@@ -70,11 +70,12 @@ El servidor esta optimizado para funcionar en entornos de produccion Linux sin i
 
 Dentro de la carpeta love-online-game/ se encuentra un Makefile. Este script te permite construir los binarios para las plataformas soportadas.
 
-Importante: Para que funcione necesitas herramientas de consola como make, zip, y las herramientas de SDK (ej. devkitPro para Switch). Asegurate de que las rutas a los ejecutables de devkitPro en el Makefile coincidan con las de tu PC.
+Importante: Para que funcione necesitas herramientas de consola como make, zip, y las herramientas de SDK correspondientes (ej. devkitPro para Switch, Android Studio/JDK para Android). 
 
-Abre tu terminal (ej. Git Bash o MSYS2 en Windows) en la ubicacion del Makefile y usa los siguientes comandos:
+Abre tu terminal (ej. Git Bash o MSYS2 en Windows) en la ubicacion del Makefile y usa los siguientes comandos o macros:
 
-* Generar el .love (Universal):
+* Generar el .love (Universal - macOS y Linux):
+  Genera el archivo universal .love. Este archivo es portatil y puede ser ejecutado directamente en macOS (x64/ARM) y Linux (x64/ARM) simplemente teniendo LOVE instalado.
   ```bash
   make lovefile
   ```
@@ -84,16 +85,24 @@ Abre tu terminal (ej. Git Bash o MSYS2 en Windows) en la ubicacion del Makefile 
   make win64
   ```
 * Compilar para Nintendo Switch (.nro):
-  Genera un .nro listo para correr en el Homebrew Launcher de la Switch. Requiere devkitPro y tu love.elf de Switch.
+  Genera un .nro listo para correr en el Homebrew Launcher de la Switch.
   ```bash
   make switch
   ```
+* Compilar para Android (.apk):
+  Descarga automaticamente el repositorio de love-android, inyecta tu .love, configura el icono, modifica el manifiesto y compila el APK con Gradle.
+  ```bash
+  make android
+  ```
+
+Tambien existen macros rapidos definidos en el Makefile para compilar en lote:
+* `make desktop` (lovefile + win64)
+* `make console` (lovefile + switch)
+* `make mobile`  (lovefile + android)
+* `make all`     (Genera todos los anteriores)
+
 * Limpiar compilaciones previas:
   Borra la carpeta temporal build/ generada por los procesos anteriores.
   ```bash
   make clean
   ```
-
----
-
-Nota: El soporte y exportacion de Android estan en desarrollo o ignorados temporalmente.
