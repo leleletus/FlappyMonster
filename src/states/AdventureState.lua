@@ -520,59 +520,8 @@ function AdventureState:render()
             g:renderDebug(self.camX, self.camY)
         end
 
-        -- Hitboxes de pinchos en pantalla
-        local HALF = TILE_PX / 2
-        local sc = math.max(1, math.floor(self.camX / TILE_PX))
-        local ec = math.min(self.level.tileW, math.ceil((self.camX + WINDOW_W) / TILE_PX) + 1)
-        local sr = math.max(1, math.floor(self.camY / TILE_PX))
-        local er = math.min(self.level.tileH, math.ceil((self.camY + WINDOW_H) / TILE_PX) + 1)
-        local subOff = {{0,0},{HALF,0},{0,HALF},{HALF,HALF}}
-        for row = sr, er do
-            for col = sc, ec do
-                local raw = self.level:getRaw(col, row)
-                local spikes = {}
-                local rraw = math.floor(raw or 0)
-                local shifts = {5, 8, 11, 14}
-                for i = 1, 4 do
-                    local sh = shifts[i]
-                    local dir = math.floor(rraw / 2^sh) % 4
-                    local present = (math.floor(rraw / 2^(sh+2)) % 2) == 1
-                    spikes[i] = {dir=dir, present=present}
-                end
-                for i = 1, 4 do
-                    if spikes[i].present then
-                        local tx = (col-1)*TILE_PX
-                        local ty = (row-1)*TILE_PX
-                        local ox = subOff[i][1]
-                        local oy = subOff[i][2]
-                        local sx2 = tx + ox
-                        local sy2 = ty + oy
-                        local margin = HALF * 0.18
-                        local dir = spikes[i].dir
-                        local hx, hy, hw, hh
-                        if dir == 0 then
-                            hx,hy,hw,hh = sx2+margin, sy2, HALF-margin*2, HALF*0.6
-                        elseif dir == 1 then
-                            hx,hy,hw,hh = sx2+margin, sy2+HALF*0.4, HALF-margin*2, HALF*0.6
-                        elseif dir == 2 then
-                            hx,hy,hw,hh = sx2, sy2+margin, HALF*0.6, HALF-margin*2
-                        else
-                            hx,hy,hw,hh = sx2+HALF*0.4, sy2+margin, HALF*0.6, HALF-margin*2
-                        end
-                        love.graphics.setColor(1, 0.3, 0.3, 0.5)
-                        love.graphics.rectangle('line',
-                            hx - self.camX, hy - self.camY, hw, hh)
-                    end
-                end
-                local id = raw % 16
-                if id == TILE_DANGER then
-                    local px = (col-1)*TILE_PX - self.camX
-                    local py = (row-1)*TILE_PX - self.camY
-                    love.graphics.setColor(1, 0, 0, 0.4)
-                    love.graphics.rectangle('line', px, py, TILE_PX, TILE_PX)
-                end
-            end
-        end
+        -- Hitboxes reales del nivel (pinchos, contacto, formas de colisión)
+        self.level:renderDebug(self.camX, self.camY)
 
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1, 1, 0, 1)

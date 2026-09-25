@@ -1,51 +1,36 @@
 -- src/world/Level.lua
--- Formato tile (número entero):
---   bits 0-3  : base id
---   bit  4    : waterlogged
---   bits 5-7  : dir(2b)+presente(1b) subceldas TL
---   bits 8-10 : dir(2b)+presente(1b) subcelda TR
---   bits 11-13: dir(2b)+presente(1b) subcelda BL
---   bits 14-16: dir(2b)+presente(1b) subcelda BR
+-- Nivel: carga el JSON, responde consultas de física (colisión, líquidos,
+-- pinchos) y dibuja los tiles. El significado de cada tile (colisión,
+-- material, aspecto) vive en el catálogo de tiles (src/world/Tiles.lua) y el
+-- formato de cada celda en src/world/tiles/TileCodec.lua.
 
-local json  = require 'libs/json'
+local json      = require 'libs/json'
+local Tiles     = require 'src/world/Tiles'
+local TileCodec = Tiles.codec
+local TileTypes = Tiles.types
+local Materials = Tiles.materials
+
 local Level = {}
 Level.__index = Level
 
-local FLAG_WATER  = 16
-local SUB_SHIFTS  = {5, 8, 11, 14}
+local DIR_UP    = TileCodec.DIR_UP
+local DIR_DOWN  = TileCodec.DIR_DOWN
+local DIR_LEFT  = TileCodec.DIR_LEFT
+local DIR_RIGHT = TileCodec.DIR_RIGHT
 
-local DIR_UP    = 0
-local DIR_DOWN  = 1
-local DIR_LEFT  = 2
-local DIR_RIGHT = 3
+local decTile          = TileCodec.decode
+local tileBaseId       = TileCodec.id
+local isWaterloggedRaw = TileCodec.isWaterlogged
+local hasSpikes        = TileCodec.hasSpikes
 
--- ── Decodificación ────────────────────────────────────────────────────────────
-local function decTile(raw)
-    raw = math.floor(raw or 0)
-    local baseId      = raw % 16
-    local waterlogged = (math.floor(raw / FLAG_WATER) % 2) == 1
-    local spikes = {}
-    for i = 1, 4 do
-        local sh      = SUB_SHIFTS[i]
-        local dir     = math.floor(raw / 2^sh) % 4
-        local present = (math.floor(raw / 2^(sh+2)) % 2) == 1
-        spikes[i] = {dir=dir, present=present}
-    end
-    return baseId, waterlogged, spikes
-end
-
-local function tileBaseId(raw)
-    return math.floor(raw or 0) % 16
-end
-
-local function isWaterloggedRaw(raw)
-    return (math.floor(raw / FLAG_WATER) % 2) == 1
-end
-
-local function hasSpikes(raw)
-    local _, _, spikes = decTile(raw)
-    for i = 1, 4 do if spikes[i].present then return true end end
-    return false
+-- Material líquido de una celda: el del propio tile si es líquido, o agua si
+-- la celda está waterlogged. nil = no hay líquido.
+local WATERLOGGED_MAT = 'water'
+local function liquidOfRaw(raw)
+    local m = TileTypes.get(tileBaseId(raw)).mat
+    if m.liquid then return m end
+    if isWaterloggedRaw(raw) then return Materials.get(WATERLOGGED_MAT) end
+    return nil
 end
 
 -- ── Spike hitbox (función pública vía Level._spikeHitbox) ────────────────────
@@ -188,8 +173,8 @@ local function findWaterBodies(level)
         if row < 1 or row > level.tileH or col < 1 or col > level.tileW then
             return false
         end
-        local raw = level:getRaw(col, row)
-        return tileBaseId(raw) == TILE_WATER or isWaterloggedRaw(raw)
+        local m = liquidOfRaw(level:getRaw(col, row))
+        return m ~= nil and m.bubbles
     end
 
     for startRow = 1, level.tileH do
@@ -289,9 +274,7 @@ function Level.new(path)
             local ceilRow = row - 1
             while ceilRow >= 1 do
                 local tr  = self.tiles[ceilRow] and self.tiles[ceilRow][col] or 0
-                local tid = math.floor(tr or 0) % 16
-                local twl = (math.floor((tr or 0) / 16) % 2) == 1
-                if tid ~= TILE_WATER and not twl then break end
+                if not liquidOfRaw(tr) then break end
                 ceilRow = ceilRow - 1
             end
             local ventCeilingY = ceilRow * TILE_PX
@@ -348,11 +331,15 @@ function Level.new(path)
 end
 
 -- ── Acceso ────────────────────────────────────────────────────────────────────
+-- Fuera del mapa todo es bloque sólido.
+local OUTSIDE_RAW = TILE_SOLID
+
 function Level:getRaw(col, row)
-    if row<1 or row>self.tileH or col<1 or col>self.tileW then return TILE_SOLID end
+    if row<1 or row>self.tileH or col<1 or col>self.tileW then return OUTSIDE_RAW end
     return self.tiles[row][col] or 0
 end
 
+-- Id del tipo de tile en la celda / en el punto de mundo
 function Level:getTile(col, row)
     return tileBaseId(self:getRaw(col, row))
 end
@@ -365,6 +352,15 @@ function Level:getRawAt(wx, wy)
     return self:getRaw(math.floor(wx/TILE_PX)+1, math.floor(wy/TILE_PX)+1)
 end
 
+-- Tipo de tile (definición del catálogo) en la celda / en el punto de mundo
+function Level:getDef(col, row)
+    return TileTypes.get(self:getTile(col, row))
+end
+
+function Level:getDefAt(wx, wy)
+    return TileTypes.get(self:getTileAt(wx, wy))
+end
+
 function Level:getSpawnPx()
     local sx=(self.playerStart[1]-1)*TILE_PX+TILE_PX/2
     local sy=(self.playerStart[2]-1)*TILE_PX+TILE_PX/2
@@ -372,10 +368,37 @@ function Level:getSpawnPx()
 end
 
 -- ── Consultas de física ───────────────────────────────────────────────────────
+
+-- Tipo que COLISIONA en el punto (respetando su hitbox), o nil.
+-- includeOneway: incluir plataformas de un solo sentido.
+function Level:collisionAt(wx, wy, includeOneway)
+    local t = self:getDefAt(wx, wy)
+    if t.collision == 'solid' or (includeOneway and t.collision == 'oneway') then
+        if TileTypes.hitboxContains(t, wx, wy) then return t end
+    end
+    return nil
+end
+
+-- ¿Los enemigos pisan/chocan con lo que hay en el punto?
+function Level:isEnemySolidAt(wx, wy)
+    local t = self:getDefAt(wx, wy)
+    return t.enemySolid and TileTypes.hitboxContains(t, wx, wy)
+end
+
+-- Tipo cuyo material tiene efecto de contacto ('kill'/'hurt') en el punto, o nil.
+function Level:contactAt(wx, wy)
+    local t = self:getDefAt(wx, wy)
+    if t.mat.contact and TileTypes.hitboxContains(t, wx, wy) then return t end
+    return nil
+end
+
+-- Material líquido en el punto (agua, waterlogged...), o nil.
+function Level:liquidAt(wx, wy)
+    return liquidOfRaw(self:getRawAt(wx, wy))
+end
+
 function Level:isWaterAt(wx, wy)
-    local raw = self:getRawAt(wx, wy)
-    local id  = tileBaseId(raw)
-    return id == TILE_WATER or isWaterloggedRaw(raw)
+    return self:liquidAt(wx, wy) ~= nil
 end
 
 -- La caja es semiabierta [bx, bx+bw) x [by, by+bh): los bordes derecho e
@@ -385,7 +408,9 @@ end
 -- base, calculada con distinto redondeo) daban resultados distintos y el
 -- jugador alternaba agacharse/levantarse cada frame.
 local EDGE_EPS = 1e-6
-function Level:isInWater(bx, by, bw, bh)
+
+-- Material líquido que toca la caja (primer punto de muestreo con líquido), o nil.
+function Level:liquidInBox(bx, by, bw, bh)
     local rx, ry = bx + bw - EDGE_EPS, by + bh - EDGE_EPS
     local pts = {
         {bx,      by      },{rx,      by      },
@@ -393,13 +418,18 @@ function Level:isInWater(bx, by, bw, bh)
         {bx+bw/2, by+bh/2 },
     }
     for _, p in ipairs(pts) do
-        if self:isWaterAt(p[1], p[2]) then return true end
+        local m = self:liquidAt(p[1], p[2])
+        if m then return m end
     end
-    return false
+    return nil
+end
+
+function Level:isInWater(bx, by, bw, bh)
+    return self:liquidInBox(bx, by, bw, bh) ~= nil
 end
 
 -- Devuelve lista de {dir, x, y, w, h} de pinchos que intersectan la hitbox.
--- Hitbox = BASE del pincho (misma lógica que el debug en AdventureState).
+-- Hitbox = BASE del pincho (la misma que dibuja Level:renderDebug).
 function Level:getSpikesInBox(bx, by, bw, bh)
     local HALF = TILE_PX / 2
     local result = {}
@@ -442,35 +472,6 @@ function Level:getSpikesInBox(bx, by, bw, bh)
         end
     end
     return result
-end
-
--- ── Helpers de tile-joining ───────────────────────────────────────────────────
--- Devuelve true si el tile (col,row) es "estructural" a efectos de unión de bordes.
--- Solid y Border se unen entre sí. El agua (tile puro o waterlogged) también
--- "tapa" el borde: un bloque sumergido no dibuja el borde que mira al agua.
-local function isStructural(level, col, row)
-    local id = tileBaseId(level:getRaw(col, row))
-    return id == TILE_SOLID or id == TILE_BORDER
-end
-
-local function isWaterNeighbor(level, col, row)
-    local raw = level:getRaw(col, row)
-    local id  = tileBaseId(raw)
-    return id == TILE_WATER or isWaterloggedRaw(raw)
-end
-
--- Devuelve qué aristas de un tile estructural están expuestas.
--- Una arista se suprime si el vecino es estructural O si es agua/waterlogged.
-local function getExposedEdges(level, col, row)
-    local function hidden(c, r)
-        return isStructural(level, c, r) or isWaterNeighbor(level, c, r)
-    end
-    return {
-        top    = not hidden(col,   row-1),
-        bottom = not hidden(col,   row+1),
-        left   = not hidden(col-1, row),
-        right  = not hidden(col+1, row),
-    }
 end
 
 -- ── Render ────────────────────────────────────────────────────────────────────
@@ -517,114 +518,19 @@ function Level:render(camX, camY)
     local er2 = math.min(self.tileH, math.ceil((camY+WINDOW_H)/TILE_PX)+1)
 
     local subOff = {{0,0},{HALF_PX,0},{0,HALF_PX},{HALF_PX,HALF_PX}}
+    local ctx = { size = TILE_PX, level = self, time = t }
 
     for row = sr2, er2 do
         for col = sc2, ec2 do
             local raw = self:getRaw(col, row)
-            local id  = tileBaseId(raw)
-            local wl  = isWaterloggedRaw(raw)
             local px  = (col-1)*TILE_PX - camX
             local py  = (row-1)*TILE_PX - camY
 
-            if id == TILE_SOLID then
-                -- Relleno base
-                love.graphics.setColor(0.28, 0.28, 0.32, 1)
-                love.graphics.rectangle('fill', px, py, TILE_PX, TILE_PX)
+            -- Aspecto del tipo (el agua se pinta en renderWaterEffect)
+            ctx.x, ctx.y, ctx.col, ctx.row, ctx.raw = px, py, col, row, raw
+            TileTypes.drawTile(TileTypes.get(tileBaseId(raw)), ctx)
 
-                -- Bordes solo en aristas expuestas (tile-joining)
-                local edges = getExposedEdges(self, col, row)
-                love.graphics.setColor(0.46, 0.46, 0.52, 1)
-                if edges.top    then love.graphics.rectangle('fill', px,            py,            TILE_PX, 2) end
-                if edges.bottom then love.graphics.rectangle('fill', px,            py+TILE_PX-2,  TILE_PX, 2) end
-                if edges.left   then love.graphics.rectangle('fill', px,            py,            2, TILE_PX) end
-                if edges.right  then love.graphics.rectangle('fill', px+TILE_PX-2,  py,            2, TILE_PX) end
-
-            elseif id == TILE_BORDER then
-                -- Relleno base
-                love.graphics.setColor(0.42, 0.30, 0.10, 1)
-                love.graphics.rectangle('fill', px, py, TILE_PX, TILE_PX)
-
-                -- Bordes solo en aristas expuestas (tile-joining)
-                local edges = getExposedEdges(self, col, row)
-                love.graphics.setColor(0.62, 0.48, 0.20, 1)
-                if edges.top    then love.graphics.rectangle('fill', px,            py,            TILE_PX, 2) end
-                if edges.bottom then love.graphics.rectangle('fill', px,            py+TILE_PX-2,  TILE_PX, 2) end
-                if edges.left   then love.graphics.rectangle('fill', px,            py,            2, TILE_PX) end
-                if edges.right  then love.graphics.rectangle('fill', px+TILE_PX-2,  py,            2, TILE_PX) end
-
-                -- Líneas de detalle interiores solo en tiles aislados (todas las caras expuestas)
-                if edges.top and edges.bottom and edges.left and edges.right then
-                    love.graphics.setColor(0.28, 0.18, 0.04, 0.35)
-                    love.graphics.line(px+TILE_PX/2, py+2, px+TILE_PX/2, py+TILE_PX-2)
-                    love.graphics.line(px+2, py+TILE_PX/2, px+TILE_PX-2, py+TILE_PX/2)
-                end
-
-            elseif id == TILE_PLATFORM then
-                -- Plataforma traversable: ≈¾ del alto, sin parte inferior.
-                -- Color neutro gris-pizarra, similar a los sólidos pero distinguible.
-                local visH  = math.floor(TILE_PX * 0.72)
-                local surfH = math.max(3, math.floor(TILE_PX * 0.18))
-
-                -- Cuerpo
-                love.graphics.setColor(0.30, 0.30, 0.36, 1)
-                love.graphics.rectangle('fill', px, py, TILE_PX, visH)
-
-                -- Franja de superficie (arriba)
-                love.graphics.setColor(0.52, 0.52, 0.60, 1)
-                love.graphics.rectangle('fill', px, py, TILE_PX, surfH)
-
-                -- Línea de borde superior brillante
-                love.graphics.setColor(0.78, 0.78, 0.90, 1)
-                love.graphics.rectangle('fill', px, py, TILE_PX, 2)
-
-                -- Bordes laterales hasta visH
-                love.graphics.setColor(0.46, 0.46, 0.54, 1)
-                love.graphics.rectangle('fill', px,           py, 2, visH)
-                love.graphics.rectangle('fill', px+TILE_PX-2, py, 2, visH)
-
-                -- Cara inferior (sombra)
-                love.graphics.setColor(0.20, 0.20, 0.24, 1)
-                love.graphics.rectangle('fill', px, py+visH-2, TILE_PX, 2)
-
-            elseif id == TILE_PLATFORM_DROP then
-                -- Plataforma traspasable (se baja agachándose): pasarela de
-                -- madera delgada, tablones con rendijas y flechas hacia abajo.
-                -- Distinta en forma y color de la losa gris no traspasable.
-                local visH  = math.floor(TILE_PX * 0.36)
-                local plank = TILE_PX / 4
-
-                -- Tablones (tonos alternos) con rendija de 2px entre ellos
-                for i = 0, 3 do
-                    local shade = (i % 2 == 0) and 0 or 0.07
-                    love.graphics.setColor(0.86 + shade, 0.52 + shade, 0.12, 1)
-                    love.graphics.rectangle('fill', px + i*plank, py, plank - 2, visH)
-                end
-
-                -- Canto superior claro
-                love.graphics.setColor(1.00, 0.86, 0.45, 1)
-                love.graphics.rectangle('fill', px, py, TILE_PX, 3)
-
-                -- Sombra inferior
-                love.graphics.setColor(0.45, 0.24, 0.05, 1)
-                love.graphics.rectangle('fill', px, py+visH-3, TILE_PX, 3)
-
-                -- Flechas hacia abajo bajo la pasarela ("se puede bajar")
-                love.graphics.setColor(1.00, 0.80, 0.30, 0.85)
-                local ay = py + visH + 6
-                for _, cx in ipairs({ px + TILE_PX*0.25, px + TILE_PX*0.75 }) do
-                    love.graphics.polygon('fill', cx-8, ay, cx+8, ay, cx, ay+8)
-                end
-
-            elseif id == TILE_DANGER then
-                love.graphics.setColor(0.80, 0.08, 0.08, 1)
-                love.graphics.rectangle('fill', px, py, TILE_PX, TILE_PX)
-                love.graphics.setColor(1.0, 0.28, 0.28, 0.55)
-                love.graphics.line(px+3, py+3, px+TILE_PX-3, py+TILE_PX-3)
-                love.graphics.line(px+TILE_PX-3, py+3, px+3, py+TILE_PX-3)
-            end
-
-            -- (sin tinte azul: el efecto agua se aplica íntegramente en renderWaterEffect)
-
+            -- Pinchos (subceldas)
             local _, _, spikes = decTile(raw)
             for i = 1, 4 do
                 if spikes[i].present then
@@ -638,6 +544,35 @@ function Level:render(camX, camY)
     love.graphics.setColor(1, 1, 1, 1)
 end
 
+-- Debug (F1): hitboxes REALES que usa la física. Pinchos en rojo, tiles con
+-- efecto de contacto en rojo intenso y formas de colisión no completas en cian.
+function Level:renderDebug(camX, camY)
+    local sc = math.max(1, math.floor(camX/TILE_PX))
+    local ec = math.min(self.tileW, math.ceil((camX+WINDOW_W)/TILE_PX)+1)
+    local sr = math.max(1, math.floor(camY/TILE_PX))
+    local er = math.min(self.tileH, math.ceil((camY+WINDOW_H)/TILE_PX)+1)
+    for row = sr, er do
+        for col = sc, ec do
+            local t = self:getDef(col, row)
+            local hx, hy, hw, hh = TileTypes.worldHitbox(t, col, row)
+            if t.mat.contact then
+                love.graphics.setColor(1, 0, 0, 0.4)
+                love.graphics.rectangle('line', hx - camX, hy - camY, hw, hh)
+            elseif t.collision ~= 'none' and not t.fullHitbox then
+                love.graphics.setColor(0.2, 1, 1, 0.6)
+                love.graphics.rectangle('line', hx - camX, hy - camY, hw, hh)
+            end
+        end
+    end
+    local x0, y0 = (sc-1)*TILE_PX, (sr-1)*TILE_PX
+    for _, sp in ipairs(self:getSpikesInBox(x0, y0, (ec-sc+1)*TILE_PX, (er-sr+1)*TILE_PX)) do
+        love.graphics.setColor(1, 0.3, 0.3, 0.5)
+        love.graphics.rectangle('line', sp.x - camX, sp.y - camY, sp.w, sp.h)
+    end
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
+-- Efecto de los líquidos: distorsión (shader) y tinte según su material.
 function Level:renderWaterEffect(camX, camY, sceneCanvas)
     local t = love.timer.getTime()
 
@@ -649,78 +584,41 @@ function Level:renderWaterEffect(camX, camY, sceneCanvas)
     local sr2 = math.max(1,          math.floor(camY/TILE_PX)+1)
     local er2 = math.min(self.tileH, math.ceil((camY+WINDOW_H)/TILE_PX)+1)
 
+    -- Distorsión: la escena se vuelve a dibujar con shader, recortada a cada
+    -- celda líquida (tile completo, también el hueco bajo una plataforma).
     if shaderOk and waterShader then
         waterShader:send('time',     t)
         waterShader:send('strength', 0.001)
         waterShader:send('speed',    1.2)
         love.graphics.setShader(waterShader)
     end
-
     for row = sr2, er2 do
         for col = sc2, ec2 do
-            local raw = self:getRaw(col, row)
-            local id  = tileBaseId(raw)
-            local wl  = isWaterloggedRaw(raw)
-            local px  = math.floor((col-1)*TILE_PX - camX)
-            local py  = math.floor((row-1)*TILE_PX - camY)
-
-            if id == TILE_WATER or wl then
-                if wl and (id == TILE_PLATFORM or id == TILE_PLATFORM_DROP) then
-                    -- Parte superior (donde está el sprite): distorsión normal
-                    local visH  = math.floor(TILE_PX * (id == TILE_PLATFORM and 0.72 or 0.36))
-                    local gapY  = py + visH
-                    local gapH  = TILE_PX - visH
-                    setTransformedScissor(px, py, TILE_PX, visH)
-                    love.graphics.setColor(1, 1, 1, 1)
-                    love.graphics.draw(sceneCanvas, 0, 0)
-                    -- Parte inferior vacía: también distorsionada, igual que TILE_WATER
-                    setTransformedScissor(px, gapY, TILE_PX, gapH)
-                    love.graphics.setColor(1, 1, 1, 1)
-                    love.graphics.draw(sceneCanvas, 0, 0)
-                else
-                    setTransformedScissor(px, py, TILE_PX, TILE_PX)
-                    love.graphics.setColor(1, 1, 1, 1)
-                    love.graphics.draw(sceneCanvas, 0, 0)
-                end
+            local m = liquidOfRaw(self:getRaw(col, row))
+            if m and m.distort then
+                local px = math.floor((col-1)*TILE_PX - camX)
+                local py = math.floor((row-1)*TILE_PX - camY)
+                setTransformedScissor(px, py, TILE_PX, TILE_PX)
+                love.graphics.setColor(1, 1, 1, 1)
+                love.graphics.draw(sceneCanvas, 0, 0)
             end
         end
     end
-
     setTransformedScissor()
     if shaderOk and waterShader then love.graphics.setShader() end
 
+    -- Tinte: una sola pasada, color uniforme por material (sin acumulación)
     for row = sr2, er2 do
         for col = sc2, ec2 do
-            local raw = self:getRaw(col, row)
-            local id  = tileBaseId(raw)
-            local wl  = isWaterloggedRaw(raw)
-            local px  = (col-1)*TILE_PX - camX
-            local py  = (row-1)*TILE_PX - camY
-
-            -- (tinte global de agua se aplica en pasada única al final)
-        end
-    end
-
-    -- ── Tinte de agua: una sola pasada, color uniforme ────────────────────────
-    -- Un único setColor para todos los tiles de agua/waterlogged, sin acumulación.
-    love.graphics.setColor(0.05, 0.30, 0.90, 0.35)
-    for row = sr2, er2 do
-        for col = sc2, ec2 do
-            local raw = self:getRaw(col, row)
-            local id  = tileBaseId(raw)
-            local wl  = isWaterloggedRaw(raw)
-            local px  = (col-1)*TILE_PX - camX
-            local py  = (row-1)*TILE_PX - camY
-            if id == TILE_WATER then
-                love.graphics.rectangle('fill', px, py, TILE_PX, TILE_PX)
-            elseif wl then
-                -- Siempre tile completo: el espacio vacío bajo la plataforma
-                -- es agua pura, debe tintarse igual que TILE_WATER.
-                love.graphics.rectangle('fill', px, py, TILE_PX, TILE_PX)
+            local m = liquidOfRaw(self:getRaw(col, row))
+            if m and m.tint then
+                love.graphics.setColor(m.tint)
+                love.graphics.rectangle('fill', (col-1)*TILE_PX - camX, (row-1)*TILE_PX - camY, TILE_PX, TILE_PX)
             end
         end
     end
 
+    -- Pinchos dentro de celdas waterlogged: por encima del tinte
     local HALF_P = TILE_PX / 2
     local subOff = {{0,0},{HALF_P,0},{0,HALF_P},{HALF_P,HALF_P}}
     for row = sr2, er2 do

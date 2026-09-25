@@ -801,7 +801,7 @@ function OnlineAdventureState:render()
         local sx, sy = pa.x, pa.y
         pa.x, pa.y = self.renderX, self.renderY
         pa:render(self.camX, self.camY)
-        if DEBUG_HITBOX then pa:renderDebug(self.camX, self.camY) end
+        if DEBUG_HITBOX then pa:renderDebug(self.camX, self.camY); self.level:renderDebug(self.camX, self.camY) end
         pa.x, pa.y = sx, sy
     end
 

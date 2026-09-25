@@ -2,6 +2,8 @@
 -- Constantes y codificación compartidas entre cliente y servidor online.
 -- Cualquier cambio aquí que rompa compatibilidad debe subir VERSION.
 
+local Tiles = require 'src/world/Tiles'
+
 local P = {}
 
 -- ── Versión / red ─────────────────────────────────────────────────────────────
@@ -105,6 +107,12 @@ function P.drownName(c)   return DROWN[c] or 'none' end
 function P.deathCode(s)   return s and DEATH_I[s] or 0 end
 function P.deathName(c)   return DEATH[c] end
 
+-- Índice de un material en el registro (mismo orden en cliente y servidor).
+function P.materialIndex(m)
+    for i, x in ipairs(Tiles.materials.list) do if x == m then return i end end
+    return 0
+end
+
 -- ── Estado completo del jugador propio (para reconciliación) ─────────────────
 -- Solo se envía a su dueño. Incluye todo lo que afecta a la física futura;
 -- lo puramente visual (frame, animT, puff) lo mantiene el cliente.
@@ -127,6 +135,9 @@ function P.packOwnState(pa)
         P.drownCode(pa.drownPhase), pa.drownTimer, pa.drownChime, pa.drownAudT,
         pa.hp, pa.lives, pa.spawnX, pa.spawnY, pa.facing,
         pa.dropTop or 0, pa.dropHoldT or 0,
+        pa.liquid and P.materialIndex(pa.liquid) or 0,
+        pa.groundDef and pa.groundDef.id or -1,
+        pa.hurtT or 0,
     }
 end
 
@@ -156,12 +167,15 @@ function P.applyOwnState(s, pa)
     pa.facing      = s[18]
     pa.dropTop     = s[19]
     pa.dropHoldT   = s[20]
+    pa.liquid      = Tiles.materials.list[s[21]]
+    pa.groundDef   = s[22] >= 0 and Tiles.types.byId[s[22]] or nil
+    pa.hurtT       = s[23]
 end
 
 -- Estructura mínima para validar un estado propio recibido del servidor.
 function P.isValidOwnState(s)
-    if type(s) ~= 'table' or #s < 20 then return false end
-    for i = 1, 20 do if type(s[i]) ~= 'number' then return false end end
+    if type(s) ~= 'table' or #s < 23 then return false end
+    for i = 1, 23 do if type(s[i]) ~= 'number' then return false end end
     return true
 end
 

@@ -1,5 +1,6 @@
 -- src/entities/PlayerAdventure.lua
 local Class = require 'libs/class'
+local Tiles = require 'src/world/Tiles'
 local PlayerAdventure = Class:new()
 
 local sprites    = nil
@@ -25,10 +26,12 @@ local DEATH_FREEZE_TIME = 0.05
 local DEATH_JUMP_VEL    = -560
 local DEATH_FALL_DIST   = WINDOW_H + 100
 
-local WATER_GRAVITY_MULT = 0.3
-local WATER_JUMP_MULT    = 0.75
-local WATER_SPEED_MULT   = 0.60
-local WATER_DRAG         = 3
+-- La física dentro de líquidos (gravedad, salto, velocidad, arrastre) y la de
+-- cada superficie (fricción, cintas...) viene del MATERIAL del tile:
+-- src/world/tiles/materials/.
+
+-- Contacto con materiales 'hurt': invulnerabilidad tras recibir daño
+local HURT_COOLDOWN = 1.0
 
 -- Ahogamiento
 local DROWN_TOTAL     = 20     -- segundos hasta empezar drowning.ogg
@@ -90,6 +93,10 @@ function PlayerAdventure:new(x, y)
     o.dropHoldT=0         -- tiempo agachado sobre una plataforma traspasable
     o.dropping=false      -- atravesando una plataforma traspasable hacia abajo
     o.dropTop=0           -- Y de la cara superior de la plataforma que se atraviesa
+    o.liquid=nil          -- material líquido en el que está (nil = fuera)
+    o.prevLiquid=nil
+    o.groundDef=nil       -- tipo de tile sobre el que está de pie (material de suelo)
+    o.hurtT=0             -- invulnerabilidad restante tras daño por contacto
     return o
 end
 
@@ -117,33 +124,25 @@ function PlayerAdventure:getHeadPoint()
 end
 
 -- ── Colisión ──────────────────────────────────────────────────────────────────
-local function isPlatform(id)
-    return id==TILE_PLATFORM or id==TILE_PLATFORM_DROP
-end
-
-local function solidAt(level, wx, wy, checkPlatform)
-    local id = level:getTileAt(wx, wy)
-    if id==TILE_SOLID or id==TILE_BORDER then return true, id end
-    if checkPlatform and isPlatform(id) then return true, id end
-    return false, id
-end
+-- Todo se consulta al nivel por TIPO de tile (colisión, hitbox, material); aquí
+-- no se nombra ningún tile concreto.
 
 -- Si el jugador (en el suelo) está apoyado SOLO sobre plataformas
 -- traspasables, devuelve la Y de su cara superior; si algo no traspasable lo
--- sostiene (sólido, borde, plataforma normal), devuelve nil.
+-- sostiene (sólido, plataforma normal...), devuelve nil.
 local function dropPlatformTop(pa, level)
     local ob    = pa:getOuterBounds()
     local footY = ob.y + ob.h + 2
-    local found = false
+    local top
     for _, cx in ipairs({ pa.x - pa.w/2 + 4, pa.x, pa.x + pa.w/2 - 4 }) do
-        local id = level:getTileAt(cx, footY)
-        if id == TILE_PLATFORM_DROP then
-            found = true
-        elseif id == TILE_SOLID or id == TILE_BORDER or id == TILE_PLATFORM then
+        local t = level:getDefAt(cx, footY)
+        if t.collision == 'oneway' and t.dropThrough then
+            top = math.floor(footY / TILE_PX) * TILE_PX + t.hitbox.y * TILE_PX
+        elseif t.collision ~= 'none' then
             return nil
         end
     end
-    return found and math.floor(footY / TILE_PX) * TILE_PX or nil
+    return top
 end
 
 -- Comprueba si un pincho dado (dir, pos) realmente golpea al jugador
@@ -164,22 +163,27 @@ local function spikeHitsPlayer(spike, pb)
 end
 
 function PlayerAdventure:moveAndCollide(level, dx, dy)
+    local T      = TILE_PX
     local x, y   = self.x, self.y+OUTER_YOFF
     local hw, hh = self.w/2, self.h/2
 
-    -- X
+    -- X: al chocar, pegarse al borde de la hitbox del tile
     x = x + dx
     local chy = {y-hh+4, y, y+hh-4}
     if dx > 0 then
         for _,py in ipairs(chy) do
-            if solidAt(level,x+hw,py) then
-                x=math.floor((x+hw)/TILE_PX)*TILE_PX-hw; self.vx=0; break
+            local t = level:collisionAt(x+hw, py)
+            if t then
+                x = math.floor((x+hw)/T)*T + t.hitbox.x*T - hw; self.vx=0; break
             end
         end
     elseif dx < 0 then
         for _,py in ipairs(chy) do
-            if solidAt(level,x-hw,py) then
-                x=math.ceil((x-hw)/TILE_PX)*TILE_PX+hw; self.vx=0; break
+            local t = level:collisionAt(x-hw, py)
+            if t then
+                local edge = t.fullHitbox and math.ceil((x-hw)/T)*T
+                             or math.floor((x-hw)/T)*T + (t.hitbox.x + t.hitbox.w)*T
+                x = edge + hw; self.vx=0; break
             end
         end
     end
@@ -188,28 +192,34 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
     local prevFoot = self.y + hh
     y = y + dy
     self.onGround = false
+    self.groundDef = nil
     local chx = {x-hw+4, x, x+hw-4}
     if dy > 0 then
         for _,px in ipairs(chx) do
-            local hit,id = solidAt(level,px,y+hh,true)
-            if hit then
-                if isPlatform(id) then
-                    local top=math.floor((y+hh)/TILE_PX)*TILE_PX
+            local t = level:collisionAt(px, y+hh, true)
+            if t then
+                local top = math.floor((y+hh)/T)*T + t.hitbox.y*T
+                if t.collision == 'oneway' then
                     -- Bajando a través de ESTA plataforma traspasable: no colisionar
-                    local passing = self.dropping and id==TILE_PLATFORM_DROP and top==self.dropTop
+                    local passing = self.dropping and t.dropThrough and top==self.dropTop
                     if not passing and prevFoot<=top+2 then
-                        y=top-hh; self.vy=0; self.onGround=true; self.jumpsLeft=2; break
+                        y=top-hh; self.vy=0; self.onGround=true; self.jumpsLeft=2
+                        self.groundDef=t; break
                     end
                 else
-                    y=math.floor((y+hh)/TILE_PX)*TILE_PX-hh
-                    self.vy=0; self.onGround=true; self.jumpsLeft=2; break
+                    y=top-hh
+                    self.vy=0; self.onGround=true; self.jumpsLeft=2
+                    self.groundDef=t; break
                 end
             end
         end
     elseif dy < 0 then
         for _,px in ipairs(chx) do
-            if solidAt(level,px,y-hh) then
-                y=math.ceil((y-hh)/TILE_PX)*TILE_PX+hh; self.vy=0; break
+            local t = level:collisionAt(px, y-hh)
+            if t then
+                local edge = t.fullHitbox and math.ceil((y-hh)/T)*T
+                             or math.floor((y-hh)/T)*T + (t.hitbox.y + t.hitbox.h)*T
+                y = edge + hh; self.vy=0; break
             end
         end
     end
@@ -223,7 +233,7 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
         self.dropping = false
     end
 
-    -- Zona de muerte (inner hitbox)
+    -- Contacto (hitbox interna) con materiales que matan o dañan
     local iw2, ih2 = INNER_W/2, INNER_H/2
     local iy = self.y+OUTER_YOFF
     local corners={
@@ -231,7 +241,14 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
         {x-iw2+2,iy+ih2-2},{x+iw2-2,iy+ih2-2},
     }
     for _,c in ipairs(corners) do
-        if level:getTileAt(c[1],c[2])==TILE_DANGER then self:die(); return end
+        local t = level:contactAt(c[1],c[2])
+        if t then
+            if t.mat.contact == 'kill' then self:die(); return end
+            if t.mat.contact == 'hurt' and self.hurtT <= 0 then
+                self.hurtT = HURT_COOLDOWN
+                if self:takeDamage() then return end
+            end
+        end
     end
 
     -- Pinchos: usar outer bounds contra getSpikesInBox
@@ -241,15 +258,16 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
         if spikeHitsPlayer(sp, ob) then self:die(); return end
     end
 
-    -- Agua
-    self.inWater = level:isInWater(ob.x, ob.y, ob.w, ob.h)
+    -- Líquidos
+    self.liquid  = level:liquidInBox(ob.x, ob.y, ob.w, ob.h)
+    self.inWater = self.liquid ~= nil
     if self.inWater and self.onGround then self.jumpsLeft=2 end
 end
 
 -- ── Acciones ──────────────────────────────────────────────────────────────────
 function PlayerAdventure:jump()
     if self.jumpsLeft > 0 then
-        local vel = ADV_JUMP_VEL * (self.inWater and WATER_JUMP_MULT or 1.0)
+        local vel = ADV_JUMP_VEL * (self.inWater and self.liquid.jumpMult or 1.0)
         self.vy=vel; self.jumpsLeft=self.jumpsLeft-1
         self.puff=PUFF_SCALE; Sound.play('jump')
     end
@@ -282,6 +300,7 @@ function PlayerAdventure:respawn()
     self.dying=false; self.alive=true; self.deathPhase=nil; self.deathTimer=0
     self.frame=3; self.puff=1; self.hp=self.hpMax; self.inWater=false
     self.crouching=false; self.dropHoldT=0; self.dropping=false; self.dropTop=0
+    self.liquid=nil; self.prevLiquid=nil; self.groundDef=nil; self.hurtT=0
     self.drownTimer=0; self.drownChime=0; self.drownPhase='none'
     self.drownAudT=0; self.drownDead=false
     self.prevInWater=false
@@ -298,7 +317,8 @@ function PlayerAdventure:updateDrowning(dt, level)
     if self.dying then return end
 
     local headX, headY = self:getHeadPoint()
-    local headUnder = level:isWaterAt(headX, headY)
+    local liq = level:liquidAt(headX, headY)
+    local headUnder = liq ~= nil and liq.drown
 
     -- ── Salió del agua: reset total ──────────────────────────────────────────
     if not headUnder then
@@ -434,23 +454,32 @@ function PlayerAdventure:update(dt, level)
     end
     if Input.pressed('jump') and not self.crouching then self:jump() end
 
-    local speedM = self.inWater and WATER_SPEED_MULT  or 1.0
-    local gravM  = self.inWater and WATER_GRAVITY_MULT or 1.0
-    local fric   = self.onGround and ADV_FRICTION or ADV_AIR_FRIC
+    -- Materiales: el líquido en el que está y la superficie que pisa
+    local liq    = self.inWater and self.liquid or nil
+    local ground = (self.onGround and self.groundDef) and self.groundDef.mat or nil
+    local speedM = liq and liq.speedMult   or 1.0
+    local gravM  = liq and liq.gravityMult or 1.0
+    local fric   = self.onGround and ADV_FRICTION * (ground and ground.friction or 1) or ADV_AIR_FRIC
+    local walkM  = ground and ground.speedMult or 1
+    local convey = ground and ground.conveyor  or 0
 
-    self.vx = self.vx + (moveX*ADV_MOVE_SPD*speedM - self.vx)*fric*dt
+    if self.hurtT > 0 then self.hurtT = math.max(0, self.hurtT - dt) end
+
+    self.vx = self.vx + (moveX*ADV_MOVE_SPD*speedM*walkM - self.vx)*fric*dt
     self.vy = self.vy + ADV_GRAVITY*gravM*dt
-    if self.inWater then self.vy=self.vy+(-self.vy*WATER_DRAG*dt) end
+    if liq then self.vy=self.vy+(-self.vy*liq.drag*dt) end
 
-    self:moveAndCollide(level, self.vx*dt, self.vy*dt)
+    self:moveAndCollide(level, (self.vx + convey)*dt, self.vy*dt)
 
-    -- Splash al entrar/salir del agua (cualquier parte del cuerpo)
+    -- Splash al entrar/salir de un líquido (cualquier parte del cuerpo)
     if self.inWater and not self.prevInWater then
-        Sound.play('waterSplash')
+        if self.liquid.splashIn then Sound.play(self.liquid.splashIn) end
     elseif not self.inWater and self.prevInWater then
-        Sound.play('waterSplashOut')
+        local prev = self.prevLiquid
+        if prev and prev.splashOut then Sound.play(prev.splashOut) end
     end
     self.prevInWater = self.inWater
+    self.prevLiquid  = self.liquid
 
     if self.vx>20 then self.facing=1 elseif self.vx<-20 then self.facing=-1 end
 

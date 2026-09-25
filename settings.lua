@@ -66,11 +66,8 @@ TILE_SIZE      = 16          -- px del sprite de tile
 TILE_SCALE     = 4           -- 16 * 4 = 64px en pantalla
 TILE_PX        = 16 * 4     -- 64px
 
--- IDs de tiles
-TILE_EMPTY     = 0
-TILE_SOLID     = 1
-TILE_PLATFORM  = 2           -- one-way: solo colisión desde arriba
-TILE_DANGER    = 3           -- mata al jugador
+-- Los IDs de tile (TILE_SOLID, TILE_WATER...) los genera el catálogo de tiles
+-- (src/world/Tiles.lua), cargado al final de este archivo.
 
 -- Física del plataformero
 ADV_GRAVITY    = 1600
@@ -82,22 +79,11 @@ ADV_AIR_FRIC   = 6           -- lerp en aire (menor control)
 -- Cámara
 CAM_LERP       = 6           -- suavidad de seguimiento
 
--- IDs de tile (extendidos)
-TILE_BORDER  = 4   -- borde de nivel, material distinto
-TILE_SPIKE_U = 5   -- pincho apuntando arriba
-TILE_SPIKE_D = 6   -- pincho apuntando abajo
-TILE_SPIKE_L = 7   -- pincho apuntando izquierda
-TILE_SPIKE_R = 8   -- pincho apuntando derecha
-TILE_WATER   = 9   -- agua traversable
-TILE_PLATFORM_DROP = 10  -- one-way traspasable: además se baja agachándose
--- (TILE_PLATFORM = 2 solo permite atravesarla subiendo)
- 
--- Física del agua (usadas en PlayerAdventure)
-WATER_GRAVITY_MULT = 0.30   -- gravedad * este factor dentro del agua
-WATER_JUMP_MULT    = 0.55   -- salto * este factor dentro del agua
-WATER_SPEED_MULT   = 0.55   -- velocidad horizontal * este factor
-WATER_DRAG         = 5      -- amortiguación vertical en agua
-
 -- ── Multijugador Online ───────────────────────────────────────────────────────
 SERVER_HOST = "localhost"    -- host por defecto del servidor
 SERVER_PORT = 22122          -- puerto del servidor
+
+-- ── Catálogo de tiles y materiales ────────────────────────────────────────────
+-- Registra los tipos de tile (y sus constantes TILE_*). La física del agua y de
+-- cualquier material vive ahora en src/world/tiles/materials/.
+require 'src/world/Tiles'

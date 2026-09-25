@@ -32,8 +32,7 @@ local INNER_H_FRAC = 0.50
 
 -- ── Helpers ───────────────────────────────────────────────────────────────────
 local function solidAt(level, wx, wy)
-    local id = level:getTileAt(wx, wy)
-    return id == TILE_SOLID or id == TILE_BORDER or id == TILE_PLATFORM or id == TILE_PLATFORM_DROP
+    return level:isEnemySolidAt(wx, wy)   -- según el catálogo de tiles (enemySolid)
 end
 
 local function randRange(a, b)
