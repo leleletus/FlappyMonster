@@ -117,7 +117,7 @@ function P.packOwnState(pa)
     if pa.inWater     then f = f + F_IN_WATER   end
     if pa.prevInWater then f = f + F_PREV_WATER end
     if pa.crouching   then f = f + F_CROUCH     end
-    if pa.dropThrough then f = f + F_DROP       end
+    if pa.dropping    then f = f + F_DROP       end
     if pa.dying       then f = f + F_DYING      end
     if pa.alive       then f = f + F_ALIVE      end
     if pa.drownDead   then f = f + F_DROWN_DEAD end
@@ -126,6 +126,7 @@ function P.packOwnState(pa)
         P.deathCode(pa.deathPhase), pa.deathTimer, pa.deathY,
         P.drownCode(pa.drownPhase), pa.drownTimer, pa.drownChime, pa.drownAudT,
         pa.hp, pa.lives, pa.spawnX, pa.spawnY, pa.facing,
+        pa.dropTop or 0, pa.dropHoldT or 0,
     }
 end
 
@@ -136,7 +137,7 @@ function P.applyOwnState(s, pa)
     pa.inWater     = band(f, F_IN_WATER)   ~= 0
     pa.prevInWater = band(f, F_PREV_WATER) ~= 0
     pa.crouching   = band(f, F_CROUCH)     ~= 0
-    pa.dropThrough = band(f, F_DROP)       ~= 0
+    pa.dropping    = band(f, F_DROP)       ~= 0
     pa.dying       = band(f, F_DYING)      ~= 0
     pa.alive       = band(f, F_ALIVE)      ~= 0
     pa.drownDead   = band(f, F_DROWN_DEAD) ~= 0
@@ -153,12 +154,14 @@ function P.applyOwnState(s, pa)
     pa.spawnX      = s[16]
     pa.spawnY      = s[17]
     pa.facing      = s[18]
+    pa.dropTop     = s[19]
+    pa.dropHoldT   = s[20]
 end
 
 -- Estructura mínima para validar un estado propio recibido del servidor.
 function P.isValidOwnState(s)
-    if type(s) ~= 'table' or #s < 18 then return false end
-    for i = 1, 18 do if type(s[i]) ~= 'number' then return false end end
+    if type(s) ~= 'table' or #s < 20 then return false end
+    for i = 1, 20 do if type(s[i]) ~= 'number' then return false end end
     return true
 end
 

@@ -40,6 +40,10 @@ local DROWN_AUDIO_DUR = 12     -- duración de drowning.ogg (s) — mata al fina
 local AIR_BAR_W  = 160
 local AIR_BAR_H  = 12
 
+-- Bajar por plataformas traspasables
+local DROP_DELAY = 0.25    -- s agachado sobre la plataforma antes de atravesarla
+local DROP_PUSH  = 60      -- empujoncito hacia abajo al empezar a caer
+
 local DIR_UP    = 0
 local DIR_DOWN  = 1
 local DIR_LEFT  = 2
@@ -83,7 +87,9 @@ function PlayerAdventure:new(x, y)
     o.airBarShakeX= 0
     o.hp=3; o.hpMax=3; o.showHpBar=false
     o.crouching=false
-    o.dropThrough=false   -- flag para caer a través de plataformas
+    o.dropHoldT=0         -- tiempo agachado sobre una plataforma traspasable
+    o.dropping=false      -- atravesando una plataforma traspasable hacia abajo
+    o.dropTop=0           -- Y de la cara superior de la plataforma que se atraviesa
     return o
 end
 
@@ -111,11 +117,33 @@ function PlayerAdventure:getHeadPoint()
 end
 
 -- ── Colisión ──────────────────────────────────────────────────────────────────
+local function isPlatform(id)
+    return id==TILE_PLATFORM or id==TILE_PLATFORM_DROP
+end
+
 local function solidAt(level, wx, wy, checkPlatform)
     local id = level:getTileAt(wx, wy)
     if id==TILE_SOLID or id==TILE_BORDER then return true, id end
-    if checkPlatform and id==TILE_PLATFORM then return true, id end
+    if checkPlatform and isPlatform(id) then return true, id end
     return false, id
+end
+
+-- Si el jugador (en el suelo) está apoyado SOLO sobre plataformas
+-- traspasables, devuelve la Y de su cara superior; si algo no traspasable lo
+-- sostiene (sólido, borde, plataforma normal), devuelve nil.
+local function dropPlatformTop(pa, level)
+    local ob    = pa:getOuterBounds()
+    local footY = ob.y + ob.h + 2
+    local found = false
+    for _, cx in ipairs({ pa.x - pa.w/2 + 4, pa.x, pa.x + pa.w/2 - 4 }) do
+        local id = level:getTileAt(cx, footY)
+        if id == TILE_PLATFORM_DROP then
+            found = true
+        elseif id == TILE_SOLID or id == TILE_BORDER or id == TILE_PLATFORM then
+            return nil
+        end
+    end
+    return found and math.floor(footY / TILE_PX) * TILE_PX or nil
 end
 
 -- Comprueba si un pincho dado (dir, pos) realmente golpea al jugador
@@ -165,15 +193,12 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
         for _,px in ipairs(chx) do
             local hit,id = solidAt(level,px,y+hh,true)
             if hit then
-                if id==TILE_PLATFORM then
-                    -- Si está agachado sobre plataforma → caer a través
-                    if self.dropThrough then
-                        -- No colisionar con plataformas
-                    else
-                        local top=math.floor((y+hh)/TILE_PX)*TILE_PX
-                        if prevFoot<=top+2 then
-                            y=top-hh; self.vy=0; self.onGround=true; self.jumpsLeft=2; break
-                        end
+                if isPlatform(id) then
+                    local top=math.floor((y+hh)/TILE_PX)*TILE_PX
+                    -- Bajando a través de ESTA plataforma traspasable: no colisionar
+                    local passing = self.dropping and id==TILE_PLATFORM_DROP and top==self.dropTop
+                    if not passing and prevFoot<=top+2 then
+                        y=top-hh; self.vy=0; self.onGround=true; self.jumpsLeft=2; break
                     end
                 else
                     y=math.floor((y+hh)/TILE_PX)*TILE_PX-hh
@@ -190,6 +215,13 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
     end
 
     self.x, self.y = x, y-OUTER_YOFF
+
+    -- Fin de la bajada: los pies ya pasaron la zona en la que la plataforma
+    -- volvería a "atraparlos" (prevFoot se mide OUTER_YOFF más arriba que los
+    -- pies reales, más el margen de 2px del aterrizaje), o aterrizó en otra cosa.
+    if self.dropping and (self.onGround or y + hh > self.dropTop + OUTER_YOFF + 4) then
+        self.dropping = false
+    end
 
     -- Zona de muerte (inner hitbox)
     local iw2, ih2 = INNER_W/2, INNER_H/2
@@ -249,7 +281,7 @@ function PlayerAdventure:respawn()
     self.vx=0; self.vy=0; self.onGround=false; self.jumpsLeft=2
     self.dying=false; self.alive=true; self.deathPhase=nil; self.deathTimer=0
     self.frame=3; self.puff=1; self.hp=self.hpMax; self.inWater=false
-    self.crouching=false; self.dropThrough=false
+    self.crouching=false; self.dropHoldT=0; self.dropping=false; self.dropTop=0
     self.drownTimer=0; self.drownChime=0; self.drownPhase='none'
     self.drownAudT=0; self.drownDead=false
     self.prevInWater=false
@@ -378,24 +410,22 @@ function PlayerAdventure:update(dt, level)
         self.crouching = false
     end
 
-    -- Drop through: al agacharse sobre plataforma, activar por un frame para caer
-    if self.crouching and self.onGround then
-        -- Detectar si estamos sobre una plataforma
-        local ob = self:getOuterBounds()
-        local footY = ob.y + ob.h + 2
-        local onPlatform = false
-        local checkXs = {self.x - self.w/2 + 4, self.x, self.x + self.w/2 - 4}
-        for _, cx in ipairs(checkXs) do
-            local tid = level:getTileAt(cx, footY)
-            if tid == TILE_PLATFORM then onPlatform = true; break end
-        end
-        if onPlatform and Input.pressed('crouch') then
-            self.dropThrough = true
-            self.onGround = false
-            self.vy = 60   -- empujoncito hacia abajo
+    -- Bajar por plataforma traspasable: hay que MANTENER agachado DROP_DELAY
+    -- segundos (margen contra agachados accidentales). Las plataformas no
+    -- traspasables nunca dejan bajar.
+    local dropTop = (self.crouching and self.onGround) and dropPlatformTop(self, level) or nil
+    if dropTop then
+        self.dropHoldT = self.dropHoldT + dt
+        if self.dropHoldT >= DROP_DELAY then
+            self.dropHoldT = 0
+            self.dropping  = true
+            self.dropTop   = dropTop
+            self.onGround  = false
+            self.crouching = false
+            self.vy        = DROP_PUSH
         end
     else
-        self.dropThrough = false
+        self.dropHoldT = 0
     end
 
     if not self.crouching then

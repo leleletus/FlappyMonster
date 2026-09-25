@@ -85,7 +85,7 @@ end
 -- ── Helpers ───────────────────────────────────────────────────────────────────
 local function solidAt(level, wx, wy)
     local id = level:getTileAt(wx, wy)
-    return id == TILE_SOLID or id == TILE_BORDER or id == TILE_PLATFORM
+    return id == TILE_SOLID or id == TILE_BORDER or id == TILE_PLATFORM or id == TILE_PLATFORM_DROP
 end
 
 local function randRange(a, b)

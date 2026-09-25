@@ -89,6 +89,8 @@ TILE_SPIKE_D = 6   -- pincho apuntando abajo
 TILE_SPIKE_L = 7   -- pincho apuntando izquierda
 TILE_SPIKE_R = 8   -- pincho apuntando derecha
 TILE_WATER   = 9   -- agua traversable
+TILE_PLATFORM_DROP = 10  -- one-way traspasable: además se baja agachándose
+-- (TILE_PLATFORM = 2 solo permite atravesarla subiendo)
  
 -- Física del agua (usadas en PlayerAdventure)
 WATER_GRAVITY_MULT = 0.30   -- gravedad * este factor dentro del agua

@@ -586,6 +586,35 @@ function Level:render(camX, camY)
                 love.graphics.setColor(0.20, 0.20, 0.24, 1)
                 love.graphics.rectangle('fill', px, py+visH-2, TILE_PX, 2)
 
+            elseif id == TILE_PLATFORM_DROP then
+                -- Plataforma traspasable (se baja agachándose): pasarela de
+                -- madera delgada, tablones con rendijas y flechas hacia abajo.
+                -- Distinta en forma y color de la losa gris no traspasable.
+                local visH  = math.floor(TILE_PX * 0.36)
+                local plank = TILE_PX / 4
+
+                -- Tablones (tonos alternos) con rendija de 2px entre ellos
+                for i = 0, 3 do
+                    local shade = (i % 2 == 0) and 0 or 0.07
+                    love.graphics.setColor(0.86 + shade, 0.52 + shade, 0.12, 1)
+                    love.graphics.rectangle('fill', px + i*plank, py, plank - 2, visH)
+                end
+
+                -- Canto superior claro
+                love.graphics.setColor(1.00, 0.86, 0.45, 1)
+                love.graphics.rectangle('fill', px, py, TILE_PX, 3)
+
+                -- Sombra inferior
+                love.graphics.setColor(0.45, 0.24, 0.05, 1)
+                love.graphics.rectangle('fill', px, py+visH-3, TILE_PX, 3)
+
+                -- Flechas hacia abajo bajo la pasarela ("se puede bajar")
+                love.graphics.setColor(1.00, 0.80, 0.30, 0.85)
+                local ay = py + visH + 6
+                for _, cx in ipairs({ px + TILE_PX*0.25, px + TILE_PX*0.75 }) do
+                    love.graphics.polygon('fill', cx-8, ay, cx+8, ay, cx, ay+8)
+                end
+
             elseif id == TILE_DANGER then
                 love.graphics.setColor(0.80, 0.08, 0.08, 1)
                 love.graphics.rectangle('fill', px, py, TILE_PX, TILE_PX)
@@ -636,9 +665,9 @@ function Level:renderWaterEffect(camX, camY, sceneCanvas)
             local py  = math.floor((row-1)*TILE_PX - camY)
 
             if id == TILE_WATER or wl then
-                if wl and id == TILE_PLATFORM then
+                if wl and (id == TILE_PLATFORM or id == TILE_PLATFORM_DROP) then
                     -- Parte superior (donde está el sprite): distorsión normal
-                    local visH  = math.floor(TILE_PX * 0.72)
+                    local visH  = math.floor(TILE_PX * (id == TILE_PLATFORM and 0.72 or 0.36))
                     local gapY  = py + visH
                     local gapH  = TILE_PX - visH
                     setTransformedScissor(px, py, TILE_PX, visH)
