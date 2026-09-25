@@ -258,7 +258,7 @@ return {
     props = {
         { key='canHide', kind='bool', label='Se esconde (pincho)', group='Comportamiento', default=true,
           showIf=function(p) return p.pauses end },
-        { key='hideChance', kind='number', label='Probabilidad de esconderse', group='Comportamiento',
+        { key='hideChance', kind='number', label='Prob. de esconderse', group='Comportamiento',
           default=0.75, min=0, max=1, step=0.05,
           showIf=function(p) return p.pauses and p.canHide end },
     },

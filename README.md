@@ -43,6 +43,36 @@ love server --headless
 
 ---
 
+## Editor de Niveles
+
+```bash
+love . --editor                               # abre assets/levels/nivel01.json
+love . --editor assets/levels/otro.json
+```
+
+Corre dentro del propio juego y usa sus mismos catalogos, dibujo y assets: todo tile, material o entidad nuevo aparece solo en la paleta.
+
+* Capas (teclas 1-6): Bloques, Agua (celdas sumergidas sobre cualquier bloque), Pinchos (subceldas, 4 direcciones), Entidades, Decoracion, Especial (inicio del jugador y vents de oxigeno).
+* Herramientas: Pincel (B), Rectangulo (R), Linea (L), Relleno (F), Borrar (E / clic derecho), Cuentagotas (I), Seleccionar (V).
+* Entidades: al seleccionarlas, el panel derecho muestra TODAS sus propiedades (movimiento, suelo/techo, velocidad, direccion, ruta con limites, pausas, hostilidad, puntos...). La ruta se ve como una linea con dos cajitas que se arrastran en el mapa. Si una entidad cae desde donde se coloco, se marca su caida.
+* Deshacer/Rehacer (Ctrl+Z / Ctrl+Y), zoom con la rueda, mover la vista con clic central, Espacio+arrastrar o flechas, redimensionar el mapa, enmarcar con borde, avisos de validacion (clic para ir a la entidad).
+* Probar (F5): juega el nivel al instante; F10 vuelve al editor.
+* Guarda en `assets/levels/` (hay que ejecutar el juego desde su carpeta). El JSON guarda una fila de tiles por linea y solo las propiedades distintas del valor por defecto, asi los diffs de git son legibles.
+
+---
+
+## Anadir Contenido (tiles, materiales, entidades)
+
+Todo es declarativo y se registra en un unico listado; el juego, el servidor online y el editor lo reconocen sin tocar nada mas.
+
+* Tile nuevo: crea `src/world/tiles/types/<nombre>.lua` con un `id` nuevo (0-255, nunca reutilizar) y anade su nombre a `TYPES` en `src/world/Tiles.lua`. Campos: `collision` (none/solid/oneway), `dropThrough`, `hitbox` parcial, `material`, `joinGroup`, y aspecto con `draw`, `texture` (imagen o tira animada) o `color`. Ver cabecera de `src/world/tiles/TileTypes.lua`.
+* Material nuevo (hielo, barro, cinta, espinas, lava...): `src/world/tiles/materials/<nombre>.lua` + `MATERIALS` en `src/world/Tiles.lua`. Campos: `friction`, `speedMult`, `conveyor`, `contact` (kill/hurt) y fisica de liquido (`liquid`, `gravityMult`, `jumpMult`, `drag`, `drown`, `tint`...). Ver `src/world/tiles/Materials.lua`.
+* Entidad nueva (enemigo, NPC...): `src/world/entities/types/<nombre>.lua` + `TYPES` en `src/world/Entities.lua`. Hereda de `Entity` (movimiento, ruta, pausas, combate ya resueltos); solo define sprites, dibujo, sus valores por defecto y, si quiere, propiedades y comportamiento propios mediante hooks. Receta completa en la cabecera de `src/world/Entities.lua`.
+* Propiedad nueva para TODAS las entidades: anadirla a `EntityTypes.COMMON` (`src/world/entities/EntityTypes.lua`); el editor la muestra automaticamente.
+* Formato de celda: `src/world/tiles/TileCodec.lua` (id, agua, pinchos). Reglas jugador-entidad: `src/world/entities/Interactions.lua`.
+
+---
+
 ## Despliegue en Ubuntu Server
 
 El servidor esta optimizado para funcionar en entornos de produccion Linux sin interfaz grafica (headless).

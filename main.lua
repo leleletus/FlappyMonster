@@ -206,3 +206,14 @@ function love.mousepressed(x, y, button, istouch, presses)
 end
 
 function love.quit() end
+
+-- ── Editor de niveles ─────────────────────────────────────────────────────────
+-- love . --editor [assets/levels/x.json]   (reemplaza los callbacks del juego;
+-- el juego se usa para "Probar" el nivel desde el editor)
+for i, a in ipairs(arg or {}) do
+    if a == '--editor' then
+        local nxt = arg[i + 1]
+        require('src/editor/Editor').install(nxt and nxt:match('%.json$') and nxt or nil)
+        break
+    end
+end

@@ -233,15 +233,27 @@ local function findWaterBodies(level)
 end
 
 -- ── Constructor ───────────────────────────────────────────────────────────────
+-- Decoraciones colocables (editor): tipo → { label, sub = usa subceldas, icon }
+Level.FOLIAGE_TYPES = {
+    { name = 'tulip',    label = 'Tulipan',    sub = true,  icon = 'assets/images/foliage/tulip.png' },
+    { name = 'stretch',  label = 'Estiradora', sub = true,  icon = 'assets/images/foliage/strech/strech1.png' },
+    { name = 'palmtree', label = 'Palmera',    sub = false, icon = 'assets/images/foliage/Palmtree/palmtree.png' },
+}
+
 function Level.new(path)
+    local data = love.filesystem.read(path)
+    assert(data, "No se pudo leer: "..tostring(path))
+    return Level.fromData(json.decode(data))
+end
+
+-- Construye el nivel desde la tabla ya decodificada (el editor la usa para
+-- mostrar su nivel en memoria sin guardarlo).
+function Level.fromData(lvl)
     local self = setmetatable({}, Level)
     loadWaterShader()
     loadBubbleImgs()
     loadVentImg()
     loadFoliageImgs()
-    local data = love.filesystem.read(path)
-    assert(data, "No se pudo leer: "..tostring(path))
-    local lvl = json.decode(data)
     self.name        = lvl.name or "?"
     self.tileW       = lvl.width
     self.tileH       = lvl.height
@@ -404,6 +416,11 @@ end
 -- Material líquido en el punto (agua, waterlogged...), o nil.
 function Level:liquidAt(wx, wy)
     return liquidOfRaw(self:getRawAt(wx, wy))
+end
+
+-- Material líquido de una celda (col,row), o nil.
+function Level:liquidOfCell(col, row)
+    return liquidOfRaw(self:getRaw(col, row))
 end
 
 function Level:isWaterAt(wx, wy)

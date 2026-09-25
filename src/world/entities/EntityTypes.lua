@@ -81,6 +81,16 @@ function EntityTypes.register(def)
     end
     for _, p in ipairs(t.props or {}) do table.insert(t.schema, p) end
 
+    -- Agrupar por `group` (orden de primera aparición) para el editor
+    local order, byGroup = {}, {}
+    for _, p in ipairs(t.schema) do
+        local g = p.group or 'General'
+        if not byGroup[g] then byGroup[g] = {}; order[#order+1] = g end
+        table.insert(byGroup[g], p)
+    end
+    t.schema = {}
+    for _, g in ipairs(order) do for _, p in ipairs(byGroup[g]) do table.insert(t.schema, p) end end
+
     t.class.def = t
     EntityTypes.byName[t.name] = t
     table.insert(EntityTypes.list, t)
