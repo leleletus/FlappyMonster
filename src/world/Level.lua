@@ -378,10 +378,18 @@ function Level:isWaterAt(wx, wy)
     return id == TILE_WATER or isWaterloggedRaw(raw)
 end
 
+-- La caja es semiabierta [bx, bx+bw) x [by, by+bh): los bordes derecho e
+-- inferior NO pertenecen a la caja. Si un borde cae justo en el límite de un
+-- tile (pies apoyados sobre un slab sumergido), ese tile es el de al lado, no
+-- uno en el que estemos. Sin esto, la hitbox de pie y la de agachado (misma
+-- base, calculada con distinto redondeo) daban resultados distintos y el
+-- jugador alternaba agacharse/levantarse cada frame.
+local EDGE_EPS = 1e-6
 function Level:isInWater(bx, by, bw, bh)
+    local rx, ry = bx + bw - EDGE_EPS, by + bh - EDGE_EPS
     local pts = {
-        {bx,      by      },{bx+bw,   by      },
-        {bx,      by+bh   },{bx+bw,   by+bh   },
+        {bx,      by      },{rx,      by      },
+        {bx,      ry      },{rx,      ry      },
         {bx+bw/2, by+bh/2 },
     }
     for _, p in ipairs(pts) do
