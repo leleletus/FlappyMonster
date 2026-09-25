@@ -9,6 +9,7 @@ local Tiles     = require 'src/world/Tiles'
 local TileCodec = Tiles.codec
 local TileTypes = Tiles.types
 local Materials = Tiles.materials
+local EntityTypes = require('src/world/Entities').types   -- carga el catálogo
 
 local Level = {}
 Level.__index = Level
@@ -247,7 +248,15 @@ function Level.new(path)
     self.playerStart = lvl.playerStart
     self.widthPx     = self.tileW * TILE_PX
     self.heightPx    = self.tileH * TILE_PX
-    self.enemies     = lvl.enemies or {}
+    -- Entidades (enemigos, NPCs): colocaciones normalizadas con sus
+    -- propiedades resueltas. Acepta el formato nuevo (`entities`) y el antiguo
+    -- (`enemies` con leftBound/rightBound/flipped). Tipos desconocidos se omiten.
+    self.entities    = {}
+    for _, ed in ipairs(lvl.entities or lvl.enemies or {}) do
+        local n = EntityTypes.normalize(ed)
+        if n then table.insert(self.entities, n) end
+    end
+    self.enemies     = self.entities   -- alias de compatibilidad
     self.tiles = {}
     for r = 1, self.tileH do
         self.tiles[r] = {}

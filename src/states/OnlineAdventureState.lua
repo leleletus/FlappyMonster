@@ -10,8 +10,7 @@
 
 local BaseState            = require 'src/BaseState'
 local Level                = require 'src/world/Level'
-local Gummy                = require 'src/entities/Gummy'
-local Crabby               = require 'src/entities/Crabby'
+local Entities             = require 'src/world/Entities'
 local PlayerAdventure      = require 'src/entities/PlayerAdventure'
 local OnlinePlayer         = require 'src/entities/OnlinePlayer'
 local NC                   = require 'src/network/NetworkClient'
@@ -118,13 +117,8 @@ function OnlineAdventureState:enter(args)
     -- Crear renderers de enemigos desde los datos del nivel
     -- El servidor controla su estado; el cliente solo los dibuja
     self.enemyRenderers = {}
-    for i, edata in ipairs(self.level.enemies) do
-        local e
-        if edata.type == 'gummy' then
-            e = Gummy:new(edata)
-        elseif edata.type == 'crabby' then
-            e = Crabby:new(edata)
-        end
+    for i, placement in ipairs(self.level.entities) do
+        local e = Entities.create(placement)
         if e then self.enemyRenderers[i] = e end
     end
 
@@ -336,10 +330,11 @@ function OnlineAdventureState:_applyInterpolation()
             -- Temporizadores: interpolar solo si avanzan (se reinician a 0)
             er.deadTimer = ((db[7] >= da[7]) and lerp(da[7], db[7], f) or db[7]) / 100
             er.breatheT  = ((db[8] >= da[8]) and lerp(da[8], db[8], f) or db[8]) / 100
-            if db[9] then
-                er.spikeProgress = lerp(da[9] or db[9], db[9], f) / 1000
-                er.flipped       = d[10] or false
-                if d[11] then er:setImgFromName(d[11]) end
+            -- Datos propios del tipo (desde el índice 9): los interpreta la entidad
+            if db[9] ~= nil then
+                local xa, xb = {}, {}
+                for k = 9, #db do xb[#xb+1] = db[k]; xa[#xa+1] = da[k] end
+                er:netApply(xa, xb, f)
             end
         end
     end
@@ -553,42 +548,19 @@ end
 function OnlineAdventureState:_checkLocalBounce()
     local pa = self.localPa
     if pa.dying then return end
-    local pob = pa:getOuterBounds()
-
     for idx, er in pairs(self.enemyRenderers) do
         local cd = self.localBounceCooldown[idx] or 0
-        if cd <= 0 and er.alive and er.state ~= 'dead' then
-            -- Saltarse si el cuerpo del Crabby está desactivado (escondido)
-            if not (er.isBodyDisabled and er:isBodyDisabled()) then
-                local gib = er:getInnerBounds()
-                local gob = er:getOuterBounds()
-                local overlap = pob.x < gib.x+gib.w and pob.x+pob.w > gib.x and
-                                pob.y < gib.y+gib.h and pob.y+pob.h > gib.y
-                if overlap then
-                    local bvy
-                    if er.flipped then
-                        -- Crabby volteado: pisotón desde abajo (jugador sube)
-                        local enemyBotZone = gob.y + gob.h * 0.65
-                        if pa.vy < 0 and pob.y > enemyBotZone - 10 then
-                            bvy = math.abs(ADV_JUMP_VEL) * 0.40
-                        end
-                    else
-                        -- Gummy / Crabby normal: pisotón desde arriba (jugador cae)
-                        local gummyTopZone = gob.y + gob.h * 0.35
-                        if pa.vy > 0 and pob.y+pob.h < gummyTopZone + 10 then
-                            bvy = -math.abs(ADV_JUMP_VEL) * 0.40
-                        end
-                    end
-                    if bvy then
-                        pa.vy        = bvy
-                        pa.jumpsLeft = 2
-                        pa.onGround  = false
-                        self.localBounceCooldown[idx] = 0.3
-                        self.predictor:recordBounce(bvy)
-                        Sound.play('enemyExplode')
-                        return
-                    end
-                end
+        if cd <= 0 then
+            -- Mismas reglas que el servidor; aquí solo se predice el rebote
+            local result, bvy = Entities.interactions.check(pa, er)
+            if result == 'stomp' then
+                pa.vy        = bvy
+                pa.jumpsLeft = 2
+                pa.onGround  = false
+                self.localBounceCooldown[idx] = 0.3
+                self.predictor:recordBounce(bvy)
+                Sound.play('enemyExplode')
+                return
             end
         end
     end

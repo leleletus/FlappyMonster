@@ -2,8 +2,7 @@
 local BaseState       = require 'src/BaseState'
 local Level           = require 'src/world/Level'
 local PlayerAdventure = require 'src/entities/PlayerAdventure'
-local Gummy           = require 'src/entities/Gummy'
-local Crabby          = require 'src/entities/Crabby'
+local Entities        = require 'src/world/Entities'
 
 local AdventureState = BaseState:new()
 
@@ -59,14 +58,11 @@ function AdventureState:enter(args)
     local sx, sy = self.level:getSpawnPx()
     self.player = PlayerAdventure:new(sx, sy)
 
-    -- Instanciar enemigos desde los datos del nivel
+    -- Instanciar entidades (enemigos, NPCs) desde el catálogo
     self.enemies = {}
-    for _, edata in ipairs(self.level.enemies) do
-        if edata.type == 'gummy' then
-            table.insert(self.enemies, Gummy:new(edata))
-        elseif edata.type == 'crabby' then
-            table.insert(self.enemies, Crabby:new(edata))
-        end
+    for _, placement in ipairs(self.level.entities) do
+        local e = Entities.create(placement)
+        if e then table.insert(self.enemies, e) end
     end
 
     self.camX = 0
@@ -202,74 +198,26 @@ function AdventureState:updateCamera(dt)
     if self.bgScrollY >= bgH then self.bgScrollY = self.bgScrollY - bgH end
 end
 
--- ── Colisión jugador ↔ enemigos ───────────────────────────────────────────────
+-- ── Colisión jugador ↔ entidades ──────────────────────────────────────────────
+-- Las reglas (pinchos, pisotón, hostilidad) viven en entities/Interactions.lua
 function AdventureState:checkEnemyCollisions()
     local player = self.player
     if player.dying or not player.alive then return end
 
-    local pob = player:getOuterBounds()
-
     for _, g in ipairs(self.enemies) do
-        if g.alive and g.state ~= 'dead' then
-
-            -- ── Colisión con pincho del Crabby ────────────────────────────────
-            if g.getSpikeHitbox then
-                local spk = g:getSpikeHitbox()
-                if spk then
-                    if pob.x < spk.x + spk.w and pob.x + pob.w > spk.x and
-                       pob.y < spk.y + spk.h and pob.y + pob.h > spk.y then
-                        player:die()
-                        return
-                    end
-                end
-            end
-
-            -- ── Si el cuerpo está desactivado (hid.png), saltar colisión ──────
-            if g.isBodyDisabled and g:isBodyDisabled() then goto continue_enemy end
-
-            local gib = g:getInnerBounds()
-            local gob = g:getOuterBounds()
-
-            -- Solapamiento AABB (outer jugador vs inner enemigo)
-            if pob.x < gib.x + gib.w and pob.x + pob.w > gib.x and
-               pob.y < gib.y + gib.h and pob.y + pob.h > gib.y then
-
-                local isFlipped = g.flipped or false
-
-                if isFlipped then
-                    local playerTop     = pob.y
-                    local enemyBotZone  = gob.y + gob.h * 0.65
-
-                    if player.vy < 0 and playerTop > enemyBotZone - 10 then
-                        g:stomp()
-                        player.vy = math.abs(ADV_JUMP_VEL) * 0.40
-                        player.jumpsLeft = 2
-                        local pts = 15
-                        self.score = self.score + pts
-                        self:spawnPopup('+' .. pts .. '!', g.x, g.y + g.outerH / 2)
-                    else
-                        player:die()
-                        return
-                    end
-                else
-                    local playerBottom  = pob.y + pob.h
-                    local gummyTopZone  = gob.y + gob.h * 0.35
-
-                    if player.vy > 0 and playerBottom < gummyTopZone + 10 then
-                        g:stomp()
-                        player.vy = -math.abs(ADV_JUMP_VEL) * 0.40
-                        player.jumpsLeft = 2
-                        local pts = (g.isBodyDisabled and 15) or 10
-                        self.score = self.score + pts
-                        self:spawnPopup('+' .. pts .. '!', g.x, g.y - g.outerH / 2)
-                    else
-                        player:die()
-                        return
-                    end
-                end
-            end
-
-            ::continue_enemy::
+        local result, bounceVy, pts = Entities.interactions.check(player, g)
+        if result == 'kill' then
+            player:die()
+            return
+        elseif result == 'hurt' then
+            if player:hurt() then return end
+        elseif result == 'stomp' then
+            g:stomp()
+            player.vy = bounceVy
+            player.jumpsLeft = 2
+            self.score = self.score + pts
+            local popY = g.flipped and (g.y + g.outerH / 2) or (g.y - g.outerH / 2)
+            self:spawnPopup('+' .. pts .. '!', g.x, popY)
         end
     end
 end

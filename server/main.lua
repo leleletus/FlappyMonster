@@ -91,7 +91,7 @@ Input = Protocol.newInputStub()
 local _inp = Input.state
 
 -- Clases de entidades (cargadas en love.load).
-local Level, PlayerAdventure, Gummy, Crabby
+local Level, PlayerAdventure, Entities
 
 -- Constantes que deben coincidir con PlayerAdventure.lua
 local DROWN_TOTAL     = 20
@@ -193,14 +193,9 @@ local function initRoomSim(room)
                   gameOverSent=false, levelTime=0, timeLimitKilled=false,
                   nextBubbleId=0 }
 
-    -- Crear instancias de enemigos del nivel
-    for _, edata in ipairs(level.enemies) do
-        local e
-        if edata.type == 'gummy' then
-            e = Gummy:new(edata); e._type = 'gummy'
-        elseif edata.type == 'crabby' then
-            e = Crabby:new(edata); e._type = 'crabby'
-        end
+    -- Crear instancias de las entidades del nivel (enemigos, NPCs)
+    for _, placement in ipairs(level.entities) do
+        local e = Entities.create(placement)
         if e then table.insert(sim.enemies, e) end
     end
 
@@ -244,60 +239,26 @@ end
 local function checkPlayerEnemyCollisions(sim, pid, ps, seq)
     local pa = ps.pa
     if ps.isSpectator or pa.dying or not pa.alive then return end
-    local pob = pa:getOuterBounds()
 
     for _, g in ipairs(sim.enemies) do
-        if g.alive and g.state ~= 'dead' then
-            -- Pincho del Crabby
-            local spikeHit = false
-            if g.getSpikeHitbox then
-                local spk = g:getSpikeHitbox()
-                if spk and
-                   pob.x < spk.x+spk.w and pob.x+pob.w > spk.x and
-                   pob.y < spk.y+spk.h and pob.y+pob.h > spk.y then
-                    spikeHit = true
-                end
-            end
-
-            if spikeHit then
-                _currentSoundPlayerId = pid; pa:die(); _currentSoundPlayerId = nil
-                return
-            elseif not (g.isBodyDisabled and g:isBodyDisabled()) then
-                local gib = g:getInnerBounds()
-                local gob = g:getOuterBounds()
-                local overlap = pob.x < gib.x+gib.w and pob.x+pob.w > gib.x and
-                                pob.y < gib.y+gib.h and pob.y+pob.h > gib.y
-
-                if overlap then
-                    local bvy, pts
-                    if g.flipped then
-                        local enemyBotZone = gob.y + gob.h * 0.65
-                        if pa.vy < 0 and pob.y > enemyBotZone - 10 then
-                            bvy = math.abs(ADV_JUMP_VEL) * 0.40
-                            pts = 15
-                        end
-                    else
-                        local gummyTopZone = gob.y + gob.h * 0.35
-                        if pa.vy > 0 and pob.y+pob.h < gummyTopZone + 10 then
-                            bvy = -math.abs(ADV_JUMP_VEL) * 0.40
-                            pts = (g.isBodyDisabled and 15) or 10
-                        end
-                    end
-
-                    if bvy then
-                        -- El sonido del pisotón se etiqueta con quien lo hizo:
-                        -- ese cliente ya lo reprodujo al predecir el rebote.
-                        _currentSoundPlayerId = pid; g:stomp(); _currentSoundPlayerId = nil
-                        pa.vy = bvy; pa.jumpsLeft = 2
-                        ps.score = ps.score + pts
-                        ps.bounceSeq = seq
-                        pushEvent(sim, { type='score', playerId=pid, delta=pts, x=round(g.x), y=round(g.y) })
-                    else
-                        _currentSoundPlayerId = pid; pa:die(); _currentSoundPlayerId = nil
-                        return
-                    end
-                end
-            end
+        -- Reglas compartidas con el modo un jugador (entities/Interactions.lua)
+        local result, bvy, pts = Entities.interactions.check(pa, g)
+        if result == 'kill' then
+            _currentSoundPlayerId = pid; pa:die(); _currentSoundPlayerId = nil
+            return
+        elseif result == 'hurt' then
+            _currentSoundPlayerId = pid
+            local died = pa:hurt()
+            _currentSoundPlayerId = nil
+            if died then return end
+        elseif result == 'stomp' then
+            -- El sonido del pisotón se etiqueta con quien lo hizo:
+            -- ese cliente ya lo reprodujo al predecir el rebote.
+            _currentSoundPlayerId = pid; g:stomp(); _currentSoundPlayerId = nil
+            pa.vy = bvy; pa.jumpsLeft = 2
+            ps.score = ps.score + pts
+            ps.bounceSeq = seq
+            pushEvent(sim, { type='score', playerId=pid, delta=pts, x=round(g.x), y=round(g.y) })
         end
     end
 end
@@ -581,11 +542,9 @@ local function broadcastSnapshot(room)
             round(e.x), round(e.y), e.facing, e.state, e.frame, e.alive,
             round((e.deadTimer or 0) * 100), round((e.breatheT or 0) * 100),
         }
-        if e._type == 'crabby' then
-            entry[9]  = round((e.spikeProgress or 0) * 1000)
-            entry[10] = e.flipped and true or false
-            entry[11] = e:getImgName()
-        end
+        -- Datos propios del tipo (p. ej. pincho y sprite del Crabby)
+        local extra = e:netPack()
+        if extra then for k, v in ipairs(extra) do entry[8 + k] = v end end
         elist[i] = entry
     end
 
@@ -1112,8 +1071,7 @@ function love.load()
     -- Cargar entidades (en modo ventana usa graphics real; en headless usa stubs)
     Level           = require 'src/world/Level'
     PlayerAdventure = require 'src/entities/PlayerAdventure'
-    Gummy           = require 'src/entities/Gummy'
-    Crabby          = require 'src/entities/Crabby'
+    Entities        = require 'src/world/Entities'
 
     log("Entidades de simulacion cargadas.")
     if HEADLESS then

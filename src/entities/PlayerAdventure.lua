@@ -244,10 +244,7 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
         local t = level:contactAt(c[1],c[2])
         if t then
             if t.mat.contact == 'kill' then self:die(); return end
-            if t.mat.contact == 'hurt' and self.hurtT <= 0 then
-                self.hurtT = HURT_COOLDOWN
-                if self:takeDamage() then return end
-            end
+            if t.mat.contact == 'hurt' and self:hurt() then return end
         end
     end
 
@@ -278,6 +275,14 @@ function PlayerAdventure:takeDamage()
     self.hp=self.hp-1
     if self.hp<=0 then self.hp=self.hpMax; self:die(); return true end
     Sound.play('dies'); return false
+end
+
+-- Daño con invulnerabilidad breve (tiles 'hurt', entidades onTouch='hurt').
+-- Devuelve true si el golpe lo mató.
+function PlayerAdventure:hurt()
+    if self.hurtT > 0 or self.dying or not self.alive then return false end
+    self.hurtT = HURT_COOLDOWN
+    return self:takeDamage()
 end
 
 function PlayerAdventure:die(drownDeath)
