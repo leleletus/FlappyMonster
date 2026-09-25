@@ -6,6 +6,7 @@ local json     = require 'libs/json'
 local Tiles    = require 'src/world/Tiles'
 local Entities = require 'src/world/Entities'
 local Level    = require 'src/world/Level'
+local DT       = require('src/world/Decorations').types
 
 local Codec = Tiles.codec
 local ET    = Entities.types
@@ -57,7 +58,11 @@ function Model.fromData(lvl, path)
         local n = ET.normalize(ed)
         if n then table.insert(m.entities, n) end
     end
-    m.foliage = deepcopy(lvl.foliage or {})
+    m.foliage = {}
+    for _, fd in ipairs(lvl.foliage or {}) do
+        local n = DT.normalize(fd)
+        if n then table.insert(m.foliage, n) end
+    end
     m.vents   = deepcopy(lvl.vents or {})
     m.path    = path
     return m
@@ -75,10 +80,12 @@ end
 function Model:toData()
     local ents = {}
     for _, e in ipairs(self.entities) do table.insert(ents, ET.serialize(e)) end
+    local decos = {}
+    for _, d in ipairs(self.foliage) do table.insert(decos, DT.serialize(d)) end
     return {
         name = self.name, width = self.width, height = self.height,
         playerStart = self.playerStart, tiles = self.tiles,
-        entities = ents, foliage = self.foliage, vents = self.vents,
+        entities = ents, foliage = decos, vents = self.vents,
     }
 end
 

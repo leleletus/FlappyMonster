@@ -437,6 +437,7 @@ function AdventureState:render()
 
     self.level:render(self.camX, self.camY)
     self.level:renderVents(self.camX, self.camY)
+    self.level:renderFoliageBack(self.camX, self.camY)
 
     -- Renderizar enemigos (entre tiles y jugador)
     for _, g in ipairs(self.enemies) do

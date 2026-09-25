@@ -754,6 +754,7 @@ function OnlineAdventureState:render()
     -- Nivel
     self.level:render(self.camX, self.camY)
     self.level:renderVents(self.camX, self.camY)
+    self.level:renderFoliageBack(self.camX, self.camY)
 
     -- Enemigos (estado controlado por el servidor)
     for i, er in pairs(self.enemyRenderers) do

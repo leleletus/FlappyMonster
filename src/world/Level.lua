@@ -10,6 +10,7 @@ local TileCodec = Tiles.codec
 local TileTypes = Tiles.types
 local Materials = Tiles.materials
 local EntityTypes = require('src/world/Entities').types   -- carga el catálogo
+local DecorationTypes = require('src/world/Decorations').types
 
 local Level = {}
 Level.__index = Level
@@ -105,46 +106,6 @@ local function loadVentImg()
     if ok then ventImg = img end
 end
 
--- ── Foliage (decoraciones) ──────────────────────────────────────────────────
-local foliageImgs = nil
-
--- Constantes de animación
-local TULIP_BREATHE_SPEED = 1.8
-local TULIP_BREATHE_AMP   = 0.05
-
-local STRETCH_FPS    = 3
-local STRETCH_FRAMES = 5
--- Duración total de un ciclo completo (ida 1→5 + vuelta 5→1)
-local STRETCH_CYCLE  = (STRETCH_FRAMES - 1) * 2 / STRETCH_FPS
-
-local PALM_SWAY_SPEED = 1.2
-local PALM_SWAY_AMP   = 0.06
-
-local function loadFoliageImgs()
-    if foliageImgs then return end
-    foliageImgs = {}
-
-    -- Tulip
-    local ok, img = pcall(love.graphics.newImage, 'assets/images/foliage/tulip.png')
-    if ok then foliageImgs.tulip = img end
-
-    -- Stretch (5 frames)
-    foliageImgs.stretch = {}
-    for i = 1, STRETCH_FRAMES do
-        local ok2, img2 = pcall(love.graphics.newImage, 'assets/images/foliage/strech/strech'..i..'.png')
-        if ok2 then foliageImgs.stretch[i] = img2 end
-    end
-
-    -- Palmtree (3 partes)
-    local ok3, img3
-    ok3, img3 = pcall(love.graphics.newImage, 'assets/images/foliage/Palmtree/palmtree.png')
-    if ok3 then foliageImgs.palmtree = img3 end
-    ok3, img3 = pcall(love.graphics.newImage, 'assets/images/foliage/Palmtree/palmleaves.png')
-    if ok3 then foliageImgs.palmleaves = img3 end
-    ok3, img3 = pcall(love.graphics.newImage, 'assets/images/foliage/Palmtree/coques.png')
-    if ok3 then foliageImgs.palmcocos = img3 end
-end
-
 -- Partículas normales: bubble2 y bubble3 (rápidas, seguidas)
 local VENT_NORM_SPEED_MIN = 28
 local VENT_NORM_SPEED_MAX = 55
@@ -233,13 +194,6 @@ local function findWaterBodies(level)
 end
 
 -- ── Constructor ───────────────────────────────────────────────────────────────
--- Decoraciones colocables (editor): tipo → { label, sub = usa subceldas, icon }
-Level.FOLIAGE_TYPES = {
-    { name = 'tulip',    label = 'Tulipan',    sub = true,  icon = 'assets/images/foliage/tulip.png' },
-    { name = 'stretch',  label = 'Estiradora', sub = true,  icon = 'assets/images/foliage/strech/strech1.png' },
-    { name = 'palmtree', label = 'Palmera',    sub = false, icon = 'assets/images/foliage/Palmtree/palmtree.png' },
-}
-
 function Level.new(path)
     local data = love.filesystem.read(path)
     assert(data, "No se pudo leer: "..tostring(path))
@@ -253,7 +207,6 @@ function Level.fromData(lvl)
     loadWaterShader()
     loadBubbleImgs()
     loadVentImg()
-    loadFoliageImgs()
     self.name        = lvl.name or "?"
     self.tileW       = lvl.width
     self.tileH       = lvl.height
@@ -312,42 +265,14 @@ function Level.fromData(lvl)
             })
         end
     end
-    -- ── Foliage ──────────────────────────────────────────────────────────────
-    self.foliage = {}
+    -- ── Decoraciones (catálogo src/world/Decorations.lua) ────────────────────
+    -- El JSON las guarda en "foliage". Tipos desconocidos se omiten.
+    self.decorations = {}
     for _, fd in ipairs(lvl.foliage or {}) do
-        local ftype = fd.type or 'tulip'
-        local col   = tonumber(fd.col)
-        local row   = tonumber(fd.row)
-        local sub   = fd.sub and tonumber(fd.sub) or nil
-        if col and row then
-            -- Posición base (pies) en px
-            local baseX, baseY
-            if sub then
-                -- Subcelda: centro-X de la subcelda, fondo-Y de la subcelda
-                local subOffX = ((sub-1)%2) * (TILE_PX/2)
-                local subOffY = (math.floor((sub-1)/2)) * (TILE_PX/2)
-                baseX = (col-1)*TILE_PX + subOffX + TILE_PX/4
-                baseY = (col-1)*TILE_PX + subOffY + TILE_PX/2  -- fondo de la subcelda
-                -- Corrección: baseY usa row, no col
-                baseY = (row-1)*TILE_PX + subOffY + TILE_PX/2
-            else
-                -- Celda completa (palmtree): misma posición que enemigos
-                -- Centro-X de la celda, centro-Y de la celda (el render ancla por base)
-                baseX = (col-1)*TILE_PX + TILE_PX/2
-                baseY = (row-1)*TILE_PX + TILE_PX    -- fondo de la celda = suelo
-            end
-
-            table.insert(self.foliage, {
-                type    = ftype,
-                x       = baseX,
-                y       = baseY,   -- posición de los "pies"
-                animT   = math.random() * 10,  -- offset aleatorio para desincronizar
-                frame   = math.random(1, STRETCH_FRAMES),
-                frameT  = math.random() * (1 / STRETCH_FPS),
-                cycleT  = math.random() * STRETCH_CYCLE,  -- offset para estiradora
-            })
-        end
+        local n = DecorationTypes.normalize(fd)
+        if n then table.insert(self.decorations, DecorationTypes.instantiate(n)) end
     end
+    self.foliage = self.decorations   -- alias de compatibilidad
     return self
 end
 
@@ -895,106 +820,31 @@ end
 -- garantizando que debug y física usen exactamente la misma función.
 Level._spikeHitbox = spikeHitbox
 
--- ── Update: foliage ──────────────────────────────────────────────────────────
+-- ── Decoraciones: animación y dibujo ────────────────────────────────────────
 function Level:updateFoliage(dt)
-    for _, f in ipairs(self.foliage) do
-        f.animT = f.animT + dt
-        -- Stretch: avanzar timer de ciclo continuo
-        if f.type == 'stretch' then
-            f.cycleT = (f.cycleT or 0) + dt
-            if f.cycleT >= STRETCH_CYCLE then
-                f.cycleT = f.cycleT - STRETCH_CYCLE
-            end
-        end
+    for _, d in ipairs(self.decorations) do
+        d.animT = d.animT + dt
+        if d.def.update then d.def.update(d, dt) end
     end
 end
 
--- ── Render: foliage (decoraciones, por encima de enemigos y player) ──────────
-function Level:renderFoliage(camX, camY)
-    if not foliageImgs then return end
-
-    -- Escalas por tipo de foliage
-    local TULIP_SCALE    = 3
-    local STRETCH_SCALE  = 4
-    local PALMTREE_SCALE = 4
-
-    for _, f in ipairs(self.foliage) do
-        local sx = math.floor(f.x - camX)
-        local sy = math.floor(f.y - camY)
-
-        -- Culling básico
-        if sx > -TILE_PX*4 and sx < WINDOW_W + TILE_PX*4 and
-           sy > -TILE_PX*4 and sy < WINDOW_H + TILE_PX*4 then
-
-            if f.type == 'tulip' then
-                local img = foliageImgs.tulip
-                if img then
-                    local iw = img:getWidth()
-                    local ih = img:getHeight()
-                    local breathe = math.sin(f.animT * TULIP_BREATHE_SPEED * math.pi)
-                    local scY = TULIP_SCALE * (1.0 + breathe * TULIP_BREATHE_AMP)
-                    local scX = TULIP_SCALE * (1.0 - breathe * TULIP_BREATHE_AMP * 0.3)
-                    love.graphics.setColor(1, 1, 1, 1)
-                    love.graphics.draw(img, sx, sy, 0, scX, scY, iw/2, ih)
-                end
-
-            elseif f.type == 'stretch' then
-                local imgs = foliageImgs.stretch
-                if imgs and #imgs >= STRETCH_FRAMES then
-                    -- Progreso ping-pong: 0→1 (ida) → 1→0 (vuelta)
-                    local cycleT = f.cycleT or 0
-                    local halfCycle = STRETCH_CYCLE / 2
-                    local progress
-                    if cycleT < halfCycle then
-                        progress = cycleT / halfCycle
-                    else
-                        progress = 1 - (cycleT - halfCycle) / halfCycle
-                    end
-
-                    -- Frame discreto (sin crossfade): 1→2→3→4→5→4→3→2→1
-                    local frameIdx = math.floor(progress * (STRETCH_FRAMES - 1) + 0.5) + 1
-                    frameIdx = math.max(1, math.min(frameIdx, STRETCH_FRAMES))
-                    local img = imgs[frameIdx]
-
-                    if img then
-                        local iw = img:getWidth()
-                        local ih = img:getHeight()
-
-                        -- Estiramiento continuo: achatado en frame 1, estirado en frame 5
-                        -- progress=0 → squash (-5%), progress=1 → stretch (+8%)
-                        local stretchAmount = -0.05 + progress * 0.13
-                        local scY = STRETCH_SCALE * (1.0 + stretchAmount)
-                        local scX = STRETCH_SCALE * (1.0 - stretchAmount * 0.25)
-
-                        love.graphics.setColor(1, 1, 1, 1)
-                        love.graphics.draw(img, sx, sy, 0, scX, scY, iw/2, ih)
-                    end
-                end
-
-            elseif f.type == 'palmtree' then
-                local sway = math.sin(f.animT * PALM_SWAY_SPEED * math.pi) * PALM_SWAY_AMP
-
-                local parts = {
-                    { img = foliageImgs.palmtree,   swayMult = 0.3 },
-                    { img = foliageImgs.palmcocos,   swayMult = 0.8 },
-                    { img = foliageImgs.palmleaves,  swayMult = 1.0 },
-                }
-
-                for _, part in ipairs(parts) do
-                    if part.img then
-                        local iw = part.img:getWidth()
-                        local ih = part.img:getHeight()
-                        local rot = sway * part.swayMult
-                        love.graphics.setColor(1, 1, 1, 1)
-                        love.graphics.draw(part.img, sx, sy, rot,
-                            PALMTREE_SCALE, PALMTREE_SCALE, iw/2, ih)
-                    end
-                end
+-- Dibuja las decoraciones de una capa: 'front' (por encima de jugador y
+-- enemigos) o 'back' (detrás de ellos, justo después del nivel).
+function Level:renderDecorations(camX, camY, layer)
+    for _, d in ipairs(self.decorations) do
+        if d.layer == layer then
+            local sx = math.floor(d.x - camX)
+            local sy = math.floor(d.y - camY)
+            local m  = TILE_PX * d.def.cullMargin
+            if sx > -m and sx < WINDOW_W + m and sy > -m and sy < WINDOW_H + m then
+                d.def.draw(d, sx, sy)
             end
         end
     end
-
     love.graphics.setColor(1, 1, 1, 1)
 end
+
+function Level:renderFoliage(camX, camY)     self:renderDecorations(camX, camY, 'front') end
+function Level:renderFoliageBack(camX, camY) self:renderDecorations(camX, camY, 'back')  end
 
 return Level

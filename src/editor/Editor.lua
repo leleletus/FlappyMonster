@@ -11,6 +11,7 @@ local Model    = require 'src/editor/EditorModel'
 local Tiles    = require 'src/world/Tiles'
 local Entities = require 'src/world/Entities'
 local Level    = require 'src/world/Level'
+local DT       = require('src/world/Decorations').types
 
 local Codec, TT, ET, Props = Tiles.codec, Tiles.types, Entities.types, Entities.props
 local th = ui.theme
@@ -30,7 +31,7 @@ local LAYERS = {
     { id='water',    label='Agua',       tools={ 'brush', 'rect', 'fill', 'erase' } },
     { id='spikes',   label='Pinchos',    tools={ 'brush', 'erase' } },
     { id='entities', label='Entidades',  tools={ 'select', 'place', 'erase' } },
-    { id='deco',     label='Decoracion', tools={ 'place', 'erase' } },
+    { id='deco',     label='Decoracion', tools={ 'select', 'place', 'erase' } },
     { id='special',  label='Especial',   tools={ 'spawn', 'vent', 'erase' } },
 }
 local TOOLS = {
@@ -40,7 +41,7 @@ local TOOLS = {
     fill   = { label='Relleno',     key='f', help='Rellena la zona contigua del mismo tipo.' },
     erase  = { label='Borrar',      key='e', help='Borra lo de esta capa (tambien clic derecho).' },
     pick   = { label='Cuentagotas', key='i', help='Copia el bloque bajo el cursor a la paleta.' },
-    select = { label='Seleccionar', key='v', help='Selecciona, mueve y edita entidades. Arrastra las cajitas de la ruta.' },
+    select = { label='Seleccionar', key='v', help='Selecciona, mueve (arrastrando) y edita sus propiedades. En entidades, arrastra las cajitas de la ruta.' },
     place  = { label='Colocar',     key='b', help='Coloca lo elegido en la paleta.' },
     spawn  = { label='Inicio',      key='s', help='Mueve el punto de inicio del jugador.' },
     vent   = { label='Vent',        key='o', help='Coloca/quita un vent de oxigeno (subcelda).' },
@@ -117,6 +118,28 @@ local function drawTileThumb(def, x, y, s)
     end
 end
 
+-- Miniatura de una decoración usando su propio draw (anclada abajo-centro)
+local decoThumbs = {}
+local function drawDecoThumb(t, x, y, s)
+    local d = decoThumbs[t.name]
+    if not d then
+        d = DT.instantiate(DT.normalize({ type = t.name, col = 1, row = 1, sub = 3 }))
+        decoThumbs[t.name] = d
+    end
+    d.animT = d.animT + love.timer.getDelta()
+    if t.update then t.update(d, love.timer.getDelta()) end
+    local k = (t.editor and t.editor.previewScale) or (t.placement == 'sub' and 1.0 or 0.4)
+    k = k * s / 64
+    local sx, sy, sw, sh = love.graphics.getScissor()
+    love.graphics.intersectScissor(x, y, s, s)
+    love.graphics.push()
+    love.graphics.translate(x + s / 2, y + s)
+    love.graphics.scale(k)
+    t.draw(d, 0, 0)
+    love.graphics.pop()
+    love.graphics.setScissor(sx, sy, sw, sh)
+end
+
 -- ── Modelo / historial ────────────────────────────────────────────────────────
 local function markDirty() E.levelDirty = true; E.unsaved = true end
 
@@ -130,14 +153,14 @@ local function undo()
     if #E.undo == 0 then return msg('Nada que deshacer', 'warn') end
     table.insert(E.redo, E.model:snapshot())
     E.model:restore(table.remove(E.undo))
-    E.selected = nil; markDirty(); msg('Deshecho')
+    E.selected, E.selDeco = nil, nil; markDirty(); msg('Deshecho')
 end
 
 local function redo()
     if #E.redo == 0 then return msg('Nada que rehacer', 'warn') end
     table.insert(E.undo, E.model:snapshot())
     E.model:restore(table.remove(E.redo))
-    E.selected = nil; markDirty(); msg('Rehecho')
+    E.selected, E.selDeco = nil, nil; markDirty(); msg('Rehecho')
 end
 
 local function rebuild()
@@ -163,7 +186,7 @@ end
 local function setModel(m, path)
     E.model = m
     E.undo, E.redo = {}, {}
-    E.selected = nil
+    E.selected, E.selDeco = nil, nil
     E.unsaved = false
     E.levelDirty = true
     E.camX, E.camY, E.zoom = -40, -40, 0.75
@@ -315,13 +338,19 @@ local function canvasPress(button)
             E.selected = nil
         end
     elseif L == 'deco' then
-        local ft
-        for _, f in ipairs(Level.FOLIAGE_TYPES) do if f.name == E.palette.deco then ft = f end end
-        local o, idx = m:findObject(m.foliage, c, r, (not erase and ft and ft.sub) and sub or nil)
+        local ft = DT.get(E.palette.deco)
+        local useSub = ft and ft.placement == 'sub'
         if erase then
-            if o then table.remove(m.foliage, idx); s.changed = true end
-        elseif not o and m:inBounds(c, r) and ft then
-            m.foliage[#m.foliage+1] = { type = ft.name, col = c, row = r, sub = ft.sub and sub or nil }
+            local o, idx = m:findObject(m.foliage, c, r)
+            if o then table.remove(m.foliage, idx); if E.selDeco == o then E.selDeco = nil end; s.changed = true end
+        elseif tool == 'select' then
+            local o = m:findObject(m.foliage, c, r, sub) or m:findObject(m.foliage, c, r)
+            E.selDeco = o
+            if o then s.moveDeco = o end
+        elseif ft and m:inBounds(c, r) and not m:findObject(m.foliage, c, r, useSub and sub or nil) then
+            local n = DT.normalize({ type = ft.name, col = c, row = r, sub = useSub and sub or nil })
+            m.foliage[#m.foliage+1] = n
+            E.selDeco = n
             s.changed = true
         end
     elseif L == 'special' then
@@ -359,6 +388,13 @@ local function canvasDrag()
         if h.side == 'right' and c ~= p.right then p.right = math.max(c, p.left);  s.changed = true; markDirty() end
         if h.side == 'point' and (c ~= p.col or r ~= p.row) then p.col, p.row = c, r; s.changed = true; markDirty() end
         h.col = (h.side == 'left' and p.left) or (h.side == 'right' and p.right) or c
+    elseif s.moveDeco and E.model:inBounds(c, r) then
+        local d = s.moveDeco
+        local nsub = d.sub and sub or nil
+        if c ~= d.col or r ~= d.row or nsub ~= d.sub then
+            d.col, d.row, d.sub = c, r, nsub
+            s.changed = true; markDirty()
+        end
     elseif s.move and E.model:inBounds(c, r) then
         local e = s.move.e
         if c ~= e.col or r ~= e.row then
@@ -422,6 +458,7 @@ local function drawCanvas()
             end
         end end
         lv:renderVents(camX, camY)
+        lv:renderFoliageBack(camX, camY)
     end
     for _, inst in pairs(E.instances or {}) do
         -- Si cae desde donde se colocó, se marca el recorrido hasta donde aterriza
@@ -492,6 +529,17 @@ local function drawCanvas()
         end
     end
 
+    -- Decoración seleccionada
+    local sd = E.selDeco
+    if sd and E.layer == 'deco' then
+        local h = sd.sub and t / 2 or t
+        local ox = sd.sub and ((sd.sub - 1) % 2) * h or 0
+        local oy = sd.sub and math.floor((sd.sub - 1) / 2) * h or 0
+        love.graphics.setColor(th.warn[1], th.warn[2], th.warn[3], 0.9 + 0.1 * math.sin(love.timer.getTime() * 6))
+        love.graphics.setLineWidth(2 / z)
+        love.graphics.rectangle('line', (sd.col-1)*t + ox - camX + 1, (sd.row-1)*t + oy - camY + 1, h - 2, h - 2, 4, 4)
+    end
+
     -- Borde del mapa
     love.graphics.setLineWidth(2 / z)
     love.graphics.setColor(th.accent[1], th.accent[2], th.accent[3], 0.6)
@@ -514,7 +562,8 @@ local function drawCanvas()
         end
         local subLayer = E.layer == 'spikes' or (E.layer == 'special' and tool == 'vent')
         if E.layer == 'deco' then
-            for _, f in ipairs(Level.FOLIAGE_TYPES) do if f.name == E.palette.deco and f.sub then subLayer = true end end
+            local ft = DT.get(E.palette.deco)
+            if E.tool.deco ~= 'erase' and ft and ft.placement == 'sub' then subLayer = true end
         end
         love.graphics.setColor(1, 1, 1, 0.9)
         if subLayer then
@@ -630,7 +679,7 @@ local function drawLeftPanel()
     elseif L == 'entities' then
         for _, t in ipairs(ET.list) do items[#items+1] = { key = t.name, label = t.label, cat = t.category, ent = t } end
     elseif L == 'deco' then
-        for _, f in ipairs(Level.FOLIAGE_TYPES) do items[#items+1] = { key = f.name, label = f.label, cat = f.sub and 'Pequenas (subcelda)' or 'Grandes', icon = f.icon } end
+        for _, t in ipairs(DT.list) do items[#items+1] = { key = t.name, label = t.label, cat = t.category, deco = t } end
     end
     local cats, order = {}, {}
     for _, it in ipairs(items) do
@@ -657,6 +706,8 @@ local function drawLeftPanel()
                 drawTileThumb(it.def, ix, iy, is)
             elseif it.ent then
                 drawImageFit(img(it.ent.editor and it.ent.editor.sprite or ''), ix, iy, is, is)
+            elseif it.deco then
+                drawDecoThumb(it.deco, ix, iy, is)
             elseif it.icon then
                 drawImageFit(img(it.icon), ix, iy, is, is)
             end
@@ -674,6 +725,7 @@ local function drawLeftPanel()
                 if ui.state.pressed then
                     E.palette[L] = it.key; ui.state.consumed = true
                     if L == 'entities' then E.tool.entities = 'place' end
+                    if L == 'deco' then E.tool.deco = 'place' end
                     if L == 'tiles' and (E.tool.tiles == 'erase' or E.tool.tiles == 'pick') then E.tool.tiles = 'brush' end
                 end
             end
@@ -681,6 +733,64 @@ local function drawLeftPanel()
         yy = yy + math.ceil(#cats[c] / cols) * (cell + 18 + gap)
     end
     ui.endScroll()
+end
+
+-- Campos editables generados a partir de un esquema de propiedades
+-- (entities/Props.lua). Sirve para entidades, decoraciones y cualquier cosa
+-- futura con esquema. `owner` = objeto con col/row (para rutas por defecto).
+local function drawPropFields(schema, props, x, y, w, owner)
+    local lastGroup
+    for _, p in ipairs(schema) do
+        if not p.showIf or p.showIf(props) then
+            if p.group ~= lastGroup then
+                lastGroup = p.group
+                ui.text(p.group or 'General', x, y + 2, th.accent, ui.fontSm); y = y + 20
+            end
+            local v = props[p.key]
+            local y0 = y
+            local nv, ch
+            if p.kind == 'bool' then
+                nv, ch = ui.toggle(p.label, v, x, y, w); y = y + 28
+            elseif p.kind == 'int' or p.kind == 'number' then
+                nv, ch = ui.number(p.label, v, x, y, w, p); y = y + 28
+            elseif p.kind == 'enum' then
+                nv, ch = ui.enum(p.label, v, p.options, x, y, w); y = y + ui.ENUM_H + 4
+            elseif p.kind == 'text' then
+                ui.text(p.label, x, y + 2, th.text); y = y + 20
+                nv, ch = ui.textField('prop_' .. p.key, v or '', x, y, w, p.maxLen); y = y + 32
+            elseif p.kind == 'patrol' then
+                local on, tch = ui.toggle(p.label, v ~= false, x, y, w); y = y + 28
+                if tch then
+                    nv, ch = on and { left = owner.col - 3, right = owner.col + 3 } or false, true
+                elseif v then
+                    local l, lch = ui.number('   Limite izq. (col)', v.left, x, y, w, { kind = 'int', min = 1, max = v.right }); y = y + 28
+                    local r, rch = ui.number('   Limite der. (col)', v.right, x, y, w, { kind = 'int', min = v.left, max = E.model.width }); y = y + 28
+                    if lch or rch then nv, ch = { left = l, right = r }, true end
+                    ui.text('Arrastra las cajitas azules en el mapa.', x, y, th.muted, ui.fontSm, w); y = y + 18
+                end
+            elseif p.kind == 'point' then
+                ui.text(p.label .. string.format(': (%d, %d)', v.col, v.row), x, y + 4, th.text); y = y + 26
+            end
+            if ch then pushUndo(); props[p.key] = nv; markDirty() end
+            if p.help and ui.inside(x, y0, w, y - y0) then ui.tooltip(p.help) end
+        end
+    end
+    return y
+end
+
+-- Inspector de decoración seleccionada
+local function drawDecoInspector(x, y, w)
+    local d = E.selDeco
+    local t = DT.get(d.type)
+    y = sectionTitle('Decoracion seleccionada', x, y, w)
+    ui.rect(x, y, 48, 48, th.panel2, 6)
+    drawDecoThumb(t, x + 4, y + 4, 40)
+    ui.text(t.label, x + 58, y + 4, th.text, ui.fontLg)
+    ui.text(string.format('col %d, fila %d%s', d.col, d.row, d.sub and (' · subcelda ' .. d.sub) or ''), x + 58, y + 28, th.muted, ui.fontSm)
+    y = y + 58
+    if ui.button('Eliminar (Supr)', x, y, w, 26, { font = ui.fontSm, textColor = th.danger }) then Editor.deleteSelected() end
+    y = y + 36
+    return drawPropFields(t.schema, d.props, x, y, w, d) + 8
 end
 
 -- Inspector de entidad: generado a partir de su esquema de propiedades
@@ -697,42 +807,7 @@ local function drawInspector(x, y, w)
     if ui.button('Eliminar (Supr)', x + (w + 6) / 2, y, (w - 6) / 2, 26, { font = ui.fontSm, textColor = th.danger }) then Editor.deleteSelected() end
     y = y + 36
 
-    local lastGroup
-    for _, p in ipairs(t.schema) do
-        if not p.showIf or p.showIf(e.props) then
-            if p.group ~= lastGroup then
-                lastGroup = p.group
-                ui.text(p.group or 'General', x, y + 2, th.accent, ui.fontSm); y = y + 20
-            end
-            local v = e.props[p.key]
-            local nv, ch
-            if p.kind == 'bool' then
-                nv, ch = ui.toggle(p.label, v, x, y, w); y = y + 28
-            elseif p.kind == 'int' or p.kind == 'number' then
-                nv, ch = ui.number(p.label, v, x, y, w, p); y = y + 28
-            elseif p.kind == 'enum' then
-                nv, ch = ui.enum(p.label, v, p.options, x, y, w); y = y + ui.ENUM_H + 4
-            elseif p.kind == 'text' then
-                ui.text(p.label, x, y + 2, th.text); y = y + 20
-                nv, ch = ui.textField('prop_' .. p.key, v or '', x, y, w, p.maxLen); y = y + 32
-            elseif p.kind == 'patrol' then
-                local on, tch = ui.toggle(p.label, v ~= false, x, y, w); y = y + 28
-                if tch then
-                    nv, ch = on and { left = e.col - 3, right = e.col + 3 } or false, true
-                elseif v then
-                    local l, lch = ui.number('   Limite izq. (col)', v.left, x, y, w, { kind = 'int', min = 1, max = v.right }); y = y + 28
-                    local r, rch = ui.number('   Limite der. (col)', v.right, x, y, w, { kind = 'int', min = v.left, max = E.model.width }); y = y + 28
-                    if lch or rch then nv, ch = { left = l, right = r }, true end
-                    ui.text('Arrastra las cajitas azules en el mapa.', x, y, th.muted, ui.fontSm, w); y = y + 18
-                end
-            elseif p.kind == 'point' then
-                ui.text(p.label .. string.format(': (%d, %d)', v.col, v.row), x, y + 4, th.text); y = y + 26
-            end
-            if ch then pushUndo(); e.props[p.key] = nv; markDirty() end
-            if p.help and ui.inside(x, y - 28, w, 28) then ui.tooltip(p.help) end
-        end
-    end
-    return y + 8
+    return drawPropFields(t.schema, e.props, x, y, w, e) + 8
 end
 
 local function drawRightPanel()
@@ -747,6 +822,8 @@ local function drawRightPanel()
 
     if E.selected and E.layer == 'entities' then
         y = drawInspector(x, y, w)
+    elseif E.selDeco and E.layer == 'deco' then
+        y = drawDecoInspector(x, y, w)
     else
         y = sectionTitle('Celda', x, y, w)
         local hv = E.hover
@@ -908,6 +985,13 @@ function Editor.centerOn(c, r)
 end
 
 function Editor.deleteSelected()
+    if E.layer == 'deco' and E.selDeco then
+        for i, x in ipairs(E.model.foliage) do
+            if x == E.selDeco then pushUndo(); table.remove(E.model.foliage, i); break end
+        end
+        E.selDeco = nil; markDirty()
+        return
+    end
     local e = E.selected
     if not e then return end
     for i, x in ipairs(E.model.entities) do
@@ -940,7 +1024,8 @@ function Editor.load(args, levelArg)
     E.mode = 'edit'
     E.layer = 'tiles'
     E.tool = { tiles='brush', water='brush', spikes='brush', entities='select', deco='place', special='spawn' }
-    E.palette = { tiles = TILE_SOLID, entities = ET.list[1] and ET.list[1].name, deco = Level.FOLIAGE_TYPES[1].name }
+    E.selDeco = nil
+    E.palette = { tiles = TILE_SOLID, entities = ET.list[1] and ET.list[1].name, deco = DT.list[1] and DT.list[1].name }
     E.spikeDir = 0
     E.grid, E.showRoutes = true, true
     E.msgT = 0
@@ -1049,7 +1134,7 @@ function Editor.keypressed(k)
     elseif k == 'h' then E.showRoutes = not E.showRoutes
     elseif k == 'x' then E.spikeDir = (E.spikeDir + 1) % 4
     elseif k == 'delete' or k == 'backspace' then Editor.deleteSelected()
-    elseif k == 'escape' then E.selected = nil
+    elseif k == 'escape' then E.selected = nil; E.selDeco = nil
     elseif k == 'f5' then startPlay()
     elseif k == '=' or k == 'kp+' then E.zoom = math.min(3, E.zoom * 1.25)
     elseif k == '-' or k == 'kp-' then E.zoom = math.max(0.25, E.zoom / 1.25)
