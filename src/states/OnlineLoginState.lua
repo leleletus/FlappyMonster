@@ -3,6 +3,7 @@
 
 local BaseState        = require 'src/BaseState'
 local NC               = require 'src/network/NetworkClient'
+local Protocol         = require 'src/network/Protocol'
 local OnlineLoginState = BaseState:new()
 
 local imgBg = nil
@@ -56,6 +57,11 @@ function OnlineLoginState:enter(args)
         self.connecting = false
         self:_showError(data.msg or "Error desconocido")
     end)
+    -- Rechazo del handshake (versión incompatible, nombre en uso o inválido)
+    NC:on("login_error", function(data)
+        self.connecting = false
+        self:_showError(data and data.msg or "No se pudo iniciar sesion.")
+    end)
 end
 
 function OnlineLoginState:_showError(msg)
@@ -68,6 +74,7 @@ end
 function OnlineLoginState:textinput(t)
     if self.connecting then return end
     local cur = self.fields[FIELD_NICK] or ""
+    if #cur >= Protocol.NAME_MAX then return end
     self.fields[FIELD_NICK] = cur .. t
 end
 

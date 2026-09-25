@@ -1,7 +1,12 @@
 -- src/states/OnlineAdventureState.lua
 -- Modo aventura multijugador online — arquitectura autoritativa.
--- El cliente solo envía inputs y renderiza el estado que manda el servidor.
--- No corre física propia ni simula enemigos localmente.
+--
+--  * Jugador propio: predicción local a paso fijo (60 Hz, igual que el
+--    servidor) + reconciliación con el último input confirmado (Predictor).
+--  * Otros jugadores, enemigos y burbujas: interpolación entre snapshots
+--    reales con un pequeño retardo adaptativo (SnapshotBuffer).
+--  * Eventos (puntos, sonidos, game over): canal fiable, sincronizados con el
+--    tick en que ocurrieron.
 
 local BaseState            = require 'src/BaseState'
 local Level                = require 'src/world/Level'
@@ -10,18 +15,20 @@ local Crabby               = require 'src/entities/Crabby'
 local PlayerAdventure      = require 'src/entities/PlayerAdventure'
 local OnlinePlayer         = require 'src/entities/OnlinePlayer'
 local NC                   = require 'src/network/NetworkClient'
+local Protocol             = require 'src/network/Protocol'
+local Predictor            = require 'src/network/Predictor'
+local SnapshotBuffer       = require 'src/network/SnapshotBuffer'
 
 local OnlineAdventureState = BaseState:new()
 
 -- ── Constantes ────────────────────────────────────────────────────────────────
-local INPUT_RATE  = 1 / 30  -- 30 Hz envío de inputs
+local TICK_DT        = Protocol.TICK_DT
+local MAX_TICKS_FRAME = 5      -- ticks máximos simulados por frame (tras un tirón)
+local TELEPORT_DIST  = 96      -- px: entre snapshots, más que esto = teletransporte
+local EVENT_MAX_WAIT = 0.35    -- s máximos que un evento espera a su tick de render
 local POPUP_LIFE  = 1.4
 local POPUP_RISE  = 28
 local POPUP_BOUNCE_T = 0.22
-
--- Deben coincidir con los valores en PlayerAdventure.lua / server
-local DROWN_TOTAL     = 20
-local DROWN_AUDIO_DUR = 12
 
 local PAUSE_RESUME = 1
 local PAUSE_HUB    = 2
@@ -48,6 +55,8 @@ local function loadAssets()
     imgIcon = love.graphics.newImage('assets/images/player/icon.png')
     imgBg   = love.graphics.newImage('assets/images/level/Background.png')
 end
+
+local function lerp(a, b, f) return a + (b - a) * f end
 
 -- ── Helpers ───────────────────────────────────────────────────────────────────
 local function drawPixelButton(label, cx, y, w, h, selected, alpha)
@@ -80,20 +89,31 @@ function OnlineAdventureState:enter(args)
     -- Burbujas de oxígeno controladas por el servidor (desactiva spawn local)
     self.level.disableOxySpawn = true
 
-    -- Jugador local para movimiento responsivo (sin latencia de red)
+    -- Jugador local (predicho). Se posiciona al recibir game_init.
     local sx, sy   = self.level:getSpawnPx()
     self.localPa   = PlayerAdventure:new(sx, sy)
     self.localPa.lives = 3
     self.localPaInit   = false
+    self.predictor     = nil
+    self.simAccum      = 0
+    self.renderX, self.renderY = sx, sy
+    self.audioDrowning = false
+
+    -- Red
+    self.myIdx       = nil
+    self.roster      = {}        -- [idx] = { id, name, color }
+    self.snapBuf     = nil
+    self.pendingEvents = {}      -- eventos de otros esperando su tick de render
+    self.pendingJump   = false   -- "recién presionado" acumulado hasta el próximo tick
+    self.pendingCrouch = false
 
     -- Game over
     self.showGameOver       = false
     self.gameOverTimer      = 0
     self.gameOverMusicPitch = nil
 
-    -- Rebote local (predicción cliente para sentir el bounce sin latencia)
+    -- Rebote local (predicción para sentir el bounce sin latencia)
     self.localBounceCooldown = {}   -- [enemyIdx] = timer restante
-    self.recentLocalBounce   = 0   -- si > 0, ignora bounceVy del servidor (evita doble rebote)
 
     -- Crear renderers de enemigos desde los datos del nivel
     -- El servidor controla su estado; el cliente solo los dibuja
@@ -108,14 +128,12 @@ function OnlineAdventureState:enter(args)
         if e then self.enemyRenderers[i] = e end
     end
 
-    -- Jugadores remotos (incluye al jugador propio para render del cuerpo)
+    -- Jugadores remotos: [idx] = OnlinePlayer (excluye al propio)
     self.remotePlayers = {}
 
-    -- Datos propios del jugador local (actualizados desde game_state)
+    -- Datos propios para el HUD (del snapshot más reciente)
     self.ownData = {
-        x=0, y=0, lives=3, hp=3, hpMax=3, score=0,
-        drownPhase='none', airFraction=1, drownAudT=0,
-        dying=false, isSpectator=false,
+        lives=3, hp=3, hpMax=3, score=0, isSpectator=false,
     }
 
     -- Cámara
@@ -140,22 +158,26 @@ function OnlineAdventureState:enter(args)
     self.specOverlay = false
     self.specSel     = SPEC_WAIT
 
-    -- Input state enviado al servidor
+    -- Input continuo muestreado cada frame
     self.inputState = { left=false, right=false, jump=false, crouch=false }
-    self.inputJustPressed = { jump=false, crouch=false }
-    self.inputTimer = 0
-
-    -- Air bar animación local (basada en datos del servidor)
-    self.airBarAlpha = 0
 
     self:_setupHandlers()
+
+    -- game_init pudo llegar en el mismo paquete que el room_update que nos trajo aquí
+    if NC.pendingGameInit then self:_onGameInit(NC.pendingGameInit) end
+
     Sound.playMusic('level')
 end
 
+function OnlineAdventureState:exit()
+    NC:off("s"); NC:off("ev"); NC:off("game_init")
+    NC.pendingGameInit = nil
+end
+
 function OnlineAdventureState:_setupHandlers()
-    NC:on("game_state", function(data)
-        self:_onGameState(data)
-    end)
+    NC:on("game_init", function(data) self:_onGameInit(data) end)
+    NC:on("s",  function(data) self:_onSnapshot(data) end)
+    NC:on("ev", function(data) self:_onEvents(data) end)
     NC:on("room_update", function(data)
         self.currentRoom = data
         if data.state == "WAITING" and not self.showGameOver then
@@ -175,194 +197,219 @@ function OnlineAdventureState:_setupHandlers()
     end)
 end
 
--- ── Recepción de estado del servidor ─────────────────────────────────────────
+-- ── Datos iniciales de la partida ─────────────────────────────────────────────
 
-function OnlineAdventureState:_onGameState(data)
-    -- Procesar jugadores
-    local activeIds = {}
-    for _, pdata in ipairs(data.players or {}) do
-        activeIds[pdata.id] = true
+function OnlineAdventureState:_onGameInit(data)
+    NC.pendingGameInit = nil
+    if self.localPaInit or type(data) ~= 'table' then return end
+    if not Protocol.isValidOwnState(data.own) then return end
 
-        -- Actualizar / crear renderer
-        local rp = self.remotePlayers[pdata.id]
-        if not rp then
-            rp = OnlinePlayer:new(pdata.id, pdata.name, pdata.color)
-            self.remotePlayers[pdata.id] = rp
-        end
-        rp:applyData(pdata)
-
-        -- Datos propios
-        if pdata.id == NC.myId then
-            local prev = self.ownData
-            self.ownData = {
-                x           = pdata.x,
-                y           = pdata.y,
-                facing      = pdata.facing,
-                frame       = pdata.frame,
-                lives       = pdata.lives,
-                hp          = pdata.hp,
-                hpMax       = pdata.hpMax,
-                score       = pdata.score,
-                drownPhase  = pdata.drownPhase,
-                airFraction = pdata.airFraction,
-                drownAudT   = pdata.drownAudT,
-                dying       = pdata.dying,
-                deathPhase  = pdata.deathPhase,
-                isSpectator = pdata.isSpectator,
-            }
-            -- Pasar a espectador si lo indica el servidor (no mostrar overlay si ya hay game over)
-            if pdata.isSpectator and not prev.isSpectator and not self.showGameOver then
-                self.specOverlay = true
-                self.specSel     = SPEC_WAIT
-            end
-            -- Sincronizar jugador local con estado autoritativo del servidor
-            if self.localPa then
-                if not self.localPaInit then
-                    self.localPa.x = pdata.x; self.localPa.y = pdata.y
-                    self.localPa.vx = 0;       self.localPa.vy = 0
-                    self.localPaInit = true
-                else
-                    if pdata.dying and not prev.dying and not self.localPa.dying then
-                        self.localPa:die()
-                    end
-                    if not pdata.dying and prev.dying then
-                        self.localPa.spawnX = pdata.x; self.localPa.spawnY = pdata.y
-                        self.localPa:respawn()
-                    end
-                    -- Muerte falsa local: cliente murió pero el servidor nunca lo confirmó
-                    -- (p.ej.: drownPhase llegó a muerte localmente pero el servidor recogió aire)
-                    if not pdata.dying and self.localPa.dying and not prev.dying then
-                        self.localPa.spawnX = pdata.x; self.localPa.spawnY = pdata.y
-                        self.localPa:respawn()
-                    end
-                    -- Sincronizar drownPhase: si el servidor reseteó el oxígeno (burbuja) y el
-                    -- cliente aún no lo sabe, corregir antes de que progrese a muerte falsa.
-                    if pdata.drownPhase == 'none' and self.localPa.drownPhase ~= 'none' then
-                        self.localPa.drownTimer  = 0; self.localPa.drownChime = 0
-                        self.localPa.drownAudT   = 0; self.localPa.drownDead  = false
-                        self.localPa.airBarAlpha  = 0; self.localPa.airBarBobOn = false
-                        self.localPa.drownPhase   = 'none'
-                    end
-                    if not pdata.dying and not self.localPa.dying then
-                        local ddx = math.abs(self.localPa.x - pdata.x)
-                        local ddy = math.abs(self.localPa.y - pdata.y)
-                        if ddx > 96 or ddy > 96 then
-                            self.localPa.x = pdata.x; self.localPa.y = pdata.y
-                            self.localPa.vx = 0; self.localPa.vy = 0
-                        end
-                    end
-                end
-            end
+    self.myIdx = data.idx
+    for _, r in ipairs(data.roster or {}) do
+        self.roster[r.idx] = r
+        if r.idx ~= self.myIdx then
+            self.remotePlayers[r.idx] = OnlinePlayer:new(r.id, r.name, r.color)
         end
     end
 
-    -- Limpiar jugadores que ya no están
-    for id in pairs(self.remotePlayers) do
-        if not activeIds[id] then self.remotePlayers[id] = nil end
-    end
-
-    -- Actualizar renderers de enemigos
-    self:_updateEnemyRenderers(data.enemies)
-
-    -- Sincronizar burbujas de oxígeno desde el servidor
-    self.level:syncOxyBubbles(data.ventBubbles)
-
-    -- Sincronizar reloj autoritativo del servidor
-    if data.levelTime then
-        self.levelTime = data.levelTime
-    end
-
-    -- Procesar eventos (sonidos, popups de puntuación)
-    self:_processEvents(data.events)
+    Protocol.applyOwnState(data.own, self.localPa)
+    self.predictor = Predictor.new(self.localPa, self.level)
+    self.snapBuf   = SnapshotBuffer.new(data.tickRate or Protocol.TICK_RATE,
+                                        data.snapEvery or Protocol.SNAPSHOT_EVERY)
+    self.localPaInit = true
+    self.renderX, self.renderY = self.localPa.x, self.localPa.y
+    self.camX = math.max(0, math.min(self.level.widthPx  - WINDOW_W, self.localPa.x - WINDOW_W/2))
+    self.camY = math.max(0, math.min(self.level.heightPx - WINDOW_H, self.localPa.y - WINDOW_H/2))
 end
 
-local ENEMY_LERP = 18  -- velocidad de suavizado de posición (px/s)
+-- ── Snapshots ─────────────────────────────────────────────────────────────────
 
-function OnlineAdventureState:_updateEnemyRenderers(enemyList)
-    for _, edata in ipairs(enemyList or {}) do
-        local er = self.enemyRenderers[edata.idx]
-        if er then
-            -- Suavizar posición hacia el valor del servidor para reducir desync visual
-            if er._renderX == nil then er._renderX = edata.x; er._renderY = edata.y end
-            local dx = edata.x - er._renderX
-            local dy = edata.y - er._renderY
-            -- Snap si la diferencia es muy grande (teletransporte / respawn)
-            if math.abs(dx) > 64 or math.abs(dy) > 64 then
-                er._renderX = edata.x; er._renderY = edata.y
-            else
-                -- El lerp se aplica en update; aquí solo guardamos el target
-                er._targetX = edata.x; er._targetY = edata.y
-            end
-            er.x        = er._renderX
-            er.y        = er._renderY
-            er.facing   = edata.facing
-            er.state    = edata.state
-            er.frame    = edata.frame
-            er.alive    = edata.alive
-            er.deadTimer = edata.deadTimer or 0
-            er.breatheT = edata.breatheT  or 0
-            if edata.eType == 'crabby' then
-                er.spikeProgress = edata.spikeProgress or 0
-                er.flipped       = edata.flipped or false
-                if edata.currentImgName then
-                    er:setImgFromName(edata.currentImgName)
-                end
-            end
+function OnlineAdventureState:_onSnapshot(snap)
+    if not self.snapBuf or type(snap) ~= 'table' or type(snap.t) ~= 'number' then return end
+
+    -- Indexar jugadores por idx una sola vez
+    snap.byIdx = {}
+    for _, p in ipairs(snap.p or {}) do
+        if type(p) == 'table' and type(p[1]) == 'number' then snap.byIdx[p[1]] = p end
+    end
+    -- Burbujas: id → {x, y}
+    snap.bub = {}
+    for vi, flat in ipairs(snap.vb or {}) do
+        for i = 1, #flat - 2, 3 do
+            snap.bub[flat[i]] = { vi, flat[i+1], flat[i+2] }
         end
     end
-end
+    if not self.snapBuf:push(snap) then return end   -- viejo/duplicado
 
-function OnlineAdventureState:_processEvents(events)
-    for _, ev in ipairs(events or {}) do
-        if ev.type == 'sound' then
-            -- Sonidos globales (enemigos) o de otros jugadores.
-            -- Los sonidos propios los genera directamente localPa para evitar dobles.
-            if not ev.playerId or ev.playerId ~= NC.myId then
-                Sound.play(ev.sound)
-            end
-        elseif ev.type == 'score' and ev.playerId == NC.myId then
-            self:_spawnPopup('+' .. ev.delta .. '!', ev.x, ev.y)
-            -- Solo aplicar rebote del servidor si la detección local no lo hizo ya
-            if ev.bounceVy and self.localPa and self.localPaInit and not self.localPa.dying
-               and (not self.recentLocalBounce or self.recentLocalBounce <= 0) then
-                self.localPa.vy        = ev.bounceVy
-                self.localPa.jumpsLeft = 2
-                self.localPa.onGround  = false
-            end
-        elseif ev.type == 'air_collected' and ev.playerId == NC.myId then
-            -- El servidor confirmó que recogimos una burbuja de oxígeno.
-            -- Resetear el estado de ahogamiento local inmediatamente, incluso si
-            -- la detección local divergió (hitbox pequeño + posición desincronizada).
-            if self.localPa and self.localPaInit then
-                local wasPhase = self.localPa.drownPhase
-                self.localPa.drownTimer  = 0; self.localPa.drownChime = 0
-                self.localPa.drownAudT   = 0; self.localPa.drownDead  = false
-                self.localPa.airBarAlpha  = 0; self.localPa.airBarBobOn = false
-                self.localPa.drownPhase   = 'none'
-                if self.localPa.dying then
-                    -- Muerte falsa por ahogamiento: el servidor dice que seguimos vivos
-                    local od = self.ownData
-                    self.localPa.spawnX = od and od.x or self.localPa.x
-                    self.localPa.spawnY = od and od.y or self.localPa.y
-                    self.localPa:respawn()
-                end
-                -- El evento 'sound'/'airGasp' del servidor se filtra para el jugador propio,
-                -- así que reproducirlo aquí.
-                if wasPhase == 'drowning' then
-                    Sound.play('airGasp')
-                    Sound.stopTracked('drowning')
-                    Sound.playMusic('level')
-                elseif wasPhase == 'warning' then
-                    Sound.play('airGasp')
-                end
-            end
-        elseif ev.type == 'game_over' then
-            self.showGameOver        = true
-            self.gameOverTimer       = 0
-            self.specOverlay         = false
-            self.gameOverMusicPitch  = 1.0
+    -- HUD propio: siempre del snapshot más reciente
+    local mine = snap.byIdx[self.myIdx]
+    if mine then
+        local wasSpec = self.ownData.isSpectator
+        self.ownData.lives       = mine[7]
+        self.ownData.hp          = mine[8]
+        self.ownData.score       = mine[9]
+        self.ownData.isSpectator = Protocol.band(mine[6], Protocol.PF_SPECTATOR) ~= 0
+        if self.ownData.isSpectator and not wasSpec and not self.showGameOver then
+            self.specOverlay = true
+            self.specSel     = SPEC_WAIT
             Sound.stopTracked('drowning')
+            self.audioDrowning = false
         end
+    end
+    if type(snap.lt) == 'number' then self.levelTime = snap.lt / 100 end
+
+    -- Reconciliar la predicción local
+    if snap.a and snap.o and self.predictor and not self.ownData.isSpectator then
+        local r = self.predictor:reconcile(snap.a, snap.o, snap.bs)
+        if r then
+            local pa = self.localPa
+            -- Muerte que no predijimos (p. ej. enemigo): su sonido
+            if pa.dying and not r.wasDying and pa.drownPhase == 'none' then
+                Sound.play('dies2')
+            end
+            -- Pisotón que solo detectó el servidor: su sonido
+            if r.missedBounce then Sound.play('enemyExplode') end
+            self:_syncDrownAudio()
+        end
+    end
+end
+
+-- La música/sonido de ahogamiento sigue al estado predicho aunque una
+-- corrección del servidor lo cambie sin pasar por la física "audible".
+function OnlineAdventureState:_syncDrownAudio()
+    local pa = self.localPa
+    local drowning = (pa.drownPhase == 'drowning') and not pa.dying
+    if self.audioDrowning and not drowning then
+        Sound.stopTracked('drowning')
+        if not pa.dying then Sound.playMusic('level') end
+    elseif drowning and not self.audioDrowning then
+        Sound.stopMusic()
+        Sound.playTracked('drowning')
+    end
+    self.audioDrowning = drowning
+end
+
+-- Aplica el estado interpolado del mundo remoto para este frame.
+function OnlineAdventureState:_applyInterpolation()
+    local a, b, f = self.snapBuf:sample()
+    if not a then return end
+
+    -- Jugadores remotos
+    for idx, rp in pairs(self.remotePlayers) do
+        local pb = b.byIdx[idx]
+        local pa = a.byIdx[idx] or pb
+        if not pb then pb = pa end
+        if pb then
+            local x, y = pb[2], pb[3]
+            if pa ~= pb and math.abs(pb[2]-pa[2]) < TELEPORT_DIST and math.abs(pb[3]-pa[3]) < TELEPORT_DIST then
+                x, y = lerp(pa[2], pb[2], f), lerp(pa[3], pb[3], f)
+            end
+            local d = (f < 0.5) and pa or pb   -- datos discretos del más cercano
+            rp.visible = true
+            rp:applyData({
+                x=x, y=y, facing=d[4], frame=d[5],
+                dying       = Protocol.band(d[6], Protocol.PF_DYING) ~= 0,
+                isSpectator = Protocol.band(d[6], Protocol.PF_SPECTATOR) ~= 0,
+                lives=d[7], hp=d[8], score=d[9], drownPhase=Protocol.drownName(d[10]),
+            })
+        else
+            rp.visible = false   -- salió de la partida
+        end
+    end
+
+    -- Enemigos
+    local ea, eb = a.e or {}, b.e or {}
+    for i, er in pairs(self.enemyRenderers) do
+        local db = eb[i]
+        local da = ea[i] or db
+        if db then
+            local x, y = db[1], db[2]
+            if math.abs(db[1]-da[1]) < TELEPORT_DIST and math.abs(db[2]-da[2]) < TELEPORT_DIST then
+                x, y = lerp(da[1], db[1], f), lerp(da[2], db[2], f)
+            end
+            local d = (f < 0.5) and da or db
+            er.x, er.y  = x, y
+            er.facing   = d[3]
+            er.state    = d[4]
+            er.frame    = d[5]
+            er.alive    = d[6]
+            -- Temporizadores: interpolar solo si avanzan (se reinician a 0)
+            er.deadTimer = ((db[7] >= da[7]) and lerp(da[7], db[7], f) or db[7]) / 100
+            er.breatheT  = ((db[8] >= da[8]) and lerp(da[8], db[8], f) or db[8]) / 100
+            if db[9] then
+                er.spikeProgress = lerp(da[9] or db[9], db[9], f) / 1000
+                er.flipped       = d[10] or false
+                if d[11] then er:setImgFromName(d[11]) end
+            end
+        end
+    end
+
+    -- Burbujas de oxígeno (interpoladas por ID)
+    local vents = {}
+    for id, bb in pairs(b.bub) do
+        local ba = a.bub[id]
+        local x, y = bb[2], bb[3]
+        if ba then x, y = lerp(ba[2], bb[2], f), lerp(ba[3], bb[3], f) end
+        local list = vents[bb[1]]
+        if not list then list = {}; vents[bb[1]] = list end
+        list[#list+1] = { x=x, y=y }
+    end
+    local out = {}
+    for vi = 1, #self.level.vents do out[vi] = vents[vi] or {} end
+    self.level:syncOxyBubbles(out)
+end
+
+-- ── Eventos ───────────────────────────────────────────────────────────────────
+
+function OnlineAdventureState:_onEvents(data)
+    if type(data) ~= 'table' or type(data.list) ~= 'table' then return end
+    for _, ev in ipairs(data.list) do
+        if type(ev) == 'table' then
+            -- Lo que le pasa al jugador propio o el fin de partida: ya.
+            -- Lo del resto del mundo: cuando se dibuje ese tick.
+            if ev.type == 'game_over' or ev.playerId == NC.myId then
+                self:_processEvent(ev)
+            else
+                ev._wait = 0
+                table.insert(self.pendingEvents, ev)
+            end
+        end
+    end
+end
+
+function OnlineAdventureState:_updatePendingEvents(dt)
+    local rt = self.snapBuf and self.snapBuf:renderTick()
+    local i = 1
+    while i <= #self.pendingEvents do
+        local ev = self.pendingEvents[i]
+        ev._wait = ev._wait + dt
+        if (rt and type(ev.t) == 'number' and ev.t <= rt) or ev._wait >= EVENT_MAX_WAIT then
+            table.remove(self.pendingEvents, i)
+            self:_processEvent(ev)
+        else
+            i = i + 1
+        end
+    end
+end
+
+function OnlineAdventureState:_processEvent(ev)
+    if ev.type == 'sound' then
+        -- Los sonidos propios los genera la predicción local (evita dobles).
+        if (not ev.playerId or ev.playerId ~= NC.myId) and type(ev.sound) == 'string' then
+            Sound.play(ev.sound)
+        end
+    elseif ev.type == 'score' and ev.playerId == NC.myId then
+        self:_spawnPopup('+' .. tostring(ev.delta) .. '!', ev.x or 0, ev.y or 0)
+    elseif ev.type == 'air_collected' and ev.playerId == NC.myId then
+        -- El servidor confirmó que recogimos una burbuja de oxígeno.
+        Sound.play('airGasp')
+    elseif ev.type == 'game_over' then
+        self.showGameOver        = true
+        self.gameOverTimer       = 0
+        self.specOverlay         = false
+        self.gameOverMusicPitch  = 1.0
+        Sound.stopTracked('drowning')
+        self.audioDrowning = false
     end
 end
 
@@ -374,8 +421,8 @@ function OnlineAdventureState:_updateCamera(dt)
     if self.ownData.isSpectator then
         -- Seguir al primer jugador vivo
         local tx, ty = nil, nil
-        for id, rp in pairs(self.remotePlayers) do
-            if id ~= NC.myId and not rp.isSpectator then
+        for _, rp in pairs(self.remotePlayers) do
+            if rp.visible and not rp.isSpectator then
                 tx = rp.renderX; ty = rp.renderY; break
             end
         end
@@ -383,10 +430,8 @@ function OnlineAdventureState:_updateCamera(dt)
         targetX = tx - WINDOW_W / 2
         targetY = ty - WINDOW_H / 2
     else
-        local px = (self.localPa and self.localPaInit) and self.localPa.x or self.ownData.x
-        local py = (self.localPa and self.localPaInit) and self.localPa.y or self.ownData.y
-        targetX = px - WINDOW_W / 2
-        targetY = py - WINDOW_H / 2
+        targetX = self.renderX - WINDOW_W / 2
+        targetY = self.renderY - WINDOW_H / 2
     end
 
     targetX = math.max(0, math.min(self.level.widthPx  - WINDOW_W, targetX))
@@ -435,36 +480,30 @@ function OnlineAdventureState:_renderPopups()
     love.graphics.setColor(1, 1, 1, 1)
 end
 
--- ── Envío de input al servidor ────────────────────────────────────────────────
+-- ── Input ─────────────────────────────────────────────────────────────────────
 
+-- Muestrea el input real una vez por frame. Los "recién presionado" se
+-- acumulan hasta el próximo tick para no perderlos entre ticks.
 function OnlineAdventureState:_collectInput()
-    -- Estado continuo
     self.inputState.left   = Input.down('move_left')
     self.inputState.right  = Input.down('move_right')
     self.inputState.jump   = Input.down('jump')
     self.inputState.crouch = Input.down('crouch')
-
-    -- Flags de "recién presionado" (se acumulan hasta el envío)
-    if Input.pressed('jump')   then self.inputJustPressed.jump   = true end
-    if Input.pressed('crouch') then self.inputJustPressed.crouch = true end
+    if Input.pressed('jump')   then self.pendingJump   = true end
+    if Input.pressed('crouch') then self.pendingCrouch = true end
 end
 
-function OnlineAdventureState:_sendInput(dt)
-    self.inputTimer = self.inputTimer + dt
-    if self.inputTimer >= INPUT_RATE then
-        self.inputTimer = 0
-        if not NC:isConnected() then return end
-        NC:send("player_input", {
-            left           = self.inputState.left,
-            right          = self.inputState.right,
-            jump           = self.inputState.jump,
-            crouch         = self.inputState.crouch,
-            jump_pressed   = self.inputJustPressed.jump,
-            crouch_pressed = self.inputJustPressed.crouch,
-        })
-        self.inputJustPressed.jump   = false
-        self.inputJustPressed.crouch = false
-    end
+function OnlineAdventureState:_clearInput()
+    self.inputState = { left=false, right=false, jump=false, crouch=false }
+    self.pendingJump, self.pendingCrouch = false, false
+end
+
+-- Envía los inputs no confirmados (redundancia contra pérdida de paquetes).
+function OnlineAdventureState:_sendInputs()
+    if not NC:isConnected() or not self.predictor then return end
+    local first, list = self.predictor:unacked(Protocol.INPUT_REDUNDANCY)
+    if #list == 0 then return end
+    NC:sendState("in", { s = first, b = list })
 end
 
 -- ── Pause / Spectator helpers ─────────────────────────────────────────────────
@@ -482,10 +521,7 @@ function OnlineAdventureState:_togglePause()
     self.pauseSel   = PAUSE_RESUME
     self.pauseAlpha = 0
     -- Limpiar input al pausar para que el jugador no siga moviéndose
-    if self.showPause then
-        self.inputState       = { left=false, right=false, jump=false, crouch=false }
-        self.inputJustPressed = { jump=false, crouch=false }
-    end
+    if self.showPause then self:_clearInput() end
 end
 
 function OnlineAdventureState:_executePause(sel)
@@ -509,12 +545,15 @@ function OnlineAdventureState:_executeSpec(sel)
     end
 end
 
+
 -- ── Detección local de rebote sobre enemigos ──────────────────────────────────
--- Replica la lógica del servidor para dar feedback inmediato (sin latencia de red).
+-- Replica la lógica del servidor para dar feedback inmediato (sin latencia de
+-- red). El rebote queda registrado en el predictor para re-aplicarlo en las
+-- re-simulaciones hasta que el servidor lo confirme.
 function OnlineAdventureState:_checkLocalBounce()
-    if not self.localPa or not self.localPaInit or self.localPa.dying then return end
-    if not self.localBounceCooldown then self.localBounceCooldown = {} end
-    local pob = self.localPa:getOuterBounds()
+    local pa = self.localPa
+    if pa.dying then return end
+    local pob = pa:getOuterBounds()
 
     for idx, er in pairs(self.enemyRenderers) do
         local cd = self.localBounceCooldown[idx] or 0
@@ -526,26 +565,28 @@ function OnlineAdventureState:_checkLocalBounce()
                 local overlap = pob.x < gib.x+gib.w and pob.x+pob.w > gib.x and
                                 pob.y < gib.y+gib.h and pob.y+pob.h > gib.y
                 if overlap then
+                    local bvy
                     if er.flipped then
                         -- Crabby volteado: pisotón desde abajo (jugador sube)
                         local enemyBotZone = gob.y + gob.h * 0.65
-                        if self.localPa.vy < 0 and pob.y > enemyBotZone - 10 then
-                            self.localPa.vy       =  math.abs(ADV_JUMP_VEL) * 0.40
-                            self.localPa.jumpsLeft = 2
-                            self.localPa.onGround  = false
-                            self.localBounceCooldown[idx] = 0.3
-                            self.recentLocalBounce        = 0.3
+                        if pa.vy < 0 and pob.y > enemyBotZone - 10 then
+                            bvy = math.abs(ADV_JUMP_VEL) * 0.40
                         end
                     else
                         -- Gummy / Crabby normal: pisotón desde arriba (jugador cae)
                         local gummyTopZone = gob.y + gob.h * 0.35
-                        if self.localPa.vy > 0 and pob.y+pob.h < gummyTopZone + 10 then
-                            self.localPa.vy       = -math.abs(ADV_JUMP_VEL) * 0.40
-                            self.localPa.jumpsLeft = 2
-                            self.localPa.onGround  = false
-                            self.localBounceCooldown[idx] = 0.3
-                            self.recentLocalBounce        = 0.3
+                        if pa.vy > 0 and pob.y+pob.h < gummyTopZone + 10 then
+                            bvy = -math.abs(ADV_JUMP_VEL) * 0.40
                         end
+                    end
+                    if bvy then
+                        pa.vy        = bvy
+                        pa.jumpsLeft = 2
+                        pa.onGround  = false
+                        self.localBounceCooldown[idx] = 0.3
+                        self.predictor:recordBounce(bvy)
+                        Sound.play('enemyExplode')
+                        return
                     end
                 end
             end
@@ -655,61 +696,60 @@ function OnlineAdventureState:update(dt)
         self.sceneCanvas = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
     end
 
-    -- ── Tiempo: interpolado localmente para suavizar el display, corregido por el server ────
-    -- El servidor envía levelTime en cada game_state (_onGameState lo sobreescribe).
-    -- El incremento local solo sirve para que el contador no se congele entre paquetes.
+    -- ── Tiempo: avanza localmente entre snapshots, el servidor lo corrige ─────
     self.levelTime = math.min(self.levelTime + dt, 600)
 
     -- ── Animaciones visuales del nivel (foliaje, burbujas) ────────────────────
     self.level:update(dt)
     self.level:updateFoliage(dt)
 
-    -- ── Actualizar renderers de jugadores remotos (no el propio) ─────────────
-    for id, rp in pairs(self.remotePlayers) do
-        if id ~= NC.myId then rp:update(dt) end
+    -- ── Mundo remoto: interpolación entre snapshots + eventos sincronizados ──
+    if self.snapBuf then
+        self.snapBuf:update(dt)
+        self:_applyInterpolation()
+        self:_updatePendingEvents(dt)
     end
+    for _, rp in pairs(self.remotePlayers) do rp:update(dt) end
 
-    -- ── Suavizar posición de enemigos hacia el target del servidor ────────────
-    local lerpF = math.min(1, ENEMY_LERP * dt)
-    for _, er in pairs(self.enemyRenderers) do
-        if er._renderX ~= nil and er._targetX ~= nil then
-            er._renderX = er._renderX + (er._targetX - er._renderX) * lerpF
-            er._renderY = er._renderY + (er._targetY - er._renderY) * lerpF
-            er.x = er._renderX
-            er.y = er._renderY
-        end
-    end
     -- Decrementar cooldowns de rebote local
-    if self.localBounceCooldown then
-        for idx, cd in pairs(self.localBounceCooldown) do
-            self.localBounceCooldown[idx] = cd - dt
-        end
-    end
-    if self.recentLocalBounce and self.recentLocalBounce > 0 then
-        self.recentLocalBounce = self.recentLocalBounce - dt
+    for idx, cd in pairs(self.localBounceCooldown) do
+        self.localBounceCooldown[idx] = cd - dt
     end
 
-    -- ── Recoger input solo cuando no pausado ─────────────────────────────────
+    -- ── Input (neutral en pausa: la física sigue corriendo) ───────────────────
     if not self.showPause and not self.ownData.isSpectator then
         self:_collectInput()
     end
 
-    -- ── Actualizar jugador local (siempre, pausado o no — física continúa) ───
-    if self.localPa and self.localPaInit and not self.ownData.isSpectator then
-        self.localPa:update(dt, self.level)
-        -- La recolección de burbujas de oxígeno la confirma el servidor vía
-        -- el evento 'air_collected' (ver _processEvents). No se detecta localmente
-        -- para evitar falsos positivos/negativos por desincronización de posición.
-        if not self.localPa.dying then
-            self:_checkLocalBounce()
+    -- ── Jugador local: predicción a paso fijo ─────────────────────────────────
+    if self.predictor and not self.ownData.isSpectator then
+        self.simAccum = self.simAccum + dt
+        local ticks = 0
+        while self.simAccum >= TICK_DT and ticks < MAX_TICKS_FRAME do
+            self.simAccum = self.simAccum - TICK_DT
+            ticks = ticks + 1
+            local s = self.inputState
+            local bits = Protocol.encodeInput(s.left, s.right, s.jump, s.crouch,
+                                              self.pendingJump, self.pendingCrouch)
+            self.pendingJump, self.pendingCrouch = false, false
+            self.predictor:tick(bits)
+            if not self.localPa.dying then self:_checkLocalBounce() end
         end
+        -- Tras un tirón largo no intentar recuperar todo de golpe
+        if ticks >= MAX_TICKS_FRAME then self.simAccum = 0 end
+        if ticks > 0 then
+            -- Los pasos "audibles" ya gestionaron el sonido del ahogamiento
+            self.audioDrowning = (self.localPa.drownPhase == 'drowning') and not self.localPa.dying
+            self:_sendInputs()
+        end
+
+        self.predictor:decay(dt)
+        self.renderX, self.renderY = self.predictor:renderPos(self.simAccum / TICK_DT)
     end
 
     -- ── Cámara ────────────────────────────────────────────────────────────────
     self:_updateCamera(dt)
     self:_updatePopups(dt)
-
-    self:_sendInput(dt)
 end
 
 -- ── Render ────────────────────────────────────────────────────────────────────
@@ -751,15 +791,18 @@ function OnlineAdventureState:render()
     end
 
     -- Jugadores remotos via OnlinePlayer (excluye al propio)
-    for id, rp in pairs(self.remotePlayers) do
-        if id ~= NC.myId then
-            rp:render(self.camX, self.camY)
-        end
+    for _, rp in pairs(self.remotePlayers) do
+        if rp.visible then rp:render(self.camX, self.camY) end
     end
 
-    -- Jugador propio via simulación local
-    if self.localPa and self.localPaInit and not self.ownData.isSpectator then
-        self.localPa:render(self.camX, self.camY)
+    -- Jugador propio via simulación local (posición interpolada + corrección suave)
+    if self.localPaInit and not self.ownData.isSpectator then
+        local pa = self.localPa
+        local sx, sy = pa.x, pa.y
+        pa.x, pa.y = self.renderX, self.renderY
+        pa:render(self.camX, self.camY)
+        if DEBUG_HITBOX then pa:renderDebug(self.camX, self.camY) end
+        pa.x, pa.y = sx, sy
     end
 
     -- Foliaje y burbujas
@@ -922,6 +965,15 @@ function OnlineAdventureState:_renderHUD()
     love.graphics.setColor(0.3, 1, 0.5, 0.65)
     local roomName = (self.currentRoom and self.currentRoom.name) or "Online"
     love.graphics.printf('ONLINE: ' .. roomName, 0, WINDOW_H-22, WINDOW_W-14, 'right')
+
+    -- Estadísticas de red (F1): ping, retardo de interpolación, correcciones
+    if DEBUG_HITBOX and self.snapBuf and self.predictor then
+        love.graphics.setColor(1, 1, 1, 0.8)
+        love.graphics.print(string.format(
+            'PING %dms  INTERP %.0fms  JITTER %.1f  CORR %d (ult %.1fpx)',
+            NC:getPing(), self.snapBuf.delay * TICK_DT * 1000, self.snapBuf.jitter,
+            self.predictor.corrections, self.predictor.lastError), 14, WINDOW_H-40)
+    end
 
     self:_renderPopups()
 end

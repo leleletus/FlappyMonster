@@ -21,9 +21,6 @@ local function loadSprites()
     spriteCrouch = love.graphics.newImage('assets/images/player/monstrito5.png')
 end
 
--- Velocidad de interpolación de posición (mayor = más pegado al server)
-local LERP_SPEED = 12
-
 function OnlinePlayer:new(id, name, color)
     loadSprites()
     local o = setmetatable({}, self)
@@ -53,7 +50,8 @@ function OnlinePlayer:new(id, name, color)
     return o
 end
 
--- Actualiza el estado con los datos recibidos del game_state
+-- Actualiza el estado con los datos ya interpolados por OnlineAdventureState
+-- (SnapshotBuffer). La posición llega suavizada: se dibuja tal cual.
 function OnlinePlayer:applyData(data)
     self.x           = data.x           or self.x
     self.y           = data.y           or self.y
@@ -67,19 +65,12 @@ function OnlinePlayer:applyData(data)
     self.dying       = data.dying       or false
     self.color       = data.color       or self.color
 
-    -- Primer sync: teleportar directamente sin interpolación
-    if self.firstSync then
-        self.renderX = self.x
-        self.renderY = self.y
-        self.firstSync = false
-    end
+    self.renderX = self.x
+    self.renderY = self.y
+    self.firstSync = false
 end
 
 function OnlinePlayer:update(dt)
-    -- Interpolación suave hacia la posición del servidor
-    local lerpT = math.min(1, LERP_SPEED * dt)
-    self.renderX = self.renderX + (self.x - self.renderX) * lerpT
-    self.renderY = self.renderY + (self.y - self.renderY) * lerpT
 end
 
 function OnlinePlayer:render(camX, camY)

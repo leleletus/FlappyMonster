@@ -238,7 +238,7 @@ function Server:update()
 
     while event do
         if event.type == "connect" then
-            local eventClient = sock.newClient(event.peer)
+            local eventClient = sock.newClient(event.peer, nil, self.maxChannels)
             eventClient:setSerialization(self.serialize, self.deserialize)
             table.insert(self.peers, event.peer)
             table.insert(self.clients, eventClient)
@@ -246,11 +246,25 @@ function Server:update()
             self:log(event.type, tostring(event.peer) .. " connected")
 
         elseif event.type == "receive" then
-            local eventName, data = self:__unpack(event.data)
             local eventClient = self:getClient(event.peer)
 
-            self:_activateTriggers(eventName, data, eventClient)
-            self:log(eventName, data)
+            -- Los paquetes vienen de clientes no confiables: limitar tamaño,
+            -- deserializar protegido y exigir un nombre de evento válido.
+            -- Un paquete malformado nunca debe tumbar el servidor.
+            local ok, eventName, data = false, nil, nil
+            if #event.data <= self.maxPacketSize then
+                ok, eventName, data = pcall(self.__unpack, self, event.data)
+            end
+            if ok and type(eventName) == "string" and #eventName <= 32
+               and eventName ~= "connect" and eventName ~= "disconnect" then
+                local okT, err = pcall(self._activateTriggers, self, eventName, data, eventClient)
+                if not okT and self.onHandlerError then
+                    self.onHandlerError(eventClient, eventName, err)
+                end
+                self:log(eventName, data)
+            elseif self.onInvalidPacket then
+                self.onInvalidPacket(eventClient, #event.data)
+            end
 
         elseif event.type == "disconnect" then
             -- remove from the active peer list
@@ -1310,6 +1324,10 @@ sock.newServer = function(address, port, maxPeers, maxChannels, inBandwidth, out
         defaultSendMode = "reliable",
         sendChannel     = 0,
         defaultSendChannel = 0,
+
+        maxPacketSize   = 4096,   -- bytes; paquetes mayores se descartan
+        onInvalidPacket = nil,    -- function(client, size)
+        onHandlerError  = nil,    -- function(client, eventName, err)
 
         peers           = {},
         clients         = {},

@@ -124,6 +124,11 @@ local function Buffer_read_byte()
 end
 
 local function Buffer_read_string(len)
+	-- Longitud inválida (negativa, fraccionaria, no numérica) = datos maliciosos.
+	-- Sin esto, ffi.string con longitud negativa lee memoria fuera del buffer.
+	if type(len) ~= "number" or len < 0 or len ~= math.floor(len) then
+		error("malformed serialized data")
+	end
 	Buffer_ensure(len)
 	local x = ffi.string(buf + buf_pos, len)
 	buf_pos = buf_pos + len
@@ -131,6 +136,7 @@ local function Buffer_read_string(len)
 end
 
 local function Buffer_read_raw(data, len)
+	Buffer_ensure(len)
 	ffi.copy(data, buf + buf_pos, len)
 	buf_pos = buf_pos + len
 	return data

@@ -28,7 +28,7 @@ Abre una terminal en la raiz del proyecto y ejecuta:
 love .
 ```
 Tips de Depuracion para el Cliente:
-* Hitboxes: Puedes presionar la tecla F1 durante el juego para mostrar/ocultar las cajas de colision (hitboxes).
+* Hitboxes: Puedes presionar la tecla F1 durante el juego para mostrar/ocultar las cajas de colision (hitboxes). En partidas online, F1 tambien muestra estadisticas de red (ping, retardo de interpolacion, jitter y correcciones de la prediccion).
 * Consola de depuracion: Si quieres ver los prints en tiempo real en Windows, abre conf.lua y cambia t.console = false por t.console = true.
 
 ### 2. Correr el Servidor Local
@@ -62,7 +62,18 @@ El servidor esta optimizado para funcionar en entornos de produccion Linux sin i
    ```bash
    love server --headless
    ```
-   El servidor escucha conexiones en el puerto 22122 por defecto. Recuerda abrir este puerto en tu firewall (ej: sudo ufw allow 22122).
+   El servidor escucha conexiones en el puerto 22122 por defecto (UDP, via ENet). Recuerda abrir este puerto en tu firewall (ej: sudo ufw allow 22122/udp).
+
+---
+
+## Red del Modo Multijugador
+
+* Paso fijo: servidor y cliente simulan al jugador a 60 Hz exactos (src/network/Protocol.lua). El servidor envia snapshots a 30 Hz.
+* Prediccion + reconciliacion (src/network/Predictor.lua): el cliente mueve a su jugador al instante con inputs numerados; cada snapshot confirma el ultimo input procesado y el cliente re-simula los pendientes. Las diferencias se corrigen suavemente.
+* Interpolacion (src/network/SnapshotBuffer.lua): otros jugadores, enemigos y burbujas se dibujan unos ~60-110 ms en el pasado, interpolando entre snapshots reales. El retardo se adapta al jitter y a la perdida de paquetes.
+* Canales ENet: canal 0 fiable (salas y eventos de juego), canal 1 no fiable (snapshots e inputs, con redundancia para tolerar perdidas).
+* Anti-trampas y robustez: el servidor es autoritativo; limita mensajes por conexion, conexiones por IP e intentos de contrasena; valida tipos y tamanos de todo lo que recibe; descarta paquetes malformados sin caerse; impide el speed hack (presupuesto de inputs por tick); banea por nombre e IP.
+* Version de protocolo: `Protocol.VERSION`. Si cambias el formato de los mensajes, subela: el servidor rechaza clientes con otra version con un mensaje claro.
 
 ---
 
