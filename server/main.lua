@@ -639,10 +639,11 @@ local function broadcastRoomUpdate(room)
     end
 end
 
-local function announceToRoom(room, msg)
+-- kind: 'join' | 'leave' | 'kick' | 'ban' | 'admin' | 'game' (el cliente lo colorea)
+local function announceToRoom(room, msg, kind)
     for _, pid in ipairs(room.playerIds) do
         local c = findClientById(pid)
-        if c then c:send("room_announce", { msg=msg }) end
+        if c then c:send("room_announce", { msg=msg, kind=kind or 'info' }) end
     end
 end
 
@@ -799,7 +800,7 @@ local function removePlayerFromRoom(player, room, silent)
     if room.sim then room.sim.playerSims[player.id] = nil end
 
     if not silent then
-        announceToRoom(room, player.name .. " ha salido de la sala.")
+        announceToRoom(room, player.name .. " ha salido de la sala.", 'leave')
     end
 
     if #room.playerIds == 0 then
@@ -811,7 +812,7 @@ local function removePlayerFromRoom(player, room, silent)
     if room.adminId == player.id then
         room.adminId = room.playerIds[1]
         local newName = findPlayerNameById(room.adminId)
-        announceToRoom(room, newName .. " es el nuevo admin.")
+        announceToRoom(room, newName .. " es el nuevo host.", 'admin')
         log("Nuevo admin de '" .. room.name .. "': " .. newName)
     end
 
@@ -918,7 +919,7 @@ end, true)
 
 -- Clientes antiguos (protocolo v1): avisar en su pantalla de login.
 on("set_nickname", function(data, client, p)
-    client:send("room_error", { msg="Version desactualizada. Actualiza el juego." })
+    client:send("room_error", { msg="Versión desactualizada. Actualiza el juego." })
 end, true)
 
 on("get_rooms", function(data, client, p)
@@ -927,12 +928,12 @@ end)
 
 on("create_room", function(data, client, player)
     if type(data) ~= "table" then return end
-    if player.roomId then client:send("room_error",{msg="Ya estas en una sala."}); return end
+    if player.roomId then client:send("room_error",{msg="Ya estás en una sala."}); return end
     local name = Protocol.sanitizeName(data.name, ROOM_NAME_MAX) or ("Sala de " .. player.name)
     local isPublic   = (data.isPublic ~= false)
     local password   = cleanText(data.password, PASSWORD_MAX)
     local maxPlayers = tonumber(data.maxPlayers) or 4
-    if not isInt(maxPlayers, 1, 8) then client:send("room_error",{msg="Max jugadores: 1-8."}); return end
+    if not isInt(maxPlayers, 1, 8) then client:send("room_error",{msg="Máximo de jugadores: 1-8."}); return end
     local roomId = newRoomId()
     rooms[roomId] = { id=roomId, name=name, isPublic=isPublic, password=password,
                       maxPlayers=maxPlayers, playerIds={player.id},
@@ -947,17 +948,18 @@ end)
 
 on("join_room", function(data, client, player)
     if type(data) ~= "table" then return end
-    if player.roomId then client:send("room_error",{msg="Ya estas en una sala."}); return end
+    if player.roomId then client:send("room_error",{msg="Ya estás en una sala."}); return end
     local now = love.timer.getTime()
     if now < player.joinLockUntil then
         client:send("room_error",{msg="Demasiados intentos. Espera unos segundos."}); return
     end
     local room = rooms[tostring(data.id or ""):sub(1, 12)]
     if not room then client:send("room_error",{msg="Sala no encontrada."}); return end
-    if room.state ~= "WAITING" then client:send("room_error",{msg="Partida en curso."}); return end
-    if #room.playerIds >= room.maxPlayers then client:send("room_error",{msg="Sala llena."}); return end
+    if room.state ~= "WAITING" then client:send("room_error",{msg="Esa sala ya está en partida."}); return end
+    if #room.playerIds >= room.maxPlayers then client:send("room_error",{msg="La sala está llena."}); return end
     if room.bannedNames[player.name:lower()] or room.bannedIPs[player.ip] then
-        client:send("room_error",{msg="Estas baneado."}); return
+        client:send("room_error",{ msg = "El host de esta sala te baneó. No puedes volver a entrar.",
+                                   kind = "banned", room = room.name }); return
     end
     if room.password ~= "" and room.password ~= cleanText(data.password, PASSWORD_MAX) then
         player.joinFails = player.joinFails + 1
@@ -966,7 +968,7 @@ on("join_room", function(data, client, player)
             player.joinLockUntil = now + JOIN_FAIL_LOCK
             log(player.name .. " bloqueado " .. JOIN_FAIL_LOCK .. "s por contrasenas erroneas")
         end
-        client:send("room_error",{msg="Contrasena incorrecta."}); return
+        client:send("room_error",{msg="Contraseña incorrecta."}); return
     end
     player.joinFails = 0
     table.insert(room.playerIds, player.id)
@@ -975,7 +977,7 @@ on("join_room", function(data, client, player)
     player.color   = PLAYER_COLORS[#room.playerIds] or {1,1,1}
     log(player.name .. " se unio a '" .. room.name .. "'")
     broadcastRoomUpdate(room)
-    announceToRoom(room, player.name .. " se ha unido.")
+    announceToRoom(room, player.name .. " se ha unido.", 'join')
 end)
 
 on("leave_room", function(data, client, player)
@@ -999,14 +1001,14 @@ on("start_game", function(data, client, player)
     if not player.roomId then return end
     local room = rooms[player.roomId]
     if not room then return end
-    if room.adminId ~= player.id then client:send("room_error",{msg="Solo el admin puede iniciar."}); return end
-    if room.state == "IN_GAME"   then client:send("room_error",{msg="Partida ya en curso."}); return end
-    if #room.playerIds < 2       then client:send("room_error",{msg="Se necesitan al menos 2 jugadores."}); return end
+    if room.adminId ~= player.id then client:send("room_error",{msg="Solo el host puede iniciar la partida."}); return end
+    if room.state == "IN_GAME"   then client:send("room_error",{msg="La partida ya está en curso."}); return end
+    if #room.playerIds < 2       then client:send("room_error",{msg="Se necesitan al menos 2 jugadores para empezar."}); return end
 
     for _, pid in ipairs(room.playerIds) do
         local c = findClientById(pid)
         if c and not players[c].isReady then
-            client:send("room_error",{msg="No todos estan listos."}); return
+            client:send("room_error",{msg="No todos los jugadores están listos."}); return
         end
     end
 
@@ -1019,14 +1021,14 @@ on("start_game", function(data, client, player)
     scanLevels(true)
     ensureRoomLevel(room)
     if not room.level then
-        client:send("room_error",{msg="No hay ningun nivel compatible con este modo."}); return
+        client:send("room_error",{msg="No hay ningún mapa compatible con este modo."}); return
     end
 
     room.state = "IN_GAME"
     room.sim   = initRoomSim(room)
 
     log("Partida iniciada en '" .. room.name .. "'!")
-    announceToRoom(room, "La partida ha comenzado!")
+    announceToRoom(room, "¡La partida ha comenzado!", 'game')
     broadcastRoomUpdate(room)   -- el cliente cambia a OnlineAdventureState...
     sendGameInit(room)          -- ...y recibe los datos iniciales (mismo canal, en orden)
 end)
@@ -1035,9 +1037,9 @@ on("stop_game", function(data, client, player)
     if not player.roomId then return end
     local room = rooms[player.roomId]
     if not room then return end
-    if room.adminId ~= player.id then client:send("room_error",{msg="Solo el admin puede detener."}); return end
+    if room.adminId ~= player.id then client:send("room_error",{msg="Solo el host puede detener la partida."}); return end
     if room.state ~= "IN_GAME" then return end
-    announceToRoom(room, "La partida fue detenida.")
+    announceToRoom(room, "El host detuvo la partida.", 'game')
     endGame(room, "detenida por el admin")
 end)
 
@@ -1084,7 +1086,7 @@ on("set_level", function(data, client, player)
     if not room then return end
     local info = levelInfo(data.level)
     if not info or not info.modes[room.mode] then
-        client:send("room_error",{msg="Ese nivel no sirve para este modo."}); return
+        client:send("room_error",{msg="Ese mapa no sirve para este modo."}); return
     end
     room.level = info.path
     broadcastRoomUpdate(room)
@@ -1093,11 +1095,11 @@ end)
 local function adminTarget(data, client, admin, verb)
     if type(data) ~= "table" or not admin.roomId then return end
     local room = rooms[admin.roomId]
-    if not room or room.adminId ~= admin.id then client:send("room_error",{msg="No eres admin."}); return end
+    if not room or room.adminId ~= admin.id then client:send("room_error",{msg="No eres el host de la sala."}); return end
     local targetId = tostring(data.playerId or ""):sub(1, 32)
     if targetId == admin.id then client:send("room_error",{msg="No puedes " .. verb .. "te."}); return end
     local tc = findClientById(targetId)
-    if not tc or players[tc].roomId ~= room.id then client:send("room_error",{msg="Jugador no encontrado."}); return end
+    if not tc or players[tc].roomId ~= room.id then client:send("room_error",{msg="Ese jugador ya no está en la sala."}); return end
     return room, tc
 end
 
@@ -1105,9 +1107,9 @@ on("kick_player", function(data, client, admin)
     local room, tc = adminTarget(data, client, admin, "kickear")
     if not room then return end
     local tname = players[tc].name
-    tc:send("kicked", {msg="Fuiste expulsado."})
+    tc:send("kicked", { msg = admin.name .. " (host) te expulsó de la sala.", room = room.name, by = admin.name })
     removePlayerFromRoom(players[tc], room, true)
-    announceToRoom(room, tname .. " fue expulsado.")
+    announceToRoom(room, tname .. " fue expulsado por el host.", 'kick')
     log(admin.name .. " kickeo a " .. tname)
 end)
 
@@ -1119,9 +1121,10 @@ on("ban_player", function(data, client, admin)
     -- Por nombre Y por IP: cambiarse el nick ya no evita el baneo.
     room.bannedNames[tname:lower()] = true
     room.bannedIPs[target.ip] = true
-    tc:send("banned", {msg="Fuiste baneado."})
+    tc:send("banned", { msg = admin.name .. " (host) te baneó de la sala. No podrás volver a entrar.",
+                        room = room.name, by = admin.name })
     removePlayerFromRoom(target, room, true)
-    announceToRoom(room, tname .. " fue baneado.")
+    announceToRoom(room, tname .. " fue baneado por el host.", 'ban')
     log(admin.name .. " baneo a " .. tname)
 end)
 
@@ -1158,13 +1161,13 @@ on("close_room", function(data, client, admin)
     if not admin.roomId then return end
     local room = rooms[admin.roomId]
     if not room or room.adminId ~= admin.id then
-        client:send("room_error",{msg="No eres admin."}); return
+        client:send("room_error",{msg="No eres el host de la sala."}); return
     end
     log("Sala '" .. room.name .. "' cerrada por " .. admin.name)
     for _, pid in ipairs(room.playerIds) do
         local c = findClientById(pid)
         if c then
-            c:send("room_closed", {msg="El admin cerro la sala."})
+            c:send("room_closed", { msg = admin.name .. " (host) cerró la sala.", room = room.name, by = admin.name })
             players[c].roomId=nil; players[c].isReady=false; players[c].color=nil
         end
     end

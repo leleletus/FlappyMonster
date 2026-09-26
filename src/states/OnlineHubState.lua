@@ -39,8 +39,6 @@ function OnlineHubState:enter(args)
     self.sub          = SUB_LIST
     self.roomList     = {}
     self.selectedIdx  = 1
-    self.errorMsg     = ""
-    self.errorTimer   = 0
     self.refreshTimer = 0
     self._keyboardOn     = false
     self.hoveredCreateBtn = nil   -- solo para botones sin variable de selección (STEP_MAX ±)
@@ -76,14 +74,17 @@ function OnlineHubState:_setupHandlers()
         gStateMachine:change('online_room', { room = data })
     end)
     NC:on("room_error", function(data)
-        self.errorMsg   = data.msg or "Error"
-        self.errorTimer = 4
+        data = type(data) == 'table' and data or {}
+        if data.kind == 'banned' then
+            Notify.modal('BANEADO', data.msg or 'Estás baneado de esta sala.', {
+                kind = 'ban', subtitle = data.room and ('Sala: ' .. data.room) or nil })
+        else
+            Notify.toast(data.msg or "Error", 'error')
+        end
         if self.sub == SUB_PASSWORD or self.sub == SUB_WAITING then
             self.sub = SUB_LIST; self.inputBuffer = ""
         end
     end)
-    NC:on("kicked",       function(data) self.errorMsg=data.msg or "Expulsado"; self.errorTimer=4 end)
-    NC:on("room_closed",  function(data) self.errorMsg=data.msg or "Sala cerrada"; self.errorTimer=4 end)
     NC:on("connection_lost", function(data)
         gStateMachine:change('online_error', {
             code = "ERR_CONNECTION_LOST",
@@ -93,7 +94,7 @@ function OnlineHubState:_setupHandlers()
 end
 
 function OnlineHubState:_showError(msg)
-    self.errorMsg = msg; self.errorTimer = 4
+    Notify.toast(msg, 'error')
 end
 
 -- Abre/cierra el teclado Android según si el sub-estado actual necesita texto.
@@ -162,10 +163,6 @@ end
 -- ── Update ────────────────────────────────────────────────────────────────────
 
 function OnlineHubState:update(dt)
-    if self.errorTimer > 0 then
-        self.errorTimer = self.errorTimer - dt
-        if self.errorTimer <= 0 then self.errorMsg = "" end
-    end
 
     -- Auto-refresh cada 5s en lista
     if self.sub == SUB_LIST then
@@ -426,17 +423,6 @@ function OnlineHubState:render()
         self:_renderCreate()
     elseif self.sub == SUB_PASSWORD then
         self:_renderPassword()
-    end
-
-    if self.errorMsg ~= "" then
-        local ew = math.min(700, WINDOW_W - 80)
-        love.graphics.setColor(0, 0, 0, 0.7)
-        love.graphics.rectangle('fill', (WINDOW_W-ew)/2 - 8, WINDOW_H - 40, ew + 16, 28)
-        love.graphics.setColor(1, 0.3, 0.3, 1)
-        love.graphics.rectangle('line', (WINDOW_W-ew)/2 - 8, WINDOW_H - 40, ew + 16, 28)
-        love.graphics.setFont(FONT_SMALL)
-        love.graphics.setColor(1, 0.3, 0.3, 1)
-        love.graphics.printf(self.errorMsg, (WINDOW_W-ew)/2, WINDOW_H - 36, ew, 'center')
     end
 
     love.graphics.setColor(COLOR_WHITE)

@@ -9,12 +9,12 @@ local imgs
 
 return {
     name = 'stretch', label = 'Estiradora', placement = 'sub',
-    editor = { icon = 'assets/images/foliage/strech/strech1.png' },
+    editor = { icon = 'assets/images/foliage/stretch/stretch1.png' },
     loadAssets = function()
         if imgs then return end
         imgs = {}
         for i = 1, FRAMES do
-            local ok, im = pcall(love.graphics.newImage, 'assets/images/foliage/strech/strech' .. i .. '.png')
+            local ok, im = pcall(love.graphics.newImage, 'assets/images/foliage/stretch/stretch' .. i .. '.png')
             if ok then imgs[i] = im end
         end
     end,

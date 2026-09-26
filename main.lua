@@ -9,6 +9,7 @@ StateMachine = require 'src/StateMachine'
 
 -- NetworkClient: singleton global para el modo online
 NC = require 'src/network/NetworkClient'
+Notify = require 'src/ui/Notify'   -- avisos globales (toasts y ventanas)
 
 local TitleState                  = require 'src/states/TitleState'
 local MainMenuState               = require 'src/states/MainMenuState'
@@ -71,12 +72,15 @@ function love.update(dt)
     Timer.update(dt)
     Input.update(dt)
     NC:update(dt)
-    gStateMachine:update(dt)
+    local blocked = Notify.blocking()    -- una ventana de aviso abierta se come la entrada
+    Notify.update(dt)
+    if not blocked then gStateMachine:update(dt) end
 end
 
 function love.draw()
     lovesize.begin()
         gStateMachine:render()
+        Notify.render()
     lovesize.finish()
 end
 
@@ -107,6 +111,7 @@ function love.touchpressed(id, x, y, dx, dy, pressure)
     local lx = (x - offX) / scale
     local ly = (y - offY) / scale
 
+    if Notify.touch(lx, ly) then return end
     local state = gStateMachine:_top()
     if state and state.touchpressed then
         state:touchpressed(id, lx, ly, dx, dy, pressure)
@@ -172,6 +177,7 @@ function love.mousemoved(x, y, dx, dy, istouch)
     local offY    = (sh - WINDOW_H * scale) / 2
     local lx      = (x - offX) / scale
     local ly      = (y - offY) / scale
+    if Notify.hover(lx, ly) then return end
     local state   = gStateMachine:_top()
     if state and state.mousemoved then
         state:mousemoved(lx, ly)
@@ -192,6 +198,7 @@ function love.mousepressed(x, y, button, istouch, presses)
     local lx      = (x - offX) / scale
     local ly      = (y - offY) / scale
 
+    if Notify.touch(lx, ly) then return end
     local state = gStateMachine:_top()
     if state and state.touchpressed then
         state:touchpressed('mouse', lx, ly, 0, 0, 1)

@@ -40,9 +40,6 @@ function OnlineRoomState:enter(args)
 
     self.currentRoom   = args.room or {}
     self.isReady       = false
-    self.announcements = {}
-    self.errorMsg      = ""
-    self.errorTimer    = 0
 
     -- Navegación
     self.sub           = SUB_MAIN
@@ -88,17 +85,15 @@ function OnlineRoomState:_setupHandlers()
         if self.modeMenu then self.modeMenu:setCatalog(data) end
     end)
     NC:on("room_announce", function(data)
-        table.insert(self.announcements, { msg = data.msg or "", timer = 5 })
-        if #self.announcements > 5 then table.remove(self.announcements, 1) end
+        if type(data) == 'table' then Notify.toast(data.msg, data.kind) end
     end)
     NC:on("room_left",   function(data) gStateMachine:change('online_hub') end)
-    NC:on("kicked",      function(data) gStateMachine:change('online_hub') end)
-    NC:on("banned",      function(data) gStateMachine:change('online_hub') end)
-    NC:on("room_closed", function(data) gStateMachine:change('online_hub') end)
+    NC:on("kicked",       function(data) Notify.roomExit('kicked', data) end)
+    NC:on("banned",       function(data) Notify.roomExit('banned', data) end)
+    NC:on("room_closed",  function(data) Notify.roomExit('room_closed', data) end)
     NC:on("room_error",  function(data)
-        self.errorMsg   = data.msg or "Error"
-        self.errorTimer = 4
-        self.sub        = SUB_MAIN
+        Notify.toast(type(data) == 'table' and data.msg or "Error", 'error')
+        if self.sub == SUB_PMENU then self.sub = SUB_MAIN end
     end)
     NC:on("connection_lost", function(data)
         gStateMachine:change('online_error', {
@@ -159,15 +154,6 @@ end
 
 function OnlineRoomState:update(dt)
     self.t = self.t + dt
-    -- Timers
-    if self.errorTimer > 0 then
-        self.errorTimer = self.errorTimer - dt
-        if self.errorTimer <= 0 then self.errorMsg = "" end
-    end
-    for i = #self.announcements, 1, -1 do
-        self.announcements[i].timer = self.announcements[i].timer - dt
-        if self.announcements[i].timer <= 0 then table.remove(self.announcements, i) end
-    end
 
     local room    = self.currentRoom
     local players = room and room.players or {}
@@ -684,36 +670,6 @@ function OnlineRoomState:render()
 
     -- ── Menú "MODO DE JUEGO" ──────────────────────────────────────────────────
     if self.sub == SUB_MODES and self.modeMenu then self.modeMenu:render() end
-
-    -- ── Anuncios ──────────────────────────────────────────────────────────────
-    if #self.announcements > 0 then
-        -- Al pie de la columna de jugadores
-        love.graphics.setFont(FONT_SMALL)
-        local ay = L.bottom - 24 - (#self.announcements - 1) * 30
-        for _, ann in ipairs(self.announcements) do
-            local alpha = math.min(ann.timer / 1.5, 1)
-            local text  = fitText(FONT_SMALL, "» " .. ann.msg, L.left.w - 24)
-            local tw    = FONT_SMALL:getWidth(text) + 24
-            local ax    = math.floor(L.left.x + (L.left.w - tw) / 2)
-            love.graphics.setColor(0, 0, 0, 0.75 * alpha)
-            love.graphics.rectangle('fill', ax, ay - 8, tw, 26)
-            love.graphics.setColor(1, 0.95, 0.2, alpha)
-            love.graphics.print(text, ax + 12, ay)
-            ay = ay + 30
-        end
-    end
-
-    -- ── Error ─────────────────────────────────────────────────────────────────
-    if self.errorMsg ~= "" then
-        local eW = math.min(600, P.w - 40)
-        local eX = math.floor((WINDOW_W - eW) / 2)
-        love.graphics.setColor(0, 0, 0, 0.8)
-        love.graphics.rectangle('fill', eX - 8, WINDOW_H - 36, eW + 16, 28)
-        love.graphics.setColor(1, 0.3, 0.3, 1)
-        love.graphics.rectangle('line', eX - 8, WINDOW_H - 36, eW + 16, 28)
-        love.graphics.setFont(FONT_SMALL)
-        love.graphics.printf(self.errorMsg, eX, WINDOW_H - 27, eW, 'center')
-    end
 
     love.graphics.setColor(COLOR_WHITE)
 end

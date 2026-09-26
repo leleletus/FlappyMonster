@@ -28,8 +28,6 @@ function OnlineLoginState:enter(args)
         [FIELD_NICK] = NC.myName or "",
     }
     self.activeField = FIELD_NICK
-    self.errorMsg    = ""
-    self.errorTimer  = 0
     self.connecting  = false
 
     -- Si ya estamos conectados, ir directo al hub
@@ -65,8 +63,7 @@ function OnlineLoginState:enter(args)
 end
 
 function OnlineLoginState:_showError(msg)
-    self.errorMsg   = msg
-    self.errorTimer = 4
+    Notify.toast(msg, 'error')
 end
 
 -- ── textinput (forwarded desde main.lua) ─────────────────────────────────────
@@ -96,10 +93,6 @@ end
 -- ── Update ────────────────────────────────────────────────────────────────────
 
 function OnlineLoginState:update(dt)
-    if self.errorTimer > 0 then
-        self.errorTimer = self.errorTimer - dt
-        if self.errorTimer <= 0 then self.errorMsg = "" end
-    end
 
     -- Solo hay un campo, no hay navegación entre campos
 
@@ -121,7 +114,6 @@ function OnlineLoginState:_tryConnect()
     end
 
     self.connecting = true
-    self.errorMsg   = ""
     NC:connect(FIXED_HOST, FIXED_PORT, nick)
 end
 
@@ -238,13 +230,6 @@ function OnlineLoginState:render()
             love.graphics.setColor(1, 1, 1, 0.8)
         end
         love.graphics.printf(b.label, b.x, b.y + b.h / 2 - FONT_MED:getHeight() / 2, b.w, 'center')
-    end
-
-    -- Error
-    if self.errorMsg ~= "" then
-        love.graphics.setFont(FONT_SMALL)
-        love.graphics.setColor(1, 0.25, 0.25, 1)
-        love.graphics.printf(self.errorMsg, 0, L.errorY, WINDOW_W, 'center')
     end
 
     love.graphics.setColor(COLOR_WHITE)

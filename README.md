@@ -10,12 +10,31 @@ El proyecto cuenta con una arquitectura dividida en dos partes que conviven en e
 
 ## Estructura del Proyecto
 
-* main.lua / conf.lua: Archivos de entrada principales del Cliente.
-* src/: Logica del cliente (estados, entidades graficas, sonido y maquina de estados).
-* assets/: Recursos graficos, niveles (.json), fuentes y sonidos del cliente.
-* server/: Carpeta que contiene la logica exclusiva del Servidor. Tiene su propio main.lua y conf.lua.
-* libs/: Librerias compartidas (ej. sock.lua para red, bitser.lua para serializacion de paquetes, lovesize.lua).
-* love-online-game/: Contiene el Makefile y los resources/ para compilar los ports (Win64, Switch).
+```
+main.lua / conf.lua      Entrada del cliente (y del editor con --editor)
+settings.lua, input.lua  Constantes globales y controles (teclado, mando, táctil)
+libs/                    Librerías compartidas cliente/servidor (sock, bitser, json...)
+server/                  Servidor autoritativo (main.lua + conf.lua propios)
+src/
+  states/                Pantallas del juego (menús, aventura, online, resultados)
+  entities/              Jugador (física compartida con el servidor) y jugadores remotos
+  network/               Protocolo, cliente de red, predicción e interpolación
+  world/                 Nivel y catálogos data-driven:
+    tiles/               tipos de tile y materiales      (receta en world/Tiles.lua)
+    entities/            enemigos / NPCs                 (receta en world/Entities.lua)
+    decorations/         decoración                      (receta en world/Decorations.lua)
+    modes/               modos de juego online           (receta en world/Modes.lua)
+  ui/                    Componentes de interfaz: avisos (Notify), menú de modos,
+                         botones de pausa/volver, iconos pixel art, utilidades de texto
+  editor/                Editor de niveles
+assets/
+  levels/                Mapas (.json). El servidor los detecta solos (los que
+                         empiezan por "_" se ocultan)
+  music/                 Música (menús, nivel, victoria)
+  sounds/                Efectos (sounds/water/, sounds/fireworks/...)
+  images/, fonts/, shaders/
+love-online-game/        Makefile y resources/ para compilar los ports (Win64, Switch, Android)
+```
 
 ---
 
@@ -62,7 +81,7 @@ Corre dentro del propio juego y usa sus mismos catalogos, dibujo y assets: todo 
 
 ---
 
-## Anadir Contenido (tiles, materiales, entidades)
+## Anadir Contenido (tiles, materiales, entidades, modos, mapas)
 
 Todo es declarativo y se registra en un unico listado; el juego, el servidor online y el editor lo reconocen sin tocar nada mas.
 
@@ -71,6 +90,9 @@ Todo es declarativo y se registra en un unico listado; el juego, el servidor onl
 * Entidad nueva (enemigo, NPC...): `src/world/entities/types/<nombre>.lua` + `TYPES` en `src/world/Entities.lua`. Hereda de `Entity` (movimiento, ruta, pausas, combate ya resueltos); solo define sprites, dibujo, sus valores por defecto y, si quiere, propiedades y comportamiento propios mediante hooks. Receta completa en la cabecera de `src/world/Entities.lua`.
 * Decoracion nueva (planta, roca, adorno...): `src/world/decorations/types/<nombre>.lua` + `TYPES` en `src/world/Decorations.lua`. Define `placement` ('sub' o 'cell'), sus imagenes, `draw` y, si quiere, `init`/`update` para animarse. Todas pueden espejarse y ponerse delante o detras del jugador desde el editor. Ver `src/world/decorations/DecorationTypes.lua`.
 * Propiedad nueva para TODAS las entidades: anadirla a `EntityTypes.COMMON` (`src/world/entities/EntityTypes.lua`); el editor la muestra automaticamente.
+* Modo de juego online nuevo: `src/world/modes/<id>.lua` + `TYPES` en `src/world/Modes.lua`. Define que necesita el nivel (`requires`), cuando termina la ronda (`tick`) y como se clasifica (`rank`, con desempates). El host lo elige en el lobby, el servidor aplica sus reglas y la pantalla de resultados es generica. Ver `src/world/modes/ModeTypes.lua`.
+* Mapa nuevo: guardalo desde el editor en `assets/levels/`. En el servidor aparece solo (en ~10 s, sin reiniciar) en los modos que admita: Carrera necesita tiles "Meta"; Cazamonstruos, enemigos pisoteables.
+* Avisos al jugador: `Notify.toast(msg, tipo)` para avisos temporales y `Notify.modal(titulo, msg)` para ventanas que hay que aceptar (`src/ui/Notify.lua`).
 * Formato de celda: `src/world/tiles/TileCodec.lua` (id, agua, pinchos). Reglas jugador-entidad: `src/world/entities/Interactions.lua`.
 
 ---

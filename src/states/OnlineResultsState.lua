@@ -144,12 +144,14 @@ function OnlineResultsState:_setupHandlers()
             gStateMachine:change('online_adventure', { room = data })
         end
     end)
-    NC:on("room_announce", function() end)
+    NC:on("room_announce", function(data)
+        if type(data) == 'table' then Notify.toast(data.msg, data.kind) end
+    end)
     NC:on("room_error",   function() end)
     NC:on("room_left",    function() gStateMachine:change('online_hub') end)
-    NC:on("room_closed",  function() gStateMachine:change('online_hub') end)
-    NC:on("kicked",       function() gStateMachine:change('online_hub') end)
-    NC:on("banned",       function() gStateMachine:change('online_hub') end)
+    NC:on("kicked",       function(data) Notify.roomExit('kicked', data) end)
+    NC:on("banned",       function(data) Notify.roomExit('banned', data) end)
+    NC:on("room_closed",  function(data) Notify.roomExit('room_closed', data) end)
     NC:on("connection_lost", function(data)
         gStateMachine:change('online_error', {
             code = "ERR_CONNECTION_LOST",
