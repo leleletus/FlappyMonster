@@ -7,7 +7,7 @@ local Tiles = require 'src/world/Tiles'
 local P = {}
 
 -- ── Versión / red ─────────────────────────────────────────────────────────────
-P.VERSION        = 3        -- el servidor rechaza clientes con otra versión
+P.VERSION        = 4        -- el servidor rechaza clientes con otra versión
 P.CHANNELS       = 2
 P.CH_RELIABLE    = 0        -- eventos de sala y de juego (ordenados, garantizados)
 P.CH_STATE       = 1        -- snapshots e inputs (no fiables: el más nuevo gana)

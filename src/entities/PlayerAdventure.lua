@@ -1,5 +1,6 @@
 -- src/entities/PlayerAdventure.lua
 local Class = require 'libs/class'
+local DeadEyes = require 'src/entities/DeadEyes'
 local Tiles = require 'src/world/Tiles'
 local PlayerAdventure = Class:new()
 
@@ -309,6 +310,7 @@ function PlayerAdventure:respawn()
     self.drownTimer=0; self.drownChime=0; self.drownPhase='none'
     self.drownAudT=0; self.drownDead=false
     self.prevInWater=false
+    self.splashSt='out'; self.splashCD=0
     Sound.stopTracked('drowning')
     Sound.playMusic('level')
     self.airBarAlpha=0; self.airBarBobT=0; self.airBarBobOn=false; self.airBarShakeX=0
@@ -381,6 +383,81 @@ function PlayerAdventure:updateDrowning(dt, level)
         end
         return
     end
+end
+
+-- ── Splash al entrar / salir del agua ────────────────────────────────────────
+-- splashSt: 'out'      fuera del líquido
+--           'wading'   pies dentro, la cabeza aún no se ha hundido
+--           'under'    cabeza sumergida
+--           'surfaced' sacó la cabeza (para respirar) pero sigue en el agua
+-- Suena al tocar el agua con los pies, al SACAR LA CABEZA (no hace falta
+-- salir del todo) y al volver a hundirla. Margen de unos píxeles y un
+-- intervalo mínimo para que flotar en la superficie no dispare repeticiones.
+local SPLASH_HYST = 5       -- px por encima/debajo de la superficie
+local SPLASH_MIN  = 0.25    -- s entre dos splashes
+
+local function playSplash(self, liq, which)
+    if not liq or self.splashCD > 0 then return end
+    local name = (which == 'in') and liq.splashIn or liq.splashOut
+    if name then Sound.play(name); self.splashCD = SPLASH_MIN end
+end
+
+function PlayerAdventure:updateSplash(dt, level)
+    self.splashCD = math.max(0, (self.splashCD or 0) - dt)
+    local st = self.splashSt or 'out'
+    if not self.inWater then
+        if st == 'under' or st == 'wading' then playSplash(self, self.prevLiquid, 'out') end
+        self.splashSt = 'out'
+        return
+    end
+    local hx, hy = self:getHeadPoint()
+    local headUnder = level:liquidAt(hx, hy - SPLASH_HYST) ~= nil   -- claramente bajo el agua
+    local headOut   = level:liquidAt(hx, hy + SPLASH_HYST) == nil   -- claramente fuera
+    if st == 'out' then
+        playSplash(self, self.liquid, 'in')
+        st = headUnder and 'under' or 'wading'
+    elseif st == 'wading' then
+        if headUnder then st = 'under' end
+    elseif st == 'under' then
+        if headOut then playSplash(self, self.liquid, 'out'); st = 'surfaced' end
+    elseif st == 'surfaced' then
+        if headUnder then playSplash(self, self.liquid, 'in'); st = 'under' end
+    end
+    self.splashSt = st
+end
+
+-- ── Cuenta regresiva de ahogamiento (estilo Sonic) ──────────────────────────
+-- Mientras suena drowning.ogg, su duración se reparte en 6 tramos: 5,4,3,2,1,0.
+local COUNTDOWN_FROM = 5
+
+function PlayerAdventure:drownCountdown()
+    if self.drownPhase ~= 'drowning' or self.dying then return nil end
+    local step = DROWN_AUDIO_DUR / (COUNTDOWN_FROM + 1)
+    local k    = math.floor(self.drownAudT / step)
+    return math.max(0, COUNTDOWN_FROM - k), (self.drownAudT - k * step) / step
+end
+
+-- Número junto al jugador, en pantalla (sx, sy = centro del jugador en pantalla).
+-- Solo lo ve el propio jugador (lo dibuja el HUD local).
+function PlayerAdventure:renderDrownCountdown(sx, sy)
+    local n, f = self:drownCountdown()
+    if not n then return end
+    local text = tostring(n)
+    local pop  = 1 + 0.6 * math.max(0, 1 - f / 0.15)      -- salta al cambiar
+    local x, y = math.floor(sx + 46), math.floor(sy - 70)
+    love.graphics.setFont(FONT_BIG)
+    love.graphics.push()
+    love.graphics.translate(x, y)
+    love.graphics.scale(pop * 1.5, pop * 1.5)
+    local w, h = FONT_BIG:getWidth(text), FONT_BIG:getHeight()
+    love.graphics.setColor(0, 0, 0, 1)
+    for _, o in ipairs({ {-2,0},{2,0},{0,-2},{0,2},{-2,-2},{2,2},{-2,2},{2,-2} }) do
+        love.graphics.print(text, -w / 2 + o[1], -h / 2 + o[2])
+    end
+    if n <= 1 then love.graphics.setColor(1, 0.3, 0.3, 1) else love.graphics.setColor(1, 1, 1, 1) end
+    love.graphics.print(text, -w / 2, -h / 2)
+    love.graphics.pop()
+    love.graphics.setColor(1, 1, 1, 1)
 end
 
 -- ── Animación barra de aire ──────────────────────────────────────────────────
@@ -476,13 +553,7 @@ function PlayerAdventure:update(dt, level)
 
     self:moveAndCollide(level, (self.vx + convey)*dt, self.vy*dt)
 
-    -- Splash al entrar/salir de un líquido (cualquier parte del cuerpo)
-    if self.inWater and not self.prevInWater then
-        if self.liquid.splashIn then Sound.play(self.liquid.splashIn) end
-    elseif not self.inWater and self.prevInWater then
-        local prev = self.prevLiquid
-        if prev and prev.splashOut then Sound.play(prev.splashOut) end
-    end
+    self:updateSplash(dt, level)
     self.prevInWater = self.inWater
     self.prevLiquid  = self.liquid
 
@@ -535,6 +606,9 @@ function PlayerAdventure:render(camX, camY)
     love.graphics.draw(img,
         math.floor(self.x-camX), math.floor(self.y-camY),
         0, s*self.facing, s, iw/2, ih/2)
+    if self.dying then
+        DeadEyes.draw(math.floor(self.x-camX), math.floor(self.y-camY), s, self.facing)
+    end
 end
 
 -- ── HUD: barra de aire pixel-art ─────────────────────────────────────────────

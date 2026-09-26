@@ -82,9 +82,6 @@ function MainMenuState:render()
         local ix = math.floor((WINDOW_W - iw) / 2)
 
         if i == self.selected then
-            -- Brillo de selección detrás del sprite
-            love.graphics.setColor(1, 0.85, 0, 0.22)
-            love.graphics.rectangle('fill', ix - 12, curY - 10, iw + 24, ih + 20, 6, 6)
 
             -- Sprite ligeramente agrandado
             local s  = MENU_BTN_SCALE * 1.12

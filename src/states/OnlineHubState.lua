@@ -713,6 +713,9 @@ end
 -- ── Hover del mouse: actualiza las variables de selección reales ──────────────
 
 function OnlineHubState:mousemoved(tx, ty)
+    -- Recordar el hover anterior ANTES de limpiarlo: el sonido solo debe
+    -- sonar al entrar en un botón, no en cada píxel de movimiento
+    local prevCreate, prevPass = self.hoveredCreateBtn, self.hoveredPassBtn
     self.hoveredCreateBtn = nil
     self.hoveredPassBtn   = nil
 
@@ -794,7 +797,7 @@ function OnlineHubState:mousemoved(tx, ty)
             local arrowW = 60
             local lArX   = selX - arrowW - 20
             local rArX   = selX + selW + 20
-            local prev   = self.hoveredCreateBtn
+            local prev   = prevCreate
             if tx >= lArX-8 and tx <= lArX+arrowW+8 and ty >= selY-8 and ty <= selY+selH+8 then
                 self.hoveredCreateBtn = 1
             elseif tx >= rArX-8 and tx <= rArX+arrowW+8 and ty >= selY-8 and ty <= selY+selH+8 then
@@ -812,7 +815,7 @@ function OnlineHubState:mousemoved(tx, ty)
         local boxY   = panelY + 104
         local bW     = math.floor((panelW - 100) / 2)
         local bY2    = boxY + 74
-        local prev   = self.hoveredPassBtn
+        local prev   = prevPass
         if tx >= panelX+60+bW-8 and tx <= panelX+60+2*bW+8 and ty >= bY2-8 and ty <= bY2+48+8 then
             self.hoveredPassBtn = 2
         end

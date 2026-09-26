@@ -67,6 +67,7 @@ function Sound.load()
     load('fwBlast1',      'assets/sounds/fireworks/blast1.ogg',       'static')
     load('fwBlast2',      'assets/sounds/fireworks/blast2.ogg',      'static')
     load('fwBlastLarge',  'assets/sounds/fireworks/blast_large.ogg', 'static')
+    load('roundOver',     'assets/sounds/round_over.ogg',    'static')
     load('youWin',        'assets/music/victory.ogg',       'stream')
     load('menus',         'assets/music/menus.ogg',         'stream')
     load('level',         'assets/music/level.ogg',         'stream')
@@ -138,6 +139,26 @@ function Sound.setMusicPitch(pitch)
     if music and music:isPlaying() then
         music:setPitch(math.max(0.1, pitch))
     end
+end
+
+-- Pausa: congela la música y los sonidos largos (ahogamiento) donde van,
+-- para continuar EXACTAMENTE desde ahí al despausar.
+local paused = nil
+function Sound.pauseAll()
+    paused = {}
+    if music and music:isPlaying() then music:pause(); table.insert(paused, music) end
+    for _, src in pairs(tracked) do
+        if src:isPlaying() then src:pause(); table.insert(paused, src) end
+    end
+end
+
+-- Devuelve true si había algo pausado que se reanudó.
+function Sound.resumeAll()
+    local list = paused
+    paused = nil
+    if not list or #list == 0 then return false end
+    for _, src in ipairs(list) do src:play() end
+    return true
 end
 
 function Sound.stopMusic()

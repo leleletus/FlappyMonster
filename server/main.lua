@@ -294,7 +294,7 @@ local function initRoomSim(room)
     local sx, sy = level:getSpawnPx()
     local N = #room.playerIds
 
-    local sim = { level=level, tick=0, playerSims={}, enemies={}, events={},
+    local sim = { level=level, tick=0, playerSims={}, enemies={}, events={}, enemyHist={},
                   ended=nil, levelTime=0, timeLimitKilled=false,
                   nextBubbleId=0,
                   levelRaw = love.filesystem.read(room.level),   -- se envía a los clientes
@@ -350,13 +350,62 @@ end
 -- Colisiones de UN jugador contra los enemigos (lógica portada de AdventureState).
 -- Se llama tras cada paso del jugador y tras mover a los enemigos, así una
 -- ráfaga de inputs procesada en un solo tick no atraviesa enemigos.
+-- ── Compensación de latencia ────────────────────────────────────────────────
+-- El cliente ve a los enemigos interpolados en el PASADO (su tick de render),
+-- mientras su propio jugador va predicho en el presente. Para que pisotones,
+-- pinchos y golpes coincidan con lo que el jugador VIO, el servidor guarda el
+-- estado de los enemigos de los últimos ticks y evalúa las interacciones de
+-- cada jugador contra el estado del tick que ese jugador tenía en pantalla
+-- (limitado a REWIND_MAX para que un cliente no pueda abusar).
+local REWIND_MAX = 20       -- ticks (~333 ms)
+local HIST_SIZE  = 32
+
+-- Copia los campos simples (números, booleanos, textos, imágenes) de una entidad
+local function scalarState(e)
+    local st = {}
+    for k, v in pairs(e) do
+        local tv = type(v)
+        if tv ~= 'table' and tv ~= 'function' then st[k] = v end
+    end
+    return st
+end
+local function applyState(e, st)
+    for k, v in pairs(st) do e[k] = v end
+end
+
+local function recordEnemyHistory(sim)
+    local states = {}
+    for i, e in ipairs(sim.enemies) do states[i] = scalarState(e) end
+    sim.enemyHist[sim.tick % HIST_SIZE] = { tick = sim.tick, states = states }
+end
+
+-- Estado histórico de los enemigos que vio el jugador (o nil = el actual)
+local function viewedHistory(sim, ps)
+    local vt = ps.viewTick
+    if not vt then return nil end
+    vt = math.max(sim.tick - REWIND_MAX, math.min(sim.tick - 1, vt))
+    local h = sim.enemyHist[vt % HIST_SIZE]
+    if h and h.tick == vt then return h end
+end
+
 local function checkPlayerEnemyCollisions(sim, pid, ps, seq)
     local pa = ps.pa
     if ps.isSpectator or pa.dying or not pa.alive then return end
 
-    for _, g in ipairs(sim.enemies) do
-        -- Reglas compartidas con el modo un jugador (entities/Interactions.lua)
-        local result, bvy, pts = Entities.interactions.check(pa, g)
+    local hist = viewedHistory(sim, ps)
+    for i, g in ipairs(sim.enemies) do
+        -- Reglas compartidas con el modo un jugador (entities/Interactions.lua),
+        -- evaluadas contra el estado del enemigo que el jugador veía
+        local result, bvy, pts
+        local old = hist and hist.states[i]
+        if old and g.alive and g.state ~= 'dead' then
+            local now = scalarState(g)
+            applyState(g, old)
+            result, bvy, pts = Entities.interactions.check(pa, g)
+            applyState(g, now)
+        else
+            result, bvy, pts = Entities.interactions.check(pa, g)
+        end
         if result == 'kill' then
             _currentSoundPlayerId = pid; pa:die(); _currentSoundPlayerId = nil
             return
@@ -452,6 +501,7 @@ local function processPlayerInputs(sim, pid, ps)
         local cmd = table.remove(q, 1)
         ps.lastProcSeq = cmd.seq
         ps.lastBits    = cmd.bits
+        if cmd.v then ps.viewTick = cmd.v end
         stepPlayer(sim, pid, ps, cmd.bits, cmd.seq)
         ps.budget = ps.budget - 1
         steps = steps + 1
@@ -546,6 +596,7 @@ local function stepRoom(room)
     for _, e in ipairs(sim.enemies) do
         e:update(TICK_DT, sim.level)
     end
+    recordEnemyHistory(sim)
 
     -- ── Colisiones tras mover enemigos (un enemigo puede alcanzar a un jugador quieto)
     for _, pid in ipairs(room.playerIds) do
@@ -1140,6 +1191,9 @@ on("in", function(data, client, player)
 
     local first, list = data.s, data.b
     if not isInt(first, 1, 2^31) or type(list) ~= "table" then return end
+    -- Tick del mundo que el cliente tenía en pantalla al generar el último input
+    local view = data.v
+    if view ~= nil and not isInt(view, 0, 2^31) then return end
     local n = #list
     if n < 1 or n > Protocol.INPUT_REDUNDANCY * 2 then return end
     if first + n - 1 > ps.lastProcSeq + MAX_SEQ_AHEAD then return end   -- seq falso
@@ -1151,7 +1205,8 @@ on("in", function(data, client, player)
     for i = 1, n do
         local seq = first + i - 1
         if seq > ps.lastRecvSeq then
-            table.insert(ps.queue, { seq=seq, bits=list[i] })
+            -- inputs anteriores del paquete se vieron ~1 tick antes cada uno
+            table.insert(ps.queue, { seq=seq, bits=list[i], v = view and (view - (n - i)) or nil })
             ps.lastRecvSeq = seq
         end
     end

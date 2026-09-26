@@ -20,7 +20,8 @@ local HISTORY_MAX   = 240    -- ticks de inputs guardados (4 s)
 local BOUNCE_WINDOW = 20     -- ticks: rebote local ≈ rebote del servidor
 
 -- Campos puramente visuales de PlayerAdventure (no afectan a la física)
-local VISUAL_FIELDS = { 'animT', 'frame', 'puff', 'airBarAlpha', 'airBarBobT', 'airBarBobOn', 'airBarShakeX' }
+local VISUAL_FIELDS = { 'animT', 'frame', 'puff', 'airBarAlpha', 'airBarBobT', 'airBarBobOn', 'airBarShakeX',
+                        'splashSt', 'splashCD' }
 
 local function noop() end
 local MUTED_SOUND = setmetatable({}, { __index = function() return noop end })

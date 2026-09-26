@@ -116,13 +116,42 @@ function OnlineRoomState:_buildActions()
         if room.state == "WAITING" then
             -- El host elige el objetivo de la ronda y el nivel en su menú
             table.insert(list, { id='gamemode', label='MODO DE JUEGO' })
-            table.insert(list, { id='start', label='INICIAR PARTIDA', color={0.3,1,0.3} })
+            local why = self:_startBlocker()
+            table.insert(list, { id='start', label='INICIAR PARTIDA', color={0.3,1,0.3},
+                                 disabled = why ~= nil, why = why })
         else
             table.insert(list, { id='stop',  label='DETENER PARTIDA', color={1,0.55,0.2} })
         end
     end
     table.insert(list, { id='leave', label='SALIR DE LA SALA', color={0.8,0.25,0.25} })
     return list
+end
+
+-- Motivo por el que aún no se puede iniciar (nil = se puede). Las mismas
+-- reglas que comprueba el servidor, para desactivar el botón de antemano.
+function OnlineRoomState:_startBlocker()
+    local room    = self.currentRoom or {}
+    local players = room.players or {}
+    if #players < 2 then
+        return "Faltan jugadores: se necesitan al menos 2 para empezar."
+    end
+    local waiting, meWaiting = {}, false
+    for _, p in ipairs(players) do
+        if not p.isReady then
+            if p.id == NC.myId then meWaiting = true else waiting[#waiting + 1] = p.name end
+        end
+    end
+    if meWaiting and #waiting == 0 then
+        return "Aún no estás listo: pulsa LISTO para poder empezar."
+    elseif #waiting > 0 then
+        local who = table.concat(waiting, ", ")
+        return (#waiting == 1 and "Falta que esté listo: " or "Faltan por estar listos: ") .. who
+               .. (meWaiting and " (y tú)" or "") .. "."
+    end
+    if not room.level then
+        return "No hay ningún mapa compatible con el modo elegido."
+    end
+    return nil
 end
 
 function OnlineRoomState:_closeModeMenu()
@@ -142,7 +171,8 @@ function OnlineRoomState:_executeAction(id)
         self.sub      = SUB_MODES
         self.modeMenu = ModeSelectMenu.new(self.currentRoom, self.catalog)
     elseif id == 'start' then
-        NC:send("start_game", {})
+        local why = self:_startBlocker()
+        if why then Notify.toast(why, 'warn') else NC:send("start_game", {}) end
     elseif id == 'stop' then
         NC:send("stop_game", {})
     elseif id == 'leave' then
@@ -430,10 +460,20 @@ local function drawSharpPanel(x, y, w, h, fillR, fillG, fillB, fillA)
     love.graphics.rectangle('line', x+2, y+2, w-4, h-4)
 end
 
-local function drawActionBtn(label, r, selected, accent)
+local function drawActionBtn(label, r, selected, accent, disabled)
     local x, y, w, h = r.x, r.y, r.w, r.h
     accent = accent or {1, 1, 1}
     love.graphics.setFont(FONT_MED)
+    if disabled then
+        -- Desactivado: gris, sin acento; si está seleccionado, borde discontinuo
+        love.graphics.setColor(0.12, 0.12, 0.12, 0.9)
+        love.graphics.rectangle('fill', x, y, w, h)
+        love.graphics.setColor(1, 1, 1, selected and 0.55 or 0.18)
+        love.graphics.rectangle('line', x, y, w, h)
+        love.graphics.setColor(1, 1, 1, selected and 0.55 or 0.3)
+        love.graphics.printf(label, x, y + h/2 - FONT_MED:getHeight()/2, w, 'center')
+        return
+    end
     if selected then
         love.graphics.setColor(0, 0, 0, 0.5)
         love.graphics.rectangle('fill', x + 4, y + 4, w, h)
@@ -641,7 +681,8 @@ function OnlineRoomState:render()
     for i, act in ipairs(actions) do
         local r = L.buttons[i]
         if r and r.y + r.h <= L.bottom + 10 then
-            drawActionBtn(act.label, r, focusA and i == self.actionSel, act.color)
+            local sel = focusA and i == self.actionSel
+            drawActionBtn(act.label, r, sel, act.color, act.disabled)
         end
     end
 

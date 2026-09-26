@@ -128,7 +128,10 @@ function OnlineResultsState:enter(args)
 
     self:_setupHandlers()
     Sound.stopMusic()
-    self.musicStarted = false
+    -- La música de victoria arranca YA; más baja mientras suben los puntos
+    -- (para oír el conteo) y luego a volumen normal
+    self.musicVol = self.celebrate and 0.6 or 0.35
+    Sound.playMusic('youWin', self.musicVol * 0.45)
 end
 
 function OnlineResultsState:exit()
@@ -235,14 +238,11 @@ function OnlineResultsState:update(dt)
             local e = self.entries[place]
             if place == 1 then
                 if self.celebrate then
-                    Sound.play('fanfare')
-                    self.musicAt = t + 1.0
                     self:_burstConfetti(PODIUM_CX[1], FLOOR_Y - PODIUM[1].h - 60, 90, 1.2)
                     self:_burstConfetti(40, WINDOW_H, 40, 0.5)
                     self:_burstConfetti(WINDOW_W - 40, WINDOW_H, 40, 0.5)
                 else
                     Sound.play('sadtrombone')
-                    self.musicAt = t + 2.0
                 end
             else
                 Sound.play('jump', 1 + (3 - place) * 0.1, 0.6)
@@ -295,15 +295,11 @@ function OnlineResultsState:update(dt)
         end
     end
 
-    -- Música de victoria (tras la fanfarria) con fundido al final
-    if self.musicAt and not self.musicStarted and t >= self.musicAt then
-        self.musicStarted = true
-        Sound.playMusic('youWin', self.celebrate and 0.6 or 0.35)
-    end
-    if self.musicStarted and t > DURATION - MUSIC_FADE then
-        local v = math.max(0, (DURATION - t) / MUSIC_FADE)
-        Sound.setMusicVolume(v * (self.celebrate and 0.6 or 0.35))
-    end
+    -- Música de victoria: baja durante el conteo de puntos, fundido al final
+    local countEnd = T_ROWS + #self.entries * T_ROW_GAP + COUNT_DUR + 0.3
+    local duck = 0.45 + 0.55 * math.max(0, math.min(1, (t - countEnd) / 0.8))
+    local fade = math.max(0, math.min(1, (DURATION - t) / MUSIC_FADE))
+    Sound.setMusicVolume(self.musicVol * duck * fade)
 
     for i = #self.confetti, 1, -1 do
         local c = self.confetti[i]

@@ -89,7 +89,10 @@ function AdventureState:enter(args)
 end
 
 function AdventureState:pause()  end
-function AdventureState:resume() Sound.playMusic('level') end
+-- Al volver de la pausa la música sigue donde estaba (no se reinicia)
+function AdventureState:resume()
+    if not Sound.resumeAll() then Sound.playMusic('level') end
+end
 
 function AdventureState:pauseGame()
     if not self.dead then gStateMachine:push('pause') end
@@ -537,6 +540,7 @@ function AdventureState:render()
     renderLivesHud(self.player)
     renderHpBar(self.player)
     self.player:renderAirBar()
+    self.player:renderDrownCountdown(self.player.x - self.camX, self.player.y - self.camY)
     self:renderPopups()
 
     -- ── Game over overlay ─────────────────────────────────────────────────────

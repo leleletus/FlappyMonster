@@ -79,7 +79,10 @@ function PlayState:enter(args)
 end
 
 function PlayState:pause()  end
-function PlayState:resume() Sound.playMusic('level') end
+-- Al volver de la pausa la música sigue donde estaba (no se reinicia)
+function PlayState:resume()
+    if not Sound.resumeAll() then Sound.playMusic('level') end
+end
 
 function PlayState:pauseGame()
     if not self.dead then gStateMachine:push('pause') end

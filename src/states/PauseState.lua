@@ -22,7 +22,7 @@ end
 
 function PauseState:enter(args)
     self.selected = 1
-    Sound.stopMusic()
+    Sound.pauseAll()
 end
 
 function PauseState:update(dt)
@@ -42,6 +42,7 @@ function PauseState:update(dt)
             gStateMachine:pop()
         else
             Sound.play('select')
+            Sound.resumeAll(); Sound.stopMusic(); Sound.stopTracked('drowning')
             gStateMachine:change('main_menu')
         end
     end
@@ -108,6 +109,7 @@ function PauseState:touchpressed(id, tx, ty, dx, dy, pressure)
                 gStateMachine:pop()
             else
                 Sound.play('select')
+                Sound.resumeAll(); Sound.stopMusic(); Sound.stopTracked('drowning')
                 gStateMachine:change('main_menu')
             end
             return

@@ -5,6 +5,7 @@
 local Class = require 'libs/class'
 local OnlinePlayer = Class:new()
 local PixelIcons = require 'src/ui/PixelIcons'
+local DeadEyes   = require 'src/entities/DeadEyes'
 
 -- Sprites compartidos con PlayerAdventure (love2d cachea las imágenes)
 local sprites     = nil
@@ -110,6 +111,9 @@ function OnlinePlayer:render(camX, camY)
         0.6 + b * 0.4,
         alpha)
     love.graphics.draw(img, sx, sy, 0, sc * self.facing, sc, iw/2, ih/2)
+    if self.dying then
+        DeadEyes.draw(sx, sy, sc, self.facing, 1, 1, 1, alpha)
+    end
 
     -- Nombre sobre el sprite
     love.graphics.setFont(FONT_SMALL)

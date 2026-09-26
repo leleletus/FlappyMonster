@@ -476,6 +476,7 @@ function OnlineAdventureState:_processEvent(ev)
         self.specOverlay         = false
         self.showPause           = false
         self.gameOverMusicPitch  = 1.0
+        Sound.play('roundOver')           -- mientras la música del nivel se ralentiza
         Sound.stopTracked('drowning')
         self.audioDrowning = false
     end
@@ -577,7 +578,10 @@ function OnlineAdventureState:_sendInputs()
     if not NC:isConnected() or not self.predictor then return end
     local first, list = self.predictor:unacked(Protocol.INPUT_REDUNDANCY)
     if #list == 0 then return end
-    NC:sendState("in", { s = first, b = list })
+    -- v = tick del mundo que estamos viendo: el servidor evalúa los choques
+    -- con enemigos contra ESE estado (compensación de latencia)
+    local rt = self.snapBuf and self.snapBuf:renderTick()
+    NC:sendState("in", { s = first, b = list, v = rt and math.max(0, math.floor(rt + 0.5)) or nil })
 end
 
 -- ── Pause / Spectator helpers ─────────────────────────────────────────────────
@@ -1154,6 +1158,7 @@ function OnlineAdventureState:_renderHUD()
         -- Barra de aire (ahogamiento) — delegada al jugador local
         if self.localPa and self.localPaInit then
             self.localPa:renderAirBar()
+            self.localPa:renderDrownCountdown(self.renderX - self.camX, self.renderY - self.camY)
         end
     elseif od.finished then
         love.graphics.setFont(FONT_MED)

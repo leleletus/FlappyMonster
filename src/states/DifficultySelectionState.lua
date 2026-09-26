@@ -67,8 +67,6 @@ function DifficultySelectionState:render()
         local ih  = img:getHeight() * DIFF_IMG_SCALE
 
         if i == self.selectedIdx then
-            love.graphics.setColor(1, 0.85, 0, 0.25)
-            love.graphics.rectangle('fill', curX - 10, imgY - 10, iw + 20, ih + 20)
             love.graphics.setColor(COLOR_WHITE)
             local s  = DIFF_IMG_SCALE * 1.15
             local ox = math.floor((iw - img:getWidth()  * s) / 2)
