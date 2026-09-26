@@ -7,6 +7,12 @@
 --   'kill'                        el jugador muere (pinchos, entidad hostil)
 --   'hurt'                        el jugador pierde 1 HP (entidad onTouch='hurt')
 --   'stomp', bounceVy, points     el jugador pisotea a la entidad
+--   'pickup'                      coleccionable (estrella, vida extra...)
+--   'checkpoint'                  punto de control
+--
+-- Interactions.run(pa, entities, cb, rewind) aplica todo lo anterior (y el
+-- impacto del ground pound) para un jugador; el juego solo pone los efectos
+-- propios en `cb` (puntos, vidas, eventos online...).
 
 local Interactions = {}
 
@@ -18,8 +24,19 @@ end
 local BOUNCE = 0.40   -- fracción de la velocidad de salto al rebotar
 
 function Interactions.check(pa, e)
-    if not e.alive or e.state == 'dead' then return nil end
+    if not e.alive or e.state == 'dead' or (e.isGhost and e:isGhost()) then return nil end
     local pob = pa:getOuterBounds()
+
+    -- Coleccionables y checkpoints: basta con tocarlos
+    local def = e.def or {}
+    if def.pickup or def.checkpoint then
+        -- Margen de "imán": que no se escape por un píxel al pasar por debajo
+        local b, m = e:getOuterBounds(), 12
+        if overlap(pob, { x = b.x - m, y = b.y - m, w = b.w + 2 * m, h = b.h + 2 * m }) then
+            return def.pickup and 'pickup' or 'checkpoint'
+        end
+        return nil
+    end
 
     -- Zonas de peligro propias (p. ej. el pincho del Crabby): siempre matan
     for _, hb in ipairs(e:getHazardBoxes() or {}) do
@@ -34,6 +51,10 @@ function Interactions.check(pa, e)
     local p = e.props
     if p.stompable then
         local gob = e:getOuterBounds()
+        -- Ground pound: cae en picado; cualquier contacto desde arriba aplasta
+        if pa.gpPhase == 'fall' and not e.flipped and pob.y + pob.h * 0.5 < gob.y + gob.h * 0.5 then
+            return 'stomp', -math.abs(ADV_JUMP_VEL) * BOUNCE, p.points
+        end
         if e.flipped then
             -- Boca abajo (techo): se pisotea desde abajo, subiendo
             if pa.vy < 0 and pob.y > gob.y + gob.h * 0.65 - 10 then
@@ -48,6 +69,52 @@ function Interactions.check(pa, e)
 
     if p.onTouch == 'none' then return nil end
     return p.onTouch
+end
+
+-- Zona aplastada al impactar un ground pound: bajo y a los lados de los pies
+function Interactions.poundZone(pa)
+    local ob = pa:getOuterBounds()
+    return { x = ob.x - 36, y = ob.y + ob.h - 24, w = ob.w + 72, h = 40 }
+end
+
+-- Aplica las interacciones de un jugador con todas las entidades.
+--   cb.stomp(e, points, i)  cb.pickup(e, pickupDef, i)  cb.checkpoint(e, i)
+--   rewind(i, e, fn)        opcional (servidor): evalúa fn() con el estado
+--                           del enemigo que veía el jugador
+function Interactions.run(pa, entities, cb, rewind)
+    if pa.dying or not pa.alive then return end
+    for i, e in ipairs(entities) do
+        local result, a, b
+        if rewind then
+            result, a, b = rewind(i, e, function() return Interactions.check(pa, e) end)
+        else
+            result, a, b = Interactions.check(pa, e)
+        end
+        if result == 'kill' then
+            pa:die(); return
+        elseif result == 'hurt' then
+            if pa:hurt() then return end
+        elseif result == 'stomp' then
+            e:stomp()
+            pa:bounce(a)
+            if cb.stomp then cb.stomp(e, b, i) end
+        elseif result == 'pickup' then
+            if e:collect() and cb.pickup then cb.pickup(e, e.def.pickup, i) end
+        elseif result == 'checkpoint' then
+            if cb.checkpoint then cb.checkpoint(e, i) end
+        end
+    end
+    -- Impacto del ground pound: aplasta lo que haya justo debajo/al lado
+    if pa.gpLanded then
+        local z = Interactions.poundZone(pa)
+        for i, e in ipairs(entities) do
+            if e.alive and e.state ~= 'dead' and not (e.isGhost and e:isGhost())
+               and e.props.stompable and e:canBeStomped() and overlap(z, e:getOuterBounds()) then
+                e:stomp()
+                if cb.stomp then cb.stomp(e, e.props.points, i) end
+            end
+        end
+    end
 end
 
 return Interactions

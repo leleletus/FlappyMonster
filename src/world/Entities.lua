@@ -25,7 +25,7 @@ local EntityTypes  = require 'src/world/entities/EntityTypes'
 local Interactions = require 'src/world/entities/Interactions'
 local Props        = require 'src/world/entities/Props'
 
-local TYPES = { 'gummy', 'crabby' }
+local TYPES = { 'gummy', 'crabby', 'spikefall', 'star', 'extralife', 'checkpoint' }
 
 for _, name in ipairs(TYPES) do
     EntityTypes.register(require('src/world/entities/types/' .. name))

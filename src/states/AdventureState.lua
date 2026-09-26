@@ -4,6 +4,7 @@ local BaseState       = require 'src/BaseState'
 local Level           = require 'src/world/Level'
 local PlayerAdventure = require 'src/entities/PlayerAdventure'
 local Entities        = require 'src/world/Entities'
+local Particles       = require 'src/fx/Particles'
 
 local AdventureState = BaseState:new()
 
@@ -58,6 +59,14 @@ function AdventureState:enter(args)
     self.level  = Level.new(self.levelPath)
     local sx, sy = self.level:getSpawnPx()
     self.player = PlayerAdventure:new(sx, sy)
+    self.level.players = { self.player }       -- para trampas/entidades que "ven" al jugador
+
+    -- Efectos del jugador (ground pound, bloques rotos...)
+    Particles.clear()
+    PlayerAdventure.fx = function(kind, x, y)
+        Particles.emit(kind, x, y)
+        if kind == 'block_break' then Sound.play('blockBreak') end
+    end
 
     -- Instanciar entidades (enemigos, NPCs) desde el catálogo
     self.enemies = {}
@@ -172,10 +181,10 @@ function AdventureState:renderPopups()
 
         -- Sombra pixel-art
         love.graphics.setColor(0, 0, 0, alpha * 0.6)
-        love.graphics.printf(pop.text, sx - 39, sy + 1, 80, 'center')
+        love.graphics.printf(pop.text, sx - 119, sy + 1, 240, 'center')
         -- Texto amarillo brillante
         love.graphics.setColor(1, 0.95, 0.15, alpha)
-        love.graphics.printf(pop.text, sx - 40, sy, 80, 'center')
+        love.graphics.printf(pop.text, sx - 120, sy, 240, 'center')
     end
     love.graphics.setColor(1, 1, 1, 1)
 end
@@ -203,27 +212,38 @@ function AdventureState:updateCamera(dt)
 end
 
 -- ── Colisión jugador ↔ entidades ──────────────────────────────────────────────
--- Las reglas (pinchos, pisotón, hostilidad) viven en entities/Interactions.lua
+-- Las reglas (pinchos, pisotón, coleccionables, checkpoints, ground pound)
+-- viven en entities/Interactions.lua; aquí solo los efectos del modo solo.
 function AdventureState:checkEnemyCollisions()
     local player = self.player
-    if player.dying or not player.alive then return end
-
-    for _, g in ipairs(self.enemies) do
-        local result, bounceVy, pts = Entities.interactions.check(player, g)
-        if result == 'kill' then
-            player:die()
-            return
-        elseif result == 'hurt' then
-            if player:hurt() then return end
-        elseif result == 'stomp' then
-            g:stomp()
-            player.vy = bounceVy
-            player.jumpsLeft = 2
-            self.score = self.score + pts
+    Entities.interactions.run(player, self.enemies, {
+        stomp = function(g, pts)
+            self.score = self.score + (pts or 0)
             local popY = g.flipped and (g.y + g.outerH / 2) or (g.y - g.outerH / 2)
-            self:spawnPopup('+' .. pts .. '!', g.x, popY)
-        end
-    end
+            self:spawnPopup('+' .. (pts or 0) .. '!', g.x, popY)
+        end,
+        pickup = function(e, pk)
+            if pk.score then
+                self.score = self.score + pk.score
+                self:spawnPopup('+' .. pk.score .. '!', e.x, e.y - e.outerH / 2)
+                Sound.play('collect'); Particles.emit('collect', e.x, e.y)
+            end
+            if pk.lives then
+                player.lives = math.min(99, player.lives + pk.lives)
+                self:spawnPopup('+1 VIDA', e.x, e.y - e.outerH / 2)
+                Sound.play('oneUp'); Particles.emit('oneup', e.x, e.y)
+            end
+        end,
+        checkpoint = function(e)
+            if self.checkpoint == e then return end
+            if self.checkpoint then self.checkpoint.activeLocal = false end
+            self.checkpoint = e
+            e:activate()
+            player.spawnX, player.spawnY = e:respawnPoint()
+            Sound.play('checkpoint'); Particles.emit('checkpoint', e.x, e.y - e.outerH / 2)
+            self:spawnPopup('CHECKPOINT', e.x, e.y - e.outerH / 2 - 10)
+        end,
+    })
 end
 
 -- ── Update ────────────────────────────────────────────────────────────────────
@@ -337,8 +357,9 @@ function AdventureState:update(dt)
         end
     end
 
-    -- Colisiones jugador ↔ enemigos
+    -- Colisiones jugador ↔ entidades
     self:checkEnemyCollisions()
+    Particles.update(dt)
     self:checkVentOxyCollisions()
     self:updatePopups(dt)
 
@@ -449,6 +470,7 @@ function AdventureState:render()
     end
 
     self.player:render(self.camX, self.camY)
+    Particles.render(self.camX, self.camY)
 
     -- Decoraciones (por encima de enemigos y player)
     self.level:renderFoliage(self.camX, self.camY)

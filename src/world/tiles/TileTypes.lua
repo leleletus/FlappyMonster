@@ -19,6 +19,9 @@
 --   enemySolid  los enemigos lo pisan/chocan (por defecto: collision ~= 'none')
 --
 --   material    nombre de material (Materials.lua): fricción, daño, líquido...
+--   breakable   se rompe con un cabezazo desde abajo o un ground pound
+--   fake        tile trampa: se ve como otro (`mimics`) pero no colisiona ni
+--               hace daño (los pinchos puestos encima tampoco)
 --   trigger     nombre de evento al tocarlo (p. ej. 'finish'); lo consultan
 --               los modos de juego con Level:triggerInBox
 --   joinGroup   tiles del mismo grupo "se unen": no dibujan borde entre sí

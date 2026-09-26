@@ -1,0 +1,129 @@
+-- Pinchos que caen: cuelgan del techo como pinchos normales (matan al tocar).
+-- Si un jugador se pone debajo (dentro del alcance y a la vista) tiemblan,
+-- caen y matan a quien golpeen. Al tocar el suelo quedan clavados un rato,
+-- desaparecen y vuelven a salir del techo en su sitio.
+local Entity = require 'src/world/entities/Entity'
+
+local SpikeFall = Entity.extend(Entity, { debugColor = { 1, 0.3, 0.3 },
+    hitbox = { outerW = 1, outerH = 1, innerW = 1, innerH = 1 } })
+
+local SHAKE     = 0.45   -- s temblando antes de caer
+local VANISH    = 0.35   -- s desapareciendo tras estar clavados
+local REGROW    = 0.6    -- s saliendo del techo
+local EMBED     = 0.45   -- fracción que se clava en el suelo
+
+-- Se ve y choca EXACTAMENTE como un pincho normal de techo: las dos
+-- subceldas superiores de una casilla con pinchos hacia abajo (mismo dibujo
+-- y misma hitbox que los pinchos de tile, ver Level.lua).
+local function half() return TILE_PX / 2 end
+
+function SpikeFall.loadAssets() end
+function SpikeFall.sizePx() return TILE_PX, TILE_PX / 2 end
+
+function SpikeFall:init()
+    self.moving, self.flying = false, true
+    self.vx, self.vy = 0, 0
+    -- Pegado al techo de su celda
+    self.y = (self.row - 1) * TILE_PX + self.outerH / 2
+    self.state = 'armed'
+    self.deadTimer = 0
+end
+
+function SpikeFall:canBeStomped() return false end
+
+function SpikeFall:updateCustom(dt, level)
+    local st = self.state
+    self.deadTimer = self.deadTimer + dt
+    if st == 'armed' then
+        if self:seesPlayerBelow(level, self.props.detectRange, self.outerW / 2 + 6) then
+            self.state, self.deadTimer = 'shake', 0
+            Sound.play('spikeShake')
+        end
+    elseif st == 'shake' then
+        if self.deadTimer >= self.props.fallDelay then self.state, self.deadTimer, self.vy = 'falling', 0, 0 end
+    elseif st == 'falling' then
+        self.vy = math.min(self.vy + ADV_GRAVITY * 1.2 * dt, 1400)
+        local ny = self.y + self.vy * dt
+        local tipY = ny + self.outerH / 2
+        local t = level:collisionAt(self.x, tipY, true)
+        if t or tipY > level.heightPx then
+            -- Se clava: la punta entra en el bloque
+            local top = math.floor(tipY / TILE_PX) * TILE_PX
+            self.y = top - self.outerH / 2 + self.outerH * EMBED
+            self.state, self.deadTimer = 'stuck', 0
+            Sound.play('spikeLand')
+        else
+            self.y = ny
+        end
+    elseif st == 'stuck' then
+        if self.deadTimer >= self.props.stuckTime then self.state, self.deadTimer = 'vanish', 0 end
+    elseif st == 'vanish' then
+        if self.deadTimer >= VANISH then
+            self.y = self.home.y
+            self.state, self.deadTimer = 'regrow', 0
+        end
+    elseif st == 'regrow' then
+        if self.deadTimer >= REGROW then self.state, self.deadTimer = 'armed', 0 end
+    end
+    return true
+end
+
+-- Peligrosos colgando, temblando y cayendo; clavados/regenerándose no.
+-- Hitbox = la de un pincho de tile hacia abajo (Level._spikeHitbox).
+function SpikeFall:getHazardBoxes()
+    local st = self.state
+    if st ~= 'armed' and st ~= 'shake' and st ~= 'falling' then return nil end
+    local Level = package.loaded['src/world/Level'] or require('src/world/Level')
+    local H  = half()
+    local x0 = self.x - TILE_PX / 2
+    local y0 = self.y - self.outerH / 2          -- base (arriba) de los pinchos
+    local boxes = {}
+    for k = 0, 1 do
+        local hx, hy, hw, hh = Level._spikeHitbox(x0 + k * H, y0, H, 1)   -- 1 = DIR_DOWN
+        boxes[#boxes + 1] = { x = hx, y = hy, w = hw, h = hh }
+    end
+    return boxes
+end
+
+function SpikeFall:isBodyDisabled() return true end
+
+-- Mismo triángulo que drawMiniSpike (Level.lua) con dirección hacia abajo
+local function drawDownSpike(px, py, sz, alpha)
+    local cx = px + sz / 2
+    love.graphics.setColor(0.92, 0.92, 0.92, alpha)
+    love.graphics.polygon('fill', cx, py + sz - 1, px + 1, py + 1, px + sz - 1, py + 1)
+end
+
+function SpikeFall:render(camX, camY)
+    local st, k, alpha = self.state, 1, 1
+    local H  = half()
+    local x0 = math.floor(self.x - camX - TILE_PX / 2)
+    local y0 = math.floor(self.y - camY - self.outerH / 2)
+    if st == 'shake' then x0 = x0 + math.floor(math.sin(self.deadTimer * 80) * 3) end
+    if st == 'vanish' then alpha = 1 - self.deadTimer / VANISH end
+    if st == 'regrow' then k = math.min(1, self.deadTimer / REGROW) end
+    -- Al regenerarse "sale" del techo: crece desde arriba
+    love.graphics.push()
+    love.graphics.translate(0, y0)
+    love.graphics.scale(1, k)
+    drawDownSpike(x0, 0, H, alpha)
+    drawDownSpike(x0 + H, 0, H, alpha)
+    love.graphics.pop()
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
+return {
+    name = 'spikefall', label = 'Pinchos que caen', category = 'Trampas',
+    class = SpikeFall,
+    hide = { 'movement', 'attach', 'speed', 'startDir', 'patrol', 'turnAtEdges', 'bobAmp', 'pauses',
+             'onTouch', 'stompable', 'points', 'dropOnSight', 'detectRange', 'respawn' },
+    props = {
+        { key='detectRange', kind='int', label='Alcance de deteccion', group='Trampa', default=6,
+          min=1, max=30, step=1, help='casillas hacia abajo: mas lejos no cae (no te pilla sin verlo)' },
+        { key='fallDelay', kind='number', label='Aviso antes de caer (s)', group='Trampa', default=SHAKE,
+          min=0.1, max=3, step=0.05 },
+        { key='stuckTime', kind='number', label='Clavados en el suelo (s)', group='Trampa', default=2.5,
+          min=0.5, max=20, step=0.5 },
+    },
+    editor = { sprite = 'assets/images/items/spikefall.png' },
+}

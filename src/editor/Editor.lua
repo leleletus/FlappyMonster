@@ -357,12 +357,22 @@ local function canvasPress(button)
         if tool == 'spawn' and not erase then
             if m:inBounds(c, r) then m.playerStart = { c, r }; s.changed = true end
         elseif tool == 'vent' and not erase then
-            local o, idx = m:findObject(m.vents, c, r, sub)
-            if o then table.remove(m.vents, idx) elseif m:inBounds(c, r) then m.vents[#m.vents+1] = { col = c, row = r, sub = sub } end
-            s.changed = true
+            -- Clic en un vent: seleccionarlo (para su límite de altura); en vacío: colocar uno
+            local o = m:findObject(m.vents, c, r, sub) or m:findObject(m.vents, c, r)
+            if o then
+                E.selVent = o
+            elseif m:inBounds(c, r) then
+                local v = { col = c, row = r, sub = sub }
+                m.vents[#m.vents+1] = v
+                E.selVent = v
+                s.changed = true
+            end
         else
             local o, idx = m:findObject(m.vents, c, r)
-            if o then table.remove(m.vents, idx); s.changed = true end
+            if o then
+                table.remove(m.vents, idx); s.changed = true
+                if E.selVent == o then E.selVent = nil end
+            end
         end
     end
     if s.changed then markDirty() end
@@ -459,6 +469,36 @@ local function drawCanvas()
         end end
         lv:renderVents(camX, camY)
         lv:renderFoliageBack(camX, camY)
+        -- Bloques trampa: en el editor se marcan (en el juego son idénticos al original)
+        love.graphics.setFont(ui.fontSm)
+        for r = r0, r1 do for c = c0, c1 do
+            local d = TT.get(Codec.id(m:get(c, r)))
+            if d.fake then
+                local x, y = (c-1)*t - camX, (r-1)*t - camY
+                love.graphics.setColor(1, 0.3, 0.8, 0.9)
+                love.graphics.setLineWidth(2 / z)
+                for k = 0, 3 do   -- borde discontinuo
+                    love.graphics.line(x + k*t/4, y + 1, x + k*t/4 + t/8, y + 1)
+                    love.graphics.line(x + k*t/4, y + t - 1, x + k*t/4 + t/8, y + t - 1)
+                end
+                love.graphics.print('?', x + t/2 - 4, y + t/2 - 8)
+            end
+        end end
+        -- Límite de altura de las burbujas de cada vent
+        for vi, vd in ipairs(m.vents) do
+            local v = lv.vents[vi]
+            if v and (tonumber(vd.limit) or 0) > 0 then
+                local y = v.ceilingY - camY
+                love.graphics.setColor(0.4, 0.9, 1, 0.9)
+                love.graphics.setLineWidth(2 / z)
+                for xx = v.x - camX - 30, v.x - camX + 24, 12 do love.graphics.line(xx, y, xx + 6, y) end
+                love.graphics.print('limite', v.x - camX + 30, y - 8)
+            end
+            if vd == E.selVent then
+                love.graphics.setColor(th.warn[1], th.warn[2], th.warn[3], 1)
+                love.graphics.circle('line', v and (v.x - camX) or 0, v and (v.y - camY) or 0, t * 0.4)
+            end
+        end
     end
     for _, inst in pairs(E.instances or {}) do
         -- Si cae desde donde se colocó, se marca el recorrido hasta donde aterriza
@@ -820,7 +860,23 @@ local function drawRightPanel()
     local yy = ui.beginScroll('right', x0, TOP, RIGHT, areaH, E.rightH or areaH)
     local y = yy + 10
 
-    if E.selected and E.layer == 'entities' then
+    if E.selVent and E.layer == 'special' then
+        y = sectionTitle('Vent seleccionado', x, y, w)
+        local v = E.selVent
+        ui.text(string.format('col %d, fila %d', v.col, v.row), x, y, th.muted, ui.fontSm); y = y + 20
+        local lim, ch = ui.number('Limite de altura', tonumber(v.limit) or 0, x, y, w,
+                                  { kind = 'int', min = 0, max = 200, step = 1 })
+        if ui.inside(x, y, w, 26) then ui.tooltip('Casillas que sube la burbuja de aire antes de explotar. 0 = hasta la superficie.') end
+        y = y + 28
+        if ch then pushUndo(); v.limit = (lim > 0) and lim or nil; markDirty() end
+        ui.text('0 = sin limite (sube hasta la superficie)', x, y, th.muted, ui.fontSm, w); y = y + 22
+        if ui.button('Eliminar vent', x, y, w, 26, { font = ui.fontSm, textColor = th.danger }) then
+            pushUndo()
+            for i, o in ipairs(E.model.vents) do if o == v then table.remove(E.model.vents, i) break end end
+            E.selVent = nil; markDirty()
+        end
+        y = y + 40
+    elseif E.selected and E.layer == 'entities' then
         y = drawInspector(x, y, w)
     elseif E.selDeco and E.layer == 'deco' then
         y = drawDecoInspector(x, y, w)

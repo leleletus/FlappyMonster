@@ -81,6 +81,20 @@ Corre dentro del propio juego y usa sus mismos catalogos, dibujo y assets: todo 
 
 ---
 
+## Mecanicas y elementos de nivel
+
+* **Ground pound:** agacharse en el aire (o nadando) congela un instante al monstruito y lo lanza en picado. Aplasta enemigos, rompe bloques rompibles y online empuja y aturde a los jugadores cercanos.
+* **Agacharse bajo el agua:** permite atravesar plataformas traspasables sumergidas.
+* **Bloque rompible** (Terreno): se rompe con un cabezazo desde abajo o con un ground pound; nada mas lo rompe.
+* **Bloques trampa** (categoria Trampas): paredes, plataformas, peligros y bloques falsos que se ven igual que los reales pero no tienen colision. Los pinchos colocados sobre un tile trampa tampoco hacen dano. En el editor se marcan con "?".
+* **Pinchos que caen** (entidad, Trampas): se ven y chocan igual que unos pinchos de techo; si un jugador se pone debajo (dentro de su alcance vertical y a la vista) tiemblan, caen, se clavan un rato y vuelven a salir del techo.
+* **Estrella** (+25 puntos), **Vida extra** (+1 vida) y **Checkpoint** (punto de reaparicion propio de cada jugador): entidades de la categoria Objetos.
+* **Propiedades comunes de entidades:** "Reaparece tras (s)" (vuelve a su sitio con animacion tras morir) y, para las de techo, "Cae al ver al jugador" con su alcance de deteccion.
+* **Vents:** con la herramienta Vent, clic en un vent para ajustar su "Limite de altura" (casillas que sube la burbuja de aire antes de explotar).
+* Nivel de ejemplo con todo lo anterior: `assets/levels/taller_trampas.json` ("Taller de Trampas").
+
+---
+
 ## Anadir Contenido (tiles, materiales, entidades, modos, mapas)
 
 Todo es declarativo y se registra en un unico listado; el juego, el servidor online y el editor lo reconocen sin tocar nada mas.

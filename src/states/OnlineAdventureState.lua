@@ -20,6 +20,7 @@ local Protocol             = require 'src/network/Protocol'
 local Predictor            = require 'src/network/Predictor'
 local SnapshotBuffer       = require 'src/network/SnapshotBuffer'
 local PixelIcons           = require 'src/ui/PixelIcons'
+local Particles            = require 'src/fx/Particles'
 local CornerButtons        = require 'src/ui/CornerButtons'
 local Modes                = require 'src/world/Modes'
 local json                 = require 'libs/json'
@@ -86,6 +87,12 @@ function OnlineAdventureState:enter(args)
     loadAssets()
     args = args or {}
     self.currentRoom = args.room or {}
+
+    -- Efectos del jugador propio (solo en los pasos "audibles" de la predicción)
+    Particles.clear()
+    PlayerAdventure.fx = function(kind, x, y)
+        if kind ~= 'block_break' then Particles.emit(kind, x, y) end
+    end
 
     -- Mundo provisional hasta que llegue game_init con el nivel real
     self:_buildWorld(nil)
@@ -168,6 +175,8 @@ function OnlineAdventureState:_buildWorld(data)
 
     -- Burbujas de oxígeno controladas por el servidor (desactiva spawn local)
     self.level.disableOxySpawn = true
+    -- Los bloques solo se rompen cuando lo dice el servidor (evento 'tile')
+    self.level.canBreak = false
 
     -- Jugador local (predicho). Se posiciona al recibir game_init.
     local sx, sy   = self.level:getSpawnPx()
@@ -351,6 +360,7 @@ function OnlineAdventureState:_applyInterpolation()
                 isSpectator = Protocol.band(d[6], Protocol.PF_SPECTATOR) ~= 0,
                 lives=d[7], hp=d[8], score=d[9], drownPhase=Protocol.drownName(d[10]),
                 finished    = Protocol.band(d[6], Protocol.PF_FINISHED) ~= 0,
+                stunned     = Protocol.band(d[6], Protocol.PF_STUNNED) ~= 0,
                 place       = d[12],
             })
         else
@@ -385,10 +395,11 @@ function OnlineAdventureState:_applyInterpolation()
             -- Temporizadores: interpolar solo si avanzan (se reinician a 0)
             er.deadTimer = ((db[7] >= da[7]) and lerp(da[7], db[7], f) or db[7]) / 100
             er.breatheT  = ((db[8] >= da[8]) and lerp(da[8], db[8], f) or db[8]) / 100
-            -- Datos propios del tipo (desde el índice 9): los interpreta la entidad
-            if db[9] ~= nil then
+            er.flipped   = d[9] == 1
+            -- Datos propios del tipo (desde el índice 10): los interpreta la entidad
+            if db[10] ~= nil then
                 local xa, xb = {}, {}
-                for k = 9, #db do xb[#xb+1] = db[k]; xa[#xa+1] = da[k] end
+                for k = 10, #db do xb[#xb+1] = db[k]; xa[#xa+1] = da[k] end
                 er:netApply(xa, xb, f)
             end
         end
@@ -450,6 +461,38 @@ function OnlineAdventureState:_processEvent(ev)
         end
     elseif ev.type == 'score' and ev.playerId == NC.myId then
         self:_spawnPopup('+' .. tostring(ev.delta) .. '!', ev.x or 0, ev.y or 0)
+    elseif ev.type == 'tile' then
+        -- Bloque roto (lo decide el servidor): aplicar y partículas para todos
+        local c, r, v = tonumber(ev.c), tonumber(ev.r), tonumber(ev.v)
+        if c and r and v then
+            self.level:setTileRaw(c, r, v)
+            Particles.emit('block_break', (c - 1) * TILE_PX, (r - 1) * TILE_PX)
+            Sound.play('blockBreak')
+        end
+    elseif ev.type == 'fx' then
+        -- Efectos de OTROS jugadores (los propios ya los generó la predicción)
+        if ev.playerId ~= NC.myId and ev.kind ~= 'block_break' and type(ev.kind) == 'string' then
+            Particles.emit(ev.kind, tonumber(ev.x) or 0, tonumber(ev.y) or 0)
+        end
+    elseif ev.type == 'pickup' then
+        local x, y = tonumber(ev.x) or 0, tonumber(ev.y) or 0
+        if ev.kind == 'life' then
+            Sound.play('oneUp'); Particles.emit('oneup', x, y)
+            if ev.playerId == NC.myId then self:_spawnPopup('+1 VIDA', x, y - 30) end
+        else
+            Sound.play('collect'); Particles.emit('collect', x, y)
+            if ev.playerId == NC.myId and ev.delta then self:_spawnPopup('+' .. ev.delta .. '!', x, y - 30) end
+        end
+    elseif ev.type == 'checkpoint' and ev.playerId == NC.myId then
+        -- Nuestra bandera se levanta (cada jugador tiene su propio checkpoint)
+        for i, er in pairs(self.enemyRenderers) do
+            if er.def and er.def.checkpoint then
+                if i == ev.idx then er:activate() else er.activeLocal = false end
+            end
+        end
+        Sound.play('checkpoint')
+        Particles.emit('checkpoint', tonumber(ev.x) or 0, (tonumber(ev.y) or 0) - 40)
+        self:_spawnPopup('CHECKPOINT', tonumber(ev.x) or 0, (tonumber(ev.y) or 0) - 60)
     elseif ev.type == 'air_collected' and ev.playerId == NC.myId then
         -- El servidor confirmó que recogimos una burbuja de oxígeno.
         Sound.play('airGasp')
@@ -548,9 +591,9 @@ function OnlineAdventureState:_renderPopups()
         local sx = math.floor(pop.wx - self.camX)
         local sy = math.floor(pop.wy - self.camY - offsetY)
         love.graphics.setColor(0, 0, 0, alpha*0.6)
-        love.graphics.printf(pop.text, sx-39, sy+1, 80, 'center')
+        love.graphics.printf(pop.text, sx-119, sy+1, 240, 'center')
         love.graphics.setColor(1, 0.95, 0.15, alpha)
-        love.graphics.printf(pop.text, sx-40, sy,   80, 'center')
+        love.graphics.printf(pop.text, sx-120, sy,   240, 'center')
     end
     love.graphics.setColor(1, 1, 1, 1)
 end
@@ -637,9 +680,7 @@ function OnlineAdventureState:_checkLocalBounce()
             -- Mismas reglas que el servidor; aquí solo se predice el rebote
             local result, bvy = Entities.interactions.check(pa, er)
             if result == 'stomp' then
-                pa.vy        = bvy
-                pa.jumpsLeft = 2
-                pa.onGround  = false
+                pa:bounce(bvy)
                 self.localBounceCooldown[idx] = 0.3
                 self.predictor:recordBounce(bvy)
                 Sound.play('enemyExplode')
@@ -829,6 +870,7 @@ function OnlineAdventureState:update(dt)
     -- ── Cámara ────────────────────────────────────────────────────────────────
     self:_updateCamera(dt)
     self:_updatePopups(dt)
+    Particles.update(dt)
 end
 
 -- ── Render ────────────────────────────────────────────────────────────────────
@@ -889,6 +931,7 @@ function OnlineAdventureState:render()
         local sx, sy = pa.x, pa.y
         pa.x, pa.y = self.renderX, self.renderY
         pa:render(self.camX, self.camY)
+        Particles.render(self.camX, self.camY)
         if DEBUG_HITBOX then pa:renderDebug(self.camX, self.camY); self.level:renderDebug(self.camX, self.camY) end
         pa.x, pa.y = sx, sy
     end

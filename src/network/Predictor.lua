@@ -10,6 +10,7 @@
 -- absorbe suavemente en unos frames en vez de teletransportar al jugador.
 
 local Protocol = require 'src/network/Protocol'
+local PlayerAdventure = require 'src/entities/PlayerAdventure'
 
 local Predictor = {}
 Predictor.__index = Predictor
@@ -21,7 +22,7 @@ local BOUNCE_WINDOW = 20     -- ticks: rebote local ≈ rebote del servidor
 
 -- Campos puramente visuales de PlayerAdventure (no afectan a la física)
 local VISUAL_FIELDS = { 'animT', 'frame', 'puff', 'airBarAlpha', 'airBarBobT', 'airBarBobOn', 'airBarShakeX',
-                        'splashSt', 'splashCD' }
+                        'splashSt', 'splashCD', 'gpLanded' }
 
 local function noop() end
 local MUTED_SOUND = setmetatable({}, { __index = function() return noop end })
@@ -46,12 +47,12 @@ end
 -- Un paso fijo de física con `bits` como input. `silent` = re-simulación
 -- (no debe volver a sonar nada).
 function Predictor:_step(bits, silent)
-    local realInput, realSound = Input, Sound
+    local realInput, realSound, realFx = Input, Sound, PlayerAdventure.fx
     Protocol.decodeInput(bits, self.inputStub.state)
     Input = self.inputStub
-    if silent then Sound = MUTED_SOUND end
+    if silent then Sound = MUTED_SOUND; PlayerAdventure.fx = nil end   -- re-simulación: ni sonidos ni partículas
     local ok, err = pcall(self.pa.update, self.pa, Protocol.TICK_DT, self.level)
-    Input, Sound = realInput, realSound
+    Input, Sound, PlayerAdventure.fx = realInput, realSound, realFx
     if not ok then error(err, 0) end
 end
 
@@ -122,7 +123,7 @@ function Predictor:reconcile(ack, own, bounceSeq)
             -- Re-aplicar rebotes predichos que el servidor aún no ha simulado
             if h.bounceVy and not pa.dying
                and math.abs(s - self.serverBounceSeq) > BOUNCE_WINDOW then
-                pa.vy = h.bounceVy; pa.jumpsLeft = 2; pa.onGround = false
+                pa:bounce(h.bounceVy)
             end
         end
     end

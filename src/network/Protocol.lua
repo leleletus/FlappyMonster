@@ -7,7 +7,7 @@ local Tiles = require 'src/world/Tiles'
 local P = {}
 
 -- ── Versión / red ─────────────────────────────────────────────────────────────
-P.VERSION        = 4        -- el servidor rechaza clientes con otra versión
+P.VERSION        = 5        -- el servidor rechaza clientes con otra versión
 P.CHANNELS       = 2
 P.CH_RELIABLE    = 0        -- eventos de sala y de juego (ordenados, garantizados)
 P.CH_STATE       = 1        -- snapshots e inputs (no fiables: el más nuevo gana)
@@ -138,6 +138,8 @@ function P.packOwnState(pa)
         pa.liquid and P.materialIndex(pa.liquid) or 0,
         pa.groundDef and pa.groundDef.id or -1,
         pa.hurtT or 0,
+        (pa.gpPhase == 'windup' and 1) or (pa.gpPhase == 'fall' and 2) or 0,
+        pa.gpT or 0, pa.stunT or 0,
     }
 end
 
@@ -170,18 +172,21 @@ function P.applyOwnState(s, pa)
     pa.liquid      = Tiles.materials.list[s[21]]
     pa.groundDef   = s[22] >= 0 and Tiles.types.byId[s[22]] or nil
     pa.hurtT       = s[23]
+    pa.gpPhase     = (s[24] == 1 and 'windup') or (s[24] == 2 and 'fall') or nil
+    pa.gpT         = s[25]
+    pa.stunT       = s[26]
 end
 
 -- Estructura mínima para validar un estado propio recibido del servidor.
 function P.isValidOwnState(s)
-    if type(s) ~= 'table' or #s < 23 then return false end
-    for i = 1, 23 do if type(s[i]) ~= 'number' then return false end end
+    if type(s) ~= 'table' or #s < 26 then return false end
+    for i = 1, 26 do if type(s[i]) ~= 'number' then return false end end
     return true
 end
 
 -- ── Estado visual de un jugador (lo ven todos) ────────────────────────────────
 -- { idx, x, y, facing, frame, flags, lives, hp, score, drownCode, air% }
-P.PF_DYING, P.PF_SPECTATOR, P.PF_FINISHED = 1, 2, 4
+P.PF_DYING, P.PF_SPECTATOR, P.PF_FINISHED, P.PF_STUNNED = 1, 2, 4, 8
 
 -- ── Utilidades ────────────────────────────────────────────────────────────────
 function P.round(x) return math.floor(x + 0.5) end

@@ -11,6 +11,8 @@
 --   hide        claves de propiedades comunes que no aplican a este tipo
 --   class       clase (derivada de Entity) con su comportamiento y dibujo
 --   editor      { sprite='assets/...png', scale=4, tint={...} } miniatura
+--   pickup      coleccionable: { score=25 } / { lives=1 } (se recoge al tocarlo)
+--   checkpoint  true: al tocarlo pasa a ser el punto de reaparición del jugador
 --
 -- En el nivel, cada colocación es:
 --   { type='crabby', col=10, row=2, props={ attach='ceiling', ... } }
@@ -56,6 +58,14 @@ EntityTypes.COMMON = {
     { key='stompable', kind='bool', label='Se puede pisotear', group='Combate', default=true },
     { key='points', kind='int', label='Puntos al pisotearlo', group='Combate', default=10,
       min=0, max=9999, step=5, showIf=function(p) return p.stompable end },
+    { key='dropOnSight', kind='bool', label='Cae al ver al jugador', group='Techo', default=false,
+      help='Desde el techo: al ver a un jugador debajo tiembla, se gira y cae (luego sigue en el suelo)',
+      showIf=function(p) return p.movement == 'walk' and p.attach == 'ceiling' end },
+    { key='detectRange', kind='int', label='Alcance de deteccion', group='Techo', default=6,
+      min=1, max=30, step=1, help='casillas hacia abajo',
+      showIf=function(p) return p.dropOnSight and p.movement == 'walk' and p.attach == 'ceiling' end },
+    { key='respawn', kind='number', label='Reaparece tras (s)', group='Reaparicion', default=0,
+      min=0, max=120, step=1, help='0 = no reaparece. Si muere, vuelve a su sitio original pasado ese tiempo' },
 }
 
 function EntityTypes.register(def)
@@ -92,6 +102,48 @@ function EntityTypes.register(def)
     for _, g in ipairs(order) do for _, p in ipairs(byGroup[g]) do table.insert(t.schema, p) end end
 
     t.class.def = t
+
+    -- Dibujo común para todos: invisible esperando reaparecer, animación de
+    -- aparición con partículas y temblor antes de caer (funciona igual online:
+    -- solo depende de state/deadTimer, que viajan en el snapshot).
+    local cls = t.class
+    if not cls._wrappedRender then
+        local draw = cls.render
+        cls._wrappedRender = true
+        cls.render = function(self, camX, camY)
+            local st = self.state
+            if st == 'gone' then return end
+            if st == 'spawning' then
+                local k  = math.min(1, (self.deadTimer or 0) / 0.7)
+                local sx = self.x - camX
+                local sy = self.y - camY
+                love.graphics.push()
+                love.graphics.translate(sx, sy)
+                love.graphics.scale(0.2 + 0.8 * k, 0.2 + 0.8 * k)
+                love.graphics.translate(-sx, -sy)
+                draw(self, camX, camY)
+                love.graphics.pop()
+                -- partículas convergiendo
+                for i = 0, 11 do
+                    local a = i / 12 * math.pi * 2 + k * 4
+                    local r = (1 - k) * 60 + 6
+                    love.graphics.setColor(1, 1, 1, 1 - k * 0.8)
+                    love.graphics.rectangle('fill', math.floor(sx + math.cos(a) * r) - 2,
+                                            math.floor(sy + math.sin(a) * r) - 2, 4, 4)
+                end
+                love.graphics.setColor(1, 1, 1, 1)
+                return
+            end
+            if st == 'drop_shake' then
+                love.graphics.push()
+                love.graphics.translate(math.floor(math.sin((self.deadTimer or 0) * 70) * 3), 0)
+                draw(self, camX, camY)
+                love.graphics.pop()
+                return
+            end
+            draw(self, camX, camY)
+        end
+    end
     EntityTypes.byName[t.name] = t
     table.insert(EntityTypes.list, t)
     return t

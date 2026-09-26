@@ -252,6 +252,12 @@ function Level.fromData(lvl)
                 ceilRow = ceilRow - 1
             end
             local ventCeilingY = ceilRow * TILE_PX
+            -- Límite opcional de altura: la burbuja de aire explota tras subir
+            -- `limit` casillas (en océanos profundos no llega a la superficie)
+            local limit = tonumber(vd.limit)
+            if limit and limit > 0 then
+                ventCeilingY = math.max(ventCeilingY, vy - limit * TILE_PX)
+            end
             table.insert(self.vents, {
                 x          = vx,
                 y          = vy,
@@ -402,6 +408,28 @@ function Level:countTrigger(name)
     return n
 end
 
+-- ── Tiles que cambian durante la partida (bloques rompibles) ────────────────
+-- canBreak = false en el cliente online: allí solo se rompen cuando lo dice
+-- el servidor (evento), para no romper nada por una predicción equivocada.
+-- Los bloques rotos se apuntan en self.brokenQueue para que el servidor los
+-- difunda (col, row, nuevo valor).
+function Level:breakTile(col, row)
+    if self.canBreak == false then return false end
+    local raw = self:getRaw(col, row)
+    if not TileTypes.get(tileBaseId(raw)).breakable then return false end
+    if not (self.tiles[row] and self.tiles[row][col]) then return false end
+    local new = TileCodec.isWaterlogged(raw) and TILE_WATER or TILE_EMPTY
+    self.tiles[row][col] = new
+    self.brokenQueue = self.brokenQueue or {}
+    table.insert(self.brokenQueue, { col, row, new })
+    return true
+end
+
+-- Aplica un cambio de tile recibido del servidor
+function Level:setTileRaw(col, row, raw)
+    if self.tiles[row] and self.tiles[row][col] ~= nil then self.tiles[row][col] = raw end
+end
+
 function Level:isInWater(bx, by, bw, bh)
     return self:liquidInBox(bx, by, bw, bh) ~= nil
 end
@@ -427,7 +455,8 @@ function Level:getSpikesInBox(bx, by, bw, bh)
     for row = sr, er do
         for col = sc, ec do
             local raw = self:getRaw(col, row)
-            if hasSpikes(raw) then
+            -- Los pinchos sobre un tile trampa son de mentira
+            if hasSpikes(raw) and not TileTypes.get(tileBaseId(raw)).fake then
                 local _, _, spikes = decTile(raw)
                 local tx = (col-1) * TILE_PX
                 local ty = (row-1) * TILE_PX

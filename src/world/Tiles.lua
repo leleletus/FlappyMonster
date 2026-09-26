@@ -26,6 +26,21 @@ local TYPES = {
     'water',          -- 9
     'platform_drop',  -- 10
     'finish',         -- 11
+    'breakable',      -- 12
+}
+
+-- Bloques TRAMPA ("mímicos"): se ven idénticos al tile original pero no tienen
+-- colisión ni efectos (paredes, plataformas, peligros o pinchos falsos).
+-- Los pinchos colocados sobre un tile trampa tampoco hacen daño.
+-- { id nuevo, tile que imitan, nombre, etiqueta }
+local FAKES = {
+    { 20, 'solid',         'fake_solid',         'Pared falsa' },
+    { 21, 'platform',      'fake_platform',      'Plataforma falsa' },
+    { 22, 'platform_drop', 'fake_platform_drop', 'Plataforma atravesable falsa' },
+    { 23, 'danger',        'fake_danger',        'Peligro falso' },
+    { 24, 'border',        'fake_border',        'Borde falso' },
+    { 25, 'breakable',     'fake_breakable',     'Bloque rompible falso' },
+    { 26, 'empty',         'fake_spikes',        'Base para pinchos falsos' },
 }
 
 -- Ids 5-8 fueron pinchos por tile; hoy los pinchos son subceldas (TileCodec).
@@ -36,6 +51,19 @@ for _, name in ipairs(MATERIALS) do
 end
 for _, name in ipairs(TYPES) do
     TileTypes.register(require('src/world/tiles/types/' .. name))
+end
+
+for _, f in ipairs(FAKES) do
+    local base = TileTypes.byName[f[2]]
+    TileTypes.register({
+        id = f[1], name = f[3], label = f[4], category = 'Trampas',
+        collision = 'none', material = 'default', enemySolid = false,
+        fake = true, mimics = base.name,
+        joinGroup = base.joinGroup, hitbox = base.hitbox,
+        draw = base.draw, texture = base.texture, color = base.color,
+        editorColor = base.editorColor or { 0.5, 0.5, 0.5 },
+        editorBadge = '?',
+    })
 end
 
 return {

@@ -18,6 +18,13 @@
 --   e:onIdleEnd() -> true  decidir otro estado al terminar una pausa
 --   e:canBeStomped(), e:isBodyDisabled(), e:getHazardBoxes()
 --   e:netPack() / e:netApply(a, b, f)   datos extra sincronizados online
+--   Cls.sizePx() -> w, h  tamaño en px (en vez de sizeImage) para dibujos por código
+--
+-- Comunes a todas (propiedades): reaparecer tras morir (respawn), y para las
+-- de techo, dejarse caer al ver a un jugador debajo (dropOnSight/detectRange).
+-- Estados comunes extra: 'gone' (esperando reaparecer), 'spawning' (animación
+-- de aparición), 'drop_shake' / 'drop_fall' (caída desde el techo). Para ver a
+-- los jugadores, el juego pone la lista en level.players.
 
 local Entity = {}
 Entity.__index = Entity
@@ -81,9 +88,13 @@ function Entity.create(cls, data)
         e.leftBoundPx, e.rightBoundPx = -math.huge, math.huge
     end
 
-    local img = cls.sizeImage()
-    local sc  = GUMMY_SCALE
-    local iw, ih = img:getWidth() * sc, img:getHeight() * sc
+    local iw, ih
+    if cls.sizePx then
+        iw, ih = cls.sizePx()
+    else
+        local img = cls.sizeImage()
+        iw, ih = img:getWidth() * GUMMY_SCALE, img:getHeight() * GUMMY_SCALE
+    end
     local hb = tn.hitbox
     e.sprW, e.sprH = iw, ih
     e.outerW, e.outerH = iw * hb.outerW, ih * hb.outerH
@@ -101,7 +112,110 @@ function Entity.create(cls, data)
     e.flyT = 0
 
     e:init()
+    -- Estado inicial para poder reaparecer igual que al colocarla
+    e.home = { x = e.x, y = e.y, vx = e.vx, facing = e.facing, flipped = e.flipped, state = e.state }
     return e
+end
+
+local SPAWN_ANIM = 0.7    -- s de la animación de reaparición
+local DROP_SHAKE = 0.5    -- s temblando antes de caer del techo
+Entity.SPAWN_ANIM = SPAWN_ANIM
+
+-- ¿Hay un jugador justo debajo (dentro de `rangeTiles` casillas) y a la vista
+-- (sin paredes en medio)? Lo usan los pinchos que caen y las entidades de techo.
+function Entity:seesPlayerBelow(level, rangeTiles, halfW)
+    local T = TILE_PX
+    halfW = halfW or (self.outerW / 2 + 20)
+    for _, pa in ipairs(level.players or {}) do
+        if not pa.dying and pa.alive ~= false and math.abs(pa.x - self.x) <= halfW then
+            local dy = pa.y - self.y
+            if dy > 0 and dy <= rangeTiles * T then
+                local blocked = false
+                local yy = self.y + self.outerH / 2 + 2
+                local top = pa.y - T / 2
+                while yy < top do
+                    local t = level:collisionAt(self.x, yy)
+                    if t and t.collision == 'solid' then blocked = true; break end
+                    yy = yy + T / 2
+                end
+                if not blocked then return pa end
+            end
+        end
+    end
+    return nil
+end
+
+-- Vuelve a su colocación original (reaparecer)
+function Entity:resetToHome()
+    local h = self.home
+    self.x, self.y, self.vx, self.vy = h.x, h.y, h.vx, 0
+    self.facing, self.flipped = h.facing, h.flipped
+    self.baseY = h.y
+    self.onGround, self.alive = false, true
+    self.animT, self.frame = 0, 1
+    self.dropped = false
+    self:init()
+    self.state = h.state
+end
+
+-- Estados comunes que no son "vivo normal". Devuelve true si se ocupó del paso.
+function Entity:updateCommonStates(dt, level)
+    local st = self.state
+    if st == 'gone' then
+        self.deadTimer = self.deadTimer + dt
+        if self.deadTimer >= (self.props.respawn or 0) then
+            self:resetToHome()
+            self.state, self.deadTimer = 'spawning', 0
+            Sound.play('respawnFx')
+        end
+        return true
+    elseif st == 'spawning' then
+        self.deadTimer = self.deadTimer + dt
+        if self.deadTimer >= SPAWN_ANIM then
+            self.deadTimer = 0
+            self.state = self.home.state
+            if self.state == 'walk' then self:startWalk() end
+        end
+        return true
+    elseif st == 'drop_shake' then
+        self.deadTimer = self.deadTimer + dt
+        if self.deadTimer >= DROP_SHAKE then
+            -- Se gira y cae: a partir de aquí es una entidad de suelo
+            self.state, self.deadTimer = 'drop_fall', 0
+            self.flipped, self.vy, self.vx = false, 0, 0
+        end
+        return true
+    elseif st == 'drop_fall' then
+        self.vy = self.vy + ADV_GRAVITY * dt
+        self:moveAndCollide(level, 0, self.vy * dt)
+        if self.onGround then
+            self.dropped = true
+            self.vx = self.moving and self.speed * self.facing or 0
+            self:startWalk()
+        end
+        return true
+    end
+    -- Entidad de techo que se deja caer al ver a un jugador debajo
+    local p = self.props
+    if p.dropOnSight and self.flipped and not self.dropped and (st == 'walk' or st == 'idle')
+       and self:seesPlayerBelow(level, p.detectRange or 6) then
+        self.state, self.deadTimer, self.vx = 'drop_shake', 0, 0
+        Sound.play('spikeShake')
+        return true
+    end
+    return false
+end
+
+-- Coleccionables: desaparece (con su animación de 'dead'). true si se recogió.
+function Entity:collect()
+    if self.state == 'dead' or self:isGhost() then return false end
+    self.state, self.deadTimer, self.vx, self.vy = 'dead', 0, 0, 0
+    return true
+end
+
+-- Intocable (esperando / apareciendo)
+function Entity:isGhost()
+    return self.state == 'gone' or self.state == 'spawning'
 end
 
 -- ── Hooks por defecto ─────────────────────────────────────────────────────────
@@ -217,10 +331,17 @@ function Entity:update(dt, level)
     if self.state == 'dead' then
         self:onDead(dt)
         self.deadTimer = self.deadTimer + dt
-        if self.deadTimer >= tn.deadDuration then self.alive = false end
+        if self.deadTimer >= tn.deadDuration then
+            if (self.props.respawn or 0) > 0 then
+                self.state, self.deadTimer = 'gone', 0     -- reaparecerá
+            else
+                self.alive = false
+            end
+        end
         return
     end
 
+    if self:updateCommonStates(dt, level) then return end
     if self:updateCustom(dt, level) then return end
 
     if self.state == 'idle' then

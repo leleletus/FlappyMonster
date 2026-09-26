@@ -42,7 +42,54 @@ local function synth(name, notes, vol)
     if ok then sources[name] = src end
 end
 
+-- Efectos sintetizados con barrido de tono y/o ruido (8 bits).
+-- parts = { {dur, f0, f1, wave='square'|'noise'|'tri', vol}, ... }
+local function sfx(name, parts)
+    local ok, src = pcall(function()
+        local rate, total = 22050, 0
+        for _, p in ipairs(parts) do total = total + p[1] end
+        local sd = love.sound.newSoundData(math.floor(total * rate) + 1, rate, 16, 1)
+        local i, phase, noiseV, noiseC = 0, 0, 0, 0
+        for _, p in ipairs(parts) do
+            local len = math.floor(p[1] * rate)
+            for k = 0, len - 1 do
+                local u   = k / math.max(1, len - 1)
+                local f   = p[2] + (p[3] - p[2]) * u
+                local env = math.min(1, k / 60) * (1 - u) ^ 1.3
+                local v
+                phase = phase + f / rate
+                if p.wave == 'noise' then
+                    noiseC = noiseC + f / rate
+                    if noiseC >= 1 then noiseC = noiseC - 1; noiseV = math.random() * 2 - 1 end
+                    v = noiseV
+                elseif p.wave == 'tri' then
+                    v = 1 - 4 * math.abs((phase % 1) - 0.5)
+                else
+                    v = (phase % 1 < 0.5) and 1 or -1
+                end
+                sd:setSample(i, v * env * (p.vol or 0.25)); i = i + 1
+            end
+        end
+        return love.audio.newSource(sd, 'static')
+    end)
+    if ok then sources[name] = src end
+end
+
 function Sound.load()
+    -- Ground pound, bloques, coleccionables...
+    sfx('gpStart',    { {0.16, 300, 900, wave='square', vol=0.16} })
+    sfx('gpImpact',   { {0.05, 180, 60, wave='square', vol=0.3}, {0.28, 900, 200, wave='noise', vol=0.35} })
+    sfx('blockBreak', { {0.22, 2600, 500, wave='noise', vol=0.32} })
+    sfx('headBump',   { {0.06, 220, 140, wave='square', vol=0.2} })
+    sfx('collect',    { {0.05, 1318, 1318, vol=0.16}, {0.05, 1760, 1760, vol=0.16}, {0.14, 2093, 2093, vol=0.14} })
+    sfx('oneUp',      { {0.08, 659, 659, vol=0.18}, {0.08, 784, 784, vol=0.18}, {0.08, 1319, 1319, vol=0.18},
+                        {0.08, 1047, 1047, vol=0.18}, {0.08, 1175, 1175, vol=0.18}, {0.2, 1568, 1568, vol=0.16} })
+    sfx('checkpoint', { {0.1, 523, 523, wave='tri', vol=0.35}, {0.1, 784, 784, wave='tri', vol=0.35},
+                        {0.25, 1047, 1047, wave='tri', vol=0.3} })
+    sfx('spikeShake', { {0.35, 3000, 2000, wave='noise', vol=0.12} })
+    sfx('spikeLand',  { {0.12, 1500, 300, wave='noise', vol=0.3} })
+    sfx('respawnFx',  { {0.25, 400, 1400, wave='tri', vol=0.25} })
+    sfx('stunned',    { {0.3, 1200, 800, wave='square', vol=0.1} })
     local G4, C5, E5, G5, C6 = 392, 523.25, 659.25, 783.99, 1046.5
     synth('fanfare', { {G4,.09},{C5,.09},{E5,.09},{G5,.09},{0,.05},{E5,.08},{G5,.08},{C6,.55} }, 0.22)
     synth('finish',  { {C5,.07},{E5,.07},{G5,.07},{C6,.22} }, 0.2)

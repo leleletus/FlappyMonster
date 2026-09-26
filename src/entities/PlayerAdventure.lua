@@ -44,6 +44,24 @@ local DROWN_AUDIO_DUR = 12     -- duración de drowning.ogg (s) — mata al fina
 local AIR_BAR_W  = 160
 local AIR_BAR_H  = 12
 
+-- Ground pound: agacharse en el aire → se frena un instante y cae en picado
+local GP_WINDUP     = 0.22     -- s suspendido en el aire antes de caer
+local GP_SPEED      = 1500     -- px/s de caída (bajo el agua ×GP_WATER)
+local GP_WATER      = 0.55
+-- Empujón que reciben otros jugadores cerca del impacto (online)
+local GP_PUSH_VX    = 900
+local GP_PUSH_VY    = -420
+local GP_STUN       = 0.8      -- s aturdido (sin control)
+PlayerAdventure.GP_RADIUS_X = 170
+PlayerAdventure.GP_RADIUS_Y = 110
+
+-- Efectos visuales (partículas): los pone el juego; el servidor los reenvía
+-- a los clientes y la re-simulación de la predicción los silencia.
+PlayerAdventure.fx = nil       -- function(kind, x, y, player)
+local function fx(self, kind, x, y)
+    if PlayerAdventure.fx then PlayerAdventure.fx(kind, x, y, self) end
+end
+
 -- Bajar por plataformas traspasables
 local DROP_DELAY = 0.25    -- s agachado sobre la plataforma antes de atravesarla
 local DROP_PUSH  = 60      -- empujoncito hacia abajo al empezar a caer
@@ -98,6 +116,10 @@ function PlayerAdventure:new(x, y)
     o.prevLiquid=nil
     o.groundDef=nil       -- tipo de tile sobre el que está de pie (material de suelo)
     o.hurtT=0             -- invulnerabilidad restante tras daño por contacto
+    o.gpPhase=nil         -- ground pound: nil | 'windup' | 'fall'
+    o.gpT=0
+    o.gpLanded=false      -- true SOLO en el paso en que impactó (lo leen juego/servidor)
+    o.stunT=0             -- aturdido (empujado por un ground pound ajeno)
     return o
 end
 
@@ -215,12 +237,21 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
             end
         end
     elseif dy < 0 then
-        for _,px in ipairs(chx) do
+        -- El centro primero: si hay un bloque rompible sobre la cabeza, es el que se rompe
+        for _,px in ipairs({x, x-hw+4, x+hw-4}) do
             local t = level:collisionAt(px, y-hh)
             if t then
                 local edge = t.fullHitbox and math.ceil((y-hh)/T)*T
                              or math.floor((y-hh)/T)*T + (t.hitbox.y + t.hitbox.h)*T
-                y = edge + hh; self.vy=0; break
+                y = edge + hh; self.vy=0
+                -- Cabezazo: rompe bloques rompibles (desde abajo, saltando)
+                local c, r = math.floor(px/T)+1, math.floor((y-hh-2)/T)+1
+                if t.breakable and level:breakTile(c, r) then
+                    fx(self, 'block_break', (c-1)*T, (r-1)*T)
+                else
+                    Sound.play('headBump')
+                end
+                break
             end
         end
     end
@@ -289,6 +320,7 @@ end
 function PlayerAdventure:die(drownDeath)
     if self.dying then return end
     self.dying=true; self.vx=0; self.vy=0
+    self.gpPhase=nil; self.stunT=0
     self.deathPhase='freeze'; self.deathTimer=0; self.deathY=self.y
     if not drownDeath then
         Sound.play('dies2')
@@ -311,6 +343,7 @@ function PlayerAdventure:respawn()
     self.drownAudT=0; self.drownDead=false
     self.prevInWater=false
     self.splashSt='out'; self.splashCD=0
+    self.gpPhase=nil; self.gpT=0; self.gpLanded=false; self.stunT=0
     Sound.stopTracked('drowning')
     Sound.playMusic('level')
     self.airBarAlpha=0; self.airBarBobT=0; self.airBarBobOn=false; self.airBarShakeX=0
@@ -487,6 +520,71 @@ function PlayerAdventure:updateAirBarAnim(dt)
     end
 end
 
+-- ── Ground pound ──────────────────────────────────────────────────────────────
+function PlayerAdventure:updateGroundPound(dt, level)
+    self.gpT = self.gpT + dt
+    self.vx = 0
+    if self.gpPhase == 'windup' then
+        -- Suspendido: sin gravedad ni desplazamiento (sí contactos: pinchos, agua...)
+        self.vy = 0
+        self:moveAndCollide(level, 0, 0)
+        if self.dying then return end
+        if self.gpT >= GP_WINDUP then self.gpPhase, self.gpT = 'fall', 0 end
+    else
+        self.vy = GP_SPEED * (self.inWater and GP_WATER or 1)
+        self:moveAndCollide(level, 0, self.vy * dt)
+        if self.dying then return end
+        if self.onGround then
+            -- Bloques rompibles bajo los pies: se rompen y sigue cayendo
+            local T  = TILE_PX
+            local ob = self:getOuterBounds()
+            local footY, broke = ob.y + ob.h + 2, false
+            for _, px in ipairs({ self.x - self.w/2 + 4, self.x, self.x + self.w/2 - 4 }) do
+                local t = level:getDefAt(px, footY)
+                local c, r = math.floor(px/T)+1, math.floor(footY/T)+1
+                if t.breakable and level:breakTile(c, r) then
+                    broke = true
+                    fx(self, 'block_break', (c-1)*T, (r-1)*T)
+                end
+            end
+            if broke then
+                self.onGround = false
+            else
+                -- Impacto
+                self.gpPhase, self.gpT = nil, 0
+                self.gpLanded  = true
+                self.jumpsLeft = 2
+                self.puff      = PUFF_SCALE
+                Sound.play('gpImpact')
+                fx(self, 'gp_land', self.x, ob.y + ob.h)
+            end
+        end
+    end
+    self:updateSplash(dt, level)
+    self.prevInWater = self.inWater
+    self.prevLiquid  = self.liquid
+    self.frame, self.animT = 2, 0            -- monstrito2 quieto, sin mover brazos
+    self.puff = self.puff + (1 - self.puff) * PUFF_SPD * dt
+    self:updateDrowning(dt, level)
+    self:updateAirBarAnim(dt)
+end
+
+-- Rebote tras pisotear (termina el ground pound y recarga el doble salto)
+function PlayerAdventure:bounce(vy)
+    self.vy = vy; self.jumpsLeft = 2; self.onGround = false
+    self.gpPhase, self.gpT = nil, 0
+end
+
+-- Empujón de un ground pound cercano: sale despedido y queda aturdido
+function PlayerAdventure:knockback(dirX)
+    if self.dying then return end
+    self.vx, self.vy = dirX * GP_PUSH_VX, GP_PUSH_VY
+    self.onGround, self.crouching = false, false
+    self.gpPhase, self.gpT = nil, 0
+    self.stunT = GP_STUN
+    Sound.play('stunned')
+end
+
 -- ── Update ────────────────────────────────────────────────────────────────────
 function PlayerAdventure:update(dt, level)
     if self.dying then
@@ -503,10 +601,29 @@ function PlayerAdventure:update(dt, level)
         return
     end
 
+    self.gpLanded = false
+    if self.stunT > 0 then self.stunT = math.max(0, self.stunT - dt) end
+    local stunned = self.stunT > 0
+
+    -- Ground pound: agacharse (pulsar) en el aire o nadando
+    if Input.pressed('crouch') and not self.onGround and not stunned
+       and not self.gpPhase and not self.dropping then
+        self.gpPhase, self.gpT = 'windup', 0
+        self.vx, self.vy = 0, 0
+        self.crouching = false
+        self.puff = PUFF_SCALE
+        Sound.play('gpStart')
+        fx(self, 'gp_start', self.x, self.y)
+    end
+    if self.gpPhase then
+        self:updateGroundPound(dt, level)
+        return
+    end
+
     local moveX=0
-    -- Agacharse: solo en el suelo, bloquea movimiento
+    -- Agacharse: en el suelo (también bajo el agua), bloquea movimiento
     local wantCrouch = Input.down('crouch')
-    if wantCrouch and self.onGround and not self.inWater then
+    if wantCrouch and self.onGround and not stunned then
         self.crouching = true
     else
         self.crouching = false
@@ -530,11 +647,11 @@ function PlayerAdventure:update(dt, level)
         self.dropHoldT = 0
     end
 
-    if not self.crouching then
+    if not self.crouching and not stunned then
         if Input.down('move_right') then moveX=1 end
         if Input.down('move_left')  then moveX=-1 end
     end
-    if Input.pressed('jump') and not self.crouching then self:jump() end
+    if Input.pressed('jump') and not self.crouching and not stunned then self:jump() end
 
     -- Materiales: el líquido en el que está y la superficie que pisa
     local liq    = self.inWater and self.liquid or nil
@@ -608,7 +725,23 @@ function PlayerAdventure:render(camX, camY)
         0, s*self.facing, s, iw/2, ih/2)
     if self.dying then
         DeadEyes.draw(math.floor(self.x-camX), math.floor(self.y-camY), s, self.facing)
+    elseif (self.stunT or 0) > 0 then
+        PlayerAdventure.drawStunStars(self.x - camX, self.y - camY)
     end
+end
+
+-- Estrellitas girando sobre la cabeza (aturdido). También para jugadores remotos.
+function PlayerAdventure.drawStunStars(sx, sy)
+    local t = love.timer.getTime()
+    for i = 0, 2 do
+        local a  = t * 6 + i * (math.pi * 2 / 3)
+        local x  = math.floor(sx + math.cos(a) * 22)
+        local y  = math.floor(sy - SPRITE_H / 2 - 10 + math.sin(a) * 6)
+        love.graphics.setColor(1, 0.9, 0.3, 1)
+        love.graphics.rectangle('fill', x - 4, y - 1, 8, 2)
+        love.graphics.rectangle('fill', x - 1, y - 4, 2, 8)
+    end
+    love.graphics.setColor(1, 1, 1, 1)
 end
 
 -- ── HUD: barra de aire pixel-art ─────────────────────────────────────────────

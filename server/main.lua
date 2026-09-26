@@ -392,38 +392,61 @@ local function checkPlayerEnemyCollisions(sim, pid, ps, seq)
     local pa = ps.pa
     if ps.isSpectator or pa.dying or not pa.alive then return end
 
+    -- Evaluar contra el estado de cada enemigo que el jugador veía
     local hist = viewedHistory(sim, ps)
-    for i, g in ipairs(sim.enemies) do
-        -- Reglas compartidas con el modo un jugador (entities/Interactions.lua),
-        -- evaluadas contra el estado del enemigo que el jugador veía
-        local result, bvy, pts
-        local old = hist and hist.states[i]
-        if old and g.alive and g.state ~= 'dead' then
-            local now = scalarState(g)
-            applyState(g, old)
-            result, bvy, pts = Entities.interactions.check(pa, g)
-            applyState(g, now)
-        else
-            result, bvy, pts = Entities.interactions.check(pa, g)
-        end
-        if result == 'kill' then
-            _currentSoundPlayerId = pid; pa:die(); _currentSoundPlayerId = nil
-            return
-        elseif result == 'hurt' then
-            _currentSoundPlayerId = pid
-            local died = pa:hurt()
-            _currentSoundPlayerId = nil
-            if died then return end
-        elseif result == 'stomp' then
-            -- El sonido del pisotón se etiqueta con quien lo hizo:
-            -- ese cliente ya lo reprodujo al predecir el rebote.
-            _currentSoundPlayerId = pid; g:stomp(); _currentSoundPlayerId = nil
-            pa.vy = bvy; pa.jumpsLeft = 2
+    local rewind = hist and function(i, g, fn)
+        local old = hist.states[i]
+        if not (old and g.alive and g.state ~= 'dead') then return fn() end
+        local now = scalarState(g)
+        applyState(g, old)
+        local r, a, b = fn()
+        applyState(g, now)
+        return r, a, b
+    end
+
+    -- Reglas compartidas con el modo un jugador (entities/Interactions.lua).
+    -- Los sonidos se etiquetan con quien los causa: su cliente ya los predijo.
+    _currentSoundPlayerId = pid
+    Entities.interactions.run(pa, sim.enemies, {
+        stomp = function(g, pts)
+            pts = pts or 0
             ps.score = ps.score + pts
             ps.scoreT = sim.levelTime          -- para desempatar: quién llegó antes
             ps.bounceSeq = seq
             sim.mode.onStomp(sim.match, ps, g)
             pushEvent(sim, { type='score', playerId=pid, delta=pts, x=round(g.x), y=round(g.y) })
+        end,
+        pickup = function(e, pk)
+            if pk.score then
+                ps.score = ps.score + pk.score
+                ps.scoreT = sim.levelTime
+            end
+            if pk.lives then pa.lives = math.min(99, pa.lives + pk.lives) end
+            pushEvent(sim, { type='pickup', playerId=pid, kind = pk.lives and 'life' or 'star',
+                             delta = pk.score, x=round(e.x), y=round(e.y) })
+        end,
+        checkpoint = function(e, i)
+            if ps.checkpointIdx == i then return end
+            ps.checkpointIdx = i
+            pa.spawnX, pa.spawnY = e:respawnPoint()
+            pushEvent(sim, { type='checkpoint', playerId=pid, idx=i, x=round(e.x), y=round(e.y) })
+        end,
+    }, rewind)
+    _currentSoundPlayerId = nil
+
+    -- Ground pound: empuja y aturde a los jugadores cercanos
+    if pa.gpLanded and ps.gpPushTick ~= sim.tick then
+        ps.gpPushTick = sim.tick                -- una vez por impacto (hay 2 pasadas por tick)
+        local PA = PlayerAdventure
+        for opid, ops in pairs(sim.playerSims) do
+            local o = ops.pa
+            if opid ~= pid and not ops.isSpectator and not o.dying then
+                local dx, dy = o.x - pa.x, o.y - pa.y
+                if math.abs(dx) <= PA.GP_RADIUS_X and math.abs(dy) <= PA.GP_RADIUS_Y then
+                    _currentSoundPlayerId = nil
+                    o:knockback(dx >= 0 and 1 or -1)
+                end
+            end
         end
     end
 end
@@ -556,9 +579,12 @@ buildResults = function(room, reason)
 end
 
 -- Avanzar la simulación de una sala un tick fijo
+local _currentSim = nil     -- sala que se está simulando (para los efectos visuales)
+
 local function stepRoom(room)
     local sim = room.sim
     if not sim then return end
+    _currentSim = sim
 
     sim.tick = sim.tick + 1
     _soundEvents = {}
@@ -592,11 +618,25 @@ local function stepRoom(room)
     _currentSoundPlayerId = nil
 
     -- ── Nivel (burbujas de oxígeno en vents) y enemigos ──────────────────────
+    -- Las trampas y entidades de techo "ven" a los jugadores activos
+    local active = {}
+    for _, pid in ipairs(room.playerIds) do
+        local ps = sim.playerSims[pid]
+        if ps and not ps.isSpectator then active[#active+1] = ps.pa end
+    end
+    sim.level.players = active
     sim.level:update(TICK_DT)
     for _, e in ipairs(sim.enemies) do
         e:update(TICK_DT, sim.level)
     end
     recordEnemyHistory(sim)
+
+    -- Bloques rotos este tick → a todos los clientes
+    local bq = sim.level.brokenQueue
+    if bq and #bq > 0 then
+        for _, b in ipairs(bq) do pushEvent(sim, { type='tile', c=b[1], r=b[2], v=b[3] }) end
+        sim.level.brokenQueue = {}
+    end
 
     -- ── Colisiones tras mover enemigos (un enemigo puede alcanzar a un jugador quieto)
     for _, pid in ipairs(room.playerIds) do
@@ -773,6 +813,7 @@ local function broadcastSnapshot(room)
             if pa.dying       then flags = flags + Protocol.PF_DYING     end
             if ps.isSpectator then flags = flags + Protocol.PF_SPECTATOR end
             if ps.finished    then flags = flags + Protocol.PF_FINISHED  end
+            if (pa.stunT or 0) > 0 then flags = flags + Protocol.PF_STUNNED end
             table.insert(plist, {
                 ps.idx, round(pa.x), round(pa.y), pa.facing, pa.frame, flags,
                 pa.lives, pa.hp, ps.score, Protocol.drownCode(pa.drownPhase),
@@ -787,10 +828,11 @@ local function broadcastSnapshot(room)
         local entry = {
             round(e.x), round(e.y), e.facing, e.state, e.frame, e.alive,
             round((e.deadTimer or 0) * 100), round((e.breatheT or 0) * 100),
+            e.flipped and 1 or 0,
         }
         -- Datos propios del tipo (p. ej. pincho y sprite del Crabby)
         local extra = e:netPack()
-        if extra then for k, v in ipairs(extra) do entry[8 + k] = v end end
+        if extra then for k, v in ipairs(extra) do entry[9 + k] = v end end
         elist[i] = entry
     end
 
@@ -1380,6 +1422,13 @@ function love.load()
     -- Cargar entidades (en modo ventana usa graphics real; en headless usa stubs)
     Level           = require 'src/world/Level'
     PlayerAdventure = require 'src/entities/PlayerAdventure'
+    -- Efectos visuales del jugador (ground pound, bloques rotos): el servidor
+    -- no dibuja; los reenvía a los clientes para que pongan las partículas
+    PlayerAdventure.fx = function(kind, x, y)
+        if _currentSim then
+            pushEvent(_currentSim, { type='fx', kind=kind, x=round(x), y=round(y), playerId=_currentSoundPlayerId })
+        end
+    end
     Entities        = require 'src/world/Entities'
 
     log("Entidades de simulacion cargadas.")

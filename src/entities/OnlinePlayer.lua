@@ -67,6 +67,7 @@ function OnlinePlayer:applyData(data)
     self.dying       = data.dying       or false
     self.finished    = data.finished    or false
     self.place       = data.place       or 0
+    self.stunned     = data.stunned     or false
     self.color       = data.color       or self.color
 
     self.renderX = self.x
@@ -113,6 +114,9 @@ function OnlinePlayer:render(camX, camY)
     love.graphics.draw(img, sx, sy, 0, sc * self.facing, sc, iw/2, ih/2)
     if self.dying then
         DeadEyes.draw(sx, sy, sc, self.facing, 1, 1, 1, alpha)
+    end
+    if self.stunned and not self.dying then
+        require('src/entities/PlayerAdventure').drawStunStars(sx, sy)
     end
 
     -- Nombre sobre el sprite
