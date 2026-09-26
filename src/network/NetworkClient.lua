@@ -102,7 +102,7 @@ function NC:connect(host, port, name)
     local events = {
         "room_list", "room_update", "room_announce",
         "room_left", "kicked", "banned", "room_closed",
-        "room_error", "s", "ev",
+        "room_error", "level_catalog", "s", "ev",
     }
     for _, evt in ipairs(events) do
         local e = evt

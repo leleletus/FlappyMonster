@@ -1163,10 +1163,11 @@ function OnlineAdventureState:_renderHUD()
     if self.currentRoom and self.currentRoom.adminId == NC.myId then
         local tw = FONT_SMALL:getWidth('ONLINE: ' .. roomName)
         local px = 3
-        -- Centrada verticalmente con la línea de texto
+        -- Centrada con el texto según el cuerpo de la corona (filas 4-9 de
+        -- la matriz), no con sus puntas: si no, a la vista queda baja.
         local textMidY = WINDOW_H - 22 + FONT_SMALL:getHeight() / 2
         PixelIcons.crown(WINDOW_W - 14 - tw - PixelIcons.CROWN_W * px - 6,
-                         textMidY - PixelIcons.CROWN_H * px / 2, px)
+                         textMidY - 6.5 * px, px)
     end
 
     -- Estadísticas de red (F1): ping, retardo de interpolación, correcciones

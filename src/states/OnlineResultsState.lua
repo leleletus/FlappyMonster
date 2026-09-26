@@ -61,16 +61,7 @@ local function easeOutBounce(t)
     else t = t - 2.625 / d; return n * t * t + 0.984375 end
 end
 
--- Recorta un texto (respetando UTF-8) para que quepa en `w` px.
-local function fitText(font, text, w)
-    if font:getWidth(text) <= w then return text end
-    while #text > 1 and font:getWidth(text .. '..') > w do
-        text = text:sub(1, -2)
-        while #text > 0 and text:byte(-1) >= 0x80 and text:byte(-1) < 0xC0 do text = text:sub(1, -2) end
-        if #text > 0 and text:byte(-1) >= 0xC0 then text = text:sub(1, -2) end
-    end
-    return text .. '..'
-end
+local fitText = require('src/ui/TextUtil').fit
 
 local function shadowText(text, x, y, w, align, r, g, b, a, off)
     off = off or 2

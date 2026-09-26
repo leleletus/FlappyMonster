@@ -7,6 +7,7 @@ local BaseState       = require 'src/BaseState'
 local NC              = require 'src/network/NetworkClient'
 local Modes           = require 'src/world/Modes'
 local PixelIcons      = require 'src/ui/PixelIcons'
+local ModeSelectMenu  = require 'src/ui/ModeSelectMenu'
 local OnlineRoomState = BaseState:new()
 
 local imgBg = nil
@@ -18,6 +19,7 @@ end
 -- Sub-estados
 local SUB_MAIN   = 'main'
 local SUB_PMENU  = 'pmenu'   -- menú de acción sobre un jugador (admin)
+local SUB_MODES  = 'modes'   -- menú "MODO DE JUEGO" (admin)
 
 -- Columnas de foco
 local FOCUS_PLAYERS = 'players'
@@ -56,6 +58,11 @@ end
 function OnlineRoomState:_setupHandlers()
     NC:on("room_update", function(data)
         self.currentRoom = data
+        if self.modeMenu then
+            self.modeMenu:setRoom(data)
+            -- Ya no somos host o empezó la partida: cerrar el menú
+            if data.adminId ~= NC.myId or data.state ~= "WAITING" then self:_closeModeMenu() end
+        end
         for _, p in ipairs(data.players or {}) do
             if p.id == NC.myId then self.isReady = p.isReady; break end
         end
@@ -64,6 +71,9 @@ function OnlineRoomState:_setupHandlers()
         if data.state == "IN_GAME" then
             gStateMachine:change('online_adventure', { room = data })
         end
+    end)
+    NC:on("level_catalog", function(data)
+        if self.modeMenu then self.modeMenu:setCatalog(data) end
     end)
     NC:on("room_announce", function(data)
         table.insert(self.announcements, { msg = data.msg or "", timer = 5 })
@@ -86,17 +96,7 @@ function OnlineRoomState:_setupHandlers()
     end)
 end
 
--- Recorta un texto para que quepa en `w` px con la fuente dada.
-local function fitText(font, text, w)
-    if font:getWidth(text) <= w then return text end
-    while #text > 1 and font:getWidth(text .. '..') > w do
-        text = text:sub(1, -2)
-        -- no dejar un carácter UTF-8 a medias
-        while #text > 0 and text:byte(-1) >= 0x80 and text:byte(-1) < 0xC0 do text = text:sub(1, -2) end
-        if #text > 0 and text:byte(-1) >= 0xC0 then text = text:sub(1, -2) end
-    end
-    return text .. '..'
-end
+local fitText = require('src/ui/TextUtil').fit
 
 -- Construye la lista dinámica de botones de acción según el estado actual.
 function OnlineRoomState:_buildActions()
@@ -107,11 +107,8 @@ function OnlineRoomState:_buildActions()
                          color = self.isReady and {0.3,1,0.3} or {1,0.95,0.15} })
     if isAdmin then
         if room.state == "WAITING" then
-            -- El host elige el objetivo de la ronda y el nivel
-            local mode = Modes.get(room.mode)
-            table.insert(list, { id='mode',  label='MODO: ' .. (mode and mode.label or '?'),
-                                 color = mode and mode.color })
-            table.insert(list, { id='level', label=fitText(FONT_MED, 'NIVEL: ' .. (room.levelName or '---'), 470) })
+            -- El host elige el objetivo de la ronda y el nivel en su menú
+            table.insert(list, { id='gamemode', label='MODO DE JUEGO' })
             table.insert(list, { id='start', label='INICIAR PARTIDA', color={0.3,1,0.3} })
         else
             table.insert(list, { id='stop',  label='DETENER PARTIDA', color={1,0.55,0.2} })
@@ -121,19 +118,22 @@ function OnlineRoomState:_buildActions()
     return list
 end
 
+function OnlineRoomState:_closeModeMenu()
+    self.modeMenu = nil
+    if self.sub == SUB_MODES then self.sub = SUB_MAIN end
+end
+
+function OnlineRoomState:exit()
+    NC:off("level_catalog")
+end
+
 function OnlineRoomState:_executeAction(id)
     if id == 'ready' then
         self.isReady = not self.isReady
         NC:send("set_ready", { ready = self.isReady })
-    elseif id == 'mode' then
-        -- Siguiente modo del catálogo (el servidor elige un nivel compatible)
-        local list, cur = Modes.list, 1
-        for i, m in ipairs(list) do if m.id == self.currentRoom.mode then cur = i end end
-        NC:send("set_mode", { mode = list[cur % #list + 1].id })
-    elseif id == 'level' then
-        local levels, cur = self.currentRoom.levels or {}, 0
-        for i, l in ipairs(levels) do if l.path == self.currentRoom.level then cur = i end end
-        if #levels > 1 then NC:send("set_level", { level = levels[cur % #levels + 1].path }) end
+    elseif id == 'gamemode' then
+        self.sub      = SUB_MODES
+        self.modeMenu = ModeSelectMenu.new(self.currentRoom)
     elseif id == 'start' then
         NC:send("start_game", {})
     elseif id == 'stop' then
@@ -167,6 +167,12 @@ function OnlineRoomState:update(dt)
     if self.playerSel > math.max(1, np) then self.playerSel = math.max(1, np) end
     if self.actionSel > na then self.actionSel = na end
     if self.actionSel < 1  then self.actionSel = 1  end
+
+    -- ── Menú "MODO DE JUEGO" ──────────────────────────────────────────────────
+    if self.sub == SUB_MODES and self.modeMenu then
+        if self.modeMenu:update(dt) == 'close' then self:_closeModeMenu() end
+        return
+    end
 
     -- ── Menú de jugador (sub-overlay) ─────────────────────────────────────────
     if self.sub == SUB_PMENU then
@@ -260,6 +266,7 @@ end
 -- ── Hover del mouse: actualiza las variables de selección reales ──────────────
 
 function OnlineRoomState:mousemoved(tx, ty)
+    if self.sub == SUB_MODES then return end
     if self.sub == SUB_PMENU then
         local mW  = 340
         local mH  = #PMENU_LABELS * 60 + 72
@@ -308,6 +315,11 @@ function OnlineRoomState:touchpressed(id, tx, ty)
     local np      = #players
     local isAdmin = room and (room.adminId == NC.myId)
     local actions = self:_buildActions()
+
+    if self.sub == SUB_MODES and self.modeMenu then
+        if self.modeMenu:touch(tx, ty) == 'close' then self:_closeModeMenu() end
+        return
+    end
 
     -- ── Overlay del menú de jugador ──────────────────────────────────────────
     if self.sub == SUB_PMENU then
@@ -717,6 +729,9 @@ function OnlineRoomState:render()
             ay = ay + annH + annGap
         end
     end
+
+    -- ── Menú "MODO DE JUEGO" ──────────────────────────────────────────────────
+    if self.sub == SUB_MODES and self.modeMenu then self.modeMenu:render() end
 
     -- ── Error ─────────────────────────────────────────────────────────────────
     if self.errorMsg ~= "" then

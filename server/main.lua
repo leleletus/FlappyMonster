@@ -211,6 +211,37 @@ local function listLevelFiles()
     return out
 end
 
+-- Miniatura del nivel para el selector del lobby: un carácter por celda
+-- ('.' vacío, '#' sólido, 'B' borde, '=' plataforma, '~' agua, 'X' peligro,
+-- 'F' meta, '^' pinchos) + entidades y punto de inicio.
+local PREVIEW_MAX_CELLS = 20000
+local function buildPreview(lv)
+    if lv.tileW * lv.tileH > PREVIEW_MAX_CELLS then return nil end
+    local Tiles = require 'src/world/Tiles'
+    local rows = {}
+    for r = 1, lv.tileH do
+        local line = {}
+        for c = 1, lv.tileW do
+            local raw = lv.tiles[r][c]
+            local t   = lv:getDef(c, r)
+            local ch  = '.'
+            if t.trigger == 'finish' then ch = 'F'
+            elseif t.mat.contact == 'kill' then ch = 'X'
+            elseif t.name == 'border' then ch = 'B'
+            elseif t.collision == 'solid' then ch = '#'
+            elseif t.collision == 'oneway' then ch = '='
+            elseif t.mat.liquid or Tiles.codec.isWaterlogged(raw) then ch = '~'
+            end
+            if ch == '.' and Tiles.codec.hasSpikes(raw) then ch = '^' end
+            line[c] = ch
+        end
+        rows[r] = table.concat(line)
+    end
+    local ents = {}
+    for _, e in ipairs(lv.entities) do ents[#ents+1] = { e.col, e.row } end
+    return { rows = rows, ents = ents, start = lv.playerStart }
+end
+
 local function scanLevels(force)
     local now = love.timer.getTime()
     if levelCache and not force and now - levelCacheT < 10 then return levelCache end
@@ -227,6 +258,8 @@ local function scanLevels(force)
             for _, m in ipairs(Modes.list) do
                 if m.requires(info) then info.modes[m.id] = true end
             end
+            info.w, info.h = lv.tileW, lv.tileH
+            info.preview   = buildPreview(lv)
             list[#list+1] = info
         else
             log('Nivel invalido ' .. path .. ': ' .. tostring(lv))
@@ -994,9 +1027,27 @@ on("set_mode", function(data, client, player)
     local room = adminRoom(client, player)
     if not room or not Modes.get(data.mode) then return end
     room.mode = data.mode
+    -- Nivel elegido junto al modo (menú del lobby); si no sirve, uno compatible
+    local info = type(data.level) == "string" and levelInfo(data.level)
+    if info and info.modes[room.mode] then room.level = info.path end
     ensureRoomLevel(room)
     log(player.name .. " cambio el modo a " .. Modes.get(room.mode).label)
     broadcastRoomUpdate(room)
+end)
+
+-- Catálogo de niveles con miniaturas (lo pide el menú de modos del lobby)
+on("get_levels", function(data, client, player)
+    local room = player.roomId and rooms[player.roomId]
+    if not room then return end
+    local list = {}
+    for _, info in ipairs(scanLevels()) do
+        local modes = {}
+        for id in pairs(info.modes) do modes[#modes+1] = id end
+        list[#list+1] = { path = info.path, name = info.name, w = info.w, h = info.h,
+                          enemies = info.enemies, finish = info.finish, modes = modes,
+                          preview = info.preview }
+    end
+    client:send("level_catalog", { levels = list })
 end)
 
 on("set_level", function(data, client, player)
