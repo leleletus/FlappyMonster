@@ -13,7 +13,7 @@ Thumbs.db
 *.swp
 *~
 
-reources/
+resources/
 
 # vscode/editor settings
 .vscode/
