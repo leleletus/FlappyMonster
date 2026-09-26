@@ -20,6 +20,7 @@ local Protocol             = require 'src/network/Protocol'
 local Predictor            = require 'src/network/Predictor'
 local SnapshotBuffer       = require 'src/network/SnapshotBuffer'
 local PixelIcons           = require 'src/ui/PixelIcons'
+local CornerButtons        = require 'src/ui/CornerButtons'
 local Modes                = require 'src/world/Modes'
 local json                 = require 'libs/json'
 
@@ -811,6 +812,14 @@ function OnlineAdventureState:update(dt)
         self.renderX, self.renderY = self.predictor:renderPos(self.simAccum / TICK_DT)
     end
 
+    -- ── Música: el respawn ocurre en el servidor (aquí solo llega la posición
+    -- corregida), así que tras morir ahogado nadie la reanudaba. Vuelve en
+    -- cuanto no estamos ahogándonos ni en plena animación de muerte.
+    if self.localPaInit and not self.audioDrowning and not Sound.isMusicPlaying()
+       and (self.ownData.isSpectator or (not self.localPa.dying and self.localPa.drownPhase ~= 'drowning')) then
+        Sound.playMusic('level')
+    end
+
     -- ── Cámara ────────────────────────────────────────────────────────────────
     self:_updateCamera(dt)
     self:_updatePopups(dt)
@@ -898,13 +907,14 @@ function OnlineAdventureState:render()
         love.graphics.circle('fill',  85, WINDOW_H-125, 65)
         love.graphics.circle('fill', 235, WINDOW_H-125, 65)
         love.graphics.circle('fill', WINDOW_W-110, WINDOW_H-125, 65)
-        love.graphics.circle('fill', WINDOW_W-50, 50, 30)
         love.graphics.setFont(FONT_BIG)
         love.graphics.setColor(1, 1, 1, 0.7)
         love.graphics.printf('<', 20,  WINDOW_H-140, 130, 'center')
         love.graphics.printf('>', 170, WINDOW_H-140, 130, 'center')
         love.graphics.printf('A', WINDOW_W-175, WINDOW_H-140, 130, 'center')
-        love.graphics.printf('||', WINDOW_W-80, 40, 60, 'center')
+    end
+    if not self.showGameOver and not self.showPause and not self.specOverlay then
+        CornerButtons.drawPause(self.pauseHover)
     end
 
     -- Overlays
@@ -1249,7 +1259,8 @@ function OnlineAdventureState:_renderSpectatorOverlay()
 
     if not self.specOverlay then
         love.graphics.setColor(1, 1, 1, 0.35)
-        love.graphics.printf('[PAUSA] para opciones', 0, WINDOW_H - 36, WINDOW_W, 'center')
+        love.graphics.printf(CornerButtons.pointerMode() and 'Pulsa || para opciones' or '[PAUSA] para opciones',
+                             0, WINDOW_H - 36, WINDOW_W, 'center')
         return
     end
 
@@ -1282,6 +1293,91 @@ function OnlineAdventureState:_renderSpectatorOverlay()
     for i, opt in ipairs(SPEC_OPTS) do
         local by = startBY + (i-1) * (btnH + btnGap)
         drawPixelButton(opt, WINDOW_W/2, by, btnW, btnH, i==self.specSel, 1)
+    end
+end
+
+-- ── Ratón / táctil ────────────────────────────────────────────────────────────
+-- Misma geometría que _renderPauseOverlay / _renderSpectatorOverlay.
+
+function OnlineAdventureState:_pauseRects()
+    local n      = #self:_getPauseOpts()
+    local btnW, btnH, gap = 300, 48, 14
+    local totalBH = n * btnH + (n - 1) * gap
+    local panelW, panelH = 440, 72 + totalBH + 32
+    local panelX = math.floor((WINDOW_W - panelW) / 2)
+    local panelY = math.floor((WINDOW_H - panelH) / 2)
+    local rects  = {}
+    for i = 1, n do
+        rects[i] = { x = WINDOW_W / 2 - btnW / 2, y = panelY + 68 + (i - 1) * (btnH + gap), w = btnW, h = btnH }
+    end
+    return rects, { x = panelX, y = panelY, w = panelW, h = panelH }
+end
+
+function OnlineAdventureState:_specRects()
+    local n = #SPEC_OPTS
+    local btnW, btnH, gap = 260, 44, 12
+    local panelW, panelH = 380, 180
+    local panelX = math.floor((WINDOW_W - panelW) / 2)
+    local panelY = math.floor((WINDOW_H - panelH) / 2)
+    local totalBH = n * btnH + (n - 1) * gap
+    local startBY = panelY + panelH / 2 - totalBH / 2 + 16
+    local rects = {}
+    for i = 1, n do
+        rects[i] = { x = WINDOW_W / 2 - btnW / 2, y = startBY + (i - 1) * (btnH + gap), w = btnW, h = btnH }
+    end
+    return rects, { x = panelX, y = panelY, w = panelW, h = panelH }
+end
+
+local function inRect(r, x, y, pad)
+    pad = pad or 0
+    return x >= r.x - pad and x <= r.x + r.w + pad and y >= r.y - pad and y <= r.y + r.h + pad
+end
+
+function OnlineAdventureState:mousemoved(tx, ty)
+    self.pauseHover = CornerButtons.hitPause(tx, ty)
+    if self.showPause then
+        for i, r in ipairs((self:_pauseRects())) do
+            if inRect(r, tx, ty, 4) and self.pauseSel ~= i then self.pauseSel = i; Sound.play('select') end
+        end
+    elseif self.ownData.isSpectator and self.specOverlay then
+        for i, r in ipairs((self:_specRects())) do
+            if inRect(r, tx, ty, 4) and self.specSel ~= i then self.specSel = i; Sound.play('select') end
+        end
+    end
+end
+
+function OnlineAdventureState:touchpressed(id, tx, ty)
+    if self.showGameOver then return end
+    if self.showPause then
+        local rects, panel = self:_pauseRects()
+        for i, r in ipairs(rects) do
+            if inRect(r, tx, ty, 4) then
+                self.pauseSel = i; Sound.play('select'); self:_executePause(i); return
+            end
+        end
+        if not inRect(panel, tx, ty) then self:_togglePause() end    -- fuera = reanudar
+        return
+    end
+    if self.ownData.isSpectator then
+        if self.specOverlay then
+            local rects, panel = self:_specRects()
+            for i, r in ipairs(rects) do
+                if inRect(r, tx, ty, 4) then
+                    self.specSel = i; Sound.play('select'); self:_executeSpec(i); return
+                end
+            end
+            if not inRect(panel, tx, ty) then self.specOverlay = false end
+        elseif CornerButtons.hitPause(tx, ty) then
+            self.specOverlay, self.specSel = true, SPEC_WAIT
+        end
+        return
+    end
+    if CornerButtons.hitPause(tx, ty) then
+        Sound.play('select'); self:_togglePause(); return
+    end
+    -- Móvil: toque de un solo cuadro en el botón de salto
+    if Input.isMobile and ty > WINDOW_H - 250 and tx > WINDOW_W - 200 and tx < WINDOW_W - 20 then
+        Input.VirtualPad._pressedThisFrame['jump'] = true
     end
 end
 

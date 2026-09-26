@@ -261,55 +261,16 @@ function OnlineHubState:update(dt)
 
     -- ── SUB_CREATE ────────────────────────────────────────────────────────────
     elseif self.sub == SUB_CREATE then
-
         if Input.pressed('back') then
-            self.sub = SUB_LIST; self:_resetCreate()
-            self:_syncKeyboard(); return
+            self:_createCancel(); return
         end
-
-        -- Paso 1: Nombre (text input + Enter para confirmar)
-        if self.createStep == STEP_NAME then
-            if Input.pressed('confirm') then
-                if #self.inputBuffer > 0 then
-                    self.createData.name = self.inputBuffer
-                    self.inputBuffer     = ""
-                    self.createStep      = STEP_PRIVACY
-                    Sound.play('select')
-                else
-                    self:_showError("El nombre no puede estar vacío.")
-                end
-            end
-
-        -- Paso 2: Privacidad (dos botones navegables)
-        elseif self.createStep == STEP_PRIVACY then
+        if self.createStep == STEP_PRIVACY then
             if Input.pressed('nav_up') or Input.pressed('nav_left') then
                 self.privacySel = 1; Sound.play('select')
             end
             if Input.pressed('nav_down') or Input.pressed('nav_right') then
                 self.privacySel = 2; Sound.play('select')
             end
-            if Input.pressed('confirm') then
-                self.createData.isPublic = (self.privacySel == 1)
-                Sound.play('select')
-                if self.privacySel == 2 then
-                    self.inputBuffer = ""
-                    self.createStep  = STEP_PASS
-                else
-                    self.createData.password = ""
-                    self.createStep          = STEP_MAX
-                end
-            end
-
-        -- Paso 3: Contraseña (solo para privadas; text input + Enter)
-        elseif self.createStep == STEP_PASS then
-            if Input.pressed('confirm') then
-                self.createData.password = self.inputBuffer
-                self.inputBuffer         = ""
-                self.createStep          = STEP_MAX
-                Sound.play('select')
-            end
-
-        -- Paso 4: Máximo de jugadores (selector ± con flechas + CREAR SALA)
         elseif self.createStep == STEP_MAX then
             if Input.pressed('nav_left') or Input.pressed('nav_up') then
                 self.maxValue = math.max(2, self.maxValue - 1); Sound.play('select')
@@ -317,14 +278,8 @@ function OnlineHubState:update(dt)
             if Input.pressed('nav_right') or Input.pressed('nav_down') then
                 self.maxValue = math.min(8, self.maxValue + 1); Sound.play('select')
             end
-            if Input.pressed('confirm') then
-                self.createData.maxPlayers = self.maxValue
-                NC:send("create_room", self.createData)
-                self:_resetCreate()
-                self.sub = SUB_WAITING; self.waitTimer = 0
-                Sound.play('select')
-            end
         end
+        if Input.pressed('confirm') then self:_createNext() end
 
     -- ── SUB_PASSWORD ──────────────────────────────────────────────────────────
     elseif self.sub == SUB_PASSWORD then
@@ -343,6 +298,64 @@ function OnlineHubState:update(dt)
 
     -- Sincronizar teclado Android tras cualquier cambio de sub-estado o paso
     self:_syncKeyboard()
+end
+
+-- ── Crear sala: avanzar / cancelar (teclado, ratón y táctil) ────────────────
+
+function OnlineHubState:_createCancel()
+    self.sub = SUB_LIST; self:_resetCreate()
+    self:_syncKeyboard()
+end
+
+function OnlineHubState:_createNext()
+    local step = self.createStep
+    if step == STEP_NAME then
+        if #self.inputBuffer == 0 then
+            self:_showError("El nombre no puede estar vacío."); return
+        end
+        self.createData.name = self.inputBuffer
+        self.inputBuffer     = ""
+        self.createStep      = STEP_PRIVACY
+    elseif step == STEP_PRIVACY then
+        self.createData.isPublic = (self.privacySel == 1)
+        if self.privacySel == 2 then
+            self.inputBuffer = ""
+            self.createStep  = STEP_PASS
+        else
+            self.createData.password = ""
+            self.createStep          = STEP_MAX
+        end
+    elseif step == STEP_PASS then
+        self.createData.password = self.inputBuffer
+        self.inputBuffer         = ""
+        self.createStep          = STEP_MAX
+    elseif step == STEP_MAX then
+        self.createData.maxPlayers = self.maxValue
+        NC:send("create_room", self.createData)
+        self:_resetCreate()
+        self.sub = SUB_WAITING; self.waitTimer = 0
+    end
+    Sound.play('select')
+    self:_syncKeyboard()
+end
+
+-- Botones CANCELAR / SIGUIENTE del asistente (misma geometría en todo el archivo)
+local function createNavRects()
+    local panelW = math.min(700, WINDOW_W - 120)
+    local panelX = math.floor((WINDOW_W - panelW) / 2)
+    local panelH = 350
+    local panelY = math.floor((WINDOW_H - panelH) / 2)
+    local bw, bh = 220, 44
+    local by = panelY + panelH - 80
+    return {
+        { x = panelX + 40,               y = by, w = bw, h = bh },   -- CANCELAR
+        { x = panelX + panelW - 40 - bw, y = by, w = bw, h = bh },   -- SIGUIENTE / CREAR
+    }
+end
+
+local function inRect(r, x, y, pad)
+    pad = pad or 0
+    return x >= r.x - pad and x <= r.x + r.w + pad and y >= r.y - pad and y <= r.y + r.h + pad
 end
 
 -- ── Helpers de dibujo ─────────────────────────────────────────────────────────
@@ -667,6 +680,12 @@ function OnlineHubState:_renderCreate()
         love.graphics.setColor(1,1,1,0.3)
         love.graphics.printf("[ENTER] Crear sala   [ESC] Cancelar", panelX, panelY + panelH - 24, panelW, 'center')
     end
+
+    -- Botones del asistente (ratón / táctil)
+    local nav = createNavRects()
+    drawBtn('CANCELAR', nav[1].x, nav[1].y, nav[1].w, nav[1].h, self.hoveredCreateNav == 1)
+    drawBtn(self.createStep == STEP_MAX and 'CREAR SALA' or 'SIGUIENTE', nav[2].x, nav[2].y, nav[2].w, nav[2].h,
+            self.hoveredCreateNav == 2 or self.hoveredCreateNav == nil)
 end
 
 function OnlineHubState:_renderPassword()
@@ -757,6 +776,12 @@ function OnlineHubState:mousemoved(tx, ty)
         end
 
     elseif self.sub == SUB_CREATE then
+        local prevNav = self.hoveredCreateNav
+        self.hoveredCreateNav = nil
+        for i, r in ipairs(createNavRects()) do
+            if inRect(r, tx, ty, 4) then self.hoveredCreateNav = i end
+        end
+        if self.hoveredCreateNav and self.hoveredCreateNav ~= prevNav then Sound.play('select') end
         local panelW   = math.min(700, WINDOW_W - 120)
         local panelX   = math.floor((WINDOW_W - panelW) / 2)
         local panelH   = 350
@@ -807,6 +832,13 @@ function OnlineHubState:mousemoved(tx, ty)
         end
         if self.hoveredPassBtn and self.hoveredPassBtn ~= prev then Sound.play('select') end
     end
+end
+
+-- Rueda del ratón: desplaza la lista de salas
+function OnlineHubState:wheelmoved(dx, dy)
+    if self.sub ~= SUB_LIST or #self.roomList == 0 then return end
+    self.listFocus   = 'rooms'
+    self.selectedIdx = math.max(1, math.min(#self.roomList, self.selectedIdx - dy))
 end
 
 -- ── Exit ──────────────────────────────────────────────────────────────────────
@@ -879,6 +911,10 @@ function OnlineHubState:touchpressed(id, tx, ty)
 
     -- ── SUB_CREATE ────────────────────────────────────────────────────────────
     if self.sub == SUB_CREATE then
+        local nav = createNavRects()
+        if inRect(nav[1], tx, ty, 6) then Sound.play('select'); self:_createCancel(); return end
+        if inRect(nav[2], tx, ty, 6) then self:_createNext(); return end
+
         local panelW   = math.min(700, WINDOW_W - 120)
         local panelX   = math.floor((WINDOW_W - panelW) / 2)
         local panelH   = 350
@@ -893,19 +929,6 @@ function OnlineHubState:touchpressed(id, tx, ty)
             if tx >= tbX and tx <= tbX + tbW and ty >= tbY and ty <= tbY + tbH then
                 love.keyboard.setTextInput(true); self._keyboardOn = true
                 return
-            end
-            -- Toque en el resto del panel → confirmar nombre
-            if tx >= panelX and tx <= panelX + panelW and
-               ty >= panelY and ty <= panelY + panelH then
-                if #self.inputBuffer > 0 then
-                    self.createData.name = self.inputBuffer
-                    self.inputBuffer     = ""
-                    self.createStep      = STEP_PRIVACY
-                    Sound.play('select')
-                    self:_syncKeyboard()
-                else
-                    self:_showError("El nombre no puede estar vacío.")
-                end
             end
 
         -- Paso 2: Privacidad (seleccionar + confirmar con un solo toque)
@@ -947,14 +970,6 @@ function OnlineHubState:touchpressed(id, tx, ty)
                 love.keyboard.setTextInput(true); self._keyboardOn = true
                 return
             end
-            if tx >= panelX and tx <= panelX + panelW and
-               ty >= panelY and ty <= panelY + panelH then
-                self.createData.password = self.inputBuffer
-                self.inputBuffer         = ""
-                self.createStep          = STEP_MAX
-                Sound.play('select')
-                self:_syncKeyboard()
-            end
 
         -- Paso 4: Máximo de jugadores
         elseif self.createStep == STEP_MAX then
@@ -979,17 +994,6 @@ function OnlineHubState:touchpressed(id, tx, ty)
                 self.maxValue = math.min(8, self.maxValue + 1)
                 Sound.play('select')
                 return
-            end
-            -- Toque en el número central o resto del panel → confirmar y crear sala
-            if tx >= panelX and tx <= panelX + panelW and
-               ty >= panelY and ty <= panelY + panelH then
-                self.createData.maxPlayers = self.maxValue
-                NC:send("create_room", self.createData)
-                self:_resetCreate()
-                self.sub       = SUB_WAITING
-                self.waitTimer = 0
-                Sound.play('select')
-                self:_syncKeyboard()
             end
         end
         return

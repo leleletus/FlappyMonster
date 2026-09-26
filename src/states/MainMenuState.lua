@@ -2,6 +2,7 @@
 -- Menú principal: Adventure / regular.
 -- Navegar con nav_up/nav_down, confirmar con confirm/flap.
 
+local CornerButtons = require 'src/ui/CornerButtons'
 local BaseState     = require 'src/BaseState'
 local MainMenuState = BaseState:new()
 
@@ -98,10 +99,13 @@ function MainMenuState:render()
 
         curY = curY + ih + gap
     end
+    CornerButtons.drawBack(self.backHover)
 end
 
 -- Hover del mouse: mueve la selección real al botón bajo el cursor
 function MainMenuState:mousemoved(tx, ty)
+    self.backHover = CornerButtons.hitBack(tx, ty)
+    if self.backHover then return end
     local imgs   = { imgAdventure, imgregular }
     local gap    = 24
     local totalH = 0
@@ -122,6 +126,11 @@ end
 
 -- Táctil Switch: tap directo en el botón
 function MainMenuState:touchpressed(id, tx, ty, dx, dy, pressure)
+    if CornerButtons.hitBack(tx, ty) then
+        Sound.play('select')
+        gStateMachine:change('title')
+        return
+    end
     local imgs  = { imgAdventure, imgregular }
     local gap   = 24
     local totalH = 0

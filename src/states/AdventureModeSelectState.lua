@@ -2,6 +2,7 @@
 -- Menú intermedio: SOLO (singleplayer) u ONLINE (multijugador).
 -- Se muestra al elegir Adventure en el menú principal.
 
+local CornerButtons = require 'src/ui/CornerButtons'
 local BaseState               = require 'src/BaseState'
 local AdventureModeSelectState = BaseState:new()
 
@@ -112,11 +113,14 @@ function AdventureModeSelectState:render()
     end
 
     love.graphics.setColor(COLOR_WHITE)
+    CornerButtons.drawBack(self.backHover)
 end
 
 -- ── Hover del mouse: mueve la selección real al botón bajo el cursor ──────────
 
 function AdventureModeSelectState:mousemoved(tx, ty)
+    self.backHover = CornerButtons.hitBack(tx, ty)
+    if self.backHover then return end
     local cx = WINDOW_W / 2
     for i = 1, #OPTIONS do
         local y  = btnY(i)
@@ -131,6 +135,11 @@ end
 -- ── Touch ─────────────────────────────────────────────────────────────────────
 
 function AdventureModeSelectState:touchpressed(id, tx, ty)
+    if CornerButtons.hitBack(tx, ty) then
+        Sound.play('select')
+        gStateMachine:change('main_menu')
+        return
+    end
     local cx = WINDOW_W / 2
     for i = 1, #OPTIONS do
         local y  = btnY(i)

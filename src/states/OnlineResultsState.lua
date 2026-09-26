@@ -14,8 +14,10 @@ local PixelIcons   = require 'src/ui/PixelIcons'
 
 local OnlineResultsState = BaseState:new()
 
-local DURATION   = 13     -- s hasta volver solo a la sala
-local SKIP_AFTER = 2.5    -- s mínimos antes de poder saltar con CONFIRMAR
+-- Dura lo MISMO para todos: no se puede saltar (antes el ganador, que llega
+-- aún pulsando saltar = confirmar, la saltaba sin querer).
+local DURATION   = 15     -- s hasta volver a la sala
+local MUSIC_FADE = 1.5    -- s de fundido de la música al final
 
 -- Tiempos de la animación (s desde que entra la pantalla)
 local T_TITLE    = 0.15
@@ -80,6 +82,8 @@ function OnlineResultsState:enter(args)
     local res    = type(args.results) == 'table' and args.results or {}
     self.mode    = Modes.get(res.mode or args.mode) or Modes.get(Modes.DEFAULT)
     self.reason  = res.reasonText or ''
+    self.note    = type(res.note) == 'string' and res.note or nil   -- desempate
+    self.tie     = res.tie == true
     self.entries = {}
     for _, e in ipairs(type(res.entries) == 'table' and res.entries or {}) do
         if type(e) == 'table' then
@@ -98,7 +102,9 @@ function OnlineResultsState:enter(args)
         end
     end
     local nw = #self.winners
-    if self.meWinner and nw == 1 then
+    if self.tie then
+        self.title, self.titleCol = '¡EMPATE!', {1, 0.9, 0.2}
+    elseif self.meWinner and nw == 1 then
         self.title, self.titleCol = '¡VICTORIA!', {1, 0.9, 0.2}
     elseif self.meWinner then
         self.title, self.titleCol = '¡GANASTE!', {1, 0.9, 0.2}
@@ -114,17 +120,20 @@ function OnlineResultsState:enter(args)
     self.t          = 0
     self.confetti   = {}
     self.sparks     = {}
-    self.fwTimer    = 1.8
+    self.fwTimer    = 0.6
+    self.rockets    = {}
     self.landed     = {}      -- [puesto] = true cuando el jugador cayó en el podio
     self.countTick  = 0
     self.leaving    = false
 
     self:_setupHandlers()
     Sound.stopMusic()
+    self.musicStarted = false
 end
 
 function OnlineResultsState:exit()
     NC:off("room_update")
+    Sound.stopMusic()
 end
 
 function OnlineResultsState:_setupHandlers()
@@ -171,16 +180,31 @@ function OnlineResultsState:_burstConfetti(x, y, n, spread)
     end
 end
 
-function OnlineResultsState:_firework(x, y)
-    local col = CONFETTI_COLS[math.random(#CONFETTI_COLS)]
-    local n   = 34
+-- Cohete: sube desde abajo dejando estela y explota en (tx, ty)
+function OnlineResultsState:_launchRocket()
+    local x  = 80 + math.random() * (WINDOW_W - 160)
+    local ty = 90 + math.random() * 200
+    table.insert(self.rockets, { x = x, y = WINDOW_H + 10, tx = x + (math.random() * 2 - 1) * 60, ty = ty,
+                                 sx = x, sy = WINDOW_H + 10, t = 0, dur = 0.9 + math.random() * 0.3,
+                                 large = math.random() < 0.3, trail = {} })
+    Sound.play('fwLaunch', 0.9 + math.random() * 0.2, 0.55)
+end
+
+function OnlineResultsState:_firework(x, y, large)
+    local col  = CONFETTI_COLS[math.random(#CONFETTI_COLS)]
+    local col2 = CONFETTI_COLS[math.random(#CONFETTI_COLS)]
+    local n    = large and 60 or 34
     for i = 1, n do
         local ang = (i / n) * math.pi * 2 + math.random() * 0.2
-        local sp  = 140 + math.random() * 90
+        local sp  = (large and 200 or 140) + math.random() * 90
         table.insert(self.sparks, { x = x, y = y, vx = math.cos(ang) * sp, vy = math.sin(ang) * sp,
-                                    col = col, life = 1.1 + math.random() * 0.4, t = 0 })
+                                    col = (i % 3 == 0) and col2 or col, life = 1.1 + math.random() * 0.5, t = 0 })
     end
-    Sound.play('point', 0.8 + math.random() * 0.5, 0.35)
+    if large then
+        Sound.play('fwBlastLarge', 0.95 + math.random() * 0.1, 0.8)
+    else
+        Sound.play(math.random() < 0.5 and 'fwBlast1' or 'fwBlast2', 0.9 + math.random() * 0.2, 0.7)
+    end
 end
 
 -- ── Geometría ─────────────────────────────────────────────────────────────────
@@ -210,11 +234,13 @@ function OnlineResultsState:update(dt)
             if place == 1 then
                 if self.celebrate then
                     Sound.play('fanfare')
+                    self.musicAt = t + 1.0
                     self:_burstConfetti(PODIUM_CX[1], FLOOR_Y - PODIUM[1].h - 60, 90, 1.2)
                     self:_burstConfetti(40, WINDOW_H, 40, 0.5)
                     self:_burstConfetti(WINDOW_W - 40, WINDOW_H, 40, 0.5)
                 else
                     Sound.play('sadtrombone')
+                    self.musicAt = t + 2.0
                 end
             else
                 Sound.play('jump', 1 + (3 - place) * 0.1, 0.6)
@@ -246,10 +272,35 @@ function OnlineResultsState:update(dt)
             })
         end
         self.fwTimer = self.fwTimer - dt
-        if self.fwTimer <= 0 then
-            self.fwTimer = 0.9 + math.random() * 0.9
-            self:_firework(80 + math.random() * (WINDOW_W - 160), 90 + math.random() * 200)
+        if self.fwTimer <= 0 and t < DURATION - 1.5 then
+            self.fwTimer = 1.0 + math.random() * 1.0
+            self:_launchRocket()
         end
+    end
+
+    -- Cohetes en vuelo
+    for i = #self.rockets, 1, -1 do
+        local r = self.rockets[i]
+        r.t = r.t + dt
+        local k = 1 - (1 - math.min(1, r.t / r.dur)) ^ 2      -- frena al subir
+        r.x = r.sx + (r.tx - r.sx) * k
+        r.y = r.sy + (r.ty - r.sy) * k
+        table.insert(r.trail, 1, { x = r.x, y = r.y })
+        if #r.trail > 10 then table.remove(r.trail) end
+        if r.t >= r.dur then
+            table.remove(self.rockets, i)
+            self:_firework(r.x, r.y, r.large)
+        end
+    end
+
+    -- Música de victoria (tras la fanfarria) con fundido al final
+    if self.musicAt and not self.musicStarted and t >= self.musicAt then
+        self.musicStarted = true
+        Sound.playMusic('youWin', self.celebrate and 0.6 or 0.35)
+    end
+    if self.musicStarted and t > DURATION - MUSIC_FADE then
+        local v = math.max(0, (DURATION - t) / MUSIC_FADE)
+        Sound.setMusicVolume(v * (self.celebrate and 0.6 or 0.35))
     end
 
     for i = #self.confetti, 1, -1 do
@@ -273,17 +324,12 @@ function OnlineResultsState:update(dt)
         if p.t >= p.life then table.remove(self.sparks, i) end
     end
 
-    -- Salir
-    if (t >= SKIP_AFTER and (Input.pressed('confirm') or Input.pressed('back') or Input.pressed('pause')))
-       or t >= DURATION then
-        Sound.play('select')
-        self:_leave()
-    end
+    -- Volver a la sala (mismo tiempo para todos; sin atajo para saltarla)
+    if t >= DURATION then self:_leave() end
 end
 
-function OnlineResultsState:touchpressed()
-    if self.t >= SKIP_AFTER then self:_leave() end
-end
+-- Sin atajos: evita que main.lua convierta el clic en CONFIRMAR/navegación
+function OnlineResultsState:touchpressed() end
 
 -- ── Render ────────────────────────────────────────────────────────────────────
 
@@ -419,7 +465,7 @@ function OnlineResultsState:_renderBoard()
     local x   = 660
     local w   = WINDOW_W - x - 40
     local DETAIL_R = 110           -- borde derecho de la columna RESULTADO (desde la derecha)
-    local y0  = 196
+    local y0  = 208
     local rowH = 50
     local showDetail = false
     for _, e in ipairs(self.entries) do if e.finished or e.out then showDetail = true end end
@@ -499,6 +545,17 @@ function OnlineResultsState:render()
     local t = self.t
     self:_renderBackground()
 
+    -- Cohetes subiendo (estela)
+    for _, r in ipairs(self.rockets) do
+        for k, tp in ipairs(r.trail) do
+            local a = 1 - k / (#r.trail + 1)
+            love.graphics.setColor(1, 0.8, 0.4, a * 0.8)
+            love.graphics.rectangle('fill', tp.x - 2, tp.y - 2, 4, 4)
+        end
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.rectangle('fill', r.x - 3, r.y - 3, 6, 6)
+    end
+
     -- Chispas de fuegos artificiales (detrás del contenido)
     for _, p in ipairs(self.sparks) do
         local a = 1 - p.t / p.life
@@ -543,6 +600,10 @@ function OnlineResultsState:render()
     love.graphics.setFont(FONT_SMALL)
     love.graphics.setColor(1, 1, 1, 0.7 * sa)
     love.graphics.printf(self.reason, 0, 142, WINDOW_W, 'center')
+    if self.note then
+        love.graphics.setColor(1, 0.85, 0.2, 0.9 * sa)
+        love.graphics.printf(self.note, 0, 160, WINDOW_W, 'center')
+    end
 
     self:_renderPodium()
     self:_renderBoard()
@@ -568,7 +629,6 @@ function OnlineResultsState:render()
     love.graphics.setFont(FONT_SMALL)
     love.graphics.setColor(1, 1, 1, 0.6)
     local hint = 'Volviendo a la sala en ' .. math.ceil(remaining) .. '...'
-    if t >= SKIP_AFTER then hint = '[ENTER] continuar   ·   ' .. hint end
     love.graphics.printf(hint, fx - 300, fy, fw + 300, 'right')
 
     love.graphics.setColor(1, 1, 1, 1)

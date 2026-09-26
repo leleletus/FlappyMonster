@@ -298,7 +298,8 @@ local function initRoomSim(room)
                   ended=nil, levelTime=0, timeLimitKilled=false,
                   nextBubbleId=0,
                   levelRaw = love.filesystem.read(room.level),   -- se envía a los clientes
-                  mode = Modes.get(room.mode) }
+                  mode = Modes.get(room.mode),
+                  startPlayers = #room.playerIds }
 
     -- Crear instancias de las entidades del nivel (enemigos, NPCs)
     for _, placement in ipairs(level.entities) do
@@ -370,6 +371,7 @@ local function checkPlayerEnemyCollisions(sim, pid, ps, seq)
             _currentSoundPlayerId = pid; g:stomp(); _currentSoundPlayerId = nil
             pa.vy = bvy; pa.jumpsLeft = 2
             ps.score = ps.score + pts
+            ps.scoreT = sim.levelTime          -- para desempatar: quién llegó antes
             ps.bounceSeq = seq
             sim.mode.onStomp(sim.match, ps, g)
             pushEvent(sim, { type='score', playerId=pid, delta=pts, x=round(g.x), y=round(g.y) })
@@ -484,14 +486,23 @@ buildResults = function(room, reason)
                 score = ps.score, finished = ps.finished or false, place = ps.place,
                 time = ps.finishTime and round(ps.finishTime * 100) / 100 or nil,
                 out = ps.isSpectator and not ps.finished, order = ps.idx, winner = false,
+                lives = ps.isSpectator and 0 or ps.pa.lives, scoreT = ps.scoreT or 0,
             }
         end
     end
-    sim.mode.rank(sim.match, entries, reason)
+    local note, tie = sim.mode.rank(sim.match, entries, reason)
+    -- Último superviviente: gana él, sea cual sea el modo
+    if reason == 'last_standing' then
+        note, tie = nil, false
+        for i, e in ipairs(entries) do
+            e.winner = (e.id == sim.survivor)
+            if e.winner and i > 1 then table.remove(entries, i); table.insert(entries, 1, e) end
+        end
+    end
     log("Ronda terminada (" .. sim.mode.id .. ", " .. reason .. ") en '" .. room.name .. "'")
     return { type = 'round_end', mode = sim.mode.id, reason = reason,
              reasonText = sim.mode.reasonText(reason) or Modes.GENERIC_REASONS[reason] or '',
-             entries = entries }
+             note = note, tie = tie or false, entries = entries }
 end
 
 -- Avanzar la simulación de una sala un tick fijo
@@ -560,6 +571,23 @@ local function stepRoom(room)
             end
             if anyPlayer and not anyActive then
                 reason = sim.timeLimitKilled and 'time_limit' or 'all_out'
+            end
+        end
+        -- Se quedó uno solo (los demás eliminados o se fueron) y nadie ha
+        -- cumplido aún el objetivo → gana el superviviente
+        if not reason and sim.startPlayers >= 2 then
+            local active, finished = {}, 0
+            for pid, ps in pairs(sim.playerSims) do
+                if ps.finished then finished = finished + 1
+                elseif not ps.isSpectator then active[#active+1] = pid end
+            end
+            if #active == 1 and finished == 0 then
+                local ps = sim.playerSims[active[1]]
+                -- Si está muriendo con su última vida, aún no es superviviente
+                if not (ps.pa.dying and ps.pa.lives <= 1) then
+                    sim.survivor = active[1]
+                    reason = 'last_standing'
+                end
             end
         end
         if reason then

@@ -63,6 +63,11 @@ function Sound.load()
     load('drowning',      'assets/sounds/drowning.ogg',      'stream')
     load('glugluglu',     'assets/sounds/glugluglu.ogg',     'static')
     if sources['drowning'] then sources['drowning']:setLooping(false) end
+    load('fwLaunch',      'assets/sounds/Firework_launch.ogg',      'static')
+    load('fwBlast1',      'assets/sounds/Firework_blast.ogg',       'static')
+    load('fwBlast2',      'assets/sounds/Firework_blast1.ogg',      'static')
+    load('fwBlastLarge',  'assets/sounds/Firework_large_blast.ogg', 'static')
+    load('youWin',        'assets/sounds/you_win.ogg',       'stream')
     load('menus',         'assets/sounds/menus.ogg',         'stream')
     load('level',         'assets/sounds/level.ogg',         'stream')
     if sources['menus'] then sources['menus']:setLooping(true) end
@@ -116,6 +121,16 @@ function Sound.playMusic(name, volume)
     src:setVolume(volume or 0.7)
     src:play()
     music = src
+end
+
+function Sound.setMusicVolume(v)
+    if music then music:setVolume(v) end
+end
+
+-- ¿Está sonando la pista `name` (o cualquier música si name es nil)?
+function Sound.isMusicPlaying(name)
+    if not music or not music:isPlaying() then return false end
+    return name == nil or sources[name] == music
 end
 
 -- Lerp del pitch de la música (usado para el slowdown al morir)

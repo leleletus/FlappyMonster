@@ -51,13 +51,22 @@ function OnlineRoomState:enter(args)
     self.actionSel     = 1
     self.pmenuSel      = PMENU_CANCEL
 
+    self.t             = 0
+    self.catalog       = nil     -- niveles con miniatura (para la tarjeta de partida)
+
     self:_setupHandlers()
+    NC:send("get_levels", {})
     Sound.playMusic('menus')
 end
 
 function OnlineRoomState:_setupHandlers()
     NC:on("room_update", function(data)
         self.currentRoom = data
+        if data.level and self.catalog then
+            local known = false
+            for _, l in ipairs(self.catalog) do if l.path == data.level then known = true end end
+            if not known then NC:send("get_levels", {}) end
+        end
         if self.modeMenu then
             self.modeMenu:setRoom(data)
             -- Ya no somos host o empezó la partida: cerrar el menú
@@ -73,6 +82,9 @@ function OnlineRoomState:_setupHandlers()
         end
     end)
     NC:on("level_catalog", function(data)
+        if type(data) ~= 'table' or type(data.levels) ~= 'table' then return end
+        self.catalog = data.levels
+        ModeSelectMenu.clearPreviews()
         if self.modeMenu then self.modeMenu:setCatalog(data) end
     end)
     NC:on("room_announce", function(data)
@@ -133,7 +145,7 @@ function OnlineRoomState:_executeAction(id)
         NC:send("set_ready", { ready = self.isReady })
     elseif id == 'gamemode' then
         self.sub      = SUB_MODES
-        self.modeMenu = ModeSelectMenu.new(self.currentRoom)
+        self.modeMenu = ModeSelectMenu.new(self.currentRoom, self.catalog)
     elseif id == 'start' then
         NC:send("start_game", {})
     elseif id == 'stop' then
@@ -146,6 +158,7 @@ end
 -- ── Update ────────────────────────────────────────────────────────────────────
 
 function OnlineRoomState:update(dt)
+    self.t = self.t + dt
     -- Timers
     if self.errorTimer > 0 then
         self.errorTimer = self.errorTimer - dt
@@ -263,146 +276,148 @@ function OnlineRoomState:_executePmenu(players)
     self.sub = SUB_MAIN
 end
 
--- ── Hover del mouse: actualiza las variables de selección reales ──────────────
+-- ── Layout (ÚNICA fuente de geometría: render, ratón y táctil) ───────────────
+
+local PANEL_X, PANEL_Y = 76, 40
+local PANEL_W, PANEL_H = WINDOW_W - 152, WINDOW_H - 80
+local HDR_H   = 84
+local ROW_H   = 54
+local CARD_H  = 196
+local BTN_H, BTN_GAP = 50, 12
+local PM_W, PM_BW, PM_BH, PM_GAP = 340, 240, 48, 10
+
+function OnlineRoomState:_layout()
+    local L = {}
+    L.panel = { x = PANEL_X, y = PANEL_Y, w = PANEL_W, h = PANEL_H }
+    local bodyY  = PANEL_Y + HDR_H + 14
+    local leftX  = PANEL_X + 24
+    local leftW  = math.floor(PANEL_W * 0.50) - 36
+    local rightX = leftX + leftW + 40
+    local rightW = PANEL_X + PANEL_W - 24 - rightX
+    L.bodyY, L.bottom = bodyY, PANEL_Y + PANEL_H - 34
+    L.left  = { x = leftX,  y = bodyY, w = leftW }
+    L.right = { x = rightX, y = bodyY, w = rightW }
+
+    -- Jugadores
+    L.rows = {}
+    local players = (self.currentRoom and self.currentRoom.players) or {}
+    for i = 1, #players do
+        local y = bodyY + 26 + (i - 1) * (ROW_H + 6)
+        if y + ROW_H > L.bottom then break end
+        L.rows[i] = { x = leftX, y = y, w = leftW, h = ROW_H }
+    end
+
+    -- Tarjeta de la partida (modo + mapa) arriba a la derecha
+    L.card = { x = rightX, y = bodyY + 26, w = rightW, h = CARD_H }
+
+    -- Botones debajo
+    L.buttons = {}
+    local by = L.card.y + CARD_H + 18
+    for i = 1, #self:_buildActions() do
+        L.buttons[i] = { x = rightX, y = by + (i - 1) * (BTN_H + BTN_GAP), w = rightW, h = BTN_H }
+    end
+
+    -- Menú de acción sobre un jugador
+    local mh = #PMENU_LABELS * (PM_BH + PM_GAP) + 72
+    L.pmenu = { x = math.floor((WINDOW_W - PM_W) / 2), y = math.floor((WINDOW_H - mh) / 2), w = PM_W, h = mh }
+    L.pmenuBtns = {}
+    for i = 1, #PMENU_LABELS do
+        L.pmenuBtns[i] = { x = L.pmenu.x + (PM_W - PM_BW) / 2, y = L.pmenu.y + 52 + (i - 1) * (PM_BH + PM_GAP),
+                           w = PM_BW, h = PM_BH }
+    end
+    return L
+end
+
+local function hit(r, x, y, pad)
+    pad = pad or 0
+    return r and x >= r.x - pad and x <= r.x + r.w + pad and y >= r.y - pad and y <= r.y + r.h + pad
+end
+
+-- ── Hover del mouse: mueve la selección real al elemento bajo el cursor ──────
 
 function OnlineRoomState:mousemoved(tx, ty)
-    if self.sub == SUB_MODES then return end
+    if self.sub == SUB_MODES then
+        if self.modeMenu then self.modeMenu:hover(tx, ty) end
+        return
+    end
+    local L = self:_layout()
     if self.sub == SUB_PMENU then
-        local mW  = 340
-        local mH  = #PMENU_LABELS * 60 + 72
-        local mX  = math.floor((WINDOW_W - mW) / 2)
-        local mY  = math.floor((WINDOW_H - mH) / 2)
-        local bW  = 240; local bH = 48; local bGap = 10
-        local bX  = mX + (mW - bW) / 2; local bY0 = mY + 50
-        for i = 1, #PMENU_LABELS do
-            local by = bY0 + (i-1) * (bH + bGap)
-            if tx >= bX-10 and tx <= bX+bW+10 and ty >= by-5 and ty <= by+bH+5 then
+        for i, r in ipairs(L.pmenuBtns) do
+            if hit(r, tx, ty, 4) then
                 if self.pmenuSel ~= i then self.pmenuSel = i; Sound.play('select') end
                 return
             end
         end
-    else
-        local actions   = self:_buildActions()
-        local panelX    = math.floor(WINDOW_W * 0.06)
-        local panelY    = 44
-        local panelW    = WINDOW_W - 2 * panelX
-        local panelH    = WINDOW_H - 88
-        local hdrH      = 78
-        local bodyY     = panelY + hdrH + 8
-        local leftW     = math.floor(panelW * 0.53) - 20
-        local rightX    = panelX + 20 + leftW + 20
-        local rightW    = panelW - leftW - 20 - 40
-        local btnH      = 56; local btnGap = 14
-        local btnStartY = bodyY + 2 + 28
-        for i = 1, #actions do
-            local by = btnStartY + (i-1) * (btnH + btnGap)
-            if by + btnH > panelY + panelH - 14 then break end
-            if tx >= rightX-10 and tx <= rightX+rightW+10 and ty >= by-5 and ty <= by+btnH+5 then
-                if self.focus ~= FOCUS_ACTIONS or self.actionSel ~= i then
-                    self.focus = FOCUS_ACTIONS; self.actionSel = i; Sound.play('select')
-                end
-                return
+        return
+    end
+    for i, r in ipairs(L.buttons) do
+        if hit(r, tx, ty, 4) then
+            if self.focus ~= FOCUS_ACTIONS or self.actionSel ~= i then
+                self.focus = FOCUS_ACTIONS; self.actionSel = i; Sound.play('select')
             end
+            return
+        end
+    end
+    for i, r in ipairs(L.rows) do
+        if hit(r, tx, ty) then
+            if self.focus ~= FOCUS_PLAYERS or self.playerSel ~= i then
+                self.focus = FOCUS_PLAYERS; self.playerSel = i; Sound.play('select')
+            end
+            return
         end
     end
 end
 
--- ── Touch ─────────────────────────────────────────────────────────────────────
+-- ── Táctil / clic ─────────────────────────────────────────────────────────────
 
 function OnlineRoomState:touchpressed(id, tx, ty)
     local room    = self.currentRoom
     local players = room and room.players or {}
-    local np      = #players
     local isAdmin = room and (room.adminId == NC.myId)
-    local actions = self:_buildActions()
 
     if self.sub == SUB_MODES and self.modeMenu then
         if self.modeMenu:touch(tx, ty) == 'close' then self:_closeModeMenu() end
         return
     end
 
-    -- ── Overlay del menú de jugador ──────────────────────────────────────────
+    local L = self:_layout()
     if self.sub == SUB_PMENU then
-        local mW  = 340
-        local mH  = #PMENU_LABELS * 60 + 72
-        local mX  = math.floor((WINDOW_W - mW) / 2)
-        local mY  = math.floor((WINDOW_H - mH) / 2)
-        local bW  = 240
-        local bH  = 48
-        local bGap = 10
-        local bX  = mX + (mW - bW) / 2
-        local bY0 = mY + 50
-
-        for i = 1, #PMENU_LABELS do
-            local by = bY0 + (i - 1) * (bH + bGap)
-            if tx >= bX - 10 and tx <= bX + bW + 10 and
-               ty >= by  - 5 and ty <= by + bH  + 5 then
+        for i, r in ipairs(L.pmenuBtns) do
+            if hit(r, tx, ty, 4) then
                 self.pmenuSel = i
                 Sound.play('select')
                 self:_executePmenu(players)
                 return
             end
         end
-        -- Toque fuera del menú = cancelar
-        self.sub = SUB_MAIN
+        self.sub = SUB_MAIN          -- toque fuera del menú = cancelar
         return
     end
 
-    -- ── Geometría de columnas (igual que render) ─────────────────────────────
-    local panelX     = math.floor(WINDOW_W * 0.06)
-    local panelY     = 44
-    local panelW     = WINDOW_W - 2 * panelX
-    local panelH     = WINDOW_H - 88
-    local hdrH       = 78
-    local bodyY      = panelY + hdrH + 8
-    local bodyH      = panelH - hdrH - 8
-    local gapBetween = 20
-    local leftW      = math.floor(panelW * 0.53) - 20
-    local rightW     = panelW - leftW - gapBetween - 40
-    local leftX      = panelX + 20
-    local rightX     = leftX + leftW + gapBetween
-
-    -- ── Columna izquierda: lista de jugadores ────────────────────────────────
-    local lblY       = bodyY + 2
-    local listStartY = lblY + 24
-    local rowH       = math.min(58, math.floor((bodyH - 28) / math.max(1, np)))
-    rowH = math.max(42, rowH)
-
-    for i = 1, np do
-        local ry = listStartY + (i - 1) * rowH
-        if ry + rowH > panelY + panelH - 14 then break end
-        if tx >= leftX     and tx <= leftX + leftW and
-           ty >= ry        and ty <= ry + rowH - 3 then
-            self.focus     = FOCUS_PLAYERS
-            self.playerSel = i
+    for i, r in ipairs(L.rows) do
+        if hit(r, tx, ty) then
+            self.focus, self.playerSel = FOCUS_PLAYERS, i
             Sound.play('select')
-            -- Admin: abrir menú de acción si selecciona a otro jugador
             local sel = players[i]
             if isAdmin and sel and sel.id ~= NC.myId then
-                self.sub      = SUB_PMENU
-                self.pmenuSel = PMENU_CANCEL
+                self.sub, self.pmenuSel = SUB_PMENU, PMENU_CANCEL
             end
             return
         end
     end
-
-    -- ── Columna derecha: botones de acción ───────────────────────────────────
-    local btnH      = 56
-    local btnGap    = 14
-    local actLblY   = bodyY + 2
-    local btnStartY = actLblY + 28
-
-    for i, act in ipairs(actions) do
-        local by = btnStartY + (i - 1) * (btnH + btnGap)
-        if by + btnH > panelY + panelH - 14 then break end
-        if tx >= rightX - 10      and tx <= rightX + rightW + 10 and
-           ty >= by    - 5        and ty <= by    + btnH   + 5 then
-            self.focus     = FOCUS_ACTIONS
-            self.actionSel = i
+    local actions = self:_buildActions()
+    for i, r in ipairs(L.buttons) do
+        if hit(r, tx, ty, 4) and actions[i] then
+            self.focus, self.actionSel = FOCUS_ACTIONS, i
             Sound.play('select')
-            self:_executeAction(act.id)
+            self:_executeAction(actions[i].id)
             return
         end
+    end
+    -- La tarjeta de la partida abre el menú de modos (host)
+    if isAdmin and room.state == "WAITING" and hit(L.card, tx, ty) then
+        Sound.play('select')
+        self:_executeAction('gamemode')
     end
 end
 
@@ -429,321 +444,275 @@ local function drawSharpPanel(x, y, w, h, fillR, fillG, fillB, fillA)
     love.graphics.rectangle('line', x+2, y+2, w-4, h-4)
 end
 
-local function drawActionBtn(label, x, y, w, h, selected)
+local function drawActionBtn(label, r, selected, accent)
+    local x, y, w, h = r.x, r.y, r.w, r.h
+    accent = accent or {1, 1, 1}
+    love.graphics.setFont(FONT_MED)
     if selected then
+        love.graphics.setColor(0, 0, 0, 0.5)
+        love.graphics.rectangle('fill', x + 4, y + 4, w, h)
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.rectangle('fill', x, y, w, h)
+        love.graphics.setColor(accent[1] * 0.8, accent[2] * 0.8, accent[3] * 0.8, 1)
+        love.graphics.rectangle('fill', x, y, 6, h)
         love.graphics.setColor(0, 0, 0, 1)
-        love.graphics.rectangle('line', x, y, w, h)
-        love.graphics.setFont(FONT_MED)
-        love.graphics.setColor(0, 0, 0, 1)
-        love.graphics.printf(label, x, y + h/2 - FONT_MED:getHeight()/2, w, 'center')
     else
-        love.graphics.setColor(0, 0, 0, 1)
+        love.graphics.setColor(0, 0, 0, 0.75)
         love.graphics.rectangle('fill', x, y, w, h)
-        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.setColor(1, 1, 1, 0.35)
         love.graphics.rectangle('line', x, y, w, h)
-        love.graphics.setFont(FONT_MED)
-        love.graphics.setColor(1, 1, 1, 1)
-        love.graphics.printf(label, x, y + h/2 - FONT_MED:getHeight()/2, w, 'center')
+        love.graphics.setColor(accent[1], accent[2], accent[3], 0.9)
+        love.graphics.rectangle('fill', x, y, 3, h)
+        love.graphics.setColor(1, 1, 1, 0.9)
     end
+    love.graphics.printf(label, x, y + h/2 - FONT_MED:getHeight()/2, w, 'center')
 end
 
--- Tarjeta con el modo elegido, su objetivo y el nivel. `bottom` = borde inferior.
-function OnlineRoomState:_renderModeCard(x, bottom, w, isAdmin)
+local function sectionLabel(text, x, y, w, active)
+    love.graphics.setFont(FONT_SMALL)
+    love.graphics.setColor(1, 0.85, 0, active and 0.95 or 0.5)
+    love.graphics.print(text, x, y)
+    love.graphics.setColor(1, 0.85, 0, active and 0.45 or 0.15)
+    love.graphics.rectangle('fill', x, y + 15, w, 1)
+end
+
+-- Tarjeta "PARTIDA": modo elegido, su objetivo y el mapa con miniatura.
+function OnlineRoomState:_renderGameCard(r, isAdmin)
     local room = self.currentRoom or {}
     local mode = Modes.get(room.mode)
     if not mode then return end
     local col  = mode.color
-    local pad  = 12
-    local _, tagLines = FONT_SMALL:getWrap(mode.tagline, w - 2 * pad)
-    local h    = pad + 28 + #tagLines * (FONT_SMALL:getHeight() + 6) + 8 + 18 + pad
-    local y    = bottom - h
+    local x, y, w, h = r.x, r.y, r.w, r.h
+    local pad  = 14
 
-    love.graphics.setColor(col[1] * 0.15, col[2] * 0.15, col[3] * 0.15, 0.85)
+    love.graphics.setColor(col[1] * 0.14, col[2] * 0.14, col[3] * 0.14, 0.92)
     love.graphics.rectangle('fill', x, y, w, h)
-    love.graphics.setColor(col[1], col[2], col[3], 0.8)
+    love.graphics.setColor(col[1], col[2], col[3], 0.85)
     love.graphics.rectangle('line', x, y, w, h)
-    love.graphics.rectangle('fill', x, y, 4, h)
+    love.graphics.rectangle('fill', x, y, w, 4)
 
-    -- Icono + nombre del modo
+    -- Modo: icono + nombre
     local iw, ih = PixelIcons.size(mode.icon or '')
-    local tx = x + pad + 6
+    local tx = x + pad
     if iw > 0 then
-        PixelIcons.draw(mode.icon, tx, y + pad + 2, 2)
-        tx = tx + iw * 2 + 12
+        PixelIcons.draw(mode.icon, tx, y + 16, 3)
+        tx = tx + iw * 3 + 14
     end
+    love.graphics.setFont(FONT_SMALL)
+    love.graphics.setColor(1, 1, 1, 0.45)
+    love.graphics.print('MODO', tx, y + 14)
     love.graphics.setFont(FONT_MED)
     love.graphics.setColor(col[1], col[2], col[3], 1)
-    love.graphics.print(fitText(FONT_MED, mode.label, x + w - pad - tx), tx, y + pad + 3)
+    love.graphics.print(fitText(FONT_MED, mode.label, x + w - pad - tx), tx, y + 30)
 
     -- Objetivo
     love.graphics.setFont(FONT_SMALL)
     love.graphics.setColor(1, 1, 1, 0.75)
-    local ty = y + pad + 28
-    for _, line in ipairs(tagLines) do
-        love.graphics.print(line, x + pad + 6, ty)
+    local _, lines = FONT_SMALL:getWrap(mode.tagline, w - 2 * pad)
+    local ty = y + 62
+    for i = 1, math.min(2, #lines) do
+        love.graphics.print(lines[i], x + pad, ty)
         ty = ty + FONT_SMALL:getHeight() + 6
     end
 
-    -- Nivel
-    ty = ty + 8
+    -- Mapa: miniatura + nombre
+    local my = y + h - 84
+    love.graphics.setColor(col[1], col[2], col[3], 0.3)
+    love.graphics.rectangle('fill', x + pad, my - 8, w - 2 * pad, 1)
+    local pw, ph = 150, 64
+    local lvl
+    for _, l in ipairs(self.catalog or {}) do if l.path == room.level then lvl = l end end
+    if lvl then
+        ModeSelectMenu.drawPreview(lvl, x + pad, my + 2, pw, ph, self.t or 0, 1)
+    else
+        love.graphics.setColor(0.2, 0.3, 0.5, 1)
+        love.graphics.rectangle('fill', x + pad, my + 2, pw, ph)
+    end
+    love.graphics.setColor(1, 1, 1, 0.3)
+    love.graphics.rectangle('line', x + pad, my + 2, pw, ph)
+    local nx = x + pad + pw + 16
+    love.graphics.setFont(FONT_SMALL)
+    love.graphics.setColor(1, 1, 1, 0.45)
+    love.graphics.print('MAPA', nx, my + 8)
     if room.levelName then
-        love.graphics.setColor(1, 0.85, 0, 0.9)
-        love.graphics.print(fitText(FONT_SMALL, 'NIVEL: ' .. room.levelName, w - 2 * pad - 6), x + pad + 6, ty)
+        love.graphics.setFont(FONT_MED)
+        love.graphics.setColor(1, 0.85, 0.2, 1)
+        love.graphics.print(fitText(FONT_MED, room.levelName, x + w - pad - nx), nx, my + 24)
     else
         love.graphics.setColor(1, 0.35, 0.35, 0.95)
-        love.graphics.print('NINGUN NIVEL SIRVE PARA ESTE MODO', x + pad + 6, ty)
+        love.graphics.print('Ningún mapa sirve para este modo', nx, my + 26)
     end
-    if not isAdmin then
-        love.graphics.setColor(1, 1, 1, 0.35)
-        love.graphics.printf('elige el host', x, ty, w - pad, 'right')
-    end
+    love.graphics.setFont(FONT_SMALL)
+    love.graphics.setColor(1, 1, 1, 0.35)
+    love.graphics.print(isAdmin and 'Cambia en MODO DE JUEGO' or 'Lo elige el host', nx, my + 50)
 end
 
 -- ── Render ────────────────────────────────────────────────────────────────────
 
 function OnlineRoomState:render()
     -- Fondo
-    local bx = WINDOW_W / imgBg:getWidth()
-    local by = WINDOW_H / imgBg:getHeight()
     love.graphics.setColor(COLOR_WHITE)
-    love.graphics.draw(imgBg, 0, 0, 0, bx, by)
+    love.graphics.draw(imgBg, 0, 0, 0, WINDOW_W / imgBg:getWidth(), WINDOW_H / imgBg:getHeight())
 
-    local room    = self.currentRoom
-    local players = room and room.players or {}
+    local room    = self.currentRoom or {}
+    local players = room.players or {}
     local np      = #players
-    local isAdmin = room and (room.adminId == NC.myId)
+    local isAdmin = room.adminId == NC.myId
     local actions = self:_buildActions()
+    local L       = self:_layout()
+    local P       = L.panel
 
-    -- Geometría del panel principal
-    local panelX = math.floor(WINDOW_W * 0.06)
-    local panelY = 44
-    local panelW = WINDOW_W - 2 * panelX
-    local panelH = WINDOW_H - 88
-
-    -- Panel de fondo
-    drawSharpPanel(panelX, panelY, panelW, panelH, 0,0,0,0.65)
+    drawSharpPanel(P.x, P.y, P.w, P.h, 0.02, 0.02, 0.04, 0.93)
 
     -- ── Cabecera ──────────────────────────────────────────────────────────────
-    local hdrH   = 78
-    local roomName = room and room.name or "Sala"
     love.graphics.setFont(FONT_BIG)
+    love.graphics.setColor(0, 0, 0, 0.8)
+    love.graphics.printf(room.name or "Sala", P.x + 3, P.y + 17, P.w, 'center')
     love.graphics.setColor(1, 0.95, 0.15, 1)
-    love.graphics.printf(roomName, panelX, panelY + 14, panelW, 'center')
-
-    -- Info: estado | tipo | jugadores
+    love.graphics.printf(room.name or "Sala", P.x, P.y + 14, P.w, 'center')
     love.graphics.setFont(FONT_SMALL)
-    local stateStr = (room and room.state == "IN_GAME") and "EN PARTIDA" or "ESPERANDO"
-    local privStr  = (room and room.isPublic == false) and "PRIVADA" or "PUBLICA"
-    local countStr = np .. "/" .. (room and room.maxPlayers or "?")
-    love.graphics.setColor(1, 1, 1, 0.45)
-    love.graphics.printf(stateStr .. "  |  " .. privStr .. "  |  " .. countStr,
-        panelX, panelY + hdrH - 22, panelW, 'center')
-
-    -- Línea divisora horizontal
+    local stateStr = (room.state == "IN_GAME") and "EN PARTIDA" or "ESPERANDO"
+    local privStr  = (room.isPublic == false) and "PRIVADA" or "PUBLICA"
+    local countStr = np .. "/" .. (room.maxPlayers or "?") .. " JUGADORES"
+    love.graphics.setColor(1, 1, 1, 0.5)
+    love.graphics.printf(stateStr .. "   ·   " .. privStr .. "   ·   " .. countStr, P.x, P.y + 56, P.w, 'center')
     love.graphics.setColor(1, 0.85, 0, 0.25)
-    love.graphics.line(panelX + 20, panelY + hdrH, panelX + panelW - 20, panelY + hdrH)
+    love.graphics.rectangle('fill', P.x + 20, P.y + HDR_H, P.w - 40, 1)
 
-    -- ── Cuerpo: dos columnas ──────────────────────────────────────────────────
-    local bodyY  = panelY + hdrH + 8
-    local bodyH  = panelH - hdrH - 8
+    -- Separador vertical
+    love.graphics.setColor(1, 0.85, 0, 0.12)
+    love.graphics.rectangle('fill', L.right.x - 20, L.bodyY, 1, L.bottom - L.bodyY)
 
-    local gapBetween = 20
-    local leftW      = math.floor(panelW * 0.53) - 20
-    local rightW     = panelW - leftW - gapBetween - 40
-    local leftX      = panelX + 20
-    local rightX     = leftX + leftW + gapBetween
-
-    -- Línea divisora vertical
-    love.graphics.setColor(1, 0.85, 0, 0.18)
-    love.graphics.line(rightX - gapBetween/2, bodyY + 4, rightX - gapBetween/2, panelY + panelH - 12)
-
-    -- ── Columna izquierda: jugadores ──────────────────────────────────────────
-    local lblY = bodyY + 2
-    love.graphics.setFont(FONT_SMALL)
-    love.graphics.setColor(1, 0.85, 0, self.focus == FOCUS_PLAYERS and 0.9 or 0.45)
-    love.graphics.print("JUGADORES", leftX, lblY)
-    love.graphics.setColor(1, 0.85, 0, self.focus == FOCUS_PLAYERS and 0.5 or 0.15)
-    love.graphics.line(leftX, lblY + 16, leftX + leftW, lblY + 16)
-
-    local listStartY = lblY + 24
-    local rowH       = math.min(58, math.floor((bodyH - 28) / math.max(1, np)))
-    rowH = math.max(42, rowH)
-
+    -- ── Jugadores ─────────────────────────────────────────────────────────────
+    local focusP = self.focus == FOCUS_PLAYERS and self.sub == SUB_MAIN
+    sectionLabel("JUGADORES", L.left.x, L.bodyY, L.left.w, focusP)
     for i, p in ipairs(players) do
-        local ry      = listStartY + (i - 1) * rowH
-        if ry + rowH > panelY + panelH - 14 then break end  -- no salir del panel
+        local r = L.rows[i]
+        if not r then break end
+        local col    = p.color or {0.7, 0.7, 0.7}
+        local isSelf = (p.id == NC.myId)
+        local isSel  = (i == self.playerSel) and focusP
 
-        local col     = p.color or {0.7, 0.7, 0.7}
-        local isSelf  = (p.id == NC.myId)
-        local isSel   = (i == self.playerSel)
-        local focused = (self.focus == FOCUS_PLAYERS)
-
-        -- Fondo de fila seleccionada
-        if isSel and focused then
-            love.graphics.setColor(1, 1, 1, 0.08)
-            love.graphics.rectangle('fill', leftX, ry, leftW, rowH - 3)
-            love.graphics.setColor(1, 0.85, 0, 0.6)
-            love.graphics.rectangle('line', leftX, ry, leftW, rowH - 3)
-        elseif isSel then
-            love.graphics.setColor(1, 1, 1, 0.04)
-            love.graphics.rectangle('fill', leftX, ry, leftW, rowH - 3)
+        love.graphics.setColor(1, 1, 1, isSel and 0.10 or 0.04)
+        love.graphics.rectangle('fill', r.x, r.y, r.w, r.h)
+        if isSel then
+            love.graphics.setColor(1, 0.85, 0, 0.7)
+            love.graphics.rectangle('line', r.x, r.y, r.w, r.h)
         end
+        love.graphics.setColor(col[1], col[2], col[3], 1)
+        love.graphics.rectangle('fill', r.x, r.y, 6, r.h)
 
-        -- Cursor ">"
-        if isSel and focused then
-            love.graphics.setFont(FONT_SMALL)
-            love.graphics.setColor(1, 0.85, 0, 1)
-            love.graphics.print(">", leftX + 4, ry + rowH/2 - FONT_SMALL:getHeight()/2)
-        end
-
-        -- Barra de color
-        love.graphics.setColor(col[1], col[2], col[3], isSel and 1 or 0.7)
-        love.graphics.rectangle('fill', leftX + 22, ry + 8, 5, rowH - 18)
-
-        -- Nombre
-        local nameY = ry + rowH/2 - FONT_SMALL:getHeight()/2
-        love.graphics.setFont(FONT_SMALL)
-        love.graphics.setColor(col[1] * 0.8 + 0.2, col[2] * 0.8 + 0.2, col[3] * 0.8 + 0.2, 1)
-        love.graphics.print(p.name, leftX + 34, nameY)
-
-        -- Tags
-        local tagX = leftX + 34 + FONT_SMALL:getWidth(p.name) + 8
-        if isSelf then
-            love.graphics.setColor(0.5, 0.8, 1, 0.8)
-            love.graphics.print("(tú)", tagX, nameY)
-            tagX = tagX + FONT_SMALL:getWidth("(tú)") + 8
-        end
+        -- Nombre (+ corona del host centrada con el texto, como en el HUD)
+        love.graphics.setFont(FONT_MED)
+        local nameY = r.y + r.h / 2 - FONT_MED:getHeight() / 2
+        local nx = r.x + 20
         if p.id == room.adminId then
-            love.graphics.setColor(1, 0.85, 0, 0.8)
-            love.graphics.print("ADM", tagX, nameY)
+            local px = 2
+            PixelIcons.crown(nx, nameY + FONT_MED:getHeight() / 2 - 6.5 * px, px)
+            nx = nx + PixelIcons.CROWN_W * px + 10
         end
-
-        -- Admin: indicador de acción disponible si otro jugador está seleccionado
-        if isSel and focused and isAdmin and not isSelf then
+        local nameMax = r.w - (nx - r.x) - 110
+        local name = fitText(FONT_MED, p.name or '?', nameMax - (isSelf and 60 or 0))
+        love.graphics.setColor(col[1] * 0.7 + 0.3, col[2] * 0.7 + 0.3, col[3] * 0.7 + 0.3, 1)
+        love.graphics.print(name, nx, nameY)
+        if isSelf then
             love.graphics.setFont(FONT_SMALL)
-            love.graphics.setColor(1, 0.85, 0, 0.65)
-            love.graphics.printf("[ENTER] acción", leftX, ry + rowH - FONT_SMALL:getHeight() - 3, leftW, 'right')
+            love.graphics.setColor(0.6, 0.85, 1, 0.8)
+            love.graphics.print("(tú)", nx + FONT_MED:getWidth(name) + 10, nameY + 4)
         end
 
-        -- Ping (derecha) y listo
-        local rightEdge = leftX + leftW - 6
+        -- Listo (pastilla) y ping
         love.graphics.setFont(FONT_SMALL)
-        local pingStr = string.format("%dms", p.ping or 0)
-        local readyStr = p.isReady and "LISTO" or "—"
-        love.graphics.setColor(p.isReady and {0.3,1,0.3,0.9} or {0.5,0.5,0.5,0.5})
-        love.graphics.printf(readyStr, leftX, ry + rowH/2 - FONT_SMALL:getHeight() - 2, leftW - 6, 'right')
-        love.graphics.setColor(0.5, 0.5, 0.5, 0.45)
-        love.graphics.printf(pingStr, leftX, ry + rowH/2 + 2, leftW - 6, 'right')
+        local bw, bh = 76, 20
+        local bx, byy = r.x + r.w - bw - 12, r.y + 8
+        if p.isReady then
+            love.graphics.setColor(0.3, 1, 0.45, 0.9)
+            love.graphics.rectangle('fill', bx, byy, bw, bh)
+            love.graphics.setColor(0, 0, 0, 1)
+        else
+            love.graphics.setColor(1, 1, 1, 0.25)
+            love.graphics.rectangle('line', bx, byy, bw, bh)
+            love.graphics.setColor(1, 1, 1, 0.45)
+        end
+        love.graphics.printf(p.isReady and "LISTO" or "ESPERA", bx, byy + 5, bw, 'center')
+        love.graphics.setColor(1, 1, 1, 0.35)
+        love.graphics.printf(string.format("%d ms", p.ping or 0), bx - 20, r.y + r.h - 16, bw + 20, 'right')
+    end
+    if focusP and isAdmin then
+        local sel = players[self.playerSel]
+        if sel and sel.id ~= NC.myId then
+            love.graphics.setFont(FONT_SMALL)
+            love.graphics.setColor(1, 0.85, 0, 0.6)
+            love.graphics.print("[ENTER] acciones sobre " .. (sel.name or '?'), L.left.x, L.bottom + 6)
+        end
     end
 
-    -- Aviso para admin de cómo navegar a acciones
-    local navHintY = panelY + panelH - 24
-    if self.focus == FOCUS_PLAYERS then
-        love.graphics.setFont(FONT_SMALL)
-        love.graphics.setColor(1, 1, 1, 0.3)
-        love.graphics.print("[>] ir a acciones", leftX, navHintY)
-    end
+    -- ── Partida + acciones ────────────────────────────────────────────────────
+    sectionLabel("PARTIDA", L.right.x, L.bodyY, L.right.w, false)
+    self:_renderGameCard(L.card, isAdmin)
 
-    -- ── Columna derecha: botones de acción ────────────────────────────────────
-    local actLblY = bodyY + 2
-    love.graphics.setFont(FONT_SMALL)
-    love.graphics.setColor(1, 0.85, 0, self.focus == FOCUS_ACTIONS and 0.9 or 0.45)
-    love.graphics.print("ACCIONES", rightX, actLblY)
-    love.graphics.setColor(1, 0.85, 0, self.focus == FOCUS_ACTIONS and 0.5 or 0.15)
-    love.graphics.line(rightX, actLblY + 16, rightX + rightW, actLblY + 16)
-
-    local btnH   = 56
-    local btnGap = 14
-    local btnStartY = actLblY + 28
-    local focused   = (self.focus == FOCUS_ACTIONS)
-
+    local focusA = self.focus == FOCUS_ACTIONS and self.sub == SUB_MAIN
     for i, act in ipairs(actions) do
-        local by  = btnStartY + (i - 1) * (btnH + btnGap)
-        if by + btnH > panelY + panelH - 14 then break end
-        local sel = (i == self.actionSel) and focused
-        drawActionBtn(act.label, rightX, by, rightW, btnH, sel)
+        local r = L.buttons[i]
+        if r and r.y + r.h <= L.bottom + 10 then
+            drawActionBtn(act.label, r, focusA and i == self.actionSel, act.color)
+        end
     end
 
-    -- Tarjeta del modo de juego (la ven todos)
-    self:_renderModeCard(rightX, navHintY - 12, rightW, isAdmin)
+    -- Ayuda de navegación
+    love.graphics.setFont(FONT_SMALL)
+    love.graphics.setColor(1, 1, 1, 0.3)
+    local hint = self.focus == FOCUS_ACTIONS and "[<] ver jugadores" or "[>] ir a acciones"
+    love.graphics.printf(hint, L.right.x, L.bottom + 6, L.right.w, 'right')
 
-    -- Aviso de cómo navegar de vuelta a jugadores
-    if self.focus == FOCUS_ACTIONS then
-        love.graphics.setFont(FONT_SMALL)
-        love.graphics.setColor(1, 1, 1, 0.3)
-        love.graphics.printf("[<] ver jugadores", rightX, navHintY, rightW, 'right')
-    end
-
-    -- ── Overlay menú de jugador ───────────────────────────────────────────────
+    -- ── Menú de acción sobre un jugador ──────────────────────────────────────
     if self.sub == SUB_PMENU then
         local target = players[self.playerSel]
-        local tname  = target and target.name or "?"
-
-        -- Fondo semitransparente
         love.graphics.setColor(0, 0, 0, 0.6)
         love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
-
-        local mW = 340
-        local mH = #PMENU_LABELS * 60 + 72
-        local mX = math.floor((WINDOW_W - mW) / 2)
-        local mY = math.floor((WINDOW_H - mH) / 2)
-
-        drawSharpPanel(mX, mY, mW, mH, 0.04,0.04,0.06,0.96)
-
+        local M = L.pmenu
+        drawSharpPanel(M.x, M.y, M.w, M.h, 0.04, 0.04, 0.06, 0.96)
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1, 1, 1, 0.65)
-        love.graphics.printf("Acción sobre:  " .. tname, mX, mY + 16, mW, 'center')
+        love.graphics.printf("Acción sobre:  " .. (target and target.name or "?"), M.x, M.y + 16, M.w, 'center')
         love.graphics.setColor(1, 0.85, 0, 0.3)
-        love.graphics.line(mX + 20, mY + 38, mX + mW - 20, mY + 38)
-
-        love.graphics.setFont(FONT_MED)
-        local bW = 240
-        local bH = 48
-        local bGap = 10
-        local bX = mX + (mW - bW) / 2
-        local bY0 = mY + 50
-
+        love.graphics.rectangle('fill', M.x + 20, M.y + 38, M.w - 40, 1)
         for i, lbl in ipairs(PMENU_LABELS) do
-            local by  = bY0 + (i - 1) * (bH + bGap)
-            local sel = (i == self.pmenuSel)
-            drawActionBtn(lbl, bX, by, bW, bH, sel)
-        end
-    end
-
-    -- ── Anuncios ──────────────────────────────────────────────────────────────
-    if #self.announcements > 0 then
-        love.graphics.setFont(FONT_MED)
-        local annH   = FONT_MED:getHeight() + 20
-        local annGap = 8
-        local totalH = #self.announcements * annH + (#self.announcements - 1) * annGap
-        local ay     = WINDOW_H * 0.62 - totalH / 2
-        for _, ann in ipairs(self.announcements) do
-            local alpha = math.min(ann.timer / 1.5, 1)
-            local text  = "» " .. ann.msg
-            local tw    = FONT_MED:getWidth(text)
-            local ax    = math.floor((WINDOW_W - tw) / 2)
-            love.graphics.setColor(1, 0.95, 0.2, alpha)
-            love.graphics.print(text, ax, ay)
-            ay = ay + annH + annGap
+            drawActionBtn(lbl, L.pmenuBtns[i], i == self.pmenuSel, PMENU_COLORS[i])
         end
     end
 
     -- ── Menú "MODO DE JUEGO" ──────────────────────────────────────────────────
     if self.sub == SUB_MODES and self.modeMenu then self.modeMenu:render() end
 
+    -- ── Anuncios ──────────────────────────────────────────────────────────────
+    if #self.announcements > 0 then
+        -- Al pie de la columna de jugadores
+        love.graphics.setFont(FONT_SMALL)
+        local ay = L.bottom - 24 - (#self.announcements - 1) * 30
+        for _, ann in ipairs(self.announcements) do
+            local alpha = math.min(ann.timer / 1.5, 1)
+            local text  = fitText(FONT_SMALL, "» " .. ann.msg, L.left.w - 24)
+            local tw    = FONT_SMALL:getWidth(text) + 24
+            local ax    = math.floor(L.left.x + (L.left.w - tw) / 2)
+            love.graphics.setColor(0, 0, 0, 0.75 * alpha)
+            love.graphics.rectangle('fill', ax, ay - 8, tw, 26)
+            love.graphics.setColor(1, 0.95, 0.2, alpha)
+            love.graphics.print(text, ax + 12, ay)
+            ay = ay + 30
+        end
+    end
+
     -- ── Error ─────────────────────────────────────────────────────────────────
     if self.errorMsg ~= "" then
-        local eW = math.min(600, panelW - 40)
+        local eW = math.min(600, P.w - 40)
         local eX = math.floor((WINDOW_W - eW) / 2)
-        love.graphics.setColor(0, 0, 0, 0.7)
-        love.graphics.rectangle('fill', eX - 8, WINDOW_H - 38, eW + 16, 28)
+        love.graphics.setColor(0, 0, 0, 0.8)
+        love.graphics.rectangle('fill', eX - 8, WINDOW_H - 36, eW + 16, 28)
         love.graphics.setColor(1, 0.3, 0.3, 1)
-        love.graphics.rectangle('line', eX - 8, WINDOW_H - 38, eW + 16, 28)
+        love.graphics.rectangle('line', eX - 8, WINDOW_H - 36, eW + 16, 28)
         love.graphics.setFont(FONT_SMALL)
-        love.graphics.setColor(1, 0.3, 0.3, 1)
-        love.graphics.printf(self.errorMsg, eX, WINDOW_H - 34, eW, 'center')
+        love.graphics.printf(self.errorMsg, eX, WINDOW_H - 27, eW, 'center')
     end
 
     love.graphics.setColor(COLOR_WHITE)

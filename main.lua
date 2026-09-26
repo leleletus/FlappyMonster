@@ -207,6 +207,12 @@ function love.mousepressed(x, y, button, istouch, presses)
     end
 end
 
+-- Rueda del ratón → estado actual (listas desplazables)
+function love.wheelmoved(dx, dy)
+    local state = gStateMachine and gStateMachine:_top()
+    if state and state.wheelmoved then state:wheelmoved(dx, dy) end
+end
+
 function love.quit() end
 
 -- ── Editor de niveles ─────────────────────────────────────────────────────────

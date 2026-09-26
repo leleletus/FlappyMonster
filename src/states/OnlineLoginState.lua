@@ -89,8 +89,7 @@ function OnlineLoginState:keypressed(k)
     elseif k == "return" or k == "kpenter" then
         self:_tryConnect()
     elseif k == "escape" then
-        NC:disconnect()
-        gStateMachine:change('adv_mode_select')
+        self:_back()
     end
 end
 
@@ -107,10 +106,7 @@ function OnlineLoginState:update(dt)
     if Input.pressed('confirm') then
         self:_tryConnect()
     end
-    if Input.pressed('back') then
-        NC:disconnect()
-        gStateMachine:change('adv_mode_select')
-    end
+    if Input.pressed('back') then self:_back() end
 end
 
 function OnlineLoginState:_tryConnect()
@@ -127,6 +123,38 @@ function OnlineLoginState:_tryConnect()
     self.connecting = true
     self.errorMsg   = ""
     NC:connect(FIXED_HOST, FIXED_PORT, nick)
+end
+
+-- ── Geometría (compartida por render, ratón y táctil) ────────────────────────
+
+local function layout()
+    local panelW, panelH = 600, 160
+    local panelX = math.floor((WINDOW_W - panelW) / 2)
+    local panelY = math.floor(WINDOW_H / 2 - panelH / 2 + 20)
+    local labelW, fieldH = 120, 52
+    local L = {
+        panel = { x = panelX, y = panelY, w = panelW, h = panelH },
+        field = { x = panelX + labelW + 30, y = panelY + 30, w = panelW - labelW - 60, h = fieldH },
+    }
+    local bw, bh, gap = 240, 48, 24
+    local bx = math.floor(WINDOW_W / 2 - bw - gap / 2)
+    local by = panelY + panelH + 18
+    L.buttons = {
+        { id = 'connect', label = 'CONECTAR', x = bx,            y = by, w = bw, h = bh },
+        { id = 'back',    label = 'VOLVER',   x = bx + bw + gap, y = by, w = bw, h = bh },
+    }
+    L.errorY = by + bh + 16
+    return L
+end
+
+local function inRect(r, x, y, pad)
+    pad = pad or 0
+    return x >= r.x - pad and x <= r.x + r.w + pad and y >= r.y - pad and y <= r.y + r.h + pad
+end
+
+function OnlineLoginState:_back()
+    NC:disconnect()
+    gStateMachine:change('adv_mode_select')
 end
 
 -- ── Render ────────────────────────────────────────────────────────────────────
@@ -190,11 +218,33 @@ function OnlineLoginState:render()
             0, hintY, WINDOW_W, 'center')
     end
 
+    -- Botones (ratón / táctil / también reflejan ENTER y ESC)
+    local L = layout()
+    love.graphics.setFont(FONT_MED)
+    for i, b in ipairs(L.buttons) do
+        local hov = (self.hoverBtn == i)
+        local primary = (b.id == 'connect')
+        if hov or (primary and not self.hoverBtn) then
+            love.graphics.setColor(0, 0, 0, 0.5)
+            love.graphics.rectangle('fill', b.x + 4, b.y + 4, b.w, b.h)
+            love.graphics.setColor(1, 1, 1, self.connecting and primary and 0.5 or 1)
+            love.graphics.rectangle('fill', b.x, b.y, b.w, b.h)
+            love.graphics.setColor(0, 0, 0, 1)
+        else
+            love.graphics.setColor(0, 0, 0, 0.6)
+            love.graphics.rectangle('fill', b.x, b.y, b.w, b.h)
+            love.graphics.setColor(1, 1, 1, 0.5)
+            love.graphics.rectangle('line', b.x, b.y, b.w, b.h)
+            love.graphics.setColor(1, 1, 1, 0.8)
+        end
+        love.graphics.printf(b.label, b.x, b.y + b.h / 2 - FONT_MED:getHeight() / 2, b.w, 'center')
+    end
+
     -- Error
     if self.errorMsg ~= "" then
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1, 0.25, 0.25, 1)
-        love.graphics.printf(self.errorMsg, 0, panelY + panelH + 16, WINDOW_W, 'center')
+        love.graphics.printf(self.errorMsg, 0, L.errorY, WINDOW_W, 'center')
     end
 
     love.graphics.setColor(COLOR_WHITE)
@@ -208,29 +258,27 @@ end
 
 -- ── Touch ─────────────────────────────────────────────────────────────────────
 
-function OnlineLoginState:touchpressed(id, tx, ty)
-    if self.connecting then return end
-
-    -- Calcular área del campo de texto (igual que en render)
-    local panelW  = 600
-    local panelH  = 160
-    local panelX  = math.floor((WINDOW_W - panelW) / 2)
-    local panelY  = math.floor(WINDOW_H / 2 - panelH / 2 + 20)
-    local fieldH  = 52
-    local labelW  = 120
-    local inputX  = panelX + labelW + 30
-    local inputW  = panelW - labelW - 60
-    local fy      = panelY + 30
-
-    -- Toque sobre el campo de texto → mostrar teclado Android (no conectar)
-    if tx >= inputX and tx <= inputX + inputW and
-       ty >= fy     and ty <= fy + fieldH then
-        love.keyboard.setTextInput(true)
-        return
+function OnlineLoginState:mousemoved(tx, ty)
+    local prev = self.hoverBtn
+    self.hoverBtn = nil
+    for i, b in ipairs(layout().buttons) do
+        if inRect(b, tx, ty, 4) then self.hoverBtn = i end
     end
+    if self.hoverBtn and self.hoverBtn ~= prev then Sound.play('select') end
+end
 
-    -- Toque en cualquier otra parte → intentar conectar
-    self:_tryConnect()
+function OnlineLoginState:touchpressed(id, tx, ty)
+    local L = layout()
+    for _, b in ipairs(L.buttons) do
+        if inRect(b, tx, ty, 6) then
+            Sound.play('select')
+            if b.id == 'back' then self:_back() else self:_tryConnect() end
+            return
+        end
+    end
+    if self.connecting then return end
+    -- Toque sobre el campo de texto → mostrar teclado (móvil)
+    if inRect(L.field, tx, ty) then love.keyboard.setTextInput(true) end
 end
 
 return OnlineLoginState

@@ -1,3 +1,4 @@
+local CornerButtons = require 'src/ui/CornerButtons'
 -- src/states/PlayState.lua
 local BaseState = require 'src/BaseState'
 local Player    = require 'src/entities/Player'
@@ -280,6 +281,8 @@ function PlayState:render()
         end
     end
 
+    if not self.dead then CornerButtons.drawPause(self.pauseHover) end
+
     love.graphics.setFont(FONT_MED)
     love.graphics.setColor(COLOR_WHITE)
 end
@@ -300,6 +303,7 @@ end
 
 -- Hover del mouse: mueve la selección real (solo en game over)
 function PlayState:mousemoved(tx, ty)
+    self.pauseHover = not self.dead and CornerButtons.hitPause(tx, ty)
     if not self.dead or self.deadTimer <= 0.8 then return end
     local btnW   = 260
     local btnH   = 48
@@ -320,7 +324,11 @@ end
 -- Táctil Switch: vivo = flap, muerto = tap en botón
 function PlayState:touchpressed(id, tx, ty, dx, dy, pressure)
     if not self.dead then
-        self.player:flap()
+        if CornerButtons.hitPause(tx, ty) then
+            gStateMachine:push('pause')
+        else
+            self.player:flap()
+        end
         return
     end
     if self.deadTimer <= 0.8 then return end

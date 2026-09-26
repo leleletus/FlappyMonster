@@ -13,7 +13,10 @@
 --   onTrigger(m, ps, name)     un jugador tocó un tile con ese trigger
 --   onStomp(m, ps, enemy)      un jugador pisoteó a una entidad
 --   tick(m, dt) -> reason|nil  devuelve un motivo para terminar la ronda
---   rank(m, entries, reason)   ordena la clasificación y marca .winner
+--   rank(m, entries, reason)   ordena la clasificación y marca .winner.
+--                              Puede devolver (nota, empate): nota = texto
+--                              de desempate para la pantalla final; empate =
+--                              true si varios comparten la victoria.
 --   reasonText(reason)         texto del motivo de fin para la pantalla final
 --   hud(m) -> tabla            datos extra que el servidor manda cada snapshot
 --
@@ -54,6 +57,7 @@ function ModeTypes.get(id) return ModeTypes.byId[id] end
 ModeTypes.GENERIC_REASONS = {
     all_out    = 'Todos los jugadores quedaron fuera',
     time_limit = 'Se acabó el tiempo del nivel',
+    last_standing = '¡El último superviviente en pie!',
 }
 
 return ModeTypes

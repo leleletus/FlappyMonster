@@ -25,15 +25,33 @@ return {
 
     hud = function(m) return { left = killableAlive(m) } end,
 
+    -- Desempate: 1) más puntos, 2) más vidas restantes, 3) quien llegó
+    -- antes a esa puntuación. Si todo coincide, comparten la victoria.
     rank = function(m, entries, reason)
         table.sort(entries, function(a, b)
             if a.score ~= b.score then return a.score > b.score end
+            if a.lives ~= b.lives then return a.lives > b.lives end
+            if a.scoreT ~= b.scoreT then return a.scoreT < b.scoreT end
             return (a.order or 0) < (b.order or 0)
         end)
-        if reason == 'cleared' and entries[1] then
-            local top = entries[1].score
-            for _, e in ipairs(entries) do e.winner = (e.score == top) end
+        if reason ~= 'cleared' or not entries[1] then return end
+        local top, note = entries[1], nil
+        local tied = 0
+        for _, e in ipairs(entries) do
+            e.winner = (e.score == top.score and e.lives == top.lives and e.scoreT == top.scoreT)
+            if e.winner then tied = tied + 1 end
         end
+        local second = entries[2]
+        if tied > 1 then
+            note = 'Empate total: comparten la victoria'
+        elseif second and second.score == top.score then
+            if second.lives ~= top.lives then
+                note = 'Empate a puntos: gana quien conservó más vidas'
+            else
+                note = 'Empate a puntos y vidas: gana quien llegó antes a esa puntuación'
+            end
+        end
+        return note, tied > 1
     end,
 
     reasonText = function(reason)

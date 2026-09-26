@@ -1,3 +1,4 @@
+local CornerButtons = require 'src/ui/CornerButtons'
 -- src/states/AdventureState.lua
 local BaseState       = require 'src/BaseState'
 local Level           = require 'src/world/Level'
@@ -573,16 +574,14 @@ function AdventureState:render()
         love.graphics.circle('fill', 235, WINDOW_H - 125, 65)
         -- Action (Jump)
         love.graphics.circle('fill', WINDOW_W - 110, WINDOW_H - 125, 65)
-        -- Pause (Arriba derecha)
-        love.graphics.circle('fill', WINDOW_W - 50, 50, 30)
-        
+
         love.graphics.setFont(FONT_BIG)
         love.graphics.setColor(1, 1, 1, 0.7)
         love.graphics.printf('<', 20, WINDOW_H - 140, 130, 'center')
         love.graphics.printf('>', 170, WINDOW_H - 140, 130, 'center')
         love.graphics.printf('A', WINDOW_W - 175, WINDOW_H - 140, 130, 'center')
-        love.graphics.printf('||', WINDOW_W - 80, 40, 60, 'center')
     end
+    if not self.dead then CornerButtons.drawPause(self.pauseHover) end
 
     love.graphics.setFont(FONT_MED)
     love.graphics.setColor(COLOR_WHITE)
@@ -590,6 +589,7 @@ end
 
 -- Hover del mouse: mueve la selección real (solo en game over)
 function AdventureState:mousemoved(tx, ty)
+    self.pauseHover = not self.dead and CornerButtons.hitPause(tx, ty)
     if not self.dead or self.deadTimer <= 0.8 then return end
     local btnW   = 260
     local btnH   = 48
@@ -633,15 +633,14 @@ function AdventureState:touchpressed(id, tx, ty, dx, dy, pressure)
         return
     end
 
-    -- Interceptar toques de un solo cuadro (Jump y Pause)
-    if Input.isMobile then
-        if ty > WINDOW_H - 250 then
-            if tx > WINDOW_W - 200 and tx < WINDOW_W - 20 then
-                Input.VirtualPad._pressedThisFrame['jump'] = true
-            end
-        elseif ty < 100 and tx > WINDOW_W - 100 then
-            Input.VirtualPad._pressedThisFrame['pause'] = true
-        end
+    -- Botón de pausa (ratón y táctil)
+    if CornerButtons.hitPause(tx, ty) then
+        Input.VirtualPad._pressedThisFrame['pause'] = true
+        return
+    end
+    -- Toque de un solo cuadro en el botón de salto (móvil)
+    if Input.isMobile and ty > WINDOW_H - 250 and tx > WINDOW_W - 200 and tx < WINDOW_W - 20 then
+        Input.VirtualPad._pressedThisFrame['jump'] = true
     end
 end
 

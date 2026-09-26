@@ -66,7 +66,10 @@ function Input.update(dt)
     end
     player:update()
 
-    -- Procesar toques virtuales del frame actual
+    -- Procesar toques virtuales del frame actual. Duran SOLO este frame: si
+    -- nadie los consume no deben quedar pendientes (un clic suelto disparaba
+    -- un CONFIRMAR segundos después en otra pantalla).
+    Input.VirtualPad.pressed = {}
     for action, _ in pairs(Input.VirtualPad._pressedThisFrame) do
         Input.VirtualPad.pressed[action] = true
     end

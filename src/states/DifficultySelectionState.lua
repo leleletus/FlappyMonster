@@ -1,4 +1,5 @@
 -- src/states/DifficultySelectionState.lua
+local CornerButtons = require 'src/ui/CornerButtons'
 local BaseState = require 'src/BaseState'
 local DifficultySelectionState = BaseState:new()
 
@@ -37,7 +38,7 @@ function DifficultySelectionState:update(dt)
     end
     if Input.pressed('back') then
         Sound.play('select')
-        gStateMachine:change('title')
+        gStateMachine:change('main_menu')
     end
 end
 
@@ -80,10 +81,13 @@ function DifficultySelectionState:render()
 
         curX = curX + iw + gap
     end
+    CornerButtons.drawBack(self.backHover)
 end
 
 -- Hover del mouse: mueve la selección real al botón bajo el cursor
 function DifficultySelectionState:mousemoved(tx, ty)
+    self.backHover = CornerButtons.hitBack(tx, ty)
+    if self.backHover then return end
     local gap    = 60
     local imgY   = math.floor(WINDOW_H * 0.52)
     local totalW = 0
@@ -106,6 +110,11 @@ end
 
 -- Táctil Switch: tap en la imagen de dificultad
 function DifficultySelectionState:touchpressed(id, tx, ty, dx, dy, pressure)
+    if CornerButtons.hitBack(tx, ty) then
+        Sound.play('select')
+        gStateMachine:change('main_menu')
+        return
+    end
     local gap    = 60
     local imgY   = math.floor(WINDOW_H * 0.52)
     local totalW = 0

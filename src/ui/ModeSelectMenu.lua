@@ -150,10 +150,10 @@ end
 
 -- ── Ciclo de vida ─────────────────────────────────────────────────────────────
 
-function ModeSelectMenu.new(room)
+function ModeSelectMenu.new(room, catalog)
     local self = setmetatable({}, ModeSelectMenu)
     self.room    = room or {}
-    self.catalog = nil
+    self.catalog = catalog     -- puede llegar ya cargado desde la sala
     self.focus   = 'levels'
     self.t       = 0
     self.tab     = 1
@@ -167,9 +167,14 @@ end
 function ModeSelectMenu:setCatalog(data)
     if type(data) ~= 'table' or type(data.levels) ~= 'table' then return end
     self.catalog = data.levels
-    previewCache = {}         -- el servidor pudo cambiar los niveles
     self:_resetSelection()
 end
+
+-- El servidor mandó un catálogo nuevo: las miniaturas cacheadas pueden estar viejas
+function ModeSelectMenu.clearPreviews() previewCache = {} end
+
+-- Miniatura reutilizable (la sala la usa en su tarjeta de partida)
+ModeSelectMenu.drawPreview = drawPreview
 
 function ModeSelectMenu:setRoom(room) self.room = room or self.room end
 
@@ -272,6 +277,22 @@ function ModeSelectMenu:touch(x, y)
     if inRect(x, y, { x = PX + PW - 12 - ARROW_W, y = ay, w = ARROW_W, h = ARROW_H }) then self:_moveSel(1); return nil end
     if not inRect(x, y, { x = PX, y = PY, w = PW, h = PH }) then return 'close' end
     return nil
+end
+
+-- Ratón: pasar por encima de una tarjeta la selecciona (como en otros menús)
+function ModeSelectMenu:hover(x, y)
+    local list = self:levels()
+    local cx0  = cardsX()
+    for k = 0, VISIBLE - 1 do
+        local i = self.first + k
+        if list[i] and inRect(x, y, { x = cx0 + k * (CARD_W + CARD_GAP), y = CARD_Y, w = CARD_W, h = CARD_H }) then
+            if self.sel ~= i or self.focus ~= 'levels' then
+                self.sel, self.focus = i, 'levels'
+                Sound.play('select')
+            end
+            return
+        end
+    end
 end
 
 -- ── Render ────────────────────────────────────────────────────────────────────
