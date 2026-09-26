@@ -19,6 +19,9 @@ local SNAP_DIST     = 128    -- px: por encima de esto se corrige sin suavizar
 local HISTORY_MAX   = 240    -- ticks de inputs guardados (4 s)
 local BOUNCE_WINDOW = 20     -- ticks: rebote local ≈ rebote del servidor
 
+-- Campos puramente visuales de PlayerAdventure (no afectan a la física)
+local VISUAL_FIELDS = { 'animT', 'frame', 'puff', 'airBarAlpha', 'airBarBobT', 'airBarBobOn', 'airBarShakeX' }
+
 local function noop() end
 local MUTED_SOUND = setmetatable({}, { __index = function() return noop end })
 
@@ -104,6 +107,12 @@ function Predictor:reconcile(ack, own, bounceSeq)
     local oldX, oldY   = pa.x, pa.y
     local wasDying     = pa.dying
 
+    -- El estado VISUAL (animación, "puff", barra de aire) no debe avanzar en
+    -- la re-simulación: son ticks que ya se mostraron. Sin esto la animación
+    -- corría 1,5-4 veces más rápido según el ping.
+    local vis = {}
+    for i, k in ipairs(VISUAL_FIELDS) do vis[i] = pa[k] end
+
     Protocol.applyOwnState(own, pa)
     for s = ack + 1, self.seq do
         local h = self.history[s]
@@ -116,6 +125,11 @@ function Predictor:reconcile(ack, own, bounceSeq)
             end
         end
     end
+
+    for i, k in ipairs(VISUAL_FIELDS) do pa[k] = vis[i] end
+    -- Si la corrección cambió la postura, el cuadro de agachado debe seguirla
+    if pa.crouching and pa.frame ~= 5 then pa.frame = 5
+    elseif not pa.crouching and pa.frame == 5 then pa.frame = 3 end
 
     -- Mantener la posición en pantalla continua: el salto se convierte en un
     -- error visual que decae, salvo teletransportes (respawn) o muerte.

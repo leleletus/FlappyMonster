@@ -4,6 +4,7 @@
 
 local Class = require 'libs/class'
 local OnlinePlayer = Class:new()
+local PixelIcons = require 'src/ui/PixelIcons'
 
 -- Sprites compartidos con PlayerAdventure (love2d cachea las imágenes)
 local sprites     = nil
@@ -118,6 +119,13 @@ function OnlinePlayer:render(camX, camY)
     love.graphics.print(self.name, nameX + 1, nameY + 1)
     love.graphics.setColor(r, g, b, alpha)
     love.graphics.print(self.name, nameX, nameY)
+
+    -- Corona sobre el nombre si es el host de la sala
+    if self.isHost then
+        local px = 2
+        local cy = nameY - PixelIcons.CROWN_H * px - 4 - (self.isSpectator and 16 or 0)
+        PixelIcons.crown(sx - PixelIcons.CROWN_W * px / 2, cy, px, alpha)
+    end
 
     -- Indicador "SPEC" si está en modo espectador
     if self.isSpectator then

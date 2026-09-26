@@ -17,6 +17,7 @@ local NC                   = require 'src/network/NetworkClient'
 local Protocol             = require 'src/network/Protocol'
 local Predictor            = require 'src/network/Predictor'
 local SnapshotBuffer       = require 'src/network/SnapshotBuffer'
+local PixelIcons           = require 'src/ui/PixelIcons'
 
 local OnlineAdventureState = BaseState:new()
 
@@ -764,7 +765,9 @@ function OnlineAdventureState:render()
     end
 
     -- Jugadores remotos via OnlinePlayer (excluye al propio)
+    local adminId = self.currentRoom and self.currentRoom.adminId
     for _, rp in pairs(self.remotePlayers) do
+        rp.isHost = (rp.id == adminId)
         if rp.visible then rp:render(self.camX, self.camY) end
     end
 
@@ -938,6 +941,13 @@ function OnlineAdventureState:_renderHUD()
     love.graphics.setColor(0.3, 1, 0.5, 0.65)
     local roomName = (self.currentRoom and self.currentRoom.name) or "Online"
     love.graphics.printf('ONLINE: ' .. roomName, 0, WINDOW_H-22, WINDOW_W-14, 'right')
+
+    -- Corona: tú eres el host (admin) de la sala
+    if self.currentRoom and self.currentRoom.adminId == NC.myId then
+        local tw = FONT_SMALL:getWidth('ONLINE: ' .. roomName)
+        local px = 2
+        PixelIcons.crown(WINDOW_W - 14 - tw - PixelIcons.CROWN_W * px - 8, WINDOW_H - 24, px)
+    end
 
     -- Estadísticas de red (F1): ping, retardo de interpolación, correcciones
     if DEBUG_HITBOX and self.snapBuf and self.predictor then
