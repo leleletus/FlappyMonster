@@ -349,6 +349,7 @@ function AdventureState:update(dt)
     self.player:update(dt, self.level)
 
     -- Actualizar enemigos y limpiar los que ya murieron
+    self.level.liveEntities = self.enemies     -- obstáculos entre entidades
     for i = #self.enemies, 1, -1 do
         local g = self.enemies[i]
         g:update(dt, self.level)

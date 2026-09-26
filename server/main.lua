@@ -626,6 +626,7 @@ local function stepRoom(room)
     end
     sim.level.players = active
     sim.level:update(TICK_DT)
+    sim.level.liveEntities = sim.enemies        -- obstáculos entre entidades
     for _, e in ipairs(sim.enemies) do
         e:update(TICK_DT, sim.level)
     end

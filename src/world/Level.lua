@@ -242,8 +242,8 @@ function Level.fromData(lvl)
             -- Centro de la subcelda en px
             local subOffX = ((sub-1)%2) * (TILE_PX/2)
             local subOffY = (math.floor((sub-1)/2)) * (TILE_PX/2)
-            local vx = (col-1)*TILE_PX + subOffX + TILE_PX/2
-            local vy = (row-1)*TILE_PX + subOffY + TILE_PX/2
+            local vx = (col-1)*TILE_PX + subOffX + TILE_PX/4
+            local vy = (row-1)*TILE_PX + subOffY + TILE_PX/4
             -- Calcular techo del cuerpo de agua sobre este vent
             local ceilRow = row - 1
             while ceilRow >= 1 do
@@ -481,6 +481,32 @@ function Level:getSpikesInBox(bx, by, bw, bh)
     return result
 end
 
+-- ¿Hay alguna subcelda con pincho (real) tocando la caja? Para que las
+-- entidades que caminan los traten como obstáculo.
+function Level:hasSpikeCellInBox(bx, by, bw, bh)
+    local HALF = TILE_PX / 2
+    local sc = math.max(1, math.floor(bx / TILE_PX) + 1)
+    local ec = math.min(self.tileW, math.floor((bx + bw) / TILE_PX) + 1)
+    local sr = math.max(1, math.floor(by / TILE_PX) + 1)
+    local er = math.min(self.tileH, math.floor((by + bh) / TILE_PX) + 1)
+    for row = sr, er do
+        for col = sc, ec do
+            local raw = self:getRaw(col, row)
+            if hasSpikes(raw) and not TileTypes.get(tileBaseId(raw)).fake then
+                local _, _, spikes = decTile(raw)
+                for i = 1, 4 do
+                    if spikes[i].present then
+                        local x = (col - 1) * TILE_PX + ((i - 1) % 2) * HALF
+                        local y = (row - 1) * TILE_PX + math.floor((i - 1) / 2) * HALF
+                        if bx < x + HALF and bx + bw > x and by < y + HALF and by + bh > y then return true end
+                    end
+                end
+            end
+        end
+    end
+    return false
+end
+
 -- ── Render ────────────────────────────────────────────────────────────────────
 local HALF_PX = nil
 
@@ -625,25 +651,8 @@ function Level:renderWaterEffect(camX, camY, sceneCanvas)
         end
     end
 
-    -- Pinchos dentro de celdas waterlogged: por encima del tinte
-    local HALF_P = TILE_PX / 2
-    local subOff = {{0,0},{HALF_P,0},{0,HALF_P},{HALF_P,HALF_P}}
-    for row = sr2, er2 do
-        for col = sc2, ec2 do
-            local raw = self:getRaw(col, row)
-            if isWaterloggedRaw(raw) then
-                local _, _, spikes = decTile(raw)
-                local px = (col-1)*TILE_PX - camX
-                local py = (row-1)*TILE_PX - camY
-                for i = 1, 4 do
-                    if spikes[i].present then
-                        local ox,oy = subOff[i][1], subOff[i][2]
-                        drawMiniSpike(spikes[i].dir, px+ox, py+oy, HALF_P)
-                    end
-                end
-            end
-        end
-    end
+    -- (Los pinchos de celdas con agua ya están en la escena: reciben la
+    -- distorsión y el tinte igual que el resto de lo que hay bajo el agua.)
 
     love.graphics.setColor(1, 1, 1, 1)
 end
@@ -702,7 +711,7 @@ function Level:update(dt)
 
             table.insert(self.bubbles, {
                 x        = sp.x + (math.random() - 0.5) * TILE_PX * 0.6,
-                y        = sp.y,
+                y        = sp.y - 4,          -- dentro del agua (sp.y es el fondo)
                 speed    = BUB_SPEED_MIN + math.random() * (BUB_SPEED_MAX - BUB_SPEED_MIN),
                 zigPhase = math.random() * math.pi * 2,
                 zigFreq  = BUB_ZIG_FREQ * (0.7 + math.random() * 0.6),
@@ -722,7 +731,8 @@ function Level:update(dt)
         local b = self.bubbles[i]
         b.y = b.y - b.speed * dt
         b.x = b.x + math.sin(t * b.zigFreq + b.zigPhase) * BUB_ZIG_AMP * dt
-        if b.y + b.ih * BUB_SCALE < b.ceilingY then
+        -- Fuera del agua (superficie, aunque sea irregular) → desaparece
+        if b.y < b.ceilingY or not liquidOfRaw(self:getRawAt(b.x, b.y)) then
             table.remove(self.bubbles, i)
         end
     end

@@ -324,15 +324,21 @@ local function canvasPress(button)
                 if h.col == c and h.row == r then s.handle = h; return end
             end
         end
-        local e, idx = m:entityAt(c, r)
+        local pdef = ET.get(E.palette.entities)
+        local e, idx = m:entityAt(c, r, sub)
         if erase then
             if e then table.remove(m.entities, idx); if E.selected == e then E.selected = nil end; s.changed = true end
         elseif e then
             E.selected = e; s.move = { e = e, dc = 0 }
         elseif tool == 'place' then
             if m:inBounds(c, r) then
-                E.selected = m:addEntity(E.palette.entities, c, r); s.changed = true
-                s.move = { e = E.selected }
+                local n, why = m:addEntity(E.palette.entities, c, r, pdef and pdef.placement == 'sub' and sub or nil)
+                if n then
+                    E.selected = n; s.changed = true
+                    s.move = { e = E.selected }
+                else
+                    msg(why or 'No se puede colocar ahi', 'warn')
+                end
             end
         else
             E.selected = nil
@@ -357,8 +363,9 @@ local function canvasPress(button)
         if tool == 'spawn' and not erase then
             if m:inBounds(c, r) then m.playerStart = { c, r }; s.changed = true end
         elseif tool == 'vent' and not erase then
-            -- Clic en un vent: seleccionarlo (para su límite de altura); en vacío: colocar uno
-            local o = m:findObject(m.vents, c, r, sub) or m:findObject(m.vents, c, r)
+            -- Clic en un vent: seleccionarlo (para su límite de altura); en una
+            -- subcelda libre: colocar uno ahí (en el centro de esa subcelda)
+            local o = m:findObject(m.vents, c, r, sub)
             if o then
                 E.selVent = o
             elseif m:inBounds(c, r) then
@@ -368,7 +375,8 @@ local function canvasPress(button)
                 s.changed = true
             end
         else
-            local o, idx = m:findObject(m.vents, c, r)
+            local o, idx = m:findObject(m.vents, c, r, sub)
+            if not o then o, idx = m:findObject(m.vents, c, r) end
             if o then
                 table.remove(m.vents, idx); s.changed = true
                 if E.selVent == o then E.selVent = nil end
@@ -407,11 +415,14 @@ local function canvasDrag()
         end
     elseif s.move and E.model:inBounds(c, r) then
         local e = s.move.e
-        if c ~= e.col or r ~= e.row then
+        local nsub = e.sub and sub or nil
+        local edef = ET.get(e.type)
+        local okPos = not (edef and edef.ceilingOnly) or E.model:ceilingAbove(c, r, nsub)
+        if okPos and (c ~= e.col or r ~= e.row or nsub ~= e.sub) then
             -- La ruta se desplaza con la entidad
             local dc = c - e.col
             if e.props.patrol then e.props.patrol.left = e.props.patrol.left + dc; e.props.patrol.right = e.props.patrol.right + dc end
-            e.col, e.row = c, r
+            e.col, e.row, e.sub = c, r, nsub
             s.changed = true; markDirty()
         end
     end
@@ -565,7 +576,13 @@ local function drawCanvas()
         end
         if sel then
             love.graphics.setColor(th.warn[1], th.warn[2], th.warn[3], 0.9 + 0.1 * math.sin(love.timer.getTime() * 6))
-            love.graphics.rectangle('line', (e.col-1)*t - camX + 2, (e.row-1)*t - camY + 2, t - 4, t - 4, 6, 6)
+            if e.sub then
+                local h = t / 2
+                love.graphics.rectangle('line', (e.col-1)*t + ((e.sub-1) % 2) * h - camX + 1,
+                                        (e.row-1)*t + math.floor((e.sub-1) / 2) * h - camY + 1, h - 2, h - 2, 3, 3)
+            else
+                love.graphics.rectangle('line', (e.col-1)*t - camX + 2, (e.row-1)*t - camY + 2, t - 4, t - 4, 6, 6)
+            end
         end
     end
 
@@ -601,6 +618,10 @@ local function drawCanvas()
             drawTileThumb(TT.get(E.palette.tiles), (c-1)*t - camX, (r-1)*t - camY, t)
         end
         local subLayer = E.layer == 'spikes' or (E.layer == 'special' and tool == 'vent')
+        if E.layer == 'entities' and tool == 'place' then
+            local et = ET.get(E.palette.entities)
+            if et and et.placement == 'sub' then subLayer = true end
+        end
         if E.layer == 'deco' then
             local ft = DT.get(E.palette.deco)
             if E.tool.deco ~= 'erase' and ft and ft.placement == 'sub' then subLayer = true end

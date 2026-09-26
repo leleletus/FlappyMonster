@@ -11,6 +11,17 @@ local Crabby = Entity.extend(Entity, {
 
 local randRange = Entity.randRange
 
+-- Crabby de techo que cae al ver a un jugador: se esconde temblando, cae como
+-- un pincho, se queda clavado boca abajo (vulnerable, pataleando) y, si
+-- consigue levantarse, se da la vuelta y sigue como un Crabby de suelo.
+Crabby.customDrop = true
+local DROP_SHAKE   = 0.5    -- s temblando mientras se esconde
+local STUCK_HID    = 0.5    -- s clavado aún escondido
+local STUCK_TIME   = 3.6    -- s clavado en total antes de levantarse
+local STUCK_EMBED  = 0.5    -- fracción del pincho dentro del suelo
+local GETUP_TIME   = 0.35   -- s del giro al levantarse
+local WIGGLE_FPS   = 12
+
 local HIDE_DURATION_MIN = 2.5
 local HIDE_DURATION_MAX = 6.0
 local PEEK_INTERVAL_MIN = 1.5
@@ -99,9 +110,87 @@ end
 function Crabby:canBeStomped() return not self:isBodyDisabled() end
 function Crabby:isBodyDisabled() return self.currentImg == imgHid end
 
+-- ── Caída desde el techo ──────────────────────────────────────────────────────
+local function spikeDims()
+    return 9 * GUMMY_SCALE, 9 * GUMMY_SCALE, 7 * GUMMY_SCALE, 8 * GUMMY_SCALE  -- w, maxH, hitW, hitMaxH
+end
+
+-- Punta del pincho (boca abajo): pies arriba, cabeza abajo, pincho debajo
+local function dropTipY(self)
+    local _, maxH = spikeDims()
+    return self.y - self.sprH / 2 + (self.currentImg or imgHid):getHeight() * GUMMY_SCALE + maxH
+end
+
+function Crabby:updateDrop(dt, level)
+    local st = self.state
+    self.deadTimer = self.deadTimer + dt
+    local t = self.deadTimer
+    if st == 'drop_shake' then
+        -- Tiembla y se esconde: sale el pincho y se mete en el caparazón
+        self.vx = 0
+        if t < 0.2 then
+            self.currentImg, self.spikeProgress = imgIdle2, math.min(1, t / 0.2)
+        else
+            self.spikeProgress = 1
+            self.currentImg = hideInFrames[math.min(#hideInFrames, math.floor((t - 0.2) / 0.1) + 1)]
+        end
+        if t >= DROP_SHAKE then
+            self.state, self.deadTimer, self.vy = 'drop_fall', 0, 0
+            self.currentImg, self.spikeProgress = imgHid, 1
+        end
+    elseif st == 'drop_fall' then
+        -- Cae como un pincho (sigue boca abajo) hasta clavarse en el suelo
+        self.vy = math.min(self.vy + ADV_GRAVITY * dt, 1400)
+        self.y = self.y + self.vy * dt
+        local tip = dropTipY(self)
+        if level:collisionAt(self.x, tip, true) then
+            local _, maxH = spikeDims()
+            local top = math.floor(tip / TILE_PX) * TILE_PX
+            self.y = self.y - (tip - (top + maxH * STUCK_EMBED))
+            self.state, self.deadTimer, self.vy = 'drop_stuck', 0, 0
+            -- Para pisotearlo cuenta como "de suelo" (se le pisa desde arriba)
+            self.flipped = false
+            Sound.play('spikeHit')
+        elseif self.y > level.heightPx + TILE_PX * 4 then
+            self.alive = false
+        end
+    elseif st == 'drop_stuck' then
+        -- Clavado: primero escondido, luego se asoma y patalea boca abajo
+        self.spikeProgress = 1
+        if t < STUCK_HID then
+            self.currentImg = imgHid
+        elseif t < STUCK_HID + SPRITE_SEQ_TIME then
+            self.currentImg = seqFrame(t - STUCK_HID, hideOutFrames)
+        else
+            local k = math.floor((t - STUCK_HID - SPRITE_SEQ_TIME) * WIGGLE_FPS) % #walkFrames + 1
+            self.currentImg = walkFrames[k]
+        end
+        if t >= STUCK_TIME then
+            -- Se levanta: salta, se gira y vuelve a caer de pie
+            self.state, self.deadTimer = 'drop_getup', 0
+            self.vy = -420
+            self.facing = -self.facing
+            self.onGround = false
+        end
+    elseif st == 'drop_getup' then
+        self.spikeProgress = math.max(0, 1 - t / GETUP_TIME)
+        self.currentImg = imgIdle2
+        self.vy = self.vy + ADV_GRAVITY * dt
+        self:moveAndCollide(level, 0, self.vy * dt)
+        if self.onGround and t >= GETUP_TIME * 0.6 then
+            self.dropped = true
+            self.spikeProgress = 0
+            self.vx = self.moving and self.speed * self.facing or 0
+            self:startWalk()
+        end
+    end
+    return true
+end
+
 -- ── Esconderse / asomarse ────────────────────────────────────────────────────
 function Crabby:updateCustom(dt, level)
     local st = self.state
+    if st:sub(1, 5) == 'drop_' then return self:updateDrop(dt, level) end
     if st == 'hide_in' then
         -- Fase 1: pincho crece 0→1 (sprite crab2). Fase 2: Meat→lookin→hid
         self.hideTransTimer = self.hideTransTimer + dt
@@ -174,12 +263,10 @@ function Crabby:updateCustom(dt, level)
 end
 
 -- ── Pincho (zona de peligro) ─────────────────────────────────────────────────
-local function spikeDims()
-    return 9 * GUMMY_SCALE, 9 * GUMMY_SCALE, 7 * GUMMY_SCALE, 8 * GUMMY_SCALE  -- w, maxH, hitW, hitMaxH
-end
-
 function Crabby:getSpikeHitbox()
     if self.spikeProgress <= 0 then return nil end
+    -- Clavado en el suelo / levantándose: el pincho no hace daño
+    if self.state == 'drop_stuck' or self.state == 'drop_getup' then return nil end
     local _, _, hitW, hitMaxH = spikeDims()
     local hitH = hitMaxH * self.spikeProgress
     if hitH < 1 then return nil end
@@ -226,28 +313,59 @@ local function drawSpike(cx, baseY, sH, dir)
     love.graphics.polygon('line', cx, tipY, cx - halfW, baseY, cx + halfW, baseY)
 end
 
+-- Pincho clavado: solo se ve la parte fuera del suelo (trapecio)
+local function drawStuckSpike(cx, baseY, len, embed)
+    local halfW = spikeDims() / 2
+    local bw    = halfW * embed          -- ancho donde entra en el suelo
+    local by    = baseY + len
+    love.graphics.setColor(0.92, 0.92, 0.92, 1)
+    love.graphics.polygon('fill', cx - halfW, baseY, cx + halfW, baseY, cx + bw, by, cx - bw, by)
+    love.graphics.setColor(0.55, 0.55, 0.60, 0.8)
+    love.graphics.polygon('line', cx - halfW, baseY, cx + halfW, baseY, cx + bw, by, cx - bw, by)
+end
+
 function Crabby:render(camX, camY)
     local img = self.currentImg or imgIdle2
+    local st  = self.state
     local bx, by = self:breatheScale()
     local scaleX = GUMMY_SCALE * self.facing * bx
     local scaleY = GUMMY_SCALE * by
     local ih = img:getHeight()
     local drawX = math.floor(self.x - camX)
-    -- Pies abajo (suelo) o arriba (techo)
-    local feetY = self.flipped and math.floor(self.y - camY - self.sprH / 2)
-                               or math.floor(self.y - camY + self.sprH / 2)
+    -- Clavado en el suelo: boca abajo (pies arriba) aunque ya cuente como de suelo
+    local stuck   = (st == 'drop_stuck')
+    local flipped = self.flipped or stuck
+    local t = self.deadTimer or 0
+    if stuck and t >= STUCK_HID + SPRITE_SEQ_TIME then
+        drawX = drawX + math.floor(math.sin(t * 45) * 2)          -- forcejea
+    end
+    local feetY = flipped and math.floor(self.y - camY - self.sprH / 2)
+                          or math.floor(self.y - camY + self.sprH / 2)
     local spriteVisH = ih * math.abs(scaleY)
 
-    if self.spikeProgress > 0 then
+    -- Levantándose: gira 180° alrededor de su centro
+    local rot = 0
+    if st == 'drop_getup' then rot = math.pi * (1 - math.min(1, t / GETUP_TIME)) end
+    if rot ~= 0 then
+        local cx, cy = self.x - camX, self.y - camY
+        love.graphics.push()
+        love.graphics.translate(cx, cy); love.graphics.rotate(rot * self.facing); love.graphics.translate(-cx, -cy)
+    end
+
+    if stuck then
+        local _, maxH = spikeDims()
+        drawStuckSpike(drawX, feetY + spriteVisH, maxH * (1 - STUCK_EMBED), STUCK_EMBED)
+    elseif self.spikeProgress > 0 then
         local _, maxH = spikeDims()
         local sH = maxH * self.spikeProgress
-        if self.flipped then drawSpike(drawX, feetY + spriteVisH, sH, 1)
-        else                 drawSpike(drawX, feetY - spriteVisH, sH, -1) end
+        if flipped then drawSpike(drawX, feetY + spriteVisH, sH, 1)
+        else            drawSpike(drawX, feetY - spriteVisH, sH, -1) end
     end
 
     love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.draw(img, drawX, feetY, 0, scaleX, self.flipped and -scaleY or scaleY,
+    love.graphics.draw(img, drawX, feetY, 0, scaleX, flipped and -scaleY or scaleY,
                        img:getWidth() / 2, ih)
+    if rot ~= 0 then love.graphics.pop() end
     love.graphics.setColor(1, 1, 1, 1)
 end
 

@@ -50,10 +50,6 @@ function Checkpoint:render(camX, camY)
     end
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.draw(im, x, bot, 0, SCALE, sy, im:getWidth() / 2, im:getHeight())
-    if on and math.floor(love.timer.getTime() * 3) % 2 == 0 then
-        love.graphics.setColor(1, 0.95, 0.5, 0.8)
-        love.graphics.rectangle('fill', x + 30, bot - self.outerH + 10, 4, 4)
-    end
     love.graphics.setColor(1, 1, 1, 1)
 end
 

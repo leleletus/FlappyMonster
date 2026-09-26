@@ -233,15 +233,30 @@ function Model:frame(id)
 end
 
 -- ── Objetos ───────────────────────────────────────────────────────────────────
-function Model:entityAt(c, r)
+-- Entidad en la celda (las de subcelda solo si coincide la subcelda)
+function Model:entityAt(c, r, sub)
     for i = #self.entities, 1, -1 do
         local e = self.entities[i]
-        if e.col == c and e.row == r then return e, i end
+        if e.col == c and e.row == r and (sub == nil or e.sub == nil or e.sub == sub) then return e, i end
     end
 end
 
-function Model:addEntity(typeName, c, r)
-    local n = ET.normalize({ type = typeName, col = c, row = r })
+-- ¿Hay un bloque sólido justo encima de esa subcelda (techo)?
+function Model:ceilingAbove(c, r, sub)
+    local rr = (sub and sub <= 2 or not sub) and r - 1 or r
+    local raw = (rr >= 1) and self:get(c, rr) or TILE_SOLID
+    if not raw then return false end
+    local def = Tiles.get(Codec.id(raw))
+    return def ~= nil and def.collision == 'solid' and not def.fake
+end
+
+-- Devuelve la entidad nueva, o nil y el motivo si no se puede colocar ahí
+function Model:addEntity(typeName, c, r, sub)
+    local def = ET.get(typeName)
+    if def and def.ceilingOnly and not self:ceilingAbove(c, r, def.placement == 'sub' and sub or nil) then
+        return nil, def.label .. ': solo se puede colocar justo debajo de un bloque solido (techo)'
+    end
+    local n = ET.normalize({ type = typeName, col = c, row = r, sub = sub })
     if n then table.insert(self.entities, n) end
     return n
 end
@@ -269,6 +284,8 @@ function Model:validate()
             w[#w+1] = { 'error', where .. ' esta fuera del mapa', e }
         elseif Tiles.get(Codec.id(self.tiles[e.row][e.col])).collision == 'solid' then
             w[#w+1] = { 'warn', where .. ' esta dentro de un bloque', e }
+        elseif t and t.ceilingOnly and not self:ceilingAbove(e.col, e.row, e.sub) then
+            w[#w+1] = { 'warn', where .. ' no cuelga de un techo solido', e }
         end
         local p = e.props
         if p.patrol and (e.col < p.patrol.left or e.col > p.patrol.right) then

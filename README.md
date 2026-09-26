@@ -83,14 +83,17 @@ Corre dentro del propio juego y usa sus mismos catalogos, dibujo y assets: todo 
 
 ## Mecanicas y elementos de nivel
 
-* **Ground pound:** agacharse en el aire (o nadando) congela un instante al monstruito y lo lanza en picado. Aplasta enemigos, rompe bloques rompibles y online empuja y aturde a los jugadores cercanos.
+* **Ground pound:** agacharse en el aire (o nadando) congela un instante al monstruito y lo lanza en picado. Solo muere el enemigo aplastado directamente; los enemigos y jugadores cercanos salen despedidos y quedan aturdidos un momento. Tambien rompe bloques rompibles.
 * **Agacharse bajo el agua:** permite atravesar plataformas traspasables sumergidas.
 * **Bloque rompible** (Terreno): se rompe con un cabezazo desde abajo o con un ground pound; nada mas lo rompe.
 * **Bloques trampa** (categoria Trampas): paredes, plataformas, peligros y bloques falsos que se ven igual que los reales pero no tienen colision. Los pinchos colocados sobre un tile trampa tampoco hacen dano. En el editor se marcan con "?".
-* **Pinchos que caen** (entidad, Trampas): se ven y chocan igual que unos pinchos de techo; si un jugador se pone debajo (dentro de su alcance vertical y a la vista) tiemblan, caen, se clavan un rato y vuelven a salir del techo.
+* **Pincho que cae** (entidad, Trampas): un pincho individual que se coloca en subceldas como los pinchos normales, pero solo justo debajo de un bloque solido. Se ve y choca igual que un pincho de techo; si un jugador se pone debajo (dentro de su alcance vertical y a la vista) tiembla, cae, se clava un rato y vuelve a salir del techo.
+* **Crabby de techo que cae:** al ver a un jugador se esconde temblando, cae como un pincho y se queda clavado boca abajo en el suelo. Mientras patalea para levantarse no puede hacer nada y se le puede aplastar; si lo consigue, se gira y sigue como un Crabby de suelo.
+* **Entidades que caminan:** se dan la vuelta ante cualquier cosa solida: paredes, pinchos y otras entidades (los objetos como estrellas o checkpoints no cuentan).
 * **Estrella** (+25 puntos), **Vida extra** (+1 vida) y **Checkpoint** (punto de reaparicion propio de cada jugador): entidades de la categoria Objetos.
 * **Propiedades comunes de entidades:** "Reaparece tras (s)" (vuelve a su sitio con animacion tras morir) y, para las de techo, "Cae al ver al jugador" con su alcance de deteccion.
-* **Vents:** con la herramienta Vent, clic en un vent para ajustar su "Limite de altura" (casillas que sube la burbuja de aire antes de explotar).
+* **Vents:** se colocan en el centro de la subcelda elegida (puede haber varios en la misma celda). Con la herramienta Vent, clic en un vent para ajustar su "Limite de altura" (casillas que sube la burbuja de aire antes de explotar).
+* **Mezcla de sonido:** la ganancia de cada efecto esta en la tabla `GAIN` de `src/Sound.lua` (se aplica al cargar, asi que puede subir por encima de 1).
 * Nivel de ejemplo con todo lo anterior: `assets/levels/taller_trampas.json` ("Taller de Trampas").
 
 ---

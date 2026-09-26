@@ -2,8 +2,8 @@
 -- Partículas visuales pixel art (solo cliente; el servidor no dibuja).
 --   Particles.emit(kind, x, y, opts)   en coordenadas de mundo
 --   Particles.update(dt)  /  Particles.render(camX, camY)  /  Particles.clear()
--- Tipos: 'gp_land', 'gp_start', 'block_break', 'collect', 'spawn', 'oneup',
---        'checkpoint', 'spike_land', 'stun'
+-- Tipos: 'gp_land', 'gp_start', 'block_break', 'spawn', 'oneup', 'spike_land'
+-- (otros nombres no hacen nada)
 
 local Particles = {}
 local list = {}
@@ -37,19 +37,31 @@ function Particles.emit(kind, x, y, opts)
                   life = 0.25, size = 4, col = {1, 1, 1}, drag = 6 })
         end
     elseif kind == 'block_break' then
+        -- Trozos de ladrillo de tamaños y trayectorias al azar, migas y polvo
         local T = TILE_PX
-        for i = 0, 3 do                  -- 4 trozos del bloque
-            local ox, oy = (i % 2) * T / 2, math.floor(i / 2) * T / 2
-            add({ x = x + ox + T / 4, y = y + oy + T / 4, vx = (ox > 0 and 1 or -1) * rnd(80, 200),
-                  vy = -rnd(250, 480), g = 1400, life = 1.0, size = T / 2 - 4, col = opts.col or {0.55, 0.45, 0.35},
-                  spin = rnd(-8, 8), chunk = true })
+        local base = opts.col or {0.55, 0.40, 0.28}   -- ladrillo (breakable.lua)
+        local function shade(k)
+            return { base[1] * k, base[2] * k, base[3] * k }
         end
-        for i = 1, 10 do
-            add({ x = x + rnd(0, T), y = y + rnd(0, T), vx = rnd(-150, 150), vy = -rnd(50, 250), g = 900,
-                  life = rnd(0.3, 0.6), size = 4, col = {0.8, 0.75, 0.7} })
+        for i = 1, math.random(9, 13) do
+            local px, py = rnd(4, T - 4), rnd(4, T - 4)
+            local dir = (px < T / 2) and -1 or 1
+            add({ x = x + px, y = y + py, vx = dir * rnd(40, 260) + rnd(-60, 60), vy = -rnd(180, 620),
+                  g = rnd(1200, 1700), life = rnd(1.2, 2.2), size = math.random(3, 7) * 2,
+                  col = shade(rnd(0.7, 1.15)), spin = rnd(-12, 12), chunk = true, fadeLast = 0.35 })
         end
-    elseif kind == 'collect' or kind == 'oneup' or kind == 'checkpoint' then
-        local col = (kind == 'oneup') and {0.4, 1, 0.5} or (kind == 'checkpoint' and {0.4, 0.9, 1} or {1, 0.95, 0.4})
+        for i = 1, math.random(14, 20) do  -- migas
+            add({ x = x + rnd(0, T), y = y + rnd(0, T), vx = rnd(-220, 220), vy = -rnd(80, 420),
+                  g = rnd(1000, 1500), life = rnd(0.7, 1.5), size = math.random(1, 2) * 3,
+                  col = shade(rnd(0.6, 1.2)) })
+        end
+        for i = 1, math.random(10, 16) do  -- polvo que se queda flotando
+            add({ x = x + rnd(0, T), y = y + rnd(0, T), vx = rnd(-70, 70), vy = -rnd(10, 90), g = -rnd(0, 30),
+                  life = rnd(0.8, 1.6), size = math.random(2, 4) * 3, col = {0.85, 0.8, 0.72}, drag = 1.5,
+                  dust = true })
+        end
+    elseif kind == 'oneup' then
+        local col = {0.4, 1, 0.5}
         for i = 1, 14 do
             local a = (i / 14) * math.pi * 2
             add({ x = x, y = y, vx = math.cos(a) * rnd(100, 220), vy = math.sin(a) * rnd(100, 220),
@@ -94,7 +106,14 @@ function Particles.render(camX, camY)
         local c = p.col
         local x, y = math.floor(p.x - camX), math.floor(p.y - camY)
         local s = p.size
-        love.graphics.setColor(c[1], c[2], c[3], p.chunk and 1 or a)
+        if p.chunk then
+            -- Los trozos se ven enteros y se desvanecen solo al final
+            local f = p.fadeLast or 0
+            a = (f > 0) and math.min(1, (1 - p.t / p.life) / f) or 1
+        elseif p.dust then
+            a = a * 0.55
+        end
+        love.graphics.setColor(c[1], c[2], c[3], a)
         if p.star then
             love.graphics.rectangle('fill', x - s / 2, y - 1, s, 2)
             love.graphics.rectangle('fill', x - 1, y - s / 2, 2, s)

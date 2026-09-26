@@ -50,7 +50,7 @@ function Notify.toast(msg, kind)
     table.insert(toasts, 1, { msg = msg, kind = kind or 'info', t = 0,
                               life = (kind == 'error' or kind == 'ban') and TOAST_LIFE + 1.5 or TOAST_LIFE })
     while #toasts > TOAST_MAX do table.remove(toasts) end
-    if kind == 'error' or kind == 'ban' or kind == 'kick' then Sound.play('dies2', 1.4, 0.5) end
+    if kind == 'error' or kind == 'ban' or kind == 'kick' then Sound.play('dies2', 1.4, 0.75) end
 end
 
 -- opts: { kind, subtitle, button }
@@ -61,7 +61,7 @@ function Notify.modal(title, msg, opts)
     end
     table.insert(modals, { title = title or '', msg = msg or '', kind = opts.kind or 'info',
                            subtitle = opts.subtitle, button = opts.button or 'ACEPTAR', t = 0, hover = false })
-    if #modals == 1 then Sound.play('dies2', 0.8, 0.6) end
+    if #modals == 1 then Sound.play('dies2', 0.8, 0.9) end
 end
 
 function Notify.blocking() return modals[1] ~= nil end

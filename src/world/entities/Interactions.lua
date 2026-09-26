@@ -71,10 +71,11 @@ function Interactions.check(pa, e)
     return p.onTouch
 end
 
--- Zona aplastada al impactar un ground pound: bajo y a los lados de los pies
+-- Zona aplastada al impactar un ground pound: SOLO justo bajo los pies (lo
+-- que queda debajo del jugador; lo de los lados solo sale despedido)
 function Interactions.poundZone(pa)
     local ob = pa:getOuterBounds()
-    return { x = ob.x - 36, y = ob.y + ob.h - 24, w = ob.w + 72, h = 40 }
+    return { x = ob.x + 4, y = ob.y + ob.h - 24, w = ob.w - 8, h = 30 }
 end
 
 -- Aplica las interacciones de un jugador con todas las entidades.
@@ -104,14 +105,23 @@ function Interactions.run(pa, entities, cb, rewind)
             if cb.checkpoint then cb.checkpoint(e, i) end
         end
     end
-    -- Impacto del ground pound: aplasta lo que haya justo debajo/al lado
+    -- Impacto del ground pound: muere solo lo que queda aplastado justo
+    -- debajo; lo que está cerca sale despedido y queda aturdido, igual que
+    -- los otros jugadores.
     if pa.gpLanded then
         local z = Interactions.poundZone(pa)
+        local rx, ry = pa.GP_RADIUS_X or 170, pa.GP_RADIUS_Y or 110
         for i, e in ipairs(entities) do
-            if e.alive and e.state ~= 'dead' and not (e.isGhost and e:isGhost())
-               and e.props.stompable and e:canBeStomped() and overlap(z, e:getOuterBounds()) then
-                e:stomp()
-                if cb.stomp then cb.stomp(e, e.props.points, i) end
+            if e.alive and e.state ~= 'dead' and not (e.isGhost and e:isGhost()) then
+                if e.props.stompable and e:canBeStomped() and overlap(z, e:getInnerBounds()) then
+                    e:stomp()
+                    if cb.stomp then cb.stomp(e, e.props.points, i) end
+                else
+                    local dx, dy = e.x - pa.x, e.y - pa.y
+                    if math.abs(dx) <= rx and math.abs(dy) <= ry and e:canBeKnocked() then
+                        e:knockback(dx >= 0 and 1 or -1)
+                    end
+                end
             end
         end
     end

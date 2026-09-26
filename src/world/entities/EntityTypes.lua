@@ -13,6 +13,8 @@
 --   editor      { sprite='assets/...png', scale=4, tint={...} } miniatura
 --   pickup      coleccionable: { score=25 } / { lives=1 } (se recoge al tocarlo)
 --   checkpoint  true: al tocarlo pasa a ser el punto de reaparición del jugador
+--   placement   'sub': se coloca en subceldas (como los pinchos); guarda `sub`
+--   ceilingOnly true: solo se puede colocar justo debajo de un bloque sólido
 --
 -- En el nivel, cada colocación es:
 --   { type='crabby', col=10, row=2, props={ attach='ceiling', ... } }
@@ -134,6 +136,30 @@ function EntityTypes.register(def)
                 love.graphics.setColor(1, 1, 1, 1)
                 return
             end
+            if st == 'stunned' then
+                -- Aturdida: se tambalea con estrellitas girando sobre la cabeza
+                local k  = math.max(0, 1 - (self.deadTimer or 0) / 1.2)
+                local sx = self.x - camX
+                local sy = self.y - camY
+                love.graphics.push()
+                love.graphics.translate(sx, sy)
+                love.graphics.rotate(math.sin((self.deadTimer or 0) * 18) * 0.18 * k)
+                love.graphics.translate(-sx, -sy)
+                draw(self, camX, camY)
+                love.graphics.pop()
+                local t  = love.timer.getTime()
+                local hy = self.flipped and (sy + (self.sprH or 40) / 2 + 10) or (sy - (self.sprH or 40) / 2 - 8)
+                for i = 0, 2 do
+                    local a = t * 6 + i * (math.pi * 2 / 3)
+                    local x = math.floor(sx + math.cos(a) * 18)
+                    local y = math.floor(hy + math.sin(a) * 5)
+                    love.graphics.setColor(1, 0.9, 0.3, 1)
+                    love.graphics.rectangle('fill', x - 3, y - 1, 6, 2)
+                    love.graphics.rectangle('fill', x - 1, y - 3, 2, 6)
+                end
+                love.graphics.setColor(1, 1, 1, 1)
+                return
+            end
             if st == 'drop_shake' then
                 love.graphics.push()
                 love.graphics.translate(math.floor(math.sin((self.deadTimer or 0) * 70) * 3), 0)
@@ -167,6 +193,10 @@ function EntityTypes.normalize(data)
     if raw.attach == nil and data.flipped then raw.attach = 'ceiling' end
     local base = { type = data.type, col = math.floor(tonumber(data.col) or 1),
                    row = math.floor(tonumber(data.row) or 1) }
+    if t.placement == 'sub' then
+        local sub = math.floor(tonumber(data.sub) or 1)
+        base.sub = (sub >= 1 and sub <= 4) and sub or 1
+    end
     base.props = Props.resolve(t.schema, raw, base)
     return base
 end
@@ -174,7 +204,7 @@ end
 -- Forma compacta para guardar: solo props distintas del default.
 function EntityTypes.serialize(e)
     local t = EntityTypes.byName[e.type]
-    local out = { type = e.type, col = e.col, row = e.row }
+    local out = { type = e.type, col = e.col, row = e.row, sub = e.sub }
     out.props = t and Props.diff(t.schema, e.props, e) or nil
     return out
 end

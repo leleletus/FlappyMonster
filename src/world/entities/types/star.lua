@@ -34,11 +34,6 @@ function Star:render(camX, camY)
     end
     love.graphics.setColor(1, 1, 1, a)
     love.graphics.draw(img, x, y, 0, SCALE * sx * s, SCALE * s, img:getWidth() / 2, img:getHeight() / 2)
-    -- destello
-    if self.state ~= 'dead' and (t * 1.3) % 2 < 0.25 then
-        love.graphics.rectangle('fill', x + 14, y - 22, 4, 4)
-        love.graphics.rectangle('fill', x + 12, y - 20, 8, 1)
-    end
     love.graphics.setColor(1, 1, 1, 1)
 end
 

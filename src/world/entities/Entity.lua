@@ -19,6 +19,7 @@
 --   e:canBeStomped(), e:isBodyDisabled(), e:getHazardBoxes()
 --   e:netPack() / e:netApply(a, b, f)   datos extra sincronizados online
 --   Cls.sizePx() -> w, h  tamaño en px (en vez de sizeImage) para dibujos por código
+--   Cls.customDrop = true  los estados 'drop_*' los lleva su updateCustom
 --
 -- Comunes a todas (propiedades): reaparecer tras morir (respawn), y para las
 -- de techo, dejarse caer al ver a un jugador debajo (dropOnSight/detectRange).
@@ -71,6 +72,11 @@ function Entity.create(cls, data)
 
     e.x = (data.col - 1) * T + T / 2
     e.y = (data.row - 1) * T + T / 2
+    e.sub = data.sub
+    if data.sub then   -- colocada en una subcelda (1 TL, 2 TR, 3 BL, 4 BR): su centro
+        e.x = (data.col - 1) * T + ((data.sub - 1) % 2) * T / 2 + T / 4
+        e.y = (data.row - 1) * T + math.floor((data.sub - 1) / 2) * T / 2 + T / 4
+    end
     e.baseY = e.y
 
     local dir = (p.startDir == 'left') and -1 or 1
@@ -118,6 +124,9 @@ function Entity.create(cls, data)
 end
 
 local SPAWN_ANIM = 0.7    -- s de la animación de reaparición
+local KNOCK_VX   = 520    -- empujón de un ground pound cercano
+local KNOCK_HOP  = 360
+local KNOCK_STUN = 1.2    -- s aturdida
 local DROP_SHAKE = 0.5    -- s temblando antes de caer del techo
 Entity.SPAWN_ANIM = SPAWN_ANIM
 
@@ -177,6 +186,32 @@ function Entity:updateCommonStates(dt, level)
             if self.state == 'walk' then self:startWalk() end
         end
         return true
+    elseif st == 'stunned' then
+        -- Empujada por un ground pound: sale despedida, frena y se queda
+        -- aturdida un momento; luego sigue con lo que hacía
+        self.deadTimer = self.deadTimer + dt
+        local vx = self.vx * math.max(0, 1 - (self.onGround and 7 or 2.5) * dt)
+        self.vx = vx
+        local facing = self.facing
+        if self.flying then
+            self:moveAndCollide(level, vx * dt, 0)
+        else
+            local gravDir = self.flipped and -1 or 1
+            self.vy = self.vy + ADV_GRAVITY * dt * gravDir
+            self:moveAndCollide(level, vx * dt, self.vy * dt)
+        end
+        if self.vx ~= vx then self.vx = 0 end          -- chocó con una pared
+        self.facing = facing
+        if self.deadTimer >= KNOCK_STUN and (self.onGround or self.flying) then
+            local prev = self.stunPrev
+            self.deadTimer, self.vy = 0, 0
+            self.vx = self.moving and self.speed * self.facing or 0
+            if self.flying then self.baseY = self.y end
+            if prev == 'walk' or prev == 'idle' or not prev then self:startWalk() else self.state = prev end
+        end
+        return true
+    elseif self.customDrop and st:sub(1, 5) == 'drop_' then
+        return false        -- el tipo tiene su propia caída (ver Crabby)
     elseif st == 'drop_shake' then
         self.deadTimer = self.deadTimer + dt
         if self.deadTimer >= DROP_SHAKE then
@@ -204,6 +239,22 @@ function Entity:updateCommonStates(dt, level)
         return true
     end
     return false
+end
+
+-- ¿Le afecta el empujón de un ground pound cercano?
+function Entity:canBeKnocked()
+    if not self:isObstacle() then return false end
+    local st = self.state
+    return st ~= 'drop_shake' and st ~= 'drop_fall' and not st:match('^drop_')
+end
+
+function Entity:knockback(dirX)
+    if self.state ~= 'stunned' then self.stunPrev = self.state end
+    self.state, self.deadTimer = 'stunned', 0
+    self.vx = dirX * KNOCK_VX
+    self.vy = self.flying and 0 or -KNOCK_HOP * (self.flipped and -1 or 1)
+    self.onGround = false
+    Sound.play('stunned')
 end
 
 -- Coleccionables: desaparece (con su animación de 'dead'). true si se recogió.
@@ -247,6 +298,41 @@ end
 -- ── Movimiento ────────────────────────────────────────────────────────────────
 local function solidAt(level, wx, wy)
     return level:isEnemySolidAt(wx, wy)   -- según el catálogo de tiles (enemySolid)
+end
+
+-- ¿Cuenta como obstáculo para las que caminan? (no los coleccionables ni lo
+-- que está esperando/apareciendo o muriendo)
+function Entity:isObstacle()
+    local d = self.def or {}
+    if d.pickup or d.checkpoint then return false end
+    return self.alive and self.state ~= 'dead' and not self:isGhost()
+end
+
+-- ¿Hay algo "sólido" justo delante (pinchos u otra entidad)? Las paredes ya
+-- las resuelve moveAndCollide.
+function Entity:blockedAhead(level, dir)
+    local hw, hh, probe = self.outerW / 2, self.outerH / 2, 4
+    local bx = dir > 0 and (self.x + hw) or (self.x - hw - probe)
+    local by, bh = self.y - hh + 2, self.outerH - 4
+    if level.hasSpikeCellInBox and level:hasSpikeCellInBox(bx, by, probe, bh) then return true end
+    for _, o in ipairs(level.liveEntities or {}) do
+        if o ~= self and (o.x - self.x) * dir > 0 and o:isObstacle() then
+            local ob = o:getOuterBounds()
+            if bx < ob.x + ob.w and bx + probe > ob.x and by < ob.y + ob.h and by + bh > ob.y then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+-- Da la vuelta si tiene un obstáculo delante
+function Entity:turnAtObstacles(level)
+    if not self.moving or self.vx == 0 then return end
+    local dir = self.vx > 0 and 1 or -1
+    if self:blockedAhead(level, dir) then
+        self.vx, self.facing = -self.vx, -dir
+    end
 end
 
 -- Colisión con el nivel. Si está pegado al techo (flipped) la "gravedad" va
@@ -369,6 +455,7 @@ function Entity:update(dt, level)
     if self.flying then
         -- Vuela: patrulla horizontal sin gravedad con oscilación vertical
         self.flyT = self.flyT + dt
+        self:turnAtObstacles(level)
         self:moveAndCollide(level, self.vx * dt, 0)
         self.y = self.baseY + math.sin(self.flyT * tn.flyBobSpeed) * (self.props.bobAmp or 0)
     else
@@ -382,6 +469,7 @@ function Entity:update(dt, level)
                 self.vx = -self.vx;  self.facing = -self.facing
             end
         end
+        self:turnAtObstacles(level)
         local gravDir = self.flipped and -1 or 1
         self.vy = self.vy + ADV_GRAVITY * dt * gravDir
         self:moveAndCollide(level, self.vx * dt, self.vy * dt)

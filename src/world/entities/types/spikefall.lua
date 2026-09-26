@@ -1,4 +1,5 @@
--- Pinchos que caen: cuelgan del techo como pinchos normales (matan al tocar).
+-- Pincho que cae: un pincho individual que cuelga del techo en una subcelda
+-- (se coloca igual que los pinchos normales, solo bajo un bloque sólido).
 -- Si un jugador se pone debajo (dentro del alcance y a la vista) tiemblan,
 -- caen y matan a quien golpeen. Al tocar el suelo quedan clavados un rato,
 -- desaparecen y vuelven a salir del techo en su sitio.
@@ -12,30 +13,29 @@ local VANISH    = 0.35   -- s desapareciendo tras estar clavados
 local REGROW    = 0.6    -- s saliendo del techo
 local EMBED     = 0.45   -- fracción que se clava en el suelo
 
--- Se ve y choca EXACTAMENTE como un pincho normal de techo: las dos
--- subceldas superiores de una casilla con pinchos hacia abajo (mismo dibujo
--- y misma hitbox que los pinchos de tile, ver Level.lua).
+-- Se ve y choca EXACTAMENTE como un pincho normal hacia abajo en una
+-- subcelda (mismo dibujo y misma hitbox que los pinchos de tile, ver Level.lua).
 local function half() return TILE_PX / 2 end
 
 function SpikeFall.loadAssets() end
-function SpikeFall.sizePx() return TILE_PX, TILE_PX / 2 end
+function SpikeFall.sizePx() return TILE_PX / 2, TILE_PX / 2 end
 
 function SpikeFall:init()
     self.moving, self.flying = false, true
     self.vx, self.vy = 0, 0
-    -- Pegado al techo de su celda
-    self.y = (self.row - 1) * TILE_PX + self.outerH / 2
+    -- Ocupa su subcelda (Entity.create ya lo centra en ella)
     self.state = 'armed'
     self.deadTimer = 0
 end
 
 function SpikeFall:canBeStomped() return false end
+function SpikeFall:canBeKnocked() return false end
 
 function SpikeFall:updateCustom(dt, level)
     local st = self.state
     self.deadTimer = self.deadTimer + dt
     if st == 'armed' then
-        if self:seesPlayerBelow(level, self.props.detectRange, self.outerW / 2 + 6) then
+        if self:seesPlayerBelow(level, self.props.detectRange, TILE_PX / 2) then
             self.state, self.deadTimer = 'shake', 0
             Sound.play('spikeShake')
         end
@@ -51,7 +51,7 @@ function SpikeFall:updateCustom(dt, level)
             local top = math.floor(tipY / TILE_PX) * TILE_PX
             self.y = top - self.outerH / 2 + self.outerH * EMBED
             self.state, self.deadTimer = 'stuck', 0
-            Sound.play('spikeLand')
+            Sound.play('spikeHit')
         else
             self.y = ny
         end
@@ -75,14 +75,8 @@ function SpikeFall:getHazardBoxes()
     if st ~= 'armed' and st ~= 'shake' and st ~= 'falling' then return nil end
     local Level = package.loaded['src/world/Level'] or require('src/world/Level')
     local H  = half()
-    local x0 = self.x - TILE_PX / 2
-    local y0 = self.y - self.outerH / 2          -- base (arriba) de los pinchos
-    local boxes = {}
-    for k = 0, 1 do
-        local hx, hy, hw, hh = Level._spikeHitbox(x0 + k * H, y0, H, 1)   -- 1 = DIR_DOWN
-        boxes[#boxes + 1] = { x = hx, y = hy, w = hw, h = hh }
-    end
-    return boxes
+    local hx, hy, hw, hh = Level._spikeHitbox(self.x - H / 2, self.y - H / 2, H, 1)   -- 1 = DIR_DOWN
+    return { { x = hx, y = hy, w = hw, h = hh } }
 end
 
 function SpikeFall:isBodyDisabled() return true end
@@ -97,7 +91,7 @@ end
 function SpikeFall:render(camX, camY)
     local st, k, alpha = self.state, 1, 1
     local H  = half()
-    local x0 = math.floor(self.x - camX - TILE_PX / 2)
+    local x0 = math.floor(self.x - camX - H / 2)
     local y0 = math.floor(self.y - camY - self.outerH / 2)
     if st == 'shake' then x0 = x0 + math.floor(math.sin(self.deadTimer * 80) * 3) end
     if st == 'vanish' then alpha = 1 - self.deadTimer / VANISH end
@@ -107,14 +101,15 @@ function SpikeFall:render(camX, camY)
     love.graphics.translate(0, y0)
     love.graphics.scale(1, k)
     drawDownSpike(x0, 0, H, alpha)
-    drawDownSpike(x0 + H, 0, H, alpha)
     love.graphics.pop()
     love.graphics.setColor(1, 1, 1, 1)
 end
 
 return {
-    name = 'spikefall', label = 'Pinchos que caen', category = 'Trampas',
+    name = 'spikefall', label = 'Pincho que cae', category = 'Trampas',
     class = SpikeFall,
+    placement = 'sub',              -- como los pinchos: en subceldas
+    ceilingOnly = true,             -- solo colgando de un bloque sólido
     hide = { 'movement', 'attach', 'speed', 'startDir', 'patrol', 'turnAtEdges', 'bobAmp', 'pauses',
              'onTouch', 'stompable', 'points', 'dropOnSight', 'detectRange', 'respawn' },
     props = {
