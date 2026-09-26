@@ -13,14 +13,12 @@ Thumbs.db
 *.swp
 *~
 
-resources/
-
 # vscode/editor settings
 .vscode/
 .idea/
 
-# love-android (ignoring android build files/downloads)
-love-online-game/resources/android/love-android/
+# LÖVE para Windows: love.exe sí se versiona (lo necesita `make win64`)
+!resources/win64/love/love.exe
 
 # Ignore memory files for AI
 MEMORY.md

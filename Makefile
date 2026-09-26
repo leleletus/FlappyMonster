@@ -9,6 +9,8 @@
 #   make lovefile  → solo el .love (portátil, corre con cualquier LÖVE)
 #   make win64     → ejecutable Windows 64-bit
 #   make switch    → NRO (Homebrew Launcher)
+#   make android   → APK debug (usa el submódulo love-android)
+#   make android-reset → limpia los cambios del build dentro de love-android
 #   make clean     → borra todo el directorio build/
 #
 # Estructura esperada de resources/:
@@ -146,45 +148,48 @@ switch: lovefile
 	@echo "    Copiá el NRO a la SD: /switch/$(GAME_LOWER)/$(GAME).nro"
 
 # ── Android ───────────────────────────────────────────────────────────────────
-# Requiere:
-# 1. Instalar Android Studio (con SDK y NDK descargados) y Java JDK.
-# 2. Clonar el repositorio oficial (automatizado en el comando).
+# Requiere Android SDK + NDK y un JDK. Definí ANDROID_HOME con la ruta del SDK
+# (por defecto ~/Android/Sdk).
+#
+# resources/android/love-android es un submódulo git (love2d/love-android 11.5a).
+# No se modifica a mano: todo lo propio del juego vive en resources/android/overlay/
+# (misma estructura de carpetas) y se copia encima antes de compilar.
+# `make android-reset` deja el submódulo limpio otra vez.
+LOVE_ANDROID := resources/android/love-android
+ANDROID_HOME ?= $(HOME)/Android/Sdk
+
 android: lovefile
 	@echo "━━━ [ANDROID] Compilando APK para Android ━━━"
-	@if [ ! -d "resources/android/love-android" ]; then \
-		echo "Clonando repositorio oficial de love-android (versión 11.5a)..."; \
-		git clone -b 11.5a --recurse-submodules https://github.com/love2d/love-android resources/android/love-android; \
-		echo "sdk.dir=C:/Users/djver/AppData/Local/Android/Sdk" > resources/android/love-android/local.properties; \
+	@if [ ! -f "$(LOVE_ANDROID)/gradlew" ] || [ ! -f "$(LOVE_ANDROID)/love/src/jni/love/Android.mk" ]; then \
+		echo "Descargando submódulo love-android (y LÖVE)..."; \
+		git submodule update --init --recursive $(LOVE_ANDROID); \
 	fi
+	@if [ ! -f "$(LOVE_ANDROID)/local.properties" ]; then \
+		echo "sdk.dir=$(ANDROID_HOME)" > $(LOVE_ANDROID)/local.properties; \
+	fi
+
 	@echo "1. Copiando .love a los assets de Android..."
-	@mkdir -p resources/android/love-android/app/src/embed/assets
-	@cp $(BUILD_DIR)/lovefile/$(GAME_LOWER).love resources/android/love-android/app/src/embed/assets/game.love
+	@mkdir -p $(LOVE_ANDROID)/app/src/embed/assets
+	@cp $(BUILD_DIR)/lovefile/$(GAME_LOWER).love $(LOVE_ANDROID)/app/src/embed/assets/game.love
 
-	@echo "1.5. Configurando nombre de la App, Icono y Application ID..."
-	@mkdir -p resources/android/love-android/app/src/embed/res/values
-	@mkdir -p resources/android/love-android/app/src/embed/res/drawable
-	@echo '<?xml version="1.0" encoding="utf-8"?><resources><string name="app_name">Flappy Monster</string></resources>' > resources/android/love-android/app/src/embed/res/values/strings.xml
-	@mkdir -p resources/android/love-android/app/src/main/res/values
-	@echo '<?xml version="1.0" encoding="utf-8"?><resources><string name="app_name">Flappy Monster</string></resources>' > resources/android/love-android/app/src/main/res/values/strings.xml
-	@cp resources/android/icon.jpg resources/android/love-android/app/src/embed/res/drawable/app_icon.jpg
-	@sed -i 's/android:icon="[^"]*"/android:icon="@drawable\/app_icon"/g' resources/android/love-android/app/src/main/AndroidManifest.xml
-	@sed -i 's/android:roundIcon="[^"]*"/android:roundIcon="@drawable\/app_icon"/g' resources/android/love-android/app/src/main/AndroidManifest.xml 2>/dev/null || true
-	@sed -i 's/android:label="[^"]*"/android:label="Flappy Monster"/g' resources/android/love-android/app/src/main/AndroidManifest.xml
-	@sed -i 's/android:screenOrientation="[^"]*"/android:screenOrientation="sensorLandscape"/g' resources/android/love-android/app/src/main/AndroidManifest.xml
-	@sed -i 's/applicationId "org.love2d.android"/applicationId "com.mati.flappymonster"/g' resources/android/love-android/app/build.gradle 2>/dev/null || true
-	@sed -i 's/applicationId = "org.love2d.android"/applicationId = "com.mati.flappymonster"/g' resources/android/love-android/app/build.gradle 2>/dev/null || true
-
-	@echo "1.6. Actualizando Gradle para soportar Java 21..."
-	@sed -i 's/gradle-[0-9.]*-bin\.zip/gradle-8.7-bin.zip/g' resources/android/love-android/gradle/wrapper/gradle-wrapper.properties 2>/dev/null || true
-	@sed -i 's/gradle-[0-9.]*-all\.zip/gradle-8.7-bin.zip/g' resources/android/love-android/gradle/wrapper/gradle-wrapper.properties 2>/dev/null || true
+	@echo "1.5. Aplicando overlay (nombre, icono, Application ID, Gradle 8.7)..."
+	@cp -r resources/android/overlay/. $(LOVE_ANDROID)/
+	@mkdir -p $(LOVE_ANDROID)/app/src/embed/res/drawable
+	@cp resources/android/icon.jpg $(LOVE_ANDROID)/app/src/embed/res/drawable/app_icon.jpg
 
 	@echo "2. Compilando con Gradle (esto puede tardar)..."
-	@cd resources/android/love-android && ./gradlew assembleEmbedNoRecordDebug -Dorg.gradle.jvmargs="-Xmx8g"
+	@cd $(LOVE_ANDROID) && ./gradlew assembleEmbedNoRecordDebug -Dorg.gradle.jvmargs="-Xmx8g"
 
 	@echo "3. Copiando APK generado a release/..."
 	@mkdir -p $(RELEASE_DIR)
-	@find resources/android/love-android/app/build/outputs/apk/ -name "*debug.apk" -exec cp {} $(RELEASE_DIR)/$(GAME_LOWER)-android-debug.apk \;
+	@find $(LOVE_ANDROID)/app/build/outputs/apk/ -name "*debug.apk" -exec cp {} $(RELEASE_DIR)/$(GAME_LOWER)-android-debug.apk \;
 	@echo "✓ $(RELEASE_DIR)/$(GAME_LOWER)-android-debug.apk"
+
+# Descarta lo que el build copió dentro del submódulo (conserva local.properties).
+android-reset:
+	@git -C $(LOVE_ANDROID) checkout -- .
+	@git -C $(LOVE_ANDROID) clean -fdq -e local.properties
+	@echo "✓ love-android limpio"
 
 # ── Limpieza ──────────────────────────────────────────────────────────────────
 clean:
@@ -192,4 +197,4 @@ clean:
 	@rm -rf $(BUILD_DIR)
 	@echo "✓ Listo"
 
-.PHONY: all desktop console mobile lovefile win64 switch android clean
+.PHONY: all desktop console mobile lovefile win64 switch android android-reset clean

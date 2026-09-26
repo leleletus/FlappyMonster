@@ -1,0 +1,6 @@
+[submodule "resources/android/love-android"]
+	path = resources/android/love-android
+	url = https://github.com/love2d/love-android
+	branch = 11.x
+	# El build copia archivos dentro (resources/android/overlay/); no son cambios reales.
+	ignore = dirty
