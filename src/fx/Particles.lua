@@ -2,7 +2,8 @@
 -- Partículas visuales pixel art (solo cliente; el servidor no dibuja).
 --   Particles.emit(kind, x, y, opts)   en coordenadas de mundo
 --   Particles.update(dt)  /  Particles.render(camX, camY)  /  Particles.clear()
--- Tipos: 'gp_land', 'gp_start', 'block_break', 'spawn', 'oneup', 'spike_land'
+-- Tipos: 'gp_land', 'gp_start', 'block_break', 'spawn', 'oneup', 'spike_land',
+--        'spike_pop'
 -- (otros nombres no hacen nada)
 
 local Particles = {}
@@ -75,9 +76,28 @@ function Particles.emit(kind, x, y, opts)
                   size = 4, col = {1, 1, 1}, implode = true, sx = x + math.cos(a) * r, sy = y + math.sin(a) * r })
         end
     elseif kind == 'spike_land' then
-        for i = 1, 8 do
-            add({ x = x + rnd(-20, 20), y = y, vx = rnd(-120, 120), vy = -rnd(60, 200), g = 900,
-                  life = 0.4, size = 4, col = {0.85, 0.85, 0.85} })
+        -- Se clava: tierra saltando a los lados, chispas y un poco de polvo
+        for i = 1, math.random(10, 14) do
+            local dir = (i % 2 == 0) and 1 or -1
+            add({ x = x + dir * rnd(2, 12), y = y - rnd(0, 4), vx = dir * rnd(60, 260), vy = -rnd(120, 380),
+                  g = rnd(1100, 1500), life = rnd(0.35, 0.7), size = math.random(1, 2) * 3,
+                  col = ({ {0.45, 0.33, 0.22}, {0.6, 0.45, 0.3}, {0.35, 0.25, 0.17} })[math.random(3)] })
+        end
+        for i = 1, 5 do
+            local a = rnd(-math.pi * 0.9, -math.pi * 0.1)
+            add({ x = x, y = y - 4, vx = math.cos(a) * rnd(160, 320), vy = math.sin(a) * rnd(160, 320),
+                  g = 600, life = rnd(0.2, 0.35), size = 5, col = {1, 1, 0.85}, star = true })
+        end
+        for i = 1, 6 do
+            add({ x = x + rnd(-18, 18), y = y - rnd(0, 6), vx = rnd(-50, 50), vy = -rnd(10, 60), g = -20,
+                  life = rnd(0.5, 0.9), size = math.random(2, 3) * 3, col = {0.85, 0.8, 0.72}, drag = 2, dust = true })
+        end
+    elseif kind == 'spike_pop' then
+        -- El Crabby arranca su pincho del suelo: tierra hacia arriba
+        for i = 1, 12 do
+            add({ x = x + rnd(-10, 10), y = y, vx = rnd(-160, 160), vy = -rnd(200, 460), g = 1300,
+                  life = rnd(0.4, 0.8), size = math.random(1, 2) * 3,
+                  col = ({ {0.45, 0.33, 0.22}, {0.6, 0.45, 0.3} })[math.random(2)] })
         end
     end
 end

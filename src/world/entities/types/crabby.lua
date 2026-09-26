@@ -115,10 +115,15 @@ local function spikeDims()
     return 9 * GUMMY_SCALE, 9 * GUMMY_SCALE, 7 * GUMMY_SCALE, 8 * GUMMY_SCALE  -- w, maxH, hitW, hitMaxH
 end
 
--- Punta del pincho (boca abajo): pies arriba, cabeza abajo, pincho debajo
+-- Base del pincho (boca abajo): pies arriba, cabeza abajo y el pincho debajo.
+-- Se mide siempre con el sprite escondido, así el pincho no se mueve aunque
+-- cambie el sprite: clavado, el cangrejo "sale" hacia arriba desde el pincho.
+local function dropSpikeBaseY(self)
+    return self.y - self.sprH / 2 + imgHid:getHeight() * GUMMY_SCALE
+end
 local function dropTipY(self)
     local _, maxH = spikeDims()
-    return self.y - self.sprH / 2 + (self.currentImg or imgHid):getHeight() * GUMMY_SCALE + maxH
+    return dropSpikeBaseY(self) + maxH
 end
 
 function Crabby:updateDrop(dt, level)
@@ -151,6 +156,7 @@ function Crabby:updateDrop(dt, level)
             -- Para pisotearlo cuenta como "de suelo" (se le pisa desde arriba)
             self.flipped = false
             Sound.play('spikeHit')
+            Entity.emitFx('spike_land', self.x, top)
         elseif self.y > level.heightPx + TILE_PX * 4 then
             self.alive = false
         end
@@ -171,6 +177,8 @@ function Crabby:updateDrop(dt, level)
             self.vy = -420
             self.facing = -self.facing
             self.onGround = false
+            Sound.play('crabPop')
+            Entity.emitFx('spike_pop', self.x, dropTipY(self) - 8)
         end
     elseif st == 'drop_getup' then
         self.spikeProgress = math.max(0, 1 - t / GETUP_TIME)
@@ -313,17 +321,6 @@ local function drawSpike(cx, baseY, sH, dir)
     love.graphics.polygon('line', cx, tipY, cx - halfW, baseY, cx + halfW, baseY)
 end
 
--- Pincho clavado: solo se ve la parte fuera del suelo (trapecio)
-local function drawStuckSpike(cx, baseY, len, embed)
-    local halfW = spikeDims() / 2
-    local bw    = halfW * embed          -- ancho donde entra en el suelo
-    local by    = baseY + len
-    love.graphics.setColor(0.92, 0.92, 0.92, 1)
-    love.graphics.polygon('fill', cx - halfW, baseY, cx + halfW, baseY, cx + bw, by, cx - bw, by)
-    love.graphics.setColor(0.55, 0.55, 0.60, 0.8)
-    love.graphics.polygon('line', cx - halfW, baseY, cx + halfW, baseY, cx + bw, by, cx - bw, by)
-end
-
 function Crabby:render(camX, camY)
     local img = self.currentImg or imgIdle2
     local st  = self.state
@@ -342,6 +339,12 @@ function Crabby:render(camX, camY)
     local feetY = flipped and math.floor(self.y - camY - self.sprH / 2)
                           or math.floor(self.y - camY + self.sprH / 2)
     local spriteVisH = ih * math.abs(scaleY)
+    if stuck then
+        -- El pincho queda fijo; la cabeza del cangrejo se apoya en su base y
+        -- el cuerpo crece hacia arriba según el sprite de cada momento
+        local baseY = math.floor(dropSpikeBaseY(self) - camY)
+        feetY = baseY - spriteVisH
+    end
 
     -- Levantándose: gira 180° alrededor de su centro
     local rot = 0
@@ -353,8 +356,9 @@ function Crabby:render(camX, camY)
     end
 
     if stuck then
+        -- Entero, igual que un pincho que cae clavado (la punta dentro del suelo)
         local _, maxH = spikeDims()
-        drawStuckSpike(drawX, feetY + spriteVisH, maxH * (1 - STUCK_EMBED), STUCK_EMBED)
+        drawSpike(math.floor(self.x - camX), feetY + spriteVisH, maxH, 1)
     elseif self.spikeProgress > 0 then
         local _, maxH = spikeDims()
         local sH = maxH * self.spikeProgress

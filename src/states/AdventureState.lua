@@ -4,6 +4,7 @@ local BaseState       = require 'src/BaseState'
 local Level           = require 'src/world/Level'
 local PlayerAdventure = require 'src/entities/PlayerAdventure'
 local Entities        = require 'src/world/Entities'
+local Entity          = require 'src/world/entities/Entity'
 local Particles       = require 'src/fx/Particles'
 
 local AdventureState = BaseState:new()
@@ -67,6 +68,7 @@ function AdventureState:enter(args)
         Particles.emit(kind, x, y)
         if kind == 'block_break' then Sound.play('blockBreak') end
     end
+    Entity.fx = Particles.emit                 -- impactos de pinchos que caen...
 
     -- Instanciar entidades (enemigos, NPCs) desde el catálogo
     self.enemies = {}

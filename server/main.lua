@@ -1431,6 +1431,12 @@ function love.load()
         end
     end
     Entities        = require 'src/world/Entities'
+    -- Efectos de las entidades (pinchos que se clavan...): para todos
+    require('src/world/entities/Entity').fx = function(kind, x, y)
+        if _currentSim then
+            pushEvent(_currentSim, { type='fx', kind=kind, x=round(x), y=round(y) })
+        end
+    end
 
     log("Entidades de simulacion cargadas.")
     if HEADLESS then

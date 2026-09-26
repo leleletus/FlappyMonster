@@ -123,6 +123,13 @@ function Entity.create(cls, data)
     return e
 end
 
+-- Efectos visuales de las entidades (impactos...). El juego pone aquí quién
+-- los dibuja: partículas en un jugador; el servidor los reenvía como eventos.
+Entity.fx = nil
+function Entity.emitFx(kind, x, y)
+    if Entity.fx then Entity.fx(kind, x, y) end
+end
+
 local SPAWN_ANIM = 0.7    -- s de la animación de reaparición
 local KNOCK_VX   = 520    -- empujón de un ground pound cercano
 local KNOCK_HOP  = 360

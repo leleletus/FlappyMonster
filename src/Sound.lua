@@ -20,7 +20,7 @@ local GAIN = {
     blockBreak   = 1.8,  checkpoint = 1.9,  collect    = 2.5,  gpImpact   = 1.6,
     gpStart      = 2.4,  headBump   = 2.0,  oneUp      = 2.0,  respawnFx  = 2.2,
     spikeShake   = 2.8,  stunned    = 2.5,  tick       = 1.8,  finish     = 1.2,
-    sadtrombone  = 1.2,
+    sadtrombone  = 1.2,  crabPop    = 2.0,
 }
 Sound.GAIN = GAIN
 
@@ -133,6 +133,10 @@ function Sound.load()
     sfx('spikeShake', { {0.35, 3000, 2000, wave='noise', vol=0.12} })
     sfx('respawnFx',  { {0.25, 400, 1400, wave='tri', vol=0.25} })
     sfx('stunned',    { {0.3, 1200, 800, wave='square', vol=0.1} })
+    -- "¡Plop-boing!": el Crabby arranca su pincho del suelo
+    sfx('crabPop',    { {0.04, 1800, 300, wave='noise', vol=0.3}, {0.09, 220, 880, wave='square', vol=0.14},
+                        {0.07, 880, 520, wave='tri', vol=0.35}, {0.07, 520, 760, wave='tri', vol=0.3},
+                        {0.1, 760, 600, wave='tri', vol=0.25} })
     local G4, C5, E5, G5, C6 = 392, 523.25, 659.25, 783.99, 1046.5
     synth('fanfare', { {G4,.09},{C5,.09},{E5,.09},{G5,.09},{0,.05},{E5,.08},{G5,.08},{C6,.55} }, 0.22)
     synth('finish',  { {C5,.07},{E5,.07},{G5,.07},{C6,.22} }, 0.2)

@@ -93,6 +93,8 @@ function OnlineAdventureState:enter(args)
     PlayerAdventure.fx = function(kind, x, y)
         if kind ~= 'block_break' then Particles.emit(kind, x, y) end
     end
+    -- Las entidades las simula el servidor: sus efectos llegan como eventos 'fx'
+    require('src/world/entities/Entity').fx = nil
 
     -- Mundo provisional hasta que llegue game_init con el nivel real
     self:_buildWorld(nil)

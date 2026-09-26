@@ -52,6 +52,7 @@ function SpikeFall:updateCustom(dt, level)
             self.y = top - self.outerH / 2 + self.outerH * EMBED
             self.state, self.deadTimer = 'stuck', 0
             Sound.play('spikeHit')
+            Entity.emitFx('spike_land', self.x, top)
         else
             self.y = ny
         end
