@@ -5,8 +5,10 @@
 --    servidor) + reconciliación con el último input confirmado (Predictor).
 --  * Otros jugadores, enemigos y burbujas: interpolación entre snapshots
 --    reales con un pequeño retardo adaptativo (SnapshotBuffer).
---  * Eventos (puntos, sonidos, game over): canal fiable, sincronizados con el
---    tick en que ocurrieron.
+--  * Eventos (puntos, sonidos, meta, fin de ronda): canal fiable,
+--    sincronizados con el tick en que ocurrieron.
+--  * El nivel y el modo de juego (objetivo) llegan en game_init: el cliente
+--    no necesita tener el archivo del nivel.
 
 local BaseState            = require 'src/BaseState'
 local Level                = require 'src/world/Level'
@@ -18,6 +20,8 @@ local Protocol             = require 'src/network/Protocol'
 local Predictor            = require 'src/network/Predictor'
 local SnapshotBuffer       = require 'src/network/SnapshotBuffer'
 local PixelIcons           = require 'src/ui/PixelIcons'
+local Modes                = require 'src/world/Modes'
+local json                 = require 'libs/json'
 
 local OnlineAdventureState = BaseState:new()
 
@@ -82,53 +86,40 @@ function OnlineAdventureState:enter(args)
     args = args or {}
     self.currentRoom = args.room or {}
 
-    -- Cargar nivel solo para renderizado
-    self.levelPath = 'assets/levels/nivel01.json'
-    self.level     = Level.new(self.levelPath)
-
-    -- Burbujas de oxígeno controladas por el servidor (desactiva spawn local)
-    self.level.disableOxySpawn = true
-
-    -- Jugador local (predicho). Se posiciona al recibir game_init.
-    local sx, sy   = self.level:getSpawnPx()
-    self.localPa   = PlayerAdventure:new(sx, sy)
-    self.localPa.lives = 3
+    -- Mundo provisional hasta que llegue game_init con el nivel real
+    self:_buildWorld(nil)
     self.localPaInit   = false
     self.predictor     = nil
     self.simAccum      = 0
-    self.renderX, self.renderY = sx, sy
     self.audioDrowning = false
 
     -- Red
     self.myIdx       = nil
     self.roster      = {}        -- [idx] = { id, name, color }
+    self.rosterById  = {}        -- [id]  = { id, name, color }
     self.snapBuf     = nil
     self.pendingEvents = {}      -- eventos de otros esperando su tick de render
     self.pendingJump   = false   -- "recién presionado" acumulado hasta el próximo tick
     self.pendingCrouch = false
 
-    -- Game over
+    -- Modo de juego (objetivo de la ronda) y su estado para el HUD
+    self.mode        = Modes.get(self.currentRoom.mode) or Modes.get(Modes.DEFAULT)
+    self.modeHud     = nil       -- datos del modo en cada snapshot (snap.md)
+    self.introT      = 0         -- cartel de presentación del modo
+    self.banners     = {}        -- avisos grandes (llegadas a la meta...)
+
+    -- Fin de ronda: breve cierre en la partida y luego pantalla de resultados
     self.showGameOver       = false
+    self.roundEnd           = nil
     self.gameOverTimer      = 0
     self.gameOverMusicPitch = nil
-
-    -- Rebote local (predicción para sentir el bounce sin latencia)
-    self.localBounceCooldown = {}   -- [enemyIdx] = timer restante
-
-    -- Crear renderers de enemigos desde los datos del nivel
-    -- El servidor controla su estado; el cliente solo los dibuja
-    self.enemyRenderers = {}
-    for i, placement in ipairs(self.level.entities) do
-        local e = Entities.create(placement)
-        if e then self.enemyRenderers[i] = e end
-    end
 
     -- Jugadores remotos: [idx] = OnlinePlayer (excluye al propio)
     self.remotePlayers = {}
 
     -- Datos propios para el HUD (del snapshot más reciente)
     self.ownData = {
-        lives=3, hp=3, hpMax=3, score=0, isSpectator=false,
+        lives=3, hp=3, hpMax=3, score=0, isSpectator=false, finished=false, place=0,
     }
 
     -- Cámara
@@ -164,6 +155,36 @@ function OnlineAdventureState:enter(args)
     Sound.playMusic('level')
 end
 
+-- (Re)construye el nivel, los renderers de entidades y el jugador local.
+-- `data` = tabla del nivel (del servidor); nil = nivel por defecto local.
+function OnlineAdventureState:_buildWorld(data)
+    local level
+    if data then
+        local ok, lv = pcall(Level.fromData, data)
+        if ok then level = lv else print('[online] nivel del servidor invalido: ' .. tostring(lv)) end
+    end
+    self.level = level or Level.new('assets/levels/nivel01.json')
+
+    -- Burbujas de oxígeno controladas por el servidor (desactiva spawn local)
+    self.level.disableOxySpawn = true
+
+    -- Jugador local (predicho). Se posiciona al recibir game_init.
+    local sx, sy   = self.level:getSpawnPx()
+    self.localPa   = PlayerAdventure:new(sx, sy)
+    self.localPa.lives = 3
+    self.renderX, self.renderY = sx, sy
+
+    -- Rebote local (predicción para sentir el bounce sin latencia)
+    self.localBounceCooldown = {}   -- [enemyIdx] = timer restante
+
+    -- Renderers de entidades: el servidor controla su estado, aquí solo se dibujan
+    self.enemyRenderers = {}
+    for i, placement in ipairs(self.level.entities) do
+        local e = Entities.create(placement)
+        if e then self.enemyRenderers[i] = e end
+    end
+end
+
 function OnlineAdventureState:exit()
     NC:off("s"); NC:off("ev"); NC:off("game_init")
     NC.pendingGameInit = nil
@@ -175,6 +196,8 @@ function OnlineAdventureState:_setupHandlers()
     NC:on("ev", function(data) self:_onEvents(data) end)
     NC:on("room_update", function(data)
         self.currentRoom = data
+        -- Tras el fin de ronda la sala vuelve a WAITING: eso lo gestiona el
+        -- cierre (y la pantalla de resultados), no se salta directo al lobby.
         if data.state == "WAITING" and not self.showGameOver then
             gStateMachine:change('online_room', { room=data })
         end
@@ -199,11 +222,24 @@ function OnlineAdventureState:_onGameInit(data)
     if self.localPaInit or type(data) ~= 'table' then return end
     if not Protocol.isValidOwnState(data.own) then return end
 
+    -- Nivel y modo enviados por el servidor
+    if type(data.level) == 'string' then
+        local ok, lv = pcall(json.decode, data.level)
+        if ok and type(lv) == 'table' then self:_buildWorld(lv) end
+    end
+    self.mode   = Modes.get(data.mode) or self.mode
+    self.introT = 0
+
     self.myIdx = data.idx
     for _, r in ipairs(data.roster or {}) do
         self.roster[r.idx] = r
+        if r.id then self.rosterById[r.id] = r end
         if r.idx ~= self.myIdx then
             self.remotePlayers[r.idx] = OnlinePlayer:new(r.id, r.name, r.color)
+        else
+            -- Tras llegar a la meta el servidor deja de simularnos: nos
+            -- dibujamos como "fantasma" en la meta con los datos del snapshot
+            self.selfGhost = OnlinePlayer:new(r.id, r.name, r.color)
         end
     end
 
@@ -244,7 +280,11 @@ function OnlineAdventureState:_onSnapshot(snap)
         self.ownData.hp          = mine[8]
         self.ownData.score       = mine[9]
         self.ownData.isSpectator = Protocol.band(mine[6], Protocol.PF_SPECTATOR) ~= 0
-        if self.ownData.isSpectator and not wasSpec and not self.showGameOver then
+        self.ownData.finished    = Protocol.band(mine[6], Protocol.PF_FINISHED) ~= 0
+        self.ownData.place       = mine[12] or 0
+        -- Quien llega a la meta también deja de jugar, pero no está "eliminado"
+        if self.ownData.isSpectator and not wasSpec and not self.showGameOver
+           and not self.ownData.finished then
             self.specOverlay = true
             self.specSel     = SPEC_WAIT
             Sound.stopTracked('drowning')
@@ -252,6 +292,7 @@ function OnlineAdventureState:_onSnapshot(snap)
         end
     end
     if type(snap.lt) == 'number' then self.levelTime = snap.lt / 100 end
+    self.modeHud = type(snap.md) == 'table' and snap.md or nil
 
     -- Reconciliar la predicción local
     if snap.a and snap.o and self.predictor and not self.ownData.isSpectator then
@@ -306,10 +347,20 @@ function OnlineAdventureState:_applyInterpolation()
                 dying       = Protocol.band(d[6], Protocol.PF_DYING) ~= 0,
                 isSpectator = Protocol.band(d[6], Protocol.PF_SPECTATOR) ~= 0,
                 lives=d[7], hp=d[8], score=d[9], drownPhase=Protocol.drownName(d[10]),
+                finished    = Protocol.band(d[6], Protocol.PF_FINISHED) ~= 0,
+                place       = d[12],
             })
         else
             rp.visible = false   -- salió de la partida
         end
+    end
+
+    -- Nosotros mismos, ya en la meta
+    local g, mine = self.selfGhost, b.byIdx[self.myIdx]
+    if g and mine and self.ownData.finished then
+        g.visible = true
+        g:applyData({ x=mine[2], y=mine[3], facing=mine[4], frame=mine[5], isSpectator=true,
+                      finished=true, place=mine[12], dying=false })
     end
 
     -- Enemigos
@@ -363,7 +414,7 @@ function OnlineAdventureState:_onEvents(data)
         if type(ev) == 'table' then
             -- Lo que le pasa al jugador propio o el fin de partida: ya.
             -- Lo del resto del mundo: cuando se dibuje ese tick.
-            if ev.type == 'game_over' or ev.playerId == NC.myId then
+            if ev.type == 'round_end' or ev.playerId == NC.myId then
                 self:_processEvent(ev)
             else
                 ev._wait = 0
@@ -399,10 +450,28 @@ function OnlineAdventureState:_processEvent(ev)
     elseif ev.type == 'air_collected' and ev.playerId == NC.myId then
         -- El servidor confirmó que recogimos una burbuja de oxígeno.
         Sound.play('airGasp')
-    elseif ev.type == 'game_over' then
+    elseif ev.type == 'finish' then
+        -- Alguien cruzó la meta (modo carrera)
+        local mine  = ev.playerId == NC.myId
+        local who   = self.rosterById[ev.playerId]
+        local place = tonumber(ev.place) or 0
+        if mine then
+            self:_addBanner('¡EN LA META!', place .. 'º lugar', {1, 0.85, 0.2})
+            Sound.play('finish')
+            Sound.stopTracked('drowning'); self.audioDrowning = false
+        else
+            self:_addBanner((who and who.name or '?') .. ' llegó a la meta',
+                            place == 1 and '¡Cuenta atrás de 15 s!' or (place .. 'º lugar'),
+                            who and who.color or {1, 1, 1}, true)
+            Sound.play('point')
+        end
+    elseif ev.type == 'round_end' then
+        if self.showGameOver then return end
         self.showGameOver        = true
+        self.roundEnd            = ev
         self.gameOverTimer       = 0
         self.specOverlay         = false
+        self.showPause           = false
         self.gameOverMusicPitch  = 1.0
         Sound.stopTracked('drowning')
         self.audioDrowning = false
@@ -446,6 +515,12 @@ function OnlineAdventureState:_updateCamera(dt)
 end
 
 -- ── Popups de puntos ─────────────────────────────────────────────────────────
+
+-- Aviso grande centrado (llegadas a la meta, etc.). `small` = versión discreta.
+function OnlineAdventureState:_addBanner(title, sub, color, small)
+    table.insert(self.banners, { title=title, sub=sub, color=color or {1,1,1}, small=small, t=0 })
+    if #self.banners > 3 then table.remove(self.banners, 1) end
+end
 
 function OnlineAdventureState:_spawnPopup(text, wx, wy)
     table.insert(self.popups, { text=text, wx=wx, wy=wy, timer=0 })
@@ -569,7 +644,9 @@ end
 
 -- ── Update ────────────────────────────────────────────────────────────────────
 
-local GAME_OVER_DUR = 3.5  -- segundos mostrando la pantalla de game over
+local GAME_OVER_DUR = 2.6  -- s de cierre en la partida antes de los resultados
+local INTRO_DUR     = 4.0  -- s del cartel de presentación del modo
+local BANNER_DUR    = 3.0
 
 function OnlineAdventureState:update(dt)
     -- ── Game Over ─────────────────────────────────────────────────────────────
@@ -584,11 +661,25 @@ function OnlineAdventureState:update(dt)
                 self.gameOverMusicPitch = 0
             end
         end
-        if self.gameOverTimer >= GAME_OVER_DUR and self.currentRoom then
-            Sound.playMusic('menus')
-            gStateMachine:change('online_room', { room=self.currentRoom })
+        -- El mundo sigue animándose de fondo durante el cierre
+        self.level:update(dt)
+        self.level:updateFoliage(dt)
+        if self.snapBuf then self.snapBuf:update(dt); self:_applyInterpolation() end
+        if self.gameOverTimer >= GAME_OVER_DUR then
+            Sound.setMusicPitch(1)
+            Sound.stopMusic()
+            gStateMachine:change('online_results', {
+                results = self.roundEnd, room = self.currentRoom, mode = self.mode and self.mode.id,
+            })
         end
         return
+    end
+
+    self.introT = self.introT + dt
+    for i = #self.banners, 1, -1 do
+        local b = self.banners[i]
+        b.t = b.t + dt
+        if b.t >= BANNER_DUR then table.remove(self.banners, i) end
     end
 
     -- ── Pausa: input del menú de pausa (el juego SIGUE corriendo) ───────────────
@@ -771,6 +862,12 @@ function OnlineAdventureState:render()
         if rp.visible then rp:render(self.camX, self.camY) end
     end
 
+    -- Jugador propio ya en la meta
+    if self.selfGhost and self.selfGhost.visible and self.ownData.finished then
+        self.selfGhost.isHost = (self.selfGhost.id == adminId)
+        self.selfGhost:render(self.camX, self.camY)
+    end
+
     -- Jugador propio via simulación local (posición interpolada + corrección suave)
     if self.localPaInit and not self.ownData.isSpectator then
         local pa = self.localPa
@@ -812,6 +909,7 @@ function OnlineAdventureState:render()
 
     -- Overlays
     if self.showPause then self:_renderPauseOverlay() end
+    self:_renderModeHUD()
     if self.ownData.isSpectator and not self.showGameOver then self:_renderSpectatorOverlay() end
 
     -- ── Game Over overlay ─────────────────────────────────────────────────────
@@ -822,24 +920,139 @@ function OnlineAdventureState:render()
 end
 
 function OnlineAdventureState:_renderGameOver()
-    local t = math.min(1, self.gameOverTimer / 0.4)  -- fade in
-    local a = t
-
-    love.graphics.setColor(0, 0, 0, 0.75 * a)
+    local t  = self.gameOverTimer
+    local a  = math.min(1, t / 0.35)
+    love.graphics.setColor(0, 0, 0, 0.55 * a)
     love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
 
-    love.graphics.setFont(FONT_BIG)
-    love.graphics.setColor(0, 0, 0, a)
-    love.graphics.printf('GAME OVER', 3, WINDOW_H/2 - 44, WINDOW_W, 'center')
-    love.graphics.setColor(1, 0.2, 0.2, a)
-    love.graphics.printf('GAME OVER', 0, WINDOW_H/2 - 46, WINDOW_W, 'center')
+    -- Franja que entra desde los lados con el título
+    local ease  = 1 - (1 - math.min(1, t / 0.45)) ^ 3
+    local bandH = 150
+    local by    = WINDOW_H / 2 - bandH / 2
+    local col   = self.mode and self.mode.color or {1, 0.85, 0.2}
+    love.graphics.setColor(0.04, 0.04, 0.07, 0.92)
+    love.graphics.rectangle('fill', WINDOW_W * (1 - ease) / 2, by, WINDOW_W * ease, bandH)
+    love.graphics.setColor(col[1], col[2], col[3], 0.9)
+    love.graphics.rectangle('fill', WINDOW_W * (1 - ease) / 2, by, WINDOW_W * ease, 4)
+    love.graphics.rectangle('fill', WINDOW_W * (1 - ease) / 2, by + bandH - 4, WINDOW_W * ease, 4)
 
-    local remaining = math.max(0, GAME_OVER_DUR - self.gameOverTimer)
-    love.graphics.setFont(FONT_SMALL)
-    love.graphics.setColor(1, 1, 1, a * 0.75)
-    love.graphics.printf(
-        'Volviendo a la sala en ' .. math.ceil(remaining) .. '...',
-        0, WINDOW_H/2 + 10, WINDOW_W, 'center')
+    local s   = 1 + 0.25 * math.max(0, 1 - t / 0.3)
+    local ta  = math.min(1, math.max(0, (t - 0.15) / 0.25))
+    love.graphics.setFont(FONT_BIG)
+    local title = '¡RONDA TERMINADA!'
+    love.graphics.push()
+    love.graphics.translate(WINDOW_W / 2, by + 52)
+    love.graphics.scale(s, s)
+    love.graphics.setColor(0, 0, 0, ta)
+    love.graphics.printf(title, -WINDOW_W / 2 + 3, -FONT_BIG:getHeight() / 2 + 3, WINDOW_W, 'center')
+    love.graphics.setColor(1, 0.95, 0.2, ta)
+    love.graphics.printf(title, -WINDOW_W / 2, -FONT_BIG:getHeight() / 2, WINDOW_W, 'center')
+    love.graphics.pop()
+
+    local reason = self.roundEnd and self.roundEnd.reasonText or ''
+    love.graphics.setFont(FONT_MED)
+    love.graphics.setColor(1, 1, 1, ta * 0.85)
+    love.graphics.printf(reason, 0, by + 96, WINDOW_W, 'center')
+end
+
+-- Presentación del modo, contador/objetivo y avisos grandes
+function OnlineAdventureState:_renderModeHUD()
+    local mode = self.mode
+    if not mode then return end
+    local col  = mode.color
+    local cx   = WINDOW_W / 2
+
+    -- Indicador permanente arriba al centro
+    local md = self.modeHud or {}
+    local label, big, urgent
+    if mode.id == 'hunt' and md.left then
+        label = 'MONSTRUOS: ' .. md.left
+    elseif mode.id == 'race' then
+        if md.cd then
+            local secs = md.cd / 100
+            big    = string.format('%d.%d', math.floor(secs), math.floor(secs * 10) % 10)
+            urgent = secs <= 5
+            label  = 'TIEMPO PARA LLEGAR'
+        else
+            label = '¡LLEGA A LA META!'
+        end
+    end
+    if label then
+        love.graphics.setFont(FONT_SMALL)
+        local iw, ih = PixelIcons.size(mode.icon or '')
+        local tw = FONT_SMALL:getWidth(label)
+        local w  = tw + (iw > 0 and iw * 2 + 10 or 0) + 24
+        local x  = math.floor(cx - w / 2)
+        love.graphics.setColor(0, 0, 0, 0.5)
+        love.graphics.rectangle('fill', x, 12, w, 28)
+        love.graphics.setColor(col[1], col[2], col[3], 0.8)
+        love.graphics.rectangle('line', x, 12, w, 28)
+        local tx = x + 12
+        if iw > 0 then PixelIcons.draw(mode.icon, tx, 26 - ih, 2); tx = tx + iw * 2 + 10 end
+        love.graphics.setColor(1, 1, 1, 0.95)
+        love.graphics.print(label, tx, 26 - FONT_SMALL:getHeight() / 2)
+    end
+    if big then
+        local pulse = urgent and (1 + 0.12 * math.abs(math.sin(love.timer.getTime() * 6))) or 1
+        love.graphics.setFont(FONT_BIG)
+        love.graphics.push()
+        love.graphics.translate(cx, 66)
+        love.graphics.scale(pulse * 1.4, pulse * 1.4)
+        local bw = FONT_BIG:getWidth(big)
+        love.graphics.setColor(0, 0, 0, 0.8)
+        love.graphics.print(big, -bw / 2 + 2, -FONT_BIG:getHeight() / 2 + 2)
+        if urgent then love.graphics.setColor(1, 0.25, 0.2, 1) else love.graphics.setColor(1, 0.95, 0.3, 1) end
+        love.graphics.print(big, -bw / 2, -FONT_BIG:getHeight() / 2)
+        love.graphics.pop()
+    end
+
+    -- Cartel de presentación: nombre del modo + objetivo
+    if self.introT < INTRO_DUR and not self.showGameOver then
+        local t  = self.introT
+        local a  = math.min(1, t / 0.3) * math.min(1, (INTRO_DUR - t) / 0.6)
+        local slide = (1 - math.min(1, t / 0.35)) ^ 3 * 60
+        local y  = WINDOW_H * 0.26 - slide
+        love.graphics.setColor(0, 0, 0, 0.6 * a)
+        love.graphics.rectangle('fill', 0, y - 14, WINDOW_W, 104)
+        love.graphics.setColor(col[1], col[2], col[3], a)
+        love.graphics.rectangle('fill', 0, y - 14, WINDOW_W, 3)
+        love.graphics.rectangle('fill', 0, y + 87, WINDOW_W, 3)
+        love.graphics.setFont(FONT_BIG)
+        love.graphics.setColor(0, 0, 0, a)
+        love.graphics.printf(mode.label, 3, y + 3, WINDOW_W, 'center')
+        love.graphics.setColor(col[1], col[2], col[3], a)
+        love.graphics.printf(mode.label, 0, y, WINDOW_W, 'center')
+        love.graphics.setFont(FONT_SMALL)
+        love.graphics.setColor(1, 1, 1, a * 0.9)
+        love.graphics.printf(mode.tagline, WINDOW_W * 0.15, y + 50, WINDOW_W * 0.7, 'center')
+    end
+
+    -- Avisos grandes
+    local y = WINDOW_H * 0.36
+    for _, b in ipairs(self.banners) do
+        local t = b.t
+        local a = math.min(1, t / 0.2) * math.min(1, (BANNER_DUR - t) / 0.5)
+        local s = 1 + 0.4 * math.max(0, 1 - t / 0.25)
+        local c = b.color
+        local font = b.small and FONT_MED or FONT_BIG
+        love.graphics.setFont(font)
+        love.graphics.push()
+        love.graphics.translate(cx, y)
+        love.graphics.scale(s, s)
+        love.graphics.setColor(0, 0, 0, a * 0.85)
+        love.graphics.printf(b.title, -WINDOW_W / 2 + 3, 3, WINDOW_W, 'center')
+        love.graphics.setColor(c[1], c[2], c[3], a)
+        love.graphics.printf(b.title, -WINDOW_W / 2, 0, WINDOW_W, 'center')
+        love.graphics.pop()
+        if b.sub then
+            love.graphics.setFont(FONT_SMALL)
+            love.graphics.setColor(0, 0, 0, a * 0.8)
+            love.graphics.printf(b.sub, 2, y + font:getHeight() + 10, WINDOW_W, 'center')
+            love.graphics.setColor(1, 1, 1, a)
+            love.graphics.printf(b.sub, 0, y + font:getHeight() + 8, WINDOW_W, 'center')
+        end
+        y = y + font:getHeight() + 40
+    end
 end
 
 -- ── HUD ───────────────────────────────────────────────────────────────────────
@@ -930,6 +1143,10 @@ function OnlineAdventureState:_renderHUD()
         if self.localPa and self.localPaInit then
             self.localPa:renderAirBar()
         end
+    elseif od.finished then
+        love.graphics.setFont(FONT_MED)
+        love.graphics.setColor(1, 0.85, 0.2, 0.95)
+        love.graphics.printf('META ' .. (od.place or 0) .. 'º', WINDOW_W-240, 20, 220, 'right')
     else
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(0.7, 0.7, 1, 0.8)
@@ -945,8 +1162,11 @@ function OnlineAdventureState:_renderHUD()
     -- Corona: tú eres el host (admin) de la sala
     if self.currentRoom and self.currentRoom.adminId == NC.myId then
         local tw = FONT_SMALL:getWidth('ONLINE: ' .. roomName)
-        local px = 2
-        PixelIcons.crown(WINDOW_W - 14 - tw - PixelIcons.CROWN_W * px - 8, WINDOW_H - 24, px)
+        local px = 3
+        -- Centrada verticalmente con la línea de texto
+        local textMidY = WINDOW_H - 22 + FONT_SMALL:getHeight() / 2
+        PixelIcons.crown(WINDOW_W - 14 - tw - PixelIcons.CROWN_W * px - 6,
+                         textMidY - PixelIcons.CROWN_H * px / 2, px)
     end
 
     -- Estadísticas de red (F1): ping, retardo de interpolación, correcciones
@@ -1016,9 +1236,15 @@ end
 -- ── Overlay espectador ────────────────────────────────────────────────────────
 
 function OnlineAdventureState:_renderSpectatorOverlay()
+    local finished = self.ownData.finished
     love.graphics.setFont(FONT_SMALL)
-    love.graphics.setColor(0.7, 0.7, 1, 0.8)
-    love.graphics.printf('ESPECTADOR', 0, WINDOW_H - 58, WINDOW_W, 'center')
+    if finished then
+        love.graphics.setColor(1, 0.85, 0.2, 0.9)
+        love.graphics.printf('¡LLEGASTE! Esperando al resto...', 0, WINDOW_H - 58, WINDOW_W, 'center')
+    else
+        love.graphics.setColor(0.7, 0.7, 1, 0.8)
+        love.graphics.printf('ESPECTADOR', 0, WINDOW_H - 58, WINDOW_W, 'center')
+    end
 
     if not self.specOverlay then
         love.graphics.setColor(1, 1, 1, 0.35)
@@ -1039,8 +1265,13 @@ function OnlineAdventureState:_renderSpectatorOverlay()
     love.graphics.rectangle('line', panelX+2, panelY+2, panelW-4, panelH-4)
 
     love.graphics.setFont(FONT_BIG)
-    love.graphics.setColor(0.7, 0.7, 1, 1)
-    love.graphics.printf('ELIMINADO', 0, panelY + 16, WINDOW_W, 'center')
+    if finished then
+        love.graphics.setColor(1, 0.85, 0.2, 1)
+        love.graphics.printf('EN LA META', 0, panelY + 16, WINDOW_W, 'center')
+    else
+        love.graphics.setColor(0.7, 0.7, 1, 1)
+        love.graphics.printf('ELIMINADO', 0, panelY + 16, WINDOW_W, 'center')
+    end
 
     local btnW, btnH = 260, 44
     local btnGap = 12

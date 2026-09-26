@@ -64,6 +64,8 @@ function OnlinePlayer:applyData(data)
     self.drownPhase  = data.drownPhase  or self.drownPhase
     self.isSpectator = data.isSpectator or false
     self.dying       = data.dying       or false
+    self.finished    = data.finished    or false
+    self.place       = data.place       or 0
     self.color       = data.color       or self.color
 
     self.renderX = self.x
@@ -82,8 +84,8 @@ function OnlinePlayer:render(camX, camY)
     if sx < -PLAYER_SCALE * 18 or sx > WINDOW_W + PLAYER_SCALE * 18 then return end
     if sy < -PLAYER_SCALE * 18 or sy > WINDOW_H + PLAYER_SCALE * 18 then return end
 
-    -- Alpha: espectadores son semi-transparentes
-    local alpha = self.isSpectator and 0.32 or 1.0
+    -- Alpha: espectadores son semi-transparentes (los que llegaron a la meta, menos)
+    local alpha = self.finished and 0.6 or (self.isSpectator and 0.32 or 1.0)
 
     -- Seleccionar sprite según frame / estado de muerte
     local img
@@ -123,12 +125,16 @@ function OnlinePlayer:render(camX, camY)
     -- Corona sobre el nombre si es el host de la sala
     if self.isHost then
         local px = 2
-        local cy = nameY - PixelIcons.CROWN_H * px - 4 - (self.isSpectator and 16 or 0)
+        local cy = nameY - PixelIcons.CROWN_H * px - 4 - (self.isSpectator and 18 or 0)
         PixelIcons.crown(sx - PixelIcons.CROWN_W * px / 2, cy, px, alpha)
     end
 
-    -- Indicador "SPEC" si está en modo espectador
-    if self.isSpectator then
+    -- Indicador "META nº" (llegó a la meta) o "SPEC" (eliminado)
+    if self.finished then
+        love.graphics.setFont(FONT_SMALL)
+        love.graphics.setColor(1, 0.85, 0.2, 0.95)
+        love.graphics.printf("META " .. self.place .. "º", sx - 60, nameY - 16, 120, 'center')
+    elseif self.isSpectator then
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(0.7, 0.7, 1, 0.7)
         love.graphics.printf("SPEC", sx - 40, nameY - 16, 80, 'center')

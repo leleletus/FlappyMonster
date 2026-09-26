@@ -22,6 +22,7 @@ local OnlineHubState              = require 'src/states/OnlineHubState'
 local OnlineRoomState             = require 'src/states/OnlineRoomState'
 local OnlineAdventureState        = require 'src/states/OnlineAdventureState'
 local OnlineErrorState            = require 'src/states/OnlineErrorState'
+local OnlineResultsState          = require 'src/states/OnlineResultsState'
 
 DEBUG_HITBOX = false   -- F1 para activar/desactivar hitboxes
 
@@ -60,6 +61,7 @@ function love.load()
         online_room        = function() return OnlineRoomState:new() end,
         online_adventure   = function() return OnlineAdventureState:new() end,
         online_error       = function() return OnlineErrorState:new() end,
+        online_results     = function() return OnlineResultsState:new() end,
     })
     gStateMachine:change('title')
 end

@@ -1,5 +1,6 @@
 -- Plataforma TRASPASABLE: se atraviesa subiendo y se baja manteniendo
--- agachado. Pasarela de madera delgada con tablones y flechas hacia abajo.
+-- agachado. Pasarela de madera delgada con tablones (naranja, distinta de
+-- la losa gris no traspasable).
 return {
     id = 10, name = 'platform_drop', label = 'Plataforma traspasable', category = 'Plataformas',
     collision = 'oneway', dropThrough = true, material = 'wood',
@@ -17,10 +18,5 @@ return {
         love.graphics.rectangle('fill', x, y, s, 3)
         love.graphics.setColor(0.45, 0.24, 0.05, 1)          -- sombra inferior
         love.graphics.rectangle('fill', x, y+visH-3, s, 3)
-        love.graphics.setColor(1.00, 0.80, 0.30, 0.85)       -- flechas "se puede bajar"
-        local ay = y + visH + 6
-        for _, cx in ipairs({ x + s*0.25, x + s*0.75 }) do
-            love.graphics.polygon('fill', cx-8, ay, cx+8, ay, cx, ay+8)
-        end
     end,
 }

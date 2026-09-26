@@ -15,7 +15,39 @@ local function load(name, path, stype)
     end
 end
 
+-- Jingles chiptune sintetizados por código (onda cuadrada): no necesitan
+-- archivos. notes = { {frecuencia Hz (0 = silencio), duración s}, ... }
+local function synth(name, notes, vol)
+    local ok, src = pcall(function()
+        local rate, total = 22050, 0
+        for _, n in ipairs(notes) do total = total + n[2] end
+        local sd = love.sound.newSoundData(math.floor(total * rate) + 1, rate, 16, 1)
+        local i = 0
+        for _, n in ipairs(notes) do
+            local len = math.floor(n[2] * rate)
+            for k = 0, len - 1 do
+                local v = 0
+                if n[1] > 0 then
+                    local t   = k / rate
+                    local f   = n[1] * (1 + 0.012 * math.sin(t * 38) * math.min(1, t * 4))  -- vibrato
+                    local env = math.min(1, k / 80) * math.min(1, (len - k) / 400)
+                    if len > rate * 0.3 then env = env * (1 - 0.6 * k / len) end
+                    v = ((t * f) % 1 < 0.5 and 1 or -1) * env * (vol or 0.25)
+                end
+                sd:setSample(i, v); i = i + 1
+            end
+        end
+        return love.audio.newSource(sd, 'static')
+    end)
+    if ok then sources[name] = src end
+end
+
 function Sound.load()
+    local G4, C5, E5, G5, C6 = 392, 523.25, 659.25, 783.99, 1046.5
+    synth('fanfare', { {G4,.09},{C5,.09},{E5,.09},{G5,.09},{0,.05},{E5,.08},{G5,.08},{C6,.55} }, 0.22)
+    synth('finish',  { {C5,.07},{E5,.07},{G5,.07},{C6,.22} }, 0.2)
+    synth('sadtrombone', { {392,.28},{370,.28},{349,.28},{330,.7} }, 0.2)
+    synth('tick', { {1318.5,.035} }, 0.12)
     load('dies',          'assets/sounds/dies.ogg',          'static')
     load('point',         'assets/sounds/point.ogg',         'static')
     load('decimal',       'assets/sounds/decimal.ogg',       'static')

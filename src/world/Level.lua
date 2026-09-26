@@ -375,6 +375,33 @@ function Level:liquidInBox(bx, by, bw, bh)
     return nil
 end
 
+-- ¿La caja toca algún tile con el trigger `name` (p. ej. 'finish')?
+-- Caja semiabierta como liquidInBox; respeta la hitbox del tile.
+function Level:triggerInBox(bx, by, bw, bh, name)
+    local T = TILE_PX
+    local c0, c1 = math.floor(bx / T) + 1, math.floor((bx + bw - EDGE_EPS) / T) + 1
+    local r0, r1 = math.floor(by / T) + 1, math.floor((by + bh - EDGE_EPS) / T) + 1
+    for r = r0, r1 do
+        for c = c0, c1 do
+            local t = self:getDef(c, r)
+            if t.trigger == name then
+                local hx, hy, hw, hh = TileTypes.worldHitbox(t, c, r)
+                if bx < hx + hw and bx + bw > hx and by < hy + hh and by + bh > hy then return true end
+            end
+        end
+    end
+    return false
+end
+
+-- Cuenta las celdas con cierto trigger (para saber qué modos admite un nivel)
+function Level:countTrigger(name)
+    local n = 0
+    for r = 1, self.tileH do for c = 1, self.tileW do
+        if self:getDef(c, r).trigger == name then n = n + 1 end
+    end end
+    return n
+end
+
 function Level:isInWater(bx, by, bw, bh)
     return self:liquidInBox(bx, by, bw, bh) ~= nil
 end

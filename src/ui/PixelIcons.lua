@@ -35,23 +35,69 @@ local function drawMatrix(m, colors, x, y, px, alpha)
     end
 end
 
+-- Otros iconos (modos de juego, resultados)
+local ICONS = {
+    crown = { m = CROWN, colors = CROWN_COLORS },
+    flag = {   -- bandera a cuadros (Carrera)
+        m = {
+            "PKWKWKWKW",
+            "PWKWKWKWK",
+            "PKWKWKWKW",
+            "PWKWKWKWK",
+            "P........",
+            "P........",
+            "P........",
+            "P........",
+            "p........",
+        },
+        colors = { P = {0.75,0.75,0.8}, p = {0.45,0.45,0.5}, K = {0.1,0.1,0.12}, W = {1,1,1} },
+    },
+    skull = {  -- calavera (Cazamonstruos)
+        m = {
+            "..WWWWW..",
+            ".WWWWWWW.",
+            "WWWWWWWWW",
+            "WKKWWWKKW",
+            "WKKWWWKKW",
+            "WWWWKWWWW",
+            ".WWWWWWW.",
+            "..WKWKW..",
+            "..sssss..",
+        },
+        colors = { W = {0.95,0.93,0.86}, K = {0.12,0.08,0.1}, s = {0.7,0.66,0.6} },
+    },
+}
+
 PixelIcons.CROWN_W, PixelIcons.CROWN_H = #CROWN[1], #CROWN
 
--- Dibuja la corona con su esquina superior izquierda en (x, y); px = tamaño
--- de cada píxel del icono.
-function PixelIcons.crown(x, y, px, alpha)
+-- Tamaño (en píxeles del icono) de un icono por nombre.
+function PixelIcons.size(name)
+    local ic = ICONS[name]
+    if not ic then return 0, 0 end
+    return #ic.m[1], #ic.m
+end
+
+-- Dibuja el icono `name` con su esquina superior izquierda en (x, y); px =
+-- tamaño de cada píxel del icono. Lleva sombra para leerse sobre cualquier fondo.
+function PixelIcons.draw(name, x, y, px, alpha)
+    local ic = ICONS[name]
+    if not ic then return end
     px = px or 2
-    -- Sombra desplazada para que se lea sobre cualquier fondo
-    for r, row in ipairs(CROWN) do
+    x, y = math.floor(x), math.floor(y)
+    for r, row in ipairs(ic.m) do
         for c = 1, #row do
             if row:sub(c, c) ~= '.' then
                 love.graphics.setColor(0, 0, 0, 0.45 * (alpha or 1))
-                love.graphics.rectangle('fill', math.floor(x) + c * px, math.floor(y) + r * px, px, px)
+                love.graphics.rectangle('fill', x + c * px, y + r * px, px, px)
             end
         end
     end
-    drawMatrix(CROWN, CROWN_COLORS, math.floor(x), math.floor(y), px, alpha)
+    drawMatrix(ic.m, ic.colors, x, y, px, alpha)
     love.graphics.setColor(1, 1, 1, 1)
+end
+
+function PixelIcons.crown(x, y, px, alpha)
+    PixelIcons.draw('crown', x, y, px, alpha)
 end
 
 return PixelIcons

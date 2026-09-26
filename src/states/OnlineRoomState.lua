@@ -5,6 +5,8 @@
 
 local BaseState       = require 'src/BaseState'
 local NC              = require 'src/network/NetworkClient'
+local Modes           = require 'src/world/Modes'
+local PixelIcons      = require 'src/ui/PixelIcons'
 local OnlineRoomState = BaseState:new()
 
 local imgBg = nil
@@ -84,6 +86,18 @@ function OnlineRoomState:_setupHandlers()
     end)
 end
 
+-- Recorta un texto para que quepa en `w` px con la fuente dada.
+local function fitText(font, text, w)
+    if font:getWidth(text) <= w then return text end
+    while #text > 1 and font:getWidth(text .. '..') > w do
+        text = text:sub(1, -2)
+        -- no dejar un carácter UTF-8 a medias
+        while #text > 0 and text:byte(-1) >= 0x80 and text:byte(-1) < 0xC0 do text = text:sub(1, -2) end
+        if #text > 0 and text:byte(-1) >= 0xC0 then text = text:sub(1, -2) end
+    end
+    return text .. '..'
+end
+
 -- Construye la lista dinámica de botones de acción según el estado actual.
 function OnlineRoomState:_buildActions()
     local room    = self.currentRoom
@@ -93,6 +107,11 @@ function OnlineRoomState:_buildActions()
                          color = self.isReady and {0.3,1,0.3} or {1,0.95,0.15} })
     if isAdmin then
         if room.state == "WAITING" then
+            -- El host elige el objetivo de la ronda y el nivel
+            local mode = Modes.get(room.mode)
+            table.insert(list, { id='mode',  label='MODO: ' .. (mode and mode.label or '?'),
+                                 color = mode and mode.color })
+            table.insert(list, { id='level', label=fitText(FONT_MED, 'NIVEL: ' .. (room.levelName or '---'), 470) })
             table.insert(list, { id='start', label='INICIAR PARTIDA', color={0.3,1,0.3} })
         else
             table.insert(list, { id='stop',  label='DETENER PARTIDA', color={1,0.55,0.2} })
@@ -106,6 +125,15 @@ function OnlineRoomState:_executeAction(id)
     if id == 'ready' then
         self.isReady = not self.isReady
         NC:send("set_ready", { ready = self.isReady })
+    elseif id == 'mode' then
+        -- Siguiente modo del catálogo (el servidor elige un nivel compatible)
+        local list, cur = Modes.list, 1
+        for i, m in ipairs(list) do if m.id == self.currentRoom.mode then cur = i end end
+        NC:send("set_mode", { mode = list[cur % #list + 1].id })
+    elseif id == 'level' then
+        local levels, cur = self.currentRoom.levels or {}, 0
+        for i, l in ipairs(levels) do if l.path == self.currentRoom.level then cur = i end end
+        if #levels > 1 then NC:send("set_level", { level = levels[cur % #levels + 1].path }) end
     elseif id == 'start' then
         NC:send("start_game", {})
     elseif id == 'stop' then
@@ -409,6 +437,58 @@ local function drawActionBtn(label, x, y, w, h, selected)
     end
 end
 
+-- Tarjeta con el modo elegido, su objetivo y el nivel. `bottom` = borde inferior.
+function OnlineRoomState:_renderModeCard(x, bottom, w, isAdmin)
+    local room = self.currentRoom or {}
+    local mode = Modes.get(room.mode)
+    if not mode then return end
+    local col  = mode.color
+    local pad  = 12
+    local _, tagLines = FONT_SMALL:getWrap(mode.tagline, w - 2 * pad)
+    local h    = pad + 28 + #tagLines * (FONT_SMALL:getHeight() + 6) + 8 + 18 + pad
+    local y    = bottom - h
+
+    love.graphics.setColor(col[1] * 0.15, col[2] * 0.15, col[3] * 0.15, 0.85)
+    love.graphics.rectangle('fill', x, y, w, h)
+    love.graphics.setColor(col[1], col[2], col[3], 0.8)
+    love.graphics.rectangle('line', x, y, w, h)
+    love.graphics.rectangle('fill', x, y, 4, h)
+
+    -- Icono + nombre del modo
+    local iw, ih = PixelIcons.size(mode.icon or '')
+    local tx = x + pad + 6
+    if iw > 0 then
+        PixelIcons.draw(mode.icon, tx, y + pad + 2, 2)
+        tx = tx + iw * 2 + 12
+    end
+    love.graphics.setFont(FONT_MED)
+    love.graphics.setColor(col[1], col[2], col[3], 1)
+    love.graphics.print(fitText(FONT_MED, mode.label, x + w - pad - tx), tx, y + pad + 3)
+
+    -- Objetivo
+    love.graphics.setFont(FONT_SMALL)
+    love.graphics.setColor(1, 1, 1, 0.75)
+    local ty = y + pad + 28
+    for _, line in ipairs(tagLines) do
+        love.graphics.print(line, x + pad + 6, ty)
+        ty = ty + FONT_SMALL:getHeight() + 6
+    end
+
+    -- Nivel
+    ty = ty + 8
+    if room.levelName then
+        love.graphics.setColor(1, 0.85, 0, 0.9)
+        love.graphics.print(fitText(FONT_SMALL, 'NIVEL: ' .. room.levelName, w - 2 * pad - 6), x + pad + 6, ty)
+    else
+        love.graphics.setColor(1, 0.35, 0.35, 0.95)
+        love.graphics.print('NINGUN NIVEL SIRVE PARA ESTE MODO', x + pad + 6, ty)
+    end
+    if not isAdmin then
+        love.graphics.setColor(1, 1, 1, 0.35)
+        love.graphics.printf('elige el host', x, ty, w - pad, 'right')
+    end
+end
+
 -- ── Render ────────────────────────────────────────────────────────────────────
 
 function OnlineRoomState:render()
@@ -573,6 +653,9 @@ function OnlineRoomState:render()
         local sel = (i == self.actionSel) and focused
         drawActionBtn(act.label, rightX, by, rightW, btnH, sel)
     end
+
+    -- Tarjeta del modo de juego (la ven todos)
+    self:_renderModeCard(rightX, navHintY - 12, rightW, isAdmin)
 
     -- Aviso de cómo navegar de vuelta a jugadores
     if self.focus == FOCUS_ACTIONS then

@@ -25,6 +25,7 @@ local TYPES = {
     'border',         -- 4
     'water',          -- 9
     'platform_drop',  -- 10
+    'finish',         -- 11
 }
 
 -- Ids 5-8 fueron pinchos por tile; hoy los pinchos son subceldas (TileCodec).

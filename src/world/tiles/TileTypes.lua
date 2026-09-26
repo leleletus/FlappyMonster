@@ -19,6 +19,8 @@
 --   enemySolid  los enemigos lo pisan/chocan (por defecto: collision ~= 'none')
 --
 --   material    nombre de material (Materials.lua): fricción, daño, líquido...
+--   trigger     nombre de evento al tocarlo (p. ej. 'finish'); lo consultan
+--               los modos de juego con Level:triggerInBox
 --   joinGroup   tiles del mismo grupo "se unen": no dibujan borde entre sí
 --               (ver TileTypes.edges). Los líquidos también ocultan bordes.
 --

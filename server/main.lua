@@ -23,6 +23,8 @@ local parentDir = love.filesystem.getSourceBaseDirectory():gsub("\\", "/")
 package.path = parentDir .. "/?.lua;" .. package.path
 
 local Protocol = require 'src/network/Protocol'
+local Modes    = require 'src/world/Modes'
+local json     = require 'libs/json'
 local TICK_DT        = Protocol.TICK_DT
 local SNAPSHOT_EVERY = Protocol.SNAPSHOT_EVERY
 local band           = Protocol.band
@@ -92,10 +94,12 @@ local _inp = Input.state
 
 -- Clases de entidades (cargadas en love.load).
 local Level, PlayerAdventure, Entities
+local buildResults   -- definida más abajo
 
 -- Constantes que deben coincidir con PlayerAdventure.lua
 local DROWN_TOTAL     = 20
-local LEVEL_PATH      = 'assets/levels/nivel01.json'
+local LEVELS_DIR      = 'assets/levels'
+local DEFAULT_LEVEL   = 'assets/levels/nivel01.json'
 local PLAYER_LIVES    = 3
 local SPAWN_STAGGER   = 48   -- px de separación horizontal entre jugadores al spawn
 local LEVEL_TIME_MAX  = 600
@@ -184,14 +188,84 @@ end
 --  Simulación de juego
 -- ─────────────────────────────────────────────────────────────────────────────
 
+-- ── Catálogo de niveles del servidor ────────────────────────────────────────
+-- Se escanea assets/levels (caché de 10 s: un nivel nuevo aparece sin
+-- reiniciar). Para cada nivel se calcula qué modos admite. Los clientes no
+-- necesitan tener el archivo: el nivel se les envía al empezar la partida.
+local levelCache, levelCacheT = nil, -1e9
+
+local function listLevelFiles()
+    local dir = parentDir .. '/' .. LEVELS_DIR
+    local cmd = (love.system.getOS() == 'Windows') and ('dir /b "' .. dir:gsub('/', '\\') .. '"')
+                or ('ls -1 "' .. dir .. '"')
+    local out = {}
+    local p = io.popen(cmd)
+    if p then
+        for line in p:lines() do
+            line = line:gsub('%s+$', '')
+            if line:match('^[%w%-_%.]+%.json$') and not line:match('^_') then out[#out+1] = line end
+        end
+        p:close()
+    end
+    table.sort(out)
+    return out
+end
+
+local function scanLevels(force)
+    local now = love.timer.getTime()
+    if levelCache and not force and now - levelCacheT < 10 then return levelCache end
+    local list = {}
+    for _, f in ipairs(listLevelFiles()) do
+        local path = LEVELS_DIR .. '/' .. f
+        local ok, lv = pcall(Level.new, path)
+        if ok then
+            local killable = 0
+            for _, e in ipairs(lv.entities) do if e.props.stompable then killable = killable + 1 end end
+            local info = { path = path, name = (lv.name and lv.name ~= '?') and lv.name or f:gsub('%.json$', ''),
+                           enemies = #lv.entities, killable = killable, finish = lv:countTrigger('finish'),
+                           modes = {} }
+            for _, m in ipairs(Modes.list) do
+                if m.requires(info) then info.modes[m.id] = true end
+            end
+            list[#list+1] = info
+        else
+            log('Nivel invalido ' .. path .. ': ' .. tostring(lv))
+        end
+    end
+    levelCache, levelCacheT = list, now
+    return list
+end
+
+local function levelsForMode(modeId)
+    local out = {}
+    for _, info in ipairs(scanLevels()) do if info.modes[modeId] then out[#out+1] = info end end
+    return out
+end
+
+local function levelInfo(path)
+    for _, info in ipairs(scanLevels()) do if info.path == path then return info end end
+end
+
+-- Asegura que la sala tenga un nivel válido para su modo (o nil si no hay).
+local function ensureRoomLevel(room)
+    local info = room.level and levelInfo(room.level)
+    if info and info.modes[room.mode] then return end
+    local cands = levelsForMode(room.mode)
+    room.level = nil
+    for _, c in ipairs(cands) do if c.path == DEFAULT_LEVEL then room.level = c.path end end
+    room.level = room.level or (cands[1] and cands[1].path)
+end
+
 local function initRoomSim(room)
-    local level = Level.new(LEVEL_PATH)
+    local level = Level.new(room.level)
     local sx, sy = level:getSpawnPx()
     local N = #room.playerIds
 
     local sim = { level=level, tick=0, playerSims={}, enemies={}, events={},
-                  gameOverSent=false, levelTime=0, timeLimitKilled=false,
-                  nextBubbleId=0 }
+                  ended=nil, levelTime=0, timeLimitKilled=false,
+                  nextBubbleId=0,
+                  levelRaw = love.filesystem.read(room.level),   -- se envía a los clientes
+                  mode = Modes.get(room.mode) }
 
     -- Crear instancias de las entidades del nivel (enemigos, NPCs)
     for _, placement in ipairs(level.entities) do
@@ -207,6 +281,7 @@ local function initRoomSim(room)
             local pa = PlayerAdventure:new(spawnX, sy)
             pa.lives = PLAYER_LIVES
             sim.playerSims[pid] = {
+                id          = pid,
                 idx         = i,
                 pa          = pa,
                 queue       = {},     -- { {seq, bits}, ... } pendientes
@@ -223,8 +298,13 @@ local function initRoomSim(room)
         end
     end
 
-    log("Simulacion iniciada para sala '" .. room.name .. "' — "
-        .. #sim.enemies .. " enemigos, " .. N .. " jugadores.")
+    -- Estado de la ronda para el modo de juego (ver src/world/modes/)
+    sim.match = { players = sim.playerSims, enemies = sim.enemies, time = 0, data = {},
+                  event = function(ev) ev.t = sim.tick; table.insert(sim.events, ev) end }
+    sim.mode.start(sim.match)
+
+    log("Simulacion iniciada para sala '" .. room.name .. "' — " .. sim.mode.label .. " en "
+        .. room.level .. " — " .. #sim.enemies .. " enemigos, " .. N .. " jugadores.")
     return sim
 end
 
@@ -258,6 +338,7 @@ local function checkPlayerEnemyCollisions(sim, pid, ps, seq)
             pa.vy = bvy; pa.jumpsLeft = 2
             ps.score = ps.score + pts
             ps.bounceSeq = seq
+            sim.mode.onStomp(sim.match, ps, g)
             pushEvent(sim, { type='score', playerId=pid, delta=pts, x=round(g.x), y=round(g.y) })
         end
     end
@@ -301,6 +382,17 @@ local function stepPlayer(sim, pid, ps, bits, seq)
     end
 
     checkPlayerEnemyCollisions(sim, pid, ps, seq)
+
+    -- Triggers de tiles que le interesan al modo (p. ej. la meta)
+    if not ps.isSpectator and not pa.dying then
+        local ob = pa:getOuterBounds()
+        for _, tr in ipairs(sim.mode.triggers) do
+            if sim.level:triggerInBox(ob.x, ob.y, ob.w, ob.h, tr) then
+                sim.match.time = sim.levelTime
+                sim.mode.onTrigger(sim.match, ps, tr)
+            end
+        end
+    end
 end
 
 -- Consume los inputs en cola de un jugador para este tick.
@@ -344,6 +436,29 @@ local function processPlayerInputs(sim, pid, ps)
             ps.budget = ps.budget - 1
         end
     end
+end
+
+-- Clasificación final de la ronda: la ordena el modo y marca ganadores.
+buildResults = function(room, reason)
+    local sim = room.sim
+    local entries = {}
+    for _, pid in ipairs(room.playerIds) do
+        local ps = sim.playerSims[pid]
+        local c  = findClientById(pid)
+        if ps and c then
+            entries[#entries+1] = {
+                id = pid, name = players[c].name, color = players[c].color or {1,1,1},
+                score = ps.score, finished = ps.finished or false, place = ps.place,
+                time = ps.finishTime and round(ps.finishTime * 100) / 100 or nil,
+                out = ps.isSpectator and not ps.finished, order = ps.idx, winner = false,
+            }
+        end
+    end
+    sim.mode.rank(sim.match, entries, reason)
+    log("Ronda terminada (" .. sim.mode.id .. ", " .. reason .. ") en '" .. room.name .. "'")
+    return { type = 'round_end', mode = sim.mode.id, reason = reason,
+             reasonText = sim.mode.reasonText(reason) or Modes.GENERIC_REASONS[reason] or '',
+             entries = entries }
 end
 
 -- Avanzar la simulación de una sala un tick fijo
@@ -400,16 +515,25 @@ local function stepRoom(room)
     end
     _soundEvents = {}
 
-    -- ── Detectar game over (todos los jugadores son espectadores) ─────────────
-    if not sim.gameOverSent then
-        local allSpec, anyPlayer = true, false
-        for _, ps in pairs(sim.playerSims) do
-            anyPlayer = true
-            if not ps.isSpectator then allSpec = false; break end
+    -- ── ¿Termina la ronda? (reglas del modo + fin genérico) ─────────────────
+    if not sim.ended then
+        sim.match.time = sim.levelTime
+        local reason = sim.mode.tick(sim.match, TICK_DT)
+        if not reason then
+            local anyActive, anyPlayer = false, false
+            for _, ps in pairs(sim.playerSims) do
+                anyPlayer = true
+                if not ps.isSpectator then anyActive = true; break end
+            end
+            if anyPlayer and not anyActive then
+                reason = sim.timeLimitKilled and 'time_limit' or 'all_out'
+            end
         end
-        if anyPlayer and allSpec then
-            sim.gameOverSent = true
-            pushEvent(sim, { type='game_over' })
+        if reason then
+            sim.ended = reason
+            local ev = buildResults(room, reason)
+            ev.t = sim.tick
+            table.insert(sim.events, ev)
         end
     end
 end
@@ -438,10 +562,15 @@ local function broadcastRoomUpdate(room)
             })
         end
     end
+    ensureRoomLevel(room)
+    local levels = {}
+    for _, info in ipairs(levelsForMode(room.mode)) do levels[#levels+1] = { path = info.path, name = info.name } end
+    local cur = room.level and levelInfo(room.level)
     local payload = {
         id=room.id, name=room.name, isPublic=room.isPublic,
         hasPassword=(room.password~=""), maxPlayers=room.maxPlayers,
         state=room.state, adminId=room.adminId, players=playerList,
+        mode=room.mode, level=room.level, levelName=cur and cur.name or nil, levels=levels,
     }
     for _, pid in ipairs(room.playerIds) do
         local c = findClientById(pid)
@@ -495,6 +624,8 @@ local function sendGameInit(room)
                 own      = Protocol.packOwnState(ps.pa),
                 tickRate = Protocol.TICK_RATE,
                 snapEvery= SNAPSHOT_EVERY,
+                mode     = room.mode,
+                level    = sim.levelRaw,        -- el nivel viaja al cliente
             })
         end
     end
@@ -528,10 +659,12 @@ local function broadcastSnapshot(room)
             local flags = 0
             if pa.dying       then flags = flags + Protocol.PF_DYING     end
             if ps.isSpectator then flags = flags + Protocol.PF_SPECTATOR end
+            if ps.finished    then flags = flags + Protocol.PF_FINISHED  end
             table.insert(plist, {
                 ps.idx, round(pa.x), round(pa.y), pa.facing, pa.frame, flags,
                 pa.lives, pa.hp, ps.score, Protocol.drownCode(pa.drownPhase),
                 round(math.max(0, 1 - pa.drownTimer / DROWN_TOTAL) * 100),
+                ps.place or 0,
             })
         end
     end
@@ -562,11 +695,12 @@ local function broadcastSnapshot(room)
     end
 
     local lt = round(sim.levelTime * 100)
+    local md = sim.mode.hud(sim.match)
     for _, pid in ipairs(room.playerIds) do
         local c  = findClientById(pid)
         local ps = sim.playerSims[pid]
         if c then
-            local snap = { t=sim.tick, lt=lt, p=plist, e=elist, vb=vb }
+            local snap = { t=sim.tick, lt=lt, p=plist, e=elist, vb=vb, md=md }
             if ps and not ps.isSpectator then
                 snap.a  = ps.lastProcSeq
                 snap.o  = Protocol.packOwnState(ps.pa)
@@ -741,7 +875,8 @@ on("create_room", function(data, client, player)
     local roomId = newRoomId()
     rooms[roomId] = { id=roomId, name=name, isPublic=isPublic, password=password,
                       maxPlayers=maxPlayers, playerIds={player.id},
-                      adminId=player.id, state="WAITING", bannedNames={}, bannedIPs={}, sim=nil }
+                      adminId=player.id, state="WAITING", bannedNames={}, bannedIPs={}, sim=nil,
+                      mode=Modes.DEFAULT, level=nil }
     player.roomId  = roomId
     player.isReady = false
     player.color   = PLAYER_COLORS[1]
@@ -820,6 +955,12 @@ on("start_game", function(data, client, player)
         if c then players[c].color = PLAYER_COLORS[i] or {1,1,1} end
     end
 
+    scanLevels(true)
+    ensureRoomLevel(room)
+    if not room.level then
+        client:send("room_error",{msg="No hay ningun nivel compatible con este modo."}); return
+    end
+
     room.state = "IN_GAME"
     room.sim   = initRoomSim(room)
 
@@ -837,6 +978,37 @@ on("stop_game", function(data, client, player)
     if room.state ~= "IN_GAME" then return end
     announceToRoom(room, "La partida fue detenida.")
     endGame(room, "detenida por el admin")
+end)
+
+-- El host elige modo de juego y nivel (solo en la sala de espera)
+local function adminRoom(client, player)
+    local room = player.roomId and rooms[player.roomId]
+    if not room then return nil end
+    if room.adminId ~= player.id then client:send("room_error",{msg="Solo el host puede cambiar esto."}); return nil end
+    if room.state ~= "WAITING" then return nil end
+    return room
+end
+
+on("set_mode", function(data, client, player)
+    if type(data) ~= "table" or type(data.mode) ~= "string" then return end
+    local room = adminRoom(client, player)
+    if not room or not Modes.get(data.mode) then return end
+    room.mode = data.mode
+    ensureRoomLevel(room)
+    log(player.name .. " cambio el modo a " .. Modes.get(room.mode).label)
+    broadcastRoomUpdate(room)
+end)
+
+on("set_level", function(data, client, player)
+    if type(data) ~= "table" or type(data.level) ~= "string" then return end
+    local room = adminRoom(client, player)
+    if not room then return end
+    local info = levelInfo(data.level)
+    if not info or not info.modes[room.mode] then
+        client:send("room_error",{msg="Ese nivel no sirve para este modo."}); return
+    end
+    room.level = info.path
+    broadcastRoomUpdate(room)
 end)
 
 local function adminTarget(data, client, admin, verb)
@@ -1175,11 +1347,11 @@ function love.update(dt)
             if room.state == "IN_GAME" and room.sim then
                 stepRoom(room)
                 local sim = room.sim
-                if sim.gameOverSent or sim.tick % SNAPSHOT_EVERY == 0 then
+                if sim.ended or sim.tick % SNAPSHOT_EVERY == 0 then
                     broadcastSnapshot(room)
                     flushEvents(room)
                 end
-                if sim.gameOverSent then endGame(room, "todos muertos") end
+                if sim.ended then endGame(room, "ronda terminada (" .. sim.ended .. ")") end
             end
         end
     end

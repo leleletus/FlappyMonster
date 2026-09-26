@@ -7,7 +7,7 @@ local Tiles = require 'src/world/Tiles'
 local P = {}
 
 -- ── Versión / red ─────────────────────────────────────────────────────────────
-P.VERSION        = 2        -- el servidor rechaza clientes con otra versión
+P.VERSION        = 3        -- el servidor rechaza clientes con otra versión
 P.CHANNELS       = 2
 P.CH_RELIABLE    = 0        -- eventos de sala y de juego (ordenados, garantizados)
 P.CH_STATE       = 1        -- snapshots e inputs (no fiables: el más nuevo gana)
@@ -181,7 +181,7 @@ end
 
 -- ── Estado visual de un jugador (lo ven todos) ────────────────────────────────
 -- { idx, x, y, facing, frame, flags, lives, hp, score, drownCode, air% }
-P.PF_DYING, P.PF_SPECTATOR = 1, 2
+P.PF_DYING, P.PF_SPECTATOR, P.PF_FINISHED = 1, 2, 4
 
 -- ── Utilidades ────────────────────────────────────────────────────────────────
 function P.round(x) return math.floor(x + 0.5) end
