@@ -71,7 +71,7 @@ TILE_PX        = 16 * 4     -- 64px
 
 -- Física del plataformero
 ADV_GRAVITY    = 1600
-ADV_JUMP_VEL   = -567        -- ≈ -560·√1.025: salto 2.5% más alto
+ADV_JUMP_VEL   = -568        -- og -560
 ADV_MOVE_SPD   = 240
 ADV_FRICTION   = 12          -- lerp horizontal en suelo
 ADV_AIR_FRIC   = 6           -- lerp en aire (menor control)
