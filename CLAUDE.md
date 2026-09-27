@@ -304,11 +304,14 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   Damage a boss does to a player is attributed with `Boss.withPlayer(pa, fn)`
   (server sets `Boss.asPlayer`), and the victim's client plays 'dies' via
   `Predictor.reconcile(...).hpDrop`.
-- **Stun rule** (anti ground-pound spam): while stunned (`isStunned()`, mirror
-  'ko') the boss takes ONE hit, then `endStun()` + `STUN_INV` (3 s) "ghost"
-  invulnerability: blinks (`ghostAlpha`), keeps attacking, can't be stunned,
-  and bosses/players pass through each other. Invulnerable players also pass
-  through bosses (but not `solidFull` objects) and bosses can't hit them.
+- **Stun rule** (anti ground-pound spam): a ground pound on top of a stunnable
+  boss (mirror) deals 2, leaves it KO ('ko') AND makes it invulnerable at once
+  for `STUN_INV` (3 s > the 1.4 s KO): no follow-up hit while KO. If it's stunned
+  by something else (knockback from a nearby GP), `isStunned()` takes ONE hit,
+  then `endStun()` + `STUN_INV`. That "ghost" invulnerability blinks
+  (`ghostAlpha`), keeps attacking, can't be stunned, and bosses/players pass
+  through each other. Invulnerable players also pass through bosses (but not
+  `solidFull` objects) and bosses can't hit them.
 - **Boss base**: HP = props.hp + props.hpPerPlayer*(n-1); stomp = 1 dmg,
   ground pound on top = 2 dmg (`'pound'` result → `e:pound(pa)`); i-frames
   `INV_TIME` (red flash, stomps only `'bounce'`); body is solid sideways. Death: `dying_hold` (blasts, alternating

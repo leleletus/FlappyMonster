@@ -21,7 +21,7 @@
     [4,4,4,4,4,4,4,4,4,4,4,4,73728,73728,73728,73728,73728,73728,73728,73728,73728,73728,73728,73728,73728,73728,73728,73728,73728,73728,4,4,4,4,4,4,4,4,4,4]
   ],
   "entities": [
-    {"col":22,"props":{"detectTime":0.15,"moveSpeed":240,"waypoints":[{"col":14,"row":6},{"col":29,"row":6},{"col":22,"row":8}]},"row":6,"type":"miniboss1"}
+    {"col":22,"props":{"detectTime":0.15,"hp":8,"hpPerPlayer":4,"moveSpeed":240,"waypoints":[{"col":14,"row":6},{"col":29,"row":6},{"col":22,"row":8}]},"row":6,"type":"miniboss1"}
   ],
   "foliage": [
     {"col":34,"row":12,"type":"palmtree"},

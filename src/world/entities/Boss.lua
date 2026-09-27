@@ -18,11 +18,13 @@
 --  * Golpes: pisotón en la cabeza = 1, ground pound encima = 2 (e:pound);
 --    tras un golpe es invulnerable INV_TIME s (parpadea rojo, los pisotones
 --    solo rebotan). Sonido 'bossHurt'.
---  * Aturdido (isStunned: KO por un ground pound) solo admite UN golpe: tras
---    él se despierta y queda invulnerable STUN_INV s (parpadea transparente,
---    como el jugador al reaparecer). Así no se le puede encadenar el aturdido.
---    Mientras es invulnerable sigue atacando, no se le puede aturdir y no
---    choca con los jugadores (se atraviesan).
+--  * Ground pound encima (jefes que se aturden, p. ej. el Espejo): le quita 2,
+--    lo deja KO y queda invulnerable YA, STUN_INV s (más que el KO): no se le
+--    puede dar otro golpe mientras está KO ni justo al despertar.
+--  * Aturdido por OTRA cosa (el empujón de un ground pound cercano) solo
+--    admite UN golpe: tras él se despierta y queda invulnerable STUN_INV s.
+--    Invulnerable así parpadea transparente (como el jugador al reaparecer),
+--    sigue atacando, no se le puede aturdir y no choca con los jugadores.
 --  * Su cuerpo es SÓLIDO para los jugadores: de lado se chocan y se paran
 --    (level.solidBodies, ver Entities.solidBodies y PlayerAdventure).
 --  * Muerte: 'dying_hold' (quieto parpadeando entre explosiones) y luego
@@ -41,8 +43,8 @@ local Entity = require 'src/world/entities/Entity'
 local Boss = Entity.extend(Entity, { debugColor = { 1, 0.25, 0.6 } })
 
 Boss.INV_TIME         = 1.0     -- s invulnerable tras un golpe normal (parpadea rojo)
-Boss.POUND_INV        = 0.35    -- tras el ground pound que lo aturde (solo evita el doble golpe)
-Boss.STUN_INV         = 3.0     -- s invulnerable tras el ÚNICO golpe que admite aturdido
+Boss.STUN_INV         = 3.0     -- s invulnerable tras el ground pound que lo deja KO (dura más
+                                -- que el KO) o tras el único golpe que admite aturdido
 Boss.DEATH_HOLD       = 3.4     -- s parpadeando entre explosiones antes de caer
 Boss.DEATH_BLAST_EVERY = 0.55   -- s entre sonidos de explosión / daño
 Boss.DEATH_FREEZE     = 0.05
@@ -127,10 +129,12 @@ function Boss:damage(n, kind)
         -- El único golpe que admite aturdido: se despierta, invulnerable un rato
         self.inv, self.ghost = self.STUN_INV, true
         self:endStun()
+    elseif kind == 'pound' and self.stunnable then
+        -- Ground pound: queda KO e invulnerable desde ya hasta después de
+        -- despertar (nada de rematarlo mientras está KO)
+        self.inv, self.ghost = self.STUN_INV, true
     else
-        -- Tras el ground pound que lo aturde, solo un instante (para el golpe
-        -- que admite aturdido); los jefes que no se aturden, lo normal
-        self.inv, self.ghost = (kind == 'pound' and self.stunnable) and self.POUND_INV or self.INV_TIME, false
+        self.inv, self.ghost = self.INV_TIME, false
     end
     self:onDamaged(n or 1, kind)
     return true
