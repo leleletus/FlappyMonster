@@ -15,6 +15,7 @@ local DT       = require('src/world/Decorations').types
 local BossZones = require 'src/world/BossZones'
 local AutoScroll = require 'src/world/AutoScroll'
 local Modes     = require 'src/world/Modes'
+local Music     = require 'src/Music'
 
 local Codec, TT, ET, Props = Tiles.codec, Tiles.types, Entities.types, Entities.props
 local th = ui.theme
@@ -266,6 +267,7 @@ local function startPlay()
     local errs = 0
     for _, w in ipairs(E.warnings or {}) do if w[1] == 'error' then errs = errs + 1 end end
     if errs > 0 then E.rightTab = 'warn'; return msg('Corrige los errores (pestaña Avisos) antes de probar', 'error') end
+    Editor.previewMusic(nil)
     love.filesystem.write(PLAYTEST, E.model:encode())
     if not E.gameReady then G.load(E.gameArgs or {}); E.gameReady = true end
     if G.resize then G.resize(love.graphics.getDimensions()) end
@@ -1352,6 +1354,36 @@ local function drawLevelTab(x, y, w)
         y = y + 4
     end
     y = y + 2
+    -- Música del nivel (catálogo: assets/music/index.json)
+    local cur = Music.levelTrack(m.music)
+    local curTrack = Music.get(cur)
+    y, open = ui.section('lvl:music', 'Música', x, y, w, curTrack and curTrack.name or cur)
+    if open then
+        for _, tr in ipairs(Music.levelList) do
+            local sel = tr.id == cur
+            local playing = E.preview == tr.id
+            local kind = tr.intro and 'intro + bucle' or 'bucle'
+            if ui.button(tr.name, x, y, w - 36, 26, { active = sel, align = 'left', font = ui.fontSm, hint = kind,
+                                                      tooltip = 'Usar "' .. tr.name .. '" como música de este nivel' }) and not sel then
+                pushUndo()
+                m.music = (tr.id ~= Music.DEFAULT) and tr.id or nil
+                markDirty()
+            end
+            -- Botón escuchar / parar (icono dibujado: la fuente no tiene ▶ ■)
+            local bx = x + w - 32
+            local pressed = ui.button('', bx, y, 32, 26, { tooltip = playing and 'Parar' or 'Escuchar', active = playing })
+            love.graphics.setColor(th.text)
+            if playing then love.graphics.rectangle('fill', bx + 11, y + 8, 10, 10)
+            else love.graphics.polygon('fill', bx + 12, y + 7, bx + 12, y + 19, bx + 22, y + 13) end
+            if pressed then
+                Editor.previewMusic(playing and nil or tr.id)
+            end
+            y = y + 30
+        end
+        y = y + ui.hint('Para añadir canciones: copia el archivo en assets/music/ y añade una entrada en assets/music/index.json.',
+                        x, y, w, th.border) + 8
+    end
+    y = y + 2
     -- Modos de juego online: en cuáles se ofrece este nivel
     y, open = ui.section('lvl:modes', 'Modos de juego', x, y, w, m.modes and 'limitados' or 'todos')
     if open then
@@ -1707,6 +1739,15 @@ function Editor.duplicate()
     E.selected = d; markDirty()
 end
 
+-- Escuchar una música del catálogo en el editor (nil = parar). Los sonidos
+-- se cargan la primera vez (el editor no los necesita hasta entonces).
+function Editor.previewMusic(id)
+    if not Sound or (not id and not E.soundReady) then E.preview = nil; return end
+    if not E.soundReady then Sound.load(); E.soundReady = true end
+    if id then Sound.playMusic(id) else Sound.stopMusic() end
+    E.preview = id
+end
+
 -- Siguiente versión (dirección...) de la entidad seleccionada o, si no hay,
 -- de lo elegido en la paleta
 function Editor.cycleVariant()
@@ -1758,6 +1799,7 @@ end
 
 function Editor.update(dt)
     if E.levelDirty then rebuild() end
+    if E.soundReady and Sound then Sound.update(dt) end       -- (música de prueba: intro → bucle)
     if E.level then E.level:update(dt); E.level:updateFoliage(dt) end
     if E.msgT > 0 then E.msgT = E.msgT - dt end
 

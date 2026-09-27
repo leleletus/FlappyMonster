@@ -324,5 +324,7 @@
     {"col":174,"row":9,"type":"palmtree"}
   ],
   "vents": [],
-  "autoScroll": {"countdown":3,"endCol":176,"margin":0.6,"speed":95,"startCol":1,"width":20}
+  "autoScroll": {"countdown":3,"endCol":176,"margin":0.6,"speed":95,"startCol":1,"width":20},
+  "modes": ["race"],
+  "music": "flying_machine"
 }

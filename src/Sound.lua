@@ -1,11 +1,14 @@
 -- src/Sound.lua
+local Music = require 'src/Music'
 local Sound = {}
 
 local sources = {}
 local music   = nil
 local tracked = {}   -- fuentes rastreadas para stop/isPlaying individuales
 local loops   = {}   -- name -> fuente del bucle de las pistas con intro (Sound.loadMusic)
-local levelMusic = nil   -- pista que suena cuando se pide 'level' (p. ej. la del jefe)
+local levelMusic = nil   -- pista que MANDA cuando se pide 'level' (p. ej. la del jefe)
+local baseLevelMusic = nil   -- música del nivel actual (su campo "music"; nil = la de siempre)
+local trackVol = {}          -- id -> volumen de la pista (assets/music/index.json)
 local origin  = {}   -- name -> ruta del archivo de cada sonido
 Sound._origin = origin
 
@@ -100,11 +103,6 @@ function Sound.load()
     load('fwBlastLarge',  'assets/sounds/fireworks/blast_large.ogg', 'static')
     load('roundOver',     'assets/sounds/flappy/round_over.ogg',    'static')
     load('spikeHit',      'assets/sounds/traps/spike_hit.wav',     'static')
-    load('youWin',        'assets/music/victory.ogg',       'stream')
-    load('menus',         'assets/music/menus.ogg',         'stream')
-    load('level',         'assets/music/level.ogg',         'stream')
-    if sources['menus'] then sources['menus']:setLooping(true) end
-    if sources['level'] then sources['level']:setLooping(true) end
 
     -- Jefes
     load('mortarShoot',   'assets/sounds/enemies/mortar_shoot.wav',        'static')
@@ -113,13 +111,27 @@ function Sound.load()
     load('bossHurt',      'assets/sounds/bosses/boss_hurt.wav',    'static')
     load('bossExplode',   'assets/sounds/bosses/boss_explode.wav', 'static')
     load('mirrorLaugh',   'assets/sounds/bosses/mirror/laugh.wav', 'static')
-    Sound.loadMusic('boss', 'assets/music/boss_battle_intro.wav', 'assets/music/boss_battle_loop.wav')
+    -- Música: todas las pistas del índice (assets/music/index.json)
+    for _, tr in ipairs(Music.list) do Sound.loadTrack(tr) end
+end
+
+-- Carga una pista del catálogo de música (src/Music.lua)
+function Sound.loadTrack(tr)
+    trackVol[tr.id] = tr.volume
+    if tr.intro then
+        Sound.loadMusic(tr.id, tr.intro, tr.loopFile)
+    elseif tr.loopFile then
+        Sound.loadMusic(tr.id, nil, tr.loopFile)
+    else
+        load(tr.id, tr.file, 'stream')
+        if sources[tr.id] then sources[tr.id]:setLooping(tr.loops) end
+    end
 end
 
 -- Pista con INTRO + BUCLE: suena la intro una vez y después el bucle para
 -- siempre (el cambio lo hace Sound.update). Se reproduce con playMusic(name).
 function Sound.loadMusic(name, introPath, loopPath)
-    load(name, introPath, 'stream')
+    if introPath then load(name, introPath, 'stream') end
     local ok, src = pcall(love.audio.newSource, loopPath, 'stream')
     if ok then
         src:setLooping(true)
@@ -213,9 +225,22 @@ end
 function Sound.setLevelMusic(name) levelMusic = name end
 function Sound.getLevelMusic() return levelMusic end
 
+-- Música del nivel en juego (id del índice; nil o desconocido = la de siempre)
+function Sound.setBaseLevelMusic(id) baseLevelMusic = id and Music.levelTrack(id) or nil end
+function Sound.getBaseLevelMusic() return baseLevelMusic or Music.DEFAULT end
+
+-- 'level' = lo que deba sonar en el nivel: la del jefe (si manda), la del
+-- nivel o la de siempre
+local function resolve(name)
+    if name == 'level' then return levelMusic or baseLevelMusic or Music.DEFAULT end
+    return name
+end
+Sound.resolveMusic = resolve
+
 local musicName = nil
 function Sound.playMusic(name, volume)
-    if name == 'level' and levelMusic then name = levelMusic end
+    name = resolve(name)
+    volume = volume or trackVol[name]
     local src = sources[name]
     if not src then return end
     -- Pista con intro que ya está en su bucle: sigue sonando
@@ -259,8 +284,48 @@ end
 -- ¿Está sonando la pista `name` (o cualquier música si name es nil)?
 function Sound.isMusicPlaying(name)
     if not music or not music:isPlaying() then return false end
-    if name == 'level' and levelMusic then name = levelMusic end
+    name = name and resolve(name)
     return name == nil or sources[name] == music or loops[name] == music
+end
+
+-- Online: coloca la pista `name` (resuelta) en el punto que le toca a los
+-- `t` segundos de haber empezado (intro una vez y luego el bucle), para que
+-- todos los jugadores oigan lo mismo a la vez. Solo corrige si ya está
+-- sonando esa pista y se ha desviado más de `tol` segundos.
+function Sound.syncMusic(name, t, tol)
+    name, tol = resolve(name), tol or 0.35
+    if paused or name ~= musicName or not music or not music:isPlaying() or t < 0 then return false end
+    local intro, lp = sources[name], loops[name]
+    local src, pos
+    if lp and intro and intro ~= lp then
+        local d = intro:getDuration()
+        if d <= 0 then return false end
+        if t < d then src, pos = intro, t
+        else
+            local ld = lp:getDuration()
+            if ld <= 0 then return false end
+            src, pos = lp, (t - d) % ld
+        end
+    else
+        src = lp or intro
+        local d = src and src:getDuration() or -1
+        if d <= 0 then return false end
+        if src:isLooping() then pos = t % d elseif t < d then pos = t else return false end
+    end
+    if src == music and math.abs(src:tell() - pos) <= tol then return false end
+    local pitch, vol = music:getPitch(), music:getVolume()
+    if src ~= music then music:stop() end
+    src:setPitch(pitch); src:setVolume(vol)
+    src:seek(pos)
+    if not src:isPlaying() then src:play() end
+    music = src
+    return true
+end
+
+-- Pista que suena y su posición (s) dentro del archivo actual (intro o bucle)
+function Sound.musicPosition()
+    if not music or not music:isPlaying() then return nil end
+    return musicName, music:tell(), (loops[musicName] == music and sources[musicName] ~= music) and 'bucle' or 'inicio'
 end
 
 -- Lerp del pitch de la música (usado para el slowdown al morir)

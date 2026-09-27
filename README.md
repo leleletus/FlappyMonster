@@ -94,6 +94,7 @@ Corre dentro del propio juego y usa sus mismos catálogos, dibujo y assets: todo
 
 * **Capas (1-6):** Bloques, Agua, Pinchos, Entidades, Decoración, Especial.
 * **Herramientas:** Pincel (B), Rectángulo (R), Línea (L), Relleno (F), Borrar (E / clic derecho), Cuentagotas (I), Seleccionar (V).
+* **Música del nivel:** pestaña Nivel → Música (con ▶ para escucharla). Para añadir una canción basta con copiar el archivo (o intro + bucle) en `assets/music/` y añadir una entrada en `assets/music/index.json`; aparece sola en el editor. Online, todos los jugadores oyen el mismo punto de la canción (se sincroniza con el reloj del servidor).
 * **Paneles:** a la izquierda capa, herramienta (con su ayuda) y paleta con buscador y categorías plegables; a la derecha pestañas **Selección** (propiedades en secciones plegables), **Nivel** (tamaño, cámara automática, modos de juego y duración de la partida) y **Avisos**. **F1** muestra todos los atajos.
 * **Probar (F5):** juega el nivel al instante; F10 vuelve al editor.
 * Guarda en `assets/levels/`. El JSON guarda una fila de tiles por línea y solo las propiedades distintas del valor por defecto, así los diffs de git son legibles.

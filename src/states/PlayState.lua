@@ -75,6 +75,7 @@ function PlayState:enter(args)
     self.nextColorIdx = 2
     self.colorT       = 0
 
+    Sound.setLevelMusic(nil); Sound.setBaseLevelMusic(nil)   -- Flappy: la de siempre
     Sound.playMusic('level')
 end
 

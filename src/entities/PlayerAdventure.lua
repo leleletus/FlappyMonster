@@ -311,7 +311,9 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
     local chx = {x-hw+4, x, x+hw-4}
     if dy > 0 then
         for _,px in ipairs(chx) do
-            local t = level:collisionAt(px, y+hh, true)
+            -- (una losa fina cuenta desde su cara hasta el fondo de la celda: un
+            -- paso rápido no la atraviesa; abajo se comprueba que venía de arriba)
+            local t = level:collisionAt(px, y+hh, true) or level:onewayCellAt(px, y+hh)
             if t then
                 local top = math.floor((y+hh)/T)*T + t.hitbox.y*T
                 if t.collision == 'oneway' then

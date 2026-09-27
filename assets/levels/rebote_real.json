@@ -53,5 +53,6 @@
   ],
   "foliage": [],
   "vents": [],
-  "modes": ["koth"]
+  "modes": ["koth"],
+  "music": "flying_machine"
 }

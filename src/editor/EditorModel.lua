@@ -78,6 +78,7 @@ function Model.fromData(lvl, path)
     -- duración de las partidas con tiempo
     m.modes     = (type(lvl.modes) == 'table' and #lvl.modes > 0) and deepcopy(lvl.modes) or nil
     m.matchTime = tonumber(lvl.matchTime)
+    m.music     = type(lvl.music) == 'string' and lvl.music or nil
     m.path    = path
     return m
 end
@@ -103,7 +104,7 @@ function Model:toData()
         playerStart = self.playerStart, tiles = self.tiles,
         entities = ents, foliage = decos, vents = self.vents, bossZones = zones,
         autoScroll = AutoScroll.serialize(self.autoScroll),
-        modes = self.modes, matchTime = self.matchTime,
+        modes = self.modes, matchTime = self.matchTime, music = self.music,
     }
 end
 
@@ -148,6 +149,7 @@ function Model:encode()
     if d.autoScroll then tail[#tail+1] = function(last) line('"autoScroll": ' .. enc(d.autoScroll), last) end end
     if d.modes then tail[#tail+1] = function(last) line('"modes": ' .. enc(d.modes), last) end end
     if d.matchTime then tail[#tail+1] = function(last) line('"matchTime": ' .. json.encode(d.matchTime), last) end end
+    if d.music then tail[#tail+1] = function(last) line('"music": ' .. json.encode(d.music), last) end end
     list('vents', d.vents, #tail == 0)
     for i, f in ipairs(tail) do f(i == #tail) end
     out[#out+1] = '}'
@@ -179,13 +181,13 @@ function Model:snapshot()
     return deepcopy({ name=self.name, width=self.width, height=self.height, tiles=self.tiles,
                       playerStart=self.playerStart, entities=self.entities,
                       foliage=self.foliage, vents=self.vents, bossZones=self.bossZones,
-                      autoScroll=self.autoScroll, modes=self.modes, matchTime=self.matchTime })
+                      autoScroll=self.autoScroll, modes=self.modes, matchTime=self.matchTime, music=self.music })
 end
 
 function Model:restore(s)
     s = deepcopy(s)
     -- (los campos opcionales pueden faltar en la copia: se vacían a mano)
-    self.autoScroll, self.modes, self.matchTime = nil, nil, nil
+    self.autoScroll, self.modes, self.matchTime, self.music = nil, nil, nil, nil
     for k, v in pairs(s) do self[k] = v end
 end
 
@@ -409,6 +411,10 @@ function Model:validate()
         end
     end
     if #self.entities == 0 then w[#w+1] = { 'info', 'El nivel no tiene entidades' } end
+    local Music = require 'src/Music'
+    if self.music and not (Music.get(self.music) and Music.get(self.music).level) then
+        w[#w+1] = { 'warn', 'La música "' .. self.music .. '" no está en assets/music/index.json: sonará la de siempre' }
+    end
     -- Rey de la Colina sin zonas de puntos
     local zones = 0
     for _, e in ipairs(self.entities) do if e.type == 'pointarea' then zones = zones + 1 end end

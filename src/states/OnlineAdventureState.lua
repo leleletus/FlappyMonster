@@ -169,6 +169,7 @@ function OnlineAdventureState:enter(args)
     self.bossFightT = 0
     Sound.setLevelMusic(nil)
     Sound.playMusic('level')
+    self.musicSyncT = 0
 end
 
 -- (Re)construye el nivel, los renderers de entidades y el jugador local.
@@ -180,6 +181,11 @@ function OnlineAdventureState:_buildWorld(data)
         if ok then level = lv else print('[online] nivel del servidor invalido: ' .. tostring(lv)) end
     end
     self.level = level or Level.new('assets/levels/nivel01.json')
+    -- Música del nivel (la misma para todos: viene en el nivel que manda el
+    -- servidor). Si ya sonaba otra, se cambia.
+    local before = Sound.resolveMusic('level')
+    Sound.setBaseLevelMusic(self.level.music)
+    if Sound.isMusicPlaying() and Sound.resolveMusic('level') ~= before then Sound.playMusic('level') end
 
     -- Burbujas de oxígeno controladas por el servidor (desactiva spawn local)
     self.level.disableOxySpawn = true
@@ -957,6 +963,16 @@ function OnlineAdventureState:update(dt)
     if self.localPaInit and not self.audioDrowning and not Sound.isMusicPlaying()
        and (self.ownData.isSpectator or (not self.localPa.dying and self.localPa.drownPhase ~= 'drowning')) then
         Sound.playMusic('level')
+    end
+
+    -- ── Música del nivel sincronizada con el reloj del servidor: todos oyen
+    -- el mismo punto de la canción (tick 0 = empieza la ronda). Solo la del
+    -- nivel (la del jefe arranca con su evento).
+    self.musicSyncT = (self.musicSyncT or 0) - dt
+    if self.musicSyncT <= 0 and self.snapBuf and self.snapBuf.clock and not Sound.getLevelMusic() then
+        self.musicSyncT = 1
+        local serverNow = (self.snapBuf.clock + NC:getPing() / 2000 / TICK_DT) * TICK_DT
+        Sound.syncMusic('level', serverNow)
     end
 
     -- ── Oyente de los sonidos del mundo: nosotros (o lo que miramos) ──────────

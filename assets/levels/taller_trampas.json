@@ -67,5 +67,6 @@
   ],
   "vents": [
     {"col":40,"limit":4,"row":11,"sub":3}
-  ]
+  ],
+  "music": "flying_machine"
 }

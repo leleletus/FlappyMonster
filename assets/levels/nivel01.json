@@ -93,5 +93,6 @@
     {"col":1,"limit":6,"row":25,"sub":2},
     {"col":21,"limit":5,"row":22,"sub":2},
     {"col":55,"limit":6,"row":28,"sub":1}
-  ]
+  ],
+  "music": "labyrinth"
 }

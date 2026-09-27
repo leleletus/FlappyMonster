@@ -582,8 +582,10 @@ function Entity:update(dt, level)
         if self.moving and self.onGround and self.props.turnAtEdges then
             local hw    = self.outerW / 2
             local lookX = self.x + (self.vx > 0 and (hw + 2) or -(hw + 2))
-            local lookY = self.flipped and (self.y - self.outerH / 2 - TILE_PX / 2)
-                                        or (self.y + self.outerH / 2 + TILE_PX / 2)
+            -- Justo pasada la superficie (4 px): media casilla más abajo se
+            -- saldría de una losa fina y creería estar siempre en un borde
+            local lookY = self.flipped and (self.y - self.outerH / 2 - 4)
+                                        or (self.y + self.outerH / 2 + 4)
             if not solidAt(level, lookX, lookY) then
                 self.vx = -self.vx;  self.facing = -self.facing
             end

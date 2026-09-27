@@ -307,6 +307,8 @@ function Level.fromData(lvl)
     -- duración de las partidas con tiempo (Rey de la Colina), en segundos
     self.modes     = type(lvl.modes) == 'table' and #lvl.modes > 0 and lvl.modes or nil
     self.matchTime = tonumber(lvl.matchTime)
+    -- Música del nivel: id de assets/music/index.json (nil = la de siempre)
+    self.music     = type(lvl.music) == 'string' and lvl.music or nil
     return self
 end
 
@@ -400,13 +402,44 @@ function Level:collisionAt(wx, wy, includeOneway)
     if t.collision == 'solid' then
         if TileTypes.hitboxContains(t, wx, wy) then return t end
     elseif includeOneway and t.collision == 'oneway' then
-        -- Aterrizar en una plataforma solo depende de su cara de arriba: de ahí
-        -- hasta el fondo de la celda cuenta (una losa fina no se "salta" en un
-        -- paso rápido, p. ej. un ground pound). Lo demás (entidades por los
-        -- lados o colgadas debajo) usa su forma real (isEnemySolidAt).
-        local hb, T = t.hitbox, TILE_PX
-        local fx, fy = (wx % T) / T, (wy % T) / T
-        if fx >= hb.x and fx < hb.x + hb.w and fy >= hb.y then return t end
+        if TileTypes.hitboxContains(t, wx, wy) then return t end
+    end
+    return nil
+end
+
+-- Plataforma (one-way) cuya celda contiene el punto por DEBAJO de su cara de
+-- arriba (aunque la losa sea fina y el punto quede bajo ella). Solo para quien
+-- comprueba además que venía de arriba (el aterrizaje del jugador): así un
+-- paso rápido no atraviesa una losa fina.
+function Level:onewayCellAt(wx, wy)
+    local t = self:getDefAt(wx, wy)
+    if t.collision ~= 'oneway' then return nil end
+    local hb, T = t.hitbox, TILE_PX
+    local fx, fy = (wx % T) / T, (wy % T) / T
+    if fx >= hb.x and fx < hb.x + hb.w and fy >= hb.y then return t end
+    return nil
+end
+
+-- Algo que cae (una punta, una bola de fuego...) pasa de y0 a y1 en la
+-- columna wx: ¿ha cruzado DESDE ARRIBA la cara superior de un bloque o una
+-- plataforma? Devuelve el tile y la Y de esa cara. No importa lo fina que sea
+-- la losa ni lo rápido que caiga; y una losa que ya estaba por encima (p. ej.
+-- la del techo del que cuelga) no cuenta. Empezar dentro de un bloque sólido
+-- cuenta como chocar con él.
+function Level:landingCross(wx, y0, y1)
+    if y1 < y0 then return nil end
+    local T = TILE_PX
+    for r = math.floor(y0 / T), math.floor(y1 / T) do
+        local t = self:getDefAt(wx, r * T + T / 2)
+        if t.collision == 'solid' or t.collision == 'oneway' then
+            local hb = t.hitbox
+            local fx = (wx % T) / T
+            if fx >= hb.x and fx < hb.x + hb.w then
+                local top = r * T + hb.y * T
+                if y0 <= top + 0.5 and y1 >= top then return t, top end
+                if t.collision == 'solid' and y1 > top and y0 < top + hb.h * T then return t, top end
+            end
+        end
     end
     return nil
 end

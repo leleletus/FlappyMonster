@@ -58,10 +58,10 @@ function SpikeFall:updateCustom(dt, level)
         self.vy = math.min(self.vy + ADV_GRAVITY * 1.2 * (self.props.fallSpeed or 1) * dt, 1400 * (self.props.fallSpeed or 1))
         local ny = self.y + self.vy * dt
         local tipY = ny + self.outerH / 2
-        local t = level:collisionAt(self.x, tipY, true)
+        local t, face = level:landingCross(self.x, self.y + self.outerH / 2, tipY)
         if t or tipY > level.heightPx then
-            -- Se clava: la punta entra en el bloque
-            local top = math.floor(tipY / TILE_PX) * TILE_PX
+            -- Se clava: la punta entra en el bloque (en su cara de arriba)
+            local top = face or (math.floor(tipY / TILE_PX) * TILE_PX)
             self.y = top - self.outerH / 2 + self.outerH * EMBED
             self.state, self.deadTimer = 'stuck', 0
             Sound.play('spikeHit')

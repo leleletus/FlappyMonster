@@ -41,6 +41,16 @@ src/Sound.lua       Sound.play(name,pitch,vol), playMusic(name), stopMusic, trac
                     bosses/<boss>/, items/, mechanics/, traps/, water/, jingles/, ui/,
                     flappy/, fireworks/. Images: assets/images/<thing>/ (bosses/<boss>/),
                     all lowercase; music: assets/music/snake_case.wav
+src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
+                    intro+loop, volume, loop, level). Sound loads every track from it
+                    (`Sound.loadTrack`); `level=false` tracks (boss, menus, youWin) are
+                    not offered as level music. Adding a song = file + one index entry.
+                    Level JSON `"music": id` (editor: Nivel tab → Música, ▶ preview).
+                    `Sound.playMusic('level')` resolves: `setLevelMusic` override (boss)
+                    → `setBaseLevelMusic(level.music)` → 'classic'. Online the client
+                    re-seeks the level track every 1 s to the server clock
+                    (`Sound.syncMusic('level', t)`; tick 0 = round start), so all players
+                    hear the same point of the song (tested: ≤0.1 s).
 src/entities/
   PlayerAdventure.lua  THE player physics (shared by SP, server and client prediction)
   OnlinePlayer.lua     remote player renderer (tinted by player color, name tag)
@@ -152,9 +162,14 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
 - Tile hitboxes are REAL for entities: platforms are slabs (`platform` h 0.72,
   `platform_drop` h 0.36). `Entity.moveAndCollide` snaps to the hit face of the
   tile hitbox (and of `solidFull` bodies via `Level:bodyAt`), in ≤16 px
-  vertical sub-steps. `Level:collisionAt(x, y, true)` (landing) treats a
-  one-way platform as solid from its top down to the cell bottom, so the
-  player's landing is unchanged and can't skip a thin plank.
+  vertical sub-steps. `collisionAt` always uses the real shape. The PLAYER's
+  landing also accepts `Level:onewayCellAt` (a one-way tile counts from its top
+  face down to the cell bottom; with its prevFoot check a fast fall/GP can't
+  skip a thin plank). Anything else that FALLS (Crabby/Crabby-trampolín drop,
+  falling spikes, mortar fire) uses `Level:landingCross(x, y0, y1)`: hit only if
+  it crossed a top face FROM ABOVE this step (never catches the slab it hung
+  from, never tunnels). Walkers' edge probe is 4 px past the surface (half a
+  tile fell out of thin slabs → turned every frame).
 - Entities vs solid objects: walkers/crawlers collide with `solidFull` bodies
   (trampolines, mortars) like blocks (crawlers climb them: `Level:entitySolidAt`).
   Touching a body's bouncy face → `Entity:touchBody` → `Entity:launch(vx,vy)` →

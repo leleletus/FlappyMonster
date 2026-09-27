@@ -104,6 +104,7 @@ function AdventureState:enter(args)
     self.respawnTimer = 0
 
     Sound.setLevelMusic(nil)
+    Sound.setBaseLevelMusic(self.level.music)          -- la música elegida en el editor
     Sound.playMusic('level')
 
     self.score      = 0

@@ -121,11 +121,11 @@ function Mortar:updateFire(dt, level)
             local nx = f.x + f.vx * dt
             if level:collisionAt(nx + (f.vx > 0 and r or -r), f.y) then f.vx = 0 else f.x = nx end
             local ny = f.y + f.vy * dt
-            if f.vy > 0 and level:collisionAt(f.x, ny + r, true) then
+            local landT, landY
+            if f.vy > 0 then landT, landY = level:landingCross(f.x, f.y + r, ny + r) end
+            if landT then
                 -- Aterriza: se queda ardiendo sobre el suelo
-                local T = TILE_PX
-                local t = level:collisionAt(f.x, ny + r, true)
-                f.y = math.floor((ny + r) / T) * T + t.hitbox.y * T - FIRE_HALF
+                f.y = landY - FIRE_HALF
                 f.vx, f.vy, f.burn = 0, 0, 0
                 if burnTime <= 0 then gone = true; Entity.emitFx('fire_puff', f.x, f.y) end
             elseif f.vy < 0 and level:collisionAt(f.x, ny - r) then

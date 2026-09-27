@@ -245,11 +245,13 @@ function Crabby:updateDrop(dt, level)
     elseif st == 'drop_fall' then
         -- Cae como un pincho (sigue boca abajo) hasta clavarse en el suelo
         self.vy = math.min(self.vy + ADV_GRAVITY * dt, 1400)
+        local tip0 = dropTipY(self)
         self.y = self.y + self.vy * dt
         local tip = dropTipY(self)
-        if level:collisionAt(self.x, tip, true) then
+        -- (solo lo que cruza desde arriba: la losa de la que colgaba no cuenta)
+        local hit, top = level:landingCross(self.x, tip0, tip)
+        if hit then
             local _, maxH = spikeDims()
-            local top = math.floor(tip / TILE_PX) * TILE_PX
             self.y = self.y - (tip - (top + maxH * STUCK_EMBED))
             self.state, self.deadTimer, self.vy = 'drop_stuck', 0, 0
             -- Para pisotearlo cuenta como "de suelo" (se le pisa desde arriba)

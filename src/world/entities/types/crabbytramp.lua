@@ -139,14 +139,16 @@ function TC:updateDrop(dt, level)
     if st == 'drop_fall' then
         -- Boca abajo con el trampolín por delante
         self.vy = math.min(self.vy + ADV_GRAVITY * dt, 1300)
+        local tb0 = self:trampBox()
+        local tip0 = tb0.y + tb0.h
         self.y  = self.y + self.vy * dt
         local tb = self:trampBox()
         if self:crush(level, tb) then self:startBounce(); return true end
         local tip = tb.y + tb.h
         for _, fx in ipairs({ -0.3, 0, 0.3 }) do
-            local t = level:collisionAt(self.x + TRAMP_W * fx, tip, true)
+            -- (solo lo que cruza desde arriba: la losa de la que colgaba no cuenta)
+            local t, top = level:landingCross(self.x + TRAMP_W * fx, tip0, tip)
             if t then
-                local top = math.floor(tip / TILE_PX) * TILE_PX + t.hitbox.y * TILE_PX
                 self.y = self.y - (tip - top)
                 self:startBounce()
                 return true
