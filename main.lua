@@ -70,6 +70,7 @@ end
 function love.update(dt)
     dt = math.min(dt, 0.05)
     Timer.update(dt)
+    Sound.update(dt)
     Input.update(dt)
     NC:update(dt)
     local blocked = Notify.blocking()    -- una ventana de aviso abierta se come la entrada

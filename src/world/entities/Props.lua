@@ -17,6 +17,10 @@
 --                 { left=col, right=col } o false (sin límites). El editor
 --                 lo dibuja como una línea con dos cajitas arrastrables.
 --   point         una celda { col, row } (para futuros destinos/puntos)
+--   points        lista de celdas { {col,row}, ... } en orden (rutas con varios
+--                 puntos, p. ej. los waypoints de un jefe). En el editor: cajitas
+--                 numeradas arrastrables + botones para añadir / quitar puntos.
+--                 min / max = número de puntos permitido.
 --
 -- `default` puede ser una función(data) (p. ej. ruta alrededor de la
 -- posición donde se colocó la entidad).
@@ -63,7 +67,26 @@ Props.kinds = {
         if type(v) ~= 'table' or not tonumber(v.col) or not tonumber(v.row) then return nil end
         return { col = math.floor(v.col), row = math.floor(v.row) }
     end,
+    points = function(p, v)
+        if type(v) ~= 'table' then return nil end
+        local out = {}
+        for i = 1, math.min(#v, p.max or 32) do
+            local q = v[i]
+            if type(q) ~= 'table' or not tonumber(q.col) or not tonumber(q.row) then return nil end
+            out[i] = { col = math.floor(q.col), row = math.floor(q.row) }
+        end
+        if #out < (p.min or 1) then return nil end
+        return out
+    end,
 }
+
+-- Igualdad profunda (para no guardar valores iguales al por defecto)
+local function same(a, b)
+    if type(a) ~= 'table' or type(b) ~= 'table' then return a == b end
+    for k, x in pairs(a) do if not same(x, b[k]) then return false end end
+    for k, x in pairs(b) do if a[k] == nil then return false end end
+    return true
+end
 
 function Props.default(p, data)
     local d = p.default
@@ -94,15 +117,7 @@ function Props.diff(schema, values, data)
     local out, any = {}, false
     for _, p in ipairs(schema) do
         local v, d = values[p.key], Props.default(p, data)
-        local same
-        if type(v) == 'table' and type(d) == 'table' then
-            same = true
-            for k, x in pairs(v) do if d[k] ~= x then same = false end end
-            for k, x in pairs(d) do if v[k] ~= x then same = false end end
-        else
-            same = (v == d)
-        end
-        if not same then out[p.key] = v; any = true end
+        if not same(v, d) then out[p.key] = v; any = true end
     end
     return any and out or nil
 end

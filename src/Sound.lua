@@ -4,7 +4,9 @@ local Sound = {}
 local sources = {}
 local music   = nil
 local tracked = {}   -- fuentes rastreadas para stop/isPlaying individuales
-local origin  = {}   -- name -> ruta del archivo o SoundData (herramientas de mezcla)
+local loops   = {}   -- name -> fuente del bucle de las pistas con intro (Sound.loadMusic)
+local levelMusic = nil   -- pista que suena cuando se pide 'level' (p. ej. la del jefe)
+local origin  = {}   -- name -> ruta del archivo de cada sonido
 Sound._origin = origin
 
 -- ── Mezcla ────────────────────────────────────────────────────────────────────
@@ -12,15 +14,11 @@ Sound._origin = origin
 -- tramo más fuerte de 100 ms ≈ -12 dBFS, como el salto o el punto). Se aplica
 -- al cargar (se escalan las muestras), así se puede subir por encima de 1.
 -- Los sonidos cortos de interfaz y pasos se dejan como están a propósito.
+-- (Los efectos que antes se sintetizaban por código ya llevan su ganancia
+-- dentro del archivo: no se ponen aquí o se aplicaría dos veces.)
 local GAIN = {
-    -- archivos
     roundOver    = 2.8,  spikeHit   = 2.2,  dies2      = 0.65, glugluglu  = 0.8,
     airGasp      = 0.85, waterWarning = 1.4,
-    -- sintetizados
-    blockBreak   = 1.8,  checkpoint = 1.9,  collect    = 2.5,  gpImpact   = 1.6,
-    gpStart      = 2.4,  headBump   = 2.0,  oneUp      = 2.0,  respawnFx  = 2.2,
-    spikeShake   = 2.8,  stunned    = 2.5,  tick       = 1.8,  finish     = 1.2,
-    sadtrombone  = 1.2,  crabPop    = 2.0,
 }
 Sound.GAIN = GAIN
 
@@ -57,125 +55,135 @@ local function load(name, path, stype)
     end
 end
 
--- Jingles chiptune sintetizados por código (onda cuadrada): no necesitan
--- archivos. notes = { {frecuencia Hz (0 = silencio), duración s}, ... }
-local function synth(name, notes, vol)
-    local ok, src = pcall(function()
-        local rate, total = 22050, 0
-        for _, n in ipairs(notes) do total = total + n[2] end
-        local sd = love.sound.newSoundData(math.floor(total * rate) + 1, rate, 16, 1)
-        local i = 0
-        for _, n in ipairs(notes) do
-            local len = math.floor(n[2] * rate)
-            for k = 0, len - 1 do
-                local v = 0
-                if n[1] > 0 then
-                    local t   = k / rate
-                    local f   = n[1] * (1 + 0.012 * math.sin(t * 38) * math.min(1, t * 4))  -- vibrato
-                    local env = math.min(1, k / 80) * math.min(1, (len - k) / 400)
-                    if len > rate * 0.3 then env = env * (1 - 0.6 * k / len) end
-                    v = ((t * f) % 1 < 0.5 and 1 or -1) * env * (vol or 0.25) * (GAIN[name] or 1)
-                end
-                sd:setSample(i, v); i = i + 1
-            end
-        end
-        origin[name] = sd
-        return love.audio.newSource(sd, 'static')
-    end)
-    if ok then sources[name] = src end
-end
-
--- Efectos sintetizados con barrido de tono y/o ruido (8 bits).
--- parts = { {dur, f0, f1, wave='square'|'noise'|'tri', vol}, ... }
-local function sfx(name, parts)
-    local ok, src = pcall(function()
-        local rate, total = 22050, 0
-        for _, p in ipairs(parts) do total = total + p[1] end
-        local sd = love.sound.newSoundData(math.floor(total * rate) + 1, rate, 16, 1)
-        local i, phase, noiseV, noiseC = 0, 0, 0, 0
-        for _, p in ipairs(parts) do
-            local len = math.floor(p[1] * rate)
-            for k = 0, len - 1 do
-                local u   = k / math.max(1, len - 1)
-                local f   = p[2] + (p[3] - p[2]) * u
-                local env = math.min(1, k / 60) * (1 - u) ^ 1.3
-                local v
-                phase = phase + f / rate
-                if p.wave == 'noise' then
-                    noiseC = noiseC + f / rate
-                    if noiseC >= 1 then noiseC = noiseC - 1; noiseV = math.random() * 2 - 1 end
-                    v = noiseV
-                elseif p.wave == 'tri' then
-                    v = 1 - 4 * math.abs((phase % 1) - 0.5)
-                else
-                    v = (phase % 1 < 0.5) and 1 or -1
-                end
-                sd:setSample(i, math.max(-1, math.min(1, v * env * (p.vol or 0.25) * (GAIN[name] or 1)))); i = i + 1
-            end
-        end
-        origin[name] = sd
-        return love.audio.newSource(sd, 'static')
-    end)
-    if ok then sources[name] = src end
-end
-
 function Sound.load()
-    -- Ground pound, bloques, coleccionables...
-    sfx('gpStart',    { {0.16, 300, 900, wave='square', vol=0.16} })
-    sfx('gpImpact',   { {0.05, 180, 60, wave='square', vol=0.3}, {0.28, 900, 200, wave='noise', vol=0.35} })
-    sfx('blockBreak', { {0.22, 2600, 500, wave='noise', vol=0.32} })
-    sfx('headBump',   { {0.06, 220, 140, wave='square', vol=0.2} })
-    sfx('collect',    { {0.05, 1318, 1318, vol=0.16}, {0.05, 1760, 1760, vol=0.16}, {0.14, 2093, 2093, vol=0.14} })
-    sfx('oneUp',      { {0.08, 659, 659, vol=0.18}, {0.08, 784, 784, vol=0.18}, {0.08, 1319, 1319, vol=0.18},
-                        {0.08, 1047, 1047, vol=0.18}, {0.08, 1175, 1175, vol=0.18}, {0.2, 1568, 1568, vol=0.16} })
-    sfx('checkpoint', { {0.1, 523, 523, wave='tri', vol=0.35}, {0.1, 784, 784, wave='tri', vol=0.35},
-                        {0.25, 1047, 1047, wave='tri', vol=0.3} })
-    sfx('spikeShake', { {0.35, 3000, 2000, wave='noise', vol=0.12} })
-    sfx('respawnFx',  { {0.25, 400, 1400, wave='tri', vol=0.25} })
-    sfx('stunned',    { {0.3, 1200, 800, wave='square', vol=0.1} })
-    -- "¡Plop-boing!": el Crabby arranca su pincho del suelo
-    sfx('crabPop',    { {0.04, 1800, 300, wave='noise', vol=0.3}, {0.09, 220, 880, wave='square', vol=0.14},
-                        {0.07, 880, 520, wave='tri', vol=0.35}, {0.07, 520, 760, wave='tri', vol=0.3},
-                        {0.1, 760, 600, wave='tri', vol=0.25} })
-    local G4, C5, E5, G5, C6 = 392, 523.25, 659.25, 783.99, 1046.5
-    synth('fanfare', { {G4,.09},{C5,.09},{E5,.09},{G5,.09},{0,.05},{E5,.08},{G5,.08},{C6,.55} }, 0.22)
-    synth('finish',  { {C5,.07},{E5,.07},{G5,.07},{C6,.22} }, 0.2)
-    synth('sadtrombone', { {392,.28},{370,.28},{349,.28},{330,.7} }, 0.2)
-    synth('tick', { {1318.5,.035} }, 0.12)
-    load('dies',          'assets/sounds/dies.ogg',          'static')
-    load('point',         'assets/sounds/point.ogg',         'static')
-    load('decimal',       'assets/sounds/decimal.ogg',       'static')
-    load('select',        'assets/sounds/select.ogg',        'static')
-    load('jump',          'assets/sounds/jump.ogg',          'static')
-    load('step',          'assets/sounds/step.ogg',          'static')
-    load('dies2',         'assets/sounds/dies2.ogg',         'static')
-    load('enemyExplode',  'assets/sounds/enemyExplode.ogg',  'static')
+    -- Efectos chiptune (antes sintetizados por código; ahora archivos
+    -- normales, organizados por tipo en assets/sounds/)
+    load('gpStart',     'assets/sounds/player/ground_pound_start.wav',  'static')
+    load('gpImpact',    'assets/sounds/player/ground_pound_impact.wav', 'static')
+    load('headBump',    'assets/sounds/player/head_bump.wav',           'static')
+    load('stunned',     'assets/sounds/player/stunned.wav',             'static')
+    load('collect',     'assets/sounds/items/collect.wav',              'static')
+    load('oneUp',       'assets/sounds/items/one_up.wav',               'static')
+    load('checkpoint',  'assets/sounds/items/checkpoint.wav',           'static')
+    load('blockBreak',  'assets/sounds/traps/block_break.wav',          'static')
+    load('spikeShake',  'assets/sounds/traps/spike_shake.wav',          'static')
+    load('fireFizzle',  'assets/sounds/traps/fire_fizzle.wav',          'static')   -- bola del mortero que se apaga
+    load('respawnFx',   'assets/sounds/enemies/respawn.wav',            'static')   -- una entidad reaparece
+    load('crabPop',     'assets/sounds/enemies/crab_pop.wav',           'static')   -- el Crabby arranca su pincho
+    load('slamStart',   'assets/sounds/bosses/miniboss1/slam_start.wav',       'static')   -- la Nave Malvada se lanza en picado
+    load('spikesOut',   'assets/sounds/bosses/miniboss1/spikes_out.wav',       'static')   -- le salen los pinchos
+    load('fanfare',     'assets/sounds/jingles/fanfare.wav',            'static')
+    load('finish',      'assets/sounds/jingles/finish.wav',             'static')
+    load('sadtrombone', 'assets/sounds/jingles/sad_trombone.wav',       'static')
+    load('tick',        'assets/sounds/jingles/tick.wav',               'static')
+    load('dies',          'assets/sounds/player/hurt.ogg',          'static')
+    load('point',         'assets/sounds/flappy/point.ogg',         'static')
+    load('decimal',       'assets/sounds/flappy/decimal.ogg',       'static')
+    load('select',        'assets/sounds/ui/select.ogg',        'static')
+    load('jump',          'assets/sounds/player/jump.ogg',          'static')
+    load('step',          'assets/sounds/player/step.ogg',          'static')
+    load('dies2',         'assets/sounds/player/death.ogg',         'static')
+    load('enemyExplode',  'assets/sounds/enemies/enemy_explode.ogg',  'static')
     load('waterWarning',   'assets/sounds/water/warning.ogg',          'static')
     load('airGasp',        'assets/sounds/water/air_gasp.ogg',        'static')
     load('waterSplash',    'assets/sounds/water/splash_in.ogg',     'static')
     load('waterSplashOut', 'assets/sounds/water/splash_out.ogg',     'static')
     load('drowning',      'assets/sounds/water/drowning.ogg',      'stream')
     load('glugluglu',     'assets/sounds/water/glugluglu.ogg',     'static')
+    load('pointGain',     'assets/sounds/mechanics/point_gain.wav',    'static')   -- zona de puntos
+    load('floodRise',     'assets/sounds/water/flood_rise.wav',    'static')   -- inundación: sube
+    load('floodFall',     'assets/sounds/water/flood_fall.wav',    'static')   -- inundación: baja
     if sources['drowning'] then sources['drowning']:setLooping(false) end
     load('fwLaunch',      'assets/sounds/fireworks/launch.ogg',      'static')
     load('fwBlast1',      'assets/sounds/fireworks/blast1.ogg',       'static')
     load('fwBlast2',      'assets/sounds/fireworks/blast2.ogg',      'static')
     load('fwBlastLarge',  'assets/sounds/fireworks/blast_large.ogg', 'static')
-    load('roundOver',     'assets/sounds/round_over.ogg',    'static')
-    load('spikeHit',      'assets/sounds/spike_hit.wav',     'static')
+    load('roundOver',     'assets/sounds/flappy/round_over.ogg',    'static')
+    load('spikeHit',      'assets/sounds/traps/spike_hit.wav',     'static')
     load('youWin',        'assets/music/victory.ogg',       'stream')
     load('menus',         'assets/music/menus.ogg',         'stream')
     load('level',         'assets/music/level.ogg',         'stream')
     if sources['menus'] then sources['menus']:setLooping(true) end
     if sources['level'] then sources['level']:setLooping(true) end
+
+    -- Jefes
+    load('mortarShoot',   'assets/sounds/enemies/mortar_shoot.wav',        'static')
+    load('trampoline',    'assets/sounds/mechanics/trampoline.wav',         'static')
+    load('miniAppear',    'assets/sounds/bosses/miniboss1/appear.wav', 'static')
+    load('bossHurt',      'assets/sounds/bosses/boss_hurt.wav',    'static')
+    load('bossExplode',   'assets/sounds/bosses/boss_explode.wav', 'static')
+    load('mirrorLaugh',   'assets/sounds/bosses/mirror/laugh.wav', 'static')
+    Sound.loadMusic('boss', 'assets/music/boss_battle_intro.wav', 'assets/music/boss_battle_loop.wav')
+end
+
+-- Pista con INTRO + BUCLE: suena la intro una vez y después el bucle para
+-- siempre (el cambio lo hace Sound.update). Se reproduce con playMusic(name).
+function Sound.loadMusic(name, introPath, loopPath)
+    load(name, introPath, 'stream')
+    local ok, src = pcall(love.audio.newSource, loopPath, 'stream')
+    if ok then
+        src:setLooping(true)
+        loops[name] = src
+        if not sources[name] then sources[name] = src end   -- sin intro: solo el bucle
+    else
+        print("[Sound] No se encontró: " .. loopPath)
+    end
+end
+
+-- ── Sonido en el mundo: atenuación por distancia ────────────────────────────
+-- El juego pone el OYENTE (el jugador local, o el centro de la cámara si no
+-- juega) y, mientras simula algo que está en el mundo, el EMISOR (la entidad,
+-- el jugador...). Todo Sound.play con un emisor activo se atenúa según la
+-- distancia al oyente: volumen completo hasta NEAR px, nada a partir de FAR.
+-- Los sonidos sin emisor (menús, avisos, los del propio jugador) suenan igual.
+-- Online cada cliente calcula SU volumen: los eventos de sonido traen x, y.
+Sound.NEAR = 480
+Sound.FAR  = 1400
+local listenerX, listenerY = nil, nil
+local emitterX, emitterY   = nil, nil
+
+function Sound.setListener(x, y) listenerX, listenerY = x, y end
+function Sound.getListener() return listenerX, listenerY end
+function Sound.setEmitter(x, y) emitterX, emitterY = x, y end
+function Sound.clearEmitter() emitterX, emitterY = nil, nil end
+function Sound.getEmitter() return emitterX, emitterY end
+
+-- Ejecuta fn con el emisor en (x, y) y deja el anterior como estaba
+function Sound.withEmitter(x, y, fn, ...)
+    local ox, oy = emitterX, emitterY
+    emitterX, emitterY = x, y
+    local ok, err = pcall(fn, ...)
+    emitterX, emitterY = ox, oy
+    if not ok then error(err, 0) end
+end
+
+-- Factor 0..1 de un sonido en (x, y) para el oyente actual
+function Sound.falloff(x, y)
+    if not x or not y or not listenerX then return 1 end
+    local dx, dy = x - listenerX, y - listenerY
+    local d = math.sqrt(dx * dx + dy * dy)
+    if d <= Sound.NEAR then return 1 end
+    if d >= Sound.FAR then return 0 end
+    local k = 1 - (d - Sound.NEAR) / (Sound.FAR - Sound.NEAR)
+    return k * k                        -- cae suave al principio y rápido al final
+end
+
+-- Sonido en un punto del mundo (x, y) sin tocar el emisor actual
+function Sound.playAt(name, x, y, pitch, volume)
+    local ox, oy = emitterX, emitterY
+    emitterX, emitterY = x, y
+    Sound.play(name, pitch, volume)
+    emitterX, emitterY = ox, oy
 end
 
 function Sound.play(name, pitch, volume)
     local src = sources[name]
     if not src then return end
+    local k = Sound.falloff(emitterX, emitterY)
+    if k <= 0.01 then return end
     local clone = src:clone()
     clone:setPitch(pitch   or 1.0)
-    clone:setVolume(volume or 1.0)
+    clone:setVolume((volume or 1.0) * k)
     clone:play()
 end
 
@@ -200,9 +208,22 @@ function Sound.isPlaying(name)
     return src:isPlaying()
 end
 
+-- Pista que suena cuando el juego pide la música 'level' (nil = la normal).
+-- Así, durante un jefe, respawns y demás siguen con la música del jefe.
+function Sound.setLevelMusic(name) levelMusic = name end
+function Sound.getLevelMusic() return levelMusic end
+
+local musicName = nil
 function Sound.playMusic(name, volume)
+    if name == 'level' and levelMusic then name = levelMusic end
     local src = sources[name]
     if not src then return end
+    -- Pista con intro que ya está en su bucle: sigue sonando
+    local lp = loops[name]
+    if lp and music == lp and lp:isPlaying() then
+        lp:setPitch(1.0); lp:setVolume(volume or 0.7)
+        return
+    end
     -- Siempre resetear pitch, aunque sea la misma pista
     if music == src and src:isPlaying() then
         src:setPitch(1.0)
@@ -215,8 +236,20 @@ function Sound.playMusic(name, volume)
     end
     src:setPitch(1.0)
     src:setVolume(volume or 0.7)
+    if lp and src ~= lp then src:seek(0) end
     src:play()
-    music = src
+    music, musicName = src, name
+end
+
+-- Cambio intro → bucle de las pistas con intro (llamar cada frame).
+local paused = nil
+function Sound.update(dt)
+    local lp = musicName and loops[musicName]
+    if lp and music ~= lp and not paused and not music:isPlaying() then
+        lp:setPitch(music:getPitch()); lp:setVolume(music:getVolume())
+        lp:seek(0); lp:play()
+        music = lp
+    end
 end
 
 function Sound.setMusicVolume(v)
@@ -226,7 +259,8 @@ end
 -- ¿Está sonando la pista `name` (o cualquier música si name es nil)?
 function Sound.isMusicPlaying(name)
     if not music or not music:isPlaying() then return false end
-    return name == nil or sources[name] == music
+    if name == 'level' and levelMusic then name = levelMusic end
+    return name == nil or sources[name] == music or loops[name] == music
 end
 
 -- Lerp del pitch de la música (usado para el slowdown al morir)
@@ -238,7 +272,6 @@ end
 
 -- Pausa: congela la música y los sonidos largos (ahogamiento) donde van,
 -- para continuar EXACTAMENTE desde ahí al despausar.
-local paused = nil
 function Sound.pauseAll()
     paused = {}
     if music and music:isPlaying() then music:pause(); table.insert(paused, music) end
@@ -258,7 +291,7 @@ end
 
 function Sound.stopMusic()
     if music and music:isPlaying() then music:stop() end
-    music = nil
+    music, musicName = nil, nil
 end
 
 function Sound.decimalPitch(score)

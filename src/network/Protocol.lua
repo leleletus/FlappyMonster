@@ -7,7 +7,7 @@ local Tiles = require 'src/world/Tiles'
 local P = {}
 
 -- ── Versión / red ─────────────────────────────────────────────────────────────
-P.VERSION        = 6        -- el servidor rechaza clientes con otra versión
+P.VERSION        = 16        -- el servidor rechaza clientes con otra versión
 P.CHANNELS       = 2
 P.CH_RELIABLE    = 0        -- eventos de sala y de juego (ordenados, garantizados)
 P.CH_STATE       = 1        -- snapshots e inputs (no fiables: el más nuevo gana)
@@ -139,7 +139,7 @@ function P.packOwnState(pa)
         pa.groundDef and pa.groundDef.id or -1,
         pa.hurtT or 0,
         (pa.gpPhase == 'windup' and 1) or (pa.gpPhase == 'fall' and 2) or 0,
-        pa.gpT or 0, pa.stunT or 0,
+        pa.gpT or 0, pa.stunT or 0, pa.spawnInvT or 0, pa.squashT or 0, pa.ctrlLockT or 0,
     }
 end
 
@@ -175,18 +175,24 @@ function P.applyOwnState(s, pa)
     pa.gpPhase     = (s[24] == 1 and 'windup') or (s[24] == 2 and 'fall') or nil
     pa.gpT         = s[25]
     pa.stunT       = s[26]
+    pa.spawnInvT   = s[27]
+    pa.squashT     = s[28]
+    pa.ctrlLockT   = s[29]
 end
 
 -- Estructura mínima para validar un estado propio recibido del servidor.
 function P.isValidOwnState(s)
-    if type(s) ~= 'table' or #s < 26 then return false end
-    for i = 1, 26 do if type(s[i]) ~= 'number' then return false end end
+    if type(s) ~= 'table' or #s < 29 then return false end
+    for i = 1, 29 do if type(s[i]) ~= 'number' then return false end end
     return true
 end
 
 -- ── Estado visual de un jugador (lo ven todos) ────────────────────────────────
 -- { idx, x, y, facing, frame, flags, lives, hp, score, drownCode, air% }
 P.PF_DYING, P.PF_SPECTATOR, P.PF_FINISHED, P.PF_STUNNED = 1, 2, 4, 8
+P.PF_HURT = 16      -- acaba de recibir daño (parpadea en rojo)
+P.PF_INVULN = 32    -- recién reaparecido: invulnerable (parpadea)
+P.PF_SQUASH = 64    -- aplastado (sprite achatado)
 
 -- ── Utilidades ────────────────────────────────────────────────────────────────
 function P.round(x) return math.floor(x + 0.5) end

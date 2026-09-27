@@ -390,10 +390,13 @@ function OnlineResultsState:_renderPodium()
             -- Brillo que recorre el bloque del 1º
             if place == 1 and e and self.celebrate then
                 local sx = x + ((t * 120) % (PODIUM_W + 80)) - 40
-                love.graphics.setScissor(math.floor(x), math.floor(y), PODIUM_W, math.ceil(h))
+                love.graphics.stencil(function()
+                    love.graphics.rectangle('fill', math.floor(x), math.floor(y), PODIUM_W, math.ceil(h))
+                end, "replace", 1)
+                love.graphics.setStencilTest("greater", 0)
                 love.graphics.setColor(1, 1, 1, 0.25)
                 love.graphics.polygon('fill', sx, y, sx + 18, y, sx - 12, y + h, sx - 30, y + h)
-                love.graphics.setScissor()
+                love.graphics.setStencilTest()
             end
             -- Número del puesto
             love.graphics.setFont(FONT_BIG)

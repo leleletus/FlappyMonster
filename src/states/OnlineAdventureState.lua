@@ -23,6 +23,11 @@ local PixelIcons           = require 'src/ui/PixelIcons'
 local Particles            = require 'src/fx/Particles'
 local CornerButtons        = require 'src/ui/CornerButtons'
 local Modes                = require 'src/world/Modes'
+local BossZones            = require 'src/world/BossZones'
+local BossHud              = require 'src/ui/BossHud'
+local AutoScroll           = require 'src/world/AutoScroll'
+local Floods               = require 'src/world/Floods'
+local PointAreas           = require 'src/world/PointAreas'
 local json                 = require 'libs/json'
 
 local OnlineAdventureState = BaseState:new()
@@ -50,9 +55,6 @@ local imgBg   = nil
 local BG_SCALE    = 15
 local BG_PARALLAX = 0.3
 local ICON_SCALE  = 4
-local HP_BAR_W    = 80
-local HP_BAR_H    = 14
-local HP_BAR_GAP  = 8
 local AIR_BAR_W   = 160
 local AIR_BAR_H   = 12
 
@@ -162,6 +164,10 @@ function OnlineAdventureState:enter(args)
     -- game_init pudo llegar en el mismo paquete que el room_update que nos trajo aquí
     if NC.pendingGameInit then self:_onGameInit(NC.pendingGameInit) end
 
+    -- Peleas de jefe (el estado de las zonas llega en cada snapshot)
+    self.bossBanner = nil
+    self.bossFightT = 0
+    Sound.setLevelMusic(nil)
     Sound.playMusic('level')
 end
 
@@ -195,6 +201,8 @@ function OnlineAdventureState:_buildWorld(data)
         local e = Entities.create(placement)
         if e then self.enemyRenderers[i] = e end
     end
+    -- Cada zona de jefe sabe qué jefes (renderers) son suyos
+    BossZones.link(self.level, self.enemyRenderers)
 end
 
 function OnlineAdventureState:exit()
@@ -306,6 +314,9 @@ function OnlineAdventureState:_onSnapshot(snap)
         end
     end
     if type(snap.lt) == 'number' then self.levelTime = snap.lt / 100 end
+    -- Zonas de jefe: el más reciente (la predicción usa sus paredes)
+    BossZones.netApply(self.level, snap.bz)
+    AutoScroll.netApply(self.level, snap.sc)     -- cámara automática (paredes de la predicción)
     self.modeHud = type(snap.md) == 'table' and snap.md or nil
 
     -- Reconciliar la predicción local
@@ -319,6 +330,8 @@ function OnlineAdventureState:_onSnapshot(snap)
             end
             -- Pisotón que solo detectó el servidor: su sonido
             if r.missedBounce then Sound.play('enemyExplode') end
+            -- Golpe que solo vio el servidor (un jefe nos cayó encima)
+            if r.hpDrop then Sound.play('dies') end
             self:_syncDrownAudio()
         end
     end
@@ -363,6 +376,9 @@ function OnlineAdventureState:_applyInterpolation()
                 lives=d[7], hp=d[8], score=d[9], drownPhase=Protocol.drownName(d[10]),
                 finished    = Protocol.band(d[6], Protocol.PF_FINISHED) ~= 0,
                 stunned     = Protocol.band(d[6], Protocol.PF_STUNNED) ~= 0,
+                hurt        = Protocol.band(d[6], Protocol.PF_HURT) ~= 0,
+                invuln      = Protocol.band(d[6], Protocol.PF_INVULN) ~= 0,
+                squashed    = Protocol.band(d[6], Protocol.PF_SQUASH) ~= 0,
                 place       = d[12],
             })
         else
@@ -383,7 +399,9 @@ function OnlineAdventureState:_applyInterpolation()
     for i, er in pairs(self.enemyRenderers) do
         local db = eb[i]
         local da = ea[i] or db
-        if db then
+        if not db then
+            er:netRest()              -- no vino: está en reposo (ver Entity:netAtRest)
+        else
             local x, y = db[1], db[2]
             if math.abs(db[1]-da[1]) < TELEPORT_DIST and math.abs(db[2]-da[2]) < TELEPORT_DIST then
                 x, y = lerp(da[1], db[1], f), lerp(da[2], db[2], f)
@@ -459,10 +477,26 @@ function OnlineAdventureState:_processEvent(ev)
     if ev.type == 'sound' then
         -- Los sonidos propios los genera la predicción local (evita dobles).
         if (not ev.playerId or ev.playerId ~= NC.myId) and type(ev.sound) == 'string' then
-            Sound.play(ev.sound)
+            local pitch = tonumber(ev.pitch)
+            pitch = pitch and math.max(0.25, math.min(3, pitch)) or nil
+            -- Con posición: se atenúa según NUESTRA distancia a donde sonó
+            local x, y = tonumber(ev.x), tonumber(ev.y)
+            if x and y then Sound.playAt(ev.sound, x, y, pitch) else Sound.play(ev.sound, pitch) end
         end
-    elseif ev.type == 'score' and ev.playerId == NC.myId then
-        self:_spawnPopup('+' .. tostring(ev.delta) .. '!', ev.x or 0, ev.y or 0)
+    elseif ev.type == 'boss_start' then
+        self.bossBanner = { text = '¡JEFE!', t = 0, col = { 1, 0.3, 0.3 } }
+        self.bossFightT = 0
+    elseif ev.type == 'scroll_start' then
+        self.bossBanner = { text = '¡YA!', t = 0, col = { 0.4, 1, 0.5 } }
+    elseif ev.type == 'boss_clear' then
+        self.bossBanner = { text = '¡JEFE DERROTADO!', t = 0, col = { 1, 0.9, 0.25 } }
+        Sound.play('fanfare')
+    elseif ev.type == 'score' then
+        -- Zona de puntos: destello para todos; el "+N", solo para quien los gana
+        if ev.kind == 'zone' then PointAreas.flashAt(self.level, tonumber(ev.x) or 0, (tonumber(ev.y) or 0) + 40) end
+        if ev.playerId == NC.myId then
+            self:_spawnPopup('+' .. tostring(ev.delta) .. (ev.kind == 'zone' and '' or '!'), ev.x or 0, ev.y or 0)
+        end
     elseif ev.type == 'tile' then
         -- Bloque roto (lo decide el servidor): aplicar y partículas para todos
         local c, r, v = tonumber(ev.c), tonumber(ev.r), tonumber(ev.v)
@@ -532,6 +566,14 @@ end
 function OnlineAdventureState:_updateCamera(dt)
     local targetX, targetY
 
+    -- Muriendo: la cámara se queda donde está (no sigue al cuerpo que cae),
+    -- igual que en un jugador. Así tampoco se sale de la zona de jefe.
+    -- Con cámara automática, en cambio, la cámara es el nivel: sigue.
+    local sc = self.level.autoScroll
+    local scrolling = sc and sc.state ~= 'stop'
+    if self.localPaInit and not self.ownData.isSpectator and self.localPa.dying and not scrolling then return end
+
+    local followX, followY           -- a quién mira la cámara (posición real)
     if self.ownData.isSpectator then
         -- Seguir al primer jugador vivo
         local tx, ty = nil, nil
@@ -541,19 +583,25 @@ function OnlineAdventureState:_updateCamera(dt)
             end
         end
         if not tx then return end
-        targetX = tx - WINDOW_W / 2
-        targetY = ty - WINDOW_H / 2
+        followX, followY = tx, ty
     else
-        targetX = self.renderX - WINDOW_W / 2
-        targetY = self.renderY - WINDOW_H / 2
+        followX, followY = self.renderX, self.renderY
     end
+    targetX = followX - WINDOW_W / 2
+    targetY = followY - WINDOW_H / 2
 
     targetX = math.max(0, math.min(self.level.widthPx  - WINDOW_W, targetX))
     targetY = math.max(0, math.min(self.level.heightPx - WINDOW_H, targetY))
+    -- Dentro de una zona de jefe (o cayendo por debajo de ella en plena
+    -- pelea) la cámara se queda fija en ella; también para el espectador
+    local zx, zy = BossZones.cameraTarget(self.level, followX, followY)
+    if zx then targetX, targetY = zx, zy end
+    if scrolling then targetX = AutoScroll.cameraX(self.level) end
 
     local prevX, prevY = self.camX, self.camY
     self.camX = self.camX + (targetX - self.camX) * CAM_LERP * dt
     self.camY = self.camY + (targetY - self.camY) * CAM_LERP * dt
+    if scrolling then self.camX = targetX end      -- la ventana manda, sin suavizado
 
     local bgW = imgBg:getWidth()  * BG_SCALE
     local bgH = imgBg:getHeight() * BG_SCALE
@@ -680,12 +728,23 @@ function OnlineAdventureState:_checkLocalBounce()
         local cd = self.localBounceCooldown[idx] or 0
         if cd <= 0 then
             -- Mismas reglas que el servidor; aquí solo se predice el rebote
-            local result, bvy = Entities.interactions.check(pa, er)
-            if result == 'stomp' then
-                pa:bounce(bvy)
+            local result, bvy, bdir, bdir2 = Entities.interactions.check(pa, er)
+            if result == 'launch' then
+                -- Trampolín: lanzado ya (bvy = vx, bdir = vy); lo confirma el servidor
+                pa:launch(bvy, bdir)
                 self.localBounceCooldown[idx] = 0.3
-                self.predictor:recordBounce(bvy)
-                Sound.play('enemyExplode')
+                self.predictor:recordLaunch(bvy, bdir)
+                Sound.play('trampoline')
+                return
+            elseif result == 'stomp' or result == 'pound' or result == 'bounce' then
+                -- rebote con empujón lateral (jefe invulnerable; pisotón de lado a un trepador)
+                local dir = (result == 'bounce') and bdir or (result == 'stomp' and bdir2) or nil
+                local soft = (result == 'stomp') or nil
+                pa:bounce(bvy, dir, soft)
+                self.localBounceCooldown[idx] = 0.3
+                self.predictor:recordBounce(bvy, dir, soft)
+                -- Los jefes suenan con su propio golpe (lo manda el servidor)
+                if not er.def.boss then Sound.play('enemyExplode') end
                 return
             end
         end
@@ -785,6 +844,7 @@ function OnlineAdventureState:update(dt)
             Input.VirtualPad.down['move_left']  = false
             Input.VirtualPad.down['move_right'] = false
             Input.VirtualPad.down['jump']       = false
+            Input.VirtualPad.down['crouch']     = false
             local touches = love.touch.getTouches()
             for _, id in ipairs(touches) do
                 local tx, ty = love.touch.getPosition(id)
@@ -797,6 +857,7 @@ function OnlineAdventureState:update(dt)
                 if ly > WINDOW_H - 250 then
                     if lx >  20 and lx <  150 then Input.VirtualPad.down['move_left']  = true end
                     if lx > 170 and lx <  300 then Input.VirtualPad.down['move_right'] = true end
+                    if lx > WINDOW_W-340 and lx <= WINDOW_W-200 then Input.VirtualPad.down['crouch'] = true end
                     if lx > WINDOW_W-200 and lx < WINDOW_W-20 then
                         Input.VirtualPad.down['jump'] = true
                     end
@@ -835,7 +896,36 @@ function OnlineAdventureState:update(dt)
         self:_collectInput()
     end
 
+    -- ── Cámara automática: la ventana avanza entre snapshots ──────────────────
+    AutoScroll.clientUpdate(self.level, dt)
+
+    -- ── Inundaciones: el agua depende solo del tiempo. Se usa el tick del
+    -- servidor en el que se procesarán los inputs que predecimos ahora
+    -- (reloj de snapshots + ping), así la predicción nada en la misma agua
+    if self.snapBuf and self.snapBuf.clock and #(self.level.floods or {}) > 0 then
+        local est = (self.snapBuf.clock + NC:getPing() / 1000 / TICK_DT) * TICK_DT
+        local cur = (self.level.floodTime or 0) + dt
+        if math.abs(est - cur) > 0.5 then cur = est
+        else cur = cur + (est - cur) * math.min(1, dt * 2) end
+        Floods.setTime(self.level, cur)
+        Floods.updateFx(self.level, dt)
+    end
+
+    -- ── Zonas de puntos: quién está dentro (solo para el dibujo) ─────────────
+    if #(self.level.pointAreas or {}) > 0 then
+        local pos = {}
+        if self.localPaInit and not self.ownData.isSpectator and not self.localPa.dying then
+            pos[1] = { self.renderX, self.renderY, true }
+        end
+        for _, rp in pairs(self.remotePlayers) do
+            if rp.visible and not rp.dying then pos[#pos+1] = { rp.x, rp.y, false } end
+        end
+        PointAreas.clientUpdate(self.level, dt, pos)
+    end
+
     -- ── Jugador local: predicción a paso fijo ─────────────────────────────────
+    -- (los jefes son sólidos: se choca con su posición interpolada)
+    self.level.solidBodies = Entities.solidBodies(self.enemyRenderers)
     if self.predictor and not self.ownData.isSpectator then
         self.simAccum = self.simAccum + dt
         local ticks = 0
@@ -869,15 +959,95 @@ function OnlineAdventureState:update(dt)
         Sound.playMusic('level')
     end
 
+    -- ── Oyente de los sonidos del mundo: nosotros (o lo que miramos) ──────────
+    if self.localPaInit and not self.ownData.isSpectator then
+        Sound.setListener(self.renderX, self.renderY)
+    else
+        Sound.setListener(self.camX + WINDOW_W / 2, self.camY + WINDOW_H / 2)
+    end
+
+    -- ── Jefes: música de la pelea y carteles ─────────────────────────────────
+    self:_updateBoss(dt)
+
     -- ── Cámara ────────────────────────────────────────────────────────────────
     self:_updateCamera(dt)
     self:_updatePopups(dt)
     Particles.update(dt)
 end
 
+function OnlineAdventureState:_updateBoss(dt)
+    if self.bossBanner then self.bossBanner.t = self.bossBanner.t + dt end
+    self.bossFightT = self.bossFightT + dt
+    local want = BossZones.music(self.level)
+    if want ~= Sound.getLevelMusic() then
+        Sound.setLevelMusic(want)
+        if not self.audioDrowning then Sound.playMusic('level') end
+    end
+end
+
+-- Barras de vida (jefe y jugadores) durante la pelea y aviso de espera
+function OnlineAdventureState:_renderBossHUD()
+    local z = BossZones.fighting(self.level)
+    if z and not self.showGameOver then
+        local y = 48
+        for _, b in ipairs(z.bosses) do
+            if b.alive then BossHud.drawBoss(b, y, math.min(1, self.bossFightT / 0.8)); y = y + 72 end
+        end
+        -- Un jugador por fila, con su color de la sala
+        local list = {}
+        for idx = 1, 16 do
+            local r = self.roster[idx]
+            if r then
+                local e
+                if idx == self.myIdx then
+                    local od = self.ownData
+                    if not od.finished then
+                        local pa = self.localPa
+                        e = { name = r.name, color = r.color, hp = pa.hp, hpMax = pa.hpMax, key = r,
+                              dead = od.isSpectator or pa.dying }
+                    end
+                else
+                    local rp = self.remotePlayers[idx]
+                    if rp and rp.visible and not rp.finished then
+                        e = { name = r.name, color = r.color, hp = rp.hp, hpMax = 3, key = r,
+                              dead = rp.isSpectator or rp.dying }
+                    end
+                end
+                if e then list[#list+1] = e end
+            end
+        end
+        BossHud.drawPlayers(list, 20, 110)
+    elseif self.localPaInit and not self.ownData.isSpectator and not self.showGameOver then
+        -- Fuera de una pelea: la vida propia solo si le falta algo
+        local pa, r = self.localPa, self.roster[self.myIdx]
+        if pa.hp < pa.hpMax and not pa.dying then
+            BossHud.drawPlayers({ { name = r and r.name or 'TU', color = r and r.color, hp = pa.hp,
+                                    hpMax = pa.hpMax, key = r or pa } }, 20, 110)
+        end
+    end
+    -- Esperando a que lleguen todos a la zona
+    if self.localPaInit and not self.ownData.isSpectator then
+        local wz = BossZones.arenaAt(self.level, self.renderX, self.renderY)
+        if wz and wz.state == 'waiting' then BossHud.drawWaiting(wz.arrived, wz.needed) end
+    end
+    if self.bossBanner then
+        BossHud.drawBanner(self.bossBanner.text, self.bossBanner.t, 2.2, self.bossBanner.col)
+    end
+    if not self.showGameOver then BossHud.drawScrollCountdown(self.level.autoScroll) end
+end
+
 -- ── Render ────────────────────────────────────────────────────────────────────
 
 function OnlineAdventureState:render()
+    -- Temblor de pantalla (impactos, explosiones): solo al dibujar
+    local shx, shy = Particles.shakeOffset()
+    local realCamX, realCamY = self.camX, self.camY
+    self.camX, self.camY = self.camX + shx, self.camY + shy
+    self:_renderScene()
+    self.camX, self.camY = realCamX, realCamY
+end
+
+function OnlineAdventureState:_renderScene()
     local bgW = imgBg:getWidth()  * BG_SCALE
     local bgH = imgBg:getHeight() * BG_SCALE
 
@@ -933,6 +1103,8 @@ function OnlineAdventureState:render()
         local sx, sy = pa.x, pa.y
         pa.x, pa.y = self.renderX, self.renderY
         pa:render(self.camX, self.camY)
+        pa.isLocalView = true
+        PointAreas.drawProgress(self.level, pa, self.renderX - self.camX, self.renderY - self.camY)
         Particles.render(self.camX, self.camY)
         if DEBUG_HITBOX then pa:renderDebug(self.camX, self.camY); self.level:renderDebug(self.camX, self.camY) end
         pa.x, pa.y = sx, sy
@@ -958,17 +1130,20 @@ function OnlineAdventureState:render()
         love.graphics.circle('fill',  85, WINDOW_H-125, 65)
         love.graphics.circle('fill', 235, WINDOW_H-125, 65)
         love.graphics.circle('fill', WINDOW_W-110, WINDOW_H-125, 65)
+        love.graphics.circle('fill', WINDOW_W-250, WINDOW_H-125, 65)
         love.graphics.setFont(FONT_BIG)
         love.graphics.setColor(1, 1, 1, 0.7)
         love.graphics.printf('<', 20,  WINDOW_H-140, 130, 'center')
         love.graphics.printf('>', 170, WINDOW_H-140, 130, 'center')
         love.graphics.printf('A', WINDOW_W-175, WINDOW_H-140, 130, 'center')
+        love.graphics.printf('v', WINDOW_W-315, WINDOW_H-132, 130, 'center')
     end
     if not self.showGameOver and not self.showPause and not self.specOverlay then
         CornerButtons.drawPause(self.pauseHover)
     end
 
     -- Overlays
+    self:_renderBossHUD()
     if self.showPause then self:_renderPauseOverlay() end
     self:_renderModeHUD()
     if self.ownData.isSpectator and not self.showGameOver then self:_renderSpectatorOverlay() end
@@ -1028,6 +1203,13 @@ function OnlineAdventureState:_renderModeHUD()
     local label, big, urgent
     if mode.id == 'hunt' and md.left then
         label = 'MONSTRUOS: ' .. md.left
+    elseif mode.id == 'koth' and md.tl then
+        local secs = md.tl / 100
+        label = string.format('TIEMPO  %d:%02d', math.floor(secs / 60), math.floor(secs) % 60)
+        if secs <= 10 then
+            big    = tostring(math.ceil(secs))
+            urgent = true
+        end
     elseif mode.id == 'race' then
         if md.cd then
             local secs = md.cd / 100
@@ -1180,25 +1362,6 @@ function OnlineAdventureState:_renderHUD()
         love.graphics.draw(imgIcon, sx, sy, 0, ICON_SCALE, ICON_SCALE)
         love.graphics.setColor(0, 0, 0, 0.85)
         love.graphics.print(label, sx+iconW+gap, sy+iconH/2-FONT_BIG:getHeight()/2)
-
-        -- Barra de HP (mostrar cuando hp < hpMax)
-        local hp    = od.hp    or 3
-        local hpMax = od.hpMax or 3
-        if hp < hpMax then
-            local totalHpW = hpMax * HP_BAR_W + (hpMax-1) * HP_BAR_GAP
-            local barX     = math.floor((WINDOW_W - totalHpW) / 2)
-            local barY     = WINDOW_H - HP_BAR_H - 20
-            for i = 1, hpMax do
-                local bx     = barX + (i-1)*(HP_BAR_W+HP_BAR_GAP)
-                local filled = i <= hp
-                love.graphics.setColor(0, 0, 0, 0.6)
-                love.graphics.rectangle('fill', bx+3, barY+3, HP_BAR_W, HP_BAR_H)
-                love.graphics.setColor(filled and 1 or 0.15, filled and 1 or 0.15, filled and 1 or 0.15, 0.85)
-                love.graphics.rectangle('fill', bx, barY, HP_BAR_W, HP_BAR_H)
-                love.graphics.setColor(0, 0, 0, 1)
-                love.graphics.rectangle('line', bx, barY, HP_BAR_W, HP_BAR_H)
-            end
-        end
 
         -- Barra de aire (ahogamiento) — delegada al jugador local
         if self.localPa and self.localPaInit then
@@ -1427,9 +1590,13 @@ function OnlineAdventureState:touchpressed(id, tx, ty)
     if CornerButtons.hitPause(tx, ty) then
         Sound.play('select'); self:_togglePause(); return
     end
-    -- Móvil: toque de un solo cuadro en el botón de salto
-    if Input.isMobile and ty > WINDOW_H - 250 and tx > WINDOW_W - 200 and tx < WINDOW_W - 20 then
-        Input.VirtualPad._pressedThisFrame['jump'] = true
+    -- Móvil: toque de un solo cuadro en los botones de acción
+    if Input.isMobile and ty > WINDOW_H - 250 then
+        if tx > WINDOW_W - 200 and tx < WINDOW_W - 20 then
+            Input.VirtualPad._pressedThisFrame['jump'] = true
+        elseif tx > WINDOW_W - 340 and tx <= WINDOW_W - 200 then
+            Input.VirtualPad._pressedThisFrame['crouch'] = true
+        end
     end
 end
 

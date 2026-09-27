@@ -67,11 +67,17 @@ function Predictor:tick(bits)
 end
 
 -- Registra que en el tick actual se aplicó un rebote predicho sobre un enemigo.
-function Predictor:recordBounce(vy)
+function Predictor:recordBounce(vy, dirX, soft)
     local h = self.history[self.seq]
-    if h then h.bounceVy = vy end
+    if h then h.bounceVy, h.bounceDir, h.bounceSoft = vy, dirX, soft end
     table.insert(self.localBounces, self.seq)
     if #self.localBounces > 16 then table.remove(self.localBounces, 1) end
+end
+
+-- Lanzamiento predicho (trampolín): se reaplica en las re-simulaciones
+function Predictor:recordLaunch(vx, vy)
+    local h = self.history[self.seq]
+    if h then h.launchVx, h.launchVy = vx, vy end
 end
 
 -- Inputs aún no confirmados (máx. `maxN`, los más recientes) para reenviar.
@@ -108,6 +114,7 @@ function Predictor:reconcile(ack, own, bounceSeq)
     local pa = self.pa
     local oldX, oldY   = pa.x, pa.y
     local wasDying     = pa.dying
+    local oldHp        = pa.hp
 
     -- El estado VISUAL (animación, "puff", barra de aire) no debe avanzar en
     -- la re-simulación: son ticks que ya se mostraron. Sin esto la animación
@@ -123,7 +130,10 @@ function Predictor:reconcile(ack, own, bounceSeq)
             -- Re-aplicar rebotes predichos que el servidor aún no ha simulado
             if h.bounceVy and not pa.dying
                and math.abs(s - self.serverBounceSeq) > BOUNCE_WINDOW then
-                pa:bounce(h.bounceVy)
+                pa:bounce(h.bounceVy, h.bounceDir, h.bounceSoft)
+            end
+            if h.launchVy and not pa.dying then
+                pa:launch(h.launchVx, h.launchVy)
             end
         end
     end
@@ -147,7 +157,9 @@ function Predictor:reconcile(ack, own, bounceSeq)
         self.errX,  self.errY  = self.errX + dx,  self.errY + dy
     end
 
-    return { wasDying = wasDying, missedBounce = missedBounce }
+    -- Daño que no predijimos (p. ej. un jefe nos cayó encima)
+    local hpDrop = not pa.dying and pa.hp < oldHp
+    return { wasDying = wasDying, missedBounce = missedBounce, hpDrop = hpDrop }
 end
 
 -- Absorbe el error visual con decaimiento exponencial (independiente de FPS).

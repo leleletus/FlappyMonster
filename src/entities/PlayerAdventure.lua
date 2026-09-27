@@ -33,6 +33,9 @@ local DEATH_FALL_DIST   = WINDOW_H + 100
 
 -- Contacto con materiales 'hurt': invulnerabilidad tras recibir daño
 local HURT_COOLDOWN = 1.0
+-- Al reaparecer: invulnerable a TODO (parpadea) durante este tiempo
+local SPAWN_INV     = 2.5
+PlayerAdventure.SPAWN_INV = SPAWN_INV
 
 -- Ahogamiento
 local DROWN_TOTAL     = 20     -- segundos hasta empezar drowning.ogg
@@ -84,6 +87,12 @@ local CROUCH_OUTER_H  = OUTER_H * 0.50
 local CROUCH_OUTER_YOFF = SPRITE_H / 2 - CROUCH_OUTER_H / 2
 local CROUCH_INNER_H  = INNER_H * 0.50
 
+-- Aplastado: aún más bajo (el sprite agachado se dibuja aplastado a SQUASH_K)
+local SQUASH_K        = 0.55
+local SQUASH_OUTER_H  = CROUCH_OUTER_H * SQUASH_K
+local SQUASH_INNER_H  = CROUCH_INNER_H * SQUASH_K
+PlayerAdventure.SQUASH_K = SQUASH_K
+
 function PlayerAdventure:new(x, y)
     loadSprites()
     local o = setmetatable({}, self)
@@ -120,23 +129,28 @@ function PlayerAdventure:new(x, y)
     o.gpT=0
     o.gpLanded=false      -- true SOLO en el paso en que impactó (lo leen juego/servidor)
     o.stunT=0             -- aturdido (empujado por un ground pound ajeno)
+    o.spawnInvT=0         -- invulnerable tras reaparecer
+    o.squashT=0           -- aplastado (agachado y aturdido)
+    o.ctrlLockT=0         -- sin control un instante (lanzado de lado por un trampolín)
     return o
 end
 
 function PlayerAdventure:getOuterBounds()
     if self.crouching then
-        -- Agachado: hitbox más baja, alineada al suelo (parte inferior igual)
+        -- Agachado (o aplastado): hitbox más baja, alineada al suelo
+        local h = ((self.squashT or 0) > 0) and SQUASH_OUTER_H or CROUCH_OUTER_H
         local normalBot = self.y + OUTER_YOFF + OUTER_H/2
-        local crouchTop = normalBot - CROUCH_OUTER_H
-        return {x=self.x-self.w/2, y=crouchTop, w=self.w, h=CROUCH_OUTER_H}
+        local crouchTop = normalBot - h
+        return {x=self.x-self.w/2, y=crouchTop, w=self.w, h=h}
     end
     return {x=self.x-self.w/2, y=self.y+OUTER_YOFF-self.h/2, w=self.w, h=self.h}
 end
 function PlayerAdventure:getInnerBounds()
     if self.crouching then
+        local h = ((self.squashT or 0) > 0) and SQUASH_INNER_H or CROUCH_INNER_H
         local normalBot = self.y + OUTER_YOFF + OUTER_H/2
-        local crouchTop = normalBot - CROUCH_INNER_H
-        return {x=self.x-INNER_W/2, y=crouchTop, w=INNER_W, h=CROUCH_INNER_H}
+        local crouchTop = normalBot - h
+        return {x=self.x-INNER_W/2, y=crouchTop, w=INNER_W, h=h}
     end
     return {x=self.x-INNER_W/2, y=self.y-INNER_H/2, w=INNER_W, h=INNER_H}
 end
@@ -144,6 +158,22 @@ end
 function PlayerAdventure:getHeadPoint()
     local ob = self:getOuterBounds()
     return ob.x + ob.w * 0.5, ob.y + ob.h * 0.05
+end
+
+-- ¿Cabe de pie? (la hitbox de pie, con los mismos pies, no toca nada sólido).
+-- Agachado en un hueco de 1 casilla de alto no hay sitio: sigue agachado.
+function PlayerAdventure:canStand(level)
+    local foot = self.y + OUTER_YOFF + OUTER_H / 2
+    local top  = foot - OUTER_H
+    for _, px in ipairs({ self.x - self.w/2 + 4, self.x, self.x + self.w/2 - 4 }) do
+        local py = top + 1
+        while true do
+            if level:collisionAt(px, py) then return false end
+            if py >= foot - 2 then break end
+            py = math.min(py + 12, foot - 2)
+        end
+    end
+    return true
 end
 
 -- ── Colisión ──────────────────────────────────────────────────────────────────
@@ -187,8 +217,19 @@ end
 
 function PlayerAdventure:moveAndCollide(level, dx, dy)
     local T      = TILE_PX
-    local x, y   = self.x, self.y+OUTER_YOFF
-    local hw, hh = self.w/2, self.h/2
+    -- Caja con la que choca: la de pie o, agachado, la baja (mismos pies)
+    local yoff, hh = OUTER_YOFF, self.h/2
+    if self.crouching then
+        local ob = self:getOuterBounds()
+        hh = ob.h / 2
+        yoff = ob.y + hh - self.y
+    end
+    local x, y   = self.x, self.y+yoff
+    local hw     = self.w/2
+    -- Choque de este paso contra un cuerpo sólido: { o, face, speed }. Cara
+    -- del CUERPO que se tocó ('top', 'bottom', 'left', 'right') y velocidad
+    -- con la que se llegó (los trampolines la usan para saber si rebotar).
+    self.bodyHit = nil
 
     -- X: al chocar, pegarse al borde de la hitbox del tile
     x = x + dx
@@ -211,8 +252,59 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
         end
     end
 
+    -- Cuerpos sólidos (p. ej. el jefe espejo): de lado se chocan y se paran,
+    -- sin empujones. Desde arriba no (eso es pisar / caer encima).
+    local x0 = self.x
+    local bodies
+    if self.solidAgainst then bodies = self.solidAgainst(level)
+    elseif not self:isInvulnerable() then bodies = level.solidBodies
+    elseif level.solidBodies then
+        -- Invulnerable: atraviesa a los jefes, pero no los objetos sólidos (morteros...)
+        bodies = {}
+        for _, o in ipairs(level.solidBodies) do if o.solidFull then bodies[#bodies+1] = o end end
+    end
+    if bodies then
+        for _, o in ipairs(bodies) do
+            if o ~= self and not o.dying and o.alive ~= false then
+                local ob = o:getOuterBounds()
+                local myTop, myBot = y - hh, y + hh
+                -- Solapan en vertical "de lado": en los sólidos completos (solidFull,
+                -- p. ej. el mortero) de verdad; en los demás, sin contar la zona de
+                -- la cabeza (eso es pisarlo) ni los pies
+                local sideTop = o.solidFull and (ob.y + 1) or (ob.y + ob.h * 0.35 + 10)
+                local sideBot = o.solidFull and (ob.y + ob.h - 1) or (ob.y + ob.h - 8)
+                if myBot > sideTop and myTop < sideBot
+                   and x + hw > ob.x and x - hw < ob.x + ob.w then
+                    local was = x0 + hw > ob.x and x0 - hw < ob.x + ob.w
+                    if not was and dx ~= 0 then
+                        -- Choque al moverse: se queda pegado a su costado
+                        x = (dx > 0) and (ob.x - hw) or (ob.x + ob.w + hw)
+                        self.bodyHit = { o = o, face = (dx > 0) and 'left' or 'right', speed = math.abs(self.vx) }
+                        self.vx = 0
+                    elseif was then
+                        -- Ya estaban metidos (p. ej. cayó a su lado): se separan
+                        -- poco a poco, sin atravesar paredes
+                        local dir = (x < ob.x + ob.w / 2) and -1 or 1
+                        if dx * dir < 0 then x = x - dx end        -- no avanzar hacia dentro
+                        local nx = x + dir * 3
+                        if not level:collisionAt(nx + dir * hw, y) then x = nx end
+                        if (self.vx or 0) * dir < 0 then self.vx = 0 end
+                    end
+                end
+            end
+        end
+    end
+
+    -- Zona de jefe activa: paredes invisibles (no se puede salir del área).
+    -- La zona se mira desde donde ESTABA: ningún empujón la atraviesa.
+    local arena = level.arenaAt and (level:arenaAt(x0, y) or level:arenaAt(x, y))
+    if arena then
+        if x - hw < arena.x0 then x = arena.x0 + hw; self.vx = 0 end
+        if x + hw > arena.x1 then x = arena.x1 - hw; self.vx = 0 end
+    end
+
     -- Y
-    local prevFoot = self.y + hh
+    local prevFoot = self.y + yoff - OUTER_YOFF + hh     -- (misma referencia que de pie)
     y = y + dy
     self.onGround = false
     self.groundDef = nil
@@ -248,7 +340,7 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
                 local c, r = math.floor(px/T)+1, math.floor((y-hh-2)/T)+1
                 if t.breakable and level:breakTile(c, r) then
                     fx(self, 'block_break', (c-1)*T, (r-1)*T)
-                else
+                elseif not self.crouching then       -- (saltitos agachado en un túnel: sin "bonk")
                     Sound.play('headBump')
                 end
                 break
@@ -256,7 +348,33 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
         end
     end
 
-    self.x, self.y = x, y-OUTER_YOFF
+    -- Sólidos completos (solidFull): se puede estar de pie encima y darse con
+    -- la cabeza por debajo, como con un bloque
+    if bodies then
+        local footWas = self.y + yoff + hh
+        local headWas = self.y + yoff - hh
+        for _, o in ipairs(bodies) do
+            if o.solidFull and o ~= self and o.alive ~= false then
+                local ob = o:getOuterBounds()
+                if x + hw - 2 > ob.x and x - hw + 2 < ob.x + ob.w then
+                    if dy > 0 and footWas <= ob.y + 2 and y + hh >= ob.y then
+                        self.bodyHit = { o = o, face = 'top', speed = self.vy }
+                        y = ob.y - hh; self.vy = 0; self.onGround = true; self.jumpsLeft = 2
+                        self.groundDef = nil
+                    elseif dy < 0 and headWas >= ob.y + ob.h - 2 and y - hh <= ob.y + ob.h then
+                        self.bodyHit = { o = o, face = 'bottom', speed = -self.vy }
+                        y = ob.y + ob.h + hh; self.vy = 0
+                        if not o.bouncyFace then Sound.play('headBump') end
+                    end
+                end
+            end
+        end
+    end
+
+    -- Techo invisible de la zona de jefe
+    if arena and y - hh < arena.y0 then y = arena.y0 + hh; if self.vy < 0 then self.vy = 0 end end
+
+    self.x, self.y = x, y-yoff
 
     -- Fin de la bajada: los pies ya pasaron la zona en la que la plataforma
     -- volvería a "atraparlos" (prevFoot se mide OUTER_YOFF más arriba que los
@@ -268,6 +386,10 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
     -- Contacto (hitbox interna) con materiales que matan o dañan
     local iw2, ih2 = INNER_W/2, INNER_H/2
     local iy = self.y+OUTER_YOFF
+    if self.crouching then                      -- agachado: la caja interna baja
+        local ib = self:getInnerBounds()
+        ih2, iy = ib.h/2, ib.y + ib.h/2
+    end
     local corners={
         {x-iw2+2,iy-ih2+2},{x+iw2-2,iy-ih2+2},
         {x-iw2+2,iy+ih2-2},{x+iw2-2,iy+ih2-2},
@@ -275,7 +397,7 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
     for _,c in ipairs(corners) do
         local t = level:contactAt(c[1],c[2])
         if t then
-            if t.mat.contact == 'kill' then self:die(); return end
+            if t.mat.contact == 'kill' and self:die() ~= false then return end
             if t.mat.contact == 'hurt' and self:hurt() then return end
         end
     end
@@ -284,7 +406,7 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
     local ob = self:getOuterBounds()
     local spikeList = level:getSpikesInBox(ob.x, ob.y, ob.w, ob.h)
     for _, sp in ipairs(spikeList) do
-        if spikeHitsPlayer(sp, ob) then self:die(); return end
+        if spikeHitsPlayer(sp, ob) and self:die() ~= false then return end
     end
 
     -- Líquidos
@@ -296,14 +418,26 @@ end
 -- ── Acciones ──────────────────────────────────────────────────────────────────
 function PlayerAdventure:jump()
     if self.jumpsLeft > 0 then
-        local vel = ADV_JUMP_VEL * (self.inWater and self.liquid.jumpMult or 1.0)
+        local vel = ADV_JUMP_VEL * (self.inWater and self.liquid.jumpMult or 1.0) * (self.jumpMult or 1)
         self.vy=vel; self.jumpsLeft=self.jumpsLeft-1
         self.puff=PUFF_SCALE; Sound.play('jump')
     end
 end
 
+-- Lo que el MUNDO le hace a un jugador (un jefe le cae encima, la cámara
+-- automática lo deja atrás...) suena como suyo: online, su cliente lo genera
+-- al ver bajar su vida. El servidor pone aquí cómo atribuirlo.
+PlayerAdventure.soundOwner = nil      -- function(pa, fn)
+function PlayerAdventure.asOwner(pa, fn)
+    if PlayerAdventure.soundOwner then return PlayerAdventure.soundOwner(pa, fn) end
+    return fn()
+end
+
+-- ¿Recién reaparecido? (no recibe ningún daño)
+function PlayerAdventure:isInvulnerable() return (self.spawnInvT or 0) > 0 end
+
 function PlayerAdventure:takeDamage()
-    if self.dying or not self.alive then return false end
+    if self.dying or not self.alive or self:isInvulnerable() then return false end
     self.hp=self.hp-1
     if self.hp<=0 then self.hp=self.hpMax; self:die(); return true end
     Sound.play('dies'); return false
@@ -312,15 +446,18 @@ end
 -- Daño con invulnerabilidad breve (tiles 'hurt', entidades onTouch='hurt').
 -- Devuelve true si el golpe lo mató.
 function PlayerAdventure:hurt()
-    if self.hurtT > 0 or self.dying or not self.alive then return false end
+    if self.hurtT > 0 or self.dying or not self.alive or self:isInvulnerable() then return false end
     self.hurtT = HURT_COOLDOWN
     return self:takeDamage()
 end
 
-function PlayerAdventure:die(drownDeath)
+-- Devuelve false si no murió (invulnerable tras reaparecer). `force` = muere
+-- igual (límite de tiempo del nivel).
+function PlayerAdventure:die(drownDeath, force)
     if self.dying then return end
+    if self:isInvulnerable() and not drownDeath and not force then return false end
     self.dying=true; self.vx=0; self.vy=0
-    self.gpPhase=nil; self.stunT=0
+    self.gpPhase=nil; self.stunT=0; self.squashT=0
     self.deathPhase='freeze'; self.deathTimer=0; self.deathY=self.y
     if not drownDeath then
         Sound.play('dies2')
@@ -343,7 +480,8 @@ function PlayerAdventure:respawn()
     self.drownAudT=0; self.drownDead=false
     self.prevInWater=false
     self.splashSt='out'; self.splashCD=0
-    self.gpPhase=nil; self.gpT=0; self.gpLanded=false; self.stunT=0
+    self.gpPhase=nil; self.gpT=0; self.gpLanded=false; self.stunT=0; self.squashT=0; self.ctrlLockT=0
+    self.spawnInvT=SPAWN_INV
     Sound.stopTracked('drowning')
     Sound.playMusic('level')
     self.airBarAlpha=0; self.airBarBobT=0; self.airBarBobOn=false; self.airBarShakeX=0
@@ -570,19 +708,73 @@ function PlayerAdventure:updateGroundPound(dt, level)
 end
 
 -- Rebote tras pisotear (termina el ground pound y recarga el doble salto)
-function PlayerAdventure:bounce(vy)
+function PlayerAdventure:bounce(vy, dirX, soft)
     self.vy = vy; self.jumpsLeft = 2; self.onGround = false
     self.gpPhase, self.gpT = nil, 0
+    -- Pisotón de lado (Crabby en una pared): sale despedido hacia fuera, un
+    -- instante sin control pero sin aturdirse
+    if dirX and soft then
+        self.vx = dirX * 300
+        self.ctrlLockT = math.max(self.ctrlLockT or 0, 0.12)
+        return
+    end
+    -- Rebote con empujón lateral (p. ej. un jefe invulnerable): no se puede
+    -- quedar rebotando encima; un instante sin control para que se note
+    if dirX then
+        self.vx = dirX * 460
+        self.stunT = math.max(self.stunT or 0, 0.18)
+    end
+end
+
+-- Lanzado por un trampolín: velocidad (vx, vy). Si empuja de lado, un
+-- instante sin control para que el impulso no se pierda.
+function PlayerAdventure:launch(vx, vy)
+    self.vy = vy
+    if vx and vx ~= 0 then
+        -- Un instante sin control (el impulso no se pierde), pero SIN aturdir
+        self.vx = vx
+        self.ctrlLockT = math.max(self.ctrlLockT or 0, 0.25)
+    end
+    self.onGround, self.crouching = false, false
+    self.jumpsLeft = 1                       -- queda el salto en el aire
+    self.gpPhase, self.gpT = nil, 0
+    self.puff = PUFF_SCALE * 1.1
+end
+
+-- Aplastado (p. ej. le cae encima un Crabby trampolín): sale empujado a un
+-- lado, agachado y aturdido un rato
+local SQUASH_T = 1.8
+function PlayerAdventure:squash(dirX)
+    if self.dying or self:isInvulnerable() then return false end
+    self.vx, self.vy = dirX * 560, -240          -- saltito hacia un lado
+    self.onGround = false
+    self.gpPhase, self.gpT = nil, 0
+    self.stunT   = math.max(self.stunT or 0, SQUASH_T)
+    self.squashT = SQUASH_T
+    Sound.play('stunned')
+    return true
 end
 
 -- Empujón de un ground pound cercano: sale despedido y queda aturdido
 function PlayerAdventure:knockback(dirX)
-    if self.dying then return end
+    if self.dying or self:isInvulnerable() then return end
     self.vx, self.vy = dirX * GP_PUSH_VX, GP_PUSH_VY
     self.onGround, self.crouching = false, false
     self.gpPhase, self.gpT = nil, 0
     self.stunT = GP_STUN
     Sound.play('stunned')
+end
+
+-- Empujón leve al chocar con un cuerpo (p. ej. el jefe espejo): sale
+-- rebotado hacia un lado sin quedar aturdido del todo.
+local RECOIL_VX, RECOIL_VY, RECOIL_STUN = 520, -300, 0.22
+function PlayerAdventure:recoil(dirX)
+    if self.dying or self.stunT > 0 or self:isInvulnerable() then return false end
+    self.vx, self.vy = dirX * RECOIL_VX, RECOIL_VY
+    self.onGround, self.crouching = false, false
+    self.gpPhase, self.gpT = nil, 0
+    self.stunT = RECOIL_STUN
+    return true
 end
 
 -- ── Update ────────────────────────────────────────────────────────────────────
@@ -603,11 +795,26 @@ function PlayerAdventure:update(dt, level)
 
     self.gpLanded = false
     if self.stunT > 0 then self.stunT = math.max(0, self.stunT - dt) end
+    if self.spawnInvT > 0 then self.spawnInvT = math.max(0, self.spawnInvT - dt) end
+    if (self.squashT or 0) > 0 then self.squashT = math.max(0, self.squashT - dt) end
     local stunned = self.stunT > 0
+    if (self.ctrlLockT or 0) > 0 then self.ctrlLockT = math.max(0, self.ctrlLockT - dt) end
+    local locked = stunned or (self.ctrlLockT or 0) > 0      -- sin control (lanzado de lado)
+
+    -- Input de este paso (los "recién pulsado" se leen UNA vez: el stub de red
+    -- los consume). Se apunta lo que el jugador PULSA, pueda o no hacerlo:
+    -- el jefe espejo lo reproduce con retardo (ver entities/types/mirror.lua).
+    local pJump, pCrouch = Input.pressed('jump'), Input.pressed('crouch')
+    local hCrouch = Input.down('crouch')
+    local inX = Input.down('move_left') and -1 or (Input.down('move_right') and 1 or 0)
+    self.inMoveX, self.inCrouch = inX, hCrouch
+    if pJump   then self.inJumpN   = (self.inJumpN or 0) + 1 end
+    if pCrouch then self.inCrouchN = (self.inCrouchN or 0) + 1 end
 
     -- Ground pound: agacharse (pulsar) en el aire o nadando
-    if Input.pressed('crouch') and not self.onGround and not stunned
-       and not self.gpPhase and not self.dropping then
+    if pCrouch and not self.onGround and not stunned
+       and not self.gpPhase and not self.dropping
+       and (not self.crouching or self:canStand(level)) then     -- (en un túnel bajo no cabe)
         self.gpPhase, self.gpT = 'windup', 0
         self.vx, self.vy = 0, 0
         self.crouching = false
@@ -621,13 +828,17 @@ function PlayerAdventure:update(dt, level)
     end
 
     local moveX=0
-    -- Agacharse: en el suelo (también bajo el agua), bloquea movimiento
-    local wantCrouch = Input.down('crouch')
-    if wantCrouch and self.onGround and not stunned then
-        self.crouching = true
+    -- Agacharse: en el suelo (también bajo el agua) no se anda, pero se puede
+    -- saltar (salto agachado). En el aire solo sigue agachado quien saltó
+    -- agachado, mientras mantenga agachar. Sin sitio para ponerse de pie
+    -- (hueco de 1 casilla de alto) sigue agachado pase lo que pase.
+    local wantCrouch = hCrouch
+    if self.onGround then
+        self.crouching = (wantCrouch and not stunned) or (self.squashT or 0) > 0   -- (aplastado: aunque esté aturdido)
     else
-        self.crouching = false
+        self.crouching = self.crouching and wantCrouch
     end
+    if not self.crouching and not self:canStand(level) then self.crouching = true end
 
     -- Bajar por plataforma traspasable: hay que MANTENER agachado DROP_DELAY
     -- segundos (margen contra agachados accidentales). Las plataformas no
@@ -647,11 +858,23 @@ function PlayerAdventure:update(dt, level)
         self.dropHoldT = 0
     end
 
-    if not self.crouching and not stunned then
+    -- Agachado en el suelo no se anda; en el aire (salto agachado) sí se dirige
+    if (not self.crouching or not self.onGround) and not locked then
         if Input.down('move_right') then moveX=1 end
         if Input.down('move_left')  then moveX=-1 end
     end
-    if Input.pressed('jump') and not self.crouching and not stunned then self:jump() end
+    if pJump and not stunned then
+        local crouchJump = self.crouching and self.onGround and (self.squashT or 0) <= 0
+        if not self.crouching or crouchJump then
+            self:jump()
+            -- Salto agachado con dirección: sale ya lanzado hacia ese lado
+            if crouchJump and inX ~= 0 and not locked then
+                local liqM = (self.inWater and self.liquid) and self.liquid.speedMult or 1
+                self.vx = inX * ADV_MOVE_SPD * liqM * (self.speedMult or 1)
+                self.facing = inX
+            end
+        end
+    end
 
     -- Materiales: el líquido en el que está y la superficie que pisa
     local liq    = self.inWater and self.liquid or nil
@@ -664,7 +887,10 @@ function PlayerAdventure:update(dt, level)
 
     if self.hurtT > 0 then self.hurtT = math.max(0, self.hurtT - dt) end
 
-    self.vx = self.vx + (moveX*ADV_MOVE_SPD*speedM*walkM - self.vx)*fric*dt
+    -- (lanzado de lado: el impulso se mantiene mientras dura el bloqueo)
+    if (self.ctrlLockT or 0) <= 0 then
+        self.vx = self.vx + (moveX*ADV_MOVE_SPD*speedM*walkM*(self.speedMult or 1) - self.vx)*fric*dt
+    end
     self.vy = self.vy + ADV_GRAVITY*gravM*dt
     if liq then self.vy=self.vy+(-self.vy*liq.drag*dt) end
 
@@ -701,6 +927,10 @@ function PlayerAdventure:update(dt, level)
         self.frame=3; self.animT=0
     end
 
+    -- Aplastado: agachado (sprite) desde el golpe, también en el saltito; y
+    -- el salto agachado también se ve agachado
+    if (self.squashT or 0) > 0 or self.crouching then self.frame, self.animT = 5, 0 end
+
     self.puff=self.puff+(1-self.puff)*PUFF_SPD*dt
 
     self:updateDrowning(dt, level)
@@ -719,24 +949,51 @@ function PlayerAdventure:render(camX, camY)
     end
     local iw=img:getWidth(); local ih=img:getHeight()
     local s=PLAYER_SCALE*self.puff
-    love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.draw(img,
-        math.floor(self.x-camX), math.floor(self.y-camY),
-        0, s*self.facing, s, iw/2, ih/2)
+    local r, g, b = PlayerAdventure.hurtTint(self.dying and 0 or self.hurtT)
+    love.graphics.setColor(r, g, b, PlayerAdventure.invulnAlpha(not self.dying and self.spawnInvT or 0))
+    local squashed = not self.dying and (self.squashT or 0) > 0
+    if squashed then
+        -- Aplastado: agachado y achatado de arriba abajo, con los pies en el suelo
+        love.graphics.draw(spriteCrouch, math.floor(self.x-camX), math.floor(self.y-camY+SPRITE_H/2),
+            0, s*self.facing, s*SQUASH_K, iw/2, ih)
+    else
+        love.graphics.draw(img,
+            math.floor(self.x-camX), math.floor(self.y-camY),
+            0, s*self.facing, s, iw/2, ih/2)
+    end
     if self.dying then
         DeadEyes.draw(math.floor(self.x-camX), math.floor(self.y-camY), s, self.facing)
     elseif (self.stunT or 0) > 0 then
-        PlayerAdventure.drawStunStars(self.x - camX, self.y - camY)
+        PlayerAdventure.drawStunStars(self.x - camX, self.y - camY, squashed)
     end
 end
 
+-- Parpadeo rojo tras recibir daño (invulnerable). También para jugadores remotos.
+function PlayerAdventure.hurtTint(hurtT, a)
+    if (hurtT or 0) > 0 and math.floor(love.timer.getTime() * 12) % 2 == 0 then
+        return 1, 0.22, 0.22, a or 1
+    end
+    return 1, 1, 1, a or 1
+end
+
+-- Parpadeo (transparencia) mientras es invulnerable tras reaparecer
+function PlayerAdventure.invulnAlpha(invT, a)
+    if (invT == true or (tonumber(invT) or 0) > 0) and math.floor(love.timer.getTime() * 15) % 2 == 0 then
+        return (a or 1) * 0.25
+    end
+    return a or 1
+end
+
 -- Estrellitas girando sobre la cabeza (aturdido). También para jugadores remotos.
-function PlayerAdventure.drawStunStars(sx, sy)
+-- squashed = aplastado: la cabeza está mucho más abajo (sprite agachado,
+-- 9 filas visibles, achatado a SQUASH_K)
+function PlayerAdventure.drawStunStars(sx, sy, squashed)
     local t = love.timer.getTime()
+    local headY = squashed and (sy + SPRITE_H / 2 - 9 * PLAYER_SCALE * SQUASH_K) or (sy - SPRITE_H / 2)
     for i = 0, 2 do
         local a  = t * 6 + i * (math.pi * 2 / 3)
         local x  = math.floor(sx + math.cos(a) * 22)
-        local y  = math.floor(sy - SPRITE_H / 2 - 10 + math.sin(a) * 6)
+        local y  = math.floor(headY - 10 + math.sin(a) * 6)
         love.graphics.setColor(1, 0.9, 0.3, 1)
         love.graphics.rectangle('fill', x - 4, y - 1, 8, 2)
         love.graphics.rectangle('fill', x - 1, y - 4, 2, 8)

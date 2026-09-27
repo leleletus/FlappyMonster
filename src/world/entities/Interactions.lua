@@ -6,7 +6,13 @@
 --   nil                           sin contacto relevante
 --   'kill'                        el jugador muere (pinchos, entidad hostil)
 --   'hurt'                        el jugador pierde 1 HP (entidad onTouch='hurt')
---   'stomp', bounceVy, points     el jugador pisotea a la entidad
+--   'stomp', bounceVy, points[, dirX]  el jugador pisotea a la entidad (dirX:
+--                                 rebote de lado, p. ej. un Crabby en una pared)
+--   'pound', bounceVy, points     le cae encima en pleno ground pound (e:pound)
+--   'bounce', bounceVy, dirX      rebota sin hacerle nada (jefe invulnerable);
+--                                 con dirX sale empujado hacia ese lado
+--   'recoil', dirX                choca con su cuerpo y sale empujado
+--   'launch', vx, vy              lanzado (trampolín): pa:launch, e:onLaunch(pa)
 --   'pickup'                      coleccionable (estrella, vida extra...)
 --   'checkpoint'                  punto de control
 --
@@ -25,6 +31,15 @@ local BOUNCE = 0.40   -- fracción de la velocidad de salto al rebotar
 
 function Interactions.check(pa, e)
     if not e.alive or e.state == 'dead' or (e.isGhost and e:isGhost()) then return nil end
+    -- Reglas propias (jefes: ver entities/Boss.lua). Debe ser una consulta
+    -- sin efectos: el cliente online la usa para predecir rebotes.
+    if e.interact then return e:interact(pa) end
+    return Interactions.defaultCheck(pa, e)
+end
+
+-- Reglas normales (enemigos, coleccionables...). Las entidades con interact()
+-- propio pueden usarlas para los casos que no tratan ellas.
+function Interactions.defaultCheck(pa, e)
     local pob = pa:getOuterBounds()
 
     -- Coleccionables y checkpoints: basta con tocarlos
@@ -38,9 +53,10 @@ function Interactions.check(pa, e)
         return nil
     end
 
-    -- Zonas de peligro propias (p. ej. el pincho del Crabby): siempre matan
+    -- Zonas de peligro propias (el pincho del Crabby, el fuego del mortero...):
+    -- matan, salvo que la caja diga otra cosa (hb.effect = 'hurt': 1 de vida)
     for _, hb in ipairs(e:getHazardBoxes() or {}) do
-        if overlap(pob, hb) then return 'kill' end
+        if overlap(pob, hb) then return hb.effect or 'kill' end
     end
 
     if e:isBodyDisabled() then return nil end
@@ -55,7 +71,21 @@ function Interactions.check(pa, e)
         if pa.gpPhase == 'fall' and not e.flipped and pob.y + pob.h * 0.5 < gob.y + gob.h * 0.5 then
             return 'stomp', -math.abs(ADV_JUMP_VEL) * BOUNCE, p.points
         end
-        if e.flipped then
+        if e.cattached and e.cnx and e.cnx ~= 0 then
+            -- En una pared (trepador): el caparazón mira hacia fuera (normal cnx).
+            -- Se le pisotea cayéndole encima (como en el suelo) o saltándole
+            -- desde el lado abierto; desde abajo o andando por el suelo, no.
+            if not pa.onGround then
+                local fromTop  = pa.vy > 0 and pob.y + pob.h < gob.y + gob.h * 0.35 + 10
+                -- (lado abierto = el centro del jugador más allá de la cara de fuera
+                -- del Crabby; si no, viene de debajo/encima, por sus patas)
+                local fromSide = (pa.x - e.x) * e.cnx > gob.w / 2
+                                 and (pa.vx or 0) * e.cnx <= 60      -- (no alejándose de él)
+                if fromTop or fromSide then
+                    return 'stomp', -math.abs(ADV_JUMP_VEL) * BOUNCE, p.points, e.cnx
+                end
+            end
+        elseif e.flipped then
             -- Boca abajo (techo): se pisotea desde abajo, subiendo
             if pa.vy < 0 and pob.y > gob.y + gob.h * 0.65 - 10 then
                 return 'stomp', math.abs(ADV_JUMP_VEL) * BOUNCE, p.points
@@ -85,20 +115,31 @@ end
 function Interactions.run(pa, entities, cb, rewind)
     if pa.dying or not pa.alive then return end
     for i, e in ipairs(entities) do
-        local result, a, b
+        local result, a, b, c
         if rewind then
-            result, a, b = rewind(i, e, function() return Interactions.check(pa, e) end)
+            result, a, b, c = rewind(i, e, function() return Interactions.check(pa, e) end)
         else
-            result, a, b = Interactions.check(pa, e)
+            result, a, b, c = Interactions.check(pa, e)
         end
         if result == 'kill' then
-            pa:die(); return
+            if pa:die() ~= false then return end      -- (invulnerable al reaparecer: sigue)
         elseif result == 'hurt' then
             if pa:hurt() then return end
         elseif result == 'stomp' then
             e:stomp()
+            pa:bounce(a, c, true)
+            if cb.stomp then cb.stomp(e, b, i) end
+        elseif result == 'pound' then
+            if e.pound then e:pound(pa) else e:stomp() end
             pa:bounce(a)
             if cb.stomp then cb.stomp(e, b, i) end
+        elseif result == 'bounce' then
+            pa:bounce(a, b)
+        elseif result == 'recoil' then
+            pa:recoil(a)
+        elseif result == 'launch' then
+            pa:launch(a, b)
+            if e.onLaunch then e:onLaunch(pa) end
         elseif result == 'pickup' then
             if e:collect() and cb.pickup then cb.pickup(e, e.def.pickup, i) end
         elseif result == 'checkpoint' then

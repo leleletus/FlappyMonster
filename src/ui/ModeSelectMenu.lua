@@ -55,6 +55,9 @@ local function buildPreviewCanvas(prev)
     local nr, nc = #rows, #(rows[1] or '')
     if nr == 0 or nc == 0 then return nil end
     local S = PREVIEW_CELL
+    local limit = love.graphics.getSystemLimits().texturesize
+    if nc * S > limit then nc = math.floor(limit / S) end
+    if nr * S > limit then nr = math.floor(limit / S) end
     local ok, canvas = pcall(love.graphics.newCanvas, nc * S, nr * S)
     if not ok then return nil end
     canvas:setFilter('nearest', 'nearest')
@@ -84,6 +87,9 @@ local function buildPreviewCanvas(prev)
             elseif ch == '^' then
                 love.graphics.setColor(0.95, 0.95, 0.95)
                 love.graphics.polygon('fill', x, y + S, x + S / 2, y + S / 2, x + S, y + S)
+            elseif ch == 'P' then
+                love.graphics.setColor(1, 0.8, 0.2, 0.55)          -- zona de puntos
+                love.graphics.rectangle('fill', x, y, S, S)
             elseif ch == 'F' then
                 local h = S / 2
                 for i = 0, 1 do for j = 0, 1 do
@@ -142,10 +148,13 @@ local function drawPreview(level, x, y, w, h, t, tint)
         ox = x - span * (0.5 - 0.5 * math.cos(t * (2 * math.pi) / math.max(6, span / 45)))
     end
     local oy = y + h - lh
-    love.graphics.setScissor(x, y, w, h)
+    love.graphics.stencil(function()
+        love.graphics.rectangle('fill', x, y, w, h)
+    end, "replace", 1)
+    love.graphics.setStencilTest("greater", 0)
     love.graphics.setColor(tint, tint, tint, 1)
     love.graphics.draw(canvas, math.floor(ox), math.floor(oy), 0, sc, sc)
-    love.graphics.setScissor()
+    love.graphics.setStencilTest()
 end
 
 -- ── Ciclo de vida ─────────────────────────────────────────────────────────────
@@ -398,9 +407,9 @@ function ModeSelectMenu:render()
         love.graphics.setColor(1, 1, 1, 0.5)
         local msg = self.catalog and 'No hay niveles para este modo' or 'Cargando niveles...'
         love.graphics.printf(msg, 0, CARD_Y + CARD_H / 2 - 10, WINDOW_W, 'center')
-        if self.catalog and mode.id == 'race' then
+        if self.catalog and mode.emptyHint then
             love.graphics.setFont(FONT_SMALL)
-            love.graphics.printf('Crea uno en el editor con el tile "Meta"', 0, CARD_Y + CARD_H / 2 + 20, WINDOW_W, 'center')
+            love.graphics.printf(mode.emptyHint, 0, CARD_Y + CARD_H / 2 + 20, WINDOW_W, 'center')
         end
     end
     for k = 0, VISIBLE - 1 do

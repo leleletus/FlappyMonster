@@ -18,6 +18,7 @@
 --   e:onIdleEnd() -> true  decidir otro estado al terminar una pausa
 --   e:canBeStomped(), e:isBodyDisabled(), e:getHazardBoxes()
 --   e:netPack() / e:netApply(a, b, f)   datos extra sincronizados online
+--   e:netAtRest() / e:netRest()          no enviarla mientras está en reposo
 --   Cls.sizePx() -> w, h  tamaño en px (en vez de sizeImage) para dibujos por código
 --   Cls.customDrop = true  los estados 'drop_*' los lleva su updateCustom
 --
@@ -193,6 +194,23 @@ function Entity:updateCommonStates(dt, level)
             if self.state == 'walk' then self:startWalk() end
         end
         return true
+    elseif st == 'launched' then
+        -- Lanzada por un trampolín: vuela hasta aterrizar
+        self.deadTimer = self.deadTimer + dt
+        local vx = self.vx
+        self.vy = self.vy + ADV_GRAVITY * dt
+        self:moveAndCollide(level, vx * dt, self.vy * dt)
+        if self.state ~= 'launched' then return true end     -- (otro trampolín la relanzó)
+        if self.vx ~= vx then self.vx = -vx * 0.3 end         -- chocó con una pared: rebota un poco
+        if self.onGround and self.deadTimer > 0.05 then
+            self.launchedPrev = nil
+            self.vy = 0
+            self.vx = self.moving and self.speed * self.facing or 0
+            self:startWalk()
+        elseif self.y > level.heightPx + TILE_PX * 4 then
+            self.alive = false
+        end
+        return true
     elseif st == 'stunned' then
         -- Empujada por un ground pound: sale despedida, frena y se queda
         -- aturdida un momento; luego sigue con lo que hacía
@@ -239,14 +257,19 @@ function Entity:updateCommonStates(dt, level)
     end
     -- Entidad de techo que se deja caer al ver a un jugador debajo
     local p = self.props
-    if p.dropOnSight and self.flipped and not self.dropped and (st == 'walk' or st == 'idle')
+    if p.dropOnSight and self.flipped and not self.dropped and self:canDropNow()
        and self:seesPlayerBelow(level, p.detectRange or 6) then
+        self.dropHidden = self:isHiding()          -- (escondido: cae tal cual, sin asomarse)
         self.state, self.deadTimer, self.vx = 'drop_shake', 0, 0
         Sound.play('spikeShake')
         return true
     end
     return false
 end
+
+-- ¿Puede empezar ya la caída desde el techo? (el Crabby también escondido)
+function Entity:canDropNow() return self.state == 'walk' or self.state == 'idle' end
+function Entity:isHiding() return false end
 
 -- ¿Le afecta el empujón de un ground pound cercano?
 function Entity:canBeKnocked()
@@ -290,6 +313,11 @@ function Entity:isBodyDisabled() return false end
 function Entity:getHazardBoxes() return nil end
 function Entity:netPack() return nil end
 function Entity:netApply(a, b, f) end
+-- Red: una entidad "en reposo" (quieta en su estado de siempre, p. ej. un
+-- pincho colgando) no se envía en los snapshots; el cliente la devuelve a ese
+-- estado con netRest(). Ahorra muchísimo con cientos de pinchos.
+function Entity:netAtRest() return false end
+function Entity:netRest() end
 
 -- ── Hitboxes ──────────────────────────────────────────────────────────────────
 function Entity:getOuterBounds()
@@ -305,6 +333,23 @@ end
 -- ── Movimiento ────────────────────────────────────────────────────────────────
 local function solidAt(level, wx, wy)
     return level:isEnemySolidAt(wx, wy)   -- según el catálogo de tiles (enemySolid)
+end
+
+-- Tile sólido en el punto (con su forma real: las losas no son bloques enteros)
+local function solidDefAt(level, wx, wy)
+    return level:enemySolidDefAt(wx, wy)
+end
+
+-- Caras de la hitbox real del tile que hay en el punto (px de mundo)
+local function faceLeft(t, px)   return math.floor(px / TILE_PX) * TILE_PX + t.hitbox.x * TILE_PX end
+local function faceRight(t, px)
+    if t.fullHitbox then return math.ceil(px / TILE_PX) * TILE_PX end
+    return math.floor(px / TILE_PX) * TILE_PX + (t.hitbox.x + t.hitbox.w) * TILE_PX
+end
+local function faceTop(t, py)    return math.floor(py / TILE_PX) * TILE_PX + t.hitbox.y * TILE_PX end
+local function faceBottom(t, py)
+    if t.fullHitbox then return math.ceil(py / TILE_PX) * TILE_PX end
+    return math.floor(py / TILE_PX) * TILE_PX + (t.hitbox.y + t.hitbox.h) * TILE_PX
 end
 
 -- ¿Cuenta como obstáculo para las que caminan? (no los coleccionables ni lo
@@ -323,7 +368,7 @@ function Entity:blockedAhead(level, dir)
     local by, bh = self.y - hh + 2, self.outerH - 4
     if level.hasSpikeCellInBox and level:hasSpikeCellInBox(bx, by, probe, bh) then return true end
     for _, o in ipairs(level.liveEntities or {}) do
-        if o ~= self and (o.x - self.x) * dir > 0 and o:isObstacle() then
+        if o ~= self and not o.solidFull and (o.x - self.x) * dir > 0 and o:isObstacle() then   -- (los sólidos los choca moveAndCollide)
             local ob = o:getOuterBounds()
             if bx < ob.x + ob.w and bx + probe > ob.x and by < ob.y + ob.h and by + bh > ob.y then
                 return true
@@ -343,53 +388,120 @@ function Entity:turnAtObstacles(level)
 end
 
 -- Colisión con el nivel. Si está pegado al techo (flipped) la "gravedad" va
--- hacia arriba: se apoya al chocar por arriba.
+-- hacia arriba: se apoya al chocar por arriba. Se ajusta a las caras de la
+-- hitbox REAL de cada tile (una losa no es un bloque entero: colgada debajo
+-- de una plataforma queda pegada a ella, no flotando).
+local MAX_STEP = 16      -- px por sub-paso vertical (no atravesar losas finas)
+
+-- Cara que se toca en el punto: tile (forma real) u objeto sólido (trampolín,
+-- mortero...). `side` = cara del obstáculo que se toca ('left' al ir hacia la
+-- derecha, 'top' al caer...). Devuelve la coordenada de la cara y el objeto.
+local function probe(level, self, px, py, side)
+    local t = solidDefAt(level, px, py)
+    if t then
+        if side == 'left'  then return faceLeft(t, px) end
+        if side == 'right' then return faceRight(t, px) end
+        if side == 'top'   then return faceTop(t, py) end
+        return faceBottom(t, py)
+    end
+    local o, b = level:bodyAt(px, py, self)
+    if o then
+        if side == 'left'  then return b.x, o end
+        if side == 'right' then return b.x + b.w, o end
+        if side == 'top'   then return b.y, o end
+        return b.y + b.h, o
+    end
+    return nil
+end
+
 function Entity:moveAndCollide(level, dx, dy)
-    local T  = TILE_PX
     local hw = self.outerW / 2
     local hh = self.outerH / 2
     local x, y = self.x, self.y
+    local free = self.state == 'launched'      -- lanzada: sin límites de ruta
+    local touched, touchedFace                 -- objeto sólido que tocó (trampolín)
 
     x = x + dx
-    if dx > 0 then
-        if solidAt(level, x + hw, y - hh + 4) or solidAt(level, x + hw, y + hh - 4) then
-            x = math.floor((x + hw) / T) * T - hw
-            self.vx = -self.speed;  self.facing = -1
-        elseif x + hw >= self.rightBoundPx then
+    local rows = { y - hh + 4, y, y + hh - 4 }
+    if dx ~= 0 then
+        local side = (dx > 0) and 'left' or 'right'
+        local edge = (dx > 0) and (x + hw) or (x - hw)
+        local hit, body
+        for _, py in ipairs(rows) do
+            local f, o = probe(level, self, edge, py, side)
+            if f and (not hit or (dx > 0 and f < hit) or (dx < 0 and f > hit)) then hit, body = f, o end
+        end
+        if hit then
+            x = (dx > 0) and (hit - hw) or (hit + hw)
+            if body then touched, touchedFace = body, side end
+            local d = (dx > 0) and -1 or 1
+            self.vx = d * self.speed;  self.facing = d
+        elseif not free and dx > 0 and x + hw >= self.rightBoundPx then
             x = self.rightBoundPx - hw
             self.vx = -self.speed;  self.facing = -1
-        end
-    elseif dx < 0 then
-        if solidAt(level, x - hw, y - hh + 4) or solidAt(level, x - hw, y + hh - 4) then
-            x = math.ceil((x - hw) / T) * T + hw
-            self.vx =  self.speed;  self.facing = 1
-        elseif x - hw <= self.leftBoundPx then
+        elseif not free and dx < 0 and x - hw <= self.leftBoundPx then
             x = self.leftBoundPx + hw
             self.vx =  self.speed;  self.facing = 1
         end
     end
 
-    y = y + dy
     self.onGround = false
     local chx = { x - hw + 4, x, x + hw - 4 }
     local landDown = not self.flipped
-    if dy > 0 then
+    -- En sub-pasos: una caída rápida no se salta una losa fina
+    local left = dy
+    while left ~= 0 do
+        local step = (left > 0) and math.min(left, MAX_STEP) or math.max(left, -MAX_STEP)
+        left = left - step
+        y = y + step
+        local side = (step > 0) and 'top' or 'bottom'
+        local edge = (step > 0) and (y + hh) or (y - hh)
+        local hit, body
         for _, px in ipairs(chx) do
-            if solidAt(level, px, y + hh) then
-                y = math.floor((y + hh) / T) * T - hh
-                self.vy = 0;  if landDown then self.onGround = true end;  break
-            end
+            local f, o = probe(level, self, px, edge, side)
+            if f and (not hit or (step > 0 and f < hit) or (step < 0 and f > hit)) then hit, body = f, o end
         end
-    elseif dy < 0 then
-        for _, px in ipairs(chx) do
-            if solidAt(level, px, y - hh) then
-                y = math.ceil((y - hh) / T) * T + hh
-                self.vy = 0;  if not landDown then self.onGround = true end;  break
-            end
+        if hit then
+            y = (step > 0) and (hit - hh) or (hit + hh)
+            self.vy = 0
+            if (step > 0) == landDown then self.onGround = true end
+            if body then touched, touchedFace = body, side end
+            break
         end
     end
 
     self.x, self.y = x, y
+    -- Trampolín: si tocó su cara buena, sale lanzada
+    if touched then self:touchBody(touched, touchedFace) end
+end
+
+-- ── Trampolines ───────────────────────────────────────────────────────────────
+-- Tocar la cara que lanza de un objeto (o.bouncyFace, o.face) la lanza con la
+-- misma velocidad que a un jugador. Los voladores no (rebotan como en una pared).
+function Entity:canBeLaunched()
+    return not self.flying and self.alive and self.state ~= 'dead' and not self:isGhost()
+end
+
+function Entity:touchBody(o, face)
+    if not (o.bouncyFace and o.face == face and o.launchVelocity) then return false end
+    if o.canLaunchEntity and not o:canLaunchEntity() then return false end
+    if not self:canBeLaunched() then return false end
+    local vx, vy = o:launchVelocity()
+    if o.onLaunch then o:onLaunch(nil) end
+    self:launch(vx, vy)
+    return true
+end
+
+-- Sale despedida (trampolín): vuela con gravedad normal hasta aterrizar y
+-- sigue andando (ya fuera de su ruta). Del techo o de una pared cae al suelo.
+function Entity:launch(vx, vy)
+    if self.releaseCrawl then self:releaseCrawl() end
+    if self.launchedPrev == nil and self.state ~= 'launched' then self.launchedPrev = self.state end
+    self.state, self.deadTimer = 'launched', 0
+    self.flipped, self.onGround = false, false
+    self.vx, self.vy = vx, vy
+    if vx ~= 0 then self.facing = vx > 0 and 1 or -1 end
+    self.leftBoundPx, self.rightBoundPx = -math.huge, math.huge
 end
 
 -- Gravedad (hacia el techo si está boca abajo) sin desplazamiento horizontal.

@@ -17,6 +17,9 @@
 --  Listo: se puede colocar en el editor con todas sus propiedades (movimiento,
 --  ruta, hostilidad, puntos...) y funciona en un jugador y online.
 --
+-- JEFES: heredan de entities/Boss.lua (vida, golpes, muerte, red) y se
+-- colocan dentro de una zona de jefe (world/BossZones.lua). Ver types/mirror.lua.
+--
 -- Propiedades comunes a todas: EntityTypes.COMMON. Comportamiento común y
 -- hooks para comportamiento propio: entities/Entity.lua. Reglas de combate:
 -- entities/Interactions.lua.
@@ -25,10 +28,15 @@ local EntityTypes  = require 'src/world/entities/EntityTypes'
 local Interactions = require 'src/world/entities/Interactions'
 local Props        = require 'src/world/entities/Props'
 
-local TYPES = { 'gummy', 'crabby', 'spikefall', 'star', 'extralife', 'checkpoint' }
+local TYPES = { 'gummy', 'crabby', 'spikefall', 'star', 'extralife', 'checkpoint',
+                'mortar', 'rainspike', 'spikerain', 'trampoline', 'crabbytramp',
+                'flood', 'pointarea', 'mirror', 'miniboss1' }
 
+-- Un archivo puede definir varios tipos (p. ej. el trampolín en sus 4 direcciones)
 for _, name in ipairs(TYPES) do
-    EntityTypes.register(require('src/world/entities/types/' .. name))
+    local d = require('src/world/entities/types/' .. name)
+    if d[1] then for _, def in ipairs(d) do EntityTypes.register(def) end
+    else EntityTypes.register(d) end
 end
 
 local Entities = {
@@ -36,6 +44,16 @@ local Entities = {
     interactions = Interactions,
     props        = Props,
 }
+
+-- Entidades con cuerpo sólido para los jugadores (p. ej. jefes): el juego lo
+-- pone en level.solidBodies antes de mover a los jugadores.
+function Entities.solidBodies(list)
+    local out = {}
+    for _, e in pairs(list) do
+        if e.isSolidBody and e:isSolidBody() then out[#out+1] = e end
+    end
+    return out
+end
 
 -- Crea la instancia de una colocación ya normalizada (Level la normaliza).
 function Entities.create(placement)

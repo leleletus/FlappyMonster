@@ -7,7 +7,10 @@
 --   id, label, tagline         identificador, nombre visible y objetivo en una línea
 --   color                      color de acento en menús/HUD
 --   icon                       icono pixel art (PixelIcons) para menús
---   requires(info) -> ok, why  ¿el nivel sirve? info = { enemies, killable, finish }
+--   emptyHint                  ayuda si no hay niveles para el modo (menú de la sala)
+--   requires(info) -> ok, why  ¿el nivel sirve? info = { enemies, killable, finish, bosses,
+--                              autoScroll, pointAreas }. Un nivel puede además limitar sus
+--                              modos con "modes": [...] en su JSON (editor: pestaña Nivel).
 --   triggers                   lista de triggers de tile que le interesan ('finish'...)
 --   start(m)                   al empezar la ronda
 --   onTrigger(m, ps, name)     un jugador tocó un tile con ese trigger
@@ -21,7 +24,7 @@
 --   hud(m) -> tabla            datos extra que el servidor manda cada snapshot
 --
 -- `m` (match) lo crea el servidor: m.players (playerSims), m.enemies, m.time,
--- m.event(ev) para emitir eventos, m.data (estado libre del modo).
+-- m.level, m.event(ev) para emitir eventos, m.data (estado libre del modo).
 
 local ModeTypes = { byId = {}, list = {} }
 

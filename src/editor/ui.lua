@@ -25,7 +25,7 @@ local st = {
     mx = 0, my = 0, down = false, pressed = false, released = false,
     rpressed = false, wheel = 0, hot = nil, active = nil, focus = nil,
     tooltip = nil, keys = {}, text = '', scroll = {}, clip = nil,
-    consumed = false,
+    consumed = false, sections = {},
 }
 ui.state = st
 
@@ -85,11 +85,31 @@ end
 
 function ui.tooltip(s) st.tooltip = s end
 
+-- Etiqueta en una sola línea que quepa en `w`: primero con la letra normal,
+-- si no cabe con la pequeña y, si aún no, recortada con "…"
+function ui.label(s, x, y, w, c, h)
+    h = h or 24
+    local f = ui.font
+    if f:getWidth(s) > w then f = ui.fontSm end
+    local t = s
+    if f:getWidth(t) > w then
+        while #t > 1 and f:getWidth(t .. '…') > w do
+            t = t:sub(1, -2)
+            while #t > 0 and t:byte(#t) >= 128 and t:byte(#t) < 192 do t = t:sub(1, -2) end   -- (no partir UTF-8)
+            if #t > 0 and t:byte(#t) >= 192 then t = t:sub(1, -2) end
+        end
+        t = t .. '…'
+        if ui.inside(x, y, w, h) and not st.tooltip then st.tooltip = s end
+    end
+    ui.text(t, x, y + (h - f:getHeight()) / 2, c or th.text, f)
+end
+
 -- ¿El ratón está sobre algún área de UI? (para no pintar en el lienzo)
 function ui.over(x, y, w, h) return inside(x, y, w, h) end
 
 -- ── Widgets ───────────────────────────────────────────────────────────────────
--- Botón. opts: active, disabled, tooltip, icon(x,y,w,h), color, align
+-- Botón. opts: active, disabled, tooltip, icon(x,y,w,h), color, align,
+--        hint (atajo de teclado, a la derecha en pequeño), textColor, font
 function ui.button(label, x, y, w, h, opts)
     opts = opts or {}
     local hov = not opts.disabled and inside(x, y, w, h)
@@ -101,11 +121,18 @@ function ui.button(label, x, y, w, h, opts)
         opts.icon(x + 4, y + 4, h - 8, h - 8)
         tx = x + h
     end
+    local hintW = 0
+    if opts.hint then
+        hintW = ui.fontSm:getWidth(opts.hint) + 10
+        ui.text(opts.hint, x + w - hintW + 2, y + (h - ui.fontSm:getHeight()) / 2, th.muted, ui.fontSm)
+    end
     if label and label ~= '' then
         local f = opts.font or ui.font
         local c = opts.disabled and th.muted or (opts.textColor or th.text)
-        ui.text(label, tx + (opts.icon and 2 or 0), y + (h - f:getHeight()) / 2, c, f,
-                w - (tx - x) - (opts.icon and 6 or 0), opts.align or (opts.icon and 'left' or 'center'))
+        local align = opts.align or ((opts.icon or opts.hint) and 'left' or 'center')
+        local pad = (align == 'left' and not opts.icon) and 8 or 0
+        ui.text(label, tx + (opts.icon and 2 or 0) + pad, y + (h - f:getHeight()) / 2, c, f,
+                w - (tx - x) - (opts.icon and 6 or 0) - hintW - pad, align)
     end
     if hov and opts.tooltip then ui.tooltip(opts.tooltip) end
     if hov and st.pressed then st.consumed = true; return true end
@@ -116,7 +143,7 @@ end
 function ui.toggle(label, value, x, y, w)
     local h = 24
     local hov = inside(x, y, w, h)
-    ui.text(label, x, y + 5, th.text, ui.font, w - 50)
+    ui.label(label, x, y, w - 50, th.text, h)
     local sx = x + w - 42
     ui.rect(sx, y + 3, 40, 18, value and th.accent or th.border, 9)
     love.graphics.setColor(1, 1, 1, 1)
@@ -130,7 +157,7 @@ function ui.number(label, value, x, y, w, p)
     local h = 24
     local step = p.step or 1
     if love.keyboard.isDown('lshift', 'rshift') then step = step * 10 end
-    ui.text(label, x, y + 5, th.text, ui.font, w - 130)
+    ui.label(label, x, y, w - 130, th.text, h)
     local bx = x + w - 124
     local changed, nv = false, value
     if ui.button('-', bx, y, 24, h) then nv = value - step; changed = true end
@@ -150,12 +177,17 @@ function ui.number(label, value, x, y, w, p)
     return value, false
 end
 
--- Selector de opciones: botones segmentados (≤3) o < valor >
+-- Selector de opciones: botones segmentados (si caben) o < valor >
 function ui.enum(label, value, options, x, y, w)
     local h = 24
-    ui.text(label, x, y + 5, th.text, ui.font)
+    ui.label(label, x, y, w, th.text, h)
     local oy = y + 22
-    if #options <= 3 then
+    local fits = #options <= 4
+    if fits then
+        local bw = (w - (#options - 1) * 4) / #options
+        for _, o in ipairs(options) do if ui.fontSm:getWidth(o.label) > bw - 6 then fits = false end end
+    end
+    if fits then
         local bw = (w - (#options - 1) * 4) / #options
         for i, o in ipairs(options) do
             if ui.button(o.label, x + (i - 1) * (bw + 4), oy, bw, h, { active = o.value == value, font = ui.fontSm }) then
@@ -175,7 +207,7 @@ end
 ui.ENUM_H = 50
 
 -- Campo de texto de una línea
-function ui.textField(id, value, x, y, w, maxLen)
+function ui.textField(id, value, x, y, w, maxLen, placeholder)
     local h = 26
     local hov = inside(x, y, w, h)
     if hov and st.pressed then st.focus = id; st.consumed = true
@@ -190,11 +222,86 @@ function ui.textField(id, value, x, y, w, maxLen)
         if st.keys['return'] or st.keys['escape'] then st.focus = nil end
     end
     local caret = (focused and (love.timer.getTime() % 1 < 0.5)) and '|' or ''
-    ui.text(value .. caret, x + 6, y + 6, th.text)
+    if value == '' and not focused and placeholder then
+        ui.text(placeholder, x + 6, y + 6, th.muted)
+    else
+        ui.text(value .. caret, x + 6, y + 6, th.text)
+    end
     return value, changed
 end
 
 function ui.hasFocus() return st.focus ~= nil end
+
+-- Alto de un texto envuelto
+function ui.textHeight(s, w, font)
+    font = font or ui.font
+    local _, lines = font:getWrap(s, w)
+    return #lines * font:getHeight()
+end
+
+-- Cabecera de sección plegable. Devuelve (y siguiente, abierta). El estado
+-- (plegada o no) se recuerda por `id`. `right` = texto a la derecha (p. ej.
+-- cuántas propiedades tiene).
+ui.SECTION_H = 26
+function ui.section(id, title, x, y, w, right, defaultOpen)
+    local open = st.sections[id]
+    if open == nil then open = (defaultOpen ~= false) end
+    local h = ui.SECTION_H
+    local hov = inside(x - 4, y, w + 8, h)
+    ui.rect(x - 4, y, w + 8, h, hov and th.hover or th.panel2, 4)
+    -- flecha (triángulo) abierta ▾ / cerrada ▸
+    ui.setColor(th.muted)
+    local ax, ay = x + 6, y + h / 2
+    if open then love.graphics.polygon('fill', ax - 4, ay - 2, ax + 4, ay - 2, ax, ay + 3)
+    else love.graphics.polygon('fill', ax - 2, ay - 4, ax - 2, ay + 4, ax + 3, ay) end
+    ui.text(title, x + 16, y + (h - ui.font:getHeight()) / 2, th.text, ui.font)
+    if right then ui.text(right, x, y + (h - ui.fontSm:getHeight()) / 2, th.muted, ui.fontSm, w - 4, 'right') end
+    if hov and st.pressed then open = not open; st.consumed = true end
+    st.sections[id] = open
+    return y + h + 6, open
+end
+
+-- Pestañas: devuelve la elegida. tabs = { {id, label, badge?, badgeColor?} }
+function ui.tabs(tabs, value, x, y, w, h)
+    h = h or 30
+    local tw = w / #tabs
+    ui.rect(x, y + h - 1, w, 1, th.border, 0)
+    for i, t in ipairs(tabs) do
+        local tx = x + (i - 1) * tw
+        local sel = t.id == value
+        local hov = inside(tx, y, tw, h)
+        if sel or hov then ui.rect(tx + 2, y, tw - 4, h - 1, sel and th.panel2 or th.hover, 4) end
+        if sel then ui.rect(tx + 2, y + h - 3, tw - 4, 3, th.accent, 1) end
+        local label = t.label
+        local f = ui.font
+        local lw = f:getWidth(label)
+        local bw = t.badge and (ui.fontSm:getWidth(tostring(t.badge)) + 10) or 0
+        local lx = tx + (tw - lw - (bw > 0 and bw + 4 or 0)) / 2
+        ui.text(label, lx, y + (h - f:getHeight()) / 2, sel and th.text or th.muted, f)
+        if t.badge then
+            ui.rect(lx + lw + 4, y + h / 2 - 8, bw, 16, t.badgeColor or th.border, 8)
+            ui.text(tostring(t.badge), lx + lw + 4, y + h / 2 - 7, th.bg, ui.fontSm, bw, 'center')
+        end
+        if hov and st.pressed then value = t.id; st.consumed = true end
+    end
+    return value
+end
+
+-- Tarjeta de ayuda (texto apagado con un borde a la izquierda). Devuelve el alto.
+function ui.hint(s, x, y, w, color)
+    local hgt = ui.textHeight(s, w - 14, ui.fontSm) + 10
+    ui.rect(x, y, w, hgt, th.panel2, 4)
+    ui.rect(x, y, 3, hgt, color or th.accentDk, 1)
+    ui.text(s, x + 10, y + 5, th.muted, ui.fontSm, w - 14)
+    return hgt
+end
+
+-- Separador con título pequeño en mayúsculas
+function ui.caption(s, x, y, w)
+    ui.text(s:upper(), x, y, th.muted, ui.fontSm)
+    ui.rect(x, y + 16, w, 1, th.border, 0)
+    return y + 24
+end
 
 -- Región con scroll: devuelve y desplazado. Llamar ui.endScroll() al final.
 function ui.beginScroll(id, x, y, w, h, contentH)

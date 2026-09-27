@@ -10,7 +10,7 @@
 
 local ModeTypes = require 'src/world/modes/ModeTypes'
 
-local TYPES = { 'hunt', 'race' }
+local TYPES = { 'hunt', 'race', 'koth' }
 
 for _, id in ipairs(TYPES) do
     ModeTypes.register(require('src/world/modes/' .. id))

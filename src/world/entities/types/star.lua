@@ -38,7 +38,8 @@ function Star:render(camX, camY)
 end
 
 return {
-    name = 'star', label = 'Estrella (+25)', category = 'Objetos',
+    name = 'star', label = 'Estrella', category = 'Objetos',
+    description = 'Coleccionable: +25 puntos.',
     class = Star,
     pickup = { score = 25 },
     hide = { 'movement', 'attach', 'speed', 'startDir', 'patrol', 'turnAtEdges', 'bobAmp', 'pauses',

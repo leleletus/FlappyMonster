@@ -7,6 +7,7 @@ return {
     id = 'race', label = 'Carrera Relámpago', icon = 'flag',
     tagline = 'Corre hasta la meta. Cuando llegue el primero, el resto tendrá 15 segundos.',
     color = { 0.35, 0.85, 1.0 },
+    emptyHint = 'Crea uno en el editor con el bloque "Meta"',
     triggers = { 'finish' },
 
     requires = function(info)

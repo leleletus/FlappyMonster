@@ -42,6 +42,7 @@ end
 
 return {
     name = 'extralife', label = 'Vida extra', category = 'Objetos',
+    description = 'Coleccionable: +1 vida.',
     class = Life,
     pickup = { lives = 1 },
     hide = { 'movement', 'attach', 'speed', 'startDir', 'patrol', 'turnAtEdges', 'bobAmp', 'pauses',

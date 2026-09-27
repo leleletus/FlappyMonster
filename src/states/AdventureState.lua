@@ -6,6 +6,11 @@ local PlayerAdventure = require 'src/entities/PlayerAdventure'
 local Entities        = require 'src/world/Entities'
 local Entity          = require 'src/world/entities/Entity'
 local Particles       = require 'src/fx/Particles'
+local BossZones       = require 'src/world/BossZones'
+local BossHud         = require 'src/ui/BossHud'
+local AutoScroll      = require 'src/world/AutoScroll'
+local Floods          = require 'src/world/Floods'
+local PointAreas      = require 'src/world/PointAreas'
 
 local AdventureState = BaseState:new()
 
@@ -20,9 +25,6 @@ local function loadHudAssets()
 end
 
 local ICON_SCALE = 4
-local HP_BAR_W   = 80
-local HP_BAR_H   = 14
-local HP_BAR_GAP = 8
 
 -- ── Helper: botón cuadrado pixel art ─────────────────────────────────────────
 local function drawPixelButton(label, cx, y, w, h, selected, alpha)
@@ -68,7 +70,11 @@ function AdventureState:enter(args)
         Particles.emit(kind, x, y)
         if kind == 'block_break' then Sound.play('blockBreak') end
     end
-    Entity.fx = Particles.emit                 -- impactos de pinchos que caen...
+    -- Impactos de pinchos que caen, bloques que rompe un jefe...
+    Entity.fx = function(kind, x, y)
+        Particles.emit(kind, x, y)
+        if kind == 'block_break' then Sound.play('blockBreak') end
+    end
 
     -- Instanciar entidades (enemigos, NPCs) desde el catálogo
     self.enemies = {}
@@ -76,6 +82,11 @@ function AdventureState:enter(args)
         local e = Entities.create(placement)
         if e then table.insert(self.enemies, e) end
     end
+
+    -- Zonas de jefe: la pelea empieza al entrar (un solo jugador)
+    self.bossCtl    = BossZones.newController(self.level, self.enemies)
+    self.bossBanner = nil       -- { text, t, col }
+    self.bossFightT = 0
 
     self.camX = 0
     self.camY = 0
@@ -92,6 +103,7 @@ function AdventureState:enter(args)
     self.respawning   = false
     self.respawnTimer = 0
 
+    Sound.setLevelMusic(nil)
     Sound.playMusic('level')
 
     self.score      = 0
@@ -192,18 +204,28 @@ function AdventureState:renderPopups()
 end
 
 function AdventureState:updateCamera(dt)
-    if self.camFrozen then return end
+    -- Con cámara automática la cámara ES el nivel: sigue moviéndose aunque se muera
+    local scrolling = self.level.autoScroll and self.level.autoScroll.state ~= 'stop'
+    if self.camFrozen and not scrolling then return end
 
     local targetX = self.player.x - WINDOW_W / 2
     local targetY = self.player.y - WINDOW_H / 2
 
     targetX = math.max(0, math.min(self.level.widthPx  - WINDOW_W, targetX))
     targetY = math.max(0, math.min(self.level.heightPx - WINDOW_H, targetY))
+    -- Dentro de una zona de jefe la cámara se queda fija en ella
+    local zx, zy = BossZones.cameraTarget(self.level, self.player.x, self.player.y)
+    if zx then targetX, targetY = zx, zy end
+    if scrolling then
+        targetX = AutoScroll.cameraX(self.level)
+    end
 
     local prevCamX = self.camX
     local prevCamY = self.camY
     self.camX = self.camX + (targetX - self.camX) * CAM_LERP * dt
     self.camY = self.camY + (targetY - self.camY) * CAM_LERP * dt
+    -- Cámara automática: sin suavizado horizontal (la ventana manda)
+    if scrolling then self.camX = targetX end
 
     local bgW = imgBg:getWidth()  * BG_SCALE
     local bgH = imgBg:getHeight() * BG_SCALE
@@ -288,6 +310,10 @@ function AdventureState:update(dt)
         self.player:update(dt, self.level)
         self.respawnTimer = self.respawnTimer + dt
         if self.respawnTimer >= RESPAWN_DELAY then
+            -- Cámara automática: se reaparece en el centro de lo que se ve
+            local rx, ry = AutoScroll.respawnPoint(self.level)
+            if not rx then rx, ry = BossZones.respawnPoint(self.level, self.player) end   -- suelo roto en la zona
+            if rx then self.player.spawnX, self.player.spawnY = rx, ry end
             self.player:respawn()
             self.camFrozen    = false
             self.respawning   = false
@@ -306,6 +332,7 @@ function AdventureState:update(dt)
         Input.VirtualPad.down['move_left']  = false
         Input.VirtualPad.down['move_right'] = false
         Input.VirtualPad.down['jump']       = false
+        Input.VirtualPad.down['crouch']     = false
         
         local touches = love.touch.getTouches()
         for _, id in ipairs(touches) do
@@ -322,6 +349,8 @@ function AdventureState:update(dt)
                     Input.VirtualPad.down['move_left'] = true
                 elseif lx > 170 and lx < 300 then
                     Input.VirtualPad.down['move_right'] = true
+                elseif lx > WINDOW_W - 340 and lx <= WINDOW_W - 200 then
+                    Input.VirtualPad.down['crouch'] = true
                 elseif lx > WINDOW_W - 200 and lx < WINDOW_W - 20 then
                     Input.VirtualPad.down['jump'] = true
                 end
@@ -343,18 +372,31 @@ function AdventureState:update(dt)
     -- Límite de 10 minutos: muerte instantánea con todas las vidas
     if self.levelTime >= 600 and not self.player.dying then
         self.player.lives = 1   -- die() restará 1, quedando en 0 → game over
-        self.player:die()
+        self.player:die(nil, true)
     end
 
     self.level:update(dt)
     self.level:updateFoliage(dt)
+    Floods.advance(self.level, dt)                 -- inundaciones: el agua sube y baja
+    Floods.updateFx(self.level, dt)
+    -- Zonas de puntos: estar dentro da puntos cada cierto tiempo
+    PointAreas.update(self.level, dt, self.player.dying and {} or { self.player }, function(pa, pts)
+        self.score = self.score + pts
+        self:spawnPopup('+' .. pts, pa.x, pa.y - 60)
+        Sound.play('pointGain'); Particles.emit('points', pa.x, pa.y)
+    end)
+    self.level.solidBodies = Entities.solidBodies(self.enemies)   -- jefes sólidos
     self.player:update(dt, self.level)
 
-    -- Actualizar enemigos y limpiar los que ya murieron
+    -- Actualizar enemigos y limpiar los que ya murieron. Sus sonidos se
+    -- atenúan según lo lejos que estén del jugador (Sound.setEmitter).
+    Sound.setListener(self.player.x, self.player.y)
     self.level.liveEntities = self.enemies     -- obstáculos entre entidades
     for i = #self.enemies, 1, -1 do
         local g = self.enemies[i]
+        Sound.setEmitter(g.x, g.y)
         g:update(dt, self.level)
+        Sound.clearEmitter()
         if not g.alive then
             table.remove(self.enemies, i)
         end
@@ -362,6 +404,10 @@ function AdventureState:update(dt)
 
     -- Colisiones jugador ↔ entidades
     self:checkEnemyCollisions()
+    self:updateBoss(dt)
+    for _, ev in ipairs(AutoScroll.update(self.level, dt)) do
+        if ev.type == 'scroll_start' then self.bossBanner = { text = '¡YA!', t = 0, col = { 0.4, 1, 0.5 } } end
+    end
     Particles.update(dt)
     self:checkVentOxyCollisions()
     self:updatePopups(dt)
@@ -387,6 +433,50 @@ function AdventureState:update(dt)
     end
 end
 
+-- ── Jefes ─────────────────────────────────────────────────────────────────────
+function AdventureState:updateBoss(dt)
+    for _, ev in ipairs(self.bossCtl:update(dt)) do
+        if ev.type == 'boss_start' then
+            self.bossBanner = { text = '¡JEFE!', t = 0, col = { 1, 0.3, 0.3 } }
+            self.bossFightT = 0
+        elseif ev.type == 'boss_clear' then
+            self.bossBanner = { text = '¡JEFE DERROTADO!', t = 0, col = { 1, 0.9, 0.25 } }
+            Sound.play('fanfare')
+        end
+    end
+    if self.bossBanner then self.bossBanner.t = self.bossBanner.t + dt end
+    self.bossFightT = self.bossFightT + dt
+    -- Música de la pelea (intro + bucle); al terminar vuelve la del nivel
+    local want = BossZones.music(self.level)
+    if want ~= Sound.getLevelMusic() then
+        Sound.setLevelMusic(want)
+        if self.player.drownPhase ~= 'drowning' then Sound.playMusic('level') end
+    end
+end
+
+function AdventureState:renderBossHud()
+    local z = BossZones.fighting(self.level)
+    if z then
+        local y = 18
+        for _, b in ipairs(z.bosses) do
+            if b.alive then
+                BossHud.drawBoss(b, y, math.min(1, self.bossFightT / 0.8)); y = y + 72
+            end
+        end
+        local p = self.player
+        BossHud.drawPlayers({ { name = 'TU', color = { 1, 0.95, 0.2 }, hp = p.hp, hpMax = p.hpMax,
+                                key = p, dead = p.dying } }, 20, 110)
+    elseif self.player.hp < self.player.hpMax and not self.player.dying then
+        -- Fuera de una pelea: la vida solo si le falta algo
+        local p = self.player
+        BossHud.drawPlayers({ { name = 'TU', color = { 1, 0.95, 0.2 }, hp = p.hp, hpMax = p.hpMax, key = p } }, 20, 110)
+    end
+    if self.bossBanner then
+        BossHud.drawBanner(self.bossBanner.text, self.bossBanner.t, 2.2, self.bossBanner.col)
+    end
+    BossHud.drawScrollCountdown(self.level.autoScroll)
+end
+
 -- ── HUD: vidas ────────────────────────────────────────────────────────────────
 local function renderLivesHud(player)
     local iconW = imgIcon:getWidth()  * ICON_SCALE
@@ -408,35 +498,17 @@ local function renderLivesHud(player)
     love.graphics.print(label, sx + iconW + gap, sy + iconH/2 - FONT_BIG:getHeight()/2)
 end
 
--- ── HUD: barritas HP ──────────────────────────────────────────────────────────
-local function renderHpBar(player)
-    if not player.showHpBar then return end
-
-    local totalW = player.hpMax * HP_BAR_W + (player.hpMax - 1) * HP_BAR_GAP
-    local startX = math.floor((WINDOW_W - totalW) / 2)
-    local barY   = WINDOW_H - HP_BAR_H - 20
-
-    for i = 1, player.hpMax do
-        local bx     = startX + (i - 1) * (HP_BAR_W + HP_BAR_GAP)
-        local filled = i <= player.hp
-
-        love.graphics.setColor(0, 0, 0, 0.6)
-        love.graphics.rectangle('fill', bx + 3, barY + 3, HP_BAR_W, HP_BAR_H)
-
-        if filled then
-            love.graphics.setColor(1, 1, 1, 1)
-        else
-            love.graphics.setColor(0.15, 0.15, 0.15, 0.85)
-        end
-        love.graphics.rectangle('fill', bx, barY, HP_BAR_W, HP_BAR_H)
-
-        love.graphics.setColor(0, 0, 0, 1)
-        love.graphics.rectangle('line', bx, barY, HP_BAR_W, HP_BAR_H)
-    end
-end
-
 -- ── Render ────────────────────────────────────────────────────────────────────
 function AdventureState:render()
+    -- Temblor de pantalla (impactos, explosiones): solo al dibujar
+    local shx, shy = Particles.shakeOffset()
+    local realCamX, realCamY = self.camX, self.camY
+    self.camX, self.camY = self.camX + shx, self.camY + shy
+    self:_renderScene()
+    self.camX, self.camY = realCamX, realCamY
+end
+
+function AdventureState:_renderScene()
     local bgW = imgBg:getWidth()  * BG_SCALE
     local bgH = imgBg:getHeight() * BG_SCALE
 
@@ -473,6 +545,7 @@ function AdventureState:render()
     end
 
     self.player:render(self.camX, self.camY)
+    PointAreas.drawProgress(self.level, self.player, self.player.x - self.camX, self.player.y - self.camY)
     Particles.render(self.camX, self.camY)
 
     -- Decoraciones (por encima de enemigos y player)
@@ -563,7 +636,7 @@ function AdventureState:render()
     printOutlined(timeStr,  valueEndX - tw,  row2Y, vr, vg, vb, va)
 
     renderLivesHud(self.player)
-    renderHpBar(self.player)
+    self:renderBossHud()
     self.player:renderAirBar()
     self.player:renderDrownCountdown(self.player.x - self.camX, self.player.y - self.camY)
     self:renderPopups()
@@ -603,12 +676,15 @@ function AdventureState:render()
         love.graphics.circle('fill', 235, WINDOW_H - 125, 65)
         -- Action (Jump)
         love.graphics.circle('fill', WINDOW_W - 110, WINDOW_H - 125, 65)
+        -- Action (Crouch)
+        love.graphics.circle('fill', WINDOW_W - 250, WINDOW_H - 125, 65)
 
         love.graphics.setFont(FONT_BIG)
         love.graphics.setColor(1, 1, 1, 0.7)
         love.graphics.printf('<', 20, WINDOW_H - 140, 130, 'center')
         love.graphics.printf('>', 170, WINDOW_H - 140, 130, 'center')
         love.graphics.printf('A', WINDOW_W - 175, WINDOW_H - 140, 130, 'center')
+        love.graphics.printf('v', WINDOW_W - 315, WINDOW_H - 132, 130, 'center')
     end
     if not self.dead then CornerButtons.drawPause(self.pauseHover) end
 
@@ -667,9 +743,13 @@ function AdventureState:touchpressed(id, tx, ty, dx, dy, pressure)
         Input.VirtualPad._pressedThisFrame['pause'] = true
         return
     end
-    -- Toque de un solo cuadro en el botón de salto (móvil)
-    if Input.isMobile and ty > WINDOW_H - 250 and tx > WINDOW_W - 200 and tx < WINDOW_W - 20 then
-        Input.VirtualPad._pressedThisFrame['jump'] = true
+    -- Toque de un solo cuadro en los botones de acción (móvil)
+    if Input.isMobile and ty > WINDOW_H - 250 then
+        if tx > WINDOW_W - 200 and tx < WINDOW_W - 20 then
+            Input.VirtualPad._pressedThisFrame['jump'] = true
+        elseif tx > WINDOW_W - 340 and tx <= WINDOW_W - 200 then
+            Input.VirtualPad._pressedThisFrame['crouch'] = true
+        end
     end
 end
 

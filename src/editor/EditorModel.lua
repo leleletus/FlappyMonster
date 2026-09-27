@@ -7,6 +7,8 @@ local Tiles    = require 'src/world/Tiles'
 local Entities = require 'src/world/Entities'
 local Level    = require 'src/world/Level'
 local DT       = require('src/world/Decorations').types
+local BossZones = require 'src/world/BossZones'
+local AutoScroll = require 'src/world/AutoScroll'
 
 local Codec = Tiles.codec
 local ET    = Entities.types
@@ -36,6 +38,8 @@ function Model.new(w, h, name)
     end
     m.playerStart = { 3, h - 2 }
     m.entities, m.foliage, m.vents = {}, {}, {}
+    m.bossZones = {}
+    m.autoScroll = nil
     m.path = nil
     return m
 end
@@ -64,6 +68,16 @@ function Model.fromData(lvl, path)
         if n then table.insert(m.foliage, n) end
     end
     m.vents   = deepcopy(lvl.vents or {})
+    m.bossZones = {}
+    for i, z in ipairs(lvl.bossZones or {}) do
+        local n = BossZones.normalize(z, i)
+        if n then table.insert(m.bossZones, n) end
+    end
+    m.autoScroll = AutoScroll.normalize(lvl.autoScroll)
+    -- Modos en los que se ofrece (nil = todos los que admitan el nivel) y
+    -- duración de las partidas con tiempo
+    m.modes     = (type(lvl.modes) == 'table' and #lvl.modes > 0) and deepcopy(lvl.modes) or nil
+    m.matchTime = tonumber(lvl.matchTime)
     m.path    = path
     return m
 end
@@ -72,7 +86,7 @@ function Model.load(path)
     local data = love.filesystem.read(path)
     if not data then return nil, 'No se pudo leer ' .. tostring(path) end
     local ok, lvl = pcall(json.decode, data)
-    if not ok or type(lvl) ~= 'table' or not lvl.tiles then return nil, 'JSON invalido: ' .. tostring(path) end
+    if not ok or type(lvl) ~= 'table' or not lvl.tiles then return nil, 'JSON inválido: ' .. tostring(path) end
     return Model.fromData(lvl, path)
 end
 
@@ -82,10 +96,14 @@ function Model:toData()
     for _, e in ipairs(self.entities) do table.insert(ents, ET.serialize(e)) end
     local decos = {}
     for _, d in ipairs(self.foliage) do table.insert(decos, DT.serialize(d)) end
+    local zones = {}
+    for _, z in ipairs(self.bossZones) do table.insert(zones, BossZones.serialize(z)) end
     return {
         name = self.name, width = self.width, height = self.height,
         playerStart = self.playerStart, tiles = self.tiles,
-        entities = ents, foliage = decos, vents = self.vents,
+        entities = ents, foliage = decos, vents = self.vents, bossZones = zones,
+        autoScroll = AutoScroll.serialize(self.autoScroll),
+        modes = self.modes, matchTime = self.matchTime,
     }
 end
 
@@ -124,7 +142,14 @@ function Model:encode()
     end
     list('entities', d.entities)
     list('foliage', d.foliage)
-    list('vents', d.vents, true)
+    -- Campos opcionales al final (solo si existen)
+    local tail = {}
+    if #d.bossZones > 0 then tail[#tail+1] = function(last) list('bossZones', d.bossZones, last) end end
+    if d.autoScroll then tail[#tail+1] = function(last) line('"autoScroll": ' .. enc(d.autoScroll), last) end end
+    if d.modes then tail[#tail+1] = function(last) line('"modes": ' .. enc(d.modes), last) end end
+    if d.matchTime then tail[#tail+1] = function(last) line('"matchTime": ' .. json.encode(d.matchTime), last) end end
+    list('vents', d.vents, #tail == 0)
+    for i, f in ipairs(tail) do f(i == #tail) end
     out[#out+1] = '}'
     return table.concat(out, '\n') .. '\n'
 end
@@ -153,11 +178,14 @@ end
 function Model:snapshot()
     return deepcopy({ name=self.name, width=self.width, height=self.height, tiles=self.tiles,
                       playerStart=self.playerStart, entities=self.entities,
-                      foliage=self.foliage, vents=self.vents })
+                      foliage=self.foliage, vents=self.vents, bossZones=self.bossZones,
+                      autoScroll=self.autoScroll, modes=self.modes, matchTime=self.matchTime })
 end
 
 function Model:restore(s)
     s = deepcopy(s)
+    -- (los campos opcionales pueden faltar en la copia: se vacían a mano)
+    self.autoScroll, self.modes, self.matchTime = nil, nil, nil
     for k, v in pairs(s) do self[k] = v end
 end
 
@@ -222,6 +250,10 @@ function Model:resize(w, h)
     self.tiles, self.width, self.height = t, w, h
     local function keep(list) local o = {} for _, x in ipairs(list) do if x.col <= w and x.row <= h then o[#o+1] = x end end return o end
     self.entities, self.foliage, self.vents = keep(self.entities), keep(self.foliage), keep(self.vents)
+    self.bossZones = keep(self.bossZones)
+    for _, z in ipairs(self.bossZones) do
+        z.w = math.max(4, math.min(z.w, w - z.col + 1)); z.h = math.max(3, math.min(z.h, h - z.row + 1))
+    end
     self.playerStart[1] = math.min(self.playerStart[1], w)
     self.playerStart[2] = math.min(self.playerStart[2], h)
 end
@@ -254,7 +286,7 @@ end
 function Model:addEntity(typeName, c, r, sub)
     local def = ET.get(typeName)
     if def and def.ceilingOnly and not self:ceilingAbove(c, r, def.placement == 'sub' and sub or nil) then
-        return nil, def.label .. ': solo se puede colocar justo debajo de un bloque solido (techo)'
+        return nil, def.label .. ': solo se puede colocar justo debajo de un bloque sólido (techo)'
     end
     local n = ET.normalize({ type = typeName, col = c, row = r, sub = sub })
     if n then table.insert(self.entities, n) end
@@ -268,31 +300,123 @@ function Model:findObject(list, c, r, sub)
     end
 end
 
+-- ── Zonas de jefe ─────────────────────────────────────────────────────────────
+function Model:zoneAt(c, r)
+    for i = #self.bossZones, 1, -1 do
+        local z = self.bossZones[i]
+        if BossZones.containsCell(z, c, r) then return z, i end
+    end
+end
+
+function Model:zoneById(id)
+    for _, z in ipairs(self.bossZones) do if z.id == id then return z end end
+end
+
+-- Nueva zona entre dos celdas (id libre más bajo)
+function Model:addZone(c0, r0, c1, r1)
+    local id = 1
+    while self:zoneById(id) do id = id + 1 end
+    local z = BossZones.normalize({ id = id, col = math.min(c0, c1), row = math.min(r0, r1),
+                                    w = math.abs(c1 - c0) + 1, h = math.abs(r1 - r0) + 1 }, id)
+    z.w = math.min(z.w, self.width - z.col + 1)
+    z.h = math.min(z.h, self.height - z.row + 1)
+    table.insert(self.bossZones, z)
+    return z
+end
+
+-- Zona a la que pertenece un jefe (su prop `zone`, o la que lo contiene)
+function Model:zoneOfBoss(e)
+    local want = e.props.zone or 0
+    if want > 0 then return self:zoneById(want) end
+    return self:zoneAt(e.col, e.row)
+end
+
+-- Jefes de una zona
+function Model:bossesOf(z)
+    local out = {}
+    for _, e in ipairs(self.entities) do
+        local t = ET.get(e.type)
+        if t and t.boss and self:zoneOfBoss(e) == z then out[#out+1] = e end
+    end
+    return out
+end
+
 -- ── Validación ────────────────────────────────────────────────────────────────
 function Model:validate()
     local w = {}
     local ps = self.playerStart
     if not ps or not self:inBounds(ps[1], ps[2]) then
-        w[#w+1] = { 'error', 'El punto de inicio esta fuera del mapa' }
+        w[#w+1] = { 'error', 'El punto de inicio está fuera del mapa' }
     elseif Tiles.get(Codec.id(self.tiles[ps[2]][ps[1]])).collision == 'solid' then
-        w[#w+1] = { 'error', 'El punto de inicio esta dentro de un bloque solido' }
+        w[#w+1] = { 'error', 'El punto de inicio está dentro de un bloque sólido' }
     end
     for _, e in ipairs(self.entities) do
         local t = ET.get(e.type)
         local where = (t and t.label or e.type) .. ' (' .. e.col .. ',' .. e.row .. ')'
         if not self:inBounds(e.col, e.row) then
-            w[#w+1] = { 'error', where .. ' esta fuera del mapa', e }
+            w[#w+1] = { 'error', where .. ' está fuera del mapa', e }
         elseif Tiles.get(Codec.id(self.tiles[e.row][e.col])).collision == 'solid' then
-            w[#w+1] = { 'warn', where .. ' esta dentro de un bloque', e }
+            w[#w+1] = { 'warn', where .. ' está dentro de un bloque', e }
         elseif t and t.ceilingOnly and not self:ceilingAbove(e.col, e.row, e.sub) then
-            w[#w+1] = { 'warn', where .. ' no cuelga de un techo solido', e }
+            w[#w+1] = { 'warn', where .. ' no cuelga de un techo sólido', e }
         end
         local p = e.props
         if p.patrol and (e.col < p.patrol.left or e.col > p.patrol.right) then
             w[#w+1] = { 'warn', where .. ': su ruta no la contiene', e }
         end
     end
+    -- Jefes y zonas de jefe
+    for _, e in ipairs(self.entities) do
+        local t = ET.get(e.type)
+        if t and t.boss then
+            local where = t.label .. ' (' .. e.col .. ',' .. e.row .. ')'
+            local z = self:zoneOfBoss(e)
+            if (e.props.zone or 0) > 0 and not z then
+                w[#w+1] = { 'error', where .. ': no existe la zona de jefe #' .. e.props.zone, e }
+            elseif not z then
+                w[#w+1] = { 'error', where .. ' no está dentro de una zona de jefe (capa Especial)', e }
+            elseif not BossZones.containsCell(z, e.col, e.row) then
+                w[#w+1] = { 'warn', where .. ' está fuera de su zona #' .. z.id, e }
+            end
+        end
+    end
+    local ids = {}
+    for _, z in ipairs(self.bossZones) do
+        if ids[z.id] then w[#w+1] = { 'error', 'Hay dos zonas de jefe con el id #' .. z.id } end
+        ids[z.id] = true
+        if #self:bossesOf(z) == 0 then
+            w[#w+1] = { 'warn', 'La zona de jefe #' .. z.id .. ' no tiene jefe (no bloqueará nada)' }
+        end
+        if ps and BossZones.containsCell(z, ps[1], ps[2]) then
+            w[#w+1] = { 'warn', 'El inicio del jugador está dentro de la zona de jefe #' .. z.id }
+        end
+    end
+    -- Cámara automática
+    local a = self.autoScroll
+    if a then
+        if ps and (ps[1] < a.startCol or ps[1] >= a.startCol + a.width) then
+            w[#w+1] = { 'error', 'Cámara automática: el inicio del jugador debe estar dentro de la ventana inicial (columnas '
+                        .. a.startCol .. '-' .. (a.startCol + a.width - 1) .. ')' }
+        end
+        local fin = 0
+        for r = 1, self.height do for c = 1, self.width do
+            if Tiles.get(Codec.id(self.tiles[r][c])).trigger == 'finish' then fin = fin + 1 end
+        end end
+        if fin == 0 then w[#w+1] = { 'warn', 'Cámara automática sin meta: la cámara solo parará al final' } end
+        if a.width > self.width then w[#w+1] = { 'warn', 'Cámara automática: la ventana es más ancha que el nivel' } end
+        if self.height * TILE_PX > 720 then
+            w[#w+1] = { 'warn', 'Cámara automática: el nivel mide más de 11 filas; la cámara no enseñará todo el alto (p. ej. un techo de pinchos)' }
+        end
+    end
     if #self.entities == 0 then w[#w+1] = { 'info', 'El nivel no tiene entidades' } end
+    -- Rey de la Colina sin zonas de puntos
+    local zones = 0
+    for _, e in ipairs(self.entities) do if e.type == 'pointarea' then zones = zones + 1 end end
+    local wantsKoth = false
+    for _, id in ipairs(self.modes or {}) do if id == 'koth' then wantsKoth = true end end
+    if wantsKoth and zones == 0 then
+        w[#w+1] = { 'warn', 'Solo para Rey de la Colina, pero no tiene ninguna Zona de puntos (Entidades › Mecanismos): no saldrá en ningún modo' }
+    end
     return w
 end
 

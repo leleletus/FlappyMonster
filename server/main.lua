@@ -75,13 +75,30 @@ local PLAYER_COLORS = {
 -- Buffer de eventos de sonido recopilados durante la simulación de cada sala.
 local _soundEvents           = {}
 local _currentSoundPlayerId  = nil   -- nil = sonido global (enemigos, etc.)
+local _emitX, _emitY         = nil, nil   -- de dónde sale el sonido (atenuación en cada cliente)
 
 Sound = {
-    play        = function(name)
+    play        = function(name, pitch)
         if name then
-            table.insert(_soundEvents, { sound = name, playerId = _currentSoundPlayerId })
+            -- El tono viaja con 2 decimales (p. ej. los sonidos graves del jefe espejo)
+            pitch = (pitch and pitch ~= 1) and math.floor(pitch * 100 + 0.5) / 100 or nil
+            table.insert(_soundEvents, { sound = name, playerId = _currentSoundPlayerId, pitch = pitch,
+                                         x = _emitX and math.floor(_emitX + 0.5), y = _emitY and math.floor(_emitY + 0.5) })
         end
     end,
+    -- Emisor del sonido: cada cliente atenúa según SU distancia (ver src/Sound.lua)
+    setEmitter   = function(x, y) _emitX, _emitY = x, y end,
+    clearEmitter = function() _emitX, _emitY = nil, nil end,
+    getEmitter   = function() return _emitX, _emitY end,
+    withEmitter  = function(x, y, fn, ...)
+        local ox, oy = _emitX, _emitY
+        _emitX, _emitY = x, y
+        local ok, err = pcall(fn, ...)
+        _emitX, _emitY = ox, oy
+        if not ok then error(err, 0) end
+    end,
+    setListener  = function() end,
+    isPlaying    = function() return false end,
     stopTracked = function() end,
     playTracked = function() end,
     stopMusic   = function() end,
@@ -93,7 +110,7 @@ Input = Protocol.newInputStub()
 local _inp = Input.state
 
 -- Clases de entidades (cargadas en love.load).
-local Level, PlayerAdventure, Entities
+local Level, PlayerAdventure, Entities, BossZones, AutoScroll, Floods, PointAreas
 local buildResults   -- definida más abajo
 
 -- Constantes que deben coincidir con PlayerAdventure.lua
@@ -213,7 +230,7 @@ end
 
 -- Miniatura del nivel para el selector del lobby: un carácter por celda
 -- ('.' vacío, '#' sólido, 'B' borde, '=' plataforma, '~' agua, 'X' peligro,
--- 'F' meta, '^' pinchos) + entidades y punto de inicio.
+-- 'F' meta, '^' pinchos, 'P' zona de puntos) + entidades y punto de inicio.
 local PREVIEW_MAX_CELLS = 20000
 local function buildPreview(lv)
     if lv.tileW * lv.tileH > PREVIEW_MAX_CELLS then return nil end
@@ -237,8 +254,22 @@ local function buildPreview(lv)
         end
         rows[r] = table.concat(line)
     end
+    -- Zonas de puntos ('P' donde no hay nada sólido)
+    for _, a in ipairs(lv.pointAreas or {}) do
+        for r = math.max(1, a.row0), math.min(lv.tileH, a.row1) do
+            local line = rows[r]
+            local chars = {}
+            for c = 1, #line do chars[c] = line:sub(c, c) end
+            for c = math.max(1, a.col0), math.min(lv.tileW, a.col1) do
+                if chars[c] == '.' then chars[c] = 'P' end
+            end
+            rows[r] = table.concat(chars)
+        end
+    end
     local ents = {}
-    for _, e in ipairs(lv.entities) do ents[#ents+1] = { e.col, e.row } end
+    for _, e in ipairs(lv.entities) do
+        if e.type ~= 'pointarea' and e.type ~= 'flood' then ents[#ents+1] = { e.col, e.row } end
+    end
     return { rows = rows, ents = ents, start = lv.playerStart }
 end
 
@@ -250,13 +281,23 @@ local function scanLevels(force)
         local path = LEVELS_DIR .. '/' .. f
         local ok, lv = pcall(Level.new, path)
         if ok then
-            local killable = 0
-            for _, e in ipairs(lv.entities) do if e.props.stompable then killable = killable + 1 end end
+            local killable, bosses = 0, 0
+            local ET = Entities.types
+            for _, e in ipairs(lv.entities) do
+                if e.props.stompable then killable = killable + 1 end
+                local t = ET.get(e.type)
+                if t and t.boss then bosses = bosses + 1 end
+            end
             local info = { path = path, name = (lv.name and lv.name ~= '?') and lv.name or f:gsub('%.json$', ''),
                            enemies = #lv.entities, killable = killable, finish = lv:countTrigger('finish'),
+                           bosses = bosses, autoScroll = lv.autoScroll ~= nil,
+                           pointAreas = #(lv.pointAreas or {}),
                            modes = {} }
+            -- El nivel puede limitar sus modos ("modes" en el JSON)
+            local allowed
+            if lv.modes then allowed = {}; for _, id in ipairs(lv.modes) do allowed[id] = true end end
             for _, m in ipairs(Modes.list) do
-                if m.requires(info) then info.modes[m.id] = true end
+                if (not allowed or allowed[m.id]) and m.requires(info) then info.modes[m.id] = true end
             end
             info.w, info.h = lv.tileW, lv.tileH
             info.preview   = buildPreview(lv)
@@ -314,6 +355,7 @@ local function initRoomSim(room)
             local spawnX = sx + (i - 1 - (N - 1) / 2) * SPAWN_STAGGER
             local pa = PlayerAdventure:new(spawnX, sy)
             pa.lives = PLAYER_LIVES
+            pa.netId = pid          -- a quién atribuir sus sonidos (golpes de jefe)
             sim.playerSims[pid] = {
                 id          = pid,
                 idx         = i,
@@ -332,8 +374,12 @@ local function initRoomSim(room)
         end
     end
 
+    -- Zonas de jefe (world/BossZones.lua): el servidor decide cuándo empieza
+    -- y termina cada pelea; los clientes reciben el estado en cada snapshot
+    sim.bossCtl = BossZones.newController(level, sim.enemies)
+
     -- Estado de la ronda para el modo de juego (ver src/world/modes/)
-    sim.match = { players = sim.playerSims, enemies = sim.enemies, time = 0, data = {},
+    sim.match = { players = sim.playerSims, enemies = sim.enemies, time = 0, data = {}, level = level,
                   event = function(ev) ev.t = sim.tick; table.insert(sim.events, ev) end }
     sim.mode.start(sim.match)
 
@@ -407,6 +453,7 @@ local function checkPlayerEnemyCollisions(sim, pid, ps, seq)
     -- Reglas compartidas con el modo un jugador (entities/Interactions.lua).
     -- Los sonidos se etiquetan con quien los causa: su cliente ya los predijo.
     _currentSoundPlayerId = pid
+    _emitX, _emitY = pa.x, pa.y
     Entities.interactions.run(pa, sim.enemies, {
         stomp = function(g, pts)
             pts = pts or 0
@@ -444,6 +491,7 @@ local function checkPlayerEnemyCollisions(sim, pid, ps, seq)
                 local dx, dy = o.x - pa.x, o.y - pa.y
                 if math.abs(dx) <= PA.GP_RADIUS_X and math.abs(dy) <= PA.GP_RADIUS_Y then
                     _currentSoundPlayerId = nil
+                    _emitX, _emitY = o.x, o.y
                     o:knockback(dx >= 0 and 1 or -1)
                 end
             end
@@ -456,6 +504,7 @@ local function stepPlayer(sim, pid, ps, bits, seq)
     local pa = ps.pa
     Protocol.decodeInput(bits, _inp)
     _currentSoundPlayerId = pid
+    _emitX, _emitY = pa.x, pa.y
     pa:update(TICK_DT, sim.level)
     _currentSoundPlayerId = nil
 
@@ -466,6 +515,10 @@ local function stepPlayer(sim, pid, ps, bits, seq)
             ps.isSpectator = true
             pushEvent(sim, { type='spectate', playerId=pid })
         else
+            -- Cámara automática: se reaparece en el centro de lo que se ve
+            local rx, ry = AutoScroll.respawnPoint(sim.level)
+            if not rx then rx, ry = BossZones.respawnPoint(sim.level, pa) end   -- suelo roto en la zona
+            if rx then pa.spawnX, pa.spawnY = rx, ry end
             _currentSoundPlayerId = pid
             pa:respawn()
             _currentSoundPlayerId = nil
@@ -482,7 +535,7 @@ local function stepPlayer(sim, pid, ps, bits, seq)
             pa.drownAudT=0;  pa.drownDead=false
             pa.drownPhase='none'
             pa.airBarAlpha=0; pa.airBarBobOn=false
-            table.insert(_soundEvents, { sound='airGasp', playerId=pid })
+            table.insert(_soundEvents, { sound='airGasp', playerId=pid, x=round(pa.x), y=round(pa.y) })
             -- Evento autoritativo: el cliente resetea sonido/música del ahogamiento
             pushEvent(sim, { type='air_collected', playerId=pid })
         end
@@ -588,9 +641,12 @@ local function stepRoom(room)
 
     sim.tick = sim.tick + 1
     _soundEvents = {}
+    _emitX, _emitY = nil, nil
 
     -- ── Reloj de nivel (autoritativo) ────────────────────────────────────────
     sim.levelTime = math.min(sim.levelTime + TICK_DT, LEVEL_TIME_MAX)
+    -- Inundaciones: el nivel del agua es función del tick (el cliente lo estima igual)
+    Floods.setTime(sim.level, sim.tick * TICK_DT)
 
     -- Límite de 10 minutos: matar a todos los jugadores activos (igual que modo solo)
     if sim.levelTime >= LEVEL_TIME_MAX and not sim.timeLimitKilled then
@@ -599,13 +655,14 @@ local function stepRoom(room)
             if not ps.isSpectator and not ps.pa.dying then
                 ps.pa.lives = 1   -- die() restará 1 → 0 vidas → espectador → game over
                 _currentSoundPlayerId = pid
-                ps.pa:die()
+                ps.pa:die(nil, true)
                 _currentSoundPlayerId = nil
             end
         end
     end
 
     -- ── Jugadores (orden estable: el de la sala) ──────────────────────────────
+    sim.level.solidBodies = Entities.solidBodies(sim.enemies)    -- jefes sólidos
     for _, pid in ipairs(room.playerIds) do
         local ps = sim.playerSims[pid]
         if ps and not ps.isSpectator then
@@ -616,6 +673,7 @@ local function stepRoom(room)
     -- Restaurar input neutral
     Protocol.decodeInput(0, _inp)
     _currentSoundPlayerId = nil
+    _emitX, _emitY = nil, nil
 
     -- ── Nivel (burbujas de oxígeno en vents) y enemigos ──────────────────────
     -- Las trampas y entidades de techo "ven" a los jugadores activos
@@ -628,9 +686,45 @@ local function stepRoom(room)
     sim.level:update(TICK_DT)
     sim.level.liveEntities = sim.enemies        -- obstáculos entre entidades
     for _, e in ipairs(sim.enemies) do
+        _emitX, _emitY = e.x, e.y
         e:update(TICK_DT, sim.level)
     end
+    _emitX, _emitY = nil, nil
     recordEnemyHistory(sim)
+
+    -- Zonas de puntos: quien está dentro suma cada cierto tiempo
+    if #(sim.level.pointAreas or {}) > 0 then
+        local owner = {}
+        for _, pid in ipairs(room.playerIds) do
+            local ps = sim.playerSims[pid]
+            if ps and not ps.isSpectator then owner[ps.pa] = pid end
+        end
+        PointAreas.update(sim.level, TICK_DT, active, function(pa, pts)
+            local pid = owner[pa]
+            local ps = pid and sim.playerSims[pid]
+            if not ps then return end
+            ps.score = ps.score + pts
+            ps.scoreT = sim.levelTime
+            pushEvent(sim, { type='score', playerId=pid, delta=pts, x=round(pa.x), y=round(pa.y - 40), kind='zone' })
+            pushEvent(sim, { type='fx', kind='points', x=round(pa.x), y=round(pa.y) })
+            _emitX, _emitY = pa.x, pa.y
+            Sound.play('pointGain')
+            _emitX, _emitY = nil, nil
+        end)
+    end
+
+    -- Zonas de jefe: llegada de los jugadores, inicio y fin de la pelea
+    for _, ev in ipairs(sim.bossCtl:update(TICK_DT)) do pushEvent(sim, ev) end
+
+    -- Cámara automática: espera a todos, avanza y mata a quien se queda atrás.
+    -- Se para en cuanto alguien llega a la meta.
+    if sim.level.autoScroll then
+        for _, ps in pairs(sim.playerSims) do if ps.finished then sim.level.finishReached = true end end
+        local evs = AutoScroll.update(sim.level, TICK_DT, function(pa)
+            PlayerAdventure.asOwner(pa, function() pa:die(nil, true) end)
+        end)
+        for _, ev in ipairs(evs) do pushEvent(sim, ev) end
+    end
 
     -- Bloques rotos este tick → a todos los clientes
     local bq = sim.level.brokenQueue
@@ -647,7 +741,7 @@ local function stepRoom(room)
 
     -- ── Fusionar eventos de sonido ────────────────────────────────────────────
     for _, se in ipairs(_soundEvents) do
-        pushEvent(sim, { type='sound', sound=se.sound, playerId=se.playerId })
+        pushEvent(sim, { type='sound', sound=se.sound, playerId=se.playerId, pitch=se.pitch, x=se.x, y=se.y })
     end
     _soundEvents = {}
 
@@ -815,6 +909,9 @@ local function broadcastSnapshot(room)
             if ps.isSpectator then flags = flags + Protocol.PF_SPECTATOR end
             if ps.finished    then flags = flags + Protocol.PF_FINISHED  end
             if (pa.stunT or 0) > 0 then flags = flags + Protocol.PF_STUNNED end
+            if (pa.hurtT or 0) > 0 and not pa.dying then flags = flags + Protocol.PF_HURT end
+            if (pa.spawnInvT or 0) > 0 and not pa.dying then flags = flags + Protocol.PF_INVULN end
+            if (pa.squashT or 0) > 0 and not pa.dying then flags = flags + Protocol.PF_SQUASH end
             table.insert(plist, {
                 ps.idx, round(pa.x), round(pa.y), pa.facing, pa.frame, flags,
                 pa.lives, pa.hp, ps.score, Protocol.drownCode(pa.drownPhase),
@@ -826,6 +923,8 @@ local function broadcastSnapshot(room)
 
     local elist = {}
     for i, e in ipairs(sim.enemies) do
+      -- En reposo (p. ej. pinchos colgando): no se envía, el cliente lo sabe
+      if not e:netAtRest() then
         local entry = {
             round(e.x), round(e.y), e.facing, e.state, e.frame, e.alive,
             round((e.deadTimer or 0) * 100), round((e.breatheT or 0) * 100),
@@ -835,6 +934,7 @@ local function broadcastSnapshot(room)
         local extra = e:netPack()
         if extra then for k, v in ipairs(extra) do entry[9 + k] = v end end
         elist[i] = entry
+      end
     end
 
     -- Burbujas de oxígeno con ID estable para interpolarlas en el cliente
@@ -852,11 +952,13 @@ local function broadcastSnapshot(room)
 
     local lt = round(sim.levelTime * 100)
     local md = sim.mode.hud(sim.match)
+    local bz = BossZones.netPack(sim.level)
+    local sc = AutoScroll.netPack(sim.level)
     for _, pid in ipairs(room.playerIds) do
         local c  = findClientById(pid)
         local ps = sim.playerSims[pid]
         if c then
-            local snap = { t=sim.tick, lt=lt, p=plist, e=elist, vb=vb, md=md }
+            local snap = { t=sim.tick, lt=lt, p=plist, e=elist, vb=vb, md=md, bz=bz, sc=sc }
             if ps and not ps.isSpectator then
                 snap.a  = ps.lastProcSeq
                 snap.o  = Protocol.packOwnState(ps.pa)
@@ -1431,6 +1533,20 @@ function love.load()
         end
     end
     Entities        = require 'src/world/Entities'
+    BossZones       = require 'src/world/BossZones'
+    AutoScroll      = require 'src/world/AutoScroll'
+    Floods          = require 'src/world/Floods'
+    PointAreas      = require 'src/world/PointAreas'
+    -- Lo que un jefe le hace a un jugador (daño, muerte) suena como suyo:
+    -- su cliente lo reproduce al ver bajar su vida en la reconciliación
+    PlayerAdventure.soundOwner = function(pa, fn)
+        local prev, px, py = _currentSoundPlayerId, _emitX, _emitY
+        _currentSoundPlayerId = pa.netId
+        _emitX, _emitY = pa.x, pa.y
+        local ok, err = pcall(fn)
+        _currentSoundPlayerId, _emitX, _emitY = prev, px, py
+        if not ok then error(err, 0) end
+    end
     -- Efectos de las entidades (pinchos que se clavan...): para todos
     require('src/world/entities/Entity').fx = function(kind, x, y)
         if _currentSim then

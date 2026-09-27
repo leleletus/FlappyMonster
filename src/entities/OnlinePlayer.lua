@@ -68,6 +68,9 @@ function OnlinePlayer:applyData(data)
     self.finished    = data.finished    or false
     self.place       = data.place       or 0
     self.stunned     = data.stunned     or false
+    self.hurt        = data.hurt        or false
+    self.invuln      = data.invuln      or false
+    self.squashed    = data.squashed    or false
     self.color       = data.color       or self.color
 
     self.renderX = self.x
@@ -88,6 +91,9 @@ function OnlinePlayer:render(camX, camY)
 
     -- Alpha: espectadores son semi-transparentes (los que llegaron a la meta, menos)
     local alpha = self.finished and 0.6 or (self.isSpectator and 0.32 or 1.0)
+    -- Parpadeo de invulnerabilidad tras reaparecer
+    local PA = require('src/entities/PlayerAdventure')
+    local spriteAlpha = PA.invulnAlpha(self.invuln and not self.dying, alpha)
 
     -- Seleccionar sprite según frame / estado de muerte
     local img
@@ -106,17 +112,28 @@ function OnlinePlayer:render(camX, camY)
     local r, g, b = self.color[1], self.color[2], self.color[3]
 
     -- Sprite con tinte de color del jugador
-    love.graphics.setColor(
-        0.6 + r * 0.4,
-        0.6 + g * 0.4,
-        0.6 + b * 0.4,
-        alpha)
-    love.graphics.draw(img, sx, sy, 0, sc * self.facing, sc, iw/2, ih/2)
+    if self.hurt and math.floor(love.timer.getTime() * 12) % 2 == 0 then
+        love.graphics.setColor(1, 0.22, 0.22, spriteAlpha)    -- parpadeo rojo al recibir daño
+    else
+        love.graphics.setColor(
+            0.6 + r * 0.4,
+            0.6 + g * 0.4,
+            0.6 + b * 0.4,
+            spriteAlpha)
+    end
+    local PAm = require('src/entities/PlayerAdventure')
+    if self.squashed and not self.dying then
+        -- Aplastado: agachado y achatado, con los pies en el suelo
+        love.graphics.draw(spriteCrouch, sx, sy + 16 * PLAYER_SCALE / 2, 0, sc * self.facing, sc * PAm.SQUASH_K,
+                           iw/2, spriteCrouch:getHeight())
+    else
+        love.graphics.draw(img, sx, sy, 0, sc * self.facing, sc, iw/2, ih/2)
+    end
     if self.dying then
         DeadEyes.draw(sx, sy, sc, self.facing, 1, 1, 1, alpha)
     end
     if self.stunned and not self.dying then
-        require('src/entities/PlayerAdventure').drawStunStars(sx, sy)
+        require('src/entities/PlayerAdventure').drawStunStars(sx, sy, self.squashed)
     end
 
     -- Nombre sobre el sprite

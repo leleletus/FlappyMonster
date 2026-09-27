@@ -44,6 +44,7 @@ end
 
 return {
     name = 'gummy', label = 'Gummy', category = 'Enemigos',
+    description = 'Enemigo básico: camina, vuela o se queda quieto. Se le pisotea.',
     class = Gummy,
     defaults = { speed = 55, points = 10 },
     editor = { sprite = 'assets/images/gummy/gummy.png' },

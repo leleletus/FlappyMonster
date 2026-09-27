@@ -11,6 +11,11 @@ local TileTypes = Tiles.types
 local Materials = Tiles.materials
 local EntityTypes = require('src/world/Entities').types   -- carga el catálogo
 local DecorationTypes = require('src/world/Decorations').types
+local BossZones = require 'src/world/BossZones'
+local AutoScroll = require 'src/world/AutoScroll'
+local Floods     = require 'src/world/Floods'
+local PointAreas = require 'src/world/PointAreas'
+local WaterSurface = require 'src/fx/WaterSurface'
 
 local Level = {}
 Level.__index = Level
@@ -124,7 +129,17 @@ local VENT_OXY_ZIG_AMP    = 3
 local VENT_OXY_ZIG_FREQ   = 1.2
 local VENT_OXY_SCALE      = 7      -- bubble1 grande y visible
 local VENT_OXY_ALPHA      = 0.95
-local VENT_OXY_HIT_R      = 14    -- radio de colisión en px (world)
+-- Colisión de la burbuja de oxígeno = el círculo que SE VE. bubble1.png es
+-- 16x16 pero la burbuja ocupa las columnas 4..10 y filas 3..9 (7x7 px); se
+-- dibuja centrada en (b.x, b.y) a escala VENT_OXY_SCALE, así que el círculo
+-- visible está desplazado respecto a (b.x, b.y). Se compara contra la caja
+-- ENTERA del jugador (antes: 14 px contra el centro de su caja, y centrado
+-- 10 px más abajo que el dibujo → se atravesaba sin coger aire).
+local OXY_VIS_DX  = ((4 + 11) / 2 - 8) * VENT_OXY_SCALE     -- -3.5 px
+local OXY_VIS_DY  = ((3 + 10) / 2 - 8) * VENT_OXY_SCALE     -- -10.5 px
+local OXY_VIS_R   = 7 / 2 * VENT_OXY_SCALE                  -- 24.5 px
+local OXY_HIT_PAD = 6      -- margen extra (online se ven ~0,1 s en el pasado)
+local VENT_OXY_HIT_R = OXY_VIS_R + OXY_HIT_PAD
 
 -- ── Flood-fill: detecta cuerpos de agua de >=9 tiles ─────────────────────────
 local function findWaterBodies(level)
@@ -279,7 +294,64 @@ function Level.fromData(lvl)
         if n then table.insert(self.decorations, DecorationTypes.instantiate(n)) end
     end
     self.foliage = self.decorations   -- alias de compatibilidad
+    -- Zonas de jefe (src/world/BossZones.lua)
+    self.bossZones = BossZones.build(lvl.bossZones)
+    -- Cámara automática (src/world/AutoScroll.lua), o nil
+    self.autoScroll = AutoScroll.build(lvl.autoScroll, self)
+    -- Inundaciones (src/world/Floods.lua): salen de las entidades 'flood'
+    self.floods = Floods.build(self.entities, Materials)
+    self.floodTime = 0
+    -- Zonas de puntos (src/world/PointAreas.lua): entidades 'pointarea'
+    self.pointAreas = PointAreas.build(self.entities)
+    -- Modos en los que se ofrece (nil = todos los que admitan el nivel) y
+    -- duración de las partidas con tiempo (Rey de la Colina), en segundos
+    self.modes     = type(lvl.modes) == 'table' and #lvl.modes > 0 and lvl.modes or nil
+    self.matchTime = tonumber(lvl.matchTime)
     return self
+end
+
+-- ── Suelo seguro para reaparecer ─────────────────────────────────────────────
+-- ¿Cabe un jugador de pie en la celda (c, r)? (ella y la de encima libres,
+-- sin peligros ni pinchos, y algo firme debajo)
+function Level:isStandable(c, r)
+    for rr = r - 1, r do
+        local d = self:getDef(c, rr)
+        if d.collision == 'solid' or d.mat.contact or d.trigger then return false end
+        if self:hasSpikeCellInBox((c - 1) * TILE_PX + 1, (rr - 1) * TILE_PX + 1, TILE_PX - 2, TILE_PX - 2) then return false end
+    end
+    local below = self:getDef(c, r + 1)
+    return below.collision == 'solid' or below.collision == 'oneway'
+end
+
+-- Punto (x, y del jugador de pie) en el suelo más bajo cerca de la columna
+-- `col`, buscando hacia los lados dentro de [minCol, maxCol] y de las filas
+-- [minRow, maxRow]. nil si no hay ninguno.
+function Level:findGround(col, minCol, maxCol, minRow, maxRow)
+    minCol, maxCol = math.max(1, minCol or 1), math.min(self.tileW, maxCol or self.tileW)
+    minRow, maxRow = math.max(2, minRow or 2), math.min(self.tileH - 1, maxRow or self.tileH - 1)
+    for off = 0, maxCol - minCol do
+        for _, c in ipairs(off == 0 and { col } or { col + off, col - off }) do
+            if c >= minCol and c <= maxCol then
+                for r = maxRow, minRow, -1 do
+                    if self:isStandable(c, r) then
+                        return (c - 0.5) * TILE_PX, r * TILE_PX - 16 * PLAYER_SCALE / 2 - 2
+                    end
+                end
+            end
+        end
+    end
+    return nil
+end
+
+-- Paredes invisibles en el punto: zona de jefe sin superar que lo contiene
+-- o la ventana de la cámara automática. nil = ninguna.
+function Level:arenaAt(wx, wy)
+    if #self.bossZones > 0 then
+        local z = BossZones.arenaAt(self, wx, wy)
+        if z then return z end
+    end
+    if self.autoScroll then return AutoScroll.arena(self) end
+    return nil
 end
 
 -- ── Acceso ────────────────────────────────────────────────────────────────────
@@ -325,13 +397,45 @@ end
 -- includeOneway: incluir plataformas de un solo sentido.
 function Level:collisionAt(wx, wy, includeOneway)
     local t = self:getDefAt(wx, wy)
-    if t.collision == 'solid' or (includeOneway and t.collision == 'oneway') then
+    if t.collision == 'solid' then
         if TileTypes.hitboxContains(t, wx, wy) then return t end
+    elseif includeOneway and t.collision == 'oneway' then
+        -- Aterrizar en una plataforma solo depende de su cara de arriba: de ahí
+        -- hasta el fondo de la celda cuenta (una losa fina no se "salta" en un
+        -- paso rápido, p. ej. un ground pound). Lo demás (entidades por los
+        -- lados o colgadas debajo) usa su forma real (isEnemySolidAt).
+        local hb, T = t.hitbox, TILE_PX
+        local fx, fy = (wx % T) / T, (wy % T) / T
+        if fx >= hb.x and fx < hb.x + hb.w and fy >= hb.y then return t end
     end
     return nil
 end
 
 -- ¿Los enemigos pisan/chocan con lo que hay en el punto?
+-- Tipo de tile sólido para las entidades en el punto (con su forma real), o nil
+function Level:enemySolidDefAt(wx, wy)
+    local t = self:getDefAt(wx, wy)
+    if t.enemySolid and TileTypes.hitboxContains(t, wx, wy) then return t end
+    return nil
+end
+
+-- Objeto sólido "como un bloque" (solidFull: trampolines, morteros...) que
+-- contiene el punto, o nil. level.solidBodies lo rellena el juego cada paso.
+function Level:bodyAt(wx, wy, except)
+    for _, o in ipairs(self.solidBodies or {}) do
+        if o.solidFull and o ~= except and o.alive ~= false then
+            local b = o:getOuterBounds()
+            if wx >= b.x and wx < b.x + b.w and wy >= b.y and wy < b.y + b.h then return o, b end
+        end
+    end
+    return nil
+end
+
+-- Sólido para las entidades que andan: tiles (forma real) y objetos sólidos
+function Level:entitySolidAt(wx, wy, except)
+    return self:isEnemySolidAt(wx, wy) or self:bodyAt(wx, wy, except) ~= nil
+end
+
 function Level:isEnemySolidAt(wx, wy)
     local t = self:getDefAt(wx, wy)
     return t.enemySolid and TileTypes.hitboxContains(t, wx, wy)
@@ -346,6 +450,11 @@ end
 
 -- Material líquido en el punto (agua, waterlogged...), o nil.
 function Level:liquidAt(wx, wy)
+    local fl = self.floods
+    if fl and fl[1] then
+        local m = Floods.liquidAt(fl, wx, wy)      -- agua de una inundación
+        if m then return m end
+    end
     return liquidOfRaw(self:getRawAt(wx, wy))
 end
 
@@ -574,6 +683,8 @@ function Level:render(camX, camY)
         end
     end
 
+    -- Zonas de puntos (detrás de entidades y jugadores)
+    PointAreas.render(self, camX, camY)
     love.graphics.setColor(1, 1, 1, 1)
 end
 
@@ -597,12 +708,33 @@ function Level:renderDebug(camX, camY)
             end
         end
     end
+    -- Burbujas de oxígeno: su círculo de colisión (cian)
+    love.graphics.setColor(0.2, 1, 1, 0.8)
+    for _, vent in ipairs(self.vents or {}) do
+        for _, b in ipairs(vent.oxyBubbles) do
+            if b.alive then
+                local cx, cy, r = Level.oxyBubbleCircle(b)
+                love.graphics.circle('line', cx - camX, cy - camY, r)
+            end
+        end
+    end
     local x0, y0 = (sc-1)*TILE_PX, (sr-1)*TILE_PX
     for _, sp in ipairs(self:getSpikesInBox(x0, y0, (ec-sc+1)*TILE_PX, (er-sr+1)*TILE_PX)) do
         love.graphics.setColor(1, 0.3, 0.3, 0.5)
         love.graphics.rectangle('line', sp.x - camX, sp.y - camY, sp.w, sp.h)
     end
     love.graphics.setColor(1, 1, 1, 1)
+end
+
+-- ¿Celda de agua con la superficie arriba? (encima hay aire: ni líquido ni
+-- un bloque macizo, que sería agua apretada contra un techo)
+function Level:isWaterSurfaceCell(col, row)
+    if row <= 1 then return false end
+    local d = self:getDef(col, row)
+    if d.collision == 'solid' and d.fullHitbox then return false end
+    if liquidOfRaw(self:getRaw(col, row - 1)) then return false end
+    local up = self:getDef(col, row - 1)
+    return not (up.collision == 'solid' and up.fullHitbox)
 end
 
 -- Efecto de los líquidos: distorsión (shader) y tinte según su material.
@@ -631,12 +763,15 @@ function Level:renderWaterEffect(camX, camY, sceneCanvas)
             if m and m.distort then
                 local px = math.floor((col-1)*TILE_PX - camX)
                 local py = math.floor((row-1)*TILE_PX - camY)
-                setTransformedScissor(px, py, TILE_PX, TILE_PX)
+                -- (en la superficie, sin distorsión justo bajo la ola)
+                local cut = self:isWaterSurfaceCell(col, row) and WaterSurface.MARGIN or 0
+                setTransformedScissor(px, py + cut, TILE_PX, TILE_PX - cut)
                 love.graphics.setColor(1, 1, 1, 1)
                 love.graphics.draw(sceneCanvas, 0, 0)
             end
         end
     end
+    Floods.renderDistort(self, camX, camY, sceneCanvas, setTransformedScissor, Level.liquidOfCell)
     setTransformedScissor()
     if shaderOk and waterShader then love.graphics.setShader() end
 
@@ -645,11 +780,24 @@ function Level:renderWaterEffect(camX, camY, sceneCanvas)
         for col = sc2, ec2 do
             local m = liquidOfRaw(self:getRaw(col, row))
             if m and m.tint then
-                love.graphics.setColor(m.tint)
-                love.graphics.rectangle('fill', (col-1)*TILE_PX - camX, (row-1)*TILE_PX - camY, TILE_PX, TILE_PX)
+                if self:isWaterSurfaceCell(col, row) then
+                    -- Superficie con olas (el tinte sigue a la ola: sin borde plano detrás)
+                    WaterSurface.draw((col-1)*TILE_PX, col*TILE_PX, (row-1)*TILE_PX, row*TILE_PX,
+                                      camX, camY, m.tint, 2, t)
+                else
+                    -- Alineado al píxel igual que la franja de la superficie (si
+                    -- no, con la cámara en posiciones fraccionarias quedaba una
+                    -- rendija de 1 px entre la superficie y el agua de debajo)
+                    love.graphics.setColor(m.tint)
+                    local x0, y0 = math.floor((col-1)*TILE_PX - camX), math.floor((row-1)*TILE_PX - camY)
+                    love.graphics.rectangle('fill', x0, y0, math.floor(col*TILE_PX - camX) - x0,
+                                            math.floor(row*TILE_PX - camY) - y0)
+                end
             end
         end
     end
+
+    Floods.renderTint(self, camX, camY, Level.liquidOfCell)
 
     -- (Los pinchos de celdas con agua ya están en la escena: reciben la
     -- distorsión y el tinte igual que el resto de lo que hay bajo el agua.)
@@ -694,6 +842,21 @@ local function spawnVentParticle(vent, isOxy)
     end
 end
 
+-- Burbuja decorativa suelta (p. ej. en una inundación): sube hasta salir del agua
+function Level:spawnBubble(x, y)
+    if not bubbleImgs or #bubbleImgs == 0 then return end
+    local def = bubbleImgs[math.random(#bubbleImgs)]
+    table.insert(self.bubbles, {
+        x = x, y = y,
+        speed    = BUB_SPEED_MIN + math.random() * (BUB_SPEED_MAX - BUB_SPEED_MIN),
+        zigPhase = math.random() * math.pi * 2,
+        zigFreq  = BUB_ZIG_FREQ * (0.7 + math.random() * 0.6),
+        ceilingY = -math.huge,
+        img = def.img, iw = def.w, ih = def.h,
+        alpha    = BUB_ALPHA * (0.7 + math.random() * 0.3),
+    })
+end
+
 -- ── Update: burbujas ──────────────────────────────────────────────────────────
 function Level:update(dt)
     local hasBubbles = bubbleImgs and #bubbleImgs > 0
@@ -732,7 +895,7 @@ function Level:update(dt)
         b.y = b.y - b.speed * dt
         b.x = b.x + math.sin(t * b.zigFreq + b.zigPhase) * BUB_ZIG_AMP * dt
         -- Fuera del agua (superficie, aunque sea irregular) → desaparece
-        if b.y < b.ceilingY or not liquidOfRaw(self:getRawAt(b.x, b.y)) then
+        if b.y < b.ceilingY or not self:liquidAt(b.x, b.y) then
             table.remove(self.bubbles, i)
         end
     end
@@ -846,14 +1009,16 @@ end
 -- Devuelve true si el jugador tocó una burbuja de oxígeno (y la consume).
 -- Llama a callback(ventIdx, bubIdx) si hay colisión.
 function Level:checkVentOxyCollision(px, py, pw, ph)
-    local pcx = px + pw/2
-    local pcy = py + ph/2
+    local r2 = VENT_OXY_HIT_R * VENT_OXY_HIT_R
     for _, vent in ipairs(self.vents) do
         for _, b in ipairs(vent.oxyBubbles) do
             if b.alive then
-                local dx = b.x - pcx
-                local dy = b.y - pcy
-                if dx*dx + dy*dy < VENT_OXY_HIT_R * VENT_OXY_HIT_R then
+                -- Punto de la caja del jugador más cercano al centro visible
+                local cx, cy = b.x + OXY_VIS_DX, b.y + OXY_VIS_DY
+                local nx = math.max(px, math.min(px + pw, cx))
+                local ny = math.max(py, math.min(py + ph, cy))
+                local dx, dy = cx - nx, cy - ny
+                if dx*dx + dy*dy < r2 then
                     b.alive = false
                     return true
                 end
@@ -862,6 +1027,9 @@ function Level:checkVentOxyCollision(px, py, pw, ph)
     end
     return false
 end
+
+-- Círculo de colisión de una burbuja de oxígeno (depuración F1)
+function Level.oxyBubbleCircle(b) return b.x + OXY_VIS_DX, b.y + OXY_VIS_DY, VENT_OXY_HIT_R end
 
 -- Reemplaza las burbujas de oxígeno con los datos del servidor (modo online).
 function Level:syncOxyBubbles(serverVentBubbles)

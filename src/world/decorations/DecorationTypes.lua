@@ -28,7 +28,7 @@ local DecorationTypes = { byName = {}, list = {} }
 DecorationTypes.COMMON = {
     { key='flip',  kind='bool', label='Espejar', group='Aspecto', default=false },
     { key='layer', kind='enum', label='Capa', group='Aspecto', default='front',
-      options = { { value='front', label='Delante' }, { value='back', label='Detras' } },
+      options = { { value='front', label='Delante' }, { value='back', label='Detrás' } },
       help='Delante o detras del jugador y los enemigos' },
 }
 
@@ -40,7 +40,7 @@ function DecorationTypes.register(def)
     local t = {}
     for k, v in pairs(def) do t[k] = v end
     t.label      = t.label or t.name
-    t.category   = t.category or (t.placement == 'sub' and 'Pequenas (subcelda)' or 'Grandes')
+    t.category   = t.category or (t.placement == 'sub' and 'Pequeñas (subcelda)' or 'Grandes')
     t.cullMargin = t.cullMargin or 4
     t.schema = {}
     for _, p in ipairs(DecorationTypes.COMMON) do

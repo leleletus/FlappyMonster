@@ -82,6 +82,13 @@ function TileTypes.register(def)
     return t
 end
 
+-- Orden de las categorías en la paleta del editor (las demás, al final)
+TileTypes.CATEGORIES = { 'Básicos', 'Terreno', 'Plataformas', 'Líquidos', 'Peligros', 'Objetivos' }
+function TileTypes.categoryOrder(c)
+    for i, id in ipairs(TileTypes.CATEGORIES) do if id == c then return i end end
+    return #TileTypes.CATEGORIES + 1
+end
+
 -- Tipo por id. Ids desconocidos (nivel hecho con un catálogo más nuevo) → vacío.
 function TileTypes.get(id)
     return TileTypes.byId[id] or TileTypes.byId[0]

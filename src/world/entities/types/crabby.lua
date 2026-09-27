@@ -1,7 +1,8 @@
 -- Crabby: cangrejo que camina por suelo o techo (propiedad attach). Tras una
 -- pausa puede esconderse en su caparazón: saca un pincho (zona de peligro) y
 -- mientras está escondido no se le puede pisotear. De vez en cuando se asoma.
-local Entity = require 'src/world/entities/Entity'
+local Entity  = require 'src/world/entities/Entity'
+local Crawler = require 'src/world/entities/Crawler'
 
 local Crabby = Entity.extend(Entity, {
     walkFps = 5, walkFrames = 3,
@@ -61,6 +62,11 @@ end
 
 function Crabby.sizeImage() return imgIdle1 end
 
+-- Propiedad propia de los Crabbies (también la usa el Crabby trampolín)
+Crabby.WALL_PROP = { key='wallWalk', kind='bool', label='Anda por paredes y techos', group='Movimiento',
+    default=false, help='Da la vuelta a los bloques: suelo, paredes y techo, girando en las esquinas',
+    showIf=function(p) return p.movement == 'walk' end }
+
 local function seqFrame(elapsed, frames)
     local idx = math.floor(elapsed / SPRITE_FRAME_DUR) + 1
     return frames[math.max(1, math.min(idx, #frames))]
@@ -74,6 +80,91 @@ function Crabby:init()
     self.peeking       = false
     self.currentImg    = imgIdle1
     self.spikeProgress = 0
+    -- Anda por paredes y techos (Crawler): se agarra a la superficie al empezar
+    self.crawl = (self.props.wallWalk == true) and self.moving and not self.flying
+    if self.crawl then
+        self.cnx, self.cny = 0, self.flipped and 1 or -1
+        self.cdir = self.flipped and -self.facing or self.facing
+        self.cattached = nil
+    end
+end
+
+-- ── Por paredes y techos ──────────────────────────────────────────────────────
+function Crabby:tryAttach(level)
+    if self.crawl and not self.cattached then Crawler.attach(self, level, self.cattached == nil and TILE_PX or nil) end
+end
+
+-- Pegado a una superficie no cae
+function Crabby:fall(level, dt)
+    if self.crawl and self.cattached then return end
+    Entity.fall(self, level, dt)
+end
+
+-- Se suelta (empujón de un ground pound, caída desde el techo...): vuelve a
+-- agarrarse cuando toque el suelo
+function Crabby:releaseCrawl()
+    if not self.crawl then return end
+    Crawler.detach(self)
+    self.flipped = false
+end
+
+function Crabby:knockback(dir)
+    self:releaseCrawl()
+    Entity.knockback(self, dir)
+end
+
+-- Andar trepando (sustituye al andar normal)
+function Crabby:crawlWalk(dt, level)
+    local tn = self.tuning
+    if not self.cattached then
+        -- Suelto: cae hasta el suelo y se vuelve a agarrar
+        self.flipped = false
+        Entity.fall(self, level, dt)
+        if self.onGround then self.cnx, self.cny = 0, -1; Crawler.attach(self, level); self.cdir = self.facing end
+        return true
+    end
+    self:onWalk(dt)
+    if self.props.pauses then
+        self.idleCountdown = self.idleCountdown - dt
+        if self.idleCountdown <= 0 then self:startIdle(); return true end
+    end
+    -- Otra entidad delante: media vuelta
+    local tx, ty = -self.cny * self.cdir, self.cnx * self.cdir
+    for _, o in ipairs(level.liveEntities or {}) do
+        if o ~= self and not o.solidFull and o:isObstacle() then     -- (a los sólidos se sube)
+            local b = o:getOuterBounds()
+            local px, py = self.x + tx * (self.sprW * 0.5 + 4), self.y + ty * (self.sprW * 0.5 + 4)
+            if px > b.x and px < b.x + b.w and py > b.y and py < b.y + b.h then self.cdir = -self.cdir; break end
+        end
+    end
+    if not Crawler.move(self, level, self.speed * dt) then return true end
+    -- Encima de la cara que lanza de un trampolín: ¡BOOM!
+    local body, face = Crawler.supportBody(self, level)
+    if body and self:touchBody(body, face) then return true end
+    -- Orientación: techo = boca abajo; de frente según hacia dónde avanza
+    self.flipped = (self.cny == 1)
+    if self.cnx ~= 0 then self.facing = self.cdir
+    else self.facing = ((-self.cny * self.cdir) >= 0) and 1 or -1 end
+    self.animT = self.animT + dt
+    if self.animT >= 1 / tn.walkFps then
+        self.animT = self.animT - 1 / tn.walkFps
+        self.frame = (self.frame % tn.walkFrames) + 1
+    end
+    return true
+end
+
+-- En una pared la hitbox está girada
+function Crabby:getOuterBounds()
+    if Crawler.onWall(self) and self.cattached then
+        return { x = self.x - self.outerH / 2, y = self.y - self.outerW / 2, w = self.outerH, h = self.outerW }
+    end
+    return Entity.getOuterBounds(self)
+end
+function Crabby:getInnerBounds()
+    if Crawler.onWall(self) and self.cattached then
+        return { x = self.x - self.innerH / 2, y = self.y - self.innerW / 2, w = self.innerH, h = self.innerW }
+    end
+    return Entity.getInnerBounds(self)
 end
 
 -- ── Estados comunes con sprite/pincho propios ────────────────────────────────
@@ -108,6 +199,11 @@ function Crabby:onStomp()
 end
 
 function Crabby:canBeStomped() return not self:isBodyDisabled() end
+
+-- Del techo: detecta al jugador también escondido y cae directamente
+local HIDE_STATES = { hide_in = true, hidden = true, hide_out = true }
+function Crabby:isHiding() return HIDE_STATES[self.state] == true end
+function Crabby:canDropNow() return self.state == 'walk' or self.state == 'idle' or self:isHiding() end
 function Crabby:isBodyDisabled() return self.currentImg == imgHid end
 
 -- ── Caída desde el techo ──────────────────────────────────────────────────────
@@ -132,8 +228,11 @@ function Crabby:updateDrop(dt, level)
     local t = self.deadTimer
     if st == 'drop_shake' then
         -- Tiembla y se esconde: sale el pincho y se mete en el caparazón
+        -- (si ya estaba escondido, tiembla dentro del caparazón)
         self.vx = 0
-        if t < 0.2 then
+        if self.dropHidden then
+            self.currentImg, self.spikeProgress = imgHid, 1
+        elseif t < 0.2 then
             self.currentImg, self.spikeProgress = imgIdle2, math.min(1, t / 0.2)
         else
             self.spikeProgress = 1
@@ -189,6 +288,7 @@ function Crabby:updateDrop(dt, level)
             self.dropped = true
             self.spikeProgress = 0
             self.vx = self.moving and self.speed * self.facing or 0
+            if self.crawl then Crawler.detach(self); Crawler.attach(self, level); self.cdir = self.facing end
             self:startWalk()
         end
     end
@@ -199,6 +299,10 @@ end
 function Crabby:updateCustom(dt, level)
     local st = self.state
     if st:sub(1, 5) == 'drop_' then return self:updateDrop(dt, level) end
+    if self.crawl then
+        if self.cattached == nil then Crawler.attach(self, level, TILE_PX) end   -- (al colocarla)
+        if st == 'walk' then return self:crawlWalk(dt, level) end
+    end
     if st == 'hide_in' then
         -- Fase 1: pincho crece 0→1 (sprite crab2). Fase 2: Meat→lookin→hid
         self.hideTransTimer = self.hideTransTimer + dt
@@ -280,6 +384,11 @@ function Crabby:getSpikeHitbox()
     if hitH < 1 then return nil end
     local spriteVisH = (self.currentImg or imgIdle2):getHeight() * GUMMY_SCALE
     local sx = self.x - hitW / 2
+    if Crawler.onWall(self) and self.cattached then
+        -- En la pared: la misma caja "encima de la cabeza", girada
+        local headLocal = self.sprH / 2 - spriteVisH
+        return Crawler.toWorldBox(self, -hitW / 2, headLocal - hitH, hitW, hitH)
+    end
     if self.flipped then
         local headY = (self.y - self.sprH / 2) + spriteVisH   -- cabeza abajo: crece hacia abajo
         return { x = sx, y = headY, w = hitW, h = hitH }
@@ -298,8 +407,18 @@ end
 function Crabby:getImgName() return IMG_NAMES[self.currentImg or imgIdle2] or 'idle2' end
 function Crabby:setImgFromName(n) if IMG_BY_NAME[n] then self.currentImg = IMG_BY_NAME[n] end end
 
+-- Superficie del trepador: 0 = normal / suelto, 1 suelo, 2 techo, 3 pared
+-- (normal +x), 4 pared (normal -x)
+local SURF = { { 0, -1 }, { 0, 1 }, { 1, 0 }, { -1, 0 } }
+local function surfCode(e)
+    if not (e.crawl and e.cattached) then return 0 end
+    for i, n in ipairs(SURF) do if n[1] == e.cnx and n[2] == e.cny then return i end end
+    return 0
+end
+Crabby.NET_N = 3          -- campos de red del Crabby (los tipos derivados añaden detrás)
+
 function Crabby:netPack()
-    return { math.floor((self.spikeProgress or 0) * 1000 + 0.5), self:getImgName() }
+    return { math.floor((self.spikeProgress or 0) * 1000 + 0.5), self:getImgName(), surfCode(self) }
 end
 
 function Crabby:netApply(a, b, f)
@@ -308,6 +427,13 @@ function Crabby:netApply(a, b, f)
         self.spikeProgress = (a[1] + (b[1] - a[1]) * f) / 1000
     end
     self:setImgFromName((f < 0.5 and a or b)[2])
+    local sc = tonumber(b[3]) or 0
+    if sc > 0 then
+        self.crawl, self.cattached = true, true
+        self.cnx, self.cny = SURF[sc][1], SURF[sc][2]
+    elseif self.crawl then
+        self.cattached = false
+    end
 end
 
 -- ── Render ────────────────────────────────────────────────────────────────────
@@ -321,7 +447,116 @@ local function drawSpike(cx, baseY, sH, dir)
     love.graphics.polygon('line', cx, tipY, cx - halfW, baseY, cx + halfW, baseY)
 end
 
+-- Lo que saca del caparazón al esconderse (dir = -1 hacia arriba, 1 hacia
+-- abajo). El Crabby normal, su pincho; el trampolín lo cambia (crabbytramp.lua).
+function Crabby:drawTopper(cx, baseY, progress, dir)
+    local _, maxH = spikeDims()
+    drawSpike(cx, baseY, maxH * progress, dir)
+end
+function Crabby:bounceRotation() return 0 end
+
+-- ── Giro al cambiar de superficie (solo visual) ──────────────────────────────
+-- El Crawler cambia de superficie de golpe en las esquinas; al dibujarlo, el
+-- ángulo y el punto de apoyo (los pies) pasan suavemente del que tenía al
+-- nuevo (TURN_MIN..TURN_MAX s), rodando alrededor de la esquina. La física,
+-- la hitbox y el pincho no se enteran.
+local TURN_MIN, TURN_MAX = 0.14, 0.32     -- s del giro (según su velocidad)
+
+local function wrapAng(a) return (a + math.pi) % (2 * math.pi) - math.pi end
+
+-- Pies (centro de la base del sprite) en el mundo, según la superficie
+local function feetOf(e) return e.x - e.cnx * e.sprH / 2, e.y - e.cny * e.sprH / 2 end
+
+-- Devuelve {x, y, ang} (mundo) mientras gira, nil si no
+function Crabby:crawlTurn()
+    if not (self.crawl and self.cattached and self.state:sub(1, 5) ~= 'drop_') then
+        self.turnVis = nil
+        return nil
+    end
+    local fx, fy = feetOf(self)
+    local ang = Crawler.angle(self)
+    local now = love.timer.getTime()
+    local tv = self.turnVis
+    if not tv then
+        self.turnVis = { nx = self.cnx, ny = self.cny, x = fx, y = fy, ang = ang }
+        return nil
+    end
+    if tv.nx ~= self.cnx or tv.ny ~= self.cny then
+        -- Empieza desde lo último que se dibujó (aunque estuviera a medio giro);
+        -- un salto grande (reaparecer...) no se anima
+        if math.abs(fx - tv.x) + math.abs(fy - tv.y) < TILE_PX * 2 then
+            local sp = math.max(1, self.speed or 50)
+            tv.t0, tv.dur = now, math.max(TURN_MIN, math.min(TURN_MAX, self.sprW * 0.35 / sp))
+            tv.sx, tv.sy, tv.sang = tv.x, tv.y, tv.ang
+            tv.onx, tv.ony = tv.nx, tv.ny
+        else
+            tv.t0 = nil
+        end
+        tv.nx, tv.ny = self.cnx, self.cny
+    end
+    local out
+    if tv.t0 then
+        local k = (now - tv.t0) / tv.dur
+        if k >= 1 then
+            tv.t0 = nil
+        else
+            local e = k * k * (3 - 2 * k)
+            local x, y = tv.sx + (fx - tv.sx) * e, tv.sy + (fy - tv.sy) * e
+            -- Rueda alrededor de la esquina: C = cruce de la superficie vieja
+            -- (por el inicio) y la nueva (por los pies actuales); los pies
+            -- giran alrededor de C a la vez que el cuerpo
+            if tv.onx * self.cnx + tv.ony * self.cny == 0 then
+                local so = tv.sx * tv.onx + tv.sy * tv.ony
+                local sn = fx * self.cnx + fy * self.cny
+                local cx, cy = tv.onx * so + self.cnx * sn, tv.ony * so + self.cny * sn
+                local ux, uy, vx, vy = tv.sx - cx, tv.sy - cy, fx - cx, fy - cy
+                local r0, r1 = math.sqrt(ux * ux + uy * uy), math.sqrt(vx * vx + vy * vy)
+                if r0 > 0.5 and r1 > 0.5 then
+                    local a0 = math.atan2(uy, ux)
+                    local a = a0 + wrapAng(math.atan2(vy, vx) - a0) * e
+                    local r = r0 + (r1 - r0) * e
+                    x, y = cx + math.cos(a) * r, cy + math.sin(a) * r
+                end
+            end
+            out = { x = x, y = y, ang = tv.sang + wrapAng(ang - tv.sang) * e }
+        end
+    end
+    if out then tv.x, tv.y, tv.ang = out.x, out.y, out.ang
+    else tv.x, tv.y, tv.ang = fx, fy, ang end
+    return out
+end
+
+-- Dibuja "como en el suelo" con los pies en (px, py) de pantalla, girado `ang`
+function Crabby:renderLocal(px, py, ang)
+    local fl, fc, ox, oy = self.flipped, self.facing, self.x, self.y
+    -- De frente en local = sentido de avance (en el techo facing va al revés)
+    if self.crawl and self.cny == 1 then self.facing = -fc end
+    self.flipped, self.x, self.y = false, 0, -self.sprH / 2
+    love.graphics.push()
+    love.graphics.translate(px, py); love.graphics.rotate(ang)
+    self:renderBody(0, 0)
+    love.graphics.pop()
+    self.flipped, self.facing, self.x, self.y = fl, fc, ox, oy
+end
+
+-- En una pared se dibuja como en el suelo, girado
 function Crabby:render(camX, camY)
+    local turn = self:crawlTurn()
+    if turn then
+        self:renderLocal(math.floor(turn.x - camX + 0.5), math.floor(turn.y - camY + 0.5), turn.ang)
+        return
+    end
+    if Crawler.onWall(self) and self.cattached and self.state:sub(1, 5) ~= 'drop_' then
+        -- Girado alrededor del punto de apoyo ajustado al píxel del borde del
+        -- bloque (girar desde el centro sin redondear lo dejaba 1 px separado)
+        self:renderLocal(math.floor(self.x - self.cnx * self.sprH / 2 - camX + 0.5),
+                         math.floor(self.y - camY), Crawler.angle(self))
+        return
+    end
+    self:renderBody(camX, camY)
+end
+
+function Crabby:renderBody(camX, camY)
     local img = self.currentImg or imgIdle2
     local st  = self.state
     local bx, by = self:breatheScale()
@@ -349,6 +584,7 @@ function Crabby:render(camX, camY)
     -- Levantándose: gira 180° alrededor de su centro
     local rot = 0
     if st == 'drop_getup' then rot = math.pi * (1 - math.min(1, t / GETUP_TIME)) end
+    if st == 'drop_bounce' then rot = self:bounceRotation() end      -- (Crabby trampolín)
     if rot ~= 0 then
         local cx, cy = self.x - camX, self.y - camY
         love.graphics.push()
@@ -360,10 +596,8 @@ function Crabby:render(camX, camY)
         local _, maxH = spikeDims()
         drawSpike(math.floor(self.x - camX), feetY + spriteVisH, maxH, 1)
     elseif self.spikeProgress > 0 then
-        local _, maxH = spikeDims()
-        local sH = maxH * self.spikeProgress
-        if flipped then drawSpike(drawX, feetY + spriteVisH, sH, 1)
-        else            drawSpike(drawX, feetY - spriteVisH, sH, -1) end
+        if flipped then self:drawTopper(drawX, feetY + spriteVisH, self.spikeProgress, 1)
+        else            self:drawTopper(drawX, feetY - spriteVisH, self.spikeProgress, -1) end
     end
 
     love.graphics.setColor(1, 1, 1, 1)
@@ -375,14 +609,16 @@ end
 
 return {
     name = 'crabby', label = 'Crabby', category = 'Enemigos',
+    description = 'Camina y a veces se esconde sacando un pincho. Puede andar por paredes y techos.',
     class = Crabby,
     defaults = { speed = 50, points = 15 },
     props = {
         { key='canHide', kind='bool', label='Se esconde (pincho)', group='Comportamiento', default=true,
           showIf=function(p) return p.pauses end },
-        { key='hideChance', kind='number', label='Prob. de esconderse', group='Comportamiento',
+        { key='hideChance', kind='number', label='Probabilidad de esconderse', group='Comportamiento',
           default=0.75, min=0, max=1, step=0.05,
           showIf=function(p) return p.pauses and p.canHide end },
+        Crabby.WALL_PROP,
     },
     editor = { sprite = 'assets/images/crabby/crab1.png' },
 }

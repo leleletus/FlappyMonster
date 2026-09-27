@@ -28,6 +28,19 @@ function SpikeFall:init()
     self.deadTimer = 0
 end
 
+-- Detecta él solo a los jugadores. Los "pinchos de lluvia" (rainspike.lua)
+-- lo desactivan: los hace caer su Lluvia de pinchos con trigger().
+SpikeFall.autoDetect = true
+
+-- Empieza a caer (tiembla `warn` s antes; nil = su aviso configurado).
+-- Devuelve false si ahora no puede (ya cayendo, clavado, regenerándose...).
+function SpikeFall:trigger(warn)
+    if self.state ~= 'armed' then return false end
+    self.state, self.deadTimer, self.warnFor = 'shake', 0, warn
+    Sound.play('spikeShake')
+    return true
+end
+
 function SpikeFall:canBeStomped() return false end
 function SpikeFall:canBeKnocked() return false end
 
@@ -35,14 +48,14 @@ function SpikeFall:updateCustom(dt, level)
     local st = self.state
     self.deadTimer = self.deadTimer + dt
     if st == 'armed' then
-        if self:seesPlayerBelow(level, self.props.detectRange, TILE_PX / 2) then
-            self.state, self.deadTimer = 'shake', 0
-            Sound.play('spikeShake')
+        if self.autoDetect and self:seesPlayerBelow(level, self.props.detectRange, TILE_PX / 2) then
+            self:trigger()
         end
     elseif st == 'shake' then
-        if self.deadTimer >= self.props.fallDelay then self.state, self.deadTimer, self.vy = 'falling', 0, 0 end
+        local warn = (self.warnFor and self.warnFor > 0) and self.warnFor or self.props.fallDelay
+        if self.deadTimer >= warn then self.state, self.deadTimer, self.vy = 'falling', 0, 0 end
     elseif st == 'falling' then
-        self.vy = math.min(self.vy + ADV_GRAVITY * 1.2 * dt, 1400)
+        self.vy = math.min(self.vy + ADV_GRAVITY * 1.2 * (self.props.fallSpeed or 1) * dt, 1400 * (self.props.fallSpeed or 1))
         local ny = self.y + self.vy * dt
         local tipY = ny + self.outerH / 2
         local t = level:collisionAt(self.x, tipY, true)
@@ -64,20 +77,31 @@ function SpikeFall:updateCustom(dt, level)
             self.state, self.deadTimer = 'regrow', 0
         end
     elseif st == 'regrow' then
-        if self.deadTimer >= REGROW then self.state, self.deadTimer = 'armed', 0 end
+        if self.deadTimer >= REGROW then self.state, self.deadTimer, self.warnFor = 'armed', 0, nil end
     end
     return true
 end
 
 -- Peligrosos colgando, temblando y cayendo; clavados/regenerándose no.
 -- Hitbox = la de un pincho de tile hacia abajo (Level._spikeHitbox).
+local LevelMod
 function SpikeFall:getHazardBoxes()
     local st = self.state
     if st ~= 'armed' and st ~= 'shake' and st ~= 'falling' then return nil end
-    local Level = package.loaded['src/world/Level'] or require('src/world/Level')
+    LevelMod = LevelMod or package.loaded['src/world/Level'] or require('src/world/Level')
     local H  = half()
-    local hx, hy, hw, hh = Level._spikeHitbox(self.x - H / 2, self.y - H / 2, H, 1)   -- 1 = DIR_DOWN
-    return { { x = hx, y = hy, w = hw, h = hh } }
+    local hx, hy, hw, hh = LevelMod._spikeHitbox(self.x - H / 2, self.y - H / 2, H, 1)   -- 1 = DIR_DOWN
+    -- Sin crear tablas cada vez (puede haber cientos de pinchos)
+    local box = self._hb
+    if not box then box = {}; self._hb = { box } else box = box[1] end
+    box.x, box.y, box.w, box.h = hx, hy, hw, hh
+    return self._hb
+end
+
+-- Red: colgando en su sitio no hace falta enviarlo
+function SpikeFall:netAtRest() return self.state == 'armed' and self.y == self.home.y end
+function SpikeFall:netRest()
+    self.state, self.deadTimer, self.y = 'armed', 0, self.home.y
 end
 
 function SpikeFall:isBodyDisabled() return true end
@@ -108,17 +132,17 @@ end
 
 return {
     name = 'spikefall', label = 'Pincho que cae', category = 'Trampas',
+    description = 'Pincho colgado de un techo que cae cuando un jugador pasa por debajo.',
     class = SpikeFall,
     placement = 'sub',              -- como los pinchos: en subceldas
     ceilingOnly = true,             -- solo colgando de un bloque sólido
-    hide = { 'movement', 'attach', 'speed', 'startDir', 'patrol', 'turnAtEdges', 'bobAmp', 'pauses',
-             'onTouch', 'stompable', 'points', 'dropOnSight', 'detectRange', 'respawn' },
+    hide = 'all',
     props = {
-        { key='detectRange', kind='int', label='Alcance de deteccion', group='Trampa', default=6,
+        { key='detectRange', kind='int', label='Alcance de detección (casillas)', group='Trampa', default=6,
           min=1, max=30, step=1, help='casillas hacia abajo: mas lejos no cae (no te pilla sin verlo)' },
         { key='fallDelay', kind='number', label='Aviso antes de caer (s)', group='Trampa', default=SHAKE,
           min=0.1, max=3, step=0.05 },
-        { key='stuckTime', kind='number', label='Clavados en el suelo (s)', group='Trampa', default=2.5,
+        { key='stuckTime', kind='number', label='Clavado en el suelo (s)', group='Trampa', default=2.5,
           min=0.5, max=20, step=0.5 },
     },
     editor = { sprite = 'assets/images/items/spikefall.png' },

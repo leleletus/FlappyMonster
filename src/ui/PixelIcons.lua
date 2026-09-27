@@ -52,6 +52,20 @@ local ICONS = {
         },
         colors = { P = {0.75,0.75,0.8}, p = {0.45,0.45,0.5}, K = {0.1,0.1,0.12}, W = {1,1,1} },
     },
+    hill = {   -- colina con corona en la cima (Rey de la Colina)
+        m = {
+            "...YoY...",
+            "...YYY...",
+            "....G....",
+            "...GGG...",
+            "..GGgGG..",
+            ".GGgGGgG.",
+            "GGGGGGGGG",
+            "ddddddddd",
+        },
+        colors = { Y = {1.00,0.80,0.18}, o = {0.90,0.15,0.20}, G = {0.35,0.80,0.35},
+                   g = {0.22,0.58,0.25}, d = {0.45,0.30,0.16} },
+    },
     skull = {  -- calavera (Cazamonstruos)
         m = {
             "..WWWWW..",

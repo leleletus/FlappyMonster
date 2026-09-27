@@ -15,6 +15,10 @@ return {
     color = { 1.0, 0.45, 0.30 },
 
     requires = function(info)
+        -- Los niveles con jefe son solo para Carrera
+        if (info.bosses or 0) > 0 then return false, 'el nivel tiene un jefe (solo Carrera)' end
+        if info.autoScroll then return false, 'el nivel tiene cámara automática (solo Carrera)' end
+        if (info.pointAreas or 0) > 0 then return false, 'el nivel tiene zonas de puntos (Rey de la Colina)' end
         if info.killable > 0 then return true end
         return false, 'el nivel no tiene enemigos que se puedan pisotear'
     end,

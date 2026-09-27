@@ -4,11 +4,17 @@
 -- src/world/Entities.lua.
 --
 -- Definición de un tipo:
---   name, label, category ('Enemigos', 'NPCs'...)
+--   name, label, category (ver EntityTypes.CATEGORIES)
+--   description texto corto para el editor (paleta e inspector)
 --   defaults    valores por defecto de las propiedades COMUNES para este tipo
 --               (p. ej. { speed = 55, points = 10 })
 --   props       propiedades EXTRA propias del tipo (mismo formato que Props)
---   hide        claves de propiedades comunes que no aplican a este tipo
+--   hide        claves de propiedades comunes que no aplican a este tipo,
+--               o 'all' (objetos: trampolines, directores... sin ninguna común)
+--   variant     { group='trampoline', label='Arriba', groupLabel='Trampolín' }:
+--               varias definiciones que son el MISMO objeto en distintas
+--               versiones (direcciones...). El editor las muestra como una sola
+--               ficha con un selector (y la tecla X las recorre).
 --   class       clase (derivada de Entity) con su comportamiento y dibujo
 --   editor      { sprite='assets/...png', scale=4, tint={...} } miniatura
 --   pickup      coleccionable: { score=25 } / { lives=1 } (se recoge al tocarlo)
@@ -22,7 +28,22 @@
 
 local Props = require 'src/world/entities/Props'
 
-local EntityTypes = { byName = {}, list = {} }
+local EntityTypes = { byName = {}, list = {}, variants = {} }
+
+-- Categorías de la paleta del editor, en este orden (una categoría nueva que
+-- no esté aquí sale al final). `description` = ayuda al pasar el ratón.
+EntityTypes.CATEGORIES = {
+    { id = 'Enemigos',   description = 'Criaturas que se mueven y hacen daño. Casi todas se pueden pisotear.' },
+    { id = 'Jefes',      description = 'Colócalos dentro de una zona de jefe (capa Especial).' },
+    { id = 'Trampas',    description = 'Peligros del escenario.' },
+    { id = 'Mecanismos', description = 'Objetos que cambian el nivel: trampolines, agua...' },
+    { id = 'Objetos',    description = 'Coleccionables y puntos de control.' },
+    { id = 'Directores', description = 'Invisibles en la partida: controlan a otros objetos.' },
+}
+
+-- Orden de los grupos de propiedades COMUNES en el inspector. Los grupos
+-- propios de un tipo (p. ej. 'Mortero', 'Inundación') van antes que estos.
+EntityTypes.COMMON_GROUPS = { 'Movimiento', 'Comportamiento', 'Combate', 'Caída desde el techo', 'Reaparición' }
 
 local function opts(...)
     local o = {}
@@ -39,36 +60,49 @@ EntityTypes.COMMON = {
     { key='attach', kind='enum', label='Superficie', group='Movimiento', default='floor',
       options=opts({'floor','Suelo'}, {'ceiling','Techo (boca abajo)'}),
       showIf=function(p) return p.movement == 'walk' end },
-    { key='speed', kind='number', label='Velocidad', group='Movimiento', default=50,
-      min=0, max=600, step=5, help='px/s',
+    { key='speed', kind='number', label='Velocidad (px/s)', group='Movimiento', default=50,
+      min=0, max=600, step=5, help='El jugador anda a 240 px/s',
       showIf=function(p) return p.movement ~= 'static' end },
-    { key='startDir', kind='enum', label='Direccion inicial', group='Movimiento', default='right',
+    { key='startDir', kind='enum', label='Dirección inicial', group='Movimiento', default='right',
       options=opts({'right','Derecha'}, {'left','Izquierda'}) },
-    { key='patrol', kind='patrol', label='Ruta (limites)', group='Movimiento',
-      help='Columnas entre las que se mueve. Desactiva para no tener limites.',
+    { key='patrol', kind='patrol', label='Ruta con límites', group='Movimiento',
+      help='Columnas entre las que se mueve. Desactívalo para que no tenga límites.',
       default=function(d) return { left = (d.col or 1) - 3, right = (d.col or 1) + 3 } end,
       showIf=function(p) return p.movement ~= 'static' end },
     { key='turnAtEdges', kind='bool', label='Gira en los bordes', group='Movimiento', default=true,
       help='Da la vuelta antes de caer por un borde',
       showIf=function(p) return p.movement == 'walk' end },
-    { key='bobAmp', kind='number', label='Oscilacion vertical', group='Movimiento', default=16,
-      min=0, max=200, step=2, help='px (solo voladores)',
+    { key='bobAmp', kind='number', label='Oscilación vertical (px)', group='Movimiento', default=16,
+      min=0, max=200, step=2, help='Cuánto sube y baja al volar',
       showIf=function(p) return p.movement == 'fly' end },
-    { key='pauses', kind='bool', label='Hace pausas', group='Comportamiento', default=true },
+    { key='pauses', kind='bool', label='Hace pausas', group='Comportamiento', default=true,
+      help='De vez en cuando se para un momento' },
     { key='onTouch', kind='enum', label='Al tocarlo', group='Combate', default='kill',
-      options=opts({'kill','Mata (hostil)'}, {'hurt','Quita 1 vida de HP'}, {'none','Nada (neutral / NPC)'}) },
+      options=opts({'kill','Mata'}, {'hurt','Quita 1 de vida'}, {'none','Nada (neutral)'}) },
     { key='stompable', kind='bool', label='Se puede pisotear', group='Combate', default=true },
     { key='points', kind='int', label='Puntos al pisotearlo', group='Combate', default=10,
       min=0, max=9999, step=5, showIf=function(p) return p.stompable end },
-    { key='dropOnSight', kind='bool', label='Cae al ver al jugador', group='Techo', default=false,
-      help='Desde el techo: al ver a un jugador debajo tiembla, se gira y cae (luego sigue en el suelo)',
+    { key='dropOnSight', kind='bool', label='Cae al ver a un jugador', group='Caída desde el techo', default=false,
+      help='Desde el techo: al ver a un jugador debajo tiembla y cae (luego sigue en el suelo)',
       showIf=function(p) return p.movement == 'walk' and p.attach == 'ceiling' end },
-    { key='detectRange', kind='int', label='Alcance de deteccion', group='Techo', default=6,
-      min=1, max=30, step=1, help='casillas hacia abajo',
+    { key='detectRange', kind='int', label='Alcance (casillas)', group='Caída desde el techo', default=6,
+      min=1, max=30, step=1, help='Hasta cuántas casillas por debajo ve a los jugadores',
       showIf=function(p) return p.dropOnSight and p.movement == 'walk' and p.attach == 'ceiling' end },
-    { key='respawn', kind='number', label='Reaparece tras (s)', group='Reaparicion', default=0,
-      min=0, max=120, step=1, help='0 = no reaparece. Si muere, vuelve a su sitio original pasado ese tiempo' },
+    { key='respawn', kind='number', label='Reaparece tras (s)', group='Reaparición', default=0,
+      min=0, max=120, step=1, help='0 = no reaparece. Si muere, vuelve a su sitio pasado ese tiempo' },
 }
+
+-- Orden de una categoría en la paleta (las desconocidas al final)
+function EntityTypes.categoryOrder(id)
+    for i, c in ipairs(EntityTypes.CATEGORIES) do if c.id == id then return i, c end end
+    return #EntityTypes.CATEGORIES + 1, nil
+end
+
+-- Variantes hermanas de un tipo (lista de nombres) o nil
+function EntityTypes.variantsOf(name)
+    local t = EntityTypes.byName[name]
+    return t and t.variant and EntityTypes.variants[t.variant.group] or nil
+end
 
 function EntityTypes.register(def)
     assert(type(def) == 'table' and type(def.name) == 'string', "entidad sin nombre")
@@ -81,7 +115,11 @@ function EntityTypes.register(def)
 
     -- Esquema final: comunes (con defaults del tipo) + propios
     local hide = {}
-    for _, k in ipairs(t.hide or {}) do hide[k] = true end
+    if t.hide == 'all' then
+        for _, p in ipairs(EntityTypes.COMMON) do hide[p.key] = true end
+    else
+        for _, k in ipairs(t.hide or {}) do hide[k] = true end
+    end
     t.schema = {}
     for _, p in ipairs(EntityTypes.COMMON) do
         if not hide[p.key] then
@@ -93,15 +131,31 @@ function EntityTypes.register(def)
     end
     for _, p in ipairs(t.props or {}) do table.insert(t.schema, p) end
 
-    -- Agrupar por `group` (orden de primera aparición) para el editor
-    local order, byGroup = {}, {}
+    -- Agrupar por `group` para el editor: primero los grupos propios del tipo
+    -- (lo que lo define: 'Mortero', 'Inundación'...), luego los comunes en su
+    -- orden fijo (las propiedades propias de un grupo común van con él)
+    local isCommon = {}
+    for i, g in ipairs(EntityTypes.COMMON_GROUPS) do isCommon[g] = i end
+    local own, byGroup = {}, {}
     for _, p in ipairs(t.schema) do
         local g = p.group or 'General'
-        if not byGroup[g] then byGroup[g] = {}; order[#order+1] = g end
+        if not byGroup[g] then
+            byGroup[g] = {}
+            if not isCommon[g] then own[#own+1] = g end
+        end
         table.insert(byGroup[g], p)
     end
-    t.schema = {}
-    for _, g in ipairs(order) do for _, p in ipairs(byGroup[g]) do table.insert(t.schema, p) end end
+    t.schema, t.groups = {}, {}
+    local function add(g) if byGroup[g] then t.groups[#t.groups+1] = g; for _, p in ipairs(byGroup[g]) do table.insert(t.schema, p) end end end
+    for _, g in ipairs(own) do add(g) end
+    for _, g in ipairs(EntityTypes.COMMON_GROUPS) do add(g) end
+
+    -- Variantes (el mismo objeto en varias versiones: direcciones...)
+    if t.variant then
+        local g = t.variant.group
+        EntityTypes.variants[g] = EntityTypes.variants[g] or {}
+        table.insert(EntityTypes.variants[g], t.name)
+    end
 
     t.class.def = t
 

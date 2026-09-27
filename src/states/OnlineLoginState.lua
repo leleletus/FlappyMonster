@@ -93,11 +93,15 @@ end
 -- ── Update ────────────────────────────────────────────────────────────────────
 
 function OnlineLoginState:update(dt)
+    if not self.btnIndex then self.btnIndex = 1 end
 
-    -- Solo hay un campo, no hay navegación entre campos
+    if Input.pressed('nav_left') or Input.pressed('nav_right') then
+        self.btnIndex = self.btnIndex == 1 and 2 or 1
+        Sound.play('select')
+    end
 
     if Input.pressed('confirm') then
-        self:_tryConnect()
+        if self.btnIndex == 1 then self:_tryConnect() else self:_back() end
     end
     if Input.pressed('back') then self:_back() end
 end
@@ -216,7 +220,7 @@ function OnlineLoginState:render()
     for i, b in ipairs(L.buttons) do
         local hov = (self.hoverBtn == i)
         local primary = (b.id == 'connect')
-        if hov or (primary and not self.hoverBtn) then
+        if hov or (self.btnIndex == i and not self.hoverBtn) then
             love.graphics.setColor(0, 0, 0, 0.5)
             love.graphics.rectangle('fill', b.x + 4, b.y + 4, b.w, b.h)
             love.graphics.setColor(1, 1, 1, self.connecting and primary and 0.5 or 1)

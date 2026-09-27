@@ -13,7 +13,7 @@ local controls = {
     pause     = {'key:escape', 'button:start'},
     -- resume y confirm separados: resume solo en pausa, confirm solo en menús
     resume    = {'key:return', 'button:a'},
-    back      = {'key:escape', 'button:back'},
+    back      = {'key:escape', 'button:back', 'button:a'},
     -- Menús
     nav_up    = {'key:up',    'button:dpup',    'axis:lefty-'},
     nav_down  = {'key:down',  'button:dpdown',  'axis:lefty+'},

@@ -3,6 +3,7 @@
 return {
     id = 2, name = 'platform', label = 'Plataforma', category = 'Plataformas',
     collision = 'oneway', dropThrough = false, material = 'stone',
+    hitbox = { x = 0, y = 0, w = 1, h = 0.72 },       -- lo que se ve (losa de ¾)
     editorColor = { 0.52, 0.52, 0.60 },
     draw = function(t, ctx)
         local x, y, s = ctx.x, ctx.y, ctx.size

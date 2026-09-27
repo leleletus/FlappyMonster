@@ -55,9 +55,9 @@ end
 
 return {
     name = 'checkpoint', label = 'Checkpoint', category = 'Objetos',
+    description = 'Al tocarlo pasa a ser el punto de reaparición del jugador.',
     class = Checkpoint,
     checkpoint = true,
-    hide = { 'movement', 'attach', 'speed', 'startDir', 'patrol', 'turnAtEdges', 'bobAmp', 'pauses',
-             'onTouch', 'stompable', 'points', 'dropOnSight', 'detectRange', 'respawn' },
+    hide = 'all',
     editor = { sprite = 'assets/images/items/checkpoint_on.png' },
 }

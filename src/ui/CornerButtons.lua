@@ -8,7 +8,7 @@ local CornerButtons = {}
 
 local PAUSE = { x = 0, y = 76, w = 56, h = 56 }     -- x se calcula con WINDOW_W
 -- Dentro del marco interior de los menús (fondo MenuDif), arriba a la izquierda
-local BACK  = { x = 120, y = 118, w = 176, h = 52 }
+local BACK  = { x = 20, y = 20, w = 176, h = 52 }
 
 local function hit(r, x, y, pad)
     pad = pad or 6
