@@ -3,14 +3,15 @@
 -- ayuda dentro de ese archivo). Lo usan Sound (para cargar y reproducir), el
 -- editor (lista de músicas de nivel) y los niveles (campo "music" = un id).
 --
--- Cada pista: { id, name, file | intro+loop, volume, loop, level }
+-- Cada pista: { id, name, file | intro+loop, volume, loop, level, boss }
 --   file        una sola pista que se repite
 --   intro/loop  intro que suena una vez y luego el bucle para siempre
 --   level=false no se ofrece como música de nivel (jefes, menús...)
+--   boss=true   se ofrece como música de pelea en las zonas de jefe
 
 local json = require 'libs/json'
 
-local Music = { list = {}, byId = {}, levelList = {} }
+local Music = { list = {}, byId = {}, levelList = {}, bossList = {} }
 
 Music.DIR     = 'assets/music/'
 Music.INDEX   = Music.DIR .. 'index.json'
@@ -34,11 +35,13 @@ local function load()
                 volume = tonumber(t.volume) or 0.7,
                 loops  = t.loop ~= false,
                 level  = t.level ~= false,
+                boss   = t.boss == true,
             }
             if Music.byId[tr.id] then print('[Music] id repetido: ' .. tr.id) else
                 Music.byId[tr.id] = tr
                 table.insert(Music.list, tr)
                 if tr.level then table.insert(Music.levelList, tr) end
+                if tr.boss then table.insert(Music.bossList, tr) end
             end
         end
     end

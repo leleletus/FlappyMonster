@@ -10,7 +10,8 @@
     "  intro/loop  o bien: una intro que suena una vez y un bucle que se repite después",
     "  volume      volumen (0-1, opcional, 0.7 por defecto)",
     "  loop        false = suena una sola vez (p. ej. un jingle); por defecto true",
-    "  level       false = no se ofrece como música de nivel (jefes, menús...); por defecto true"
+    "  level       false = no se ofrece como música de nivel (jefes, menús...); por defecto true",
+    "  boss        true = se ofrece como música de pelea en las zonas de jefe (editor: zona > Música)"
   ],
   "tracks": [
     { "id": "classic",        "name": "Clásica",        "file": "level.ogg" },
@@ -18,7 +19,8 @@
     { "id": "hidro_city",     "name": "Hidro City",     "file": "hidro_city.wav" },
     { "id": "labyrinth",      "name": "Labyrinth",      "intro": "labyrinth_intro.wav", "loop": "labyrinth_loop.wav" },
 
-    { "id": "boss",   "name": "Boss Battle", "intro": "boss_battle_intro.wav", "loop": "boss_battle_loop.wav", "level": false },
+    { "id": "boss",   "name": "Boss Battle", "intro": "boss_battle_intro.wav", "loop": "boss_battle_loop.wav", "level": false, "boss": true },
+    { "id": "Tentacle_Tantrum", "name": "Tentacle Tantrum", "file": "TentacleTantrum.ogg", "level": false, "boss": true },
     { "id": "menus",  "name": "Menús",       "file": "menus.ogg",   "level": false },
     { "id": "youWin", "name": "Victoria",    "file": "victory.ogg", "level": false, "loop": false }
   ]

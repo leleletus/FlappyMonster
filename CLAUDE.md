@@ -125,7 +125,7 @@ src/Sound.lua       Sound.play(name,pitch,vol), playMusic(name), stopMusic, trac
                     flappy/, fireworks/. Images: assets/images/<thing>/ (bosses/<boss>/),
                     all lowercase; music: assets/music/snake_case.wav
 src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
-                    intro+loop, volume, loop, level). Sound loads every track from it
+                    intro+loop, volume, loop, level, boss). Sound loads every track from it
                     (`Sound.loadTrack`); `level=false` tracks (boss, menus, youWin) are
                     not offered as level music. Adding a song = file + one index entry.
                     Level JSON `"music": id` (editor: Nivel tab → Música, ▶ preview).
@@ -408,7 +408,10 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   respawn points move into the zone. Camera: `BossZones.cameraTarget` via
   `cameraZone` — during a fight it also stays fixed for players BELOW the zone
   (fell through a broken floor: walls no longer hold them, camera must not follow).
-  Music: `BossZones.music(level)` → `Sound.setLevelMusic(track)` (so every
+  Music: zone field `music` = any catalog track with `"boss": true` (options built
+  from `Music.bossList` + 'level'; default 'boss'; editor: zone inspector). Prefer
+  OGG for music (the updater ships it to every player).
+  `BossZones.music(level)` → `Sound.setLevelMusic(track)` (so every
   `Sound.playMusic('level')` call plays the boss track during the fight).
 - **Controller** (`BossZones.newController(level, entities)`) runs in
   AdventureState and on the server; returns events `boss_start`/`boss_clear`.
