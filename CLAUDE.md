@@ -210,7 +210,10 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
 - Oxygen bubbles: `Level:checkVentOxyCollision` = visible circle of bubble1
   (offset -3.5,-10.5 from b.x,b.y, r 24.5 + 6 px pad) vs the whole outer box.
   F1 draws the circles; breathing point = `getHeadPoint` (top of head).
-- `hurt()` = 1 damage with i-frames (`takeDamage`), returns true if it killed.
+- `hurt()` = 1 damage with i-frames (`takeDamage`), returns true if it killed. After a
+  hit `hurtT` = HURT_COOLDOWN (1.6 s): no damage, no pushes (`isHitProtected()`: knockback,
+  recoil, squash skip; the push of the SAME hit applies via `hitNow`) and bosses'
+  solid bodies are passed through — nothing can chain hits or pin a player.
 - `bounce(vy)`, `knockback(dirX)` (GP shove + stun), `die()`, `respawn()`.
 - Sounds: 'jump', 'step', 'dies2' (death), 'dies' (non-lethal hit), 'gpStart',
   'gpImpact', 'stunned', 'headBump'.
@@ -277,7 +280,7 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   end OR coming from the open side (player centre beyond its outer face) =
   'stomp' with 4th return dirX = cnx → `pa:bounce(vy, dirX, soft=true)` (vx 300 +
   ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill; v17: crawler turn in snapshots; v18: MegaCrabby;
-  v19: boss walls, Mega minions/pounce).
+  v19: boss walls, Mega minions/pounce; v20: post-hit protection).
 - **Crawler** (`src/world/entities/Crawler.lua`): surface-following movement
   (floor ↔ walls ↔ ceiling, concave and convex corners) for Crabbies with prop
   `wallWalk` (`Crabby.WALL_PROP`, off by default so old levels don't change).
@@ -392,7 +395,8 @@ Catalog metadata that drives the editor (no editor code needed):
 when it fits), textField (placeholder), section, tabs, hint, caption, label
 (fits/ellipsizes). F1 = shortcuts overlay. `E.instances` renders entities as
 in-game. `Model:validate()` → warnings (Avisos tab, clickable). F5 playtests
-via `AdventureState` with `editor_playtest.json`.
+via `AdventureState` with `editor_playtest.json` (SP keeps reserve entities in
+`self.enemies`: it only drops non-alive ones without `summonOf`).
 
 ## Boss system (generic)
 
@@ -469,13 +473,14 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   `hitPlayers`; claw boxes too; after a hit it backs off: recover) → windup → charge →
   recover (contact near a wall: `pushAway` bounces the player OVER the crab to the
   other side; `graceT` after every contact hit: no chained stuns); `pounceEvery`:
-  wallclimb (the wall AWAY from the target) → wallaim (marker) → pounce (ballistic leap,
+  wallclimb (the wall AWAY from the target) → wallaim (marker starts at the target and
+  chases it at `MARKER_SPEED`, fixed the last `AIM_LOCK_WALL` s) → pounce (ballistic leap,
   not head-first, only the crush counts: `pounceDamage` 2 HP) → recover; `summonEvery`:
-  summon (activates reserve minions); every `ceilingEvery` s: climb (Crawler; the
+  summon (only if it can: free reserve and below `summonMax`; `SUMMON_WARN` s of yellow
+  floor markers at `summonSpot(i)`, count in netPack); every `ceilingEvery` s: climb (Crawler; the
   zone edges count as walls/ceiling via `crawlSolidAt`) → ceiling (above target) → aim
-  (shakes, `landY`/`markerX` marker; keeps tracking the PREDICTED player x —
-  `predictX` = x + smoothed vx × lead·`aimLead` — for `AIM_LOCK` of the warning)
-  → drop (spike hazard = KILL) → stuck (ONLY vulnerable state,
+  (FOLLOWS the target along the ceiling with the marker below for `aimTime`, then
+  `AIM_LOCK_CEIL` s still and shaking) → drop (spike hazard = KILL) → stuck (ONLY vulnerable state,
   one hit per drop: `hitDrop`; stomp 1 / GP 2) → getup (during its inv time; landing =
   `landShock`: knockback+stun around, 1 HP only to whoever is really UNDER it; then
   `recover` 1 s + `graceT` 1.4 s without contact damage). Spike boxes (head spike,

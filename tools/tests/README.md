@@ -21,5 +21,8 @@ settings.lua input.lua` del repo; se lanza desde la raíz del repo.
 - `online_boss/` — pelea de jefe online: cliente real + bot entran en la arena;
   estados recibidos por red, errores y capturas (`<save>/boss_*.png`).
 
+- `sp_boss/` — pelea en el modo UN JUGADOR REAL (AdventureState, como "Probar"
+  del editor): estados, súbditos, bloques de jefe y tiempo entre golpes.
+
 Las carpetas de guardado de las pruebas (`~/.local/share/love/fm_test_*`) se
 pueden borrar después. Nunca apuntar una prueba al servidor real.
