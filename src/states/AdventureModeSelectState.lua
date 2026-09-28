@@ -4,6 +4,7 @@
 
 local CornerButtons = require 'src/ui/CornerButtons'
 local BaseState               = require 'src/BaseState'
+local L = require 'src/Lang'
 local AdventureModeSelectState = BaseState:new()
 
 local imgBg = nil
@@ -12,7 +13,7 @@ local function loadAssets()
     imgBg = love.graphics.newImage('assets/images/menus/MenuDif.png')
 end
 
-local OPTIONS = { 'SOLO', 'ONLINE' }
+local OPTIONS = { 'adv.solo', 'adv.online' }   -- claves de idioma
 local BTN_W   = 320
 local BTN_H   = 58
 local BTN_GAP = 30
@@ -102,14 +103,14 @@ function AdventureModeSelectState:render()
     -- Título
     love.graphics.setFont(FONT_BIG)
     love.graphics.setColor(0, 0, 0, 0.6)
-    love.graphics.printf('ADVENTURE', 2, WINDOW_H/2 - 148, WINDOW_W, 'center')
+    love.graphics.printf(L('adv.title'), 2, WINDOW_H/2 - 148, WINDOW_W, 'center')
     love.graphics.setColor(1, 0.95, 0.15, 1)
-    love.graphics.printf('ADVENTURE', 0, WINDOW_H/2 - 150, WINDOW_W, 'center')
+    love.graphics.printf(L('adv.title'), 0, WINDOW_H/2 - 150, WINDOW_W, 'center')
 
     -- Botones
     local cx = WINDOW_W / 2
     for i, opt in ipairs(OPTIONS) do
-        drawBtn(opt, cx, btnY(i), BTN_W, BTN_H, i == self.selected)
+        drawBtn(L(opt), cx, btnY(i), BTN_W, BTN_H, i == self.selected)
     end
 
     love.graphics.setColor(COLOR_WHITE)

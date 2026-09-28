@@ -3,6 +3,7 @@ local CornerButtons = require 'src/ui/CornerButtons'
 local BaseState = require 'src/BaseState'
 local Player    = require 'src/entities/Player'
 local Pipe      = require 'src/entities/Pipe'
+local L = require 'src/Lang'
 
 local PlayState = BaseState:new()
 
@@ -18,7 +19,7 @@ local COLOR_LERP_SPD  = 0.5
 local SLOWDOWN_TARGET = 0.7
 local SLOWDOWN_SPEED  = 1.8
 
-local GAMEOVER_OPTIONS = { 'Reintentar', 'Menu' }
+local GAMEOVER_OPTIONS = { 'common.retry', 'common.menu' }   -- claves de idioma
 
 local imgBg = nil
 local function loadBg()
@@ -246,10 +247,10 @@ function PlayState:render()
     -- HUD
     love.graphics.setColor(0, 0, 0, 0.7)
     love.graphics.setFont(FONT_MED)
-    love.graphics.print("Score: " .. self.score,     20, 20)
-    love.graphics.print("Best:  " .. self.highScore, 20, 55)
+    love.graphics.print(L('flappy.score', { n = self.score }),     20, 20)
+    love.graphics.print(L('flappy.best', { n = self.highScore }), 20, 55)
     love.graphics.setFont(FONT_BIG)
-    local diffLabel = string.upper(self.diffKey)
+    local diffLabel = L('diff.' .. self.diffKey)
     local diffW = FONT_BIG:getWidth(diffLabel)
     love.graphics.print(diffLabel, WINDOW_W - diffW - 24, 20)
 
@@ -262,11 +263,11 @@ function PlayState:render()
 
         love.graphics.setFont(FONT_BIG)
         love.graphics.setColor(COLOR_RED[1], COLOR_RED[2], COLOR_RED[3], oa)
-        love.graphics.printf('GAME OVER', 0, WINDOW_H/2 - 110, WINDOW_W, 'center')
+        love.graphics.printf(L('hud.game_over'), 0, WINDOW_H/2 - 110, WINDOW_W, 'center')
 
         love.graphics.setFont(FONT_MED)
         love.graphics.setColor(1, 1, 1, oa)
-        love.graphics.printf('Puntuacion: ' .. self.score, 0, WINDOW_H/2 - 40, WINDOW_W, 'center')
+        love.graphics.printf(L('flappy.final_score', { n = self.score }), 0, WINDOW_H/2 - 40, WINDOW_W, 'center')
 
         if self.deadTimer > 0.8 then
             local ba = math.min(1, (self.deadTimer - 0.8) / 0.3)
@@ -280,7 +281,7 @@ function PlayState:render()
 
             for i, opt in ipairs(GAMEOVER_OPTIONS) do
                 local by = startY + (i - 1) * (btnH + gap)
-                drawPixelButton(opt, cx, by, btnW, btnH, i == self.selectedOpt, ba)
+                drawPixelButton(L(opt), cx, by, btnW, btnH, i == self.selectedOpt, ba)
             end
         end
     end

@@ -4,6 +4,7 @@
 
 local BaseState        = require 'src/BaseState'
 local NC               = require 'src/network/NetworkClient'
+local L = require 'src/Lang'
 local OnlineErrorState = BaseState:new()
 
 local imgBg = nil
@@ -16,7 +17,7 @@ function OnlineErrorState:enter(args)
     loadAssets()
     args         = args or {}
     self.code    = args.code or "ERR_NETWORK"
-    self.msg     = args.msg  or "Se perdio la conexion con el servidor."
+    self.msg     = args.msg  or L('err.lost')
     self.alpha   = 0
     self.hovered = false
     NC:disconnect()
@@ -55,7 +56,7 @@ function OnlineErrorState:render()
 
     love.graphics.setFont(FONT_BIG)
     love.graphics.setColor(1, 0.22, 0.22, a)
-    love.graphics.printf('ERROR DE RED', 0, panelY + 20, WINDOW_W, 'center')
+    love.graphics.printf(L('err.title'), 0, panelY + 20, WINDOW_W, 'center')
 
     love.graphics.setColor(1, 0.22, 0.22, 0.3 * a)
     love.graphics.line(panelX + 24, panelY + 66, panelX + panelW - 24, panelY + 66)
@@ -80,7 +81,7 @@ function OnlineErrorState:render()
     love.graphics.rectangle('line', btnX, btnY, btnW, btnH)
     love.graphics.setFont(FONT_MED)
     love.graphics.setColor(isHov and {0,0,0,a} or {1,1,1,a})
-    love.graphics.printf('VOLVER AL MENU', btnX, btnY + btnH/2 - FONT_MED:getHeight()/2, btnW, 'center')
+    love.graphics.printf(L('err.back_menu'), btnX, btnY + btnH/2 - FONT_MED:getHeight()/2, btnW, 'center')
 
     love.graphics.setColor(COLOR_WHITE)
 end

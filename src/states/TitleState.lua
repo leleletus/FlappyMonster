@@ -1,5 +1,6 @@
 -- src/states/TitleState.lua
 local BaseState  = require 'src/BaseState'
+local L = require 'src/Lang'
 local TitleState = BaseState:new()
 
 local imgBg    = nil
@@ -182,7 +183,7 @@ function TitleState:render()
     local alpha = (math.sin(self.pulse) + 1) / 2 * 0.7 + 0.3
     love.graphics.setColor(0, 0, 0, alpha)
     love.graphics.printf(
-        "Presiona " .. Input.label('confirm') .. " para continuar",
+        L('title.press', { key = Input.label('confirm') }),
         0, math.floor(WINDOW_H * 0.72), WINDOW_W, 'center')
 
     love.graphics.setColor(COLOR_WHITE)

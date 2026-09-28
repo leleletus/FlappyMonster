@@ -24,6 +24,8 @@ local OnlineRoomState             = require 'src/states/OnlineRoomState'
 local OnlineAdventureState        = require 'src/states/OnlineAdventureState'
 local OnlineErrorState            = require 'src/states/OnlineErrorState'
 local OnlineResultsState          = require 'src/states/OnlineResultsState'
+local SettingsState               = require 'src/states/SettingsState'
+local Settings                    = require 'src/Settings'
 
 DEBUG_HITBOX = false   -- F1 para activar/desactivar hitboxes
 
@@ -44,6 +46,7 @@ function love.load()
     FONT_BIG   = love.graphics.newFont('assets/fonts/PressStart2P.ttf', 28)
     love.graphics.setFont(FONT_MED)
 
+    Settings.load()                 -- idioma guardado (src/Lang.lua)
     Input.load()
     Input.lastDevice = Input.isMobile and 'touch' or 'keyboard'
     Sound.load()
@@ -52,6 +55,7 @@ function love.load()
         title              = function() return TitleState:new() end,
         main_menu          = function() return MainMenuState:new() end,
         difficulty         = function() return DifficultySelectionState:new() end,
+        settings           = function() return SettingsState:new() end,
         play               = function() return PlayState:new() end,
         pause              = function() return PauseState:new() end,
         adventure          = function() return AdventureState:new() end,

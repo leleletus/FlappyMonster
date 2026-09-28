@@ -11,6 +11,7 @@
 --    no necesita tener el archivo del nivel.
 
 local BaseState            = require 'src/BaseState'
+local L = require 'src/Lang'
 local Level                = require 'src/world/Level'
 local Entities             = require 'src/world/Entities'
 local PlayerAdventure      = require 'src/entities/PlayerAdventure'
@@ -47,7 +48,7 @@ local PAUSE_STOP   = 3
 
 local SPEC_WAIT  = 1
 local SPEC_LEAVE = 2
-local SPEC_OPTS  = { 'ESPERAR', 'SALIR AL HUB' }
+local SPEC_OPTS  = { 'oadv.wait', 'oadv.leave_hub' }   -- claves de idioma
 
 -- Assets
 local imgIcon = nil
@@ -233,7 +234,7 @@ function OnlineAdventureState:_setupHandlers()
         end
     end)
     NC:on("room_announce", function(data)
-        if type(data) == 'table' and data.kind ~= 'game' then Notify.toast(data.msg, data.kind) end
+        if type(data) == 'table' and data.kind ~= 'game' then Notify.toast(L.fromServer(data), data.kind) end
     end)
     NC:on("room_left",    function(data) gStateMachine:change('online_hub') end)
     NC:on("kicked",       function(data) Notify.roomExit('kicked', data) end)
@@ -242,7 +243,7 @@ function OnlineAdventureState:_setupHandlers()
     NC:on("connection_lost", function(data)
         gStateMachine:change('online_error', {
             code = "ERR_CONNECTION_LOST",
-            msg  = data.msg or "Se perdio la conexion con el servidor.",
+            msg  = data.msg or L('err.lost'),
         })
     end)
 end
@@ -495,12 +496,12 @@ function OnlineAdventureState:_processEvent(ev)
             if x and y then Sound.playAt(ev.sound, x, y, pitch) else Sound.play(ev.sound, pitch) end
         end
     elseif ev.type == 'boss_start' then
-        self.bossBanner = { text = '¡JEFE!', t = 0, col = { 1, 0.3, 0.3 } }
+        self.bossBanner = { text = L('hud.boss'), t = 0, col = { 1, 0.3, 0.3 } }
         self.bossFightT = 0
     elseif ev.type == 'scroll_start' then
-        self.bossBanner = { text = '¡YA!', t = 0, col = { 0.4, 1, 0.5 } }
+        self.bossBanner = { text = L('hud.go'), t = 0, col = { 0.4, 1, 0.5 } }
     elseif ev.type == 'boss_clear' then
-        self.bossBanner = { text = '¡JEFE DERROTADO!', t = 0, col = { 1, 0.9, 0.25 } }
+        self.bossBanner = { text = L('hud.boss_defeated'), t = 0, col = { 1, 0.9, 0.25 } }
         Sound.play('fanfare')
     elseif ev.type == 'score' then
         -- Zona de puntos: destello para todos; el "+N", solo para quien los gana
@@ -525,7 +526,7 @@ function OnlineAdventureState:_processEvent(ev)
         local x, y = tonumber(ev.x) or 0, tonumber(ev.y) or 0
         if ev.kind == 'life' then
             Sound.play('oneUp'); Particles.emit('oneup', x, y)
-            if ev.playerId == NC.myId then self:_spawnPopup('+1 VIDA', x, y - 30) end
+            if ev.playerId == NC.myId then self:_spawnPopup(L('hud.plus_life'), x, y - 30) end
         else
             Sound.play('collect'); Particles.emit('collect', x, y)
             if ev.playerId == NC.myId and ev.delta then self:_spawnPopup('+' .. ev.delta .. '!', x, y - 30) end
@@ -539,7 +540,7 @@ function OnlineAdventureState:_processEvent(ev)
         end
         Sound.play('checkpoint')
         Particles.emit('checkpoint', tonumber(ev.x) or 0, (tonumber(ev.y) or 0) - 40)
-        self:_spawnPopup('CHECKPOINT', tonumber(ev.x) or 0, (tonumber(ev.y) or 0) - 60)
+        self:_spawnPopup(L('hud.checkpoint'), tonumber(ev.x) or 0, (tonumber(ev.y) or 0) - 60)
     elseif ev.type == 'air_collected' and ev.playerId == NC.myId then
         -- El servidor confirmó que recogimos una burbuja de oxígeno.
         Sound.play('airGasp')
@@ -549,12 +550,12 @@ function OnlineAdventureState:_processEvent(ev)
         local who   = self.rosterById[ev.playerId]
         local place = tonumber(ev.place) or 0
         if mine then
-            self:_addBanner('¡EN LA META!', place .. 'º lugar', {1, 0.85, 0.2})
+            self:_addBanner(L('oadv.at_finish'), L('oadv.place', { n = place }), {1, 0.85, 0.2})
             Sound.play('finish')
             Sound.stopTracked('drowning'); self.audioDrowning = false
         else
-            self:_addBanner((who and who.name or '?') .. ' llegó a la meta',
-                            place == 1 and '¡Cuenta atrás de 15 s!' or (place .. 'º lugar'),
+            self:_addBanner(L('oadv.reached_finish', { name = who and who.name or '?' }),
+                            place == 1 and L('oadv.countdown') or L('oadv.place', { n = place }),
                             who and who.color or {1, 1, 1}, true)
             Sound.play('point')
         end
@@ -693,9 +694,9 @@ end
 function OnlineAdventureState:_getPauseOpts()
     local isAdmin = self.currentRoom and (self.currentRoom.adminId == NC.myId)
     if isAdmin then
-        return { 'REANUDAR', 'SALIR AL HUB', 'DETENER PARTIDA' }
+        return { 'common.resume', 'oadv.leave_hub', 'room.stop' }   -- claves de idioma
     end
-    return { 'REANUDAR', 'SALIR AL HUB' }
+    return { 'common.resume', 'oadv.leave_hub' }
 end
 
 function OnlineAdventureState:_togglePause()
@@ -709,11 +710,11 @@ end
 function OnlineAdventureState:_executePause(sel)
     local opts = self:_getPauseOpts()
     local chosen = opts[sel]
-    if chosen == 'REANUDAR' then
+    if chosen == 'common.resume' then
         self.showPause = false
-    elseif chosen == 'SALIR AL HUB' then
+    elseif chosen == 'oadv.leave_hub' then
         NC:send("leave_room", {})
-    elseif chosen == 'DETENER PARTIDA' then
+    elseif chosen == 'room.stop' then
         NC:send("stop_game", {})
         self.showPause = false
     end
@@ -1042,7 +1043,7 @@ function OnlineAdventureState:_renderBossHUD()
         -- Fuera de una pelea: la vida propia solo si le falta algo
         local pa, r = self.localPa, self.roster[self.myIdx]
         if pa.hp < pa.hpMax and not pa.dying then
-            BossHud.drawPlayers({ { name = r and r.name or 'TU', color = r and r.color, hp = pa.hp,
+            BossHud.drawPlayers({ { name = r and r.name or L('hud.you'), color = r and r.color, hp = pa.hp,
                                     hpMax = pa.hpMax, key = r or pa } }, 20, 110)
         end
     end
@@ -1202,7 +1203,7 @@ function OnlineAdventureState:_renderGameOver()
     local s   = 1 + 0.25 * math.max(0, 1 - t / 0.3)
     local ta  = math.min(1, math.max(0, (t - 0.15) / 0.25))
     love.graphics.setFont(FONT_BIG)
-    local title = '¡RONDA TERMINADA!'
+    local title = L('oadv.round_over')
     love.graphics.push()
     love.graphics.translate(WINDOW_W / 2, by + 52)
     love.graphics.scale(s, s)
@@ -1212,7 +1213,10 @@ function OnlineAdventureState:_renderGameOver()
     love.graphics.printf(title, -WINDOW_W / 2, -FONT_BIG:getHeight() / 2, WINDOW_W, 'center')
     love.graphics.pop()
 
-    local reason = self.roundEnd and self.roundEnd.reasonText or ''
+    -- Motivo en el idioma de este jugador (reasonText del servidor = español)
+    local re = self.roundEnd or {}
+    local reason = re.reason and Modes.reasonText(Modes.get(re.mode), re.reason) or ''
+    if reason == '' then reason = re.reasonText or '' end
     love.graphics.setFont(FONT_MED)
     love.graphics.setColor(1, 1, 1, ta * 0.85)
     love.graphics.printf(reason, 0, by + 96, WINDOW_W, 'center')
@@ -1253,9 +1257,11 @@ function OnlineAdventureState:_renderModeHUD()
     local wO = FONT_SMALL:getWidth(objective)
     local wB = line and FONT_MED:getWidth(line) or 0
     local w  = math.max(wT, wO, wB) + 32
-    -- Hueco libre centrado entre SCORE/TIME (llega a x≈404: el ancho de
-    -- "0'00''00" en letra grande) y las vidas/pausa de la derecha
-    local topFree = WINDOW_W - 2 * 416
+    -- Hueco libre centrado entre el marcador (PUNTOS/TIEMPO: su ancho cambia
+    -- con el idioma) y las vidas/pausa de la derecha
+    local labelW = math.max(FONT_BIG:getWidth(L('hud.score')), FONT_BIG:getWidth(L('hud.time')))
+    local hudRight = 20 + labelW + 20 + FONT_BIG:getWidth("0'00''00")
+    local topFree = WINDOW_W - 2 * math.max(hudRight + 12, 150 + 12)
     local boss = BossZones.fighting(self.level)
     local ph, pyBottom
     if boss then
@@ -1364,7 +1370,11 @@ function OnlineAdventureState:_renderModeHUD()
         love.graphics.printf(mode.label, 0, y, WINDOW_W, 'center')
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1, 1, 1, a * 0.9)
+        -- (si ocupa dos líneas, con aire entre ellas: esta fuente no deja hueco)
+        local lh = FONT_SMALL:getLineHeight()
+        FONT_SMALL:setLineHeight(1.6)
         love.graphics.printf(mode.tagline, WINDOW_W * 0.15, y + 50, WINDOW_W * 0.7, 'center')
+        FONT_SMALL:setLineHeight(lh)
     end
 
     -- Avisos grandes
@@ -1420,8 +1430,8 @@ function OnlineAdventureState:_renderHUD()
         love.graphics.print(text, x, y)
     end
 
-    local scoreLabelW = FONT_BIG:getWidth('SCORE')
-    local timeLabelW  = FONT_BIG:getWidth('TIME')
+    local scoreLabelW = FONT_BIG:getWidth(L('hud.score'))
+    local timeLabelW  = FONT_BIG:getWidth(L('hud.time'))
     local maxLabelW   = math.max(scoreLabelW, timeLabelW)
     local valueStartX = labelX + maxLabelW + gap
     local maxValueW   = math.max(FONT_BIG:getWidth(scoreStr), FONT_BIG:getWidth(timeStr))
@@ -1429,7 +1439,7 @@ function OnlineAdventureState:_renderHUD()
     local sw = FONT_BIG:getWidth(scoreStr)
     local tw = FONT_BIG:getWidth(timeStr)
 
-    printOut('SCORE', labelX,          row1Y, 1, 0.95, 0.15)
+    printOut(L('hud.score'), labelX,          row1Y, 1, 0.95, 0.15)
     printOut(scoreStr, valueEndX - sw, row1Y, 1, 1, 1)
 
     -- TIME: parpadea rojo cuando quedan menos de 60 s (igual que modo solo)
@@ -1443,7 +1453,7 @@ function OnlineAdventureState:_renderHUD()
             vr, vg, vb = 1, 0.20, 0.20
         end
     end
-    printOut('TIME',  labelX,          row2Y, tr, tg, tb)
+    printOut(L('hud.time'),  labelX,          row2Y, tr, tg, tb)
     printOut(timeStr,  valueEndX - tw, row2Y, vr, vg, vb)
 
     -- Vidas e indicadores del jugador local
@@ -1468,22 +1478,22 @@ function OnlineAdventureState:_renderHUD()
     elseif od.finished then
         love.graphics.setFont(FONT_MED)
         love.graphics.setColor(1, 0.85, 0.2, 0.95)
-        love.graphics.printf('META ' .. (od.place or 0) .. 'º', WINDOW_W-240, 20, 220, 'right')
+        love.graphics.printf(L('oadv.finish_place', { n = od.place or 0 }), WINDOW_W-240, 20, 220, 'right')
     else
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(0.7, 0.7, 1, 0.8)
-        love.graphics.printf('ESPECTADOR', WINDOW_W-180, 16, 160, 'right')
+        love.graphics.printf(L('oadv.spectator'), WINDOW_W-180, 16, 160, 'right')
     end
 
     -- Indicador ONLINE
     love.graphics.setFont(FONT_SMALL)
     love.graphics.setColor(0.3, 1, 0.5, 0.65)
     local roomName = (self.currentRoom and self.currentRoom.name) or "Online"
-    love.graphics.printf('ONLINE: ' .. roomName, 0, WINDOW_H-22, WINDOW_W-14, 'right')
+    love.graphics.printf(L('oadv.online', { room = roomName }), 0, WINDOW_H-22, WINDOW_W-14, 'right')
 
     -- Corona: tú eres el host (admin) de la sala
     if self.currentRoom and self.currentRoom.adminId == NC.myId then
-        local tw = FONT_SMALL:getWidth('ONLINE: ' .. roomName)
+        local tw = FONT_SMALL:getWidth(L('oadv.online', { room = roomName }))
         local px = 3
         -- Centrada con el texto según el cuerpo de la corona (filas 4-9 de
         -- la matriz), no con sus puntas: si no, a la vista queda baja.
@@ -1529,29 +1539,29 @@ function OnlineAdventureState:_renderPauseOverlay()
 
     love.graphics.setFont(FONT_BIG)
     love.graphics.setColor(1, 0.95, 0.15, a)
-    love.graphics.printf('PAUSA', 0, panelY + 16, WINDOW_W, 'center')
+    love.graphics.printf(L('pause.title'), 0, panelY + 16, WINDOW_W, 'center')
 
     love.graphics.setFont(FONT_MED)
     local startBY = panelY + 68
     for i, opt in ipairs(opts) do
         local by = startBY + (i - 1) * (btnH + btnGap)
-        local col = (opt == 'DETENER PARTIDA') and {1,0.4,0.4} or nil
+        local col = (opt == 'room.stop') and {1,0.4,0.4} or nil
         if col and i == self.pauseSel then
             love.graphics.setColor(0.12, 0.12, 0.12, a)
             love.graphics.rectangle('fill', WINDOW_W/2 - btnW/2 + 4, by + 4, btnW, btnH)
             love.graphics.setColor(col[1], col[2], col[3], a)
             love.graphics.rectangle('fill', WINDOW_W/2 - btnW/2, by, btnW, btnH)
             love.graphics.setColor(0, 0, 0, a)
-            love.graphics.printf(opt, WINDOW_W/2 - btnW/2, by + btnH/2 - FONT_MED:getHeight()/2, btnW, 'center')
+            love.graphics.printf(L(opt):upper(), WINDOW_W/2 - btnW/2, by + btnH/2 - FONT_MED:getHeight()/2, btnW, 'center')
         elseif col then
             love.graphics.setColor(col[1], col[2], col[3], 0.2 * a)
             love.graphics.rectangle('fill', WINDOW_W/2 - btnW/2, by, btnW, btnH)
             love.graphics.setColor(col[1], col[2], col[3], 0.55 * a)
             love.graphics.rectangle('line', WINDOW_W/2 - btnW/2, by, btnW, btnH)
             love.graphics.setColor(col[1], col[2], col[3], 0.8 * a)
-            love.graphics.printf(opt, WINDOW_W/2 - btnW/2, by + btnH/2 - FONT_MED:getHeight()/2, btnW, 'center')
+            love.graphics.printf(L(opt):upper(), WINDOW_W/2 - btnW/2, by + btnH/2 - FONT_MED:getHeight()/2, btnW, 'center')
         else
-            drawPixelButton(opt, WINDOW_W/2, by, btnW, btnH, i == self.pauseSel, a)
+            drawPixelButton(L(opt):upper(), WINDOW_W/2, by, btnW, btnH, i == self.pauseSel, a)
         end
     end
 end
@@ -1563,15 +1573,15 @@ function OnlineAdventureState:_renderSpectatorOverlay()
     love.graphics.setFont(FONT_SMALL)
     if finished then
         love.graphics.setColor(1, 0.85, 0.2, 0.9)
-        love.graphics.printf('¡LLEGASTE! Esperando al resto...', 0, WINDOW_H - 58, WINDOW_W, 'center')
+        love.graphics.printf(L('oadv.arrived_wait'), 0, WINDOW_H - 58, WINDOW_W, 'center')
     else
         love.graphics.setColor(0.7, 0.7, 1, 0.8)
-        love.graphics.printf('ESPECTADOR', 0, WINDOW_H - 58, WINDOW_W, 'center')
+        love.graphics.printf(L('oadv.spectator'), 0, WINDOW_H - 58, WINDOW_W, 'center')
     end
 
     if not self.specOverlay then
         love.graphics.setColor(1, 1, 1, 0.35)
-        love.graphics.printf(CornerButtons.pointerMode() and 'Pulsa || para opciones' or '[PAUSA] para opciones',
+        love.graphics.printf(L(CornerButtons.pointerMode() and 'oadv.opts_touch' or 'oadv.opts_key'),
                              0, WINDOW_H - 36, WINDOW_W, 'center')
         return
     end
@@ -1591,10 +1601,10 @@ function OnlineAdventureState:_renderSpectatorOverlay()
     love.graphics.setFont(FONT_BIG)
     if finished then
         love.graphics.setColor(1, 0.85, 0.2, 1)
-        love.graphics.printf('EN LA META', 0, panelY + 16, WINDOW_W, 'center')
+        love.graphics.printf(L('oadv.finished'), 0, panelY + 16, WINDOW_W, 'center')
     else
         love.graphics.setColor(0.7, 0.7, 1, 1)
-        love.graphics.printf('ELIMINADO', 0, panelY + 16, WINDOW_W, 'center')
+        love.graphics.printf(L('oadv.eliminated'), 0, panelY + 16, WINDOW_W, 'center')
     end
 
     local btnW, btnH = 260, 44
@@ -1604,7 +1614,7 @@ function OnlineAdventureState:_renderSpectatorOverlay()
     love.graphics.setFont(FONT_MED)
     for i, opt in ipairs(SPEC_OPTS) do
         local by = startBY + (i-1) * (btnH + btnGap)
-        drawPixelButton(opt, WINDOW_W/2, by, btnW, btnH, i==self.specSel, 1)
+        drawPixelButton(L(opt), WINDOW_W/2, by, btnW, btnH, i==self.specSel, 1)
     end
 end
 

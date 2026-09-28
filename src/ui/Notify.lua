@@ -12,6 +12,7 @@
 -- main.lua llama a update/render/touch/hover y cede la entrada al modal.
 
 local PixelIcons = require 'src/ui/PixelIcons'
+local Lang = require 'src/Lang'
 
 local Notify = {}
 
@@ -60,7 +61,7 @@ function Notify.modal(title, msg, opts)
         if m.title == title and m.msg == msg then return end
     end
     table.insert(modals, { title = title or '', msg = msg or '', kind = opts.kind or 'info',
-                           subtitle = opts.subtitle, button = opts.button or 'ACEPTAR', t = 0, hover = false })
+                           subtitle = opts.subtitle, button = opts.button or Lang('common.ok'), t = 0, hover = false })
     if #modals == 1 then Sound.play('dies2', 0.8, 0.9) end
 end
 
@@ -70,21 +71,19 @@ function Notify.clear() toasts = {}; modals = {} end
 
 -- Te sacaron de la sala: volver al hub y explicar claramente por qué.
 local EXIT_TEXT = {
-    kicked      = { title = 'EXPULSADO',     kind = 'kick',
-                    msg = 'El host te expulsó de la sala. Puedes volver a unirte si quieres.' },
-    banned      = { title = 'BANEADO',       kind = 'ban',
-                    msg = 'El host te baneó de la sala. No podrás volver a entrar en ella.' },
-    room_closed = { title = 'SALA CERRADA',  kind = 'warn',
-                    msg = 'El host cerró la sala.' },
+    -- (claves de idioma)
+    kicked      = { title = 'notify.kicked_title', kind = 'kick', msg = 'notify.kicked' },
+    banned      = { title = 'hub.banned_title',    kind = 'ban',  msg = 'notify.banned' },
+    room_closed = { title = 'notify.closed_title', kind = 'warn', msg = 'notify.closed' },
 }
 function Notify.roomExit(event, data)
     local e = EXIT_TEXT[event] or EXIT_TEXT.room_closed
     data = type(data) == 'table' and data or {}
     Sound.stopTracked('drowning')
     gStateMachine:change('online_hub')
-    Notify.modal(e.title, type(data.msg) == 'string' and data.msg or e.msg, {
+    Notify.modal(Lang(e.title), Lang.fromServer(data, e.msg), {
         kind = e.kind,
-        subtitle = type(data.room) == 'string' and ('Sala: ' .. data.room) or nil,
+        subtitle = type(data.room) == 'string' and Lang('hub.room_label', { name = data.room }) or nil,
     })
 end
 

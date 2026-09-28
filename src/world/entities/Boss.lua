@@ -39,6 +39,7 @@
 -- isVulnerable, isSolidBody.
 
 local Entity = require 'src/world/entities/Entity'
+local Lang = require 'src/Lang'
 
 local Boss = Entity.extend(Entity, { debugColor = { 1, 0.25, 0.6 } })
 
@@ -105,7 +106,12 @@ function Boss:startFight(nPlayers)
     self:onFightStart(nPlayers or 1)
 end
 
-function Boss:title() return (self.def.boss and self.def.boss.title) or self.def.label end
+-- Nombre en la barra: clave de idioma boss.<tipo> si existe; si no, def.boss.title
+function Boss:title()
+    local key = 'boss.' .. self.def.name
+    if Lang.has(key) then return Lang(key) end
+    return (self.def.boss and self.def.boss.title) or self.def.label
+end
 
 function Boss:isDying()
     local s = self.state

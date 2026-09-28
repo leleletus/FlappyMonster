@@ -3,7 +3,9 @@
 LÖVE 11.x game (Lua / LuaJIT). Two games in one: the original Flappy mode
 (`PlayState`) and **Adventure** — a platformer with a single-player mode
 (`AdventureState`) and an online mode backed by an **authoritative server**
-(`server/main.lua`). Code comments and in-game text are in Spanish; keep that.
+(`server/main.lua`). Code comments are in Spanish; keep that. Player-facing
+text is translated (es/en, see *Languages* below) — never hardcode it. The
+level editor is a dev tool and stays in Spanish.
 
 Run: `love .` (game) · `love . --editor [assets/levels/x.json]` (level editor)
 · `love server` / `love server --headless` (server, port 22122).
@@ -51,6 +53,34 @@ Quick syntax check of everything: `for f in $(git ls-files '*.lua' | grep -v res
   (`src/network/Resolver.lua`, LuaSocket) — ENet's own DNS lookup blocks the
   main thread (froze the Switch on reconnect). Failed/closed clients destroy
   their ENet host (deferred to the next `NC:update`). Peer timeout 10 s.
+
+## Languages (i18n)
+
+- `src/Lang.lua`: `local L = require 'src/Lang'` → `L('hub.create')`,
+  `L('mode.hunt.left', { n = 3 })` (`{var}` interpolation). Missing key → es →
+  the key itself. Files with a local `L` layout table (OnlineRoomState,
+  OnlineLoginState, Notify) import it as `Lang`.
+- Texts: `assets/lang/es.lua` / `en.lua` — nested tables by screen (`common`,
+  `hud`, `menu`, `hub`, `room`, `oadv`, `results`, `msm`, `mode`, `srv`, `boss`,
+  `notify`, `err`...). Add a key to BOTH files. New language = copy es.lua +
+  one entry in `Lang.LANGUAGES`.
+- Translate at DRAW time: option lists store keys (`LIST_BTNS`, pause opts,
+  `PMENU_LABELS`) and draw `L(key)`; layouts must measure the real text
+  (`fitText`, `FONT:getWidth(L(..))`) — English/Spanish differ in length.
+- Modes: text fields are keys `mode.<id>.label|tagline|objective|empty_hint`
+  resolved on read by `ModeTypes` (`m.label` is already translated).
+  `reasonText(reason)` and `rank` notes return KEYS; `Modes.reasonText(mode,
+  reason)` translates. Boss bar names: `boss.<type>`.
+- Server messages: `Lang.message(key, args, extra)` → `{key, args, msg(es)}`;
+  clients show `L.fromServer(data, fallbackKey)` in their own language.
+  `round_end` carries `reason` + `noteKey` (plus Spanish text for old clients).
+  Lang reads files with `love.filesystem.read` (the server patches it).
+- `src/Settings.lua`: player options saved as `options.cfg` in the save dir
+  (NEVER a name like settings.lua: the save dir shadows the game's modules).
+  `SettingsState` = language selector (main menu → CONFIGURACIÓN).
+- Big menu buttons are TEXT drawn with `src/ui/PixelFont.lua` (the 5-px font of
+  the old button images, accents included): `PixelFont.draw(text, x, y, scale,
+  alpha)`, `.width`, `.height`. No text baked into images.
 
 ## Directory map
 

@@ -4,6 +4,7 @@
 
 local BaseState      = require 'src/BaseState'
 local NC             = require 'src/network/NetworkClient'
+local L = require 'src/Lang'
 local OnlineHubState = BaseState:new()
 
 local imgBg = nil
@@ -30,7 +31,7 @@ local STEP_MAX     = 4
 local BTN_CREATE  = 1
 local BTN_REFRESH = 2
 local BTN_BACK    = 3
-local LIST_BTNS   = { 'CREAR SALA', 'REFRESCAR', 'VOLVER' }
+local LIST_BTNS   = { 'hub.create', 'hub.refresh', 'common.back' }   -- claves de idioma
 
 -- ── Enter ─────────────────────────────────────────────────────────────────────
 
@@ -77,10 +78,10 @@ function OnlineHubState:_setupHandlers()
     NC:on("room_error", function(data)
         data = type(data) == 'table' and data or {}
         if data.kind == 'banned' then
-            Notify.modal('BANEADO', data.msg or 'Estás baneado de esta sala.', {
-                kind = 'ban', subtitle = data.room and ('Sala: ' .. data.room) or nil })
+            Notify.modal(L('hub.banned_title'), L.fromServer(data, 'hub.banned'), {
+                kind = 'ban', subtitle = data.room and L('hub.room_label', { name = data.room }) or nil })
         else
-            Notify.toast(data.msg or "Error", 'error')
+            Notify.toast(L.fromServer(data, 'hub.error'), 'error')
         end
         if self.sub == SUB_PASSWORD or self.sub == SUB_WAITING then
             self.sub = SUB_LIST; self.inputBuffer = ""
@@ -89,7 +90,7 @@ function OnlineHubState:_setupHandlers()
     NC:on("connection_lost", function(data)
         gStateMachine:change('online_error', {
             code = "ERR_CONNECTION_LOST",
-            msg  = data.msg or "Se perdio la conexion con el servidor.",
+            msg  = data.msg or L('err.lost'),
         })
     end)
 end
@@ -181,7 +182,7 @@ function OnlineHubState:update(dt)
         if self.waitTimer >= ROOM_WAIT_TIMEOUT then
             gStateMachine:change('online_error', {
                 code = "ERR_SERVER_TIMEOUT",
-                msg  = "El servidor no respondio a tiempo.",
+                msg  = L('err.timeout'),
             })
             return
         end
@@ -309,7 +310,7 @@ function OnlineHubState:_createNext()
     local step = self.createStep
     if step == STEP_NAME then
         if #self.inputBuffer == 0 then
-            self:_showError("El nombre no puede estar vacío."); return
+            self:_showError(L('hub.name_empty')); return
         end
         self.createData.name = self.inputBuffer
         self.inputBuffer     = ""
@@ -414,10 +415,10 @@ function OnlineHubState:render()
         local dots = string.rep(".", math.floor(love.timer.getTime() * 2) % 4)
         love.graphics.setFont(FONT_MED)
         love.graphics.setColor(1, 1, 1, 1)
-        love.graphics.printf("Conectando" .. dots, 0, WINDOW_H / 2 - FONT_MED:getHeight(), WINDOW_W, 'center')
+        love.graphics.printf(L('hub.connecting') .. dots, 0, WINDOW_H / 2 - FONT_MED:getHeight(), WINDOW_W, 'center')
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1, 1, 1, 0.4)
-        love.graphics.printf("[ESC] Cancelar", 0, WINDOW_H / 2 + 20, WINDOW_W, 'center')
+        love.graphics.printf(L('hub.cancel_hint'), 0, WINDOW_H / 2 + 20, WINDOW_W, 'center')
     elseif self.sub == SUB_LIST then
         self:_renderList()
     elseif self.sub == SUB_CREATE then
@@ -440,12 +441,12 @@ function OnlineHubState:_renderList()
     -- Título
     love.graphics.setFont(FONT_BIG)
     love.graphics.setColor(1, 0.95, 0.15, 1)
-    love.graphics.printf('HUB DE SALAS', 0, panelY + 12, WINDOW_W, 'center')
+    love.graphics.printf(L('hub.title'), 0, panelY + 12, WINDOW_W, 'center')
 
     -- Usuario
     love.graphics.setFont(FONT_SMALL)
     love.graphics.setColor(1, 1, 1, 0.45)
-    love.graphics.printf('Jugando como: ' .. (NC.myName or "?"), panelX + 20, panelY + 56, panelW - 40, 'left')
+    love.graphics.printf(L('hub.playing_as', { name = NC.myName or '?' }), panelX + 20, panelY + 56, panelW - 40, 'left')
 
     love.graphics.setColor(1, 0.85, 0, 0.25)
     love.graphics.line(panelX + 20, panelY + 74, panelX + panelW - 20, panelY + 74)
@@ -469,7 +470,7 @@ function OnlineHubState:_renderList()
     for i, lbl in ipairs(LIST_BTNS) do
         local bx  = bx0 + (i-1) * (btnW + btnGap)
         local sel = (self.listFocus == 'btns' and i == self.btnSel)
-        drawBtn(lbl, bx, by0, btnW, btnH, sel)
+        drawBtn(L(lbl), bx, by0, btnW, btnH, sel)
     end
 
     -- Lista de salas
@@ -482,7 +483,7 @@ function OnlineHubState:_renderList()
     if nr == 0 then
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1, 1, 1, 0.35)
-        love.graphics.printf('No hay salas disponibles. Crea una!',
+        love.graphics.printf(L('hub.no_rooms'),
             panelX + 20, listStartY + listH/2 - 8, panelW - 40, 'center')
     else
         local maxVisible = math.floor(listH / rowH)
@@ -514,7 +515,7 @@ function OnlineHubState:_renderList()
             love.graphics.print(lockStr .. room.name, panelX + 36, ry + rowH/2 - FONT_SMALL:getHeight()/2)
 
             love.graphics.setColor(0.7, 0.7, 0.7, 0.85)
-            local statusStr = inGame and "EN PARTIDA" or "ESPERANDO"
+            local statusStr = inGame and L('hub.in_game') or L('hub.waiting')
             love.graphics.printf(
                 string.format("%d/%d  %s", room.currentPlayers, room.maxPlayers, statusStr),
                 panelX, ry + rowH/2 - FONT_SMALL:getHeight()/2, panelW - 26, 'right')
@@ -533,17 +534,17 @@ function OnlineHubState:_renderCreate()
     -- Título y paso
     love.graphics.setFont(FONT_BIG)
     love.graphics.setColor(1, 0.95, 0.15, 1)
-    love.graphics.printf('CREAR SALA', 0, panelY + 14, WINDOW_W, 'center')
+    love.graphics.printf(L('hub.create'), 0, panelY + 14, WINDOW_W, 'center')
 
     local stepLabels = {
-        "Nombre de la sala",
-        "Visibilidad",
-        "Contrasena de la sala",
-        "Maximo de jugadores",
+        L('hub.step_name'),
+        L('hub.step_visibility'),
+        L('hub.step_password'),
+        L('hub.step_max'),
     }
     love.graphics.setFont(FONT_SMALL)
     love.graphics.setColor(1, 1, 1, 0.5)
-    love.graphics.printf("Paso " .. self.createStep .. "/4  —  " .. stepLabels[self.createStep],
+    love.graphics.printf(L('hub.step', { n = self.createStep, label = stepLabels[self.createStep] }),
         panelX + 20, panelY + 62, panelW - 40, 'center')
 
     love.graphics.setColor(1, 0.85, 0, 0.25)
@@ -565,21 +566,21 @@ function OnlineHubState:_renderCreate()
     if self.createStep == STEP_NAME then
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1, 1, 1, 0.6)
-        love.graphics.printf("Escribe el nombre de la sala y presiona CONFIRMAR",
+        love.graphics.printf(L('hub.name_prompt'),
             panelX + 20, contentY, panelW - 40, 'center')
         drawTextBox(panelX + 40, contentY + 32, panelW - 80, 56, self.inputBuffer, true)
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1, 1, 1, 0.3)
-        love.graphics.printf("max. 28 caracteres", panelX + 40, contentY + 96, panelW - 80, 'right')
+        love.graphics.printf(L('hub.name_max'), panelX + 40, contentY + 96, panelW - 80, 'right')
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1,1,1,0.3)
-        love.graphics.printf("[ENTER] Confirmar   [ESC] Cancelar", panelX, panelY + panelH - 24, panelW, 'center')
+        love.graphics.printf(L('hub.confirm_hint'), panelX, panelY + panelH - 24, panelW, 'center')
 
     -- Paso 2: Privacidad (botones navegables)
     elseif self.createStep == STEP_PRIVACY then
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1, 1, 1, 0.6)
-        love.graphics.printf("Elige la visibilidad de la sala",
+        love.graphics.printf(L('hub.visibility_prompt'),
             panelX + 20, contentY, panelW - 40, 'center')
 
         local bW  = math.floor((panelW - 100) / 2)
@@ -590,43 +591,43 @@ function OnlineHubState:_renderCreate()
 
         -- Botón PUBLICA
         local pubSel = (self.privacySel == 1)
-        drawBtn('PUBLICA', bX1, bY, bW, bH, pubSel)
+        drawBtn(L('hub.public'), bX1, bY, bW, bH, pubSel)
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(pubSel and {1,1,1,0.75} or {0,0,0,0.65})
-        love.graphics.printf("Aparece en la lista", bX1 + 4, bY + bH - 20, bW - 8, 'center')
+        love.graphics.printf(L('hub.public_desc'), bX1 + 4, bY + bH - 20, bW - 8, 'center')
 
         -- Botón PRIVADA
         local privSel = (self.privacySel == 2)
-        drawBtn('PRIVADA', bX2, bY, bW, bH, privSel)
+        drawBtn(L('hub.private'), bX2, bY, bW, bH, privSel)
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(privSel and {1,1,1,0.75} or {0,0,0,0.65})
-        love.graphics.printf("Solo por contrasena", bX2 + 4, bY + bH - 20, bW - 8, 'center')
+        love.graphics.printf(L('hub.private_desc'), bX2 + 4, bY + bH - 20, bW - 8, 'center')
 
         -- Instrucción
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1,1,1,0.4)
-        love.graphics.printf("[<][>] Seleccionar   [ENTER] Confirmar   [ESC] Cancelar",
+        love.graphics.printf(L('hub.select_hint'),
             panelX, panelY + panelH - 24, panelW, 'center')
 
     -- Paso 3: Contraseña (solo si privada)
     elseif self.createStep == STEP_PASS then
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1, 1, 1, 0.6)
-        love.graphics.printf("Escribe una contrasena (opcional — deja vacio para ninguna)",
+        love.graphics.printf(L('hub.password_prompt'),
             panelX + 20, contentY, panelW - 40, 'center')
         drawTextBox(panelX + 40, contentY + 32, panelW - 80, 56, self.inputBuffer, true)
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1,1,1,0.3)
-        love.graphics.printf("Dejar vacio = sin contrasena", panelX + 40, contentY + 96, panelW - 80, 'left')
+        love.graphics.printf(L('hub.password_empty'), panelX + 40, contentY + 96, panelW - 80, 'left')
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1,1,1,0.3)
-        love.graphics.printf("[ENTER] Confirmar   [ESC] Cancelar", panelX, panelY + panelH - 24, panelW, 'center')
+        love.graphics.printf(L('hub.confirm_hint'), panelX, panelY + panelH - 24, panelW, 'center')
 
     -- Paso 4: Máximo de jugadores (selector)
     elseif self.createStep == STEP_MAX then
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1, 1, 1, 0.6)
-        love.graphics.printf("Numero maximo de jugadores (1 - 8)",
+        love.graphics.printf(L('hub.max_prompt'),
             panelX + 20, contentY, panelW - 40, 'center')
 
         -- Selector de número
@@ -661,17 +662,17 @@ function OnlineHubState:_renderCreate()
         -- Instrucción
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1,1,1,0.4)
-        love.graphics.printf("[<][>] Cambiar", panelX, selY + selH + 12, panelW, 'center')
+        love.graphics.printf(L('hub.change_hint'), panelX, selY + selH + 12, panelW, 'center')
 
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1,1,1,0.3)
-        love.graphics.printf("[ENTER] Crear sala   [ESC] Cancelar", panelX, panelY + panelH - 24, panelW, 'center')
+        love.graphics.printf(L('hub.create_hint'), panelX, panelY + panelH - 24, panelW, 'center')
     end
 
     -- Botones del asistente (ratón / táctil)
     local nav = createNavRects()
-    drawBtn('CANCELAR', nav[1].x, nav[1].y, nav[1].w, nav[1].h, self.hoveredCreateNav == 1)
-    drawBtn(self.createStep == STEP_MAX and 'CREAR SALA' or 'SIGUIENTE', nav[2].x, nav[2].y, nav[2].w, nav[2].h,
+    drawBtn(L('hub.cancel'), nav[1].x, nav[1].y, nav[1].w, nav[1].h, self.hoveredCreateNav == 1)
+    drawBtn(self.createStep == STEP_MAX and L('hub.create') or L('hub.next'), nav[2].x, nav[2].y, nav[2].w, nav[2].h,
             self.hoveredCreateNav == 2 or self.hoveredCreateNav == nil)
 end
 
@@ -685,12 +686,12 @@ function OnlineHubState:_renderPassword()
 
     love.graphics.setFont(FONT_BIG)
     love.graphics.setColor(1, 0.95, 0.15, 1)
-    love.graphics.printf('CONTRASENA', 0, panelY + 14, WINDOW_W, 'center')
+    love.graphics.printf(L('hub.password_title'), 0, panelY + 14, WINDOW_W, 'center')
 
     if self.joinRoom then
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1, 1, 1, 0.55)
-        love.graphics.printf('Sala: ' .. self.joinRoom.name, panelX + 20, panelY + 66, panelW - 40, 'center')
+        love.graphics.printf(L('hub.room_label', { name = self.joinRoom.name }), panelX + 20, panelY + 66, panelW - 40, 'center')
     end
 
     love.graphics.setColor(1, 0.85, 0, 0.2)
@@ -703,12 +704,12 @@ function OnlineHubState:_renderPassword()
     local bW  = math.floor((panelW - 100) / 2)
     local bY2 = boxY + 74
     local mouse = Input.lastDevice == 'mouse'
-    drawBtn('UNIRSE',   panelX + 40,      bY2, bW, 48, true)
-    drawBtn('CANCELAR', panelX + 60 + bW, bY2, bW, 48, self.hoveredPassBtn == 2 and mouse)
+    drawBtn(L('hub.join'),   panelX + 40,      bY2, bW, 48, true)
+    drawBtn(L('hub.cancel'), panelX + 60 + bW, bY2, bW, 48, self.hoveredPassBtn == 2 and mouse)
 
     love.graphics.setFont(FONT_SMALL)
     love.graphics.setColor(1,1,1,0.3)
-    love.graphics.printf("[ENTER] Unirse   [ESC] Cancelar", panelX, panelY + panelH - 24, panelW, 'center')
+    love.graphics.printf(L('hub.join_hint'), panelX, panelY + panelH - 24, panelW, 'center')
 end
 
 -- ── Hover del mouse: actualiza las variables de selección reales ──────────────

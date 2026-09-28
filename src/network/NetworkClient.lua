@@ -7,6 +7,7 @@ local sock     = require 'libs/sock'
 local bitser   = require 'libs/bitser'
 local Protocol = require 'src/network/Protocol'
 local Resolver = require 'src/network/Resolver'
+local Lang = require 'src/Lang'
 
 -- Nunca reconstruir metatablas desde datos de red.
 bitser.includeMetatables(false)
@@ -108,7 +109,7 @@ function NC:_open(host, port, name)
         self.client        = nil
         dropClient(me)
         self._connectTimer = nil
-        NC:_fire("connection_lost", { msg = "El servidor cerro la conexion." })
+        NC:_fire("connection_lost", { msg = Lang('err.server_closed') })
     end)
 
     -- Login exitoso: ya estamos dentro
@@ -185,7 +186,7 @@ function NC:update(dt)
     if self._connectTimer ~= nil then
         self._connectTimer = self._connectTimer + (dt or 0.016)
         if self._connectTimer >= CONNECT_TIMEOUT then
-            return self:_fail("Tiempo de espera agotado. El servidor no responde.")
+            return self:_fail(Lang('err.connect_timeout'))
         end
     end
 
@@ -195,7 +196,7 @@ function NC:update(dt)
         local ip = r.job:poll()
         if ip == nil then return end                       -- aún no
         self._resolving = nil
-        if not ip then return self:_fail("No se encontró el servidor. Revisa tu conexión a internet.") end
+        if not ip then return self:_fail(Lang('err.not_found')) end
         local ok, err = pcall(function() self:_open(ip, r.port, r.name) end)
         if not ok then return self:_fail(tostring(err)) end
     end

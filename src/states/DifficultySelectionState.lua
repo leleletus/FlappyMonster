@@ -1,19 +1,40 @@
 -- src/states/DifficultySelectionState.lua
+-- Elegir la dificultad del modo clásico (Flappy). Los nombres son TEXTO en
+-- la fuente pixel de los menús (src/ui/PixelFont), traducidos (diff.*).
 local CornerButtons = require 'src/ui/CornerButtons'
 local BaseState = require 'src/BaseState'
+local PixelFont = require 'src/ui/PixelFont'
+local L         = require 'src/Lang'
 local DifficultySelectionState = BaseState:new()
 
-local imgBg    = nil
-local imgDiffs = {}
+local imgBg = nil
+local GAP   = 60
 
 local function loadAssets()
     if imgBg then return end
     imgBg = love.graphics.newImage('assets/images/menus/MenuDif.png')
-    imgDiffs = {
-        easy   = love.graphics.newImage('assets/images/menus/diff/easy.png'),
-        normal = love.graphics.newImage('assets/images/menus/diff/normal.png'),
-        hard   = love.graphics.newImage('assets/images/menus/diff/hard.png'),
-    }
+end
+
+-- Rectángulos de las dificultades (dibujo, ratón y táctil)
+local function layout()
+    local list, totalW = {}, 0
+    for i, key in ipairs(DIFFICULTY_ORDER) do
+        local text = L('diff.' .. key)
+        list[i] = { key = key, text = text, w = PixelFont.width(text, DIFF_IMG_SCALE), h = PixelFont.height(DIFF_IMG_SCALE) }
+        totalW = totalW + list[i].w
+    end
+    totalW = totalW + GAP * (#list - 1)
+    -- Si no caben (pantallas estrechas / textos largos), se reduce la escala
+    local s = DIFF_IMG_SCALE
+    if totalW > WINDOW_W - 80 then
+        s = math.max(4, math.floor(DIFF_IMG_SCALE * (WINDOW_W - 80) / totalW))
+        totalW = GAP * (#list - 1)
+        for _, r in ipairs(list) do r.w, r.h = PixelFont.width(r.text, s), PixelFont.height(s); totalW = totalW + r.w end
+    end
+    local x = math.floor((WINDOW_W - totalW) / 2)
+    local y = math.floor(WINDOW_H * 0.52)
+    for _, r in ipairs(list) do r.x, r.y, r.s = x, y, s; x = x + r.w + GAP end
+    return list
 end
 
 function DifficultySelectionState:enter(args)
@@ -38,7 +59,7 @@ function DifficultySelectionState:update(dt)
     end
     if Input.pressed('back') then
         Sound.play('select')
-        gStateMachine:change('main_menu')
+        gStateMachine:change('main_menu', { selected = 2 })
     end
 end
 
@@ -48,37 +69,16 @@ function DifficultySelectionState:render()
     love.graphics.setColor(COLOR_WHITE)
     love.graphics.draw(imgBg, 0, 0, 0, bx, by)
 
-    local totalW = 0
-    local gap    = 60
-    local widths = {}
-    for i, key in ipairs(DIFFICULTY_ORDER) do
-        widths[i] = imgDiffs[key]:getWidth() * DIFF_IMG_SCALE
-        totalW    = totalW + widths[i]
-    end
-    totalW = totalW + gap * (#DIFFICULTY_ORDER - 1)
-
-    local startX = math.floor((WINDOW_W - totalW) / 2)
-    local imgY   = math.floor(WINDOW_H * 0.52)
-    local curX   = startX
-
-    for i, key in ipairs(DIFFICULTY_ORDER) do
-        local img = imgDiffs[key]
-        local iw  = img:getWidth()  * DIFF_IMG_SCALE
-        local ih  = img:getHeight() * DIFF_IMG_SCALE
-
+    for i, r in ipairs(layout()) do
         if i == self.selectedIdx then
-            love.graphics.setColor(COLOR_WHITE)
-            local s  = DIFF_IMG_SCALE * 1.15
-            local ox = math.floor((iw - img:getWidth()  * s) / 2)
-            local oy = math.floor((ih - img:getHeight() * s) / 2)
-            love.graphics.draw(img, curX + ox, imgY + oy, 0, s, s)
+            local s = r.s * 1.15
+            local w = PixelFont.width(r.text, s)
+            PixelFont.draw(r.text, math.floor(r.x + (r.w - w) / 2), math.floor(r.y + (r.h - PixelFont.height(s)) / 2), s, 1)
         else
-            love.graphics.setColor(1, 1, 1, 0.45)
-            love.graphics.draw(img, curX, imgY, 0, DIFF_IMG_SCALE, DIFF_IMG_SCALE)
+            PixelFont.draw(r.text, r.x, r.y, r.s, 0.45)
         end
-
-        curX = curX + iw + gap
     end
+    love.graphics.setColor(COLOR_WHITE)
     CornerButtons.drawBack(self.backHover)
 end
 
@@ -86,57 +86,31 @@ end
 function DifficultySelectionState:mousemoved(tx, ty)
     self.backHover = CornerButtons.hitBack(tx, ty)
     if self.backHover then return end
-    local gap    = 60
-    local imgY   = math.floor(WINDOW_H * 0.52)
-    local totalW = 0
-    for i, key in ipairs(DIFFICULTY_ORDER) do
-        totalW = totalW + imgDiffs[key]:getWidth() * DIFF_IMG_SCALE
-    end
-    totalW = totalW + gap * (#DIFFICULTY_ORDER - 1)
-    local curX = math.floor((WINDOW_W - totalW) / 2)
-    for i, key in ipairs(DIFFICULTY_ORDER) do
-        local img = imgDiffs[key]
-        local iw  = img:getWidth()  * DIFF_IMG_SCALE
-        local ih  = img:getHeight() * DIFF_IMG_SCALE
-        if tx >= curX-10 and tx <= curX+iw+10 and ty >= imgY-10 and ty <= imgY+ih+10 then
+    for i, r in ipairs(layout()) do
+        if tx >= r.x - 10 and tx <= r.x + r.w + 10 and ty >= r.y - 10 and ty <= r.y + r.h + 10 then
             if self.selectedIdx ~= i then self.selectedIdx = i; Sound.play('select') end
             return
         end
-        curX = curX + iw + gap
     end
 end
 
--- Táctil Switch: tap en la imagen de dificultad
+-- Táctil: primer toque selecciona, segundo toque (en la misma) confirma
 function DifficultySelectionState:touchpressed(id, tx, ty, dx, dy, pressure)
     if CornerButtons.hitBack(tx, ty) then
         Sound.play('select')
-        gStateMachine:change('main_menu')
+        gStateMachine:change('main_menu', { selected = 2 })
         return
     end
-    local gap    = 60
-    local imgY   = math.floor(WINDOW_H * 0.52)
-    local totalW = 0
-    for i, key in ipairs(DIFFICULTY_ORDER) do
-        totalW = totalW + imgDiffs[key]:getWidth() * DIFF_IMG_SCALE
-    end
-    totalW = totalW + gap * (#DIFFICULTY_ORDER - 1)
-    local curX = math.floor((WINDOW_W - totalW) / 2)
-    for i, key in ipairs(DIFFICULTY_ORDER) do
-        local img = imgDiffs[key]
-        local iw  = img:getWidth()  * DIFF_IMG_SCALE
-        local ih  = img:getHeight() * DIFF_IMG_SCALE
-        if tx >= curX-10 and tx <= curX+iw+10 and ty >= imgY-10 and ty <= imgY+ih+10 then
+    for i, r in ipairs(layout()) do
+        if tx >= r.x - 10 and tx <= r.x + r.w + 10 and ty >= r.y - 10 and ty <= r.y + r.h + 10 then
             Sound.play('select')
             if i == self.selectedIdx then
-                -- Segundo tap en el ya seleccionado = confirmar
-                gStateMachine:change('play', { difficulty = key })
+                gStateMachine:change('play', { difficulty = r.key })
             else
-                -- Primer tap = seleccionar
                 self.selectedIdx = i
             end
             return
         end
-        curX = curX + iw + gap
     end
 end
 

@@ -3,12 +3,19 @@
 -- contador de vidas) y VOLVER (arriba a la izquierda) en menús que solo se
 -- podían dejar con teclado/mando.
 -- Solo se dibujan si el último dispositivo usado fue ratón o táctil.
+local L = require 'src/Lang'
 
 local CornerButtons = {}
 
 local PAUSE = { x = 0, y = 76, w = 56, h = 56 }     -- x se calcula con WINDOW_W
 -- Dentro del marco interior de los menús (fondo MenuDif), arriba a la izquierda
 local BACK  = { x = 20, y = 20, w = 176, h = 52 }
+
+-- El ancho de VOLVER depende del texto del idioma (flecha + texto + márgenes)
+local function backRect()
+    BACK.w = math.max(176, 46 + FONT_MED:getWidth(L('common.back')) + 24)
+    return BACK
+end
 
 local function hit(r, x, y, pad)
     pad = pad or 6
@@ -52,13 +59,13 @@ end
 
 -- ── Volver ────────────────────────────────────────────────────────────────────
 
-function CornerButtons.hitBack(x, y) return hit(BACK, x, y) end
+function CornerButtons.hitBack(x, y) return hit(backRect(), x, y) end
 
 -- Mismo aspecto que los botones VOLVER de los menús (pixel, sin redondeos):
 -- normal = fondo negro con borde blanco; ratón encima = relleno blanco
 function CornerButtons.drawBack(hover)
     if not CornerButtons.pointerMode() then return end
-    local r = BACK
+    local r = backRect()
     if hover then
         love.graphics.setColor(0.18, 0.18, 0.18, 1)
         love.graphics.rectangle('fill', r.x + 4, r.y + 4, r.w, r.h)
@@ -83,7 +90,7 @@ function CornerButtons.drawBack(hover)
         love.graphics.rectangle('fill', ax + i * 2, cy - 1 + i * 2, 3, 3)     -- punta inferior
     end
     love.graphics.setFont(FONT_MED)
-    love.graphics.print('VOLVER', ax + 30, cy - FONT_MED:getHeight() / 2)
+    love.graphics.print(L('common.back'), ax + 30, cy - FONT_MED:getHeight() / 2)
     love.graphics.setColor(1, 1, 1, 1)
 end
 

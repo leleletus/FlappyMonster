@@ -4,11 +4,15 @@
 -- ejecuta sus reglas (autoritativo); el cliente usa sus textos y colores.
 --
 -- Definición de un modo:
---   id, label, tagline         identificador, nombre visible y objetivo en una línea
+--   id                         identificador
 --   color                      color de acento en menús/HUD
 --   icon                       icono pixel art (PixelIcons) para menús
---   emptyHint                  ayuda si no hay niveles para el modo (menú de la sala)
---   objective                  objetivo en una frase: panel fijo arriba durante la partida
+--   Textos (en assets/lang, claves mode.<id>.<campo>; se leen como m.label etc.
+--   y salen en el idioma actual):
+--     label (mode.<id>.label)          nombre visible
+--     tagline (.tagline)               objetivo en una línea (menús)
+--     objective (.objective)           objetivo en una frase: panel fijo arriba en la partida
+--     emptyHint (.empty_hint)          ayuda si no hay niveles para el modo (opcional)
 --   hudLine(md) -> texto, urgente, grande
 --                              línea de estado de ese panel a partir del hud del servidor
 --                              (urgente = en rojo; grande = número gigante debajo)
@@ -21,16 +25,31 @@
 --   onStomp(m, ps, enemy)      un jugador pisoteó a una entidad
 --   tick(m, dt) -> reason|nil  devuelve un motivo para terminar la ronda
 --   rank(m, entries, reason)   ordena la clasificación y marca .winner.
---                              Puede devolver (nota, empate): nota = texto
---                              de desempate para la pantalla final; empate =
---                              true si varios comparten la victoria.
---   reasonText(reason)         texto del motivo de fin para la pantalla final
+--                              Puede devolver (nota, empate): nota = CLAVE de
+--                              idioma del desempate para la pantalla final;
+--                              empate = true si varios comparten la victoria.
+--   reasonText(reason)         CLAVE de idioma del motivo de fin (pantalla final)
+--   (los textos que dependen del jugador, hudLine y el `why` de requires, usan L())
 --   hud(m) -> tabla            datos extra que el servidor manda cada snapshot
 --
 -- `m` (match) lo crea el servidor: m.players (playerSims), m.enemies, m.time,
 -- m.level, m.event(ev) para emitir eventos, m.data (estado libre del modo).
 
+local Lang = require 'src/Lang'
+
 local ModeTypes = { byId = {}, list = {} }
+
+-- Campos de texto -> sufijo de su clave de idioma (mode.<id>.<sufijo>)
+local TEXT_FIELDS = { label = 'label', tagline = 'tagline', objective = 'objective',
+                      emptyHint = 'empty_hint' }
+local textMeta = { __index = function(m, k)
+    local suffix = TEXT_FIELDS[k]
+    if not suffix then return nil end
+    local key = 'mode.' .. rawget(m, 'id') .. '.' .. suffix
+    if Lang.has(key) then return Lang(key) end
+    if k == 'label' then return rawget(m, 'id') end
+    if k == 'tagline' then return '' end
+end }
 
 local function noop() end
 
@@ -39,8 +58,6 @@ function ModeTypes.register(def)
     assert(not ModeTypes.byId[def.id], "modo duplicado: " .. def.id)
     local m = {}
     for k, v in pairs(def) do m[k] = v end
-    m.label      = m.label or m.id
-    m.tagline    = m.tagline or ''
     m.color      = m.color or { 1, 0.85, 0.2 }
     m.triggers   = m.triggers or {}
     m.requires   = m.requires or function() return true end
@@ -53,6 +70,7 @@ function ModeTypes.register(def)
     m.rank       = m.rank or function(_, entries)
         table.sort(entries, function(a, b) return a.score > b.score end)
     end
+    setmetatable(m, textMeta)
     ModeTypes.byId[m.id] = m
     table.insert(ModeTypes.list, m)
     return m
@@ -77,11 +95,17 @@ function ModeTypes.hiddenTriggers(mode)
     return hide
 end
 
--- Motivos genéricos de fin (los modos pueden añadir los suyos)
+-- Motivos genéricos de fin (los modos pueden añadir los suyos): claves de idioma
 ModeTypes.GENERIC_REASONS = {
-    all_out    = 'Todos los jugadores quedaron fuera',
-    time_limit = 'Se acabó el tiempo del nivel',
-    last_standing = '¡El último superviviente en pie!',
+    all_out       = 'mode.reason.all_out',
+    time_limit    = 'mode.reason.time_limit',
+    last_standing = 'mode.reason.last_standing',
 }
+
+-- Texto (idioma actual) del motivo de fin de ronda
+function ModeTypes.reasonText(mode, reason)
+    local key = (mode and mode.reasonText(reason)) or ModeTypes.GENERIC_REASONS[reason]
+    return key and Lang(key) or ''
+end
 
 return ModeTypes

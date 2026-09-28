@@ -1,4 +1,5 @@
 local CornerButtons = require 'src/ui/CornerButtons'
+local L = require 'src/Lang'
 -- src/states/AdventureState.lua
 local BaseState       = require 'src/BaseState'
 local Level           = require 'src/world/Level'
@@ -14,7 +15,7 @@ local PointAreas      = require 'src/world/PointAreas'
 
 local AdventureState = BaseState:new()
 
-local GAMEOVER_OPTIONS = { 'Reintentar', 'Menu' }
+local GAMEOVER_OPTIONS = { 'common.retry', 'common.menu' }   -- claves de idioma
 local RESPAWN_DELAY    = 0
 
 -- ── Assets del HUD ────────────────────────────────────────────────────────────
@@ -255,7 +256,7 @@ function AdventureState:checkEnemyCollisions()
             end
             if pk.lives then
                 player.lives = math.min(99, player.lives + pk.lives)
-                self:spawnPopup('+1 VIDA', e.x, e.y - e.outerH / 2)
+                self:spawnPopup(L('hud.plus_life'), e.x, e.y - e.outerH / 2)
                 Sound.play('oneUp'); Particles.emit('oneup', e.x, e.y)
             end
         end,
@@ -266,7 +267,7 @@ function AdventureState:checkEnemyCollisions()
             e:activate()
             player.spawnX, player.spawnY = e:respawnPoint()
             Sound.play('checkpoint'); Particles.emit('checkpoint', e.x, e.y - e.outerH / 2)
-            self:spawnPopup('CHECKPOINT', e.x, e.y - e.outerH / 2 - 10)
+            self:spawnPopup(L('hud.checkpoint'), e.x, e.y - e.outerH / 2 - 10)
         end,
     })
 end
@@ -407,7 +408,7 @@ function AdventureState:update(dt)
     self:checkEnemyCollisions()
     self:updateBoss(dt)
     for _, ev in ipairs(AutoScroll.update(self.level, dt)) do
-        if ev.type == 'scroll_start' then self.bossBanner = { text = '¡YA!', t = 0, col = { 0.4, 1, 0.5 } } end
+        if ev.type == 'scroll_start' then self.bossBanner = { text = L('hud.go'), t = 0, col = { 0.4, 1, 0.5 } } end
     end
     Particles.update(dt)
     self:checkVentOxyCollisions()
@@ -438,10 +439,10 @@ end
 function AdventureState:updateBoss(dt)
     for _, ev in ipairs(self.bossCtl:update(dt)) do
         if ev.type == 'boss_start' then
-            self.bossBanner = { text = '¡JEFE!', t = 0, col = { 1, 0.3, 0.3 } }
+            self.bossBanner = { text = L('hud.boss'), t = 0, col = { 1, 0.3, 0.3 } }
             self.bossFightT = 0
         elseif ev.type == 'boss_clear' then
-            self.bossBanner = { text = '¡JEFE DERROTADO!', t = 0, col = { 1, 0.9, 0.25 } }
+            self.bossBanner = { text = L('hud.boss_defeated'), t = 0, col = { 1, 0.9, 0.25 } }
             Sound.play('fanfare')
         end
     end
@@ -465,12 +466,12 @@ function AdventureState:renderBossHud()
             end
         end
         local p = self.player
-        BossHud.drawPlayers({ { name = 'TU', color = { 1, 0.95, 0.2 }, hp = p.hp, hpMax = p.hpMax,
+        BossHud.drawPlayers({ { name = L('hud.you'), color = { 1, 0.95, 0.2 }, hp = p.hp, hpMax = p.hpMax,
                                 key = p, dead = p.dying } }, 20, 110)
     elseif self.player.hp < self.player.hpMax and not self.player.dying then
         -- Fuera de una pelea: la vida solo si le falta algo
         local p = self.player
-        BossHud.drawPlayers({ { name = 'TU', color = { 1, 0.95, 0.2 }, hp = p.hp, hpMax = p.hpMax, key = p } }, 20, 110)
+        BossHud.drawPlayers({ { name = L('hud.you'), color = { 1, 0.95, 0.2 }, hp = p.hp, hpMax = p.hpMax, key = p } }, 20, 110)
     end
     if self.bossBanner then
         BossHud.drawBanner(self.bossBanner.text, self.bossBanner.t, 2.2, self.bossBanner.col)
@@ -604,8 +605,8 @@ function AdventureState:_renderScene()
     local scoreStr  = string.format('%06d', self.score)
 
     -- Columna de etiquetas y columna de valores alineados a la derecha
-    local scoreLabelW = FONT_BIG:getWidth('SCORE')
-    local timeLabelW  = FONT_BIG:getWidth('TIME')
+    local scoreLabelW = FONT_BIG:getWidth(L('hud.score'))
+    local timeLabelW  = FONT_BIG:getWidth(L('hud.time'))
     local maxLabelW   = math.max(scoreLabelW, timeLabelW)
     local valueStartX = labelX + maxLabelW + gap
     -- El ancho del área de valor se fija al más ancho de los dos valores
@@ -624,7 +625,7 @@ function AdventureState:_renderScene()
     local tw = FONT_BIG:getWidth(timeStr)
 
     -- SCORE
-    printOutlined('SCORE',  labelX,          row1Y, 1, 0.95, 0.15)
+    printOutlined(L('hud.score'),  labelX,          row1Y, 1, 0.95, 0.15)
     printOutlined(scoreStr, valueEndX - sw,  row1Y, 1, 1,    1   )
 
     -- TIME (parpadea rojo cuando quedan menos de 60 s)
@@ -639,7 +640,7 @@ function AdventureState:_renderScene()
             vr, vg, vb = 1, 0.20, 0.20
         end
     end
-    printOutlined('TIME',   labelX,          row2Y, tr, tg, tb, ta)
+    printOutlined(L('hud.time'),   labelX,          row2Y, tr, tg, tb, ta)
     printOutlined(timeStr,  valueEndX - tw,  row2Y, vr, vg, vb, va)
 
     renderLivesHud(self.player)
@@ -657,7 +658,7 @@ function AdventureState:_renderScene()
 
         love.graphics.setFont(FONT_BIG)
         love.graphics.setColor(COLOR_RED[1], COLOR_RED[2], COLOR_RED[3], oa)
-        love.graphics.printf('GAME OVER', 0, WINDOW_H/2 - 110, WINDOW_W, 'center')
+        love.graphics.printf(L('hud.game_over'), 0, WINDOW_H/2 - 110, WINDOW_W, 'center')
 
         if self.deadTimer > 0.8 then
             local ba = math.min(1, (self.deadTimer - 0.8) / 0.3)
@@ -670,7 +671,7 @@ function AdventureState:_renderScene()
             local cx     = WINDOW_W / 2
             for i, opt in ipairs(GAMEOVER_OPTIONS) do
                 local by = startY + (i - 1) * (btnH + gap)
-                drawPixelButton(opt, cx, by, btnW, btnH, i == self.selectedOpt, ba)
+                drawPixelButton(L(opt), cx, by, btnW, btnH, i == self.selectedOpt, ba)
             end
         end
     end

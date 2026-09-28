@@ -8,6 +8,7 @@ local NC              = require 'src/network/NetworkClient'
 local Modes           = require 'src/world/Modes'
 local PixelIcons      = require 'src/ui/PixelIcons'
 local ModeSelectMenu  = require 'src/ui/ModeSelectMenu'
+local Lang            = require 'src/Lang'
 local OnlineRoomState = BaseState:new()
 
 local imgBg = nil
@@ -29,7 +30,7 @@ local FOCUS_ACTIONS = 'actions'
 local PMENU_KICK   = 1
 local PMENU_BAN    = 2
 local PMENU_CANCEL = 3
-local PMENU_LABELS = { 'KICKEAR', 'BANEAR', 'CANCELAR' }
+local PMENU_LABELS = { 'room.kick', 'room.ban', 'hub.cancel' }   -- claves de idioma
 local PMENU_COLORS = { {1,0.65,0.1}, {1,0.25,0.25}, {0.55,0.55,0.55} }
 
 -- ── Enter ─────────────────────────────────────────────────────────────────────
@@ -85,20 +86,20 @@ function OnlineRoomState:_setupHandlers()
         if self.modeMenu then self.modeMenu:setCatalog(data) end
     end)
     NC:on("room_announce", function(data)
-        if type(data) == 'table' then Notify.toast(data.msg, data.kind) end
+        if type(data) == 'table' then Notify.toast(Lang.fromServer(data), data.kind) end
     end)
     NC:on("room_left",   function(data) gStateMachine:change('online_hub') end)
     NC:on("kicked",       function(data) Notify.roomExit('kicked', data) end)
     NC:on("banned",       function(data) Notify.roomExit('banned', data) end)
     NC:on("room_closed",  function(data) Notify.roomExit('room_closed', data) end)
     NC:on("room_error",  function(data)
-        Notify.toast(type(data) == 'table' and data.msg or "Error", 'error')
+        Notify.toast(Lang.fromServer(data, 'hub.error'), 'error')
         if self.sub == SUB_PMENU then self.sub = SUB_MAIN end
     end)
     NC:on("connection_lost", function(data)
         gStateMachine:change('online_error', {
             code = "ERR_CONNECTION_LOST",
-            msg  = data.msg or "Se perdio la conexion con el servidor.",
+            msg  = data.msg or Lang('err.lost'),
         })
     end)
 end
@@ -110,20 +111,20 @@ function OnlineRoomState:_buildActions()
     local room    = self.currentRoom
     local isAdmin = room and (room.adminId == NC.myId)
     local list    = {}
-    table.insert(list, { id='ready',   label = self.isReady and 'NO LISTO' or 'LISTO',
+    table.insert(list, { id='ready',   label = self.isReady and Lang('room.not_ready') or Lang('room.ready'),
                          color = self.isReady and {0.3,1,0.3} or {1,0.95,0.15} })
     if isAdmin then
         if room.state == "WAITING" then
             -- El host elige el objetivo de la ronda y el nivel en su menú
-            table.insert(list, { id='gamemode', label='MODO DE JUEGO' })
+            table.insert(list, { id='gamemode', label=Lang('room.game_mode') })
             local why = self:_startBlocker()
-            table.insert(list, { id='start', label='INICIAR PARTIDA', color={0.3,1,0.3},
+            table.insert(list, { id='start', label=Lang('room.start'), color={0.3,1,0.3},
                                  disabled = why ~= nil, why = why })
         else
-            table.insert(list, { id='stop',  label='DETENER PARTIDA', color={1,0.55,0.2} })
+            table.insert(list, { id='stop',  label=Lang('room.stop'), color={1,0.55,0.2} })
         end
     end
-    table.insert(list, { id='leave', label='SALIR DE LA SALA', color={0.8,0.25,0.25} })
+    table.insert(list, { id='leave', label=Lang('room.leave'), color={0.8,0.25,0.25} })
     return list
 end
 
@@ -133,7 +134,7 @@ function OnlineRoomState:_startBlocker()
     local room    = self.currentRoom or {}
     local players = room.players or {}
     if #players < 2 then
-        return "Faltan jugadores: se necesitan al menos 2 para empezar."
+        return Lang('room.need_players')
     end
     local waiting, meWaiting = {}, false
     for _, p in ipairs(players) do
@@ -142,14 +143,14 @@ function OnlineRoomState:_startBlocker()
         end
     end
     if meWaiting and #waiting == 0 then
-        return "Aún no estás listo: pulsa LISTO para poder empezar."
+        return Lang('room.me_not_ready')
     elseif #waiting > 0 then
         local who = table.concat(waiting, ", ")
-        return (#waiting == 1 and "Falta que esté listo: " or "Faltan por estar listos: ") .. who
-               .. (meWaiting and " (y tú)" or "") .. "."
+        return Lang(#waiting == 1 and 'room.waiting_one' or 'room.waiting_many', { names = who })
+               .. (meWaiting and Lang('room.and_you') or "") .. "."
     end
     if not room.level then
-        return "No hay ningún mapa compatible con el modo elegido."
+        return Lang('room.no_map')
     end
     return nil
 end
@@ -529,7 +530,7 @@ function OnlineRoomState:_renderGameCard(r, isAdmin)
     end
     love.graphics.setFont(FONT_SMALL)
     love.graphics.setColor(1, 1, 1, 0.45)
-    love.graphics.print('MODO', tx, y + 14)
+    love.graphics.print(Lang('room.mode'), tx, y + 14)
     love.graphics.setFont(FONT_MED)
     love.graphics.setColor(col[1], col[2], col[3], 1)
     love.graphics.print(fitText(FONT_MED, mode.label, x + w - pad - tx), tx, y + 30)
@@ -562,18 +563,18 @@ function OnlineRoomState:_renderGameCard(r, isAdmin)
     local nx = x + pad + pw + 16
     love.graphics.setFont(FONT_SMALL)
     love.graphics.setColor(1, 1, 1, 0.45)
-    love.graphics.print('MAPA', nx, my + 8)
+    love.graphics.print(Lang('room.map'), nx, my + 8)
     if room.levelName then
         love.graphics.setFont(FONT_MED)
         love.graphics.setColor(1, 0.85, 0.2, 1)
         love.graphics.print(fitText(FONT_MED, room.levelName, x + w - pad - nx), nx, my + 24)
     else
         love.graphics.setColor(1, 0.35, 0.35, 0.95)
-        love.graphics.print('Ningún mapa sirve para este modo', nx, my + 26)
+        love.graphics.print(fitText(FONT_MED, Lang('room.no_map_short'), x + w - pad - nx), nx, my + 26)
     end
     love.graphics.setFont(FONT_SMALL)
     love.graphics.setColor(1, 1, 1, 0.35)
-    love.graphics.print(isAdmin and 'Cambia en MODO DE JUEGO' or 'Lo elige el host', nx, my + 50)
+    love.graphics.print(fitText(FONT_SMALL, isAdmin and Lang('room.change_in_mode') or Lang('room.host_picks'), x + w - pad - nx), nx, my + 50)
 end
 
 -- ── Render ────────────────────────────────────────────────────────────────────
@@ -596,13 +597,13 @@ function OnlineRoomState:render()
     -- ── Cabecera ──────────────────────────────────────────────────────────────
     love.graphics.setFont(FONT_BIG)
     love.graphics.setColor(0, 0, 0, 0.8)
-    love.graphics.printf(room.name or "Sala", P.x + 3, P.y + 17, P.w, 'center')
+    love.graphics.printf(room.name or Lang('room.default_name'), P.x + 3, P.y + 17, P.w, 'center')
     love.graphics.setColor(1, 0.95, 0.15, 1)
-    love.graphics.printf(room.name or "Sala", P.x, P.y + 14, P.w, 'center')
+    love.graphics.printf(room.name or Lang('room.default_name'), P.x, P.y + 14, P.w, 'center')
     love.graphics.setFont(FONT_SMALL)
-    local stateStr = (room.state == "IN_GAME") and "EN PARTIDA" or "ESPERANDO"
-    local privStr  = (room.isPublic == false) and "PRIVADA" or "PUBLICA"
-    local countStr = np .. "/" .. (room.maxPlayers or "?") .. " JUGADORES"
+    local stateStr = (room.state == "IN_GAME") and Lang('hub.in_game') or Lang('hub.waiting')
+    local privStr  = (room.isPublic == false) and Lang('hub.private') or Lang('hub.public')
+    local countStr = Lang('room.players_count', { n = np, max = room.maxPlayers or '?' })
     love.graphics.setColor(1, 1, 1, 0.5)
     love.graphics.printf(stateStr .. "   ·   " .. privStr .. "   ·   " .. countStr, P.x, P.y + 56, P.w, 'center')
     love.graphics.setColor(1, 0.85, 0, 0.25)
@@ -614,7 +615,7 @@ function OnlineRoomState:render()
 
     -- ── Jugadores ─────────────────────────────────────────────────────────────
     local focusP = self.focus == FOCUS_PLAYERS and self.sub == SUB_MAIN
-    sectionLabel("JUGADORES", L.left.x, L.bodyY, L.left.w, focusP)
+    sectionLabel(Lang('room.players'), L.left.x, L.bodyY, L.left.w, focusP)
     for i, p in ipairs(players) do
         local r = L.rows[i]
         if not r then break end
@@ -647,7 +648,7 @@ function OnlineRoomState:render()
         if isSelf then
             love.graphics.setFont(FONT_SMALL)
             love.graphics.setColor(0.6, 0.85, 1, 0.8)
-            love.graphics.print("(tú)", nx + FONT_MED:getWidth(name) + 10, nameY + 4)
+            love.graphics.print(Lang('room.you'), nx + FONT_MED:getWidth(name) + 10, nameY + 4)
         end
 
         -- Listo (pastilla) y ping
@@ -663,7 +664,7 @@ function OnlineRoomState:render()
             love.graphics.rectangle('line', bx, byy, bw, bh)
             love.graphics.setColor(1, 1, 1, 0.45)
         end
-        love.graphics.printf(p.isReady and "LISTO" or "ESPERA", bx, byy + 5, bw, 'center')
+        love.graphics.printf(p.isReady and Lang('room.ready') or Lang('room.wait'), bx, byy + 5, bw, 'center')
         love.graphics.setColor(1, 1, 1, 0.35)
         love.graphics.printf(string.format("%d ms", p.ping or 0), bx - 20, r.y + r.h - 16, bw + 20, 'right')
     end
@@ -672,12 +673,12 @@ function OnlineRoomState:render()
         if sel and sel.id ~= NC.myId then
             love.graphics.setFont(FONT_SMALL)
             love.graphics.setColor(1, 0.85, 0, 0.6)
-            love.graphics.print("[ENTER] acciones sobre " .. (sel.name or '?'), L.left.x, L.bottom + 6)
+            love.graphics.print(Lang('room.actions_on', { name = sel.name or '?' }), L.left.x, L.bottom + 6)
         end
     end
 
     -- ── Partida + acciones ────────────────────────────────────────────────────
-    sectionLabel("PARTIDA", L.right.x, L.bodyY, L.right.w, false)
+    sectionLabel(Lang('room.match'), L.right.x, L.bodyY, L.right.w, false)
     self:_renderGameCard(L.card, isAdmin)
 
     local focusA = self.focus == FOCUS_ACTIONS and self.sub == SUB_MAIN
@@ -692,7 +693,7 @@ function OnlineRoomState:render()
     -- Ayuda de navegación
     love.graphics.setFont(FONT_SMALL)
     love.graphics.setColor(1, 1, 1, 0.3)
-    local hint = self.focus == FOCUS_ACTIONS and "[<] ver jugadores" or "[>] ir a acciones"
+    local hint = self.focus == FOCUS_ACTIONS and Lang('room.see_players') or Lang('room.go_actions')
     love.graphics.printf(hint, L.right.x, L.bottom + 6, L.right.w, 'right')
 
     -- ── Menú de acción sobre un jugador ──────────────────────────────────────
@@ -704,11 +705,11 @@ function OnlineRoomState:render()
         drawSharpPanel(M.x, M.y, M.w, M.h, 0.04, 0.04, 0.06, 0.96)
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1, 1, 1, 0.65)
-        love.graphics.printf("Acción sobre:  " .. (target and target.name or "?"), M.x, M.y + 16, M.w, 'center')
+        love.graphics.printf(Lang('room.action_on', { name = target and target.name or '?' }), M.x, M.y + 16, M.w, 'center')
         love.graphics.setColor(1, 0.85, 0, 0.3)
         love.graphics.rectangle('fill', M.x + 20, M.y + 38, M.w - 40, 1)
         for i, lbl in ipairs(PMENU_LABELS) do
-            drawActionBtn(lbl, L.pmenuBtns[i], i == self.pmenuSel, PMENU_COLORS[i])
+            drawActionBtn(Lang(lbl), L.pmenuBtns[i], i == self.pmenuSel, PMENU_COLORS[i])
         end
     end
 

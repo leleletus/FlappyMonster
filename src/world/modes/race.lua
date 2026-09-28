@@ -1,27 +1,27 @@
 -- Carrera Relámpago: el primero en tocar la meta activa una cuenta atrás de
 -- GRACE segundos para el resto. Al acabar (o cuando nadie más puede llegar),
 -- ganan solo los que llegaron, ordenados por orden de llegada.
+local L = require 'src/Lang'
+
 local GRACE = 15
 
 return {
-    id = 'race', label = 'Carrera Relámpago', icon = 'flag',
-    tagline = 'Corre hasta la meta. Cuando llegue el primero, el resto tendrá 15 segundos.',
+    -- Textos (nombre, tagline, objetivo, emptyHint): assets/lang, claves mode.race.*
+    id = 'race', icon = 'flag',
     color = { 0.35, 0.85, 1.0 },
-    objective = '¡Llega a la meta!',
     hudLine = function(md)
         if md.cd then
             local secs = md.cd / 100
             local big = string.format('%d.%d', math.floor(secs), math.floor(secs * 10) % 10)
-            return '¡Date prisa!', secs <= 5, big
+            return L('mode.race.hurry'), secs <= 5, big
         end
-        return 'Llega antes que los demás', false
+        return L('mode.race.beat_others'), false
     end,
-    emptyHint = 'Crea uno en el editor con el bloque "Meta"',
     triggers = { 'finish' },
 
     requires = function(info)
         if info.finish > 0 then return true end
-        return false, 'el nivel no tiene meta (tile Meta)'
+        return false, L('mode.why.no_finish')
     end,
 
     start = function(m) m.data.arrived = 0 end,
@@ -63,8 +63,8 @@ return {
     end,
 
     reasonText = function(reason)
-        if reason == 'all_finished' then return '¡Todos cruzaron la meta!' end
-        if reason == 'time_up' then return '¡Se acabó la cuenta atrás!' end
-        if reason == 'all_out' then return 'Ya no queda nadie en carrera' end
+        if reason == 'all_finished' then return 'mode.race.all_finished' end
+        if reason == 'time_up' then return 'mode.race.time_up' end
+        if reason == 'all_out' then return 'mode.race.all_out' end
     end,
 }

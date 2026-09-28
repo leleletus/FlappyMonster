@@ -1,6 +1,8 @@
 -- Cazamonstruos: elimina a todos los enemigos pisoteables. Cuando no queda ninguno,
 -- gana quien más puntos tenga (empates: ganan todos los empatados). Si todos
 -- los jugadores caen antes, nadie gana.
+local L = require 'src/Lang'
+
 local function killableAlive(m)
     local n = 0
     for _, e in ipairs(m.enemies) do
@@ -10,24 +12,23 @@ local function killableAlive(m)
 end
 
 return {
-    id = 'hunt', label = 'Cazamonstruos', icon = 'skull',
-    tagline = 'Aplasta a todos los monstruos. Cuando no quede ninguno, gana quien tenga más puntos.',
+    -- Textos (nombre, tagline, objetivo): assets/lang, claves mode.hunt.*
+    id = 'hunt', icon = 'skull',
     color = { 1.0, 0.45, 0.30 },
-    objective = '¡Aplasta a todos los monstruos!',
     -- Línea de estado del panel de objetivo (cliente; md = hud del servidor)
     hudLine = function(md)
         if not md.left then return nil end
-        if md.left == 1 then return '¡Queda 1 monstruo!', true end
-        return 'Quedan ' .. md.left .. ' monstruos', false
+        if md.left == 1 then return L('mode.hunt.left_one'), true end
+        return L('mode.hunt.left', { n = md.left }), false
     end,
 
     requires = function(info)
         -- Los niveles con jefe son solo para Carrera
-        if (info.bosses or 0) > 0 then return false, 'el nivel tiene un jefe (solo Carrera)' end
-        if info.autoScroll then return false, 'el nivel tiene cámara automática (solo Carrera)' end
-        if (info.pointAreas or 0) > 0 then return false, 'el nivel tiene zonas de puntos (Rey de la Colina)' end
+        if (info.bosses or 0) > 0 then return false, L('mode.why.boss') end
+        if info.autoScroll then return false, L('mode.why.autoscroll') end
+        if (info.pointAreas or 0) > 0 then return false, L('mode.why.point_areas') end
         if info.killable > 0 then return true end
-        return false, 'el nivel no tiene enemigos que se puedan pisotear'
+        return false, L('mode.why.no_killable')
     end,
 
     tick = function(m)
@@ -54,18 +55,18 @@ return {
         end
         local second = entries[2]
         if tied > 1 then
-            note = 'Empate total: comparten la victoria'
+            note = 'mode.tie_all'
         elseif second and second.score == top.score then
             if second.lives ~= top.lives then
-                note = 'Empate a puntos: gana quien conservó más vidas'
+                note = 'mode.tie_lives'
             else
-                note = 'Empate a puntos y vidas: gana quien llegó antes a esa puntuación'
+                note = 'mode.tie_time'
             end
         end
         return note, tied > 1
     end,
 
     reasonText = function(reason)
-        if reason == 'cleared' then return '¡No queda ni un monstruo en pie!' end
+        if reason == 'cleared' then return 'mode.hunt.cleared' end
     end,
 }

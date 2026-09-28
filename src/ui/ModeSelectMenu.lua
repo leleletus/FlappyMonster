@@ -12,6 +12,7 @@ local Modes      = require 'src/world/Modes'
 local Clip        = require 'src/ui/Clip'
 local PixelIcons = require 'src/ui/PixelIcons'
 local fitText    = require('src/ui/TextUtil').fit
+local L = require 'src/Lang'
 
 local ModeSelectMenu = {}
 ModeSelectMenu.__index = ModeSelectMenu
@@ -149,7 +150,7 @@ local function drawPreview(level, x, y, w, h, t, tint, mode)
     if type(prev) ~= 'table' or type(prev.rows) ~= 'table' then
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1, 1, 1, 0.5 * tint)
-        love.graphics.printf('sin vista previa', x, y + h / 2 - 5, w, 'center')
+        love.graphics.printf(L('msm.no_preview'), x, y + h / 2 - 5, w, 'center')
         return
     end
     local hideFinish = mode ~= nil and not Modes.usesTrigger(mode, 'finish')
@@ -366,9 +367,9 @@ function ModeSelectMenu:render()
     -- Título
     love.graphics.setFont(FONT_BIG)
     love.graphics.setColor(0, 0, 0, 0.8)
-    love.graphics.printf('MODO DE JUEGO', 3, PY + 18 + 3, WINDOW_W, 'center')
+    love.graphics.printf(L('msm.title'), 3, PY + 18 + 3, WINDOW_W, 'center')
     love.graphics.setColor(1, 0.95, 0.15, 1)
-    love.graphics.printf('MODO DE JUEGO', 0, PY + 18, WINDOW_W, 'center')
+    love.graphics.printf(L('msm.title'), 0, PY + 18, WINDOW_W, 'center')
 
     -- Pestañas
     local tabs = tabRects()
@@ -423,7 +424,7 @@ function ModeSelectMenu:render()
     love.graphics.rectangle('fill', ix, INFO_Y, 4, INFO_H)
     love.graphics.setFont(FONT_MED)
     love.graphics.setColor(col[1], col[2], col[3], 1)
-    love.graphics.print('MODO: ' .. mode.label, ix + 20, INFO_Y + 14)
+    love.graphics.print(fitText(FONT_MED, L('msm.mode', { name = mode.label }), INFO_W - 40), ix + 20, INFO_Y + 14)
     love.graphics.setFont(FONT_SMALL)
     love.graphics.setColor(1, 1, 1, 0.75)
     local _, lines = FONT_SMALL:getWrap(mode.tagline, INFO_W - 40)
@@ -437,7 +438,7 @@ function ModeSelectMenu:render()
     if #list == 0 then
         love.graphics.setFont(FONT_MED)
         love.graphics.setColor(1, 1, 1, 0.5)
-        local msg = self.catalog and 'No hay niveles para este modo' or 'Cargando niveles...'
+        local msg = self.catalog and L('msm.no_levels') or L('msm.loading')
         love.graphics.printf(msg, 0, CARD_Y + CARD_H / 2 - 10, WINDOW_W, 'center')
         if self.catalog and mode.emptyHint then
             love.graphics.setFont(FONT_SMALL)
@@ -472,17 +473,17 @@ function ModeSelectMenu:render()
             love.graphics.setColor(1, 1, 1, 0.5)
             local info = {}
             if lvl.w and lvl.h then info[#info + 1] = lvl.w .. 'x' .. lvl.h end
-            if lvl.enemies then info[#info + 1] = lvl.enemies .. (lvl.enemies == 1 and ' monstruo' or ' monstruos') end
-            if (lvl.finish or 0) > 0 and Modes.usesTrigger(mode, 'finish') then info[#info + 1] = 'meta' end
+            if lvl.enemies then info[#info + 1] = L(lvl.enemies == 1 and 'msm.monster' or 'msm.monsters', { n = lvl.enemies }) end
+            if (lvl.finish or 0) > 0 and Modes.usesTrigger(mode, 'finish') then info[#info + 1] = L('msm.finish') end
             love.graphics.print(fitText(FONT_SMALL, table.concat(info, ' · '), CARD_W - 24), x + 12, y + PREV_H + 58)
 
             -- Nivel en uso
             if lvl.path == self.room.level and mode.id == self.room.mode then
-                local bw = FONT_SMALL:getWidth('EN USO') + 16
+                local bw = FONT_SMALL:getWidth(L('msm.in_use')) + 16
                 love.graphics.setColor(0.3, 1, 0.45, 0.95)
                 love.graphics.rectangle('fill', x + CARD_W - bw - 14, y + 16, bw, 20)
                 love.graphics.setColor(0, 0, 0, 1)
-                love.graphics.print('EN USO', x + CARD_W - bw - 6, y + 21)
+                love.graphics.print(L('msm.in_use'), x + CARD_W - bw - 6, y + 21)
             end
 
             -- Borde
@@ -514,8 +515,8 @@ function ModeSelectMenu:render()
     love.graphics.setFont(FONT_SMALL)
     love.graphics.setColor(1, 1, 1, 0.4)
     local hint = self.focus == 'tabs'
-        and '[<][>] cambiar modo    [ABAJO] elegir nivel    [ESC] cerrar'
-        or  '[<][>] elegir nivel    [ARRIBA] cambiar modo    [ENTER] confirmar    [ESC] volver'
+        and L('msm.hint_tabs')
+        or  L('msm.hint_levels')
     love.graphics.printf(hint, 0, PY + PH - 26, WINDOW_W, 'center')
     love.graphics.setColor(1, 1, 1, 1)
 end

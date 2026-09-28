@@ -12,6 +12,7 @@ local NC           = require 'src/network/NetworkClient'
 local Modes        = require 'src/world/Modes'
 local PixelIcons   = require 'src/ui/PixelIcons'
 local Clip         = require 'src/ui/Clip'
+local L            = require 'src/Lang'
 
 local OnlineResultsState = BaseState:new()
 
@@ -82,8 +83,12 @@ function OnlineResultsState:enter(args)
     self.room    = args.room or {}
     local res    = type(args.results) == 'table' and args.results or {}
     self.mode    = Modes.get(res.mode or args.mode) or Modes.get(Modes.DEFAULT)
-    self.reason  = res.reasonText or ''
-    self.note    = type(res.note) == 'string' and res.note or nil   -- desempate
+    -- Motivo y desempate en el idioma de este jugador (el servidor manda los
+    -- códigos; reasonText/note en español quedan para servidores antiguos)
+    self.reason  = res.reason and Modes.reasonText(self.mode, res.reason) or ''
+    if self.reason == '' then self.reason = res.reasonText or '' end
+    if type(res.noteKey) == 'string' and L.has(res.noteKey) then self.note = L(res.noteKey)
+    else self.note = type(res.note) == 'string' and res.note or nil end   -- desempate
     self.tie     = res.tie == true
     self.entries = {}
     for _, e in ipairs(type(res.entries) == 'table' and res.entries or {}) do
@@ -104,17 +109,17 @@ function OnlineResultsState:enter(args)
     end
     local nw = #self.winners
     if self.tie then
-        self.title, self.titleCol = '¡EMPATE!', {1, 0.9, 0.2}
+        self.title, self.titleCol = L('results.tie'), {1, 0.9, 0.2}
     elseif self.meWinner and nw == 1 then
-        self.title, self.titleCol = '¡VICTORIA!', {1, 0.9, 0.2}
+        self.title, self.titleCol = L('results.victory'), {1, 0.9, 0.2}
     elseif self.meWinner then
-        self.title, self.titleCol = '¡GANASTE!', {1, 0.9, 0.2}
+        self.title, self.titleCol = L('results.you_won'), {1, 0.9, 0.2}
     elseif nw == 1 then
-        self.title, self.titleCol = '¡GANA ' .. self.winners[1].name .. '!', self.winners[1].color
+        self.title, self.titleCol = L('results.wins', { name = self.winners[1].name }), self.winners[1].color
     elseif nw > 1 then
-        self.title, self.titleCol = '¡GANAN ' .. nw .. ' JUGADORES!', {1, 0.9, 0.2}
+        self.title, self.titleCol = L('results.n_win', { n = nw }), {1, 0.9, 0.2}
     else
-        self.title, self.titleCol = 'NADIE GANA', {0.65, 0.65, 0.75}
+        self.title, self.titleCol = L('results.nobody'), {0.65, 0.65, 0.75}
     end
     self.celebrate = nw > 0
 
@@ -149,7 +154,7 @@ function OnlineResultsState:_setupHandlers()
         end
     end)
     NC:on("room_announce", function(data)
-        if type(data) == 'table' then Notify.toast(data.msg, data.kind) end
+        if type(data) == 'table' then Notify.toast(L.fromServer(data), data.kind) end
     end)
     NC:on("room_error",   function() end)
     NC:on("room_left",    function() gStateMachine:change('online_hub') end)
@@ -159,7 +164,7 @@ function OnlineResultsState:_setupHandlers()
     NC:on("connection_lost", function(data)
         gStateMachine:change('online_error', {
             code = "ERR_CONNECTION_LOST",
-            msg  = data.msg or "Se perdio la conexion con el servidor.",
+            msg  = data.msg or L('err.lost'),
         })
     end)
 end
@@ -450,18 +455,19 @@ end
 -- Texto de la columna "resultado" según lo que traiga la entrada
 local function detailText(e)
     if e.finished then
-        local s = e.place and (e.place .. 'º') or 'META'
+        local s = e.place and L('results.place', { n = e.place }) or L('results.finish')
         if e.time then s = s .. string.format(' %.1fs', e.time) end
         return s, {1, 0.85, 0.2}
     elseif e.out then
-        return 'FUERA', {0.9, 0.4, 0.4}
+        return L('results.out'), {0.9, 0.4, 0.4}
     end
     return '', {1, 1, 1}
 end
 
 function OnlineResultsState:_renderBoard()
     local t   = self.t
-    local x   = 660
+    -- a la derecha del podio (acaba en x≈540); en 4:3 se acerca para ganar ancho
+    local x   = math.max(560, WINDOW_W - 620)
     local w   = WINDOW_W - x - 40
     local DETAIL_R = 110           -- borde derecho de la columna RESULTADO (desde la derecha)
     local y0  = 208
@@ -473,9 +479,14 @@ function OnlineResultsState:_renderBoard()
     love.graphics.setFont(FONT_SMALL)
     love.graphics.setColor(1, 0.85, 0.2, 0.8 * ha)
     love.graphics.print('#', x + 14, y0 - 22)
-    love.graphics.print('JUGADOR', x + 56, y0 - 22)
-    love.graphics.printf('PUNTOS', x, y0 - 22, w - 14, 'right')
-    if showDetail then love.graphics.printf('RESULTADO', x, y0 - 22, w - DETAIL_R, 'right') end
+    -- (JUGADOR se omite si chocaría con RESULTADO en pantallas estrechas)
+    local playerEnd = x + 56 + FONT_SMALL:getWidth(L('results.player'))
+    local resultX = x + w - DETAIL_R - FONT_SMALL:getWidth(L('results.result'))
+    if not showDetail or playerEnd + 12 <= resultX then
+        love.graphics.print(L('results.player'), x + 56, y0 - 22)
+    end
+    love.graphics.printf(L('results.points'), x, y0 - 22, w - 14, 'right')
+    if showDetail then love.graphics.printf(L('results.result'), x, y0 - 22, w - DETAIL_R, 'right') end
     love.graphics.setColor(1, 0.85, 0.2, 0.3 * ha)
     love.graphics.rectangle('fill', x, y0 - 6, w, 2)
 
@@ -522,7 +533,7 @@ function OnlineResultsState:_renderBoard()
             if showDetail then
                 nameMax = w - DETAIL_R - FONT_SMALL:getWidth((detailText(e))) - 16 - (nx - rx)
             end
-            local name = fitText(FONT_MED, e.name .. (mine and ' (tú)' or ''), nameMax)
+            local name = fitText(FONT_MED, e.name .. (mine and ' ' .. L('room.you') or ''), nameMax)
             shadowText(name, nx, ty, nameMax + 20, 'left', c[1] * 0.7 + 0.3, c[2] * 0.7 + 0.3, c[3] * 0.7 + 0.3, k)
 
             -- Puntos con conteo
@@ -627,7 +638,7 @@ function OnlineResultsState:render()
     love.graphics.rectangle('fill', fx, fy + 22, fw * (1 - remaining / DURATION), 4)
     love.graphics.setFont(FONT_SMALL)
     love.graphics.setColor(1, 1, 1, 0.6)
-    local hint = 'Volviendo a la sala en ' .. math.ceil(remaining) .. '...'
+    local hint = L('results.back_in', { n = math.ceil(remaining) })
     love.graphics.printf(hint, fx - 300, fy, fw + 300, 'right')
 
     love.graphics.setColor(1, 1, 1, 1)

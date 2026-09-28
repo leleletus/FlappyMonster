@@ -4,6 +4,7 @@
 local BaseState        = require 'src/BaseState'
 local NC               = require 'src/network/NetworkClient'
 local Protocol         = require 'src/network/Protocol'
+local Lang = require 'src/Lang'
 local OnlineLoginState = BaseState:new()
 
 local imgBg = nil
@@ -14,7 +15,7 @@ end
 
 -- Campos del formulario (HOST y PORT fijos, solo se muestra NOMBRE)
 local FIELD_NICK   = 1
-local FIELD_LABELS = { "NOMBRE" }
+local FIELD_LABELS = { 'login.name' }   -- claves de idioma
 
 local FIXED_HOST = "djvemo.net.pe"
 local FIXED_PORT = 22122
@@ -48,17 +49,17 @@ function OnlineLoginState:enter(args)
         self.connecting = false
         gStateMachine:change('online_error', {
             code = "ERR_SERVER_UNREACHABLE",
-            msg  = data.msg or "No se pudo establecer conexion con el servidor.",
+            msg  = data.msg or Lang('err.unreachable'),
         })
     end)
     NC:on("room_error", function(data)
         self.connecting = false
-        self:_showError(data.msg or "Error desconocido")
+        self:_showError(Lang.fromServer(data, 'err.unknown'))
     end)
     -- Rechazo del handshake (versión incompatible, nombre en uso o inválido)
     NC:on("login_error", function(data)
         self.connecting = false
-        self:_showError(data and data.msg or "No se pudo iniciar sesion.")
+        self:_showError(Lang.fromServer(data, 'login.failed'))
     end)
 end
 
@@ -113,7 +114,7 @@ function OnlineLoginState:_tryConnect()
     local nick = (self.fields[FIELD_NICK] or ""):match("^%s*(.-)%s*$")
 
     if #nick == 0 then
-        self:_showError("Ingresa un nombre de jugador.")
+        self:_showError(Lang('login.enter_name'))
         return
     end
 
@@ -136,8 +137,8 @@ local function layout()
     local bx = math.floor(WINDOW_W / 2 - bw - gap / 2)
     local by = panelY + panelH + 18
     L.buttons = {
-        { id = 'connect', label = 'CONECTAR', x = bx,            y = by, w = bw, h = bh },
-        { id = 'back',    label = 'VOLVER',   x = bx + bw + gap, y = by, w = bw, h = bh },
+        { id = 'connect', label = Lang('login.connect'), x = bx,            y = by, w = bw, h = bh },
+        { id = 'back',    label = Lang('common.back'),   x = bx + bw + gap, y = by, w = bw, h = bh },
     }
     L.errorY = by + bh + 16
     return L
@@ -164,9 +165,9 @@ function OnlineLoginState:render()
     -- Título
     love.graphics.setFont(FONT_BIG)
     love.graphics.setColor(0, 0, 0, 0.6)
-    love.graphics.printf('ONLINE', 2, 162, WINDOW_W, 'center')
+    love.graphics.printf(Lang('login.title'), 2, 162, WINDOW_W, 'center')
     love.graphics.setColor(1, 0.95, 0.15, 1)
-    love.graphics.printf('ONLINE', 0, 160, WINDOW_W, 'center')
+    love.graphics.printf(Lang('login.title'), 0, 160, WINDOW_W, 'center')
 
     -- Panel central
     local panelW = 600
@@ -191,7 +192,7 @@ function OnlineLoginState:render()
 
     love.graphics.setFont(FONT_SMALL)
     love.graphics.setColor(1, 0.85, 0, 0.9)
-    love.graphics.print(FIELD_LABELS[FIELD_NICK], panelX + 20, fy + fieldH/2 - FONT_SMALL:getHeight()/2)
+    love.graphics.print(Lang(FIELD_LABELS[FIELD_NICK]), panelX + 20, fy + fieldH/2 - FONT_SMALL:getHeight()/2)
 
     love.graphics.setColor(1, 1, 1, 0.15)
     love.graphics.rectangle('fill', inputX, fy, inputW, fieldH)
@@ -207,10 +208,10 @@ function OnlineLoginState:render()
     love.graphics.setFont(FONT_SMALL)
     if self.connecting then
         love.graphics.setColor(1, 1, 1, 0.6)
-        love.graphics.printf('CONECTANDO...', 0, hintY, WINDOW_W, 'center')
+        love.graphics.printf(Lang('login.connecting'), 0, hintY, WINDOW_W, 'center')
     else
         love.graphics.setColor(1, 1, 1, 0.35)
-        love.graphics.printf('[ENTER] conectar   [ESC] volver',
+        love.graphics.printf(Lang('login.hint'),
             0, hintY, WINDOW_W, 'center')
     end
 

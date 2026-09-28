@@ -4,6 +4,8 @@
 -- rectángulos finos separados por un hueco, con borde negro, luz arriba y
 -- sombra abajo como el resto de la interfaz.
 
+local L = require 'src/Lang'
+
 local BossHud = {}
 
 local lost = setmetatable({}, { __mode = 'k' })   -- [clave] = { hp, t } para el destello al perder vida
@@ -74,7 +76,7 @@ function BossHud.drawBoss(boss, y, appear)
     local w = hpMax * segW + (hpMax - 1) * gap
     local x = math.floor((WINDOW_W - w) / 2)
     love.graphics.setFont(FONT_MED)
-    local title = boss.title and boss:title() or 'JEFE'
+    local title = boss.title and boss:title() or L('boss.default')
     outlined(title, math.floor(WINDOW_W / 2 - FONT_MED:getWidth(title) / 2), y, { 1, 0.35, 0.35 })
     segments(boss, x, y + 26, hp, hpMax, segW, segH, gap, { 0.92, 0.16, 0.22 })
     love.graphics.setColor(1, 1, 1, 1)
@@ -97,7 +99,7 @@ end
 
 -- "Esperando a los demás jugadores" (los que llegaron a la zona antes)
 function BossHud.drawWaiting(arrived, needed)
-    local text = string.format('ESPERANDO A LOS DEMAS  %d/%d', arrived or 0, needed or 0)
+    local text = L('boss.waiting', { n = arrived or 0, max = needed or 0 })
     love.graphics.setFont(FONT_MED)
     local w = FONT_MED:getWidth(text) + 32
     local x, y = math.floor((WINDOW_W - w) / 2), math.floor(WINDOW_H * 0.22)

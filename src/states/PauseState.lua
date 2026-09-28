@@ -1,8 +1,9 @@
 -- src/states/PauseState.lua
 local BaseState  = require 'src/BaseState'
+local L = require 'src/Lang'
 local PauseState = BaseState:new()
 
-local PAUSE_OPTIONS = { 'Reanudar', 'Menu' }
+local PAUSE_OPTIONS = { 'common.resume', 'common.menu' }   -- claves de idioma
 
 local function drawPixelButton(label, cx, y, w, h, selected)
     if selected then
@@ -56,7 +57,7 @@ function PauseState:render()
     -- Título PAUSA
     love.graphics.setFont(FONT_BIG)
     love.graphics.setColor(COLOR_WHITE)
-    love.graphics.printf('PAUSA', 0, WINDOW_H/2 - 130, WINDOW_W, 'center')
+    love.graphics.printf(L('pause.title'), 0, WINDOW_H/2 - 130, WINDOW_W, 'center')
 
     -- Botones
     love.graphics.setFont(FONT_MED)
@@ -69,7 +70,7 @@ function PauseState:render()
 
     for i, opt in ipairs(PAUSE_OPTIONS) do
         local by = startY + (i - 1) * (btnH + gap)
-        drawPixelButton(opt, cx, by, btnW, btnH, i == self.selected)
+        drawPixelButton(L(opt), cx, by, btnW, btnH, i == self.selected)
     end
 
     love.graphics.setColor(COLOR_WHITE)

@@ -3,28 +3,28 @@
 -- tiempo gana quien tenga más puntos; empates: más vidas y luego quien llegó
 -- antes a esa puntuación. Si solo queda uno en pie, gana él (regla genérica
 -- 'last_standing' del servidor) y, si caen todos, gana el que más puntos tenía.
+local L = require 'src/Lang'
+
 local DEFAULT_TIME = 150        -- s (el nivel puede cambiarlo: "matchTime")
 
 local function timeLeft(m) return math.max(0, (m.data.duration or DEFAULT_TIME) - m.time) end
 
 return {
-    id = 'koth', label = 'Rey de la Colina', icon = 'hill',
-    tagline = 'Quédate en las zonas de puntos. Cuando se acabe el tiempo, gana quien tenga más puntos.',
+    -- Textos (nombre, tagline, objetivo, emptyHint): assets/lang, claves mode.koth.*
+    id = 'koth', icon = 'hill',
     color = { 1.0, 0.78, 0.22 },
-    objective = '¡Quédate en la zona de puntos!',
     hudLine = function(md)
         if not md.tl then return nil end
         local secs = md.tl / 100
-        local txt = string.format('Tiempo %d:%02d', math.floor(secs / 60), math.floor(secs) % 60)
+        local txt = L('mode.koth.time', { m = math.floor(secs / 60), s = string.format('%02d', math.floor(secs) % 60) })
         if secs <= 10 then return txt, true, tostring(math.ceil(secs)) end
         return txt, false
     end,
-    emptyHint = 'Crea uno en el editor con la "Zona de puntos" (Entidades › Mecanismos)',
     DEFAULT_TIME = DEFAULT_TIME,
 
     requires = function(info)
         if (info.pointAreas or 0) > 0 then return true end
-        return false, 'el nivel no tiene zonas de puntos'
+        return false, L('mode.why.no_point_areas')
     end,
 
     start = function(m)
@@ -53,16 +53,15 @@ return {
         end
         local second = entries[2]
         if tied > 1 then
-            note = 'Empate total: comparten la corona'
+            note = 'mode.koth.tie_all'
         elseif second and second.score == top.score then
-            note = (second.lives ~= top.lives) and 'Empate a puntos: gana quien conservó más vidas'
-                   or 'Empate a puntos y vidas: gana quien llegó antes a esa puntuación'
+            note = (second.lives ~= top.lives) and 'mode.tie_lives' or 'mode.tie_time'
         end
         return note, tied > 1
     end,
 
     reasonText = function(reason)
-        if reason == 'time_up' then return '¡Se acabó el tiempo!' end
-        if reason == 'all_out' then return 'Todos cayeron: gana quien más puntos tenía' end
+        if reason == 'time_up' then return 'mode.koth.time_up' end
+        if reason == 'all_out' then return 'mode.koth.all_out' end
     end,
 }

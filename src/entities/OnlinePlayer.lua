@@ -6,6 +6,7 @@ local Class = require 'libs/class'
 local OnlinePlayer = Class:new()
 local PixelIcons = require 'src/ui/PixelIcons'
 local DeadEyes   = require 'src/entities/DeadEyes'
+local L = require 'src/Lang'
 
 -- Sprites compartidos con PlayerAdventure (love2d cachea las imágenes)
 local sprites     = nil
@@ -158,7 +159,7 @@ function OnlinePlayer:render(camX, camY)
     if self.finished then
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1, 0.85, 0.2, 0.95)
-        love.graphics.printf("META " .. self.place .. "º", sx - 60, nameY - 16, 120, 'center')
+        love.graphics.printf(L('oadv.finish_place', { n = self.place }), sx - 60, nameY - 16, 120, 'center')
     elseif self.isSpectator then
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(0.7, 0.7, 1, 0.7)
