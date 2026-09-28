@@ -461,8 +461,9 @@ function Crabby:netApply(a, b, f)
     local elapsed = self.netClock and math.min(0.1, now - self.netClock) or 0
     self.netClock = now
     local tb, ta = tonumber(b[4]) or 0, tonumber(a[4]) or 0
-    local cur = self.cnx .. ',' .. self.cny
-    local changed = was and sc > 0 and was ~= cur
+    -- (solo los trepadores tienen superficie; un Crabby normal no tiene cnx/cny)
+    local cur = sc > 0 and (self.cnx .. ',' .. self.cny) or nil
+    local changed = was and cur and was ~= cur
     if changed then self.turnDoneOn = nil end
     if sc == 0 or self.state:sub(1, 5) == 'drop_' then
         self.turnT = nil
