@@ -46,6 +46,7 @@ end
 
 local function solve(path)
     local data = json.decode(love.filesystem.read(path))
+    data.bossZones = nil                        -- las arenas de jefe se ignoran (solo terreno)
     data.autoScroll = nil                       -- la cámara automática no cuenta: solo el terreno
     local level = Level.fromData(data)
     local tramps = {}
@@ -63,13 +64,15 @@ local function solve(path)
     local explore = os.getenv('EXPLORE')
     if #goals == 0 and not explore then return false, 'sin meta ni zona', 0 end
     local function near(pa)
+        if explore then return false end
         for _, g in ipairs(goals) do
             if math.abs(pa.x - g[1]) < TILE_PX * 0.9 and math.abs(pa.y - g[2]) < TILE_PX * 1.6 then return true end
         end
     end
     local function key(pa)
-        return table.concat({ math.floor(pa.x / 14), math.floor(pa.y / 14), pa.onGround and 1 or 0,
-            pa.jumpsLeft, math.floor(pa.vy / 260), math.floor(pa.vx / 120), pa.crouching and 1 or 0 }, ',')
+        return table.concat({ math.floor(pa.x / (explore and 24 or 14)), math.floor(pa.y / (explore and 24 or 14)), pa.onGround and 1 or 0,
+            pa.jumpsLeft, math.floor(pa.vy / 260), math.floor(pa.vx / 120), pa.crouching and 1 or 0,
+            pa.gpPhase == 'windup' and 1 or (pa.gpPhase == 'fall' and 2 or 0), math.floor((pa.dropHoldT or 0) * 8), pa.dropping and 1 or 0 }, ',')
     end
     local s0 = P.packOwnState(pa)
     local function h(x, y)
@@ -158,6 +161,16 @@ local function solve(path)
             end
         end
     end
+    if os.getenv('DUMP') then
+        for r = 1, level.tileH do
+            local line = {}
+            for c = 1, level.tileW do
+                local d = level:getDef(c, r)
+                line[#line + 1] = visited[r * 1000 + c] and 'o' or (d.collision == 'solid' and '#' or (level:isWaterAt((c - 0.5) * TILE_PX, (r - 0.5) * TILE_PX) and '~' or '.'))
+            end
+            print(table.concat(line))
+        end
+    end
     if explore then
         local miss, total = {}, 0
         for _, e in ipairs(data.entities or {}) do
@@ -173,16 +186,6 @@ local function solve(path)
         end
         print(('EXPLORE %s: %d/%d entidades alcanzables; %d estados. Fuera de alcance: %s'):format(path, total - #miss, total, pops, table.concat(miss, ' ')))
         return #miss == 0, 'explorar', 0
-    end
-    if os.getenv('DUMP') then
-        for r = 1, level.tileH do
-            local line = {}
-            for c = 1, level.tileW do
-                local d = level:getDef(c, r)
-                line[#line + 1] = visited[r * 1000 + c] and 'o' or (d.collision == 'solid' and '#' or (level:isWaterAt((c - 0.5) * TILE_PX, (r - 0.5) * TILE_PX) and '~' or '.'))
-            end
-            print(table.concat(line))
-        end
     end
     return false, kind, ('mas cerca en (%s,%s) [%s]'):format(bestC, bestR, bestInfo), pops
 end

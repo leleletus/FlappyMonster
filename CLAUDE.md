@@ -624,5 +624,20 @@ don't copy speeds/forces literally (the user tunes feel by hand).
   both Trampoline Crabbies), `assets/levels/cumbre_cangrejo.json` (KOTH:
   wall-walking Crabbies), `assets/levels/marea_alta.json` (KOTH: floods).
   For online tests of a KOTH level add a `pointarea` to a temp copy.
+- **Level generator + solver**: `tools/levelgen/` writes levels from Python
+  (`lib.py` = grid helpers, `levels_run|hunt|koth|boss.py`, `python3
+  tools/levelgen/build.py [--show name]` → `assets/levels/*.json`; boss levels graft
+  the proven arenas of jefe_espejo / MiniBossArena / jefe_cangrejo). Check them with
+  `tools/tests/level_solve` (BFS with the REAL player physics: double jump, crouch,
+  water, spikes, trampolines emulated; `EXPLORE=1` = every enemy reachable, for hunt)
+  and `tools/tests/level_check` (editor validate + which modes list it + 20 s entity
+  sim). Design numbers (double jump): one jump ≈ 1.6 tiles, two ≈ 3; gaps ≤ 4 easy;
+  a 1-tile tunnel needs a crouch jump; up trampoline ≈ 5 tiles + air control;
+  water: exit a 3-deep pool needs a ledge at the surface (drag eats the jumps).
+  Batch of 15 (race: valle_soleado, cavernas_cristal, torre_viento, fabrica_morteros,
+  tren_fugaz (auto-scroll), canon_trampolines; hunt: ciudadela_cangrejos,
+  jardin_gummies, mina_inundada; koth: isla_flotante, coliseo_pinchos, cascada_dorada;
+  race+boss: ruta_del_espejo, fortaleza_malvada, guarida_cangrejo_rey). Each level
+  whitelists its mode with `"modes"`. Ship = bump `version.txt`.
 - Bots: send `in` only when there are new inputs, or the server kicks them
   for flooding.

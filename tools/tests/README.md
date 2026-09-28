@@ -24,5 +24,17 @@ settings.lua input.lua` del repo; se lanza desde la raíz del repo.
 - `sp_boss/` — pelea en el modo UN JUGADOR REAL (AdventureState, como "Probar"
   del editor): estados, súbditos, bloques de jefe y tiempo entre golpes.
 
+- `level_solve/` — ¿se puede COMPLETAR un nivel? Búsqueda con la física real del
+  jugador (doble salto, agacharse, agua, pinchos; emula trampolines; ignora
+  enemigos, jefes y cámara automática). Necesita pantalla virtual:
+
+      xvfb-run -a love tools/tests/level_solve assets/levels/x.json [más.json]
+      MAXN=200000 ...      # presupuesto de estados (por defecto 60000)
+      EXPLORE=1 ...        # sin meta: ¿se llega a todos los enemigos/objetos? (caza)
+      DUMP=1 ...           # dibuja lo alcanzado (o = visitado)
+
+  Los niveles de `tools/levelgen/` (generador en Python: `python3
+  tools/levelgen/build.py [--show nombre]`) se comprueban con esto.
+
 Las carpetas de guardado de las pruebas (`~/.local/share/love/fm_test_*`) se
 pueden borrar después. Nunca apuntar una prueba al servidor real.
