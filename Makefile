@@ -27,7 +27,12 @@
 # ── Nombre del juego ──────────────────────────────────────────────────────────
 GAME        := FlappyMonster
 GAME_LOWER  := flappymonster
-AUTHOR      := TuNombre
+AUTHOR      := Serqwjahk
+# Metadatos de Switch (NACP): nombre visible y Title ID (el "código" del juego
+# en la consola). Fijo y fuera del rango de los juegos oficiales (0100…);
+# no cambiarlo: la consola lo usa para reconocer el juego entre versiones.
+TITLE       := Flappy Monster
+TITLE_ID    := 052B1EAA2D297000
 
 # ── Directorios ───────────────────────────────────────────────────────────────
 SRC_DIR     := .
@@ -128,9 +133,10 @@ switch: lovefile
 		$(BUILD_DIR)/switch/romfs/game.love
 
 	@echo "2. Generando NACP (metadata)..."
-	@$(NACPTOOL) --create "$(GAME)" "$(AUTHOR)" \
+	@$(NACPTOOL) --create "$(TITLE)" "$(AUTHOR)" \
 		"$$(cat version.txt 2>/dev/null || echo '1.0.0')" \
-		$(BUILD_DIR)/switch/$(GAME_LOWER).nacp
+		$(BUILD_DIR)/switch/$(GAME_LOWER).nacp \
+		--titleid=$(TITLE_ID)
 
 	@echo "3. Generando NRO..."
 	@$(ELF2NRO) resources/switch/love.elf \
