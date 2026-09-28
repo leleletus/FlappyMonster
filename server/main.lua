@@ -448,6 +448,8 @@ local function checkPlayerEnemyCollisions(sim, pid, ps, seq)
         applyState(g, old)
         local r, a, b = fn()
         applyState(g, now)
+        -- (lo que ahora es nil, p. ej. turnT al acabar un giro, vuelve a nil)
+        for k in pairs(old) do if now[k] == nil then g[k] = nil end end
         return r, a, b
     end
 

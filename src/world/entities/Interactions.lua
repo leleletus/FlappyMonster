@@ -68,10 +68,17 @@ function Interactions.defaultCheck(pa, e)
     if p.stompable then
         local gob = e:getOuterBounds()
         -- Ground pound: cae en picado; cualquier contacto desde arriba aplasta
-        if pa.gpPhase == 'fall' and not e.flipped and pob.y + pob.h * 0.5 < gob.y + gob.h * 0.5 then
+        -- Superficie del trepador (girando en una esquina: a la que más mira)
+        local snx, sny = e.cnx, e.cny
+        local flipped = e.flipped
+        if e.surfaceNormal then
+            local nx, ny = e:surfaceNormal()
+            if nx then snx, sny, flipped = nx, ny, (ny == 1) end
+        end
+        if pa.gpPhase == 'fall' and not flipped and pob.y + pob.h * 0.5 < gob.y + gob.h * 0.5 then
             return 'stomp', -math.abs(ADV_JUMP_VEL) * BOUNCE, p.points
         end
-        if e.cattached and e.cnx and e.cnx ~= 0 then
+        if e.cattached and snx and snx ~= 0 then
             -- En una pared (trepador): el caparazón mira hacia fuera (normal cnx).
             -- Se le pisotea cayéndole encima (como en el suelo) o saltándole
             -- desde el lado abierto; desde abajo o andando por el suelo, no.
@@ -79,13 +86,14 @@ function Interactions.defaultCheck(pa, e)
                 local fromTop  = pa.vy > 0 and pob.y + pob.h < gob.y + gob.h * 0.35 + 10
                 -- (lado abierto = el centro del jugador más allá de la cara de fuera
                 -- del Crabby; si no, viene de debajo/encima, por sus patas)
-                local fromSide = (pa.x - e.x) * e.cnx > gob.w / 2
-                                 and (pa.vx or 0) * e.cnx <= 60      -- (no alejándose de él)
+                local gcx = gob.x + gob.w / 2                          -- (centro de la pose)
+                local fromSide = (pa.x - gcx) * snx > gob.w / 2
+                                 and (pa.vx or 0) * snx <= 60      -- (no alejándose de él)
                 if fromTop or fromSide then
-                    return 'stomp', -math.abs(ADV_JUMP_VEL) * BOUNCE, p.points, e.cnx
+                    return 'stomp', -math.abs(ADV_JUMP_VEL) * BOUNCE, p.points, snx
                 end
             end
-        elseif e.flipped then
+        elseif flipped then
             -- Boca abajo (techo): se pisotea desde abajo, subiendo
             if pa.vy < 0 and pob.y > gob.y + gob.h * 0.65 - 10 then
                 return 'stomp', math.abs(ADV_JUMP_VEL) * BOUNCE, p.points

@@ -20,6 +20,14 @@
 --     otro lado del mismo bloque.
 -- Si se queda sin nada a lo que agarrarse (p. ej. rompen el bloque), se
 -- suelta y cae (Crawler.detach): vuelve a agarrarse al tocar el suelo.
+--
+-- Giro en las esquinas: la superficie (cnx, cny) cambia de golpe, pero el
+-- cuerpo tarda `turnDur` s en rodar alrededor de la esquina. Ese giro es
+-- parte de la SIMULACIÓN (no solo del dibujo): Crawler.pose da dónde está de
+-- verdad (pies + ángulo) y Crawler.poseBox gira con esa pose las cajas de
+-- choque, así la hitbox coincide con lo que se ve. Estado en escalares (el
+-- servidor rebobina copiando los campos escalares): turnT, turnDur, tsx/tsy
+-- (pies al empezar), tsang, tonx/tony (normal anterior).
 
 local Crawler = {}
 
@@ -55,6 +63,89 @@ function Crawler.toWorldBox(e, lx, ly, w, h)
         x1, y1 = math.max(x1, wx), math.max(y1, wy)
     end
     return { x = x0, y = y0, w = x1 - x0, h = y1 - y0 }
+end
+
+-- ── Giro (pose) ───────────────────────────────────────────────────────────────
+local TURN_MIN, TURN_MAX = 0.14, 0.32     -- s del giro (según su velocidad)
+
+local function wrapAng(a) return (a + math.pi) % (2 * math.pi) - math.pi end
+
+-- Pies (centro de la base del sprite) según la superficie actual
+function Crawler.feet(e) return e.x - e.cnx * e.sprH / 2, e.y - e.cny * e.sprH / 2 end
+
+function Crawler.turning(e) return e.turnT ~= nil and e.crawl and e.cattached end
+
+-- Pose real: pies (x, y) y ángulo. Durante un giro los pies ruedan alrededor
+-- de la esquina C (cruce de la superficie vieja, por el inicio, y la nueva,
+-- por los pies actuales) mientras el cuerpo gira.
+function Crawler.pose(e)
+    local fx, fy = Crawler.feet(e)
+    local ang = Crawler.angle(e)
+    if not Crawler.turning(e) then return fx, fy, ang end
+    local k = math.max(0, math.min(1, e.turnT / e.turnDur))
+    local m = k * k * (3 - 2 * k)
+    local x, y = e.tsx + (fx - e.tsx) * m, e.tsy + (fy - e.tsy) * m
+    if e.tonx * e.cnx + e.tony * e.cny == 0 then
+        local so = e.tsx * e.tonx + e.tsy * e.tony
+        local sn = fx * e.cnx + fy * e.cny
+        local cx, cy = e.tonx * so + e.cnx * sn, e.tony * so + e.cny * sn
+        local ux, uy, vx, vy = e.tsx - cx, e.tsy - cy, fx - cx, fy - cy
+        local r0, r1 = math.sqrt(ux * ux + uy * uy), math.sqrt(vx * vx + vy * vy)
+        if r0 > 0.5 and r1 > 0.5 then
+            local a0 = math.atan2(uy, ux)
+            local a = a0 + wrapAng(math.atan2(vy, vx) - a0) * m
+            local r = r0 + (r1 - r0) * m
+            x, y = cx + math.cos(a) * r, cy + math.sin(a) * r
+        end
+    end
+    return x, y, e.tsang + wrapAng(ang - e.tsang) * m
+end
+
+-- Normal "de choque" durante el giro: la de la superficie a la que más mira
+-- (vieja en la primera mitad, nueva en la segunda)
+function Crawler.poseNormal(e)
+    if not Crawler.turning(e) then return e.cnx, e.cny end
+    local _, _, a = Crawler.pose(e)
+    local nx, ny = math.sin(a), -math.cos(a)
+    if math.abs(nx) > math.abs(ny) then return (nx > 0) and 1 or -1, 0 end
+    return 0, (ny > 0) and 1 or -1
+end
+
+-- Como toWorldBox, pero con la pose real (girando: la caja se lleva al
+-- ángulo actual; sus lados se mezclan según el ángulo, sin inflarla)
+function Crawler.poseBox(e, lx, ly, w, h)
+    if not Crawler.turning(e) then return Crawler.toWorldBox(e, lx, ly, w, h) end
+    local fx, fy, a = Crawler.pose(e)
+    local c, s = math.cos(a), math.sin(a)
+    -- centro de la entidad = pies + normal * sprH/2; ejes: derecha (c, s), abajo (-s, c)
+    local ox, oy = fx + s * e.sprH / 2, fy - c * e.sprH / 2
+    local lcx, lcy = lx + w / 2, ly + h / 2
+    local wx, wy = ox + c * lcx - s * lcy, oy + s * lcx + c * lcy
+    local c2, s2 = c * c, s * s
+    local W, H = w * c2 + h * s2, w * s2 + h * c2
+    return { x = wx - W / 2, y = wy - H / 2, w = W, h = H }
+end
+
+-- Lo que dura un giro (según su velocidad)
+function Crawler.turnDuration(e)
+    local sp = math.max(1, e.speed or 50)
+    return math.max(TURN_MIN, math.min(TURN_MAX, e.sprW * 0.35 / sp))
+end
+
+-- Empieza un giro desde la pose actual (aunque ya estuviera a medio girar)
+local function beginTurn(e)
+    local fx, fy, ang = Crawler.pose(e)
+    e.tsx, e.tsy, e.tsang = fx, fy, ang
+    e.tonx, e.tony = e.cnx, e.cny
+    e.turnT, e.turnDur = 0, Crawler.turnDuration(e)
+end
+Crawler.beginTurn = beginTurn
+
+-- Avanza el giro (llamar cada paso, ande o no)
+function Crawler.advanceTurn(e, dt)
+    if not e.turnT then return end
+    e.turnT = e.turnT + dt
+    if e.turnT >= e.turnDur or not (e.crawl and e.cattached) then e.turnT = nil end
 end
 
 -- Busca a qué superficie agarrarse alrededor de su posición (preferencia:
@@ -97,6 +188,7 @@ end
 
 function Crawler.detach(e)
     e.cattached = false
+    e.turnT = nil
     e.cnx, e.cny = 0, -1
 end
 
@@ -120,6 +212,7 @@ function Crawler.move(e, level, dist)
             for d = 1, hw + 1 do
                 if solid(level, e.x + tx * d, e.y + ty * d) then D = d; break end
             end
+            beginTurn(e)
             local k = D - (hh + 1)
             e.x, e.y = e.x + tx * k + nx * k, e.y + ty * k + ny * k
             local nnx, nny = -tx, -ty                        -- normal de la pared
@@ -139,6 +232,7 @@ function Crawler.move(e, level, dist)
                     if solid(level, sx - tx * j, sy - ty * j) then J = j; break end
                 end
                 if not J then Crawler.detach(e); return false end
+                beginTurn(e)
                 -- Giro rígido de 90° alrededor de la esquina: lo que se había
                 -- pasado del borde pasa a ser lo que baja por el lado nuevo, y
                 -- queda a hh del lado (primera columna sólida a hh + 1)

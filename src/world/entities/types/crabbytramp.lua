@@ -54,9 +54,9 @@ end
 function TC:trampBox()
     local imgH = (self.currentImg and self.currentImg:getHeight() or 1) * S
     local h = TRAMP_H * self.spikeProgress
-    if Crawler.onWall(self) and self.cattached then
-        -- En la pared: la misma caja "encima de la cabeza", girada
-        return Crawler.toWorldBox(self, -TRAMP_W / 2, self.sprH / 2 - imgH - h, TRAMP_W, h)
+    if (Crawler.onWall(self) and self.cattached) or Crawler.turning(self) then
+        -- En la pared (o girando en una esquina): la misma caja "encima de la cabeza", girada
+        return Crawler.poseBox(self, -TRAMP_W / 2, self.sprH / 2 - imgH - h, TRAMP_W, h)
     end
     if self.flipped then
         local b = self.y - self.sprH / 2 + imgH
@@ -78,12 +78,15 @@ function TC:interact(pa)
         local tb, pob = self:trampBox(), pa:getOuterBounds()
         if self:canBounce() and overlap(pob, tb) then
             local P = math.abs(ADV_JUMP_VEL) * (self.props.power or 1.6)
-            if Crawler.onWall(self) and self.cattached then
+            local nx, ny = Crawler.poseNormal(self)
+            local flipped = self.flipped
+            if self.crawl and self.cattached then flipped = (ny == 1) end
+            if self.crawl and self.cattached and nx ~= 0 then
                 -- En la pared: al ir contra el cojín, lanza de lado (como un trampolín lateral)
-                if (pa.vx or 0) * self.cnx < 0 then return 'launch', self.cnx * P * 0.85, -380 end
-            elseif not self.flipped and pa.vy > 0 and pob.y + pob.h <= tb.y + tb.h * 0.6 + 10 then
+                if (pa.vx or 0) * nx < 0 then return 'launch', nx * P * 0.85, -380 end
+            elseif not flipped and pa.vy > 0 and pob.y + pob.h <= tb.y + tb.h * 0.6 + 10 then
                 return 'launch', 0, -P
-            elseif self.flipped and pa.vy < 0 and pob.y >= tb.y + tb.h * 0.4 - 10 then
+            elseif flipped and pa.vy < 0 and pob.y >= tb.y + tb.h * 0.4 - 10 then
                 return 'launch', 0, P * 0.6
             end
         end

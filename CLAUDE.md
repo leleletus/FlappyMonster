@@ -234,7 +234,7 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
 - Wall Crabby stomp (Interactions.defaultCheck): in the air, falling onto its top
   end OR coming from the open side (player centre beyond its outer face) =
   'stomp' with 4th return dirX = cnx → `pa:bounce(vy, dirX, soft=true)` (vx 300 +
-  ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill).
+  ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill; v17: crawler turn in snapshots).
 - **Crawler** (`src/world/entities/Crawler.lua`): surface-following movement
   (floor ↔ walls ↔ ceiling, concave and convex corners) for Crabbies with prop
   `wallWalk` (`Crabby.WALL_PROP`, off by default so old levels don't change).
@@ -242,9 +242,14 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   surface (same as a normal Crabby, attach snaps pixel-exact); corners are a rigid
   90° rotation about the corner measured pixel by pixel (no jump); `Crawler.angle` for
   drawing (Crabby renders "as floor" inside a rotation), `Crawler.toWorldBox`
-  to rotate local boxes (spike, trampoline). Corner turns are animated in RENDER
-  only (`Crabby:crawlTurn`, render-local state `turnVis`, real clock): feet roll
-  around the corner point while the body rotates; physics switch instantly.
+  to rotate local boxes (spike, trampoline). Corner turns are part of the SIM
+  (`Crawler.beginTurn/advanceTurn`, scalar fields `turnT/turnDur/tsx/tsy/tsang/
+  tonx/tony` so the server rewind copies them): the surface switches at once,
+  but `Crawler.pose(e)` (feet rolling around the corner + angle) is where the
+  body really is. Hitbox, inner box, spike and trampoline boxes use
+  `Crawler.poseBox`, stomp rules use `e:surfaceNormal()` (pose normal), and
+  render draws the same pose. Net: Crabby field 4 = turn progress+1; the client
+  starts the turn from its last drawn pose and runs it on its own clock.
   Detaches on knockback / drops and
   re-attaches on landing. Net: surface code in Crabby.netPack (`Crabby.NET_N`
   = number of Crabby fields; subclasses append after it).

@@ -153,14 +153,20 @@ function Crabby:crawlWalk(dt, level)
     return true
 end
 
--- En una pared la hitbox está girada
+-- En una pared la hitbox está girada; girando en una esquina, con la pose real
 function Crabby:getOuterBounds()
+    if Crawler.turning(self) then
+        return Crawler.poseBox(self, -self.outerW / 2, -self.outerH / 2, self.outerW, self.outerH)
+    end
     if Crawler.onWall(self) and self.cattached then
         return { x = self.x - self.outerH / 2, y = self.y - self.outerW / 2, w = self.outerH, h = self.outerW }
     end
     return Entity.getOuterBounds(self)
 end
 function Crabby:getInnerBounds()
+    if Crawler.turning(self) then
+        return Crawler.poseBox(self, -self.innerW / 2, -self.innerH / 2, self.innerW, self.innerH)
+    end
     if Crawler.onWall(self) and self.cattached then
         return { x = self.x - self.innerH / 2, y = self.y - self.innerW / 2, w = self.innerH, h = self.innerW }
     end
@@ -299,8 +305,9 @@ end
 
 -- ── Esconderse / asomarse ────────────────────────────────────────────────────
 function Crabby:updateCustom(dt, level)
+    Crawler.advanceTurn(self, dt)             -- giro en una esquina (ver Crawler)
     local st = self.state
-    if st:sub(1, 5) == 'drop_' then return self:updateDrop(dt, level) end
+    if st:sub(1, 5) == 'drop_' then self.turnT = nil; return self:updateDrop(dt, level) end
     if self.crawl then
         if self.cattached == nil then Crawler.attach(self, level, TILE_PX) end   -- (al colocarla)
         if st == 'walk' then return self:crawlWalk(dt, level) end
@@ -386,10 +393,10 @@ function Crabby:getSpikeHitbox()
     if hitH < 1 then return nil end
     local spriteVisH = (self.currentImg or imgIdle2):getHeight() * GUMMY_SCALE
     local sx = self.x - hitW / 2
-    if Crawler.onWall(self) and self.cattached then
-        -- En la pared: la misma caja "encima de la cabeza", girada
+    if (Crawler.onWall(self) and self.cattached) or Crawler.turning(self) then
+        -- En la pared (o girando): la misma caja "encima de la cabeza", girada
         local headLocal = self.sprH / 2 - spriteVisH
-        return Crawler.toWorldBox(self, -hitW / 2, headLocal - hitH, hitW, hitH)
+        return Crawler.poseBox(self, -hitW / 2, headLocal - hitH, hitW, hitH)
     end
     if self.flipped then
         local headY = (self.y - self.sprH / 2) + spriteVisH   -- cabeza abajo: crece hacia abajo
@@ -417,10 +424,19 @@ local function surfCode(e)
     for i, n in ipairs(SURF) do if n[1] == e.cnx and n[2] == e.cny then return i end end
     return 0
 end
-Crabby.NET_N = 3          -- campos de red del Crabby (los tipos derivados añaden detrás)
+Crabby.NET_N = 4          -- campos de red del Crabby (los tipos derivados añaden detrás)
+
+-- Normal de la superficie para las reglas de pisotón (girando: a la que más
+-- mira; ver Interactions.defaultCheck)
+function Crabby:surfaceNormal()
+    if self.crawl and self.cattached then return Crawler.poseNormal(self) end
+    return nil
+end
 
 function Crabby:netPack()
-    return { math.floor((self.spikeProgress or 0) * 1000 + 0.5), self:getImgName(), surfCode(self) }
+    -- 4º: progreso del giro en una esquina + 1 (0 = no gira)
+    local turn = Crawler.turning(self) and (math.floor(self.turnT / self.turnDur * 100 + 0.5) + 1) or 0
+    return { math.floor((self.spikeProgress or 0) * 1000 + 0.5), self:getImgName(), surfCode(self), turn }
 end
 
 function Crabby:netApply(a, b, f)
@@ -430,11 +446,47 @@ function Crabby:netApply(a, b, f)
     end
     self:setImgFromName((f < 0.5 and a or b)[2])
     local sc = tonumber(b[3]) or 0
+    local was = self.crawl and self.cattached and self.cnx and (self.cnx .. ',' .. self.cny)
     if sc > 0 then
         self.crawl, self.cattached = true, true
         self.cnx, self.cny = SURF[sc][1], SURF[sc][2]
     elseif self.crawl then
         self.cattached = false
+    end
+    -- Giro en una esquina: empieza cuando cambia la superficie (desde la
+    -- última pose dibujada: x, y ya son los nuevos cuando llega aquí) y avanza
+    -- con el reloj, a la vez que en el servidor; el progreso que manda el
+    -- servidor solo lo adelanta (nunca atrás) y el final lo pone el reloj.
+    local now = love.timer.getTime()
+    local elapsed = self.netClock and math.min(0.1, now - self.netClock) or 0
+    self.netClock = now
+    local tb, ta = tonumber(b[4]) or 0, tonumber(a[4]) or 0
+    local cur = self.cnx .. ',' .. self.cny
+    local changed = was and sc > 0 and was ~= cur
+    if changed then self.turnDoneOn = nil end
+    if sc == 0 or self.state:sub(1, 5) == 'drop_' then
+        self.turnT = nil
+    elseif changed or (tb > 0 and not self.turnT and self.turnDoneOn ~= cur) then
+        if self.pfx and self.lastNx and changed then
+            self.tsx, self.tsy, self.tsang = self.pfx, self.pfy, self.pang
+            self.tonx, self.tony = self.lastNx, self.lastNy
+        else
+            self.tsx, self.tsy = Crawler.feet(self)
+            self.tsang, self.tonx, self.tony = Crawler.angle(self), self.cnx, self.cny
+        end
+        self.turnDur = Crawler.turnDuration(self)
+        self.turnT = tb > 0 and (tb - 1) / 100 * self.turnDur or 0
+    elseif self.turnT then
+        self.turnT = self.turnT + elapsed
+        if tb > 0 then
+            local k = (ta > 0 and ta <= tb) and (ta + (tb - ta) * f) or tb
+            self.turnT = math.max(self.turnT, (k - 1) / 100 * self.turnDur)
+        end
+        if self.turnT >= self.turnDur then self.turnT = nil; self.turnDoneOn = cur end   -- (no repetirlo)
+    end
+    if self.crawl and self.cattached then
+        self.pfx, self.pfy, self.pang = Crawler.pose(self)
+        self.lastNx, self.lastNy = self.cnx, self.cny
     end
 end
 
@@ -457,77 +509,6 @@ function Crabby:drawTopper(cx, baseY, progress, dir)
 end
 function Crabby:bounceRotation() return 0 end
 
--- ── Giro al cambiar de superficie (solo visual) ──────────────────────────────
--- El Crawler cambia de superficie de golpe en las esquinas; al dibujarlo, el
--- ángulo y el punto de apoyo (los pies) pasan suavemente del que tenía al
--- nuevo (TURN_MIN..TURN_MAX s), rodando alrededor de la esquina. La física,
--- la hitbox y el pincho no se enteran.
-local TURN_MIN, TURN_MAX = 0.14, 0.32     -- s del giro (según su velocidad)
-
-local function wrapAng(a) return (a + math.pi) % (2 * math.pi) - math.pi end
-
--- Pies (centro de la base del sprite) en el mundo, según la superficie
-local function feetOf(e) return e.x - e.cnx * e.sprH / 2, e.y - e.cny * e.sprH / 2 end
-
--- Devuelve {x, y, ang} (mundo) mientras gira, nil si no
-function Crabby:crawlTurn()
-    if not (self.crawl and self.cattached and self.state:sub(1, 5) ~= 'drop_') then
-        self.turnVis = nil
-        return nil
-    end
-    local fx, fy = feetOf(self)
-    local ang = Crawler.angle(self)
-    local now = love.timer.getTime()
-    local tv = self.turnVis
-    if not tv then
-        self.turnVis = { nx = self.cnx, ny = self.cny, x = fx, y = fy, ang = ang }
-        return nil
-    end
-    if tv.nx ~= self.cnx or tv.ny ~= self.cny then
-        -- Empieza desde lo último que se dibujó (aunque estuviera a medio giro);
-        -- un salto grande (reaparecer...) no se anima
-        if math.abs(fx - tv.x) + math.abs(fy - tv.y) < TILE_PX * 2 then
-            local sp = math.max(1, self.speed or 50)
-            tv.t0, tv.dur = now, math.max(TURN_MIN, math.min(TURN_MAX, self.sprW * 0.35 / sp))
-            tv.sx, tv.sy, tv.sang = tv.x, tv.y, tv.ang
-            tv.onx, tv.ony = tv.nx, tv.ny
-        else
-            tv.t0 = nil
-        end
-        tv.nx, tv.ny = self.cnx, self.cny
-    end
-    local out
-    if tv.t0 then
-        local k = (now - tv.t0) / tv.dur
-        if k >= 1 then
-            tv.t0 = nil
-        else
-            local e = k * k * (3 - 2 * k)
-            local x, y = tv.sx + (fx - tv.sx) * e, tv.sy + (fy - tv.sy) * e
-            -- Rueda alrededor de la esquina: C = cruce de la superficie vieja
-            -- (por el inicio) y la nueva (por los pies actuales); los pies
-            -- giran alrededor de C a la vez que el cuerpo
-            if tv.onx * self.cnx + tv.ony * self.cny == 0 then
-                local so = tv.sx * tv.onx + tv.sy * tv.ony
-                local sn = fx * self.cnx + fy * self.cny
-                local cx, cy = tv.onx * so + self.cnx * sn, tv.ony * so + self.cny * sn
-                local ux, uy, vx, vy = tv.sx - cx, tv.sy - cy, fx - cx, fy - cy
-                local r0, r1 = math.sqrt(ux * ux + uy * uy), math.sqrt(vx * vx + vy * vy)
-                if r0 > 0.5 and r1 > 0.5 then
-                    local a0 = math.atan2(uy, ux)
-                    local a = a0 + wrapAng(math.atan2(vy, vx) - a0) * e
-                    local r = r0 + (r1 - r0) * e
-                    x, y = cx + math.cos(a) * r, cy + math.sin(a) * r
-                end
-            end
-            out = { x = x, y = y, ang = tv.sang + wrapAng(ang - tv.sang) * e }
-        end
-    end
-    if out then tv.x, tv.y, tv.ang = out.x, out.y, out.ang
-    else tv.x, tv.y, tv.ang = fx, fy, ang end
-    return out
-end
-
 -- Dibuja "como en el suelo" con los pies en (px, py) de pantalla, girado `ang`
 function Crabby:renderLocal(px, py, ang)
     local fl, fc, ox, oy = self.flipped, self.facing, self.x, self.y
@@ -543,9 +524,10 @@ end
 
 -- En una pared se dibuja como en el suelo, girado
 function Crabby:render(camX, camY)
-    local turn = self:crawlTurn()
-    if turn then
-        self:renderLocal(math.floor(turn.x - camX + 0.5), math.floor(turn.y - camY + 0.5), turn.ang)
+    -- Girando en una esquina: con la pose real (la misma que la hitbox)
+    if Crawler.turning(self) and self.state:sub(1, 5) ~= 'drop_' then
+        local fx, fy, ang = Crawler.pose(self)
+        self:renderLocal(math.floor(fx - camX + 0.5), math.floor(fy - camY + 0.5), ang)
         return
     end
     if Crawler.onWall(self) and self.cattached and self.state:sub(1, 5) ~= 'drop_' then
