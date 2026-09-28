@@ -80,7 +80,8 @@ local _emitX, _emitY         = nil, nil   -- de d√≥nde sale el sonido (atenuaci√
 
 Sound = {
     play        = function(name, pitch)
-        if name then
+        -- (los privados de un jugador no se mandan: su cliente ya los predijo)
+        if name and not (_currentSoundPlayerId and Protocol.PRIVATE_SOUNDS[name]) then
             -- El tono viaja con 2 decimales (p. ej. los sonidos graves del jefe espejo)
             pitch = (pitch and pitch ~= 1) and math.floor(pitch * 100 + 0.5) / 100 or nil
             table.insert(_soundEvents, { sound = name, playerId = _currentSoundPlayerId, pitch = pitch,

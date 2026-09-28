@@ -488,7 +488,8 @@ end
 function OnlineAdventureState:_processEvent(ev)
     if ev.type == 'sound' then
         -- Los sonidos propios los genera la predicción local (evita dobles).
-        if (not ev.playerId or ev.playerId ~= NC.myId) and type(ev.sound) == 'string' then
+        if (not ev.playerId or ev.playerId ~= NC.myId) and type(ev.sound) == 'string'
+           and not (ev.playerId and Protocol.PRIVATE_SOUNDS[ev.sound]) then   -- (alarma de otro)
             local pitch = tonumber(ev.pitch)
             pitch = pitch and math.max(0.25, math.min(3, pitch)) or nil
             -- Con posición: se atenúa según NUESTRA distancia a donde sonó

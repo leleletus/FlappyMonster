@@ -272,7 +272,9 @@ Server (`server/main.lua`):
 - Sounds: `Sound.play(name)` on server → `{type='sound', sound, playerId}` event.
   `playerId` = the player whose step caused it (client skips its own, since the
   prediction already played it). Entity sounds get `playerId=nil` → everybody.
-  Sound events carry only a name (no pitch).
+  Sound events carry only a name (no pitch). Sounds in
+  `Protocol.PRIVATE_SOUNDS` (e.g. 'waterWarning', the drowning alarm) are never
+  broadcast: only their owner hears them, from its own prediction.
 - Snapshot `"s"` (30 Hz, unreliable): `p` players `{idx,x,y,facing,frame,flags,
   lives,hp,score,drown,air%,place}`, `e` entities `{x,y,facing,state,frame,alive,
   deadTimer*100,breatheT*100,flipped, ...netPack()}`, `md` mode hud, plus own
