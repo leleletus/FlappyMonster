@@ -11,6 +11,7 @@ local BaseState    = require 'src/BaseState'
 local NC           = require 'src/network/NetworkClient'
 local Modes        = require 'src/world/Modes'
 local PixelIcons   = require 'src/ui/PixelIcons'
+local Clip         = require 'src/ui/Clip'
 
 local OnlineResultsState = BaseState:new()
 
@@ -390,13 +391,10 @@ function OnlineResultsState:_renderPodium()
             -- Brillo que recorre el bloque del 1º
             if place == 1 and e and self.celebrate then
                 local sx = x + ((t * 120) % (PODIUM_W + 80)) - 40
-                love.graphics.stencil(function()
-                    love.graphics.rectangle('fill', math.floor(x), math.floor(y), PODIUM_W, math.ceil(h))
-                end, "replace", 1)
-                love.graphics.setStencilTest("greater", 0)
+                Clip.push(math.floor(x), math.floor(y), PODIUM_W, math.ceil(h))
                 love.graphics.setColor(1, 1, 1, 0.25)
                 love.graphics.polygon('fill', sx, y, sx + 18, y, sx - 12, y + h, sx - 30, y + h)
-                love.graphics.setStencilTest()
+                Clip.pop()
             end
             -- Número del puesto
             love.graphics.setFont(FONT_BIG)

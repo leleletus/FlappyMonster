@@ -669,17 +669,23 @@ local function drawMiniSpike(dir, px, py, size)
 end
 
 -- Helper para aplicar recorte usando las transformaciones actuales (cámara/zoom)
+-- Recorte a una celda (varias seguidas) y, con nil, vuelta al recorte que
+-- había antes (las bandas de lovesize), no a "sin recorte"
+local prevScissor
 local function setTransformedScissor(x, y, w, h)
     if x and y and w and h then
+        if not prevScissor then prevScissor = { love.graphics.getScissor() } end
+        local p = prevScissor
+        if p[1] then love.graphics.setScissor(p[1], p[2], p[3], p[4]) else love.graphics.setScissor() end
         local sx, sy = love.graphics.transformPoint(x, y)
         local ex, ey = love.graphics.transformPoint(x + w, y + h)
-        local scX = math.min(sx, ex)
-        local scY = math.min(sy, ey)
-        local scW = math.abs(ex - sx)
-        local scH = math.abs(ey - sy)
-        love.graphics.setScissor(math.floor(scX), math.floor(scY), math.ceil(scW), math.ceil(scH))
+        local x0, y0 = math.floor(math.min(sx, ex)), math.floor(math.min(sy, ey))
+        local x1, y1 = math.ceil(math.max(sx, ex)), math.ceil(math.max(sy, ey))
+        love.graphics.intersectScissor(x0, y0, math.max(0, x1 - x0), math.max(0, y1 - y0))
     else
-        love.graphics.setScissor()
+        local p = prevScissor
+        prevScissor = nil
+        if p and p[1] then love.graphics.setScissor(p[1], p[2], p[3], p[4]) else love.graphics.setScissor() end
     end
 end
 
@@ -701,9 +707,14 @@ function Level:render(camX, camY)
             local px  = (col-1)*TILE_PX - camX
             local py  = (row-1)*TILE_PX - camY
 
-            -- Aspecto del tipo (el agua se pinta en renderWaterEffect)
+            -- Aspecto del tipo (el agua se pinta en renderWaterEffect). Los
+            -- bloques cuyo trigger no usa el modo en juego (hiddenTriggers, p. ej.
+            -- la meta en Cacería) no se dibujan: no tienen colisión.
             ctx.x, ctx.y, ctx.col, ctx.row, ctx.raw = px, py, col, row, raw
-            TileTypes.drawTile(TileTypes.get(tileBaseId(raw)), ctx)
+            local def = TileTypes.get(tileBaseId(raw))
+            if not (def.trigger and self.hiddenTriggers and self.hiddenTriggers[def.trigger]) then
+                TileTypes.drawTile(def, ctx)
+            end
 
             -- Pinchos (subceldas)
             local _, _, spikes = decTile(raw)

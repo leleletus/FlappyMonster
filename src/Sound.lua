@@ -354,6 +354,23 @@ function Sound.resumeAll()
     return true
 end
 
+-- Para todos los sonidos rastreados (ahogamiento...): al salir de una partida
+function Sound.stopAllTracked()
+    for _, src in pairs(tracked) do
+        if src:isPlaying() then src:stop() end
+    end
+    paused = nil
+end
+
+-- Deja la música "de partida" como al empezar: sin pista de jefe ni del nivel,
+-- tono normal y nada sonando (la pantalla siguiente pone la suya)
+function Sound.leaveMatch()
+    Sound.stopAllTracked()
+    levelMusic, baseLevelMusic = nil, nil
+    if music then music:setPitch(1.0) end
+    Sound.stopMusic()
+end
+
 function Sound.stopMusic()
     if music and music:isPlaying() then music:stop() end
     music, musicName = nil, nil

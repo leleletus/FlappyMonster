@@ -294,8 +294,7 @@ end
 
 -- ── Layout (ÚNICA fuente de geometría: render, ratón y táctil) ───────────────
 
-local PANEL_X, PANEL_Y = 76, 40
-local PANEL_W, PANEL_H = WINDOW_W - 152, WINDOW_H - 80
+local PANEL_X, PANEL_Y = 76, 40      -- márgenes; el tamaño se calcula en _layout()
 local HDR_H   = 84
 local ROW_H   = 54
 local CARD_H  = 196
@@ -303,6 +302,10 @@ local BTN_H, BTN_GAP = 50, 12
 local PM_W, PM_BW, PM_BH, PM_GAP = 340, 240, 48, 10
 
 function OnlineRoomState:_layout()
+    -- (con el ancho lógico ACTUAL: en móviles más alargados que 16:9, main.lua
+    -- lo cambia al arrancar o al girar; calcularlo al cargar el archivo dejaba
+    -- el panel con el tamaño de 1280 y pegado a la izquierda)
+    local PANEL_W, PANEL_H = WINDOW_W - 2 * PANEL_X, WINDOW_H - 2 * PANEL_Y
     local L = {}
     L.panel = { x = PANEL_X, y = PANEL_Y, w = PANEL_W, h = PANEL_H }
     local bodyY  = PANEL_Y + HDR_H + 14
@@ -549,7 +552,7 @@ function OnlineRoomState:_renderGameCard(r, isAdmin)
     local lvl
     for _, l in ipairs(self.catalog or {}) do if l.path == room.level then lvl = l end end
     if lvl then
-        ModeSelectMenu.drawPreview(lvl, x + pad, my + 2, pw, ph, self.t or 0, 1)
+        ModeSelectMenu.drawPreview(lvl, x + pad, my + 2, pw, ph, self.t or 0, 1, Modes.get(room.mode))
     else
         love.graphics.setColor(0.2, 0.3, 0.5, 1)
         love.graphics.rectangle('fill', x + pad, my + 2, pw, ph)

@@ -9,16 +9,24 @@
 
 local NC         = require 'src/network/NetworkClient'
 local Modes      = require 'src/world/Modes'
+local Clip        = require 'src/ui/Clip'
 local PixelIcons = require 'src/ui/PixelIcons'
 local fitText    = require('src/ui/TextUtil').fit
 
 local ModeSelectMenu = {}
 ModeSelectMenu.__index = ModeSelectMenu
 
--- Geometría (resolución lógica 1280x720)
-local PX, PY, PW, PH = 50, 36, 1180, 648
+-- Geometría (pensada para 1280x720). El ancho lógico cambia según la
+-- pantalla (main.lua: móviles alargados > 1280, tabletas 4:3 = 960), así que
+-- el panel se centra con el ancho ACTUAL y, si no cabe, se estrecha: menos
+-- tarjetas a la vez (con flechas) y descripción más estrecha. fit() lo
+-- recalcula al principio de cada entrada pública (dibujo, táctil, ratón...).
+local PY, PH = 36, 648
+local PW_MAX, INFO_W_MAX = 1180, 780
+local PW, INFO_W = PW_MAX, INFO_W_MAX
+local function panelX() return math.floor((WINDOW_W - PW) / 2) end
 local TAB_Y, TAB_H, TAB_GAP = 104, 56, 30
-local INFO_Y, INFO_H, INFO_W = 184, 78, 780
+local INFO_Y, INFO_H = 184, 78
 local CARD_Y, CARD_W, CARD_H, CARD_GAP = 290, 320, 312, 40
 local VISIBLE = 3
 local PREV_H  = 206
@@ -26,6 +34,14 @@ local ARROW_W, ARROW_H = 36, 110
 local PREVIEW_CELL = 6          -- px por celda al cachear la miniatura
 
 local function clamp01(x) return x < 0 and 0 or (x > 1 and 1 or x) end
+
+local function fit()
+    PW      = math.min(PW_MAX, WINDOW_W - 40)
+    INFO_W  = math.min(INFO_W_MAX, PW - 80)
+    -- Tarjetas que caben entre las dos flechas (1 a 3)
+    local room = PW - 2 * (ARROW_W + 24)
+    VISIBLE = math.max(1, math.min(3, math.floor((room + CARD_GAP) / (CARD_W + CARD_GAP))))
+end
 
 local function cardsX()
     local total = VISIBLE * CARD_W + (VISIBLE - 1) * CARD_GAP
@@ -50,7 +66,7 @@ local CELL_COLORS = {
 }
 local previewCache = {}   -- [path .. tamaño] = Canvas
 
-local function buildPreviewCanvas(prev)
+local function buildPreviewCanvas(prev, hideFinish)
     local rows = prev.rows
     local nr, nc = #rows, #(rows[1] or '')
     if nr == 0 or nc == 0 then return nil end
@@ -62,12 +78,18 @@ local function buildPreviewCanvas(prev)
     if not ok then return nil end
     canvas:setFilter('nearest', 'nearest')
     love.graphics.push('all')
+    -- Se construye en pleno dibujo del menú (dentro de lovesize): sin su
+    -- escala/desplazamiento ni su recorte, o en Android (escala ≠ 1) el nivel
+    -- sale descolocado dentro de la miniatura y casi todo queda vacío (azul)
+    love.graphics.origin()
+    love.graphics.setScissor()
     love.graphics.setCanvas(canvas)
     love.graphics.clear(0, 0, 0, 0)
     for r = 1, nr do
         local line = rows[r]
         for c = 1, nc do
             local ch = line:sub(c, c)
+            if ch == 'F' and hideFinish then ch = '.' end          -- meta: solo en los modos que la usan
             local x, y = (c - 1) * S, (r - 1) * S
             local col = CELL_COLORS[ch]
             if col then
@@ -115,7 +137,8 @@ end
 
 -- Dibuja la miniatura dentro de (x,y,w,h): encaja por alto y, si el nivel es
 -- más ancho que la tarjeta, se desplaza lentamente de lado a lado.
-local function drawPreview(level, x, y, w, h, t, tint)
+-- `mode` (opcional): sin meta si el modo no la usa
+local function drawPreview(level, x, y, w, h, t, tint, mode)
     -- Cielo
     for i = 0, 7 do
         local f = i / 7
@@ -129,10 +152,12 @@ local function drawPreview(level, x, y, w, h, t, tint)
         love.graphics.printf('sin vista previa', x, y + h / 2 - 5, w, 'center')
         return
     end
-    local canvas = previewCache[level.path]
+    local hideFinish = mode ~= nil and not Modes.usesTrigger(mode, 'finish')
+    local key = level.path .. (hideFinish and '#sinmeta' or '')
+    local canvas = previewCache[key]
     if canvas == nil then
-        canvas = buildPreviewCanvas(prev) or false
-        previewCache[level.path] = canvas
+        canvas = buildPreviewCanvas(prev, hideFinish) or false
+        previewCache[key] = canvas
     end
     if not canvas then return end
     local cw, ch = canvas:getDimensions()
@@ -148,13 +173,11 @@ local function drawPreview(level, x, y, w, h, t, tint)
         ox = x - span * (0.5 - 0.5 * math.cos(t * (2 * math.pi) / math.max(6, span / 45)))
     end
     local oy = y + h - lh
-    love.graphics.stencil(function()
-        love.graphics.rectangle('fill', x, y, w, h)
-    end, "replace", 1)
-    love.graphics.setStencilTest("greater", 0)
+    -- Recortada a la tarjeta (scissor en coordenadas reales: ver ui/Clip.lua)
+    Clip.push(x, y, w, h)
     love.graphics.setColor(tint, tint, tint, 1)
     love.graphics.draw(canvas, math.floor(ox), math.floor(oy), 0, sc, sc)
-    love.graphics.setStencilTest()
+    Clip.pop()
 end
 
 -- ── Ciclo de vida ─────────────────────────────────────────────────────────────
@@ -205,6 +228,7 @@ function ModeSelectMenu:levels()
 end
 
 function ModeSelectMenu:_resetSelection()
+    fit()
     local list = self:levels()
     self.sel = 1
     for i, l in ipairs(list) do if l.path == self.room.level then self.sel = i end end
@@ -213,6 +237,7 @@ function ModeSelectMenu:_resetSelection()
 end
 
 function ModeSelectMenu:_moveSel(d)
+    fit()
     local n = #self:levels()
     if n == 0 then return end
     self.sel = math.max(1, math.min(n, self.sel + d))
@@ -241,6 +266,7 @@ end
 
 -- Devuelve 'close' cuando el menú debe cerrarse.
 function ModeSelectMenu:update(dt)
+    fit()
     self.t = self.t + dt
     self.tabAnim = self.tabAnim + (self.tab - self.tabAnim) * math.min(1, dt * 14)
 
@@ -265,6 +291,7 @@ end
 
 -- Toque / clic. Devuelve 'close' si se cierra.
 function ModeSelectMenu:touch(x, y)
+    fit()
     for i, r in ipairs(tabRects()) do
         if inRect(x, y, r) then self.focus = 'tabs'; self:_setTab(i); return nil end
     end
@@ -282,14 +309,15 @@ function ModeSelectMenu:touch(x, y)
         end
     end
     local ay = CARD_Y + CARD_H / 2 - ARROW_H / 2
-    if inRect(x, y, { x = PX + 12, y = ay, w = ARROW_W, h = ARROW_H }) then self:_moveSel(-1); return nil end
-    if inRect(x, y, { x = PX + PW - 12 - ARROW_W, y = ay, w = ARROW_W, h = ARROW_H }) then self:_moveSel(1); return nil end
-    if not inRect(x, y, { x = PX, y = PY, w = PW, h = PH }) then return 'close' end
+    if inRect(x, y, { x = panelX() + 12, y = ay, w = ARROW_W, h = ARROW_H }) then self:_moveSel(-1); return nil end
+    if inRect(x, y, { x = panelX() + PW - 12 - ARROW_W, y = ay, w = ARROW_W, h = ARROW_H }) then self:_moveSel(1); return nil end
+    if not inRect(x, y, { x = panelX(), y = PY, w = PW, h = PH }) then return 'close' end
     return nil
 end
 
 -- Ratón: pasar por encima de una tarjeta la selecciona (como en otros menús)
 function ModeSelectMenu:hover(x, y)
+    fit()
     local list = self:levels()
     local cx0  = cardsX()
     for k = 0, VISIBLE - 1 do
@@ -320,6 +348,7 @@ local function arrow(x, y, w, h, dir, enabled, col)
 end
 
 function ModeSelectMenu:render()
+    fit()
     local t    = self.t
     local mode = self:mode()
     local col  = mode.color
@@ -328,11 +357,11 @@ function ModeSelectMenu:render()
     love.graphics.setColor(0, 0, 0, 0.7 * appear)
     love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
     love.graphics.setColor(0.04, 0.04, 0.07, 0.96)
-    love.graphics.rectangle('fill', PX, PY, PW, PH)
+    love.graphics.rectangle('fill', panelX(), PY, PW, PH)
     love.graphics.setColor(1, 1, 1, 0.5)
-    love.graphics.rectangle('line', PX, PY, PW, PH)
+    love.graphics.rectangle('line', panelX(), PY, PW, PH)
     love.graphics.setColor(col[1], col[2], col[3], 0.35)
-    love.graphics.rectangle('line', PX + 3, PY + 3, PW - 6, PH - 6)
+    love.graphics.rectangle('line', panelX() + 3, PY + 3, PW - 6, PH - 6)
 
     -- Título
     love.graphics.setFont(FONT_BIG)
@@ -345,7 +374,7 @@ function ModeSelectMenu:render()
     local tabs = tabRects()
     local lineY = TAB_Y + TAB_H
     love.graphics.setColor(col[1], col[2], col[3], 0.6)
-    love.graphics.rectangle('fill', PX + 20, lineY, PW - 40, 2)
+    love.graphics.rectangle('fill', panelX() + 20, lineY, PW - 40, 2)
     for i, r in ipairs(tabs) do
         local m   = Modes.list[i]
         local mc  = m.color
@@ -369,9 +398,12 @@ function ModeSelectMenu:render()
             love.graphics.rectangle('line', r.x, r.y + 6, r.w, r.h - 6)
         end
         local iw, ih = PixelIcons.size(m.icon or '')
-        love.graphics.setFont(FONT_MED)
-        local label = fitText(FONT_MED, m.label, r.w - 40 - iw * 2)
-        local tw = FONT_MED:getWidth(label) + (iw > 0 and iw * 2 + 12 or 0)
+        -- (si el nombre no cabe con la letra normal, con la pequeña)
+        local room = r.w - 40 - iw * 2
+        local font = (FONT_MED:getWidth(m.label) <= room) and FONT_MED or FONT_SMALL
+        love.graphics.setFont(font)
+        local label = fitText(font, m.label, room)
+        local tw = font:getWidth(label) + (iw > 0 and iw * 2 + 12 or 0)
         local tx = r.x + r.w / 2 - tw / 2
         local ty = r.y + (on and 0 or 3) + r.h / 2
         if iw > 0 then
@@ -379,7 +411,7 @@ function ModeSelectMenu:render()
             tx = tx + iw * 2 + 12
         end
         love.graphics.setColor(mc[1], mc[2], mc[3], on and 1 or 0.45)
-        love.graphics.print(label, tx, ty - FONT_MED:getHeight() / 2)
+        love.graphics.print(label, tx, ty - font:getHeight() / 2)
     end
 
     -- Objetivo del modo
@@ -430,7 +462,7 @@ function ModeSelectMenu:render()
             love.graphics.setColor(0.09, 0.09, 0.13, 1)
             love.graphics.rectangle('fill', x, y, CARD_W, CARD_H)
 
-            drawPreview(lvl, x + 10, y + 10, CARD_W - 20, PREV_H, t + i * 1.7, sel and 1 or 0.6)
+            drawPreview(lvl, x + 10, y + 10, CARD_W - 20, PREV_H, t + i * 1.7, sel and 1 or 0.6, mode)
 
             -- Nombre y datos
             love.graphics.setFont(FONT_MED)
@@ -441,7 +473,7 @@ function ModeSelectMenu:render()
             local info = {}
             if lvl.w and lvl.h then info[#info + 1] = lvl.w .. 'x' .. lvl.h end
             if lvl.enemies then info[#info + 1] = lvl.enemies .. (lvl.enemies == 1 and ' monstruo' or ' monstruos') end
-            if (lvl.finish or 0) > 0 then info[#info + 1] = 'meta' end
+            if (lvl.finish or 0) > 0 and Modes.usesTrigger(mode, 'finish') then info[#info + 1] = 'meta' end
             love.graphics.print(fitText(FONT_SMALL, table.concat(info, ' · '), CARD_W - 24), x + 12, y + PREV_H + 58)
 
             -- Nivel en uso
@@ -474,8 +506,8 @@ function ModeSelectMenu:render()
     -- Flechas
     local ay = CARD_Y + CARD_H / 2 - ARROW_H / 2
     if #list > VISIBLE then
-        arrow(PX + 12, ay, ARROW_W, ARROW_H, -1, self.first > 1, col)
-        arrow(PX + PW - 12 - ARROW_W, ay, ARROW_W, ARROW_H, 1, self.first + VISIBLE - 1 < #list, col)
+        arrow(panelX() + 12, ay, ARROW_W, ARROW_H, -1, self.first > 1, col)
+        arrow(panelX() + PW - 12 - ARROW_W, ay, ARROW_W, ARROW_H, 1, self.first + VISIBLE - 1 < #list, col)
     end
 
     -- Ayuda

@@ -36,6 +36,7 @@ local LIST_BTNS   = { 'CREAR SALA', 'REFRESCAR', 'VOLVER' }
 
 function OnlineHubState:enter(args)
     loadAssets()
+    Sound.playMusic('menus')      -- (si ya sonaba, sigue sin cortarse)
     self.sub          = SUB_LIST
     self.roomList     = {}
     self.selectedIdx  = 1

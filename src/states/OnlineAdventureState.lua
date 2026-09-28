@@ -181,6 +181,7 @@ function OnlineAdventureState:_buildWorld(data)
         if ok then level = lv else print('[online] nivel del servidor invalido: ' .. tostring(lv)) end
     end
     self.level = level or Level.new('assets/levels/nivel01.json')
+    if self.mode then self.level.hiddenTriggers = Modes.hiddenTriggers(self.mode) end
     -- Música del nivel (la misma para todos: viene en el nivel que manda el
     -- servidor). Si ya sonaba otra, se cambia.
     local before = Sound.resolveMusic('level')
@@ -214,6 +215,9 @@ end
 function OnlineAdventureState:exit()
     NC:off("s"); NC:off("ev"); NC:off("game_init")
     NC.pendingGameInit = nil
+    -- Fuera de la partida (sala, hub, resultados, error): nada de la partida
+    -- sigue sonando — música del nivel/jefe, ahogamiento...
+    Sound.leaveMatch()
 end
 
 function OnlineAdventureState:_setupHandlers()
@@ -256,6 +260,7 @@ function OnlineAdventureState:_onGameInit(data)
         if ok and type(lv) == 'table' then self:_buildWorld(lv) end
     end
     self.mode   = Modes.get(data.mode) or self.mode
+    self.level.hiddenTriggers = Modes.hiddenTriggers(self.mode)   -- (la meta, fuera de Carrera)
     self.introT = 0
 
     self.myIdx = data.idx
@@ -1069,6 +1074,11 @@ function OnlineAdventureState:_renderScene()
 
     love.graphics.push()
     love.graphics.origin()
+    -- El recorte de lovesize (bandas negras) está en píxeles de la PANTALLA:
+    -- dentro del canvas de la escena (tamaño lógico) recortaba otra zona y, con
+    -- la ventana a otro tamaño que 1280x720, el juego salía cortado/descuadrado
+    local scX, scY, scW, scH = love.graphics.getScissor()
+    love.graphics.setScissor()
     love.graphics.setCanvas(self.sceneCanvas)
     love.graphics.clear(0, 0, 0, 1)
 
@@ -1131,6 +1141,7 @@ function OnlineAdventureState:_renderScene()
     self.level:renderBubbles(self.camX, self.camY)
 
     love.graphics.setCanvas()
+    if scX then love.graphics.setScissor(scX, scY, scW, scH) end
     love.graphics.pop()
 
     -- Efecto agua
@@ -1214,48 +1225,118 @@ function OnlineAdventureState:_renderModeHUD()
     local col  = mode.color
     local cx   = WINDOW_W / 2
 
-    -- Indicador permanente arriba al centro
+    -- Panel de objetivo, siempre visible arriba al centro: el objetivo del
+    -- modo (grande, en su color) y la línea de estado (monstruos que quedan,
+    -- tiempo...). Los textos los da el modo (objective, hudLine). Si no cabe
+    -- entre el marcador y las vidas (pantallas estrechas), baja debajo.
     local md = self.modeHud or {}
-    local label, big, urgent
-    if mode.id == 'hunt' and md.left then
-        label = 'MONSTRUOS: ' .. md.left
-    elseif mode.id == 'koth' and md.tl then
-        local secs = md.tl / 100
-        label = string.format('TIEMPO  %d:%02d', math.floor(secs / 60), math.floor(secs) % 60)
-        if secs <= 10 then
-            big    = tostring(math.ceil(secs))
-            urgent = true
-        end
-    elseif mode.id == 'race' then
-        if md.cd then
-            local secs = md.cd / 100
-            big    = string.format('%d.%d', math.floor(secs), math.floor(secs * 10) % 10)
-            urgent = secs <= 5
-            label  = 'TIEMPO PARA LLEGAR'
-        else
-            label = '¡LLEGA A LA META!'
-        end
+    local objective = (mode.objective or mode.label):upper()
+    local line, urgent, big
+    if mode.hudLine then line, urgent, big = mode.hudLine(md) end
+    line = line and line:upper() or nil
+    -- Destello cuando cambia el estado (muere un monstruo, empieza la cuenta atrás...)
+    if line ~= self.hudLinePrev then
+        if self.hudLinePrev ~= nil then self.hudFlashT = 0.6 end
+        self.hudLinePrev = line
     end
-    if label then
-        love.graphics.setFont(FONT_SMALL)
-        local iw, ih = PixelIcons.size(mode.icon or '')
-        local tw = FONT_SMALL:getWidth(label)
-        local w  = tw + (iw > 0 and iw * 2 + 10 or 0) + 24
-        local x  = math.floor(cx - w / 2)
-        love.graphics.setColor(0, 0, 0, 0.5)
-        love.graphics.rectangle('fill', x, 12, w, 28)
-        love.graphics.setColor(col[1], col[2], col[3], 0.8)
-        love.graphics.rectangle('line', x, 12, w, 28)
-        local tx = x + 12
-        if iw > 0 then PixelIcons.draw(mode.icon, tx, 26 - ih, 2); tx = tx + iw * 2 + 10 end
-        love.graphics.setColor(1, 1, 1, 0.95)
-        love.graphics.print(label, tx, 26 - FONT_SMALL:getHeight() / 2)
+    self.hudFlashT = math.max(0, (self.hudFlashT or 0) - love.timer.getDelta())
+    local flash = self.hudFlashT / 0.6
+
+    -- Panel compacto (3 líneas: MODO / objetivo / estado) arriba, entre el
+    -- marcador y las vidas. Si ahí no cabe (pantallas estrechas) se reduce a
+    -- UNA línea fina debajo del marcador. Durante una pelea de jefe no se
+    -- dibuja (la parte de arriba es de sus barras).
+    local title = mode.label:upper()
+    local iw, ih = PixelIcons.size(mode.icon or '')
+    local iconW = iw > 0 and iw * 2 + 10 or 0
+    local wT = FONT_MED:getWidth(title) + iconW
+    local wO = FONT_SMALL:getWidth(objective)
+    local wB = line and FONT_MED:getWidth(line) or 0
+    local w  = math.max(wT, wO, wB) + 32
+    -- Hueco libre centrado entre SCORE/TIME (llega a x≈404: el ancho de
+    -- "0'00''00" en letra grande) y las vidas/pausa de la derecha
+    local topFree = WINDOW_W - 2 * 416
+    local boss = BossZones.fighting(self.level)
+    local ph, pyBottom
+    if boss then
+        -- Pelea de jefe: la parte de arriba es de sus barras; el objetivo
+        -- desaparece y vuelve al terminar (la cuenta atrás grande, si la hay,
+        -- sí se ve, debajo de las barras)
+        local n = 0
+        for _, b in ipairs(boss.bosses) do if b.alive then n = n + 1 end end
+        ph, pyBottom = 0, 48 + 72 * math.max(1, n)
+    elseif w <= topFree then
+        local py = 6
+        ph = 8 + FONT_MED:getHeight() + 6 + FONT_SMALL:getHeight() + (line and (6 + FONT_MED:getHeight()) or 0) + 8
+        local px = math.floor(cx - w / 2)
+        love.graphics.setColor(0, 0, 0, 0.62)
+        love.graphics.rectangle('fill', px, py, w, ph)
+        love.graphics.setColor(col[1], col[2], col[3], 0.12 + 0.35 * flash)
+        love.graphics.rectangle('fill', px, py, w, ph)
+        love.graphics.setColor(col[1], col[2], col[3], 1)
+        love.graphics.rectangle('fill', px, py, w, 3)
+        love.graphics.rectangle('line', px, py, w, ph)
+        local function shadowed(font, text, x, y, c)
+            love.graphics.setFont(font)
+            love.graphics.setColor(0, 0, 0, 0.9)
+            love.graphics.print(text, x + 2, y + 2)
+            love.graphics.setColor(c[1], c[2], c[3], 1)
+            love.graphics.print(text, x, y)
+        end
+        local ty = py + 9
+        local tx = math.floor(cx - wT / 2)
+        if iw > 0 then PixelIcons.draw(mode.icon, tx, ty + FONT_MED:getHeight() / 2 - ih, 2); tx = tx + iconW end
+        shadowed(FONT_MED, title, tx, ty, col)
+        local oy = ty + FONT_MED:getHeight() + 6
+        shadowed(FONT_SMALL, objective, math.floor(cx - wO / 2), oy, { 1, 1, 1 })
+        if line then
+            local by = oy + FONT_SMALL:getHeight() + 6
+            local bs = 1 + 0.15 * flash
+            local lw = FONT_MED:getWidth(line)
+            love.graphics.setFont(FONT_MED)
+            love.graphics.push()
+            love.graphics.translate(cx, by + FONT_MED:getHeight() / 2)
+            love.graphics.scale(bs, bs)
+            love.graphics.setColor(0, 0, 0, 0.9)
+            love.graphics.print(line, -lw / 2 + 2, -FONT_MED:getHeight() / 2 + 2)
+            local blink = urgent and math.floor(love.timer.getTime() * 4) % 2 == 0
+            if blink then love.graphics.setColor(1, 0.3, 0.25, 1) else love.graphics.setColor(1, 0.92, 0.55, 1) end
+            love.graphics.print(line, -lw / 2, -FONT_MED:getHeight() / 2)
+            love.graphics.pop()
+        end
+        pyBottom = py + ph
+    else
+        -- Una sola línea: [icono] OBJETIVO · ESTADO
+        local text = objective .. (line and ('  ·  ' .. line) or '')
+        local font = FONT_SMALL
+        local tw = font:getWidth(text) + iconW
+        local lw = tw + 24
+        local lh = 26
+        -- Justo debajo del marcador
+        local py = 100
+        local px = math.floor(cx - lw / 2)
+        love.graphics.setColor(0, 0, 0, 0.62)
+        love.graphics.rectangle('fill', px, py, lw, lh)
+        love.graphics.setColor(col[1], col[2], col[3], 0.12 + 0.35 * flash)
+        love.graphics.rectangle('fill', px, py, lw, lh)
+        love.graphics.setColor(col[1], col[2], col[3], 1)
+        love.graphics.rectangle('line', px, py, lw, lh)
+        local tx = px + 12
+        if iw > 0 then PixelIcons.draw(mode.icon, tx, py + lh / 2 - ih, 2); tx = tx + iconW end
+        love.graphics.setFont(font)
+        local blink = urgent and math.floor(love.timer.getTime() * 4) % 2 == 0
+        love.graphics.setColor(0, 0, 0, 0.9)
+        love.graphics.print(text, tx + 1, py + lh / 2 - font:getHeight() / 2 + 1)
+        if blink then love.graphics.setColor(1, 0.3, 0.25, 1) else love.graphics.setColor(1, 1, 1, 1) end
+        love.graphics.print(text, tx, py + lh / 2 - font:getHeight() / 2)
+        ph, pyBottom = lh, py + lh
     end
+    local h, py = ph, pyBottom - ph
     if big then
         local pulse = urgent and (1 + 0.12 * math.abs(math.sin(love.timer.getTime() * 6))) or 1
         love.graphics.setFont(FONT_BIG)
         love.graphics.push()
-        love.graphics.translate(cx, 66)
+        love.graphics.translate(cx, py + h + 34)
         love.graphics.scale(pulse * 1.4, pulse * 1.4)
         local bw = FONT_BIG:getWidth(big)
         love.graphics.setColor(0, 0, 0, 0.8)

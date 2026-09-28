@@ -7,6 +7,15 @@ return {
     id = 'race', label = 'Carrera Relámpago', icon = 'flag',
     tagline = 'Corre hasta la meta. Cuando llegue el primero, el resto tendrá 15 segundos.',
     color = { 0.35, 0.85, 1.0 },
+    objective = '¡Llega a la meta!',
+    hudLine = function(md)
+        if md.cd then
+            local secs = md.cd / 100
+            local big = string.format('%d.%d', math.floor(secs), math.floor(secs * 10) % 10)
+            return '¡Date prisa!', secs <= 5, big
+        end
+        return 'Llega antes que los demás', false
+    end,
     emptyHint = 'Crea uno en el editor con el bloque "Meta"',
     triggers = { 'finish' },
 

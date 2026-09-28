@@ -11,7 +11,13 @@ function love.conf(t)
     t.window.width   = 1280
     t.window.height  = 720
     t.window.vsync   = 1
-    t.window.resizable = false
+    -- En PC la ventana se puede redimensionar (y maximizar): lovesize escala el
+    -- juego y main.lua (love.resize) recalcula el ancho lógico. En Switch y
+    -- Android el tamaño lo impone el sistema.
+    local desktop = love._os == 'Windows' or love._os == 'Linux' or love._os == 'OS X'
+    t.window.resizable = desktop
+    t.window.minwidth  = 640
+    t.window.minheight = 360
     t.window.fullscreen = false   -- lovesize lo maneja por nosotros
     t.window.usedpiscale = false  -- Evita descuadres de resolución en Android
 

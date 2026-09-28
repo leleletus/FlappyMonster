@@ -516,6 +516,11 @@ function AdventureState:_renderScene()
     -- ── Aislar transformaciones para el Canvas (Evita zoom doble y cortes) ──
     love.graphics.push()
     love.graphics.origin()
+    -- El recorte de lovesize (bandas negras) está en píxeles de la PANTALLA:
+    -- dentro del canvas de la escena (tamaño lógico) recortaba otra zona y, con
+    -- la ventana a otro tamaño que 1280x720, el juego salía cortado/descuadrado
+    local scX, scY, scW, scH = love.graphics.getScissor()
+    love.graphics.setScissor()
 
     -- ── Paso 1: renderizar toda la escena al canvas ───────────────────────────
     love.graphics.setCanvas(self.sceneCanvas)
@@ -556,6 +561,7 @@ function AdventureState:_renderScene()
     self.level:renderBubbles(self.camX, self.camY)
 
     love.graphics.setCanvas()
+    if scX then love.graphics.setScissor(scX, scY, scW, scH) end
     love.graphics.pop()
 
     -- ── Paso 2: volver a pantalla y aplicar efecto agua ───────────────────────

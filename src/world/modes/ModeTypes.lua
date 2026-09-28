@@ -8,6 +8,10 @@
 --   color                      color de acento en menús/HUD
 --   icon                       icono pixel art (PixelIcons) para menús
 --   emptyHint                  ayuda si no hay niveles para el modo (menú de la sala)
+--   objective                  objetivo en una frase: panel fijo arriba durante la partida
+--   hudLine(md) -> texto, urgente, grande
+--                              línea de estado de ese panel a partir del hud del servidor
+--                              (urgente = en rojo; grande = número gigante debajo)
 --   requires(info) -> ok, why  ¿el nivel sirve? info = { enemies, killable, finish, bosses,
 --                              autoScroll, pointAreas }. Un nivel puede además limitar sus
 --                              modos con "modes": [...] en su JSON (editor: pestaña Nivel).
@@ -55,6 +59,23 @@ function ModeTypes.register(def)
 end
 
 function ModeTypes.get(id) return ModeTypes.byId[id] end
+
+-- ¿El modo usa los bloques con este trigger (p. ej. 'finish')? Los que no,
+-- no se dibujan en la partida ni en las miniaturas (una meta en Cacería
+-- confundía: parece el objetivo y no hace nada).
+function ModeTypes.usesTrigger(mode, name)
+    for _, tr in ipairs(mode and mode.triggers or {}) do if tr == name then return true end end
+    return false
+end
+
+-- Triggers de tile que un modo NO usa: { finish = true, ... }
+function ModeTypes.hiddenTriggers(mode)
+    local hide = {}
+    for _, name in ipairs({ 'finish' }) do
+        if not ModeTypes.usesTrigger(mode, name) then hide[name] = true end
+    end
+    return hide
+end
 
 -- Motivos genéricos de fin (los modos pueden añadir los suyos)
 ModeTypes.GENERIC_REASONS = {

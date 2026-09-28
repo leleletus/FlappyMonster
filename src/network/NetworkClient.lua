@@ -6,6 +6,7 @@
 local sock     = require 'libs/sock'
 local bitser   = require 'libs/bitser'
 local Protocol = require 'src/network/Protocol'
+local Resolver = require 'src/network/Resolver'
 
 -- Nunca reconstruir metatablas desde datos de red.
 bitser.includeMetatables(false)
@@ -19,6 +20,7 @@ local NC = {
     myName         = nil,
     _handlers      = {},
     _connectTimer  = nil,   -- nil = no hay intento en curso; número = segundos transcurridos
+    _resolving     = nil,   -- { job, port, name } mientras se resuelve el nombre del servidor
     pendingGameInit = nil,  -- último game_init recibido (por si llega antes del estado)
 }
 
@@ -55,12 +57,41 @@ function NC:getPing()
     return (ok and type(rtt) == "number") and rtt or 0
 end
 
--- Conecta al servidor y registra el nickname.
-function NC:connect(host, port, name)
-    if self.client then return end
-    self.myName       = name
-    self._connectTimer = 0   -- iniciar contador de timeout
+-- Cierra de verdad un cliente (y su socket ENet). Sin esto, cada intento
+-- fallido dejaba un socket abierto; en consola se acaban.
+-- (El socket se destruye en el siguiente NC:update: puede que estemos dentro
+-- del propio bucle de red de ese cliente, p. ej. al recibir login_error.)
+local graveyard = {}
+local function dropClient(c)
+    if not c then return end
+    pcall(function() if c.connection then c:disconnectNow() end end)
+    graveyard[#graveyard + 1] = c
+end
+local function buryClients()
+    for i = #graveyard, 1, -1 do
+        local c = graveyard[i]
+        graveyard[i] = nil
+        pcall(function() if c.host then c.host:flush(); c.host:destroy() end end)
+    end
+end
 
+-- Conecta al servidor y registra el nickname. El nombre del servidor se
+-- resuelve en otro hilo (ver Resolver): nunca congela el juego.
+function NC:connect(host, port, name)
+    if self.client or self._resolving then return end
+    self.myName       = name
+    self._connectTimer = 0   -- iniciar contador de timeout (cuenta también el DNS)
+    local job = Resolver.start(host)
+    if job then
+        self._resolving = { job = job, port = port, name = name }
+    else
+        self:_open(host, port, name)
+    end
+end
+
+function NC:isBusy() return self.client ~= nil or self._resolving ~= nil end
+
+function NC:_open(host, port, name)
     self.client = sock.newClient(host, port, Protocol.CHANNELS)
     self.client:setSerialization(bitser.dumps, bitser.loads)
 
@@ -70,10 +101,12 @@ function NC:connect(host, port, name)
     end)
 
     -- El servidor cerró la conexión (evento ENet DISCONNECT)
+    local me = self.client
     self.client:on("disconnect", function()
-        if not self.client then return end   -- ya fue procesado por disconnect() intencional
+        if self.client ~= me then return end   -- ya fue procesado por disconnect() intencional
         self.connected     = false
         self.client        = nil
+        dropClient(me)
         self._connectTimer = nil
         NC:_fire("connection_lost", { msg = "El servidor cerro la conexion." })
     end)
@@ -112,6 +145,9 @@ function NC:connect(host, port, name)
     end
 
     self.client:connect()
+    -- Si el servidor deja de responder (se cae, se va la red), darlo por
+    -- perdido en ≤10 s en vez de los 30 s de ENet por defecto
+    pcall(function() self.client:setTimeout(32, 3000, 10000) end)
 end
 
 -- Desconecta limpiando el estado (desconexión intencional — no dispara connection_lost).
@@ -121,36 +157,51 @@ function NC:disconnect()
     self.connected     = false
     self.myId          = nil
     self._connectTimer = nil
+    self._resolving    = nil   -- (si el DNS responde luego, se ignora)
     self.pendingGameInit = nil
     -- Avisar al servidor para que libere el slot al instante (no esperar timeout)
-    if c then pcall(function() c:disconnectNow() end) end
+    -- y cerrar el socket
+    dropClient(c)
+end
+
+-- Fallo de red: limpiar TODO (cliente, socket, DNS pendiente) y avisar
+function NC:_fail(msg)
+    local c = self.client
+    self._connectTimer = nil
+    self._resolving    = nil
+    self.connected     = false
+    self.client        = nil
+    dropClient(c)
+    NC:_fire("connection_lost", { msg = msg })
 end
 
 -- Debe llamarse cada frame con dt. Gestiona timeout y errores de red.
 function NC:update(dt)
-    if not self.client then return end
+    if graveyard[1] then buryClients() end
+    if not self.client and not self._resolving then return end
 
     -- Timeout de conexión: si login_success no llega en CONNECT_TIMEOUT segundos
+    -- (incluye resolver el nombre del servidor)
     if self._connectTimer ~= nil then
         self._connectTimer = self._connectTimer + (dt or 0.016)
         if self._connectTimer >= CONNECT_TIMEOUT then
-            self._connectTimer = nil
-            self.connected     = false
-            self.client        = nil
-            NC:_fire("connection_lost", {
-                msg = "Tiempo de espera agotado. El servidor no responde.",
-            })
-            return
+            return self:_fail("Tiempo de espera agotado. El servidor no responde.")
         end
     end
 
-    local ok, err = pcall(function() self.client:update() end)
-    if not ok then
-        self._connectTimer = nil
-        self.connected     = false
-        self.client        = nil
-        NC:_fire("connection_lost", { msg = tostring(err) })
+    -- Nombre del servidor resuelto (en otro hilo): ahora sí, conectar
+    local r = self._resolving
+    if r then
+        local ip = r.job:poll()
+        if ip == nil then return end                       -- aún no
+        self._resolving = nil
+        if not ip then return self:_fail("No se encontró el servidor. Revisa tu conexión a internet.") end
+        local ok, err = pcall(function() self:_open(ip, r.port, r.name) end)
+        if not ok then return self:_fail(tostring(err)) end
     end
+
+    local ok, err = pcall(function() self.client:update() end)
+    if not ok then self:_fail(tostring(err)) end
 end
 
 function NC:isConnected()

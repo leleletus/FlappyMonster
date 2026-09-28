@@ -13,6 +13,13 @@ return {
     id = 'hunt', label = 'Cazamonstruos', icon = 'skull',
     tagline = 'Aplasta a todos los monstruos. Cuando no quede ninguno, gana quien tenga más puntos.',
     color = { 1.0, 0.45, 0.30 },
+    objective = '¡Aplasta a todos los monstruos!',
+    -- Línea de estado del panel de objetivo (cliente; md = hud del servidor)
+    hudLine = function(md)
+        if not md.left then return nil end
+        if md.left == 1 then return '¡Queda 1 monstruo!', true end
+        return 'Quedan ' .. md.left .. ' monstruos', false
+    end,
 
     requires = function(info)
         -- Los niveles con jefe son solo para Carrera

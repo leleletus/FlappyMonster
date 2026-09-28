@@ -28,6 +28,30 @@ Quick syntax check of everything: `for f in $(git ls-files '*.lua' | grep -v res
    + one name in a list. The editor and server pick them up automatically.
 6. Don't commit the many ` M` files in git status (they're mode-only changes).
 
+## Screens, scaling and platforms (PC / Switch / Android)
+
+- The game draws in a LOGICAL resolution: height 720, width `WINDOW_W` = 720 ×
+  aspect (clamped 4:3..21:9) — 1280 on PC/Switch, e.g. 1600 on a 20:9 phone,
+  960 on a 4:3 tablet. `main.lua` sets it in `love.load` AND `love.resize` (the
+  PC window is resizable; Android rotates). **Never compute layout from
+  `WINDOW_W/H` at file load time** (a `local X = WINDOW_W - ...` at the top of a
+  module keeps 1280 forever): compute it when drawing (see
+  `OnlineRoomState:_layout`, `ModeSelectMenu` `fit()`/`panelX()`).
+- `lovesize` scales/letterboxes and sets a SCREEN-pixel scissor. So:
+  (1) when rendering into a canvas, `love.graphics.origin()` AND
+  `setScissor()` first, restore after (scene canvas in Adventure/Online states,
+  level thumbnails in ModeSelectMenu); (2) to clip UI use `src/ui/Clip.lua`
+  (`Clip.push(x,y,w,h)` / `Clip.pop()`: transformed + intersected scissor).
+  Don't use stencils (Switch/Android backbuffers may lack a stencil buffer).
+- Mouse/touch → logical coords in `main.lua` with the same scale as lovesize.
+- Testing other screens: run the REAL main.lua from a scratch app with a
+  custom window size and `love.system.getOS = function() return 'Android' end`
+  (Input.isMobile), plus a local server/bot for the online menus.
+- Networking: `NC:connect` resolves the server name in a thread
+  (`src/network/Resolver.lua`, LuaSocket) — ENet's own DNS lookup blocks the
+  main thread (froze the Switch on reconnect). Failed/closed clients destroy
+  their ENet host (deferred to the next `NC:update`). Peer timeout 10 s.
+
 ## Directory map
 
 ```
@@ -233,6 +257,16 @@ Game modes: `requires(info)` decides which levels a mode lists
 may also whitelist modes with JSON `"modes": [...]` (editor: Nivel tab → Modos
 de juego) and set `"matchTime"` (s) for timed modes. Mode defs may set
 `emptyHint` (shown when no level qualifies). `m.level` is available to modes.
+Mode defs also carry the in-match objective panel (always visible): a compact
+3-line panel (MODE / objective / status) at the top between the score and the
+lives when it fits (`topFree = WINDOW_W - 832`), otherwise a single thin line
+below the score. HIDDEN during a boss fight (the boss bars own the top centre:
+y 48 + 72/boss); only a `big` countdown is drawn, below the bars. Texts: `objective` (one sentence) and
+`hudLine(md) -> text, urgent, big` (status line from the server hud `md`;
+`big` = giant number below, e.g. countdowns). Tile triggers a mode doesn't
+list in `triggers` are hidden: `Modes.hiddenTriggers(mode)` →
+`level.hiddenTriggers` (Level:render skips those tiles; thumbnails via
+`drawPreview(..., mode)`), e.g. the finish is invisible in Hunt/KOTH.
 
 **King of the Hill** (`modes/koth.lua`, icon 'hill'): timed (`matchTime`, default
 150 s; hud `tl` = centiseconds left, big countdown ≤10 s). Points come from

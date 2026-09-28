@@ -11,6 +11,14 @@ return {
     id = 'koth', label = 'Rey de la Colina', icon = 'hill',
     tagline = 'Quédate en las zonas de puntos. Cuando se acabe el tiempo, gana quien tenga más puntos.',
     color = { 1.0, 0.78, 0.22 },
+    objective = '¡Quédate en la zona de puntos!',
+    hudLine = function(md)
+        if not md.tl then return nil end
+        local secs = md.tl / 100
+        local txt = string.format('Tiempo %d:%02d', math.floor(secs / 60), math.floor(secs) % 60)
+        if secs <= 10 then return txt, true, tostring(math.ceil(secs)) end
+        return txt, false
+    end,
     emptyHint = 'Crea uno en el editor con la "Zona de puntos" (Entidades › Mecanismos)',
     DEFAULT_TIME = DEFAULT_TIME,
 
