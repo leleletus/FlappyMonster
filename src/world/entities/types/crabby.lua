@@ -89,6 +89,24 @@ function Crabby:init()
     end
 end
 
+-- ── Súbdito de reserva (ver Level: def.summons; lo activa su jefe) ──────────
+function Crabby:makeReserve(key)
+    self.summonOf = key
+    self.alive, self.state = false, 'reserve'
+end
+-- En reserva (o ya muerto) no se envía por red: el cliente lo sabe
+function Crabby:netAtRest() return self.state == 'reserve' or (self.summonOf ~= nil and not self.alive) end
+function Crabby:netRest()
+    if self.summonOf then self.alive, self.state = false, 'reserve' end
+end
+
+-- Atado a una zona (súbditos): los bordes de la zona cuentan como paredes
+function Crabby:crawlSolidAt(level, x, y)
+    if level:entitySolidAt(x, y) then return true end
+    local z = self.leashZone
+    return z ~= nil and (x < z.x0 or x > z.x1 or y < z.y0 or y > z.y1)
+end
+
 -- ── Por paredes y techos ──────────────────────────────────────────────────────
 function Crabby:tryAttach(level)
     if self.crawl and not self.cattached then Crawler.attach(self, level, self.cattached == nil and TILE_PX or nil) end
@@ -309,6 +327,7 @@ end
 
 -- ── Esconderse / asomarse ────────────────────────────────────────────────────
 function Crabby:updateCustom(dt, level)
+    if self.state == 'reserve' then return true end
     Crawler.advanceTurn(self, dt)             -- giro en una esquina (ver Crawler)
     local st = self.state
     if st:sub(1, 5) == 'drop_' then self.turnT = nil; return self:updateDrop(dt, level) end

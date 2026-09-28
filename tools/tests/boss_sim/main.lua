@@ -31,6 +31,7 @@ function love.load()
     local boss
     for _, e in ipairs(ents) do if e.def.boss then boss = e end end
     local z = boss.zone
+    if os.getenv('HP') then boss.props.hp, boss.props.hpPerPlayer = tonumber(os.getenv('HP')), 0 end
     local pa = PlayerAdventure:new(z.x0 + 3 * TILE_PX, z.y1 - 60)
     pa.spawnX, pa.spawnY = pa.x, pa.y
     level.players = { pa }
@@ -38,6 +39,12 @@ function love.load()
     local lastState, hits, deaths, hurts = nil, {}, 0, 0
     local attack, attacksDone = nil, 0
     local lastHp = pa.hp
+    -- Registro extra: bloques de jefe, súbditos y eventos del jefe (si los tiene)
+    local walls, wallSt, lastMinions = {}, {}, -1
+    for _, e in ipairs(ents) do if e.def.name == 'bosswall' then walls[#walls + 1] = e end end
+    if boss.def.class.onEvent ~= nil or boss.def.class.onEvent == nil then
+        boss.def.class.onEvent = function(name) print(('%6.1fs     evento: %s'):format(t, name)) end
+    end
     while t < (tonumber(os.getenv('SECS')) or 240) do
         t = t + dt
         pa:update(dt, level)
@@ -66,6 +73,15 @@ function love.load()
             end
             boss._pfx, boss._pfy = fx, fy
         elseif boss._pfx then boss._pfx = nil end
+        for i, w in ipairs(walls) do
+            if w.state ~= wallSt[i] then wallSt[i] = w.state; print(('%6.1fs   bloque de jefe %d: %s'):format(t, i, w.state)) end
+        end
+        local nm = 0
+        for _, e in ipairs(ents) do if e.summonOf and e.alive then nm = nm + 1 end end
+        if nm ~= lastMinions then lastMinions = nm; print(('%6.1fs   súbditos activos: %d'):format(t, nm)) end
+        if os.getenv('DEBUG_POUNCE') and boss.state == 'pounce' then
+            print(('      salto t=%.2f x=%.0f y=%.0f vx=%.0f vy=%.0f suelo=%s'):format(boss.deadTimer, boss.x, boss.y, boss.vx, boss.vy, tostring(boss.onGround)))
+        end
         -- cambios de estado del jefe
         if boss.state ~= lastState then
             print(('%6.1fs jefe: %-12s  hp %s/%s  x=%d y=%d'):format(t, boss.state, boss.hp, boss.hpMax, boss.x, boss.y))

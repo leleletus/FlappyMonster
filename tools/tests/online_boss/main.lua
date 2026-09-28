@@ -131,7 +131,15 @@ function love.update(dt)
             end
             log.pfx, log.pfy = fx, fy
         else log.pfx = nil end
-        for _, want in ipairs({ 'climb', 'aim', 'stuck', 'chase', 'dying_shrink' }) do
+        -- Bloques de jefe y súbditos tal y como los ve el cliente
+        local wl, nm = {}, 0
+        for _, er in pairs(st.enemyRenderers) do
+            if er.def.name == 'bosswall' then wl[#wl + 1] = er.state end
+            if er.summonOf and er.alive then nm = nm + 1 end
+        end
+        local key = table.concat(wl, ',') .. ' súbditos=' .. nm
+        if key ~= log.lastOther then log.lastOther = key; log.states[#log.states + 1] = ('\n    %.1f [cliente] bloques=%s'):format(t, key) end
+        for _, want in ipairs({ 'climb', 'aim', 'stuck', 'chase', 'dying_shrink', 'summon', 'wallaim' }) do
             if not os.getenv('NOSHOTS') and boss.state == want and not log.shots[want] and t - (log.stateT or t) > 0.4 then
                 log.shots[want] = true; snap(want)
             end

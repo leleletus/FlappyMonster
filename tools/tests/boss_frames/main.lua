@@ -62,10 +62,14 @@ function love.load()
             love.graphics.setCanvas(canvas)
             love.graphics.setScissor(col * CW, row * CH, CW - 2, CH - 2)
             love.graphics.push()
-            local camX = math.floor(boss.x - CW / 2 * 1.6)
-            local camY = math.floor(boss.y - CH / 2 * 1.6)
+            -- (ZONE=1: toda la zona del jefe en cada captura)
+            local zoom = os.getenv('ZONE') and ((z.x1 - z.x0 + 4 * TILE_PX) / CW) or 1.6
+            local cx, cy = boss.x, boss.y
+            if os.getenv('ZONE') then cx, cy = (z.x0 + z.x1) / 2, (z.y0 + z.y1) / 2 end
+            local camX = math.floor(cx - CW / 2 * zoom)
+            local camY = math.floor(cy - CH / 2 * zoom)
             love.graphics.translate(col * CW, row * CH)
-            love.graphics.scale(1 / 1.6, 1 / 1.6)
+            love.graphics.scale(1 / zoom, 1 / zoom)
             love.graphics.clear(0.55, 0.7, 0.85, 1)
             level:render(camX, camY)
             pa:render(camX, camY)

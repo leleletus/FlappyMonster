@@ -236,6 +236,20 @@ function Level.fromData(lvl)
         local n = EntityTypes.normalize(ed)
         if n then table.insert(self.entities, n) end
     end
+    -- Entidades de reserva que algunas crean (p. ej. los súbditos del Mega
+    -- Crabby, def.summons): van DESPUÉS de las del JSON, así el servidor y los
+    -- clientes tienen la misma lista (mismos índices)
+    local reserve = {}
+    for _, n in ipairs(self.entities) do
+        local def = EntityTypes.byName[n.type]
+        if def and def.summons then
+            for _, raw in ipairs(def.summons(n) or {}) do
+                local m = EntityTypes.normalize(raw)
+                if m then m.reserve, m.summonKey = true, raw.summonKey; reserve[#reserve + 1] = m end
+            end
+        end
+    end
+    for _, m in ipairs(reserve) do table.insert(self.entities, m) end
     self.enemies     = self.entities   -- alias de compatibilidad
     self.tiles = {}
     for r = 1, self.tileH do

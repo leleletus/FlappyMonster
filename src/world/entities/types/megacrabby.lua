@@ -33,6 +33,7 @@ local Mega = Entity.extend(Boss, {
     hitbox = { outerW = 0.72, outerH = 1.0, innerW = 0.60, innerH = 0.70 },
 })
 Mega.hurtSound = 'megaHurt'
+Mega.onEvent = nil          -- (pruebas: function(name, pa) para registrar eventos)
 
 local MS = 10                       -- escala del pixel art (el Crabby normal usa 4: ×2,5)
 local SPIKE_H  = 36 * MS / 4        -- alto del pincho (el del Crabby a la misma escala)
@@ -45,14 +46,18 @@ local GETUP_T  = 0.45               -- s del giro al levantarse
 local WIGGLE_FPS = 12
 local CONTACT_PAD = 6               -- px: tocar su cuerpo sólido ya cuenta
 -- Muerte
-local KICK_T, SHRINK_T, FLEE_T = 1.3, 1.0, 2.8
-local FLEE_SPEED = 380
+local KICK_T, SHRINK_T, FLEE_T = 1.3, 1.0, 2.6
+local FLEE_SPEED = 620              -- huye en línea recta atravesándolo todo
+local FLEE_FADE  = 0.8              -- s del final en que se desvanece
 local SMALL = GUMMY_SCALE / MS      -- al desinflarse queda del tamaño de un Crabby normal
 -- Al aterrizar tras levantarse: empuja y aturde a los de alrededor
 local SHOCK_RX, SHOCK_RY = 4.5, 1.8 -- casillas
 local GETUP_MAX = 3.0               -- s: si no llega a aterrizar, sigue igual
 local LAND_RECOVER = 1.0            -- s quieto tras aterrizar
 local LAND_GRACE   = 1.4            -- s sin dañar por contacto tras aterrizar
+local CONTACT_GRACE = 1.0           -- s sin dañar por contacto tras un golpe
+local WALL_ESCAPE_VX, WALL_ESCAPE_VY = 560, -900   -- rebote para salir de una pared
+local AIM_LOCK = 0.65               -- fracción del aviso que sigue apuntando
 
 -- Pinzas: más pequeñas que el cuerpo (CLAW_K de su escala) y saliendo del
 -- costado, a la altura del arranque de las patas (CLAW_X, CLAW_Y en píxeles
@@ -77,10 +82,11 @@ end
 function Mega.sizePx() return 16 * MS, 9 * MS end
 
 -- Estados en los que va pegado a una superficie (trepando)
-local CRAWL = { climb = true, ceiling = true, aim = true, dying_flee = true }
+local CRAWL = { climb = true, ceiling = true, aim = true, wallclimb = true, wallaim = true }
 -- Estados en los que tocarlo quita vida
-local CONTACT = { chase = true, windup = true, charge = true, recover = true,
-                  climb = true, ceiling = true, aim = true }
+local CONTACT = { chase = true, windup = true, charge = true, recover = true, summon = true,
+                  climb = true, ceiling = true, aim = true, wallclimb = true, wallaim = true }
+-- (saltando desde la pared solo cuenta el aplastamiento: ver 'pounce')
 
 -- ── Tamaño (el pequeño de la huida mide la mitad) ────────────────────────────
 function Mega:setSmall(small)
@@ -102,8 +108,11 @@ function Mega:initBoss()
     self.crawl, self.cattached = false, false
     self.cnx, self.cny, self.cdir = 0, -1, 1
     self.chargeCd, self.ceilT = self.props.chargeEvery or 2.5, 0
+    self.pounceT, self.summonT = 0, 0
+    self.tvx = 0                          -- velocidad media del objetivo (puntería)
     self.travel, self.chargeDir = 0, 1
-    self.landY, self.floorY = 0, 0
+    self.landY, self.floorY, self.markerX = 0, 0, 0
+    self.summonKey = 'mc' .. self.col .. ',' .. self.row
     self.hitDrop = false
     self.small = false
 end
@@ -111,6 +120,9 @@ end
 function Mega:onFightStart(n)
     self.state, self.deadTimer = 'intro', 0
     self.ceilT, self.chargeCd = 0, self.props.chargeEvery or 2.5
+    -- (desfasados: los ataques especiales se van alternando)
+    self.pounceT = (self.props.pounceEvery or 9) * 0.45
+    self.summonT = (self.props.summonEvery or 12) * 0.3
     Sound.play('megaClack')
 end
 
@@ -119,6 +131,9 @@ function Mega:isDying()
     return self.state:sub(1, 6) == 'dying_' or self.state == 'dead' or not self.alive
 end
 function Mega:isVulnerable() return self.state == 'stuck' and not self.hitDrop end
+-- Al huir (ya pequeño) la zona queda superada: se abren las paredes de jefe
+-- y el cangrejo sale corriendo por ellas
+function Mega:releasesZone() return self.state == 'dying_flee' end
 function Mega:canBeKnocked() return false end
 
 -- Enfadado (poca vida): multiplicadores
@@ -229,7 +244,8 @@ function Mega:hitPlayers(level)
                 if Boss.overlap(pob, b) then
                     local dir = (pa.x >= self.x) and 1 or -1
                     Boss.withPlayer(pa, function() pa:hurt() end)
-                    if not pa.dying then pa:knockback(dir) end
+                    if not pa.dying then self:pushAway(level, pa, dir) end
+                    self.graceT = CONTACT_GRACE           -- (no encadena golpes)
                     if self.state == 'chase' or self.state == 'charge' then
                         self.state, self.deadTimer, self.recoverFor = 'recover', 0, 0.6
                         self.chargeCd = math.max(self.chargeCd, 1.0)
@@ -241,9 +257,47 @@ function Mega:hitPlayers(level)
     end
 end
 
--- Aterriza del salto al levantarse: aplasta al que tenga justo debajo (1 de
--- vida) y empuja y aturde, sin daño, a los que estén alrededor
-function Mega:landShock(level)
+-- Quita `n` de vida (con sus i-frames de después: n golpes seguidos)
+local function hurtN(pa, n)
+    if (pa.hurtT or 0) > 0 or pa:isInvulnerable() then return end
+    Boss.withPlayer(pa, function()
+        for i = 1, n do
+            if pa.dying then break end
+            pa.hurtT = 0
+            if pa:hurt() then break end
+        end
+    end)
+end
+
+-- ¿Tiene el jugador una pared (o el borde de la zona) justo detrás, hacia `dir`?
+function Mega:wallBehind(level, pa, dir)
+    local b = pa:getOuterBounds()
+    local px = (dir > 0) and (b.x + b.w + 14) or (b.x - 14)
+    local z = self.zone
+    if z and (px < z.x0 or px > z.x1) then return true end
+    for _, py in ipairs({ b.y + 8, b.y + b.h / 2, b.y + b.h - 8 }) do
+        if level:entitySolidAt(px, py) then return true end
+    end
+    return false
+end
+
+-- Empujón al tocarlo. Contra una pared no se queda atrapado: rebota en ella y
+-- sale por encima del cangrejo hacia el otro lado
+function Mega:pushAway(level, pa, dir)
+    if self:wallBehind(level, pa, dir) then
+        if Mega.onEvent then Mega.onEvent('escape_pared', pa) end
+        pa:knockback(-dir)
+        pa.vx, pa.vy = -dir * WALL_ESCAPE_VX, WALL_ESCAPE_VY
+        Entity.emitFx('gp_start', pa.x + dir * 20, pa.y)
+    else
+        pa:knockback(dir)
+    end
+end
+
+-- Aterriza (al levantarse o tras el salto desde la pared): aplasta al que
+-- tenga justo debajo (`dmg` de vida) y empuja y aturde, sin daño, a los de
+-- alrededor
+function Mega:landShock(level, dmg)
     local ob, T = self:getOuterBounds(), TILE_PX
     for _, pa in ipairs(level.players or {}) do
         if not pa.dying and pa.alive ~= false then
@@ -253,10 +307,8 @@ function Mega:landShock(level)
             -- debajo del centro del cangrejo): el que está encima o al lado
             -- (p. ej. el que acaba de pisarlo) solo sale empujado
             if Boss.overlap(pa:getOuterBounds(), ob) and pa.y > self.y then
-                if (pa.hurtT or 0) <= 0 and not pa:isInvulnerable() then
-                    Boss.withPlayer(pa, function() pa:hurt() end)
-                end
-                if not pa.dying then pa:knockback(dir) end
+                hurtN(pa, dmg or 1)
+                if not pa.dying then self:pushAway(level, pa, dir) end
             elseif Boss.overlap(pa:getOuterBounds(), ob) then
                 pa:knockback(dir)
             elseif math.abs(dx) <= SHOCK_RX * T and math.abs(dy) <= SHOCK_RY * T then
@@ -282,24 +334,29 @@ function Mega:walk(level, dt, vx)
 end
 
 -- Animación de andar + pisadas pesadas
-function Mega:animWalk(dt, fps)
+function Mega:animWalk(dt, fps, silent)
     self.animT = self.animT + dt
     if self.animT >= 1 / fps then
         self.animT = self.animT - 1 / fps
         self.frame = self.frame % 3 + 1
-        if (self.frame == 1 or self.frame == 3) and (self.onGround or self.cattached) then
+        if not silent and (self.frame == 1 or self.frame == 3) and (self.onGround or self.cattached) then
             Sound.play('megaStep', 0.9 + math.random() * 0.2)
         end
     end
 end
 
-function Mega:startClimb(level)
+function Mega:startClimb(level, state)
     local z = self.zone
     self.crawl, self.cnx, self.cny, self.cattached = true, 0, -1, false
     if not Crawler.attach(self, level) then self.crawl = false; return false end
-    -- Hacia la pared (o borde de la zona) más cercana
-    if z then self.cdir = (self.x - z.x0 < z.x1 - self.x) and -1 or 1 else self.cdir = self.facing end
-    self.state, self.deadTimer, self.ceilT = 'climb', 0, 0
+    -- Hacia la pared (o borde de la zona) más cercana; para saltar desde la
+    -- pared, la del lado CONTRARIO al jugador (así se lanza cruzando hacia él)
+    local tgt = (state == 'wallclimb') and self.target
+    if z and tgt then self.cdir = (tgt.x - z.x0 < z.x1 - tgt.x) and 1 or -1
+    elseif z then self.cdir = (self.x - z.x0 < z.x1 - self.x) and -1 or 1
+    else self.cdir = self.facing end
+    self.state, self.deadTimer = state or 'climb', 0
+    self.climbFloorY = self.y + self.outerH / 2
     Sound.play('megaClack', 0.9)
     return true
 end
@@ -317,6 +374,85 @@ function Mega:crawlFacing()
     else self.facing = ((-self.cny * self.cdir) >= 0) and 1 or -1 end
 end
 
+-- ¿Dónde estará el objetivo dentro de `lead` s? (su velocidad media, sin
+-- salirse de la zona)
+function Mega:predictX(level, lead)
+    local tgt = self:pickTarget(level)
+    if not tgt then return self.x end
+    local x = tgt.x + (self.tvx or 0) * lead * (self.props.aimLead or 0.85)
+    local z, hw = self.zone, self.outerW / 2
+    if z then x = math.max(z.x0 + hw, math.min(z.x1 - hw, x)) end
+    return x
+end
+
+-- Tiempo que tarda en caer desde el techo (para adelantarse)
+function Mega:fallTime()
+    local floorLine = self.zone and self.zone.y1 or (self.y + 8 * TILE_PX)
+    local h = math.max(1, floorLine - (self.y + self.sprH / 2 + SPIKE_H))
+    return math.sqrt(2 * h / (ADV_GRAVITY * 1.4))
+end
+
+-- Suelo que hay debajo de x (la marca de dónde caerá)
+function Mega:floorBelow(level, x, fromY)
+    local floorLine = self.zone and self.zone.y1 or level.heightPx
+    local hit, top = level:landingCross(x, fromY, floorLine)
+    return hit and top or floorLine
+end
+
+-- Súbditos: los Crabbies de reserva que el nivel crea para él (ver `summons`)
+function Mega:minions(level)
+    local out = {}
+    for _, e in ipairs(level.liveEntities or {}) do
+        if e.summonOf == self.summonKey then out[#out + 1] = e end
+    end
+    return out
+end
+
+function Mega:summonMinions(level)
+    local p, T = self.props, TILE_PX
+    local free, active = {}, 0
+    for _, e in ipairs(self:minions(level)) do
+        if e.alive then active = active + 1 else free[#free + 1] = e end
+    end
+    local n = math.min(#free, p.summonCount or 2, math.max(0, (p.summonMax or 3) - active))
+    local floorY = self.y + self.outerH / 2
+    for i = 1, n do
+        local e = free[i]
+        local dir = (i % 2 == 1) and -1 or 1
+        local x = self.x + dir * (self.sprW * 0.5 + 24)
+        if self.zone then x = math.max(self.zone.x0 + T, math.min(self.zone.x1 - T, x)) end
+        local h = e.home
+        h.x, h.y, h.facing, h.flipped, h.state = x, floorY - e.outerH / 2, dir, false, 'walk'
+        h.vx = e.speed * dir
+        e:resetToHome()
+        e.state, e.deadTimer = 'spawning', 0
+        e.leashZone = self.zone
+        Entity.emitFx('spawn', x, floorY - e.outerH / 2)
+        Entity.emitFx('mega_step', x, floorY)
+    end
+    if n > 0 then Sound.play('respawnFx', 0.8) end
+end
+
+function Mega:startPounce()
+    -- De la caja girada (en la pared) a la de pie, más ancha: se separa de la
+    -- pared lo justo para no quedar metido en ella
+    local nx = self.cnx or 0
+    if nx ~= 0 then self.x = self.x - nx * self.outerH / 2 + nx * (self.outerW / 2 + 2) end
+    Crawler.detach(self)
+    self.crawl, self.flipped = false, false
+    local x0, y0 = self.x, self.y
+    local tx, ty = self.markerX, self.landY - self.outerH / 2
+    local T, g = self.props.pounceTime or 0.9, ADV_GRAVITY
+    self.vx = (tx - x0) / T
+    self.vy = (ty - y0 - 0.5 * g * T * T) / T
+    self.facing = (self.vx >= 0) and 1 or -1
+    self.speed = 0                        -- (al chocar con algo de lado, se para)
+    self.crushed = {}
+    self.state, self.deadTimer = 'pounce', 0
+    Sound.play('megaWindup', 1.25)
+    Sound.play('megaClack', 1.1)
+end
+
 function Mega:startGetup()
     self.state, self.deadTimer = 'getup', 0
     self.vy, self.onGround, self.flipped = -480, false, false
@@ -332,6 +468,9 @@ function Mega:updateBoss(dt, level)
     self.deadTimer = self.deadTimer + dt
     local t = self.deadTimer
     local k = self:speedMult()
+    -- Velocidad media del objetivo (para adelantarse a dónde irá)
+    local tg = self.target
+    if tg and not tg.dying then self.tvx = self.tvx + ((tg.vx or 0) - self.tvx) * math.min(1, dt * 5) end
 
     if st == 'dormant' then
         self:walk(level, dt, 0)
@@ -349,8 +488,19 @@ function Mega:updateBoss(dt, level)
         if dir ~= 0 then self:animWalk(dt, self.tuning.walkFps * k) end
         self.chargeCd = self.chargeCd - dt
         self.ceilT = self.ceilT + dt
+        self.pounceT = self.pounceT + dt
+        self.summonT = self.summonT + dt
+        local summonsOn = (p.summonCount or 2) > 0 and (p.summonPool or 4) > 0
         if self.onGround and self.ceilT >= (p.ceilingEvery or 7) then
-            if not self:startClimb(level) then self.ceilT = 0 end
+            if self:startClimb(level) then self.ceilT = 0 else self.ceilT = 0 end
+        elseif self.onGround and (p.pounceEvery or 9) > 0 and self.pounceT >= (p.pounceEvery or 9) then
+            self.pounceT = 0
+            self:startClimb(level, 'wallclimb')
+        elseif self.onGround and summonsOn and self.summonT >= (p.summonEvery or 12) then
+            self.summonT = 0
+            self.state, self.deadTimer, self.summoned = 'summon', 0, false
+            Sound.play('megaWindup', 0.8)
+            Sound.play('megaClack', 0.7)
         elseif self.onGround and tgt and self.chargeCd <= 0 and math.abs(dx) <= (p.chargeRange or 5) * T
                and math.abs(tgt.y - self.y) <= 1.5 * T then
             self.state, self.deadTimer = 'windup', 0
@@ -399,8 +549,8 @@ function Mega:updateBoss(dt, level)
         end
     elseif st == 'ceiling' then
         -- Por el techo hasta ponerse encima del jugador
-        local tgt = self:pickTarget(level)
-        local dx = tgt and (tgt.x - self.x) or 0
+        local aimFor = (p.aimTime or 0.9) / k
+        local dx = self:predictX(level, aimFor + self:fallTime()) - self.x
         local dir = sign(dx)
         local ahead = self.x + dir * (self.sprW * 0.45 + 6)
         if math.abs(dx) <= 10 or t > (p.ceilingMax or 3) or self:crawlSolidAt(level, ahead, self.y) then
@@ -416,11 +566,81 @@ function Mega:updateBoss(dt, level)
             self:animWalk(dt, self.tuning.walkFps * 1.5 * k)
         end
     elseif st == 'aim' then
-        -- Tiembla en el techo (la marca del suelo avisa) y se deja caer
-        if t >= (p.aimTime or 0.9) / k then
+        -- Tiembla en el techo (la marca del suelo avisa) y se deja caer. La
+        -- primera parte del aviso sigue al jugador (adelantándose a dónde
+        -- irá); la última, ya fijo
+        local aimFor = (p.aimTime or 0.9) / k
+        if t < aimFor * AIM_LOCK then
+            local dx = self:predictX(level, (aimFor - t) + self:fallTime()) - self.x
+            local dir = sign(dx)
+            local ahead = self.x + dir * (self.sprW * 0.45 + 6)
+            if math.abs(dx) > 4 and not self:crawlSolidAt(level, ahead, self.y) then
+                self.cdir = -dir
+                self.speed = (p.climbSpeed or 280) * k
+                Crawler.move(self, level, math.min(math.abs(dx), self.speed * 0.6 * dt))
+                self:crawlFacing()
+            end
+        end
+        self.markerX = self.x
+        self.landY = self:floorBelow(level, self.x, self.y + self.sprH / 2 + SPIKE_H)
+        if t >= aimFor then
             Crawler.detach(self)
             self.crawl, self.flipped = false, true             -- boca abajo: el pincho hacia abajo
             self.state, self.deadTimer, self.vy = 'drop', 0, 0
+        end
+    elseif st == 'summon' then
+        -- Invoca súbditos: se alza castañeteando y salen de debajo
+        self:walk(level, dt, 0)
+        if not self.summoned and t >= 0.45 then self.summoned = true; self:summonMinions(level) end
+        if t >= 1.0 then self.state, self.deadTimer = 'chase', 0 end
+    elseif st == 'wallclimb' then
+        -- A la pared más cercana y hasta media altura
+        self.speed = (p.climbSpeed or 280) * k
+        local slow = Crawler.turning(self) and TURN_SLOW or 1
+        if not Crawler.move(self, level, self.speed * slow * dt) then return self:abortClimb() end
+        self:crawlFacing()
+        self:animWalk(dt, self.tuning.walkFps * 1.5 * k)
+        local high = (self.climbFloorY or self.y) - self.y
+        if not Crawler.turning(self) and self.cnx ~= 0 and high >= (p.pounceHeight or 3) * T then
+            self.state, self.deadTimer = 'wallaim', 0
+            Sound.play('megaClack', 0.8)
+        elseif self.cny == 1 and not Crawler.turning(self) then
+            self.state, self.deadTimer = 'wallaim', 0          -- (zona baja: salta desde el techo)
+        elseif t > (p.climbMax or 6) then
+            return self:abortClimb()
+        end
+    elseif st == 'wallaim' then
+        -- Agarrado a la pared apuntando (marca en el suelo), y salta
+        local aimFor = (p.pounceAim or 0.8) / k
+        if t < aimFor * AIM_LOCK or self.markerX == 0 then
+            self.markerX = self:predictX(level, (aimFor - t) + (p.pounceTime or 0.9))
+            self.landY = self:floorBelow(level, self.markerX, self.y)
+        end
+        if t >= aimFor then self:startPounce() end
+    elseif st == 'pounce' then
+        -- En el aire (sin caer de cabeza: después no queda vulnerable).
+        -- Aplasta a quien le caiga encima: pounceDamage de vida
+        self.vy = self.vy + ADV_GRAVITY * dt
+        self:moveAndCollide(level, self.vx * dt, self.vy * dt)
+        self:clampToZone()
+        if self.vy > 0 then
+            local ob = self:getOuterBounds()
+            for _, pa in ipairs(level.players or {}) do
+                if not pa.dying and pa.alive ~= false and not self.crushed[pa] and pa.y > self.y
+                   and Boss.overlap(pa:getOuterBounds(), ob) then
+                    self.crushed[pa] = true
+                    if Mega.onEvent then Mega.onEvent('aplasta', pa) end
+                    hurtN(pa, p.pounceDamage or 2)
+                    if not pa.dying then self:pushAway(level, pa, (pa.x >= self.x) and 1 or -1) end
+                end
+            end
+        end
+        if (self.onGround and t > 0.1) or t > 3 then
+            self.speed = 0
+            self.state, self.deadTimer, self.recoverFor = 'recover', 0, LAND_RECOVER
+            self.graceT = LAND_GRACE
+            self.chargeCd = math.max(self.chargeCd, 1.2)
+            self:landShock(level, p.pounceDamage or 2)
         end
     elseif st == 'drop' then
         self.vy = math.min(self.vy + ADV_GRAVITY * 1.4 * dt, p.dropSpeed or 1600)
@@ -471,6 +691,7 @@ function Mega:startAim(level)
     local floorLine = self.zone and self.zone.y1 or level.heightPx
     local hit, top = level:landingCross(self.x, tip, floorLine)
     self.landY = hit and top or floorLine
+    self.markerX = self.x
     Sound.play('spikeShake', 0.7)
     Sound.play('megaClack', 0.8)
 end
@@ -484,6 +705,7 @@ end
 function Mega:onDefeat()
     self.state, self.deadTimer = 'dying_kick', 0
     self.nextSqueak = 0
+    self.defeatedMinions = false
 end
 
 function Mega:update(dt, level)
@@ -495,6 +717,18 @@ function Mega:updateDeath(dt, level)
     self.deadTimer = self.deadTimer + dt
     local st, t = self.state, self.deadTimer
     if st == 'dying_kick' then
+        -- Sus súbditos desaparecen con él
+        if not self.defeatedMinions then
+            self.defeatedMinions = true
+            for _, e in ipairs(self:minions(level)) do
+                if e.alive and e.state ~= 'dead' then
+                    e.state, e.deadTimer, e.vx, e.vy = 'dead', 0, 0, 0
+                    if e.onStomp then e:onStomp() end
+                    Entity.emitFx('smoke', e.x, e.y)
+                    Entity.emitFx('spawn', e.x, e.y)
+                end
+            end
+        end
         if t >= self.nextSqueak then
             self.nextSqueak = t + 0.28
             Sound.play('megaClack', 0.9 + math.random() * 0.4)
@@ -507,24 +741,18 @@ function Mega:updateDeath(dt, level)
         end
     elseif st == 'dying_shrink' then
         if t >= SHRINK_T then
-            -- Ya es un Crabby normal: al suelo y a huir por la pared más cercana
+            -- Ya es un Crabby normal (sin pinzas): huye por el lado más cercano
+            -- de la zona (sus paredes ya desaparecen), atravesándolo todo
             self:setSmall(true)
-            self.flipped, self.vy = false, 0
+            self.flipped, self.vy, self.crawl = false, 0, false
             self.y = self.floorY - self.outerH / 2
-            self.crawl, self.cnx, self.cny, self.cattached = true, 0, -1, false
-            Crawler.attach(self, level)
             local z = self.zone
-            self.cdir = (z and (self.x - z.x0 < z.x1 - self.x)) and -1 or 1
+            self.facing = (z and (self.x - z.x0 < z.x1 - self.x)) and -1 or 1
             self.state, self.deadTimer, self.nextSqueak = 'dying_flee', 0, 0
         end
     elseif st == 'dying_flee' then
-        Crawler.advanceTurn(self, dt)
-        if self.cattached then
-            self.speed = FLEE_SPEED
-            Crawler.move(self, level, FLEE_SPEED * (Crawler.turning(self) and TURN_SLOW or 1) * dt)
-            self:crawlFacing()
-        end
-        self:animWalk(dt, 16)
+        self.x = self.x + self.facing * FLEE_SPEED * dt
+        self:animWalk(dt, 16, true)                    -- (ya no pisa fuerte)
         if t >= self.nextSqueak then
             self.nextSqueak = t + 0.45
             Sound.play('megaFlee', 0.9 + math.random() * 0.25)
@@ -536,7 +764,8 @@ end
 -- ── Red ───────────────────────────────────────────────────────────────────────
 function Mega:netPackExtra()
     local surf, turn = Crawler.netPack(self)
-    return { surf, turn, math.floor(self.landY + 0.5), math.floor(self.floorY + 0.5), self.hitDrop and 1 or 0 }
+    return { surf, turn, math.floor(self.landY + 0.5), math.floor(self.floorY + 0.5), self.hitDrop and 1 or 0,
+             math.floor(self.markerX + 0.5) }
 end
 
 function Mega:netApplyExtra(a, b, f)
@@ -547,6 +776,7 @@ function Mega:netApplyExtra(a, b, f)
     self.landY = tonumber(b[3]) or 0
     self.floorY = tonumber(b[4]) or 0
     self.hitDrop = b[5] == 1
+    self.markerX = tonumber(b[6]) or self.x
 end
 
 -- ── Dibujo ────────────────────────────────────────────────────────────────────
@@ -588,7 +818,7 @@ function Mega:pose2d(now, moving, walkPhase)
         sy, sx = 1 + 0.025 * breath, 1 - 0.015 * breath
         swing(0.8, 2.1)
     end
-    if (st == 'chase' or st == 'climb' or st == 'ceiling' or st == 'charge') and moving then
+    if (st == 'chase' or st == 'climb' or st == 'ceiling' or st == 'wallclimb' or st == 'charge') and moving then
         -- Andando: rebota con cada paso y las pinzas se mecen a contrapaso
         local b = math.sin(walkPhase * TAU)
         sy, sx = 1 + 0.045 * b, 1 - 0.03 * b
@@ -597,10 +827,30 @@ function Mega:pose2d(now, moving, walkPhase)
             claws[i][1], claws[i][2] = math.cos(w) * 0.6, math.sin(w) * 1.3
         end
     end
-    if (st == 'chase' or st == 'recover') and t < 0.6 and self._prevState == 'getup' then
+    if (st == 'chase' or st == 'recover') and t < 0.6 and (self._prevState == 'getup' or self._prevState == 'pounce') then
         -- Aterriza del salto: se aplasta y rebota
         local q = spring(t, 0.24, 20, 7)
         sx, sy = sx * (1 + q), sy * (1 - q)
+    elseif st == 'summon' then
+        -- Invoca: se alza con las pinzas arriba, castañeteando
+        local up = math.sin(math.min(1, t / 0.45) * math.pi * 0.5)
+        sx, sy = 1 - 0.08 * up, 1 + 0.14 * up
+        for i, side in ipairs({ -1, 1 }) do
+            claws[i][1] = side * 0.8 * up
+            claws[i][2] = -3.0 * up + math.sin(now * 30 + i) * 0.5
+        end
+    elseif st == 'wallaim' then
+        -- En la pared, a punto de saltar: encogido, pinzas arriba temblando
+        local k = math.min(1, t / 0.5)
+        sx, sy = 1 + 0.08 * k, 1 - 0.12 * k
+        for i, side in ipairs({ -1, 1 }) do
+            claws[i][1] = side * 0.5
+            claws[i][2] = -2 * k + math.sin(now * 38 + i * 2) * 0.5
+        end
+    elseif st == 'pounce' then
+        -- Saltando: estirado, pinzas por delante
+        sx, sy = 0.9, 1.14
+        for i = 1, 2 do claws[i][1] = self.facing * 1.0; claws[i][2] = -1.4 end
     elseif st == 'intro' then
         local q = 0.09 * math.abs(math.sin(t * 9)) * math.max(0, 1 - t)
         sx, sy = 1 - q * 0.5, 1 + q
@@ -652,7 +902,7 @@ end
 
 -- Dibuja el cangrejo "como en el suelo" con los pies en (px, py) de pantalla,
 -- girado `ang`, a escala de píxel `s`, deformado (sx, sy) desde los pies
-function Mega:drawLocal(px, py, ang, s, img, withSpike, alpha, nervous, sx, sy, claws)
+function Mega:drawLocal(px, py, ang, s, img, withSpike, alpha, nervous, sx, sy, claws, noClaws)
     local now = love.timer.getTime()
     local red = self:flashRed()
     if red then love.graphics.setColor(1, 0.3, 0.3, alpha) else love.graphics.setColor(1, 1, 1, alpha) end
@@ -667,7 +917,7 @@ function Mega:drawLocal(px, py, ang, s, img, withSpike, alpha, nervous, sx, sy, 
     end
     love.graphics.draw(img, 0, 0, 0, s * self.facing, s, img:getWidth() / 2, ih)
     -- Pinzas delante del cuerpo, saliendo del costado junto a las patas
-    for i, side in ipairs({ -1, 1 }) do
+    for i, side in ipairs(noClaws and {} or { -1, 1 }) do
         local off = claws and claws[i] or { 0, 0 }
         local cx = side * (CLAW_X * s + 7 * cs / 2 - CLAW_IN * cs) + math.floor(off[1] * cs + 0.5)
         local cy = CLAW_Y * s - 6 * cs / 2 + math.floor(off[2] * cs + 0.5)
@@ -695,7 +945,7 @@ function Mega:renderFx(now, fx, fy, moved)
     local f = self._fx or { acc = 0, t = 0, foot = 1 }
     self._fx = f
     local walking = st == 'chase' or st == 'charge'
-    local crawling = st == 'climb' or st == 'ceiling'
+    local crawling = st == 'climb' or st == 'ceiling' or st == 'wallclimb'
     if (walking or crawling) and moved > 0 then
         f.acc = f.acc + moved
         if f.acc >= STEP_DIST then
@@ -705,12 +955,12 @@ function Mega:renderFx(now, fx, fy, moved)
         end
     end
     local every = (st == 'charge') and 0.04 or (st == 'stuck' or st == 'dying_kick') and 0.16
-                  or (st == 'aim') and 0.12 or (st == 'windup') and 0.09 or nil
+                  or (st == 'aim' or st == 'wallaim') and 0.12 or (st == 'windup') and 0.09 or nil
     if every and now - f.t >= every then
         f.t = now
         if st == 'charge' then Particles.emit('mega_trail', fx - self.facing * self.sprW * 0.3, fy, { dir = self.facing })
         elseif st == 'windup' then Particles.emit('mega_trail', fx - self.facing * self.sprW * 0.35, fy, { dir = -self.facing })
-        elseif st == 'aim' then Particles.emit('mega_debris', fx + (math.random() - 0.5) * self.sprW * 0.6, fy)
+        elseif st == 'aim' or st == 'wallaim' then Particles.emit('mega_debris', fx + (math.random() - 0.5) * self.sprW * 0.6, fy)
         else Particles.emit('mega_dirt', self.x + (math.random() - 0.5) * SPIKE_HW, self.floorY) end
     end
 end
@@ -719,7 +969,8 @@ function Mega:render(camX, camY)
     local st, t = self.state, self.deadTimer or 0
     local now = love.timer.getTime()
     local s, alpha = MS, 1
-    local nervous = st == 'windup' or st == 'aim' or st == 'stuck' or st == 'dying_kick' or st == 'intro' or st == 'charge'
+    local nervous = st == 'windup' or st == 'aim' or st == 'stuck' or st == 'dying_kick' or st == 'intro'
+                    or st == 'charge' or st == 'summon' or st == 'wallaim' or st == 'pounce'
     if self._rstate ~= st then self._prevState, self._rstate = self._rstate, st end
 
     -- ¿Se mueve? (para el paso y el balanceo): lo que avanzó desde el dibujo anterior
@@ -733,7 +984,8 @@ function Mega:render(camX, camY)
     local frame = self.frame or 1
     if st == 'stuck' or st == 'dying_kick' then
         frame = math.floor(t * (st == 'dying_kick' and WIGGLE_FPS * 2 or WIGGLE_FPS)) % 3 + 1
-    elseif not moving and (st == 'dormant' or st == 'windup' or st == 'aim' or st == 'recover' or st == 'chase' or st == 'intro') then
+    elseif not moving and (st == 'dormant' or st == 'windup' or st == 'aim' or st == 'recover' or st == 'chase'
+                           or st == 'intro' or st == 'summon' or st == 'wallaim') then
         frame = 2
     end
     local img = imgs[frame] or imgs[2]
@@ -741,13 +993,14 @@ function Mega:render(camX, camY)
 
     -- Temblor (aviso de embestida, a punto de caer, pataleo final)
     local jx, jy = 0, 0
-    if st == 'windup' or st == 'aim' or st == 'dying_kick' then
+    if st == 'windup' or st == 'aim' or st == 'wallaim' or st == 'dying_kick' then
         jx = math.floor(math.sin(now * 70) * 3)
         jy = math.floor(math.cos(now * 55) * 2)
     end
 
-    if st == 'aim' and not EDITOR_VIEW then
-        drawTarget(math.floor(self.x - camX), math.floor(self.landY - camY), self.sprW * 0.9, now)
+    if (st == 'aim' or st == 'wallaim') and not EDITOR_VIEW then
+        local mx = (st == 'aim') and self.x or self.markerX
+        drawTarget(math.floor(mx - camX), math.floor(self.landY - camY), self.sprW * 0.9, now)
     end
 
     local sx, sy, shx, claws = self:pose2d(now, moving, walkPhase)
@@ -759,6 +1012,7 @@ function Mega:render(camX, camY)
         ang = 0
         if st == 'drop' or st == 'stuck' or st == 'dying_kick' then ang = math.pi
         elseif st == 'getup' then ang = math.pi * (1 - math.min(1, t / GETUP_T))
+        elseif st == 'pounce' then ang = self.facing * math.pi / 2 * (1 - math.min(1, t / 0.3))
         elseif st == 'dying_shrink' then
             -- Se desinfla: del tamaño colosal al de un Crabby con un temblor
             -- elástico, dándose la vuelta y posándose en el suelo
@@ -773,14 +1027,25 @@ function Mega:render(camX, camY)
         end
         if not fx then fx, fy = self.x - math.sin(ang) * H / 2, self.y + math.cos(ang) * H / 2 end
     end
+    local noClaws = false
     if st == 'dying_flee' then
-        s, withSpike = MS * SMALL, false
-        alpha = math.max(0, math.min(1, (FLEE_T - t) / 0.9))
+        s, withSpike, noClaws = MS * SMALL, false, true
+        alpha = math.max(0, math.min(1, (FLEE_T - t) / FLEE_FADE))
+    elseif st == 'dying_shrink' and t > SHRINK_T * 0.4 then
+        noClaws = true                            -- (las pierde al desinflarse)
+    end
+    if noClaws and not self._clawsGone and not EDITOR_VIEW then
+        self._clawsGone = true
+        Particles = Particles or require 'src/fx/Particles'
+        for _, side in ipairs({ -1, 1 }) do
+            Particles.emit('smoke', self.x + side * self.sprW * 0.4, self.y)
+            Particles.emit('spawn', self.x + side * self.sprW * 0.4, self.y)
+        end
     end
     if EDITOR_VIEW then nervous = false end
     self:renderFx(now, fx, fy, moved)
     self:drawLocal(math.floor(fx - camX + 0.5) + jx + shx, math.floor(fy - camY + 0.5) + jy, ang, s, img,
-                   withSpike, alpha * self:ghostAlpha(), nervous, sx, sy, claws)
+                   withSpike, alpha * self:ghostAlpha(), nervous, sx, sy, claws, noClaws)
     love.graphics.setColor(1, 1, 1, 1)
 end
 
@@ -819,6 +1084,31 @@ return {
           min=300, max=3000, step=50 },
         { key='stuckTime', kind='number', label='Clavado en el suelo (s)', group='Ataque del techo', default=3,
           min=0.5, max=10, step=0.25, help='El momento de golpearlo (un golpe por caída)' },
+        { key='aimLead', kind='number', label='Adelantarse al jugador', group='Ataque del techo', default=0.85,
+          min=0, max=1.5, step=0.05, help='Cuánto predice dónde estará el jugador al caer (0 = apunta a donde está)' },
+        { key='pounceEvery', kind='number', label='Salto desde la pared cada (s)', group='Salto desde la pared',
+          default=9, min=0, max=60, step=0.5, help='0 = nunca. No cae de cabeza: después no queda vulnerable' },
+        { key='pounceHeight', kind='number', label='Altura a la que trepa (casillas)', group='Salto desde la pared',
+          default=3, min=1, max=10, step=0.5 },
+        { key='pounceAim', kind='number', label='Aviso antes de saltar (s)', group='Salto desde la pared', default=0.8,
+          min=0.2, max=3, step=0.05, help='Tiembla en la pared y marca en el suelo dónde caerá' },
+        { key='pounceTime', kind='number', label='Duración del salto (s)', group='Salto desde la pared', default=0.9,
+          min=0.4, max=2, step=0.05 },
+        { key='pounceDamage', kind='int', label='Daño al aplastar', group='Salto desde la pared', default=2,
+          min=1, max=3, step=1 },
+        { key='summonEvery', kind='number', label='Invocar súbditos cada (s)', group='Súbditos', default=12,
+          min=1, max=60, step=0.5 },
+        { key='summonCount', kind='int', label='Súbditos por invocación', group='Súbditos', default=2,
+          min=0, max=4, step=1, help='0 = nunca invoca' },
+        { key='summonMax', kind='int', label='Súbditos a la vez (máximo)', group='Súbditos', default=3,
+          min=1, max=6, step=1 },
+        { key='summonPool', kind='int', label='Reserva de súbditos', group='Súbditos', default=4,
+          min=0, max=6, step=1, help='Cuántos Crabbies prepara el nivel para él (reutiliza los que mueren)' },
+        { key='summonType', kind='enum', label='Tipo de súbditos', group='Súbditos', default='mix',
+          options={ { value='mix', label='Pincho y trampolín' }, { value='spike', label='De pincho' },
+                    { value='tramp', label='Trampolín' } } },
+        { key='summonSpeed', kind='number', label='Velocidad de los súbditos', group='Súbditos', default=110,
+          min=20, max=400, step=10 },
         { key='rageAt', kind='number', label='Se enfada con vida por debajo de', group='Enfado', default=0.5,
           min=0, max=1, step=0.05, help='Fracción de vida (0.5 = la mitad). 0 = nunca' },
         { key='rageSpeed', kind='number', label='Enfadado: velocidad x', group='Enfado', default=1.3,
@@ -827,4 +1117,21 @@ return {
           min=0.2, max=1, step=0.05 },
     }),
     editor = { sprite = 'assets/images/MegaCrabby/crab1.png' },
+    -- Súbditos: Crabbies escaladores de reserva que el nivel crea al cargar
+    -- (Level.fromData), después de las entidades del JSON: así el servidor y
+    -- los clientes tienen la misma lista. Empiezan fuera de juego y el jefe
+    -- los activa al invocar; al morir vuelven a la reserva.
+    summons = function(pl)
+        local p, out = pl.props or {}, {}
+        for i = 1, math.max(0, math.floor(p.summonPool or 4)) do
+            local tramp = p.summonType == 'tramp' or (p.summonType ~= 'spike' and i % 2 == 0)
+            out[#out + 1] = {
+                type = tramp and 'crabbytramp' or 'crabby', col = pl.col, row = pl.row,
+                summonKey = 'mc' .. pl.col .. ',' .. pl.row,
+                props = { movement = 'walk', speed = p.summonSpeed or 110, wallWalk = true,
+                          dropOnSight = true, detectRange = 10, respawn = 0, points = 5 },
+            }
+        end
+        return out
+    end,
 }

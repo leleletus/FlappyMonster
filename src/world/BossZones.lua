@@ -96,6 +96,7 @@ function BossZones.link(level, entities)
     local zones = level.bossZones or {}
     for _, z in ipairs(zones) do z.bosses = {} end
     for _, e in pairs(entities) do
+        if e.wantsLevel then e.levelRef = level end
         if e.def and e.def.boss then
             local want, zone = e.props.zone or 0, nil
             for _, z in ipairs(zones) do
@@ -122,7 +123,12 @@ function BossZones.newController(level, entities)
     }, Controller)
 end
 
-local function bossAlive(b) return b.alive and b.state ~= 'dead' end
+-- ¿Sigue "ocupando" su zona? (un jefe puede soltarla antes de desaparecer:
+-- b:releasesZone(), p. ej. el Mega Crabby cuando huye ya derrotado)
+local function bossAlive(b)
+    if b.releasesZone and b:releasesZone() then return false end
+    return b.alive and b.state ~= 'dead'
+end
 
 function Controller:update(dt)
     local events = {}

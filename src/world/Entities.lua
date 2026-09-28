@@ -30,7 +30,7 @@ local Props        = require 'src/world/entities/Props'
 
 local TYPES = { 'gummy', 'crabby', 'spikefall', 'star', 'extralife', 'checkpoint',
                 'mortar', 'rainspike', 'spikerain', 'trampoline', 'crabbytramp',
-                'flood', 'pointarea', 'mirror', 'miniboss1', 'megacrabby' }
+                'flood', 'pointarea', 'bosswall', 'mirror', 'miniboss1', 'megacrabby' }
 
 -- Un archivo puede definir varios tipos (p. ej. el trampolín en sus 4 direcciones)
 for _, name in ipairs(TYPES) do
@@ -59,7 +59,10 @@ end
 function Entities.create(placement)
     local t = EntityTypes.get(placement.type)
     if not t then return nil end
-    return t.class.create(t.class, placement)
+    local e = t.class.create(t.class, placement)
+    -- De reserva (súbditos de un jefe): fuera de juego hasta que lo activen
+    if e and placement.reserve and e.makeReserve then e:makeReserve(placement.summonKey) end
+    return e
 end
 
 return Entities

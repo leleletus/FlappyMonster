@@ -276,7 +276,8 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
 - Wall Crabby stomp (Interactions.defaultCheck): in the air, falling onto its top
   end OR coming from the open side (player centre beyond its outer face) =
   'stomp' with 4th return dirX = cnx → `pa:bounce(vy, dirX, soft=true)` (vx 300 +
-  ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill; v17: crawler turn in snapshots; v18: MegaCrabby).
+  ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill; v17: crawler turn in snapshots; v18: MegaCrabby;
+  v19: boss walls, Mega minions/pounce).
 - **Crawler** (`src/world/entities/Crawler.lua`): surface-following movement
   (floor ↔ walls ↔ ceiling, concave and convex corners) for Crabbies with prop
   `wallWalk` (`Crabby.WALL_PROP`, off by default so old levels don't change).
@@ -463,16 +464,36 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   (`renderFx`: mega_step / mega_trail / mega_debris / mega_dirt); one-shot fx from the
   sim: mega_slam, mega_land, mega_poof. States intro → chase (floor, nearest player, contact/spike = 1 HP + knockback via
   `hitPlayers`; claw boxes too; after a hit it backs off: recover) → windup → charge →
-  recover; every `ceilingEvery` s: climb (Crawler; the
+  recover (contact near a wall: `pushAway` bounces the player OVER the crab to the
+  other side; `graceT` after every contact hit: no chained stuns); `pounceEvery`:
+  wallclimb (the wall AWAY from the target) → wallaim (marker) → pounce (ballistic leap,
+  not head-first, only the crush counts: `pounceDamage` 2 HP) → recover; `summonEvery`:
+  summon (activates reserve minions); every `ceilingEvery` s: climb (Crawler; the
   zone edges count as walls/ceiling via `crawlSolidAt`) → ceiling (above target) → aim
-  (shakes, `landY` marker) → drop (spike hazard = KILL) → stuck (ONLY vulnerable state,
+  (shakes, `landY`/`markerX` marker; keeps tracking the PREDICTED player x —
+  `predictX` = x + smoothed vx × lead·`aimLead` — for `AIM_LOCK` of the warning)
+  → drop (spike hazard = KILL) → stuck (ONLY vulnerable state,
   one hit per drop: `hitDrop`; stomp 1 / GP 2) → getup (during its inv time; landing =
   `landShock`: knockback+stun around, 1 HP only to whoever is really UNDER it; then
   `recover` 1 s + `graceT` 1.4 s without contact damage). Spike boxes (head spike,
   drop kill) = tile-spike proportions: base rectangle 60% w × 40% h. Rage below
   `rageAt`. Death (own states): dying_kick → dying_shrink (deflates to normal size) →
-  dying_flee (small crab climbs away, fades) → dead. `Boss.hurtSound` per boss.
+  dying_flee (small crab without claws runs straight to the nearest side through
+  everything, silent steps, fades) → dead. `releasesZone()` (Boss hook, used by
+  BossZones) lets the zone clear when the flee starts, so boss walls open first.
+  Minions: the type def's `summons(placement)` makes Level.fromData append RESERVE
+  placements (crabby / crabbytramp, wallWalk + dropOnSight) after the JSON ones, so
+  server and clients share indices; `Entities.create` → `e:makeReserve(key)` (not alive,
+  state 'reserve', not sent: netAtRest). The boss activates them (`resetToHome` +
+  'spawning', `leashZone` = its zone via `Crabby:crawlSolidAt`); they die with it. `Boss.hurtSound` per boss.
   Test arena: `assets/levels/jefe_cangrejo.json`.
+- **Boss walls** (`types/bosswall.lua`, entity "Bloque de jefe", Mecanismos): rect of
+  normal-looking blocks (cell = top-left, `corner` = bottom-right, `zone` id, 0 =
+  nearest), hidden+passable → appearing (when its zone is in 'fight'; waits until no
+  player is inside) → solid (`solidFull` body: blocks players/entities, climbable) →
+  vanishing (zone no longer fighting) → hidden. State sent in snapshots (hidden =
+  netAtRest). `BossZones.link` gives entities with `wantsLevel` the level (edges drawn
+  like real blocks). Protocol v19.
 - Boss-zone respawns are validated: `BossZones.respawnPoint(level, pa)` moves
   the spawn to remaining ground in the zone if the floor under it was broken
   (`Level:isStandable`, `Level:findGround` are generic helpers).
