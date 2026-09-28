@@ -231,7 +231,9 @@ function Entity:updateCommonStates(dt, level)
             local prev = self.stunPrev
             self.deadTimer, self.vy = 0, 0
             self.vx = self.moving and self.speed * self.facing or 0
-            if self.flying then self.baseY = self.y end
+            if self.flying then          -- (sigue su oscilación desde donde quedó, sin salto)
+                self.baseY = self.y - math.sin(self.flyT * self.tuning.flyBobSpeed) * (self.props.bobAmp or 0)
+            end
             if prev == 'walk' or prev == 'idle' or not prev then self:startWalk() else self.state = prev end
         end
         return true
@@ -378,11 +380,14 @@ function Entity:blockedAhead(level, dir)
     return false
 end
 
--- Da la vuelta si tiene un obstáculo delante
+-- Da la vuelta si tiene un obstáculo delante. Un volador encajonado (algo
+-- delante Y detrás, p. ej. al oscilar junto a otra entidad) no se gira:
+-- sigue y lo atraviesa, en vez de convulsionar girándose cada fotograma.
 function Entity:turnAtObstacles(level)
     if not self.moving or self.vx == 0 then return end
     local dir = self.vx > 0 and 1 or -1
     if self:blockedAhead(level, dir) then
+        if self.flying and self:blockedAhead(level, -dir) then return end
         self.vx, self.facing = -self.vx, -dir
     end
 end
@@ -392,6 +397,7 @@ end
 -- hitbox REAL de cada tile (una losa no es un bloque entero: colgada debajo
 -- de una plataforma queda pegada a ella, no flotando).
 local MAX_STEP = 16      -- px por sub-paso vertical (no atravesar losas finas)
+local EMBED = 6         -- px: un volador más metido que esto en una cara la atraviesa (sale)
 
 -- Cara que se toca en el punto: tile (forma real) u objeto sólido (trampolín,
 -- mortero...). `side` = cara del obstáculo que se toca ('left' al ir hacia la
@@ -429,6 +435,11 @@ function Entity:moveAndCollide(level, dx, dy)
         local hit, body
         for _, py in ipairs(rows) do
             local f, o = probe(level, self, edge, py, side)
+            -- Volador: una cara que ya quedaba bien por detrás de su borde
+            -- (estaba metido en ella, p. ej. un bloque de jefe que apareció
+            -- encima) no lo frena: así sale en vez de quedarse atascado dando
+            -- vueltas. (Más de EMBED px: el roce de las esquinas sí choca.)
+            if f and self.flying and ((dx > 0 and f < self.x + hw - EMBED) or (dx < 0 and f > self.x - hw + EMBED)) then f = nil end
             if f and (not hit or (dx > 0 and f < hit) or (dx < 0 and f > hit)) then hit, body = f, o end
         end
         if hit then
@@ -459,6 +470,7 @@ function Entity:moveAndCollide(level, dx, dy)
         local hit, body
         for _, px in ipairs(chx) do
             local f, o = probe(level, self, px, edge, side)
+            if f and self.flying and ((step > 0 and f < y - step + hh - EMBED) or (step < 0 and f > y - step - hh + EMBED)) then f = nil end
             if f and (not hit or (step > 0 and f < hit) or (step < 0 and f > hit)) then hit, body = f, o end
         end
         if hit then
@@ -572,11 +584,14 @@ function Entity:update(dt, level)
     end
 
     if self.flying then
-        -- Vuela: patrulla horizontal sin gravedad con oscilación vertical
+        -- Vuela: patrulla horizontal sin gravedad con oscilación vertical. La
+        -- oscilación también choca (no se mete en el suelo, techo, losas ni
+        -- objetos sólidos): se queda en la cara y la sigue cuando se aparta.
         self.flyT = self.flyT + dt
         self:turnAtObstacles(level)
         self:moveAndCollide(level, self.vx * dt, 0)
-        self.y = self.baseY + math.sin(self.flyT * tn.flyBobSpeed) * (self.props.bobAmp or 0)
+        local ty = self.baseY + math.sin(self.flyT * tn.flyBobSpeed) * (self.props.bobAmp or 0)
+        if ty ~= self.y then self:moveAndCollide(level, 0, ty - self.y) end
     else
         -- Detección de borde: si no hay suelo (o techo) al frente → dar la vuelta
         if self.moving and self.onGround and self.props.turnAtEdges then

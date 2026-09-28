@@ -278,7 +278,22 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   common state 'launched' (gravity, lands → walk; patrol bounds dropped). Flyers
   aren't launched. Crawlers: `Crawler.supportBody` (face from the normal).
 - Ceiling Crabbies detect players while hidden (`canDropNow`/`isHiding`) and drop
-  straight from the shell (`dropHidden`).
+  straight from the shell (`dropHidden`). A wall-walking one RELEASES the crawl when
+  it starts falling (`releaseCrawl` at drop_fall; otherwise the stomp rules kept
+  seeing a ceiling normal and a stuck Crabby killed whoever jumped on it) and, once
+  back on the ceiling, clears `dropped` → it drops again (a plain ceiling Crabby
+  stays a floor Crabby). Trampoline crush: `pa:squash` + hurt + invulnerability for
+  `PlayerAdventure.SQUASH_T` + 1 s, and it lands walking AWAY (`crushDir`).
+- **Flyers** (`props.movement == 'fly'`): the vertical bob is a TARGET
+  (`baseY + sin`) reached with `moveAndCollide` (stops at floors/slabs/solid
+  bodies instead of clipping into them). A flyer already embedded > `EMBED` px in a
+  face ignores it (gets out instead of flipping every frame), and one blocked
+  both ahead AND behind by entities/spikes doesn't turn (no convulsing). Wings:
+  `EntityTypes.drawWings` in the render wrapper (so every flying entity type gets
+  them, behind the body): `assets/images/wings/wings-Sheet.png` (LEFT wing, 2
+  frames 9x13, root at the right edge) + its mirror, integer scale and position
+  from the entity's outer hitbox. Harness `flyers` (every level, all enemies as
+  flyers).
 - Wall Crabby stomp (Interactions.defaultCheck): in the air, falling onto its top
   end OR coming from the open side (player centre beyond its outer face) =
   'stomp' with 4th return dirX = cnx → `pa:bounce(vy, dirX, soft=true)` (vx 300 +
@@ -366,6 +381,9 @@ and server: server adds ps.score/scoreT and pushes `score` {kind='zone'} +
 (occupancy, local progress bar via `drawProgress`). The level draws the zones
 in `Level:render`. Rank: score, lives, earlier scoreT; nobody scored → no
 winner; generic `last_standing` still wins. Hunt rejects levels with zones.
+Balance (data, in the level JSONs): Point Areas give 4 points per second
+(points 4, interval 1); enemies give 40% of their usual points (floor: 15→6,
+10→4) and ALL of them respawn (`respawn` > 0).
 KOTH levels: cumbre_cangrejo, rebote_real, marea_alta (`modes: ["koth"]`; they
 list no mode until the user places a Point Area in them).
 
@@ -400,6 +418,9 @@ when it fits), textField (placeholder), section, tabs, hint, caption, label
 in-game. `Model:validate()` → warnings (Avisos tab, clickable). F5 playtests
 via `AdventureState` with `editor_playtest.json` (SP keeps reserve entities in
 `self.enemies`: it only drops non-alive ones without `summonOf`).
+Ctrl+O "Abrir nivel" = scrollable list (wheel / arrows + Enter) with file + level
+name; hides `_*` files and `editor_playtest.json`. Test arenas live in
+`tools/levelgen/arenas/` (not listed).
 
 ## Boss system (generic)
 
@@ -497,7 +518,8 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   server and clients share indices; `Entities.create` → `e:makeReserve(key)` (not alive,
   state 'reserve', not sent: netAtRest). The boss activates them (`resetToHome` +
   'spawning', `leashZone` = its zone via `Crabby:crawlSolidAt`); they die with it. `Boss.hurtSound` per boss.
-  Test arena: `assets/levels/jefe_cangrejo.json`.
+  Minions behave exactly like normal wall-walking ceiling Crabbies (harness
+  `crawler_drop SUMMON=1`). Test arena: `tools/levelgen/arenas/jefe_cangrejo.json`.
 - **Boss walls** (`types/bosswall.lua`, entity "Bloque de jefe", Mecanismos): rect of
   normal-looking blocks (cell = top-left, `corner` = bottom-right, `zone` id, 0 =
   nearest), hidden+passable → appearing (when its zone is in 'fight'; waits until no
@@ -603,10 +625,22 @@ don't copy speeds/forces literally (the user tunes feel by hand).
 
 ## Testing without a human
 
-- **Reusable harnesses live in `tools/tests/`** (see its README; e.g.
-  `online_smoke`). Put new ones there, not only in the temporary scratchpad
-  (it gets wiped between sessions). `tools/` is not shipped (.love / updates).
+**ALWAYS start here — don't rebuild test setups by hand.** Every harness lives
+in `tools/tests/` and runs through ONE command from the repo root:
+`tools/tests/run.sh all` (quick battery, ~2 min, exit 0/1) or
+`tools/tests/run.sh <harness> [VAR=val ...] [-- args]`. `run.sh` starts/stops a
+FRESH local server for `online_*` (a reused one keeps stale peers → bots never
+join), copies `tools/levelgen/arenas/*.json` to a temp `assets/levels/zz_tmp_*`
+(the server ignores `_*` names), cleans `server/published`, applies a timeout
+(a LÖVE error screen never exits) and flags Lua errors in harness or server.
+`tools/tests/README.md` = table of every harness (what it checks, how to run
+it, its env vars) + rules for new ones. When a test needs something new, fix
+or extend the HARNESS (and its README row) instead of working around it in a
+scratch copy: the time spent fighting test setups was the user's complaint.
+Harnesses: flyers, crawler_drop, boss_sim, sp_boss, boss_frames, editor_open,
+online_smoke, online_boss, level_check, level_solve. `tools/` is not shipped (.love / updates).
 
+Low-level notes (for writing NEW harnesses):
 - Headless sim (no window): a scratch LÖVE app with `t.window=false`,
   `package.path` pointing at the repo, `love.filesystem.read` patched to read
   from the repo and a stub `love.graphics.newImage` (like server headless).
@@ -617,9 +651,14 @@ don't copy speeds/forces literally (the user tunes feel by hand).
 - Online: `love server --headless` + bot clients using `libs/sock` + bitser
   (hello → create_room → set_mode{mode,level} → join_room → set_ready →
   start_game → send `in` {s, b}). Kill the server afterwards (`ss -lunp | grep 22122`).
-- Test levels: `assets/levels/jefe_espejo.json` (race, mirror boss arena, mortars),
+- Test levels: boss test arenas are NOT game levels any more (not in the editor
+  or the server): `tools/levelgen/arenas/jefe_espejo.json` (mirror boss, mortars),
+  `MiniBossArena.json` (Nave Malvada; the user's layout), `jefe_cangrejo.json`
+  (Mega Crabby) — small, the boss is in view at once; pass them to `run.sh` as
+  `LEVEL=tools/levelgen/arenas/x.json`. Real boss levels: ruta_del_espejo,
+  fortaleza_malvada, guarida_cangrejo_rey (default of the boss harnesses; sp_boss
+  teleports the player into the arena).
   `assets/levels/lluvia_pinchos.json` (race, auto-scroll + spike rain),
-  `assets/levels/MiniBossArena.json` (race, Nave Malvada; the user's layout),
   `assets/levels/rebote_real.json` (King of the Hill: all 4 trampolines +
   both Trampoline Crabbies), `assets/levels/cumbre_cangrejo.json` (KOTH:
   wall-walking Crabbies), `assets/levels/marea_alta.json` (KOTH: floods).
@@ -627,7 +666,7 @@ don't copy speeds/forces literally (the user tunes feel by hand).
 - **Level generator + solver**: `tools/levelgen/` writes levels from Python
   (`lib.py` = grid helpers, `levels_run|hunt|koth|boss.py`, `python3
   tools/levelgen/build.py [--show name]` → `assets/levels/*.json`; boss levels graft
-  the proven arenas of jefe_espejo / MiniBossArena / jefe_cangrejo). Check them with
+  the proven arenas of `tools/levelgen/arenas/`). Check them with
   `tools/tests/level_solve` (BFS with the REAL player physics: double jump, crouch,
   water, spikes, trampolines emulated; `EXPLORE=1` = every enemy reachable, for hunt)
   and `tools/tests/level_check` (editor validate + which modes list it + 20 s entity

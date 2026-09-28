@@ -17,12 +17,12 @@
     [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
   ],
   "entities": [
-    {"col":10,"props":{"patrol":false,"respawn":1,"speed":90,"wallWalk":true},"row":4,"type":"crabby"},
-    {"col":12,"props":{"patrol":false,"respawn":1,"speed":70,"wallWalk":true},"row":4,"type":"crabbytramp"},
-    {"col":12,"props":{"attach":"ceiling","canHide":false,"dropOnSight":true,"patrol":false,"respawn":1,"wallWalk":true},"row":2,"type":"crabby"},
-    {"col":12,"props":{"canHide":false,"dropOnSight":true,"patrol":false,"respawn":1,"wallWalk":true},"row":9,"type":"crabby"},
+    {"col":10,"props":{"patrol":false,"points":6,"respawn":1,"speed":90,"wallWalk":true},"row":4,"type":"crabby"},
+    {"col":12,"props":{"patrol":false,"points":6,"respawn":1,"speed":70,"wallWalk":true},"row":4,"type":"crabbytramp"},
+    {"col":12,"props":{"attach":"ceiling","canHide":false,"dropOnSight":true,"patrol":false,"points":6,"respawn":1,"wallWalk":true},"row":2,"type":"crabby"},
+    {"col":12,"props":{"canHide":false,"dropOnSight":true,"patrol":false,"points":6,"respawn":1,"wallWalk":true},"row":9,"type":"crabby"},
     {"col":2,"props":{"corner":{"col":23,"row":9},"maxLevel":6},"row":3,"type":"flood"},
-    {"col":11,"props":{"corner":{"col":14,"row":4}},"row":3,"type":"pointarea"}
+    {"col":11,"props":{"corner":{"col":14,"row":4},"points":4},"row":3,"type":"pointarea"}
   ],
   "foliage": [],
   "vents": [],

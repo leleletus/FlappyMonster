@@ -5,7 +5,7 @@
 -- capturas (<save>/boss_*.png) en los estados que interesan.
 --
 --   love server --headless &
---   LEVEL=assets/levels/jefe_cangrejo.json love tools/tests/online_boss
+--   LEVEL=assets/levels/guarida_cangrejo_rey.json love tools/tests/online_boss
 --   pkill -f "^love server"
 io.stdout:setvbuf("no")
 love.filesystem.setSymlinksEnabled(true)
@@ -22,7 +22,7 @@ local bitser = require 'libs/bitser'
 local P = require 'src/network/Protocol'
 local Crawler = require 'src/world/entities/Crawler'
 local OnlineAdventureState = require 'src/states/OnlineAdventureState'
-local LEVEL = os.getenv('LEVEL') or 'assets/levels/jefe_cangrejo.json'
+local LEVEL = os.getenv('LEVEL') or 'assets/levels/guarida_cangrejo_rey.json'
 local SECS = tonumber(os.getenv('SECS')) or 60
 local t, st = 0, nil
 local stub = P.newInputStub()
@@ -50,13 +50,13 @@ function love.load()
         if not st and d.state == 'IN_GAME' then gStateMachine:change('online_adventure', { room = d }); st = gStateMachine:_top() end
         if phase == 0 then phase = 1
             NC:send('set_mode', { mode = 'race', level = LEVEL })
-            bot.c:send('join_room', { id = d.id }); bot.readyAt = t + 1.2 end
+            bot.roomId = d.id end        -- (el bot entra cuando haya iniciado sesión)
     end)
     NC:connect('localhost', 22122, 'Cliente')        -- (nunca el servidor real)
     bot.c = sock.newClient('localhost', 22122, P.CHANNELS)
     bot.c:setSerialization(bitser.dumps, bitser.loads)
-    bot.c:on('connect', function() bot.c:send('hello', { v = P.VERSION, name = 'Bot' }) end)
     bot.c:on('game_init', function() bot.inGame = true end)
+    bot.c:on('login_success', function() bot.logged = true end)
     bot.c:on('s', function(s) if s.o then bot.x = s.o[1] end end)
     bot.c:connect()
 end
@@ -64,6 +64,9 @@ end
 function love.update(dt)
     t = t + dt
     Timer.update(dt); Sound.update(dt); NC:update(dt); bot.c:update()
+    if not bot.hello and bot.c:isConnected() then bot.hello = true; bot.c:send('hello', { v = P.VERSION, name = 'Bot' }) end
+    if bot.logged and bot.roomId and not bot.joined then
+        bot.joined = true; bot.c:send('join_room', { id = bot.roomId }); bot.readyAt = t + 1.2 end
     if bot.readyAt and t > bot.readyAt then bot.readyAt = nil
         bot.c:send('set_ready', { ready = true }); NC:send('set_ready', { ready = true }); bot.startAt = t + 0.6 end
     if bot.startAt and t > bot.startAt then bot.startAt = nil; NC:send('start_game', {}) end

@@ -3,7 +3,7 @@
 -- arena y esquiva a medias; se registran los estados del jefe, los súbditos
 -- activos y los bloques de jefe tal como los ve AdventureState.
 --
---   LEVEL=assets/levels/jefe_cangrejo.json love tools/tests/sp_boss
+--   LEVEL=assets/levels/guarida_cangrejo_rey.json love tools/tests/sp_boss
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
 love.filesystem.load('game_main.lua')()
@@ -14,7 +14,7 @@ local t, st, last = 0, nil, {}
 local SECS = tonumber(os.getenv('SECS')) or 60
 function love.load(a)
     gameLoad(a); love.audio.setVolume(0)
-    gStateMachine:change('adventure', { level = os.getenv('LEVEL') or 'assets/levels/jefe_cangrejo.json' })
+    gStateMachine:change('adventure', { level = os.getenv('LEVEL') or 'assets/levels/guarida_cangrejo_rey.json' })
     st = gStateMachine:_top()
 end
 function love.update(dt)
@@ -22,6 +22,11 @@ function love.update(dt)
     local pa = st.player
     local boss
     for _, e in ipairs(st.enemies) do if e.def.boss then boss = e end end
+    -- (empieza dentro de la arena: los niveles definitivos tienen un tramo antes)
+    if boss and boss.zone and pa and not last.placed then
+        last.placed = true
+        pa.x, pa.y = boss.zone.x0 + 2 * TILE_PX, boss.zone.y1 - 60
+    end
     local s = stub.state
     s.left, s.right, s.jump, s.jump_pressed = false, false, false, false
     if boss and boss.zone and pa then

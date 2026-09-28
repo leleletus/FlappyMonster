@@ -4,11 +4,12 @@ import json
 import os
 from lib import *
 
-LEVELS_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'levels')
+# Arenas de los niveles de prueba originales (ya no son niveles del juego)
+ARENAS_DIR = os.path.join(os.path.dirname(__file__), 'arenas')
 
 
 def load_src(name):
-    with open(os.path.join(LEVELS_DIR, name), encoding='utf-8') as f:
+    with open(os.path.join(ARENAS_DIR, name), encoding='utf-8') as f:
         return json.load(f)
 
 

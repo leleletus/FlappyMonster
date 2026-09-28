@@ -34,18 +34,24 @@
     [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
   ],
   "entities": [
-    {"col":16,"props":{"corner":{"col":24,"row":10}},"row":7,"type":"pointarea"},
+    {"col":16,"props":{"corner":{"col":24,"row":10},"points":4},"row":7,"type":"pointarea"},
     {"col":2,"props":{"corner":{"col":47,"row":26},"fallSpeed":0.9,"holdTime":6,"lowTime":6,"maxLevel":18,"riseSpeed":0.6,"startDelay":6,"startLevel":2},"row":2,"type":"flood"},
-    {"col":25,"props":{"patrol":{"left":22,"right":28},"respawn":1},"row":18,"type":"crabby"},
-    {"col":16,"props":{"patrol":{"left":13,"right":19},"respawn":1},"row":20,"type":"gummy"},
-    {"col":37,"props":{"patrol":{"left":35,"right":41},"respawn":1},"row":14,"type":"gummy"},
+    {"col":25,"props":{"points":6,"respawn":1},"row":18,"type":"crabby"},
+    {"col":16,"props":{"points":4,"respawn":1},"row":20,"type":"gummy"},
+    {"col":37,"props":{"patrol":{"left":35,"right":41},"points":4,"respawn":1},"row":14,"type":"gummy"},
     {"col":9,"row":25,"type":"trampoline"},
     {"col":39,"row":25,"type":"trampoline"},
     {"col":8,"row":9,"type":"star"},
-    {"col":40,"row":9,"type":"star"}
+    {"col":40,"row":9,"type":"star"},
+    {"col":8,"row":18,"type":"mortar"},
+    {"col":11,"props":{"points":6,"respawn":1},"row":14,"type":"crabby"}
   ],
   "foliage": [],
-  "vents": [{"col":6,"row":26,"sub":3},{"col":44,"row":26,"sub":3},{"col":25,"row":26,"sub":3}],
+  "vents": [
+    {"col":6,"row":26,"sub":3},
+    {"col":44,"row":26,"sub":3},
+    {"col":25,"row":26,"sub":3}
+  ],
   "modes": ["koth"],
   "matchTime": 180,
   "music": "hidro_city"

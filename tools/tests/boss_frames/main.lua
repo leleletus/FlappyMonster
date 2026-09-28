@@ -2,7 +2,7 @@
 -- jugador quieto que esquiva las caídas) en una rejilla de fotogramas, para
 -- revisar el aspecto sin jugar. Guarda <save>/boss_frames.png.
 --
---   LEVEL=assets/levels/jefe_cangrejo.json love tools/tests/boss_frames
+--   LEVEL=assets/levels/guarida_cangrejo_rey.json love tools/tests/boss_frames
 --   (STATES=chase,climb,... elige qué estados capturar; EVERY = s entre capturas)
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
@@ -22,7 +22,7 @@ function love.load()
     love.graphics.setDefaultFilter('nearest', 'nearest')
     FONT_SMALL = love.graphics.newFont('assets/fonts/PressStart2P.ttf', 10)
     math.randomseed(3)
-    local data = json.decode(love.filesystem.read(os.getenv('LEVEL') or 'assets/levels/jefe_cangrejo.json'))
+    local data = json.decode(love.filesystem.read(os.getenv('LEVEL') or 'assets/levels/guarida_cangrejo_rey.json'))
     local level = Level.fromData(data)
     local ents = {}
     for _, pl in ipairs(level.entities) do ents[#ents + 1] = Entities.create(pl) end

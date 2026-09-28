@@ -161,6 +161,9 @@ function Crabby:crawlWalk(dt, level)
     if body and self:touchBody(body, face) then return true end
     -- Orientación: techo = boca abajo; de frente según hacia dónde avanza
     self.flipped = (self.cny == 1)
+    -- De vuelta en el techo tras caer: puede volver a dejarse caer (el
+    -- Crabby de techo normal se queda en el suelo; el trepador repite)
+    if self.flipped and self.dropped then self.dropped = false end
     if self.cnx ~= 0 then self.facing = self.cdir
     else self.facing = ((-self.cny * self.cdir) >= 0) and 1 or -1 end
     self.animT = self.animT + dt
@@ -269,6 +272,11 @@ function Crabby:updateDrop(dt, level)
         if t >= DROP_SHAKE then
             self.state, self.deadTimer, self.vy = 'drop_fall', 0, 0
             self.currentImg, self.spikeProgress = imgHid, 1
+            -- Trepador: se suelta del techo. Si no, seguiría "boca abajo" para
+            -- las reglas (pisotón solo desde abajo) aunque ya esté clavado en
+            -- el suelo, y saltarle encima mataría al jugador
+            self:releaseCrawl()
+            self.flipped = true
         end
     elseif st == 'drop_fall' then
         -- Cae como un pincho (sigue boca abajo) hasta clavarse en el suelo

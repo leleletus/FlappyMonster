@@ -128,6 +128,10 @@ function TC:crush(level, box)
                     pa:squash(dir)
                     pa:hurt(dmg)
                 end)
+                -- Protegido mientras está aplastado y un poco después: si no,
+                -- se levanta sin protección con el Crabby encima y muere
+                pa:grantInvulnerability(PlayerAdventure.SQUASH_T + 1.0)
+                self.crushDir = dir         -- (al aterrizar se va hacia el otro lado)
                 hit = true
             end
         end
@@ -165,6 +169,7 @@ function TC:updateDrop(dt, level)
         if self.onGround and self.deadTimer >= FLIP_T * 0.7 then
             self.dropped = true
             self.vy = 0
+            if self.crushDir then self.facing, self.crushDir = -self.crushDir, nil end
             self.vx = self.moving and self.speed * self.facing or 0     -- vuelve a andar
             if self.crawl then Crawler.detach(self); Crawler.attach(self, level); self.cdir = self.facing end
             self.state, self.hideTransTimer = 'hide_out', 0

@@ -15,6 +15,7 @@ actualizaciones). Escribe los `assets/levels/*.json` desde código.
 - `levels_hunt.py` — caza (sin meta, `modes:["hunt"]`). `levels_koth.py` — rey de la colina
   (`pointarea`, `matchTime`). `levels_boss.py` — carrera + jefe: `graft()` copia una arena ya probada
   de `jefe_espejo` / `MiniBossArena` / `jefe_cangrejo` (misma altura, 15) tras un tramo propio.
+  Esas arenas de prueba viven en `tools/levelgen/arenas/` (ya no son niveles del juego).
 - Un nivel nuevo = una función que devuelve `Level` + añadirla a `BUILDERS` del archivo.
   El nombre del archivo JSON es el de la función.
 

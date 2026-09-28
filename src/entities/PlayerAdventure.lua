@@ -765,6 +765,7 @@ end
 -- Aplastado (p. ej. le cae encima un Crabby trampolín): sale empujado a un
 -- lado, agachado y aturdido un rato
 local SQUASH_T = 1.8
+PlayerAdventure.SQUASH_T = SQUASH_T
 function PlayerAdventure:squash(dirX)
     if self.dying or self:isPushProtected() then return false end
     self.vx, self.vy = dirX * 560, -240          -- saltito hacia un lado

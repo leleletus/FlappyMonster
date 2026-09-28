@@ -21,11 +21,11 @@
     {"col":23,"props":{"corner":{"col":33,"row":10},"fallSpeed":0.4,"lowTime":3,"risePause":1.2,"riseSpeed":1,"riseStep":1,"startDelay":6,"startLevel":0.5},"row":4,"type":"flood"},
     {"col":20,"row":5,"type":"trampoline_left"},
     {"col":22,"row":5,"type":"trampoline_right"},
-    {"col":4,"props":{"patrol":false,"respawn":1,"wallWalk":true},"row":5,"type":"crabby"},
-    {"col":37,"props":{"patrol":false,"respawn":1,"wallWalk":true},"row":5,"type":"crabby"},
-    {"col":14,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":9,"right":20},"respawn":1},"row":2,"type":"crabby"},
-    {"col":28,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":22,"right":39},"respawn":1},"row":2,"type":"crabby"},
-    {"col":20,"props":{"corner":{"col":22,"row":4}},"row":2,"type":"pointarea"}
+    {"col":4,"props":{"patrol":false,"points":6,"respawn":1,"wallWalk":true},"row":5,"type":"crabby"},
+    {"col":37,"props":{"patrol":false,"points":6,"respawn":1,"wallWalk":true},"row":5,"type":"crabby"},
+    {"col":14,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":9,"right":20},"points":6,"respawn":1},"row":2,"type":"crabby"},
+    {"col":28,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":22,"right":39},"points":6,"respawn":1},"row":2,"type":"crabby"},
+    {"col":20,"props":{"corner":{"col":22,"row":4},"points":4},"row":2,"type":"pointarea"}
   ],
   "foliage": [
     {"col":10,"row":10,"sub":2,"type":"stretch"},

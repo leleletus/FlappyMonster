@@ -164,7 +164,11 @@ function EntityTypes.register(def)
     -- solo depende de state/deadTimer, que viajan en el snapshot).
     local cls = t.class
     if not cls._wrappedRender then
-        local draw = cls.render
+        local drawBody = cls.render
+        local draw = function(self, camX, camY)
+            EntityTypes.drawWings(self, camX, camY)       -- (detrás del cuerpo)
+            drawBody(self, camX, camY)
+        end
         cls._wrappedRender = true
         cls.render = function(self, camX, camY)
             local st = self.state
@@ -227,6 +231,33 @@ function EntityTypes.register(def)
     EntityTypes.byName[t.name] = t
     table.insert(EntityTypes.list, t)
     return t
+end
+
+-- ── Alas de los voladores ────────────────────────────────────────────────────
+-- Toda entidad con movimiento 'fly' lleva un ala a cada lado, DETRÁS del
+-- sprite: assets/images/wings/wings-Sheet.png (ala IZQUIERDA, 2 cuadros de
+-- 9x13: abierta / plegada, unida al cuerpo por su borde derecho); la derecha
+-- es la misma espejada. Tamaño y posición salen de la hitbox exterior de cada
+-- entidad (su cuerpo real), no de números fijos. Solo dibujo.
+local wingStrip
+local WING_FPS = 9
+function EntityTypes.drawWings(e, camX, camY)
+    if not (e.props and e.props.movement == 'fly') or e.state == 'dead' then return end
+    wingStrip = wingStrip or require('src/fx/SpriteStrip').load('assets/images/wings/wings-Sheet.png', 9)
+    local bw, bh = e.outerW or e.sprW or 40, e.outerH or e.sprH or 40
+    local s = math.max(1, math.floor(bh * 0.7 / wingStrip.h + 0.5))    -- escala entera (pixel art)
+    local half = wingStrip.w * s / 2
+    -- Raíz del ala: un poco dentro del cuerpo (queda tapada) y en su mitad alta
+    local rootX = math.floor(bw * 0.42)
+    local cy = math.floor(e.y - camY - bh * 0.18)
+    if e.flipped then cy = math.floor(e.y - camY + bh * 0.18) end
+    local cx = math.floor(e.x - camX)
+    -- Aleteo (desfasado por entidad para que no vayan todas a la vez)
+    local f = wingStrip:frameAt(love.timer.getTime() + (e.home and e.home.x or 0) * 0.013, WING_FPS)
+    local sy = e.flipped and -s or s
+    love.graphics.setColor(1, 1, 1, 1)
+    wingStrip:draw(f, cx - rootX - half, cy, 0, s, sy)      -- izquierda
+    wingStrip:draw(f, cx + rootX + half, cy, 0, -s, sy)     -- derecha (espejada)
 end
 
 function EntityTypes.get(name)

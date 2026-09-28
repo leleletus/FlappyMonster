@@ -240,12 +240,22 @@ local function setModel(m, path)
     msg(path and ('Abierto ' .. path) or 'Nivel nuevo')
 end
 
+-- Niveles de la carpeta (con su nombre, para la lista de "Abrir"). Los que
+-- empiezan por _ (p. ej. el de "Probar") no se ofrecen.
 local function listLevels()
     local out = {}
     for _, f in ipairs(love.filesystem.getDirectoryItems(LEVELS_DIR)) do
-        if f:match('%.json$') then out[#out+1] = LEVELS_DIR .. '/' .. f end
+        if f:match('%.json$') and not f:match('^_') and f ~= 'editor_playtest.json' then
+            out[#out+1] = LEVELS_DIR .. '/' .. f
+        end
     end
-    table.sort(out)
+    table.sort(out, function(a, b) return a:lower() < b:lower() end)
+    local names = {}
+    for _, path in ipairs(out) do
+        local ok, d = pcall(function() return require('libs/json').decode(love.filesystem.read(path)) end)
+        names[path] = ok and type(d) == 'table' and d.name or nil
+    end
+    out.names = names
     return out
 end
 
@@ -1540,7 +1550,7 @@ local function drawModal()
     love.graphics.setColor(0, 0, 0, 0.55)
     love.graphics.rectangle('fill', 0, 0, sw, sh)
     local w, h = 460, 200
-    if md.kind == 'open' then h = math.min(sh - 120, 120 + #md.files * 34) end
+    if md.kind == 'open' then w, h = math.min(sw - 80, 620), math.min(sh - 80, 130 + #md.files * 34) end
     if md.kind == 'help' then w, h = 720, 470 end
     local x, y = (sw - w) / 2, (sh - h) / 2
     ui.rect(x, y, w, h, th.panel, 8)
@@ -1554,15 +1564,35 @@ local function drawModal()
         if ui.button('Cancelar', x + w - 120, y + h - 50, 100, 32) then close() end
     elseif md.kind == 'open' then
         ui.text('Abrir nivel', x + 20, y + 16, th.text, ui.fontLg)
-        local yy = y + 56
-        for _, f in ipairs(md.files) do
-            if ui.button(f, x + 20, yy, w - 40, 28, { align = 'left' }) then
-                local m, err = Model.load(f)
-                if m then E.modal = nil; setModel(m, f) else msg(err, 'error') end
-            end
+        ui.text(#md.files .. ' niveles  ·  rueda del ratón o flechas para moverse', x + 170, y + 22, th.muted, ui.fontSm)
+        -- Lista con scroll (caben muchos niveles)
+        local top, areaH = y + 56, h - 56 - 60
+        local contentH = #md.files * 34
+        md.sel = math.max(1, math.min(#md.files, md.sel or 1))
+        local keys = ui.state.keys
+        if keys['down'] then md.sel = math.min(#md.files, md.sel + 1) end
+        if keys['up'] then md.sel = math.max(1, md.sel - 1) end
+        if keys['down'] or keys['up'] then          -- (que la seleccionada se vea)
+            local off = ui.state.scroll['open'] or 0
+            local sy = (md.sel - 1) * 34
+            if sy < off then off = sy elseif sy + 28 > off + areaH then off = sy + 28 - areaH end
+            ui.state.scroll['open'] = off
+        end
+        local open = function(f)
+            local m, err = Model.load(f)
+            if m then E.modal = nil; setModel(m, f) else msg(err, 'error') end
+        end
+        local yy = ui.beginScroll('open', x + 16, top, w - 32, areaH, contentH)
+        for i, f in ipairs(md.files) do
+            local file = f:match('[^/]+$')
+            local name = md.files.names and md.files.names[f]
+            local label = (name and name ~= '' and name ~= file:gsub('%.json$', '')) and (file .. '   —   ' .. name) or file
+            if ui.button(label, x + 20, yy, w - 48, 28, { align = 'left', active = (i == md.sel) }) then open(f) end
             yy = yy + 34
         end
-        if #md.files == 0 then ui.text('No hay niveles en ' .. LEVELS_DIR, x + 20, yy, th.muted) end
+        ui.endScroll()
+        if #md.files == 0 then ui.text('No hay niveles en ' .. LEVELS_DIR, x + 20, top, th.muted) end
+        if keys['return'] and md.files[md.sel] then open(md.files[md.sel]) end
         if ui.button('Cancelar', x + w - 120, y + h - 46, 100, 30) then close() end
     elseif md.kind == 'saveas' then
         ui.text('Guardar como', x + 20, y + 16, th.text, ui.fontLg)

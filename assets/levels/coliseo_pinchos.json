@@ -28,8 +28,8 @@
   "entities": [
     {"col":11,"row":17,"type":"trampoline"},
     {"col":52,"row":17,"type":"trampoline"},
-    {"col":27,"props":{"corner":{"col":37,"row":14}},"row":10,"type":"pointarea"},
-    {"col":32,"props":{"activeEasy":1,"activeHard":4,"range":9},"row":4,"type":"spikerain"},
+    {"col":27,"props":{"corner":{"col":37,"row":14},"points":4},"row":10,"type":"pointarea"},
+    {"col":32,"props":{"range":9},"row":4,"type":"spikerain"},
     {"col":16,"row":3,"sub":1,"type":"rainspike"},
     {"col":16,"row":3,"sub":2,"type":"rainspike"},
     {"col":17,"row":3,"sub":1,"type":"rainspike"},
@@ -96,9 +96,9 @@
     {"col":47,"row":3,"sub":2,"type":"rainspike"},
     {"col":48,"row":3,"sub":1,"type":"rainspike"},
     {"col":48,"row":3,"sub":2,"type":"rainspike"},
-    {"col":20,"props":{"patrol":{"left":18,"right":23},"respawn":1},"row":17,"type":"crabby"},
-    {"col":44,"props":{"patrol":{"left":41,"right":46},"respawn":1},"row":17,"type":"crabby"},
-    {"col":30,"props":{"patrol":{"left":25,"right":39},"respawn":1},"row":14,"type":"gummy"},
+    {"col":20,"props":{"patrol":{"left":18,"right":23},"points":6,"respawn":1},"row":17,"type":"crabby"},
+    {"col":44,"props":{"patrol":{"left":41,"right":46},"points":6,"respawn":1},"row":17,"type":"crabby"},
+    {"col":30,"props":{"patrol":{"left":25,"right":39},"points":4,"respawn":1},"row":14,"type":"gummy"},
     {"col":32,"row":12,"type":"star"}
   ],
   "foliage": [],

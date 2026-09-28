@@ -22,7 +22,7 @@
     {"col":12,"row":9,"type":"trampoline_left"},
     {"col":14,"row":9,"type":"trampoline_right"},
     {"col":17,"row":5,"type":"trampoline_down"},
-    {"col":21,"props":{"patrol":false,"respawn":1,"startDir":"left","wallWalk":true},"row":9,"type":"crabbytramp"},
+    {"col":21,"props":{"patrol":false,"points":6,"respawn":1,"startDir":"left","wallWalk":true},"row":9,"type":"crabbytramp"},
     {"col":22,"row":4,"type":"spikerain"},
     {"col":25,"row":3,"sub":1,"type":"rainspike"},
     {"col":25,"row":3,"sub":2,"type":"rainspike"},
@@ -38,7 +38,7 @@
     {"col":31,"row":3,"sub":2,"type":"rainspike"},
     {"col":28,"row":3,"sub":1,"type":"rainspike"},
     {"col":28,"row":3,"sub":2,"type":"rainspike"},
-    {"col":28,"props":{"attach":"ceiling","dropOnSight":true},"row":8,"type":"crabbytramp"},
+    {"col":28,"props":{"attach":"ceiling","dropOnSight":true,"points":6,"respawn":1},"row":8,"type":"crabbytramp"},
     {"col":15,"row":3,"sub":2,"type":"spikefall"},
     {"col":15,"row":3,"sub":1,"type":"spikefall"},
     {"col":11,"row":3,"sub":1,"type":"spikefall"},
@@ -49,7 +49,7 @@
     {"col":33,"row":3,"sub":2,"type":"spikefall"},
     {"col":33,"row":9,"type":"trampoline_left"},
     {"col":28,"row":10,"type":"trampoline"},
-    {"col":25,"props":{"corner":{"col":31,"row":6}},"row":4,"type":"pointarea"}
+    {"col":25,"props":{"corner":{"col":31,"row":6},"points":4},"row":4,"type":"pointarea"}
   ],
   "foliage": [],
   "vents": [],

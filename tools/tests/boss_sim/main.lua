@@ -4,7 +4,7 @@
 -- queda vulnerable ('stuck') el arnés le golpea: pisotón y ground pound
 -- alternos, dos veces seguidas (solo debe contar la primera).
 --
---   LEVEL=assets/levels/jefe_cangrejo.json love tools/tests/boss_sim
+--   LEVEL=assets/levels/guarida_cangrejo_rey.json love tools/tests/boss_sim
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
 require 'settings'
@@ -22,7 +22,7 @@ local PlayerAdventure = require 'src/entities/PlayerAdventure'
 
 function love.load()
     math.randomseed(3)
-    local data = json.decode(love.filesystem.read(os.getenv('LEVEL') or 'assets/levels/jefe_cangrejo.json'))
+    local data = json.decode(love.filesystem.read(os.getenv('LEVEL') or 'assets/levels/guarida_cangrejo_rey.json'))
     local level = Level.fromData(data)
     local ents = {}
     for _, pl in ipairs(level.entities) do ents[#ents + 1] = Entities.create(pl) end

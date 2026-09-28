@@ -33,7 +33,12 @@ function love.load()
     FONT_MED   = love.graphics.newFont('assets/fonts/PressStart2P.ttf', 16)
     FONT_BIG   = love.graphics.newFont('assets/fonts/PressStart2P.ttf', 28)
     Input.load(); Sound.load(); love.audio.setVolume(0)
-    gStateMachine = StateMachine:new({ online_adventure = function() return OnlineAdventureState:new() end })
+    -- (al terminar la ronda el juego pasa a resultados / sala: aquí basta con parar)
+    local Done = { new = function() return setmetatable({}, { __index = { enter = function() end,
+        update = function() end, render = function() end, exit = function() end } }) end }
+    gStateMachine = StateMachine:new({ online_adventure = function() return OnlineAdventureState:new() end,
+                                       online_results = function() return Done.new() end,
+                                       online_room = function() return Done.new() end })
     NC:on('login_success', function() NC:send('create_room', { name = 'Prueba', maxPlayers = 4 }) end)
     NC:on('room_error', function(d) print('room_error', d.key, d.msg) end)
     local phase = 0
@@ -41,18 +46,21 @@ function love.load()
         if not st and d.state == 'IN_GAME' then gStateMachine:change('online_adventure', { room = d }); st = gStateMachine:_top() end
         if phase == 0 then phase = 1
             NC:send('set_mode', { mode = os.getenv('MODE') or 'race', level = LEVEL })
-            bot.c:send('join_room', { id = d.id }); bot.readyAt = t + 1.2 end
+            bot.roomId = d.id end        -- (el bot entra cuando haya iniciado sesión)
     end)
     NC:connect('localhost', 22122, 'Prueba')     -- (nunca el servidor real)
     bot.c = sock.newClient('localhost', 22122, P.CHANNELS)
     bot.c:setSerialization(bitser.dumps, bitser.loads)
-    bot.c:on('connect', function() bot.c:send('hello', { v = P.VERSION, name = 'Bot' }) end)
     bot.c:on('game_init', function() bot.inGame = true end)
+    bot.c:on('login_success', function() bot.logged = true end)
     bot.c:connect()
 end
 function love.update(dt)
     t = t + dt
     Timer.update(dt); Sound.update(dt); NC:update(dt); bot.c:update()
+    if not bot.hello and bot.c:isConnected() then bot.hello = true; bot.c:send('hello', { v = P.VERSION, name = 'Bot' }) end
+    if bot.logged and bot.roomId and not bot.joined then
+        bot.joined = true; bot.c:send('join_room', { id = bot.roomId }); bot.readyAt = t + 1.2 end
     if bot.readyAt and t > bot.readyAt then bot.readyAt = nil
         bot.c:send('set_ready', { ready = true }); NC:send('set_ready', { ready = true }); bot.startAt = t + 0.6 end
     if bot.startAt and t > bot.startAt then bot.startAt = nil; NC:send('start_game', {}) end
