@@ -652,19 +652,24 @@ end
 -- ── Render ────────────────────────────────────────────────────────────────────
 local HALF_PX = nil
 
+-- Púa de tile: assets/images/spikes/spike.png (hacia arriba, del tamaño de
+-- media casilla); las otras direcciones son la misma imagen girada o volteada
+local spikeImg
 local function drawMiniSpike(dir, px, py, size)
-    local s  = size
-    local cx = px + s/2
-    local cy = py + s/2
-    love.graphics.setColor(0.92, 0.92, 0.92, 1)
+    if not spikeImg then
+        spikeImg = love.graphics.newImage('assets/images/spikes/spike.png')
+        spikeImg:setFilter('nearest', 'nearest')
+    end
+    local k = size / spikeImg:getWidth()
+    love.graphics.setColor(1, 1, 1, 1)
     if dir == DIR_UP then
-        love.graphics.polygon('fill', cx, py+1, px+1, py+s-1, px+s-1, py+s-1)
+        love.graphics.draw(spikeImg, px, py, 0, k, k)
     elseif dir == DIR_DOWN then
-        love.graphics.polygon('fill', cx, py+s-1, px+1, py+1, px+s-1, py+1)
+        love.graphics.draw(spikeImg, px, py + size, 0, k, -k)
     elseif dir == DIR_LEFT then
-        love.graphics.polygon('fill', px+1, cy, px+s-1, py+1, px+s-1, py+s-1)
+        love.graphics.draw(spikeImg, px, py + size, -math.pi / 2, k, k)
     elseif dir == DIR_RIGHT then
-        love.graphics.polygon('fill', px+s-1, cy, px+1, py+1, px+1, py+s-1)
+        love.graphics.draw(spikeImg, px + size, py, math.pi / 2, k, k)
     end
 end
 

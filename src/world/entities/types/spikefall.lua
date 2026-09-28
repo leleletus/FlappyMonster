@@ -106,11 +106,16 @@ end
 
 function SpikeFall:isBodyDisabled() return true end
 
--- Mismo triángulo que drawMiniSpike (Level.lua) con dirección hacia abajo
+-- La púa de los pinchos (assets/images/spikes/spike.png) hacia abajo
+local spikeImg
 local function drawDownSpike(px, py, sz, alpha)
-    local cx = px + sz / 2
-    love.graphics.setColor(0.92, 0.92, 0.92, alpha)
-    love.graphics.polygon('fill', cx, py + sz - 1, px + 1, py + 1, px + sz - 1, py + 1)
+    if not spikeImg then
+        spikeImg = love.graphics.newImage('assets/images/spikes/spike.png')
+        spikeImg:setFilter('nearest', 'nearest')
+    end
+    local k = sz / spikeImg:getWidth()
+    love.graphics.setColor(1, 1, 1, alpha)
+    love.graphics.draw(spikeImg, px, py + sz, 0, k, -k)
 end
 
 function SpikeFall:render(camX, camY)

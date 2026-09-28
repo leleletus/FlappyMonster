@@ -492,14 +492,19 @@ function Crabby:netApply(a, b, f)
 end
 
 -- ── Render ────────────────────────────────────────────────────────────────────
+-- Pincho: assets/images/crabby/spike.png (36x36 hacia arriba + 1 px de margen
+-- para el contorno). Al salir crece desde la base: se estira en alto.
+local spikeImg
 local function drawSpike(cx, baseY, sH, dir)
     if sH < 1 then return end
-    local halfW = spikeDims() / 2
-    local tipY  = baseY + sH * dir
-    love.graphics.setColor(0.92, 0.92, 0.92, 1)
-    love.graphics.polygon('fill', cx, tipY, cx - halfW, baseY, cx + halfW, baseY)
-    love.graphics.setColor(0.55, 0.55, 0.60, 0.8)
-    love.graphics.polygon('line', cx, tipY, cx - halfW, baseY, cx + halfW, baseY)
+    if not spikeImg then
+        spikeImg = love.graphics.newImage('assets/images/crabby/spike.png')
+        spikeImg:setFilter('nearest', 'nearest')
+    end
+    local _, maxH = spikeDims()
+    local iw, ih = spikeImg:getDimensions()
+    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.draw(spikeImg, cx, baseY, 0, 1, -dir * sH / maxH, iw / 2, ih - 1)
 end
 
 -- Lo que saca del caparazón al esconderse (dir = -1 hacia arriba, 1 hacia

@@ -173,6 +173,12 @@ src/fx/Particles.lua   Particles.emit(kind,x,y) — kinds: gp_land, gp_start, bl
                        boss_hit, boss_blast, boss_big_blast, mortar_blast, fire_puff, ember,
                        exhaust, smoke, sparks, shake_small/shake_big (screen shake:
                        states add Particles.shakeOffset() to the camera when drawing)
+src/ui/PixelIcons.lua  small pixel icons = PNGs in assets/images/icons/<name>.png (crown,
+                       mode icons skull/flag/hill: a new mode icon is just a file); drawn
+                       at integer scale with a 1-px drop shadow
+Spikes are images too: assets/images/spikes/spike.png (tile spikes, rotated/flipped
+                       for the 4 directions; falling spike), crabby/spike.png and
+                       bosses/miniboss1/spike.png (stretched in height while they grow)
 src/fx/SpriteStrip.lua animation strips (frames side by side in one PNG):
                        SpriteStrip.load(path[, frameW]) → :frameAt(t, fps), :draw(i, x, y, r, sx, sy)
 server/main.lua        authoritative sim (see below)
@@ -534,6 +540,10 @@ scripts in `Scripts/Assembly-CSharp/`, real inspector values in
 don't copy speeds/forces literally (the user tunes feel by hand).
 
 ## Testing without a human
+
+- **Reusable harnesses live in `tools/tests/`** (see its README; e.g.
+  `online_smoke`). Put new ones there, not only in the temporary scratchpad
+  (it gets wiped between sessions). `tools/` is not shipped (.love / updates).
 
 - Headless sim (no window): a scratch LÖVE app with `t.window=false`,
   `package.path` pointing at the repo, `love.filesystem.read` patched to read

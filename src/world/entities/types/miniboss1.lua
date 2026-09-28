@@ -387,17 +387,22 @@ end
 -- Pinchos de tamaño fijo (como los del diseño original: 5 a lo ancho de la
 -- nave); salen menos cuantos menos bloques rompe: 2 con 1 bloque, 3 con 2...
 local SPIKE_W = 24 * S / 5
+local spikeImg
 local function drawSpikes(x, bottomY, len, nTiles)
     if len < 1 then return end
     local n  = math.min(5, nTiles + 1)
     local sw = SPIKE_W
     local w  = n * sw
+    -- assets/images/bosses/miniboss1/spike.png: una púa de SPIKE_W x SPIKE_LEN
+    -- hacia abajo (+1 px de margen para el contorno); al salir se estira
+    if not spikeImg then
+        spikeImg = love.graphics.newImage('assets/images/bosses/miniboss1/spike.png')
+        spikeImg:setFilter('nearest', 'nearest')
+    end
+    love.graphics.setColor(1, 1, 1, 1)
     for i = 0, n - 1 do
         local sx = x - w / 2 + i * sw
-        love.graphics.setColor(0.92, 0.92, 0.92, 1)
-        love.graphics.polygon('fill', sx + 2, bottomY, sx + sw - 2, bottomY, sx + sw / 2, bottomY + len)
-        love.graphics.setColor(0.45, 0.45, 0.5, 1)
-        love.graphics.polygon('line', sx + 2, bottomY, sx + sw - 2, bottomY, sx + sw / 2, bottomY + len)
+        love.graphics.draw(spikeImg, sx - 1, bottomY, 0, 1, len / SPIKE_LEN, 0, 1)
     end
 end
 
