@@ -12,5 +12,14 @@ settings.lua input.lua` del repo; se lanza desde la raíz del repo.
       LEVEL=assets/levels/carrera01.json MODE=race love tools/tests/online_smoke
       pkill -f "^love server"
 
+- `boss_sim/` — pelea de jefe en solitario, sin ventana útil: estados del jefe,
+  daño al jugador y golpes (pisotón / ground pound) cuando es vulnerable.
+  `LEVEL=assets/levels/jefe_cangrejo.json love tools/tests/boss_sim`
+  (`DEBUG_POSE=1`: continuidad del dibujo al trepar).
+- `boss_frames/` — la misma pelea dibujada en una rejilla de fotogramas
+  (`<save>/boss_frames.png`; `STATES=...`, `EVERY=...`).
+- `online_boss/` — pelea de jefe online: cliente real + bot entran en la arena;
+  estados recibidos por red, errores y capturas (`<save>/boss_*.png`).
+
 Las carpetas de guardado de las pruebas (`~/.local/share/love/fm_test_*`) se
 pueden borrar después. Nunca apuntar una prueba al servidor real.

@@ -254,6 +254,7 @@ return {
         waiting = "WAITING FOR THE OTHERS  {n}/{max}",
         miniboss1 = "EVIL MONSTER",
         mirror = "MIRROR",
+        megacrabby = "MEGA CRABBY",
     },
     oadv = {
         wait = "WAIT",

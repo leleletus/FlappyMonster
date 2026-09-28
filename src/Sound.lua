@@ -111,6 +111,14 @@ function Sound.load()
     load('bossHurt',      'assets/sounds/bosses/boss_hurt.wav',    'static')
     load('bossExplode',   'assets/sounds/bosses/boss_explode.wav', 'static')
     load('mirrorLaugh',   'assets/sounds/bosses/mirror/laugh.wav', 'static')
+    -- Mega Crabby (generados con tools/sounds/megacrabby.py)
+    load('megaStep',      'assets/sounds/bosses/megacrabby/step.wav',   'static')   -- pisada pesada
+    load('megaClack',     'assets/sounds/bosses/megacrabby/clack.wav',  'static')   -- chasquido de pinzas
+    load('megaHurt',      'assets/sounds/bosses/megacrabby/hurt.wav',   'static')   -- recibe un golpe
+    load('megaSlam',      'assets/sounds/bosses/megacrabby/slam.wav',   'static')   -- se clava al caer del techo
+    load('megaWindup',    'assets/sounds/bosses/megacrabby/windup.wav', 'static')   -- aviso de embestida
+    load('megaShrink',    'assets/sounds/bosses/megacrabby/shrink.wav', 'static')   -- muerte: se desinfla
+    load('megaFlee',      'assets/sounds/bosses/megacrabby/flee.wav',   'static')   -- huye asustado
     -- Música: todas las pistas del índice (assets/music/index.json)
     for _, tr in ipairs(Music.list) do Sound.loadTrack(tr) end
 end

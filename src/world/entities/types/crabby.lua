@@ -416,14 +416,6 @@ end
 function Crabby:getImgName() return IMG_NAMES[self.currentImg or imgIdle2] or 'idle2' end
 function Crabby:setImgFromName(n) if IMG_BY_NAME[n] then self.currentImg = IMG_BY_NAME[n] end end
 
--- Superficie del trepador: 0 = normal / suelto, 1 suelo, 2 techo, 3 pared
--- (normal +x), 4 pared (normal -x)
-local SURF = { { 0, -1 }, { 0, 1 }, { 1, 0 }, { -1, 0 } }
-local function surfCode(e)
-    if not (e.crawl and e.cattached) then return 0 end
-    for i, n in ipairs(SURF) do if n[1] == e.cnx and n[2] == e.cny then return i end end
-    return 0
-end
 Crabby.NET_N = 4          -- campos de red del Crabby (los tipos derivados añaden detrás)
 
 -- Normal de la superficie para las reglas de pisotón (girando: a la que más
@@ -434,9 +426,9 @@ function Crabby:surfaceNormal()
 end
 
 function Crabby:netPack()
-    -- 4º: progreso del giro en una esquina + 1 (0 = no gira)
-    local turn = Crawler.turning(self) and (math.floor(self.turnT / self.turnDur * 100 + 0.5) + 1) or 0
-    return { math.floor((self.spikeProgress or 0) * 1000 + 0.5), self:getImgName(), surfCode(self), turn }
+    -- 3º y 4º: superficie del trepador y progreso del giro (ver Crawler.netPack)
+    local surf, turn = Crawler.netPack(self)
+    return { math.floor((self.spikeProgress or 0) * 1000 + 0.5), self:getImgName(), surf, turn }
 end
 
 function Crabby:netApply(a, b, f)
@@ -445,50 +437,7 @@ function Crabby:netApply(a, b, f)
         self.spikeProgress = (a[1] + (b[1] - a[1]) * f) / 1000
     end
     self:setImgFromName((f < 0.5 and a or b)[2])
-    local sc = tonumber(b[3]) or 0
-    local was = self.crawl and self.cattached and self.cnx and (self.cnx .. ',' .. self.cny)
-    if sc > 0 then
-        self.crawl, self.cattached = true, true
-        self.cnx, self.cny = SURF[sc][1], SURF[sc][2]
-    elseif self.crawl then
-        self.cattached = false
-    end
-    -- Giro en una esquina: empieza cuando cambia la superficie (desde la
-    -- última pose dibujada: x, y ya son los nuevos cuando llega aquí) y avanza
-    -- con el reloj, a la vez que en el servidor; el progreso que manda el
-    -- servidor solo lo adelanta (nunca atrás) y el final lo pone el reloj.
-    local now = love.timer.getTime()
-    local elapsed = self.netClock and math.min(0.1, now - self.netClock) or 0
-    self.netClock = now
-    local tb, ta = tonumber(b[4]) or 0, tonumber(a[4]) or 0
-    -- (solo los trepadores tienen superficie; un Crabby normal no tiene cnx/cny)
-    local cur = sc > 0 and (self.cnx .. ',' .. self.cny) or nil
-    local changed = was and cur and was ~= cur
-    if changed then self.turnDoneOn = nil end
-    if sc == 0 or self.state:sub(1, 5) == 'drop_' then
-        self.turnT = nil
-    elseif changed or (tb > 0 and not self.turnT and self.turnDoneOn ~= cur) then
-        if self.pfx and self.lastNx and changed then
-            self.tsx, self.tsy, self.tsang = self.pfx, self.pfy, self.pang
-            self.tonx, self.tony = self.lastNx, self.lastNy
-        else
-            self.tsx, self.tsy = Crawler.feet(self)
-            self.tsang, self.tonx, self.tony = Crawler.angle(self), self.cnx, self.cny
-        end
-        self.turnDur = Crawler.turnDuration(self)
-        self.turnT = tb > 0 and (tb - 1) / 100 * self.turnDur or 0
-    elseif self.turnT then
-        self.turnT = self.turnT + elapsed
-        if tb > 0 then
-            local k = (ta > 0 and ta <= tb) and (ta + (tb - ta) * f) or tb
-            self.turnT = math.max(self.turnT, (k - 1) / 100 * self.turnDur)
-        end
-        if self.turnT >= self.turnDur then self.turnT = nil; self.turnDoneOn = cur end   -- (no repetirlo)
-    end
-    if self.crawl and self.cattached then
-        self.pfx, self.pfy, self.pang = Crawler.pose(self)
-        self.lastNx, self.lastNy = self.cnx, self.cny
-    end
+    Crawler.netApply(self, b[3], a[4], b[4], f, self.state:sub(1, 5) == 'drop_')
 end
 
 -- ── Render ────────────────────────────────────────────────────────────────────

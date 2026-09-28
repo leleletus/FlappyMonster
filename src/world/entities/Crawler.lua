@@ -31,8 +31,14 @@
 
 local Crawler = {}
 
--- Tiles (con su forma real) y objetos sólidos (trampolines, morteros...)
-local function solid(level, x, y) return level:entitySolidAt(x, y) end
+-- Tiles (con su forma real) y objetos sólidos (trampolines, morteros...).
+-- Una entidad puede añadir lo suyo con e:crawlSolidAt(level, x, y) (p. ej. el
+-- Mega Crabby trepa por los bordes de su zona de jefe).
+local function baseSolid(level, x, y) return level:entitySolidAt(x, y) end
+local function solidFor(e)
+    if e.crawlSolidAt then return function(level, x, y) return e:crawlSolidAt(level, x, y) end end
+    return baseSolid
+end
 
 local function halfH(e) return e.outerH / 2 end
 local function halfW(e) return e.sprW * 0.45 end
@@ -127,9 +133,10 @@ function Crawler.poseBox(e, lx, ly, w, h)
 end
 
 -- Lo que dura un giro (según su velocidad)
+-- (una entidad grande puede alargarlo: e.turnLength, e.turnMax)
 function Crawler.turnDuration(e)
     local sp = math.max(1, e.speed or 50)
-    return math.max(TURN_MIN, math.min(TURN_MAX, e.sprW * 0.35 / sp))
+    return math.max(TURN_MIN, math.min(e.turnMax or TURN_MAX, e.sprW * (e.turnLength or 0.35) / sp))
 end
 
 -- Empieza un giro desde la pose actual (aunque ya estuviera a medio girar)
@@ -154,6 +161,7 @@ end
 -- al colocarla, una casilla entera (bajo una losa fina, su cara de abajo
 -- queda más lejos que el borde de la celda).
 function Crawler.attach(e, level, maxD)
+    local solid = solidFor(e)
     local hh = halfH(e)
     maxD = maxD or TILE_PX / 2
     local cands = { { e.cnx or 0, e.cny or -1 }, { 0, -1 }, { 0, 1 }, { 1, 0 }, { -1, 0 } }
@@ -195,6 +203,7 @@ end
 -- Avanza `dist` px a lo largo de la superficie, girando en las esquinas.
 -- Devuelve false si se ha soltado (no hay superficie).
 function Crawler.move(e, level, dist)
+    local solid = solidFor(e)
     local hh, hw = halfH(e), halfW(e)
     local left = math.abs(dist)
     local guard = 0
@@ -251,6 +260,67 @@ function Crawler.move(e, level, dist)
         end
     end
     return true
+end
+
+-- ── Red (cliente online) ──────────────────────────────────────────────────────
+-- Superficie: 0 = normal / suelto, 1 suelo, 2 techo, 3 pared (normal +x),
+-- 4 pared (normal -x). Giro: progreso + 1 (0 = no gira).
+local SURF = { { 0, -1 }, { 0, 1 }, { 1, 0 }, { -1, 0 } }
+function Crawler.netPack(e)
+    local surf = 0
+    if e.crawl and e.cattached then
+        for i, n in ipairs(SURF) do if n[1] == e.cnx and n[2] == e.cny then surf = i end end
+    end
+    local turn = Crawler.turning(e) and (math.floor(e.turnT / e.turnDur * 100 + 0.5) + 1) or 0
+    return surf, turn
+end
+
+-- Aplica superficie y giro recibidos. El giro empieza cuando cambia la
+-- superficie (desde la última pose dibujada: x, y ya son los nuevos cuando
+-- llega aquí) y avanza con el reloj, a la vez que en el servidor; el progreso
+-- que manda el servidor solo lo adelanta (nunca atrás) y el final lo pone el
+-- reloj. `noTurn` = ahora no gira (p. ej. cayendo del techo).
+function Crawler.netApply(e, surfB, turnA, turnB, f, noTurn)
+    local sc = tonumber(surfB) or 0
+    local was = e.crawl and e.cattached and e.cnx and (e.cnx .. ',' .. e.cny)
+    if sc > 0 then
+        e.crawl, e.cattached = true, true
+        e.cnx, e.cny = SURF[sc][1], SURF[sc][2]
+    elseif e.crawl then
+        e.cattached = false
+    end
+    local now = love.timer.getTime()
+    local elapsed = e.netClock and math.min(0.1, now - e.netClock) or 0
+    e.netClock = now
+    local tb, ta = tonumber(turnB) or 0, tonumber(turnA) or 0
+    -- (solo los trepadores tienen superficie; los que no trepan no tienen cnx/cny)
+    local cur = sc > 0 and (e.cnx .. ',' .. e.cny) or nil
+    local changed = was and cur and was ~= cur
+    if changed then e.turnDoneOn = nil end
+    if sc == 0 or noTurn then
+        e.turnT = nil
+    elseif changed or (tb > 0 and not e.turnT and e.turnDoneOn ~= cur) then
+        if e.pfx and e.lastNx and changed then
+            e.tsx, e.tsy, e.tsang = e.pfx, e.pfy, e.pang
+            e.tonx, e.tony = e.lastNx, e.lastNy
+        else
+            e.tsx, e.tsy = Crawler.feet(e)
+            e.tsang, e.tonx, e.tony = Crawler.angle(e), e.cnx, e.cny
+        end
+        e.turnDur = Crawler.turnDuration(e)
+        e.turnT = tb > 0 and (tb - 1) / 100 * e.turnDur or 0
+    elseif e.turnT then
+        e.turnT = e.turnT + elapsed
+        if tb > 0 then
+            local k = (ta > 0 and ta <= tb) and (ta + (tb - ta) * f) or tb
+            e.turnT = math.max(e.turnT, (k - 1) / 100 * e.turnDur)
+        end
+        if e.turnT >= e.turnDur then e.turnT = nil; e.turnDoneOn = cur end   -- (no repetirlo)
+    end
+    if e.crawl and e.cattached then
+        e.pfx, e.pfy, e.pang = Crawler.pose(e)
+        e.lastNx, e.lastNy = e.cnx, e.cny
+    end
 end
 
 return Crawler

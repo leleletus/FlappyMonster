@@ -128,7 +128,7 @@ function Boss:damage(n, kind)
     if not self:isVulnerable() or self.inv > 0 then return false end
     local wasStunned = self:isStunned()
     self.hp = math.max(0, self.hp - (n or 1))
-    Sound.play('bossHurt')
+    Sound.play(self.hurtSound or 'bossHurt')
     Entity.emitFx('boss_hit', self.x, self.y)
     if self.hp <= 0 then self:defeat(); return true end
     if wasStunned then
@@ -268,6 +268,7 @@ end
 
 -- ── Hooks por defecto ─────────────────────────────────────────────────────────
 Boss.stunnable = false                        -- ¿el ground pound lo deja KO? (Mirror: sí)
+Boss.hurtSound = 'bossHurt'                   -- sonido al recibir un golpe (cada jefe el suyo)
 function Boss:isStunned() return false end   -- p. ej. estado 'ko'
 function Boss:endStun() end                  -- se despierta (tras su único golpe)
 function Boss:initBoss() end

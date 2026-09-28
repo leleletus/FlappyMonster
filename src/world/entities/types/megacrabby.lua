@@ -1,0 +1,626 @@
+-- Mega Crabby: un Crabby gigante (el doble), siempre con el pincho en la
+-- cabeza y dos pinzas que se abren y cierran a su aire. Nunca se esconde.
+--
+-- Pelea (todo configurable en el editor):
+--  * Persigue por el suelo al jugador más cercano. Si lo tiene cerca, avisa
+--    (se para castañeteando las pinzas) y EMBISTE. Tocarlo quita 1 de vida
+--    y empuja (también su pincho de la cabeza).
+--  * Cada cierto tiempo hace el ATAQUE FUERTE: va a la pared más cercana, trepa
+--    hasta el techo (como los Crabbies escaladores; los bordes de su zona de
+--    jefe cuentan como paredes y techo), se coloca encima del jugador, tiembla
+--    un momento (una marca en el suelo avisa de dónde caerá) y se deja caer de
+--    cabeza. El pincho MATA a quien pille debajo.
+--  * Al caer se queda CLAVADO de cabeza, pataleando: es el ÚNICO momento en que
+--    se le puede hacer daño, y solo UN golpe por caída (pisotón 1, ground
+--    pound 2). Con el golpe se levanta durante su invulnerabilidad.
+--  * Con poca vida (rageAt) se enfada: más rápido y menos tiempo clavado.
+--  * Muerte: patalea desesperado, se desinfla en una nube de humo hasta ser un
+--    Crabby normal y huye trepando por la pared.
+--
+-- Sprites: assets/images/MegaCrabby/ (crab1-3 como el Crabby, claw_left-Sheet
+-- = pinza izquierda 7x6 abierta/cerrada; la derecha es la misma volteada;
+-- spike.png = el pincho del Crabby, al doble). Sonidos: bosses/megacrabby/.
+
+local Entity      = require 'src/world/entities/Entity'
+local Boss        = require 'src/world/entities/Boss'
+local Crawler     = require 'src/world/entities/Crawler'
+local SpriteStrip = require 'src/fx/SpriteStrip'
+
+local Mega = Entity.extend(Boss, {
+    walkFps = 6, walkFrames = 3,
+    debugColor = { 1, 0.45, 0.2 },
+    -- (alto completo: apoya las patas justo en el suelo y en las paredes)
+    hitbox = { outerW = 0.72, outerH = 1.0, innerW = 0.60, innerH = 0.70 },
+})
+Mega.hurtSound = 'megaHurt'
+
+local MS = 8                        -- escala del pixel art (el Crabby normal usa 4)
+local SPIKE_H  = 36 * MS / 4        -- alto del pincho (el del Crabby al doble)
+local SPIKE_HW = 7 * MS             -- ancho de su zona de peligro
+local SPIKE_HH = 8 * MS             -- alto de su zona de peligro
+local EMBED    = 0.5                -- fracción del pincho que se clava en el suelo
+local GETUP_T  = 0.45               -- s del giro al levantarse
+local WIGGLE_FPS = 12
+local CONTACT_PAD = 6               -- px: tocar su cuerpo sólido ya cuenta
+-- Muerte
+local KICK_T, SHRINK_T, FLEE_T = 1.3, 1.0, 2.8
+local FLEE_SPEED = 380
+
+-- Pinzas (en píxeles del sprite, desde los pies): la izquierda a la izquierda
+-- del caparazón, un poco levantada; la derecha, igual y volteada
+local CLAW_CX, CLAW_CY = 7.5, -6
+
+local imgs, claw, spikeImg
+function Mega.loadAssets()
+    if imgs then return end
+    local function load(p)
+        local i = love.graphics.newImage(p)
+        if i.setFilter then i:setFilter('nearest', 'nearest') end
+        return i
+    end
+    imgs = { load('assets/images/MegaCrabby/crab1.png'), load('assets/images/MegaCrabby/crab2.png'),
+             load('assets/images/MegaCrabby/crab3.png') }
+    claw = SpriteStrip.load('assets/images/MegaCrabby/claw_left-Sheet.png', 7)
+    spikeImg = load('assets/images/MegaCrabby/spike.png')
+end
+function Mega.sizePx() return 16 * MS, 9 * MS end
+
+-- Estados en los que va pegado a una superficie (trepando)
+local CRAWL = { climb = true, ceiling = true, aim = true, dying_flee = true }
+-- Estados en los que tocarlo quita vida
+local CONTACT = { chase = true, windup = true, charge = true, recover = true,
+                  climb = true, ceiling = true, aim = true }
+
+-- ── Tamaño (el pequeño de la huida mide la mitad) ────────────────────────────
+function Mega:setSmall(small)
+    if self.small == small then return end
+    self.small = small
+    local k = small and 0.5 or 1
+    local tn = self.tuning.hitbox
+    self.sprW, self.sprH = 16 * MS * k, 9 * MS * k
+    self.outerW, self.outerH = self.sprW * tn.outerW, self.sprH * tn.outerH
+    self.innerW, self.innerH = self.sprW * tn.innerW, self.sprH * tn.innerH
+end
+
+-- Giro de esquina a su tamaño (ver Crawler.turnDuration): más largo que el de
+-- un Crabby, y frenando al doblar (TURN_SLOW) para que el dibujo no corra
+Mega.turnLength, Mega.turnMax = 0.9, 0.6
+local TURN_SLOW = 0.35
+
+function Mega:initBoss()
+    self.crawl, self.cattached = false, false
+    self.cnx, self.cny, self.cdir = 0, -1, 1
+    self.chargeCd, self.ceilT = self.props.chargeEvery or 2.5, 0
+    self.travel, self.chargeDir = 0, 1
+    self.landY, self.floorY = 0, 0
+    self.hitDrop = false
+    self.small = false
+end
+
+function Mega:onFightStart(n)
+    self.state, self.deadTimer = 'intro', 0
+    self.ceilT, self.chargeCd = 0, self.props.chargeEvery or 2.5
+    Sound.play('megaClack')
+end
+
+-- ── Reglas ────────────────────────────────────────────────────────────────────
+function Mega:isDying()
+    return self.state:sub(1, 6) == 'dying_' or self.state == 'dead' or not self.alive
+end
+function Mega:isVulnerable() return self.state == 'stuck' and not self.hitDrop end
+function Mega:canBeKnocked() return false end
+
+-- Enfadado (poca vida): multiplicadores
+function Mega:rage()
+    local p = self.props
+    return (self.hpMax or 1) > 0 and self.hp / self.hpMax <= (p.rageAt or 0.5)
+end
+function Mega:speedMult() return self:rage() and (self.props.rageSpeed or 1.3) or 1 end
+
+-- Trepa también por los bordes de su zona (paredes y techo invisibles)
+function Mega:crawlSolidAt(level, x, y)
+    if level:entitySolidAt(x, y) then return true end
+    local z = self.zone
+    return z ~= nil and (x < z.x0 or x > z.x1 or y < z.y0 or y > z.y1)
+end
+
+function Mega:clampToZone()
+    local z = self.zone
+    if not z then return end
+    local hw = self.outerW / 2
+    self.x = math.max(z.x0 + hw, math.min(z.x1 - hw, self.x))
+end
+
+local function inZone(z, x, y) return x >= z.x0 and x <= z.x1 and y >= z.y0 and y <= z.y1 end
+
+-- Jugador más cercano (dentro de su zona), sin cambiar de objetivo por poco
+function Mega:pickTarget(level)
+    local z = self.zone
+    local best, bd, cur
+    for _, pa in ipairs(level.players or {}) do
+        if not pa.dying and pa.alive ~= false and (not z or inZone(z, pa.x, pa.y)) then
+            local d = math.abs(pa.x - self.x) + math.abs(pa.y - self.y) * 0.5
+            if pa == self.target then cur = d end
+            if not bd or d < bd then best, bd = pa, d end
+        end
+    end
+    if cur and cur <= bd * 1.25 then return self.target end
+    self.target = best
+    return best
+end
+
+-- ── Hitboxes (giradas al trepar, como el Crabby) ─────────────────────────────
+function Mega:getOuterBounds()
+    if self.crawl and self.cattached then
+        return Crawler.poseBox(self, -self.outerW / 2, -self.outerH / 2, self.outerW, self.outerH)
+    end
+    return Entity.getOuterBounds(self)
+end
+function Mega:getInnerBounds()
+    if self.crawl and self.cattached then
+        return Crawler.poseBox(self, -self.innerW / 2, -self.innerH / 2, self.innerW, self.innerH)
+    end
+    return Entity.getInnerBounds(self)
+end
+
+-- Cayendo del techo: el pincho (hacia abajo) mata
+function Mega:getHazardBoxes()
+    if self.state ~= 'drop' then return nil end
+    local b = self._hz or { {} }
+    self._hz = b
+    local box = b[1]
+    box.x, box.w = self.x - SPIKE_HW / 2, SPIKE_HW
+    box.y = self.y + self.sprH * 0.1
+    box.h = self.sprH * 0.4 + SPIKE_HH
+    box.effect = 'kill'
+    return b
+end
+
+function Mega:interact(pa)
+    for _, hb in ipairs(self:getHazardBoxes() or {}) do
+        if Boss.overlap(pa:getOuterBounds(), hb) then return 'kill' end
+    end
+    return Boss.interact(self, pa)
+end
+
+-- Tocarlo (cuerpo y pincho de la cabeza) quita 1 de vida y empuja
+function Mega:hitPlayers(level)
+    if not CONTACT[self.state] then return end
+    local ob = self:getOuterBounds()
+    local body = { x = ob.x - CONTACT_PAD, y = ob.y - CONTACT_PAD, w = ob.w + 2 * CONTACT_PAD, h = ob.h + 2 * CONTACT_PAD }
+    local spike = Crawler.poseBox(self, -SPIKE_HW / 2, -self.sprH / 2 - SPIKE_HH, SPIKE_HW, SPIKE_HH)
+    for _, pa in ipairs(level.players or {}) do
+        if not pa.dying and pa.alive ~= false and (pa.hurtT or 0) <= 0 and not pa:isInvulnerable() then
+            local pob = pa:getOuterBounds()
+            if Boss.overlap(pob, body) or Boss.overlap(pob, spike) then
+                local dir = (pa.x >= self.x) and 1 or -1
+                Boss.withPlayer(pa, function() pa:hurt() end)
+                if not pa.dying then pa:knockback(dir) end
+            end
+        end
+    end
+end
+
+-- ── Update ────────────────────────────────────────────────────────────────────
+local function sign(v) return v > 0 and 1 or (v < 0 and -1 or 0) end
+
+-- Anda por el suelo (sin trepar): gravedad, choque con el nivel y su zona
+function Mega:walk(level, dt, vx)
+    self.vy = self.vy + ADV_GRAVITY * dt
+    local x0 = self.x
+    self:moveAndCollide(level, vx * dt, self.vy * dt)
+    self:clampToZone()
+    return self.x - x0
+end
+
+-- Animación de andar + pisadas pesadas
+function Mega:animWalk(dt, fps)
+    self.animT = self.animT + dt
+    if self.animT >= 1 / fps then
+        self.animT = self.animT - 1 / fps
+        self.frame = self.frame % 3 + 1
+        if (self.frame == 1 or self.frame == 3) and (self.onGround or self.cattached) then
+            Sound.play('megaStep', 0.9 + math.random() * 0.2)
+        end
+    end
+end
+
+function Mega:startClimb(level)
+    local z = self.zone
+    self.crawl, self.cnx, self.cny, self.cattached = true, 0, -1, false
+    if not Crawler.attach(self, level) then self.crawl = false; return false end
+    -- Hacia la pared (o borde de la zona) más cercana
+    if z then self.cdir = (self.x - z.x0 < z.x1 - self.x) and -1 or 1 else self.cdir = self.facing end
+    self.state, self.deadTimer, self.ceilT = 'climb', 0, 0
+    Sound.play('megaClack', 0.9)
+    return true
+end
+
+-- No llegó al techo (sin paredes a las que agarrarse...): suelta y sigue
+function Mega:abortClimb()
+    Crawler.detach(self)
+    self.crawl, self.flipped, self.vy = false, false, 0
+    self.state, self.deadTimer = 'chase', 0
+end
+
+-- Orientación al trepar (como el Crabby)
+function Mega:crawlFacing()
+    if self.cnx ~= 0 then self.facing = self.cdir
+    else self.facing = ((-self.cny * self.cdir) >= 0) and 1 or -1 end
+end
+
+function Mega:startGetup()
+    self.state, self.deadTimer = 'getup', 0
+    self.vy, self.onGround, self.flipped = -480, false, false
+    Sound.play('crabPop', 0.7)
+    Entity.emitFx('spike_pop', self.x, self.floorY - 8)
+end
+
+function Mega:updateBoss(dt, level)
+    local p, T = self.props, TILE_PX
+    Crawler.advanceTurn(self, dt)
+    local st = self.state
+    self.deadTimer = self.deadTimer + dt
+    local t = self.deadTimer
+    local k = self:speedMult()
+
+    if st == 'dormant' then
+        self:walk(level, dt, 0)
+        return
+    elseif st == 'intro' then
+        -- Se presenta: castañetea las pinzas
+        self:walk(level, dt, 0)
+        if t >= 1.0 then self.state, self.deadTimer = 'chase', 0 end
+    elseif st == 'chase' then
+        local tgt = self:pickTarget(level)
+        local dx = tgt and (tgt.x - self.x) or 0
+        local dir = (math.abs(dx) > 20) and sign(dx) or 0
+        if dir ~= 0 then self.facing = dir end
+        self:walk(level, dt, dir * (p.chaseSpeed or 150) * k)
+        if dir ~= 0 then self:animWalk(dt, self.tuning.walkFps * k) end
+        self.chargeCd = self.chargeCd - dt
+        self.ceilT = self.ceilT + dt
+        if self.onGround and self.ceilT >= (p.ceilingEvery or 7) then
+            if not self:startClimb(level) then self.ceilT = 0 end
+        elseif self.onGround and tgt and self.chargeCd <= 0 and math.abs(dx) <= (p.chargeRange or 5) * T
+               and math.abs(tgt.y - self.y) <= 1.5 * T then
+            self.state, self.deadTimer = 'windup', 0
+            self.facing = sign(dx) ~= 0 and sign(dx) or self.facing
+            Sound.play('megaWindup')
+        end
+    elseif st == 'windup' then
+        -- Aviso: quieto, castañeteando, mirando al jugador
+        self:walk(level, dt, 0)
+        if t >= (p.windupTime or 0.6) / k then
+            self.state, self.deadTimer = 'charge', 0
+            self.chargeDir, self.travel = self.facing, 0
+            Entity.emitFx('gp_start', self.x - self.facing * self.sprW * 0.4, self.y + self.outerH / 2)
+        end
+    elseif st == 'charge' then
+        local want = self.chargeDir * (p.chargeSpeed or 520) * k
+        local moved = self:walk(level, dt, want)
+        self.facing = self.chargeDir
+        self.travel = self.travel + math.abs(moved)
+        self:animWalk(dt, self.tuning.walkFps * 2 * k)
+        local blocked = math.abs(moved) < math.abs(want * dt) * 0.5
+        if blocked or self.travel >= (p.chargeDist or 8) * T then
+            self.state, self.deadTimer = 'recover', 0
+            self.recoverFor = blocked and 0.9 or 0.45
+            self.chargeCd = (p.chargeEvery or 2.5) / k
+            if blocked then
+                Sound.play('gpImpact', 0.7)
+                Entity.emitFx('shake_small', self.x, self.y)
+            end
+        end
+    elseif st == 'recover' then
+        self:walk(level, dt, 0)
+        if t >= (self.recoverFor or 0.5) then self.state, self.deadTimer = 'chase', 0 end
+    elseif st == 'climb' then
+        -- A la pared más cercana y hasta el techo
+        self.speed = (p.climbSpeed or 280) * k
+        local slow = Crawler.turning(self) and TURN_SLOW or 1
+        if not Crawler.move(self, level, self.speed * slow * dt) then return self:abortClimb() end
+        self:crawlFacing()
+        self:animWalk(dt, self.tuning.walkFps * 1.5 * k)
+        if self.cny == 1 and not Crawler.turning(self) then
+            self.state, self.deadTimer = 'ceiling', 0
+        elseif t > (p.climbMax or 6) then
+            return self:abortClimb()
+        end
+    elseif st == 'ceiling' then
+        -- Por el techo hasta ponerse encima del jugador
+        local tgt = self:pickTarget(level)
+        local dx = tgt and (tgt.x - self.x) or 0
+        local dir = sign(dx)
+        local ahead = self.x + dir * (self.sprW * 0.45 + 6)
+        if math.abs(dx) <= 10 or t > (p.ceilingMax or 3) or self:crawlSolidAt(level, ahead, self.y) then
+            self:startAim(level)
+        else
+            self.cdir = -dir                              -- (en el techo, avanzar = -cdir)
+            self.speed = (p.climbSpeed or 280) * k
+            local slow = Crawler.turning(self) and TURN_SLOW or 1
+            if not Crawler.move(self, level, math.min(math.abs(dx), self.speed * slow * dt)) then
+                return self:abortClimb()
+            end
+            self:crawlFacing()
+            self:animWalk(dt, self.tuning.walkFps * 1.5 * k)
+        end
+    elseif st == 'aim' then
+        -- Tiembla en el techo (la marca del suelo avisa) y se deja caer
+        if t >= (p.aimTime or 0.9) / k then
+            Crawler.detach(self)
+            self.crawl, self.flipped = false, true             -- boca abajo: el pincho hacia abajo
+            self.state, self.deadTimer, self.vy = 'drop', 0, 0
+        end
+    elseif st == 'drop' then
+        self.vy = math.min(self.vy + ADV_GRAVITY * 1.4 * dt, p.dropSpeed or 1600)
+        local tip0 = self.y + self.sprH / 2 + SPIKE_H
+        self.y = self.y + self.vy * dt
+        local tip = self.y + self.sprH / 2 + SPIKE_H
+        local floorLine = self.zone and self.zone.y1 or level.heightPx
+        local hit, top = level:landingCross(self.x, tip0, tip)
+        if not hit and tip >= floorLine then hit, top = true, floorLine end
+        if hit then
+            self.y = top + SPIKE_H * EMBED - SPIKE_H - self.sprH / 2
+            self.floorY = top
+            self.state, self.deadTimer, self.vy = 'stuck', 0, 0
+            self.hitDrop = false
+            Sound.play('megaSlam')
+            Entity.emitFx('spike_land', self.x, top)
+            Entity.emitFx('gp_land', self.x, top)
+            Entity.emitFx('shake_big', self.x, top)
+        elseif self.y > level.heightPx + T * 4 then
+            -- (se salió del nivel: vuelve a su sitio)
+            self.x, self.y, self.flipped, self.vy = self.home.x, self.home.y, false, 0
+            self.state, self.deadTimer = 'chase', 0
+        end
+    elseif st == 'stuck' then
+        -- Clavado de cabeza, pataleando: vulnerable (un golpe)
+        local stuckFor = (p.stuckTime or 3) * ((self:rage() and (p.rageStuck or 0.75)) or 1)
+        if t >= stuckFor then self:startGetup() end
+    elseif st == 'getup' then
+        self.vy = self.vy + ADV_GRAVITY * dt
+        self:moveAndCollide(level, 0, self.vy * dt)
+        if self.onGround and t >= GETUP_T * 0.6 then
+            self.state, self.deadTimer = 'chase', 0
+            self.chargeCd, self.ceilT = math.max(self.chargeCd, 1.0), 0
+        end
+    end
+    self:hitPlayers(level)
+end
+
+function Mega:startAim(level)
+    self.state, self.deadTimer = 'aim', 0
+    -- Dónde caerá (la marca del suelo): lo primero que cruce el pincho
+    local tip = self.y + self.sprH / 2 + SPIKE_H
+    local floorLine = self.zone and self.zone.y1 or level.heightPx
+    local hit, top = level:landingCross(self.x, tip, floorLine)
+    self.landY = hit and top or floorLine
+    Sound.play('spikeShake', 0.7)
+    Sound.play('megaClack', 0.8)
+end
+
+function Mega:onDamaged(n, kind)
+    self.hitDrop = true                   -- un solo golpe por caída
+    self:startGetup()
+end
+
+-- ── Muerte: patalea, se desinfla y huye ──────────────────────────────────────
+function Mega:onDefeat()
+    self.state, self.deadTimer = 'dying_kick', 0
+    self.nextSqueak = 0
+end
+
+function Mega:update(dt, level)
+    if self.state:sub(1, 6) == 'dying_' then return self:updateDeath(dt, level) end
+    return Boss.update(self, dt, level)
+end
+
+function Mega:updateDeath(dt, level)
+    self.deadTimer = self.deadTimer + dt
+    local st, t = self.state, self.deadTimer
+    if st == 'dying_kick' then
+        if t >= self.nextSqueak then
+            self.nextSqueak = t + 0.28
+            Sound.play('megaClack', 0.9 + math.random() * 0.4)
+        end
+        if t >= KICK_T then
+            self.state, self.deadTimer = 'dying_shrink', 0
+            Sound.play('megaShrink')
+            Entity.emitFx('spike_pop', self.x, self.floorY - 8)
+            for i = 1, 6 do
+                Entity.emitFx('smoke', self.x + (math.random() - 0.5) * self.sprW, self.y + (math.random() - 0.5) * self.sprH)
+            end
+        end
+    elseif st == 'dying_shrink' then
+        if t >= SHRINK_T then
+            -- Ya es un Crabby normal: al suelo y a huir por la pared más cercana
+            self:setSmall(true)
+            self.flipped, self.vy = false, 0
+            self.y = self.floorY - self.outerH / 2
+            self.crawl, self.cnx, self.cny, self.cattached = true, 0, -1, false
+            Crawler.attach(self, level)
+            local z = self.zone
+            self.cdir = (z and (self.x - z.x0 < z.x1 - self.x)) and -1 or 1
+            self.state, self.deadTimer, self.nextSqueak = 'dying_flee', 0, 0
+        end
+    elseif st == 'dying_flee' then
+        Crawler.advanceTurn(self, dt)
+        if self.cattached then
+            self.speed = FLEE_SPEED
+            Crawler.move(self, level, FLEE_SPEED * (Crawler.turning(self) and TURN_SLOW or 1) * dt)
+            self:crawlFacing()
+        end
+        self:animWalk(dt, 16)
+        if t >= self.nextSqueak then
+            self.nextSqueak = t + 0.45
+            Sound.play('megaFlee', 0.9 + math.random() * 0.25)
+        end
+        if t >= FLEE_T then self.state, self.alive = 'dead', false end
+    end
+end
+
+-- ── Red ───────────────────────────────────────────────────────────────────────
+function Mega:netPackExtra()
+    local surf, turn = Crawler.netPack(self)
+    return { surf, turn, math.floor(self.landY + 0.5), math.floor(self.floorY + 0.5), self.hitDrop and 1 or 0 }
+end
+
+function Mega:netApplyExtra(a, b, f)
+    a = a or b
+    self:setSmall(self.state == 'dying_flee')
+    Crawler.netApply(self, b[1], a[2], b[2], f, not CRAWL[self.state])
+    if not CRAWL[self.state] then self.crawl = false end
+    self.landY = tonumber(b[3]) or 0
+    self.floorY = tonumber(b[4]) or 0
+    self.hitDrop = b[5] == 1
+end
+
+-- ── Dibujo ────────────────────────────────────────────────────────────────────
+-- Pinzas: cada una se cierra y abre sola cada cierto tiempo (más a menudo
+-- cuando está nervioso). Solo es dibujo (cada cliente a su aire).
+local function clawFrame(self, i, now, nervous)
+    self._claws = self._claws or { { next = now + math.random() }, { next = now + math.random() } }
+    local c = self._claws[i]
+    if now >= c.next then
+        c.closedUntil = now + 0.12
+        c.next = now + (nervous and (0.12 + math.random() * 0.3) or (0.7 + math.random() * 1.8))
+    end
+    return (c.closedUntil and now < c.closedUntil) and 2 or 1
+end
+
+-- Dibuja el cangrejo "como en el suelo" con los pies en (px, py) de pantalla,
+-- girado `ang`, a escala de píxel `s`
+function Mega:drawLocal(px, py, ang, s, img, withSpike, alpha, nervous)
+    local now = love.timer.getTime()
+    local red = self:flashRed()
+    local function color()
+        if red then love.graphics.setColor(1, 0.3, 0.3, alpha) else love.graphics.setColor(1, 1, 1, alpha) end
+    end
+    love.graphics.push()
+    love.graphics.translate(px, py)
+    love.graphics.rotate(ang)
+    local ih = img:getHeight()
+    color()
+    if withSpike then                             -- detrás del cuerpo, sobre la cabeza
+        love.graphics.draw(spikeImg, 0, -ih * s, 0, s / 4, s / 4, spikeImg:getWidth() / 2, spikeImg:getHeight() - 1)
+    end
+    love.graphics.draw(img, 0, 0, 0, s * self.facing, s, img:getWidth() / 2, ih)
+    claw:draw(clawFrame(self, 1, now, nervous), -CLAW_CX * s, CLAW_CY * s, 0, s, s)
+    claw:draw(clawFrame(self, 2, now, nervous), CLAW_CX * s, CLAW_CY * s, 0, -s, s)
+    love.graphics.pop()
+end
+
+-- Marca en el suelo de donde va a caer (parpadea)
+local function drawTarget(x, y, w, t)
+    local on = math.floor(t * 8) % 2 == 0
+    love.graphics.setColor(0, 0, 0, 0.35)
+    love.graphics.rectangle('fill', x - w / 2, y - 6, w, 6)
+    love.graphics.setColor(1, 0.2, 0.2, on and 0.9 or 0.45)
+    local seg = math.floor(w / 6)
+    for i = 0, 5, 2 do love.graphics.rectangle('fill', x - w / 2 + i * seg, y - 4, seg, 4) end
+end
+
+function Mega:render(camX, camY)
+    local st, t = self.state, self.deadTimer or 0
+    local now = love.timer.getTime()
+    local s, alpha = MS, 1
+    local nervous = st == 'windup' or st == 'aim' or st == 'stuck' or st == 'dying_kick' or st == 'intro'
+
+    -- Sprite: andar, o patalear clavado
+    local frame = self.frame or 1
+    if st == 'stuck' or st == 'dying_kick' then
+        frame = math.floor(t * (st == 'dying_kick' and WIGGLE_FPS * 2 or WIGGLE_FPS)) % 3 + 1
+    elseif st == 'dormant' or st == 'windup' or st == 'aim' or st == 'recover' then
+        frame = 2
+    end
+    local img = imgs[frame] or imgs[2]
+    local withSpike = true
+
+    -- Temblor (aviso de embestida, a punto de caer, pataleo final)
+    local jx, jy = 0, 0
+    if st == 'windup' or st == 'aim' or st == 'dying_kick' then
+        jx = math.floor(math.sin(now * 70) * 3)
+        jy = math.floor(math.cos(now * 55) * 2)
+    end
+
+    if st == 'aim' and not EDITOR_VIEW then
+        drawTarget(math.floor(self.x - camX), math.floor(self.landY - camY), self.sprW * 0.9, now)
+    end
+
+    local fx, fy, ang
+    if self.crawl and self.cattached and CRAWL[st] then
+        fx, fy, ang = Crawler.pose(self)
+    else
+        local H = self.sprH
+        ang = 0
+        if st == 'drop' or st == 'stuck' or st == 'dying_kick' then ang = math.pi
+        elseif st == 'getup' then ang = math.pi * (1 - math.min(1, t / GETUP_T))
+        elseif st == 'dying_shrink' then
+            -- Se desinfla: del doble al tamaño normal con un temblor elástico,
+            -- dándose la vuelta y posándose en el suelo
+            local q = math.min(1, t / SHRINK_T)
+            s = MS * (1 - 0.5 * q) * (1 + 0.12 * math.sin(q * math.pi * 7) * (1 - q))
+            ang = math.pi * (1 - q)
+            withSpike = q < 0.15
+            H = 9 * s
+            -- centro: de donde estaba clavado hasta apoyado en el suelo
+            local cy = (1 - q) * self.y + q * (self.floorY - H / 2)
+            fx, fy = self.x - math.sin(ang) * H / 2, cy + math.cos(ang) * H / 2
+        end
+        if not fx then fx, fy = self.x - math.sin(ang) * H / 2, self.y + math.cos(ang) * H / 2 end
+    end
+    if st == 'dying_flee' then
+        s, withSpike = MS / 2, false
+        alpha = math.max(0, math.min(1, (FLEE_T - t) / 0.9))
+    end
+    if self.state == 'dormant' and EDITOR_VIEW then nervous = false end
+    self:drawLocal(math.floor(fx - camX + 0.5) + jx, math.floor(fy - camY + 0.5) + jy, ang, s, img,
+                   withSpike, alpha * self:ghostAlpha(), nervous)
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
+return {
+    name = 'megacrabby', label = 'Mega Crabby', category = 'Jefes',
+    description = 'Crabby gigante: persigue y embiste; trepa al techo y cae de cabeza (su pincho mata). '
+               .. 'Solo es vulnerable clavado en el suelo: un golpe por caída.',
+    class = Mega,
+    boss = { title = 'MEGA CRABBY' },
+    hide = Boss.HIDE,
+    defaults = { points = 60 },
+    props = Boss.props({ hp = 10, hpPerPlayer = 4 }, {
+        { key='chaseSpeed', kind='number', label='Velocidad persiguiendo', group='Persecución', default=150,
+          min=20, max=600, step=10, help='px/s (el jugador anda a 240)' },
+        { key='chargeRange', kind='number', label='Distancia para embestir (casillas)', group='Persecución',
+          default=5, min=1, max=20, step=0.5 },
+        { key='windupTime', kind='number', label='Aviso antes de embestir (s)', group='Persecución', default=0.6,
+          min=0.1, max=3, step=0.05 },
+        { key='chargeSpeed', kind='number', label='Velocidad de la embestida', group='Persecución', default=520,
+          min=100, max=1500, step=10 },
+        { key='chargeDist', kind='number', label='Largo de la embestida (casillas)', group='Persecución', default=8,
+          min=1, max=30, step=0.5 },
+        { key='chargeEvery', kind='number', label='Espera entre embestidas (s)', group='Persecución', default=2.5,
+          min=0, max=20, step=0.25 },
+        { key='ceilingEvery', kind='number', label='Ataque desde el techo cada (s)', group='Ataque del techo',
+          default=7, min=1, max=60, step=0.5, help='Tiempo persiguiendo antes de subir al techo' },
+        { key='climbSpeed', kind='number', label='Velocidad trepando', group='Ataque del techo', default=280,
+          min=40, max=900, step=10 },
+        { key='climbMax', kind='number', label='Tiempo máximo para llegar al techo (s)', group='Ataque del techo',
+          default=6, min=1, max=20, step=0.5, help='Si no lo consigue (sin paredes), se suelta y sigue' },
+        { key='ceilingMax', kind='number', label='Tiempo buscando por el techo (s)', group='Ataque del techo',
+          default=3, min=0.5, max=15, step=0.25 },
+        { key='aimTime', kind='number', label='Aviso antes de caer (s)', group='Ataque del techo', default=0.9,
+          min=0.2, max=4, step=0.05, help='Tiembla y marca en el suelo dónde caerá' },
+        { key='dropSpeed', kind='number', label='Velocidad máxima de caída', group='Ataque del techo', default=1600,
+          min=300, max=3000, step=50 },
+        { key='stuckTime', kind='number', label='Clavado en el suelo (s)', group='Ataque del techo', default=3,
+          min=0.5, max=10, step=0.25, help='El momento de golpearlo (un golpe por caída)' },
+        { key='rageAt', kind='number', label='Se enfada con vida por debajo de', group='Enfado', default=0.5,
+          min=0, max=1, step=0.05, help='Fracción de vida (0.5 = la mitad). 0 = nunca' },
+        { key='rageSpeed', kind='number', label='Enfadado: velocidad x', group='Enfado', default=1.3,
+          min=1, max=3, step=0.05 },
+        { key='rageStuck', kind='number', label='Enfadado: tiempo clavado x', group='Enfado', default=0.75,
+          min=0.2, max=1, step=0.05 },
+    }),
+    editor = { sprite = 'assets/images/MegaCrabby/crab1.png' },
+}

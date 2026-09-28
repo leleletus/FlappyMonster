@@ -151,7 +151,8 @@ src/world/
   entities/Interactions.lua  player<->entity rules (kill/hurt/stomp/pickup/checkpoint/GP)
   entities/types/*.lua gummy, crabby, spikefall, star, extralife, checkpoint, mortar, mirror,
                        rainspike (orchestrated spike), spikerain (the orchestrator),
-                       miniboss1 (Nave Malvada), trampoline (4 defs: up/down/left/right),
+                       miniboss1 (Nave Malvada), megacrabby (Mega Crabby),
+                       trampoline (4 defs: up/down/left/right),
                        crabbytramp (Crabby trampolín, subclass of crabby),
                        flood (editor-only placeholder for a Floods area)
   AutoScroll.lua       auto-scrolling camera levels (see below)
@@ -273,7 +274,7 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
 - Wall Crabby stomp (Interactions.defaultCheck): in the air, falling onto its top
   end OR coming from the open side (player centre beyond its outer face) =
   'stomp' with 4th return dirX = cnx → `pa:bounce(vy, dirX, soft=true)` (vx 300 +
-  ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill; v17: crawler turn in snapshots).
+  ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill; v17: crawler turn in snapshots; v18: MegaCrabby).
 - **Crawler** (`src/world/entities/Crawler.lua`): surface-following movement
   (floor ↔ walls ↔ ceiling, concave and convex corners) for Crabbies with prop
   `wallWalk` (`Crabby.WALL_PROP`, off by default so old levels don't change).
@@ -287,8 +288,10 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   but `Crawler.pose(e)` (feet rolling around the corner + angle) is where the
   body really is. Hitbox, inner box, spike and trampoline boxes use
   `Crawler.poseBox`, stomp rules use `e:surfaceNormal()` (pose normal), and
-  render draws the same pose. Net: Crabby field 4 = turn progress+1; the client
-  starts the turn from its last drawn pose and runs it on its own clock.
+  render draws the same pose. Net: `Crawler.netPack/netApply` (surface code + turn
+  progress+1; the client starts the turn from its last drawn pose and runs it on its
+  own clock), shared by Crabby and MegaCrabby. Big crawlers can lengthen the turn
+  (`e.turnLength`, `e.turnMax`) and an entity can add solidity (`e:crawlSolidAt`).
   Detaches on knockback / drops and
   re-attaches on landing. Net: surface code in Crabby.netPack (`Crabby.NET_N`
   = number of Crabby fields; subclasses append after it).
@@ -448,6 +451,17 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   flies `lift` px (default 32) above its placement cell; 1 full-size spike per
   broken block + 1. The hurt face has no eyes: X eyes are drawn on it (hit +
   death hold) and on the thrown dead sprites, at positions measured per sprite.
+- **MegaCrabby** (`types/megacrabby.lua`, sprites `assets/images/MegaCrabby/`, sounds
+  `bosses/megacrabby/` from `tools/sounds/megacrabby.py`): Crabby ×2 (MS=8), always spiked,
+  two claws (`claw_left-Sheet.png` 2×7x6, right = flipped) that snap at random (render
+  only). States intro → chase (floor, nearest player, contact/spike = 1 HP + knockback via
+  `hitPlayers`) → windup → charge → recover; every `ceilingEvery` s: climb (Crawler; the
+  zone edges count as walls/ceiling via `crawlSolidAt`) → ceiling (above target) → aim
+  (shakes, `landY` marker) → drop (spike hazard = KILL) → stuck (ONLY vulnerable state,
+  one hit per drop: `hitDrop`; stomp 1 / GP 2) → getup (during its inv time). Rage below
+  `rageAt`. Death (own states): dying_kick → dying_shrink (deflates to normal size) →
+  dying_flee (small crab climbs away, fades) → dead. `Boss.hurtSound` per boss.
+  Test arena: `assets/levels/jefe_cangrejo.json`.
 - Boss-zone respawns are validated: `BossZones.respawnPoint(level, pa)` moves
   the spawn to remaining ground in the zone if the floor under it was broken
   (`Level:isStandable`, `Level:findGround` are generic helpers).
