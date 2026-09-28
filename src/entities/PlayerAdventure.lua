@@ -32,7 +32,9 @@ local DEATH_FALL_DIST   = WINDOW_H + 100
 -- src/world/tiles/materials/.
 
 -- Contacto con materiales 'hurt': invulnerabilidad tras recibir daño
-local HURT_COOLDOWN = 1.0
+-- Tras un golpe: HURT_COOLDOWN s sin poder recibir daño NI empujones, y
+-- atravesando a los jefes (nadie encadena golpes ni atrapa en una esquina)
+local HURT_COOLDOWN = 1.6
 -- Al reaparecer: invulnerable a TODO (parpadea) durante este tiempo
 local SPAWN_INV     = 2.5
 PlayerAdventure.SPAWN_INV = SPAWN_INV
@@ -257,9 +259,10 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
     local x0 = self.x
     local bodies
     if self.solidAgainst then bodies = self.solidAgainst(level)
-    elseif not self:isInvulnerable() then bodies = level.solidBodies
+    elseif not (self:isInvulnerable() or (self.hurtT or 0) > 0) then bodies = level.solidBodies
     elseif level.solidBodies then
-        -- Invulnerable: atraviesa a los jefes, pero no los objetos sólidos (morteros...)
+        -- Invulnerable (o recién golpeado): atraviesa a los jefes, pero no los
+        -- objetos sólidos (morteros...)
         bodies = {}
         for _, o in ipairs(level.solidBodies) do if o.solidFull then bodies[#bodies+1] = o end end
     end
@@ -437,6 +440,11 @@ end
 
 -- ¿Recién reaparecido? (no recibe ningún daño)
 function PlayerAdventure:isInvulnerable() return (self.spawnInvT or 0) > 0 end
+-- Protegido tras un golpe (i-frames): ni daño ni empujones. El empujón que
+-- acompaña al MISMO golpe sí se aplica (hitNow: solo el paso del golpe)
+function PlayerAdventure:isHitProtected()
+    return (self.hurtT or 0) > 0 and not self.hitNow
+end
 
 function PlayerAdventure:takeDamage()
     if self.dying or not self.alive or self:isInvulnerable() then return false end
@@ -450,6 +458,7 @@ end
 function PlayerAdventure:hurt()
     if self.hurtT > 0 or self.dying or not self.alive or self:isInvulnerable() then return false end
     self.hurtT = HURT_COOLDOWN
+    self.hitNow = true
     return self:takeDamage()
 end
 
@@ -747,7 +756,7 @@ end
 -- lado, agachado y aturdido un rato
 local SQUASH_T = 1.8
 function PlayerAdventure:squash(dirX)
-    if self.dying or self:isInvulnerable() then return false end
+    if self.dying or self:isInvulnerable() or self:isHitProtected() then return false end
     self.vx, self.vy = dirX * 560, -240          -- saltito hacia un lado
     self.onGround = false
     self.gpPhase, self.gpT = nil, 0
@@ -759,7 +768,7 @@ end
 
 -- Empujón de un ground pound cercano: sale despedido y queda aturdido
 function PlayerAdventure:knockback(dirX)
-    if self.dying or self:isInvulnerable() then return end
+    if self.dying or self:isInvulnerable() or self:isHitProtected() then return end
     self.vx, self.vy = dirX * GP_PUSH_VX, GP_PUSH_VY
     self.onGround, self.crouching = false, false
     self.gpPhase, self.gpT = nil, 0
@@ -771,7 +780,7 @@ end
 -- rebotado hacia un lado sin quedar aturdido del todo.
 local RECOIL_VX, RECOIL_VY, RECOIL_STUN = 520, -300, 0.22
 function PlayerAdventure:recoil(dirX)
-    if self.dying or self.stunT > 0 or self:isInvulnerable() then return false end
+    if self.dying or self.stunT > 0 or self:isInvulnerable() or self:isHitProtected() then return false end
     self.vx, self.vy = dirX * RECOIL_VX, RECOIL_VY
     self.onGround, self.crouching = false, false
     self.gpPhase, self.gpT = nil, 0
@@ -781,6 +790,7 @@ end
 
 -- ── Update ────────────────────────────────────────────────────────────────────
 function PlayerAdventure:update(dt, level)
+    self.hitNow = nil
     if self.dying then
         self.deathTimer=self.deathTimer+dt
         if self.deathPhase=='freeze' then

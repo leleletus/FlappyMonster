@@ -62,6 +62,15 @@ function love.load()
         if not pa.alive or (pa.dying and pa.deathPhase == 'fall') then
             pa:respawn(); pa._counted = false; pa.hp = pa.hpMax; lastHp = pa.hp
         end
+        -- seguimiento al apuntar (DEBUG_AIM=1): jefe/marca vs jugador
+        if os.getenv('DEBUG_AIM') and (boss.state == 'aim' or boss.state == 'wallaim') then
+            boss._aimLog = (boss._aimLog or 0) + dt
+            if boss._aimLog >= 0.2 then
+                boss._aimLog = 0
+                print(('      %s t=%.1f  marca x=%.0f  jugador x=%.0f'):format(boss.state, boss.deadTimer,
+                    boss.state == 'aim' and boss.x or boss.markerX, pa.x))
+            end
+        end
         -- continuidad del dibujo al trepar (DEBUG_POSE=1)
         if os.getenv('DEBUG_POSE') and boss.crawl and boss.cattached then
             local Crawler = require 'src/world/entities/Crawler'

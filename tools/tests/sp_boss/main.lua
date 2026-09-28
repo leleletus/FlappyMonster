@@ -1,0 +1,62 @@
+-- tools/tests/sp_boss — pelea de jefe en el modo UN JUGADOR REAL (AdventureState,
+-- el mismo camino que "Probar" del editor). El jugador entra andando en la
+-- arena y esquiva a medias; se registran los estados del jefe, los súbditos
+-- activos y los bloques de jefe tal como los ve AdventureState.
+--
+--   LEVEL=assets/levels/jefe_cangrejo.json love tools/tests/sp_boss
+io.stdout:setvbuf('no')
+love.filesystem.setSymlinksEnabled(true)
+love.filesystem.load('game_main.lua')()
+local gameLoad, gameUpdate = love.load, love.update
+local P = require 'src/network/Protocol'
+local stub = P.newInputStub()
+local t, st, last = 0, nil, {}
+local SECS = tonumber(os.getenv('SECS')) or 60
+function love.load(a)
+    gameLoad(a); love.audio.setVolume(0)
+    gStateMachine:change('adventure', { level = os.getenv('LEVEL') or 'assets/levels/jefe_cangrejo.json' })
+    st = gStateMachine:_top()
+end
+function love.update(dt)
+    t = t + dt
+    local pa = st.player
+    local boss
+    for _, e in ipairs(st.enemies) do if e.def.boss then boss = e end end
+    local s = stub.state
+    s.left, s.right, s.jump, s.jump_pressed = false, false, false, false
+    if boss and boss.zone and pa then
+        local z = boss.zone
+        if pa.x < z.x0 + 3 * TILE_PX then s.right = true
+        elseif boss.state ~= 'dormant' then
+            local d = pa.x - boss.x
+            if math.abs(d) < 4 * TILE_PX then s.right, s.left = d > 0, d <= 0 end
+        end
+    end
+    Input = setmetatable({ pressed = stub.pressed, down = stub.down }, { __index = package.loaded['input'] })
+    gameUpdate(dt)
+    Input = package.loaded['input']
+    if boss then
+        local nm, walls = 0, {}
+        for _, e in ipairs(st.enemies) do
+            if e.summonOf and e.alive then nm = nm + 1 end
+            if e.def.name == 'bosswall' then walls[#walls + 1] = e.state end
+        end
+        local line = ('jefe=%s súbditos=%d bloques=%s'):format(boss.state, nm, table.concat(walls, ','))
+        if line ~= last.line then last.line = line; print(('%6.1fs %s'):format(t, line)) end
+    end
+    -- golpes al jugador: tiempo desde el anterior (nunca debe ser < la protección)
+    if pa then
+        if last.hp and pa.hp < last.hp and not pa.dying then
+            print(('%6.1fs   golpe al jugador (vida %d, %.2f s desde el anterior, jefe=%s)'):format(t, pa.hp, t - (last.hitT or -99), boss and boss.state or '?'))
+            last.minGap = math.min(last.minGap or 99, t - (last.hitT or -99))
+            last.hitT = t
+        end
+        if pa.dying and not last.dead then print(('%6.1fs   jugador MUERE (jefe=%s)'):format(t, boss and boss.state or '?')) end
+        last.dead = pa.dying
+        last.hp = pa.hp
+    end
+    if t > SECS then
+        print(('Menor tiempo entre dos golpes: %.2f s'):format(last.minGap or -1))
+        love.event.quit()
+    end
+end

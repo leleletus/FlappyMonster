@@ -399,7 +399,8 @@ function AdventureState:update(dt)
         Sound.setEmitter(g.x, g.y)
         g:update(dt, self.level)
         Sound.clearEmitter()
-        if not g.alive then
+        -- (los súbditos de reserva de un jefe se quedan: el jefe los reutiliza)
+        if not g.alive and not g.summonOf then
             table.remove(self.enemies, i)
         end
     end
@@ -548,7 +549,7 @@ function AdventureState:_renderScene()
 
     -- Renderizar enemigos (entre tiles y jugador)
     for _, g in ipairs(self.enemies) do
-        g:render(self.camX, self.camY)
+        if g.alive then g:render(self.camX, self.camY) end      -- (reservas: no)
     end
 
     self.player:render(self.camX, self.camY)
@@ -576,7 +577,7 @@ function AdventureState:_renderScene()
 
         -- Hitboxes de enemigos
         for _, g in ipairs(self.enemies) do
-            g:renderDebug(self.camX, self.camY)
+            if g.alive then g:renderDebug(self.camX, self.camY) end
         end
 
         -- Hitboxes reales del nivel (pinchos, contacto, formas de colisión)

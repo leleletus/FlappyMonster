@@ -30,7 +30,8 @@ local Mega = Entity.extend(Boss, {
     walkFps = 6, walkFrames = 3,
     debugColor = { 1, 0.45, 0.2 },
     -- (alto completo: apoya las patas justo en el suelo y en las paredes)
-    hitbox = { outerW = 0.72, outerH = 1.0, innerW = 0.60, innerH = 0.70 },
+    -- (ancho del caparazón y las patas, sin las pinzas: lo que se ve de lado)
+    hitbox = { outerW = 0.66, outerH = 1.0, innerW = 0.55, innerH = 0.70 },
 })
 Mega.hurtSound = 'megaHurt'
 Mega.onEvent = nil          -- (pruebas: function(name, pa) para registrar eventos)
@@ -44,7 +45,7 @@ local SPIKE_HH = SPIKE_H * 0.4
 local EMBED    = 0.5                -- fracción del pincho que se clava en el suelo
 local GETUP_T  = 0.45               -- s del giro al levantarse
 local WIGGLE_FPS = 12
-local CONTACT_PAD = 6               -- px: tocar su cuerpo sólido ya cuenta
+local CONTACT_PAD = 0               -- px alrededor del cuerpo que ya cuentan como tocarlo
 -- Muerte
 local KICK_T, SHRINK_T, FLEE_T = 1.3, 1.0, 2.6
 local FLEE_SPEED = 620              -- huye en línea recta atravesándolo todo
@@ -57,7 +58,12 @@ local LAND_RECOVER = 1.0            -- s quieto tras aterrizar
 local LAND_GRACE   = 1.4            -- s sin dañar por contacto tras aterrizar
 local CONTACT_GRACE = 1.0           -- s sin dañar por contacto tras un golpe
 local WALL_ESCAPE_VX, WALL_ESCAPE_VY = 560, -900   -- rebote para salir de una pared
-local AIM_LOCK = 0.65               -- fracción del aviso que sigue apuntando
+-- Apuntar = SEGUIR al jugador (el techo: el cangrejo se mueve encima; la
+-- pared: la marca del suelo le persigue) y, al final, un instante quieto
+-- temblando para poder reaccionar
+local AIM_LOCK_CEIL, AIM_LOCK_WALL = 0.35, 0.3   -- s fijos antes de lanzarse
+local MARKER_SPEED = 520                         -- px/s de la marca desde la pared
+local SUMMON_WARN  = 1.0                         -- s de aviso (marcas) antes de que salgan
 
 -- Pinzas: más pequeñas que el cuerpo (CLAW_K de su escala) y saliendo del
 -- costado, a la altura del arranque de las patas (CLAW_X, CLAW_Y en píxeles
@@ -109,7 +115,6 @@ function Mega:initBoss()
     self.cnx, self.cny, self.cdir = 0, -1, 1
     self.chargeCd, self.ceilT = self.props.chargeEvery or 2.5, 0
     self.pounceT, self.summonT = 0, 0
-    self.tvx = 0                          -- velocidad media del objetivo (puntería)
     self.travel, self.chargeDir = 0, 1
     self.landY, self.floorY, self.markerX = 0, 0, 0
     self.summonKey = 'mc' .. self.col .. ',' .. self.row
@@ -209,32 +214,21 @@ function Mega:interact(pa)
     return Boss.interact(self, pa)
 end
 
--- Cajas de las pinzas (donde se dibujan en reposo) en el marco local del
--- cuerpo: origen en los pies, "arriba" = -y
-local function clawBox(side)
-    local cw, ch = 7 * CS, 6 * CS
-    local x = side * (CLAW_X * MS + cw / 2 - CLAW_IN * CS)
-    local y = CLAW_Y * MS - ch / 2
-    return x - cw / 2, y - ch / 2, cw, ch
-end
-
 -- Caja local (marco de los pies) → mundo con la pose real
 function Mega:footBox(lx, ly, w, h)
     return Crawler.poseBox(self, lx, ly + self.sprH / 2, w, h)
 end
 
--- Tocarlo (cuerpo, pinzas y base del pincho) quita 1 de vida y empuja.
+-- Tocarlo (cuerpo y base del pincho) quita 1 de vida y empuja.
 -- Tras golpear a alguien se para un momento (no lo aplasta contra una pared).
 function Mega:hitPlayers(level)
     if not CONTACT[self.state] or (self.graceT or 0) > 0 then return end
     local ob = self:getOuterBounds()
-    -- (el pincho de la cabeza, con la caja de un pincho normal: se le puede
-    -- saltar por encima)
+    -- (el cuerpo, sin las pinzas, y la base del pincho de la cabeza, con la
+    -- caja de un pincho normal: se le puede saltar por encima)
     local boxes = {
         { x = ob.x - CONTACT_PAD, y = ob.y - CONTACT_PAD, w = ob.w + 2 * CONTACT_PAD, h = ob.h + 2 * CONTACT_PAD },
         self:footBox(-SPIKE_HW / 2, -self.sprH - SPIKE_HH, SPIKE_HW, SPIKE_HH),
-        self:footBox(clawBox(-1)),
-        self:footBox(clawBox(1)),
     }
     self._dbgBoxes = boxes                    -- (para ver las cajas en las pruebas)
     for _, pa in ipairs(level.players or {}) do
@@ -284,6 +278,7 @@ end
 -- Empujón al tocarlo. Contra una pared no se queda atrapado: rebota en ella y
 -- sale por encima del cangrejo hacia el otro lado
 function Mega:pushAway(level, pa, dir)
+    if pa:isHitProtected() or pa:isInvulnerable() then return end   -- (recién golpeado: nada)
     if self:wallBehind(level, pa, dir) then
         if Mega.onEvent then Mega.onEvent('escape_pared', pa) end
         pa:knockback(-dir)
@@ -374,22 +369,14 @@ function Mega:crawlFacing()
     else self.facing = ((-self.cny * self.cdir) >= 0) and 1 or -1 end
 end
 
--- ¿Dónde estará el objetivo dentro de `lead` s? (su velocidad media, sin
--- salirse de la zona)
-function Mega:predictX(level, lead)
+-- x del objetivo ahora (sin salirse de la zona)
+function Mega:targetX(level)
     local tgt = self:pickTarget(level)
     if not tgt then return self.x end
-    local x = tgt.x + (self.tvx or 0) * lead * (self.props.aimLead or 0.85)
     local z, hw = self.zone, self.outerW / 2
+    local x = tgt.x
     if z then x = math.max(z.x0 + hw, math.min(z.x1 - hw, x)) end
     return x
-end
-
--- Tiempo que tarda en caer desde el techo (para adelantarse)
-function Mega:fallTime()
-    local floorLine = self.zone and self.zone.y1 or (self.y + 8 * TILE_PX)
-    local h = math.max(1, floorLine - (self.y + self.sprH / 2 + SPIKE_H))
-    return math.sqrt(2 * h / (ADV_GRAVITY * 1.4))
 end
 
 -- Suelo que hay debajo de x (la marca de dónde caerá)
@@ -408,19 +395,33 @@ function Mega:minions(level)
     return out
 end
 
-function Mega:summonMinions(level)
-    local p, T = self.props, TILE_PX
+-- ¿Cuántos puede invocar ahora? (libres en la reserva, sin pasar del máximo)
+function Mega:summonable(level)
+    local p = self.props
     local free, active = {}, 0
     for _, e in ipairs(self:minions(level)) do
         if e.alive then active = active + 1 else free[#free + 1] = e end
     end
-    local n = math.min(#free, p.summonCount or 2, math.max(0, (p.summonMax or 3) - active))
+    return math.min(#free, p.summonCount or 2, math.max(0, (p.summonMax or 3) - active)), free
+end
+
+-- Dónde sale el súbdito i (a los lados, alternando). Solo depende de su x y
+-- de i: el cliente dibuja las marcas en el mismo sitio
+function Mega:summonSpot(i)
+    local T = TILE_PX
+    local dir = (i % 2 == 1) and -1 or 1
+    local x = self.x + dir * (self.sprW * 0.5 + 24 + math.floor((i - 1) / 2) * T)
+    if self.zone then x = math.max(self.zone.x0 + T, math.min(self.zone.x1 - T, x)) end
+    return x, dir
+end
+
+function Mega:summonMinions(level)
+    local n, free = self:summonable(level)
+    n = math.min(n, self.summonN or n)
     local floorY = self.y + self.outerH / 2
     for i = 1, n do
         local e = free[i]
-        local dir = (i % 2 == 1) and -1 or 1
-        local x = self.x + dir * (self.sprW * 0.5 + 24)
-        if self.zone then x = math.max(self.zone.x0 + T, math.min(self.zone.x1 - T, x)) end
+        local x, dir = self:summonSpot(i)
         local h = e.home
         h.x, h.y, h.facing, h.flipped, h.state = x, floorY - e.outerH / 2, dir, false, 'walk'
         h.vx = e.speed * dir
@@ -468,9 +469,6 @@ function Mega:updateBoss(dt, level)
     self.deadTimer = self.deadTimer + dt
     local t = self.deadTimer
     local k = self:speedMult()
-    -- Velocidad media del objetivo (para adelantarse a dónde irá)
-    local tg = self.target
-    if tg and not tg.dying then self.tvx = self.tvx + ((tg.vx or 0) - self.tvx) * math.min(1, dt * 5) end
 
     if st == 'dormant' then
         self:walk(level, dt, 0)
@@ -497,10 +495,17 @@ function Mega:updateBoss(dt, level)
             self.pounceT = 0
             self:startClimb(level, 'wallclimb')
         elseif self.onGround and summonsOn and self.summonT >= (p.summonEvery or 12) then
-            self.summonT = 0
-            self.state, self.deadTimer, self.summoned = 'summon', 0, false
-            Sound.play('megaWindup', 0.8)
-            Sound.play('megaClack', 0.7)
+            -- Solo si puede sacar alguno (con el máximo vivo no lo intenta:
+            -- lo vuelve a mirar un poco después)
+            local n = self:summonable(level)
+            if n > 0 then
+                self.summonT, self.summonN = 0, n
+                self.state, self.deadTimer, self.summoned = 'summon', 0, false
+                Sound.play('megaWindup', 0.8)
+                Sound.play('megaClack', 0.7)
+            else
+                self.summonT = (p.summonEvery or 12) * 0.8
+            end
         elseif self.onGround and tgt and self.chargeCd <= 0 and math.abs(dx) <= (p.chargeRange or 5) * T
                and math.abs(tgt.y - self.y) <= 1.5 * T then
             self.state, self.deadTimer = 'windup', 0
@@ -549,8 +554,7 @@ function Mega:updateBoss(dt, level)
         end
     elseif st == 'ceiling' then
         -- Por el techo hasta ponerse encima del jugador
-        local aimFor = (p.aimTime or 0.9) / k
-        local dx = self:predictX(level, aimFor + self:fallTime()) - self.x
+        local dx = self:targetX(level) - self.x
         local dir = sign(dx)
         local ahead = self.x + dir * (self.sprW * 0.45 + 6)
         if math.abs(dx) <= 10 or t > (p.ceilingMax or 3) or self:crawlSolidAt(level, ahead, self.y) then
@@ -569,16 +573,18 @@ function Mega:updateBoss(dt, level)
         -- Tiembla en el techo (la marca del suelo avisa) y se deja caer. La
         -- primera parte del aviso sigue al jugador (adelantándose a dónde
         -- irá); la última, ya fijo
-        local aimFor = (p.aimTime or 0.9) / k
-        if t < aimFor * AIM_LOCK then
-            local dx = self:predictX(level, (aimFor - t) + self:fallTime()) - self.x
+        local aimFor = (p.aimTime or 1.8) / k
+        if t < aimFor - AIM_LOCK_CEIL then
+            -- Le sigue por el techo (la marca va debajo)
+            local dx = self:targetX(level) - self.x
             local dir = sign(dx)
             local ahead = self.x + dir * (self.sprW * 0.45 + 6)
             if math.abs(dx) > 4 and not self:crawlSolidAt(level, ahead, self.y) then
                 self.cdir = -dir
                 self.speed = (p.climbSpeed or 280) * k
-                Crawler.move(self, level, math.min(math.abs(dx), self.speed * 0.6 * dt))
+                Crawler.move(self, level, math.min(math.abs(dx), self.speed * (p.trackSpeed or 1.0) * dt))
                 self:crawlFacing()
+                self:animWalk(dt, self.tuning.walkFps * 1.5 * k)
             end
         end
         self.markerX = self.x
@@ -591,8 +597,9 @@ function Mega:updateBoss(dt, level)
     elseif st == 'summon' then
         -- Invoca súbditos: se alza castañeteando y salen de debajo
         self:walk(level, dt, 0)
-        if not self.summoned and t >= 0.45 then self.summoned = true; self:summonMinions(level) end
-        if t >= 1.0 then self.state, self.deadTimer = 'chase', 0 end
+        -- (antes, SUMMON_WARN s con las marcas de dónde saldrán)
+        if not self.summoned and t >= SUMMON_WARN then self.summoned = true; self:summonMinions(level) end
+        if t >= SUMMON_WARN + 0.5 then self.state, self.deadTimer = 'chase', 0 end
     elseif st == 'wallclimb' then
         -- A la pared más cercana y hasta media altura
         self.speed = (p.climbSpeed or 280) * k
@@ -602,20 +609,26 @@ function Mega:updateBoss(dt, level)
         self:animWalk(dt, self.tuning.walkFps * 1.5 * k)
         local high = (self.climbFloorY or self.y) - self.y
         if not Crawler.turning(self) and self.cnx ~= 0 and high >= (p.pounceHeight or 3) * T then
-            self.state, self.deadTimer = 'wallaim', 0
+            self.state, self.deadTimer, self.markerSet = 'wallaim', 0, false
             Sound.play('megaClack', 0.8)
         elseif self.cny == 1 and not Crawler.turning(self) then
-            self.state, self.deadTimer = 'wallaim', 0          -- (zona baja: salta desde el techo)
+            self.state, self.deadTimer, self.markerSet = 'wallaim', 0, false   -- (zona baja: salta desde el techo)
         elseif t > (p.climbMax or 6) then
             return self:abortClimb()
         end
     elseif st == 'wallaim' then
         -- Agarrado a la pared apuntando (marca en el suelo), y salta
-        local aimFor = (p.pounceAim or 0.8) / k
-        if t < aimFor * AIM_LOCK or self.markerX == 0 then
-            self.markerX = self:predictX(level, (aimFor - t) + (p.pounceTime or 0.9))
-            self.landY = self:floorBelow(level, self.markerX, self.y)
+        local aimFor = (p.pounceAim or 1.4) / k
+        if self.markerX == 0 or not self.markerSet then
+            self.markerX, self.markerSet = self:targetX(level), true     -- (empieza en el jugador)
         end
+        if t < aimFor - AIM_LOCK_WALL then
+            -- La marca del suelo persigue al jugador
+            local dx = self:targetX(level) - self.markerX
+            local step = MARKER_SPEED * k * dt
+            self.markerX = self.markerX + math.max(-step, math.min(step, dx))
+        end
+        self.landY = self:floorBelow(level, self.markerX, self.y)
         if t >= aimFor then self:startPounce() end
     elseif st == 'pounce' then
         -- En el aire (sin caer de cabeza: después no queda vulnerable).
@@ -765,7 +778,7 @@ end
 function Mega:netPackExtra()
     local surf, turn = Crawler.netPack(self)
     return { surf, turn, math.floor(self.landY + 0.5), math.floor(self.floorY + 0.5), self.hitDrop and 1 or 0,
-             math.floor(self.markerX + 0.5) }
+             math.floor(self.markerX + 0.5), self.summonN or 0 }
 end
 
 function Mega:netApplyExtra(a, b, f)
@@ -777,6 +790,7 @@ function Mega:netApplyExtra(a, b, f)
     self.floorY = tonumber(b[4]) or 0
     self.hitDrop = b[5] == 1
     self.markerX = tonumber(b[6]) or self.x
+    self.summonN = tonumber(b[7]) or 0
 end
 
 -- ── Dibujo ────────────────────────────────────────────────────────────────────
@@ -927,11 +941,12 @@ function Mega:drawLocal(px, py, ang, s, img, withSpike, alpha, nervous, sx, sy, 
 end
 
 -- Marca en el suelo de donde va a caer (parpadea)
-local function drawTarget(x, y, w, t)
+local function drawTarget(x, y, w, t, col)
     local on = math.floor(t * 8) % 2 == 0
+    col = col or { 1, 0.2, 0.2 }
     love.graphics.setColor(0, 0, 0, 0.35)
     love.graphics.rectangle('fill', x - w / 2, y - 6, w, 6)
-    love.graphics.setColor(1, 0.2, 0.2, on and 0.9 or 0.45)
+    love.graphics.setColor(col[1], col[2], col[3], on and 0.9 or 0.45)
     local seg = math.floor(w / 6)
     for i = 0, 5, 2 do love.graphics.rectangle('fill', x - w / 2 + i * seg, y - 4, seg, 4) end
 end
@@ -993,11 +1008,29 @@ function Mega:render(camX, camY)
 
     -- Temblor (aviso de embestida, a punto de caer, pataleo final)
     local jx, jy = 0, 0
-    if st == 'windup' or st == 'aim' or st == 'wallaim' or st == 'dying_kick' then
+    -- (apuntando: solo al final, cuando ya se ha fijado y va a lanzarse)
+    local k = self:speedMult()
+    local locked = (st == 'aim' and t >= (self.props.aimTime or 1.8) / k - AIM_LOCK_CEIL)
+                or (st == 'wallaim' and t >= (self.props.pounceAim or 1.4) / k - AIM_LOCK_WALL)
+    if st == 'windup' or locked or st == 'dying_kick' then
         jx = math.floor(math.sin(now * 70) * 3)
         jy = math.floor(math.cos(now * 55) * 2)
     end
 
+    if st == 'summon' and t < SUMMON_WARN and not EDITOR_VIEW then
+        -- Dónde van a salir los súbditos (marca amarilla y tierra que burbujea)
+        local fy0 = self.y + self.outerH / 2
+        for i = 1, (self.summonN or 0) do
+            local x = self:summonSpot(i)
+            drawTarget(math.floor(x - camX), math.floor(fy0 - camY), TILE_PX, now, { 1, 0.85, 0.2 })
+            self._sfx = self._sfx or {}
+            if now - (self._sfx[i] or 0) > 0.15 then
+                self._sfx[i] = now
+                Particles = Particles or require 'src/fx/Particles'
+                Particles.emit('mega_dirt', x, fy0)
+            end
+        end
+    end
     if (st == 'aim' or st == 'wallaim') and not EDITOR_VIEW then
         local mx = (st == 'aim') and self.x or self.markerX
         drawTarget(math.floor(mx - camX), math.floor(self.landY - camY), self.sprW * 0.9, now)
@@ -1078,20 +1111,20 @@ return {
           default=6, min=1, max=20, step=0.5, help='Si no lo consigue (sin paredes), se suelta y sigue' },
         { key='ceilingMax', kind='number', label='Tiempo buscando por el techo (s)', group='Ataque del techo',
           default=3, min=0.5, max=15, step=0.25 },
-        { key='aimTime', kind='number', label='Aviso antes de caer (s)', group='Ataque del techo', default=0.9,
-          min=0.2, max=4, step=0.05, help='Tiembla y marca en el suelo dónde caerá' },
+        { key='aimTime', kind='number', label='Siguiendo antes de caer (s)', group='Ataque del techo', default=1.8,
+          min=0.5, max=6, step=0.1, help='Sigue al jugador por el techo con la marca debajo; se queda quieto el último instante' },
         { key='dropSpeed', kind='number', label='Velocidad máxima de caída', group='Ataque del techo', default=1600,
           min=300, max=3000, step=50 },
         { key='stuckTime', kind='number', label='Clavado en el suelo (s)', group='Ataque del techo', default=3,
           min=0.5, max=10, step=0.25, help='El momento de golpearlo (un golpe por caída)' },
-        { key='aimLead', kind='number', label='Adelantarse al jugador', group='Ataque del techo', default=0.85,
-          min=0, max=1.5, step=0.05, help='Cuánto predice dónde estará el jugador al caer (0 = apunta a donde está)' },
+        { key='trackSpeed', kind='number', label='Velocidad siguiendo (x trepar)', group='Ataque del techo',
+          default=1.0, min=0.2, max=1.5, step=0.05, help='Mientras apunta desde el techo sigue al jugador a esta velocidad' },
         { key='pounceEvery', kind='number', label='Salto desde la pared cada (s)', group='Salto desde la pared',
           default=9, min=0, max=60, step=0.5, help='0 = nunca. No cae de cabeza: después no queda vulnerable' },
         { key='pounceHeight', kind='number', label='Altura a la que trepa (casillas)', group='Salto desde la pared',
           default=3, min=1, max=10, step=0.5 },
-        { key='pounceAim', kind='number', label='Aviso antes de saltar (s)', group='Salto desde la pared', default=0.8,
-          min=0.2, max=3, step=0.05, help='Tiembla en la pared y marca en el suelo dónde caerá' },
+        { key='pounceAim', kind='number', label='Apuntando antes de saltar (s)', group='Salto desde la pared', default=1.4,
+          min=0.5, max=5, step=0.1, help='La marca del suelo persigue al jugador; se fija el último instante' },
         { key='pounceTime', kind='number', label='Duración del salto (s)', group='Salto desde la pared', default=0.9,
           min=0.4, max=2, step=0.05 },
         { key='pounceDamage', kind='int', label='Daño al aplastar', group='Salto desde la pared', default=2,
