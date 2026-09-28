@@ -4,7 +4,9 @@
 --   Particles.update(dt)  /  Particles.render(camX, camY)  /  Particles.clear()
 -- Tipos: 'gp_land', 'gp_start', 'block_break', 'spawn', 'oneup', 'spike_land',
 --        'spike_pop', 'boss_hit', 'boss_blast', 'boss_big_blast', 'mortar_blast', 'fire_puff', 'ember',
---        'exhaust', 'smoke', 'sparks', 'shake_small', 'shake_big' (temblor de pantalla:
+--        'exhaust', 'smoke', 'sparks', 'mega_step', 'mega_trail', 'mega_debris', 'mega_dirt',
+--        'mega_slam', 'mega_land', 'mega_poof' (Mega Crabby),
+--        'shake_small', 'shake_big' (temblor de pantalla:
 --        Particles.shakeOffset() se suma a la cámara al dibujar)
 -- (otros nombres no hacen nada)
 
@@ -194,6 +196,82 @@ function Particles.emit(kind, x, y, opts)
         -- Chispa que suelta la bola de fuego al volar
         add({ x = x + rnd(-6, 6), y = y + rnd(-6, 6), vx = rnd(-20, 20), vy = -rnd(10, 50), g = -60,
               life = rnd(0.25, 0.5), size = 3, col = ({ {1, 0.85, 0.2}, {1, 0.45, 0.05} })[math.random(2)] })
+    -- ── Mega Crabby (un cangrejo colosal: polvo y tierra a lo grande) ─────────
+    elseif kind == 'mega_step' then
+        -- Pisada: polvo bajo y alguna piedrecita
+        for i = 1, 5 do
+            add({ x = x + rnd(-14, 14), y = y - rnd(0, 4), vx = rnd(-130, 130), vy = -rnd(20, 70), g = -10,
+                  life = rnd(0.35, 0.6), size = math.random(3, 5) * 3, col = {0.85, 0.8, 0.72}, drag = 4, dust = true })
+        end
+        for i = 1, 3 do
+            add({ x = x + rnd(-10, 10), y = y - 2, vx = rnd(-120, 120), vy = -rnd(120, 260), g = 1300,
+                  life = rnd(0.3, 0.5), size = 3, col = ({ {0.45, 0.33, 0.22}, {0.6, 0.45, 0.3} })[math.random(2)] })
+        end
+    elseif kind == 'mega_trail' then
+        -- Estela de la embestida (opts.dir = hacia dónde va)
+        local dir = opts.dir or 1
+        for i = 1, 2 do
+            add({ x = x + rnd(-8, 8), y = y - rnd(0, 8), vx = -dir * rnd(40, 140), vy = -rnd(20, 70), g = -10,
+                  life = rnd(0.3, 0.55), size = math.random(2, 4) * 3, col = {0.88, 0.84, 0.76}, drag = 3, dust = true })
+        end
+    elseif kind == 'mega_debris' then
+        -- Piedrecitas que suelta al trepar por paredes y techo
+        for i = 1, 3 do
+            add({ x = x + rnd(-16, 16), y = y + rnd(-6, 6), vx = rnd(-50, 50), vy = rnd(0, 80), g = 1200,
+                  life = rnd(0.5, 0.9), size = math.random(1, 2) * 3,
+                  col = ({ {0.5, 0.5, 0.55}, {0.45, 0.35, 0.25}, {0.62, 0.6, 0.58} })[math.random(3)] })
+        end
+    elseif kind == 'mega_dirt' then
+        -- Forcejeando clavado: tierra que salta del agujero
+        for i = 1, 4 do
+            add({ x = x + rnd(-12, 12), y = y, vx = rnd(-170, 170), vy = -rnd(160, 380), g = 1400,
+                  life = rnd(0.35, 0.65), size = math.random(1, 2) * 3,
+                  col = ({ {0.45, 0.33, 0.22}, {0.6, 0.45, 0.3}, {0.35, 0.25, 0.17} })[math.random(3)] })
+        end
+    elseif kind == 'mega_slam' then
+        -- Se clava cayendo del techo: trozos de suelo, un muro de polvo y estrellas
+        for i = 1, math.random(16, 22) do
+            local dir = (i % 2 == 0) and 1 or -1
+            add({ x = x + dir * rnd(4, 30), y = y - rnd(0, 10), vx = dir * rnd(90, 480), vy = -rnd(260, 720),
+                  g = rnd(1300, 1700), life = rnd(1.0, 1.6), size = math.random(2, 5) * 3,
+                  col = ({ {0.45, 0.33, 0.22}, {0.6, 0.45, 0.3}, {0.38, 0.3, 0.22} })[math.random(3)],
+                  spin = rnd(-12, 12), chunk = true, fadeLast = 0.3 })
+        end
+        for i = 1, 18 do
+            local dir = (i % 2 == 0) and 1 or -1
+            add({ x = x + dir * rnd(0, 40), y = y - rnd(0, 14), vx = dir * rnd(150, 520), vy = -rnd(20, 140), g = -15,
+                  life = rnd(0.6, 1.1), size = math.random(4, 7) * 3, col = {0.86, 0.82, 0.74}, drag = 3, dust = true })
+        end
+        for i = 1, 8 do
+            local a = rnd(-math.pi * 0.95, -math.pi * 0.05)
+            add({ x = x, y = y - 10, vx = math.cos(a) * rnd(200, 420), vy = math.sin(a) * rnd(200, 420),
+                  g = 600, life = rnd(0.35, 0.6), size = 7, col = {1, 0.95, 0.5}, star = true })
+        end
+    elseif kind == 'mega_land' then
+        -- Aterriza tras el salto: onda de polvo que barre el suelo a los lados
+        for i = 1, 28 do
+            local dir = (i % 2 == 0) and 1 or -1
+            add({ x = x + dir * rnd(0, 40), y = y - rnd(0, 8), vx = dir * rnd(260, 720), vy = -rnd(10, 90), g = -10,
+                  life = rnd(0.4, 0.8), size = math.random(3, 6) * 3, col = {0.88, 0.84, 0.76}, drag = 4, dust = true })
+        end
+        for i = 1, 10 do
+            add({ x = x + rnd(-40, 40), y = y - 2, vx = rnd(-260, 260), vy = -rnd(160, 380), g = 1300,
+                  life = rnd(0.4, 0.7), size = math.random(1, 2) * 3, col = {0.5, 0.4, 0.3} })
+        end
+    elseif kind == 'mega_poof' then
+        -- Se desinfla: nube grande de humo claro y destellos
+        for i = 1, 26 do
+            local a = rnd(0, math.pi * 2)
+            add({ x = x + math.cos(a) * rnd(0, 40), y = y + math.sin(a) * rnd(0, 30),
+                  vx = math.cos(a) * rnd(80, 300), vy = math.sin(a) * rnd(80, 300) - 40, g = -20,
+                  life = rnd(0.7, 1.2), size = math.random(4, 8) * 3,
+                  col = ({ {0.95, 0.95, 0.97}, {0.8, 0.8, 0.84}, {0.65, 0.65, 0.7} })[math.random(3)], drag = 3, dust = true })
+        end
+        for i = 1, 10 do
+            local a = rnd(0, math.pi * 2)
+            add({ x = x, y = y, vx = math.cos(a) * rnd(150, 340), vy = math.sin(a) * rnd(150, 340),
+                  g = 300, life = rnd(0.4, 0.7), size = 6, col = {1, 1, 0.8}, star = true })
+        end
     elseif kind == 'spike_pop' then
         -- El Crabby arranca su pincho del suelo: tierra hacia arriba
         for i = 1, 12 do

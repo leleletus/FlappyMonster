@@ -110,6 +110,15 @@ function love.update(dt)
             log.states[#log.states + 1] = ('%.1f %s(%s/%s)'):format(t, boss.state, boss.hp, boss.hpMax)
             log.stateT = t
         end
+        -- (DEBUG_CLIMB: posición fotograma a fotograma al empezar a trepar)
+        if os.getenv('DEBUG_CLIMB') and (boss.state == 'climb' or log.lastState == 'climb') then
+            log.cn = (log.cn or 0) + 1
+            if log.cn <= 14 then
+                local fx, fy = Crawler.pose(boss)
+                print(('    f%02d %s crawl=%s att=%s x=%.1f y=%.1f pose=%.1f,%.1f'):format(log.cn, boss.state,
+                    tostring(boss.crawl), tostring(boss.cattached), boss.x, boss.y, fx, fy))
+            end
+        end
         -- saltos del dibujo al trepar (pose)
         if boss.crawl and boss.cattached then
             local fx, fy = Crawler.pose(boss)
@@ -123,7 +132,7 @@ function love.update(dt)
             log.pfx, log.pfy = fx, fy
         else log.pfx = nil end
         for _, want in ipairs({ 'climb', 'aim', 'stuck', 'chase', 'dying_shrink' }) do
-            if boss.state == want and not log.shots[want] and t - (log.stateT or t) > 0.4 then
+            if not os.getenv('NOSHOTS') and boss.state == want and not log.shots[want] and t - (log.stateT or t) > 0.4 then
                 log.shots[want] = true; snap(want)
             end
         end

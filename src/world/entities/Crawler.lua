@@ -308,12 +308,18 @@ function Crawler.netApply(e, surfB, turnA, turnB, f, noTurn)
             e.tsang, e.tonx, e.tony = Crawler.angle(e), e.cnx, e.cny
         end
         e.turnDur = Crawler.turnDuration(e)
-        e.turnT = tb > 0 and (tb - 1) / 100 * e.turnDur or 0
+        -- Progreso a la hora que se está dibujando (interpolado como la
+        -- posición; el snapshot nuevo va por delante)
+        local kb = tb > 0 and (tb - 1) / 100 or 0
+        local ka = ta > 0 and ta <= tb and (ta - 1) / 100 or 0
+        e.turnT = (ka + (kb - ka) * f) * e.turnDur
     elseif e.turnT then
         e.turnT = e.turnT + elapsed
         if tb > 0 then
-            local k = (ta > 0 and ta <= tb) and (ta + (tb - ta) * f) or tb
-            e.turnT = math.max(e.turnT, (k - 1) / 100 * e.turnDur)
+            -- (interpolado; si el snapshot anterior aún no giraba, desde 0)
+            local kb = (tb - 1) / 100
+            local ka = (ta > 0 and ta <= tb) and (ta - 1) / 100 or 0
+            e.turnT = math.max(e.turnT, (ka + (kb - ka) * f) * e.turnDur)
         end
         if e.turnT >= e.turnDur then e.turnT = nil; e.turnDoneOn = cur end   -- (no repetirlo)
     end

@@ -172,7 +172,7 @@ src/editor/            Editor.lua (UI+tools), EditorModel.lua (data/save/validat
 src/fx/Particles.lua   Particles.emit(kind,x,y) — kinds: gp_land, gp_start, block_break,
                        oneup, spawn, spike_land, spike_pop, collect, checkpoint,
                        boss_hit, boss_blast, boss_big_blast, mortar_blast, fire_puff, ember,
-                       exhaust, smoke, sparks, shake_small/shake_big (screen shake:
+                       exhaust, smoke, sparks, mega_* (Mega Crabby), shake_small/shake_big (screen shake:
                        states add Particles.shakeOffset() to the camera when drawing)
 src/ui/PixelIcons.lua  small pixel icons = PNGs in assets/images/icons/<name>.png (crown,
                        mode icons skull/flag/hill: a new mode icon is just a file); drawn
@@ -452,13 +452,20 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   broken block + 1. The hurt face has no eyes: X eyes are drawn on it (hit +
   death hold) and on the thrown dead sprites, at positions measured per sprite.
 - **MegaCrabby** (`types/megacrabby.lua`, sprites `assets/images/MegaCrabby/`, sounds
-  `bosses/megacrabby/` from `tools/sounds/megacrabby.py`): Crabby ×2 (MS=8), always spiked,
-  two claws (`claw_left-Sheet.png` 2×7x6, right = flipped) that snap at random (render
-  only). States intro → chase (floor, nearest player, contact/spike = 1 HP + knockback via
-  `hitPlayers`) → windup → charge → recover; every `ceilingEvery` s: climb (Crawler; the
+  `bosses/megacrabby/` from `tools/sounds/megacrabby.py`): Crabby ×2.5 (MS=10), always spiked,
+  two claws (`claw_left-Sheet.png` 2×7x6 at 0.7 of the body scale, right = flipped,
+  drawn IN FRONT of the body beside the legs; `CLAW_*` constants) that snap at random.
+  Secondary animation is render-only and derived from state + deadTimer (same in SP and
+  online): squash & stretch per step/landing/windup/charge/drop, breathing, claw sway
+  per animation (`Mega:pose2d`), struggle shake when stuck, continuous particles
+  (`renderFx`: mega_step / mega_trail / mega_debris / mega_dirt); one-shot fx from the
+  sim: mega_slam, mega_land, mega_poof. States intro → chase (floor, nearest player, contact/spike = 1 HP + knockback via
+  `hitPlayers`; claw boxes too; after a hit it backs off: recover) → windup → charge →
+  recover; every `ceilingEvery` s: climb (Crawler; the
   zone edges count as walls/ceiling via `crawlSolidAt`) → ceiling (above target) → aim
   (shakes, `landY` marker) → drop (spike hazard = KILL) → stuck (ONLY vulnerable state,
-  one hit per drop: `hitDrop`; stomp 1 / GP 2) → getup (during its inv time). Rage below
+  one hit per drop: `hitDrop`; stomp 1 / GP 2) → getup (during its inv time; landing =
+  `landShock`: knockback+stun around, 1 HP only to whoever it lands on). Rage below
   `rageAt`. Death (own states): dying_kick → dying_shrink (deflates to normal size) →
   dying_flee (small crab climbs away, fades) → dead. `Boss.hurtSound` per boss.
   Test arena: `assets/levels/jefe_cangrejo.json`.

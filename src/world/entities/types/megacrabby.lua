@@ -34,8 +34,8 @@ local Mega = Entity.extend(Boss, {
 })
 Mega.hurtSound = 'megaHurt'
 
-local MS = 8                        -- escala del pixel art (el Crabby normal usa 4)
-local SPIKE_H  = 36 * MS / 4        -- alto del pincho (el del Crabby al doble)
+local MS = 10                       -- escala del pixel art (el Crabby normal usa 4: ×2,5)
+local SPIKE_H  = 36 * MS / 4        -- alto del pincho (el del Crabby a la misma escala)
 local SPIKE_HW = 7 * MS             -- ancho de su zona de peligro
 local SPIKE_HH = 8 * MS             -- alto de su zona de peligro
 local EMBED    = 0.5                -- fracción del pincho que se clava en el suelo
@@ -45,10 +45,17 @@ local CONTACT_PAD = 6               -- px: tocar su cuerpo sólido ya cuenta
 -- Muerte
 local KICK_T, SHRINK_T, FLEE_T = 1.3, 1.0, 2.8
 local FLEE_SPEED = 380
+local SMALL = GUMMY_SCALE / MS      -- al desinflarse queda del tamaño de un Crabby normal
+-- Al aterrizar tras levantarse: empuja y aturde a los de alrededor
+local SHOCK_RX, SHOCK_RY = 4.5, 1.8 -- casillas
+local GETUP_MAX = 3.0               -- s: si no llega a aterrizar, sigue igual
 
--- Pinzas (en píxeles del sprite, desde los pies): la izquierda a la izquierda
--- del caparazón, un poco levantada; la derecha, igual y volteada
-local CLAW_CX, CLAW_CY = 7.5, -6
+-- Pinzas: más pequeñas que el cuerpo (CLAW_K de su escala) y saliendo del
+-- costado, a la altura del arranque de las patas (CLAW_X, CLAW_Y en píxeles
+-- del sprite desde los pies, el punto donde se unen); se solapan CLAW_IN
+-- píxeles de pinza con el cuerpo. La derecha es la izquierda volteada.
+local CLAW_K, CLAW_X, CLAW_Y, CLAW_IN = 0.7, 4.6, -1.6, 1.5
+local CS = MS * CLAW_K
 
 local imgs, claw, spikeImg
 function Mega.loadAssets()
@@ -75,7 +82,7 @@ local CONTACT = { chase = true, windup = true, charge = true, recover = true,
 function Mega:setSmall(small)
     if self.small == small then return end
     self.small = small
-    local k = small and 0.5 or 1
+    local k = small and SMALL or 1
     local tn = self.tuning.hitbox
     self.sprW, self.sprH = 16 * MS * k, 9 * MS * k
     self.outerW, self.outerH = self.sprW * tn.outerW, self.sprH * tn.outerH
@@ -183,22 +190,72 @@ function Mega:interact(pa)
     return Boss.interact(self, pa)
 end
 
--- Tocarlo (cuerpo y pincho de la cabeza) quita 1 de vida y empuja
+-- Cajas de las pinzas (donde se dibujan en reposo) en el marco local del
+-- cuerpo: origen en los pies, "arriba" = -y
+local function clawBox(side)
+    local cw, ch = 7 * CS, 6 * CS
+    local x = side * (CLAW_X * MS + cw / 2 - CLAW_IN * CS)
+    local y = CLAW_Y * MS - ch / 2
+    return x - cw / 2, y - ch / 2, cw, ch
+end
+
+-- Caja local (marco de los pies) → mundo con la pose real
+function Mega:footBox(lx, ly, w, h)
+    return Crawler.poseBox(self, lx, ly + self.sprH / 2, w, h)
+end
+
+-- Tocarlo (cuerpo, pinzas y pincho de la cabeza) quita 1 de vida y empuja.
+-- Tras golpear a alguien se para un momento (no lo aplasta contra una pared).
 function Mega:hitPlayers(level)
     if not CONTACT[self.state] then return end
     local ob = self:getOuterBounds()
-    local body = { x = ob.x - CONTACT_PAD, y = ob.y - CONTACT_PAD, w = ob.w + 2 * CONTACT_PAD, h = ob.h + 2 * CONTACT_PAD }
-    local spike = Crawler.poseBox(self, -SPIKE_HW / 2, -self.sprH / 2 - SPIKE_HH, SPIKE_HW, SPIKE_HH)
+    local boxes = {
+        { x = ob.x - CONTACT_PAD, y = ob.y - CONTACT_PAD, w = ob.w + 2 * CONTACT_PAD, h = ob.h + 2 * CONTACT_PAD },
+        self:footBox(-SPIKE_HW / 2, -self.sprH - SPIKE_HH, SPIKE_HW, SPIKE_HH),
+        self:footBox(clawBox(-1)),
+        self:footBox(clawBox(1)),
+    }
+    self._dbgBoxes = boxes                    -- (para ver las cajas en las pruebas)
     for _, pa in ipairs(level.players or {}) do
         if not pa.dying and pa.alive ~= false and (pa.hurtT or 0) <= 0 and not pa:isInvulnerable() then
             local pob = pa:getOuterBounds()
-            if Boss.overlap(pob, body) or Boss.overlap(pob, spike) then
-                local dir = (pa.x >= self.x) and 1 or -1
-                Boss.withPlayer(pa, function() pa:hurt() end)
-                if not pa.dying then pa:knockback(dir) end
+            for _, b in ipairs(boxes) do
+                if Boss.overlap(pob, b) then
+                    local dir = (pa.x >= self.x) and 1 or -1
+                    Boss.withPlayer(pa, function() pa:hurt() end)
+                    if not pa.dying then pa:knockback(dir) end
+                    if self.state == 'chase' or self.state == 'charge' then
+                        self.state, self.deadTimer, self.recoverFor = 'recover', 0, 0.6
+                        self.chargeCd = math.max(self.chargeCd, 1.0)
+                    end
+                    break
+                end
             end
         end
     end
+end
+
+-- Aterriza del salto al levantarse: aplasta al que tenga justo debajo (1 de
+-- vida) y empuja y aturde, sin daño, a los que estén alrededor
+function Mega:landShock(level)
+    local ob, T = self:getOuterBounds(), TILE_PX
+    for _, pa in ipairs(level.players or {}) do
+        if not pa.dying and pa.alive ~= false then
+            local dx, dy = pa.x - self.x, pa.y - self.y
+            local dir = (dx >= 0) and 1 or -1
+            if Boss.overlap(pa:getOuterBounds(), ob) then
+                if (pa.hurtT or 0) <= 0 and not pa:isInvulnerable() then
+                    Boss.withPlayer(pa, function() pa:hurt() end)
+                end
+                if not pa.dying then pa:knockback(dir) end
+            elseif math.abs(dx) <= SHOCK_RX * T and math.abs(dy) <= SHOCK_RY * T then
+                pa:knockback(dir)
+            end
+        end
+    end
+    Sound.play('megaSlam', 0.75)
+    Entity.emitFx('mega_land', self.x, ob.y + ob.h)
+    Entity.emitFx('shake_big', self.x, ob.y + ob.h)
 end
 
 -- ── Update ────────────────────────────────────────────────────────────────────
@@ -309,6 +366,7 @@ function Mega:updateBoss(dt, level)
             self.chargeCd = (p.chargeEvery or 2.5) / k
             if blocked then
                 Sound.play('gpImpact', 0.7)
+                Entity.emitFx('mega_land', self.x + self.chargeDir * self.sprW * 0.45, self.y + self.outerH / 2)
                 Entity.emitFx('shake_small', self.x, self.y)
             end
         end
@@ -366,8 +424,8 @@ function Mega:updateBoss(dt, level)
             self.state, self.deadTimer, self.vy = 'stuck', 0, 0
             self.hitDrop = false
             Sound.play('megaSlam')
+            Entity.emitFx('mega_slam', self.x, top)
             Entity.emitFx('spike_land', self.x, top)
-            Entity.emitFx('gp_land', self.x, top)
             Entity.emitFx('shake_big', self.x, top)
         elseif self.y > level.heightPx + T * 4 then
             -- (se salió del nivel: vuelve a su sitio)
@@ -381,9 +439,11 @@ function Mega:updateBoss(dt, level)
     elseif st == 'getup' then
         self.vy = self.vy + ADV_GRAVITY * dt
         self:moveAndCollide(level, 0, self.vy * dt)
-        if self.onGround and t >= GETUP_T * 0.6 then
+        self:clampToZone()
+        if (self.onGround and t >= GETUP_T * 0.6) or t >= GETUP_MAX then
             self.state, self.deadTimer = 'chase', 0
             self.chargeCd, self.ceilT = math.max(self.chargeCd, 1.0), 0
+            self:landShock(level)
         end
     end
     self:hitPlayers(level)
@@ -428,9 +488,7 @@ function Mega:updateDeath(dt, level)
             self.state, self.deadTimer = 'dying_shrink', 0
             Sound.play('megaShrink')
             Entity.emitFx('spike_pop', self.x, self.floorY - 8)
-            for i = 1, 6 do
-                Entity.emitFx('smoke', self.x + (math.random() - 0.5) * self.sprW, self.y + (math.random() - 0.5) * self.sprH)
-            end
+            Entity.emitFx('mega_poof', self.x, self.y)
         end
     elseif st == 'dying_shrink' then
         if t >= SHRINK_T then
@@ -477,6 +535,14 @@ function Mega:netApplyExtra(a, b, f)
 end
 
 -- ── Dibujo ────────────────────────────────────────────────────────────────────
+-- Todo lo "secundario" (squash & stretch, balanceo de pinzas, forcejeo,
+-- partículas continuas) sale del estado y su tiempo (deadTimer), que llegan
+-- por red: se ve igual en un jugador y online. Nada de esto toca la física.
+local Particles
+local TAU = math.pi * 2
+
+local function spring(t, amp, freq, damp) return amp * math.exp(-t * damp) * math.cos(t * freq) end
+
 -- Pinzas: cada una se cierra y abre sola cada cierto tiempo (más a menudo
 -- cuando está nervioso). Solo es dibujo (cada cliente a su aire).
 local function clawFrame(self, i, now, nervous)
@@ -489,25 +555,109 @@ local function clawFrame(self, i, now, nervous)
     return (c.closedUntil and now < c.closedUntil) and 2 or 1
 end
 
+-- Deformación del cuerpo (sx, sy desde los pies), temblor y balanceo de las
+-- pinzas (en píxeles de pinza) según lo que esté haciendo
+function Mega:pose2d(now, moving, walkPhase)
+    local st, t = self.state, self.deadTimer or 0
+    local sx, sy, shx = 1, 1, 0
+    local claws = { { 0, 0 }, { 0, 0 } }                 -- izquierda, derecha: dx, dy
+    local function swing(amp, speed, spread)
+        for i, side in ipairs({ -1, 1 }) do
+            local ph = (i == 1) and 0 or 1.9
+            claws[i][2] = math.sin(now * speed + ph) * amp
+            claws[i][1] = side * (spread or 0)
+        end
+    end
+    local breath = math.sin(now * 3)
+    if st == 'dormant' or st == 'recover' or ((st == 'chase' or st == 'intro') and not moving) then
+        sy, sx = 1 + 0.025 * breath, 1 - 0.015 * breath
+        swing(0.8, 2.1)
+    end
+    if (st == 'chase' or st == 'climb' or st == 'ceiling' or st == 'charge') and moving then
+        -- Andando: rebota con cada paso y las pinzas se mecen a contrapaso
+        local b = math.sin(walkPhase * TAU)
+        sy, sx = 1 + 0.045 * b, 1 - 0.03 * b
+        for i, side in ipairs({ -1, 1 }) do
+            local w = walkPhase * TAU + (i == 1 and 0 or math.pi)
+            claws[i][1], claws[i][2] = math.cos(w) * 0.6, math.sin(w) * 1.3
+        end
+    end
+    if st == 'chase' and t < 0.6 and self._prevState == 'getup' then
+        -- Aterriza del salto: se aplasta y rebota
+        local q = spring(t, 0.24, 20, 7)
+        sx, sy = sx * (1 + q), sy * (1 - q)
+    elseif st == 'intro' then
+        local q = 0.09 * math.abs(math.sin(t * 9)) * math.max(0, 1 - t)
+        sx, sy = 1 - q * 0.5, 1 + q
+        for i = 1, 2 do claws[i][2] = -1.6 - math.abs(math.sin(t * 9 + i)) * 1.2 end
+    elseif st == 'windup' then
+        -- Anticipación: se agacha y levanta las pinzas temblando
+        local k = math.min(1, t / math.max(0.1, self.props.windupTime or 0.6))
+        sx, sy = 1 + 0.10 * k, 1 - 0.14 * k
+        for i, side in ipairs({ -1, 1 }) do
+            claws[i][1] = side * 0.6 * k
+            claws[i][2] = -2.2 * k + math.sin(now * 42 + i) * 0.4
+        end
+    elseif st == 'charge' then
+        -- Lanzado: estirado hacia delante, pinzas por delante
+        local q = spring(t, 0.10, 16, 6)
+        sx, sy = sx * (1.10 - q), sy * (0.93 + q)
+        for i = 1, 2 do claws[i][1] = claws[i][1] + self.facing * 1.2; claws[i][2] = claws[i][2] - 0.6 end
+    elseif st == 'recover' then
+        local q = spring(t, -0.10, 18, 6)
+        sx, sy = sx * (1 + q), sy * (1 - q)
+    elseif st == 'aim' then
+        -- Colgado, a punto de caer: vibra y abre las pinzas
+        sx, sy = 1 + 0.03 * math.sin(now * 30), 1 - 0.03 * math.sin(now * 30)
+        for i, side in ipairs({ -1, 1 }) do
+            claws[i][1] = side * 0.8
+            claws[i][2] = math.sin(now * 20 + i * 2) * 1.2
+        end
+    elseif st == 'drop' then
+        -- Cayendo de cabeza: estirado, pinzas echadas hacia atrás (los pies)
+        sx, sy = 0.88, 1.18
+        for i = 1, 2 do claws[i][2] = 1.6 end
+    elseif st == 'stuck' or st == 'dying_kick' then
+        -- Clavado: aplastado por el golpe y luego forcejeando (como el Crabby)
+        local q = spring(t, 0.28, 22, 7)
+        local fury = (st == 'dying_kick') and 1.8 or 1
+        sx, sy = 1 + q + 0.04 * math.sin(now * 13) * fury, 1 - q - 0.04 * math.sin(now * 13) * fury
+        if t > 0.3 then shx = math.floor(math.sin(now * 45) * 2 * fury * MS / 4) end
+        for i = 1, 2 do
+            claws[i][1] = math.cos(now * 17 * fury + i * 2.3) * 1.0
+            claws[i][2] = math.sin(now * 22 * fury + i * 3.1) * 2.0
+        end
+    elseif st == 'getup' then
+        local k = math.min(1, t / GETUP_T)
+        sy, sx = 1 + 0.12 * math.sin(k * math.pi), 1 - 0.08 * math.sin(k * math.pi)
+        for i = 1, 2 do claws[i][2] = -1.5 * math.sin(k * math.pi) end
+    end
+    return sx, sy, shx, claws
+end
+
 -- Dibuja el cangrejo "como en el suelo" con los pies en (px, py) de pantalla,
--- girado `ang`, a escala de píxel `s`
-function Mega:drawLocal(px, py, ang, s, img, withSpike, alpha, nervous)
+-- girado `ang`, a escala de píxel `s`, deformado (sx, sy) desde los pies
+function Mega:drawLocal(px, py, ang, s, img, withSpike, alpha, nervous, sx, sy, claws)
     local now = love.timer.getTime()
     local red = self:flashRed()
-    local function color()
-        if red then love.graphics.setColor(1, 0.3, 0.3, alpha) else love.graphics.setColor(1, 1, 1, alpha) end
-    end
+    if red then love.graphics.setColor(1, 0.3, 0.3, alpha) else love.graphics.setColor(1, 1, 1, alpha) end
     love.graphics.push()
     love.graphics.translate(px, py)
     love.graphics.rotate(ang)
+    love.graphics.scale(sx or 1, sy or 1)
     local ih = img:getHeight()
-    color()
+    local cs = s * CLAW_K
     if withSpike then                             -- detrás del cuerpo, sobre la cabeza
         love.graphics.draw(spikeImg, 0, -ih * s, 0, s / 4, s / 4, spikeImg:getWidth() / 2, spikeImg:getHeight() - 1)
     end
     love.graphics.draw(img, 0, 0, 0, s * self.facing, s, img:getWidth() / 2, ih)
-    claw:draw(clawFrame(self, 1, now, nervous), -CLAW_CX * s, CLAW_CY * s, 0, s, s)
-    claw:draw(clawFrame(self, 2, now, nervous), CLAW_CX * s, CLAW_CY * s, 0, -s, s)
+    -- Pinzas delante del cuerpo, saliendo del costado junto a las patas
+    for i, side in ipairs({ -1, 1 }) do
+        local off = claws and claws[i] or { 0, 0 }
+        local cx = side * (CLAW_X * s + 7 * cs / 2 - CLAW_IN * cs) + math.floor(off[1] * cs + 0.5)
+        local cy = CLAW_Y * s - 6 * cs / 2 + math.floor(off[2] * cs + 0.5)
+        claw:draw(clawFrame(self, i, now, nervous), cx, cy, 0, -side * cs, cs)
+    end
     love.graphics.pop()
 end
 
@@ -521,17 +671,54 @@ local function drawTarget(x, y, w, t)
     for i = 0, 5, 2 do love.graphics.rectangle('fill', x - w / 2 + i * seg, y - 4, seg, 4) end
 end
 
+-- Partículas continuas (solo dibujo): pisadas, estela, piedrecitas, tierra
+local STEP_DIST = 7 * MS
+function Mega:renderFx(now, fx, fy, moved)
+    if EDITOR_VIEW then return end
+    Particles = Particles or require 'src/fx/Particles'
+    local st = self.state
+    local f = self._fx or { acc = 0, t = 0, foot = 1 }
+    self._fx = f
+    local walking = st == 'chase' or st == 'charge'
+    local crawling = st == 'climb' or st == 'ceiling'
+    if (walking or crawling) and moved > 0 then
+        f.acc = f.acc + moved
+        if f.acc >= STEP_DIST then
+            f.acc, f.foot = 0, -f.foot
+            if walking then Particles.emit('mega_step', fx + f.foot * self.sprW * 0.3, fy)
+            else Particles.emit('mega_debris', fx, fy) end
+        end
+    end
+    local every = (st == 'charge') and 0.04 or (st == 'stuck' or st == 'dying_kick') and 0.16
+                  or (st == 'aim') and 0.12 or (st == 'windup') and 0.09 or nil
+    if every and now - f.t >= every then
+        f.t = now
+        if st == 'charge' then Particles.emit('mega_trail', fx - self.facing * self.sprW * 0.3, fy, { dir = self.facing })
+        elseif st == 'windup' then Particles.emit('mega_trail', fx - self.facing * self.sprW * 0.35, fy, { dir = -self.facing })
+        elseif st == 'aim' then Particles.emit('mega_debris', fx + (math.random() - 0.5) * self.sprW * 0.6, fy)
+        else Particles.emit('mega_dirt', self.x + (math.random() - 0.5) * SPIKE_HW, self.floorY) end
+    end
+end
+
 function Mega:render(camX, camY)
     local st, t = self.state, self.deadTimer or 0
     local now = love.timer.getTime()
     local s, alpha = MS, 1
-    local nervous = st == 'windup' or st == 'aim' or st == 'stuck' or st == 'dying_kick' or st == 'intro'
+    local nervous = st == 'windup' or st == 'aim' or st == 'stuck' or st == 'dying_kick' or st == 'intro' or st == 'charge'
+    if self._rstate ~= st then self._prevState, self._rstate = self._rstate, st end
+
+    -- ¿Se mueve? (para el paso y el balanceo): lo que avanzó desde el dibujo anterior
+    local moved = self._lx and math.sqrt((self.x - self._lx) ^ 2 + (self.y - self._ly) ^ 2) or 0
+    self._lx, self._ly = self.x, self.y
+    self._dist = (self._dist or 0) + moved
+    local walkPhase = self._dist / (STEP_DIST * 2)
+    local moving = moved > 0.05
 
     -- Sprite: andar, o patalear clavado
     local frame = self.frame or 1
     if st == 'stuck' or st == 'dying_kick' then
         frame = math.floor(t * (st == 'dying_kick' and WIGGLE_FPS * 2 or WIGGLE_FPS)) % 3 + 1
-    elseif st == 'dormant' or st == 'windup' or st == 'aim' or st == 'recover' then
+    elseif not moving and (st == 'dormant' or st == 'windup' or st == 'aim' or st == 'recover' or st == 'chase' or st == 'intro') then
         frame = 2
     end
     local img = imgs[frame] or imgs[2]
@@ -548,6 +735,7 @@ function Mega:render(camX, camY)
         drawTarget(math.floor(self.x - camX), math.floor(self.landY - camY), self.sprW * 0.9, now)
     end
 
+    local sx, sy, shx, claws = self:pose2d(now, moving, walkPhase)
     local fx, fy, ang
     if self.crawl and self.cattached and CRAWL[st] then
         fx, fy, ang = Crawler.pose(self)
@@ -557,26 +745,27 @@ function Mega:render(camX, camY)
         if st == 'drop' or st == 'stuck' or st == 'dying_kick' then ang = math.pi
         elseif st == 'getup' then ang = math.pi * (1 - math.min(1, t / GETUP_T))
         elseif st == 'dying_shrink' then
-            -- Se desinfla: del doble al tamaño normal con un temblor elástico,
-            -- dándose la vuelta y posándose en el suelo
+            -- Se desinfla: del tamaño colosal al de un Crabby con un temblor
+            -- elástico, dándose la vuelta y posándose en el suelo
             local q = math.min(1, t / SHRINK_T)
-            s = MS * (1 - 0.5 * q) * (1 + 0.12 * math.sin(q * math.pi * 7) * (1 - q))
+            s = MS * (1 - (1 - SMALL) * q) * (1 + 0.12 * math.sin(q * math.pi * 7) * (1 - q))
             ang = math.pi * (1 - q)
             withSpike = q < 0.15
             H = 9 * s
-            -- centro: de donde estaba clavado hasta apoyado en el suelo
             local cy = (1 - q) * self.y + q * (self.floorY - H / 2)
             fx, fy = self.x - math.sin(ang) * H / 2, cy + math.cos(ang) * H / 2
+            sx, sy = 1 + 0.15 * math.sin(q * math.pi * 9) * (1 - q), 1 - 0.15 * math.sin(q * math.pi * 9) * (1 - q)
         end
         if not fx then fx, fy = self.x - math.sin(ang) * H / 2, self.y + math.cos(ang) * H / 2 end
     end
     if st == 'dying_flee' then
-        s, withSpike = MS / 2, false
+        s, withSpike = MS * SMALL, false
         alpha = math.max(0, math.min(1, (FLEE_T - t) / 0.9))
     end
-    if self.state == 'dormant' and EDITOR_VIEW then nervous = false end
-    self:drawLocal(math.floor(fx - camX + 0.5) + jx, math.floor(fy - camY + 0.5) + jy, ang, s, img,
-                   withSpike, alpha * self:ghostAlpha(), nervous)
+    if EDITOR_VIEW then nervous = false end
+    self:renderFx(now, fx, fy, moved)
+    self:drawLocal(math.floor(fx - camX + 0.5) + jx + shx, math.floor(fy - camY + 0.5) + jy, ang, s, img,
+                   withSpike, alpha * self:ghostAlpha(), nervous, sx, sy, claws)
     love.graphics.setColor(1, 1, 1, 1)
 end
 

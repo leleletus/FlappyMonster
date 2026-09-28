@@ -70,6 +70,19 @@ function love.load()
             level:render(camX, camY)
             pa:render(camX, camY)
             for _, e in ipairs(ents) do if e.alive then e:render(camX, camY) end end
+            if os.getenv('BOXES') then       -- cajas reales: cuerpo (azul), contacto (amarillo), mata (rojo)
+                local function box(b, r, g, bl)
+                    love.graphics.setColor(r, g, bl, 0.9)
+                    love.graphics.setLineWidth(2)
+                    love.graphics.rectangle('line', b.x - camX, b.y - camY, b.w, b.h)
+                end
+                box(boss:getOuterBounds(), 0.2, 0.4, 1)
+                if boss.footBox then
+                    for _, b in ipairs(boss._dbgBoxes or {}) do box(b, 1, 0.9, 0.1) end
+                end
+                for _, hb in ipairs(boss:getHazardBoxes() or {}) do box(hb, 1, 0.1, 0.1) end
+                love.graphics.setLineWidth(1)
+            end
             love.graphics.pop()
             love.graphics.setScissor()
             love.graphics.setColor(0, 0, 0, 0.7); love.graphics.rectangle('fill', col * CW, row * CH, CW - 2, 14)
