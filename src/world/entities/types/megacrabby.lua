@@ -36,8 +36,10 @@ Mega.hurtSound = 'megaHurt'
 
 local MS = 10                       -- escala del pixel art (el Crabby normal usa 4: ×2,5)
 local SPIKE_H  = 36 * MS / 4        -- alto del pincho (el del Crabby a la misma escala)
-local SPIKE_HW = 7 * MS             -- ancho de su zona de peligro
-local SPIKE_HH = 8 * MS             -- alto de su zona de peligro
+-- Zona de peligro del pincho = la de un pincho de tile (Level._spikeHitbox):
+-- un rectángulo en la BASE, 60% del ancho y 40% del alto (sin la punta)
+local SPIKE_HW = SPIKE_H * 0.6
+local SPIKE_HH = SPIKE_H * 0.4
 local EMBED    = 0.5                -- fracción del pincho que se clava en el suelo
 local GETUP_T  = 0.45               -- s del giro al levantarse
 local WIGGLE_FPS = 12
@@ -49,6 +51,8 @@ local SMALL = GUMMY_SCALE / MS      -- al desinflarse queda del tamaño de un Cr
 -- Al aterrizar tras levantarse: empuja y aturde a los de alrededor
 local SHOCK_RX, SHOCK_RY = 4.5, 1.8 -- casillas
 local GETUP_MAX = 3.0               -- s: si no llega a aterrizar, sigue igual
+local LAND_RECOVER = 1.0            -- s quieto tras aterrizar
+local LAND_GRACE   = 1.4            -- s sin dañar por contacto tras aterrizar
 
 -- Pinzas: más pequeñas que el cuerpo (CLAW_K de su escala) y saliendo del
 -- costado, a la altura del arranque de las patas (CLAW_X, CLAW_Y en píxeles
@@ -177,7 +181,7 @@ function Mega:getHazardBoxes()
     self._hz = b
     local box = b[1]
     box.x, box.w = self.x - SPIKE_HW / 2, SPIKE_HW
-    box.y = self.y + self.sprH * 0.1
+    box.y = self.y + self.sprH * 0.1                 -- media cabeza + base del pincho
     box.h = self.sprH * 0.4 + SPIKE_HH
     box.effect = 'kill'
     return b
@@ -204,11 +208,13 @@ function Mega:footBox(lx, ly, w, h)
     return Crawler.poseBox(self, lx, ly + self.sprH / 2, w, h)
 end
 
--- Tocarlo (cuerpo, pinzas y pincho de la cabeza) quita 1 de vida y empuja.
+-- Tocarlo (cuerpo, pinzas y base del pincho) quita 1 de vida y empuja.
 -- Tras golpear a alguien se para un momento (no lo aplasta contra una pared).
 function Mega:hitPlayers(level)
-    if not CONTACT[self.state] then return end
+    if not CONTACT[self.state] or (self.graceT or 0) > 0 then return end
     local ob = self:getOuterBounds()
+    -- (el pincho de la cabeza, con la caja de un pincho normal: se le puede
+    -- saltar por encima)
     local boxes = {
         { x = ob.x - CONTACT_PAD, y = ob.y - CONTACT_PAD, w = ob.w + 2 * CONTACT_PAD, h = ob.h + 2 * CONTACT_PAD },
         self:footBox(-SPIKE_HW / 2, -self.sprH - SPIKE_HH, SPIKE_HW, SPIKE_HH),
@@ -243,11 +249,16 @@ function Mega:landShock(level)
         if not pa.dying and pa.alive ~= false then
             local dx, dy = pa.x - self.x, pa.y - self.y
             local dir = (dx >= 0) and 1 or -1
-            if Boss.overlap(pa:getOuterBounds(), ob) then
+            -- Solo le cae ENCIMA a quien está debajo de verdad (su centro por
+            -- debajo del centro del cangrejo): el que está encima o al lado
+            -- (p. ej. el que acaba de pisarlo) solo sale empujado
+            if Boss.overlap(pa:getOuterBounds(), ob) and pa.y > self.y then
                 if (pa.hurtT or 0) <= 0 and not pa:isInvulnerable() then
                     Boss.withPlayer(pa, function() pa:hurt() end)
                 end
                 if not pa.dying then pa:knockback(dir) end
+            elseif Boss.overlap(pa:getOuterBounds(), ob) then
+                pa:knockback(dir)
             elseif math.abs(dx) <= SHOCK_RX * T and math.abs(dy) <= SHOCK_RY * T then
                 pa:knockback(dir)
             end
@@ -316,6 +327,7 @@ end
 function Mega:updateBoss(dt, level)
     local p, T = self.props, TILE_PX
     Crawler.advanceTurn(self, dt)
+    if (self.graceT or 0) > 0 then self.graceT = math.max(0, self.graceT - dt) end
     local st = self.state
     self.deadTimer = self.deadTimer + dt
     local t = self.deadTimer
@@ -441,8 +453,11 @@ function Mega:updateBoss(dt, level)
         self:moveAndCollide(level, 0, self.vy * dt)
         self:clampToZone()
         if (self.onGround and t >= GETUP_T * 0.6) or t >= GETUP_MAX then
-            self.state, self.deadTimer = 'chase', 0
-            self.chargeCd, self.ceilT = math.max(self.chargeCd, 1.0), 0
+            -- Se recupera un momento sin dañar por contacto: los empujados
+            -- (aturdidos GP_STUN) tienen tiempo de reponerse y apartarse
+            self.state, self.deadTimer, self.recoverFor = 'recover', 0, LAND_RECOVER
+            self.graceT = LAND_GRACE
+            self.chargeCd, self.ceilT = math.max(self.chargeCd, 1.5), 0
             self:landShock(level)
         end
     end
@@ -582,7 +597,7 @@ function Mega:pose2d(now, moving, walkPhase)
             claws[i][1], claws[i][2] = math.cos(w) * 0.6, math.sin(w) * 1.3
         end
     end
-    if st == 'chase' and t < 0.6 and self._prevState == 'getup' then
+    if (st == 'chase' or st == 'recover') and t < 0.6 and self._prevState == 'getup' then
         -- Aterriza del salto: se aplasta y rebota
         local q = spring(t, 0.24, 20, 7)
         sx, sy = sx * (1 + q), sy * (1 - q)

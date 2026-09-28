@@ -244,6 +244,8 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   speed match → `pa:launch(vx, vy)` + `e:onLaunch(pa)`; predicted on the client
   (`Predictor:recordLaunch`). States ready → bounce (0.1 s: everyone touching
   bounces) → extended (`cooldown`, just a wall) → retract → ready.
+- Crabby spike hazard = tile-spike proportions (base rectangle, 60% × 40% of the
+  visible spike: `spikeDims` in crabby.lua), like `Level._spikeHitbox`.
 - Crabby hooks: `drawTopper(cx, baseY, progress, dir)` (spike by default) and
   `bounceRotation()`; `Interactions.defaultCheck(pa, e)` = the normal rules, for
   entities whose `interact` only overrides some cases.
@@ -465,7 +467,9 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   zone edges count as walls/ceiling via `crawlSolidAt`) → ceiling (above target) → aim
   (shakes, `landY` marker) → drop (spike hazard = KILL) → stuck (ONLY vulnerable state,
   one hit per drop: `hitDrop`; stomp 1 / GP 2) → getup (during its inv time; landing =
-  `landShock`: knockback+stun around, 1 HP only to whoever it lands on). Rage below
+  `landShock`: knockback+stun around, 1 HP only to whoever is really UNDER it; then
+  `recover` 1 s + `graceT` 1.4 s without contact damage). Spike boxes (head spike,
+  drop kill) = tile-spike proportions: base rectangle 60% w × 40% h. Rage below
   `rageAt`. Death (own states): dying_kick → dying_shrink (deflates to normal size) →
   dying_flee (small crab climbs away, fades) → dead. `Boss.hurtSound` per boss.
   Test arena: `assets/levels/jefe_cangrejo.json`.
@@ -500,7 +504,9 @@ Online camera freezes while the local player is dying (same as single player).
 and an EMITTER: `Sound.setEmitter/clearEmitter/withEmitter(x, y, fn)/playAt`.
 Every `Sound.play` while an emitter is set is scaled by distance
 (`Sound.NEAR` 480 px full volume → `Sound.FAR` 1400 px silent). No emitter =
-full volume (UI, own actions). AdventureState sets the emitter around each
+full volume (UI, own actions). `Sound.RANGE[name]` multiplies NEAR/FAR per sound
+(boss sounds carry across the arena). Per-sound volume: `GAIN` table at the top of
+Sound.lua (baked into the samples at load). AdventureState sets the emitter around each
 entity update; the server sets `_emitX/_emitY` around each player step,
 collision pass and entity update, and sound events carry `x, y`; each client
 attenuates with its OWN listener (`Sound.playAt`). New world sounds need

@@ -22,6 +22,9 @@ Sound._origin = origin
 local GAIN = {
     roundOver    = 2.8,  spikeHit   = 2.2,  dies2      = 0.65, glugluglu  = 0.8,
     airGasp      = 0.85, waterWarning = 1.4,
+    -- Mega Crabby (archivos ya comprimidos: subir poco por encima de 1 satura)
+    megaStep     = 0.9,  megaClack  = 1.0,  megaHurt   = 1.1,  megaSlam   = 1.1,
+    megaWindup   = 0.85, megaShrink = 0.8,  megaFlee   = 0.9,
 }
 Sound.GAIN = GAIN
 
@@ -159,6 +162,12 @@ end
 -- Online cada cliente calcula SU volumen: los eventos de sonido traen x, y.
 Sound.NEAR = 480
 Sound.FAR  = 1400
+-- Alcance por sonido (multiplica NEAR y FAR): lo que hace algo enorme se oye
+-- en toda la arena (un jefe que la cruza no debe quedarse mudo)
+Sound.RANGE = {
+    megaStep = 1.8, megaClack = 2.2, megaHurt = 3, megaSlam = 3, megaWindup = 2.5,
+    megaShrink = 3, megaFlee = 2.2, bossHurt = 3, bossExplode = 3,
+}
 local listenerX, listenerY = nil, nil
 local emitterX, emitterY   = nil, nil
 
@@ -177,14 +186,16 @@ function Sound.withEmitter(x, y, fn, ...)
     if not ok then error(err, 0) end
 end
 
--- Factor 0..1 de un sonido en (x, y) para el oyente actual
-function Sound.falloff(x, y)
+-- Factor 0..1 de un sonido en (x, y) para el oyente actual (`range`
+-- multiplica las distancias, ver Sound.RANGE)
+function Sound.falloff(x, y, range)
     if not x or not y or not listenerX then return 1 end
     local dx, dy = x - listenerX, y - listenerY
     local d = math.sqrt(dx * dx + dy * dy)
-    if d <= Sound.NEAR then return 1 end
-    if d >= Sound.FAR then return 0 end
-    local k = 1 - (d - Sound.NEAR) / (Sound.FAR - Sound.NEAR)
+    local near, far = Sound.NEAR * (range or 1), Sound.FAR * (range or 1)
+    if d <= near then return 1 end
+    if d >= far then return 0 end
+    local k = 1 - (d - near) / (far - near)
     return k * k                        -- cae suave al principio y rápido al final
 end
 
@@ -199,7 +210,7 @@ end
 function Sound.play(name, pitch, volume)
     local src = sources[name]
     if not src then return end
-    local k = Sound.falloff(emitterX, emitterY)
+    local k = Sound.falloff(emitterX, emitterY, Sound.RANGE[name])
     if k <= 0.01 then return end
     local clone = src:clone()
     clone:setPitch(pitch   or 1.0)

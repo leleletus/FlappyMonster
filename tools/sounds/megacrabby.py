@@ -57,7 +57,10 @@ def at(x, delay, total=None):
     return pad(out, total) if total else out
 
 
-def save(name, x, peak=0.85):
+def save(name, x, peak=0.95, drive=2.2):
+    # Compresión suave (tanh): más densidad = se oye más a igual pico
+    x = x / (np.max(np.abs(x)) + 1e-9)
+    x = np.tanh(x * drive) / np.tanh(drive)
     x = x / (np.max(np.abs(x)) + 1e-9) * peak
     fade = min(len(x), int(SR * 0.004))
     x[-fade:] *= np.linspace(1, 0, fade)
@@ -80,8 +83,9 @@ def step():
     d = 0.24
     thump = sweep(95, 42, d, 0.6) * env(int(SR * d), 0.003, 0.07)
     dirt = lowpass(noise(0.08), 900) * env(int(SR * 0.08), 0.001, 0.025) * 1.6
-    shell = np.sin(2 * np.pi * 820 * t_(0.05)) * env(int(SR * 0.05), 0.001, 0.012) * 0.25
-    return mix(thump * 1.2, dirt, shell)
+    shell = np.sin(2 * np.pi * 820 * t_(0.05)) * env(int(SR * 0.05), 0.001, 0.012) * 0.35
+    clonk = sweep(420, 240, 0.12) * env(int(SR * 0.12), 0.002, 0.035) * 0.7
+    return mix(thump * 1.0, dirt, shell, clonk)
 
 
 # Chasquido de pinzas: dos clics secos seguidos
@@ -110,9 +114,10 @@ def hurt():
 def slam():
     d = 0.7
     boom = sweep(80, 32, d, 0.5) * env(int(SR * d), 0.002, 0.18)
-    crunch = lowpass(noise(0.35), 1600) * env(int(SR * 0.35), 0.001, 0.08) * 1.5
+    crunch = lowpass(noise(0.35), 3200) * env(int(SR * 0.35), 0.001, 0.09) * 1.9
+    crack = sweep(520, 180, 0.3) * env(int(SR * 0.3), 0.002, 0.07) * 0.8
     ting = np.sin(2 * np.pi * 1850 * t_(0.4)) * env(int(SR * 0.4), 0.001, 0.09) * 0.35
-    return mix(boom * 1.4, crunch, at(ting, 0.01))
+    return mix(boom * 1.2, crunch, crack, at(ting, 0.01))
 
 
 # Aviso de embestida: castañeteo cada vez más rápido y un tono que sube

@@ -213,8 +213,12 @@ function Crabby:canDropNow() return self.state == 'walk' or self.state == 'idle'
 function Crabby:isBodyDisabled() return self.currentImg == imgHid end
 
 -- ── Caída desde el techo ──────────────────────────────────────────────────────
+-- w, maxH (lo que se ve) y hitW, hitMaxH: la zona de peligro es la de un
+-- pincho de tile (Level._spikeHitbox), un rectángulo en la BASE del 60% del
+-- ancho y el 40% del alto (sin la punta)
 local function spikeDims()
-    return 9 * GUMMY_SCALE, 9 * GUMMY_SCALE, 7 * GUMMY_SCALE, 8 * GUMMY_SCALE  -- w, maxH, hitW, hitMaxH
+    local w, h = 9 * GUMMY_SCALE, 9 * GUMMY_SCALE
+    return w, h, w * 0.6, h * 0.4
 end
 
 -- Base del pincho (boca abajo): pies arriba, cabeza abajo y el pincho debajo.
