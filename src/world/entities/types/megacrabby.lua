@@ -232,7 +232,7 @@ function Mega:hitPlayers(level)
     }
     self._dbgBoxes = boxes                    -- (para ver las cajas en las pruebas)
     for _, pa in ipairs(level.players or {}) do
-        if not pa.dying and pa.alive ~= false and (pa.hurtT or 0) <= 0 and not pa:isInvulnerable() then
+        if not pa.dying and pa.alive ~= false and not pa:isInvulnerable() then
             local pob = pa:getOuterBounds()
             for _, b in ipairs(boxes) do
                 if Boss.overlap(pob, b) then
@@ -251,16 +251,9 @@ function Mega:hitPlayers(level)
     end
 end
 
--- Quita `n` de vida (con sus i-frames de después: n golpes seguidos)
+-- Quita `n` de vida de un golpe (luego queda invulnerable: ver PlayerAdventure)
 local function hurtN(pa, n)
-    if (pa.hurtT or 0) > 0 or pa:isInvulnerable() then return end
-    Boss.withPlayer(pa, function()
-        for i = 1, n do
-            if pa.dying then break end
-            pa.hurtT = 0
-            if pa:hurt() then break end
-        end
-    end)
+    Boss.withPlayer(pa, function() pa:hurt(n) end)
 end
 
 -- ¿Tiene el jugador una pared (o el borde de la zona) justo detrás, hacia `dir`?
@@ -278,7 +271,7 @@ end
 -- Empujón al tocarlo. Contra una pared no se queda atrapado: rebota en ella y
 -- sale por encima del cangrejo hacia el otro lado
 function Mega:pushAway(level, pa, dir)
-    if pa:isHitProtected() or pa:isInvulnerable() then return end   -- (recién golpeado: nada)
+    if pa:isPushProtected() then return end        -- (invulnerable: ni empujones)
     if self:wallBehind(level, pa, dir) then
         if Mega.onEvent then Mega.onEvent('escape_pared', pa) end
         pa:knockback(-dir)

@@ -32,9 +32,13 @@ local DEATH_FALL_DIST   = WINDOW_H + 100
 -- src/world/tiles/materials/.
 
 -- Contacto con materiales 'hurt': invulnerabilidad tras recibir daño
--- Tras un golpe: HURT_COOLDOWN s sin poder recibir daño NI empujones, y
--- atravesando a los jefes (nadie encadena golpes ni atrapa en una esquina)
-local HURT_COOLDOWN = 1.6
+-- INVULNERABILIDAD (un solo sistema, sea cual sea la causa): mientras dura
+-- (invT) no recibe daño, no muere salvo ahogado o por el límite de tiempo, no
+-- le empujan, atraviesa a los jefes y PARPADEA (también para los demás
+-- jugadores online: PF_INVULN). La dan reaparecer (SPAWN_INV) y cualquier
+-- golpe que no mata (HIT_INV): nadie encadena golpes ni atrapa en una esquina.
+local HIT_INV     = 1.6
+local HURT_FLASH  = 0.5      -- s del destello rojo al recibir un golpe
 -- Al reaparecer: invulnerable a TODO (parpadea) durante este tiempo
 local SPAWN_INV     = 2.5
 PlayerAdventure.SPAWN_INV = SPAWN_INV
@@ -126,12 +130,12 @@ function PlayerAdventure:new(x, y)
     o.liquid=nil          -- material líquido en el que está (nil = fuera)
     o.prevLiquid=nil
     o.groundDef=nil       -- tipo de tile sobre el que está de pie (material de suelo)
-    o.hurtT=0             -- invulnerabilidad restante tras daño por contacto
+    o.hurtT=0             -- destello rojo tras un golpe (solo dibujo)
     o.gpPhase=nil         -- ground pound: nil | 'windup' | 'fall'
     o.gpT=0
     o.gpLanded=false      -- true SOLO en el paso en que impactó (lo leen juego/servidor)
     o.stunT=0             -- aturdido (empujado por un ground pound ajeno)
-    o.spawnInvT=0         -- invulnerable tras reaparecer
+    o.invT=0              -- invulnerable (reaparecer, tras un golpe...: ver HIT_INV)
     o.squashT=0           -- aplastado (agachado y aturdido)
     o.ctrlLockT=0         -- sin control un instante (lanzado de lado por un trampolín)
     return o
@@ -259,10 +263,9 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
     local x0 = self.x
     local bodies
     if self.solidAgainst then bodies = self.solidAgainst(level)
-    elseif not (self:isInvulnerable() or (self.hurtT or 0) > 0) then bodies = level.solidBodies
+    elseif not self:isInvulnerable() then bodies = level.solidBodies
     elseif level.solidBodies then
-        -- Invulnerable (o recién golpeado): atraviesa a los jefes, pero no los
-        -- objetos sólidos (morteros...)
+        -- Invulnerable: atraviesa a los jefes, pero no los objetos sólidos (morteros...)
         bodies = {}
         for _, o in ipairs(level.solidBodies) do if o.solidFull then bodies[#bodies+1] = o end end
     end
@@ -438,12 +441,16 @@ function PlayerAdventure.asOwner(pa, fn)
     return fn()
 end
 
--- ¿Recién reaparecido? (no recibe ningún daño)
-function PlayerAdventure:isInvulnerable() return (self.spawnInvT or 0) > 0 end
--- Protegido tras un golpe (i-frames): ni daño ni empujones. El empujón que
--- acompaña al MISMO golpe sí se aplica (hitNow: solo el paso del golpe)
-function PlayerAdventure:isHitProtected()
-    return (self.hurtT or 0) > 0 and not self.hitNow
+-- ¿Invulnerable? (por lo que sea: reaparecer, un golpe reciente...)
+function PlayerAdventure:isInvulnerable() return (self.invT or 0) > 0 end
+-- Da invulnerabilidad `t` s (se queda con la que dure más)
+function PlayerAdventure:grantInvulnerability(t)
+    self.invT = math.max(self.invT or 0, t)
+end
+-- ¿No se le puede empujar ahora? Invulnerable, salvo el empujón que acompaña
+-- al MISMO golpe (hitNow: solo durante el paso en que lo recibió)
+function PlayerAdventure:isPushProtected()
+    return self:isInvulnerable() and not self.hitNow
 end
 
 function PlayerAdventure:takeDamage()
@@ -453,13 +460,16 @@ function PlayerAdventure:takeDamage()
     Sound.play('dies'); return false
 end
 
--- Daño con invulnerabilidad breve (tiles 'hurt', entidades onTouch='hurt').
--- Devuelve true si el golpe lo mató.
-function PlayerAdventure:hurt()
-    if self.hurtT > 0 or self.dying or not self.alive or self:isInvulnerable() then return false end
-    self.hurtT = HURT_COOLDOWN
-    self.hitNow = true
-    return self:takeDamage()
+-- Golpe de `n` de vida (1 por defecto): tiles 'hurt', entidades onTouch='hurt',
+-- jefes... Si no lo mata, queda invulnerable HIT_INV s. true si lo mató.
+function PlayerAdventure:hurt(n)
+    if self.dying or not self.alive or self:isInvulnerable() then return false end
+    for _ = 1, math.max(1, n or 1) do
+        if self:takeDamage() then return true end
+    end
+    self:grantInvulnerability(HIT_INV)
+    self.hurtT, self.hitNow = HURT_FLASH, true
+    return false
 end
 
 -- Devuelve false si no murió (invulnerable tras reaparecer). `force` = muere
@@ -492,7 +502,7 @@ function PlayerAdventure:respawn()
     self.prevInWater=false
     self.splashSt='out'; self.splashCD=0
     self.gpPhase=nil; self.gpT=0; self.gpLanded=false; self.stunT=0; self.squashT=0; self.ctrlLockT=0
-    self.spawnInvT=SPAWN_INV
+    self:grantInvulnerability(SPAWN_INV)
     Sound.stopTracked('drowning')
     Sound.playMusic('level')
     self.airBarAlpha=0; self.airBarBobT=0; self.airBarBobOn=false; self.airBarShakeX=0
@@ -756,7 +766,7 @@ end
 -- lado, agachado y aturdido un rato
 local SQUASH_T = 1.8
 function PlayerAdventure:squash(dirX)
-    if self.dying or self:isInvulnerable() or self:isHitProtected() then return false end
+    if self.dying or self:isPushProtected() then return false end
     self.vx, self.vy = dirX * 560, -240          -- saltito hacia un lado
     self.onGround = false
     self.gpPhase, self.gpT = nil, 0
@@ -768,7 +778,7 @@ end
 
 -- Empujón de un ground pound cercano: sale despedido y queda aturdido
 function PlayerAdventure:knockback(dirX)
-    if self.dying or self:isInvulnerable() or self:isHitProtected() then return end
+    if self.dying or self:isPushProtected() then return end
     self.vx, self.vy = dirX * GP_PUSH_VX, GP_PUSH_VY
     self.onGround, self.crouching = false, false
     self.gpPhase, self.gpT = nil, 0
@@ -780,7 +790,7 @@ end
 -- rebotado hacia un lado sin quedar aturdido del todo.
 local RECOIL_VX, RECOIL_VY, RECOIL_STUN = 520, -300, 0.22
 function PlayerAdventure:recoil(dirX)
-    if self.dying or self.stunT > 0 or self:isInvulnerable() or self:isHitProtected() then return false end
+    if self.dying or self.stunT > 0 or self:isPushProtected() then return false end
     self.vx, self.vy = dirX * RECOIL_VX, RECOIL_VY
     self.onGround, self.crouching = false, false
     self.gpPhase, self.gpT = nil, 0
@@ -807,7 +817,7 @@ function PlayerAdventure:update(dt, level)
 
     self.gpLanded = false
     if self.stunT > 0 then self.stunT = math.max(0, self.stunT - dt) end
-    if self.spawnInvT > 0 then self.spawnInvT = math.max(0, self.spawnInvT - dt) end
+    if (self.invT or 0) > 0 then self.invT = math.max(0, self.invT - dt) end
     if (self.squashT or 0) > 0 then self.squashT = math.max(0, self.squashT - dt) end
     local stunned = self.stunT > 0
     if (self.ctrlLockT or 0) > 0 then self.ctrlLockT = math.max(0, self.ctrlLockT - dt) end
@@ -962,7 +972,7 @@ function PlayerAdventure:render(camX, camY)
     local iw=img:getWidth(); local ih=img:getHeight()
     local s=PLAYER_SCALE*self.puff
     local r, g, b = PlayerAdventure.hurtTint(self.dying and 0 or self.hurtT)
-    love.graphics.setColor(r, g, b, PlayerAdventure.invulnAlpha(not self.dying and self.spawnInvT or 0))
+    love.graphics.setColor(r, g, b, PlayerAdventure.invulnAlpha(not self.dying and self.invT or 0))
     local squashed = not self.dying and (self.squashT or 0) > 0
     if squashed then
         -- Aplastado: agachado y achatado de arriba abajo, con los pies en el suelo
@@ -980,7 +990,7 @@ function PlayerAdventure:render(camX, camY)
     end
 end
 
--- Parpadeo rojo tras recibir daño (invulnerable). También para jugadores remotos.
+-- Destello rojo al recibir un golpe. También para jugadores remotos.
 function PlayerAdventure.hurtTint(hurtT, a)
     if (hurtT or 0) > 0 and math.floor(love.timer.getTime() * 12) % 2 == 0 then
         return 1, 0.22, 0.22, a or 1
@@ -988,7 +998,7 @@ function PlayerAdventure.hurtTint(hurtT, a)
     return 1, 1, 1, a or 1
 end
 
--- Parpadeo (transparencia) mientras es invulnerable tras reaparecer
+-- Parpadeo (transparencia) mientras es invulnerable (por lo que sea)
 function PlayerAdventure.invulnAlpha(invT, a)
     if (invT == true or (tonumber(invT) or 0) > 0) and math.floor(love.timer.getTime() * 15) % 2 == 0 then
         return (a or 1) * 0.25

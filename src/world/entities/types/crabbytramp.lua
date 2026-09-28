@@ -126,7 +126,7 @@ function TC:crush(level, box)
                 local dmg = self.props.crushDamage or 1
                 PlayerAdventure.asOwner(pa, function()
                     pa:squash(dir)
-                    for _ = 1, dmg do pa.hurtT = 0; if pa:hurt() then break end end
+                    pa:hurt(dmg)
                 end)
                 hit = true
             end

@@ -194,7 +194,8 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
 
 - Fields: `x,y` = sprite center; `vx,vy`, `onGround`, `facing`, `frame`
   (1..3 walk/fall anim, 2 = rising/GP, 5 = crouch; dying uses monstrito4),
-  `puff` (squash scale), `hp/hpMax` (3), `lives`, `hurtT` (i-frames),
+  `puff` (squash scale), `hp/hpMax` (3), `lives`, `invT` (invulnerability), `hurtT`
+  (red flash only),
   `gpPhase` nil|'windup'|'fall', `gpLanded` (true only the step it lands),
   `stunT`, `dying/alive/deathPhase` ('freeze'→'jump'→'fall', `alive=false`
   when off-screen → caller subtracts a life and respawns).
@@ -210,10 +211,12 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
 - Oxygen bubbles: `Level:checkVentOxyCollision` = visible circle of bubble1
   (offset -3.5,-10.5 from b.x,b.y, r 24.5 + 6 px pad) vs the whole outer box.
   F1 draws the circles; breathing point = `getHeadPoint` (top of head).
-- `hurt()` = 1 damage with i-frames (`takeDamage`), returns true if it killed. After a
-  hit `hurtT` = HURT_COOLDOWN (1.6 s): no damage, no pushes (`isHitProtected()`: knockback,
-  recoil, squash skip; the push of the SAME hit applies via `hitNow`) and bosses'
-  solid bodies are passed through — nothing can chain hits or pin a player.
+- `hurt(n)` = n damage (default 1), returns true if it killed; otherwise grants HIT_INV
+  (1.6 s) invulnerability + red flash (`hurtT`). ONE invulnerability system for every
+  cause (`invT`, `grantInvulnerability(t)`, `isInvulnerable()`): no damage, no deaths
+  except drowning / `die(nil, true)`, no pushes (`isPushProtected()`: knockback, recoil,
+  squash; the push of the SAME hit still applies via `hitNow`), bosses' solid bodies are
+  passed through, and it BLINKS (`invulnAlpha`; others see `PF_INVULN`).
 - `bounce(vy)`, `knockback(dirX)` (GP shove + stun), `die()`, `respawn()`.
 - Sounds: 'jump', 'step', 'dies2' (death), 'dies' (non-lethal hit), 'gpStart',
   'gpImpact', 'stunned', 'headBump'.
@@ -280,7 +283,7 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   end OR coming from the open side (player centre beyond its outer face) =
   'stomp' with 4th return dirX = cnx → `pa:bounce(vy, dirX, soft=true)` (vx 300 +
   ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill; v17: crawler turn in snapshots; v18: MegaCrabby;
-  v19: boss walls, Mega minions/pounce; v20: post-hit protection).
+  v19: boss walls, Mega minions/pounce; v20: post-hit protection; v21: unified invulnerability).
 - **Crawler** (`src/world/entities/Crawler.lua`): surface-following movement
   (floor ↔ walls ↔ ceiling, concave and convex corners) for Crabbies with prop
   `wallWalk` (`Crabby.WALL_PROP`, off by default so old levels don't change).
@@ -514,11 +517,10 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   Rendered with an invert-colors shader; laugh = Body_Arms* + Head_* + JoyEyes.
 - Levels with bosses are Race-only (`hunt.requires` rejects `info.bosses > 0`).
 
-Player HP: 3 (`pa.hp/hpMax`), `pa:hurt()` = 1 dmg + i-frames + red flash; 0 → die.
-Respawn: `pa.spawnInvT` (2.5 s, `PlayerAdventure.SPAWN_INV`) blocks hurt/die/
-knockback/recoil and blinks (`invulnAlpha`); only drowning and `die(nil, true)`
-(level time limit) go through. `die()` returns false when it was blocked.
-Synced in own-state (index 27) and to others via `PF_INVULN` (protocol v8; v9 adds the boss ghost flag + mortar).
+Player HP: 3 (`pa.hp/hpMax`), `pa:hurt(n)` = n dmg + invulnerability + red flash; 0 → die.
+Respawn grants `SPAWN_INV` (2.5 s) of the same invulnerability (`invT`, see Player).
+`die()` returns false when it was blocked. `invT` is own-state index 27 and others see
+it via `PF_INVULN` (protocol v21: one system for respawn and hits).
 Solid bodies: `level.solidBodies` (set each step from `Entities.solidBodies`,
 i.e. entities with `isSolidBody()`, e.g. active bosses) block players sideways
 in `moveAndCollide` (contact by movement direction, gentle separation if they

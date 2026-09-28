@@ -49,11 +49,20 @@ function love.update(dt)
         if last.hp and pa.hp < last.hp and not pa.dying then
             print(('%6.1fs   golpe al jugador (vida %d, %.2f s desde el anterior, jefe=%s)'):format(t, pa.hp, t - (last.hitT or -99), boss and boss.state or '?'))
             last.minGap = math.min(last.minGap or 99, t - (last.hitT or -99))
+            if os.getenv('SHOTS') and not last.shotAt then last.shotAt = t + 0.25; last.shots = 0 end
             last.hitT = t
         end
         if pa.dying and not last.dead then print(('%6.1fs   jugador MUERE (jefe=%s)'):format(t, boss and boss.state or '?')) end
         last.dead = pa.dying
         last.hp = pa.hp
+    end
+    -- (SHOTS=1: 3 capturas seguidas tras el primer golpe, para ver el parpadeo)
+    if last.shotAt and t >= last.shotAt and last.shots < 3 then
+        last.shots = last.shots + 1
+        last.shotAt = t + 0.021
+        love.graphics.captureScreenshot(function(img) img:encode('png', 'hit_' .. last.shots .. '.png') end)
+        print(('  captura %d: invT=%.2f alfa=%.2f'):format(last.shots, pa.invT or 0,
+            require('src/entities/PlayerAdventure').invulnAlpha(pa.invT or 0)))
     end
     if t > SECS then
         print(('Menor tiempo entre dos golpes: %.2f s'):format(last.minGap or -1))

@@ -918,7 +918,7 @@ local function broadcastSnapshot(room)
             if ps.finished    then flags = flags + Protocol.PF_FINISHED  end
             if (pa.stunT or 0) > 0 then flags = flags + Protocol.PF_STUNNED end
             if (pa.hurtT or 0) > 0 and not pa.dying then flags = flags + Protocol.PF_HURT end
-            if (pa.spawnInvT or 0) > 0 and not pa.dying then flags = flags + Protocol.PF_INVULN end
+            if (pa.invT or 0) > 0 and not pa.dying then flags = flags + Protocol.PF_INVULN end
             if (pa.squashT or 0) > 0 and not pa.dying then flags = flags + Protocol.PF_SQUASH end
             table.insert(plist, {
                 ps.idx, round(pa.x), round(pa.y), pa.facing, pa.frame, flags,

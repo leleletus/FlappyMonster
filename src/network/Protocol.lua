@@ -7,7 +7,7 @@ local Tiles = require 'src/world/Tiles'
 local P = {}
 
 -- ── Versión / red ─────────────────────────────────────────────────────────────
-P.VERSION        = 20        -- el servidor rechaza clientes con otra versión
+P.VERSION        = 21        -- el servidor rechaza clientes con otra versión
 
 -- Sonidos PRIVADOS: solo los oye el jugador que los causa (su cliente ya los
 -- genera con la predicción), así que el servidor no los manda a nadie. P. ej.
@@ -144,7 +144,7 @@ function P.packOwnState(pa)
         pa.groundDef and pa.groundDef.id or -1,
         pa.hurtT or 0,
         (pa.gpPhase == 'windup' and 1) or (pa.gpPhase == 'fall' and 2) or 0,
-        pa.gpT or 0, pa.stunT or 0, pa.spawnInvT or 0, pa.squashT or 0, pa.ctrlLockT or 0,
+        pa.gpT or 0, pa.stunT or 0, pa.invT or 0, pa.squashT or 0, pa.ctrlLockT or 0,
     }
 end
 
@@ -180,7 +180,7 @@ function P.applyOwnState(s, pa)
     pa.gpPhase     = (s[24] == 1 and 'windup') or (s[24] == 2 and 'fall') or nil
     pa.gpT         = s[25]
     pa.stunT       = s[26]
-    pa.spawnInvT   = s[27]
+    pa.invT        = s[27]
     pa.squashT     = s[28]
     pa.ctrlLockT   = s[29]
 end
