@@ -179,6 +179,10 @@ src/ui/PixelIcons.lua  small pixel icons = PNGs in assets/images/icons/<name>.pn
 Spikes are images too: assets/images/spikes/spike.png (tile spikes, rotated/flipped
                        for the 4 directions; falling spike), crabby/spike.png and
                        bosses/miniboss1/spike.png (stretched in height while they grow)
+Tile textures: assets/images/tiles/ (breakable, platform, platform_drop via the tile
+                       def's `texture`; finish.png = the checkerboard, its wave + gold
+                       frame stay in finish.lua). Other tiles are code-drawn on purpose
+                       (material colour + neighbour-dependent edges).
 src/fx/SpriteStrip.lua animation strips (frames side by side in one PNG):
                        SpriteStrip.load(path[, frameW]) → :frameAt(t, fps), :draw(i, x, y, r, sx, sy)
 server/main.lua        authoritative sim (see below)
