@@ -1,239 +1,117 @@
--- main.lua
-lovesize     = require 'libs/lovesize'
-Timer        = require 'libs/timer'
+-- main.lua — ARRANQUE. Monta la última actualización descargada y arranca el
+-- juego (game.lua). Este archivo NO se actualiza solo (ni conf.lua): cambiarlo
+-- exige volver a instalar el juego, así que debe quedarse pequeño y estable.
+--
+-- Actualizaciones (ver src/update/Updater.lua): cada versión descargada vive en
+-- la carpeta de guardado, en update/slots/<versión>/, solo con los archivos que
+-- cambian respecto al juego instalado. Aquí se monta la activa POR ENCIMA del
+-- juego instalado (LÖVE lee primero de ella). Estado en update/state.lua:
+--   active    versión montada (nil = la instalada)
+--   previous  la que había antes (se guarda hasta confirmar la nueva)
+--   pending   true = recién instalada, aún sin confirmar
+--   boots     arranques sin confirmar;  bad = versión que falló (no reinstalar)
+--   trash     carpeta a borrar al arrancar
+-- Una versión nueva se confirma tras CONFIRM_T s de juego sin errores. Si da
+-- un error antes (o no llega a confirmarse en MAX_BOOTS arranques), se vuelve
+-- a la anterior y no se vuelve a instalar esa versión.
+--
+-- Al ejecutar desde la carpeta del repo (`love .`) no se monta nada (así las
+-- descargas de un .love probado en el mismo PC nunca tapan el código).
+-- FM_UPDATE=1 lo fuerza (pruebas).
 
-require 'settings'
-Input        = require 'input'
-Sound        = require 'src/Sound'
-StateMachine = require 'src/StateMachine'
+local UPD       = 'update'
+local STATE     = UPD .. '/state.lua'
+local CONFIRM_T = 10
+local MAX_BOOTS = 3
 
--- NetworkClient: singleton global para el modo online
-NC = require 'src/network/NetworkClient'
-Notify = require 'src/ui/Notify'   -- avisos globales (toasts y ventanas)
+local fs = love.filesystem
+local source = fs.getSource() or ''
+UPDATE_ENABLED = fs.isFused() or source:match('%.love$') ~= nil or os.getenv('FM_UPDATE') == '1'
 
-local TitleState                  = require 'src/states/TitleState'
-local MainMenuState               = require 'src/states/MainMenuState'
-local DifficultySelectionState    = require 'src/states/DifficultySelectionState'
-local PlayState                   = require 'src/states/PlayState'
-local PauseState                  = require 'src/states/PauseState'
-local AdventureState              = require 'src/states/AdventureState'
-local AdventureModeSelectState    = require 'src/states/AdventureModeSelectState'
-local OnlineLoginState            = require 'src/states/OnlineLoginState'
-local OnlineHubState              = require 'src/states/OnlineHubState'
-local OnlineRoomState             = require 'src/states/OnlineRoomState'
-local OnlineAdventureState        = require 'src/states/OnlineAdventureState'
-local OnlineErrorState            = require 'src/states/OnlineErrorState'
-local OnlineResultsState          = require 'src/states/OnlineResultsState'
-local SettingsState               = require 'src/states/SettingsState'
-local Settings                    = require 'src/Settings'
+local function slotDir(v) return UPD .. '/slots/' .. v end
 
-DEBUG_HITBOX = false   -- F1 para activar/desactivar hitboxes
-
-function love.load()
-    -- Autoadaptar la resolución lógica para móviles y tablets (Evitar Zoom excesivo)
-    local sw, sh = love.graphics.getDimensions()
-    local aspect = sw / sh
-    aspect = math.max(4/3, math.min(21/9, aspect)) -- Limitar para no deformar UI
-    WINDOW_W = math.floor(720 * aspect)
-
-    love.graphics.setDefaultFilter('nearest', 'nearest')
-    lovesize.set(WINDOW_W, WINDOW_H)
-
-    -- Fuentes pixel art globales (Press Start 2P)
-    -- Archivo: assets/fonts/PressStart2P.ttf
-    FONT_SMALL = love.graphics.newFont('assets/fonts/PressStart2P.ttf', 10)
-    FONT_MED   = love.graphics.newFont('assets/fonts/PressStart2P.ttf', 16)
-    FONT_BIG   = love.graphics.newFont('assets/fonts/PressStart2P.ttf', 28)
-    love.graphics.setFont(FONT_MED)
-
-    Settings.load()                 -- idioma guardado (src/Lang.lua)
-    Input.load()
-    Input.lastDevice = Input.isMobile and 'touch' or 'keyboard'
-    Sound.load()
-
-    gStateMachine = StateMachine:new({
-        title              = function() return TitleState:new() end,
-        main_menu          = function() return MainMenuState:new() end,
-        difficulty         = function() return DifficultySelectionState:new() end,
-        settings           = function() return SettingsState:new() end,
-        play               = function() return PlayState:new() end,
-        pause              = function() return PauseState:new() end,
-        adventure          = function() return AdventureState:new() end,
-        -- Modo online
-        adv_mode_select    = function() return AdventureModeSelectState:new() end,
-        online_login       = function() return OnlineLoginState:new() end,
-        online_hub         = function() return OnlineHubState:new() end,
-        online_room        = function() return OnlineRoomState:new() end,
-        online_adventure   = function() return OnlineAdventureState:new() end,
-        online_error       = function() return OnlineErrorState:new() end,
-        online_results     = function() return OnlineResultsState:new() end,
-    })
-    gStateMachine:change('title')
+local function readState()
+    local ok, src = pcall(fs.read, STATE)
+    local chunk = ok and src and loadstring(src)
+    if not chunk then return {} end
+    setfenv(chunk, {})
+    local ok2, t = pcall(chunk)
+    return (ok2 and type(t) == 'table') and t or {}
 end
 
-function love.update(dt)
-    dt = math.min(dt, 0.05)
-    Timer.update(dt)
-    Sound.update(dt)
-    Input.update(dt)
-    NC:update(dt)
-    local blocked = Notify.blocking()    -- una ventana de aviso abierta se come la entrada
-    Notify.update(dt)
-    if not blocked then gStateMachine:update(dt) end
-end
-
-function love.draw()
-    lovesize.begin()
-        gStateMachine:render()
-        Notify.render()
-    lovesize.finish()
-end
-
-function love.joystickadded(joystick)
-    Input.joystickadded(joystick)
-end
-
--- Actualizar lovesize cuando Android rota o cambia el tamaño real de la ventana
-function love.resize(w, h)
-    local aspect = w / h
-    aspect = math.max(4/3, math.min(21/9, aspect))
-    WINDOW_W = math.floor(720 * aspect)
-    
-    if lovesize and lovesize.set then
-        lovesize.set(WINDOW_W, WINDOW_H)
+local function writeState(s)
+    local out = { 'return {' }
+    for k, v in pairs(s) do
+        if type(v) == 'string' then out[#out + 1] = string.format('  %s = %q,', k, v)
+        elseif type(v) == 'number' or type(v) == 'boolean' then out[#out + 1] = string.format('  %s = %s,', k, tostring(v)) end
     end
+    out[#out + 1] = '}\n'
+    fs.createDirectory(UPD)
+    pcall(fs.write, STATE, table.concat(out, '\n'))
 end
+UPDATE_WRITE_STATE, UPDATE_READ_STATE = writeState, readState
 
--- Táctil (Switch / Android / iOS): reenviar al estado del tope de la pila
-function love.touchpressed(id, x, y, dx, dy, pressure)
-    if not gStateMachine then return end
-
-    -- Convertir coordenadas de pantalla (Android) a lógicas (1280x720) para los botones
-    local sw, sh = love.graphics.getWidth(), love.graphics.getHeight()
-    local scale = math.min(sw / WINDOW_W, sh / WINDOW_H)
-    local offX = (sw - WINDOW_W * scale) / 2
-    local offY = (sh - WINDOW_H * scale) / 2
-    local lx = (x - offX) / scale
-    local ly = (y - offY) / scale
-
-    if Notify.touch(lx, ly) then return end
-    local state = gStateMachine:_top()
-    if state and state.touchpressed then
-        state:touchpressed(id, lx, ly, dx, dy, pressure)
-        else
-            -- Fallback global para menús: dividir la pantalla en 3 zonas
-            local sh = love.graphics.getHeight()
-            if y < sh * 0.33 then
-                Input.VirtualPad._pressedThisFrame['nav_up'] = true
-            elseif y > sh * 0.66 then
-                Input.VirtualPad._pressedThisFrame['nav_down'] = true
-            else
-                Input.VirtualPad._pressedThisFrame['confirm'] = true
-            end
+-- Borra una carpeta de la carpeta de guardado (solo lo que está en ella)
+local saveDir = fs.getSaveDirectory()
+local function rmrf(path)
+    local info = fs.getInfo(path)
+    if not info then return end
+    if info.type == 'directory' then
+        for _, it in ipairs(fs.getDirectoryItems(path)) do rmrf(path .. '/' .. it) end
     end
+    if fs.getRealDirectory(path) == saveDir then fs.remove(path) end
 end
+UPDATE_RMRF = rmrf
 
-function love.focus(f)
-    if not f then
-        if gStateMachine then
-            local state = gStateMachine:_top()
-            if state and state.pauseGame then state:pauseGame() end
+local st
+if UPDATE_ENABLED then
+    st = readState()
+    if st.trash then rmrf(slotDir(st.trash)); st.trash = nil; writeState(st) end
+    if st.pending then
+        st.boots = (st.boots or 0) + 1
+        if st.boots > MAX_BOOTS then
+            -- No llega a confirmarse (¿se cierra solo?): volver a la anterior
+            st.bad, st.trash, st.active = st.active, st.active, st.previous
+            st.previous, st.pending, st.boots = nil, nil, nil
         end
-        love.audio.setVolume(0)
-    else
-        love.audio.setVolume(1)
+        writeState(st)
+    end
+    if st.active and fs.getInfo(slotDir(st.active), 'directory') then
+        if not fs.mount(slotDir(st.active), '', false) then
+            print('[update] no se pudo montar ' .. st.active)
+        end
+    elseif st.active then
+        st.active = nil; writeState(st)                       -- (carpeta perdida)
     end
 end
 
-function love.keypressed(k)
-    if k == 'f1' then DEBUG_HITBOX = not DEBUG_HITBOX end
-    Input.lastDevice = 'keyboard'
-    -- Reenviar al estado actual (para campos de texto en menús online)
-    local state = gStateMachine:_top()
-    if state and state.keypressed then state:keypressed(k) end
-    if k == 'escape' then return true end -- Evita que Android cierre el juego abruptamente
-end
+require 'game'
 
--- Reenviar entrada de texto al estado actual (menús online)
-function love.textinput(t)
-    local state = gStateMachine:_top()
-    if state and state.textinput then state:textinput(t) end
-end
-
-function love.joystickpressed(joystick, button)
-    Input.lastDevice = 'gamepad'
-end
-
--- Registrar cuando se toca la pantalla
-local oldTouchpressed = love.touchpressed
-function love.touchpressed(id, x, y, dx, dy, pressure)
-    Input.lastDevice = 'touch'
-    oldTouchpressed(id, x, y, dx, dy, pressure)
-end
-
--- Movimiento del mouse: actualiza hover en el estado actual
-function love.mousemoved(x, y, dx, dy, istouch)
-    if istouch then return end
-    if not gStateMachine then return end
-    Input.lastDevice = 'mouse'
-    local sw, sh  = love.graphics.getWidth(), love.graphics.getHeight()
-    local scale   = math.min(sw / WINDOW_W, sh / WINDOW_H)
-    local offX    = (sw - WINDOW_W * scale) / 2
-    local offY    = (sh - WINDOW_H * scale) / 2
-    local lx      = (x - offX) / scale
-    local ly      = (y - offY) / scale
-    if Notify.hover(lx, ly) then return end
-    local state   = gStateMachine:_top()
-    if state and state.mousemoved then
-        state:mousemoved(lx, ly)
-    end
-end
-
--- Clic del mouse (PC / pantalla táctil de escritorio): redirige al mismo manejador que el toque
-function love.mousepressed(x, y, button, istouch, presses)
-    if istouch then return end          -- ya lo maneja love.touchpressed (evita doble disparo)
-    if button ~= 1 then return end      -- solo botón izquierdo
-    if not gStateMachine then return end
-    Input.lastDevice = 'mouse'
-
-    local sw, sh  = love.graphics.getWidth(), love.graphics.getHeight()
-    local scale   = math.min(sw / WINDOW_W, sh / WINDOW_H)
-    local offX    = (sw - WINDOW_W * scale) / 2
-    local offY    = (sh - WINDOW_H * scale) / 2
-    local lx      = (x - offX) / scale
-    local ly      = (y - offY) / scale
-
-    if Notify.touch(lx, ly) then return end
-    local state = gStateMachine:_top()
-    if state and state.touchpressed then
-        state:touchpressed('mouse', lx, ly, 0, 0, 1)
-    else
-        -- Fallback: dividir la pantalla en 3 zonas (igual que touchpressed)
-        if y < sh * 0.33 then
-            Input.VirtualPad._pressedThisFrame['nav_up'] = true
-        elseif y > sh * 0.66 then
-            Input.VirtualPad._pressedThisFrame['nav_down'] = true
-        else
-            Input.VirtualPad._pressedThisFrame['confirm'] = true
+-- ── Confirmar / deshacer una versión recién instalada ────────────────────────
+if st and st.pending then
+    local t, done = 0, false
+    local gameUpdate = love.update
+    love.update = function(dt)
+        if gameUpdate then gameUpdate(dt) end
+        if done then return end
+        t = t + dt
+        if t >= CONFIRM_T then
+            done = true
+            local s = readState()
+            if s.previous then s.trash = s.previous end       -- (se borra al arrancar)
+            s.previous, s.pending, s.boots = nil, nil, nil
+            writeState(s)
         end
     end
-end
-
--- Rueda del ratón → estado actual (listas desplazables)
-function love.wheelmoved(dx, dy)
-    local state = gStateMachine and gStateMachine:_top()
-    if state and state.wheelmoved then state:wheelmoved(dx, dy) end
-end
-
-function love.quit() end
-
--- ── Editor de niveles ─────────────────────────────────────────────────────────
--- love . --editor [assets/levels/x.json]   (reemplaza los callbacks del juego;
--- el juego se usa para "Probar" el nivel desde el editor)
-for i, a in ipairs(arg or {}) do
-    if a == '--editor' then
-        local nxt = arg[i + 1]
-        require('src/editor/Editor').install(nxt and nxt:match('%.json$') and nxt or nil)
-        break
+    local handler = love.errorhandler or love.errhand
+    love.errorhandler = function(msg)
+        if not done then
+            local s = readState()
+            s.bad, s.trash, s.active = s.active, s.active, s.previous
+            s.previous, s.pending, s.boots = nil, nil, nil
+            writeState(s)
+            msg = tostring(msg) .. '\n\n(La actualización falló: al reiniciar se usará la versión anterior.)'
+        end
+        return handler(msg)
     end
 end

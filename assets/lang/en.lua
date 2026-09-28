@@ -272,4 +272,13 @@ return {
         finished = "FINISHED",
         eliminated = "ELIMINATED",
     },
+    upd = {
+        checking = "CHECKING FOR UPDATES...",
+        updating = "UPDATING TO VERSION {v}",
+        from = "Current version: {v}",
+        comparing = "Comparing files...",
+        progress = "{n}/{total} files  ·  {mb} / {tmb} MB",
+        restarting = "RESTARTING...",
+        skip = "[{key}] skip",
+    },
 }

@@ -186,6 +186,17 @@ function TitleState:render()
         L('title.press', { key = Input.label('confirm') }),
         0, math.floor(WINDOW_H * 0.72), WINDOW_W, 'center')
 
+    -- Versión instalada (version.txt; la cambian las actualizaciones)
+    if not self.version then
+        local ok, v = pcall(love.filesystem.read, 'version.txt')
+        self.version = 'v' .. ((ok and v or '?'):match('^%s*(.-)%s*$'))
+    end
+    local prevFont = love.graphics.getFont()
+    love.graphics.setFont(FONT_SMALL)
+    love.graphics.setColor(0, 0, 0, 0.55)
+    love.graphics.printf(self.version, 0, math.floor(WINDOW_H * 0.81), math.floor(WINDOW_W * 0.9), 'right')   -- (dentro del marco)
+    love.graphics.setFont(prevFont)
+
     love.graphics.setColor(COLOR_WHITE)
 end
 

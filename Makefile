@@ -65,6 +65,7 @@ lovefile:
 
 	@zip -9 -r $(BUILD_DIR)/lovefile/$(GAME_LOWER).love $(SRC_DIR) \
 		-x "build/*" \
+		-x "server/published/*" \
 		-x "resources/*" \
 		-x "tools/*" \
 		-x "*.love" \

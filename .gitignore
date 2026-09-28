@@ -22,3 +22,6 @@ Thumbs.db
 
 # Ignore memory files for AI
 MEMORY.md
+
+# Actualizaciones publicadas por el servidor (server/updates.lua)
+/server/published/

@@ -17,8 +17,8 @@ end
 local FIELD_NICK   = 1
 local FIELD_LABELS = { 'login.name' }   -- claves de idioma
 
-local FIXED_HOST = "djvemo.net.pe"
-local FIXED_PORT = 22122
+local FIXED_HOST = SERVER_HOST     -- (settings.lua)
+local FIXED_PORT = SERVER_PORT
 
 -- ── Enter ─────────────────────────────────────────────────────────────────────
 
@@ -59,6 +59,12 @@ function OnlineLoginState:enter(args)
     -- Rechazo del handshake (versión incompatible, nombre en uso o inválido)
     NC:on("login_error", function(data)
         self.connecting = false
+        -- Versión incompatible: intentar actualizar el juego (y volver aquí)
+        if type(data) == 'table' and data.key == 'srv.version' and UPDATE_ENABLED and not UPDATE_TRIED then
+            UPDATE_TRIED = true                  -- (una vez por sesión: sin bucles)
+            gStateMachine:change('update', { after = 'online_login' })
+            return
+        end
         self:_showError(Lang.fromServer(data, 'login.failed'))
     end)
 end

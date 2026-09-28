@@ -80,7 +80,7 @@ ADV_AIR_FRIC   = 6           -- lerp en aire (menor control)
 CAM_LERP       = 6           -- suavidad de seguimiento
 
 -- ── Multijugador Online ───────────────────────────────────────────────────────
-SERVER_HOST = "localhost"    -- host por defecto del servidor
+SERVER_HOST = os.getenv("FM_SERVER") or "djvemo.net.pe"  -- servidor (online y actualizaciones); FM_SERVER=localhost para pruebas
 SERVER_PORT = 22122          -- puerto del servidor
 
 -- ── Catálogo de tiles y materiales ────────────────────────────────────────────

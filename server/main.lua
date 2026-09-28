@@ -26,6 +26,7 @@ local Protocol = require 'src/network/Protocol'
 local Modes    = require 'src/world/Modes'
 local Lang     = require 'src/Lang'
 local json     = require 'libs/json'
+local Updates  = require 'updates'            -- server/updates.lua
 local TICK_DT        = Protocol.TICK_DT
 local SNAPSHOT_EVERY = Protocol.SNAPSHOT_EVERY
 local band           = Protocol.band
@@ -47,6 +48,7 @@ local FLOOD_LIMIT     = 300   -- mensajes descartados (ventana de 10 s) antes de
 local INVALID_LIMIT   = 10    -- paquetes malformados antes de expulsar
 local MAX_CONN_PER_IP = 4
 local HELLO_TIMEOUT   = 6     -- s para identificarse tras conectar
+local UPDATE_IDLE     = 20    -- s sin pedir nada un cliente que se actualiza (ver updates.lua)
 local JOIN_FAIL_MAX   = 5     -- contraseñas erróneas antes de bloqueo temporal
 local JOIN_FAIL_LOCK  = 30    -- s de bloqueo
 local PASSWORD_MAX    = 20
@@ -1063,6 +1065,14 @@ local function on(event, handler, allowAnonymous)
     end)
 end
 
+-- Actualizaciones automáticas de los clientes (sin login; ver updates.lua)
+Updates.register(function(event, handler)
+    on(event, function(data, client, p)
+        p.updT = love.timer.getTime()
+        handler(data, client, p)
+    end, true)
+end)
+
 server.onInvalidPacket = function(client, size)
     local p = client and players[client]
     if not p or p.kicked then return end
@@ -1405,6 +1415,7 @@ function love.load()
     -- Acceder a los assets del juego via io.open (love.filesystem no puede montar rutas OS arbitrarias)
     -- (package.path ya se extendió con parentDir al inicio del archivo)
     log("Directorio del juego: " .. parentDir)
+    Updates.init(parentDir, log)                  -- actualizaciones automáticas (updates.lua)
 
     -- Override love.filesystem.read para leer assets (JSON de niveles, etc.)
     local _lfsRead = love.filesystem.read
@@ -1641,8 +1652,10 @@ end -- if not HEADLESS
 local function checkHelloTimeouts()
     local now = love.timer.getTime()
     for c, p in pairs(players) do
-        if not p.verified and not p.kicked and now - p.connectedAt > HELLO_TIMEOUT then
-            dropClient(c, "sin handshake")
+        -- (quien se está actualizando no se identifica: basta con que siga pidiendo)
+        local since = p.updT and (now - p.updT > UPDATE_IDLE) or (not p.updT and now - p.connectedAt > HELLO_TIMEOUT)
+        if not p.verified and not p.kicked and since then
+            dropClient(c, p.updT and "actualización inactiva" or "sin handshake")
         end
     end
 end
@@ -1650,6 +1663,7 @@ end
 function love.update(dt)
     server:update()
     checkHelloTimeouts()
+    Updates.update(dt)
 
     -- Paso fijo: la simulación avanza exactamente TICK_DT por tick sin importar
     -- los FPS del servidor (headless corre a ~1000 FPS, con ventana a 60).

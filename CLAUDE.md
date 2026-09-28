@@ -7,7 +7,7 @@ LÖVE 11.x game (Lua / LuaJIT). Two games in one: the original Flappy mode
 text is translated (es/en, see *Languages* below) — never hardcode it. The
 level editor is a dev tool and stays in Spanish.
 
-Run: `love .` (game) · `love . --editor [assets/levels/x.json]` (level editor)
+Run: `love .` (game; `main.lua` is the update bootstrap, the game is `game.lua`) · `love . --editor [assets/levels/x.json]` (level editor)
 · `love server` / `love server --headless` (server, port 22122).
 Quick syntax check of everything: `for f in $(git ls-files '*.lua' | grep -v resources/); do luajit -bl "$f" >/dev/null || echo "$f"; done`
 
@@ -82,10 +82,39 @@ Quick syntax check of everything: `for f in $(git ls-files '*.lua' | grep -v res
   the old button images, accents included): `PixelFont.draw(text, x, y, scale,
   alpha)`, `.width`, `.height`. No text baked into images.
 
+## Automatic updates
+
+- `main.lua` is only the BOOTSTRAP (never auto-updated, like `conf.lua`; keep
+  it small): mounts the active update slot over the installed game, then
+  `require 'game'` (the real client entry, `game.lua`). Crash guard: a new
+  version is `pending` until it runs 10 s without errors; an error (or 3
+  unconfirmed boots) rolls back to `previous` and marks it `bad`.
+  Disabled when running from the repo folder (`love .`); `FM_UPDATE=1` forces it.
+- Save dir: `update/state.lua` {active, previous, pending, boots, bad, trash},
+  `update/slots/<version>/` = only the files that differ from the installed
+  game + `.manifest.lua` (hashes, so the next update doesn't rehash).
+- `src/update/Updater.lua` + `src/states/UpdateState.lua` (first state; goes
+  to the title at once when offline/up to date; also entered from the online
+  login when the server rejects the version). Downloads only changed files
+  (sha256-checked), copies unchanged ones from the old slot, then
+  `love.event.quit('restart')`. Files deleted from the repo can't be hidden if
+  the INSTALLED build has them (only matters for directory scans).
+- Server `server/updates.lua`: publishes a snapshot of `git ls-files` (game.lua,
+  input.lua, settings.lua, version.txt, src/, libs/, assets/) into
+  `server/published/current/` ONLY when `version.txt` changes (checked at start
+  and every 30 s, hashing in a thread) and serves it over ENet:
+  `upd_manifest` / `upd_get {path, offset}` → `upd_chunk` (48 KB). That
+  message contract is FROZEN (installed clients rely on it). The server must
+  be run from the repo root (it needs `git`).
+- RELEASE = bump `version.txt` in master (+ git pull/restart the server). Bump it
+  too whenever `Protocol.VERSION` changes, or old clients can't join.
+- `SERVER_HOST`/`SERVER_PORT` in settings.lua (`FM_SERVER=localhost` for tests).
+
 ## Directory map
 
 ```
-main.lua            client entry; state machine registry; editor hook (--editor)
+main.lua            BOOTSTRAP only (mounts updates, see Automatic updates) → game.lua
+game.lua            client entry; state machine registry; editor hook (--editor)
 settings.lua        global constants; requires src/world/Tiles (defines TILE_* ids)
 input.lua           baton-based Input (keyboard/gamepad/touch VirtualPad)
 src/Sound.lua       Sound.play(name,pitch,vol), playMusic(name), stopMusic, tracked sounds,

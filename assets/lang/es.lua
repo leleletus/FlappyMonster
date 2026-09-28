@@ -272,4 +272,13 @@ return {
         finished = "EN LA META",
         eliminated = "ELIMINADO",
     },
+    upd = {
+        checking = "BUSCANDO ACTUALIZACIONES...",
+        updating = "ACTUALIZANDO A LA VERSIÓN {v}",
+        from = "Versión actual: {v}",
+        comparing = "Comparando archivos...",
+        progress = "{n}/{total} archivos  ·  {mb} / {tmb} MB",
+        restarting = "REINICIANDO...",
+        skip = "[{key}] saltar",
+    },
 }
