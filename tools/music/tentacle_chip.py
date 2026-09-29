@@ -149,6 +149,20 @@ MEL = {
 }
 
 
+# Dónde calla la melodía (para respirar y dejar sitio a solos instrumentales):
+#   'h2'   la 2ª mitad del compás: golpes de acorde en tresillo + redoble de toms
+#   'perc' solo de percusión (toms, redoble, golpes de acorde, subida)
+#   'steel' solo de steel drum (arpegios tropicales rápidos)
+#   'drums' solo de batería (toms + bongós + golpes)
+# Clave: (vuelta 1|2, compás 1-36). Sin vuelta = las dos.
+def rest(passno, bar):
+    if bar in (4, 16, 20, 32): return 'h2'
+    if bar in (11, 12): return 'perc'
+    if bar in (25, 26): return 'steel' if passno == 1 else 'drums'
+    if passno == 2 and bar <= 4: return 'steel'        # la 2ª vuelta empieza instrumental
+    return None
+
+
 def parse(s):
     out = []
     for tok in s.split():
@@ -168,19 +182,20 @@ def parse(s):
 TRES = {0: 1, 3: .8, 5: .75, 8: .95, 11: .8, 13: .75}
 DR = {
     'A':  {'k': TRES, 'chop': (2, 6, 10, 14), 'sn': {2: .8, 6: .9, 10: .8, 14: .9}, 'hh': (1, .5),
-           'sh': {}, 'bongo': {}},
+           'sh': {}, 'bongo': {1: .35, 3: .6, 7: .65, 9: .35, 11: .6, 15: .65}},
     'BR': {'k': {0: 1, 8: .9}, 'chop': (2, 6, 10, 14), 'sn': {}, 'hh': (.7, 0),
            'sh': {2: .6, 6: .6, 10: .6, 14: .6}, 'bongo': {}},
     'B':  {'k': {**TRES, 15: .5}, 'chop': (2, 6, 10, 14), 'sn': {2: .7, 6: 1, 10: .7, 14: 1}, 'hh': (1, .55),
-           'sh': {}, 'bongo': {3: .6, 7: .7, 11: .6, 15: .7}},
+           'sh': {}, 'bongo': {1: .4, 3: .7, 4: .35, 7: .75, 9: .4, 11: .7, 12: .35, 15: .75}},
     'C':  {'k': {0: 1, 3: .8, 6: .8, 8: 1, 11: .8, 14: .8}, 'chop': (2, 6, 10, 14),
-           'sn': {4: .9, 12: .9, 2: .5, 10: .5, 15: .5}, 'hh': (1, .6), 'sh': {}, 'bongo': {}},
+           'sn': {4: .9, 12: .9, 2: .5, 10: .5, 15: .5}, 'hh': (1, .6), 'sh': {},
+           'bongo': {1: .4, 3: .6, 5: .4, 7: .6, 9: .4, 11: .6, 13: .4, 15: .6}},
     'D':  {'k': {**TRES, 4: .6, 12: .6}, 'chop': (2, 6, 10, 14), 'sn': {2: .8, 6: 1, 10: .8, 14: 1},
-           'hh': (1, .6), 'sh': {}, 'bongo': {3: .5, 7: .6, 11: .5, 15: .6}},
+           'hh': (1, .6), 'sh': {}, 'bongo': {1: .4, 3: .6, 5: .35, 7: .7, 9: .4, 11: .6, 13: .35, 15: .7}},
 }
 # Energía por compás (mezcla): el break baja, el compás 12 es el golpe más
 # fuerte de la canción, el 28 crece antes del final y el 35-36 respira
-BAR_GAIN = {8: 0.9, 9: 0.9, 10: 0.92, 11: 1.3, 27: 1.18, 34: 0.9, 35: 0.94}
+BAR_GAIN = {8: 0.9, 9: 0.9, 10: 1.0, 11: 0.95, 27: 1.18, 34: 0.9, 35: 0.94}   # (el 12 ya lleva golpes y toms)
 
 # ── Síntesis ─────────────────────────────────────────────────────────────────
 
@@ -232,6 +247,22 @@ def highpass(x, cutoff):
     return x - lowpass(x, cutoff)
 
 
+def lead_voice(f, n, ln, env):
+    """Lead con más energía: dos pulsos desafinados (50 % + 25 %, efecto coro),
+    una capa fina una octava arriba, un "scoop" de tono al atacar y un poco de
+    saturación (más brillante y con más mordida que un pulso solo)."""
+    vib = 0.25 if ln >= 3 else 0.0
+    a = pulse(f * 2 ** (-7 / 1200), n, 0.5, vib=vib, vib_rate=6.5, vib_delay=0.1, bend=-1.0, bend_t=0.018)
+    b = pulse(f * 2 ** (7 / 1200), n, 0.25, vib=vib, vib_rate=6.5, vib_delay=0.1, bend=-1.0, bend_t=0.018)
+    c = pulse(f * 2, n, 0.125, bend=-1.0, bend_t=0.018)
+    return np.tanh((0.55 * a + 0.45 * b + 0.22 * c) * 1.5) * env
+
+
+def tom(f0, n):
+    t = t_(n)
+    return np.sin(2 * np.pi * np.cumsum(f0 * (1 + 0.7 * np.exp(-t / 0.02))) / SR) * np.exp(-t / 0.14)
+
+
 class Track:
     def __init__(self, seconds):
         self.buf = np.zeros(int(seconds * SR) + SR)
@@ -256,12 +287,15 @@ def render(passes=2):
         pat = DR[sec]
         halves = [chord(c) for c in H[bi]]
 
-        # ── Melodía (pulso 25%, vibrato) + eco de 3 semicorcheas (tresillo) ──
+        # ── Melodía (lead chip) + eco de 3 semicorcheas (tresillo) ──────────
+        rs = rest(2 if second else 1, bi + 1)
         for st, m, ln in parse(MEL[bi + 1]):
+            if rs in ('perc', 'steel', 'drums') or (rs == 'h2' and st >= 8):
+                continue                                          # (respiro / solo)
             dur = ln * SIX
             n = int((dur + 0.06) * SR)
-            env = adsr(n, a=0.004, d=0.12, s=0.72, r=0.05, gate=dur * 0.92)
-            sig = pulse(hz(m), n, 0.25, vib=0.22 if ln >= 3 else 0.0, bend=-0.6 if ln >= 2 else 0) * env
+            env = adsr(n, a=0.003, d=0.1, s=0.75, r=0.04, gate=dur * 0.9)
+            sig = lead_voice(hz(m), n, ln, env)
             lead.add(t0 + st * SIX, sig)
             echo.add(t0 + st * SIX + 3 * SIX, pulse(hz(m), n, 0.125) * env, 0.33)
             midi_ev['lead'].append((t0 + st * SIX, m, dur))
@@ -292,6 +326,53 @@ def render(passes=2):
             nn = int(0.03 * SR)                                         # el rasgueo del skank
             scr = highpass(lowpass(noise(nn), 4200), 1500) * np.exp(-t_(nn) / 0.008)
             chop.add(t0 + st * SIX, scr, 1.3 if sec in ('BR', 'B', 'C') else 0.9)   # (más brillo en break y estribillo)
+
+        # ── Solos y respiros ─────────────────────────────────────────────────
+        def hits(steps, gain=1.0):
+            # Golpes del acorde entero (pulso + steel), con bombo debajo
+            for k_, st in enumerate(steps):
+                r, q, _ = halves[0 if st < 8 else 1]
+                for iv in q[:4]:
+                    m = 60 + (r + iv) % 12
+                    n = int(0.3 * SR)
+                    e = np.exp(-t_(n) / 0.09)
+                    steel.add(t0 + st * SIX, (pulse(hz(m), n, 0.5) * 0.7 + pulse(hz(m) * 2, n, 0.125) * 0.4) * e, 0.55 * gain)
+                kick.add(t0 + st * SIX, np.tanh(np.sin(2 * np.pi * np.cumsum(48 + 140 * np.exp(-t_(int(0.18 * SR)) / 0.022)) / SR)
+                                                * np.exp(-t_(int(0.18 * SR)) / 0.12) * 1.8), gain)
+        TOMS = {'H': 220, 'M': 165, 'L': 120}
+        def toms(seq, gain=1.0):
+            for tok in seq.split():
+                st, pitch = tok.split(':')
+                bongo.add(t0 + int(st) * SIX, tom(TOMS[pitch], int(0.25 * SR)), 0.9 * gain)
+        def steel_solo(shape):
+            # Solo de steel drum: olas de arpegio por las notas del acorde (2 octavas)
+            for st in range(16):
+                r, q, _ = halves[0 if st < 8 else 1]
+                tones = sorted({58 + (r + iv - 58) % 12 + o for iv in q for o in (0, 12, 24)})
+                m = tones[min(len(tones) - 1, shape[st])]
+                n = int(0.24 * SR)
+                e = np.exp(-t_(n) / 0.1)
+                v = 1.0 if st in (0, 3, 6, 8, 11, 14) else 0.7
+                sig = pulse(hz(m), n, 0.125, bend=0.35, bend_t=0.012) * 0.8 + np.sin(2 * np.pi * hz(m) * 2.01 * t_(n)) * np.exp(-t_(n) / 0.05) * 0.6
+                steel.add(t0 + st * SIX, sig * e, 0.62 * v)
+                midi_ev['arp'].append((t0 + st * SIX, m, 0.2))
+        if rs == 'h2':
+            hits((8, 11, 14))
+            toms('12:H 13:H 14:M 15:L')
+        elif rs == 'perc':
+            if bi == 10:
+                toms('0:H 1:H 2:M 3:H 4:M 5:M 6:L 7:M 8:H 9:H 10:M 11:H 12:M 13:L 14:L 15:L', 1.3)
+                hits((0, 3, 6), 0.8)                                  # (acentos del tresillo)
+            else:
+                hits((0, 3, 6), 1.2)
+                toms('8:H 9:H 10:H 11:M 12:M 13:M 14:L 15:L', 1.1)
+        elif rs == 'steel':
+            ups = [[0, 2, 4, 5, 4, 2, 3, 5, 6, 5, 4, 2, 3, 4, 6, 7], [7, 6, 4, 3, 4, 6, 5, 3, 2, 3, 5, 4, 2, 1, 2, 0]]
+            steel_solo(ups[bi % 2])
+        elif rs == 'drums':
+            hits((0, 8), 0.9)
+            toms('2:H 3:H 5:M 6:H 7:M 10:H 11:M 12:M 13:L 14:L 15:L' if bi % 2 == 0 else
+                 '0:H 1:M 2:L 3:H 4:M 5:L 6:H 7:H 9:M 10:M 11:L 12:H 13:M 14:L 15:L')
 
         # ── Arpegios rápidos (el final y la tensión) ─────────────────────────
         if sec in ('D', 'C') or (sec == 'B' and second):
@@ -374,14 +455,25 @@ def render(passes=2):
             n = int(0.07 * SR)
             s = highpass(noise(n), 7000) * np.exp(-t_(n) / 0.02)
             shaker.add(t0 + st * SIX, s, v * (1.35 if sec in ('BR', 'B') else 1.0))
-        # Hi-hat continuo en semicorcheas (más fuerte en las corcheas)
+        # Hi-hat continuo en semicorcheas (más fuerte en las corcheas), con
+        # fusas antes de cada tiempo y hi-hat abierto en los contratiempos
         hv, hw = pat['hh']
+        busy = sec in ('A', 'B', 'C', 'D')
         for st in range(16):
             v = hv if st % 2 == 0 else hw
             if v > 0:
                 n = int(0.035 * SR)
                 s = highpass(noise(n), 8000) * np.exp(-t_(n) / 0.009)
                 shaker.add(t0 + st * SIX, s, v * 0.8)
+                if busy and st % 4 == 3:                               # fusa: "tsk-tsk"
+                    shaker.add(t0 + st * SIX + SIX / 2, s, v * 0.55)
+                if busy and st % 4 == 2 and sec in ('B', 'D'):         # abierto
+                    no = int(0.12 * SR)
+                    shaker.add(t0 + st * SIX, highpass(noise(no), 6000) * np.exp(-t_(no) / 0.05), 0.35)
+        if busy:                                                        # caja fantasma
+            for st in (1, 5, 9, 13):
+                n = int(0.08 * SR)
+                snare.add(t0 + st * SIX, highpass(noise(n, 2), 1200) * np.exp(-t_(n) / 0.03), 0.22)
         for st, v in pat['bongo'].items():                          # bongós: 2 alturas
             n = int(0.12 * SR)
             f0 = 330 if st % 4 == 3 else 250
@@ -409,8 +501,8 @@ def render(passes=2):
     for tr in (lead, echo, harm, steel, arp):
         tr.buf = lowpass(tr.buf, 7500)
     parts = [
-        st_(lead, 0.44, -0.05), st_(echo, 0.30, 0.35), st_(harm, 0.30, 0.25), st_(steel, 0.75, 0.2),
-        st_(arp, 0.24, -0.3), st_(bass, 0.85, 0.0), st_(kick, 0.95, 0.0), st_(snare, 0.50, -0.1),
+        st_(lead, 0.72, -0.05), st_(echo, 0.30, 0.35), st_(harm, 0.30, 0.25), st_(steel, 0.75, 0.2),
+        st_(arp, 0.24, -0.3), st_(bass, 0.72, 0.0), st_(kick, 0.95, 0.0), st_(snare, 0.50, -0.1),
         st_(shaker, 0.30, 0.3), st_(bongo, 0.34, -0.35), st_(chop, 0.22, 0.15),
     ]
     # SOLO=lead,bass... → solo esas pistas (para escucharlas o medirlas); RAW=1 → sin normalizar
