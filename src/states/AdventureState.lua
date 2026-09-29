@@ -65,6 +65,7 @@ function AdventureState:enter(args)
     loadBgAsset()
     args = args or {}
     self.levelPath = args.level or 'assets/levels/nivel01.json'
+    self.returnTo  = args.returnTo or 'main_menu'   -- a dónde se sale (Juego libre → free_play)
 
     self.level  = Level.new(self.levelPath)
     local sx, sy = self.level:getSpawnPx()
@@ -309,9 +310,9 @@ function AdventureState:update(dt)
             if Input.pressed('confirm') then
                 Sound.play('select')
                 if self.selectedOpt == 1 then
-                    gStateMachine:change('adventure', { level = self.levelPath })
+                    gStateMachine:change('adventure', { level = self.levelPath, returnTo = self.returnTo })
                 else
-                    gStateMachine:change('main_menu')
+                    gStateMachine:change(self.returnTo)
                 end
                 return
             end
@@ -756,9 +757,9 @@ function AdventureState:touchpressed(id, tx, ty, dx, dy, pressure)
             if tx >= bx-10 and tx <= bx+btnW+10 and ty >= by-5 and ty <= by+btnH+5 then
                 Sound.play('select')
                 if i == 1 then
-                    gStateMachine:change('adventure', { level = self.levelPath })
+                    gStateMachine:change('adventure', { level = self.levelPath, returnTo = self.returnTo })
                 else
-                    gStateMachine:change('main_menu')
+                    gStateMachine:change(self.returnTo)
                 end
                 return
             end

@@ -166,8 +166,8 @@ src/network/
   NetworkClient.lua    NC singleton (NC:on/off, NC:send, NC.myId)
   Predictor.lua        local prediction + reconciliation (re-sim is SILENT: Sound muted)
   SnapshotBuffer.lua   interpolation buffer for remote stuff
-src/states/            Title, MainMenu, Play (flappy), Adventure (SP), Online* (login,
-                       hub, room, adventure, results, error), Pause
+src/states/            Title, MainMenu, Play (flappy), Adventure (SP), FreePlay (SP level
+                       hub), Online* (login, hub, room, adventure, results, error), Pause
 src/editor/            Editor.lua (UI+tools), EditorModel.lua (data/save/validate), ui.lua
 src/fx/Particles.lua   Particles.emit(kind,x,y) — kinds: gp_land, gp_start, block_break,
                        oneup, spawn, spike_land, spike_pop, collect, checkpoint,
@@ -452,6 +452,23 @@ list no mode until the user places a Point Area in them).
   counts), then hold 0.25 s, blink 0.9 s, gone. Editor/thumbnails draw a dashed ghost.
 - Harness: `tools/tests/run.sh mechanics` (also covers the Gummy helmet and the
   pufferfish). Protocol v22 (ON/OFF + invisible blocks + helmet + pufferfish).
+
+## Free Play (single player)
+
+Aventura → SOLO opens `FreePlayState` (state `free_play`): every level in a scrolling
+grid of cards (thumbnail, name, size, monsters, boss, water/floods/auto-scroll/zones,
+stars/lives/checkpoints, music, online-mode chips). Nothing is saved or unlocked (a
+test hub for beta testers until the story map exists). Level cards come from
+`src/world/LevelCatalog.lua` — the ONE level-info builder, also used by the server's
+lobby catalog (`LevelCatalog.info/load/files/buildPreview`; `RETIRED` = old test files
+an installed build still has; `_*` hidden). Loading is incremental (time budget per
+frame) and cached between visits; only visible cards are drawn; columns come from the
+current `WINDOW_W`. Input: arrows/ENTER/ESC, mouse hover + click, wheel, finger drag
+(`love.touchmoved/touchreleased` are now routed to states in logical coords). Levels are
+started with `{ level, returnTo = 'free_play' }`: AdventureState game over and
+PauseState "exit" go back to `returnTo` (Pause looks at the state under it). Level
+thumbnails live in canvases → `love.resize` clears `ModeSelectMenu` previews.
+Harness `free_play`.
 
 ## Level JSON
 

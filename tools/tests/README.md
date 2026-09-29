@@ -32,6 +32,7 @@ actualizaciones automáticas. Nunca apuntan al servidor real (usan
 | `online_smoke` | Un cliente real + un bot juegan una partida online: sin errores en cliente ni servidor. | `run.sh online_smoke LEVEL=assets/levels/isla_flotante.json MODE=koth` |
 | `online_boss` | Pelea de jefe online: estados recibidos por red, súbditos, bloques, capturas `<save>/boss_*.png`. | `run.sh online_boss LEVEL=tools/levelgen/arenas/jefe_cangrejo.json NOSHOTS=1` |
 | `editor_open` | El editor real: diálogo "Abrir nivel" (Ctrl+O) con scroll; capturas `<save>/editor_open_{1,2}.png`. | `run.sh editor_open` |
+| `free_play` | El Juego libre (Aventura → SOLO) con el juego real: fichas de todos los niveles (ninguna rota), navegar con scroll, ENTER abre el nivel, pausa → salir vuelve con la misma selección; capturas a 1280, 960 y 1600 de ancho (`<save>/free_play_*.png`). | `run.sh free_play` |
 | `level_check` | Niveles: avisos del editor, modos que lo listan, 20 s de simulación. | `run.sh level_check -- assets/levels/a.json b.json` |
 | `level_solve` | ¿Se puede COMPLETAR un nivel? Búsqueda con la física real del jugador, ahogarse incluido (usa `xvfb-run` si está). Guiada por la distancia por los huecos hasta la meta (`HDIST=0` = en línea recta). `MAXN=` (presupuesto), `NODROWN=1` (solo el terreno: ¿falla por el aire o por el terreno?), `EXPLORE=1`, `DUMP=1` (qué alcanza). No modela enemigos, burbujas de los vents ni rompe bloques de forma fiable. | `run.sh level_solve MAXN=1500000 -- assets/levels/laberinto_submarino.json` |
 
@@ -52,5 +53,8 @@ tools/levelgen/build.py [--show nombre]`) se comprueban con `level_solve`.
   (`login_success`), no antes; registrar `online_results` / `online_room`
   (la ronda puede acabar antes del tiempo del arnés).
 - El servidor ignora los niveles que empiezan por `_` (`run.sh` usa `zz_tmp_*`).
+- Arneses con ventana que manejan menús: aislarlos del escritorio (anular
+  `love.mousemoved/mousepressed/wheelmoved/touch*/focus`): mientras corre la
+  batería las ventanas salen bajo el cursor y un clic o el foco cambian la prueba.
 - Las carpetas de guardado de las pruebas (`~/.local/share/love/fm_test_*`) se
   pueden borrar después.

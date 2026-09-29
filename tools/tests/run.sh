@@ -75,7 +75,7 @@ run_one() {
 if [ "${1:-}" = all ]; then
     # Batería rápida (~5 min): física de entidades, jefe (solo y online), partida online
     fail=0
-    for t in "flyers" "flyers SEED=3" "crawler_drop" "crawler_drop SUMMON=1" "mechanics" "sounds" "boss_sim" "editor_open" \
+    for t in "flyers" "flyers SEED=3" "crawler_drop" "crawler_drop SUMMON=1" "mechanics" "sounds" "boss_sim" "editor_open" "free_play" \
              "online_helmet LEVEL=tools/tests/online_helmet/level.json" \
              "online_smoke LEVEL=assets/levels/jardin_gummies.json MODE=race SECS=16" \
              "online_smoke LEVEL=assets/levels/isla_flotante.json MODE=koth SECS=16" \

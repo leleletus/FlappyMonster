@@ -85,7 +85,7 @@ end
 
 function AdventureModeSelectState:_select(i)
     if i == 1 then
-        gStateMachine:change('adventure', { level = 'assets/levels/nivel01.json' })
+        gStateMachine:change('free_play')           -- Juego libre: elegir nivel
     else
         gStateMachine:change('online_login')
     end

@@ -21,6 +21,14 @@ local function drawPixelButton(label, cx, y, w, h, selected)
     end
 end
 
+-- Salir: al estado del que vino el juego pausado (p. ej. un nivel del Juego
+-- libre vuelve al Juego libre); si no dice nada, al menú principal
+local function exitTarget()
+    local st = gStateMachine.stack
+    local under = st[#st - 1]
+    return (under and under.returnTo) or 'main_menu'
+end
+
 function PauseState:enter(args)
     self.selected = 1
     Sound.pauseAll()
@@ -44,7 +52,7 @@ function PauseState:update(dt)
         else
             Sound.play('select')
             Sound.resumeAll(); Sound.stopMusic(); Sound.stopTracked('drowning')
-            gStateMachine:change('main_menu')
+            gStateMachine:change(exitTarget())
         end
     end
 end
@@ -111,7 +119,7 @@ function PauseState:touchpressed(id, tx, ty, dx, dy, pressure)
             else
                 Sound.play('select')
                 Sound.resumeAll(); Sound.stopMusic(); Sound.stopTracked('drowning')
-                gStateMachine:change('main_menu')
+                gStateMachine:change(exitTarget())
             end
             return
         end

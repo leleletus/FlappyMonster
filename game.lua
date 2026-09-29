@@ -18,6 +18,7 @@ local PlayState                   = require 'src/states/PlayState'
 local PauseState                  = require 'src/states/PauseState'
 local AdventureState              = require 'src/states/AdventureState'
 local AdventureModeSelectState    = require 'src/states/AdventureModeSelectState'
+local FreePlayState               = require 'src/states/FreePlayState'
 local OnlineLoginState            = require 'src/states/OnlineLoginState'
 local OnlineHubState              = require 'src/states/OnlineHubState'
 local OnlineRoomState             = require 'src/states/OnlineRoomState'
@@ -63,6 +64,7 @@ function love.load()
         adventure          = function() return AdventureState:new() end,
         -- Modo online
         adv_mode_select    = function() return AdventureModeSelectState:new() end,
+        free_play          = function() return FreePlayState:new() end,       -- Juego libre (SOLO)
         online_login       = function() return OnlineLoginState:new() end,
         online_hub         = function() return OnlineHubState:new() end,
         online_room        = function() return OnlineRoomState:new() end,
@@ -104,6 +106,9 @@ function love.resize(w, h)
     if lovesize and lovesize.set then
         lovesize.set(WINDOW_W, WINDOW_H)
     end
+    -- Las miniaturas de niveles están en canvases: al cambiar la ventana (o
+    -- girar el móvil) su contenido se puede perder → se rehacen al dibujar
+    require('src/ui/ModeSelectMenu').clearPreviews()
 end
 
 -- Táctil (Switch / Android / iOS): reenviar al estado del tope de la pila
@@ -219,6 +224,22 @@ function love.mousepressed(x, y, button, istouch, presses)
             Input.VirtualPad._pressedThisFrame['confirm'] = true
         end
     end
+end
+
+-- Arrastrar el dedo / soltarlo → estado actual (listas desplazables en el
+-- móvil), en coordenadas lógicas como touchpressed
+local function toLogical(x, y)
+    local sw, sh = love.graphics.getWidth(), love.graphics.getHeight()
+    local scale  = math.min(sw / WINDOW_W, sh / WINDOW_H)
+    return (x - (sw - WINDOW_W * scale) / 2) / scale, (y - (sh - WINDOW_H * scale) / 2) / scale
+end
+function love.touchmoved(id, x, y)
+    local state = gStateMachine and gStateMachine:_top()
+    if state and state.touchmoved then state:touchmoved(id, toLogical(x, y)) end
+end
+function love.touchreleased(id, x, y)
+    local state = gStateMachine and gStateMachine:_top()
+    if state and state.touchreleased then state:touchreleased(id, toLogical(x, y)) end
 end
 
 -- Rueda del ratón → estado actual (listas desplazables)

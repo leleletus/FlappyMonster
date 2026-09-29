@@ -233,77 +233,20 @@ local function listLevelFiles()
     return out
 end
 
--- Miniatura del nivel para el selector del lobby: un carácter por celda
--- ('.' vacío, '#' sólido, 'B' borde, '=' plataforma, '~' agua, 'X' peligro,
--- 'F' meta, '^' pinchos, 'P' zona de puntos) + entidades y punto de inicio.
-local PREVIEW_MAX_CELLS = 20000
-local function buildPreview(lv)
-    if lv.tileW * lv.tileH > PREVIEW_MAX_CELLS then return nil end
-    local Tiles = require 'src/world/Tiles'
-    local rows = {}
-    for r = 1, lv.tileH do
-        local line = {}
-        for c = 1, lv.tileW do
-            local raw = lv.tiles[r][c]
-            local t   = lv:getDef(c, r)
-            local ch  = '.'
-            if t.trigger == 'finish' then ch = 'F'
-            elseif t.mat.contact == 'kill' then ch = 'X'
-            elseif t.name == 'border' then ch = 'B'
-            elseif t.collision == 'solid' then ch = '#'
-            elseif t.collision == 'oneway' then ch = '='
-            elseif t.mat.liquid or Tiles.codec.isWaterlogged(raw) then ch = '~'
-            end
-            if ch == '.' and Tiles.codec.hasSpikes(raw) then ch = '^' end
-            line[c] = ch
-        end
-        rows[r] = table.concat(line)
-    end
-    -- Zonas de puntos ('P' donde no hay nada sólido)
-    for _, a in ipairs(lv.pointAreas or {}) do
-        for r = math.max(1, a.row0), math.min(lv.tileH, a.row1) do
-            local line = rows[r]
-            local chars = {}
-            for c = 1, #line do chars[c] = line:sub(c, c) end
-            for c = math.max(1, a.col0), math.min(lv.tileW, a.col1) do
-                if chars[c] == '.' then chars[c] = 'P' end
-            end
-            rows[r] = table.concat(chars)
-        end
-    end
-    local ents = {}
-    for _, e in ipairs(lv.entities) do
-        if e.type ~= 'pointarea' and e.type ~= 'flood' then ents[#ents+1] = { e.col, e.row } end
-    end
-    return { rows = rows, ents = ents, start = lv.playerStart }
-end
-
+-- Ficha de cada nivel (modos, monstruos, miniatura...): src/world/LevelCatalog.lua
+-- (la misma que usa el Juego libre del cliente)
 local function scanLevels(force)
     local now = love.timer.getTime()
     if levelCache and not force and now - levelCacheT < 10 then return levelCache end
+    -- (se carga aquí: necesita Level y los stubs del servidor ya puestos)
+    local LevelCatalog = require 'src/world/LevelCatalog'
     local list = {}
     for _, f in ipairs(listLevelFiles()) do
-        local path = LEVELS_DIR .. '/' .. f
-        local ok, lv = pcall(Level.new, path)
-        if ok then
-            local info = Modes.entityInfo(lv.entities)
-            info.path = path
-            info.name = (lv.name and lv.name ~= '?') and lv.name or f:gsub('%.json$', '')
-            info.finish = lv:countTrigger('finish')
-            info.autoScroll = lv.autoScroll ~= nil
-            info.pointAreas = #(lv.pointAreas or {})
-            info.modes = {}
-            -- El nivel puede limitar sus modos ("modes" en el JSON)
-            local allowed
-            if lv.modes then allowed = {}; for _, id in ipairs(lv.modes) do allowed[id] = true end end
-            for _, m in ipairs(Modes.list) do
-                if (not allowed or allowed[m.id]) and m.requires(info) then info.modes[m.id] = true end
-            end
-            info.w, info.h = lv.tileW, lv.tileH
-            info.preview   = buildPreview(lv)
-            list[#list+1] = info
-        else
-            log('Nivel invalido ' .. path .. ': ' .. tostring(lv))
+        if LevelCatalog.isListed(f) then
+            local path = LEVELS_DIR .. '/' .. f
+            local info, err = LevelCatalog.load(path, f)
+            if info then list[#list+1] = info
+            else log('Nivel invalido ' .. path .. ': ' .. tostring(err)) end
         end
     end
     levelCache, levelCacheT = list, now
