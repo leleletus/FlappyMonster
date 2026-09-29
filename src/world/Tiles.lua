@@ -15,7 +15,7 @@ local TileCodec = require 'src/world/tiles/TileCodec'
 local Materials = require 'src/world/tiles/Materials'
 local TileTypes = require 'src/world/tiles/TileTypes'
 
-local MATERIALS = { 'default', 'stone', 'wood', 'deadly', 'water' }
+local MATERIALS = { 'default', 'stone', 'wood', 'deadly', 'water', 'dirt', 'grass' }
 
 local TYPES = {
     'empty',          -- 0
@@ -30,6 +30,8 @@ local TYPES = {
     'switch_on',      -- 13
     'switch_off',     -- 14
     'hidden_block',   -- 15
+    'dirt',           -- 16
+    'grass',          -- 17
 }
 
 -- Bloques TRAMPA ("mímicos"): se ven idénticos al tile original pero no tienen

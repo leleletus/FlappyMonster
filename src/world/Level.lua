@@ -15,6 +15,7 @@ local BossZones = require 'src/world/BossZones'
 local AutoScroll = require 'src/world/AutoScroll'
 local Floods     = require 'src/world/Floods'
 local PointAreas = require 'src/world/PointAreas'
+local SubTiles   = require 'src/world/SubTiles'
 local WaterSurface = require 'src/fx/WaterSurface'
 
 local Level = {}
@@ -258,6 +259,8 @@ function Level.fromData(lvl)
             self.tiles[r][c] = math.floor(tonumber(lvl.tiles[r][c]) or 0)
         end
     end
+    -- Subtiles: bloques de un cuarto de casilla (src/world/SubTiles.lua)
+    SubTiles.build(self, lvl.subtiles)
     -- Burbujas: detectar cuerpos de agua y preparar pool activo
     self.waterBodies = findWaterBodies(self)
     self.bubbles     = {}
@@ -333,10 +336,12 @@ function Level:isStandable(c, r)
     for rr = r - 1, r do
         local d = self:getDef(c, rr)
         if d.collision == 'solid' or d.mat.contact or d.trigger then return false end
+        if SubTiles.solidInCell(self, c, rr) then return false end
         if self:hasSpikeCellInBox((c - 1) * TILE_PX + 1, (rr - 1) * TILE_PX + 1, TILE_PX - 2, TILE_PX - 2) then return false end
     end
     local below = self:getDef(c, r + 1)
-    return below.collision == 'solid' or below.collision == 'oneway'
+    local sb = self.subSolid and self.subSolid[SubTiles.key(c, r + 1)]
+    return below.collision == 'solid' or below.collision == 'oneway' or (sb ~= nil and (sb[1] ~= nil or sb[2] ~= nil))
 end
 
 -- Punto (x, y del jugador de pie) en el suelo más bajo cerca de la columna
@@ -402,8 +407,15 @@ function Level:getDef(col, row)
     return TileTypes.get(self:getTile(col, row))
 end
 
+-- (con subtiles: en una celda sin colisión propia, la subcelda sólida que
+-- contiene el punto; ver src/world/SubTiles.lua)
 function Level:getDefAt(wx, wy)
-    return TileTypes.get(self:getTileAt(wx, wy))
+    local t = TileTypes.get(self:getTileAt(wx, wy))
+    if self.subSolid and t.collision == 'none' then
+        local s = SubTiles.defAt(self, wx, wy)
+        if s then return s end
+    end
+    return t
 end
 
 function Level:getSpawnPx()
@@ -413,6 +425,18 @@ function Level:getSpawnPx()
 end
 
 -- ── Consultas de física ───────────────────────────────────────────────────────
+
+-- Puntos donde mirar a lo largo de un lado de una caja, de a a b: los 3 de
+-- siempre (extremos y centro) o, si el nivel tiene subtiles (bloques de medio
+-- tile, 32 px), los que hagan falta para no saltarse ninguno
+local SUB_STEP = 24
+function Level:samples(a, b)
+    if not self.subSolid or b - a <= 2 * SUB_STEP then return { a, (a + b) / 2, b } end
+    local n = math.ceil((b - a) / SUB_STEP)
+    local out = {}
+    for i = 0, n do out[i + 1] = a + (b - a) * i / n end
+    return out
+end
 
 -- Tipo que COLISIONA en el punto (respetando su hitbox), o nil.
 -- includeOneway: incluir plataformas de un solo sentido.
@@ -445,18 +469,22 @@ end
 -- la losa ni lo rápido que caiga; y una losa que ya estaba por encima (p. ej.
 -- la del techo del que cuelga) no cuenta. Empezar dentro de un bloque sólido
 -- cuenta como chocar con él.
+local MID_Y, SUB_Y = { 0.5 }, { 0.25, 0.75 }     -- dónde mirar en cada celda (con subtiles: las dos mitades)
 function Level:landingCross(wx, y0, y1)
     if y1 < y0 then return nil end
     local T = TILE_PX
+    local col = math.floor(wx / T) + 1
     for r = math.floor(y0 / T), math.floor(y1 / T) do
-        local t = self:getDefAt(wx, r * T + T / 2)
-        if t.collision == 'solid' or t.collision == 'oneway' then
-            local hb = t.hitbox
-            local fx = (wx % T) / T
-            if fx >= hb.x and fx < hb.x + hb.w then
-                local top = r * T + hb.y * T
-                if y0 <= top + 0.5 and y1 >= top then return t, top end
-                if t.collision == 'solid' and y1 > top and y0 < top + hb.h * T then return t, top end
+        for _, fy in ipairs(SubTiles.solidInCell(self, col, r + 1) and SUB_Y or MID_Y) do
+            local t = self:getDefAt(wx, r * T + fy * T)
+            if t.collision == 'solid' or t.collision == 'oneway' then
+                local hb = t.hitbox
+                local fx = (wx % T) / T
+                if fx >= hb.x and fx < hb.x + hb.w then
+                    local top = r * T + hb.y * T
+                    if y0 <= top + 0.5 and y1 >= top then return t, top end
+                    if t.collision == 'solid' and y1 > top and y0 < top + hb.h * T then return t, top end
+                end
             end
         end
     end
@@ -580,6 +608,7 @@ function Level:breakTile(col, row)
     if not TileTypes.get(tileBaseId(raw)).breakable then return false end
     if not (self.tiles[row] and self.tiles[row][col]) then return false end
     local new = TileCodec.isWaterlogged(raw) and TILE_WATER or TILE_EMPTY
+    self:rememberTile(col, row, raw)
     self.tiles[row][col] = new
     self.brokenQueue = self.brokenQueue or {}
     table.insert(self.brokenQueue, { col, row, new })
@@ -665,7 +694,21 @@ end
 
 -- Aplica un cambio de tile recibido del servidor
 function Level:setTileRaw(col, row, raw)
-    if self.tiles[row] and self.tiles[row][col] ~= nil then self.tiles[row][col] = raw end
+    if self.tiles[row] and self.tiles[row][col] ~= nil then
+        if self.tiles[row][col] ~= raw then self:rememberTile(col, row, self.tiles[row][col]) end
+        self.tiles[row][col] = raw
+    end
+end
+
+-- Lo que había en una celda antes de cambiarla (solo dibujo: de qué color
+-- salen los trozos de un bloque roto; ver Particles 'block_break')
+function Level:rememberTile(col, row, raw)
+    self.prevTiles = self.prevTiles or {}
+    self.prevTiles[row * 65536 + col] = raw
+end
+function Level:previousDef(col, row)
+    local raw = self.prevTiles and self.prevTiles[row * 65536 + col]
+    return raw and TileTypes.get(tileBaseId(raw)) or nil
 end
 
 function Level:isInWater(bx, by, bw, bh)
@@ -836,6 +879,8 @@ function Level:render(camX, camY)
                 TileTypes.drawTile(def, ctx)
             end
             if anim then love.graphics.pop() end
+            -- Subtiles (bloques de un cuarto de casilla)
+            if self.subCells then SubTiles.renderCell(self, col, row, px, py, ctx) end
 
             -- Pinchos (subceldas)
             local _, _, spikes = decTile(raw)
@@ -870,6 +915,14 @@ function Level:renderDebug(camX, camY)
             elseif t.collision ~= 'none' and not t.fullHitbox then
                 love.graphics.setColor(0.2, 1, 1, 0.6)
                 love.graphics.rectangle('line', hx - camX, hy - camY, hw, hh)
+            end
+            local ss = self.subSolid and self.subSolid[SubTiles.key(col, row)]
+            for q = 1, 4 do
+                if ss and ss[q] then
+                    hx, hy, hw, hh = TileTypes.worldHitbox(ss[q], col, row)
+                    love.graphics.setColor(0.2, 1, 1, 0.6)
+                    love.graphics.rectangle('line', hx - camX, hy - camY, hw, hh)
+                end
             end
         end
     end

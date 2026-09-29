@@ -450,7 +450,7 @@ function Entity:moveAndCollide(level, dx, dy)
     local touched, touchedFace                 -- objeto sólido que tocó (trampolín)
 
     x = x + dx
-    local rows = { y - hh + 4, y, y + hh - 4 }
+    local rows = level.samples and level:samples(y - hh + 4, y + hh - 4) or { y - hh + 4, y, y + hh - 4 }
     if dx ~= 0 then
         local side = (dx > 0) and 'left' or 'right'
         local edge = (dx > 0) and (x + hw) or (x - hw)
@@ -479,7 +479,7 @@ function Entity:moveAndCollide(level, dx, dy)
     end
 
     self.onGround = false
-    local chx = { x - hw + 4, x, x + hw - 4 }
+    local chx = level.samples and level:samples(x - hw + 4, x + hw - 4) or { x - hw + 4, x, x + hw - 4 }
     local landDown = not self.flipped
     -- En sub-pasos: una caída rápida no se salta una losa fina
     local left = dy

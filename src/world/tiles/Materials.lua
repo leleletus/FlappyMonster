@@ -28,6 +28,11 @@
 --
 --  Editor:
 --   label, color   nombre y color para la paleta del editor de niveles
+--
+--  Partículas (solo dibujo):
+--   debris     { {r,g,b}, ... } colores de los trozos/tierra que suelta al
+--              golpearlo (un tile puede tener los suyos: campo `debris`).
+--              Sin él se sacan tonos de `color`. Ver TileTypes.debris.
 
 local Materials = { byName = {}, list = {} }
 

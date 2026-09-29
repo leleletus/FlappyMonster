@@ -319,7 +319,7 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   'stomp' with 4th return dirX = cnx → `pa:bounce(vy, dirX, soft=true)` (vx 300 +
   ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill; v17: crawler turn in snapshots; v18: MegaCrabby;
   v19: boss walls, Mega minions/pounce; v20: post-hit protection; v21: unified invulnerability;
-  v23: boss intro + Mega emotes).
+  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass).
 - **Crawler** (`src/world/entities/Crawler.lua`): surface-following movement
   (floor ↔ walls ↔ ceiling, concave and convex corners) for Crabbies with prop
   `wallWalk` (`Crabby.WALL_PROP`, off by default so old levels don't change).
@@ -480,6 +480,33 @@ list no mode until the user places a Point Area in them).
 - Harness: `tools/tests/run.sh mechanics` (also covers the Gummy helmet and the
   pufferfish). Protocol v22 (ON/OFF + invisible blocks + helmet + pufferfish).
 
+## Terrain blocks, subtiles and physical particles
+
+- Terrain tiles: `solid` (label **Piedra**, grey), `dirt` (**Tierra** 16, brown with
+  pebbles), `grass` (**Césped** 17, green; blades drawn ABOVE the cell when its top is
+  exposed), `border`. All `joinGroup='ground'`. Materials `dirt`, `grass`.
+- **Subtiles** (`src/world/SubTiles.lua`): quarter-cell versions of the tiles in
+  `SubTiles.KINDS` ({'solid','dirt','grass'}; a new one = one name). JSON
+  `"subtiles": [{col,row,sub 1..4,kind[,solid=false]}]` (solid by default; the editor
+  only writes `solid:false`). Physics: `Level:getDefAt` returns the quarter's def
+  (`SubTiles.def(kind,q)` = the tile def with that quarter as hitbox) in cells without
+  collision, so collisionAt/entitySolidAt/landingCross (samples both halves of such
+  cells) and everything built on them (player, entities, server, prediction, solver)
+  see them. With subtiles `Level:samples(a,b)` gives denser probe points (≤ 24 px; a
+  quarter is 32) and the player keeps the MOST restrictive face of all hits.
+  `level.subCells` (draw) / `level.subSolid` (physics, nil when none). Editor layer 7
+  "Mini bloques": brush/pick/erase per subcell + "Sólido" toggle; non-solid ones show a
+  dotted frame in the editor. Thumbnails: 'D' dirt, 'G' grass, 'm' mini blocks.
+- **Physical particles** (`phys = true` in `Particles`): collide with the level set by
+  `Particles.setLevel(level)` (Adventure/Online states): bounce off walls/ceilings,
+  bounce and then REST on floors/platforms (`landingCross`), fall again without
+  support, sink slowly in water; born inside a block → no collisions. Impact kinds
+  (block_break, spike_land, gp_land, spike_pop, mega_step/debris/dirt/slam/land) take
+  the colours of the block they hit: `TileTypes.debris(def)` = tile `debris` →
+  material `debris` → shades of its colour; the surface is probed around the point.
+  A broken block's colours come from `Level:previousDef(c, r)` (setTileRaw/breakTile
+  remember the old raw). Harness `subtiles`.
+
 ## Free Play (single player)
 
 Aventura → SOLO opens `FreePlayState` (state `free_play`): every level in a scrolling
@@ -505,7 +532,7 @@ one tile row per line and only non-default props.
 
 ## Editor
 
-Layers (1-6): tiles, water, spikes, entities, deco, special (`LAYERS`/`TOOLS`
+Layers (1-7): tiles, water, spikes, entities, deco, special, mini (subtiles) (`LAYERS`/`TOOLS`
 at the top of Editor.lua carry their help texts). Left panel: layer, tool
 (+ hint card), palette (search + collapsible categories). Right panel has tabs
 Selección / Nivel / Avisos. EVERYTHING editable is drawn by

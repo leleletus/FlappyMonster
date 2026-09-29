@@ -9,6 +9,7 @@ local Level    = require 'src/world/Level'
 local DT       = require('src/world/Decorations').types
 local BossZones = require 'src/world/BossZones'
 local AutoScroll = require 'src/world/AutoScroll'
+local SubTiles  = require 'src/world/SubTiles'
 
 local Codec = Tiles.codec
 local ET    = Entities.types
@@ -37,7 +38,7 @@ function Model.new(w, h, name)
         end
     end
     m.playerStart = { 3, h - 2 }
-    m.entities, m.foliage, m.vents = {}, {}, {}
+    m.entities, m.foliage, m.vents, m.subtiles = {}, {}, {}, {}
     m.bossZones = {}
     m.autoScroll = nil
     m.path = nil
@@ -68,6 +69,11 @@ function Model.fromData(lvl, path)
         if n then table.insert(m.foliage, n) end
     end
     m.vents   = deepcopy(lvl.vents or {})
+    m.subtiles = {}
+    for _, o in ipairs(lvl.subtiles or {}) do
+        local n = SubTiles.normalize(o)
+        if n then table.insert(m.subtiles, n) end
+    end
     m.bossZones = {}
     for i, z in ipairs(lvl.bossZones or {}) do
         local n = BossZones.normalize(z, i)
@@ -99,10 +105,17 @@ function Model:toData()
     for _, d in ipairs(self.foliage) do table.insert(decos, DT.serialize(d)) end
     local zones = {}
     for _, z in ipairs(self.bossZones) do table.insert(zones, BossZones.serialize(z)) end
+    -- (solo se guarda `solid` cuando es false: por defecto son sólidos)
+    local subs = {}
+    for _, o in ipairs(self.subtiles or {}) do
+        local d = { col = o.col, row = o.row, sub = o.sub, kind = o.kind }
+        if o.solid == false then d.solid = false end
+        subs[#subs+1] = d
+    end
     return {
         name = self.name, width = self.width, height = self.height,
         playerStart = self.playerStart, tiles = self.tiles,
-        entities = ents, foliage = decos, vents = self.vents, bossZones = zones,
+        entities = ents, foliage = decos, vents = self.vents, bossZones = zones, subtiles = subs,
         autoScroll = AutoScroll.serialize(self.autoScroll),
         modes = self.modes, matchTime = self.matchTime, music = self.music,
     }
@@ -145,6 +158,7 @@ function Model:encode()
     list('foliage', d.foliage)
     -- Campos opcionales al final (solo si existen)
     local tail = {}
+    if #d.subtiles > 0 then tail[#tail+1] = function(last) list('subtiles', d.subtiles, last) end end
     if #d.bossZones > 0 then tail[#tail+1] = function(last) list('bossZones', d.bossZones, last) end end
     if d.autoScroll then tail[#tail+1] = function(last) line('"autoScroll": ' .. enc(d.autoScroll), last) end end
     if d.modes then tail[#tail+1] = function(last) line('"modes": ' .. enc(d.modes), last) end end
@@ -180,7 +194,7 @@ end
 function Model:snapshot()
     return deepcopy({ name=self.name, width=self.width, height=self.height, tiles=self.tiles,
                       playerStart=self.playerStart, entities=self.entities,
-                      foliage=self.foliage, vents=self.vents, bossZones=self.bossZones,
+                      foliage=self.foliage, vents=self.vents, bossZones=self.bossZones, subtiles=self.subtiles,
                       autoScroll=self.autoScroll, modes=self.modes, matchTime=self.matchTime, music=self.music })
 end
 
@@ -252,6 +266,7 @@ function Model:resize(w, h)
     self.tiles, self.width, self.height = t, w, h
     local function keep(list) local o = {} for _, x in ipairs(list) do if x.col <= w and x.row <= h then o[#o+1] = x end end return o end
     self.entities, self.foliage, self.vents = keep(self.entities), keep(self.foliage), keep(self.vents)
+    self.subtiles = keep(self.subtiles or {})
     self.bossZones = keep(self.bossZones)
     for _, z in ipairs(self.bossZones) do
         z.w = math.max(4, math.min(z.w, w - z.col + 1)); z.h = math.max(3, math.min(z.h, h - z.row + 1))
@@ -300,6 +315,30 @@ function Model:findObject(list, c, r, sub)
         local o = list[i]
         if o.col == c and o.row == r and (sub == nil or o.sub == sub) then return o, i end
     end
+end
+
+-- ── Subtiles (bloques de un cuarto de casilla, src/world/SubTiles.lua) ───────
+function Model:subtileAt(c, r, sub)
+    return self:findObject(self.subtiles, c, r, sub)
+end
+
+-- Pone (kind = nombre de tile) o quita (kind = nil) la subtile de esa
+-- subcelda. Devuelve true si cambió algo.
+function Model:setSubtile(c, r, sub, kind, solid)
+    if not self:inBounds(c, r) then return false end
+    local o, i = self:subtileAt(c, r, sub)
+    if not kind then
+        if o then table.remove(self.subtiles, i); return true end
+        return false
+    end
+    solid = solid ~= false
+    if o then
+        if o.kind == kind and o.solid == solid then return false end
+        o.kind, o.solid = kind, solid
+        return true
+    end
+    table.insert(self.subtiles, { col = c, row = r, sub = sub, kind = kind, solid = solid })
+    return true
 end
 
 -- ── Zonas de jefe ─────────────────────────────────────────────────────────────
@@ -365,6 +404,15 @@ function Model:validate()
         local p = e.props
         if p.patrol and (e.col < p.patrol.left or e.col > p.patrol.right) then
             w[#w+1] = { 'warn', where .. ': su ruta no la contiene', e }
+        end
+    end
+    -- Subtiles dentro de un bloque con colisión: no se ven ni hacen nada
+    for _, o in ipairs(self.subtiles or {}) do
+        if self:inBounds(o.col, o.row) and Tiles.get(Codec.id(self.tiles[o.row][o.col])).collision ~= 'none' then
+            w[#w+1] = { 'warn', 'Mini bloque (' .. o.col .. ',' .. o.row .. ') dentro de un bloque: no tiene efecto' }
+        end
+        if ps and o.col == ps[1] and (o.row == ps[2] or o.row == ps[2] - 1) and o.solid then
+            w[#w+1] = { 'warn', 'Mini bloque sólido en el punto de inicio (' .. o.col .. ',' .. o.row .. ')' }
         end
     end
     -- Jefes y zonas de jefe

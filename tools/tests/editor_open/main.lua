@@ -1,6 +1,7 @@
 -- tools/tests/editor_open — el editor de niveles real con el diálogo "Abrir
 -- nivel" (Ctrl+O): captura la lista arriba y tras bajar con las flechas
--- (<save>/editor_open_1.png, _2.png) y comprueba que no hay errores.
+-- (<save>/editor_open_1.png, _2.png), cierra el diálogo y captura la capa
+-- Mini bloques (tecla 7, _3.png); comprueba que no hay errores.
 --
 --   tools/tests/run.sh editor_open
 io.stdout:setvbuf('no')
@@ -25,8 +26,11 @@ function love.update(dt)
     if frame == 10 then shot(1) end
     if frame >= 12 and frame < 42 then key('down') end
     if frame == 50 then shot(2) end
-    if frame == 55 then
-        print('capturas en ' .. love.filesystem.getSaveDirectory() .. '/editor_open_{1,2}.png')
+    if frame == 55 then key('escape') end
+    if frame == 60 then key('7') end                    -- capa Mini bloques
+    if frame == 66 then shot(3) end
+    if frame == 72 then
+        print('capturas en ' .. love.filesystem.getSaveDirectory() .. '/editor_open_{1,2,3}.png')
         print('TODO OK'); love.event.quit(0)
     end
 end

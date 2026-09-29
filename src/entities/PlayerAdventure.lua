@@ -245,23 +245,30 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
 
     -- X: al chocar, pegarse al borde de la hitbox del tile
     x = x + dx
-    local chy = {y-hh+4, y, y+hh-4}
+    -- (con varios choques manda la cara más restrictiva: con subtiles, medio
+    -- tile y un tile entero pueden tener caras distintas en la misma columna)
+    local chy = level.samples and level:samples(y-hh+4, y+hh-4) or {y-hh+4, y, y+hh-4}
     if dx > 0 then
+        local edge
         for _,py in ipairs(chy) do
             local t = level:collisionAt(x+hw, py)
             if t then
-                x = math.floor((x+hw)/T)*T + t.hitbox.x*T - hw; self.vx=0; break
+                local e = math.floor((x+hw)/T)*T + t.hitbox.x*T
+                if not edge or e < edge then edge = e end
             end
         end
+        if edge then x = edge - hw; self.vx=0 end
     elseif dx < 0 then
+        local edge
         for _,py in ipairs(chy) do
             local t = level:collisionAt(x-hw, py)
             if t then
-                local edge = t.fullHitbox and math.ceil((x-hw)/T)*T
-                             or math.floor((x-hw)/T)*T + (t.hitbox.x + t.hitbox.w)*T
-                x = edge + hw; self.vx=0; break
+                local e = t.fullHitbox and math.ceil((x-hw)/T)*T
+                          or math.floor((x-hw)/T)*T + (t.hitbox.x + t.hitbox.w)*T
+                if not edge or e > edge then edge = e end
             end
         end
+        if edge then x = edge + hw; self.vx=0 end
     end
 
     -- Cuerpos sólidos (p. ej. el jefe espejo): de lado se chocan y se paran,
@@ -320,35 +327,49 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
     y = y + dy
     self.onGround = false
     self.groundDef = nil
-    local chx = {x-hw+4, x, x+hw-4}
+    local chx = level.samples and level:samples(x-hw+4, x+hw-4) or {x-hw+4, x, x+hw-4}
     if dy > 0 then
+        local best, bestT
         for _,px in ipairs(chx) do
             -- (una losa fina cuenta desde su cara hasta el fondo de la celda: un
             -- paso rápido no la atraviesa; abajo se comprueba que venía de arriba)
             local t = level:collisionAt(px, y+hh, true) or level:onewayCellAt(px, y+hh)
             if t then
                 local top = math.floor((y+hh)/T)*T + t.hitbox.y*T
+                local ok = true
                 if t.collision == 'oneway' then
                     -- Bajando a través de ESTA plataforma traspasable: no colisionar
                     local passing = self.dropping and t.dropThrough and top==self.dropTop
-                    if not passing and prevFoot<=top+2 then
-                        y=top-hh; self.vy=0; self.onGround=true; self.jumpsLeft=2
-                        self.groundDef=t; break
-                    end
-                else
-                    y=top-hh
-                    self.vy=0; self.onGround=true; self.jumpsLeft=2
-                    self.groundDef=t; break
+                    ok = not passing and prevFoot<=top+2
                 end
+                if ok and (not best or top < best) then best, bestT = top, t end
             end
+        end
+        if best then
+            y=best-hh
+            self.vy=0; self.onGround=true; self.jumpsLeft=2
+            self.groundDef=bestT
         end
     elseif dy < 0 then
         -- El centro primero: si hay un bloque rompible sobre la cabeza, es el que se rompe
-        for _,px in ipairs({x, x-hw+4, x+hw-4}) do
+        local heads = {x, x-hw+4, x+hw-4}
+        if level.subSolid then for _, px in ipairs(chx) do heads[#heads+1] = px end end
+        for _,px in ipairs(heads) do
             local t = level:collisionAt(px, y-hh)
             if t then
                 local edge = t.fullHitbox and math.ceil((y-hh)/T)*T
                              or math.floor((y-hh)/T)*T + (t.hitbox.y + t.hitbox.h)*T
+                if level.subSolid then
+                    -- (subtiles: la cara más baja de todas las que toca)
+                    for _, qx in ipairs(heads) do
+                        local u = level:collisionAt(qx, y-hh)
+                        if u and not u.fullHitbox then
+                            edge = math.max(edge, math.floor((y-hh)/T)*T + (u.hitbox.y + u.hitbox.h)*T)
+                        elseif u then
+                            edge = math.max(edge, math.ceil((y-hh)/T)*T)
+                        end
+                    end
+                end
                 y = edge + hh; self.vy=0
                 -- Cabezazo: rompe bloques rompibles y cambia los ON/OFF (desde abajo)
                 local c, r = math.floor(px/T)+1, math.floor((y-hh-2)/T)+1

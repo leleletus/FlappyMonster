@@ -16,6 +16,7 @@ local BossZones = require 'src/world/BossZones'
 local AutoScroll = require 'src/world/AutoScroll'
 local Modes     = require 'src/world/Modes'
 local Music     = require 'src/Music'
+local SubTiles  = require 'src/world/SubTiles'
 
 local Codec, TT, ET, Props = Tiles.codec, Tiles.types, Entities.types, Entities.props
 local th = ui.theme
@@ -45,6 +46,8 @@ local LAYERS = {
       help='Plantas y adornos: solo se ven, no afectan al juego.' },
     { id='special',  label='Especial',   tools={ 'spawn', 'vent', 'boss', 'erase' },
       help='Estructura del nivel: inicio del jugador, vents de oxígeno y zonas de jefe.' },
+    { id='mini',     label='Mini bloques', tools={ 'brush', 'pick', 'erase' },
+      help='Bloques de un cuarto de casilla (piedra, tierra, césped) en cualquiera de las 4 subceldas: para detalles y adornos. Sólidos para todos por defecto; desmarca "Sólido" para que sean solo decoración.' },
 }
 local TOOLS = {
     brush  = { label='Pincel',      key='b', help='Pinta casilla a casilla (arrastra). Clic derecho borra.' },
@@ -311,6 +314,11 @@ local function applySpike(c, r, sub, erase)
     return E.model:setSpike(c, r, sub, not erase, E.spikeDir)
 end
 
+local function applyMini(c, r, sub, erase)
+    if not E.model:inBounds(c, r) then return false end
+    return E.model:setSubtile(c, r, sub, (not erase) and E.palette.mini or nil, E.miniSolid)
+end
+
 local function applyFill(c, r, erase)
     local m = E.model
     if E.layer == 'tiles' then
@@ -377,6 +385,17 @@ local function canvasPress(button)
     elseif L == 'spikes' then
         s.spikes = true; s.erase = erase; s.lastSub = sub
         s.changed = applySpike(c, r, sub, erase)
+    elseif L == 'mini' then
+        if tool == 'pick' and button == 1 then
+            local o = m:subtileAt(c, r, sub)
+            if o then
+                E.palette.mini, E.miniSolid, E.tool.mini = o.kind, o.solid, 'brush'
+                msg('Mini bloque copiado: ' .. TT.byName[o.kind].label .. (o.solid and '' or ' (decoración)'))
+            end
+        else
+            s.mini = true; s.erase = erase; s.lastSub = sub
+            s.changed = applyMini(c, r, sub, erase)
+        end
     elseif L == 'entities' then
         -- ¿Asa de la entidad seleccionada?
         if E.selected and tool ~= 'erase' then
@@ -490,6 +509,11 @@ local function canvasDrag()
     elseif s.spikes then
         if c ~= s.last[1] or r ~= s.last[2] or sub ~= s.lastSub then
             if applySpike(c, r, sub, s.erase) then s.changed = true; markDirty() end
+            s.lastSub = sub
+        end
+    elseif s.mini then
+        if c ~= s.last[1] or r ~= s.last[2] or sub ~= s.lastSub then
+            if applyMini(c, r, sub, s.erase) then s.changed = true; markDirty() end
             s.lastSub = sub
         end
     elseif s.handle and E.selected then
@@ -779,7 +803,7 @@ local function drawCanvas()
         elseif E.layer == 'tiles' and (tool == 'brush' or tool == 'rect' or tool == 'line' or tool == 'fill') then
             drawTileThumb(TT.get(E.palette.tiles), (c-1)*t - camX, (r-1)*t - camY, t)
         end
-        local subLayer = E.layer == 'spikes' or (E.layer == 'special' and tool == 'vent')
+        local subLayer = E.layer == 'spikes' or E.layer == 'mini' or (E.layer == 'special' and tool == 'vent')
         if E.layer == 'entities' and tool == 'place' then
             local et = ET.get(E.palette.entities)
             if et and et.placement == 'sub' then subLayer = true end
@@ -881,6 +905,12 @@ local function paletteItems(L)
                 items[#items+1] = it
             end
         end
+    elseif L == 'mini' then
+        for _, k in ipairs(SubTiles.KINDS) do
+            local t = TT.byName[k]
+            if t then items[#items+1] = { key = k, label = t.label, cat = 'Mini bloques', ord = 1, def = t,
+                                         tip = t.label .. ' (un cuarto de casilla)' } end
+        end
     elseif L == 'deco' then
         for _, t in ipairs(DT.list) do
             items[#items+1] = { key = t.name, label = t.label, cat = t.category, ord = t.placement == 'sub' and 2 or 1, deco = t, tip = t.label }
@@ -928,6 +958,7 @@ local function pickPalette(L, it)
     if L == 'entities' then E.tool.entities = 'place' end
     if L == 'deco' then E.tool.deco = 'place' end
     if L == 'tiles' and (E.tool.tiles == 'erase' or E.tool.tiles == 'pick') then E.tool.tiles = 'brush' end
+    if L == 'mini' then E.tool.mini = 'brush' end
 end
 
 -- Selector de variante del objeto elegido en la paleta (p. ej. dirección
@@ -1024,7 +1055,7 @@ local function drawLeftPanel()
             E.layer = l.id
         end
     end
-    y = y + 72
+    y = y + math.ceil(#LAYERS / 3) * 34 + 4
     y = sectionTitle('Herramienta', x, y, w)
     local tools = layerDef(E.layer).tools
     local tw = (w - 4) / 2
@@ -1052,6 +1083,12 @@ local function drawLeftPanel()
         end
         y = y + 34
         ui.text('X gira la dirección.', x, y, th.muted, ui.fontSm, w)
+    elseif L == 'mini' then
+        local v, ch = ui.toggle('Sólido (choca con todo)', E.miniSolid, x, y, w)
+        if ch then E.miniSolid = v end
+        y = y + 30
+        y = sectionTitle('Paleta', x, y, w)
+        drawPalette(L, x, y, w, bottom)
     elseif L == 'water' or L == 'special' then
         y = sectionTitle('Capa ' .. layerDef(L).label, x, y, w)
         ui.hint(layerDef(L).help, x, y, w, th.border)
@@ -1808,10 +1845,12 @@ function Editor.load(args, levelArg)
     E.gameArgs = args
     E.mode = 'edit'
     E.layer = 'tiles'
-    E.tool = { tiles='brush', water='brush', spikes='brush', entities='select', deco='place', special='spawn' }
+    E.tool = { tiles='brush', water='brush', spikes='brush', entities='select', deco='place', special='spawn', mini='brush' }
     E.selZone = nil
     E.selDeco = nil
-    E.palette = { tiles = TILE_SOLID, entities = ET.list[1] and ET.list[1].name, deco = DT.list[1] and DT.list[1].name }
+    E.palette = { tiles = TILE_SOLID, entities = ET.list[1] and ET.list[1].name, deco = DT.list[1] and DT.list[1].name,
+                  mini = SubTiles.KINDS[1] }
+    E.miniSolid = true
     E.spikeDir = 0
     E.search, E.variantPick, E.rightTab = {}, {}, 'sel'
     E.grid, E.showRoutes = true, true

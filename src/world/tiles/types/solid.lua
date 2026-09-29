@@ -1,8 +1,9 @@
--- Bloque sólido de piedra. Se une visualmente con otros bloques del grupo 'ground'.
+-- Bloque sólido de piedra ("Piedra"; se llamaba "Bloque"). Se une visualmente
+-- con otros bloques del grupo 'ground'.
 local TileTypes = require 'src/world/tiles/TileTypes'
 
 return {
-    id = 1, name = 'solid', label = 'Bloque', category = 'Terreno',
+    id = 1, name = 'solid', label = 'Piedra', category = 'Terreno',
     collision = 'solid', material = 'stone', joinGroup = 'ground',
     editorColor = { 0.28, 0.28, 0.32 },
     draw = function(t, ctx)

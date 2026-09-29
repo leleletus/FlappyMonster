@@ -10,8 +10,18 @@
 --        'shake_small', 'shake_big' (temblor de pantalla:
 --        Particles.shakeOffset() se suma a la cámara al dibujar)
 -- (otros nombres no hacen nada)
+--
+-- Partículas FÍSICAS (`phys`: trozos, tierra, piedrecitas): chocan con el
+-- nivel (Particles.setLevel), rebotan, se quedan en el suelo y en el agua
+-- caen despacio. Las de impacto toman los colores del bloque golpeado
+-- (TileTypes.debris: piedra gris, madera, tierra, césped...): se mira el
+-- tile que hay junto al punto, o opts.def si quien las emite lo sabe.
+
+local TileTypes = require 'src/world/tiles/TileTypes'
 
 local Particles = {}
+local level                                       -- nivel actual (choques)
+function Particles.setLevel(l) level = l end
 local list = {}
 local shakeT, shakeDur, shakePow = 0, 0.35, 0     -- temblor de pantalla
 local MAX  = 600
@@ -24,13 +34,47 @@ end
 
 local function rnd(a, b) return a + math.random() * (b - a) end
 
+-- ── Colores del material golpeado ────────────────────────────────────────────
+local FALLBACK = { { 0.45, 0.33, 0.22 }, { 0.6, 0.45, 0.3 }, { 0.35, 0.25, 0.17 } }   -- tierra
+-- Dónde buscar el bloque: debajo (suelo), encima (techo) y a los lados (paredes)
+local PROBES = { { 0, 6 }, { 0, 16 }, { 0, -6 }, { -10, 0 }, { 10, 0 }, { 0, -16 }, { -20, 6 }, { 20, 6 } }
+local function surfaceDef(x, y)
+    if not level then return nil end
+    for _, d in ipairs(PROBES) do
+        local t = level:getDefAt(x + d[1], y + d[2])
+        if t.collision ~= 'none' then return t end
+    end
+    return nil
+end
+local function paletteAt(x, y, opts)
+    local t = opts.def or surfaceDef(x, y)
+    return t and TileTypes.debris(t) or FALLBACK
+end
+Particles.paletteAt = function(x, y, def) return paletteAt(x, y, { def = def }) end
+local function pick(pal, k)
+    local c = pal[math.random(#pal)]
+    k = k or 1
+    return { math.min(1, c[1] * k), math.min(1, c[2] * k), math.min(1, c[3] * k) }
+end
+-- Polvo: el color del material, muy aclarado
+local function dustOf(pal)
+    local c = pal[1]
+    return { 0.5 + c[1] * 0.42, 0.48 + c[2] * 0.42, 0.44 + c[3] * 0.42 }
+end
+
 function Particles.emit(kind, x, y, opts)
     opts = opts or {}
     if kind == 'gp_land' then
-        for i = 1, 16 do                 -- polvo hacia los lados
+        local pal = paletteAt(x, y, opts)
+        local dust = dustOf(pal)
+        for i = 1, 16 do                 -- polvo hacia los lados (del color del suelo)
             local dir = (i % 2 == 0) and 1 or -1
             add({ x = x + dir * rnd(4, 20), y = y - rnd(0, 6), vx = dir * rnd(120, 380), vy = -rnd(40, 220),
-                  g = 700, life = rnd(0.35, 0.6), size = math.random(2, 3) * 3, col = {0.92, 0.9, 0.85}, drag = 3 })
+                  g = 700, life = rnd(0.35, 0.6), size = math.random(2, 3) * 3, col = dust, drag = 3 })
+        end
+        for i = 1, 5 do                  -- migas del suelo
+            add({ x = x + rnd(-14, 14), y = y - 3, vx = rnd(-200, 200), vy = -rnd(160, 340), g = 1400,
+                  life = rnd(0.6, 1.0), size = 3, col = pick(pal), phys = true, fadeLast = 0.3 })
         end
         for i = 1, 6 do                  -- estrellitas
             local a = rnd(-math.pi, 0)
@@ -45,26 +89,26 @@ function Particles.emit(kind, x, y, opts)
         end
     elseif kind == 'block_break' then
         -- Trozos de ladrillo de tamaños y trayectorias al azar, migas y polvo
+        -- (x, y = esquina de la casilla; el material es el del bloque que había)
         local T = TILE_PX
-        local base = opts.col or {0.55, 0.40, 0.28}   -- ladrillo (breakable.lua)
-        local function shade(k)
-            return { base[1] * k, base[2] * k, base[3] * k }
-        end
+        local def = opts.def or (level and level.previousDef and level:previousDef(math.floor(x / T) + 1, math.floor(y / T) + 1))
+        local pal = TileTypes.debris(def or TileTypes.byName.breakable)
         for i = 1, math.random(9, 13) do
             local px, py = rnd(4, T - 4), rnd(4, T - 4)
             local dir = (px < T / 2) and -1 or 1
             add({ x = x + px, y = y + py, vx = dir * rnd(40, 260) + rnd(-60, 60), vy = -rnd(180, 620),
-                  g = rnd(1200, 1700), life = rnd(1.2, 2.2), size = math.random(3, 7) * 2,
-                  col = shade(rnd(0.7, 1.15)), spin = rnd(-12, 12), chunk = true, fadeLast = 0.35 })
+                  g = rnd(1200, 1700), life = rnd(1.6, 2.6), size = math.random(3, 7) * 2,
+                  col = pick(pal, rnd(0.8, 1.1)), spin = rnd(-12, 12), chunk = true, fadeLast = 0.35,
+                  phys = true, bounce = 0.3 })
         end
         for i = 1, math.random(14, 20) do  -- migas
             add({ x = x + rnd(0, T), y = y + rnd(0, T), vx = rnd(-220, 220), vy = -rnd(80, 420),
-                  g = rnd(1000, 1500), life = rnd(0.7, 1.5), size = math.random(1, 2) * 3,
-                  col = shade(rnd(0.6, 1.2)) })
+                  g = rnd(1000, 1500), life = rnd(0.9, 1.7), size = math.random(1, 2) * 3,
+                  col = pick(pal, rnd(0.7, 1.15)), phys = true, fadeLast = 0.3 })
         end
         for i = 1, math.random(10, 16) do  -- polvo que se queda flotando
             add({ x = x + rnd(0, T), y = y + rnd(0, T), vx = rnd(-70, 70), vy = -rnd(10, 90), g = -rnd(0, 30),
-                  life = rnd(0.8, 1.6), size = math.random(2, 4) * 3, col = {0.85, 0.8, 0.72}, drag = 1.5,
+                  life = rnd(0.8, 1.6), size = math.random(2, 4) * 3, col = dustOf(pal), drag = 1.5,
                   dust = true })
         end
     elseif kind == 'points' then
@@ -93,12 +137,13 @@ function Particles.emit(kind, x, y, opts)
                   size = 4, col = {1, 1, 1}, implode = true, sx = x + math.cos(a) * r, sy = y + math.sin(a) * r })
         end
     elseif kind == 'spike_land' then
-        -- Se clava: tierra saltando a los lados, chispas y un poco de polvo
+        -- Se clava: trozos del suelo saltando a los lados, chispas y un poco de polvo
+        local pal = paletteAt(x, y, opts)
         for i = 1, math.random(10, 14) do
             local dir = (i % 2 == 0) and 1 or -1
             add({ x = x + dir * rnd(2, 12), y = y - rnd(0, 4), vx = dir * rnd(60, 260), vy = -rnd(120, 380),
-                  g = rnd(1100, 1500), life = rnd(0.35, 0.7), size = math.random(1, 2) * 3,
-                  col = ({ {0.45, 0.33, 0.22}, {0.6, 0.45, 0.3}, {0.35, 0.25, 0.17} })[math.random(3)] })
+                  g = rnd(1100, 1500), life = rnd(0.6, 1.1), size = math.random(1, 2) * 3,
+                  col = pick(pal), phys = true, fadeLast = 0.3 })
         end
         for i = 1, 5 do
             local a = rnd(-math.pi * 0.9, -math.pi * 0.1)
@@ -107,7 +152,7 @@ function Particles.emit(kind, x, y, opts)
         end
         for i = 1, 6 do
             add({ x = x + rnd(-18, 18), y = y - rnd(0, 6), vx = rnd(-50, 50), vy = -rnd(10, 60), g = -20,
-                  life = rnd(0.5, 0.9), size = math.random(2, 3) * 3, col = {0.85, 0.8, 0.72}, drag = 2, dust = true })
+                  life = rnd(0.5, 0.9), size = math.random(2, 3) * 3, col = dustOf(pal), drag = 2, dust = true })
         end
     elseif kind == 'boss_hit' then
         -- Golpe al jefe: estallido de chispas blancas y rojas
@@ -175,7 +220,7 @@ function Particles.emit(kind, x, y, opts)
             add({ x = x + rnd(-20, 20), y = y + rnd(-6, 6), vx = dir * rnd(80, 280), vy = -rnd(200, 460),
                   g = 1500, life = rnd(0.6, 1.0), size = math.random(2, 4) * 3,
                   col = ({ {0.08, 0.08, 0.08}, {0.17, 0.17, 0.17}, {1, 1, 1} })[math.random(3)],
-                  spin = rnd(-12, 12), chunk = true, fadeLast = 0.3 })
+                  spin = rnd(-12, 12), chunk = true, fadeLast = 0.3, phys = true, bounce = 0.4 })
         end
     elseif kind == 'sparks' then
         -- Chispas metálicas (salen los pinchos de la nave, choques...)
@@ -197,7 +242,7 @@ function Particles.emit(kind, x, y, opts)
             add({ x = x, y = y, vx = math.cos(ang) * rnd(150, 450), vy = math.sin(ang) * rnd(150, 450) - 250,
                   g = rnd(1200, 1600), life = rnd(1.0, 1.8), size = math.random(3, 6) * 2,
                   col = ({ {0.25, 0.25, 0.28}, {0.5, 0.5, 0.52}, {0.9, 0.9, 0.92} })[math.random(3)],
-                  spin = rnd(-12, 12), chunk = true, fadeLast = 0.3 })
+                  spin = rnd(-12, 12), chunk = true, fadeLast = 0.3, phys = true, bounce = 0.35 })
         end
         for i = 1, 16 do
             add({ x = x + rnd(-40, 40), y = y + rnd(-30, 30), vx = rnd(-60, 60), vy = -rnd(30, 120), g = -30,
@@ -231,14 +276,15 @@ function Particles.emit(kind, x, y, opts)
               life = rnd(0.25, 0.5), size = 3, col = ({ {1, 0.85, 0.2}, {1, 0.45, 0.05} })[math.random(2)] })
     -- ── Mega Crabby (un cangrejo colosal: polvo y tierra a lo grande) ─────────
     elseif kind == 'mega_step' then
-        -- Pisada: polvo bajo y alguna piedrecita
+        -- Pisada: polvo bajo y alguna piedrecita (del suelo que pisa)
+        local pal = paletteAt(x, y, opts)
         for i = 1, 5 do
             add({ x = x + rnd(-14, 14), y = y - rnd(0, 4), vx = rnd(-130, 130), vy = -rnd(20, 70), g = -10,
-                  life = rnd(0.35, 0.6), size = math.random(3, 5) * 3, col = {0.85, 0.8, 0.72}, drag = 4, dust = true })
+                  life = rnd(0.35, 0.6), size = math.random(3, 5) * 3, col = dustOf(pal), drag = 4, dust = true })
         end
         for i = 1, 3 do
             add({ x = x + rnd(-10, 10), y = y - 2, vx = rnd(-120, 120), vy = -rnd(120, 260), g = 1300,
-                  life = rnd(0.3, 0.5), size = 3, col = ({ {0.45, 0.33, 0.22}, {0.6, 0.45, 0.3} })[math.random(2)] })
+                  life = rnd(0.5, 0.8), size = 3, col = pick(pal), phys = true, fadeLast = 0.25 })
         end
     elseif kind == 'mega_trail' then
         -- Estela de la embestida (opts.dir = hacia dónde va)
@@ -248,32 +294,35 @@ function Particles.emit(kind, x, y, opts)
                   life = rnd(0.3, 0.55), size = math.random(2, 4) * 3, col = {0.88, 0.84, 0.76}, drag = 3, dust = true })
         end
     elseif kind == 'mega_debris' then
-        -- Piedrecitas que suelta al trepar por paredes y techo
+        -- Piedrecitas que suelta al trepar por paredes y techo (de lo que pisa)
+        local pal = paletteAt(x, y, opts)
         for i = 1, 3 do
             add({ x = x + rnd(-16, 16), y = y + rnd(-6, 6), vx = rnd(-50, 50), vy = rnd(0, 80), g = 1200,
-                  life = rnd(0.5, 0.9), size = math.random(1, 2) * 3,
-                  col = ({ {0.5, 0.5, 0.55}, {0.45, 0.35, 0.25}, {0.62, 0.6, 0.58} })[math.random(3)] })
+                  life = rnd(0.8, 1.3), size = math.random(1, 2) * 3,
+                  col = pick(pal), phys = true, fadeLast = 0.3 })
         end
     elseif kind == 'mega_dirt' then
-        -- Forcejeando clavado: tierra que salta del agujero
+        -- Forcejeando clavado: trozos del suelo que saltan del agujero
+        local pal = paletteAt(x, y, opts)
         for i = 1, 4 do
-            add({ x = x + rnd(-12, 12), y = y, vx = rnd(-170, 170), vy = -rnd(160, 380), g = 1400,
-                  life = rnd(0.35, 0.65), size = math.random(1, 2) * 3,
-                  col = ({ {0.45, 0.33, 0.22}, {0.6, 0.45, 0.3}, {0.35, 0.25, 0.17} })[math.random(3)] })
+            add({ x = x + rnd(-12, 12), y = y - 2, vx = rnd(-170, 170), vy = -rnd(160, 380), g = 1400,
+                  life = rnd(0.6, 1.0), size = math.random(1, 2) * 3,
+                  col = pick(pal), phys = true, fadeLast = 0.3 })
         end
     elseif kind == 'mega_slam' then
-        -- Se clava cayendo del techo: trozos de suelo, un muro de polvo y estrellas
+        -- Se clava cayendo del techo: trozos del suelo, un muro de polvo y estrellas
+        local pal = paletteAt(x, y, opts)
         for i = 1, math.random(16, 22) do
             local dir = (i % 2 == 0) and 1 or -1
-            add({ x = x + dir * rnd(4, 30), y = y - rnd(0, 10), vx = dir * rnd(90, 480), vy = -rnd(260, 720),
-                  g = rnd(1300, 1700), life = rnd(1.0, 1.6), size = math.random(2, 5) * 3,
-                  col = ({ {0.45, 0.33, 0.22}, {0.6, 0.45, 0.3}, {0.38, 0.3, 0.22} })[math.random(3)],
-                  spin = rnd(-12, 12), chunk = true, fadeLast = 0.3 })
+            add({ x = x + dir * rnd(4, 30), y = y - rnd(2, 10), vx = dir * rnd(90, 480), vy = -rnd(260, 720),
+                  g = rnd(1300, 1700), life = rnd(1.4, 2.2), size = math.random(2, 5) * 3,
+                  col = pick(pal, rnd(0.85, 1.1)), spin = rnd(-12, 12), chunk = true, fadeLast = 0.3,
+                  phys = true, bounce = 0.3 })
         end
         for i = 1, 18 do
             local dir = (i % 2 == 0) and 1 or -1
             add({ x = x + dir * rnd(0, 40), y = y - rnd(0, 14), vx = dir * rnd(150, 520), vy = -rnd(20, 140), g = -15,
-                  life = rnd(0.6, 1.1), size = math.random(4, 7) * 3, col = {0.86, 0.82, 0.74}, drag = 3, dust = true })
+                  life = rnd(0.6, 1.1), size = math.random(4, 7) * 3, col = dustOf(pal), drag = 3, dust = true })
         end
         for i = 1, 8 do
             local a = rnd(-math.pi * 0.95, -math.pi * 0.05)
@@ -282,14 +331,16 @@ function Particles.emit(kind, x, y, opts)
         end
     elseif kind == 'mega_land' then
         -- Aterriza tras el salto: onda de polvo que barre el suelo a los lados
+        local pal = paletteAt(x, y, opts)
+        local dust = dustOf(pal)
         for i = 1, 28 do
             local dir = (i % 2 == 0) and 1 or -1
             add({ x = x + dir * rnd(0, 40), y = y - rnd(0, 8), vx = dir * rnd(260, 720), vy = -rnd(10, 90), g = -10,
-                  life = rnd(0.4, 0.8), size = math.random(3, 6) * 3, col = {0.88, 0.84, 0.76}, drag = 4, dust = true })
+                  life = rnd(0.4, 0.8), size = math.random(3, 6) * 3, col = dust, drag = 4, dust = true })
         end
         for i = 1, 10 do
-            add({ x = x + rnd(-40, 40), y = y - 2, vx = rnd(-260, 260), vy = -rnd(160, 380), g = 1300,
-                  life = rnd(0.4, 0.7), size = math.random(1, 2) * 3, col = {0.5, 0.4, 0.3} })
+            add({ x = x + rnd(-40, 40), y = y - 3, vx = rnd(-260, 260), vy = -rnd(160, 380), g = 1300,
+                  life = rnd(0.7, 1.1), size = math.random(1, 2) * 3, col = pick(pal), phys = true, fadeLast = 0.3 })
         end
     elseif kind == 'mega_poof' then
         -- Se desinfla: nube grande de humo claro y destellos
@@ -321,11 +372,12 @@ function Particles.emit(kind, x, y, opts)
                   life = rnd(0.4, 0.7), size = 3, col = {0.85, 0.95, 1} })
         end
     elseif kind == 'spike_pop' then
-        -- El Crabby arranca su pincho del suelo: tierra hacia arriba
+        -- El Crabby arranca su pincho del suelo: trozos del suelo hacia arriba
+        local pal = paletteAt(x, y, opts)
         for i = 1, 12 do
             add({ x = x + rnd(-10, 10), y = y, vx = rnd(-160, 160), vy = -rnd(200, 460), g = 1300,
-                  life = rnd(0.4, 0.8), size = math.random(1, 2) * 3,
-                  col = ({ {0.45, 0.33, 0.22}, {0.6, 0.45, 0.3} })[math.random(2)] })
+                  life = rnd(0.7, 1.1), size = math.random(1, 2) * 3,
+                  col = pick(pal), phys = true, fadeLast = 0.3 })
         end
     end
 end
@@ -335,6 +387,62 @@ function Particles.shakeOffset()
     if shakeT <= 0 then return 0, 0 end
     local k = shakePow * (shakeT / shakeDur)
     return math.floor((math.random() * 2 - 1) * k + 0.5), math.floor((math.random() * 2 - 1) * k + 0.5)
+end
+
+-- Un paso de una partícula física: gravedad (poca en el agua, donde además
+-- frena y se hunde despacio), choque con paredes y techos (rebota), aterriza
+-- en suelos y plataformas (rebota si viene rápida; si no, se queda y resbala
+-- hasta pararse) y vuelve a caer si pierde el apoyo
+local WATER_G, WATER_DRAG, WATER_SINK = 0.2, 5, 70
+function Particles.physStep(p, dt)
+    local r = (p.size or 3) / 2
+    if p.inside == nil then
+        -- (nacida dentro de un bloque: sin choques, como antes)
+        p.inside = level:collisionAt(p.x, p.y) ~= nil
+        if p.inside then p.phys = false; return end
+    end
+    local water = level:liquidAt(p.x, p.y) ~= nil
+    local drag = (p.drag or 0) + (water and WATER_DRAG or 0)
+    if drag > 0 then
+        local k = math.max(0, 1 - drag * dt)
+        p.vx, p.vy = p.vx * k, p.vy * k
+    end
+    if p.ground then
+        -- En el suelo: resbala frenando; si ya no hay nada debajo, cae
+        p.vx = p.vx * math.max(0, 1 - 9 * dt)
+        if not level:landingCross(p.x, p.y + r - 1, p.y + r + 2) then p.ground = false end
+    end
+    if not p.ground then
+        p.vy = p.vy + (p.g or 0) * (water and WATER_G or 1) * dt
+        if water and p.vy > WATER_SINK then p.vy = WATER_SINK end
+    end
+    local spin = p.spin or 0
+    -- X: una pared la hace rebotar
+    local nx = p.x + p.vx * dt
+    if level:collisionAt(nx + (p.vx > 0 and r or -r), p.y) then
+        nx, p.vx, spin = p.x, -p.vx * 0.35, -spin * 0.5
+    end
+    p.x = nx
+    -- Y
+    if not p.ground then
+        local ny = p.y + p.vy * dt
+        if p.vy > 0 then
+            local t, top = level:landingCross(p.x, p.y + r, ny + r)
+            if t then
+                ny = top - r
+                if p.vy > 150 then
+                    p.vy, p.vx, spin = -p.vy * (p.bounce or 0.35), p.vx * 0.7, spin * 0.6
+                else
+                    p.vy, p.ground, spin = 0, true, 0
+                end
+            end
+        elseif p.vy < 0 and level:collisionAt(p.x, ny - r) then
+            ny, p.vy = p.y, -p.vy * 0.25
+        end
+        p.y = ny
+    end
+    p.spin = spin
+    p.ang = (p.ang or 0) + spin * dt
 end
 
 function Particles.update(dt)
@@ -348,10 +456,13 @@ function Particles.update(dt)
             local k = p.t / p.life
             p.x = p.sx + (p.tx - p.sx) * k
             p.y = p.sy + (p.ty - p.sy) * k
+        elseif p.phys and level then
+            Particles.physStep(p, dt)
         else
             if p.drag then p.vx = p.vx * (1 - p.drag * dt); p.vy = p.vy * (1 - p.drag * dt) end
             p.vy = p.vy + (p.g or 0) * dt
             p.x, p.y = p.x + p.vx * dt, p.y + p.vy * dt
+            if p.spin then p.ang = (p.ang or 0) + p.spin * dt end
         end
     end
 end
@@ -368,6 +479,8 @@ function Particles.render(camX, camY)
             a = (f > 0) and math.min(1, (1 - p.t / p.life) / f) or 1
         elseif p.dust then
             a = a * 0.55
+        elseif p.fadeLast then
+            a = math.min(1, (1 - p.t / p.life) / p.fadeLast)
         end
         love.graphics.setColor(c[1], c[2], c[3], a)
         if p.star then
@@ -376,7 +489,7 @@ function Particles.render(camX, camY)
         elseif p.chunk then
             love.graphics.push()
             love.graphics.translate(x, y)
-            love.graphics.rotate(p.t * p.spin)
+            love.graphics.rotate(p.ang or 0)
             love.graphics.rectangle('fill', -s / 2, -s / 2, s, s)
             love.graphics.setColor(0, 0, 0, 0.35)
             love.graphics.rectangle('line', -s / 2, -s / 2, s, s)

@@ -37,7 +37,11 @@
 --   color       {r,g,b[,a]} relleno plano
 --   editorColor color de respaldo para la paleta si no hay otro aspecto
 --
---   ctx (dibujo): { x, y, size, col, row, raw, level, time }
+--   debris      { {r,g,b}, ... } colores de sus partículas de impacto (si no,
+--               los del material; ver TileTypes.debris)
+--
+--   ctx (dibujo): { x, y, size, col, row, raw, level, time [, edges] }
+--   (`edges` ya calculadas: las subceldas de src/world/SubTiles.lua)
 --   `level` es nil al dibujar miniaturas del editor: el dibujo debe tolerarlo.
 
 local TileCodec = require 'src/world/tiles/TileCodec'
@@ -118,6 +122,7 @@ end
 -- pertenece al mismo joinGroup o es líquido (un bloque sumergido no dibuja el
 -- borde que mira al agua). Sin nivel (miniaturas) todas están expuestas.
 function TileTypes.edges(t, ctx)
+    if ctx.edges then return ctx.edges end
     local level = ctx.level
     if not level or not t.joinGroup then
         return { top = true, bottom = true, left = true, right = true }
@@ -144,6 +149,22 @@ function TileTypes.drawEdges(ctx, edges, thick)
     if edges.bottom then love.graphics.rectangle('fill', x,           y+s-thick,   s, thick) end
     if edges.left   then love.graphics.rectangle('fill', x,           y,           thick, s) end
     if edges.right  then love.graphics.rectangle('fill', x+s-thick,   y,           thick, s) end
+end
+
+-- Colores de las partículas que suelta al golpearlo / romperlo: los del
+-- tile, los de su material o, si no, tonos de su color
+local debrisCache = setmetatable({}, { __mode = 'k' })
+function TileTypes.debris(t)
+    if t.debris then return t.debris end
+    if t.mat and t.mat.debris then return t.mat.debris end
+    local d = debrisCache[t]
+    if not d then
+        local c = t.editorColor or (t.mat and t.mat.color) or { 0.6, 0.6, 0.6 }
+        d = { { c[1], c[2], c[3] }, { c[1] * 0.75, c[2] * 0.75, c[3] * 0.75 },
+              { math.min(1, c[1] * 1.2), math.min(1, c[2] * 1.2), math.min(1, c[3] * 1.2) } }
+        debrisCache[t] = d
+    end
+    return d
 end
 
 local textureCache = {}

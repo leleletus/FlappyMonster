@@ -34,9 +34,9 @@ function LevelCatalog.files()
     return out
 end
 
--- Miniatura: un carácter por celda ('.' vacío, '#' sólido, 'B' borde, '='
--- plataforma, '~' agua, 'X' peligro, 'F' meta, '^' pinchos, 'P' zona de
--- puntos) + entidades y punto de inicio. La dibuja ModeSelectMenu.drawPreview.
+-- Miniatura: un carácter por celda ('.' vacío, '#' sólido, 'B' borde, 'D'
+-- tierra, 'G' césped, '=' plataforma, '~' agua, 'X' peligro, 'F' meta, '^'
+-- pinchos, 'm' mini bloques, 'P' zona de puntos) + entidades y punto de inicio. La dibuja ModeSelectMenu.drawPreview.
 LevelCatalog.PREVIEW_MAX_CELLS = 20000
 function LevelCatalog.buildPreview(lv)
     if lv.tileW * lv.tileH > LevelCatalog.PREVIEW_MAX_CELLS then return nil end
@@ -50,11 +50,14 @@ function LevelCatalog.buildPreview(lv)
             if t.trigger == 'finish' then ch = 'F'
             elseif t.mat.contact == 'kill' then ch = 'X'
             elseif t.name == 'border' then ch = 'B'
+            elseif t.name == 'dirt' then ch = 'D'
+            elseif t.name == 'grass' then ch = 'G'
             elseif t.collision == 'solid' then ch = '#'
             elseif t.collision == 'oneway' then ch = '='
             elseif t.mat.liquid or Tiles.codec.isWaterlogged(raw) then ch = '~'
             end
             if ch == '.' and Tiles.codec.hasSpikes(raw) then ch = '^' end
+            if (ch == '.' or ch == '~') and lv.subCells and lv.subCells[r * 65536 + c] then ch = 'm' end
             line[c] = ch
         end
         rows[r] = table.concat(line)

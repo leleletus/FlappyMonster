@@ -64,6 +64,7 @@ local function inRect(x, y, r) return x >= r.x and x <= r.x + r.w and y >= r.y a
 
 local CELL_COLORS = {
     ['#'] = { 0.30, 0.30, 0.36 }, B = { 0.42, 0.30, 0.12 }, X = { 0.85, 0.15, 0.15 },
+    D = { 0.47, 0.32, 0.19 }, G = { 0.3, 0.62, 0.24 },
 }
 local previewCache = {}   -- [path .. tamaño] = Canvas
 
@@ -101,6 +102,9 @@ local function buildPreviewCanvas(prev, hideFinish)
                     love.graphics.setColor(0.62, 0.62, 0.68)
                     love.graphics.rectangle('fill', x, y, S, 1)
                 end
+            elseif ch == 'm' then
+                love.graphics.setColor(0.36, 0.36, 0.42)                -- mini bloques: medio cuadro
+                love.graphics.rectangle('fill', x + S / 4, y + S / 2, math.ceil(S / 2), math.ceil(S / 2))
             elseif ch == '=' then
                 love.graphics.setColor(0.75, 0.72, 0.68)
                 love.graphics.rectangle('fill', x, y, S, math.ceil(S / 3))

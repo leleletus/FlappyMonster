@@ -76,6 +76,7 @@ function AdventureState:enter(args)
 
     -- Efectos del jugador (ground pound, bloques rotos...)
     Particles.clear()
+    Particles.setLevel(self.level)                 -- (las partículas físicas chocan con él)
     PlayerAdventure.fx = function(kind, x, y)
         Particles.emit(kind, x, y)
         if kind == 'block_break' then Sound.play('blockBreak') end

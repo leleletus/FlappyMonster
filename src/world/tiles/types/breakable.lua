@@ -6,4 +6,5 @@ return {
     collision = 'solid', material = 'stone', breakable = true,
     editorColor = { 0.55, 0.42, 0.30 },
     texture = { image = 'assets/images/tiles/breakable.png' },
+    debris = { { 0.55, 0.4, 0.28 }, { 0.42, 0.29, 0.2 }, { 0.66, 0.5, 0.36 } },
 }

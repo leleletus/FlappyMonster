@@ -7,7 +7,7 @@ local Tiles = require 'src/world/Tiles'
 local P = {}
 
 -- ── Versión / red ─────────────────────────────────────────────────────────────
-P.VERSION        = 23        -- el servidor rechaza clientes con otra versión (23: entrada del Mega Crabby y emotes)
+P.VERSION        = 24        -- el servidor rechaza clientes con otra versión (24: subtiles, tierra y césped)
 
 -- Sonidos PRIVADOS: solo los oye el jugador que los causa (su cliente ya los
 -- genera con la predicción), así que el servidor no los manda a nadie. P. ej.

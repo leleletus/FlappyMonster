@@ -7,4 +7,5 @@ return {
     collision = 'solid', material = 'stone', toggle = 'switch_off',
     editorColor = { 0.25, 0.75, 0.35 },
     texture = { image = 'assets/images/tiles/switch_on.png' },
+    debris = { { 0.25, 0.75, 0.35 }, { 0.18, 0.55, 0.26 }, { 0.9, 0.95, 0.9 } },
 }

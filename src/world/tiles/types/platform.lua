@@ -7,4 +7,5 @@ return {
     hitbox = { x = 0, y = 0, w = 1, h = 0.72 },       -- lo que se ve (losa de ¾)
     editorColor = { 0.52, 0.52, 0.60 },
     texture = { image = 'assets/images/tiles/platform.png' },
+    debris = { { 0.52, 0.52, 0.6 }, { 0.4, 0.4, 0.47 }, { 0.64, 0.64, 0.72 } },
 }
