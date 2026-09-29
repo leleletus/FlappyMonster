@@ -16,6 +16,24 @@
 -- Para la física es agua normal: Level:liquidAt la devuelve bajo la
 -- superficie, así que nadar, ahogarse, salpicar, apagar bolas de fuego...
 -- funciona sin nada especial.
+--
+-- CONTROL (prop `control` de la entidad):
+--   'cycle'  (por defecto) el ciclo de arriba, siempre.
+--   'boss'   conectada a una zona de jefe (prop `zone`; 0 = la que se solapa
+--            con ella): mientras la pelea está activa hace su ciclo (desde
+--            que empieza la pelea: la espera inicial cuenta desde ahí); cuando
+--            el jefe entra en su secuencia de muerte, baja a su mínimo y se
+--            queda (y antes de la pelea está en el mínimo).
+--   'switch' conectada a bloques ON/OFF (level.links: {col, row, flood=id}):
+--            con alguno en ON sube hasta el máximo y se queda; con todos en
+--            OFF baja hasta el mínimo y se queda (por escalones y pausas si
+--            los tiene).
+-- Una controlada guarda solo {active, t0, L0}: si está activa, desde cuándo
+-- y a qué nivel estaba entonces. El nivel en el instante t sigue siendo una
+-- función pura de t y de eso (Floods.levelAt), así que el cliente online
+-- calcula el agua en su tiempo predicho igual que con las de ciclo: el
+-- servidor (y un jugador) deciden los cambios en Floods.control y los manda
+-- en cada snapshot (Floods.netPack → 'fc').
 
 local Floods = {}
 local WaterSurface = require 'src/fx/WaterSurface'
@@ -61,6 +79,9 @@ function Floods.fromPlacement(pl, Materials)
         hTiles = r1 - r0 + 1,
         mat = Materials and Materials.get('water') or nil,
     }
+    f.id      = math.floor(num(p.id, pl.floodIndex or 0))
+    f.control = (p.control == 'boss' or p.control == 'switch') and p.control or 'cycle'
+    f.zoneId  = math.floor(num(p.zone, 0))
     local lo = math.max(0, math.min(f.hTiles, num(p.startLevel, 1)))
     local hi = math.max(lo, math.min(f.hTiles, num(p.maxLevel, f.hTiles)))
     f.lo, f.hi = lo, hi
@@ -73,6 +94,8 @@ function Floods.fromPlacement(pl, Materials)
     f.riseT = select(2, travel(D, f.riseSpeed, f.riseStep, f.risePause, 0))
     f.fallT = select(2, travel(D, f.fallSpeed, f.fallStep, f.fallPause, 0))
     f.cycle = f.riseT + f.holdTime + f.fallT + f.lowTime
+    -- (controlada: empieza apagada en su mínimo)
+    f.active, f.t0, f.L0 = false, 0, lo
     Floods.setFloodTime(f, 0)
     f.prevLevel, f.moving = f.level, false
     return f
@@ -81,9 +104,46 @@ end
 function Floods.build(placements, Materials)
     local out = {}
     for _, pl in ipairs(placements or {}) do
-        if pl.type == 'flood' then out[#out+1] = Floods.fromPlacement(pl, Materials) end
+        -- (sin id guardado: su número de orden entre las inundaciones)
+        if pl.type == 'flood' then
+            pl.floodIndex = #out + 1
+            out[#out+1] = Floods.fromPlacement(pl, Materials)
+        end
     end
     return out
+end
+
+-- Inundación con ese id, o nil
+function Floods.byId(level, id)
+    for _, f in ipairs(level.floods or {}) do if f.id == id then return f end end
+    return nil
+end
+
+-- Enlaza las controladas: zona de jefe (por id, o la que se solapa con su
+-- área, o la más cercana) y bloques ON/OFF (level.links)
+function Floods.link(level)
+    for _, f in ipairs(level.floods or {}) do
+        f.zone, f.switches = nil, {}
+        if f.control == 'boss' then
+            local best, bd
+            for _, z in ipairs(level.bossZones or {}) do
+                if f.zoneId > 0 then
+                    if z.id == f.zoneId then best = z end
+                else
+                    local ix = math.min(f.x1, z.x1) - math.max(f.x0, z.x0)
+                    local iy = math.min(f.y1, z.y1) - math.max(f.y0, z.y0)
+                    local d = (ix > 0 and iy > 0) and -ix * iy
+                              or math.abs((f.x0 + f.x1) / 2 - (z.x0 + z.x1) / 2) + math.abs((f.y0 + f.y1) / 2 - (z.y0 + z.y1) / 2)
+                    if not bd or d < bd then best, bd = z, d end
+                end
+            end
+            f.zone = best
+        end
+    end
+    for _, l in ipairs(level.links or {}) do
+        local f = Floods.byId(level, l.flood)
+        if f then f.switches[#f.switches + 1] = { l.col, l.row } end
+    end
 end
 
 -- ── Línea de tiempo ──────────────────────────────────────────────────────────
@@ -100,8 +160,24 @@ function Floods.levelAt(f, t)
     return f.lo, 'low'
 end
 
+-- Controlada: desde el cambio en t0 (nivel L0) sube / hace su ciclo (activa)
+-- o baja a su mínimo (apagada)
+function Floods.controlledLevelAt(f, t)
+    local u = math.max(0, t - f.t0)
+    if f.active then
+        if f.control == 'boss' then return Floods.levelAt(f, u) end
+        local D = f.hi - f.L0
+        local d = travel(D, f.riseSpeed, f.riseStep, f.risePause, u)
+        return f.L0 + d, (d < D - 1e-6) and 'rise' or 'hold'
+    end
+    local D = f.L0 - f.lo
+    local d = travel(D, f.fallSpeed, f.fallStep, f.fallPause, u)
+    return f.L0 - d, (d < D - 1e-6) and 'fall' or 'low'
+end
+
 function Floods.setFloodTime(f, t)
-    f.level, f.phase = Floods.levelAt(f, t)
+    if f.control and f.control ~= 'cycle' then f.level, f.phase = Floods.controlledLevelAt(f, t)
+    else f.level, f.phase = Floods.levelAt(f, t) end
     f.surf = f.y1 - f.level * TILE_PX            -- Y de la superficie (px de mundo)
 end
 
@@ -111,10 +187,71 @@ function Floods.setTime(level, t)
     for _, f in ipairs(level.floods or {}) do Floods.setFloodTime(f, t) end
 end
 
+-- ¿Debe estar activa ahora? (solo un jugador y el servidor: el cliente lo
+-- recibe en los snapshots)
+local function wantsActive(level, f)
+    if f.control == 'boss' then
+        local z = f.zone
+        if not z or z.state ~= 'fight' then return false end
+        for _, b in ipairs(z.bosses or {}) do
+            if b.alive and not (b.isDying and b:isDying()) then return true end
+        end
+        return false
+    end
+    for _, c in ipairs(f.switches or {}) do
+        if level:getDef(c[1], c[2]).name == 'switch_on' then return true end
+    end
+    return false
+end
+
+-- Decide los cambios de las controladas en el instante t (autoritativo: un
+-- jugador y el servidor). El nivel al cambiar pasa a ser el nuevo L0.
+function Floods.control(level, t)
+    for _, f in ipairs(level.floods or {}) do
+        if f.control ~= 'cycle' then
+            local want = wantsActive(level, f)
+            if want ~= f.active then
+                f.L0 = Floods.controlledLevelAt(f, t)
+                f.active, f.t0 = want, t
+            end
+        end
+    end
+end
+
 -- Un jugador: el tiempo avanza con la partida
 function Floods.advance(level, dt)
     if not level.floods or #level.floods == 0 then return end
-    Floods.setTime(level, (level.floodTime or 0) + dt)
+    local t = (level.floodTime or 0) + dt
+    Floods.control(level, t)
+    Floods.setTime(level, t)
+end
+
+-- ── Red: estado de las controladas en cada snapshot ──────────────────────────
+-- { {activa 0/1, t0 en ticks, L0 × 1000}, ... } en el orden de level.floods
+-- (las de ciclo van como 0 y no se usan). nil si no hay ninguna controlada.
+function Floods.netPack(level, tickDt)
+    local out, any = {}, false
+    for i, f in ipairs(level.floods or {}) do
+        if f.control ~= 'cycle' then
+            any = true
+            out[i] = { f.active and 1 or 0, math.floor(f.t0 / tickDt + 0.5), math.floor(f.L0 * 1000 + 0.5) }
+        else
+            out[i] = 0
+        end
+    end
+    return any and out or nil
+end
+
+function Floods.netApply(level, list, tickDt)
+    if type(list) ~= 'table' then return end
+    for i, f in ipairs(level.floods or {}) do
+        local d = list[i]
+        if f.control ~= 'cycle' and type(d) == 'table' then
+            f.active = d[1] == 1
+            f.t0 = (tonumber(d[2]) or 0) * tickDt
+            f.L0 = (tonumber(d[3]) or 0) / 1000
+        end
+    end
 end
 
 -- ── Física ────────────────────────────────────────────────────────────────────

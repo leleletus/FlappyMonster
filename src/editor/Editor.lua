@@ -34,7 +34,7 @@ local T = function() return TILE_PX end
 -- Una capa = qué se edita; cada una tiene sus herramientas (tecla entre
 -- paréntesis) y una descripción que el panel enseña como ayuda.
 local LAYERS = {
-    { id='tiles',    label='Bloques',    tools={ 'brush', 'rect', 'line', 'fill', 'pick', 'erase' },
+    { id='tiles',    label='Bloques',    tools={ 'brush', 'rect', 'line', 'fill', 'pick', 'link', 'erase' },
       help='Terreno, plataformas, líquidos, peligros y meta.' },
     { id='water',    label='Agua',       tools={ 'brush', 'rect', 'fill', 'erase' },
       help='Llena celdas de agua. Se combina con cualquier bloque (una plataforma sumergida, por ejemplo). El bloque "Agua" sin nada más está en la capa Bloques.' },
@@ -56,6 +56,7 @@ local TOOLS = {
     fill   = { label='Relleno',     key='f', help='Rellena la zona contigua del mismo tipo.' },
     erase  = { label='Borrar',      key='e', help='Borra lo de esta capa (también con clic derecho).' },
     pick   = { label='Cuentagotas', key='i', help='Copia a la paleta el bloque que hay bajo el cursor.' },
+    link   = { label='Conectar',    key='k', help='Clic en un bloque ON/OFF para elegir (a la derecha) a qué inundación está conectado. Las conexiones se ven como líneas amarillas.' },
     select = { label='Seleccionar', key='v', help='Clic para seleccionar y editar sus propiedades; arrastra para moverlo. Las cajitas azules (rutas, puntos, esquinas) también se arrastran.' },
     place  = { label='Colocar',     key='b', help='Coloca lo elegido en la paleta. Algunos objetos se pintan arrastrando.' },
     spawn  = { label='Inicio',      key='s', help='Mueve el punto donde aparece el jugador (uno por nivel).' },
@@ -370,7 +371,15 @@ local function canvasPress(button)
     pushUndo()
     local s = E.stroke
 
-    if L == 'tiles' or L == 'water' then
+    if L == 'tiles' and tool == 'link' then
+        local d = m:inBounds(c, r) and TT.get(Codec.id(m:get(c, r)))
+        if d and (d.name == 'switch_on' or d.name == 'switch_off') then
+            E.selSwitch = { c = c, r = r }
+        else
+            E.selSwitch = nil
+            if button == 1 then msg('Conectar: haz clic en un bloque ON/OFF', 'warn') end
+        end
+    elseif L == 'tiles' or L == 'water' then
         if tool == 'pick' and button == 1 then
             local raw = m:get(c, r)
             if raw then E.palette.tiles = Codec.id(raw); E.tool.tiles = 'brush'; msg('Bloque copiado: ' .. TT.get(Codec.id(raw)).label) end
@@ -679,6 +688,7 @@ local function drawCanvas()
         end
     end
     Editor.drawZones(camX, camY, t, z)
+    Editor.drawLinks(camX, camY, t, z)
     Editor.drawAutoScroll(camX, camY, t, z)
     for _, inst in pairs(E.instances or {}) do
         -- Si cae desde donde se colocó, se marca el recorrido hasta donde aterriza
@@ -1354,8 +1364,48 @@ local function drawNothingSelected(x, y, w)
 end
 
 -- ── Panel de la derecha: Selección / Nivel / Avisos ──────────────────────────
+-- Bloque ON/OFF (herramienta Conectar): a qué inundación está conectado
+local function drawSwitchInspector(x, y, w)
+    local sw, m = E.selSwitch, E.model
+    local d = TT.get(Codec.id(m:get(sw.c, sw.r) or 0))
+    if d.name ~= 'switch_on' and d.name ~= 'switch_off' then E.selSwitch = nil; return y end
+    y = inspectorHeader(x, y, w, function(ix, iy, s) drawTileThumb(d, ix, iy, s) end, 'Bloque ON/OFF',
+                        string.format('Mecanismo  ·  col %d, fila %d', sw.c, sw.r),
+                        'Un cabezazo o un ground pound lo cambia. Conectado a una inundación que "se mueve con bloques ON/OFF": en ON sube al máximo, en OFF baja al mínimo.')
+    local opts = { { value = 0, label = 'Ninguna' } }
+    for _, f in ipairs(m:floods()) do
+        local id = tonumber(f.props.id) or 1
+        opts[#opts + 1] = { value = id, label = string.format('Inundación #%d (col %d, fila %d)%s', id, f.col, f.row,
+                            f.props.control == 'switch' and '' or ' — no usa ON/OFF') }
+    end
+    local l = m:linkAt(sw.c, sw.r)
+    local cur = l and l.flood or 0
+    ui.text('Conectado a', x, y, th.text); y = y + 20
+    for _, o in ipairs(opts) do
+        if ui.button(o.label, x, y, w, 26, { active = o.value == cur, align = 'left', font = ui.fontSm }) and o.value ~= cur then
+            pushUndo()
+            m:setLink(sw.c, sw.r, o.value > 0 and o.value or nil)
+            -- (una inundación conectada pasa a moverse con los bloques ON/OFF)
+            for _, f in ipairs(m:floods()) do
+                if o.value > 0 and (tonumber(f.props.id) or 1) == o.value then f.props.control = 'switch' end
+            end
+            markDirty()
+        end
+        y = y + 30
+    end
+    y = y + 6
+    local on, ch = ui.toggle('Empieza encendido (ON)', d.name == 'switch_on', x, y, w)
+    if ch then
+        pushUndo()
+        m:setId(sw.c, sw.r, TT.byName[on and 'switch_on' or 'switch_off'].id)
+        markDirty()
+    end
+    return y + 32
+end
+
 local function drawSelectionTab(x, y, w)
-    if E.selVent and E.layer == 'special' then return drawVentInspector(x, y, w)
+    if E.selSwitch and E.layer == 'tiles' then return drawSwitchInspector(x, y, w)
+    elseif E.selVent and E.layer == 'special' then return drawVentInspector(x, y, w)
     elseif E.selZone and E.layer == 'special' then return Editor.drawZoneInspector(x, y, w)
     elseif E.selected and E.layer == 'entities' then return drawEntityInspector(x, y, w)
     elseif E.selDeco and E.layer == 'deco' then return drawDecoInspector(x, y, w) end
@@ -1515,7 +1565,7 @@ local function drawWarningsTab(x, y, w)
 end
 
 local function selectionKey()
-    return tostring(E.selected) .. tostring(E.selDeco) .. tostring(E.selZone) .. tostring(E.selVent)
+    return tostring(E.selected) .. tostring(E.selDeco) .. tostring(E.selZone) .. tostring(E.selVent) .. tostring(E.selSwitch)
 end
 
 local function drawRightPanel()
@@ -1529,7 +1579,7 @@ local function drawRightPanel()
     local key = selectionKey()
     if key ~= E.lastSelKey then
         E.lastSelKey = key
-        if E.selected or E.selDeco or E.selZone or E.selVent then E.rightTab = 'sel' end
+        if E.selected or E.selDeco or E.selZone or E.selVent or E.selSwitch then E.rightTab = 'sel' end
     end
     E.rightTab = E.rightTab or 'sel'
     local ws = E.warnings or {}
@@ -1691,6 +1741,43 @@ local function dashedRect(x, y, w, h, dash)
         love.graphics.line(x, yy, x, math.min(yy + dash, y + h))
         love.graphics.line(x + w, yy, x + w, math.min(yy + dash, y + h))
     end
+end
+
+-- Conexiones bloque ON/OFF → inundación: línea de puntos amarilla del
+-- bloque al centro del área de la inundación (roja si no existe)
+function Editor.drawLinks(camX, camY, t, zoom)
+    local m = E.model
+    local byId = {}
+    for _, f in ipairs(m:floods()) do byId[tonumber(f.props.id) or 1] = f end
+    love.graphics.setLineWidth(2 / zoom)
+    for _, l in ipairs(m.links or {}) do
+        local x0, y0 = (l.col - 0.5) * t - camX, (l.row - 0.5) * t - camY
+        local f = byId[l.flood]
+        local sel = E.selSwitch and E.selSwitch.c == l.col and E.selSwitch.r == l.row
+        if f then
+            local cr = f.props.corner or { col = f.col, row = f.row }
+            local x1 = ((f.col - 1) + cr.col) / 2 * t - camX
+            local y1 = ((f.row - 1) + cr.row) / 2 * t - camY
+            love.graphics.setColor(1, 0.85, 0.2, sel and 1 or 0.6)
+            local dx, dy = x1 - x0, y1 - y0
+            local len = math.sqrt(dx * dx + dy * dy)
+            for k = 0, len - 1, 14 / zoom do
+                local a, b = k / len, math.min(1, (k + 7 / zoom) / len)
+                love.graphics.line(x0 + dx * a, y0 + dy * a, x0 + dx * b, y0 + dy * b)
+            end
+            love.graphics.circle('fill', x1, y1, 4 / zoom)
+        else
+            love.graphics.setColor(1, 0.3, 0.3, 0.9)
+        end
+        love.graphics.rectangle('line', x0 - t / 2 + 2, y0 - t / 2 + 2, t - 4, t - 4)
+        love.graphics.print('#' .. l.flood, x0 - t / 2 + 4, y0 - t / 2 + 2, 0, 1 / zoom, 1 / zoom)
+    end
+    if E.selSwitch and E.layer == 'tiles' then
+        love.graphics.setColor(th.warn[1], th.warn[2], th.warn[3], 1)
+        love.graphics.rectangle('line', (E.selSwitch.c - 1) * t - camX, (E.selSwitch.r - 1) * t - camY, t, t)
+    end
+    love.graphics.setLineWidth(1)
+    love.graphics.setColor(1, 1, 1, 1)
 end
 
 function Editor.drawZones(camX, camY, t, zoom)

@@ -591,7 +591,9 @@ local function stepRoom(room)
 
     -- ── Reloj de nivel (autoritativo) ────────────────────────────────────────
     sim.levelTime = math.min(sim.levelTime + TICK_DT, LEVEL_TIME_MAX)
-    -- Inundaciones: el nivel del agua es función del tick (el cliente lo estima igual)
+    -- Inundaciones: el nivel del agua es función del tick (el cliente lo estima
+    -- igual); las controladas (jefe / ON-OFF) cambian aquí y van en el snapshot
+    Floods.control(sim.level, sim.tick * TICK_DT)
     Floods.setTime(sim.level, sim.tick * TICK_DT)
 
     -- Límite de 10 minutos: matar a todos los jugadores activos (igual que modo solo)
@@ -901,11 +903,12 @@ local function broadcastSnapshot(room)
     local md = sim.mode.hud(sim.match)
     local bz = BossZones.netPack(sim.level)
     local sc = AutoScroll.netPack(sim.level)
+    local fc = Floods.netPack(sim.level, TICK_DT)     -- inundaciones controladas (jefe / ON-OFF)
     for _, pid in ipairs(room.playerIds) do
         local c  = findClientById(pid)
         local ps = sim.playerSims[pid]
         if c then
-            local snap = { t=sim.tick, lt=lt, p=plist, e=elist, vb=vb, md=md, bz=bz, sc=sc }
+            local snap = { t=sim.tick, lt=lt, p=plist, e=elist, vb=vb, md=md, bz=bz, sc=sc, fc=fc }
             if ps and not ps.isSpectator then
                 snap.a  = ps.lastProcSeq
                 snap.o  = Protocol.packOwnState(ps.pa)

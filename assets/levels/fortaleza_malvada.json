@@ -41,7 +41,7 @@
     {"col":35,"row":2,"sub":2,"type":"spikefall"},
     {"col":34,"row":2,"sub":2,"type":"spikefall"},
     {"col":23,"row":3,"type":"extralife"},
-    {"col":94,"props":{"corner":{"col":111,"row":15},"holdTime":5,"maxLevel":6.75},"row":7,"type":"flood"},
+    {"col":94,"props":{"control":"boss","corner":{"col":111,"row":15},"holdTime":5,"maxLevel":6.75},"row":7,"type":"flood"},
     {"col":93,"props":{"corner":{"col":93,"row":12}},"row":2,"type":"bosswall"},
     {"col":112,"props":{"corner":{"col":112,"row":12}},"row":2,"type":"bosswall"}
   ],

@@ -319,7 +319,7 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   'stomp' with 4th return dirX = cnx → `pa:bounce(vy, dirX, soft=true)` (vx 300 +
   ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill; v17: crawler turn in snapshots; v18: MegaCrabby;
   v19: boss walls, Mega minions/pounce; v20: post-hit protection; v21: unified invulnerability;
-  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass).
+  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods).
 - **Crawler** (`src/world/entities/Crawler.lua`): surface-following movement
   (floor ↔ walls ↔ ceiling, concave and convex corners) for Crabbies with prop
   `wallWalk` (`Crabby.WALL_PROP`, off by default so old levels don't change).
@@ -762,6 +762,20 @@ drawn in 4-px columns whose top follows the wave (no flat edge behind it);
 distortion starts `WaterSurface.MARGIN` px below the surface. `Floods.updateFx`
 (clients only): 'floodRise'/'floodFall' sounds when the water starts moving
 (each step too), bubbles via `Level:spawnBubble`. Level `marea_alta.json`.
+**Connected floods** (flood prop `control`): 'cycle' (default, the pure time cycle),
+'boss' (zone prop `zone`, 0 = the overlapping/nearest one: runs its cycle from the fight
+start while the zone is in 'fight' and a boss is alive and not dying; then falls to its
+minimum and stays — fortaleza_malvada) and 'switch' (ON/OFF blocks linked in the level
+JSON `"links": [{col,row,flood=id}]`, flood prop `id`: any linked block ON → rises to max
+and stays; all OFF → falls to min; steps/pauses honoured). A controlled flood stores
+only `{active, t0, L0}`; its level is still a pure function of t
+(`Floods.controlledLevelAt`). `Floods.control(level, t)` (SP inside `Floods.advance`,
+server before `setTime`) decides the changes; the snapshot carries `fc =
+Floods.netPack` → client `Floods.netApply` and computes the water at its predicted time.
+Editor: Bloques layer → tool **Conectar** (K): click an ON/OFF block → pick its flood in
+the Selección tab (+ "Empieza encendido"); links drawn as yellow dotted lines; flood ids
+kept unique (`Model:fixFloodIds`); warnings for dangling links. Harness `flood_control`
+(+ `online_boss` with `tools/tests/online_boss/fortaleza_flood.json`). Protocol v25.
 
 ## Spike rain (orchestrated spikes)
 

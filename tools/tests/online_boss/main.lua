@@ -3,6 +3,9 @@
 -- cuando todos están dentro) y se quedan quietos. Desde el cliente se registra
 -- lo que llega del jefe por red (estados, vida) y cualquier error, y se hacen
 -- capturas (<save>/boss_*.png) en los estados que interesan.
+-- Si el nivel tiene inundaciones conectadas a la pelea (control 'boss', p. ej.
+-- fortaleza_malvada) comprueba lo que ve el cliente: en el mínimo antes de la
+-- pelea, activas durante ella (llega por red) y sin saltos del agua.
 --
 --   love server --headless &
 --   LEVEL=assets/levels/guarida_cangrejo_rey.json love tools/tests/online_boss
@@ -148,12 +151,38 @@ function love.update(dt)
             end
         end
     end
+    -- Inundaciones conectadas a la pelea, tal y como las ve el cliente
+    if st and st.level and st.level.floods then
+        for i, f in ipairs(st.level.floods) do
+            if f.control == 'boss' then
+                local fl = log.floods or {}; log.floods = fl
+                local r = fl[i] or { maxStep = 0, preBad = 0, sawActive = false, maxLv = 0 }; fl[i] = r
+                if r.last then r.maxStep = math.max(r.maxStep, math.abs(f.level - r.last)) end
+                r.last = f.level
+                r.maxLv = math.max(r.maxLv, f.level)
+                if boss and boss.zone and boss.zone.state ~= 'fight' and not r.sawActive and math.abs(f.level - f.lo) > 1e-3 then
+                    r.preBad = r.preBad + 1
+                end
+                if f.active then r.sawActive = true end
+                r.f = f
+            end
+        end
+    end
     if t > SECS or (log.roundOver and t > log.roundOver + 0.5) then
+        for i, r in pairs(log.floods or {}) do
+            local f = r.f
+            -- (el salto máximo por fotograma: lo que sube a su velocidad + margen por el reloj estimado)
+            local lim = math.max(f.riseSpeed, f.fallSpeed) * 0.1 + 0.05
+            local ok = r.sawActive and r.preBad == 0 and r.maxStep <= lim and r.maxLv > f.lo + 0.5
+            print(('%s inundación #%d (pelea de jefe): activa en la pelea=%s, fuera del mínimo antes=%d, máximo visto %.2f (mín %.2f máx %.2f), salto máximo %.3f casillas/fotograma (límite %.3f)'):format(
+                ok and 'OK   ' or 'FALLA', f.id, tostring(r.sawActive), r.preBad, r.maxLv, f.lo, f.hi, r.maxStep, lim))
+            if not ok then log.fail = true end
+        end
         if log.roundOver then print(('Ronda terminada a los %.1f s'):format(log.roundOver)) end
         print('Estados del jefe vistos en el cliente:')
         print('  ' .. table.concat(log.states, '  '))
         print(('Salto máximo del dibujo trepando: %.1f px por fotograma'):format(log.maxJump))
-        love.event.quit()
+        love.event.quit(log.fail and 1 or 0)
     end
 end
 function love.draw() lovesize.begin(); if gStateMachine:_top() then gStateMachine:render() end; lovesize.finish() end

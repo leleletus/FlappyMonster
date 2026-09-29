@@ -318,6 +318,14 @@ function Level.fromData(lvl)
     -- Inundaciones (src/world/Floods.lua): salen de las entidades 'flood'
     self.floods = Floods.build(self.entities, Materials)
     self.floodTime = 0
+    -- Conexiones de bloques ON/OFF con objetos activables (de momento,
+    -- inundaciones): { {col, row, flood = id}, ... }
+    self.links = {}
+    for _, l in ipairs(lvl.links or {}) do
+        local c, r, id = tonumber(l.col), tonumber(l.row), tonumber(l.flood)
+        if c and r and id then self.links[#self.links + 1] = { col = c, row = r, flood = id } end
+    end
+    Floods.link(self)
     -- Zonas de puntos (src/world/PointAreas.lua): entidades 'pointarea'
     self.pointAreas = PointAreas.build(self.entities)
     -- Modos en los que se ofrece (nil = todos los que admitan el nivel) y

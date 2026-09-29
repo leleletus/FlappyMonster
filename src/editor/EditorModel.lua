@@ -38,7 +38,7 @@ function Model.new(w, h, name)
         end
     end
     m.playerStart = { 3, h - 2 }
-    m.entities, m.foliage, m.vents, m.subtiles = {}, {}, {}, {}
+    m.entities, m.foliage, m.vents, m.subtiles, m.links = {}, {}, {}, {}, {}
     m.bossZones = {}
     m.autoScroll = nil
     m.path = nil
@@ -69,6 +69,11 @@ function Model.fromData(lvl, path)
         if n then table.insert(m.foliage, n) end
     end
     m.vents   = deepcopy(lvl.vents or {})
+    m.links = {}
+    for _, l in ipairs(lvl.links or {}) do
+        local c, r, id = tonumber(l.col), tonumber(l.row), tonumber(l.flood)
+        if c and r and id then m.links[#m.links + 1] = { col = c, row = r, flood = id } end
+    end
     m.subtiles = {}
     for _, o in ipairs(lvl.subtiles or {}) do
         local n = SubTiles.normalize(o)
@@ -86,6 +91,7 @@ function Model.fromData(lvl, path)
     m.matchTime = tonumber(lvl.matchTime)
     m.music     = type(lvl.music) == 'string' and lvl.music or nil
     m.path    = path
+    m:fixFloodIds()
     return m
 end
 
@@ -115,7 +121,7 @@ function Model:toData()
     return {
         name = self.name, width = self.width, height = self.height,
         playerStart = self.playerStart, tiles = self.tiles,
-        entities = ents, foliage = decos, vents = self.vents, bossZones = zones, subtiles = subs,
+        entities = ents, foliage = decos, vents = self.vents, bossZones = zones, subtiles = subs, links = self.links or {},
         autoScroll = AutoScroll.serialize(self.autoScroll),
         modes = self.modes, matchTime = self.matchTime, music = self.music,
     }
@@ -159,6 +165,7 @@ function Model:encode()
     -- Campos opcionales al final (solo si existen)
     local tail = {}
     if #d.subtiles > 0 then tail[#tail+1] = function(last) list('subtiles', d.subtiles, last) end end
+    if #d.links > 0 then tail[#tail+1] = function(last) list('links', d.links, last) end end
     if #d.bossZones > 0 then tail[#tail+1] = function(last) list('bossZones', d.bossZones, last) end end
     if d.autoScroll then tail[#tail+1] = function(last) line('"autoScroll": ' .. enc(d.autoScroll), last) end end
     if d.modes then tail[#tail+1] = function(last) line('"modes": ' .. enc(d.modes), last) end end
@@ -194,7 +201,7 @@ end
 function Model:snapshot()
     return deepcopy({ name=self.name, width=self.width, height=self.height, tiles=self.tiles,
                       playerStart=self.playerStart, entities=self.entities,
-                      foliage=self.foliage, vents=self.vents, bossZones=self.bossZones, subtiles=self.subtiles,
+                      foliage=self.foliage, vents=self.vents, bossZones=self.bossZones, subtiles=self.subtiles, links=self.links,
                       autoScroll=self.autoScroll, modes=self.modes, matchTime=self.matchTime, music=self.music })
 end
 
@@ -267,6 +274,7 @@ function Model:resize(w, h)
     local function keep(list) local o = {} for _, x in ipairs(list) do if x.col <= w and x.row <= h then o[#o+1] = x end end return o end
     self.entities, self.foliage, self.vents = keep(self.entities), keep(self.foliage), keep(self.vents)
     self.subtiles = keep(self.subtiles or {})
+    self.links = keep(self.links or {})
     self.bossZones = keep(self.bossZones)
     for _, z in ipairs(self.bossZones) do
         z.w = math.max(4, math.min(z.w, w - z.col + 1)); z.h = math.max(3, math.min(z.h, h - z.row + 1))
@@ -307,7 +315,41 @@ function Model:addEntity(typeName, c, r, sub)
     end
     local n = ET.normalize({ type = typeName, col = c, row = r, sub = sub })
     if n then table.insert(self.entities, n) end
+    if n and typeName == 'flood' then self:fixFloodIds() end
     return n
+end
+
+-- ── Inundaciones y sus conexiones con bloques ON/OFF ─────────────────────────
+function Model:floods()
+    local out = {}
+    for _, e in ipairs(self.entities) do if e.type == 'flood' then out[#out + 1] = e end end
+    return out
+end
+
+-- Cada inundación con un número (id) distinto: las repetidas (o las antiguas,
+-- que no lo tenían: todas valen 1) reciben el siguiente libre
+function Model:fixFloodIds()
+    local used, maxId = {}, 0
+    for _, e in ipairs(self:floods()) do maxId = math.max(maxId, tonumber(e.props.id) or 1) end
+    for _, e in ipairs(self:floods()) do
+        local id = tonumber(e.props.id) or 1
+        if used[id] then maxId = maxId + 1; id = maxId end
+        e.props.id, used[id] = id, true
+    end
+end
+
+function Model:linkAt(c, r)
+    for i, l in ipairs(self.links or {}) do if l.col == c and l.row == r then return l, i end end
+end
+
+-- Conecta el bloque (c, r) a la inundación `id` (nil = desconectar)
+function Model:setLink(c, r, id)
+    self.links = self.links or {}
+    local l, i = self:linkAt(c, r)
+    if not id then if l then table.remove(self.links, i); return true end return false end
+    if l then if l.flood == id then return false end l.flood = id; return true end
+    self.links[#self.links + 1] = { col = c, row = r, flood = id }
+    return true
 end
 
 function Model:findObject(list, c, r, sub)
@@ -404,6 +446,30 @@ function Model:validate()
         local p = e.props
         if p.patrol and (e.col < p.patrol.left or e.col > p.patrol.right) then
             w[#w+1] = { 'warn', where .. ': su ruta no la contiene', e }
+        end
+    end
+    -- Conexiones ON/OFF → inundación
+    local floodById = {}
+    for _, e in ipairs(self:floods()) do floodById[tonumber(e.props.id) or 1] = e end
+    local linked = {}
+    for _, l in ipairs(self.links or {}) do
+        local name = self:inBounds(l.col, l.row) and Tiles.get(Codec.id(self.tiles[l.row][l.col])).name
+        local f = floodById[l.flood]
+        if name ~= 'switch_on' and name ~= 'switch_off' then
+            w[#w+1] = { 'warn', 'Conexión en (' .. l.col .. ',' .. l.row .. '): ahí ya no hay un bloque ON/OFF' }
+        elseif not f then
+            w[#w+1] = { 'error', 'Bloque ON/OFF (' .. l.col .. ',' .. l.row .. ') conectado a la inundación #' .. l.flood .. ', que no existe' }
+        elseif f.props.control ~= 'switch' then
+            w[#w+1] = { 'warn', 'Bloque ON/OFF (' .. l.col .. ',' .. l.row .. ') conectado a la inundación #' .. l.flood
+                                 .. ', pero esta no se mueve con bloques ON/OFF (propiedad "Se mueve")', f }
+        end
+        linked[l.flood] = true
+    end
+    for id, f in pairs(floodById) do
+        if f.props.control == 'switch' and not linked[id] then
+            w[#w+1] = { 'warn', 'Inundación #' .. id .. ': se mueve con bloques ON/OFF pero no tiene ninguno conectado (capa Bloques → Conectar)', f }
+        elseif f.props.control == 'boss' and #self.bossZones == 0 then
+            w[#w+1] = { 'warn', 'Inundación #' .. id .. ': se mueve con la pelea de jefe pero no hay zonas de jefe', f }
         end
     end
     -- Subtiles dentro de un bloque con colisión: no se ven ni hacen nada

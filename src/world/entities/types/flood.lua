@@ -91,24 +91,42 @@ function Flood.drawEditorOverlay(props, cx, cy, zoom, ctx)
     -- (texto a tamaño fijo en pantalla aunque el editor esté alejado)
     love.graphics.push()
     love.graphics.translate(x0, y1 + 4 / zoom); love.graphics.scale(1 / zoom)
+    local txt
+    if f.control == 'switch' then
+        txt = string.format('#%d · bloques ON/OFF: ON = sube al máximo en %.1f s · OFF = baja al mínimo en %.1f s',
+            f.id, f.riseT, f.fallT)
+    else
+        txt = string.format('#%d · %sciclo %.1f s (sube %.1f, arriba %.1f, baja %.1f, abajo %.1f) - %s', f.id,
+            f.control == 'boss' and 'durante la pelea de jefe: ' or '', f.cycle, f.riseT, f.holdTime, f.fallT,
+            f.lowTime, names[phase] or phase)
+    end
     love.graphics.setColor(0, 0, 0, 0.6)
-    love.graphics.print(string.format('Ciclo %.1f s (sube %.1f, arriba %.1f, baja %.1f, abajo %.1f) - %s',
-        f.cycle, f.riseT, f.holdTime, f.fallT, f.lowTime, names[phase] or phase), 1, 1)
+    love.graphics.print(txt, 1, 1)
     love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.print(string.format('Ciclo %.1f s (sube %.1f, arriba %.1f, baja %.1f, abajo %.1f) - %s',
-        f.cycle, f.riseT, f.holdTime, f.fallT, f.lowTime, names[phase] or phase), 0, 0)
+    love.graphics.print(txt, 0, 0)
     love.graphics.pop()
     love.graphics.setLineWidth(1)
 end
 
-local G1, G2, G3 = 'Área y niveles', 'Subida', 'Bajada'
+local G0, G1, G2, G3 = 'Control', 'Área y niveles', 'Subida', 'Bajada'
+local function cyclic(p) return p.control ~= 'switch' end
 return {
     name = 'flood', label = 'Inundación', category = 'Mecanismos',
-    description = 'Área cuyo nivel de agua sube, se queda arriba, baja y vuelve a empezar.',
+    description = 'Área cuyo nivel de agua sube y baja: siempre en ciclo, durante la pelea de una zona de jefe, '
+               .. 'o al encender/apagar bloques ON/OFF conectados a ella (capa Bloques → herramienta Conectar).',
     class = Flood,
     hide = 'all',
     defaults = { movement = 'static' },
     props = {
+        { key='id', kind='int', label='Número (id)', group=G0, default=1, min=1, max=99, step=1,
+          help='Los bloques ON/OFF se conectan a la inundación con este número' },
+        { key='control', kind='enum', label='Se mueve', group=G0, default='cycle',
+          options={ { value='cycle', label='Siempre' }, { value='boss', label='Pelea de jefe' },
+                    { value='switch', label='Bloques ON/OFF' } },
+          help='Siempre: ciclo sin fin. Pelea de jefe: su ciclo solo mientras dura la pelea; al morir el jefe baja al mínimo y se queda. '
+            .. 'Bloques ON/OFF: con uno conectado en ON sube al máximo y se queda; con todos en OFF baja al mínimo' },
+        { key='zone', kind='int', label='Zona de jefe (id)', group=G0, default=0, min=0, max=99, step=1,
+          showIf=function(p) return p.control == 'boss' end, help='0 = la zona con la que se solapa (o la más cercana)' },
         { key='corner', kind='point', label='Esquina inferior derecha', group=G1,
           default=function(d) return { col = (d.col or 1) + 7, row = (d.row or 1) + 4 } end,
           help='Arrastra la cajita en el mapa. La casilla de la entidad es la esquina superior izquierda' },
@@ -116,11 +134,11 @@ return {
           min=0, max=200, step=0.25, help='Casillas de agua desde el fondo del area (también a donde vuelve al bajar)' },
         { key='maxLevel', kind='number', label='Nivel máximo', group=G1, default=4,
           min=0, max=200, step=0.25, help='Casillas de agua desde el fondo cuando está arriba del todo' },
-        { key='startDelay', kind='number', label='Espera inicial (s)', group=G1, default=3,
-          min=0, max=600, step=0.5, help='Tiempo desde que empieza el nivel hasta la primera subida' },
-        { key='holdTime', kind='number', label='Tiempo arriba (s)', group=G1, default=4,
+        { key='startDelay', kind='number', label='Espera inicial (s)', group=G1, default=3, showIf=cyclic,
+          min=0, max=600, step=0.5, help='Tiempo hasta la primera subida (desde que empieza el nivel, o la pelea)' },
+        { key='holdTime', kind='number', label='Tiempo arriba (s)', group=G1, default=4, showIf=cyclic,
           min=0, max=600, step=0.5, help='Lo que se queda en el nivel máximo antes de bajar' },
-        { key='lowTime', kind='number', label='Tiempo abajo (s)', group=G1, default=4,
+        { key='lowTime', kind='number', label='Tiempo abajo (s)', group=G1, default=4, showIf=cyclic,
           min=0, max=600, step=0.5, help='Lo que se queda en el nivel mínimo antes de volver a subir' },
         { key='riseSpeed', kind='number', label='Velocidad (casillas/s)', group=G2, default=0.5,
           min=0.05, max=20, step=0.05 },
