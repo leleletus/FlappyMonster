@@ -11,6 +11,11 @@
 #
 #   python3 tools/music/tentacle_chip.py      → assets/music/tentacle_chip.ogg (+ .mid)
 #   SOLO=lead,bass python3 ...                → solo esas pistas (para escucharlas)
+#   python3 tools/music/tentacle_chip.py --instrumental
+#                                             → tentacle_chip_instrumental.ogg: sin la melodía
+#                                               (percusión, bajo, steel, arpegios, solos y efectos),
+#                                               el steel y los arpegios más fuertes (llevan la
+#                                               canción) y al mismo volumen total que la versión completa
 #
 # Lo que se midió en la referencia (librosa, ver el final de este archivo):
 #   · 92.5 BPM en 4/4 con semicorcheas (el "pulso" que parece de 123 es el
@@ -33,7 +38,8 @@ BPM = 92.5
 SIX = 60.0 / BPM / 4                 # s por semicorchea
 BAR = 16 * SIX
 OUT = os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'music')
-NAME = 'tentacle_chip'
+INSTRUMENTAL = '--instrumental' in sys.argv
+NAME = 'tentacle_chip' + ('_instrumental' if INSTRUMENTAL else '')
 rng = np.random.default_rng(1985)
 
 NOTE = {'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3, 'E': 4, 'F': 5, 'F#': 6, 'Gb': 6,
@@ -505,8 +511,17 @@ def render(passes=2):
         st_(arp, 0.24, -0.3), st_(bass, 0.72, 0.0), st_(kick, 0.95, 0.0), st_(snare, 0.50, -0.1),
         st_(shaker, 0.30, 0.3), st_(bongo, 0.34, -0.35), st_(chop, 0.22, 0.15),
     ]
+    # Instrumental: fuera la melodía (lead, su eco y la 2ª voz); el steel y los
+    # arpegios suben ~4 dB para llevar la canción. La normalización de abajo la
+    # deja al mismo volumen total que la versión completa.
+    if INSTRUMENTAL:
+        names = ['lead', 'echo', 'harm', 'steel', 'arp', 'bass', 'kick', 'snare', 'shaker', 'bongo', 'chop']
+        boost = {'steel': 1.6, 'arp': 1.6}
+        parts = [(p[0] * boost.get(nm, 1.0), p[1] * boost.get(nm, 1.0)) for nm, p in zip(names, parts)
+                 if nm not in ('lead', 'echo', 'harm')]
     # SOLO=lead,bass... → solo esas pistas (para escucharlas o medirlas); RAW=1 → sin normalizar
     solo = os.environ.get('SOLO')
+    if solo and INSTRUMENTAL: solo = None
     if solo:
         names = ['lead', 'echo', 'harm', 'steel', 'arp', 'bass', 'kick', 'snare', 'shaker', 'bongo', 'chop']
         parts = [p for nm, p in zip(names, parts) if nm in solo.split(',')]
@@ -571,8 +586,9 @@ if __name__ == '__main__':
     x, ev = render()
     wav = os.path.join(OUT, NAME + '.wav')
     write_wav(wav, x)
-    write_midi(os.path.join(OUT, NAME + '.mid'), ev)
+    if not INSTRUMENTAL:                                     # (el .mid es el de la versión completa)
+        write_midi(os.path.join(OUT, NAME + '.mid'), ev)
     ogg = os.path.join(OUT, NAME + '.ogg')
     os.system(f'ffmpeg -v quiet -y -i "{wav}" -c:a libvorbis -q:a 5 "{ogg}"')
     os.remove(wav)
-    print(f'  {ogg}  {len(x) / SR:.1f} s  (+ {NAME}.mid)')
+    print(f'  {ogg}  {len(x) / SR:.1f} s' + ('' if INSTRUMENTAL else f'  (+ {NAME}.mid)'))
