@@ -163,6 +163,29 @@ MEL = {
 #   'steel' solo de steel drum (arpegios tropicales rápidos)
 #   'drums' solo de batería (toms + bongós + golpes)
 # Clave: (vuelta 1|2, compás 1-36). Sin vuelta = las dos.
+# La frase del steel drum (la del solo de los compases 25-26, que gustó):
+# formas de arpegio por las notas del acorde (índices en 3 octavas; None =
+# silencio). 0-1 son las del solo original; 2 sube más alto contestando; 3
+# cierra bajando y deja SONAR la última nota (no se corta de golpe). Todos los
+# compases de cierre caen en Re (la dominante): la siguiente sección arranca.
+STEEL_PHRASE = [
+    [0, 2, 4, 5, 4, 2, 3, 5, 6, 5, 4, 2, 3, 4, 6, 7],
+    [7, 6, 4, 3, 4, 6, 5, 3, 2, 3, 5, 4, 2, 1, 2, 0],
+    [2, 4, 5, 7, 6, 5, 7, 8, 7, 5, 6, 8, 7, 6, 5, 7],
+    [8, 7, 5, 4, 5, 4, 2, 1, 2, 1, 0, None, 0, None, None, None],
+]
+
+
+# Instrumental: la frase del steel es su voz principal y vuelve en varias
+# partes (siempre entera, las 4 formas): 2ª mitad de A, final del estribillo,
+# el solo (25-28, que ya no se corta) y el final; la 2ª vuelta empieza con ella.
+def steel_lead(passno, bar):
+    for start in (5, 17, 25, 33):
+        if start <= bar < start + 4: return bar - start
+    if passno == 2 and bar <= 4: return bar - 1
+    return None
+
+
 def rest(passno, bar):
     if bar in (4, 16, 20, 32): return 'h2'
     if bar in (11, 12): return 'perc'
@@ -358,13 +381,18 @@ def render(passes=2):
                 st, pitch = tok.split(':')
                 bongo.add(t0 + int(st) * SIX, tom(TOMS[pitch], int(0.25 * SR)), 0.9 * gain)
         def steel_solo(shape):
-            # Solo de steel drum: olas de arpegio por las notas del acorde (2 octavas)
+            # Solo de steel drum: olas de arpegio por las notas del acorde (2 octavas).
+            # La última nota antes de un silencio suena larga (cierre, sin corte).
             for st in range(16):
+                if shape[st] is None:
+                    continue
                 r, q, _ = halves[0 if st < 8 else 1]
                 tones = sorted({58 + (r + iv - 58) % 12 + o for iv in q for o in (0, 12, 24)})
                 m = tones[min(len(tones) - 1, shape[st])]
-                n = int(0.24 * SR)
-                e = np.exp(-t_(n) / 0.1)
+                ring = st == 15 or shape[st + 1] is None if st < 15 else True
+                ring = ring and any(x is None for x in shape)
+                n = int((0.9 if ring else 0.24) * SR)
+                e = np.exp(-t_(n) / (0.35 if ring else 0.1))
                 v = 1.0 if st in (0, 3, 6, 8, 11, 14) else 0.7
                 sig = pulse(hz(m), n, 0.125, bend=0.35, bend_t=0.012) * 0.8 + np.sin(2 * np.pi * hz(m) * 2.01 * t_(n)) * np.exp(-t_(n) / 0.05) * 0.6
                 steel.add(t0 + st * SIX, sig * e, 0.62 * v)
@@ -379,9 +407,8 @@ def render(passes=2):
             else:
                 hits((0, 3, 6), 1.2)
                 toms('8:H 9:H 10:H 11:M 12:M 13:M 14:L 15:L', 1.1)
-        elif rs == 'steel':
-            ups = [[0, 2, 4, 5, 4, 2, 3, 5, 6, 5, 4, 2, 3, 4, 6, 7], [7, 6, 4, 3, 4, 6, 5, 3, 2, 3, 5, 4, 2, 1, 2, 0]]
-            steel_solo(ups[bi % 2])
+        elif rs == 'steel' and not INSTRUMENTAL:                   # (la instrumental la lleva abajo)
+            steel_solo(STEEL_PHRASE[bi % 2])
         elif rs == 'drums':
             hits((0, 8), 0.9)
             toms('2:H 3:H 5:M 6:H 7:M 10:H 11:M 12:M 13:L 14:L 15:L' if bi % 2 == 0 else
@@ -495,6 +522,9 @@ def render(passes=2):
             bongo.add(t0 + st * SIX, s, v)
         # ── Solo en la instrumental: capas extra para que no quede vacía ─────
         if INSTRUMENTAL:
+            sl = steel_lead(2 if second else 1, bi + 1)
+            if sl is not None:
+                steel_solo(STEEL_PHRASE[sl])
             energetic = sec in ('A', 'B', 'C', 'D')
             # Colchón de acordes: "cuerdas" chip (pulso con trémolo en fusas)
             for h in range(2):
@@ -603,18 +633,19 @@ def render(passes=2):
     # Instrumental: fuera la melodía (lead, su eco y la 2ª voz); el steel y los
     # arpegios suben ~4 dB para llevar la canción. La normalización de abajo la
     # deja al mismo volumen total que la versión completa.
+    names = ['lead', 'echo', 'harm', 'steel', 'arp', 'bass', 'kick', 'snare', 'shaker', 'bongo', 'chop']
+    named = list(zip(names, parts))
     if INSTRUMENTAL:
-        names = ['lead', 'echo', 'harm', 'steel', 'arp', 'bass', 'kick', 'snare', 'shaker', 'bongo', 'chop']
         boost = {'steel': 1.6, 'arp': 1.6}
-        parts = [(p[0] * boost.get(nm, 1.0), p[1] * boost.get(nm, 1.0)) for nm, p in zip(names, parts)
+        named = [(nm, (p[0] * boost.get(nm, 1.0), p[1] * boost.get(nm, 1.0))) for nm, p in named
                  if nm not in ('lead', 'echo', 'harm')]
-        parts += [st_(pad, 0.16, -0.25), st_(rhythm, 0.20, 0.3), st_(perc2, 0.42, -0.2), st_(fx, 0.55, 0.0)]
-    # SOLO=lead,bass... → solo esas pistas (para escucharlas o medirlas); RAW=1 → sin normalizar
+        named += [('pad', st_(pad, 0.16, -0.25)), ('rhythm', st_(rhythm, 0.20, 0.3)),
+                  ('perc2', st_(perc2, 0.42, -0.2)), ('fx', st_(fx, 0.55, 0.0))]
+    # SOLO=steel,bass... → solo esas pistas (para escucharlas o medirlas); RAW=1 → sin normalizar
     solo = os.environ.get('SOLO')
-    if solo and INSTRUMENTAL: solo = None
     if solo:
-        names = ['lead', 'echo', 'harm', 'steel', 'arp', 'bass', 'kick', 'snare', 'shaker', 'bongo', 'chop']
-        parts = [p for nm, p in zip(names, parts) if nm in solo.split(',')]
+        named = [(nm, p) for nm, p in named if nm in solo.split(',')]
+    parts = [p for _, p in named]
     L = sum(p[0] for p in parts)
     R = sum(p[1] for p in parts)
     x = np.stack([L, R], 1)
