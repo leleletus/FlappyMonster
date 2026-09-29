@@ -146,8 +146,9 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     Generated music: `tools/music/tentacle_chip.py` → `tentacle_chip.ogg` + `.mid`
                     ("Tentacle Chip", boss track): chiptune modelled on an ANALYSIS of
                     TentacleTantrum.ogg (92.5 BPM 4/4 with a 3+3+2 tresillo groove — beat
-                    trackers read it as 123 BPM —, 36-bar form ×2, same harmony, offbeat
-                    skank drums) with a NEW melody; seamless loop (tail folded onto the start).
+                    trackers read it as 123 BPM —, 36-bar form ×2, offbeat skank) with
+                    its own coherent G-minor harmony and a NEW melody built on one motif (the
+                    G–F#–G neighbour note); seamless loop (tail folded onto the start).
 src/entities/
   PlayerAdventure.lua  THE player physics (shared by SP, server and client prediction)
   OnlinePlayer.lua     remote player renderer (tinted by player color, name tag)

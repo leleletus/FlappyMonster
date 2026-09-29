@@ -2,10 +2,15 @@
 # tools/music/tentacle_chip.py
 # "Tentacle Chip": música de jefe chiptune (la del Mega Crabby) hecha a partir
 # del ANÁLISIS de TentacleTantrum.ogg (el placeholder): mismo tempo, misma
-# forma, mismo recorrido armónico y el mismo groove tropical, pero con una
-# MELODÍA NUEVA, escrita aquí. Instrumentos chip (pulsos, triángulo, ruido).
+# forma y el mismo groove tropical, con los mismos gestos armónicos pero todo
+# en Sol menor (cadencia andaluza en A, bajo que baja en el estribillo,
+# ♭VI–♭VII–i en el final) y una MELODÍA NUEVA hecha de un solo motivo (la
+# bordadura Sol–Fa#–Sol de la referencia sobre el ritmo del tresillo) que se
+# desarrolla en todas las secciones. Batería y bajo con la fuerza de
+# chiptune_tentacle (bombo en tresillo, caja en los contratiempos, hi-hat).
 #
 #   python3 tools/music/tentacle_chip.py      → assets/music/tentacle_chip.ogg (+ .mid)
+#   SOLO=lead,bass python3 ...                → solo esas pistas (para escucharlas)
 #
 # Lo que se midió en la referencia (librosa, ver el final de este archivo):
 #   · 92.5 BPM en 4/4 con semicorcheas (el "pulso" que parece de 123 es el
@@ -61,68 +66,86 @@ def chord(sym):
     return r, QUAL[q], NOTE[bass] if bass else r
 
 
-# Armonía de una pasada (36 compases), 2 acordes por compás (medio compás cada uno)
+# Armonía de una pasada (36 compases), 2 acordes por compás (medio compás
+# cada uno). Todo en Sol menor, por bloques que llevan de uno a otro:
+#   A      i – ♭VII – ♭VI – V (cadencia andaluza: enérgica, latina), dos veces
+#   Break  ♭VI – iv – V (suspendido en la dominante: pide seguir)
+#   B      relativo mayor, luminoso: ♭III – ♭VII – i – ♭VI (bajo que baja Re–Do–Sib,
+#          como el estribillo de la referencia) y cierra en V
+#   C      desarrollo: iv – i – iv – V – ♭VI – ♭III – iv/V – V (tensión en la dominante)
+#   D      el final: ♭VI – ♭VII – i (el mismo gesto que la referencia, en nuestra
+#          tonalidad) y termina en V para volver al principio (bucle)
 H = [
-    # A: riff sobre Sol (con Fa# cromático) y una 4ª arriba
-    ('Gm', 'D7/F#'), ('Gm', 'D7/F#'), ('Gm', 'A7'), ('G/B', 'A7'),
-    ('Cm', 'G/B'), ('Cm', 'Ab7'), ('Cm', 'Bb'), ('G/B', 'Bb'),
+    # A
+    ('Gm', 'Gm'), ('Gm', 'F'), ('Eb', 'Eb'), ('D', 'D'),
+    ('Gm', 'Gm'), ('Gm', 'F'), ('Eb', 'F'), ('D', 'D'),
     # Break
-    ('Gm', 'Bb'), ('F', 'Bdim'), ('F#dim7', 'F#dim7'), ('D7', 'D7'),
-    # B: estribillo tropical
-    ('Dm', 'C'), ('Bb', 'Bb'), ('F', 'Am'), ('Bb', 'C'),
-    ('Dm', 'C'), ('Bb', 'Bb'), ('F', 'Am'), ('Bb', 'A7'),
-    # C: tensión cromática
-    ('A7/C#', 'G/B'), ('A7', 'A7'), ('F#dim7', 'G#dim7'), ('Am', 'B7'),
-    ('D', 'C'), ('Bb', 'Bb'), ('Gm', 'A7'), ('Bb', 'C'),
-    # D: ♭VI – ♭VII – I en Mib (Si = Dob)
-    ('B', 'C#'), ('D#', 'D#'), ('B', 'C#'), ('D#', 'Cm7'),
-    ('B', 'C#'), ('D#', 'D#'), ('Bdim', 'C#'), ('Bb', 'D7'),
+    ('Eb', 'Eb'), ('Cm', 'Cm'), ('D', 'D7'), ('D7', 'D7'),
+    # B (estribillo)
+    ('Bb', 'Bb'), ('F', 'F'), ('Gm', 'Gm'), ('Eb', 'Eb'),
+    ('Bb', 'Bb'), ('F', 'F'), ('Eb', 'F'), ('Cm', 'D'),
+    # C
+    ('Cm', 'Cm'), ('Gm', 'Gm'), ('Cm', 'Cm'), ('D', 'D'),
+    ('Eb', 'Eb'), ('Bb', 'Bb'), ('Cm', 'D'), ('D', 'D'),
+    # D (final)
+    ('Eb', 'F'), ('Gm', 'Gm'), ('Eb', 'F'), ('Gm', 'Gm'),
+    ('Eb', 'F'), ('Gm', 'Eb'), ('Cm', 'D'), ('D', 'D7'),
 ]
 SECTION = ['A'] * 8 + ['BR'] * 4 + ['B'] * 8 + ['C'] * 8 + ['D'] * 8
 
-# ── Melodía (NUEVA): por compás "paso:nota:largo" en semicorcheas ────────────
+# ── Melodía: por compás "paso:nota:largo" en semicorcheas ────────────────────
+# MOTIVO (de la referencia: su melodía gira alrededor de Sol–Fa#–Sol): la
+# bordadura Sol–Fa#–Sol sobre el ritmo del tresillo "X . . X X . X X".
+#   A      el motivo, respondido y subiendo; cada 4 compases cae en la dominante
+#   Break  contraste: notas largas y tranquilas; luego el motivo en fragmentos
+#          que suben hasta el golpe del compás 12
+#   B      mismo ritmo del motivo, en secuencias que bajan un grado por compás
+#          (Re–Do–Sib–Sol) con el bajo; anticipaciones en el 7 y el 15
+#   C      el motivo en Do (con Si natural) y carreras de semicorcheas
+#   D      el motivo ampliado arriba, y la 2ª mitad una octava más alta
+# Cada sección acaba en una línea que lleva a la siguiente (p. ej. Fa# → Sol).
 MEL = {
-    # A — llamada heroica y pícara, con el Fa# cromático
-    1: '0:G4:2 2:D5:2 4:C5:1 5:Bb4:3 8:A4:2 10:F#4:2 12:A4:4',
-    2: '0:G4:2 2:Bb4:2 4:D5:3 7:Eb5:1 8:D5:3 11:C5:1 12:A4:4',
-    3: '0:Bb4:3 3:C5:1 4:D5:4 8:C#5:2 10:E5:2 12:G5:4',
-    4: '0:F5:3 3:E5:1 4:D5:2 6:Bb4:2 8:C#5:4 12:E5:2 14:C#5:2',
-    5: '0:C5:2 2:G5:2 4:F5:1 5:Eb5:3 8:D5:2 10:B4:2 12:D5:4',
-    6: '0:C5:2 2:Eb5:2 4:G5:3 7:Ab5:1 8:G5:3 11:F#5:1 12:Eb5:4',
-    7: '0:Eb5:3 3:F5:1 4:G5:4 8:F5:2 10:D5:2 12:Bb4:4',
-    8: '0:B4:2 2:D5:2 4:F5:2 6:D5:2 8:C5:2 10:Bb4:2 12:A4:2 14:F#4:2',
-    # Break — casi nada, y la subida
-    9: '7:D5:2 9:C5:3 12:Bb4:2 14:A4:2',
-    10: '7:F5:2 9:Eb5:3 12:D5:2 14:B4:2',
-    11: '0:F#4:2 2:A4:2 4:C5:2 6:Eb5:2 8:F#5:2 10:A5:2 12:C6:2 14:Eb6:2',
-    12: '0:D6:4 8:C6:1 9:A5:1 10:F#5:1 11:D5:1 12:C5:1 13:A4:1 14:F#4:1 15:A4:1',
-    # B — estribillo tropical (anticipaciones en el 7 y el 15)
-    13: '0:F5:3 3:E5:1 4:D5:2 6:A4:1 7:C5:3 10:E5:2 12:G5:3 15:F5:1',
-    14: '0:D5:6 6:C5:1 7:D5:3 10:F5:2 12:D5:2 14:Bb4:2',
-    15: '0:C5:3 3:A4:1 4:C5:2 6:F5:1 7:E5:3 10:C5:2 12:A4:3 15:G4:1',
-    16: '0:Bb4:3 3:D5:1 4:F5:2 6:Bb5:1 7:A5:3 10:G5:2 12:E5:2 14:C5:2',
-    17: '0:F5:3 3:E5:1 4:D5:2 6:A4:1 7:C5:3 10:E5:2 12:G5:3 15:F5:1',
-    18: '0:D5:6 6:C5:1 7:D5:3 10:F5:2 12:D5:2 14:Bb4:2',
-    19: '0:C5:3 3:A4:1 4:C5:2 6:F5:1 7:G5:3 10:A5:2 12:C6:3 15:Bb5:1',
-    20: '0:A5:3 3:G5:1 4:F5:2 6:D5:1 7:E5:3 10:G5:2 12:E5:2 14:C#5:2',
-    # C — carreras cromáticas de villano
-    21: '0:E5:1 1:G5:1 2:Bb5:1 3:A5:1 4:G5:2 6:E5:1 7:C#5:1 8:D5:1 9:F5:1 10:G5:1 11:F5:1 12:D5:2 14:B4:1 15:D5:1',
-    22: '0:C#5:2 2:E5:1 3:G5:1 4:A5:2 6:G5:1 7:E5:1 8:G#5:2 10:A5:1 11:C6:1 12:A5:2 14:E5:2',
-    23: '0:Eb5:1 1:C5:1 2:A4:1 3:F#4:1 4:A4:2 6:C5:2 8:F5:1 9:D5:1 10:B4:1 11:G#4:1 12:B4:2 14:D5:2',
-    24: '0:C5:2 2:E5:2 4:A5:2 6:G5:1 7:E5:1 8:D#5:2 10:F#5:2 12:A5:2 14:B5:2',
-    25: '0:A5:2 2:F#5:1 3:D5:1 4:F#5:2 6:A5:2 8:G5:2 10:E5:1 11:C5:1 12:E5:2 14:G5:2',
-    26: '0:F5:3 3:D5:1 4:Bb4:2 6:D5:1 7:F5:1 8:Bb5:2 10:A5:1 11:F5:1 12:D5:2 14:Bb4:2',
-    27: '0:G5:2 2:F#5:1 3:F5:1 4:F#5:2 6:D5:2 8:C#5:2 10:E5:1 11:A5:1 12:G#5:2 14:A5:2',
-    28: '0:Bb5:4 4:A5:2 6:F5:2 8:C6:4 12:G5:1 13:A5:1 14:Bb5:1 15:B5:1',
-    # D — el final épico: notas largas que suben
-    29: '0:D#5:4 4:F#5:2 6:D#5:2 8:F5:4 12:G#5:4',
-    30: '0:A#5:8 8:G5:2 10:A#5:2 12:D#6:4',
-    31: '0:D#6:3 3:C#6:1 4:B5:4 8:C#6:2 10:G#5:2 12:F5:4',
-    32: '0:G5:6 6:A#5:2 8:G5:2 10:D#5:2 12:C5:4',
-    33: '0:F#5:4 4:B5:2 6:F#5:2 8:G#5:4 12:C#6:4',
-    34: '0:A#5:6 6:G5:1 7:A#5:1 8:D#6:8',
-    35: '0:D6:2 2:B5:2 4:F5:2 6:D5:2 8:F5:2 10:G#5:2 12:C#6:4',
-    36: '0:A#5:4 4:F5:2 6:D5:2 8:C5:2 10:D5:2 12:F#5:2 14:A5:2',
+    # A
+    1: '0:G5:2 3:F#5:1 4:G5:2 6:D5:1 7:G5:1 8:Bb5:2 10:A5:1 11:G5:1 12:F#5:1 13:G5:1 14:D5:2',
+    2: '0:G5:2 3:F#5:1 4:G5:2 6:D5:1 7:G5:1 8:A5:2 10:F5:1 11:C5:1 12:F5:1 13:A5:1 14:C6:2',
+    3: '0:Bb5:2 3:A5:1 4:Bb5:2 6:G5:1 7:Eb5:1 8:G5:2 10:Bb5:1 11:Eb6:1 12:D6:1 13:C6:1 14:Bb5:2',
+    4: '0:A5:2 3:G5:1 4:F#5:2 6:D5:1 7:F#5:1 8:A5:2 10:C6:1 11:A5:1 12:F#5:1 13:E5:1 14:D5:2',
+    5: '0:G5:2 3:F#5:1 4:G5:2 6:D5:1 7:G5:1 8:Bb5:1 9:C6:1 10:D6:2 12:C6:1 13:Bb5:1 14:A5:2',
+    6: '0:Bb5:2 3:A5:1 4:G5:2 6:F#5:1 7:G5:1 8:A5:2 10:C6:1 11:A5:1 12:F5:2 14:A5:2',
+    7: '0:G5:1 1:Bb5:1 2:Eb6:2 4:D6:1 5:C6:1 6:Bb5:2 8:A5:1 9:C6:1 10:F6:2 12:Eb6:1 13:D6:1 14:C6:2',
+    8: '0:D6:2 3:C6:1 4:A5:2 6:F#5:1 7:A5:1 8:D6:1 9:C6:1 10:A5:1 11:F#5:1 12:D5:1 13:E5:1 14:F#5:1 15:A5:1',
+    # Break (el contraste tranquilo, y la subida)
+    9: '0:G5:4 4:Bb5:2 6:G5:2 8:Eb5:6 14:F5:2',
+    10: '0:G5:4 4:C6:2 6:Bb5:2 8:G5:6 14:A5:2',
+    11: '0:A5:1 1:G5:1 2:F#5:2 4:A5:1 5:G5:1 6:F#5:2 8:C6:1 9:Bb5:1 10:A5:2 12:D6:1 13:C6:1 14:A5:2',
+    12: '0:D6:2 2:D6:1 3:D6:1 4:C6:1 5:A5:1 6:F#5:1 7:A5:1 8:C6:1 9:D6:1 10:F#6:2 12:C6:1 13:D6:1 14:F#6:1 15:A6:1',
+    # B (estribillo)
+    13: '0:D6:2 3:D6:1 4:C6:1 5:Bb5:1 6:C6:1 7:D6:2 9:F6:1 10:D6:2 12:Bb5:2 14:C6:1 15:D6:1',
+    14: '0:C6:2 3:C6:1 4:A5:1 5:F5:1 6:A5:1 7:C6:2 9:F6:1 10:C6:2 12:A5:2 14:Bb5:1 15:C6:1',
+    15: '0:Bb5:2 3:Bb5:1 4:A5:1 5:G5:1 6:A5:1 7:Bb5:2 9:D6:1 10:Bb5:2 12:G5:2 14:A5:1 15:Bb5:1',
+    16: '0:G5:2 3:G5:1 4:F5:1 5:Eb5:1 6:F5:1 7:G5:2 9:Bb5:1 10:G5:2 12:Eb5:1 13:F5:1 14:G5:1 15:A5:1',
+    17: '0:D6:2 3:D6:1 4:C6:1 5:Bb5:1 6:C6:1 7:D6:2 9:F6:1 10:D6:2 12:Bb5:2 14:C6:1 15:D6:1',
+    18: '0:C6:2 3:C6:1 4:A5:1 5:F5:1 6:A5:1 7:C6:2 9:F6:1 10:C6:2 12:A5:2 14:Bb5:1 15:C6:1',
+    19: '0:G5:2 3:G5:1 4:Bb5:1 5:Eb6:1 6:D6:1 7:Eb6:1 8:F6:2 10:C6:1 11:A5:1 12:F6:1 13:Eb6:1 14:D6:1 15:C6:1',
+    20: '0:Eb6:1 1:D6:1 2:C6:2 4:G5:1 5:C6:1 6:Eb6:2 8:D6:1 9:C6:1 10:A5:1 11:F#5:1 12:D5:1 13:F#5:1 14:A5:1 15:C6:1',
+    # C (desarrollo)
+    21: '0:C6:2 3:B5:1 4:C6:2 6:G5:1 7:C6:1 8:Eb6:1 9:D6:1 10:C6:1 11:Bb5:1 12:Ab5:1 13:G5:1 14:F5:1 15:Eb5:1',
+    22: '0:D5:1 1:G5:1 2:Bb5:1 3:D6:1 4:G6:2 6:F#6:1 7:G6:1 8:D6:1 9:Bb5:1 10:G5:1 11:Bb5:1 12:A5:1 13:G5:1 14:F#5:1 15:G5:1',
+    23: '0:C6:2 3:B5:1 4:C6:2 6:G5:1 7:C6:1 8:Eb6:1 9:F6:1 10:G6:2 12:F6:1 13:Eb6:1 14:D6:1 15:C6:1',
+    24: '0:D6:1 1:A5:1 2:F#5:1 3:A5:1 4:D6:1 5:F#6:1 6:A6:2 8:F#6:1 9:E6:1 10:D6:1 11:C6:1 12:A5:1 13:F#5:1 14:D5:1 15:F#5:1',
+    25: '0:G5:1 1:Bb5:1 2:Eb6:1 3:G6:1 4:F6:1 5:Eb6:1 6:D6:1 7:Eb6:1 8:Bb5:2 10:G5:1 11:Bb5:1 12:Eb6:2 14:D6:1 15:C6:1',
+    26: '0:D6:1 1:F6:1 2:D6:1 3:Bb5:1 4:F5:1 5:Bb5:1 6:D6:2 8:D6:1 9:Eb6:1 10:F6:2 12:Eb6:1 13:D6:1 14:C6:1 15:Bb5:1',
+    27: '0:C6:1 1:Eb6:1 2:G6:1 3:Eb6:1 4:C6:1 5:G5:1 6:Eb5:1 7:G5:1 8:F#5:1 9:A5:1 10:C6:1 11:D6:1 12:F#6:1 13:D6:1 14:C6:1 15:A5:1',
+    28: '0:D5:1 2:D5:1 3:D5:1 4:E5:1 6:E5:1 7:E5:1 8:F#5:1 10:F#5:1 11:F#5:1 12:A5:1 13:C6:1 14:A5:1 15:F#5:1',
+    # D (final)
+    29: '0:G5:2 2:Eb5:1 3:G5:1 4:Bb5:2 6:G5:2 8:A5:2 10:F5:1 11:A5:1 12:C6:2 14:A5:2',
+    30: '0:Bb5:2 3:A5:1 4:Bb5:2 6:G5:1 7:D5:1 8:G5:2 10:Bb5:1 11:A5:1 12:G5:1 13:F#5:1 14:G5:2',
+    31: '0:G5:1 1:Bb5:1 2:G5:1 3:Eb5:1 4:G5:2 6:Bb5:2 8:C6:1 9:A5:1 10:F5:1 11:A5:1 12:C6:2 14:D6:2',
+    32: '0:D6:2 3:C6:1 4:Bb5:2 6:A5:1 7:G5:1 8:G5:1 9:F#5:1 10:G5:1 11:Bb5:1 12:D6:2 14:G5:2',
+    33: '0:G6:2 2:Eb6:1 3:G6:1 4:Bb6:2 6:G6:2 8:A6:2 10:F6:1 11:A6:1 12:C7:2 14:A6:2',
+    34: '0:Bb6:2 3:A6:1 4:Bb6:2 6:G6:1 7:D6:1 8:Eb6:2 10:G6:1 11:Bb6:1 12:G6:1 13:F6:1 14:Eb6:2',
+    35: '0:C6:1 1:Eb6:1 2:G6:1 3:Eb6:1 4:C6:1 5:Eb6:1 6:G6:2 8:F#6:1 9:A6:1 10:D6:2 12:C6:1 13:A5:1 14:F#5:1 15:D5:1',
+    36: '0:D5:1 1:F#5:1 2:A5:1 3:D6:1 4:C6:1 5:A5:1 6:F#5:1 7:D5:1 8:C5:1 9:A4:1 10:F#4:1 11:A4:1 12:D5:1 13:E5:1 14:F#5:1 15:A5:1',
 }
 
 
@@ -138,18 +161,22 @@ def parse(s):
 # Medidos en la referencia y simplificados (ver el análisis al final)
 # (Ojo: la "caja" de la referencia NO es un backbeat en 2 y 4: son los
 # contratiempos del "chop" (skank tropical). Solo C lleva golpes de caja.)
+# Con fuerza (la energía de chiptune_tentacle): bombo en tresillo (0, 3, 5 de
+# cada medio compás), caja dura en los contratiempos (2, 6, 10, 14: donde la
+# referencia tiene el "chop") y hi-hat continuo en semicorcheas (`hh`: volumen
+# de los tiempos de corchea / de las semicorcheas de en medio)
+TRES = {0: 1, 3: .8, 5: .75, 8: .95, 11: .8, 13: .75}
 DR = {
-    'A':  {'k': {0: .6, 1: .5, 5: 1, 8: .85, 9: .5, 13: .5}, 'chop': (2, 6, 10, 14), 'sh': {2: 1, 6: 1, 10: 1, 14: 1},
-           'sn': {0: .35, 5: .3, 9: .3}, 'bongo': {}},
-    'BR': {'k': {0: 1, 2: .8, 4: .4, 5: .4, 6: .4, 8: 1, 9: .4, 12: .4, 14: .4}, 'chop': (2, 3, 6, 10, 11, 14),
-           'sh': {2: .8, 3: .4, 4: .4, 6: .8, 10: .8, 11: .4, 12: .4, 14: .8}, 'sn': {}, 'bongo': {}},
-    'B':  {'k': {0: .5, 1: .5, 5: .45, 8: .8, 9: .8, 13: .45}, 'chop': (2, 6, 10, 14), 'sh': {2: .8, 6: 1, 10: 1, 14: 1},
-           'sn': {}, 'bongo': {3: .6, 7: .7, 11: .6, 15: .7}},
-    'C':  {'k': {0: .8, 5: .8, 8: .45, 9: .45, 13: .8}, 'chop': (2, 3, 6, 10, 11, 14),
-           'sh': {2: .8, 3: .5, 6: .8, 7: .5, 10: .8, 11: .5, 14: .8, 15: .5}, 'sn': {0: .6, 8: .6, 12: .6, 15: .6},
-           'bongo': {}},
-    'D':  {'k': {0: .45, 5: .45, 8: .7, 13: .5}, 'chop': (2, 6, 10, 14), 'sh': {2: .8, 6: 1, 10: 1, 11: .7, 14: 1},
-           'sn': {}, 'bongo': {3: .5, 7: .6, 11: .5, 15: .6}},
+    'A':  {'k': TRES, 'chop': (2, 6, 10, 14), 'sn': {2: .8, 6: .9, 10: .8, 14: .9}, 'hh': (1, .5),
+           'sh': {}, 'bongo': {}},
+    'BR': {'k': {0: 1, 8: .9}, 'chop': (2, 6, 10, 14), 'sn': {}, 'hh': (.7, 0),
+           'sh': {2: .6, 6: .6, 10: .6, 14: .6}, 'bongo': {}},
+    'B':  {'k': {**TRES, 15: .5}, 'chop': (2, 6, 10, 14), 'sn': {2: .7, 6: 1, 10: .7, 14: 1}, 'hh': (1, .55),
+           'sh': {}, 'bongo': {3: .6, 7: .7, 11: .6, 15: .7}},
+    'C':  {'k': {0: 1, 3: .8, 6: .8, 8: 1, 11: .8, 14: .8}, 'chop': (2, 6, 10, 14),
+           'sn': {4: .9, 12: .9, 2: .5, 10: .5, 15: .5}, 'hh': (1, .6), 'sh': {}, 'bongo': {}},
+    'D':  {'k': {**TRES, 4: .6, 12: .6}, 'chop': (2, 6, 10, 14), 'sn': {2: .8, 6: 1, 10: .8, 14: 1},
+           'hh': (1, .6), 'sh': {}, 'bongo': {3: .5, 7: .6, 11: .5, 15: .6}},
 }
 # Energía por compás (mezcla): el break baja, el compás 12 es el golpe más
 # fuerte de la canción, el 28 crece antes del final y el 35-36 respira
@@ -231,8 +258,6 @@ def render(passes=2):
 
         # ── Melodía (pulso 25%, vibrato) + eco de 3 semicorcheas (tresillo) ──
         for st, m, ln in parse(MEL[bi + 1]):
-            if second and sec in ('D',):
-                m += 12 if m < midi('C6') else 0        # el final, una octava arriba la 2ª vez
             dur = ln * SIX
             n = int((dur + 0.06) * SR)
             env = adsr(n, a=0.004, d=0.12, s=0.72, r=0.05, gate=dur * 0.92)
@@ -240,6 +265,10 @@ def render(passes=2):
             lead.add(t0 + st * SIX, sig)
             echo.add(t0 + st * SIX + 3 * SIX, pulse(hz(m), n, 0.125) * env, 0.33)
             midi_ev['lead'].append((t0 + st * SIX, m, dur))
+            # 2ª vuelta del final: la melodía doblada una octava abajo (más cuerpo)
+            if second and sec == 'D':
+                harm.add(t0 + st * SIX, pulse(hz(m - 12), n, 0.5) * env, 0.5)
+                midi_ev['harm'].append((t0 + st * SIX, m - 12, dur))
             # 2ª vuelta del estribillo: segunda voz una 3ª/6ª por debajo (del acorde)
             if second and sec == 'B' and ln >= 2:
                 r, q, _ = halves[0 if st < 8 else 1]
@@ -293,13 +322,13 @@ def render(passes=2):
             fifth = R + 7 if R + 7 <= 50 else R - 5
             o = h * 8
             if sec == 'A':
-                bl += [(o + 0, R, 3), (o + 3, R, 3), (o + 6, R + 12, 2)]
+                bl += [(o + 0, R, 3), (o + 3, R + 12, 2), (o + 5, R, 1), (o + 6, R + 12, 2)]
             elif sec == 'B':
-                bl += [(o + 0, R, 2), (o + 2, fifth, 2), (o + 4, fifth, 2), (o + 6, R, 2)]
+                bl += [(o + 0, R, 2), (o + 2, R + 12, 1), (o + 3, R, 2), (o + 5, fifth, 1), (o + 6, R + 12, 2)]
             elif sec == 'C':
-                bl += [(o + 0, R, 2), (o + 2, R + 12, 1), (o + 3, R, 2), (o + 5, R + 1 if h == 0 else R - 1, 1), (o + 6, R, 2)]
+                bl += [(o + i, R + (12 if i % 2 else 0), 1) for i in range(8)]
             elif sec == 'D':
-                bl += [(o + i * 2, R + (12 if i % 2 else 0), 2) for i in range(4)]
+                bl += [(o + 0, R, 3), (o + 3, R + 12, 2), (o + 5, fifth, 1), (o + 6, R + 12, 2)]
             else:  # break (sin huecos: la referencia no se calla nunca)
                 if bi == 10:
                     bl += [(o + i, R, 1) for i in range(8)]      # pedal en semicorcheas
@@ -311,7 +340,7 @@ def render(passes=2):
             dur = ln * SIX
             n = int((dur + 0.02) * SR)
             env = adsr(n, a=0.002, d=0.15, s=0.6, r=0.02, gate=dur * (0.98 if sec == 'BR' else 0.85))   # (legato en el break)
-            bass.add(t0 + st * SIX, tri(hz(m), n) * env)
+            bass.add(t0 + st * SIX, (tri(hz(m), n) + pulse(hz(m) * 2, n, 0.5) * 0.18) * env)
             midi_ev['bass'].append((t0 + st * SIX, m, dur))
 
         # ── Batería ─────────────────────────────────────────────────────────
@@ -325,8 +354,9 @@ def render(passes=2):
         for st, v in pat['k'].items():
             n = int(0.18 * SR)
             t = t_(n)
-            f = 55 + 120 * np.exp(-t / 0.025)
-            k = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t / 0.09)
+            f = 48 + 140 * np.exp(-t / 0.022)                     # más grave y con más pegada
+            k = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t / 0.12)
+            k = np.tanh(k * 1.8)
             # (golpe sin agudos: un clic de ruido sonaba también como caja y hi-hat)
             k += lowpass(noise(n), 900) * np.exp(-t / 0.006) * 0.6
             kick.add(t0 + st * SIX, k, v)
@@ -344,6 +374,14 @@ def render(passes=2):
             n = int(0.07 * SR)
             s = highpass(noise(n), 7000) * np.exp(-t_(n) / 0.02)
             shaker.add(t0 + st * SIX, s, v * (1.35 if sec in ('BR', 'B') else 1.0))
+        # Hi-hat continuo en semicorcheas (más fuerte en las corcheas)
+        hv, hw = pat['hh']
+        for st in range(16):
+            v = hv if st % 2 == 0 else hw
+            if v > 0:
+                n = int(0.035 * SR)
+                s = highpass(noise(n), 8000) * np.exp(-t_(n) / 0.009)
+                shaker.add(t0 + st * SIX, s, v * 0.8)
         for st, v in pat['bongo'].items():                          # bongós: 2 alturas
             n = int(0.12 * SR)
             f0 = 330 if st % 4 == 3 else 250
@@ -371,10 +409,15 @@ def render(passes=2):
     for tr in (lead, echo, harm, steel, arp):
         tr.buf = lowpass(tr.buf, 7500)
     parts = [
-        st_(lead, 0.36, -0.05), st_(echo, 0.34, 0.35), st_(harm, 0.30, 0.25), st_(steel, 0.42, 0.2),
-        st_(arp, 0.30, -0.3), st_(bass, 0.62, 0.0), st_(kick, 0.72, 0.0), st_(snare, 0.28, -0.1),
+        st_(lead, 0.44, -0.05), st_(echo, 0.30, 0.35), st_(harm, 0.30, 0.25), st_(steel, 0.75, 0.2),
+        st_(arp, 0.24, -0.3), st_(bass, 0.85, 0.0), st_(kick, 0.95, 0.0), st_(snare, 0.50, -0.1),
         st_(shaker, 0.30, 0.3), st_(bongo, 0.34, -0.35), st_(chop, 0.22, 0.15),
     ]
+    # SOLO=lead,bass... → solo esas pistas (para escucharlas o medirlas); RAW=1 → sin normalizar
+    solo = os.environ.get('SOLO')
+    if solo:
+        names = ['lead', 'echo', 'harm', 'steel', 'arp', 'bass', 'kick', 'snare', 'shaker', 'bongo', 'chop']
+        parts = [p for nm, p in zip(names, parts) if nm in solo.split(',')]
     L = sum(p[0] for p in parts)
     R = sum(p[1] for p in parts)
     x = np.stack([L, R], 1)
@@ -392,6 +435,8 @@ def render(passes=2):
     g = np.convolve(g, np.ones(k) / k, mode='same')
     x = x * g[:, None]
     # nivel como la referencia (RMS ≈ 0.19) sin recortar: compresión suave
+    if os.environ.get('RAW'):
+        return x, midi_ev
     x = x / (np.sqrt(np.mean(x ** 2)) + 1e-9) * 0.215
     x = np.tanh(x * 1.6) / 1.6
     return x, midi_ev
