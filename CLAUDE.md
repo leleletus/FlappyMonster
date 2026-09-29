@@ -149,6 +149,8 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     trackers read it as 123 BPM —, 36-bar form ×2, offbeat skank) with
                     its own coherent G-minor harmony and a NEW melody built on one motif (the
                     G–F#–G neighbour note); seamless loop (tail folded onto the start).
+                    `--instrumental` → `tentacle_chip_instrumental.ogg`: no melody, extra layers
+                    only there (pad, tresillo rhythm chords, cowbell/claps/congas/timbales, fx).
 src/entities/
   PlayerAdventure.lua  THE player physics (shared by SP, server and client prediction)
   OnlinePlayer.lua     remote player renderer (tinted by player color, name tag)

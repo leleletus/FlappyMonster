@@ -12,10 +12,12 @@
 #   python3 tools/music/tentacle_chip.py      → assets/music/tentacle_chip.ogg (+ .mid)
 #   SOLO=lead,bass python3 ...                → solo esas pistas (para escucharlas)
 #   python3 tools/music/tentacle_chip.py --instrumental
-#                                             → tentacle_chip_instrumental.ogg: sin la melodía
-#                                               (percusión, bajo, steel, arpegios, solos y efectos),
-#                                               el steel y los arpegios más fuertes (llevan la
-#                                               canción) y al mismo volumen total que la versión completa
+#                                             → tentacle_chip_instrumental.ogg: sin la melodía y con
+#                                               capas propias para que no quede vacía: colchón de
+#                                               "cuerdas" chip, acordes rítmicos en tresillo, arpegios
+#                                               en todas partes, cencerro, palmas, congas, timbales,
+#                                               shaker, impactos, subidas, platillos al revés y zaps;
+#                                               al mismo volumen total que la versión completa
 #
 # Lo que se midió en la referencia (librosa, ver el final de este archivo):
 #   · 92.5 BPM en 4/4 con semicorcheas (el "pulso" que parece de 123 es el
@@ -269,6 +271,10 @@ def tom(f0, n):
     return np.sin(2 * np.pi * np.cumsum(f0 * (1 + 0.7 * np.exp(-t / 0.02))) / SR) * np.exp(-t / 0.14)
 
 
+def bandpass_(x, lo, hi):
+    return highpass(lowpass(x, hi), lo)
+
+
 class Track:
     def __init__(self, seconds):
         self.buf = np.zeros(int(seconds * SR) + SR)
@@ -284,6 +290,7 @@ def render(passes=2):
     nbars = 36 * passes
     total = nbars * BAR
     lead, echo, harm, steel, arp, bass, kick, snare, shaker, bongo, chop = (Track(total) for _ in range(11))
+    pad, rhythm, perc2, fx = (Track(total) for _ in range(4))     # (solo en la instrumental)
     midi_ev = {k: [] for k in ('lead', 'harm', 'bass', 'arp')}   # (inicio s, nota, largo s)
     for b in range(nbars):
         bi = b % 36
@@ -486,6 +493,88 @@ def render(passes=2):
             t = t_(n)
             s = np.sin(2 * np.pi * np.cumsum(f0 * (1 + 0.5 * np.exp(-t / 0.01))) / SR) * np.exp(-t / 0.04)
             bongo.add(t0 + st * SIX, s, v)
+        # ── Solo en la instrumental: capas extra para que no quede vacía ─────
+        if INSTRUMENTAL:
+            energetic = sec in ('A', 'B', 'C', 'D')
+            # Colchón de acordes: "cuerdas" chip (pulso con trémolo en fusas)
+            for h in range(2):
+                r, q, _ = halves[h]
+                n = int(BAR / 2 * SR) + int(0.03 * SR)
+                tt = t_(n)
+                trem = 0.65 + 0.35 * np.sign(np.sin(2 * np.pi * (4 / SIX) * tt))
+                env = np.clip(tt / 0.04, 0, 1) * np.clip((BAR / 2 + 0.03 - tt) / 0.03, 0, 1)
+                for iv in q[:3]:
+                    m = 55 + (r + iv - 55) % 12
+                    pad.add(t0 + h * BAR / 2, pulse(hz(m), n, 0.5) * trem * env, 0.9 if sec == 'BR' else 0.6)
+            # Acordes rítmicos en tresillo (como una guitarra rítmica)
+            if energetic:
+                for st in (0, 3, 6, 8, 11, 14):
+                    r, q, _ = halves[0 if st < 8 else 1]
+                    n = int(0.11 * SR)
+                    e = np.exp(-t_(n) / 0.045)
+                    for iv in q[:3]:
+                        m = 62 + (r + iv - 62) % 12
+                        rhythm.add(t0 + st * SIX, pulse(hz(m), n, 0.25) * e, 1.0 if st in (0, 8) else 0.8)
+            # Arpegios también en A, en el break y en el estribillo de la 1ª vuelta
+            if sec == 'A' or (sec == 'B' and not second):
+                for st in range(16):
+                    r, q, _ = halves[0 if st < 8 else 1]
+                    pcs = [r + iv for iv in q]
+                    m = 72 + (pcs[st % len(pcs)] % 12) + (12 if (st // len(pcs)) % 2 else 0)
+                    n = int(SIX * 0.9 * SR)
+                    arp.add(t0 + st * SIX, pulse(hz(m), n, 0.125) * np.exp(-t_(n) / 0.05), 0.13)
+            # Percusión tropical extra
+            if energetic:
+                for st in (0, 3, 6, 8, 11, 14):                     # cencerro en el tresillo
+                    n = int(0.09 * SR)
+                    cb = (pulse(540, n, 0.5) + pulse(800, n, 0.5)) * np.exp(-t_(n) / 0.035)
+                    perc2.add(t0 + st * SIX, bandpass_(cb, 500, 3000), 0.45 if st in (0, 8) else 0.32)
+                for st in (4, 12):                                   # palmas en el 2 y el 4
+                    n = int(0.09 * SR)
+                    cl = np.zeros(n)
+                    for k in range(3):
+                        i0 = int(k * 0.009 * SR)
+                        m = n - i0
+                        cl[i0:] += bandpass_(noise(m), 900, 3500) * np.exp(-t_(m) / (0.012 if k < 2 else 0.04))
+                    perc2.add(t0 + st * SIX, cl, 0.6)
+                for st, f0, v in ((3, 260, .5), (7, 185, .7), (11, 260, .5), (15, 185, .7), (10, 220, .35)):
+                    n = int(0.16 * SR)                               # congas (tumbao)
+                    tt = t_(n)
+                    cg = np.sin(2 * np.pi * np.cumsum(f0 * (1 + 0.3 * np.exp(-tt / 0.008))) / SR) * np.exp(-tt / 0.07)
+                    perc2.add(t0 + st * SIX, cg, v)
+                for st in range(16):                                 # shaker continuo
+                    n = int(0.04 * SR)
+                    perc2.add(t0 + st * SIX, highpass(noise(n), 5500) * np.exp(-t_(n) / 0.012) * (1 if st % 2 else 0.6), 0.22)
+            if (bi + 1) % 4 == 0:                                    # timbales al final de cada frase
+                for st in (12, 13, 14, 15) if bi % 8 != 7 else range(8, 16):
+                    n = int(0.12 * SR)
+                    tt = t_(n)
+                    tb = (pulse(880 if st % 2 else 660, n, 0.5) * 0.5 + highpass(noise(n), 2000) * 0.5) * np.exp(-tt / 0.05)
+                    perc2.add(t0 + st * SIX, tb, 0.35 + 0.05 * (st - 8))
+            # Efectos: impacto al empezar cada sección, subida antes, zaps
+            if bi in (0, 8, 12, 20, 28):
+                n = int(1.0 * SR)
+                tt = t_(n)
+                boom = np.sin(2 * np.pi * np.cumsum(38 + 40 * np.exp(-tt / 0.08)) / SR) * np.exp(-tt / 0.35)
+                fx.add(t0, boom * 1.2 + highpass(noise(n), 4000) * np.exp(-tt / 0.4) * 0.5, 0.9)
+                nz = int(0.18 * SR)
+                zap = pulse(1, nz, 0.5) * 0 + pulse(2000, nz, 0.25)
+                ph = np.cumsum(2000 * np.exp(-t_(nz) / 0.05) + 150) / SR
+                zap = np.where((ph % 1) < 0.25, 1.0, -1.0) * np.exp(-t_(nz) / 0.08)
+                fx.add(t0 + 0.02, zap, 0.35)
+            if bi in (7, 19, 27, 35):                                # subida + platillo al revés
+                n = int(BAR * SR)
+                tt = t_(n)
+                sweep = highpass(noise(n), 1500) * (tt / (BAR)) ** 2.2
+                fx.add(t0, sweep, 0.45)
+                rv = highpass(noise(int(BAR / 2 * SR)), 5000) * np.exp((t_(int(BAR / 2 * SR)) - BAR / 2) / 0.25)
+                fx.add(t0 + BAR / 2, rv, 0.5)
+            if rs in ('h2', 'perc', 'drums'):                        # zaps en los golpes de los solos
+                for st in ((8, 14) if rs == 'h2' else (0, 6)):
+                    nz = int(0.12 * SR)
+                    ph = np.cumsum(1600 * np.exp(-t_(nz) / 0.04) + 120) / SR
+                    fx.add(t0 + st * SIX, np.where((ph % 1) < 0.5, 1.0, -1.0) * np.exp(-t_(nz) / 0.05), 0.25)
+
         # Golpe del break (compás 12): acorde entero, largo y fuerte
         if bi == 11:
             r, q, _ = halves[0]
@@ -504,7 +593,7 @@ def render(passes=2):
         return tr.buf * g * (1 - pan), tr.buf * g * (1 + pan)
     # Los pulsos tienen muchos agudos en cada ataque: se suavizan SOLO ellos
     # (el shaker y el rasgueo tienen que sonar arriba, en los contratiempos)
-    for tr in (lead, echo, harm, steel, arp):
+    for tr in (lead, echo, harm, steel, arp, pad, rhythm):
         tr.buf = lowpass(tr.buf, 7500)
     parts = [
         st_(lead, 0.72, -0.05), st_(echo, 0.30, 0.35), st_(harm, 0.30, 0.25), st_(steel, 0.75, 0.2),
@@ -519,6 +608,7 @@ def render(passes=2):
         boost = {'steel': 1.6, 'arp': 1.6}
         parts = [(p[0] * boost.get(nm, 1.0), p[1] * boost.get(nm, 1.0)) for nm, p in zip(names, parts)
                  if nm not in ('lead', 'echo', 'harm')]
+        parts += [st_(pad, 0.16, -0.25), st_(rhythm, 0.20, 0.3), st_(perc2, 0.42, -0.2), st_(fx, 0.55, 0.0)]
     # SOLO=lead,bass... → solo esas pistas (para escucharlas o medirlas); RAW=1 → sin normalizar
     solo = os.environ.get('SOLO')
     if solo and INSTRUMENTAL: solo = None
