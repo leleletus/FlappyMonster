@@ -7,6 +7,10 @@
   vidas extra en los callejones sin salida.
 
 Todo sale de una semilla fija: el mismo laberinto cada vez.
+
+OJO: assets/levels/laberinto_submarino.json es ya la "versión 2" retocada a mano
+por el usuario en el editor (escaleras, aire, vents, vidas, peces, decoración).
+Regenerarlo (build.py --only laberinto_submarino) BORRA esos retoques.
 """
 import random
 from lib import Level, SOLID, WATER, EMPTY, FINISH, DROP, UP, DOWN, LEFT, RIGHT, spike_bits, _BASE_SUBS
