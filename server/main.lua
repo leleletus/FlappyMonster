@@ -675,7 +675,7 @@ local function stepRoom(room)
     -- Bloques rotos este tick → a todos los clientes
     local bq = sim.level.brokenQueue
     if bq and #bq > 0 then
-        for _, b in ipairs(bq) do pushEvent(sim, { type='tile', c=b[1], r=b[2], v=b[3], k=b[4] }) end
+        for _, b in ipairs(bq) do pushEvent(sim, { type='tile', c=b[1], r=b[2], v=b[3], k=b[4], from=b[5] }) end
         sim.level.brokenQueue = {}
     end
 

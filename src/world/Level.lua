@@ -586,7 +586,9 @@ end
 -- convierte, conservando agua y pinchos). Devuelve 'break', 'toggle' o nil.
 -- Igual que breakTile: en el cliente online (canBreak = false) no hace nada
 -- (lo decide el servidor) y los cambios van a brokenQueue con su tipo.
-function Level:hitTile(col, row)
+-- `from` = 'head' (cabezazo desde abajo) o 'pound' (ground pound encima):
+-- decide la animación del bloque (saltito / aplastarse, ver tileBump).
+function Level:hitTile(col, row, from)
     local def = self:getDef(col, row)
     if def.breakable then return self:breakTile(col, row) and 'break' or nil end
     if not def.toggle or self.canBreak == false then return nil end
@@ -597,8 +599,19 @@ function Level:hitTile(col, row)
     local new = TileCodec.encode(to.id, water, spikes)
     self.tiles[row][col] = new
     self.brokenQueue = self.brokenQueue or {}
-    table.insert(self.brokenQueue, { col, row, new, 'toggle' })
+    table.insert(self.brokenQueue, { col, row, new, 'toggle', from })
+    self:tileBump(col, row, from)
     return 'toggle'
+end
+
+-- Animación de un bloque golpeado (solo dibujo): 'head' = saltito hacia arriba,
+-- 'pound' = se aplasta y recupera. La pone quien golpea (un jugador) o el
+-- evento del servidor (online); Level:update la hace avanzar.
+local BUMP_T = { head = 0.22, pound = 0.28 }
+function Level:tileBump(col, row, from)
+    if not BUMP_T[from] then return end
+    self.tileAnim = self.tileAnim or {}
+    self.tileAnim[row * 65536 + col] = { kind = from, t = 0, dur = BUMP_T[from] }
 end
 
 -- Bloques invisibles (tile `hidden`): cuáles se ven. Solo dibujo; cada juego
@@ -795,9 +808,29 @@ function Level:render(camX, camY)
             -- la meta en Cacería) no se dibujan: no tienen colisión.
             ctx.x, ctx.y, ctx.col, ctx.row, ctx.raw = px, py, col, row, raw
             local def = TileTypes.get(tileBaseId(raw))
+            local anim = self.tileAnim and self.tileAnim[row * 65536 + col]
+            if anim then
+                -- Golpeado: cabezazo = sube y baja; ground pound = se aplasta
+                -- desde arriba (anclado abajo) y rebota un poco al recuperarse
+                local k = anim.t / anim.dur
+                love.graphics.push()
+                if anim.kind == 'head' then
+                    love.graphics.translate(0, -math.floor(math.sin(k * math.pi) * TILE_PX * 0.22))
+                else
+                    -- (se aplasta hasta el 40 % y rebota amortiguado hasta quedarse igual)
+                    local u = (k - 0.4) / 0.6
+                    local sq = (k < 0.4) and (k / 0.4) or (1 - u) * math.cos(u * math.pi * 1.5)
+                    local sy = 1 - 0.3 * sq
+                    local sx = 1 + 0.12 * sq
+                    love.graphics.translate(px + TILE_PX / 2, py + TILE_PX)
+                    love.graphics.scale(sx, sy)
+                    love.graphics.translate(-(px + TILE_PX / 2), -(py + TILE_PX))
+                end
+            end
             if not (def.trigger and self.hiddenTriggers and self.hiddenTriggers[def.trigger]) then
                 TileTypes.drawTile(def, ctx)
             end
+            if anim then love.graphics.pop() end
 
             -- Pinchos (subceldas)
             local _, _, spikes = decTile(raw)
@@ -987,6 +1020,11 @@ end
 -- ── Update: burbujas ──────────────────────────────────────────────────────────
 function Level:update(dt)
     local hasBubbles = bubbleImgs and #bubbleImgs > 0
+    -- Bloques golpeados (saltito / aplastarse)
+    for k, a in pairs(self.tileAnim or {}) do
+        a.t = a.t + dt
+        if a.t >= a.dur then self.tileAnim[k] = nil end
+    end
 
     -- Spawn desde cada cuerpo de agua (solo si hay sprites de burbuja)
     if hasBubbles then

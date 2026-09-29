@@ -27,6 +27,7 @@ local HURT_K = 0.85
 local DEFLATE_T = 0.4          -- s de la animación de deshincharse
 local ARRIVE    = 14           -- px: ha llegado a su destino
 local POP_T     = 0.12         -- s del "pop" al hincharse del todo (solo dibujo)
+local SWIM_FPS  = 2.5          -- cambios de cuadro por segundo al nadar (no cambia su velocidad)
 
 local Puffer = Entity.extend(Entity, {
     debugColor = { 1, 0.8, 0.2 },
@@ -242,7 +243,7 @@ function Puffer:render(camX, camY)
     elseif st == 'deflate' then
         f = (t < DEFLATE_T * 0.6) and half or 1
     elseif n >= 4 then
-        f = strip:frameAt(love.timer.getTime() + (self.home and self.home.x or 0) * 0.01, 5) % 2 + 1
+        f = math.floor((love.timer.getTime() + (self.home and self.home.x or 0) * 0.01) * SWIM_FPS) % 2 + 1
     end
     local x, y = math.floor(self.x - camX), math.floor(self.y - camY)
     -- Temblor del aviso

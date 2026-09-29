@@ -69,7 +69,7 @@ local SUMMON_WARN  = 1.0                         -- s de aviso (marcas) antes de
 -- costado, a la altura del arranque de las patas (CLAW_X, CLAW_Y en píxeles
 -- del sprite desde los pies, el punto donde se unen); se solapan CLAW_IN
 -- píxeles de pinza con el cuerpo. La derecha es la izquierda volteada.
-local CLAW_K, CLAW_X, CLAW_Y, CLAW_IN = 0.7, 4.6, -1.6, 1.5
+local CLAW_K, CLAW_X, CLAW_Y, CLAW_IN = 0.85, 4.6, -1.6, 1.5
 local CS = MS * CLAW_K
 
 local imgs, claw, spikeImg
@@ -127,6 +127,7 @@ function Mega:onFightStart(n)
     self.ceilT, self.chargeCd = 0, self.props.chargeEvery or 2.5
     -- (desfasados: los ataques especiales se van alternando)
     self.pounceT = (self.props.pounceEvery or 9) * 0.45
+    self.restT = 0
     self.summonT = (self.props.summonEvery or 12) * 0.3
     Sound.play('megaClack')
 end
@@ -481,8 +482,16 @@ function Mega:updateBoss(dt, level)
         self.ceilT = self.ceilT + dt
         self.pounceT = self.pounceT + dt
         self.summonT = self.summonT + dt
+        self.restT = (self.restT or 0) + dt
         local summonsOn = (p.summonCount or 2) > 0 and (p.summonPool or 4) > 0
-        if self.onGround and self.ceilT >= (p.ceilingEvery or 7) then
+        if self.onGround and (p.restEvery or 5) > 0 and self.restT >= (p.restEvery or 5) then
+            -- Descanso: se queda quieto respirando (un respiro para él y para el
+            -- jugador); mientras tanto no cuentan los tiempos de los ataques
+            self.restT = 0
+            local rt = p.restTime or 1.8
+            self.restFor = rt * (0.8 + math.random() * 0.5)
+            self.state, self.deadTimer = 'rest', 0
+        elseif self.onGround and self.ceilT >= (p.ceilingEvery or 7) then
             if self:startClimb(level) then self.ceilT = 0 else self.ceilT = 0 end
         elseif self.onGround and (p.pounceEvery or 9) > 0 and self.pounceT >= (p.pounceEvery or 9) then
             self.pounceT = 0
@@ -533,6 +542,9 @@ function Mega:updateBoss(dt, level)
     elseif st == 'recover' then
         self:walk(level, dt, 0)
         if t >= (self.recoverFor or 0.5) then self.state, self.deadTimer = 'chase', 0 end
+    elseif st == 'rest' then
+        self:walk(level, dt, 0)
+        if t >= (self.restFor or 1.8) then self.state, self.deadTimer = 'chase', 0 end
     elseif st == 'climb' then
         -- A la pared más cercana y hasta el techo
         self.speed = (p.climbSpeed or 280) * k
@@ -824,6 +836,11 @@ function Mega:pose2d(now, moving, walkPhase)
     if st == 'dormant' or st == 'recover' or ((st == 'chase' or st == 'intro') and not moving) then
         sy, sx = 1 + 0.025 * breath, 1 - 0.015 * breath
         swing(0.8, 2.1)
+    elseif st == 'rest' then
+        -- Descansando: respira hondo y despacio, pinzas caídas meciéndose
+        local deep = math.sin(now * 1.9)
+        sy, sx = 1 + 0.04 * deep, 1 - 0.025 * deep
+        swing(1.1, 1.3, 0.3)
     end
     if (st == 'chase' or st == 'climb' or st == 'ceiling' or st == 'wallclimb' or st == 'charge') and moving then
         -- Andando: rebota con cada paso y las pinzas se mecen a contrapaso
@@ -992,7 +1009,7 @@ function Mega:render(camX, camY)
     local frame = self.frame or 1
     if st == 'stuck' or st == 'dying_kick' then
         frame = math.floor(t * (st == 'dying_kick' and WIGGLE_FPS * 2 or WIGGLE_FPS)) % 3 + 1
-    elseif not moving and (st == 'dormant' or st == 'windup' or st == 'aim' or st == 'recover' or st == 'chase'
+    elseif not moving and (st == 'dormant' or st == 'windup' or st == 'aim' or st == 'recover' or st == 'chase' or st == 'rest'
                            or st == 'intro' or st == 'summon' or st == 'wallaim') then
         frame = 2
     end
@@ -1096,6 +1113,10 @@ return {
           min=1, max=30, step=0.5 },
         { key='chargeEvery', kind='number', label='Espera entre embestidas (s)', group='Persecución', default=2.5,
           min=0, max=20, step=0.25 },
+        { key='restEvery', kind='number', label='Descansa cada (s)', group='Descanso', default=5,
+          min=0, max=60, step=0.5, help='Tiempo persiguiendo antes de pararse a descansar. 0 = nunca' },
+        { key='restTime', kind='number', label='Descanso (s)', group='Descanso', default=1.8,
+          min=0.3, max=8, step=0.1, help='Cuánto dura cada descanso (varía un poco)' },
         { key='ceilingEvery', kind='number', label='Ataque desde el techo cada (s)', group='Ataque del techo',
           default=7, min=1, max=60, step=0.5, help='Tiempo persiguiendo antes de subir al techo' },
         { key='climbSpeed', kind='number', label='Velocidad trepando', group='Ataque del techo', default=280,

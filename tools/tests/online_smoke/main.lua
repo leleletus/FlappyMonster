@@ -74,7 +74,18 @@ function love.update(dt)
     if gStateMachine:_top() then gStateMachine:update(dt) end
     Input = package.loaded['input']
     if st and st.localPaInit then frames = frames + 1 end
+    -- Reloj del HUD en los modos con tiempo: tiene que ir hacia atrás
+    if st and st.roundEndAt then
+        local left = st.roundEndAt - st.levelTime
+        clk = clk or { first = left, t = t }
+        clk.last, clk.lastT = left, t
+    end
     if t > (tonumber(os.getenv('SECS')) or 16) then
+        if clk then
+            local fell = clk.first - clk.last
+            print(('reloj: %.1f s → %.1f s (baja %.1f s en %.1f s)'):format(clk.first, clk.last, fell, clk.lastT - clk.t))
+            if math.abs(fell - (clk.lastT - clk.t)) > 1.5 then print('Error: el reloj de la ronda no cuenta hacia atrás') end
+        end
         print(('OK: %d fotogramas de partida sin errores; iconos: skull %dx%d, flag %dx%d, hill %dx%d, corona %dx%d'):format(frames,
             PixelIcons.size('skull'), select(2, PixelIcons.size('skull')), PixelIcons.size('flag'), select(2, PixelIcons.size('flag')),
             PixelIcons.size('hill'), select(2, PixelIcons.size('hill')), PixelIcons.CROWN_W, PixelIcons.CROWN_H))

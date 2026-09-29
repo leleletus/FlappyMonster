@@ -78,14 +78,15 @@ def click(freqs=(2300, 3400), d=0.03):
     return mix(burst * 0.9, ring * 0.6)
 
 
-# Pisada pesada: golpe grave con la cáscara que suena un poco
+# Pisada pesada: golpe grave con la cáscara que suena un poco (más grave que
+# al principio: todo ~⅓ más bajo de tono; mismas duraciones)
 def step():
     d = 0.24
-    thump = sweep(95, 42, d, 0.6) * env(int(SR * d), 0.003, 0.07)
-    dirt = lowpass(noise(0.08), 900) * env(int(SR * 0.08), 0.001, 0.025) * 1.6
-    shell = np.sin(2 * np.pi * 820 * t_(0.05)) * env(int(SR * 0.05), 0.001, 0.012) * 0.35
-    clonk = sweep(420, 240, 0.12) * env(int(SR * 0.12), 0.002, 0.035) * 0.7
-    return mix(thump * 1.0, dirt, shell, clonk)
+    thump = sweep(66, 28, d, 0.6) * env(int(SR * d), 0.003, 0.08)
+    dirt = lowpass(noise(0.08), 600) * env(int(SR * 0.08), 0.001, 0.025) * 1.6
+    shell = np.sin(2 * np.pi * 540 * t_(0.05)) * env(int(SR * 0.05), 0.001, 0.012) * 0.25
+    clonk = sweep(290, 160, 0.12) * env(int(SR * 0.12), 0.002, 0.035) * 0.6
+    return mix(thump * 1.1, dirt, shell, clonk)
 
 
 # Chasquido de pinzas: dos clics secos seguidos

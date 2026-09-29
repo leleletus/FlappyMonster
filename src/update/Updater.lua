@@ -34,6 +34,7 @@ local IN_FLIGHT   = 4        -- peticiones de trozos a la vez
 local REQ_TIMEOUT = 4        -- s sin respuesta → volver a pedir
 local REQ_PER_SEC = 90       -- (el servidor limita a 120 mensajes/s)
 local HASH_BUDGET = 0.012    -- s por frame hasheando archivos locales
+local MAX_TRIES   = 2        -- instalaciones de una misma versión sin confirmar
 
 local fs = love.filesystem
 
@@ -116,10 +117,16 @@ function Updater:_onManifest(m)
     local st = state()
     self.version = m.version
     self.current = Updater.localVersion()
-    if m.version == self.current or m.version == st.bad then
+    -- Ya la tiene (instalada o ACTIVA: aunque version.txt no la diga, no se
+    -- reinstala la que está en uso: eso era el bucle de la Switch), o falló
+    if m.version == self.current or m.version == st.active or m.version == st.bad then
         self.status = 'uptodate'
         self:_close()
         return
+    end
+    -- La misma versión instalada 2 veces sin llegar a confirmarse: no más
+    if st.tryVer == m.version and (st.tries or 0) >= MAX_TRIES then
+        return self:_fail('la versión ' .. m.version .. ' no llega a arrancar: no se reinstala')
     end
     self.files = {}
     for _, f in ipairs(m.files) do
@@ -155,7 +162,8 @@ function Updater:_hashStep()
     end
     if #self.hashQueue == 0 then
         self.slot = SLOTS .. self.version .. '/'
-        if UPDATE_RMRF then UPDATE_RMRF(SLOTS .. self.version) end      -- (restos de un intento anterior)
+        -- (restos de un intento anterior; NUNCA la carpeta de la versión en uso)
+        if UPDATE_RMRF and self.version ~= self.active then UPDATE_RMRF(SLOTS .. self.version) end
         fs.createDirectory(self.slot)
         self.queue = {}
         for _, f in ipairs(self.files) do
@@ -262,6 +270,8 @@ function Updater:_install()
     local st = state()
     st.previous = st.active                 -- (nil = el juego instalado)
     st.active, st.pending, st.boots = self.version, true, 0
+    st.tries = (st.tryVer == self.version) and (st.tries or 0) + 1 or 1
+    st.tryVer = self.version
     if UPDATE_WRITE_STATE then UPDATE_WRITE_STATE(st) end
     self.status = 'done'
 end

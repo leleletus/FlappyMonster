@@ -617,25 +617,74 @@ function Entity:update(dt, level)
         local ty = self.baseY + math.sin(self.flyT * tn.flyBobSpeed) * (self.props.bobAmp or 0)
         if ty ~= self.y then self:moveAndCollide(level, 0, ty - self.y) end
     else
-        -- Detección de borde: si no hay suelo (o techo) al frente → dar la vuelta
-        if self.moving and self.onGround and self.props.turnAtEdges then
-            local hw    = self.outerW / 2
-            local lookX = self.x + (self.vx > 0 and (hw + 2) or -(hw + 2))
-            -- Justo pasada la superficie (4 px): media casilla más abajo se
-            -- saldría de una losa fina y creería estar siempre en un borde
-            local lookY = self.flipped and (self.y - self.outerH / 2 - 4)
-                                        or (self.y + self.outerH / 2 + 4)
-            if not solidAt(level, lookX, lookY) then
-                self.vx = -self.vx;  self.facing = -self.facing
-            end
-        end
-        self:turnAtObstacles(level)
+        -- Encerrado (no puede andar hacia ningún lado: bloques, límites de su
+        -- ruta, bordes, pinchos u otra entidad a los dos lados): se queda
+        -- quieto en vez de girarse cada fotograma; vuelve a andar en cuanto
+        -- tenga sitio
         local gravDir = self.flipped and -1 or 1
         self.vy = self.vy + ADV_GRAVITY * dt * gravDir
+        if self.moving and self.onGround and self:isBoxedIn(level) then
+            self.boxedIn = true
+            self:moveAndCollide(level, 0, self.vy * dt)
+            return
+        end
+        self.boxedIn = nil
+        -- Detección de borde: si no hay suelo (o techo) al frente → dar la vuelta
+        if self.moving and self.onGround and self.props.turnAtEdges and not self:groundAhead(level, self.vx > 0 and 1 or -1) then
+            self.vx = -self.vx;  self.facing = -self.facing
+        end
+        self:turnAtObstacles(level)
         self:moveAndCollide(level, self.vx * dt, self.vy * dt)
     end
 
     if self.moving then self:animateWalk(dt) end
+end
+
+-- ¿Hay suelo (o techo, boca abajo) justo delante, hacia `dir`? Se mira 4 px
+-- pasada la superficie: media casilla más abajo se saldría de una losa fina y
+-- creería estar siempre en un borde
+function Entity:groundAhead(level, dir)
+    local lookX = self.x + dir * (self.outerW / 2 + 2)
+    local lookY = self.flipped and (self.y - self.outerH / 2 - 4) or (self.y + self.outerH / 2 + 4)
+    return solidAt(level, lookX, lookY)
+end
+
+-- Sitio libre hacia `dir` (px, hasta `max`): hasta una pared u objeto sólido,
+-- el límite de su ruta o, si gira en los bordes, un borde
+function Entity:freeRoom(level, dir, max)
+    local hw, d = self.outerW / 2, 0
+    local rows = { self.y - self.outerH / 2 + 4, self.y, self.y + self.outerH / 2 - 4 }
+    local lookY = self.flipped and (self.y - self.outerH / 2 - 4) or (self.y + self.outerH / 2 + 4)
+    while d < max do
+        local ex = self.x + dir * (hw + d + 2)
+        if dir > 0 and ex >= self.rightBoundPx or dir < 0 and ex <= self.leftBoundPx then break end
+        local hit = false
+        for _, py in ipairs(rows) do if level:entitySolidAt(ex, py, self) then hit = true; break end end
+        if hit or (self.props.turnAtEdges and not solidAt(level, ex, lookY)) then break end
+        d = d + 4
+    end
+    return d
+end
+
+local MIN_ROOM = TILE_PX / 2     -- px de juego (a los dos lados juntos) para echar a andar
+
+-- ¿Encerrado? No puede andar hacia ningún lado, o el hueco que le queda es tan
+-- pequeño que solo iría y vendría chocando (p. ej. un Gummy entre dos bloques
+-- con una casilla de hueco)
+function Entity:isBoxedIn(level)
+    local dir = self.vx >= 0 and 1 or -1
+    local ahead = self:freeRoom(level, dir, MIN_ROOM)
+    if ahead >= MIN_ROOM and self:canWalk(level, dir) then return false end      -- (lo normal: rápido)
+    if not self:canWalk(level, 1) and not self:canWalk(level, -1) then return true end
+    return ahead + self:freeRoom(level, -dir, MIN_ROOM) < MIN_ROOM
+end
+
+-- ¿Puede echar a andar hacia `dir`? (sitio libre, dentro de su ruta, sin
+-- pinchos ni entidades delante y, si gira en los bordes, con suelo delante)
+function Entity:canWalk(level, dir)
+    if not self:canGo(level, dir) or self:blockedAhead(level, dir) then return false end
+    if self.props.turnAtEdges and not self:groundAhead(level, dir) then return false end
+    return true
 end
 
 -- Avanza la animación de andar (patitas)

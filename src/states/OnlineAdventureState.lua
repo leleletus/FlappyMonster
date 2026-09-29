@@ -330,6 +330,10 @@ function OnlineAdventureState:_onSnapshot(snap)
     BossZones.netApply(self.level, snap.bz)
     AutoScroll.netApply(self.level, snap.sc)     -- cámara automática (paredes de la predicción)
     self.modeHud = type(snap.md) == 'table' and snap.md or nil
+    -- Modo con tiempo (hud `tl` = centésimas que quedan, p. ej. Rey de la
+    -- Colina): el reloj del HUD cuenta hacia atrás hasta este instante
+    local tl = self.modeHud and tonumber(self.modeHud.tl)
+    self.roundEndAt = tl and (self.levelTime + tl / 100) or nil
 
     -- Reconciliar la predicción local
     if snap.a and snap.o and self.predictor and not self.ownData.isSpectator then
@@ -517,6 +521,7 @@ function OnlineAdventureState:_processEvent(ev)
         if c and r and v then
             self.level:setTileRaw(c, r, v)
             if ev.k == 'toggle' then
+                self.level:tileBump(c, r, ev.from)
                 Particles.emit('switch_hit', (c - 1) * TILE_PX, (r - 1) * TILE_PX)
                 Sound.play(self.level:getDef(c, r).name == 'switch_on' and 'switchOn' or 'switchOff')
             else
@@ -1448,10 +1453,12 @@ function OnlineAdventureState:_renderHUD()
     local row2Y  = row1Y + fh + 10
 
     local od         = self.ownData
-    local totalSecs  = math.floor(self.levelTime)
+    -- Reloj: sube desde 0 o, en los modos con tiempo, baja hasta 0
+    local shown      = self.roundEndAt and math.max(0, self.roundEndAt - self.levelTime) or self.levelTime
+    local totalSecs  = math.floor(shown)
     local mins       = math.floor(totalSecs/60)
     local secs       = totalSecs % 60
-    local centis     = math.floor((self.levelTime - math.floor(self.levelTime))*100)
+    local centis     = math.floor((shown - math.floor(shown))*100)
     local timeStr    = mins .. string.format("'%02d''%02d", secs, centis)
     local scoreStr   = string.format('%06d', od.score or 0)
 
@@ -1474,8 +1481,9 @@ function OnlineAdventureState:_renderHUD()
     printOut(L('hud.score'), labelX,          row1Y, 1, 0.95, 0.15)
     printOut(scoreStr, valueEndX - sw, row1Y, 1, 1, 1)
 
-    -- TIME: parpadea rojo cuando quedan menos de 60 s (igual que modo solo)
-    local timeLeft = 600 - self.levelTime
+    -- TIME: parpadea rojo cuando se acaba (60 s del límite general; 10 s de un
+    -- modo con tiempo, que ya avisa con su cuenta atrás grande)
+    local timeLeft = self.roundEndAt and (shown + 50) or (600 - self.levelTime)
     local tr, tg, tb = 1, 0.95, 0.15
     local vr, vg, vb = 1, 1,    1
     if timeLeft < 60 then

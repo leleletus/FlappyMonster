@@ -90,6 +90,15 @@ Quick syntax check of everything: `for f in $(git ls-files '*.lua' | grep -v res
   version is `pending` until it runs 10 s without errors; an error (or 3
   unconfirmed boots) rolls back to `previous` and marks it `bad`.
   Disabled when running from the repo folder (`love .`); `FM_UPDATE=1` forces it.
+- The mount is VERIFIED (`version.txt` must read the active version; relative path,
+  then absolute save path). If it doesn't take effect (the Switch looped: download →
+  restart → old version.txt → "update" again → restart...), main.lua goes back to the
+  installed game, sets `nomount` = installed version and `UPDATE_BLOCKED` (UpdateState
+  skips; retried when the installed version changes = reinstall). Every boot writes
+  `<save>/update/boot.log` (no console on Switch). Updater guards: never reinstall the
+  ACTIVE version (even if version.txt disagrees), never delete its slot, max 2
+  unconfirmed installs of one version (`tryVer/tries`, cleared on confirm). main.lua
+  changes only reach a device by reinstalling. Harness `update_boot` (FM_UPDATE=1).
 - Save dir: `update/state.lua` {active, previous, pending, boots, bad, trash},
   `update/slots/<version>/` = only the files that differ from the installed
   game + `.manifest.lua` (hashes, so the next update doesn't rehash).
@@ -343,7 +352,8 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   `points`, 3-24 cell centres = any polygon, concave OK; editor shows it filled via
   `love.math.triangulate`): picks random targets reachable in a straight line INSIDE the
   polygon (`segInside`), usually the farthest of 8 candidates (so it reaches the ends of
-  every arm), sometimes rests; `px/py` = position without the bob. States walk(swim) → warn (a player IN WATER within `range` tiles;
+  every arm), sometimes rests; `px/py` = position without the bob. Swim frames swap at
+  `SWIM_FPS` 2.5 (animation only; the swim speed is `speed`). States walk(swim) → warn (a player IN WATER within `range` tiles;
   pufferWarn) → inflated (hazard box = body ×0.85, `effect='hurt'`; pufferInflate + fx
   puffer_pop) → deflate (pufferDeflate) → `cooldown`. Not killable (not stompable, not
   an obstacle, can't be knocked/launched). Prick: `Interactions.run` calls
@@ -353,6 +363,10 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   `Protocol.SHARED_SOUNDS` (helmetBreak, pufferPrick): the server sends them with no
   owner, so everybody hears them. New sounds: `tools/sounds/mechanics.py` (switch,
   helmet, puffer), levelled with `Sound.GAIN` to ≈ -12 dBFS (harness `sounds`).
+- Walkers never flip-flop when boxed in: `Entity:isBoxedIn` (can't walk either way —
+  `canWalk` = `canGo` + no spike/entity ahead + ground ahead if `turnAtEdges` — or less
+  than `MIN_ROOM` (half a tile) of total play from walls/limits/edges) → they stand still
+  (gravity only, no walk anim) until there is room. Crawlers keep their own movement.
 - Flyers (`movement='fly'`) NEVER go idle: pauses only for walkers on the ground; in
   the air (also stunned) they keep the walk animation (`Entity:animateWalk`).
 - **Play recorder** (dev): `FM_RECORD=1 love .` → single-player runs are logged to
@@ -416,7 +430,8 @@ list in `triggers` are hidden: `Modes.hiddenTriggers(mode)` →
 `drawPreview(..., mode)`), e.g. the finish is invisible in Hunt/KOTH.
 
 **King of the Hill** (`modes/koth.lua`, icon 'hill'): timed (`matchTime`, default
-150 s; hud `tl` = centiseconds left, big countdown ≤10 s). Points come from
+150 s; hud `tl` = centiseconds left, big countdown ≤10 s). Any mode whose hud sends `tl`
+turns the HUD TIME clock into a countdown (`roundEndAt` = levelTime + tl, smooth). Points come from
 **Point Areas** (`src/world/PointAreas.lua`, entity `pointarea`: rect via
 `corner` handle, props points/interval/contested; placeholder entity like
 `flood`). `PointAreas.update(level, dt, players, award)` is authoritative (SP
@@ -439,6 +454,9 @@ list no mode until the user places a Point Area in them).
   changes go to `brokenQueue {c, r, raw, kind}` → server event `tile` (+`k='toggle'`)
   → clients `setTileRaw` + fx/sound (online clients never change tiles themselves:
   `canBreak = false`). A GP toggles each block once and lands normally.
+  `hitTile(c, r, from)`: `from` = 'head' | 'pound' → `Level:tileBump` (render-only,
+  `level.tileAnim`, advanced in `Level:update`): head = hop up, pound = squash from the
+  top anchored at the bottom + damped rebound. Online: tile event field `from`.
 - **ON/OFF** (`switch_on` 13 / `switch_off` 14, category Mecanismos; textures
   `assets/images/tiles/switch_*.png`, 16-px art ×4; fx `switch_hit`, sounds
   switchOn/switchOff from `tools/sounds/mechanics.py`). Not linked to anything yet
@@ -590,7 +608,11 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   `AIM_LOCK_CEIL` s still and shaking) → drop (spike hazard = KILL) → stuck (ONLY vulnerable state,
   one hit per drop: `hitDrop`; stomp 1 / GP 2) → getup (during its inv time; landing =
   `landShock`: knockback+stun around, 1 HP only to whoever is really UNDER it; then
-  `recover` 1 s + `graceT` 1.4 s without contact damage). Spike boxes (head spike,
+  `recover` 1 s + `graceT` 1.4 s without contact damage). `rest`: every `restEvery` s
+  of chase (5) it stops for ~`restTime` (1.8, ×0.8-1.3) breathing slowly with drooping
+  claws (attack timers don't run meanwhile); still spiky on contact. Claws `CLAW_K` 0.85
+  (anchored at the joint `CLAW_X/CLAW_Y`: bigger claws grow outward/up from the same
+  point). Steps: deeper `step.wav` + GAIN 0.56 (≈ -11.5 dBFS). Spike boxes (head spike,
   drop kill) = tile-spike proportions: base rectangle 60% w × 40% h. Rage below
   `rageAt`. Death (own states): dying_kick → dying_shrink (deflates to normal size) →
   dying_flee (small crab without claws runs straight to the nearest side through
@@ -721,7 +743,8 @@ it, its env vars) + rules for new ones. When a test needs something new, fix
 or extend the HARNESS (and its README row) instead of working around it in a
 scratch copy: the time spent fighting test setups was the user's complaint.
 Harnesses: flyers, crawler_drop, mechanics, sounds, boss_sim, sp_boss, boss_frames,
-editor_open, online_smoke, online_boss, online_helmet, level_check, level_solve. `tools/` is not shipped (.love / updates).
+editor_open, free_play, update_boot, online_smoke, online_boss, online_helmet,
+level_check, level_solve. `tools/` is not shipped (.love / updates).
 
 Low-level notes (for writing NEW harnesses):
 - Headless sim (no window): a scratch LÖVE app with `t.window=false`,

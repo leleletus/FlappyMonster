@@ -16,7 +16,8 @@ function UpdateState:enter(args)
     args = args or {}
     self.after = args.after or 'title'
     self.t = 0
-    if not UPDATE_ENABLED then self.skip = true; return end
+    -- (UPDATE_BLOCKED: este aparato no puede montar las actualizaciones; ver main.lua)
+    if not UPDATE_ENABLED or UPDATE_BLOCKED then self.skip = true; return end
     self.upd = Updater.new(SERVER_HOST, SERVER_PORT)
 end
 

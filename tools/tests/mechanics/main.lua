@@ -16,6 +16,7 @@
 --   puffer_through el pez globo explora su área (atraviesa bloques) sin salir de ella
 --   puffer_concave área cóncava en L: la recorre entera y nunca sale
 --   flyer_anim     un volador nunca pasa a idle; uno de suelo sí
+--   boxed_in       Gummy/Crabby encerrados (entre bloques, en un pilar): quietos, sin girarse
 --   puffer_cycle   jugador en el agua cerca: aviso → hinchado (pincha 1) → deshincha
 --   puffer_dry     jugador fuera del agua: no se hincha
 -- SHOT=1: además guarda <save>/mechanics.png (bloques, invisible visible,
@@ -344,6 +345,41 @@ function cases.puffer_concave()
         ('fuera del área %d veces; recorre el brazo de arriba=%s y el de abajo=%s'):format(out, tostring(legs.top), tostring(legs.left)))
 end
 
+-- Encerrados: entre dos bloques (o en un pilar de una casilla, con bordes a
+-- los dos lados) se quedan quietos, sin girarse; con sitio, vuelven a andar
+cases.boxed_in = function()
+    local res = {}
+    for _, kind in ipairs({ 'gummy', 'crabby' }) do
+        local level, es = room(12, 8, { { 5, 7, 'solid' }, { 7, 7, 'solid' } },
+            { { type = kind, col = 6, row = 7, props = { pauses = false, speed = 60 } } })
+        level.players = {}
+        local e = es[1]
+        for _ = 1, 30 do e:update(1 / 60, level) end      -- (cae y se asienta)
+        local flips, x0, facing = 0, nil, e.facing
+        for _ = 1, 60 * 4 do
+            e:update(1 / 60, level)
+            if e.facing ~= facing then flips = flips + 1; facing = e.facing end
+            x0 = x0 or e.x
+        end
+        local still = math.abs(e.x - x0) < 1
+        level.tiles[7][7] = TILE_EMPTY                  -- se abre la derecha
+        local xa = e.x
+        for _ = 1, 60 * 3 do e:update(1 / 60, level) end
+        res[#res + 1] = { kind = kind, flips = flips, still = still, moved = math.abs(e.x - xa) }
+    end
+    -- pilar de una casilla con bordes a los dos lados
+    local level, es = room(12, 8, { { 6, 6, 'solid' } }, { { type = 'gummy', col = 6, row = 5, props = { pauses = false } } })
+    level.players = {}
+    local g = es[1]
+    for _ = 1, 30 do g:update(1 / 60, level) end
+    local gx, gflips, gf = g.x, 0, g.facing
+    for _ = 1, 60 * 3 do g:update(1 / 60, level); if g.facing ~= gf then gflips = gflips + 1; gf = g.facing end end
+    local ok = res[1].flips == 0 and res[1].still and res[1].moved > 40 and res[2].flips == 0 and res[2].still
+               and res[2].moved > 40 and gflips == 0 and math.abs(g.x - gx) < 1
+    check('boxed_in', ok, ('gummy: giros %d quieto=%s, luego anda %d px · crabby: giros %d quieto=%s, anda %d px · pilar: giros %d'):format(
+        res[1].flips, tostring(res[1].still), res[1].moved, res[2].flips, tostring(res[2].still), res[2].moved, gflips))
+end
+
 -- Voladores: nunca en idle (patitas siempre moviéndose); uno de suelo sí para
 function cases.flyer_anim()
     local level, es = room(14, 8, {}, {
@@ -410,7 +446,7 @@ local shot
 function love.load()
     for _, n in ipairs({ 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
                          'helmet_jump', 'helmet_ride', 'helmet_gp', 'helmet_side', 'stomp_fast',
-                         'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim' }) do cases[n]() end
+                         'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'boxed_in' }) do cases[n]() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
     if not os.getenv('SHOT') then love.event.quit(fails == 0 and 0 or 1); return end
     -- Escena para la captura
@@ -424,6 +460,11 @@ function love.load()
         { type = 'pufferfish', col = 6, row = 3, props = {} },
         { type = 'pufferfish', col = 9, row = 3, props = {} } })
     for _, e in ipairs(es) do e.vx = 0 end
+    -- Bloques ON/OFF golpeados, congelados a media animación: el ON en lo alto
+    -- del saltito (cabezazo) y el OFF lo más aplastado (ground pound)
+    level:tileBump(4, 7, 'head'); level.tileAnim[7 * 65536 + 4].t = 0.11
+    level:tileBump(6, 7, 'pound'); level.tileAnim[7 * 65536 + 6].t = 0.11
+    level.update = function() end
     -- Peces: nadando, avisando (medio) e hinchado
     es[4].state = 'walk'; es[5].state, es[5].deadTimer = 'warn', 0.45; es[6].state, es[6].deadTimer = 'inflated', 1
     local pa = PlayerAdventure:new(9.5 * T, 6 * T - 60)
