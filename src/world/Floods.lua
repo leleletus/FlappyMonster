@@ -24,7 +24,7 @@
 --            que empieza la pelea: la espera inicial cuenta desde ahí); cuando
 --            el jefe entra en su secuencia de muerte, baja a su mínimo y se
 --            queda (y antes de la pelea está en el mínimo).
---   'switch' conectada a bloques ON/OFF (level.links: {col, row, flood=id}):
+--   'switch' conectada a bloques ON/OFF (level.links: {col, row, to=id}):
 --            con alguno en ON sube hasta el máximo y se queda; con todos en
 --            OFF baja hasta el mínimo y se queda (por escalones y pausas si
 --            los tiene).
@@ -140,9 +140,8 @@ function Floods.link(level)
             f.zone = best
         end
     end
-    for _, l in ipairs(level.links or {}) do
-        local f = Floods.byId(level, l.flood)
-        if f then f.switches[#f.switches + 1] = { l.col, l.row } end
+    for _, f in ipairs(level.floods or {}) do
+        f.switches = level.linkedCells and level:linkedCells(f.id) or {}
     end
 end
 

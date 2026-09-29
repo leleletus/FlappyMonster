@@ -318,12 +318,13 @@ function Level.fromData(lvl)
     -- Inundaciones (src/world/Floods.lua): salen de las entidades 'flood'
     self.floods = Floods.build(self.entities, Materials)
     self.floodTime = 0
-    -- Conexiones de bloques ON/OFF con objetos activables (de momento,
-    -- inundaciones): { {col, row, flood = id}, ... }
+    -- Conexiones de bloques ON/OFF con objetos activables (entidades con
+    -- `activatable`, p. ej. inundaciones): { {col, row, to = id}, ... }
+    -- (`flood` = nombre antiguo de `to`)
     self.links = {}
     for _, l in ipairs(lvl.links or {}) do
-        local c, r, id = tonumber(l.col), tonumber(l.row), tonumber(l.flood)
-        if c and r and id then self.links[#self.links + 1] = { col = c, row = r, flood = id } end
+        local c, r, id = tonumber(l.col), tonumber(l.row), tonumber(l.to or l.flood)
+        if c and r and id then self.links[#self.links + 1] = { col = c, row = r, to = id } end
     end
     Floods.link(self)
     -- Zonas de puntos (src/world/PointAreas.lua): entidades 'pointarea'
@@ -370,6 +371,22 @@ function Level:findGround(col, minCol, maxCol, minRow, maxRow)
         end
     end
     return nil
+end
+
+-- ── Conexiones (bloques ON/OFF → objetos activables) ─────────────────────────
+-- Casillas de los bloques conectados al objeto `id`
+function Level:linkedCells(id)
+    local out = {}
+    for _, l in ipairs(self.links or {}) do if l.to == id then out[#out + 1] = { l.col, l.row } end end
+    return out
+end
+-- ¿Está encendido? (algún bloque conectado en ON). Autoritativo: un jugador y
+-- el servidor (el cliente online recibe el resultado de cada objeto)
+function Level:signal(id)
+    for _, l in ipairs(self.links or {}) do
+        if l.to == id and self:getDef(l.col, l.row).name == 'switch_on' then return true end
+    end
+    return false
 end
 
 -- Paredes invisibles en el punto: zona de jefe sin superar que lo contiene
@@ -647,9 +664,9 @@ function Level:hitTile(col, row, from)
 end
 
 -- Animación de un bloque golpeado (solo dibujo): 'head' = saltito hacia arriba,
--- 'pound' = se aplasta y recupera. La pone quien golpea (un jugador) o el
+-- 'pound' = el mismo hacia abajo. La pone quien golpea (un jugador) o el
 -- evento del servidor (online); Level:update la hace avanzar.
-local BUMP_T = { head = 0.22, pound = 0.28 }
+local BUMP_T = { head = 0.22, pound = 0.22 }
 function Level:tileBump(col, row, from)
     if not BUMP_T[from] then return end
     self.tileAnim = self.tileAnim or {}
@@ -866,22 +883,12 @@ function Level:render(camX, camY)
             local def = TileTypes.get(tileBaseId(raw))
             local anim = self.tileAnim and self.tileAnim[row * 65536 + col]
             if anim then
-                -- Golpeado: cabezazo = sube y baja; ground pound = se aplasta
-                -- desde arriba (anclado abajo) y rebota un poco al recuperarse
+                -- Golpeado: el mismo saltito, hacia arriba con un cabezazo y
+                -- hacia abajo con un ground pound (se hunde un poco y vuelve)
                 local k = anim.t / anim.dur
                 love.graphics.push()
-                if anim.kind == 'head' then
-                    love.graphics.translate(0, -math.floor(math.sin(k * math.pi) * TILE_PX * 0.22))
-                else
-                    -- (se aplasta hasta el 40 % y rebota amortiguado hasta quedarse igual)
-                    local u = (k - 0.4) / 0.6
-                    local sq = (k < 0.4) and (k / 0.4) or (1 - u) * math.cos(u * math.pi * 1.5)
-                    local sy = 1 - 0.3 * sq
-                    local sx = 1 + 0.12 * sq
-                    love.graphics.translate(px + TILE_PX / 2, py + TILE_PX)
-                    love.graphics.scale(sx, sy)
-                    love.graphics.translate(-(px + TILE_PX / 2), -(py + TILE_PX))
-                end
+                local dir = (anim.kind == 'pound') and 1 or -1
+                love.graphics.translate(0, dir * math.floor(math.sin(k * math.pi) * TILE_PX * 0.22))
             end
             if not (def.trigger and self.hiddenTriggers and self.hiddenTriggers[def.trigger]) then
                 TileTypes.drawTile(def, ctx)

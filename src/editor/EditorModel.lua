@@ -71,8 +71,8 @@ function Model.fromData(lvl, path)
     m.vents   = deepcopy(lvl.vents or {})
     m.links = {}
     for _, l in ipairs(lvl.links or {}) do
-        local c, r, id = tonumber(l.col), tonumber(l.row), tonumber(l.flood)
-        if c and r and id then m.links[#m.links + 1] = { col = c, row = r, flood = id } end
+        local c, r, id = tonumber(l.col), tonumber(l.row), tonumber(l.to or l.flood)   -- (flood: nombre antiguo)
+        if c and r and id then m.links[#m.links + 1] = { col = c, row = r, to = id } end
     end
     m.subtiles = {}
     for _, o in ipairs(lvl.subtiles or {}) do
@@ -91,7 +91,8 @@ function Model.fromData(lvl, path)
     m.matchTime = tonumber(lvl.matchTime)
     m.music     = type(lvl.music) == 'string' and lvl.music or nil
     m.path    = path
-    m:fixFloodIds()
+    m:fixActivatableIds()
+    m:pruneLinks()
     return m
 end
 
@@ -219,6 +220,8 @@ function Model:get(c, r) return self:inBounds(c, r) and self.tiles[r][c] or nil 
 function Model:set(c, r, raw)
     if not self:inBounds(c, r) or self.tiles[r][c] == raw then return false end
     self.tiles[r][c] = raw
+    -- (si deja de ser un bloque ON/OFF, su conexión desaparece con él)
+    if self.links and #self.links > 0 and not self:isSwitch(c, r) then self:setLink(c, r, nil) end
     return true
 end
 
@@ -315,41 +318,69 @@ function Model:addEntity(typeName, c, r, sub)
     end
     local n = ET.normalize({ type = typeName, col = c, row = r, sub = sub })
     if n then table.insert(self.entities, n) end
-    if n and typeName == 'flood' then self:fixFloodIds() end
+    if n and def and def.activatable then self:fixActivatableIds() end
     return n
 end
 
--- ── Inundaciones y sus conexiones con bloques ON/OFF ─────────────────────────
+-- ── Conexiones: bloques ON/OFF → objetos activables ──────────────────────────
+-- (entidades cuyo tipo tiene `activatable`: inundaciones...)
+function Model:activatables()
+    local out = {}
+    for _, e in ipairs(self.entities) do
+        local t = ET.get(e.type)
+        if t and t.activatable then out[#out + 1] = e end
+    end
+    return out
+end
 function Model:floods()
     local out = {}
     for _, e in ipairs(self.entities) do if e.type == 'flood' then out[#out + 1] = e end end
     return out
 end
+function Model:activatableById(id)
+    for _, e in ipairs(self:activatables()) do if (tonumber(e.props.id) or 1) == id then return e end end
+end
 
--- Cada inundación con un número (id) distinto: las repetidas (o las antiguas,
--- que no lo tenían: todas valen 1) reciben el siguiente libre
-function Model:fixFloodIds()
+-- Cada objeto activable con un número (id) distinto: los repetidos (o los
+-- antiguos, que no lo tenían: todos valen 1) reciben el siguiente libre
+function Model:fixActivatableIds()
     local used, maxId = {}, 0
-    for _, e in ipairs(self:floods()) do maxId = math.max(maxId, tonumber(e.props.id) or 1) end
-    for _, e in ipairs(self:floods()) do
+    for _, e in ipairs(self:activatables()) do maxId = math.max(maxId, tonumber(e.props.id) or 1) end
+    for _, e in ipairs(self:activatables()) do
         local id = tonumber(e.props.id) or 1
         if used[id] then maxId = maxId + 1; id = maxId end
         e.props.id, used[id] = id, true
     end
 end
 
+function Model:isSwitch(c, r)
+    local raw = self:get(c, r)
+    local n = raw and Tiles.get(Codec.id(raw)).name
+    return n == 'switch_on' or n == 'switch_off'
+end
+
 function Model:linkAt(c, r)
     for i, l in ipairs(self.links or {}) do if l.col == c and l.row == r then return l, i end end
 end
 
--- Conecta el bloque (c, r) a la inundación `id` (nil = desconectar)
+-- Conecta el bloque (c, r) al objeto `id` (nil = desconectar)
 function Model:setLink(c, r, id)
     self.links = self.links or {}
     local l, i = self:linkAt(c, r)
     if not id then if l then table.remove(self.links, i); return true end return false end
-    if l then if l.flood == id then return false end l.flood = id; return true end
-    self.links[#self.links + 1] = { col = c, row = r, flood = id }
+    if l then if l.to == id then return false end l.to = id; return true end
+    self.links[#self.links + 1] = { col = c, row = r, to = id }
     return true
+end
+
+-- Quita las conexiones de casillas que ya no son un bloque ON/OFF (devuelve cuántas)
+function Model:pruneLinks()
+    local n = 0
+    for i = #(self.links or {}), 1, -1 do
+        local l = self.links[i]
+        if not self:isSwitch(l.col, l.row) then table.remove(self.links, i); n = n + 1 end
+    end
+    return n
 end
 
 function Model:findObject(list, c, r, sub)
@@ -448,23 +479,22 @@ function Model:validate()
             w[#w+1] = { 'warn', where .. ': su ruta no la contiene', e }
         end
     end
-    -- Conexiones ON/OFF → inundación
-    local floodById = {}
-    for _, e in ipairs(self:floods()) do floodById[tonumber(e.props.id) or 1] = e end
+    -- Conexiones ON/OFF → objetos activables
     local linked = {}
     for _, l in ipairs(self.links or {}) do
-        local name = self:inBounds(l.col, l.row) and Tiles.get(Codec.id(self.tiles[l.row][l.col])).name
-        local f = floodById[l.flood]
-        if name ~= 'switch_on' and name ~= 'switch_off' then
+        local e = self:activatableById(l.to)
+        if not self:isSwitch(l.col, l.row) then
             w[#w+1] = { 'warn', 'Conexión en (' .. l.col .. ',' .. l.row .. '): ahí ya no hay un bloque ON/OFF' }
-        elseif not f then
-            w[#w+1] = { 'error', 'Bloque ON/OFF (' .. l.col .. ',' .. l.row .. ') conectado a la inundación #' .. l.flood .. ', que no existe' }
-        elseif f.props.control ~= 'switch' then
-            w[#w+1] = { 'warn', 'Bloque ON/OFF (' .. l.col .. ',' .. l.row .. ') conectado a la inundación #' .. l.flood
-                                 .. ', pero esta no se mueve con bloques ON/OFF (propiedad "Se mueve")', f }
+        elseif not e then
+            w[#w+1] = { 'error', 'Bloque ON/OFF (' .. l.col .. ',' .. l.row .. ') conectado al #' .. l.to .. ', que no existe (capa Bloques → Conectar para cambiarlo)' }
+        elseif e.type == 'flood' and e.props.control ~= 'switch' then
+            w[#w+1] = { 'warn', 'Bloque ON/OFF (' .. l.col .. ',' .. l.row .. ') conectado a la inundación #' .. l.to
+                                 .. ', pero esta no se mueve con bloques ON/OFF (propiedad "Se mueve")', e }
         end
-        linked[l.flood] = true
+        linked[l.to] = true
     end
+    local floodById = {}
+    for _, e in ipairs(self:floods()) do floodById[tonumber(e.props.id) or 1] = e end
     for id, f in pairs(floodById) do
         if f.props.control == 'switch' and not linked[id] then
             w[#w+1] = { 'warn', 'Inundación #' .. id .. ': se mueve con bloques ON/OFF pero no tiene ninguno conectado (capa Bloques → Conectar)', f }

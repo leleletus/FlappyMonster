@@ -21,6 +21,12 @@
 --   checkpoint  true: al tocarlo pasa a ser el punto de reaparición del jugador
 --   placement   'sub': se coloca en subceldas (como los pinchos); guarda `sub`
 --   ceilingOnly true: solo se puede colocar justo debajo de un bloque sólido
+--   activatable true: se le pueden CONECTAR bloques ON/OFF (editor: capa
+--               Bloques → Conectar). Tiene una propiedad `id` (si el tipo no la
+--               declara, se añade sola) y en el juego pregunta
+--               level:signal(id) (¿algún bloque conectado en ON?). Opcional
+--               onLink(props): al conectarle un bloque en el editor (p. ej. la
+--               inundación pasa a moverse con bloques ON/OFF). Ver flood.lua.
 --
 -- En el nivel, cada colocación es:
 --   { type='crabby', col=10, row=2, props={ attach='ceiling', ... } }
@@ -130,6 +136,14 @@ function EntityTypes.register(def)
         end
     end
     for _, p in ipairs(t.props or {}) do table.insert(t.schema, p) end
+    if t.activatable then
+        local has = false
+        for _, p in ipairs(t.schema) do if p.key == 'id' then has = true end end
+        if not has then
+            table.insert(t.schema, { key='id', kind='int', label='Número (id)', group='Conexión', default=1,
+                                     min=1, max=99, step=1, help='Los bloques ON/OFF se conectan a este número' })
+        end
+    end
 
     -- Agrupar por `group` para el editor: primero los grupos propios del tipo
     -- (lo que lo define: 'Mortero', 'Inundación'...), luego los comunes en su

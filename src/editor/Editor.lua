@@ -56,7 +56,7 @@ local TOOLS = {
     fill   = { label='Relleno',     key='f', help='Rellena la zona contigua del mismo tipo.' },
     erase  = { label='Borrar',      key='e', help='Borra lo de esta capa (también con clic derecho).' },
     pick   = { label='Cuentagotas', key='i', help='Copia a la paleta el bloque que hay bajo el cursor.' },
-    link   = { label='Conectar',    key='k', help='Clic en un bloque ON/OFF para elegir (a la derecha) a qué inundación está conectado. Las conexiones se ven como líneas amarillas.' },
+    link   = { label='Conectar',    key='k', help='Clic en un bloque ON/OFF para elegir (a la derecha) a qué objeto está conectado (inundaciones...). Las conexiones se ven como líneas amarillas; al borrar el bloque se borra la suya.' },
     select = { label='Seleccionar', key='v', help='Clic para seleccionar y editar sus propiedades; arrastra para moverlo. Las cajitas azules (rutas, puntos, esquinas) también se arrastran.' },
     place  = { label='Colocar',     key='b', help='Coloca lo elegido en la paleta. Algunos objetos se pintan arrastrando.' },
     spawn  = { label='Inicio',      key='s', help='Mueve el punto donde aparece el jugador (uno por nivel).' },
@@ -1371,27 +1371,36 @@ local function drawSwitchInspector(x, y, w)
     if d.name ~= 'switch_on' and d.name ~= 'switch_off' then E.selSwitch = nil; return y end
     y = inspectorHeader(x, y, w, function(ix, iy, s) drawTileThumb(d, ix, iy, s) end, 'Bloque ON/OFF',
                         string.format('Mecanismo  ·  col %d, fila %d', sw.c, sw.r),
-                        'Un cabezazo o un ground pound lo cambia. Conectado a una inundación que "se mueve con bloques ON/OFF": en ON sube al máximo, en OFF baja al mínimo.')
-    local opts = { { value = 0, label = 'Ninguna' } }
-    for _, f in ipairs(m:floods()) do
-        local id = tonumber(f.props.id) or 1
-        opts[#opts + 1] = { value = id, label = string.format('Inundación #%d (col %d, fila %d)%s', id, f.col, f.row,
-                            f.props.control == 'switch' and '' or ' — no usa ON/OFF') }
-    end
+                        'Un cabezazo o un ground pound lo cambia. Enciende y apaga los objetos conectados (p. ej. una inundación: en ON sube al máximo, en OFF baja al mínimo). Al borrar el bloque, su conexión se va con él.')
     local l = m:linkAt(sw.c, sw.r)
-    local cur = l and l.flood or 0
+    local cur = l and l.to or 0
+    local opts = { { value = 0, label = 'Nada' } }
+    local found = cur == 0
+    for _, e in ipairs(m:activatables()) do
+        local t, id = ET.get(e.type), tonumber(e.props.id) or 1
+        if id == cur then found = true end
+        opts[#opts + 1] = { value = id, label = string.format('%s #%d (col %d, fila %d)%s', t.label, id, e.col, e.row,
+                            (e.type == 'flood' and e.props.control ~= 'switch') and ' — no usa ON/OFF' or '') }
+    end
+    if not found then opts[#opts + 1] = { value = cur, label = '#' .. cur .. ' (ya no existe)' } end
     ui.text('Conectado a', x, y, th.text); y = y + 20
     for _, o in ipairs(opts) do
         if ui.button(o.label, x, y, w, 26, { active = o.value == cur, align = 'left', font = ui.fontSm }) and o.value ~= cur then
             pushUndo()
             m:setLink(sw.c, sw.r, o.value > 0 and o.value or nil)
-            -- (una inundación conectada pasa a moverse con los bloques ON/OFF)
-            for _, f in ipairs(m:floods()) do
-                if o.value > 0 and (tonumber(f.props.id) or 1) == o.value then f.props.control = 'switch' end
-            end
+            -- (el objeto conectado se prepara para ello: la inundación pasa a moverse con bloques ON/OFF)
+            local e = o.value > 0 and m:activatableById(o.value)
+            local t = e and ET.get(e.type)
+            if t and t.onLink then t.onLink(e.props) end
             markDirty()
         end
         y = y + 30
+    end
+    if l then
+        if ui.button('Quitar conexión', x, y, w, 26, { font = ui.fontSm, textColor = th.danger }) then
+            pushUndo(); m:setLink(sw.c, sw.r, nil); markDirty()
+        end
+        y = y + 32
     end
     y = y + 6
     local on, ch = ui.toggle('Empieza encendido (ON)', d.name == 'switch_on', x, y, w)
@@ -1743,19 +1752,19 @@ local function dashedRect(x, y, w, h, dash)
     end
 end
 
--- Conexiones bloque ON/OFF → inundación: línea de puntos amarilla del
--- bloque al centro del área de la inundación (roja si no existe)
+-- Conexiones bloque ON/OFF → objeto activable: línea de puntos amarilla del
+-- bloque al objeto (al centro de su área si la tiene; roja si no existe)
 function Editor.drawLinks(camX, camY, t, zoom)
     local m = E.model
     local byId = {}
-    for _, f in ipairs(m:floods()) do byId[tonumber(f.props.id) or 1] = f end
+    for _, f in ipairs(m:activatables()) do byId[tonumber(f.props.id) or 1] = f end
     love.graphics.setLineWidth(2 / zoom)
     for _, l in ipairs(m.links or {}) do
         local x0, y0 = (l.col - 0.5) * t - camX, (l.row - 0.5) * t - camY
-        local f = byId[l.flood]
+        local f = byId[l.to]
         local sel = E.selSwitch and E.selSwitch.c == l.col and E.selSwitch.r == l.row
         if f then
-            local cr = f.props.corner or { col = f.col, row = f.row }
+            local cr = type(f.props.corner) == 'table' and f.props.corner or { col = f.col, row = f.row }
             local x1 = ((f.col - 1) + cr.col) / 2 * t - camX
             local y1 = ((f.row - 1) + cr.row) / 2 * t - camY
             love.graphics.setColor(1, 0.85, 0.2, sel and 1 or 0.6)
@@ -1770,7 +1779,7 @@ function Editor.drawLinks(camX, camY, t, zoom)
             love.graphics.setColor(1, 0.3, 0.3, 0.9)
         end
         love.graphics.rectangle('line', x0 - t / 2 + 2, y0 - t / 2 + 2, t - 4, t - 4)
-        love.graphics.print('#' .. l.flood, x0 - t / 2 + 4, y0 - t / 2 + 2, 0, 1 / zoom, 1 / zoom)
+        love.graphics.print('#' .. l.to, x0 - t / 2 + 4, y0 - t / 2 + 2, 0, 1 / zoom, 1 / zoom)
     end
     if E.selSwitch and E.layer == 'tiles' then
         love.graphics.setColor(th.warn[1], th.warn[2], th.warn[3], 1)

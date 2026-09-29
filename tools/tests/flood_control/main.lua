@@ -13,6 +13,8 @@
 --                el snapshot 'fc') ve exactamente la misma agua en cada tick
 --   editor       conexiones guardadas y cargadas, números de inundación únicos y
 --                aviso de una conexión a una inundación que no existe
+--   conexiones   al borrar el bloque (o pintar otro encima) su conexión se va con
+--                él; ON↔OFF la conserva; "Quitar conexión"; clave antigua `flood`
 --
 --   tools/tests/run.sh flood_control
 io.stdout:setvbuf('no')
@@ -194,10 +196,11 @@ function cases.editor()
     local m = Model.new(20, 10, 'links')
     m:setId(5, 5, TileTypes.byName.switch_off.id)
     m:setId(7, 5, TileTypes.byName.switch_on.id)
+    m:setId(9, 5, TileTypes.byName.switch_on.id)
     m:addEntity('flood', 10, 3); m:addEntity('flood', 14, 3)
     local fl = m:floods()
     fl[1].props.control, fl[2].props.control = 'switch', 'switch'
-    m:setLink(5, 5, fl[2].props.id); m:setLink(7, 5, 42)
+    m:setLink(5, 5, fl[2].props.id); m:setLink(7, 5, 42); m:setLink(9, 5, fl[1].props.id)
     local m2 = Model.fromData(json.decode(m:encode()))
     local ids = {}
     for _, f in ipairs(m2:floods()) do ids[#ids + 1] = f.props.id end
@@ -206,9 +209,26 @@ function cases.editor()
     for _, w in ipairs(m2:validate()) do if w[2]:find('#42') then warn = true end end
     local lv = Level.fromData(json.decode(m:encode()))
     local linked = lv.floods[2] and #lv.floods[2].switches == 1
-    check('editor', #ids == 2 and ids[1] ~= ids[2] and l1 and l1.flood == ids[2] and l2 and warn and linked,
+    check('editor', #ids == 2 and ids[1] ~= ids[2] and l1 and l1.to == ids[2] and l2 and warn and linked,
         ('ids %s; (5,5) → #%s; aviso de la #42=%s; el juego la enlaza=%s'):format(table.concat(ids, ','),
-            tostring(l1 and l1.flood), tostring(warn), tostring(linked)))
+            tostring(l1 and l1.to), tostring(warn), tostring(linked)))
+    -- Cambiar ON↔OFF la conserva; borrar el bloque (o pintar otro encima) la quita;
+    -- "Quitar conexión" también; un nivel con la clave antigua `flood` se lee igual
+    m2:setId(5, 5, TileTypes.byName.switch_on.id)
+    local kept = m2:linkAt(5, 5) ~= nil
+    m2:setId(5, 5, 0)
+    local erased = m2:linkAt(5, 5) == nil
+    m2:setId(9, 5, TileTypes.byName.solid.id)
+    local painted = m2:linkAt(9, 5) == nil
+    m2:setLink(7, 5, nil)
+    local removed = m2:linkAt(7, 5) == nil and #m2.links == 0
+    local old = Model.fromData({ name = 'x', width = 4, height = 4, playerStart = { 2, 2 },
+        tiles = { { 1, 1, 1, 1 }, { 1, TileTypes.byName.switch_off.id, 0, 1 }, { 1, 0, 0, 1 }, { 1, 1, 1, 1 } },
+        entities = {}, links = { { col = 2, row = 2, flood = 7 }, { col = 3, row = 2, flood = 7 } } })
+    local legacy = old:linkAt(2, 2) and old:linkAt(2, 2).to == 7 and old:linkAt(3, 2) == nil
+    check('conexiones', kept and erased and painted and removed and legacy,
+        ('ON↔OFF la conserva=%s; borrar el bloque la quita=%s; pintar otro bloque encima=%s; quitar a mano=%s; clave antigua `flood` (y la de una casilla sin bloque se descarta)=%s'):format(
+            tostring(kept), tostring(erased), tostring(painted), tostring(removed), tostring(legacy)))
 end
 
 function love.load()

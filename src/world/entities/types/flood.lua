@@ -116,10 +116,13 @@ return {
                .. 'o al encender/apagar bloques ON/OFF conectados a ella (capa Bloques → herramienta Conectar).',
     class = Flood,
     hide = 'all',
+    activatable = true,
+    -- (al conectarle un bloque ON/OFF en el editor, pasa a moverse con ellos)
+    onLink = function(p) p.control = 'switch' end,
     defaults = { movement = 'static' },
     props = {
         { key='id', kind='int', label='Número (id)', group=G0, default=1, min=1, max=99, step=1,
-          help='Los bloques ON/OFF se conectan a la inundación con este número' },
+          help='Los bloques ON/OFF se conectan a este número (capa Bloques → Conectar)' },
         { key='control', kind='enum', label='Se mueve', group=G0, default='cycle',
           options={ { value='cycle', label='Siempre' }, { value='boss', label='Pelea de jefe' },
                     { value='switch', label='Bloques ON/OFF' } },

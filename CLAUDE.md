@@ -319,7 +319,7 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   'stomp' with 4th return dirX = cnx → `pa:bounce(vy, dirX, soft=true)` (vx 300 +
   ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill; v17: crawler turn in snapshots; v18: MegaCrabby;
   v19: boss walls, Mega minions/pounce; v20: post-hit protection; v21: unified invulnerability;
-  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods).
+  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`).
 - **Crawler** (`src/world/entities/Crawler.lua`): surface-following movement
   (floor ↔ walls ↔ ceiling, concave and convex corners) for Crabbies with prop
   `wallWalk` (`Crabby.WALL_PROP`, off by default so old levels don't change).
@@ -464,8 +464,8 @@ list no mode until the user places a Point Area in them).
   → clients `setTileRaw` + fx/sound (online clients never change tiles themselves:
   `canBreak = false`). A GP toggles each block once and lands normally.
   `hitTile(c, r, from)`: `from` = 'head' | 'pound' → `Level:tileBump` (render-only,
-  `level.tileAnim`, advanced in `Level:update`): head = hop up, pound = squash from the
-  top anchored at the bottom + damped rebound. Online: tile event field `from`.
+  `level.tileAnim`, advanced in `Level:update`): head = hop up, pound = the same hop
+  DOWN (0.22 s, 0.22 tile). Online: tile event field `from`.
 - **ON/OFF** (`switch_on` 13 / `switch_off` 14, category Mecanismos; textures
   `assets/images/tiles/switch_*.png`, 16-px art ×4; fx `switch_hit`, sounds
   switchOn/switchOff from `tools/sounds/mechanics.py`). Not linked to anything yet
@@ -765,9 +765,16 @@ distortion starts `WaterSurface.MARGIN` px below the surface. `Floods.updateFx`
 **Connected floods** (flood prop `control`): 'cycle' (default, the pure time cycle),
 'boss' (zone prop `zone`, 0 = the overlapping/nearest one: runs its cycle from the fight
 start while the zone is in 'fight' and a boss is alive and not dying; then falls to its
-minimum and stays — fortaleza_malvada) and 'switch' (ON/OFF blocks linked in the level
-JSON `"links": [{col,row,flood=id}]`, flood prop `id`: any linked block ON → rises to max
-and stays; all OFF → falls to min; steps/pauses honoured). A controlled flood stores
+minimum and stays — fortaleza_malvada) and 'switch' (ON/OFF blocks linked to it: any
+linked block ON → rises to max and stays; all OFF → falls to min; steps/pauses honoured).
+**Links are generic**: level JSON `"links": [{col,row,to=id}]` (old key `flood` still
+read) from an ON/OFF block to any ACTIVATABLE entity (type def `activatable = true` →
+prop `id`, auto-added if the type doesn't declare it; optional `onLink(props)` run by
+the editor when a block is linked, e.g. flood → control 'switch'). Game side:
+`Level:linkedCells(id)`, `Level:signal(id)` (any linked block ON; authoritative in SP and
+server — send the resulting state to clients, like floods do). Editor: a link disappears
+with its block (`Model:set` drops it when the cell stops being ON/OFF; `pruneLinks` on
+load), "Quitar conexión" in the inspector, ids unique across all activatables. A controlled flood stores
 only `{active, t0, L0}`; its level is still a pure function of t
 (`Floods.controlledLevelAt`). `Floods.control(level, t)` (SP inside `Floods.advance`,
 server before `setTime`) decides the changes; the snapshot carries `fc =
