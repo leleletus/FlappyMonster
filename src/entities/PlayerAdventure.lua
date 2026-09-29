@@ -472,7 +472,8 @@ function PlayerAdventure.asOwner(pa, fn)
 end
 
 -- ¿Invulnerable? (por lo que sea: reaparecer, un golpe reciente...)
-function PlayerAdventure:isInvulnerable() return (self.invT or 0) > 0 end
+-- (congelado en la entrada de un jefe también: sin control, nada le hace daño)
+function PlayerAdventure:isInvulnerable() return (self.invT or 0) > 0 or self.frozen == true end
 -- Da invulnerabilidad `t` s (se queda con la que dure más)
 function PlayerAdventure:grantInvulnerability(t)
     self.invT = math.max(self.invT or 0, t)
@@ -841,7 +842,8 @@ end
 -- la gravedad y lo demás siguen). Igual en un jugador, servidor y predicción.
 local FROZEN_INPUT = { pressed = function() return false end, down = function() return false end }
 function PlayerAdventure:update(dt, level)
-    if level and level.frozenAt and not self.dying and level:frozenAt(self.x, self.y) then
+    self.frozen = level ~= nil and level.frozenAt ~= nil and not self.dying and level:frozenAt(self.x, self.y)
+    if self.frozen then
         -- (quieto de verdad: sin la inercia que traía; la gravedad sigue)
         if not self.stunT or self.stunT <= 0 then self.vx = 0 end
         local real = Input

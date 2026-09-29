@@ -221,16 +221,84 @@ function BossZones.frozenAt(level, x, y)
 end
 
 -- ── Reaparecer dentro de una zona en plena pelea ─────────────────────────────
--- El suelo de la zona puede desaparecer (el jefe rompe bloques): si el punto
--- de reaparición del jugador ya no tiene suelo, se busca el más cercano que
--- quede dentro de la zona. nil = no hace falta cambiarlo (o no queda suelo).
+-- Quien muere en plena pelea reaparece en el sitio MÁS SEGURO de la zona en
+-- ese momento (no donde estaba al empezar): de todas las casillas donde se
+-- cabe de pie (Level:isStandable: sin pinchos ni peligros, con suelo), la
+-- mejor puntuada:
+--   · lejos del jefe (su x: si apunta desde el techo, es donde caerá),
+--     hasta SAFE_BOSS casillas (más allá ya da igual);
+--   · sin otros enemigos cerca (súbditos, peces...);
+--   · fuera del agua y lejos de una inundación que sube;
+--   · no dentro de un bloque de jefe (cuerpos sólidos).
+-- Lo usan un jugador y el servidor (misma función, mismo resultado).
+-- nil = no está en una zona en pelea (o no queda suelo).
+local SAFE_BOSS  = 7        -- casillas: a partir de aquí, más lejos no puntúa más
+local ENEMY_NEAR = 2.5      -- casillas: un enemigo más cerca penaliza
+local STAND_DY   = 16 * PLAYER_SCALE / 2 + 2   -- del suelo al centro del jugador de pie
+
+local function spawnScore(level, z, bosses, c, r)
+    local T = TILE_PX
+    local x, y = (c - 0.5) * T, r * T - STAND_DY
+    -- Dentro de un bloque de jefe u otro cuerpo sólido: no
+    if level:bodyAt(x, y) or level:bodyAt(x, (r - 1) * T + 4) then return nil end
+    local score = 0
+    local dBoss = SAFE_BOSS * T
+    for _, b in ipairs(bosses) do
+        local bx, by = b.x, b.y
+        if b.markerX and (b.state == 'aim' or b.state == 'wallaim') then bx = b.markerX end
+        local d = math.max(math.abs(bx - x) - (b.outerW or 0) / 2, 0) + math.max(math.abs(by - y) - (b.outerH or 0) / 2, 0) * 0.5
+        dBoss = math.min(dBoss, d)
+    end
+    score = score + dBoss / T * 10
+    for _, e in ipairs(level.liveEntities or {}) do
+        if e.alive and not e.def.boss and not e.def.pickup and not e.def.checkpoint and e.isObstacle and e:isObstacle()
+           and e.state ~= 'reserve' then
+            local d = math.sqrt((e.x - x) ^ 2 + (e.y - y) ^ 2) / T
+            if d < ENEMY_NEAR then score = score - (ENEMY_NEAR - d) * 12 end
+        end
+    end
+    -- Agua: la cabeza dentro es malo; los pies dentro, un poco
+    if level:liquidAt(x, y - 30) then score = score - 40
+    elseif level:liquidAt(x, y + 30) then score = score - 8 end
+    -- Inundación: por debajo de donde llegará el agua (su nivel máximo), peor
+    -- cuanto más hondo; y ya cubierto ahora, mucho peor
+    for _, f in ipairs(level.floods or {}) do
+        if x >= f.x0 and x < f.x1 and y < f.y1 then
+            local top = f.y1 - (f.hi or f.hTiles) * T              -- superficie en lo más alto
+            local under = (y - STAND_DY + 8 - top) / T             -- cabeza por debajo de ella
+            if under > 0 then score = score - math.min(under, 4) * 6 end
+            if f.surf and y - 30 >= f.surf then score = score - 30 end
+        end
+    end
+    return score, x, y
+end
+
+function BossZones.safeSpawn(level, z)
+    local bosses = {}
+    for _, b in ipairs(z.bosses or {}) do
+        if b.alive and not (b.isDying and b:isDying()) then bosses[#bosses + 1] = b end
+    end
+    local best, bx, by
+    for c = z.col, z.col + z.w - 1 do
+        for r = z.row, z.row + z.h - 1 do
+            if level:isStandable(c, r) then
+                local sc, x, y = spawnScore(level, z, bosses, c, r)
+                if sc and (not best or sc > best + 1e-6) then best, bx, by = sc, x, y end
+            end
+        end
+    end
+    return bx, by, best
+end
+
 function BossZones.respawnPoint(level, pa)
-    local x, y = pa.spawnX, pa.spawnY
     for _, z in ipairs(level.bossZones or {}) do
-        if z.state == 'fight' and contains(z, x, y) then
+        if z.state == 'fight' and (contains(z, pa.spawnX, pa.spawnY) or contains(z, pa.x, pa.y)) then
+            local x, y = BossZones.safeSpawn(level, z)
+            if x then return x, y end
+            -- (sin sitio bueno: el de siempre si aún tiene suelo)
             local T = TILE_PX
-            local c = math.floor(x / T) + 1
-            local r = math.floor((y + 16 * PLAYER_SCALE / 2 - 2) / T) + 1  -- celda donde está de pie
+            local c = math.floor(pa.spawnX / T) + 1
+            local r = math.floor((pa.spawnY + STAND_DY) / T) + 1
             if level:isStandable(c, r) then return nil end
             return level:findGround(c, z.col, z.col + z.w - 1, z.row, z.row + z.h - 1)
         end

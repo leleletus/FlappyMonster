@@ -46,8 +46,30 @@ local function surfaceDef(x, y)
     end
     return nil
 end
+-- Sólido (tile) en el punto, o nil
+local function solidDef(x, y)
+    local t = level:getDefAt(x, y)
+    return t.collision ~= 'none' and t or nil
+end
+-- Superficie conocida su normal (nx, ny: hacia fuera): se busca el bloque
+-- hacia dentro; si no hay (el borde invisible de una zona de jefe), el suelo
+-- que haya debajo (lo más parecido a "de qué está hecho esto")
+local function surfaceDefN(x, y, nx, ny)
+    if not level then return nil end
+    for d = 4, 48, 8 do
+        local t = solidDef(x - nx * d, y - ny * d)
+        if t then return t end
+    end
+    local t = surfaceDef(x, y)
+    if t then return t end
+    for d = 16, 20 * TILE_PX, 16 do
+        t = solidDef(x, y + d)
+        if t then return t end
+    end
+    return nil
+end
 local function paletteAt(x, y, opts)
-    local t = opts.def or surfaceDef(x, y)
+    local t = opts.def or (opts.nx and surfaceDefN(x, y, opts.nx, opts.ny)) or surfaceDef(x, y)
     return t and TileTypes.debris(t) or FALLBACK
 end
 Particles.paletteAt = function(x, y, def) return paletteAt(x, y, { def = def }) end
@@ -287,18 +309,24 @@ function Particles.emit(kind, x, y, opts)
                   life = rnd(0.5, 0.8), size = 3, col = pick(pal), phys = true, fadeLast = 0.25 })
         end
     elseif kind == 'mega_trail' then
-        -- Estela de la embestida (opts.dir = hacia dónde va)
+        -- Estela de la embestida (opts.dir = hacia dónde va): polvo del suelo
         local dir = opts.dir or 1
+        local dust = dustOf(paletteAt(x, y, opts))
         for i = 1, 2 do
             add({ x = x + rnd(-8, 8), y = y - rnd(0, 8), vx = -dir * rnd(40, 140), vy = -rnd(20, 70), g = -10,
-                  life = rnd(0.3, 0.55), size = math.random(2, 4) * 3, col = {0.88, 0.84, 0.76}, drag = 3, dust = true })
+                  life = rnd(0.3, 0.55), size = math.random(2, 4) * 3, col = dust, drag = 3, dust = true })
         end
     elseif kind == 'mega_debris' then
-        -- Piedrecitas que suelta al trepar por paredes y techo (de lo que pisa)
+        -- Piedrecitas que suelta al trepar por paredes y techo (de lo que pisa).
+        -- opts.nx, ny = normal de la superficie: nacen fuera del bloque,
+        -- repartidas a lo largo de ella, y se despegan hacia fuera
         local pal = paletteAt(x, y, opts)
+        local nx, ny = opts.nx or 0, opts.ny or -1
         for i = 1, 3 do
-            add({ x = x + rnd(-16, 16), y = y + rnd(-6, 6), vx = rnd(-50, 50), vy = rnd(0, 80), g = 1200,
-                  life = rnd(0.8, 1.3), size = math.random(1, 2) * 3,
+            local k, out = rnd(-16, 16), rnd(8, 14)
+            add({ x = x + nx * out - ny * k, y = y + ny * out + nx * k,
+                  vx = nx * rnd(40, 120) + rnd(-40, 40), vy = ny * rnd(20, 80) + rnd(0, 60), g = 1200,
+                  life = rnd(0.9, 1.4), size = math.random(1, 2) * 3,
                   col = pick(pal), phys = true, fadeLast = 0.3 })
         end
     elseif kind == 'mega_dirt' then
@@ -502,5 +530,6 @@ function Particles.render(camX, camY)
 end
 
 function Particles.clear() list = {}; shakeT = 0 end
+function Particles.debugList() return list end      -- (pruebas: tools/tests/subtiles)
 
 return Particles

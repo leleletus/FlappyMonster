@@ -10,6 +10,10 @@
 --   sonidos     megaFall y megaRoar
 --   libres      al empezar la pelea vuelven a moverse
 --   emotes      los descansos siguen el orden 1 (rugido), 2 (pinzas), 1, 3 (pincho)
+--   reaparece   muriendo en plena pelea (uno cada 6 s) se reaparece con
+--               BossZones.respawnPoint (como el servidor y un jugador): siempre
+--               dentro de la zona, de pie en suelo seguro, sin la cabeza en el
+--               agua y lejos del jefe (≥ 2 casillas de su cuerpo)
 --
 --   tools/tests/run.sh boss_intro        (LEVEL=..., SECS=90)
 io.stdout:setvbuf('no')
@@ -46,7 +50,12 @@ function love.load()
     local z = boss.zone
     local T = TILE_PX
     -- Uno justo donde está el jefe (debe caer en otro sitio) y otro a la izquierda
-    local players = { PlayerAdventure:new(boss.x, z.y1 - 60), PlayerAdventure:new(z.x0 + 3 * T, z.y1 - 60) }
+    -- (de pie en el suelo que haya: el de la arena puede tener agua)
+    local function ground(x)
+        local gx, gy = level:findGround(math.floor(x / T) + 1, z.col, z.col + z.w - 1, z.row, z.row + z.h - 1)
+        return gx or x, gy or (z.y1 - 60)
+    end
+    local players = { PlayerAdventure:new(ground(boss.x)), PlayerAdventure:new(ground(z.x0 + 3 * T)) }
     for _, pa in ipairs(players) do pa.spawnX, pa.spawnY = pa.x, pa.y end
     level.players = players
     local dt, t = 1 / 60, 0
@@ -57,6 +66,7 @@ function love.load()
     local x0 = {}
     local rests, lastRest = {}, nil
     local freeMoved = 0
+    local spawns, nextKill = {}, nil
     while t < (tonumber(os.getenv('SECS')) or 90) do
         t = t + dt
         local intro = z.state == 'intro'
@@ -97,10 +107,29 @@ function love.load()
             if boss.state == 'rest' then rests[#rests + 1] = boss.restKind; print('         emote ' .. tostring(boss.restKind)) end
             lastState = boss.state
         end
-        for _, pa in ipairs(players) do
-            if not pa.alive or (pa.dying and pa.deathPhase == 'fall') then pa:respawn(); pa.hp = pa.hpMax end
+        -- Muertes forzadas en plena pelea (el primero, cada 6 s)
+        if fightT and z.state == 'fight' then
+            nextKill = nextKill or fightT + 6
+            if t >= nextKill and not players[1].dying then players[1]:die(nil, true); nextKill = t + 6 end
         end
-        if #rests >= 4 then break end
+        for _, pa in ipairs(players) do
+            if not pa.alive or (pa.dying and pa.deathPhase == 'fall') then
+                local rx, ry = BossZones.respawnPoint(level, pa)
+                if rx then pa.spawnX, pa.spawnY = rx, ry end
+                pa:respawn(); pa.hp = pa.hpMax
+                if z.state == 'fight' then
+                    local c = math.floor(pa.spawnX / T) + 1
+                    local r = math.floor((pa.spawnY + 16 * PLAYER_SCALE / 2 - 2) / T) + 1   -- (celda donde está de pie)
+                    local d = math.max(0, math.abs(pa.spawnX - boss.x) - boss.outerW / 2)
+                    spawns[#spawns + 1] = { inZone = BossZones.contains(z, pa.spawnX, pa.spawnY),
+                        stand = level:isStandable(c, r), wet = level:liquidAt(pa.spawnX, pa.spawnY - 30) ~= nil, d = d }
+                    local sp = spawns[#spawns]
+                    print(('%6.2fs reaparece en (%d,%d), a %.1f casillas del jefe (%s)%s%s%s'):format(t, c, r, d / T, boss.state,
+                        sp.inZone and '' or ' FUERA DE LA ZONA', sp.stand and '' or ' SIN SUELO', sp.wet and ' EN EL AGUA' or ''))
+                end
+            end
+        end
+        if #rests >= 4 and #spawns >= 4 then break end
     end
     local want = { 'dormant', 'fall_in', 'land_in', 'roar_in', 'ready', 'chase' }
     local okSeq = true
@@ -120,6 +149,14 @@ function love.load()
     local okR = #rests >= 3
     for i, k in ipairs(rests) do if k ~= ks[i] then okR = false end end
     check('emotes', okR, 'descansos: ' .. table.concat(rests, ', '))
+    local okS, minD = #spawns >= 3, math.huge
+    for _, sp in ipairs(spawns) do
+        okS = okS and sp.inZone and sp.stand and not sp.wet
+        minD = math.min(minD, sp.d)
+    end
+    check('reaparece', okS and minD >= 2 * T,
+        ('%d reapariciones; todas en la zona, de pie y secas=%s; la más cercana al jefe a %.1f casillas'):format(#spawns,
+            tostring(okS), minD / T))
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
     love.event.quit(fails == 0 and 0 or 1)
 end

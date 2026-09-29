@@ -500,7 +500,10 @@ list no mode until the user places a Point Area in them).
 - **Physical particles** (`phys = true` in `Particles`): collide with the level set by
   `Particles.setLevel(level)` (Adventure/Online states): bounce off walls/ceilings,
   bounce and then REST on floors/platforms (`landingCross`), fall again without
-  support, sink slowly in water; born inside a block → no collisions. Impact kinds
+  support, sink slowly in water; born inside a block → no collisions. Debris from a
+  surface with a known normal (`opts.nx, ny`: the Mega on walls/ceilings) is born
+  outside the block and looks for the material INTO the surface; on an invisible zone
+  edge it uses the floor below. Impact kinds
   (block_break, spike_land, gp_land, spike_pop, mega_step/debris/dirt/slam/land) take
   the colours of the block they hit: `TileTypes.debris(def)` = tile `debris` →
   material `debris` → shades of its colour; the surface is probed around the point.
@@ -683,9 +686,13 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   vanishing (zone no longer fighting) → hidden. State sent in snapshots (hidden =
   netAtRest). `BossZones.link` gives entities with `wantsLevel` the level (edges drawn
   like real blocks). Protocol v19.
-- Boss-zone respawns are validated: `BossZones.respawnPoint(level, pa)` moves
-  the spawn to remaining ground in the zone if the floor under it was broken
-  (`Level:isStandable`, `Level:findGround` are generic helpers).
+- Boss-zone respawns: dying in a zone in 'fight' respawns at `BossZones.safeSpawn(level,
+  z)` (via `respawnPoint`, SP + server): the best-scored standable cell of the zone
+  (`Level:isStandable`) — far from the boss (its `markerX` while aiming; capped at 7
+  tiles), no other enemy within 2.5 tiles, head out of water, below a flood's max
+  level penalised, never inside a solid body (boss walls). Fallback: old spawn if it
+  still has ground, else `Level:findGround`. Frozen players (boss intro) are
+  invulnerable (`isInvulnerable` = invT or `pa.frozen`, no blink).
 - **MirrorEnemy**: owns a real `PlayerAdventure` body (`self.body`) and feeds it
   the delayed inputs of its target through a stub `Input` (and a `Sound` proxy
   that lowers pitch). Players record their raw inputs every step
@@ -749,7 +756,7 @@ holdTime, fallSpeed/fallStep/fallPause, lowTime. `Level.fromData` builds
 at which its predicted inputs get processed; 0 corrections in tests). Physics:
 `Level:liquidAt` returns water below `f.surf`, so swimming/drowning/splash/
 fireballs work unchanged. Render in `renderWaterEffect` (distortion + tint per
-cell, skipping solid blocks and tile water). Surfaces (floods AND tile water
+cell, over EVERYTHING it covers incl. solid blocks — only tile water is skipped, no double tint). Surfaces (floods AND tile water
 with air above: `Level:isWaterSurfaceCell`) use `src/fx/WaterSurface.lua`: tint
 drawn in 4-px columns whose top follows the wave (no flat edge behind it);
 distortion starts `WaterSurface.MARGIN` px below the surface. `Floods.updateFx`

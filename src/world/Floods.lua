@@ -163,9 +163,10 @@ end
 -- ── Dibujo ────────────────────────────────────────────────────────────────────
 -- ¿Celda que no se pinta de agua? (bloque macizo, o agua de tiles, que ya
 -- tiene su propio tinte)
+-- (Solo se salta el agua de tile, que ya se pinta sola: no dos tintes. Los
+-- bloques NO: la inundación va por delante de todo lo que cubre, bloques,
+-- rompibles, entidades... así se ve que el agua los tapa al subir)
 local function skipCell(level, col, row, liquidOfCell)
-    local d = level:getDef(col, row)
-    if d.collision == 'solid' and d.fullHitbox then return true end
     return liquidOfCell(level, col, row) ~= nil
 end
 

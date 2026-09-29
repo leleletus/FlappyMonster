@@ -12,6 +12,10 @@
 --   part_agua    en el agua cae mucho más despacio que en el aire
 --   part_color   colores del material: césped, tierra, piedra, madera; y el de un
 --                bloque roto (lo recuerda el nivel)
+--   debris_pared piedrecitas del Mega trepando: en una pared de tierra, un techo de
+--                césped y un borde invisible (sin bloque: el suelo de debajo) nacen
+--                fuera del bloque, con su material, y acaban quietas en el suelo
+--   inundacion   una inundación tapa (tiñe) un bloque rompible que queda debajo
 --   editor       guardar y cargar en el editor: se conservan (y solid=false)
 --   dibujo       Level:render con tierra, césped y subtiles no da errores
 -- SHOT=1: además guarda <save>/subtiles.png a tamaño real.
@@ -198,6 +202,65 @@ function cases.part_color()
             prev and prev.name or 'nil'))
 end
 
+function cases.debris_pared()
+    local put = {}
+    for r = 2, 9 do put[#put + 1] = { 2, r, 'dirt' } end         -- pared de tierra a la izquierda
+    for c = 6, 9 do put[#put + 1] = { c, 3, 'grass' } end        -- techo de césped
+    for c = 2, 13 do put[#put + 1] = { c, 10, 'solid' } end      -- suelo de piedra
+    local level = room(14, 11, put)
+    local res = {}
+    for _, sc in ipairs({ { 'pared', 2 * T, 6 * T, 1, 0, 'dirt' }, { 'techo', 7.5 * T, 3 * T, 0, 1, 'grass' },
+                          { 'borde', 11.5 * T, 5 * T, -1, 0, 'solid' } }) do
+        Particles.clear(); Particles.setLevel(level)
+        for _ = 1, 4 do Particles.emit('mega_debris', sc[2], sc[3], { nx = sc[4], ny = sc[5] }) end
+        local list = {}
+        for i, p in ipairs(Particles.debugList()) do list[i] = p; p.life = 99 end   -- (que no se borren al mirar)
+        local pal = TileTypes.debris(TileTypes.byName[sc[6]])
+        local okCol, n = true, #list
+        for _, p in ipairs(list) do
+            local found = false
+            for _, c in ipairs(pal) do
+                if math.abs(p.col[1] - c[1]) < 0.001 and math.abs(p.col[2] - c[2]) < 0.001 then found = true end
+            end
+            okCol = okCol and found
+        end
+        for _ = 1, 150 do Particles.update(1 / 60) end
+        local phys, rest = 0, 0
+        for _, p in ipairs(list) do
+            if p.phys then phys = phys + 1 end
+            if p.ground and math.abs(p.y + p.size / 2 - 9 * T) < 1 then rest = rest + 1 end
+        end
+        res[#res + 1] = { sc[1], okCol, phys == n, rest == #list and #list > 0, n }
+    end
+    local ok, parts = true, {}
+    for _, r in ipairs(res) do
+        ok = ok and r[2] and r[3] and r[4]
+        parts[#parts + 1] = ('%s: material=%s físicas=%s en el suelo=%s'):format(r[1], tostring(r[2]), tostring(r[3]), tostring(r[4]))
+    end
+    check('debris_pared', ok, table.concat(parts, '; '))
+end
+
+function cases.inundacion()
+    local Floods = require 'src/world/Floods'
+    local function pixel(withFlood)
+        local ents = withFlood and { { type = 'flood', col = 2, row = 4, props = { corner = { col = 9, row = 9 },
+                                       startLevel = 6, maxLevel = 6 } } } or {}
+        local level = room(10, 10, { { 5, 8, 'breakable' } }, nil, ents)
+        if withFlood then Floods.setTime(level, 0) end
+        local scene = love.graphics.newCanvas(640, 640)
+        local out = love.graphics.newCanvas(640, 640)
+        love.graphics.setCanvas(scene); love.graphics.clear(0, 0, 0, 1); level:render(0, 0)
+        love.graphics.setCanvas(out); love.graphics.clear(0, 0, 0, 1); level:renderWaterEffect(0, 0, scene)
+        love.graphics.setCanvas()
+        local r, g, b = out:newImageData():getPixel(4 * T + 20, 7 * T + 20)
+        return r, g, b
+    end
+    local r0, g0, b0 = pixel(false)
+    local r1, g1, b1 = pixel(true)
+    check('inundacion', b1 - r1 > (b0 - r0) + 0.05,
+        ('bloque rompible sin agua rgb(%.2f,%.2f,%.2f) → bajo la inundación rgb(%.2f,%.2f,%.2f)'):format(r0, g0, b0, r1, g1, b1))
+end
+
 function cases.editor()
     local Model = require 'src/editor/EditorModel'
     local m = Model.new(10, 8, 'sub')
@@ -227,7 +290,12 @@ local function scene()
     for c = 2, 19 do put[#put + 1] = { c, 10, c < 7 and 'solid' or (c < 12 and 'dirt' or 'grass') } end
     for c = 15, 18 do put[#put + 1] = { c, 9, 'grass' } end
     put[#put + 1] = { 17, 8, 'dirt' }; put[#put + 1] = { 17, 7, 'grass' }
-    return room(20, 11, put, subs)
+    -- rompibles a medio tapar por una inundación (a la derecha)
+    put[#put + 1] = { 15, 8, 'breakable' }; put[#put + 1] = { 18, 8, 'breakable' }
+    local level = room(20, 11, put, subs, { { type = 'flood', col = 14, row = 2, props = { corner = { col = 19, row = 9 },
+                                            startLevel = 2.5, maxLevel = 2.5 } } })
+    require('src/world/Floods').setTime(level, 0)
+    return level
 end
 
 function cases.dibujo()
@@ -246,7 +314,7 @@ end
 local shot
 function love.load()
     for _, n in ipairs({ 'de_pie', 'medio_pie', 'pared', 'decorativa', 'cabeza', 'crabby', 'caida',
-                         'part_suelo', 'part_agua', 'part_color', 'editor', 'dibujo' }) do cases[n]() end
+                         'part_suelo', 'part_agua', 'part_color', 'debris_pared', 'inundacion', 'editor', 'dibujo' }) do cases[n]() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
     if not os.getenv('SHOT') then love.event.quit(fails == 0 and 0 or 1); return end
     love.window.setMode(1280, 720)
@@ -262,9 +330,13 @@ end
 
 function love.draw()
     if not shot then return end
+    shot.canvas = shot.canvas or love.graphics.newCanvas(1280, 720)
+    love.graphics.setCanvas(shot.canvas)
     love.graphics.clear(0.35, 0.6, 0.85)
     shot.level:render(0, 0)
     Particles.render(0, 0)
+    love.graphics.setCanvas()
+    shot.level:renderWaterEffect(0, 0, shot.canvas)
     shot.n = shot.n + 1
     if shot.n == 3 then love.graphics.captureScreenshot(function(img) img:encode('png', 'subtiles.png') end) end
     if shot.n > 5 then

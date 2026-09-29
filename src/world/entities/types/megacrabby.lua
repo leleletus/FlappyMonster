@@ -1191,12 +1191,17 @@ function Mega:renderFx(now, fx, fy, moved)
     self._fx = f
     local walking = st == 'chase' or st == 'charge'
     local crawling = st == 'climb' or st == 'ceiling' or st == 'wallclimb'
+    -- Pegado a pared/techo: la normal de la superficie (las piedrecitas salen
+    -- de ella, del material que sea, y no nacen metidas en el bloque)
+    local nx, ny = 0, -1
+    if self.crawl and self.cattached then nx, ny = self.cnx or 0, self.cny or -1 end
+    local srf = { nx = nx, ny = ny }
     if (walking or crawling) and moved > 0 then
         f.acc = f.acc + moved
         if f.acc >= STEP_DIST then
             f.acc, f.foot = 0, -f.foot
             if walking then Particles.emit('mega_step', fx + f.foot * self.sprW * 0.3, fy)
-            else Particles.emit('mega_debris', fx, fy) end
+            else Particles.emit('mega_debris', fx, fy, srf) end
         end
     end
     local every = (st == 'charge') and 0.04 or (st == 'stuck' or st == 'dying_kick') and 0.16
@@ -1205,7 +1210,10 @@ function Mega:renderFx(now, fx, fy, moved)
         f.t = now
         if st == 'charge' then Particles.emit('mega_trail', fx - self.facing * self.sprW * 0.3, fy, { dir = self.facing })
         elseif st == 'windup' then Particles.emit('mega_trail', fx - self.facing * self.sprW * 0.35, fy, { dir = -self.facing })
-        elseif st == 'aim' or st == 'wallaim' then Particles.emit('mega_debris', fx + (math.random() - 0.5) * self.sprW * 0.6, fy)
+        elseif st == 'aim' or st == 'wallaim' then
+            -- (repartidas a lo largo de la superficie: horizontal en el techo, vertical en la pared)
+            local k = (math.random() - 0.5) * self.sprW * 0.6
+            Particles.emit('mega_debris', fx - ny * k, fy + nx * k, srf)
         else Particles.emit('mega_dirt', self.x + (math.random() - 0.5) * SPIKE_HW, self.floorY) end
     end
 end
