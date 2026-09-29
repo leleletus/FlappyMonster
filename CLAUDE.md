@@ -143,6 +143,11 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     re-seeks the level track every 1 s to the server clock
                     (`Sound.syncMusic('level', t)`; tick 0 = round start), so all players
                     hear the same point of the song (tested: ≤0.1 s).
+                    Generated music: `tools/music/tentacle_chip.py` → `tentacle_chip.ogg` + `.mid`
+                    ("Tentacle Chip", boss track): chiptune modelled on an ANALYSIS of
+                    TentacleTantrum.ogg (92.5 BPM 4/4 with a 3+3+2 tresillo groove — beat
+                    trackers read it as 123 BPM —, 36-bar form ×2, same harmony, offbeat
+                    skank drums) with a NEW melody; seamless loop (tail folded onto the start).
 src/entities/
   PlayerAdventure.lua  THE player physics (shared by SP, server and client prediction)
   OnlinePlayer.lua     remote player renderer (tinted by player color, name tag)
