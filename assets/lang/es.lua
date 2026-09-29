@@ -175,6 +175,7 @@ return {
         ["why.autoscroll"] = "el nivel tiene cámara automática (solo Carrera)",
         ["why.point_areas"] = "el nivel tiene zonas de puntos (Rey de la Colina)",
         ["why.no_killable"] = "el nivel no tiene enemigos que se puedan pisotear",
+        ["why.respawn"]      = "los enemigos del nivel reaparecen",
         ["why.no_finish"] = "el nivel no tiene meta (tile Meta)",
         ["why.no_point_areas"] = "el nivel no tiene zonas de puntos",
     },

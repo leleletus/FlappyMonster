@@ -54,7 +54,10 @@
     {"col":24,"props":{"patrol":{"left":22,"right":28}},"row":11,"type":"gummy"},
     {"col":50,"props":{"patrol":{"left":44,"right":56}},"row":17,"type":"crabby"},
     {"col":74,"props":{"patrol":{"left":70,"right":78}},"row":11,"type":"gummy"},
-    {"col":40,"props":{"patrol":{"left":36,"right":44}},"row":17,"type":"gummy"}
+    {"col":40,"props":{"patrol":{"left":36,"right":44}},"row":17,"type":"gummy"},
+    {"col":7,"props":{"patrol":{"left":2,"right":12}},"row":22,"type":"pufferfish"},
+    {"col":30,"props":{"patrol":{"left":25,"right":46}},"row":21,"type":"pufferfish"},
+    {"col":84,"props":{"patrol":{"left":79,"right":91},"startDir":"left"},"row":22,"type":"pufferfish"}
   ],
   "foliage": [],
   "vents": [

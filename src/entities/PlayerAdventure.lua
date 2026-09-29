@@ -141,6 +141,12 @@ function PlayerAdventure:new(x, y)
     return o
 end
 
+-- Caja exterior de un jugador DE PIE con el centro del sprite en (x, y)
+-- (jugadores remotos online, de los que solo se conoce la posición)
+function PlayerAdventure.outerBoxAt(x, y)
+    return { x = x - OUTER_W / 2, y = y + OUTER_YOFF - OUTER_H / 2, w = OUTER_W, h = OUTER_H }
+end
+
 function PlayerAdventure:getOuterBounds()
     if self.crouching then
         -- Agachado (o aplastado): hitbox más baja, alineada al suelo
@@ -344,10 +350,13 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
                 local edge = t.fullHitbox and math.ceil((y-hh)/T)*T
                              or math.floor((y-hh)/T)*T + (t.hitbox.y + t.hitbox.h)*T
                 y = edge + hh; self.vy=0
-                -- Cabezazo: rompe bloques rompibles (desde abajo, saltando)
+                -- Cabezazo: rompe bloques rompibles y cambia los ON/OFF (desde abajo)
                 local c, r = math.floor(px/T)+1, math.floor((y-hh-2)/T)+1
-                if t.breakable and level:breakTile(c, r) then
+                local how = (t.breakable or t.toggle) and level:hitTile(c, r)
+                if how == 'break' then
                     fx(self, 'block_break', (c-1)*T, (r-1)*T)
+                elseif how == 'toggle' then
+                    fx(self, 'switch_hit', (c-1)*T, (r-1)*T)
                 elseif not self.crouching then       -- (saltitos agachado en un túnel: sin "bonk")
                     Sound.play('headBump')
                 end
@@ -694,16 +703,23 @@ function PlayerAdventure:updateGroundPound(dt, level)
         self:moveAndCollide(level, 0, self.vy * dt)
         if self.dying then return end
         if self.onGround then
-            -- Bloques rompibles bajo los pies: se rompen y sigue cayendo
+            -- Bloques rompibles bajo los pies: se rompen y sigue cayendo. Los
+            -- ON/OFF cambian (una vez cada uno) y el impacto es normal.
             local T  = TILE_PX
             local ob = self:getOuterBounds()
-            local footY, broke = ob.y + ob.h + 2, false
+            local footY, broke, done = ob.y + ob.h + 2, false, {}
             for _, px in ipairs({ self.x - self.w/2 + 4, self.x, self.x + self.w/2 - 4 }) do
                 local t = level:getDefAt(px, footY)
                 local c, r = math.floor(px/T)+1, math.floor(footY/T)+1
-                if t.breakable and level:breakTile(c, r) then
-                    broke = true
-                    fx(self, 'block_break', (c-1)*T, (r-1)*T)
+                if (t.breakable or t.toggle) and not done[c] then
+                    done[c] = true
+                    local how = level:hitTile(c, r)
+                    if how == 'break' then
+                        broke = true
+                        fx(self, 'block_break', (c-1)*T, (r-1)*T)
+                    elseif how == 'toggle' then
+                        fx(self, 'switch_hit', (c-1)*T, (r-1)*T)
+                    end
                 end
             end
             if broke then

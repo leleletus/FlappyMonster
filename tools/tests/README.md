@@ -21,8 +21,11 @@ actualizaciones automáticas. Nunca apuntan al servidor real (usan
 
 | Arnés | Qué comprueba | Ejemplo |
 |---|---|---|
-| `flyers` | Enemigos voladores en TODOS los niveles (cada enemigo convertido en volador con oscilación grande): ni metidos en bloques, ni convulsionando (giros seguidos), ni atascados. `SHOT=1` guarda capturas con las alas. | `run.sh flyers` · `run.sh flyers BOB=16` |
+| `flyers` | Enemigos voladores en TODOS los niveles (cada enemigo convertido en volador con oscilación grande): ni metidos en bloques, ni convulsionando (giros seguidos), ni atascados. `SHOT=1` guarda capturas con las alas. | `run.sh flyers` · `run.sh flyers BOB=16` · `SEED=n` (otra secuencia de pausas al azar; `all` prueba 2) · `WHY=1` (qué se atasca/convulsiona) |
 | `crawler_drop` | Crabbies trepadores de techo (como los súbditos del Mega Crabby): pisotón al clavado, el trampolín aplasta sin matar y no remata, y repiten la caída varias veces. | `run.sh crawler_drop SUMMON=1` (`NOWALL=1` = Crabby de techo normal, `TRACE=1` = estados) |
+| `mechanics` | Bloques ON/OFF (cabezazo y ground pound), bloque invisible (se atraviesa subiendo y de lado, no se baja, aparece/parpadea/desaparece), Gummy con casco (66 caídas de todas las velocidades: siempre rebote sin daño; ground pound = muerto; de lado sí daña), pisotón rápido a un Gummy normal y pez globo (atraviesa bloques, ciclo aviso→hinchado→pinchazo, no se hincha con jugadores fuera del agua). `SHOT=1` = captura `<save>/mechanics.png`. | `run.sh mechanics` |
+| `sounds` | Todo `Sound.play('nombre')` del código está cargado; los sonidos de `NAMES` (por defecto los nuevos) se reproducen y, con `Sound.GAIN`, quedan en [-15, -8] dBFS. | `run.sh sounds` (`NAMES=a,b`) |
+| `online_helmet` | Online (cliente real + bot + servidor local): rebotar sobre un Gummy con casco (casco intacto, sin daño), ground pound (muere, se oye helmetBreak), pez globo (pincha: -1 vida, se oye pufferPrick). Nivel propio: `tools/tests/online_helmet/level.json`. | `run.sh online_helmet LEVEL=tools/tests/online_helmet/level.json` |
 | `boss_sim` | Pelea de jefe en solitario con las clases reales: estados, daño al jugador, golpes cuando es vulnerable. | `run.sh boss_sim` (`LEVEL=`, `HP=`, `DEBUG_POSE=1`) |
 | `sp_boss` | La pelea en el modo UN JUGADOR REAL (AdventureState, como "Probar" del editor): súbditos, bloques de jefe, tiempo entre golpes. | `run.sh sp_boss SECS=60` (`SHOTS=1`) |
 | `boss_frames` | La pelea dibujada en una rejilla de fotogramas (`<save>/boss_frames.png`). | `run.sh boss_frames STATES=chase,climb EVERY=0.2` |

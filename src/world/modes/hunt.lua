@@ -27,6 +27,8 @@ return {
         if (info.bosses or 0) > 0 then return false, L('mode.why.boss') end
         if info.autoScroll then return false, L('mode.why.autoscroll') end
         if (info.pointAreas or 0) > 0 then return false, L('mode.why.point_areas') end
+        -- Cazar no tiene sentido si los enemigos vuelven
+        if (info.respawning or 0) > 0 then return false, L('mode.why.respawn') end
         if info.killable > 0 then return true end
         return false, L('mode.why.no_killable')
     end,

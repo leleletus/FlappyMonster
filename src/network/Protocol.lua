@@ -7,12 +7,16 @@ local Tiles = require 'src/world/Tiles'
 local P = {}
 
 -- ── Versión / red ─────────────────────────────────────────────────────────────
-P.VERSION        = 21        -- el servidor rechaza clientes con otra versión
+P.VERSION        = 22        -- el servidor rechaza clientes con otra versión (22: bloques ON/OFF e invisible, casco)
 
 -- Sonidos PRIVADOS: solo los oye el jugador que los causa (su cliente ya los
 -- genera con la predicción), así que el servidor no los manda a nadie. P. ej.
 -- la alarma de ahogo: cada uno debe oír solo la suya.
 P.PRIVATE_SOUNDS = { waterWarning = true }
+-- Sonidos COMPARTIDOS: los oyen todos, también quien los causa (su cliente NO
+-- los predice): lo que decide solo el servidor, p. ej. el casco que se rompe
+-- con un ground pound o el pinchazo del pez globo.
+P.SHARED_SOUNDS  = { helmetBreak = true, pufferPrick = true }
 P.CHANNELS       = 2
 P.CH_RELIABLE    = 0        -- eventos de sala y de juego (ordenados, garantizados)
 P.CH_STATE       = 1        -- snapshots e inputs (no fiables: el más nuevo gana)

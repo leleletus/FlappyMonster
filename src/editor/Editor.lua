@@ -1398,14 +1398,8 @@ local function drawLevelTab(x, y, w)
     y, open = ui.section('lvl:modes', 'Modos de juego', x, y, w, m.modes and 'limitados' or 'todos')
     if open then
         -- Lo que el servidor mira para decidir (mismo cálculo que server/main.lua)
-        local info = { killable = 0, bosses = 0, pointAreas = 0, finish = 0, autoScroll = m.autoScroll ~= nil }
-        for _, e in ipairs(m.entities) do
-            local t = ET.get(e.type)
-            if e.props.stompable then info.killable = info.killable + 1 end
-            if t and t.boss then info.bosses = info.bosses + 1 end
-            if e.type == 'pointarea' then info.pointAreas = info.pointAreas + 1 end
-        end
-        info.enemies = #m.entities
+        local info = Modes.entityInfo(m.entities)
+        info.finish, info.autoScroll = 0, m.autoScroll ~= nil
         if E.level then info.finish = E.level:countTrigger('finish') end
         local allowed = {}
         if m.modes then for _, id in ipairs(m.modes) do allowed[id] = true end end

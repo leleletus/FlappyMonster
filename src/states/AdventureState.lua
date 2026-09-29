@@ -70,6 +70,10 @@ function AdventureState:enter(args)
     PlayerAdventure.fx = function(kind, x, y)
         Particles.emit(kind, x, y)
         if kind == 'block_break' then Sound.play('blockBreak') end
+        if kind == 'switch_hit' then               -- (el bloque ya cambió: suena su estado nuevo)
+            local on = self.level:getDefAt(x + 1, y + 1).name == 'switch_on'
+            Sound.play(on and 'switchOn' or 'switchOff')
+        end
     end
     -- Impactos de pinchos que caen, bloques que rompe un jefe...
     Entity.fx = function(kind, x, y)
@@ -379,6 +383,7 @@ function AdventureState:update(dt)
 
     self.level:update(dt)
     self.level:updateFoliage(dt)
+    self.level:updateHiddenBlocks(dt, self.player.dying and {} or { self.player:getOuterBounds() })
     Floods.advance(self.level, dt)                 -- inundaciones: el agua sube y baja
     Floods.updateFx(self.level, dt)
     -- Zonas de puntos: estar dentro da puntos cada cierto tiempo
@@ -549,12 +554,17 @@ function AdventureState:_renderScene()
 
     -- Renderizar enemigos (entre tiles y jugador)
     for _, g in ipairs(self.enemies) do
-        if g.alive then g:render(self.camX, self.camY) end      -- (reservas: no)
+        if g.alive and not g.renderFront then g:render(self.camX, self.camY) end      -- (reservas: no)
     end
 
     self.player:render(self.camX, self.camY)
     PointAreas.drawProgress(self.level, self.player, self.player.x - self.camX, self.player.y - self.camY)
     Particles.render(self.camX, self.camY)
+
+    -- Entidades en un plano por delante del jugador (renderFront: pez globo)
+    for _, g in ipairs(self.enemies) do
+        if g.alive and g.renderFront then g:render(self.camX, self.camY) end
+    end
 
     -- Decoraciones (por encima de enemigos y player)
     self.level:renderFoliage(self.camX, self.camY)

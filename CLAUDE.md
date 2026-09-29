@@ -149,7 +149,7 @@ src/world/
                        points = ordered list of cells, e.g. boss waypoints; editor has
                        numbered draggable handles + add/remove buttons)
   entities/Interactions.lua  player<->entity rules (kill/hurt/stomp/pickup/checkpoint/GP)
-  entities/types/*.lua gummy, crabby, spikefall, star, extralife, checkpoint, mortar, mirror,
+  entities/types/*.lua gummy (helmet), crabby, pufferfish, spikefall, star, extralife, checkpoint, mortar, mirror,
                        rainspike (orchestrated spike), spikerain (the orchestrator),
                        miniboss1 (Nave Malvada), megacrabby (Mega Crabby),
                        trampoline (4 defs: up/down/left/right),
@@ -287,8 +287,11 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
 - **Flyers** (`props.movement == 'fly'`): the vertical bob is a TARGET
   (`baseY + sin`) reached with `moveAndCollide` (stops at floors/slabs/solid
   bodies instead of clipping into them). A flyer already embedded > `EMBED` px in a
-  face ignores it (gets out instead of flipping every frame), and one blocked
-  both ahead AND behind by entities/spikes doesn't turn (no convulsing). Wings:
+  face ignores it (gets out instead of flipping every frame); one blocked ahead by an
+  entity doesn't turn if it can't go the other way (entity behind, patrol limit or
+  wall: `Entity:canGo`) and, after turning for an entity, ignores entities for
+  `FLY_TURN_CD` 0.8 s (it passes through): no convulsing, no pinning at a limit.
+  The `flyers` harness uses fixed random sequences: `SEED=n` tries others. Wings:
   `EntityTypes.drawWings` in the render wrapper (so every flying entity type gets
   them, behind the body): `assets/images/wings/wings-Sheet.png` (LEFT wing, 2
   frames 9x13, root at the right edge) + its mirror, integer scale and position
@@ -319,6 +322,37 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   Detaches on knockback / drops and
   re-attaches on landing. Net: surface code in Crabby.netPack (`Crabby.NET_N`
   = number of Crabby fields; subclasses append after it).
+- **Gummy helmet** (prop `helmet`, Gummies only; `assets/images/gummy/casco.png`
+  drawn over the sprite on the same 16x16 grid, scaled `HELMET_K` 1.10 around its
+  bottom edge; the outer box grows up by what the helmet sticks out). `Gummy:interact`
+  has NO ambiguous case: player feet in the upper half (outer box overlap, feet ≤
+  centre) → ground pound = `'stomp'` (dies, `onStomp` breaks the helmet: sound
+  helmetBreak + fx helmet_break), falling/still = `'helmet'` (run: `pa:bounce` +
+  `e:onHelmetBounce()`: sound helmetBounce + render-only bonk `bonkT`, helmet intact,
+  no points), rising = nothing; from the side/below = normal Gummy rules (it hurts),
+  and a normal stomp there is also turned into `'helmet'`. The GP landing
+  `poundZone` kills it too. Client predicts `'helmet'` as a bounce (+ sound). Net:
+  Gummy netPack {helmet, bonkT}. Harnesses `mechanics` (66 drops) + `online_helmet`.
+- Stomp window fix (all floor enemies, `Interactions.defaultCheck`): a stomp also
+  counts when the feet were above the stomp line one step before (`STEP_DT`); fast
+  falls (≥ 20 px/step) used to skip the ~20 px window and die on contact.
+- **Pufferfish** (`types/pufferfish.lua`, sheet `assets/images/puffer_fish/
+  puffer_fish-Sheet.png`, 16x16 frames facing RIGHT: swim ×1-2, half, full; the code
+  adapts to 3 or 4 frames; scale 5): water-only enemy on a plane IN FRONT (moves
+  through everything along its patrol, `renderFront` = drawn after the players in SP
+  and online). States walk(swim) → warn (a player IN WATER within `range` tiles;
+  pufferWarn) → inflated (hazard box = body ×0.85, `effect='hurt'`; pufferInflate + fx
+  puffer_pop) → deflate (pufferDeflate) → `cooldown`. Not killable (not stompable, not
+  an obstacle, can't be knocked/launched). Prick: `Interactions.run` calls
+  `e:onHurtPlayer(pa)` only if the hurt really took HP → pufferPrick + `pa:recoil`.
+  Placed in `mina_inundada` (3, one crossing walls).
+- Sounds decided only by the server (the causing client doesn't predict them) go in
+  `Protocol.SHARED_SOUNDS` (helmetBreak, pufferPrick): the server sends them with no
+  owner, so everybody hears them. New sounds: `tools/sounds/mechanics.py` (switch,
+  helmet, puffer), levelled with `Sound.GAIN` to ≈ -12 dBFS (harness `sounds`).
+- Hunt rejects levels whose stompable enemies respawn (`info.respawning`). The level
+  info for modes comes from ONE function, `Modes.entityInfo(entities)` (server,
+  editor Nivel tab, level_check).
 - Projectiles: there is no global projectile system; an entity owns its
   projectiles (list), exposes them as hazard boxes and sends them in
   `netPack` with a stable id so the client interpolates them (see mortar).
@@ -386,6 +420,28 @@ Balance (data, in the level JSONs): Point Areas give 4 points per second
 10→4) and ALL of them respawn (`respawn` > 0).
 KOTH levels: cumbre_cangrejo, rebote_real, marea_alta (`modes: ["koth"]`; they
 list no mode until the user places a Point Area in them).
+
+## Special blocks (tiles)
+
+- `Level:hitTile(col,row)` = the ONE entry for "head bump from below / ground pound
+  on top": breaks `breakable` tiles, turns `toggle` tiles into their other state
+  (`toggle = '<tile name>'`, keeps water/spikes bits). Returns 'break'|'toggle'|nil;
+  changes go to `brokenQueue {c, r, raw, kind}` → server event `tile` (+`k='toggle'`)
+  → clients `setTileRaw` + fx/sound (online clients never change tiles themselves:
+  `canBreak = false`). A GP toggles each block once and lands normally.
+- **ON/OFF** (`switch_on` 13 / `switch_off` 14, category Mecanismos; textures
+  `assets/images/tiles/switch_*.png`, 16-px art ×4; fx `switch_hit`, sounds
+  switchOn/switchOff from `tools/sounds/mechanics.py`). Not linked to anything yet
+  (future: activatable objects).
+- **Invisible block** (`hidden_block` 15, Plataformas): FULL-cell hitbox but
+  `collision='oneway', dropThrough=false` (pass through going up / sideways, stand on
+  top, can't drop); enemySolid for entities. Visibility is RENDER-ONLY per client:
+  `Level:updateHiddenBlocks(dt, boxes)` (SP: the player; online: own predicted box +
+  remote players via `PlayerAdventure.outerBoxAt`) → `level.hiddenVis[row*65536+col]
+  = {age, left, hold, blink}`: appear anim while touched (box +1 px, standing on it
+  counts), then hold 0.25 s, blink 0.9 s, gone. Editor/thumbnails draw a dashed ghost.
+- Harness: `tools/tests/run.sh mechanics` (also covers the Gummy helmet and the
+  pufferfish). Protocol v22 (ON/OFF + invisible blocks + helmet + pufferfish).
 
 ## Level JSON
 
@@ -637,8 +693,8 @@ join), copies `tools/levelgen/arenas/*.json` to a temp `assets/levels/zz_tmp_*`
 it, its env vars) + rules for new ones. When a test needs something new, fix
 or extend the HARNESS (and its README row) instead of working around it in a
 scratch copy: the time spent fighting test setups was the user's complaint.
-Harnesses: flyers, crawler_drop, boss_sim, sp_boss, boss_frames, editor_open,
-online_smoke, online_boss, level_check, level_solve. `tools/` is not shipped (.love / updates).
+Harnesses: flyers, crawler_drop, mechanics, sounds, boss_sim, sp_boss, boss_frames,
+editor_open, online_smoke, online_boss, online_helmet, level_check, level_solve. `tools/` is not shipped (.love / updates).
 
 Low-level notes (for writing NEW harnesses):
 - Headless sim (no window): a scratch LÖVE app with `t.window=false`,

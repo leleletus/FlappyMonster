@@ -94,7 +94,7 @@ function OnlineAdventureState:enter(args)
     -- Efectos del jugador propio (solo en los pasos "audibles" de la predicción)
     Particles.clear()
     PlayerAdventure.fx = function(kind, x, y)
-        if kind ~= 'block_break' then Particles.emit(kind, x, y) end
+        if kind ~= 'block_break' and kind ~= 'switch_hit' then Particles.emit(kind, x, y) end
     end
     -- Las entidades las simula el servidor: sus efectos llegan como eventos 'fx'
     require('src/world/entities/Entity').fx = nil
@@ -511,16 +511,22 @@ function OnlineAdventureState:_processEvent(ev)
             self:_spawnPopup('+' .. tostring(ev.delta) .. (ev.kind == 'zone' and '' or '!'), ev.x or 0, ev.y or 0)
         end
     elseif ev.type == 'tile' then
-        -- Bloque roto (lo decide el servidor): aplicar y partículas para todos
+        -- Bloque roto / ON-OFF cambiado (lo decide el servidor): aplicar,
+        -- partículas y sonido para todos
         local c, r, v = tonumber(ev.c), tonumber(ev.r), tonumber(ev.v)
         if c and r and v then
             self.level:setTileRaw(c, r, v)
-            Particles.emit('block_break', (c - 1) * TILE_PX, (r - 1) * TILE_PX)
-            Sound.play('blockBreak')
+            if ev.k == 'toggle' then
+                Particles.emit('switch_hit', (c - 1) * TILE_PX, (r - 1) * TILE_PX)
+                Sound.play(self.level:getDef(c, r).name == 'switch_on' and 'switchOn' or 'switchOff')
+            else
+                Particles.emit('block_break', (c - 1) * TILE_PX, (r - 1) * TILE_PX)
+                Sound.play('blockBreak')
+            end
         end
     elseif ev.type == 'fx' then
         -- Efectos de OTROS jugadores (los propios ya los generó la predicción)
-        if ev.playerId ~= NC.myId and ev.kind ~= 'block_break' and type(ev.kind) == 'string' then
+        if ev.playerId ~= NC.myId and ev.kind ~= 'block_break' and ev.kind ~= 'switch_hit' and type(ev.kind) == 'string' then
             Particles.emit(ev.kind, tonumber(ev.x) or 0, tonumber(ev.y) or 0)
         end
     elseif ev.type == 'pickup' then
@@ -749,6 +755,14 @@ function OnlineAdventureState:_checkLocalBounce()
                 self.predictor:recordLaunch(bvy, bdir)
                 Sound.play('trampoline')
                 return
+            elseif result == 'helmet' then
+                -- Casco de Gummy: rebota (el servidor lo confirma); suena ya
+                pa:bounce(bvy)
+                self.localBounceCooldown[idx] = 0.3
+                self.predictor:recordBounce(bvy)
+                er.bonkT = 0.25
+                Sound.play('helmetBounce')
+                return
             elseif result == 'stomp' or result == 'pound' or result == 'bounce' then
                 -- rebote con empujón lateral (jefe invulnerable; pisotón de lado a un trepador)
                 local dir = (result == 'bounce') and bdir or (result == 'stomp' and bdir2) or nil
@@ -757,7 +771,7 @@ function OnlineAdventureState:_checkLocalBounce()
                 self.localBounceCooldown[idx] = 0.3
                 self.predictor:recordBounce(bvy, dir, soft)
                 -- Los jefes suenan con su propio golpe (lo manda el servidor)
-                if not er.def.boss then Sound.play('enemyExplode') end
+                if not er.def.boss and result ~= 'bounce' then Sound.play('enemyExplode') end
                 return
             end
         end
@@ -898,6 +912,18 @@ function OnlineAdventureState:update(dt)
         self:_updatePendingEvents(dt)
     end
     for _, rp in pairs(self.remotePlayers) do rp:update(dt) end
+
+    -- Bloques invisibles: se ven si los toca el jugador propio o uno remoto
+    local boxes = {}
+    if self.localPa and self.localPaInit and not self.localPa.dying and not self.ownData.isSpectator then
+        boxes[1] = self.localPa:getOuterBounds()
+    end
+    for _, rp in pairs(self.remotePlayers) do
+        if not rp.isSpectator and not rp.dying and not rp.firstSync then
+            boxes[#boxes + 1] = PlayerAdventure.outerBoxAt(rp.x, rp.y)
+        end
+    end
+    self.level:updateHiddenBlocks(dt, boxes)
 
     -- Decrementar cooldowns de rebote local
     for idx, cd in pairs(self.localBounceCooldown) do
@@ -1107,7 +1133,7 @@ function OnlineAdventureState:_renderScene()
 
     -- Enemigos (estado controlado por el servidor)
     for i, er in pairs(self.enemyRenderers) do
-        if er.alive then
+        if er.alive and not er.renderFront then
             er:render(self.camX, self.camY)
         end
     end
@@ -1136,6 +1162,11 @@ function OnlineAdventureState:_renderScene()
         Particles.render(self.camX, self.camY)
         if DEBUG_HITBOX then pa:renderDebug(self.camX, self.camY); self.level:renderDebug(self.camX, self.camY) end
         pa.x, pa.y = sx, sy
+    end
+
+    -- Entidades en un plano por delante de los jugadores (renderFront: pez globo)
+    for _, er in pairs(self.enemyRenderers) do
+        if er.alive and er.renderFront then er:render(self.camX, self.camY) end
     end
 
     -- Foliaje y burbujas

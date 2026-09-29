@@ -25,6 +25,9 @@ local GAIN = {
     -- Mega Crabby (archivos ya comprimidos: subir poco por encima de 1 satura)
     megaStep     = 0.9,  megaClack  = 1.0,  megaHurt   = 1.1,  megaSlam   = 1.1,
     megaWindup   = 0.85, megaShrink = 0.8,  megaFlee   = 0.9,
+    -- tools/sounds/mechanics.py (medidos: → ≈ -12 dBFS)
+    switchOn     = 0.77, switchOff  = 0.76, helmetBounce = 1.15, helmetBreak = 0.72,
+    pufferWarn   = 1.0,  pufferInflate = 0.81, pufferDeflate = 0.77, pufferPrick = 0.67,
 }
 Sound.GAIN = GAIN
 
@@ -72,6 +75,14 @@ function Sound.load()
     load('oneUp',       'assets/sounds/items/one_up.wav',               'static')
     load('checkpoint',  'assets/sounds/items/checkpoint.wav',           'static')
     load('blockBreak',  'assets/sounds/traps/block_break.wav',          'static')
+    load('switchOn',    'assets/sounds/mechanics/switch_on.wav',        'static')   -- bloque ON/OFF → ON
+    load('switchOff',   'assets/sounds/mechanics/switch_off.wav',       'static')   -- bloque ON/OFF → OFF
+    load('helmetBreak', 'assets/sounds/enemies/helmet_break.wav',       'static')   -- ground pound: se rompe el casco de un Gummy
+    load('helmetBounce','assets/sounds/enemies/helmet_bounce.wav',      'static')   -- rebote en el casco de un Gummy
+    load('pufferWarn',  'assets/sounds/enemies/puffer_warn.wav',        'static')   -- pez globo: medio hinchado (aviso)
+    load('pufferInflate','assets/sounds/enemies/puffer_inflate.wav',    'static')   -- pez globo: hinchado del todo
+    load('pufferDeflate','assets/sounds/enemies/puffer_deflate.wav',    'static')   -- pez globo: se deshincha
+    load('pufferPrick', 'assets/sounds/enemies/puffer_prick.wav',       'static')   -- pez globo: pincha al jugador
     load('spikeShake',  'assets/sounds/traps/spike_shake.wav',          'static')
     load('fireFizzle',  'assets/sounds/traps/fire_fizzle.wav',          'static')   -- bola del mortero que se apaga
     load('respawnFx',   'assets/sounds/enemies/respawn.wav',            'static')   -- una entidad reaparece
@@ -206,6 +217,9 @@ function Sound.playAt(name, x, y, pitch, volume)
     Sound.play(name, pitch, volume)
     emitterX, emitterY = ox, oy
 end
+
+-- Fuente cargada de un sonido (nil si no existe) y su archivo: para pruebas
+function Sound.source(name) return sources[name], origin[name] end
 
 function Sound.play(name, pitch, volume)
     local src = sources[name]

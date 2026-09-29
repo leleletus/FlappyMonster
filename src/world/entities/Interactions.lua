@@ -9,6 +9,8 @@
 --   'stomp', bounceVy, points[, dirX]  el jugador pisotea a la entidad (dirX:
 --                                 rebote de lado, p. ej. un Crabby en una pared)
 --   'pound', bounceVy, points     le cae encima en pleno ground pound (e:pound)
+--   'helmet', bounceVy            salta sobre un Gummy con casco: rebota, el
+--                                 casco aguanta (e:onHelmetBounce), sin puntos
 --   'bounce', bounceVy, dirX      rebota sin hacerle nada (jefe invulnerable);
 --                                 con dirX sale empujado hacia ese lado
 --   'recoil', dirX                choca con su cuerpo y sale empujado
@@ -28,6 +30,8 @@ local function overlap(a, b)
 end
 
 local BOUNCE = 0.40   -- fracción de la velocidad de salto al rebotar
+local STEP_DT = 1 / 60  -- paso fijo de la simulación (Protocol.TICK_RATE)
+Interactions.BOUNCE = BOUNCE
 
 function Interactions.check(pa, e)
     if not e.alive or e.state == 'dead' or (e.isGhost and e:isGhost()) then return nil end
@@ -99,7 +103,11 @@ function Interactions.defaultCheck(pa, e)
                 return 'stomp', math.abs(ADV_JUMP_VEL) * BOUNCE, p.points
             end
         else
-            if pa.vy > 0 and pob.y + pob.h < gob.y + gob.h * 0.35 + 10 then
+            -- Cayendo desde arriba. También vale si los pies estaban por
+            -- encima de la línea en el paso ANTERIOR: cayendo rápido (≥ 20 px por
+            -- paso) se podía saltar la franja de pisotón y morir al tocarlo
+            local line, foot = gob.y + gob.h * 0.35 + 10, pob.y + pob.h
+            if pa.vy > 0 and (foot < line or foot - pa.vy * STEP_DT <= line) then
                 return 'stomp', -math.abs(ADV_JUMP_VEL) * BOUNCE, p.points
             end
         end
@@ -132,7 +140,11 @@ function Interactions.run(pa, entities, cb, rewind)
         if result == 'kill' then
             if pa:die() ~= false then return end      -- (invulnerable al reaparecer: sigue)
         elseif result == 'hurt' then
-            if pa:hurt() then return end
+            -- (e:onHurtPlayer: solo si de verdad le quitó vida; p. ej. el pinchazo del pez globo)
+            local hp0 = pa.hp
+            local killed = pa:hurt()
+            if pa.hp < hp0 and e.onHurtPlayer then e:onHurtPlayer(pa) end
+            if killed then return end
         elseif result == 'stomp' then
             e:stomp()
             pa:bounce(a, c, true)
@@ -141,6 +153,10 @@ function Interactions.run(pa, entities, cb, rewind)
             if e.pound then e:pound(pa) else e:stomp() end
             pa:bounce(a)
             if cb.stomp then cb.stomp(e, b, i) end
+        elseif result == 'helmet' then
+            -- Salto sobre un Gummy con casco: rebota, sin daño ni puntos
+            pa:bounce(a)
+            if e.onHelmetBounce then e:onHelmetBounce(pa) end
         elseif result == 'bounce' then
             pa:bounce(a, b)
         elseif result == 'recoil' then

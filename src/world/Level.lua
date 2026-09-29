@@ -581,6 +581,70 @@ function Level:breakTile(col, row)
     return true
 end
 
+-- Golpe a un tile (cabezazo desde abajo o ground pound encima): rompe los
+-- rompibles y cambia los ON/OFF (`toggle`: nombre del tile en que se
+-- convierte, conservando agua y pinchos). Devuelve 'break', 'toggle' o nil.
+-- Igual que breakTile: en el cliente online (canBreak = false) no hace nada
+-- (lo decide el servidor) y los cambios van a brokenQueue con su tipo.
+function Level:hitTile(col, row)
+    local def = self:getDef(col, row)
+    if def.breakable then return self:breakTile(col, row) and 'break' or nil end
+    if not def.toggle or self.canBreak == false then return nil end
+    if not (self.tiles[row] and self.tiles[row][col]) then return nil end
+    local to = TileTypes.byName[def.toggle]
+    if not to then return nil end
+    local _, water, spikes = decTile(self:getRaw(col, row))
+    local new = TileCodec.encode(to.id, water, spikes)
+    self.tiles[row][col] = new
+    self.brokenQueue = self.brokenQueue or {}
+    table.insert(self.brokenQueue, { col, row, new, 'toggle' })
+    return 'toggle'
+end
+
+-- Bloques invisibles (tile `hidden`): cuáles se ven. Solo dibujo; cada juego
+-- lo llama con las cajas de SUS jugadores (un jugador: el suyo; online: el
+-- propio predicho + los remotos). Un bloque aparece al tocarlo (caja del
+-- jugador ampliada 1 px: estar de pie encima cuenta), sigue visible mientras
+-- alguien lo toca y, sin contacto, espera `hold` s, parpadea `blink` s y se va.
+local HIDDEN_HOLD, HIDDEN_BLINK = 0.25, 0.9
+function Level:updateHiddenBlocks(dt, boxes)
+    if self.hasHidden == nil then
+        self.hasHidden = false
+        for r = 1, self.tileH do for c = 1, self.tileW do
+            if self:getDef(c, r).hidden then self.hasHidden = true end
+        end end
+    end
+    if not self.hasHidden then return end
+    local vis = self.hiddenVis or {}
+    self.hiddenVis = vis
+    local T = TILE_PX
+    local touched = {}
+    for _, b in ipairs(boxes) do
+        local c0, c1 = math.floor((b.x - 1) / T) + 1, math.floor((b.x + b.w + 1) / T) + 1
+        local r0, r1 = math.floor((b.y - 1) / T) + 1, math.floor((b.y + b.h + 1) / T) + 1
+        for r = r0, r1 do
+            for c = c0, c1 do
+                if self:getDef(c, r).hidden then touched[r * 65536 + c] = true end
+            end
+        end
+    end
+    for k in pairs(touched) do
+        local st = vis[k]
+        if not st then
+            vis[k] = { age = 0, left = 0, hold = HIDDEN_HOLD, blink = HIDDEN_BLINK }
+        else
+            st.left = 0
+        end
+    end
+    for k, st in pairs(vis) do
+        st.age = st.age + dt
+        if not touched[k] then
+            st.left = st.left + dt
+            if st.left >= st.hold + st.blink then vis[k] = nil end
+        end
+    end
+end
+
 -- Aplica un cambio de tile recibido del servidor
 function Level:setTileRaw(col, row, raw)
     if self.tiles[row] and self.tiles[row][col] ~= nil then self.tiles[row][col] = raw end

@@ -380,14 +380,35 @@ function Entity:blockedAhead(level, dir)
     return false
 end
 
--- Da la vuelta si tiene un obstáculo delante. Un volador encajonado (algo
--- delante Y detrás, p. ej. al oscilar junto a otra entidad) no se gira:
--- sigue y lo atraviesa, en vez de convulsionar girándose cada fotograma.
+-- ¿Puede avanzar hacia `dir`? (no está pegado al límite de su ruta ni a
+-- una pared en ese lado)
+function Entity:canGo(level, dir)
+    local hw = self.outerW / 2
+    if dir > 0 and self.x + hw >= self.rightBoundPx - 1 then return false end
+    if dir < 0 and self.x - hw <= self.leftBoundPx + 1 then return false end
+    local ex = self.x + dir * (hw + 2)
+    for _, py in ipairs({ self.y - self.outerH / 2 + 4, self.y, self.y + self.outerH / 2 - 4 }) do
+        if level:entitySolidAt(ex, py, self) then return false end
+    end
+    return true
+end
+
+-- Da la vuelta si tiene un obstáculo delante. Un volador:
+--  · encajonado (algo delante y, detrás, otra entidad, el límite de su ruta
+--    o una pared) no se gira: sigue y atraviesa la entidad;
+--  · tras girarse por una entidad, no vuelve a hacerlo en FLY_TURN_CD s (si
+--    no, en el límite de su ruta con otra delante iba y venía 1-2 px).
+-- Así nunca convulsiona ni se queda clavado girándose cada fotograma.
+local FLY_TURN_CD = 0.8
 function Entity:turnAtObstacles(level)
     if not self.moving or self.vx == 0 then return end
     local dir = self.vx > 0 and 1 or -1
+    if self.flying and self.flyTurnAt and self.flyT - self.flyTurnAt < FLY_TURN_CD then return end
     if self:blockedAhead(level, dir) then
-        if self.flying and self:blockedAhead(level, -dir) then return end
+        if self.flying then
+            if self:blockedAhead(level, -dir) or not self:canGo(level, -dir) then return end
+            self.flyTurnAt = self.flyT
+        end
         self.vx, self.facing = -self.vx, -dir
     end
 end

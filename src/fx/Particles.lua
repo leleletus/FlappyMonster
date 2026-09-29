@@ -5,7 +5,8 @@
 -- Tipos: 'gp_land', 'gp_start', 'block_break', 'spawn', 'oneup', 'spike_land',
 --        'spike_pop', 'boss_hit', 'boss_blast', 'boss_big_blast', 'mortar_blast', 'fire_puff', 'ember',
 --        'exhaust', 'smoke', 'sparks', 'mega_step', 'mega_trail', 'mega_debris', 'mega_dirt',
---        'mega_slam', 'mega_land', 'mega_poof' (Mega Crabby),
+--        'mega_slam', 'mega_land', 'mega_poof' (Mega Crabby), 'switch_hit' (bloque ON/OFF),
+--        'helmet_break' (casco de Gummy), 'puffer_pop' (pez globo),
 --        'shake_small', 'shake_big' (temblor de pantalla:
 --        Particles.shakeOffset() se suma a la cámara al dibujar)
 -- (otros nombres no hacen nada)
@@ -144,6 +145,38 @@ function Particles.emit(kind, x, y, opts)
         -- Humo negro de algo dañado
         add({ x = x + rnd(-10, 10), y = y, vx = rnd(-25, 25), vy = -rnd(40, 90), g = -20, life = rnd(0.6, 1.1),
               size = math.random(3, 5) * 3, col = {0.2, 0.2, 0.22}, drag = 1.5, dust = true })
+    elseif kind == 'switch_hit' then
+        -- Bloque ON/OFF golpeado (x, y = esquina de la casilla): chispitas
+        -- desde arriba y abajo del bloque y un aro blanco
+        local T = TILE_PX
+        for i = 1, 12 do
+            local top = i % 2 == 0
+            add({ x = x + rnd(6, T - 6), y = y + (top and 0 or T), vx = rnd(-160, 160),
+                  vy = top and -rnd(120, 320) or rnd(60, 200), g = 900, life = rnd(0.25, 0.45),
+                  size = math.random(1, 2) * 3, col = ({ {1, 1, 0.85}, {1, 0.9, 0.4} })[math.random(2)] })
+        end
+        for i = 1, 12 do
+            local a = (i / 12) * math.pi * 2
+            add({ x = x + T / 2 + math.cos(a) * 20, y = y + T / 2 + math.sin(a) * 20,
+                  vx = math.cos(a) * 180, vy = math.sin(a) * 180, life = 0.2, size = 4, col = {1, 1, 1}, drag = 6 })
+        end
+    elseif kind == 'puffer_pop' then
+        -- Pez globo que se hincha del todo: aro de burbujas que sale
+        for i = 1, 14 do
+            local a = (i / 14) * math.pi * 2
+            add({ x = x + math.cos(a) * 26, y = y + math.sin(a) * 26, vx = math.cos(a) * rnd(90, 170),
+                  vy = math.sin(a) * rnd(90, 170) - 30, life = rnd(0.35, 0.6), size = math.random(1, 2) * 3,
+                  col = { 0.8, 0.95, 1 }, drag = 4 })
+        end
+    elseif kind == 'helmet_break' then
+        -- Casco de Gummy que se rompe: trozos negros y grises que saltan
+        for i = 1, 9 do
+            local dir = (i % 2 == 0) and 1 or -1
+            add({ x = x + rnd(-20, 20), y = y + rnd(-6, 6), vx = dir * rnd(80, 280), vy = -rnd(200, 460),
+                  g = 1500, life = rnd(0.6, 1.0), size = math.random(2, 4) * 3,
+                  col = ({ {0.08, 0.08, 0.08}, {0.17, 0.17, 0.17}, {1, 1, 1} })[math.random(3)],
+                  spin = rnd(-12, 12), chunk = true, fadeLast = 0.3 })
+        end
     elseif kind == 'sparks' then
         -- Chispas metálicas (salen los pinchos de la nave, choques...)
         for i = 1, 10 do

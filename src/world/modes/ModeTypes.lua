@@ -17,7 +17,7 @@
 --                              línea de estado de ese panel a partir del hud del servidor
 --                              (urgente = en rojo; grande = número gigante debajo)
 --   requires(info) -> ok, why  ¿el nivel sirve? info = { enemies, killable, finish, bosses,
---                              autoScroll, pointAreas }. Un nivel puede además limitar sus
+--                              autoScroll, pointAreas, respawning } (ver ModeTypes.entityInfo). Un nivel puede además limitar sus
 --                              modos con "modes": [...] en su JSON (editor: pestaña Nivel).
 --   triggers                   lista de triggers de tile que le interesan ('finish'...)
 --   start(m)                   al empezar la ronda
@@ -77,6 +77,24 @@ function ModeTypes.register(def)
 end
 
 function ModeTypes.get(id) return ModeTypes.byId[id] end
+
+-- Recuento de las entidades de un nivel para `requires(info)` (lo usan el
+-- servidor, el editor y las pruebas: un solo cálculo). `list` = colocaciones
+-- normalizadas ({type, props}). respawning = enemigos pisoteables que reaparecen.
+function ModeTypes.entityInfo(list)
+    local ET = require 'src/world/entities/EntityTypes'
+    local info = { enemies = #list, killable = 0, bosses = 0, pointAreas = 0, respawning = 0 }
+    for _, e in ipairs(list) do
+        local t, p = ET.get(e.type), e.props or {}
+        if p.stompable then
+            info.killable = info.killable + 1
+            if (p.respawn or 0) > 0 then info.respawning = info.respawning + 1 end
+        end
+        if t and t.boss then info.bosses = info.bosses + 1 end
+        if e.type == 'pointarea' then info.pointAreas = info.pointAreas + 1 end
+    end
+    return info
+end
 
 -- ¿El modo usa los bloques con este trigger (p. ej. 'finish')? Los que no,
 -- no se dibujan en la partida ni en las miniaturas (una meta en Cacería

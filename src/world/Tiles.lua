@@ -27,6 +27,9 @@ local TYPES = {
     'platform_drop',  -- 10
     'finish',         -- 11
     'breakable',      -- 12
+    'switch_on',      -- 13
+    'switch_off',     -- 14
+    'hidden_block',   -- 15
 }
 
 -- Bloques TRAMPA ("mímicos"): se ven idénticos al tile original pero no tienen

@@ -26,14 +26,10 @@ local function check(path)
         if w[1] == 'error' then bad = bad + 1 end
     end
     local lv = Level.new(path)
-    local killable, bosses = 0, 0
-    for _, e in ipairs(lv.entities) do
-        if e.props.stompable then killable = killable + 1 end
-        local t = Entities.types.get(e.type)
-        if t and t.boss then bosses = bosses + 1 end
-    end
-    local info = { enemies = #lv.entities, killable = killable, finish = lv:countTrigger('finish'), bosses = bosses,
-                   autoScroll = lv.autoScroll ~= nil, pointAreas = #(lv.pointAreas or {}) }
+    local info = Modes.entityInfo(lv.entities)
+    info.finish, info.autoScroll = lv:countTrigger('finish'), lv.autoScroll ~= nil
+    info.pointAreas = #(lv.pointAreas or {})
+    local killable, bosses = info.killable, info.bosses
     local allowed
     if lv.modes then allowed = {}; for _, id in ipairs(lv.modes) do allowed[id] = true end end
     local listed = {}

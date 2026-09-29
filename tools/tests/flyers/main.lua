@@ -7,7 +7,9 @@
 -- SHOT=1: además guarda shot_flyers.png con los voladores de jardin_gummies
 -- (alas incluidas) a escala real.
 --
---   love tools/tests/flyers            (BOB=px cambia la oscilación, 40 por defecto)
+--   tools/tests/run.sh flyers   (BOB=px cambia la oscilación, 40 por defecto; SEED=n otra
+--                               secuencia de azar; WHY=1 dice qué se atascó; TRACE_AT=s
+--                               TRACE_LEVEL= TRACE_COL= TRACE_ROW= sigue a una entidad)
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
 require 'settings'
@@ -51,6 +53,16 @@ local function simLevel(path)
         level.solidBodies = Entities.solidBodies and Entities.solidBodies(ents) or level.solidBodies
         if level.update then level:update(dt) end
         for _, e in ipairs(ents) do if e.alive then e:update(dt, level) end end
+        if os.getenv('TRACE_AT') and path:match(os.getenv('TRACE_LEVEL') or '.') then
+            local ta = tonumber(os.getenv('TRACE_AT'))
+            if t >= ta and t < ta + 0.25 then
+                for _, e in ipairs(ents) do
+                    if e.col == tonumber(os.getenv('TRACE_COL')) and (not os.getenv('TRACE_ROW') or e.row == tonumber(os.getenv('TRACE_ROW'))) and e.def.name == (os.getenv('TRACE_TYPE') or 'gummy') then
+                        print(('    t=%.3f %s x=%.1f y=%.1f vx=%.1f facing=%d state=%s'):format(t, e.def.name, e.x, e.y, e.vx, e.facing, e.state))
+                    end
+                end
+            end
+        end
         for i, e in ipairs(ents) do
             if e.flying and e.props.movement == 'fly' and e.alive and e.state == 'walk' then
                 local tr = track[i] or { flips = {}, lastX = e.x, stillT = 0, facing = e.facing }
@@ -60,10 +72,23 @@ local function simLevel(path)
                     tr.facing = e.facing
                     table.insert(tr.flips, t)
                     while tr.flips[1] and tr.flips[1] < t - 0.5 do table.remove(tr.flips, 1) end
-                    if #tr.flips > 3 then stats.convuls = stats.convuls + 1 end
+                    if #tr.flips > 3 then
+                        stats.convuls = stats.convuls + 1
+                        if os.getenv('WHY') and not tr.toldC then
+                            tr.toldC = true
+                            print(('  convulsiona: %s col %d fila %d en x=%d y=%d patrulla %s..%s t=%.1f'):format(e.def.name,
+                                e.col, e.row, e.x, e.y, tostring(e.leftBoundPx), tostring(e.rightBoundPx), t))
+                        end
+                    end
                 end
                 if math.abs(e.x - tr.lastX) < 0.01 then tr.stillT = tr.stillT + dt else tr.stillT = 0 end
-                if tr.stillT > 2 and not tr.stuckOnce then tr.stuckOnce = true; stats.stuck = stats.stuck + 1 end
+                if tr.stillT > 2 and not tr.stuckOnce then
+                    tr.stuckOnce = true; stats.stuck = stats.stuck + 1
+                    if os.getenv('WHY') then
+                        print(('  atasco: %s col %d fila %d en x=%d y=%d vx=%.1f patrulla %s..%s t=%.1f'):format(e.def.name, e.col, e.row,
+                            e.x, e.y, e.vx, tostring(e.leftBoundPx), tostring(e.rightBoundPx), t))
+                    end
+                end
                 tr.lastX = e.x
             end
         end
@@ -73,6 +98,7 @@ end
 
 local shotLevel, shotEnts
 function love.load()
+    if os.getenv('SEED') then math.randomseed(tonumber(os.getenv('SEED'))) end   -- (pausas al azar: otras secuencias)
     local total = { inside = 0, convuls = 0, stuck = 0 }
     local files = love.filesystem.getDirectoryItems('assets/levels')
     table.sort(files)

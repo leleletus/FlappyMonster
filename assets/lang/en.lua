@@ -175,6 +175,7 @@ return {
         ["why.autoscroll"] = "the level has an auto-scrolling camera (Race only)",
         ["why.point_areas"] = "the level has point zones (King of the Hill)",
         ["why.no_killable"] = "the level has no stompable enemies",
+        ["why.respawn"]      = "the level's enemies respawn",
         ["why.no_finish"] = "the level has no finish (Meta tile)",
         ["why.no_point_areas"] = "the level has no point zones",
     },

@@ -20,6 +20,9 @@
 --
 --   material    nombre de material (Materials.lua): fricción, daño, líquido...
 --   breakable   se rompe con un cabezazo desde abajo o un ground pound
+--   toggle      nombre del tile en que se convierte con un cabezazo desde
+--               abajo o un ground pound (bloques ON/OFF: Level:hitTile)
+--   hidden      no se ve hasta que un jugador lo toca (Level:updateHiddenBlocks)
 --   fake        tile trampa: se ve como otro (`mimics`) pero no colisiona ni
 --               hace daño (los pinchos puestos encima tampoco)
 --   trigger     nombre de evento al tocarlo (p. ej. 'finish'); lo consultan
@@ -83,7 +86,7 @@ function TileTypes.register(def)
 end
 
 -- Orden de las categorías en la paleta del editor (las demás, al final)
-TileTypes.CATEGORIES = { 'Básicos', 'Terreno', 'Plataformas', 'Líquidos', 'Peligros', 'Objetivos' }
+TileTypes.CATEGORIES = { 'Básicos', 'Terreno', 'Plataformas', 'Mecanismos', 'Líquidos', 'Peligros', 'Objetivos' }
 function TileTypes.categoryOrder(c)
     for i, id in ipairs(TileTypes.CATEGORIES) do if id == c then return i end end
     return #TileTypes.CATEGORIES + 1

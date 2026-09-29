@@ -86,7 +86,8 @@ Sound = {
         if name and not (_currentSoundPlayerId and Protocol.PRIVATE_SOUNDS[name]) then
             -- El tono viaja con 2 decimales (p. ej. los sonidos graves del jefe espejo)
             pitch = (pitch and pitch ~= 1) and math.floor(pitch * 100 + 0.5) / 100 or nil
-            table.insert(_soundEvents, { sound = name, playerId = _currentSoundPlayerId, pitch = pitch,
+            local owner = (not Protocol.SHARED_SOUNDS[name]) and _currentSoundPlayerId or nil
+            table.insert(_soundEvents, { sound = name, playerId = owner, pitch = pitch,
                                          x = _emitX and math.floor(_emitX + 0.5), y = _emitY and math.floor(_emitY + 0.5) })
         end
     end,
@@ -285,18 +286,13 @@ local function scanLevels(force)
         local path = LEVELS_DIR .. '/' .. f
         local ok, lv = pcall(Level.new, path)
         if ok then
-            local killable, bosses = 0, 0
-            local ET = Entities.types
-            for _, e in ipairs(lv.entities) do
-                if e.props.stompable then killable = killable + 1 end
-                local t = ET.get(e.type)
-                if t and t.boss then bosses = bosses + 1 end
-            end
-            local info = { path = path, name = (lv.name and lv.name ~= '?') and lv.name or f:gsub('%.json$', ''),
-                           enemies = #lv.entities, killable = killable, finish = lv:countTrigger('finish'),
-                           bosses = bosses, autoScroll = lv.autoScroll ~= nil,
-                           pointAreas = #(lv.pointAreas or {}),
-                           modes = {} }
+            local info = Modes.entityInfo(lv.entities)
+            info.path = path
+            info.name = (lv.name and lv.name ~= '?') and lv.name or f:gsub('%.json$', '')
+            info.finish = lv:countTrigger('finish')
+            info.autoScroll = lv.autoScroll ~= nil
+            info.pointAreas = #(lv.pointAreas or {})
+            info.modes = {}
             -- El nivel puede limitar sus modos ("modes" en el JSON)
             local allowed
             if lv.modes then allowed = {}; for _, id in ipairs(lv.modes) do allowed[id] = true end end
@@ -736,7 +732,7 @@ local function stepRoom(room)
     -- Bloques rotos este tick → a todos los clientes
     local bq = sim.level.brokenQueue
     if bq and #bq > 0 then
-        for _, b in ipairs(bq) do pushEvent(sim, { type='tile', c=b[1], r=b[2], v=b[3] }) end
+        for _, b in ipairs(bq) do pushEvent(sim, { type='tile', c=b[1], r=b[2], v=b[3], k=b[4] }) end
         sim.level.brokenQueue = {}
     end
 

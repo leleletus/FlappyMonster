@@ -1,6 +1,22 @@
 -- Gummy: enemigo básico que camina, hace pausas "respirando" y muere al
 -- pisotearlo. Todo el movimiento y combate viene de Entity + propiedades.
-local Entity = require 'src/world/entities/Entity'
+--
+-- Casco (prop `helmet`, solo Gummies). Reglas SIN casos ambiguos:
+--   · pies del jugador en la mitad de ARRIBA del Gummy (casco incluido):
+--       ground pound → se rompe el casco y muere ('stomp');
+--       cayendo o quieto → rebota y el casco sigue intacto ('helmet');
+--       subiendo (acaba de rebotar) → nada. Nunca daña al jugador.
+--   · de lado o desde abajo: las reglas normales del Gummy (le hace daño).
+-- La caja exterior sube lo que sobresale el casco (se rebota en lo que se ve).
+-- assets/images/gummy/casco.png va dibujado encima del sprite (misma rejilla de
+-- 16x16), algo más grande (HELMET_K) alrededor de su borde de abajo.
+local Entity       = require 'src/world/entities/Entity'
+local Interactions = require 'src/world/entities/Interactions'
+
+local HELMET_K    = 1.10             -- escala del casco sobre la del Gummy
+local HELMET_AX, HELMET_AY = 8, 7    -- punto del casco que no se mueve al escalar (borde de abajo)
+local HELMET_TOP  = 1                -- primera fila con píxeles del casco (casco.png)
+local BONK_TIME   = 0.25             -- s del "bonk" del casco al rebotar (solo dibujo)
 
 local Gummy = Entity.extend(Entity, {
     walkFps = 7, walkFrames = 2,
@@ -8,7 +24,7 @@ local Gummy = Entity.extend(Entity, {
     debugColor = { 1, 0.55, 0 },
 })
 
-local imgIdle, imgWalk1, imgWalk2, imgDead
+local imgIdle, imgWalk1, imgWalk2, imgDead, imgHelmet
 
 function Gummy.loadAssets()
     if imgIdle then return end
@@ -16,6 +32,80 @@ function Gummy.loadAssets()
     imgWalk1 = love.graphics.newImage('assets/images/gummy/gummy1.png')
     imgWalk2 = love.graphics.newImage('assets/images/gummy/gummy2.png')
     imgDead  = love.graphics.newImage('assets/images/gummy/dead.png')
+    imgHelmet = love.graphics.newImage('assets/images/gummy/casco.png')
+    if imgHelmet.setFilter then imgHelmet:setFilter('nearest', 'nearest') end
+end
+
+function Gummy:init()
+    self.helmet = self.props.helmet == true
+    self.bonkT  = 0
+end
+
+function Gummy:updateCustom(dt)
+    if self.bonkT > 0 then self.bonkT = math.max(0, self.bonkT - dt) end
+    return false                       -- (el resto: comportamiento normal)
+end
+
+-- Cuánto sobresale el casco por encima de la caja exterior normal (px)
+local function helmetExtra(self)
+    local top = self.y - self.sprH / 2 + (HELMET_AY - (HELMET_AY - HELMET_TOP) * HELMET_K) * GUMMY_SCALE
+    return math.max(0, (self.y - self.outerH / 2) - top)
+end
+
+function Gummy:getOuterBounds()
+    local b = Entity.getOuterBounds(self)
+    if self.helmet and not self.flipped and self.state ~= 'dead' then
+        local ex = helmetExtra(self)
+        b.y, b.h = b.y - ex, b.h + ex
+    end
+    return b
+end
+
+local function overlap(a, b)
+    return a.x < b.x + b.w and a.x + a.w > b.x and a.y < b.y + b.h and a.y + a.h > b.y
+end
+
+-- Sin efectos: el cliente online lo usa para predecir
+function Gummy:interact(pa)
+    if not self.helmet then return Interactions.defaultCheck(pa, self) end
+    local gp = pa.gpPhase == 'fall'
+    local bounceVy = -math.abs(ADV_JUMP_VEL) * Interactions.BOUNCE
+    if not self.flipped and self.props.stompable ~= false and not self:isBodyDisabled() then
+        local pob, gob = pa:getOuterBounds(), self:getOuterBounds()
+        if overlap(pob, gob) and pob.y + pob.h <= self.y then
+            if gp then return 'stomp', bounceVy, self.props.points end
+            if (pa.vy or 0) >= 0 then return 'helmet', bounceVy end
+            return nil
+        end
+    end
+    -- De lado / desde abajo: reglas normales (un pisotón normal nunca lo mata)
+    local r, a, b, c = Interactions.defaultCheck(pa, self)
+    if r == 'stomp' and not gp then return 'helmet', a end
+    return r, a, b, c
+end
+
+-- Rebote en el casco (lo llama Interactions.run): suena y el casco se hunde
+function Gummy:onHelmetBounce()
+    self.bonkT = BONK_TIME
+    Sound.play('helmetBounce')
+end
+
+-- Muere (ground pound): el casco se rompe
+function Gummy:onStomp()
+    if self.helmet then
+        self.helmet = false
+        Sound.play('helmetBreak')
+        Entity.emitFx('helmet_break', self.x, self.y - self.sprH / 2 + 8)
+    end
+end
+
+-- Red: casco y "bonk"
+function Gummy:netPack()
+    return { self.helmet and 1 or 0, math.floor(self.bonkT * 100 + 0.5) }
+end
+function Gummy:netApply(a, b)
+    self.helmet = b[1] == 1
+    self.bonkT  = (tonumber(b[2]) or 0) / 100
 end
 
 function Gummy.sizeImage() return imgIdle end
@@ -40,6 +130,16 @@ function Gummy:render(camX, camY)
                                or math.floor(self.y - camY + self.sprH / 2)
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.draw(img, drawX, feetY, 0, scaleX, scaleY, img:getWidth() / 2, img:getHeight())
+    -- Casco: la misma rejilla que el sprite, algo más grande alrededor de su borde de abajo
+    if self.helmet and self.state ~= 'dead' then
+        local ox, oy = img:getWidth() / 2, img:getHeight()
+        local hx = drawX + (HELMET_AX - ox) * scaleX
+        local hy = feetY + (HELMET_AY - oy) * scaleY
+        -- Bonk: el casco se aplasta un poco y vuelve
+        local k = self.bonkT > 0 and math.sin((1 - self.bonkT / BONK_TIME) * math.pi) or 0
+        love.graphics.draw(imgHelmet, math.floor(hx), math.floor(hy + k * 4), 0,
+                           scaleX * HELMET_K * (1 + 0.12 * k), scaleY * HELMET_K * (1 - 0.18 * k), HELMET_AX, HELMET_AY)
+    end
 end
 
 return {
@@ -47,5 +147,9 @@ return {
     description = 'Enemigo básico: camina, vuela o se queda quieto. Se le pisotea.',
     class = Gummy,
     defaults = { speed = 55, points = 10 },
+    props = {
+        { key='helmet', kind='bool', label='Casco', group='Combate', default=false,
+          help='Saltarle encima solo hace rebotar (el casco aguanta). Solo el ground pound rompe el casco y lo mata' },
+    },
     editor = { sprite = 'assets/images/gummy/gummy.png' },
 }
