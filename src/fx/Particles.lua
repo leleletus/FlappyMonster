@@ -5,7 +5,7 @@
 -- Tipos: 'gp_land', 'gp_start', 'block_break', 'spawn', 'oneup', 'spike_land',
 --        'spike_pop', 'boss_hit', 'boss_blast', 'boss_big_blast', 'mortar_blast', 'fire_puff', 'ember',
 --        'exhaust', 'smoke', 'sparks', 'mega_step', 'mega_trail', 'mega_debris', 'mega_dirt',
---        'mega_slam', 'mega_land', 'mega_poof' (Mega Crabby), 'switch_hit' (bloque ON/OFF),
+--        'mega_slam', 'mega_land', 'mega_poof', 'mega_roar' (Mega Crabby), 'switch_hit' (bloque ON/OFF),
 --        'helmet_break' (casco de Gummy), 'puffer_pop' (pez globo),
 --        'shake_small', 'shake_big' (temblor de pantalla:
 --        Particles.shakeOffset() se suma a la cámara al dibujar)
@@ -304,6 +304,21 @@ function Particles.emit(kind, x, y, opts)
             local a = rnd(0, math.pi * 2)
             add({ x = x, y = y, vx = math.cos(a) * rnd(150, 340), vy = math.sin(a) * rnd(150, 340),
                   g = 300, life = rnd(0.4, 0.7), size = 6, col = {1, 1, 0.8}, star = true })
+        end
+    elseif kind == 'mega_roar' then
+        -- Rugido: dos anillos de "onda" que se abren y babas/polvo al frente
+        for ring = 1, 2 do
+            local n, sp = 24 + ring * 6, 260 + ring * 170
+            for i = 1, n do
+                local a = (i / n) * math.pi * 2
+                add({ x = x + math.cos(a) * 20, y = y + math.sin(a) * 14, vx = math.cos(a) * sp, vy = math.sin(a) * sp * 0.7,
+                      g = 0, drag = 2.2, life = 0.42 + ring * 0.08, size = (ring == 1) and 6 or 4,
+                      col = (ring == 1) and {1, 0.96, 0.82} or {1, 0.75, 0.45} })
+            end
+        end
+        for i = 1, 8 do
+            add({ x = x + rnd(-20, 20), y = y + rnd(-10, 10), vx = rnd(-200, 200), vy = -rnd(60, 240), g = 900,
+                  life = rnd(0.4, 0.7), size = 3, col = {0.85, 0.95, 1} })
         end
     elseif kind == 'spike_pop' then
         -- El Crabby arranca su pincho del suelo: tierra hacia arriba

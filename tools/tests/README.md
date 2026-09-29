@@ -27,6 +27,7 @@ actualizaciones automáticas. Nunca apuntan al servidor real (usan
 | `sounds` | Todo `Sound.play('nombre')` del código está cargado; los sonidos de `NAMES` (por defecto los nuevos) se reproducen y, con `Sound.GAIN`, quedan en [-15, -8] dBFS. | `run.sh sounds` (`NAMES=a,b`) |
 | `online_helmet` | Online (cliente real + bot + servidor local): rebotar sobre un Gummy con casco (casco intacto, sin daño), ground pound (muere, se oye helmetBreak), pez globo (pincha: -1 vida, se oye pufferPrick). Nivel propio: `tools/tests/online_helmet/level.json`. | `run.sh online_helmet LEVEL=tools/tests/online_helmet/level.json` |
 | `boss_sim` | Pelea de jefe en solitario con las clases reales: estados, daño al jugador, golpes cuando es vulnerable. | `run.sh boss_sim` (`LEVEL=`, `HP=`, `DEBUG_POSE=1`) |
+| `boss_intro` | Entrada del jefe (Mega Crabby) con 2 jugadores: congelados, silencio, orden dormant→fall_in→land_in→roar_in→ready→chase, cae lejos de ellos sin dañar, luego libres; emotes de los descansos en orden 1,2,1,3. | `run.sh boss_intro` (`LEVEL=`, `SECS=`) |
 | `sp_boss` | La pelea en el modo UN JUGADOR REAL (AdventureState, como "Probar" del editor): súbditos, bloques de jefe, tiempo entre golpes. | `run.sh sp_boss SECS=60` (`SHOTS=1`) |
 | `boss_frames` | La pelea dibujada en una rejilla de fotogramas (`<save>/boss_frames.png`). | `run.sh boss_frames STATES=chase,climb EVERY=0.2` |
 | `online_smoke` | Un cliente real + un bot juegan una partida online: sin errores en cliente ni servidor. | `run.sh online_smoke LEVEL=assets/levels/isla_flotante.json MODE=koth` |

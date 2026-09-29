@@ -816,7 +816,24 @@ function PlayerAdventure:recoil(dirX)
 end
 
 -- ── Update ────────────────────────────────────────────────────────────────────
+-- Entrada de un jefe: el jugador se queda sin control (se lee un Input vacío;
+-- la gravedad y lo demás siguen). Igual en un jugador, servidor y predicción.
+local FROZEN_INPUT = { pressed = function() return false end, down = function() return false end }
 function PlayerAdventure:update(dt, level)
+    if level and level.frozenAt and not self.dying and level:frozenAt(self.x, self.y) then
+        -- (quieto de verdad: sin la inercia que traía; la gravedad sigue)
+        if not self.stunT or self.stunT <= 0 then self.vx = 0 end
+        local real = Input
+        Input = setmetatable(FROZEN_INPUT, { __index = real })
+        local ok, err = pcall(self._update, self, dt, level)
+        Input = real
+        if not ok then error(err, 0) end
+        return
+    end
+    return self:_update(dt, level)
+end
+
+function PlayerAdventure:_update(dt, level)
     self.hitNow = nil
     if self.dying then
         self.deathTimer=self.deathTimer+dt

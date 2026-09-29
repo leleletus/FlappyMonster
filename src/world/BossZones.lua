@@ -8,6 +8,11 @@
 --  * La cámara se queda fija enfocando la zona (BossZones.cameraTarget).
 --  * La pelea empieza cuando TODOS los jugadores activos están dentro; hasta
 --    entonces el jefe está dormido (y los que llegaron, esperando).
+--  * Entrada del jefe (si tiene: b:hasIntro()): antes de la pelea la zona pasa
+--    a 'intro'. Los jugadores de dentro se quedan CONGELADOS (sin control:
+--    BossZones.frozenAt, que mira PlayerAdventure) y la música se calla
+--    (BossZones.SILENCE) mientras el jefe hace su entrada; cuando todos sus
+--    jefes dicen b:introDone(), empieza la pelea (y su música).
 --  * La zona sabe qué jefes le pertenecen (zone.bosses): las entidades con
 --    `boss` en su definición cuya propiedad `zone` es el id de la zona, o,
 --    con zone = 0, las que están colocadas dentro de ella.
@@ -19,7 +24,7 @@
 local BossZones = {}
 
 BossZones.DEFAULT_W, BossZones.DEFAULT_H = 20, 11      -- 1280x704 px: una pantalla
-BossZones.STATES = { 'idle', 'waiting', 'fight', 'cleared' }
+BossZones.STATES = { 'idle', 'waiting', 'fight', 'cleared', 'intro' }   -- (códigos de red: no reordenar)
 local CODE = {}
 for i, s in ipairs(BossZones.STATES) do CODE[s] = i end
 
@@ -161,17 +166,27 @@ function Controller:update(dt)
                 if #z.bosses == 0 then
                     z.state = 'cleared'                       -- zona sin jefe: no bloquea
                 elseif #players > 0 and inside == #players then
-                    z.state = 'fight'
-                    for _, b in ipairs(z.bosses) do b:startFight(#players) end
-                    -- Durante la pelea se reaparece dentro de la zona
-                    for _, pa in ipairs(players) do
-                        local s = self.safe[pa]
-                        pa.spawnX, pa.spawnY = s and s[1] or pa.x, s and s[2] or pa.y
+                    local intro = false
+                    for _, b in ipairs(z.bosses) do if b.hasIntro and b:hasIntro() then intro = true end end
+                    if intro then
+                        -- Entrada del jefe: congelados, sin música, hasta que acabe
+                        z.state = 'intro'
+                        for _, b in ipairs(z.bosses) do
+                            if b.startIntro then b:startIntro(self.level, players, z) end
+                        end
+                        events[#events+1] = { type = 'boss_intro', zone = z.id }
+                    else
+                        self:beginFight(z, players, events)
                     end
-                    events[#events+1] = { type = 'boss_start', zone = z.id }
                 else
                     z.state = inside > 0 and 'waiting' or 'idle'
                 end
+            elseif z.state == 'intro' then
+                local done = true
+                for _, b in ipairs(z.bosses) do
+                    if b.introDone and not b:introDone() then done = false end
+                end
+                if done then self:beginFight(z, players, events) end
             elseif z.state == 'fight' then
                 local any = false
                 for _, b in ipairs(z.bosses) do if bossAlive(b) then any = true end end
@@ -184,6 +199,25 @@ function Controller:update(dt)
     end
     for _, pa in ipairs(players) do self.wasDying[pa] = pa.dying end
     return events
+end
+
+function Controller:beginFight(z, players, events)
+    z.state = 'fight'
+    for _, b in ipairs(z.bosses) do b:startFight(#players) end
+    -- Durante la pelea se reaparece dentro de la zona
+    for _, pa in ipairs(players) do
+        local s = self.safe[pa]
+        pa.spawnX, pa.spawnY = s and s[1] or pa.x, s and s[2] or pa.y
+    end
+    events[#events+1] = { type = 'boss_start', zone = z.id }
+end
+
+-- ¿Está congelado quien está en (x, y)? (entrada del jefe de su zona)
+function BossZones.frozenAt(level, x, y)
+    for _, z in ipairs(level.bossZones or {}) do
+        if z.state == 'intro' and contains(z, x, y) then return true end
+    end
+    return false
 end
 
 -- ── Reaparecer dentro de una zona en plena pelea ─────────────────────────────
@@ -263,8 +297,14 @@ function BossZones.fighting(level)
     return nil
 end
 
--- Pista de música que debe sonar como 'level' ahora mismo (nil = la normal)
+-- Pista de música que debe sonar como 'level' ahora mismo (nil = la normal;
+-- SILENCE = callada, durante la entrada de un jefe: no es ninguna pista, así
+-- que Sound.playMusic('level') no suena y los estados paran la que hubiera)
+BossZones.SILENCE = '_silencio'
 function BossZones.music(level)
+    for _, zz in ipairs(level.bossZones or {}) do
+        if zz.state == 'intro' then return BossZones.SILENCE end
+    end
     local z = BossZones.fighting(level)
     if z and z.music ~= 'level' then return z.music end
     return nil

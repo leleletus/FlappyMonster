@@ -318,7 +318,8 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   end OR coming from the open side (player centre beyond its outer face) =
   'stomp' with 4th return dirX = cnx → `pa:bounce(vy, dirX, soft=true)` (vx 300 +
   ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill; v17: crawler turn in snapshots; v18: MegaCrabby;
-  v19: boss walls, Mega minions/pounce; v20: post-hit protection; v21: unified invulnerability).
+  v19: boss walls, Mega minions/pounce; v20: post-hit protection; v21: unified invulnerability;
+  v23: boss intro + Mega emotes).
 - **Crawler** (`src/world/entities/Crawler.lua`): surface-following movement
   (floor ↔ walls ↔ ceiling, concave and convex corners) for Crabbies with prop
   `wallWalk` (`Crabby.WALL_PROP`, off by default so old levels don't change).
@@ -545,6 +546,13 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   respawn points move into the zone. Camera: `BossZones.cameraTarget` via
   `cameraZone` — during a fight it also stays fixed for players BELOW the zone
   (fell through a broken floor: walls no longer hold them, camera must not follow).
+  **Boss intro**: if a boss has `hasIntro()`, the zone goes `waiting → intro → fight`
+  (state code 5, appended: codes are network ids). During 'intro' players inside are
+  FROZEN (`Level:frozenAt` → `PlayerAdventure:update` feeds an all-false Input and
+  zeroes vx; gravity still acts; identical SP/server/prediction since the zone state
+  is in snapshots) and `BossZones.music` returns `BossZones.SILENCE` (states call
+  `Sound.stopMusic()`). The boss runs `startIntro(level, players, z)` and the fight
+  starts when every boss says `introDone()`. Event `boss_intro`. Harness `boss_intro`.
   Music: zone field `music` = any catalog track with `"boss": true` (options built
   from `Music.bossList` + 'level'; default 'boss'; editor: zone inspector). Prefer
   OGG for music (the updater ships it to every player).
@@ -626,6 +634,14 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   dying_flee (small crab without claws runs straight to the nearest side through
   everything, silent steps, fades) → dead. `releasesZone()` (Boss hook, used by
   BossZones) lets the zone clear when the flee starts, so boss walls open first.
+  Intro: hidden + not solid while `dormant`; `fall_in` (0.7 s silence, 'megaFall',
+  falls from above the zone through anything outside it, lands on the zone floor at
+  `introSpot` = its editor x if ≥ `INTRO_SAFE` tiles from every player, else the floor
+  point farthest from them; shadow grows on the floor) → `land_in` (slam fx, no
+  damage) → `roar_in` ('megaRoar' + fx `mega_roar` rings + shakes, claws up) → `ready`
+  → fight starts straight in 'chase'. Rests are EMOTES: `restKind` (netPack field 8)
+  cycles `REST_KINDS` {1 roar, 2 claw punches + clacks, 1, 3 spike flex}; drawn in
+  `pose2d` (5th return = spike scale for `drawLocal`).
   Minions: the type def's `summons(placement)` makes Level.fromData append RESERVE
   placements (crabby / crabbytramp, wallWalk + dropOnSight) after the JSON ones, so
   server and clients share indices; `Entities.create` → `e:makeReserve(key)` (not alive,

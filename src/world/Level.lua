@@ -361,6 +361,11 @@ end
 
 -- Paredes invisibles en el punto: zona de jefe sin superar que lo contiene
 -- o la ventana de la cámara automática. nil = ninguna.
+-- ¿Sin control? (entrada de un jefe: ver BossZones.frozenAt)
+function Level:frozenAt(wx, wy)
+    return BossZones.frozenAt(self, wx, wy)
+end
+
 function Level:arenaAt(wx, wy)
     if #self.bossZones > 0 then
         local z = BossZones.arenaAt(self, wx, wy)

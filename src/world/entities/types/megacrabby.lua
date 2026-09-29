@@ -16,6 +16,12 @@
 --  * Con poca vida (rageAt) se enfada: más rápido y menos tiempo clavado.
 --  * Muerte: patalea desesperado, se desinfla en una nube de humo hasta ser un
 --    Crabby normal y huye trepando por la pared.
+--  * Entrada (BossZones 'intro'): hasta que llegan todos no está (ni se ve ni
+--    choca). Con los jugadores congelados y sin música cae del cielo en el
+--    sitio de la zona más lejos de ellos (fall_in → land_in), ruge (roar_in) y
+--    espera (ready) a que la zona empiece la pelea.
+--  * Descansos = "emotes" (rest + restKind, en orden fijo): rugido, amenaza
+--    con las pinzas o sacar pecho con el pincho.
 --
 -- Sprites: assets/images/MegaCrabby/ (crab1-3 como el Crabby, claw_left-Sheet
 -- = pinza izquierda 7x6 abierta/cerrada; la derecha es la misma volteada;
@@ -64,6 +70,11 @@ local WALL_ESCAPE_VX, WALL_ESCAPE_VY = 560, -900   -- rebote para salir de una p
 local AIM_LOCK_CEIL, AIM_LOCK_WALL = 0.35, 0.3   -- s fijos antes de lanzarse
 local MARKER_SPEED = 520                         -- px/s de la marca desde la pared
 local SUMMON_WARN  = 1.0                         -- s de aviso (marcas) antes de que salgan
+-- Entrada: silencio antes de caer, aplastado al aterrizar, rugido
+local FALL_WAIT, LAND_T, ROAR_T = 0.7, 0.7, 1.9
+local INTRO_SAFE = 2.5                           -- casillas libres entre él y un jugador al caer
+-- Descansos: qué emote toca en cada uno (1 rugido, 2 pinzas, 3 pincho)
+local REST_KINDS = { 1, 2, 1, 3 }
 
 -- Pinzas: más pequeñas que el cuerpo (CLAW_K de su escala) y saliendo del
 -- costado, a la altura del arranque de las patas (CLAW_X, CLAW_Y en píxeles
@@ -123,13 +134,137 @@ function Mega:initBoss()
 end
 
 function Mega:onFightStart(n)
-    self.state, self.deadTimer = 'intro', 0
+    -- (tras su entrada ya ha rugido: ataca directamente)
+    self.state, self.deadTimer = self.introPlayed and 'chase' or 'intro', 0
     self.ceilT, self.chargeCd = 0, self.props.chargeEvery or 2.5
     -- (desfasados: los ataques especiales se van alternando)
     self.pounceT = (self.props.pounceEvery or 9) * 0.45
     self.restT = 0
     self.summonT = (self.props.summonEvery or 12) * 0.3
-    Sound.play('megaClack')
+    if not self.introPlayed then Sound.play('megaClack') end
+end
+
+-- ── Entrada ───────────────────────────────────────────────────────────────────
+-- Antes de la entrada no está (dormant) y mientras cae no se le puede tocar
+local HIDDEN = { dormant = true, fall_in = true }
+local INTRO  = { fall_in = true, land_in = true, roar_in = true, ready = true }
+function Mega:isActive() return not INTRO[self.state] and Boss.isActive(self) end
+function Mega:isSolidBody() return not HIDDEN[self.state] and Boss.isSolidBody(self) end
+
+function Mega:hasIntro() return self.zone ~= nil end
+function Mega:introDone() return self.state == 'ready' end
+
+-- Dónde cae: su sitio del editor si está lejos de todos; si no, el punto del
+-- suelo de la zona más alejado de los jugadores (nunca encima de nadie)
+function Mega:introSpot(level, players)
+    local z, T, hw = self.zone, TILE_PX, self.outerW / 2
+    local x0, x1 = z.x0 + hw, z.x1 - hw
+    if x0 > x1 then return (z.x0 + z.x1) / 2 end
+    local function clearance(x)
+        local d = math.huge
+        for _, pa in ipairs(players) do d = math.min(d, math.abs(pa.x - x)) end
+        return d
+    end
+    -- (solo el suelo de verdad: lo más bajo que haya, no una plataforma)
+    local cands, lowest = {}, -math.huge
+    for x = x0, x1, T / 2 do
+        local f = self:floorBelow(level, x, z.y0)
+        cands[#cands + 1] = { x = x, f = f }
+        lowest = math.max(lowest, f)
+    end
+    local home = math.max(x0, math.min(x1, self.home and self.home.x or self.x))
+    local safe = hw + INTRO_SAFE * T
+    if clearance(home) >= safe and self:floorBelow(level, home, z.y0) >= lowest - T then return home end
+    local best, bc
+    for _, c in ipairs(cands) do
+        if c.f >= lowest - T then
+            local cl = clearance(c.x)
+            if not bc or cl > bc + 0.5 or (math.abs(cl - bc) <= 0.5 and math.abs(c.x - home) < math.abs(best - home)) then
+                best, bc = c.x, cl
+            end
+        end
+    end
+    return best or home
+end
+
+function Mega:startIntro(level, players, z)
+    self.zone = self.zone or z
+    z = self.zone
+    Crawler.detach(self)
+    self.crawl, self.flipped = false, false
+    self.x = self:introSpot(level, players)
+    self.y = z.y0 - self.sprH                    -- del cielo (sobre la zona)
+    self.vx, self.vy, self.onGround = 0, 0, false
+    self.floorY = self:floorBelow(level, self.x, z.y0)
+    local near
+    for _, pa in ipairs(players) do
+        if not near or math.abs(pa.x - self.x) < math.abs(near.x - self.x) then near = pa end
+    end
+    if near then self.facing = (near.x >= self.x) and 1 or -1 end
+    self.state, self.deadTimer = 'fall_in', 0
+end
+
+-- ¿Pasó el instante `s` en este paso? (sonidos y efectos a su tiempo)
+local function at(t, dt, s) return t >= s and t - dt < s end
+
+function Mega:updateIntro(dt, level, st, t)
+    local z = self.zone
+    if st == 'fall_in' then
+        if t < FALL_WAIT then return end              -- (un momento de silencio)
+        if at(t, dt, FALL_WAIT) then Sound.play('megaFall') end
+        self.vy = math.min(self.vy + ADV_GRAVITY * dt, self.props.dropSpeed or 1600)
+        local feet0 = self.y + self.outerH / 2
+        self.y = self.y + self.vy * dt
+        local feet1 = self.y + self.outerH / 2
+        local floorLine = z and z.y1 or level.heightPx
+        -- (atraviesa lo que haya encima de la zona: viene del cielo)
+        local top0 = z and z.y0 or 0
+        if feet1 <= top0 then return end
+        local hit, top = level:landingCross(self.x, math.max(feet0, top0), math.min(feet1, floorLine))
+        if not hit and feet1 >= floorLine then hit, top = true, floorLine end
+        if hit then
+            self.y, self.vy, self.onGround = top - self.outerH / 2, 0, true
+            self.floorY = top
+            self.state, self.deadTimer = 'land_in', 0
+            Sound.play('megaSlam', 0.8)
+            Sound.play('gpImpact', 0.6)
+            Entity.emitFx('mega_slam', self.x, top)
+            Entity.emitFx('mega_land', self.x, top)
+            Entity.emitFx('shake_big', self.x, top)
+        end
+    elseif st == 'land_in' then
+        self:walk(level, dt, 0)
+        if t >= LAND_T then
+            self.state, self.deadTimer = 'roar_in', 0
+            self:roar(1)
+        end
+    elseif st == 'roar_in' then
+        self:walk(level, dt, 0)
+        self:roarTick(dt, t)
+        if at(t, dt, 1.35) then Sound.play('megaClack', 1.0) end
+        if at(t, dt, 1.55) then Sound.play('megaClack', 1.15) end
+        if t >= ROAR_T then
+            self.state, self.deadTimer = 'ready', 0
+            self.introPlayed = true
+        end
+    else                                              -- ready: espera a la zona
+        self:walk(level, dt, 0)
+    end
+end
+
+-- Rugido (entrada y descansos): sonido, onda y temblor
+function Mega:roar(pitch)
+    Sound.play('megaRoar', pitch or 1)
+    Entity.emitFx('mega_roar', self.x + self.facing * self.sprW * 0.15, self.y - self.sprH * 0.2)
+    Entity.emitFx('shake_small', self.x, self.y)
+end
+function Mega:roarTick(dt, t)
+    for _, s in ipairs({ 0.4, 0.8 }) do
+        if at(t, dt, s) then
+            Entity.emitFx('mega_roar', self.x + self.facing * self.sprW * 0.15, self.y - self.sprH * 0.2)
+            Entity.emitFx('shake_small', self.x, self.y)
+        end
+    end
 end
 
 -- ── Reglas ────────────────────────────────────────────────────────────────────
@@ -467,6 +602,8 @@ function Mega:updateBoss(dt, level)
     if st == 'dormant' then
         self:walk(level, dt, 0)
         return
+    elseif INTRO[st] then
+        return self:updateIntro(dt, level, st, t)
     elseif st == 'intro' then
         -- Se presenta: castañetea las pinzas
         self:walk(level, dt, 0)
@@ -490,7 +627,12 @@ function Mega:updateBoss(dt, level)
             self.restT = 0
             local rt = p.restTime or 1.8
             self.restFor = rt * (0.8 + math.random() * 0.5)
+            self.restN = (self.restN or 0) + 1
+            self.restKind = REST_KINDS[(self.restN - 1) % #REST_KINDS + 1]
+            if self.restKind == 1 then self.restFor = math.max(self.restFor, 1.4) end
             self.state, self.deadTimer = 'rest', 0
+            if self.restKind == 1 then self:roar(1.1)
+            elseif self.restKind == 3 then Sound.play('spikeShake', 0.8) end
         elseif self.onGround and self.ceilT >= (p.ceilingEvery or 7) then
             if self:startClimb(level) then self.ceilT = 0 else self.ceilT = 0 end
         elseif self.onGround and (p.pounceEvery or 9) > 0 and self.pounceT >= (p.pounceEvery or 9) then
@@ -544,6 +686,17 @@ function Mega:updateBoss(dt, level)
         if t >= (self.recoverFor or 0.5) then self.state, self.deadTimer = 'chase', 0 end
     elseif st == 'rest' then
         self:walk(level, dt, 0)
+        -- Emote del descanso
+        if self.restKind == 2 then
+            for i, s in ipairs({ 0.15, 0.4, 0.65, 0.9 }) do
+                if at(t, dt, s) then Sound.play('megaClack', 0.95 + i * 0.07) end
+            end
+        elseif self.restKind == 3 then
+            if at(t, dt, 0.55) then
+                Sound.play('crabPop', 0.75)
+                Entity.emitFx('sparks', self.x, self.y - self.sprH / 2 - SPIKE_H * 0.8)
+            end
+        end
         if t >= (self.restFor or 1.8) then self.state, self.deadTimer = 'chase', 0 end
     elseif st == 'climb' then
         -- A la pared más cercana y hasta el techo
@@ -783,7 +936,7 @@ end
 function Mega:netPackExtra()
     local surf, turn = Crawler.netPack(self)
     return { surf, turn, math.floor(self.landY + 0.5), math.floor(self.floorY + 0.5), self.hitDrop and 1 or 0,
-             math.floor(self.markerX + 0.5), self.summonN or 0 }
+             math.floor(self.markerX + 0.5), self.summonN or 0, self.restKind or 0 }
 end
 
 function Mega:netApplyExtra(a, b, f)
@@ -796,6 +949,7 @@ function Mega:netApplyExtra(a, b, f)
     self.hitDrop = b[5] == 1
     self.markerX = tonumber(b[6]) or self.x
     self.summonN = tonumber(b[7]) or 0
+    self.restKind = tonumber(b[8]) or 0
 end
 
 -- ── Dibujo ────────────────────────────────────────────────────────────────────
@@ -833,14 +987,78 @@ function Mega:pose2d(now, moving, walkPhase)
         end
     end
     local breath = math.sin(now * 3)
-    if st == 'dormant' or st == 'recover' or ((st == 'chase' or st == 'intro') and not moving) then
+    local spikeK = 1
+    -- Rugido: se echa atrás, se estira hacia arriba temblando con las pinzas
+    -- en alto y abiertas, y vuelve a su sitio
+    local function roarPose(rt)
+        if rt < 0.25 then
+            local k = rt / 0.25
+            sx, sy = 1 + 0.08 * k, 1 - 0.1 * k
+            for i = 1, 2 do claws[i][2] = 1.0 * k end
+        elseif rt < 1.15 then
+            local k = math.min(1, (rt - 0.25) / 0.12)
+            local tr = math.sin(now * 48) * 0.025
+            sx, sy = 1 - 0.07 * k - tr, 1 + 0.16 * k + tr
+            shx = math.floor(math.sin(now * 61) * 2 * MS / 4)
+            spikeK = 1 + 0.1 * k + math.sin(now * 40) * 0.04
+            for i, side in ipairs({ -1, 1 }) do
+                claws[i][1] = side * 1.4 * k
+                claws[i][2] = -3.4 * k + math.sin(now * 34 + i * 2) * 0.6
+            end
+        else
+            local q = spring(rt - 1.15, 0.12, 16, 6)
+            sx, sy = 1 + q, 1 - q
+        end
+    end
+    if st == 'dormant' or st == 'recover' or st == 'ready' or ((st == 'chase' or st == 'intro') and not moving) then
         sy, sx = 1 + 0.025 * breath, 1 - 0.015 * breath
         swing(0.8, 2.1)
     elseif st == 'rest' then
-        -- Descansando: respira hondo y despacio, pinzas caídas meciéndose
+        -- Descansando: respira hondo y despacio, pinzas caídas meciéndose...
         local deep = math.sin(now * 1.9)
         sy, sx = 1 + 0.04 * deep, 1 - 0.025 * deep
         swing(1.1, 1.3, 0.3)
+        -- ...tras su emote
+        local kind = self.restKind or 0
+        if kind == 1 and t < 1.4 then
+            roarPose(t)
+        elseif kind == 2 and t < 1.15 then
+            -- Amenaza: puñetazos al aire alternando las pinzas, botando
+            local k = math.min(1, t / 0.12) * math.min(1, (1.15 - t) / 0.15)
+            sy, sx = 1 + 0.05 * math.abs(math.sin(t * 16)) * k, 1 - 0.03 * math.abs(math.sin(t * 16)) * k
+            for i, side in ipairs({ -1, 1 }) do
+                local ph = math.max(0, math.sin(t * 16 + (i == 1 and 0 or math.pi)))
+                claws[i][1] = side * (0.4 + 1.2 * ph) * k
+                claws[i][2] = (-1.0 - 2.6 * ph) * k
+            end
+        elseif kind == 3 and t < 1.2 then
+            -- Saca pecho: se encoge, el pincho crece de golpe y vibra
+            if t < 0.5 then
+                local k = t / 0.5
+                sx, sy = 1 + 0.1 * k, 1 - 0.12 * k
+                spikeK = 1 - 0.1 * k
+                for i = 1, 2 do claws[i][2] = 1.2 * k end
+            else
+                local q = spring(t - 0.5, 0.18, 18, 5)
+                sx, sy = 1 - 0.05 - q * 0.5, 1 + 0.1 + q
+                spikeK = 1.35 + spring(t - 0.5, 0.25, 30, 5)
+                for i, side in ipairs({ -1, 1 }) do claws[i][1] = side * 1.0; claws[i][2] = -1.6 end
+            end
+        end
+    elseif st == 'roar_in' then
+        roarPose(t)
+    elseif st == 'land_in' then
+        -- Aterriza del cielo: aplastado y rebotando
+        local q = spring(t, 0.32, 17, 5)
+        sx, sy = 1 + q, 1 - q
+        for i, side in ipairs({ -1, 1 }) do claws[i][1] = side * 1.2 * math.max(0, q * 3); claws[i][2] = 1.2 end
+    elseif st == 'fall_in' then
+        -- Cayendo: estirado, patas y pinzas arriba agitándose
+        sx, sy = 0.9, 1.14
+        for i, side in ipairs({ -1, 1 }) do
+            claws[i][1] = side * 0.8
+            claws[i][2] = -2.4 + math.sin(now * 26 + i * 2) * 0.8
+        end
     end
     if (st == 'chase' or st == 'climb' or st == 'ceiling' or st == 'wallclimb' or st == 'charge') and moving then
         -- Andando: rebota con cada paso y las pinzas se mecen a contrapaso
@@ -921,12 +1139,12 @@ function Mega:pose2d(now, moving, walkPhase)
         sy, sx = 1 + 0.12 * math.sin(k * math.pi), 1 - 0.08 * math.sin(k * math.pi)
         for i = 1, 2 do claws[i][2] = -1.5 * math.sin(k * math.pi) end
     end
-    return sx, sy, shx, claws
+    return sx, sy, shx, claws, spikeK
 end
 
 -- Dibuja el cangrejo "como en el suelo" con los pies en (px, py) de pantalla,
 -- girado `ang`, a escala de píxel `s`, deformado (sx, sy) desde los pies
-function Mega:drawLocal(px, py, ang, s, img, withSpike, alpha, nervous, sx, sy, claws, noClaws)
+function Mega:drawLocal(px, py, ang, s, img, withSpike, alpha, nervous, sx, sy, claws, noClaws, spikeK)
     local now = love.timer.getTime()
     local red = self:flashRed()
     if red then love.graphics.setColor(1, 0.3, 0.3, alpha) else love.graphics.setColor(1, 1, 1, alpha) end
@@ -937,7 +1155,9 @@ function Mega:drawLocal(px, py, ang, s, img, withSpike, alpha, nervous, sx, sy, 
     local ih = img:getHeight()
     local cs = s * CLAW_K
     if withSpike then                             -- detrás del cuerpo, sobre la cabeza
-        love.graphics.draw(spikeImg, 0, -ih * s, 0, s / 4, s / 4, spikeImg:getWidth() / 2, spikeImg:getHeight() - 1)
+        local k = spikeK or 1                     -- (los emotes lo hinchan)
+        love.graphics.draw(spikeImg, 0, -ih * s, 0, s / 4 * (0.85 + 0.15 * k), s / 4 * k,
+                           spikeImg:getWidth() / 2, spikeImg:getHeight() - 1)
     end
     love.graphics.draw(img, 0, 0, 0, s * self.facing, s, img:getWidth() / 2, ih)
     -- Pinzas delante del cuerpo, saliendo del costado junto a las patas
@@ -993,9 +1213,23 @@ end
 function Mega:render(camX, camY)
     local st, t = self.state, self.deadTimer or 0
     local now = love.timer.getTime()
+    -- Antes de su entrada no está; cayendo, su sombra crece en el suelo
+    if not EDITOR_VIEW and (st == 'dormant' or (st == 'fall_in' and t < FALL_WAIT)) then
+        self._lx = nil
+        return
+    end
+    if st == 'fall_in' and not EDITOR_VIEW and (self.floorY or 0) > 0 then
+        local k = math.max(0, math.min(1, 1 - (self.floorY - (self.y + self.outerH / 2)) / 900))
+        local w = math.floor(self.sprW * (0.25 + 0.6 * k))
+        love.graphics.setColor(0, 0, 0, 0.2 + 0.35 * k)
+        love.graphics.rectangle('fill', math.floor(self.x - camX - w / 2), math.floor(self.floorY - camY - 6), w, 6)
+        love.graphics.setColor(1, 1, 1, 1)
+    end
     local s, alpha = MS, 1
+    local emote = st == 'rest' and t < 1.2 and (self.restKind or 0) or 0
     local nervous = st == 'windup' or st == 'aim' or st == 'stuck' or st == 'dying_kick' or st == 'intro'
                     or st == 'charge' or st == 'summon' or st == 'wallaim' or st == 'pounce'
+                    or st == 'roar_in' or st == 'fall_in' or emote == 1 or emote == 2
     if self._rstate ~= st then self._prevState, self._rstate = self._rstate, st end
 
     -- ¿Se mueve? (para el paso y el balanceo): lo que avanzó desde el dibujo anterior
@@ -1009,8 +1243,11 @@ function Mega:render(camX, camY)
     local frame = self.frame or 1
     if st == 'stuck' or st == 'dying_kick' then
         frame = math.floor(t * (st == 'dying_kick' and WIGGLE_FPS * 2 or WIGGLE_FPS)) % 3 + 1
+    elseif st == 'fall_in' or (emote == 2 and t < 1.15) then
+        frame = math.floor(now * 14) % 3 + 1              -- (patalea)
     elseif not moving and (st == 'dormant' or st == 'windup' or st == 'aim' or st == 'recover' or st == 'chase' or st == 'rest'
-                           or st == 'intro' or st == 'summon' or st == 'wallaim') then
+                           or st == 'intro' or st == 'summon' or st == 'wallaim' or st == 'land_in' or st == 'roar_in'
+                           or st == 'ready') then
         frame = 2
     end
     local img = imgs[frame] or imgs[2]
@@ -1046,7 +1283,7 @@ function Mega:render(camX, camY)
         drawTarget(math.floor(mx - camX), math.floor(self.landY - camY), self.sprW * 0.9, now)
     end
 
-    local sx, sy, shx, claws = self:pose2d(now, moving, walkPhase)
+    local sx, sy, shx, claws, spikeK = self:pose2d(now, moving, walkPhase)
     local fx, fy, ang
     if self.crawl and self.cattached and CRAWL[st] then
         fx, fy, ang = Crawler.pose(self)
@@ -1088,7 +1325,7 @@ function Mega:render(camX, camY)
     if EDITOR_VIEW then nervous = false end
     self:renderFx(now, fx, fy, moved)
     self:drawLocal(math.floor(fx - camX + 0.5) + jx + shx, math.floor(fy - camY + 0.5) + jy, ang, s, img,
-                   withSpike, alpha * self:ghostAlpha(), nervous, sx, sy, claws, noClaws)
+                   withSpike, alpha * self:ghostAlpha(), nervous, sx, sy, claws, noClaws, spikeK)
     love.graphics.setColor(1, 1, 1, 1)
 end
 

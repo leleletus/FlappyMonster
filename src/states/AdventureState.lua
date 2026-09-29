@@ -468,7 +468,8 @@ function AdventureState:updateBoss(dt)
     local want = BossZones.music(self.level)
     if want ~= Sound.getLevelMusic() then
         Sound.setLevelMusic(want)
-        if self.player.drownPhase ~= 'drowning' then Sound.playMusic('level') end
+        if want == BossZones.SILENCE then Sound.stopMusic()          -- (entrada del jefe: silencio)
+        elseif self.player.drownPhase ~= 'drowning' then Sound.playMusic('level') end
     end
 end
 

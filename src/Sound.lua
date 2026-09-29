@@ -24,7 +24,7 @@ local GAIN = {
     airGasp      = 0.85, waterWarning = 1.4,
     -- Mega Crabby (archivos ya comprimidos: subir poco por encima de 1 satura)
     megaStep     = 0.56, megaClack  = 1.0,  megaHurt   = 1.1,  megaSlam   = 1.1,
-    megaWindup   = 0.85, megaShrink = 0.8,  megaFlee   = 0.9,
+    megaWindup   = 0.85, megaShrink = 0.8,  megaFlee   = 0.9,  megaRoar = 1.0, megaFall = 0.8,
     -- tools/sounds/mechanics.py (medidos: → ≈ -12 dBFS)
     switchOn     = 0.77, switchOff  = 0.76, helmetBounce = 1.15, helmetBreak = 0.72,
     pufferWarn   = 1.0,  pufferInflate = 0.81, pufferDeflate = 0.77, pufferPrick = 0.67,
@@ -133,6 +133,8 @@ function Sound.load()
     load('megaWindup',    'assets/sounds/bosses/megacrabby/windup.wav', 'static')   -- aviso de embestida
     load('megaShrink',    'assets/sounds/bosses/megacrabby/shrink.wav', 'static')   -- muerte: se desinfla
     load('megaFlee',      'assets/sounds/bosses/megacrabby/flee.wav',   'static')   -- huye asustado
+    load('megaRoar',      'assets/sounds/bosses/megacrabby/roar.wav',   'static')   -- rugido (entrada y descansos)
+    load('megaFall',      'assets/sounds/bosses/megacrabby/fall.wav',   'static')   -- cae del cielo (entrada)
     -- Música: todas las pistas del índice (assets/music/index.json)
     for _, tr in ipairs(Music.list) do Sound.loadTrack(tr) end
 end
@@ -176,7 +178,7 @@ Sound.FAR  = 1400
 -- Alcance por sonido (multiplica NEAR y FAR): lo que hace algo enorme se oye
 -- en toda la arena (un jefe que la cruza no debe quedarse mudo)
 Sound.RANGE = {
-    megaStep = 1.8, megaClack = 2.2, megaHurt = 3, megaSlam = 3, megaWindup = 2.5,
+    megaStep = 1.8, megaClack = 2.2, megaRoar = 3, megaFall = 3, megaHurt = 3, megaSlam = 3, megaWindup = 2.5,
     megaShrink = 3, megaFlee = 2.2, bossHurt = 3, bossExplode = 3,
 }
 local listenerX, listenerY = nil, nil
