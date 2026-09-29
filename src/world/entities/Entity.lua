@@ -220,6 +220,7 @@ function Entity:updateCommonStates(dt, level)
         local facing = self.facing
         if self.flying then
             self:moveAndCollide(level, vx * dt, 0)
+            if self.moving then self:animateWalk(dt) end       -- (en el aire sigue pataleando)
         else
             local gravDir = self.flipped and -1 or 1
             self.vy = self.vy + ADV_GRAVITY * dt * gravDir
@@ -596,9 +597,11 @@ function Entity:update(dt, level)
     -- ── Walk / vuelo ─────────────────────────────────────────────────────────
     self:onWalk(dt)
 
-    if self.props.pauses then
+    -- Pausas (idle): solo apoyado en el suelo o quieto. Un volador nunca: en el
+    -- aire sigue moviendo las patitas (animación de andar) aunque esté parado
+    if self.props.pauses and not self.flying then
         self.idleCountdown = self.idleCountdown - dt
-        if self.idleCountdown <= 0 and (self.onGround or self.flying or not self.moving) then
+        if self.idleCountdown <= 0 and (self.onGround or not self.moving) then
             self:startIdle()
             return
         end
@@ -632,12 +635,16 @@ function Entity:update(dt, level)
         self:moveAndCollide(level, self.vx * dt, self.vy * dt)
     end
 
-    if self.moving then
-        self.animT = self.animT + dt
-        if self.animT >= 1 / tn.walkFps then
-            self.animT = self.animT - 1 / tn.walkFps
-            self.frame = (self.frame % tn.walkFrames) + 1
-        end
+    if self.moving then self:animateWalk(dt) end
+end
+
+-- Avanza la animación de andar (patitas)
+function Entity:animateWalk(dt)
+    local tn = self.tuning
+    self.animT = self.animT + dt
+    if self.animT >= 1 / tn.walkFps then
+        self.animT = self.animT - 1 / tn.walkFps
+        self.frame = (self.frame % tn.walkFrames) + 1
     end
 end
 

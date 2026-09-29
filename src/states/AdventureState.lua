@@ -4,6 +4,7 @@ local L = require 'src/Lang'
 local BaseState       = require 'src/BaseState'
 local Level           = require 'src/world/Level'
 local PlayerAdventure = require 'src/entities/PlayerAdventure'
+local PlayRecorder    = require 'src/PlayRecorder'
 local Entities        = require 'src/world/Entities'
 local Entity          = require 'src/world/entities/Entity'
 local Particles       = require 'src/fx/Particles'
@@ -54,6 +55,11 @@ local function loadBgAsset()
 end
 
 -- ── Enter ─────────────────────────────────────────────────────────────────────
+-- Al salir del nivel: cerrar la grabación (si la hay)
+function AdventureState:exit()
+    if self.rec then self.rec:finish(self); self.rec = nil end
+end
+
 function AdventureState:enter(args)
     loadHudAssets()
     loadBgAsset()
@@ -64,6 +70,8 @@ function AdventureState:enter(args)
     local sx, sy = self.level:getSpawnPx()
     self.player = PlayerAdventure:new(sx, sy)
     self.level.players = { self.player }       -- para trampas/entidades que "ven" al jugador
+    -- Grabación de la partida para analizarla (FM_RECORD=1; ver src/PlayRecorder.lua)
+    if PlayRecorder.enabled() then self.rec = PlayRecorder.new(self.levelPath, self.level.name) end
 
     -- Efectos del jugador (ground pound, bloques rotos...)
     Particles.clear()
@@ -421,6 +429,7 @@ function AdventureState:update(dt)
     self:updatePopups(dt)
 
     self:updateCamera(dt)
+    if self.rec then self.rec:step(dt, self) end
 
     -- ── Detectar muerte del jugador ───────────────────────────────────────────
     if self.player.dying and not self.player.alive then

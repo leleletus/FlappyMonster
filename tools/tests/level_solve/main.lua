@@ -17,6 +17,7 @@ local Level = require 'src/world/Level'
 local PlayerAdventure = require 'src/entities/PlayerAdventure'
 
 local DT, K = 1 / 60, 6
+local NODROWN = os.getenv('NODROWN')    -- (sin ahogarse: ¿el terreno se puede recorrer?)
 local ACTIONS = {}
 for _, d in ipairs({ -1, 0, 1 }) do
     for _, j in ipairs({ false, true }) do
@@ -72,11 +73,38 @@ local function solve(path)
     local function key(pa)
         return table.concat({ math.floor(pa.x / (explore and 24 or 14)), math.floor(pa.y / (explore and 24 or 14)), pa.onGround and 1 or 0,
             pa.jumpsLeft, math.floor(pa.vy / 260), math.floor(pa.vx / 120), pa.crouching and 1 or 0,
+            math.floor((pa.drownTimer or 0) / 3),          -- (con más aire no es el mismo estado)
             pa.gpPhase == 'windup' and 1 or (pa.gpPhase == 'fall' and 2 or 0), math.floor((pa.dropHoldT or 0) * 8), pa.dropping and 1 or 0 }, ',')
     end
     local s0 = P.packOwnState(pa)
+    -- Heurística: distancia POR LOS HUECOS hasta la meta (BFS de casillas no
+    -- sólidas desde ella), no en línea recta: en un laberinto la recta apunta a
+    -- las paredes. HDIST=0 vuelve a la línea recta.
+    local T = TILE_PX
+    local dist = {}
+    if not explore and os.getenv('HDIST') ~= '0' then
+        local q, head = {}, 1
+        for _, g in ipairs(goals) do
+            local c, r = math.floor(g[1] / T) + 1, math.floor(g[2] / T) + 1
+            local k = r * 4096 + c
+            if not dist[k] then dist[k] = 0; q[#q + 1] = { c, r } end
+        end
+        while head <= #q do
+            local c, r = q[head][1], q[head][2]; head = head + 1
+            local d = dist[r * 4096 + c]
+            for _, n in ipairs({ { c + 1, r }, { c - 1, r }, { c, r + 1 }, { c, r - 1 } }) do
+                local nc, nr = n[1], n[2]
+                if nc >= 1 and nr >= 1 and nc <= level.tileW and nr <= level.tileH and not dist[nr * 4096 + nc]
+                   and level:getDef(nc, nr).collision ~= 'solid' then
+                    dist[nr * 4096 + nc] = d + 1; q[#q + 1] = { nc, nr }
+                end
+            end
+        end
+    end
     local function h(x, y)
         if explore then return 0 end
+        local d = dist[(math.floor(y / T) + 1) * 4096 + math.floor(x / T) + 1]
+        if d then return d * T end
         local m = 1e9
         for _, g in ipairs(goals) do m = math.min(m, math.abs(x - g[1]) * 0.5 + math.abs(y - g[2]) * (tonumber(os.getenv("HWY")) or 1.5)) end
         return m
@@ -126,6 +154,7 @@ local function solve(path)
                 st.jump_pressed = a.j and f == 1
                 st.crouch_pressed = a.c and f == 1
                 local before = pa.y + pa:getOuterBounds().h / 2
+                if NODROWN then pa.drownTimer, pa.drownPhase, pa.drownAudT = 0, 'none', 0 end
                 pa:update(DT, level)
                 -- trampolines (emulación: solo terreno + lanzamiento)
                 for _, t in ipairs(tramps) do

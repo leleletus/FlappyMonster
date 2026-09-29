@@ -55,9 +55,9 @@
     {"col":50,"props":{"patrol":{"left":44,"right":56}},"row":17,"type":"crabby"},
     {"col":74,"props":{"patrol":{"left":70,"right":78}},"row":11,"type":"gummy"},
     {"col":40,"props":{"patrol":{"left":36,"right":44}},"row":17,"type":"gummy"},
-    {"col":7,"props":{"patrol":{"left":2,"right":12}},"row":22,"type":"pufferfish"},
-    {"col":30,"props":{"patrol":{"left":25,"right":46}},"row":21,"type":"pufferfish"},
-    {"col":84,"props":{"patrol":{"left":79,"right":91},"startDir":"left"},"row":22,"type":"pufferfish"}
+    {"col":7,"props":{"area":[{"col":2,"row":21},{"col":13,"row":21},{"col":13,"row":22},{"col":11,"row":22},{"col":11,"row":24},{"col":2,"row":24}]},"row":22,"type":"pufferfish"},
+    {"col":30,"props":{"area":[{"col":25,"row":21},{"col":46,"row":21},{"col":46,"row":22},{"col":25,"row":22}]},"row":21,"type":"pufferfish"},
+    {"col":84,"props":{"area":[{"col":79,"row":21},{"col":91,"row":21},{"col":91,"row":22},{"col":89,"row":24},{"col":80,"row":24}],"startDir":"left"},"row":22,"type":"pufferfish"}
   ],
   "foliage": [],
   "vents": [

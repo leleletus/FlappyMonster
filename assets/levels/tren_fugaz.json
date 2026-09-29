@@ -32,7 +32,14 @@
     {"col":136,"props":{"detectRange":4},"row":6,"sub":1,"type":"spikefall"},
     {"col":139,"props":{"detectRange":4},"row":6,"sub":2,"type":"spikefall"},
     {"col":137,"row":8,"type":"extralife"},
-    {"col":152,"props":{"patrol":{"left":150,"right":155}},"row":9,"type":"gummy"}
+    {"col":152,"props":{"patrol":{"left":150,"right":155}},"row":9,"type":"gummy"},
+    {"col":20,"row":9,"type":"mortar"},
+    {"col":38,"row":8,"type":"mortar"},
+    {"col":63,"row":7,"type":"mortar"},
+    {"col":82,"row":9,"type":"mortar"},
+    {"col":97,"row":8,"type":"mortar"},
+    {"col":124,"row":7,"type":"mortar"},
+    {"col":137,"row":9,"type":"mortar"}
   ],
   "foliage": [],
   "vents": [],

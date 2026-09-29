@@ -1,6 +1,10 @@
 -- Pez globo: enemigo exclusivo del agua. Nada en un plano POR DELANTE del
 -- juego (atraviesa bloques, plataformas y objetos; se dibuja delante de los
--- jugadores: renderFront) de un lado a otro de su ruta, subiendo y bajando.
+-- jugadores: renderFront) explorando libremente su ÁREA DE NADO: un polígono
+-- (prop `area`, de 3 a 24 puntos = centros de casilla; puede ser irregular y
+-- cóncavo). Elige puntos al azar dentro del área a los que se llega en línea
+-- recta SIN salir de ella, nada hasta allí, a veces se para un momento y
+-- vuelve a elegir. (Solo simula quien manda: un jugador / servidor.)
 -- Cuando un jugador que está EN EL AGUA se le acerca (`range` casillas):
 --   warn (medio hinchado, aviso) → inflated (hinchado: pincha, 1 de vida y
 --   empujón) → deflate → sigue nadando (`cooldown` s sin volver a hincharse).
@@ -21,6 +25,7 @@ local SHEET = 'assets/images/puffer_fish/puffer_fish-Sheet.png'
 local BODY_X0, BODY_X1, BODY_Y0, BODY_Y1 = 4, 15, 4, 14
 local HURT_K = 0.85
 local DEFLATE_T = 0.4          -- s de la animación de deshincharse
+local ARRIVE    = 14           -- px: ha llegado a su destino
 local POP_T     = 0.12         -- s del "pop" al hincharse del todo (solo dibujo)
 
 local Puffer = Entity.extend(Entity, {
@@ -38,11 +43,88 @@ end
 
 function Puffer.sizePx() return 16 * S, 16 * S end
 
+-- ── Área de nado (polígono en px de mundo: centros de las casillas) ──────────
+local function inside(poly, x, y)
+    local c, n = false, #poly
+    local j = n
+    for i = 1, n do
+        local a, b = poly[i], poly[j]
+        if (a[2] > y) ~= (b[2] > y) and x < (b[1] - a[1]) * (y - a[2]) / (b[2] - a[2]) + a[1] then c = not c end
+        j = i
+    end
+    return c
+end
+
+-- ¿El tramo recto de (x0,y0) a (x1,y1) queda dentro del área? (cada 12 px)
+local function segInside(poly, x0, y0, x1, y1)
+    local d = math.sqrt((x1 - x0) ^ 2 + (y1 - y0) ^ 2)
+    local n = math.max(1, math.ceil(d / 12))
+    for i = 1, n do
+        local k = i / n
+        if not inside(poly, x0 + (x1 - x0) * k, y0 + (y1 - y0) * k) then return false end
+    end
+    return true
+end
+
+function Puffer:buildArea()
+    local T, pts = TILE_PX, self.props.area
+    local poly = {}
+    for _, q in ipairs(type(pts) == 'table' and pts or {}) do poly[#poly + 1] = { (q.col - 0.5) * T, (q.row - 0.5) * T } end
+    if #poly < 3 then                -- (sin área: un rectángulo alrededor de donde se colocó)
+        local x, y = self.home.x, self.home.y
+        poly = { { x - 3 * T, y - T }, { x + 3 * T, y - T }, { x + 3 * T, y + T }, { x - 3 * T, y + T } }
+    end
+    local x0, y0, x1, y1 = math.huge, math.huge, -math.huge, -math.huge
+    for _, v in ipairs(poly) do
+        x0, y0 = math.min(x0, v[1]), math.min(y0, v[2]); x1, y1 = math.max(x1, v[1]), math.max(y1, v[2])
+    end
+    self.poly, self.bx0, self.by0, self.bx1, self.by1 = poly, x0, y0, x1, y1
+end
+
+-- Nuevo destino: un punto del área al que se llega en línea recta sin salir
+-- de ella. Se juntan varios candidatos y casi siempre gana el MÁS LEJANO: así
+-- llega a los extremos de cada brazo del área (y desde ahí ve los demás) en
+-- vez de quedarse dando vueltas por la parte más grande. Si no encuentra
+-- ninguno, vuelve a donde se colocó (o se queda donde está).
+function Puffer:pickTarget()
+    local poly, best = self.poly, nil
+    local here = inside(poly, self.px, self.py)
+    local cands = {}
+    for try = 1, 60 do
+        local x = self.bx0 + math.random() * (self.bx1 - self.bx0)
+        local y = self.by0 + math.random() * (self.by1 - self.by0)
+        if inside(poly, x, y) and (not here or segInside(poly, self.px, self.py, x, y)) then
+            cands[#cands + 1] = { x, y }
+            if #cands >= 8 then break end
+        end
+    end
+    if #cands > 0 then
+        if math.random() < 0.65 then
+            local bd = -1
+            for _, c in ipairs(cands) do
+                local d = (c[1] - self.px) ^ 2 + (c[2] - self.py) ^ 2
+                if d > bd then best, bd = c, d end
+            end
+        else
+            best = cands[math.random(#cands)]
+        end
+    end
+    if not best then
+        best = inside(poly, self.home.x, self.home.y) and { self.home.x, self.home.y } or { self.px, self.py }
+    end
+    self.tx, self.ty = best[1], best[2]
+    local d = math.sqrt((self.tx - self.px) ^ 2 + (self.ty - self.py) ^ 2)
+    self.goT = d / math.max(10, self.speed) * 2 + 2          -- (tiempo máximo para llegar)
+end
+
 function Puffer:init()
     self.flying = true              -- (sin gravedad; su movimiento es propio)
     self.state  = 'walk'
     self.cool   = 0
     self.swimT  = 0
+    self.px, self.py, self.vy = self.x, self.y, 0     -- posición sin la oscilación
+    self.restT  = 0
+    self.poly   = nil               -- (el área se prepara en el primer paso)
 end
 
 -- Nada nunca le afecta: ni empujones, ni trampolines, ni es un obstáculo
@@ -89,17 +171,33 @@ function Puffer:updateCustom(dt, level)
     self.deadTimer = self.deadTimer + dt
     self.cool = math.max(0, self.cool - dt)
     local swimming = st == 'walk' or st == 'idle'
-    -- Movimiento: a lo largo de su ruta atravesándolo todo; frena al hincharse
-    local want = swimming and self.speed * self.facing or 0
-    self.vx = self.vx + (want - self.vx) * math.min(1, dt * (swimming and 3 or 6))
-    self.x = self.x + self.vx * dt
-    local hw = self.outerW / 2
-    local left  = math.max(self.leftBoundPx, 0)
-    local right = math.min(self.rightBoundPx, level.widthPx or math.huge)
-    if self.x + hw >= right and self.facing > 0 then self.x, self.facing = right - hw, -1
-    elseif self.x - hw <= left and self.facing < 0 then self.x, self.facing = left + hw, 1 end
+    if not self.poly then self:buildArea(); self:pickTarget() end
+    -- Movimiento: hacia su destino dentro del área, atravesándolo todo; frena
+    -- al hincharse y, al llegar, a veces descansa un momento
+    local wx, wy = 0, 0
+    if swimming then
+        local dx, dy = self.tx - self.px, self.ty - self.py
+        local d = math.sqrt(dx * dx + dy * dy)
+        self.goT = self.goT - dt
+        if self.restT > 0 then
+            self.restT = self.restT - dt
+            if self.restT <= 0 then self:pickTarget() end
+        elseif d < ARRIVE or self.goT <= 0 then
+            if math.random() < 0.4 then self.restT = 0.3 + math.random() * 0.9 else self:pickTarget() end
+        else
+            -- (frena al acercarse al destino)
+            local sp = self.speed * math.min(1, d / (TILE_PX * 0.75) + 0.25)
+            wx, wy = dx / d * sp, dy / d * sp
+        end
+    end
+    local k = math.min(1, dt * (swimming and 3 or 6))
+    self.vx = self.vx + (wx - self.vx) * k
+    self.vy = self.vy + (wy - self.vy) * k
+    self.px, self.py = self.px + self.vx * dt, self.py + self.vy * dt
+    if swimming and math.abs(self.vx) > 6 then self.facing = self.vx > 0 and 1 or -1 end
     self.swimT = self.swimT + dt * (swimming and 1 or 0.4)
-    self.y = self.baseY + math.sin(self.swimT * 1.7) * (p.swimBob or 10)
+    self.x = self.px
+    self.y = self.py + math.sin(self.swimT * 1.7) * (p.swimBob or 6)
 
     if swimming then
         self.state = 'walk'
@@ -153,8 +251,21 @@ function Puffer:render(camX, camY)
     strip:draw(f, x, y, 0, S * k * self.facing, S * k)
 end
 
--- Editor: alcance de detección (círculo) al seleccionarlo
-function Puffer.drawEditorOverlay(props, cx, cy, zoom)
+-- Editor: área de nado (relleno) y alcance de detección (círculo) al seleccionarlo
+function Puffer.drawEditorOverlay(props, cx, cy, zoom, ctx)
+    if ctx and type(props.area) == 'table' and #props.area >= 3 then
+        local vs = {}
+        for _, q in ipairs(props.area) do
+            vs[#vs + 1] = (q.col - 0.5) * ctx.t - ctx.camX
+            vs[#vs + 1] = (q.row - 0.5) * ctx.t - ctx.camY
+        end
+        local ok, tris = pcall(love.math.triangulate, vs)        -- (cóncavo: en triángulos)
+        love.graphics.setColor(0.2, 0.9, 0.6, 0.16)
+        if ok then for _, tri in ipairs(tris) do love.graphics.polygon('fill', tri) end end
+        love.graphics.setColor(0.2, 0.9, 0.6, 0.9)
+        love.graphics.setLineWidth(3 / zoom)
+        love.graphics.polygon('line', vs)
+    end
     local r = (props.range or 2.5) * TILE_PX
     love.graphics.setColor(0.3, 0.8, 1, 0.12)
     love.graphics.circle('fill', cx, cy, r)
@@ -179,13 +290,20 @@ end
 
 return {
     name = 'pufferfish', label = 'Pez globo', category = 'Enemigos',
-    description = 'Solo para el agua: nada por delante de todo (atraviesa bloques). Si un jugador que está '
+    description = 'Solo para el agua: explora su área de nado por delante de todo (atraviesa bloques). Si un jugador que está '
                .. 'en el agua se acerca, avisa, se hincha y pincha (1 de vida y empujón). No se le puede matar.',
     class = Puffer,
-    hide = { 'movement', 'attach', 'turnAtEdges', 'bobAmp', 'pauses', 'onTouch', 'stompable', 'points',
+    hide = { 'movement', 'attach', 'patrol', 'turnAtEdges', 'bobAmp', 'pauses', 'onTouch', 'stompable', 'points',
              'dropOnSight', 'detectRange', 'respawn' },
     defaults = { movement = 'walk', speed = 45, stompable = false, points = 0, onTouch = 'none', pauses = false },
     props = {
+        { key='area', kind='points', label='Área de nado', group='Pez globo', min=3, max=24,
+          default=function(d)
+              local c, r = d.col or 1, d.row or 1
+              return { { col = c - 3, row = r - 1 }, { col = c + 3, row = r - 1 },
+                       { col = c + 3, row = r + 1 }, { col = c - 3, row = r + 1 } }
+          end,
+          help='Contorno de la zona por la que nada (puede ser irregular). Explora libremente todo su interior' },
         { key='range', kind='number', label='Alcance (casillas)', group='Pez globo', default=2.5,
           min=1, max=10, step=0.5, help='Se hincha si un jugador que está en el agua se acerca a esta distancia' },
         { key='warnTime', kind='number', label='Aviso (s)', group='Pez globo', default=0.6,
@@ -194,7 +312,7 @@ return {
           min=0.5, max=10, step=0.5 },
         { key='cooldown', kind='number', label='Descanso (s)', group='Pez globo', default=1.5,
           min=0, max=10, step=0.5, help='Tras deshincharse, cuánto nada antes de poder hincharse otra vez' },
-        { key='swimBob', kind='number', label='Oscilación al nadar (px)', group='Pez globo', default=10,
+        { key='swimBob', kind='number', label='Oscilación al nadar (px)', group='Pez globo', default=6,
           min=0, max=80, step=2 },
     },
     editor = { draw = drawIcon },

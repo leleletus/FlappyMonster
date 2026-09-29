@@ -1,18 +1,30 @@
-"""Genera los niveles nuevos en assets/levels/. Uso: python3 tools/levelgen/build.py [--show]"""
+"""Genera niveles en assets/levels/ desde código.
+
+    python3 tools/levelgen/build.py --only nombre [nombre...]   # SOLO esos niveles
+    python3 tools/levelgen/build.py [--show [nombre]]           # TODOS (ver aviso)
+
+AVISO: sin --only se reescriben TODOS los niveles generados, y se pierde lo que
+se haya retocado a mano en el editor (el usuario los retoca). Úsalo con --only.
+"""
 import os, re, sys
 sys.path.insert(0, os.path.dirname(__file__))
 import levels_run
 mods = [levels_run]
-for name in ('levels_hunt', 'levels_koth', 'levels_boss'):
+for name in ('levels_hunt', 'levels_koth', 'levels_boss', 'levels_water'):
     try:
         mods.append(__import__(name))
     except ImportError:
         pass
+only = None
+if '--only' in sys.argv:
+    only = set(a for a in sys.argv[sys.argv.index('--only') + 1:] if not a.startswith('--'))
 out = os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'levels')
 for m in mods:
     for b in m.BUILDERS:
-        L = b()
         fn = re.sub(r'\W+', '_', b.__name__)
+        if only is not None and fn not in only:
+            continue
+        L = b()
         w = L.check()
         if w: print(b.__name__, 'AVISOS:', *w, sep='\n  ')
         if '--show' in sys.argv and (len(sys.argv) < 3 or sys.argv[-1] == b.__name__ or sys.argv[-1] == '--show'):

@@ -33,7 +33,7 @@ actualizaciones automáticas. Nunca apuntan al servidor real (usan
 | `online_boss` | Pelea de jefe online: estados recibidos por red, súbditos, bloques, capturas `<save>/boss_*.png`. | `run.sh online_boss LEVEL=tools/levelgen/arenas/jefe_cangrejo.json NOSHOTS=1` |
 | `editor_open` | El editor real: diálogo "Abrir nivel" (Ctrl+O) con scroll; capturas `<save>/editor_open_{1,2}.png`. | `run.sh editor_open` |
 | `level_check` | Niveles: avisos del editor, modos que lo listan, 20 s de simulación. | `run.sh level_check -- assets/levels/a.json b.json` |
-| `level_solve` | ¿Se puede COMPLETAR un nivel? Búsqueda con la física real del jugador (usa `xvfb-run` si está). `MAXN=`, `EXPLORE=1`, `DUMP=1`. | `run.sh level_solve -- assets/levels/carrera01.json` |
+| `level_solve` | ¿Se puede COMPLETAR un nivel? Búsqueda con la física real del jugador, ahogarse incluido (usa `xvfb-run` si está). Guiada por la distancia por los huecos hasta la meta (`HDIST=0` = en línea recta). `MAXN=` (presupuesto), `NODROWN=1` (solo el terreno: ¿falla por el aire o por el terreno?), `EXPLORE=1`, `DUMP=1` (qué alcanza). No modela enemigos, burbujas de los vents ni rompe bloques de forma fiable. | `run.sh level_solve MAXN=1500000 -- assets/levels/laberinto_submarino.json` |
 
 Niveles de prueba: los de `assets/levels/` (los reales) y las arenas de jefe
 de `tools/levelgen/arenas/` (`jefe_cangrejo`, `jefe_espejo`, `MiniBossArena`:

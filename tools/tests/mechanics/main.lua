@@ -13,7 +13,9 @@
 --   helmet_gp    ground pound: casco roto y muerto, sin daño al jugador
 --   helmet_side  de lado sí hace daño (como un Gummy normal)
 --   stomp_fast   Gummy normal: caer rapidísimo encima es pisotón, no muerte
---   puffer_through el pez globo atraviesa bloques nadando
+--   puffer_through el pez globo explora su área (atraviesa bloques) sin salir de ella
+--   puffer_concave área cóncava en L: la recorre entera y nunca sale
+--   flyer_anim     un volador nunca pasa a idle; uno de suelo sí
 --   puffer_cycle   jugador en el agua cerca: aviso → hinchado (pincha 1) → deshincha
 --   puffer_dry     jugador fuera del agua: no se hincha
 -- SHOT=1: además guarda <save>/mechanics.png (bloques, invisible visible,
@@ -278,23 +280,86 @@ end
 
 -- ── Pez globo ────────────────────────────────────────────────────────────────
 -- Estanque de agua con una columna de bloques en medio de su ruta
-local function pond()
+local function pond(area)
     local W, H = 16, 9
     local put = {}
     for r = 3, 8 do for c = 2, W - 1 do put[#put + 1] = { c, r, 'water' } end end
     for r = 4, 6 do put[#put + 1] = { 9, r, 'solid' } end
     return room(W, H, put, { { type = 'pufferfish', col = 5, row = 5,
-        props = { patrol = { left = 2, right = 15 }, speed = 60, range = 2.5, warnTime = 0.6, inflateTime = 2.5 } } })
+        props = { area = area or { { col = 3, row = 4 }, { col = 14, row = 4 }, { col = 14, row = 7 }, { col = 3, row = 7 } },
+                  speed = 60, range = 2.5, warnTime = 0.6, inflateTime = 2.5 } } })
 end
 
+-- Punto dentro del polígono de casillas (centros), con margen `m` px
+local function inPoly(area, x, y, m)
+    local poly = {}
+    for _, q in ipairs(area) do poly[#poly + 1] = { (q.col - 0.5) * T, (q.row - 0.5) * T } end
+    local function ins(px, py)
+        local c, j = false, #poly
+        for i = 1, #poly do
+            local a, b = poly[i], poly[j]
+            if (a[2] > py) ~= (b[2] > py) and px < (b[1] - a[1]) * (py - a[2]) / (b[2] - a[2]) + a[1] then c = not c end
+            j = i
+        end
+        return c
+    end
+    return ins(x, y) or ins(x - m, y) or ins(x + m, y) or ins(x, y - m) or ins(x, y + m)
+end
+
+-- Explora su área (rectángulo con una columna de bloques en medio): la
+-- atraviesa y pasa por muchas casillas distintas sin salir nunca
 function cases.puffer_through()
     local level, es = pond()
     local f = es[1]
     level.players = {}
+    local cells, n, out = {}, 0, 0
     local minX, maxX = f.x, f.x
-    for _ = 1, 60 * 30 do f:update(1 / 60, level); minX = math.min(minX, f.x); maxX = math.max(maxX, f.x) end
-    check('puffer_through', maxX > 10 * T and minX < 4 * T and f.state == 'walk',
-        ('nada de %d a %d atravesando la columna (x %d..%d), sin hincharse'):format(minX, maxX, 8 * T, 9 * T))
+    for _ = 1, 60 * 40 do
+        f:update(1 / 60, level)
+        minX, maxX = math.min(minX, f.x), math.max(maxX, f.x)
+        local k = math.floor(f.px / T) .. ',' .. math.floor(f.py / T)
+        if not cells[k] then cells[k] = true; n = n + 1 end
+        if not inPoly(f.props.area, f.px, f.py, 3) then out = out + 1 end
+    end
+    check('puffer_through', maxX > 10 * T and minX < 5 * T and n >= 12 and out == 0 and f.state == 'walk',
+        ('x %d..%d (columna en %d..%d), %d casillas visitadas, fuera del área %d veces'):format(minX, maxX, 8 * T, 9 * T, n, out))
+end
+
+-- Área cóncava en L: nunca sale de ella (no corta por la esquina de fuera)
+function cases.puffer_concave()
+    local L = { { col = 3, row = 4 }, { col = 14, row = 4 }, { col = 14, row = 5 }, { col = 5, row = 5 },
+                { col = 5, row = 8 }, { col = 3, row = 8 } }
+    local level, es = pond(L)
+    local f = es[1]
+    f.x, f.y = 4 * T, 4 * T; f.home.x, f.home.y = f.x, f.y; f.px, f.py = f.x, f.y
+    level.players = {}
+    local out, legs = 0, { top = false, left = false }
+    for _ = 1, 60 * 60 do
+        f:update(1 / 60, level)
+        if not inPoly(L, f.px, f.py, 3) then out = out + 1 end
+        if f.px > 9 * T then legs.top = true end
+        if f.py > 6.5 * T then legs.left = true end
+    end
+    check('puffer_concave', out == 0 and legs.top and legs.left,
+        ('fuera del área %d veces; recorre el brazo de arriba=%s y el de abajo=%s'):format(out, tostring(legs.top), tostring(legs.left)))
+end
+
+-- Voladores: nunca en idle (patitas siempre moviéndose); uno de suelo sí para
+function cases.flyer_anim()
+    local level, es = room(14, 8, {}, {
+        { type = 'gummy', col = 7, row = 4, props = { movement = 'fly', pauses = true, patrol = { left = 3, right = 12 } } },
+        { type = 'gummy', col = 7, row = 7, props = { pauses = true, patrol = { left = 3, right = 12 } } } })
+    level.players = {}
+    local flyIdle, groundIdle, frames = false, false, {}
+    for _ = 1, 60 * 20 do
+        for _, e in ipairs(es) do e:update(1 / 60, level) end
+        if es[1].state == 'idle' then flyIdle = true end
+        if es[2].state == 'idle' then groundIdle = true end
+        frames[es[1].frame] = true
+    end
+    check('flyer_anim', not flyIdle and groundIdle and frames[1] and frames[2],
+        ('volador en idle=%s (patitas: cuadros 1 y 2=%s), el de suelo para=%s'):format(tostring(flyIdle),
+            tostring(frames[1] and frames[2]), tostring(groundIdle)))
 end
 
 function cases.puffer_cycle()
@@ -345,7 +410,7 @@ local shot
 function love.load()
     for _, n in ipairs({ 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
                          'helmet_jump', 'helmet_ride', 'helmet_gp', 'helmet_side', 'stomp_fast',
-                         'puffer_through', 'puffer_cycle', 'puffer_dry' }) do cases[n]() end
+                         'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim' }) do cases[n]() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
     if not os.getenv('SHOT') then love.event.quit(fails == 0 and 0 or 1); return end
     -- Escena para la captura

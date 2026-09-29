@@ -337,10 +337,13 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   counts when the feet were above the stomp line one step before (`STEP_DT`); fast
   falls (≥ 20 px/step) used to skip the ~20 px window and die on contact.
 - **Pufferfish** (`types/pufferfish.lua`, sheet `assets/images/puffer_fish/
-  puffer_fish-Sheet.png`, 16x16 frames facing RIGHT: swim ×1-2, half, full; the code
-  adapts to 3 or 4 frames; scale 5): water-only enemy on a plane IN FRONT (moves
-  through everything along its patrol, `renderFront` = drawn after the players in SP
-  and online). States walk(swim) → warn (a player IN WATER within `range` tiles;
+  puffer_fish-Sheet.png`, 16x16 frames facing RIGHT: swim 1-2, half 3, full 4; scale 5):
+  water-only enemy on a plane IN FRONT (moves through everything, `renderFront` = drawn
+  after the players in SP and online). It explores its SWIM AREA: prop `area` (kind
+  `points`, 3-24 cell centres = any polygon, concave OK; editor shows it filled via
+  `love.math.triangulate`): picks random targets reachable in a straight line INSIDE the
+  polygon (`segInside`), usually the farthest of 8 candidates (so it reaches the ends of
+  every arm), sometimes rests; `px/py` = position without the bob. States walk(swim) → warn (a player IN WATER within `range` tiles;
   pufferWarn) → inflated (hazard box = body ×0.85, `effect='hurt'`; pufferInflate + fx
   puffer_pop) → deflate (pufferDeflate) → `cooldown`. Not killable (not stompable, not
   an obstacle, can't be knocked/launched). Prick: `Interactions.run` calls
@@ -350,6 +353,13 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   `Protocol.SHARED_SOUNDS` (helmetBreak, pufferPrick): the server sends them with no
   owner, so everybody hears them. New sounds: `tools/sounds/mechanics.py` (switch,
   helmet, puffer), levelled with `Sound.GAIN` to ≈ -12 dBFS (harness `sounds`).
+- Flyers (`movement='fly'`) NEVER go idle: pauses only for walkers on the ground; in
+  the air (also stunned) they keep the walk animation (`Entity:animateWalk`).
+- **Play recorder** (dev): `FM_RECORD=1 love .` → single-player runs are logged to
+  `<save>/recordings/<level name>_<date>.csv` (every 0.1 s: cell, px, hp, lives, in
+  water, air used; events: daño/muerte with a guessed cause ahogado/pincho/pez/enemigo,
+  reaparece, checkpoint, meta). `src/PlayRecorder.lua`, hooked in AdventureState. To
+  analyse how the user plays a level (editor → F5 also records).
 - Hunt rejects levels whose stompable enemies respawn (`info.respawning`). The level
   info for modes comes from ONE function, `Modes.entityInfo(entities)` (server,
   editor Nivel tab, level_check).
@@ -729,6 +739,18 @@ Low-level notes (for writing NEW harnesses):
   sim). Design numbers (double jump): one jump ≈ 1.6 tiles, two ≈ 3; gaps ≤ 4 easy;
   a 1-tile tunnel needs a crouch jump; up trampoline ≈ 5 tiles + air control;
   water: exit a 3-deep pool needs a ledge at the surface (drag eats the jumps).
+  `build.py` WITHOUT `--only` rewrites every generated level and loses the user's editor
+  touch-ups: always `python3 tools/levelgen/build.py --only name`.
+  Underwater design numbers: one jump ≈ 1.1 tiles, double ≈ 2.1 (jumps only come back on
+  ground) → vertical climbs need footholds: ladders of waterlogged drop-through
+  platforms (`DROP + 16`, one per row). Surfacing (head in air) refills air at once;
+  vents only give a bubble every 8-26 s, so long water sections need air pockets with a
+  ledge to stand and breathe. `laberinto_submarino` (`levels_water.py`): 20x9-chamber
+  maze, 1-2 routes to the finish (loops only inside dead branches; asserted), exit = the
+  right-column chamber farthest from the start, air ≤ every 2 chambers on the route,
+  ~77 pufferfish (gentler on the route), spikes, checkpoints/vents/stars/lives; the
+  generator tries seeds until the rules hold. Solver: `NODROWN=1` = terrain only; the
+  heuristic is the tunnel distance to the goal (`HDIST=0` = straight line).
   Batch of 15 (race: valle_soleado, cavernas_cristal, torre_viento, fabrica_morteros,
   tren_fugaz (auto-scroll), canon_trampolines; hunt: ciudadela_cangrejos,
   jardin_gummies, mina_inundada; koth: isla_flotante, coliseo_pinchos, cascada_dorada;
