@@ -60,7 +60,18 @@
     {"col":46,"row":13,"type":"checkpoint"},
     {"col":98,"row":13,"type":"checkpoint"}
   ],
-  "foliage": [{"col":8,"row":13,"type":"palmtree"},{"col":30,"row":11,"type":"palmtree"},{"col":50,"row":13,"type":"palmtree"},{"col":64,"row":12,"type":"palmtree"},{"col":90,"row":12,"type":"palmtree"},{"col":114,"row":12,"type":"palmtree"},{"col":12,"row":13,"sub":4,"type":"tulip"},{"col":38,"row":12,"sub":4,"type":"tulip"},{"col":76,"row":11,"sub":4,"type":"tulip"},{"col":100,"row":13,"sub":4,"type":"tulip"}],
+  "foliage": [
+    {"col":8,"row":13,"type":"palmtree"},
+    {"col":30,"row":11,"type":"palmtree"},
+    {"col":50,"row":13,"type":"palmtree"},
+    {"col":64,"row":12,"type":"palmtree"},
+    {"col":90,"row":12,"type":"palmtree"},
+    {"col":114,"row":12,"type":"palmtree"},
+    {"col":12,"row":13,"sub":4,"type":"tulip"},
+    {"col":38,"row":12,"sub":4,"type":"tulip"},
+    {"col":76,"row":11,"sub":4,"type":"tulip"},
+    {"col":100,"row":13,"sub":4,"type":"tulip"}
+  ],
   "vents": [],
   "modes": ["hunt"],
   "music": "classic"
