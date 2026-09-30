@@ -80,6 +80,16 @@ function love.update(dt)
             print(('  captura entrada %d (jefe=%s)'):format(n, boss.state))
         end
     end
+    -- (FIGHT_SHOT=1: una captura 1.5 s después de empezar la pelea → fight.png:
+    -- bloques de jefe ya sólidos, uniones con el suelo)
+    if os.getenv('FIGHT_SHOT') and boss and boss.zone and boss.zone.state == 'fight' then
+        last.fightAt = last.fightAt or t
+        if not last.fightShot and t - last.fightAt >= 1.5 then
+            last.fightShot = true
+            love.graphics.captureScreenshot(function(img) img:encode('png', 'fight.png') end)
+            print('  captura de la pelea: fight.png')
+        end
+    end
     if t > SECS then
         print(('Menor tiempo entre dos golpes: %.2f s'):format(last.minGap or -1))
         love.event.quit()
