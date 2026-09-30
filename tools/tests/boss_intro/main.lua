@@ -1,4 +1,5 @@
--- tools/tests/boss_intro — la ENTRADA del jefe (Mega Crabby) y sus emotes, con
+-- tools/tests/boss_intro — la ENTRADA del jefe (cualquiera; con el Mega Crabby
+-- además sus emotes y súbditos). Con
 -- las clases reales y dos jugadores dentro de la zona (uno justo en el sitio
 -- donde está colocado el jefe, para que tenga que caer en otro lado):
 --   congelados  durante 'intro' los jugadores no se mueven aunque pulsen
@@ -17,7 +18,13 @@
 --               dentro de la zona, de pie en suelo seguro, sin la cabeza en el
 --               agua y lejos del jefe (≥ 2 casillas de su cuerpo)
 --
+--   camara      durante la entrada la cámara no sigue a nadie: la misma para
+--               los dos jugadores y quieta, centrada en el jefe
+--   (Nave Malvada / Espejo: orden dormant → intro → ready → su estado de pelea,
+--    sonidos de su entrada; lejos/emotes/invocar son solo del Mega)
+--
 --   tools/tests/run.sh boss_intro        (LEVEL=..., SECS=90)
+--   LEVEL=assets/levels/fortaleza_malvada.json / ruta_del_espejo.json
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
 require 'settings'
@@ -58,6 +65,8 @@ function love.load()
     for _, e in ipairs(ents) do if e.def.boss then boss = e end end
     local z = boss.zone
     local T = TILE_PX
+    local mega = boss.def.name == 'megacrabby'
+    local camBad, camRef = 0, nil
     -- Uno justo donde está el jefe (debe caer en otro sitio) y otro a la izquierda
     -- (de pie en el suelo que haya: el de la arena puede tener agua)
     local function ground(x)
@@ -96,12 +105,17 @@ function love.load()
         if z.state == 'intro' and BossZones.music(level) ~= BossZones.SILENCE then silenceBad = silenceBad + 1 end
         for _, pa in ipairs(players) do Entities.interactions.run(pa, ents, {}) end
         if intro then
+            local c1x, c1y = BossZones.cameraTarget(level, players[1].x, players[1].y)
+            local c2x, c2y = BossZones.cameraTarget(level, players[2].x, players[2].y)
+            camRef = camRef or { c1x, c1y }
+            if not c1x or c1x ~= c2x or c1y ~= c2y or c1x ~= camRef[1] or c1y ~= camRef[2] then camBad = camBad + 1 end
             for i, pa in ipairs(players) do
                 if math.abs(pa.x - x0[i]) > 0.01 then frozenMoved = frozenMoved + 1 end
                 if pa.hp < pa.hpMax or pa.dying then hurtIntro = hurtIntro + 1 end
             end
         end
-        if (boss.state == 'dormant' or boss.state == 'fall_in') and (boss:isSolidBody() or boss:isActive()) then
+        local hidden = boss.state == 'dormant' or boss.state == 'fall_in' or boss.state == 'intro' or (not mega and boss.state == 'ready')
+        if hidden and (boss:isSolidBody() or boss:isActive()) then
             solidBad = solidBad + 1
         end
         if fightT and t - fightT < 0.5 then
@@ -161,9 +175,10 @@ function love.load()
                 if gb < 0 then spawnBad = spawnBad + 1 end
             end
         end
-        if #rests >= 4 and #spawns >= 4 and spawnN >= 6 then break end
+        if (not mega or (#rests >= 4 and spawnN >= 6)) and #spawns >= 4 then break end
     end
-    local want = { 'dormant', 'fall_in', 'land_in', 'roar_in', 'ready', 'chase' }
+    local want = mega and { 'dormant', 'fall_in', 'land_in', 'roar_in', 'ready', 'chase' }
+                 or { 'dormant', 'intro', 'ready', boss.def.name == 'miniboss1' and 'patrol' or 'fight' }
     local okSeq = true
     for i, s in ipairs(want) do if seq[i] ~= s then okSeq = false end end
     check('orden', introSeen and okSeq, table.concat(seq, ' → ', 1, math.min(#seq, 7)))
@@ -171,16 +186,26 @@ function love.load()
     check('silencio', silenceBad == 0 and fightT ~= nil and BossZones.music(level) ~= BossZones.SILENCE,
         ('pasos con música durante la entrada: %d; después: %s'):format(silenceBad, tostring(BossZones.music(level))))
     check('intocable', solidBad == 0, ('pasos sólido/activo escondido o cayendo: %d'):format(solidBad))
+    check('camara', camRef ~= nil and camBad == 0, ('pasos de la entrada con la cámara distinta o moviéndose: %d'):format(camBad))
     local safe = boss.outerW / 2 + 2.5 * T
+    if not mega then
+        check('sin daño', hurtIntro == 0, ('daño en la entrada: %d'):format(hurtIntro))
+        local snd = boss.def.name == 'miniboss1' and { 'miniAppear', 'spikesOut' } or { 'mirrorLaugh' }
+        local okSnd, txt = true, {}
+        for _, n in ipairs(snd) do okSnd = okSnd and (sounds[n] or 0) >= 1; txt[#txt + 1] = n .. '=' .. (sounds[n] or 0) end
+        check('sonidos', okSnd, table.concat(txt, ' '))
+    end
+    if mega then
     check('lejos', landClear and landClear >= safe - 1 and hurtIntro == 0,
         ('jugador más cercano al aterrizar: %.0f px (mín %.0f); daño en la entrada: %d'):format(landClear or -1, safe, hurtIntro))
     check('sonidos', (sounds.megaFall or 0) >= 1 and (sounds.megaRoar or 0) >= 1,
         ('megaFall=%d megaRoar=%d'):format(sounds.megaFall or 0, sounds.megaRoar or 0))
+    end
     check('libres', freeMoved > 20, ('se movieron %.0f px en 0.5 s de pelea'):format(freeMoved))
     local ks = { 1, 2, 1, 3 }
     local okR = #rests >= 3
     for i, k in ipairs(rests) do if k ~= ks[i] then okR = false end end
-    check('emotes', okR, 'descansos: ' .. table.concat(rests, ', '))
+    if mega then check('emotes', okR, 'descansos: ' .. table.concat(rests, ', ')) end
     local okS, minD = #spawns >= 3, math.huge
     for _, sp in ipairs(spawns) do
         okS = okS and sp.inZone and sp.stand and not sp.wet
@@ -189,9 +214,9 @@ function love.load()
     check('reaparece', okS and minD >= 2 * T,
         ('%d reapariciones; todas en la zona, de pie y secas=%s; la más cercana al jefe a %.1f casillas'):format(#spawns,
             tostring(okS), minD / T))
-    check('invocar', spawnN >= 6 and spawnBad == 0,
+    if mega then check('invocar', spawnN >= 6 and spawnBad == 0,
         ('%d súbditos invocados (3 por vez, 6 máx.); separación mínima entre súbditos %.0f px, hueco mínimo con el Mega %.0f px; solapes %d'):format(
-            spawnN, spawnMinGap, spawnMinBoss, spawnBad))
+            spawnN, spawnMinGap, spawnMinBoss, spawnBad)) end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
     love.event.quit(fails == 0 and 0 or 1)
 end

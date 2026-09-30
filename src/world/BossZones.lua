@@ -12,7 +12,10 @@
 --    a 'intro'. Los jugadores de dentro se quedan CONGELADOS (sin control:
 --    BossZones.frozenAt, que mira PlayerAdventure) y la música se calla
 --    (BossZones.SILENCE) mientras el jefe hace su entrada; cuando todos sus
---    jefes dicen b:introDone(), empieza la pelea (y su música).
+--    jefes dicen b:introDone(), empieza la pelea (y su música). La cámara se
+--    centra en el jefe (cameraTarget) y el HUD pone franjas de cine con su
+--    nombre (BossHud.drawCinema). La parte genérica de la entrada está en
+--    Boss.lua (estados 'intro' → 'ready'); cada jefe solo anima la suya.
 --  * La zona sabe qué jefes le pertenecen (zone.bosses): las entidades con
 --    `boss` en su definición cuya propiedad `zone` es el id de la zona, o,
 --    con zone = 0, las que están colocadas dentro de ella.
@@ -351,6 +354,13 @@ end
 function BossZones.cameraTarget(level, x, y)
     local z = BossZones.cameraZone(level, x, y)
     if not z then return nil end
+    -- Entrada del jefe: la cámara no sigue a nadie, se centra en el jefe (su
+    -- sitio del editor, o b:introFocus(): igual en todos los clientes)
+    if z.state == 'intro' and z.bosses and z.bosses[1] then
+        local b = z.bosses[1]
+        if b.introFocus then x, y = b:introFocus()
+        elseif b.home then x, y = b.home.x, b.home.y end
+    end
     -- (fuera de la zona por abajo: se enfoca como si estuviera en su borde)
     x = math.max(z.x0, math.min(z.x1, x))
     y = math.max(z.y0, math.min(z.y1, y))

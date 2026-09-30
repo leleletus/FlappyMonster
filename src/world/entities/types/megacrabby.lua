@@ -156,6 +156,11 @@ function Mega:isActive() return not INTRO[self.state] and Boss.isActive(self) en
 function Mega:isSolidBody() return not HIDDEN[self.state] and Boss.isSolidBody(self) end
 
 function Mega:hasIntro() return self.zone ~= nil end
+-- Cámara de la entrada: sobre su sitio, con el suelo de la zona abajo (cae ahí)
+function Mega:introFocus()
+    local z = self.zone
+    return self.home.x, z and (z.y1 - WINDOW_H * 0.3) or self.home.y
+end
 function Mega:introDone() return self.state == 'ready' end
 
 -- Dónde cae: su sitio del editor si está lejos de todos; si no, el punto del
@@ -211,7 +216,7 @@ end
 -- ¿Pasó el instante `s` en este paso? (sonidos y efectos a su tiempo)
 local function at(t, dt, s) return t >= s and t - dt < s end
 
-function Mega:updateIntro(dt, level, st, t)
+function Mega:updateMegaIntro(dt, level, st, t)
     local z = self.zone
     if st == 'fall_in' then
         if t < FALL_WAIT then return end              -- (un momento de silencio)
@@ -639,7 +644,7 @@ function Mega:updateBoss(dt, level)
         self:walk(level, dt, 0)
         return
     elseif INTRO[st] then
-        return self:updateIntro(dt, level, st, t)
+        return self:updateMegaIntro(dt, level, st, t)
     elseif st == 'intro' then
         -- Se presenta: castañetea las pinzas
         self:walk(level, dt, 0)
@@ -1036,7 +1041,9 @@ local function clawFrame(self, i, now, nervous)
     local c = self._claws[i]
     if now >= c.next then
         c.closedUntil = now + 0.12
-        c.next = now + (nervous and (0.12 + math.random() * 0.3) or (0.7 + math.random() * 1.8))
+        -- (enfadado: chasquidos rabiosos, casi seguidos)
+        c.next = now + ((nervous == 'rage') and (0.05 + math.random() * 0.16)
+                        or nervous and (0.12 + math.random() * 0.3) or (0.7 + math.random() * 1.8))
     end
     return (c.closedUntil and now < c.closedUntil) and 2 or 1
 end
@@ -1220,7 +1227,12 @@ end
 function Mega:drawLocal(px, py, ang, s, img, withSpike, alpha, nervous, sx, sy, claws, noClaws, spikeK)
     local now = love.timer.getTime()
     local red = self:flashRed()
-    if red then love.graphics.setColor(1, 0.3, 0.3, alpha) else love.graphics.setColor(1, 1, 1, alpha) end
+    if red then love.graphics.setColor(1, 0.3, 0.3, alpha)
+    elseif nervous == 'rage' then
+        -- Enfadado: se le sube el color (rojizo que late)
+        local k = 0.07 + 0.05 * math.sin(now * 9)
+        love.graphics.setColor(1, 1 - k, 1 - k * 1.2, alpha)
+    else love.graphics.setColor(1, 1, 1, alpha) end
     love.graphics.push()
     love.graphics.translate(px, py)
     love.graphics.rotate(ang)
@@ -1294,7 +1306,7 @@ end
 -- Enfadado (rage): símbolos de enfado que salen al azar alrededor de la cabeza
 -- (vena 💢 que late, nube de vapor que sube, garabato). Solo dibujo: cada
 -- cliente los saca a su aire; la vida (y por tanto el enfado) llega por red.
-local ANGER_S = 5                                  -- escala de píxel de los símbolos
+local ANGER_S = 4                                  -- escala de píxel de los símbolos
 local ANGER_KINDS = { 'vein', 'vein', 'steam', 'scribble', 'vein', 'steam' }
 local ANGER_LIFE = { vein = 0.8, steam = 0.6, scribble = 0.7 }
 function Mega:renderAnger(now, fx, fy, ang, camX, camY)
@@ -1388,6 +1400,10 @@ function Mega:render(camX, camY)
                            or st == 'ready') then
         frame = 2
     end
+    -- (enfadado y parado: patea el suelo impaciente)
+    if not moving and not EDITOR_VIEW and (st == 'chase' or st == 'recover' or st == 'rest') and self:rage() then
+        frame = (math.floor(now * 9) % 2 == 0) and 1 or 3
+    end
     local img = imgs[frame] or imgs[2]
     local withSpike = true
 
@@ -1421,6 +1437,19 @@ function Mega:render(camX, camY)
     end
 
     local sx, sy, shx, claws, spikeK = self:pose2d(now, moving, walkPhase)
+    -- ENFADADO (rage): todo su repertorio más nervioso: tiembla sin parar,
+    -- respira y rebota más fuerte y las pinzas se agitan y chasquean con rabia
+    local angry = self:rage() and not self:isDying() and not INTRO[st] and st ~= 'dormant' and not EDITOR_VIEW
+    if angry then
+        shx = shx + math.floor(math.sin(now * 57) * 1.6 + math.sin(now * 23) * 1.2 + 0.5)
+        jy = jy + math.floor(math.sin(now * 49 + 1.3) * 1.3 + 0.5)
+        sx, sy = 1 + (sx - 1) * 1.5, 1 + (sy - 1) * 1.5
+        for i = 1, 2 do
+            local c = claws[i]
+            c[1] = c[1] * 1.3 + math.cos(now * 31 + i * 2.1) * 0.45
+            c[2] = c[2] * 1.3 + math.sin(now * 38 + i * 1.7) * 0.8 - 0.4
+        end
+    end
     local fx, fy, ang
     if self.crawl and self.cattached and CRAWL[st] then
         fx, fy, ang = Crawler.pose(self)
@@ -1459,6 +1488,7 @@ function Mega:render(camX, camY)
             Particles.emit('spawn', self.x + side * self.sprW * 0.4, self.y)
         end
     end
+    if angry then nervous = 'rage' end
     if EDITOR_VIEW then nervous = false end
     self._clawForce = nil
     if st == 'windup' and not EDITOR_VIEW then

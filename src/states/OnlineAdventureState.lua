@@ -1193,7 +1193,8 @@ function OnlineAdventureState:_renderScene()
     love.graphics.setColor(1, 1, 1, 1)
     self.level:renderWaterEffect(self.camX, self.camY, self.sceneCanvas)
 
-    -- HUD
+    -- HUD (antes, las franjas de cine de la entrada de un jefe: el HUD va encima)
+    BossHud.drawCinema(self.level)
     self:_renderHUD()
 
     -- Controles táctiles

@@ -274,8 +274,88 @@ function Mirror:chooseTarget(level, dt)
     end
 end
 
+-- ── Entrada (cinemática genérica de Boss.lua) ────────────────────────────────
+-- Sale de debajo de la pantalla de un salto enorme, atravesando el suelo (que
+-- revienta hacia arriba), cae en su sitio del editor y se ríe de los jugadores.
+-- El plan (de dónde sale, cuánto dura) sale solo de la zona y de su sitio:
+-- igual en el servidor y en cada cliente (el dibujo de la risa lo necesita).
+local INTRO_WAIT, INTRO_APEX, INTRO_LAUGH_GAP = 0.45, 150, 0.25
+function Mirror:introPlan()
+    local z, hx, hy = self.zone, self.home.x, self.home.y
+    local viewBottom = z and math.max(z.y1, (z.y0 + z.y1) / 2 + WINDOW_H / 2) or hy + WINDOW_H / 2
+    local y0 = viewBottom + self.sprH
+    local g = ADV_GRAVITY
+    local vy = -math.sqrt(2 * g * (y0 - hy + INTRO_APEX))
+    local jumpT = (-vy + math.sqrt(2 * g * INTRO_APEX)) / g
+    return y0, vy, jumpT, INTRO_WAIT + jumpT + INTRO_LAUGH_GAP
+end
+function Mirror:introLength()
+    local _, _, _, laughAt = self:introPlan()
+    return laughAt + LAUGH_DUR + 0.15
+end
+function Mirror:onIntroStart(level, players)
+    local y0 = self:introPlan()
+    self.x, self.y, self.frame, self.puff = self.home.x, y0, 2, 1
+    self.laughN, self.popped = 0, false
+    local near
+    for _, pa in ipairs(players or {}) do
+        if not near or dist(pa, self) < dist(near, self) then near = pa end
+    end
+    if near then self.facing = near.x < self.x and -1 or 1 end
+end
+function Mirror:updateIntro(dt, level, t)
+    local y0, vy, jumpT, laughAt = self:introPlan()
+    local hy = self.home.y
+    local floorY = hy + self.sprH / 2
+    local tj = t - INTRO_WAIT
+    if tj < 0 then
+        self.y = y0
+    elseif tj < jumpT then
+        if tj - dt < 0 then Sound.play('jump', 0.55) end
+        self.y = y0 + vy * tj + 0.5 * ADV_GRAVITY * tj * tj
+        local rising = vy + ADV_GRAVITY * tj < 0
+        self.frame = rising and 2 or 3
+        -- Atraviesa el suelo: revienta hacia arriba
+        if rising and not self.popped and self.y - self.sprH / 2 <= floorY then
+            self.popped = true
+            Sound.play('gpImpact', 0.6)
+            Entity.emitFx('spike_pop', self.x, floorY)
+            Entity.emitFx('block_break', self.x - TILE_PX / 2, floorY)
+            Entity.emitFx('shake_small', self.x, floorY)
+        end
+    else
+        if self.y ~= hy then
+            -- Aterriza
+            self.y, self.frame = hy, 3
+            Sound.play('gpImpact', 0.8)
+            Entity.emitFx('gp_land', self.x, floorY)
+        end
+        local lt = t - laughAt
+        -- Aplastado al caer y rebote
+        self.puff = 1 + 0.18 * math.exp(-(tj - jumpT) * 9) * math.cos((tj - jumpT) * 22)
+        while lt >= 0 and self.laughN < 5 and lt >= LAUGH_FRAME + self.laughN * 2 * LAUGH_FRAME do
+            Sound.play('mirrorLaugh', rand(0.92, 1.08))
+            self.laughN = self.laughN + 1
+        end
+    end
+end
+-- Tiempo de la risa que toca dibujar (estado 'laugh', o el final de la entrada)
+function Mirror:laughTime()
+    if self.state == 'laugh' then return self.deadTimer or 0 end
+    if self.state == 'intro' and self.zone then
+        local _, _, _, laughAt = self:introPlan()
+        local lt = (self.deadTimer or 0) - laughAt
+        if lt >= 0 and lt < LAUGH_DUR then return lt end
+    end
+    return nil
+end
+
 -- ── Pelea ─────────────────────────────────────────────────────────────────────
 function Mirror:onFightStart(n)
+    -- (tras la entrada: el cuerpo de verdad, de pie en su sitio)
+    local b = self.body
+    b.x, b.y, b.vx, b.vy, b.onGround, b.facing = self.x, self.y, 0, 0, true, self.facing
+    self.puff, b.puff = 1, 1
     self.memoryFrom = self.clock
     self.replayT = self.clock
     self.nextFlip = self.clock + rand(self.props.flipMin or 1, self.props.flipMax or 3)
@@ -484,10 +564,16 @@ function Mirror:render(camX, camY)
     local ga = self:ghostAlpha()
     love.graphics.setColor(r, g, bb, ga)
 
-    if st == 'laugh' then
+    -- Antes de su entrada no está (sale de debajo de la pantalla)
+    if st == 'dormant' and self.zone and not EDITOR_VIEW then
+        love.graphics.setShader(); love.graphics.setColor(1, 1, 1, 1)
+        return
+    end
+    local laughT = self:laughTime()
+    if laughT then
         -- Laugh.anim: cuadro A = cabeza arriba + brazos abajo, cuadro B =
         -- cabeza abajo (baja un poco, con los ojos) + brazos arriba
-        local k   = math.floor((self.deadTimer or 0) / LAUGH_FRAME) % 2
+        local k   = math.floor(laughT / LAUGH_FRAME) % 2
         local bob = (k == 1) and math.floor(PLAYER_SCALE / 2) or 0
         local body, head = (k == 1) and bodyUp or bodyDown, (k == 1) and headDown or headUp
         local iw, ih = body:getWidth(), body:getHeight()

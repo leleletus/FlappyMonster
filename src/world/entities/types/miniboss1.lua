@@ -7,9 +7,12 @@
 --    entre Idle, Idle1 e Idle2 (Idle1 volteado) y pone cara de dolor al
 --    recibir un golpe.
 --
+-- Entrada (cinemática genérica de Boss.lua, con jugadores congelados): baja
+-- desde fuera de la pantalla, por encima de la zona, frenando hasta su altura
+-- con su sonido de aparición, y enseña los pinchos un momento como amenaza.
+--
 -- Pelea (tiempos del original, Level1.unity):
---  * Empieza fuera de la pantalla, por encima de la zona, y baja despacio
---    con su sonido de aparición ('intro').
+--  * (Sin zona de jefe no hay entrada: baja al empezar la pelea, 'intro_fight'.)
 --  * Patrulla por sus waypoints (editables en el editor) en línea recta de uno
 --    a otro: deciden por dónde va y a qué altura.
 --  * Si tiene un jugador debajo detectionTime s: se para, saca los pinchos y
@@ -95,9 +98,38 @@ function Ship:introStartY()
     return viewTop - self.sprH / 2 - 24
 end
 
+-- Entrada: baja frenando (DESC_T s) y amenaza sacando los pinchos
+local DESC_T, THREAT_AT, THREAT_T = 2.2, 2.35, 0.7
+Ship.introLength = 3.4
+function Ship:onIntroStart(level, players)
+    self.x, self.y, self.spike = self.home.x, self:introStartY(), 0
+    self.introY0 = self.y
+    Sound.play('miniAppear')
+end
+function Ship:updateIntro(dt, level, t)
+    local k = math.min(1, t / DESC_T)
+    local e = 1 - (1 - k) ^ 3                           -- (frena al llegar)
+    self.y = (self.introY0 or self.hoverY) + (self.hoverY - (self.introY0 or self.hoverY)) * e
+    -- Amenaza: saca los pinchos de golpe y los recoge
+    local a = t - THREAT_AT
+    if a >= 0 and a - dt < 0 then
+        Sound.play('spikesOut')
+        Entity.emitFx('sparks', self.x, self.y + self.sprH / 2)
+        Entity.emitFx('shake_small', self.x, self.y)
+    end
+    if a >= 0 and a < THREAT_T then self.spike = math.min(1, a / 0.12) * math.min(1, (THREAT_T - a) / 0.25)
+    else self.spike = 0 end
+end
+function Ship:introFocus() return self.home.x, self.hoverY end
+
 function Ship:onFightStart(n)
+    self.spike = 0
+    if self.state == 'ready' or self.introY0 then
+        self.y, self.state, self.deadTimer = self.hoverY, 'patrol', 0   -- (ya hizo su entrada)
+        return
+    end
     self.y = self:introStartY()
-    self.state, self.deadTimer = 'intro', 0
+    self.state, self.deadTimer = 'intro_fight', 0
     Sound.play('miniAppear')
 end
 
@@ -112,7 +144,7 @@ function Ship:isVulnerable()
 end
 function Ship:canBeKnocked() return false end
 function Ship:isSolidBody()
-    return self.state ~= 'dormant' and self.state ~= 'intro' and Boss.isSolidBody(self)
+    return self.state ~= 'intro_fight' and Boss.isSolidBody(self)
 end
 
 -- Waypoint actual (px): los waypoints deciden por dónde vuela, también la
@@ -182,8 +214,8 @@ function Ship:updateBoss(dt, level)
     self.deadTimer = self.deadTimer + dt
     if st == 'dormant' then
         return
-    elseif st == 'intro' then
-        -- InitialDescent
+    elseif st == 'intro_fight' then
+        -- InitialDescent (sin zona de jefe: sin entrada cinemática)
         self.y = math.min(self.hoverY, self.y + (p.descendSpeed or 110) * dt)
         if self.y >= self.hoverY then self.state, self.deadTimer = 'patrol', 0 end
     elseif st == 'patrol' then
@@ -414,7 +446,7 @@ function Ship:render(camX, camY)
     if not EDITOR_VIEW and not self.shipGone then
         Particles = Particles or require 'src/fx/Particles'
         local now = love.timer.getTime()
-        if (st == 'intro' or st == 'patrol' or st == 'rise') and now - (self._exT or 0) > 0.05 then
+        if (st == 'intro' or st == 'intro_fight' or st == 'ready' or st == 'patrol' or st == 'rise') and now - (self._exT or 0) > 0.05 then
             self._exT = now
             Particles.emit('exhaust', self.x, self.y + self.sprH / 2 + 8)
         end
@@ -434,7 +466,7 @@ function Ship:render(camX, camY)
 
     if not self.shipGone then
         -- Escape de humo bajo la nave
-        if st == 'intro' or st == 'patrol' or st == 'rise' then drawExhaust(x, y + self.sprH / 2) end
+        if st == 'intro' or st == 'intro_fight' or st == 'ready' or st == 'patrol' or st == 'rise' then drawExhaust(x, y + self.sprH / 2) end
         -- Monstruo Malvado (detrás del cristal), si sigue dentro
         if st ~= 'dying_eject' and st ~= 'dying_boom' then
             local img, fx = imgIdle1, 1

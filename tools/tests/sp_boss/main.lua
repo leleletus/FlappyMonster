@@ -69,6 +69,17 @@ function love.update(dt)
         print(('  captura %d: invT=%.2f alfa=%.2f'):format(last.shots, pa.invT or 0,
             require('src/entities/PlayerAdventure').invulnAlpha(pa.invT or 0)))
     end
+    -- (INTRO_SHOTS=1: capturas de la entrada del jefe cada 0.6 s → intro_N.png:
+    -- franjas de cine con el nombre, cámara centrada en el jefe)
+    if os.getenv('INTRO_SHOTS') and boss and boss.zone and boss.zone.state == 'intro' then
+        last.introN = last.introN or 0
+        if t >= (last.introAt or 0) and last.introN < 6 then
+            last.introN, last.introAt = last.introN + 1, t + 0.6
+            local n = last.introN
+            love.graphics.captureScreenshot(function(img) img:encode('png', 'intro_' .. n .. '.png') end)
+            print(('  captura entrada %d (jefe=%s)'):format(n, boss.state))
+        end
+    end
     if t > SECS then
         print(('Menor tiempo entre dos golpes: %.2f s'):format(last.minGap or -1))
         love.event.quit()

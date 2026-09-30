@@ -251,6 +251,11 @@ def fall():
     return mix(whistle * 0.8, air)
 
 
+# Compresión por sonido: los cortos o a golpes (chasquido, aviso) y el rugido
+# necesitan más densidad para sonar fuertes a igual pico
+DRIVE = {'clack': 4.0, 'windup': 5.0, 'roar': 3.5}
+
+
 if __name__ == '__main__':
     # (con nombres: solo esos, p. ej. `megacrabby.py roar windup`; los demás no se tocan)
     import sys
@@ -259,4 +264,4 @@ if __name__ == '__main__':
     for name, fn in (('step', step), ('clack', clack), ('hurt', hurt), ('slam', slam),
                      ('windup', windup), ('shrink', shrink), ('flee', flee), ('roar', roar), ('fall', fall)):
         if only and name not in only: continue
-        save(name, fn(), drive=4.0 if name == 'clack' else 2.2)   # (el chasquido es muy corto: más denso)
+        save(name, fn(), drive=DRIVE.get(name, 2.2))

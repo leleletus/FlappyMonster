@@ -5,6 +5,7 @@
 -- sombra abajo como el resto de la interfaz.
 
 local L = require 'src/Lang'
+local utf8 = require 'utf8'
 
 local BossHud = {}
 
@@ -136,6 +137,49 @@ function BossHud.drawScrollCountdown(a)
         love.graphics.pop()
         love.graphics.setColor(1, 1, 1, 1)
     end
+end
+
+-- Entrada de un jefe (zona en 'intro'): franjas negras de cine que entran
+-- desde arriba y abajo y, en la de abajo, el nombre del jefe letra a letra.
+-- Solo dibujo: el avance lo lleva cada cliente con su reloj; se van solas al
+-- empezar la pelea. `level` = el nivel (mira sus zonas de jefe).
+local CINE_H, CINE_IN, CINE_OUT = 46, 0.45, 0.35
+local cine = { k = 0, t = 0, title = nil }
+function BossHud.drawCinema(level)
+    local dt = math.min(0.05, love.timer.getDelta())
+    local zone
+    for _, z in ipairs(level.bossZones or {}) do if z.state == 'intro' then zone = z end end
+    if zone then
+        if cine.k == 0 then cine.t = 0 end
+        cine.k = math.min(1, cine.k + dt / CINE_IN)
+        cine.t = cine.t + dt
+        local names = {}
+        for _, b in ipairs(zone.bosses or {}) do if b.title then names[#names + 1] = b:title() end end
+        cine.title = table.concat(names, ' & ')
+    else
+        cine.k = math.max(0, cine.k - dt / CINE_OUT)
+    end
+    if cine.k <= 0 then return end
+    local e = 1 - (1 - cine.k) ^ 2
+    local h = math.floor(CINE_H * e)
+    love.graphics.setColor(0, 0, 0, 1)
+    love.graphics.rectangle('fill', 0, 0, WINDOW_W, h)
+    love.graphics.rectangle('fill', 0, WINDOW_H - h, WINDOW_W, h)
+    -- Nombre del jefe (aparece letra a letra tras entrar las franjas)
+    local title = cine.title
+    if title and title ~= '' and zone then
+        local n = math.floor(math.max(0, cine.t - 0.6) * 18)
+        local cut = utf8.offset(title, n + 1)                 -- (UTF-8: letras con tilde)
+        local shown = cut and title:sub(1, cut - 1) or title
+        if #shown > 0 then
+            love.graphics.setFont(FONT_MED)
+            local w = FONT_MED:getWidth(title)
+            local x = math.floor(WINDOW_W / 2 - w / 2)
+            local y = math.floor(WINDOW_H - h / 2 - FONT_MED:getHeight() / 2)
+            outlined(shown, x, y, { 1, 0.3, 0.3 }, 1)
+        end
+    end
+    love.graphics.setColor(1, 1, 1, 1)
 end
 
 -- Cartel de inicio / fin de pelea (t = segundos desde que apareció)

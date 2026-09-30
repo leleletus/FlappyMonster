@@ -612,6 +612,8 @@ function AdventureState:_renderScene()
         love.graphics.print("DEBUG HITBOX [F1]", 20, WINDOW_H - 30)
     end
 
+    BossHud.drawCinema(self.level)        -- (entrada de un jefe: franjas de cine, bajo el HUD)
+
     -- HUD: SCORE y TIME  (sin fondo, valores alineados a la derecha)
     love.graphics.setFont(FONT_BIG)
     local fh = FONT_BIG:getHeight()

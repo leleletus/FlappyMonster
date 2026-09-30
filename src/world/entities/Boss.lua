@@ -33,7 +33,22 @@
 --    lo suyo con netPackExtra() / netApplyExtra(a, b, f).
 --
 -- Estados comunes: 'dormant' (antes de la pelea: no se le puede tocar),
--- 'fight', 'dying_hold', 'dying_fall', 'dead'. Los tipos añaden los suyos.
+-- 'intro' / 'ready' (su entrada, ver abajo), 'fight', 'dying_hold',
+-- 'dying_fall', 'dead'. Los tipos añaden los suyos.
+--
+-- ENTRADA (cinemática antes de la pelea, genérica): un jefe con
+-- `Cls.introLength` (s, o la función introLength(self)) tiene entrada. Cuando
+-- todos los jugadores están en su zona, la zona pasa a 'intro' (jugadores
+-- congelados e invulnerables, sin música, cámara centrada en el jefe, franjas
+-- de cine con su nombre: BossZones / BossHud) y el jefe pasa a 'intro':
+--   onIntroStart(level, players)  -- colocarse (fuera de pantalla...), sonidos
+--   updateIntro(dt, level, t)     -- animar la entrada (t = deadTimer); sin
+--                                 -- tocar a nadie. Al llegar a introLength
+--                                 -- pasa solo a 'ready' y empieza la pelea.
+--   introFocus()                  -- (opcional) x, y donde mira la cámara
+-- En 'intro'/'ready' no se le puede tocar ni es sólido. Todo lo que dibuje
+-- debe salir de su estado + deadTimer (+ x, y): llega igual por red.
+-- (El Mega Crabby tiene su propia entrada, con estados propios.)
 -- Hooks: initBoss, updateBoss, isStunned, endStun, onFightStart(n), onDamaged(n, kind),
 -- onDefeat, onDeathFall, onPounded(pa), onKnocked(dir), onPlayerDeath(pa),
 -- isVulnerable, isSolidBody.
@@ -118,8 +133,25 @@ function Boss:isDying()
     return s == 'dying_hold' or s == 'dying_fall' or s == 'dead' or not self.alive
 end
 
+-- ── Entrada genérica ─────────────────────────────────────────────────────────
+local INTRO = { intro = true, ready = true }
+Boss.INTRO = INTRO
+function Boss:introTime()
+    local l = self.introLength
+    if type(l) == 'function' then return l(self) end
+    return l
+end
+function Boss:hasIntro() return self.zone ~= nil and self:introTime() ~= nil end
+function Boss:startIntro(level, players, z)
+    self.zone = self.zone or z
+    self.state, self.deadTimer = 'intro', 0
+    self:onIntroStart(level, players)
+end
+function Boss:introDone() return self.state == 'ready' end
+function Boss:inIntro() return INTRO[self.state] == true end
+
 -- ¿Se le puede tocar / dañar ahora?
-function Boss:isActive() return self.state ~= 'dormant' and not self:isDying() end
+function Boss:isActive() return self.state ~= 'dormant' and not INTRO[self.state] and not self:isDying() end
 function Boss:isVulnerable() return self:isActive() end
 function Boss:isInvulnerable() return self.inv > 0 end
 
@@ -194,7 +226,9 @@ end
 
 -- ¿Bloquea a los jugadores de lado? (vivo, sin morir y sin ser invulnerable:
 -- invulnerable, jefe y jugadores se atraviesan)
-function Boss:isSolidBody() return self.alive and not self:isDying() and self.inv <= 0 end
+function Boss:isSolidBody()
+    return self.alive and not self:isDying() and self.inv <= 0 and self.state ~= 'dormant' and not INTRO[self.state]
+end
 
 -- ── Update ────────────────────────────────────────────────────────────────────
 function Boss:update(dt, level)
@@ -202,6 +236,16 @@ function Boss:update(dt, level)
     if self.inv <= 0 then self.ghost = false end
     local st = self.state
     if st == 'dead' then self.alive = false; return end
+    if st == 'intro' then
+        self.deadTimer = self.deadTimer + dt
+        self:updateIntro(dt, level, self.deadTimer)
+        if self.deadTimer >= (self:introTime() or 0) then self.state, self.deadTimer = 'ready', 0 end
+        return
+    elseif st == 'ready' then
+        self.deadTimer = self.deadTimer + dt
+        self:updateIntro(dt, level, (self:introTime() or 0) + self.deadTimer)
+        return
+    end
     if st == 'dying_hold' then
         self.deadTimer = self.deadTimer + dt
         -- Explosiones alternando con el sonido de daño
@@ -274,6 +318,8 @@ function Boss:endStun() end                  -- se despierta (tras su único gol
 function Boss:initBoss() end
 function Boss:updateBoss(dt, level) end
 function Boss:onFightStart(n) end
+function Boss:onIntroStart(level, players) end
+function Boss:updateIntro(dt, level, t) end
 function Boss:onDamaged(n, kind) end
 function Boss:onDefeat() end
 function Boss:onDeathFall() Sound.play('bossExplode') end

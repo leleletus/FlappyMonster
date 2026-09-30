@@ -23,8 +23,8 @@ local GAIN = {
     roundOver    = 2.8,  spikeHit   = 2.2,  dies2      = 0.65, glugluglu  = 0.8,
     airGasp      = 0.85, waterWarning = 1.4,
     -- Mega Crabby (archivos ya comprimidos: subir poco por encima de 1 satura)
-    megaStep     = 0.56, megaClack  = 1.0,  megaHurt   = 1.1,  megaSlam   = 1.1,
-    megaWindup   = 0.85, megaShrink = 0.8,  megaFlee   = 0.9,  megaRoar = 0.53, megaFall = 0.8,
+    megaStep     = 0.7,  megaClack  = 1.0,  megaHurt   = 1.1,  megaSlam   = 1.1,
+    megaWindup   = 0.78, megaShrink = 0.8,  megaFlee   = 0.9,  megaRoar = 0.58, megaFall = 0.8,
     -- tools/sounds/mechanics.py (medidos: → ≈ -12 dBFS)
     switchOn     = 0.77, switchOff  = 0.76, helmetBounce = 1.15, helmetBreak = 0.72,
     pufferWarn   = 1.0,  pufferInflate = 0.81, pufferDeflate = 0.77, pufferPrick = 0.67,

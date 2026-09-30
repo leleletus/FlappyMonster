@@ -357,7 +357,7 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   'stomp' with 4th return dirX = cnx → `pa:bounce(vy, dirX, soft=true)` (vx 300 +
   ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill; v17: crawler turn in snapshots; v18: MegaCrabby;
   v19: boss walls, Mega minions/pounce; v20: post-hit protection; v21: unified invulnerability;
-  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`).
+  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros).
 - **Crawler** (`src/world/entities/Crawler.lua`): surface-following movement
   (floor ↔ walls ↔ ceiling, concave and convex corners) for Crabbies with prop
   `wallWalk` (`Crabby.WALL_PROP`, off by default so old levels don't change).
@@ -629,7 +629,17 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   zeroes vx; gravity still acts; identical SP/server/prediction since the zone state
   is in snapshots) and `BossZones.music` returns `BossZones.SILENCE` (states call
   `Sound.stopMusic()`). The boss runs `startIntro(level, players, z)` and the fight
-  starts when every boss says `introDone()`. Event `boss_intro`. Harness `boss_intro`.
+  starts when every boss says `introDone()`. Event `boss_intro`. Harness `boss_intro`
+  (any boss: `LEVEL=`). GENERIC intro in `Boss.lua`: a boss with `introLength` (s or
+  function) gets states 'intro' → 'ready' (not active, not solid) and hooks
+  `onIntroStart(level, players)`, `updateIntro(dt, level, t)`, optional `introFocus()`;
+  everything drawn must derive from state + deadTimer + x,y (net). During 'intro' the
+  camera centres on the boss (`cameraTarget` → `introFocus()` or its editor spot) and
+  `BossHud.drawCinema(level)` draws letterbox bars (under the HUD) with the boss name
+  typed in. MiniBoss1: descends from above the view braking + spike threat (3.4 s;
+  without a zone the old 'intro_fight' descent). Mirror: jumps up from below the screen
+  through the floor (`introPlan()` = pure function of zone + home, used by client for the
+  laugh timing), lands, laughs (`laughTime()`). The Mega keeps its own states.
   Music: zone field `music` = any catalog track with `"boss": true` (options built
   from `Music.bossList` + 'level'; default 'boss'; editor: zone inspector). Prefer
   OGG for music (the updater ships it to every player).
@@ -708,7 +718,9 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   point). Steps: deeper `step.wav` + GAIN 0.56 (≈ -11.5 dBFS). Spike boxes (head spike,
   drop kill) = tile-spike proportions: base rectangle 60% w × 40% h. Rage below
   `rageAt` (default 0.6): render-only anger symbols pop around its head (`renderAnger`:
-  `anger_vein/steam/scribble.png` strips). Roar = crab-like (stridulation + froth + hiss,
+  `anger_vein/steam/scribble.png` strips, scale 4) and the whole animation set turns angry
+  (`angry` in render: constant tremble, bigger squash, twitching raised claws, rabid claw
+  snaps `nervous='rage'`, reddish pulse, foot stamping when standing). Roar = crab-like (stridulation + froth + hiss,
   `tools/sounds/megacrabby.py roar`) with fx `mega_roar` (warped semi-transparent shock
   rings + zigzag bolts, rough lines) + `shake_roar` (soft, long). Windup = legs scuttling +
   accelerating claw snaps; claw closes on the sound's snaps (`WINDUP_SNAPS`, same in the
