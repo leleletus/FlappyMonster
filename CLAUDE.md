@@ -30,7 +30,9 @@ code, comments (Spanish), commits, docs or game text — those keep their usual 
 3. Globals used everywhere: `Sound`, `Input`, `TILE_PX`(64), `PLAYER_SCALE`(6),
    `GUMMY_SCALE`(4), `ADV_GRAVITY`, `ADV_JUMP_VEL`, `ADV_MOVE_SPD`,
    `WINDOW_W/H`, fonts `FONT_SMALL/MED/BIG` (Press Start 2P), `DEBUG_HITBOX`.
-4. Visual style is 8/16-bit pixel art: integer positions (`math.floor`), hard
+4. Visual style is 8/16-bit pixel art: integer positions (`math.floor`; the states round
+   the CAMERA to whole pixels when drawing — fractional cameras left 1-px seams between
+   blocks that only showed with the window scaled up), hard
    rectangles, black drop shadows offset 2-4 px, no rounded/smooth UI in-game.
 5. Data-driven catalogs: new tiles/entities/decorations/modes are a new file
    + one name in a list. The editor and server pick them up automatically.

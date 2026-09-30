@@ -614,20 +614,6 @@ function AdventureState:_renderScene()
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1, 1, 0, 1)
         love.graphics.print("DEBUG HITBOX [F1]", 20, WINDOW_H - 30)
-        -- Uniones de bloques de jefe: estado, si está apuntado en joinOverlay y
-        -- cómo ve el suelo de debajo su esquina (false = unido)
-        local TileTypes = require 'src/world/tiles/TileTypes'
-        local y = WINDOW_H - 50
-        for _, g in ipairs(self.enemies) do
-            if g.def and g.def.name == 'bosswall' then
-                local reg = self.level.joinOverlay and self.level.joinOverlay[g] and 'si' or 'NO'
-                local e = TileTypes.sideExposure(self.level, g.c0, g.r1 + 1, 'top', 'ground')
-                local es = type(e) == 'table' and ('{' .. tostring(e[1]) .. ',' .. tostring(e[2]) .. '}') or tostring(e)
-                love.graphics.print(('bloque jefe %d,%d: %s  registrado=%s  suelo(%d,%d) arriba=%s  cam=%.2f,%.2f'):format(
-                    g.c0, g.r0, g.state, reg, g.c0, g.r1 + 1, es, self.camX, self.camY), 20, y)
-                y = y - 16
-            end
-        end
     end
 
     BossHud.drawCinema(self.level)        -- (entrada de un jefe: franjas de cine, bajo el HUD)
