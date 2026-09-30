@@ -151,11 +151,16 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     G–F#–G neighbour note); seamless loop (tail folded onto the start).
                     `--instrumental` → `tentacle_chip_instrumental.ogg`: no melody, extra layers
                     only there (pad, tresillo rhythm chords, cowbell/claps/congas/timbales, fx).
-                    `tools/music/menus_chip.py` → `menus_chip.ogg` + `.mid` (catalog id `menus`, the
-                    game's main theme): the user's old song (`menus.ogg`, a mix with a "crunch"
-                    effect, no longer loaded) transcribed from an ANALYSIS (140 BPM, 18 bars: 3
-                    phrases A A B A C + link; boogie bass C E G A C' E G A, sixth chords, blues lick
-                    only in phrase 2, chromatic run from G in the links) and rebuilt with chip voices.
+                    `tools/music/menus_chip.py` → a chiptune take on `menus.ogg` (the user's theme;
+                    140 BPM, 18 bars, boogie bass, sixth chords, blues lick in phrase 2). REJECTED by
+                    the user: the game keeps the original `menus.ogg`; the script + .mid stay.
+                    `tools/music/tentacle_nes.py` → `tentacle_nes.ogg` + `.mid` (catalog id
+                    `tentacle_nes`, boss track): Tentacle Tantrum recreated as REAL NES music (2A03 +
+                    VRC6 emulation: 60 Hz driver, quantized periods, 32-step triangle, 15-bit LFSR
+                    noise, 1-bit DPCM kick/snare, non-linear mixer). Notes from the Musescore MIDI
+                    (`tools/music/ref/`, local only, copyrighted, gitignored), everything the MIDI lacks
+                    or gets wrong from the ogg analysis: drums (tresillo kick tuned to F#2, snare 2&4,
+                    four-on-the-floor break), chords per half bar, and the finale's B–C#–D# bass.
 src/entities/
   PlayerAdventure.lua  THE player physics (shared by SP, server and client prediction)
   OnlinePlayer.lua     remote player renderer (tinted by player color, name tag)

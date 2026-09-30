@@ -25,3 +25,6 @@ MEMORY.md
 
 # Actualizaciones publicadas por el servidor (server/updates.lua)
 /server/published/
+# Referencias con copyright (partitura/MIDI de Musescore): solo locales, nunca en git
+tools/music/ref/
+tools/music/capas_instrumental/
