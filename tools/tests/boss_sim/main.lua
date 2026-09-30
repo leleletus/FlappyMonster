@@ -50,6 +50,9 @@ function love.load()
     local mirror = boss.def.name == 'mirror'
     local VULN = { stuck = true, recover = mirror }
     local seen, gpDmg, chain, maxChain, leapOff = {}, {}, 0, 0, {}
+    local laughWait, laughs, laughLate = {}, 0, 0
+    lastAliveT = nil
+    lastHitT = nil
     local glass
     for _, e in ipairs(ents) do if e.def.name == 'bossglass' then glass = e end end
     local gl = { events = 0, launches = 0, badJumps = 0, maxDmg = 0, fightInDanger = 0, bossHits = 0, backAfter = nil,
@@ -73,6 +76,7 @@ function love.load()
                 print(('%6.1fs   cristal: %s'):format(t, glass.state))
                 if glass.state == 'active' then gl.events = gl.events + 1 end
                 if glass.state == 'idle' then gl.endT = t end
+                if glass.state == 'warn' and not gl.backAfter then gl.endT = nil end   -- (otro evento seguido)
                 gl.lastSt = glass.state
             end
             -- Prueba: con el cristal recién activo se deja caer al Espejo al suelo
@@ -108,6 +112,10 @@ function love.load()
         lastHp = pa.hp
         if pa.dying and not pa._counted then
             pa._counted = true; deaths = deaths + 1
+            if mirror and boss.alive and not boss:isDying() and z.state == 'fight' then
+                laughWait[#laughWait + 1] = t
+                if os.getenv('DEBUG_LAUGH') then print(('      (muerte con el jefe en %s, pendiente=%s)'):format(boss.state, tostring(boss.laughPending))) end
+            end
             print(('%6.1fs   jugador MUERE (jefe en %s)'):format(t, boss.state))
         end
         if not pa.alive or (pa.dying and pa.deathPhase == 'fall') then
@@ -146,6 +154,12 @@ function love.load()
         if boss.state ~= lastState then
             print(('%6.1fs jefe: %-12s  hp %s/%s  x=%d y=%d'):format(t, boss.state, boss.hp, boss.hpMax, boss.x, boss.y))
             seen[boss.state] = true
+            if boss.state == 'dying_hold' then lastAliveT = t end
+            if boss.state == 'laugh' and #laughWait > 0 then
+                laughs = laughs + 1
+                if t - table.remove(laughWait, 1) > 3 then laughLate = laughLate + 1 end
+                laughWait = {}                  -- (una risa vale por las muertes seguidas)
+            end
             if mirror then
                 if boss.state == 'warp_out' then chain = chain + 1; maxChain = math.max(maxChain, chain) end
                 if boss.state == 'fight' then chain = 0 end
@@ -157,7 +171,10 @@ function love.load()
             end
             lastState = boss.state
             -- (Espejo: solo al final de una ristra de ataques, para verla entera)
-            if VULN[boss.state] and not (mirror and (boss.chainLeft or 1) > 1) then attack = { t0 = t, n = 0, kind = (attacksDone % 2 == 0) and 'stomp' or 'pound' } end
+            -- (Espejo: como mucho un golpe cada 10 s, para ver sus fases y el evento)
+            if VULN[boss.state] and not (mirror and ((boss.chainLeft or 1) > 1 or t - (lastHitT or -99) < 10)) then
+                if mirror then lastHitT = t end
+                attack = { t0 = t, n = 0, kind = (attacksDone % 2 == 0) and 'stomp' or 'pound' } end
         end
         -- esquivar la caída: al ver la marca (estado 'aim') se aparta 5 casillas
         if boss.state == 'aim' and not pa.dying and math.abs(pa.x - boss.x) < 3 * TILE_PX then
@@ -167,6 +184,7 @@ function love.load()
         -- golpear al jefe clavado: dos intentos (0.3 s y 1.2 s después)
         if attack and VULN[boss.state] or (attack and attack.n == 1 and t - attack.t0 < 1.4) then
             local due = attack.n == 0 and 0.3 or 1.2
+            if mirror then due = attack.n == 0 and 0.05 or 0.2 end     -- (su pausa al aterrizar es corta)
             if t - attack.t0 >= due and attack.n < 2 then
                 local ob = boss:getOuterBounds()
                 local hp0 = boss.hp
@@ -212,6 +230,11 @@ function love.load()
             check('vuelve', gl.backAfter ~= nil and gl.backAfter < 8,
                 ('vuelve a copiar %.1f s después del evento'):format(gl.backAfter or -1))
         end
+        -- (una muerte justo antes de vencerlo no tiene risa: ya está muriendo)
+        local dieT = boss.alive and math.huge or (lastAliveT or math.huge)
+        for i = #laughWait, 1, -1 do if laughWait[i] > dieT - 3 then table.remove(laughWait, i) end end
+        check('risa', deaths > 0 and laughs >= 1 and #laughWait == 0 and laughLate == 0,
+            ('muertes en la pelea con risa: %d risas; sin risa %d; tarde (>3 s) %d'):format(laughs, #laughWait, laughLate))
         check('fases', maxChain >= 2 or not boss.alive and maxChain >= 2, ('ataques seguidos (máx.): %d'):format(maxChain))
     end
     local ks = {}

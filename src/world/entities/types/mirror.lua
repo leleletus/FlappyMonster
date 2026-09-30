@@ -27,7 +27,8 @@
 --    reaparece de pie en una plataforma de la arena, se agacha, salta hacia el
 --    jugador y en lo alto del salto hace el ground pound sobre él.
 --  Su ground pound quita 2 de vida al que pilla debajo (como el del jugador a
---  él). Tras caer queda aturdido 'recover' (se le puede pisar) y vuelve a copiar.
+--  él). Tras caer hace una pausa corta 'recover' (NO se aturde con sus propios
+--  ataques: solo el ground pound de un jugador lo aturde) y sigue.
 --  Fases por vida: más a menudo, encadena 1 / 2 / 3 ataques y copia más rápido.
 --  CRISTAL ROTO (entidad bossglass de su zona, evento): mientras avisa o está
 --  activo deja de copiar y pelea desde las plataformas (salta de plataforma en
@@ -90,7 +91,7 @@ local PORTAL_FOLLOW  = 420           -- px/s siguiendo al objetivo desde el espe
 local PORTAL_UP      = 4.5           -- casillas por encima del objetivo (mín.: techo de la zona)
 local PERCH_T        = 0.75          -- s en la plataforma antes de saltar
 local LEAP_VY        = -760          -- salto desde la plataforma (px/s)
-local RECOVER_T      = 1.1           -- s aturdido tras caer (se le puede pisar)
+local RECOVER_T      = 0.3           -- s de pausa al aterrizar (NO aturdido: sus ataques no le aturden)
 local GP_DAMAGE      = 2             -- su ground pound encima de alguien
 -- Fases (fracción de vida → cada cuánto ataca, ataques seguidos, retardo x)
 local PHASES = { { at = 1.0, every = 7.0, chain = 1, delay = 1.0 },
@@ -461,6 +462,11 @@ function Mirror:updateBoss(dt, level)
         return
     end
 
+    -- (risa pendiente de una muerte durante un ataque: en cuanto pisa suelo)
+    if self.laughPending and (st == 'fight' or st == 'recover' or st == 'perch') and b.onGround and not b.gpPhase then
+        self:startLaugh()
+        return
+    end
     if self:updateAttack(dt, level) then return end
     -- Aviso o cristales: deja de copiar y se va a las plataformas
     if st == 'fight' and self:glassDanger(level) and b.onGround and not b.gpPhase then
@@ -743,7 +749,8 @@ function Mirror:updateAttack(dt, level)
         end
         return true
     elseif st == 'recover' then
-        -- Aturdido tras caer: su momento débil
+        -- Aterriza de su ataque: una pausa corta y sigue (sin aturdirse: solo
+        -- el ground pound de un JUGADOR lo aturde)
         self.deadTimer = self.deadTimer + dt
         self:runBody(dt, level, 0)
         if self.deadTimer >= (self.props.recoverTime or RECOVER_T) then
@@ -848,14 +855,30 @@ function Mirror:endStun()
     self.memoryFrom = self.clock      -- se despierta y vuelve a copiar desde cero
 end
 
+-- Muere un jugador: se ríe SIEMPRE. Si está a medias de un ataque (roto, en
+-- el espejo, saltando, cayendo) se ríe en cuanto vuelve a tener los pies en
+-- el suelo (laughPending). Antes solo se reía si estaba copiando: con los
+-- ataques de arena casi nunca lo estaba.
+local LAUGH_NOW = { fight = true, recover = true, perch = true }
 function Mirror:onPlayerDeath(pa)
-    if self.state ~= 'fight' then return end
+    if self:isDying() or Boss.INTRO[self.state] then return end
+    if LAUGH_NOW[self.state] and self.body.onGround then self:startLaugh()
+    else self.laughPending = true end
+end
+function Mirror:startLaugh()
+    self.laughPending = false
+    self.chainLeft = 0
     self.state, self.deadTimer, self.laughN = 'laugh', 0, 0
-    self.body.vx = 0
+    self.markX, self.markY = nil, nil
+    self.body.vx, self.body.gpPhase, self.crouching = 0, nil, false
 end
 
 function Mirror:onDamaged(n, kind)
-    if self.state == 'laugh' then self.state, self.deadTimer = 'fight', 0 end
+    if self.state == 'laugh' then
+        self.state, self.deadTimer = 'fight', 0
+        -- (con el cristal roto, directo a las plataformas: ni un paso copiando en el suelo)
+        if self.levelRef and self:glassDanger(self.levelRef) then self:toPlatforms(self.levelRef) end
+    end
     self.chainLeft = 0                      -- (golpeado: se acaba la ristra de ataques)
 end
 
@@ -1018,7 +1041,7 @@ function Mirror:render(camX, camY)
     end
     love.graphics.setShader()
     love.graphics.setColor(1, 1, 1, 1)
-    if st == 'ko' or st == 'recover' then PlayerAdventure.drawStunStars(self.x - camX, self.y - camY) end
+    if st == 'ko' then PlayerAdventure.drawStunStars(self.x - camX, self.y - camY) end
 end
 
 return {
@@ -1047,8 +1070,8 @@ return {
           min=0.4, max=3, step=0.05, help='Sigue al jugador desde el espejo y se fija el último instante' },
         { key='glassJump', kind='number', label='Salto al tocar el cristal', group='Ataques', default=950,
           min=500, max=1600, step=20, help='Si cae en el cristal roto de su zona, vuelve a una plataforma de este salto (px/s)' },
-        { key='recoverTime', kind='number', label='Aturdido tras caer (s)', group='Ataques', default=1.1,
-          min=0.3, max=4, step=0.1, help='El momento de pisarlo' },
+        { key='recoverTime', kind='number', label='Pausa tras caer (s)', group='Ataques', default=0.3,
+          min=0, max=4, step=0.05, help='Al aterrizar de su ground pound se para este tiempo y sigue (no se aturde)' },
     }),
     editor = { sprite = 'assets/images/player/monstrito3.png', invert = true },
 }

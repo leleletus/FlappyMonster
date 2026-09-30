@@ -299,13 +299,16 @@ function Sound.playMusic(name, volume)
         src:setVolume(volume or 0.7)
         return
     end
-    if music and music:isPlaying() then
+    if music then
         music:setPitch(1.0)
         music:stop()
     end
     src:setPitch(1.0)
     src:setVolume(volume or 0.7)
-    if lp and src ~= lp then src:seek(0) end
+    -- Empieza SIEMPRE desde el principio: stop() rebobina (una pista que se
+    -- quedó en pausa al salir de la partida seguía desde donde estaba)
+    src:stop()
+    if lp and lp ~= src then lp:stop() end
     src:play()
     music, musicName = src, name
 end
@@ -400,10 +403,11 @@ end
 
 -- Para todos los sonidos rastreados (ahogamiento...): al salir de una partida
 function Sound.stopAllTracked()
-    for _, src in pairs(tracked) do
-        if src:isPlaying() then src:stop() end
+    for _, src in pairs(tracked) do src:stop() end
+    if paused then
+        for _, src in ipairs(paused) do src:stop() end
+        paused = nil
     end
-    paused = nil
 end
 
 -- Deja la música "de partida" como al empezar: sin pista de jefe ni del nivel,
@@ -415,8 +419,16 @@ function Sound.leaveMatch()
     Sound.stopMusic()
 end
 
+-- Para la música (también si estaba en PAUSA: si no, al volver a pedirla
+-- seguía desde donde se quedó) y olvida lo pausado
 function Sound.stopMusic()
-    if music and music:isPlaying() then music:stop() end
+    if music then music:stop() end
+    local lp = musicName and loops[musicName]
+    if lp then lp:stop() end
+    if paused then
+        for _, src in ipairs(paused) do src:stop() end
+        paused = nil
+    end
     music, musicName = nil, nil
 end
 

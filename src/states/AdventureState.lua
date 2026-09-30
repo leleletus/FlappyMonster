@@ -58,6 +58,10 @@ end
 -- Al salir del nivel: cerrar la grabación (si la hay)
 function AdventureState:exit()
     require('src/ui/View').unlock()
+    -- Música y sonidos de partida a cero (también la pista de jefe): al volver
+    -- a entrar (reintentar tras perder todas las vidas, desde el editor...)
+    -- todo empieza como la primera vez, la música desde el principio
+    Sound.leaveMatch()
     if self.rec then self.rec:finish(self); self.rec = nil end
 end
 
