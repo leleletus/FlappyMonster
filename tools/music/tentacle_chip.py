@@ -16,8 +16,8 @@
 #   python3 tools/music/tentacle_chip.py --instrumental
 #                                             → tentacle_chip_instrumental.ogg: sin la melodía y con
 #                                               capas propias para que no quede vacía: colchón de
-#                                               "cuerdas" chip, acordes rítmicos en tresillo, arpegios
-#                                               en todas partes, cencerro, palmas, congas, timbales,
+#                                               "cuerdas" chip, acordes rítmicos en tresillo (sin los
+#                                               arpegios), cencerro, palmas, congas, timbales,
 #                                               shaker, impactos, subidas, platillos al revés y zaps;
 #                                               al mismo volumen total que la versión completa
 #
@@ -554,14 +554,6 @@ def render(passes=2):
                     for iv in q[:3]:
                         m = 62 + (r + iv - 62) % 12
                         rhythm.add(t0 + st * SIX, pulse(hz(m), n, 0.25) * e, 1.0 if st in (0, 8) else 0.8)
-            # Arpegios también en A, en el break y en el estribillo de la 1ª vuelta
-            if sec == 'A' or (sec == 'B' and not second):
-                for st in range(16):
-                    r, q, _ = halves[0 if st < 8 else 1]
-                    pcs = [r + iv for iv in q]
-                    m = 72 + (pcs[st % len(pcs)] % 12) + (12 if (st // len(pcs)) % 2 else 0)
-                    n = int(SIX * 0.9 * SR)
-                    arp.add(t0 + st * SIX, pulse(hz(m), n, 0.125) * np.exp(-t_(n) / 0.05), 0.13)
             # Percusión tropical extra
             if energetic:
                 for st in (0, 3, 6, 8, 11, 14):                     # cencerro en el tresillo
@@ -639,15 +631,15 @@ def render(passes=2):
         st_(arp, 0.24, -0.3), st_(bass, 0.72, 0.0), st_(kick, 0.95, 0.0), st_(snare, 0.50, -0.1),
         st_(shaker, 0.30, 0.3), st_(bongo, 0.34, -0.35), st_(chop, 0.22, 0.15),
     ]
-    # Instrumental: fuera la melodía (lead, su eco y la 2ª voz); el steel y los
-    # arpegios suben ~4 dB para llevar la canción. La normalización de abajo la
-    # deja al mismo volumen total que la versión completa.
+    # Instrumental: fuera la melodía (lead, su eco y la 2ª voz) y los arpegios
+    # (el "trutrutru" de semicorcheas constante: cansaba); el steel sube ~4 dB.
+    # La normalización de abajo la deja al mismo volumen total que la completa.
     names = ['lead', 'echo', 'harm', 'steel', 'arp', 'bass', 'kick', 'snare', 'shaker', 'bongo', 'chop']
     named = list(zip(names, parts))
     if INSTRUMENTAL:
-        boost = {'steel': 1.6, 'arp': 1.6}
+        boost = {'steel': 1.6}
         named = [(nm, (p[0] * boost.get(nm, 1.0), p[1] * boost.get(nm, 1.0))) for nm, p in named
-                 if nm not in ('lead', 'echo', 'harm')]
+                 if nm not in ('lead', 'echo', 'harm', 'arp')]
         named += [('pad', st_(pad, 0.16, -0.25)), ('rhythm', st_(rhythm, 0.20, 0.3)),
                   ('perc2', st_(perc2, 0.42, -0.2)), ('fx', st_(fx, 0.55, 0.0))]
     # SOLO=steel,bass... → solo esas pistas (para escucharlas o medirlas); RAW=1 → sin normalizar
