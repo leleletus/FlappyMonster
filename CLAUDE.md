@@ -11,6 +11,11 @@ Run: `love .` (game; `main.lua` is the update bootstrap, the game is `game.lua`)
 · `love server` / `love server --headless` (server, port 22122).
 Quick syntax check of everything: `for f in $(git ls-files '*.lua' | grep -v resources/); do luajit -bl "$f" >/dev/null || echo "$f"; done`
 
+## Communication (user preference, IMPORTANT)
+
+Reply to the user in ENGLISH, as short as possible (save tokens): results, numbers,
+what's left. No long explanations or recaps unless asked. Code comments stay Spanish.
+
 ## Golden rules
 
 1. **Everything that affects gameplay must run identically in 3 places**:
@@ -906,3 +911,31 @@ Low-level notes (for writing NEW harnesses):
   whitelists its mode with `"modes"`. Ship = bump `version.txt`.
 - Bots: send `in` only when there are new inputs, or the server kicks them
   for flooding.
+
+## Music generation: lessons learned (tools/music/)
+
+- Engine: `famicom.py` (shared). Generators: tentacle_nes.py, melody_nes.py (level +
+  boss), tentacle_chip.py, menus_chip.py (rejected). Refs (MIDI/PDF, copyrighted or
+  unknown licence) live in `tools/music/ref/` (gitignored) — never in `assets/`
+  (everything there ships to players).
+- Always MEASURE against the original (librosa): tempo grid fit on onsets (don't trust
+  the MIDI tempo: level.ogg is 137.5, its MIDI 140), MIDI↔audio chroma alignment,
+  per-bar chroma correlation, octave-band dB per section, rms/peak. The MIDI vs the
+  audio sets the ceiling of what "matching" can mean.
+- Tuning/clash checks for arrangements: pyin f0 per mono stem (≈5 cents ok); power
+  chord 5th only if in the half-bar harmony; never transpose notes to "darken" a
+  recognizable song; never sustain noise channels under long notes (buzz = "audio
+  destruction").
+- Mixing: fit gains per INSTRUMENT GROUP (voices summed), bounded around musical base
+  levels (per-voice fits give absurd gains). Keep a minimum for the lead. Don't chase
+  the original's HPSS percussive ratio when it has crunch/distortion (buries the
+  melody); instead a fixed drum push (×1.6 level, ×2 boss) + fixed kick/snare/cymbal
+  split. User wants: balanced melody vs drums, energetic punchy drums (esp. boss).
+- basic-pitch (polyphonic transcription) works from a separate venv (Python 3.11,
+  `basic-pitch[onnx]`, setuptools<70): ~80 % melody / 77 % bass on Tentacle, octave
+  errors common; vote notes across repeated bars. Without a score results were poor
+  (user: "doesn't resemble") — prefer a MIDI.
+- Music tasks are verified by numbers only; always tell the user it wasn't listened to.
+- Release: bump version.txt; audio-only changes need only `git pull` on the server
+  (it republishes within 30 s); code/protocol changes need a server restart.
+
