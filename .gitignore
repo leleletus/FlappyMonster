@@ -28,3 +28,4 @@ MEMORY.md
 # Referencias con copyright (partitura/MIDI de Musescore): solo locales, nunca en git
 tools/music/ref/
 tools/music/capas_instrumental/
+__pycache__/
