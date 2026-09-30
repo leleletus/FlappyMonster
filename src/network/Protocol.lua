@@ -7,7 +7,7 @@ local Tiles = require 'src/world/Tiles'
 local P = {}
 
 -- ── Versión / red ─────────────────────────────────────────────────────────────
-P.VERSION = 29        -- el servidor rechaza clientes con otra versión (27: Bloques ON/OFF, vista fija en niveles; 28: entradas de jefe genéricas; 29: ataques de arena del Espejo)
+P.VERSION = 30        -- el servidor rechaza clientes con otra versión (27: Bloques ON/OFF, vista fija en niveles; 28: entradas de jefe genéricas; 29: ataques de arena del Espejo; 30: cristal roto de jefe)
 
 -- Sonidos PRIVADOS: solo los oye el jugador que los causa (su cliente ya los
 -- genera con la predicción), así que el servidor no los manda a nadie. P. ej.

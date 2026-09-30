@@ -26,7 +26,7 @@ local GAIN = {
     megaStep     = 0.7,  megaClack  = 1.0,  megaHurt   = 1.1,  megaSlam   = 1.1,
     megaWindup   = 0.78, megaShrink = 0.8,  megaFlee   = 0.9,  megaRoar = 0.58, megaFall = 0.8,
     -- Espejo (tools/sounds/mirror.py)
-    mirrorAppear = 0.62, mirrorPortal = 0.37,
+    mirrorAppear = 0.62, mirrorPortal = 0.37, glassWarn = 0.85, glassRise = 0.72, glassHit = 0.72,
     -- tools/sounds/mechanics.py (medidos: → ≈ -12 dBFS)
     switchOn     = 0.77, switchOff  = 0.76, helmetBounce = 1.15, helmetBreak = 0.72,
     pufferWarn   = 1.0,  pufferInflate = 0.81, pufferDeflate = 0.77, pufferPrick = 0.67,
@@ -130,6 +130,9 @@ function Sound.load()
     load('mirrorWarp',    'assets/sounds/bosses/mirror/warp.wav',   'static')   -- se rompe y desaparece
     load('mirrorAppear',  'assets/sounds/bosses/mirror/appear.wav', 'static')   -- reaparece en un espejo
     load('mirrorPortal',  'assets/sounds/bosses/mirror/portal.wav', 'static')   -- apunta desde el espejo
+    load('glassWarn',     'assets/sounds/bosses/mirror/glass_warn.wav', 'static')  -- cristal roto: aviso
+    load('glassRise',     'assets/sounds/bosses/mirror/glass_rise.wav', 'static')  -- cristal roto: salen
+    load('glassHit',      'assets/sounds/bosses/mirror/glass_hit.wav',  'static')  -- cristal roto: tocarlos
     -- Mega Crabby (generados con tools/sounds/megacrabby.py)
     load('megaStep',      'assets/sounds/bosses/megacrabby/step.wav',   'static')   -- pisada pesada
     load('megaClack',     'assets/sounds/bosses/megacrabby/clack.wav',  'static')   -- chasquido de pinzas
@@ -183,7 +186,7 @@ Sound.FAR  = 1400
 -- Alcance por sonido (multiplica NEAR y FAR): lo que hace algo enorme se oye
 -- en toda la arena (un jefe que la cruza no debe quedarse mudo)
 Sound.RANGE = {
-    mirrorWarp = 2.5, mirrorAppear = 2.5, mirrorPortal = 2.5,
+    mirrorWarp = 2.5, mirrorAppear = 2.5, mirrorPortal = 2.5, glassWarn = 3, glassRise = 3,
     megaStep = 1.8, megaClack = 2.2, megaRoar = 3, megaFall = 3, megaHurt = 3, megaSlam = 3, megaWindup = 2.5,
     megaShrink = 3, megaFlee = 2.2, bossHurt = 3, bossExplode = 3,
 }

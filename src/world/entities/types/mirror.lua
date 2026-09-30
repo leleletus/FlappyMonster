@@ -29,6 +29,11 @@
 --  Su ground pound quita 2 de vida al que pilla debajo (como el del jugador a
 --  él). Tras caer queda aturdido 'recover' (se le puede pisar) y vuelve a copiar.
 --  Fases por vida: más a menudo, encadena 1 / 2 / 3 ataques y copia más rápido.
+--  CRISTAL ROTO (entidad bossglass de su zona, evento): mientras avisa o está
+--  activo deja de copiar y pelea desde las plataformas (salta de plataforma en
+--  plataforma cayendo en ground pound sobre la del objetivo). Si toca los
+--  cristales recibe 1 y vuelve de un salto a la plataforma alcanzable más
+--  cercana. Al acabar el evento vuelve a lo de siempre.
 --
 -- Con varios jugadores copia a uno solo: al más cercano, pero sin cambiar a
 -- lo loco (tiempo mínimo por objetivo, histéresis de distancia y solo cuando
@@ -414,6 +419,14 @@ function Mirror:updateBoss(dt, level)
     self:record(level)
     local b, st = self.body, self.state
 
+    -- Cristal roto: tocarlo duele y lo devuelve a una plataforma
+    local g = st ~= 'dormant' and self:glass(level)
+    if g and g:isActiveGlass() and b.vy >= -120 and st ~= 'warp_out' and st ~= 'portal' and st ~= 'leap'
+       and Boss.overlap(self:getOuterBounds(), g:glassBox()) then
+        self:glassEscape(level)
+        return
+    end
+
     if st == 'dormant' then
         self:runBody(dt, level, 0)
         local near
@@ -435,6 +448,7 @@ function Mirror:updateBoss(dt, level)
             -- HandlePlayerRevive: InitializeQueues (vuelve a grabar desde cero)
             self.state, self.deadTimer = 'fight', 0
             self.memoryFrom = self.clock
+            if self:glassDanger(level) and self.target then self:toPlatforms(level) end
         end
         return
     elseif st == 'ko' then
@@ -442,11 +456,17 @@ function Mirror:updateBoss(dt, level)
         self:runBody(dt, level, 0)
         if self.deadTimer >= self.koDur and b.onGround then
             self.state, self.deadTimer = 'fight', 0
+            if self:glassDanger(level) and self.target then self:toPlatforms(level) end
         end
         return
     end
 
     if self:updateAttack(dt, level) then return end
+    -- Aviso o cristales: deja de copiar y se va a las plataformas
+    if st == 'fight' and self:glassDanger(level) and b.onGround and not b.gpPhase then
+        self:chooseTarget(level, 0)
+        if self.target then return self:toPlatforms(level) end
+    end
 
     -- ── 'fight' ──────────────────────────────────────────────────────────────
     self:chooseTarget(level, dt)
@@ -544,6 +564,70 @@ function Mirror:groundBelow(level, x, y)
     return hit and top or z.y1
 end
 
+-- ── Cristal roto (evento de su zona) ─────────────────────────────────────────
+function Mirror:glass(level)
+    if self._glass == nil and self.zone then
+        self._glass = false
+        for _, e in ipairs(level.liveEntities or {}) do
+            if e.def and e.def.name == 'bossglass' and e.alive and e:findZone(level) == self.zone then self._glass = e end
+        end
+    end
+    return self._glass or nil
+end
+function Mirror:glassDanger(level)
+    local g = self:glass(level)
+    return g ~= nil and g:isDanger()
+end
+
+-- Plataforma sobre la que está de pie (o nil)
+function Mirror:platformUnder(level)
+    local b = self.body
+    if not b.onGround then return nil end
+    local ob = b:getOuterBounds()
+    local feet = ob.y + ob.h
+    for _, p in ipairs(self:arenaPlatforms(level)) do
+        if math.abs(feet - p.top) <= 4 and self.x >= p.x0 - 8 and self.x <= p.x1 + 8 then return p end
+    end
+    return nil
+end
+
+-- x sobre una plataforma a la que saltar: la más cercana al objetivo (justo
+-- encima de él si está en ella)
+function Mirror:platformTargetX(level)
+    local tx, best, bd = self:targetX(level), nil, nil
+    local b = self.body
+    for _, p in ipairs(self:arenaPlatforms(level)) do
+        local d = math.max(0, p.x0 - tx, tx - p.x1)
+        if not bd or d < bd then best, bd = p, d end
+    end
+    if not best then return tx end
+    return math.max(best.x0 + b.w, math.min(best.x1 - b.w, tx))
+end
+
+-- Toca los cristales: 1 de vida y de un salto a la plataforma alcanzable más cercana
+function Mirror:glassEscape(level)
+    local b, g = self.body, ADV_GRAVITY
+    self:damage(1, 'hazard')
+    if self:isDying() then return end
+    Sound.play('glassHit', 0.85)
+    Entity.emitFx('mirror_shards', self.x, self.y + self.sprH / 2)
+    local vy = -(self.props.glassJump or 950)
+    local rise = vy * vy / (2 * g)
+    local ob = b:getOuterBounds()
+    local feet = ob.y + ob.h
+    local best, bd
+    for _, p in ipairs(self:arenaPlatforms(level)) do
+        if p.top > feet - rise + 16 then                   -- (llega por encima de ella)
+            local d = math.max(0, p.x0 - self.x, self.x - p.x1)
+            if not bd or d < bd then best, bd = p, d end
+        end
+    end
+    local tx = best and math.max(best.x0 + b.w, math.min(best.x1 - b.w, self.x)) or self.x
+    self.leapTX, self.leapVX = tx, (tx - self.x) / (-vy / g)
+    b.vy, b.onGround, b.gpPhase, b.crouching = vy, false, nil, false
+    self.state, self.deadTimer, self.chainLeft = 'leap', 0, 0
+end
+
 function Mirror:startWarp(level)
     self.state, self.deadTimer = 'warp_out', 0
     self.body.vx, self.body.vy = 0, 0
@@ -553,6 +637,20 @@ function Mirror:startWarp(level)
     local plats = self:arenaPlatforms(level)
     self.attackN = (self.attackN or 0) + 1
     self.nextAttack = (#plats > 0 and self.attackN % 2 == 0) and 'perch' or 'portal'
+    -- (con el cristal roto, solo desde las plataformas)
+    if #plats > 0 and self:glassDanger(level) then self.nextAttack = 'perch' end
+end
+
+-- Cristal roto: a las plataformas. Si ya está en una, salta desde ahí; si no,
+-- se rompe y aparece en una
+function Mirror:toPlatforms(level)
+    self.chainLeft = 1
+    if self:platformUnder(level) then
+        self.state, self.deadTimer = 'perch', 0
+        return true
+    end
+    self:startWarp(level)
+    return true
 end
 
 function Mirror:targetX(level)
@@ -594,7 +692,7 @@ function Mirror:updateAttack(dt, level)
         -- De pie en la plataforma, mirando al objetivo, agachándose para saltar
         self.deadTimer = self.deadTimer + dt
         self:chooseTarget(level, dt)
-        local tx = self:targetX(level)
+        local tx = self:glassDanger(level) and self:platformTargetX(level) or self:targetX(level)
         b.facing = (tx < self.x) and -1 or 1
         self.markX, self.markY = tx, self:groundBelow(level, tx, self.y - 3 * T)
         -- (agachado solo de dibujo: agacharse de verdad en una plataforma
@@ -650,6 +748,7 @@ function Mirror:updateAttack(dt, level)
         self:runBody(dt, level, 0)
         if self.deadTimer >= (self.props.recoverTime or RECOVER_T) then
             self.chainLeft = (self.chainLeft or 1) - 1
+            if self:glassDanger(level) and self.target then return self:toPlatforms(level) end
             if self.chainLeft > 0 and self.target then return self:startWarp(level) or true end
             self.state, self.deadTimer = 'fight', 0
             self.memoryFrom = self.clock          -- (vuelve a copiar desde ahora)
@@ -946,6 +1045,8 @@ return {
           min=2, max=30, step=0.5, help='Copiando este tiempo antes de un ataque de arena (luego, más a menudo)' },
         { key='portalAim', kind='number', label='Apuntando desde el espejo (s)', group='Ataques', default=1.0,
           min=0.4, max=3, step=0.05, help='Sigue al jugador desde el espejo y se fija el último instante' },
+        { key='glassJump', kind='number', label='Salto al tocar el cristal', group='Ataques', default=950,
+          min=500, max=1600, step=20, help='Si cae en el cristal roto de su zona, vuelve a una plataforma de este salto (px/s)' },
         { key='recoverTime', kind='number', label='Aturdido tras caer (s)', group='Ataques', default=1.1,
           min=0.3, max=4, step=0.1, help='El momento de pisarlo' },
     }),

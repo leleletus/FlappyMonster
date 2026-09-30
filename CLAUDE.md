@@ -357,7 +357,7 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   'stomp' with 4th return dirX = cnx → `pa:bounce(vy, dirX, soft=true)` (vx 300 +
   ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill; v17: crawler turn in snapshots; v18: MegaCrabby;
   v19: boss walls, Mega minions/pounce; v20: post-hit protection; v21: unified invulnerability;
-  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks).
+  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks; v30: boss broken glass).
 - **Crawler** (`src/world/entities/Crawler.lua`): surface-following movement
   (floor ↔ walls ↔ ceiling, concave and convex corners) for Crabbies with prop
   `wallWalk` (`Crabby.WALL_PROP`, off by default so old levels don't change).
@@ -779,6 +779,19 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   `tools/sounds/mirror.py` (warp, appear, portal). Harness: `boss_sim LEVEL=ruta_del_espejo`
   (attacks, GP = 2, leap lands on its mark, chains), `online_boss LEVEL=
   tools/tests/online_boss/espejo.json` (start next to the arena).
+  **Broken glass event** (`types/bossglass.lua`, entity "Cristal roto de jefe", Mecanismos;
+  rect like bosswall over the AIR row above the arena floor, shards stand on its bottom
+  edge): idle → warn (cracks + red pulse, glassWarn) → active (shards, glassRise) → retract;
+  only while its zone fights; fires every `every` s (first at `first`) and once per boss HP
+  threshold `phase1/phase2` (0.66/0.33). Touching active glass = `interact` → `'launch', 0,
+  -launchSpeed, 2` (all jumps recharged; `pa:launch(vx, vy, jumps)`, predicted via
+  `Predictor:recordLaunch(vx, vy, jumps)`, client sound `er.launchSound`) + `onLaunch` =
+  1 HP unless invulnerable. `unsafeAt(x, y)` → `BossZones.safeSpawn` never respawns there
+  while dangerous. Mirror: while `glassDanger` it stops copying (`toPlatforms`: perch in
+  place or warp to a platform) and chains platform→platform leaps (`platformTargetX`);
+  touching the glass → `glassEscape` (1 HP + leap to the nearest reachable platform, GP
+  onto it); back to copying when the event ends. Placed in ruta_del_espejo. Harness:
+  `boss_sim LEVEL=ruta_del_espejo` (cristal / arriba / escapa / vuelve).
 - Levels with bosses are Race-only (`hunt.requires` rejects `info.bosses > 0`).
 
 Player HP: 3 (`pa.hp/hpMax`), `pa:hurt(n)` = n dmg + invulnerability + red flash; 0 → die.

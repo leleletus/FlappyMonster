@@ -75,9 +75,9 @@ function Predictor:recordBounce(vy, dirX, soft)
 end
 
 -- Lanzamiento predicho (trampolín): se reaplica en las re-simulaciones
-function Predictor:recordLaunch(vx, vy)
+function Predictor:recordLaunch(vx, vy, jumps)
     local h = self.history[self.seq]
-    if h then h.launchVx, h.launchVy = vx, vy end
+    if h then h.launchVx, h.launchVy, h.launchJumps = vx, vy, jumps end
 end
 
 -- Inputs aún no confirmados (máx. `maxN`, los más recientes) para reenviar.
@@ -133,7 +133,7 @@ function Predictor:reconcile(ack, own, bounceSeq)
                 pa:bounce(h.bounceVy, h.bounceDir, h.bounceSoft)
             end
             if h.launchVy and not pa.dying then
-                pa:launch(h.launchVx, h.launchVy)
+                pa:launch(h.launchVx, h.launchVy, h.launchJumps)
             end
         end
     end

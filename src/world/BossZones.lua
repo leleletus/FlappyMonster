@@ -244,6 +244,10 @@ local function spawnScore(level, z, bosses, c, r)
     local x, y = (c - 0.5) * T, r * T - STAND_DY
     -- Dentro de un bloque de jefe u otro cuerpo sólido: no
     if level:bodyAt(x, y) or level:bodyAt(x, (r - 1) * T + 4) then return nil end
+    -- Sobre algo que ahora es peligroso (p. ej. el cristal roto de jefe): no
+    for _, e in ipairs(level.liveEntities or {}) do
+        if e.unsafeAt and e.alive and e:unsafeAt(x, y) then return nil end
+    end
     local score = 0
     local dBoss = SAFE_BOSS * T
     for _, b in ipairs(bosses) do

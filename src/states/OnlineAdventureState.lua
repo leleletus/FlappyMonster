@@ -761,10 +761,10 @@ function OnlineAdventureState:_checkLocalBounce()
             local result, bvy, bdir, bdir2 = Entities.interactions.check(pa, er)
             if result == 'launch' then
                 -- Trampolín: lanzado ya (bvy = vx, bdir = vy); lo confirma el servidor
-                pa:launch(bvy, bdir)
+                pa:launch(bvy, bdir, bdir2)
                 self.localBounceCooldown[idx] = 0.3
-                self.predictor:recordLaunch(bvy, bdir)
-                Sound.play('trampoline')
+                self.predictor:recordLaunch(bvy, bdir, bdir2)
+                Sound.play(er.launchSound or 'trampoline')
                 return
             elseif result == 'helmet' then
                 -- Casco de Gummy: rebota (el servidor lo confirma); suena ya

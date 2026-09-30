@@ -14,7 +14,7 @@
 --   'bounce', bounceVy, dirX      rebota sin hacerle nada (jefe invulnerable);
 --                                 con dirX sale empujado hacia ese lado
 --   'recoil', dirX                choca con su cuerpo y sale empujado
---   'launch', vx, vy              lanzado (trampolín): pa:launch, e:onLaunch(pa)
+--   'launch', vx, vy[, jumps]     lanzado (trampolín, cristal roto): pa:launch, e:onLaunch(pa)
 --   'pickup'                      coleccionable (estrella, vida extra...)
 --   'checkpoint'                  punto de control
 --
@@ -162,7 +162,7 @@ function Interactions.run(pa, entities, cb, rewind)
         elseif result == 'recoil' then
             pa:recoil(a)
         elseif result == 'launch' then
-            pa:launch(a, b)
+            pa:launch(a, b, c)
             if e.onLaunch then e:onLaunch(pa) end
         elseif result == 'pickup' then
             if e:collect() and cb.pickup then cb.pickup(e, e.def.pickup, i) end

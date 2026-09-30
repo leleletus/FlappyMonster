@@ -787,7 +787,9 @@ end
 
 -- Lanzado por un trampolín: velocidad (vx, vy). Si empuja de lado, un
 -- instante sin control para que el impulso no se pierda.
-function PlayerAdventure:launch(vx, vy)
+-- `jumps` = saltos que le quedan en el aire (por defecto 1; el cristal roto
+-- de los jefes los recarga todos)
+function PlayerAdventure:launch(vx, vy, jumps)
     self.vy = vy
     if vx and vx ~= 0 then
         -- Un instante sin control (el impulso no se pierde), pero SIN aturdir
@@ -795,7 +797,7 @@ function PlayerAdventure:launch(vx, vy)
         self.ctrlLockT = math.max(self.ctrlLockT or 0, 0.25)
     end
     self.onGround, self.crouching = false, false
-    self.jumpsLeft = 1                       -- queda el salto en el aire
+    self.jumpsLeft = jumps or 1              -- queda el salto en el aire
     self.gpPhase, self.gpT = nil, 0
     self.puff = PUFF_SCALE * 1.1
 end

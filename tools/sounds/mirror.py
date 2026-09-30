@@ -76,9 +76,47 @@ def portal():
     return y * shape * 0.6
 
 
+# Cristal roto de jefe (evento): aviso = crujidos de cristal que se agrieta
+# sobre un retumbar grave; salen = estallido de cristales hacia arriba;
+# tocarlos = crujido de pisar cristal
+def glass_warn():
+    d = 1.6
+    tt = t_(d)
+    rumble = lowpass(noise(d), 160) * np.clip(tt / 0.3, 0, 1) * 1.6
+    parts = [np.zeros(int(SR * d)), rumble]
+    t0 = 0.05
+    while t0 < 1.5:
+        k = t0 / 1.5
+        crk = highpass(noise(0.012), 2000) * env(int(SR * 0.012), 0.0003, 0.003)
+        parts.append(at(crk * (0.3 + 0.7 * k), t0))
+        if rng.uniform() < 0.5:
+            parts.append(at(tink(rng.uniform(2500, 5200), 0.08, 0.25 + 0.3 * k), t0 + 0.005))
+        t0 += 0.16 - 0.1 * k + rng.uniform(0, 0.04)
+    return mix(*parts)
+
+
+def glass_rise():
+    d = 0.9
+    boom = lowpass(noise(0.3), 400) * env(int(SR * 0.3), 0.002, 0.08) * 1.5
+    parts = [np.zeros(int(SR * d)), boom, warp() * 0.8]
+    for i in range(8):
+        parts.append(at(tink(rng.uniform(2200, 4200), 0.3, 0.6), 0.02 + i * 0.02))
+    return mix(*parts)
+
+
+def glass_hit():
+    d = 0.35
+    crunch = highpass(noise(0.12), 1500) * env(int(SR * 0.12), 0.001, 0.03) * 1.3
+    parts = [np.zeros(int(SR * d)), crunch]
+    for i in range(5):
+        parts.append(at(tink(rng.uniform(3000, 6500), 0.12, 0.5), rng.uniform(0, 0.08)))
+    return mix(*parts)
+
+
 if __name__ == '__main__':
     only = set(sys.argv[1:])
     print('Sonidos del Espejo:')
-    for name, fn in (('warp', warp), ('appear', appear), ('portal', portal)):
+    for name, fn in (('warp', warp), ('appear', appear), ('portal', portal),
+                     ('glass_warn', glass_warn), ('glass_rise', glass_rise), ('glass_hit', glass_hit)):
         if only and name not in only: continue
         save(name, fn())

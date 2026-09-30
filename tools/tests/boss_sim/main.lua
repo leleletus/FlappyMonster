@@ -7,7 +7,10 @@
 -- Espejo (LEVEL=assets/levels/ruta_del_espejo.json): se le golpea aturdido
 -- tras caer ('recover') y se comprueban sus ataques de arena: los dos tipos
 -- (espejo flotante y plataforma), su ground pound quita 2, el salto cae donde
--- marcó y encadena ataques en las fases de poca vida.
+-- marcó y encadena ataques en las fases de poca vida. Con cristal roto de
+-- jefe (bossglass) en la arena: el evento salta, tocarlo lanza hacia arriba
+-- con 2 saltos y quita como mucho 1, el Espejo no copia en el suelo mientras
+-- dura (si lo toca, recibe 1 y vuelve a una plataforma) y luego vuelve a copiar.
 --
 --   LEVEL=assets/levels/guarida_cangrejo_rey.json love tools/tests/boss_sim
 io.stdout:setvbuf('no')
@@ -47,6 +50,10 @@ function love.load()
     local mirror = boss.def.name == 'mirror'
     local VULN = { stuck = true, recover = mirror }
     local seen, gpDmg, chain, maxChain, leapOff = {}, {}, 0, 0, {}
+    local glass
+    for _, e in ipairs(ents) do if e.def.name == 'bossglass' then glass = e end end
+    local gl = { events = 0, launches = 0, badJumps = 0, maxDmg = 0, fightInDanger = 0, bossHits = 0, backAfter = nil,
+                 lastSt = 'idle', endT = nil }
     -- Registro extra: bloques de jefe, súbditos y eventos del jefe (si los tiene)
     local walls, wallSt, lastMinions = {}, {}, -1
     for _, e in ipairs(ents) do if e.def.name == 'bosswall' then walls[#walls + 1] = e end end
@@ -60,11 +67,41 @@ function love.load()
         ctrl:update(dt)
         for _, e in ipairs(ents) do if e.alive then e:update(dt, level) end end
         Entities.interactions.run(pa, ents, {})
+        -- Cristal roto
+        if glass then
+            if glass.state ~= gl.lastSt then
+                print(('%6.1fs   cristal: %s'):format(t, glass.state))
+                if glass.state == 'active' then gl.events = gl.events + 1 end
+                if glass.state == 'idle' then gl.endT = t end
+                gl.lastSt = glass.state
+            end
+            -- Prueba: con el cristal recién activo se deja caer al Espejo al suelo
+            -- (encima de los cristales): debe recibir 1 y volver a una plataforma
+            if glass.state == 'active' and glass.deadTimer > 0.6 and not gl.dropped and boss.state == 'perch' then
+                gl.dropped = { t = t, hp = boss.hp }
+                local b = boss.body
+                b.x, b.y, b.vy, b.onGround = (z.x0 + z.x1) / 2, z.y1 - 100, 200, false
+                boss.state, boss.deadTimer, boss.inv = 'fight', 0, 0
+                boss:syncFromBody()
+            end
+            if gl.dropped and not gl.escaped and t - gl.dropped.t < 3 and boss:platformUnder(level) then
+                gl.escaped = { dt = t - gl.dropped.t, dmg = gl.dropped.hp - boss.hp }
+            end
+            if gl.endT and boss.state == 'fight' and not gl.backAfter then gl.backAfter = t - gl.endT end
+            if glass:isDanger() and glass.deadTimer > 0.5 and boss.state == 'fight' and boss.body.onGround then
+                gl.fightInDanger = gl.fightInDanger + 1
+            end
+            if (pa.jumpsLeft or 0) == 2 and pa.vy < -700 and not gl.inLaunch then
+                gl.inLaunch = true; gl.launches = gl.launches + 1
+                gl.maxDmg = math.max(gl.maxDmg, lastHp - pa.hp)
+            elseif pa.vy >= 0 then gl.inLaunch = false end
+        end
         -- daño al jugador
         if pa.hp < lastHp then
             if not pa.dying then hurts = hurts + 1 end
             print(('%6.1fs   jugador: -%d vida (%d) jefe=%s'):format(t, lastHp - pa.hp, pa.hp, boss.state))
-            if mirror and (boss.state == 'dive' or boss.state == 'recover') and boss.gpHit ~= nil then
+            local byGlass = glass and glass:isActiveGlass() and pa.vy < -700     -- (lo lanzó el cristal)
+            if mirror and (boss.state == 'dive' or boss.state == 'recover') and boss.gpHit ~= nil and not byGlass then
                 gpDmg[#gpDmg + 1] = lastHp - pa.hp
             end
         end
@@ -164,6 +201,17 @@ function love.load()
         local worst = 0
         for _, d in ipairs(leapOff) do worst = math.max(worst, d) end
         check('salto', #leapOff > 0 and worst <= 24, ('%d saltos; el que más lejos de su marca: %.0f px'):format(#leapOff, worst))
+        if glass then
+            check('cristal', gl.events >= 1 and gl.launches >= 1 and gl.maxDmg <= 1,
+                ('eventos %d; lanzamientos del jugador %d (daño máx. por toque %d)'):format(gl.events, gl.launches, gl.maxDmg))
+            check('arriba', gl.fightInDanger == 0,
+                ('pasos copiando en el suelo con el cristal: %d'):format(gl.fightInDanger))
+            check('escapa', gl.escaped ~= nil and gl.escaped.dmg == 1,
+                gl.escaped and ('cayó al cristal: -%d y en una plataforma a los %.1f s'):format(gl.escaped.dmg, gl.escaped.dt)
+                or ('no volvió a una plataforma (%s)'):format(gl.dropped and 'dejado caer' or 'no se probó'))
+            check('vuelve', gl.backAfter ~= nil and gl.backAfter < 8,
+                ('vuelve a copiar %.1f s después del evento'):format(gl.backAfter or -1))
+        end
         check('fases', maxChain >= 2 or not boss.alive and maxChain >= 2, ('ataques seguidos (máx.): %d'):format(maxChain))
     end
     local ks = {}
