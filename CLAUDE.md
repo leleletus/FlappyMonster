@@ -165,12 +165,14 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     original's, then percussion raised to its percussive/harmonic ratio (0.21).
                     `tools/music/famicom.py` = the shared Famicom engine (Chan/play driver, 2A03/VRC6/
                     N163 renderers, noise, DPCM, DAC curves, band_power); the NES generators import it.
-                    `tools/music/boss_nes.py` → `boss_nes_intro.ogg` + `boss_nes_loop.ogg` (+ .mid; catalog
-                    `boss_nes`, intro+loop): "Boss Battle" rebuilt WITHOUT a score — notes from basic-pitch
-                    (Spotify's polyphonic transcriber, ONNX, run from a separate Python 3.11 venv; validated
-                    on Tentacle Tantrum: 80 % of the melody, 77 % of the bass) VOTED across repeated bars,
-                    tables embedded in the script; power chords = VRC6 saw + pulses (5th, bright octave) +
-                    slow-clock noise for the distortion "fizz"; gains fitted per octave band (±3 dB). Notes from the Musescore MIDI
+                    `tools/music/melody_nes.py` → `level_nes.ogg` (catalog `classic`, the default level
+                    music; replaces level.ogg) and `boss_nes_intro.ogg` + `boss_nes_loop.ogg` (catalog
+                    `boss_nes`), all + .mid, from the level song's MIDI (`tools/music/ref/melody.mid`, local
+                    only). Level = faithful, one Famicom channel per MIDI instrument, at 137.5 BPM (level.ogg's
+                    real tempo; the MIDI says 140). Boss = the same score darker (A→A♭, power-chord chugs
+                    + fizz, lead doubled down, choir pad, double kick, tom fills), 140 BPM, 4-bar intro, loop
+                    from the riff (bars 9-36 + 1-8). Gains fitted PER INSTRUMENT GROUP (bounded around musical
+                    base levels) to level.ogg / the original boss remix's band spectrum. Notes from the Musescore MIDI
                     (`tools/music/ref/`, local only, copyrighted, gitignored), everything the MIDI lacks
                     or gets wrong from the ogg analysis: drums (tresillo kick tuned to F#2, snare 2&4,
                     four-on-the-floor break), chords per half bar, and the finale's B–C#–D# bass.

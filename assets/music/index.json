@@ -14,7 +14,7 @@
     "  boss        true = se ofrece como música de pelea en las zonas de jefe (editor: zona > Música)"
   ],
   "tracks": [
-    { "id": "classic",        "name": "Clásica",        "file": "level.ogg" },
+    { "id": "classic",        "name": "Clásica",        "file": "level_nes.ogg" },
     { "id": "flying_machine", "name": "Flying Machine", "file": "flying_machine.wav" },
     { "id": "hidro_city",     "name": "Hidro City",     "file": "hidro_city.wav" },
     { "id": "labyrinth",      "name": "Labyrinth",      "intro": "labyrinth_intro.wav", "loop": "labyrinth_loop.wav" },
