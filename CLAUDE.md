@@ -169,10 +169,14 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     music; replaces level.ogg) and `boss_nes_intro.ogg` + `boss_nes_loop.ogg` (catalog
                     `boss_nes`), all + .mid, from the level song's MIDI (`tools/music/ref/melody.mid`, local
                     only). Level = faithful, one Famicom channel per MIDI instrument, at 137.5 BPM (level.ogg's
-                    real tempo; the MIDI says 140). Boss = the same score darker (A→A♭, power-chord chugs
-                    + fizz, lead doubled down, choir pad, double kick, tom fills), 140 BPM, 4-bar intro, loop
-                    from the riff (bars 9-36 + 1-8). Gains fitted PER INSTRUMENT GROUP (bounded around musical
-                    base levels) to level.ogg / the original boss remix's band spectrum. Notes from the Musescore MIDI
+                    real tempo; the MIDI says 140). Boss = the SAME NOTES (recognizable; transposing A→A♭,
+                    fifths from every bass note and a sustained noise "fizz" made it sound out of tune and
+                    saturated — don't), boss style from timbres (dark bell/organ/clean choir on the long notes),
+                    VRC6 power chords whose 5th is used only if it's in the harmony (else octave), short noise
+                    hits on chugs, double kick, tom fills; 140 BPM, 4-bar intro, loop from the riff (bars 9-36 +
+                    1-8). Gains fitted PER INSTRUMENT GROUP (bounded around musical base levels) to level.ogg /
+                    the original boss remix's band spectrum; then a fixed drum push (×1.6 level, ×2 boss) with a
+                    fixed kick/snare/cymbal split (chasing the originals' HPSS ratio buried the melody). Notes from the Musescore MIDI
                     (`tools/music/ref/`, local only, copyrighted, gitignored), everything the MIDI lacks
                     or gets wrong from the ogg analysis: drums (tresillo kick tuned to F#2, snare 2&4,
                     four-on-the-floor break), chords per half bar, and the finale's B–C#–D# bass.
