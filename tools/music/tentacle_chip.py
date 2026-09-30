@@ -535,12 +535,13 @@ def render(passes=2):
         # ── Solo en la instrumental: capas extra para que no quede vacía ─────
         if INSTRUMENTAL:
             energetic = sec in ('A', 'B', 'C', 'D')
-            # Colchón de acordes: "cuerdas" chip (pulso con trémolo en fusas)
+            # Colchón de acordes: "cuerdas" chip, sostenidas y suaves (antes con
+            # un trémolo cuadrado muy rápido que sonaba a "trrrr" toda la canción)
             for h in range(2):
                 r, q, _ = halves[h]
                 n = int(BAR / 2 * SR) + int(0.03 * SR)
                 tt = t_(n)
-                trem = 0.65 + 0.35 * np.sign(np.sin(2 * np.pi * (4 / SIX) * tt))
+                trem = 0.62 + 0.08 * np.exp(-tt / 0.25)
                 env = np.clip(tt / 0.04, 0, 1) * np.clip((BAR / 2 + 0.03 - tt) / 0.03, 0, 1)
                 for iv in q[:3]:
                     m = 55 + (r + iv - 55) % 12
