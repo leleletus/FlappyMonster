@@ -728,9 +728,13 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   `rageAt` (default 0.6): render-only anger symbols pop around its head (`renderAnger`:
   `anger_vein/steam/scribble.png` strips, scale 3) plus, in render (`self._angry`), ONLY a
   reddish pulse and a SLIGHT 1-px tremble — claws, snaps and bounce stay normal (the user
-  found more too much; idle = idle frame, never walking feet when still). Roar = crab-like (stridulation + froth + hiss,
-  `tools/sounds/megacrabby.py roar`) with fx `mega_roar` (warped semi-transparent shock
-  rings + zigzag bolts, rough lines) + `shake_roar` (soft, long). Windup = legs scuttling +
+  found more too much; idle = idle frame, never walking feet when still). Roar = giant-crab
+  MONSTER (`tools/sounds/megacrabby.py roar`): distorted 34-52 Hz throat growl with jaw
+  chatter (AM ~23 Hz) through mouth formants (310/680 Hz) + sub, crescendo, plus the crab
+  layer (low chitin stridulation, froth, hiss) and claw clacks; fx `mega_roar` (warped
+  semi-transparent shock rings + IRREGULAR sharp zigzag shockwave lines: 3-5 long segments,
+  uneven kinks, tapering width, optional side crack; bone/sand colours with a dark brown
+  edge — the user rejected "electric" yellow/blue) + `shake_roar` (soft, long). Windup = legs scuttling +
   accelerating claw snaps; claw closes on the sound's snaps (`WINDUP_SNAPS`, same in the
   .py). Summon spots: `pickSummonSpots` (never overlapping, outside its body; netPack 9). Death (own states): dying_kick → dying_shrink (deflates to normal size) →
   dying_flee (small crab without claws runs straight to the nearest side through
@@ -748,7 +752,12 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   placements (crabby / crabbytramp, wallWalk + dropOnSight) after the JSON ones, so
   server and clients share indices; `Entities.create` → `e:makeReserve(key)` (not alive,
   state 'reserve', not sent: netAtRest). The boss activates them (`resetToHome` +
-  'spawning', `leashZone` = its zone via `Crabby:crawlSolidAt`); they die with it. `Boss.hurtSound` per boss.
+  'spawning', `leashZone` = its zone via `Crabby:crawlSolidAt`); they die with it. Minions have
+  NO patrol route (`makeReserve` sets infinite bounds): they used to inherit the default
+  Crabby route around the boss's cell and a GP knockback snapped them to its edge (a
+  "teleport", sometimes onto the player). Route limits in `Entity:moveAndCollide` never pull
+  an entity that is already outside back in one step (they only stop it moving further out).
+  Harness `boss_intro` case `gp_subditos`. `Boss.hurtSound` per boss.
   Minions behave exactly like normal wall-walking ceiling Crabbies (harness
   `crawler_drop SUMMON=1`). Test arena: `tools/levelgen/arenas/jefe_cangrejo.json`.
 - **Boss walls** (`types/bosswall.lua`, entity "Bloque de jefe", Mecanismos): rect of

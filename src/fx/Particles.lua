@@ -396,19 +396,43 @@ function Particles.emit(kind, x, y, opts)
         local nb = math.random(5, 7)
         for i = 1, nb do
             local a = (i + rnd(-0.3, 0.3)) / nb * math.pi * 2
-            -- (rayo: zigzag desde cerca del centro hacia fuera)
-            local pts, r = {}, rnd(80, 100)                     -- (fuera del cuerpo)
-            local len = r + rnd(90, 160)
-            local px, py = math.cos(a + math.pi / 2), math.sin(a + math.pi / 2)
-            while r < len do
-                local j = (#pts % 2 == 0) and rnd(8, 18) or -rnd(8, 18)
-                pts[#pts + 1] = x + math.cos(a) * r + px * j
-                pts[#pts + 1] = y + (math.sin(a) * r + py * j) * 0.75
-                r = r + rnd(18, 30)
+            -- Onda de choque en zigzag IRREGULAR: pocos tramos largos con
+            -- quiebros bruscos y desiguales (a veces dos hacia el mismo lado),
+            -- gruesa en la raíz y afilada en la punta; a veces una grieta
+            -- lateral. (Antes: muchos zigzags pequeños iguales = parecían curvas)
+            local ca, sa = math.cos(a), math.sin(a)
+            local qx, qy = -sa, ca                               -- (perpendicular)
+            local function P(r, lat) return x + ca * r + qx * lat, y + (sa * r + qy * lat) * 0.75 end
+            local pts, r, lat = {}, rnd(78, 96), rnd(-4, 4)
+            local ax, ay = P(r, lat)
+            pts[1], pts[2] = ax, ay
+            local side = (math.random() < 0.5) and 1 or -1
+            for s = 1, math.random(3, 5) do
+                r = r + rnd(22, 46)
+                if math.random() < 0.75 then side = -side end
+                lat = side * rnd(6, 30)
+                local bx, by = P(r, lat)
+                pts[#pts + 1], pts[#pts + 2] = bx, by
+            end
+            local forks
+            if math.random() < 0.6 and #pts >= 6 then
+                -- (grieta: sale de un quiebro intermedio, en ángulo, 1-2 tramos)
+                local k = math.random(2, #pts / 2 - 1) * 2 - 1
+                local fa = a + ((math.random() < 0.5) and -1 or 1) * rnd(0.5, 0.9)
+                local fx, fy = pts[k], pts[k + 1]
+                local f = { fx, fy }
+                for _ = 1, math.random(1, 2) do
+                    local l = rnd(16, 30)
+                    fx, fy = fx + math.cos(fa) * l, fy + math.sin(fa) * l * 0.75
+                    fa = fa + rnd(-0.6, 0.6)
+                    f[#f + 1], f[#f + 2] = fx, fy
+                end
+                forks = { f }
             end
             local delay = rnd(0, 0.12)
-            add({ x = x, y = y, vx = 0, vy = 0, bolt = pts, life = delay + rnd(0.16, 0.3), delay = delay,
-                  size = 5, col = ({ {1, 1, 0.75}, {0.75, 0.95, 1} })[math.random(2)] })
+            add({ x = x, y = y, vx = 0, vy = 0, bolt = pts, forks = forks, life = delay + rnd(0.16, 0.3), delay = delay,
+                  size = 6, col = ({ {0.96, 0.91, 0.8}, {0.85, 0.74, 0.57}, {0.9, 0.82, 0.68} })[math.random(3)],
+                  edge = {0.24, 0.16, 0.1, 0.85} })          -- (hueso / arena: nada de "eléctrico")
         end
         for i = 1, 6 do
             add({ x = x + rnd(-20, 20), y = y + rnd(-10, 10), vx = rnd(-200, 200), vy = -rnd(60, 240), g = 900,
@@ -572,19 +596,23 @@ local function renderSpecial(p, camX, camY)
             end
         end
     elseif math.floor(lt * 30) % 3 ~= 2 then                     -- (parpadeo)
-        local pts, xy = p.bolt, {}
-        for i = 1, #pts, 2 do
-            xy[#xy + 1] = math.floor(pts[i] - camX)
-            xy[#xy + 1] = math.floor(pts[i + 1] - camY)
+        -- Tramo a tramo, cada vez más fino (afilado en la punta): borde oscuro
+        -- y núcleo claro
+        local function jag(pts, w0)
+            local n = #pts / 2 - 1
+            for pass = 1, 2 do
+                if pass == 1 then love.graphics.setColor(p.edge or {0.3, 0.15, 0.05, 0.85})
+                else love.graphics.setColor(c[1], c[2], c[3], 1) end
+                for i = 1, n do
+                    local w = math.max(1, math.floor(w0 * (1 - 0.65 * (i - 1) / n) + 0.5))
+                    love.graphics.setLineWidth(pass == 1 and w + 3 or w)
+                    love.graphics.line(math.floor(pts[2 * i - 1] - camX), math.floor(pts[2 * i] - camY),
+                                       math.floor(pts[2 * i + 1] - camX), math.floor(pts[2 * i + 2] - camY))
+                end
+            end
         end
-        if #xy >= 4 then
-            love.graphics.setLineWidth(p.size + 4)
-            love.graphics.setColor(0.3, 0.15, 0.05, 0.85)
-            love.graphics.line(xy)
-            love.graphics.setLineWidth(p.size)
-            love.graphics.setColor(c[1], c[2], c[3], 1)
-            love.graphics.line(xy)
-        end
+        if #p.bolt >= 4 then jag(p.bolt, p.size) end
+        for _, f in ipairs(p.forks or {}) do jag(f, math.max(2, p.size - 3)) end
     end
     love.graphics.setLineWidth(1)
     love.graphics.setLineStyle('smooth')

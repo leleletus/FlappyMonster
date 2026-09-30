@@ -24,7 +24,7 @@ local GAIN = {
     airGasp      = 0.85, waterWarning = 1.4,
     -- Mega Crabby (archivos ya comprimidos: subir poco por encima de 1 satura)
     megaStep     = 0.7,  megaClack  = 1.0,  megaHurt   = 1.1,  megaSlam   = 1.1,
-    megaWindup   = 0.78, megaShrink = 0.8,  megaFlee   = 0.9,  megaRoar = 0.58, megaFall = 0.8,
+    megaWindup   = 0.78, megaShrink = 0.8,  megaFlee   = 0.9,  megaRoar = 0.67, megaFall = 0.8,
     -- Espejo (tools/sounds/mirror.py)
     mirrorAppear = 0.62, mirrorPortal = 0.37, glassWarn = 0.85, glassRise = 0.72, glassHit = 0.72,
     -- tools/sounds/mechanics.py (medidos: → ≈ -12 dBFS)

@@ -210,34 +210,47 @@ def bubble(f0):
     return np.sin(2 * np.pi * np.cumsum(f) / SR) * env(len(tt), 0.001, 0.005)
 
 
-# Rugido de CANGREJO (entrada y descansos), no de león: estridulación (el
-# raspado rapidísimo de quitina contra quitina, cada vez más rápido y luego
-# frenando), espuma burbujeante, un siseo áspero por la boca, un fondo grave
-# que lo hace enorme y un castañeteo de pinzas al final
+# Rugido de CANGREJO GIGANTE (entrada y descansos): monstruoso pero de
+# cangrejo. Debajo, una GARGANTA enorme: gruñido distorsionado muy grave
+# (34-52 Hz) con el traqueteo de las mandíbulas (trémolo a ~23/s) y formantes
+# de una boca grande; encima, lo de cangrejo: estridulación (raspado de
+# quitina, más grave y fuerte), espuma burbujeante y siseo áspero. Crescendo
+# hasta el pico (0,5-0,9 s), chasquido de pinzas al empezar y al acabar.
 def roar():
-    d = 1.2
+    d = 1.25
     tt = t_(d)
-    shape = np.sin(np.pi * np.clip(tt / 1.0, 0, 1)) ** 0.6              # sube y baja (0-1 s)
+    # Forma: ataque, crece hasta el pico y cae
+    shape = np.clip(tt / 0.1, 0, 1) * (0.55 + 0.45 * np.clip((tt - 0.1) / 0.45, 0, 1)) \
+        * np.clip((d - tt) / 0.35, 0, 1)
     parts = [np.zeros(int(SR * d))]
-    # Estridulación: raspados de 18/s a 60/s y de vuelta
-    t = 0.04
-    i = 0
-    while t < 1.0:
-        s = np.sin(np.pi * t / 1.0) ** 0.6
-        parts.append(at(chitin(0.55 + 0.25 * s + 0.04 * (i % 2), 0.04) * (0.35 + 0.65 * s), t))
-        t += 1 / (18 + 42 * s)
+    # Garganta: tono que sube un poco y baja, diente de sierra + pulso, sub
+    f0 = 40 + 12 * np.sin(np.pi * np.clip(tt / 1.0, 0, 1)) ** 0.8 - 6 * np.clip((tt - 0.9) / 0.35, 0, 1)
+    ph = np.cumsum(f0) / SR
+    saw = 2 * (ph % 1) - 1
+    pulse = np.where((ph * 2 % 1) < 0.3, 1.0, -1.0)
+    chatter = 1 - 0.6 * (0.5 + 0.5 * np.sign(np.sin(2 * np.pi * 23 * tt + 1.3 * np.sin(2 * np.pi * 3 * tt))))
+    throat = (saw * 0.7 + pulse * 0.4) * chatter
+    mouth = reson(throat, 310, 3.5) * 1.2 + reson(throat, 680, 4) * 0.8 + lowpass(throat, 180) * 0.9
+    growl = np.tanh(mouth / (np.max(np.abs(mouth)) + 1e-9) * 3.2) * shape
+    sub = np.sin(2 * np.pi * ph) * shape * 0.8
+    # Estridulación grave: raspados de 16/s a 55/s y de vuelta
+    t, i = 0.03, 0
+    while t < 1.05:
+        k = np.sin(np.pi * min(1, t / 1.05)) ** 0.6
+        parts.append(at(chitin(0.38 + 0.18 * k + 0.03 * (i % 2), 0.05) * (0.4 + 0.6 * k), t))
+        t += 1 / (16 + 39 * k)
         i += 1
-    # Espuma: burbujas al azar, más densas en el centro
-    for _ in range(170):
-        t0 = rng.uniform(0.05, 1.0)
-        if rng.uniform() < np.sin(np.pi * t0) ** 0.8:
-            parts.append(at(bubble(rng.uniform(320, 1100)) * rng.uniform(0.25, 0.6), t0))
-    # Siseo por la boca (ruido de banda media con aspereza) y fondo grave
-    rasp = 1 + 0.5 * np.sign(np.sin(2 * np.pi * 34 * tt))
-    hiss = highpass(lowpass(noise(d), 2400), 450) * rasp * shape * 0.55
-    ph = np.cumsum(46 + 14 * shape) / SR
-    rumble = lowpass(np.where((ph % 1) < 0.5, 1.0, -1.0), 260) * shape * 0.55
-    parts += [hiss, rumble, at(clack() * 0.8, 1.0), at(chitin(1.1, 0.05) * 0.4, 1.06)]
+    # Espuma (más grave) y siseo áspero por la boca
+    for _ in range(120):
+        t0 = rng.uniform(0.08, 1.05)
+        if rng.uniform() < np.sin(np.pi * t0 / 1.1) ** 0.8:
+            parts.append(at(bubble(rng.uniform(200, 700)) * rng.uniform(0.2, 0.5), t0))
+    rasp = 1 + 0.6 * np.sign(np.sin(2 * np.pi * 29 * tt))
+    hiss = highpass(lowpass(noise(d), 2000), 300) * rasp * shape * 0.45
+    # Golpe al abrir la boca + pinzas al empezar y al acabar
+    boom = lowpass(noise(0.25), 160) * env(int(SR * 0.25), 0.003, 0.07) * 1.4
+    parts += [growl * 1.25, sub, hiss, boom, clack() * 0.6,
+              at(clack() * 0.8, 1.05), at(chitin(0.9, 0.05) * 0.45, 1.11)]
     return mix(*parts)
 
 

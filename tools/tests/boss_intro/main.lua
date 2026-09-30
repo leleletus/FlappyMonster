@@ -18,6 +18,9 @@
 --               dentro de la zona, de pie en suelo seguro, sin la cabeza en el
 --               agua y lejos del jefe (≥ 2 casillas de su cuerpo)
 --
+--   gp_subditos el segundo jugador hace ground pounds justo al lado de súbditos
+--               vivos (empujón + aturdido): ningún súbdito se mueve más de lo
+--               físicamente posible en un paso (antes "se teletransportaban")
 --   camara      durante la entrada la cámara no sigue a nadie: la misma para
 --               los dos jugadores y quieta, centrada en el jefe
 --   (Nave Malvada / Espejo: orden dormant → intro → ready → su estado de pelea,
@@ -88,6 +91,29 @@ function love.load()
     local spawnBad, spawnN, spawnMinGap, spawnMinBoss = 0, 0, math.huge, math.huge
     local wasSpawning = {}
     local spawns, nextKill = {}, nil
+    local lastPos, jumps, gps, worstJump = {}, {}, 0, 0
+    -- (DEBUG_JUMP=1: dice qué función movió de golpe a un súbdito)
+    if os.getenv('DEBUG_JUMP') then
+        local Crawler = require 'src/world/entities/Crawler'
+        local function wrap(tbl, name, getE)
+            local f = tbl[name]
+            tbl[name] = function(...)
+                local e = getE(...)
+                local x0, y0 = e.x, e.y
+                local r = { f(...) }
+                if e.summonOf and math.sqrt((e.x - x0) ^ 2 + (e.y - y0) ^ 2) > 30 then
+                    print(('  SALTO en %s: (%d,%d)→(%d,%d) estado=%s'):format(name, x0, y0, e.x, e.y, e.state))
+                    print(debug.traceback('', 2))
+                end
+                return unpack(r)
+            end
+        end
+        local Entity = require 'src/world/entities/Entity'
+        wrap(Entity, 'moveAndCollide', function(e) return e end)
+        wrap(Crawler, 'attach', function(e) return e end)
+        wrap(Crawler, 'move', function(e) return e end)
+    end
+    local nextGP = nil
     while t < (tonumber(os.getenv('SECS')) or 90) do
         t = t + dt
         local intro = z.state == 'intro'
@@ -162,6 +188,41 @@ function love.load()
                 end
             end
         end
+        -- Ground pound del jugador 2 junto a un súbdito vivo (cada 0.8 s)
+        -- (después de ver los 4 emotes: los ground pounds cambian la persecución)
+        if mega and fightT and z.state == 'fight' and #rests >= 4 then
+            nextGP = nextGP or t + 1
+            local pa = players[2]
+            if t >= nextGP and not pa.dying and pa.alive ~= false then
+                nextGP = t + 0.8
+                for _, e in ipairs(ents) do
+                    if e.summonOf and e.alive and e.state ~= 'spawning' and e.state ~= 'dead' then
+                        -- (encima del suelo que tenga, a 1,2 casillas del súbdito)
+                        local side = (math.random() < 0.5) and -1 or 1
+                        pa.x = math.max(z.x0 + 40, math.min(z.x1 - 40, e.x + side * 1.2 * T))
+                        pa.y, pa.vx, pa.vy = e.y - 60, 0, 0
+                        pa.onGround, pa.gpPhase, pa.gpT = false, 'fall', 0
+                        pa.invT = 5                    -- (que el jugador no muera aquí)
+                        gps = gps + 1
+                        break
+                    end
+                end
+            end
+        end
+        -- Ningún súbdito salta más de lo posible en un paso (caída máx. ~25 px)
+        for _, e in ipairs(ents) do
+            if e.summonOf then
+                local lp = lastPos[e]
+                if e.alive and lp and lp.alive and lp.state ~= 'reserve' and e.state ~= 'spawning' and lp.state ~= 'spawning' then
+                    local d = math.sqrt((e.x - lp.x) ^ 2 + (e.y - lp.y) ^ 2)
+                    worstJump = math.max(worstJump, d)
+                    if d > 40 then
+                        jumps[#jumps + 1] = ('%.1fs %s→%s %.0f px (%d,%d)→(%d,%d)'):format(t, lp.state, e.state, d, lp.x, lp.y, e.x, e.y)
+                    end
+                end
+                lastPos[e] = { x = e.x, y = e.y, alive = e.alive, state = e.state }
+            end
+        end
         -- Súbditos que acaban de salir: separados entre sí y del Mega
         local born = {}
         for _, e in ipairs(ents) do
@@ -183,7 +244,7 @@ function love.load()
                 if gb < 0 then spawnBad = spawnBad + 1 end
             end
         end
-        if (not mega or (#rests >= 4 and spawnN >= 6)) and #spawns >= 4 then break end
+        if (not mega or (#rests >= 4 and spawnN >= 6 and gps >= 20)) and #spawns >= 4 then break end
     end
     local want = mega and { 'dormant', 'fall_in', 'land_in', 'roar_in', 'ready', 'chase' }
                  or { 'dormant', 'intro', 'ready', boss.def.name == 'miniboss1' and 'patrol' or 'fight' }
@@ -226,6 +287,11 @@ function love.load()
     check('reaparece', okS and minD >= 2 * T,
         ('%d reapariciones; todas en la zona, de pie y secas=%s; la más cercana al jefe a %.1f casillas'):format(#spawns,
             tostring(okS), minD / T))
+    if mega then
+        check('gp_subditos', gps >= 10 and #jumps == 0,
+            ('%d ground pounds junto a súbditos; mayor salto en un paso %.0f px; saltos imposibles %d%s'):format(
+                gps, worstJump, #jumps, #jumps > 0 and (': ' .. table.concat(jumps, ' | ', 1, math.min(#jumps, 4))) or ''))
+    end
     if mega then check('invocar', spawnN >= 6 and spawnBad == 0,
         ('%d súbditos invocados (3 por vez, 6 máx.); separación mínima entre súbditos %.0f px, hueco mínimo con el Mega %.0f px; solapes %d'):format(
             spawnN, spawnMinGap, spawnMinBoss, spawnBad)) end

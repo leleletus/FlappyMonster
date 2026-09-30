@@ -469,11 +469,14 @@ function Entity:moveAndCollide(level, dx, dy)
             if body then touched, touchedFace = body, side end
             local d = (dx > 0) and -1 or 1
             self.vx = d * self.speed;  self.facing = d
+        -- Límite de la ruta: no pasa de él, pero si ya estaba fuera (un
+        -- trepador que salió de ella, un empujón...) no lo devuelve de golpe:
+        -- solo no se aleja más (antes saltaba al borde en un paso = "teletransporte")
         elseif not free and dx > 0 and x + hw >= self.rightBoundPx then
-            x = self.rightBoundPx - hw
+            x = math.max(math.min(self.x, x), self.rightBoundPx - hw)
             self.vx = -self.speed;  self.facing = -1
         elseif not free and dx < 0 and x - hw <= self.leftBoundPx then
-            x = self.leftBoundPx + hw
+            x = math.min(math.max(self.x, x), self.leftBoundPx + hw)
             self.vx =  self.speed;  self.facing = 1
         end
     end
