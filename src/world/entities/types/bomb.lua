@@ -1,8 +1,8 @@
 -- Bomba (viva): anda como un Gummy (a los lados, con o sin ruta, o volando),
--- sin casco. NO hace daño al tocarla: se la puede atravesar. Se enciende al
--- acercarse un jugador (triggerRange) o al tocarla; pisarla o el empujón de un
--- ground pound la patean (sale despedida, también fuera de su ruta) y se
--- enciende. Encendida parpadea cada vez más deprisa, se pone roja y explota
+-- sin casco. NO hace daño al tocarla y SOLO se enciende si la pisan o la
+-- patean (nunca por cercanía): tocarla andando = patada hacia donde iba el
+-- jugador; pisarla = rebote + patada; el empujón de un ground pound también.
+-- Pateada sale despedida (también fuera de su ruta) y se enciende. Encendida parpadea cada vez más deprisa, se pone roja y explota
 -- (ver entities/BombCore.lua y world/Explosions.lua).
 -- Sprites: assets/images/bomb/bomb-Sheet.png (4 cuadros 15x16: quieta, andar
 -- 1-2, a punto de explotar) + bomb-fuse-Sheet.png (mecha encendida) +
@@ -21,6 +21,8 @@ local Bomb = Entity.extend(Entity, {
     hitbox = { outerW = 0.6, outerH = 0.8, innerW = 0.44, innerH = 0.5 },
 })
 
+local KICK_CD = 0.35          -- s entre patadas (un empujón no cuenta como varias)
+
 local sheet, fuseSheet
 function Bomb.loadAssets()
     if sheet then return end
@@ -30,7 +32,7 @@ function Bomb.loadAssets()
 end
 function Bomb.sizePx() return Core.FW * GUMMY_SCALE, Core.FH * GUMMY_SCALE end
 
-function Bomb:init() self.kicked = false end
+function Bomb:init() self.kicked, self.kickCd = false, 0 end
 
 -- ── Reglas ────────────────────────────────────────────────────────────────────
 function Bomb:canBeStomped() return false end
@@ -51,6 +53,7 @@ function Bomb:interact(pa)
 end
 -- Pisada: sale pateada (lejos del jugador) y se enciende
 function Bomb:onBounced(pa)
+    self.kickCd = KICK_CD
     Core.kick(self, (self.x >= pa.x) and 1 or -1, 0.8)
 end
 -- Empujón de un ground pound cercano: igual
@@ -64,25 +67,30 @@ function Bomb:dieBurst()
 end
 
 -- ── Update ────────────────────────────────────────────────────────────────────
-function Bomb:updateCustom(dt, level)
-    if Core.update(self, dt, level) then return true end
-    if self.state == 'walk' or self.state == 'idle' then
-        -- Se enciende al tocarla o con un jugador cerca
-        local r = (self.props.triggerRange or 1.6) * TILE_PX
-        local near = false
-        if r > 0 then
-            for _, pa in ipairs(level.players or {}) do
-                if not pa.dying and pa.alive ~= false then
-                    local dx, dy = pa.x - self.x, pa.y - self.y
-                    if dx * dx + dy * dy <= r * r then near = true end
-                end
+-- Un jugador la toca (sin caerle encima): la patea hacia donde iba
+function Bomb:touchKick(level)
+    if self.kickCd > 0 or self.state == 'exploding' then return false end
+    local b = self:getOuterBounds()
+    for _, pa in ipairs(level.players or {}) do
+        if not pa.dying and pa.alive ~= false then
+            local o = pa:getOuterBounds()
+            if b.x < o.x + o.w and b.x + b.w > o.x and b.y < o.y + o.h and b.y + b.h > o.y
+               and not ((pa.vy or 0) >= 0 and o.y + o.h <= self.y + 4) then          -- (encima = pisotón)
+                local dir = (math.abs(pa.vx or 0) > 20) and ((pa.vx > 0) and 1 or -1)
+                            or ((self.x >= pa.x) and 1 or -1)
+                self.kickCd = KICK_CD
+                Core.kick(self, dir, 0.7)
+                return true
             end
         end
-        if near or Core.touched(self, level) then
-            Core.light(self)
-            return true
-        end
     end
+    return false
+end
+
+function Bomb:updateCustom(dt, level)
+    if self.kickCd > 0 then self.kickCd = math.max(0, self.kickCd - dt) end
+    if self:touchKick(level) then return true end
+    if Core.update(self, dt, level) then return true end
     return false                       -- (andar / volar: lo normal de Entity)
 end
 
@@ -94,21 +102,21 @@ function Bomb:render(camX, camY)
     local fx = self.x - camX
     local fy = self.y - camY + self.sprH / 2                           -- pies
     if self.flipped then fy = self.y - camY + self.sprH / 2 end
-    Core.draw(self, sheet, fuseSheet, Core.TIPS.bomb, fx, fy, s, frame, 1, camX, camY)
+    local bx, by = 1, 1
+    if self.state == 'idle' or self.state == 'walk' then bx, by = self:breatheScale() end   -- (como el Gummy)
+    Core.draw(self, sheet, fuseSheet, Core.TIPS.bomb, fx, fy, s, frame, 1, camX, camY, bx, by)
 end
 
 function Bomb.drawEditorOverlay(props, cx, cy, zoom)
-    Core.drawRadii(props, cx, cy, zoom, true)
+    Core.drawRadii(props, cx, cy, zoom, false)
 end
 
 local props = Core.props()
-table.insert(props, 1, { key='triggerRange', kind='number', label='Se enciende a (casillas)', group='Explosión',
-    default=1.6, min=0, max=8, step=0.1, help='Un jugador a esta distancia la enciende. 0 = solo al tocarla' })
 
 return {
     name = 'bomb', label = 'Bomba', category = 'Enemigos',
-    description = 'Anda como un Gummy (o vuela). No hace daño al tocarla: se enciende al acercarse o tocarla y '
-               .. 'explota (muerte cerca, daño y empujón más lejos; rompe bloques, cambia activadores).',
+    description = 'Anda como un Gummy (o vuela). No hace daño al tocarla: solo se enciende si la pisan o la patean '
+               .. '(tocarla la patea) y explota (muerte cerca, daño y empujón más lejos; rompe bloques, cambia activadores).',
     class = Bomb,
     defaults = { speed = 55, points = 0 },
     hide = { 'onTouch', 'stompable', 'points', 'dropOnSight', 'detectRange' },

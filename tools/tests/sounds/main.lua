@@ -4,10 +4,13 @@
 --  2. los sonidos de NAMES (por defecto, los nuevos) se reproducen: la fuente
 --     arranca y suena;
 --  3. volumen tras la ganancia de Sound.GAIN (tramo más fuerte de 100 ms, como
---     se midió la mezcla): debe quedar en [-15, -8] dBFS.
+--     se midió la mezcla): debe quedar en [-15, -8] dBFS (los de LOUD, grandes
+--     explosiones, hasta -4 dBFS).
 --
 --   tools/tests/run.sh sounds                       (NAMES=a,b,c para otros)
 io.stdout:setvbuf('no')
+-- Sonidos que PUEDEN ir más fuertes que el resto (explosiones grandes)
+LOUD = { bombBlast = true }
 love.filesystem.setSymlinksEnabled(true)
 require 'settings'
 Sound = require 'src/Sound'
@@ -82,7 +85,8 @@ function love.load()
             local playing = c:isPlaying(); c:stop()
             local g = Sound.GAIN[name] or 1
             local db = loudness(path, g)
-            check(playing and db >= -15 and db <= -8,
+            local top = LOUD[name] and -4 or -8
+            check(playing and db >= -15 and db <= top,
                 ('%-14s suena=%s  GAIN=%.2f  %.1f dBFS  (%s)'):format(name, tostring(playing), g, db, path))
         end
     end

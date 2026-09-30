@@ -15,7 +15,7 @@ from PIL import Image
 
 FORCE = '--force' in sys.argv
 DIR = 'assets/images/bomb'
-FUSE = (37, 37, 37, 255)                    # color de la mecha en las hojas
+FUSE = (164, 120, 72, 255)                  # color de la mecha en las hojas (cuerda; ver retouch_bomb.py)
 FW = 15
 
 

@@ -452,10 +452,14 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   idle, walk 1-2, about-to-explode), `*-fuse-Sheet.png` (lit fuse overlay, 8 frames = 2
   flicker variants) and `explosion-Sheet.png` (7 frames 48x48) from
   `tools/ui/make_bomb_sprites.py` (never overwrites; --force). Sounds bomb_ignite/fizz/blast/kick
-  (`tools/sounds/bomb.py`). Living bomb walks/flies like a Gummy (no helmet), NO contact
-  damage (walk through it); lights by proximity (`triggerRange`) or contact; stomping it = the
-  player bounces (`'bounce'` + new `e:onBounced(pa)` hook in Interactions) and it gets KICKED
-  (`Core.kick`: leaves its route) and lit; a GP shove (`knockback`) kicks + lights. States
+  (`tools/sounds/bomb.py`; the blast is in the harness `LOUD` list, up to −4 dBFS, RANGE 4;
+  the kick is metallic). The user's sheets were retouched by `tools/ui/retouch_bomb.py`
+  (1x2 eyes, metal cap, rope-coloured fuse; originals kept as `*-orig.png`). Living bomb
+  walks/flies like a Gummy (no helmet, breathes when idle), NO contact damage and NEVER lit by
+  proximity: touching it KICKS it in the player's walking direction (`touchKick`, cooldown
+  `KICK_CD`); stomping it = the player bounces (`'bounce'` + `e:onBounced(pa)` hook in
+  Interactions) and it is kicked; a GP shove (`knockback`) kicks too. A kick (`Core.kick`)
+  leaves the route and lights the fuse. States
   'lit' (physics, flashes frame 4↔1 faster and faster = `Core.litFrame`, turns red, fuse
   overlay + `fuse_spark` particles, bombFizz every 0.5 s) → 'exploding' (`Explosions.blast`,
   explosion sprite scaled to the hurt radius, fx `bomb_blast` + shake) → dead/gone. Bomb object:

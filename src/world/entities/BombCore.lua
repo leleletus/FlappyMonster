@@ -26,8 +26,8 @@ Core.FIZZ_EVERY = 0.5         -- s entre chisporroteos (bomb_fizz dura 0,5 s)
 Core.FW, Core.FH = 15, 16     -- cuadro de las hojas
 -- Punta de la mecha por cuadro (píxeles de la hoja; ver tools/ui/make_bomb_sprites.py)
 Core.TIPS = {
-    bomb   = { { 6, 1 }, { 4, 1 }, { 10, 1 }, { 6, 0 } },
-    object = { { 6, 2 }, { 4, 2 }, { 10, 2 }, { 6, 1 } },
+    bomb   = { { 6, 0 }, { 4, 0 }, { 10, 0 }, { 7, 0 } },
+    object = { { 6, 1 }, { 4, 1 }, { 10, 1 }, { 6, 0 } },
 }
 
 local explosionSheet
@@ -154,7 +154,7 @@ function Core.redness(t, fuse) return math.min(1, math.max(0, t / math.max(0.05,
 -- Dibuja la bomba (hoja `sheet`, mecha `fuseSheet`, puntas `tips`) con los pies
 -- en (fx, fy) de pantalla, escala s. frame = cuadro base cuando no arde.
 local Particles
-function Core.draw(self, sheet, fuseSheet, tips, fx, fy, s, frame, alpha, camX, camY)
+function Core.draw(self, sheet, fuseSheet, tips, fx, fy, s, frame, alpha, camX, camY, bx, by)
     local st, t = self.state, self.deadTimer or 0
     local now = love.timer.getTime()
     if st == 'exploding' then
@@ -170,19 +170,21 @@ function Core.draw(self, sheet, fuseSheet, tips, fx, fy, s, frame, alpha, camX, 
     local fuse = self.fuseT or self.props.fuseTime or 2.0
     if lit then frame = Core.litFrame(t, fuse) end
     local red = lit and Core.redness(t, fuse) or 0
-    local sx = s * (self.facing or 1)
+    -- (bx, by: "respiración" como el Gummy, anclada a los pies)
+    bx, by = bx or 1, by or 1
+    local sx, sy = s * (self.facing or 1) * bx, s * by
     love.graphics.setColor(1, 1 - 0.8 * red, 1 - 0.85 * red, alpha or 1)
     local cx = math.floor(fx)
-    local cy = math.floor(fy - Core.FH * s / 2)
-    sheet:draw(frame, cx, cy, 0, sx, s)
+    local cy = math.floor(fy - Core.FH * sy / 2)
+    sheet:draw(frame, cx, cy, 0, sx, sy)
     if lit then
         -- Mecha encendida (2 variantes que parpadean) y chispas en la punta
         love.graphics.setColor(1, 1, 1, alpha or 1)
         local v = math.floor(now * 14) % 2
-        fuseSheet:draw(frame + v * 4, cx, cy, 0, sx, s)
+        fuseSheet:draw(frame + v * 4, cx, cy, 0, sx, sy)
         local tip = tips[frame] or tips[1]
         local tx = cx + (tip[1] + 0.5 - Core.FW / 2) * sx
-        local ty = cy + (tip[2] + 0.5 - Core.FH / 2) * s
+        local ty = cy + (tip[2] + 0.5 - Core.FH / 2) * sy
         self._sparkT = self._sparkT or 0
         if not EDITOR_VIEW and now - self._sparkT > 0.05 then
             self._sparkT = now

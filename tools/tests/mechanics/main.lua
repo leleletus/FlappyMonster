@@ -26,7 +26,8 @@
 --   tramp_avanza   Crabby trepador que pisa un trampolín: sale lanzado hacia
 --                  delante y sigue andando (antes rebotaba en el sitio sin fin)
 --   tramp_pinchos  lanzado por un trampolín y cae en pinchos: revienta (dead_burst)
---   bomba_activa   bomba viva: un jugador cerca la enciende; atravesarla no hace daño
+--   bomba_activa   bomba viva: tener un jugador al lado NO la enciende; tocarla
+--                  andando la patea hacia donde iba y la enciende, sin daño
 --   bomba_pisada   pisar la bomba viva (con ruta): rebota, la bomba sale pateada
 --                  (fuera de su ruta) y se enciende; la bomba objeto igual
 --   bomba_radios   explosión con jugadores a 4 distancias: muere / -1 y empujón /
@@ -512,22 +513,27 @@ end
 function cases.bomba_activa()
     local level, es = bombRoom({ { type = 'bomb', col = 8, row = 8, props = { pauses = false, speed = 0 } } })
     local b = es[1]
-    stepEnts(level, es, 0.5)                             -- (se asienta, nadie cerca: quieta)
-    local before = b.state
-    -- un jugador que la atraviesa andando: no pierde vida
+    stepEnts(level, es, 0.5)
+    -- un jugador parado justo al lado: NO la enciende (nunca por cercanía)
+    local pn = PlayerAdventure:new(b.x - 0.9 * T, b.y)
+    level.players = { pn }
+    stepEnts(level, es, 1.0)
+    local near = b.state
+    -- otro que anda hacia ella: la patea hacia donde iba (derecha), sin daño
     local pa = playerAt(level, 5, 8)
     level.players = { pa }
-    local hp0 = pa.hp
+    local hp0, x0 = pa.hp, b.x
     clear(); stub.state.right = true
-    local litAt
+    local kickedAt
     for i = 1, 60 * 1.2 do
         pa:update(1 / 60, level)
         stepEnts(level, es, 1 / 60)
-        if b.state == 'lit' and not litAt then litAt = math.abs(pa.x - b.x) / T end
+        if b.state == 'lit' and not kickedAt then kickedAt = true end
     end
     clear()
-    check('bomba_activa', before ~= 'lit' and litAt and litAt <= 1.7 and pa.hp == hp0,
-        ('antes=%s; se enciende con el jugador a %.1f casillas; vida %d → %d'):format(before, litAt or -1, hp0, pa.hp))
+    check('bomba_activa', near ~= 'lit' and kickedAt and b.x - x0 > T and pa.hp == hp0,
+        ('jugador al lado: %s (no se enciende) · al tocarla: %s, pateada %.1f casillas hacia donde iba; vida %d → %d'):format(
+            near, b.state, (b.x - x0) / T, hp0, pa.hp))
 end
 
 function cases.bomba_pisada()
