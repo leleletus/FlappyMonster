@@ -13,7 +13,7 @@ return {
         love.graphics.setColor(0.62, 0.48, 0.20, 1)
         TileTypes.drawEdges(ctx, e, 2)
         -- Detalle interior solo en tiles aislados (todas las caras expuestas)
-        if e.top and e.bottom and e.left and e.right then
+        if e.top == true and e.bottom == true and e.left == true and e.right == true then
             love.graphics.setColor(0.28, 0.18, 0.04, 0.35)
             love.graphics.line(x+s/2, y+2, x+s/2, y+s-2)
             love.graphics.line(x+2, y+s/2, x+s-2, y+s/2)

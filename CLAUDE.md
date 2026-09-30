@@ -532,6 +532,12 @@ list no mode until the user places a Point Area in them).
 - Terrain tiles: `solid` (label **Piedra**, grey), `dirt` (**Tierra** 16, brown with
   pebbles), `grass` (**Césped** 17, green; blades drawn ABOVE the cell when its top is
   exposed), `border`. All `joinGroup='ground'`. Materials `dirt`, `grass`.
+- **Block joining = ONE rule** (`TileTypes.joinsCell` / `sideExposure` / `half`): big tiles,
+  subtiles and boss walls of the same `joinGroup` never draw a border between them. An edge
+  is `true` / `false` / `{a, b}` (half edges, when the neighbour cell has subtiles covering
+  only half the side; `drawEdges` and grass blades honour halves). Entities that draw as
+  blocks expose `e:joinsCell(c, r, group)` and are registered by `BossZones.link` in
+  `level.joinOverlay` (boss walls, only while 'solid'). Harness `subtiles` case `union`.
 - **Subtiles** (`src/world/SubTiles.lua`): quarter-cell versions of the tiles in
   `SubTiles.KINDS` ({'solid','dirt','grass'}; a new one = one name). JSON
   `"subtiles": [{col,row,sub 1..4,kind[,solid=false]}]` (solid by default; the editor

@@ -124,34 +124,86 @@ end
 -- ¿Qué aristas de la celda están expuestas? Una arista se oculta si el vecino
 -- pertenece al mismo joinGroup o es líquido (un bloque sumergido no dibuja el
 -- borde que mira al agua). Sin nivel (miniaturas) todas están expuestas.
+--
+-- UNA sola regla para todo lo que se dibuja como bloque (bloques grandes,
+-- mini bloques de src/world/SubTiles.lua y bloques de jefe): se unen si son
+-- del mismo joinGroup. Una arista puede estar expuesta entera (true), oculta
+-- (false) o solo a medias ({ primera, segunda } = mitad izquierda/arriba y
+-- derecha/abajo) cuando al otro lado hay mini bloques que cubren solo media.
+
+-- ¿Se une con `group` la celda (c, r)? Bloque grande del grupo, líquido, o un
+-- cuerpo que se dibuja como bloque (level.joinOverlay: bloques de jefe sólidos)
+function TileTypes.joinsCell(level, c, r, group)
+    local raw = level:getRaw(c, r)
+    local n = TileTypes.get(TileCodec.id(raw))
+    if (group and n.joinGroup == group) or n.mat.liquid or TileCodec.isWaterlogged(raw) then return true end
+    if group and level.joinOverlay then
+        for o in pairs(level.joinOverlay) do
+            if o.joinsCell and o:joinsCell(c, r, group) then return true end
+        end
+    end
+    return false
+end
+
+-- Mini bloques de la celda vecina que tocan cada mitad de la arista (cuartos:
+-- 1 arriba-izq, 2 arriba-der, 3 abajo-izq, 4 abajo-der)
+local SIDE = {
+    top    = { 0, -1, { 3, 4 } }, bottom = { 0, 1, { 1, 2 } },
+    left   = { -1, 0, { 2, 4 } }, right  = { 1, 0, { 1, 3 } },
+}
+-- Exposición de la arista `side` de la celda (c, r): true / false / {a, b}
+function TileTypes.sideExposure(level, c, r, side, group)
+    local d = SIDE[side]
+    local nc, nr = c + d[1], r + d[2]
+    if TileTypes.joinsCell(level, nc, nr, group) then return false end
+    local cells = group and level.subCells and level.subCells[nr * 65536 + nc]
+    if not cells then return true end
+    local function joined(i)
+        local s = cells[d[3][i]]
+        local def = s and TileTypes.byName[s.kind]
+        return def ~= nil and def.joinGroup == group
+    end
+    local a, b = not joined(1), not joined(2)
+    if a == b then return a end
+    return { a, b }
+end
+
+-- ¿Está expuesta la mitad `i` (1 o 2) de una arista? (true/false o {a, b})
+function TileTypes.half(v, i)
+    if type(v) == 'table' then return v[i] end
+    return v and true or false
+end
+
 function TileTypes.edges(t, ctx)
     if ctx.edges then return ctx.edges end
     local level = ctx.level
     if not level or not t.joinGroup then
         return { top = true, bottom = true, left = true, right = true }
     end
-    local function hidden(c, r)
-        local raw = level:getRaw(c, r)
-        local n = TileTypes.get(TileCodec.id(raw))
-        return n.joinGroup == t.joinGroup or n.mat.liquid or TileCodec.isWaterlogged(raw)
-    end
-    local col, row = ctx.col, ctx.row
+    local col, row, g = ctx.col, ctx.row, t.joinGroup
     return {
-        top    = not hidden(col,   row-1),
-        bottom = not hidden(col,   row+1),
-        left   = not hidden(col-1, row),
-        right  = not hidden(col+1, row),
+        top    = TileTypes.sideExposure(level, col, row, 'top', g),
+        bottom = TileTypes.sideExposure(level, col, row, 'bottom', g),
+        left   = TileTypes.sideExposure(level, col, row, 'left', g),
+        right  = TileTypes.sideExposure(level, col, row, 'right', g),
     }
 end
 
--- Dibuja un borde de `thick` px en las aristas expuestas.
+-- Dibuja un borde de `thick` px en las aristas (o medias aristas) expuestas.
 function TileTypes.drawEdges(ctx, edges, thick)
     local x, y, s = ctx.x, ctx.y, ctx.size
     thick = thick or 2
-    if edges.top    then love.graphics.rectangle('fill', x,           y,           s, thick) end
-    if edges.bottom then love.graphics.rectangle('fill', x,           y+s-thick,   s, thick) end
-    if edges.left   then love.graphics.rectangle('fill', x,           y,           thick, s) end
-    if edges.right  then love.graphics.rectangle('fill', x+s-thick,   y,           thick, s) end
+    local h1 = math.floor(s / 2)
+    local h2 = s - h1
+    local half, rect = TileTypes.half, love.graphics.rectangle
+    if half(edges.top, 1)    then rect('fill', x,      y,         h1, thick) end
+    if half(edges.top, 2)    then rect('fill', x + h1, y,         h2, thick) end
+    if half(edges.bottom, 1) then rect('fill', x,      y+s-thick, h1, thick) end
+    if half(edges.bottom, 2) then rect('fill', x + h1, y+s-thick, h2, thick) end
+    if half(edges.left, 1)   then rect('fill', x,         y,      thick, h1) end
+    if half(edges.left, 2)   then rect('fill', x,         y + h1, thick, h2) end
+    if half(edges.right, 1)  then rect('fill', x+s-thick, y,      thick, h1) end
+    if half(edges.right, 2)  then rect('fill', x+s-thick, y + h1, thick, h2) end
 end
 
 -- Colores de las partículas que suelta al golpearlo / romperlo: los del

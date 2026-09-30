@@ -104,9 +104,8 @@ local function hiddenTowards(level, def, gx, gy)
         local n = TileTypes.byName[s.kind]
         return n.joinGroup ~= nil and n.joinGroup == def.joinGroup
     end
-    local raw = level:getRaw(col, row)
-    local n = TileTypes.get(TileCodec.id(raw))
-    return (n.joinGroup ~= nil and n.joinGroup == def.joinGroup) or n.mat.liquid or TileCodec.isWaterlogged(raw)
+    -- (misma regla que los bloques grandes: bloque del grupo, líquido o bloque de jefe)
+    return TileTypes.joinsCell(level, col, row, def.joinGroup)
 end
 
 local function edgesOf(level, def, gx, gy)

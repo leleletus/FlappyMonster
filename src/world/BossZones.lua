@@ -108,6 +108,12 @@ function BossZones.link(level, entities)
     for _, z in ipairs(zones) do z.bosses = {} end
     for _, e in pairs(entities) do
         if e.wantsLevel then e.levelRef = level end
+        -- Cuerpos que se dibujan como bloques (bloques de jefe): los bloques de
+        -- al lado se unen con ellos (TileTypes.joinsCell)
+        if e.joinsCell then
+            level.joinOverlay = level.joinOverlay or setmetatable({}, { __mode = 'k' })
+            level.joinOverlay[e] = true
+        end
         if e.def and e.def.boss then
             local want, zone = e.props.zone or 0, nil
             for _, z in ipairs(zones) do

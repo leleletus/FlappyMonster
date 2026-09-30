@@ -448,7 +448,7 @@ function Mirror:updateBoss(dt, level)
             -- HandlePlayerRevive: InitializeQueues (vuelve a grabar desde cero)
             self.state, self.deadTimer = 'fight', 0
             self.memoryFrom = self.clock
-            if self:glassDanger(level) and self.target then self:toPlatforms(level) end
+            if self:glassDanger(level) then self:toPlatforms(level) end
         end
         return
     elseif st == 'ko' then
@@ -456,7 +456,7 @@ function Mirror:updateBoss(dt, level)
         self:runBody(dt, level, 0)
         if self.deadTimer >= self.koDur and b.onGround then
             self.state, self.deadTimer = 'fight', 0
-            if self:glassDanger(level) and self.target then self:toPlatforms(level) end
+            if self:glassDanger(level) then self:toPlatforms(level) end
         end
         return
     end
@@ -465,7 +465,7 @@ function Mirror:updateBoss(dt, level)
     -- Aviso o cristales: deja de copiar y se va a las plataformas
     if st == 'fight' and self:glassDanger(level) and b.onGround and not b.gpPhase then
         self:chooseTarget(level, 0)
-        if self.target then return self:toPlatforms(level) end
+        return self:toPlatforms(level)          -- (aunque no haya objetivo: nunca en el suelo)
     end
 
     -- ── 'fight' ──────────────────────────────────────────────────────────────
@@ -748,7 +748,7 @@ function Mirror:updateAttack(dt, level)
         self:runBody(dt, level, 0)
         if self.deadTimer >= (self.props.recoverTime or RECOVER_T) then
             self.chainLeft = (self.chainLeft or 1) - 1
-            if self:glassDanger(level) and self.target then return self:toPlatforms(level) end
+            if self:glassDanger(level) then return self:toPlatforms(level) end
             if self.chainLeft > 0 and self.target then return self:startWarp(level) or true end
             self.state, self.deadTimer = 'fight', 0
             self.memoryFrom = self.clock          -- (vuelve a copiar desde ahora)

@@ -28,10 +28,13 @@ return {
             for i = 1, n do
                 local b = BLADES[((ctx.col or 1) * 5 + i * 3) % #BLADES + 1]
                 local bx = x + math.floor(b[1] * s / 16)
-                love.graphics.setColor(0.24, 0.52, 0.19, 1)
-                love.graphics.rectangle('fill', bx, y - b[2] * p, p, b[2] * p)
-                love.graphics.setColor(0.46, 0.78, 0.32, 1)
-                love.graphics.rectangle('fill', bx, y - b[2] * p, p, p)
+                -- (solo en la mitad de arriba que da al aire: la otra la tapa un mini bloque)
+                if TileTypes.half(e.top, b[1] < 8 and 1 or 2) then
+                    love.graphics.setColor(0.24, 0.52, 0.19, 1)
+                    love.graphics.rectangle('fill', bx, y - b[2] * p, p, b[2] * p)
+                    love.graphics.setColor(0.46, 0.78, 0.32, 1)
+                    love.graphics.rectangle('fill', bx, y - b[2] * p, p, p)
+                end
             end
         end
     end,

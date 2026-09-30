@@ -15,7 +15,6 @@
 
 local Entity    = require 'src/world/entities/Entity'
 local TileTypes = require 'src/world/tiles/TileTypes'
-local TileCodec = require 'src/world/tiles/TileCodec'
 
 local BW = Entity.extend(Entity, { debugColor = { 0.6, 0.6, 0.7 },
     hitbox = { outerW = 1, outerH = 1, innerW = 1, innerH = 1 } })
@@ -49,6 +48,14 @@ function BW:getOuterBounds() return { x = self.x0, y = self.y0, w = self.x1 - se
 function BW:getInnerBounds() return self:getOuterBounds() end
 
 function BW:isSolidBody() return self.alive and self.state == 'solid' end
+
+-- Se dibuja como bloques de piedra: sólido, los bloques 'ground' de al lado
+-- (grandes, mini bloques y otros bloques de jefe) se unen con él sin borde
+-- (TileTypes.joinsCell; BossZones.link lo apunta en level.joinOverlay)
+function BW:joinsCell(c, r, group)
+    return group == 'ground' and self.alive and self.state == 'solid'
+       and c >= self.c0 and c <= self.c1 and r >= self.r0 and r <= self.r1
+end
 function BW:canBeStomped() return false end
 function BW:canBeKnocked() return false end
 function BW:canBeLaunched() return false end
@@ -137,11 +144,6 @@ end
 
 -- ── Dibujo: como un bloque normal (mismos colores y bordes) ──────────────────
 local solidDef
-local function groundAt(level, c, r)
-    if not level then return false end
-    local n = TileTypes.get(TileCodec.id(level:getRaw(c, r)))
-    return n.joinGroup == 'ground'
-end
 
 -- Cada casilla aparece / desaparece con un poco de retraso según su posición
 local function cellK(self, c, r, t, dur, appearing)
@@ -174,11 +176,18 @@ function BW:render(camX, camY)
                 love.graphics.setColor(0.28, 0.28, 0.32, a)
                 love.graphics.rectangle('fill', ox, oy, sz, sz)
                 love.graphics.setColor(0.46, 0.46, 0.52, a)
+                -- Aristas: solo las de fuera del rectángulo, con la regla de todos
+                -- los bloques (piedra grande, mini bloques y otros bloques de jefe)
+                local function side(inside, name)
+                    if inside then return false end
+                    if not level then return true end
+                    return TileTypes.sideExposure(level, c, r, name, 'ground')
+                end
                 local e = {
-                    top    = r == self.r0 and not groundAt(level, c, r - 1),
-                    bottom = r == self.r1 and not groundAt(level, c, r + 1),
-                    left   = c == self.c0 and not groundAt(level, c - 1, r),
-                    right  = c == self.c1 and not groundAt(level, c + 1, r),
+                    top    = side(r > self.r0, 'top'),
+                    bottom = side(r < self.r1, 'bottom'),
+                    left   = side(c > self.c0, 'left'),
+                    right  = side(c < self.c1, 'right'),
                 }
                 if k < 1 then e = { top = true, bottom = true, left = true, right = true } end
                 TileTypes.drawEdges({ x = ox, y = oy, size = sz }, e, 2)

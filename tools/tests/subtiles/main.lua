@@ -17,6 +17,9 @@
 --                fuera del bloque, con su material, y acaban quietas en el suelo
 --   inundacion   una inundación tapa (tiñe) un bloque rompible que queda debajo
 --   editor       guardar y cargar en el editor: se conservan (y solid=false)
+--   union        los bloques del mismo grupo se unen sin borde sea cual sea su tamaño:
+--                grande ↔ mini bloques (arista entera o media arista), césped/tierra,
+--                bloques de jefe entre sí y con la piedra (solo sólidos)
 --   dibujo       Level:render con tierra, césped y subtiles no da errores
 -- SHOT=1: además guarda <save>/subtiles.png a tamaño real.
 --
@@ -277,6 +280,52 @@ function cases.editor()
             a and a.kind or '-', b and b.kind or '-', tostring(b and b.solid == false), tostring(noSolidKey)))
 end
 
+function cases.union()
+    local BossZones = require 'src/world/BossZones'
+    local subs = { S(6, 5, 1), S(6, 5, 3),              -- piedra pequeña: toda la columna izquierda
+                   S(6, 3, 1),                          -- solo el cuarto de arriba
+                   S(6, 7, 1, 'dirt'), S(6, 7, 3, 'dirt'),
+                   S(5, 1, 3, 'grass'),                 -- césped pequeño sobre la mitad izquierda
+                   S(9, 3, 2), S(9, 3, 4) }             -- piedra pequeña junto a un bloque de jefe
+    local put = { { 5, 5, 'solid' }, { 5, 3, 'solid' }, { 5, 7, 'dirt' }, { 5, 2, 'grass' }, { 14, 3, 'solid' } }
+    local ents = { { type = 'bosswall', col = 10, row = 3, props = { corner = { col = 11, row = 4 } } },
+                   { type = 'bosswall', col = 12, row = 3, props = { corner = { col = 13, row = 4 } } } }
+    local level, es = room(20, 11, put, subs, ents)
+    BossZones.link(level, es)
+    local g = 'ground'
+    local ex = TileTypes.sideExposure
+    local function eq(v, w)
+        if type(v) == 'table' and type(w) == 'table' then return v[1] == w[1] and v[2] == w[2] end
+        return v == w
+    end
+    local res = {}
+    local function t(name, got, want) res[#res + 1] = { name, eq(got, want), got } end
+    t('piedra→mini', ex(level, 5, 5, 'right', g), false)
+    t('piedra→media', ex(level, 5, 3, 'right', g), { false, true })
+    t('tierra→mini', ex(level, 5, 7, 'right', g), false)
+    t('césped→mini', ex(level, 5, 2, 'top', g), { false, true })
+    -- Bloques de jefe: ocultos no se unen; sólidos se unen entre sí, con la piedra y con los mini
+    t('jefe oculto', ex(level, 14, 3, 'left', g), true)
+    for _, e in ipairs(es) do e.state = 'solid' end
+    t('jefe↔jefe', ex(level, 11, 3, 'right', g), false)
+    t('piedra→jefe', ex(level, 14, 3, 'left', g), false)
+    t('jefe→piedra', ex(level, 13, 3, 'right', g), false)
+    t('mini→jefe', TileTypes.joinsCell(level, 10, 3, g), true)
+    t('jefe→mini', ex(level, 10, 3, 'left', g), false)
+    -- Bloque de jefe que baja hasta el suelo (fila 10 = suelo de la sala)
+    local w3 = Entities.create({ type = 'bosswall', col = 16, row = 7, props = { corner = { col = 16, row = 10 } } })
+    w3.state = 'solid'; level.joinOverlay[w3] = true
+    t('suelo→jefe', ex(level, 15, 10, 'right', g), false)
+    t('jefe→suelo', ex(level, 16, 10, 'bottom', g), false)
+    local ok, parts = true, {}
+    for _, r in ipairs(res) do
+        ok = ok and r[2]
+        local v = type(r[3]) == 'table' and ('{' .. tostring(r[3][1]) .. ',' .. tostring(r[3][2]) .. '}') or tostring(r[3])
+        parts[#parts + 1] = r[1] .. '=' .. v .. (r[2] and '' or '(MAL)')
+    end
+    check('union', ok, table.concat(parts, ' '))
+end
+
 local function scene()
     local subs = {}
     -- escalera de piedra pequeña, repisa de tierra, matas de césped y una decorativa
@@ -286,15 +335,26 @@ local function scene()
     subs[#subs + 1] = S(9, 6, 1, 'grass'); subs[#subs + 1] = S(9, 6, 2, 'grass')
     subs[#subs + 1] = S(13, 9, 3, 'grass'); subs[#subs + 1] = S(13, 9, 4, 'grass', false)
     subs[#subs + 1] = S(16, 7, 1, 'solid', false)
+    -- (unión: piedra grande con piedra pequeña a media arista, y junto a bloques de jefe)
+    subs[#subs + 1] = S(4, 3, 1); subs[#subs + 1] = S(4, 3, 3); subs[#subs + 1] = S(4, 2, 3)
+    subs[#subs + 1] = S(9, 3, 2); subs[#subs + 1] = S(9, 3, 4)
     local put = {}
     for c = 2, 19 do put[#put + 1] = { c, 10, c < 7 and 'solid' or (c < 12 and 'dirt' or 'grass') } end
     for c = 15, 18 do put[#put + 1] = { c, 9, 'grass' } end
     put[#put + 1] = { 17, 8, 'dirt' }; put[#put + 1] = { 17, 7, 'grass' }
+    put[#put + 1] = { 2, 3, 'solid' }; put[#put + 1] = { 3, 3, 'solid' }; put[#put + 1] = { 14, 3, 'solid' }
     -- rompibles a medio tapar por una inundación (a la derecha)
     put[#put + 1] = { 15, 8, 'breakable' }; put[#put + 1] = { 18, 8, 'breakable' }
-    local level = room(20, 11, put, subs, { { type = 'flood', col = 14, row = 2, props = { corner = { col = 19, row = 9 },
-                                            startLevel = 2.5, maxLevel = 2.5 } } })
+    local level, es = room(20, 11, put, subs, { { type = 'flood', col = 14, row = 5, props = { corner = { col = 19, row = 9 },
+                                            startLevel = 2.5, maxLevel = 2.5 } },
+        { type = 'bosswall', col = 10, row = 2, props = { corner = { col = 11, row = 4 } } },
+        { type = 'bosswall', col = 12, row = 2, props = { corner = { col = 13, row = 4 } } },
+        -- (como en las arenas: el bloque de jefe baja hasta la fila del suelo, pegado a él)
+        { type = 'bosswall', col = 7, row = 7, props = { corner = { col = 7, row = 10 } } } })
     require('src/world/Floods').setTime(level, 0)
+    require('src/world/BossZones').link(level, es)
+    for _, e in ipairs(es) do if e.def.name == 'bosswall' then e.state = 'solid' end end
+    level.sceneEntities = es
     return level
 end
 
@@ -314,7 +374,7 @@ end
 local shot
 function love.load()
     for _, n in ipairs({ 'de_pie', 'medio_pie', 'pared', 'decorativa', 'cabeza', 'crabby', 'caida',
-                         'part_suelo', 'part_agua', 'part_color', 'debris_pared', 'inundacion', 'editor', 'dibujo' }) do cases[n]() end
+                         'part_suelo', 'part_agua', 'part_color', 'debris_pared', 'inundacion', 'editor', 'union', 'dibujo' }) do cases[n]() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
     if not os.getenv('SHOT') then love.event.quit(fails == 0 and 0 or 1); return end
     love.window.setMode(1280, 720)
@@ -334,6 +394,7 @@ function love.draw()
     love.graphics.setCanvas(shot.canvas)
     love.graphics.clear(0.35, 0.6, 0.85)
     shot.level:render(0, 0)
+    for _, e in ipairs(shot.level.sceneEntities or {}) do if e.def.name == 'bosswall' then e:render(0, 0) end end
     Particles.render(0, 0)
     love.graphics.setCanvas()
     shot.level:renderWaterEffect(0, 0, shot.canvas)
