@@ -7,8 +7,9 @@
 #   assets/images/ui/ping/ping-Sheet.png    antena de conexión, 5 cuadros de 20x12:
 #                                           0 = sin conexión (X roja), 1 roja, 2-3 amarillas, 4 verdes
 # Los PNG que salen son los que carga el juego: se pueden retocar a mano
-# (Aseprite...) sin volver a ejecutar esto. Ejecutar desde la raíz del repo:
-#     python3 tools/ui/make_sprites.py
+# (Aseprite...) sin volver a ejecutar esto: NO pisa los que ya existen
+# (--force para rehacerlos). Ejecutar desde la raíz del repo:
+#     python3 tools/ui/make_sprites.py [--force]
 import os
 from PIL import Image
 
@@ -22,7 +23,15 @@ YD = (196, 150, 20, 255)       # pulsado, sombra
 _ = None
 
 
+import sys
+FORCE = '--force' in sys.argv
+
+
 def save(img, path):
+    # (no pisa un PNG que ya existe: el usuario los retoca a mano. --force = rehacer)
+    if os.path.exists(path) and not FORCE:
+        print('  ' + path + ' ya existe (retocado a mano?): no se toca (--force para rehacerlo)')
+        return
     os.makedirs(os.path.dirname(path), exist_ok=True)
     img.save(path)
     print('  ' + path, img.size)

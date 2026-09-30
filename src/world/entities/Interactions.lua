@@ -159,6 +159,7 @@ function Interactions.run(pa, entities, cb, rewind)
             if e.onHelmetBounce then e:onHelmetBounce(pa) end
         elseif result == 'bounce' then
             pa:bounce(a, b)
+            if e.onBounced then e:onBounced(pa) end         -- (bombas: salen pateadas)
         elseif result == 'recoil' then
             pa:recoil(a)
         elseif result == 'launch' then

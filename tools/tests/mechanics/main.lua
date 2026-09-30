@@ -26,8 +26,20 @@
 --   tramp_avanza   Crabby trepador que pisa un trampolín: sale lanzado hacia
 --                  delante y sigue andando (antes rebotaba en el sitio sin fin)
 --   tramp_pinchos  lanzado por un trampolín y cae en pinchos: revienta (dead_burst)
+--   bomba_activa   bomba viva: un jugador cerca la enciende; atravesarla no hace daño
+--   bomba_pisada   pisar la bomba viva (con ruta): rebota, la bomba sale pateada
+--                  (fuera de su ruta) y se enciende; la bomba objeto igual
+--   bomba_radios   explosión con jugadores a 4 distancias: muere / -1 y empujón /
+--                  solo empujón / nada (y los invulnerables, nada)
+--   bomba_mundo    explosión: rompe bloques rompibles (solo cerca), cambia un
+--                  activador, echa a un Gummy cercano, aturde a uno más lejos y
+--                  enciende otra bomba (reacción en cadena)
+--   bomba_objeto   quieta: tocarla no hace daño (se enciende); lanzada contra el
+--                  jugador: -1 y aturdido
 --   ping_icono     antena de conexión online: niveles (verde/amarillo/rojo/X) y que
 --                  no parpadee (mejorar espera 0,6 s; perder la conexión, al momento)
+-- SHOT_BOMB=1: <save>/mechanics_bombs.png (bombas andando, volando, encendidas
+-- a distintos tiempos, objeto y explosión).
 -- SHOT=1: además guarda <save>/mechanics.png (bloques, invisible visible,
 -- Gummies con y sin casco) a tamaño real.
 --
@@ -482,6 +494,146 @@ function cases.tramp_pinchos()
         ('revienta=%s fantasma=%s desaparece=%s'):format(tostring(burst), tostring(ghost), tostring(not c.alive)))
 end
 
+-- ── Bombas ────────────────────────────────────────────────────────────────────
+local function bombRoom(ents, put)
+    local level, es = room(24, 9, put or {}, ents)
+    level.players = {}
+    return level, es
+end
+local function stepEnts(level, es, secs, each)
+    for _ = 1, math.floor(secs * 60) do
+        level.solidBodies = Entities.solidBodies(es)
+        for _, e in ipairs(es) do if e.alive then e:update(1 / 60, level) end end
+        for _, pa in ipairs(level.players) do Interactions.run(pa, es, {}) end
+        if each then each() end
+    end
+end
+
+function cases.bomba_activa()
+    local level, es = bombRoom({ { type = 'bomb', col = 8, row = 8, props = { pauses = false, speed = 0 } } })
+    local b = es[1]
+    stepEnts(level, es, 0.5)                             -- (se asienta, nadie cerca: quieta)
+    local before = b.state
+    -- un jugador que la atraviesa andando: no pierde vida
+    local pa = playerAt(level, 5, 8)
+    level.players = { pa }
+    local hp0 = pa.hp
+    clear(); stub.state.right = true
+    local litAt
+    for i = 1, 60 * 1.2 do
+        pa:update(1 / 60, level)
+        stepEnts(level, es, 1 / 60)
+        if b.state == 'lit' and not litAt then litAt = math.abs(pa.x - b.x) / T end
+    end
+    clear()
+    check('bomba_activa', before ~= 'lit' and litAt and litAt <= 1.7 and pa.hp == hp0,
+        ('antes=%s; se enciende con el jugador a %.1f casillas; vida %d → %d'):format(before, litAt or -1, hp0, pa.hp))
+end
+
+function cases.bomba_pisada()
+    local parts, ok = {}, true
+    for _, kind in ipairs({ 'bomb', 'bombobject' }) do
+        local level, es = bombRoom({ { type = kind, col = 8, row = 8,
+            props = { pauses = false, speed = 0, patrol = { left = 7, right = 9 }, fuseTime = 5 } } })
+        local b = es[1]
+        stepEnts(level, es, 0.4)
+        local pa = PlayerAdventure:new(b.x - 30, b.y - 90)
+        level.players = { pa }
+        pa.vy = 300
+        local bounced, x0 = false, b.x
+        for i = 1, 60 do
+            pa:update(1 / 60, level)
+            stepEnts(level, es, 1 / 60)
+            if os.getenv('TRACE_BOMB') and i % 4 == 0 then print(('    %s t=%d x=%d y=%d vx=%d vy=%d suelo=%s %s'):format(kind, i, b.x, b.y, b.vx, b.vy, tostring(b.onGround), b.state)) end
+            if pa.vy < -100 and not bounced then bounced = true end
+        end
+        local moved = math.abs(b.x - x0) / T
+        local good = bounced and b.state == 'lit' and moved > 1 and pa.hp == pa.hpMax
+        ok = ok and good
+        parts[#parts + 1] = ('%s: rebota=%s %s, pateada %.1f casillas'):format(kind, tostring(bounced), b.state, moved)
+    end
+    check('bomba_pisada', ok, table.concat(parts, ' · '))
+end
+
+-- Enciende la bomba `b` con mecha corta y avanza hasta que explote
+local function detonate(level, es, b, secs)
+    require('src/world/entities/BombCore').light(b, 0.1)
+    local exploded = false
+    stepEnts(level, es, secs or 0.5, function() if b.state == 'exploding' then exploded = true end end)
+    return exploded
+end
+
+function cases.bomba_radios()
+    local level, es = bombRoom({ { type = 'bombobject', col = 12, row = 8 } })
+    local b = es[1]
+    stepEnts(level, es, 0.3)
+    -- jugadores a 0.6, 1.8, 3.0 y 5 casillas (borde de su caja), y uno invulnerable a 0.6
+    local function at(d, side)
+        local pa = PlayerAdventure:new(0, 0)
+        local ob = pa:getOuterBounds()
+        pa.x = b.x + side * (d * T + (pa.x - ob.x))
+        pa.y = b.y
+        return pa
+    end
+    local p1, p2, p3, p4, p5 = at(0.6, -1), at(1.8, 1), at(3.0, -1), at(5, 1), at(0.6, 1)
+    p5.invT = 3
+    level.players = { p1, p2, p3, p4, p5 }
+    local ex = detonate(level, es, b, 0.3)
+    local r = ('muy cerca: muere=%s · medio: vida %d/%d vx %d · lejos: vida %d vx %d · fuera: vx %d · invulnerable cerca: muere=%s'):format(
+        tostring(p1.dying), p2.hp, p2.hpMax, p2.vx, p3.hp, p3.vx, p4.vx, tostring(p5.dying))
+    check('bomba_radios', ex and p1.dying and p2.hp == p2.hpMax - 1 and p2.vx > 200 and p3.hp == p3.hpMax
+          and p3.vx < -100 and math.abs(p4.vx) < 1 and not p5.dying and p5.hp == p5.hpMax, r)
+end
+
+function cases.bomba_mundo()
+    local level, es = bombRoom({
+        { type = 'bombobject', col = 12, row = 8 },
+        { type = 'gummy', col = 10, row = 8, props = { pauses = false, speed = 0 } },
+        { type = 'crabby', col = 15, row = 8, props = { pauses = false, speed = 0 } },
+        { type = 'bombobject', col = 14, row = 8, props = { fuseTime = 3 } },
+    }, { { 12, 6, 'breakable' }, { 11, 7, 'breakable' }, { 20, 7, 'breakable' }, { 13, 7, 'switch_on' } })
+    local b, g, c, b2 = es[1], es[2], es[3], es[4]
+    stepEnts(level, es, 0.3)
+    detonate(level, es, b, 0.25)
+    local near, nearB, far = name(level, 12, 6), name(level, 11, 7), name(level, 20, 7)
+    local sw = name(level, 13, 7)
+    local gs, cs = g.state, c.state
+    local chain = false
+    stepEnts(level, es, 1.5, function() if b2.state == 'exploding' then chain = true end end)
+    check('bomba_mundo', near ~= 'breakable' and nearB ~= 'breakable' and far == 'breakable' and sw == 'switch_off'
+          and gs == 'dead_fling' and cs == 'stunned' and chain,
+        ('bloques cerca: %s,%s lejos: %s · activador: %s · gummy: %s · crabby: %s · cadena: %s'):format(
+            near, nearB, far, sw, gs, cs, tostring(chain)))
+end
+
+function cases.bomba_objeto()
+    local level, es = bombRoom({ { type = 'bombobject', col = 10, row = 8, props = { fuseTime = 5 } } })
+    local b = es[1]
+    stepEnts(level, es, 0.3)
+    local pa = playerAt(level, 8, 8)
+    level.players = { pa }
+    clear(); stub.state.right = true
+    for _ = 1, 50 do pa:update(1 / 60, level); stepEnts(level, es, 1 / 60) end
+    clear()
+    local stillOk = pa.hp == pa.hpMax and b.state == 'lit'
+    -- otra, lanzada contra un jugador
+    local level2, es2 = bombRoom({ { type = 'bombobject', col = 4, row = 4, props = { fuseTime = 5 } } })
+    local b2 = es2[1]
+    local pb = playerAt(level2, 8, 8)
+    level2.players = { pb }
+    local tt = 0.6                                 -- (tiro parabólico que le cae encima en 0,6 s)
+    b2:throw((pb.x - b2.x) / tt, (pb.y - b2.y - 0.5 * ADV_GRAVITY * tt * tt) / tt, false)
+    local hit, stunned = false, false
+    for _ = 1, 60 do
+        pb:update(1 / 60, level2)
+        stepEnts(level2, es2, 1 / 60)
+        if pb.hp < pb.hpMax and not hit then hit = true; stunned = (pb.stunT or 0) > 0 end
+    end
+    check('bomba_objeto', stillOk and hit and stunned and b2.state == 'lit',
+        ('quieta: vida %d/%d, %s · lanzada: golpea=%s aturde=%s, %s'):format(pa.hp, pa.hpMax, b.state,
+            tostring(hit), tostring(stunned), b2.state))
+end
+
 function cases.ping_icono()
     local PingIcon = require 'src/ui/PingIcon'
     local L = PingIcon.level
@@ -565,12 +717,40 @@ function cases.puffer_dry()
     check('puffer_dry', not pa.inWater and f.state == 'walk', ('jugador en el agua=%s, pez=%s'):format(tostring(pa.inWater), f.state))
 end
 
+-- SHOT_BOMB=1: bombas en todos sus estados → <save>/mechanics_bombs.png
+local function bombShot()
+    local Core = require 'src/world/entities/BombCore'
+    local level, es = bombRoom({
+        { type = 'bomb', col = 3, row = 8, props = { pauses = false, speed = 40 } },
+        { type = 'bomb', col = 6, row = 8, props = { speed = 0, fuseTime = 2 } },
+        { type = 'bomb', col = 9, row = 8, props = { speed = 0, fuseTime = 2 } },
+        { type = 'bomb', col = 12, row = 8, props = { speed = 0, fuseTime = 2 } },
+        { type = 'bombobject', col = 15, row = 8, props = { fuseTime = 2 } },
+        { type = 'bomb', col = 3, row = 4, props = { movement = 'fly', speed = 40 } },
+        { type = 'bombobject', col = 20, row = 8, props = { fuseTime = 2 } },
+    })
+    stepEnts(level, es, 0.4)
+    local times = { [2] = 0.2, [3] = 1.2, [4] = 1.85, [5] = 1.0 }
+    for i, t in pairs(times) do Core.light(es[i], 2); es[i].deadTimer = t end
+    es[7].state, es[7].deadTimer = 'exploding', 0.15
+    local canvas = love.graphics.newCanvas(24 * T, 9 * T)
+    love.graphics.setCanvas(canvas)
+    love.graphics.clear(0.45, 0.62, 0.8, 1)
+    level:render(0, 0)
+    for _, e in ipairs(es) do if e.alive then e:render(0, 0) end end
+    love.graphics.setCanvas()
+    canvas:newImageData():encode('png', 'mechanics_bombs.png')
+    print('captura bombas: ' .. love.filesystem.getSaveDirectory() .. '/mechanics_bombs.png')
+end
+
 local shot
 function love.load()
     for _, n in ipairs({ 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
                          'helmet_jump', 'helmet_ride', 'helmet_gp', 'helmet_side', 'stomp_fast',
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'boxed_in',
-                         'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono' }) do cases[n]() end
+                         'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
+                         'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto' }) do cases[n]() end
+    if os.getenv('SHOT_BOMB') then bombShot() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
     if not os.getenv('SHOT') then love.event.quit(fails == 0 and 0 or 1); return end
     -- Escena para la captura

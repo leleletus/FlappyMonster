@@ -233,7 +233,8 @@ src/world/
                        miniboss1 (Nave Malvada), megacrabby (Mega Crabby),
                        trampoline (4 defs: up/down/left/right),
                        crabbytramp (Crabby trampolín, subclass of crabby),
-                       flood (editor-only placeholder for a Floods area)
+                       flood (editor-only placeholder for a Floods area),
+                       bomb / bombobject (bombs, see Bombs), bossglass, bosswall
   AutoScroll.lua       auto-scrolling camera levels (see below)
   Floods.lua           rising/falling water areas (see below)
   BossZones.lua        boss arenas (see below)
@@ -381,7 +382,7 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   'stomp' with 4th return dirX = cnx → `pa:bounce(vy, dirX, soft=true)` (vx 300 +
   ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill; v17: crawler turn in snapshots; v18: MegaCrabby;
   v19: boss walls, Mega minions/pounce; v20: post-hit protection; v21: unified invulnerability;
-  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks; v30: boss broken glass; v31: special enemy deaths).
+  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks; v30: boss broken glass; v31: special enemy deaths; v32: bombs).
 - **Crawler** (`src/world/entities/Crawler.lua`): surface-following movement
   (floor ↔ walls ↔ ceiling, concave and convex corners) for Crabbies with prop
   `wallWalk` (`Crabby.WALL_PROP`, off by default so old levels don't change).
@@ -445,6 +446,29 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   water, air used; events: daño/muerte with a guessed cause ahogado/pincho/pez/enemigo,
   reaparece, checkpoint, meta). `src/PlayRecorder.lua`, hooked in AdventureState. To
   analyse how the user plays a level (editor → F5 also records).
+- **Bombs** (`types/bomb.lua` living bomb, Enemigos; `types/bombobject.lua` Bomba objeto,
+  Objetos; shared `entities/BombCore.lua`; effects `src/world/Explosions.lua`). Sprites
+  `assets/images/bomb/`: `bomb-Sheet.png` / `bombObject-Sheet.png` (user's, 4 frames 15x16:
+  idle, walk 1-2, about-to-explode), `*-fuse-Sheet.png` (lit fuse overlay, 8 frames = 2
+  flicker variants) and `explosion-Sheet.png` (7 frames 48x48) from
+  `tools/ui/make_bomb_sprites.py` (never overwrites; --force). Sounds bomb_ignite/fizz/blast/kick
+  (`tools/sounds/bomb.py`). Living bomb walks/flies like a Gummy (no helmet), NO contact
+  damage (walk through it); lights by proximity (`triggerRange`) or contact; stomping it = the
+  player bounces (`'bounce'` + new `e:onBounced(pa)` hook in Interactions) and it gets KICKED
+  (`Core.kick`: leaves its route) and lit; a GP shove (`knockback`) kicks + lights. States
+  'lit' (physics, flashes frame 4↔1 faster and faster = `Core.litFrame`, turns red, fuse
+  overlay + `fuse_spark` particles, bombFizz every 0.5 s) → 'exploding' (`Explosions.blast`,
+  explosion sprite scaled to the hurt radius, fx `bomb_blast` + shake) → dead/gone. Bomb object:
+  physics only (falls, bounces off walls, trampolines), lights on contact, harmless when still;
+  FALLING (vy > 260) or THROWN (`throw(vx, vy, lit, fuse)`, for a future boss) → `'hurt'` 1 HP +
+  `onHurtPlayer` stun; a kick never hurts the kicker. Launched onto spikes = it lights (short).
+  **Explosions.blast(level, x, y, {kill, hurt, push} tiles, source)** — authoritative (SP +
+  server): players (distance to their box) kill → `die()`, hurt → 1 HP + push, push → push
+  only (`launch`, weaker farther; invulnerability protects); enemies ('Enemigos') hurt →
+  `dieFling`, push → `knockback`; other bombs → `onBlast` (kick + short fuse = chain);
+  breakable blocks within the hurt radius break, ON/OFF Activators toggle. Clients get all of
+  it from snapshots/tile+fx+sound events. Editor overlay: the 3 radii (+ trigger range).
+  Harnesses `mechanics` (bomba_*), `online_smoke WATCH=bomb` (arena `bombas.json`).
 - **Special deaths** (`Entity:dieFling(dir)` / `dieBurst()`, states `dead_fling` /
   `dead_burst`, `Entity.SPECIAL_DEATH`): already dead, ghosts (no interactions), fly through
   everything, end like 'dead' (`finishDeath`: respawn or gone). Drawn from state + deadTimer

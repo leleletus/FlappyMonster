@@ -438,6 +438,33 @@ function Particles.emit(kind, x, y, opts)
             add({ x = x + rnd(-20, 20), y = y + rnd(-10, 10), vx = rnd(-200, 200), vy = -rnd(60, 240), g = 900,
                   life = rnd(0.4, 0.7), size = 3, col = {0.85, 0.95, 1} })
         end
+    elseif kind == 'fuse_spark' then
+        -- Chispas de la mecha encendida (saltan hacia arriba y se apagan)
+        for i = 1, 2 do
+            add({ x = x, y = y, vx = rnd(-80, 80), vy = -rnd(60, 200), g = 500, life = rnd(0.15, 0.35),
+                  size = math.random(1, 2) * 2, col = ({ {1, 0.95, 0.6}, {1, 0.7, 0.2}, {1, 0.4, 0.1} })[math.random(3)] })
+        end
+    elseif kind == 'bomb_blast' then
+        -- Explosión de una bomba (el sprite lo dibuja la bomba): onda, cascotes
+        -- ardientes, chispas y humo
+        add({ x = x, y = y, vx = 0, vy = 0, shock = true, r0 = 20, r1 = 190, life = 0.35, size = 10,
+              col = {1, 0.92, 0.7} })
+        for i = 1, 26 do
+            local a = rnd(0, math.pi * 2)
+            local sp = rnd(200, 650)
+            add({ x = x, y = y, vx = math.cos(a) * sp, vy = math.sin(a) * sp - 200, g = 1300,
+                  life = rnd(0.5, 1.0), size = math.random(1, 3) * 3, chunk = true, fadeLast = 0.3, spin = rnd(-16, 16),
+                  col = ({ {1, 0.85, 0.3}, {1, 0.5, 0.15}, {0.25, 0.2, 0.2}, {0.95, 0.95, 0.95} })[math.random(4)] })
+        end
+        for i = 1, 14 do
+            local a = rnd(0, math.pi * 2)
+            add({ x = x, y = y, vx = math.cos(a) * rnd(250, 600), vy = math.sin(a) * rnd(250, 600),
+                  g = 500, life = rnd(0.2, 0.45), size = 8, star = true, col = {1, 0.9, 0.5} })
+        end
+        for i = 1, 12 do
+            add({ x = x + rnd(-30, 30), y = y + rnd(-30, 30), vx = rnd(-50, 50), vy = -rnd(30, 110), g = -40,
+                  life = rnd(0.8, 1.4), size = math.random(4, 6) * 3, col = {0.3, 0.28, 0.3}, drag = 2, dust = true })
+        end
     elseif kind == 'enemy_burst' then
         -- ¡Revienta! (enemigo lanzado que cae en pinchos): destello, muchos
         -- pedazos de caparazón que giran y lo atraviesan todo, humo y chispas

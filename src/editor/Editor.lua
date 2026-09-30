@@ -147,6 +147,15 @@ local function drawEntThumb(t, x, y, w, h, flipY)
     if t.editor and t.editor.draw then
         local s = math.min(w, h)
         t.editor.draw(x + (w - s) / 2, y + (h - s) / 2, s)
+    elseif t.editor and t.editor.frameW then
+        -- Hoja de animación (editor.frameW): solo el primer cuadro
+        local i = entThumb(t)
+        if not i then return end
+        local fw, fh = t.editor.frameW, i:getHeight()
+        t._thumbQuad = t._thumbQuad or love.graphics.newQuad(0, 0, fw, fh, i:getWidth(), fh)
+        local sc = math.min(w / fw, h / fh)
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.draw(i, t._thumbQuad, x + w / 2, y + h / 2, 0, sc, flipY and -sc or sc, fw / 2, fh / 2)
     else
         drawImageFit(entThumb(t), x, y, w, h, flipY)
     end
