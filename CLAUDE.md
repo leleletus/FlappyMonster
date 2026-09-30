@@ -13,8 +13,9 @@ Quick syntax check of everything: `for f in $(git ls-files '*.lua' | grep -v res
 
 ## Communication (user preference, IMPORTANT)
 
-Reply to the user in ENGLISH, as short as possible (save tokens): results, numbers,
-what's left. No long explanations or recaps unless asked. Code comments stay Spanish.
+Chat replies to the user ONLY: ENGLISH, as short as possible (save tokens): results,
+numbers, what's left. Explain in detail only when the user asks. This does NOT apply to
+code, comments (Spanish), commits, docs or game text — those keep their usual rules.
 
 ## Golden rules
 
