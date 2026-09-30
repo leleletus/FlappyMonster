@@ -31,22 +31,25 @@
 #   57-72 el final: Si – Do# – Re# – Re# (×4)
 #   Batería: bombo en tresillo (corcheas 0, 3 y 5), caja en 2 y 4, hi-hat en
 #   corcheas; el break en negras.
-import os, sys, wave
+import os, sys
 import numpy as np
 
-SR = 44100
+sys.path.insert(0, os.path.dirname(__file__))
+from famicom import (SR, FPS, CPU, FRAME_S, frames_for, t_, Chan, fr, hz, q_pulse, q_tri, q_vrc6, q_saw, q_n163,
+                     play, per_sample, render_pulse, render_tri, render_saw, render_noise, dpcm, wavetable,
+                     render_wave, Noise, pulse_dac, tnd_dac, OCT, band_power, write_wav)   # (motor de Famicom)
+
 BPM = 185
 E = 60.0 / BPM / 2                 # s por corchea
 BAR = 8 * E
 NBARS = 144                        # 72 × 2 vueltas (como el original)
-FPS = 60.0988                      # frames del driver (NTSC)
-CPU = 1789773.0
 HERE = os.path.dirname(__file__)
 OUT = os.path.join(HERE, '..', '..', 'assets', 'music')
 # (partitura y MIDI de Musescore: con copyright, solo en local — tools/music/ref/ está en .gitignore)
 MIDI_IN = os.path.join(HERE, 'ref', 'tentacle-tantrum-fall-guys-ss3s9.mid')
 NAME = 'tentacle_nes'
 rng = np.random.default_rng(2020)
+NF = frames_for(NBARS * BAR)
 
 # ── Armonía (del original, por compás; una lista = por mitades) ──────────────
 MAJ, MIN = (0, 4, 7), (0, 3, 7)
@@ -80,177 +83,12 @@ def section(bar):
 
 
 # ── Motor NES ────────────────────────────────────────────────────────────────
-def hz(m):
-    return 440.0 * 2 ** ((m - 69) / 12)
-
-
-def q_pulse(f):                      # frecuencia real del pulso (periodo de 11 bits)
-    t = np.clip(np.round(CPU / (16 * f) - 1), 8, 2047)
-    return CPU / (16 * (t + 1))
-
-
-def q_tri(f):
-    t = np.clip(np.round(CPU / (32 * f) - 1), 2, 2047)
-    return CPU / (32 * (t + 1))
-
-
-def q_vrc6(f):                       # (12 bits)
-    t = np.clip(np.round(CPU / (16 * f) - 1), 8, 4095)
-    return CPU / (16 * (t + 1))
-
-
-def q_saw(f):
-    t = np.clip(np.round(CPU / (14 * f) - 1), 8, 4095)
-    return CPU / (14 * (t + 1))
-
-
-NF = int(NBARS * BAR * FPS) + int(FPS * 2)
-FRAME_S = SR / FPS
-
-
-class Chan:
-    """Registros por frame: frecuencia (Hz), volumen (0-15), duty"""
-    def __init__(self):
-        self.f = np.zeros(NF)
-        self.v = np.zeros(NF)
-        self.d = np.full(NF, 0.5)
-
-
-def fr(t):
-    return int(round(t * FPS))
-
-
-def play(chn, t0, t1, m, inst, q=q_pulse, vs=1.0, arp=None, release=3):
-    """Una nota con su instrumento: envolvente de volumen, duty, vibrato y
-    arpegio frame a frame (como un driver de NES/FamiTracker)"""
-    a, b = fr(t0), max(fr(t0) + 1, fr(t1))
-    env = inst['vol']
-    for k in range(a, min(NF, b + release)):
-        i = k - a
-        if k < b:
-            vol = env[i] if i < len(env) else inst.get('sus', env[-1])
-        else:                                                     # soltar
-            vol = (env[min(i, len(env) - 1)] if i < len(env) else inst.get('sus', env[-1])) * (1 - (k - b + 1) / (release + 1))
-        semi = 0.0
-        vd, vdep, vrate = inst.get('vib', (0, 0, 0))
-        if vdep and i >= vd:
-            semi += vdep * np.sin(2 * np.pi * vrate * (i - vd) / FPS)
-        if arp:
-            semi += arp[(i // inst.get('arp_speed', 1)) % len(arp)]
-        if inst.get('drop') and i < len(inst['drop']):
-            semi += inst['drop'][i]
-        chn.f[k] = q(hz(m + semi))
-        chn.v[k] = min(15, round(vol * vs)) if k < b else round(vol * vs)
-        dseq = inst.get('duty', 0.5)
-        chn.d[k] = dseq[min(i, len(dseq) - 1)] if isinstance(dseq, (list, tuple)) else dseq
-
-
-def polyblep(t, dt):
-    y = np.zeros_like(t)
-    m = t < dt
-    x = t[m] / dt[m]
-    y[m] = x + x - x * x - 1
-    m2 = t > 1 - dt
-    x = (t[m2] - 1) / dt[m2]
-    y[m2] = x * x + x + x + 1
-    return y
-
-
-def per_sample(arr):
-    idx = (np.arange(int(NF * FRAME_S)) / FRAME_S).astype(int)
-    return arr[np.minimum(idx, NF - 1)]
-
-
-def render_pulse(chn):
-    f, v, d = per_sample(chn.f), per_sample(chn.v), per_sample(chn.d)
-    dt = f / SR
-    ph = np.cumsum(dt) % 1.0
-    sq = np.where(ph < d, 1.0, -1.0)
-    sq += polyblep(ph, np.maximum(dt, 1e-9))
-    sq -= polyblep((ph - d) % 1.0, np.maximum(dt, 1e-9))
-    return (sq * 0.5 + 0.5) * v                                  # 0..15 (como el DAC)
-
-
-TRI32 = np.concatenate([np.arange(15, -1, -1), np.arange(0, 16)]).astype(float)
-
-
-def render_tri(chn):
-    f, on = per_sample(chn.f), per_sample(chn.v) > 0
-    dt = np.where(on, f / SR, 0.0)                               # parado: se queda en su paso
-    ph = np.cumsum(dt) % 1.0
-    return TRI32[(ph * 32).astype(int) % 32]
-
-
-def render_saw(chn):
-    """Sierra del VRC6: 7 pasos de un acumulador (se oye escalonada)"""
-    f, v = per_sample(chn.f), per_sample(chn.v)
-    dt = f / SR
-    ph = np.cumsum(dt) % 1.0
-    step = np.floor(ph * 7) / 6.0
-    s = step - polyblep(ph, np.maximum(dt, 1e-9)) * 0.5
-    return s * v * 2.0                                           # 0..~31
-
-
-NOISE_PER = [4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068]
-
-
-def lfsr(short):
-    reg, out = 1, []
-    n = 93 if short else 32767
-    for _ in range(n):
-        tap = 6 if short else 1
-        fb = (reg & 1) ^ ((reg >> tap) & 1)
-        reg = (reg >> 1) | (fb << 14)
-        out.append(reg & 1)
-    return np.array(out, float)
-
-
-LFSR_LONG, LFSR_SHORT = lfsr(False), lfsr(True)
-
-
-def render_noise(per, vol, short):
-    p, v, s = per_sample(per), per_sample(vol), per_sample(short)
-    rate = CPU / np.array(NOISE_PER)[p.astype(int)] / SR
-    pos = np.cumsum(rate)
-    a = LFSR_LONG[pos.astype(np.int64) % len(LFSR_LONG)]
-    b = LFSR_SHORT[pos.astype(np.int64) % len(LFSR_SHORT)]
-    return np.where(s > 0, b, a) * v
-
-
-def dpcm(x, rate=33144.0):
-    """Codifica en DPCM de 1 bit (±2 sobre 7 bits) y decodifica: el sonido real
-    de las muestras del NES"""
-    n = int(len(x) * rate / SR)
-    src = np.interp(np.arange(n) * SR / rate, np.arange(len(x)), x)
-    lvl, out = 64, np.zeros(n)
-    tgt = 64 + src * 60
-    for i in range(n):
-        if tgt[i] > lvl and lvl <= 125: lvl += 2
-        elif tgt[i] < lvl and lvl >= 2: lvl -= 2
-        out[i] = lvl
-    idx = (np.arange(int(n * SR / rate)) * rate / SR).astype(int)
-    return out[np.minimum(idx, n - 1)] - 64
-
-
-def t_(n):
-    return np.arange(n) / SR
-
-
 # ── Ondas del Namco 163 (tablas de 32 muestras de 4 bits) ────────────────────
 # Hechas con la HUELLA de los instrumentos del original: fuerza de cada
 # armónico medida en el ogg sobre las notas del MIDI (mediana de decenas de
 # notas por sección; ver el final del archivo). El N163 es un chip de
 # expansión real de la Famicom: así el timbre se parece al original sin dejar
 # de ser 4 bits.
-def wavetable(harm, seed=3):
-    t = np.arange(32) / 32
-    ph = np.random.default_rng(seed).uniform(0, 2 * np.pi, len(harm))
-    ph[0] = 0
-    w = sum(a * np.sin(2 * np.pi * (k + 1) * t + ph[k]) for k, a in enumerate(harm))
-    w = (w - w.min()) / (w.max() - w.min() + 1e-9)
-    return np.round(w * 15)                                     # 0..15 (4 bits)
-
-
 WAVES = [
     wavetable([1.0, 1.2, 0.65, 0.6, 0.25, 0.5, 0.08, 0.1]),       # 0 melodía del riff y el break
     wavetable([1.0, 1.1, 0.8, 0.65, 0.1, 0.45, 0.07, 0.2]),       # 1 estribillo
@@ -259,14 +97,6 @@ WAVES = [
     wavetable([1.0, 0.39, 0.02, 0.06, 0.0, 0.07]),                # 4 bajo (redondo: seno + un poco de octava)
 ]
 WAVE_OF = {'A': 0, 'BR': 0, 'B': 1, 'C': 2, 'D': 3}
-
-
-def render_wave(chn):
-    """Canal del N163: lee su tabla (chn.d = índice de la onda) a su frecuencia"""
-    f, v, d = per_sample(chn.f), per_sample(chn.v), per_sample(chn.d)
-    ph = np.cumsum(f / SR) % 1.0
-    tab = np.array(WAVES)[d.astype(int), (ph * 32).astype(int) % 32]
-    return (tab - 7.5) / 7.5 * v                                  # ±15
 
 
 # ── Batería (medida en el original) ──────────────────────────────────────────
@@ -299,10 +129,6 @@ I_PAD = {'vol': [4, 5, 5], 'sus': 5, 'duty': 0.25, 'arp_speed': 2}
 I_SAW = {'vol': [12, 12, 11, 11, 10], 'sus': 10, 'vib': (14, 0.22, 5.6)}
 
 
-def q_n163(f):
-    return f                                                     # (el N163 afina muy fino: 18 bits)
-
-
 # ── MIDI de referencia ───────────────────────────────────────────────────────
 def load_midi():
     import mido
@@ -333,27 +159,12 @@ def voices(notes):
     return top, low
 
 
-class Noise:
-    def __init__(self):
-        self.per, self.vol, self.short = np.zeros(NF), np.zeros(NF), np.zeros(NF)
-
-    def hit(self, t, per, vols, short=0):
-        a = fr(t)
-        for i, v in enumerate(vols):
-            if a + i < NF:
-                self.per[a + i] = per if not isinstance(per, list) else per[min(i, len(per) - 1)]
-                self.vol[a + i], self.short[a + i] = v, short
-
-    def render(self):
-        return render_noise(self.per, self.vol, self.short)
-
-
 # ── Arreglo ──────────────────────────────────────────────────────────────────
 def arrange():
     rh, lh = load_midi()
     top, low = voices(rh)
-    C = {k: Chan() for k in ('lead', 'p2', 'tri', 'bass', 'v1', 'v2', 'saw')}
-    NZ = {k: Noise() for k in ('hat', 'snare', 'crash')}
+    C = {k: Chan(NF) for k in ('lead', 'p2', 'tri', 'bass', 'v1', 'v2', 'saw')}
+    NZ = {k: Noise(NF) for k in ('hat', 'snare', 'crash')}
     NS = int(NF * FRAME_S) + SR
     DM = {'kick': np.zeros(NS), 'snare': np.zeros(NS)}
     ev = {k: [] for k in ('p1', 'p2', 'tri', 'v1', 'saw', 'drums')}
@@ -481,22 +292,14 @@ def arrange():
 # original ≈ suma de las de los instrumentos (mínimos cuadrados con límites,
 # para que nada desaparezca ni se dispare). Así el equilibrio melodía /
 # percusión / bajo es el del original, no el de "todo a tope".
-def pulse_dac(p):
-    return np.where(p > 0, 95.88 / (8128.0 / np.maximum(p, 1e-6) + 100), 0.0)
-
-
-def tnd_dac(x):
-    return np.where(x > 0, 159.79 / (1.0 / np.maximum(x, 1e-9) + 100), 0.0)
-
-
 def stems(C, NZ, DM):
     n = int(NBARS * BAR * SR)
     cut = lambda x: x[:n] - np.mean(x[:n])
     return {
-        'lead':  cut(render_wave(C['lead']) * 0.0075),
+        'lead':  cut(render_wave(C['lead'], WAVES) * 0.0075),
         'saw':   cut(render_saw(C['saw']) * 0.0075),
         'p2':    cut(pulse_dac(render_pulse(C['p2']))),
-        'bass':  cut(render_wave(C['bass']) * 0.0075),
+        'bass':  cut(render_wave(C['bass'], WAVES) * 0.0075),
         'tri':   cut(tnd_dac(render_tri(C['tri']) / 8227.0)),
         'v1':    cut(render_pulse(C['v1']) * 0.0075),
         'v2':    cut(render_pulse(C['v2']) * 0.0075),
@@ -507,19 +310,11 @@ def stems(C, NZ, DM):
     }
 
 
-OCT = [(40, 63), (63, 125), (125, 250), (250, 500), (500, 1000), (1000, 2000), (2000, 4000), (4000, 8000), (8000, 16000)]
 SECS = {'A': (1, 16), 'BR': (17, 24), 'B': (25, 40), 'C': (41, 56), 'D': (57, 72)}
 # Límites de la ganancia (× la de partida): la melodía puede bajar mucho, la
 # percusión y el bajo subir mucho, y nada se apaga del todo
 BOUNDS = {'lead': (0.15, 1.5), 'saw': (0.1, 1.5), 'p2': (0.1, 1.5), 'bass': (0.3, 6), 'tri': (0.3, 4),
           'v1': (0.2, 1.6), 'v2': (0.2, 1.6), 'kick': (0.5, 8), 'snare': (0.3, 8), 'hat': (0.3, 6), 'crash': (0.2, 3)}
-
-
-def band_power(x, a, b):
-    from scipy.signal import welch
-    seg = x[int(a * SR):int(b * SR)]
-    f, P = welch(seg, fs=SR, nperseg=8192)
-    return np.array([P[(f >= lo) & (f < hi)].sum() for lo, hi in OCT])
 
 
 def fit_gains(S):
@@ -570,12 +365,6 @@ def mix(C, NZ, DM, report=True):
     # Nivel como el original (RMS ≈ 0.19): limitador suave
     y = y / (np.sqrt(np.mean(y ** 2)) + 1e-9) * 0.19
     return np.tanh(y * 1.4) / 1.4
-
-
-def write_wav(path, x):
-    with wave.open(path, 'wb') as w:
-        w.setnchannels(2); w.setsampwidth(2); w.setframerate(SR)
-        w.writeframes((np.clip(x, -1, 1) * 32767).astype('<i2').tobytes())
 
 
 def write_midi(path, ev):

@@ -162,7 +162,15 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     notes (one wave per section); drums from measured curves (kick 275→160 Hz then
                     F#2, a deep ~47 Hz boom in the break, very short bright snare); per-instrument gains
                     FITTED (bounded least squares) so each section's octave-band spectrum matches the
-                    original's, then percussion raised to its percussive/harmonic ratio (0.21). Notes from the Musescore MIDI
+                    original's, then percussion raised to its percussive/harmonic ratio (0.21).
+                    `tools/music/famicom.py` = the shared Famicom engine (Chan/play driver, 2A03/VRC6/
+                    N163 renderers, noise, DPCM, DAC curves, band_power); the NES generators import it.
+                    `tools/music/boss_nes.py` → `boss_nes_intro.ogg` + `boss_nes_loop.ogg` (+ .mid; catalog
+                    `boss_nes`, intro+loop): "Boss Battle" rebuilt WITHOUT a score — notes from basic-pitch
+                    (Spotify's polyphonic transcriber, ONNX, run from a separate Python 3.11 venv; validated
+                    on Tentacle Tantrum: 80 % of the melody, 77 % of the bass) VOTED across repeated bars,
+                    tables embedded in the script; power chords = VRC6 saw + pulses (5th, bright octave) +
+                    slow-clock noise for the distortion "fizz"; gains fitted per octave band (±3 dB). Notes from the Musescore MIDI
                     (`tools/music/ref/`, local only, copyrighted, gitignored), everything the MIDI lacks
                     or gets wrong from the ogg analysis: drums (tresillo kick tuned to F#2, snare 2&4,
                     four-on-the-floor break), chords per half bar, and the finale's B–C#–D# bass.
