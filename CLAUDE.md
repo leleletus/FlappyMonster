@@ -238,7 +238,7 @@ src/world/
   AutoScroll.lua       auto-scrolling camera levels (see below)
   Floods.lua           rising/falling water areas (see below)
   BossZones.lua        boss arenas (see below)
-  Decorations.lua (+decorations/)  foliage registry
+  Decorations.lua (+decorations/)  foliage registry (see Decorations below)
   Modes.lua (+modes/)  online game modes: hunt, race, koth (ModeTypes.lua documents the API)
   PointAreas.lua       point zones (King of the Hill), see below
 src/network/
@@ -658,6 +658,25 @@ started with `{ level, returnTo = 'free_play' }`: AdventureState game over and
 PauseState "exit" go back to `returnTo` (Pause looks at the state under it). Level
 thumbnails live in canvases → `love.resize` clears `ModeSelectMenu` previews.
 Harness `free_play`.
+
+## Decorations (`src/world/Decorations.lua`, JSON `foliage`)
+
+Render-only (client + editor; the server builds them but never draws). `placement` = 'sub'
+(sprite 8 art px wide = 32 px, anchored bottom-centre of the quarter) or 'cell' (16 px wide
+= 64, bottom-centre of the cell; taller ones grow upward); hanging ones draw from the TOP of
+their cell/quarter (`DecoFx.sheet(..., {hang=true})`). A type file may return a LIST: themed
+sets `ice_set` (Hielo y nieve), `cave_set` (Cueva), `water_set` (Acuático), `tropical_set`
+(Tropical) + `icicle`, `palmtree` (Tropical), `tulip`/`stretch` (Plantas); palette order
+`DecorationTypes.CATEGORIES`. `src/world/decorations/DecoFx.lua` = shared helpers: sprite
+strips at ×4, `wave` (row-by-row sine sway, root still), additive `glow`, per-decoration
+particles in `d.fx` (`emit/update/draw`, spawned only while seen, `every` timers), `drip`
+(forms, falls, splashes on `d.level:landingCross`); bubbles pop out of water. Sprites:
+`assets/images/decorations/<theme>/` + `fx/` from `tools/ui/make_decorations.py` (simple
+style: 1-px dark outline + 3 tones, no noise; never overwrites; `--force [names]`). It also
+REDESIGNED the old foliage (tulip, stretch, palmtree parts) in that style from the user's
+originals kept as `*-orig.png`; the icicle now uses `decorations/ice/icicle.png` (the user's
+`tiles/icespike.png` stays). Showcase arena `tools/levelgen/arenas/decoraciones.json`
+(`run.sh editor_open PLAY=...`).
 
 ## Level JSON
 

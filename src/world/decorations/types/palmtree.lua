@@ -7,7 +7,7 @@ local SWAY_AMP   = 0.06
 local parts   -- { {img, swayMult}, ... } de atrás hacia delante
 
 return {
-    name = 'palmtree', label = 'Palmera', placement = 'cell',
+    name = 'palmtree', label = 'Palmera', placement = 'cell', category = 'Tropical',
     editor = { icon = 'assets/images/foliage/palmtree/palmtree.png', previewScale = 0.36 },
     loadAssets = function()
         if parts then return end

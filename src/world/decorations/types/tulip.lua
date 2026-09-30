@@ -6,7 +6,7 @@ local BREATHE_AMP   = 0.05
 local img
 
 return {
-    name = 'tulip', label = 'Tulipán', placement = 'sub',
+    name = 'tulip', label = 'Tulipán', placement = 'sub', category = 'Plantas',
     editor = { icon = 'assets/images/foliage/tulip.png' },
     loadAssets = function()
         if img == nil then

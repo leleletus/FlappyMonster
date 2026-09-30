@@ -9,7 +9,7 @@
 -- PLAY=assets/levels/x.json: abre ese nivel en el editor, pulsa F5 (probar, como
 -- el usuario), mete al jugador en la zona de jefe y captura 1.5 s después de
 -- empezar la pelea (_play.png): lo que se ve jugando desde el editor.
--- Si el nivel no tiene zona de jefe: captura el editor (_play_ed.png) y el juego
+-- Si el nivel no tiene zona de jefe: captura el editor en la capa Decoración (_play_ed.png) y el juego
 -- quieto a los 0.5 / 1.2 / 2.0 / 2.8 / 3.8 s (_play_1.._5.png), p. ej. el hielo
 -- fino agrietándose bajo el jugador (tools/levelgen/arenas/hielo.json).
 --
@@ -48,8 +48,9 @@ function love.update(dt)
             print('ventana: ' .. table.concat({ love.graphics.getDimensions() }, 'x'))
             if love.resize then love.resize(tonumber(w), tonumber(h)) end
         end
-        if frame == 3 then love.graphics.captureScreenshot(function(img) img:encode('png', 'editor_open_play_ed.png') end) end
-        if frame == 5 then key('f5') end
+        if frame == 2 then key('5') end            -- (capa Decoración: la paleta sale en la captura)
+        if frame == 4 then love.graphics.captureScreenshot(function(img) img:encode('png', 'editor_open_play_ed.png') end) end
+        if frame == 6 then key('f5') end
         local st = gStateMachine and gStateMachine:_top()
         if frame > 8 and st and st.player and st.level then
             local z = (st.level.bossZones or {})[1]

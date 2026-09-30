@@ -10,6 +10,9 @@
 --                init = function(d) ... end,            -- opcional
 --                update = function(d, dt) ... end,      -- opcional
 --                draw = function(d, sx, sy) ... end }   -- d.flip, d.animT, d.phase
+--     Un archivo puede devolver una LISTA de decoraciones (los juegos
+--     temáticos: ice_set, cave_set, water_set, tropical_set; ayudas de dibujo,
+--     animación y partículas en decorations/DecoFx.lua).
 --  2. Añade su nombre a TYPES abajo.
 --  Listo: aparece en la capa Decoracion del editor (con Espejar y Capa
 --  delante/detras) y el juego la dibuja y anima.
@@ -17,10 +20,11 @@
 
 local DecorationTypes = require 'src/world/decorations/DecorationTypes'
 
-local TYPES = { 'tulip', 'stretch', 'palmtree', 'icicle' }
+local TYPES = { 'tulip', 'stretch', 'palmtree', 'icicle', 'ice_set', 'cave_set', 'water_set', 'tropical_set' }
 
 for _, name in ipairs(TYPES) do
-    DecorationTypes.register(require('src/world/decorations/types/' .. name))
+    local def = require('src/world/decorations/types/' .. name)
+    if def[1] then for _, d in ipairs(def) do DecorationTypes.register(d) end else DecorationTypes.register(def) end
 end
 
 return { types = DecorationTypes }

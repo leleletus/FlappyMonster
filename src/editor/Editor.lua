@@ -947,7 +947,8 @@ local function paletteItems(L)
         end
     elseif L == 'deco' then
         for _, t in ipairs(DT.list) do
-            items[#items+1] = { key = t.name, label = t.label, cat = t.category, ord = t.placement == 'sub' and 2 or 1, deco = t, tip = t.label }
+            items[#items+1] = { key = t.name, label = t.label, cat = t.category, ord = DT.categoryOrder(t.category), deco = t,
+                                 tip = t.label .. (t.placement == 'sub' and ' (subcelda)' or ' (casilla)') }
         end
     end
     -- Búsqueda

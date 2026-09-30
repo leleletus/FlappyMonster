@@ -8,7 +8,7 @@ local CYCLE  = (FRAMES - 1) * 2 / FPS     -- ida 1→5 + vuelta 5→1
 local imgs
 
 return {
-    name = 'stretch', label = 'Estiradora', placement = 'sub',
+    name = 'stretch', label = 'Estiradora', placement = 'sub', category = 'Plantas',
     editor = { icon = 'assets/images/foliage/stretch/stretch1.png' },
     loadAssets = function()
         if imgs then return end

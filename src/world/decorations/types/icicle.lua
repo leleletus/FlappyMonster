@@ -1,24 +1,23 @@
 -- Carámbano: decoración (no choca ni hace daño) que cuelga del techo de su
--- casilla. Imagen del usuario: assets/images/tiles/icespike.png (16x16, x4).
-local SCALE = 4
+-- casilla y gotea de vez en cuando. Sprite: assets/images/decorations/ice/icicle.png
+-- (tools/ui/make_decorations.py; la imagen original del usuario sigue en
+-- assets/images/tiles/icespike.png).
+local DecoFx = require 'src/world/decorations/DecoFx'
 
-local img
+local S = DecoFx.SCALE
+local ICE = { 0.75, 0.88, 1 }
 
 return {
     name = 'icicle', label = 'Carámbano', placement = 'cell', category = 'Hielo y nieve',
-    editor = { icon = 'assets/images/tiles/icespike.png' },
-    loadAssets = function()
-        if img == nil then
-            local ok, i = pcall(love.graphics.newImage, 'assets/images/tiles/icespike.png')
-            img = ok and i or false
-            if img then img:setFilter('nearest', 'nearest') end
-        end
+    editor = { previewScale = 0.8 },
+    update = function(d, dt)
+        -- (punta grande: x 7.5 de 16, 15 de largo)
+        if DecoFx.every(d, 'drip', dt, 2, 5) then DecoFx.drip(d, -2 * d.flip, -TILE_PX + 15 * S - 2, ICE) end
+        DecoFx.update(d, dt)
     end,
-    -- (sx, sy) = centro-abajo de la casilla: se dibuja colgando desde su borde de arriba
     draw = function(d, sx, sy)
-        if not img then return end
-        love.graphics.setColor(1, 1, 1, 0.92)
-        love.graphics.draw(img, math.floor(sx), math.floor(sy - TILE_PX), 0, SCALE * d.flip, SCALE, img:getWidth() / 2, 0)
-        love.graphics.setColor(1, 1, 1, 1)
+        DecoFx.seen(d)
+        DecoFx.sheet(d, sx, sy, DecoFx.strip('assets/images/decorations/ice/icicle.png', 16), 1, { hang = true, alpha = 0.92 })
+        DecoFx.draw(d, sx, sy)
     end,
 }

@@ -308,7 +308,11 @@ function Level.fromData(lvl)
     self.decorations = {}
     for _, fd in ipairs(lvl.foliage or {}) do
         local n = DecorationTypes.normalize(fd)
-        if n then table.insert(self.decorations, DecorationTypes.instantiate(n)) end
+        if n then
+            local d = DecorationTypes.instantiate(n)
+            d.level = self          -- (gotas y burbujas miran el suelo y el agua)
+            table.insert(self.decorations, d)
+        end
     end
     self.foliage = self.decorations   -- alias de compatibilidad
     -- Zonas de jefe (src/world/BossZones.lua)
