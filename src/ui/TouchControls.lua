@@ -1,0 +1,151 @@
+-- src/ui/TouchControls.lua
+-- Controles táctiles de los niveles (móvil), en píxeles REALES de la pantalla
+-- (fuera de lovesize): en móviles alargados el juego lleva bandas a los lados
+-- y los controles se ponen en ellas; si no hay sitio, encima del juego.
+--
+--   * CRUCETA (izquierda): izquierda / derecha / abajo (= agacharse; pulsado
+--     en el aire = ground pound). Diagonales abajo-izq / abajo-der = agachado
+--     + dirección (el salto agachado usa la dirección que se mantiene).
+--     Zona táctil GRANDE: toda la mitad izquierda de abajo; cuenta la
+--     dirección del dedo respecto al centro de la cruceta (se puede deslizar).
+--   * SALTO (derecha): toda la mitad derecha de abajo. Salto agachado = pulgar
+--     izquierdo abajo + pulgar derecho salta.
+-- Arriba de la pantalla (HUD, pausa) no cuenta como control.
+-- Sprites: assets/images/ui/touch/dpad-Sheet.png (7 cuadros de 40x40: neutra,
+-- izq, der, abajo, abajo-izq, abajo-der, arriba) y jump-Sheet.png (2 de 32x32),
+-- generados por tools/ui/make_sprites.py (se pueden retocar a mano).
+--
+--   TouchControls.update(active)   cada frame, en el update del estado (pone
+--                                  Input.VirtualPad.down / pressed)
+--   TouchControls.draw()           en pantalla real, tras lovesize (game.lua)
+--   TouchControls.layout(sw, sh)   posiciones (lo usan las pruebas)
+
+local SpriteStrip = require 'src/fx/SpriteStrip'
+
+local TC = {}
+local dpad, jump
+local state = { l = false, r = false, d = false, j = false }
+local prev = { d = false, j = false }
+
+local TOP_FRAC  = 0.30        -- por encima de esta altura (fracción) no hay controles
+local PAD_FRAC  = 0.30        -- diámetro visual de la cruceta (fracción del alto)
+local JUMP_FRAC = 0.22        -- del botón de salto
+local DEAD_FRAC = 0.16        -- zona muerta del centro de la cruceta (fracción de su tamaño)
+
+local function assets()
+    dpad = dpad or SpriteStrip.load('assets/images/ui/touch/dpad-Sheet.png', 40)
+    jump = jump or SpriteStrip.load('assets/images/ui/touch/jump-Sheet.png', 32)
+end
+
+-- Rectángulo del juego (lovesize) en la pantalla real
+function TC.gameRect(sw, sh)
+    local s = math.min(sw / WINDOW_W, sh / WINDOW_H)
+    local gw, gh = WINDOW_W * s, WINDOW_H * s
+    return (sw - gw) / 2, (sh - gh) / 2, gw, gh, s
+end
+
+-- Posición y tamaño de todo (píxeles de pantalla). Escala entera de los
+-- sprites (pixel art nítido)
+function TC.layout(sw, sh)
+    local gx = TC.gameRect(sw, sh)
+    local padPx = math.max(2, math.floor(sh * PAD_FRAC / 40))
+    local jumpPx = math.max(2, math.floor(sh * JUMP_FRAC / 32))
+    local padW, jumpW = 40 * padPx, 32 * jumpPx
+    local band = gx                                  -- ancho de las bandas negras
+    local margin = sh * 0.05
+    local L = {
+        sw = sw, sh = sh, band = band,
+        padPx = padPx, padW = padW, jumpPx = jumpPx, jumpW = jumpW,
+        -- (en la banda si cabe; si no, pegado al borde con margen)
+        padX = math.floor(math.max(band / 2, padW / 2 + margin)),
+        padY = math.floor(sh - padW / 2 - sh * 0.06),
+        jumpX = math.floor(sw - math.max(band / 2, jumpW / 2 + margin * 1.4)),
+        jumpY = math.floor(sh - jumpW / 2 - sh * 0.11),
+        topY = sh * TOP_FRAC,
+    }
+    return L
+end
+
+-- ¿Qué pulsa cada dedo? (posiciones de pantalla)
+function TC.read(L, touches)
+    local s = { l = false, r = false, d = false, j = false }
+    local dead = L.padW * DEAD_FRAC
+    for _, t in ipairs(touches) do
+        local x, y = t[1], t[2]
+        if y >= L.topY then
+            if x < L.sw / 2 then
+                local dx, dy = x - L.padX, y - L.padY
+                if math.abs(dx) > dead and math.abs(dx) > 0.45 * math.abs(dy) then
+                    if dx < 0 then s.l = true else s.r = true end
+                end
+                if dy > dead and dy > 0.45 * math.abs(dx) then s.d = true end
+            else
+                s.j = true
+            end
+        end
+    end
+    return s
+end
+
+-- Cada frame: lee los dedos y pone las acciones del jugador. `active` = el
+-- estado quiere controles (nivel en marcha, no muerto / espectador)
+function TC.update(active)
+    local VP = Input.VirtualPad
+    if not (active and Input.isMobile) then
+        state = { l = false, r = false, d = false, j = false }
+        prev.d, prev.j = false, false
+        return
+    end
+    local sw, sh = love.graphics.getDimensions()
+    local L = TC.layout(sw, sh)
+    local touches = {}
+    for _, id in ipairs(love.touch.getTouches()) do
+        local x, y = love.touch.getPosition(id)
+        touches[#touches + 1] = { x, y }
+    end
+    state = TC.read(L, touches)
+    VP.down['move_left'], VP.down['move_right'] = state.l, state.r
+    VP.down['crouch'], VP.down['jump'] = state.d, state.j
+    -- "Recién pulsado" (este mismo frame: saltar, y abajo en el aire = ground pound)
+    if state.j and not prev.j then VP.pressed['jump'] = true end
+    if state.d and not prev.d then VP.pressed['crouch'] = true end
+    prev.d, prev.j = state.d, state.j
+end
+
+-- Cuadro de la cruceta según lo pulsado
+local function padFrame(s)
+    if s.d and s.l then return 5 end
+    if s.d and s.r then return 6 end
+    if s.d then return 4 end
+    if s.l then return 2 end
+    if s.r then return 3 end
+    return 1
+end
+
+-- Dibuja en píxeles de pantalla (fuera de lovesize). `st` = lo pulsado (por
+-- defecto, lo del último update)
+function TC.draw(L, st, fade)
+    fade = fade or 1                              -- (entrada de un jefe: se van)
+    if fade <= 0.001 then return end
+    assets()
+    st = st or state
+    L = L or TC.layout(love.graphics.getDimensions())
+    -- (semitransparentes: en pantallas 16:9 no hay bandas y van encima del juego;
+    -- donde hay bandas negras se ven igual de claros)
+    local a = (L.band >= L.padW * 0.75) and 0.7 or 0.38
+    -- (sombra negra, como el resto de la interfaz)
+    local sh = math.max(2, math.floor(L.padPx))
+    love.graphics.setColor(0, 0, 0, 0.35 * a / 0.7 * fade)
+    dpad:draw(padFrame(st), L.padX + sh, L.padY + sh, 0, L.padPx, L.padPx)
+    jump:draw(st.j and 2 or 1, L.jumpX + sh, L.jumpY + sh, 0, L.jumpPx, L.jumpPx)
+    love.graphics.setColor(1, 1, 1, ((st.l or st.r or st.d) and 0.8 or a) * fade)
+    dpad:draw(padFrame(st), L.padX, L.padY, 0, L.padPx, L.padPx)
+    love.graphics.setColor(1, 1, 1, (st.j and 0.8 or a) * fade)
+    jump:draw(st.j and 2 or 1, L.jumpX, L.jumpY + (st.j and L.jumpPx or 0), 0, L.jumpPx, L.jumpPx)
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
+-- ¿Se ven los controles? (móvil y último uso táctil)
+function TC.visible() return Input.isMobile and Input.lastDevice == 'touch' end
+
+return TC

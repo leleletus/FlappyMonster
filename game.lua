@@ -87,6 +87,10 @@ function love.draw()
         gStateMachine:render()
         Notify.render()
     lovesize.finish()
+    -- En píxeles de PANTALLA (fuera del área del juego, p. ej. en las bandas
+    -- negras de los móviles alargados): controles táctiles de los niveles
+    local top = gStateMachine:_top()
+    if top and top.drawScreen then top:drawScreen() end
 end
 
 function love.joystickadded(joystick)

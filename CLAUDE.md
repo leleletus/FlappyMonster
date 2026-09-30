@@ -34,9 +34,13 @@ code, comments (Spanish), commits, docs or game text — those keep their usual 
    the CAMERA to whole pixels when drawing — fractional cameras left 1-px seams between
    blocks that only showed with the window scaled up), hard
    rectangles, black drop shadows offset 2-4 px, no rounded/smooth UI in-game.
-5. Data-driven catalogs: new tiles/entities/decorations/modes are a new file
+5. EVERY image and sound the game uses is a real ASSET FILE (assets/images/..., assets/sounds/...),
+   never only drawn/synthesized in code, so the user can edit or replace it. Generators are fine
+   (tools/sounds/*.py, tools/ui/make_sprites.py …) as long as their output files are committed
+   and loaded by the game; code only places/animates them.
+6. Data-driven catalogs: new tiles/entities/decorations/modes are a new file
    + one name in a list. The editor and server pick them up automatically.
-6. Don't commit the many ` M` files in git status (they're mode-only changes).
+7. Don't commit the many ` M` files in git status (they're mode-only changes).
 
 ## Screens, scaling and platforms (PC / Switch / Android)
 
@@ -57,6 +61,15 @@ code, comments (Spanish), commits, docs or game text — those keep their usual 
   (`Clip.push(x,y,w,h)` / `Clip.pop()`: transformed + intersected scissor).
   Don't use stencils (Switch/Android backbuffers may lack a stencil buffer).
 - Mouse/touch → logical coords in `main.lua` with the same scale as lovesize.
+- **Touch controls in levels** (`src/ui/TouchControls.lua`, shared by Adventure/OnlineAdventure):
+  drawn in SCREEN pixels after lovesize (`game.lua` calls `top:drawScreen()`), so on wide phones
+  they sit in the black letterbox bands. D-pad (left: ←/→/↓, diagonals ↓+dir for the crouch
+  jump; ↓ in the air = ground pound) + big jump button (right). Touch zones = the whole lower
+  left/right halves (finger direction from the pad centre, slide allowed); above 30 % of the
+  height nothing counts (HUD/pause). Sprites `assets/images/ui/touch/dpad-Sheet.png` (7 frames
+  40x40) and `jump-Sheet.png` (2 frames 32x32) from `tools/ui/make_sprites.py`, integer scale,
+  D-pad ≈ 30 % / jump ≈ 22 % of the screen height (the user found 40 % too big), 0.38 alpha over
+  the game (0.7 in bands). Harness `touch_layout` (8 phone/tablet sizes) and `sp_boss MOBILE=1`.
 - Testing other screens: run the REAL main.lua from a scratch app with a
   custom window size and `love.system.getOS = function() return 'Android' end`
   (Input.isMobile), plus a local server/bot for the online menus.
@@ -129,8 +142,8 @@ code, comments (Spanish), commits, docs or game text — those keep their usual 
 - RELEASE = bump `version.txt` in master (+ git pull/restart the server). Bump it
   too whenever `Protocol.VERSION` changes, or old clients can't join.
 - `SERVER_HOST`/`SERVER_PORT` in settings.lua (`FM_SERVER=localhost` for tests).
-- In-match connection indicator: `src/ui/PingIcon.lua` (antenna + 4 bars, bottom-left; top-left
-  on mobile): level from ENet RTT AND the age of the last snapshot (RTT freezes when packets
+- In-match connection indicator: `src/ui/PingIcon.lua`, sprites `assets/images/ui/ping/ping-Sheet.png`
+  (5 frames 20x12: 0 = red X, 1..4 bars; bottom-left, bottom-CENTRE when touch controls show): level from ENet RTT AND the age of the last snapshot (RTT freezes when packets
   stop): 4 green, 3-2 yellow, 1 red, 0 = red X (no snapshot for 1.5 s / disconnected);
   improves after 0.6 s, big drops at once. `OnlineAdventureState.lastSnapAt`.
 
@@ -664,7 +677,9 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   everything drawn must derive from state + deadTimer + x,y (net). During 'intro' the
   camera centres on the boss (`cameraTarget` → `introFocus()` or its editor spot) and
   `BossHud.drawCinema(level)` draws letterbox bars (under the HUD) with the boss name
-  typed in. MiniBoss1: descends from above the view braking + spike threat (3.4 s;
+  typed in; the WHOLE HUD (score/time, lives, HP bars, pause, ping, mode panel, touch
+  controls) fades out and back with the bars (`BossHud.fadeHud(fn)` renders a HUD piece via a
+  canvas at `BossHud.hudAlpha()`; `TouchControls.draw(nil, nil, fade)`). MiniBoss1: descends from above the view braking + spike threat (3.4 s;
   without a zone the old 'intro_fight' descent). Mirror: jumps up from below the screen
   through the floor (`introPlan()` = pure function of zone + home, used by client for the
   laugh timing), lands, laughs (`laughTime()`). The Mega keeps its own states.

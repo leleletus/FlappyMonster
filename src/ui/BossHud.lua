@@ -182,6 +182,41 @@ function BossHud.drawCinema(level)
     love.graphics.setColor(1, 1, 1, 1)
 end
 
+-- Durante la entrada de un jefe el HUD entero (puntos, tiempo, vidas, barras,
+-- pausa, ping, controles táctiles) se va y vuelve SUAVE, con las franjas:
+-- solo quedan las franjas y el nombre del jefe.
+function BossHud.hudAlpha()
+    local k = cine.k
+    return 1 - (1 - (1 - k) ^ 2)                      -- (misma curva que las franjas)
+end
+
+-- Dibuja `fn` (HUD) con la transparencia de hudAlpha: a través de un canvas,
+-- así se desvanece todo junto (texto, sombras...) sin tocar el código del HUD
+local hudCanvas
+function BossHud.fadeHud(fn)
+    local a = BossHud.hudAlpha()
+    if a >= 0.999 then fn(); return end
+    if a <= 0.001 then return end
+    if not hudCanvas or hudCanvas:getWidth() ~= WINDOW_W or hudCanvas:getHeight() ~= WINDOW_H then
+        hudCanvas = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
+    end
+    -- (canvas: sin la escala ni el recorte en píxeles de pantalla de lovesize)
+    local sx, sy, sw, sh = love.graphics.getScissor()
+    love.graphics.push('all')
+    love.graphics.setCanvas(hudCanvas)
+    love.graphics.clear(0, 0, 0, 0)
+    love.graphics.origin()
+    love.graphics.setScissor()
+    fn()
+    love.graphics.pop()
+    if sx then love.graphics.setScissor(sx, sy, sw, sh) end
+    love.graphics.setBlendMode('alpha', 'premultiplied')
+    love.graphics.setColor(a, a, a, a)
+    love.graphics.draw(hudCanvas, 0, 0)
+    love.graphics.setBlendMode('alpha')
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
 -- Cartel de inicio / fin de pelea (t = segundos desde que apareció)
 function BossHud.drawBanner(title, t, dur, col)
     if t >= dur then return end

@@ -31,6 +31,7 @@ local Floods               = require 'src/world/Floods'
 local PointAreas           = require 'src/world/PointAreas'
 local json                 = require 'libs/json'
 local PingIcon             = require 'src/ui/PingIcon'
+local TouchControls        = require 'src/ui/TouchControls'
 
 local OnlineAdventureState = BaseState:new()
 
@@ -802,6 +803,8 @@ function OnlineAdventureState:update(dt)
     self.pingIcon = self.pingIcon or PingIcon.new()
     local age = self.lastSnapAt and (love.timer.getTime() - self.lastSnapAt) or 0
     self.pingIcon:update(dt, NC:getPing(), age, NC.connected ~= false)
+    -- Controles táctiles (móvil): cruceta + salto en píxeles de pantalla
+    TouchControls.update(not self.showPause and not self.showGameOver and not (self.ownData and self.ownData.isSpectator))
     -- ── Game Over ─────────────────────────────────────────────────────────────
     if self.showGameOver then
         self.gameOverTimer = self.gameOverTimer + dt
@@ -883,31 +886,6 @@ function OnlineAdventureState:update(dt)
             end
         end
 
-        -- ── Controles táctiles ────────────────────────────────────────────────
-        if Input.isMobile and not self.ownData.isSpectator then
-            Input.VirtualPad.down['move_left']  = false
-            Input.VirtualPad.down['move_right'] = false
-            Input.VirtualPad.down['jump']       = false
-            Input.VirtualPad.down['crouch']     = false
-            local touches = love.touch.getTouches()
-            for _, id in ipairs(touches) do
-                local tx, ty = love.touch.getPosition(id)
-                local sw, sh = love.graphics.getWidth(), love.graphics.getHeight()
-                local scale  = math.min(sw/WINDOW_W, sh/WINDOW_H)
-                local offX   = (sw - WINDOW_W*scale)/2
-                local offY   = (sh - WINDOW_H*scale)/2
-                local lx     = (tx-offX)/scale
-                local ly     = (ty-offY)/scale
-                if ly > WINDOW_H - 250 then
-                    if lx >  20 and lx <  150 then Input.VirtualPad.down['move_left']  = true end
-                    if lx > 170 and lx <  300 then Input.VirtualPad.down['move_right'] = true end
-                    if lx > WINDOW_W-340 and lx <= WINDOW_W-200 then Input.VirtualPad.down['crouch'] = true end
-                    if lx > WINDOW_W-200 and lx < WINDOW_W-20 then
-                        Input.VirtualPad.down['jump'] = true
-                    end
-                end
-            end
-        end
     end  -- end if showPause / else
 
     -- ── Canvas ────────────────────────────────────────────────────────────────
@@ -1202,30 +1180,18 @@ function OnlineAdventureState:_renderScene()
 
     -- HUD (antes, las franjas de cine de la entrada de un jefe: el HUD va encima)
     BossHud.drawCinema(self.level)
-    self:_renderHUD()
-
-    -- Controles táctiles
-    if Input.isMobile and Input.lastDevice == 'touch' and not self.ownData.isSpectator then
-        love.graphics.setColor(1, 1, 1, 0.25)
-        love.graphics.circle('fill',  85, WINDOW_H-125, 65)
-        love.graphics.circle('fill', 235, WINDOW_H-125, 65)
-        love.graphics.circle('fill', WINDOW_W-110, WINDOW_H-125, 65)
-        love.graphics.circle('fill', WINDOW_W-250, WINDOW_H-125, 65)
-        love.graphics.setFont(FONT_BIG)
-        love.graphics.setColor(1, 1, 1, 0.7)
-        love.graphics.printf('<', 20,  WINDOW_H-140, 130, 'center')
-        love.graphics.printf('>', 170, WINDOW_H-140, 130, 'center')
-        love.graphics.printf('A', WINDOW_W-175, WINDOW_H-140, 130, 'center')
-        love.graphics.printf('v', WINDOW_W-315, WINDOW_H-132, 130, 'center')
-    end
-    if not self.showGameOver and not self.showPause and not self.specOverlay then
-        CornerButtons.drawPause(self.pauseHover)
-    end
+    -- (todo el HUD se desvanece durante la entrada de un jefe: BossHud.fadeHud)
+    BossHud.fadeHud(function()
+        self:_renderHUD()
+        if not self.showGameOver and not self.showPause and not self.specOverlay then
+            CornerButtons.drawPause(self.pauseHover)
+        end
+        self:_renderBossHUD()
+    end)
 
     -- Overlays
-    self:_renderBossHUD()
     if self.showPause then self:_renderPauseOverlay() end
-    self:_renderModeHUD()
+    BossHud.fadeHud(function() self:_renderModeHUD() end)
     if self.ownData.isSpectator and not self.showGameOver then self:_renderSpectatorOverlay() end
 
     -- ── Game Over overlay ─────────────────────────────────────────────────────
@@ -1460,10 +1426,15 @@ end
 -- ── HUD ───────────────────────────────────────────────────────────────────────
 
 function OnlineAdventureState:_renderHUD()
-    -- Antena de conexión: abajo a la izquierda (en móvil arriba a la izquierda,
-    -- bajo la vida: abajo está la cruceta táctil)
+    -- Antena de conexión: abajo a la izquierda; con los controles táctiles a la
+    -- vista, abajo en el CENTRO (a los lados van la cruceta y el salto, y
+    -- arriba el HUD)
     if self.pingIcon then
-        if Input.isMobile then self.pingIcon:draw(20, 196) else self.pingIcon:draw(16, WINDOW_H - 14) end
+        if TouchControls.visible() then
+            self.pingIcon:draw(math.floor(WINDOW_W / 2 - self.pingIcon:width() / 2), WINDOW_H - 14)
+        else
+            self.pingIcon:draw(16, WINDOW_H - 14)
+        end
     end
     love.graphics.setFont(FONT_BIG)
     local fh     = FONT_BIG:getHeight()
@@ -1628,6 +1599,14 @@ end
 
 -- ── Overlay espectador ────────────────────────────────────────────────────────
 
+-- En píxeles de pantalla, tras lovesize (game.lua): controles táctiles
+function OnlineAdventureState:drawScreen()
+    if TouchControls.visible() and not self.showPause and not self.showGameOver
+       and not (self.ownData and self.ownData.isSpectator) then
+        TouchControls.draw(nil, nil, BossHud.hudAlpha())
+    end
+end
+
 function OnlineAdventureState:_renderSpectatorOverlay()
     local finished = self.ownData.finished
     love.graphics.setFont(FONT_SMALL)
@@ -1756,14 +1735,6 @@ function OnlineAdventureState:touchpressed(id, tx, ty)
     end
     if CornerButtons.hitPause(tx, ty) then
         Sound.play('select'); self:_togglePause(); return
-    end
-    -- Móvil: toque de un solo cuadro en los botones de acción
-    if Input.isMobile and ty > WINDOW_H - 250 then
-        if tx > WINDOW_W - 200 and tx < WINDOW_W - 20 then
-            Input.VirtualPad._pressedThisFrame['jump'] = true
-        elseif tx > WINDOW_W - 340 and tx <= WINDOW_W - 200 then
-            Input.VirtualPad._pressedThisFrame['crouch'] = true
-        end
     end
 end
 

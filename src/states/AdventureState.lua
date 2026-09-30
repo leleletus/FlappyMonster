@@ -1,3 +1,4 @@
+local TouchControls = require 'src/ui/TouchControls'
 local CornerButtons = require 'src/ui/CornerButtons'
 local L = require 'src/Lang'
 -- src/states/AdventureState.lua
@@ -349,36 +350,8 @@ function AdventureState:update(dt)
         self.sceneCanvas = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
     end
 
-    -- ── Actualizar Controles Virtuales (Mantener presionado) ──
-    if Input.isMobile and not self.dead then
-        Input.VirtualPad.down['move_left']  = false
-        Input.VirtualPad.down['move_right'] = false
-        Input.VirtualPad.down['jump']       = false
-        Input.VirtualPad.down['crouch']     = false
-        
-        local touches = love.touch.getTouches()
-        for _, id in ipairs(touches) do
-            local tx, ty = love.touch.getPosition(id)
-            local sw, sh = love.graphics.getWidth(), love.graphics.getHeight()
-            local scale  = math.min(sw / WINDOW_W, sh / WINDOW_H)
-            local offX   = (sw - WINDOW_W * scale) / 2
-            local offY   = (sh - WINDOW_H * scale) / 2
-            local lx     = (tx - offX) / scale
-            local ly     = (ty - offY) / scale
-            
-            if ly > WINDOW_H - 250 then
-                if lx > 20 and lx < 150 then
-                    Input.VirtualPad.down['move_left'] = true
-                elseif lx > 170 and lx < 300 then
-                    Input.VirtualPad.down['move_right'] = true
-                elseif lx > WINDOW_W - 340 and lx <= WINDOW_W - 200 then
-                    Input.VirtualPad.down['crouch'] = true
-                elseif lx > WINDOW_W - 200 and lx < WINDOW_W - 20 then
-                    Input.VirtualPad.down['jump'] = true
-                end
-            end
-        end
-    end
+    -- ── Controles táctiles (móvil): cruceta + salto, ver src/ui/TouchControls ──
+    TouchControls.update(not self.dead)
 
     if Input.pressed('pause') then
         gStateMachine:push('pause')
@@ -622,6 +595,8 @@ function AdventureState:_renderScene()
 
     BossHud.drawCinema(self.level)        -- (entrada de un jefe: franjas de cine, bajo el HUD)
 
+    -- (todo el HUD se desvanece durante la entrada de un jefe: BossHud.fadeHud)
+    BossHud.fadeHud(function()
     -- HUD: SCORE y TIME  (sin fondo, valores alineados a la derecha)
     love.graphics.setFont(FONT_BIG)
     local fh = FONT_BIG:getHeight()
@@ -683,6 +658,7 @@ function AdventureState:_renderScene()
     self.player:renderAirBar()
     self.player:renderDrownCountdown(self.player.x - self.camX, self.player.y - self.camY)
     self:renderPopups()
+    end)
 
     -- ── Game over overlay ─────────────────────────────────────────────────────
     if self.dead and self.deadTimer > 0.4 then
@@ -711,25 +687,7 @@ function AdventureState:_renderScene()
         end
     end
 
-    -- ── Dibujar controles virtuales en móviles si se usa la pantalla táctil ──
-    if Input.isMobile and Input.lastDevice == 'touch' and not self.dead then
-        love.graphics.setColor(1, 1, 1, 0.25)
-        -- D-Pad
-        love.graphics.circle('fill', 85, WINDOW_H - 125, 65)
-        love.graphics.circle('fill', 235, WINDOW_H - 125, 65)
-        -- Action (Jump)
-        love.graphics.circle('fill', WINDOW_W - 110, WINDOW_H - 125, 65)
-        -- Action (Crouch)
-        love.graphics.circle('fill', WINDOW_W - 250, WINDOW_H - 125, 65)
-
-        love.graphics.setFont(FONT_BIG)
-        love.graphics.setColor(1, 1, 1, 0.7)
-        love.graphics.printf('<', 20, WINDOW_H - 140, 130, 'center')
-        love.graphics.printf('>', 170, WINDOW_H - 140, 130, 'center')
-        love.graphics.printf('A', WINDOW_W - 175, WINDOW_H - 140, 130, 'center')
-        love.graphics.printf('v', WINDOW_W - 315, WINDOW_H - 132, 130, 'center')
-    end
-    if not self.dead then CornerButtons.drawPause(self.pauseHover) end
+    if not self.dead then BossHud.fadeHud(function() CornerButtons.drawPause(self.pauseHover) end) end
 
     love.graphics.setFont(FONT_MED)
     love.graphics.setColor(COLOR_WHITE)
@@ -753,6 +711,11 @@ function AdventureState:mousemoved(tx, ty)
             return
         end
     end
+end
+
+-- En píxeles de pantalla, tras lovesize (game.lua): controles táctiles
+function AdventureState:drawScreen()
+    if TouchControls.visible() and not self.dead then TouchControls.draw(nil, nil, BossHud.hudAlpha()) end
 end
 
 -- Táctil Switch: tap en botón de game over
@@ -785,14 +748,6 @@ function AdventureState:touchpressed(id, tx, ty, dx, dy, pressure)
     if CornerButtons.hitPause(tx, ty) then
         Input.VirtualPad._pressedThisFrame['pause'] = true
         return
-    end
-    -- Toque de un solo cuadro en los botones de acción (móvil)
-    if Input.isMobile and ty > WINDOW_H - 250 then
-        if tx > WINDOW_W - 200 and tx < WINDOW_W - 20 then
-            Input.VirtualPad._pressedThisFrame['jump'] = true
-        elseif tx > WINDOW_W - 340 and tx <= WINDOW_W - 200 then
-            Input.VirtualPad._pressedThisFrame['crouch'] = true
-        end
     end
 end
 

@@ -20,11 +20,14 @@ local t, st, last = 0, nil, {}
 local SECS = tonumber(os.getenv('SECS')) or 60
 function love.load(a)
     gameLoad(a); love.audio.setVolume(0)
+    -- (MOBILE=1: como en un móvil, con los controles táctiles a la vista)
+    if os.getenv('MOBILE') then package.loaded['input'].isMobile = true; package.loaded['input'].lastDevice = 'touch' end
     gStateMachine:change('adventure', { level = os.getenv('LEVEL') or 'assets/levels/guarida_cangrejo_rey.json' })
     st = gStateMachine:_top()
 end
 function love.update(dt)
     t = t + dt
+    if os.getenv('MOBILE') then package.loaded['input'].lastDevice = 'touch' end   -- (la ventana de prueba recibe ratón)
     local pa = st.player
     local boss
     for _, e in ipairs(st.enemies) do if e.def.boss then boss = e end end

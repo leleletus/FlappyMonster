@@ -26,12 +26,12 @@ function PingIcon.level(ping, snapAge, connected)
     return 4
 end
 
-local COLORS = {
-    [1] = { 0.95, 0.2, 0.2 },
-    [2] = { 1, 0.82, 0.15 },
-    [3] = { 1, 0.82, 0.15 },
-    [4] = { 0.3, 0.9, 0.35 },
-}
+-- Sprites: assets/images/ui/ping/ping-Sheet.png, 5 cuadros de 20x12 (0 = X
+-- roja, 1..4 = barras; los genera tools/ui/make_sprites.py y se pueden retocar)
+local SpriteStrip = require 'src/fx/SpriteStrip'
+local sheet
+local TEXT_COL = { [1] = { 0.95, 0.2, 0.2 }, [2] = { 1, 0.82, 0.15 }, [3] = { 1, 0.82, 0.15 }, [4] = { 0.3, 0.9, 0.35 } }
+PingIcon.W, PingIcon.H = 20, 12
 
 function PingIcon.new()
     return setmetatable({ shown = 4, want = 4, holdT = 0, ping = 0 }, PingIcon)
@@ -46,43 +46,32 @@ function PingIcon:update(dt, ping, snapAge, connected)
     if lv ~= self.shown and (self.holdT >= 0.6 or lv <= self.shown - 2 or lv == 0) then self.shown = lv end
 end
 
+-- Ancho total (antena + texto) a escala `px`, para colocarla
+function PingIcon:width(px)
+    px = px or 3
+    local tw = (FONT_SMALL and self.shown > 0) and (FONT_SMALL:getWidth('000 ms') + 3 * px) or 0
+    return PingIcon.W * px + tw
+end
+
 -- Dibuja la antena con su esquina inferior izquierda en (x, y). `px` = tamaño
 -- de un píxel del arte (3 por defecto)
 function PingIcon:draw(x, y, px)
     px = px or 3
+    sheet = sheet or SpriteStrip.load('assets/images/ui/ping/ping-Sheet.png', PingIcon.W)
     x, y = math.floor(x), math.floor(y)
     local lv = self.shown
-    local col = COLORS[lv] or COLORS[1]
-    local function rect(cx, cy, w, h, c, a)
-        -- (con sombra negra, como el resto de la interfaz)
-        love.graphics.setColor(0, 0, 0, 0.6 * (a or 1))
-        love.graphics.rectangle('fill', x + cx * px + 2, y - (cy + h) * px + 2, w * px, h * px)
-        love.graphics.setColor(c[1], c[2], c[3], a or 1)
-        love.graphics.rectangle('fill', x + cx * px, y - (cy + h) * px, w * px, h * px)
-    end
-    -- Antena: mástil y travesaño
-    local grey = { 0.85, 0.85, 0.9 }
-    rect(1, 0, 1, 9, grey)
-    rect(0, 8, 3, 1, grey)
-    -- Barras (2 px de ancho, 1 de hueco; alturas 2, 4, 6, 8)
-    for i = 1, 4 do
-        local bx, h = 4 + (i - 1) * 3, i * 2
-        if i <= lv then rect(bx, 0, 2, h, col)
-        else rect(bx, 0, 2, h, { 0.25, 0.25, 0.3 }, 0.8) end
-    end
-    -- Sin conexión: X roja encima de las barras
-    if lv == 0 then
-        local red = { 0.95, 0.15, 0.15 }
-        for k = 0, 4 do
-            rect(5 + k, 1 + k, 1, 1, red)
-            rect(9 - k, 1 + k, 1, 1, red)
-        end
-    end
+    local cx, cy = x + PingIcon.W * px / 2, y - PingIcon.H * px / 2
+    -- (sombra negra, como el resto de la interfaz)
+    love.graphics.setColor(0, 0, 0, 0.6)
+    sheet:draw(lv + 1, cx + 2, cy + 2, 0, px, px)
+    love.graphics.setColor(1, 1, 1, 1)
+    sheet:draw(lv + 1, cx, cy, 0, px, px)
     -- Ping en ms al lado (pequeño)
     if FONT_SMALL and lv > 0 then
+        local col = TEXT_COL[lv]
         love.graphics.setFont(FONT_SMALL)
         local txt = string.format('%d ms', math.floor(self.ping + 0.5))
-        local tx, ty = x + 17 * px, y - 4 * px - FONT_SMALL:getHeight() / 2
+        local tx, ty = x + (PingIcon.W + 3) * px, y - PingIcon.H * px / 2 - FONT_SMALL:getHeight() / 2
         love.graphics.setColor(0, 0, 0, 0.7)
         love.graphics.print(txt, math.floor(tx) + 2, math.floor(ty) + 2)
         love.graphics.setColor(col[1], col[2], col[3], 1)
