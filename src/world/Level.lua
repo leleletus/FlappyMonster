@@ -344,6 +344,7 @@ function Level.fromData(lvl)
     self.matchTime = tonumber(lvl.matchTime)
     -- Música del nivel: id de assets/music/index.json (nil = la de siempre)
     self.music     = type(lvl.music) == 'string' and lvl.music or nil
+    self.snow      = lvl.snow == true                  -- (nieve cayendo: src/fx/Snowfall.lua, solo visual)
     return self
 end
 
@@ -675,6 +676,8 @@ end
 function Level:hitTile(col, row, from)
     local def = self:getDef(col, row)
     if def.breakable then return self:breakTile(col, row) and 'break' or nil end
+    -- Hielo fino: un ground pound encima avanza 3 estados; un cabezazo, 1
+    if def.thinIce then return self:crackIce(col, row, (from == 'pound') and 3 or 1, from) end
     if not def.toggle or self.canBreak == false then return nil end
     if not (self.tiles[row] and self.tiles[row][col]) then return nil end
     local to = TileTypes.byName[def.toggle]
@@ -768,10 +771,66 @@ function Level:updateSwitchBlocks(silent)
     end
 end
 
+-- ── Hielo fino (tiles con `thinIce`, ver tiles/types/thin_ice.lua) ──────────
+-- Avanza `n` estados; del último se rompe. Solo donde se deciden los tiles (un
+-- jugador / servidor): el cambio va a brokenQueue con su tipo ('crack' /
+-- 'icebreak') y los clientes ponen el tile, la animación, partículas y sonido.
+-- En un jugador, `self.tileFx(kind, c, r)` (lo pone AdventureState) hace esos
+-- efectos. Devuelve 'crack' | 'break' | nil.
+Level.THIN_ICE_WEAR = 0.8          -- s de pie encima por estado
+function Level:crackIce(col, row, n, from)
+    if self.canBreak == false then return nil end
+    local def = self:getDef(col, row)
+    if not def.thinIce or not (self.tiles[row] and self.tiles[row][col]) then return nil end
+    local raw = self:getRaw(col, row)
+    local _, water, spikes = decTile(raw)
+    local stage = def.thinIce.stage + (n or 1)
+    local kind, new
+    if stage >= 4 then
+        self:rememberTile(col, row, raw)
+        new = water and TILE_WATER or TILE_EMPTY
+        kind = 'icebreak'                                      -- (los de encima simplemente caen)
+    else
+        local name = ({ 'thin_ice', 'thin_ice_1', 'thin_ice_2', 'thin_ice_3' })[stage + 1]
+        new = TileCodec.encode(TileTypes.byName[name].id, water, spikes)
+        kind = 'crack'
+    end
+    self.tiles[row][col] = new
+    if self.iceWear then self.iceWear[row * 65536 + col] = nil end
+    self.brokenQueue = self.brokenQueue or {}
+    table.insert(self.brokenQueue, { col, row, new, kind, from })
+    if kind == 'crack' then self:tileBump(col, row, 'crack') end
+    if self.tileFx then self.tileFx(kind, col, row) end
+    return (kind == 'icebreak') and 'break' or 'crack'
+end
+
+-- Desgaste: cada jugador de pie encima de hielo fino lo va agrietando
+function Level:updateThinIce(dt)
+    if self.canBreak == false or not self.players then return end
+    local T = TILE_PX
+    local touched = {}
+    for _, pa in ipairs(self.players) do
+        if pa.onGround and not pa.dying and pa.alive ~= false and pa.getOuterBounds then
+            local b = pa:getOuterBounds()
+            local fy = b.y + b.h + 2
+            for _, fx in ipairs({ b.x + 3, b.x + b.w / 2, b.x + b.w - 3 }) do
+                local c, r = math.floor(fx / T) + 1, math.floor(fy / T) + 1
+                local d = self:getDef(c, r)
+                if d.thinIce and math.abs(fy - 2 - (r - 1) * T) <= 4 then touched[r * 65536 + c] = { c, r } end
+            end
+        end
+    end
+    for k, cr in pairs(touched) do
+        self.iceWear = self.iceWear or {}
+        self.iceWear[k] = (self.iceWear[k] or 0) + dt
+        if self.iceWear[k] >= Level.THIN_ICE_WEAR then self:crackIce(cr[1], cr[2], 1, 'wear') end
+    end
+end
+
 -- Animación de un bloque golpeado (solo dibujo): 'head' = saltito hacia arriba,
 -- 'pound' = el mismo hacia abajo. La pone quien golpea (un jugador) o el
 -- evento del servidor (online); Level:update la hace avanzar.
-local BUMP_T = { head = 0.22, pound = 0.22 }
+local BUMP_T = { head = 0.22, pound = 0.22, crack = 0.35 }     -- (crack: el hielo fino tiembla)
 function Level:tileBump(col, row, from)
     if not BUMP_T[from] then return end
     self.tileAnim = self.tileAnim or {}
@@ -992,8 +1051,14 @@ function Level:render(camX, camY)
                 -- hacia abajo con un ground pound (se hunde un poco y vuelve)
                 local k = anim.t / anim.dur
                 love.graphics.push()
-                local dir = (anim.kind == 'pound') and 1 or -1
-                love.graphics.translate(0, dir * math.floor(math.sin(k * math.pi) * TILE_PX * 0.22))
+                if anim.kind == 'crack' then
+                    -- Hielo fino que se agrieta: tiembla de lado y se hunde un pelín
+                    love.graphics.translate(math.floor(math.sin(anim.t * 70) * 3 * (1 - k) + 0.5),
+                                            math.floor(math.sin(k * math.pi) * 3))
+                else
+                    local dir = (anim.kind == 'pound') and 1 or -1
+                    love.graphics.translate(0, dir * math.floor(math.sin(k * math.pi) * TILE_PX * 0.22))
+                end
             end
             if not (def.trigger and self.hiddenTriggers and self.hiddenTriggers[def.trigger]) then
                 TileTypes.drawTile(def, ctx)
@@ -1205,6 +1270,8 @@ function Level:update(dt)
             if b.pending then self:updateSwitchBlocks(); break end
         end
     end
+    -- Hielo fino que se desgasta con alguien encima
+    self:updateThinIce(dt)
     -- Bloques golpeados (saltito / aplastarse)
     for k, a in pairs(self.tileAnim or {}) do
         a.t = a.t + dt

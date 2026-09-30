@@ -8,7 +8,7 @@
 # - Los arneses online (online_smoke, online_boss) arrancan un servidor LOCAL
 #   NUEVO para cada ejecución (uno reutilizado arrastra conexiones viejas),
 #   esperan a que escuche y lo paran al acabar. Nunca el servidor real.
-# - LEVEL=tools/levelgen/arenas/x.json (una arena de prueba, fuera de
+# - LEVEL= / PLAY=tools/levelgen/arenas/x.json (una arena de prueba, fuera de
 #   assets/levels): se copia temporalmente a assets/levels/zz_tmp_*.json (el
 #   servidor ignora los que empiezan por _) y se borra al acabar.
 # - Borra server/published si no existía antes (lo crea el servidor local).
@@ -38,11 +38,11 @@ run_one() {
     local i
     for i in "${!envs[@]}"; do
         local v=${envs[$i]}
-        if [[ $v == LEVEL=* && $v != LEVEL=assets/levels/* ]]; then
-            local src=${v#LEVEL=}
+        if [[ ( $v == LEVEL=* || $v == PLAY=* ) && $v != *=assets/levels/* ]]; then
+            local key=${v%%=*} src=${v#*=}
             tmp="assets/levels/zz_tmp_$(basename "$src")"
             cp "$src" "$tmp" || return 2
-            envs[$i]="LEVEL=$tmp"
+            envs[$i]="$key=$tmp"
         fi
     done
     [ -d server/published ] && had_pub=1
@@ -80,6 +80,7 @@ if [ "${1:-}" = all ]; then
              "online_smoke LEVEL=assets/levels/jardin_gummies.json MODE=race SECS=16" \
              "online_smoke LEVEL=assets/levels/isla_flotante.json MODE=koth SECS=16" \
              "online_smoke LEVEL=tools/levelgen/arenas/bombas.json MODE=race SECS=12 WATCH=bomb WANT=lit,exploding" \
+             "online_smoke LEVEL=tools/levelgen/arenas/hielo.json MODE=race SECS=10 WANTTILES=thin_ice_1,thin_ice_2,thin_ice_3,empty" \
              "online_boss LEVEL=tools/levelgen/arenas/jefe_cangrejo.json NOSHOTS=1" \
              "online_boss LEVEL=tools/tests/online_boss/fortaleza_flood.json NOSHOTS=1 SECS=40" \
              "online_boss LEVEL=tools/tests/online_boss/espejo.json NOSHOTS=1 SECS=30"; do

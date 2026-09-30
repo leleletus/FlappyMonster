@@ -15,7 +15,7 @@ local TileCodec = require 'src/world/tiles/TileCodec'
 local Materials = require 'src/world/tiles/Materials'
 local TileTypes = require 'src/world/tiles/TileTypes'
 
-local MATERIALS = { 'default', 'stone', 'wood', 'deadly', 'water', 'dirt', 'grass' }
+local MATERIALS = { 'default', 'stone', 'wood', 'deadly', 'water', 'dirt', 'grass', 'snow', 'ice' }
 
 local TYPES = {
     'empty',          -- 0
@@ -33,6 +33,9 @@ local TYPES = {
     'dirt',           -- 16
     'grass',          -- 17
     'switchblock_on', -- 18, 19, 27, 28 (Bloques ON / OFF, activo e inactivo)
+    'snow',           -- 29
+    'ice',            -- 30
+    'thin_ice',       -- 31-34 (hielo fino: normal, dañado, muy dañado, a punto de romperse)
 }
 
 -- Bloques TRAMPA ("mímicos"): se ven idénticos al tile original pero no tienen

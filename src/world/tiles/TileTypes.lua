@@ -234,6 +234,16 @@ local function getTexture(tex)
     return entry or nil
 end
 
+-- Dibuja una textura de tile (def.texture o { image = ... }) en la celda del
+-- contexto, con transparencia opcional (hielo: semitransparente)
+function TileTypes.drawTexture(tex, ctx, alpha)
+    local e = getTexture(tex)
+    if not e then return end
+    local w, h = e.img:getWidth(), e.img:getHeight()
+    love.graphics.setColor(1, 1, 1, alpha or 1)
+    love.graphics.draw(e.img, ctx.x, ctx.y, 0, ctx.size / w, ctx.size / h)
+end
+
 -- Dibuja un tile completo (aspecto del tipo) en ctx.x, ctx.y, tamaño ctx.size.
 function TileTypes.drawTile(t, ctx)
     if t.draw then

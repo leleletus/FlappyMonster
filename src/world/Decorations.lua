@@ -17,7 +17,7 @@
 
 local DecorationTypes = require 'src/world/decorations/DecorationTypes'
 
-local TYPES = { 'tulip', 'stretch', 'palmtree' }
+local TYPES = { 'tulip', 'stretch', 'palmtree', 'icicle' }
 
 for _, name in ipairs(TYPES) do
     DecorationTypes.register(require('src/world/decorations/types/' .. name))

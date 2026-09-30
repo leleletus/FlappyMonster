@@ -9,6 +9,9 @@
 -- PLAY=assets/levels/x.json: abre ese nivel en el editor, pulsa F5 (probar, como
 -- el usuario), mete al jugador en la zona de jefe y captura 1.5 s después de
 -- empezar la pelea (_play.png): lo que se ve jugando desde el editor.
+-- Si el nivel no tiene zona de jefe: captura el editor (_play_ed.png) y el juego
+-- quieto a los 0.5 / 1.2 / 2.0 / 2.8 / 3.8 s (_play_1.._5.png), p. ej. el hielo
+-- fino agrietándose bajo el jugador (tools/levelgen/arenas/hielo.json).
 --
 --   tools/tests/run.sh editor_open
 io.stdout:setvbuf('no')
@@ -45,6 +48,7 @@ function love.update(dt)
             print('ventana: ' .. table.concat({ love.graphics.getDimensions() }, 'x'))
             if love.resize then love.resize(tonumber(w), tonumber(h)) end
         end
+        if frame == 3 then love.graphics.captureScreenshot(function(img) img:encode('png', 'editor_open_play_ed.png') end) end
         if frame == 5 then key('f5') end
         local st = gStateMachine and gStateMachine:_top()
         if frame > 8 and st and st.player and st.level then
@@ -52,6 +56,18 @@ function love.update(dt)
             if z and not PLAY_placed then
                 PLAY_placed = true
                 st.player.x, st.player.y = z.x0 + 2 * TILE_PX, z.y1 - 2 * TILE_PX
+            end
+            if not z then
+                PLAY_t0 = PLAY_t0 or frame
+                for i, sec in ipairs({ 0.5, 1.2, 2.0, 2.8, 3.8 }) do
+                    if frame == PLAY_t0 + math.floor(sec * 60) then
+                        love.graphics.captureScreenshot(function(img) img:encode('png', 'editor_open_play_' .. i .. '.png') end)
+                    end
+                end
+                if frame == PLAY_t0 + 240 then
+                    print('capturas en ' .. love.filesystem.getSaveDirectory() .. '/editor_open_play_*.png')
+                    print('TODO OK'); love.event.quit(0)
+                end
             end
             if z and z.state == 'fight' then
                 PLAY_fight = PLAY_fight or frame

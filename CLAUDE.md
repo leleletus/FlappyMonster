@@ -382,7 +382,7 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   'stomp' with 4th return dirX = cnx → `pa:bounce(vy, dirX, soft=true)` (vx 300 +
   ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill; v17: crawler turn in snapshots; v18: MegaCrabby;
   v19: boss walls, Mega minions/pounce; v20: post-hit protection; v21: unified invulnerability;
-  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks; v30: boss broken glass; v31: special enemy deaths; v32: bombs).
+  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks; v30: boss broken glass; v31: special enemy deaths; v32: bombs; v33: snow/ice/thin ice).
 - **Crawler** (`src/world/entities/Crawler.lua`): surface-following movement
   (floor ↔ walls ↔ ceiling, concave and convex corners) for Crabbies with prop
   `wallWalk` (`Crabby.WALL_PROP`, off by default so old levels don't change).
@@ -587,8 +587,24 @@ list no mode until the user places a Point Area in them).
   remote players via `PlayerAdventure.outerBoxAt`) → `level.hiddenVis[row*65536+col]
   = {age, left, hold, blink}`: appear anim while touched (box +1 px, standing on it
   counts), then hold 0.25 s, blink 0.9 s, gone. Editor/thumbnails draw a dashed ghost.
-- Harness: `tools/tests/run.sh mechanics` (also covers the Gummy helmet and the
-  pufferfish). Protocol v22 (ON/OFF + invisible blocks + helmet + pufferfish).
+- **Snow / ice** (`snow` 29, material snow, joinGroup ground; `ice` 30, drawn at 0.78 alpha,
+  joinGroup ice). Textures `tiles/snow.png`, `ice.png` (the user's originals kept as
+  `*-orig.png`), from `tools/ui/make_snow_sprites.py` (never overwrites; `--force`).
+- **Thin ice** (`thin_ice.lua`, 4 tiles 31-34: normal → `_1` damaged → `_2` → `_3` about to
+  break; later stages `editorHide`): SOLID on every side, half a cell tall (hitbox top half),
+  0.8 alpha, textures `thin_ice_0..3.png`. `Level:crackIce(c, r, n, from)` advances n stages
+  (≥4 → breaks to empty/water): standing on it `Level.THIN_ICE_WEAR` (0.8 s) per stage
+  (`Level:updateThinIce`, SP/server only), head bump 1, GP 3 (the player keeps falling if it
+  breaks), explosion 4. Tile events `k='crack'|'icebreak'` → client `tileBump('crack')` (shake),
+  fx `ice_crack` / `ice_break`, sounds iceCrack / iceBreak (`tools/sounds/ice.py`); SP gets the
+  same through the `level.tileFx(kind, c, r)` hook.
+- **Ice drips** (`src/fx/IceDrips.lua`, render-only, per client): tiles with `iceDrip` and air
+  below grow drops (`fx/ice_drop.png`) that fall and splash. **Snowfall** (`src/fx/Snowfall.lua`):
+  level JSON `"snow": true` (editor Nivel → Clima → "Nieve cayendo"), 3 depth layers of
+  `fx/snowflakes.png`, visual only. Decoration `icicle` (Carámbano, `tiles/icespike.png`,
+  hangs from the top of its cell). Test arena `tools/levelgen/arenas/hielo.json`.
+- Harness: `tools/tests/run.sh mechanics` (also covers the Gummy helmet, the
+  pufferfish and thin ice: `hielo_*`). Protocol v22 (ON/OFF + invisible blocks + helmet + pufferfish).
 
 ## Terrain blocks, subtiles and physical particles
 

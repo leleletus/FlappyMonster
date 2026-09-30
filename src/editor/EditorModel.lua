@@ -97,6 +97,7 @@ function Model.fromData(lvl, path)
     m.modes     = (type(lvl.modes) == 'table' and #lvl.modes > 0) and deepcopy(lvl.modes) or nil
     m.matchTime = tonumber(lvl.matchTime)
     m.music     = type(lvl.music) == 'string' and lvl.music or nil
+    m.snow      = lvl.snow == true or nil                 -- (nieve cayendo: solo visual)
     m.path    = path
     m:fixActivatableIds()
     m:pruneLinks()
@@ -131,7 +132,7 @@ function Model:toData()
         playerStart = self.playerStart, tiles = self.tiles,
         entities = ents, foliage = decos, vents = self.vents, bossZones = zones, subtiles = subs, links = self.links or {}, blockLinks = self.blockLinks or {},
         autoScroll = AutoScroll.serialize(self.autoScroll),
-        modes = self.modes, matchTime = self.matchTime, music = self.music,
+        modes = self.modes, matchTime = self.matchTime, music = self.music, snow = self.snow,
     }
 end
 
@@ -180,6 +181,7 @@ function Model:encode()
     if d.modes then tail[#tail+1] = function(last) line('"modes": ' .. enc(d.modes), last) end end
     if d.matchTime then tail[#tail+1] = function(last) line('"matchTime": ' .. json.encode(d.matchTime), last) end end
     if d.music then tail[#tail+1] = function(last) line('"music": ' .. json.encode(d.music), last) end end
+    if d.snow then tail[#tail+1] = function(last) line('"snow": true', last) end end
     list('vents', d.vents, #tail == 0)
     for i, f in ipairs(tail) do f(i == #tail) end
     out[#out+1] = '}'
@@ -211,13 +213,13 @@ function Model:snapshot()
     return deepcopy({ name=self.name, width=self.width, height=self.height, tiles=self.tiles,
                       playerStart=self.playerStart, entities=self.entities,
                       foliage=self.foliage, vents=self.vents, bossZones=self.bossZones, subtiles=self.subtiles, links=self.links, blockLinks=self.blockLinks,
-                      autoScroll=self.autoScroll, modes=self.modes, matchTime=self.matchTime, music=self.music })
+                      autoScroll=self.autoScroll, modes=self.modes, matchTime=self.matchTime, music=self.music, snow=self.snow })
 end
 
 function Model:restore(s)
     s = deepcopy(s)
     -- (los campos opcionales pueden faltar en la copia: se vacían a mano)
-    self.autoScroll, self.modes, self.matchTime, self.music = nil, nil, nil, nil
+    self.autoScroll, self.modes, self.matchTime, self.music, self.snow = nil, nil, nil, nil, nil
     for k, v in pairs(s) do self[k] = v end
 end
 

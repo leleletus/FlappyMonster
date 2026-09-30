@@ -26,7 +26,7 @@ local GAIN = {
     megaStep     = 0.7,  megaClack  = 1.0,  megaHurt   = 1.1,  megaSlam   = 1.1,
     megaWindup   = 0.78, megaShrink = 0.8,  megaFlee   = 0.9,  megaRoar = 0.67, megaFall = 0.8,
     -- Espejo (tools/sounds/mirror.py)
-    bombIgnite = 0.72, bombFizz = 0.48, bombBlast = 0.87,
+    bombIgnite = 0.72, bombFizz = 0.48, bombBlast = 0.87, iceBreak = 0.85,
     mirrorAppear = 0.62, mirrorPortal = 0.37, glassWarn = 0.85, glassRise = 0.72, glassHit = 0.72,
     -- tools/sounds/mechanics.py (medidos: → ≈ -12 dBFS)
     switchOn     = 0.77, switchOff  = 0.76, helmetBounce = 1.15, helmetBreak = 0.72,
@@ -94,6 +94,8 @@ function Sound.load()
     load('bombFizz',    'assets/sounds/enemies/bomb_fizz.wav',          'static')   -- bomba: la mecha chisporrotea
     load('bombBlast',   'assets/sounds/enemies/bomb_blast.wav',         'static')   -- bomba: explota
     load('bombKick',    'assets/sounds/enemies/bomb_kick.wav',          'static')   -- bomba: pisada / pateada
+    load('iceCrack',    'assets/sounds/mechanics/ice_crack.wav',        'static')   -- hielo fino: se agrieta
+    load('iceBreak',    'assets/sounds/mechanics/ice_break.wav',        'static')   -- hielo fino: se rompe
     load('slamStart',   'assets/sounds/bosses/miniboss1/slam_start.wav',       'static')   -- la Nave Malvada se lanza en picado
     load('spikesOut',   'assets/sounds/bosses/miniboss1/spikes_out.wav',       'static')   -- le salen los pinchos
     load('fanfare',     'assets/sounds/jingles/fanfare.wav',            'static')

@@ -11,6 +11,9 @@
 -- ese tipo, los tiles que cambian y la vida del jugador local; con WANT=lit,exploding
 -- falla si alguno de esos estados no llegó (p. ej. la arena de bombas:
 -- LEVEL=tools/levelgen/arenas/bombas.json)
+-- WANTTILES=thin_ice_1,thin_ice_2,...: falla si el cliente no llegó a ver esos
+-- tiles (eventos 'tile' del servidor), p. ej. el hielo fino que se agrieta bajo
+-- el jugador local (LEVEL=tools/levelgen/arenas/hielo.json)
 io.stdout:setvbuf("no")
 love.filesystem.setSymlinksEnabled(true)
 lovesize = require 'libs/lovesize'
@@ -78,14 +81,19 @@ function love.update(dt)
     if gStateMachine:_top() then gStateMachine:update(dt) end
     Input = package.loaded['input']
     if st and st.localPaInit then frames = frames + 1 end
-    if os.getenv('WATCH') and st and st.enemyRenderers then
-        watch = watch or { states = {}, tiles = 0, minHp = 99, deaths = 0 }
+    if (os.getenv('WATCH') or os.getenv('WANTTILES')) and st and st.enemyRenderers then
+        watch = watch or { states = {}, tiles = 0, minHp = 99, deaths = 0, tileNames = {} }
         for _, er in pairs(st.enemyRenderers) do
             if er.def and er.def.name == os.getenv('WATCH') then watch.states[er.state] = true end
         end
         if st.level and not watch.t0 then
             watch.t0 = {}
             for r = 1, st.level.tileH do for c = 1, st.level.tileW do watch.t0[r * 65536 + c] = st.level:getRaw(c, r) end end
+        end
+        if watch.t0 then
+            for r = 1, st.level.tileH do for c = 1, st.level.tileW do
+                if watch.t0[r * 65536 + c] ~= st.level:getRaw(c, r) then watch.tileNames[st.level:getDef(c, r).name] = true end
+            end end
         end
         local pa = st.localPa
         if pa then
@@ -114,8 +122,14 @@ function love.update(dt)
             local seen = {}
             for k in pairs(watch.states) do seen[#seen + 1] = k end
             table.sort(seen)
-            print(('%s vistos en el cliente: %s · tiles cambiados: %d · vida mínima del jugador: %d · muertes: %d'):format(
-                os.getenv('WATCH'), table.concat(seen, ','), changed, watch.minHp, watch.deaths))
+            local tn = {}
+            for k in pairs(watch.tileNames) do tn[#tn + 1] = k end
+            table.sort(tn)
+            print(('%s vistos en el cliente: %s · tiles cambiados: %d (%s) · vida mínima del jugador: %d · muertes: %d'):format(
+                os.getenv('WATCH') or '-', table.concat(seen, ','), changed, table.concat(tn, ','), watch.minHp, watch.deaths))
+            for w in (os.getenv('WANTTILES') or ''):gmatch('[^,]+') do
+                if not watch.tileNames[w] then print('Error: el cliente no vio el tile ' .. w) end
+            end
             for w in (os.getenv('WANT') or ''):gmatch('[^,]+') do
                 if not watch.states[w] then print('Error: el cliente no vio el estado ' .. w) end
             end

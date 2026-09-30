@@ -1518,6 +1518,15 @@ local function drawLevelTab(x, y, w)
                         x, y, w, th.border) + 8
     end
     y = y + 2
+    -- Clima (solo visual): nieve cayendo por todo el nivel
+    y, open = ui.section('lvl:weather', 'Clima', x, y, w, m.snow and 'nieve' or 'nada')
+    if open then
+        local v, ch = ui.toggle('Nieve cayendo', m.snow == true, x, y, w)
+        y = y + 28
+        if ch then pushUndo(); m.snow = v or nil; markDirty() end
+        y = y + ui.hint('Copos de nieve cayendo por todo el nivel. Solo es visual: no afecta al juego.', x, y, w, th.border) + 8
+    end
+    y = y + 2
     -- Modos de juego online: en cuáles se ofrece este nivel
     y, open = ui.section('lvl:modes', 'Modos de juego', x, y, w, m.modes and 'limitados' or 'todos')
     if open then

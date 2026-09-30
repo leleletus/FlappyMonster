@@ -89,7 +89,9 @@ function Explosions.blast(level, x, y, radii, source)
             local cx, cy = (c - 0.5) * T, (r - 0.5) * T
             if math.sqrt((cx - x) ^ 2 + (cy - y) ^ 2) <= hurtR then
                 local def = level:getDef(c, r)
-                if def.breakable then
+                if def.thinIce then
+                    level:crackIce(c, r, 4, 'blast')                 -- (el hielo fino se rompe)
+                elseif def.breakable then
                     if level:breakTile(c, r) then
                         local Entity = require 'src/world/entities/Entity'
                         Entity.emitFx('block_break', (c - 1) * T, (r - 1) * T)

@@ -373,9 +373,11 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
                 y = edge + hh; self.vy=0
                 -- Cabezazo: rompe bloques rompibles y cambia los ON/OFF (desde abajo)
                 local c, r = math.floor(px/T)+1, math.floor((y-hh-2)/T)+1
-                local how = (t.breakable or t.toggle) and level:hitTile(c, r, 'head')
-                if how == 'break' then
-                    fx(self, 'block_break', (c-1)*T, (r-1)*T)
+                local how = (t.breakable or t.toggle or t.thinIce) and level:hitTile(c, r, 'head')
+                if how == 'crack' then
+                    -- (hielo fino: los efectos los hace crackIce / el evento del servidor)
+                elseif how == 'break' then
+                    if not t.thinIce then fx(self, 'block_break', (c-1)*T, (r-1)*T) end
                 elseif how == 'toggle' then
                     fx(self, 'switch_hit', (c-1)*T, (r-1)*T)
                 elseif not self.crouching then       -- (saltitos agachado en un túnel: sin "bonk")
@@ -733,12 +735,12 @@ function PlayerAdventure:updateGroundPound(dt, level)
             for _, px in ipairs({ self.x - self.w/2 + 4, self.x, self.x + self.w/2 - 4 }) do
                 local t = level:getDefAt(px, footY)
                 local c, r = math.floor(px/T)+1, math.floor(footY/T)+1
-                if (t.breakable or t.toggle) and not done[c] then
+                if (t.breakable or t.toggle or t.thinIce) and not done[c] then
                     done[c] = true
                     local how = level:hitTile(c, r, 'pound')
                     if how == 'break' then
                         broke = true
-                        fx(self, 'block_break', (c-1)*T, (r-1)*T)
+                        if not t.thinIce then fx(self, 'block_break', (c-1)*T, (r-1)*T) end   -- (hielo: crackIce)
                     elseif how == 'toggle' then
                         fx(self, 'switch_hit', (c-1)*T, (r-1)*T)
                     end

@@ -1,3 +1,5 @@
+local IceDrips = require 'src/fx/IceDrips'
+local Snowfall = require 'src/fx/Snowfall'
 -- src/states/OnlineAdventureState.lua
 -- Modo aventura multijugador online — arquitectura autoritativa.
 --
@@ -529,6 +531,12 @@ function OnlineAdventureState:_processEvent(ev)
             self.level:setTileRaw(c, r, v)
             if ev.k == 'set' then
                 -- (Bloque ON/OFF que cambia con su activador: sin efectos)
+            elseif ev.k == 'crack' or ev.k == 'icebreak' then
+                -- Hielo fino que se agrieta / se rompe
+                local x, y = (c - 0.5) * TILE_PX, (r - 1) * TILE_PX + TILE_PX / 4
+                if ev.k == 'crack' then self.level:tileBump(c, r, 'crack') end
+                Particles.emit(ev.k == 'icebreak' and 'ice_break' or 'ice_crack', x, y)
+                Sound.playAt(ev.k == 'icebreak' and 'iceBreak' or 'iceCrack', x, y)
             elseif ev.k == 'toggle' then
                 self.level:tileBump(c, r, ev.from)
                 Particles.emit('switch_hit', (c - 1) * TILE_PX, (r - 1) * TILE_PX)
@@ -1125,6 +1133,7 @@ function OnlineAdventureState:_renderScene()
 
     -- Nivel
     self.level:render(self.camX, self.camY)
+    IceDrips.render(self.level, self.camX, self.camY)      -- (gotas del hielo: solo dibujo)
     self.level:renderVents(self.camX, self.camY)
     self.level:renderFoliageBack(self.camX, self.camY)
 
@@ -1169,6 +1178,7 @@ function OnlineAdventureState:_renderScene()
     -- Foliaje y burbujas
     self.level:renderFoliage(self.camX, self.camY)
     self.level:renderBubbles(self.camX, self.camY)
+    Snowfall.render(self.level, self.camX, self.camY)      -- (nieve cayendo: solo dibujo)
 
     love.graphics.setCanvas()
     if scX then love.graphics.setScissor(scX, scY, scW, scH) end

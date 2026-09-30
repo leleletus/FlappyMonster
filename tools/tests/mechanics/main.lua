@@ -37,6 +37,13 @@
 --                  enciende otra bomba (reacción en cadena)
 --   bomba_objeto   quieta: tocarla no hace daño (se enciende); lanzada contra el
 --                  jugador: -1 y aturdido
+--   hielo_solido   hielo fino: se está de pie a media casilla; no se atraviesa
+--                  saltando desde abajo ni agachándose encima
+--   hielo_desgaste de pie encima: normal → dañado → muy dañado → a punto → roto
+--                  (un estado cada THIN_ICE_WEAR s) y el jugador cae; efectos y
+--                  eventos de red ('crack' / 'icebreak') en cada paso
+--   hielo_gp       ground pound: 3 estados de golpe (normal → a punto); otro lo rompe
+--   hielo_bomba    una explosión rompe el hielo fino
 --   ping_icono     antena de conexión online: niveles (verde/amarillo/rojo/X) y que
 --                  no parpadee (mejorar espera 0,6 s; perder la conexión, al momento)
 -- SHOT_BOMB=1: <save>/mechanics_bombs.png (bombas andando, volando, encendidas
@@ -66,7 +73,7 @@ local function room(W, H, put, ents)
         for c = 1, W do row[c] = (r == H or c == 1 or c == W) and 1 or 0 end
         tiles[r] = row
     end
-    for _, p in ipairs(put or {}) do tiles[p[2]][p[1]] = _G['TILE_' .. p[3]:upper()] end
+    for _, p in ipairs(put or {}) do tiles[p[2]][p[1]] = require('src/world/tiles/TileCodec').encode(_G['TILE_' .. p[3]:upper()]) end
     local level = Level.fromData({ name = 'test', width = W, height = H, playerStart = { 2, H - 1 },
                                    tiles = tiles, entities = ents or {} })
     local es = {}
@@ -640,6 +647,102 @@ function cases.bomba_objeto()
             tostring(hit), tostring(stunned), b2.state))
 end
 
+-- ── Hielo fino ───────────────────────────────────────────────────────────────
+local function iceRoom()
+    -- losa de hielo fino de 5 casillas (cols 6-10) en la fila 5, con aire debajo
+    local level, es = room(16, 9, { { 6, 5, 'thin_ice' }, { 7, 5, 'thin_ice' }, { 8, 5, 'thin_ice' },
+                                    { 9, 5, 'thin_ice' }, { 10, 5, 'thin_ice' } })
+    level.players = {}
+    local fx = {}
+    level.tileFx = function(kind, c, r) fx[#fx + 1] = kind end
+    return level, fx
+end
+
+function cases.hielo_solido()
+    local level = iceRoom()
+    -- de pie encima (cae desde arriba): pies a media casilla
+    local pa = PlayerAdventure:new(8 * T - 32, 2 * T)
+    level.players = { pa }
+    clear()
+    for _ = 1, 60 do pa:update(1 / 60, level) end
+    local feetY = pa:getOuterBounds().y + pa:getOuterBounds().h
+    local onTop = pa.onGround and math.abs(feetY - 4 * T) < 2
+    -- agachado encima: no baja
+    stub.state.crouch = true
+    for _ = 1, 40 do pa:update(1 / 60, level) end
+    stub.state.crouch = false
+    local stayed = pa:getOuterBounds().y + pa:getOuterBounds().h <= 4 * T + 2
+    -- desde abajo saltando: choca con la cara de abajo (media casilla)
+    local pb = PlayerAdventure:new(8 * T - 32, 8 * T - 60)
+    level.players = { pb }
+    for _ = 1, 20 do pb:update(1 / 60, level) end
+    stub.state.jump_pressed = true; pb:update(1 / 60, level); stub.state.jump_pressed = false
+    local minHead = math.huge
+    for i = 1, 50 do
+        stub.state.jump_pressed = (i == 14)            -- doble salto: sin el hielo llegaría más arriba
+        pb:update(1 / 60, level); minHead = math.min(minHead, pb:getOuterBounds().y)
+    end
+    clear()
+    local blocked = minHead >= 4.5 * T - 1
+    check('hielo_solido', onTop and stayed and blocked,
+        ('de pie a media casilla=%s (pies %d, cara %d) · agachado no baja=%s · desde abajo la cabeza para en %d (cara de abajo %d)'):format(
+            tostring(onTop), feetY, 4 * T, tostring(stayed), minHead, 4.5 * T))
+end
+
+function cases.hielo_desgaste()
+    local level, fx = iceRoom()
+    local pa = PlayerAdventure:new(8 * T - 32, 2 * T)
+    level.players = { pa }
+    clear()
+    local seen, t, brokeAt, fellBy = {}, 0, nil, nil
+    for i = 1, 60 * 5 do
+        pa:update(1 / 60, level)
+        level:update(1 / 60)
+        t = t + 1 / 60
+        local n = name(level, 8, 5)
+        if seen[#seen] ~= n then seen[#seen + 1] = n end
+        if n == 'empty' and not brokeAt then brokeAt = t end
+    end
+    local fell = pa.y > 5 * T
+    local q = level.brokenQueue or {}
+    local kinds = {}
+    for _, b in ipairs(q) do kinds[#kinds + 1] = b[4] end
+    local want = { 'thin_ice', 'thin_ice_1', 'thin_ice_2', 'thin_ice_3', 'empty' }
+    local ok = #seen == 5 and fell and brokeAt and brokeAt > 3 and brokeAt < 3.6
+    for i = 1, 5 do ok = ok and seen[i] == want[i] end
+    check('hielo_desgaste', ok and #fx >= 4,
+        ('estados: %s · roto a los %.1f s · el jugador cae=%s · efectos %s'):format(table.concat(seen, ' → '),
+            brokeAt or -1, tostring(fell), table.concat(fx, ',')))
+end
+
+function cases.hielo_gp()
+    local level, fx = iceRoom()
+    local function gp(col)
+        local pa = PlayerAdventure:new(col * T - 32, 2 * T)
+        level.players = { pa }
+        pa.vy, pa.gpPhase, pa.gpT = 0, 'fall', 0
+        for _ = 1, 50 do pa:update(1 / 60, level) end
+        return pa
+    end
+    gp(8)
+    local a = name(level, 8, 5)
+    gp(8)
+    local b = name(level, 8, 5)
+    check('hielo_gp', a == 'thin_ice_3' and b == 'empty',
+        ('primer ground pound: %s (3 estados) · segundo: %s'):format(a, b))
+end
+
+function cases.hielo_bomba()
+    local level, es = room(16, 9, { { 7, 7, 'thin_ice' }, { 8, 7, 'thin_ice' } },
+        { { type = 'bombobject', col = 8, row = 8 } })
+    level.players = {}
+    stepEnts(level, es, 0.3)
+    require('src/world/entities/BombCore').light(es[1], 0.1)
+    stepEnts(level, es, 0.3)
+    check('hielo_bomba', name(level, 7, 7) == 'empty' and name(level, 8, 7) == 'empty',
+        ('hielo fino tras la explosión: %s, %s'):format(name(level, 7, 7), name(level, 8, 7)))
+end
+
 function cases.ping_icono()
     local PingIcon = require 'src/ui/PingIcon'
     local L = PingIcon.level
@@ -755,7 +858,8 @@ function love.load()
                          'helmet_jump', 'helmet_ride', 'helmet_gp', 'helmet_side', 'stomp_fast',
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
-                         'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto' }) do cases[n]() end
+                         'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
+                         'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba' }) do cases[n]() end
     if os.getenv('SHOT_BOMB') then bombShot() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
     if not os.getenv('SHOT') then love.event.quit(fails == 0 and 0 or 1); return end

@@ -438,6 +438,33 @@ function Particles.emit(kind, x, y, opts)
             add({ x = x + rnd(-20, 20), y = y + rnd(-10, 10), vx = rnd(-200, 200), vy = -rnd(60, 240), g = 900,
                   life = rnd(0.4, 0.7), size = 3, col = {0.85, 0.95, 1} })
         end
+    elseif kind == 'ice_crack' then
+        -- Hielo fino que se agrieta: esquirlas pequeñas y un destello
+        for i = 1, 8 do
+            add({ x = x + rnd(-24, 24), y = y + rnd(-6, 6), vx = rnd(-120, 120), vy = -rnd(60, 220), g = 1100,
+                  life = rnd(0.35, 0.6), size = math.random(1, 2) * 2, chunk = true, spin = rnd(-12, 12), fadeLast = 0.3,
+                  col = ({ {0.9, 0.96, 1}, {0.7, 0.82, 1}, {1, 1, 1} })[math.random(3)] })
+        end
+        for i = 1, 3 do
+            add({ x = x + rnd(-20, 20), y = y + rnd(-8, 8), vx = 0, vy = 0, life = rnd(0.15, 0.3), size = 8,
+                  star = true, col = {1, 1, 1} })
+        end
+    elseif kind == 'ice_break' then
+        -- Hielo fino que se rompe: trozos de hielo que caen y rebotan (físicos),
+        -- polvo de escarcha y destellos
+        for i = 1, 22 do
+            add({ x = x + rnd(-30, 30), y = y + rnd(-10, 10), vx = rnd(-200, 200), vy = rnd(-320, 40), g = 1300,
+                  life = rnd(0.7, 1.2), size = math.random(2, 4) * 2, chunk = true, spin = rnd(-16, 16), fadeLast = 0.35,
+                  phys = true, col = ({ {0.9, 0.96, 1}, {0.68, 0.8, 1}, {0.55, 0.7, 0.98}, {1, 1, 1} })[math.random(4)] })
+        end
+        for i = 1, 10 do
+            add({ x = x + rnd(-30, 30), y = y + rnd(-8, 8), vx = rnd(-40, 40), vy = rnd(-60, 10), g = -20,
+                  life = rnd(0.5, 0.9), size = math.random(2, 4) * 2, col = {0.92, 0.96, 1}, drag = 2, dust = true })
+        end
+        for i = 1, 5 do
+            add({ x = x + rnd(-28, 28), y = y + rnd(-10, 10), vx = 0, vy = 0, life = rnd(0.2, 0.4), size = 10,
+                  star = true, col = {1, 1, 1} })
+        end
     elseif kind == 'fuse_spark' then
         -- Chispas de la mecha encendida (saltan hacia arriba y se apagan)
         for i = 1, 2 do

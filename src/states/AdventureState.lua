@@ -1,3 +1,5 @@
+local IceDrips = require 'src/fx/IceDrips'
+local Snowfall = require 'src/fx/Snowfall'
 local TouchControls = require 'src/ui/TouchControls'
 local CornerButtons = require 'src/ui/CornerButtons'
 local L = require 'src/Lang'
@@ -75,6 +77,12 @@ function AdventureState:enter(args)
     self.returnTo  = args.returnTo or 'main_menu'   -- a dónde se sale (Juego libre → free_play)
 
     self.level  = Level.new(self.levelPath)
+    -- Hielo fino que se agrieta / rompe (lo decide el nivel): partículas y sonido
+    self.level.tileFx = function(kind, c, r)
+        local x, y = (c - 0.5) * TILE_PX, (r - 1) * TILE_PX + TILE_PX / 4
+        Particles.emit(kind == 'icebreak' and 'ice_break' or 'ice_crack', x, y)
+        Sound.playAt(kind == 'icebreak' and 'iceBreak' or 'iceCrack', x, y, 0.9 + math.random() * 0.2)
+    end
     local sx, sy = self.level:getSpawnPx()
     self.player = PlayerAdventure:new(sx, sy)
     self.level.players = { self.player }       -- para trampas/entidades que "ven" al jugador
@@ -544,6 +552,7 @@ function AdventureState:_renderScene()
     end
 
     self.level:render(self.camX, self.camY)
+    IceDrips.render(self.level, self.camX, self.camY)      -- (gotas del hielo: solo dibujo)
     self.level:renderVents(self.camX, self.camY)
     self.level:renderFoliageBack(self.camX, self.camY)
 
@@ -566,6 +575,7 @@ function AdventureState:_renderScene()
 
     -- Burbujas de agua y vent (por encima de todo menos agua)
     self.level:renderBubbles(self.camX, self.camY)
+    Snowfall.render(self.level, self.camX, self.camY)      -- (nieve cayendo: solo dibujo)
 
     love.graphics.setCanvas()
     if scX then love.graphics.setScissor(scX, scY, scW, scH) end
