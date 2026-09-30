@@ -151,6 +151,11 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     G–F#–G neighbour note); seamless loop (tail folded onto the start).
                     `--instrumental` → `tentacle_chip_instrumental.ogg`: no melody, extra layers
                     only there (pad, tresillo rhythm chords, cowbell/claps/congas/timbales, fx).
+                    `tools/music/menus_chip.py` → `menus_chip.ogg` + `.mid` (catalog id `menus`, the
+                    game's main theme): the user's old song (`menus.ogg`, a mix with a "crunch"
+                    effect, no longer loaded) transcribed from an ANALYSIS (140 BPM, 18 bars: 3
+                    phrases A A B A C + link; boogie bass C E G A C' E G A, sixth chords, blues lick
+                    only in phrase 2, chromatic run from G in the links) and rebuilt with chip voices.
 src/entities/
   PlayerAdventure.lua  THE player physics (shared by SP, server and client prediction)
   OnlinePlayer.lua     remote player renderer (tinted by player color, name tag)
