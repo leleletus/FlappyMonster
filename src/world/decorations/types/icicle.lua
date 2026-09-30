@@ -1,7 +1,7 @@
 -- Carámbano: decoración (no choca ni hace daño) que cuelga del techo de su
 -- casilla y gotea de vez en cuando. Sprite: assets/images/decorations/ice/icicle.png
--- (tools/ui/make_decorations.py; la imagen original del usuario sigue en
--- assets/images/tiles/icespike.png).
+-- (tools/ui/make_decorations.py; la imagen original del usuario, icespike.png,
+-- se guarda fuera del repo: tools/ui/originals.py).
 local DecoFx = require 'src/world/decorations/DecoFx'
 
 local S = DecoFx.SCALE
@@ -17,7 +17,7 @@ return {
     end,
     draw = function(d, sx, sy)
         DecoFx.seen(d)
-        DecoFx.sheet(d, sx, sy, DecoFx.strip('assets/images/decorations/ice/icicle.png', 16), 1, { hang = true, alpha = 0.92 })
+        DecoFx.sheet(d, sx, sy, DecoFx.strip('assets/images/decorations/ice/icicle.png'), 1, { hang = true, alpha = 0.92 })
         DecoFx.draw(d, sx, sy)
     end,
 }

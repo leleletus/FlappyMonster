@@ -3,9 +3,9 @@
 # Sprites del hielo y la nieve (arte de 16x16 escalado x4, como el resto de
 # texturas de tiles):
 #   assets/images/tiles/snow.png        Nieve (a partir del color del usuario;
-#                                       su original queda en snow-orig.png)
+#                                       su original, fuera del repo: tools/ui/originals.py)
 #   assets/images/tiles/ice.png         Hielo (sus burbujas, con brillos y grietas;
-#                                       original en ice-orig.png). Se dibuja semitransparente
+#                                       original fuera del repo). Se dibuja semitransparente
 #   assets/images/tiles/thin_ice_0..3.png  Hielo fino (losa de media casilla):
 #                                       normal, dañado, muy dañado, a punto de romperse
 #   assets/images/fx/snowflakes.png     copos de nieve, 4 cuadros de 7x7
@@ -15,6 +15,8 @@
 #     python3 tools/ui/make_snow_sprites.py [--force]
 import os, sys, shutil, random
 from PIL import Image
+sys.path.insert(0, os.path.dirname(__file__))
+import originals   # noqa: E402
 
 FORCE = '--force' in sys.argv
 T = 'assets/images/tiles'
@@ -33,13 +35,9 @@ def save(img, path, scale=1):
 
 
 def backup(name):
-    """El original del usuario se guarda una vez como <name>-orig.png y el nuevo lo sustituye."""
-    p = os.path.join(T, name + '.png')
-    o = os.path.join(T, name + '-orig.png')
-    if os.path.exists(p) and not os.path.exists(o):
-        shutil.copy(p, o)
-        return True
-    return FORCE
+    """El original del usuario se guarda una vez FUERA del repo (originals.py) y el nuevo lo sustituye."""
+    _, fresh = originals.keep(os.path.join(T, name + '.png'))
+    return fresh or FORCE
 
 
 def grid(rows, pal):
@@ -173,9 +171,9 @@ if __name__ == '__main__':
     print('Sprites de hielo y nieve:')
     if backup('snow'):
         FORCE_SAVE = True
-        snow().resize((64, 64), Image.NEAREST).save(os.path.join(T, 'snow.png')); print('  ' + T + '/snow.png (original: snow-orig.png)')
+        snow().resize((64, 64), Image.NEAREST).save(os.path.join(T, 'snow.png')); print('  ' + T + '/snow.png (original: ' + originals.path(os.path.join(T, 'snow.png')) + ')')
     if backup('ice'):
-        ice().resize((64, 64), Image.NEAREST).save(os.path.join(T, 'ice.png')); print('  ' + T + '/ice.png (original: ice-orig.png)')
+        ice().resize((64, 64), Image.NEAREST).save(os.path.join(T, 'ice.png')); print('  ' + T + '/ice.png (original: ' + originals.path(os.path.join(T, 'ice.png')) + ')')
     for st in range(4):
         save(thin_ice(st), os.path.join(T, 'thin_ice_%d.png' % st), 4)
     save(flakes(), os.path.join(FX, 'snowflakes.png'))

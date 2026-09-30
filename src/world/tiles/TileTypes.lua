@@ -235,13 +235,29 @@ local function getTexture(tex)
 end
 
 -- Dibuja una textura de tile (def.texture o { image = ... }) en la celda del
--- contexto, con transparencia opcional (hielo: semitransparente)
-function TileTypes.drawTexture(tex, ctx, alpha)
+-- contexto, con transparencia opcional (hielo: semitransparente). Un mini bloque
+-- (ctx.quarter = {qx, qy}) dibuja SU cuarto de la textura a la misma escala que
+-- los bloques grandes, así que casan sin costura; `capRow` fuerza la fila de
+-- cuartos (el césped con la cara de arriba al aire siempre usa la de arriba).
+function TileTypes.drawTexture(tex, ctx, alpha, capRow)
     local e = getTexture(tex)
     if not e then return end
     local w, h = e.img:getWidth(), e.img:getHeight()
     love.graphics.setColor(1, 1, 1, alpha or 1)
-    love.graphics.draw(e.img, ctx.x, ctx.y, 0, ctx.size / w, ctx.size / h)
+    local q = ctx.quarter
+    if q then
+        local qy = capRow or q[2]
+        local k = q[1] * 2 + qy + 1
+        local qd = e.quarters and e.quarters[k]
+        if not qd then
+            e.quarters = e.quarters or {}
+            qd = love.graphics.newQuad(q[1] * w / 2, qy * h / 2, w / 2, h / 2, w, h)
+            e.quarters[k] = qd
+        end
+        love.graphics.draw(e.img, qd, ctx.x, ctx.y, 0, ctx.size / (w / 2), ctx.size / (h / 2))
+    else
+        love.graphics.draw(e.img, ctx.x, ctx.y, 0, ctx.size / w, ctx.size / h)
+    end
 end
 
 -- Dibuja un tile completo (aspecto del tipo) en ctx.x, ctx.y, tamaño ctx.size.

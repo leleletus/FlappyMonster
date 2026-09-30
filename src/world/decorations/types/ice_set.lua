@@ -53,7 +53,7 @@ return {
         end,
         draw = function(d, sx, sy)
             DecoFx.seen(d)
-            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'icicle_small.png', 8), 1, { hang = true, alpha = 0.92 })
+            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'icicle_small.png'), 1, { hang = true, alpha = 0.92 })
             DecoFx.draw(d, sx, sy)
         end,
     },
@@ -66,7 +66,7 @@ return {
         end,
         draw = function(d, sx, sy)
             DecoFx.seen(d)
-            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'snow_pile.png', 8), 1)
+            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'snow_pile.png'), 1)
             DecoFx.draw(d, sx, sy)
         end,
     },
@@ -81,7 +81,7 @@ return {
             DecoFx.seen(d)
             local pulse = 0.14 + 0.06 * math.sin(d.animT * 2.2)
             DecoFx.glow(sx, sy - 14, 24, ICE, pulse)
-            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'ice_crystal.png', 8), 1, { alpha = 0.9 })
+            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'ice_crystal.png'), 1, { alpha = 0.9 })
             DecoFx.draw(d, sx, sy)
         end,
     },
@@ -95,7 +95,7 @@ return {
         end,
         draw = function(d, sx, sy)
             DecoFx.seen(d)
-            DecoFx.wave(d, sx, sy, DecoFx.strip(DIR .. 'frozen_bush.png', 16), 1, 0.6, 1.1)
+            DecoFx.wave(d, sx, sy, DecoFx.strip(DIR .. 'frozen_bush.png'), 1, 0.6, 1.1)
             DecoFx.draw(d, sx, sy)
         end,
     },
@@ -113,7 +113,7 @@ return {
         end,
         draw = function(d, sx, sy)
             DecoFx.seen(d)
-            DecoFx.wave(d, sx, sy, DecoFx.strip(DIR .. 'snowy_pine.png', 16), 1, 1.2, 0.9)
+            DecoFx.wave(d, sx, sy, DecoFx.strip(DIR .. 'snowy_pine.png'), 1, 1.2, 0.9)
             DecoFx.draw(d, sx, sy)
         end,
     },
@@ -125,7 +125,7 @@ return {
             -- Parpadea 0.15 s cada ~4 s; la bufanda cambia cada 0.5 s
             local t = d.animT
             local frame = (t % 4.1 < 0.15) and 2 or ((math.floor(t / 0.5) % 2 == 0) and 1 or 3)
-            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'snowman-Sheet.png', 16), frame)
+            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'snowman-Sheet.png', 18), frame)
             DecoFx.draw(d, sx, sy)
         end,
     },

@@ -1,39 +1,49 @@
--- Césped: bloque sólido verde; con la cara de arriba al aire le crecen unos
--- tallitos de hierba por encima (fijos por celda). Se une con 'ground'.
+-- Césped: tierra con una capa de hierba cuando su cara de arriba da al aire
+-- (tapado por otro bloque se ve como tierra) y unos tallitos que asoman por
+-- encima. Texturas (tools/ui/make_terrain.py): assets/images/tiles/grass.png,
+-- dirt.png y grass_blades.png (3 variantes de 16x4, se elige una por celda).
+-- Se une con 'ground'.
 local TileTypes = require 'src/world/tiles/TileTypes'
 
--- Tallos: { x en píxeles de 16, alto en píxeles }
-local BLADES = { { 1, 2 }, { 4, 3 }, { 6, 1 }, { 9, 2 }, { 12, 3 }, { 14, 2 }, { 3, 1 }, { 11, 1 } }
+local TOP  = { image = 'assets/images/tiles/grass.png' }
+local DIRT = { image = 'assets/images/tiles/dirt.png' }
+local blades, quads
+
+local function loadBlades()
+    if blades == nil then
+        local ok, img = pcall(love.graphics.newImage, 'assets/images/tiles/grass_blades.png')
+        blades = ok and img or false
+        if blades then
+            blades:setFilter('nearest', 'nearest')
+            local w, h = blades:getDimensions()
+            quads = {}
+            for v = 0, 2 do          -- [variante][mitad]
+                quads[v + 1] = { love.graphics.newQuad(v * 16, 0, 8, 4, w, h), love.graphics.newQuad(v * 16 + 8, 0, 8, 4, w, h) }
+            end
+        end
+    end
+    return blades
+end
 
 return {
     id = 17, name = 'grass', label = 'Césped', category = 'Terreno',
     collision = 'solid', material = 'grass', joinGroup = 'ground',
     editorColor = { 0.3, 0.62, 0.24 },
+    texture = TOP,
     draw = function(t, ctx)
         local x, y, s = ctx.x, ctx.y, ctx.size
-        local p = math.max(2, math.floor(s / 16))           -- un píxel del arte
-        love.graphics.setColor(0.3, 0.62, 0.24, 1)
-        love.graphics.rectangle('fill', x, y, s, s)
-        -- (algún brote más oscuro por dentro)
-        local h = ((ctx.col or 1) * 5 + (ctx.row or 1) * 11) % 7
-        love.graphics.setColor(0.24, 0.52, 0.19, 1)
-        love.graphics.rectangle('fill', x + math.floor((3 + h) * s / 16), y + math.floor((6 + h % 3 * 3) * s / 16), p, p * 2)
-        love.graphics.rectangle('fill', x + math.floor((10 - h % 4) * s / 16), y + math.floor((10 + h % 2 * 2) * s / 16), p, p * 2)
         local e = TileTypes.edges(t, ctx)
-        love.graphics.setColor(0.46, 0.78, 0.32, 1)
-        TileTypes.drawEdges(ctx, e, 2)
-        if e.top then
-            -- Tallitos de hierba asomando por arriba (unos pocos, al azar fijo)
-            local n = 2 + (((ctx.col or 1) * 3 + (ctx.row or 1)) % 3)
-            for i = 1, n do
-                local b = BLADES[((ctx.col or 1) * 5 + i * 3) % #BLADES + 1]
-                local bx = x + math.floor(b[1] * s / 16)
-                -- (solo en la mitad de arriba que da al aire: la otra la tapa un mini bloque)
-                if TileTypes.half(e.top, b[1] < 8 and 1 or 2) then
-                    love.graphics.setColor(0.24, 0.52, 0.19, 1)
-                    love.graphics.rectangle('fill', bx, y - b[2] * p, p, b[2] * p)
-                    love.graphics.setColor(0.46, 0.78, 0.32, 1)
-                    love.graphics.rectangle('fill', bx, y - b[2] * p, p, p)
+        TileTypes.drawTexture(e.top and TOP or DIRT, ctx, 1, e.top and 0 or nil)
+        love.graphics.setColor(0.62, 0.45, 0.28, 1)
+        TileTypes.drawEdges(ctx, { left = e.left, right = e.right, bottom = e.bottom }, 2)
+        if e.top and loadBlades() then
+            -- Tallitos por encima (solo en la mitad de arriba que da al aire)
+            local v = ((ctx.col or 1) * 5 + (ctx.row or 1) * 3) % 3 + 1
+            local k = s / 16
+            love.graphics.setColor(1, 1, 1, 1)
+            for h = 1, 2 do
+                if TileTypes.half(e.top, h) then
+                    love.graphics.draw(blades, quads[v][h], x + (h - 1) * 8 * k, y - 4 * k, 0, k, k)
                 end
             end
         end

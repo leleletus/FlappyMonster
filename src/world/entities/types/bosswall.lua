@@ -49,7 +49,8 @@ function BW:getInnerBounds() return self:getOuterBounds() end
 
 function BW:isSolidBody() return self.alive and self.state == 'solid' end
 
--- Se dibuja como bloques de piedra: sólido, los bloques 'ground' de al lado
+-- Se dibuja como bloques de su material (prop `material`: piedra, tierra, césped,
+-- arena o nieve; con el dibujo real de ese tile): sólido, los bloques 'ground' de al lado
 -- (grandes, mini bloques y otros bloques de jefe) se unen con él sin borde
 -- (TileTypes.joinsCell; BossZones.link lo apunta en level.joinOverlay)
 function BW:joinsCell(c, r, group)
@@ -143,7 +144,6 @@ function BW:updateCustom(dt, level)
 end
 
 -- ── Dibujo: como un bloque normal (mismos colores y bordes) ──────────────────
-local solidDef
 
 -- Cada casilla aparece / desaparece con un poco de retraso según su posición
 local function cellK(self, c, r, t, dur, appearing)
@@ -156,7 +156,7 @@ end
 function BW:render(camX, camY)
     local st, t = self.state, self.deadTimer or 0
     local T = TILE_PX
-    solidDef = solidDef or TileTypes.byName.solid
+    local def = TileTypes.byName[self.props.material or 'solid'] or TileTypes.byName.solid
     if st == 'hidden' and not EDITOR_VIEW then return end
     local level = self.levelRef
     local appearing = st == 'appearing'
@@ -172,12 +172,8 @@ function BW:render(camX, camY)
                 local s = (k < 1) and (k + math.sin(k * math.pi) * 0.15) or 1
                 local sz = math.floor(T * s + 0.5)
                 local ox, oy = math.floor(x + (T - sz) / 2), math.floor(y + (T - sz) / 2)
-                local a = EDITOR_VIEW and 0.45 or 1
-                love.graphics.setColor(0.28, 0.28, 0.32, a)
-                love.graphics.rectangle('fill', ox, oy, sz, sz)
-                love.graphics.setColor(0.46, 0.46, 0.52, a)
                 -- Aristas: solo las de fuera del rectángulo, con la regla de todos
-                -- los bloques (piedra grande, mini bloques y otros bloques de jefe)
+                -- los bloques (bloques grandes, mini bloques y otros bloques de jefe)
                 local function side(inside, name)
                     if inside then return false end
                     if not level then return true end
@@ -190,7 +186,12 @@ function BW:render(camX, camY)
                     right  = side(c < self.c1, 'right'),
                 }
                 if k < 1 then e = { top = true, bottom = true, left = true, right = true } end
-                TileTypes.drawEdges({ x = ox, y = oy, size = sz }, e, 2)
+                -- (el dibujo real del tile de su material: césped, transiciones de la arena...)
+                TileTypes.drawTile(def, { x = ox, y = oy, size = sz, level = level, col = c, row = r, edges = e })
+                if EDITOR_VIEW and st == 'hidden' then
+                    love.graphics.setColor(1, 0.35, 0.35, 0.3)       -- (en el editor: aún no está)
+                    love.graphics.rectangle('fill', ox, oy, sz, sz)
+                end
             end
         end
     end
@@ -249,6 +250,10 @@ return {
           min=0.1, max=3, step=0.05 },
         { key='vanishTime', kind='number', label='Desaparece en (s)', group='Bloque', default=0.6,
           min=0.1, max=3, step=0.05 },
+        { key='material', kind='enum', label='Material', group='Bloque', default='solid',
+          options = { { value='solid', label='Piedra' }, { value='dirt', label='Tierra' }, { value='grass', label='Césped' },
+                      { value='sand', label='Arena' }, { value='snow', label='Nieve' } },
+          help='Aspecto de los bloques: el mismo que el suelo o las paredes de la arena' },
     },
     editor = { draw = drawIcon },
 }

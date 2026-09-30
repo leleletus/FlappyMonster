@@ -4,7 +4,9 @@
 -- propias partículas en d.fx (no toca el sistema global de Particles): viven
 -- pegadas a su punto de anclaje, así que se mueven con la cámara.
 --
---   DecoFx.strip(path, fw)          tira de cuadros (SpriteStrip, cacheada)
+--   DecoFx.strip(path, fw)          tira de cuadros (SpriteStrip, cacheada); sin fw = la
+--                                   imagen entera es un cuadro (los sprites llevan 1 px de
+--                                   margen transparente: nunca se ven cortados)
 --   DecoFx.sheet(d, sx, sy, strip, frame, opts)   dibuja un cuadro anclado
 --        opts.hang = cuelga desde arriba de su celda/subcelda; opts.alpha, opts.rot
 --   DecoFx.wave(d, sx, sy, strip, frame, amp, speed, opts)
@@ -25,7 +27,10 @@ local strips = {}
 function DecoFx.strip(path, fw)
     local k = path .. '#' .. tostring(fw)
     if strips[k] == nil then
-        local ok, s = pcall(SpriteStrip.load, path, fw)
+        local ok, s = pcall(function()
+            if not fw then fw = love.graphics.newImage(path):getWidth() end
+            return SpriteStrip.load(path, fw)
+        end)
         strips[k] = ok and s or false
     end
     return strips[k]

@@ -23,18 +23,18 @@ return {
         editor = { previewScale = 1.5 },
         draw = function(d, sx, sy)
             local rot = math.sin(d.animT * 1.6 + d.phase * 6) * 0.08
-            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'hibiscus.png', 8), 1, { rot = rot })
+            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'hibiscus.png'), 1, { rot = rot })
         end,
     },
     base {
         name = 'pineapple', label = 'Piña', placement = 'sub',
         editor = { previewScale = 1.5 },
-        draw = function(d, sx, sy) DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'pineapple.png', 8), 1) end,
+        draw = function(d, sx, sy) DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'pineapple.png'), 1) end,
     },
     base {
         name = 'fern', label = 'Helecho', placement = 'cell', layer = 'back',
         editor = { previewScale = 0.8 },
-        draw = function(d, sx, sy) DecoFx.wave(d, sx, sy, DecoFx.strip(DIR .. 'fern.png', 16), 1, 0.9, 1.3) end,
+        draw = function(d, sx, sy) DecoFx.wave(d, sx, sy, DecoFx.strip(DIR .. 'fern.png'), 1, 0.9, 1.3) end,
     },
     base {
         name = 'tropical_bush', label = 'Arbusto tropical', placement = 'cell', layer = 'back',
@@ -50,7 +50,7 @@ return {
         end,
         draw = function(d, sx, sy)
             DecoFx.seen(d)
-            DecoFx.wave(d, sx, sy, DecoFx.strip(DIR .. 'bush.png', 16), 1, 0.6, 1.2)
+            DecoFx.wave(d, sx, sy, DecoFx.strip(DIR .. 'bush.png'), 1, 0.6, 1.2)
             DecoFx.draw(d, sx, sy)
         end,
     },
@@ -71,7 +71,7 @@ return {
             local flick = 0.2 + 0.05 * math.sin(d.animT * 12) + 0.03 * math.sin(d.animT * 29 + d.phase * 9)
             -- (tira de 8x28: llama en las 8 filas de arriba, cuenco en la 7-9)
             DecoFx.glow(sx, sy - 96, 50, FIRE, flick)
-            local s = DecoFx.strip(DIR .. 'tiki_torch-Sheet.png', 8)
+            local s = DecoFx.strip(DIR .. 'tiki_torch-Sheet.png', 10)
             DecoFx.sheet(d, sx, sy, s, s and s:frameAt(d.animT + d.phase, 9) or 1)
             DecoFx.draw(d, sx, sy)
         end,

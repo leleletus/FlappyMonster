@@ -37,7 +37,11 @@ code, comments (Spanish), commits, docs or game text — those keep their usual 
 5. EVERY image and sound the game uses is a real ASSET FILE (assets/images/..., assets/sounds/...),
    never only drawn/synthesized in code, so the user can edit or replace it. Generators are fine
    (tools/sounds/*.py, tools/ui/make_sprites.py …) as long as their output files are committed
-   and loaded by the game; code only places/animates them.
+   and loaded by the game; code only places/animates them. When a generator REDESIGNS an
+   existing image, the original goes OUTSIDE the repo (`tools/ui/originals.py`:
+   `/home/mtvemo/FlappyMonster_originals/<same path>-orig.png`, or `$FM_ORIGINALS`) and the
+   generator always starts from it. `*-orig.png` is gitignored: never commit backups. The
+   user's `.aseprite` source files live there too (same relative paths; gitignored).
 6. Data-driven catalogs: new tiles/entities/decorations/modes are a new file
    + one name in a list. The editor and server pick them up automatically.
 7. Don't commit the many ` M` files in git status (they're mode-only changes).
@@ -262,8 +266,16 @@ Spikes are images too: assets/images/spikes/spike.png (tile spikes, rotated/flip
                        bosses/miniboss1/spike.png (stretched in height while they grow)
 Tile textures: assets/images/tiles/ (breakable, platform, platform_drop via the tile
                        def's `texture`; finish.png = the checkerboard, its wave + gold
-                       frame stay in finish.lua). Other tiles are code-drawn on purpose
-                       (material colour + neighbour-dependent edges).
+                       frame stay in finish.lua). Terrain: stone.png, dirt.png, grass.png
+                       (grass cap over dirt, only when the top is in the air; covered grass
+                       = dirt.png), grass_blades.png (3 variants of 16x4 above exposed tops)
+                       from `tools/ui/make_terrain.py`; the light edges on faces in the air are
+                       still drawn by code (neighbour-dependent). Mini blocks (ctx.quarter) draw
+                       THEIR quarter of the texture at the same scale (seamless with big blocks).
+                       **Sand** (`sand` 35, material sand, also a mini block): sand.png +
+                       `sand_blend.png` (dithered band in the neighbour's colours, frame 1
+                       dirt/grass, 2 stone, drawn rotated on each side touching dirt/grass/stone,
+                       so the change is never abrupt).
 src/fx/SpriteStrip.lua animation strips (frames side by side in one PNG):
                        SpriteStrip.load(path[, frameW]) → :frameAt(t, fps), :draw(i, x, y, r, sx, sy)
 server/main.lua        authoritative sim (see below)
@@ -382,7 +394,7 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   'stomp' with 4th return dirX = cnx → `pa:bounce(vy, dirX, soft=true)` (vx 300 +
   ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill; v17: crawler turn in snapshots; v18: MegaCrabby;
   v19: boss walls, Mega minions/pounce; v20: post-hit protection; v21: unified invulnerability;
-  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks; v30: boss broken glass; v31: special enemy deaths; v32: bombs; v33: snow/ice/thin ice).
+  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks; v30: boss broken glass; v31: special enemy deaths; v32: bombs; v33: snow/ice/thin ice; v34: sand).
 - **Crawler** (`src/world/entities/Crawler.lua`): surface-following movement
   (floor ↔ walls ↔ ceiling, concave and convex corners) for Crabbies with prop
   `wallWalk` (`Crabby.WALL_PROP`, off by default so old levels don't change).
@@ -454,7 +466,7 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   `tools/ui/make_bomb_sprites.py` (never overwrites; --force). Sounds bomb_ignite/fizz/blast/kick
   (`tools/sounds/bomb.py`; the blast is in the harness `LOUD` list, up to −4 dBFS, RANGE 4;
   the kick is metallic). The user's sheets were retouched by `tools/ui/retouch_bomb.py`
-  (1x2 eyes, metal cap, rope-coloured fuse; originals kept as `*-orig.png`). Living bomb
+  (1x2 eyes, metal cap, rope-coloured fuse; originals kept OUTSIDE the repo, see Golden rule 5). Living bomb
   walks/flies like a Gummy (no helmet, breathes when idle), NO contact damage and NEVER lit by
   proximity: touching it KICKS it in the player's walking direction (`touchKick`, cooldown
   `KICK_CD`); stomping it = the player bounces (`'bounce'` + `e:onBounced(pa)` hook in
@@ -588,8 +600,8 @@ list no mode until the user places a Point Area in them).
   = {age, left, hold, blink}`: appear anim while touched (box +1 px, standing on it
   counts), then hold 0.25 s, blink 0.9 s, gone. Editor/thumbnails draw a dashed ghost.
 - **Snow / ice** (`snow` 29, material snow, joinGroup ground; `ice` 30, drawn at 0.78 alpha,
-  joinGroup ice). Textures `tiles/snow.png`, `ice.png` (the user's originals kept as
-  `*-orig.png`), from `tools/ui/make_snow_sprites.py` (never overwrites; `--force`).
+  joinGroup ice). Textures `tiles/snow.png`, `ice.png` (the user's originals kept outside the
+  repo), from `tools/ui/make_snow_sprites.py` (never overwrites; `--force`).
 - **Thin ice** (`thin_ice.lua`, 4 tiles 31-34: normal → `_1` damaged → `_2` → `_3` about to
   break; later stages `editorHide`): SOLID on every side, half a cell tall (hitbox top half),
   0.8 alpha, textures `thin_ice_0..3.png`. `Level:crackIce(c, r, n, from)` advances n stages
@@ -601,7 +613,7 @@ list no mode until the user places a Point Area in them).
 - **Ice drips** (`src/fx/IceDrips.lua`, render-only, per client): tiles with `iceDrip` and air
   below grow drops (`fx/ice_drop.png`) that fall and splash. **Snowfall** (`src/fx/Snowfall.lua`):
   level JSON `"snow": true` (editor Nivel → Clima → "Nieve cayendo"), 3 depth layers of
-  `fx/snowflakes.png`, visual only. Decoration `icicle` (Carámbano, `tiles/icespike.png`,
+  `fx/snowflakes.png`, visual only. Decoration `icicle` (Carámbano, `decorations/ice/icicle.png`,
   hangs from the top of its cell). Test arena `tools/levelgen/arenas/hielo.json`.
 - Harness: `tools/tests/run.sh mechanics` (also covers the Gummy helmet, the
   pufferfish and thin ice: `hielo_*`). Protocol v22 (ON/OFF + invisible blocks + helmet + pufferfish).
@@ -672,11 +684,29 @@ strips at ×4, `wave` (row-by-row sine sway, root still), additive `glow`, per-d
 particles in `d.fx` (`emit/update/draw`, spawned only while seen, `every` timers), `drip`
 (forms, falls, splashes on `d.level:landingCross`); bubbles pop out of water. Sprites:
 `assets/images/decorations/<theme>/` + `fx/` from `tools/ui/make_decorations.py` (simple
-style: 1-px dark outline + 3 tones, no noise; never overwrites; `--force [names]`). It also
+style: 1-px dark outline + 3 tones, no noise; never overwrites; `--force [names]`). Every
+sprite gets a 1-px transparent margin (sides + top, or bottom if it hangs) with its outline
+closed there, and `edge_check` warns if fill touches the canvas edge (it looked CUT in
+game); `DecoFx.strip(path)` without a frame width = the whole image. It also
 REDESIGNED the old foliage (tulip, stretch, palmtree parts) in that style from the user's
-originals kept as `*-orig.png`; the icicle now uses `decorations/ice/icicle.png` (the user's
-`tiles/icespike.png` stays). Showcase arena `tools/levelgen/arenas/decoraciones.json`
+originals (kept outside the repo); the icicle now uses `decorations/ice/icicle.png` (the user's
+original `icespike.png` is kept outside the repo). Showcase arena `tools/levelgen/arenas/decoraciones.json`
 (`run.sh editor_open PLAY=...`).
+
+## Level themes (`tools/levelgen/retheme.py`)
+
+The levels were built when stone was the only block. `retheme.py` re-dresses them by
+THEME (table `THEMES`: meadow, tropical, snow, cave, mine, underwater, fortress) with
+ZERO gameplay change (stone/dirt/grass/snow are identical for physics): solid blocks and
+the frame's bottom row → surface of the theme where the top is in the air (grass / snow /
+dirt / stone), dirt 2-3 rows below, stone deeper; SAND 2 deep under water (sea floor) and on
+meadow/tropical shores (water ≤ 3 columns away; shells/starfish/palms on it); snow: small one-row islands → ice (+
+`"snow": true`). Then decorations by theme on floors (planks: small ones only), ceilings
+and underwater floors, always `layer = 'back'`, never on spikes/entities/start/finish/
+vents/boss walls/boss arenas. `--force` re-rolls only its own decorations (the ones with
+`layer='back'` of its types; hand-placed ones stay); `--terrain` also re-decides dirt/grass/
+snow/sand blocks (overrides hand-placed ones). Seeded per level (stable). Writes the
+editor's JSON format. Run it again after `build.py --only x`. New levels: add a THEMES row.
 
 ## Level JSON
 
@@ -864,7 +894,8 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   player is inside) → solid (`solidFull` body: blocks players/entities, climbable) →
   vanishing (zone no longer fighting) → hidden. State sent in snapshots (hidden =
   netAtRest). `BossZones.link` gives entities with `wantsLevel` the level (edges drawn
-  like real blocks). Protocol v19.
+  like real blocks). Prop `material` (Piedra/Tierra/Césped/Arena/Nieve, default stone): drawn
+  with that tile's real draw (grass cap, sand transitions), so walls can match the arena. Protocol v19.
 - Boss-zone respawns: dying in a zone in 'fight' respawns at `BossZones.safeSpawn(level,
   z)` (via `respawnPoint`, SP + server): the best-scored standable cell of the zone
   (`Level:isStandable`) — far from the boss (its `markerX` while aiming; capped at 7

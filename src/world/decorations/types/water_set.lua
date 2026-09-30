@@ -34,7 +34,7 @@ local function waving(name, label, placement, file, fw, amp, speed, extra)
         editor = { previewScale = placement == 'sub' and 1.5 or ((extra and extra.tall) and 0.42 or 0.8) },
         draw = function(d, sx, sy)
             DecoFx.seen(d)
-            DecoFx.wave(d, sx, sy, DecoFx.strip(DIR .. file, fw), 1, amp, speed)
+            DecoFx.wave(d, sx, sy, DecoFx.strip(DIR .. file), 1, amp, speed)
             DecoFx.draw(d, sx, sy)
         end }
     for k, v in pairs(extra or {}) do def[k] = v end
@@ -44,7 +44,7 @@ end
 
 local function static(name, label, file)
     return base { name = name, label = label, placement = 'sub', editor = { previewScale = 1.5 },
-        draw = function(d, sx, sy) DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. file, 8), 1) end }
+        draw = function(d, sx, sy) DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. file), 1) end }
 end
 
 return {
@@ -59,7 +59,7 @@ return {
         end,
         draw = function(d, sx, sy)
             DecoFx.seen(d)
-            DecoFx.wave(d, sx, sy, DecoFx.strip(DIR .. 'coral.png', 16), 1, 0.35, 1.2)
+            DecoFx.wave(d, sx, sy, DecoFx.strip(DIR .. 'coral.png'), 1, 0.35, 1.2)
             DecoFx.draw(d, sx, sy)
         end,
     },
@@ -70,7 +70,7 @@ return {
         draw = function(d, sx, sy)
             -- (ida y vuelta 1→2→3→2)
             local k = math.floor(d.animT * 3.5 + d.phase * 4) % 4
-            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'anemone-Sheet.png', 8), ({ 1, 2, 3, 2 })[k + 1])
+            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'anemone-Sheet.png', 10), ({ 1, 2, 3, 2 })[k + 1])
         end,
     },
     static('starfish', 'Estrella de mar', 'starfish.png'),
@@ -92,7 +92,7 @@ return {
             DecoFx.seen(d)
             local c = (d.animT + d.phase * 6) % 6
             local f = (c < 4.2) and 1 or ((c < 4.4 or c >= 5.8) and 2 or 3)
-            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'clam-Sheet.png', 8), f)
+            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'clam-Sheet.png', 10), f)
             DecoFx.draw(d, sx, sy)
         end,
     },

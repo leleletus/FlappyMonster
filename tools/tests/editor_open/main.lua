@@ -11,7 +11,8 @@
 -- empezar la pelea (_play.png): lo que se ve jugando desde el editor.
 -- Si el nivel no tiene zona de jefe: captura el editor en la capa Decoración (_play_ed.png) y el juego
 -- quieto a los 0.5 / 1.2 / 2.0 / 2.8 / 3.8 s (_play_1.._5.png), p. ej. el hielo
--- fino agrietándose bajo el jugador (tools/levelgen/arenas/hielo.json).
+-- fino agrietándose bajo el jugador (tools/levelgen/arenas/hielo.json). AT=col,fila:
+-- pone ahí al jugador (ver cualquier parte de un nivel).
 --
 --   tools/tests/run.sh editor_open
 io.stdout:setvbuf('no')
@@ -59,6 +60,12 @@ function love.update(dt)
                 st.player.x, st.player.y = z.x0 + 2 * TILE_PX, z.y1 - 2 * TILE_PX
             end
             if not z then
+                if not PLAY_t0 and os.getenv('AT') then
+                    -- AT=col,fila: pone al jugador ahí (capturas de cualquier parte del nivel)
+                    local c, r = os.getenv('AT'):match('(%d+),(%d+)')
+                    st.player.x, st.player.y = (tonumber(c) - 0.5) * TILE_PX, (tonumber(r) - 0.5) * TILE_PX
+                    st.player.spawnX, st.player.spawnY = st.player.x, st.player.y
+                end
                 PLAY_t0 = PLAY_t0 or frame
                 for i, sec in ipairs({ 0.5, 1.2, 2.0, 2.8, 3.8 }) do
                     if frame == PLAY_t0 + math.floor(sec * 60) then

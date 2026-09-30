@@ -13,6 +13,8 @@
 #     python3 tools/ui/make_decorations.py [--force] [nombre ...]
 import os, sys, math, random
 from PIL import Image, ImageDraw
+sys.path.insert(0, os.path.dirname(__file__))
+import originals   # noqa: E402
 
 FORCE = '--force' in sys.argv
 ONLY = {a for a in sys.argv[1:] if not a.startswith('--')}
@@ -43,6 +45,75 @@ def strip(frames):
     return out
 
 
+def outline_color(fr):
+    """Color de contorno: el más frecuente entre los píxeles que tocan transparencia."""
+    w, h = fr.size
+    op = lambda x, y: 0 <= x < w and 0 <= y < h and fr.getpixel((x, y))[3] > 0
+    count = {}
+    for y in range(h):
+        for x in range(w):
+            if op(x, y) and not all(op(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                c = fr.getpixel((x, y)); count[c] = count.get(c, 0) + 1
+    return max(count, key=count.get) if count else None
+
+
+def edge_check(name, img):
+    """Avisa si RELLENO (no contorno) toca el borde del lienzo por los lados o por arriba
+    (por abajo si cuelga): se vería cortado en el juego."""
+    if name in NO_PAD: return
+    fw = FRAME_W.get(name, img.width) + 2
+    hang = name in HANGING
+    for k in range(img.width // fw):
+        fr = img.crop((k * fw, 0, (k + 1) * fw, img.height))
+        w, h = fr.size
+        oc = outline_color(fr)
+        pts = [(0, y) for y in range(h)] + [(w - 1, y) for y in range(h)] + \
+              [(x, h - 1 if hang else 0) for x in range(w)]
+        bad = [q for q in pts if fr.getpixel(q)[3] and fr.getpixel(q) != oc]
+        if bad: print('  AVISO: %s (cuadro %d) toca el borde del lienzo: %s' % (name, k + 1, bad[:4]))
+
+
+# Ancho de cuadro de las tiras (sin el margen) y lo que no lleva margen
+FRAME_W = {'snowman-Sheet': 16, 'torch-Sheet': 8, 'anemone-Sheet': 8, 'clam-Sheet': 8, 'tiki_torch-Sheet': 8}
+NO_PAD = {'cobweb', 'spider-Sheet', 'butterfly-Sheet'}
+HANGING = {'icicle', 'icicle_small', 'stalactite'}
+
+
+def complete_outline(fr, hang):
+    """Cierra el contorno SOLO en el margen nuevo (donde el borde lo cortaba): pone el
+    color de contorno junto al relleno que tocaba el borde del lienzo."""
+    w, h = fr.size
+    op = lambda x, y: 0 <= x < w and 0 <= y < h and fr.getpixel((x, y))[3] > 0
+    oc = outline_color(fr)
+    if not oc: return fr
+    out = fr.copy()
+    margin = [(0, y) for y in range(h)] + [(w - 1, y) for y in range(h)] + \
+             [(x, h - 1 if hang else 0) for x in range(w)]
+    for x, y in margin:
+        if op(x, y): continue
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            if op(x + dx, y + dy) and fr.getpixel((x + dx, y + dy)) != oc:
+                out.putpixel((x, y), oc)
+                break
+    return out
+
+
+def pad(name, img):
+    """1 px de margen a los lados y arriba (o abajo si cuelga) + contorno cerrado, para
+    que nada se vea cortado por el borde del lienzo. Se centra igual (ancla abajo-centro)."""
+    if name in NO_PAD: return img
+    fw = FRAME_W.get(name, img.width)
+    hang = name in HANGING
+    n = img.width // fw
+    out = Image.new('RGBA', ((fw + 2) * n, img.height + 1), (0, 0, 0, 0))
+    for k in range(n):
+        fr = img.crop((k * fw, 0, (k + 1) * fw, img.height))
+        big = Image.new('RGBA', (fw + 2, img.height + 1), (0, 0, 0, 0))
+        big.paste(fr, (1, 0 if hang else 1))
+        out.paste(complete_outline(big, hang), (k * (fw + 2), 0))
+    return out
+
+
 def save(theme, name, img):
     if ONLY and name not in ONLY: return
     path = os.path.join(OUT, theme, name + '.png')
@@ -50,6 +121,9 @@ def save(theme, name, img):
         print('  ' + path + ' ya existe: no se toca (--force)')
         return
     os.makedirs(os.path.dirname(path), exist_ok=True)
+    if theme != 'fx':
+        img = pad(name, img)
+        edge_check(name, img)
     img.save(path)
     print('  %-52s %dx%d' % (path, img.width, img.height))
 
@@ -146,12 +220,12 @@ def frozen_bush():
     w, h = 16, 12
     im = Image.new('RGBA', (w, h), (0, 0, 0, 0))
     leaf, leafL, leafD = rgb('3f7f78'), rgb('5ea393'), rgb('2c5a5a')
-    cx, cy, rx, ry = 7.5, 7.5, 7.4, 5.2
+    cx, cy, rx, ry = 7.5, 7.5, 6.3, 5.0
     for y in range(h):
         for x in range(w):
             dx, dy = (x - cx) / rx, (y - cy) / ry
             bump = 0.18 * math.sin(x * 1.7)
-            if dx * dx + dy * dy < 1 + bump or (y >= 9 and 1 <= x <= 14):
+            if dx * dx + dy * dy < 1 + bump or (y >= 10 and 2 <= x <= 13):
                 c = leafL if dx < -0.2 else (leafD if dx > 0.45 else leaf)
                 im.putpixel((x, y), c)
     # nieve encima: las 2 primeras filas opacas de cada columna
@@ -257,7 +331,7 @@ def cave_crystals():
     d = ImageDraw.Draw(im)
     P, PL, PD = rgb('9a5ce6'), rgb('d6b4ff'), rgb('5e2fa8')
     shards = [  # (base x, alto, inclinación, medio ancho)
-        (7.5, 13, 0.0, 2.2), (3.5, 8, -2.2, 1.6), (12, 9, 2.4, 1.7), (10, 5, 1.0, 1.2), (5.5, 5, -0.8, 1.2)]
+        (7.5, 13, 0.0, 2.2), (4.2, 8, -1.3, 1.5), (11.2, 9, 1.4, 1.5), (9.8, 5, 0.8, 1.1), (5.6, 5, -0.6, 1.1)]
     for bx, ht, lean, hw in shards:
         tipx, tipy = bx + lean, h - 1 - ht
         poly = [(bx - hw, h - 1), (bx - hw + lean * 0.7, tipy + 2), (tipx, tipy), (bx + hw + lean * 0.7, tipy + 2), (bx + hw, h - 1)]
@@ -266,7 +340,7 @@ def cave_crystals():
         d.line([(bx + hw * 0.7, h - 1), (bx + hw * 0.7 + lean * 0.7, tipy + 2)], fill=PD)
     for x in range(w):              # base de roca
         for y in (h - 1,):
-            if 2 <= x <= 13: im.putpixel((x, y), RM)
+            if 3 <= x <= 12: im.putpixel((x, y), RM)
     return outline(im, rgb('2a1250'))
 
 
@@ -379,7 +453,7 @@ def bones():
     ], {'B': B, 'D': BD, 'O': O, 'k': k})
 
 
-def seaweed(w=16, h=32, strands=((5, 30, 0.0), (10, 24, 1.6), (13, 16, 3.1)), seed=2):
+def seaweed(w=16, h=32, strands=((4, 30, 0.0), (8, 24, 1.6), (11, 16, 3.1)), seed=2):
     im = Image.new('RGBA', (w, h), (0, 0, 0, 0))
     g, gL, gD = rgb('3aa25a'), rgb('7ad07a'), rgb('24703e')
     for bx, ht, ph in strands:
@@ -398,7 +472,7 @@ def seaweed(w=16, h=32, strands=((5, 30, 0.0), (10, 24, 1.6), (13, 16, 3.1)), se
 
 
 def seaweed_small():
-    return seaweed(8, 8, ((2, 8, 0.4), (5, 6, 2.0)), 3)
+    return seaweed(8, 8, ((2, 7, 0.4), (4, 6, 2.0)), 3)
 
 
 def coral():
@@ -514,12 +588,12 @@ def fern():
     im = Image.new('RGBA', (w, h), (0, 0, 0, 0))
     g, gL, gD = rgb('44b04a'), rgb('8ae06a'), rgb('2a7a34')
     # hojas que salen del centro de la base y se arquean hacia fuera y abajo
-    for ang, ln in ((-1.15, 8), (-0.6, 10), (-0.1, 11), (0.35, 10), (0.85, 9), (1.25, 7)):
+    for ang, ln in ((-1.05, 7), (-0.55, 9), (-0.1, 10), (0.35, 9), (0.8, 8), (1.15, 6)):
         pts = []
         for i in range(ln * 3):
             t = i / (ln * 3)
             a = ang * (0.6 + 1.2 * t)
-            x = 7.5 + math.sin(a) * t * ln * 1.15
+            x = 7.5 + math.sin(a) * t * ln * 1.0
             y = h - 1 - math.cos(a) * t * ln + (t ** 2) * 2.5
             pts.append((int(round(x)), int(round(y)), t))
         for x, y, t in pts:
@@ -537,7 +611,7 @@ def tropical_bush():
     w, h = 16, 14
     im = Image.new('RGBA', (w, h), (0, 0, 0, 0))
     g, gL, gD = rgb('2e9a48'), rgb('62cc5a'), rgb('1c6a34')
-    blobs = [(4, 8, 4), (11, 8, 4.2), (7.5, 5, 4.5), (7.5, 10, 5)]
+    blobs = [(4.6, 8.5, 3.3), (10.6, 8.5, 3.3), (7.5, 5.5, 4.2), (7.5, 10, 4.6)]
     for y in range(h):
         for x in range(w):
             for bx, by, r in blobs:
@@ -545,7 +619,7 @@ def tropical_bush():
                     c = gL if (x - bx) < -r * 0.3 and (y - by) < 0 else (gD if (y - by) > r * 0.4 else g)
                     im.putpixel((x, y), c)
                     break
-    for x in range(1, 15):
+    for x in range(3, 13):
         im.putpixel((x, h - 1), gD)
     flowers = [(3, 6, rgb('ff5a8a')), (10, 4, rgb('ffd83a')), (12, 9, rgb('ff5a8a')), (6, 10, rgb('ffd83a'))]
     for fx, fy, fc in flowers:
@@ -651,8 +725,8 @@ def leaf():
 # ═══════════════════ REDISEÑO de las decoraciones antiguas ════════════════════
 # Mismo dibujo y tamaño que el original del usuario, con el estilo de las nuevas:
 # contorno oscuro de 1 px (su propio color oscurecido) y luz arriba-izquierda /
-# sombra abajo-derecha en los trazos planos. El original se guarda UNA vez como
-# <nombre>-orig.png y siempre se parte de él (se puede rehacer sin perder nada).
+# sombra abajo-derecha en los trazos planos. El original se guarda UNA vez FUERA
+# del repo (tools/ui/originals.py) y siempre se parte de él (se puede rehacer).
 OLD = [
     'assets/images/foliage/tulip.png',
     'assets/images/foliage/palmtree/palmtree.png',
@@ -692,14 +766,15 @@ def restyle(im, flat_shade):
 def redesign_old():
     for path in OLD:
         if ONLY and os.path.basename(path)[:-4] not in ONLY: continue
-        orig = path[:-4] + '-orig.png'
-        if not os.path.exists(orig):
-            if not os.path.exists(path): continue
-            Image.open(path).save(orig)
-        elif not FORCE:
+        orig, fresh = originals.keep(path)
+        if not os.path.exists(orig): continue
+        if not fresh and not FORCE:
             print('  ' + path + ' ya rediseñado (original en ' + os.path.basename(orig) + '; --force)')
             continue
-        im = restyle(Image.open(orig).convert('RGBA'), 'stretch' in path)
+        src = Image.open(orig).convert('RGBA')
+        big = Image.new('RGBA', (src.width + 2, src.height + 1), (0, 0, 0, 0))
+        big.paste(src, (1, 1))
+        im = restyle(big, 'stretch' in path)
         im.save(path)
         print('  %-52s rediseño (original: %s)' % (path, os.path.basename(orig)))
 

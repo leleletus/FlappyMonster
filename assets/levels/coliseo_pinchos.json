@@ -23,7 +23,7 @@
     [4,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,4],
     [4,1,1,1,1,1,1,1,1,1,1,73728,73728,73728,73728,73728,73728,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,73728,73728,73728,73728,73728,73728,1,1,1,1,1,1,1,1,1,1,1,1,4],
     [4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4],
-    [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
+    [4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4]
   ],
   "entities": [
     {"col":11,"row":17,"type":"trampoline"},
@@ -101,7 +101,22 @@
     {"col":30,"props":{"patrol":{"left":25,"right":39},"points":4,"respawn":1},"row":14,"type":"gummy"},
     {"col":32,"row":12,"type":"star"}
   ],
-  "foliage": [],
+  "foliage": [
+    {"col":2,"props":{"layer":"back"},"row":2,"type":"cobweb"},
+    {"col":19,"props":{"layer":"back"},"row":12,"sub":4,"type":"bones"},
+    {"col":21,"props":{"layer":"back"},"row":12,"sub":3,"type":"bones"},
+    {"col":44,"props":{"flip":true,"layer":"back"},"row":12,"sub":3,"type":"torch"},
+    {"col":26,"props":{"flip":true,"layer":"back"},"row":14,"sub":4,"type":"torch"},
+    {"col":37,"props":{"layer":"back"},"row":14,"sub":3,"type":"bones"},
+    {"col":40,"props":{"layer":"back"},"row":14,"sub":4,"type":"bones"},
+    {"col":40,"props":{"layer":"back"},"row":14,"sub":3,"type":"torch"},
+    {"col":57,"props":{"layer":"back"},"row":14,"sub":3,"type":"torch"},
+    {"col":21,"props":{"layer":"back"},"row":15,"sub":3,"type":"torch"},
+    {"col":41,"props":{"flip":true,"layer":"back"},"row":15,"sub":4,"type":"bones"},
+    {"col":43,"props":{"layer":"back"},"row":15,"sub":4,"type":"bones"},
+    {"col":60,"props":{"layer":"back"},"row":15,"sub":4,"type":"torch"},
+    {"col":18,"props":{"layer":"back"},"row":17,"sub":4,"type":"torch"}
+  ],
   "vents": [],
   "modes": ["koth"],
   "matchTime": 180,

@@ -26,7 +26,7 @@ end
 local function static(name, label, placement, file, fw, extra)
     local def = base { name = name, label = label, placement = placement,
         editor = { previewScale = placement == 'sub' and 1.5 or 0.8 },
-        draw = function(d, sx, sy) DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. file, fw), 1) end }
+        draw = function(d, sx, sy) DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. file), 1) end }
     for k, v in pairs(extra or {}) do def[k] = v end
     return def
 end
@@ -56,7 +56,7 @@ return {
         end,
         draw = function(d, sx, sy)
             DecoFx.seen(d)
-            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'stalactite.png', 16), 1, { hang = true })
+            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'stalactite.png'), 1, { hang = true })
             DecoFx.draw(d, sx, sy)
         end,
     },
@@ -76,7 +76,7 @@ return {
         draw = function(d, sx, sy)
             DecoFx.seen(d)
             DecoFx.glow(sx, sy - 24, 48, PURPLE, 0.16 + 0.06 * math.sin(d.animT * 1.6))
-            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'crystals.png', 16), 1)
+            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'crystals.png'), 1)
             DecoFx.draw(d, sx, sy)
         end,
     },
@@ -94,7 +94,7 @@ return {
         draw = function(d, sx, sy)
             DecoFx.seen(d)
             DecoFx.glow(sx, sy - 16, 28, CYAN, 0.18 + 0.07 * math.sin(d.animT * 1.9))
-            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'glow_mushroom.png', 8), 1)
+            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'glow_mushroom.png'), 1)
             DecoFx.draw(d, sx, sy)
         end,
     },
@@ -108,7 +108,7 @@ return {
         draw = function(d, sx, sy)
             DecoFx.seen(d)
             -- (tira de 8x12: palo abajo, llama en las 6 filas de arriba)
-            flameDraw(d, sx, sy, DecoFx.strip(DIR .. 'torch-Sheet.png', 8), 9, -34, 46)
+            flameDraw(d, sx, sy, DecoFx.strip(DIR .. 'torch-Sheet.png', 10), 9, -34, 46)
             DecoFx.draw(d, sx, sy)
         end,
     },
@@ -119,7 +119,7 @@ return {
         props = { { key = 'spider', kind = 'bool', label = 'Araña', group = 'Aspecto', default = true } },
         draw = function(d, sx, sy)
             local sp = DecoFx.strip(DIR .. 'spider-Sheet.png', 7)
-            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'cobweb.png', 16), 1, { hang = true })
+            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'cobweb.png'), 1, { hang = true })
             if d.props.spider ~= false and sp then
                 -- Cuelga de un hilo que sale de la tela; sube y baja despacio
                 local x = math.floor(sx - 10 * d.flip)

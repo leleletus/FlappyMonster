@@ -20,7 +20,7 @@ local TileCodec = require 'src/world/tiles/TileCodec'
 
 local SubTiles = {}
 
-SubTiles.KINDS = { 'solid', 'dirt', 'grass' }     -- piedra, tierra, césped
+SubTiles.KINDS = { 'solid', 'dirt', 'grass', 'sand' }     -- piedra, tierra, césped, arena
 
 local QUAD = { { 0, 0 }, { 0.5, 0 }, { 0, 0.5 }, { 0.5, 0.5 } }   -- esquina de cada subcelda (fracción)
 SubTiles.QUAD = QUAD
@@ -134,8 +134,9 @@ function SubTiles.renderCell(level, col, row, px, py, ctx)
             ctx.x, ctx.y, ctx.size = px + QUAD[q][1] * T, py + QUAD[q][2] * T, H
             ctx.col, ctx.row = gx, gy
             ctx.edges = edgesOf(level, def, gx, gy)
+            ctx.quarter = { gx % 2, gy % 2 }      -- (su cuarto de la textura: casa con los bloques grandes)
             TileTypes.drawTile(def, ctx)
-            ctx.edges = nil
+            ctx.edges, ctx.quarter = nil, nil
             if EDITOR_VIEW and not s.solid then
                 love.graphics.setColor(1, 1, 1, 0.8)
                 for i = 0, H - 4, 8 do

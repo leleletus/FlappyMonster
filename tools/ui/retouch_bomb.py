@@ -7,10 +7,12 @@
 #   * boquilla: tapón metálico de 3 px encima del cuerpo, con brillo
 #   * mecha: la misma forma que la suya, subida 1 px para salir del tapón y en
 #     color cuerda (antes, gris casi negro: se perdía contra el contorno)
-# Guarda una copia del original junto a cada hoja (*-orig.png) la primera vez.
+# Guarda una copia del original FUERA del repo la primera vez (tools/ui/originals.py).
 # Después hay que regenerar las mechas encendidas:
 #     python3 tools/ui/make_bomb_sprites.py --force
-import os, shutil
+import os, sys
+sys.path.insert(0, os.path.dirname(__file__))
+import originals   # noqa: E402
 from PIL import Image
 
 DIR = 'assets/images/bomb'
@@ -23,9 +25,7 @@ BLACK, WHITE = (0, 0, 0, 255), (255, 255, 255, 255)
 
 def retouch(name):
     path = os.path.join(DIR, name)
-    orig = path.replace('.png', '-orig.png')
-    if not os.path.exists(orig):
-        shutil.copy(path, orig)
+    orig, _ = originals.keep(path)
     src = Image.open(orig).convert('RGBA')
     out = src.copy()
     for f in range(src.width // FW):
