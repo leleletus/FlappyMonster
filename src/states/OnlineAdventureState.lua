@@ -1103,7 +1103,8 @@ function OnlineAdventureState:render()
     -- Temblor de pantalla (impactos, explosiones): solo al dibujar
     local shx, shy = Particles.shakeOffset()
     local realCamX, realCamY = self.camX, self.camY
-    self.camX, self.camY = self.camX + shx, self.camY + shy
+    -- (cámara en píxeles enteros al dibujar: ver AdventureState:render)
+    self.camX, self.camY = math.floor(self.camX + shx + 0.5), math.floor(self.camY + shy + 0.5)
     self:_renderScene()
     self.camX, self.camY = realCamX, realCamY
 end

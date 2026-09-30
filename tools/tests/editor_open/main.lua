@@ -6,6 +6,10 @@
 -- elige Bloques → Conectar (K), hace clic en el bloque y captura el
 -- inspector y la línea de la conexión (_links.png).
 --
+-- PLAY=assets/levels/x.json: abre ese nivel en el editor, pulsa F5 (probar, como
+-- el usuario), mete al jugador en la zona de jefe y captura 1.5 s después de
+-- empezar la pelea (_play.png): lo que se ve jugando desde el editor.
+--
 --   tools/tests/run.sh editor_open
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
@@ -13,6 +17,8 @@ arg = arg or {}
 arg[#arg + 1] = '--editor'
 local LINKS = os.getenv('LINKS')
 if LINKS then arg[#arg + 1] = 'links.json' end
+local PLAY = os.getenv('PLAY')
+if PLAY then arg[#arg + 1] = PLAY end
 love.filesystem.load('game_main.lua')()
 local frame, realDown = 0, love.keyboard.isDown
 local function key(k, ctrl)
@@ -27,6 +33,40 @@ local gameUpdate = love.update
 function love.update(dt)
     frame = frame + 1
     gameUpdate(dt)
+    if PLAY then
+        -- (WIN=1813x1014: tamaño de ventana, p. ej. el del usuario)
+        if frame == 2 and os.getenv('WIN') == 'full' then
+            love.window.setFullscreen(true, 'desktop')
+            if love.resize then love.resize(love.graphics.getDimensions()) end
+            print('ventana: ' .. table.concat({ love.graphics.getDimensions() }, 'x') .. ' dpi ' .. love.window.getDPIScale())
+        elseif frame == 2 and os.getenv('WIN') then
+            local w, h = os.getenv('WIN'):match('(%d+)x(%d+)')
+            love.window.updateMode(tonumber(w), tonumber(h), { resizable = true })
+            print('ventana: ' .. table.concat({ love.graphics.getDimensions() }, 'x'))
+            if love.resize then love.resize(tonumber(w), tonumber(h)) end
+        end
+        if frame == 5 then key('f5') end
+        local st = gStateMachine and gStateMachine:_top()
+        if frame > 8 and st and st.player and st.level then
+            local z = (st.level.bossZones or {})[1]
+            if z and not PLAY_placed then
+                PLAY_placed = true
+                st.player.x, st.player.y = z.x0 + 2 * TILE_PX, z.y1 - 2 * TILE_PX
+            end
+            if z and z.state == 'fight' then
+                PLAY_fight = PLAY_fight or frame
+                if frame == PLAY_fight + 90 then
+                    love.graphics.captureScreenshot(function(img) img:encode('png', 'editor_open_play.png') end)
+                end
+                if frame == PLAY_fight + 96 then
+                    print('captura en ' .. love.filesystem.getSaveDirectory() .. '/editor_open_play.png')
+                    print('TODO OK'); love.event.quit(0)
+                end
+            end
+        end
+        if frame > 3000 then print('FALLA: la pelea no empezó'); love.event.quit(1) end
+        return
+    end
     if LINKS then
         if frame == 5 then key('1') end
         if frame == 8 then key('k') end

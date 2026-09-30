@@ -525,7 +525,11 @@ function AdventureState:render()
     -- Temblor de pantalla (impactos, explosiones): solo al dibujar
     local shx, shy = Particles.shakeOffset()
     local realCamX, realCamY = self.camX, self.camY
-    self.camX, self.camY = self.camX + shx, self.camY + shy
+    -- Cámara en píxeles ENTEROS al dibujar (pixel art): con decimales, los
+    -- tiles caían a medio píxel y lo que redondea su posición (bloques de jefe,
+    -- entidades) no: quedaban rendijas de 1 px que, con la ventana grande
+    -- (canvas escalado), se veían como líneas entre bloques que deben unirse
+    self.camX, self.camY = math.floor(self.camX + shx + 0.5), math.floor(self.camY + shy + 0.5)
     self:_renderScene()
     self.camX, self.camY = realCamX, realCamY
 end
@@ -610,6 +614,20 @@ function AdventureState:_renderScene()
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1, 1, 0, 1)
         love.graphics.print("DEBUG HITBOX [F1]", 20, WINDOW_H - 30)
+        -- Uniones de bloques de jefe: estado, si está apuntado en joinOverlay y
+        -- cómo ve el suelo de debajo su esquina (false = unido)
+        local TileTypes = require 'src/world/tiles/TileTypes'
+        local y = WINDOW_H - 50
+        for _, g in ipairs(self.enemies) do
+            if g.def and g.def.name == 'bosswall' then
+                local reg = self.level.joinOverlay and self.level.joinOverlay[g] and 'si' or 'NO'
+                local e = TileTypes.sideExposure(self.level, g.c0, g.r1 + 1, 'top', 'ground')
+                local es = type(e) == 'table' and ('{' .. tostring(e[1]) .. ',' .. tostring(e[2]) .. '}') or tostring(e)
+                love.graphics.print(('bloque jefe %d,%d: %s  registrado=%s  suelo(%d,%d) arriba=%s  cam=%.2f,%.2f'):format(
+                    g.c0, g.r0, g.state, reg, g.c0, g.r1 + 1, es, self.camX, self.camY), 20, y)
+                y = y - 16
+            end
+        end
     end
 
     BossHud.drawCinema(self.level)        -- (entrada de un jefe: franjas de cine, bajo el HUD)

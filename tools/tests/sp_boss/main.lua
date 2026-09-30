@@ -40,6 +40,12 @@ function love.update(dt)
     Input = setmetatable({ pressed = stub.pressed, down = stub.down }, { __index = package.loaded['input'] })
     gameUpdate(dt)
     Input = package.loaded['input']
+    -- (CAMFRAC=0.6: cámara con decimales, como al deslizarse; para ver rendijas
+    -- de medio píxel entre bloques en las capturas)
+    if os.getenv('CAMFRAC') and st.camY then
+        local f = tonumber(os.getenv('CAMFRAC'))
+        st.camX, st.camY = math.floor(st.camX) + f, math.floor(st.camY) + f
+    end
     if boss then
         local nm, walls = 0, {}
         for _, e in ipairs(st.enemies) do
