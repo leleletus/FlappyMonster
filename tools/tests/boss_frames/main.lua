@@ -3,7 +3,9 @@
 -- revisar el aspecto sin jugar. Guarda <save>/boss_frames.png.
 --
 --   LEVEL=assets/levels/guarida_cangrejo_rey.json love tools/tests/boss_frames
---   (STATES=chase,climb,... elige qué estados capturar; EVERY = s entre capturas)
+--   (STATES=chase,climb,... elige qué estados capturar; EVERY = s entre capturas;
+--    FX=1: partículas del juego y reloj de dibujo = tiempo simulado (rugidos,
+--    rayos, humo...); RAGE=1: el jefe empieza con poca vida = enfadado)
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
 require 'settings'
@@ -16,8 +18,12 @@ local Entities = require 'src/world/Entities'
 local BossZones = require 'src/world/BossZones'
 local PlayerAdventure = require 'src/entities/PlayerAdventure'
 local Particles = require 'src/fx/Particles'
+local Entity = require 'src/world/entities/Entity'
 
 local COLS, ROWS, CW, CH = 5, 6, 360, 240
+local FX = os.getenv('FX') ~= nil
+local simT = 0
+if FX then love.timer.getTime = function() return simT end end   -- (el dibujo sigue la simulación)
 function love.load()
     love.graphics.setDefaultFilter('nearest', 'nearest')
     FONT_SMALL = love.graphics.newFont('assets/fonts/PressStart2P.ttf', 10)
@@ -31,6 +37,7 @@ function love.load()
     local boss
     for _, e in ipairs(ents) do if e.def.boss then boss = e end end
     local z = boss.zone
+    if FX then Entity.fx = function(kind, x, y) Particles.emit(kind, x, y) end; Particles.setLevel(level) end
     local pa = PlayerAdventure:new(z.x0 + 3 * TILE_PX, z.y1 - 60)
     level.players = { pa }
     local want = {}
@@ -42,6 +49,9 @@ function love.load()
     local hitDone = {}
     while n < COLS * ROWS and t < 200 do
         t = t + dt
+        simT = t
+        if FX then Particles.update(dt) end
+        if os.getenv('RAGE') and boss.hpMax and boss.hp > boss.hpMax * 0.4 then boss.hp = math.floor(boss.hpMax * 0.4) end
         pa:update(dt, level)
         level.solidBodies = Entities.solidBodies(ents)
         ctrl:update(dt)
@@ -63,7 +73,7 @@ function love.load()
             love.graphics.setScissor(col * CW, row * CH, CW - 2, CH - 2)
             love.graphics.push()
             -- (ZONE=1: toda la zona del jefe en cada captura)
-            local zoom = os.getenv('ZONE') and ((z.x1 - z.x0 + 4 * TILE_PX) / CW) or 1.6
+            local zoom = os.getenv('ZONE') and ((z.x1 - z.x0 + 4 * TILE_PX) / CW) or tonumber(os.getenv('ZOOM') or 1.6)
             local cx, cy = boss.x, boss.y
             if os.getenv('ZONE') then cx, cy = (z.x0 + z.x1) / 2, (z.y0 + z.y1) / 2 end
             local camX = math.floor(cx - CW / 2 * zoom)
@@ -74,6 +84,7 @@ function love.load()
             level:render(camX, camY)
             pa:render(camX, camY)
             for _, e in ipairs(ents) do if e.alive then e:render(camX, camY) end end
+            if FX then Particles.render(camX, camY) end
             if os.getenv('BOXES') then       -- cajas reales: cuerpo (azul), contacto (amarillo), mata (rojo)
                 local function box(b, r, g, bl)
                     love.graphics.setColor(r, g, bl, 0.9)

@@ -83,7 +83,7 @@ local REST_KINDS = { 1, 2, 1, 3 }
 local CLAW_K, CLAW_X, CLAW_Y, CLAW_IN = 0.85, 4.6, -1.6, 1.5
 local CS = MS * CLAW_K
 
-local imgs, claw, spikeImg
+local imgs, claw, spikeImg, anger
 function Mega.loadAssets()
     if imgs then return end
     local function load(p)
@@ -95,6 +95,10 @@ function Mega.loadAssets()
              load('assets/images/MegaCrabby/crab3.png') }
     claw = SpriteStrip.load('assets/images/MegaCrabby/claw_left-Sheet.png', 7)
     spikeImg = load('assets/images/MegaCrabby/spike.png')
+    -- Enfado (solo dibujo): vena 💢, vapor y garabato
+    anger = { vein = SpriteStrip.load('assets/images/MegaCrabby/anger_vein.png', 11),
+              steam = SpriteStrip.load('assets/images/MegaCrabby/anger_steam.png', 9),
+              scribble = SpriteStrip.load('assets/images/MegaCrabby/anger_scribble.png', 9) }
 end
 function Mega.sizePx() return 16 * MS, 9 * MS end
 
@@ -256,13 +260,14 @@ end
 function Mega:roar(pitch)
     Sound.play('megaRoar', pitch or 1)
     Entity.emitFx('mega_roar', self.x + self.facing * self.sprW * 0.15, self.y - self.sprH * 0.2)
-    Entity.emitFx('shake_small', self.x, self.y)
+    Entity.emitFx('shake_roar', self.x, self.y)
 end
+-- (durante el rugido: más ondas y rayos, y el temblor suave sigue)
 function Mega:roarTick(dt, t)
     for _, s in ipairs({ 0.4, 0.8 }) do
         if at(t, dt, s) then
             Entity.emitFx('mega_roar', self.x + self.facing * self.sprW * 0.15, self.y - self.sprH * 0.2)
-            Entity.emitFx('shake_small', self.x, self.y)
+            Entity.emitFx('shake_roar', self.x, self.y)
         end
     end
 end
@@ -280,7 +285,7 @@ function Mega:canBeKnocked() return false end
 -- Enfadado (poca vida): multiplicadores
 function Mega:rage()
     local p = self.props
-    return (self.hpMax or 1) > 0 and self.hp / self.hpMax <= (p.rageAt or 0.5)
+    return (self.hpMax or 1) > 0 and self.hp / self.hpMax <= (p.rageAt or 0.6)
 end
 function Mega:speedMult() return self:rage() and (self.props.rageSpeed or 1.3) or 1 end
 
@@ -534,23 +539,54 @@ function Mega:summonable(level)
     return math.min(#free, p.summonCount or 2, math.max(0, (p.summonMax or 3) - active)), free
 end
 
--- Dónde sale el súbdito i (a los lados, alternando). Solo depende de su x y
--- de i: el cliente dibuja las marcas en el mismo sitio
+-- Dónde salen los súbditos: se eligen al EMPEZAR a invocar (un jugador y el
+-- servidor) y van en el snapshot (el cliente dibuja las marcas ahí mismo).
+-- Cada sitio: con suelo, sin pared, fuera del cuerpo del Mega, lejos de los
+-- otros sitios, de los súbditos vivos y de los jugadores (antes se calculaban
+-- a los lados alternando y, al pegar con el borde de la zona, dos salían en
+-- el mismo sitio, uno encima del otro)
+local SPOT_GAP = 1.3                             -- casillas entre sitios / súbditos
+function Mega:pickSummonSpots(level, n)
+    local T, z = TILE_PX, self.zone
+    local floorY = self.y + self.outerH / 2
+    local x0, x1 = (z and z.x0 or 0) + T * 0.6, (z and z.x1 or level.widthPx) - T * 0.6
+    local taken = {}
+    for _, e in ipairs(self:minions(level)) do if e.alive then taken[#taken + 1] = e.x end end
+    local spots = {}
+    local d0 = self.outerW / 2 + T * 0.9           -- (fuera de su cuerpo, con margen)
+    for d = d0, (x1 - x0) + d0, T / 2 do
+        for _, dir in ipairs({ -1, 1 }) do
+            local x = math.floor(self.x + dir * d)
+            if #spots < n and x >= x0 and x <= x1 then
+                local fy = self:floorBelow(level, x, floorY - 2 * T)
+                local ok = math.abs(fy - floorY) <= 2 * T
+                    and not level:entitySolidAt(x, fy - T * 0.3) and not level:entitySolidAt(x, fy - T * 0.9)
+                for _, o in ipairs(taken) do if math.abs(o - x) < SPOT_GAP * T then ok = false end end
+                for _, pa in ipairs(level.players or {}) do
+                    if math.abs(pa.x - x) < T and math.abs(pa.y - (fy - T / 2)) < 1.5 * T then ok = false end
+                end
+                if ok then
+                    spots[#spots + 1] = { x = x, y = math.floor(fy), dir = dir }
+                    taken[#taken + 1] = x
+                end
+            end
+        end
+    end
+    return spots
+end
+
 function Mega:summonSpot(i)
-    local T = TILE_PX
-    local dir = (i % 2 == 1) and -1 or 1
-    local x = self.x + dir * (self.sprW * 0.5 + 24 + math.floor((i - 1) / 2) * T)
-    if self.zone then x = math.max(self.zone.x0 + T, math.min(self.zone.x1 - T, x)) end
-    return x, dir
+    local sp = self.spots and self.spots[i]
+    if sp then return sp.x, sp.dir, sp.y end
+    return self.x, 1, self.y + self.outerH / 2
 end
 
 function Mega:summonMinions(level)
     local n, free = self:summonable(level)
     n = math.min(n, self.summonN or n)
-    local floorY = self.y + self.outerH / 2
     for i = 1, n do
         local e = free[i]
-        local x, dir = self:summonSpot(i)
+        local x, dir, floorY = self:summonSpot(i)
         local h = e.home
         h.x, h.y, h.facing, h.flipped, h.state = x, floorY - e.outerH / 2, dir, false, 'walk'
         h.vx = e.speed * dir
@@ -642,6 +678,8 @@ function Mega:updateBoss(dt, level)
             -- Solo si puede sacar alguno (con el máximo vivo no lo intenta:
             -- lo vuelve a mirar un poco después)
             local n = self:summonable(level)
+            self.spots = (n > 0) and self:pickSummonSpots(level, n) or nil
+            n = math.min(n, self.spots and #self.spots or 0)
             if n > 0 then
                 self.summonT, self.summonN = 0, n
                 self.state, self.deadTimer, self.summoned = 'summon', 0, false
@@ -687,7 +725,9 @@ function Mega:updateBoss(dt, level)
     elseif st == 'rest' then
         self:walk(level, dt, 0)
         -- Emote del descanso
-        if self.restKind == 2 then
+        if self.restKind == 1 then
+            self:roarTick(dt, t)
+        elseif self.restKind == 2 then
             for i, s in ipairs({ 0.15, 0.4, 0.65, 0.9 }) do
                 if at(t, dt, s) then Sound.play('megaClack', 0.95 + i * 0.07) end
             end
@@ -936,7 +976,15 @@ end
 function Mega:netPackExtra()
     local surf, turn = Crawler.netPack(self)
     return { surf, turn, math.floor(self.landY + 0.5), math.floor(self.floorY + 0.5), self.hitDrop and 1 or 0,
-             math.floor(self.markerX + 0.5), self.summonN or 0, self.restKind or 0 }
+             math.floor(self.markerX + 0.5), self.summonN or 0, self.restKind or 0, self:spotsPack() }
+end
+
+-- Sitios de invocación en el snapshot: "x,y,dir;x,y,dir;..."
+function Mega:spotsPack()
+    if self.state ~= 'summon' or not self.spots then return '' end
+    local t = {}
+    for _, sp in ipairs(self.spots) do t[#t + 1] = sp.x .. ',' .. sp.y .. ',' .. sp.dir end
+    return table.concat(t, ';')
 end
 
 function Mega:netApplyExtra(a, b, f)
@@ -950,6 +998,13 @@ function Mega:netApplyExtra(a, b, f)
     self.markerX = tonumber(b[6]) or self.x
     self.summonN = tonumber(b[7]) or 0
     self.restKind = tonumber(b[8]) or 0
+    local sp = type(b[9]) == 'string' and b[9] or ''
+    if sp ~= '' then
+        self.spots = {}
+        for x, y, d in sp:gmatch('(-?%d+),(-?%d+),(-?%d+)') do
+            self.spots[#self.spots + 1] = { x = tonumber(x), y = tonumber(y), dir = tonumber(d) }
+        end
+    end
 end
 
 -- ── Dibujo ────────────────────────────────────────────────────────────────────
@@ -961,9 +1016,22 @@ local TAU = math.pi * 2
 
 local function spring(t, amp, freq, damp) return amp * math.exp(-t * damp) * math.cos(t * freq) end
 
+-- Chasquidos del sonido megaWindup (= WINDUP_SNAPS de tools/sounds/megacrabby.py;
+-- el último, las dos a la vez). ¿Está una pinza cerrada en `t`? → true, cuál (0 = las dos)
+local WINDUP_SNAPS = { 0.02, 0.16, 0.27, 0.35, 0.41, 0.46, 0.50, 0.53 }
+local function windupSnap(t)
+    for i, s in ipairs(WINDUP_SNAPS) do
+        if t >= s + 0.02 and t < s + 0.075 then
+            return true, (i == #WINDUP_SNAPS) and 0 or ((i % 2 == 1) and 1 or 2)
+        end
+    end
+    return false
+end
+
 -- Pinzas: cada una se cierra y abre sola cada cierto tiempo (más a menudo
 -- cuando está nervioso). Solo es dibujo (cada cliente a su aire).
 local function clawFrame(self, i, now, nervous)
+    if self._clawForce then return self._clawForce[i] end   -- (al compás del sonido)
     self._claws = self._claws or { { next = now + math.random() }, { next = now + math.random() } }
     local c = self._claws[i]
     if now >= c.next then
@@ -1098,12 +1166,17 @@ function Mega:pose2d(now, moving, walkPhase)
         sx, sy = 1 - q * 0.5, 1 + q
         for i = 1, 2 do claws[i][2] = -1.6 - math.abs(math.sin(t * 9 + i)) * 1.2 end
     elseif st == 'windup' then
-        -- Anticipación: se agacha y levanta las pinzas temblando
-        local k = math.min(1, t / math.max(0.1, self.props.windupTime or 0.6))
+        -- Anticipación de cangrejo: agachado, escarbando en el sitio (se mece
+        -- de lado a lado) con las pinzas en alto; cada chasquido del sonido
+        -- (WINDUP_SNAPS) la pinza que toca da un tirón hacia delante
+        local k = math.min(1, t / 0.2)
         sx, sy = 1 + 0.10 * k, 1 - 0.14 * k
+        shx = math.floor(math.sin(t * 38) * 2 * MS / 4)
+        local snap, which = windupSnap(t)
         for i, side in ipairs({ -1, 1 }) do
-            claws[i][1] = side * 0.6 * k
-            claws[i][2] = -2.2 * k + math.sin(now * 42 + i) * 0.4
+            local jab = (snap and (which == 0 or which == i)) and 1 or 0
+            claws[i][1] = side * 0.6 * k + self.facing * 0.9 * jab
+            claws[i][2] = -2.2 * k + 0.8 * jab + math.sin(now * 42 + i) * 0.3
         end
     elseif st == 'charge' then
         -- Lanzado: estirado hacia delante, pinzas por delante
@@ -1218,6 +1291,63 @@ function Mega:renderFx(now, fx, fy, moved)
     end
 end
 
+-- Enfadado (rage): símbolos de enfado que salen al azar alrededor de la cabeza
+-- (vena 💢 que late, nube de vapor que sube, garabato). Solo dibujo: cada
+-- cliente los saca a su aire; la vida (y por tanto el enfado) llega por red.
+local ANGER_S = 5                                  -- escala de píxel de los símbolos
+local ANGER_KINDS = { 'vein', 'vein', 'steam', 'scribble', 'vein', 'steam' }
+local ANGER_LIFE = { vein = 0.8, steam = 0.6, scribble = 0.7 }
+function Mega:renderAnger(now, fx, fy, ang, camX, camY)
+    local list = self._anger or {}
+    self._anger = list
+    local st = self.state
+    local on = self:rage() and not self:isDying() and not INTRO[st] and st ~= 'dormant' and not EDITOR_VIEW
+    if on and now >= (self._angerNext or 0) and #list < 3 then
+        self._angerNext = now + 0.3 + math.random() * 0.55
+        local kind = ANGER_KINDS[math.random(#ANGER_KINDS)]
+        -- (arriba, a un lado u otro de la cabeza; nunca dos seguidos en el mismo lado)
+        self._angerSide = -(self._angerSide or 1)
+        local a = self._angerSide * (0.35 + math.random() * 0.8)
+        local r = self.sprW * (0.32 + math.random() * 0.14)
+        list[#list + 1] = { kind = kind, born = now, ox = math.sin(a) * r, oy = -math.cos(a) * r * 0.4 + self.sprH * 0.1 }
+    end
+    if #list == 0 then return end
+    -- Cabeza = pies + (0, -alto) girado con el cuerpo
+    local ca, sa = math.cos(ang), math.sin(ang)
+    local hx, hy = fx + sa * self.sprH, fy - ca * self.sprH
+    for i = #list, 1, -1 do
+        local p = list[i]
+        local age, life = now - p.born, ANGER_LIFE[p.kind]
+        if age >= life then
+            table.remove(list, i)
+        else
+            local ox, oy = p.ox * ca - p.oy * sa, p.ox * sa + p.oy * ca
+            local x, y = hx + ox - camX, hy + oy - camY
+            local k, frame = ANGER_S, 1
+            local alpha = math.min(1, (life - age) / 0.15)
+            if p.kind == 'vein' then
+                -- Aparece de golpe (con rebote) y late
+                k = ANGER_S * ((age < 0.1) and (0.5 + age / 0.1 * 0.75) or 1)
+                frame = (math.floor(age * 7) % 2 == 0) and 1 or 2
+            elseif p.kind == 'steam' then
+                frame = math.min(3, math.floor(age / life * 3) + 1)
+                y = y - age * 60
+                x = x + math.sin(age * 12) * 3
+            else
+                frame = math.floor(age * 12) % 2 + 1
+                x = x + math.floor(math.sin(age * 40) * 2)
+            end
+            k = math.floor(k + 0.5)
+            x, y = math.floor(x + 0.5), math.floor(y + 0.5)
+            love.graphics.setColor(0, 0, 0, 0.5 * alpha)
+            anger[p.kind]:draw(frame, x + 3, y + 3, 0, k, k)
+            love.graphics.setColor(1, 1, 1, alpha)
+            anger[p.kind]:draw(frame, x, y, 0, k, k)
+        end
+    end
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
 function Mega:render(camX, camY)
     local st, t = self.state, self.deadTimer or 0
     local now = love.timer.getTime()
@@ -1251,8 +1381,8 @@ function Mega:render(camX, camY)
     local frame = self.frame or 1
     if st == 'stuck' or st == 'dying_kick' then
         frame = math.floor(t * (st == 'dying_kick' and WIGGLE_FPS * 2 or WIGGLE_FPS)) % 3 + 1
-    elseif st == 'fall_in' or (emote == 2 and t < 1.15) then
-        frame = math.floor(now * 14) % 3 + 1              -- (patalea)
+    elseif st == 'fall_in' or (emote == 2 and t < 1.15) or st == 'windup' then
+        frame = math.floor(now * (st == 'windup' and 18 or 14)) % 3 + 1   -- (patalea / escarba)
     elseif not moving and (st == 'dormant' or st == 'windup' or st == 'aim' or st == 'recover' or st == 'chase' or st == 'rest'
                            or st == 'intro' or st == 'summon' or st == 'wallaim' or st == 'land_in' or st == 'roar_in'
                            or st == 'ready') then
@@ -1274,9 +1404,8 @@ function Mega:render(camX, camY)
 
     if st == 'summon' and t < SUMMON_WARN and not EDITOR_VIEW then
         -- Dónde van a salir los súbditos (marca amarilla y tierra que burbujea)
-        local fy0 = self.y + self.outerH / 2
         for i = 1, (self.summonN or 0) do
-            local x = self:summonSpot(i)
+            local x, _, fy0 = self:summonSpot(i)
             drawTarget(math.floor(x - camX), math.floor(fy0 - camY), TILE_PX, now, { 1, 0.85, 0.2 })
             self._sfx = self._sfx or {}
             if now - (self._sfx[i] or 0) > 0.15 then
@@ -1331,9 +1460,15 @@ function Mega:render(camX, camY)
         end
     end
     if EDITOR_VIEW then nervous = false end
+    self._clawForce = nil
+    if st == 'windup' and not EDITOR_VIEW then
+        local snap, which = windupSnap(t)
+        self._clawForce = { (snap and which ~= 2) and 2 or 1, (snap and which ~= 1) and 2 or 1 }
+    end
     self:renderFx(now, fx, fy, moved)
     self:drawLocal(math.floor(fx - camX + 0.5) + jx + shx, math.floor(fy - camY + 0.5) + jy, ang, s, img,
                    withSpike, alpha * self:ghostAlpha(), nervous, sx, sy, claws, noClaws, spikeK)
+    self:renderAnger(now, fx + jx + shx, fy + jy, ang, camX, camY)
     love.graphics.setColor(1, 1, 1, 1)
 end
 
@@ -1401,8 +1536,8 @@ return {
                     { value='tramp', label='Trampolín' } } },
         { key='summonSpeed', kind='number', label='Velocidad de los súbditos', group='Súbditos', default=110,
           min=20, max=400, step=10 },
-        { key='rageAt', kind='number', label='Se enfada con vida por debajo de', group='Enfado', default=0.5,
-          min=0, max=1, step=0.05, help='Fracción de vida (0.5 = la mitad). 0 = nunca' },
+        { key='rageAt', kind='number', label='Se enfada con vida por debajo de', group='Enfado', default=0.6,
+          min=0, max=1, step=0.05, help='Fracción de vida (0.5 = la mitad). 0 = nunca. Enfadado le salen venas de enfado y vapor' },
         { key='rageSpeed', kind='number', label='Enfadado: velocidad x', group='Enfado', default=1.3,
           min=1, max=3, step=0.05 },
         { key='rageStuck', kind='number', label='Enfadado: tiempo clavado x', group='Enfado', default=0.75,

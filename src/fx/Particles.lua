@@ -7,7 +7,7 @@
 --        'exhaust', 'smoke', 'sparks', 'mega_step', 'mega_trail', 'mega_debris', 'mega_dirt',
 --        'mega_slam', 'mega_land', 'mega_poof', 'mega_roar' (Mega Crabby), 'switch_hit' (bloque ON/OFF),
 --        'helmet_break' (casco de Gummy), 'puffer_pop' (pez globo),
---        'shake_small', 'shake_big' (temblor de pantalla:
+--        'shake_small', 'shake_big', 'shake_roar' (suave y largo) (temblor de pantalla:
 --        Particles.shakeOffset() se suma a la cámara al dibujar)
 -- (otros nombres no hacen nada)
 --
@@ -385,19 +385,42 @@ function Particles.emit(kind, x, y, opts)
                   g = 300, life = rnd(0.4, 0.7), size = 6, col = {1, 1, 0.8}, star = true })
         end
     elseif kind == 'mega_roar' then
-        -- Rugido: dos anillos de "onda" que se abren y babas/polvo al frente
+        -- Rugido: ondas de choque de píxeles que se abren (achatadas) y rayos
+        -- en zigzag que saltan alrededor, parpadeando; unas gotas de espuma
         for ring = 1, 2 do
-            local n, sp = 24 + ring * 6, 260 + ring * 170
-            for i = 1, n do
-                local a = (i / n) * math.pi * 2
-                add({ x = x + math.cos(a) * 20, y = y + math.sin(a) * 14, vx = math.cos(a) * sp, vy = math.sin(a) * sp * 0.7,
-                      g = 0, drag = 2.2, life = 0.42 + ring * 0.08, size = (ring == 1) and 6 or 4,
-                      col = (ring == 1) and {1, 0.96, 0.82} or {1, 0.75, 0.45} })
-            end
+            add({ x = x, y = y, vx = 0, vy = 0, shock = true, r0 = 60 + ring * 10, r1 = 230 + ring * 90,
+                  ph1 = rnd(0, 6.3), ph2 = rnd(0, 6.3), wob = rnd(0.05, 0.09),
+                  life = 0.32 + ring * 0.1 + (ring - 1) * 0.08, delay = (ring - 1) * 0.08, size = (ring == 1) and 10 or 8,
+                  col = (ring == 1) and {1, 0.97, 0.8} or {1, 0.78, 0.35} })
         end
-        for i = 1, 8 do
+        local nb = math.random(5, 7)
+        for i = 1, nb do
+            local a = (i + rnd(-0.3, 0.3)) / nb * math.pi * 2
+            -- (rayo: zigzag desde cerca del centro hacia fuera)
+            local pts, r = {}, rnd(80, 100)                     -- (fuera del cuerpo)
+            local len = r + rnd(90, 160)
+            local px, py = math.cos(a + math.pi / 2), math.sin(a + math.pi / 2)
+            while r < len do
+                local j = (#pts % 2 == 0) and rnd(8, 18) or -rnd(8, 18)
+                pts[#pts + 1] = x + math.cos(a) * r + px * j
+                pts[#pts + 1] = y + (math.sin(a) * r + py * j) * 0.75
+                r = r + rnd(18, 30)
+            end
+            local delay = rnd(0, 0.12)
+            add({ x = x, y = y, vx = 0, vy = 0, bolt = pts, life = delay + rnd(0.16, 0.3), delay = delay,
+                  size = 5, col = ({ {1, 1, 0.75}, {0.75, 0.95, 1} })[math.random(2)] })
+        end
+        for i = 1, 6 do
             add({ x = x + rnd(-20, 20), y = y + rnd(-10, 10), vx = rnd(-200, 200), vy = -rnd(60, 240), g = 900,
                   life = rnd(0.4, 0.7), size = 3, col = {0.85, 0.95, 1} })
+        end
+    elseif kind == 'shake_roar' then
+        -- Temblor suave y largo (rugidos): se nota sin marear
+        local k = (Sound and Sound.falloff) and Sound.falloff(x, y) or 1
+        local pow = 4 * k
+        if pow > shakePow * (shakeT / shakeDur) then
+            shakePow, shakeDur = pow, 0.9
+            shakeT = shakeDur
         end
     elseif kind == 'spike_pop' then
         -- El Crabby arranca su pincho del suelo: trozos del suelo hacia arriba
@@ -495,36 +518,89 @@ function Particles.update(dt)
     end
 end
 
+-- Onda de choque (elipse de trazos duros que se abre y adelgaza) y rayo
+-- (zigzag que parpadea: borde oscuro + núcleo claro). Líneas 'rough' = sin
+-- suavizado, bordes de píxel.
+local function renderSpecial(p, camX, camY)
+    local lt = p.t - (p.delay or 0)
+    if lt < 0 then return end
+    local k = lt / (p.life - (p.delay or 0))
+    local c = p.col
+    love.graphics.setLineStyle('rough')
+    love.graphics.setLineJoin('none')
+    if p.shock then
+        local r = p.r0 + (p.r1 - p.r0) * (1 - (1 - k) ^ 2)
+        local w = math.max(2, math.floor(p.size * (1 - k * 0.7)))
+        local n = 40
+        love.graphics.setLineWidth(w)
+        love.graphics.setColor(c[1], c[2], c[3], 0.55 * (1 - k))
+        local cx, cy = math.floor(p.x - camX), math.floor(p.y - camY)
+        -- (deformada: ondulaciones suaves que se mueven mientras se abre)
+        local function pt(a)
+            local rr = r * (1 + p.wob * math.sin(3 * a + p.ph1 + lt * 9) + p.wob * 0.6 * math.sin(5 * a + p.ph2 - lt * 7))
+            return math.floor(cx + math.cos(a) * rr), math.floor(cy + math.sin(a) * rr * 0.62)
+        end
+        for i = 0, n - 1 do
+            if i % 5 ~= 4 then                                   -- (a trazos)
+                local x0, y0 = pt(i / n * math.pi * 2)
+                local x1, y1 = pt((i + 1) / n * math.pi * 2)
+                love.graphics.line(x0, y0, x1, y1)
+            end
+        end
+    elseif math.floor(lt * 30) % 3 ~= 2 then                     -- (parpadeo)
+        local pts, xy = p.bolt, {}
+        for i = 1, #pts, 2 do
+            xy[#xy + 1] = math.floor(pts[i] - camX)
+            xy[#xy + 1] = math.floor(pts[i + 1] - camY)
+        end
+        if #xy >= 4 then
+            love.graphics.setLineWidth(p.size + 4)
+            love.graphics.setColor(0.3, 0.15, 0.05, 0.85)
+            love.graphics.line(xy)
+            love.graphics.setLineWidth(p.size)
+            love.graphics.setColor(c[1], c[2], c[3], 1)
+            love.graphics.line(xy)
+        end
+    end
+    love.graphics.setLineWidth(1)
+    love.graphics.setLineStyle('smooth')
+    love.graphics.setLineJoin('miter')
+end
+
+local function renderOne(p, camX, camY)
+    local a = 1 - p.t / p.life
+    local c = p.col
+    local x, y = math.floor(p.x - camX), math.floor(p.y - camY)
+    local s = p.size
+    if p.chunk then
+        -- Los trozos se ven enteros y se desvanecen solo al final
+        local f = p.fadeLast or 0
+        a = (f > 0) and math.min(1, (1 - p.t / p.life) / f) or 1
+    elseif p.dust then
+        a = a * 0.55
+    elseif p.fadeLast then
+        a = math.min(1, (1 - p.t / p.life) / p.fadeLast)
+    end
+    love.graphics.setColor(c[1], c[2], c[3], a)
+    if p.star then
+        love.graphics.rectangle('fill', x - s / 2, y - 1, s, 2)
+        love.graphics.rectangle('fill', x - 1, y - s / 2, 2, s)
+    elseif p.chunk then
+        love.graphics.push()
+        love.graphics.translate(x, y)
+        love.graphics.rotate(p.ang or 0)
+        love.graphics.rectangle('fill', -s / 2, -s / 2, s, s)
+        love.graphics.setColor(0, 0, 0, 0.35)
+        love.graphics.rectangle('line', -s / 2, -s / 2, s, s)
+        love.graphics.pop()
+    else
+        love.graphics.rectangle('fill', x - s / 2, y - s / 2, s, s)
+    end
+end
+
 function Particles.render(camX, camY)
     for _, p in ipairs(list) do
-        local a = 1 - p.t / p.life
-        local c = p.col
-        local x, y = math.floor(p.x - camX), math.floor(p.y - camY)
-        local s = p.size
-        if p.chunk then
-            -- Los trozos se ven enteros y se desvanecen solo al final
-            local f = p.fadeLast or 0
-            a = (f > 0) and math.min(1, (1 - p.t / p.life) / f) or 1
-        elseif p.dust then
-            a = a * 0.55
-        elseif p.fadeLast then
-            a = math.min(1, (1 - p.t / p.life) / p.fadeLast)
-        end
-        love.graphics.setColor(c[1], c[2], c[3], a)
-        if p.star then
-            love.graphics.rectangle('fill', x - s / 2, y - 1, s, 2)
-            love.graphics.rectangle('fill', x - 1, y - s / 2, 2, s)
-        elseif p.chunk then
-            love.graphics.push()
-            love.graphics.translate(x, y)
-            love.graphics.rotate(p.ang or 0)
-            love.graphics.rectangle('fill', -s / 2, -s / 2, s, s)
-            love.graphics.setColor(0, 0, 0, 0.35)
-            love.graphics.rectangle('line', -s / 2, -s / 2, s, s)
-            love.graphics.pop()
-        else
-            love.graphics.rectangle('fill', x - s / 2, y - s / 2, s, s)
-        end
+        if p.shock or p.bolt then renderSpecial(p, camX, camY) else renderOne(p, camX, camY) end
     end
     love.graphics.setColor(1, 1, 1, 1)
 end

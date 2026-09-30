@@ -148,22 +148,36 @@ def slam():
     return mix(boom * 1.2, crunch, crack, at(ting, 0.01))
 
 
-# Aviso de embestida: castañeteo cada vez más rápido y un tono que sube
-# Aviso de embestida: DOBLE advertencia ("¡ta-TAN! ¡ta-TAN!"), la segunda
-# más aguda: chasquido + bocinazo áspero que sube
+# Aviso de embestida (cangrejo de verdad): las patas escarban en el sitio
+# (tic-tic graves y rápidos de quitina) mientras las pinzas chasquean cada vez
+# más deprisa, alternando, hasta un chasquido doble fuerte al lanzarse.
+# Los tiempos de los chasquidos = WINDUP_SNAPS de megacrabby.lua (el dibujo
+# cierra la pinza a la vez).
+WINDUP_SNAPS = (0.02, 0.16, 0.27, 0.35, 0.41, 0.46, 0.50)
+
+
 def windup():
-    d = 0.56
+    d = 0.62
     parts = [np.zeros(int(SR * d))]
-    for k, (t0, f0) in enumerate(((0.0, 300), (0.25, 390))):
-        dd = 0.19
-        tt = t_(dd)
-        f = f0 * (1 + 0.55 * np.minimum(1, tt / 0.07)) + 18 * np.sin(2 * np.pi * 32 * tt)
-        ph = 2 * np.pi * np.cumsum(f) / SR
-        body = np.sign(np.sin(ph)) * 0.5 + np.sin(ph * 2) * 0.3 + np.sin(ph * 0.5) * 0.4
-        body = lowpass(body, 2400) * env(len(tt), 0.006, 0.09)
-        grit = lowpass(noise(dd), 1500) * env(len(tt), 0.002, 0.05) * 0.5
-        parts.append(at(np.tanh((body + grit) * 2.5) * 0.7, t0 + 0.035))
-        parts.append(at(clack() * 0.9, t0))
+    # Patas escarbando: tics graves a ~22/s que van a más
+    t = 0.0
+    i = 0
+    while t < 0.52:
+        g = 0.25 + 0.35 * t / 0.52
+        parts.append(at(chitin(0.42 + 0.05 * (i % 3), 0.05) * g, t))
+        scrape = lowpass(noise(0.03), 900) * env(int(SR * 0.03), 0.002, 0.01) * g * 0.6
+        parts.append(at(scrape, t))
+        t += 0.045 - 0.012 * t / 0.52
+        i += 1
+    # Chasquidos de pinzas acelerando, alternando tono (una pinza y la otra)
+    for k, t0 in enumerate(WINDUP_SNAPS):
+        g = 0.55 + 0.45 * k / (len(WINDUP_SNAPS) - 1)
+        parts.append(at(clack() * g, t0, None) if k % 2 == 0 else at(chitin(0.86, 0.06) * g, t0 + 0.028))
+    # Golpe final: las dos pinzas a la vez + un "hff" de aire
+    parts.append(at(clack() * 1.1, 0.53))
+    parts.append(at(chitin(0.8, 0.07) * 0.9, 0.56))
+    huff = highpass(lowpass(noise(0.12), 2600), 500) * env(int(SR * 0.12), 0.01, 0.04) * 0.5
+    parts.append(at(huff, 0.53))
     return mix(*parts)
 
 
@@ -188,19 +202,43 @@ def flee():
     return mix(*parts, np.zeros(int(SR * d)))
 
 
-# Rugido (entrada y descansos): gruñido grave con traqueteo, que sube y baja,
-# con ruido de garganta y un castañeteo de pinzas al final
-def roar():
-    d = 1.15
+# Burbuja: blip corto que sube de tono (la espuma de la boca de un cangrejo)
+def bubble(f0):
+    d = 0.018
     tt = t_(d)
-    f = 70 + 55 * np.sin(np.pi * np.clip(tt / d, 0, 1)) ** 0.7        # sube y baja
-    rattle = 1 + 0.45 * np.sign(np.sin(2 * np.pi * 26 * tt))          # traqueteo de la garganta
-    ph = np.cumsum(f) / SR
-    body = (np.where((ph % 1) < 0.5, 1.0, -1.0) * 0.6 + np.where(((ph * 2) % 1) < 0.25, 1.0, -1.0) * 0.4)
-    env_ = np.clip(tt / 0.12, 0, 1) * np.clip((d - tt) / 0.35, 0, 1)
-    growl = lowpass(body * rattle, 1400) * env_
-    throat = lowpass(noise(d), 2200) * rattle * env_ * 0.5
-    return mix(growl * 1.2, throat, at(clack(), d - 0.2) * 0.6)
+    f = f0 * (1 + 0.7 * tt / d)
+    return np.sin(2 * np.pi * np.cumsum(f) / SR) * env(len(tt), 0.001, 0.005)
+
+
+# Rugido de CANGREJO (entrada y descansos), no de león: estridulación (el
+# raspado rapidísimo de quitina contra quitina, cada vez más rápido y luego
+# frenando), espuma burbujeante, un siseo áspero por la boca, un fondo grave
+# que lo hace enorme y un castañeteo de pinzas al final
+def roar():
+    d = 1.2
+    tt = t_(d)
+    shape = np.sin(np.pi * np.clip(tt / 1.0, 0, 1)) ** 0.6              # sube y baja (0-1 s)
+    parts = [np.zeros(int(SR * d))]
+    # Estridulación: raspados de 18/s a 60/s y de vuelta
+    t = 0.04
+    i = 0
+    while t < 1.0:
+        s = np.sin(np.pi * t / 1.0) ** 0.6
+        parts.append(at(chitin(0.55 + 0.25 * s + 0.04 * (i % 2), 0.04) * (0.35 + 0.65 * s), t))
+        t += 1 / (18 + 42 * s)
+        i += 1
+    # Espuma: burbujas al azar, más densas en el centro
+    for _ in range(170):
+        t0 = rng.uniform(0.05, 1.0)
+        if rng.uniform() < np.sin(np.pi * t0) ** 0.8:
+            parts.append(at(bubble(rng.uniform(320, 1100)) * rng.uniform(0.25, 0.6), t0))
+    # Siseo por la boca (ruido de banda media con aspereza) y fondo grave
+    rasp = 1 + 0.5 * np.sign(np.sin(2 * np.pi * 34 * tt))
+    hiss = highpass(lowpass(noise(d), 2400), 450) * rasp * shape * 0.55
+    ph = np.cumsum(46 + 14 * shape) / SR
+    rumble = lowpass(np.where((ph % 1) < 0.5, 1.0, -1.0), 260) * shape * 0.55
+    parts += [hiss, rumble, at(clack() * 0.8, 1.0), at(chitin(1.1, 0.05) * 0.4, 1.06)]
+    return mix(*parts)
 
 
 # Caída desde el cielo: silbido que baja (antes del golpe)
@@ -214,7 +252,11 @@ def fall():
 
 
 if __name__ == '__main__':
+    # (con nombres: solo esos, p. ej. `megacrabby.py roar windup`; los demás no se tocan)
+    import sys
+    only = set(sys.argv[1:])
     print('Sonidos del Mega Crabby:')
     for name, fn in (('step', step), ('clack', clack), ('hurt', hurt), ('slam', slam),
                      ('windup', windup), ('shrink', shrink), ('flee', flee), ('roar', roar), ('fall', fall)):
+        if only and name not in only: continue
         save(name, fn(), drive=4.0 if name == 'clack' else 2.2)   # (el chasquido es muy corto: más denso)

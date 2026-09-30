@@ -244,12 +244,18 @@ local function spawnScore(level, z, bosses, c, r)
     local score = 0
     local dBoss = SAFE_BOSS * T
     for _, b in ipairs(bosses) do
-        local bx, by = b.x, b.y
-        if b.markerX and (b.state == 'aim' or b.state == 'wallaim') then bx = b.markerX end
-        local d = math.max(math.abs(bx - x) - (b.outerW or 0) / 2, 0) + math.max(math.abs(by - y) - (b.outerH or 0) / 2, 0) * 0.5
-        dBoss = math.min(dBoss, d)
+        -- (su cuerpo y, si apunta, también donde va a caer: los dos cuentan;
+        -- en horizontal pesa más: debajo de un jefe en la pared no es seguro)
+        local pts = { { b.x, b.y } }
+        if b.markerX and (b.state == 'aim' or b.state == 'wallaim') then pts[2] = { b.markerX, b.landY or b.y } end
+        for _, q in ipairs(pts) do
+            local d = math.max(math.abs(q[1] - x) - (b.outerW or 0) / 2, 0) + math.max(math.abs(q[2] - y) - (b.outerH or 0) / 2, 0) * 0.25
+            dBoss = math.min(dBoss, d)
+        end
     end
     score = score + dBoss / T * 10
+    -- (pegado al jefe es lo peor: pesa más que tener súbditos cerca)
+    if dBoss < 3 * T then score = score - (3 - dBoss / T) * 45 end
     for _, e in ipairs(level.liveEntities or {}) do
         if e.alive and not e.def.boss and not e.def.pickup and not e.def.checkpoint and e.isObstacle and e:isObstacle()
            and e.state ~= 'reserve' then

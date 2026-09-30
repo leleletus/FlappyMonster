@@ -707,7 +707,12 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   (anchored at the joint `CLAW_X/CLAW_Y`: bigger claws grow outward/up from the same
   point). Steps: deeper `step.wav` + GAIN 0.56 (≈ -11.5 dBFS). Spike boxes (head spike,
   drop kill) = tile-spike proportions: base rectangle 60% w × 40% h. Rage below
-  `rageAt`. Death (own states): dying_kick → dying_shrink (deflates to normal size) →
+  `rageAt` (default 0.6): render-only anger symbols pop around its head (`renderAnger`:
+  `anger_vein/steam/scribble.png` strips). Roar = crab-like (stridulation + froth + hiss,
+  `tools/sounds/megacrabby.py roar`) with fx `mega_roar` (warped semi-transparent shock
+  rings + zigzag bolts, rough lines) + `shake_roar` (soft, long). Windup = legs scuttling +
+  accelerating claw snaps; claw closes on the sound's snaps (`WINDUP_SNAPS`, same in the
+  .py). Summon spots: `pickSummonSpots` (never overlapping, outside its body; netPack 9). Death (own states): dying_kick → dying_shrink (deflates to normal size) →
   dying_flee (small crab without claws runs straight to the nearest side through
   everything, silent steps, fades) → dead. `releasesZone()` (Boss hook, used by
   BossZones) lets the zone clear when the flee starts, so boss walls open first.

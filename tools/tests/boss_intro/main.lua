@@ -10,6 +10,8 @@
 --   sonidos     megaFall y megaRoar
 --   libres      al empezar la pelea vuelven a moverse
 --   emotes      los descansos siguen el orden 1 (rugido), 2 (pinzas), 1, 3 (pincho)
+--   invocar     con 3 súbditos por invocación (6 a la vez): ninguno sale encima de
+--               otro (≥ 1 casilla) ni dentro del Mega
 --   reaparece   muriendo en plena pelea (uno cada 6 s) se reaparece con
 --               BossZones.respawnPoint (como el servidor y un jugador): siempre
 --               dentro de la zona, de pie en suelo seguro, sin la cabeza en el
@@ -40,6 +42,13 @@ end
 function love.load()
     math.randomseed(5)
     local data = json.decode(love.filesystem.read(os.getenv('LEVEL') or 'assets/levels/guarida_cangrejo_rey.json'))
+    -- (muchos súbditos: 3 por invocación, 6 a la vez, a menudo)
+    for _, e in ipairs(data.entities or {}) do
+        if e.type == 'megacrabby' then
+            e.props = e.props or {}
+            e.props.summonCount, e.props.summonMax, e.props.summonPool, e.props.summonEvery = 3, 6, 6, 4
+        end
+    end
     local level = Level.fromData(data)
     local ents = {}
     for _, pl in ipairs(level.entities) do ents[#ents + 1] = Entities.create(pl) end
@@ -66,6 +75,8 @@ function love.load()
     local x0 = {}
     local rests, lastRest = {}, nil
     local freeMoved = 0
+    local spawnBad, spawnN, spawnMinGap, spawnMinBoss = 0, 0, math.huge, math.huge
+    local wasSpawning = {}
     local spawns, nextKill = {}, nil
     while t < (tonumber(os.getenv('SECS')) or 90) do
         t = t + dt
@@ -129,7 +140,28 @@ function love.load()
                 end
             end
         end
-        if #rests >= 4 and #spawns >= 4 then break end
+        -- Súbditos que acaban de salir: separados entre sí y del Mega
+        local born = {}
+        for _, e in ipairs(ents) do
+            if e.summonOf and e.alive and e.state == 'spawning' and not wasSpawning[e] then born[#born + 1] = e end
+            wasSpawning[e] = e.summonOf and e.alive and e.state == 'spawning' or nil
+        end
+        if #born > 0 then
+            for _, e in ipairs(born) do
+                spawnN = spawnN + 1
+                local gb = math.abs(e.x - boss.x) - boss.outerW / 2 - e.outerW / 2
+                spawnMinBoss = math.min(spawnMinBoss, gb)
+                for _, o in ipairs(ents) do
+                    if o ~= e and o.summonOf and o.alive then
+                        local g = math.abs(o.x - e.x)
+                        spawnMinGap = math.min(spawnMinGap, g)
+                        if g < T then spawnBad = spawnBad + 1 end
+                    end
+                end
+                if gb < 0 then spawnBad = spawnBad + 1 end
+            end
+        end
+        if #rests >= 4 and #spawns >= 4 and spawnN >= 6 then break end
     end
     local want = { 'dormant', 'fall_in', 'land_in', 'roar_in', 'ready', 'chase' }
     local okSeq = true
@@ -157,6 +189,9 @@ function love.load()
     check('reaparece', okS and minD >= 2 * T,
         ('%d reapariciones; todas en la zona, de pie y secas=%s; la más cercana al jefe a %.1f casillas'):format(#spawns,
             tostring(okS), minD / T))
+    check('invocar', spawnN >= 6 and spawnBad == 0,
+        ('%d súbditos invocados (3 por vez, 6 máx.); separación mínima entre súbditos %.0f px, hueco mínimo con el Mega %.0f px; solapes %d'):format(
+            spawnN, spawnMinGap, spawnMinBoss, spawnBad))
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
     love.event.quit(fails == 0 and 0 or 1)
 end
