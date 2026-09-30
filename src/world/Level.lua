@@ -646,7 +646,23 @@ function Level:breakTile(col, row)
     self.tiles[row][col] = new
     self.brokenQueue = self.brokenQueue or {}
     table.insert(self.brokenQueue, { col, row, new })
+    -- Enemigos de pie encima: mueren despedidos girando (no se quedan flotando)
+    self:forStanders(col, row, function(e)
+        local cx = (col - 0.5) * TILE_PX
+        e:dieFling((e.x >= cx) and 1 or -1)
+    end)
     return true
+end
+
+-- Entidades de suelo (enemigos: Crabby, Gummy...) de pie sobre la casilla
+-- (col, row). Solo donde se deciden los tiles (un jugador / servidor).
+function Level:forStanders(col, row, fn)
+    for _, e in ipairs(self.liveEntities or {}) do
+        if e.standingOnCell and e.def and e.def.category == 'Enemigos' and not e.def.boss
+           and not e.solidFull and e:standingOnCell(col, row) then
+            fn(e)
+        end
+    end
 end
 
 -- Golpe a un tile (cabezazo desde abajo o ground pound encima): rompe los
@@ -669,6 +685,11 @@ function Level:hitTile(col, row, from)
     self.brokenQueue = self.brokenQueue or {}
     table.insert(self.brokenQueue, { col, row, new, 'toggle', from })
     self:tileBump(col, row, from)
+    -- Enemigos encima del activador: un saltito con el golpe (no mueren)
+    self:forStanders(col, row, function(e)
+        if e.releaseCrawl then e:releaseCrawl() end
+        e.vy, e.onGround = -380, false
+    end)
     self:updateSwitchBlocks()
     return 'toggle'
 end

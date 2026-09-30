@@ -132,6 +132,13 @@ function Entity.emitFx(kind, x, y)
 end
 
 local SPAWN_ANIM = 0.7    -- s de la animación de reaparición
+local FLING_T    = 1.6    -- s volando tras romperle el bloque de debajo
+local BURST_T    = 1.0    -- s "muerta" tras reventar (las partículas vuelan)
+local FLING_VX, FLING_VY = 230, -760
+local LAUNCH_MIN_VX = 170   -- px/s de avance mínimo al salir de un trampolín hacia arriba
+-- Muertes especiales (ya muertas: sin choques, lo atraviesan todo; el dibujo
+-- solo depende de state + deadTimer + x, y: igual online)
+Entity.SPECIAL_DEATH = { dead_fling = true, dead_burst = true }
 local KNOCK_VX   = 520    -- empujón de un ground pound cercano
 local KNOCK_HOP  = 360
 local KNOCK_STUN = 1.2    -- s aturdida
@@ -202,6 +209,10 @@ function Entity:updateCommonStates(dt, level)
         self:moveAndCollide(level, vx * dt, self.vy * dt)
         if self.state ~= 'launched' then return true end     -- (otro trampolín la relanzó)
         if self.vx ~= vx then self.vx = -vx * 0.3 end         -- chocó con una pared: rebota un poco
+        if self.deadTimer > 0.05 and self:onDeadlyGround(level) then
+            self:dieBurst()                                    -- (¡en pinchos! revienta)
+            return true
+        end
         if self.onGround and self.deadTimer > 0.05 then
             self.launchedPrev = nil
             self.vy = 0
@@ -297,9 +308,56 @@ function Entity:collect()
     return true
 end
 
--- Intocable (esperando / apareciendo)
+-- Intocable (esperando / apareciendo / en una muerte especial)
 function Entity:isGhost()
-    return self.state == 'gone' or self.state == 'spawning'
+    return self.state == 'gone' or self.state == 'spawning' or Entity.SPECIAL_DEATH[self.state] == true
+end
+
+-- Muere porque le rompen el bloque sobre el que está: sale despedida hacia
+-- arriba y hacia fuera, girando (no la muerte de "aplastada")
+function Entity:dieFling(dirX)
+    if Entity.SPECIAL_DEATH[self.state] or self.state == 'dead' then return end
+    if self.releaseCrawl then self:releaseCrawl() end
+    dirX = (dirX and dirX ~= 0) and dirX or self.facing or 1
+    self.state, self.deadTimer = 'dead_fling', 0
+    self.vx, self.vy = dirX * FLING_VX, FLING_VY
+    self.facing = dirX
+    self.flipped, self.onGround = false, false
+    Sound.play('crabPop', 1.2)
+    Entity.emitFx('gp_start', self.x, self.y + self.outerH / 2)
+end
+
+-- Revienta en pedazos (cae en pinchos o algo mortal tras un trampolín)
+function Entity:dieBurst()
+    if Entity.SPECIAL_DEATH[self.state] or self.state == 'dead' then return end
+    if self.releaseCrawl then self:releaseCrawl() end
+    self.state, self.deadTimer, self.vx, self.vy = 'dead_burst', 0, 0, 0
+    Sound.play('enemyExplode', 1.1)
+    Sound.play('blockBreak', 0.8)
+    Entity.emitFx('enemy_burst', self.x, self.y)
+    Entity.emitFx('shake_small', self.x, self.y)
+end
+
+-- ¿Algo mortal donde está? (pinchos de verdad o material 'deadly')
+function Entity:onDeadlyGround(level)
+    local b = self:getOuterBounds()
+    if #level:getSpikesInBox(b.x, b.y, b.w, b.h) > 0 then return true end
+    for _, py in ipairs({ self.y, b.y + b.h - 4 }) do
+        local t = level:getDefAt(self.x, py)
+        if t and t.mat and t.mat.contact == 'kill' then return true end
+    end
+    return false
+end
+
+-- Está de pie sobre la casilla (c, r)? (pies en su cara de arriba)
+function Entity:standingOnCell(c, r)
+    if not self.alive or self.flying or not self.onGround then return false end
+    if Entity.SPECIAL_DEATH[self.state] or self.state == 'dead' or self.state == 'gone' then return false end
+    local T = TILE_PX
+    local b = self:getOuterBounds()
+    local x0, x1 = (c - 1) * T, c * T
+    local top = (r - 1) * T
+    return b.x < x1 and b.x + b.w > x0 and math.abs(b.y + b.h - top) <= 6
 end
 
 -- ── Hooks por defecto ─────────────────────────────────────────────────────────
@@ -524,8 +582,18 @@ function Entity:touchBody(o, face)
     if o.canLaunchEntity and not o:canLaunchEntity() then return false end
     if not self:canBeLaunched() then return false end
     local vx, vy = o:launchVelocity()
+    -- Hacia arriba (sin impulso de lado): sigue avanzando hacia donde andaba,
+    -- no rebota en el sitio para siempre (volvía a caer en el mismo trampolín)
+    if vx == 0 and self.moving then vx = (self.facing or 1) * math.max(self.speed or 0, LAUNCH_MIN_VX) end
     if o.onLaunch then o:onLaunch(nil) end
     self:launch(vx, vy)
+    -- Sale desde ENCIMA de la cara de arriba: un trepador llega a ella girando
+    -- por la esquina, medio metido en la caja del trampolín, y su primer paso
+    -- de lado chocaba con él y lo devolvía hacia atrás (rebotaba en el sitio)
+    if face == 'top' and o.getOuterBounds then
+        local bb = o:getOuterBounds()
+        self.y = math.min(self.y, bb.y - self.outerH / 2 - 1)
+    end
     return true
 end
 
@@ -567,19 +635,34 @@ function Entity:startWalk()
 end
 
 -- ── Update ────────────────────────────────────────────────────────────────────
+-- Fin de una muerte: reaparecerá (respawn) o desaparece
+function Entity:finishDeath()
+    if (self.props.respawn or 0) > 0 then
+        self.state, self.deadTimer = 'gone', 0     -- reaparecerá
+    else
+        self.alive = false
+    end
+end
+
 function Entity:update(dt, level)
     local tn = self.tuning
 
     if self.state == 'dead' then
         self:onDead(dt)
         self.deadTimer = self.deadTimer + dt
-        if self.deadTimer >= tn.deadDuration then
-            if (self.props.respawn or 0) > 0 then
-                self.state, self.deadTimer = 'gone', 0     -- reaparecerá
-            else
-                self.alive = false
-            end
-        end
+        if self.deadTimer >= tn.deadDuration then self:finishDeath() end
+        return
+    elseif self.state == 'dead_fling' then
+        -- Despedida girando (le rompieron el bloque de debajo): vuela sin chocar
+        self.deadTimer = self.deadTimer + dt
+        self.vy = self.vy + ADV_GRAVITY * dt
+        self.x, self.y = self.x + self.vx * dt, self.y + self.vy * dt
+        if self.deadTimer >= FLING_T then self:finishDeath() end
+        return
+    elseif self.state == 'dead_burst' then
+        -- Reventada en pedazos (partículas): el cuerpo ya no está
+        self.deadTimer = self.deadTimer + dt
+        if self.deadTimer >= BURST_T then self:finishDeath() end
         return
     end
 

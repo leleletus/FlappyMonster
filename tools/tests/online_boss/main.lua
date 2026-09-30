@@ -145,7 +145,7 @@ function love.update(dt)
         end
         local key = table.concat(wl, ',') .. ' súbditos=' .. nm
         if key ~= log.lastOther then log.lastOther = key; log.states[#log.states + 1] = ('\n    %.1f [cliente] bloques=%s'):format(t, key) end
-        for _, want in ipairs({ 'climb', 'aim', 'stuck', 'chase', 'dying_shrink', 'summon', 'wallaim' }) do
+        for _, want in ipairs({ 'climb', 'aim', 'stuck', 'chase', 'dying_shrink', 'summon', 'wallaim', 'fight', 'perch' }) do
             if not os.getenv('NOSHOTS') and boss.state == want and not log.shots[want] and t - (log.stateT or t) > 0.4 then
                 log.shots[want] = true; snap(want)
             end

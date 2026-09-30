@@ -3,6 +3,12 @@
 -- arena y esquiva a medias; se registran los estados del jefe, los súbditos
 -- activos y los bloques de jefe tal como los ve AdventureState.
 --
+-- RETRY=1: en plena pelea (música del jefe sonando) pierde la última vida y
+-- elige "Reintentar": todo debe empezar de cero (música del nivel desde el
+-- principio, zona de jefe esperando, bloques de jefe ocultos, tiles como en el
+-- archivo, jefe con toda la vida). RETRY=level: igual pero muriendo FUERA de la
+-- pelea (la misma pista del nivel sonando: antes seguía donde iba al reintentar).
+--
 --   LEVEL=assets/levels/guarida_cangrejo_rey.json love tools/tests/sp_boss
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
@@ -23,7 +29,7 @@ function love.update(dt)
     local boss
     for _, e in ipairs(st.enemies) do if e.def.boss then boss = e end end
     -- (empieza dentro de la arena: los niveles definitivos tienen un tramo antes)
-    if boss and boss.zone and pa and not last.placed then
+    if boss and boss.zone and pa and not last.placed and os.getenv('RETRY') ~= 'level' then
         last.placed = true
         pa.x, pa.y = boss.zone.x0 + 2 * TILE_PX, boss.zone.y1 - 60
     end
@@ -94,6 +100,41 @@ function love.update(dt)
             last.fightShot = true
             love.graphics.captureScreenshot(function(img) img:encode('png', 'fight.png') end)
             print('  captura de la pelea: fight.png')
+        end
+    end
+    if os.getenv('RETRY') and st then
+        local z = boss and boss.zone
+        local outside = os.getenv('RETRY') == 'level'
+        if not last.retry and z and (outside or z.state == 'fight') and pa and not pa.dying then
+            last.fightAt2 = last.fightAt2 or t
+            if t - last.fightAt2 > (outside and 6 or 3) then
+                -- (antes de morir: rompe un bloque rompible si lo hay, para ver que vuelve)
+                last.retry = { music = Sound.getLevelMusic() }
+                pa.lives = 1
+                pa:die(nil, true)
+            end
+        elseif last.retry and not last.retry.done and st.dead and st.deadTimer > 1 then
+            last.retry.done = t
+            gStateMachine:change('adventure', { level = st.levelPath, returnTo = st.returnTo })   -- (= "Reintentar")
+            st = gStateMachine:_top()
+        elseif last.retry and last.retry.done and t - last.retry.done > 0.5 then
+            local b2
+            for _, e in ipairs(st.enemies) do if e.def.boss then b2 = e end end
+            local walls = 0
+            for _, e in ipairs(st.enemies) do if e.def.name == 'bosswall' and e.state ~= 'hidden' then walls = walls + 1 end end
+            local name, pos = Sound.musicPosition()
+            local fresh = require('src/world/Level').new(st.levelPath)
+            local same = true
+            for r = 1, fresh.tileH do for c = 1, fresh.tileW do
+                if fresh:getRaw(c, r) ~= st.level:getRaw(c, r) then same = false end
+            end end
+            local ok = (last.retry.music ~= nil or os.getenv('RETRY') == 'level') and Sound.getLevelMusic() == nil and name == Sound.resolveMusic('level')
+                       and pos and pos < 1.0 and b2 and b2.zone.state ~= 'fight' and b2.hp == b2.hpMax and walls == 0 and same
+            print(('reintentar %s  música antes=%s ahora=%s pos=%.2f s · zona=%s jefe hp=%s/%s · bloques de jefe visibles=%d · tiles como el archivo=%s'):format(
+                ok and 'OK   ' or 'FALLA', tostring(last.retry.music), tostring(name), pos or -1, b2 and b2.zone.state or '?',
+                b2 and b2.hp or '?', b2 and b2.hpMax or '?', walls, tostring(same)))
+            love.event.quit(ok and 0 or 1)
+            return
         end
     end
     if t > SECS then

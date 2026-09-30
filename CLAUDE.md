@@ -129,6 +129,10 @@ code, comments (Spanish), commits, docs or game text — those keep their usual 
 - RELEASE = bump `version.txt` in master (+ git pull/restart the server). Bump it
   too whenever `Protocol.VERSION` changes, or old clients can't join.
 - `SERVER_HOST`/`SERVER_PORT` in settings.lua (`FM_SERVER=localhost` for tests).
+- In-match connection indicator: `src/ui/PingIcon.lua` (antenna + 4 bars, bottom-left; top-left
+  on mobile): level from ENet RTT AND the age of the last snapshot (RTT freezes when packets
+  stop): 4 green, 3-2 yellow, 1 red, 0 = red X (no snapshot for 1.5 s / disconnected);
+  improves after 0.6 s, big drops at once. `OnlineAdventureState.lastSnapAt`.
 
 ## Directory map
 
@@ -149,6 +153,11 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     (`Sound.loadTrack`); `level=false` tracks (boss, menus, youWin) are
                     not offered as level music. Adding a song = file + one index entry.
                     Level JSON `"music": id` (editor: Nivel tab → Música, ▶ preview).
+                    Music ALWAYS starts from 0 when (re)started: `stopMusic`/`playMusic` stop and
+                    rewind even a PAUSED source (it used to resume where it was after leaving a
+                    level from the pause menu); `AdventureState:exit` calls `Sound.leaveMatch()`
+                    so retrying (game over) or re-entering starts like the first time
+                    (harness `sp_boss RETRY=level`).
                     `Sound.playMusic('level')` resolves: `setLevelMusic` override (boss)
                     → `setBaseLevelMusic(level.music)` → 'classic'. Online the client
                     re-seeks the level track every 1 s to the server clock
@@ -359,7 +368,7 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   'stomp' with 4th return dirX = cnx → `pa:bounce(vy, dirX, soft=true)` (vx 300 +
   ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill; v17: crawler turn in snapshots; v18: MegaCrabby;
   v19: boss walls, Mega minions/pounce; v20: post-hit protection; v21: unified invulnerability;
-  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks; v30: boss broken glass).
+  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks; v30: boss broken glass; v31: special enemy deaths).
 - **Crawler** (`src/world/entities/Crawler.lua`): surface-following movement
   (floor ↔ walls ↔ ceiling, concave and convex corners) for Crabbies with prop
   `wallWalk` (`Crabby.WALL_PROP`, off by default so old levels don't change).
@@ -423,6 +432,17 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   water, air used; events: daño/muerte with a guessed cause ahogado/pincho/pez/enemigo,
   reaparece, checkpoint, meta). `src/PlayRecorder.lua`, hooked in AdventureState. To
   analyse how the user plays a level (editor → F5 also records).
+- **Special deaths** (`Entity:dieFling(dir)` / `dieBurst()`, states `dead_fling` /
+  `dead_burst`, `Entity.SPECIAL_DEATH`): already dead, ghosts (no interactions), fly through
+  everything, end like 'dead' (`finishDeath`: respawn or gone). Drawn from state + deadTimer
+  + x,y (same online). `dead_fling` = the block under it broke (`Level:breakTile` →
+  `Level:forStanders`: 'Enemigos' category standing on the cell), spins up and out.
+  `dead_burst` = a LAUNCHED entity lands on spikes / `contact='kill'` material
+  (`Entity:onDeadlyGround`): fx `enemy_burst` (flash, shell chunks, smoke) + shake. Hitting
+  an ON/OFF Activator (`hitTile` toggle) makes enemies on it hop (vy −380), never kills.
+  Trampolines: an UP launch gives walkers their walking speed forward (min
+  `LAUNCH_MIN_VX`) and starts them exactly on top of the face (a climbing Crabby was half
+  inside the box, hit it sideways and bounced in place forever). Harness `mechanics`.
 - Hunt rejects levels whose stompable enemies respawn (`info.respawning`). The level
   info for modes comes from ONE function, `Modes.entityInfo(entities)` (server,
   editor Nivel tab, level_check).
@@ -780,7 +800,10 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   (`pa.inMoveX, inCrouch, inJumpN, inCrouchN` in `PlayerAdventure:update`).
   It records ALL players, so switching target (nearest, with hysteresis) is
   seamless. `speedMult/jumpMult` on the body make it a bit faster/higher.
-  Rendered with an invert-colors shader; laugh = Body_Arms* + Head_* + JoyEyes.
+  Rendered with an invert-colors shader; laugh = Body_Arms* + Head_* + JoyEyes. It laughs at
+  EVERY player death (`onPlayerDeath`: now if copying/landed/perched, else `laughPending`
+  → as soon as it's on the ground). Its own attacks never daze it: 'recover' is a short
+  landing pause without stars; only a PLAYER's ground pound stuns it ('ko').
   ARENA ATTACKS (rework, in progress with the user): every `attackEvery` s of copying
   (phase-scaled) it shatters ('warp_out', fx `mirror_shards`, sound mirrorWarp) and either
   appears in a floating mirror portal above the target ('portal': follows, locks the last

@@ -30,6 +30,7 @@ local AutoScroll           = require 'src/world/AutoScroll'
 local Floods               = require 'src/world/Floods'
 local PointAreas           = require 'src/world/PointAreas'
 local json                 = require 'libs/json'
+local PingIcon             = require 'src/ui/PingIcon'
 
 local OnlineAdventureState = BaseState:new()
 
@@ -294,6 +295,7 @@ end
 
 function OnlineAdventureState:_onSnapshot(snap)
     if not self.snapBuf or type(snap) ~= 'table' or type(snap.t) ~= 'number' then return end
+    self.lastSnapAt = love.timer.getTime()          -- (indicador de conexión)
 
     -- Indexar jugadores por idx una sola vez
     snap.byIdx = {}
@@ -796,6 +798,10 @@ local INTRO_DUR     = 4.0  -- s del cartel de presentación del modo
 local BANNER_DUR    = 3.0
 
 function OnlineAdventureState:update(dt)
+    -- Indicador de conexión: ping + cuánto hace del último snapshot
+    self.pingIcon = self.pingIcon or PingIcon.new()
+    local age = self.lastSnapAt and (love.timer.getTime() - self.lastSnapAt) or 0
+    self.pingIcon:update(dt, NC:getPing(), age, NC.connected ~= false)
     -- ── Game Over ─────────────────────────────────────────────────────────────
     if self.showGameOver then
         self.gameOverTimer = self.gameOverTimer + dt
@@ -1454,6 +1460,11 @@ end
 -- ── HUD ───────────────────────────────────────────────────────────────────────
 
 function OnlineAdventureState:_renderHUD()
+    -- Antena de conexión: abajo a la izquierda (en móvil arriba a la izquierda,
+    -- bajo la vida: abajo está la cruceta táctil)
+    if self.pingIcon then
+        if Input.isMobile then self.pingIcon:draw(20, 196) else self.pingIcon:draw(16, WINDOW_H - 14) end
+    end
     love.graphics.setFont(FONT_BIG)
     local fh     = FONT_BIG:getHeight()
     local labelX = 20
@@ -1557,7 +1568,7 @@ function OnlineAdventureState:_renderHUD()
         love.graphics.print(string.format(
             'PING %dms  INTERP %.0fms  JITTER %.1f  CORR %d (ult %.1fpx)',
             NC:getPing(), self.snapBuf.delay * TICK_DT * 1000, self.snapBuf.jitter,
-            self.predictor.corrections, self.predictor.lastError), 14, WINDOW_H-40)
+            self.predictor.corrections, self.predictor.lastError), 14, WINDOW_H-64)   -- (encima de la antena)
     end
 
     self:_renderPopups()

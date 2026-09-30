@@ -438,6 +438,28 @@ function Particles.emit(kind, x, y, opts)
             add({ x = x + rnd(-20, 20), y = y + rnd(-10, 10), vx = rnd(-200, 200), vy = -rnd(60, 240), g = 900,
                   life = rnd(0.4, 0.7), size = 3, col = {0.85, 0.95, 1} })
         end
+    elseif kind == 'enemy_burst' then
+        -- ¡Revienta! (enemigo lanzado que cae en pinchos): destello, muchos
+        -- pedazos de caparazón que giran y lo atraviesan todo, humo y chispas
+        add({ x = x, y = y, vx = 0, vy = 0, shock = true, r0 = 10, r1 = 120, life = 0.3, size = 10,
+              col = {1, 0.95, 0.85} })
+        for i = 1, 34 do
+            local a = rnd(0, math.pi * 2)
+            local sp = rnd(220, 720)
+            add({ x = x + rnd(-10, 10), y = y + rnd(-10, 10), vx = math.cos(a) * sp, vy = math.sin(a) * sp - 260,
+                  g = 1500, life = rnd(0.7, 1.2), size = math.random(2, 4) * 3, chunk = true, fadeLast = 0.3,
+                  spin = rnd(-20, 20),
+                  col = ({ {0.9, 0.25, 0.2}, {1, 0.45, 0.3}, {0.95, 0.9, 0.85}, {0.25, 0.12, 0.1}, {0.8, 0.8, 0.82} })[math.random(5)] })
+        end
+        for i = 1, 10 do
+            add({ x = x + rnd(-16, 16), y = y + rnd(-16, 16), vx = rnd(-60, 60), vy = -rnd(40, 120), g = -30,
+                  life = rnd(0.5, 0.9), size = math.random(3, 5) * 3, col = {0.25, 0.23, 0.26}, drag = 2, dust = true })
+        end
+        for i = 1, 12 do
+            local a = rnd(0, math.pi * 2)
+            add({ x = x, y = y, vx = math.cos(a) * rnd(200, 500), vy = math.sin(a) * rnd(200, 500),
+                  g = 600, life = rnd(0.25, 0.5), size = 8, star = true, col = {1, 0.85, 0.4} })
+        end
     elseif kind == 'mirror_shards' then
         -- El Espejo se rompe: trozos de cristal (blanco / celeste) en todas
         -- direcciones que giran y caen, y un destello
@@ -585,7 +607,8 @@ local function renderSpecial(p, camX, camY)
         local cx, cy = math.floor(p.x - camX), math.floor(p.y - camY)
         -- (deformada: ondulaciones suaves que se mueven mientras se abre)
         local function pt(a)
-            local rr = r * (1 + p.wob * math.sin(3 * a + p.ph1 + lt * 9) + p.wob * 0.6 * math.sin(5 * a + p.ph2 - lt * 7))
+            local w = p.wob or 0
+            local rr = r * (1 + w * math.sin(3 * a + (p.ph1 or 0) + lt * 9) + w * 0.6 * math.sin(5 * a + (p.ph2 or 0) - lt * 7))
             return math.floor(cx + math.cos(a) * rr), math.floor(cy + math.sin(a) * rr * 0.62)
         end
         for i = 0, n - 1 do

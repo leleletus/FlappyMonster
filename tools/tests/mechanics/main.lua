@@ -19,6 +19,15 @@
 --   boxed_in       Gummy/Crabby encerrados (entre bloques, en un pilar): quietos, sin girarse
 --   puffer_cycle   jugador en el agua cerca: aviso → hinchado (pincha 1) → deshincha
 --   puffer_dry     jugador fuera del agua: no se hincha
+--   bloque_roto    Gummy/Crabby encima de un bloque rompible que se rompe: muere
+--                  despedido girando (dead_fling: fantasma, sube y desaparece)
+--   activador      Gummy/Crabby encima de un activador ON/OFF que cambia: saltito,
+--                  sigue vivo y andando
+--   tramp_avanza   Crabby trepador que pisa un trampolín: sale lanzado hacia
+--                  delante y sigue andando (antes rebotaba en el sitio sin fin)
+--   tramp_pinchos  lanzado por un trampolín y cae en pinchos: revienta (dead_burst)
+--   ping_icono     antena de conexión online: niveles (verde/amarillo/rojo/X) y que
+--                  no parpadee (mejorar espera 0,6 s; perder la conexión, al momento)
 -- SHOT=1: además guarda <save>/mechanics.png (bloques, invisible visible,
 -- Gummies con y sin casco) a tamaño real.
 --
@@ -380,6 +389,120 @@ cases.boxed_in = function()
         res[1].flips, tostring(res[1].still), res[1].moved, res[2].flips, tostring(res[2].still), res[2].moved, gflips))
 end
 
+-- Enemigo de pie sobre una fila de 3 bloques `tile` (cols 5-7, fila 6)
+local function onBlocks(kind, tile)
+    local level, es = room(12, 8, { { 5, 6, tile }, { 6, 6, tile }, { 7, 6, tile } },
+        { { type = kind, col = 6, row = 5, props = { pauses = false, speed = 20 } } })
+    level.players = {}
+    local e = es[1]
+    for _ = 1, 40 do e:update(1 / 60, level) end        -- (cae y se asienta)
+    return level, es, e
+end
+
+function cases.bloque_roto()
+    local parts, ok = {}, true
+    for _, kind in ipairs({ 'gummy', 'crabby' }) do
+        local level, es, e = onBlocks(kind, 'breakable')
+        local y0, stood = e.y, e.onGround
+        level:hitTile(6, 6, 'head')
+        local st, ghost = e.state, e:isGhost()
+        local maxUp = 0
+        for _ = 1, 60 * 2.5 do
+            if e.alive then e:update(1 / 60, level) end
+            maxUp = math.max(maxUp, y0 - e.y)
+        end
+        local good = stood and st == 'dead_fling' and ghost and maxUp > 60 and not e.alive
+        ok = ok and good
+        parts[#parts + 1] = ('%s: de pie=%s → %s fantasma=%s sube %d px, desaparece=%s'):format(kind, tostring(stood), st,
+            tostring(ghost), maxUp, tostring(not e.alive))
+    end
+    check('bloque_roto', ok, table.concat(parts, ' · '))
+end
+
+function cases.activador()
+    local parts, ok = {}, true
+    for _, kind in ipairs({ 'gummy', 'crabby' }) do
+        local level, es, e = onBlocks(kind, 'switch_on')
+        level:hitTile(6, 6, 'head')
+        local vy = e.vy
+        for _ = 1, 60 * 2 do e:update(1 / 60, level) end
+        local good = vy < -100 and e.alive and (e.state == 'walk' or e.state == 'idle') and e.onGround ~= nil
+        ok = ok and good
+        parts[#parts + 1] = ('%s: vy %d, luego %s vivo=%s'):format(kind, vy, e.state, tostring(e.alive))
+    end
+    check('activador', ok, table.concat(parts, ' · '))
+end
+
+-- Sala con un trampolín hacia arriba en (7, 7) y un Crabby trepador que va hacia él
+local function trampRoom(extra)
+    local level, es = room(18, 8, {}, { { type = 'trampoline', col = 7, row = 7 },
+        { type = 'crabby', col = 4, row = 7, props = { pauses = false, speed = 110, wallWalk = true, startDir = 'right' } } })
+    level.players = {}
+    if extra then extra(level) end
+    return level, es
+end
+local function stepAll(level, es, secs, each)
+    for _ = 1, math.floor(secs * 60) do
+        level.solidBodies = Entities.solidBodies(es)
+        for _, e in ipairs(es) do if e.alive then e:update(1 / 60, level) end end
+        if each then each() end
+    end
+end
+
+function cases.tramp_avanza()
+    local level, es = trampRoom()
+    local c = es[2]
+    local launches, wasL, firstLand = 0, false, nil
+    local tx = 6.5 * T
+    stepAll(level, es, 5, function()
+        local l = c.state == 'launched'
+        if l and not wasL then launches = launches + 1 end
+        if wasL and not l and not firstLand then firstLand = c.x end
+        wasL = l
+    end)
+    check('tramp_avanza', launches >= 1 and launches <= 2 and firstLand and firstLand - tx > 0.8 * T,   -- (hacia DELANTE)
+        ('lanzamientos en 5 s: %d; aterrizó a %.1f casillas del trampolín'):format(launches,
+            firstLand and math.abs(firstLand - tx) / T or -1))
+end
+
+function cases.tramp_pinchos()
+    local TileCodec = require 'src/world/tiles/TileCodec'
+    local level, es = trampRoom(function(level)
+        -- pinchos en el suelo, a la derecha del trampolín (cols 8-13)
+        local up = { present = true, dir = TileCodec.DIR_UP }
+        for c = 8, 13 do level.tiles[7][c] = TileCodec.encode(0, false, { nil, nil, up, up }) end
+    end)
+    local c = es[2]
+    local burst, ghost = false, false
+    stepAll(level, es, 4, function()
+        if c.state == 'dead_burst' and not burst then burst, ghost = true, c:isGhost() end
+        if os.getenv('TRACE_CRAB') and c.state ~= lastSt then print(('    %s x=%d y=%d vx=%d'):format(c.state, c.x, c.y, c.vx or 0)); lastSt = c.state end
+    end)
+    check('tramp_pinchos', burst and ghost and not c.alive,
+        ('revienta=%s fantasma=%s desaparece=%s'):format(tostring(burst), tostring(ghost), tostring(not c.alive)))
+end
+
+function cases.ping_icono()
+    local PingIcon = require 'src/ui/PingIcon'
+    local L = PingIcon.level
+    local lv = { L(40, 0.03, true), L(120, 0.03, true), L(200, 0.03, true), L(400, 0.03, true),
+                 L(40, 0.8, true), L(40, 2, true), L(40, 0.03, false) }
+    local want = { 4, 3, 2, 1, 1, 0, 0 }
+    local ok = true
+    for i = 1, #want do ok = ok and lv[i] == want[i] end
+    local ind = PingIcon.new()
+    ind:update(1 / 60, 200, 0.03, true)          -- 4 → 2: empeora 2, al momento
+    local a = ind.shown
+    ind:update(0.3, 40, 0.03, true)              -- mejora: aún no
+    local b = ind.shown
+    ind:update(0.4, 40, 0.03, true)              -- 0,7 s después: sí
+    local c = ind.shown
+    ind:update(1 / 60, 40, 3, true)              -- sin snapshots: X al momento
+    local d = ind.shown
+    ok = ok and a == 2 and b == 2 and c == 4 and d == 0
+    check('ping_icono', ok, ('niveles %s; parpadeo: %d %d %d %d'):format(table.concat(lv, ','), a, b, c, d))
+end
+
 -- Voladores: nunca en idle (patitas siempre moviéndose); uno de suelo sí para
 function cases.flyer_anim()
     local level, es = room(14, 8, {}, {
@@ -446,7 +569,8 @@ local shot
 function love.load()
     for _, n in ipairs({ 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
                          'helmet_jump', 'helmet_ride', 'helmet_gp', 'helmet_side', 'stomp_fast',
-                         'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'boxed_in' }) do cases[n]() end
+                         'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'boxed_in',
+                         'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono' }) do cases[n]() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
     if not os.getenv('SHOT') then love.event.quit(fails == 0 and 0 or 1); return end
     -- Escena para la captura

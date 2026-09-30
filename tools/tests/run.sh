@@ -75,7 +75,7 @@ run_one() {
 if [ "${1:-}" = all ]; then
     # Batería rápida (~5 min): física de entidades, jefe (solo y online), partida online
     fail=0
-    for t in "flyers" "flyers SEED=3" "crawler_drop" "crawler_drop SUMMON=1" "mechanics" "sounds" "boss_sim" "boss_sim LEVEL=assets/levels/ruta_del_espejo.json" "boss_intro SECS=200" "boss_intro LEVEL=assets/levels/ruta_del_espejo.json SECS=40" "subtiles" "flood_control" "editor_open" "editor_open LINKS=1" "free_play" "update_boot FM_UPDATE=1" \
+    for t in "flyers" "flyers SEED=3" "crawler_drop" "crawler_drop SUMMON=1" "mechanics" "sounds" "boss_sim" "boss_sim LEVEL=assets/levels/ruta_del_espejo.json" "boss_intro SECS=200" "sp_boss SECS=40 RETRY=level" "boss_intro LEVEL=assets/levels/ruta_del_espejo.json SECS=40" "subtiles" "flood_control" "editor_open" "editor_open LINKS=1" "free_play" "update_boot FM_UPDATE=1" \
              "online_helmet LEVEL=tools/tests/online_helmet/level.json" \
              "online_smoke LEVEL=assets/levels/jardin_gummies.json MODE=race SECS=16" \
              "online_smoke LEVEL=assets/levels/isla_flotante.json MODE=koth SECS=16" \

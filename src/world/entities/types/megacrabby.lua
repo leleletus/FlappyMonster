@@ -589,6 +589,21 @@ end
 function Mega:summonMinions(level)
     local n, free = self:summonable(level)
     n = math.min(n, self.summonN or n)
+    -- (durante el aviso otro súbdito pudo meterse en un sitio marcado — p. ej.
+    -- empujado por un ground pound —: se vuelven a comprobar con donde están
+    -- AHORA; si alguno ya no vale, sitios nuevos libres)
+    local T = TILE_PX
+    local clash = false
+    for i = 1, n do
+        local sp = self.spots and self.spots[i]
+        for _, e in ipairs(self:minions(level)) do
+            if sp and e.alive and math.abs(e.x - sp.x) < T and math.abs(e.y - (sp.y - e.outerH / 2)) < 1.5 * T then clash = true end
+        end
+    end
+    if clash then
+        self.spots = self:pickSummonSpots(level, n)
+        n = math.min(n, #self.spots)
+    end
     for i = 1, n do
         local e = free[i]
         local x, dir, floorY = self:summonSpot(i)

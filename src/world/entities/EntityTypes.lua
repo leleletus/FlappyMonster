@@ -186,7 +186,20 @@ function EntityTypes.register(def)
         cls._wrappedRender = true
         cls.render = function(self, camX, camY)
             local st = self.state
-            if st == 'gone' then return end
+            if st == 'gone' or st == 'dead_burst' then return end      -- (reventada: solo quedan los pedazos)
+            if st == 'dead_fling' then
+                -- Despedida girando (le rompieron el bloque de debajo)
+                local t = self.deadTimer or 0
+                local sx, sy = math.floor(self.x - camX + 0.5), math.floor(self.y - camY + 0.5)
+                love.graphics.push()
+                love.graphics.translate(sx, sy)
+                love.graphics.rotate((self.facing or 1) * t * 13)
+                love.graphics.translate(-sx, -sy)
+                draw(self, camX, camY)
+                love.graphics.pop()
+                love.graphics.setColor(1, 1, 1, 1)
+                return
+            end
             if st == 'spawning' then
                 local k  = math.min(1, (self.deadTimer or 0) / 0.7)
                 local sx = self.x - camX
