@@ -35,7 +35,7 @@ import os, sys
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(__file__))
-from famicom import (master, SR, FPS, CPU, FRAME_S, frames_for, t_, Chan, fr, hz, q_pulse, q_tri, q_vrc6, q_saw, q_n163,
+from famicom import (master, biquad, SR, FPS, CPU, FRAME_S, frames_for, t_, Chan, fr, hz, q_pulse, q_tri, q_vrc6, q_saw, q_n163,
                      play, per_sample, render_pulse, render_tri, render_saw, render_noise, dpcm, wavetable,
                      render_wave, Noise, pulse_dac, tnd_dac, OCT, band_power, write_wav)   # (motor de Famicom)
 
@@ -124,9 +124,16 @@ I_ECHO = {'vol': [6, 6, 5, 5, 4], 'sus': 4, 'duty': 0.125}
 I_HARM = {'vol': [10, 9, 9, 8], 'sus': 8, 'duty': 0.25, 'vib': (14, 0.2, 5.8)}
 I_TRI = {'vol': [15], 'sus': 15}
 I_BASS = {'vol': [15, 15, 14, 14, 13], 'sus': 13}
-I_CHOP = {'vol': [12, 10, 8, 6, 4, 3], 'sus': 0, 'duty': 0.375, 'arp_speed': 1}
+I_CHOP = {'vol': [15, 13, 11, 9, 7, 5, 3], 'sus': 0, 'duty': 0.25, 'arp_speed': 1}
 I_PAD = {'vol': [4, 5, 5], 'sus': 5, 'duty': 0.25, 'arp_speed': 2}
 I_SAW = {'vol': [12, 12, 11, 11, 10], 'sus': 10, 'vib': (14, 0.22, 5.6)}
+# Energía (le faltaba brillo y ataque al compararla con el original): capa de
+# pulso del 2A03 sobre la melodía con barrido de duty y un golpe de tono al
+# atacar (el lead "que corta" de los juegos de NES), acordes más brillantes
+I_BITE = {'vol': [13, 12, 11, 10, 10, 9], 'sus': 9, 'duty': [0.125, 0.125, 0.25, 0.25, 0.25, 0.5],
+          'vib': (14, 0.22, 5.8), 'drop': [0.7, 0.35, 0.15]}
+I_BITE_STAB = {'vol': [15, 13, 10, 8, 6, 4, 3], 'sus': 2, 'duty': [0.5, 0.25, 0.25, 0.125], 'drop': [1.0, 0.5, 0.2]}
+I_SHIMMER = {'vol': [8, 7, 6, 5, 4, 3], 'sus': 2, 'duty': 0.125, 'arp_speed': 1}
 
 
 # ── MIDI de referencia ───────────────────────────────────────────────────────
@@ -163,7 +170,7 @@ def voices(notes):
 def arrange():
     rh, lh = load_midi()
     top, low = voices(rh)
-    C = {k: Chan(NF) for k in ('lead', 'p2', 'tri', 'bass', 'v1', 'v2', 'saw')}
+    C = {k: Chan(NF) for k in ('lead', 'p1', 'p2', 'tri', 'bass', 'v1', 'v2', 'saw')}
     NZ = {k: Noise(NF) for k in ('hat', 'snare', 'crash')}
     NS = int(NF * FRAME_S) + SR
     DM = {'kick': np.zeros(NS), 'snare': np.zeros(NS)}
@@ -181,6 +188,7 @@ def arrange():
         gate = dur * (0.55 if sec == 'BR' else 0.92)
         inst = dict(inst, duty=float(WAVE_OF[sec]))              # (en el N163, "duty" = nº de onda)
         play(C['lead'], s, s + gate, n, inst, q=q_n163)
+        play(C['p1'], s, s + gate, n, I_BITE_STAB if sec == 'BR' else I_BITE)
         ev['p1'].append((s, n, gate))
         if sec == 'D' or (second and sec == 'B'):
             play(C['saw'], s, s + gate, n - 12, I_SAW, q=q_saw)
@@ -233,7 +241,17 @@ def arrange():
                 st = 2 + half * 4                                  # tiempos 2 y 4
                 play(C['v1'], t0 + st * E, t0 + (st + 1) * E, base, I_CHOP, q=q_vrc6, arp=arp)
                 ev['v1'] += [(t0 + st * E, base + x, E * 0.6) for x in arp]
-            if sec in ('B', 'D') or (sec == 'C' and b > 72):
+            if sec == 'C':
+                # Escalas: brillo en semicorcheas (arpegio del acorde a la octava alta)
+                for k in range(4):
+                    tt = t0 + (half * 4 + k) * E
+                    play(C['v2'], tt, tt + E * 0.9, base + 12, I_SHIMMER, q=q_vrc6, arp=[0, q[1], q[2], 12])
+            elif sec == 'BR':
+                # Break: golpe de acorde en cada negra (antes el break se quedaba sin medios)
+                for k in (0, 2):
+                    tt = t0 + (half * 4 + k) * E
+                    play(C['v2'], tt, tt + E * 0.8, base, I_CHOP, q=q_vrc6, arp=arp)
+            elif sec in ('B', 'D'):
                 play(C['v2'], t0 + half * 4 * E, t0 + (half * 4 + 4) * E * 0.98, base - 12, I_PAD, q=q_vrc6,
                      arp=[0, q[1], q[2], 12])
 
@@ -244,7 +262,7 @@ def arrange():
         buf[i:j] = smp[:j - i] * g                                 # (monofónico: la nueva corta la anterior)
 
     HAT = [9, 8, 7, 6, 5, 4, 3, 2, 1]                               # (a la mitad en ~70 ms, como el original)
-    SN_HI, SN_MID = [15, 9, 5, 3, 1], [9, 5, 3, 1]                  # (a la mitad en ~15 ms, al 20 % en ~45 ms)
+    SN_HI, SN_MID = [15, 12, 8, 5, 3, 2, 1], [9, 5, 3, 1]           # (brillante y con algo más de cola)
     CRASH = [15, 14, 13, 12, 12, 11, 10, 10, 9, 9, 8, 8, 7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1]
     for b in range(1, NBARS + 1):
         sec = section(b)
@@ -266,8 +284,10 @@ def arrange():
                 continue
             NZ['hat'].hit(t0 + st * E, 0, [x * (1.0 if st % 2 else 0.6) for x in HAT])
             ev['drums'].append((t0 + st * E, 42, 0.05))
+            if sec in ('B', 'C', 'D') and st + 1 not in snares:     # (semicorchea fantasma: más empuje)
+                NZ['hat'].hit(t0 + st * E + E / 2, 0, [4, 2, 1])
         for st in snares:
-            NZ['snare'].hit(t0 + st * E, [1, 1, 2, 3, 4], SN_HI)
+            NZ['snare'].hit(t0 + st * E, [0, 1, 1, 2, 3, 4], SN_HI)
             sample(DM['snare'], t0 + st * E, SNARE_BODY, 1.0)
             ev['drums'].append((t0 + st * E, 38, 0.1))
         if sec == 'C':                                             # (fantasma en el 2 del medio tiempo)
@@ -297,6 +317,7 @@ def stems(C, NZ, DM):
     cut = lambda x: x[:n] - np.mean(x[:n])
     return {
         'lead':  cut(render_wave(C['lead'], WAVES) * 0.0075),
+        'p1':    cut(pulse_dac(render_pulse(C['p1']))),
         'saw':   cut(render_saw(C['saw']) * 0.0075),
         'p2':    cut(pulse_dac(render_pulse(C['p2']))),
         'bass':  cut(render_wave(C['bass'], WAVES) * 0.0075),
@@ -313,7 +334,7 @@ def stems(C, NZ, DM):
 SECS = {'A': (1, 16), 'BR': (17, 24), 'B': (25, 40), 'C': (41, 56), 'D': (57, 72)}
 # Límites de la ganancia (× la de partida): la melodía puede bajar mucho, la
 # percusión y el bajo subir mucho, y nada se apaga del todo
-BOUNDS = {'lead': (0.15, 1.5), 'saw': (0.1, 1.5), 'p2': (0.1, 1.5), 'bass': (0.3, 6), 'tri': (0.3, 4),
+BOUNDS = {'lead': (0.15, 1.5), 'p1': (0.15, 1.2), 'saw': (0.1, 1.5), 'p2': (0.5, 1.5), 'bass': (0.3, 6), 'tri': (0.3, 4),
           'v1': (0.2, 1.6), 'v2': (0.2, 1.6), 'kick': (0.5, 8), 'snare': (0.3, 8), 'hat': (0.3, 6), 'crash': (0.2, 3)}
 
 
@@ -346,7 +367,7 @@ def fit_gains(S):
 PERC_BOOST = {'kick': 2.0, 'snare': 1.8, 'hat': 1.4, 'crash': 1.2}
 # En el juego (música a 0.9, efectos encima) el acompañamiento se perdía
 # detrás de la melodía: se sube y la melodía baja un poco
-BACKING = {'v1': 1.5, 'v2': 1.5, 'bass': 1.35, 'tri': 1.35, 'p2': 1.3, 'saw': 1.2, 'lead': 0.85}
+BACKING = {'v1': 1.8, 'v2': 1.8, 'bass': 1.0, 'tri': 1.0, 'p2': 1.3, 'saw': 1.3, 'lead': 0.85}   # (bajo sin empuje: embarraba 125-250 Hz)
 
 
 def mix(C, NZ, DM, report=True):
@@ -365,6 +386,9 @@ def mix(C, NZ, DM, report=True):
     # Estéreo discreto (separación suave de canales, como un emulador)
     side = S['p2'] * g['p2'] * 0.35 - S['v1'] * g['v1'] * 0.3 + S['hat'] * g['hat'] * 0.2
     y = np.stack([x + side, x - side], 1)
+    # EQ (medido frente al original): menos barro en 125-250 Hz, más brillo arriba
+    y = biquad(y, 'peak', 180, -3.5, 0.9)
+    y = biquad(y, 'high', 4500, 1.2)
     # Más fuerte que el original (-12.2 LUFS) para que en el juego se oiga lleno
     return master(y, lufs=-10.5)
 

@@ -268,3 +268,17 @@ def master(y, lufs=-10.5, ceiling=0.8, knee=0.55):
         g *= 10 ** (err / 20)
     return z
 
+
+def biquad(x, kind, f0, gain_db, q=0.9):
+    """EQ de mezcla (RBJ): 'peak' (campana) o 'high' (estantería de agudos)"""
+    from scipy.signal import lfilter
+    A = 10 ** (gain_db / 40); w = 2 * np.pi * f0 / SR; cw, sw = np.cos(w), np.sin(w)
+    if kind == 'peak':
+        al = sw / (2 * q)
+        b = [1 + al * A, -2 * cw, 1 - al * A]; a = [1 + al / A, -2 * cw, 1 - al / A]
+    else:
+        al = sw / 2 * np.sqrt(2); sA = 2 * np.sqrt(A) * al
+        b = [A * ((A + 1) + (A - 1) * cw + sA), -2 * A * ((A - 1) + (A + 1) * cw), A * ((A + 1) + (A - 1) * cw - sA)]
+        a = [(A + 1) - (A - 1) * cw + sA, 2 * ((A - 1) - (A + 1) * cw), (A + 1) - (A - 1) * cw - sA]
+    return lfilter(np.array(b) / a[0], np.array(a) / a[0], x, axis=0)
+

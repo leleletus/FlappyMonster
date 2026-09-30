@@ -941,6 +941,11 @@ Low-level notes (for writing NEW harnesses):
   peaks at 0.714 (~3 dB lost → "empty in game"). Targets: level −11, boss −10/−10.5 LUFS
   (originals ≈ −12); catalog `volume` 0.9 for boss tracks (default 0.7). In game the
   backing gets masked by the lead + SFX: keep lead ≈10-15 % of the energy, drums ≈40 %.
+- "Calmer than the original" = timbre, not notes: compare spectral centroid, attacks/s,
+  rms dynamics (p95/p20) and octave bands. tentacle_nes fix: 2A03 pulse layer on the
+  melody (duty sweep 12.5→50 % + pitch drop on attack), brighter chord stabs, 16th
+  shimmer arps in the scale section, stabs in the break, ghost 16th hats, bass not
+  boosted (mud), mix EQ (−3.5 dB @180 Hz, +1.2 dB shelf @4.5 kHz) via `famicom.biquad`.
 - Boss vs level identity (melody_nes): boss = 148 BPM, lead on a clipped-sine N163 wave
   + thin pulse an octave up, organ with fast octave arp, harsh bass, INDUSTRIAL drums
   (short-mode 2A03 noise "metal" on offbeats and under snares, low tom on 1, crash every
