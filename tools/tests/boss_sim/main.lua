@@ -4,6 +4,11 @@
 -- queda vulnerable ('stuck') el arnés le golpea: pisotón y ground pound
 -- alternos, dos veces seguidas (solo debe contar la primera).
 --
+-- Espejo (LEVEL=assets/levels/ruta_del_espejo.json): se le golpea aturdido
+-- tras caer ('recover') y se comprueban sus ataques de arena: los dos tipos
+-- (espejo flotante y plataforma), su ground pound quita 2, el salto cae donde
+-- marcó y encadena ataques en las fases de poca vida.
+--
 --   LEVEL=assets/levels/guarida_cangrejo_rey.json love tools/tests/boss_sim
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
@@ -39,6 +44,9 @@ function love.load()
     local lastState, hits, deaths, hurts = nil, {}, 0, 0
     local attack, attacksDone = nil, 0
     local lastHp = pa.hp
+    local mirror = boss.def.name == 'mirror'
+    local VULN = { stuck = true, recover = mirror }
+    local seen, gpDmg, chain, maxChain, leapOff = {}, {}, 0, 0, {}
     -- Registro extra: bloques de jefe, súbditos y eventos del jefe (si los tiene)
     local walls, wallSt, lastMinions = {}, {}, -1
     for _, e in ipairs(ents) do if e.def.name == 'bosswall' then walls[#walls + 1] = e end end
@@ -53,7 +61,13 @@ function love.load()
         for _, e in ipairs(ents) do if e.alive then e:update(dt, level) end end
         Entities.interactions.run(pa, ents, {})
         -- daño al jugador
-        if pa.hp < lastHp and not pa.dying then hurts = hurts + 1; print(('%6.1fs   jugador: -1 vida (%d)'):format(t, pa.hp)) end
+        if pa.hp < lastHp then
+            if not pa.dying then hurts = hurts + 1 end
+            print(('%6.1fs   jugador: -%d vida (%d) jefe=%s'):format(t, lastHp - pa.hp, pa.hp, boss.state))
+            if mirror and (boss.state == 'dive' or boss.state == 'recover') and boss.gpHit ~= nil then
+                gpDmg[#gpDmg + 1] = lastHp - pa.hp
+            end
+        end
         lastHp = pa.hp
         if pa.dying and not pa._counted then
             pa._counted = true; deaths = deaths + 1
@@ -94,8 +108,19 @@ function love.load()
         -- cambios de estado del jefe
         if boss.state ~= lastState then
             print(('%6.1fs jefe: %-12s  hp %s/%s  x=%d y=%d'):format(t, boss.state, boss.hp, boss.hpMax, boss.x, boss.y))
+            seen[boss.state] = true
+            if mirror then
+                if boss.state == 'warp_out' then chain = chain + 1; maxChain = math.max(maxChain, chain) end
+                if boss.state == 'fight' then chain = 0 end
+                if boss.state == 'recover' and boss.leapTX and lastState == 'dive' and boss.prevAttack == 'perch'
+                   and not boss.gpHit then                     -- (si le cayó encima a alguien, rebota)
+                    leapOff[#leapOff + 1] = math.abs(boss.x - boss.leapTX)
+                end
+                if boss.state == 'warp_out' then boss.prevAttack = boss.nextAttack end
+            end
             lastState = boss.state
-            if boss.state == 'stuck' then attack = { t0 = t, n = 0, kind = (attacksDone % 2 == 0) and 'stomp' or 'pound' } end
+            -- (Espejo: solo al final de una ristra de ataques, para verla entera)
+            if VULN[boss.state] and not (mirror and (boss.chainLeft or 1) > 1) then attack = { t0 = t, n = 0, kind = (attacksDone % 2 == 0) and 'stomp' or 'pound' } end
         end
         -- esquivar la caída: al ver la marca (estado 'aim') se aparta 5 casillas
         if boss.state == 'aim' and not pa.dying and math.abs(pa.x - boss.x) < 3 * TILE_PX then
@@ -103,7 +128,7 @@ function love.load()
             pa.x, pa.vx = boss.x + dir * 5 * TILE_PX, 0
         end
         -- golpear al jefe clavado: dos intentos (0.3 s y 1.2 s después)
-        if attack and boss.state == 'stuck' or (attack and attack.n == 1 and t - attack.t0 < 1.4) then
+        if attack and VULN[boss.state] or (attack and attack.n == 1 and t - attack.t0 < 1.4) then
             local due = attack.n == 0 and 0.3 or 1.2
             if t - attack.t0 >= due and attack.n < 2 then
                 local ob = boss:getOuterBounds()
@@ -125,9 +150,25 @@ function love.load()
     ctrl:update(dt)
     if boss._maxj then print(('Paso máximo del dibujo trepando: %.1f px (a 60 pasos/s)'):format(boss._maxj)) end
     print(('Resumen: jugador -1 vida %d veces, muertes %d; zona %s'):format(hurts, deaths, z.state))
+    local fails = 0
+    if mirror then
+        local function check(name, ok, msg)
+            print(('%-10s %s  %s'):format(name, ok and 'OK   ' or 'FALLA', msg))
+            if not ok then fails = fails + 1 end
+        end
+        check('ataques', seen.portal and seen.perch and seen.leap and seen.dive and seen.recover,
+            'espejo=' .. tostring(seen.portal) .. ' plataforma=' .. tostring(seen.perch) .. ' salto=' .. tostring(seen.leap))
+        local ok2 = true
+        for _, d in ipairs(gpDmg) do if d ~= 2 then ok2 = false end end
+        check('gp 2', ok2, ('golpes de su ground pound: %s'):format(#gpDmg > 0 and table.concat(gpDmg, ',') or 'ninguno'))
+        local worst = 0
+        for _, d in ipairs(leapOff) do worst = math.max(worst, d) end
+        check('salto', #leapOff > 0 and worst <= 24, ('%d saltos; el que más lejos de su marca: %.0f px'):format(#leapOff, worst))
+        check('fases', maxChain >= 2 or not boss.alive and maxChain >= 2, ('ataques seguidos (máx.): %d'):format(maxChain))
+    end
     local ks = {}
     for k, v in pairs(sounds) do ks[#ks + 1] = k .. '=' .. v end
     table.sort(ks)
     print('Sonidos: ' .. table.concat(ks, ' '))
-    love.event.quit()
+    love.event.quit(fails == 0 and 0 or 1)
 end

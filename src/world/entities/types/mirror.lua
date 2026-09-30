@@ -18,6 +18,18 @@
 -- rebota un poco; su ground pound empuja/aturde a los jugadores cercanos y
 -- daña al que pilla debajo; el ground pound de un jugador lo deja KO.
 --
+-- ATAQUES DE ARENA (rework): cada `attackEvery` s de copia usa la arena:
+--  * PICADO DESDE EL ESPEJO ('warp_out' → 'portal' → 'dive'): se rompe en
+--    cristales, reaparece en un espejo flotando sobre el objetivo (lo sigue y
+--    se fija el último instante; una marca en el suelo avisa) y cae en ground
+--    pound. Las plataformas lo paran: debajo de una se está a salvo.
+--  * SALTO DESDE UNA PLATAFORMA ('warp_out' → 'perch' → 'leap' → 'dive'):
+--    reaparece de pie en una plataforma de la arena, se agacha, salta hacia el
+--    jugador y en lo alto del salto hace el ground pound sobre él.
+--  Su ground pound quita 2 de vida al que pilla debajo (como el del jugador a
+--  él). Tras caer queda aturdido 'recover' (se le puede pisar) y vuelve a copiar.
+--  Fases por vida: más a menudo, encadena 1 / 2 / 3 ataques y copia más rápido.
+--
 -- Con varios jugadores copia a uno solo: al más cercano, pero sin cambiar a
 -- lo loco (tiempo mínimo por objetivo, histéresis de distancia y solo cuando
 -- está en el suelo). Graba a TODOS a la vez, así al cambiar de objetivo sigue
@@ -65,6 +77,20 @@ local SWITCH_RATIO   = 0.7           -- el nuevo tiene que estar bastante más c
 local SWITCH_MARGIN  = 64            -- ...y al menos esto
 local SWITCH_PAUSE   = 0.3           -- s de duda al cambiar de objetivo
 local FALL_FPS       = 6             -- animación de caída del jugador (brazos arriba/abajo)
+-- Ataques de arena
+local WARP_OUT_T     = 0.3           -- s rompiéndose antes de desaparecer
+local PORTAL_IN_T    = 0.25          -- s apareciendo en el espejo
+local PORTAL_LOCK    = 0.35          -- s fijo (sin seguir) antes de caer
+local PORTAL_FOLLOW  = 420           -- px/s siguiendo al objetivo desde el espejo
+local PORTAL_UP      = 4.5           -- casillas por encima del objetivo (mín.: techo de la zona)
+local PERCH_T        = 0.75          -- s en la plataforma antes de saltar
+local LEAP_VY        = -760          -- salto desde la plataforma (px/s)
+local RECOVER_T      = 1.1           -- s aturdido tras caer (se le puede pisar)
+local GP_DAMAGE      = 2             -- su ground pound encima de alguien
+-- Fases (fracción de vida → cada cuánto ataca, ataques seguidos, retardo x)
+local PHASES = { { at = 1.0, every = 7.0, chain = 1, delay = 1.0 },
+                 { at = 0.66, every = 5.5, chain = 2, delay = 0.85 },
+                 { at = 0.33, every = 4.5, chain = 3, delay = 0.7 } }
 
 local function rand(a, b) return a + math.random() * (b - a) end
 
@@ -161,7 +187,13 @@ function Mirror:initBoss()
     self.laughN     = 0
 end
 
-function Mirror:delay() return self.props.delay or 1 end
+function Mirror:phase()
+    local r = (self.hpMax or 1) > 0 and (self.hp or 0) / self.hpMax or 1
+    local ph = PHASES[1]
+    for _, p in ipairs(PHASES) do if r <= p.at then ph = p end end
+    return ph
+end
+function Mirror:delay() return (self.props.delay or 1) * self:phase().delay end
 
 -- Un paso del cuerpo con el input dado
 function Mirror:runBody(dt, level, mx, jumpP, crouch, crouchP)
@@ -280,8 +312,24 @@ end
 -- El plan (de dónde sale, cuánto dura) sale solo de la zona y de su sitio:
 -- igual en el servidor y en cada cliente (el dibujo de la risa lo necesita).
 local INTRO_WAIT, INTRO_APEX, INTRO_LAUGH_GAP = 0.45, 150, 0.25
+-- Dónde queda DE PIE al caer: el suelo bajo su sitio del editor (su centro
+-- está en mitad de la casilla, no apoyado: antes se quedaba medio enterrado
+-- hasta empezar la pelea). Mismo cálculo en el servidor y en los clientes.
+function Mirror:introLandY()
+    local level, hx, hy = self.levelRef, self.home.x, self.home.y
+    if self._landY then return self._landY end
+    if not level then return hy end
+    local ob = self.body:getOuterBounds()
+    local feet = ob.y + ob.h - self.body.y                  -- (del centro a los pies, de pie)
+    local z = self.zone
+    local hit, top = level:landingCross(hx, hy - TILE_PX, z and z.y1 + TILE_PX or level.heightPx)
+    self._landY = hit and (top - feet) or hy
+    return self._landY
+end
+Mirror.wantsLevel = true                                     -- (BossZones.link le da el nivel)
+
 function Mirror:introPlan()
-    local z, hx, hy = self.zone, self.home.x, self.home.y
+    local z, hx, hy = self.zone, self.home.x, self:introLandY()
     local viewBottom = z and math.max(z.y1, (z.y0 + z.y1) / 2 + WINDOW_H / 2) or hy + WINDOW_H / 2
     local y0 = viewBottom + self.sprH
     local g = ADV_GRAVITY
@@ -305,7 +353,7 @@ function Mirror:onIntroStart(level, players)
 end
 function Mirror:updateIntro(dt, level, t)
     local y0, vy, jumpT, laughAt = self:introPlan()
-    local hy = self.home.y
+    local hy = self:introLandY()
     local floorY = hy + self.sprH / 2
     local tj = t - INTRO_WAIT
     if tj < 0 then
@@ -398,8 +446,17 @@ function Mirror:updateBoss(dt, level)
         return
     end
 
+    if self:updateAttack(dt, level) then return end
+
     -- ── 'fight' ──────────────────────────────────────────────────────────────
     self:chooseTarget(level, dt)
+    -- Ataque de arena cada cierto tiempo (solo desde el suelo, sin nada raro)
+    self.attackT = (self.attackT or 0) + dt
+    if self.props.arenaAttacks ~= false and self.zone and self.attackT >= self:phase().every * (self.props.attackEvery or 7) / 7
+       and b.onGround and not b.gpPhase and self.target then
+        self.attackT, self.chainLeft = 0, self:phase().chain
+        return self:startWarp(level)
+    end
     if self.clock > self.nextFlip then           -- HandleDirectionChanges
         self.mirrored = not self.mirrored
         self.nextFlip = self.clock + rand(self.props.flipMin or 1, self.props.flipMax or 3)
@@ -445,6 +502,201 @@ function Mirror:updateBoss(dt, level)
     self:hitPlayers(level)
 end
 
+-- ── Ataques de arena ─────────────────────────────────────────────────────────
+-- Plataformas de su arena: tramos de ≥ 2 casillas con suelo y 2 libres encima,
+-- al menos 2 casillas por encima del suelo de la zona (se calculan una vez)
+function Mirror:arenaPlatforms(level)
+    if self._plats then return self._plats end
+    local z, T = self.zone, TILE_PX
+    local out = {}
+    local floorRow = z.row + z.h - 1
+    local function solid(c, r) return level:getDef(c, r).collision ~= 'none' end
+    for r = z.row + 2, floorRow - 2 do
+        local run = nil
+        for c = z.col, z.col + z.w do
+            local ok = c < z.col + z.w and solid(c, r) and not solid(c, r - 1) and not solid(c, r - 2)
+            if ok then run = run or { c0 = c }; run.c1 = c
+            elseif run then
+                if run.c1 - run.c0 >= 1 then
+                    local def = level:getDef(run.c0, r)
+                    out[#out + 1] = { x = ((run.c0 + run.c1) / 2 - 0.5) * T,
+                                      top = (r - 1) * T + (def.hitbox and def.hitbox.y or 0) * T,
+                                      x0 = (run.c0 - 1) * T, x1 = run.c1 * T }
+                end
+                run = nil
+            end
+        end
+    end
+    self._plats = out
+    return out
+end
+
+-- Del centro del cuerpo a los pies (de pie)
+function Mirror:feetOff()
+    local ob = self.body:getOuterBounds()
+    return ob.y + ob.h - self.body.y
+end
+
+-- Primer suelo (o plataforma) debajo de x desde y
+function Mirror:groundBelow(level, x, y)
+    local z = self.zone
+    local hit, top = level:landingCross(x, y, z.y1 + TILE_PX)
+    return hit and top or z.y1
+end
+
+function Mirror:startWarp(level)
+    self.state, self.deadTimer = 'warp_out', 0
+    self.body.vx, self.body.vy = 0, 0
+    Sound.play('mirrorWarp')
+    Entity.emitFx('mirror_shards', self.x, self.y)
+    -- ¿Qué ataque? Desde plataforma si hay alguna, alternando; si no, espejo
+    local plats = self:arenaPlatforms(level)
+    self.attackN = (self.attackN or 0) + 1
+    self.nextAttack = (#plats > 0 and self.attackN % 2 == 0) and 'perch' or 'portal'
+end
+
+function Mirror:targetX(level)
+    local t, z, T = self.target, self.zone, TILE_PX
+    local x = t and t.x or self.x
+    return math.max(z.x0 + T, math.min(z.x1 - T, x))
+end
+
+-- Estados de ataque (true = ya está hecho este paso)
+function Mirror:updateAttack(dt, level)
+    local st, b, z, T = self.state, self.body, self.zone, TILE_PX
+    if st == 'warp_out' then
+        self.deadTimer = self.deadTimer + dt
+        if self.deadTimer >= WARP_OUT_T then
+            self:chooseTarget(level, 0)
+            if self.nextAttack == 'perch' then self:startPerch(level) else self:startPortal(level) end
+        end
+        return true
+    elseif st == 'portal' then
+        -- En el espejo, sobre el objetivo: lo sigue y el último instante se fija
+        self.deadTimer = self.deadTimer + dt
+        local aimT = (self.props.portalAim or 1.0) * (self:phase().chain > 1 and 0.85 or 1)
+        self:chooseTarget(level, dt)
+        if self.deadTimer < aimT - PORTAL_LOCK then
+            local dx = self:targetX(level) - self.x
+            local step = PORTAL_FOLLOW * dt
+            self.x = self.x + math.max(-step, math.min(step, dx))
+            b.x = self.x
+        end
+        self.markX, self.markY = self.x, self:groundBelow(level, self.x, self.y)
+        if self.deadTimer >= aimT then
+            -- ¡Cae! (el ground pound del cuerpo de verdad)
+            self.state, self.deadTimer = 'dive', 0
+            b.gpPhase, b.gpT, b.vx, b.vy, b.onGround = 'fall', 0, 0, 0, false
+            self.gpHit = false
+        end
+        return true
+    elseif st == 'perch' then
+        -- De pie en la plataforma, mirando al objetivo, agachándose para saltar
+        self.deadTimer = self.deadTimer + dt
+        self:chooseTarget(level, dt)
+        local tx = self:targetX(level)
+        b.facing = (tx < self.x) and -1 or 1
+        self.markX, self.markY = tx, self:groundBelow(level, tx, self.y - 3 * T)
+        -- (agachado solo de dibujo: agacharse de verdad en una plataforma
+        -- traspasable la atraviesa)
+        self:runBody(dt, level, 0)
+        self.crouching = self.deadTimer > PERCH_T * 0.5
+        if self.deadTimer >= PERCH_T then
+            -- Salto hacia él: en lo alto, ground pound (cae justo encima)
+            -- (sin chocar con el techo de la zona: si no, cortaba el salto a medias)
+            local ob = b:getOuterBounds()
+            local room = ob.y - (self.zone.y0 + 8)
+            local rise = math.max(40, math.min(LEAP_VY * LEAP_VY / (2 * ADV_GRAVITY), room))
+            local vy = -math.sqrt(2 * ADV_GRAVITY * rise)
+            local apexT = -vy / ADV_GRAVITY
+            self.leapTX = tx
+            self.leapVX = (tx - self.x) / apexT
+            b.vy, b.onGround, b.crouching = vy, false, false
+            b.puff = 1.15
+            realSound = Sound; BodySound.play('jump')
+            self.state, self.deadTimer = 'leap', 0
+        end
+        return true
+    elseif st == 'leap' then
+        -- Vuelo balístico (a mano: más rápido que su control en el aire)
+        self.deadTimer = self.deadTimer + dt
+        b.vy = b.vy + ADV_GRAVITY * dt
+        b:moveAndCollide(level, self.leapVX * dt, b.vy * dt)
+        b.facing = self.leapVX < 0 and -1 or 1
+        b.frame = 2
+        self:syncFromBody()
+        self.markX, self.markY = self.leapTX, self:groundBelow(level, self.leapTX, self.y)
+        if b.vy >= 0 or b.onGround or self.deadTimer > 1.5 then
+            b.gpPhase, b.gpT, b.vx, b.vy = 'windup', 0, 0, 0
+            b.puff = 1.15
+            realSound = Sound; BodySound.play('gpStart')
+            Entity.emitFx('gp_start', self.x, self.y)
+            self.state, self.deadTimer, self.gpHit = 'dive', 0, false
+        end
+        return true
+    elseif st == 'dive' then
+        self.deadTimer = self.deadTimer + dt
+        self:runBody(dt, level, 0)
+        self:hitPlayers(level)
+        if b.gpLanded or (not b.gpPhase and b.onGround) or self.deadTimer > 3 then
+            Entity.emitFx('shake_small', self.x, self.y)
+            self.markX, self.markY = nil, nil
+            self.state, self.deadTimer = 'recover', 0
+        end
+        return true
+    elseif st == 'recover' then
+        -- Aturdido tras caer: su momento débil
+        self.deadTimer = self.deadTimer + dt
+        self:runBody(dt, level, 0)
+        if self.deadTimer >= (self.props.recoverTime or RECOVER_T) then
+            self.chainLeft = (self.chainLeft or 1) - 1
+            if self.chainLeft > 0 and self.target then return self:startWarp(level) or true end
+            self.state, self.deadTimer = 'fight', 0
+            self.memoryFrom = self.clock          -- (vuelve a copiar desde ahora)
+            self.attackT = 0
+        end
+        return true
+    end
+    return false
+end
+
+function Mirror:startPortal(level)
+    local z, T = self.zone, TILE_PX
+    local t = self.target
+    local x = self:targetX(level)
+    local y = math.max(z.y0 + T * 1.2, (t and t.y or self.y) - PORTAL_UP * T)
+    self.x, self.y = x, y
+    local b = self.body
+    b.x, b.y, b.vx, b.vy, b.gpPhase, b.onGround, b.crouching = x, y, 0, 0, nil, false, false
+    b.frame, b.puff = 2, 1
+    self.frame, self.crouching = 2, false
+    self.state, self.deadTimer = 'portal', 0
+    Sound.play('mirrorAppear')
+    Sound.play('mirrorPortal')
+    Entity.emitFx('mirror_glint', x, y)
+end
+
+function Mirror:startPerch(level)
+    local plats, T = self:arenaPlatforms(level), TILE_PX
+    local tx = self:targetX(level)
+    -- La plataforma más lejos del objetivo en horizontal (pero a menos de 9
+    -- casillas: tiene que llegar de un salto); entre las dos mejores, al azar
+    table.sort(plats, function(a, c) return math.abs(a.x - tx) > math.abs(c.x - tx) end)
+    local cands = {}
+    for _, p in ipairs(plats) do if math.abs(p.x - tx) <= 9 * T and math.abs(p.x - tx) >= 1.5 * T then cands[#cands + 1] = p end end
+    local p = cands[math.random(math.min(2, math.max(1, #cands)))] or plats[1]
+    if not p or #cands == 0 then return self:startPortal(level) end
+    local b = self.body
+    local x = math.max(p.x0 + b.w, math.min(p.x1 - b.w, p.x))
+    local y = p.top - self:feetOff()
+    b.x, b.y, b.vx, b.vy, b.gpPhase, b.onGround, b.crouching = x, y, 0, 0, nil, true, false
+    b.facing = (tx < x) and -1 or 1
+    self:syncFromBody()
+    self.state, self.deadTimer = 'perch', 0
+    Sound.play('mirrorAppear')
+    Entity.emitFx('mirror_glint', x, y)
+end
+
 -- Cae sobre la cabeza de un jugador / su ground pound impacta
 function Mirror:hitPlayers(level)
     local b = self.body
@@ -455,7 +707,10 @@ function Mirror:hitPlayers(level)
             local pob = pa:getOuterBounds()
             if falling and Boss.overlap(gob, pob) and gob.y + gob.h < pob.y + pob.h * 0.35 + 10
                and gob.y + gob.h * 0.5 < pob.y then
-                Boss.withPlayer(pa, function() pa:hurt() end)
+                -- (en pleno ground pound le cae encima: 2, como el del jugador a él)
+                local n = (b.gpPhase == 'fall') and GP_DAMAGE or 1
+                Boss.withPlayer(pa, function() pa:hurt(n) end)
+                if b.gpPhase == 'fall' then self.gpHit = true end
                 b.vy, b.onGround, b.jumpsLeft = HEAD_BOUNCE, false, 2
                 b.vx = (self.x < pa.x and -1 or 1) * HEAD_PUSH
                 b.gpPhase, b.gpT = nil, 0
@@ -473,7 +728,7 @@ function Mirror:hitPlayers(level)
             if not pa.dying and pa.alive ~= false then
                 local dx, dy = pa.x - self.x, pa.y - self.y
                 if Boss.overlap(z, pa:getInnerBounds()) then
-                    Boss.withPlayer(pa, function() pa:hurt() end)
+                    Boss.withPlayer(pa, function() pa:hurt(GP_DAMAGE) end)
                 elseif math.abs(dx) <= PlayerAdventure.GP_RADIUS_X and math.abs(dy) <= PlayerAdventure.GP_RADIUS_Y then
                     pa:knockback(dx >= 0 and 1 or -1)
                 end
@@ -481,6 +736,10 @@ function Mirror:hitPlayers(level)
         end
     end
 end
+
+-- Roto (desapareciendo): ni se le toca ni es sólido
+function Mirror:isActive() return self.state ~= 'warp_out' and Boss.isActive(self) end
+function Mirror:isSolidBody() return self.state ~= 'warp_out' and self.state ~= 'portal' and Boss.isSolidBody(self) end
 
 -- Aturdido (KO): solo admite un golpe (ver Boss.damage)
 Mirror.stunnable = true
@@ -498,11 +757,13 @@ end
 
 function Mirror:onDamaged(n, kind)
     if self.state == 'laugh' then self.state, self.deadTimer = 'fight', 0 end
+    self.chainLeft = 0                      -- (golpeado: se acaba la ristra de ataques)
 end
 
 -- Ground pound encima: KO
 function Mirror:onPounded(pa)
     local b = self.body
+    self.chainLeft = 0
     self.state, self.deadTimer, self.koDur = 'ko', 0, KO_POUND
     b.gpPhase, b.vx, b.vy = nil, 0, -200
     b.onGround = false
@@ -512,8 +773,9 @@ end
 -- Ground pound cerca: sale despedido y aturdido
 function Mirror:onKnocked(dir)
     local b = self.body
-    if self.state == 'fight' or self.state == 'laugh' then
+    if self.state == 'fight' or self.state == 'laugh' or self.state == 'recover' or self.state == 'perch' then
         self.state, self.deadTimer, self.koDur = 'ko', 0, KO_KNOCK
+        self.chainLeft = 0
     end
     b.gpPhase = nil
     b.vx, b.vy, b.onGround = dir * KNOCK_VX, KNOCK_VY, false
@@ -531,11 +793,14 @@ function Mirror:onDeathFall() Sound.play('dies2', PITCH) end
 
 -- ── Red ───────────────────────────────────────────────────────────────────────
 function Mirror:netPackExtra()
-    return { math.floor(self.puff * 100 + 0.5), self.crouching and 1 or 0 }
+    return { math.floor(self.puff * 100 + 0.5), self.crouching and 1 or 0,
+             self.markX and math.floor(self.markX + 0.5) or 0, self.markY and math.floor(self.markY + 0.5) or 0 }
 end
 function Mirror:netApplyExtra(a, b, f)
     if type(b[1]) == 'number' then self.puff = b[1] / 100 end
     self.crouching = b[2] == 1
+    local mx, my = tonumber(b[3]) or 0, tonumber(b[4]) or 0
+    if mx ~= 0 or my ~= 0 then self.markX, self.markY = mx, my else self.markX, self.markY = nil, nil end
 end
 
 -- ── Dibujo ────────────────────────────────────────────────────────────────────
@@ -553,9 +818,48 @@ local function useInvert()
     if invShader then love.graphics.setShader(invShader) end
 end
 
+-- Marca en el suelo de dónde caerá (parpadea)
+local function drawMark(x, y, t)
+    local on = math.floor(t * 8) % 2 == 0
+    local w = 72
+    love.graphics.setColor(0, 0, 0, 0.35)
+    love.graphics.rectangle('fill', x - w / 2, y - 6, w, 6)
+    love.graphics.setColor(0.6, 0.9, 1, on and 0.95 or 0.5)
+    for i = 0, 5, 2 do love.graphics.rectangle('fill', x - w / 2 + i * 12, y - 4, 12, 4) end
+end
+
+-- El espejo flotante (marco de cristal pixelado) donde aparece para caer
+local function drawPortal(x, y, k, now)
+    local w, h = math.floor(88 * k / 4) * 4, math.floor(128 * k / 4) * 4
+    if w < 8 then return end
+    local x0, y0 = math.floor(x - w / 2), math.floor(y - h / 2)
+    love.graphics.setColor(0, 0, 0, 0.5)                                   -- sombra
+    love.graphics.rectangle('fill', x0 + 4, y0 + 4, w, h)
+    love.graphics.setColor(0.55, 0.8, 0.95, 1)                             -- marco
+    love.graphics.rectangle('fill', x0, y0 + 8, w, h - 16)
+    love.graphics.rectangle('fill', x0 + 8, y0, w - 16, h)
+    love.graphics.setColor(0.08, 0.12, 0.25, 0.85)                         -- cristal
+    love.graphics.rectangle('fill', x0 + 6, y0 + 12, w - 12, h - 24)
+    love.graphics.rectangle('fill', x0 + 12, y0 + 6, w - 24, h - 12)
+    -- Brillo diagonal que recorre el cristal
+    local p = (now * 0.9) % 1.6 - 0.3
+    love.graphics.setColor(0.8, 0.95, 1, 0.35)
+    for i = 0, 3 do
+        local sx = math.floor(x0 + 12 + (w - 24) * p + i * 4 - (h - 24) * 0.3)
+        local sy = y0 + 12 + i * math.floor((h - 24) / 4)
+        if sx > x0 + 10 and sx < x0 + w - 14 then love.graphics.rectangle('fill', sx, sy, 4, math.floor((h - 24) / 4)) end
+    end
+end
+
 function Mirror:render(camX, camY)
     local x, y = math.floor(self.x - camX), math.floor(self.y - camY)
     local st   = self.state
+    local now0 = love.timer.getTime()
+    -- Marca del sitio donde caerá y espejo flotante (sin colores invertidos)
+    if self.markX and not EDITOR_VIEW then drawMark(math.floor(self.markX - camX), math.floor(self.markY - camY), now0) end
+    if st == 'portal' and not EDITOR_VIEW then
+        drawPortal(x, y, math.min(1, (self.deadTimer or 0) / PORTAL_IN_T), now0)
+    end
     local s    = PLAYER_SCALE * (self.puff or 1)
     local f    = self.facing or 1
     local r, g, bb = 1, 1, 1
@@ -600,12 +904,22 @@ function Mirror:render(camX, camY)
             img = sprites[self.frame] or sprites[3]
         end
         local iw, ih = img:getWidth(), img:getHeight()
-        love.graphics.draw(img, x, y, 0, s * f, s, iw / 2, ih / 2)
+        local sx = s * f
+        if st == 'warp_out' then
+            -- Se rompe: se estrecha hasta desaparecer, blanco
+            local k = math.min(1, (self.deadTimer or 0) / WARP_OUT_T)
+            sx = sx * (1 - k)
+            love.graphics.setColor(1, 1, 1, ga * (1 - k * 0.5))
+        elseif st == 'portal' then
+            local k = math.min(1, (self.deadTimer or 0) / PORTAL_IN_T)
+            sx, s = sx * k, s * k
+        end
+        love.graphics.draw(img, x, y, 0, sx, s, iw / 2, ih / 2)
         if st == 'dying_fall' then DeadEyes.draw(x, y, s, f, r, g, bb, 1) end
     end
     love.graphics.setShader()
     love.graphics.setColor(1, 1, 1, 1)
-    if st == 'ko' then PlayerAdventure.drawStunStars(self.x - camX, self.y - camY) end
+    if st == 'ko' or st == 'recover' then PlayerAdventure.drawStunStars(self.x - camX, self.y - camY) end
 end
 
 return {
@@ -626,6 +940,14 @@ return {
           help='Salta apartándose cuando un jugador se le pone justo encima' },
         { key='randomMove', kind='bool', label='Pasos al azar', group='Espejo', default=true,
           help='Si el jugador se queda quieto, da unos pasos al azar' },
+        { key='arenaAttacks', kind='bool', label='Ataques de arena', group='Ataques', default=true,
+          help='Se rompe en cristales y ataca desde un espejo flotante o desde una plataforma de la zona' },
+        { key='attackEvery', kind='number', label='Ataca cada (s, fase 1)', group='Ataques', default=7,
+          min=2, max=30, step=0.5, help='Copiando este tiempo antes de un ataque de arena (luego, más a menudo)' },
+        { key='portalAim', kind='number', label='Apuntando desde el espejo (s)', group='Ataques', default=1.0,
+          min=0.4, max=3, step=0.05, help='Sigue al jugador desde el espejo y se fija el último instante' },
+        { key='recoverTime', kind='number', label='Aturdido tras caer (s)', group='Ataques', default=1.1,
+          min=0.3, max=4, step=0.1, help='El momento de pisarlo' },
     }),
     editor = { sprite = 'assets/images/player/monstrito3.png', invert = true },
 }

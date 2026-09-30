@@ -1400,10 +1400,6 @@ function Mega:render(camX, camY)
                            or st == 'ready') then
         frame = 2
     end
-    -- (enfadado y parado: patea el suelo impaciente)
-    if not moving and not EDITOR_VIEW and (st == 'chase' or st == 'recover' or st == 'rest') and self:rage() then
-        frame = (math.floor(now * 9) % 2 == 0) and 1 or 3
-    end
     local img = imgs[frame] or imgs[2]
     local withSpike = true
 
@@ -1437,13 +1433,12 @@ function Mega:render(camX, camY)
     end
 
     local sx, sy, shx, claws, spikeK = self:pose2d(now, moving, walkPhase)
-    -- ENFADADO (rage): todo su repertorio más nervioso: tiembla sin parar,
-    -- respira y rebota más fuerte y las pinzas se agitan y chasquean con rabia
+    -- ENFADADO (rage): rojizo, un temblor LEVE (1 px de vez en cuando), un
+    -- poco más de rebote y las pinzas se agitan y chasquean con rabia
     local angry = self:rage() and not self:isDying() and not INTRO[st] and st ~= 'dormant' and not EDITOR_VIEW
     if angry then
-        shx = shx + math.floor(math.sin(now * 57) * 1.6 + math.sin(now * 23) * 1.2 + 0.5)
-        jy = jy + math.floor(math.sin(now * 49 + 1.3) * 1.3 + 0.5)
-        sx, sy = 1 + (sx - 1) * 1.5, 1 + (sy - 1) * 1.5
+        shx = shx + math.floor(math.sin(now * 41) * 0.9 + 0.5)
+        sx, sy = 1 + (sx - 1) * 1.2, 1 + (sy - 1) * 1.2
         for i = 1, 2 do
             local c = claws[i]
             c[1] = c[1] * 1.3 + math.cos(now * 31 + i * 2.1) * 0.45

@@ -67,6 +67,7 @@ function love.load()
     local T = TILE_PX
     local mega = boss.def.name == 'megacrabby'
     local camBad, camRef = 0, nil
+    local landGap
     -- Uno justo donde está el jefe (debe caer en otro sitio) y otro a la izquierda
     -- (de pie en el suelo que haya: el de la arena puede tener agua)
     local function ground(x)
@@ -120,6 +121,13 @@ function love.load()
         end
         if fightT and t - fightT < 0.5 then
             for i, pa in ipairs(players) do freeMoved = freeMoved + math.abs(pa.x - x0[i]) end
+        end
+        -- (Espejo: al acabar la entrada, de pie EN el suelo: ni enterrado ni flotando)
+        if boss.def.name == 'mirror' and boss.state == 'ready' and not landGap then
+            local ob = boss:getOuterBounds()
+            local bot = ob.y + ob.h
+            local hit, top = level:landingCross(boss.x, bot - 40, bot + 40)
+            landGap = hit and (bot - top) or 999
         end
         if boss.state ~= lastState then
             print(('%6.2fs jefe: %-10s x=%d y=%d  zona=%s'):format(t, boss.state, boss.x, boss.y, z.state))
@@ -194,6 +202,10 @@ function love.load()
         local okSnd, txt = true, {}
         for _, n in ipairs(snd) do okSnd = okSnd and (sounds[n] or 0) >= 1; txt[#txt + 1] = n .. '=' .. (sounds[n] or 0) end
         check('sonidos', okSnd, table.concat(txt, ' '))
+        if boss.def.name == 'mirror' then
+            check('apoyado', landGap and math.abs(landGap) <= 2,
+                ('pies respecto al suelo al acabar la entrada: %s px (+ = enterrado)'):format(tostring(landGap)))
+        end
     end
     if mega then
     check('lejos', landClear and landClear >= safe - 1 and hurtIntro == 0,

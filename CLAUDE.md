@@ -357,7 +357,7 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   'stomp' with 4th return dirX = cnx → `pa:bounce(vy, dirX, soft=true)` (vx 300 +
   ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill; v17: crawler turn in snapshots; v18: MegaCrabby;
   v19: boss walls, Mega minions/pounce; v20: post-hit protection; v21: unified invulnerability;
-  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros).
+  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks).
 - **Crawler** (`src/world/entities/Crawler.lua`): surface-following movement
   (floor ↔ walls ↔ ceiling, concave and convex corners) for Crabbies with prop
   `wallWalk` (`Crabby.WALL_PROP`, off by default so old levels don't change).
@@ -719,8 +719,9 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   drop kill) = tile-spike proportions: base rectangle 60% w × 40% h. Rage below
   `rageAt` (default 0.6): render-only anger symbols pop around its head (`renderAnger`:
   `anger_vein/steam/scribble.png` strips, scale 4) and the whole animation set turns angry
-  (`angry` in render: constant tremble, bigger squash, twitching raised claws, rabid claw
-  snaps `nervous='rage'`, reddish pulse, foot stamping when standing). Roar = crab-like (stridulation + froth + hiss,
+  (`angry` in render: reddish pulse, twitching raised claws, rabid claw snaps
+  `nervous='rage'`, only a SLIGHT 1-px tremble — the user found more too much; idle = idle
+  frame, never walking feet when still). Roar = crab-like (stridulation + froth + hiss,
   `tools/sounds/megacrabby.py roar`) with fx `mega_roar` (warped semi-transparent shock
   rings + zigzag bolts, rough lines) + `shake_roar` (soft, long). Windup = legs scuttling +
   accelerating claw snaps; claw closes on the sound's snaps (`WINDUP_SNAPS`, same in the
@@ -764,6 +765,20 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   It records ALL players, so switching target (nearest, with hysteresis) is
   seamless. `speedMult/jumpMult` on the body make it a bit faster/higher.
   Rendered with an invert-colors shader; laugh = Body_Arms* + Head_* + JoyEyes.
+  ARENA ATTACKS (rework, in progress with the user): every `attackEvery` s of copying
+  (phase-scaled) it shatters ('warp_out', fx `mirror_shards`, sound mirrorWarp) and either
+  appears in a floating mirror portal above the target ('portal': follows, locks the last
+  `PORTAL_LOCK` s, floor marker `markX/markY` in netPack) and ground-pounds down ('dive';
+  platforms stop it = shelter), or appears standing on an arena platform ('perch';
+  `arenaPlatforms` = runs ≥2 cells with 2 free above, ≥2 above the zone floor) and leaps
+  ballistically (height capped under the zone ceiling) to GP at the apex over the target
+  ('leap' → 'dive'). Then 'recover' (dazed, stompable; a hit ends the chain). Its GP
+  landing on a player = 2 HP (`GP_DAMAGE`, also the copied GP). Phases (`PHASES`: HP ≤
+  66 % / 33 %): attacks more often, chains 2 / 3, copy delay ×0.85 / ×0.7. Crouch in
+  perch/recover is VISUAL only (a real crouch drops through platform_drop). Sounds
+  `tools/sounds/mirror.py` (warp, appear, portal). Harness: `boss_sim LEVEL=ruta_del_espejo`
+  (attacks, GP = 2, leap lands on its mark, chains), `online_boss LEVEL=
+  tools/tests/online_boss/espejo.json` (start next to the arena).
 - Levels with bosses are Race-only (`hunt.requires` rejects `info.bosses > 0`).
 
 Player HP: 3 (`pa.hp/hpMax`), `pa:hurt(n)` = n dmg + invulnerability + red flash; 0 → die.

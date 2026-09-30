@@ -414,6 +414,30 @@ function Particles.emit(kind, x, y, opts)
             add({ x = x + rnd(-20, 20), y = y + rnd(-10, 10), vx = rnd(-200, 200), vy = -rnd(60, 240), g = 900,
                   life = rnd(0.4, 0.7), size = 3, col = {0.85, 0.95, 1} })
         end
+    elseif kind == 'mirror_shards' then
+        -- El Espejo se rompe: trozos de cristal (blanco / celeste) en todas
+        -- direcciones que giran y caen, y un destello
+        for i = 1, 22 do
+            local a = rnd(0, math.pi * 2)
+            local sp = rnd(140, 420)
+            add({ x = x + rnd(-14, 14), y = y + rnd(-30, 30), vx = math.cos(a) * sp, vy = math.sin(a) * sp - 120,
+                  g = 1100, life = rnd(0.45, 0.8), size = math.random(1, 3) * 3, chunk = true, fadeLast = 0.4,
+                  spin = rnd(-14, 14), col = ({ {0.95, 0.98, 1}, {0.7, 0.9, 1}, {0.55, 0.75, 0.95} })[math.random(3)] })
+        end
+        for i = 1, 6 do
+            local a = rnd(0, math.pi * 2)
+            add({ x = x, y = y, vx = math.cos(a) * rnd(60, 200), vy = math.sin(a) * rnd(60, 200),
+                  life = rnd(0.25, 0.45), size = 10, col = {1, 1, 1}, star = true, drag = 3 })
+        end
+    elseif kind == 'mirror_glint' then
+        -- Reaparece: brillos que se juntan hacia él
+        for i = 1, 12 do
+            local a = (i / 12) * math.pi * 2
+            local r = rnd(60, 90)
+            add({ x = x + math.cos(a) * r, y = y + math.sin(a) * r, vx = -math.cos(a) * r / 0.3,
+                  vy = -math.sin(a) * r / 0.3, life = 0.3, size = 8, star = true,
+                  col = ({ {1, 1, 1}, {0.7, 0.9, 1} })[math.random(2)] })
+        end
     elseif kind == 'shake_roar' then
         -- Temblor suave y largo (rugidos): se nota sin marear
         local k = (Sound and Sound.falloff) and Sound.falloff(x, y) or 1

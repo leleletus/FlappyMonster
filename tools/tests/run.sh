@@ -75,12 +75,13 @@ run_one() {
 if [ "${1:-}" = all ]; then
     # Batería rápida (~5 min): física de entidades, jefe (solo y online), partida online
     fail=0
-    for t in "flyers" "flyers SEED=3" "crawler_drop" "crawler_drop SUMMON=1" "mechanics" "sounds" "boss_sim" "boss_intro" "subtiles" "flood_control" "editor_open" "editor_open LINKS=1" "free_play" "update_boot FM_UPDATE=1" \
+    for t in "flyers" "flyers SEED=3" "crawler_drop" "crawler_drop SUMMON=1" "mechanics" "sounds" "boss_sim" "boss_sim LEVEL=assets/levels/ruta_del_espejo.json" "boss_intro" "boss_intro LEVEL=assets/levels/ruta_del_espejo.json SECS=40" "subtiles" "flood_control" "editor_open" "editor_open LINKS=1" "free_play" "update_boot FM_UPDATE=1" \
              "online_helmet LEVEL=tools/tests/online_helmet/level.json" \
              "online_smoke LEVEL=assets/levels/jardin_gummies.json MODE=race SECS=16" \
              "online_smoke LEVEL=assets/levels/isla_flotante.json MODE=koth SECS=16" \
              "online_boss LEVEL=tools/levelgen/arenas/jefe_cangrejo.json NOSHOTS=1" \
-             "online_boss LEVEL=tools/tests/online_boss/fortaleza_flood.json NOSHOTS=1 SECS=40"; do
+             "online_boss LEVEL=tools/tests/online_boss/fortaleza_flood.json NOSHOTS=1 SECS=40" \
+             "online_boss LEVEL=tools/tests/online_boss/espejo.json NOSHOTS=1 SECS=30"; do
         echo "════ $t"
         # shellcheck disable=SC2086
         run_one $t > /tmp/fm_test_all.log 2>&1; r=$?
