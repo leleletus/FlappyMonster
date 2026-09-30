@@ -238,3 +238,33 @@ def write_wav(path, x):
     with wave.open(path, 'wb') as w:
         w.setnchannels(2); w.setsampwidth(2); w.setframerate(SR)
         w.writeframes((np.clip(x, -1, 1) * 32767).astype('<i2').tobytes())
+
+
+def loudness(y):
+    """Sonoridad integrada (LUFS, ITU-R BS.1770) de una señal mono o estéreo"""
+    import pyloudnorm as pyln
+    return pyln.Meter(SR).integrated_loudness(y)
+
+
+def master(y, lufs=-10.5, ceiling=0.8, knee=0.55):
+    """Masterizado: sube hasta `lufs` con un limitador suave (por encima de
+    `knee` comprime con tanh) y deja el pico en `ceiling` (0.8: el OGG sube
+    los picos hasta ~20 %; con 0.89-0.95 pasaban de 1.0). (Antes cada
+    generador hacía tanh(x·1.4)/1.4, que nunca pasaba de 0.714 de pico:
+    ~3 dB desperdiciados y la música se oía floja en el juego.)"""
+    def limit(z):
+        a = np.abs(z)
+        over = a > knee
+        out = z.copy()
+        out[over] = np.sign(z[over]) * (knee + (1 - knee) * np.tanh((a[over] - knee) / (1 - knee)))
+        return out
+    g = 1.0
+    for _ in range(8):
+        z = limit(y * g)
+        z = z * (ceiling / (np.abs(z).max() + 1e-9))
+        err = lufs - loudness(z)
+        if abs(err) < 0.1:
+            break
+        g *= 10 ** (err / 20)
+    return z
+

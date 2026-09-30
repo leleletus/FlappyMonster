@@ -936,6 +936,15 @@ Low-level notes (for writing NEW harnesses):
   `basic-pitch[onnx]`, setuptools<70): ~80 % melody / 77 % bass on Tentacle, octave
   errors common; vote notes across repeated bars. Without a score results were poor
   (user: "doesn't resemble") — prefer a MIDI.
+- LOUDNESS: finish every track with `famicom.master(y, lufs)` (pyloudnorm; soft-knee
+  limiter, ceiling 0.8 so the OGG encode stays < 1.0). The old `tanh(x·1.4)/1.4` capped
+  peaks at 0.714 (~3 dB lost → "empty in game"). Targets: level −11, boss −10/−10.5 LUFS
+  (originals ≈ −12); catalog `volume` 0.9 for boss tracks (default 0.7). In game the
+  backing gets masked by the lead + SFX: keep lead ≈10-15 % of the energy, drums ≈40 %.
+- Boss vs level identity (melody_nes): boss = 148 BPM, lead on a clipped-sine N163 wave
+  + thin pulse an octave up, organ with fast octave arp, harsh bass, INDUSTRIAL drums
+  (short-mode 2A03 noise "metal" on offbeats and under snares, low tom on 1, crash every
+  2 bars). Measured timbre distance to level_nes (MFCC): 14.9 → 55.
 - Music tasks are verified by numbers only; always tell the user it wasn't listened to.
 - Release: bump version.txt; audio-only changes need only `git pull` on the server
   (it republishes within 30 s); code/protocol changes need a server restart.

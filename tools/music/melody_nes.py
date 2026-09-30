@@ -39,7 +39,7 @@ import os, sys
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(__file__))
-from famicom import (SR, FRAME_S, frames_for, t_, Chan, q_pulse, q_tri, q_vrc6, q_saw, q_n163, play,
+from famicom import (master, SR, FRAME_S, frames_for, t_, Chan, q_pulse, q_tri, q_vrc6, q_saw, q_n163, play,
                      render_pulse, render_tri, render_saw, dpcm, wavetable, render_wave, Noise, pulse_dac,
                      tnd_dac, band_power, OCT, write_wav)
 
@@ -50,7 +50,7 @@ NB = 36
 # level.ogg va a 137.5 BPM (no a los 140 del MIDI: 36 compases = 62.84 s, su
 # duración exacta) y empieza a los 0.04 s: la versión del nivel usa su tempo;
 # la de jefe, 140 (como el remix original, 140.4)
-LEVEL_BPM, BOSS_BPM = 137.5, 140.0
+LEVEL_BPM, BOSS_BPM = 137.5, 148.0                   # (el jefe, más rápido: más agresivo)
 
 
 def set_tempo(bpm):
@@ -109,6 +109,9 @@ WAVES = [
     wavetable([1.0, 0, 0.45, 0, 0.28, 0, 0.16, 0, 0.08]),          # 5 coro oscuro (armónicos impares: hueco)
     wavetable([1.0, 0.75, 0.55, 0.5, 0.38, 0.3, 0.2, 0.15]),       # 6 lead oscuro
     wavetable([1.0, 0, 0.2, 0, 0, 0.45, 0, 0, 0.15]),              # 7 campana oscura (parciales 1, 3, 6)
+    np.round(np.clip(np.sin(2 * np.pi * np.arange(32) / 32) * 2.2 + 0.35 * np.sin(6 * np.pi * np.arange(32) / 32), -1, 1)
+             * 7.5 + 7.5),                                          # 8 lead "saturado" (seno recortado: áspero)
+    wavetable([1.0, 0.9, 0.7, 0.6, 0.45, 0.4, 0.3]),               # 9 bajo áspero (casi sierra)
 ]
 I_SQR = {'vol': [12, 12, 11, 11, 10, 10], 'sus': 10, 'duty': 0.25, 'vib': (16, 0.18, 5.8)}
 I_SQR2 = dict(I_SQR, duty=0.125)
@@ -132,6 +135,10 @@ I_CHUG = {'vol': [11, 7, 4, 2], 'sus': 0, 'duty': 0.5}
 I_CHUG5 = {'vol': [8, 5, 3, 1], 'sus': 0, 'duty': 0.25}
 I_GTR = {'vol': [14, 13, 12, 12, 11], 'sus': 11, 'duty': 0.5}
 I_GTR5 = {'vol': [11, 10, 10, 9, 9], 'sus': 9, 'duty': 0.25}
+I_LEAD_DIST = {'vol': [15, 15, 15, 14, 14, 13], 'sus': 13, 'duty': 8.0, 'vib': (12, 0.3, 6.2)}
+I_SHEEN = {'vol': [7, 6, 6, 5, 5], 'sus': 5, 'duty': 0.125, 'vib': (12, 0.3, 6.2)}
+I_ARP_ORG = {'vol': [12, 11, 10, 10, 9, 9, 8], 'sus': 8, 'duty': 5.0, 'arp_speed': 2}
+I_BASS_HARSH = {'vol': [15, 15, 14, 14, 13, 13], 'sus': 13, 'duty': 9.0}
 I_SAW_BOSS = {'vol': [15, 15, 14, 14, 13], 'sus': 13, 'vib': (14, 0.22, 5.4)}
 I_BELL_B = {'vol': [14, 13, 11, 10, 9, 8, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1], 'sus': 1, 'duty': 7.0}
 I_ORGAN_B = {'vol': [11, 10, 9, 9, 8, 8, 7, 7, 6], 'sus': 6, 'duty': 5.0}
@@ -164,7 +171,7 @@ class Song:
         self.nb = nbars
         self.nf = frames_for(nbars * BAR)
         self.C = {}
-        self.NZ = {k: Noise(self.nf) for k in ('hat', 'snare', 'crash', 'grit')}
+        self.NZ = {k: Noise(self.nf) for k in ('hat', 'snare', 'crash', 'grit', 'metal')}
         ns = int(self.nf * FRAME_S) + SR
         self.DM = {'kick': np.zeros(ns), 'snare': np.zeros(ns), 'tom': np.zeros(ns)}
         self.ev = {}
@@ -224,12 +231,14 @@ class Song:
         out['tom'] = cut(tnd_dac((self.DM['tom'] + 64) / 22638.0))
         out['hat'] = cut(tnd_dac(self.NZ['hat'].render() / 12241.0))
         out['crash'] = cut(tnd_dac(self.NZ['crash'].render() / 12241.0))
+        if self.NZ['metal'].vol.any():
+            out['metal'] = cut(tnd_dac(self.NZ['metal'].render() / 12241.0))
         if self.NZ['grit'].vol.any():
             out['grit'] = cut(tnd_dac(self.NZ['grit'].render() / 12241.0))
         return out
 
 
-PERC = ('kick', 'snare', 'tom', 'hat', 'crash')
+PERC = ('kick', 'snare', 'tom', 'hat', 'crash', 'metal')
 
 
 # ── Versión del NIVEL (fiel) ─────────────────────────────────────────────────
@@ -303,12 +312,22 @@ def power(root, pcs):
     return r, (r + 7 if (r + 7) % 12 in pcs else r + 12)
 
 
+def L_chan(S, name):
+    return S.chan(name, 'n163')
+
+
 def boss_bar(S, T, b, t0, part):
     """Toca el compás b del MIDI (estilo jefe) a partir de t0"""
     drive = b in DRIVE
+    # Lead: N163 con onda "saturada" + un pulso fino a la octava (brillo); la
+    # 2ª voz en pulso (en el nivel el lead es un pulso: aquí suena distinto)
     for i, vs in enumerate(voices(bar_notes(T['Square Wave Lead'], b), 2)):
         for s, d, m, v in vs:
-            S.note('lead%d' % i, 'pulse', t0 + s, d, m, I_LEAD_B if i == 0 else I_LEAD_B2, midi='lead')
+            if i == 0:
+                S.note('leadn', 'n163', t0 + s, d, m, I_LEAD_DIST, midi='lead')
+                S.note('lead0', 'pulse', t0 + s, d, m + 12, I_SHEEN, midi='lead')
+            else:
+                S.note('lead1', 'pulse', t0 + s, d, m, I_LEAD_B2, midi='lead')
     saw = voices(bar_notes(T['Saw Wave Lead'], b), 3)
     for s, d, m, v in saw[0]:
         S.note('saw', 'saw', t0 + s, d, m, I_SAW_BOSS, vs=v / 96, midi='saw')
@@ -318,9 +337,11 @@ def boss_bar(S, T, b, t0, part):
     for i, vs in enumerate(voices(bar_notes(T['Vibes'], b), 2)):
         for s, d, m, v in vs:
             S.note('vib%d' % i, 'n163', t0 + s, d, m, I_BELL_B, vs=v / 80, gate=1.1, midi='keys', release=6)
+    # Piano → órgano con arpegio de octava rápido (tipo chiptune agresivo)
     for i, vs in enumerate(voices(bar_notes(T['Electric Piano 1'], b), 2)):
         for s, d, m, v in vs:
-            S.note('ep%d' % i, 'n163', t0 + s, d, m, I_ORGAN_B, vs=v / 96, midi='keys')
+            play(L_chan(S, 'ep%d' % i), t0 + s, t0 + s + d * 0.92, m, I_ARP_ORG, q=q_n163, arp=[0, 12])
+            S.ev.setdefault('keys', []).append((t0 + s, m, d * 0.92))
     # Las notas largas (piano 2 desde el compás 24): coro limpio, con vibrato suave
     for s, d, m, v in bar_notes(T['Electric Piano 2'], b):
         S.note('ep2', 'n163', t0 + s, d, m, I_CHOIR, gate=0.96, midi='keys')
@@ -329,7 +350,7 @@ def boss_bar(S, T, b, t0, part):
             S.note('brs%d' % i, 'n163', t0 + s, d, m, I_BRS_B, midi='brass')
     for s, d, m, v in voices(bar_notes(T['Slap Bass'], b), 2)[0]:
         S.note('tri', 'tri', t0 + s, d, m, I_TRI, gate=0.9, midi='bass')
-        S.note('bass', 'n163', t0 + s, d, m, I_BASS_B, gate=0.9, midi='bass')
+        S.note('bass', 'n163', t0 + s, d, m, I_BASS_HARSH, gate=0.9, midi='bass')
     # "Guitarra" (pulsos del VRC6): quintas en semicorcheas con palm mute y un
     # golpe de "fritura" CORTO en las partes fuertes; en el resto, un acorde
     # por medio compás, suave y limpio (sin ruido: no tapa las notas largas)
@@ -345,13 +366,28 @@ def boss_bar(S, T, b, t0, part):
         else:
             S.note('gtr', 'vrc6', t0 + h * BAR / 2, BAR / 2 * 0.9, r, I_GTR, vs=0.7, midi='gtr')
             S.note('gtr5', 'vrc6', t0 + h * BAR / 2, BAR / 2 * 0.9, r2, I_GTR5, vs=0.7, midi='gtr')
-    # Batería: la del MIDI con muestras más duras + doble bombo, platillos y toms
+    # Batería INDUSTRIAL: la del MIDI con muestras más duras + doble bombo,
+    # "metal" (ruido corto del 2A03: suena a chapa/yunque) en los
+    # contratiempos y bajo cada caja, bombo grave en el 1, platillos
     for s, d, n, v in bar_notes(T['Drums'], b):
         S.drum(t0 + s, n, 1.0, boss=True)
+        if n == 40:
+            S.NZ['metal'].hit(t0 + s, 3, [15, 12, 9, 7, 5, 3, 2, 1], short=1)
     if drive:
         for k in range(16):
             if k % 4:
                 S.drum(t0 + k * S16, 36, 0.5, boss=True)
+        S.sample('tom', t0, TOMS[45], 0.9)                          # (golpe grave en el 1)
+        for k in range(16):
+            if k % 4 == 2:
+                S.NZ['metal'].hit(t0 + k * S16, 4, [12, 9, 6, 4, 2, 1], short=1)
+            elif k % 2:
+                S.NZ['metal'].hit(t0 + k * S16, 2, [5, 3, 1], short=1)
+        if b % 2 == 1:
+            S.drum(t0, 49)
+    else:
+        for k in (2, 6, 10, 14):
+            S.NZ['metal'].hit(t0 + k * S16, 4, [8, 5, 3, 1], short=1)
     if b in (9, 17, 25, 33, 1):
         S.drum(t0, 49)
     if b in (8, 16, 24, 32, 36):                    # redoble de toms al final de cada parte
@@ -390,9 +426,10 @@ def load_ref(name):
 # volumen de partida (musical) y cuánto puede corregirlo el ajuste
 GROUPS = {'lead': ('sqr', 'lead'), 'saw': ('saw',), 'keys': ('vib', 'ep', 'choir'), 'brass': ('brs',),
           'gtr': ('gtr', 'grit'), 'bass': ('tri', 'bass'), 'kick': ('kick',), 'snare': ('snare', 'tom'),
+          'metal': ('metal',),
           'cymbals': ('hat', 'crash')}
 BASE = {'lead': 1.0, 'saw': 1.0, 'keys': 0.8, 'brass': 0.9, 'gtr': 0.8, 'bass': 1.0, 'kick': 1.0, 'snare': 0.45,
-        'cymbals': 0.3}
+        'cymbals': 0.3, 'metal': 0.4}
 RANGE = {'lead': (0.8, 2.0), 'bass': (0.3, 2.0), 'gtr': (0.5, 3.0), 'snare': (0.5, 3.0), 'cymbals': (0.5, 3.0)}  # (la melodía nunca queda enterrada)
 
 
@@ -454,13 +491,13 @@ def fold_tail(y, n):
 # original). No se persigue la proporción percusión/armonía del original: su
 # "crunch" hace que la medida vea percusión en todo, y perseguirla enterraba
 # la melodía (×6 → los medios −8 dB)
-PERC_EXTRA = {'level': 1.6, 'boss': 2.0}
+PERC_EXTRA = {'level': 1.6, 'boss': 2.4}
 
 
 # Reparto DENTRO de la batería (energía): bombo y caja parejos, platillos
 # detrás. (El ajuste por bandas lo descuadraba: bombo y bajo comparten graves)
 DRUM_SPLIT = {'level': {'kick': 0.45, 'snare': 0.45, 'cymbals': 0.10},
-              'boss': {'kick': 0.38, 'snare': 0.47, 'cymbals': 0.15}}
+              'boss': {'kick': 0.34, 'snare': 0.34, 'cymbals': 0.10, 'metal': 0.22}}
 
 
 def balance(S, rows_spec, boost, ver):
@@ -480,9 +517,7 @@ def balance(S, rows_spec, boost, ver):
     return g, boost
 
 
-def export(name, y, ev, rms, tail=True):
-    y = y / (np.sqrt(np.mean(y ** 2)) + 1e-9) * rms if rms else y
-    y = np.tanh(y * 1.4) / 1.4
+def export(name, y, ev):
     wav = os.path.join(OUT, name + '.wav')
     write_wav(wav, y)
     write_midi(os.path.join(OUT, name + '.mid'), ev)
@@ -535,7 +570,7 @@ if __name__ == '__main__':
         g, boost = balance(st, spec, PERC_EXTRA['level'], 'level')
         print(f'  nivel: batería ×{boost:.2f}')
         n = int(NB * BAR * SR)
-        export('level_nes', fold_tail(mixdown(st, g, n), n), S.ev, 0.245)   # (tras el limitador ≈ 0.22, como level.ogg)
+        export('level_nes', master(fold_tail(mixdown(st, g, n), n), lufs=-11.0), S.ev)
     if only in (None, 'boss'):
         set_tempo(BOSS_BPM)
         T = load_midi()
@@ -550,6 +585,7 @@ if __name__ == '__main__':
         loop = fold_tail(mixdown(sl, g, n), n)
         si = I.stems()
         intro = mixdown(si, g, int(I.nb * BAR * SR))[:int(I.nb * BAR * SR)]
-        k = 0.19 / (np.sqrt(np.mean(loop ** 2)) + 1e-9)          # (mismo nivel para las dos partes)
-        export('boss_nes_intro', intro * k, I.ev, None)
-        export('boss_nes_loop', loop * k, L.ev, None)
+        # (masterizadas juntas: mismo nivel en las dos partes)
+        both = master(np.concatenate([intro, loop]), lufs=-10.0)
+        export('boss_nes_intro', both[:len(intro)], I.ev)
+        export('boss_nes_loop', both[len(intro):], L.ev)

@@ -23,8 +23,8 @@
     { "id": "Tentacle_Tantrum", "name": "Tentacle Tantrum", "file": "TentacleTantrum.ogg", "level": false, "boss": true },
     { "id": "tentacle_chip", "name": "Tentacle Chip", "file": "tentacle_chip.ogg", "level": false, "boss": true },
     { "id": "tentacle_chip_instrumental", "name": "Tentacle Chip (instrumental)", "file": "tentacle_chip_instrumental.ogg", "level": false, "boss": true },
-    { "id": "tentacle_nes", "name": "Tentacle Tantrum (NES)", "file": "tentacle_nes.ogg", "level": false, "boss": true },
-    { "id": "boss_nes", "name": "Boss Battle (NES)", "intro": "boss_nes_intro.ogg", "loop": "boss_nes_loop.ogg", "level": false, "boss": true },
+    { "id": "tentacle_nes", "name": "Tentacle Tantrum (NES)", "file": "tentacle_nes.ogg", "level": false, "boss": true, "volume": 0.9 },
+    { "id": "boss_nes", "name": "Boss Battle (NES)", "intro": "boss_nes_intro.ogg", "loop": "boss_nes_loop.ogg", "level": false, "boss": true, "volume": 0.9 },
     { "id": "menus",  "name": "Menús",       "file": "menus.ogg",   "level": false },
     { "id": "youWin", "name": "Victoria",    "file": "victory.ogg", "level": false, "loop": false }
   ]

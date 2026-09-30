@@ -35,7 +35,7 @@ import os, sys
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(__file__))
-from famicom import (SR, FPS, CPU, FRAME_S, frames_for, t_, Chan, fr, hz, q_pulse, q_tri, q_vrc6, q_saw, q_n163,
+from famicom import (master, SR, FPS, CPU, FRAME_S, frames_for, t_, Chan, fr, hz, q_pulse, q_tri, q_vrc6, q_saw, q_n163,
                      play, per_sample, render_pulse, render_tri, render_saw, render_noise, dpcm, wavetable,
                      render_wave, Noise, pulse_dac, tnd_dac, OCT, band_power, write_wav)   # (motor de Famicom)
 
@@ -343,13 +343,16 @@ def fit_gains(S):
 
 # El original tiene más percusión respecto a lo armónico (HPSS: 0.21) que lo
 # que da el ajuste por bandas (0.13): la batería se sube después
-PERC_BOOST = {'kick': 1.45, 'snare': 1.3, 'hat': 1.15, 'crash': 1.0}
+PERC_BOOST = {'kick': 2.0, 'snare': 1.8, 'hat': 1.4, 'crash': 1.2}
+# En el juego (música a 0.9, efectos encima) el acompañamiento se perdía
+# detrás de la melodía: se sube y la melodía baja un poco
+BACKING = {'v1': 1.5, 'v2': 1.5, 'bass': 1.35, 'tri': 1.35, 'p2': 1.3, 'saw': 1.2, 'lead': 0.85}
 
 
 def mix(C, NZ, DM, report=True):
     S = stems(C, NZ, DM)
     g, s = fit_gains(S)
-    for k, v in PERC_BOOST.items():
+    for k, v in list(PERC_BOOST.items()) + list(BACKING.items()):
         g[k] *= v
     if report:
         print('  ganancias ajustadas al original: ' + ' '.join(f'{k}={v:.2f}' for k, v in g.items()))
@@ -362,9 +365,8 @@ def mix(C, NZ, DM, report=True):
     # Estéreo discreto (separación suave de canales, como un emulador)
     side = S['p2'] * g['p2'] * 0.35 - S['v1'] * g['v1'] * 0.3 + S['hat'] * g['hat'] * 0.2
     y = np.stack([x + side, x - side], 1)
-    # Nivel como el original (RMS ≈ 0.19): limitador suave
-    y = y / (np.sqrt(np.mean(y ** 2)) + 1e-9) * 0.19
-    return np.tanh(y * 1.4) / 1.4
+    # Más fuerte que el original (-12.2 LUFS) para que en el juego se oiga lleno
+    return master(y, lufs=-10.5)
 
 
 def write_midi(path, ev):
