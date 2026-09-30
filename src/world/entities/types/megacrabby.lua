@@ -1041,9 +1041,7 @@ local function clawFrame(self, i, now, nervous)
     local c = self._claws[i]
     if now >= c.next then
         c.closedUntil = now + 0.12
-        -- (enfadado: chasquidos rabiosos, casi seguidos)
-        c.next = now + ((nervous == 'rage') and (0.05 + math.random() * 0.16)
-                        or nervous and (0.12 + math.random() * 0.3) or (0.7 + math.random() * 1.8))
+        c.next = now + (nervous and (0.12 + math.random() * 0.3) or (0.7 + math.random() * 1.8))
     end
     return (c.closedUntil and now < c.closedUntil) and 2 or 1
 end
@@ -1228,7 +1226,7 @@ function Mega:drawLocal(px, py, ang, s, img, withSpike, alpha, nervous, sx, sy, 
     local now = love.timer.getTime()
     local red = self:flashRed()
     if red then love.graphics.setColor(1, 0.3, 0.3, alpha)
-    elseif nervous == 'rage' then
+    elseif self._angry then
         -- Enfadado: se le sube el color (rojizo que late)
         local k = 0.07 + 0.05 * math.sin(now * 9)
         love.graphics.setColor(1, 1 - k, 1 - k * 1.2, alpha)
@@ -1306,7 +1304,7 @@ end
 -- Enfadado (rage): símbolos de enfado que salen al azar alrededor de la cabeza
 -- (vena 💢 que late, nube de vapor que sube, garabato). Solo dibujo: cada
 -- cliente los saca a su aire; la vida (y por tanto el enfado) llega por red.
-local ANGER_S = 4                                  -- escala de píxel de los símbolos
+local ANGER_S = 3                                  -- escala de píxel de los símbolos
 local ANGER_KINDS = { 'vein', 'vein', 'steam', 'scribble', 'vein', 'steam' }
 local ANGER_LIFE = { vein = 0.8, steam = 0.6, scribble = 0.7 }
 function Mega:renderAnger(now, fx, fy, ang, camX, camY)
@@ -1433,18 +1431,12 @@ function Mega:render(camX, camY)
     end
 
     local sx, sy, shx, claws, spikeK = self:pose2d(now, moving, walkPhase)
-    -- ENFADADO (rage): rojizo, un temblor LEVE (1 px de vez en cuando), un
-    -- poco más de rebote y las pinzas se agitan y chasquean con rabia
+    -- ENFADADO (rage): solo rojizo y un temblor LEVE (1 px de vez en cuando),
+    -- además de los símbolos de enfado. Pinzas y rebote, los de siempre (el
+    -- usuario quitó el resto: demasiado)
     local angry = self:rage() and not self:isDying() and not INTRO[st] and st ~= 'dormant' and not EDITOR_VIEW
-    if angry then
-        shx = shx + math.floor(math.sin(now * 41) * 0.9 + 0.5)
-        sx, sy = 1 + (sx - 1) * 1.2, 1 + (sy - 1) * 1.2
-        for i = 1, 2 do
-            local c = claws[i]
-            c[1] = c[1] * 1.3 + math.cos(now * 31 + i * 2.1) * 0.45
-            c[2] = c[2] * 1.3 + math.sin(now * 38 + i * 1.7) * 0.8 - 0.4
-        end
-    end
+    self._angry = angry
+    if angry then shx = shx + math.floor(math.sin(now * 41) * 0.9 + 0.5) end
     local fx, fy, ang
     if self.crawl and self.cattached and CRAWL[st] then
         fx, fy, ang = Crawler.pose(self)
@@ -1483,7 +1475,6 @@ function Mega:render(camX, camY)
             Particles.emit('spawn', self.x + side * self.sprW * 0.4, self.y)
         end
     end
-    if angry then nervous = 'rage' end
     if EDITOR_VIEW then nervous = false end
     self._clawForce = nil
     if st == 'windup' and not EDITOR_VIEW then

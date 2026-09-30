@@ -726,10 +726,9 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   point). Steps: deeper `step.wav` + GAIN 0.56 (≈ -11.5 dBFS). Spike boxes (head spike,
   drop kill) = tile-spike proportions: base rectangle 60% w × 40% h. Rage below
   `rageAt` (default 0.6): render-only anger symbols pop around its head (`renderAnger`:
-  `anger_vein/steam/scribble.png` strips, scale 4) and the whole animation set turns angry
-  (`angry` in render: reddish pulse, twitching raised claws, rabid claw snaps
-  `nervous='rage'`, only a SLIGHT 1-px tremble — the user found more too much; idle = idle
-  frame, never walking feet when still). Roar = crab-like (stridulation + froth + hiss,
+  `anger_vein/steam/scribble.png` strips, scale 3) plus, in render (`self._angry`), ONLY a
+  reddish pulse and a SLIGHT 1-px tremble — claws, snaps and bounce stay normal (the user
+  found more too much; idle = idle frame, never walking feet when still). Roar = crab-like (stridulation + froth + hiss,
   `tools/sounds/megacrabby.py roar`) with fx `mega_roar` (warped semi-transparent shock
   rings + zigzag bolts, rough lines) + `shake_roar` (soft, long). Windup = legs scuttling +
   accelerating claw snaps; claw closes on the sound's snaps (`WINDUP_SNAPS`, same in the
