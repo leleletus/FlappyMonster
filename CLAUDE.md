@@ -40,7 +40,10 @@ code, comments (Spanish), commits, docs or game text — those keep their usual 
 
 - The game draws in a LOGICAL resolution: height 720, width `WINDOW_W` = 720 ×
   aspect (clamped 4:3..21:9) — 1280 on PC/Switch, e.g. 1600 on a 20:9 phone,
-  960 on a 4:3 tablet. `main.lua` sets it in `love.load` AND `love.resize` (the
+  960 on a 4:3 tablet. That is for MENUS only: inside a level (`AdventureState`,
+  `OnlineAdventureState` enter/exit → `src/ui/View.lua` `lockGameplay/unlock`) the view
+  is FIXED at 1280x720, scaled with letterbox bands, so every device sees exactly the
+  same area (boss arenas!). `View.apply()` in `love.load`/`love.resize`. `main.lua` sets it in `love.load` AND `love.resize` (the
   PC window is resizable; Android rotates). **Never compute layout from
   `WINDOW_W/H` at file load time** (a `local X = WINDOW_W - ...` at the top of a
   module keeps 1280 forever): compute it when drawing (see
@@ -501,10 +504,19 @@ list no mode until the user places a Point Area in them).
   `hitTile(c, r, from)`: `from` = 'head' | 'pound' → `Level:tileBump` (render-only,
   `level.tileAnim`, advanced in `Level:update`): head = hop up, pound = the same hop
   DOWN (0.22 s, 0.22 tile). Online: tile event field `from`.
-- **ON/OFF** (`switch_on` 13 / `switch_off` 14, category Mecanismos; textures
-  `assets/images/tiles/switch_*.png`, 16-px art ×4; fx `switch_hit`, sounds
-  switchOn/switchOff from `tools/sounds/mechanics.py`). Not linked to anything yet
-  (future: activatable objects).
+- **ON/OFF Activators** (`switch_on` 13 / `switch_off` 14, labels "Activador ON/OFF",
+  Mecanismos; textures `assets/images/tiles/switch_*.png`; fx `switch_hit`, sounds
+  switchOn/switchOff). They drive linked activatable entities (floods, `links`) and
+  **ON/OFF Blocks** (`switchblock_on.lua`, 4 tiles: `switchblock_on` 18 / `_on_x` 19,
+  `switchblock_off` 27 / `_off_x` 28; `switchBlock = {kind, active, other}`; inactive
+  variants `editorHide`): ON Block solid while its activator is ON, OFF Block while it's
+  OFF; inactive = passable + outline texture. Source = level JSON `"blockLinks":
+  [{col,row,from=[c,r]}]` or the NEAREST activator. `Level:updateSwitchBlocks` (after
+  every toggle; swaps tile ids, queues `tile` events with `k='set'` = no fx) — a block
+  never turns solid with a player/obstacle inside (`pending`, retried in `Level:update`,
+  only where tiles are decided: SP/server). Editor: Conectar tool → pick an activator,
+  then click/drag ON/OFF Blocks to (un)link; cyan lines = links, faint = nearest.
+  Harness `flood_control` case `switchblocks`. Protocol v27.
 - **Invisible block** (`hidden_block` 15, Plataformas): FULL-cell hitbox but
   `collision='oneway', dropThrough=false` (pass through going up / sideways, stand on
   top, can't drop); enemySolid for entities. Visibility is RENDER-ONLY per client:

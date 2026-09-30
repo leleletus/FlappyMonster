@@ -327,6 +327,15 @@ function Level.fromData(lvl)
         if c and r and id then self.links[#self.links + 1] = { col = c, row = r, to = id } end
     end
     Floods.link(self)
+    -- Bloques ON/OFF: su activador (conectado en el editor, o el más cercano)
+    self.blockLinks = {}
+    for _, l in ipairs(lvl.blockLinks or {}) do
+        local c, r, f = tonumber(l.col), tonumber(l.row), l.from
+        if c and r and type(f) == 'table' and tonumber(f[1]) and tonumber(f[2]) then
+            self.blockLinks[r * 65536 + c] = { tonumber(f[1]), tonumber(f[2]) }
+        end
+    end
+    self:initSwitchBlocks()
     -- Zonas de puntos (src/world/PointAreas.lua): entidades 'pointarea'
     self.pointAreas = PointAreas.build(self.entities)
     -- Modos en los que se ofrece (nil = todos los que admitan el nivel) y
@@ -660,7 +669,82 @@ function Level:hitTile(col, row, from)
     self.brokenQueue = self.brokenQueue or {}
     table.insert(self.brokenQueue, { col, row, new, 'toggle', from })
     self:tileBump(col, row, from)
+    self:updateSwitchBlocks()
     return 'toggle'
+end
+
+-- ── Bloques ON/OFF (tiles con `switchBlock`) ─────────────────────────────────
+-- Cada uno depende de un activador (switch_on / switch_off): el conectado en
+-- el editor (JSON "blockLinks": [{col, row, from = {c, r}}]) o, si no, el más
+-- cercano. Activo = sólido (Bloque ON con el activador en ON; Bloque OFF con
+-- él en OFF); inactivo = se atraviesa. El cambio es un cambio de tile: en el
+-- servidor va a brokenQueue ('set': sin efectos) y los clientes lo aplican.
+local function isActivator(def) return def.name == 'switch_on' or def.name == 'switch_off' end
+
+function Level:initSwitchBlocks()
+    self.switchBlocks = nil
+    local acts, blocks = {}, {}
+    for r = 1, self.tileH do
+        for c = 1, self.tileW do
+            local d = self:getDef(c, r)
+            if isActivator(d) then acts[#acts + 1] = { c, r }
+            elseif d.switchBlock then blocks[#blocks + 1] = { c, r } end
+        end
+    end
+    if #blocks == 0 then return end
+    self.switchBlocks = {}
+    for _, b in ipairs(blocks) do
+        local src = self.blockLinks and self.blockLinks[b[2] * 65536 + b[1]]
+        if src and not isActivator(self:getDef(src[1], src[2])) then src = nil end
+        if not src then
+            local bd
+            for _, a in ipairs(acts) do
+                local d = (a[1] - b[1]) ^ 2 + (a[2] - b[2]) ^ 2
+                if not bd or d < bd then src, bd = a, d end
+            end
+        end
+        self.switchBlocks[#self.switchBlocks + 1] = { c = b[1], r = b[2], src = src }
+    end
+    self:updateSwitchBlocks(true)
+end
+
+-- ¿Hay un jugador o una entidad sólida dentro de la celda?
+function Level:cellOccupied(c, r)
+    local T = TILE_PX
+    local x0, y0 = (c - 1) * T, (r - 1) * T
+    local function hit(b) return b.x < x0 + T and b.x + b.w > x0 and b.y < y0 + T and b.y + b.h > y0 end
+    for _, pa in ipairs(self.players or {}) do
+        if pa.alive ~= false and not pa.dying and hit(pa:getOuterBounds()) then return true end
+    end
+    for _, e in ipairs(self.liveEntities or {}) do
+        if e.alive and e.isObstacle and e:isObstacle() and hit(e:getOuterBounds()) then return true end
+    end
+    return false
+end
+
+-- Pone cada Bloque ON/OFF en su estado según su activador. `silent` = al cargar
+-- (sin cola: todos parten igual)
+function Level:updateSwitchBlocks(silent)
+    for _, b in ipairs(self.switchBlocks or {}) do
+        local def = self:getDef(b.c, b.r)
+        local sb = def.switchBlock
+        if sb then
+            local on = b.src and self:getDef(b.src[1], b.src[2]).name == 'switch_on' or false
+            local want = (sb.kind == 'on') == on
+            -- (no se vuelve sólido con alguien dentro: espera a que se aparte)
+            b.pending = want and not sb.active and not silent and self:cellOccupied(b.c, b.r)
+            if want ~= sb.active and not b.pending then
+                local to = TileTypes.byName[sb.other]
+                local _, water, spikes = decTile(self:getRaw(b.c, b.r))
+                local new = TileCodec.encode(to.id, water, spikes)
+                self.tiles[b.r][b.c] = new
+                if not silent then
+                    self.brokenQueue = self.brokenQueue or {}
+                    table.insert(self.brokenQueue, { b.c, b.r, new, 'set' })
+                end
+            end
+        end
+    end
 end
 
 -- Animación de un bloque golpeado (solo dibujo): 'head' = saltito hacia arriba,
@@ -1093,6 +1177,13 @@ end
 -- ── Update: burbujas ──────────────────────────────────────────────────────────
 function Level:update(dt)
     local hasBubbles = bubbleImgs and #bubbleImgs > 0
+    -- Bloques ON/OFF que esperaban a que nadie estuviera dentro (solo quien
+    -- decide los tiles: un jugador y el servidor)
+    if self.switchBlocks and self.canBreak ~= false then
+        for _, b in ipairs(self.switchBlocks) do
+            if b.pending then self:updateSwitchBlocks(); break end
+        end
+    end
     -- Bloques golpeados (saltito / aplastarse)
     for k, a in pairs(self.tileAnim or {}) do
         a.t = a.t + dt

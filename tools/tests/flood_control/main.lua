@@ -13,6 +13,9 @@
 --                el snapshot 'fc') ve exactamente la misma agua en cada tick
 --   editor       conexiones guardadas y cargadas, números de inundación únicos y
 --                aviso de una conexión a una inundación que no existe
+--   switchblocks Bloques ON/OFF: estado inicial según su activador, cambian al
+--                golpearlo, esperan si hay alguien dentro, conexión explícita o
+--                al más cercano, y el editor limpia conexiones
 --   conexiones   al borrar el bloque (o pintar otro encima) su conexión se va con
 --                él; ON↔OFF la conserva; "Quitar conexión"; clave antigua `flood`
 --
@@ -231,8 +234,61 @@ function cases.editor()
             tostring(kept), tostring(erased), tostring(painted), tostring(removed), tostring(legacy)))
 end
 
+-- Bloques ON/OFF: dos activadores (A en (4,7) OFF, B en (11,7) OFF);
+-- Bloque ON en (7,8) y Bloque OFF en (8,8) conectados a A; un Bloque ON en
+-- (12,3) sin conexión (sigue al más cercano: B)
+function cases.switchblocks()
+    local W, H = 14, 10
+    local id = function(n) return require('src/world/tiles/TileCodec').encode(TileTypes.byName[n].id) end
+    local tiles = {}
+    for r = 1, H do
+        local row = {}
+        for c = 1, W do row[c] = (r == H or c == 1 or c == W) and 1 or 0 end
+        tiles[r] = row
+    end
+    tiles[7][4], tiles[7][11] = id('switch_off'), id('switch_off')
+    tiles[8][7], tiles[8][8], tiles[3][12] = id('switchblock_on'), id('switchblock_off'), id('switchblock_on')
+    local data = { name = 'sb', width = W, height = H, playerStart = { 4, 9 }, tiles = tiles, entities = {},
+                   blockLinks = { { col = 7, row = 8, from = { 4, 7 } }, { col = 8, row = 8, from = { 4, 7 } } } }
+    local level = Level.fromData(json.decode(json.encode(data)))
+    local n = function(c, r) return level:getDef(c, r).name end
+    local init = n(7, 8) == 'switchblock_on_x' and n(8, 8) == 'switchblock_off' and n(12, 3) == 'switchblock_on_x'
+    local pa = PlayerAdventure:new(3.5 * T, 9 * T - 60)
+    level.players = { pa }
+    for _ = 1, 60 do pa:update(DT, level); level:update(DT) end
+    local function bump()
+        clear(); stub.state.jump_pressed, stub.state.jump = true, true
+        for _ = 1, 50 do pa:update(DT, level); level:update(DT); stub.state.jump_pressed = false end
+        clear(); for _ = 1, 40 do pa:update(DT, level); level:update(DT) end
+    end
+    bump()                                              -- A → ON
+    local on1 = n(4, 7) == 'switch_on' and n(7, 8) == 'switchblock_on' and n(8, 8) == 'switchblock_off_x'
+                and n(12, 3) == 'switchblock_on_x'      -- (el suelto sigue a B, que sigue en OFF)
+    local sets = 0
+    for _, e in ipairs(level.brokenQueue or {}) do if e[4] == 'set' then sets = sets + 1 end end
+    -- Alguien dentro de (8,8): al volver A a OFF, el Bloque OFF espera
+    local other = PlayerAdventure:new(7.5 * T, 8 * T - 20)
+    other.invT = 99
+    level.players = { pa, other }
+    bump()                                              -- A → OFF
+    local waited = n(4, 7) == 'switch_off' and n(7, 8) == 'switchblock_on_x' and n(8, 8) == 'switchblock_off_x'
+    other.x, other.y = 11.5 * T, 3 * T
+    for _ = 1, 5 do level:update(DT) end
+    local after = n(8, 8) == 'switchblock_off'
+    -- Editor: borrar el activador A borra las conexiones de sus bloques
+    local Model = require 'src/editor/EditorModel'
+    local m = Model.fromData(json.decode(json.encode(data)))
+    local had = #m.blockLinks
+    m:setId(4, 7, 0)
+    local src, implicit = m:blockSource(7, 8)
+    local toB = src ~= nil and src[1] == 11 and implicit
+    check('switchblocks', init and on1 and sets == 2 and waited and after and had == 2 and #m.blockLinks == 0 and toB,
+        ('inicio=%s; A→ON bloques=%s (%d cambios "set"); con alguien dentro espera=%s, luego se activa=%s; editor: %d conexiones → %d al borrar A, pasa al más cercano=%s'):format(
+            tostring(init), tostring(on1), sets, tostring(waited), tostring(after), had, #m.blockLinks, tostring(toB)))
+end
+
 function love.load()
-    for _, n in ipairs({ 'jefe', 'switch', 'switch_step', 'red', 'editor' }) do cases[n]() end
+    for _, n in ipairs({ 'jefe', 'switch', 'switch_step', 'red', 'editor', 'switchblocks' }) do cases[n]() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
     love.event.quit(fails == 0 and 0 or 1)
 end

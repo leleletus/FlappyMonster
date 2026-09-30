@@ -32,6 +32,7 @@ local TYPES = {
     'hidden_block',   -- 15
     'dirt',           -- 16
     'grass',          -- 17
+    'switchblock_on', -- 18, 19, 27, 28 (Bloques ON / OFF, activo e inactivo)
 }
 
 -- Bloques TRAMPA ("mímicos"): se ven idénticos al tile original pero no tienen
@@ -55,7 +56,9 @@ for _, name in ipairs(MATERIALS) do
     Materials.register(require('src/world/tiles/materials/' .. name))
 end
 for _, name in ipairs(TYPES) do
-    TileTypes.register(require('src/world/tiles/types/' .. name))
+    local def = require('src/world/tiles/types/' .. name)
+    -- (un archivo puede definir varios tiles: una lista)
+    if def[1] then for _, d in ipairs(def) do TileTypes.register(d) end else TileTypes.register(def) end
 end
 
 for _, f in ipairs(FAKES) do

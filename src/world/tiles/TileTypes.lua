@@ -23,6 +23,9 @@
 --   toggle      nombre del tile en que se convierte con un cabezazo desde
 --               abajo o un ground pound (bloques ON/OFF: Level:hitTile)
 --   hidden      no se ve hasta que un jugador lo toca (Level:updateHiddenBlocks)
+--   switchBlock { kind='on'|'off', active=bool, other='<tile>' }: Bloque ON/OFF
+--               que depende de un activador (Level:updateSwitchBlocks)
+--   editorHide  no sale en la paleta (p. ej. la variante inactiva de un Bloque ON)
 --   fake        tile trampa: se ve como otro (`mimics`) pero no colisiona ni
 --               hace daño (los pinchos puestos encima tampoco)
 --   trigger     nombre de evento al tocarlo (p. ej. 'finish'); lo consultan

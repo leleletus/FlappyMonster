@@ -7,6 +7,9 @@
 --  4. pausa → salir vuelve al Juego libre, con la misma selección;
 --  5. capturas a 1280x720, 960x720 (4:3) y 1600x720 (móvil alargado):
 --     <save>/free_play_{1280,960,1600}.png
+--  6. vista fija en los niveles (src/ui/View.lua): con la ventana a 1600x720,
+--     el menú usa 1600 de ancho lógico; al entrar en un nivel pasa a 1280
+--     (bandas negras) y al salir vuelve a 1600. Captura free_play_level1600.png
 --
 --   tools/tests/run.sh free_play
 io.stdout:setvbuf('no')
@@ -115,7 +118,22 @@ function love.update(dt)
     elseif step == 'r960b' and t - T > 0.3 then          -- (que la captura se haga antes de cambiar)
         resize(1600, 720); step, T = 'r1600', t
     elseif step == 'r1600' and t - T > 0.6 then
-        shot('1600'); step, T = 'end', t
+        shot('1600'); step, T = 'vl', t
+    elseif step == 'vl' and t - T > 0.3 then
+        MENU_W = WINDOW_W
+        pressNext('confirm'); step, T = 'vl2', t
+    elseif step == 'vl2' and t - T > 0.8 then
+        LEVEL_W = WINDOW_W
+        shot('level1600')
+        step, T = 'vl3', t
+    elseif step == 'vl3' and t - T > 0.3 then
+        gStateMachine:push('pause')
+        top().selected = 2
+        pressNext('confirm'); step, T = 'vl4', t
+    elseif step == 'vl4' and t - T > 0.5 then
+        check('vista', MENU_W == 1600 and LEVEL_W == 1280 and WINDOW_W == 1600,
+            ('ventana 1600x720: menú %d, nivel %d (fijo 16:9), tras salir %d'):format(MENU_W, LEVEL_W, WINDOW_W))
+        step, T = 'end', t
     elseif step == 'end' and t - T > 0.5 then
         print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
         print('capturas: ' .. love.filesystem.getSaveDirectory() .. '/free_play_*.png')

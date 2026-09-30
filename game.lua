@@ -33,13 +33,9 @@ DEBUG_HITBOX = false   -- F1 para activar/desactivar hitboxes
 
 function love.load()
     -- Autoadaptar la resolución lógica para móviles y tablets (Evitar Zoom excesivo)
-    local sw, sh = love.graphics.getDimensions()
-    local aspect = sw / sh
-    aspect = math.max(4/3, math.min(21/9, aspect)) -- Limitar para no deformar UI
-    WINDOW_W = math.floor(720 * aspect)
-
+    -- (en los niveles se fija a 1280x720: src/ui/View.lua)
     love.graphics.setDefaultFilter('nearest', 'nearest')
-    lovesize.set(WINDOW_W, WINDOW_H)
+    require('src/ui/View').apply()
 
     -- Fuentes pixel art globales (Press Start 2P)
     -- Archivo: assets/fonts/PressStart2P.ttf
@@ -99,13 +95,7 @@ end
 
 -- Actualizar lovesize cuando Android rota o cambia el tamaño real de la ventana
 function love.resize(w, h)
-    local aspect = w / h
-    aspect = math.max(4/3, math.min(21/9, aspect))
-    WINDOW_W = math.floor(720 * aspect)
-    
-    if lovesize and lovesize.set then
-        lovesize.set(WINDOW_W, WINDOW_H)
-    end
+    require('src/ui/View').apply()          -- (adaptable en menús, fijo en niveles)
     -- Las miniaturas de niveles están en canvases: al cambiar la ventana (o
     -- girar el móvil) su contenido se puede perder → se rehacen al dibujar
     require('src/ui/ModeSelectMenu').clearPreviews()

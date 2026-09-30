@@ -38,7 +38,7 @@ function Model.new(w, h, name)
         end
     end
     m.playerStart = { 3, h - 2 }
-    m.entities, m.foliage, m.vents, m.subtiles, m.links = {}, {}, {}, {}, {}
+    m.entities, m.foliage, m.vents, m.subtiles, m.links, m.blockLinks = {}, {}, {}, {}, {}, {}
     m.bossZones = {}
     m.autoScroll = nil
     m.path = nil
@@ -73,6 +73,13 @@ function Model.fromData(lvl, path)
     for _, l in ipairs(lvl.links or {}) do
         local c, r, id = tonumber(l.col), tonumber(l.row), tonumber(l.to or l.flood)   -- (flood: nombre antiguo)
         if c and r and id then m.links[#m.links + 1] = { col = c, row = r, to = id } end
+    end
+    m.blockLinks = {}
+    for _, l in ipairs(lvl.blockLinks or {}) do
+        local c, r, f = tonumber(l.col), tonumber(l.row), l.from
+        if c and r and type(f) == 'table' and tonumber(f[1]) and tonumber(f[2]) then
+            m.blockLinks[#m.blockLinks + 1] = { col = c, row = r, from = { tonumber(f[1]), tonumber(f[2]) } }
+        end
     end
     m.subtiles = {}
     for _, o in ipairs(lvl.subtiles or {}) do
@@ -122,7 +129,7 @@ function Model:toData()
     return {
         name = self.name, width = self.width, height = self.height,
         playerStart = self.playerStart, tiles = self.tiles,
-        entities = ents, foliage = decos, vents = self.vents, bossZones = zones, subtiles = subs, links = self.links or {},
+        entities = ents, foliage = decos, vents = self.vents, bossZones = zones, subtiles = subs, links = self.links or {}, blockLinks = self.blockLinks or {},
         autoScroll = AutoScroll.serialize(self.autoScroll),
         modes = self.modes, matchTime = self.matchTime, music = self.music,
     }
@@ -167,6 +174,7 @@ function Model:encode()
     local tail = {}
     if #d.subtiles > 0 then tail[#tail+1] = function(last) list('subtiles', d.subtiles, last) end end
     if #d.links > 0 then tail[#tail+1] = function(last) list('links', d.links, last) end end
+    if #d.blockLinks > 0 then tail[#tail+1] = function(last) list('blockLinks', d.blockLinks, last) end end
     if #d.bossZones > 0 then tail[#tail+1] = function(last) list('bossZones', d.bossZones, last) end end
     if d.autoScroll then tail[#tail+1] = function(last) line('"autoScroll": ' .. enc(d.autoScroll), last) end end
     if d.modes then tail[#tail+1] = function(last) line('"modes": ' .. enc(d.modes), last) end end
@@ -202,7 +210,7 @@ end
 function Model:snapshot()
     return deepcopy({ name=self.name, width=self.width, height=self.height, tiles=self.tiles,
                       playerStart=self.playerStart, entities=self.entities,
-                      foliage=self.foliage, vents=self.vents, bossZones=self.bossZones, subtiles=self.subtiles, links=self.links,
+                      foliage=self.foliage, vents=self.vents, bossZones=self.bossZones, subtiles=self.subtiles, links=self.links, blockLinks=self.blockLinks,
                       autoScroll=self.autoScroll, modes=self.modes, matchTime=self.matchTime, music=self.music })
 end
 
@@ -220,8 +228,18 @@ function Model:get(c, r) return self:inBounds(c, r) and self.tiles[r][c] or nil 
 function Model:set(c, r, raw)
     if not self:inBounds(c, r) or self.tiles[r][c] == raw then return false end
     self.tiles[r][c] = raw
-    -- (si deja de ser un bloque ON/OFF, su conexión desaparece con él)
+    -- (si deja de ser un activador ON/OFF, sus conexiones desaparecen con él;
+    -- si deja de ser un Bloque ON/OFF, la suya también)
     if self.links and #self.links > 0 and not self:isSwitch(c, r) then self:setLink(c, r, nil) end
+    if self.blockLinks and #self.blockLinks > 0 then
+        if not self:isSwitchBlock(c, r) then self:setBlockLink(c, r, nil) end
+        if not self:isSwitch(c, r) then
+            for i = #self.blockLinks, 1, -1 do
+                local l = self.blockLinks[i]
+                if l.from[1] == c and l.from[2] == r then table.remove(self.blockLinks, i) end
+            end
+        end
+    end
     return true
 end
 
@@ -278,6 +296,7 @@ function Model:resize(w, h)
     self.entities, self.foliage, self.vents = keep(self.entities), keep(self.foliage), keep(self.vents)
     self.subtiles = keep(self.subtiles or {})
     self.links = keep(self.links or {})
+    self.blockLinks = keep(self.blockLinks or {})
     self.bossZones = keep(self.bossZones)
     for _, z in ipairs(self.bossZones) do
         z.w = math.max(4, math.min(z.w, w - z.col + 1)); z.h = math.max(3, math.min(z.h, h - z.row + 1))
@@ -373,9 +392,48 @@ function Model:setLink(c, r, id)
     return true
 end
 
+-- ── Bloques ON/OFF → su activador ────────────────────────────────────────────
+function Model:isSwitchBlock(c, r)
+    local raw = self:get(c, r)
+    return raw ~= nil and Tiles.get(Codec.id(raw)).switchBlock ~= nil
+end
+function Model:blockLinkAt(c, r)
+    for i, l in ipairs(self.blockLinks or {}) do if l.col == c and l.row == r then return l, i end end
+end
+-- Conecta el Bloque ON/OFF (c, r) al activador src = {c, r} (nil = desconectar)
+function Model:setBlockLink(c, r, src)
+    self.blockLinks = self.blockLinks or {}
+    local l, i = self:blockLinkAt(c, r)
+    if not src then if l then table.remove(self.blockLinks, i); return true end return false end
+    if l then l.from = { src[1], src[2] }; return true end
+    self.blockLinks[#self.blockLinks + 1] = { col = c, row = r, from = { src[1], src[2] } }
+    return true
+end
+-- Activador del que depende el bloque: el conectado o el más cercano (y si es implícito)
+function Model:blockSource(c, r)
+    local l = self:blockLinkAt(c, r)
+    if l and self:isSwitch(l.from[1], l.from[2]) then return l.from, false end
+    local best, bd
+    for rr = 1, self.height do
+        for cc = 1, self.width do
+            if self:isSwitch(cc, rr) then
+                local d = (cc - c) ^ 2 + (rr - r) ^ 2
+                if not bd or d < bd then best, bd = { cc, rr }, d end
+            end
+        end
+    end
+    return best, true
+end
+
 -- Quita las conexiones de casillas que ya no son un bloque ON/OFF (devuelve cuántas)
 function Model:pruneLinks()
     local n = 0
+    for i = #(self.blockLinks or {}), 1, -1 do
+        local l = self.blockLinks[i]
+        if not self:isSwitchBlock(l.col, l.row) or not self:isSwitch(l.from[1], l.from[2]) then
+            table.remove(self.blockLinks, i); n = n + 1
+        end
+    end
     for i = #(self.links or {}), 1, -1 do
         local l = self.links[i]
         if not self:isSwitch(l.col, l.row) then table.remove(self.links, i); n = n + 1 end

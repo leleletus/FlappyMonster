@@ -57,10 +57,12 @@ end
 -- ── Enter ─────────────────────────────────────────────────────────────────────
 -- Al salir del nivel: cerrar la grabación (si la hay)
 function AdventureState:exit()
+    require('src/ui/View').unlock()
     if self.rec then self.rec:finish(self); self.rec = nil end
 end
 
 function AdventureState:enter(args)
+    require('src/ui/View').lockGameplay()      -- (todos ven la misma zona del nivel)
     loadHudAssets()
     loadBgAsset()
     args = args or {}

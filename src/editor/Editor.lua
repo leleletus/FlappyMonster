@@ -375,6 +375,16 @@ local function canvasPress(button)
         local d = m:inBounds(c, r) and TT.get(Codec.id(m:get(c, r)))
         if d and (d.name == 'switch_on' or d.name == 'switch_off') then
             E.selSwitch = { c = c, r = r }
+        elseif d and d.switchBlock and E.selSwitch then
+            -- Con un activador elegido: clic (y arrastrar) en Bloques ON/OFF los
+            -- conecta a él; clic en uno ya conectado a él lo desconecta
+            local l = m:blockLinkAt(c, r)
+            local mine = l and l.from[1] == E.selSwitch.c and l.from[2] == E.selSwitch.r
+            s.blockPaint = mine and 'remove' or 'add'
+            s.changed = m:setBlockLink(c, r, (not mine) and { E.selSwitch.c, E.selSwitch.r } or nil)
+            s.last = { c, r }
+        elseif d and d.switchBlock then
+            msg('Conectar: elige primero un activador ON/OFF y luego haz clic en sus bloques', 'warn')
         else
             E.selSwitch = nil
             if button == 1 then msg('Conectar: haz clic en un bloque ON/OFF', 'warn') end
@@ -519,6 +529,11 @@ local function canvasDrag()
         if c ~= s.last[1] or r ~= s.last[2] or sub ~= s.lastSub then
             if applySpike(c, r, sub, s.erase) then s.changed = true; markDirty() end
             s.lastSub = sub
+        end
+    elseif s.blockPaint then
+        if (c ~= s.last[1] or r ~= s.last[2]) and E.model:isSwitchBlock(c, r) and E.selSwitch then
+            local ch = E.model:setBlockLink(c, r, s.blockPaint == 'add' and { E.selSwitch.c, E.selSwitch.r } or nil)
+            if ch then s.changed = true; markDirty() end
         end
     elseif s.mini then
         if c ~= s.last[1] or r ~= s.last[2] or sub ~= s.lastSub then
@@ -895,10 +910,10 @@ local function paletteItems(L)
     local items = {}
     if L == 'tiles' then
         for _, t in ipairs(TT.list) do
-            items[#items+1] = { key = t.id, label = t.label, cat = t.category, ord = TT.categoryOrder(t.category), def = t,
+            if not t.editorHide then items[#items+1] = { key = t.id, label = t.label, cat = t.category, ord = TT.categoryOrder(t.category), def = t,
                                 tip = string.format('%s\nColisión: %s%s · Material: %s', t.label,
                                       ({ solid = 'sólida', oneway = 'solo desde arriba', none = 'ninguna' })[t.collision] or t.collision,
-                                      t.dropThrough and ' (se baja agachado)' or '', t.mat.label) }
+                                      t.dropThrough and ' (se baja agachado)' or '', t.mat.label) } end
         end
     elseif L == 'entities' then
         local seen = {}
@@ -1383,7 +1398,11 @@ local function drawSwitchInspector(x, y, w)
                             (e.type == 'flood' and e.props.control ~= 'switch') and ' — no usa ON/OFF' or '') }
     end
     if not found then opts[#opts + 1] = { value = cur, label = '#' .. cur .. ' (ya no existe)' } end
-    ui.text('Conectado a', x, y, th.text); y = y + 20
+    local nb = 0
+    for _, bl in ipairs(m.blockLinks or {}) do if bl.from[1] == sw.c and bl.from[2] == sw.r then nb = nb + 1 end end
+    local hintTxt = string.format('Bloques ON/OFF conectados: %d. Con este activador elegido, haz clic (o arrastra) en Bloques ON/OFF para conectarlos o desconectarlos. Los que no tienen conexión siguen al activador más cercano.', nb)
+    y = y + ui.hint(hintTxt, x, y, w) + 8
+    ui.text('Objeto conectado', x, y, th.text); y = y + 20
     for _, o in ipairs(opts) do
         if ui.button(o.label, x, y, w, 26, { active = o.value == cur, align = 'left', font = ui.fontSm }) and o.value ~= cur then
             pushUndo()
@@ -1780,6 +1799,21 @@ function Editor.drawLinks(camX, camY, t, zoom)
         end
         love.graphics.rectangle('line', x0 - t / 2 + 2, y0 - t / 2 + 2, t - 4, t - 4)
         love.graphics.print('#' .. l.to, x0 - t / 2 + 4, y0 - t / 2 + 2, 0, 1 / zoom, 1 / zoom)
+    end
+    -- Bloques ON/OFF → su activador (cian: conectado; tenue: el más cercano)
+    if E.layer == 'tiles' and E.tool.tiles == 'link' then
+        for rr = 1, m.height do
+            for cc = 1, m.width do
+                if m:isSwitchBlock(cc, rr) then
+                    local src, implicit = m:blockSource(cc, rr)
+                    if src then
+                        local sel = E.selSwitch and E.selSwitch.c == src[1] and E.selSwitch.r == src[2]
+                        love.graphics.setColor(0.3, 0.9, 1, implicit and 0.25 or (sel and 0.95 or 0.6))
+                        love.graphics.line((cc - 0.5) * t - camX, (rr - 0.5) * t - camY, (src[1] - 0.5) * t - camX, (src[2] - 0.5) * t - camY)
+                    end
+                end
+            end
+        end
     end
     if E.selSwitch and E.layer == 'tiles' then
         love.graphics.setColor(th.warn[1], th.warn[2], th.warn[3], 1)

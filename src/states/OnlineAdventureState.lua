@@ -87,6 +87,7 @@ end
 -- ── Enter ─────────────────────────────────────────────────────────────────────
 
 function OnlineAdventureState:enter(args)
+    require('src/ui/View').lockGameplay()      -- (todos ven la misma zona del nivel)
     loadAssets()
     args = args or {}
     self.currentRoom = args.room or {}
@@ -215,6 +216,7 @@ function OnlineAdventureState:_buildWorld(data)
 end
 
 function OnlineAdventureState:exit()
+    require('src/ui/View').unlock()
     NC:off("s"); NC:off("ev"); NC:off("game_init")
     NC.pendingGameInit = nil
     -- Fuera de la partida (sala, hub, resultados, error): nada de la partida
@@ -522,7 +524,9 @@ function OnlineAdventureState:_processEvent(ev)
         local c, r, v = tonumber(ev.c), tonumber(ev.r), tonumber(ev.v)
         if c and r and v then
             self.level:setTileRaw(c, r, v)
-            if ev.k == 'toggle' then
+            if ev.k == 'set' then
+                -- (Bloque ON/OFF que cambia con su activador: sin efectos)
+            elseif ev.k == 'toggle' then
                 self.level:tileBump(c, r, ev.from)
                 Particles.emit('switch_hit', (c - 1) * TILE_PX, (r - 1) * TILE_PX)
                 Sound.play(self.level:getDef(c, r).name == 'switch_on' and 'switchOn' or 'switchOff')

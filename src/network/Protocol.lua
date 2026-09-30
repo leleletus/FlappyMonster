@@ -7,7 +7,7 @@ local Tiles = require 'src/world/Tiles'
 local P = {}
 
 -- ── Versión / red ─────────────────────────────────────────────────────────────
-P.VERSION        = 26        -- el servidor rechaza clientes con otra versión (26: conexiones genéricas ON/OFF → activables)
+P.VERSION        = 27        -- el servidor rechaza clientes con otra versión (27: Bloques ON/OFF, vista fija en niveles)
 
 -- Sonidos PRIVADOS: solo los oye el jugador que los causa (su cliente ya los
 -- genera con la predicción), así que el servidor no los manda a nadie. P. ej.
