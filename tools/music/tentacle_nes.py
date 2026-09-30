@@ -236,23 +236,71 @@ def t_(n):
     return np.arange(n) / SR
 
 
-# Bombo afinado como el del original (su tono se queda en ~Fa#2: se ve en la
-# croma de todo el tema como Fa-Fa#-Sol), cayendo desde ~220 Hz
-KICK = dpcm(np.sin(2 * np.pi * np.cumsum(92 + 130 * np.exp(-t_(int(0.26 * SR)) / 0.025)) / SR) * np.exp(-t_(int(0.26 * SR)) / 0.11))
-SNARE = dpcm((rng.uniform(-1, 1, int(0.14 * SR)) * 0.7 + np.sin(2 * np.pi * 190 * t_(int(0.14 * SR))) * 0.6)
-             * np.exp(-t_(int(0.14 * SR)) / 0.045))
+# ── Ondas del Namco 163 (tablas de 32 muestras de 4 bits) ────────────────────
+# Hechas con la HUELLA de los instrumentos del original: fuerza de cada
+# armónico medida en el ogg sobre las notas del MIDI (mediana de decenas de
+# notas por sección; ver el final del archivo). El N163 es un chip de
+# expansión real de la Famicom: así el timbre se parece al original sin dejar
+# de ser 4 bits.
+def wavetable(harm, seed=3):
+    t = np.arange(32) / 32
+    ph = np.random.default_rng(seed).uniform(0, 2 * np.pi, len(harm))
+    ph[0] = 0
+    w = sum(a * np.sin(2 * np.pi * (k + 1) * t + ph[k]) for k, a in enumerate(harm))
+    w = (w - w.min()) / (w.max() - w.min() + 1e-9)
+    return np.round(w * 15)                                     # 0..15 (4 bits)
+
+
+WAVES = [
+    wavetable([1.0, 1.2, 0.65, 0.6, 0.25, 0.5, 0.08, 0.1]),       # 0 melodía del riff y el break
+    wavetable([1.0, 1.1, 0.8, 0.65, 0.1, 0.45, 0.07, 0.2]),       # 1 estribillo
+    wavetable([1.0, 0.6, 0.6, 0.55, 0.15, 0.26, 0.11, 0.12]),     # 2 escalas
+    wavetable([1.0, 0.94, 0.13, 0.15, 0.05, 0.11]),               # 3 final (casi puro: fundamental + octava)
+    wavetable([1.0, 0.39, 0.02, 0.06, 0.0, 0.07]),                # 4 bajo (redondo: seno + un poco de octava)
+]
+WAVE_OF = {'A': 0, 'BR': 0, 'B': 1, 'C': 2, 'D': 3}
+
+
+def render_wave(chn):
+    """Canal del N163: lee su tabla (chn.d = índice de la onda) a su frecuencia"""
+    f, v, d = per_sample(chn.f), per_sample(chn.v), per_sample(chn.d)
+    ph = np.cumsum(f / SR) % 1.0
+    tab = np.array(WAVES)[d.astype(int), (ph * 32).astype(int) % 32]
+    return (tab - 7.5) / 7.5 * v                                  # ±15
+
+
+# ── Batería (medida en el original) ──────────────────────────────────────────
+# Bombo: golpe que cae de ~275 a ~160 Hz en 100 ms y se queda en ~Fa#2 (su
+# tono se ve en la croma de todo el tema), con un clic de ataque. DPCM de 1 bit.
+_kt = t_(int(0.36 * SR))
+KICK = dpcm(np.clip(1.25 * np.sin(2 * np.pi * np.cumsum(92 + 60 * np.exp(-_kt / 0.08) + 140 * np.exp(-_kt / 0.018)) / SR)
+                    * np.exp(-_kt / 0.17), -1, 1)
+            + np.concatenate([rng.uniform(-0.6, 0.6, int(0.004 * SR)), np.zeros(len(_kt) - int(0.004 * SR))]))
+# En el break el bombo es un "boom" una octava más grave (~Fa#1-Sol1, 47 Hz:
+# ahí está casi toda la energía del original en esa sección)
+_kd = t_(int(0.34 * SR))
+KICK_DEEP = dpcm(np.clip(1.3 * np.sin(2 * np.pi * np.cumsum(47 + 40 * np.exp(-_kd / 0.06) + 110 * np.exp(-_kd / 0.015)) / SR)
+                         * np.exp(-_kd / 0.2), -1, 1))
+# Caja: brillante y MUY corta (a la mitad en 15 ms, al 20 % en 45 ms): ruido
+# agudo + un poco de cuerpo; la muestra DPCM solo da el golpe
+SNARE_BODY = dpcm(np.sin(2 * np.pi * 200 * t_(int(0.05 * SR))) * np.exp(-t_(int(0.05 * SR)) / 0.015))
 
 # ── Instrumentos (secuencias por frame) ──────────────────────────────────────
-I_LEAD = {'vol': [15, 15, 14, 13, 13, 12], 'sus': 12, 'duty': 0.25, 'vib': (14, 0.22, 5.8)}
-I_LEAD_BIG = {'vol': [15, 15, 14, 13, 13, 12], 'sus': 12, 'duty': 0.5, 'vib': (12, 0.28, 5.6)}
-I_LEAD_RUN = {'vol': [14, 12, 11, 10], 'sus': 9, 'duty': [0.125, 0.125, 0.25], 'vib': (20, 0.15, 6)}
-I_STAB = {'vol': [15, 13, 10, 8, 6, 5, 4], 'sus': 3, 'duty': [0.5, 0.25]}
+I_LEAD = {'vol': [15, 15, 14, 14, 13, 13], 'sus': 13, 'vib': (14, 0.2, 5.8)}
+I_LEAD_BIG = {'vol': [15, 15, 15, 14, 14, 14], 'sus': 14, 'vib': (12, 0.26, 5.6)}
+I_LEAD_RUN = {'vol': [15, 14, 13, 12], 'sus': 12, 'vib': (20, 0.12, 6)}
+I_STAB = {'vol': [15, 13, 11, 9, 7, 6, 5], 'sus': 4}
 I_ECHO = {'vol': [6, 6, 5, 5, 4], 'sus': 4, 'duty': 0.125}
 I_HARM = {'vol': [10, 9, 9, 8], 'sus': 8, 'duty': 0.25, 'vib': (14, 0.2, 5.8)}
 I_TRI = {'vol': [15], 'sus': 15}
+I_BASS = {'vol': [15, 15, 14, 14, 13], 'sus': 13}
 I_CHOP = {'vol': [12, 10, 8, 6, 4, 3], 'sus': 0, 'duty': 0.375, 'arp_speed': 1}
 I_PAD = {'vol': [4, 5, 5], 'sus': 5, 'duty': 0.25, 'arp_speed': 2}
 I_SAW = {'vol': [12, 12, 11, 11, 10], 'sus': 10, 'vib': (14, 0.22, 5.6)}
+
+
+def q_n163(f):
+    return f                                                     # (el N163 afina muy fino: 18 bits)
 
 
 # ── MIDI de referencia ───────────────────────────────────────────────────────
@@ -285,26 +333,43 @@ def voices(notes):
     return top, low
 
 
+class Noise:
+    def __init__(self):
+        self.per, self.vol, self.short = np.zeros(NF), np.zeros(NF), np.zeros(NF)
+
+    def hit(self, t, per, vols, short=0):
+        a = fr(t)
+        for i, v in enumerate(vols):
+            if a + i < NF:
+                self.per[a + i] = per if not isinstance(per, list) else per[min(i, len(per) - 1)]
+                self.vol[a + i], self.short[a + i] = v, short
+
+    def render(self):
+        return render_noise(self.per, self.vol, self.short)
+
+
 # ── Arreglo ──────────────────────────────────────────────────────────────────
 def arrange():
     rh, lh = load_midi()
     top, low = voices(rh)
-    C = {k: Chan() for k in ('p1', 'p2', 'tri', 'v1', 'v2', 'saw')}
-    nper, nvol, nshort = np.zeros(NF), np.zeros(NF), np.zeros(NF)
-    dmc = np.zeros(int(NF * FRAME_S) + SR)
+    C = {k: Chan() for k in ('lead', 'p2', 'tri', 'bass', 'v1', 'v2', 'saw')}
+    NZ = {k: Noise() for k in ('hat', 'snare', 'crash')}
+    NS = int(NF * FRAME_S) + SR
+    DM = {'kick': np.zeros(NS), 'snare': np.zeros(NS)}
     ev = {k: [] for k in ('p1', 'p2', 'tri', 'v1', 'saw', 'drums')}
 
     def bar_of(t):
         return int(t / BAR + 1e-6) + 1
 
-    # Melodía (pulso 1) + sierra (épico) + eco / 2ª voz (pulso 2)
+    # Melodía (N163, con la onda de cada sección) + sierra (épico) + eco / 2ª voz (pulso 2)
     for s, e, n in top:
         b = bar_of(s)
         sec, second = section(b), b > 72
         dur = e - s
         inst = {'A': I_LEAD, 'BR': I_STAB, 'B': I_LEAD_BIG, 'C': I_LEAD_RUN, 'D': I_LEAD_BIG}[sec]
         gate = dur * (0.55 if sec == 'BR' else 0.92)
-        play(C['p1'], s, s + gate, n, inst)
+        inst = dict(inst, duty=float(WAVE_OF[sec]))              # (en el N163, "duty" = nº de onda)
+        play(C['lead'], s, s + gate, n, inst, q=q_n163)
         ev['p1'].append((s, n, gate))
         if sec == 'D' or (second and sec == 'B'):
             play(C['saw'], s, s + gate, n - 12, I_SAW, q=q_saw)
@@ -320,27 +385,32 @@ def arrange():
             continue
         play(C['p2'], s + E, s + E + (e - s) * 0.8, n, I_ECHO)
 
-    # Bajo (triángulo): el del MIDI, menos la sección final (del original)
+    # Bajo: N163 con la onda medida (redonda) + el triángulo debajo (peso)
+    def bass_note(t0, t1, n, sub=True):
+        play(C['bass'], t0, t1, n, dict(I_BASS, duty=4.0), q=q_n163, release=2)
+        # (el triángulo una octava por debajo: el sub-grave del original, 40-63 Hz)
+        play(C['tri'], t0, t1, n - 12 if n >= 40 and sub else n, I_TRI, q=q_tri, release=0)
+        ev['tri'].append((t0, n, t1 - t0))
     for s, e, n in lh:
-        b = bar_of(s)
-        if section(b) == 'D':
+        sec = section(bar_of(s))
+        if sec == 'D':
             continue
         while n < 33: n += 12
-        g = (e - s) * 0.88
-        play(C['tri'], s, s + g, n, I_TRI, q=q_tri, release=0)
-        ev['tri'].append((s, n, g))
-    for b in range(1, NBARS + 1):
+        if sec == 'BR':
+            # (en el break el bajo va con los golpes, corto y sin sub: manda el bombo)
+            bass_note(s, s + (e - s) * 0.4, n, sub=False)
+        else:
+            bass_note(s, s + (e - s) * 0.88, n)
+    for b in range(1, NBARS + 1):                                # la sección final: del original
         if section(b) != 'D':
             continue
         r, _ = chord_at(b, 0)
         root = 36 + (r - 36) % 12 - (12 if r >= 8 else 0)         # Si1, Do#2, Re#2
         t0 = (b - 1) * BAR
         for st, dm, ln in ((0, 0, 3), (3, 7, 2), (5, 0, 3)):      # tresillo: raíz, 5ª, raíz
-            play(C['tri'], t0 + st * E, t0 + (st + ln) * E * 0.9, root + dm, I_TRI, q=q_tri, release=0)
-            ev['tri'].append((t0 + st * E, root + dm, ln * E * 0.9))
+            bass_note(t0 + st * E, t0 + (st + ln) * E * 0.9, root + dm)
 
-    # Acordes (VRC6): el "chop" en 2 y 4 como arpegio rápido; en el estribillo
-    # y el final, además un colchón arpegiado suave
+    # Acordes (VRC6): el "chop" en 2 y 4 como arpegio rápido; colchón arpegiado
     for b in range(1, NBARS + 1):
         sec = section(b)
         t0 = (b - 1) * BAR
@@ -352,25 +422,18 @@ def arrange():
                 st = 2 + half * 4                                  # tiempos 2 y 4
                 play(C['v1'], t0 + st * E, t0 + (st + 1) * E, base, I_CHOP, q=q_vrc6, arp=arp)
                 ev['v1'] += [(t0 + st * E, base + x, E * 0.6) for x in arp]
-            if sec in ('B', 'D', 'BR') or (sec == 'C' and b > 72):
+            if sec in ('B', 'D') or (sec == 'C' and b > 72):
                 play(C['v2'], t0 + half * 4 * E, t0 + (half * 4 + 4) * E * 0.98, base - 12, I_PAD, q=q_vrc6,
                      arp=[0, q[1], q[2], 12])
 
-    # Batería: ruido (hi-hat, caja, platillos, redobles) + DPCM (bombo, caja)
-    def noise(t, per, vols, short=0):
-        a = fr(t)
-        for i, v in enumerate(vols):
-            if a + i < NF:
-                nper[a + i], nvol[a + i], nshort[a + i] = per if not isinstance(per, list) else per[min(i, len(per) - 1)], v, short
-
-    def sample(t, smp, g):
+    # Batería
+    def sample(buf, t, smp, g):
         i = int(t * SR)
-        j = min(len(dmc), i + len(smp))
-        dmc[i:j] = smp[:j - i] * g                                 # (monofónico: la nueva corta la anterior)
-        dmc[j:j + int(0.01 * SR)] *= 0
+        j = min(len(buf), i + len(smp))
+        buf[i:j] = smp[:j - i] * g                                 # (monofónico: la nueva corta la anterior)
 
-    HAT = [8, 6, 3, 1]
-    SN = [15, 13, 11, 9, 8, 6, 5, 4, 3, 2, 1]
+    HAT = [9, 8, 7, 6, 5, 4, 3, 2, 1]                               # (a la mitad en ~70 ms, como el original)
+    SN_HI, SN_MID = [15, 9, 5, 3, 1], [9, 5, 3, 1]                  # (a la mitad en ~15 ms, al 20 % en ~45 ms)
     CRASH = [15, 14, 13, 12, 12, 11, 10, 10, 9, 9, 8, 8, 7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1]
     for b in range(1, NBARS + 1):
         sec = section(b)
@@ -385,63 +448,125 @@ def arrange():
         if sec == 'D' and bb % 2 == 0:
             kicks = (0, 3, 5, 7)
         for st in kicks:
-            sample(t0 + st * E, KICK, 0.85)
+            sample(DM['kick'], t0 + st * E, KICK_DEEP if sec == 'BR' else KICK, 1.0)
             ev['drums'].append((t0 + st * E, 36, 0.1))
         for st in range(8):
             if st in snares:
                 continue
-            noise(t0 + st * E, 1 if st % 2 else 0, [x * (1.0 if st % 2 else 0.7) for x in HAT])
+            NZ['hat'].hit(t0 + st * E, 0, [x * (1.0 if st % 2 else 0.6) for x in HAT])
             ev['drums'].append((t0 + st * E, 42, 0.05))
         for st in snares:
-            sample(t0 + st * E, SNARE, 0.8)
-            noise(t0 + st * E, 5, SN)
+            NZ['snare'].hit(t0 + st * E, [1, 1, 2, 3, 4], SN_HI)
+            sample(DM['snare'], t0 + st * E, SNARE_BODY, 1.0)
             ev['drums'].append((t0 + st * E, 38, 0.1))
         if sec == 'C':                                             # (fantasma en el 2 del medio tiempo)
-            noise(t0 + 2 * E, 6, [x * 0.45 for x in SN])
-        # Platillo al empezar cada sección y redoble de caja antes
-        if bb in (1, 17, 25, 41, 49, 57):
-            noise(t0, 3, CRASH)
+            NZ['snare'].hit(t0 + 2 * E, 2, [x * 0.45 for x in SN_MID])
+        if bb in (1, 17, 25, 41, 49, 57):                          # platillo al empezar cada sección
+            NZ['crash'].hit(t0, 3, CRASH)
             ev['drums'].append((t0, 49, 0.5))
-        if bb in (16, 24, 40, 56, 72):
+        if bb in (16, 24, 40, 56, 72):                             # redoble antes
             for k in range(8):
                 ts = t0 + 4 * E + k * E / 2
-                noise(ts, [5, 6], [int(8 + k), int(6 + k * 0.8), 4, 2])
+                NZ['snare'].hit(ts, [2, 3], [int(7 + k), int(5 + k * 0.7), 3, 1])
                 if k % 2 == 0:
-                    sample(ts, SNARE, 0.5 + k * 0.06)
+                    sample(DM['snare'], ts, SNARE_BODY, 0.5 + k * 0.06)
                 ev['drums'].append((ts, 38, 0.05))
-    return C, (nper, nvol, nshort), dmc, ev
+    return C, NZ, DM, ev
 
 
-def mix(C, noise, dmc):
-    p1, p2 = render_pulse(C['p1']), render_pulse(C['p2'])
-    tri = render_tri(C['tri'])
-    nz = render_noise(*noise)
-    v1, v2, saw = render_pulse(C['v1']), render_pulse(C['v2']), render_saw(C['saw'])
-    n = min(len(p1), len(dmc))
-    dm = (dmc[:n] + 64)
+# ── Mezcla ───────────────────────────────────────────────────────────────────
+# Cada instrumento se renderiza aparte con la salida de su chip (2A03: curvas
+# no lineales del DAC; VRC6 y N163: lineales) y se mezcla con GANANCIAS
+# AJUSTADAS al original: potencia por bandas de octava de cada sección del
+# original ≈ suma de las de los instrumentos (mínimos cuadrados con límites,
+# para que nada desaparezca ni se dispare). Así el equilibrio melodía /
+# percusión / bajo es el del original, no el de "todo a tope".
+def pulse_dac(p):
+    return np.where(p > 0, 95.88 / (8128.0 / np.maximum(p, 1e-6) + 100), 0.0)
+
+
+def tnd_dac(x):
+    return np.where(x > 0, 159.79 / (1.0 / np.maximum(x, 1e-9) + 100), 0.0)
+
+
+def stems(C, NZ, DM):
+    n = int(NBARS * BAR * SR)
+    cut = lambda x: x[:n] - np.mean(x[:n])
+    return {
+        'lead':  cut(render_wave(C['lead']) * 0.0075),
+        'saw':   cut(render_saw(C['saw']) * 0.0075),
+        'p2':    cut(pulse_dac(render_pulse(C['p2']))),
+        'bass':  cut(render_wave(C['bass']) * 0.0075),
+        'tri':   cut(tnd_dac(render_tri(C['tri']) / 8227.0)),
+        'v1':    cut(render_pulse(C['v1']) * 0.0075),
+        'v2':    cut(render_pulse(C['v2']) * 0.0075),
+        'kick':  cut(tnd_dac((DM['kick'] + 64) / 22638.0)),
+        'snare': cut(tnd_dac(NZ['snare'].render() / 12241.0)) + cut(tnd_dac((DM['snare'] + 64) / 22638.0)),
+        'hat':   cut(tnd_dac(NZ['hat'].render() / 12241.0)),
+        'crash': cut(tnd_dac(NZ['crash'].render() / 12241.0)),
+    }
+
+
+OCT = [(40, 63), (63, 125), (125, 250), (250, 500), (500, 1000), (1000, 2000), (2000, 4000), (4000, 8000), (8000, 16000)]
+SECS = {'A': (1, 16), 'BR': (17, 24), 'B': (25, 40), 'C': (41, 56), 'D': (57, 72)}
+# Límites de la ganancia (× la de partida): la melodía puede bajar mucho, la
+# percusión y el bajo subir mucho, y nada se apaga del todo
+BOUNDS = {'lead': (0.15, 1.5), 'saw': (0.1, 1.5), 'p2': (0.1, 1.5), 'bass': (0.3, 6), 'tri': (0.3, 4),
+          'v1': (0.2, 1.6), 'v2': (0.2, 1.6), 'kick': (0.5, 8), 'snare': (0.3, 8), 'hat': (0.3, 6), 'crash': (0.2, 3)}
+
+
+def band_power(x, a, b):
+    from scipy.signal import welch
+    seg = x[int(a * SR):int(b * SR)]
+    f, P = welch(seg, fs=SR, nperseg=8192)
+    return np.array([P[(f >= lo) & (f < hi)].sum() for lo, hi in OCT])
+
+
+def fit_gains(S):
+    """Ganancias por instrumento para que el reparto por bandas y secciones se
+    parezca al del original (TentacleTantrum.ogg, desfase 0.042 s)"""
+    import librosa
+    from scipy.optimize import lsq_linear
+    ref, _ = librosa.load(os.path.join(OUT, 'TentacleTantrum.ogg'), sr=SR, mono=True)
+    names = list(S)
+    rows, tgt = [], []
+    for sec, (b0, b1) in SECS.items():
+        for p in (0, 72):
+            t0, t1 = (p + b0 - 1) * BAR, (p + b1) * BAR
+            R = band_power(ref, t0 + 0.042, t1 + 0.042)
+            M = np.array([band_power(S[k], t0, t1) for k in names]).T  # bandas × instrumentos
+            for j in range(len(OCT)):
+                rows.append(M[j] / R[j]); tgt.append(1.0)          # (error relativo por banda)
+    A, y = np.array(rows), np.array(tgt)
+    lo = np.array([BOUNDS[k][0] ** 2 for k in names]); hi = np.array([BOUNDS[k][1] ** 2 for k in names])
+    # (escala común libre: se ajusta primero con todo a 1)
+    s = np.sum(A.sum(1) * y) / np.sum(A.sum(1) ** 2)
+    res = lsq_linear(A * s, y, bounds=(lo, hi))
+    g = np.sqrt(res.x)
+    return dict(zip(names, g)), s
+
+
+# El original tiene más percusión respecto a lo armónico (HPSS: 0.21) que lo
+# que da el ajuste por bandas (0.13): la batería se sube después
+PERC_BOOST = {'kick': 1.45, 'snare': 1.3, 'hat': 1.15, 'crash': 1.0}
+
+
+def mix(C, NZ, DM, report=True):
+    S = stems(C, NZ, DM)
+    g, s = fit_gains(S)
+    for k, v in PERC_BOOST.items():
+        g[k] *= v
+    if report:
+        print('  ganancias ajustadas al original: ' + ' '.join(f'{k}={v:.2f}' for k, v in g.items()))
     solo = os.environ.get('SOLO')
-    if solo:
-        keep = set(solo.split(','))
-        z = np.zeros(n)
-        p1 = p1 if 'p1' in keep else z; p2 = p2 if 'p2' in keep else z
-        tri = tri if 'tri' in keep else z; nz = nz if 'noise' in keep else z
-        dm = dm if 'dmc' in keep else z + 64; v1 = v1 if 'v1' in keep else z
-        v2 = v2 if 'v2' in keep else z; saw = saw if 'saw' in keep else z
-    p = p1[:n] + p2[:n]
-    pulse_out = np.where(p > 0, 95.88 / (8128.0 / np.maximum(p, 1e-6) + 100), 0.0)
-    tnd = tri[:n] / 8227.0 + nz[:n] / 12241.0 + dm / 22638.0
-    tnd_out = np.where(tnd > 0, 159.79 / (1.0 / np.maximum(tnd, 1e-9) + 100), 0.0)
-    vrc6 = (v1[:n] + v2[:n] + saw[:n]) * 0.0085
-    x = pulse_out + tnd_out + vrc6
-    # Filtros de la consola: paso alto ~37 Hz, paso bajo ~14 kHz
+    keep = set(solo.split(',')) if solo else set(S)
+    x = sum(S[k] * g[k] for k in S if k in keep)
     from scipy.signal import butter, sosfilt
-    x = sosfilt(butter(1, 37, btype='high', fs=SR, output='sos'), x)
+    x = sosfilt(butter(1, 30, btype='high', fs=SR, output='sos'), x)
     x = sosfilt(butter(1, 14000, btype='low', fs=SR, output='sos'), x)
-    # Estéreo discreto (como un emulador con separación de canales suave)
-    L = x + (p2[:n] * 0.004 - v1[:n] * 0.003)
-    R = x + (v1[:n] * 0.003 - p2[:n] * 0.004)
-    y = np.stack([L, R], 1)
-    y = y[:int(NBARS * BAR * SR)]
+    # Estéreo discreto (separación suave de canales, como un emulador)
+    side = S['p2'] * g['p2'] * 0.35 - S['v1'] * g['v1'] * 0.3 + S['hat'] * g['hat'] * 0.2
+    y = np.stack([x + side, x - side], 1)
     # Nivel como el original (RMS ≈ 0.19): limitador suave
     y = y / (np.sqrt(np.mean(y ** 2)) + 1e-9) * 0.19
     return np.tanh(y * 1.4) / 1.4
@@ -460,7 +585,7 @@ def write_midi(path, ev):
     meta = mido.MidiTrack(); mf.tracks.append(meta)
     meta.append(mido.MetaMessage('set_tempo', tempo=mido.bpm2tempo(BPM)))
     meta.append(mido.MetaMessage('time_signature', numerator=4, denominator=4))
-    chans = (('p1', 0, 80, 'Pulso 1 (melodia)'), ('p2', 1, 80, 'Pulso 2 (2a voz)'), ('tri', 2, 38, 'Triangulo (bajo)'),
+    chans = (('p1', 0, 80, 'N163 (melodia)'), ('p2', 1, 80, 'Pulso 2 (2a voz)'), ('tri', 2, 38, 'N163 + triangulo (bajo)'),
              ('v1', 3, 81, 'VRC6 (acordes)'), ('saw', 4, 81, 'VRC6 sierra'), ('drums', 9, 0, 'Ruido + DPCM'))
     for key, c, prog, name in chans:
         tr = mido.MidiTrack(); mf.tracks.append(tr)
@@ -481,8 +606,8 @@ def write_midi(path, ev):
 
 
 if __name__ == '__main__':
-    C, nz, dmc, ev = arrange()
-    y = mix(C, nz, dmc)
+    C, NZ, DM, ev = arrange()
+    y = mix(C, NZ, DM)
     wav = os.path.join(OUT, NAME + '.wav')
     write_wav(wav, y)
     write_midi(os.path.join(OUT, NAME + '.mid'), ev)

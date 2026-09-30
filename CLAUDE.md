@@ -155,9 +155,14 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     140 BPM, 18 bars, boogie bass, sixth chords, blues lick in phrase 2). REJECTED by
                     the user: the game keeps the original `menus.ogg`; the script + .mid stay.
                     `tools/music/tentacle_nes.py` → `tentacle_nes.ogg` + `.mid` (catalog id
-                    `tentacle_nes`, boss track): Tentacle Tantrum recreated as REAL NES music (2A03 +
-                    VRC6 emulation: 60 Hz driver, quantized periods, 32-step triangle, 15-bit LFSR
-                    noise, 1-bit DPCM kick/snare, non-linear mixer). Notes from the Musescore MIDI
+                    `tentacle_nes`, boss track): Tentacle Tantrum recreated as REAL Famicom music (2A03 +
+                    VRC6 + Namco 163 emulation: 60 Hz driver, quantized periods, 32-step triangle,
+                    15-bit LFSR noise, 1-bit DPCM kick/snare, non-linear DAC curves). Melody and bass
+                    on N163 wavetables built from the harmonic fingerprint MEASURED on the original's
+                    notes (one wave per section); drums from measured curves (kick 275→160 Hz then
+                    F#2, a deep ~47 Hz boom in the break, very short bright snare); per-instrument gains
+                    FITTED (bounded least squares) so each section's octave-band spectrum matches the
+                    original's, then percussion raised to its percussive/harmonic ratio (0.21). Notes from the Musescore MIDI
                     (`tools/music/ref/`, local only, copyrighted, gitignored), everything the MIDI lacks
                     or gets wrong from the ogg analysis: drums (tresillo kick tuned to F#2, snare 2&4,
                     four-on-the-floor break), chords per half bar, and the finale's B–C#–D# bass.
