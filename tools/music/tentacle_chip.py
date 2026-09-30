@@ -8,6 +8,8 @@
 # bordadura Sol–Fa#–Sol de la referencia sobre el ritmo del tresillo) que se
 # desarrolla en todas las secciones. Batería y bajo con la fuerza de
 # chiptune_tentacle (bombo en tresillo, caja en los contratiempos, hi-hat).
+# La melodía la toca un STEEL DRUM (el timbre del solo de los compases 25-26):
+# golpe metálico, y las notas largas en redoble (steel_voice).
 #
 #   python3 tools/music/tentacle_chip.py      → assets/music/tentacle_chip.ogg (+ .mid)
 #   SOLO=lead,bass python3 ...                → solo esas pistas (para escucharlas)
@@ -43,6 +45,7 @@ OUT = os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'music')
 INSTRUMENTAL = '--instrumental' in sys.argv
 NAME = 'tentacle_chip' + ('_instrumental' if INSTRUMENTAL else '')
 rng = np.random.default_rng(1985)
+LEAD_GAIN = 1.0              # (la melodía en steel: ajustada para que pese igual que el lead de antes)
 
 NOTE = {'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3, 'E': 4, 'F': 5, 'F#': 6, 'Gb': 6,
         'G': 7, 'G#': 8, 'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11, 'Cb': 11}
@@ -176,14 +179,8 @@ STEEL_PHRASE = [
 ]
 
 
-# Instrumental: la frase del steel es su voz principal y vuelve en varias
-# partes (siempre entera, las 4 formas): 2ª mitad de A, final del estribillo,
-# el solo (25-28, que ya no se corta) y el final; la 2ª vuelta empieza con ella.
-def steel_lead(passno, bar):
-    for start in (5, 17, 25, 33):
-        if start <= bar < start + 4: return bar - start
-    if passno == 2 and bar <= 4: return bar - 1
-    return None
+# (Las formas 2-3 las usó un tiempo la instrumental como voz principal; se
+# volvió a la versión con solo el solo de 2 compases: la batería pegaba más.)
 
 
 def rest(passno, bar):
@@ -278,15 +275,30 @@ def highpass(x, cutoff):
     return x - lowpass(x, cutoff)
 
 
-def lead_voice(f, n, ln, env):
-    """Lead con más energía: dos pulsos desafinados (50 % + 25 %, efecto coro),
-    una capa fina una octava arriba, un "scoop" de tono al atacar y un poco de
-    saturación (más brillante y con más mordida que un pulso solo)."""
-    vib = 0.25 if ln >= 3 else 0.0
-    a = pulse(f * 2 ** (-7 / 1200), n, 0.5, vib=vib, vib_rate=6.5, vib_delay=0.1, bend=-1.0, bend_t=0.018)
-    b = pulse(f * 2 ** (7 / 1200), n, 0.25, vib=vib, vib_rate=6.5, vib_delay=0.1, bend=-1.0, bend_t=0.018)
-    c = pulse(f * 2, n, 0.125, bend=-1.0, bend_t=0.018)
-    return np.tanh((0.55 * a + 0.45 * b + 0.22 * c) * 1.5) * env
+def steel_voice(f, n, ln, gate):
+    """La melodía con el timbre del steel drum del solo (pulso fino con un
+    golpe de tono hacia arriba al atacar + el "tin" metálico a 2.01×). El steel
+    no sostiene: las notas largas se tocan como los músicos de steel band, con
+    un REDOBLE (golpes rápidos en fusas que se apagan al final de la nota)."""
+    t = t_(n)
+    def strike(m, tau, v):
+        return (pulse(f, m, 0.125, bend=0.35, bend_t=0.012) * 0.8
+                + np.sin(2 * np.pi * f * 2.01 * t_(m)) * np.exp(-t_(m) / 0.05) * 0.6) * np.exp(-t_(m) / tau) * v
+    out = np.zeros(n)
+    if ln < 3:
+        out += strike(n, 0.16 if ln == 1 else 0.22, 1.0)
+    else:
+        step = int(SIX / 2 * SR)                                   # redoble en fusas
+        k = 0
+        for i in range(0, max(1, int(gate * SR)), step):
+            v = 1.0 if k == 0 else 0.62 + 0.08 * (k % 2)
+            m = n - i
+            out[i:] += strike(m, 0.09, v)[:m]
+            k += 1
+    # (se apaga suave al final: sin clic al cortar la cola)
+    f_out = min(n, int(0.012 * SR))
+    out[n - f_out:] *= np.linspace(1, 0, f_out)
+    return out
 
 
 def tom(f0, n):
@@ -331,9 +343,9 @@ def render(passes=2):
             dur = ln * SIX
             n = int((dur + 0.06) * SR)
             env = adsr(n, a=0.003, d=0.1, s=0.75, r=0.04, gate=dur * 0.9)
-            sig = lead_voice(hz(m), n, ln, env)
-            lead.add(t0 + st * SIX, sig)
-            echo.add(t0 + st * SIX + 3 * SIX, pulse(hz(m), n, 0.125) * env, 0.33)
+            sig = steel_voice(hz(m), n, ln, dur * 0.9)
+            lead.add(t0 + st * SIX, sig, LEAD_GAIN)
+            echo.add(t0 + st * SIX + 3 * SIX, sig, 0.33 * LEAD_GAIN * 0.7)
             midi_ev['lead'].append((t0 + st * SIX, m, dur))
             # 2ª vuelta del final: la melodía doblada una octava abajo (más cuerpo)
             if second and sec == 'D':
@@ -407,7 +419,7 @@ def render(passes=2):
             else:
                 hits((0, 3, 6), 1.2)
                 toms('8:H 9:H 10:H 11:M 12:M 13:M 14:L 15:L', 1.1)
-        elif rs == 'steel' and not INSTRUMENTAL:                   # (la instrumental la lleva abajo)
+        elif rs == 'steel':
             steel_solo(STEEL_PHRASE[bi % 2])
         elif rs == 'drums':
             hits((0, 8), 0.9)
@@ -522,9 +534,6 @@ def render(passes=2):
             bongo.add(t0 + st * SIX, s, v)
         # ── Solo en la instrumental: capas extra para que no quede vacía ─────
         if INSTRUMENTAL:
-            sl = steel_lead(2 if second else 1, bi + 1)
-            if sl is not None:
-                steel_solo(STEEL_PHRASE[sl])
             energetic = sec in ('A', 'B', 'C', 'D')
             # Colchón de acordes: "cuerdas" chip (pulso con trémolo en fusas)
             for h in range(2):
