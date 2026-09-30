@@ -250,7 +250,7 @@ def arrange():
                 # Break: golpe de acorde en cada negra (antes el break se quedaba sin medios)
                 for k in (0, 2):
                     tt = t0 + (half * 4 + k) * E
-                    play(C['v2'], tt, tt + E * 0.8, base, I_CHOP, q=q_vrc6, arp=arp)
+                    play(C['v2'], tt, tt + E * 0.8, base, I_SHIMMER, q=q_vrc6, arp=arp)
             elif sec in ('B', 'D'):
                 play(C['v2'], t0 + half * 4 * E, t0 + (half * 4 + 4) * E * 0.98, base - 12, I_PAD, q=q_vrc6,
                      arp=[0, q[1], q[2], 12])
@@ -364,10 +364,13 @@ def fit_gains(S):
 
 # El original tiene más percusión respecto a lo armónico (HPSS: 0.21) que lo
 # que da el ajuste por bandas (0.13): la batería se sube después
-PERC_BOOST = {'kick': 2.0, 'snare': 1.8, 'hat': 1.4, 'crash': 1.2}
+PERC_BOOST = {'kick': 2.0, 'snare': 1.8, 'hat': 1.4, 'crash': 0.45}   # (el platillo tapaba la melodía)
 # En el juego (música a 0.9, efectos encima) el acompañamiento se perdía
 # detrás de la melodía: se sube y la melodía baja un poco
-BACKING = {'v1': 1.8, 'v2': 1.8, 'bass': 1.0, 'tri': 1.0, 'p2': 1.3, 'saw': 1.3, 'lead': 0.85}   # (bajo sin empuje: embarraba 125-250 Hz)
+BACKING = {'v1': 1.8, 'v2': 0.9, 'bass': 1.0, 'tri': 1.0, 'p2': 1.3, 'saw': 1.3, 'lead': 0.85}   # (bajo sin empuje: embarraba 125-250 Hz)
+
+
+MAX_UNDER_MELODY = 0.45
 
 
 def mix(C, NZ, DM, report=True):
@@ -375,6 +378,24 @@ def mix(C, NZ, DM, report=True):
     g, s = fit_gains(S)
     for k, v in list(PERC_BOOST.items()) + list(BACKING.items()):
         g[k] *= v
+    # La melodía manda: ninguna capa de acompañamiento pasa del 45 % de la
+    # melodía en su banda (1-5 kHz) en ninguna sección
+    from scipy.signal import butter, sosfilt
+    sos = butter(4, [1000, 5000], btype='band', fs=SR, output='sos')
+    band = {k: sosfilt(sos, S[k]) for k in S}
+    for k in S:
+        if k in ('lead', 'p1', 'kick', 'tri', 'bass'):
+            continue
+        worst = 0.0
+        for a, b in SECS.values():
+            for p in (0, 72):
+                i, j = int((p + a - 1) * BAR * SR), int((p + b) * BAR * SR)
+                mel = np.sqrt(np.mean((band['lead'][i:j] * g['lead'] + band['p1'][i:j] * g['p1']) ** 2))
+                x = np.sqrt(np.mean((band[k][i:j] * g[k]) ** 2))
+                if mel > 0:
+                    worst = max(worst, x / mel)
+        if worst > MAX_UNDER_MELODY:
+            g[k] *= MAX_UNDER_MELODY / worst
     if report:
         print('  ganancias ajustadas al original: ' + ' '.join(f'{k}={v:.2f}' for k, v in g.items()))
     solo = os.environ.get('SOLO')

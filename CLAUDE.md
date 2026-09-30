@@ -946,6 +946,9 @@ Low-level notes (for writing NEW harnesses):
   melody (duty sweep 12.5→50 % + pitch drop on attack), brighter chord stabs, 16th
   shimmer arps in the scale section, stabs in the break, ghost 16th hats, bass not
   boosted (mud), mix EQ (−3.5 dB @180 Hz, +1.2 dB shelf @4.5 kHz) via `famicom.biquad`.
+  MELODY PRIORITY: new layers must not mask the lead. `tentacle_nes.mix` caps every
+  accompaniment/percussion stem at 45 % of the melody in 1-5 kHz, per section
+  (`MAX_UNDER_MELODY`); check masking by band-limited stem ratios, not plain RMS.
 - Boss vs level identity (melody_nes): boss = 148 BPM, lead on a clipped-sine N163 wave
   + thin pulse an octave up, organ with fast octave arp, harsh bass, INDUSTRIAL drums
   (short-mode 2A03 noise "metal" on offbeats and under snares, low tom on 1, crash every
