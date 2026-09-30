@@ -31,7 +31,7 @@
     {"col":64,"row":10,"type":"extralife"},
     {"col":72,"row":11,"type":"checkpoint"},
     {"col":77,"props":{"patrol":{"left":74,"right":81}},"row":13,"type":"gummy"},
-    {"col":100,"row":10,"type":"megacrabby"},
+    {"col":100,"props":{"aimTime":2,"ceilingEvery":5,"pounceHeight":5,"rageAt":0.4,"rageSpeed":1.45,"rageStuck":0.6,"restEvery":6,"restTime":1.5,"stuckTime":2,"summonCount":3,"summonEvery":10,"summonMax":6,"summonPool":6},"row":10,"type":"megacrabby"},
     {"col":88,"props":{"corner":{"col":90,"row":13},"zone":1},"row":3,"type":"bosswall"},
     {"col":109,"props":{"corner":{"col":111,"row":13},"zone":1},"row":3,"type":"bosswall"},
     {"col":88,"props":{"corner":{"col":111,"row":2}},"row":2,"type":"bosswall"},
