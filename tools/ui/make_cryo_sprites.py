@@ -2,7 +2,7 @@
 # tools/ui/make_cryo_sprites.py
 # Arte del CONGELADOR (lanzador de nitrógeno líquido) y del bloque de hielo que
 # encierra a lo que congela (jugador, enemigos, jefes). Pixel art sencillo, x4:
-#   assets/images/cryo/cryo-Sheet.png     4 cuadros 16x16 mirando a la DERECHA:
+#   assets/images/cryo/cryo-Sheet.png     (ahora lo genera make_cryo_parts.py, por piezas) 4 cuadros 16x16 mirando a la DERECHA:
 #                                         reposo, carga 1, carga 2 (el indicador brilla,
 #                                         escarcha en la boquilla), disparo (boquilla abierta,
 #                                         retroceso)
@@ -157,7 +157,7 @@ def save(rel, img, scale=1):
 
 if __name__ == '__main__':
     print('Congelador:')
-    save('cryo/cryo-Sheet.png', sheet([frame('idle'), frame('w1'), frame('w2'), frame('fire')]))
+    # (cryo-Sheet.png y las piezas del Congelador: tools/ui/make_cryo_parts.py)
     save('cryo/stream-Sheet.png', sheet([stream(i) for i in range(3)]))
     save('cryo/stream_head-Sheet.png', sheet([head(i) for i in range(2)]))
     save('fx/ice_block.png', ice_block())

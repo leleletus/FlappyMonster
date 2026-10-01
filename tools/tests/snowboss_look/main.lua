@@ -143,6 +143,8 @@ local function room()
         { type = 'cryo', col = 27, row = 13, props = { dir = 'up' } },     -- en el suelo, hacia arriba
         { type = 'cryo', col = 15, row = 9, props = { dir = 'down' } },    -- bajo un bloque suelto
         { type = 'cryo', col = 9, row = 3, props = { dir = 'down' } },     -- justo bajo el techo
+        { type = 'cryo', col = 2, row = 11, props = { dir = 'right' } },   -- pared izquierda, hacia dentro
+        { type = 'cryo', col = 29, row = 11, props = { dir = 'left' } },   -- pared derecha, hacia dentro
     }
     local level = Level.fromData({ name = 'cryo', width = W, height = H, playerStart = { 2, 13 },
                                    tiles = tiles, entities = ents })
@@ -159,7 +161,10 @@ local function cryo()
     sky(1920, 1000)
     -- la sala de casos (30x15 casillas a escala 1)
     local level, es = room()
+    local ww, wh = WINDOW_W, WINDOW_H
+    WINDOW_W, WINDOW_H = 1920, 1000                         -- (que no recorte la sala)
     level:render(0, 0)
+    WINDOW_W, WINDOW_H = ww, wh
     clock = 10
     for _, e in ipairs(es) do e:render(0, 0) end
     love.graphics.setCanvas()

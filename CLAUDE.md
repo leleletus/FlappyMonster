@@ -692,10 +692,12 @@ list no mode until the user places a Point Area in them).
   EntityTypes render wrapper, PlayerAdventure and OnlinePlayer. Art `assets/images/cryo/` from
   `tools/ui/make_cryo_sprites.py`; sounds `traps/cryo_*.wav` from `tools/sounds/cryo.py` (cryoFreeze is a
   SHARED sound). Particles cryo_puff/cryo_mist/cryo_blast/ice_freeze/ice_shatter. Harness `mechanics`
-  (cryo_*). Support (render only, `Cryo:support()`, needs `levelRef`: `wantsLevel`, also set by the editor):
-  the feet (bottom row of the sprite) mirror toward a solid cell beside the firing axis, else toward the
-  nearest surface on that axis; firing up with ground behind / sideways with a wall behind = mounted;
-  otherwise it HANGS from the ceiling with `cryo/chain.png` + `anchor.png` + `clamp.png`
+  (cryo_*). Drawn from PIECES (`tools/ui/make_cryo_parts.py`, all 16x16 centred on the cell): body
+  `cryo_body-Sheet` (always upright, 4 frames), cannon `cryo_cannon-Sheet` (drawn facing right, rotated to
+  `dir`), feet `cryo_feet` (drawn facing down, rotated to the supporting side); `cryo-Sheet` = the classic
+  assembly (editor icon). `Cryo:support()` (render only, needs `levelRef`: `wantsLevel`, also set by the
+  editor) = the solid side holding it, never the firing side, preference floor → behind the cannon → sides →
+  ceiling; nil = it HANGS: no feet, `cryo/chain.png` + `anchor.png` + `clamp.png` to the ceiling
   (`tools/ui/make_cryo_chain.py`; two side chains when firing up). Harness `snowboss_look` (snow_cryo.png),
   `online_smoke LEVEL=tools/levelgen/arenas/congelador.json WATCH=gummy WANT=frozen WANTICE=1`,
   `editor_open PLAY=tools/levelgen/arenas/congelador.json`.
