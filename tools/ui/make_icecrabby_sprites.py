@@ -14,10 +14,11 @@
 #
 # Salida (como assets/images/crabby/ + tapas):
 #   crab1/2/3.png   andar (18x13; los de assets/images/megacrabby_ice)
-#   meat.png        el cuerpo sin patas (se mete en el suelo), lookin.png (solo asoma), hid.png
+#   meat.png        el cuerpo sin patas, lookin.png (solo asoma), hid.png
+#   hide-Sheet.png  8 cuadros 18x8: se hunde fila a fila en la superficie (esconderse / salir al revés)
 #   spike.png       púa de hielo (38x38, como crabby/spike.png)
 #   tramp_normal.png / tramp_extended.png   trampolín de hielo (16x16, como trampoline/*.png)
-#   snow.png        montón de nieve (18x8), snow_cracked.png (a punto de reventar)
+#   snow.png        montón de nieve (18x8, estilo de la decoración snow_pile), snow_cracked.png
 #   icicle.png      carámbano (8x16, el de la Gran Bola de Nieve)
 import argparse
 import os
@@ -31,28 +32,32 @@ ICE_MEGA = os.path.join(ROOT, 'assets', 'images', 'megacrabby_ice')
 DST = os.path.join(ROOT, 'assets', 'images', 'crabby_ice')
 S = 4                                   # escala del Crabby en el juego
 
-PAL = {'.': None, 'O': (30, 30, 42), 'W': (255, 255, 255), 'w': (226, 238, 252), 'b': (176, 204, 236),
-       'B': (128, 166, 214)}
-
+PAL = {'.': None, 'O': (30, 30, 42)}
+# Montón de nieve: MISMO ESTILO que la decoración snow_pile (tools/ui/make_decorations.py):
+# contorno azul claro (no el oscuro de los personajes), 3 tonos, base en sombra sin contorno
+# abajo, 1 px de margen. Así pasa por una decoración más.
+PAL.update({'o': (142, 164, 212), 'W': (244, 248, 255), 'H': (255, 255, 255), 'S': (196, 210, 240),
+            'c': (110, 130, 182)})
 SNOW = [
-    "......OOOO........",
-    "....OOWWWWOO.OOO..",
-    "...OWWWWWwwOOWWwO.",
-    "..OWWWWwwwwwwwwbO.",
-    ".OWWwwwwwwwwwbbbbO",
-    "OWwwwwwwwwwbbbbbBO",
-    "OwbbbbbbbbbbbBBBBO",
-    "OOOOOOOOOOOOOOOOOO",
+    "..................",
+    ".......ooo........",
+    ".....ooWHWoo.ooo..",
+    "....oWWWWWWWoWHWo.",
+    "...oWHWWWWWWWWWSo.",
+    "..oWWWWWWWWWWWSSSo",
+    ".oWHWWWWWWWWWSSSSo",
+    ".oSSSSSSSSSSSSSSSo",
 ]
+# A punto de reventar: grietas (más oscuras, para que se vean) y bultos
 SNOW_CRACKED = [
-    "......OOOO........",
-    "....OOWWWOOO.OOO..",
-    "...OWWWWOwwOOWWwO.",
-    "..OWWWWwwOwwOwwbO.",
-    ".OWWwwOwwOwwOwbbbO",
-    "OWwwwwwOwwwOwbbbBO",
-    "OwbbbbbbObbbOBBBBO",
-    "OOOOOOOOOOOOOOOOOO",
+    "..................",
+    ".......ooo...o....",
+    ".....ooWcWoo.ooo..",
+    "....oWWWcWWWoWcWo.",
+    "...oWHWWcWWcWWWSo.",
+    "..oWWWWcWWWWcWSSSo",
+    ".oWHWWcWWWWWWcSSSo",
+    ".oSSSSSSSSSSSSSSSo",
 ]
 # Trampolín: amarillo → hielo, grises → nieve
 TRAMP = {(232, 160, 32): (110, 170, 226), (255, 225, 74): (196, 232, 255),
@@ -86,6 +91,14 @@ def build():
     out['meat.png'] = body.crop((0, 0, body.width, 8))           # el caparazón sin patas
     out['lookin.png'] = body.crop((0, 4, body.width, 8))         # asoman los ojos
     out['hid.png'] = Image.new('RGBA', (body.width, 1), (0, 0, 0, 0))
+    # Se HUNDE poco a poco (8 cuadros): el caparazón baja fila a fila dentro de la superficie
+    # (se dibuja anclado abajo), en vez de pasar de golpe de meat → lookin → nada
+    shell = out['meat.png']
+    sheet = Image.new('RGBA', (shell.width * 8, shell.height), (0, 0, 0, 0))
+    for i in range(8):
+        part = shell.crop((0, 0, shell.width, shell.height - i))
+        sheet.paste(part, (i * shell.width, i))
+    out['hide-Sheet.png'] = sheet
     out['tramp_normal.png'] = recolor(os.path.join(ROOT, 'assets/images/trampoline/normal.png'), TRAMP)
     out['tramp_extended.png'] = recolor(os.path.join(ROOT, 'assets/images/trampoline/extended.png'), TRAMP)
     out['snow.png'] = grid(SNOW)
@@ -156,18 +169,18 @@ def mockup(sp, out):
     for n in ('crab1.png', 'crab2.png', 'crab3.png'):
         paste_bottom(im, up(sp[n], S), x, y1); x += 100
     d.text((230, 30), 'Crabby helado: andar 1-3', fill=(255, 255, 255), font=font)
-    # esconderse: cuerpo → meat → lookin → escondido con su tapa (crece)
-    x = 620
-    d.text((600, 30), 'se esconde (púa de hielo): sale la tapa, se mete', fill=(255, 255, 255), font=font)
-    seq = [(sp['crab2.png'], 0.0), (sp['crab2.png'], 0.6), (sp['meat.png'], 1.0), (sp['lookin.png'], 1.0), (None, 1.0)]
-    for b, pr in seq:
-        c = cover_img(sp, 'spike', pr) if pr > 0 else None
-        bh = 0
-        if b is not None:
-            bb = up(b, S); paste_bottom(im, bb, x, y1); bh = bb.height
-        if c is not None: paste_bottom(im, c, x, y1 - bh + (4 if bh else 0))
-        x += 130
-
+    # esconderse: sale la tapa (montón de nieve) y el caparazón se hunde fila a fila
+    d.text((560, 30), 'se esconde (montón de nieve): crece la tapa y se hunde poco a poco', fill=(255, 255, 255), font=font)
+    sheet = sp['hide-Sheet.png']
+    fw = sheet.width // 8
+    x = 560
+    # (el montón crece DELANTE, desde el suelo, mientras el caparazón se hunde detrás)
+    frames = [(sp['crab2.png'], 0.0)] + [(sheet.crop((i * fw, 0, (i + 1) * fw, sheet.height)), 0.25 + i * 0.11)
+                                         for i in (0, 1, 3, 5, 7)] + [(None, 1)]
+    for b, pr in frames:
+        if b is not None: paste_bottom(im, up(b, S), x, y1)
+        if pr > 0: paste_bottom(im, cover_img(sp, 'snow', min(1, pr)), x, y1)
+        x += 100
     # 2) Las 4 tapas en el suelo, en una pared y en el techo
     kinds = [('spike', 'púa de hielo: mata'), ('tramp', 'trampolín: rebota'),
              ('snow', 'nieve: disfraz, revienta al tocarla'), ('icicle', 'carámbano: -2 vida + empujón')]
