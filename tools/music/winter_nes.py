@@ -64,6 +64,29 @@ SECT = [('intro', 1, 4), ('A', 5, 20), ('B', 21, 44), ('break', 45, 60), ('C', 6
         ('E', 117, 140), ('fin', 141, 144)]
 LOUD = set(range(5, 45)) | set(range(61, 141))          # secciones fuertes (hats fantasma, redobles)
 BREAK = set(range(45, 61))
+# Acordes del comp (Pop Synth) que el ogg cambia: las vueltas 2 y 3 del motivo van en
+# Si♭ Si♭ Do Do (como el final) y no en Fa / Solm del MIDI (mismo método que PAD_FIX)
+TRI = {'Bb': (10, 2, 5), 'C': (0, 4, 7), 'F': (5, 9, 0), 'Dm': (2, 5, 9)}
+CHORD_FIX = {12: TRI['C'], 28: TRI['C'], 29: TRI['Bb'], 30: TRI['Bb'], 31: TRI['C'], 32: TRI['C'], 36: TRI['C'],
+             37: TRI['Bb'], 38: TRI['Bb'], 39: TRI['C'], 40: TRI['C'], 44: TRI['Dm']}
+# Compases en que el ogg dobla el comp una octava abajo (saliencia: la octava baja ≥ 0.8 de la
+# del MIDI). En los impares del motivo (golpes Fa/La) no: doblarlos añadía un La grave → La menor
+COMP_LOW = {5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19, 22, 23, 24, 26, 27, 28, 30, 32, 34, 36, 38, 40,
+            42, 44, 78, 82, 83, 84}
+COMP_HIGH = {20}                    # el paso cromático Do#-Mi-Re#-Re-Do# suena también una octava arriba
+
+
+def snap(m, pcs):
+    """La nota del acorde `pcs` más cercana a m (empate: abajo); sin acorde, m"""
+    if not pcs:
+        return m
+    for d in range(0, 7):
+        for q in (m - d, m + d):
+            if q % 12 in pcs:
+                return q
+    return m
+
+
 # Acordes del colchón (8-Bit Sine) corregidos según el ogg. El MIDI repite el mismo ciclo de 16
 # compases tres veces (85, 101, 117) y el ogg no: para cada compás se ajustó la tríada diatónica
 # (Fa, Solm, Lam, Si♭, Do, Rem, Do/Si♭) que mejor explica su perfil de alturas (saliencia del stem
@@ -136,6 +159,7 @@ I_LEAD_N = {'vol': [14, 14, 13, 13, 12], 'sus': 12, 'duty': 4.0, 'vib': (14, 0.2
 I_PLUCK = {'vol': [14, 11, 9, 7, 5, 4, 3, 2], 'sus': 2, 'duty': 4.0}
 I_FLUTE = {'vol': [6, 8, 9, 10, 10], 'sus': 10, 'duty': 2.0, 'vib': (16, 0.15, 5.0)}
 I_PAD = {'vol': [5, 7, 9, 10, 11, 11], 'sus': 11, 'duty': 3.0, 'vib': (24, 0.1, 4.5)}
+I_CHORDLO = {'vol': [11, 10, 9, 8, 7, 6, 6, 5], 'sus': 5, 'duty': 5.0}                     # comp grave (N163 hueca)
 I_STR = {'vol': [4, 6, 8, 9, 10, 10], 'sus': 10, 'duty': 5.0, 'vib': (20, 0.12, 5.0)}      # cuerdas (onda hueca)
 I_STR2 = {'vol': [3, 5, 6, 7, 8, 8], 'sus': 8, 'duty': 4.0, 'vib': (20, 0.12, 5.0)}
 I_TRI_LEAD = {'vol': [11, 11, 10, 10], 'sus': 10, 'duty': 0.25, 'vib': (16, 0.18, 5.5)}
@@ -275,12 +299,19 @@ def build(T):
         slap = m - 12 if m - 12 >= 36 else m
         S.note('bass_tri', 'tri', s, d, sub, I_TRI, gate=0.85, midi='bass')
         S.note('bass_n', 'n163', s, min(d, S16 * 1.6), slap, I_BASSN, vs=min(1, 0.6 + v / 160), gate=0.9, midi='bass')
-    # Acordes (Pop Synth): 2 pulsos del VRC6, golpes cortos; en el break, más flojos
-    for i, vs in enumerate(voices(T['Pop Synth (Classic)'], 2)):
+    # Acordes (Pop Synth): 2 pulsos del VRC6, golpes cortos. Donde el ogg tiene otro acorde
+    # (CHORD_FIX) cada nota va a la nota del acorde bueno más cercana (mismo ritmo y registro);
+    # en 5-44 el ogg los dobla una octava abajo (COMP_LOW)
+    pop = [(s, d, snap(m, CHORD_FIX.get(bar_of(s))), v) for s, d, m, v in T['Pop Synth (Classic)']]
+    for i, vs in enumerate(voices(pop, 2)):
         for s, d, m, v in vs:
-            k = 1.0
-            S.note('chord%d' % i, 'vrc6', s, d, m, I_CHORD if i == 0 else I_CHORD2, vs=min(1, 0.6 + v / 120) * k,
+            S.note('chord%d' % i, 'vrc6', s, d, m, I_CHORD if i == 0 else I_CHORD2, vs=min(1, 0.6 + v / 120),
                    gate=0.8, midi='keys')
+    for s, d, m, v in pop:
+        if bar_of(s) in COMP_HIGH:                     # (el paso cromático también una octava arriba)
+            S.note('chordhi', 'pulse', s, d, m + 12, I_SHIM, vs=1.0, gate=0.9, midi='keys')
+        if bar_of(s) in COMP_LOW and m >= 64:
+            S.note('chordlo', 'n163', s, d, m - 12, I_CHORDLO, vs=min(1, 0.6 + v / 120), gate=0.8, midi='keys')
     # Caja de música: campana + eco 3/16 después (truco de eco de los juegos de NES)
     for i, vs in enumerate(voices(T['Music Box'], 2)):
         for s, d, m, v in vs:
@@ -436,16 +467,20 @@ def escalate(S, T, has):
         S.note('lay_bellx', 'n163', s, d, m, I_PLUCK, vs=0.85 if bar_of(s) < 125 else 1.0, gate=1.0, midi='keys')
     # Pedal de Fa en la segunda mitad de cada frase del motivo del final: en el ogg el Fa es la
     # nota más fuerte de los compases 121-123 y 129-132 (el chiptune quedaba en La / Sol)
-    # (en el 124 el ogg ya va a Do: Mi y Sol; el pedal acaba antes)
-    for b0, nb in ((121, 3), (129, 4)):
-        for m_, inst in ((65, I_STR), (77, I_STR), (89, I_STR2)):
-            S.note('lay_ped%d' % m_, 'n163', (b0 - 1) * BAR, nb * BAR - S16, m_, inst, gate=1.0, midi='keys')
+    # (en el 124 el ogg ya va a Do: Mi y Sol; el pedal acaba antes). Las vueltas 2 y 3 del
+    # motivo tienen el mismo pedal (33-35, 41-44) y en el 36, sobre el Do, un Sol tenido
+    for b0, nb, (m1, m2, m3) in ((33, 3, (65, 77, 89)), (36, 1, (67, 79, 91)), (41, 4, (65, 77, 89)),
+                                 (121, 3, (65, 77, 89)), (129, 4, (65, 77, 89))):
+        for m_, inst in ((m1, I_STR), (m2, I_STR), (m3, I_STR2)):
+            S.note('lay_ped%d' % (m_ - (m1 - 65)), 'n163', (b0 - 1) * BAR, nb * BAR - S16, m_, inst, gate=1.0, midi='keys')
     # El motivo del final va ARMONIZADO a la quinta por encima (una octava más arriba) en el
     # ogg: Do6-La#5-La5-La#5 (la voz alta de la caja de música) → Sol6-Fa6-Mi6-Fa6 (compás 118); el
     # MIDI no la trae
-    for s, d, m, v in notes_in(bells, *FINAL):
-        S.note('lay_bell5', 'pulse', s, d, m + 7, I_SPARK, vs=0.85 if bar_of(s) < 125 else 1.0, gate=1.0,
-               midi='keys')
+    # (y en TODAS las vueltas: el ogg ya la tiene en la primera, compases 22-25; crece con la vuelta)
+    for s, d, m, v in notes_in(bells, 21, 44) + notes_in(bells, *FINAL):
+        b = bar_of(s)
+        k = 0.6 if b < 29 else 0.72 if b < 37 else 0.8 if b < 45 else 0.85 if b < 125 else 1.0
+        S.note('lay_bell5', 'pulse', s, d, m + 7, I_SPARK, vs=k, gate=1.0, midi='keys')
     # Final: el lead doblado a la octava, terceras debajo Y encima (brillo)
     for s, d, m, v in notes_in(square, *FINAL):
         S.note('lay_lead8', 'pulse', s, d, m + 12, I_OCT, midi='lead')

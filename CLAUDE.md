@@ -251,6 +251,13 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     octaves up (strings `str*`, group 'strings'); in the final the motif is harmonized a
                     fifth above (`lay_bell5`), the lead is an octave higher than the MIDI's 8-Bit Square
                     (`lay_leadsaw` at +12) and an F pedal holds bars 121-123 / 129-132 (`lay_ped*`).
+                    Same method over the WHOLE song (motif passes too): `CHORD_FIX` snaps the Pop Synth comp
+                    to the ogg's chord (passes 2-3 of the motif = B♭ B♭ C C, like the final; same rhythm and
+                    register), `COMP_LOW` doubles the comp an octave down only where the ogg does (even bars;
+                    in the odd F/A bars it added a low A → A minor), the fifth harmony is on every motif pass
+                    (from bar 22, growing), F pedals in 33-35 / 41-44 and a G in 36, bar 20's chromatic step
+                    also an octave up (`COMP_HIGH`). Result: confident chord mismatches 15 → 2 (intro riser,
+                    bar 26 ambiguous), missing notes 966 → ~780 over the song.
 src/entities/
   PlayerAdventure.lua  THE player physics (shared by SP, server and client prediction)
   OnlinePlayer.lua     remote player renderer (tinted by player color, name tag)
