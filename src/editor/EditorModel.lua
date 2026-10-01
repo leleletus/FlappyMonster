@@ -219,7 +219,9 @@ end
 
 -- Nivel del juego (para dibujar) a partir de estos datos
 function Model:buildLevel()
-    return Level.fromData(deepcopy(self:toData()))
+    local d = deepcopy(self:toData())
+    d._editor = true                  -- (los bloques de fase se ven tal cual: PhaseBlocks)
+    return Level.fromData(d)
 end
 
 -- ── Copias (deshacer) ─────────────────────────────────────────────────────────

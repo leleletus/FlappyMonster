@@ -314,6 +314,7 @@ end
 -- ── Hooks por defecto ─────────────────────────────────────────────────────────
 Boss.stunnable = false                        -- ¿el ground pound lo deja KO? (Mirror: sí)
 Boss.hurtSound = 'bossHurt'                   -- sonido al recibir un golpe (cada jefe el suyo)
+function Boss:bossPhase() return 1 end        -- fase de la pelea (1..): la zona la usa (BossZones)
 function Boss:isStunned() return false end   -- p. ej. estado 'ko'
 function Boss:endStun() end                  -- se despierta (tras su único golpe)
 function Boss:initBoss() end

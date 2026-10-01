@@ -2,23 +2,29 @@
 -- escenario, caso a caso (salas hechas a mano + la arena real de lago_helado):
 --   bola          una bola de nieve que le da: -1 de vida y empujón fuerte en su dirección;
 --                 la bola desaparece. Invulnerable: ni daño ni empujón
---   bola_bomba    la bola-bomba que le da: -1, empujón y se convierte en bomba encendida
---   carambano     un carámbano cayendo encima: -2
+--   carambano     un carámbano cayendo sobre un jugador: -2 (y vuelve a crecer luego)
+--   carambano_jefe  un carámbano cayendo sobre la bola: MAREADA (sin daño)
+--   carambano_sacude un aterrizaje sacude solo los carámbanos a < 2.5 casillas: tiemblan y caen
 --   ola           la ola de nieve del gran golpe: -1 y empujón hacia donde va la ola
 --   onda_golpe    al aterrizar el gran golpe: cerca y a ras de suelo -1 y empujón MUY
 --                 fuerte hacia fuera (y aturdido); lejos o en lo alto, nada
---   rueda_activa  rodando contra un Activador ON/OFF lo cambia (sus Congeladores disparan)
+--   rueda_pared   rodando contra la pared: fase 1 mareada al primer choque, fase 2 tras 1
+--                 rebote, fase 3 tras 2
+--   rueda_escalon rodando contra un escalón de 1 casilla: se estampa (no lo sube)
+--   rueda_activa  rodando contra un Activador ON/OFF lo cambia
 --   rueda_rompe   rodando contra bloques rompibles / nieve prensada / hielo: NO los rompe
---   lago_compuerta  arena de lago_helado: compuerta subida → la bola rodando choca, se marea y
---                 la compuerta se abre con el golpe (su Activador vuelve a OFF)
---   lago_congelador el Activador de una plataforma dispara el congelador de su pared: congela a
---                 la bola en esa mitad; con la compuerta subida no llega a la otra mitad
---   lago_hundirse   lago roto bajo la bola: cae al agua, se congela, sale de un salto y el lago
---                 vuelve a helarse
---   avalancha_fin   la avalancha (fase 3) entre paredes SIEMPRE acaba (antes rebotaba sin fin)
---   rueda_nieve     rodando choca con la nieve prensada (no la atraviesa ni la rompe)
---   enterrar      fase 3: nieve prensada en las 8 casillas alrededor de cada Activador,
---                 solo en las vacías (no toca bloques, agua ni la casilla de un jugador)
+--   rueda_nieve   rodando choca con la nieve prensada (no la atraviesa ni la rompe)
+--   rueda_fin     arena real, fase 3 (2 rebotes): el ataque rodando SIEMPRE acaba
+--   salto_plataforma  fase 2, jugador en una plataforma media: la bola cae en ESA plataforma
+--   salto_debajo  saltando desde justo debajo de una plataforma: la atraviesa y se posa encima
+--   empapada      el hielo de una bolsa se rompe bajo ella: cae al agua, EMPAPADA (vulnerable),
+--                 sale de un salto a lo seco y el hielo se rehace solo
+--   fase3_aparece arena real: Activadores del suelo y Congeladores no están hasta la fase 3;
+--                 en la fase 3 sale el Activador (en vez de hielo) y el Congelador baja
+--   congelada     fase 3, empapada en la bolsa + su Activador → su Congelador la CONGELA;
+--                 ground pound = 3
+--   seca_aturdida un Congelador sobre la bola seca: solo aturdida un momento y escarchada
+--   encoge        cambio de fase: escala 10 → 8 → 6; en la fase 2 crecen los carámbanos
 --
 --   tools/tests/run.sh snowboss_rules
 io.stdout:setvbuf('no')
@@ -34,6 +40,7 @@ local Entities = require 'src/world/Entities'
 local BossZones = require 'src/world/BossZones'
 local PlayerAdventure = require 'src/entities/PlayerAdventure'
 local TileCodec = require 'src/world/tiles/TileCodec'
+local PhaseBlocks = require 'src/world/PhaseBlocks'
 local T = TILE_PX
 
 local fails = 0
@@ -89,40 +96,18 @@ function cases.bola()
     fight(boss)
     local pa = playerAt(level, 14, 9)
     local hp0 = pa.hp
-    boss.proj = { { id = 1, x = pa.x - 10, y = pa.y, vx = 500, vy = 0, kind = 1, t = 0 } }
+    boss.proj = { { id = 1, x = pa.x - 10, y = pa.y, vx = 500, vy = 0, t = 0 } }
     boss:hitWithShots(level)
     local vx, dx = pa.vx, travel(level, pa, 0.6)
     local okHit = pa.hp == hp0 - 1 and vx >= 500 and dx > 3 * T and #boss.proj == 0
     -- invulnerable: nada
     local pb = playerAt(level, 14, 9)
     pb:grantInvulnerability(2)
-    boss.proj = { { id = 2, x = pb.x - 10, y = pb.y, vx = 500, vy = 0, kind = 1, t = 0 } }
+    boss.proj = { { id = 2, x = pb.x - 10, y = pb.y, vx = 500, vy = 0, t = 0 } }
     boss:hitWithShots(level)
     check('bola', okHit and pb.hp == pb.hpMax and math.abs(pb.vx) < 50 and #boss.proj == 1,
         ('vida %d→%d, vx %d, recorre %.1f casillas; invulnerable: vida %d vx %d'):format(
             hp0, pa.hp, vx, dx / T, pb.hp, pb.vx))
-end
-
-function cases.bola_bomba()
-    local level, es, boss = room(24, 10, nil, { { type = 'snowboss', col = 4, row = 9 } })
-    fight(boss)
-    local pa = playerAt(level, 14, 9)
-    boss.proj = { { id = 1, x = pa.x + 10, y = pa.y, vx = -500, vy = 0, kind = 2, t = 0 } }
-    boss:hitWithShots(level)
-    local lit = 0
-    for _, e in ipairs(es) do if e.def.name == 'bombobject' and e.alive then lit = lit + 1 end end
-    check('bola_bomba', pa.hp == pa.hpMax - 1 and pa.vx <= -500 and lit == 1,
-        ('vida %d, vx %d, bombas encendidas %d'):format(pa.hp, pa.vx, lit))
-end
-
-function cases.carambano()
-    local level, es, boss = room(24, 10, nil, { { type = 'snowboss', col = 4, row = 9 } })
-    fight(boss)
-    local pa = playerAt(level, 14, 9)
-    boss.icicles = { { id = 1, x = math.floor(pa.x), y = pa.y - 60, vy = 400, t = 0, stage = 2 } }
-    boss:hitWithShots(level)
-    check('carambano', pa.hp == pa.hpMax - 2 and #boss.icicles == 0,
-        ('vida %d/%d, carámbanos %d'):format(pa.hp, pa.hpMax, #boss.icicles))
 end
 
 function cases.ola()
@@ -156,9 +141,10 @@ function cases.onda_golpe()
 end
 
 -- Hace rodar al jefe hacia `dir` hasta que choque (o 3 s)
-local function rollInto(level, boss, dir)
+local function rollInto(level, boss, dir, bounces)
     boss.state, boss.deadTimer = 'roll', 0
-    boss.dir, boss.vx, boss.bounces, boss.phase = dir, dir * 500, 0, boss.phase or 1
+    boss.dir, boss.vx, boss.bounces, boss.phase = dir, dir * 500, bounces or 0, boss.phase or 1
+    boss.rollLeft, boss.crashes = 3.2, 0
     for _ = 1, 180 do
         boss:update(1 / 60, level)
         if boss.state ~= 'roll' then break end
@@ -218,78 +204,6 @@ local function putBoss(boss, col)
     boss.vx, boss.vy, boss.onGround = 0, 0, true
 end
 
-function cases.lago_compuerta()
-    local level, es, boss = lago()
-    fight(boss)
-    putBoss(boss, 89)
-    level:hitTile(83, 8, 'head')
-    local up = level:getDef(83, 11).name
-    rollInto(level, boss, -1)
-    local st = boss.state
-    local after, act = level:getDef(83, 11).name, level:getDef(83, 8).name
-    check('lago_compuerta', up == 'switchblock_on' and st == 'dizzy' and after == 'switchblock_on_x' and act == 'switch_off',
-        ('compuerta subida=%s · la bola choca → %s · después: compuerta %s, Activador %s'):format(up, st, after, act))
-end
-
-function cases.lago_congelador()
-    local level, es, boss = lago()
-    fight(boss)
-    putBoss(boss, 79)
-    boss.state, boss.deadTimer = 'recover', 0
-    step(level, es, 0.1)                               -- (el congelador apunta el estado inicial)
-    level:hitTile(79, 9, 'head')                       -- Activador del congelador izquierdo
-    local frozen = step(level, es, 2.5, function() return boss.state == 'frozen' end)
-    -- la otra mitad: el congelador izquierdo NO llega más allá de la compuerta subida
-    local level2, es2, boss2 = lago()
-    fight(boss2)
-    putBoss(boss2, 87)
-    boss2.state, boss2.deadTimer = 'recover', 0
-    step(level2, es2, 0.1)
-    level2:hitTile(83, 8, 'head')                      -- compuerta subida
-    level2:hitTile(79, 9, 'head')
-    local frozen2 = step(level2, es2, 2.5, function() return boss2.state == 'frozen' end)
-    check('lago_congelador', frozen == true and not frozen2,
-        ('bola en la mitad izquierda: congelada=%s · al otro lado de la compuerta: congelada=%s'):format(
-            tostring(frozen), tostring(frozen2 or false)))
-end
-
-function cases.lago_hundirse()
-    local level, es, boss = lago()
-    fight(boss)
-    boss:findLake(level)
-    putBoss(boss, 81)
-    boss.x = 80 * T                                    -- encima del lago (columnas 80-81)
-    level:crackIce(80, 13, 4, 'pound'); level:crackIce(81, 13, 4, 'pound')
-    local sank = step(level, es, 1.0, function() return boss.sunk and boss.state == 'frozen' end)
-    local t, out = 0, false
-    step(level, es, 14, function()
-        t = t + 1 / 60
-        if not boss.sunk and boss.state ~= 'hop' and boss.onGround then out = true; return true end
-    end)
-    local lake = level:getDef(80, 13).name .. ',' .. level:getDef(81, 13).name
-    check('lago_hundirse', sank == true and out and lake == 'thin_ice,thin_ice' and math.abs(boss.x - 80 * T) > 2 * T,
-        ('cae al agua y se congela=%s · sale en %.1f s=%s, a %.1f casillas · lago: %s'):format(
-            tostring(sank), t, tostring(out), math.abs(boss.x - 80 * T) / T, lake))
-end
-
-function cases.avalancha_fin()
-    local level, es, boss = lago()
-    fight(boss)
-    boss.phase = 3
-    boss:setScale(9)
-    putBoss(boss, 86)
-    boss.avalanche, boss.bounces = true, 99
-    boss:enter('windup')
-    local t, rolling = 0, 0
-    local ended = step(level, es, 20, function()
-        t = t + 1 / 60
-        if boss.state == 'roll' or boss.state == 'slide' then rolling = rolling + 1 / 60 end
-        return boss.state == 'recover' or boss.state == 'idle'
-    end)
-    check('avalancha_fin', ended == true and t < 12,
-        ('la avalancha acaba a los %.1f s (rodando %.1f s, choques %d)'):format(t, rolling, boss.crashes or 0))
-end
-
 function cases.rueda_nieve()
     local level, es, boss = room(24, 10, { { 15, 8, 'packed_snow' }, { 15, 9, 'packed_snow' } },
                                  { { type = 'snowboss', col = 7, row = 9 } })
@@ -300,35 +214,243 @@ function cases.rueda_nieve()
             boss.x / T, tostring(level:getDef(15, 9).name == 'packed_snow')))
 end
 
-function cases.enterrar()
-    -- Activador en medio de la sala: a su izquierda un bloque, abajo-derecha agua y
-    -- arriba a la derecha un jugador de pie (encima de un bloque)
-    local level, es, boss = room(16, 12, { { 8, 6, 'switch_on' }, { 7, 6, 'solid' }, { 9, 7, 'water' },
-                                           { 9, 6, 'solid' } },
-                                 { { type = 'snowboss', col = 3, row = 11 } })
+local IC = nil
+local function icicleAt(boss, x, top, st)
+    IC = IC or boss.IC
+    boss.icicles = { { x = x, top = top, y = top, vy = 0, st = st or IC.ready, t = 0 } }
+    return boss.icicles[1]
+end
+
+function cases.carambano()
+    local level, es, boss = room(24, 10, nil, { { type = 'snowboss', col = 4, row = 9 } })
     fight(boss)
-    local pa = PlayerAdventure:new(7.5 * T, 5 * T - 32)
-    level.players = { pa }
-    for _ = 1, 20 do pa:update(1 / 60, level) end
-    local pc, pr = math.floor(pa.x / T) + 1, math.floor(pa.y / T) + 1
-    boss:bury(level)
-    local got = {}
-    for dr = -1, 1 do
-        local line = ''
-        for dc = -1, 1 do line = line .. (({ packed_snow = 'p', solid = '#', water = '~', switch_on = 'A', empty = '.' })[level:getDef(8 + dc, 6 + dr).name] or '?') end
-        got[#got + 1] = line
+    local pa = playerAt(level, 14, 9)
+    local c = icicleAt(boss, math.floor(pa.x), 2 * T, boss.IC.fall)
+    local hit
+    for _ = 1, 120 do boss:updateIcicles(level, 1 / 60); if c.st ~= boss.IC.fall then hit = true; break end end
+    local hp = pa.hp
+    for _ = 1, math.floor(6.5 * 60) do boss:updateIcicles(level, 1 / 60) end
+    check('carambano', hit and hp == pa.hpMax - 2 and (c.st == boss.IC.grow or c.st == boss.IC.ready),
+        ('vida %d/%d; después de 6.5 s el carámbano vuelve a crecer (estado %d)'):format(hp, pa.hpMax, c.st))
+end
+
+function cases.carambano_jefe()
+    local level, es, boss = room(24, 10, nil, { { type = 'snowboss', col = 10, row = 9 } })
+    fight(boss)
+    boss.phase = 2; boss:setScale(8)
+    local hp0 = boss.hp
+    local c = icicleAt(boss, math.floor(boss.x), 1 * T, boss.IC.fall)
+    for _ = 1, 120 do boss:updateIcicles(level, 1 / 60); if c.st ~= boss.IC.fall then break end end
+    check('carambano_jefe', boss.state == 'dizzy' and boss.hp == hp0 and boss:isVulnerable(),
+        ('al caerle: %s, vida %d→%d, vulnerable=%s'):format(boss.state, hp0, boss.hp, tostring(boss:isVulnerable())))
+end
+
+function cases.carambano_sacude()
+    local level, es, boss = room(30, 10, nil, { { type = 'snowboss', col = 10, row = 9 } })
+    fight(boss)
+    boss.phase = 2; boss:setScale(8)
+    boss.icicles = {
+        { x = boss.x + 1.5 * T, top = T, y = T, vy = 0, st = boss.IC.ready, t = 0 },   -- cerca
+        { x = boss.x + 5 * T, top = T, y = T, vy = 0, st = boss.IC.ready, t = 0 },     -- lejos
+    }
+    boss:landed(level, 1)
+    local s1, s2 = boss.icicles[1].st, boss.icicles[2].st
+    local fell = false
+    for _ = 1, 90 do boss:updateIcicles(level, 1 / 60); if boss.icicles[1].st == boss.IC.fall then fell = true end end
+    check('carambano_sacude', s1 == boss.IC.shake and s2 == boss.IC.ready and fell,
+        ('cerca: %d (3 = tiembla), lejos: %d (2 = quieto), cae después=%s'):format(s1, s2, tostring(fell)))
+end
+
+function cases.rueda_pared()
+    local out, ok = {}, true
+    for ph = 1, 3 do
+        local level, es, boss = room(24, 10, nil, { { type = 'snowboss', col = 12, row = 9 } })
+        fight(boss)
+        boss.phase = ph; boss:setScale(boss.SC[ph])
+        boss.state, boss.deadTimer = 'windup', 0
+        boss.bounces = ({ 0, 1, 2 })[ph]
+        boss.dir = -1
+        local level0 = level
+        for _ = 1, 60 * 10 do
+            boss:update(1 / 60, level0)
+            if boss.state ~= 'windup' and boss.state ~= 'roll' and boss.state ~= 'slide' then break end
+        end
+        out[#out + 1] = ('fase %d: %s tras %d choques'):format(ph, boss.state, boss.crashes or 0)
+        if boss.state ~= 'dizzy' or (boss.crashes or 0) ~= ph then ok = false end
     end
-    -- esperado: arriba fila 5: (7,5) p, (8,5) jugador → vacío, (9,5) p; fila 6: # A #; fila 7: p p ~
-    local want = { 'p.p', '#A#', 'pp~' }
-    local ok = got[1] == want[1] and got[2] == want[2] and got[3] == want[3]
-    check('enterrar', ok, ('alrededor: %s | %s | %s (jugador en %d,%d)'):format(got[1], got[2], got[3], pc, pr))
+    check('rueda_pared', ok, table.concat(out, ' · '))
+end
+
+function cases.rueda_escalon()
+    local level, es, boss = room(24, 10, { { 4, 9, 'snow' } }, { { type = 'snowboss', col = 14, row = 9 } })
+    fight(boss)
+    rollInto(level, boss, -1)
+    check('rueda_escalon', boss.state == 'dizzy' and boss.x > 4 * T,
+        ('contra el escalón (columna 4): %s, x = %.1f casillas'):format(boss.state, boss.x / T))
+end
+
+function cases.rueda_fin()
+    local level, es, boss = lago()
+    fight(boss)
+    boss.phase = 3
+    boss:setScale(6)
+    putBoss(boss, 86)
+    boss.bounces = 2
+    boss:enter('windup')
+    local t = 0
+    local ended = step(level, es, 20, function()
+        t = t + 1 / 60
+        return boss.state ~= 'windup' and boss.state ~= 'roll' and boss.state ~= 'slide'
+    end)
+    check('rueda_fin', ended == true and t < 8,
+        ('acaba a los %.1f s en %s (choques %d)'):format(t, boss.state, boss.crashes or 0))
+end
+
+-- Arena real: zona 75-98, bolsas 79-81 / 92-94, plataformas medias (fila 8) 82-85 / 88-91,
+-- de arriba (fila 6) 85-88, laterales (fila 10) 75-78 / 95-98; Activadores 83 y 90 (fila 13),
+-- Congeladores (80,3) y (93,3)
+local function leapUntilLanded(level, es, boss)
+    local t = 0
+    step(level, es, 6, function()
+        t = t + 1 / 60
+        return boss.state == 'leap_land' or boss.state == 'land'
+    end)
+    return t
+end
+
+function cases.salto_plataforma()
+    local level, es, boss = lago()
+    fight(boss)
+    boss.phase = 2; boss:setScale(8)
+    putBoss(boss, 95)
+    local pa = PlayerAdventure:new(83 * T, 7 * T - 60)           -- en la plataforma media izquierda
+    level.players = { pa }
+    for _ = 1, 30 do pa:update(1 / 60, level) end
+    local ok0 = boss:startLeap(level, pa)
+    local t = leapUntilLanded(level, es, boss)
+    local onPlat = math.abs(boss:feetY() - 7 * T) < 2 and boss.x > 81 * T and boss.x < 85 * T + 1
+    check('salto_plataforma', ok0 and onPlat and boss.state == 'leap_land',
+        ('marca (%.1f, fila %.2f) · cae en x=%.1f casillas, pies a la fila %.2f en %.1f s (%s)'):format(
+            boss.landX / T, boss.landY / T, boss.x / T, boss:feetY() / T, t, boss.state))
+end
+
+function cases.salto_debajo()
+    local level, es, boss = lago()
+    fight(boss)
+    boss.phase = 2; boss:setScale(8)
+    putBoss(boss, 87)                                             -- debajo de la plataforma de arriba
+    local pa = PlayerAdventure:new(86.5 * T, 5 * T - 60)          -- encima de ella
+    level.players = { pa }
+    for _ = 1, 30 do pa:update(1 / 60, level) end
+    boss:startLeap(level, pa)
+    leapUntilLanded(level, es, boss)
+    check('salto_debajo', math.abs(boss:feetY() - 5 * T) < 2,
+        ('desde debajo: pies a la fila %.2f (plataforma de arriba: 5)'):format(boss:feetY() / T))
+end
+
+function cases.empapada()
+    local level, es, boss = lago()
+    fight(boss)
+    boss:findLake(level)
+    putBoss(boss, 80)                                             -- encima de la bolsa izquierda
+    for c = 79, 81 do level:crackIce(c, 13, 4, 'pound') end
+    local soaked = step(level, es, 1.5, function() return boss.state == 'soaked' end)
+    local vuln = boss:isVulnerable()
+    local t, out = 0, false
+    step(level, es, 10, function()
+        t = t + 1 / 60
+        if not boss:inWater(level) and boss.onGround and (boss.state == 'leap_land' or boss.state == 'land' or boss.state == 'idle') then
+            out = true; return true
+        end
+    end)
+    step(level, es, 4.5)
+    local lake = level:getDef(79, 13).name .. ',' .. level:getDef(80, 13).name .. ',' .. level:getDef(81, 13).name
+    local healed = level:getDef(79, 13).thinIce and level:getDef(80, 13).thinIce and level:getDef(81, 13).thinIce
+    check('empapada', soaked == true and vuln and out and healed,
+        ('cae al agua: empapada=%s vulnerable=%s · sale en %.1f s=%s (x=%.1f) · lago: %s'):format(
+            tostring(soaked), tostring(vuln), t, tostring(out), boss.x / T, lake))
+end
+
+local function cryoAt(es, col)
+    for _, e in ipairs(es) do if e.def.name == 'cryo' and e.col == col then return e end end
+end
+
+function cases.fase3_aparece()
+    local level, es, boss = lago()
+    fight(boss)
+    local z = boss.zone
+    local before = level:getDef(83, 13).name
+    local cz = cryoAt(es, 80)
+    step(level, es, 0.2)
+    local solid0 = cz:isSolidBody()
+    z.phase = 2; PhaseBlocks.update(level)
+    local mid = level:getDef(83, 13).name
+    z.phase = 3; PhaseBlocks.update(level)
+    local after, after2 = level:getDef(83, 13).name, level:getDef(90, 13).name
+    step(level, es, 1.3)
+    local solid1 = cz:isSolidBody()
+    check('fase3_aparece', before == 'ice' and mid == 'ice' and after == 'switch_off' and after2 == 'switch_off'
+                           and not solid0 and solid1,
+        ('Activador: fase 1 %s, fase 2 %s, fase 3 %s/%s · Congelador sólido: antes %s, tras bajar %s'):format(
+            before, mid, after, after2, tostring(solid0), tostring(solid1)))
+end
+
+function cases.congelada()
+    local level, es, boss = lago()
+    fight(boss)
+    boss:findLake(level)
+    boss.phase = 3; boss:setScale(6)
+    boss.zone.phase = 3; PhaseBlocks.update(level)
+    step(level, es, 1.3)                                          -- (bajan los Congeladores)
+    putBoss(boss, 80)
+    for c = 79, 81 do level:crackIce(c, 13, 4, 'pound') end
+    local soaked = step(level, es, 1.5, function() return boss.state == 'soaked' end)
+    level:hitTile(83, 13, 'pound')                                -- su Activador
+    local frozen = step(level, es, 2.5, function() return boss.state == 'frozen' end)
+    local hp0 = boss.hp
+    boss:pound(nil)
+    check('congelada', soaked == true and frozen == true and boss.hp == hp0 - 3,
+        ('empapada=%s → Activador → congelada=%s · ground pound: vida %d→%d'):format(
+            tostring(soaked), tostring(frozen or false), hp0, boss.hp))
+end
+
+function cases.seca_aturdida()
+    local level, es, boss = room(20, 10, nil, { { type = 'snowboss', col = 8, row = 9 } })
+    fight(boss)
+    local ok1 = boss:freeze(3)
+    local st, dz, fr = boss.state, boss.dizzyFor, boss.frostT
+    for _ = 1, 100 do boss:update(1 / 60, level) end
+    local st2 = boss.state
+    local again = boss:canFreeze()
+    check('seca_aturdida', ok1 and st == 'dizzy' and dz < 2 and fr > 5 and st2 ~= 'dizzy' and not again,
+        ('seca + chorro: %s %.1f s, escarchada %.1f s · a los 1.7 s: %s · otro chorro le afecta=%s'):format(
+            st, dz or 0, fr or 0, st2, tostring(again)))
+end
+
+function cases.encoge()
+    local level, es, boss = room(30, 12, nil, { { type = 'snowboss', col = 15, row = 11 } })
+    fight(boss)
+    local sc = { boss.sc }
+    local grew
+    boss.hp, boss.hpMax = 9, 14
+    boss:phaseNow()
+    for _ = 1, 150 do boss:update(1 / 60, level) end
+    sc[#sc + 1] = boss.sc
+    for _, c in ipairs(boss.icicles or {}) do if c.st == boss.IC.grow or c.st == boss.IC.ready then grew = true end end
+    boss.hp = 4
+    boss:phaseNow()
+    for _ = 1, 150 do boss:update(1 / 60, level) end
+    sc[#sc + 1] = boss.sc
+    check('encoge', sc[1] == 10 and sc[2] == 8 and sc[3] == 6 and boss.phase == 3 and grew == true,
+        ('escalas %d → %d → %d, fase %d, carámbanos crecen=%s'):format(sc[1], sc[2], sc[3], boss.phase, tostring(grew)))
 end
 
 function love.load(arg)
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'bola', 'bola_bomba', 'carambano', 'ola', 'onda_golpe', 'rueda_activa', 'rueda_rompe',
-                         'lago_compuerta', 'lago_congelador', 'lago_hundirse', 'avalancha_fin', 'rueda_nieve',
-                         'enterrar' }) do
+    for _, n in ipairs({ 'bola', 'carambano', 'carambano_jefe', 'carambano_sacude', 'ola', 'onda_golpe',
+                         'rueda_pared', 'rueda_escalon', 'rueda_activa', 'rueda_rompe', 'rueda_nieve', 'rueda_fin',
+                         'salto_plataforma', 'salto_debajo', 'empapada', 'fase3_aparece', 'congelada',
+                         'seca_aturdida', 'encoge' }) do
         if not only or only == n then
             local ok, err = pcall(cases[n])
             if not ok then check(n, false, 'error: ' .. tostring(err)) end

@@ -17,6 +17,10 @@
 --
 -- Online: lo simula el servidor; el cliente dibuja todo a partir de state +
 -- deadTimer (+ el alcance `reach` en netPack). En reposo no se envía.
+--
+-- FASE DEL JEFE (prop `phase`, 0 = siempre): no está (ni choca, ni dispara) hasta que el
+-- jefe de su zona llega a esa fase (z.phase, que viaja en el snapshot: BossZones); entonces
+-- BAJA del techo colgado de sus cadenas (DESCEND_T s, sonido cryoDrop) y ya funciona.
 
 local Entity      = require 'src/world/entities/Entity'
 local SpriteStrip = require 'src/fx/SpriteStrip'
@@ -31,6 +35,8 @@ local STREAM_SPEED = 1800              -- px/s a los que avanza (y se va) el cho
 local STREAM_HALF  = 16                -- media anchura de la caja que congela (px)
 local STREAM_FPS   = 16
 local DIRS = { right = { 1, 0 }, left = { -1, 0 }, up = { 0, -1 }, down = { 0, 1 } }
+local DESCEND_T    = 1.1               -- s bajando del techo al llegar su fase
+local PhaseBlocks, Clip
 
 Cryo.wantsLevel = true        -- (solo dibujo: mira los bloques de alrededor para apoyarse; BossZones.link / editor)
 
@@ -68,6 +74,29 @@ function Cryo:init()
     self.waitFor = p.firstDelay or 2
     self.reach   = (p.range or 8) * TILE_PX
     self.lastSig = nil
+end
+
+-- ── Fase del jefe ──────────────────────────────────────────────────────────────
+function Cryo:phaseZone()
+    if self._pz == nil then
+        local lv = self.levelRef
+        if not lv then return nil end
+        PhaseBlocks = PhaseBlocks or require 'src/world/PhaseBlocks'
+        local c, r = math.floor(self.x / TILE_PX) + 1, math.floor(self.y / TILE_PX) + 1
+        self._pz = PhaseBlocks.zoneOf(lv, { zone = self.props.zone or 0, c0 = c, r0 = r }) or false
+    end
+    return self._pz or nil
+end
+function Cryo:phaseReached()
+    local ph = self.props.phase or 0
+    if ph <= 0 then return true end
+    local z = self:phaseZone()
+    return z ~= nil and (z.phase or 1) >= ph
+end
+-- ¿Ya está colocado y funcionando? (un jugador / servidor: tras bajar; cliente: con la fase)
+function Cryo:isReady()
+    if not self:phaseReached() then return false end
+    return self.shownT == nil or self.shownT >= DESCEND_T
 end
 
 function Cryo:dirVec() local d = DIRS[self.dir]; return d[1], d[2] end
@@ -123,6 +152,23 @@ end
 
 function Cryo:updateCustom(dt, level)
     local p = self.props
+    -- Con fase: escondido hasta que llega (solo sigue el Activador), luego baja
+    if (p.phase or 0) > 0 then
+        if not self:phaseReached() then
+            self.shownT = nil
+            if (p.mode or 'interval') == 'switch' then self.lastSig = level:signal(p.id or 1) end
+            return true
+        end
+        if not self.shownT then
+            self.shownT = 0
+            Sound.play('cryoDrop')
+        end
+        if self.shownT < DESCEND_T then
+            self.shownT = self.shownT + dt
+            if (p.mode or 'interval') == 'switch' then self.lastSig = level:signal(p.id or 1) end
+            return true
+        end
+    end
     self.deadTimer = self.deadTimer + dt
     local st = self.state
     if (p.mode or 'interval') == 'switch' then
@@ -168,7 +214,7 @@ function Cryo:canBeStomped() return false end
 
 -- Sólido como un bloque (lados, encima y debajo)
 Cryo.solidFull = true
-function Cryo:isSolidBody() return self.alive end
+function Cryo:isSolidBody() return self.alive and self:isReady() end
 
 -- El chorro congela a los jugadores (Interactions: effect='freeze', time)
 function Cryo:getHazardBoxes()
@@ -294,9 +340,43 @@ function Cryo:drawStream(camX, camY, tail, head, now)
     end
 end
 
+-- Bajando del techo (solo dibujo, con su reloj): 0 = arriba (escondido) .. 1 = en su sitio
+function Cryo:descendK(now)
+    if EDITOR_VIEW or (self.props.phase or 0) <= 0 then return 1 end
+    if not self:phaseReached() then self.appearAt = nil; return 0 end
+    self.appearAt = self.appearAt or now
+    return math.min(1, (now - self.appearAt) / DESCEND_T)
+end
+
+-- Altura del techo sobre él (px de mundo; solo dibujo)
+function Cryo:ceilingY()
+    local level, T = self.levelRef, TILE_PX
+    if not level then return self.y - 3 * T end
+    local c = math.floor(self.x / T) + 1
+    for rr = math.floor(self.y / T), 1, -1 do
+        if level:getDef(c, rr).collision == 'solid' then return rr * T end
+    end
+    return 0
+end
+
 function Cryo:render(camX, camY)
     local p   = self.props
     local now = love.timer.getTime()
+    local dk  = self:descendK(now)
+    if dk <= 0 then return end
+    local dropY = 0
+    if dk < 1 then
+        -- cae frenando, con un rebote corto al final (la cadena se tensa)
+        local e = 1 - (1 - dk) ^ 3
+        local dist = self.y + TILE_PX / 2 - self:ceilingY()
+        dropY = -math.floor((1 - e) * dist + 0.5)
+        if dk > 0.85 then dropY = dropY - math.floor(math.sin((dk - 0.85) / 0.15 * math.pi) * 6) end
+        self.dropFx = nil
+    elseif not self.dropFx and self.appearAt then
+        self.dropFx = true
+        emit('cryo_puff', self.x, self.y - TILE_PX / 2, { nx = 0, ny = -1 })
+        emit('snow_puff', self.x, self.y - TILE_PX / 2)
+    end
     local st  = self.state
     local t   = self.deadTimer or 0
     local frame, shake = 1, 0
@@ -324,9 +404,15 @@ function Cryo:render(camX, camY)
     end
     if st ~= 'fire' then self.blasted = nil end
     local side = self:support()
-    if not side then self:drawHanger(camX, camY, math.floor(self.x - camX), math.floor(self.y - camY)) end
+    if dk < 1 then
+        -- bajando: cuelga, y lo que aún está dentro del techo no se ve
+        side = nil
+        Clip = Clip or require 'src/ui/Clip'
+        Clip.push(math.floor(self.x - camX) - 2 * TILE_PX, math.floor(self:ceilingY() - camY), 4 * TILE_PX, 6 * TILE_PX)
+    end
+    if not side then self:drawHanger(camX, camY, math.floor(self.x - camX), math.floor(self.y - camY) + dropY) end
     local sx = math.floor(self.x - camX) + ((shake > 0) and math.floor((math.random() * 2 - 1) * shake + 0.5) or 0)
-    local sy = math.floor(self.y - camY) + ((shake > 0) and math.floor((math.random() * 2 - 1) * shake + 0.5) or 0)
+    local sy = math.floor(self.y - camY) + dropY + ((shake > 0) and math.floor((math.random() * 2 - 1) * shake + 0.5) or 0)
     love.graphics.setColor(1, 1, 1, 1)
     self:drawParts(frame, sx, sy, side)
     if st == 'windup' then
@@ -338,6 +424,7 @@ function Cryo:render(camX, camY)
         self:drawParts(frame, sx, sy, side)
         love.graphics.setBlendMode('alpha')
     end
+    if dk < 1 then Clip.pop() end
     local tail, head = self:streamSpan()
     if tail then self:drawStream(camX, camY, tail, head, now) end
     love.graphics.setColor(1, 1, 1, 1)
@@ -397,6 +484,11 @@ return {
           min=0.5, max=15, step=0.5, help='Lo que dura el bloque de hielo (el jugador sale antes pulsando)' },
         { key='affectPlayers', kind='bool', label='Congela jugadores', group='Chorro', default=true },
         { key='affectEnemies', kind='bool', label='Congela enemigos', group='Chorro', default=true },
+        { key='phase', kind='int', label='Aparece en la fase del jefe', group='Aparición', default=0,
+          min=0, max=5, step=1, help='0 = siempre. Si no, no está hasta que el jefe de su zona llega a esa fase: '
+                                   .. 'entonces baja del techo colgado de cadenas' },
+        { key='zone', kind='int', label='Zona de jefe', group='Aparición', default=0, min=0, max=20, step=1,
+          help='Id de la zona cuya fase mira (0 = la que lo contiene o la más cercana)' },
     },
     editor = { sprite = 'assets/images/cryo/cryo-Sheet.png', frameW = 16 },
 }

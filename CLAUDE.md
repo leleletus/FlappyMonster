@@ -267,7 +267,7 @@ src/world/
                        crabbytramp (Crabby trampolín, subclass of crabby), cryo (Congelador),
                        flood (editor-only placeholder for a Floods area),
                        bomb / bombobject (bombs, see Bombs), bossglass, bosswall, cryo (Freezer),
-                       snowboss (Gran Bola de Nieve)
+                       snowboss (Gran Bola de Nieve), phaseblock (Bloques de fase)
   AutoScroll.lua       auto-scrolling camera levels (see below)
   Floods.lua           rising/falling water areas (see below)
   BossZones.lua        boss arenas (see below)
@@ -456,7 +456,7 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   'stomp' with 4th return dirX = cnx → `pa:bounce(vy, dirX, soft=true)` (vx 300 +
   ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill; v17: crawler turn in snapshots; v18: MegaCrabby;
   v19: boss walls, Mega minions/pounce; v20: post-hit protection; v21: unified invulnerability;
-  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks; v30: boss broken glass; v31: special enemy deaths; v32: bombs; v33: snow/ice/thin ice; v34: sand; v35: deep stone; v36: freezer; v37: Snowball Boss).
+  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks; v30: boss broken glass; v31: special enemy deaths; v32: bombs; v33: snow/ice/thin ice; v34: sand; v35: deep stone; v36: freezer; v37: Snowball Boss; v38: Snowball Boss rebuilt, zone phases, phase blocks).
 - **Crawler** (`src/world/entities/Crawler.lua`): surface-following movement
   (floor ↔ walls ↔ ceiling, concave and convex corners) for Crabbies with prop
   `wallWalk` (`Crabby.WALL_PROP`, off by default so old levels don't change).
@@ -676,7 +676,7 @@ list no mode until the user places a Point Area in them).
   fx `ice_crack` / `ice_break`, sounds iceCrack / iceBreak (`tools/sounds/ice.py`); SP gets the
   same through the `level.tileFx(kind, c, r)` hook.
 - **Freezer** (`types/cryo.lua`, entity "Congelador", Trampas; liquid-nitrogen launcher): solid 1-cell
-  block (`solidFull`), prop `dir` (right/left/up/down; sprite drawn facing right, rotated). States
+  block (`solidFull`; prop `phase` > 0 = only from that boss phase on, see Phase system), prop `dir` (right/left/up/down; sprite drawn facing right, rotated). States
   idle → windup (`windup` s: shakes, gauge glows, frost puffs, cryoWindup) → fire (stream grows/leaves at
   `STREAM_SPEED` 1800 px/s for `burst` s, cut at the first solid tile = `reach` in netPack; cryoBlast) →
   idle. `mode` 'interval' (`interval`, `firstDelay`) or 'switch' (`activatable`: fires when its linked ON/OFF
@@ -1014,59 +1014,54 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   Harness `boss_intro` case `gp_subditos`. `Boss.hurtSound` per boss.
   Minions behave exactly like normal wall-walking ceiling Crabbies (harness
   `crawler_drop SUMMON=1`). Test arena: `tools/levelgen/arenas/jefe_cangrejo.json`.
-- **Snowball Boss** (`types/snowboss.lua`, "Gran Bola de Nieve", `boss.snowboss`; sprites
-  `assets/images/bosses/snowboss/` from `tools/ui/make_snowboss_sprites.py` = the user's
-  `snowball/ball.png` restyled (original outside the repo) + new frames (hurt, dizzy, 8-frame roll with
-  the face rotated per pixel, cracks, sweat, ball, bomb ball, flee, icicle, shock wave, screen splat);
-  sounds `bosses/snowboss/` from `tools/sounds/snowboss.py`; music `WinterFallympics` = winter.ogg).
-  Scale 8 (16x16 art), ×10 from phase 2 (`setScale`, box 13 px of art; scale in netPack). renderFront.
-  NEVER hurt directly: only 'dizzy' (rolling into a SOLID ON/OFF Block = a gate at ≥ `CRASH_SPD`, or a
-  bomb blast via `onBlastHit` hook in Explosions.blast: 1 + dizzy; stomp 1 / GP 2) or 'frozen' (a
-  Freezer stream: `canFreeze/freeze` overrides, slides inside the ice, stomp 1 / GP 3, then thaw);
-  otherwise immune bounce. Interactions: the generic frozen-enemy rule skips entities with `interact`.
-  Attack cycles per phase (`CYCLE`): hop (low: never lands on the 3-tile-high platforms; landing on a
-  player = hurt + squash), shoot (arc snowballs = own projectiles, hazard 'hurt'; phase 2+ some are
-  bomb balls that, on landing, become a lit RESERVE `bombobject` (def.summons, `makeReserve` on
-  bombobject); a kicked bomb touching the boss detonates (`bombContact`)), windup → roll (accelerates;
-  walls bounce in phase 2+, ice slide after `ROLL_MAX_T`), slam (high jump, hold, fall: two snow shock
-  waves along the floor + falling icicles with a floor shadow warning; hazards 'hurt'), avalanche
-  (phase 3, `avalT` 6 s of bouncing). Phases at `phase2`/`phase3` HP fractions → 'phase_up' (roar,
-  frost breath, inflates, refreezes broken thin ice of its zone if any; phase 3 buries every activator
-  of the zone with `packed_snow` 37 = breakable, solid for everyone). Intro (generic
-  `introLength` 4.4): a small ball enters top-left of the zone, bounces on the real surfaces
-  (`planIntro`), grows, lands (slam fx), laughs, spits at the camera → screen splat (render-only, from
-  the intro clock). Death: dying_crack → dying_burst → dying_flee (releasesZone) → dead. Roll rumble =
-  `Sound.loop('snowRoll', on, x, y)` from render. Arena: see ARENA below. Hits on players are applied by the boss itself (bosses use `interact`, so
-  hazard boxes are NOT consulted): `Snow:hitWithShots` (SP/server) + `strike(pa, hit, dir)` = { HP, vx, vy,
-  ctrlLock, stun }: ball 1 HP + strong push (bomb ball also becomes a lit bomb), icicle 2 HP, snow wave 1 HP
-  + push along the wave, `slamWave` on the slam landing = 1 HP + VERY strong push + stun within `SLAM_R`
-  tiles at floor level; invulnerable/frozen players get nothing. Rolling into an ON/OFF Activator toggles it
-  (`physics` records `hitToggles`, `crash` → `toggleHit` → `level:hitTile`); it never breaks breakables /
-  packed snow / thin ice. `phaseNow()`: a hit that crosses a phase threshold goes to 'phase_up' at once
-  (a Freezer re-freezing it every pause no longer skips phases). Phase-3 burial fills the 8 cells around
-  each Activator only where truly empty (`freeCell`: no tile, water, spikes, subtile, solidFull body or
-  player). Cracks follow every frame: `cracks_body/roll-Sheet.png` from `tools/ui/make_snowboss_cracks.py`
-  (reads the CURRENT body/roll sheets — rerun after editing them or cracks-Sheet). Intro spit (render from the
-  intro clock): `SPIT_WIND` inhale → `SPIT_AT` mouth open + puff → ball flies to the camera growing →
-  `SPLAT_AT` flash + splat + shake. Harnesses `snowboss_rules`, `snowboss_look`.
-  ROLL END (deterministic): each roll attack gets a time budget `rollLeft` (ROLL_MAX_T, avalanche AVAL_T);
-  bounces only while pushing with budget left; when it runs out → 'slide' with bounces cleared; a crash while
-  sliding, or after `MAX_CRASHES`, always stops (the old bug: bounces stayed 99 after the avalanche → endless).
-  Packed snow is solid for it (it bounces off, never breaks it). ARENA "Pista de hielo" (jefe_nieve.json from
-  `tools/levelgen/arenas/make_jefe_nieve.py`; `--lago` also writes it into lago_helado's columns 72-103, the
-  rest of the level untouched): central GATE (2 ON blocks, `blockLinks` to the floating Activador above it):
-  rolling into the raised gate = dizzy AND `smashGate` toggles its activator (the gate opens: one gate stops one
-  ball). Each platform's Activador fires the wall FREEZER of its side (beam along the track at mid height:
-  freezes the ball, not a standing player; a raised gate cuts it). LAKE = thin ice over water (2 pockets): its
-  hop landings crack 2 stages (`LAND_CRACK`), the slam 4; if it falls into the water (`checkSink`) it freezes
-  (`SINK_T`), then `escapeHop` out and refreezes the lake. After any thaw it is FROST-PROOF `FROST_PROOF` 7 s
-  (blue tint + mist; netPackExtra last field `frostT`): no freezer/lake freeze → no freeze-lock. Phase 2 scale
-  9 (fits under the platforms/Activadores 3 tiles up). Slam waves only on the arena floor; shadows (hop, slam,
-  icicles) on the real surface below (`groundBelow`, `wantsLevel`). Any Activador hit shows a spark trail to
-  everything it controls (`Particles.signal`, from 'switch_hit'; only switch-listening objects). Level `lago_helado` (`levels_boss.py`, graft copies `links`; `Level.extra`
-  in `lib.py` = extra JSON keys). Harnesses: `boss_sim LEVEL=tools/levelgen/arenas/jefe_nieve.json`
-  (attacks, dizzy, frozen GP = 3, kicked bomb, phases, burial, death order), `boss_intro`, `online_boss`,
-  `boss_frames`.
+- **Snowball Boss** (`types/snowboss.lua`, "Gran Bola de Nieve", `boss.snowboss`; REBUILT from zero in 3.22.0
+  — the old gate/bombs/burial/avalanche version was "overcomplicated"; sprites `assets/images/bosses/snowboss/`
+  from `tools/ui/make_snowboss_sprites.py` (the user's `snowball/ball.png` restyled, original outside the repo);
+  sounds `bosses/snowboss/` from `tools/sounds/snowboss.py`; music `winter_nes`). renderFront. NEVER hurt
+  directly: only VULNERABLE states take stomp 1 / GP 2 (one hit per opening, then 'recover'):
+  'dizzy' (rolling into a wall/step at ≥ `CRASH_SPD` after ≥ `CRASH_RUN` tiles since the last crash, on its
+  LAST crash: bounces per phase `BOUNCES` {0,1,2}; or a falling CEILING ICICLE hits it = `bonk`), 'soaked'
+  (falls into water through broken thin ice: `soakTime` s stuck + dripping, then `nextAttack` leaps out to the
+  nearest DRY spot; only on ENTERING water: `wasWet`) and 'frozen' (soaked + a Freezer stream: `FROZEN_T`
+  4.5 s, GP 3, then thaw; a Freezer on a DRY boss = short daze `DAZE_T`). After any Freezer it is FROST-PROOF
+  `frostProof` s (blue tint; `frostT` in netPack). Water itself never freezes it (user's rule).
+  THREE PHASES THAT SHRINK IT (`SC` = {10, 8, 6}; 'phase_up' roars, sheds snow `snow_shed` and shrinks;
+  `bossPhase()` → zone phase, see Phase system): cycles `CYCLE` — 1: shoot, roll, hop (low: never reaches the
+  platforms), roll · 2: LEAP (ballistic jump to the `spots` surface nearest the target — platforms included,
+  it passes UP through one-way platforms with its own `Snow:move`; marker `landX/landY` during 'leap_wind'),
+  shoot, leap, roll · 3: SLAM (rises `SLAM_H`, reaches the target's vertical at the apex, falls; cracks thin
+  ice 4 = breaks a pocket → soaked; snow waves only on the arena floor), roll (2 bounces), leap, slam, shoot(5),
+  leap. At most 2 attacks in a row, then 'rest'. Every landing (`landed`) cracks thin ice, crushes players
+  under it and SHAKES the ceiling icicles within `ICE_R` 2.5 tiles: prop `icicles` (points; they hang from the
+  TOP of their cell; appear growing in phase 2; ready → shake 0.6 s → fall → `icicleRegrow` s → grow). Icicles
+  over a platform land on it (platforms are shelter). LAKE: thin ice cells of the zone regrow `lakeRegrow` s
+  after breaking (`regrowLake`, never into an occupied cell); all at death. Hits on players by the boss itself
+  (`hitWithShots`, `strike(pa, hit, dir)` = {HP, vx, vy, ctrlLock, stun}): ball 1 HP + strong push, icicle
+  2 HP, snow wave 1 HP + push, `slamWave` 1 HP + VERY strong push + stun within `SLAM_R`; rolling/landing
+  contact 1 HP + knockback/squash. Rolling into an ON/OFF Activator toggles it. Roll end is deterministic
+  (time budget `ROLL_MAX_T` per phase, then 'slide'; `MAX_CRASHES`). Intro (generic `introLength` 4.4: a small
+  ball bounces in, grows, lands, laughs, spits at the camera → screen splat). Death: dying_crack → dying_burst
+  → dying_flee (releasesZone). netPackExtra: phase, scale, shock wave, dir, frozenFor, frostT, dizzyFor,
+  landX/Y, balls {id,x,y}, icicles {state,y,t} by INDEX (same list on both sides: `icicleList`). Protocol v38.
+  ARENA "Pista de hielo" (jefe_nieve.json from `tools/levelgen/arenas/make_jefe_nieve.py`; `--lago` writes it
+  into lago_helado from column 72, widening the level to 113): zone 24×10, ice floor, two thin-ice POCKETS over
+  water out in the open, steps at both walls, one-way platforms (sides row 10, middle row 8, top row 6), five
+  icicles over the platforms, and in PHASE 3 ONLY: two floor Activadores (phase blocks hidden as ice) and two
+  Freezers (`phase` 3) that drop from the ceiling above the pockets, each pocket's Activador fires its
+  Freezer (ids 11/12). Harnesses: `snowboss_rules` (every rule, real arena cases), `boss_sim LEVEL=
+  tools/levelgen/arenas/jefe_nieve.json` (plays it as intended: bait under icicles, slam onto a pocket,
+  freeze it soaked), `online_boss LEVEL=tools/tests/online_boss/nieve_fases.json` (3 HP: the client sees
+  scales 10/8/6, zone phase 3, icicles, Activadores and Freezers only in phase 3), `snowboss_look`
+  (`snow_arena.png` per phase), `boss_intro`.
+- **Phase system** (generic, any boss): `Boss:bossPhase()` (default 1) → the controller keeps
+  `z.phase` = the highest of its bosses (4th field of the `bz` snapshot) and calls `PhaseBlocks.update`.
+  **Phase blocks** (`src/world/PhaseBlocks.lua`, entity `phaseblock` "Bloques de fase", Mecanismos: rect
+  `corner`, props `phase`, `zone`, `hiddenAs` = empty/ice/snow/stone/...): at load (SP, server AND client, not
+  in the editor: `lvl._editor` from `EditorModel:buildLevel`) the cells are swapped for `hiddenAs`; when the zone
+  reaches the phase, SP/server restore them ('set' tile events, hop + 'spawn' fx; an Activador also shows its
+  spark trail; occupied cells wait). Any entity can do the same with a `phase` prop: the **Freezer** (`phase`,
+  `zone`) is hidden, not solid and doesn't fire until then, then drops from the ceiling on its chains
+  (`DESCEND_T` 1.1 s, sound `cryoDrop`, render clipped below the ceiling). Editor: everything shows as placed.
 - **Boss walls** (`types/bosswall.lua`, entity "Bloque de jefe", Mecanismos): rect of
   normal-looking blocks (cell = top-left, `corner` = bottom-right, `zone` id, 0 =
   nearest), hidden+passable → appearing (when its zone is in 'fight'; waits until no

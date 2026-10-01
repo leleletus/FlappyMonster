@@ -566,6 +566,24 @@ function Particles.emit(kind, x, y, opts)
                   life = rnd(1.2, 2.2), size = math.random(2, 4) * 3, chunk = true, phys = true, fadeLast = 0.4,
                   spin = rnd(-10, 10), col = ({ {0.97, 0.98, 1}, {0.84, 0.89, 0.98}, {0.7, 0.78, 0.94} })[math.random(3)] })
         end
+    elseif kind == 'snow_drip' then
+        -- Bola de Nieve empapada: gotas de agua que caen de ella
+        add({ x = x + rnd(-4, 4), y = y, vx = rnd(-20, 20), vy = rnd(20, 80), g = 1200,
+              life = rnd(0.35, 0.6), size = math.random(1, 2) * 2,
+              col = ({ {0.55, 0.78, 1}, {0.75, 0.9, 1} })[math.random(2)] })
+    elseif kind == 'snow_shed' then
+        -- Bola de Nieve encogiendo (cambio de fase): se le caen trozos de nieve
+        for i = 1, 16 do
+            local a = rnd(0, math.pi * 2)
+            add({ x = x + math.cos(a) * rnd(30, 70), y = y + math.sin(a) * rnd(30, 70), vx = math.cos(a) * rnd(80, 300),
+                  vy = -rnd(120, 420), g = 1400, life = rnd(0.7, 1.3), size = math.random(2, 4) * 3, chunk = true,
+                  phys = true, fadeLast = 0.4, spin = rnd(-10, 10),
+                  col = ({ {0.97, 0.98, 1}, {0.84, 0.89, 0.98}, {0.72, 0.8, 0.95} })[math.random(3)] })
+        end
+        for i = 1, 10 do
+            add({ x = x + rnd(-50, 50), y = y + rnd(-40, 40), vx = rnd(-80, 80), vy = -rnd(20, 120), g = 200, drag = 2,
+                  life = rnd(0.4, 0.8), size = math.random(2, 4) * 2, dust = true, col = {1, 1, 1} })
+        end
     elseif kind == 'frost_breath' then
         -- Aliento helado (cambio de fase): nube fría alrededor
         for i = 1, 24 do

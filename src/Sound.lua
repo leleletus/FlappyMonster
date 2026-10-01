@@ -27,7 +27,7 @@ local GAIN = {
     megaWindup   = 0.78, megaShrink = 0.8,  megaFlee   = 0.9,  megaRoar = 0.67, megaFall = 0.8,
     -- Espejo (tools/sounds/mirror.py)
     bombIgnite = 0.72, bombFizz = 0.48, bombBlast = 0.87, iceBreak = 0.85,
-    cryoWindup = 0.58, cryoBlast = 0.6, cryoFreeze = 0.51, cryoFree = 0.72,
+    cryoWindup = 0.58, cryoBlast = 0.6, cryoFreeze = 0.51, cryoFree = 0.72, cryoDrop = 0.6,
     -- Gran Bola de Nieve (tools/sounds/snowboss.py)
     snowLaugh = 0.53, snowRoar = 0.55, snowSpit = 0.62, snowSplat = 0.51, snowRoll = 0.63,
     snowLand = 0.49, snowSlam = 0.59, snowCrash = 0.60, snowDizzy = 0.56, snowCrack = 0.92,
@@ -105,6 +105,7 @@ function Sound.load()
     load('cryoBlast',   'assets/sounds/traps/cryo_blast.wav',          'static')   -- congelador: chorro
     load('cryoFreeze',  'assets/sounds/traps/cryo_freeze.wav',         'static')   -- algo queda congelado
     load('cryoFree',    'assets/sounds/traps/cryo_free.wav',           'static')   -- se rompe el bloque de hielo
+    load('cryoDrop',    'assets/sounds/traps/cryo_drop.wav',           'static')   -- congelador: baja del techo (fase del jefe)
     load('slamStart',   'assets/sounds/bosses/miniboss1/slam_start.wav',       'static')   -- la Nave Malvada se lanza en picado
     load('spikesOut',   'assets/sounds/bosses/miniboss1/spikes_out.wav',       'static')   -- le salen los pinchos
     load('fanfare',     'assets/sounds/jingles/fanfare.wav',            'static')

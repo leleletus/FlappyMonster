@@ -5,6 +5,8 @@
 #   cryo_blast   disparo: chorro de gas (ruido que baja) con chasquidos de hielo dentro
 #   cryo_freeze  algo queda congelado: crepitar cristalino que se cierra + tintineo
 #   cryo_free    se rompe el bloque de hielo (salir o romperlo): estallido corto + trocitos
+#   cryo_drop    baja del techo colgado de cadenas (aparece en una fase del jefe): traqueteo
+#                metálico de eslabones que se frena y un golpe seco al quedar colgado
 # Ejecutar desde la raíz del repo:  python3 tools/sounds/cryo.py [nombres...]
 import os, sys, wave
 import numpy as np
@@ -100,9 +102,30 @@ def free():
     return mix(*parts)
 
 
+def drop():
+    d = 1.25
+    parts = [np.zeros(int(SR * d))]
+    # eslabones: clics metálicos cada vez más espaciados (la cadena se frena)
+    t0, gap = 0.0, 0.028
+    while t0 < 0.95:
+        f = rng.uniform(1800, 3200)
+        parts.append(at(tink(f, rng.uniform(0.03, 0.06), rng.uniform(0.25, 0.45)), t0))
+        parts.append(at(highpass(noise(0.012), 2500) * env(int(SR * 0.012), 0.0003, 0.004) * 0.5, t0))
+        t0 += gap * rng.uniform(0.8, 1.2)
+        gap *= 1.07
+    # golpe seco al quedar colgado: cuerpo metálico grave + rebote de la cadena
+    tt = t_(0.35)
+    thud = (np.sin(2 * np.pi * 95 * tt) + 0.5 * np.sin(2 * np.pi * 212 * tt)) * env(len(tt), 0.001, 0.09)
+    parts.append(at(thud * 1.1, 0.97))
+    parts.append(at(tink(1400, 0.25, 0.5), 0.975))
+    parts.append(at(tink(2100, 0.12, 0.25), 1.08))
+    return mix(*parts)
+
+
 if __name__ == '__main__':
     only = set(sys.argv[1:])
     print('Sonidos del congelador:')
-    for name, fn in (('cryo_windup', windup), ('cryo_blast', blast), ('cryo_freeze', freeze), ('cryo_free', free)):
+    for name, fn in (('cryo_windup', windup), ('cryo_blast', blast), ('cryo_freeze', freeze), ('cryo_free', free),
+                     ('cryo_drop', drop)):
         if only and name not in only: continue
         save(name, fn())

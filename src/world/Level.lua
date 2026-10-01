@@ -11,6 +11,7 @@ local TileTypes = Tiles.types
 local Materials = Tiles.materials
 local EntityTypes = require('src/world/Entities').types   -- carga el catálogo
 local DecorationTypes = require('src/world/Decorations').types
+local PhaseBlocks = require 'src/world/PhaseBlocks'
 local BossZones = require 'src/world/BossZones'
 local AutoScroll = require 'src/world/AutoScroll'
 local Floods     = require 'src/world/Floods'
@@ -340,6 +341,9 @@ function Level.fromData(lvl)
             self.blockLinks[r * 65536 + c] = { tonumber(f[1]), tonumber(f[2]) }
         end
     end
+    -- Bloques de fase (src/world/PhaseBlocks.lua): esconde las casillas que salen
+    -- con una fase del jefe (antes de buscar los Activadores)
+    self.phaseBlocks = PhaseBlocks.build(self, self.entities, lvl._editor)
     self:initSwitchBlocks()
     -- Zonas de puntos (src/world/PointAreas.lua): entidades 'pointarea'
     self.pointAreas = PointAreas.build(self.entities)

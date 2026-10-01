@@ -6,6 +6,9 @@
 -- Si el nivel tiene inundaciones conectadas a la pelea (control 'boss', p. ej.
 -- fortaleza_malvada) comprueba lo que ve el cliente: en el mínimo antes de la
 -- pelea, activas durante ella (llega por red) y sin saltos del agua.
+-- Gran Bola de Nieve: lo que ve el cliente de sus fases (escala, fase de la zona,
+-- carámbanos, Activadores que salen y Congeladores que bajan en la fase 3). Con
+-- `tools/tests/online_boss/nieve_fases.json` (vida 3, fases a 0.9 / 0.5) llega a la 3.
 --
 --   love server --headless &
 --   LEVEL=assets/levels/guarida_cangrejo_rey.json love tools/tests/online_boss
@@ -60,7 +63,7 @@ function love.load()
     bot.c:setSerialization(bitser.dumps, bitser.loads)
     bot.c:on('game_init', function() bot.inGame = true end)
     bot.c:on('login_success', function() bot.logged = true end)
-    bot.c:on('s', function(s) if s.o then bot.x = s.o[1] end end)
+    bot.c:on('s', function(s) if s.o then bot.x, bot.y = s.o[1], s.o[2] end end)
     bot.c:connect()
 end
 
@@ -91,7 +94,24 @@ function love.update(dt)
                 end
             end
             if STOP_X and bot.x and bot.x >= STOP_X then bot.inArena = true end
-            table.insert(bot.bits, P.encodeInput(left, right, false, false, jump, false)) end
+            -- Gran Bola de Nieve vulnerable: doble salto encima y ground pound
+            local jumpHeld, gp = false, false
+            local VUL = { dizzy = true, soaked = true, frozen = true }
+            if boss and boss.def.name == 'snowboss' and bot.x and bot.inArena then
+                local d = boss.x - bot.x
+                if VUL[boss.state] and not bot.hit and math.abs(d) < 3 * TILE_PX then bot.hit = { n = 0 } end
+                local h = bot.hit
+                if h then
+                    h.n = h.n + 1
+                    right, left = d > 8, d < -8
+                    jump = h.n == 1 or h.n == 14
+                    jumpHeld = h.n < 28
+                    gp = h.n > 16 and math.abs(d) < 30 and bot.y and bot.y < boss.y - boss.outerH / 2
+                    if gp or h.n > 100 then bot.hit = (h.n > 100) and nil or h end
+                    if gp then h.n = 101 end
+                end
+            end
+            table.insert(bot.bits, P.encodeInput(left, right, jumpHeld or jump, gp, jump, gp)) end
         if #bot.bits > 0 then bot.c:send('in', { s = bot.seq - #bot.bits + 1, b = bot.bits }); bot.bits = {} end
     end
     -- cliente: igual
@@ -168,7 +188,34 @@ function love.update(dt)
             end
         end
     end
+    -- Gran Bola de Nieve: fases tal y como las ve el cliente
+    if boss and boss.def.name == 'snowboss' and boss.zone then
+        local sn = log.snow or { scales = {}, zphase = 1, icicles = false, switches = 0, cryos = 0, early = 0 }
+        log.snow = sn
+        sn.scales[boss.sc] = true
+        sn.zphase = math.max(sn.zphase, boss.zone.phase or 1)
+        for _, c in ipairs(boss.icicles or {}) do if c.st and c.st > 0 then sn.icicles = true end end
+        local nsw = 0
+        for _, l in ipairs(st.level.links or {}) do
+            local n = st.level:getDef(l.col, l.row).name
+            if n == 'switch_on' or n == 'switch_off' then nsw = nsw + 1 end
+        end
+        local ncr = 0
+        for _, er in pairs(st.enemyRenderers) do
+            if er.def.name == 'cryo' and (er.props.phase or 0) > 0 and er:isReady() then ncr = ncr + 1 end
+        end
+        if (boss.zone.phase or 1) < 3 and (nsw > 0 or ncr > 0) then sn.early = sn.early + 1 end
+        sn.switches, sn.cryos = math.max(sn.switches, nsw), math.max(sn.cryos, ncr)
+    end
     if t > SECS or (log.roundOver and t > log.roundOver + 0.5) then
+        if log.snow then
+            local sn = log.snow
+            local ok = sn.early == 0 and (sn.zphase < 3 or (sn.switches > 0 and sn.cryos > 0 and sn.icicles))
+            print(('%s Bola de Nieve en el cliente: fase de la zona %d, escalas %s%s%s, carámbanos %s, Activadores %d, Congeladores listos %d, antes de tiempo %d'):format(
+                ok and 'OK   ' or 'FALLA', sn.zphase, sn.scales[10] and '10 ' or '', sn.scales[8] and '8 ' or '', sn.scales[6] and '6' or '',
+                tostring(sn.icicles), sn.switches, sn.cryos, sn.early))
+            if not ok then log.fail = true end
+        end
         for i, r in pairs(log.floods or {}) do
             local f = r.f
             -- (el salto máximo por fotograma: lo que sube a su velocidad + margen por el reloj estimado)

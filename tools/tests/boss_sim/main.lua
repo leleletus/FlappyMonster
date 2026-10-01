@@ -13,12 +13,13 @@
 -- dura (si lo toca, recibe 1 y vuelve a una plataforma) y luego vuelve a copiar.
 --
 -- Gran Bola de Nieve (LEVEL=tools/levelgen/arenas/jefe_nieve.json): se le golpea
--- MAREADA o CONGELADA; el arnés cambia un Activador (dispara su Congelador) cuando el
--- jefe está a tiro de él y patea las bombas encendidas hacia el jefe. Comprueba: todos
--- sus ataques, mareada al chocar con una compuerta, congelada por el chorro (ground pound
--- = 3), bomba devuelta = 1 + mareada, las 3 fases, nieve prensada bajo los Activadores
--- en la fase 3, hielo fino vuelto a congelar (si la arena tiene), muerte en orden y
--- zona superada.
+-- MAREADA, EMPAPADA o CONGELADA. El jugador juega como se espera: en la fase 2 se pone
+-- bajo un carámbano para que la bola salte allí y se aparta al ver la marca; en la fase 3
+-- se pone sobre una bolsa de hielo fino para que el gran golpe la rompa, se aparta, y con
+-- la bola empapada golpea el Activador de esa bolsa (su Congelador la congela). Comprueba:
+-- todos sus ataques, mareada al chocar y por un carámbano, empapada, congelada (ground
+-- pound = 3), las 3 fases (escalas 10 → 8 → 6), los Activadores y Congeladores solo en la
+-- fase 3, hielo fino que se rehace, muerte en orden y zona superada.
 --
 --   LEVEL=assets/levels/guarida_cangrejo_rey.json love tools/tests/boss_sim
 io.stdout:setvbuf('no')
@@ -58,15 +59,15 @@ function love.load()
     local mirror = boss.def.name == 'mirror'
     local VULN = { stuck = true, recover = mirror }
     local snow = boss.def.name == 'snowboss'
-    if snow then VULN = { dizzy = true, frozen = true } end
-    local sn = { phases = {}, frozenHits = {}, blastHits = 0, crashDizzy = 0, kicks = 0, toggles = 0, lakeBroken = 0,
-                 refrozen = 0, packed = 0, deathOrder = {} }
+    if snow then VULN = { dizzy = true, frozen = true, soaked = true } end
+    local sn = { phases = {}, scales = {}, frozenHits = {}, crashDizzy = 0, bonks = 0, toggles = 0, refrozen = 0,
+                 deathOrder = {}, early = {}, shown = {} }
     if snow then
-        local orig = boss.onBlastHit
-        boss.onBlastHit = function(self, ...)
-            local h0 = self.hp
-            orig(self, ...)
-            if self.hp < h0 then sn.blastHits = sn.blastHits + 1; print(('%6.1fs     ¡bomba devuelta! hp %d -> %d'):format(t, h0, self.hp)) end
+        local orig = boss.bonk
+        boss.bonk = function(self, ...)
+            sn.bonks = sn.bonks + 1
+            print(('%6.1fs     ¡carámbano en la bola! (%s)'):format(t, self.state))
+            return orig(self, ...)
         end
     end
     local seen, gpDmg, chain, maxChain, leapOff = {}, {}, 0, 0, {}
@@ -192,63 +193,87 @@ function love.load()
             lastState = boss.state
             -- (Espejo: solo al final de una ristra de ataques, para verla entera)
             -- (Espejo: como mucho un golpe cada 10 s, para ver sus fases y el evento)
-            if VULN[boss.state] and not (mirror and ((boss.chainLeft or 1) > 1 or t - (lastHitT or -99) < 10)) then
+            local waitFreeze = false
+            if snow and boss.state == 'soaked' and boss.phase == 3 and (boss.frostT or 0) <= 0 then
+                for _, e in ipairs(ents) do
+                    if e.def.name == 'cryo' and e:isSolidBody() and math.abs(e.x - boss.x) < 2 * TILE_PX then waitFreeze = true end
+                end
+            end
+            if VULN[boss.state] and not waitFreeze and not (mirror and ((boss.chainLeft or 1) > 1 or t - (lastHitT or -99) < 10)) then
                 if mirror then lastHitT = t end
                 attack = { t0 = t, n = 0, kind = (attacksDone % 2 == 0) and 'stomp' or 'pound' } end
         end
-        -- Gran Bola de Nieve: Activadores (Congeladores), bombas devueltas, registro
+        -- Gran Bola de Nieve: el jugador juega como se espera (ver la cabecera) y se registra
         if snow and z.state == 'fight' then
             sn.phases[boss.phase] = true
-            if boss.state == 'dizzy' and sn.prev ~= 'dizzy' then sn.crashDizzy = sn.crashDizzy + 1 end
-            sn.prev = boss.state
-            -- Activador del lado del jefe si está a tiro de su Congelador (cada 6 s como mucho)
-            -- (el lago: se rompen 2 celdas al empezar, como si las rompiera un jugador; al cambiar
-            -- de fase el jefe debe volver a congelarlas)
-            if not sn.broke and boss.lake and #boss.lake >= 2 then
-                sn.broke = true
-                for i = 1, 2 do level:crackIce(boss.lake[i][1], boss.lake[i][2], 4, 'pound') end
+            sn.scales[boss.sc] = true
+            if boss.state == 'dizzy' and sn.prev ~= 'dizzy' and (sn.prev == 'roll' or sn.prev == 'slide') then
+                sn.crashDizzy = sn.crashDizzy + 1
             end
-            if (boss.state == 'idle' or boss.state == 'recover' or boss.state == 'shoot') and t - (sn.lastToggle or -99) > 14 then
-                for _, e in ipairs(ents) do
-                    if e.def.name == 'cryo' and e.state == 'idle' and math.abs(e.x - boss.x) < 6 * TILE_PX then
-                        local cells = level:linkedCells(e.props.id or 1)
-                        if cells[1] then
-                            level:hitTile(cells[1][1], cells[1][2], 'head')
-                            sn.lastToggle, sn.toggles = t, sn.toggles + 1
-                            print(('%6.1fs     Activador (%d,%d) → %s'):format(t, cells[1][1], cells[1][2], level:getDef(cells[1][1], cells[1][2]).name))
-                            break
-                        end
-                    end
+            sn.prev = boss.state
+            local T = TILE_PX
+            local floorY = z.y1
+            local function standAt(x)
+                if pa.dying then return end
+                pa.x, pa.y, pa.vx, pa.vy = x, floorY - 50, 0, 0
+            end
+            -- Activadores / Congeladores con fase: no deben estar antes de su fase
+            for _, e in ipairs(ents) do
+                if e.def.name == 'cryo' and (e.props.phase or 0) > 0 then
+                    if boss.phase < e.props.phase and e:isSolidBody() then sn.early[#sn.early + 1] = 'congelador' end
+                    if e:isSolidBody() then sn.shown.cryo = true end
                 end
             end
-            -- compuerta: si va a rodar hacia el jugador con una compuerta BAJADA en medio, la sube
-            if boss.state == 'windup' and pa and not sn.gateUp then
-                for _, b in ipairs(level.switchBlocks or {}) do
-                    local gx = (b.c - 0.5) * TILE_PX
-                    local d = level:getDef(b.c, b.r).switchBlock
-                    if b.src and d and not d.active and (boss.x - gx) * (pa.x - gx) < 0 then
-                        level:hitTile(b.src[1], b.src[2], 'head')
-                        sn.gateUp, sn.gates = true, (sn.gates or 0) + 1
-                        print(('%6.1fs     compuerta subida (Activador %d,%d)'):format(t, b.src[1], b.src[2]))
+            for _, l in ipairs(level.links or {}) do
+                local n = level:getDef(l.col, l.row).name
+                local isSw = n == 'switch_on' or n == 'switch_off'
+                if isSw and boss.phase < 3 and (z.phase or 1) < 3 then sn.early[#sn.early + 1] = 'activador' end
+                if isSw then sn.shown.switch = true end
+            end
+            local idle = boss.state == 'idle' or boss.state == 'rest' or boss.state == 'recover'
+            -- fase 2: en la superficie de debajo de un carámbano listo (una plataforma: para que
+            -- salte allí); al ver la marca, se aparta
+            if boss.phase == 2 and idle then
+                for _, c in ipairs(boss.icicles or {}) do
+                    if c.st == boss.IC.ready and math.abs(c.x - boss.x) > 3 * T then
+                        local gy = boss:groundBelow(c.x, c.top + 70)
+                        if not pa.dying then pa.x, pa.y, pa.vx, pa.vy = c.x, gy - 50, 0, 0 end
                         break
                     end
                 end
             end
-            if boss.state ~= 'windup' and boss.state ~= 'roll' then sn.gateUp = nil end
-            -- bombas encendidas: patada hacia el jefe
-            for _, e in ipairs(ents) do
-                if e.summonOf and e.alive and e.state == 'lit' and e.onGround and not e._kicked then
-                    e._kicked = true
-                    e.x = boss.x + ((e.x < boss.x) and -1 or 1) * (boss.outerW / 2 + 40)
-                    e:knockback((e.x < boss.x) and 1 or -1)
-                    sn.kicks = sn.kicks + 1
+            -- fase 3: sobre el centro de una bolsa de hielo fino (el gran golpe la rompe)
+            if boss.phase == 3 and idle and boss.lake and boss.lake[1] then
+                local best
+                for _, cr in ipairs(boss.lake) do
+                    local x = (cr[1] - 0.5) * T
+                    if level:getDef(cr[1], cr[2]).thinIce and level:getDef(cr[1] - 1, cr[2]).thinIce
+                       and level:getDef(cr[1] + 1, cr[2]).thinIce and (not best or math.abs(x - boss.x) > math.abs(best - boss.x)) then
+                        best = x
+                    end
+                end
+                if best then standAt(best) end
+            end
+            -- se aparta del salto / del gran golpe (a 5 casillas, hacia donde haya sitio)
+            if (boss.state == 'leap_wind' and math.abs(pa.x - boss.landX) < 3 * T)
+               or ((boss.state == 'slam_up' or boss.state == 'slam_hold') and math.abs(pa.x - boss.x) < 5 * T) then
+                local cx = (boss.state == 'leap_wind') and boss.landX or boss.x
+                local dir = (cx - z.x0 > z.x1 - cx) and -1 or 1
+                standAt(math.max(z.x0 + T, math.min(z.x1 - T, cx + dir * 6 * T)))
+            end
+            -- empapada en la fase 3: golpea el Activador de la bolsa (su Congelador la congela)
+            if boss.state == 'soaked' and boss.phase == 3 and boss.deadTimer > 0.2 and t - (sn.lastToggle or -99) > 3 then
+                for _, e in ipairs(ents) do
+                    if e.def.name == 'cryo' and e:isSolidBody() and e.state == 'idle' and math.abs(e.x - boss.x) < 2 * T then
+                        local cells = level:linkedCells(e.props.id or 1)
+                        if cells[1] and level:hitTile(cells[1][1], cells[1][2], 'pound') == 'toggle' then
+                            sn.lastToggle, sn.toggles = t, sn.toggles + 1
+                            print(('%6.1fs     Activador (%d,%d) → %s'):format(t, cells[1][1], cells[1][2], level:getDef(cells[1][1], cells[1][2]).name))
+                        end
+                        break
+                    end
                 end
             end
-            local np = 0
-            for r = 1, level.tileH do for c = 1, level.tileW do
-                if level:getDef(c, r).name == 'packed_snow' then np = np + 1 end
-            end end
-            sn.packed = math.max(sn.packed, np)
             for _, c in ipairs(boss.lake or {}) do
                 if not level:getDef(c[1], c[2]).thinIce then c.broken = true
                 elseif c.broken then c.broken = nil; sn.refrozen = sn.refrozen + 1 end
@@ -325,20 +350,28 @@ function love.load()
             print(('%-10s %s  %s'):format(name, ok and 'OK   ' or 'FALLA', msg))
             if not ok then fails = fails + 1 end
         end
-        local need = { 'hop', 'shoot', 'windup', 'roll', 'dizzy', 'frozen', 'slam_up', 'slam_land', 'phase_up' }
+        local need = { 'hop', 'shoot', 'windup', 'roll', 'dizzy', 'rest', 'leap_wind', 'leap', 'leap_land',
+                       'slam_up', 'slam_land', 'soaked', 'frozen', 'phase_up' }
         local miss = {}
         for _, n in ipairs(need) do if not seen[n] then miss[#miss + 1] = n end end
         check('ataques', #miss == 0, #miss == 0 and 'todos vistos' or ('faltan: ' .. table.concat(miss, ',')))
-        check('mareada', sn.crashDizzy > 0, ('mareada %d veces (choque o bomba)'):format(sn.crashDizzy))
+        check('mareada', sn.crashDizzy > 0 and sn.bonks > 0,
+            ('mareada al chocar rodando %d veces; carámbanos en la bola %d'):format(sn.crashDizzy, sn.bonks))
         local f3 = #sn.frozenHits > 0
         for _, d in ipairs(sn.frozenHits) do if d ~= 3 then f3 = false end end
-        check('congelada', f3, ('ground pound congelada: %s (Activadores cambiados %d)'):format(table.concat(sn.frozenHits, ','), sn.toggles))
-        check('bomba', sn.blastHits > 0, ('bombas pateadas %d, golpes de bomba al jefe %d'):format(sn.kicks, sn.blastHits))
-        check('fases', sn.phases[1] and sn.phases[2] and sn.phases[3], ('fases vistas: %s%s%s'):format(
-            sn.phases[1] and '1' or '', sn.phases[2] and '2' or '', sn.phases[3] and '3' or ''))
-        check('enterrado', sn.packed > 0, ('nieve prensada en la arena: %d'):format(sn.packed))
+        check('congelada', f3, ('ground pound congelada: %s (Activadores pulsados %d)'):format(table.concat(sn.frozenHits, ','), sn.toggles))
+        check('fases', sn.phases[1] and sn.phases[2] and sn.phases[3] and sn.scales[10] and sn.scales[8] and sn.scales[6],
+            ('fases vistas: %s%s%s; escalas 10/8/6: %s/%s/%s'):format(sn.phases[1] and '1' or '', sn.phases[2] and '2' or '',
+            sn.phases[3] and '3' or '', tostring(sn.scales[10] or false), tostring(sn.scales[8] or false), tostring(sn.scales[6] or false)))
+        local anyPhase = false
+        for _, e in ipairs(ents) do if e.def.name == 'cryo' and (e.props.phase or 0) > 0 then anyPhase = true end end
+        if anyPhase then
+            check('aparecen', #sn.early == 0 and sn.shown.cryo and sn.shown.switch,
+                ('antes de la fase 3: %s; en la fase 3: Congelador %s, Activador %s'):format(
+                    #sn.early == 0 and 'nada' or table.concat(sn.early, ','), tostring(sn.shown.cryo or false), tostring(sn.shown.switch or false)))
+        end
         if #(boss.lake or {}) > 0 then        -- (solo si la arena tiene hielo fino)
-            check('lago', sn.refrozen > 0, ('celdas de hielo fino vueltas a congelar: %d'):format(sn.refrozen))
+            check('lago', sn.refrozen > 0, ('celdas de hielo fino rehechas: %d'):format(sn.refrozen))
         end
         check('muerte', not boss.alive and table.concat(sn.deathOrder, ',') == 'dying_crack,dying_burst,dying_flee' and z.state == 'cleared',
             ('vivo=%s orden %s, zona %s'):format(tostring(boss.alive), table.concat(sn.deathOrder, ','), z.state))

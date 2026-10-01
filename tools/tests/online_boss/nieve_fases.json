@@ -1,5 +1,5 @@
 {
-  "name": "Jefe: Gran Bola de Nieve",
+  "name": "Prueba: Bola de Nieve por fases (online)",
   "name_en": "Boss: Big Snowball",
   "width": 50,
   "height": 15,
@@ -22,7 +22,7 @@
     [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
   ],
   "entities": [
-    {"col":25,"props":{"icicles":[{"col":14,"row":3},{"col":20,"row":3},{"col":24,"row":3},{"col":27,"row":3},{"col":33,"row":3}]},"row":12,"type":"snowboss"},
+    {"col":25,"props":{"hp":3,"hpPerPlayer":0,"icicles":[{"col":14,"row":3},{"col":20,"row":3},{"col":24,"row":3},{"col":27,"row":3},{"col":33,"row":3}],"phase2":0.9,"phase3":0.5},"row":12,"type":"snowboss"},
     {"col":9,"props":{"corner":{"col":11,"row":9},"material":"snow","zone":1},"row":3,"type":"bosswall"},
     {"col":36,"props":{"corner":{"col":38,"row":9},"material":"snow","zone":1},"row":3,"type":"bosswall"},
     {"col":9,"props":{"corner":{"col":38,"row":2},"material":"snow","zone":1},"row":2,"type":"bosswall"},

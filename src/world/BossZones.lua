@@ -22,9 +22,14 @@
 --  * Superada (todos sus jefes muertos) la zona desaparece y todo vuelve a
 --    la normalidad.
 --
+--  * FASE de la zona (z.phase, 1..): la más alta que alcanzan sus jefes
+--    (b:bossPhase()); va en el snapshot. Con ella aparecen los bloques de fase
+--    (src/world/PhaseBlocks.lua) y las entidades con prop `phase` (Congeladores).
+--
 -- En el JSON del nivel:  "bossZones": [ { "id":1, "col":40, "row":2, "w":20, "h":11, "music":"boss" } ]
 
 local BossZones = {}
+local PhaseBlocks = require 'src/world/PhaseBlocks'
 
 BossZones.DEFAULT_W, BossZones.DEFAULT_H = 20, 11      -- 1280x704 px: una pantalla
 BossZones.STATES = { 'idle', 'waiting', 'fight', 'cleared', 'intro' }   -- (códigos de red: no reordenar)
@@ -79,7 +84,7 @@ function BossZones.build(list)
         local z = BossZones.normalize(raw, i)
         if z then
             z.x0, z.y0, z.x1, z.y1 = BossZones.rect(z)
-            z.state, z.arrived, z.needed = 'idle', 0, 0
+            z.state, z.arrived, z.needed, z.phase = 'idle', 0, 0, 1
             z.bosses = {}
             out[#out+1] = z
         end
@@ -199,6 +204,12 @@ function Controller:update(dt)
             elseif z.state == 'fight' then
                 local any = false
                 for _, b in ipairs(z.bosses) do if bossAlive(b) then any = true end end
+                -- Fase de la pelea = la más alta de sus jefes (b:bossPhase()): la usan
+                -- los bloques de fase y los objetos con `phase` (p. ej. Congeladores)
+                for _, b in ipairs(z.bosses) do
+                    local ph = b.bossPhase and b:bossPhase() or 1
+                    if ph > (z.phase or 1) then z.phase = ph end
+                end
                 if not any then
                     z.state = 'cleared'
                     events[#events+1] = { type = 'boss_clear', zone = z.id }
@@ -207,6 +218,7 @@ function Controller:update(dt)
         end
     end
     for _, pa in ipairs(players) do self.wasDying[pa] = pa.dying end
+    PhaseBlocks.update(self.level)
     return events
 end
 
@@ -330,7 +342,7 @@ function BossZones.netPack(level)
     local zones = level.bossZones or {}
     if #zones == 0 then return nil end
     local out = {}
-    for i, z in ipairs(zones) do out[i] = { CODE[z.state] or 1, z.arrived or 0, z.needed or 0 } end
+    for i, z in ipairs(zones) do out[i] = { CODE[z.state] or 1, z.arrived or 0, z.needed or 0, z.phase or 1 } end
     return out
 end
 
@@ -342,6 +354,7 @@ function BossZones.netApply(level, list)
             z.state   = BossZones.STATES[d[1]] or z.state
             z.arrived = tonumber(d[2]) or 0
             z.needed  = tonumber(d[3]) or 0
+            z.phase   = tonumber(d[4]) or 1
         end
     end
 end

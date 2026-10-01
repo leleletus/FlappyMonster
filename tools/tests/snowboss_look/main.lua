@@ -4,9 +4,12 @@
 --                    hacia la cámara y se estampa
 --   snow_cracks.png  fase 3 (agrietada) en todas sus poses: quieta, aplastada, escupiendo,
 --                    cargando, rodando (8 ángulos), mareada, congelada, agrietándose al morir
---   snow_signal.png  la arena de lago_helado al golpear dos Activadores: chispas hasta lo que
---                    controlan (la compuerta, el congelador de su pared)
---   snow_cryo.png    Congeladores: la arena de lago_helado y una sala con todos los casos
+--   snow_signal.png  la arena de lago_helado en la fase 3 al golpear los dos Activadores del
+--                    suelo: chispas hasta el Congelador de cada bolsa
+--   snow_arena.png   la arena por fases (2x2): fase 1 · fase 2 con los carámbanos (uno
+--                    temblando) y la marca del salto · fase 3 con los Congeladores bajando y
+--                    los Activadores, la bola EMPAPADA en una bolsa · CONGELADA
+--   snow_cryo.png    Congeladores: la arena de lago_helado (fase 3) y una sala con todos los casos
 --                    (en el suelo, en el techo, en una pared, flotando en cada dirección)
 --
 --   tools/tests/run.sh snowboss_look
@@ -21,6 +24,7 @@ local Level = require 'src/world/Level'
 local Entities = require 'src/world/Entities'
 local BossZones = require 'src/world/BossZones'
 local TileCodec = require 'src/world/tiles/TileCodec'
+local PhaseBlocks = require 'src/world/PhaseBlocks'
 local T = TILE_PX
 
 local clock = 0
@@ -170,9 +174,12 @@ local function cryo()
     clock = 10
     for _, e in ipairs(es) do e:render(0, 0) end
     love.graphics.setCanvas()
-    -- la arena de lago_helado (esquinas)
+    -- la arena de lago_helado (esquinas), ya en la fase 3 (los Congeladores han bajado)
     local lv, les, boss = lago()
     local z = boss.zone
+    z.phase = 3; PhaseBlocks.update(lv)
+    clock = 100
+    for _, e in ipairs(les) do if e.def.name == 'cryo' then e.appearAt = 0 end end
     local frame = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
     love.graphics.setCanvas(frame)
     sky(WINDOW_W, WINDOW_H)
@@ -198,10 +205,13 @@ local function signal()
     local level, es, boss = lago()
     Particles.setLevel(level)
     local z = boss.zone
+    z.phase = 3; PhaseBlocks.update(level)
+    clock = 100
+    for _, e in ipairs(es) do if e.def.name == 'cryo' then e.appearAt = 0 end end
     local camX = math.floor((z.x0 + z.x1) / 2 - WINDOW_W / 2)
     local camY = math.floor(z.y1 + T - WINDOW_H)
-    if not os.getenv('ONLY_LEFT') then Particles.emit('switch_hit', (83 - 1) * T, (8 - 1) * T) end  -- compuerta
-    Particles.emit('switch_hit', (79 - 1) * T, (9 - 1) * T)      -- congelador izquierdo
+    Particles.emit('switch_hit', (83 - 1) * T, (13 - 1) * T)
+    if not os.getenv('ONLY_LEFT') then Particles.emit('switch_hit', (90 - 1) * T, (13 - 1) * T) end
     for _ = 1, 9 do Particles.update(1 / 60) end
     local out = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
     love.graphics.setCanvas(out)
@@ -213,6 +223,59 @@ local function signal()
     save(out, 'snow_signal.png')
 end
 
+-- La arena por fases (2x2)
+local function arena()
+    local frame = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
+    local out = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
+    local shots = {
+        { 'fase 1', function(level, es, boss) boss.state, boss.deadTimer = 'idle', 0 end },
+        { 'fase 2: carámbanos y marca del salto', function(level, es, boss)
+            boss.phase = 2; boss:setScale(8)
+            boss:growIcicles()
+            for i, c in ipairs(boss.icicles) do c.st = (i == 2) and boss.IC.shake or boss.IC.ready; c.t = 0.3 end
+            boss.state, boss.deadTimer = 'leap_wind', 0.4
+            boss.landX, boss.landY = math.floor(83.5 * T), 7 * T
+        end },
+        { 'fase 3: Congeladores bajando, empapada', function(level, es, boss)
+            boss.phase = 3; boss:setScale(6); boss.zone.phase = 3
+            PhaseBlocks.update(level)
+            boss:growIcicles()
+            for _, c in ipairs(boss.icicles) do c.st = boss.IC.ready end
+            for _, e in ipairs(es) do if e.def.name == 'cryo' then e.appearAt = clock - 0.6 end end
+            for c = 79, 81 do level:setTileRaw(c, 13, TILE_WATER) end
+            boss.x, boss.y = 80 * T, 13 * T - boss.outerH / 2 + 30
+            boss.state, boss.deadTimer = 'soaked', 0.5
+        end },
+        { 'fase 3: congelada', function(level, es, boss)
+            boss.phase = 3; boss:setScale(6); boss.zone.phase = 3
+            PhaseBlocks.update(level)
+            for _, e in ipairs(es) do if e.def.name == 'cryo' then e.appearAt = 0 end end
+            boss.x, boss.y = 80 * T, 13 * T - boss.outerH / 2 + 30
+            boss.state, boss.deadTimer, boss.frozenFor = 'frozen', 0.5, 4.5
+        end },
+    }
+    for i, sh in ipairs(shots) do
+        local level, es, boss = lago()
+        clock = 100
+        sh[2](level, es, boss)
+        local z = boss.zone
+        local camX = math.floor((z.x0 + z.x1) / 2 - WINDOW_W / 2)
+        local camY = math.floor(z.y1 + T - WINDOW_H)
+        love.graphics.setCanvas(frame)
+        sky(WINDOW_W, WINDOW_H)
+        level:render(camX, camY)
+        for _, e in ipairs(es) do if e.alive and e ~= boss then e:render(camX, camY) end end
+        boss:render(camX, camY)
+        love.graphics.setColor(0, 0, 0, 1)
+        love.graphics.print(sh[1], 12, 12, 0, 2, 2)
+        love.graphics.setCanvas(out)
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.draw(frame, ((i - 1) % 2) * WINDOW_W / 2, math.floor((i - 1) / 2) * WINDOW_H / 2, 0, 0.5, 0.5)
+        love.graphics.setCanvas()
+    end
+    save(out, 'snow_arena.png')
+end
+
 function love.load()
     love.graphics.setDefaultFilter('nearest', 'nearest')
     local only = os.getenv('ONLY')
@@ -220,5 +283,6 @@ function love.load()
     if not only or only == 'cracks' then cracks() end
     if not only or only == 'cryo' then cryo() end
     if not only or only == 'signal' then signal() end
+    if not only or only == 'arena' then arena() end
     love.event.quit(0)
 end
