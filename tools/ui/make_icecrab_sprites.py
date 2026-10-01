@@ -12,8 +12,8 @@
 #    /home/mtvemo/FlappyMonster_pruebas/megacrabby_ice — fuera del repo)
 #
 # Piezas (como las del Mega Crabby):
-#   crab1/2/3.png         cuerpo + patas, 3 cuadros de andar (36x20, a escala 5 = el tamaño del Mega)
-#   claw_left-Sheet.png   pinza izquierda, 2 cuadros (abierta / cerrada), 18x10 (grande y larga, con púas)
+#   crab1/2/3.png         cuerpo + patas, 3 cuadros de andar (18x13 a escala 10, como el Mega)
+#   claw_left-Sheet.png   pinza izquierda, 2 cuadros (abierta / cerrada), 10x7, dedos hacia dentro
 #   spike.png             la púa de la cabeza, de HIELO (la del Mega recoloreada a azul hielo)
 # Vista previa: vista_previa.png (Mega Crabby original vs helado, a escala de juego, sobre la
 # pista de hielo, + las tiras ampliadas) y andar.gif (ciclo de andar con chasquidos de pinza).
@@ -39,129 +39,81 @@ PAL = {
     'f': (176, 214, 242),     # escarcha en sombra
 }
 
-# ENFOQUE: más resolución, mismo tamaño en pantalla. El Mega Crabby es arte de 16x9 a
-# escala 10 (160 px de ancho); el helado se dibuja a 32 px de ancho y escala 5, así que
-# ocupa prácticamente lo mismo pero con detalle: tubérculos/espinas por todo el caparazón,
-# patas articuladas largas y pinzas grandes. Se genera por geometría (elipses y segmentos
-# rasterizados a mano, sin antialias) y luego se sombrea con la paleta de arriba: luz
-# arriba a la izquierda, sombra abajo a la derecha, contorno oscuro de 1 px. Sin "boca":
-# por delante el caparazón acaba en su borde, como el cangrejo real.
-SCALE = 5                   # escala de juego propuesta (Mega Crabby: 10)
-CLAW_X, CLAW_Y = 13.0, -9.0  # dónde van las pinzas (px de arte desde el centro-abajo del cuerpo)
-BW, BH = 36, 20             # cuerpo + patas
-CX, CY, RX, RY = 17.5, 7.0, 11.4, 5.6      # caparazón (elipse)
-EYES = ((13, 6), (21, 6))        # 2x2, con brillo
-# Patas (lado izquierdo; el derecho es su espejo con el paso contrario): raíz → rodilla
-# (arriba y hacia fuera, como las patas largas del Paralomis) → punta en el suelo
-LEGS = [
-    [((9, 9), (3, 7), (0, 19)), ((12, 11), (7, 10), (5, 19))],
-    [((9, 9), (3, 6), (1, 19)), ((12, 11), (8, 9), (8, 19))],
-    [((9, 9), (4, 7), (3, 19)), ((12, 11), (6, 10), (3, 19))],
+# MISMA RESOLUCIÓN QUE EL MEGA: el pixel del helado mide lo mismo que el del Mega Crabby
+# (escala 10), así encaja con el resto del juego. El diseño es el de la 3.ª propuesta
+# (caparazón redondo con bultos y púas, escarcha, sin boca, patas largas, pinzas grandes)
+# dibujado a mano a esa resolución. Las pinzas apuntan HACIA DENTRO (hacia el cuerpo).
+SCALE = 10                  # escala de juego (la del Mega Crabby)
+CLAW_K = 0.85               # pinzas a 0.85 del cuerpo, como en el Mega
+CLAW_X, CLAW_Y = 4.6, -3.2  # dónde van las pinzas (px de arte desde el centro-abajo del cuerpo)
+
+SHELL = [
+    ".....O.O..O.O.....",
+    "....OOOOOOOOOO....",
+    "...OFFHLLLLLfMO...",
+    "..OHLHLLLLHLLMSO..",
+    "OOLLLOLLLLLLOLMSOO",
+    ".OMLSLLLLLLSLMMSO.",
+    "..OMMMMMMMMMMSSO..",
+    "...OOOOOOOOOOOO...",
+]
+# Patas: 2 por lado, naranjas con su borde oscuro por fuera; mitad izquierda (9 px), el
+# lado derecho es el espejo de otro cuadro (paso alterno)
+LEG_HALVES = [          # filas 6-12; la pata de fuera sale de la púa del costado (rodilla)
+    ["OM.......",
+     "OM.......",
+     "OM..OM...",
+     "OM..OM...",
+     "OS...OM..",
+     "O....OS..",
+     "O.....O.."],
+    ["OM.......",
+     ".OM......",
+     ".OM.OM...",
+     "OM...OM..",
+     "OS...OM..",
+     "O....OS..",
+     "O....O..."],
+    ["OM.......",
+     "OM.......",
+     "OM...OM..",
+     ".OM.OM...",
+     ".OSOM....",
+     ".O.OS....",
+     ".O.O....."],
 ]
 PHASE = [0, 2, 1]
 
 
-def blank(w, h): return [['.'] * w for _ in range(h)]
-
-
-def outline(g):
-    """Contorno oscuro de 1 px alrededor de todo lo que no es transparente."""
-    h, w = len(g), len(g[0])
-    out = [r[:] for r in g]
-    for y in range(h):
-        for x in range(w):
-            if g[y][x] == '.':
-                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                    xx, yy = x + dx, y + dy
-                    if 0 <= xx < w and 0 <= yy < h and g[yy][xx] not in '.O':
-                        out[y][x] = 'O'; break
-    return out
-
-
-def seg(a, b):
-    (x0, y0), (x1, y1) = a, b
-    n = max(abs(x1 - x0), abs(y1 - y0), 1)
-    return [(round(x0 + (x1 - x0) * i / n), round(y0 + (y1 - y0) * i / n)) for i in range(n + 1)]
-
-
-def shell(g):
-    for y in range(BH):
-        for x in range(BW):
-            dx, dy = (x + 0.5 - CX - 0.5) / RX, (y + 0.5 - CY) / RY
-            if dx * dx + dy * dy <= 1:
-                # luz por la normal: arriba-izquierda clara, abajo-derecha sombra
-                l = -dx * 0.55 - dy * 0.85
-                g[y][x] = 'H' if l > 0.62 else 'L' if l > 0.05 else 'M' if l > -0.55 else 'S'
-    # tubérculos: bultitos (brillo + sombra debajo) repartidos sin cuadrícula, lejos de los ojos
-    for x, y in ((9, 4), (16, 3), (24, 4), (27, 7), (7, 8), (11, 10), (17, 9), (24, 10), (20, 3), (13, 3)):
-        if g[y][x] in 'LMS' and g[y + 1][x] != '.':
-            g[y][x] = 'H'; g[y + 1][x] = 'S'
-    # escarcha en lo alto del caparazón
-    for x, y in ((10, 3), (11, 2), (12, 2), (13, 2), (14, 2), (15, 2), (21, 2), (22, 2), (23, 2), (9, 3), (16, 2)):
-        if g[y][x] != '.': g[y][x] = 'F' if x < 18 else 'f'
-
-
-def spines(g):
-    """Púas: 1 px oscuro asomando por fuera del contorno, repartidas por el borde de arriba
-    y los lados (se ponen DESPUÉS del contorno)."""
-    for x, y in ((10, 1), (14, 0), (18, 0), (22, 0), (26, 1), (7, 3), (29, 3), (5, 6), (30, 6), (6, 10), (29, 10)):
-        if g[y][x] == '.': g[y][x] = 'O'
-
-
-def legs(g, frame):
-    for side, fr in ((0, frame), (1, PHASE[frame])):
-        for path in LEGS[fr]:
-            pts = []
-            for a, b in zip(path, path[1:]): pts += seg(a, b)
-            if side: pts = [(BW - 1 - x, y) for x, y in pts]
-            for k, (x, y) in enumerate(pts):
-                if 0 <= y < BH and g[y][x] == '.':
-                    g[y][x] = 'M' if k % 4 else 'S'           # (articulaciones más oscuras)
-
-
 def body(frame):
-    g = blank(BW, BH)
-    legs(g, frame)
-    shell(g)
-    g = outline(g)
-    spines(g)
-    for x, y in EYES:                                         # ojos: 2x2 oscuros con brillo
-        for dx in (0, 1):
-            for dy in (0, 1): g[y + dy][x + dx] = 'O'
-        g[y][x] = 'F'
-    return [''.join(r) for r in g]
+    rows = [list(r) for r in SHELL] + [['.'] * 18 for _ in range(5)]
+    for i, (l, r) in enumerate(zip(LEG_HALVES[frame], LEG_HALVES[PHASE[frame]])):
+        for x, ch in enumerate(l + r[::-1]):
+            if ch != '.' and rows[6 + i][x] == '.': rows[6 + i][x] = ch
+    return [''.join(r) for r in rows]
 
 
-# Pinza izquierda (el dedo largo hacia la izquierda, la palma a la derecha, donde se une
-# al cuerpo): GRANDE y LARGA, 18x10, con púas en el dorso. Cuadro 1 abierta, 2 cerrada.
-CW, CH = 18, 10
+# Pinza izquierda con los dedos HACIA DENTRO (a la derecha; la derecha es su espejo):
+# grande, con 3 púas en el dorso. Cuadro 1 abierta, 2 cerrada.
+CLAWS = [
+    ["...O.O.O..",
+     ".OOOOOOOO.",
+     "OHHLLLLLLO",
+     "OHLLMOOO.O",
+     "OLLMO.....",
+     "OLLMMMMMO.",
+     ".OOOOOOO.."],
+    ["...O.O.O..",
+     ".OOOOOOOO.",
+     "OHHLLLLLLO",
+     "OHLLMOOOOO",
+     "OLLLMMMMO.",
+     "OLMMSSSO..",
+     ".OOOOOO..."],
+]
 
 
-def claw(opened):
-    g = blank(CW, CH)
-    for y in range(CH):                                       # palma (elipse)
-        for x in range(CW):
-            dx, dy = (x - 12.5) / 5.2, (y - 5.0) / 3.6
-            if dx * dx + dy * dy <= 1:
-                l = -dx * 0.4 - dy * 0.9
-                g[y][x] = 'H' if l > 0.55 else 'L' if l > 0 else 'M' if l > -0.5 else 'S'
-    # dedo de arriba (fijo): largo, se afila hacia la punta curvada
-    for x in range(1, 9):
-        g[3][x] = 'L' if x > 2 else 'M'
-        if x > 3: g[2][x] = 'H' if x < 8 else 'L'
-        if x > 5: g[4][x] = 'M'
-    g[4][1] = 'M'                                              # punta hacia abajo
-    # dedo de abajo (el que se mueve)
-    y0 = 7 if opened else 5
-    for x in range(3, 9):
-        g[y0][x] = 'M' if x > 3 else 'S'
-        if x > 5: g[y0 + 1][x] = 'S'
-    if opened: g[y0 - 1][3] = 'S'                              # punta hacia arriba
-    g = outline(g)
-    for x in (9, 11, 13, 15):                                  # púas del dorso
-        top = next(y for y in range(CH) if g[y][x] != '.')
-        if top > 0: g[top - 1][x] = 'O'
-    return [''.join(r) for r in g]
+def claw(opened): return CLAWS[0 if opened else 1]
 
 
 ICE = {(255, 255, 255): (226, 246, 255), (242, 242, 246): (186, 226, 250),
@@ -248,7 +200,7 @@ def mockup(sprites, out):
         d = None
     crab(im, orig['crab1.png'], orig['claw_left-Sheet.png'], orig['spike.png'], 330, floor, 10)
     crab(im, sprites['crab1.png'], sprites['claw_left-Sheet.png'], sprites['spike.png'], 930, floor, SCALE,
-         claw_k=1, claw_x=CLAW_X, claw_y=CLAW_Y, frames=(0, 1), spike_s=2.5)
+         claw_k=CLAW_K, claw_x=CLAW_X, claw_y=CLAW_Y, frames=(0, 1))
     # jugador de referencia (tamaño)
     pl = os.path.join(ROOT, 'assets', 'images', 'player', 'monstrito1.png')
     if os.path.exists(pl):
@@ -256,19 +208,19 @@ def mockup(sprites, out):
         im.alpha_composite(p, (620, floor - p.height))
     if d:
         d.text((250, 40), 'MEGA CRABBY (actual) x10', fill=(255, 255, 255), font=font)
-        d.text((830, 40), 'MEGA CRABBY HELADO x5 (propuesta: arte 32 px)', fill=(255, 255, 255), font=font)
+        d.text((830, 40), 'MEGA CRABBY HELADO x10 (propuesta)', fill=(255, 255, 255), font=font)
     # tiras ampliadas: 3 cuadros de andar, 2 de pinza, púa
     y0 = floor + 140
     x = 40
     for n in ('crab1.png', 'crab2.png', 'crab3.png'):
-        a = up(sprites[n], 6)
+        a = up(sprites[n], 10)
         im.alpha_composite(a, (x, y0)); x += a.width + 24
-    c = up(sprites['claw_left-Sheet.png'], 7)
+    c = up(sprites['claw_left-Sheet.png'], 10)
     im.alpha_composite(c, (x, y0)); x += c.width + 24
     s = up(sprites['spike.png'], 3)
     im.alpha_composite(s, (x, y0 - 10))
     if d:
-        d.text((40, y0 - 22), 'andar 1-3 (x6)                                                              pinza abierta / cerrada (x7)', fill=(255, 255, 255), font=font)
+        d.text((40, y0 - 22), 'andar 1-3 (x10)                                                                pinza abierta / cerrada (x10)', fill=(255, 255, 255), font=font)
     os.makedirs(out, exist_ok=True)
     im.convert('RGB').save(os.path.join(out, 'vista_previa.png'))
     # GIF: ciclo de andar (1-2-1-3) con chasquidos de pinza, junto al original
@@ -279,8 +231,8 @@ def mockup(sprites, out):
         n = seq[i % 4]
         o = Image.open(os.path.join(SRC, 'crab%d.png' % n)).convert('RGBA')
         crab(f, o, orig['claw_left-Sheet.png'], orig['spike.png'], 190, 250, 7, frames=((i // 3) % 2, (i // 5) % 2))
-        crab(f, sprites['crab%d.png' % n], sprites['claw_left-Sheet.png'], sprites['spike.png'], 560, 250, 3.5,
-             claw_k=1, claw_x=CLAW_X, claw_y=CLAW_Y, frames=((i // 3) % 2, (i // 5) % 2), spike_s=1.75)
+        crab(f, sprites['crab%d.png' % n], sprites['claw_left-Sheet.png'], sprites['spike.png'], 560, 250, 7,
+             claw_k=CLAW_K, claw_x=CLAW_X, claw_y=CLAW_Y, frames=((i // 3) % 2, (i // 5) % 2))
         frames.append(f.convert('RGB'))
     frames[0].save(os.path.join(out, 'andar.gif'), save_all=True, append_images=frames[1:], duration=140, loop=0)
 
