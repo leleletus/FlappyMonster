@@ -66,6 +66,12 @@ local ICE_DECEL  = 260                  -- frenada deslizando sobre hielo (px/s�
 local SNOW_DECEL = 2600                 -- y sobre lo demás
 local ICICLE_WARN = 0.85
 local BALL_HIT   = 26                   -- lado de la caja de daño de una bola
+-- Golpes a los jugadores: { vida, vx, vy, s sin control (el impulso no se pierde), s aturdido }
+local HIT_BALL   = { 1, 620, -360, 0.22, 0 }       -- bola de nieve: empujón fuerte
+local HIT_ICICLE = { 2, 320, -280, 0.12, 0 }       -- carámbano en la cabeza
+local HIT_WAVE   = { 1, 1000, -560, 0.30, 0.35 }   -- ola de nieve del gran golpe
+local HIT_SLAM   = { 1, 1350, -700, 0.38, 0.55 }   -- onda del aterrizaje del gran golpe: MUY fuerte
+local SLAM_R     = 3.5                  -- casillas (además del medio cuerpo) que alcanza la onda
 local DEATH = { dying_crack = true, dying_burst = true, dying_flee = true }
 local CRACK_T, BURST_T, FLEE_T = 2.0, 0.6, 3.2
 
@@ -77,14 +83,16 @@ local CYCLE = {
 }
 
 -- ── Arte ──────────────────────────────────────────────────────────────────────
-local body, rollH, rollA, cracks, sweat, ballImg, bombBall, flee, icicleImg, shock, splat
+local body, rollH, rollA, cracksB, cracksR, sweat, ballImg, bombBall, flee, icicleImg, shock, splat
 function Snow.loadAssets()
     if body then return end
     local D = 'assets/images/bosses/snowboss/'
     body     = SpriteStrip.load(D .. 'body-Sheet.png', 16)
     rollH    = SpriteStrip.load(D .. 'roll_happy-Sheet.png', 16)
     rollA    = SpriteStrip.load(D .. 'roll_angry-Sheet.png', 16)
-    cracks   = SpriteStrip.load(D .. 'cracks-Sheet.png', 16)
+    -- grietas adaptadas a cada cuadro del cuerpo y de rodar (tools/ui/make_snowboss_cracks.py)
+    cracksB  = SpriteStrip.load(D .. 'cracks_body-Sheet.png', 16)
+    cracksR  = SpriteStrip.load(D .. 'cracks_roll-Sheet.png', 16)
     sweat    = SpriteStrip.load(D .. 'sweat-Sheet.png', 5)
     ballImg  = SpriteStrip.load(D .. 'ball.png', 8)
     bombBall = SpriteStrip.load(D .. 'bomb_ball-Sheet.png', 10)
@@ -164,12 +172,21 @@ function Snow:physics(level, dt, gravity)
     self.speed = 0
     self:moveAndCollide(level, self.vx * dt, self.vy * dt)
     local hit, def
+    self.hitToggles = nil
     if vx0 ~= 0 and self.vx == 0 then
         hit = 'wall'
         local fx = self.x + (vx0 > 0 and 1 or -1) * (self.outerW / 2 + 4)
         for _, yy in ipairs({ self.y - self.outerH * 0.3, self.y, self.y + self.outerH * 0.35 }) do
             local d = SOLID_VS(level, fx, yy)
-            if d and (d.switchBlock or d.breakable) then def = d; self.hitCol = math.floor(fx / T) + 1; self.hitRow = math.floor(yy / T) + 1 end
+            local c, r = math.floor(fx / T) + 1, math.floor(yy / T) + 1
+            if d and (d.switchBlock or d.breakable) then def = d; self.hitCol = c; self.hitRow = r end
+            -- Activadores ON/OFF tocados (crash los cambia; nada de romper bloques)
+            if d and d.toggle then
+                self.hitToggles = self.hitToggles or {}
+                local dup = false
+                for _, h in ipairs(self.hitToggles) do if h[1] == c and h[2] == r then dup = true end end
+                if not dup then self.hitToggles[#self.hitToggles + 1] = { c, r } end
+            end
         end
         self.vx = vx0                                -- (quien llama decide qué pasa)
     end
@@ -222,6 +239,88 @@ function Snow:hitPlayers(level, crush)
     end
 end
 
+-- Golpe a un jugador (un jugador / servidor): `hit` = { vida, vx, vy, bloqueo, aturdido },
+-- empujado hacia `dir`. Invulnerable o congelado: nada (ni empujón). true si le dio.
+local function strike(pa, hit, dir)
+    if pa.dying or pa.alive == false or pa:isInvulnerable() then return false end
+    Boss.withPlayer(pa, function()
+        if pa:hurt(hit[1]) or pa.dying then return end
+        pa.vx, pa.vy = dir * hit[2], hit[3]
+        pa.onGround, pa.crouching = false, false
+        pa.gpPhase, pa.gpT = nil, 0
+        pa.ctrlLockT = math.max(pa.ctrlLockT or 0, hit[4])
+        if hit[5] > 0 then
+            pa.stunT = math.max(pa.stunT or 0, hit[5])
+            Sound.play('stunned')
+        end
+    end)
+    return true
+end
+Snow.strike = strike
+
+-- Onda del aterrizaje del gran golpe: a quien esté cerca y a ras de suelo, 1 de vida
+-- y un empujón MUY fuerte hacia fuera (la caída encima ya lo aplasta: hitPlayers)
+function Snow:slamWave(level)
+    local reach = self.outerW / 2 + SLAM_R * T
+    local floorY = self:feetY()
+    for _, pa in ipairs(level.players or {}) do
+        local ob = pa:getOuterBounds()
+        local dx = pa.x - self.x
+        if math.abs(dx) <= reach and ob.y + ob.h >= floorY - 1.6 * T and ob.y <= floorY + 8 then
+            strike(pa, HIT_SLAM, (dx >= 0) and 1 or -1)
+        end
+    end
+end
+
+-- Lo que lanza (bolas, carámbanos) y las olas de nieve contra los jugadores
+function Snow:hitWithShots(level)
+    local players = level.players or {}
+    if #players == 0 then return end
+    for i = #self.proj, 1, -1 do
+        local b = self.proj[i]
+        local box = { x = b.x - BALL_HIT / 2, y = b.y - BALL_HIT / 2, w = BALL_HIT, h = BALL_HIT }
+        for _, pa in ipairs(players) do
+            if overlap(pa:getOuterBounds(), box) then
+                local dir = (b.vx > 30 and 1) or (b.vx < -30 and -1) or ((pa.x >= b.x) and 1 or -1)
+                if strike(pa, HIT_BALL, dir) then
+                    table.remove(self.proj, i)
+                    if b.kind == 2 then
+                        self:dropBomb(level, b.x, b.y + 20)
+                    else
+                        Sound.play('snowSplat')
+                        Entity.emitFx('snow_puff', b.x, b.y)
+                    end
+                    break
+                end
+            end
+        end
+    end
+    for i = #self.icicles, 1, -1 do
+        local c = self.icicles[i]
+        if c.stage == 2 then
+            local box = { x = c.x - 12, y = c.y + 4, w = 24, h = 44 }
+            for _, pa in ipairs(players) do
+                if overlap(pa:getOuterBounds(), box) and strike(pa, HIT_ICICLE, (pa.x >= c.x) and 1 or -1) then
+                    table.remove(self.icicles, i)
+                    Sound.play('iceBreak', 1.1, 0.8)
+                    Entity.emitFx('ice_break', c.x, c.y + 40)
+                    break
+                end
+            end
+        end
+    end
+    if (self.shockT or 99) < SHOCK_LIFE then
+        local d = self.shockT * SHOCK_SPD
+        for _, sd in ipairs({ -1, 1 }) do
+            local x = self.shockX + sd * d
+            local box = { x = x - 22, y = self.shockY - 30, w = 44, h = 30 }
+            for _, pa in ipairs(players) do
+                if overlap(pa:getOuterBounds(), box) then strike(pa, HIT_WAVE, sd) end
+            end
+        end
+    end
+end
+
 -- Cambia una celda (un jugador / servidor) y la manda a los clientes ('set')
 local function placeTile(level, c, r, id)
     if level.canBreak == false then return end
@@ -252,21 +351,46 @@ function Snow:refreeze(level)
     if any then Sound.play('snowBreath') end
 end
 
--- Fase 3: tapa con nieve prensada la casilla de debajo de cada Activador de la zona
+-- Fase 3: rodea cada Activador de la zona con nieve prensada (rompible) en las 8
+-- casillas de alrededor, SOLO donde hay hueco: casillas vacías de verdad (sin bloque,
+-- agua, pinchos, mini bloques, cuerpos sólidos como los Congeladores, ni jugadores
+-- dentro). Nunca sustituye nada del nivel.
+local AROUND = { { 0, 1 }, { 0, -1 }, { -1, 0 }, { 1, 0 }, { -1, -1 }, { 1, -1 }, { -1, 1 }, { 1, 1 } }
+local SubTiles
+function Snow:freeCell(level, c, r)
+    if c < 1 or r < 1 or c > level.tileW or r > level.tileH then return false end
+    local raw = level:getRaw(c, r)
+    local id, water = TileCodec.decode(raw)
+    if water or TileCodec.hasSpikes(raw) or level:getDef(c, r).name ~= 'empty' or id ~= 0 then return false end
+    SubTiles = SubTiles or require 'src/world/SubTiles'
+    if SubTiles.solidInCell(level, c, r) then return false end
+    local box = { x = (c - 1) * T, y = (r - 1) * T, w = T, h = T }
+    for _, pa in ipairs(level.players or {}) do
+        if not pa.dying and overlap(pa:getOuterBounds(), box) then return false end
+    end
+    for _, e in ipairs(level.liveEntities or {}) do
+        if e ~= self and e.alive and e.solidFull and e.getOuterBounds and overlap(e:getOuterBounds(), box) then return false end
+    end
+    return true
+end
+
 function Snow:bury(level)
     local zx0, zx1, zy0, zy1 = self:zoneBounds()
     local c0, c1 = math.floor(zx0 / T) + 1, math.floor((zx1 - 1) / T) + 1
     local r0, r1 = math.floor(zy0 / T) + 1, math.floor((zy1 - 1) / T) + 1
     local packed = TileTypes.byName.packed_snow
     if not packed then return end
-    for r = r0, r1 do
-        for c = c0, c1 do
+    -- (los activadores pueden estar en la pared, justo fuera de la zona)
+    for r = math.max(1, r0 - 1), math.min(level.tileH, r1 + 1) do
+        for c = math.max(1, c0 - 1), math.min(level.tileW, c1 + 1) do
             local d = level:getDef(c, r)
             if d.name == 'switch_on' or d.name == 'switch_off' then
-                local below = level:getDef(c, r + 1)
-                if below.collision ~= 'solid' and below.name ~= 'packed_snow' then
-                    placeTile(level, c, r + 1, packed.id)
-                    Entity.emitFx('snow_puff', (c - 0.5) * T, (r + 0.5) * T)
+                for _, o in ipairs(AROUND) do
+                    local cc, rr = c + o[1], r + o[2]
+                    if self:freeCell(level, cc, rr) then
+                        placeTile(level, cc, rr, packed.id)
+                        Entity.emitFx('snow_puff', (cc - 0.5) * T, (rr - 0.5) * T)
+                    end
                 end
             end
         end
@@ -505,7 +629,17 @@ function Snow:onDamaged(n, kind)
         self:enter('dizzy')
         return
     end
-    if self.state ~= 'frozen' then self:enter('recover'); self.vx = 0 end
+    if self.state ~= 'frozen' and not self:phaseNow() then self:enter('recover'); self.vx = 0 end
+end
+
+-- Si el golpe la dejó por debajo del umbral de fase, cambia YA (no espera a su
+-- siguiente ataque: un Congelador que la vuelve a congelar en cada pausa la dejaría
+-- en la fase 1 hasta morir). true si cambió.
+function Snow:phaseNow()
+    if self:isDying() or self:phaseFor() <= self.phase then return false end
+    self:enter('phase_up')
+    self.vx = 0
+    return true
 end
 
 -- Derrotada: muerte propia (se agrieta → revienta → la bolita huye)
@@ -542,6 +676,7 @@ end
 function Snow:thaw()
     Sound.play('cryoFree')
     Entity.emitFx('ice_shatter', self.x, self.y)
+    if self:phaseNow() then return end
     self:enter('recover')
     self.vx = 0
 end
@@ -561,6 +696,7 @@ function Snow:updateBoss(dt, level)
     if self.shockT < 10 then self.shockT = self.shockT + dt end
     self:updateProjectiles(level, dt)
     self:updateIcicles(level, dt)
+    if level.canBreak ~= false then self:hitWithShots(level) end   -- (el cliente online no decide golpes)
     if self:isActive() then self:bombContact(level) end
 
     if st == 'fight' then self:enter('idle'); return end
@@ -668,6 +804,7 @@ function Snow:updateBoss(dt, level)
             self.shockT, self.shockX, self.shockY = 0, math.floor(self.x), math.floor(self:feetY())
             self:crackUnder(level, 2)
             self:hitPlayers(level, true)
+            self:slamWave(level)
             self:spawnIcicles(level, (self.phase == 3) and 5 or 3)
         end
 
@@ -735,6 +872,7 @@ function Snow:crash(level, def)
     Sound.play('snowCrash')
     Entity.emitFx('snow_crash', self.x + self.dir * self.outerW / 2, self.y)
     Entity.emitFx('shake_small', self.x, self.y)
+    self:toggleHit(level)
     if def and def.switchBlock and speed >= CRASH_SPD then
         self.avalanche = nil
         self.vx = -self.dir * 140
@@ -757,12 +895,35 @@ function Snow:crash(level, def)
     self:enter('recover')
 end
 
+-- Rodando contra un Activador ON/OFF: lo cambia, como un cabezazo (y sus Bloques
+-- ON/OFF y Congeladores conectados reaccionan). Solo activadores: nunca rompe bloques
+-- rompibles, nieve prensada ni hielo. Una vez por choque (physics apunta las celdas).
+function Snow:toggleHit(level)
+    for _, cr in ipairs(self.hitToggles or {}) do
+        if level:getDef(cr[1], cr[2]).toggle and level:hitTile(cr[1], cr[2], 'head') == 'toggle' then
+            Entity.emitFx('switch_hit', (cr[1] - 1) * T, (cr[2] - 1) * T)
+            Sound.play(level:getDef(cr[1], cr[2]).name == 'switch_on' and 'switchOn' or 'switchOff')
+        end
+    end
+    self.hitToggles = nil
+end
+
 -- ── Entrada ──────────────────────────────────────────────────────────────────
 -- Recorrido: entra arriba a la izquierda de la zona, bota en lo primero que encuentra
 -- debajo (una plataforma), luego en el suelo a medio camino y llega a su sitio,
 -- creciendo (escala 0.3 → 1). Los puntos de bote se calculan al empezar (un jugador /
 -- servidor, con el nivel); el cliente solo dibuja x, y y la escala sale del tiempo.
 local ROLL_IN = 2.2
+-- Escupitajo a la cámara: coge aire (SPIT_WIND), escupe (SPIT_AT: boca abierta, nube),
+-- la bola vuela hacia la pantalla creciendo y se estampa (SPLAT_AT)
+local SPIT_WIND, SPIT_AT, SPLAT_AT = 3.2, 3.45, 3.78
+Snow.SPIT_AT, Snow.SPLAT_AT = SPIT_AT, SPLAT_AT
+
+-- Boca en el cuadro de escupir (arte 16x16, origen en los pies 8,15)
+function Snow:mouthPos()
+    local sc = self.sc or SC1
+    return self.x - 0.5 * sc, self:feetY() - 6 * sc
+end
 local function surfaceBelow(level, x, y0, y1)
     for y = y0, y1, 8 do
         if level:collisionAt(x, y, true) then return math.floor(y / 8) * 8 end
@@ -835,7 +996,19 @@ function Snow:updateIntro(dt, level, t)
             self:crackUnder(level, 1)
         end
         if t >= 2.6 and self.introStep < 4 then self.introStep = 4; Sound.play('snowLaugh') end
-        if t >= 3.5 and self.introStep < 5 then self.introStep = 5; Sound.play('snowSpit'); Sound.play('snowSplat', 0.8) end
+        if t >= SPIT_WIND and self.introStep < 5 then self.introStep = 5; Sound.play('snowBreath', 1.2, 0.6) end   -- (coge aire)
+        if t >= SPIT_AT and self.introStep < 6 then
+            self.introStep = 6
+            Sound.play('snowSpit', 0.9)
+            local mx, my = self:mouthPos()
+            Entity.emitFx('snow_puff', mx, my)
+            Entity.emitFx('cryo_puff', mx, my)
+        end
+        if t >= SPLAT_AT and self.introStep < 7 then
+            self.introStep = 7
+            Sound.play('snowSplat', 0.8)
+            Entity.emitFx('shake_small', self.x, self.y)
+        end
     end
 end
 
@@ -903,6 +1076,29 @@ local function emit(kind, x, y, o)
     Particles.emit(kind, x, y, o)
 end
 
+-- Fila de arriba (arte) de cada cuadro del cuerpo: el sudor y las estrellas de mareo se
+-- apoyan en la cabeza también cuando está aplastada (se mide del PNG: solo dibujo)
+local bodyTop
+local function topRow(fr)
+    if not bodyTop then
+        bodyTop = {}
+        local ok, data = pcall(love.image.newImageData, 'assets/images/bosses/snowboss/body-Sheet.png')
+        if ok and data then
+            for i = 1, math.floor(data:getWidth() / 16) do
+                for y = 0, 15 do
+                    local found = false
+                    for x = (i - 1) * 16, i * 16 - 1 do
+                        local _, _, _, a = data:getPixel(x, y)
+                        if a > 0 then found = true; break end
+                    end
+                    if found then bodyTop[i] = y; break end
+                end
+            end
+        end
+    end
+    return bodyTop[fr] or 1
+end
+
 -- Cuadro del cuerpo (1-12) o, rodando, de la tira de rodar
 function Snow:pose()
     local st, t = self.state, self.deadTimer or 0
@@ -927,8 +1123,9 @@ function Snow:pose()
     if st == 'slam_hold' then return 'body', b + 4 end
     if st == 'intro' or st == 'ready' then
         if t >= 2.2 and t < 2.45 then return 'body', 3 end
-        if t >= 2.6 and t < 3.3 then return 'body', (math.floor((t - 2.6) * 8) % 2 == 0) and 4 or 2 end
-        if t >= 3.3 and t < 3.7 then return 'body', (t < 3.45) and 2 or 4 end
+        if t >= 2.6 and t < SPIT_WIND then return 'body', (math.floor((t - 2.6) * 8) % 2 == 0) and 4 or 2 end
+        if t >= SPIT_WIND and t < SPIT_AT then return 'body', (t < SPIT_WIND + 0.1) and 2 or 3 end   -- coge aire
+        if t >= SPIT_AT and t < SPLAT_AT + 0.15 then return 'body', 4 end                          -- boca abierta
         return 'body', 1
     end
     return 'body', b + 1
@@ -947,6 +1144,10 @@ function Snow:drawBody(camX, camY, alpha)
     if st == 'windup' then sh = 2 + math.floor(t / WINDUP_T[self.phase or 1] * 3) end
     if st == 'phase_up' or st == 'dying_crack' then sh = 3 end
     if (self.phase or 1) == 3 and st == 'idle' then sh = 1 end
+    if st == 'intro' and t >= SPIT_WIND and t < SPIT_AT then                    -- coge aire: tiembla cada vez más
+        sh = 1 + math.floor((t - SPIT_WIND) / (SPIT_AT - SPIT_WIND) * 2.99)
+    end
+    if st == 'intro' and t >= SPIT_AT and t < SPIT_AT + 0.1 then fy = fy - sc end  -- (retroceso al escupir)
     if sh > 0 then fx = fx + math.floor((math.random() * 2 - 1) * sh + 0.5); fy = fy + math.floor((math.random() * 2 - 1) * sh * 0.5 + 0.5) end
     local r, g, bl = 1, 1, 1
     if self:flashRed() then r, g, bl = 1, 0.35, 0.35 end
@@ -957,16 +1158,20 @@ function Snow:drawBody(camX, camY, alpha)
     local ck = nil
     if st == 'dying_crack' then ck = math.min(3, 1 + math.floor(t / (CRACK_T / 3)))
     elseif (self.phase or 1) >= 3 then ck = 2 end
-    if ck and kind ~= 'roll' then
-        love.graphics.setColor(1, 1, 1, alpha)
-        love.graphics.draw(cracks.image, cracks.quads[ck], fx, fy, 0, sc, sc, 8, 15)
+    if ck then
+        -- (una tira por cuadro: siguen el aplastamiento y giran al rodar)
+        local cs, n = cracksB, 12
+        if kind == 'roll' then cs, n = cracksR, 8 end
+        love.graphics.setColor(r, g, bl, alpha)
+        love.graphics.draw(cs.image, cs.quads[(ck - 1) * n + fr], fx, fy, 0, sc, sc, 8, 15)
     end
     -- Sudor (fase 3 / mareada)
-    if ((self.phase or 1) >= 3 or st == 'dizzy') and kind ~= 'roll' then
+    if ((self.phase or 1) >= 3 or st == 'dizzy') and kind ~= 'roll' and st ~= 'frozen' then
         local now = love.timer.getTime()
         local k = (now * 1.4) % 1
         love.graphics.setColor(1, 1, 1, alpha * (1 - k))
-        sweat:draw(math.floor(now * 4) % 2 + 1, fx + 6 * sc, fy - 14 * sc + k * 3 * sc, 0, sc * 0.5, sc * 0.5)
+        local top = (kind == 'roll') and 1 or topRow(fr)
+        sweat:draw(math.floor(now * 4) % 2 + 1, fx + 6 * sc, fy - (15 - top) * sc + k * 3 * sc, 0, sc * 0.5, sc * 0.5)
     end
     -- Mareada: pajaritos/estrellas girando
     if st == 'dizzy' then
@@ -1066,20 +1271,40 @@ function Snow:render(camX, camY)
     love.graphics.setColor(1, 1, 1, 1)
 end
 
--- Bola estampada en la pantalla (entrada): se dispara cuando el dibujo ve pasar
--- los 3.5 s de la entrada; dura 1.5 s (golpe, chorrea, cae)
+-- Escupitajo de la entrada (solo dibujo, del reloj de la entrada: igual online):
+-- la bola sale de la boca, vuela hacia la cámara creciendo y girando (con estela) y al
+-- llegar se estampa en la pantalla (destello + mancha que chorrea y cae, 1.6 s)
 function Snow:renderSplat(camX, camY, now)
-    if self.state == 'intro' and (self.deadTimer or 0) >= 3.5 and not self.splatAt then self.splatAt = now end
+    local t = self.deadTimer or 0
     if self.state == 'dormant' then self.splatAt = nil end
+    if self.state == 'intro' and t >= SPIT_AT and t < SPLAT_AT then
+        local mx, my = self:mouthPos()
+        local x0, y0 = mx - camX, my - camY
+        local x1, y1 = WINDOW_W / 2, WINDOW_H * 0.46
+        for i = 3, 0, -1 do                                        -- (estela: copias de antes)
+            local u = math.max(0, (t - i * 0.025 - SPIT_AT) / (SPLAT_AT - SPIT_AT))
+            local e = u * u                                        -- (acelera hacia la cámara)
+            local x = x0 + (x1 - x0) * e
+            local y = y0 + (y1 - y0) * e - math.sin(u * math.pi) * 70
+            local k = math.floor(4 + 26 * e * e + 0.5)            -- 8 px → ~240 px
+            love.graphics.setColor(1, 1, 1, (i == 0) and 1 or (0.35 - i * 0.08))
+            ballImg:draw(1, math.floor(x), math.floor(y), u * 7, k, k)
+        end
+    end
+    if self.state == 'intro' and t >= SPLAT_AT and not self.splatAt then self.splatAt = now end
     local s = self.splatAt
     if not s then return end
     local u = now - s
     if u > 1.6 then return end
+    if u < 0.09 then                                               -- destello del golpe
+        love.graphics.setColor(1, 1, 1, 0.45 * (1 - u / 0.09))
+        love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
+    end
     local fr = (u < 0.55) and 1 or ((u < 1.1) and 2 or 3)
     local slide = math.max(0, u - 0.55) * 180
-    local sc = 12
+    local sc = (u < 0.06) and 14 or 12                             -- (aplasta un instante al chocar)
     love.graphics.setColor(1, 1, 1, math.min(1, (1.6 - u) / 0.4))
-    splat:draw(fr, math.floor(640), math.floor(330 + slide), 0, sc, sc)
+    splat:draw(fr, math.floor(WINDOW_W / 2), math.floor(WINDOW_H * 0.46 + slide), 0, sc, sc)
 end
 
 function Snow.drawEditorOverlay(props, cx, cy, zoom) end

@@ -692,7 +692,12 @@ list no mode until the user places a Point Area in them).
   EntityTypes render wrapper, PlayerAdventure and OnlinePlayer. Art `assets/images/cryo/` from
   `tools/ui/make_cryo_sprites.py`; sounds `traps/cryo_*.wav` from `tools/sounds/cryo.py` (cryoFreeze is a
   SHARED sound). Particles cryo_puff/cryo_mist/cryo_blast/ice_freeze/ice_shatter. Harness `mechanics`
-  (cryo_*), `online_smoke LEVEL=tools/levelgen/arenas/congelador.json WATCH=gummy WANT=frozen WANTICE=1`,
+  (cryo_*). Support (render only, `Cryo:support()`, needs `levelRef`: `wantsLevel`, also set by the editor):
+  the feet (bottom row of the sprite) mirror toward a solid cell beside the firing axis, else toward the
+  nearest surface on that axis; firing up with ground behind / sideways with a wall behind = mounted;
+  otherwise it HANGS from the ceiling with `cryo/chain.png` + `anchor.png` + `clamp.png`
+  (`tools/ui/make_cryo_chain.py`; two side chains when firing up). Harness `snowboss_look` (snow_cryo.png),
+  `online_smoke LEVEL=tools/levelgen/arenas/congelador.json WATCH=gummy WANT=frozen WANTICE=1`,
   `editor_open PLAY=tools/levelgen/arenas/congelador.json`.
 - **Ice drips** (`src/fx/IceDrips.lua`, render-only, per client): tiles with `iceDrip` and air
   below grow drops (`fx/ice_drop.png`) that fall and splash. **Snowfall** (`src/fx/Snowfall.lua`):
@@ -1033,7 +1038,19 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   `make_jefe_nieve.py`): entry/exit LEDGES (walk in and drop: bots/players never need to jump), ice
   floor, two snow platforms (row 9) each with an Activator (start OFF = gates down), gates = ON/OFF
   Blocks at both ends, each Activator linked to TWO Freezers in switch mode (wall one along the floor,
-  ceiling one firing down). Level `lago_helado` (`levels_boss.py`, graft copies `links`; `Level.extra`
+  ceiling one firing down). Hits on players are applied by the boss itself (bosses use `interact`, so
+  hazard boxes are NOT consulted): `Snow:hitWithShots` (SP/server) + `strike(pa, hit, dir)` = { HP, vx, vy,
+  ctrlLock, stun }: ball 1 HP + strong push (bomb ball also becomes a lit bomb), icicle 2 HP, snow wave 1 HP
+  + push along the wave, `slamWave` on the slam landing = 1 HP + VERY strong push + stun within `SLAM_R`
+  tiles at floor level; invulnerable/frozen players get nothing. Rolling into an ON/OFF Activator toggles it
+  (`physics` records `hitToggles`, `crash` → `toggleHit` → `level:hitTile`); it never breaks breakables /
+  packed snow / thin ice. `phaseNow()`: a hit that crosses a phase threshold goes to 'phase_up' at once
+  (a Freezer re-freezing it every pause no longer skips phases). Phase-3 burial fills the 8 cells around
+  each Activator only where truly empty (`freeCell`: no tile, water, spikes, subtile, solidFull body or
+  player). Cracks follow every frame: `cracks_body/roll-Sheet.png` from `tools/ui/make_snowboss_cracks.py`
+  (reads the CURRENT body/roll sheets — rerun after editing them or cracks-Sheet). Intro spit (render from the
+  intro clock): `SPIT_WIND` inhale → `SPIT_AT` mouth open + puff → ball flies to the camera growing →
+  `SPLAT_AT` flash + splat + shake. Harnesses `snowboss_rules`, `snowboss_look`. Level `lago_helado` (`levels_boss.py`, graft copies `links`; `Level.extra`
   in `lib.py` = extra JSON keys). Harnesses: `boss_sim LEVEL=tools/levelgen/arenas/jefe_nieve.json`
   (attacks, dizzy, frozen GP = 3, kicked bomb, phases, burial, death order), `boss_intro`, `online_boss`,
   `boss_frames`.

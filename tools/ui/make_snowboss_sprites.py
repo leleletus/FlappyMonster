@@ -10,7 +10,8 @@
 #                      enfadado (igual), golpe contento, golpe enfadado, mareado 1, 2
 #   roll_happy-Sheet.png / roll_angry-Sheet.png  16x16 x8: rodando (la cara gira de
 #                      45 en 45 grados, rotación por píxel, sin difuminar)
-#   cracks-Sheet.png   16x16 x3: grietas (fase 3 y muerte), de menos a más
+#   cracks-Sheet.png   16x16 x3: grietas (fase 3 y muerte), de menos a más (base: el juego
+#                      usa las adaptadas a cada cuadro de tools/ui/make_snowboss_cracks.py)
 #   sweat-Sheet.png    5x7 x2: gota de sudor
 #   ball.png           8x8: bola de nieve (proyectil)
 #   bomb_ball-Sheet.png 10x12 x2: bola con mecha encendida (chispa en 2 cuadros)

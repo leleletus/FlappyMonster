@@ -32,10 +32,20 @@ local STREAM_HALF  = 16                -- media anchura de la caja que congela (
 local STREAM_FPS   = 16
 local DIRS = { right = { 1, 0 }, left = { -1, 0 }, up = { 0, -1 }, down = { 0, 1 } }
 
-local sheet, streamImg, streamQuads, headStrip
+Cryo.wantsLevel = true        -- (solo dibujo: mira los bloques de alrededor para apoyarse; BossZones.link / editor)
+
+local sheet, streamImg, streamQuads, headStrip, chainImg, anchorImg, clampImg
+local function nearest(path)
+    local im = love.graphics.newImage(path)
+    if im.setFilter then im:setFilter('nearest', 'nearest') end
+    return im
+end
 function Cryo.loadAssets()
     if sheet then return end
     sheet = SpriteStrip.load('assets/images/cryo/cryo-Sheet.png', 16)
+    -- soporte colgante (tools/ui/make_cryo_chain.py)
+    chainImg, anchorImg, clampImg = nearest('assets/images/cryo/chain.png'), nearest('assets/images/cryo/anchor.png'),
+                                    nearest('assets/images/cryo/clamp.png')
     streamImg = love.graphics.newImage('assets/images/cryo/stream-Sheet.png')
     if streamImg.setFilter then streamImg:setFilter('nearest', 'nearest') end
     streamQuads = {}
@@ -187,6 +197,64 @@ local function pose(dir)
     return 0, 1
 end
 
+-- Hacia dónde quedan las patas del sprite (su fila de abajo) con cada dirección SIN espejo
+local FEET = { right = { 0, 1 }, left = { 0, 1 }, up = { 1, 0 }, down = { -1, 0 } }
+local SEARCH = 40                       -- casillas que mira buscando dónde apoyarse
+
+-- ¿Dónde se apoya? (solo dibujo). Devuelve el espejo de las patas (1 / -1: hacia el
+-- otro lado del eje de disparo) y si cuelga (cadena hasta el techo):
+--  * toca un bloque a un lado del eje de disparo → patas hacia él
+--  * si no, patas hacia la superficie más cercana de ese eje, y:
+--      - disparando hacia arriba con el suelo justo detrás, o de lado con la pared
+--        detrás: está montado ahí, no cuelga
+--      - si no, cuelga del techo con una cadena
+function Cryo:support()
+    local level = self.levelRef
+    if not level then return 1, false end
+    local T = TILE_PX
+    local c, r = math.floor(self.x / T) + 1, math.floor(self.y / T) + 1
+    local function solid(cc, rr)
+        if cc < 1 or rr < 1 or cc > level.tileW or rr > level.tileH then return rr < 1 end
+        return level:getDef(cc, rr).collision == 'solid'
+    end
+    local f = FEET[self.dir] or FEET.right
+    if solid(c + f[1], r + f[2]) then return 1, false end
+    if solid(c - f[1], r - f[2]) then return -1, false end
+    local function dist(dx, dy)
+        for i = 2, SEARCH do if solid(c + dx * i, r + dy * i) then return i end end
+        return SEARCH + 1
+    end
+    local mir = (dist(-f[1], -f[2]) < dist(f[1], f[2])) and -1 or 1
+    local dx, dy = self:dirVec()
+    if solid(c - dx, r - dy) and dy <= 0 then return mir, false end      -- montado (suelo / pared detrás)
+    return mir, true
+end
+
+-- Cadena(s) desde el techo hasta el aparato (dibujadas DETRÁS de él)
+function Cryo:drawHanger(camX, camY, sx, sy)
+    local level, T, S = self.levelRef, TILE_PX, SCALE
+    local xs = (self.dir == 'up') and { -5 * S, 5 * S } or { 0 }       -- (hacia arriba: a los lados del chorro)
+    love.graphics.setColor(1, 1, 1, 1)
+    for _, ox in ipairs(xs) do
+        local wx = self.x + ox
+        local c = math.floor(wx / T) + 1
+        local ceil = 0
+        for rr = math.floor(self.y / T), 1, -1 do
+            if level:getDef(c, rr).collision == 'solid' then ceil = rr * T; break end
+        end
+        local x = math.floor(sx + ox)
+        local top = math.floor(ceil - camY)
+        local bottom = sy - 6 * S                                   -- (entra por arriba del aparato)
+        local y = top + 2 * S
+        while y < bottom do
+            love.graphics.draw(chainImg, x - math.floor(chainImg:getWidth() * S / 2), y, 0, S, S)
+            y = y + chainImg:getHeight() * S
+        end
+        love.graphics.draw(anchorImg, x - math.floor(anchorImg:getWidth() * S / 2), top, 0, S, S)
+        love.graphics.draw(clampImg, x - math.floor(clampImg:getWidth() * S / 2), bottom - S, 0, S, S)
+    end
+end
+
 function Cryo:drawStream(camX, camY, tail, head, now)
     local nx, ny = self:nozzle()
     local ang = pose(self.dir)
@@ -251,17 +319,19 @@ function Cryo:render(camX, camY)
     end
     if st ~= 'fire' then self.blasted = nil end
     local ang, flip = pose(self.dir)
+    local mir, hang = self:support()
+    if hang then self:drawHanger(camX, camY, math.floor(self.x - camX), math.floor(self.y - camY)) end
     local sx = math.floor(self.x - camX) + ((shake > 0) and math.floor((math.random() * 2 - 1) * shake + 0.5) or 0)
     local sy = math.floor(self.y - camY) + ((shake > 0) and math.floor((math.random() * 2 - 1) * shake + 0.5) or 0)
     love.graphics.setColor(1, 1, 1, 1)
-    sheet:draw(frame, sx, sy, ang, SCALE * flip, SCALE)
+    sheet:draw(frame, sx, sy, ang, SCALE * flip, SCALE * mir)
     if st == 'windup' then
         -- Brillo azul que crece (aditivo) sobre todo el aparato
         local k = math.min(1, t / math.max(0.05, wind))
         local pulse = 0.5 + 0.5 * math.sin(now * (10 + 20 * k))
         love.graphics.setBlendMode('add')
         love.graphics.setColor(0.25 * k, 0.6 * k, 0.9 * k, 0.35 + 0.35 * pulse)
-        sheet:draw(frame, sx, sy, ang, SCALE * flip, SCALE)
+        sheet:draw(frame, sx, sy, ang, SCALE * flip, SCALE * mir)
         love.graphics.setBlendMode('alpha')
     end
     local tail, head = self:streamSpan()

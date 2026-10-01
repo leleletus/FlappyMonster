@@ -232,6 +232,7 @@ local function rebuild()
         local inst = Entities.create(Model.deepcopy(e))
         if inst then
             inst._spawnY = inst.y
+            if inst.wantsLevel then inst.levelRef = lvl end           -- (p. ej. el Congelador: dónde se apoya)
             if inst.tryAttach then inst:tryAttach(lvl) end        -- trepadores: pegados a su pared/techo
             if not inst.flying then
                 for _ = 1, 240 do inst:fall(lvl, 1 / 60); if inst.onGround then break end end

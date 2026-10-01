@@ -37,7 +37,7 @@ local BossZones = require 'src/world/BossZones'
 local PlayerAdventure = require 'src/entities/PlayerAdventure'
 
 function love.load()
-    math.randomseed(3)
+    math.randomseed(tonumber(os.getenv('SEED')) or 3)
     local data = json.decode(love.filesystem.read(os.getenv('LEVEL') or 'assets/levels/guarida_cangrejo_rey.json'))
     local level = Level.fromData(data)
     local ents = {}
