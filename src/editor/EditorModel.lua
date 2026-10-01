@@ -547,7 +547,7 @@ function Model:validate()
         local where = (t and t.label or e.type) .. ' (' .. e.col .. ',' .. e.row .. ')'
         if not self:inBounds(e.col, e.row) then
             w[#w+1] = { 'error', where .. ' está fuera del mapa', e }
-        elseif Tiles.get(Codec.id(self.tiles[e.row][e.col])).collision == 'solid' then
+        elseif Tiles.get(Codec.id(self.tiles[e.row][e.col])).collision == 'solid' and not (t and t.inBlockOk) then
             w[#w+1] = { 'warn', where .. ' está dentro de un bloque', e }
         elseif t and t.ceilingOnly and not self:ceilingAbove(e.col, e.row, e.sub) then
             w[#w+1] = { 'warn', where .. ' no cuelga de un techo sólido', e }

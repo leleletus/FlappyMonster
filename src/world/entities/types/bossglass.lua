@@ -299,6 +299,7 @@ return {
                .. 'cambiar de fase el jefe. Quita 1 de vida y lanza hacia arriba con los saltos recargados. '
                .. 'Pinta la fila de aire justo encima del suelo.',
     class = G,
+    inBlockOk = true,          -- (zona: puede tocar bloques)
     hide = 'all',
     defaults = { movement = 'static' },
     props = {

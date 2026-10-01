@@ -115,6 +115,7 @@ return {
     description = 'Área cuyo nivel de agua sube y baja: siempre en ciclo, durante la pelea de una zona de jefe, '
                .. 'o al encender/apagar bloques ON/OFF conectados a ella (capa Bloques → herramienta Conectar).',
     class = Flood,
+    inBlockOk = true,          -- (zona: puede empezar dentro de los bloques)
     hide = 'all',
     activatable = true,
     -- (al conectarle un bloque ON/OFF en el editor, pasa a moverse con ellos)

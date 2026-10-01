@@ -21,6 +21,7 @@
 --   checkpoint  true: al tocarlo pasa a ser el punto de reaparición del jugador
 --   placement   'sub': se coloca en subceldas (como los pinchos); guarda `sub`
 --   ceilingOnly true: solo se puede colocar justo debajo de un bloque sólido
+--   inBlockOk   true: colocada dentro de un bloque no es un aviso (pez globo, zonas)
 --   activatable true: se le pueden CONECTAR bloques ON/OFF (editor: capa
 --               Bloques → Conectar). Tiene una propiedad `id` (si el tipo no la
 --               declara, se añade sola) y en el juego pregunta

@@ -238,6 +238,7 @@ return {
     description = 'Bloques invisibles y traspasables que aparecen al empezar la pelea de su zona de jefe '
                .. '(p. ej. para cerrar la arena) y desaparecen al vencer al jefe.',
     class = BW,
+    inBlockOk = true,          -- (son bloques: su celda puede estar dentro de otros)
     hide = 'all',
     defaults = { movement = 'static' },
     props = {

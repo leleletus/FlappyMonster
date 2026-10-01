@@ -295,6 +295,7 @@ return {
     description = 'Solo para el agua: explora su área de nado por delante de todo (atraviesa bloques). Si un jugador que está '
                .. 'en el agua se acerca, avisa, se hincha y pincha (1 de vida y empujón). No se le puede matar.',
     class = Puffer,
+    inBlockOk = true,          -- (atraviesa los bloques: dentro de uno no es un aviso)
     hide = { 'movement', 'attach', 'patrol', 'turnAtEdges', 'bobAmp', 'pauses', 'onTouch', 'stompable', 'points',
              'dropOnSight', 'detectRange', 'respawn' },
     defaults = { movement = 'walk', speed = 45, stompable = false, points = 0, onTouch = 'none', pauses = false },

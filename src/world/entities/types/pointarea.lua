@@ -74,6 +74,7 @@ return {
     name = 'pointarea', label = 'Zona de puntos', category = 'Mecanismos',
     description = 'Quien esté dentro gana puntos cada cierto tiempo. Es el objetivo del modo Rey de la Colina.',
     class = PA,
+    inBlockOk = true,          -- (zona: puede cubrir bloques)
     hide = 'all',
     defaults = { movement = 'static' },
     props = {
