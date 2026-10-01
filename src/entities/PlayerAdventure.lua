@@ -1007,6 +1007,18 @@ function PlayerAdventure:_update(dt, level)
     local speedM = liq and liq.speedMult   or 1.0
     local gravM  = liq and liq.gravityMult or 1.0
     local fric   = self.onGround and ADV_FRICTION * (ground and ground.friction or 1) or ADV_AIR_FRIC
+    -- Placas de escarcha que deja el Mega Crabby helado (level.frostPatches, también en la
+    -- predicción: llegan en su snapshot): resbalan como el hielo
+    if self.onGround and level and level.frostPatches then
+        local ob = self:getOuterBounds()
+        local foot = ob.y + ob.h
+        for _, fp in ipairs(level.frostPatches) do
+            if (fp.left or 0) > 0 and self.x >= fp.x0 and self.x <= fp.x1 and math.abs(foot - fp.y) < 12 then
+                fric = math.min(fric, ADV_FRICTION * 0.2)
+                break
+            end
+        end
+    end
     local walkM  = ground and ground.speedMult or 1
     local convey = ground and ground.conveyor  or 0
 

@@ -54,7 +54,7 @@ function love.load()
     local data = json.decode(love.filesystem.read(os.getenv('LEVEL') or 'assets/levels/guarida_cangrejo_rey.json'))
     -- (muchos súbditos: 3 por invocación, 6 a la vez, a menudo)
     for _, e in ipairs(data.entities or {}) do
-        if e.type == 'megacrabby' then
+        if e.type == 'megacrabby' or e.type == 'megacrabby_ice' then
             e.props = e.props or {}
             e.props.summonCount, e.props.summonMax, e.props.summonPool, e.props.summonEvery = 3, 6, 6, 4
         end
@@ -68,7 +68,7 @@ function love.load()
     for _, e in ipairs(ents) do if e.def.boss then boss = e end end
     local z = boss.zone
     local T = TILE_PX
-    local mega = boss.def.name == 'megacrabby'
+    local mega = boss.def.name == 'megacrabby' or boss.def.name == 'megacrabby_ice'
     local camBad, camRef = 0, nil
     local landGap
     -- Uno justo donde está el jefe (debe caer en otro sitio) y otro a la izquierda

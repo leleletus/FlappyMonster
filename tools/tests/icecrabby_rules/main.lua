@@ -11,6 +11,14 @@
 --   carambano_techo  del techo con carámbano: cae encima: -2
 --   trampolin     escondido con el trampolín de hielo: caerle encima lanza
 --   pared         trepador en una pared escondido bajo un carámbano: la caja sale de la pared
+-- MEGA CRABBY HELADO (types/megacrabby_ice.lua):
+--   mega_palmada  tras una embestida: palmada → 2 ondas que congelan a quien está en el suelo
+--                 (no a quien salta por encima) → pinzas pegadas → recover → chase
+--   mega_pinzas   pinzas pegadas: pisar el lomo rebota sin daño, pisotón en una pinza rebota sin
+--                 daño, ground pound en una pinza = -2 y se suelta (un golpe por palmada)
+--   mega_placa    al caer del salto desde la pared deja una placa que resbala; dura patchTime,
+--                 ragePatchTime enfadado; se acaba al morir
+--   mega_red      netPackExtra → netApplyExtra: ondas y placas iguales en el cliente (y en su nivel)
 --   LOOK=1        además guarda <save>/icecrabby_look.png: las 4 tapas andando y escondidas, en
 --                 suelo, techo y pared, y un montón agrietándose
 --
@@ -245,6 +253,116 @@ function cases.pared()
 end
 
 -- Captura: las 4 tapas en suelo (andando / escondido), techo y pared
+-- ── Mega Crabby helado ───────────────────────────────────────────────────────
+local function mega(W)
+    local level, es, e = room(W or 34, 10, { { type = 'megacrabby_ice', col = 17, row = 9, props = {} } })
+    level.players = {}
+    e:startFight(1)
+    e.state, e.deadTimer = 'chase', 0
+    step(level, es, 0.3)
+    return level, es, e
+end
+
+function cases.mega_palmada()
+    local level, es, e = mega(40)
+    local pa = player(level, e.x + 520, 9 * T - 40)
+    local jumper = PlayerAdventure:new(e.x - 520, 9 * T - 40)
+    level.players = { pa, jumper }
+    step(level, es, 0.4)
+    e.chargeDir, e.facing, e.travel, e.state, e.deadTimer = 1, 1, 1e9, 'charge', 0
+    e.graceT = 0
+    local seq, frozenA, frozenB, last = {}, false, false, nil
+    step(level, es, 4, function()
+        if e.state ~= last then seq[#seq + 1] = e.state; last = e.state end
+        -- el saltador salta justo cuando la onda le llega
+        for _, w in ipairs(e.waves) do
+            if w.dir < 0 and math.abs(w.x - jumper.x) < 140 and jumper.onGround then jumper.vy = -900; jumper.onGround = false end
+        end
+        if (pa.iceT or 0) > 0 then frozenA = true end
+        if (jumper.iceT or 0) > 0 then frozenB = true end
+        return last == 'chase' and #seq > 3
+    end)
+    local s = table.concat(seq, '>')
+    check('mega_palmada', s:match('clap>clap_stuck>recover>chase') ~= nil and frozenA and not frozenB,
+        ('estados %s; congelado en el suelo %s, el que salta %s'):format(s, tostring(frozenA), tostring(frozenB)))
+end
+
+function cases.mega_pinzas()
+    local level, es, e = mega()
+    local function stuck()
+        e.state, e.deadTimer, e.hitDrop, e.inv = 'clap_stuck', 0, false, 0
+        e.props.clapStuck = 30
+    end
+    local function drop(x, gp)
+        local pa = player(level, x, e.y - e.outerH / 2 - 80)
+        pa.vy = 600
+        if gp then pa.gpPhase = 'fall' end
+        local hp0 = e.hp
+        step(level, es, 0.6, function() return e.hp ~= hp0 or e.state ~= 'clap_stuck' end)
+        return hp0 - e.hp, pa
+    end
+    stuck()
+    local d1 = drop(e.x, true)                                   -- lomo (ground pound)
+    stuck()
+    local cb = e:clawBoxes()[2]
+    local d2 = drop(cb.x + cb.w - 30, false)                     -- pinza, pisotón
+    stuck()
+    local cl = e:clawBoxes()[1]
+    local d3 = drop(cl.x + 30, true)                             -- pinza, ground pound
+    local st = e.state
+    check('mega_pinzas', d1 == 0 and d2 == 0 and d3 == 2 and st == 'recover',
+        ('daño: lomo %d, pisotón en pinza %d, GP en pinza %d; luego %s'):format(d1, d2, d3, st))
+end
+
+function cases.mega_placa()
+    local level, es, e = mega()
+    e.state, e.deadTimer = 'pounce', 0
+    e.vy, e.onGround = 0, true
+    e.props.patchTime = 2
+    e:addPatch(level)
+    local fp = e.patches[1]
+    e.state, e.recoverFor = 'recover', 99
+    e.x = 30 * T                                                 -- (fuera de la placa)
+    step(level, es, 0.05)
+    local function slide(x)
+        local pa = player(level, x, 9 * T - 40)
+        step(level, es, 0.4)
+        pa.vx = ADV_MOVE_SPD
+        local x0 = pa.x
+        step(level, es, 0.35)
+        return pa.x - x0
+    end
+    local onP = slide((fp.x0 + fp.x1) / 2 - 60)
+    local offP = slide(4 * T)
+    step(level, es, 2)
+    local gone = level.frostPatches == nil or #level.frostPatches == 0
+    e.hp = 1
+    e:addPatch(level)
+    local rageLife = e.patches[#e.patches].left
+    e:defeat()
+    step(level, es, 0.05)
+    check('mega_placa', onP > offP * 1.8 and gone and math.abs(rageLife - (e.props.ragePatchTime or 8)) < 0.01
+        and level.frostPatches == nil,
+        ('resbala %.0f px en la placa / %.0f fuera; caduca %s; enfadado dura %.1f s; al morir %s'):format(
+        onP, offP, tostring(gone), rageLife, tostring(level.frostPatches)))
+end
+
+function cases.mega_red()
+    local level, es, e = mega()
+    e:spawnWaves()
+    e:addPatch(level)
+    local pk = e:netPackExtra()
+    local level2 = room(34, 10, {})
+    local r = Entities.create({ type = 'megacrabby_ice', col = 17, row = 9, props = {} })
+    r.levelRef = level2
+    r.state = 'clap'
+    r:netApplyExtra(pk, pk, 1)
+    local ok = #r.waves == 2 and #r.patches == 1 and level2.frostPatches == r.patches
+        and math.abs(r.waves[2].x - math.floor(e.waves[2].x)) < 1 and r.patches[1].x0 == e.patches[1].x0
+    check('mega_red', ok, ('ondas %d, placas %d, en el nivel del cliente %s'):format(
+        #r.waves, #r.patches, tostring(level2.frostPatches ~= nil)))
+end
+
 local function look()
     local types = { 'crabby_ice', 'crabby_ice_icicle', 'crabby_ice_snow', 'crabbytramp_ice' }
     local ents = {}
@@ -273,11 +391,38 @@ local function look()
     print('guardado ' .. love.filesystem.getSaveDirectory() .. '/icecrabby_look.png')
 end
 
+-- LOOK=1: el Mega Crabby helado en 4 momentos (palmada, pinzas pegadas con ondas y placa, enfadado)
+local function lookMega()
+    local CW, CH = 9 * T, 5 * T
+    local moments = { { 'clap', 0.15 }, { 'clap_stuck', 0.3 }, { 'chase', 0, true }, { 'rest', 0.5, true } }
+    local cv = love.graphics.newCanvas(CW * #moments, CH)
+    love.graphics.setCanvas(cv)
+    love.graphics.clear(0.35, 0.42, 0.62, 1)
+    for i, m in ipairs(moments) do
+        local level, es, e = mega(40)
+        if i == 2 then e:spawnWaves(); for _, w in ipairs(e.waves) do w.x = w.x + w.dir * 150 end; e:addPatch(level) end
+        e.state, e.deadTimer = m[1], m[2]
+        if m[3] then e.hp = 1 end
+        love.timer.getTime = function() return 10 + i end
+        if m[3] then e:render(0, 0); love.timer.getTime = function() return 11 + i end end
+        local camX, camY = math.floor(e.x - CW / 2 - (i - 1) * CW), math.floor(9 * T - CH + T)
+        love.graphics.setScissor((i - 1) * CW, 0, CW - 4, CH)
+        love.graphics.clear(0.35, 0.42, 0.62, 1)
+        level:render(camX, camY)
+        e:render(camX, camY)
+        love.graphics.setScissor()
+    end
+    love.graphics.setCanvas()
+    cv:newImageData():encode('png', 'icemega_look.png')
+    print('guardado ' .. love.filesystem.getSaveDirectory() .. '/icemega_look.png')
+end
+
 function love.load()
-    if os.getenv('LOOK') then look() end
+    if os.getenv('LOOK') then look(); lookMega() end
     local only = os.getenv('CASE')
     for _, n in ipairs({ 'hundirse', 'escombros', 'pua', 'carambano', 'nieve_toque', 'nieve_encima', 'nieve_gp',
-                         'nieve_techo', 'carambano_techo', 'trampolin', 'pared' }) do
+                         'nieve_techo', 'carambano_techo', 'trampolin', 'pared',
+                         'mega_palmada', 'mega_pinzas', 'mega_placa', 'mega_red' }) do
         if not only or only == n then
             local ok, err = pcall(cases[n])
             if not ok then check(n, false, 'error: ' .. tostring(err)) end

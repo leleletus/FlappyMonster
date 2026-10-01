@@ -284,7 +284,8 @@ src/world/
                        crabbytramp (Crabby trampolín, subclass of crabby), cryo (Congelador),
                        flood (editor-only placeholder for a Floods area),
                        bomb / bombobject (bombs, see Bombs), bossglass, bosswall, cryo (Freezer),
-                       snowboss (Gran Bola de Nieve), phaseblock (Bloques de fase), crabby_ice (Crabby helado: 4 defs)
+                       snowboss (Gran Bola de Nieve), phaseblock (Bloques de fase), crabby_ice (Crabby helado: 4 defs),
+                       megacrabby_ice (Mega Crabby helado)
   AutoScroll.lua       auto-scrolling camera levels (see below)
   Floods.lua           rising/falling water areas (see below)
   BossZones.lua        boss arenas (see below)
@@ -473,7 +474,7 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   'stomp' with 4th return dirX = cnx → `pa:bounce(vy, dirX, soft=true)` (vx 300 +
   ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill; v17: crawler turn in snapshots; v18: MegaCrabby;
   v19: boss walls, Mega minions/pounce; v20: post-hit protection; v21: unified invulnerability;
-  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks; v30: boss broken glass; v31: special enemy deaths; v32: bombs; v33: snow/ice/thin ice; v34: sand; v35: deep stone; v36: freezer; v37: Snowball Boss; v38: Snowball Boss rebuilt, zone phases, phase blocks; v39: Icy Crabby).
+  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks; v30: boss broken glass; v31: special enemy deaths; v32: bombs; v33: snow/ice/thin ice; v34: sand; v35: deep stone; v36: freezer; v37: Snowball Boss; v38: Snowball Boss rebuilt, zone phases, phase blocks; v39: Icy Crabby; v40: Icy Mega Crabby).
 - **Crawler** (`src/world/entities/Crawler.lua`): surface-following movement
   (floor ↔ walls ↔ ceiling, concave and convex corners) for Crabbies with prop
   `wallWalk` (`Crabby.WALL_PROP`, off by default so old levels don't change).
@@ -510,6 +511,26 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   small physical debris of the block under it while hiding/unhiding (render-only `Crabby:renderDig` →
   particle `crab_dig`, colours from the surface, along its normal). Harness `icecrabby_rules` (+`LOOK=1`),
   online `online_smoke LEVEL=tools/levelgen/arenas/crabby_helado.json WATCH=crabby_ice_snow`. Protocol v39.
+- **Icy Mega Crabby** (`types/megacrabby_ice.lua`, "Mega Crabby helado", `boss.megacrabby_ice`): subclass of
+  the Mega (ALL its states/attacks/intro/rests/death); art per class (`Mega.loadArt(dir, w, h, cw, ch, clawK,
+  clawX, clawY, clawIn)` → `self.art`; the icy one 18x13 at MS 10 from `tools/ui/make_icecrab_sprites.py`,
+  Paralomis birsteini, claws 1.0 of the body scale, lower). Minions = Icy Crabbies (`summons` maps the types).
+  Three ice rules: (1) FROST CLAP after every charge that hit nobody ('clap': claws up, slammed OUTWARD flat on
+  the floor at `CLAP_AT`) → two floor waves (`waves`, speed `waveSpeed`, 1.4 s, 34 px tall = jump them) that
+  `pa:freeze(waveFreeze)`; then 'clap_stuck' (`clapStuck` s, claws in ice blocks). WEAK POINT = a frozen CLAW
+  (`clawBoxes()`, outside the body): ground pound on one = 2 dmg (once per clap, then recover); a normal stomp
+  on a claw bounces; the back keeps its head spike → immune bounce (the user: "how is it vulnerable with that
+  spike?"). (2) FROST PATCHES where the wall pounce lands (`patchWidth` tiles, `patchTime` s): `level.frostPatches`
+  {x0,x1,y,left} → PlayerAdventure caps ground friction at 0.2× (also in prediction: the client sets them from
+  netPackExtra on `levelRef`); cleared on death. (3) RAGE: sharp ice shards on shell AND claws (user's
+  pick "A: Esquirlas" of 4 options; `rage_body-Sheet.png` 26x21 / `rage_claw-Sheet.png` 18x15, 2 frames
+  normal/glint, from `make_icecrab_sprites.py --rabia A`: procedural tapered shards, coverage-rasterised) drawn
+  by Mega.drawLocal hooks `drawBodyOverlay` / `drawClawOverlay` (same transform: follow squash/claws), white
+  flash when they appear; no red pulse; anger symbols = vein + steam only (`angerKinds`, no scribble);
+  patches last `ragePatchTime`. Its head spike sits 2 art px lower (`Mega.loadArt(..., spikeDy)`). netPackExtra = the
+  Mega's 9 fields + waves {id,x,y,dir,t} + patches. Arena `tools/levelgen/arenas/jefe_cangrejo_helado.json`.
+  Harnesses: `icecrabby_rules` (mega_* cases, `LOOK=1` → icemega_look.png), `boss_sim`/`boss_intro`/`online_boss`
+  with `LEVEL=` that arena. Protocol v40.
 - **Gummy helmet** (prop `helmet`, Gummies only; `assets/images/gummy/casco.png`
   drawn over the sprite on the same 16x16 grid, scaled `HELMET_K` 1.10 around its
   bottom edge; the outer box grows up by what the helmet sticks out). `Gummy:interact`
