@@ -709,10 +709,14 @@ Level JSON `"background"` (SURFACE biome, default meadow), `"time"` (day|dusk|ni
 `"clouds": false`, `"depth"` (optional DEPTH biome: cave, underwater, abyss, icecave, underground)
 and `"surfaceRow"` (row whose top is the surface line; default = the ground under the player
 start, `Sky.autoSurfaceRow`); editor: Nivel tab → "Fondo y clima" (+ snowfall; the map shows the
-surface line as a dashed cyan line while the Nivel tab is open). With a depth, the surface layers
-rest on the line (as seen at ~¾ of the screen) and below the line (scissor) the depth gradient
-(world-anchored, darker deeper) and its layers draw: `top` layers hang from the line, ground
-layers rest on the level bottom; the level's own ground usually hides the line itself. Drawn first in
+surface line as a dashed cyan line while the Nivel tab is open). With a depth, the whole
+background is ONE cross-section moving with the nearest surface layer (the user rejected a
+world-locked seam: "abrupt, different speeds, unrelated"): horizontal parallax per layer, but
+VERTICAL parallax close to the world (`pv(p) = 0.7 + 0.4p`, so deep down no sky shows). The
+landscape rests on a background line B (the line seen at ~78 % of the screen); under B a strip
+of the surface's own ground colour (`e.bottom` of its nearest opaque layer) + `sky/blend.png`
+dither into the depth gradient, the depth's `top` layer hangs from there and its ground layers
+rest on the level bottom (scissor below B). Drawn first in
 Adventure/OnlineAdventure states (`Sky.render(level, camX, camY)`; `Background.png` is ONLY
 for the Flappy mode now). Pixel-banded gradient per time (cave/underwater have their own,
 tinted by the time), sun (day; low + orange at dusk) or moon + twinkling stars (night),

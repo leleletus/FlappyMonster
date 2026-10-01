@@ -132,10 +132,9 @@ function Sky.surfaceY(level)
     return level._skySurf
 end
 
--- Capas de un bioma. groundY = donde se apoyan las de suelo (px de mundo);
--- topY = de donde cuelgan las de techo; restY = altura de pantalla en la que una
--- capa de suelo toca su línea cuando la línea está ahí (con paralaje se separa)
-local function drawLayers(biome, tint, camX, camY, groundY, topY, now, restY)
+-- Capas de un bioma. ground(p, h) / top(p) = y de pantalla de las capas de suelo
+-- (arriba del dibujo) y de techo, según su paralaje
+local function drawLayers(biome, tint, camX, ground, top, now)
     local W, H = WINDOW_W, WINDOW_H
     local mode, am = love.graphics.getBlendMode()
     for _, L in ipairs(biome.layers) do
@@ -144,13 +143,7 @@ local function drawLayers(biome, tint, camX, camY, groundY, topY, now, restY)
             local p = L[2]
             local w, h = e.w * S, e.h * S
             local x0 = -((camX * p) % w)
-            local y
-            if L.top then
-                y = math.floor((topY - camY) + (camY - topY) * (1 - p))       -- cuelga, con paralaje
-            else
-                local r0 = restY or H
-                y = math.floor(r0 + (groundY - camY - r0) * p - h)             -- apoyada, con paralaje
-            end
+            local y = math.floor(L.top and top(p) or ground(p, h))
             if L.add then
                 love.graphics.setBlendMode('add')
                 love.graphics.setColor(1, 1, 1, 0.35 + 0.1 * math.sin(now * 0.7))
@@ -173,6 +166,18 @@ local function drawLayers(biome, tint, camX, camY, groundY, topY, now, restY)
             love.graphics.setBlendMode(mode, am)
         end
     end
+end
+
+-- Color de la última fila de un cuadro de gradients.png (relleno de lo más hondo)
+local gradData
+local function gradBottom(frame)
+    if gradData == nil then
+        local ok, d = pcall(love.image.newImageData, DIR .. 'gradients.png')
+        gradData = ok and d or false
+    end
+    if not gradData then return { 0, 0, 0 } end
+    local r, g, b = gradData:getPixel((frame - 1) * 8, gradData:getHeight() - 1)
+    return { r, g, b }
 end
 
 function Sky.render(level, camX, camY)
@@ -224,27 +229,66 @@ function Sky.render(level, camX, camY)
             end
         end
     end
-    -- (sin profundidad, las capas de suelo se apoyan en el fondo del nivel)
     local depth = Sky.depthOf(level)
-    -- (con profundidad se apoyan en la línea de superficie, que suele verse a ~¾ de la pantalla)
-    drawLayers(biome, tint, camX, camY, depth and surfY or math.max(surfY, levelBottom), levelTop, now,
-               depth and math.floor(H * 0.78) or nil)
-
-    -- ══ PROFUNDIDAD (por debajo de la línea de superficie) ═══════════════════
-    local B = math.floor(surfY - camY)
-    if depth and B < H then
-        local top = math.max(0, B)
-        local sx, sy, sw, sh = love.graphics.getScissor()
-        love.graphics.setScissor(0, top, W, H - top)
-        if g then
-            -- degradado anclado al mundo: más oscuro cuanto más hondo
-            -- (hasta el fondo del nivel y una pantalla más: siempre tapa lo que se ve)
-            local span = math.max(H, levelBottom - surfY) + H
-            setTint(tint)
-            love.graphics.draw(g.img, quad('gradients', GRAD[depth.grad], 8, g), 0, B, 0, W / 8, span / g.h)
+    if not depth then
+        -- Sin profundidad: las capas de suelo se apoyan en el fondo del nivel (o la línea)
+        local groundY = math.max(surfY, levelBottom)
+        drawLayers(biome, tint, camX, function(p, h) return H + (groundY - camY - H) * p - h end,
+                   function(p) return (levelTop - camY) * p end, now)
+    else
+        -- Con profundidad, TODO el fondo es un corte del mismo terreno, a la velocidad
+        -- de la capa de superficie más cercana (pB): el paisaje se apoya en una línea
+        -- de fondo B; debajo, una franja de su suelo que se trama hacia la
+        -- profundidad, de la que cuelga el techo de la profundidad.
+        local restY = math.floor(H * 0.78)                 -- (donde suele verse el suelo)
+        -- En vertical el fondo va casi con el mundo (si no, bien hondo aún se vería el
+        -- cielo); el paralaje se nota sobre todo en horizontal
+        local pv = function(p) return 0.7 + 0.4 * p end
+        local pB, soil = 0, nil
+        for k = #biome.layers, 1, -1 do
+            local L = biome.layers[k]
+            if not L.top and not L.add then
+                pB = math.max(pB, L[2])
+                local e = img(L[1])
+                if not soil and e and e.bottom[4] > 0 then soil = e.bottom end
+            end
         end
-        drawLayers(depth, tint, camX, camY, levelBottom, surfY, now)
-        love.graphics.setScissor(sx, sy, sw, sh)
+        soil = soil or { 0.3, 0.25, 0.2, 1 }
+        local B = math.floor(restY + (surfY - camY - restY) * pv(pB))
+        drawLayers(biome, tint, camX, function(p, h) return restY + (surfY - camY - restY) * pv(p) - h end,
+                   function(p) return (levelTop - camY) * p end, now)
+        if B < H then
+            local SOIL, BLEND = 6 * S, 8 * S                -- franja de suelo y tramado (px)
+            local top = math.max(0, B)
+            local sx, sy, sw, sh = love.graphics.getScissor()
+            love.graphics.setScissor(0, top, W, H - top)
+            local d0 = B + SOIL                             -- empieza la profundidad
+            if g then
+                local fi = GRAD[depth.grad]
+                local span = H * 1.4
+                setTint(tint)
+                love.graphics.draw(g.img, quad('gradients', fi, 8, g), 0, d0, 0, W / 8, span / g.h)
+                if d0 + span < H then
+                    local c = gradBottom(fi)
+                    love.graphics.setColor(c[1] * tint[1], c[2] * tint[2], c[3] * tint[3], 1)
+                    love.graphics.rectangle('fill', 0, d0 + span, W, H - d0 - span)
+                end
+            end
+            -- (techo de la profundidad colgando de la franja; sus capas de suelo, en el
+            -- fondo del nivel, con el mismo paralaje de fondo)
+            drawLayers(depth, tint, camX,
+                       function(p, h) return math.max(d0 + 40, H + (levelBottom - camY - H) * pv(p) - h) end,
+                       function(p) return d0 + BLEND * 0.5 end, now)
+            -- Franja del suelo de la superficie + tramado hacia abajo
+            love.graphics.setColor(soil[1] * tint[1], soil[2] * tint[2], soil[3] * tint[3], 1)
+            love.graphics.rectangle('fill', 0, B, W, SOIL)
+            local bl = img('blend')
+            if bl then
+                local x = 0
+                while x < W do love.graphics.draw(bl.img, x, d0, 0, S, S); x = x + bl.w * S end
+            end
+            love.graphics.setScissor(sx, sy, sw, sh)
+        end
     end
     love.graphics.setColor(1, 1, 1, 1)
 end

@@ -10,6 +10,7 @@
 #   rays.png        rayos de luz bajo el agua (se dibujan aditivos)
 #   abyss_*, icecave_*, underground_*   fondos de PROFUNDIDAD (bajo la superficie)
 #   (gradients.png: + abismo, cueva helada, subsuelo)
+#   blend.png       tramado que une el suelo de la superficie con la profundidad (se tiñe)
 # Sencillo a propósito: siluetas legibles de 2-3 tonos, sin detalle fino.
 # No pisa lo que ya existe (--force [nombres]). Desde la raíz del repo:
 #     python3 tools/ui/make_sky.py [--force]
@@ -348,6 +349,18 @@ def layer_underground():
     return far, mid, top
 
 
+def blend():
+    """Tramado (blanco, se tiñe): de lleno arriba a casi nada abajo; une el suelo de la
+    superficie con el fondo de profundidad."""
+    im = Image.new('RGBA', (8, 8), (0, 0, 0, 0))
+    dens = [8, 7, 6, 4, 3, 2, 1, 1]
+    order = [0, 4, 2, 6, 1, 5, 3, 7]               # (reparto ordenado tipo Bayer en 8)
+    for y, d in enumerate(dens):
+        for x in range(8):
+            if order.index((x + y * 3) % 8) < d: im.putpixel((x, y), (255, 255, 255, 255))
+    return im
+
+
 if __name__ == '__main__':
     print('Cielo y fondos:')
     save('gradients', gradients())
@@ -363,3 +376,4 @@ if __name__ == '__main__':
             if b == 'cave' and n == 'top': save('cave_top', im)
             elif n == 'rays': save('rays', im)
             else: save('%s_%s' % (b, n), im)
+    save('blend', blend())
