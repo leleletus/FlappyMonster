@@ -234,4 +234,54 @@ def lago_helado():
     return L
 
 
-BUILDERS = [ruta_del_espejo, fortaleza_malvada, guarida_cangrejo_rey, lago_helado]
+THIN = _enc(31)
+
+
+def glaciar_cangrejo():
+    """Glaciar del Cangrejo: un glaciar con Crabbies helados de todas las tapas (montón de nieve,
+    carámbano, púa de hielo, trampolín; en suelo, paredes y techo), hielo fino sobre agua y el
+    Mega Crabby helado al final (arena jefe_cangrejo_helado: la del Mega con suelo de nieve)."""
+    src = load_src('jefe_cangrejo_helado.json')
+    L = Level('Glaciar del Cangrejo', 120, 15, (4, 12), music='labyrinth')
+    L.extra.update({'name_en': 'Crab Glacier', 'snow': True, 'spikeSkin': 'ice'})
+    G = 13
+    L.rect(2, G, 81, 14, SNOW)
+    # salida: un Crabby helado normal (púa de hielo) para empezar
+    L.walker('crabby_ice', 10, G - 1, 7, 13)
+    # hielo fino sobre agua: hay que cruzarlo sin pararse (se agrieta al estar encima)
+    L.rect(15, G, 20, G, THIN)
+    L.water(15, 14, 20, 14)
+    L.ent('star', 18, G - 3)
+    # pista de hielo con un montón de nieve en medio (¡no es una decoración!)
+    L.rect(22, G, 31, G, ICE)
+    L.walker('crabby_ice_snow', 27, G - 1, 24, 30, hideChance=0.9)
+    L.plat(25, 29, G - 4, DROP)
+    L.ent('star', 27, G - 5)
+    L.ent('checkpoint', 33, G - 1)
+    # foso de pinchos de hielo con losas; en la del medio, un Crabby con carámbano
+    L.rect(36, G, 48, 14, EMPTY)
+    L.spikes(36, 48, 14, UP)
+    for c in (37, 41, 45):
+        L.plat(c, c + 2, 10, SLAB)
+    L.walker('crabby_ice_icicle', 42, 9, 41, 43, hideChance=0.6)
+    # techo bajo con Crabbies que caen (carámbano / nieve) sobre quien pasa por debajo
+    L.rect(50, 2, 61, 7, SNOW)
+    L.ent('crabby_ice_icicle', 53, 8, attach='ceiling', dropOnSight=True, patrol={'left': 51, 'right': 55})
+    L.ent('crabby_ice_snow', 58, 8, attach='ceiling', dropOnSight=True, patrol={'left': 56, 'right': 60})
+    L.ent('extralife', 55, G - 4)
+    L.plat(54, 56, G - 3, DROP)
+    # columna de hielo con un trepador (tapa de púa) dándole la vuelta
+    L.rect(65, G - 2, 67, G - 1, SNOW)
+    L.ent('crabby_ice', 64, G - 1, wallWalk=True, patrol=False, speed=60)
+    L.ent('star', 66, G - 5)
+    # Crabby trampolín helado: su trampolín sube a la repisa del checkpoint
+    L.walker('crabbytramp_ice', 71, G - 1, 69, 74)
+    L.rect(76, G - 2, 80, G - 1, SNOW)
+    L.ent('checkpoint', 78, G - 3)
+    L.walker('gummy', 73, G - 5, 70, 75, movement='fly')
+    # arena del Mega Crabby helado (la zona empieza en la columna 89)
+    graft(L, src, 6, 82)
+    return L
+
+
+BUILDERS = [ruta_del_espejo, fortaleza_malvada, guarida_cangrejo_rey, lago_helado, glaciar_cangrejo]

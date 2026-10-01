@@ -533,7 +533,10 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   by Mega.drawLocal hooks `drawBodyOverlay` / `drawClawOverlay` (same transform: follow squash/claws), white
   flash when they appear; no red pulse; anger symbols = vein + steam only (`angerKinds`, no scribble);
   patches last `ragePatchTime`. Its head spike sits 2 art px lower (`Mega.loadArt(..., spikeDy)`). netPackExtra = the
-  Mega's 9 fields + waves {id,x,y,dir,t} + patches. Arena `tools/levelgen/arenas/jefe_cangrejo_helado.json`.
+  Mega's 9 fields + waves {id,x,y,dir,t} + patches. Arena `tools/levelgen/arenas/jefe_cangrejo_helado.json` (music `tentacle_nes`);
+  real level **glaciar_cangrejo** "Glaciar del Cangrejo" / "Crab Glacier" (`levels_boss.py`, snow theme): thin ice
+  over water, ice track with a snow-mound Crabby, ice-spike pit with an icicle Crabby, low ceiling with icicle/snow
+  droppers, a wall-walking climber, an icy trampoline Crabby, then that arena grafted (zone from column 89).
   Harnesses: `icecrabby_rules` (mega_* cases, `LOOK=1` → icemega_look.png), `boss_sim`/`boss_intro`/`online_boss`
   with `LEVEL=` that arena. Protocol v40.
 - **Gummy helmet** (prop `helmet`, Gummies only; `assets/images/gummy/casco.png`
@@ -1357,7 +1360,7 @@ Low-level notes (for writing NEW harnesses):
   Batch of 15 (race: valle_soleado, cavernas_cristal, torre_viento, fabrica_morteros,
   tren_fugaz (auto-scroll), canon_trampolines; hunt: ciudadela_cangrejos,
   jardin_gummies, mina_inundada; koth: isla_flotante, coliseo_pinchos, cascada_dorada;
-  race+boss: ruta_del_espejo, fortaleza_malvada, guarida_cangrejo_rey, lago_helado). Each level
+  race+boss: ruta_del_espejo, fortaleza_malvada, guarida_cangrejo_rey, lago_helado, glaciar_cangrejo). Each level
   whitelists its mode with `"modes"`. Ship = bump `version.txt`.
 - Bots: send `in` only when there are new inputs, or the server kicks them
   for flooding.
