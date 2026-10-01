@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # tools/ui/make_icecrab_sprites.py — sprites del MEGA CRABBY HELADO (variante de hielo del jefe
 # Mega Crabby), inspirado en el cangrejo antártico Paralomis birsteini: naranja, caparazón
-# redondeado y lleno de espinas, patas y pinzas más LARGAS y espinosas, con escarcha encima.
+# redondeado y lleno de espinas, patas y pinzas más LARGAS y espinosas (sin escarcha).
 # Mismo estilo y mismas piezas que el Mega Crabby (assets/images/MegaCrabby/): contorno azul
 # marino oscuro, luz arriba a la izquierda, sombra abajo a la derecha, ojos de 1 px y boca
 # ancha; así se reconoce como "su versión helada" y no como otro enemigo.
@@ -41,7 +41,7 @@ PAL = {
 
 # MISMA RESOLUCIÓN QUE EL MEGA: el pixel del helado mide lo mismo que el del Mega Crabby
 # (escala 10), así encaja con el resto del juego. El diseño es el de la 3.ª propuesta
-# (caparazón redondo con bultos y púas, escarcha, sin boca, patas largas, pinzas grandes)
+# (caparazón redondo con bultos y púas, sin escarcha ni boca, patas largas, pinzas grandes)
 # dibujado a mano a esa resolución. Las pinzas apuntan HACIA DENTRO (hacia el cuerpo).
 SCALE = 10                  # escala de juego (la del Mega Crabby)
 CLAW_K = 0.85               # pinzas a 0.85 del cuerpo, como en el Mega
@@ -50,7 +50,7 @@ CLAW_X, CLAW_Y = 4.6, -3.2  # dónde van las pinzas (px de arte desde el centro-
 SHELL = [
     ".....O.O..O.O.....",
     "....OOOOOOOOOO....",
-    "...OFFHLLLLLfMO...",
+    "...OHHHLLLLLLMO...",
     "..OHLHLLLLHLLMSO..",
     "OOLLLOLLLLLLOLMSOO",
     ".OMLSLLLLLLSLMMSO.",
@@ -59,38 +59,31 @@ SHELL = [
 ]
 # Patas: 2 por lado, naranjas con su borde oscuro por fuera; mitad izquierda (9 px), el
 # lado derecho es el espejo de otro cuadro (paso alterno)
-LEG_HALVES = [          # filas 6-12; la pata de fuera sale de la púa del costado (rodilla)
-    ["OM.......",
-     "OM.......",
-     "OM..OM...",
-     "OM..OM...",
-     "OS...OM..",
-     "O....OS..",
+LEG_HALVES = [          # filas 8-12
+    [".OM..OM..",
+     "OM...OM..",
+     "OM....OM.",
+     "OS....OS.",
      "O.....O.."],
-    ["OM.......",
-     ".OM......",
-     ".OM.OM...",
-     "OM...OM..",
-     "OS...OM..",
-     "O....OS..",
+    [".OM..OM..",
+     ".OM...OM.",
+     "OM....OM.",
+     "OS...OS..",
      "O....O..."],
-    ["OM.......",
-     "OM.......",
-     "OM...OM..",
-     ".OM.OM...",
-     ".OSOM....",
-     ".O.OS....",
-     ".O.O....."],
+    [".OM..OM..",
+     "OM..OM...",
+     "OM..OM...",
+     ".OS.OS...",
+     ".O..O...."],
 ]
 PHASE = [0, 2, 1]
 
 
 def body(frame):
-    rows = [list(r) for r in SHELL] + [['.'] * 18 for _ in range(5)]
-    for i, (l, r) in enumerate(zip(LEG_HALVES[frame], LEG_HALVES[PHASE[frame]])):
-        for x, ch in enumerate(l + r[::-1]):
-            if ch != '.' and rows[6 + i][x] == '.': rows[6 + i][x] = ch
-    return [''.join(r) for r in rows]
+    rows = list(SHELL)
+    for l, r in zip(LEG_HALVES[frame], LEG_HALVES[PHASE[frame]]):
+        rows.append(l + r[::-1])
+    return rows
 
 
 # Pinza izquierda con los dedos HACIA DENTRO (a la derecha; la derecha es su espejo):
