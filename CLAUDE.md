@@ -284,7 +284,7 @@ src/world/
                        crabbytramp (Crabby trampolín, subclass of crabby), cryo (Congelador),
                        flood (editor-only placeholder for a Floods area),
                        bomb / bombobject (bombs, see Bombs), bossglass, bosswall, cryo (Freezer),
-                       snowboss (Gran Bola de Nieve), phaseblock (Bloques de fase)
+                       snowboss (Gran Bola de Nieve), phaseblock (Bloques de fase), crabby_ice (Crabby helado: 4 defs)
   AutoScroll.lua       auto-scrolling camera levels (see below)
   Floods.lua           rising/falling water areas (see below)
   BossZones.lua        boss arenas (see below)
@@ -473,7 +473,7 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   'stomp' with 4th return dirX = cnx → `pa:bounce(vy, dirX, soft=true)` (vx 300 +
   ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill; v17: crawler turn in snapshots; v18: MegaCrabby;
   v19: boss walls, Mega minions/pounce; v20: post-hit protection; v21: unified invulnerability;
-  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks; v30: boss broken glass; v31: special enemy deaths; v32: bombs; v33: snow/ice/thin ice; v34: sand; v35: deep stone; v36: freezer; v37: Snowball Boss; v38: Snowball Boss rebuilt, zone phases, phase blocks).
+  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks; v30: boss broken glass; v31: special enemy deaths; v32: bombs; v33: snow/ice/thin ice; v34: sand; v35: deep stone; v36: freezer; v37: Snowball Boss; v38: Snowball Boss rebuilt, zone phases, phase blocks; v39: Icy Crabby).
 - **Crawler** (`src/world/entities/Crawler.lua`): surface-following movement
   (floor ↔ walls ↔ ceiling, concave and convex corners) for Crabbies with prop
   `wallWalk` (`Crabby.WALL_PROP`, off by default so old levels don't change).
@@ -494,6 +494,22 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   Detaches on knockback / drops and
   re-attaches on landing. Net: surface code in Crabby.netPack (`Crabby.NET_N`
   = number of Crabby fields; subclasses append after it).
+- **Crabby skins + Icy Crabby** (`types/crabby_ice.lua`, one palette card "Crabby helado" with selector
+  "Se esconde bajo" = 4 defs: `crabby_ice` ice spike, `crabby_ice_icicle`, `crabby_ice_snow`, `crabbytramp_ice`).
+  Crabby images live in a SKIN (`Crabby.SKINS.normal|ice`, `self.sk`, class field `skinId`; network image
+  names are prefixed per skin). The ice skin (`assets/images/crabby_ice/` from `tools/ui/make_icecrabby_sprites.py`
+  = the Icy Mega Crabby body at Crabby scale) SINKS row by row when hiding (`sink1..8.png`, same total time).
+  Covers (on floor, walls and ceiling): ice spike = the normal spike (kills); icicle = the Snowball Boss icicle,
+  always an icicle, hazard `effect='hurt', dmg=2` + `onHurtPlayer` recoil (Interactions 'hurt' now takes the
+  damage from `hb.dmg`), drops from the ceiling like the spike (2 HP) and sticks; trampoline = the Crabby
+  trampolín (`TC:trampImages` overridden); SNOW = a mound in the `snow_pile` decoration style, drawn IN FRONT
+  (`coverFront`: grows from the surface while the crab sinks behind; `noPeek`): harmless while hidden;
+  touching it → 'snow_crack' (0.25 s, no damage) → 'snow_burst' (whoever still overlaps: 1 HP + recoil);
+  landing on it = 'bounce' (thrown up, no damage, bursts under you); GP on it = stomp kill; from the ceiling
+  it falls as a snow lump (1 HP + 0.8 s stun) and bursts on the floor. Every Crabby (normal and icy) throws
+  small physical debris of the block under it while hiding/unhiding (render-only `Crabby:renderDig` →
+  particle `crab_dig`, colours from the surface, along its normal). Harness `icecrabby_rules` (+`LOOK=1`),
+  online `online_smoke LEVEL=tools/levelgen/arenas/crabby_helado.json WATCH=crabby_ice_snow`. Protocol v39.
 - **Gummy helmet** (prop `helmet`, Gummies only; `assets/images/gummy/casco.png`
   drawn over the sprite on the same 16x16 grid, scaled `HELMET_K` 1.10 around its
   bottom edge; the outer box grows up by what the helmet sticks out). `Gummy:interact`

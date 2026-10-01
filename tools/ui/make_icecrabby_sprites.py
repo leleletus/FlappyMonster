@@ -15,7 +15,8 @@
 # Salida (como assets/images/crabby/ + tapas):
 #   crab1/2/3.png   andar (18x13; los de assets/images/megacrabby_ice)
 #   meat.png        el cuerpo sin patas, lookin.png (solo asoma), hid.png
-#   hide-Sheet.png  8 cuadros 18x8: se hunde fila a fila en la superficie (esconderse / salir al revés)
+#   hide-Sheet.png  8 cuadros 18x8: se hunde fila a fila en la superficie (esconderse / salir al revés);
+#                   también sueltos: sink1..8.png (los usa el juego)
 #   spike.png       púa de hielo (38x38, como crabby/spike.png)
 #   tramp_normal.png / tramp_extended.png   trampolín de hielo (16x16, como trampoline/*.png)
 #   snow.png        montón de nieve (18x8, estilo de la decoración snow_pile), snow_cracked.png
@@ -99,6 +100,8 @@ def build():
         part = shell.crop((0, 0, shell.width, shell.height - i))
         sheet.paste(part, (i * shell.width, i))
     out['hide-Sheet.png'] = sheet
+    for i in range(8):                                           # (y suelto: el juego usa imágenes)
+        out['sink%d.png' % (i + 1)] = sheet.crop((i * shell.width, 0, (i + 1) * shell.width, shell.height))
     out['tramp_normal.png'] = recolor(os.path.join(ROOT, 'assets/images/trampoline/normal.png'), TRAMP)
     out['tramp_extended.png'] = recolor(os.path.join(ROOT, 'assets/images/trampoline/extended.png'), TRAMP)
     out['snow.png'] = grid(SNOW)

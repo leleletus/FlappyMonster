@@ -196,9 +196,13 @@ function TC:netApply(a, b, f)
 end
 
 -- ── Dibujo: el trampolín sale del caparazón ──────────────────────────────────
+-- Imágenes del trampolín (el Crabby helado pone las suyas)
+function TC:trampImages() return imgTNormal, imgTExt end
+
 function TC:drawTopper(cx, baseY, progress, dir)
     if progress <= 0.01 then return end
-    local img = (self.bounceAge < COOLDOWN) and imgTExt or imgTNormal
+    local n, e = self:trampImages()
+    local img = (self.bounceAge < COOLDOWN) and e or n
     love.graphics.setColor(1, 1, 1, 1)
     -- Anclado por su base (fila 16 del sprite) y creciendo hacia fuera
     love.graphics.draw(img, cx, baseY, 0, S, (dir < 0) and S * progress or -S * progress, 8, 16)
@@ -211,6 +215,8 @@ local function editorIcon(x, y, s)
     love.graphics.draw(imgTNormal, x, y - k * 2, 0, k, k)
     love.graphics.draw(imgShell, x, y + s - k * 2, 0, k, k * 2)
 end
+
+TC.editorIcon = editorIcon
 
 return {
     name = 'crabbytramp', label = 'Crabby trampolín', category = 'Enemigos',

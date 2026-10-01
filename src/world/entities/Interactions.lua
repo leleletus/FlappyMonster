@@ -5,7 +5,8 @@
 -- Interactions.check(player, entity) devuelve:
 --   nil                           sin contacto relevante
 --   'kill'                        el jugador muere (pinchos, entidad hostil)
---   'hurt'                        el jugador pierde 1 HP (entidad onTouch='hurt')
+--   'hurt'[, n]                   el jugador pierde n HP (1 por defecto; entidad onTouch='hurt'
+--                                 o caja de peligro effect='hurt', dmg=n)
 --   'stomp', bounceVy, points[, dirX]  el jugador pisotea a la entidad (dirX:
 --                                 rebote de lado, p. ej. un Crabby en una pared)
 --   'pound', bounceVy, points     le cae encima en pleno ground pound (e:pound)
@@ -80,7 +81,7 @@ function Interactions.defaultCheck(pa, e)
     -- Zonas de peligro propias (el pincho del Crabby, el fuego del mortero...):
     -- matan, salvo que la caja diga otra cosa (hb.effect = 'hurt': 1 de vida)
     for _, hb in ipairs(e:getHazardBoxes() or {}) do
-        if overlap(pob, hb) then return hb.effect or 'kill', hb.time end
+        if overlap(pob, hb) then return hb.effect or 'kill', hb.time or hb.dmg end
     end
 
     if e:isBodyDisabled() then return nil end
@@ -162,7 +163,7 @@ function Interactions.run(pa, entities, cb, rewind)
         elseif result == 'hurt' then
             -- (e:onHurtPlayer: solo si de verdad le quitó vida; p. ej. el pinchazo del pez globo)
             local hp0 = pa.hp
-            local killed = pa:hurt()
+            local killed = pa:hurt(a)                       -- (a = vida que quita: hb.dmg; nil = 1)
             if pa.hp < hp0 and e.onHurtPlayer then e:onHurtPlayer(pa) end
             if killed then return end
         elseif result == 'stomp' then

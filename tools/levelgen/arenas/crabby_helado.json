@@ -1,0 +1,34 @@
+{
+  "name": "Prueba: Crabbies helados",
+  "name_en": "Test: icy Crabbies",
+  "width": 30,
+  "height": 10,
+  "playerStart": [3,8],
+  "tiles": [
+    [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],
+    [4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4],
+    [4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4],
+    [4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4],
+    [4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4],
+    [4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4],
+    [4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4],
+    [4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,11,0,0,4],
+    [4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4],
+    [4,131085,131085,131085,131085,131085,131085,131085,131085,131085,131085,131085,131086,131086,131086,131086,131086,131086,131085,131085,131085,131085,131085,131085,131085,131085,131085,131085,131085,4]
+  ],
+  "entities": [
+    {"col":6,"props":{"canHide":true,"hideChance":1,"movement":"walk","pauses":true},"row":9,"type":"crabby_ice_snow"},
+    {"col":10,"props":{"canHide":true,"hideChance":1,"movement":"walk","pauses":true},"row":9,"type":"crabby_ice"},
+    {"col":14,"props":{"canHide":true,"hideChance":1,"movement":"walk","pauses":true},"row":9,"type":"crabby_ice_icicle"},
+    {"col":18,"props":{"canHide":true,"hideChance":1,"movement":"walk","pauses":true},"row":9,"type":"crabbytramp_ice"},
+    {"col":8,"props":{"attach":"ceiling","canHide":true,"detectRange":8,"dropOnSight":true,"hideChance":1,"movement":"walk","pauses":true},"row":2,"type":"crabby_ice_icicle"},
+    {"col":20,"props":{"attach":"ceiling","canHide":true,"detectRange":8,"dropOnSight":true,"hideChance":1,"movement":"walk","pauses":true},"row":2,"type":"crabby_ice_snow"},
+    {"col":24,"props":{"canHide":true,"hideChance":1,"movement":"walk","pauses":true,"wallWalk":true},"row":9,"type":"crabby_ice_snow"}
+  ],
+  "foliage": [
+    {"col":4,"row":9,"type":"snow_pile"}
+  ],
+  "vents": [],
+  "background": "snow",
+  "snow": true
+}

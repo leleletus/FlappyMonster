@@ -37,48 +37,78 @@ local SPRITE_FRAME_DUR = 0.25
 local SPRITE_SEQ_TIME  = SPRITE_FRAME_DUR * 3
 local HIDE_TRANSITION  = SPIKE_GROW_TIME + SPRITE_SEQ_TIME
 
-local imgIdle1, imgIdle2, imgIdle3, imgDead, imgHid, imgLookin, imgMeat
-local hideInFrames, hideOutFrames, walkFrames
-local IMG_NAMES, IMG_BY_NAME
+-- ASPECTO (skin): las imágenes de cada momento. El Crabby normal usa 'normal'; el Crabby
+-- helado (crabby_ice.lua) usa 'ice': su propio cangrejo y, al esconderse, se HUNDE fila a
+-- fila (8 cuadros) en vez de pasar de golpe de meat → lookin → nada. Cada instancia guarda
+-- el suyo en self.sk (los nombres de red llevan el prefijo de la skin: son únicos).
+local imgIdle1, imgIdle2, imgDead, imgHid
+local IMG_NAMES, IMG_BY_NAME = {}, {}
+Crabby.SKINS = {}
+
+local function addSkin(id, dir, o)
+    local sk = { id = id }
+    local function img(f) return love.graphics.newImage(dir .. f) end
+    sk.idle1, sk.idle2, sk.idle3 = img('crab1.png'), img('crab2.png'), img('crab3.png')
+    sk.dead   = imgDead
+    sk.hid    = img('hid.png')
+    sk.lookin = img(o.lookin or 'lookin.png')
+    sk.meat   = img(o.meat or 'meat.png')
+    if o.sink then
+        sk.hideIn = {}
+        for i = 1, o.sink do sk.hideIn[i] = img('sink' .. i .. '.png') end
+        sk.hideIn[#sk.hideIn + 1] = sk.hid
+        sk.hideOut = {}
+        for i = o.sink, 1, -1 do sk.hideOut[#sk.hideOut + 1] = sk.hideIn[i] end
+        sk.hideOut[#sk.hideOut + 1] = sk.idle2
+    else
+        sk.hideIn  = { sk.meat, sk.lookin, sk.hid }       -- crab2 → Meat → lookin → hid
+        sk.hideOut = { sk.lookin, sk.meat, sk.idle2 }     -- hid → lookin → Meat → crab2
+    end
+    sk.walk = { sk.idle1, sk.idle2, sk.idle3 }
+    -- (la secuencia dura lo mismo con 3 o con 9 cuadros)
+    sk.frameDur = (0.25 * 3) / #sk.hideIn
+    local pre = (id == 'normal') and '' or (id .. '_')
+    for n, im in pairs({ idle1 = sk.idle1, idle2 = sk.idle2, idle3 = sk.idle3, hid = sk.hid,
+                         lookin = sk.lookin, meat = sk.meat }) do
+        IMG_NAMES[im], IMG_BY_NAME[pre .. n] = pre .. n, im
+    end
+    for i, im in ipairs(sk.hideIn) do
+        if not IMG_NAMES[im] then IMG_NAMES[im], IMG_BY_NAME[pre .. 's' .. i] = pre .. 's' .. i, im end
+    end
+    Crabby.SKINS[id] = sk
+    return sk
+end
 
 function Crabby.loadAssets()
     if imgIdle1 then return end
-    imgIdle1  = love.graphics.newImage('assets/images/crabby/crab1.png')
-    imgIdle2  = love.graphics.newImage('assets/images/crabby/crab2.png')
-    imgIdle3  = love.graphics.newImage('assets/images/crabby/crab3.png')
     imgDead   = love.graphics.newImage('assets/images/gummy/dead.png')
-    imgHid    = love.graphics.newImage('assets/images/crabby/hid.png')
-    imgLookin = love.graphics.newImage('assets/images/crabby/lookin.png')
-    imgMeat   = love.graphics.newImage('assets/images/crabby/MeatCrabby.png')
-    hideInFrames  = { imgMeat, imgLookin, imgHid }    -- crab2 → Meat → lookin → hid
-    hideOutFrames = { imgLookin, imgMeat, imgIdle2 }  -- hid → lookin → Meat → crab2
-    walkFrames    = { imgIdle1, imgIdle2, imgIdle3 }
-    -- Nombres para sincronizar el sprite actual online
-    IMG_NAMES = { [imgIdle1]='idle1', [imgIdle2]='idle2', [imgIdle3]='idle3', [imgDead]='dead',
-                  [imgHid]='hid', [imgLookin]='lookin', [imgMeat]='meat' }
-    IMG_BY_NAME = {}
-    for img, n in pairs(IMG_NAMES) do IMG_BY_NAME[n] = img end
+    IMG_NAMES[imgDead], IMG_BY_NAME.dead = 'dead', imgDead
+    local sk = addSkin('normal', 'assets/images/crabby/', { meat = 'MeatCrabby.png' })
+    imgIdle1, imgIdle2, imgHid = sk.idle1, sk.idle2, sk.hid
+    addSkin('ice', 'assets/images/crabby_ice/', { sink = 8 })
 end
 
 function Crabby.sizeImage() return imgIdle1 end
+function Crabby:skin() return self.sk or Crabby.SKINS.normal end
 
 -- Propiedad propia de los Crabbies (también la usa el Crabby trampolín)
 Crabby.WALL_PROP = { key='wallWalk', kind='bool', label='Anda por paredes y techos', group='Movimiento',
     default=false, help='Da la vuelta a los bloques: suelo, paredes y techo, girando en las esquinas',
     showIf=function(p) return p.movement == 'walk' end }
 
-local function seqFrame(elapsed, frames)
-    local idx = math.floor(elapsed / SPRITE_FRAME_DUR) + 1
+local function seqFrame(elapsed, frames, dur)
+    local idx = math.floor(elapsed / (dur or SPRITE_FRAME_DUR)) + 1
     return frames[math.max(1, math.min(idx, #frames))]
 end
 
 function Crabby:init()
+    self.sk = self.sk or Crabby.SKINS[self.skinId or 'normal'] or Crabby.SKINS.normal
     self.hideTransTimer = 0
     self.hideTimer, self.hideDuration = 0, 0
     self.peekCountdown = randRange(PEEK_INTERVAL_MIN, PEEK_INTERVAL_MAX)
     self.peekTimer, self.peekDuration = 0, 0
     self.peeking       = false
-    self.currentImg    = imgIdle1
+    self.currentImg    = self.sk.idle1
     self.spikeProgress = 0
     -- Anda por paredes y techos (Crawler): se agarra a la superficie al empezar
     self.crawl = (self.props.wallWalk == true) and self.moving and not self.flying
@@ -202,11 +232,11 @@ end
 -- ── Estados comunes con sprite/pincho propios ────────────────────────────────
 function Crabby:onWalk()
     self.spikeProgress = 0
-    self.currentImg = walkFrames[self.frame] or imgIdle2
+    self.currentImg = self.sk.walk[self.frame] or self.sk.idle2
 end
 
 function Crabby:onIdle()
-    self.currentImg    = imgIdle2
+    self.currentImg    = self.sk.idle2
     self.spikeProgress = 0
 end
 
@@ -221,13 +251,13 @@ function Crabby:onIdleEnd()
 end
 
 function Crabby:onDead()
-    self.currentImg    = imgDead
+    self.currentImg    = self.sk.dead
     self.spikeProgress = 0
 end
 
 function Crabby:onStomp()
     self.spikeProgress = 0
-    self.currentImg    = imgDead
+    self.currentImg    = self.sk.dead
 end
 
 function Crabby:canBeStomped() return not self:isBodyDisabled() end
@@ -236,7 +266,7 @@ function Crabby:canBeStomped() return not self:isBodyDisabled() end
 local HIDE_STATES = { hide_in = true, hidden = true, hide_out = true }
 function Crabby:isHiding() return HIDE_STATES[self.state] == true end
 function Crabby:canDropNow() return self.state == 'walk' or self.state == 'idle' or self:isHiding() end
-function Crabby:isBodyDisabled() return self.currentImg == imgHid end
+function Crabby:isBodyDisabled() return self.currentImg == self.sk.hid end
 
 -- ── Caída desde el techo ──────────────────────────────────────────────────────
 -- w, maxH (lo que se ve) y hitW, hitMaxH: la zona de peligro es la de un
@@ -250,11 +280,13 @@ end
 -- Base del pincho (boca abajo): pies arriba, cabeza abajo y el pincho debajo.
 -- Se mide siempre con el sprite escondido, así el pincho no se mueve aunque
 -- cambie el sprite: clavado, el cangrejo "sale" hacia arriba desde el pincho.
+function Crabby:spikeDims() return spikeDims() end
+
 local function dropSpikeBaseY(self)
-    return self.y - self.sprH / 2 + imgHid:getHeight() * GUMMY_SCALE
+    return self.y - self.sprH / 2 + self.sk.hid:getHeight() * GUMMY_SCALE
 end
 local function dropTipY(self)
-    local _, maxH = spikeDims()
+    local _, maxH = self:spikeDims()
     return dropSpikeBaseY(self) + maxH
 end
 
@@ -267,16 +299,16 @@ function Crabby:updateDrop(dt, level)
         -- (si ya estaba escondido, tiembla dentro del caparazón)
         self.vx = 0
         if self.dropHidden then
-            self.currentImg, self.spikeProgress = imgHid, 1
+            self.currentImg, self.spikeProgress = self.sk.hid, 1
         elseif t < 0.2 then
-            self.currentImg, self.spikeProgress = imgIdle2, math.min(1, t / 0.2)
+            self.currentImg, self.spikeProgress = self.sk.idle2, math.min(1, t / 0.2)
         else
             self.spikeProgress = 1
-            self.currentImg = hideInFrames[math.min(#hideInFrames, math.floor((t - 0.2) / 0.1) + 1)]
+            self.currentImg = self.sk.hideIn[math.min(#self.sk.hideIn, math.floor((t - 0.2) / (0.3 / #self.sk.hideIn)) + 1)]
         end
         if t >= DROP_SHAKE then
             self.state, self.deadTimer, self.vy = 'drop_fall', 0, 0
-            self.currentImg, self.spikeProgress = imgHid, 1
+            self.currentImg, self.spikeProgress = self.sk.hid, 1
             -- Trepador: se suelta del techo. Si no, seguiría "boca abajo" para
             -- las reglas (pisotón solo desde abajo) aunque ya esté clavado en
             -- el suelo, y saltarle encima mataría al jugador
@@ -292,7 +324,7 @@ function Crabby:updateDrop(dt, level)
         -- (solo lo que cruza desde arriba: la losa de la que colgaba no cuenta)
         local hit, top = level:landingCross(self.x, tip0, tip)
         if hit then
-            local _, maxH = spikeDims()
+            local _, maxH = self:spikeDims()
             self.y = self.y - (tip - (top + maxH * STUCK_EMBED))
             self.state, self.deadTimer, self.vy = 'drop_stuck', 0, 0
             -- Para pisotearlo cuenta como "de suelo" (se le pisa desde arriba)
@@ -306,12 +338,12 @@ function Crabby:updateDrop(dt, level)
         -- Clavado: primero escondido, luego se asoma y patalea boca abajo
         self.spikeProgress = 1
         if t < STUCK_HID then
-            self.currentImg = imgHid
+            self.currentImg = self.sk.hid
         elseif t < STUCK_HID + SPRITE_SEQ_TIME then
-            self.currentImg = seqFrame(t - STUCK_HID, hideOutFrames)
+            self.currentImg = seqFrame(t - STUCK_HID, self.sk.hideOut, self.sk.frameDur)
         else
-            local k = math.floor((t - STUCK_HID - SPRITE_SEQ_TIME) * WIGGLE_FPS) % #walkFrames + 1
-            self.currentImg = walkFrames[k]
+            local k = math.floor((t - STUCK_HID - SPRITE_SEQ_TIME) * WIGGLE_FPS) % #self.sk.walk + 1
+            self.currentImg = self.sk.walk[k]
         end
         if t >= STUCK_TIME then
             -- Se levanta: salta, se gira y vuelve a caer de pie
@@ -324,7 +356,7 @@ function Crabby:updateDrop(dt, level)
         end
     elseif st == 'drop_getup' then
         self.spikeProgress = math.max(0, 1 - t / GETUP_TIME)
-        self.currentImg = imgIdle2
+        self.currentImg = self.sk.idle2
         self.vy = self.vy + ADV_GRAVITY * dt
         self:moveAndCollide(level, 0, self.vy * dt)
         if self.onGround and t >= GETUP_TIME * 0.6 then
@@ -352,16 +384,20 @@ function Crabby:updateCustom(dt, level)
         -- Fase 1: pincho crece 0→1 (sprite crab2). Fase 2: Meat→lookin→hid
         self.hideTransTimer = self.hideTransTimer + dt
         self:fall(level, dt)
-        if self.hideTransTimer < SPIKE_GROW_TIME then
-            self.currentImg    = imgIdle2
+        if self.coverFront then
+            -- Tapa DELANTE (montón de nieve): crece desde la superficie mientras se hunde detrás
+            self.spikeProgress = math.min(1, self.hideTransTimer / HIDE_TRANSITION)
+            self.currentImg = seqFrame(self.hideTransTimer, self.sk.hideIn, self.sk.frameDur)
+        elseif self.hideTransTimer < SPIKE_GROW_TIME then
+            self.currentImg    = self.sk.idle2
             self.spikeProgress = math.min(1, self.hideTransTimer / SPIKE_GROW_TIME)
         else
             self.spikeProgress = 1
-            self.currentImg = seqFrame(self.hideTransTimer - SPIKE_GROW_TIME, hideInFrames)
+            self.currentImg = seqFrame(self.hideTransTimer - SPIKE_GROW_TIME, self.sk.hideIn, self.sk.frameDur)
         end
         if self.hideTransTimer >= HIDE_TRANSITION then
             self.state         = 'hidden'
-            self.currentImg    = imgHid
+            self.currentImg    = self.sk.hid
             self.spikeProgress = 1
             self.hideTimer     = 0
             self.hideDuration  = randRange(HIDE_DURATION_MIN, HIDE_DURATION_MAX)
@@ -374,16 +410,18 @@ function Crabby:updateCustom(dt, level)
         self.spikeProgress = 1
         self.hideTimer     = self.hideTimer + dt
         self:fall(level, dt)
-        if self.peeking then
-            self.currentImg = imgLookin
+        if self.noPeek then
+            self.currentImg = self.sk.hid                 -- (disfraz: nunca se asoma)
+        elseif self.peeking then
+            self.currentImg = self.sk.lookin
             self.peekTimer  = self.peekTimer + dt
             if self.peekTimer >= self.peekDuration then
                 self.peeking       = false
-                self.currentImg    = imgHid
+                self.currentImg    = self.sk.hid
                 self.peekCountdown = randRange(PEEK_INTERVAL_MIN, PEEK_INTERVAL_MAX)
             end
         else
-            self.currentImg    = imgHid
+            self.currentImg    = self.sk.hid
             self.peekCountdown = self.peekCountdown - dt
             if self.peekCountdown <= 0 then
                 self.peeking      = true
@@ -401,16 +439,19 @@ function Crabby:updateCustom(dt, level)
         -- Fase 1: lookin→Meat→crab2 con pincho. Fase 2: pincho se retrae 1→0
         self.hideTransTimer = self.hideTransTimer + dt
         self:fall(level, dt)
-        if self.hideTransTimer < SPRITE_SEQ_TIME then
+        if self.coverFront then
+            self.spikeProgress = math.max(0, 1 - self.hideTransTimer / HIDE_TRANSITION)
+            self.currentImg = seqFrame(self.hideTransTimer, self.sk.hideOut, self.sk.frameDur)
+        elseif self.hideTransTimer < SPRITE_SEQ_TIME then
             self.spikeProgress = 1
-            self.currentImg = seqFrame(self.hideTransTimer, hideOutFrames)
+            self.currentImg = seqFrame(self.hideTransTimer, self.sk.hideOut, self.sk.frameDur)
         else
-            self.currentImg = imgIdle2
+            self.currentImg = self.sk.idle2
             self.spikeProgress = math.max(0, 1 - (self.hideTransTimer - SPRITE_SEQ_TIME) / SPIKE_GROW_TIME)
         end
         if self.hideTransTimer >= HIDE_TRANSITION then
             self.state         = 'walk'
-            self.currentImg    = imgIdle2
+            self.currentImg    = self.sk.idle2
             self.spikeProgress = 0
             self.idleCountdown = randRange(self.tuning.idleEvery[1], self.tuning.idleEvery[2])
         end
@@ -424,10 +465,10 @@ function Crabby:getSpikeHitbox()
     if self.spikeProgress <= 0 then return nil end
     -- Clavado en el suelo / levantándose: el pincho no hace daño
     if self.state == 'drop_stuck' or self.state == 'drop_getup' then return nil end
-    local _, _, hitW, hitMaxH = spikeDims()
+    local _, _, hitW, hitMaxH = self:spikeDims()
     local hitH = hitMaxH * self.spikeProgress
     if hitH < 1 then return nil end
-    local spriteVisH = (self.currentImg or imgIdle2):getHeight() * GUMMY_SCALE
+    local spriteVisH = (self.currentImg or self.sk.idle2):getHeight() * GUMMY_SCALE
     local sx = self.x - hitW / 2
     if (Crawler.onWall(self) and self.cattached) or Crawler.turning(self) then
         -- En la pared (o girando): la misma caja "encima de la cabeza", girada
@@ -449,7 +490,7 @@ function Crabby:getHazardBoxes()
 end
 
 -- ── Red: pincho y sprite actual ──────────────────────────────────────────────
-function Crabby:getImgName() return IMG_NAMES[self.currentImg or imgIdle2] or 'idle2' end
+function Crabby:getImgName() return IMG_NAMES[self.currentImg or self.sk.idle2] or 'idle2' end
 function Crabby:setImgFromName(n) if IMG_BY_NAME[n] then self.currentImg = IMG_BY_NAME[n] end end
 
 Crabby.NET_N = 4          -- campos de red del Crabby (los tipos derivados añaden detrás)
@@ -479,12 +520,15 @@ end
 -- ── Render ────────────────────────────────────────────────────────────────────
 -- Pincho: assets/images/crabby/spike.png (36x36 hacia arriba + 1 px de margen
 -- para el contorno). Al salir crece desde la base: se estira en alto.
-local spikeImg
-local function drawSpike(cx, baseY, sH, dir)
+local spikeImgs = {}
+local function drawSpike(cx, baseY, sH, dir, file)
     if sH < 1 then return end
+    file = file or 'assets/images/crabby/spike.png'
+    local spikeImg = spikeImgs[file]
     if not spikeImg then
-        spikeImg = love.graphics.newImage('assets/images/crabby/spike.png')
+        spikeImg = love.graphics.newImage(file)
         spikeImg:setFilter('nearest', 'nearest')
+        spikeImgs[file] = spikeImg
     end
     local _, maxH = spikeDims()
     local iw, ih = spikeImg:getDimensions()
@@ -496,7 +540,12 @@ end
 -- abajo). El Crabby normal, su pincho; el trampolín lo cambia (crabbytramp.lua).
 function Crabby:drawTopper(cx, baseY, progress, dir)
     local _, maxH = spikeDims()
-    drawSpike(cx, baseY, maxH * progress, dir)
+    drawSpike(cx, baseY, maxH * progress, dir, self.spikeFile)
+end
+-- Clavado en el suelo tras caer del techo: la tapa entera, punta abajo
+function Crabby:drawStuckTopper(cx, baseY)
+    local _, maxH = spikeDims()
+    drawSpike(cx, baseY, maxH, 1, self.spikeFile)
 end
 function Crabby:bounceRotation() return 0 end
 
@@ -513,8 +562,28 @@ function Crabby:renderLocal(px, py, ang)
     self.flipped, self.facing, self.x, self.y = fl, fc, ox, oy
 end
 
+-- Escombros al meterse en la superficie (o salir de ella): piedrecitas con física del
+-- material del bloque de debajo (solo dibujo: sale del estado, igual online)
+local Particles
+local DIG = { hide_in = 0.07, hide_out = 0.12, drop_shake = 0.08 }
+function Crabby:renderDig()
+    local every = DIG[self.state]
+    if not every or EDITOR_VIEW then return end
+    local img = self.currentImg
+    if img == self.sk.idle2 or img == self.sk.idle1 or img == self.sk.idle3 or img == self.sk.hid then return end
+    local now = love.timer.getTime()
+    if (self._digT or 0) + every > now then return end
+    self._digT = now
+    local nx, ny = 0, self.flipped and 1 or -1
+    if self.crawl and self.cattached then nx, ny = self.cnx or 0, self.cny or -1 end
+    local h = self.sprH / 2
+    Particles = Particles or require 'src/fx/Particles'
+    Particles.emit('crab_dig', self.x - nx * h, self.y - ny * h, { nx = nx, ny = ny })
+end
+
 -- En una pared se dibuja como en el suelo, girado
 function Crabby:render(camX, camY)
+    self:renderDig()
     -- Girando en una esquina: con la pose real (la misma que la hitbox)
     if Crawler.turning(self) and self.state:sub(1, 5) ~= 'drop_' then
         local fx, fy, ang = Crawler.pose(self)
@@ -532,7 +601,7 @@ function Crabby:render(camX, camY)
 end
 
 function Crabby:renderBody(camX, camY)
-    local img = self.currentImg or imgIdle2
+    local img = self.currentImg or self.sk.idle2
     local st  = self.state
     local bx, by = self:breatheScale()
     local scaleX = GUMMY_SCALE * self.facing * bx
@@ -568,9 +637,8 @@ function Crabby:renderBody(camX, camY)
 
     if stuck then
         -- Entero, igual que un pincho que cae clavado (la punta dentro del suelo)
-        local _, maxH = spikeDims()
-        drawSpike(math.floor(self.x - camX), feetY + spriteVisH, maxH, 1)
-    elseif self.spikeProgress > 0 then
+        self:drawStuckTopper(math.floor(self.x - camX), feetY + spriteVisH)
+    elseif self.spikeProgress > 0 and not self.coverFront then
         if flipped then self:drawTopper(drawX, feetY + spriteVisH, self.spikeProgress, 1)
         else            self:drawTopper(drawX, feetY - spriteVisH, self.spikeProgress, -1) end
     end
@@ -578,6 +646,10 @@ function Crabby:renderBody(camX, camY)
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.draw(img, drawX, feetY, 0, scaleX, flipped and -scaleY or scaleY,
                        img:getWidth() / 2, ih)
+    -- Tapa DELANTE (montón de nieve): sale de la superficie, por delante del cangrejo
+    if self.coverFront and self.spikeProgress > 0 and not stuck then
+        self:drawTopper(drawX, feetY, self.spikeProgress, flipped and 1 or -1)
+    end
     if rot ~= 0 then love.graphics.pop() end
     love.graphics.setColor(1, 1, 1, 1)
 end

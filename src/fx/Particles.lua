@@ -369,6 +369,19 @@ function Particles.emit(kind, x, y, opts)
                   life = rnd(0.9, 1.4), size = math.random(1, 2) * 3,
                   col = pick(pal), phys = true, fadeLast = 0.3 })
         end
+    elseif kind == 'crab_dig' then
+        -- Un Crabby se mete en el suelo (o sale): piedrecitas del bloque que tiene debajo,
+        -- pequeñas, con física; salen hacia fuera de la superficie (opts.nx, ny)
+        local nx, ny = opts.nx or 0, opts.ny or -1
+        local pal = paletteAt(x, y, opts)
+        for i = 1, (opts.n or 2) do
+            local sp, side = rnd(90, 240), rnd(-1, 1)
+            add({ x = x + rnd(-14, 14) * math.abs(ny) + nx * 2, y = y + rnd(-14, 14) * math.abs(nx) + ny * 2,
+                  vx = nx * sp + side * 120 * math.abs(ny) + rnd(-30, 30),
+                  vy = ny * sp + side * 120 * math.abs(nx) + rnd(-60, 0),
+                  g = 1300, life = rnd(0.5, 0.9), size = math.random(1, 2) * 2,
+                  col = pick(pal), phys = true, fadeLast = 0.25 })
+        end
     elseif kind == 'mega_dirt' then
         -- Forcejeando clavado: trozos del suelo que saltan del agujero
         local pal = paletteAt(x, y, opts)
