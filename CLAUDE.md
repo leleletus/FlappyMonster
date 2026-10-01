@@ -245,6 +245,12 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     final the MIDI lead (8-Bit Square) is ~6 dB under the previous melody → doubled on the VRC6
                     saw. Break 45-60: the melody stays (only the low end goes) and it rebuilds from bar 53 (the
                     first version cut the chords ×0.2: the melody vanished at 0:57 and jumped back at 1:18).
+                    MIDI ERRORS FIXED from the ogg (2:09 on): the "8-Bit Sine" pad repeats one 16-bar
+                    cycle 3× but the ogg changes the harmony → `PAD_FIX` (bar → dyad, voiced like the ogg:
+                    B♭ with F on top, C with G on top, A7 as G/C#); the ogg also plays that pad 1 and 2
+                    octaves up (strings `str*`, group 'strings'); in the final the motif is harmonized a
+                    fifth above (`lay_bell5`), the lead is an octave higher than the MIDI's 8-Bit Square
+                    (`lay_leadsaw` at +12) and an F pedal holds bars 121-123 / 129-132 (`lay_ped*`).
 src/entities/
   PlayerAdventure.lua  THE player physics (shared by SP, server and client prediction)
   OnlinePlayer.lua     remote player renderer (tinted by player color, name tag)
@@ -1339,6 +1345,13 @@ Low-level notes (for writing NEW harnesses):
   (short-mode 2A03 noise "metal" on offbeats and under snares, low tom on 1, crash every
   2 bars). Measured timbre distance to level_nes (MFCC): 14.9 → 55.
 - Music tasks are verified by numbers only; always tell the user it wasn't listened to.
+- TOOLS: `~/.venvs/fm-music` (Python 3.11, outside the repo): basic-pitch, demucs, librosa,
+  pyloudnorm, mido, matplotlib. Finding wrong/missing MIDI notes vs the real recording (worked for
+  winter): `python -m demucs -n htdemucs <ogg>` → the 'other' stem (melodic; 'vocals' was empty) →
+  per-16th PITCH SALIENCE (`librosa.salience`, harmonics 1-4) vs a render of the chiptune's melodic
+  stems only → (a) notes strong in the ogg and weak in ours, (b) per-bar pitch-class profile → best
+  diatonic triad in each (shows wrong chords), (c) the top note per step (shows octave / harmony
+  lines). basic-pitch on the full mix found few notes; images of CQTs were too busy to judge.
 - Release: bump version.txt; audio-only changes need only `git pull` on the server
   (it republishes within 30 s); code/protocol changes need a server restart.
 

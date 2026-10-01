@@ -29,7 +29,9 @@
 #   Synth Bass (alto, 61-76), Smooth Synth (85-116), 8-Bit Square (117-132),
 #   Synth Pluck (133-140), 8-Bit Triangle → melodías de cada sección: pulsos / N163
 #   Flute (contramelodía suave)     → onda N163 suave
-#   8-Bit Sine (notas largas 85-132)→ onda casi seno N163 (colchón)
+#   8-Bit Sine (notas largas 85-132)→ onda casi seno N163 (colchón) + CUERDAS: las mismas notas
+#                                     una y dos octavas arriba (el ogg las tiene ahí: el MIDI solo
+#                                     guarda la octava grave; medido por saliencia, ver strings)
 #   Electric Drum Kit               → bombo / caja DPCM + ruido (caja, hats, platillos, toms)
 # ENERGÍA (sin cambiar la canción): semicorcheas fantasma de hat entre los hats del
 # MIDI en las secciones fuertes, redoble de caja al final de cada frase de 8 compases
@@ -62,6 +64,18 @@ SECT = [('intro', 1, 4), ('A', 5, 20), ('B', 21, 44), ('break', 45, 60), ('C', 6
         ('E', 117, 140), ('fin', 141, 144)]
 LOUD = set(range(5, 45)) | set(range(61, 141))          # secciones fuertes (hats fantasma, redobles)
 BREAK = set(range(45, 61))
+# Acordes del colchón (8-Bit Sine) corregidos según el ogg. El MIDI repite el mismo ciclo de 16
+# compases tres veces (85, 101, 117) y el ogg no: para cada compás se ajustó la tríada diatónica
+# (Fa, Solm, Lam, Si♭, Do, Rem, Do/Si♭) que mejor explica su perfil de alturas (saliencia del stem
+# 'other' de demucs) y se corrigen SOLO los compases donde la del ogg está clara y no coincide.
+# El final (117-132) sigue en el ogg Si♭ Si♭ Do Do | Fa Fa Rem Do | Si♭ Si♭ Do Do | Fa Fa Fa Rem.
+# Voces como en el ogg: Si♭ con el Fa arriba, Do con el Sol arriba; en 88 y 104 el ogg tiene La7
+# con el Sol y el Do# delante (el La3/Do#4 del MIDI dejaba el La arriba) y en 120, Do con el Mi.
+_BB, _C, _F, _DM, _C_BB, _A7, _CE = (53, 58), (55, 60), (57, 60), (57, 62), (58, 64), (55, 61), (60, 64)
+PAD_FIX = {91: _BB, 99: _BB, 107: _BB, 115: _BB, 123: _DM, 131: _F,
+           87: _BB, 88: _A7, 92: _C, 94: _C_BB, 103: _BB, 104: _A7, 108: _C, 110: _C_BB,
+           117: _BB, 118: _BB, 119: _C, 120: _CE, 121: _F, 122: _F, 124: _C,
+           125: _BB, 126: _BB, 127: _C, 128: _C, 129: _F, 130: _F, 132: _DM}
 
 
 # ── MIDI ─────────────────────────────────────────────────────────────────────
@@ -122,6 +136,8 @@ I_LEAD_N = {'vol': [14, 14, 13, 13, 12], 'sus': 12, 'duty': 4.0, 'vib': (14, 0.2
 I_PLUCK = {'vol': [14, 11, 9, 7, 5, 4, 3, 2], 'sus': 2, 'duty': 4.0}
 I_FLUTE = {'vol': [6, 8, 9, 10, 10], 'sus': 10, 'duty': 2.0, 'vib': (16, 0.15, 5.0)}
 I_PAD = {'vol': [5, 7, 9, 10, 11, 11], 'sus': 11, 'duty': 3.0, 'vib': (24, 0.1, 4.5)}
+I_STR = {'vol': [4, 6, 8, 9, 10, 10], 'sus': 10, 'duty': 5.0, 'vib': (20, 0.12, 5.0)}      # cuerdas (onda hueca)
+I_STR2 = {'vol': [3, 5, 6, 7, 8, 8], 'sus': 8, 'duty': 4.0, 'vib': (20, 0.12, 5.0)}
 I_TRI_LEAD = {'vol': [11, 11, 10, 10], 'sus': 10, 'duty': 0.25, 'vib': (16, 0.18, 5.5)}
 
 # Batería (muestras DPCM de 1 bit): bombo con clic y caída de tono, caja corta y brillante
@@ -279,9 +295,21 @@ def build(T):
     for i, vs in enumerate(voices(T['Flute'], 2)):
         for s, d, m, v in vs:
             S.note('flute%d' % i, 'n163', s, d, m, I_FLUTE, vs=min(1, 0.5 + v / 100), midi='keys')
-    for i, vs in enumerate(voices(T['8-Bit Sine'], 2)):
+    # (el ogg manda: el colchón del MIDI repite el mismo ciclo de 16 compases tres veces, pero
+    # el ogg cambia la armonía; PAD_FIX = el acorde del ogg en esos compases, ver arriba)
+    sine = [x for x in T['8-Bit Sine'] if bar_of(x[0]) not in PAD_FIX]
+    for b, notes in PAD_FIX.items():
+        for m in notes:
+            sine.append(((b - 1) * BAR, BAR, m, 51))
+    sine.sort()
+    for i, vs in enumerate(voices(sine, 2)):
         for s, d, m, v in vs:
             S.note('pad%d' % i, 'n163', s, d, m, I_PAD, vs=min(1, 0.55 + v / 120), gate=0.98, midi='keys')
+            # Cuerdas: el ogg tiene estos acordes una y dos octavas arriba (saliencia del stem
+            # 'other' de demucs frente al chiptune: compases 97-100, 107, 110, 115-116 y el final
+            # 117-132 — p. ej. el Sol3/La#3 del MIDI en el 107 suena como La#4/La#5/Re6 —)
+            S.note('str%d' % i, 'n163', s, d, m + 12, I_STR, vs=min(1, 0.55 + v / 120), gate=0.98, midi='keys')
+            S.note('strh%d' % i, 'n163', s, d, m + 24, I_STR2, vs=min(1, 0.55 + v / 120), gate=0.98, midi='keys')
     # Batería del MIDI
     drums = T['Electric Drum Kit']
     has = {}
@@ -400,10 +428,24 @@ def escalate(S, T, has):
     # Final: el lead del MIDI ahí (8-Bit Square) suena ~6 dB por debajo de la melodía del
     # tramo anterior (Smooth Synth: medido en 1-4 kHz) → doblado en la sierra del VRC6 (la
     # voz de la melodía principal) y la campana del motivo, al unísono en otra onda
+    # (y el ogg la toca UNA OCTAVA ARRIBA: su línea de arriba es la voz alta del 8-Bit Square
+    # +12 — compás 124: Sol4-Fa4-Mi4-Re4 del MIDI → Sol5-Fa5-Mi5-Re6 —; medido por saliencia)
     for s, d, m, v in notes_in(square, *FINAL):
-        S.note('lay_leadsaw', 'saw', s, d, m, I_SAW, vs=0.85 if bar_of(s) < 125 else 1.0, midi='lead')
+        S.note('lay_leadsaw', 'saw', s, d, m + 12, I_SAW, vs=0.85 if bar_of(s) < 125 else 1.0, midi='lead')
     for s, d, m, v in notes_in(bells, *FINAL):
         S.note('lay_bellx', 'n163', s, d, m, I_PLUCK, vs=0.85 if bar_of(s) < 125 else 1.0, gate=1.0, midi='keys')
+    # Pedal de Fa en la segunda mitad de cada frase del motivo del final: en el ogg el Fa es la
+    # nota más fuerte de los compases 121-123 y 129-132 (el chiptune quedaba en La / Sol)
+    # (en el 124 el ogg ya va a Do: Mi y Sol; el pedal acaba antes)
+    for b0, nb in ((121, 3), (129, 4)):
+        for m_, inst in ((65, I_STR), (77, I_STR), (89, I_STR2)):
+            S.note('lay_ped%d' % m_, 'n163', (b0 - 1) * BAR, nb * BAR - S16, m_, inst, gate=1.0, midi='keys')
+    # El motivo del final va ARMONIZADO a la quinta por encima (una octava más arriba) en el
+    # ogg: Do6-La#5-La5-La#5 (la voz alta de la caja de música) → Sol6-Fa6-Mi6-Fa6 (compás 118); el
+    # MIDI no la trae
+    for s, d, m, v in notes_in(bells, *FINAL):
+        S.note('lay_bell5', 'pulse', s, d, m + 7, I_SPARK, vs=0.85 if bar_of(s) < 125 else 1.0, gate=1.0,
+               midi='keys')
     # Final: el lead doblado a la octava, terceras debajo Y encima (brillo)
     for s, d, m, v in notes_in(square, *FINAL):
         S.note('lay_lead8', 'pulse', s, d, m + 12, I_OCT, midi='lead')
@@ -474,12 +516,12 @@ def escalate(S, T, has):
 
 # ── Mezcla ───────────────────────────────────────────────────────────────────
 GROUPS = {'lead': ('lead',), 'bass': ('bass',), 'chords': ('chord',), 'bell': ('bell', 'echo'),
-          'arp': ('arp',), 'soft': ('flute', 'pad', 'pluck'), 'kick': ('kick',), 'snare': ('snare', 'tom'),
+          'arp': ('arp',), 'soft': ('flute', 'pad', 'pluck'), 'strings': ('str',), 'kick': ('kick',), 'snare': ('snare', 'tom'),
           'cymbals': ('hat', 'crash'), 'layer': ('lay_',), 'xdrums': ('x',)}
-LAYER_OF = {'lay_bell': 'bell', 'lay_leadsaw': 'lead', 'lay_lead': 'lead', 'lay_shim': 'arp', 'lay_pump': 'bass'}
+LAYER_OF = {'lay_ped': 'strings', 'lay_bell': 'bell', 'lay_leadsaw': 'lead', 'lay_lead': 'lead', 'lay_shim': 'arp', 'lay_pump': 'bass'}
 # (una capa suena un poco por debajo del instrumento que dobla; las dos "estrellas" del
 # final — la sierra que dobla el lead y la campana del motivo — a la par)
-LAYER_K = {'*': 0.75, 'lay_leadsaw': 1.0, 'lay_bellx': 1.1}
+LAYER_K = {'*': 0.75, 'lay_leadsaw': 1.0, 'lay_bellx': 1.1, 'lay_ped65': 1.0, 'lay_ped77': 1.2, 'lay_ped89': 1.0}
 XBUS = {'xkick': 'kick', 'xsnare': 'snare', 'xtom': 'tom', 'xhat': 'hat', 'xcrash': 'crash', 'xriser': 'crash'}
 
 
@@ -503,7 +545,7 @@ def band_rms(x, t0, t1, lo=1000, hi=5000):
 # Nivel de cada grupo respecto a la melodía (dB, RMS mientras suena): la batería y el
 # bajo a la par que la melodía, el acompañamiento audible pero detrás
 LEVEL_DB = {'lead': 0, 'bass': -1, 'kick': 1.5, 'snare': -0.5, 'cymbals': -7, 'chords': -4, 'bell': -3, 'arp': -6,
-            'soft': -7}
+            'soft': -7, 'strings': -5}
 BREAK_DB = -4.0                     # el break (45-52) baja así y del 53 al 60 vuelve a subir poco a poco
 
 
