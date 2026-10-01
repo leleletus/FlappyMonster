@@ -577,11 +577,9 @@ function Model:validate()
             w[#w+1] = { 'warn', 'Inundación #' .. id .. ': se mueve con la pelea de jefe pero no hay zonas de jefe', f }
         end
     end
-    -- Subtiles dentro de un bloque con colisión: no se ven ni hacen nada
+    -- (un mini bloque dentro de un bloque no es un aviso: el bloque grande manda y
+    -- puede quedarse ahí para cuando el bloque se rompa o se cambie)
     for _, o in ipairs(self.subtiles or {}) do
-        if self:inBounds(o.col, o.row) and Tiles.get(Codec.id(self.tiles[o.row][o.col])).collision ~= 'none' then
-            w[#w+1] = { 'warn', 'Mini bloque (' .. o.col .. ',' .. o.row .. ') dentro de un bloque: no tiene efecto' }
-        end
         if ps and o.col == ps[1] and (o.row == ps[2] or o.row == ps[2] - 1) and o.solid then
             w[#w+1] = { 'warn', 'Mini bloque sólido en el punto de inicio (' .. o.col .. ',' .. o.row .. ')' }
         end

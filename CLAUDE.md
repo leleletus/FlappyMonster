@@ -284,8 +284,10 @@ Tile textures: assets/images/tiles/ (breakable, platform, platform_drop via the 
                        THEIR quarter of the texture at the same scale (seamless with big blocks).
                        **Sand** (`sand` 35, material sand, also a mini block): sand.png +
                        `sand_blend.png` (dithered band in the neighbour's colours, frame 1
-                       dirt/grass, 2 stone, drawn rotated on each side touching dirt/grass/stone,
-                       so the change is never abrupt).
+                       dirt/grass, 2 stone, 3 deep stone, 4 border), drawn per HALF cell (big sand =
+                       4 halves; sand mini blocks too) towards any neighbour half cell —
+                       big block or mini block, `SubTiles.kindAt(level, gx, gy)` — so the change
+                       is never abrupt. A mini block inside a block is NOT a validator warning.
 src/fx/SpriteStrip.lua animation strips (frames side by side in one PNG):
                        SpriteStrip.load(path[, frameW]) → :frameAt(t, fps), :draw(i, x, y, r, sx, sy)
 server/main.lua        authoritative sim (see below)
@@ -715,7 +717,7 @@ world-locked seam: "abrupt, different speeds, unrelated"): horizontal parallax p
 VERTICAL parallax close to the world (`pv(p) = 0.7 + 0.4p`, so deep down no sky shows). The
 landscape rests on a background line B (the line seen at ~78 % of the screen); under B a strip
 of the surface's own ground colour (`e.bottom` of its nearest opaque layer) + `sky/blend.png`
-dither into the depth gradient, the depth's `top` layer hangs from there and its ground layers
+dither (scrolls sideways WITH the nearest landscape layer, never screen-fixed) into the depth gradient, the depth's `top` layer hangs from there and its ground layers
 rest on the level bottom (scissor below B). Drawn first in
 Adventure/OnlineAdventure states (`Sky.render(level, camX, camY)`; `Background.png` is ONLY
 for the Flappy mode now). Pixel-banded gradient per time (cave/underwater have their own,

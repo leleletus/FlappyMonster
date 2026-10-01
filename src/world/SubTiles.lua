@@ -88,6 +88,17 @@ function SubTiles.defAt(level, wx, wy)
     return c[q]
 end
 
+-- Nombre del bloque que ocupa la media casilla (gx, gy) (rejilla de subceldas, desde 0):
+-- el bloque grande de esa casilla si tiene colisión, si no su mini bloque, o nil
+function SubTiles.kindAt(level, gx, gy)
+    local col, row = math.floor(gx / 2) + 1, math.floor(gy / 2) + 1
+    local d = level:getDef(col, row)
+    if d and d.collision ~= 'none' then return d.name end
+    local cells = level.subCells and level.subCells[key(col, row)]
+    local s = cells and cells[(gx % 2) + (gy % 2) * 2 + 1]
+    return s and s.kind or (d and d.name)
+end
+
 -- ¿Hay alguna subcelda sólida en la celda?
 function SubTiles.solidInCell(level, col, row)
     return level.subSolid ~= nil and level.subSolid[key(col, row)] ~= nil

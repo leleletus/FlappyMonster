@@ -282,10 +282,13 @@ function Sky.render(level, camX, camY)
             -- Franja del suelo de la superficie + tramado hacia abajo
             love.graphics.setColor(soil[1] * tint[1], soil[2] * tint[2], soil[3] * tint[3], 1)
             love.graphics.rectangle('fill', 0, B, W, SOIL)
+            -- (el tramado va pegado al paisaje: se desplaza con su capa más cercana, no
+            -- con la pantalla)
             local bl = img('blend')
             if bl then
-                local x = 0
-                while x < W do love.graphics.draw(bl.img, x, d0, 0, S, S); x = x + bl.w * S end
+                local bw = bl.w * S
+                local x = -math.floor((camX * pB) % bw)
+                while x < W do love.graphics.draw(bl.img, x, d0, 0, S, S); x = x + bw end
             end
             love.graphics.setScissor(sx, sy, sw, sh)
         end
