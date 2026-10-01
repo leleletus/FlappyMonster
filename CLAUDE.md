@@ -332,7 +332,8 @@ Spikes are images too: assets/images/spikes/spike.png (tile spikes, rotated/flip
                        (editor Nivel → Fondo y clima → Pinchos; `src/world/SpikeSkins.lua` LIST = id + PNG, new skin =
                        PNG + one line) → `spike_ice.png` (`tools/ui/make_ice_spikes.py`) for tile AND falling spikes
                        (spikefall/rainspike `wantsLevel` → `levelRef.spikeSkin`); render only. Set in the snowy
-                       levels (lago_helado, torre_viento, icy arenas; retheme 'snow' theme + make_jefe_nieve write it), crabby/spike.png and
+                       levels (lago_helado, torre_viento, icy arenas; retheme 'snow' theme + make_jefe_nieve write it;
+                       their Crabbies are Icy Crabbies too: retheme `ICY_CRABS` swaps crabby/crabbytramp), crabby/spike.png and
                        bosses/miniboss1/spike.png (stretched in height while they grow)
 Tile textures: assets/images/tiles/ (breakable, platform, platform_drop via the tile
                        def's `texture`; finish.png = the checkerboard, its wave + gold
