@@ -134,5 +134,7 @@
   "vents": [],
   "modes": ["race"],
   "music": "flying_machine",
-  "snow": true
+  "snow": true,
+  "background": "snow",
+  "time": "night"
 }

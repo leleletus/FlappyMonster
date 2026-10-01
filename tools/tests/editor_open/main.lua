@@ -1,7 +1,8 @@
 -- tools/tests/editor_open — el editor de niveles real con el diálogo "Abrir
 -- nivel" (Ctrl+O): captura la lista arriba y tras bajar con las flechas
 -- (<save>/editor_open_1.png, _2.png), cierra el diálogo y captura la capa
--- Mini bloques (tecla 7, _3.png); comprueba que no hay errores.
+-- Mini bloques (tecla 7, _3.png) y la pestaña Nivel con "Fondo y clima" abierto
+-- (_4.png); comprueba que no hay errores.
 -- LINKS=1: abre links.json (un bloque ON/OFF conectado a una inundación),
 -- elige Bloques → Conectar (K), hace clic en el bloque y captura el
 -- inspector y la línea de la conexión (_links.png).
@@ -68,11 +69,13 @@ function love.update(dt)
                 end
                 PLAY_t0 = PLAY_t0 or frame
                 for i, sec in ipairs({ 0.5, 1.2, 2.0, 2.8, 3.8 }) do
-                    if frame == PLAY_t0 + math.floor(sec * 60) then
+                    PLAY_shot = PLAY_shot or {}
+                    if frame >= PLAY_t0 + math.floor(sec * 60) and not PLAY_shot[i] then
+                        PLAY_shot[i] = true
                         love.graphics.captureScreenshot(function(img) img:encode('png', 'editor_open_play_' .. i .. '.png') end)
                     end
                 end
-                if frame == PLAY_t0 + 240 then
+                if frame >= PLAY_t0 + 240 then
                     print('capturas en ' .. love.filesystem.getSaveDirectory() .. '/editor_open_play_*.png')
                     print('TODO OK'); love.event.quit(0)
                 end
@@ -87,6 +90,9 @@ function love.update(dt)
                     print('TODO OK'); love.event.quit(0)
                 end
             end
+        end
+        if PLAY_t0 and not (st and st.player) and frame >= PLAY_t0 + 240 then
+            print('TODO OK'); love.event.quit(0)           -- (p. ej. el jugador estaba muriendo)
         end
         if frame > 3000 then print('FALLA: la pelea no empezó'); love.event.quit(1) end
         return
@@ -116,8 +122,16 @@ function love.update(dt)
     if frame == 55 then key('escape') end
     if frame == 60 then key('7') end                    -- capa Mini bloques
     if frame == 66 then shot(3) end
-    if frame == 72 then
-        print('capturas en ' .. love.filesystem.getSaveDirectory() .. '/editor_open_{1,2,3}.png')
+    -- Pestaña Nivel con todas sus secciones abiertas (Fondo y clima, Música...)
+    if frame == 68 then
+        local E = require('src/editor/Editor').state()
+        E.rightTab = 'level'
+        local ui = require 'src/editor/ui'
+        for _, k in ipairs({ 'lvl:weather' }) do ui.state.sections[k] = true end
+    end
+    if frame == 74 then shot(4) end
+    if frame == 80 then
+        print('capturas en ' .. love.filesystem.getSaveDirectory() .. '/editor_open_{1,2,3,4}.png')
         print('TODO OK'); love.event.quit(0)
     end
 end

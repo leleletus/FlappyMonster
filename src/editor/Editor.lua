@@ -742,6 +742,18 @@ local function drawCanvas()
     love.graphics.setLineWidth(2 / z)
     love.graphics.rectangle('line', (ps[1]-1)*t - camX, (ps[2]-1)*t - camY, t, t)
 
+    -- Línea de superficie del fondo (pestaña Nivel): arriba la superficie, abajo la profundidad
+    if E.rightTab == 'level' and lv then
+        local Sky = require 'src/fx/Sky'
+        local row = (m.surfaceRow and m.surfaceRow > 0) and m.surfaceRow or Sky.autoSurfaceRow(lv)
+        local yy = (row - 1) * t - camY
+        love.graphics.setColor(0.4, 0.85, 1, 0.9)
+        love.graphics.setLineWidth(3 / z)
+        for xx = -camX, m.width * t - camX, 24 do love.graphics.line(xx, yy, math.min(xx + 14, m.width * t - camX), yy) end
+        love.graphics.print('Superficie' .. (m.depth and (' / ' .. (Sky.byId[m.depth] and Sky.byId[m.depth].label or m.depth)) or ''),
+                            8 - camX, yy - 20 / z, 0, 1 / z, 1 / z)
+    end
+
     -- Rejilla
     if E.grid then
         local c0 = math.max(0, math.floor(camX / t)); local c1 = math.min(m.width, math.ceil((camX + vw) / t))
@@ -1519,9 +1531,39 @@ local function drawLevelTab(x, y, w)
                         x, y, w, th.border) + 8
     end
     y = y + 2
-    -- Clima (solo visual): nieve cayendo por todo el nivel
-    y, open = ui.section('lvl:weather', 'Clima', x, y, w, m.snow and 'nieve' or 'nada')
+    -- Fondo y clima (solo visual): bioma del fondo con paralaje, hora del día, nubes, nieve
+    local Sky = require 'src/fx/Sky'
+    local bg, tm = Sky.byId[m.background or Sky.DEFAULT], Sky.timeById[m.time or 'day']
+    y, open = ui.section('lvl:weather', 'Fondo y clima', x, y, w, bg.label .. ' · ' .. tm.label)
     if open then
+        local opts = {}
+        for _, b in ipairs(Sky.BIOMES) do if not b.onlyDepth then opts[#opts + 1] = { value = b.id, label = b.label } end end
+        local v, ch = ui.enum('Superficie', bg.id, opts, x, y, w)
+        y = y + ui.ENUM_H
+        if ch then pushUndo(); m.background = (v ~= Sky.DEFAULT) and v or nil; markDirty() end
+        local topts = {}
+        for _, t in ipairs(Sky.TIMES) do topts[#topts + 1] = { value = t.id, label = t.label } end
+        v, ch = ui.enum('Hora', tm.id, topts, x, y, w)
+        y = y + ui.ENUM_H
+        if ch then pushUndo(); m.time = (v ~= 'day') and v or nil; markDirty() end
+        if bg.sky then
+            v, ch = ui.toggle('Nubes', m.clouds ~= false, x, y, w)
+            y = y + 28
+            if ch then pushUndo(); m.clouds = (not v) and false or nil; markDirty() end
+        end
+        local dopts = { { value = 'none', label = 'Ninguna' } }
+        for _, b in ipairs(Sky.BIOMES) do if b.depth then dopts[#dopts + 1] = { value = b.id, label = b.label } end end
+        v, ch = ui.enum('Profundidad', m.depth or 'none', dopts, x, y, w)
+        y = y + ui.ENUM_H
+        if ch then pushUndo(); m.depth = (v ~= 'none') and v or nil; markDirty() end
+        if m.depth then
+            local auto = E.level and Sky.autoSurfaceRow(E.level) or 1
+            v, ch = ui.number('Línea de superficie (fila, 0 = auto: ' .. auto .. ')', m.surfaceRow or 0, x, y, w,
+                              { kind = 'int', min = 0, max = m.height, help = 'Fila del suelo donde acaba la superficie y empieza la profundidad. 0 = el suelo bajo la salida del jugador.' })
+            y = y + 30
+            if ch then pushUndo(); m.surfaceRow = (v > 0) and v or nil; markDirty() end
+        end
+        y = y + ui.hint('Superficie: cielo y paisaje hasta la línea (azul en el mapa). Profundidad: el fondo de debajo (cuevas, fondo marino...). Capas con paralaje; de noche, luna y estrellas. Solo visual.', x, y, w, th.border) + 8
         local v, ch = ui.toggle('Nieve cayendo', m.snow == true, x, y, w)
         y = y + 28
         if ch then pushUndo(); m.snow = v or nil; markDirty() end

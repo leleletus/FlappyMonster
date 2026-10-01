@@ -235,29 +235,43 @@ local function getTexture(tex)
 end
 
 -- Dibuja una textura de tile (def.texture o { image = ... }) en la celda del
--- contexto, con transparencia opcional (hielo: semitransparente). Un mini bloque
--- (ctx.quarter = {qx, qy}) dibuja SU cuarto de la textura a la misma escala que
--- los bloques grandes, así que casan sin costura; `capRow` fuerza la fila de
--- cuartos (el césped con la cara de arriba al aire siempre usa la de arriba).
+-- contexto, con transparencia opcional (hielo: semitransparente).
+--   tex.span = n : el dibujo cubre n x n casillas y se repite (la piedra: sus grietas
+--                  siguen de un bloque al de al lado); cada casilla usa su trozo según
+--                  su columna/fila.
+--   ctx.quarter = {qx, qy} : un mini bloque dibuja SU cuarto de ese trozo, a la misma
+--                  escala que los bloques grandes (casan sin costura); `capRow` fuerza
+--                  la fila de cuartos (el césped al aire siempre usa la de arriba).
+local function texQuad(e, sx, sy, sw, sh, w, h)
+    e.sub = e.sub or {}
+    local k = sx .. ',' .. sy .. ',' .. sw
+    local q = e.sub[k]
+    if not q then q = love.graphics.newQuad(sx, sy, sw, sh, w, h); e.sub[k] = q end
+    return q
+end
+
 function TileTypes.drawTexture(tex, ctx, alpha, capRow)
     local e = getTexture(tex)
     if not e then return end
     local w, h = e.img:getWidth(), e.img:getHeight()
     love.graphics.setColor(1, 1, 1, alpha or 1)
-    local q = ctx.quarter
-    if q then
-        local qy = capRow or q[2]
-        local k = q[1] * 2 + qy + 1
-        local qd = e.quarters and e.quarters[k]
-        if not qd then
-            e.quarters = e.quarters or {}
-            qd = love.graphics.newQuad(q[1] * w / 2, qy * h / 2, w / 2, h / 2, w, h)
-            e.quarters[k] = qd
-        end
-        love.graphics.draw(e.img, qd, ctx.x, ctx.y, 0, ctx.size / (w / 2), ctx.size / (h / 2))
-    else
+    local span, q = tex.span or 1, ctx.quarter
+    if span == 1 and not q then
         love.graphics.draw(e.img, ctx.x, ctx.y, 0, ctx.size / w, ctx.size / h)
+        return
     end
+    local cw, ch = w / span, h / span
+    local cx, cy = 0, 0
+    if span > 1 and ctx.col and ctx.row then
+        if q then cx, cy = math.floor(ctx.col / 2) % span, math.floor(ctx.row / 2) % span   -- (rejilla de medias casillas, desde 0)
+        else cx, cy = (ctx.col - 1) % span, (ctx.row - 1) % span end
+    end
+    local sx, sy, sw, sh = cx * cw, cy * ch, cw, ch
+    if q then
+        sw, sh = cw / 2, ch / 2
+        sx, sy = sx + q[1] * sw, sy + (capRow or q[2]) * sh
+    end
+    love.graphics.draw(e.img, texQuad(e, sx, sy, sw, sh, w, h), ctx.x, ctx.y, 0, ctx.size / sw, ctx.size / sh)
 end
 
 -- Dibuja un tile completo (aspecto del tipo) en ctx.x, ctx.y, tamaño ctx.size.

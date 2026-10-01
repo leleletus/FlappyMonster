@@ -3,15 +3,11 @@
 # Texturas de los bloques de terreno (arte 16x16 escalado x4 = 64x64, se repiten
 # sin costura; los bordes claros los dibuja el juego solo en las caras al aire):
 #   assets/images/tiles/dirt.png          Tierra
-#   assets/images/tiles/stone.png         Piedra
 #   assets/images/tiles/grass.png         Césped con la cara de arriba al aire
 #                                         (capa verde sobre tierra; tapado = dirt.png)
 #   assets/images/tiles/grass_blades.png  tallitos que asoman encima (3 variantes 16x4)
 #   assets/images/tiles/sand.png          Arena
-#   assets/images/tiles/sand_blend.png    transición de la arena hacia el bloque vecino
-#                                         (2 cuadros 16x16: tierra —también bajo el césped—, piedra): franja
-#                                         a la IZQUIERDA con el color del vecino tramado
-#                                         (el juego la gira para cada lado)
+#   (piedra, borde y transiciones de la arena: tools/ui/make_world_art.py)
 # Antes estos bloques se dibujaban con código. No pisa lo que ya existe
 # (--force para rehacerlo). Desde la raíz del repo:
 #     python3 tools/ui/make_terrain.py [--force]
@@ -144,7 +140,6 @@ def blend(pal_dark, pal_base):
 if __name__ == '__main__':
     print('Texturas de terreno:')
     save(grid(DIRT_ROWS, DIRT), 'dirt')
-    save(grid(STONE_ROWS, STONE), 'stone')
     g = Image.new('RGBA', (16, 16), (0, 0, 0, 0))
     g.paste(grid(GRASS_TOP[:6], GRASS), (0, 0))
     g.paste(grid(DIRT_ROWS[6:], DIRT), (0, 6))
@@ -156,7 +151,3 @@ if __name__ == '__main__':
         strip.paste(grid(rows, BL), (i * 16, 0))
     save(strip, 'grass_blades')
     save(grid(SAND_ROWS, SAND), 'sand')
-    sb = Image.new('RGBA', (32, 16), (0, 0, 0, 0))
-    for i, (dk, bs) in enumerate(((DIRT['d'], DIRT['.']), (STONE['d'], STONE['.']))):
-        sb.paste(blend(dk, bs), (i * 16, 0))
-    save(sb, 'sand_blend')

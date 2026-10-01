@@ -2,12 +2,12 @@
 -- assets/images/tiles/sand.png. Donde toca tierra, césped o piedra no cambia de
 -- golpe: dibuja por ese lado una franja tramada con los colores del vecino
 -- (assets/images/tiles/sand_blend.png: cuadro 1 tierra —también bajo el césped—,
--- 2 piedra; la franja está a la izquierda y se gira para cada lado).
--- Ambas de tools/ui/make_terrain.py.
+-- 2 piedra, 3 roca abisal, 4 borde; la franja está a la izquierda y se gira para
+-- cada lado). sand.png: tools/ui/make_terrain.py; sand_blend.png: make_world_art.py.
 local TileTypes = require 'src/world/tiles/TileTypes'
 
 local TEX = { image = 'assets/images/tiles/sand.png' }
-local BLEND_OF = { dirt = 1, grass = 1, solid = 2 }
+local BLEND_OF = { dirt = 1, grass = 1, solid = 2, deep_stone = 3, border = 4 }
 -- lado → { dc, dr, ángulo } (la franja del dibujo está a la izquierda)
 local SIDES = { left = { -1, 0, 0 }, top = { 0, -1, math.pi / 2 }, right = { 1, 0, math.pi }, bottom = { 0, 1, -math.pi / 2 } }
 local blend, quads

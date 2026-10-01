@@ -365,5 +365,6 @@
   "vents": [],
   "autoScroll": {"countdown":3,"endCol":176,"margin":0.6,"speed":95,"startCol":1,"width":20},
   "modes": ["race"],
-  "music": "flying_machine"
+  "music": "flying_machine",
+  "background": "mountain"
 }

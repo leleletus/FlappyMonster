@@ -87,20 +87,29 @@
     {"col":93,"props":{"flip":true,"layer":"back"},"row":12,"sub":4,"type":"hibiscus"},
     {"col":110,"props":{"layer":"back"},"row":13,"sub":3,"type":"pineapple"},
     {"col":75,"props":{"layer":"back"},"row":14,"sub":4,"type":"hibiscus"},
-    {"col":109,"props":{"layer":"back"},"row":15,"type":"tropical_bush"},
+    {"col":109,"row":15,"type":"tropical_bush"},
     {"col":52,"props":{"layer":"back"},"row":16,"sub":3,"type":"hibiscus"},
     {"col":52,"props":{"layer":"back"},"row":16,"sub":4,"type":"hibiscus"},
     {"col":56,"props":{"flip":true,"layer":"back"},"row":16,"type":"palmtree"},
-    {"col":61,"props":{"flip":true,"layer":"back"},"row":16,"type":"fern"},
-    {"col":69,"props":{"layer":"back"},"row":16,"type":"fern"},
+    {"col":61,"props":{"flip":true},"row":16,"type":"fern"},
+    {"col":69,"row":16,"type":"fern"},
     {"col":3,"props":{"layer":"back"},"row":17,"type":"palmtree"},
-    {"col":23,"props":{"layer":"back"},"row":17,"type":"fern"},
+    {"col":23,"row":17,"type":"fern"},
     {"col":31,"props":{"flip":true,"layer":"back"},"row":17,"sub":3,"type":"pineapple"},
     {"col":38,"props":{"flip":true,"layer":"back"},"row":17,"sub":3,"type":"hibiscus"},
     {"col":38,"props":{"layer":"back"},"row":17,"sub":4,"type":"hibiscus"},
     {"col":40,"props":{"layer":"back"},"row":17,"sub":4,"type":"pineapple"}
   ],
   "vents": [],
+  "subtiles": [
+    {"col":26,"kind":"dirt","row":15,"sub":1},
+    {"col":27,"kind":"dirt","row":15,"sub":1},
+    {"col":27,"kind":"dirt","row":15,"sub":2},
+    {"col":26,"kind":"dirt","row":15,"sub":2},
+    {"col":26,"kind":"dirt","row":15,"sub":3},
+    {"col":28,"kind":"dirt","row":15,"sub":2}
+  ],
   "modes": ["race"],
-  "music": "hidro_city"
+  "music": "hidro_city",
+  "background": "coast"
 }

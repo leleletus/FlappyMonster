@@ -2,7 +2,7 @@
   "name": "Jardín de Gummies",
   "width": 120,
   "height": 16,
-  "playerStart": [5,13],
+  "playerStart": [3,12],
   "tiles": [
     [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],
     [4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4],
@@ -22,8 +22,7 @@
     [4,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,1,1,131072,131072,131072,131072,1,131072,1,1,1,1,1,1,1,1,1,1,1,1,1,131072,131072,1,131072,131072,131072,1,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,1,131072,1,1,1,131072,131072,131072,131072,1,1,1,1,1,1,1,1,1,1,1,1,131072,1,131072,1,131072,1,1,1,1,1,1,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,1,131072,131072,131072,1,131072,1,131072,131072,131072,131072,4]
   ],
   "entities": [
-    {"col":8,"props":{"patrol":{"left":2,"right":14}},"row":13,"type":"gummy"},
-    {"col":4,"props":{"patrol":{"left":2,"right":8}},"row":13,"type":"gummy"},
+    {"col":8,"props":{"patrol":{"left":6,"right":14}},"row":13,"type":"gummy"},
     {"col":19,"props":{"helmet":true,"patrol":{"left":15,"right":24}},"row":12,"type":"gummy"},
     {"col":17,"props":{"patrol":{"left":15,"right":19}},"row":12,"type":"gummy"},
     {"col":29,"props":{"patrol":{"left":25,"right":34}},"row":11,"type":"gummy"},
@@ -75,27 +74,28 @@
     {"col":115,"props":{"layer":"back"},"row":9,"sub":3,"type":"hibiscus"},
     {"col":115,"props":{"layer":"back"},"row":9,"sub":4,"type":"tulip"},
     {"col":28,"props":{"layer":"back"},"row":11,"sub":3,"type":"tulip"},
-    {"col":73,"props":{"flip":true,"layer":"back"},"row":11,"type":"tropical_bush"},
-    {"col":15,"props":{"layer":"back"},"row":12,"type":"tropical_bush"},
-    {"col":20,"props":{"layer":"back"},"row":12,"type":"fern"},
-    {"col":22,"props":{"flip":true,"layer":"back"},"row":12,"type":"fern"},
+    {"col":73,"props":{"flip":true},"row":11,"type":"tropical_bush"},
+    {"col":15,"row":12,"type":"tropical_bush"},
+    {"col":20,"row":12,"type":"fern"},
+    {"col":22,"props":{"flip":true},"row":12,"type":"fern"},
     {"col":40,"props":{"flip":true,"layer":"back"},"row":12,"sub":3,"type":"tulip"},
     {"col":44,"props":{"layer":"back"},"row":12,"type":"butterflies"},
-    {"col":59,"props":{"layer":"back"},"row":12,"type":"fern"},
-    {"col":63,"props":{"layer":"back"},"row":12,"type":"fern"},
-    {"col":89,"props":{"flip":true,"layer":"back"},"row":12,"type":"tropical_bush"},
+    {"col":59,"row":12,"type":"fern"},
+    {"col":63,"row":12,"type":"fern"},
+    {"col":89,"props":{"flip":true},"row":12,"type":"tropical_bush"},
     {"col":94,"props":{"flip":true,"layer":"back"},"row":12,"sub":4,"type":"tulip"},
     {"col":94,"props":{"layer":"back"},"row":12,"sub":3,"type":"tulip"},
-    {"col":109,"props":{"flip":true,"layer":"back"},"row":12,"type":"tropical_bush"},
+    {"col":109,"props":{"flip":true},"row":12,"type":"tropical_bush"},
     {"col":2,"props":{"layer":"back"},"row":13,"sub":3,"type":"stretch"},
     {"col":2,"props":{"layer":"back"},"row":13,"sub":4,"type":"tulip"},
     {"col":6,"props":{"flip":true,"layer":"back"},"row":13,"sub":4,"type":"stretch"},
-    {"col":11,"props":{"layer":"back"},"row":13,"type":"fern"},
+    {"col":11,"row":13,"type":"fern"},
     {"col":51,"props":{"layer":"back"},"row":13,"sub":4,"type":"tulip"},
     {"col":51,"props":{"layer":"back"},"row":13,"sub":3,"type":"tulip"},
-    {"col":99,"props":{"layer":"back"},"row":13,"type":"fern"}
+    {"col":99,"row":13,"type":"fern"}
   ],
   "vents": [],
   "modes": ["hunt"],
-  "music": "classic"
+  "music": "classic",
+  "background": "forest"
 }

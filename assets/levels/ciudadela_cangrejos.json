@@ -126,5 +126,6 @@
   ],
   "vents": [],
   "modes": ["hunt"],
-  "music": "hidro_city"
+  "music": "hidro_city",
+  "background": "coast"
 }

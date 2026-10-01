@@ -68,5 +68,6 @@
   ],
   "vents": [],
   "modes": ["koth"],
-  "music": "flying_machine"
+  "music": "flying_machine",
+  "background": "forest"
 }

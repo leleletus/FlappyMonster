@@ -79,5 +79,6 @@
   "bossZones": [
     {"col":92,"h":10,"id":1,"music":"tentacle_chip_instrumental","row":4,"w":18}
   ],
-  "music": "classic"
+  "music": "classic",
+  "time": "night"
 }

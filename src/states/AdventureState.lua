@@ -1,4 +1,6 @@
 local IceDrips = require 'src/fx/IceDrips'
+local LavaFx   = require 'src/fx/LavaFx'
+local Sky      = require 'src/fx/Sky'
 local Snowfall = require 'src/fx/Snowfall'
 local TouchControls = require 'src/ui/TouchControls'
 local CornerButtons = require 'src/ui/CornerButtons'
@@ -48,14 +50,8 @@ local function drawPixelButton(label, cx, y, w, h, selected, alpha)
     end
 end
 
-local imgBg = nil
-local BG_SCALE    = 15
-local BG_PARALLAX = 0.3
-
-local function loadBgAsset()
-    if imgBg then return end
-    imgBg = love.graphics.newImage('assets/images/level/Background.png')
-end
+-- (fondo: cielo y capas con paralaje del bioma del nivel, src/fx/Sky.lua;
+-- Background.png es solo del modo Flappy)
 
 -- ── Enter ─────────────────────────────────────────────────────────────────────
 -- Al salir del nivel: cerrar la grabación (si la hay)
@@ -71,7 +67,6 @@ end
 function AdventureState:enter(args)
     require('src/ui/View').lockGameplay()      -- (todos ven la misma zona del nivel)
     loadHudAssets()
-    loadBgAsset()
     args = args or {}
     self.levelPath = args.level or 'assets/levels/nivel01.json'
     self.returnTo  = args.returnTo or 'main_menu'   -- a dónde se sale (Juego libre → free_play)
@@ -121,8 +116,6 @@ function AdventureState:enter(args)
     self.camX = 0
     self.camY = 0
     self.camFrozen = false
-    self.bgScrollX = 0
-    self.bgScrollY = 0
 
     self.sceneCanvas = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
 
@@ -251,19 +244,10 @@ function AdventureState:updateCamera(dt)
         targetX = AutoScroll.cameraX(self.level)
     end
 
-    local prevCamX = self.camX
-    local prevCamY = self.camY
     self.camX = self.camX + (targetX - self.camX) * CAM_LERP * dt
     self.camY = self.camY + (targetY - self.camY) * CAM_LERP * dt
     -- Cámara automática: sin suavizado horizontal (la ventana manda)
     if scrolling then self.camX = targetX end
-
-    local bgW = imgBg:getWidth()  * BG_SCALE
-    local bgH = imgBg:getHeight() * BG_SCALE
-    self.bgScrollX = self.bgScrollX + (self.camX - prevCamX) * BG_PARALLAX
-    self.bgScrollY = self.bgScrollY + (self.camY - prevCamY) * BG_PARALLAX
-    if self.bgScrollX >= bgW then self.bgScrollX = self.bgScrollX - bgW end
-    if self.bgScrollY >= bgH then self.bgScrollY = self.bgScrollY - bgH end
 end
 
 -- ── Colisión jugador ↔ entidades ──────────────────────────────────────────────
@@ -520,8 +504,6 @@ function AdventureState:render()
 end
 
 function AdventureState:_renderScene()
-    local bgW = imgBg:getWidth()  * BG_SCALE
-    local bgH = imgBg:getHeight() * BG_SCALE
 
     -- ── Aislar transformaciones para el Canvas (Evita zoom doble y cortes) ──
     love.graphics.push()
@@ -536,23 +518,11 @@ function AdventureState:_renderScene()
     love.graphics.setCanvas(self.sceneCanvas)
     love.graphics.clear(0, 0, 0, 1)
 
-    love.graphics.setColor(1, 1, 1, 1)
-    local startX = -(math.floor(self.bgScrollX) % bgW)
-    local startY = -(math.floor(self.bgScrollY) % bgH)
-    if startX > 0 then startX = startX - bgW end
-    if startY > 0 then startY = startY - bgH end
-    local x = startX
-    while x < WINDOW_W do
-        local y = startY
-        while y < WINDOW_H do
-            love.graphics.draw(imgBg, x, y, 0, BG_SCALE, BG_SCALE)
-            y = y + bgH
-        end
-        x = x + bgW
-    end
+    Sky.render(self.level, self.camX, self.camY)          -- (cielo y fondo con paralaje)
 
     self.level:render(self.camX, self.camY)
     IceDrips.render(self.level, self.camX, self.camY)      -- (gotas del hielo: solo dibujo)
+    LavaFx.render(self.level, self.camX, self.camY)        -- (burbujas de la lava: solo dibujo)
     self.level:renderVents(self.camX, self.camY)
     self.level:renderFoliageBack(self.camX, self.camY)
 

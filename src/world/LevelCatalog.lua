@@ -54,6 +54,7 @@ function LevelCatalog.buildPreview(lv)
             elseif t.name == 'grass' then ch = 'G'
             elseif t.name == 'snow' then ch = 'S'
             elseif t.name == 'sand' then ch = 'A'
+            elseif t.name == 'deep_stone' then ch = 'R'
             elseif t.mat.name == 'ice' then ch = 'I'
             elseif t.collision == 'solid' then ch = '#'
             elseif t.collision == 'oneway' then ch = '='

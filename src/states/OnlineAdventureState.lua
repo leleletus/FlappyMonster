@@ -1,4 +1,6 @@
 local IceDrips = require 'src/fx/IceDrips'
+local LavaFx   = require 'src/fx/LavaFx'
+local Sky      = require 'src/fx/Sky'
 local Snowfall = require 'src/fx/Snowfall'
 -- src/states/OnlineAdventureState.lua
 -- Modo aventura multijugador online — arquitectura autoritativa.
@@ -56,9 +58,6 @@ local SPEC_OPTS  = { 'oadv.wait', 'oadv.leave_hub' }   -- claves de idioma
 
 -- Assets
 local imgIcon = nil
-local imgBg   = nil
-local BG_SCALE    = 15
-local BG_PARALLAX = 0.3
 local ICON_SCALE  = 4
 local AIR_BAR_W   = 160
 local AIR_BAR_H   = 12
@@ -66,7 +65,6 @@ local AIR_BAR_H   = 12
 local function loadAssets()
     if imgIcon then return end
     imgIcon = love.graphics.newImage('assets/images/player/icon.png')
-    imgBg   = love.graphics.newImage('assets/images/level/Background.png')
 end
 
 local function lerp(a, b, f) return a + (b - a) * f end
@@ -143,8 +141,6 @@ function OnlineAdventureState:enter(args)
     -- Cámara
     self.camX     = 0
     self.camY     = 0
-    self.bgScrollX = 0
-    self.bgScrollY = 0
 
     -- Canvas
     self.sceneCanvas = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
@@ -639,17 +635,9 @@ function OnlineAdventureState:_updateCamera(dt)
     if zx then targetX, targetY = zx, zy end
     if scrolling then targetX = AutoScroll.cameraX(self.level) end
 
-    local prevX, prevY = self.camX, self.camY
     self.camX = self.camX + (targetX - self.camX) * CAM_LERP * dt
     self.camY = self.camY + (targetY - self.camY) * CAM_LERP * dt
     if scrolling then self.camX = targetX end      -- la ventana manda, sin suavizado
-
-    local bgW = imgBg:getWidth()  * BG_SCALE
-    local bgH = imgBg:getHeight() * BG_SCALE
-    self.bgScrollX = self.bgScrollX + (self.camX - prevX) * BG_PARALLAX
-    self.bgScrollY = self.bgScrollY + (self.camY - prevY) * BG_PARALLAX
-    if self.bgScrollX >= bgW then self.bgScrollX = self.bgScrollX - bgW end
-    if self.bgScrollY >= bgH then self.bgScrollY = self.bgScrollY - bgH end
 end
 
 -- ── Popups de puntos ─────────────────────────────────────────────────────────
@@ -1102,8 +1090,6 @@ function OnlineAdventureState:render()
 end
 
 function OnlineAdventureState:_renderScene()
-    local bgW = imgBg:getWidth()  * BG_SCALE
-    local bgH = imgBg:getHeight() * BG_SCALE
 
     love.graphics.push()
     love.graphics.origin()
@@ -1115,25 +1101,13 @@ function OnlineAdventureState:_renderScene()
     love.graphics.setCanvas(self.sceneCanvas)
     love.graphics.clear(0, 0, 0, 1)
 
-    -- Fondo parallax
-    love.graphics.setColor(1, 1, 1, 1)
-    local startX = -(math.floor(self.bgScrollX) % bgW)
-    local startY = -(math.floor(self.bgScrollY) % bgH)
-    if startX > 0 then startX = startX - bgW end
-    if startY > 0 then startY = startY - bgH end
-    local bx = startX
-    while bx < WINDOW_W do
-        local by = startY
-        while by < WINDOW_H do
-            love.graphics.draw(imgBg, bx, by, 0, BG_SCALE, BG_SCALE)
-            by = by + bgH
-        end
-        bx = bx + bgW
-    end
+    -- Cielo y fondo con paralaje (bioma del nivel; src/fx/Sky.lua)
+    Sky.render(self.level, self.camX, self.camY)
 
     -- Nivel
     self.level:render(self.camX, self.camY)
     IceDrips.render(self.level, self.camX, self.camY)      -- (gotas del hielo: solo dibujo)
+    LavaFx.render(self.level, self.camX, self.camY)        -- (burbujas de la lava: solo dibujo)
     self.level:renderVents(self.camX, self.camY)
     self.level:renderFoliageBack(self.camX, self.camY)
 

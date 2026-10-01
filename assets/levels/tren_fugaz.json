@@ -42,12 +42,11 @@
     {"col":137,"row":9,"type":"mortar"}
   ],
   "foliage": [
-    {"col":101,"props":{"flip":true,"layer":"back"},"row":7,"type":"palmtree"},
     {"col":103,"props":{"flip":true,"layer":"back"},"row":7,"sub":3,"type":"hibiscus"},
     {"col":125,"props":{"flip":true,"layer":"back"},"row":7,"sub":4,"type":"tulip"},
     {"col":7,"props":{"layer":"back"},"row":9,"sub":4,"type":"tulip"},
     {"col":12,"props":{"layer":"back"},"row":9,"sub":3,"type":"tulip"},
-    {"col":44,"props":{"layer":"back"},"row":9,"type":"tropical_bush"},
+    {"col":44,"row":9,"type":"tropical_bush"},
     {"col":48,"props":{"flip":true,"layer":"back"},"row":9,"sub":4,"type":"hibiscus"},
     {"col":48,"props":{"layer":"back"},"row":9,"sub":3,"type":"tulip"},
     {"col":50,"props":{"layer":"back"},"row":9,"sub":3,"type":"hibiscus"},
@@ -59,18 +58,21 @@
     {"col":79,"props":{"layer":"back"},"row":9,"sub":3,"type":"stretch"},
     {"col":79,"props":{"layer":"back"},"row":9,"sub":4,"type":"hibiscus"},
     {"col":84,"props":{"layer":"back"},"row":9,"type":"butterflies"},
-    {"col":105,"props":{"layer":"back"},"row":9,"type":"tropical_bush"},
-    {"col":110,"props":{"flip":true,"layer":"back"},"row":9,"type":"tropical_bush"},
+    {"col":105,"row":9,"type":"tropical_bush"},
+    {"col":110,"props":{"flip":true},"row":9,"type":"tropical_bush"},
     {"col":120,"props":{"flip":true,"layer":"back"},"row":9,"sub":4,"type":"stretch"},
     {"col":120,"props":{"layer":"back"},"row":9,"sub":3,"type":"hibiscus"},
     {"col":144,"props":{"layer":"back"},"row":9,"sub":3,"type":"tulip"},
     {"col":157,"props":{"flip":true,"layer":"back"},"row":9,"sub":4,"type":"tulip"},
     {"col":159,"props":{"layer":"back"},"row":9,"type":"butterflies"},
     {"col":166,"props":{"layer":"back"},"row":9,"sub":3,"type":"tulip"},
-    {"col":166,"props":{"layer":"back"},"row":9,"sub":4,"type":"tulip"}
+    {"col":166,"props":{"layer":"back"},"row":9,"sub":4,"type":"tulip"},
+    {"col":107,"row":9,"type":"palmtree"}
   ],
   "vents": [],
   "autoScroll": {"countdown":3,"endCol":170,"margin":0.6,"speed":105,"startCol":1,"width":20},
   "modes": ["race"],
-  "music": "flying_machine"
+  "music": "flying_machine",
+  "background": "mountain",
+  "time": "dusk"
 }

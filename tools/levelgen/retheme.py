@@ -10,6 +10,9 @@ Terreno (bloques 'solid' y la fila de ABAJO del marco de 'border'):
   - arriba al aire  → superficie del tema (césped / nieve / tierra / piedra)
   - arriba agua     → arena (fondo del agua, 2 de hondo; nieve: tierra; fortaleza: piedra)
   - playa (césped/trópico): superficie con agua a ≤ 3 columnas → arena (2 de hondo)
+  - hondo: terreno a ≥ DEEP_ROWS filas bajo una superficie de agua → roca abisal
+    (en cualquier tema salvo nieve; sin arena honda); tema 'underwater': también
+    todo lo que esté por debajo del 45 % del alto del nivel
   - 1-3 por debajo  → tierra (la profundidad varía por columna)
   - más hondo       → piedra
   Nieve: islas sueltas pequeñas (≤ 4 bloques de una fila) → hielo.
@@ -24,6 +27,9 @@ Uso (desde la raíz del repo):
   --terrain vuelve a decidir también los bloques de tierra/césped/nieve/arena
             (¡pisa los que se pusieran a mano!); sin él solo cambia la piedra
   --dry     no escribe, solo cuenta
+  --tiles   solo el terreno: no toca las decoraciones (las del usuario se quedan)
+  --sky     solo escribe el fondo y la hora (tabla SKY) en los niveles que no los tengan
+  --deep    solo pasa a roca abisal el terreno hondo bajo el agua (nada más cambia)
 Tras `build.py --only x` (que reescribe el nivel) hay que volver a pasarlo.
 """
 import json, os, random, sys, hashlib
@@ -31,8 +37,9 @@ import json, os, random, sys, hashlib
 LEVELS = 'assets/levels'
 ID_HIGH = 2 ** 17
 EMPTY, SOLID, SLAB, BORDER, WATER, DROP, FINISH, BREAK = 0, 1, 2, 4, 9, 10, 11, 12
-DIRT, GRASS, SNOW, ICE, SAND = 16, 17, 29, 30, 35
-GROUND = {SOLID, BORDER, DIRT, GRASS, SNOW, ICE, SAND}
+DIRT, GRASS, SNOW, ICE, SAND, DEEP = 16, 17, 29, 30, 35, 36
+GROUND = {SOLID, BORDER, DIRT, GRASS, SNOW, ICE, SAND, DEEP}
+DEEP_ROWS = 4                     # bajo ≥ 4 filas de agua: roca abisal
 
 THEMES = {
     'valle_soleado': 'meadow', 'jardin_gummies': 'meadow', 'carrera01': 'meadow', 'nivel01': 'meadow',
@@ -44,6 +51,32 @@ THEMES = {
     'fabrica_morteros': 'fortress', 'fortaleza_malvada': 'fortress', 'taller_trampas': 'fortress',
     'coliseo_pinchos': 'fortress',
 }
+
+# Fondo de superficie (src/fx/Sky.lua), hora y fondo de profundidad (opcional) de cada nivel: `--sky` los escribe SOLO si el nivel
+# aún no los tiene (lo elegido en el editor no se toca)
+SKY = {
+    'valle_soleado': ('meadow', 'day'), 'jardin_gummies': ('forest', 'day'), 'carrera01': ('meadow', 'day', 'underwater'),
+    'nivel01': ('coast', 'day', 'abyss'), 'lluvia_pinchos': ('mountain', 'day'), 'tren_fugaz': ('mountain', 'dusk'),
+    'ruta_del_espejo': ('meadow', 'night'), 'ciudadela_cangrejos': ('coast', 'day'), 'marea_alta': ('coast', 'dusk'),
+    'cascada_dorada': ('forest', 'day'), 'isla_flotante': ('meadow', 'day'), 'canon_trampolines': ('coast', 'day'),
+    'rebote_real': ('forest', 'day'), 'guarida_cangrejo_rey': ('coast', 'day'), 'cumbre_cangrejo': ('coast', 'dusk'),
+    'torre_viento': ('snow', 'night'), 'cavernas_cristal': ('cave', 'day'), 'mina_inundada': ('mountain', 'day', 'cave'),
+    'laberinto_submarino': ('coast', 'day', 'underwater'), 'fabrica_morteros': ('fortress', 'dusk'),
+    'fortaleza_malvada': ('fortress', 'night'), 'taller_trampas': ('fortress', 'day', 'cave'), 'coliseo_pinchos': ('fortress', 'dusk'),
+}
+
+
+def set_sky(name):
+    path = os.path.join(LEVELS, name + '.json')
+    lv = json.load(open(path))
+    bg, tm, *dp = SKY.get(name, ('meadow', 'day'))
+    changed = []
+    if dp and 'depth' not in lv: lv['depth'] = dp[0]; changed.append('profundidad ' + dp[0])
+    if 'background' not in lv and bg != 'meadow': lv['background'] = bg; changed.append(bg)
+    if 'time' not in lv and tm != 'day': lv['time'] = tm; changed.append(tm)
+    if changed: save(path, lv)
+    print('  %-22s %s' % (name, ', '.join(changed) or '(sin cambios)'))
+
 
 # Superficie al aire / cerca de la superficie / hondo, por tema
 TERRAIN = {
@@ -95,7 +128,7 @@ def waterlogged(raw): return (raw // 16) % 2 == 1
 def spiky(raw): return (raw // 32) % 4096 != 0
 
 
-def retheme(name, force=False, dry=False, terrain=False):
+def retheme(name, force=False, dry=False, terrain=False, tiles_only=False):
     path = os.path.join(LEVELS, name + '.json')
     lv = json.load(open(path))
     theme = THEMES[name]
@@ -103,7 +136,7 @@ def retheme(name, force=False, dry=False, terrain=False):
     H, W = len(T), len(T[0])
     auto = lambda f: (f.get('props') or {}).get('layer') == 'back' and f.get('type') in AUTO_TYPES
     already = any(auto(f) for f in lv.get('foliage', []))
-    if already and not force:
+    if already and not force and not tiles_only:
         print('  %-22s ya re-vestido (--force)' % name)
         return
     rnd = random.Random(int(hashlib.md5(name.encode()).hexdigest()[:8], 16))
@@ -122,7 +155,21 @@ def retheme(name, force=False, dry=False, terrain=False):
         if theme not in ('meadow', 'tropical'): return False
         return any(wet(c + dx, r + dy) for dx in range(-3, 4) for dy in (-1, 0, 1))
 
-    CONVERT = {SOLID, BORDER} | ({DIRT, GRASS, SNOW, SAND} if terrain else set())
+    CONVERT = {SOLID, BORDER} | ({DIRT, GRASS, SNOW, SAND, DEEP} if terrain else set())
+
+    # Profundidad bajo el agua por casilla: filas desde la superficie del agua de su
+    # columna (atravesando agua y terreno; el aire la reinicia)
+    deepAt = {}
+    for c in range(W):
+        surfRow = None
+        for r in range(H):
+            raw = at(c, r)
+            if tid(raw) in GROUND or tid(raw) == BREAK:
+                if surfRow is not None: deepAt[(c, r)] = r - surfRow
+            elif wet(c, r):
+                if surfRow is None: surfRow = r
+            else:
+                surfRow = None
 
     # ── Terreno ───────────────────────────────────────────────────────────────
     changed = 0
@@ -147,7 +194,9 @@ def retheme(name, force=False, dry=False, terrain=False):
                 depth += 1
             if frame(c, r) or i not in CONVERT or (i == BORDER and r != H - 1):
                 continue
-            if depth <= 1 and top != 'rock' and sandy:
+            if theme != 'snow' and (deepAt.get((c, r), 0) >= DEEP_ROWS or (theme == 'underwater' and r >= H * 0.45)):
+                want = DEEP
+            elif depth <= 1 and top != 'rock' and sandy:
                 want = SAND
             elif depth == 0:
                 want = surf if top == 'air' else (DIRT if near == DIRT else SOLID)
@@ -155,6 +204,7 @@ def retheme(name, force=False, dry=False, terrain=False):
                 want = near
             else:
                 want = deep
+            if DEEP_ONLY and want != DEEP: continue
             if want != i:
                 new[r][c] = with_id(T[r][c], want)
                 changed += 1
@@ -176,6 +226,10 @@ def retheme(name, force=False, dry=False, terrain=False):
                         new[y][x] = with_id(new[y][x], ICE); changed += 1
     lv['tiles'] = new
     T = new
+    if tiles_only:
+        print('  %-22s %-10s bloques cambiados %4d (solo terreno)' % (name, theme, changed))
+        if not dry: save(path, lv)
+        return
 
     # ── Decoraciones ──────────────────────────────────────────────────────────
     busy = set()
@@ -290,8 +344,15 @@ def save(path, lv):
     open(path, 'w').write('{\n' + ',\n'.join(out) + '\n}\n')
 
 
+DEEP_ONLY = '--deep' in sys.argv
+if DEEP_ONLY: sys.argv += ['--tiles', '--terrain']
+
 if __name__ == '__main__':
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
+    if '--sky' in sys.argv:
+        print('Fondo y hora:')
+        for n in (args or sorted(SKY)): set_sky(n)
+        sys.exit(0)
     print('Re-vestir niveles:')
     for n in (args or sorted(THEMES)):
-        retheme(n, '--force' in sys.argv, '--dry' in sys.argv, '--terrain' in sys.argv)
+        retheme(n, '--force' in sys.argv, '--dry' in sys.argv, '--terrain' in sys.argv, '--tiles' in sys.argv)

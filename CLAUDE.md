@@ -266,7 +266,17 @@ Spikes are images too: assets/images/spikes/spike.png (tile spikes, rotated/flip
                        bosses/miniboss1/spike.png (stretched in height while they grow)
 Tile textures: assets/images/tiles/ (breakable, platform, platform_drop via the tile
                        def's `texture`; finish.png = the checkerboard, its wave + gold
-                       frame stay in finish.lua). Terrain: stone.png, dirt.png, grass.png
+                       frame stay in finish.lua). Stone, border (very hard compact rock) and deep
+                       stone are 2x2-cell drawings (`texture.span = 2`: each cell draws its part
+                       by column/row, so marks continue across blocks) kept VERY simple (flat
+                       colour + a few short marks away from the edges; the user rejected busy
+                       Voronoi cracks). **Lava** = tile `danger` (id 3, label "Lava"): lava.png /
+                       lava_top.png (exposed top), 4 frames of a hand-drawn pattern shifted 4 px =
+                       flowing; `src/fx/LavaFx.lua` (render-only bubbles that pop + droplets +
+                       glow, like IceDrips). **Deep stone** (`deep_stone` 36, "Roca abisal", also a
+                       mini block). Platform (non pass-through) = riveted steel girder. All these +
+                       mortar and checkpoint sprites + sand_blend from `tools/ui/make_world_art.py`
+                       (originals outside the repo). Terrain: dirt.png, grass.png
                        (grass cap over dirt, only when the top is in the air; covered grass
                        = dirt.png), grass_blades.png (3 variants of 16x4 above exposed tops)
                        from `tools/ui/make_terrain.py`; the light edges on faces in the air are
@@ -394,7 +404,7 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   'stomp' with 4th return dirX = cnx → `pa:bounce(vy, dirX, soft=true)` (vx 300 +
   ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill; v17: crawler turn in snapshots; v18: MegaCrabby;
   v19: boss walls, Mega minions/pounce; v20: post-hit protection; v21: unified invulnerability;
-  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks; v30: boss broken glass; v31: special enemy deaths; v32: bombs; v33: snow/ice/thin ice; v34: sand).
+  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks; v30: boss broken glass; v31: special enemy deaths; v32: bombs; v33: snow/ice/thin ice; v34: sand; v35: deep stone).
 - **Crawler** (`src/world/entities/Crawler.lua`): surface-following movement
   (floor ↔ walls ↔ ceiling, concave and convex corners) for Crabbies with prop
   `wallWalk` (`Crabby.WALL_PROP`, off by default so old levels don't change).
@@ -693,6 +703,26 @@ originals (kept outside the repo); the icicle now uses `decorations/ice/icicle.p
 original `icespike.png` is kept outside the repo). Showcase arena `tools/levelgen/arenas/decoraciones.json`
 (`run.sh editor_open PLAY=...`).
 
+## Sky and backgrounds (`src/fx/Sky.lua`)
+
+Level JSON `"background"` (SURFACE biome, default meadow), `"time"` (day|dusk|night, default day),
+`"clouds": false`, `"depth"` (optional DEPTH biome: cave, underwater, abyss, icecave, underground)
+and `"surfaceRow"` (row whose top is the surface line; default = the ground under the player
+start, `Sky.autoSurfaceRow`); editor: Nivel tab → "Fondo y clima" (+ snowfall; the map shows the
+surface line as a dashed cyan line while the Nivel tab is open). With a depth, the surface layers
+rest on the line (as seen at ~¾ of the screen) and below the line (scissor) the depth gradient
+(world-anchored, darker deeper) and its layers draw: `top` layers hang from the line, ground
+layers rest on the level bottom; the level's own ground usually hides the line itself. Drawn first in
+Adventure/OnlineAdventure states (`Sky.render(level, camX, camY)`; `Background.png` is ONLY
+for the Flappy mode now). Pixel-banded gradient per time (cave/underwater have their own,
+tinted by the time), sun (day; low + orange at dusk) or moon + twinkling stars (night),
+drifting clouds, then the biome's silhouette layers (`Sky.BIOMES`: meadow, coast, mountain,
+snow, forest, fortress, cave, underwater) repeated horizontally with parallax; ground layers
+rest on the level bottom (tall levels show more sky as you climb), `top` layers hang from the
+level top (cave ceiling), `add` = additive (underwater rays); outside a layer, its edge row
+colour fills the screen. Dusk/night tint layers and clouds. Art: `assets/images/sky/` from
+`tools/ui/make_sky.py` (simple 2-3 tone silhouettes). New biome = PNGs + one BIOMES entry.
+
 ## Level themes (`tools/levelgen/retheme.py`)
 
 The levels were built when stone was the only block. `retheme.py` re-dresses them by
@@ -705,7 +735,11 @@ meadow/tropical shores (water ≤ 3 columns away; shells/starfish/palms on it); 
 and underwater floors, always `layer = 'back'`, never on spikes/entities/start/finish/
 vents/boss walls/boss arenas. `--force` re-rolls only its own decorations (the ones with
 `layer='back'` of its types; hand-placed ones stay); `--terrain` also re-decides dirt/grass/
-snow/sand blocks (overrides hand-placed ones). Seeded per level (stable). Writes the
+snow/sand blocks (overrides hand-placed ones); `--tiles` = terrain only (decorations untouched);
+`--deep` = ONLY ground ≥ 4 rows under a water surface → deep stone (any theme but snow; the
+'underwater' theme also below 45 % of the height); `--sky` = writes the SKY table's background/
+time only into levels that don't set them. The user edits levels by hand afterwards: prefer the
+narrow modes (`--deep`, `--sky`, `--tiles`) over `--force`/`--terrain` on levels they touched. Seeded per level (stable). Writes the
 editor's JSON format. Run it again after `build.py --only x`. New levels: add a THEMES row.
 
 ## Level JSON

@@ -15,7 +15,7 @@ local TileCodec = require 'src/world/tiles/TileCodec'
 local Materials = require 'src/world/tiles/Materials'
 local TileTypes = require 'src/world/tiles/TileTypes'
 
-local MATERIALS = { 'default', 'stone', 'wood', 'deadly', 'water', 'dirt', 'grass', 'snow', 'ice', 'sand' }
+local MATERIALS = { 'default', 'stone', 'wood', 'deadly', 'water', 'dirt', 'grass', 'snow', 'ice', 'sand', 'deep_stone' }
 
 local TYPES = {
     'empty',          -- 0
@@ -37,6 +37,7 @@ local TYPES = {
     'ice',            -- 30
     'thin_ice',       -- 31-34 (hielo fino: normal, dañado, muy dañado, a punto de romperse)
     'sand',           -- 35
+    'deep_stone',     -- 36
 }
 
 -- Bloques TRAMPA ("mímicos"): se ven idénticos al tile original pero no tienen
@@ -47,7 +48,7 @@ local FAKES = {
     { 20, 'solid',         'fake_solid',         'Pared falsa' },
     { 21, 'platform',      'fake_platform',      'Plataforma falsa' },
     { 22, 'platform_drop', 'fake_platform_drop', 'Plataforma atravesable falsa' },
-    { 23, 'danger',        'fake_danger',        'Peligro falso' },
+    { 23, 'danger',        'fake_danger',        'Lava falsa' },
     { 24, 'border',        'fake_border',        'Borde falso' },
     { 25, 'breakable',     'fake_breakable',     'Bloque rompible falso' },
     { 26, 'empty',         'fake_spikes',        'Base para pinchos falsos' },
