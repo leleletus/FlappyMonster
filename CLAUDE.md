@@ -472,10 +472,8 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   puffer_pop) → deflate (pufferDeflate) → `cooldown`. Not killable (not stompable, not
   an obstacle, can't be knocked/launched). Prick: `Interactions.run` calls
   `e:onHurtPlayer(pa)` only if the hurt really took HP → pufferPrick + `pa:recoil`.
-  Placed in `mina_inundada` (3, one crossing walls). Spikes: a separate ring
-  `puffer_fish/spikes-Sheet.png` (2 frames 24x24: half / full) drawn BEHIND the body,
-  centred on the body (`BODY_*`), only when inflating/inflated (render-only; the hurt box
-  is unchanged); sheet restyled by `tools/ui/make_puffer_redesign.py --apply`.
+  Placed in `mina_inundada` (3, one crossing walls). Sheet restyled by
+  `tools/ui/make_puffer_redesign.py --apply` (a separate spike ring was tried and dropped).
 - Sounds decided only by the server (the causing client doesn't predict them) go in
   `Protocol.SHARED_SOUNDS` (helmetBreak, pufferPrick): the server sends them with no
   owner, so everybody hears them. New sounds: `tools/sounds/mechanics.py` (switch,
@@ -753,7 +751,10 @@ drifting clouds, then the biome's silhouette layers (`Sky.BIOMES`: meadow, coast
 snow, forest, fortress, cave, underwater) repeated horizontally with parallax; ground layers
 rest on the level bottom (tall levels show more sky as you climb), `top` layers hang from the
 level top (cave ceiling), `add` = additive (underwater rays); outside a layer, its edge row
-colour fills the screen. Dusk/night tint layers and clouds. Art: `assets/images/sky/` from
+colour fills the screen. Dusk/night tint layers and clouds. The EDITOR draws the same sky under the map (`drawCanvas`:
+`Sky.render(lv, camX, camY)` with WINDOW_W/H = the visible world area, clipped to the level rect;
+Sky clips with `Clip` so it works inside the editor's zoom transform), so surface/depth/row
+changes show without playtesting (at zoom ≠ 1 the view is larger than a game screen). Art: `assets/images/sky/` from
 `tools/ui/make_sky.py` (simple 2-3 tone silhouettes). New biome = PNGs + one BIOMES entry.
 
 ## Level themes (`tools/levelgen/retheme.py`)

@@ -17,7 +17,10 @@
 --           techo (cueva) cuelgan de arriba del nivel
 -- De noche / al atardecer las capas y nubes se tiñen. Arte en assets/images/sky/
 -- (tools/ui/make_sky.py). Un bioma nuevo = sus PNG + una entrada en BIOMES.
---   Sky.render(level, camX, camY)   (antes que el nivel, en lugar del fondo)
+--   Sky.render(level, camX, camY)   (antes que el nivel, en lugar del fondo; el editor
+--   también lo dibuja bajo el mapa, con WINDOW_W/H = la zona visible)
+local Clip = require 'src/ui/Clip'
+
 local Sky = {}
 
 local DIR = 'assets/images/sky/'
@@ -258,8 +261,8 @@ function Sky.render(level, camX, camY)
         if B < H and depth then
             local SOIL, BLEND = 6 * S, 8 * S                -- franja de suelo y tramado (px)
             local top = math.max(0, B)
-            local sx, sy, sw, sh = love.graphics.getScissor()
-            love.graphics.setScissor(0, top, W, H - top)
+            -- (recorte con la transformación actual: igual en el juego y en el editor)
+            Clip.push(0, top, W, H - top)
             local d0 = B + SOIL                             -- empieza la profundidad
             if g then
                 local fi = GRAD[depth.grad]
@@ -307,7 +310,7 @@ function Sky.render(level, camX, camY)
                 local x = -math.floor((camX * pB) % bw)
                 while x < W do love.graphics.draw(bl.img, x, d0, 0, S, S); x = x + bw end
             end
-            love.graphics.setScissor(sx, sy, sw, sh)
+            Clip.pop()
         end
     end
     love.graphics.setColor(1, 1, 1, 1)

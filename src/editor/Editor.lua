@@ -12,6 +12,8 @@ local Tiles    = require 'src/world/Tiles'
 local Entities = require 'src/world/Entities'
 local Level    = require 'src/world/Level'
 local DT       = require('src/world/Decorations').types
+local Clip     = require 'src/ui/Clip'
+local Sky      = require 'src/fx/Sky'
 local BossZones = require 'src/world/BossZones'
 local AutoScroll = require 'src/world/AutoScroll'
 local Modes     = require 'src/world/Modes'
@@ -659,13 +661,20 @@ local function drawCanvas()
     local vw, vh = cw / z, ch / z
     EDITOR_VIEW = true         -- las entidades invisibles en la partida se dibujan aquí
 
-    -- Fondo del mapa
-    love.graphics.setColor(0.36, 0.48, 0.62, 1)
-    love.graphics.rectangle('fill', -camX, -camY, m.width * t, m.height * t)
-
     -- Nivel (los culls de Level usan WINDOW_W/H: se ajustan a la vista)
     local ww, wh = WINDOW_W, WINDOW_H
     WINDOW_W, WINDOW_H = vw, vh
+
+    -- Fondo del mapa: el MISMO cielo con paralaje que en la partida (bioma, hora,
+    -- profundidad y línea de superficie) para la cámara del editor, recortado al nivel
+    love.graphics.setColor(0.36, 0.48, 0.62, 1)
+    love.graphics.rectangle('fill', -camX, -camY, m.width * t, m.height * t)
+    if lv then
+        Clip.push(-camX, -camY, m.width * t, m.height * t)
+        Sky.render(lv, camX, camY)
+        Clip.pop()
+    end
+
     if lv then
         lv:render(camX, camY)
         -- Líquidos: tinte por material
@@ -744,7 +753,6 @@ local function drawCanvas()
 
     -- Línea de superficie del fondo (pestaña Nivel): arriba la superficie, abajo la profundidad
     if E.rightTab == 'level' and lv then
-        local Sky = require 'src/fx/Sky'
         local row = (m.surfaceRow and m.surfaceRow > 0) and m.surfaceRow or Sky.autoSurfaceRow(lv)
         local yy = (row - 1) * t - camY
         love.graphics.setColor(0.4, 0.85, 1, 0.9)
@@ -1536,7 +1544,6 @@ local function drawLevelTab(x, y, w)
     end
     y = y + 2
     -- Fondo y clima (solo visual): bioma del fondo con paralaje, hora del día, nubes, nieve
-    local Sky = require 'src/fx/Sky'
     local bg, tm = Sky.byId[m.background or Sky.DEFAULT], Sky.timeById[m.time or 'day']
     y, open = ui.section('lvl:weather', 'Fondo y clima', x, y, w, bg.label .. ' · ' .. tm.label)
     if open then

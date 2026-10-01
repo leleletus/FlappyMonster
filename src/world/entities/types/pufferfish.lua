@@ -19,10 +19,6 @@ local SpriteStrip = require 'src/fx/SpriteStrip'
 
 local S = 5                    -- escala del pixel art
 local SHEET = 'assets/images/puffer_fish/puffer_fish-Sheet.png'
--- Corona de púas (aparte: no caben en el cuadro de 16x16): 2 cuadros de 24x24,
--- medio hinchado / hinchado, centrados en el cuerpo y dibujados DETRÁS de él.
--- Solo dibujo (la caja que pincha sigue siendo la del cuerpo)
-local SPIKES = 'assets/images/puffer_fish/spikes-Sheet.png'
 -- Cuerpo hinchado dentro del cuadro (px del sprite, mirando a la derecha):
 -- columnas 4..14, filas 4..13 (sin la cola). La caja que pincha es un poco
 -- menor (HURT_K) para que no pinche "por el aire" en las esquinas.
@@ -39,13 +35,11 @@ local Puffer = Entity.extend(Entity, {
 })
 Puffer.renderFront = true
 
-local strip, spikeStrip
+local strip
 
 function Puffer.loadAssets()
     if strip then return end
     strip = SpriteStrip.load(SHEET, 16)
-    local ok, sp = pcall(SpriteStrip.load, SPIKES, 24)
-    spikeStrip = ok and sp or false
 end
 
 function Puffer.sizePx() return 16 * S, 16 * S end
@@ -255,13 +249,6 @@ function Puffer:render(camX, camY)
     -- Temblor del aviso
     if st == 'warn' then x = x + math.floor(math.sin(t * 60) * 2 + 0.5) end
     love.graphics.setColor(1, 1, 1, 1)
-    -- Púas detrás del cuerpo (medio / del todo hinchado), centradas en el cuerpo:
-    -- su centro en el cuadro (px del sprite) respecto al centro del cuadro
-    if spikeStrip and (f == half or f == full) and f > 2 then
-        local bx = ((BODY_X0 + BODY_X1) / 2 - 8) * S * k * self.facing
-        local by = ((BODY_Y0 + BODY_Y1) / 2 - 8) * S * k
-        spikeStrip:draw(f == full and 2 or 1, math.floor(x + bx), math.floor(y + by), 0, S * k * self.facing, S * k)
-    end
     strip:draw(f, x, y, 0, S * k * self.facing, S * k)
 end
 
