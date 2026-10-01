@@ -640,7 +640,7 @@ list no mode until the user places a Point Area in them).
   remote players via `PlayerAdventure.outerBoxAt`) → `level.hiddenVis[row*65536+col]
   = {age, left, hold, blink}`: appear anim while touched (box +1 px, standing on it
   counts), then hold 0.25 s, blink 0.9 s, gone. Editor/thumbnails draw a dashed ghost.
-- **Snow / ice** (`snow` 29, material snow, joinGroup ground; `ice` 30, drawn at 0.78 alpha,
+- **Snow / ice** (`snow` 29, material snow, joinGroup ground; `ice` 30, drawn at 0.78 alpha, SLIPPERY: material `friction = 0.2` scales the player's ground friction, ice + thin ice; harness `mechanics hielo_resbala`;
   joinGroup ice). Textures `tiles/snow.png`, `ice.png` (the user's originals kept outside the
   repo), from `tools/ui/make_snow_sprites.py` (never overwrites; `--force`).
 - **Thin ice** (`thin_ice.lua`, 4 tiles 31-34: normal → `_1` damaged → `_2` → `_3` about to

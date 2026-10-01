@@ -44,6 +44,8 @@
 --                  eventos de red ('crack' / 'icebreak') en cada paso
 --   hielo_gp       ground pound: 3 estados de golpe (normal → a punto); otro lo rompe
 --   hielo_bomba    una explosión rompe el hielo fino
+--   hielo_resbala  el hielo (y el hielo fino) resbala: corriendo y soltando, se frena
+--                  en mucha más distancia que en piedra; también tarda más en arrancar
 --   encerrado      un Gummy sin sitio para andar (bloques a los dos lados) pasa a
 --                  reposo (idle) y NO vuelve a andar (ni un cuadro); al quitar un
 --                  bloque echa a andar
@@ -746,6 +748,37 @@ function cases.hielo_bomba()
         ('hielo fino tras la explosión: %s, %s'):format(name(level, 7, 7), name(level, 8, 7)))
 end
 
+function cases.hielo_resbala()
+    local function run(kind)
+        -- suelo de 24 casillas del material en la fila 8
+        local put = {}
+        for c = 2, 23 do put[#put + 1] = { c, 8, kind } end
+        local level = room(25, 9, put)
+        local pa = PlayerAdventure:new(4 * T, 7 * T - 50)
+        level.players = { pa }
+        clear()
+        for _ = 1, 40 do pa:update(1 / 60, level) end           -- (se posa)
+        local x0 = pa.x
+        stub.state.right = true
+        local tAccel
+        for i = 1, 120 do
+            pa:update(1 / 60, level)
+            if not tAccel and pa.vx >= ADV_MOVE_SPD * 0.9 then tAccel = i / 60 end
+        end
+        stub.state.right = false
+        local xs = pa.x
+        for _ = 1, 180 do pa:update(1 / 60, level) end
+        clear()
+        return pa.x - xs, tAccel or 9
+    end
+    local dStone, aStone = run('solid')
+    local dIce, aIce = run('ice')
+    local dThin, aThin = run('thin_ice')
+    check('hielo_resbala', dIce > dStone * 3 and dThin > dStone * 3 and aIce > aStone * 2,
+        ('frenada: piedra %d px, hielo %d px, hielo fino %d px · arrancar: piedra %.2f s, hielo %.2f s'):format(
+            dStone, dIce, dThin, aStone, aIce))
+end
+
 function cases.encerrado()
     -- Gummy en la casilla 8, bloques en la 7 y la 9 (fila 8, suelo en la 9)
     local level, es = room(16, 10, { { 7, 9, 'solid' }, { 9, 9, 'solid' } },
@@ -882,7 +915,7 @@ function love.load()
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
-                         'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado' }) do cases[n]() end
+                         'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'hielo_resbala' }) do cases[n]() end
     if os.getenv('SHOT_BOMB') then bombShot() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
     if not os.getenv('SHOT') then love.event.quit(fails == 0 and 0 or 1); return end
