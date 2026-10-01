@@ -234,6 +234,17 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     ~40 %, lead ~19 %, bass ~17 %, backing ~19 %; band shape within ±2 dB of the ogg in the main
                     sections. Energy additions: ghost 16th hats, snare roll every 8 bars, crash on section entries,
                     intro kicks (the ogg has a low hit there). `REPORT=1` prints the numbers without exporting.
+                    ESCALATION (user: the repeated "Christmas" motif = Music Box bars 21/29/37/117/125 sounded
+                    copy-pasted, the final not epic): the ogg doesn't get louder (it's limited), it gets DENSER
+                    and brighter each time (spectral peaks: motif 15.5→21.9, Smooth Synth 85-116 15→26). So
+                    `escalate()` adds layers without touching a MIDI note (bell octave / thirds / two-octave
+                    sparkle, lead octave + thirds, a 16th "shimmer" arpeggio of the harmony, bass 8ths) and
+                    drums on a separate 'x' bus (open hats, four-on-the-floor, crashes, rolls, tom fill, noise
+                    risers before 45/61/117), growing per repetition. Layers take the gain of the instrument
+                    they double (`LAYER_OF`/`LAYER_K`; normalizing them as a group flattened the climb). In the
+                    final the MIDI lead (8-Bit Square) is ~6 dB under the previous melody → doubled on the VRC6
+                    saw. Break 45-60: the melody stays (only the low end goes) and it rebuilds from bar 53 (the
+                    first version cut the chords ×0.2: the melody vanished at 0:57 and jumped back at 1:18).
 src/entities/
   PlayerAdventure.lua  THE player physics (shared by SP, server and client prediction)
   OnlinePlayer.lua     remote player renderer (tinted by player color, name tag)

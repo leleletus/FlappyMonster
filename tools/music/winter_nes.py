@@ -146,9 +146,11 @@ class Song:
         self.nb = nbars
         self.nf = frames_for(nbars * BAR)
         self.C, self.kind, self.ev = {}, {}, {}
-        self.NZ = {k: Noise(self.nf) for k in ('hat', 'snare', 'crash')}
+        # (bus 'x': los golpes AÑADIDOS para la escalada, en pistas aparte con la misma
+        # ganancia que los del MIDI: no cambian el reparto de las secciones de antes)
+        self.NZ = {k: Noise(self.nf) for k in ('hat', 'snare', 'crash', 'xhat', 'xsnare', 'xcrash', 'xriser')}
         ns = int(self.nf * FRAME_S) + SR
-        self.DM = {'kick': np.zeros(ns), 'snare': np.zeros(ns), 'tom': np.zeros(ns)}
+        self.DM = {k: np.zeros(ns) for k in ('kick', 'snare', 'tom', 'xkick', 'xsnare', 'xtom')}
 
     def chan(self, name, kind):
         if name not in self.C:
@@ -167,21 +169,27 @@ class Song:
         i = int(t * SR); j = min(len(d), i + len(smp))
         d[i:j] = np.where(np.abs(smp[:j - i] * g) > np.abs(d[i:j]), smp[:j - i] * g, d[i:j])
 
-    def drum(self, t, n, vel=1.0):
+    def drum(self, t, n, vel=1.0, bus=''):
         if n in (35, 36):
-            self.sample('kick', t, KICK, vel)
+            self.sample(bus + 'kick', t, KICK, vel)
         elif n in (38, 40):
-            self.sample('snare', t, SNARE, vel)
-            self.NZ['snare'].hit(t, [1, 2, 3, 4, 5], [int(x * vel + 0.5) for x in [15, 13, 11, 9, 7, 5, 4, 3, 2, 1]])
+            self.sample(bus + 'snare', t, SNARE, vel)
+            self.NZ[bus + 'snare'].hit(t, [1, 2, 3, 4, 5], [int(x * vel + 0.5) for x in [15, 13, 11, 9, 7, 5, 4, 3, 2, 1]])
         elif n in (42, 44):
-            self.NZ['hat'].hit(t, 0, [int(x * vel + 0.5) for x in ([9, 6, 3, 1] if n == 42 else [6, 4, 2])])
+            self.NZ[bus + 'hat'].hit(t, 0, [int(x * vel + 0.5) for x in ([9, 6, 3, 1] if n == 42 else [6, 4, 2])])
         elif n == 46:
-            self.NZ['hat'].hit(t, 0, [int(x * vel + 0.5) for x in [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]])
+            self.NZ[bus + 'hat'].hit(t, 0, [int(x * vel + 0.5) for x in [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]])
         elif n in TOMS:
-            self.sample('tom', t, TOMS[n], vel)
+            self.sample(bus + 'tom', t, TOMS[n], vel)
         elif n in (49, 57):
-            self.NZ['crash'].hit(t, 2, [15, 14, 13, 12, 11, 10, 10, 9, 9, 8, 8, 7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1])
+            self.NZ[bus + 'crash'].hit(t, 2, [15, 14, 13, 12, 11, 10, 10, 9, 9, 8, 8, 7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1])
         self.ev.setdefault('drums', []).append((t, n, 0.08))
+
+    def riser(self, t0, t1, top=11):
+        """Subida de ruido (de grave a agudo, cada vez más fuerte) antes de una entrada"""
+        n = max(2, int((t1 - t0) * 60))
+        self.NZ['xriser'].hit(t0, [int(round(13 - 12 * i / (n - 1))) for i in range(n)],
+                              [int(round(1 + (top - 1) * (i / (n - 1)) ** 1.5)) for i in range(n)])
 
     def stems(self):
         n = int(self.nb * BAR * SR)
@@ -205,6 +213,14 @@ class Song:
         out['tom'] = cut(tnd_dac((self.DM['tom'] + 64) / 22638.0))
         out['hat'] = cut(tnd_dac(self.NZ['hat'].render() / 12241.0))
         out['crash'] = cut(tnd_dac(self.NZ['crash'].render() / 12241.0))
+        for k in ('xkick', 'xtom'):
+            if self.DM[k].any():
+                out[k] = cut(tnd_dac((self.DM[k] + 64) / 22638.0))
+        if self.DM['xsnare'].any() or self.NZ['xsnare'].vol.any():
+            out['xsnare'] = cut(tnd_dac(self.NZ['xsnare'].render() / 12241.0)) + cut(tnd_dac((self.DM['xsnare'] + 64) / 22638.0))
+        for k in ('xhat', 'xcrash', 'xriser'):
+            if self.NZ[k].vol.any():
+                out[k] = cut(tnd_dac(self.NZ[k].render() / 12241.0))
         return out
 
 
@@ -246,7 +262,7 @@ def build(T):
     # Acordes (Pop Synth): 2 pulsos del VRC6, golpes cortos; en el break, más flojos
     for i, vs in enumerate(voices(T['Pop Synth (Classic)'], 2)):
         for s, d, m, v in vs:
-            k = 0.2 if bar_of(s) in BREAK else 1.0
+            k = 1.0
             S.note('chord%d' % i, 'vrc6', s, d, m, I_CHORD if i == 0 else I_CHORD2, vs=min(1, 0.6 + v / 120) * k,
                    gate=0.8, midi='keys')
     # Caja de música: campana + eco 3/16 después (truco de eco de los juegos de NES)
@@ -257,7 +273,7 @@ def build(T):
                 S.note('echo', 'n163', s + 3 * S16, d, m, I_ECHO, gate=1.2, midi='keys', release=4)
     # Scifi: pulso 12.5 % con arpegio de octava (centelleo)
     for s, d, m, v in T['Scifi']:
-        k = 0.45 if bar_of(s) in BREAK else 1.0
+        k = 1.0
         S.note('arp', 'pulse', s, d, m, I_ARP, vs=min(1, 0.55 + v / 150) * k, midi='keys', arp=[0, 12])
     # Flauta (contramelodía suave) y seno (notas largas)
     for i, vs in enumerate(voices(T['Flute'], 2)):
@@ -273,6 +289,8 @@ def build(T):
         vel = min(1.0, 0.55 + v / 110)
         if bar_of(s) in BREAK and n in (42, 44, 46):
             vel *= 1.1                                         # (el break es de batería)
+        if bar_of(s) in BREAK and n in (35, 36):
+            vel *= 0.5                                         # (y sin graves: el ogg quita el grave ahí)
         S.drum(s, n, vel)
         has.setdefault(bar_of(s), set()).add((round((s % BAR) / S16), n))
     # Energía: hats fantasma en las semicorcheas libres de las secciones fuertes
@@ -302,13 +320,167 @@ def build(T):
     for _, a, _b in SECT[1:]:
         if not any(n in (49, 57) and k == 0 for k, n in has.get(a, set())):
             S.drum((a - 1) * BAR, 49, 1.0)
+    escalate(S, T, has)
     return S
+
+
+# ── Escalada: cada repetición del motivo, más grande ─────────────────────────
+# El ogg no sube de volumen (está limitado), sube de DENSIDAD y BRILLO: más voces
+# (picos espectrales por trama: el motivo 15.5 → 18 → 19.6 → 21.9; la melodía del
+# Smooth Synth 15 → 26) y más presencia / agudos. Aquí, sin tocar ninguna nota del
+# MIDI, cada repetición suma capas (grupo 'layer') y golpes (bus 'x'):
+#   motivo (Music Box)  21 base · 29 + campana una octava arriba, hats abiertos ·
+#                       37 + terceras, centelleo de semicorcheas, crash cada 4, subida al break
+#   break 45-60         la melodía se queda (solo se va el grave) y vuelve a crecer desde el 53
+#   Smooth Synth        85 base · 93 + octava, hats abiertos · 101 + terceras, centelleo,
+#                       bombo a negras · 109 + crash cada 4, redoble y subida al 117
+#   FINAL 117-132       todo: campana + octava + terceras, lead (8-Bit Square) doblado a la
+#                       octava y en terceras, centelleo fuerte, bajo a corcheas, bombo a negras,
+#                       semicorcheas de hat, crash cada 2 compases (cada compás desde el 125),
+#                       redobles y toms al final
+SCALE = [5, 7, 9, 10, 0, 2, 4]                  # Fa mayor
+
+
+def third(m, up=True):
+    """Tercera diatónica (Fa mayor) encima / debajo; None si la nota no es de la escala"""
+    pc = m % 12
+    if pc not in SCALE:
+        return None
+    i = SCALE.index(pc)
+    j = i + (2 if up else -2)
+    pc2 = SCALE[j % 7]
+    d = (pc2 - pc) % 12
+    return m + d if up else m - ((pc - pc2) % 12)
+
+
+def harmony_pcs(T, t0, t1):
+    pcs = {}
+    for name, notes in T.items():
+        if name == 'Electric Drum Kit':
+            continue
+        for s, d, m, v in notes:
+            if s < t1 and s + d > t0:
+                pcs[m % 12] = pcs.get(m % 12, 0) + min(s + d, t1) - max(s, t0)
+    return [pc for pc, _ in sorted(pcs.items(), key=lambda z: -z[1])[:4]]
+
+
+I_SPARK = {'vol': [9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1], 'sus': 1, 'duty': 0.125}
+I_THIRD = {'vol': [10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1], 'sus': 1, 'duty': 0.0}
+I_SHIM = {'vol': [7, 5, 3, 2], 'sus': 1, 'duty': 0.25}
+I_OCT = {'vol': [9, 9, 8, 8, 7], 'sus': 7, 'duty': 0.125, 'vib': (14, 0.2, 5.6)}
+I_HARM = {'vol': [9, 9, 8, 8, 7], 'sus': 7, 'duty': 5.0, 'vib': (14, 0.2, 5.6)}
+I_PUMP = {'vol': [12, 10, 8, 6, 4, 2], 'sus': 0, 'duty': 1.0}
+
+
+def escalate(S, T, has):
+    def notes_in(lst, a, b):
+        return [x for x in lst if a <= bar_of(x[0]) <= b]
+    bells = voices(T['Music Box'], 2)[0]
+    smooth = T.get('Smooth Synth (Classic)', [])
+    square = voices(T.get('8-Bit Square', []), 2)[0]
+    FINAL = (117, 132)
+    # Cada capa crece con la repetición (vs): pronto, flojita; en el final, entera
+    # Motivo: octava (29-44 y el final), terceras (37-44 y el final)
+    for s, d, m, v in notes_in(bells, 29, 44) + notes_in(bells, *FINAL):
+        k = 0.6 if bar_of(s) < 37 else (0.8 if bar_of(s) < 45 else 1.0)
+        S.note('lay_bell8', 'pulse', s, d, m + 12, I_SPARK, vs=k, gate=1.0, midi='keys')
+    for s, d, m, v in notes_in(bells, 37, 44) + notes_in(bells, *FINAL):
+        th = third(m, up=False)
+        if th:
+            S.note('lay_bell3', 'n163', s, d, th, I_THIRD, vs=0.8 if bar_of(s) < 45 else 1.0, gate=1.1, midi='keys', release=5)
+    for s, d, m, v in notes_in(bells, 125, 132):                 # (la última: brillo a dos octavas)
+        S.note('lay_bell16', 'pulse', s, d, m + 24, I_SPARK, vs=0.7, gate=1.0, midi='keys')
+    # Smooth Synth: octava desde el 93, terceras desde el 101
+    for s, d, m, v in notes_in(smooth, 93, 116):
+        S.note('lay_lead8', 'pulse', s, d, m + 12, I_OCT, vs=0.6 if bar_of(s) < 101 else 0.75, midi='lead')
+    for s, d, m, v in notes_in(smooth, 101, 116):
+        th = third(m, up=False)
+        if th:
+            S.note('lay_lead3', 'n163', s, d, th, I_HARM, vs=0.7, midi='lead')
+    # Final: el lead del MIDI ahí (8-Bit Square) suena ~6 dB por debajo de la melodía del
+    # tramo anterior (Smooth Synth: medido en 1-4 kHz) → doblado en la sierra del VRC6 (la
+    # voz de la melodía principal) y la campana del motivo, al unísono en otra onda
+    for s, d, m, v in notes_in(square, *FINAL):
+        S.note('lay_leadsaw', 'saw', s, d, m, I_SAW, vs=0.85 if bar_of(s) < 125 else 1.0, midi='lead')
+    for s, d, m, v in notes_in(bells, *FINAL):
+        S.note('lay_bellx', 'n163', s, d, m, I_PLUCK, vs=0.85 if bar_of(s) < 125 else 1.0, gate=1.0, midi='keys')
+    # Final: el lead doblado a la octava, terceras debajo Y encima (brillo)
+    for s, d, m, v in notes_in(square, *FINAL):
+        S.note('lay_lead8', 'pulse', s, d, m + 12, I_OCT, midi='lead')
+        lo, hi = third(m, up=False), third(m, up=True)
+        if lo:
+            S.note('lay_lead3', 'n163', s, d, lo, I_HARM, midi='lead')
+        if hi:
+            S.note('lay_leadhi', 'vrc6', s, d, hi + 12, I_OCT, vs=0.8 if bar_of(s) < 125 else 1.0, midi='lead')
+    for b in range(FINAL[0], FINAL[1] + 1):
+        root = None
+        for s, d, m, v in T['Slap Bass']:
+            if bar_of(s) == b:
+                root = m; break
+        if root is None:
+            continue
+        for k in range(8):
+            t0 = (b - 1) * BAR + k * BAR / 8
+            mm = None
+            for s, d, m, v in T['Slap Bass']:                       # (la nota del bajo que suena ahí)
+                if s <= t0 + 1e-6 < s + max(d, BAR / 8):
+                    mm = m
+            S.note('lay_pump', 'n163', t0, BAR / 16, (mm or root) - 12 + (12 if k % 2 else 0), I_PUMP, midi='bass')
+    # Centelleo: arpegio de semicorcheas de la armonía (suave en 37-44 y 101-116, fuerte al final)
+    for (a, b, vs) in ((37, 44, 0.75), (101, 116, 0.75), (117, 124, 1.0), (125, 132, 1.15)):
+        for bb in range(a, b + 1):
+            for h in range(2):
+                t0 = (bb - 1) * BAR + h * BAR / 2
+                pcs = sorted(harmony_pcs(T, t0, t0 + BAR / 2))
+                if not pcs:
+                    continue
+                notes = [72 + pc if 72 + pc >= 74 else 84 + pc for pc in pcs]
+                notes.sort()
+                for k in range(8):
+                    S.note('lay_shim', 'pulse', t0 + k * S16, S16, notes[k % len(notes)] + (12 if k >= 4 else 0),
+                           I_SHIM, vs=vs, gate=0.7, midi='keys')
+    # Batería añadida (bus x)
+    def offbeat_open(a, b, vel):
+        for bb in range(a, b + 1):
+            for beat in range(4):
+                S.drum((bb - 1) * BAR + beat * BAR / 4 + BAR / 8, 46, vel, bus='x')
+    offbeat_open(29, 44, 0.55); offbeat_open(93, 116, 0.6); offbeat_open(117, 132, 0.75)
+    def four_floor(a, b, vel):
+        for bb in range(a, b + 1):
+            kicks = {k for k, n in has.get(bb, set()) if n in (35, 36)}
+            for beat in range(4):
+                if beat * 4 not in kicks:
+                    S.drum((bb - 1) * BAR + beat * BAR / 4, 36, vel, bus='x')
+    four_floor(101, 116, 0.7); four_floor(117, 132, 0.85)
+    for bb in list(range(37, 45, 4)) + list(range(101, 117, 4)) + list(range(117, 125, 2)) + list(range(125, 133)):
+        if not any(n in (49, 57) and k == 0 for k, n in has.get(bb, set())):
+            S.drum((bb - 1) * BAR, 49, 0.9, bus='x')
+    for bb in range(117, 133):                                       # semicorcheas de hat al final
+        for k in range(0, 16, 2):
+            S.NZ['xhat'].hit((bb - 1) * BAR + k * S16 + S16, 0, [5, 3, 1])
+    # Redobles: 115-116 (a corcheas y luego semicorcheas, creciendo), 124, 131-132 con toms
+    for k in range(8):
+        S.drum((115 - 1) * BAR + k * BAR / 8, 40, 0.45 + 0.04 * k, bus='x')
+    for k in range(16):
+        S.drum((116 - 1) * BAR + k * S16, 40, 0.6 + 0.025 * k, bus='x')
+    for k in range(12, 16):
+        S.drum((124 - 1) * BAR + k * S16, 40, 0.7 + 0.08 * (k - 12), bus='x')
+    for i, (k, n) in enumerate(((8, 50), (10, 48), (12, 47), (13, 45), (14, 43), (15, 41))):
+        S.drum((132 - 1) * BAR + k * S16, n, 1.0, bus='x')
+    # Subidas de ruido antes de cada entrada grande
+    for a in (45, 61, 117):
+        S.riser((a - 3) * BAR, (a - 1) * BAR, top=9 if a != 117 else 12)
 
 
 # ── Mezcla ───────────────────────────────────────────────────────────────────
 GROUPS = {'lead': ('lead',), 'bass': ('bass',), 'chords': ('chord',), 'bell': ('bell', 'echo'),
           'arp': ('arp',), 'soft': ('flute', 'pad', 'pluck'), 'kick': ('kick',), 'snare': ('snare', 'tom'),
-          'cymbals': ('hat', 'crash')}
+          'cymbals': ('hat', 'crash'), 'layer': ('lay_',), 'xdrums': ('x',)}
+LAYER_OF = {'lay_bell': 'bell', 'lay_leadsaw': 'lead', 'lay_lead': 'lead', 'lay_shim': 'arp', 'lay_pump': 'bass'}
+# (una capa suena un poco por debajo del instrumento que dobla; las dos "estrellas" del
+# final — la sierra que dobla el lead y la campana del motivo — a la par)
+LAYER_K = {'*': 0.75, 'lay_leadsaw': 1.0, 'lay_bellx': 1.1}
+XBUS = {'xkick': 'kick', 'xsnare': 'snare', 'xtom': 'tom', 'xhat': 'hat', 'xcrash': 'crash', 'xriser': 'crash'}
 
 
 def group_of(k):
@@ -332,7 +504,7 @@ def band_rms(x, t0, t1, lo=1000, hi=5000):
 # bajo a la par que la melodía, el acompañamiento audible pero detrás
 LEVEL_DB = {'lead': 0, 'bass': -1, 'kick': 1.5, 'snare': -0.5, 'cymbals': -7, 'chords': -4, 'bell': -3, 'arp': -6,
             'soft': -7}
-BREAK_DB = -5.0                     # el break (45-60) baja así (el ogg: ~-10 dB y casi solo batería)
+BREAK_DB = -4.0                     # el break (45-52) baja así y del 53 al 60 vuelve a subir poco a poco
 
 
 def active_rms(x, win=0.1):
@@ -348,7 +520,7 @@ def active_rms(x, win=0.1):
 
 def balance(S, ref):
     g = {k: 1.0 for k in S}
-    groups = [gr for gr in GROUPS if any(group_of(k) == gr for k in S)]
+    groups = [gr for gr in GROUPS if gr not in ('xdrums', 'layer') and any(group_of(k) == gr for k in S)]
     lvl = {gr: active_rms(sum(S[k] for k in S if group_of(k) == gr)) for gr in groups}
     for gr in groups:
         if lvl[gr] > 0:
@@ -357,6 +529,16 @@ def balance(S, ref):
                 if group_of(k) == gr:
                     g[k] = want / lvl[gr]
     # (dentro de la batería: el reparto bombo / caja / platillos sale de LEVEL_DB)
+    for k in S:                                       # golpes añadidos: como los del MIDI
+        if k in XBUS:
+            g[k] = g.get(XBUS[k], 1.0) * (0.8 if k == 'xriser' else 1.0)
+    # Capas de la escalada: la ganancia del instrumento al que doblan (su vs decide cuánto
+    # suena cada repetición; normalizarlas como grupo aplanaba la subida)
+    for k in S:
+        if k.startswith('lay_'):
+            base = next(v for pre, v in LAYER_OF.items() if k.startswith(pre))
+            ref = next((kk for kk in S if group_of(kk) == base), None)
+            g[k] = (g[ref] if ref else 1.0) * LAYER_K.get(k, LAYER_K['*'])
     print('  grupos (dB de partida → ganancia): ' + ' '.join(f'{gr}×{want_g:.2f}' for gr, want_g in
                                                             ((gr, next(g[k] for k in S if group_of(k) == gr)) for gr in groups)))
     return g
@@ -398,11 +580,13 @@ def mixdown(S, g, n):
         if k in S and (keep is None or any(k.startswith(w) for w in keep)):
             side += S[k] * g.get(k, 1.0) * p
     y = np.stack([x + side, x - side], 1)
-    # El break, más bajo (rampa de un pulso a cada lado)
+    # El break: baja en medio compás y, del 53 al 60, vuelve a subir poco a poco (en dB)
     a, b = (min(BREAK) - 1) * BAR, max(BREAK) * BAR
     t = np.arange(len(y)) / SR
-    ramp = np.clip(np.minimum(t - a, b - t) / (BAR / 4), 0, 1)
-    y *= (1 + (10 ** (BREAK_DB / 20) - 1) * ramp)[:, None]
+    down = np.clip((t - a) / (BAR / 2), 0, 1)
+    up = np.clip((t - (52 * BAR)) / (b - 52 * BAR), 0, 1)
+    db = np.where((t >= a) & (t < b), BREAK_DB * down * (1 - up), 0.0)
+    y *= (10 ** (db / 20))[:, None]
     return y
 
 
