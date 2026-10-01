@@ -101,6 +101,14 @@ end
 
 function Lang.current() return current end
 
+-- Nombre de algo con versiones por idioma (niveles: JSON "name" = español y
+-- "name_en", "name_<idioma>"...): el del idioma elegido, o el de siempre
+function Lang.localName(t)
+    if not t then return nil end
+    local v = t['name_' .. current]
+    return (type(v) == 'string' and v ~= '') and v or t.name
+end
+
 function Lang.set(id)
     local valid = false
     for _, l in ipairs(Lang.LANGUAGES) do if l.id == id then valid = true end end

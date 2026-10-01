@@ -1,5 +1,6 @@
 {
   "name": "Cumbre del Cangrejo",
+  "name_en": "Crab Summit",
   "width": 24,
   "height": 11,
   "playerStart": [3,8],
@@ -34,5 +35,6 @@
   "modes": ["koth"],
   "music": "hidro_city",
   "background": "coast",
-  "time": "dusk"
+  "time": "dusk",
+  "surfaceRow": 9
 }

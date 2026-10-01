@@ -224,6 +224,7 @@ function Level.fromData(lvl)
     loadBubbleImgs()
     loadVentImg()
     self.name        = lvl.name or "?"
+    self.name_en     = lvl.name_en                      -- (nombre en inglés; ver Lang.localName)
     self.tileW       = lvl.width
     self.tileH       = lvl.height
     self.playerStart = lvl.playerStart

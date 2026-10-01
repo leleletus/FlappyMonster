@@ -36,6 +36,14 @@ return {
         TileTypes.drawTexture(e.top and TOP or DIRT, ctx, 1, e.top and 0 or nil)
         love.graphics.setColor(0.62, 0.45, 0.28, 1)
         TileTypes.drawEdges(ctx, { left = e.left, right = e.right, bottom = e.bottom }, 2)
+        if e.top then
+            -- Junto a la capa de hierba el borde de los lados es verde, no de tierra
+            -- (la capa ocupa 6 de las 16 filas; en un mini bloque, 6 de sus 8)
+            local cap = math.floor(s * (ctx.quarter and 6 / 8 or 6 / 16))
+            love.graphics.setColor(0.46, 0.78, 0.32, 1)
+            if TileTypes.half(e.left, 1) then love.graphics.rectangle('fill', x, y, 2, cap) end
+            if TileTypes.half(e.right, 1) then love.graphics.rectangle('fill', x + s - 2, y, 2, cap) end
+        end
         if e.top and loadBlades() then
             -- Tallitos por encima (solo en la mitad de arriba que da al aire)
             local v = ((ctx.col or 1) * 5 + (ctx.row or 1) * 3) % 3 + 1

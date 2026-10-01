@@ -42,14 +42,14 @@ Sky.BIOMES = {
     { id = 'fortress', label = 'Fortaleza', sky = true, layers = { { 'fortress_far', 0.08 }, { 'fortress_mid', 0.25 } } },
     -- (estos también valen de PROFUNDIDAD: depth = true)
     { id = 'cave',     label = 'Cueva',     grad = 'cave', depth = true,
-      layers = { { 'cave_far', 0.12 }, { 'cave_mid', 0.28 }, { 'cave_top', 0.2, top = true } } },
-    { id = 'underwater', label = 'Submarino', grad = 'water', depth = true,
+      wall = 'cave_wall', layers = { { 'cave_far', 0.12 }, { 'cave_mid', 0.28 }, { 'cave_top', 0.2, top = true } } },
+    { id = 'underwater', label = 'Submarino', grad = 'water', depth = true, wall = 'underwater_wall',
       layers = { { 'underwater_far', 0.12 }, { 'underwater_mid', 0.28 }, { 'rays', 0.1, top = true, add = true } } },
-    { id = 'abyss',    label = 'Abismo',    grad = 'abyss', depth = true, onlyDepth = true,
+    { id = 'abyss',    label = 'Abismo',    grad = 'abyss', depth = true, onlyDepth = true, wall = 'abyss_wall',
       layers = { { 'abyss_far', 0.12 }, { 'abyss_mid', 0.28 }, { 'abyss_top', 0.2, top = true } } },
-    { id = 'icecave',  label = 'Cueva helada', grad = 'icecave', depth = true, onlyDepth = true,
+    { id = 'icecave',  label = 'Cueva helada', grad = 'icecave', depth = true, onlyDepth = true, wall = 'icecave_wall',
       layers = { { 'icecave_far', 0.12 }, { 'icecave_mid', 0.28 }, { 'icecave_top', 0.2, top = true } } },
-    { id = 'underground', label = 'Subsuelo', grad = 'underground', depth = true, onlyDepth = true,
+    { id = 'underground', label = 'Subsuelo', grad = 'underground', depth = true, onlyDepth = true, wall = 'underground_wall',
       layers = { { 'underground_far', 0.12 }, { 'underground_mid', 0.28 }, { 'underground_top', 0.2, top = true } } },
 }
 Sky.byId = {}
@@ -263,13 +263,32 @@ function Sky.render(level, camX, camY)
             local d0 = B + SOIL                             -- empieza la profundidad
             if g then
                 local fi = GRAD[depth.grad]
-                local span = H * 1.4
+                -- (el degradado cubre TODA la profundidad del nivel: más oscuro cuanto más hondo)
+                local span = math.max(H * 1.4, (levelBottom - surfY) * pv(pB) + H * 0.5)
                 setTint(tint)
                 love.graphics.draw(g.img, quad('gradients', fi, 8, g), 0, d0, 0, W / 8, span / g.h)
                 if d0 + span < H then
                     local c = gradBottom(fi)
                     love.graphics.setColor(c[1] * tint[1], c[2] * tint[2], c[3] * tint[3], 1)
                     love.graphics.rectangle('fill', 0, d0 + span, W, H - d0 - span)
+                end
+            end
+            -- Pared lejana que se repite en las dos direcciones: niveles muy hondos
+            -- siempre tienen fondo, no solo color (paralaje lento)
+            local wl = depth.wall and img(depth.wall)
+            if wl then
+                local ww, wh = wl.w * S, wl.h * S
+                local pw = 0.18
+                local ox = -math.floor((camX * pw) % ww)
+                local oy = d0 + BLEND - math.floor(((camY - surfY) * pw) % wh) - wh
+                setTint(tint, 0.9)
+                local yy = oy
+                while yy < H do
+                    if yy + wh > top then
+                        local xx = ox
+                        while xx < W do love.graphics.draw(wl.img, xx, yy, 0, S, S); xx = xx + ww end
+                    end
+                    yy = yy + wh
                 end
             end
             -- (techo de la profundidad colgando de la franja; sus capas de suelo, en el

@@ -1,5 +1,6 @@
 {
   "name": "Isla Flotante",
+  "name_en": "Floating Island",
   "width": 60,
   "height": 22,
   "playerStart": [4,19],
@@ -43,21 +44,22 @@
     {"col":52,"props":{"patrol":{"left":48,"right":57},"points":4,"respawn":1},"row":19,"type":"gummy"}
   ],
   "foliage": [
-    {"col":31,"props":{"layer":"back"},"row":2,"type":"fern"},
+    {"col":31,"row":2,"type":"fern"},
     {"col":34,"props":{"layer":"back"},"row":2,"type":"butterflies"},
     {"col":44,"props":{"layer":"back"},"row":8,"sub":3,"type":"hibiscus"},
-    {"col":34,"props":{"layer":"back"},"row":11,"type":"tropical_bush"},
+    {"col":34,"row":11,"type":"tropical_bush"},
     {"col":35,"props":{"flip":true,"layer":"back"},"row":13,"sub":3,"type":"hibiscus"},
     {"col":35,"props":{"layer":"back"},"row":13,"sub":4,"type":"pineapple"},
     {"col":21,"props":{"flip":true,"layer":"back"},"row":15,"sub":4,"type":"pineapple"},
     {"col":40,"props":{"layer":"back"},"row":15,"sub":4,"type":"pineapple"},
     {"col":41,"props":{"layer":"back"},"row":17,"sub":4,"type":"pineapple"},
     {"col":7,"props":{"layer":"back"},"row":19,"type":"butterflies"},
-    {"col":11,"props":{"layer":"back"},"row":19,"type":"fern"},
+    {"col":11,"row":19,"type":"fern"},
     {"col":49,"props":{"flip":true,"layer":"back"},"row":19,"sub":3,"type":"hibiscus"}
   ],
   "vents": [],
   "modes": ["koth"],
   "matchTime": 150,
-  "music": "flying_machine"
+  "music": "flying_machine",
+  "surfaceRow": 20
 }

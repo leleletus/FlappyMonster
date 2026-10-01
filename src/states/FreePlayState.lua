@@ -242,7 +242,7 @@ function FreePlayState:drawCard(i, x, y)
     else
         ModeSelectMenu.drawPreview(info, x + 10, y + 10, CARD_W - 20, PREV_H, self.t + i * 1.7, sel and 1 or 0.65)
         local ty = y + PREV_H + 22
-        shadowText(FONT_MED, fitText(FONT_MED, info.name, w), tx, ty, sel and { 1, 0.95, 0.3, 1 } or { 0.9, 0.9, 0.9, 1 })
+        shadowText(FONT_MED, fitText(FONT_MED, L.localName(info), w), tx, ty, sel and { 1, 0.95, 0.3, 1 } or { 0.9, 0.9, 0.9, 1 })
         -- Datos (letra pequeña)
         local lines = {}
         local l1 = { info.w .. 'x' .. info.h, L(info.monsters == 1 and 'msm.monster' or 'msm.monsters', { n = info.monsters }) }

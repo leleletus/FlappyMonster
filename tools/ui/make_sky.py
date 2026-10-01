@@ -10,6 +10,8 @@
 #   rays.png        rayos de luz bajo el agua (se dibujan aditivos)
 #   abyss_*, icecave_*, underground_*   fondos de PROFUNDIDAD (bajo la superficie)
 #   (gradients.png: + abismo, cueva helada, subsuelo)
+#   <prof>_wall.png pared lejana de cada fondo de PROFUNDIDAD (160x160, se repite en
+#                   horizontal Y vertical: así cubre niveles muy hondos)
 #   blend.png       tramado que une el suelo de la superficie con la profundidad (se tiñe)
 # Sencillo a propósito: siluetas legibles de 2-3 tonos, sin detalle fino.
 # No pisa lo que ya existe (--force [nombres]). Desde la raíz del repo:
@@ -69,7 +71,7 @@ GRADS = {
     'cave':  ['141016', '1a151c', '211a24', '28202c', '302634'],
     'water': ['0e3a64', '134a78', '1a5c8c', '2470a0', '2c84b4'],
     'abyss': ['3a1424', '2e1020', '240c1a', '1a0814', '12060e'],
-    'icecave': ['3c5a84', '344e74', '2c4264', '243656', '1c2a48'],
+    'icecave': ['4a6c9a', '3e5e8a', '34507a', '2a446a', '22385a'],
     'underground': ['3a2a1e', '33251a', '2c2016', '251b12', '1e160e'],
 }
 
@@ -328,9 +330,30 @@ def layer_abyss():
 
 
 def layer_icecave():
-    far = fill_profile(80, profile([(10, 3, 0.6), (5, 8, 1.9)], 34), rgb('5a7eaa'), rgb('86a8d0'))
-    mid = fill_profile(60, profile([(6, 4, 1.4), (3, 10, 0.2)], 20), rgb('3e5c88'), rgb('6e90bc'))
-    top = hanging(60, [(4, 4, 1.0), (2, 9, 0.5)], 10, rgb('6e90bc'), 17, 8, 28, 2.5)
+    ice, iceL, iceD = rgb('7ea6d4'), rgb('c4dcf4'), rgb('4e72a4')
+    farp = profile([(14, 3, 0.6), (6, 8, 1.9)], 40)
+    far = fill_profile(100, farp, rgb('5a80b0'), rgb('9cbce0'))
+    for x0 in range(20, W, 53):            # agujas de hielo lejanas
+        hgt = 30 + rnd.randrange(30)
+        for i in range(hgt):
+            hw = 5 * (1 - i / hgt)
+            for x in range(int(x0 - hw), int(x0 + hw) + 1):
+                y = int(100 - farp[x0 % W] - i)
+                if 0 <= y < 100: far.putpixel((x % W, y), iceL if x < x0 else rgb('5a80b0'))
+    midp = profile([(6, 4, 1.4), (3, 10, 0.2)], 22)
+    mid = fill_profile(70, midp, iceD, ice)
+    for x0 in range(14, W, 29):            # cristales
+        hgt = 8 + rnd.randrange(12)
+        base = int(70 - midp[x0 % W])
+        for i in range(hgt):
+            hw = 2.5 * (1 - i / hgt) + 0.5
+            for x in range(int(x0 - hw), int(x0 + hw) + 1):
+                y = base - i
+                if 0 <= y < 70: mid.putpixel((x % W, y), iceL if x <= x0 else ice)
+    top = hanging(90, [(5, 4, 1.0), (3, 9, 0.5)], 14, ice, 13, 12, 60, 4.0)
+    for x in range(W):                      # filo claro del techo
+        for y in range(90):
+            if top.getpixel((x, y))[3] and (x % 13 < 2): top.putpixel((x, y), iceL)
     return far, mid, top
 
 
@@ -361,6 +384,51 @@ def blend():
     return im
 
 
+# ── Paredes lejanas de la profundidad (se repiten en las dos direcciones) ──────
+WS = 160
+
+
+def wall(body, light, seed, kind):
+    r = random.Random(seed)
+    im = Image.new('RGBA', (WS, WS), (0, 0, 0, 0))
+
+    def put(x, y, c):
+        im.putpixel((x % WS, y % WS), c)
+    # columnas que recorren todo el alto (abultan con senos de ciclos enteros: sin costura)
+    for cx, w0 in ((20, 9), (75, 6), (128, 12)):
+        ph = r.random() * 6.28
+        for y in range(WS):
+            w = w0 + 3 * math.sin(2 * math.pi * 2 * y / WS + ph) + 2 * math.sin(2 * math.pi * 5 * y / WS)
+            off = 4 * math.sin(2 * math.pi * y / WS + ph)
+            if kind == 'kelp':
+                w = 2
+                off = 6 * math.sin(2 * math.pi * 3 * y / WS + ph)
+            for x in range(int(cx + off - w), int(cx + off + w) + 1):
+                put(x, y, light if x <= cx + off - w + 1 else body)
+    # manchas: rocas / cristales / raíces
+    for _ in range(9):
+        x0, y0 = r.randrange(WS), r.randrange(WS)
+        sz = 3 + r.randrange(6)
+        for y in range(-sz, sz + 1):
+            for x in range(-sz, sz + 1):
+                if kind == 'crystal':
+                    ok = abs(x) * 2 + abs(y) <= sz * 1.6
+                else:
+                    ok = x * x + (y * 1.4) ** 2 <= sz * sz
+                if ok: put(x0 + x, y0 + y, light if (x + y) < -sz // 2 else body)
+    return im
+
+
+def walls():
+    return {
+        'cave_wall': wall(rgb('241e2a'), rgb('2e2636'), 1, 'rock'),
+        'underwater_wall': wall(rgb('163c5c'), rgb('1c4a6a'), 2, 'kelp'),
+        'abyss_wall': wall(rgb('2a0c18'), rgb('3a1424'), 3, 'rock'),
+        'icecave_wall': wall(rgb('2e4a74'), rgb('5a80b0'), 4, 'crystal'),
+        'underground_wall': wall(rgb('2a1e14'), rgb('36281a'), 5, 'rock'),
+    }
+
+
 if __name__ == '__main__':
     print('Cielo y fondos:')
     save('gradients', gradients())
@@ -377,3 +445,4 @@ if __name__ == '__main__':
             elif n == 'rays': save('rays', im)
             else: save('%s_%s' % (b, n), im)
     save('blend', blend())
+    for n, im in walls().items(): save(n, im)

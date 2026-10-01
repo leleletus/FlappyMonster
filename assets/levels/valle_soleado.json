@@ -1,5 +1,6 @@
 {
   "name": "Valle Soleado",
+  "name_en": "Sunny Valley",
   "width": 130,
   "height": 18,
   "playerStart": [4,14],
@@ -77,5 +78,6 @@
   ],
   "vents": [],
   "modes": ["race"],
-  "music": "classic"
+  "music": "classic",
+  "surfaceRow": 15
 }

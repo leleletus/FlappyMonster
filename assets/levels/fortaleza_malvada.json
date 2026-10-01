@@ -1,5 +1,6 @@
 {
   "name": "Fortaleza Malvada",
+  "name_en": "Evil Fortress",
   "width": 121,
   "height": 15,
   "playerStart": [4,12],
@@ -77,5 +78,6 @@
   ],
   "music": "flying_machine",
   "background": "fortress",
-  "time": "night"
+  "time": "night",
+  "surfaceRow": 12
 }

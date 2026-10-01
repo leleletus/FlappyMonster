@@ -1,5 +1,6 @@
 {
   "name": "Taller de Trampas",
+  "name_en": "Trap Workshop",
   "width": 60,
   "height": 17,
   "playerStart": [3,10],
@@ -74,7 +75,7 @@
     {"col":29,"props":{"layer":"back"},"row":11,"sub":4,"type":"stalagmite_small"},
     {"col":33,"props":{"layer":"back"},"row":11,"sub":3,"type":"clam"},
     {"col":36,"props":{"layer":"back"},"row":11,"sub":4,"type":"clam"},
-    {"col":41,"props":{"flip":true,"layer":"back"},"row":11,"type":"coral"},
+    {"col":41,"props":{"flip":true},"row":11,"type":"coral"},
     {"col":58,"props":{"layer":"back"},"row":11,"sub":3,"type":"torch"},
     {"col":36,"props":{"layer":"back"},"row":15,"sub":3,"type":"stalagmite_small"},
     {"col":36,"props":{"layer":"back"},"row":15,"sub":4,"type":"torch"},
@@ -91,5 +92,6 @@
   ],
   "music": "flying_machine",
   "background": "fortress",
-  "depth": "cave"
+  "depth": "cave",
+  "surfaceRow": 11
 }

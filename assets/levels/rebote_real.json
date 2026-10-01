@@ -1,5 +1,6 @@
 {
   "name": "Rebote Real",
+  "name_en": "Royal Bounce",
   "width": 34,
   "height": 12,
   "playerStart": [3,9],
@@ -64,10 +65,11 @@
     {"col":22,"props":{"layer":"back"},"row":9,"sub":4,"type":"pineapple"},
     {"col":24,"props":{"flip":true,"layer":"back"},"row":10,"sub":4,"type":"hibiscus"},
     {"col":24,"props":{"layer":"back"},"row":10,"sub":3,"type":"hibiscus"},
-    {"col":31,"props":{"flip":true,"layer":"back"},"row":10,"type":"tiki_torch"}
+    {"col":31,"props":{"flip":true},"row":10,"type":"tiki_torch"}
   ],
   "vents": [],
   "modes": ["koth"],
   "music": "flying_machine",
-  "background": "forest"
+  "background": "forest",
+  "surfaceRow": 12
 }

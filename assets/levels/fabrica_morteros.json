@@ -1,5 +1,6 @@
 {
   "name": "Fábrica de Morteros",
+  "name_en": "Mortar Factory",
   "width": 124,
   "height": 17,
   "playerStart": [4,14],
@@ -97,5 +98,6 @@
   "modes": ["race"],
   "music": "flying_machine",
   "background": "fortress",
-  "time": "dusk"
+  "time": "dusk",
+  "surfaceRow": 14
 }

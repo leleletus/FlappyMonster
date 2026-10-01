@@ -472,7 +472,7 @@ function ModeSelectMenu:render()
             -- Nombre y datos
             love.graphics.setFont(FONT_MED)
             love.graphics.setColor(sel and 1 or 0.7, sel and 1 or 0.7, sel and 1 or 0.7, 1)
-            love.graphics.print(fitText(FONT_MED, lvl.name or '?', CARD_W - 24), x + 12, y + PREV_H + 26)
+            love.graphics.print(fitText(FONT_MED, L.localName(lvl) or '?', CARD_W - 24), x + 12, y + PREV_H + 26)
             love.graphics.setFont(FONT_SMALL)
             love.graphics.setColor(1, 1, 1, 0.5)
             local info = {}

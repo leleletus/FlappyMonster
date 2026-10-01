@@ -95,6 +95,7 @@ function LevelCatalog.info(lv, path, file)
     file = file or path:match('([^/]+)$')
     info.path, info.file = path, file
     info.name = (lv.name and lv.name ~= '?') and lv.name or file:gsub('%.json$', '')
+    info.name_en = lv.name_en                       -- (Lang.localName elige según el idioma)
     info.finish = lv:countTrigger('finish')
     info.autoScroll = lv.autoScroll ~= nil
     info.pointAreas = #(lv.pointAreas or {})

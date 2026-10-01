@@ -759,13 +759,13 @@ local function broadcastRoomUpdate(room)
     end
     ensureRoomLevel(room)
     local levels = {}
-    for _, info in ipairs(levelsForMode(room.mode)) do levels[#levels+1] = { path = info.path, name = info.name } end
+    for _, info in ipairs(levelsForMode(room.mode)) do levels[#levels+1] = { path = info.path, name = info.name, name_en = info.name_en } end
     local cur = room.level and levelInfo(room.level)
     local payload = {
         id=room.id, name=room.name, isPublic=room.isPublic,
         hasPassword=(room.password~=""), maxPlayers=room.maxPlayers,
         state=room.state, adminId=room.adminId, players=playerList,
-        mode=room.mode, level=room.level, levelName=cur and cur.name or nil, levels=levels,
+        mode=room.mode, level=room.level, levelName=cur and cur.name or nil, levelName_en=cur and cur.name_en or nil, levels=levels,
     }
     for _, pid in ipairs(room.playerIds) do
         local c = findClientById(pid)
@@ -1227,7 +1227,7 @@ on("get_levels", function(data, client, player)
     for _, info in ipairs(scanLevels()) do
         local modes = {}
         for id in pairs(info.modes) do modes[#modes+1] = id end
-        list[#list+1] = { path = info.path, name = info.name, w = info.w, h = info.h,
+        list[#list+1] = { path = info.path, name = info.name, name_en = info.name_en, w = info.w, h = info.h,
                           enemies = info.enemies, finish = info.finish, modes = modes,
                           preview = info.preview }
     end

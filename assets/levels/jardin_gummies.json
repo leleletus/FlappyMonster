@@ -1,5 +1,6 @@
 {
   "name": "Jardín de Gummies",
+  "name_en": "Gummy Garden",
   "width": 120,
   "height": 16,
   "playerStart": [3,12],
@@ -97,5 +98,6 @@
   "vents": [],
   "modes": ["hunt"],
   "music": "classic",
-  "background": "forest"
+  "background": "forest",
+  "surfaceRow": 16
 }

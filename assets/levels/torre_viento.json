@@ -1,5 +1,6 @@
 {
   "name": "Torre del Viento",
+  "name_en": "Wind Tower",
   "width": 44,
   "height": 56,
   "playerStart": [5,54],
@@ -122,19 +123,21 @@
     {"col":4,"props":{"layer":"back"},"row":51,"sub":3,"type":"ice_crystal"},
     {"col":3,"props":{"layer":"back"},"row":54,"sub":4,"type":"snow_pile"},
     {"col":3,"props":{"layer":"back"},"row":54,"sub":3,"type":"ice_crystal"},
-    {"col":6,"props":{"flip":true,"layer":"back"},"row":54,"type":"snowman"},
+    {"col":6,"props":{"flip":true},"row":54,"type":"snowman"},
     {"col":14,"props":{"flip":true,"layer":"back"},"row":54,"sub":4,"type":"ice_crystal"},
-    {"col":16,"props":{"flip":true,"layer":"back"},"row":54,"type":"snowy_pine"},
-    {"col":21,"props":{"flip":true,"layer":"back"},"row":54,"type":"snowy_pine"},
-    {"col":27,"props":{"flip":true,"layer":"back"},"row":54,"type":"snowy_pine"},
-    {"col":36,"props":{"layer":"back"},"row":54,"type":"frozen_bush"},
-    {"col":41,"props":{"flip":true,"layer":"back"},"row":54,"type":"frozen_bush"},
-    {"col":43,"props":{"layer":"back"},"row":54,"type":"snowy_pine"}
+    {"col":16,"props":{"flip":true},"row":54,"type":"snowy_pine"},
+    {"col":21,"props":{"flip":true},"row":54,"type":"snowy_pine"},
+    {"col":27,"props":{"flip":true},"row":54,"type":"snowy_pine"},
+    {"col":36,"row":54,"type":"frozen_bush"},
+    {"col":41,"props":{"flip":true},"row":54,"type":"frozen_bush"},
+    {"col":43,"row":54,"type":"snowy_pine"}
   ],
   "vents": [],
   "modes": ["race"],
   "music": "flying_machine",
   "snow": true,
   "background": "snow",
-  "time": "night"
+  "time": "night",
+  "depth": "icecave",
+  "surfaceRow": 8
 }

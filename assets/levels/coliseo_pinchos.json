@@ -1,5 +1,6 @@
 {
   "name": "Coliseo de Pinchos",
+  "name_en": "Spike Colosseum",
   "width": 64,
   "height": 20,
   "playerStart": [9,17],
@@ -122,5 +123,6 @@
   "matchTime": 180,
   "music": "flying_machine",
   "background": "fortress",
-  "time": "dusk"
+  "time": "dusk",
+  "surfaceRow": 18
 }

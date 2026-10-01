@@ -1470,6 +1470,10 @@ local function drawLevelTab(x, y, w)
         ui.text('Nombre', x, y + 6, th.text)
         local nm, nch = ui.textField('lvl_name', m.name or '', x + 70, y, w - 70, 40, 'Nombre del nivel')
         if nch then m.name = nm; E.unsaved = true end
+        y = y + 32
+        ui.text('Inglés', x, y + 6, th.text)
+        local ne, nech = ui.textField('lvl_name_en', m.name_en or '', x + 70, y, w - 70, 40, 'Nombre en inglés (si no, el de arriba)')
+        if nech then m.name_en = (ne ~= '') and ne or nil; E.unsaved = true end
         y = y + 34
         E.newW = E.newW or m.width
         E.newH = E.newH or m.height

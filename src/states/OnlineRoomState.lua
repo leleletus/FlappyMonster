@@ -565,9 +565,10 @@ function OnlineRoomState:_renderGameCard(r, isAdmin)
     love.graphics.setColor(1, 1, 1, 0.45)
     love.graphics.print(Lang('room.map'), nx, my + 8)
     if room.levelName then
+        local levelName = Lang.localName({ name = room.levelName, name_en = room.levelName_en })
         love.graphics.setFont(FONT_MED)
         love.graphics.setColor(1, 0.85, 0.2, 1)
-        love.graphics.print(fitText(FONT_MED, room.levelName, x + w - pad - nx), nx, my + 24)
+        love.graphics.print(fitText(FONT_MED, levelName, x + w - pad - nx), nx, my + 24)
     else
         love.graphics.setColor(1, 0.35, 0.35, 0.95)
         love.graphics.print(fitText(FONT_MED, Lang('room.no_map_short'), x + w - pad - nx), nx, my + 26)

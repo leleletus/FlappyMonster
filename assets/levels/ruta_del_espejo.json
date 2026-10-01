@@ -1,5 +1,6 @@
 {
   "name": "Ruta del Espejo",
+  "name_en": "Mirror Route",
   "width": 134,
   "height": 15,
   "playerStart": [3,12],
@@ -38,7 +39,7 @@
     {"col":74,"row":13,"type":"gummy"},
     {"col":69,"row":11,"type":"checkpoint"},
     {"col":69,"row":10,"type":"extralife"},
-    {"col":106,"props":{"attackEvery":2,"glassJump":1000,"hp":10,"hpPerPlayer":5,"portalAim":0.4,"recoverTime":0.3},"row":12,"type":"mirror"},
+    {"col":106,"props":{"attackEvery":2,"glassJump":1000,"hp":10,"hpPerPlayer":5,"portalAim":0.4},"row":12,"type":"mirror"},
     {"col":79,"row":13,"type":"mortar"},
     {"col":87,"props":{"attach":"ceiling","detectRange":12,"dropOnSight":true,"patrol":{"left":85,"right":89}},"row":2,"type":"crabbytramp"},
     {"col":122,"props":{"sides":"left"},"row":13,"type":"mortar"},
@@ -52,24 +53,24 @@
     {"col":2,"props":{"layer":"back"},"row":13,"sub":3,"type":"stretch"},
     {"col":4,"props":{"layer":"back"},"row":13,"type":"butterflies"},
     {"col":8,"props":{"flip":true,"layer":"back"},"row":13,"sub":4,"type":"hibiscus"},
-    {"col":11,"props":{"layer":"back"},"row":13,"type":"tropical_bush"},
-    {"col":18,"props":{"layer":"back"},"row":13,"type":"fern"},
+    {"col":11,"row":13,"type":"tropical_bush"},
+    {"col":18,"row":13,"type":"fern"},
     {"col":22,"props":{"flip":true,"layer":"back"},"row":13,"sub":4,"type":"tulip"},
-    {"col":25,"props":{"flip":true,"layer":"back"},"row":13,"type":"fern"},
-    {"col":31,"props":{"flip":true,"layer":"back"},"row":13,"type":"fern"},
+    {"col":25,"props":{"flip":true},"row":13,"type":"fern"},
+    {"col":31,"props":{"flip":true},"row":13,"type":"fern"},
     {"col":41,"props":{"layer":"back"},"row":13,"type":"butterflies"},
     {"col":47,"props":{"layer":"back"},"row":13,"sub":4,"type":"stretch"},
     {"col":47,"props":{"layer":"back"},"row":13,"sub":3,"type":"tulip"},
-    {"col":50,"props":{"layer":"back"},"row":13,"type":"fern"},
-    {"col":59,"props":{"layer":"back"},"row":13,"type":"tropical_bush"},
+    {"col":50,"row":13,"type":"fern"},
+    {"col":59,"row":13,"type":"tropical_bush"},
     {"col":61,"props":{"layer":"back"},"row":13,"sub":4,"type":"hibiscus"},
-    {"col":77,"props":{"layer":"back"},"row":13,"type":"fern"},
-    {"col":81,"props":{"layer":"back"},"row":13,"type":"fern"},
-    {"col":84,"props":{"layer":"back"},"row":13,"type":"tropical_bush"},
+    {"col":77,"row":13,"type":"fern"},
+    {"col":81,"row":13,"type":"fern"},
+    {"col":84,"row":13,"type":"tropical_bush"},
     {"col":86,"props":{"layer":"back"},"row":13,"sub":4,"type":"tulip"},
     {"col":86,"props":{"layer":"back"},"row":13,"sub":3,"type":"tulip"},
-    {"col":116,"props":{"flip":true,"layer":"back"},"row":13,"type":"fern"},
-    {"col":118,"props":{"flip":true,"layer":"back"},"row":13,"type":"tropical_bush"}
+    {"col":116,"props":{"flip":true},"row":13,"type":"fern"},
+    {"col":118,"props":{"flip":true},"row":13,"type":"tropical_bush"}
   ],
   "vents": [],
   "subtiles": [
@@ -80,5 +81,6 @@
     {"col":92,"h":10,"id":1,"music":"tentacle_chip_instrumental","row":4,"w":18}
   ],
   "music": "classic",
-  "time": "night"
+  "time": "night",
+  "surfaceRow": 13
 }

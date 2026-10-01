@@ -288,8 +288,15 @@ function Floods.updateFx(level, dt)
             while f.bubT >= BUB_EVERY do
                 f.bubT = f.bubT - BUB_EVERY
                 if level.spawnBubble then
-                    local x = f.x0 + 8 + math.random() * (f.x1 - f.x0 - 16)
-                    if not level:collisionAt(x, f.y1 - 6) then level:spawnBubble(x, f.y1 - 6) end
+                    -- Nace en el punto de agua libre más hondo de una columna al azar: el
+                    -- rectángulo de la inundación puede empezar DENTRO de bloques (agua que
+                    -- sube desde bajo el suelo) y antes no salía ninguna burbuja
+                    for _ = 1, 4 do
+                        local x = f.x0 + 8 + math.random() * (f.x1 - f.x0 - 16)
+                        local y = f.y1 - 6
+                        while y > f.surf + 12 and level:collisionAt(x, y) do y = y - TILE_PX / 4 end
+                        if y > f.surf + 12 then level:spawnBubble(x, y); break end
+                    end
                 end
             end
         end

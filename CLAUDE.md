@@ -106,6 +106,9 @@ code, comments (Spanish), commits, docs or game text — those keep their usual 
 - `src/Settings.lua`: player options saved as `options.cfg` in the save dir
   (NEVER a name like settings.lua: the save dir shadows the game's modules).
   `SettingsState` = language selector (main menu → CONFIGURACIÓN).
+- Level names: JSON `"name"` (Spanish) + `"name_en"` (+ `name_<lang>` for new languages);
+  show them with `Lang.localName(t)` (FreePlay cards, mode menu, online room; the server sends
+  `name_en` / `levelName_en` too). Editor: Nivel → General → "Inglés".
 - Big menu buttons are TEXT drawn with `src/ui/PixelFont.lua` (the 5-px font of
   the old button images, accents included): `PixelFont.draw(text, x, y, scale,
   alpha)`, `.width`, `.height`. No text baked into images.
@@ -720,7 +723,9 @@ VERTICAL parallax close to the world (`pv(p) = 0.7 + 0.4p`, so deep down no sky 
 landscape rests on a background line B (the line seen at ~78 % of the screen); under B a strip
 of the surface's own ground colour (`e.bottom` of its nearest opaque layer) + `sky/blend.png`
 dither (scrolls sideways WITH the nearest landscape layer, never screen-fixed) into the depth gradient, the depth's `top` layer hangs from there and its ground layers
-rest on the level bottom (scissor below B). Drawn first in
+rest on the level bottom (scissor below B). Every depth biome also has a `wall` (160x160,
+repeats in BOTH directions, slow parallax 0.18) so very deep levels (laberinto_submarino,
+torre_viento) always have scenery, and the depth gradient spans the whole level depth. Drawn first in
 Adventure/OnlineAdventure states (`Sky.render(level, camX, camY)`; `Background.png` is ONLY
 for the Flappy mode now). Pixel-banded gradient per time (cave/underwater have their own,
 tinted by the time), sun (day; low + orange at dusk) or moon + twinkling stars (night),
@@ -1043,7 +1048,8 @@ with air above: `Level:isWaterSurfaceCell`) use `src/fx/WaterSurface.lua`: tint
 drawn in 4-px columns whose top follows the wave (no flat edge behind it);
 distortion starts `WaterSurface.MARGIN` px below the surface. `Floods.updateFx`
 (clients only): 'floodRise'/'floodFall' sounds when the water starts moving
-(each step too), bubbles via `Level:spawnBubble`. Level `marea_alta.json`.
+(each step too), bubbles via `Level:spawnBubble`, born at the lowest OPEN water point of a random column
+(the flood rect may start inside blocks: water rising from under the ground). Level `marea_alta.json`.
 **Connected floods** (flood prop `control`): 'cycle' (default, the pure time cycle),
 'boss' (zone prop `zone`, 0 = the overlapping/nearest one: runs its cycle from the fight
 start while the zone is in 'fight' and a boss is alive and not dying; then falls to its

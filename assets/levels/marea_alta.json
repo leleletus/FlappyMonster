@@ -1,5 +1,6 @@
 {
   "name": "Marea Alta",
+  "name_en": "High Tide",
   "width": 40,
   "height": 11,
   "playerStart": [3,5],
@@ -42,5 +43,7 @@
   "modes": ["koth"],
   "music": "hidro_city",
   "background": "coast",
-  "time": "dusk"
+  "time": "dusk",
+  "depth": "underwater",
+  "surfaceRow": 5
 }
