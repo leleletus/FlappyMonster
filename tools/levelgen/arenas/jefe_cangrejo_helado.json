@@ -21,7 +21,7 @@
     [4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4]
   ],
   "entities": [
-    {"col":22,"row":11,"type":"megacrabby_ice"},
+    {"col":22,"props":{"aimTime":2,"ceilingEvery":5,"pounceHeight":5,"rageAt":0.4,"rageSpeed":1.45,"rageStuck":0.6,"restEvery":6,"restTime":1.5,"stuckTime":2,"summonCount":3,"summonEvery":10,"summonMax":6,"summonPool":6},"row":11,"type":"megacrabby_ice"},
     {"col":10,"props":{"corner":{"col":12,"row":12},"material":"snow","zone":1},"row":3,"type":"bosswall"},
     {"col":31,"props":{"corner":{"col":33,"row":12},"material":"snow","zone":1},"row":3,"type":"bosswall"},
     {"col":10,"props":{"corner":{"col":33,"row":2},"material":"snow"},"row":2,"type":"bosswall"}
