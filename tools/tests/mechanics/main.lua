@@ -44,6 +44,9 @@
 --                  eventos de red ('crack' / 'icebreak') en cada paso
 --   hielo_gp       ground pound: 3 estados de golpe (normal → a punto); otro lo rompe
 --   hielo_bomba    una explosión rompe el hielo fino
+--   encerrado      un Gummy sin sitio para andar (bloques a los dos lados) pasa a
+--                  reposo (idle) y NO vuelve a andar (ni un cuadro); al quitar un
+--                  bloque echa a andar
 --   ping_icono     antena de conexión online: niveles (verde/amarillo/rojo/X) y que
 --                  no parpadee (mejorar espera 0,6 s; perder la conexión, al momento)
 -- SHOT_BOMB=1: <save>/mechanics_bombs.png (bombas andando, volando, encendidas
@@ -743,6 +746,26 @@ function cases.hielo_bomba()
         ('hielo fino tras la explosión: %s, %s'):format(name(level, 7, 7), name(level, 8, 7)))
 end
 
+function cases.encerrado()
+    -- Gummy en la casilla 8, bloques en la 7 y la 9 (fila 8, suelo en la 9)
+    local level, es = room(16, 10, { { 7, 9, 'solid' }, { 9, 9, 'solid' } },
+        { { type = 'gummy', col = 8, row = 9, props = { pauses = false } } })
+    level.players = {}
+    local g = es[1]
+    local walked, idleT = 0, 0
+    stepEnts(level, es, 3, function()
+        if g.state == 'walk' then walked = walked + 1 else idleT = idleT + 1 end
+    end)
+    -- (los primeros fotogramas aún anda hasta darse cuenta)
+    local stuckOk = g.state == 'idle' and idleT > 150
+    level:setTileRaw(9, 9, 0)                   -- se abre sitio a la derecha
+    local walkedAfter = false
+    stepEnts(level, es, 1.5, function() if g.state == 'walk' and math.abs(g.vx or 0) > 0 then walkedAfter = true end end)
+    check('encerrado', stuckOk and walked < 10 and walkedAfter,
+        ('encerrado: estado %s, %d fotogramas andando de 180 · con sitio vuelve a andar=%s'):format(
+            g.state, walked, tostring(walkedAfter)))
+end
+
 function cases.ping_icono()
     local PingIcon = require 'src/ui/PingIcon'
     local L = PingIcon.level
@@ -859,7 +882,7 @@ function love.load()
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
-                         'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba' }) do cases[n]() end
+                         'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado' }) do cases[n]() end
     if os.getenv('SHOT_BOMB') then bombShot() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
     if not os.getenv('SHOT') then love.event.quit(fails == 0 and 0 or 1); return end

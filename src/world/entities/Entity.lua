@@ -674,6 +674,17 @@ function Entity:update(dt, level)
         self.idleTimer = self.idleTimer + dt
         self.breatheT  = self.breatheT  + dt
         self:fall(level, dt)
+        if self.boxedIn then
+            -- Encerrado: sigue en reposo (animación de idle) mientras no tenga sitio;
+            -- en cuanto lo tiene, echa a andar
+            if self.onGround and self:isBoxedIn(level) then
+                self.idleTimer = 0
+            else
+                self.boxedIn = nil
+                self:startWalk()
+            end
+            return
+        end
         if self.idleTimer >= self.idleDuration then
             if not self:onIdleEnd() then self:startWalk() end
         end
@@ -705,13 +716,16 @@ function Entity:update(dt, level)
     else
         -- Encerrado (no puede andar hacia ningún lado: bloques, límites de su
         -- ruta, bordes, pinchos u otra entidad a los dos lados): se queda
-        -- quieto en vez de girarse cada fotograma; vuelve a andar en cuanto
-        -- tenga sitio
+        -- quieto EN REPOSO (idle) en vez de girarse cada fotograma o quedarse
+        -- con un cuadro de andar; vuelve a andar en cuanto tenga sitio
         local gravDir = self.flipped and -1 or 1
         self.vy = self.vy + ADV_GRAVITY * dt * gravDir
         if self.moving and self.onGround and self:isBoxedIn(level) then
+            -- (no intenta andar: pasa al reposo y se queda en él hasta tener sitio;
+            -- el estado 'idle' viaja en las instantáneas, así online se ve igual)
             self.boxedIn = true
             self:moveAndCollide(level, 0, self.vy * dt)
+            self:startIdle()
             return
         end
         self.boxedIn = nil

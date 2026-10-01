@@ -41,7 +41,9 @@ code, comments (Spanish), commits, docs or game text — those keep their usual 
    existing image, the original goes OUTSIDE the repo (`tools/ui/originals.py`:
    `/home/mtvemo/FlappyMonster_originals/<same path>-orig.png`, or `$FM_ORIGINALS`) and the
    generator always starts from it. `*-orig.png` is gitignored: never commit backups. The
-   user's `.aseprite` source files live there too (same relative paths; gitignored).
+   user's `.aseprite` source files live there too (same relative paths; gitignored), and so
+   does reference audio (`music/TentacleTantrum.wav`). Design previews for the user go to
+   `/home/mtvemo/FlappyMonster_pruebas/<thing>/vista_previa.png` (also outside the repo).
 6. Data-driven catalogs: new tiles/entities/decorations/modes are a new file
    + one name in a list. The editor and server pick them up automatically.
 7. Don't commit the many ` M` files in git status (they're mode-only changes).
@@ -470,15 +472,20 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   puffer_pop) → deflate (pufferDeflate) → `cooldown`. Not killable (not stompable, not
   an obstacle, can't be knocked/launched). Prick: `Interactions.run` calls
   `e:onHurtPlayer(pa)` only if the hurt really took HP → pufferPrick + `pa:recoil`.
-  Placed in `mina_inundada` (3, one crossing walls).
+  Placed in `mina_inundada` (3, one crossing walls). Spikes: a separate ring
+  `puffer_fish/spikes-Sheet.png` (2 frames 24x24: half / full) drawn BEHIND the body,
+  centred on the body (`BODY_*`), only when inflating/inflated (render-only; the hurt box
+  is unchanged); sheet restyled by `tools/ui/make_puffer_redesign.py --apply`.
 - Sounds decided only by the server (the causing client doesn't predict them) go in
   `Protocol.SHARED_SOUNDS` (helmetBreak, pufferPrick): the server sends them with no
   owner, so everybody hears them. New sounds: `tools/sounds/mechanics.py` (switch,
   helmet, puffer), levelled with `Sound.GAIN` to ≈ -12 dBFS (harness `sounds`).
 - Walkers never flip-flop when boxed in: `Entity:isBoxedIn` (can't walk either way —
   `canWalk` = `canGo` + no spike/entity ahead + ground ahead if `turnAtEdges` — or less
-  than `MIN_ROOM` (half a tile) of total play from walls/limits/edges) → they stand still
-  (gravity only, no walk anim) until there is room. Crawlers keep their own movement.
+  than `MIN_ROOM` (half a tile) of total play from walls/limits/edges) → they switch to the
+  IDLE state (`boxedIn`; idle animation, never a walk frame; the idle timer is held) and walk
+  again as soon as there is room. 'idle' is in snapshots, so online looks the same. Harness
+  `mechanics` case `encerrado`. Crawlers keep their own movement.
 - Flyers (`movement='fly'`) NEVER go idle: pauses only for walkers on the ground; in
   the air (also stunned) they keep the walk animation (`Entity:animateWalk`).
 - **Play recorder** (dev): `FM_RECORD=1 love .` → single-player runs are logged to
