@@ -1038,17 +1038,27 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   directly: only VULNERABLE states take stomp 1 / GP 2 (one hit per opening, then 'recover'):
   'dizzy' (rolling into a wall/step at ≥ `CRASH_SPD` after ≥ `CRASH_RUN` tiles since the last crash, on its
   LAST crash: bounces per phase `BOUNCES` {0,1,2}; or a falling CEILING ICICLE hits it = `bonk`), 'soaked'
-  (falls into water through broken thin ice: `soakTime` s stuck + dripping, then `nextAttack` leaps out to the
-  nearest DRY spot; only on ENTERING water: `wasWet`) and 'frozen' (soaked + a Freezer stream: `FROZEN_T`
+  (falls into water through broken thin ice: it is HEAVY — `LAND_CRACK` 4, any landing on thin ice breaks it,
+  rolling wears it `ROLL_WEAR`, and when one cell under it breaks its whole footprint goes, so it reliably falls
+  in; entering the water opens the hole to its width; `soakTime` s drenched + dripping, then a big heavy jump
+  out (`ESCAPE_WIND`, `ESCAPE_UP`) to the nearest DRY spot — dry = no thin ice/water below AND no water above:
+  the pool bottom used to count as dry and it "escaped" back into the pool forever; the thin ice does NOT
+  regrow while it is in the water / escaping, only 0.6 s after it is out; only on ENTERING water: `wasWet`) and 'frozen' (soaked + a Freezer stream: `FROZEN_T`
   4.5 s, GP 3, then thaw; a Freezer on a DRY boss = short daze `DAZE_T`). After any Freezer it is FROST-PROOF
   `frostProof` s (blue tint; `frostT` in netPack). Water itself never freezes it (user's rule).
   THREE PHASES THAT SHRINK IT (`SC` = {10, 8, 6}; 'phase_up' roars, sheds snow `snow_shed` and shrinks;
   `bossPhase()` → zone phase, see Phase system): cycles `CYCLE` — 1: shoot, roll, hop (low: never reaches the
-  platforms), roll · 2: LEAP (ballistic jump to the `spots` surface nearest the target — platforms included,
-  it passes UP through one-way platforms with its own `Snow:move`; marker `landX/landY` during 'leap_wind'),
+  platforms), roll · 2: LEAP (ballistic jump to the `spots` surface nearest the target — platforms included;
+  during the jump `passY` = the mark: it passes through every platform/block on the way and only lands on a
+  top at the mark's height or lower, so it always reaches the marked spot; marker `landX/landY` during 'leap_wind'),
   shoot, leap, roll · 3: SLAM (rises `SLAM_H`, reaches the target's vertical at the apex, falls; cracks thin
   ice 4 = breaks a pocket → soaked; snow waves only on the arena floor), roll (2 bounces), leap, slam, shoot(5),
-  leap. At most 2 attacks in a row, then 'rest'. Every landing (`landed`) cracks thin ice, crushes players
+  leap. PACE per phase (normal / middle / aggressive; user: much more agile, the old phase-3 pace is now the
+  middle one): `IDLE_T` {0.5, 0.4, 0.22}, `REST_T`, `STREAK` {2, 2, 3} attacks per streak, `SHOTS` {4, 6, 8}
+  balls per volley, `WINDUP_T`, `SHOOT_WIND/GAP`, `LEAP_WIND/LAND`, `LAND_T`, `RECOVER_T`, `SLAM_HOLD/LAND`,
+  `ROLL_SPD` all per phase (render uses the phase from netPack). Snowballs PASS THROUGH platforms (one-way
+  tiles): only solid tiles (floor, ledges, walls) or leaving the zone stop them. It does NOT laugh at player
+  deaths (only in its intro; laughing at deaths is the Mirror's thing). Every landing (`landed`) cracks thin ice, crushes players
   under it and SHAKES the ceiling icicles within `ICE_R` 2.5 tiles: prop `icicles` (points; they hang from the
   TOP of their cell; appear growing in phase 2; ready → shake 0.6 s → fall → `icicleRegrow` s → grow). Icicles
   over a platform land on it (platforms are shelter). LAKE: thin ice cells of the zone regrow `lakeRegrow` s
