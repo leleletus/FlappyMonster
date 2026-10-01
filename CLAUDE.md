@@ -709,9 +709,11 @@ original `icespike.png` is kept outside the repo). Showcase arena `tools/levelge
 
 Level JSON `"background"` (SURFACE biome, default meadow), `"time"` (day|dusk|night, default day),
 `"clouds": false`, `"depth"` (optional DEPTH biome: cave, underwater, abyss, icecave, underground)
-and `"surfaceRow"` (row whose top is the surface line; default = the ground under the player
-start, `Sky.autoSurfaceRow`); editor: Nivel tab → "Fondo y clima" (+ snowfall; the map shows the
-surface line as a dashed cyan line while the Nivel tab is open). With a depth, the whole
+and `"surfaceRow"` (row whose top is the surface line; default `Sky.autoSurfaceRow` = 2 rows
+above the player start, `Sky.AUTO_ABOVE`); editor: Nivel tab → "Fondo y clima" → "Superficie:
+fila" (0 = auto; always visible) or Alt + click on the map with the Nivel tab open (the map shows
+the line dashed cyan). Without a depth the line is only used when set manually (auto = the old
+look: landscape on the level bottom). With a depth, the whole
 background is ONE cross-section moving with the nearest surface layer (the user rejected a
 world-locked seam: "abrupt, different speeds, unrelated"): horizontal parallax per layer, but
 VERTICAL parallax close to the world (`pv(p) = 0.7 + 0.4p`, so deep down no sky shows). The

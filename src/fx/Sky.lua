@@ -1,7 +1,7 @@
 -- src/fx/Sky.lua
 -- Cielo y fondo con paralaje de los niveles (solo dibujo). Dos partes:
 --   SUPERFICIE  (JSON "background", bioma con cielo o sin él) hasta la línea de
---               superficie: por defecto el suelo bajo la salida del jugador, o la fila
+--               superficie: por defecto 2 casillas por encima de la salida del jugador, o la fila
 --               "surfaceRow" del JSON (el suelo de esa fila); sus capas de suelo se apoyan
 --               en esa línea
 --   PROFUNDIDAD (JSON "depth", opcional: cueva, submarino, abismo, cueva helada,
@@ -110,17 +110,14 @@ end
 function Sky.depthOf(level) local d = level.depth and Sky.byId[level.depth]; return d and d.depth and d or nil end
 function Sky.timeOf(level) return Sky.timeById[level.timeOfDay or 'day'] or Sky.TIMES[1] end
 
-local GROUNDISH = { solid = true, oneway = true }
--- Fila del suelo bajo la salida del jugador (la línea de superficie por defecto)
+-- Línea de superficie por defecto: 2 casillas por encima de la salida del jugador
+-- (el JSON "surfaceRow" / el editor la cambian)
+Sky.AUTO_ABOVE = 2
 function Sky.autoSurfaceRow(level)
     local ps = level.playerStart or level.spawn
-    local c, r = 1, 1
-    if type(ps) == 'table' then c, r = ps[1] or ps.col or 1, ps[2] or ps.row or 1 end
-    for rr = r, level.tileH or r do
-        local d = level:getDef(c, rr)
-        if d and GROUNDISH[d.collision] then return rr end
-    end
-    return level.tileH or r
+    local r = 1
+    if type(ps) == 'table' then r = ps[2] or ps.row or 1 end
+    return math.max(1, r - Sky.AUTO_ABOVE)
 end
 
 -- Línea de superficie en px de mundo (arriba de la fila del suelo)
@@ -230,7 +227,8 @@ function Sky.render(level, camX, camY)
         end
     end
     local depth = Sky.depthOf(level)
-    if not depth then
+    local manual = level.surfaceRow and level.surfaceRow > 0
+    if not depth and not manual then
         -- Sin profundidad: las capas de suelo se apoyan en el fondo del nivel (o la línea)
         local groundY = math.max(surfY, levelBottom)
         drawLayers(biome, tint, camX, function(p, h) return H + (groundY - camY - H) * p - h end,
@@ -257,7 +255,7 @@ function Sky.render(level, camX, camY)
         local B = math.floor(restY + (surfY - camY - restY) * pv(pB))
         drawLayers(biome, tint, camX, function(p, h) return restY + (surfY - camY - restY) * pv(p) - h end,
                    function(p) return (levelTop - camY) * p end, now)
-        if B < H then
+        if B < H and depth then
             local SOIL, BLEND = 6 * S, 8 * S                -- franja de suelo y tramado (px)
             local top = math.max(0, B)
             local sx, sy, sw, sh = love.graphics.getScissor()

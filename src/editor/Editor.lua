@@ -750,7 +750,7 @@ local function drawCanvas()
         love.graphics.setColor(0.4, 0.85, 1, 0.9)
         love.graphics.setLineWidth(3 / z)
         for xx = -camX, m.width * t - camX, 24 do love.graphics.line(xx, yy, math.min(xx + 14, m.width * t - camX), yy) end
-        love.graphics.print('Superficie' .. (m.depth and (' / ' .. (Sky.byId[m.depth] and Sky.byId[m.depth].label or m.depth)) or ''),
+        love.graphics.print('Superficie (Alt + clic: moverla)' .. (m.depth and (' / ' .. (Sky.byId[m.depth] and Sky.byId[m.depth].label or m.depth)) or ''),
                             8 - camX, yy - 20 / z, 0, 1 / z, 1 / z)
     end
 
@@ -1556,10 +1556,11 @@ local function drawLevelTab(x, y, w)
         v, ch = ui.enum('Profundidad', m.depth or 'none', dopts, x, y, w)
         y = y + ui.ENUM_H
         if ch then pushUndo(); m.depth = (v ~= 'none') and v or nil; markDirty() end
-        if m.depth then
+        do
             local auto = E.level and Sky.autoSurfaceRow(E.level) or 1
-            v, ch = ui.number('Línea de superficie (fila, 0 = auto: ' .. auto .. ')', m.surfaceRow or 0, x, y, w,
-                              { kind = 'int', min = 0, max = m.height, help = 'Fila del suelo donde acaba la superficie y empieza la profundidad. 0 = el suelo bajo la salida del jugador.' })
+            v, ch = ui.number('Superficie: fila (0 = auto ' .. auto .. ')', m.surfaceRow or 0, x, y, w,
+                              { kind = 'int', min = 0, max = m.height,
+                                help = 'Fila donde se apoya el paisaje de la superficie (y donde empieza la profundidad). 0 = auto: 2 casillas por encima de la salida del jugador (sin profundidad, en auto el paisaje se apoya en el fondo del nivel). También: Alt + clic en el mapa.' })
             y = y + 30
             if ch then pushUndo(); m.surfaceRow = (v > 0) and v or nil; markDirty() end
         end
@@ -2099,6 +2100,12 @@ function Editor.mousepressed(x, y, b)
     if not overCanvas(x, y) then return end
     if b == 3 or (b == 1 and love.keyboard.isDown('space')) then
         E.pan = { mx = x, my = y, camX = E.camX, camY = E.camY }
+    elseif b == 1 and E.rightTab == 'level' and love.keyboard.isDown('lalt', 'ralt') then
+        -- Alt + clic (pestaña Nivel): la línea de superficie del fondo pasa a esa fila
+        local _, wy = screenToWorld(x, y)
+        local row = math.max(1, math.min(E.model.height, math.floor(wy / TILE_PX + 0.5) + 1))
+        pushUndo(); E.model.surfaceRow = row; markDirty()
+        msg('Línea de superficie en la fila ' .. row)
     elseif b == 1 or b == 2 then
         canvasPress(b)
     end
