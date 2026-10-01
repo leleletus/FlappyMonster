@@ -23,7 +23,7 @@
 --               físicamente posible en un paso (antes "se teletransportaban")
 --   camara      durante la entrada la cámara no sigue a nadie: la misma para
 --               los dos jugadores y quieta, centrada en el jefe
---   (Nave Malvada / Espejo: orden dormant → intro → ready → su estado de pelea,
+--   (Nave Malvada / Espejo / Gran Bola de Nieve: orden dormant → intro → ready → su estado de pelea,
 --    sonidos de su entrada; lejos/emotes/invocar son solo del Mega)
 --
 --   tools/tests/run.sh boss_intro        (LEVEL=..., SECS=90)
@@ -247,7 +247,7 @@ function love.load()
         if (not mega or (#rests >= 4 and spawnN >= 6 and gps >= 20)) and #spawns >= 4 then break end
     end
     local want = mega and { 'dormant', 'fall_in', 'land_in', 'roar_in', 'ready', 'chase' }
-                 or { 'dormant', 'intro', 'ready', boss.def.name == 'miniboss1' and 'patrol' or 'fight' }
+                 or { 'dormant', 'intro', 'ready', ({ miniboss1 = 'patrol', snowboss = 'idle' })[boss.def.name] or 'fight' }
     local okSeq = true
     for i, s in ipairs(want) do if seq[i] ~= s then okSeq = false end end
     check('orden', introSeen and okSeq, table.concat(seq, ' → ', 1, math.min(#seq, 7)))
@@ -259,7 +259,8 @@ function love.load()
     local safe = boss.outerW / 2 + 2.5 * T
     if not mega then
         check('sin daño', hurtIntro == 0, ('daño en la entrada: %d'):format(hurtIntro))
-        local snd = boss.def.name == 'miniboss1' and { 'miniAppear', 'spikesOut' } or { 'mirrorLaugh' }
+        local snd = ({ miniboss1 = { 'miniAppear', 'spikesOut' }, snowboss = { 'snowIntroRoll', 'snowLaugh', 'snowSpit' } })[boss.def.name]
+                    or { 'mirrorLaugh' }
         local okSnd, txt = true, {}
         for _, n in ipairs(snd) do okSnd = okSnd and (sounds[n] or 0) >= 1; txt[#txt + 1] = n .. '=' .. (sounds[n] or 0) end
         check('sonidos', okSnd, table.concat(txt, ' '))

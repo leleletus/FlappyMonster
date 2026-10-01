@@ -9,7 +9,9 @@
 --
 --   tools/tests/run.sh flyers   (BOB=px cambia la oscilación, 40 por defecto; SEED=n otra
 --                               secuencia de azar; WHY=1 dice qué se atascó; TRACE_AT=s
---                               TRACE_LEVEL= TRACE_COL= TRACE_ROW= sigue a una entidad)
+--                               TRACE_LEVEL= TRACE_COL= TRACE_ROW= sigue a una entidad; ONLY=patrón
+--                               solo esos niveles; PROGRESS=1 dice el tiempo simulado y la última
+--                               entidad actualizada cada segundo: si se cuelga, se ve dónde)
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
 require 'settings'
@@ -52,7 +54,12 @@ local function simLevel(path)
         t = t + dt
         level.solidBodies = Entities.solidBodies and Entities.solidBodies(ents) or level.solidBodies
         if level.update then level:update(dt) end
-        for _, e in ipairs(ents) do if e.alive then e:update(dt, level) end end
+        for i, e in ipairs(ents) do
+            if e.alive then
+                if os.getenv('PROGRESS') then io.stderr:write(('\r%s t=%.2f ent %d %s %s     '):format(path, t, i, e.def.name, e.state)) end
+                e:update(dt, level)
+            end
+        end
         if os.getenv('TRACE_AT') and path:match(os.getenv('TRACE_LEVEL') or '.') then
             local ta = tonumber(os.getenv('TRACE_AT'))
             if t >= ta and t < ta + 0.25 then
@@ -103,7 +110,7 @@ function love.load()
     local files = love.filesystem.getDirectoryItems('assets/levels')
     table.sort(files)
     for _, f in ipairs(files) do
-        if f:match('%.json$') then
+        if f:match('%.json$') and f:match(os.getenv('ONLY') or '.') then
             local s, level, ents = simLevel('assets/levels/' .. f)
             if s.n > 0 then
                 print(('%-28s voladores=%3d  dentro=%4d  convuls=%3d  atasco=%3d'):format(f, s.n, s.inside, s.convuls, s.stuck))

@@ -222,6 +222,18 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     (`tools/music/ref/`, local only, copyrighted, gitignored), everything the MIDI lacks
                     or gets wrong from the ogg analysis: drums (tresillo kick tuned to F#2, snare 2&4,
                     four-on-the-floor break), chords per half bar, and the finale's B–C#–D# bass.
+                    `tools/music/winter_nes.py` → `winter_nes.ogg` + `.mid` (catalog `winter_nes`, the Snowball
+                    Boss fight in lago_helado / jefe_nieve): "Winter Fallympics" (winter.ogg, the user's) as loaded
+                    Famicom music from `tools/music/ref/winter.mid` (local only), with winter.ogg as the truth:
+                    185 BPM, 144 bars, F major, song starts at 0.045 s of the ogg; MIDI and ogg agree bar by bar
+                    (beat DTW) except DYNAMICS (bars 45-60 = a −10 dB drum break → chords ×0.2, arps ×0.45, mix
+                    −5 dB) and the BASS: the ogg has it at F1/F2 under the MIDI's F3 → triangle sub 2 octaves down
+                    (1 if below E1) + short N163 "slap" an octave down. Mix = per-group levels relative to the lead
+                    (`LEVEL_DB`, RMS while playing; fitting the ogg's bands left chords/bells at ~0 % and the bass at
+                    33 %), then a MEASURED octave-band EQ toward the ogg (`eq_to_ref`, 70 %, ±5 dB). Energy: drums
+                    ~40 %, lead ~19 %, bass ~17 %, backing ~19 %; band shape within ±2 dB of the ogg in the main
+                    sections. Energy additions: ghost 16th hats, snare roll every 8 bars, crash on section entries,
+                    intro kicks (the ogg has a low hit there). `REPORT=1` prints the numbers without exporting.
 src/entities/
   PlayerAdventure.lua  THE player physics (shared by SP, server and client prediction)
   OnlinePlayer.lua     remote player renderer (tinted by player color, name tag)
@@ -243,7 +255,8 @@ src/world/
                        trampoline (4 defs: up/down/left/right),
                        crabbytramp (Crabby trampolín, subclass of crabby), cryo (Congelador),
                        flood (editor-only placeholder for a Floods area),
-                       bomb / bombobject (bombs, see Bombs), bossglass, bosswall
+                       bomb / bombobject (bombs, see Bombs), bossglass, bosswall, cryo (Freezer),
+                       snowboss (Gran Bola de Nieve)
   AutoScroll.lua       auto-scrolling camera levels (see below)
   Floods.lua           rising/falling water areas (see below)
   BossZones.lua        boss arenas (see below)
@@ -432,7 +445,7 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   'stomp' with 4th return dirX = cnx → `pa:bounce(vy, dirX, soft=true)` (vx 300 +
   ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill; v17: crawler turn in snapshots; v18: MegaCrabby;
   v19: boss walls, Mega minions/pounce; v20: post-hit protection; v21: unified invulnerability;
-  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks; v30: boss broken glass; v31: special enemy deaths; v32: bombs; v33: snow/ice/thin ice; v34: sand; v35: deep stone; v36: freezer).
+  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks; v30: boss broken glass; v31: special enemy deaths; v32: bombs; v33: snow/ice/thin ice; v34: sand; v35: deep stone; v36: freezer; v37: Snowball Boss).
 - **Crawler** (`src/world/entities/Crawler.lua`): surface-following movement
   (floor ↔ walls ↔ ceiling, concave and convex corners) for Crabbies with prop
   `wallWalk` (`Crabby.WALL_PROP`, off by default so old levels don't change).
@@ -983,6 +996,36 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   Harness `boss_intro` case `gp_subditos`. `Boss.hurtSound` per boss.
   Minions behave exactly like normal wall-walking ceiling Crabbies (harness
   `crawler_drop SUMMON=1`). Test arena: `tools/levelgen/arenas/jefe_cangrejo.json`.
+- **Snowball Boss** (`types/snowboss.lua`, "Gran Bola de Nieve", `boss.snowboss`; sprites
+  `assets/images/bosses/snowboss/` from `tools/ui/make_snowboss_sprites.py` = the user's
+  `snowball/ball.png` restyled (original outside the repo) + new frames (hurt, dizzy, 8-frame roll with
+  the face rotated per pixel, cracks, sweat, ball, bomb ball, flee, icicle, shock wave, screen splat);
+  sounds `bosses/snowboss/` from `tools/sounds/snowboss.py`; music `WinterFallympics` = winter.ogg).
+  Scale 8 (16x16 art), ×10 from phase 2 (`setScale`, box 13 px of art; scale in netPack). renderFront.
+  NEVER hurt directly: only 'dizzy' (rolling into a SOLID ON/OFF Block = a gate at ≥ `CRASH_SPD`, or a
+  bomb blast via `onBlastHit` hook in Explosions.blast: 1 + dizzy; stomp 1 / GP 2) or 'frozen' (a
+  Freezer stream: `canFreeze/freeze` overrides, slides inside the ice, stomp 1 / GP 3, then thaw);
+  otherwise immune bounce. Interactions: the generic frozen-enemy rule skips entities with `interact`.
+  Attack cycles per phase (`CYCLE`): hop (low: never lands on the 3-tile-high platforms; landing on a
+  player = hurt + squash), shoot (arc snowballs = own projectiles, hazard 'hurt'; phase 2+ some are
+  bomb balls that, on landing, become a lit RESERVE `bombobject` (def.summons, `makeReserve` on
+  bombobject); a kicked bomb touching the boss detonates (`bombContact`)), windup → roll (accelerates;
+  walls bounce in phase 2+, ice slide after `ROLL_MAX_T`), slam (high jump, hold, fall: two snow shock
+  waves along the floor + falling icicles with a floor shadow warning; hazards 'hurt'), avalanche
+  (phase 3, `avalT` 6 s of bouncing). Phases at `phase2`/`phase3` HP fractions → 'phase_up' (roar,
+  frost breath, inflates, refreezes broken thin ice of its zone if any; phase 3 buries every activator
+  of the zone with `packed_snow` 37 in the cell below = breakable, `enemySolid=false`). Intro (generic
+  `introLength` 4.4): a small ball enters top-left of the zone, bounces on the real surfaces
+  (`planIntro`), grows, lands (slam fx), laughs, spits at the camera → screen splat (render-only, from
+  the intro clock). Death: dying_crack → dying_burst → dying_flee (releasesZone) → dead. Roll rumble =
+  `Sound.loop('snowRoll', on, x, y)` from render. Arena `tools/levelgen/arenas/jefe_nieve.json` (from
+  `make_jefe_nieve.py`): entry/exit LEDGES (walk in and drop: bots/players never need to jump), ice
+  floor, two snow platforms (row 9) each with an Activator (start OFF = gates down), gates = ON/OFF
+  Blocks at both ends, each Activator linked to TWO Freezers in switch mode (wall one along the floor,
+  ceiling one firing down). Level `lago_helado` (`levels_boss.py`, graft copies `links`; `Level.extra`
+  in `lib.py` = extra JSON keys). Harnesses: `boss_sim LEVEL=tools/levelgen/arenas/jefe_nieve.json`
+  (attacks, dizzy, frozen GP = 3, kicked bomb, phases, burial, death order), `boss_intro`, `online_boss`,
+  `boss_frames`.
 - **Boss walls** (`types/bosswall.lua`, entity "Bloque de jefe", Mecanismos): rect of
   normal-looking blocks (cell = top-left, `corner` = bottom-right, `zone` id, 0 =
   nearest), hidden+passable → appearing (when its zone is in 'fight'; waits until no
@@ -1209,7 +1252,7 @@ Low-level notes (for writing NEW harnesses):
   Batch of 15 (race: valle_soleado, cavernas_cristal, torre_viento, fabrica_morteros,
   tren_fugaz (auto-scroll), canon_trampolines; hunt: ciudadela_cangrejos,
   jardin_gummies, mina_inundada; koth: isla_flotante, coliseo_pinchos, cascada_dorada;
-  race+boss: ruta_del_espejo, fortaleza_malvada, guarida_cangrejo_rey). Each level
+  race+boss: ruta_del_espejo, fortaleza_malvada, guarida_cangrejo_rey, lago_helado). Each level
   whitelists its mode with `"modes"`. Ship = bump `version.txt`.
 - Bots: send `in` only when there are new inputs, or the server kicks them
   for flooding.

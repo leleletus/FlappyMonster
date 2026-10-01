@@ -71,6 +71,9 @@ function Explosions.blast(level, x, y, radii, source)
             local dir = (e.x >= x) and 1 or -1
             if e.onBlast then
                 if d <= pushR then e:onBlast(x, y, d, pushR) end
+            elseif e.onBlastHit then
+                -- (jefes a los que les afectan las bombas: la Gran Bola de Nieve se marea)
+                if d <= hurtR then e:onBlastHit(x, y, d) end
             elseif e.def and e.def.category == 'Enemigos' and not e.def.boss and e.state ~= 'dead' then
                 if d <= hurtR and e.dieFling then
                     e:dieFling(dir)

@@ -38,6 +38,7 @@ local TYPES = {
     'thin_ice',       -- 31-34 (hielo fino: normal, dañado, muy dañado, a punto de romperse)
     'sand',           -- 35
     'deep_stone',     -- 36
+    'packed_snow',    -- 37 (nieve prensada rompible)
 }
 
 -- Bloques TRAMPA ("mímicos"): se ven idénticos al tile original pero no tienen

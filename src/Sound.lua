@@ -28,6 +28,10 @@ local GAIN = {
     -- Espejo (tools/sounds/mirror.py)
     bombIgnite = 0.72, bombFizz = 0.48, bombBlast = 0.87, iceBreak = 0.85,
     cryoWindup = 0.58, cryoBlast = 0.6, cryoFreeze = 0.51, cryoFree = 0.72,
+    -- Gran Bola de Nieve (tools/sounds/snowboss.py)
+    snowLaugh = 0.53, snowRoar = 0.55, snowSpit = 0.62, snowSplat = 0.51, snowRoll = 0.63,
+    snowLand = 0.49, snowSlam = 0.59, snowCrash = 0.60, snowDizzy = 0.56, snowCrack = 0.92,
+    snowBurst = 0.60, snowFlee = 0.46, snowIntroRoll = 0.59, snowBreath = 0.46,
     mirrorAppear = 0.62, mirrorPortal = 0.37, glassWarn = 0.85, glassRise = 0.72, glassHit = 0.72,
     -- tools/sounds/mechanics.py (medidos: → ≈ -12 dBFS)
     switchOn     = 0.77, switchOff  = 0.76, helmetBounce = 1.15, helmetBreak = 0.72,
@@ -155,6 +159,12 @@ function Sound.load()
     load('megaFlee',      'assets/sounds/bosses/megacrabby/flee.wav',   'static')   -- huye asustado
     load('megaRoar',      'assets/sounds/bosses/megacrabby/roar.wav',   'static')   -- rugido (entrada y descansos)
     load('megaFall',      'assets/sounds/bosses/megacrabby/fall.wav',   'static')   -- cae del cielo (entrada)
+    -- Gran Bola de Nieve (tools/sounds/snowboss.py)
+    for _, n in ipairs({ 'laugh', 'roar', 'spit', 'splat', 'roll', 'land', 'slam', 'crash', 'dizzy', 'crack',
+                         'burst', 'flee', 'intro_roll', 'breath' }) do
+        local id = 'snow' .. n:gsub('^%l', string.upper):gsub('_(%l)', string.upper)
+        load(id, 'assets/sounds/bosses/snowboss/' .. n .. '.wav', 'static')
+    end
     -- Música: todas las pistas del índice (assets/music/index.json)
     for _, tr in ipairs(Music.list) do Sound.loadTrack(tr) end
 end
@@ -202,6 +212,8 @@ Sound.RANGE = {
     mirrorWarp = 2.5, mirrorAppear = 2.5, mirrorPortal = 2.5, glassWarn = 3, glassRise = 3,
     megaStep = 1.8, megaClack = 2.2, megaRoar = 3, megaFall = 3, megaHurt = 3, megaSlam = 3, megaWindup = 2.5,
     megaShrink = 3, megaFlee = 2.2, bossHurt = 3, bossExplode = 3,
+    snowLaugh = 3, snowRoar = 3, snowSlam = 3, snowCrash = 3, snowBurst = 3, snowIntroRoll = 3, snowRoll = 2.5,
+    snowLand = 2.5, snowSpit = 2.2, snowDizzy = 2.5, snowCrack = 2.5, snowBreath = 2.5,
 }
 local listenerX, listenerY = nil, nil
 local emitterX, emitterY   = nil, nil
@@ -263,6 +275,21 @@ function Sound.playTracked(name, pitch, volume)
     src:setPitch(pitch or 1.0)
     src:setVolume(volume or 1.0)
     if not src:isPlaying() then src:play() end
+    tracked[name] = src
+end
+
+-- Bucle mientras `on` (lo llama cada fotograma quien lo dibuja: solo dibujo, p. ej. la
+-- Gran Bola de Nieve rodando); el volumen sigue a la distancia de (x, y) al oyente
+function Sound.loop(name, on, x, y)
+    local src = sources[name]
+    if not src then return end
+    if not on then
+        if tracked[name] then src:stop(); tracked[name] = nil end
+        return
+    end
+    local k = (x and Sound.falloff) and Sound.falloff(x, y, Sound.RANGE[name]) or 1
+    src:setVolume(k)
+    if not src:isPlaying() then src:setLooping(true); src:play() end
     tracked[name] = src
 end
 

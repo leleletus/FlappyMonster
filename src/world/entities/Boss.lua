@@ -306,7 +306,8 @@ function Boss:netApply(a, b, f)
     if type(b[3]) == 'number' then self.inv = b[3] / 100 end
     self.ghost = b[4] == 1
     local xa, xb = {}, {}
-    for k = 5, #b do xb[#xb+1] = b[k]; xa[#xa+1] = a[k] end
+    for k = 5, #b do xb[#xb+1] = b[k] end
+    for k = 5, #a do xa[#xa+1] = a[k] end      -- (a puede ser más largo: listas de proyectiles)
     self:netApplyExtra(xa, xb, f)
 end
 

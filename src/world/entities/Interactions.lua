@@ -39,7 +39,8 @@ Interactions.BOUNCE = BOUNCE
 function Interactions.check(pa, e)
     if not e.alive or e.state == 'dead' or (e.isGhost and e:isGhost()) then return nil end
     -- Congelada en un bloque de hielo: inofensiva; caerle encima rompe el hielo
-    if e.state == 'frozen' then return Interactions.frozenCheck(pa, e) end
+    -- (los jefes y lo que tiene reglas propias deciden ellos: ver interact)
+    if e.state == 'frozen' and not e.interact then return Interactions.frozenCheck(pa, e) end
     -- Reglas propias (jefes: ver entities/Boss.lua). Debe ser una consulta
     -- sin efectos: el cliente online la usa para predecir rebotes.
     if e.interact then return e:interact(pa) end
@@ -203,7 +204,7 @@ function Interactions.run(pa, entities, cb, rewind)
         local rx, ry = pa.GP_RADIUS_X or 170, pa.GP_RADIUS_Y or 110
         for i, e in ipairs(entities) do
             if e.alive and e.state ~= 'dead' and not (e.isGhost and e:isGhost()) then
-                if e.state == 'frozen' then
+                if e.state == 'frozen' and not e.interact then
                     -- (congelada: el impacto rompe el hielo)
                     if overlap(z, e:getOuterBounds()) then
                         local killed = e.props.stompable

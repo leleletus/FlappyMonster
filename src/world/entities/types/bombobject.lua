@@ -48,6 +48,15 @@ function BombObject:isFlyingHit()
     return self.thrown == true and (math.abs(self.vx or 0) > HIT_SPEED or math.abs(self.vy or 0) > HIT_SPEED)
 end
 
+-- De reserva (bombas de un jefe: la Gran Bola de Nieve las saca con sus bolas-bomba):
+-- fuera de juego hasta que las use; al explotar vuelven a la reserva
+function BombObject:makeReserve(key)
+    self.summonOf = key
+    self.alive, self.state = false, 'reserve'
+end
+function BombObject:netAtRest() return self.summonOf ~= nil and not self.alive end
+function BombObject:netRest() if self.summonOf then self.alive, self.state = false, 'reserve' end end
+
 -- ── Reglas ────────────────────────────────────────────────────────────────────
 function BombObject:canBeStomped() return false end
 function BombObject:canBeKnocked() return self.alive and self.state ~= 'exploding' end

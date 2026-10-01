@@ -466,6 +466,76 @@ function Particles.emit(kind, x, y, opts)
             add({ x = x + rnd(-28, 28), y = y + rnd(-10, 10), vx = 0, vy = 0, life = rnd(0.2, 0.4), size = 10,
                   star = true, col = {1, 1, 1} })
         end
+    elseif kind == 'snow_puff' then
+        -- Nieve que salta (aterrizajes, bolas que se estampan): polvo blanco y grumos
+        for i = 1, 10 do
+            add({ x = x + rnd(-20, 20), y = y - rnd(0, 10), vx = rnd(-220, 220), vy = -rnd(60, 260), g = 700, drag = 3,
+                  life = rnd(0.35, 0.7), size = math.random(2, 4) * 2, dust = true,
+                  col = ({ {1, 1, 1}, {0.88, 0.92, 1}, {0.78, 0.84, 0.96} })[math.random(3)] })
+        end
+        for i = 1, 5 do
+            add({ x = x + rnd(-14, 14), y = y - 4, vx = rnd(-240, 240), vy = -rnd(160, 380), g = 1400,
+                  life = rnd(0.5, 0.9), size = math.random(1, 2) * 3, chunk = true, phys = true, fadeLast = 0.3,
+                  col = ({ {0.96, 0.98, 1}, {0.82, 0.88, 0.98} })[math.random(2)] })
+        end
+    elseif kind == 'snow_trail' then
+        -- Rodando: polvo de nieve que levanta
+        for i = 1, 2 do
+            add({ x = x + rnd(-10, 10), y = y - rnd(0, 6), vx = rnd(-60, 60), vy = -rnd(30, 140), g = 500, drag = 2.5,
+                  life = rnd(0.3, 0.6), size = math.random(2, 3) * 2, dust = true,
+                  col = ({ {1, 1, 1}, {0.86, 0.9, 1} })[math.random(2)] })
+        end
+    elseif kind == 'snow_slam' then
+        -- El gran golpe de la Bola de Nieve: anillo, nube ancha y grumos
+        add({ x = x, y = y - 10, vx = 0, vy = 0, shock = true, r0 = 30, r1 = 230, life = 0.4, size = 10,
+              col = {0.95, 0.98, 1} })
+        for i = 1, 26 do
+            local dir = (i % 2 == 0) and 1 or -1
+            add({ x = x + dir * rnd(10, 60), y = y - rnd(0, 14), vx = dir * rnd(160, 520), vy = -rnd(60, 300), g = 600,
+                  drag = 2.5, life = rnd(0.5, 1.0), size = math.random(2, 5) * 2, dust = true,
+                  col = ({ {1, 1, 1}, {0.88, 0.92, 1}, {0.76, 0.82, 0.96} })[math.random(3)] })
+        end
+        for i = 1, 12 do
+            add({ x = x + rnd(-40, 40), y = y - 6, vx = rnd(-320, 320), vy = -rnd(200, 520), g = 1400,
+                  life = rnd(0.6, 1.1), size = math.random(2, 3) * 3, chunk = true, phys = true, fadeLast = 0.3,
+                  spin = rnd(-10, 10), col = ({ {0.96, 0.98, 1}, {0.8, 0.86, 0.98} })[math.random(2)] })
+        end
+    elseif kind == 'snow_crash' then
+        -- Choca rodando contra algo: nieve y esquirlas de hielo hacia atrás
+        for i = 1, 14 do
+            add({ x = x + rnd(-8, 8), y = y + rnd(-40, 40), vx = rnd(-300, 300), vy = -rnd(80, 360), g = 1100, drag = 1.5,
+                  life = rnd(0.4, 0.8), size = math.random(2, 4) * 2, chunk = (i % 3 == 0), phys = (i % 3 == 0), fadeLast = 0.3,
+                  dust = (i % 3 ~= 0), col = ({ {1, 1, 1}, {0.7, 0.85, 1}, {0.88, 0.92, 1} })[math.random(3)] })
+        end
+        for i = 1, 3 do
+            add({ x = x + rnd(-10, 10), y = y + rnd(-30, 30), vx = 0, vy = 0, life = rnd(0.15, 0.3), size = 10,
+                  star = true, col = {1, 1, 1} })
+        end
+    elseif kind == 'snow_burst' then
+        -- La Bola de Nieve revienta: gran nube, grumos que se quedan en el suelo
+        add({ x = x, y = y, vx = 0, vy = 0, shock = true, r0 = 40, r1 = 260, life = 0.45, size = 12,
+              col = {1, 1, 1} })
+        for i = 1, 40 do
+            local a = rnd(0, math.pi * 2)
+            local s = rnd(80, 520)
+            add({ x = x + math.cos(a) * 30, y = y + math.sin(a) * 30, vx = math.cos(a) * s, vy = math.sin(a) * s - 120,
+                  g = 500, drag = 2, life = rnd(0.6, 1.3), size = math.random(3, 6) * 2, dust = true,
+                  col = ({ {1, 1, 1}, {0.9, 0.93, 1}, {0.78, 0.84, 0.96} })[math.random(3)] })
+        end
+        for i = 1, 24 do
+            add({ x = x + rnd(-50, 50), y = y + rnd(-50, 40), vx = rnd(-420, 420), vy = -rnd(200, 640), g = 1400,
+                  life = rnd(1.2, 2.2), size = math.random(2, 4) * 3, chunk = true, phys = true, fadeLast = 0.4,
+                  spin = rnd(-10, 10), col = ({ {0.97, 0.98, 1}, {0.84, 0.89, 0.98}, {0.7, 0.78, 0.94} })[math.random(3)] })
+        end
+    elseif kind == 'frost_breath' then
+        -- Aliento helado (cambio de fase): nube fría alrededor
+        for i = 1, 24 do
+            local a = rnd(0, math.pi * 2)
+            local s = rnd(60, 260)
+            add({ x = x, y = y, vx = math.cos(a) * s, vy = math.sin(a) * s * 0.5, g = -20, drag = 2,
+                  life = rnd(0.6, 1.1), size = math.random(2, 4) * 2, dust = true,
+                  col = ({ {0.9, 0.97, 1}, {0.7, 0.88, 1} })[math.random(2)] })
+        end
     elseif kind == 'cryo_puff' then
         -- Congelador cargando: bocanadas de escarcha por la boquilla (opts.nx, ny = hacia dónde mira)
         local nx, ny = (opts and opts.nx) or 1, (opts and opts.ny) or 0

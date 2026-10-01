@@ -48,6 +48,10 @@ def graft(L, src, c0, x0):
         nz = dict(z)
         nz['col'] += dx
         L.boss_zones.append(nz)
+    for l in src.get('links', []):            # (Activadores → objetos conectados: congeladores...)
+        nl = dict(l)
+        nl['col'] += dx
+        L.extra.setdefault('links', []).append(nl)
     for d in src.get('foliage', []):
         if d['col'] >= c0:
             nd = dict(d)
@@ -183,4 +187,51 @@ def guarida_cangrejo_rey():
     return L
 
 
-BUILDERS = [ruta_del_espejo, fortaleza_malvada, guarida_cangrejo_rey]
+def _enc(i): return i % 16 + (i // 16) * 2 ** 17      # id de tile → valor de celda (TileCodec)
+
+
+SNOW, ICE = _enc(29), _enc(30)
+
+
+def lago_helado():
+    """Lago helado: suelo de hielo que resbala, congeladores (para aprender a esquivar el
+    chorro) y la Gran Bola de Nieve al final (arena jefe_nieve: compuertas + congeladores
+    de los Activadores)."""
+    src = load_src('jefe_nieve.json')
+    L = Level('Lago Helado', 103, 15, (4, 9), music='classic')
+    L.extra.update({'name_en': 'Frozen Lake', 'snow': True, 'background': 'snow', 'time': 'dusk'})
+    G = 10
+    L.rect(2, G, 71, 14, SNOW)
+    # foso con pinchos
+    L.rect(15, G, 17, 13, EMPTY)
+    L.spikes(15, 17, 13, UP)
+    # pista de hielo (resbala) y el primer congelador, de frente: hay que saltar el chorro
+    L.rect(18, G, 30, G, ICE)
+    L.walker('gummy', 23, G - 1, 19, 27)
+    L.rect(31, G - 2, 34, G - 1, SNOW)
+    L.set(31, G - 1, EMPTY)
+    L.ent('cryo', 31, G - 1, dir='left', interval=3.5, firstDelay=1.5, range=9, freezeTime=2.5)
+    L.ent('star', 33, G - 4)
+    # llano con plataformas
+    L.walker('crabby', 41, G - 1, 36, 46)
+    L.plat(38, 42, G - 4, DROP)
+    L.ent('star', 40, G - 5)
+    L.ent('checkpoint', 47, G - 1)
+    # foso de agua helada con islas de hielo
+    L.rect(49, G, 56, 13, EMPTY)
+    L.water(49, 12, 56, 13)
+    for c in (50, 53, 56):
+        L.set(c, G, ICE)
+    L.walker('gummy', 53, G - 3, 51, 55, movement='fly')
+    # lluvia: congelador colgado que dispara hacia abajo
+    L.ent('cryo', 62, 4, dir='down', interval=3, firstDelay=0.5, range=6, freezeTime=2)
+    L.walker('crabby', 65, G - 1, 58, 69)
+    L.ent('extralife', 66, G - 4)
+    L.plat(64, 68, G - 3, DROP)
+    L.ent('checkpoint', 70, G - 1)
+    # arena de la Gran Bola de Nieve (la zona empieza en la columna 75)
+    graft(L, src, 9, 72)
+    return L
+
+
+BUILDERS = [ruta_del_espejo, fortaleza_malvada, guarida_cangrejo_rey, lago_helado]

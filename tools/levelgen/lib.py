@@ -37,6 +37,7 @@ class Level:
             self.set(w, r, BORDER)
         self.entities, self.foliage, self.vents = [], [], []
         self.boss_zones, self.auto_scroll = [], None
+        self.extra = {}       # otras claves del JSON (links, snow, background, name_en...)
 
     # ── tiles ────────────────────────────────────────────────────────────
     def inb(self, c, r):
@@ -144,7 +145,7 @@ class Level:
         lines.append('  ],')
         lines.append('  "foliage": [%s],' % ','.join(j(d) for d in self.foliage))
         lines.append('  "vents": [%s]' % ','.join(j(v) for v in self.vents)
-                     + (',' if (self.boss_zones or self.auto_scroll or self.modes or self.match_time or self.music) else ''))
+                     + (',' if (self.boss_zones or self.auto_scroll or self.modes or self.match_time or self.music or self.extra) else ''))
         extra = []
         if self.boss_zones:
             extra.append('  "bossZones": %s' % j(self.boss_zones))
@@ -156,6 +157,8 @@ class Level:
             extra.append('  "matchTime": %s' % j(self.match_time))
         if self.music:
             extra.append('  "music": %s' % j(self.music))
+        for k in sorted(self.extra):
+            extra.append('  %s: %s' % (j(k), j(self.extra[k])))
         lines.append(',\n'.join(extra))
         lines.append('}')
         return '\n'.join(lines) + '\n'
