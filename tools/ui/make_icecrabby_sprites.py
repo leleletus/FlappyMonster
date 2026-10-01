@@ -146,7 +146,7 @@ def paste_bottom(canvas, im, cx, base):
 
 
 def mockup(sp, out):
-    W, H = 1280, 900
+    W, H = 1280, 1000
     im = scene_bg(W, H, H)
     d = ImageDraw.Draw(im)
     font = ImageFont.load_default()
@@ -181,10 +181,30 @@ def mockup(sp, out):
         if b is not None: paste_bottom(im, up(b, S), x, y1)
         if pr > 0: paste_bottom(im, cover_img(sp, 'snow', min(1, pr)), x, y1)
         x += 100
+    # objeto (aquí el carámbano; igual púa y trampolín): como el Crabby normal, la tapa le
+    # SALE DEL LOMO y luego baja encima del caparazón mientras se hunde, hasta quedar en la superficie
+    fr2 = [(sp['crab2.png'], 0.0), (sp['crab2.png'], 0.5), (sp['crab2.png'], 1.0)] + \
+          [(sheet.crop((i * fw, 0, (i + 1) * fw, sheet.height)), 1.0, i) for i in (0, 2, 4, 6)] + [(None, 1.0)]
+    x = 60
+    yo = y1 + 135
+    d.rectangle((0, yo, W, yo + 30), fill=(226, 238, 252))
+    d.text((20, yo - 125), 'se esconde con un objeto (carámbano / púa / trampolín): le sale del lomo y baja con el caparazón', fill=(255, 255, 255), font=font)
+    for item in fr2:
+        b, pr = item[0], item[1]
+        top = yo
+        if b is not None:
+            bb = up(b, S)
+            paste_bottom(im, bb, x, yo)
+            # lo alto del caparazón: donde se apoya la tapa (en la hoja de hundirse, lo que asoma)
+            top = yo - bb.height + (item[2] * S if len(item) > 2 else 0)
+        if pr > 0:
+            c = cover_img(sp, 'icicle', pr)
+            paste_bottom(im, c, x, top + 4)
+        x += 110
     # 2) Las 4 tapas en el suelo, en una pared y en el techo
     kinds = [('spike', 'púa de hielo: mata'), ('tramp', 'trampolín: rebota'),
              ('snow', 'nieve: disfraz, revienta al tocarla'), ('icicle', 'carámbano: -2 vida + empujón')]
-    y2 = 230
+    y2 = 330
     for i, (k, label) in enumerate(kinds):
         cx = 160 + i * 310
         d.text((cx - 120, y2), label, fill=(255, 255, 255), font=font)
@@ -207,7 +227,7 @@ def mockup(sp, out):
         d.text((cx - 20, ty + 160), 'techo', fill=(255, 255, 255), font=font)
 
     # 3) El montón de nieve: escondido → se agrieta (0.25 s, sin daño) → sale
-    y3 = 820
+    y3 = 930
     floor_line(y3)
     d.text((20, y3 - 150), 'nieve: tocarla → se agrieta 0.25 s (aún sin daño: da tiempo a saltar) → revienta y sale (luego -1 vida + empujón; encima te lanza hacia arriba; ground pound encima = lo aplasta)', fill=(255, 255, 255), font=font)
     x = 160
