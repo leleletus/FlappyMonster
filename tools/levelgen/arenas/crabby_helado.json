@@ -29,6 +29,7 @@
     {"col":4,"row":9,"type":"snow_pile"}
   ],
   "vents": [],
+  "spikeSkin": "ice",
   "background": "snow",
   "snow": true
 }

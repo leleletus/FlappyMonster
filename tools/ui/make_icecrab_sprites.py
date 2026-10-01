@@ -17,7 +17,8 @@
 #   spike.png             la púa de la cabeza, de HIELO (la del Mega recoloreada a azul hielo)
 #   rage_body-Sheet.png   enfadado: esquirlas de hielo sobre el caparazón (26x21, 2 cuadros: normal / brillo)
 #   rage_claw-Sheet.png   enfadado: esquirlas sobre la pinza (18x15, centrada como la pinza, 2 cuadros)
-#                         (--rabia A|B|C|D elige la opción; la del juego es la A, "Esquirlas"; vista previa: rabia_opciones.png, pua.png)
+#                         (--rabia A|B|C|D elige la opción; la del juego: cuerpo A "Esquirlas" + pinzas B "Corona"
+#                         = --rabia A --rabia-pinza B; vista previa: rabia_opciones.png, pua.png)
 # Vista previa: vista_previa.png (Mega Crabby original vs helado, a escala de juego, sobre la
 # pista de hielo, + las tiras ampliadas) y andar.gif (ciclo de andar con chasquidos de pinza).
 import argparse
@@ -333,12 +334,13 @@ def glint(im, seed):
     return g
 
 
-def rage_layers(opt):
+def rage_layers(opt, claw_opt=None):
     o = RAGE[opt]
+    oc = RAGE[claw_opt or opt]
     bw, bh = 18 + 2 * RP_X, 13 + RP_TOP
     b = shard_layer(bw, bh, o['body'], RP_X, RP_TOP, mirror_w=18)
     cw, ch = 10 + 2 * RC_P, 7 + 2 * RC_P
-    c = shard_layer(cw, ch, o['claw'], RC_P, RC_P)
+    c = shard_layer(cw, ch, oc['claw'], RC_P, RC_P)
     body = Image.new('RGBA', (bw * 2, bh), (0, 0, 0, 0))
     body.paste(b, (0, 0)); body.paste(glint(b, 1), (bw, 0))
     claw = Image.new('RGBA', (cw * 2, ch), (0, 0, 0, 0))
@@ -424,7 +426,8 @@ def rage_preview(sp, out):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--apply', action='store_true')
-    ap.add_argument('--rabia', default=None, help='opción de la coraza de rabia que se escribe (A/B/C/D)')
+    ap.add_argument('--rabia', default=None, help='opción de la coraza de rabia que se escribe (A/B/C/D): el cuerpo')
+    ap.add_argument('--rabia-pinza', default=None, help='opción para las pinzas (por defecto la de --rabia)')
     ap.add_argument('--out', default=os.path.join(os.environ.get('FM_PREVIEWS', '/home/mtvemo/FlappyMonster_pruebas'),
                                                   'megacrabby_ice'))
     a = ap.parse_args()
@@ -432,7 +435,7 @@ def main():
     os.makedirs(a.out, exist_ok=True)
     for n, im in sp.items(): im.save(os.path.join(a.out, n))
     if a.rabia:
-        body, claw = rage_layers(a.rabia)
+        body, claw = rage_layers(a.rabia, a.rabia_pinza)
         sp['rage_body-Sheet.png'], sp['rage_claw-Sheet.png'] = body, claw
     mockup(sp, a.out)
     rage_preview(sp, a.out)

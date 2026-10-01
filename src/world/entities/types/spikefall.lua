@@ -106,13 +106,11 @@ end
 
 function SpikeFall:isBodyDisabled() return true end
 
--- La púa de los pinchos (assets/images/spikes/spike.png) hacia abajo
-local spikeImg
-local function drawDownSpike(px, py, sz, alpha)
-    if not spikeImg then
-        spikeImg = love.graphics.newImage('assets/images/spikes/spike.png')
-        spikeImg:setFilter('nearest', 'nearest')
-    end
+-- La púa de los pinchos hacia abajo, con el aspecto de pinchos del nivel (SpikeSkins)
+local SpikeSkins = require 'src/world/SpikeSkins'
+SpikeFall.wantsLevel = true          -- (solo dibujo: el aspecto de los pinchos del nivel; BossZones.link / editor)
+local function drawDownSpike(px, py, sz, alpha, skin)
+    local spikeImg = SpikeSkins.image(skin)
     local k = sz / spikeImg:getWidth()
     love.graphics.setColor(1, 1, 1, alpha)
     love.graphics.draw(spikeImg, px, py + sz, 0, k, -k)
@@ -130,7 +128,7 @@ function SpikeFall:render(camX, camY)
     love.graphics.push()
     love.graphics.translate(0, y0)
     love.graphics.scale(1, k)
-    drawDownSpike(x0, 0, H, alpha)
+    drawDownSpike(x0, 0, H, alpha, SpikeSkins.of(self.levelRef))
     love.graphics.pop()
     love.graphics.setColor(1, 1, 1, 1)
 end

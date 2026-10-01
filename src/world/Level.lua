@@ -17,6 +17,7 @@ local AutoScroll = require 'src/world/AutoScroll'
 local Floods     = require 'src/world/Floods'
 local PointAreas = require 'src/world/PointAreas'
 local SubTiles   = require 'src/world/SubTiles'
+local SpikeSkins = require 'src/world/SpikeSkins'
 local WaterSurface = require 'src/fx/WaterSurface'
 
 local Level = {}
@@ -354,6 +355,7 @@ function Level.fromData(lvl)
     -- Música del nivel: id de assets/music/index.json (nil = la de siempre)
     self.music     = type(lvl.music) == 'string' and lvl.music or nil
     self.snow      = lvl.snow == true                  -- (nieve cayendo: src/fx/Snowfall.lua, solo visual)
+    self.spikeSkin = lvl.spikeSkin                     -- (aspecto de los pinchos: src/world/SpikeSkins.lua, solo visual)
     self.background, self.timeOfDay, self.clouds = lvl.background, lvl.time, lvl.clouds   -- (fondo y hora: src/fx/Sky.lua)
     self.depth, self.surfaceRow = lvl.depth, tonumber(lvl.surfaceRow)                    -- (fondo de profundidad y su línea)
     return self
@@ -991,14 +993,10 @@ end
 -- ── Render ────────────────────────────────────────────────────────────────────
 local HALF_PX = nil
 
--- Púa de tile: assets/images/spikes/spike.png (hacia arriba, del tamaño de
--- media casilla); las otras direcciones son la misma imagen girada o volteada
-local spikeImg
-local function drawMiniSpike(dir, px, py, size)
-    if not spikeImg then
-        spikeImg = love.graphics.newImage('assets/images/spikes/spike.png')
-        spikeImg:setFilter('nearest', 'nearest')
-    end
+-- Púa de tile: la imagen del aspecto de pinchos del nivel (SpikeSkins: spike.png / spike_ice.png;
+-- hacia arriba, del tamaño de media casilla); las otras direcciones son la misma imagen girada o volteada
+local function drawMiniSpike(dir, px, py, size, skin)
+    local spikeImg = SpikeSkins.image(skin)
     local k = size / spikeImg:getWidth()
     love.graphics.setColor(1, 1, 1, 1)
     if dir == DIR_UP then
@@ -1083,7 +1081,7 @@ function Level:render(camX, camY)
             for i = 1, 4 do
                 if spikes[i].present then
                     local ox,oy = subOff[i][1], subOff[i][2]
-                    drawMiniSpike(spikes[i].dir, px+ox, py+oy, HALF_PX)
+                    drawMiniSpike(spikes[i].dir, px+ox, py+oy, HALF_PX, self.spikeSkin)
                 end
             end
         end

@@ -136,6 +136,7 @@
   "modes": ["race"],
   "music": "flying_machine",
   "snow": true,
+  "spikeSkin": "ice",
   "background": "snow",
   "time": "night",
   "depth": "icecave",

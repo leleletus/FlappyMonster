@@ -328,7 +328,11 @@ Character restyles keep EVERY pixel of the user's original shape and only add th
                        leading edge + fan of 3 long feathers, 2 flap frames, still 9x13). Both read the
                        originals kept outside the repo, so they can be re-run safely.
 Spikes are images too: assets/images/spikes/spike.png (tile spikes, rotated/flipped
-                       for the 4 directions; falling spike), crabby/spike.png and
+                       for the 4 directions; falling spike) — SPIKE SKINS: level JSON `"spikeSkin": "ice"`
+                       (editor Nivel → Fondo y clima → Pinchos; `src/world/SpikeSkins.lua` LIST = id + PNG, new skin =
+                       PNG + one line) → `spike_ice.png` (`tools/ui/make_ice_spikes.py`) for tile AND falling spikes
+                       (spikefall/rainspike `wantsLevel` → `levelRef.spikeSkin`); render only. Set in the snowy
+                       levels (lago_helado, torre_viento, icy arenas; retheme 'snow' theme + make_jefe_nieve write it), crabby/spike.png and
                        bosses/miniboss1/spike.png (stretched in height while they grow)
 Tile textures: assets/images/tiles/ (breakable, platform, platform_drop via the tile
                        def's `texture`; finish.png = the checkerboard, its wave + gold
@@ -523,7 +527,7 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   spike?"). (2) FROST PATCHES where the wall pounce lands (`patchWidth` tiles, `patchTime` s): `level.frostPatches`
   {x0,x1,y,left} → PlayerAdventure caps ground friction at 0.2× (also in prediction: the client sets them from
   netPackExtra on `levelRef`); cleared on death. (3) RAGE: sharp ice shards on shell AND claws (user's
-  pick "A: Esquirlas" of 4 options; `rage_body-Sheet.png` 26x21 / `rage_claw-Sheet.png` 18x15, 2 frames
+  pick: body "A: Esquirlas" + claws "B: Corona" of 4 options, `--rabia A --rabia-pinza B`; `rage_body-Sheet.png` 26x21 / `rage_claw-Sheet.png` 18x15, 2 frames
   normal/glint, from `make_icecrab_sprites.py --rabia A`: procedural tapered shards, coverage-rasterised) drawn
   by Mega.drawLocal hooks `drawBodyOverlay` / `drawClawOverlay` (same transform: follow squash/claws), white
   flash when they appear; no red pulse; anger symbols = vein + steam only (`angerKinds`, no scribble);

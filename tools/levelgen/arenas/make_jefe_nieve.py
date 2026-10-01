@@ -95,7 +95,7 @@ def build():
         'links': [{'col': c, 'row': r, 'to': 11 + i} for i, (c, r) in enumerate(SWITCHES)],
         'blockLinks': [],
         'bossZones': [{'id': 1, 'col': Z0, 'row': 3, 'w': Z1 - Z0 + 1, 'h': 10, 'music': 'winter_nes'}],
-        'background': 'snow', 'time': 'dusk', 'snow': True,
+        'background': 'snow', 'time': 'dusk', 'snow': True, 'spikeSkin': 'ice',
     }
 
 

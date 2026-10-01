@@ -325,7 +325,7 @@ def retheme(name, force=False, dry=False, terrain=False, tiles_only=False):
                 else:
                     place(tp, c, r)
     lv.setdefault('foliage', []).extend(added)
-    if theme == 'snow': lv['snow'] = True
+    if theme == 'snow': lv['snow'], lv['spikeSkin'] = True, 'ice'      # (nieve cayendo, pinchos de hielo)
     print('  %-22s %-10s bloques cambiados %4d · decoraciones +%d' % (name, theme, changed, len(added)))
     if not dry:
         save(path, lv)

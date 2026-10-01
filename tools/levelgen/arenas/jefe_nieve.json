@@ -43,5 +43,6 @@
   ],
   "background": "snow",
   "time": "dusk",
-  "snow": true
+  "snow": true,
+  "spikeSkin": "ice"
 }

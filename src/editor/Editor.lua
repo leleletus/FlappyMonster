@@ -13,6 +13,7 @@ local Entities = require 'src/world/Entities'
 local Level    = require 'src/world/Level'
 local DT       = require('src/world/Decorations').types
 local Clip     = require 'src/ui/Clip'
+local SpikeSkins = require 'src/world/SpikeSkins'
 local Sky      = require 'src/fx/Sky'
 local BossZones = require 'src/world/BossZones'
 local AutoScroll = require 'src/world/AutoScroll'
@@ -1581,6 +1582,12 @@ local function drawLevelTab(x, y, w)
         y = y + 28
         if ch then pushUndo(); m.snow = v or nil; markDirty() end
         y = y + ui.hint('Copos de nieve cayendo por todo el nivel. Solo es visual: no afecta al juego.', x, y, w, th.border) + 8
+        local sopts = {}
+        for _, sk in ipairs(SpikeSkins.LIST) do sopts[#sopts + 1] = { value = sk.id, label = sk.label } end
+        v, ch = ui.enum('Pinchos', m.spikeSkin or 'normal', sopts, x, y, w)
+        y = y + ui.ENUM_H
+        if ch then pushUndo(); m.spikeSkin = (v ~= 'normal') and v or nil; markDirty() end
+        y = y + ui.hint('Aspecto de todos los pinchos del nivel (los de las casillas y los que caen). Solo es visual.', x, y, w, th.border) + 8
     end
     y = y + 2
     -- Modos de juego online: en cuáles se ofrece este nivel

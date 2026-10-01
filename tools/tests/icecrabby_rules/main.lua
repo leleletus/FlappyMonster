@@ -19,6 +19,9 @@
 --   mega_placa    al caer del salto desde la pared deja una placa que resbala; dura patchTime,
 --                 ragePatchTime enfadado; se acaba al morir
 --   mega_red      netPackExtra → netApplyExtra: ondas y placas iguales en el cliente (y en su nivel)
+-- PINCHOS DE HIELO (src/world/SpikeSkins.lua, JSON "spikeSkin"):
+--   pinchos_skin  el nivel guarda su aspecto (Level y el modelo del editor, ida y vuelta) y los
+--                 niveles helados lo usan
 --   LOOK=1        además guarda <save>/icecrabby_look.png: las 4 tapas andando y escondidas, en
 --                 suelo, techo y pared, y un montón agrietándose
 --
@@ -392,6 +395,63 @@ local function look()
 end
 
 -- LOOK=1: el Mega Crabby helado en 4 momentos (palmada, pinzas pegadas con ondas y placa, enfadado)
+function cases.pinchos_skin()
+    local SpikeSkins = require 'src/world/SpikeSkins'
+    local Model = require 'src/editor/EditorModel'
+    local json = require 'libs/json'
+    local d = json.decode(love.filesystem.read('assets/levels/lago_helado.json'))
+    local lvl = Level.fromData(d)
+    local m = Model.fromData(d, 'x.json')
+    local back = m:toData()
+    local m2 = Model.new(10, 6, 'n')
+    local plain = Level.fromData(m2:toData())
+    local okImg = SpikeSkins.image('ice') ~= SpikeSkins.image('normal') and SpikeSkins.image('nada') == SpikeSkins.image('normal')
+    local icy = {}
+    for _, f in ipairs({ 'lago_helado', 'torre_viento' }) do
+        local t = json.decode(love.filesystem.read('assets/levels/' .. f .. '.json'))
+        icy[#icy + 1] = f .. '=' .. tostring(t.spikeSkin)
+    end
+    local ok = lvl.spikeSkin == 'ice' and SpikeSkins.of(lvl) == 'ice' and back.spikeSkin == 'ice'
+               and SpikeSkins.of(plain) == nil and okImg and table.concat(icy, ' '):match('nil') == nil
+    check('pinchos_skin', ok, ('nivel %s · editor ida y vuelta %s · nivel nuevo %s · imágenes ok %s · %s'):format(
+        tostring(lvl.spikeSkin), tostring(back.spikeSkin), tostring(SpikeSkins.of(plain)), tostring(okImg),
+        table.concat(icy, ' ')))
+end
+
+-- LOOK=1: pinchos normales y de hielo (casilla en las 4 direcciones + pincho que cae)
+local function lookSpikes()
+    local TC = require 'src/world/tiles/TileCodec'
+    local cv = love.graphics.newCanvas(2 * 8 * T, 5 * T)
+    love.graphics.setCanvas(cv)
+    love.graphics.clear(0.35, 0.42, 0.62, 1)
+    for i, skin in ipairs({ 'normal', 'ice' }) do
+        local tiles = {}
+        for r = 1, 5 do
+            local row = {}
+            for c = 1, 8 do row[c] = (r == 1 or r == 5) and 1 or 0 end
+            tiles[r] = row
+        end
+        local sp = function(dir) local t = {}; for k = 1, 4 do t[k] = { present = true, dir = dir } end; return t end
+        tiles[4][3] = TC.encode(0, false, sp(TC.DIR_UP))
+        tiles[2][4] = TC.encode(0, false, sp(TC.DIR_DOWN))
+        tiles[3][6] = TC.encode(0, false, sp(TC.DIR_LEFT))
+        tiles[3][7] = TC.encode(0, false, sp(TC.DIR_RIGHT))
+        local level = Level.fromData({ name = 't', width = 8, height = 5, playerStart = { 2, 4 }, tiles = tiles,
+                                       entities = { { type = 'spikefall', col = 2, row = 2, props = {} } },
+                                       spikeSkin = (skin ~= 'normal') and skin or nil })
+        local e = Entities.create(level.entities[1])
+        e.levelRef = level
+        love.graphics.push()
+        love.graphics.translate((i - 1) * 8 * T, 0)
+        level:render(0, 0)
+        e:render(0, 0)
+        love.graphics.pop()
+    end
+    love.graphics.setCanvas()
+    cv:newImageData():encode('png', 'pinchos_hielo.png')
+    print('guardado ' .. love.filesystem.getSaveDirectory() .. '/pinchos_hielo.png')
+end
+
 local function lookMega()
     local CW, CH = 9 * T, 5 * T
     local moments = { { 'clap', 0.15 }, { 'clap_stuck', 0.3 }, { 'chase', 0, true }, { 'rest', 0.5, true } }
@@ -418,11 +478,11 @@ local function lookMega()
 end
 
 function love.load()
-    if os.getenv('LOOK') then look(); lookMega() end
+    if os.getenv('LOOK') then look(); lookMega(); lookSpikes() end
     local only = os.getenv('CASE')
     for _, n in ipairs({ 'hundirse', 'escombros', 'pua', 'carambano', 'nieve_toque', 'nieve_encima', 'nieve_gp',
                          'nieve_techo', 'carambano_techo', 'trampolin', 'pared',
-                         'mega_palmada', 'mega_pinzas', 'mega_placa', 'mega_red' }) do
+                         'mega_palmada', 'mega_pinzas', 'mega_placa', 'mega_red', 'pinchos_skin' }) do
         if not only or only == n then
             local ok, err = pcall(cases[n])
             if not ok then check(n, false, 'error: ' .. tostring(err)) end

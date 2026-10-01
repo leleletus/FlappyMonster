@@ -82,6 +82,7 @@
   ],
   "music": "classic",
   "snow": true,
+  "spikeSkin": "ice",
   "background": "snow",
   "time": "night",
   "surfaceRow": 13
