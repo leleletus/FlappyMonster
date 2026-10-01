@@ -1,6 +1,9 @@
 -- tools/tests/icecrabby_rules — reglas del CRABBY HELADO (types/crabby_ice.lua), caso a caso en
 -- salas hechas a mano:
 --   hundirse      al esconderse se hunde fila a fila (los 8 cuadros sink) y acaba escondido
+--   tapa_pegada   púa / carámbano / trampolín bien pegados a la cabeza en TODO el esconderse y
+--                 el salir: la base de su caja = la fila de arriba OPACA del cuadro actual (medida en
+--                 el PNG) menos 2 px de arte (púa y carámbano encajados; el trampolín encima), ±1 px
 --   escombros     al esconderse suelta piedrecitas del bloque de debajo (Crabby normal y helado)
 --   pua           escondido bajo la púa de hielo: tocarla mata (como el Crabby)
 --   carambano     escondido bajo un carámbano: tocarlo = -2 de vida + empujón
@@ -99,6 +102,56 @@ local function ent(type, col, row, props)
 end
 
 local cases = {}
+
+-- Fila de arriba opaca de cada imagen (medida en el PNG, no con lo que dice el código)
+local topRows = {}
+local function opaqueRows(img)
+    if topRows[img] == nil then
+        local Crabby = require('src/world/entities/types/crabby').class
+        local name = Crabby.getImgName({ currentImg = img, sk = Crabby.SKINS.ice })
+        local file = name:gsub('^ice_', '')
+        file = ({ idle1 = 'crab1', idle2 = 'crab2', idle3 = 'crab3' })[file] or file
+        file = file:match('^s(%d)$') and ('sink' .. file:sub(2)) or file
+        local ok, d = pcall(love.image.newImageData, 'assets/images/crabby_ice/' .. file .. '.png')
+        local rows = 0
+        if ok then
+            for y = 0, d:getHeight() - 1 do
+                local any = false
+                for x = 0, d:getWidth() - 1 do if select(4, d:getPixel(x, y)) > 0 then any = true; break end end
+                if any then rows = d:getHeight() - y; break end
+            end
+        end
+        topRows[img] = rows
+    end
+    return topRows[img]
+end
+
+function cases.tapa_pegada()
+    local S = GUMMY_SCALE
+    local worst, seen, info = 0, 0, {}
+    for _, t in ipairs({ { 'crabby_ice', 2 }, { 'crabby_ice_icicle', 2 }, { 'crabbytramp_ice', 0 } }) do
+        local level, es, e = room(20, 8, { ent(t[1], 10, 7) })
+        step(level, es, 0.3)
+        local feet = e.y + e.sprH / 2
+        local maxd = 0
+        local function measure()
+            local box = e.trampBox and e:trampBox() or e:getSpikeHitbox()
+            if not box or box.h < 2 then return end
+            local want = feet - math.max(0, opaqueRows(e.currentImg) - t[2]) * S
+            local d = math.abs((box.y + box.h) - want)
+            if d > maxd then maxd = d end
+            seen = seen + 1
+        end
+        e.state, e.hideTransTimer = 'hide_in', 0
+        step(level, es, 1.2, function() measure(); return e.state == 'hidden' end)
+        e.hideDuration = 0
+        step(level, es, 1.2, function() measure(); return e.state == 'walk' end)
+        info[#info + 1] = ('%s %.0f'):format(t[1], maxd)
+        if maxd > worst then worst = maxd end
+    end
+    check('tapa_pegada', worst <= 1 and seen > 30,
+        ('desfase máximo base de la tapa / cabeza (px): %s · %d pasos medidos'):format(table.concat(info, ', '), seen))
+end
 
 function cases.hundirse()
     local level, es, e = room(20, 8, { ent('crabby_ice_snow', 10, 7) })
@@ -452,6 +505,36 @@ local function lookSpikes()
     print('guardado ' .. love.filesystem.getSaveDirectory() .. '/pinchos_hielo.png')
 end
 
+-- LOOK=1: esconderse y salir, cuadro a cuadro, de cada tapa de objeto (icecrabby_esconderse.png)
+local function lookHide()
+    local covers = { 'crabby_ice', 'crabby_ice_icicle', 'crabbytramp_ice' }
+    local N = 12
+    local W, H = 2 * T, 2 * T
+    local cv = love.graphics.newCanvas(N * W, #covers * H)
+    love.graphics.setCanvas(cv)
+    love.graphics.clear(0.35, 0.42, 0.62, 1)
+    for row, ty in ipairs(covers) do
+        local level, es, e = room(6, 4, { ent(ty, 3, 3) })
+        step(level, es, 0.3)
+        e.pauses = false
+        for i = 1, N do
+            -- 6 momentos escondiéndose y 6 saliendo
+            local k = (i - 1) % 6
+            if i <= 6 then e.state, e.hideTransTimer = 'hide_in', k * 0.2
+            else e.state, e.hideTransTimer = 'hide_out', k * 0.2 end
+            e:updateCustom(0, level)
+            love.graphics.setScissor((i - 1) * W, (row - 1) * H, W, H)
+            love.graphics.clear(0.35, 0.42, 0.62, 1)
+            level:render(e.x - W / 2 - (i - 1) * W, e.y - H * 0.75 - (row - 1) * H)
+            e:render(e.x - W / 2 - (i - 1) * W, e.y - H * 0.75 - (row - 1) * H)
+            love.graphics.setScissor()
+        end
+    end
+    love.graphics.setCanvas()
+    cv:newImageData():encode('png', 'icecrabby_esconderse.png')
+    print('guardado ' .. love.filesystem.getSaveDirectory() .. '/icecrabby_esconderse.png')
+end
+
 local function lookMega()
     local CW, CH = 9 * T, 5 * T
     local moments = { { 'clap', 0.15 }, { 'clap_stuck', 0.3 }, { 'chase', 0, true }, { 'rest', 0.5, true } }
@@ -478,9 +561,9 @@ local function lookMega()
 end
 
 function love.load()
-    if os.getenv('LOOK') then look(); lookMega(); lookSpikes() end
+    if os.getenv('LOOK') then look(); lookMega(); lookSpikes(); lookHide() end
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'hundirse', 'escombros', 'pua', 'carambano', 'nieve_toque', 'nieve_encima', 'nieve_gp',
+    for _, n in ipairs({ 'tapa_pegada', 'hundirse', 'escombros', 'pua', 'carambano', 'nieve_toque', 'nieve_encima', 'nieve_gp',
                          'nieve_techo', 'carambano_techo', 'trampolin', 'pared',
                          'mega_palmada', 'mega_pinzas', 'mega_placa', 'mega_red', 'pinchos_skin' }) do
         if not only or only == n then

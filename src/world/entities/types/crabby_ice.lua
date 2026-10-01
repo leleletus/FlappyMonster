@@ -56,6 +56,8 @@ function Ice:init()
     Crabby.init(self)
     self.cover = self.def.cover or 'spike'
     if self.cover == 'spike' then self.spikeFile = D .. 'spike.png' end
+    -- púa y carámbano encajados 2 px de arte en el caparazón (como la púa del Mega helado)
+    if self.cover == 'spike' or self.cover == 'icicle' then self.topperDy = 2 end
     if self.cover == 'snow' then self.coverFront, self.noPeek = true, true end
 end
 

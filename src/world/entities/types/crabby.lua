@@ -53,9 +53,16 @@ local function addSkin(id, dir, o)
     sk.hid    = img('hid.png')
     sk.lookin = img(o.lookin or 'lookin.png')
     sk.meat   = img(o.meat or 'meat.png')
+    -- inset[img] = filas vacías ARRIBA del cuadro (los de hundirse del helado conservan el lienzo
+    -- 18x8 y van bajando: sin esto la tapa flotaba sobre el caparazón; ver Crabby:headH)
+    sk.inset = {}
     if o.sink then
         sk.hideIn = {}
-        for i = 1, o.sink do sk.hideIn[i] = img('sink' .. i .. '.png') end
+        for i = 1, o.sink do
+            sk.hideIn[i] = img('sink' .. i .. '.png')
+            sk.inset[sk.hideIn[i]] = i - 1
+        end
+        sk.inset[sk.hid] = 1                              -- (escondido: la tapa apoya en la superficie)
         sk.hideIn[#sk.hideIn + 1] = sk.hid
         sk.hideOut = {}
         for i = o.sink, 1, -1 do sk.hideOut[#sk.hideOut + 1] = sk.hideIn[i] end
@@ -461,6 +468,15 @@ function Crabby:updateCustom(dt, level)
 end
 
 -- ── Pincho (zona de peligro) ─────────────────────────────────────────────────
+-- Alto (px de pantalla) desde los pies hasta donde se apoya la tapa: la parte de arriba
+-- VISIBLE del cuadro actual (sk.inset) menos `topperDy` px de arte (la púa encajada en el
+-- caparazón: Crabby helado). Lo usan el dibujo, la zona de peligro y el trampolín.
+function Crabby:headH(img)
+    img = img or self.currentImg or self.sk.idle2
+    local rows = img:getHeight() - ((self.sk.inset and self.sk.inset[img]) or 0)
+    return math.max(0, rows - (self.topperDy or 0)) * GUMMY_SCALE
+end
+
 function Crabby:getSpikeHitbox()
     if self.spikeProgress <= 0 then return nil end
     -- Clavado en el suelo / levantándose: el pincho no hace daño
@@ -468,7 +484,7 @@ function Crabby:getSpikeHitbox()
     local _, _, hitW, hitMaxH = self:spikeDims()
     local hitH = hitMaxH * self.spikeProgress
     if hitH < 1 then return nil end
-    local spriteVisH = (self.currentImg or self.sk.idle2):getHeight() * GUMMY_SCALE
+    local spriteVisH = self:headH()
     local sx = self.x - hitW / 2
     if (Crawler.onWall(self) and self.cattached) or Crawler.turning(self) then
         -- En la pared (o girando): la misma caja "encima de la cabeza", girada
@@ -639,8 +655,9 @@ function Crabby:renderBody(camX, camY)
         -- Entero, igual que un pincho que cae clavado (la punta dentro del suelo)
         self:drawStuckTopper(math.floor(self.x - camX), feetY + spriteVisH)
     elseif self.spikeProgress > 0 and not self.coverFront then
-        if flipped then self:drawTopper(drawX, feetY + spriteVisH, self.spikeProgress, 1)
-        else            self:drawTopper(drawX, feetY - spriteVisH, self.spikeProgress, -1) end
+        local headH = self:headH(img) * math.abs(by)              -- (sigue a la cabeza: respira, se hunde)
+        if flipped then self:drawTopper(drawX, feetY + headH, self.spikeProgress, 1)
+        else            self:drawTopper(drawX, feetY - headH, self.spikeProgress, -1) end
     end
 
     love.graphics.setColor(1, 1, 1, 1)

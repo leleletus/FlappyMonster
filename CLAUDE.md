@@ -505,6 +505,11 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   Crabby images live in a SKIN (`Crabby.SKINS.normal|ice`, `self.sk`, class field `skinId`; network image
   names are prefixed per skin). The ice skin (`assets/images/crabby_ice/` from `tools/ui/make_icecrabby_sprites.py`
   = the Icy Mega Crabby body at Crabby scale) SINKS row by row when hiding (`sink1..8.png`, same total time).
+  The sink frames keep the 18x8 canvas with EMPTY top rows (`sk.inset[img]` = rows; hid = 1), so every cover
+  (drawing, hazard box, trampoline box) sits on the VISIBLE shell top via `Crabby:headH(img)` (minus `topperDy`
+  art px: the ice spike and icicle sit 2 px into the shell, like the Mega's spike); before, the cover floated up to
+  32 px above the sinking shell. Harness `icecrabby_rules tapa_pegada` (measures the opaque top in the PNGs;
+  `LOOK=1` → icecrabby_esconderse.png).
   Covers (on floor, walls and ceiling): ice spike = the normal spike (kills); icicle = the Snowball Boss icicle,
   always an icicle, hazard `effect='hurt', dmg=2` + `onHurtPlayer` recoil (Interactions 'hurt' now takes the
   damage from `hb.dmg`), drops from the ceiling like the spike (2 HP) and sticks; trampoline = the Crabby

@@ -52,7 +52,7 @@ end
 
 -- Caja del cojín (encima del caparazón, o debajo si está en el techo)
 function TC:trampBox()
-    local imgH = (self.currentImg and self.currentImg:getHeight() or 1) * S
+    local imgH = self:headH()                         -- (parte de arriba visible del caparazón)
     local h = TRAMP_H * self.spikeProgress
     if (Crawler.onWall(self) and self.cattached) or Crawler.turning(self) then
         -- En la pared (o girando en una esquina): la misma caja "encima de la cabeza", girada
