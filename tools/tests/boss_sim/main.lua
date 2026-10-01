@@ -350,7 +350,9 @@ function love.load()
             print(('%-10s %s  %s'):format(name, ok and 'OK   ' or 'FALLA', msg))
             if not ok then fails = fails + 1 end
         end
-        local need = { 'hop', 'shoot', 'windup', 'roll', 'dizzy', 'rest', 'leap_wind', 'leap', 'leap_land',
+        -- ('rest' no: con el ritmo rápido el arnés la golpea antes de acabar una tanda; lo
+        -- comprueba snowboss_rules, caso descansa)
+        local need = { 'hop', 'shoot', 'windup', 'roll', 'dizzy', 'leap_wind', 'leap', 'leap_land',
                        'slam_up', 'slam_land', 'soaked', 'frozen', 'phase_up' }
         local miss = {}
         for _, n in ipairs(need) do if not seen[n] then miss[#miss + 1] = n end end

@@ -44,35 +44,42 @@ local T = TILE_PX
 local GRAV = 2200
 
 -- Duraciones / fuerzas
-local IDLE_T     = { 0.7, 0.55, 0.45 }  -- pausa entre los 2 ataques de una tanda
-local REST_T     = { 1.6, 1.3, 1.1 }    -- descanso tras cada tanda de 2
+-- RITMO (por fase: normal / media / agresiva). La fase media tiene el ritmo que antes era
+-- el de la fase 3; la normal va más rápida que antes y la agresiva, mucho más
+local IDLE_T     = { 0.5, 0.4, 0.22 }   -- pausa entre los ataques de una tanda
+local REST_T     = { 1.15, 0.9, 0.5 }   -- descanso tras cada tanda
+local STREAK     = { 2, 2, 3 }          -- ataques seguidos por tanda
+local SHOTS      = { 4, 6, 8 }          -- bolas por ráfaga
 local HOP_VY     = 900                  -- (bajito: no se sube a las plataformas de la arena)
 local HOP_AIR    = 0.82                 -- s en el aire (2·HOP_VY/GRAV) para apuntar el salto
-local LAND_T     = 0.35
-local LEAP_WIND  = 0.7                  -- aviso del salto a plataforma (marca donde cae)
-local LEAP_LAND  = 1.2                  -- se queda quieta tras caer (los carámbanos caen)
+local LAND_T     = { 0.3, 0.24, 0.16 }
+local LEAP_WIND  = { 0.55, 0.45, 0.32 } -- aviso del salto a plataforma (marca donde cae)
+local LEAP_LAND  = { 0.8, 0.6, 0.42 }   -- se queda quieta tras caer (los carámbanos caen)
+local ESCAPE_WIND = 0.5                 -- empapada: coge impulso antes del gran salto fuera del agua
+local ESCAPE_UP  = 2.6                  -- casillas sobre lo más alto del gran salto para salir
 local LEAP_UP    = 1.4                  -- casillas por encima del punto más alto del salto
-local SHOOT_WIND = 0.5
-local SHOOT_GAP  = 0.22
-local WINDUP_T   = { 0.8, 0.7, 0.6 }
-local ROLL_SPD   = { 560, 680, 780 }
+local SHOOT_WIND = { 0.4, 0.32, 0.24 }
+local SHOOT_GAP  = { 0.18, 0.15, 0.11 }
+local WINDUP_T   = { 0.6, 0.5, 0.34 }
+local ROLL_SPD   = { 620, 760, 900 }
 local ROLL_ACC   = 2600
 local ROLL_MAX_T = { 3.2, 5.0, 7.0 }    -- s empujando antes de dejarse deslizar (le dan para sus rebotes)
 local BOUNCES    = { 0, 1, 2 }          -- rebotes por ataque rodando (el último choque la marea)
 local DIZZY_T    = 2.6
 local DAZE_T     = 1.4                  -- Congelador seca: solo aturdida
 local FROZEN_T   = 4.5                  -- Congelador empapada: congelada
-local RECOVER_T  = 0.8
+local RECOVER_T  = { 0.6, 0.5, 0.32 }
 local SLAM_H     = 480                  -- px que sube el gran golpe (menos si no cabe bajo el techo)
-local SLAM_HOLD  = 0.35
+local SLAM_HOLD  = { 0.3, 0.28, 0.2 }
 local SLAM_FALL  = 1700
-local SLAM_LAND  = 0.8
+local SLAM_LAND  = { 0.6, 0.5, 0.38 }
 local SHOCK_SPD  = 560
 local SHOCK_LIFE = 1.35
 local PHASE_T    = 1.8
 local CRASH_SPD  = 240                  -- px/s mínimos para marearse al chocar
 local CRASH_RUN  = 2.5                  -- casillas rodadas (desde el último choque) para marearse
-local LAND_CRACK, SLAM_CRACK = 1, 4     -- estados de hielo fino que rompe al caer (el gran golpe lo rompe)
+local LAND_CRACK, SLAM_CRACK = 4, 4     -- estados de hielo fino que rompe al caer: pesa, lo rompe SIEMPRE
+local ROLL_WEAR  = 0.15                 -- s rodando / deslizando sobre hielo fino por cada estado que lo gasta
 local MAX_CRASHES = 8                   -- choques como mucho por ataque rodando (seguro: siempre acaba)
 local ICE_DECEL  = 260                  -- frenada deslizando sobre hielo (px/s²)
 local SNOW_DECEL = 2600                 -- y sobre lo demás
@@ -190,11 +197,15 @@ local function solidTile(level, x, y)
 end
 
 local MAX_STEP = 16
+-- `self.passY` (saltos a una marca): atraviesa plataformas y bloques por el camino (de lado y
+-- hacia arriba) y solo se posa en una cara superior a la altura de la marca o más abajo;
+-- así llega a donde marcó (antes se quedaba enganchada en las plataformas de en medio)
 function Snow:move(level, dx, dy)
     local hw, hh = self.outerW / 2, self.outerH / 2
     local x, y = self.x + dx, self.y
     local hitX, hitDef
-    if dx ~= 0 then
+    local pass = self.passY
+    if dx ~= 0 and not pass then
         local edge = (dx > 0) and (x + hw) or (x - hw)
         local face
         for _, py in ipairs(level:samples(y - hh + 4, y + hh - 4)) do
@@ -231,10 +242,11 @@ function Snow:move(level, dx, dy)
                     local o, b = level:bodyAt(px, f1, self)
                     if o and f0 <= b.y + 0.5 then top = b.y end
                 end
+                if top and pass and top < pass - 8 then top = nil end      -- (más arriba que la marca: la atraviesa)
                 if top and (not stop or top < stop) then stop = top end
             end
             if stop then y = stop - hh; self.vy = 0; self.onGround = true; break end
-        else
+        elseif not pass then
             local e = ny - hh
             for _, px in ipairs(cols) do
                 local f
@@ -304,9 +316,35 @@ function Snow:cellsUnder(level)
     return out
 end
 
+-- Agrieta el hielo fino bajo ella `n` estados. Es PESADA: si una celda se rompe, se rompe
+-- todo lo que pisa (si no, una celda vecina la sostenía y casi nunca caía al agua)
 function Snow:crackUnder(level, n)
+    local cells, broke = self:cellsUnder(level), false
+    for _, cr in ipairs(cells) do
+        if level:getDef(cr[1], cr[2]).thinIce then
+            level:crackIce(cr[1], cr[2], n, 'pound')
+            if not level:getDef(cr[1], cr[2]).thinIce then broke = true end
+        end
+    end
+    if broke then
+        for _, cr in ipairs(cells) do
+            if level:getDef(cr[1], cr[2]).thinIce then level:crackIce(cr[1], cr[2], 4, 'pound') end
+        end
+    end
+end
+
+-- Rodando / deslizando sobre hielo fino lo va gastando (un estado cada ROLL_WEAR s)
+function Snow:wearIce(level, dt)
+    if not self.onGround then return end
+    local on = false
     for _, cr in ipairs(self:cellsUnder(level)) do
-        if level:getDef(cr[1], cr[2]).thinIce then level:crackIce(cr[1], cr[2], n, 'pound') end
+        if level:getDef(cr[1], cr[2]).thinIce then on = true end
+    end
+    if not on then self.wearT = 0; return end
+    self.wearT = (self.wearT or 0) + dt
+    if self.wearT >= ROLL_WEAR then
+        self.wearT = 0
+        self:crackUnder(level, 1)
     end
 end
 
@@ -533,6 +571,11 @@ end
 function Snow:regrowLake(level, dt, now)
     local thin = TileTypes.byName.thin_ice
     local any = false
+    -- Mientras ella esté en el agua (empapada, cogiendo impulso o saltando fuera) el hielo
+    -- NO se rehace; vuelve cuando ya ha salido (dryT: s fuera del agua)
+    local wet = self:inWater(level) or self.state == 'soaked' or self.escaping
+    if wet then self.dryT = 0 else self.dryT = (self.dryT or 99) + dt end
+    if not now and (self.dryT or 99) < 0.6 then return end
     for _, cr in ipairs(self.lake or {}) do
         local d = level:getDef(cr[1], cr[2])
         if d.thinIce or d.collision == 'solid' then
@@ -562,6 +605,15 @@ function Snow:checkSoak(level)
     self:stopRoll()
     self.vx = 0
     self:enter('soaked')
+    -- el agujero, a su medida: rompe el hielo fino que tiene encima o a los lados (si no,
+    -- quedaba encajada bajo el hielo y no podía salir)
+    local hw = self.outerW / 2 + T / 4
+    for _, cr in ipairs(self.lake or {}) do
+        local cx0, cx1 = (cr[1] - 1) * T, cr[1] * T
+        if cx1 > self.x - hw and cx0 < self.x + hw and level:getDef(cr[1], cr[2]).thinIce then
+            level:crackIce(cr[1], cr[2], 4, 'pound')
+        end
+    end
     Sound.play('waterSplash', 0.7)
     Sound.play('snowDizzy', 0.9)
     Entity.emitFx('snow_puff', self.x, self:feetY() - 20)
@@ -588,6 +640,10 @@ end
 
 function Snow:enter(st)
     self.state, self.deadTimer = st, 0
+    -- (un salto cortado — congelada en el aire, cambio de fase... — no deja atrás el
+    -- atravesar plataformas ni el "saliendo del agua", que impedía rehacer el hielo)
+    if st ~= 'leap' then self.passY = nil end
+    if st ~= 'leap' and st ~= 'leap_wind' and st ~= 'leap_land' then self.escaping = nil end
 end
 
 -- Sitios donde puede posarse (saltos a plataforma y para salir del agua): bordes de
@@ -610,7 +666,10 @@ function Snow:spots(level, dry)
                         local ok = true
                         for _, px in ipairs({ x - hw + 6, x, x + hw - 6 }) do
                             if not level:collisionAt(px, top + 2, true) or level:collisionAt(px, top - 2, true) then ok = false; break end
-                            if dry and (level:getDefAt(px, top + 2).thinIce or level:liquidAt(px, top + 2)) then ok = false; break end
+                            -- (seco: ni hielo fino / agua debajo NI agua encima — el fondo de la poza
+                            -- contaba como seco y "salía" otra vez al fondo: se quedaba atascada)
+                            if dry and (level:getDefAt(px, top + 2).thinIce or level:liquidAt(px, top + 2)
+                                        or level:liquidAt(px, top - 8)) then ok = false; break end
                         end
                         if ok then
                             for _, py in ipairs({ top - h + 6, top - h / 2, top - 8 }) do
@@ -661,6 +720,11 @@ function Snow:pickLeap(level, pa, dry)
     return best
 end
 
+function Snow:leapWind()
+    if self.escaping then return ESCAPE_WIND end
+    return LEAP_WIND[self.phase or 1]
+end
+
 function Snow:startLeap(level, pa, dry)
     local s = self:pickLeap(level, pa, dry)
     if not s then return false end
@@ -683,7 +747,7 @@ function Snow:nextAttack(level)
         return
     end
     -- Tanda de 2 ataques y descanso
-    if self.streak >= 2 then
+    if self.streak >= STREAK[self.phase] then
         self.streak = 0
         self:enter('rest')
         return
@@ -706,7 +770,7 @@ function Snow:nextAttack(level)
     elseif a == 'leap' then
         if not self:startLeap(level, pa) then self:enter('idle') end
     elseif a == 'shoot' then
-        self.shots = (self.phase == 3) and 5 or 3
+        self.shots = SHOTS[self.phase]
         self.shotN = 0
         self:enter('shoot')
     elseif a == 'roll' then
@@ -753,12 +817,22 @@ function Snow:updateProjectiles(level, dt)
         local nx, ny = b.x + b.vx * dt, b.y + b.vy * dt
         local gone = b.t > 4 or ny > level.heightPx
         if not gone then
-            local landT, landY
-            if b.vy > 0 then landT, landY = level:landingCross(nx, b.y + 10, ny + 10) end
-            if landT or level:collisionAt(nx, ny) then
+            -- Atraviesan las PLATAFORMAS (tiles traspasables: ni las frenan ni las rompen);
+            -- las para lo sólido de verdad (suelo, repisas, paredes) o salir de la zona
+            local floorY
+            if level:collisionAt(nx, ny + 10) then                       -- (solo sólidos: sin 'oneway')
+                floorY = math.floor((ny + 10) / T) * T
+                local d = level:getDefAt(nx, ny + 10)
+                if d.hitbox then floorY = floorY + d.hitbox.y * T end
+            end
+            if self.zone then
+                local zx0, zx1 = self:zoneBounds()
+                if nx < zx0 or nx > zx1 then gone = true end
+            end
+            if floorY then
                 gone = true
                 Sound.play('snowSplat')
-                Entity.emitFx('snow_puff', nx, landY and (landY - 10) or b.y)
+                Entity.emitFx('snow_puff', nx, floorY - 10)
             end
         end
         if gone then table.remove(self.proj, i) else b.x, b.y = nx, ny end
@@ -869,9 +943,8 @@ function Snow:thaw()
     self.vx = 0
 end
 
-function Snow:onPlayerDeath(pa)
-    if self:isActive() then Sound.play('snowLaugh') end
-end
+-- (solo se ríe en su entrada: reírse de las muertes es cosa del Espejo)
+function Snow:onPlayerDeath(pa) end
 
 -- Aterriza (salto bajito, salto a plataforma, gran golpe): polvo, grietas, aplasta y
 -- sacude los carámbanos de encima
@@ -918,16 +991,31 @@ function Snow:updateBoss(dt, level)
 
     elseif st == 'land' then
         self:physics(level, dt); self:friction(level, dt)
-        if t >= LAND_T then self:enter('idle') end
+        if t >= LAND_T[self.phase] then self:enter('idle') end
 
     elseif st == 'leap_wind' then
         -- Se agacha (la marca de donde caerá ya se ve) y salta
         self:physics(level, dt); self:friction(level, dt)
         self.facing = (self.landX >= self.x) and 1 or -1
-        if t >= (self.escaping and 0.3 or LEAP_WIND) then
-            self:jumpTo(self.landX, self.landY)
-            Sound.play('snowLand', 1.4, 0.6)
+        if self.escaping and (self.lastSplash or -1) < math.floor(t / 0.15) then
+            self.lastSplash = math.floor(t / 0.15)                -- (chapotea cogiendo impulso)
+            Entity.emitFx('snow_puff', self.x + rand(-1, 1) * self.outerW * 0.4, self:feetY() - 10)
+        end
+        if t >= self:leapWind() then
+            self.passY = self.landY
+            if self.escaping then
+                -- GRAN SALTO pesado fuera del agua (atraviesa el hielo y las plataformas)
+                self:jumpTo(self.landX, self.landY, ESCAPE_UP)
+                Sound.play('waterSplash', 0.6)
+                Sound.play('snowLand', 0.7, 0.9)
+                Entity.emitFx('shake_small', self.x, self.y)
+                Entity.emitFx('snow_crash', self.x, self:feetY() - 20)
+            else
+                self:jumpTo(self.landX, self.landY)
+                Sound.play('snowLand', 1.4, 0.6)
+            end
             Sound.play('snowSpit', 0.5, 0.5)
+            self.lastSplash = nil
             self:enter('leap')
         end
 
@@ -935,25 +1023,27 @@ function Snow:updateBoss(dt, level)
         self:physics(level, dt)
         if self.onGround and self.vy >= 0 and t > 0.1 then
             self.vx = 0
+            self.passY = nil
             self:enter('leap_land')
-            Sound.play('snowLand', 0.9)
-            Entity.emitFx('shake_small', self.x, self.y)
+            Sound.play('snowLand', self.escaping and 0.7 or 0.9)
+            Entity.emitFx(self.escaping and 'shake_big' or 'shake_small', self.x, self.y)
             self:landed(level, LAND_CRACK)
             self.escaping = nil
         end
 
     elseif st == 'leap_land' then
         self:physics(level, dt); self:friction(level, dt)
-        if t >= LEAP_LAND then self:enter('idle') end
+        if t >= LEAP_LAND[self.phase] then self:enter('idle') end
 
     elseif st == 'shoot' then
         self:physics(level, dt); self:friction(level, dt)
-        local due = math.floor((t - SHOOT_WIND) / SHOOT_GAP) + 1
-        while t >= SHOOT_WIND and self.shotN < math.min(self.shots, due) do
+        local sw, sg = SHOOT_WIND[self.phase], SHOOT_GAP[self.phase]
+        local due = math.floor((t - sw) / sg) + 1
+        while t >= sw and self.shotN < math.min(self.shots, due) do
             self.shotN = self.shotN + 1
             self:spit(level)
         end
-        if t >= SHOOT_WIND + self.shots * SHOOT_GAP + 0.3 then self:enter('idle') end
+        if t >= sw + self.shots * sg + 0.2 then self:enter('idle') end
 
     elseif st == 'windup' then
         self:physics(level, dt); self:friction(level, dt)
@@ -978,6 +1068,7 @@ function Snow:updateBoss(dt, level)
         local hit, def = self:physics(level, dt)
         self.rollRun = (self.rollRun or 0) + math.abs(self.x - x0)
         self:hitPlayers(level)
+        self:wearIce(level, dt)
         if hit then self:crash(level, def) end
         if self.state == 'roll' then
             self.rollLeft = (self.rollLeft or 0) - dt
@@ -989,6 +1080,7 @@ function Snow:updateBoss(dt, level)
         local hit, def = self:physics(level, dt)
         self.rollRun = (self.rollRun or 0) + math.abs(self.x - x0)
         self:friction(level, dt)
+        self:wearIce(level, dt)
         if math.abs(self.vx) > 200 then self:hitPlayers(level) end
         if hit then self:crash(level, def) end
         if self.state == 'slide' and self.vx == 0 then self:enter('recover') end
@@ -1012,7 +1104,7 @@ function Snow:updateBoss(dt, level)
 
     elseif st == 'recover' then
         self:physics(level, dt); self:friction(level, dt)
-        if t >= RECOVER_T then self.streak = 0; self:enter('idle') end
+        if t >= RECOVER_T[self.phase] then self.streak = 0; self:enter('idle') end
 
     elseif st == 'slam_up' then
         self:physics(level, dt)
@@ -1022,7 +1114,7 @@ function Snow:updateBoss(dt, level)
         end
 
     elseif st == 'slam_hold' then
-        if t >= SLAM_HOLD then
+        if t >= SLAM_HOLD[self.phase] then
             self.vy = SLAM_FALL
             self:enter('slam_fall')
         end
@@ -1046,7 +1138,7 @@ function Snow:updateBoss(dt, level)
 
     elseif st == 'slam_land' then
         self:physics(level, dt)
-        if t >= SLAM_LAND then self:enter('idle') end
+        if t >= SLAM_LAND[self.phase] then self:enter('idle') end
 
     elseif st == 'phase_up' then
         -- Ruge, suelta nieve y ENCOGE (la escala va en el snapshot)
@@ -1371,9 +1463,10 @@ function Snow:pose()
     if st == 'windup' or st == 'leap_wind' then return 'body', b + 3 end
     if st == 'leap' then return 'body', b + 4 end
     if st == 'shoot' then
-        local u = t - SHOOT_WIND
+        local ph = self.phase or 1
+        local u = t - SHOOT_WIND[ph]
         if u < 0 then return 'body', b + 2 end
-        return 'body', b + ((u % SHOOT_GAP) < SHOOT_GAP * 0.6 and 4 or 1)
+        return 'body', b + ((u % SHOOT_GAP[ph]) < SHOOT_GAP[ph] * 0.6 and 4 or 1)
     end
     if st == 'phase_up' then return 'body', 8 end
     if st == 'slam_hold' then return 'body', b + 4 end
@@ -1400,7 +1493,7 @@ function Snow:drawBody(camX, camY, alpha)
     -- temblor (carga, fase, grietas) y saltitos de risa
     local sh = 0
     if st == 'windup' then sh = 2 + math.floor(t / WINDUP_T[self.phase or 1] * 3) end
-    if st == 'leap_wind' then sh = 1 + math.floor(math.min(1, t / LEAP_WIND) * 2) end
+    if st == 'leap_wind' then sh = 1 + math.floor(math.min(1, t / self:leapWind()) * 2) end
     if st == 'phase_up' or st == 'dying_crack' then sh = 3 end
     if (self.phase or 1) == 3 and st == 'idle' then sh = 1 end
     if st == 'intro' and t >= SPIT_WIND and t < SPIT_AT then                    -- coge aire: tiembla cada vez más
@@ -1483,7 +1576,7 @@ function Snow:render(camX, camY)
     end
     -- Salto a plataforma: MARCA donde va a caer (parpadea, se cierra al acercarse)
     if st == 'leap_wind' or st == 'leap' then
-        local k = (st == 'leap') and 1 or math.min(1, t / LEAP_WIND)
+        local k = (st == 'leap') and 1 or math.min(1, t / self:leapWind())
         local w = math.floor(self.outerW * (1.3 - 0.4 * k))
         local x0 = math.floor(self.landX - camX - w / 2)
         local y0 = math.floor(self.landY - camY - 8)

@@ -18,7 +18,16 @@
 --   salto_plataforma  fase 2, jugador en una plataforma media: la bola cae en ESA plataforma
 --   salto_debajo  saltando desde justo debajo de una plataforma: la atraviesa y se posa encima
 --   empapada      el hielo de una bolsa se rompe bajo ella: cae al agua, EMPAPADA (vulnerable),
---                 sale de un salto a lo seco y el hielo se rehace solo
+--                 sale de un GRAN salto a lo seco (no al fondo de la poza: se quedaba atascada) y
+--                 el hielo se rehace solo DESPUÉS de que salga (nunca con ella en el agua)
+--   romper        cae de un salto sobre una bolsa de hielo fino: la rompe y cae al agua (siempre)
+--   bola_plataforma una bola de nieve atraviesa una plataforma y solo la para el suelo de la arena
+--   salto_bajar   desde la plataforma de arriba, marca en el suelo: llega al suelo (no se queda
+--                 en la plataforma de en medio)
+--   risa          no se ríe cuando muere un jugador (eso es solo del Espejo)
+--   descansa      sin que nadie la golpee, 14 s por fase: el tiempo parada (pausas, aterrizajes,
+--                 descansos) baja de fase en fase y en la 3 es < 30 %. (Tras rodar se recupera y la
+--                 tanda vuelve a empezar: en la fase 1 casi nunca llega a descansar)
 --   fase3_aparece arena real: Activadores del suelo y Congeladores no están hasta la fase 3;
 --                 en la fase 3 sale el Activador (en vez de hielo) y el Congelador baja
 --   congelada     fase 3, empapada en la bolsa + su Activador → su Congelador la CONGELA;
@@ -306,9 +315,9 @@ function cases.rueda_fin()
         ('acaba a los %.1f s en %s (choques %d)'):format(t, boss.state, boss.crashes or 0))
 end
 
--- Arena real: zona 75-98, bolsas 79-81 / 92-94, plataformas medias (fila 8) 82-85 / 88-91,
--- de arriba (fila 6) 85-88, laterales (fila 10) 75-78 / 95-98; Activadores 83 y 90 (fila 13),
--- Congeladores (80,3) y (93,3)
+-- Arena real (la del usuario): zona 75-98 filas 4-14, bolsas de hielo fino 79-81 / 92-94 (fila 13,
+-- agua debajo), plataformas traspasables medias (fila 8) 79-82 / 91-94 y de arriba (fila 7) 85-88,
+-- repisas de nieve a los lados; Activadores 83 y 90 (fila 13), Congeladores (80,5) y (93,5)
 local function leapUntilLanded(level, es, boss)
     local t = 0
     step(level, es, 6, function()
@@ -323,12 +332,12 @@ function cases.salto_plataforma()
     fight(boss)
     boss.phase = 2; boss:setScale(8)
     putBoss(boss, 95)
-    local pa = PlayerAdventure:new(83 * T, 7 * T - 60)           -- en la plataforma media izquierda
+    local pa = PlayerAdventure:new(80.5 * T, 7 * T - 60)         -- en la plataforma media izquierda
     level.players = { pa }
     for _ = 1, 30 do pa:update(1 / 60, level) end
     local ok0 = boss:startLeap(level, pa)
     local t = leapUntilLanded(level, es, boss)
-    local onPlat = math.abs(boss:feetY() - 7 * T) < 2 and boss.x > 81 * T and boss.x < 85 * T + 1
+    local onPlat = math.abs(boss:feetY() - 7 * T) < 2 and boss.x > 78 * T and boss.x < 82 * T + 1
     check('salto_plataforma', ok0 and onPlat and boss.state == 'leap_land',
         ('marca (%.1f, fila %.2f) · cae en x=%.1f casillas, pies a la fila %.2f en %.1f s (%s)'):format(
             boss.landX / T, boss.landY / T, boss.x / T, boss:feetY() / T, t, boss.state))
@@ -339,13 +348,13 @@ function cases.salto_debajo()
     fight(boss)
     boss.phase = 2; boss:setScale(8)
     putBoss(boss, 87)                                             -- debajo de la plataforma de arriba
-    local pa = PlayerAdventure:new(86.5 * T, 5 * T - 60)          -- encima de ella
+    local pa = PlayerAdventure:new(86.5 * T, 6 * T - 60)          -- encima de ella
     level.players = { pa }
     for _ = 1, 30 do pa:update(1 / 60, level) end
     boss:startLeap(level, pa)
     leapUntilLanded(level, es, boss)
-    check('salto_debajo', math.abs(boss:feetY() - 5 * T) < 2,
-        ('desde debajo: pies a la fila %.2f (plataforma de arriba: 5)'):format(boss:feetY() / T))
+    check('salto_debajo', math.abs(boss:feetY() - 6 * T) < 2,
+        ('desde debajo: pies a la fila %.2f (plataforma de arriba: 6)'):format(boss:feetY() / T))
 end
 
 function cases.empapada()
@@ -357,18 +366,109 @@ function cases.empapada()
     local soaked = step(level, es, 1.5, function() return boss.state == 'soaked' end)
     local vuln = boss:isVulnerable()
     local t, out = 0, false
+    local last
+    local wetHeal = false
     step(level, es, 10, function()
         t = t + 1 / 60
+        if boss:inWater(level) and (level:getDef(79, 13).thinIce or level:getDef(80, 13).thinIce) then wetHeal = true end
+        if os.getenv('TRACE') and boss.state ~= last then          -- (TRACE=1: estados de la bola)
+            last = boss.state
+            print(('      t=%.2f %s x=%.1f pies=%.2f vy=%.0f agua=%s marca=%s'):format(t, boss.state, boss.x / T,
+                boss:feetY() / T, boss.vy or 0, tostring(boss:inWater(level)), boss.landX and ('%.1f,%.2f'):format(boss.landX / T, boss.landY / T) or '-'))
+        end
         if not boss:inWater(level) and boss.onGround and (boss.state == 'leap_land' or boss.state == 'land' or boss.state == 'idle') then
             out = true; return true
         end
     end)
+    -- (mientras está en el agua el hielo no vuelve; lo comprueba wetHeal)
     step(level, es, 4.5)
     local lake = level:getDef(79, 13).name .. ',' .. level:getDef(80, 13).name .. ',' .. level:getDef(81, 13).name
     local healed = level:getDef(79, 13).thinIce and level:getDef(80, 13).thinIce and level:getDef(81, 13).thinIce
-    check('empapada', soaked == true and vuln and out and healed,
-        ('cae al agua: empapada=%s vulnerable=%s · sale en %.1f s=%s (x=%.1f) · lago: %s'):format(
-            tostring(soaked), tostring(vuln), t, tostring(out), boss.x / T, lake))
+    check('empapada', soaked == true and vuln and out and healed and not wetHeal,
+        ('cae al agua: empapada=%s vulnerable=%s · sale en %.1f s=%s (x=%.1f) · lago: %s · se rehízo con ella dentro=%s'):format(
+            tostring(soaked), tostring(vuln), t, tostring(out), boss.x / T, lake, tostring(wetHeal)))
+end
+
+function cases.romper()
+    local level, es, boss = lago()
+    fight(boss)
+    boss:findLake(level)
+    boss.x, boss.y, boss.vx, boss.vy, boss.onGround = 80 * T, 9 * T, 0, 0, false
+    boss:enter('hop')
+    local soaked = step(level, es, 3, function() return boss.state == 'soaked' end)
+    check('romper', soaked == true,
+        ('cae sobre la bolsa: %s (hielo: %s)'):format(boss.state, level:getDef(80, 13).name))
+end
+
+function cases.bola_plataforma()
+    local level, es, boss = lago()
+    fight(boss)
+    -- una bola cayendo en vertical sobre la plataforma media izquierda (fila 8, 79-82)
+    boss.proj = { { id = 1, x = 80.5 * T, y = 5 * T, vx = 0, vy = 200, t = 0 } }
+    local minY, gone = 0, false
+    step(level, es, 2, function()
+        local b = boss.proj[1]
+        if b then minY = math.max(minY, b.y) else gone = true; return true end
+    end)
+    check('bola_plataforma', gone and minY > 12 * T - 30 and minY < 12 * T + 4,
+        ('la bola llega a y=%.2f casillas (plataforma en la 8; la cara del suelo en la 12.00)'):format(minY / T))
+end
+
+function cases.salto_bajar()
+    local level, es, boss = lago()
+    fight(boss)
+    boss.phase = 2; boss:setScale(8)
+    boss.x, boss.y = 86.5 * T, 6 * T - boss.outerH / 2          -- encima de la plataforma de arriba
+    boss.vy, boss.onGround = 0, true
+    local pa = PlayerAdventure:new(81 * T, 12 * T - 60)          -- en el suelo, bajo la plataforma media
+    level.players = { pa }
+    for _ = 1, 30 do pa:update(1 / 60, level) end
+    boss.landX, boss.landY = math.floor(81 * T), math.floor(12 * T)
+    boss:enter('leap_wind')
+    leapUntilLanded(level, es, boss)
+    check('salto_bajar', math.abs(boss:feetY() - 12 * T) < 2,
+        ('marca en el suelo (fila 12): pies a la fila %.2f (%s)'):format(boss:feetY() / T, boss.state))
+end
+
+function cases.descansa()
+    local res = {}
+    for ph = 1, 3 do
+        local level, es, boss = lago()
+        fight(boss)
+        boss.phase = ph; boss:setScale(({ 10, 8, 6 })[ph])
+        local pa = PlayerAdventure:new(77 * T, 12 * T - 60)
+        level.players = { pa }
+        local last, attacks, firstRest, still, total = nil, 0, nil, 0, 0
+        local PAUSE = { idle = true, rest = true, recover = true, land = true, leap_land = true, slam_land = true }
+        local ATT = { hop = true, leap_wind = true, shoot = true, windup = true, slam_up = true }
+        step(level, es, 14, function()
+            pa.x, pa.y, pa.vx, pa.vy, pa.invT = 77 * T, 12 * T - 60, 0, 0, 9          -- (quieto e intocable)
+            total = total + 1
+            if PAUSE[boss.state] then still = still + 1 end
+            if boss.state ~= last then
+                last = boss.state
+                if ATT[boss.state] and not firstRest then attacks = attacks + 1 end
+                if boss.state == 'rest' and not firstRest then firstRest = attacks end
+            end
+        end)
+        res[ph] = { firstRest = firstRest, still = still / total }
+    end
+    local ok = res[1].still > res[2].still and res[2].still > res[3].still and res[3].still < 0.3
+    check('descansa', ok, ('ataques antes de descansar: %s / %s / %s · tiempo parada: %.0f%% / %.0f%% / %.0f%%'):format(
+        tostring(res[1].firstRest), tostring(res[2].firstRest), tostring(res[3].firstRest),
+        100 * res[1].still, 100 * res[2].still, 100 * res[3].still))
+end
+
+function cases.risa()
+    local level, es, boss = lago()
+    fight(boss)
+    local played = {}
+    local real = Sound
+    Sound = setmetatable({ play = function(n) played[n] = true end }, { __index = function() return function() end end })
+    local pa = PlayerAdventure:new(80 * T, 12 * T - 60)
+    boss:onPlayerDeath(pa)
+    Sound = real
+    check('risa', not played.snowLaugh, ('al morir un jugador: risa=%s'):format(tostring(played.snowLaugh or false)))
 end
 
 local function cryoAt(es, col)
@@ -449,7 +549,8 @@ function love.load(arg)
     local only = os.getenv('CASE')
     for _, n in ipairs({ 'bola', 'carambano', 'carambano_jefe', 'carambano_sacude', 'ola', 'onda_golpe',
                          'rueda_pared', 'rueda_escalon', 'rueda_activa', 'rueda_rompe', 'rueda_nieve', 'rueda_fin',
-                         'salto_plataforma', 'salto_debajo', 'empapada', 'fase3_aparece', 'congelada',
+                         'salto_plataforma', 'salto_debajo', 'empapada', 'romper', 'bola_plataforma', 'salto_bajar',
+                         'risa', 'descansa', 'fase3_aparece', 'congelada',
                          'seca_aturdida', 'encoge' }) do
         if not only or only == n then
             local ok, err = pcall(cases[n])
