@@ -4,6 +4,8 @@
 --                    hacia la cámara y se estampa
 --   snow_cracks.png  fase 3 (agrietada) en todas sus poses: quieta, aplastada, escupiendo,
 --                    cargando, rodando (8 ángulos), mareada, congelada, agrietándose al morir
+--   snow_signal.png  la arena de lago_helado al golpear dos Activadores: chispas hasta lo que
+--                    controlan (la compuerta, el congelador de su pared)
 --   snow_cryo.png    Congeladores: la arena de lago_helado y una sala con todos los casos
 --                    (en el suelo, en el techo, en una pared, flotando en cada dirección)
 --
@@ -190,11 +192,33 @@ local function cryo()
     save(out2, 'snow_cryo_lago.png')
 end
 
+-- Señal de los Activadores: al golpearlos corre un reguero de chispas hasta lo que controlan
+local function signal()
+    local Particles = require 'src/fx/Particles'
+    local level, es, boss = lago()
+    Particles.setLevel(level)
+    local z = boss.zone
+    local camX = math.floor((z.x0 + z.x1) / 2 - WINDOW_W / 2)
+    local camY = math.floor(z.y1 + T - WINDOW_H)
+    if not os.getenv('ONLY_LEFT') then Particles.emit('switch_hit', (83 - 1) * T, (8 - 1) * T) end  -- compuerta
+    Particles.emit('switch_hit', (79 - 1) * T, (9 - 1) * T)      -- congelador izquierdo
+    for _ = 1, 9 do Particles.update(1 / 60) end
+    local out = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
+    love.graphics.setCanvas(out)
+    sky(WINDOW_W, WINDOW_H)
+    level:render(camX, camY)
+    for _, e in ipairs(es) do if e.def.name == 'cryo' then e:render(camX, camY) end end
+    Particles.render(camX, camY)
+    love.graphics.setCanvas()
+    save(out, 'snow_signal.png')
+end
+
 function love.load()
     love.graphics.setDefaultFilter('nearest', 'nearest')
     local only = os.getenv('ONLY')
     if not only or only == 'intro' then intro() end
     if not only or only == 'cracks' then cracks() end
     if not only or only == 'cryo' then cryo() end
+    if not only or only == 'signal' then signal() end
     love.event.quit(0)
 end

@@ -1032,15 +1032,11 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   waves along the floor + falling icicles with a floor shadow warning; hazards 'hurt'), avalanche
   (phase 3, `avalT` 6 s of bouncing). Phases at `phase2`/`phase3` HP fractions → 'phase_up' (roar,
   frost breath, inflates, refreezes broken thin ice of its zone if any; phase 3 buries every activator
-  of the zone with `packed_snow` 37 in the cell below = breakable, `enemySolid=false`). Intro (generic
+  of the zone with `packed_snow` 37 = breakable, solid for everyone). Intro (generic
   `introLength` 4.4): a small ball enters top-left of the zone, bounces on the real surfaces
   (`planIntro`), grows, lands (slam fx), laughs, spits at the camera → screen splat (render-only, from
   the intro clock). Death: dying_crack → dying_burst → dying_flee (releasesZone) → dead. Roll rumble =
-  `Sound.loop('snowRoll', on, x, y)` from render. Arena `tools/levelgen/arenas/jefe_nieve.json` (from
-  `make_jefe_nieve.py`): entry/exit LEDGES (walk in and drop: bots/players never need to jump), ice
-  floor, two snow platforms (row 9) each with an Activator (start OFF = gates down), gates = ON/OFF
-  Blocks at both ends, each Activator linked to TWO Freezers in switch mode (wall one along the floor,
-  ceiling one firing down). Hits on players are applied by the boss itself (bosses use `interact`, so
+  `Sound.loop('snowRoll', on, x, y)` from render. Arena: see ARENA below. Hits on players are applied by the boss itself (bosses use `interact`, so
   hazard boxes are NOT consulted): `Snow:hitWithShots` (SP/server) + `strike(pa, hit, dir)` = { HP, vx, vy,
   ctrlLock, stun }: ball 1 HP + strong push (bomb ball also becomes a lit bomb), icicle 2 HP, snow wave 1 HP
   + push along the wave, `slamWave` on the slam landing = 1 HP + VERY strong push + stun within `SLAM_R`
@@ -1052,7 +1048,22 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   player). Cracks follow every frame: `cracks_body/roll-Sheet.png` from `tools/ui/make_snowboss_cracks.py`
   (reads the CURRENT body/roll sheets — rerun after editing them or cracks-Sheet). Intro spit (render from the
   intro clock): `SPIT_WIND` inhale → `SPIT_AT` mouth open + puff → ball flies to the camera growing →
-  `SPLAT_AT` flash + splat + shake. Harnesses `snowboss_rules`, `snowboss_look`. Level `lago_helado` (`levels_boss.py`, graft copies `links`; `Level.extra`
+  `SPLAT_AT` flash + splat + shake. Harnesses `snowboss_rules`, `snowboss_look`.
+  ROLL END (deterministic): each roll attack gets a time budget `rollLeft` (ROLL_MAX_T, avalanche AVAL_T);
+  bounces only while pushing with budget left; when it runs out → 'slide' with bounces cleared; a crash while
+  sliding, or after `MAX_CRASHES`, always stops (the old bug: bounces stayed 99 after the avalanche → endless).
+  Packed snow is solid for it (it bounces off, never breaks it). ARENA "Pista de hielo" (jefe_nieve.json from
+  `tools/levelgen/arenas/make_jefe_nieve.py`; `--lago` also writes it into lago_helado's columns 72-103, the
+  rest of the level untouched): central GATE (2 ON blocks, `blockLinks` to the floating Activador above it):
+  rolling into the raised gate = dizzy AND `smashGate` toggles its activator (the gate opens: one gate stops one
+  ball). Each platform's Activador fires the wall FREEZER of its side (beam along the track at mid height:
+  freezes the ball, not a standing player; a raised gate cuts it). LAKE = thin ice over water (2 pockets): its
+  hop landings crack 2 stages (`LAND_CRACK`), the slam 4; if it falls into the water (`checkSink`) it freezes
+  (`SINK_T`), then `escapeHop` out and refreezes the lake. After any thaw it is FROST-PROOF `FROST_PROOF` 7 s
+  (blue tint + mist; netPackExtra last field `frostT`): no freezer/lake freeze → no freeze-lock. Phase 2 scale
+  9 (fits under the platforms/Activadores 3 tiles up). Slam waves only on the arena floor; shadows (hop, slam,
+  icicles) on the real surface below (`groundBelow`, `wantsLevel`). Any Activador hit shows a spark trail to
+  everything it controls (`Particles.signal`, from 'switch_hit'; only switch-listening objects). Level `lago_helado` (`levels_boss.py`, graft copies `links`; `Level.extra`
   in `lib.py` = extra JSON keys). Harnesses: `boss_sim LEVEL=tools/levelgen/arenas/jefe_nieve.json`
   (attacks, dizzy, frozen GP = 3, kicked bomb, phases, burial, death order), `boss_intro`, `online_boss`,
   `boss_frames`.

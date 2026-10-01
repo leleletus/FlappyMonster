@@ -221,6 +221,20 @@ function love.load()
                     end
                 end
             end
+            -- compuerta: si va a rodar hacia el jugador con una compuerta BAJADA en medio, la sube
+            if boss.state == 'windup' and pa and not sn.gateUp then
+                for _, b in ipairs(level.switchBlocks or {}) do
+                    local gx = (b.c - 0.5) * TILE_PX
+                    local d = level:getDef(b.c, b.r).switchBlock
+                    if b.src and d and not d.active and (boss.x - gx) * (pa.x - gx) < 0 then
+                        level:hitTile(b.src[1], b.src[2], 'head')
+                        sn.gateUp, sn.gates = true, (sn.gates or 0) + 1
+                        print(('%6.1fs     compuerta subida (Activador %d,%d)'):format(t, b.src[1], b.src[2]))
+                        break
+                    end
+                end
+            end
+            if boss.state ~= 'windup' and boss.state ~= 'roll' then sn.gateUp = nil end
             -- bombas encendidas: patada hacia el jefe
             for _, e in ipairs(ents) do
                 if e.summonOf and e.alive and e.state == 'lit' and e.onGround and not e._kicked then

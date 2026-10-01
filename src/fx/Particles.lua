@@ -35,6 +35,44 @@ end
 
 local function rnd(a, b) return a + math.random() * (b - a) end
 
+-- Señal de un Activador ON/OFF (x, y = esquina de su casilla): un reguero de chispas
+-- corre hasta todo lo que controla (sus Bloques ON/OFF y los objetos conectados:
+-- congeladores, inundaciones...), para que se vea qué hace cada Activador. Solo dibujo.
+local SIGNAL_SPEED = 900
+function Particles.signal(x, y)
+    if not level then return end
+    local T = TILE_PX
+    local c, r = math.floor(x / T + 0.5) + 1, math.floor(y / T + 0.5) + 1
+    local sx, sy = (c - 0.5) * T, (r - 0.5) * T
+    local targets = {}
+    for _, b in ipairs(level.switchBlocks or {}) do
+        if b.src and b.src[1] == c and b.src[2] == r then targets[#targets + 1] = { (b.c - 0.5) * T, (b.r - 0.5) * T } end
+    end
+    for _, l in ipairs(level.links or {}) do
+        if l.col == c and l.row == r then
+            for _, e in ipairs(level.entities or {}) do
+                local pr = e.props
+                -- (solo lo que escucha a su Activador: congelador en modo Activador, inundación 'switch'...)
+                if pr and pr.id == l.to and (pr.mode == nil or pr.mode == 'switch')
+                   and (pr.control == nil or pr.control == 'switch') then
+                    targets[#targets + 1] = { (e.col - 0.5) * T, (e.row - 0.5) * T }
+                end
+            end
+        end
+    end
+    for _, tg in ipairs(targets) do
+        local d = math.sqrt((tg[1] - sx) ^ 2 + (tg[2] - sy) ^ 2)
+        if d > 1 then
+            for i = 1, 9 do
+                local v = SIGNAL_SPEED * (0.55 + i * 0.05)
+                add({ implode = true, sx = sx, sy = sy, tx = tg[1], ty = tg[2], x = sx, y = sy,
+                      life = d / v, size = (i % 3 == 0) and 6 or 4,
+                      col = (i % 2 == 0) and { 1, 0.95, 0.45 } or { 1, 1, 0.9 } })
+            end
+        end
+    end
+end
+
 -- ── Colores del material golpeado ────────────────────────────────────────────
 local FALLBACK = { { 0.45, 0.33, 0.22 }, { 0.6, 0.45, 0.3 }, { 0.35, 0.25, 0.17 } }   -- tierra
 -- Dónde buscar el bloque: debajo (suelo), encima (techo) y a los lados (paredes)
@@ -228,6 +266,7 @@ function Particles.emit(kind, x, y, opts)
             add({ x = x + T / 2 + math.cos(a) * 20, y = y + T / 2 + math.sin(a) * 20,
                   vx = math.cos(a) * 180, vy = math.sin(a) * 180, life = 0.2, size = 4, col = {1, 1, 1}, drag = 6 })
         end
+        Particles.signal(x, y)
     elseif kind == 'puffer_pop' then
         -- Pez globo que se hincha del todo: aro de burbujas que sale
         for i = 1, 14 do

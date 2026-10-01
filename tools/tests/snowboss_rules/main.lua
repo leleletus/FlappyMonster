@@ -9,7 +9,14 @@
 --                 fuerte hacia fuera (y aturdido); lejos o en lo alto, nada
 --   rueda_activa  rodando contra un Activador ON/OFF lo cambia (sus Congeladores disparan)
 --   rueda_rompe   rodando contra bloques rompibles / nieve prensada / hielo: NO los rompe
---   lago_activa   la arena de lago_helado: rodando hacia la pared, el Activador cambia
+--   lago_compuerta  arena de lago_helado: compuerta subida → la bola rodando choca, se marea y
+--                 la compuerta se abre con el golpe (su Activador vuelve a OFF)
+--   lago_congelador el Activador de una plataforma dispara el congelador de su pared: congela a
+--                 la bola en esa mitad; con la compuerta subida no llega a la otra mitad
+--   lago_hundirse   lago roto bajo la bola: cae al agua, se congela, sale de un salto y el lago
+--                 vuelve a helarse
+--   avalancha_fin   la avalancha (fase 3) entre paredes SIEMPRE acaba (antes rebotaba sin fin)
+--   rueda_nieve     rodando choca con la nieve prensada (no la atraviesa ni la rompe)
 --   enterrar      fase 3: nieve prensada en las 8 casillas alrededor de cada Activador,
 --                 solo en las vacías (no toca bloques, agua ni la casilla de un jugador)
 --
@@ -195,26 +202,102 @@ local function lago()
     return level, es, boss
 end
 
-function cases.lago_activa()
+-- Pasos de la simulación con todas las entidades (congeladores...) y el nivel
+local function step(level, es, secs, each)
+    for _ = 1, math.floor(secs * 60) do
+        level.solidBodies = Entities.solidBodies(es)
+        if level.update then level:update(1 / 60) end
+        for _, e in ipairs(es) do if e.alive then e:update(1 / 60, level) end end
+        if each and each() then return true end
+    end
+end
+
+local function putBoss(boss, col)
+    boss.x = (col - 0.5) * T
+    boss.y = 12 * T - boss.outerH / 2
+    boss.vx, boss.vy, boss.onGround = 0, 0, true
+end
+
+function cases.lago_compuerta()
     local level, es, boss = lago()
     fight(boss)
-    local acts = {}
-    for r = 1, level.tileH do for c = 1, level.tileW do
-        local n = level:getDef(c, r).name
-        if n == 'switch_on' or n == 'switch_off' then acts[#acts + 1] = { c, r, n } end
-    end end
-    local out = {}
-    for _, dir in ipairs({ -1, 1 }) do
-        local before = {}
-        for i, a in ipairs(acts) do before[i] = level:getDef(a[1], a[2]).name end
-        rollInto(level, boss, dir)
-        local changed = 0
-        for i, a in ipairs(acts) do if level:getDef(a[1], a[2]).name ~= before[i] then changed = changed + 1 end end
-        out[#out + 1] = changed
-        boss.state = 'idle'
-    end
-    check('lago_activa', out[1] == 1 and out[2] == 1,
-        ('rodando a la izquierda cambia %d activador(es), a la derecha %d'):format(out[1], out[2] or -1))
+    putBoss(boss, 89)
+    level:hitTile(83, 8, 'head')
+    local up = level:getDef(83, 11).name
+    rollInto(level, boss, -1)
+    local st = boss.state
+    local after, act = level:getDef(83, 11).name, level:getDef(83, 8).name
+    check('lago_compuerta', up == 'switchblock_on' and st == 'dizzy' and after == 'switchblock_on_x' and act == 'switch_off',
+        ('compuerta subida=%s · la bola choca → %s · después: compuerta %s, Activador %s'):format(up, st, after, act))
+end
+
+function cases.lago_congelador()
+    local level, es, boss = lago()
+    fight(boss)
+    putBoss(boss, 79)
+    boss.state, boss.deadTimer = 'recover', 0
+    step(level, es, 0.1)                               -- (el congelador apunta el estado inicial)
+    level:hitTile(79, 9, 'head')                       -- Activador del congelador izquierdo
+    local frozen = step(level, es, 2.5, function() return boss.state == 'frozen' end)
+    -- la otra mitad: el congelador izquierdo NO llega más allá de la compuerta subida
+    local level2, es2, boss2 = lago()
+    fight(boss2)
+    putBoss(boss2, 87)
+    boss2.state, boss2.deadTimer = 'recover', 0
+    step(level2, es2, 0.1)
+    level2:hitTile(83, 8, 'head')                      -- compuerta subida
+    level2:hitTile(79, 9, 'head')
+    local frozen2 = step(level2, es2, 2.5, function() return boss2.state == 'frozen' end)
+    check('lago_congelador', frozen == true and not frozen2,
+        ('bola en la mitad izquierda: congelada=%s · al otro lado de la compuerta: congelada=%s'):format(
+            tostring(frozen), tostring(frozen2 or false)))
+end
+
+function cases.lago_hundirse()
+    local level, es, boss = lago()
+    fight(boss)
+    boss:findLake(level)
+    putBoss(boss, 81)
+    boss.x = 80 * T                                    -- encima del lago (columnas 80-81)
+    level:crackIce(80, 13, 4, 'pound'); level:crackIce(81, 13, 4, 'pound')
+    local sank = step(level, es, 1.0, function() return boss.sunk and boss.state == 'frozen' end)
+    local t, out = 0, false
+    step(level, es, 14, function()
+        t = t + 1 / 60
+        if not boss.sunk and boss.state ~= 'hop' and boss.onGround then out = true; return true end
+    end)
+    local lake = level:getDef(80, 13).name .. ',' .. level:getDef(81, 13).name
+    check('lago_hundirse', sank == true and out and lake == 'thin_ice,thin_ice' and math.abs(boss.x - 80 * T) > 2 * T,
+        ('cae al agua y se congela=%s · sale en %.1f s=%s, a %.1f casillas · lago: %s'):format(
+            tostring(sank), t, tostring(out), math.abs(boss.x - 80 * T) / T, lake))
+end
+
+function cases.avalancha_fin()
+    local level, es, boss = lago()
+    fight(boss)
+    boss.phase = 3
+    boss:setScale(9)
+    putBoss(boss, 86)
+    boss.avalanche, boss.bounces = true, 99
+    boss:enter('windup')
+    local t, rolling = 0, 0
+    local ended = step(level, es, 20, function()
+        t = t + 1 / 60
+        if boss.state == 'roll' or boss.state == 'slide' then rolling = rolling + 1 / 60 end
+        return boss.state == 'recover' or boss.state == 'idle'
+    end)
+    check('avalancha_fin', ended == true and t < 12,
+        ('la avalancha acaba a los %.1f s (rodando %.1f s, choques %d)'):format(t, rolling, boss.crashes or 0))
+end
+
+function cases.rueda_nieve()
+    local level, es, boss = room(24, 10, { { 15, 8, 'packed_snow' }, { 15, 9, 'packed_snow' } },
+                                 { { type = 'snowboss', col = 7, row = 9 } })
+    fight(boss)
+    rollInto(level, boss, 1)
+    check('rueda_nieve', boss.x < 14 * T and level:getDef(15, 9).name == 'packed_snow',
+        ('choca con la nieve prensada: x = %.1f casillas (nieve en la 15), nieve intacta=%s'):format(
+            boss.x / T, tostring(level:getDef(15, 9).name == 'packed_snow')))
 end
 
 function cases.enterrar()
@@ -244,7 +327,8 @@ end
 function love.load(arg)
     local only = os.getenv('CASE')
     for _, n in ipairs({ 'bola', 'bola_bomba', 'carambano', 'ola', 'onda_golpe', 'rueda_activa', 'rueda_rompe',
-                         'lago_activa', 'enterrar' }) do
+                         'lago_compuerta', 'lago_congelador', 'lago_hundirse', 'avalancha_fin', 'rueda_nieve',
+                         'enterrar' }) do
         if not only or only == n then
             local ok, err = pcall(cases[n])
             if not ok then check(n, false, 'error: ' .. tostring(err)) end
