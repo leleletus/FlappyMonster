@@ -4,18 +4,21 @@
 --   * MAREADA ('dizzy'): rodando se estampa contra una pared o un escalón (fase 1 a la
 --     primera; fase 2 tras 1 rebote; fase 3 tras 2), o le cae un CARÁMBANO encima
 --   * EMPAPADA ('soaked'): cae al agua del lago (hielo fino roto) → atascada un rato
---   * CONGELADA ('frozen', fase 3): empapada y la alcanza un Congelador → ground pound 3
---     (seca, el Congelador solo la aturde un momento)
+--   * CONGELADA ('frozen', fase 3): en el AGUA (empapada o a punto de salir de un salto) y la
+--     alcanza un Congelador → ground pound 3 (seca, el Congelador solo la aturde un momento)
 -- Tres fases que la ENCOGEN (escala 10 → 8 → 6: cada vez más ágil):
 --   1 grande: escupe, rueda, salta bajito (no llega a las plataformas)
 --   2 mediana: SALTO A PLATAFORMA (ballístico hasta cerca del jugador; marca donde cae).
 --     Cada aterrizaje sacude los carámbanos del techo a menos de 2.5 casillas: tiemblan
---     y caen (en el jugador 2 de vida; en ella, mareada). Vuelven a crecer.
+--     y caen (en el jugador 2 de vida; en ella, mareada). Vuelven a crecer. SOLO en la fase 2:
+--     al llegar a la 3 se rompen y no vuelven.
 --   3 pequeña: GRAN GOLPE (rompe el hielo fino y levanta olas por el suelo), rueda con 2
 --     rebotes, salta, ráfagas de 5 bolas. Bajan del techo los Congeladores y sale el
 --     Activador del suelo (bloques/props `phase` de la arena: BossZones / PhaseBlocks).
 -- Como mucho 2 ataques seguidos y descansa. El lago (hielo fino) se vuelve a helar solo
--- unos segundos después de romperse. Entrada (genérica de Boss): una bolita entra
+-- unos segundos después de romperse; si ella cayó al agua, en cuanto SALE (al momento,
+-- menos las celdas que tiene debajo mientras salta: así no se cae otra vez por el mismo
+-- agujero ni se le cierra la salida). Entrada (genérica de Boss): una bolita entra
 -- botando y creciendo, se estampa, se ríe y escupe una bola a la cámara. Muerte: se
 -- agrieta → revienta en nieve → una bolita con cara huye (libera la zona antes).
 -- Todo lo que se dibuja sale de state + deadTimer + x, y (+ netPackExtra): igual online.
@@ -400,7 +403,7 @@ end
 
 -- ── Carámbanos del techo ─────────────────────────────────────────────────────
 -- Fijos (prop `icicles`: celdas; cuelgan del borde de arriba de su celda). Salen en la
--- fase 2. Un aterrizaje de la bola a menos de ICE_R casillas los sacude: tiemblan
+-- fase 2 y SOLO en la 2: al llegar a la 3 se rompen (meltIcicles) y no vuelven a crecer. Un aterrizaje de la bola a menos de ICE_R casillas los sacude: tiemblan
 -- ICE_SHAKE s y caen. Al jugador: 2 de vida. A la bola: MAREADA. Al romperse vuelven
 -- a crecer a los `icicleRegrow` s. Misma lista (mismos índices) en servidor y clientes.
 function Snow:icicleList()
@@ -430,6 +433,21 @@ function Snow:growIcicles()
     for _, c in ipairs(self:icicleList()) do
         if c.st == IC_HIDDEN then c.st, c.t, c.y = IC_GROW, 0, c.top end
     end
+end
+
+-- Fase 3: los carámbanos que cuelgan se rompen y desaparecen (los que caen terminan de caer)
+function Snow:meltIcicles()
+    local any = false
+    for _, c in ipairs(self:icicleList()) do
+        if c.st == IC_READY or c.st == IC_GROW or c.st == IC_SHAKE or c.st == IC_WAIT then
+            if c.st ~= IC_WAIT then
+                any = true
+                Entity.emitFx('ice_break', c.x, c.top + ICE_LEN * 0.5)
+            end
+            c.st, c.t, c.y, c.vy = IC_HIDDEN, 0, c.top, 0
+        end
+    end
+    if any then Sound.play('iceBreak', 1.1, 0.8) end
 end
 
 -- Un aterrizaje sacude los carámbanos cercanos (en horizontal)
@@ -482,10 +500,11 @@ function Snow:updateIcicles(level, dt)
             if broke or landT or ny > level.heightPx then
                 Sound.play('iceBreak', 1.1, 0.8)
                 Entity.emitFx('ice_break', c.x, broke and (c.y + ICE_LEN * 0.6) or ((landY or ny) - 6))
-                c.st, c.t, c.y, c.vy = IC_WAIT, 0, c.top, 0
+                c.st, c.t, c.y, c.vy = ((self.phase or 1) >= 3) and IC_HIDDEN or IC_WAIT, 0, c.top, 0
             end
         elseif c.st == IC_WAIT then
-            if c.t >= (self.props.icicleRegrow or 6) then c.st, c.t = IC_GROW, 0 end
+            if (self.phase or 1) >= 3 then c.st, c.t = IC_HIDDEN, 0
+            elseif c.t >= (self.props.icicleRegrow or 6) then c.st, c.t = IC_GROW, 0 end
         end
     end
 end
@@ -567,29 +586,44 @@ function Snow:findLake(level)
 end
 
 -- Celda rota del lago: a los `lakeRegrow` s se vuelve a helar (si no hay nadie dentro;
--- `now` = todas ya, al morir)
+-- `now` = todas ya, al morir). Si ELLA cayó al agua (`fellIn`), en cuanto sale del agua
+-- vuelven todas YA (si no, se la podía tirar una y otra vez por el mismo agujero), menos
+-- las que tiene debajo mientras salta (no se le cierra la salida ni aterriza en hielo
+-- recién hecho): esas vuelven en cuanto se aparta o ya está en el suelo.
 function Snow:regrowLake(level, dt, now)
     local thin = TileTypes.byName.thin_ice
     local any = false
+    local inW = self:inWater(level)
     -- Mientras ella esté en el agua (empapada, cogiendo impulso o saltando fuera) el hielo
-    -- NO se rehace; vuelve cuando ya ha salido (dryT: s fuera del agua)
-    local wet = self:inWater(level) or self.state == 'soaked' or self.escaping
+    -- NO se rehace por tiempo; vuelve cuando ya ha salido (dryT: s fuera del agua)
+    local wet = inW or self.state == 'soaked' or self.escaping
     if wet then self.dryT = 0 else self.dryT = (self.dryT or 99) + dt end
-    if not now and (self.dryT or 99) < 0.6 then return end
+    local out = self.fellIn and not inW and self.state ~= 'soaked' and self.state ~= 'frozen'
+    if not now and not out and (self.dryT or 99) < 0.6 then return end
+    local hw = self.outerW / 2 + T / 2
+    local blocked = false
     for _, cr in ipairs(self.lake or {}) do
         local d = level:getDef(cr[1], cr[2])
         if d.thinIce or d.collision == 'solid' then
             cr[3] = 0
         else
-            cr[3] = cr[3] + dt
-            if (now or cr[3] >= (self.props.lakeRegrow or 4)) and not self:cellTaken(level, cr[1], cr[2]) then
+            if (self.dryT or 99) >= 0.6 then cr[3] = cr[3] + dt end
+            local ready = now or cr[3] >= (self.props.lakeRegrow or 4)
+            if out and not ready then
+                local under = math.abs((cr[1] - 0.5) * T - self.x) < hw and not (self.onGround and not self.escaping)
+                if under then blocked = true else ready = true end
+            end
+            if ready and not self:cellTaken(level, cr[1], cr[2]) then
                 cr[3] = 0
                 placeTile(level, cr[1], cr[2], thin.id)
                 Entity.emitFx('ice_freeze', (cr[1] - 0.5) * T, (cr[2] - 0.5) * T)
                 any = true
+            elseif ready then
+                blocked = true
             end
         end
     end
+    if out and not blocked then self.fellIn = nil end
     if any then Sound.play('snowBreath', 1.3, 0.5) end
 end
 
@@ -605,6 +639,7 @@ function Snow:checkSoak(level)
     self:stopRoll()
     self.vx = 0
     self:enter('soaked')
+    self.fellIn = true                   -- (al salir del agua el lago se rehace al momento: regrowLake)
     -- el agujero, a su medida: rompe el hielo fino que tiene encima o a los lados (si no,
     -- quedaba encajada bajo el hielo y no podía salir)
     local hw = self.outerW / 2 + T / 4
@@ -912,7 +947,8 @@ function Snow:defeat()
 end
 
 -- ── Congelador ────────────────────────────────────────────────────────────────
--- Empapada → CONGELADA (FROZEN_T s; ground pound 3). Seca → solo aturdida (DAZE_T s).
+-- En el AGUA (empapada, cogiendo impulso para salir o saliendo, mientras siga dentro) →
+-- CONGELADA (FROZEN_T s; ground pound 3). Seca → solo aturdida (DAZE_T s).
 -- Después queda escarchada `frostProof` s: ningún Congelador le hace nada.
 local NO_FREEZE = { frozen = true, phase_up = true, dizzy = true }
 function Snow:canFreeze()
@@ -923,8 +959,10 @@ function Snow:freeze(t)
     self:stopRoll()
     Sound.play('cryoFreeze')
     Entity.emitFx('ice_freeze', self.x, self.y)
-    if self.state == 'soaked' then
+    local lvl = self.levelRef
+    if self.state == 'soaked' or (lvl and self:inWater(lvl)) then
         self.frozenFor = FROZEN_T
+        self.vy = math.max(self.vy or 0, 0)          -- (si saltaba para salir, se queda en el agua)
         self:enter('frozen')
     else
         self.frostT = self.props.frostProof or 7
@@ -1164,7 +1202,7 @@ function Snow:updateBoss(dt, level)
             self.phase = math.min(3, self.phase + 1)
             self:setScale(SC[self.phase])
             self.cycleI, self.streak = 0, 0
-            if self.phase >= 2 then self:growIcicles() end
+            if self.phase == 2 then self:growIcicles() elseif self.phase >= 3 then self:meltIcicles() end
             self:enter('idle')
         end
 

@@ -1088,8 +1088,12 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   in; entering the water opens the hole to its width; `soakTime` s drenched + dripping, then a big heavy jump
   out (`ESCAPE_WIND`, `ESCAPE_UP`) to the nearest DRY spot — dry = no thin ice/water below AND no water above:
   the pool bottom used to count as dry and it "escaped" back into the pool forever; the thin ice does NOT
-  regrow while it is in the water / escaping, only 0.6 s after it is out; only on ENTERING water: `wasWet`) and 'frozen' (soaked + a Freezer stream: `FROZEN_T`
-  4.5 s, GP 3, then thaw; a Freezer on a DRY boss = short daze `DAZE_T`). After any Freezer it is FROST-PROOF
+  regrow while it is in the water / escaping; once IT fell in (`fellIn`), the moment it is OUT of the water every broken
+  cell comes back AT ONCE (the user: re-dropping it into the same hole was an exploit), except cells under it while it
+  jumps out (they return as soon as it clears them or lands — never closes its exit, never lands on fresh ice); other
+  breaks keep the `lakeRegrow` timer; only on ENTERING water: `wasWet`) and 'frozen' (IN THE WATER — soaked, or winding
+  up / jumping out while still in it — + a Freezer stream: `FROZEN_T` 4.5 s, GP 3, then thaw; a Freezer on a DRY
+  boss = short daze `DAZE_T`; the user found "stunned + water + beam" too hard). After any Freezer it is FROST-PROOF
   `frostProof` s (blue tint; `frostT` in netPack). Water itself never freezes it (user's rule).
   THREE PHASES THAT SHRINK IT (`SC` = {10, 8, 6}; 'phase_up' roars, sheds snow `snow_shed` and shrinks;
   `bossPhase()` → zone phase, see Phase system): cycles `CYCLE` — 1: shoot, roll, hop (low: never reaches the
@@ -1105,7 +1109,8 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   tiles): only solid tiles (floor, ledges, walls) or leaving the zone stop them. It does NOT laugh at player
   deaths (only in its intro; laughing at deaths is the Mirror's thing). Every landing (`landed`) cracks thin ice, crushes players
   under it and SHAKES the ceiling icicles within `ICE_R` 2.5 tiles: prop `icicles` (points; they hang from the
-  TOP of their cell; appear growing in phase 2; ready → shake 0.6 s → fall → `icicleRegrow` s → grow). Icicles
+  TOP of their cell; appear growing in phase 2 and ONLY exist in phase 2: reaching phase 3 shatters them
+  (`meltIcicles`; a falling one finishes its fall) and they never regrow; ready → shake 0.6 s → fall → `icicleRegrow` s → grow). Icicles
   over a platform land on it (platforms are shelter). LAKE: thin ice cells of the zone regrow `lakeRegrow` s
   after breaking (`regrowLake`, never into an occupied cell); all at death. Hits on players by the boss itself
   (`hitWithShots`, `strike(pa, hit, dir)` = {HP, vx, vy, ctrlLock, stun}): ball 1 HP + strong push, icicle

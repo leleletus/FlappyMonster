@@ -19,7 +19,9 @@
 --   salto_debajo  saltando desde justo debajo de una plataforma: la atraviesa y se posa encima
 --   empapada      el hielo de una bolsa se rompe bajo ella: cae al agua, EMPAPADA (vulnerable),
 --                 sale de un GRAN salto a lo seco (no al fondo de la poza: se quedaba atascada) y
---                 el hielo se rehace solo DESPUÉS de que salga (nunca con ella en el agua)
+--                 el hielo se rehace solo DESPUÉS de que salga (nunca con ella en el agua) y en
+--                 cuanto sale: ya entero al aterrizar (antes tardaba ~4.6 s: se la podía tirar
+--                 otra vez por el mismo agujero); no vuelve a caer en él
 --   romper        cae de un salto sobre una bolsa de hielo fino: la rompe y cae al agua (siempre)
 --   bola_plataforma una bola de nieve atraviesa una plataforma y solo la para el suelo de la arena
 --   salto_bajar   desde la plataforma de arriba, marca en el suelo: llega al suelo (no se queda
@@ -32,6 +34,10 @@
 --                 en la fase 3 sale el Activador (en vez de hielo) y el Congelador baja
 --   congelada     fase 3, empapada en la bolsa + su Activador → su Congelador la CONGELA;
 --                 ground pound = 3
+--   congelada_saliendo  en el agua SIN estar empapada (cogiendo impulso para salir) + chorro →
+--                 CONGELADA igual (basta con estar en el agua)
+--   carambano_fase3  al llegar a la fase 3 los carámbanos se rompen y no vuelven (el que caía
+--                 termina de caer y tampoco vuelve)
 --   seca_aturdida un Congelador sobre la bola seca: solo aturdida un momento y escarchada
 --   encoge        cambio de fase: escala 10 → 8 → 6; en la fase 2 crecen los carámbanos
 --
@@ -380,13 +386,15 @@ function cases.empapada()
             out = true; return true
         end
     end)
-    -- (mientras está en el agua el hielo no vuelve; lo comprueba wetHeal)
-    step(level, es, 4.5)
+    -- (mientras está en el agua el hielo no vuelve; lo comprueba wetHeal). Al aterrizar fuera,
+    -- el hielo ya está entero (como mucho un paso después)
+    step(level, es, 2 / 60)
     local lake = level:getDef(79, 13).name .. ',' .. level:getDef(80, 13).name .. ',' .. level:getDef(81, 13).name
     local healed = level:getDef(79, 13).thinIce and level:getDef(80, 13).thinIce and level:getDef(81, 13).thinIce
-    check('empapada', soaked == true and vuln and out and healed and not wetHeal,
-        ('cae al agua: empapada=%s vulnerable=%s · sale en %.1f s=%s (x=%.1f) · lago: %s · se rehízo con ella dentro=%s'):format(
-            tostring(soaked), tostring(vuln), t, tostring(out), boss.x / T, lake, tostring(wetHeal)))
+    local again = step(level, es, 4.5, function() return boss.state == 'soaked' end)
+    check('empapada', soaked == true and vuln and out and healed and not wetHeal and not again,
+        ('cae al agua: empapada=%s vulnerable=%s · sale en %.1f s=%s (x=%.1f) · lago al aterrizar: %s · se rehízo con ella dentro=%s · vuelve a caer=%s'):format(
+            tostring(soaked), tostring(vuln), t, tostring(out), boss.x / T, lake, tostring(wetHeal), tostring(again or false)))
 end
 
 function cases.romper()
@@ -545,12 +553,55 @@ function cases.encoge()
         ('escalas %d → %d → %d, fase %d, carámbanos crecen=%s'):format(sc[1], sc[2], sc[3], boss.phase, tostring(grew)))
 end
 
+function cases.congelada_saliendo()
+    local level, es, boss = lago()
+    fight(boss)
+    boss:findLake(level)
+    boss.phase = 3; boss:setScale(6)
+    putBoss(boss, 80)
+    for c = 79, 81 do level:crackIce(c, 13, 4, 'pound') end
+    local soaked = step(level, es, 1.5, function() return boss.state == 'soaked' end)
+    -- espera a que deje de estar empapada y coja impulso para salir (sigue en el agua)
+    local wind = step(level, es, 6, function() return boss.state ~= 'soaked' and boss:inWater(level) end)
+    local st = boss.state
+    local ok = boss:freeze(3)
+    local frozen = boss.state == 'frozen'
+    step(level, es, 0.5)
+    local stays = boss.state == 'frozen' and boss:inWater(level)
+    check('congelada_saliendo', soaked == true and wind == true and st ~= 'soaked' and ok and frozen and stays,
+        ('empapada=%s · luego %s en el agua=%s · chorro → %s (sigue congelada en el agua=%s)'):format(
+            tostring(soaked), st, tostring(wind or false), boss.state, tostring(stays)))
+end
+
+function cases.carambano_fase3()
+    local level, es, boss = room(30, 12, nil, { { type = 'snowboss', col = 15, row = 11 } })
+    fight(boss)
+    boss.hp, boss.hpMax = 9, 14
+    boss:phaseNow()
+    for _ = 1, 200 do boss:update(1 / 60, level) end           -- fase 2: crecen
+    local list = boss:icicleList()
+    local ready = 0
+    for _, c in ipairs(list) do if c.st == boss.IC.ready then ready = ready + 1 end end
+    list[1].st, list[1].t, list[1].vy = boss.IC.fall, 0, 0       -- uno cayendo al cambiar de fase
+    boss.hp = 4
+    boss:phaseNow()
+    for _ = 1, 150 do boss:update(1 / 60, level) end
+    for _ = 1, 600 do                                          -- 10 s más en la fase 3
+        boss.state, boss.deadTimer = 'recover', 0              -- (quieta: que no salte ni ruede)
+        boss:update(1 / 60, level)
+    end
+    local left = 0
+    for _, c in ipairs(list) do if c.st ~= boss.IC.hidden then left = left + 1 end end
+    check('carambano_fase3', ready > 0 and boss.phase == 3 and left == 0,
+        ('fase 2: %d carámbanos listos · fase 3 y 10 s después: %d sin desaparecer'):format(ready, left))
+end
+
 function love.load(arg)
     local only = os.getenv('CASE')
     for _, n in ipairs({ 'bola', 'carambano', 'carambano_jefe', 'carambano_sacude', 'ola', 'onda_golpe',
                          'rueda_pared', 'rueda_escalon', 'rueda_activa', 'rueda_rompe', 'rueda_nieve', 'rueda_fin',
                          'salto_plataforma', 'salto_debajo', 'empapada', 'romper', 'bola_plataforma', 'salto_bajar',
-                         'risa', 'descansa', 'fase3_aparece', 'congelada',
+                         'risa', 'descansa', 'fase3_aparece', 'congelada', 'congelada_saliendo', 'carambano_fase3',
                          'seca_aturdida', 'encoge' }) do
         if not only or only == n then
             local ok, err = pcall(cases[n])
