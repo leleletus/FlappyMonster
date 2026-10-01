@@ -34,6 +34,7 @@ local Puffer = Entity.extend(Entity, {
     hitbox = { outerW = 0.6, outerH = 0.5, innerW = 0.5, innerH = 0.4 },
 })
 Puffer.renderFront = true
+Puffer.freezeFloats = true      -- (congelado: el bloque de hielo flota donde estaba)
 
 local strip
 

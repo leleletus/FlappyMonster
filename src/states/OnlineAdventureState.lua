@@ -400,6 +400,7 @@ function OnlineAdventureState:_applyInterpolation()
                 hurt        = Protocol.band(d[6], Protocol.PF_HURT) ~= 0,
                 invuln      = Protocol.band(d[6], Protocol.PF_INVULN) ~= 0,
                 squashed    = Protocol.band(d[6], Protocol.PF_SQUASH) ~= 0,
+                iced        = Protocol.band(d[6], Protocol.PF_ICE) ~= 0,
                 place       = d[12],
             })
         else
@@ -773,6 +774,13 @@ function OnlineAdventureState:_checkLocalBounce()
                 er.bonkT = 0.25
                 Sound.play('helmetBounce')
                 return
+            elseif result == 'shatter' then
+                -- Enemigo congelado que no muere: rebota y le rompe el hielo
+                pa:bounce(bvy)
+                self.localBounceCooldown[idx] = 0.3
+                self.predictor:recordBounce(bvy)
+                Sound.play('cryoFree')
+                return
             elseif result == 'stomp' or result == 'pound' or result == 'bounce' then
                 -- rebote con empujón lateral (jefe invulnerable; pisotón de lado a un trepador)
                 local dir = (result == 'bounce') and bdir or (result == 'stomp' and bdir2) or nil
@@ -782,6 +790,7 @@ function OnlineAdventureState:_checkLocalBounce()
                 self.predictor:recordBounce(bvy, dir, soft)
                 -- Los jefes suenan con su propio golpe (lo manda el servidor)
                 if not er.def.boss and result ~= 'bounce' then Sound.play('enemyExplode') end
+                if er.state == 'frozen' then Sound.play('cryoFree') end       -- (le rompió el hielo)
                 return
             end
         end

@@ -46,6 +46,12 @@
 --   hielo_bomba    una explosión rompe el hielo fino
 --   hielo_resbala  el hielo (y el hielo fino) resbala: corriendo y soltando, se frena
 --                  en mucha más distancia que en piedra; también tarda más en arrancar
+--   cryo_jugador   congelador (cada X s): carga → chorro → el jugador queda congelado
+--                  (no se mueve aunque pulse), se descongela solo; pulsando sale antes
+--   cryo_enemigo   congela a un Crabby (cae, inofensivo), se descongela y anda; congelado
+--                  y pisado muere; un Gummy volador congelado cae al suelo
+--   cryo_activador modo Activador: no dispara solo; al cambiar el Activador conectado, sí
+--   cryo_corte     el chorro se corta en el primer bloque sólido
 --   encerrado      un Gummy sin sitio para andar (bloques a los dos lados) pasa a
 --                  reposo (idle) y NO vuelve a andar (ni un cuadro); al quitar un
 --                  bloque echa a andar
@@ -779,6 +785,104 @@ function cases.hielo_resbala()
             dStone, dIce, dThin, aStone, aIce))
 end
 
+-- Sala del congelador: suelo en la fila 9, congelador en (3, 8) mirando a la derecha
+local function cryoRoom(props, put, ents)
+    local list = { { type = 'cryo', col = 3, row = 8, props = props } }
+    for _, e in ipairs(ents or {}) do list[#list + 1] = e end
+    local level, es = room(20, 9, put, list)
+    level.players = {}
+    return level, es, es[1]
+end
+
+function cases.cryo_jugador()
+    local function trial(mashEvery)
+        local level, es, cryo = cryoRoom({ firstDelay = 0.3, interval = 60, windup = 0.5, freezeTime = 3 })
+        local pa = playerAt(level, 8, 8)
+        clear()
+        local seen, frozenFor, moved, x0 = {}, 0, 0, nil
+        local n = 0
+        stepEnts(level, es, 6, function()
+            n = n + 1
+            seen[cryo.state] = true
+            stub.state.right = (pa.iceT or 0) > 0                 -- (intenta andar congelado)
+            if (pa.iceT or 0) > 0 then
+                frozenFor = frozenFor + 1 / 60
+                x0 = x0 or pa.x
+                moved = math.max(moved, math.abs(pa.x - x0))
+                if mashEvery and n % mashEvery == 0 then stub.state.jump_pressed = true end
+            end
+            pa:update(1 / 60, level)
+        end)
+        clear()
+        return seen, frozenFor, moved
+    end
+    local seen, tFree, moved = trial(nil)
+    local _, tMash = trial(8)
+    check('cryo_jugador', seen.windup and seen.fire and tFree > 2.7 and tFree < 3.3 and moved < 8 and tMash < tFree * 0.5,
+        ('estados carga=%s chorro=%s · congelado %.2f s (se mueve %d px pulsando →) · pulsando saltar %.2f s'):format(
+            tostring(seen.windup), tostring(seen.fire), tFree, moved, tMash))
+end
+
+function cases.cryo_enemigo()
+    -- Crabby andando delante del congelador
+    local level, es, cryo = cryoRoom({ firstDelay = 0.2, interval = 60, windup = 0.3, freezeTime = 2 }, nil,
+        { { type = 'crabby', col = 8, row = 8, props = { pauses = false, speed = 40 } } })
+    local c = es[2]
+    local froze, thawed
+    stepEnts(level, es, 4, function()
+        if c.state == 'frozen' then froze = true end
+        if froze and c.state == 'walk' then thawed = true end
+    end)
+    -- Otra vez congelado y pisado desde arriba: muere
+    c.alive, c.state = true, 'walk'
+    c:freeze(3)
+    local pa = PlayerAdventure:new(c.x, c.y - 140)
+    level.players = { pa }
+    clear()
+    local res
+    for _ = 1, 60 do
+        pa:update(1 / 60, level)
+        local r = Interactions.check(pa, c)
+        if r then res = r end
+        Interactions.run(pa, { c }, {})
+        if c.state == 'dead' then break end
+    end
+    -- Gummy volador congelado: cae al suelo
+    local level2, es2 = cryoRoom({ firstDelay = 0.2, interval = 60, windup = 0.3, freezeTime = 3 }, nil,
+        { { type = 'gummy', col = 8, row = 5, props = { movement = 'fly', pauses = false, speed = 40 } } })
+    local g = es2[2]
+    g:freeze(3)
+    stepEnts(level2, es2, 1.5)
+    check('cryo_enemigo', froze and thawed and c.state == 'dead' and res == 'stomp' and g.state == 'frozen' and g.onGround,
+        ('Crabby congelado=%s descongelado=%s · pisado: %s → %s · Gummy volador congelado en el suelo=%s'):format(
+            tostring(froze), tostring(thawed), tostring(res), c.state, tostring(g.onGround)))
+end
+
+function cases.cryo_activador()
+    local level, es, cryo = cryoRoom({ mode = 'switch', id = 1, windup = 0.3 }, { { 12, 4, 'switch_on' } })
+    level.links = { { col = 12, row = 4, to = 1 } }
+    local before = {}
+    stepEnts(level, es, 3, function() before[cryo.state] = true end)
+    level:hitTile(12, 4, 'head')
+    local after = {}
+    stepEnts(level, es, 1.5, function() after[cryo.state] = true end)
+    check('cryo_activador', not before.windup and not before.fire and after.windup and after.fire,
+        ('sin cambiar: carga=%s · tras el Activador: carga=%s chorro=%s'):format(
+            tostring(before.windup or false), tostring(after.windup), tostring(after.fire)))
+end
+
+function cases.cryo_corte()
+    local level, es, cryo = cryoRoom({ firstDelay = 0.1, windup = 0.2, range = 12 }, { { 9, 8, 'solid' } })
+    local maxHead = 0
+    stepEnts(level, es, 1.5, function()
+        local _, head = cryo:streamSpan()
+        if head then maxHead = math.max(maxHead, head) end
+    end)
+    local want = 8 * T - 3 * T                 -- (de la boca, borde derecho de la casilla 3, al bloque de la 9)
+    check('cryo_corte', math.abs(maxHead - want) <= 8,
+        ('punta del chorro %d px (bloque a %d px)'):format(maxHead, want))
+end
+
 function cases.encerrado()
     -- Gummy en la casilla 8, bloques en la 7 y la 9 (fila 8, suelo en la 9)
     local level, es = room(16, 10, { { 7, 9, 'solid' }, { 9, 9, 'solid' } },
@@ -915,7 +1019,8 @@ function love.load()
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
-                         'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'hielo_resbala' }) do cases[n]() end
+                         'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'hielo_resbala',
+                         'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte' }) do cases[n]() end
     if os.getenv('SHOT_BOMB') then bombShot() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
     if not os.getenv('SHOT') then love.event.quit(fails == 0 and 0 or 1); return end

@@ -6,7 +6,8 @@
 --        'spike_pop', 'boss_hit', 'boss_blast', 'boss_big_blast', 'mortar_blast', 'fire_puff', 'ember',
 --        'exhaust', 'smoke', 'sparks', 'mega_step', 'mega_trail', 'mega_debris', 'mega_dirt',
 --        'mega_slam', 'mega_land', 'mega_poof', 'mega_roar' (Mega Crabby), 'switch_hit' (bloque ON/OFF),
---        'helmet_break' (casco de Gummy), 'puffer_pop' (pez globo),
+--        'helmet_break' (casco de Gummy), 'puffer_pop' (pez globo), 'cryo_puff' / 'cryo_mist' /
+--        'cryo_blast' (congelador), 'ice_freeze' / 'ice_shatter' (bloque de hielo de lo congelado),
 --        'shake_small', 'shake_big', 'shake_roar' (suave y largo) (temblor de pantalla:
 --        Particles.shakeOffset() se suma a la cámara al dibujar)
 -- (otros nombres no hacen nada)
@@ -463,6 +464,65 @@ function Particles.emit(kind, x, y, opts)
         end
         for i = 1, 5 do
             add({ x = x + rnd(-28, 28), y = y + rnd(-10, 10), vx = 0, vy = 0, life = rnd(0.2, 0.4), size = 10,
+                  star = true, col = {1, 1, 1} })
+        end
+    elseif kind == 'cryo_puff' then
+        -- Congelador cargando: bocanadas de escarcha por la boquilla (opts.nx, ny = hacia dónde mira)
+        local nx, ny = (opts and opts.nx) or 1, (opts and opts.ny) or 0
+        for i = 1, 2 do
+            add({ x = x + rnd(-4, 4), y = y + rnd(-4, 4), vx = nx * rnd(20, 70) + rnd(-25, 25), vy = ny * rnd(20, 70) - rnd(10, 40),
+                  g = -30, drag = 2.5, life = rnd(0.35, 0.6), size = math.random(2, 3) * 2, dust = true,
+                  col = ({ {0.9, 0.97, 1}, {0.75, 0.9, 1} })[math.random(2)] })
+        end
+    elseif kind == 'cryo_mist' then
+        -- Bruma helada que suelta el chorro al pasar (cae y se deshace)
+        add({ x = x + rnd(-6, 6), y = y + rnd(-6, 6), vx = rnd(-30, 30), vy = rnd(10, 60), g = 40, drag = 1.5,
+              life = rnd(0.4, 0.8), size = math.random(2, 4) * 2, dust = true,
+              col = ({ {0.92, 0.98, 1}, {0.7, 0.88, 1}, {1, 1, 1} })[math.random(3)] })
+        if math.random() < 0.3 then
+            add({ x = x + rnd(-8, 8), y = y + rnd(-8, 8), vx = 0, vy = 0, life = rnd(0.12, 0.25), size = 6,
+                  star = true, col = {1, 1, 1} })
+        end
+    elseif kind == 'cryo_blast' then
+        -- Disparo del congelador: nube de vapor helado en la boquilla
+        local nx, ny = (opts and opts.nx) or 1, (opts and opts.ny) or 0
+        for i = 1, 12 do
+            local s = rnd(60, 260)
+            add({ x = x, y = y, vx = nx * s + rnd(-80, 80), vy = ny * s + rnd(-80, 80), drag = 4, g = -20,
+                  life = rnd(0.35, 0.7), size = math.random(2, 4) * 2, dust = true,
+                  col = ({ {0.95, 0.99, 1}, {0.75, 0.9, 1} })[math.random(2)] })
+        end
+    elseif kind == 'ice_freeze' then
+        -- Algo queda congelado: esquirlas que se cierran hacia el centro, destellos
+        for i = 1, 14 do
+            local a = rnd(0, math.pi * 2)
+            local r = rnd(40, 70)
+            add({ x = x + math.cos(a) * r, y = y + math.sin(a) * r, vx = -math.cos(a) * r * 4, vy = -math.sin(a) * r * 4,
+                  life = 0.25, size = math.random(1, 2) * 2, fadeLast = 0.1,
+                  col = ({ {0.9, 0.97, 1}, {0.65, 0.85, 1}, {1, 1, 1} })[math.random(3)] })
+        end
+        for i = 1, 4 do
+            add({ x = x + rnd(-30, 30), y = y + rnd(-30, 30), vx = 0, vy = 0, life = rnd(0.2, 0.45), size = 10,
+                  star = true, col = {1, 1, 1} })
+        end
+        for i = 1, 6 do
+            add({ x = x + rnd(-30, 30), y = y + rnd(-20, 20), vx = rnd(-30, 30), vy = rnd(-40, 0), g = -10, drag = 2,
+                  life = rnd(0.4, 0.7), size = math.random(2, 3) * 2, dust = true, col = {0.9, 0.97, 1} })
+        end
+    elseif kind == 'ice_shatter' then
+        -- Se rompe el bloque de hielo de algo congelado: trozos que rebotan (físicos),
+        -- escarcha y destellos
+        for i = 1, 20 do
+            add({ x = x + rnd(-30, 30), y = y + rnd(-34, 30), vx = rnd(-260, 260), vy = rnd(-420, -60), g = 1300,
+                  life = rnd(0.6, 1.1), size = math.random(2, 4) * 2, chunk = true, spin = rnd(-16, 16), fadeLast = 0.35,
+                  phys = true, col = ({ {0.9, 0.96, 1}, {0.68, 0.84, 1}, {0.55, 0.75, 1}, {1, 1, 1} })[math.random(4)] })
+        end
+        for i = 1, 10 do
+            add({ x = x + rnd(-30, 30), y = y + rnd(-30, 30), vx = rnd(-60, 60), vy = rnd(-80, 0), g = -20, drag = 2,
+                  life = rnd(0.5, 0.9), size = math.random(2, 4) * 2, col = {0.92, 0.97, 1}, dust = true })
+        end
+        for i = 1, 5 do
+            add({ x = x + rnd(-30, 30), y = y + rnd(-30, 30), vx = 0, vy = 0, life = rnd(0.2, 0.4), size = 10,
                   star = true, col = {1, 1, 1} })
         end
     elseif kind == 'fuse_spark' then

@@ -2,6 +2,7 @@
 local Class = require 'libs/class'
 local DeadEyes = require 'src/entities/DeadEyes'
 local Tiles = require 'src/world/Tiles'
+local IceEncase            -- (solo dibujo: se carga al dibujar el hielo)
 local PlayerAdventure = Class:new()
 
 local sprites    = nil
@@ -137,6 +138,7 @@ function PlayerAdventure:new(x, y)
     o.stunT=0             -- aturdido (empujado por un ground pound ajeno)
     o.invT=0              -- invulnerable (reaparecer, tras un golpe...: ver HIT_INV)
     o.squashT=0           -- aplastado (agachado y aturdido)
+    o.iceT=0              -- congelado en un bloque de hielo (congelador)
     o.ctrlLockT=0         -- sin control un instante (lanzado de lado por un trampolín)
     return o
 end
@@ -511,7 +513,7 @@ function PlayerAdventure:die(drownDeath, force)
     if self.dying then return end
     if self:isInvulnerable() and not drownDeath and not force then return false end
     self.dying=true; self.vx=0; self.vy=0
-    self.gpPhase=nil; self.stunT=0; self.squashT=0
+    self.gpPhase=nil; self.stunT=0; self.squashT=0; self.iceT=0
     self.deathPhase='freeze'; self.deathTimer=0; self.deathY=self.y
     if not drownDeath then
         Sound.play('dies2')
@@ -534,7 +536,7 @@ function PlayerAdventure:respawn()
     self.drownAudT=0; self.drownDead=false
     self.prevInWater=false
     self.splashSt='out'; self.splashCD=0
-    self.gpPhase=nil; self.gpT=0; self.gpLanded=false; self.stunT=0; self.squashT=0; self.ctrlLockT=0
+    self.gpPhase=nil; self.gpT=0; self.gpLanded=false; self.stunT=0; self.squashT=0; self.ctrlLockT=0; self.iceT=0
     self:grantInvulnerability(SPAWN_INV)
     Sound.stopTracked('drowning')
     Sound.playMusic('level')
@@ -841,12 +843,52 @@ function PlayerAdventure:recoil(dirX)
     return true
 end
 
+-- Congelado (chorro del congelador, types/cryo.lua): dentro de un bloque de hielo
+-- `t` s, sin control (la gravedad sigue y resbala lo que traía). Cada pulsación
+-- (saltar o agacharse: lo único "recién pulsado" que viaja por red) le quita ICE_MASH s; al acabar se rompe el hielo y
+-- queda invulnerable un instante (no lo vuelve a congelar el mismo chorro).
+local ICE_MASH, ICE_FREE_INV = 0.22, 0.7
+function PlayerAdventure:freeze(t)
+    if self.dying or not self.alive or self:isInvulnerable() or (self.iceT or 0) > 0 then return false end
+    self.iceT = t or 3
+    self.gpPhase, self.gpT = nil, 0
+    self.dropping, self.dropHoldT = false, 0
+    self.vy = math.max(self.vy, -100)
+    Sound.play('cryoFreeze')
+    fx(self, 'ice_freeze', self.x, self.y)
+    return true
+end
+
 -- ── Update ────────────────────────────────────────────────────────────────────
 -- Entrada de un jefe: el jugador se queda sin control (se lee un Input vacío;
 -- la gravedad y lo demás siguen). Igual en un jugador, servidor y predicción.
 local FROZEN_INPUT = { pressed = function() return false end, down = function() return false end }
 function PlayerAdventure:update(dt, level)
     self.frozen = level ~= nil and level.frozenAt ~= nil and not self.dying and level:frozenAt(self.x, self.y)
+    if (self.iceT or 0) > 0 and not self.dying then
+        -- Congelado: las pulsaciones rompen el hielo antes; el cuerpo se queda en
+        -- su pose (cuadro y escala) y resbala/cae como un bloque
+        local mash = 0
+        if Input.pressed('jump') then mash = mash + 1 end
+        if Input.pressed('crouch') then mash = mash + 1 end
+        self.iceT = math.max(0, self.iceT - dt - mash * ICE_MASH)
+        if self.onGround then self.vx = self.vx * math.max(0, 1 - 1.5 * dt) end
+        local frame, puff, crouch = self.frame, self.puff, self.crouching
+        local real = Input
+        Input = setmetatable(FROZEN_INPUT, { __index = real })
+        local ok, err = pcall(self._update, self, dt, level)
+        Input = real
+        if not ok then error(err, 0) end
+        if self.iceT > 0 and not self.dying then
+            self.frame, self.puff, self.crouching = frame, puff, crouch
+        elseif not self.dying then
+            -- Se rompe el hielo
+            self:grantInvulnerability(ICE_FREE_INV)
+            Sound.play('cryoFree')
+            fx(self, 'ice_shatter', self.x, self.y)
+        end
+        return
+    end
     if self.frozen then
         -- (quieto de verdad: sin la inercia que traía; la gravedad sigue)
         if not self.stunT or self.stunT <= 0 then self.vx = 0 end
@@ -1035,6 +1077,12 @@ function PlayerAdventure:render(camX, camY)
     local r, g, b = PlayerAdventure.hurtTint(self.dying and 0 or self.hurtT)
     love.graphics.setColor(r, g, b, PlayerAdventure.invulnAlpha(not self.dying and self.invT or 0))
     local squashed = not self.dying and (self.squashT or 0) > 0
+    local iced = not self.dying and (self.iceT or 0) > 0
+    if iced then                                     -- (congelado: el cuerpo teñido de hielo)
+        IceEncase = IceEncase or require 'src/fx/IceEncase'
+        local sh = IceEncase.tint()
+        if sh then love.graphics.setShader(sh) end
+    end
     if squashed then
         -- Aplastado: agachado y achatado de arriba abajo, con los pies en el suelo
         love.graphics.draw(spriteCrouch, math.floor(self.x-camX), math.floor(self.y-camY+SPRITE_H/2),
@@ -1044,11 +1092,25 @@ function PlayerAdventure:render(camX, camY)
             math.floor(self.x-camX), math.floor(self.y-camY),
             0, s*self.facing, s, iw/2, ih/2)
     end
+    if iced then love.graphics.setShader() end
     if self.dying then
         DeadEyes.draw(math.floor(self.x-camX), math.floor(self.y-camY), s, self.facing)
     elseif (self.stunT or 0) > 0 then
         PlayerAdventure.drawStunStars(self.x - camX, self.y - camY, squashed)
     end
+    if not self.dying and (self.iceT or 0) > 0 then
+        PlayerAdventure.drawIce(math.floor(self.x-camX), math.floor(self.y-camY), love.timer.getTime(), self.iceT,
+                                self.crouching or squashed)
+    end
+end
+
+-- Bloque de hielo alrededor del jugador congelado (x, y = centro en pantalla).
+-- También para jugadores remotos (sin `left`: no parpadea al final).
+function PlayerAdventure.drawIce(sx, sy, t, left, crouched)
+    IceEncase = IceEncase or require 'src/fx/IceEncase'
+    -- (todo el dibujo, antenas incluidas: 9 px de arte de ancho, 16 de alto / 9 agachado)
+    local w, h = 9 * PLAYER_SCALE, (crouched and 9 or 16) * PLAYER_SCALE
+    IceEncase.draw(sx - w / 2, sy + SPRITE_H / 2 - h, w, h - 2, t, left)
 end
 
 -- Destello rojo al recibir un golpe. También para jugadores remotos.

@@ -161,6 +161,7 @@ end
 
 function Mortar:onDead(dt) self.proj = {} end
 function Mortar:canBeKnocked() return false end
+function Mortar:canFreeze() return false end
 
 -- Sólido como un bloque (lados, encima y debajo): ver PlayerAdventure.moveAndCollide
 Mortar.solidFull = true

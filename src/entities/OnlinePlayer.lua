@@ -72,6 +72,8 @@ function OnlinePlayer:applyData(data)
     self.hurt        = data.hurt        or false
     self.invuln      = data.invuln      or false
     self.squashed    = data.squashed    or false
+    if data.iced and not self.iced then self.icedAt = love.timer.getTime() end
+    self.iced        = data.iced        or false
     self.color       = data.color       or self.color
 
     self.renderX = self.x
@@ -123,6 +125,11 @@ function OnlinePlayer:render(camX, camY)
             spriteAlpha)
     end
     local PAm = require('src/entities/PlayerAdventure')
+    local iced = self.iced and not self.dying
+    if iced then                                     -- (congelado: el cuerpo teñido de hielo)
+        local sh = require('src/fx/IceEncase').tint()
+        if sh then love.graphics.setShader(sh) end
+    end
     if self.squashed and not self.dying then
         -- Aplastado: agachado y achatado, con los pies en el suelo
         love.graphics.draw(spriteCrouch, sx, sy + 16 * PLAYER_SCALE / 2, 0, sc * self.facing, sc * PAm.SQUASH_K,
@@ -130,11 +137,15 @@ function OnlinePlayer:render(camX, camY)
     else
         love.graphics.draw(img, sx, sy, 0, sc * self.facing, sc, iw/2, ih/2)
     end
+    if iced then love.graphics.setShader() end
     if self.dying then
         DeadEyes.draw(sx, sy, sc, self.facing, 1, 1, 1, alpha)
     end
     if self.stunned and not self.dying then
         require('src/entities/PlayerAdventure').drawStunStars(sx, sy, self.squashed)
+    end
+    if self.iced and not self.dying then           -- (congelado: bloque de hielo)
+        PAm.drawIce(sx, sy, love.timer.getTime() - (self.icedAt or 0), nil, self.squashed)
     end
 
     -- Nombre sobre el sprite

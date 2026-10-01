@@ -33,6 +33,7 @@
 -- Solo se guardan las propiedades que difieren del valor por defecto.
 
 local Props = require 'src/world/entities/Props'
+local IceEncase           -- (solo dibujo: el bloque de hielo de lo congelado)
 
 local EntityTypes = { byName = {}, list = {}, variants = {} }
 
@@ -180,7 +181,7 @@ function EntityTypes.register(def)
     if not cls._wrappedRender then
         local drawBody = cls.render
         local draw = function(self, camX, camY)
-            EntityTypes.drawWings(self, camX, camY)       -- (detrás del cuerpo)
+            if self.state ~= 'frozen' then EntityTypes.drawWings(self, camX, camY) end   -- (detrás del cuerpo)
             drawBody(self, camX, camY)
         end
         cls._wrappedRender = true
@@ -243,6 +244,15 @@ function EntityTypes.register(def)
                     love.graphics.rectangle('fill', x - 1, y - 3, 2, 6)
                 end
                 love.graphics.setColor(1, 1, 1, 1)
+                return
+            end
+            if st == 'frozen' then
+                -- Congelada: el cuerpo quieto, teñido de azul, dentro de un bloque de hielo
+                -- (deadTimer = lo que le queda: parpadea al final)
+                IceEncase = IceEncase or require 'src/fx/IceEncase'
+                IceEncase.tinted(function() draw(self, camX, camY) end)
+                local b = self:getOuterBounds()
+                IceEncase.draw(b.x - camX, b.y - camY, b.w, b.h, love.timer.getTime(), self.deadTimer)
                 return
             end
             if st == 'drop_shake' then

@@ -241,7 +241,7 @@ src/world/
                        rainspike (orchestrated spike), spikerain (the orchestrator),
                        miniboss1 (Nave Malvada), megacrabby (Mega Crabby),
                        trampoline (4 defs: up/down/left/right),
-                       crabbytramp (Crabby trampolín, subclass of crabby),
+                       crabbytramp (Crabby trampolín, subclass of crabby), cryo (Congelador),
                        flood (editor-only placeholder for a Floods area),
                        bomb / bombobject (bombs, see Bombs), bossglass, bosswall
   AutoScroll.lua       auto-scrolling camera levels (see below)
@@ -432,7 +432,7 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   'stomp' with 4th return dirX = cnx → `pa:bounce(vy, dirX, soft=true)` (vx 300 +
   ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill; v17: crawler turn in snapshots; v18: MegaCrabby;
   v19: boss walls, Mega minions/pounce; v20: post-hit protection; v21: unified invulnerability;
-  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks; v30: boss broken glass; v31: special enemy deaths; v32: bombs; v33: snow/ice/thin ice; v34: sand; v35: deep stone).
+  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks; v30: boss broken glass; v31: special enemy deaths; v32: bombs; v33: snow/ice/thin ice; v34: sand; v35: deep stone; v36: freezer).
 - **Crawler** (`src/world/entities/Crawler.lua`): surface-following movement
   (floor ↔ walls ↔ ceiling, concave and convex corners) for Crabbies with prop
   `wallWalk` (`Crabby.WALL_PROP`, off by default so old levels don't change).
@@ -651,6 +651,25 @@ list no mode until the user places a Point Area in them).
   breaks), explosion 4. Tile events `k='crack'|'icebreak'` → client `tileBump('crack')` (shake),
   fx `ice_crack` / `ice_break`, sounds iceCrack / iceBreak (`tools/sounds/ice.py`); SP gets the
   same through the `level.tileFx(kind, c, r)` hook.
+- **Freezer** (`types/cryo.lua`, entity "Congelador", Trampas; liquid-nitrogen launcher): solid 1-cell
+  block (`solidFull`), prop `dir` (right/left/up/down; sprite drawn facing right, rotated). States
+  idle → windup (`windup` s: shakes, gauge glows, frost puffs, cryoWindup) → fire (stream grows/leaves at
+  `STREAM_SPEED` 1800 px/s for `burst` s, cut at the first solid tile = `reach` in netPack; cryoBlast) →
+  idle. `mode` 'interval' (`interval`, `firstDelay`) or 'switch' (`activatable`: fires when its linked ON/OFF
+  Activator changes, `trigger` any/on/off; linking it in the editor sets switch) — boss arenas: fires with
+  the gates. Stream = hazard box `effect='freeze', time` → `pa:freeze(t)` (own-state index 30 `iceT`,
+  `PF_ICE` 128, protocol v36): no control (FROZEN_INPUT), keeps its pose, slides/falls; each jump/crouch
+  press removes 0.22 s; on break cryoFree + fx `ice_shatter` + 0.7 s invulnerability. Enemies in the
+  stream: `Entity:freeze(t)` → common state 'frozen' (`canFreeze`: category Enemigos only; mortar no;
+  bosses no unless they override; `freezeFloats` = stays in place, pufferfish), deadTimer = time LEFT,
+  falls (flyers too), harmless (`Interactions.frozenCheck`: landing on it / GP → 'stomp' kills a stompable
+  one, else 'shatter' = thaw), `thaw()` resumes the previous state with its timer. Look: `src/fx/IceEncase.lua`
+  (9-slice `fx/ice_block.png` around the body + ice tint shader, blinks the last 0.6 s), used by the
+  EntityTypes render wrapper, PlayerAdventure and OnlinePlayer. Art `assets/images/cryo/` from
+  `tools/ui/make_cryo_sprites.py`; sounds `traps/cryo_*.wav` from `tools/sounds/cryo.py` (cryoFreeze is a
+  SHARED sound). Particles cryo_puff/cryo_mist/cryo_blast/ice_freeze/ice_shatter. Harness `mechanics`
+  (cryo_*), `online_smoke LEVEL=tools/levelgen/arenas/congelador.json WATCH=gummy WANT=frozen WANTICE=1`,
+  `editor_open PLAY=tools/levelgen/arenas/congelador.json`.
 - **Ice drips** (`src/fx/IceDrips.lua`, render-only, per client): tiles with `iceDrip` and air
   below grow drops (`fx/ice_drop.png`) that fall and splash. **Snowfall** (`src/fx/Snowfall.lua`):
   level JSON `"snow": true` (editor Nivel → Clima → "Nieve cayendo"), 3 depth layers of

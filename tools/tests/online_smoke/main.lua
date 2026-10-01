@@ -14,6 +14,8 @@
 -- WANTTILES=thin_ice_1,thin_ice_2,...: falla si el cliente no llegó a ver esos
 -- tiles (eventos 'tile' del servidor), p. ej. el hielo fino que se agrieta bajo
 -- el jugador local (LEVEL=tools/levelgen/arenas/hielo.json)
+-- WANTICE=1: falla si el jugador local nunca quedó congelado (congelador:
+-- LEVEL=tools/levelgen/arenas/congelador.json WATCH=gummy WANT=frozen WANTICE=1)
 io.stdout:setvbuf("no")
 love.filesystem.setSymlinksEnabled(true)
 lovesize = require 'libs/lovesize'
@@ -100,6 +102,7 @@ function love.update(dt)
             watch.minHp = math.min(watch.minHp, pa.hp or 99)
             if pa.dying and not watch.wasDying then watch.deaths = watch.deaths + 1 end
             watch.wasDying = pa.dying
+            if (pa.iceT or 0) > 0 then watch.iced = (watch.iced or 0) + 1 end
         end
     end
     -- Reloj del HUD en los modos con tiempo: tiene que ir hacia atrás
@@ -130,6 +133,8 @@ function love.update(dt)
             for w in (os.getenv('WANTTILES') or ''):gmatch('[^,]+') do
                 if not watch.tileNames[w] then print('Error: el cliente no vio el tile ' .. w) end
             end
+            print(('jugador local congelado: %d fotogramas'):format(watch.iced or 0))
+            if os.getenv('WANTICE') and (watch.iced or 0) == 0 then print('Error: el jugador local nunca quedó congelado') end
             for w in (os.getenv('WANT') or ''):gmatch('[^,]+') do
                 if not watch.states[w] then print('Error: el cliente no vio el estado ' .. w) end
             end

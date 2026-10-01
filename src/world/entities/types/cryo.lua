@@ -1,0 +1,328 @@
+-- Congelador (lanzador de nitrógeno líquido): bloque fijo y sólido que, tras una
+-- CARGA (tiembla, el indicador se llena y brilla, escarcha en la boquilla), suelta
+-- un chorro corto de líquido helado en línea recta (derecha / izquierda / arriba /
+-- abajo). Lo que toca el chorro queda CONGELADO dentro de un bloque de hielo:
+--  * jugadores: pa:freeze(t) (Interactions: caja de peligro effect='freeze');
+--    pulsando saltar / moverse se rompe antes
+--  * enemigos: e:freeze(t) (estado común 'frozen': caen, no hacen daño; caerles
+--    encima rompe el hielo y los mata)
+--  * jefes: solo los que lo permiten (Boss: canFreeze)
+-- El chorro avanza a STREAM_SPEED y se corta en el primer bloque sólido.
+--
+-- Modos (editor):
+--  'interval'  dispara cada `interval` s (el primero a los `firstDelay` s)
+--  'switch'    dispara cuando cambia su Activador ON/OFF conectado (capa Bloques →
+--              Conectar; `trigger`: cualquier cambio, al encender o al apagar). Así,
+--              en la pelea de un jefe, salta a la vez que se abren las compuertas.
+--
+-- Online: lo simula el servidor; el cliente dibuja todo a partir de state +
+-- deadTimer (+ el alcance `reach` en netPack). En reposo no se envía.
+
+local Entity      = require 'src/world/entities/Entity'
+local SpriteStrip = require 'src/fx/SpriteStrip'
+
+local Cryo = Entity.extend(Entity, {
+    debugColor = { 0.5, 0.85, 1 },
+    hitbox = { outerW = 1, outerH = 1, innerW = 1, innerH = 1 },
+})
+
+local SCALE        = GUMMY_SCALE       -- 16x16 → 64 px, una casilla
+local STREAM_SPEED = 1800              -- px/s a los que avanza (y se va) el chorro
+local STREAM_HALF  = 16                -- media anchura de la caja que congela (px)
+local STREAM_FPS   = 16
+local DIRS = { right = { 1, 0 }, left = { -1, 0 }, up = { 0, -1 }, down = { 0, 1 } }
+
+local sheet, streamImg, streamQuads, headStrip
+function Cryo.loadAssets()
+    if sheet then return end
+    sheet = SpriteStrip.load('assets/images/cryo/cryo-Sheet.png', 16)
+    streamImg = love.graphics.newImage('assets/images/cryo/stream-Sheet.png')
+    if streamImg.setFilter then streamImg:setFilter('nearest', 'nearest') end
+    streamQuads = {}
+    for i = 1, 3 do
+        streamQuads[i] = love.graphics.newQuad((i - 1) * 16, 0, 16, 10, streamImg:getWidth(), streamImg:getHeight())
+    end
+    headStrip = SpriteStrip.load('assets/images/cryo/stream_head-Sheet.png', 12)
+end
+function Cryo.sizePx() return 16 * SCALE, 16 * SCALE end
+
+function Cryo:init()
+    local p = self.props
+    self.moving, self.vx, self.vy = false, 0, 0
+    self.dir = DIRS[p.dir or 'right'] and (p.dir or 'right') or 'right'
+    self.state, self.deadTimer = 'idle', 0
+    self.waitFor = p.firstDelay or 2
+    self.reach   = (p.range or 8) * TILE_PX
+    self.lastSig = nil
+end
+
+function Cryo:dirVec() local d = DIRS[self.dir]; return d[1], d[2] end
+
+-- Boca de la boquilla: el borde de su casilla hacia donde mira
+function Cryo:nozzle()
+    local dx, dy = self:dirVec()
+    return self.x + dx * TILE_PX / 2, self.y + dy * TILE_PX / 2
+end
+
+-- Hasta dónde llega el chorro: el alcance, o el primer bloque sólido delante
+function Cryo:computeReach(level)
+    local max = (self.props.range or 8) * TILE_PX
+    local nx, ny = self:nozzle()
+    local dx, dy = self:dirVec()
+    for d = 4, max, 8 do
+        if level:collisionAt(nx + dx * d, ny + dy * d) then return math.max(0, d - 4) end
+    end
+    return max
+end
+
+-- Tramo del chorro [cola, punta] (distancias desde la boquilla) en el paso actual
+function Cryo:streamSpan()
+    if self.state ~= 'fire' then return nil end
+    local t = self.deadTimer or 0
+    local burst = self.props.burst or 0.8
+    local head = math.min(self.reach, t * STREAM_SPEED)
+    local tail = math.min(self.reach, math.max(0, (t - burst) * STREAM_SPEED))
+    if head - tail < 1 then return nil end
+    return tail, head
+end
+
+-- Caja (mundo) del tramo [a, b] del chorro
+function Cryo:streamBox(a, b)
+    local nx, ny = self:nozzle()
+    local dx, dy = self:dirVec()
+    local x0, y0 = nx + dx * a, ny + dy * a
+    local x1, y1 = nx + dx * b, ny + dy * b
+    local lx, hx = math.min(x0, x1), math.max(x0, x1)
+    local ly, hy = math.min(y0, y1), math.max(y0, y1)
+    if dx ~= 0 then ly, hy = ly - STREAM_HALF, hy + STREAM_HALF else lx, hx = lx - STREAM_HALF, hx + STREAM_HALF end
+    return { x = lx, y = ly, w = hx - lx, h = hy - ly }
+end
+
+local function overlap(a, b)
+    return a.x < b.x + b.w and a.x + a.w > b.x and a.y < b.y + b.h and a.y + a.h > b.y
+end
+
+function Cryo:startWindup()
+    self.state, self.deadTimer = 'windup', 0
+    Sound.play('cryoWindup')
+end
+
+function Cryo:updateCustom(dt, level)
+    local p = self.props
+    self.deadTimer = self.deadTimer + dt
+    local st = self.state
+    if (p.mode or 'interval') == 'switch' then
+        -- Conectado a un Activador: dispara cuando cambia (según `trigger`)
+        local sig = level:signal(p.id or 1)
+        if self.lastSig ~= nil and sig ~= self.lastSig and st == 'idle' then
+            local tr = p.trigger or 'any'
+            if tr == 'any' or (tr == 'on' and sig) or (tr == 'off' and not sig) then self:startWindup() end
+        end
+        self.lastSig = sig
+    elseif st == 'idle' and self.deadTimer >= self.waitFor then
+        self.waitFor = math.max(0.2, p.interval or 4)
+        self:startWindup()
+    end
+    st = self.state
+    if st == 'windup' then
+        self.reach = self:computeReach(level)
+        if self.deadTimer >= (p.windup or 0.8) then
+            self.state, self.deadTimer = 'fire', 0
+            Sound.play('cryoBlast')
+        end
+    elseif st == 'fire' then
+        self.reach = math.min(self.reach, self:computeReach(level))      -- (un bloque que aparece lo corta)
+        local tail, head = self:streamSpan()
+        if tail and p.affectEnemies ~= false then
+            local box = self:streamBox(tail, head)
+            for _, e in ipairs(level.liveEntities or {}) do
+                if e ~= self and e.alive and e.freeze and e:canFreeze() and overlap(box, e:getOuterBounds()) then
+                    e:freeze(p.freezeTime or 3)
+                end
+            end
+        end
+        if self.deadTimer >= (p.burst or 0.8) + self.reach / STREAM_SPEED + 0.05 then
+            self.state, self.deadTimer = 'idle', 0
+        end
+    end
+    return true
+end
+
+function Cryo:canBeKnocked() return false end
+function Cryo:canFreeze() return false end
+function Cryo:canBeStomped() return false end
+
+-- Sólido como un bloque (lados, encima y debajo)
+Cryo.solidFull = true
+function Cryo:isSolidBody() return self.alive end
+
+-- El chorro congela a los jugadores (Interactions: effect='freeze', time)
+function Cryo:getHazardBoxes()
+    if self.props.affectPlayers == false then return nil end
+    local tail, head = self:streamSpan()
+    if not tail then return nil end
+    local b = self:streamBox(tail, head)
+    b.effect, b.time = 'freeze', self.props.freezeTime or 3
+    return { b }
+end
+
+-- ── Red ───────────────────────────────────────────────────────────────────────
+function Cryo:netAtRest() return self.state == 'idle' end
+function Cryo:netRest() self.state, self.deadTimer = 'idle', 0 end
+function Cryo:netPack() return { math.floor(self.reach + 0.5) } end
+function Cryo:netApply(a, b, f) self.reach = (b and b[1]) or self.reach end
+
+-- ── Dibujo ────────────────────────────────────────────────────────────────────
+local Particles
+local function emit(kind, x, y, opts)
+    Particles = Particles or require 'src/fx/Particles'
+    Particles.emit(kind, x, y, opts)
+end
+
+-- Ángulo y espejo del sprite (dibujado mirando a la derecha)
+local function pose(dir)
+    if dir == 'left' then return 0, -1 end
+    if dir == 'up'   then return -math.pi / 2, 1 end
+    if dir == 'down' then return math.pi / 2, 1 end
+    return 0, 1
+end
+
+function Cryo:drawStream(camX, camY, tail, head, now)
+    local nx, ny = self:nozzle()
+    local ang = pose(self.dir)
+    if self.dir == 'left' then ang = math.pi end
+    love.graphics.push()
+    love.graphics.translate(math.floor(nx - camX), math.floor(ny - camY))
+    love.graphics.rotate(ang)
+    love.graphics.setColor(1, 1, 1, 1)
+    local fi = math.floor(now * STREAM_FPS) % 3 + 1
+    local seg = 16 * SCALE
+    -- (el dibujo se repite desde la boquilla: así "fluye" sin saltos al cortarse la cola)
+    local x = math.floor(tail / seg) * seg
+    while x < head do
+        local a, b = math.max(x, tail), math.min(x + seg, head)
+        if b > a then
+            local q = streamQuads[fi]
+            q:setViewport((fi - 1) * 16 + (a - x) / SCALE, 0, (b - a) / SCALE, 10)
+            love.graphics.draw(streamImg, q, math.floor(a), -5 * SCALE, 0, SCALE, SCALE)
+        end
+        x = x + seg
+    end
+    -- La punta: nube helada (mientras el chorro avanza y al chocar)
+    local hf = headStrip:frameAt(now, 10)
+    headStrip:draw(hf, math.floor(head - 3 * SCALE), 0, 0, SCALE, SCALE)
+    love.graphics.pop()
+    -- Bruma que cae del chorro (solo dibujo)
+    if (self.lastMist or 0) + 0.03 < now then
+        self.lastMist = now
+        local dx, dy = self:dirVec()
+        local d = tail + math.random() * (head - tail)
+        emit('cryo_mist', nx + dx * d, ny + dy * d)
+    end
+end
+
+function Cryo:render(camX, camY)
+    local p   = self.props
+    local now = love.timer.getTime()
+    local st  = self.state
+    local t   = self.deadTimer or 0
+    local frame, shake = 1, 0
+    local wind = p.windup or 0.8
+    if st == 'windup' then
+        local k = math.min(1, t / math.max(0.05, wind))
+        frame = (k < 0.5) and 2 or 3
+        shake = math.floor(k * 2.99)
+        -- Escarcha por la boquilla, cada vez más seguida
+        if (self.lastPuff or 0) + (0.12 - 0.08 * k) < now then
+            self.lastPuff = now
+            local dx, dy = self:dirVec()
+            local nx, ny = self:nozzle()
+            emit('cryo_puff', nx, ny, { nx = dx, ny = dy })
+        end
+    elseif st == 'fire' then
+        local tail = self:streamSpan()
+        frame = (tail == 0 or t < 0.15) and 4 or 1
+        if t < 0.05 and not self.blasted then
+            self.blasted = true
+            local dx, dy = self:dirVec()
+            local nx, ny = self:nozzle()
+            emit('cryo_blast', nx, ny, { nx = dx, ny = dy })
+        end
+    end
+    if st ~= 'fire' then self.blasted = nil end
+    local ang, flip = pose(self.dir)
+    local sx = math.floor(self.x - camX) + ((shake > 0) and math.floor((math.random() * 2 - 1) * shake + 0.5) or 0)
+    local sy = math.floor(self.y - camY) + ((shake > 0) and math.floor((math.random() * 2 - 1) * shake + 0.5) or 0)
+    love.graphics.setColor(1, 1, 1, 1)
+    sheet:draw(frame, sx, sy, ang, SCALE * flip, SCALE)
+    if st == 'windup' then
+        -- Brillo azul que crece (aditivo) sobre todo el aparato
+        local k = math.min(1, t / math.max(0.05, wind))
+        local pulse = 0.5 + 0.5 * math.sin(now * (10 + 20 * k))
+        love.graphics.setBlendMode('add')
+        love.graphics.setColor(0.25 * k, 0.6 * k, 0.9 * k, 0.35 + 0.35 * pulse)
+        sheet:draw(frame, sx, sy, ang, SCALE * flip, SCALE)
+        love.graphics.setBlendMode('alpha')
+    end
+    local tail, head = self:streamSpan()
+    if tail then self:drawStream(camX, camY, tail, head, now) end
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
+-- Editor: el recorrido del chorro (alcance máximo; en juego se corta en el primer bloque)
+function Cryo.drawEditorOverlay(props, cx, cy, zoom)
+    local d = DIRS[props.dir or 'right'] or DIRS.right
+    local r = (props.range or 8) * TILE_PX
+    local nx, ny = cx + d[1] * TILE_PX / 2, cy + d[2] * TILE_PX / 2
+    local x0, y0, x1, y1 = nx, ny, nx + d[1] * r, ny + d[2] * r
+    local lx, hx, ly, hy = math.min(x0, x1), math.max(x0, x1), math.min(y0, y1), math.max(y0, y1)
+    if d[1] ~= 0 then ly, hy = ly - STREAM_HALF, hy + STREAM_HALF else lx, hx = lx - STREAM_HALF, hx + STREAM_HALF end
+    love.graphics.setColor(0.55, 0.9, 1, 0.15)
+    love.graphics.rectangle('fill', lx, ly, hx - lx, hy - ly)
+    love.graphics.setColor(0.55, 0.9, 1, 0.8)
+    love.graphics.setLineWidth(2 / zoom)
+    love.graphics.rectangle('line', lx, ly, hx - lx, hy - ly)
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
+local function opts(...)
+    local o = {}
+    for _, pair in ipairs({ ... }) do o[#o+1] = { value = pair[1], label = pair[2] } end
+    return o
+end
+
+return {
+    name = 'cryo', label = 'Congelador', category = 'Trampas',
+    description = 'Lanza un chorro corto de nitrógeno líquido que congela en un bloque de hielo '
+               .. 'a jugadores y enemigos. Cada X segundos o al cambiar su Activador ON/OFF conectado.',
+    class = Cryo,
+    hide = 'all',
+    defaults = { movement = 'static', onTouch = 'none' },
+    activatable = true,
+    -- Al conectarle un Activador en el editor pasa a dispararse con él
+    onLink = function(p) p.mode = 'switch' end,
+    props = {
+        { key='dir', kind='enum', label='Dispara hacia', group='Congelador', default='right',
+          options=opts({'right','Derecha'}, {'left','Izquierda'}, {'up','Arriba'}, {'down','Abajo'}) },
+        { key='mode', kind='enum', label='Se activa', group='Congelador', default='interval',
+          options=opts({'interval','Cada X s'}, {'switch','Con su Activador'}),
+          help='Con su Activador: dispara cuando cambia el Activador ON/OFF conectado (capa Bloques → Conectar)' },
+        { key='interval', kind='number', label='Cada (s)', group='Congelador', default=4,
+          min=0.5, max=60, step=0.5, help='Tiempo entre disparos (modo "Cada X s"; la carga cuenta dentro)' },
+        { key='firstDelay', kind='number', label='Primer disparo (s)', group='Congelador', default=2,
+          min=0, max=60, step=0.5, help='Para desfasar varios congeladores' },
+        { key='trigger', kind='enum', label='Con el Activador', group='Congelador', default='any',
+          options=opts({'any','Al cambiar'}, {'on','Al encender'}, {'off','Al apagar'}) },
+        { key='windup', kind='number', label='Carga (s)', group='Chorro', default=0.8,
+          min=0.1, max=5, step=0.1, help='Aviso antes de disparar: tiembla, brilla y suelta escarcha' },
+        { key='burst', kind='number', label='Duración del chorro (s)', group='Chorro', default=0.8,
+          min=0.1, max=5, step=0.1 },
+        { key='range', kind='int', label='Alcance (casillas)', group='Chorro', default=8,
+          min=1, max=40, step=1, help='Se corta antes en el primer bloque sólido' },
+        { key='freezeTime', kind='number', label='Congelado (s)', group='Chorro', default=3,
+          min=0.5, max=15, step=0.5, help='Lo que dura el bloque de hielo (el jugador sale antes pulsando)' },
+        { key='affectPlayers', kind='bool', label='Congela jugadores', group='Chorro', default=true },
+        { key='affectEnemies', kind='bool', label='Congela enemigos', group='Chorro', default=true },
+    },
+    editor = { sprite = 'assets/images/cryo/cryo-Sheet.png', frameW = 16 },
+}

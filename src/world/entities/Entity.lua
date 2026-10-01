@@ -222,6 +222,17 @@ function Entity:updateCommonStates(dt, level)
             self.alive = false
         end
         return true
+    elseif st == 'frozen' then
+        -- Congelada (congelador): dentro de un bloque de hielo, cae (salvo las que
+        -- flotan: freezeFloats) y no hace nada; deadTimer = lo que le queda
+        self.deadTimer = self.deadTimer - dt
+        if not self.freezeFloats then
+            self.vy = self.vy + ADV_GRAVITY * dt
+            self:moveAndCollide(level, 0, self.vy * dt)
+            if self.y > level.heightPx + TILE_PX * 4 then self.alive = false; return true end
+        end
+        if self.deadTimer <= 0 then self:thaw() end
+        return true
     elseif st == 'stunned' then
         -- Empujada por un ground pound: sale despedida, frena y se queda
         -- aturdida un momento; luego sigue con lo que hacía
@@ -289,6 +300,7 @@ function Entity:isHiding() return false end
 function Entity:canBeKnocked()
     if not self:isObstacle() then return false end
     local st = self.state
+    if st == 'frozen' then return false end
     return st ~= 'drop_shake' and st ~= 'drop_fall' and not st:match('^drop_')
 end
 
@@ -574,7 +586,7 @@ end
 -- Tocar la cara que lanza de un objeto (o.bouncyFace, o.face) la lanza con la
 -- misma velocidad que a un jugador. Los voladores no (rebotan como en una pared).
 function Entity:canBeLaunched()
-    return not self.flying and self.alive and self.state ~= 'dead' and not self:isGhost()
+    return not self.flying and self.alive and self.state ~= 'dead' and self.state ~= 'frozen' and not self:isGhost()
 end
 
 function Entity:touchBody(o, face)
@@ -797,9 +809,74 @@ function Entity:animateWalk(dt)
     end
 end
 
+-- ── Congelada (congelador: types/cryo.lua) ────────────────────────────────────
+-- Solo los enemigos normales (los jefes deciden en Boss; objetos, trampas... no)
+function Entity:canFreeze()
+    local st = self.state
+    if not self.alive or st == 'dead' or st == 'gone' or st == 'spawning' or st == 'reserve'
+       or st == 'frozen' or Entity.SPECIAL_DEATH[st] then return false end
+    return (self.def and self.def.category) == 'Enemigos'
+end
+
+-- Encerrada en hielo `t` s: deja lo que hacía (lo retoma al descongelarse, con
+-- su temporizador), no hace daño, cae; un pisotón rompe el hielo (shatter)
+function Entity:freeze(t)
+    if not self:canFreeze() then return false end
+    if self.releaseCrawl then self:releaseCrawl() end
+    self.frozenPrev, self.frozenPrevT = self.state, self.deadTimer
+    self.frozenFlying = self.flying
+    self.state, self.deadTimer = 'frozen', t
+    self.vx, self.vy = 0, 0
+    self.onGround = false
+    if not self.freezeFloats then
+        self.flying = false                       -- (el bloque de hielo cae)
+        if self.flipped then self.flipped, self.dropped = false, true end    -- (del techo: cae al suelo)
+    end
+    Sound.play('cryoFreeze')
+    Entity.emitFx('ice_freeze', self.x, self.y)
+    return true
+end
+
+-- Se rompe el hielo y sigue con lo que hacía
+function Entity:thaw()
+    if self.state ~= 'frozen' then return end
+    local prev = self.frozenPrev
+    self.flying = self.frozenFlying
+    self.vy = 0
+    self.vx = self.moving and self.speed * self.facing or 0
+    if self.flying then           -- (sigue su oscilación desde donde quedó)
+        self.baseY = self.y - math.sin(self.flyT * self.tuning.flyBobSpeed) * (self.props.bobAmp or 0)
+    end
+    if not prev or prev == 'walk' or prev == 'idle' or prev == 'stunned' or prev == 'launched' or prev:match('^drop_') then
+        self.deadTimer = 0
+        self:startWalk()
+    else
+        self.state, self.deadTimer = prev, self.frozenPrevT or 0
+    end
+    Sound.play('cryoFree')
+    Entity.emitFx('ice_shatter', self.x, self.y)
+end
+
+-- Le rompen el bloque de hielo (pisotón, ground pound): muere si se le puede
+-- pisotear; si no (pez globo...), solo se descongela
+function Entity:shatter()
+    if self.state ~= 'frozen' then return end
+    if self.props.stompable then
+        self.flying = self.frozenFlying
+        self.state, self.deadTimer = 'dead', 0
+        self.vx, self.vy = 0, 0
+        Sound.play('cryoFree')
+        Sound.play('enemyExplode')
+        Entity.emitFx('ice_shatter', self.x, self.y)
+    else
+        self:thaw()
+    end
+end
+
 -- ── Pisotón ───────────────────────────────────────────────────────────────────
 function Entity:stomp()
     if self.state == 'dead' then return end
+    if self.state == 'frozen' then return self:shatter() end
     if not self:canBeStomped() then return end
     self.state     = 'dead'
     self.deadTimer = 0

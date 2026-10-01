@@ -15,6 +15,9 @@
 --                                 con dirX sale empujado hacia ese lado
 --   'recoil', dirX                choca con su cuerpo y sale empujado
 --   'launch', vx, vy[, jumps]     lanzado (trampolín, cristal roto): pa:launch, e:onLaunch(pa)
+--   'freeze', t                   congelado t s (chorro del congelador): pa:freeze(t)
+--   'shatter', bounceVy           le cae encima a un enemigo congelado que no se puede
+--                                 matar: rebota y le rompe el hielo (e:shatter)
 --   'pickup'                      coleccionable (estrella, vida extra...)
 --   'checkpoint'                  punto de control
 --
@@ -35,10 +38,26 @@ Interactions.BOUNCE = BOUNCE
 
 function Interactions.check(pa, e)
     if not e.alive or e.state == 'dead' or (e.isGhost and e:isGhost()) then return nil end
+    -- Congelada en un bloque de hielo: inofensiva; caerle encima rompe el hielo
+    if e.state == 'frozen' then return Interactions.frozenCheck(pa, e) end
     -- Reglas propias (jefes: ver entities/Boss.lua). Debe ser una consulta
     -- sin efectos: el cliente online la usa para predecir rebotes.
     if e.interact then return e:interact(pa) end
     return Interactions.defaultCheck(pa, e)
+end
+
+-- Enemigo congelado: solo cuenta caerle encima (o un ground pound): rompe el
+-- hielo; si se le puede pisotear muere (puntos), si no solo se descongela
+function Interactions.frozenCheck(pa, e)
+    local pob, gob = pa:getOuterBounds(), e:getOuterBounds()
+    if not overlap(pob, gob) then return nil end
+    local line, foot = gob.y + gob.h * 0.5, pob.y + pob.h
+    if pa.gpPhase == 'fall' or (pa.vy > 0 and (foot < line or foot - pa.vy * STEP_DT <= line)) then
+        local vy = -math.abs(ADV_JUMP_VEL) * BOUNCE
+        if e.props.stompable then return 'stomp', vy, e.props.points end
+        return 'shatter', vy
+    end
+    return nil
 end
 
 -- Reglas normales (enemigos, coleccionables...). Las entidades con interact()
@@ -60,7 +79,7 @@ function Interactions.defaultCheck(pa, e)
     -- Zonas de peligro propias (el pincho del Crabby, el fuego del mortero...):
     -- matan, salvo que la caja diga otra cosa (hb.effect = 'hurt': 1 de vida)
     for _, hb in ipairs(e:getHazardBoxes() or {}) do
-        if overlap(pob, hb) then return hb.effect or 'kill' end
+        if overlap(pob, hb) then return hb.effect or 'kill', hb.time end
     end
 
     if e:isBodyDisabled() then return nil end
@@ -160,6 +179,11 @@ function Interactions.run(pa, entities, cb, rewind)
         elseif result == 'bounce' then
             pa:bounce(a, b)
             if e.onBounced then e:onBounced(pa) end         -- (bombas: salen pateadas)
+        elseif result == 'freeze' then
+            pa:freeze(a)
+        elseif result == 'shatter' then
+            e:shatter()
+            pa:bounce(a)
         elseif result == 'recoil' then
             pa:recoil(a)
         elseif result == 'launch' then
@@ -179,7 +203,14 @@ function Interactions.run(pa, entities, cb, rewind)
         local rx, ry = pa.GP_RADIUS_X or 170, pa.GP_RADIUS_Y or 110
         for i, e in ipairs(entities) do
             if e.alive and e.state ~= 'dead' and not (e.isGhost and e:isGhost()) then
-                if e.props.stompable and e:canBeStomped() and overlap(z, e:getInnerBounds()) then
+                if e.state == 'frozen' then
+                    -- (congelada: el impacto rompe el hielo)
+                    if overlap(z, e:getOuterBounds()) then
+                        local killed = e.props.stompable
+                        e:shatter()
+                        if killed and cb.stomp then cb.stomp(e, e.props.points, i) end
+                    end
+                elseif e.props.stompable and e:canBeStomped() and overlap(z, e:getInnerBounds()) then
                     e:stomp()
                     if cb.stomp then cb.stomp(e, e.props.points, i) end
                 else

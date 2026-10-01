@@ -7,7 +7,7 @@ local Tiles = require 'src/world/Tiles'
 local P = {}
 
 -- ── Versión / red ─────────────────────────────────────────────────────────────
-P.VERSION = 35        -- el servidor rechaza clientes con otra versión (27: Bloques ON/OFF, vista fija en niveles; 28: entradas de jefe genéricas; 29: ataques de arena del Espejo; 30: cristal roto de jefe; 31: muertes especiales de enemigos; 32: bombas; 33: nieve, hielo y hielo fino; 34: arena; 35: roca abisal)
+P.VERSION = 36        -- el servidor rechaza clientes con otra versión (36: congelador; 27: Bloques ON/OFF, vista fija en niveles; 28: entradas de jefe genéricas; 29: ataques de arena del Espejo; 30: cristal roto de jefe; 31: muertes especiales de enemigos; 32: bombas; 33: nieve, hielo y hielo fino; 34: arena; 35: roca abisal)
 
 -- Sonidos PRIVADOS: solo los oye el jugador que los causa (su cliente ya los
 -- genera con la predicción), así que el servidor no los manda a nadie. P. ej.
@@ -16,7 +16,7 @@ P.PRIVATE_SOUNDS = { waterWarning = true }
 -- Sonidos COMPARTIDOS: los oyen todos, también quien los causa (su cliente NO
 -- los predice): lo que decide solo el servidor, p. ej. el casco que se rompe
 -- con un ground pound o el pinchazo del pez globo.
-P.SHARED_SOUNDS  = { helmetBreak = true, pufferPrick = true }
+P.SHARED_SOUNDS  = { helmetBreak = true, pufferPrick = true, cryoFreeze = true }
 P.CHANNELS       = 2
 P.CH_RELIABLE    = 0        -- eventos de sala y de juego (ordenados, garantizados)
 P.CH_STATE       = 1        -- snapshots e inputs (no fiables: el más nuevo gana)
@@ -149,6 +149,7 @@ function P.packOwnState(pa)
         pa.hurtT or 0,
         (pa.gpPhase == 'windup' and 1) or (pa.gpPhase == 'fall' and 2) or 0,
         pa.gpT or 0, pa.stunT or 0, pa.invT or 0, pa.squashT or 0, pa.ctrlLockT or 0,
+        pa.iceT or 0,
     }
 end
 
@@ -187,12 +188,13 @@ function P.applyOwnState(s, pa)
     pa.invT        = s[27]
     pa.squashT     = s[28]
     pa.ctrlLockT   = s[29]
+    pa.iceT        = s[30]
 end
 
 -- Estructura mínima para validar un estado propio recibido del servidor.
 function P.isValidOwnState(s)
-    if type(s) ~= 'table' or #s < 29 then return false end
-    for i = 1, 29 do if type(s[i]) ~= 'number' then return false end end
+    if type(s) ~= 'table' or #s < 30 then return false end
+    for i = 1, 30 do if type(s[i]) ~= 'number' then return false end end
     return true
 end
 
@@ -202,6 +204,7 @@ P.PF_DYING, P.PF_SPECTATOR, P.PF_FINISHED, P.PF_STUNNED = 1, 2, 4, 8
 P.PF_HURT = 16      -- acaba de recibir daño (parpadea en rojo)
 P.PF_INVULN = 32    -- recién reaparecido: invulnerable (parpadea)
 P.PF_SQUASH = 64    -- aplastado (sprite achatado)
+P.PF_ICE = 128      -- congelado en un bloque de hielo (congelador)
 
 -- ── Utilidades ────────────────────────────────────────────────────────────────
 function P.round(x) return math.floor(x + 0.5) end
