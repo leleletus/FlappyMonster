@@ -60,36 +60,38 @@ def dead():
 
 def wings():
     pal = dict(PAL, f=(180, 196, 220, 255))
-    # (plumas: puntas y muescas en el borde de fuera; la raíz, a la derecha)
+    # Ala nueva (no la original): borde de ataque curvo que sale de la raíz (a la
+    # derecha) y un abanico de 3 plumas largas con la punta redondeada; 2 cuadros
+    # de aleteo: arriba (plumas hacia arriba) y abajo (hacia abajo)
     opn = [
-        ".....OOO.",
-        "...OOWWWO",
-        "..OWWHWWO",
-        ".OWWWWWWO",
-        "OWWWWWWWO",
-        "OOOWWWWWO",
-        ".OWWWWWWO",
-        "OWWWWWWSO",
-        "OOOWWWWSO",
-        ".OWWWWWSO",
-        ".OOOWWSSO",
-        "..OOOSSO.",
-        "....OOO..",
+        "O........",
+        "OHO......",
+        "OWHO..O..",
+        ".OWHOOHO.",
+        ".OWWHOWWO",
+        "..OWWWWWO",
+        ".OOWWWWWO",
+        "OHWfWWWWO",
+        ".OWWfWWSO",
+        "..OOWfSSO",
+        "....OOSO.",
+        "......O..",
+        ".........",
     ]
     fold = [
-        "......OO.",
-        ".....OWWO",
-        "....OWHWO",
-        "...OWWWWO",
-        "..OWWWWWO",
-        "..OOOWWWO",
-        "..OWWWWWO",
-        "..OWWWWSO",
-        "..OOOWWSO",
-        "...OWWWSO",
-        "...OOOWSO",
-        "....OOSO.",
-        ".....OO..",
+        ".........",
+        "......O..",
+        "....OOHO.",
+        "..OOHWWWO",
+        ".OHWWWWWO",
+        "OHWWWWWSO",
+        ".OOWfWWSO",
+        "OHWfWWSSO",
+        ".OOfWWSO.",
+        "OHWfWSO..",
+        ".OOOSO...",
+        "...OO....",
+        ".........",
     ]
     def g(rows):
         im = Image.new('RGBA', (9, 13), (0, 0, 0, 0))

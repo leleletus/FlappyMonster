@@ -269,7 +269,8 @@ Character restyles keep EVERY pixel of the user's original shape and only add th
                        `tools/ui/make_crab_redesign.py --apply` (Crabbies, Mega Crabby body + claws,
                        trampolines, and ALL spikes: one pixel-art steel spike scaled to each original
                        canvas — crabby/Mega 38x38, tiles/falling 32x32, Nave Malvada 26x27 down, icon 8x8);
-                       `tools/ui/make_gummy_redesign.py` (Gummies, helmet, wings, dead.png). Both read the
+                       `tools/ui/make_gummy_redesign.py --apply` (Gummies, helmet, dead.png; the WINGS are a new design: curved
+                       leading edge + fan of 3 long feathers, 2 flap frames, still 9x13). Both read the
                        originals kept outside the repo, so they can be re-run safely.
 Spikes are images too: assets/images/spikes/spike.png (tile spikes, rotated/flipped
                        for the 4 directions; falling spike), crabby/spike.png and
