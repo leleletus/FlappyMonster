@@ -253,11 +253,15 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     (`lay_leadsaw` at +12) and an F pedal holds bars 121-123 / 129-132 (`lay_ped*`).
                     Same method over the WHOLE song (motif passes too): `CHORD_FIX` snaps the Pop Synth comp
                     to the ogg's chord (passes 2-3 of the motif = B♭ B♭ C C, like the final; same rhythm and
-                    register), `COMP_LOW` doubles the comp an octave down only where the ogg does (even bars;
+                    register) but ONLY sustained stabs (≥ 6 sixteenths): the short ones are little lines
+                    (C/E → B♭/D → A/C in bars 12/28/36, bar 44) and snapping them sounded "different and weird"
+                    to the user (the triad metric flags passing tones as wrong chords — don't trust it there), `COMP_LOW` doubles the comp an octave down only where the ogg does (even bars;
                     in the odd F/A bars it added a low A → A minor), the fifth harmony is on every motif pass
                     (from bar 22, growing), F pedals in 33-35 / 41-44 and a G in 36, bar 20's chromatic step
                     also an octave up (`COMP_HIGH`). Result: confident chord mismatches 15 → 2 (intro riser,
-                    bar 26 ambiguous), missing notes 966 → ~780 over the song.
+                    bar 26 ambiguous), missing notes 966 → ~780 over the song. The final was then SLIMMED (user: overloaded
+                    and too strong for chiptune): no duplicate octave, no thirds above, no bell unison/thirds/
+                    double octave, 2-octave pedal, softer shimmer/pump/hats, crash every 2 bars.
 src/entities/
   PlayerAdventure.lua  THE player physics (shared by SP, server and client prediction)
   OnlinePlayer.lua     remote player renderer (tinted by player color, name tag)

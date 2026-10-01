@@ -67,7 +67,7 @@ BREAK = set(range(45, 61))
 # Acordes del comp (Pop Synth) que el ogg cambia: las vueltas 2 y 3 del motivo van en
 # Si♭ Si♭ Do Do (como el final) y no en Fa / Solm del MIDI (mismo método que PAD_FIX)
 TRI = {'Bb': (10, 2, 5), 'C': (0, 4, 7), 'F': (5, 9, 0), 'Dm': (2, 5, 9)}
-CHORD_FIX = {12: TRI['C'], 28: TRI['C'], 29: TRI['Bb'], 30: TRI['Bb'], 31: TRI['C'], 32: TRI['C'], 36: TRI['C'],
+CHORD_FIX = {28: TRI['C'], 29: TRI['Bb'], 30: TRI['Bb'], 31: TRI['C'], 32: TRI['C'], 36: TRI['C'],
              37: TRI['Bb'], 38: TRI['Bb'], 39: TRI['C'], 40: TRI['C'], 44: TRI['Dm']}
 # Compases en que el ogg dobla el comp una octava abajo (saliencia: la octava baja ≥ 0.8 de la
 # del MIDI). En los impares del motivo (golpes Fa/La) no: doblarlos añadía un La grave → La menor
@@ -302,7 +302,11 @@ def build(T):
     # Acordes (Pop Synth): 2 pulsos del VRC6, golpes cortos. Donde el ogg tiene otro acorde
     # (CHORD_FIX) cada nota va a la nota del acorde bueno más cercana (mismo ritmo y registro);
     # en 5-44 el ogg los dobla una octava abajo (COMP_LOW)
-    pop = [(s, d, snap(m, CHORD_FIX.get(bar_of(s))), v) for s, d, m, v in T['Pop Synth (Classic)']]
+    # (solo los golpes LARGOS, de 6 semicorcheas o más: los cortos forman pequeñas líneas — Do/Mi
+    # → Si♭/Re → La/Do en los compases 12, 28, 36; Sol/Si♭ → Si♭/Re → La/Do en el 44 — y
+    # "ajustarlos" al acorde las rompía: sonaban distintas y raras)
+    pop = [(s, d, snap(m, CHORD_FIX.get(bar_of(s))) if d >= 6 * S16 - 1e-6 else m, v)
+           for s, d, m, v in T['Pop Synth (Classic)']]
     for i, vs in enumerate(voices(pop, 2)):
         for s, d, m, v in vs:
             S.note('chord%d' % i, 'vrc6', s, d, m, I_CHORD if i == 0 else I_CHORD2, vs=min(1, 0.6 + v / 120),
@@ -393,10 +397,11 @@ def build(T):
 #   break 45-60         la melodía se queda (solo se va el grave) y vuelve a crecer desde el 53
 #   Smooth Synth        85 base · 93 + octava, hats abiertos · 101 + terceras, centelleo,
 #                       bombo a negras · 109 + crash cada 4, redoble y subida al 117
-#   FINAL 117-132       todo: campana + octava + terceras, lead (8-Bit Square) doblado a la
-#                       octava y en terceras, centelleo fuerte, bajo a corcheas, bombo a negras,
-#                       semicorcheas de hat, crash cada 2 compases (cada compás desde el 125),
-#                       redobles y toms al final
+#   FINAL 117-132       campana + octava + quinta, lead (8-Bit Square) una octava arriba en la
+#                       sierra y en terceras, centelleo, bajo a corcheas, bombo a negras, hats a
+#                       semicorcheas, crash cada 2 compases, redobles y toms al final. (Una versión
+#                       con TODO a la vez — doble octava, terceras arriba y abajo, unísonos, crash
+#                       cada compás — sonaba sobrecargada en chiptune: el usuario lo notó)
 SCALE = [5, 7, 9, 10, 0, 2, 4]                  # Fa mayor
 
 
@@ -443,12 +448,10 @@ def escalate(S, T, has):
     for s, d, m, v in notes_in(bells, 29, 44) + notes_in(bells, *FINAL):
         k = 0.6 if bar_of(s) < 37 else (0.8 if bar_of(s) < 45 else 1.0)
         S.note('lay_bell8', 'pulse', s, d, m + 12, I_SPARK, vs=k, gate=1.0, midi='keys')
-    for s, d, m, v in notes_in(bells, 37, 44) + notes_in(bells, *FINAL):
+    for s, d, m, v in notes_in(bells, 37, 44):
         th = third(m, up=False)
         if th:
             S.note('lay_bell3', 'n163', s, d, th, I_THIRD, vs=0.8 if bar_of(s) < 45 else 1.0, gate=1.1, midi='keys', release=5)
-    for s, d, m, v in notes_in(bells, 125, 132):                 # (la última: brillo a dos octavas)
-        S.note('lay_bell16', 'pulse', s, d, m + 24, I_SPARK, vs=0.7, gate=1.0, midi='keys')
     # Smooth Synth: octava desde el 93, terceras desde el 101
     for s, d, m, v in notes_in(smooth, 93, 116):
         S.note('lay_lead8', 'pulse', s, d, m + 12, I_OCT, vs=0.6 if bar_of(s) < 101 else 0.75, midi='lead')
@@ -463,15 +466,13 @@ def escalate(S, T, has):
     # +12 — compás 124: Sol4-Fa4-Mi4-Re4 del MIDI → Sol5-Fa5-Mi5-Re6 —; medido por saliencia)
     for s, d, m, v in notes_in(square, *FINAL):
         S.note('lay_leadsaw', 'saw', s, d, m + 12, I_SAW, vs=0.85 if bar_of(s) < 125 else 1.0, midi='lead')
-    for s, d, m, v in notes_in(bells, *FINAL):
-        S.note('lay_bellx', 'n163', s, d, m, I_PLUCK, vs=0.85 if bar_of(s) < 125 else 1.0, gate=1.0, midi='keys')
     # Pedal de Fa en la segunda mitad de cada frase del motivo del final: en el ogg el Fa es la
     # nota más fuerte de los compases 121-123 y 129-132 (el chiptune quedaba en La / Sol)
     # (en el 124 el ogg ya va a Do: Mi y Sol; el pedal acaba antes). Las vueltas 2 y 3 del
     # motivo tienen el mismo pedal (33-35, 41-44) y en el 36, sobre el Do, un Sol tenido
     for b0, nb, (m1, m2, m3) in ((33, 3, (65, 77, 89)), (36, 1, (67, 79, 91)), (41, 4, (65, 77, 89)),
                                  (121, 3, (65, 77, 89)), (129, 4, (65, 77, 89))):
-        for m_, inst in ((m1, I_STR), (m2, I_STR), (m3, I_STR2)):
+        for m_, inst in ((m2, I_STR), (m3, I_STR2)):          # (sin la octava grave: embarraba)
             S.note('lay_ped%d' % (m_ - (m1 - 65)), 'n163', (b0 - 1) * BAR, nb * BAR - S16, m_, inst, gate=1.0, midi='keys')
     # El motivo del final va ARMONIZADO a la quinta por encima (una octava más arriba) en el
     # ogg: Do6-La#5-La5-La#5 (la voz alta de la caja de música) → Sol6-Fa6-Mi6-Fa6 (compás 118); el
@@ -483,12 +484,9 @@ def escalate(S, T, has):
         S.note('lay_bell5', 'pulse', s, d, m + 7, I_SPARK, vs=k, gate=1.0, midi='keys')
     # Final: el lead doblado a la octava, terceras debajo Y encima (brillo)
     for s, d, m, v in notes_in(square, *FINAL):
-        S.note('lay_lead8', 'pulse', s, d, m + 12, I_OCT, midi='lead')
-        lo, hi = third(m, up=False), third(m, up=True)
+        lo = third(m, up=False)
         if lo:
-            S.note('lay_lead3', 'n163', s, d, lo, I_HARM, midi='lead')
-        if hi:
-            S.note('lay_leadhi', 'vrc6', s, d, hi + 12, I_OCT, vs=0.8 if bar_of(s) < 125 else 1.0, midi='lead')
+            S.note('lay_lead3', 'n163', s, d, lo, I_HARM, vs=0.8, midi='lead')
     for b in range(FINAL[0], FINAL[1] + 1):
         root = None
         for s, d, m, v in T['Slap Bass']:
@@ -504,7 +502,7 @@ def escalate(S, T, has):
                     mm = m
             S.note('lay_pump', 'n163', t0, BAR / 16, (mm or root) - 12 + (12 if k % 2 else 0), I_PUMP, midi='bass')
     # Centelleo: arpegio de semicorcheas de la armonía (suave en 37-44 y 101-116, fuerte al final)
-    for (a, b, vs) in ((37, 44, 0.75), (101, 116, 0.75), (117, 124, 1.0), (125, 132, 1.15)):
+    for (a, b, vs) in ((37, 44, 0.75), (101, 116, 0.75), (117, 124, 0.75), (125, 132, 0.85)):
         for bb in range(a, b + 1):
             for h in range(2):
                 t0 = (bb - 1) * BAR + h * BAR / 2
@@ -528,13 +526,13 @@ def escalate(S, T, has):
             for beat in range(4):
                 if beat * 4 not in kicks:
                     S.drum((bb - 1) * BAR + beat * BAR / 4, 36, vel, bus='x')
-    four_floor(101, 116, 0.7); four_floor(117, 132, 0.85)
-    for bb in list(range(37, 45, 4)) + list(range(101, 117, 4)) + list(range(117, 125, 2)) + list(range(125, 133)):
+    four_floor(101, 116, 0.7); four_floor(117, 132, 0.75)
+    for bb in list(range(37, 45, 4)) + list(range(101, 117, 4)) + list(range(117, 133, 2)):
         if not any(n in (49, 57) and k == 0 for k, n in has.get(bb, set())):
             S.drum((bb - 1) * BAR, 49, 0.9, bus='x')
     for bb in range(117, 133):                                       # semicorcheas de hat al final
         for k in range(0, 16, 2):
-            S.NZ['xhat'].hit((bb - 1) * BAR + k * S16 + S16, 0, [5, 3, 1])
+            S.NZ['xhat'].hit((bb - 1) * BAR + k * S16 + S16, 0, [3, 2, 1])
     # Redobles: 115-116 (a corcheas y luego semicorcheas, creciendo), 124, 131-132 con toms
     for k in range(8):
         S.drum((115 - 1) * BAR + k * BAR / 8, 40, 0.45 + 0.04 * k, bus='x')
@@ -556,7 +554,7 @@ GROUPS = {'lead': ('lead',), 'bass': ('bass',), 'chords': ('chord',), 'bell': ('
 LAYER_OF = {'lay_ped': 'strings', 'lay_bell': 'bell', 'lay_leadsaw': 'lead', 'lay_lead': 'lead', 'lay_shim': 'arp', 'lay_pump': 'bass'}
 # (una capa suena un poco por debajo del instrumento que dobla; las dos "estrellas" del
 # final — la sierra que dobla el lead y la campana del motivo — a la par)
-LAYER_K = {'*': 0.75, 'lay_leadsaw': 1.0, 'lay_bellx': 1.1, 'lay_ped65': 1.0, 'lay_ped77': 1.2, 'lay_ped89': 1.0}
+LAYER_K = {'*': 0.75, 'lay_leadsaw': 1.0, 'lay_ped77': 1.1, 'lay_ped89': 0.9, 'lay_pump': 0.5}
 XBUS = {'xkick': 'kick', 'xsnare': 'snare', 'xtom': 'tom', 'xhat': 'hat', 'xcrash': 'crash', 'xriser': 'crash'}
 
 
