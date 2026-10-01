@@ -44,8 +44,8 @@ PAL = {
 # (caparazón redondo con bultos y púas, sin escarcha ni boca, patas largas, pinzas grandes)
 # dibujado a mano a esa resolución. Las pinzas apuntan HACIA DENTRO (hacia el cuerpo).
 SCALE = 10                  # escala de juego (la del Mega Crabby)
-CLAW_K = 0.85               # pinzas a 0.85 del cuerpo, como en el Mega
-CLAW_X, CLAW_Y = 4.6, -3.2  # dónde van las pinzas (px de arte desde el centro-abajo del cuerpo)
+CLAW_K = 1.0                # pinzas a la escala del cuerpo (el Mega: 0.85): más grandes
+CLAW_X, CLAW_Y = 5.4, -1.2  # dónde van las pinzas (px de arte desde el centro-abajo del cuerpo)
 
 SHELL = [
     ".....O.O..O.O.....",
