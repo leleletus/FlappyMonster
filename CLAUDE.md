@@ -409,8 +409,10 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   The `flyers` harness uses fixed random sequences: `SEED=n` tries others. Wings:
   `EntityTypes.drawWings` in the render wrapper (so every flying entity type gets
   them, behind the body): `assets/images/wings/wings-Sheet.png` (LEFT wing, 2
-  frames 9x13, root at the right edge) + its mirror, integer scale and position
-  from the entity's outer hitbox. Harness `flyers` (every level, all enemies as
+  frames 9x13, root at the right edge) + its mirror, integer scale; placed
+  SYMMETRIC on the VISIBLE body: the opaque box of the type's `editor.sprite` (first
+  frame if `editor.frameW`), measured once, with facing and flip (sprites are not
+  always centred in their canvas); no sprite → outer hitbox. Harness `flyers` (every level, all enemies as
   flyers).
 - Wall Crabby stomp (Interactions.defaultCheck): in the air, falling onto its top
   end OR coming from the open side (player centre beyond its outer face) =

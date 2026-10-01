@@ -263,22 +263,66 @@ end
 -- ── Alas de los voladores ────────────────────────────────────────────────────
 -- Toda entidad con movimiento 'fly' lleva un ala a cada lado, DETRÁS del
 -- sprite: assets/images/wings/wings-Sheet.png (ala IZQUIERDA, 2 cuadros de
--- 9x13: abierta / plegada, unida al cuerpo por su borde derecho); la derecha
--- es la misma espejada. Tamaño y posición salen de la hitbox exterior de cada
--- entidad (su cuerpo real), no de números fijos. Solo dibujo.
+-- 9x13 de aleteo, unida al cuerpo por su borde derecho); la derecha es la misma
+-- espejada. Se colocan SIMÉTRICAS respecto a lo que se VE: la caja de píxeles
+-- visibles del sprite del tipo (editor.sprite, medida una vez), con su lado y su
+-- vuelta; sin sprite, la hitbox exterior. Solo dibujo.
 local wingStrip
 local WING_FPS = 9
+local visCache = {}
+
+-- Caja visible del sprite del tipo, en píxeles de arte: {x0, x1, y0, y1, iw, ih} o false
+local function visibleBox(def)
+    local path = def and def.editor and def.editor.sprite
+    if not path then return false end
+    local fw = def.editor.frameW                                   -- (hoja de cuadros: solo el primero)
+    if visCache[path] == nil then
+        local ok, data = pcall(love.image.newImageData, path)
+        if not ok then visCache[path] = false; return false end
+        local iw, ih = data:getDimensions()
+        if fw then iw = math.min(iw, fw) end
+        local x0, x1, y0, y1 = iw, -1, ih, -1
+        for y = 0, ih - 1 do
+            for x = 0, iw - 1 do
+                local _, _, _, a = data:getPixel(x, y)
+                if a > 0 then
+                    if x < x0 then x0 = x end
+                    if x > x1 then x1 = x end
+                    if y < y0 then y0 = y end
+                    if y > y1 then y1 = y end
+                end
+            end
+        end
+        visCache[path] = (x1 >= 0) and { x0 = x0, x1 = x1, y0 = y0, y1 = y1, iw = iw, ih = ih } or false
+    end
+    return visCache[path]
+end
+
 function EntityTypes.drawWings(e, camX, camY)
     if not (e.props and e.props.movement == 'fly') or e.state == 'dead' then return end
     wingStrip = wingStrip or require('src/fx/SpriteStrip').load('assets/images/wings/wings-Sheet.png', 9)
-    local bw, bh = e.outerW or e.sprW or 40, e.outerH or e.sprH or 40
+    -- Cuerpo visible (centro x, arriba y alto en px de mundo)
+    local cxw, top, bw, bh
+    local vb = e.sprW and e.sprH and visibleBox(e.def or (e.class and e.class.def))
+    if vb then
+        local k = e.sprW / vb.iw                                 -- px de mundo por píxel de arte
+        local facing = (e.facing or 1) < 0 and -1 or 1
+        local mid = ((vb.x0 + vb.x1 + 1) / 2 - vb.iw / 2) * k     -- (dibujado centrado en e.x)
+        cxw = e.x + mid * facing
+        bw, bh = (vb.x1 - vb.x0 + 1) * k, (vb.y1 - vb.y0 + 1) * (e.sprH / vb.ih)
+        -- (dibujado apoyado abajo: los pies en e.y + sprH/2)
+        top = e.y + e.sprH / 2 - (vb.ih - vb.y0) * (e.sprH / vb.ih)
+        if e.flipped then top = 2 * e.y - (top + bh) end
+    else
+        bw, bh = e.outerW or e.sprW or 40, e.outerH or e.sprH or 40
+        cxw, top = e.x, e.y - bh / 2
+    end
     local s = math.max(1, math.floor(bh * 0.7 / wingStrip.h + 0.5))    -- escala entera (pixel art)
     local half = wingStrip.w * s / 2
-    -- Raíz del ala: un poco dentro del cuerpo (queda tapada) y en su mitad alta
+    -- Raíz del ala: un poco dentro del cuerpo (queda tapada), en su mitad alta
     local rootX = math.floor(bw * 0.42)
-    local cy = math.floor(e.y - camY - bh * 0.18)
-    if e.flipped then cy = math.floor(e.y - camY + bh * 0.18) end
-    local cx = math.floor(e.x - camX)
+    local cy = math.floor(top + bh * (e.flipped and 0.68 or 0.32) - camY)
+    local cx = math.floor(cxw - camX)
     -- Aleteo (desfasado por entidad para que no vayan todas a la vez)
     local f = wingStrip:frameAt(love.timer.getTime() + (e.home and e.home.x or 0) * 0.013, WING_FPS)
     local sy = e.flipped and -s or s
