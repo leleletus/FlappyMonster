@@ -8,6 +8,7 @@
 #   blanco → la cara: brillo arriba-izquierda y sombra a la derecha / abajo
 #   --rim  → variante B: además un borde fino azul claro SOLO por fuera de la silueta
 #            (los huecos de 1-2 px entre brazos y piernas no se rellenan)
+#   --mix  → la ELEGIDA: mezcla de A y D (cuerpo casi negro con el filo de volumen de A)
 #   --black→ variante D: cuerpo NEGRO puro como el original; solo la cara cambia
 #   --light→ variante C: cuerpo gris azulado algo más claro, sin borde (se distingue
 #            un poco de los fondos oscuros sin cambiar la silueta)
@@ -23,6 +24,7 @@ APPLY = '--apply' in sys.argv
 RIM = '--rim' in sys.argv
 LIGHT = '--light' in sys.argv
 BLACK = '--black' in sys.argv          # variante D: el cuerpo sigue NEGRO puro; solo la cara cambia
+MIX = '--mix' in sys.argv              # la ELEGIDA (mezcla de A y D): casi negro + el filo de volumen de A
 OUT = next((a for a in sys.argv[1:] if not a.startswith('--')), '/tmp/player_redesign')
 SRC = 'assets/images/'
 
@@ -63,7 +65,7 @@ def outer_rim(out, w, h):
     return res
 
 
-def restyle(rel, rim=False, light=False, black_body=False):
+def restyle(rel, rim=False, light=False, black_body=False, mix=False):
     im = Image.open(src(rel)).convert('RGBA')
     w, h = im.size
     at = lambda x, y: im.getpixel((x, y)) if 0 <= x < w and 0 <= y < h else (0, 0, 0, 0)
@@ -78,6 +80,7 @@ def restyle(rel, rim=False, light=False, black_body=False):
     cx = (min(xs) + max(xs)) / 2 if xs else w / 2
     body, bodyL = ((52, 56, 78, 255), (78, 84, 112, 255)) if light else (NAVY, NAVY_L)
     if black_body: body = bodyL = (0, 0, 0, 255)
+    if mix: body, bodyL = (12, 12, 20, 255), (50, 52, 74, 255)
     out = Image.new('RGBA', (w, h), (0, 0, 0, 0))
     for y in range(h):
         for x in range(w):
@@ -103,7 +106,7 @@ if __name__ == '__main__':
         print('Rediseño del monstruito y del Espejo (originales fuera del repo):')
         for rel in FILES:
             originals.keep(SRC + rel)
-            im = restyle(rel, RIM and rel not in NO_RIM, LIGHT, BLACK)
+            im = restyle(rel, RIM and rel not in NO_RIM, LIGHT, BLACK, MIX)
             im.save(SRC + rel)
             print('  %-42s %dx%d' % (SRC + rel, im.width, im.height))
         sys.exit(0)
