@@ -259,7 +259,11 @@ src/states/            Title, MainMenu, Play (flappy; HUD: big score in PixelFon
                        shadow (`boxed`), pops on each point and flashes yellow every 10; best with the
                        crown → "¡NUEVO RÉCORD!" blinking once beaten; difficulty plaque top-left in its
                        colour; game-over card. Labels use PixelFont because FONT_* lack uppercase
-                       accents; harness `flappy_hud`), Adventure (SP), FreePlay (SP level
+                       accents; harness `flappy_hud`). Difficulty pacing = `DIFFICULTIES` in settings.lua:
+                       pipes spawn by DISTANCE (`spacing`), speed ramps per pipe passed (`ramp` up to
+                       `rampMax`), the gap moves at most `maxJump` from the previous one; easy/normal were
+                       reworked to be faster (user: "very slow, boring"), `flappy_hud BOT=1` proves them
+                       beatable at top speed), Adventure (SP), FreePlay (SP level
                        hub), Online* (login, hub, room, adventure, results, error), Pause
 src/editor/            Editor.lua (UI+tools), EditorModel.lua (data/save/validate), ui.lua
 src/fx/Particles.lua   Particles.emit(kind,x,y) — kinds: gp_land, gp_start, block_break,

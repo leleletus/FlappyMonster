@@ -61,10 +61,13 @@ function PlayState:enter(args)
     local diff    = DIFFICULTIES[diffKey]
 
     self.diffKey       = diffKey
-    self.pipeSpeed     = PIPE_SPEED     * diff.speedMult
+    self.diff          = diff
+    self.baseSpeed     = PIPE_SPEED     * diff.speedMult
+    self.pipeSpeed     = self.baseSpeed
     self.pipeGap       = PIPE_GAP       * diff.gapMult
-    self.pipeSpawnTime = PIPE_SPAWN_TIME / diff.spawnMult
+    self.pipeSpacing   = diff.spacing
     self.pointsPerPipe = diff.points
+    self.passed        = 0                  -- tuberías pasadas (aceleración)
     self.pipeMinY      = 80
     self.pipeMaxY      = WINDOW_H - 80 - self.pipeGap
 
@@ -74,7 +77,7 @@ function PlayState:enter(args)
     self.popT, self.flashT = 0, 0
     self.highScore = self:loadHighScore(diffKey)
     self.bgScroll  = 0
-    self.pipeTimer = self.pipeSpawnTime * 0.55
+    self.pipeDist  = self.pipeSpacing * 0.45          -- (la primera tubería llega pronto)
 
     self.dead        = false
     self.deadTimer   = 0
@@ -134,16 +137,7 @@ function PlayState:update(dt)
             end
         end
         self.player:update(sdt)
-        self.pipeTimer = self.pipeTimer + sdt
-        if self.pipeTimer >= self.pipeSpawnTime then
-            self.pipeTimer = 0
-            local gapY = math.random(
-                math.floor(self.pipeMinY + self.pipeGap / 2),
-                math.floor(self.pipeMaxY + self.pipeGap / 2))
-            local p = Pipe:new(WINDOW_W + PIPE_W, gapY)
-            p.gap = self.pipeGap
-            table.insert(self.pipes, p)
-        end
+        self:spawnPipes(sdt)
         for i = #self.pipes, 1, -1 do
             local p = self.pipes[i]
             p:update(sdt)
@@ -164,16 +158,7 @@ function PlayState:update(dt)
     self:updateScroll(sdt)
     self:updateColor(dt)
 
-    self.pipeTimer = self.pipeTimer + sdt
-    if self.pipeTimer >= self.pipeSpawnTime then
-        self.pipeTimer = 0
-        local gapY = math.random(
-            math.floor(self.pipeMinY + self.pipeGap / 2),
-            math.floor(self.pipeMaxY + self.pipeGap / 2))
-        local p = Pipe:new(WINDOW_W + PIPE_W, gapY)
-        p.gap = self.pipeGap
-        table.insert(self.pipes, p)
-    end
+    self:spawnPipes(sdt)
 
     for i = #self.pipes, 1, -1 do
         local p = self.pipes[i]
@@ -181,6 +166,9 @@ function PlayState:update(dt)
         p.x = p.x - self.pipeSpeed * sdt
         if not p.passed and p.x + p.w < self.player.x then
             p.passed = true
+            -- (la velocidad sube un poco con cada tubería, hasta su tope)
+            self.passed = self.passed + 1
+            self.pipeSpeed = self.baseSpeed * (1 + math.min(self.diff.rampMax or 0, self.passed * (self.diff.ramp or 0)))
             local before = self.score
             self.score = self.score + self.pointsPerPipe
             self.popT = POP_T
@@ -201,6 +189,26 @@ function PlayState:update(dt)
         if p:collides(bounds) then self:die(); return end
     end
     if not self.player.alive then self:die() end
+end
+
+-- Saca tuberías por DISTANCIA recorrida (la separación no cambia al acelerar). El
+-- hueco nuevo no se aleja más de maxJump del anterior: rápido pero siempre alcanzable
+function PlayState:spawnPipes(sdt)
+    self.pipeDist = self.pipeDist + self.pipeSpeed * sdt
+    if self.pipeDist < self.pipeSpacing then return end
+    self.pipeDist = self.pipeDist - self.pipeSpacing
+    local lo = math.floor(self.pipeMinY + self.pipeGap / 2)
+    local hi = math.floor(self.pipeMaxY + self.pipeGap / 2)
+    local mj = self.diff.maxJump
+    if mj and self.lastGapY then
+        lo = math.max(lo, math.floor(self.lastGapY - mj))
+        hi = math.min(hi, math.floor(self.lastGapY + mj))
+    end
+    local gapY = math.random(lo, math.max(lo, hi))
+    self.lastGapY = gapY
+    local p = Pipe:new(WINDOW_W + PIPE_W, gapY)
+    p.gap = self.pipeGap
+    table.insert(self.pipes, p)
 end
 
 function PlayState:updateScroll(sdt)

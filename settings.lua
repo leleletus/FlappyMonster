@@ -25,11 +25,15 @@ PIPE_MIN_Y      = 80
 PIPE_MAX_Y      = WINDOW_H - 80 - PIPE_GAP
 
 -- ── Dificultades ──────────────────────────────────────────────────────────────
--- Cada entrada: { speed_mult, gap_mult, spawn_mult, points, label }
+-- speedMult/gapMult: sobre PIPE_SPEED / PIPE_GAP; spacing: px entre tuberías (se
+-- sacan por DISTANCIA, así la separación no cambia al acelerar); ramp: velocidad
+-- extra por tubería pasada hasta rampMax (la partida se anima sin cambiar de
+-- dificultad); maxJump: lo más que se mueve el hueco de una tubería a la
+-- siguiente (nil = libre). Fácil y normal eran justas pero MUY lentas.
 DIFFICULTIES = {
-    easy   = { speedMult = 0.75, gapMult = 1.35, spawnMult = 0.60, points = 1 },
-    normal = { speedMult = 1.15, gapMult = 0.95, spawnMult = 1.10, points = 2 },
-    hard   = { speedMult = 1.90, gapMult = 0.65, spawnMult = 1.20, points = 5 },
+    easy   = { speedMult = 1.20, gapMult = 1.30, spacing = 430, ramp = 0.012, rampMax = 0.25, maxJump = 170, points = 1 },
+    normal = { speedMult = 1.50, gapMult = 1.00, spacing = 400, ramp = 0.012, rampMax = 0.30, maxJump = 210, points = 2 },
+    hard   = { speedMult = 1.90, gapMult = 0.65, spacing = 557, ramp = 0,     rampMax = 0,                  points = 5 },
 }
 DIFFICULTY_ORDER = { 'easy', 'normal', 'hard' }  -- orden de selección
 
