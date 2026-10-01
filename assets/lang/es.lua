@@ -43,6 +43,8 @@ return {
         score = "Puntos: {n}",
         best = "Récord: {n}",
         final_score = "Puntuación: {n}",
+        best_label = "RÉCORD",
+        new_best = "¡NUEVO RÉCORD!",
     },
     diff = {
         easy = "FÁCIL",

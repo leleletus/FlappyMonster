@@ -139,7 +139,8 @@ function PixelFont.height(s) return H * s end
 
 -- Dibuja el texto: blanco sobre negro ajustado, con la esquina superior
 -- izquierda del cuerpo de las letras en (x, y). `alpha` afecta a todo.
-function PixelFont.draw(text, x, y, s, alpha)
+-- color (opcional) = el de las letras ({r, g, b}); el fondo sigue negro
+function PixelFont.draw(text, x, y, s, alpha, color)
     local f = build()
     text = PixelFont.upper(text)
     alpha = alpha or 1
@@ -150,7 +151,8 @@ function PixelFont.draw(text, x, y, s, alpha)
     love.graphics.rectangle('fill', x, y - top, w, H * s + top)
     local prev = love.graphics.getFont()
     love.graphics.setFont(f)
-    love.graphics.setColor(1, 1, 1, alpha)
+    local c = color or { 1, 1, 1 }
+    love.graphics.setColor(c[1], c[2], c[3], alpha)
     love.graphics.print(text, x, y - ACC * s, 0, s, s)
     love.graphics.setFont(prev)
 end

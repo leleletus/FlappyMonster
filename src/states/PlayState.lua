@@ -4,6 +4,16 @@ local BaseState = require 'src/BaseState'
 local Player    = require 'src/entities/Player'
 local Pipe      = require 'src/entities/Pipe'
 local L = require 'src/Lang'
+local PixelFont  = require 'src/ui/PixelFont'
+local PixelIcons = require 'src/ui/PixelIcons'
+
+-- HUD: puntuación grande en el centro (fuente pixel de los menús), récord debajo
+-- con la corona, dificultad en una placa de su color arriba a la izquierda
+local SCORE_PX   = 12                       -- escala de la fuente pixel de la puntuación
+local POP_T      = 0.18                     -- s del "salto" al sumar un punto
+local FLASH_T    = 0.6                      -- s del destello amarillo cada 10 puntos
+local YELLOW     = { 1, 0.9, 0.2 }
+local DIFF_COLOR = { easy = { 0.30, 0.72, 0.36 }, normal = { 0.95, 0.72, 0.15 }, hard = { 0.86, 0.24, 0.24 } }
 
 local PlayState = BaseState:new()
 
@@ -61,6 +71,7 @@ function PlayState:enter(args)
     self.player    = Player:new()
     self.pipes     = {}
     self.score     = 0
+    self.popT, self.flashT = 0, 0
     self.highScore = self:loadHighScore(diffKey)
     self.bgScroll  = 0
     self.pipeTimer = self.pipeSpawnTime * 0.55
@@ -170,7 +181,10 @@ function PlayState:update(dt)
         p.x = p.x - self.pipeSpeed * sdt
         if not p.passed and p.x + p.w < self.player.x then
             p.passed = true
+            local before = self.score
             self.score = self.score + self.pointsPerPipe
+            self.popT = POP_T
+            if math.floor(self.score / 10) > math.floor(before / 10) then self.flashT = FLASH_T end
             if self.score % 10 == 0 then
                 Sound.play('decimal', Sound.decimalPitch(self.score))
             else
@@ -209,6 +223,7 @@ function PlayState:die()
     self.selectedOpt = 1
     self.player:die()
     Sound.play('dies')
+    self.newBest = self.score > self.highScore
     if self.score > self.highScore then
         self.highScore = self.score
         self:saveHighScore(self.diffKey, self.score)
@@ -245,14 +260,7 @@ function PlayState:render()
     self.player:render()
 
     -- HUD
-    love.graphics.setColor(0, 0, 0, 0.7)
-    love.graphics.setFont(FONT_MED)
-    love.graphics.print(L('flappy.score', { n = self.score }),     20, 20)
-    love.graphics.print(L('flappy.best', { n = self.highScore }), 20, 55)
-    love.graphics.setFont(FONT_BIG)
-    local diffLabel = L('diff.' .. self.diffKey)
-    local diffW = FONT_BIG:getWidth(diffLabel)
-    love.graphics.print(diffLabel, WINDOW_W - diffW - 24, 20)
+    if not self.dead then self:renderHud() end
 
     -- ── Game over overlay ─────────────────────────────────────────────────────
     if self.dead and self.deadTimer > 0.4 then
@@ -261,13 +269,7 @@ function PlayState:render()
         love.graphics.setColor(0, 0, 0, 0.60 * oa)
         love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
 
-        love.graphics.setFont(FONT_BIG)
-        love.graphics.setColor(COLOR_RED[1], COLOR_RED[2], COLOR_RED[3], oa)
-        love.graphics.printf(L('hud.game_over'), 0, WINDOW_H/2 - 110, WINDOW_W, 'center')
-
-        love.graphics.setFont(FONT_MED)
-        love.graphics.setColor(1, 1, 1, oa)
-        love.graphics.printf(L('flappy.final_score', { n = self.score }), 0, WINDOW_H/2 - 40, WINDOW_W, 'center')
+        self:renderGameOverCard(oa)
 
         if self.deadTimer > 0.8 then
             local ba = math.min(1, (self.deadTimer - 0.8) / 0.3)
@@ -290,6 +292,88 @@ function PlayState:render()
 
     love.graphics.setFont(FONT_MED)
     love.graphics.setColor(COLOR_WHITE)
+end
+
+-- Texto en la fuente pixel con margen negro de un píxel (de la fuente) y sombra
+local function boxed(text, x, y, s, a, color)
+    local w, h = PixelFont.width(text, s), PixelFont.height(s)
+    local top = text:find('[\195]') and 2 * s or 0             -- (tildes encima)
+    love.graphics.setColor(0, 0, 0, 0.45 * (a or 1))
+    love.graphics.rectangle('fill', x - s + s, y - s - top + s, w + 2 * s, h + 2 * s + top)
+    love.graphics.setColor(0, 0, 0, a or 1)
+    love.graphics.rectangle('fill', x - s, y - s - top, w + 2 * s, h + 2 * s + top)
+    PixelFont.draw(text, x, y, s, a, color)
+end
+
+-- Texto con sombra negra (como el HUD de la Aventura)
+local function shadowed(font, text, x, y, c, a)
+    love.graphics.setFont(font)
+    love.graphics.setColor(0, 0, 0, 0.8 * (a or 1))
+    love.graphics.print(text, x + 3, y + 3)
+    love.graphics.setColor(c[1], c[2], c[3], a or 1)
+    love.graphics.print(text, x, y)
+end
+
+function PlayState:renderHud()
+    local dt = love.timer.getDelta()
+    self.popT = math.max(0, (self.popT or 0) - dt)
+    self.flashT = math.max(0, (self.flashT or 0) - dt)
+    -- Puntuación: grande y centrada; da un saltito al sumar y destella cada 10
+    local txt = tostring(self.score)
+    local px = SCORE_PX + ((self.popT > POP_T / 2) and 2 or (self.popT > 0 and 1 or 0))
+    local w = PixelFont.width(txt, px)
+    local col = (self.flashT > 0 and math.floor(self.flashT * 12) % 2 == 0) and YELLOW or nil
+    boxed(txt, math.floor(WINDOW_W / 2 - w / 2), 30 - (px - SCORE_PX) * 2, px, 1, col)
+    -- Récord (o ¡nuevo récord!, parpadeando, si ya lo has superado en esta partida)
+    local by = 30 + PixelFont.height(SCORE_PX) + 26
+    local beaten = self.highScore > 0 and self.score > self.highScore
+    -- (con la fuente pixel: la del HUD no tiene tildes en mayúscula)
+    local label = beaten and L('flappy.new_best') or (L('flappy.best_label') .. ' ' .. self.highScore)
+    local LS = 4
+    local lw = PixelFont.width(label, LS)
+    local iconW = 11 * 3 + 10
+    local lx = math.floor(WINDOW_W / 2 - (lw + iconW) / 2)
+    local blink = beaten and math.floor(love.timer.getTime() * 4) % 2 == 0
+    PixelIcons.draw('crown', lx, by - 4, 3, 1)
+    boxed(label, lx + iconW, by, LS, 1, blink and { 1, 1, 1 } or YELLOW)
+    -- Dificultad: placa negra con marco de su color, arriba a la izquierda
+    local dl = L('diff.' .. self.diffKey)
+    local dc = DIFF_COLOR[self.diffKey] or DIFF_COLOR.normal
+    local DS = 4
+    local dw, dh = PixelFont.width(dl, DS), PixelFont.height(DS)
+    local px, py = 30, 32
+    love.graphics.setColor(0, 0, 0, 0.8)
+    love.graphics.rectangle('fill', px - 10 + 4, py - 12 + 4, dw + 20, dh + 22)   -- sombra
+    love.graphics.setColor(dc[1], dc[2], dc[3], 1)
+    love.graphics.rectangle('fill', px - 10, py - 12, dw + 20, dh + 22)
+    love.graphics.setColor(0, 0, 0, 1)
+    love.graphics.rectangle('fill', px - 4, py - 6, dw + 8, dh + 10)
+    PixelFont.draw(dl, px, py, DS, 1, dc)
+end
+
+-- Tarjeta de fin de partida: GAME OVER, la puntuación grande y el récord
+function PlayState:renderGameOverCard(oa)
+    local cw, ch = 520, 230
+    local x, y = math.floor(WINDOW_W / 2 - cw / 2), math.floor(WINDOW_H / 2 - 270)
+    love.graphics.setColor(0, 0, 0, 0.8 * oa)
+    love.graphics.rectangle('fill', x + 6, y + 6, cw, ch)
+    love.graphics.setColor(0.10, 0.10, 0.16, 0.95 * oa)
+    love.graphics.rectangle('fill', x, y, cw, ch)
+    love.graphics.setColor(1, 1, 1, oa)
+    for _, r in ipairs({ { x, y, cw, 4 }, { x, y + ch - 4, cw, 4 }, { x, y, 4, ch }, { x + cw - 4, y, 4, ch } }) do
+        love.graphics.rectangle('fill', r[1], r[2], r[3], r[4])
+    end
+    local go = L('hud.game_over')
+    shadowed(FONT_BIG, go, math.floor(WINDOW_W / 2 - FONT_BIG:getWidth(go) / 2), y + 22, COLOR_RED, oa)
+    local txt = tostring(self.score)
+    local w = PixelFont.width(txt, 8)
+    boxed(txt, math.floor(WINDOW_W / 2 - w / 2), y + 84, 8, oa)
+    local newBest = self.score > 0 and self.score >= self.highScore and self.newBest
+    local label = newBest and L('flappy.new_best') or (L('flappy.best_label') .. ' ' .. self.highScore)
+    local lw = PixelFont.width(label, 4) + 43
+    local lx = math.floor(WINDOW_W / 2 - lw / 2)
+    PixelIcons.draw('crown', lx, y + ch - 56, 3, oa)
+    boxed(label, lx + 43, y + ch - 50, 4, oa, YELLOW)
 end
 
 function PlayState:exit() end

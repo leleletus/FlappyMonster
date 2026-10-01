@@ -255,7 +255,11 @@ src/network/
   NetworkClient.lua    NC singleton (NC:on/off, NC:send, NC.myId)
   Predictor.lua        local prediction + reconciliation (re-sim is SILENT: Sound muted)
   SnapshotBuffer.lua   interpolation buffer for remote stuff
-src/states/            Title, MainMenu, Play (flappy), Adventure (SP), FreePlay (SP level
+src/states/            Title, MainMenu, Play (flappy; HUD: big score in PixelFont with a black margin +
+                       shadow (`boxed`), pops on each point and flashes yellow every 10; best with the
+                       crown → "¡NUEVO RÉCORD!" blinking once beaten; difficulty plaque top-left in its
+                       colour; game-over card. Labels use PixelFont because FONT_* lack uppercase
+                       accents; harness `flappy_hud`), Adventure (SP), FreePlay (SP level
                        hub), Online* (login, hub, room, adventure, results, error), Pause
 src/editor/            Editor.lua (UI+tools), EditorModel.lua (data/save/validate), ui.lua
 src/fx/Particles.lua   Particles.emit(kind,x,y) — kinds: gp_land, gp_start, block_break,

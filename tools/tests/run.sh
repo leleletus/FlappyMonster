@@ -82,6 +82,7 @@ if [ "${1:-}" = all ]; then
              "online_smoke LEVEL=tools/levelgen/arenas/bombas.json MODE=race SECS=12 WATCH=bomb WANT=lit,exploding" \
              "online_smoke LEVEL=tools/levelgen/arenas/hielo.json MODE=race SECS=10 WANTTILES=thin_ice_1,thin_ice_2,thin_ice_3,empty" \
              "online_boss LEVEL=tools/levelgen/arenas/jefe_cangrejo.json NOSHOTS=1" \
+             "flappy_hud" \
              "online_boss LEVEL=tools/tests/online_boss/fortaleza_flood.json NOSHOTS=1 SECS=40" \
              "online_boss LEVEL=tools/tests/online_boss/espejo.json NOSHOTS=1 SECS=30"; do
         echo "════ $t"
