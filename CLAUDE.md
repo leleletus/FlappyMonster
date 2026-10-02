@@ -268,21 +268,22 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     double octave, 2-octave pedal, softer shimmer/pump/hats, crash every 2 bars.
                     `tools/music/tentacle_winter.py` → `tentacle_winter.ogg` + `.mid` (catalog `tentacle_winter`, the
                     Icy Mega Crabby: jefe_cangrejo_helado arena + glaciar_cangrejo): a NEW arrangement, not a blend of
-                    the two files (both are 185 BPM, 144 bars). FOUNDATION = tentacle_nes (imports its `load_midi`/
-                    `voices`/`HARM`/`chord_at`/`section`: melody note for note, bass, harmony, drum patterns); PALETTE =
-                    winter_nes (imports its `Song`, instruments, kit: saw lead + sheen, music box + echo, hollow strings,
-                    tri sub + slap, shimmer) + sleigh bells (short 2A03 noise on 8ths). The winter MOTIF (scale degrees
-                    `MOTIF`) is placed by form: chorus = call and response in the GAPS of Tentacle's melody (bars 27-28,
-                    31-32, 35-36, 39-40: D minor = the motif's own F major, and those gaps sit on B♭ B♭ / B♭ C, the
-                    motif's chords in winter); riff = its head transposed DIATONICALLY (from the 5th of the minor),
-                    alternate bars (whole motif on pass 2); scales = when the harmony reaches F (49-53; E too on pass 2);
-                    final = in the final's scale (B natural over B/C#, C over D#), fifth harmony on pass 2. Every ADDED
-                    note goes through `fit`: avoid note of the chord → nearest chord tone that doesn't repeat the
-                    previous one; a semitone from the lead sounding in that quarter → dropped (silence beats bending the
-                    motif); strings swap to the root (or drop) when the lead rubs them. Mix = winter's per-group levels
-                    + octave-band EQ toward winter_nes.ogg. Measured: MFCC distance to winter 12 vs tentacle 24
-                    (winter↔tentacle 26), centroid 2913 Hz (winter 2945, tentacle 2151), percussive ratio 0.30, chroma
-                    energy on avoid notes 20.2 % = tentacle_nes's own (the additions add no dissonance), −10 LUFS.
+                    the two files (both are 185 BPM). FOUNDATION = tentacle_nes (imports its `load_midi`/`voices`/
+                    `HARM`/`chord_at`/`section`: melody note for note, bass, harmony, drum patterns); PALETTE and
+                    DRIVE = winter_nes (imports its `Song`, instruments, kit, `LEVEL_DB`: saw lead + sheen + low N163
+                    body, harmonized lead in chorus/final, hollow strings, pad, tri sub + slap, low comp doubling,
+                    8th "pump" bass, offbeat open hats, four-on-the-floor, crashes, shimmer) + sleigh bells. FORM
+                    (176 bars, 228 s): Tentacle pass 1 (72) | a NEW SECTION = winter's 1:48 melody (Smooth Synth,
+                    bars 85-116) with winter_nes's WHOLE arrangement (class `Part` wraps the song while `W.build`
+                    runs: keeps only those bars, shifted and transposed +1 → F# MAJOR: enters from the final's D#,
+                    its last chord C# is the dominant of the F# minor riff) | Tentacle pass 2 (denser). The Christmas
+                    music-box motif is NOT used: v1 put it in the gaps of Tentacle's melody and the user found it
+                    forced in almost every appearance — don't graft a motif onto another song's sections; give it
+                    its own section. Strings swap to the root (or drop) when the lead rubs them. Strength = sustained
+                    BODY, not louder drums: with the kick at +1.5 dB the crest factor was 11 dB vs winter's 9.7 and
+                    sections 1-2 dB weaker → kick +0.3, bass 0, pad −5, master −9.3 LUFS (no quiet stretches like
+                    winter's intro). Measured vs winter 85-116 (rms −10.5, 64 spectral peaks/frame, crest 9.7):
+                    sections −11.9…−10.7, 65-93 peaks, crest 9.9-10.7.
 src/entities/
   PlayerAdventure.lua  THE player physics (shared by SP, server and client prediction)
   OnlinePlayer.lua     remote player renderer (tinted by player color, name tag)
