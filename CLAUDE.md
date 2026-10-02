@@ -275,15 +275,19 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     final — with the VRC6 saw as main lead the user still heard Tentacle's instrument —, harmonized
                     lead in chorus/final, hollow strings, pad, tri sub + slap, low comp doubling,
                     8th "pump" bass, offbeat open hats, four-on-the-floor, crashes, shimmer) + sleigh bells. FORM
-                    (180 bars, 233.5 s): Tentacle pass 1 (72) | 4-bar BRIDGE (`bridge()`: B B C# C# = the final's first two
+                    (188 bars, 243.9 s): Tentacle pass 1 (72) | 4-bar BRIDGE (`bridge()`: B B C# C# = the final's first two
                     chords turned into IV–V of F#; the final's melodic cell, a rising C# arpeggio, drums emptied then a
                     snare build + toms + riser, swelling strings, music-box arpeggio; a bare cut was "abrupt") | a NEW SECTION = winter's 1:48 melody (Smooth Synth,
                     bars 85-116) with winter_nes's WHOLE arrangement (class `Part` wraps the song while `W.build`
                     runs: keeps only those bars, shifted and transposed +1 → F# MAJOR: enters from the final's D#,
-                    its last chord C# is the dominant of the F# minor riff) | Tentacle pass 2 (denser). The Christmas
-                    music-box motif is NOT used: v1 put it in the gaps of Tentacle's melody and the user found it
-                    forced in almost every appearance — don't graft a motif onto another song's sections; give it
-                    its own section. SECTION CHANGES must not also be instrument changes (user: entry and exit felt
+                    its last chord C# is the dominant of the F# minor riff) + winter's bars 117-124 (the first pass of the
+                    CHRISTMAS MOTIF of winter's final, as the section's payoff; also ends on C#) | Tentacle pass 2
+                    (denser). The Christmas music-box motif appears TWICE, both in its own harmony and key: in the
+                    bridge (IV–IV–V–V → I are exactly the motif's chords in winter; `MOTIF_F` + 1 on the music box,
+                    a note that rubs the lead is dropped, the landing note falls on the new section's downbeat) and
+                    as that payoff. v1 put it in the gaps of Tentacle's melody (other keys, bent by fits) and the user
+                    found it forced in almost every appearance — don't graft a motif onto another song's sections;
+                    put it where its own chords already are. SECTION CHANGES must not also be instrument changes (user: entry and exit felt
                     strange): the winter melody is sung by the SAME voice as Tentacle's (`Part.note` adds the music box
                     + pulse to `lead3`), Tentacle's chop (on the notes of winter's pad) and tresillo kick run under the
                     whole winter section, winter's shimmer + high strings already play in the last 8 bars before the
