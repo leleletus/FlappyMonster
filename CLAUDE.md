@@ -1689,8 +1689,20 @@ arenas as bonus nodes vs an expert BOT. User's decisions: world map with a path,
 - `src/story/Save.lua`: 3 slots `story1..3.sav` + global `story.sav` (unlocks) in the save dir — Lua tables loaded
   without an environment; never a `.lua` name. `src/story/Run.lua`: the open slot; `state(w, k)` = done / open /
   locked (levels open in order, the next world when the boss is beaten), `complete(id, result)` saves, `frontier()`.
-- `StorySlotState` (pick / create / delete with confirmation) and `StoryMapState` (one world per screen: path of nodes,
-  boss node last, hero hops between nodes; ←→ node, ↑↓ world; mouse/touch; layout computed at draw time).
+- `StorySlotState` (pick / create / delete with confirmation) and `StoryMapState` = the WORLD MAP (stage 5, Super Mario
+  World style): ONE big scrolling map (84x48 cells of 32 px) from DATA `assets/story/overworld.json`, written by
+  `tools/ui/make_overworld.py` (deterministic; also writes `assets/images/story/` node/castle/water/path/bridge/ground/
+  edge/foam sprites): terrain letters per cell (`~` sea, g grass, s sand, w snow, c cave rock, f fortress stone, l volcanic
+  rock, L lava = the game's lava.png animated), one PATH polyline per world (its `Worlds` levels are spread evenly along it
+  by arc length, however many there are, boss last = a CASTLE with the boss sprite small beside it, gold flag once beaten),
+  bridges between worlds (`connect`; planks over water), decorations and wandering critters (the game's own sprites at ×2),
+  per-world boss art (`worlds[i].boss` {img, fw, over, glow, fly, invert}). Island tops = ground tiles coloured from the
+  game's blocks; CLIFF faces under land facing the sea = the real block textures seen from the side (grass/sand/snow/
+  stone/border/deep_stone). The hero (monstrito walk frames) WALKS along the path: ←→ = previous / next level (crosses
+  worlds over the bridge; a locked stop stops it with a bump), ↑↓ = walk to the next world's first level / previous
+  world's boss; long trips speed up (~1 s). `self.world/self.node` change at once (the walk is visual; ENTER while walking
+  snaps and plays). Tap a node = walk there (tap your own = play); bottom arrows = previous / next. Camera follows the
+  hero between the top band (TOP_H) and the level card (BOT_H), clamped to the map. Bonus nodes (KOTH vs bot) = stage 8.
   `PixelFont.draw` draws ONLY the letters (it used to fill a tight black box behind them: fine on the black menus,
   odd everywhere else — the user had it removed); over coloured backgrounds use `PixelFont.shadow` (1-font-pixel black
   drop shadow).
@@ -1699,7 +1711,7 @@ arenas as bonus nodes vs an expert BOT. User's decisions: world map with a path,
   `args.onFinish(result {score, time, lives})` or goes to `returnTo`. The story passes `onFinish`; Free Play and the
   editor just return.
 - Harness `story_flow` (real game: slots, locked nodes, clearing levels, save reloaded from disk, world 2 unlock,
-  delete; screenshots at 1280 / 960 / 1600).
+  delete; screenshots at 1280 / 960 / 1600, plus a tour with every world open: `story_world_<n>.png`).
 
 ## OST presentation videos (`tools/video/`)
 

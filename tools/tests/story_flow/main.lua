@@ -98,14 +98,13 @@ function love.update(dt)
         shot('map_1280')
         pressNext('nav_right'); go('locked')
     elseif step == 'locked' and t - T > 0.3 then
-        pressNext('confirm'); go('locked2')
-    elseif step == 'locked2' and t - T > 0.4 then
-        local stayed = top().node == 2 and top().world == 1 and top().levelPath == nil
-        pressNext('nav_down'); go('locked3'); LOCK1 = stayed
+        -- el camino al nodo 2 está cerrado: el monstruo no anda (choca) y ABAJO no pasa al mundo 2
+        LOCK1 = top().node == 1 and top().world == 1 and #top().queue == 0 and top().levelPath == nil
+        pressNext('nav_down'); go('locked3')
     elseif step == 'locked3' and t - T > 0.3 then
         check('cerrado', LOCK1 and st.world == 1 and Run.state(1, 2) == 'locked' and not Run.worldOpen(2),
-            ('ENTER en el nodo 2 cerrado no entra=%s; ABAJO no pasa al mundo 2 (sigue en el %s)'):format(tostring(LOCK1), tostring(st.world)))
-        pressNext('nav_left'); go('play1')
+            ('DERECHA hacia el nodo 2 cerrado no anda=%s; ABAJO no pasa al mundo 2 (sigue en el %s)'):format(tostring(LOCK1), tostring(st.world)))
+        go('play1')
     elseif step == 'play1' and t - T > 0.3 then
         pressNext('confirm'); go('in1')
     elseif step == 'in1' and t - T > 0.6 then
@@ -271,7 +270,22 @@ function love.update(dt)
     elseif step == 'r960' and t - T > 0.3 then resize(960, 720); go('r960b')
     elseif step == 'r960b' and t - T > 0.5 then shot('map_960'); go('r1600')
     elseif step == 'r1600' and t - T > 0.3 then resize(1600, 720); go('r1600b')
-    elseif step == 'r1600b' and t - T > 0.5 then shot('map_1600'); go('del')
+    elseif step == 'r1600b' and t - T > 0.5 then shot('map_1600'); resize(1280, 720); TOUR = 0; go('tour')
+    -- VUELTA por el mapa: todos los mundos abiertos (copia de la partida, se restaura) y una captura
+    -- de cada uno, con el monstruo ya llegado a su primer nivel (story_world_<n>.png)
+    elseif step == 'tour' and t - T > 0.3 then
+        if TOUR == 0 then
+            KEEP = {}
+            for k, v in pairs(Run.data.done) do KEEP[k] = v end
+            for w = 1, Worlds.count() - 1 do for _, n in ipairs(Worlds.nodes(w)) do Run.data.done[n.id] = true end end
+        end
+        TOUR = TOUR + 1
+        if TOUR > Worlds.count() then
+            Run.data.done = KEEP; Run.save(); go('del')
+        else
+            gStateMachine:change('story_map', { world = TOUR, node = 1 }); go('tour2')
+        end
+    elseif step == 'tour2' and t - T > 0.6 then shot('world_' .. TOUR); go('tour')
     elseif step == 'del' and t - T > 0.3 then
         resize(1280, 720)
         pressNext('back'); go('del2')
