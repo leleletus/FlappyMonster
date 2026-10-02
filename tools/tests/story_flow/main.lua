@@ -10,6 +10,8 @@
 --  6b. las VIDAS son de la aventura: perder una en un nivel se nota en el siguiente; salir por la pausa las
 --     guarda; sin vidas = GAME OVER: de vuelta al principio del mundo (sus niveles, sin superar), vidas de
 --     nuevo; en Xtra extremo, todo el juego; vidas de partida 3 / 3 / 3 / 4 / 6;
+--  6c. RESULTADOS tras cada nivel (estadísticas, nota S-D, puntos) y de ahí al mapa; notas con casos fijos;
+--     premios (vida por la primera S, premio del mundo una sola vez);
 --  7. borrar la partida (dos pulsaciones) la deja vacía;
 --  8. capturas del mapa y de las partidas a 1280, 960 y 1600 de ancho: <save>/story_*.png
 --   tools/tests/run.sh story_flow
@@ -116,6 +118,18 @@ function love.update(dt)
         WON1 = st.won == true
         go('back1')
     elseif step == 'back1' and t - T > 3.2 then
+        -- antes del mapa, los RESULTADOS del nivel: estadísticas, nota y premio
+        local sm = st.sum
+        local d = Run.data.best[W1[1].id]
+        check('resultados', sm ~= nil and st.rows ~= nil and #st.rows == 5 and sm.grade ~= nil and d and d.grade == sm.grade
+            and sm.rating <= 100 and sm.rating >= 0 and Run.data.points == sm.points,
+            ('pantalla de resultados=%s: nota %s (%s/100), puntos %s; guardada en la partida=%s'):format(tostring(st.rows ~= nil),
+             tostring(sm and sm.grade), tostring(sm and sm.rating), tostring(sm and sm.points), tostring(d and d.grade)))
+        go('res1a')
+    elseif step == 'res1a' and t - T > 7.0 then          -- (la animación ya ha acabado: un ENTER vuelve al mapa)
+        shot('results')
+        pressNext('confirm'); go('back1b')
+    elseif step == 'back1b' and t - T > 0.5 then
         check('superar', IN1 and WON1 and st.world == 1 and st.node == 2 and Run.isDone(W1[1].id) and Run.state(1, 2) == 'open',
             ('entra en %s=%s; meta=%s; vuelve al mapa en el nodo %s; nivel 1 superado=%s, nodo 2 %s'):format(W1[1].id, tostring(IN1),
              tostring(WON1), tostring(st.node), tostring(Run.isDone(W1[1].id)), Run.state(1, 2)))
@@ -127,6 +141,10 @@ function love.update(dt)
              tostring(Run.data.lives), tostring(st.player.lives)))
         toFinish(st); go('back2')
     elseif step == 'back2' and t - T > 3.6 then
+        pressNext('confirm'); go('back2a')
+    elseif step == 'back2a' and t - T > 0.2 then
+        pressNext('confirm'); go('back2b')
+    elseif step == 'back2b' and t - T > 0.5 then
         OK2 = Run.isDone(W1[2].id) and st.node == 3
         pressNext('back'); go('slots2')
     elseif step == 'slots2' and t - T > 0.4 then
@@ -193,7 +211,63 @@ function love.update(dt)
         check('extremos', Save.new('easy').lives == 3 and Save.new('hard').lives == 3 and s4 == 4 and s6 == 6 and wiped,
             ('vidas al empezar: fácil %d, difícil %d, extremo %d, xtra %d; Game Over en Xtra: todo el juego de nuevo=%s'):format(
              Save.new('easy').lives, Save.new('hard').lives, s4, s6, tostring(wiped)))
-        go('r960')
+        -- NOTAS (src/story/Score.lua): casos fijos
+        local Score = require 'src/story/Score'
+        local perfect = Score.level({ time = 60, par = 90, deaths = 0, hits = 0, kills = 8, killable = 8, stars = 5, starsTotal = 5 })
+        local mid = Score.level({ time = 180, par = 90, deaths = 1, hits = 3, kills = 4, killable = 8, stars = 2, starsTotal = 5 })
+        local bad = Score.level({ time = 400, par = 90, deaths = 3, hits = 6, kills = 0, killable = 8, stars = 0, starsTotal = 5 })
+        local empty = Score.level({ time = 60, par = 90, deaths = 0, hits = 0, kills = 0, killable = 0, stars = 0, starsTotal = 0 })
+        local avg, ag = Score.average({ 100, 80 }, 4)
+        check('notas', perfect.rating == 100 and perfect.grade == 'S' and mid.rating == 52 and mid.grade == 'C' and bad.rating == 0
+            and bad.grade == 'D' and empty.rating == 100 and Score.par(160) == 120 and Score.par(10) == 40 and avg == 45 and ag == 'D',
+            ('perfecto %d %s; regular %d %s; desastre %d %s; nivel sin enemigos ni estrellas %d; referencia de 160 casillas %d s; media de mundo %d %s'):format(
+             perfect.rating, perfect.grade, mid.rating, mid.grade, bad.rating, bad.grade, empty.rating, Score.par(160), avg, ag))
+        -- premios: la primera S de un nivel da una vida; repetirla, no; el mundo completo da el suyo una vez
+        local keepSlot, keepData = Run.slot, Run.data
+        Run.slot, Run.data = 3, Save.new('hard')
+        local full = { score = 100, time = 30, width = 100, lives = 3, deaths = 0, hits = 0, kills = 1, killable = 1, stars = 1, starsTotal = 1 }
+        local r1 = Run.complete(W1[1].id, full)
+        local l1 = Run.data.lives
+        local r2 = Run.complete(W1[1].id, full)
+        local l2 = Run.data.lives
+        for k = 2, #W1 - 1 do full.lives = Run.data.lives; Run.complete(W1[k].id, full) end
+        full.lives = Run.data.lives
+        local rb = Run.complete(W1[#W1].id, full)
+        Save.delete(3)
+        local lw = Run.data.lives
+        Run.slot, Run.data = keepSlot, keepData
+        check('premios', r1.grade == 'S' and r1.reward and r1.reward.lives == 1 and l1 == 4 and r2.reward == nil and l2 == 3 and r1.points == 120
+            and rb.world and rb.world.grade == 'S' and rb.world.reward and rb.world.reward.lives == 2,
+            ('primera S: +%s vida (vidas %d), puntos ×1,2 en Difícil = %d; repetirla: premio=%s; mundo completo: nota %s, +%s vidas'):format(
+             tostring(r1.reward and r1.reward.lives), l1, r1.points, tostring(r2.reward), tostring(rb.world and rb.world.grade),
+             tostring(rb.world and rb.world.reward and rb.world.reward.lives)))
+        MOODS = { { 'S', 98, 'happy' }, { 'C', 60, 'meh' }, { 'D', 40, 'sad' }, { 'D', 10, 'dead' } }
+        MI = 0
+        go('mood')
+    -- La REACCIÓN del monstruo en los resultados: nervioso al contar; luego contento / sin más / triste /
+    -- se muere del disgusto (capturas story_mood_<nota>_{wait,react}.png)
+    elseif step == 'mood' and t - T > 0.3 then
+        MI = MI + 1
+        local m = MOODS[MI]
+        if not m then gStateMachine:change('story_map', { world = 2, node = 1 }); go('r960') else
+            gStateMachine:change('story_results', { level = W1[1].id, result = { time = 90, deaths = 1, hits = 2, kills = 3, killable = 6, stars = 1, starsTotal = 4 },
+                summary = { rating = m[2], grade = m[1], parts = {}, points = 100 }, map = { world = 1, node = 1 }, color = { 0.36, 0.62, 0.36 } })
+            go('mood2')
+        end
+    elseif step == 'mood2' and t - T > 0.2 then
+        local m = MOODS[MI]
+        MOODOK = (MOODOK ~= false) and st.mood == m[3]
+        st.t = 2.6; go('mood3')
+    elseif step == 'mood3' and t - T > 0.1 then
+        shot('mood_' .. MOODS[MI][3] .. '_wait'); go('mood4')
+    elseif step == 'mood4' and t - T > 0.2 then
+        st.t = st.tStamp + (MOODS[MI][3] == 'dead' and 0.3 or 1.2); go('mood5')
+    elseif step == 'mood5' and t - T > 0.1 then
+        shot('mood_' .. MOODS[MI][3] .. '_react')
+        if MI == #MOODS then
+            check('reaccion', MOODOK, 'S → contento, C → sin más, D → triste, D con menos de 25 → se muere del disgusto: ' .. tostring(MOODOK))
+        end
+        go('mood')
     elseif step == 'r960' and t - T > 0.3 then resize(960, 720); go('r960b')
     elseif step == 'r960b' and t - T > 0.5 then shot('map_960'); go('r1600')
     elseif step == 'r1600' and t - T > 0.3 then resize(1600, 720); go('r1600b')

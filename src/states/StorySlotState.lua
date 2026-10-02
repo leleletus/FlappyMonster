@@ -162,7 +162,7 @@ function StorySlotState:render()
 
     local title = L('story.title')
     local ts = 6
-    PixelFont.draw(title, math.floor((WINDOW_W - PixelFont.width(title, ts)) / 2), 52, ts, 1, { 1, 0.95, 0.15 })
+    PixelFont.shadow(title, math.floor((WINDOW_W - PixelFont.width(title, ts)) / 2), 52, ts, 1, { 1, 0.95, 0.15 })
     local sub = L('story.pick_slot')
     love.graphics.setFont(FONT_MED)
     love.graphics.setColor(1, 1, 1, 0.8)
@@ -179,7 +179,7 @@ function StorySlotState:render()
         love.graphics.rectangle('line', x, y, w, h)
         love.graphics.setLineWidth(1)
         local ink = sel and { 0, 0, 0 } or { 1, 1, 1 }
-        PixelFont.draw(L('story.slot', { n = i }), x + 18, y + 16, 4, 1, sel and { 1, 0.95, 0.15 } or nil)   -- (PixelFont: letras sobre negro)
+        PixelFont.shadow(L('story.slot', { n = i }), x + 18, y + 16, 4, 1, sel and { 1, 0.95, 0.15 } or nil)   -- (PixelFont: letras sobre negro)
         love.graphics.setFont(FONT_MED)
         local s = self.slots[i]
         if s then
@@ -187,7 +187,7 @@ function StorySlotState:render()
             love.graphics.setColor(ink[1], ink[2], ink[3], 0.9)
             love.graphics.print(L('story.slot_world', { n = s.world, name = L('story.world.' .. W.id) }), x + 18, y + 58)
             love.graphics.print(L('story.slot_progress', { done = s.done, total = s.total, lives = s.data.lives })
-                .. '   ·   ' .. L('diff.' .. s.data.difficulty), x + 18, y + 86)
+                .. '   ·   ' .. L('difficulty.' .. s.data.difficulty), x + 18, y + 86)
             -- BORRAR (segunda pulsación = confirmar)
             local dx, dy, dw, dh = delRect(i)
             local ask = self.confirm == i
@@ -205,8 +205,8 @@ function StorySlotState:render()
     if self.pick then
         love.graphics.setColor(0, 0, 0, 0.78)
         love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
-        local t2 = L('diff.title')
-        PixelFont.draw(t2, math.floor((WINDOW_W - PixelFont.width(t2, 5)) / 2), 70, 5, 1, { 1, 0.95, 0.15 })
+        local t2 = L('difficulty.title')
+        PixelFont.shadow(t2, math.floor((WINDOW_W - PixelFont.width(t2, 5)) / 2), 70, 5, 1, { 1, 0.95, 0.15 })
         for k, id in ipairs(Difficulty.ORDER) do
             local x, y, w, h = pickRect(k)
             local sel, open = k == self.pick.sel, self:_diffOpen(k)
@@ -216,12 +216,10 @@ function StorySlotState:render()
             love.graphics.setColor(sel and 1 or 0.6, sel and 0.85 or 0.6, sel and 0 or 0.65, 1)
             love.graphics.setLineWidth(sel and 4 or 2); love.graphics.rectangle('line', x, y, w, h); love.graphics.setLineWidth(1)
             local c = sel and 0 or 1
-            love.graphics.setFont(FONT_MED)
-            love.graphics.setColor(c, c, c, open and 1 or 0.45)
-            love.graphics.print(L('diff.' .. id), x + 16, y + 10)
+            PixelFont.draw(L('difficulty.' .. id), x + 16, y + 10, 3, open and 1 or 0.45, { c, c, c })   -- (fuente pixel: con tildes)
             love.graphics.setFont(FONT_SMALL)
             love.graphics.setColor(c, c, c, open and 0.8 or 0.45)
-            love.graphics.print(open and L('diff.desc.' .. id) or L('diff.locked.' .. id), x + 16, y + 36)
+            love.graphics.print(open and L('difficulty.desc.' .. id) or L('difficulty.locked.' .. id), x + 16, y + 36)
             if not open then
                 local PixelIcons = require 'src/ui/PixelIcons'
                 PixelIcons.draw('lock', x + w - 42, y + h / 2 - 15, 3)
@@ -230,7 +228,7 @@ function StorySlotState:render()
     end
     love.graphics.setFont(FONT_SMALL)
     love.graphics.setColor(1, 1, 1, 0.7)
-    love.graphics.printf(L(self.pick and 'diff.hint' or 'story.slot_hint'), 0, WINDOW_H - 34, WINDOW_W, 'center')
+    love.graphics.printf(L(self.pick and 'difficulty.hint' or 'story.slot_hint'), 0, WINDOW_H - 34, WINDOW_W, 'center')
     love.graphics.setFont(FONT_MED)
     love.graphics.setColor(1, 1, 1, 1)
     CornerButtons.drawBack(self.backHover)

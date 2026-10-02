@@ -41,7 +41,7 @@ return {
         online = "ONLINE",
         free = "FREE PLAY (TESTING)",
     },
-    diff = {
+    difficulty = {
         title = "CHOOSE THE DIFFICULTY",
         hint = "[ARROWS] choose    [ENTER] start    [ESC] back",
         easy = "EASY", normal = "NORMAL", hard = "HARD", extreme = "EXTREME", xtra = "XTRA EXTREME",
@@ -59,6 +59,14 @@ return {
         },
     },
     story = {
+        results = {
+            title = "LEVEL CLEAR",
+            time = "Time", lives = "Lives lost", hits = "Hits taken", kills = "Enemies", stars = "Stars",
+            points = "Points", grade = "GRADE", record = "NEW BEST GRADE!",
+            reward_lives = "REWARD: +{n} LIFE", reward_points = "REWARD: +{n} POINTS",
+            world = "WORLD COMPLETE  ·  GRADE {grade}",
+            hint = "[ENTER] continue",
+        },
         title = "STORY MODE",
         pick_slot = "Choose a save",
         slot = "SAVE {n}",
@@ -74,7 +82,9 @@ return {
         locked_hint = "Clear the previous level",
         play_line = "[ENTER] play",
         boss_line = "BOSS!  [ENTER] play",
-        done_line = "Cleared  ·  {score} points  ·  {time}",
+        done_line = "Grade {grade}  ·  {score} points  ·  {time}",
+        world_grade = "World grade: {grade}",
+
         go_continue = "CONTINUE",
         go_world = "No lives left: back to the start of this world",
         go_game = "No lives left: the adventure starts over",

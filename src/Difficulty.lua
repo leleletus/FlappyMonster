@@ -27,6 +27,7 @@
 --   airTime                         × aire bajo el agua
 --   hazardHurt                      pinchos y lava quitan 1 de vida (y te sacan de un bote) en vez de matar
 --   bossExtra                       (etapa 6) segundo jefe en la arena
+--   scoreMult                       (historia) × los puntos del nivel al apuntarlos (Fácil 0,8 … Xtra extremo 2)
 --   livesStart                      (historia) vidas con las que empieza la aventura: 3; Extremo 4; Xtra extremo 6
 --   restartGame                     (historia) un Game Over reinicia el JUEGO entero, no solo el mundo (Xtra extremo)
 local Difficulty = {}
@@ -36,11 +37,11 @@ Difficulty.START = { easy = true, normal = true, hard = true }       -- disponib
 Difficulty.DEFAULT = 'normal'
 
 Difficulty.MODS = {
-    easy    = { enemyPace = 0.8, trapPace = 0.8, bossPace = 0.7, bossHp = 0.75, playerHp = 4, invuln = 1.3, airTime = 1.4, hazardHurt = true },
+    easy    = { scoreMult = 0.8, enemyPace = 0.8, trapPace = 0.8, bossPace = 0.7, bossHp = 0.75, playerHp = 4, invuln = 1.3, airTime = 1.4, hazardHurt = true },
     normal  = { bossPace = 0.85, bossHp = 0.9 },
-    hard    = { enemyPace = 1.1, trapPace = 1.1, airTime = 0.9 },
-    extreme = { enemyPace = 1.25, trapPace = 1.3, bossPace = 1.2, bossHp = 1.15, invuln = 0.75, airTime = 0.8, livesStart = 4 },
-    xtra    = { enemyPace = 1.25, trapPace = 1.3, bossPace = 1.2, bossHp = 1.15, invuln = 0.75, airTime = 0.8, livesStart = 6,
+    hard    = { scoreMult = 1.2, enemyPace = 1.1, trapPace = 1.1, airTime = 0.9 },
+    extreme = { scoreMult = 1.5, enemyPace = 1.25, trapPace = 1.3, bossPace = 1.2, bossHp = 1.15, invuln = 0.75, airTime = 0.8, livesStart = 4 },
+    xtra    = { scoreMult = 2, enemyPace = 1.25, trapPace = 1.3, bossPace = 1.2, bossHp = 1.15, invuln = 0.75, airTime = 0.8, livesStart = 6,
                 bossExtra = true, restartGame = true },
 }
 -- Qué ritmo lleva cada categoría de entidad

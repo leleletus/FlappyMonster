@@ -13,6 +13,7 @@ local Modes        = require 'src/world/Modes'
 local PixelIcons   = require 'src/ui/PixelIcons'
 local Clip         = require 'src/ui/Clip'
 local L            = require 'src/Lang'
+local Celebration  = require 'src/ui/Celebration'     -- (confeti y fuegos: compartidos con los resultados de la historia)
 
 local OnlineResultsState = BaseState:new()
 
@@ -34,10 +35,6 @@ local PODIUM = {          -- por puesto: altura, colores del bloque
     { h = 120, col = {0.80, 0.84, 0.92}, dark = {0.45, 0.48, 0.58} },
     { h =  84, col = {0.85, 0.52, 0.28}, dark = {0.50, 0.28, 0.12} },
 }
-local CONFETTI_COLS = {
-    {1,0.85,0.2}, {1,0.35,0.45}, {0.35,0.85,1}, {0.5,1,0.45}, {0.85,0.5,1}, {1,1,1},
-}
-
 local sprites
 local function loadSprites()
     if sprites then return end
@@ -124,10 +121,8 @@ function OnlineResultsState:enter(args)
     self.celebrate = nw > 0
 
     self.t          = 0
-    self.confetti   = {}
-    self.sparks     = {}
+    self.fx         = Celebration.new()
     self.fwTimer    = 0.6
-    self.rockets    = {}
     self.landed     = {}      -- [puesto] = true cuando el jugador cayó en el podio
     self.countTick  = 0
     self.leaving    = false
@@ -175,49 +170,6 @@ function OnlineResultsState:_leave()
     gStateMachine:change('online_room', { room = self.room })
 end
 
--- ── Efectos ───────────────────────────────────────────────────────────────────
-
-function OnlineResultsState:_burstConfetti(x, y, n, spread)
-    for _ = 1, n do
-        local ang = -math.pi / 2 + (math.random() * 2 - 1) * (spread or 1.1)
-        local sp  = 250 + math.random() * 420
-        table.insert(self.confetti, {
-            x = x, y = y, vx = math.cos(ang) * sp, vy = math.sin(ang) * sp,
-            rot = math.random() * 6.28, vr = (math.random() * 2 - 1) * 12,
-            w = 5 + math.random() * 6, h = 3 + math.random() * 4,
-            col = CONFETTI_COLS[math.random(#CONFETTI_COLS)], life = 3.5 + math.random() * 2,
-            sway = math.random() * 6.28,
-        })
-    end
-end
-
--- Cohete: sube desde abajo dejando estela y explota en (tx, ty)
-function OnlineResultsState:_launchRocket()
-    local x  = 80 + math.random() * (WINDOW_W - 160)
-    local ty = 90 + math.random() * 200
-    table.insert(self.rockets, { x = x, y = WINDOW_H + 10, tx = x + (math.random() * 2 - 1) * 60, ty = ty,
-                                 sx = x, sy = WINDOW_H + 10, t = 0, dur = 0.9 + math.random() * 0.3,
-                                 large = math.random() < 0.3, trail = {} })
-    Sound.play('fwLaunch', 0.9 + math.random() * 0.2, 0.55)
-end
-
-function OnlineResultsState:_firework(x, y, large)
-    local col  = CONFETTI_COLS[math.random(#CONFETTI_COLS)]
-    local col2 = CONFETTI_COLS[math.random(#CONFETTI_COLS)]
-    local n    = large and 60 or 34
-    for i = 1, n do
-        local ang = (i / n) * math.pi * 2 + math.random() * 0.2
-        local sp  = (large and 200 or 140) + math.random() * 90
-        table.insert(self.sparks, { x = x, y = y, vx = math.cos(ang) * sp, vy = math.sin(ang) * sp,
-                                    col = (i % 3 == 0) and col2 or col, life = 1.1 + math.random() * 0.5, t = 0 })
-    end
-    if large then
-        Sound.play('fwBlastLarge', 0.95 + math.random() * 0.1, 0.8)
-    else
-        Sound.play(math.random() < 0.5 and 'fwBlast1' or 'fwBlast2', 0.9 + math.random() * 0.2, 0.7)
-    end
-end
-
 -- ── Geometría ─────────────────────────────────────────────────────────────────
 
 local PODIUM_CX = { 320, 170, 470 }   -- centro X de cada puesto (1º al centro)
@@ -244,9 +196,9 @@ function OnlineResultsState:update(dt)
             local e = self.entries[place]
             if place == 1 then
                 if self.celebrate then
-                    self:_burstConfetti(PODIUM_CX[1], FLOOR_Y - PODIUM[1].h - 60, 90, 1.2)
-                    self:_burstConfetti(40, WINDOW_H, 40, 0.5)
-                    self:_burstConfetti(WINDOW_W - 40, WINDOW_H, 40, 0.5)
+                    self.fx:burst(PODIUM_CX[1], FLOOR_Y - PODIUM[1].h - 60, 90, 1.2)
+                    self.fx:burst(40, WINDOW_H, 40, 0.5)
+                    self.fx:burst(WINDOW_W - 40, WINDOW_H, 40, 0.5)
                 else
                     Sound.play('sadtrombone')
                 end
@@ -254,7 +206,7 @@ function OnlineResultsState:update(dt)
                 Sound.play('jump', 1 + (3 - place) * 0.1, 0.6)
             end
             if e and e.winner and place > 1 then
-                self:_burstConfetti(PODIUM_CX[place], FLOOR_Y - PODIUM[place].h - 50, 25, 0.9)
+                self.fx:burst(PODIUM_CX[place], FLOOR_Y - PODIUM[place].h - 50, 25, 0.9)
             end
         end
     end
@@ -271,62 +223,20 @@ function OnlineResultsState:update(dt)
 
     -- Confeti continuo suave y fuegos artificiales si hay ganador
     if self.celebrate and self.landed[1] then
-        if math.random() < dt * 14 then
-            table.insert(self.confetti, {
-                x = math.random() * WINDOW_W, y = -10, vx = (math.random() * 2 - 1) * 30, vy = 60 + math.random() * 60,
-                rot = math.random() * 6.28, vr = (math.random() * 2 - 1) * 8,
-                w = 5 + math.random() * 5, h = 3 + math.random() * 3,
-                col = CONFETTI_COLS[math.random(#CONFETTI_COLS)], life = 12, sway = math.random() * 6.28,
-            })
-        end
+        self.fx:rain(dt)
         self.fwTimer = self.fwTimer - dt
         if self.fwTimer <= 0 and t < DURATION - 1.5 then
             self.fwTimer = 1.0 + math.random() * 1.0
-            self:_launchRocket()
+            self.fx:rocket()
         end
     end
-
-    -- Cohetes en vuelo
-    for i = #self.rockets, 1, -1 do
-        local r = self.rockets[i]
-        r.t = r.t + dt
-        local k = 1 - (1 - math.min(1, r.t / r.dur)) ^ 2      -- frena al subir
-        r.x = r.sx + (r.tx - r.sx) * k
-        r.y = r.sy + (r.ty - r.sy) * k
-        table.insert(r.trail, 1, { x = r.x, y = r.y })
-        if #r.trail > 10 then table.remove(r.trail) end
-        if r.t >= r.dur then
-            table.remove(self.rockets, i)
-            self:_firework(r.x, r.y, r.large)
-        end
-    end
+    self.fx:update(dt)
 
     -- Música de victoria: baja durante el conteo de puntos, fundido al final
     local countEnd = T_ROWS + #self.entries * T_ROW_GAP + COUNT_DUR + 0.3
     local duck = 0.45 + 0.55 * math.max(0, math.min(1, (t - countEnd) / 0.8))
     local fade = math.max(0, math.min(1, (DURATION - t) / MUSIC_FADE))
     Sound.setMusicVolume(self.musicVol * duck * fade)
-
-    for i = #self.confetti, 1, -1 do
-        local c = self.confetti[i]
-        c.vy   = c.vy + 520 * dt
-        if c.vy > 150 then c.vy = 150 end            -- resistencia del aire
-        c.vx   = c.vx * (1 - 1.8 * dt)
-        c.sway = c.sway + dt * 3
-        c.x    = c.x + (c.vx + math.sin(c.sway) * 40) * dt
-        c.y    = c.y + c.vy * dt
-        c.rot  = c.rot + c.vr * dt
-        c.life = c.life - dt
-        if c.life <= 0 or c.y > WINDOW_H + 20 then table.remove(self.confetti, i) end
-    end
-    for i = #self.sparks, 1, -1 do
-        local p = self.sparks[i]
-        p.t  = p.t + dt
-        p.vy = p.vy + 120 * dt
-        p.vx, p.vy = p.vx * (1 - 1.5 * dt), p.vy * (1 - 1.5 * dt)
-        p.x, p.y = p.x + p.vx * dt, p.y + p.vy * dt
-        if p.t >= p.life then table.remove(self.sparks, i) end
-    end
 
     -- Volver a la sala (mismo tiempo para todos; sin atajo para saltarla)
     if t >= DURATION then self:_leave() end
@@ -555,25 +465,7 @@ function OnlineResultsState:render()
     local t = self.t
     self:_renderBackground()
 
-    -- Cohetes subiendo (estela)
-    for _, r in ipairs(self.rockets) do
-        for k, tp in ipairs(r.trail) do
-            local a = 1 - k / (#r.trail + 1)
-            love.graphics.setColor(1, 0.8, 0.4, a * 0.8)
-            love.graphics.rectangle('fill', tp.x - 2, tp.y - 2, 4, 4)
-        end
-        love.graphics.setColor(1, 1, 1, 1)
-        love.graphics.rectangle('fill', r.x - 3, r.y - 3, 6, 6)
-    end
-
-    -- Chispas de fuegos artificiales (detrás del contenido)
-    for _, p in ipairs(self.sparks) do
-        local a = 1 - p.t / p.life
-        love.graphics.setColor(p.col[1], p.col[2], p.col[3], a)
-        love.graphics.rectangle('fill', p.x - 2, p.y - 2, 4, 4)
-        love.graphics.setColor(1, 1, 1, a * 0.6)
-        love.graphics.rectangle('fill', p.x - 1, p.y - 1, 2, 2)
-    end
+    self.fx:drawBack()                         -- (cohetes y chispas, detrás del contenido)
 
     -- Título con rebote de escala
     local ta = clamp01((t - T_TITLE) / 0.25)
@@ -618,16 +510,7 @@ function OnlineResultsState:render()
     self:_renderPodium()
     self:_renderBoard()
 
-    -- Confeti (delante de todo)
-    for _, c in ipairs(self.confetti) do
-        local a = math.min(1, c.life)
-        love.graphics.push()
-        love.graphics.translate(c.x, c.y)
-        love.graphics.rotate(c.rot)
-        love.graphics.setColor(c.col[1], c.col[2], c.col[3], a)
-        love.graphics.rectangle('fill', -c.w / 2, -c.h / 2 * math.abs(math.cos(c.rot * 1.7)), c.w, c.h * math.abs(math.cos(c.rot * 1.7)) + 1)
-        love.graphics.pop()
-    end
+    self.fx:drawFront()                        -- (confeti, delante de todo)
 
     -- Pie: cuenta atrás hasta volver a la sala
     local remaining = math.max(0, DURATION - t)

@@ -3,8 +3,10 @@
 -- (AVENTURA / CLÁSICO, dificultades, CONFIGURACIÓN...). Antes esos botones
 -- eran imágenes con el texto dibujado (no se podían traducir); ahora se
 -- generan con esta fuente, que copia las letras de aquellas imágenes y
--- completa el resto en el mismo estilo: blanco sobre un rectángulo negro
--- ajustado al texto, una columna negra entre letras.
+-- completa el resto en el mismo estilo. SOLO las letras: sin relleno negro entre ellas ni detrás
+-- (lo tenía — un rectángulo negro ajustado al texto —: sobre los menús negros no se notaba, pero
+-- sobre cualquier otro fondo quedaba raro; el usuario lo quitó). Sobre fondos de color, usa
+-- PixelFont.shadow (sombra negra de un píxel de la fuente) para que se lea.
 --
 --   PixelFont.draw('AVENTURA', x, y, 8)          -- y = arriba de las letras
 --   PixelFont.width('AVENTURA', 8), PixelFont.height(8)
@@ -137,24 +139,24 @@ function PixelFont.width(text, s)
 end
 function PixelFont.height(s) return H * s end
 
--- Dibuja el texto: blanco sobre negro ajustado, con la esquina superior
--- izquierda del cuerpo de las letras en (x, y). `alpha` afecta a todo.
--- color (opcional) = el de las letras ({r, g, b}); el fondo sigue negro
+-- Dibuja el texto (solo las letras), con la esquina superior izquierda del cuerpo de las letras
+-- en (x, y). `alpha` afecta a todo. color (opcional) = el de las letras ({r, g, b}); blanco si no.
 function PixelFont.draw(text, x, y, s, alpha, color)
     local f = build()
     text = PixelFont.upper(text)
     alpha = alpha or 1
-    local w = (f:getWidth(text) - 1) * s
-    -- (si lleva tildes/eñe, el fondo negro también las cubre)
-    local top = text:find('[\195]') and ACC * s or 0
-    love.graphics.setColor(0, 0, 0, alpha)
-    love.graphics.rectangle('fill', x, y - top, w, H * s + top)
     local prev = love.graphics.getFont()
     love.graphics.setFont(f)
     local c = color or { 1, 1, 1 }
     love.graphics.setColor(c[1], c[2], c[3], alpha)
     love.graphics.print(text, x, y - ACC * s, 0, s, s)
     love.graphics.setFont(prev)
+end
+
+-- Lo mismo con SOMBRA negra (un píxel de la fuente abajo a la derecha): para fondos que no son negros
+function PixelFont.shadow(text, x, y, s, alpha, color)
+    PixelFont.draw(text, x + s, y + s, s, (alpha or 1) * 0.75, { 0, 0, 0 })
+    PixelFont.draw(text, x, y, s, alpha, color)
 end
 
 return PixelFont

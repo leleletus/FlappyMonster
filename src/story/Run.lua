@@ -66,18 +66,63 @@ function Run.frontier()
     return Worlds.count(), #Worlds.nodes(Worlds.count())      -- todo superado
 end
 
+-- Nivel superado: se apunta, se guardan las vidas, se calcula su NOTA (src/story/Score.lua) y se dan
+-- los premios. Devuelve el resumen para la pantalla de resultados:
+--   { rating, grade, parts, points (del nivel, ya con el × de la dificultad), record (mejor nota que antes),
+--     reward = { lives | points } | nil, world = { rating, grade, reward } | nil (si con él se completa el mundo) }
 function Run.complete(id, result)
     local d = Run.data
-    if not d then return end
-    d.done[id] = true
+    if not d then return nil end
+    local Score = require 'src/story/Score'
+    local Difficulty = require 'src/Difficulty'
     result = result or {}
+    local first = not d.done[id]
+    d.done[id] = true
     if result.lives then d.lives = result.lives end      -- (las vidas se llevan al nivel siguiente)
+    local sc = Score.level({ time = result.time, par = Score.par(result.width), deaths = result.deaths, hits = result.hits,
+                             kills = result.kills, killable = result.killable, stars = result.stars, starsTotal = result.starsTotal })
+    local points = math.floor((result.score or 0) * Difficulty.of(d.difficulty, 'scoreMult', 1) + 0.5)
     local b = d.best[id] or {}
-    if result.score and result.score > (b.score or -1) then b.score = result.score end
+    local out = { rating = sc.rating, grade = sc.grade, parts = sc.parts, points = points, record = sc.rating > (b.rating or -1) }
+    -- premio del nivel: solo la primera vez que se llega a esa letra
+    local had = b.grade
+    local order = { S = 4, A = 3, B = 2, C = 1, D = 0 }
+    if (order[sc.grade] or 0) > (order[had or ''] or -1) then out.reward = Score.LEVEL_REWARD[sc.grade] end
+    if points > (b.score or -1) then b.score = points end
     if result.time and (not b.time or result.time < b.time) then b.time = math.floor(result.time * 100) / 100 end
+    if sc.rating > (b.rating or -1) then b.rating, b.grade = sc.rating, sc.grade end
     d.best[id] = b
+    d.points = (d.points or 0) + points
     d.playTime = d.playTime + (result.time or 0)
+    -- ¿con este se completa su mundo? → nota del mundo y su premio (una vez)
+    for w = 1, Worlds.count() do
+        local nodes = Worlds.nodes(w)
+        if nodes[#nodes] and nodes[#nodes].id == id then
+            local rating, grade = Run.worldRating(w)
+            out.world = { index = w, rating = rating, grade = grade }
+            if first and not d.worldReward[w] then
+                d.worldReward[w] = grade
+                out.world.reward = Score.WORLD_REWARD[grade]
+            end
+        end
+    end
+    for _, rw in ipairs({ out.reward, out.world and out.world.reward }) do
+        if rw.lives then d.lives = math.min(99, d.lives + rw.lives) end
+        if rw.points then d.points = d.points + rw.points end
+    end
     Run.save()
+    return out
+end
+
+-- Nota de un mundo: la media de la mejor valoración de cada nivel suyo (los no superados, 0)
+function Run.worldRating(w)
+    local Score = require 'src/story/Score'
+    local list, nodes = {}, Worlds.nodes(w)
+    for _, n in ipairs(nodes) do
+        local b = Run.data and Run.data.best[n.id]
+        if b and b.rating and Run.isDone(n.id) then list[#list + 1] = b.rating end
+    end
+    return Score.average(list, #nodes)
 end
 
 -- Vidas con las que sigue la aventura (al salir de un nivel sin acabarlo también cuentan las perdidas)

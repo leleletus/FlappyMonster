@@ -256,8 +256,8 @@ local function drawLogo()
     love.graphics.draw(logo, cx, cy, rot, s, s, logo:getWidth() / 2, logo:getHeight() / 2)
     -- la pista
     local a = math.min(1, math.max(0, (vt - 0.8) / 0.8))
-    PixelFont.draw(show.title, 28, H - 62, 3, a)
-    PixelFont.draw(show.sub .. '  ·  FLAPPY MONSTER OST', 28, H - 34, 2, 0.8 * a)
+    PixelFont.shadow(show.title, 28, H - 62, 3, a)
+    PixelFont.shadow(show.sub .. '  ·  FLAPPY MONSTER OST', 28, H - 34, 2, 0.8 * a)
 end
 
 local function render()

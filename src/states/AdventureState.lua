@@ -154,6 +154,12 @@ function AdventureState:enter(args)
     Sound.playMusic('level')
 
     self.score      = 0
+    -- Estadísticas del nivel (para la nota del modo historia: src/story/Score.lua)
+    local stars = 0
+    for _, e in ipairs(self.level.entities) do if e.type == 'star' then stars = stars + 1 end end
+    self.stats = { kills = 0, killable = require('src/world/Modes').entityInfo(self.level.entities).killable or 0,
+                   stars = 0, starsTotal = stars, deaths = 0, hits = 0 }
+    self.prevHp = self.player.hp
     self.levelTime  = 0   -- segundos transcurridos
     self.popups     = {}  -- lista de textos flotantes de puntos
 end
@@ -281,12 +287,14 @@ function AdventureState:checkEnemyCollisions()
     Entities.interactions.run(player, self.enemies, {
         stomp = function(g, pts)
             self.score = self.score + (pts or 0)
+            if not g.def.boss and g.state == 'dead' then self.stats.kills = self.stats.kills + 1 end
             local popY = g.flipped and (g.y + g.outerH / 2) or (g.y - g.outerH / 2)
             self:spawnPopup('+' .. (pts or 0) .. '!', g.x, popY)
         end,
         pickup = function(e, pk)
             if pk.score then
                 self.score = self.score + pk.score
+                if e.def.name == 'star' then self.stats.stars = self.stats.stars + 1 end
                 self:spawnPopup('+' .. pk.score .. '!', e.x, e.y - e.outerH / 2)
                 Sound.play('collect'); Particles.emit('collect', e.x, e.y)
             end
@@ -393,7 +401,10 @@ function AdventureState:update(dt)
     if self.won then
         self.wonT = self.wonT + dt
         if self.wonT >= AdventureState.WIN_TIME then
-            local result = { score = self.score, time = self.levelTime, lives = self.player.lives }
+            local st = self.stats
+            local result = { score = self.score, time = self.levelTime, lives = self.player.lives, width = self.level.tileW,
+                             kills = st.kills, killable = st.killable, stars = st.stars, starsTotal = st.starsTotal,
+                             deaths = st.deaths, hits = st.hits }
             if self.onFinish then self.onFinish(result) else gStateMachine:change(self.returnTo) end
             return
         end
@@ -453,6 +464,10 @@ function AdventureState:update(dt)
     self:updateCamera(dt)
     if self.rec then self.rec:step(dt, self) end
 
+    -- (golpes recibidos: cada vez que baja la vida sin morir)
+    if self.player.hp < self.prevHp and not self.player.dying then self.stats.hits = self.stats.hits + (self.prevHp - self.player.hp) end
+    self.prevHp = self.player.hp
+
     -- ── META: tocarla termina el nivel ────────────────────────────────────────
     if not self.won and not self.player.dying then
         local ob = self.player:getOuterBounds()
@@ -462,6 +477,7 @@ function AdventureState:update(dt)
     -- ── Detectar muerte del jugador ───────────────────────────────────────────
     if self.player.dying and not self.player.alive then
         self.player.lives = self.player.lives - 1
+        self.stats.deaths = self.stats.deaths + 1
 
         if self.player.lives <= 0 then
             self.dead        = true

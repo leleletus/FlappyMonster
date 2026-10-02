@@ -41,7 +41,7 @@ return {
         online = "ONLINE",
         free = "JUEGO LIBRE (PRUEBAS)",
     },
-    diff = {
+    difficulty = {
         title = "ELIGE LA DIFICULTAD",
         hint = "[FLECHAS] elegir    [ENTER] empezar    [ESC] volver",
         easy = "FÁCIL", normal = "NORMAL", hard = "DIFÍCIL", extreme = "EXTREMO", xtra = "XTRA EXTREMO",
@@ -59,6 +59,14 @@ return {
         },
     },
     story = {
+        results = {
+            title = "NIVEL SUPERADO",
+            time = "Tiempo", lives = "Vidas perdidas", hits = "Golpes recibidos", kills = "Enemigos", stars = "Estrellas",
+            points = "Puntos", grade = "NOTA", record = "¡NUEVA MEJOR NOTA!",
+            reward_lives = "PREMIO: +{n} VIDA", reward_points = "PREMIO: +{n} PUNTOS",
+            world = "MUNDO COMPLETADO  ·  NOTA {grade}",
+            hint = "[ENTER] continuar",
+        },
         title = "MODO HISTORIA",
         pick_slot = "Elige una partida",
         slot = "PARTIDA {n}",
@@ -74,7 +82,9 @@ return {
         locked_hint = "Supera el nivel anterior",
         play_line = "[ENTER] jugar",
         boss_line = "¡JEFE!  [ENTER] jugar",
-        done_line = "Superado  ·  {score} puntos  ·  {time}",
+        done_line = "Nota {grade}  ·  {score} puntos  ·  {time}",
+        world_grade = "Nota del mundo: {grade}",
+
         go_continue = "CONTINUAR",
         go_world = "Sin vidas: vuelves al principio de este mundo",
         go_game = "Sin vidas: la aventura empieza de nuevo",

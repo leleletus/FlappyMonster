@@ -1639,7 +1639,7 @@ don't copy speeds/forces literally (the user tunes feel by hand).
 ## Story Mode (`src/story/`, in progress by STAGES)
 
 Plan (approved by the user; file `~/.claude/plans/rippling-swinging-seal.md`): 1 foundation ✔ · 2 generic difficulty
-framework ✔ · 3 lives + Game Over ✔ · 4 results screen + grades · 5 full map polish · 6
+framework ✔ · 3 lives + Game Over ✔ · 4 results + grades ✔ · 5 full map polish · 6
 difficulty unlocks (Extreme after Hard, Xtra after Extreme; double bosses) · 7 final level order by difficulty · 8 KOTH
 arenas as bonus nodes vs an expert BOT. User's decisions: world map with a path, 3 save slots, KOTH = bonus vs a bot.
 - **Stage 2 ✔ — DIFFICULTY = generic modifier framework** (`src/Difficulty.lua`): each difficulty id (`easy, normal,
@@ -1665,6 +1665,24 @@ arenas as bonus nodes vs an expert BOT. User's decisions: world map with a path,
   + `gameOverNote`: with them the Game Over overlay has no "retry", only CONTINUE. `Run.gameOver(world)`: lives back to
   the start value and the WORLD restarts (its nodes are no longer done; `best` records stay); with the modifier
   `restartGame` (Xtra Extreme) the whole game restarts. The map shows the lives and a notice after a Game Over.
+- **Stage 4 ✔ — results, grades, rewards.** `AdventureState` keeps level stats (`self.stats`: kills of non-boss
+  enemies, killable total from `Modes.entityInfo`, stars / total, deaths, hits = HP lost) and passes them in the
+  `onFinish` result. `src/story/Score.lua` = the scoring as DATA: weights (time 30 vs a par of 0.75 s per tile of level
+  width, min 40 s, zero at 3×par; lives 25; hits 10; kills 15; stars 20) → rating 0-100 → grade S ≥95, A ≥85, B ≥70,
+  C ≥50, D; world grade = average of the best rating of each node. `Run.complete` stores best rating / grade / points
+  (× difficulty `scoreMult`: easy .8, hard 1.2, extreme 1.5, xtra 2), total points, and gives REWARDS: the first time a
+  level reaches S → +1 life, A → +500 points (`Score.LEVEL_REWARD`); clearing a world's boss the first time, by the
+  world grade S +2 lives, A +1, B +1000 points (`WORLD_REWARD`, once per world: `worldReward`). `StoryResultsState`
+  is based on `OnlineResultsState` (the user asked for its life: bouncing title, light rays, youWin music ducked while
+  counting, tick sounds) adapted to ONE player: a single pedestal (height + colour by grade) the monster lands on,
+  rows slide in and count up, TOTAL /100 and points, then the grade is stamped on the pedestal (S/A: confetti +
+  fireworks, B: confetti, D: sad trombone); then record / rewards / world grade. First ENTER skips the animation,
+  the next returns to the map. The MONSTER (user's request: it was hard to see and lifeless) stands in a spotlight
+  with a light outline (silhouette shader drawn at 4 offsets) and REACTS: falls onto the pedestal, NERVOUS while the
+  rows count (foot taps, looks left/right, little hops, tremble); after the grade: happy jumping (S A B), standing
+  sighing (C), sad crouched with its back turned (D), and below 25/100 a comic DEATH (the game's death sprite with X
+  eyes, jumps and falls out, then drops back in sad) — visual only. Confetti and fireworks are a shared module, `src/ui/Celebration.lua` (also used by
+  the online results). The map shows each cleared node's grade and the world grade.
 - Menu: Aventura → HISTORIA (`story_slots`) / ONLINE / JUEGO LIBRE (PRUEBAS) (`free_play` stays as the debug hub).
 - `src/story/Worlds.lua` = the story as DATA: ordered worlds `{ id, levels = {...}, boss }` (provisional order by
   theme; every story level needs a FINISH — hunt-only levels have none). `Worlds.nodes(w)`, `levelName(id)`.
@@ -1673,7 +1691,9 @@ arenas as bonus nodes vs an expert BOT. User's decisions: world map with a path,
   locked (levels open in order, the next world when the boss is beaten), `complete(id, result)` saves, `frontier()`.
 - `StorySlotState` (pick / create / delete with confirmation) and `StoryMapState` (one world per screen: path of nodes,
   boss node last, hero hops between nodes; ←→ node, ↑↓ world; mouse/touch; layout computed at draw time).
-  `PixelFont` always draws on a tight black box: never pass it a dark text colour.
+  `PixelFont.draw` draws ONLY the letters (it used to fill a tight black box behind them: fine on the black menus,
+  odd everywhere else — the user had it removed); over coloured backgrounds use `PixelFont.shadow` (1-font-pixel black
+  drop shadow).
 - **Level complete now exists in single player** (it didn't: reaching the finish did nothing): `AdventureState`
   detects the `finish` trigger → `win()` (fanfare, banner `hud.level_clear`, invulnerable) → after `WIN_TIME` calls
   `args.onFinish(result {score, time, lives})` or goes to `returnTo`. The story passes `onFinish`; Free Play and the

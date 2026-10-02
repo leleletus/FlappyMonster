@@ -44,7 +44,7 @@ function Save.new(difficulty)
     difficulty = difficulty or 'normal'
     return { version = Save.VERSION, difficulty = difficulty, world = 1, node = 1,
              lives = require('src/Difficulty').of(difficulty, 'livesStart', 3),     -- (3; Extremo 4; Xtra extremo 6)
-             done = {}, best = {}, playTime = 0, gameOvers = 0 }
+             done = {}, best = {}, playTime = 0, gameOvers = 0, points = 0, worldReward = {} }
 end
 
 function Save.load(i)
@@ -56,6 +56,8 @@ function Save.load(i)
     d.world, d.node = tonumber(d.world) or 1, tonumber(d.node) or 1
     d.playTime = tonumber(d.playTime) or 0
     d.gameOvers = tonumber(d.gameOvers) or 0
+    d.points = tonumber(d.points) or 0
+    d.worldReward = type(d.worldReward) == 'table' and d.worldReward or {}
     return d
 end
 

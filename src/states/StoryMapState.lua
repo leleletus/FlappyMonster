@@ -26,6 +26,9 @@ local THEME = {
     nieve = { 0.6, 0.75, 0.88 }, cuevas = { 0.2, 0.2, 0.32 }, final = { 0.5, 0.22, 0.2 },
 }
 
+local GRADE_COLOR = { S = { 1, 0.85, 0.2 }, A = { 0.5, 1, 0.5 }, B = { 0.5, 0.85, 1 }, C = { 1, 1, 1 }, D = { 0.8, 0.6, 0.6 } }
+StoryMapState.GRADE_COLOR = GRADE_COLOR
+
 local imgBg, imgHero
 local function loadAssets()
     if imgBg then return end
@@ -100,13 +103,14 @@ function StoryMapState:_play()
             gStateMachine:change('story_map', { world = w, node = 1, notice = 'story.go_notice' })
         end,
         onFinish = function(result)
-            Run.complete(n.id, result)
-            -- de vuelta al mapa, ya en el siguiente (tras el jefe: al mundo que se abre)
+            local summary = Run.complete(n.id, result)
+            -- a los RESULTADOS y, de ahí, al mapa, ya en el siguiente (tras el jefe: al mundo que se abre)
             local nw, nk = world, math.min(#nodes, node + 1)
             if node == #nodes and Run.worldOpen(world + 1) then nw, nk = world + 1, 1 end
             Run.data.world, Run.data.node = nw, nk
             Run.save()
-            gStateMachine:change('story_map', { world = nw, node = nk, cleared = n.id })
+            gStateMachine:change('story_results', { level = n.id, result = result, summary = summary, color = THEME[Worlds.get(world).id],
+                                                    map = { world = nw, node = nk, cleared = n.id } })
         end,
     })
 end
@@ -186,21 +190,22 @@ function StoryMapState:render()
     -- Cabecera: mundo y progreso
     local title = L('story.world_n', { n = self.world }) .. '  ' .. L('story.world.' .. W.id)
     local ts = (PixelFont.width(title, 6) > WINDOW_W - 80) and 4 or 6
-    PixelFont.draw(title, math.floor((WINDOW_W - PixelFont.width(title, ts)) / 2), 40, ts, 1, { 1, 0.95, 0.15 })
+    PixelFont.shadow(title, math.floor((WINDOW_W - PixelFont.width(title, ts)) / 2), 40, ts, 1, { 1, 0.95, 0.15 })
     local done, total = Run.progress(self.world)
     local allDone, allTotal = Run.progress()
     love.graphics.setFont(FONT_MED)
     love.graphics.setColor(1, 1, 1, 0.9)
     love.graphics.printf(L('story.progress', { done = done, total = total, all = allDone, allTotal = allTotal })
-        .. '     ' .. L('diff.' .. Run.data.difficulty), 0, 98, WINDOW_W, 'center')
+        .. '     ' .. L('difficulty.' .. Run.data.difficulty)
+        .. ((done > 0) and ('     ' .. L('story.world_grade', { grade = select(2, Run.worldRating(self.world)) })) or ''), 0, 98, WINDOW_W, 'center')
     -- Vidas de la aventura (arriba a la derecha, como en el nivel)
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.draw(imgHero, WINDOW_W - 150, 22, 0, 4, 4)
-    PixelFont.draw('x' .. Run.data.lives, WINDOW_W - 96, 30, 5, 1)
+    PixelFont.shadow('x' .. Run.data.lives, WINDOW_W - 96, 30, 5, 1)
     if self.notice and self.noticeT < 4 then
         local a = math.min(1, (4 - self.noticeT) / 0.6)
         local msg = L(self.notice)
-        PixelFont.draw(msg, math.floor((WINDOW_W - PixelFont.width(msg, 4)) / 2), 140, 4, a, { 1, 0.35, 0.3 })
+        PixelFont.shadow(msg, math.floor((WINDOW_W - PixelFont.width(msg, 4)) / 2), 140, 4, a, { 1, 0.35, 0.3 })
     end
 
     -- El camino (punteado) entre nodos
@@ -238,9 +243,14 @@ function StoryMapState:render()
             PixelIcons.draw(icon, x - iw * px / 2, y - ih * px / 2, px)
         else
             local num = tostring(k)
-            PixelFont.draw(num, math.floor(x - PixelFont.width(num, 5) / 2), math.floor(y - PixelFont.height(5) / 2), 5, 1)
+            PixelFont.draw(num, math.floor(x - PixelFont.width(num, 5) / 2), math.floor(y - PixelFont.height(5) / 2), 5, 1, { 0.1, 0.1, 0.14 })      -- (oscuro sobre el nodo claro)
         end
         if st == 'done' and node.boss then PixelIcons.draw('check', x + s / 2 - 16, y - s / 2 - 12, 3) end
+        -- su NOTA, debajo
+        local b = st == 'done' and Run.data.best[node.id]
+        if b and b.grade then
+            PixelFont.shadow(b.grade, math.floor(x - PixelFont.width(b.grade, 4) / 2), y + s / 2 + 10, 4, 1, GRADE_COLOR[b.grade])
+        end
     end
 
     -- El monstruo, sobre su nodo (un saltito al moverse)
@@ -265,7 +275,7 @@ function StoryMapState:render()
     if st == 'locked' then line = L('story.locked_hint')
     elseif st == 'done' then
         local b = Run.data.best[node.id] or {}
-        line = L('story.done_line', { score = b.score or 0, time = string.format('%d:%02d', math.floor((b.time or 0) / 60), math.floor((b.time or 0) % 60)) })
+        line = L('story.done_line', { grade = b.grade or '-', score = b.score or 0, time = string.format('%d:%02d', math.floor((b.time or 0) / 60), math.floor((b.time or 0) % 60)) })
     else line = L(node.boss and 'story.boss_line' or 'story.play_line') end
     love.graphics.setColor(1, 1, 1, 0.85)
     love.graphics.printf(line, 0, py + 44, WINDOW_W, 'center')
@@ -278,7 +288,7 @@ function StoryMapState:render()
             local open = Run.worldOpen(w)
             box(x, y, aw, ah, open and { 0.1, 0.1, 0.14, 0.9 } or { 0.2, 0.2, 0.24, 0.7 }, open and { 1, 1, 1, 1 } or { 0.5, 0.5, 0.55, 1 })
             if open then
-                PixelFont.draw(side < 0 and '<' or '>', x + aw / 2 - PixelFont.width('<', 5) / 2, y + ah / 2 - PixelFont.height(5) / 2, 5, 1)
+                PixelFont.shadow(side < 0 and '<' or '>', x + aw / 2 - PixelFont.width('<', 5) / 2, y + ah / 2 - PixelFont.height(5) / 2, 5, 1)
             else
                 local iw, ih = PixelIcons.size('lock')
                 PixelIcons.draw('lock', x + aw / 2 - iw * 1.5, y + ah / 2 - ih * 1.5, 3)
