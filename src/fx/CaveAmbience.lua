@@ -11,9 +11,10 @@ local CaveAmbience = {}
 
 -- { sonido, cada [a, b] s, volumen [a, b], tono [a, b] }
 local LAYERS = {
-    { 'caveDrip',   2.5, 7,  0.10, 0.32, 0.8, 1.3 },
-    { 'cavePebble', 14,  32, 0.10, 0.22, 0.8, 1.2 },
-    { 'caveRumble', 24,  50, 0.18, 0.3,  0.85, 1.1 },
+    -- (flojos: es el FONDO, no algo que llame la atención; el usuario los pidió más bajos)
+    { 'caveDrip',   2.5, 7,  0.04, 0.14, 0.8, 1.3 },
+    { 'cavePebble', 14,  32, 0.04, 0.10, 0.8, 1.2 },
+    { 'caveRumble', 24,  50, 0.08, 0.14, 0.85, 1.1 },
 }
 local timers, forLevel = {}, nil
 

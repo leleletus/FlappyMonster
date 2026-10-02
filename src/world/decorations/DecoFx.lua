@@ -166,8 +166,9 @@ end
 
 -- Sonido de ambiente de una decoración, donde está (se atenúa con la distancia; en las cuevas
 -- lleva eco). Solo en el cliente (el servidor no tiene playAt); tono algo distinto cada vez
+DecoFx.AMBIENT_VOL = 0.35                  -- (de fondo: una gota no debe sonar como un efecto del juego)
 function DecoFx.sound(name, x, y, vol)
-    if Sound and Sound.playAt then Sound.playAt(name, x, y, 0.85 + math.random() * 0.4, vol or 1) end
+    if Sound and Sound.playAt then Sound.playAt(name, x, y, 0.85 + math.random() * 0.4, vol or DecoFx.AMBIENT_VOL) end
 end
 
 -- Gota que cae (estalactitas, carámbanos): se forma colgando, cae y salpica al

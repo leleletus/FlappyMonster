@@ -55,7 +55,7 @@ function IceDrips.render(level, camX, camY)
         if d.phase == 'form' then
             if d.t >= FORM_T then
                 d.phase, d.t = 'fall', 0
-                if Sound.playAt then Sound.playAt('dripFall', d.x, d.y, 0.9 + math.random() * 0.4, 0.7) end
+                if Sound.playAt then Sound.playAt('dripFall', d.x, d.y, 0.9 + math.random() * 0.4, 0.3) end
             end
         elseif d.phase == 'fall' then
             local y0 = d.y
@@ -64,7 +64,7 @@ function IceDrips.render(level, camX, camY)
             local hit, top = level:landingCross(d.x, y0 + 6, d.y + 6)
             if hit then
                 d.y, d.phase, d.t = top - 2, 'splash', 0
-                if Sound.playAt then Sound.playAt('dripSplash', d.x, d.y, 0.9 + math.random() * 0.4, 0.7) end
+                if Sound.playAt then Sound.playAt('dripSplash', d.x, d.y, 0.9 + math.random() * 0.4, 0.3) end
             elseif level:liquidAt(d.x, d.y) or d.y > level.heightPx then table.remove(list, i); d = nil end
         elseif d.t >= SPLASH_T then
             table.remove(list, i); d = nil

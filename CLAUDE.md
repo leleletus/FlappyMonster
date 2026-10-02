@@ -973,7 +973,8 @@ list no mode until the user places a Point Area in them).
   a flashlight for `Lights`). New luminous decoration = that one field.
 - **Cave ambience** (render-only sound, per client; never Noise): `DecoFx.drip` (stalactites) and `IceDrips` play
   'dripFall' when the drop lets go and 'dripSplash' where it lands (`DecoFx.sound` → `Sound.playAt`, random pitch,
-  attenuated, with the cave echo); `src/fx/CaveAmbience.lua` (`tick(level)` from both level states, only when
+  attenuated, with the cave echo; QUIET on purpose: `DecoFx.AMBIENT_VOL` 0.35, ambience layers 0.04-0.14 — the user
+  wanted them as background, not something that stands out); `src/fx/CaveAmbience.lua` (`tick(level)` from both level states, only when
   `level.echo`) plays far drips every 2.5-7 s, a rolling pebble every 14-32 s and a low rock rumble every 24-50 s at
   random pitch/volume. Files `assets/sounds/ambience/` from `tools/sounds/ambience.py`.
 - Lives HUD: in dark levels the "x3" is white with a black shadow (black text was invisible).
