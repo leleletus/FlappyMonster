@@ -8,13 +8,9 @@
 #   gummy/parachute.png      paracaídas de la guardia del Rey Gummy (entra por el techo)
 #   megacrabby_ice/ice_field-Sheet.png   campo de carámbanos del Mega Crabby helado, 3 cuadros
 #                            8x16: grietas de aviso, carámbano, carámbano con brillo
-#   MegaCrabby/claw_left-Sheet.png       PINZAS del Mega Crabby (2 cuadros 11x10: abierta /
-#                            cerrada): pinza de cangrejo de costa templada (buey de mar): horizontal
-#                            como la del helado, pero GORDA — palma redonda, dos dedos gruesos y
-#                            curvos que abren como una boca y puntas oscuras —, sin cerdas. La del
-#                            helado (centolla) es larga, baja y fina. (Una versión alzada, tipo
-#                            ermitaño, no le pegaba: el usuario la descartó.) El original del
-#                            usuario sigue fuera del repo (tools/ui/originals.py).
+# (Las pinzas del Mega Crabby ya NO salen de aquí: las dibujó el usuario — 2 cuadros 10x7 como
+#  las del Mega helado — tras dos propuestas de este script que no le convencieron; `CLAW` queda
+#  solo como referencia y no se escribe.)
 #
 #   python3 tools/ui/make_enemy_extras.py            → solo la vista previa
 #   python3 tools/ui/make_enemy_extras.py --apply    → escribe los assets
@@ -125,7 +121,6 @@ OUT = {
     'crabby_ice/dead.png': ICE_DEAD,
     'gummy/parachute.png': PARACHUTE,
     'megacrabby_ice/ice_field-Sheet.png': FIELD,
-    'MegaCrabby/claw_left-Sheet.png': CLAW,
 }
 
 
@@ -154,7 +149,6 @@ def preview():
             cx = ox + side * (4.6 * S + fw * cs / 2 - 1.5 * cs)
             cy = fy - 1.6 * S - fh * cs / 2
             bg.alpha_composite(c, (int(cx - c.width / 2), int(cy - c.height / 2)))
-    mega(CLAW, 11, 260)
     import importlib.util
     try:
         old = Image.open(os.path.join(IMG, 'MegaCrabby', 'claw_left-Sheet.png')).convert('RGBA')

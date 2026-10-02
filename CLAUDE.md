@@ -388,13 +388,11 @@ Small enemy sprites drawn by hand as character maps: `tools/ui/make_enemy_extras
                        FlappyMonster_pruebas/extras/): CRUSHED Crabby `crabby/dead.png` and crushed Icy Crabby
                        `crabby_ice/dead.png` (each Crabby skin loads its own `dead.png`; they used to share
                        gummy/dead.png, fine while everything was white), the guard's parachute, the Icy Mega's icicle
-                       field and the Mega Crabby's CLAWS (`MegaCrabby/claw_left-Sheet.png`, 2 frames 11x10; the user:
-                       the 7x6 ones looked like little fingers): a TEMPERATE shore-crab pincer — horizontal like the Icy
-                       Mega's, but FAT: round palm, two thick curved fingers that open like a mouth, dark finger tips,
-                       no bristles (the icy one, king crab, is long, low and thin). A raised hermit-crab pincer was
-                       tried first and rejected ("fits another kind of crab"). `CLAW_K` 0.68, `CLAW_X` 6.6 so they
-                       don't cover the body. Art only (the Mega's claws are not hitboxes). make_crab_redesign.py no
-                       longer writes that sheet.
+                       field (the Mega Crabby's CLAWS are NOT generated any more: after two proposals from this script — a
+                       raised hermit-crab pincer and a fat shore-crab one — the USER drew them: `MegaCrabby/
+                       claw_left-Sheet.png`, 2 frames 10x7 like the Icy Mega's, no bristles; never overwrite it).
+                       They are drawn at the body's own pixel size (`CLAW_K` 1.0, `CLAW_X` 5.6, `CLAW_Y` −1.2,
+                       `CLAW_IN` 1.5) with the Mega's shared claw animation (`pose2d`); art only, not hitboxes.
 Spikes are images too: assets/images/spikes/spike.png (tile spikes, rotated/flipped
                        for the 4 directions; falling spike) — SPIKE SKINS: level JSON `"spikeSkin": "ice"`
                        (editor Nivel → Fondo y clima → Pinchos; `src/world/SpikeSkins.lua` LIST = id + PNG, new skin =

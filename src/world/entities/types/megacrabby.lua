@@ -24,7 +24,7 @@
 --    con las pinzas o sacar pecho con el pincho.
 --
 -- Sprites: assets/images/MegaCrabby/ (crab1-3 como el Crabby, claw_left-Sheet
--- = pinza izquierda 11x10 abierta/cerrada (tools/ui/make_enemy_extras.py); la derecha es la misma volteada;
+-- = pinza izquierda 10x7 abierta/cerrada (dibujada por el usuario); la derecha es la misma volteada;
 -- spike.png = el pincho del Crabby, al doble). Sonidos: bosses/megacrabby/.
 
 local Entity      = require 'src/world/entities/Entity'
@@ -80,8 +80,10 @@ local REST_KINDS = { 1, 2, 1, 3 }
 -- costado, a la altura del arranque de las patas (CLAW_X, CLAW_Y en píxeles
 -- del sprite desde los pies, el punto donde se unen); se solapan CLAW_IN
 -- píxeles de pinza con el cuerpo. La derecha es la izquierda volteada.
--- (con las pinzas grandes 11x10: algo más pequeñas de escala y más afuera, para que no tapen el cuerpo)
-local CLAW_K, CLAW_X, CLAW_Y, CLAW_IN = 0.68, 6.6, -1.2, 1.5
+-- (pinzas del usuario, 2 cuadros 10x7 como las del Mega helado: a la MISMA escala que el cuerpo
+-- — CLAW_K 1: sus píxeles miden lo mismo que los del cangrejo — y saliendo del costado junto a
+-- las patas, como las originales de 7x6, algo más afuera porque son más largas)
+local CLAW_K, CLAW_X, CLAW_Y, CLAW_IN = 1.0, 5.6, -1.2, 1.5
 local CS = MS * CLAW_K
 
 -- ARTE por clase (Mega.art; el Mega Crabby helado, megacrabby_ice.lua, pone el suyo):
@@ -100,8 +102,7 @@ function Mega.loadArt(dir, w, h, cw, ch, k, cx, cy, cin, spikeDy)
 end
 function Mega.loadAssets()
     if Mega.art then return end
-    -- (pinzas 11x10, tools/ui/make_enemy_extras.py: grandes, de ermitaño; antes 7x6, "deditos")
-    Mega.art = Mega.loadArt('assets/images/MegaCrabby/', 16, 9, 11, 10, CLAW_K, CLAW_X, CLAW_Y, CLAW_IN)
+    Mega.art = Mega.loadArt('assets/images/MegaCrabby/', 16, 9, 10, 7, CLAW_K, CLAW_X, CLAW_Y, CLAW_IN)
     -- Enfado (solo dibujo): vena 💢, vapor y garabato
     anger = { vein = SpriteStrip.load('assets/images/MegaCrabby/anger_vein.png', 11),
               steam = SpriteStrip.load('assets/images/MegaCrabby/anger_steam.png', 9),
