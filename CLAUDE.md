@@ -1638,7 +1638,11 @@ don't copy speeds/forces literally (the user tunes feel by hand).
 
 ## OST presentation videos (`tools/video/`)
 
-`tools/video/make_ost.sh [megacrabby megacrabby_ice megagloomy]` → `FlappyMonster_pruebas/videos/<track>.mp4` (outside
+TRACK NAMES (user): the game's own versions are called **Crab Tantrum (X)** — catalog `name` of `tentacle_nes` (NES),
+`tentacle_winter` (Winter), `tentacle_gloomy` (Gloomy), `tentacle_chip` (Chip / Chip instrumental); ids and files keep
+`tentacle_*` (levels reference the ids). Only the original recording stays "Tentacle Tantrum".
+
+`tools/video/make_ost.sh [megacrabby megacrabby_ice megagloomy]` → `FlappyMonster_pruebas/videos/crab_tantrum_<x>.mp4` (outside
 the repo; 1280x720, 30 fps, H.264 + AAC, the full track once with a 2 s fade-out). `tools/video/ost/main.lua` is a
 LÖVE app that renders OFFLINE with the real game code (not a screen recording): the boss's REAL arena level (its zone
 of guarida_cangrejo_rey / glaciar_cangrejo / gruta_lugubre, with sky, decorations, water, snow, particles), frame by

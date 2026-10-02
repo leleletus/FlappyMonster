@@ -22,13 +22,13 @@
 
     { "id": "boss",   "name": "Boss Battle", "intro": "boss_battle_intro.wav", "loop": "boss_battle_loop.wav", "level": false, "boss": true },
     { "id": "Tentacle_Tantrum", "name": "Tentacle Tantrum", "file": "TentacleTantrum.ogg", "level": false, "boss": true },
-    { "id": "tentacle_chip", "name": "Tentacle Chip", "file": "tentacle_chip.ogg", "level": false, "boss": true },
+    { "id": "tentacle_chip", "name": "Crab Tantrum (Chip)", "file": "tentacle_chip.ogg", "level": false, "boss": true },
     { "id": "WinterFallympics", "name": "Winter Fallympics", "file": "winter.ogg", "level": false, "boss": true },
     { "id": "winter_nes", "name": "Winter Fallympics (NES)", "file": "winter_nes.ogg", "level": false, "boss": true, "volume": 0.9 },
-    { "id": "tentacle_winter", "name": "Tentacle Tantrum (Winter)", "file": "tentacle_winter.ogg", "level": false, "boss": true, "volume": 0.9 },
-    { "id": "tentacle_chip_instrumental", "name": "Tentacle Chip (instrumental)", "file": "tentacle_chip_instrumental.ogg", "level": false, "boss": true },
-    { "id": "tentacle_gloomy", "name": "Tentacle Tantrum (Cueva)", "file": "tentacle_gloomy.ogg", "level": false, "boss": true, "volume": 0.9 },
-    { "id": "tentacle_nes", "name": "Tentacle Tantrum (NES)", "file": "tentacle_nes.ogg", "level": false, "boss": true, "volume": 0.9 },
+    { "id": "tentacle_winter", "name": "Crab Tantrum (Winter)", "file": "tentacle_winter.ogg", "level": false, "boss": true, "volume": 0.9 },
+    { "id": "tentacle_chip_instrumental", "name": "Crab Tantrum (Chip instrumental)", "file": "tentacle_chip_instrumental.ogg", "level": false, "boss": true },
+    { "id": "tentacle_gloomy", "name": "Crab Tantrum (Gloomy)", "file": "tentacle_gloomy.ogg", "level": false, "boss": true, "volume": 0.9 },
+    { "id": "tentacle_nes", "name": "Crab Tantrum (NES)", "file": "tentacle_nes.ogg", "level": false, "boss": true, "volume": 0.9 },
     { "id": "boss_nes", "name": "Boss Battle (NES)", "intro": "boss_nes_intro.ogg", "loop": "boss_nes_loop.ogg", "level": false, "boss": true, "volume": 0.9 },
     { "id": "menus",  "name": "Menús",       "file": "menus.ogg",   "level": false },
     { "id": "youWin", "name": "Victoria",    "file": "victory.ogg", "level": false, "loop": false }

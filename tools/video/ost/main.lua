@@ -35,11 +35,11 @@ local Darkness = require 'src/fx/Darkness'
 local PixelFont = require 'src/ui/PixelFont'
 
 local SHOWS = {
-    megacrabby     = { level = 'assets/levels/guarida_cangrejo_rey.json', track = 'tentacle_nes', bpm = 185, title = 'TENTACLE TANTRUM (NES)',
+    megacrabby     = { level = 'assets/levels/guarida_cangrejo_rey.json', track = 'tentacle_nes', bpm = 185, title = 'CRAB TANTRUM (NES)', file = 'crab_tantrum_nes',
                        sub = 'MEGA CRABBY' },
-    megacrabby_ice = { level = 'assets/levels/glaciar_cangrejo.json', track = 'tentacle_winter', bpm = 185, title = 'TENTACLE TANTRUM (WINTER)',
+    megacrabby_ice = { level = 'assets/levels/glaciar_cangrejo.json', track = 'tentacle_winter', bpm = 185, title = 'CRAB TANTRUM (WINTER)', file = 'crab_tantrum_winter',
                        sub = 'MEGA CRABBY HELADO' },
-    megagloomy     = { level = 'assets/levels/gruta_lugubre.json', track = 'tentacle_gloomy', bpm = 150, title = 'TENTACLE TANTRUM (CUEVA)',
+    megagloomy     = { level = 'assets/levels/gruta_lugubre.json', track = 'tentacle_gloomy', bpm = 150, title = 'CRAB TANTRUM (GLOOMY)', file = 'crab_tantrum_gloomy',
                        sub = 'MEGA CRABBY LÚGUBRE', bulb = true },
 }
 local FPS, W, H, T = 30, 1280, 720, TILE_PX
@@ -95,7 +95,7 @@ function love.load(arg)
 
     local out = (os.getenv('FM_PREVIEWS') or '/home/mtvemo/FlappyMonster_pruebas') .. '/videos'
     os.execute('mkdir -p "' .. out .. '"')
-    local file = out .. '/' .. show.track .. '.mp4'
+    local file = out .. '/' .. show.file .. '.mp4'
     -- En DOS pasos: primero solo la imagen (por la tubería) y, al acabar, se le pone la música. (En
     -- uno solo, con -shortest, ffmpeg terminaba el audio mucho antes de que llegaran los fotogramas
     -- y cortaba el vídeo a los pocos segundos.)
@@ -111,7 +111,9 @@ end
 
 -- ── Simulación (pasos de 1/60) ───────────────────────────────────────────────
 local function beat() return 60 / show.bpm end
-local IDLE = { megacrabby = 'ready', megacrabby_ice = 'ready', megagloomy = 'ready' }
+-- (los Megas, en 'recover': misma pose de reposo que 'ready', pero 'ready' es de la ENTRADA y ahí no se
+-- dibuja el enfado — las esquirlas de hielo y los símbolos solo salían durante los gestos)
+local IDLE = { megacrabby = 'recover', megacrabby_ice = 'recover', megagloomy = 'ready' }
 
 local function emote()
     emoteN = emoteN + 1
@@ -169,7 +171,7 @@ local function step(dt)
         else
             boss:update(dt, level)                               -- (el gesto, con sus efectos de verdad)
             st = boss.state
-            if st == 'chase' or st == 'prowl' or st == 'fight' then
+            if st == 'chase' or st == 'prowl' or st == 'fight' or (st == 'recover' and IDLE[boss.def.name] ~= 'recover') then
                 boss.state, boss.deadTimer = IDLE[boss.def.name], 10
                 boss.vx = 0
             end
