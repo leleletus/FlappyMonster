@@ -278,6 +278,7 @@ return {
         mirror = "MIRROR",
         megacrabby = "MEGA CRABBY",
         megacrabby_ice = "ICY MEGA CRABBY",
+        megagummy = "GUMMY KING",
         snowboss = "BIG SNOWBALL",
     },
     oadv = {

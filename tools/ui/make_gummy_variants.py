@@ -167,6 +167,126 @@ def mega_frames(opt):
     return [mega_frame(opt, i) for i in range(3)] + [mega_frame(opt, 0, dead=True)]
 
 
+# ── Jefe REY GUMMY (types/megagummy.lua): todo en la rejilla del Gummy (16x16, 1 px del Gummy =
+# 1 px del jefe) con retoques de 1 px. La corona va APARTE (crown.png, misma rejilla): se dibuja
+# encima y sale volando al dividirse. Cuadros de body-Sheet.png (16x16 cada uno):
+#   1 quieto · 2-3 andar · 4 saltando (patas recogidas) · 5 mareado (ojos cruzados, boca en zigzag)
+#   6 dolor (ojos > <, boca abierta) · 7 risa (ojos ^ ^, boca abierta) · 8 grito (fanfarria, boca abierta)
+# Más: crown.png, wave-Sheet.png (ola de gelatina 12x8, 2 cuadros), stars-Sheet.png (estrellita de
+# mareo 5x5, 2 cuadros), target-Sheet.png (marca de caída 16x4, 2 cuadros), shadow.png (16x3).
+EYES = [(5, 5), (5, 6), (5, 7), (9, 5), (9, 6), (9, 7)]
+SMILE = [(4, 9), (10, 9), (5, 10), (6, 10), (7, 10), (8, 10), (9, 10)]
+
+
+def clear(im, pts):
+    put(im, pts, BODY)
+
+
+def open_mouth(im):
+    put(im, [(5, 10), (6, 10), (7, 10), (8, 10), (9, 10)], MOUTH)
+    put(im, [(4, 10), (10, 10)], OUT_C)
+    put(im, [(5, 11), (6, 11), (7, 11), (8, 11), (9, 11)], OUT_C)
+
+
+def boss_frames():
+    base = [load(n) for n in ('gummy.png', 'gummy1.png', 'gummy2.png')]
+    out = []
+    for im in base:
+        im = im.copy(); brows(im); out.append(im)
+    idle = out[0]
+    # 4 saltando: patas recogidas (solo los pies pegados a la barriga)
+    j = idle.copy()
+    for y in (13, 14, 15):
+        for x in range(16):
+            j.putpixel((x, y), (0, 0, 0, 0))
+    put(j, [(4, 13), (5, 13), (6, 13), (8, 13), (9, 13), (10, 13)], OUT_C)
+    out.append(j)
+    # 5 mareado: ojos cruzados (uno arriba, otro abajo), sin cejas, boca en zigzag
+    d = load('gummy.png')
+    clear(d, EYES + SMILE)
+    put(d, [(5, 5), (9, 7)], OUT_C)
+    put(d, [(5, 10), (6, 9), (7, 10), (8, 9), (9, 10)], OUT_C)
+    out.append(d)
+    # 6 dolor: ojos apretados > <, boca abierta
+    h = idle.copy()
+    clear(h, EYES + SMILE)
+    put(h, [(4, 5), (5, 6), (4, 7), (10, 5), (9, 6), (10, 7)], OUT_C)
+    open_mouth(h)
+    out.append(h)
+    # 7 risa: ojos cerrados ^ ^, boca abierta
+    r = load('gummy.png')
+    clear(r, EYES + SMILE)
+    put(r, [(4, 6), (5, 5), (6, 6), (8, 6), (9, 5), (10, 6)], OUT_C)
+    open_mouth(r)
+    out.append(r)
+    # 8 grito (fanfarria): ojos normales y cejas, boca abierta
+    g = idle.copy()
+    clear(g, SMILE)
+    open_mouth(g)
+    out.append(g)
+    return out
+
+
+def sheet(frames):
+    w, h = frames[0].size
+    s = Image.new('RGBA', (w * len(frames), h), (0, 0, 0, 0))
+    for i, f in enumerate(frames):
+        s.paste(f, (i * w, 0))
+    return s
+
+
+def grid(rows, pal):
+    h, w = len(rows), len(rows[0])
+    im = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+    for y, row in enumerate(rows):
+        for x, ch in enumerate(row):
+            if ch in pal:
+                im.putpixel((x, y), pal[ch] + (255,))
+    return im
+
+
+def boss_art(dst):
+    os.makedirs(dst, exist_ok=True)
+    sheet(boss_frames()).save(os.path.join(dst, 'body-Sheet.png'))
+    c = Image.new('RGBA', (MW, MH), (0, 0, 0, 0))     # la corona sola (misma rejilla 16x16)
+    crown(c)
+    c.save(os.path.join(dst, 'crown.png'))
+    P = {'o': OUT_C, 'w': WHITE, 'b': BODY, 's': SHADE, 'y': GOLD, 'Y': GOLD_S,
+         'r': (230, 60, 70), 'R': (150, 30, 40), 'k': (0, 0, 0)}
+    # ola de gelatina (sale del aterrizaje y corre por el suelo; se salta)
+    wave = [grid(["....oooo....",
+                  "..oowwbboo..",
+                  ".owbbbbbbso.",
+                  ".obbbbbbbso.",
+                  "obbbbbbbbsso",
+                  "obbbbbbbbsso",
+                  "obbbbbbssssO".replace('O', 'o'),
+                  "oooooooooooo"], P),
+            grid(["............",
+                  "...ooooo....",
+                  ".oowwbbboo..",
+                  "obbbbbbbbso.",
+                  "obbbbbbbbsso",
+                  "obbbbbbbbsso",
+                  "obbbbbbsssso",
+                  "oooooooooooo"], P)]
+    sheet(wave).save(os.path.join(dst, 'wave-Sheet.png'))
+    stars = [grid(["..o..", ".oyo.", "oyyYo", ".oYo.", "..o.."], P),
+             grid([".....", ".oyo.", ".yYy.", ".oyo.", "....."], P)]
+    sheet(stars).save(os.path.join(dst, 'stars-Sheet.png'))
+    target = [grid(["rr..r..rr..r..rr", "rR.rRr.rR.rRr.Rr", "r..............r", "rrrrrrrrrrrrrrrr"], P),
+              grid(["ww..w..ww..w..ww", "wb.wbw.wb.wbw.bw", "w..............w", "wwwwwwwwwwwwwwww"], P)]
+    sheet(target).save(os.path.join(dst, 'target-Sheet.png'))
+    sh = Image.new('RGBA', (16, 3), (0, 0, 0, 0))
+    for x in range(16):
+        for y in range(3):
+            edge = x in (0, 15) or (y != 1 and x in (1, 14))
+            if not edge:
+                sh.putpixel((x, y), (0, 0, 0, 255))
+    sh.save(os.path.join(dst, 'shadow.png'))
+    print('escrito', dst)
+
+
 # ── Vista previa ──────────────────────────────────────────────────────────────
 def up(im, k):
     return im.resize((max(1, round(im.width * k)), max(1, round(im.height * k))), Image.NEAREST)
@@ -285,7 +405,7 @@ def main():
     ap.add_argument('--apply-helado', action='store_true',
                     help='escribe el Gummy helado elegido (A "Escarcha" sin carámbanos) en assets/images/gummy_ice/')
     ap.add_argument('--apply-mega', action='store_true',
-                    help='escribe el Mega Gummy elegido (B "Rey Gummy") en assets/images/gummy_mega/')
+                    help='escribe el jefe Rey Gummy (opción B) en assets/images/bosses/megagummy/ (boss_art)')
     ap.add_argument('--out', default=os.path.join(os.environ.get('FM_PREVIEWS', '/home/mtvemo/FlappyMonster_pruebas'),
                                                   'gummy_variantes'))
     a = ap.parse_args()
@@ -297,14 +417,7 @@ def main():
             f.save(os.path.join(dst, n))
         print('escrito', dst)
     if a.apply_mega:
-        dst = os.path.join(ROOT, 'assets', 'images', 'gummy_mega')
-        os.makedirs(dst, exist_ok=True)
-        for n, f in zip(('gummy.png', 'gummy1.png', 'gummy2.png', 'dead.png'), mega_frames('B')):
-            f.save(os.path.join(dst, n))
-        c = Image.new('RGBA', (MW, MH), (0, 0, 0, 0))     # la corona sola (misma rejilla 16x16)
-        crown(c)
-        c.save(os.path.join(dst, 'crown.png'))
-        print('escrito', dst)
+        boss_art(os.path.join(ROOT, 'assets', 'images', 'bosses', 'megagummy'))
 
 
 if __name__ == '__main__':

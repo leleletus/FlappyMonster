@@ -21,6 +21,12 @@
 -- pound = 3), las 3 fases (escalas 10 → 8 → 6), los Activadores y Congeladores solo en la
 -- fase 3, hielo fino que se rehace, muerte en orden y zona superada.
 --
+-- Rey Gummy (LEVEL=tools/levelgen/arenas/jefe_gummy.json): se le golpea MAREADO tras el
+-- panzazo; el jugador se aparta de la marca cuando ya salta y salta las olas de gelatina; con
+-- los trozos, ground pound a cada uno. Comprueba: todos sus estados (fanfarria, guardia, se
+-- divide, trozos, revienta), las 3 fases, que la guardia entra, que cae en su marca (≤ 24 px),
+-- que ninguna ola le da al jugador (las salta), y muerte + zona superada.
+--
 --   LEVEL=assets/levels/guarida_cangrejo_rey.json love tools/tests/boss_sim
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
@@ -60,6 +66,9 @@ function love.load()
     local VULN = { stuck = true, recover = mirror }
     local snow = boss.def.name == 'snowboss'
     if snow then VULN = { dizzy = true, frozen = true, soaked = true } end
+    local king = boss.def.name == 'megagummy'
+    if king then VULN = { dazed = true } end
+    local kg = { phases = {}, maxGuards = 0, flopOff = {}, waveHits = 0, partHits = 0, lastPartT = -9 }
     local sn = { phases = {}, scales = {}, frozenHits = {}, crashDizzy = 0, bonks = 0, toggles = 0, refrozen = 0,
                  deathOrder = {}, early = {}, shown = {} }
     if snow then
@@ -124,6 +133,13 @@ function love.load()
         -- daño al jugador
         if pa.hp < lastHp then
             if not pa.dying then hurts = hurts + 1 end
+            if king then
+                for _, w in ipairs(boss.waves or {}) do
+                    local b = boss:waveBox(w)
+                    local o = pa:getOuterBounds()
+                    if o.x < b.x + b.w + 30 and o.x + o.w > b.x - 30 and o.y + o.h > b.y - 10 then kg.waveHits = kg.waveHits + 1 end
+                end
+            end
             print(('%6.1fs   jugador: -%d vida (%d) jefe=%s'):format(t, lastHp - pa.hp, pa.hp, boss.state))
             local byGlass = glass and glass:isActiveGlass() and pa.vy < -700     -- (lo lanzó el cristal)
             if mirror and (boss.state == 'dive' or boss.state == 'recover') and boss.gpHit ~= nil and not byGlass then
@@ -279,6 +295,47 @@ function love.load()
                 elseif c.broken then c.broken = nil; sn.refrozen = sn.refrozen + 1 end
             end
         end
+        -- Rey Gummy: el jugador juega como se espera (ver la cabecera) y se registra
+        if king and z.state == 'fight' then
+            local T = TILE_PX
+            kg.phases[boss.phase or 1] = true
+            local nm = 0
+            for _, e in ipairs(ents) do if e.summonOf and e.alive then nm = nm + 1 end end
+            kg.maxGuards = math.max(kg.maxGuards, nm)
+            if (boss.state == 'dazed' or boss.state == 'flop_land') and kg.prev == 'flop_air' then
+                kg.flopOff[#kg.flopOff + 1] = math.abs(boss.x - boss.landX)
+            end
+            kg.prev = boss.state
+            -- se aparta de la marca cuando ya ha saltado (la marca está fija)
+            if boss.state == 'flop_air' and not pa.dying and math.abs(pa.x - boss.landX) < boss.outerW / 2 + 60 then
+                local dir = (boss.landX - z.x0 > z.x1 - boss.landX) and -1 or 1
+                pa.x, pa.vx = math.max(z.x0 + T, math.min(z.x1 - T, boss.landX + dir * 6 * T)), 0
+            end
+            -- salta las olas que se le acercan
+            for _, w in ipairs(boss.waves or {}) do
+                local d = (pa.x - w.x) * w.dir
+                if d > 0 and d < 90 and pa.onGround and not pa.dying then
+                    pa.vy, pa.onGround = -math.abs(ADV_JUMP_VEL), false
+                end
+            end
+            -- trozos: ground pound a uno que esté en el suelo cada 0.7 s
+            if boss.state == 'parts' and t - kg.lastPartT > 0.7 and not pa.dying then
+                for _, pt in ipairs(boss.parts) do
+                    if pt.st == 1 and pt.inv <= 0 then
+                        kg.lastPartT = t
+                        local ob = pt:box()
+                        local ph = pa:getOuterBounds().h
+                        pa.x, pa.y, pa.vx, pa.vy = pt.x, ob.y - ph / 2 + 4, 0, 400
+                        pa.onGround, pa.gpPhase, pa.hurtT = false, 'fall', 0
+                        local hp0 = pt.hp
+                        Entities.interactions.run(pa, ents, {})
+                        if pt.hp < hp0 then kg.partHits = kg.partHits + 1 end
+                        print(('%6.1fs     ground pound a un trozo: %d -> %d (barra %d)'):format(t, hp0, pt.hp, boss.hp))
+                        break
+                    end
+                end
+            end
+        end
         if snow then
             if boss.state ~= sn.prevD and boss.state:match('^dying_') then sn.deathOrder[#sn.deathOrder + 1] = boss.state end
             sn.prevD = boss.state
@@ -377,6 +434,27 @@ function love.load()
         end
         check('muerte', not boss.alive and table.concat(sn.deathOrder, ',') == 'dying_crack,dying_burst,dying_flee' and z.state == 'cleared',
             ('vivo=%s orden %s, zona %s'):format(tostring(boss.alive), table.concat(sn.deathOrder, ','), z.state))
+    end
+    if king then
+        local function check(name, ok, msg)
+            print(('%-10s %s  %s'):format(name, ok and 'OK   ' or 'FALLA', msg))
+            if not ok then fails = fails + 1 end
+        end
+        local need = { 'chase', 'flop_wind', 'flop_air', 'dazed', 'recover', 'phase_up', 'flop_land', 'split', 'parts',
+                       'dying_pop' }
+        local miss = {}
+        for _, n in ipairs(need) do if not seen[n] then miss[#miss + 1] = n end end
+        check('estados', #miss == 0, #miss == 0 and 'todos vistos' or ('faltan: ' .. table.concat(miss, ',')))
+        check('fases', kg.phases[1] and kg.phases[2] and kg.phases[3], ('fases vistas: %s%s%s'):format(
+            kg.phases[1] and '1' or '', kg.phases[2] and '2' or '', kg.phases[3] and '3' or ''))
+        check('guardia', kg.maxGuards > 0 and kg.maxGuards <= (boss.props.guardMax or 3),
+            ('guardias a la vez (máx.): %d'):format(kg.maxGuards))
+        local worst = 0
+        for _, d in ipairs(kg.flopOff) do worst = math.max(worst, d) end
+        check('marca', #kg.flopOff > 0 and worst <= 24, ('%d panzazos; el más lejos de su marca: %.0f px'):format(#kg.flopOff, worst))
+        check('olas', kg.waveHits == 0, ('golpes de ola al jugador (saltándolas): %d'):format(kg.waveHits))
+        check('muerte', not boss.alive and kg.partHits >= 3 and z.state == 'cleared',
+            ('vivo=%s, golpes a trozos %d, zona %s'):format(tostring(boss.alive), kg.partHits, z.state))
     end
     local ks = {}
     for k, v in pairs(sounds) do ks[#ks + 1] = k .. '=' .. v end

@@ -284,4 +284,45 @@ def glaciar_cangrejo():
     return L
 
 
-BUILDERS = [ruta_del_espejo, fortaleza_malvada, guarida_cangrejo_rey, lago_helado, glaciar_cangrejo]
+def reino_gummy():
+    """Reino Gummy: un prado lleno de Gummies de todas las clases (normales, con casco, voladores)
+    — la guardia del rey — y el REY GUMMY al final (arena jefe_gummy: el salón del trono)."""
+    src = load_src('jefe_gummy.json')
+    L = Level('Reino Gummy', 122, 15, (4, 12), music='flying_machine')
+    L.extra.update({'name_en': 'Gummy Kingdom'})
+    G = 13
+    L.rect(2, G, 80, 14, SOLID)
+    # entrada: un Gummy normal para empezar
+    L.walker('gummy', 10, G - 1, 7, 14)
+    # escalón con un Gummy con casco encima (rebota: ground pound para romperle el casco)
+    L.rect(18, G - 2, 22, G - 1, SOLID)
+    L.walker('gummy', 20, G - 3, 18, 22, helmet=True)
+    L.ent('star', 20, G - 6)
+    # foso de pinchos con dos losas y un Gummy volador por encima
+    L.rect(24, G, 31, G, EMPTY)
+    L.spikes(24, 31, G, UP)
+    L.plat(25, 26, G - 3, SLAB)
+    L.plat(29, 30, G - 3, SLAB)
+    L.walker('gummy', 27, G - 5, 24, 31, movement='fly')
+    L.ent('checkpoint', 34, G - 1)
+    # el pasillo de la guardia: normal, con casco y un volador sobre la plataforma
+    L.walker('gummy', 38, G - 1, 36, 42)
+    L.walker('gummy', 45, G - 1, 43, 48, helmet=True)
+    L.plat(39, 46, G - 4, DROP)
+    L.ent('star', 42, G - 5)
+    L.walker('gummy', 42, G - 7, 38, 47, movement='fly')
+    # escalera de plataformas hasta una vida extra (con un volador con casco)
+    L.plat(51, 53, G - 3, DROP)
+    L.plat(55, 57, G - 6, DROP)
+    L.ent('extralife', 56, G - 7)
+    L.walker('gummy', 54, G - 5, 50, 58, movement='fly', helmet=True)
+    # dos más antes del castillo
+    L.walker('gummy', 62, G - 1, 60, 66, helmet=True)
+    L.walker('gummy', 66, G - 1, 63, 69)
+    L.ent('checkpoint', 72, G - 1)
+    # arena del Rey Gummy (la zona empieza en la columna 87)
+    graft(L, src, 6, 81)
+    return L
+
+
+BUILDERS = [ruta_del_espejo, fortaleza_malvada, guarida_cangrejo_rey, lago_helado, glaciar_cangrejo, reino_gummy]

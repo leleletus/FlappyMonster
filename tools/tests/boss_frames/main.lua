@@ -6,6 +6,8 @@
 --   (STATES=chase,climb,... elige qué estados capturar; EVERY = s entre capturas;
 --    FX=1: partículas del juego y reloj de dibujo = tiempo simulado (rugidos,
 --    rayos, humo...); RAGE=1: el jefe empieza con poca vida = enfadado)
+--   Rey Gummy: LEVEL=tools/levelgen/arenas/jefe_gummy.json FX=1 ZONE=1
+--     STATES=intro,chase,flop_wind,flop_air,flop_land,dazed,phase_up,split,parts,dying_pop
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
 require 'settings'
@@ -66,7 +68,16 @@ function love.load()
             boss.hp = math.min(boss.hp, 1)
             boss:damage(1, 'stomp')
         end
-        if want[boss.state] and t - lastShot >= every and boss.alive then
+        -- Rey Gummy: ground pound al mareado y a los trozos (uno cada s) para verlo todo hasta el final
+        if boss.def.name == 'megagummy' then
+            if boss.state == 'dazed' and boss.deadTimer > 0.8 then boss:damage(2, 'pound') end
+            if boss.state == 'parts' and boss.deadTimer > 1.5 and t - (hitDone.part or 0) > 1 then
+                for i, p in ipairs(boss.parts) do
+                    if p.st ~= 0 and p.inv <= 0 then hitDone.part = t; boss:hitPart(i, 2); break end
+                end
+            end
+        end
+        if want[boss.state] and t - lastShot >= every and (boss.alive or boss.def.name == 'megagummy') then
             lastShot = t
             local col, row = n % COLS, math.floor(n / COLS)
             love.graphics.setCanvas(canvas)

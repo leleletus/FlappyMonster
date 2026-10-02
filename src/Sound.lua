@@ -32,6 +32,9 @@ local GAIN = {
     snowLaugh = 0.53, snowRoar = 0.55, snowSpit = 0.62, snowSplat = 0.51, snowRoll = 0.63,
     snowLand = 0.49, snowSlam = 0.59, snowCrash = 0.60, snowDizzy = 0.56, snowCrack = 0.92,
     snowBurst = 0.60, snowFlee = 0.46, snowIntroRoll = 0.59, snowBreath = 0.46,
+    -- Rey Gummy (tools/sounds/megagummy.py)
+    kingHop = 0.46, kingCharge = 0.34, kingJump = 0.37, kingFlop = 0.55, kingWave = 0.6, kingFanfare = 0.43,
+    kingLaugh = 0.67, kingHurt = 0.55, kingSplit = 0.47, kingPop = 0.55, kingCrown = 0.66, kingLand = 0.55,
     mirrorAppear = 0.62, mirrorPortal = 0.37, glassWarn = 0.85, glassRise = 0.72, glassHit = 0.72,
     -- tools/sounds/mechanics.py (medidos: → ≈ -12 dBFS)
     switchOn     = 0.77, switchOff  = 0.76, helmetBounce = 1.15, helmetBreak = 0.72,
@@ -166,6 +169,11 @@ function Sound.load()
         local id = 'snow' .. n:gsub('^%l', string.upper):gsub('_(%l)', string.upper)
         load(id, 'assets/sounds/bosses/snowboss/' .. n .. '.wav', 'static')
     end
+    -- Rey Gummy (tools/sounds/megagummy.py): kingHop, kingFlop...
+    for _, n in ipairs({ 'hop', 'charge', 'jump', 'flop', 'wave', 'fanfare', 'laugh', 'hurt', 'split', 'pop',
+                         'crown', 'land' }) do
+        load('king' .. n:gsub('^%l', string.upper), 'assets/sounds/bosses/megagummy/' .. n .. '.wav', 'static')
+    end
     -- Música: todas las pistas del índice (assets/music/index.json)
     for _, tr in ipairs(Music.list) do Sound.loadTrack(tr) end
 end
@@ -215,6 +223,8 @@ Sound.RANGE = {
     megaShrink = 3, megaFlee = 2.2, bossHurt = 3, bossExplode = 3,
     snowLaugh = 3, snowRoar = 3, snowSlam = 3, snowCrash = 3, snowBurst = 3, snowIntroRoll = 3, snowRoll = 2.5,
     snowLand = 2.5, snowSpit = 2.2, snowDizzy = 2.5, snowCrack = 2.5, snowBreath = 2.5,
+    kingFlop = 3, kingLand = 3, kingFanfare = 3, kingLaugh = 3, kingSplit = 3, kingWave = 2.5, kingCharge = 2.5,
+    kingJump = 2.5, kingHurt = 2.5, kingPop = 2.5, kingCrown = 2.5, kingHop = 2,
 }
 local listenerX, listenerY = nil, nil
 local emitterX, emitterY   = nil, nil

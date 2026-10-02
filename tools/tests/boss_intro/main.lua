@@ -23,7 +23,7 @@
 --               físicamente posible en un paso (antes "se teletransportaban")
 --   camara      durante la entrada la cámara no sigue a nadie: la misma para
 --               los dos jugadores y quieta, centrada en el jefe
---   (Nave Malvada / Espejo / Gran Bola de Nieve: orden dormant → intro → ready → su estado de pelea,
+--   (Nave Malvada / Espejo / Gran Bola de Nieve / Rey Gummy: orden dormant → intro → ready → su estado de pelea,
 --    sonidos de su entrada; lejos/emotes/invocar son solo del Mega)
 --
 --   tools/tests/run.sh boss_intro        (LEVEL=..., SECS=90)
@@ -131,7 +131,7 @@ function love.load()
         for _, e in ipairs(ents) do if e.alive then e:update(dt, level) end end
         if z.state == 'intro' and BossZones.music(level) ~= BossZones.SILENCE then silenceBad = silenceBad + 1 end
         for _, pa in ipairs(players) do Entities.interactions.run(pa, ents, {}) end
-        if intro then
+        if intro and z.state == 'intro' then          -- (la pelea pudo empezar en este paso: ya sigue a cada uno)
             local c1x, c1y = BossZones.cameraTarget(level, players[1].x, players[1].y)
             local c2x, c2y = BossZones.cameraTarget(level, players[2].x, players[2].y)
             camRef = camRef or { c1x, c1y }
@@ -247,7 +247,7 @@ function love.load()
         if (not mega or (#rests >= 4 and spawnN >= 6 and gps >= 20)) and #spawns >= 4 then break end
     end
     local want = mega and { 'dormant', 'fall_in', 'land_in', 'roar_in', 'ready', 'chase' }
-                 or { 'dormant', 'intro', 'ready', ({ miniboss1 = 'patrol', snowboss = 'idle' })[boss.def.name] or 'fight' }
+                 or { 'dormant', 'intro', 'ready', ({ miniboss1 = 'patrol', snowboss = 'idle', megagummy = 'chase' })[boss.def.name] or 'fight' }
     local okSeq = true
     for i, s in ipairs(want) do if seq[i] ~= s then okSeq = false end end
     check('orden', introSeen and okSeq, table.concat(seq, ' → ', 1, math.min(#seq, 7)))
@@ -259,7 +259,8 @@ function love.load()
     local safe = boss.outerW / 2 + 2.5 * T
     if not mega then
         check('sin daño', hurtIntro == 0, ('daño en la entrada: %d'):format(hurtIntro))
-        local snd = ({ miniboss1 = { 'miniAppear', 'spikesOut' }, snowboss = { 'snowIntroRoll', 'snowLaugh', 'snowSpit' } })[boss.def.name]
+        local snd = ({ miniboss1 = { 'miniAppear', 'spikesOut' }, snowboss = { 'snowIntroRoll', 'snowLaugh', 'snowSpit' },
+                      megagummy = { 'kingLand', 'kingFanfare', 'kingLaugh' } })[boss.def.name]
                     or { 'mirrorLaugh' }
         local okSnd, txt = true, {}
         for _, n in ipairs(snd) do okSnd = okSnd and (sounds[n] or 0) >= 1; txt[#txt + 1] = n .. '=' .. (sounds[n] or 0) end

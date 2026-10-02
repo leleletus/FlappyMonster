@@ -50,7 +50,20 @@ function Gummy:init()
     self.bonkT  = 0
 end
 
+-- ── Guardia de reserva (los llama el Rey Gummy: types/megagummy.lua, def.summons) ──
+function Gummy:makeReserve(key)
+    self.summonOf = key
+    self.alive, self.state = false, 'reserve'
+    self.leftBoundPx, self.rightBoundPx = -math.huge, math.huge     -- (sin ruta: la pone el jefe al llamarlo)
+end
+-- En reserva (o ya muerto) no se envía por red: el cliente lo sabe
+function Gummy:netAtRest() return self.state == 'reserve' or (self.summonOf ~= nil and not self.alive) end
+function Gummy:netRest()
+    if self.summonOf then self.alive, self.state = false, 'reserve' end
+end
+
 function Gummy:updateCustom(dt)
+    if self.state == 'reserve' then return true end
     if self.bonkT > 0 then self.bonkT = math.max(0, self.bonkT - dt) end
     return false                       -- (el resto: comportamiento normal)
 end
@@ -120,6 +133,7 @@ end
 function Gummy.sizeImage() return Gummy.loadArt(ART_DIR).idle end
 
 function Gummy:render(camX, camY)
+    if self.state == 'reserve' then return end
     local img
     local A = self:art()
     local bx, by = self:breatheScale()

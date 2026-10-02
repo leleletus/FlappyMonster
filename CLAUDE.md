@@ -324,7 +324,7 @@ src/world/
                        flood (editor-only placeholder for a Floods area),
                        bomb / bombobject (bombs, see Bombs), bossglass, bosswall, cryo (Freezer),
                        snowboss (Gran Bola de Nieve), phaseblock (Bloques de fase), crabby_ice (Crabby helado: 4 defs),
-                       megacrabby_ice (Mega Crabby helado)
+                       megacrabby_ice (Mega Crabby helado), megagummy (Rey Gummy), gummy_ice (Gummy helado)
   AutoScroll.lua       auto-scrolling camera levels (see below)
   Floods.lua           rising/falling water areas (see below)
   BossZones.lua        boss arenas (see below)
@@ -518,7 +518,7 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   'stomp' with 4th return dirX = cnx → `pa:bounce(vy, dirX, soft=true)` (vx 300 +
   ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill; v17: crawler turn in snapshots; v18: MegaCrabby;
   v19: boss walls, Mega minions/pounce; v20: post-hit protection; v21: unified invulnerability;
-  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks; v30: boss broken glass; v31: special enemy deaths; v32: bombs; v33: snow/ice/thin ice; v34: sand; v35: deep stone; v36: freezer; v37: Snowball Boss; v38: Snowball Boss rebuilt, zone phases, phase blocks; v39: Icy Crabby; v40: Icy Mega Crabby).
+  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks; v30: boss broken glass; v31: special enemy deaths; v32: bombs; v33: snow/ice/thin ice; v34: sand; v35: deep stone; v36: freezer; v37: Snowball Boss; v38: Snowball Boss rebuilt, zone phases, phase blocks; v39: Icy Crabby; v40: Icy Mega Crabby; v41: Rey Gummy + reserve Gummies).
 - **Crawler** (`src/world/entities/Crawler.lua`): surface-following movement
   (floor ↔ walls ↔ ceiling, concave and convex corners) for Crabbies with prop
   `wallWalk` (`Crabby.WALL_PROP`, off by default so old levels don't change).
@@ -593,9 +593,10 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   `tools/ui/make_gummy_variants.py --apply-helado` (user's pick: option A "Escarcha" WITHOUT the icicles = the
   exact Gummy shape in ice + snow on its head). Same behaviour (walk/fly, helmet...). Used in the icy levels
   (lago_helado, torre_viento, glaciar_cangrejo; retheme `ICY_CRABS` also maps gummy → gummy_ice). Harness
-  `icecrabby_rules gummy_helado`. MEGA GUMMY: designs only (same script; the user rejected a new 20x20 body —
-  like the Icy Mega Crabby, a Mega must keep the SMALL sprite's resolution: the 16x16 Gummy drawn at scale 10,
-  1-px edits only).
+  `icecrabby_rules gummy_helado`. MEGA GUMMY = the boss **Rey Gummy** (see Boss system; the user rejected a new
+  20x20 body — like the Icy Mega Crabby, a Mega must keep the SMALL sprite's resolution: the 16x16 Gummy drawn
+  at scale 10, 1-px edits only). Gummies can be RESERVE minions (`Gummy:makeReserve/netAtRest/netRest`, like
+  Crabby): the Rey Gummy's royal guard.
 - **Gummy helmet** (prop `helmet`, Gummies only; `assets/images/gummy/casco.png`
   drawn over the sprite on the same 16x16 grid, scaled `HELMET_K` 1.10 around its
   bottom edge; the outer box grows up by what the helmet sticks out). `Gummy:interact`
@@ -1049,7 +1050,9 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   `INV_TIME` (red flash, stomps only `'bounce'`); body is solid sideways. Death: `dying_hold` (blasts, alternating
   'bossExplode'/'bossHurt') → `dying_fall` → `dead` (alive=false → zone cleared).
   `e:interact(pa)` must be side-effect free (client uses it to predict bounces).
-- **Adding a boss**: `types/<name>.lua` with `Entity.extend(Boss, …)`, def fields
+- **Adding a boss**: FOLLOW `docs/jefes/COMO_CREAR_UN_JEFE.md` (step-by-step guide + checklist: design,
+  art, sounds, particles, entity skeleton, minions, net, lang, arena, real level, harnesses, docs, release;
+  with the pitfalls already paid for). Short version: `types/<name>.lua` with `Entity.extend(Boss, …)`, def fields
   `category='Jefes'`, `boss={title=…}`, `hide=Boss.HIDE`,
   `props=Boss.props({hp=…, hpPerPlayer=…}, {extra props})`; implement
   `initBoss/updateBoss/render` (+ hooks listed at top of Boss.lua); add the name
@@ -1187,6 +1190,30 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   freeze it soaked), `online_boss LEVEL=tools/tests/online_boss/nieve_fases.json` (3 HP: the client sees
   scales 10/8/6, zone phase 3, icicles, Activadores and Freezers only in phase 3), `snowboss_look`
   (`snow_arena.png` per phase), `boss_intro`.
+- **Rey Gummy** (`types/megagummy.lua`, "Rey Gummy", `boss.megagummy` = REY GUMMY / GUMMY KING): the Gummy's
+  16x16 sprite at scale 10 (`MS`) with brows + a gold crown (crown = separate `crown.png` on the same grid, drawn
+  over the body so it can fly off). Art `assets/images/bosses/megagummy/` from `tools/ui/make_gummy_variants.py
+  --apply-mega` (body-Sheet 8 frames: idle, walk1/2, jump (legs tucked), dazed, hurt, laugh, shout; wave, stars,
+  target marker, shadow); sounds `bosses/megagummy/` from `tools/sounds/megagummy.py` (ids `king*`); particles
+  king_splat / king_wave / king_sparkle / king_confetti(_big). Physics REUSED from the Snowball Boss
+  (`Snow.move/physics/friction/jumpTo/target/zoneBounds/groundBelow/strike`). Chases in small hops (contact 1 HP +
+  push, `GRACE`); solid sideways; on top = immune bounce. (1) BELLY-FLOP: 'flop_wind' (marker `landX/landY` follows
+  the target, locked the last `FLOP_LOCK` s) → 'flop_air' (`jumpTo` + `passY`: lands on the marked surface, platforms
+  included; drawn rotated 90° = belly down while falling) → crush 2 HP + squash, two jelly WAVES along the surface
+  (34 px tall: jump them; 1 HP + push; die at walls / zone edge / no floor) → 'dazed' (stars; the ONLY vulnerable
+  body state: stomp 1 / GP 2, one hit) → 'recover'. Phase 2 chains `FLOP_CHAIN` 2 ('flop_land' between). (2) ROYAL
+  GUARD: phase 2 (`phase2` = fraction of the BODY hp) starts with 'phase_up' (fanfare) and then 'summon' every
+  `guardEvery` s: reserve Gummies (`def.summons`: normal / helmet / flyer cycling, pool `guardPool`, max `guardMax`)
+  enter from the zone EDGES, bounded to the zone; they vanish when it dies. (3) SPLIT: hp = body + `splitCount` ×
+  `partHp`; the hit that reaches that budget is CLAMPED (`MG:damage`) and starts 'split' (crown flies to `crownX/Y`)
+  → 'parts': medium Gummies (scale 6, `Part` objects with the Snow physics) that hop at players; contact 1 HP; stomp 1 /
+  GP 2 per part (`interact` notes `_hitPart`, side-effect-free otherwise); hp bar = sum of parts. Last part →
+  'dying_pop' (big confetti, the crown hops and fades; `releasesZone`) → dead. netPackExtra: phase, landX/Y, splitX/Y,
+  crownX/Y, waves {id,x,y,dir,t}, parts {x,y,hp,inv,st,facing}. Arena `tools/levelgen/arenas/jefe_gummy.json` (from
+  `make_jefe_gummy.py`: flat throne hall, side platforms row 10 + middle row 7, music `boss_nes`); real level
+  **reino_gummy** "Reino Gummy" / "Gummy Kingdom" (`levels_boss.py`, meadow theme; every Gummy kind on the way).
+  Harnesses: `megagummy_rules` (every rule), `boss_sim` / `boss_intro` / `online_boss` / `boss_frames` with
+  `LEVEL=tools/levelgen/arenas/jefe_gummy.json`. Protocol v41.
 - **Phase system** (generic, any boss): `Boss:bossPhase()` (default 1) → the controller keeps
   `z.phase` = the highest of its bosses (4th field of the `bz` snapshot) and calls `PhaseBlocks.update`.
   **Phase blocks** (`src/world/PhaseBlocks.lua`, entity `phaseblock` "Bloques de fase", Mecanismos: rect
@@ -1370,7 +1397,7 @@ join), copies `tools/levelgen/arenas/*.json` to a temp `assets/levels/zz_tmp_*`
 it, its env vars) + rules for new ones. When a test needs something new, fix
 or extend the HARNESS (and its README row) instead of working around it in a
 scratch copy: the time spent fighting test setups was the user's complaint.
-Harnesses: flyers, crawler_drop, mechanics, sounds, boss_sim, sp_boss, boss_frames,
+Harnesses: flyers, crawler_drop, mechanics, sounds, boss_sim, sp_boss, boss_frames, megagummy_rules,
 editor_open, free_play, update_boot, online_smoke, online_boss, online_helmet,
 level_check, level_solve. `tools/` is not shipped (.love / updates).
 
@@ -1422,7 +1449,7 @@ Low-level notes (for writing NEW harnesses):
   Batch of 15 (race: valle_soleado, cavernas_cristal, torre_viento, fabrica_morteros,
   tren_fugaz (auto-scroll), canon_trampolines; hunt: ciudadela_cangrejos,
   jardin_gummies, mina_inundada; koth: isla_flotante, coliseo_pinchos, cascada_dorada;
-  race+boss: ruta_del_espejo, fortaleza_malvada, guarida_cangrejo_rey, lago_helado, glaciar_cangrejo). Each level
+  race+boss: ruta_del_espejo, fortaleza_malvada, guarida_cangrejo_rey, lago_helado, glaciar_cangrejo, reino_gummy). Each level
   whitelists its mode with `"modes"`. Ship = bump `version.txt`.
 - Bots: send `in` only when there are new inputs, or the server kicks them
   for flooding.

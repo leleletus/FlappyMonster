@@ -597,6 +597,57 @@ function Particles.emit(kind, x, y, opts)
             add({ x = x + rnd(-50, 50), y = y + rnd(-40, 40), vx = rnd(-80, 80), vy = -rnd(20, 120), g = 200, drag = 2,
                   life = rnd(0.4, 0.8), size = math.random(2, 4) * 2, dust = true, col = {1, 1, 1} })
         end
+    elseif kind == 'king_splat' then
+        -- Rey Gummy: panzazo / aterrizaje — goterones de gelatina hacia los lados + polvo del suelo
+        local pal = paletteAt(x, y, opts)
+        local jelly = { {1, 1, 1}, {0.95, 0.95, 0.97}, {0.77, 0.78, 0.84} }
+        for i = 1, 22 do
+            local dir = (i % 2 == 0) and 1 or -1
+            add({ x = x + dir * rnd(10, 60), y = y - rnd(2, 20), vx = dir * rnd(160, 520), vy = -rnd(160, 560),
+                  g = 1500, life = rnd(0.6, 1.1), size = math.random(2, 4) * 3, col = jelly[math.random(3)],
+                  phys = true, bounce = 0.2, fadeLast = 0.35 })
+        end
+        local dust = dustOf(pal)
+        for i = 1, 18 do
+            local dir = (i % 2 == 0) and 1 or -1
+            add({ x = x + dir * rnd(20, 70), y = y - rnd(0, 8), vx = dir * rnd(200, 520), vy = -rnd(30, 160),
+                  g = 500, life = rnd(0.4, 0.8), size = math.random(2, 4) * 3, col = dust, drag = 3, dust = true })
+        end
+    elseif kind == 'king_wave' then
+        -- Ola de gelatina corriendo: salpicaduras pequeñas detrás (opts.nx = hacia dónde va)
+        local nx = (opts and opts.nx) or 1
+        for i = 1, 2 do
+            add({ x = x - nx * rnd(10, 20), y = y - rnd(4, 16), vx = -nx * rnd(20, 90), vy = -rnd(80, 220), g = 1300,
+                  life = rnd(0.3, 0.5), size = math.random(1, 2) * 3,
+                  col = ({ {1, 1, 1}, {0.85, 0.86, 0.9} })[math.random(2)], fadeLast = 0.2 })
+        end
+    elseif kind == 'king_sparkle' then
+        -- Destellos dorados (la corona, la fanfarria)
+        for i = 1, 8 do
+            local a = rnd(0, math.pi * 2)
+            add({ x = x + math.cos(a) * rnd(4, 24), y = y + math.sin(a) * rnd(4, 18), vx = math.cos(a) * rnd(30, 120),
+                  vy = math.sin(a) * rnd(30, 120) - 40, drag = 2, life = rnd(0.35, 0.7), size = 6, star = (i % 2 == 0),
+                  col = ({ {1, 0.86, 0.3}, {1, 0.96, 0.7} })[math.random(2)] })
+        end
+    elseif kind == 'king_confetti' or kind == 'king_confetti_big' then
+        -- Revienta un trozo de gelatina / el rey: confeti de colores que cae girando + gotas de gelatina
+        local cols = { {1, 0.35, 0.4}, {1, 0.82, 0.25}, {0.4, 0.85, 0.45}, {0.35, 0.65, 1}, {0.85, 0.45, 1}, {1, 1, 1} }
+        local big = kind == 'king_confetti_big'
+        local n = big and 70 or 30
+        local sp = big and 1.5 or 1
+        for i = 1, n do
+            local a = rnd(-math.pi * 0.95, -math.pi * 0.05)
+            local s = rnd(220, 640) * sp
+            add({ x = x + rnd(-14, 14), y = y + rnd(-14, 14), vx = math.cos(a) * s, vy = math.sin(a) * s, g = 700,
+                  drag = 2.2, life = rnd(1.0, 2.0), size = math.random(2, 3) * 3, col = cols[math.random(#cols)],
+                  chunk = true, spin = rnd(-14, 14), fadeLast = 0.5 })
+        end
+        for i = 1, math.floor(n / 3) do
+            local a = rnd(0, math.pi * 2)
+            add({ x = x, y = y, vx = math.cos(a) * rnd(120, 420), vy = math.sin(a) * rnd(120, 420) - 150, g = 1400,
+                  life = rnd(0.5, 0.9), size = math.random(2, 3) * 3, col = {0.95, 0.95, 0.97}, phys = true,
+                  fadeLast = 0.3 })
+        end
     elseif kind == 'frost_breath' then
         -- Aliento helado (cambio de fase): nube fría alrededor
         for i = 1, 24 do
