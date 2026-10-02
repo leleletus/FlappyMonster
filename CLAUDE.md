@@ -1639,8 +1639,7 @@ don't copy speeds/forces literally (the user tunes feel by hand).
 ## Story Mode (`src/story/`, in progress by STAGES)
 
 Plan (approved by the user; file `~/.claude/plans/rippling-swinging-seal.md`): 1 foundation ✔ · 2 generic difficulty
-framework ✔ · 3 lives carried between
-levels + Game Over restarts the world (Xtra: the whole game) · 4 results screen + grades · 5 full map polish · 6
+framework ✔ · 3 lives + Game Over ✔ · 4 results screen + grades · 5 full map polish · 6
 difficulty unlocks (Extreme after Hard, Xtra after Extreme; double bosses) · 7 final level order by difficulty · 8 KOTH
 arenas as bonus nodes vs an expert BOT. User's decisions: world map with a path, 3 save slots, KOTH = bonus vs a bot.
 - **Stage 2 ✔ — DIFFICULTY = generic modifier framework** (`src/Difficulty.lua`): each difficulty id (`easy, normal,
@@ -1659,6 +1658,13 @@ arenas as bonus nodes vs an expert BOT. User's decisions: world map with a path,
   `room.difficulty` → `game_init.difficulty` (no room UI yet; additive, no protocol bump). Story: a NEW save asks the
   difficulty (`StorySlotState` picker; Extreme / Xtra locked until `Save.global().unlocked`); `AdventureState` takes
   `args.difficulty`. Harness `difficulty_rules`; `online_smoke DIFF=easy`.
+- **Stage 3 ✔ — lives and Game Over.** Lives belong to the ADVENTURE (save field `lives`), not to the level: start =
+  `livesStart` (3 on Easy/Normal/Hard, 4 on Extreme, 6 on Xtra Extreme — the user's numbers; `Difficulty.of(id, name,
+  default)` reads a modifier without a level). `AdventureState` args `lives`, `onLeave(lives)` (called from `exit()`
+  however the level is left — finished, pause → exit — so lost lives always count; never on 0 lives), `onGameOver()`
+  + `gameOverNote`: with them the Game Over overlay has no "retry", only CONTINUE. `Run.gameOver(world)`: lives back to
+  the start value and the WORLD restarts (its nodes are no longer done; `best` records stay); with the modifier
+  `restartGame` (Xtra Extreme) the whole game restarts. The map shows the lives and a notice after a Game Over.
 - Menu: Aventura → HISTORIA (`story_slots`) / ONLINE / JUEGO LIBRE (PRUEBAS) (`free_play` stays as the debug hub).
 - `src/story/Worlds.lua` = the story as DATA: ordered worlds `{ id, levels = {...}, boss }` (provisional order by
   theme; every story level needs a FINISH — hunt-only levels have none). `Worlds.nodes(w)`, `levelName(id)`.

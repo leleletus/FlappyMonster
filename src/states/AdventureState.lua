@@ -66,6 +66,7 @@ function AdventureState:exit()
     -- todo empieza como la primera vez, la música desde el principio
     Sound.leaveMatch()
     Difficulty.bind(nil)
+    if self.onLeave and self.player and self.player.lives > 0 then self.onLeave(self.player.lives) end
     if self.rec then self.rec:finish(self); self.rec = nil end
 end
 
@@ -78,6 +79,11 @@ function AdventureState:enter(args)
     -- Al llegar a la META el nivel termina: `onFinish(result)` decide qué pasa (el modo historia
     -- apunta el nivel y vuelve a su mapa); sin él se vuelve a `returnTo`.
     self.onFinish  = args.onFinish
+    -- Modo historia: las vidas vienen de la aventura (`lives`) y vuelven a ella al salir del nivel
+    -- (`onLeave(vidas)`); quedarse sin ninguna es el GAME OVER de la aventura (`onGameOver()`: sin
+    -- "reintentar": se vuelve al principio del mundo). `gameOverNote` = la frase que lo explica.
+    self.startLives = args.lives
+    self.onLeave, self.onGameOver, self.gameOverNote = args.onLeave, args.onGameOver, args.gameOverNote
     self.won, self.wonT = false, 0
 
     self.level  = Level.new(self.levelPath)
@@ -93,6 +99,7 @@ function AdventureState:enter(args)
     local sx, sy = self.level:getSpawnPx()
     self.player = PlayerAdventure:new(sx, sy)
     self.player:applyDifficulty()
+    if self.startLives then self.player.lives = self.startLives end
     self.level.players = { self.player }       -- para trampas/entidades que "ven" al jugador
     -- Grabación de la partida para analizarla (FM_RECORD=1; ver src/PlayRecorder.lua)
     if PlayRecorder.enabled() then self.rec = PlayRecorder.new(self.levelPath, self.level.name) end
@@ -340,6 +347,7 @@ function AdventureState:update(dt)
             end
             if Input.pressed('confirm') then
                 Sound.play('select')
+                if self.onGameOver then self.onGameOver(); return end
                 if self.selectedOpt == 1 then
                     gStateMachine:change('adventure', self:retryArgs())
                 else
@@ -724,9 +732,16 @@ function AdventureState:_renderScene()
             local totalH = #GAMEOVER_OPTIONS * btnH + (#GAMEOVER_OPTIONS - 1) * gap
             local startY = WINDOW_H/2 - totalH/2 + 30
             local cx     = WINDOW_W / 2
+            if self.onGameOver then
+                -- Modo historia: no hay "reintentar"; se explica adónde se vuelve y se sigue
+                love.graphics.setColor(1, 1, 1, ba)
+                love.graphics.printf(self.gameOverNote or '', 0, startY - 6, WINDOW_W, 'center')
+                drawPixelButton(L('story.go_continue'), cx, startY + 44, btnW, btnH, true, ba)
+            else
             for i, opt in ipairs(GAMEOVER_OPTIONS) do
                 local by = startY + (i - 1) * (btnH + gap)
                 drawPixelButton(L(opt), cx, by, btnW, btnH, i == self.selectedOpt, ba)
+            end
             end
         end
     end
@@ -766,6 +781,7 @@ end
 function AdventureState:touchpressed(id, tx, ty, dx, dy, pressure)
     if self.dead then
         if self.deadTimer <= 0.8 then return end
+        if self.onGameOver then Sound.play('select'); self.onGameOver(); return end      -- (historia: cualquier toque sigue)
         local btnW   = 260
         local btnH   = 48
         local gap    = 18
@@ -777,6 +793,7 @@ function AdventureState:touchpressed(id, tx, ty, dx, dy, pressure)
             local bx = cx - btnW/2
             if tx >= bx-10 and tx <= bx+btnW+10 and ty >= by-5 and ty <= by+btnH+5 then
                 Sound.play('select')
+                if self.onGameOver then self.onGameOver(); return end
                 if i == 1 then
                     gStateMachine:change('adventure', self:retryArgs())
                 else

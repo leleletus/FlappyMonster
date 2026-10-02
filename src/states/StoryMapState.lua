@@ -13,6 +13,7 @@ local PixelFont     = require 'src/ui/PixelFont'
 local PixelIcons    = require 'src/ui/PixelIcons'
 local Run           = require 'src/story/Run'
 local Worlds        = require 'src/story/Worlds'
+local Difficulty    = require 'src/Difficulty'
 local L = require 'src/Lang'
 
 local StoryMapState = BaseState:new()
@@ -53,6 +54,7 @@ function StoryMapState:enter(args)
     self.t, self.hop, self.shake = 0, 1, 0
     self.heroX, self.heroY = nodePos(self.node, #Worlds.nodes(self.world))
     self.justCleared = args.cleared               -- (acaba de superar ese nivel: destello)
+    self.notice, self.noticeT = args.notice, 0    -- (aviso un momento: tras un Game Over)
     Sound.playMusic('menus')
 end
 
@@ -89,6 +91,14 @@ function StoryMapState:_play()
     Sound.play('select')
     gStateMachine:change('adventure', {
         level = Worlds.path(n.id), returnTo = 'story_map', difficulty = Run.data.difficulty,
+        -- las VIDAS son de la aventura: entran con las que lleva y, salga como salga, se guardan
+        lives = Run.data.lives,
+        onLeave = function(lives) Run.setLives(lives) end,
+        gameOverNote = L(Difficulty.of(Run.data.difficulty, 'restartGame', false) and 'story.go_game' or 'story.go_world'),
+        onGameOver = function()
+            local w = Run.gameOver(world)                 -- al principio del mundo (o del juego)
+            gStateMachine:change('story_map', { world = w, node = 1, notice = 'story.go_notice' })
+        end,
         onFinish = function(result)
             Run.complete(n.id, result)
             -- de vuelta al mapa, ya en el siguiente (tras el jefe: al mundo que se abre)
@@ -109,6 +119,7 @@ end
 
 function StoryMapState:update(dt)
     self.t = self.t + dt
+    self.noticeT = (self.noticeT or 0) + dt
     self.hop = math.min(1, self.hop + dt * 5)
     self.shake = math.max(0, self.shake - dt)
     local tx, ty = nodePos(self.node, #Worlds.nodes(self.world))
@@ -182,6 +193,15 @@ function StoryMapState:render()
     love.graphics.setColor(1, 1, 1, 0.9)
     love.graphics.printf(L('story.progress', { done = done, total = total, all = allDone, allTotal = allTotal })
         .. '     ' .. L('diff.' .. Run.data.difficulty), 0, 98, WINDOW_W, 'center')
+    -- Vidas de la aventura (arriba a la derecha, como en el nivel)
+    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.draw(imgHero, WINDOW_W - 150, 22, 0, 4, 4)
+    PixelFont.draw('x' .. Run.data.lives, WINDOW_W - 96, 30, 5, 1)
+    if self.notice and self.noticeT < 4 then
+        local a = math.min(1, (4 - self.noticeT) / 0.6)
+        local msg = L(self.notice)
+        PixelFont.draw(msg, math.floor((WINDOW_W - PixelFont.width(msg, 4)) / 2), 140, 4, a, { 1, 0.35, 0.3 })
+    end
 
     -- El camino (punteado) entre nodos
     for k = 1, n - 1 do

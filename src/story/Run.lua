@@ -71,12 +71,39 @@ function Run.complete(id, result)
     if not d then return end
     d.done[id] = true
     result = result or {}
+    if result.lives then d.lives = result.lives end      -- (las vidas se llevan al nivel siguiente)
     local b = d.best[id] or {}
     if result.score and result.score > (b.score or -1) then b.score = result.score end
     if result.time and (not b.time or result.time < b.time) then b.time = math.floor(result.time * 100) / 100 end
     d.best[id] = b
     d.playTime = d.playTime + (result.time or 0)
     Run.save()
+end
+
+-- Vidas con las que sigue la aventura (al salir de un nivel sin acabarlo también cuentan las perdidas)
+function Run.setLives(n)
+    if not Run.data then return end
+    Run.data.lives = math.max(1, math.floor(n))
+    Run.save()
+end
+
+-- GAME OVER (sin vidas): se vuelve al PRINCIPIO DEL MUNDO `w` — sus niveles dejan de estar superados
+-- y las vidas vuelven a las del principio. En las dificultades con `restartGame` (Xtra extremo) se
+-- pierde TODO: de vuelta al mundo 1. Los récords (`best`) se conservan. Devuelve el mundo al que se va.
+function Run.gameOver(w)
+    local d = Run.data
+    if not d then return 1 end
+    local Difficulty = require 'src/Difficulty'
+    d.lives = Difficulty.of(d.difficulty, 'livesStart', 3)
+    d.gameOvers = (d.gameOvers or 0) + 1
+    if Difficulty.of(d.difficulty, 'restartGame', false) then
+        d.done, w = {}, 1
+    else
+        for _, n in ipairs(Worlds.nodes(w)) do d.done[n.id] = nil end
+    end
+    d.world, d.node = w, 1
+    Run.save()
+    return w
 end
 
 return Run

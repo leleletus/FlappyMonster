@@ -41,8 +41,10 @@ end
 
 -- Una partida nueva (sin guardar todavía)
 function Save.new(difficulty)
-    return { version = Save.VERSION, difficulty = difficulty or 'normal', lives = 3, world = 1, node = 1,
-             done = {}, best = {}, playTime = 0 }
+    difficulty = difficulty or 'normal'
+    return { version = Save.VERSION, difficulty = difficulty, world = 1, node = 1,
+             lives = require('src/Difficulty').of(difficulty, 'livesStart', 3),     -- (3; Extremo 4; Xtra extremo 6)
+             done = {}, best = {}, playTime = 0, gameOvers = 0 }
 end
 
 function Save.load(i)
@@ -53,6 +55,7 @@ function Save.load(i)
     d.lives = tonumber(d.lives) or 3
     d.world, d.node = tonumber(d.world) or 1, tonumber(d.node) or 1
     d.playTime = tonumber(d.playTime) or 0
+    d.gameOvers = tonumber(d.gameOvers) or 0
     return d
 end
 

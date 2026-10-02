@@ -7,6 +7,9 @@
 --  4. el nivel 2 igual; salir a las partidas: el hueco 1 dice 2 niveles;
 --  5. se RELEE del disco (como al reabrir el juego): el progreso sigue ahí;
 --  6. con todos los niveles y el jefe del mundo 1 superados se abre el mundo 2;
+--  6b. las VIDAS son de la aventura: perder una en un nivel se nota en el siguiente; salir por la pausa las
+--     guarda; sin vidas = GAME OVER: de vuelta al principio del mundo (sus niveles, sin superar), vidas de
+--     nuevo; en Xtra extremo, todo el juego; vidas de partida 3 / 3 / 3 / 4 / 6;
 --  7. borrar la partida (dos pulsaciones) la deja vacía;
 --  8. capturas del mapa y de las partidas a 1280, 960 y 1600 de ancho: <save>/story_*.png
 --   tools/tests/run.sh story_flow
@@ -106,6 +109,8 @@ function love.update(dt)
     elseif step == 'in1' and t - T > 0.6 then
         IN1 = st.levelPath == Worlds.path(W1[1].id) and st.returnTo == 'story_map' and st.level.difficulty == 'easy'
               and st.player.hpMax == 4
+        LIVES0 = st.player.lives
+        st.player.lives = st.player.lives - 1               -- (pierde una vida en el nivel)
         toFinish(st); go('won1')
     elseif step == 'won1' and t - T > 0.5 then
         WON1 = st.won == true
@@ -117,6 +122,9 @@ function love.update(dt)
         shot('map_done')
         pressNext('confirm'); go('in2')
     elseif step == 'in2' and t - T > 0.6 then
+        check('vidas', LIVES0 == 3 and Run.data.lives == 2 and st.player.lives == 2,
+            ('empieza con %s; pierde una en el nivel 1 → la aventura lleva %s y el nivel 2 empieza con %s'):format(tostring(LIVES0),
+             tostring(Run.data.lives), tostring(st.player.lives)))
         toFinish(st); go('back2')
     elseif step == 'back2' and t - T > 3.6 then
         OK2 = Run.isDone(W1[2].id) and st.node == 3
@@ -143,7 +151,49 @@ function love.update(dt)
         check('mundo2', OPEN2 and st.world == 2 and Run.state(2, 1) == 'open' and Run.state(2, 2) == 'locked',
             ('mundo 1 completo → mundo 2 abierto=%s; ABAJO pasa al mundo %s; su nodo 1 %s, el 2 %s'):format(tostring(OPEN2), tostring(st.world),
              Run.state(2, 1), Run.state(2, 2)))
-        shot('map_w2'); go('r960')
+        shot('map_w2')
+        -- GAME OVER en el mundo 2: con su nivel 1 superado, entra en el 2, sale por la pausa con una vida
+        -- menos (se guarda), vuelve a entrar y se queda sin vidas
+        local W2 = Worlds.nodes(2)
+        Run.data.done[W2[1].id] = true; Run.save()
+        pressNext('nav_right'); go('go1')
+    elseif step == 'go1' and t - T > 0.3 then
+        pressNext('confirm'); go('go2')
+    elseif step == 'go2' and t - T > 0.6 then
+        st.player.lives = st.player.lives - 1
+        gStateMachine:push('pause'); top().selected = 2
+        pressNext('confirm'); go('go3')
+    elseif step == 'go3' and t - T > 0.5 then
+        QUIT_LIVES = Run.data.lives
+        pressNext('confirm'); go('go4')
+    elseif step == 'go4' and t - T > 0.6 then
+        IN_LIVES = st.player.lives
+        st.player.lives = 1
+        st.player:die(nil, true); go('go5')
+    elseif step == 'go5' and (st.dead and st.deadTimer > 1.0 or t - T > 12) then
+        DEAD, NOTE = st.dead == true, st.gameOverNote
+        pressNext('confirm'); go('go6')
+    elseif step == 'go6' and t - T > 0.5 then
+        local W2 = Worlds.nodes(2)
+        check('game_over', QUIT_LIVES == 1 and IN_LIVES == 1 and DEAD and st.world == 2 and st.node == 1 and st.notice ~= nil
+            and Run.data.lives == 3 and not Run.isDone(W2[1].id) and Run.isDone(W1[1].id) and Run.data.gameOvers == 1,
+            ('salir por la pausa guarda las vidas (%s) y se vuelve a entrar con %s; sin vidas: GAME OVER=%s → mapa mundo %s nodo %s, '
+             .. 'vidas %s, mundo 2 reiniciado=%s, mundo 1 intacto=%s'):format(tostring(QUIT_LIVES), tostring(IN_LIVES), tostring(DEAD),
+             tostring(st.world), tostring(st.node), tostring(Run.data.lives), tostring(not Run.isDone(W2[1].id)), tostring(Run.isDone(W1[1].id))))
+        shot('game_over_map')
+        -- vidas de partida y Game Over por dificultad (sin jugar: la lógica de la partida)
+        local s4, s6 = Save.new('extreme').lives, Save.new('xtra').lives
+        local keepSlot, keepData = Run.slot, Run.data
+        Run.slot, Run.data = 3, Save.new('xtra')
+        Run.data.done[W1[1].id], Run.data.done[W2[1].id], Run.data.lives = true, true, 1
+        local back = Run.gameOver(2)
+        local wiped = back == 1 and next(Run.data.done) == nil and Run.data.lives == 6
+        Save.delete(3)
+        Run.slot, Run.data = keepSlot, keepData
+        check('extremos', Save.new('easy').lives == 3 and Save.new('hard').lives == 3 and s4 == 4 and s6 == 6 and wiped,
+            ('vidas al empezar: fácil %d, difícil %d, extremo %d, xtra %d; Game Over en Xtra: todo el juego de nuevo=%s'):format(
+             Save.new('easy').lives, Save.new('hard').lives, s4, s6, tostring(wiped)))
+        go('r960')
     elseif step == 'r960' and t - T > 0.3 then resize(960, 720); go('r960b')
     elseif step == 'r960b' and t - T > 0.5 then shot('map_960'); go('r1600')
     elseif step == 'r1600' and t - T > 0.3 then resize(1600, 720); go('r1600b')

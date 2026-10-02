@@ -75,6 +75,10 @@ return {
         play_line = "[ENTER] play",
         boss_line = "BOSS!  [ENTER] play",
         done_line = "Cleared  ·  {score} points  ·  {time}",
+        go_continue = "CONTINUE",
+        go_world = "No lives left: back to the start of this world",
+        go_game = "No lives left: the adventure starts over",
+        go_notice = "GAME OVER: BACK TO THE START",
         map_hint = "[LEFT/RIGHT] level    [UP/DOWN] world    [ENTER] play    [ESC] saves",
         world = {
             pradera = "THE MEADOW", costa = "THE COAST", fortaleza = "THE FORTRESS",

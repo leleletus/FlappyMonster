@@ -75,6 +75,10 @@ return {
         play_line = "[ENTER] jugar",
         boss_line = "¡JEFE!  [ENTER] jugar",
         done_line = "Superado  ·  {score} puntos  ·  {time}",
+        go_continue = "CONTINUAR",
+        go_world = "Sin vidas: vuelves al principio de este mundo",
+        go_game = "Sin vidas: la aventura empieza de nuevo",
+        go_notice = "GAME OVER: DE VUELTA AL PRINCIPIO",
         map_hint = "[IZQ/DER] nivel    [ARRIBA/ABAJO] mundo    [ENTER] jugar    [ESC] partidas",
         world = {
             pradera = "LA PRADERA", costa = "LA COSTA", fortaleza = "LA FORTALEZA",
