@@ -132,6 +132,7 @@ function AdventureState:enter(args)
 
     Sound.setLevelMusic(nil)
     Sound.setBaseLevelMusic(self.level.music)          -- la música elegida en el editor
+    Sound.setEcho(self.level.echo and 1 or 0)          -- (cuevas: eco)
     Sound.playMusic('level')
 
     self.score      = 0

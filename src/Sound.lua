@@ -20,6 +20,8 @@ Sound._origin = origin
 -- (Los efectos que antes se sintetizaban por código ya llevan su ganancia
 -- dentro del archivo: no se ponen aquí o se aplicaría dos veces.)
 local GAIN = {
+    -- (el usuario: los pasos sonaban demasiado → 0.55 fue pasarse, "un poquito" más: 0.65; y el salto, algo menos)
+    step         = 0.65, jump = 0.75,
     roundOver    = 2.8,  spikeHit   = 2.2,  dies2      = 0.65, glugluglu  = 0.8,
     airGasp      = 0.85, waterWarning = 1.4,
     -- Mega Crabby (archivos ya comprimidos: subir poco por encima de 1 satura)
@@ -41,7 +43,9 @@ local GAIN = {
     pufferWarn   = 1.0,  pufferInflate = 0.81, pufferDeflate = 0.77, pufferPrick = 0.67,
     -- Linterna y Crabby lúgubre (tools/sounds/gloomy.py ya los deja a -12 dBFS; el tic, más flojo)
     lightOn = 1.0, lightOff = 1.0, lightOut = 1.0, lightDead = 1.0,
-    gloomyTick = 0.75, gloomyAlert = 1.0, gloomyWind = 1.0, gloomyLeap = 1.0, gloomyScared = 1.0, gloomyLost = 1.0,
+    mgloomyPing = 1.0, mgloomyListen = 1.0, mgloomyDrop = 1.0, mgloomySlam = 1.25, mgloomyDazzled = 1.0,
+    mgloomyShriek = 1.0, mgloomyHurt = 1.0, mgloomyStep = 0.5, mgloomyRoar = 1.1,
+    gloomyWind = 0.7, gloomyLeap = 0.8,
 }
 Sound.GAIN = GAIN
 
@@ -181,8 +185,11 @@ function Sound.load()
     for _, n in ipairs({ 'on', 'off', 'out', 'dead' }) do
         load('light' .. n:gsub('^%l', string.upper), 'assets/sounds/gloomy/light_' .. n .. '.wav', 'static')
     end
-    for _, n in ipairs({ 'tick', 'alert', 'wind', 'leap', 'scared', 'lost' }) do
+    for _, n in ipairs({ 'wind', 'leap' }) do
         load('gloomy' .. n:gsub('^%l', string.upper), 'assets/sounds/gloomy/' .. n .. '.wav', 'static')
+    end
+    for _, n in ipairs({ 'ping', 'listen', 'drop', 'slam', 'dazzled', 'shriek', 'hurt', 'step', 'roar' }) do
+        load('mgloomy' .. n:gsub('^%l', string.upper), 'assets/sounds/bosses/megagloomy/' .. n .. '.wav', 'static')
     end
     -- Música: todas las pistas del índice (assets/music/index.json)
     for _, tr in ipairs(Music.list) do Sound.loadTrack(tr) end
@@ -229,6 +236,8 @@ Sound.FAR  = 1400
 Sound.RANGE = {
     bombBlast = 4,
     mirrorWarp = 2.5, mirrorAppear = 2.5, mirrorPortal = 2.5, glassWarn = 3, glassRise = 3,
+    mgloomyPing = 3, mgloomyListen = 3, mgloomyDrop = 3, mgloomySlam = 3, mgloomyDazzled = 3, mgloomyShriek = 3,
+    mgloomyHurt = 3, mgloomyStep = 2, mgloomyRoar = 3,
     megaStep = 1.8, megaClack = 2.2, megaRoar = 3, megaFall = 3, megaHurt = 3, megaSlam = 3, megaWindup = 2.5,
     megaShrink = 3, megaFlee = 2.2, bossHurt = 3, bossExplode = 3,
     snowLaugh = 3, snowRoar = 3, snowSlam = 3, snowCrash = 3, snowBurst = 3, snowIntroRoll = 3, snowRoll = 2.5,
@@ -278,15 +287,51 @@ end
 -- Fuente cargada de un sonido (nil si no existe) y su archivo: para pruebas
 function Sound.source(name) return sources[name], origin[name] end
 
+-- ECO (cuevas profundas: nivel con `echo`, Sound.setEcho): cada sonido se repite más flojo y
+-- un poco más grave, y cuanto MÁS FUERTE llega, más eco deja (más repeticiones y más altas).
+-- "Fuerte" = su volumen ya atenuado por la distancia × su peso (ECHO_W: un golpe en la roca
+-- retumba; un paso, casi nada). Repeticiones a mano (clones con retraso): funciona igual en PC,
+-- Switch y Android (los efectos de OpenAL no están en todas partes). La música no tiene eco.
+local ECHO_DELAY, ECHO_DECAY, ECHO_MIN, ECHO_MAX = 0.21, 0.5, 0.07, 3
+local ECHO_W = {
+    step = 0.3, jump = 0.4, lightOn = 0.35, lightOff = 0.35, lightDead = 0.35, lightOut = 0.6, headBump = 0.6,
+    gpImpact = 1.0, gpStart = 0.5, enemyExplode = 0.9, blockBreak = 1.0, spikeHit = 0.9, dies = 0.8, dies2 = 0.9,
+    bossHurt = 1.0, bossExplode = 1.0, mgloomySlam = 1.0, mgloomyShriek = 1.0, mgloomyRoar = 1.0, mgloomyPing = 0.9,
+    mgloomyDazzled = 0.9, mgloomyHurt = 0.9, mgloomyListen = 0.7, mgloomyStep = 0.5, gloomyWind = 0.5, gloomyLeap = 0.6,
+    megaSlam = 1.0, megaRoar = 1.0, megaStep = 0.7, bombBlast = 1.0, stunned = 0.6, collect = 0.5,
+}
+local echoK, echoes = 0, {}
+function Sound.setEcho(k)
+    echoK = k or 0
+    if echoK <= 0 then echoes = {} end
+end
+function Sound.getEcho() return echoK end
+
+local function playClone(name, pitch, vol)
+    local src = sources[name]
+    if not src then return end
+    local clone = src:clone()
+    clone:setPitch(pitch)
+    clone:setVolume(vol)
+    clone:play()
+end
+
 function Sound.play(name, pitch, volume)
     local src = sources[name]
     if not src then return end
     local k = Sound.falloff(emitterX, emitterY, Sound.RANGE[name])
     if k <= 0.01 then return end
-    local clone = src:clone()
-    clone:setPitch(pitch   or 1.0)
-    clone:setVolume((volume or 1.0) * k)
-    clone:play()
+    local vol = (volume or 1.0) * k
+    playClone(name, pitch or 1.0, vol)
+    if echoK > 0 then
+        local e = math.min(1, vol) * (ECHO_W[name] or 0.6) * echoK
+        local now = love.timer.getTime()
+        for i = 1, ECHO_MAX do
+            e = e * ECHO_DECAY
+            if e < ECHO_MIN then break end
+            echoes[#echoes + 1] = { name = name, at = now + ECHO_DELAY * i, pitch = (pitch or 1.0) * (0.985 ^ i), vol = e }
+        end
+    end
 end
 
 -- Reproduce rastreado (sin clonar) → permite stop/isPlaying precisos
@@ -377,6 +422,16 @@ end
 -- Cambio intro → bucle de las pistas con intro (llamar cada frame).
 local paused = nil
 function Sound.update(dt)
+    if echoes[1] then                                      -- ecos pendientes
+        local now = love.timer.getTime()
+        for i = #echoes, 1, -1 do
+            local e = echoes[i]
+            if now >= e.at then
+                if not paused then playClone(e.name, e.pitch, e.vol) end
+                table.remove(echoes, i)
+            end
+        end
+    end
     local lp = musicName and loops[musicName]
     if lp and music ~= lp and not paused and not music:isPlaying() then
         lp:setPitch(music:getPitch()); lp:setVolume(music:getVolume())
@@ -475,6 +530,7 @@ end
 -- tono normal y nada sonando (la pantalla siguiente pone la suya)
 function Sound.leaveMatch()
     Sound.stopAllTracked()
+    Sound.setEcho(0)
     levelMusic, baseLevelMusic = nil, nil
     if music then music:setPitch(1.0) end
     Sound.stopMusic()

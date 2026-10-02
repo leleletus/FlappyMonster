@@ -30,7 +30,7 @@ local function fan(ox, oy, dir, k, level, cache)
         local a = dir - Lights.HALF + 2 * Lights.HALF * i / RAYS
         local d = pts[i] or Lights.ray(level, ox, oy, a)
         pts[i] = d
-        d = math.min(d, Lights.RANGE * k)
+        d = math.min(d, Lights.range(level) * k)
         pts[i + 100] = ox + math.cos(a) * d
         pts[i + 200] = oy + math.sin(a) * d
     end

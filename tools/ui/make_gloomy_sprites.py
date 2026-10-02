@@ -560,6 +560,23 @@ def touch_light():
     return out
 
 
+def icons():
+    """Iconos que flotan sobre un lúgubre en vez de sonidos (el silencio es parte del nivel): 3 cuadros
+    7x9 en blanco (el juego los tiñe): ! ha oído algo · ? busca · … ha perdido el rastro"""
+    rows = [['..ooo..', '..oxo..', '..oxo..', '..oxo..', '..oxo..', '..ooo..', '..oxo..', '..ooo..', '.......'],
+            ['.oooo..', 'oxxxxo.', 'oooxxo.', '..oxxo.', '..oxo..', '..ooo..', '..oxo..', '..ooo..', '.......'],
+            ['.......', '.......', '.......', '.......', '.......', 'ooooooo', 'xoxoxox'.replace('o', 'o'), 'ooooooo', '.......']]
+    out = Image.new('RGBA', (21, 9), (0, 0, 0, 0))
+    for i, fr in enumerate(rows):
+        for y, r in enumerate(fr):
+            for x, ch in enumerate(r):
+                if ch == 'x':
+                    out.putpixel((i * 7 + x, y), (255, 255, 255, 255))
+                elif ch == 'o':
+                    out.putpixel((i * 7 + x, y), (20, 20, 30, 255))
+    return out
+
+
 def apply():
     o = OPTIONS['B']
     body, glow = sheets(o)
@@ -567,6 +584,7 @@ def apply():
     out = {
         'gloomy/gloomy-Sheet.png': body, 'gloomy/glow-Sheet.png': glow,
         'bosses/megagloomy/body-Sheet.png': mbody, 'bosses/megagloomy/glow-Sheet.png': mglow,
+        'gloomy/icons-Sheet.png': icons(),
         'ui/flashlight-Sheet.png': flashlight_icon(), 'ui/touch/light-Sheet.png': touch_light(),
     }
     for name, im in out.items():

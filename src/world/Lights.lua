@@ -20,6 +20,9 @@ local function blocks(level, x, y)
     return t ~= nil and t ~= false and (type(t) ~= 'table' or t.collision == 'solid')
 end
 
+-- Alcance ahora: el grito del Mega Crabby lúgubre lo acorta un rato (level.lightScale)
+function Lights.range(level) return Lights.RANGE * ((level and level.lightScale) or 1) end
+
 -- Origen y dirección de la linterna de un jugador (o de sus datos: x, y, facing)
 function Lights.origin(x, y, facing)
     return x + facing * 14, y - 22, (facing >= 0) and 0 or math.pi
@@ -27,7 +30,7 @@ end
 
 -- Distancia que recorre un rayo desde (x, y) con ángulo `ang` hasta el primer bloque sólido
 function Lights.ray(level, x, y, ang, range)
-    range = range or Lights.RANGE
+    range = range or Lights.range(level)
     local dx, dy = math.cos(ang), math.sin(ang)
     local d = 0
     while d < range do
@@ -41,7 +44,7 @@ end
 function Lights.inCone(level, ox, oy, dir, px, py)
     local dx, dy = px - ox, py - oy
     local d = math.sqrt(dx * dx + dy * dy)
-    if d > Lights.RANGE then return false end
+    if d > Lights.range(level) then return false end
     if d > 8 then
         local a = math.atan2(dy, dx)
         local da = math.abs((a - dir + math.pi) % (2 * math.pi) - math.pi)

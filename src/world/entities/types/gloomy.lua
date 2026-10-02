@@ -10,7 +10,10 @@
 --                       oído lo multiplica (`hearing`). Si lo oye → 'hunt': va hacia donde SONÓ
 --                       (no hacia el jugador: no sabe dónde está), por la superficie.
 --   'search'            llega al sitio y no hay nadie: ronda por allí `searchTime` s y, si no
---                       vuelve a oír nada, lo deja (sonido gloomyLost) y sigue explorando.
+--                       vuelve a oír nada, lo deja y sigue explorando.
+--   CASI NO SUENA (el silencio es la tensión del nivel; el usuario lo encontró ruidoso): lo que
+--   le pasa se cuenta con un ICONO que flota sobre él y se ve a oscuras — "!" ha oído algo, "?"
+--   busca, "…" pierde el rastro —; solo suenan el siseo antes de saltar y el salto.
 --   SIENTE de cerca     a un jugador que se MUEVE a menos de `senseRange` casillas (a uno quieto,
 --                       solo a la mitad): entonces se agacha ('crouch', `leapWind` s: los puntos
 --                       parpadean y sisea = el aviso) y SALTA hacia él ('leap', balístico). En el
@@ -53,9 +56,10 @@ local ARRIVE     = 0.9 * T                -- "ha llegado" al sitio del ruido
 local STILL_SPD  = 30                     -- px/s: por debajo, el jugador está "quieto"
 local GLOW       = { 1, 0.77, 0.35 }      -- ámbar
 
-local body, glow
+local body, glow, icons
 function Gloomy.loadAssets()
     if body then return end
+    icons = SpriteStrip.load('assets/images/gloomy/icons-Sheet.png', 7)
     body = SpriteStrip.load('assets/images/gloomy/gloomy-Sheet.png', FW)
     glow = SpriteStrip.load('assets/images/gloomy/glow-Sheet.png', FW)
 end
@@ -73,6 +77,17 @@ function Gloomy:init()
     self.modeT, self.stallT, self.bestD = 0, 0, nil
     self.calmT = 0
     self.leapCd = 0
+    self.icon, self.iconT = 0, 0
+end
+
+-- ── Súbdito de reserva (los llama el Mega Crabby lúgubre: def.summons) ──────
+function Gloomy:makeReserve(key)
+    self.summonOf = key
+    self.alive, self.state = false, 'reserve'
+end
+function Gloomy:netAtRest() return self.state == 'reserve' or (self.summonOf ~= nil and not self.alive) end
+function Gloomy:netRest()
+    if self.summonOf then self.alive, self.state = false, 'reserve' end
 end
 
 -- ── Trepador: cajas giradas y reglas de pisotón (como el Crabby) ─────────────
@@ -183,7 +198,6 @@ function Gloomy:animateWalk(dt)
     if self.animT >= 1 / tn.walkFps then
         self.animT = self.animT - 1 / tn.walkFps
         self.frame = (self.frame % tn.walkFrames) + 1
-        if self.frame % 2 == 1 and self.state ~= 'walk' then Sound.play('gloomyTick') end
     end
 end
 
@@ -201,12 +215,19 @@ end
 
 -- ── Update ───────────────────────────────────────────────────────────────────
 function Gloomy:updateCustom(dt, level)
+    if self.state == 'reserve' then return true end
     Crawler.advanceTurn(self, dt)
     if self.cattached == nil then Crawler.attach(self, level, T) end        -- (al colocarlo)
     local st = self.state
     self.modeT = (self.modeT or 0) + dt
     self.deadTimer = self.modeT
     if self.leapCd > 0 then self.leapCd = self.leapCd - dt end
+    -- Icono sobre él (en vez de sonidos: el silencio es parte del nivel): ! oye · ? busca · … lo deja
+    if (self.iconT or 0) > 0 then
+        self.iconT = self.iconT - dt
+        if self.iconT <= 0 then self.icon = 0 end
+    end
+    if st == 'search' then self.icon, self.iconT = 2, 0.2 end
     local p = self.props
 
     -- En el aire (salto / soltado): balístico hasta tocar algo y agarrarse
@@ -239,7 +260,7 @@ function Gloomy:updateCustom(dt, level)
     if lit then
         if st ~= 'flee' then
             self:setMode('flee')
-            Sound.play('gloomyScared')
+            self.icon, self.iconT = 0, 0
         end
         self.calmT = p.calmTime or 1.2
         self.goalX, self.lightX, self.lightY = nil, lx, ly
@@ -258,7 +279,7 @@ function Gloomy:updateCustom(dt, level)
     -- OÍDO: un ruido nuevo lo pone a cazar (o le cambia de sitio si ya cazaba)
     local z = self:hear(level)
     if z and st ~= 'crouch' then
-        if st ~= 'hunt' then Sound.play('gloomyAlert') end
+        if st ~= 'hunt' then self.icon, self.iconT = 1, 0.9 end          -- ("!": lo ha oído)
         self.goalX, self.goalY = z.x, z.y
         self:setMode('hunt')
         st = 'hunt'
@@ -308,7 +329,7 @@ function Gloomy:updateCustom(dt, level)
         -- Ronda el último sitio: va y viene sin alejarse de él
         if self.modeT >= (p.searchTime or 4) then
             self.goalX = nil
-            Sound.play('gloomyLost')
+            self.icon, self.iconT = 3, 1.3                                 -- ("…": pierde el rastro)
             self:setMode('walk')
             return true
         end
@@ -340,12 +361,13 @@ end
 -- ── Red ──────────────────────────────────────────────────────────────────────
 function Gloomy:netPack()
     local surf, turn = Crawler.netPack(self)
-    return { surf, turn, math.floor((self.modeT or 0) * 100) }
+    return { surf, turn, math.floor((self.modeT or 0) * 100), self.icon or 0 }
 end
 function Gloomy:netApply(a, b, f)
     a = a or b
     Crawler.netApply(self, b[1], a[2], b[2], f, self.state == 'leap')
     self.modeT = (tonumber(b[3]) or 0) / 100
+    self.icon = tonumber(b[4]) or 0
     self.flipped = self.cattached and self.cny == 1 or false
 end
 
@@ -382,6 +404,7 @@ function Gloomy:drawSheet(sheet, camX, camY)
 end
 
 function Gloomy:render(camX, camY)
+    if self.state == 'reserve' then return end
     love.graphics.setColor(1, 1, 1, 1)
     self:drawSheet(body, camX, camY)
 end
@@ -390,7 +413,7 @@ end
 -- van en el propio cuerpo). Parpadean deprisa antes del salto (el aviso) y se apagan al morir
 function Gloomy:renderGlow(camX, camY)
     local st = self.state
-    if st == 'dead' or st == 'gone' or st == 'spawning' then return end
+    if st == 'dead' or st == 'gone' or st == 'spawning' or st == 'reserve' then return end
     local a = 0.9
     if st == 'crouch' then a = (math.floor(love.timer.getTime() * 22) % 2 == 0) and 1 or 0.25
     elseif st == 'flee' then a = 0.55
@@ -404,6 +427,14 @@ function Gloomy:renderGlow(camX, camY)
         self:drawSheet(glow, camX - o[1], camY - o[2])
     end
     love.graphics.setBlendMode('alpha')
+    -- icono flotando sobre él (siempre derecho, esté en el suelo, la pared o el techo)
+    local ic = self.icon or 0
+    if ic > 0 and st ~= 'flee' and st ~= 'leap' and st ~= 'crouch' then
+        local bob = math.floor(math.sin(love.timer.getTime() * 6) * 2)
+        local col = (ic == 1) and { 1, 0.85, 0.3 } or ((ic == 2) and { 0.75, 0.9, 1 } or { 0.7, 0.72, 0.8 })
+        love.graphics.setColor(col[1], col[2], col[3], 0.95)
+        love.graphics.draw(icons.image, icons.quads[ic], math.floor(self.x - camX), math.floor(self.y - camY - 46 + bob), 0, 3, 3, 3.5, 9)
+    end
     love.graphics.setColor(1, 1, 1, 1)
 end
 

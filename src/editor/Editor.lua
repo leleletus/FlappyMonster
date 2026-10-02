@@ -1585,6 +1585,10 @@ local function drawLevelTab(x, y, w)
         v, ch = ui.toggle('A oscuras (linterna)', m.dark == true, x, y, w)
         y = y + 28
         if ch then pushUndo(); m.dark = v or nil; markDirty() end
+        local echoOn = m.echo == true or (m.echo == nil and m.dark == true)
+        v, ch = ui.toggle('Eco (cueva profunda)', echoOn, x, y, w)
+        y = y + 28
+        if ch then pushUndo(); if v == (m.dark == true) then m.echo = nil else m.echo = v end; markDirty() end
         y = y + ui.hint('Cueva sin luz: solo se ve lo que alumbra la linterna de cada jugador (se enciende y apaga; la batería se gasta y, si se agota, tarda en volver). AFECTA AL JUEGO: los Crabbies lúgubres huyen de la luz. En el editor el mapa se ve entero.', x, y, w, th.border) + 8
         local sopts = {}
         for _, sk in ipairs(SpikeSkins.LIST) do sopts[#sopts + 1] = { value = sk.id, label = sk.label } end

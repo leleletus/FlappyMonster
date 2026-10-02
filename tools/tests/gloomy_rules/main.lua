@@ -7,7 +7,7 @@
 --   estado_propio la linterna viaja en el estado propio (pack → apply) y en el bit de input
 --   oye           un ground pound lejos (10 casillas) lo atrae; unos pasos a esa distancia, no; unos
 --                 pasos cerca, sí
---   busca         llega donde sonó, ronda por allí y, sin más ruidos, lo deja (gloomyLost)
+--   busca         llega donde sonó, ronda por allí y, sin más ruidos, lo deja: sin sonidos, con sus iconos (! ? …)
 --   salta         de cerca se agacha (aviso) y salta: 1 de vida + empujón; nunca mata
 --   contacto      tocarlo quita 1 de vida, no mata
 --   huye          con la linterna encima huye de la luz y se aleja; a oscuras se calma
@@ -167,15 +167,18 @@ function cases.busca()
     local gx = e.x + 8 * T
     Noise.emit(gx, e.y, Noise.R.pound)
     local seen, reach = {}, nil
+    local icons = {}
     played = {}
     step(level, es, 12, function()
         seen[e.state] = true
+        icons[e.icon or 0] = true
         if e.state == 'search' and not reach then reach = math.abs(e.x - gx) / T end
     end)
     check('busca', seen.hunt and seen.search and reach and reach < 1.5 and e.state ~= 'search' and e.state ~= 'hunt'
-        and (played.gloomyLost or 0) == 1 and (played.gloomyAlert or 0) == 1,
-        ('va=%s, ronda=%s (llegó a %.1f casillas del sitio), al final %s; avisos: oye %d, pierde el rastro %d'):format(
-         tostring(seen.hunt), tostring(seen.search), reach or -1, e.state, played.gloomyAlert or 0, played.gloomyLost or 0))
+        and icons[1] and icons[2] and icons[3] and not next(played),
+        ('va=%s, ronda=%s (llegó a %.1f casillas del sitio), al final %s; iconos ! ? …: %s %s %s; sonidos: %s'):format(
+         tostring(seen.hunt), tostring(seen.search), reach or -1, e.state, tostring(icons[1]), tostring(icons[2]),
+         tostring(icons[3]), next(played) or 'ninguno'))
 end
 
 function cases.salta()
@@ -226,7 +229,7 @@ function cases.huye()
     local lit = Lights.lit(level, e.x, e.y)
     press('light')                                         -- apaga
     step(level, es, 3)
-    check('huye', fled and d1 > d0 + 2 * T and (played.gloomyScared or 0) == 1 and e.state ~= 'flee',
+    check('huye', fled and d1 > d0 + 2 * T and e.state ~= 'flee',
         ('huye=%s: de %.1f a %.1f casillas del jugador en 1,5 s (aún alumbrado=%s); a oscuras: %s'):format(tostring(fled),
          d0 / T, d1 / T, tostring(lit), e.state))
 end

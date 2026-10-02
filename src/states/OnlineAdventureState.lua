@@ -192,6 +192,7 @@ function OnlineAdventureState:_buildWorld(data)
     -- servidor). Si ya sonaba otra, se cambia.
     local before = Sound.resolveMusic('level')
     Sound.setBaseLevelMusic(self.level.music)
+    Sound.setEcho(self.level.echo and 1 or 0)          -- (cuevas: eco)
     if Sound.isMusicPlaying() and Sound.resolveMusic('level') ~= before then Sound.playMusic('level') end
 
     -- Burbujas de oxígeno controladas por el servidor (desactiva spawn local)

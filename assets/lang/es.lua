@@ -279,6 +279,7 @@ return {
         megacrabby = "MEGA CRABBY",
         megacrabby_ice = "MEGA CRABBY HELADO",
         megagummy = "REY GUMMY",
+        megagloomy = "MEGA CRABBY LÚGUBRE",
         snowboss = "GRAN BOLA DE NIEVE",
     },
     oadv = {

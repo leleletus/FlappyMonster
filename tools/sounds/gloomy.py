@@ -4,12 +4,11 @@
 # más fuerte de 100 ms a -12 dBFS (GAIN 1 en Sound.lua):
 #   light_on     clic de interruptor que sube       light_off   clic que baja
 #   light_out    se agota: zumbido que cae y chasquido   light_dead  no enciende: doble clic sordo
-#   tick         una pata en la roca (tic seco y agudo: se oye cerca aunque no se le vea)
-#   alert        ha oído algo: tres chasquidos que suben (el jugador sabe que viene)
 #   wind         va a saltar: siseo que sube (el aviso del salto)
 #   leap         salta: silbido corto
-#   scared       le da la luz: chillido agudo que cae
-#   lost         pierde el rastro: dos notas que bajan
+# (Solo esos dos del Crabby lúgubre: el usuario lo encontró ruidoso. Oír algo, buscar y perder el rastro
+#  son ICONOS sobre él — assets/images/gloomy/icons-Sheet.png —, no sonidos: el silencio es la tensión.)
+# … y los del jefe, el Mega Crabby lúgubre (más abajo: MEGA → assets/sounds/bosses/megagloomy/).
 # Desde la raíz del repo:  python3 tools/sounds/gloomy.py
 import os, wave
 import numpy as np
@@ -64,17 +63,43 @@ SOUNDS = {
     'light_out':  lambda: at([(0, tone(900, 140, 0.32, (1, 0.5, 0.3, 0.2)) * env(int(SR * 0.32), 0.005, 0.12) * (1 + 0.5 * np.sin(2 * np.pi * 38 * t_(0.32)))),
                               (0.3, click(700, 0.06, 0.015))], 0.4),
     'light_dead': lambda: at([(0, click(500, 0.04, 0.008)), (0.07, click(420, 0.04, 0.008))], 0.14),
-    'tick':       lambda: (tone(3400, 2600, 0.03, (1, 0.4)) + bp(noise(0.03), 2500, 9000)) * decay(0.03, 0.005),
-    'alert':      lambda: at([(i * 0.07, (tone(1500 + i * 500, 1900 + i * 500, 0.05, (1, 0.5, 0.25)) + 0.4 * bp(noise(0.05), 2000, 8000)) * decay(0.05, 0.014))
-                              for i in range(3)], 0.26),
     'wind':       lambda: (bp(noise(0.42), 2200, 9000) * (0.4 + 0.6 * t_(0.42) / 0.42) + 0.35 * tone(700, 1700, 0.42, (1, 0.6, 0.3))
                            * (1 + 0.6 * np.sin(2 * np.pi * 31 * t_(0.42)))) * env(int(SR * 0.42), 0.04, 0.03),
     'leap':       lambda: (bp(noise(0.2), 900, 6000) * 0.8 + 0.5 * tone(1300, 500, 0.2)) * env(int(SR * 0.2), 0.004, 0.14),
-    'scared':     lambda: tone(3000, 1200, 0.2, (1, 0.5, 0.3)) * (1 + 0.5 * np.sin(2 * np.pi * 46 * t_(0.2))) * env(int(SR * 0.2), 0.004, 0.09),
-    'lost':       lambda: at([(0, tone(1200, 1000, 0.1, (1, 0.4)) * env(int(SR * 0.1), 0.006, 0.05)),
-                              (0.13, tone(820, 640, 0.16, (1, 0.4)) * env(int(SR * 0.16), 0.006, 0.09))], 0.32),
+}
+
+# ── Mega Crabby lúgubre (assets/sounds/bosses/megagloomy/) ───────────────────
+#   ping      ecolocalización: chasquido + pío que sube (se oye de dónde viene)
+#   listen    escucha antes de atacar: siseo grave que sube con gruñido (el aviso)
+#   drop      se lanza: silbido grave
+#   slam      cae: golpe sordo + crujido de roca
+#   dazzled   deslumbrado: chillido largo que tiembla
+#   shriek    grito que oscurece la arena: chirrido largo
+#   hurt      golpe: crujido + chillido corto
+#   step      pata gorda en la roca
+#   roar      entrada: gruñido que sube y chasquidos
+def growl(f0, f1, d, am=27):
+    return tone(f0, f1, d, (1, 0.7, 0.5, 0.35, 0.2)) * (1 + 0.6 * np.sin(2 * np.pi * am * t_(d)))
+
+MEGA = {
+    'ping':    lambda: at([(0, click(2400, 0.03, 0.006)), (0.03, tone(1500, 2600, 0.16, (1, 0.3)) * env(int(SR * 0.16), 0.004, 0.11))], 0.22),
+    'listen':  lambda: (0.7 * bp(noise(0.9), 600, 5000) * (0.3 + 0.7 * t_(0.9) / 0.9) + growl(70, 150, 0.9)) * env(int(SR * 0.9), 0.08, 0.04),
+    'drop':    lambda: (bp(noise(0.34), 300, 3000) + 0.6 * tone(500, 160, 0.34)) * env(int(SR * 0.34), 0.01, 0.22),
+    'slam':    lambda: at([(0, tone(95, 38, 0.5, (1, 0.5, 0.25)) * decay(0.5, 0.13) * 1.6),
+                           (0, bp(noise(0.3), 200, 4000) * decay(0.3, 0.05)),
+                           (0.06, bp(noise(0.25), 1500, 7000) * decay(0.25, 0.04) * 0.5)], 0.55),
+    'dazzled': lambda: tone(2100, 1300, 0.55, (1, 0.6, 0.4, 0.2)) * (1 + 0.7 * np.sin(2 * np.pi * 34 * t_(0.55))) * env(int(SR * 0.55), 0.01, 0.2),
+    'shriek':  lambda: (tone(900, 2400, 1.0, (1, 0.7, 0.5, 0.3)) * (1 + 0.8 * np.sin(2 * np.pi * 52 * t_(1.0))) + 0.4 * bp(noise(1.0), 2500, 9000))
+                       * env(int(SR * 1.0), 0.05, 0.25),
+    'hurt':    lambda: at([(0, bp(noise(0.12), 400, 5000) * decay(0.12, 0.03)), (0.03, tone(1700, 800, 0.22, (1, 0.5, 0.3)) * env(int(SR * 0.22), 0.004, 0.12))], 0.27),
+    'step':    lambda: (tone(900, 500, 0.05, (1, 0.5)) + bp(noise(0.05), 700, 5000)) * decay(0.05, 0.01),
+    'roar':    lambda: at([(0, growl(60, 170, 1.1, 21) * env(int(SR * 1.1), 0.15, 0.3)),
+                           (0.75, click(1500, 0.04, 0.01)), (0.86, click(1900, 0.04, 0.01)), (0.97, click(2300, 0.05, 0.012))], 1.2),
 }
 
 if __name__ == '__main__':
     for n, f in SOUNDS.items():
+        save(n, f())
+    OUT = 'assets/sounds/bosses/megagloomy'
+    for n, f in MEGA.items():
         save(n, f())

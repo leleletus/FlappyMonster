@@ -247,7 +247,7 @@ function love.load()
         if (not mega or (#rests >= 4 and spawnN >= 6 and gps >= 20)) and #spawns >= 4 then break end
     end
     local want = mega and { 'dormant', 'fall_in', 'land_in', 'roar_in', 'ready', 'chase' }
-                 or { 'dormant', 'intro', 'ready', ({ miniboss1 = 'patrol', snowboss = 'idle', megagummy = 'chase' })[boss.def.name] or 'fight' }
+                 or { 'dormant', 'intro', 'ready', ({ miniboss1 = 'patrol', snowboss = 'idle', megagummy = 'chase', megagloomy = 'stalk' })[boss.def.name] or 'fight' }
     local okSeq = true
     for i, s in ipairs(want) do if seq[i] ~= s then okSeq = false end end
     check('orden', introSeen and okSeq, table.concat(seq, ' → ', 1, math.min(#seq, 7)))
@@ -260,7 +260,8 @@ function love.load()
     if not mega then
         check('sin daño', hurtIntro == 0, ('daño en la entrada: %d'):format(hurtIntro))
         local snd = ({ miniboss1 = { 'miniAppear', 'spikesOut' }, snowboss = { 'snowIntroRoll', 'snowLaugh', 'snowSpit' },
-                      megagummy = { 'kingLand', 'kingFanfare', 'kingLaugh' } })[boss.def.name]
+                      megagummy = { 'kingLand', 'kingFanfare', 'kingLaugh' },
+                      megagloomy = { 'mgloomyPing', 'mgloomyRoar' } })[boss.def.name]
                     or { 'mirrorLaugh' }
         local okSnd, txt = true, {}
         for _, n in ipairs(snd) do okSnd = okSnd and (sounds[n] or 0) >= 1; txt[#txt + 1] = n .. '=' .. (sounds[n] or 0) end

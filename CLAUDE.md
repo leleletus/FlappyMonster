@@ -905,16 +905,47 @@ list no mode until the user places a Point Area in them).
 - **Gloomy Crabby** (`types/gloomy.lua`, "Crabby lúgubre", Cancrocaeca xenomorpha; art `assets/images/gloomy/`
   = the user's pick, option B "Fantasma", 9 frames 26x15 at scale 4 + `glow-Sheet.png`, from
   `tools/ui/make_gloomy_sprites.py --apply`: body hand-drawn, LEGS traced by code hip–knee–foot so every pose comes
-  from the same legs; sounds `tools/sounds/gloomy.py`). A different archetype: no route, never hides, never kills on
+  from the same legs; sounds `tools/sounds/gloomy.py`). ALMOST SILENT (the user found it noisy: silence is the
+  level's tension): only the hiss before the leap and the leap sound; what happens to it is told by an ICON floating
+  over it, visible in the dark (`gloomy/icons-Sheet.png`, 3 frames 7x9 tinted in code: "!" heard something, "?"
+  searching, "…" lost the trail; `icon` in netPack). A different archetype: no route, never hides, never kills on
   touch (`onTouch = 'hurt'`), always a Crawler. In the dark only its two glow points show. States: 'walk' (wanders
   floor/walls/ceiling, random reversals, 'idle') → HEARS a noise → 'hunt' (goes to WHERE IT SOUNDED along the surface,
   `steerTo`; stalled 1.2 s with the spot within `LEAP_MAX` 5 tiles and a clear line → leaps to it, e.g. down from the
-  ceiling) → 'search' (`searchTime` s around the spot, then gloomyLost → walk). SENSES a player within `senseRange`
+  ceiling) → 'search' (`searchTime` s around the spot, then "…" → walk). SENSES a player within `senseRange`
   2.6 tiles if moving (half if still) → 'crouch' (`leapWind` 0.45 s: glow blinks + hiss = the tell) → 'leap'
   (ballistic; contact in the air = 1 HP + recoil via `onHurtPlayer`; grabs whatever it touches, never sticks like
   other Crabbies) → 'rest'. LIT by a flashlight → 'flee' (away from the light at ×2, forgets its goal; calms
-  `calmTime` s after the dark returns). Stompable with the crawler rules. Net: {surface, turn, modeT}. Test arena
+  `calmTime` s after the dark returns). Stompable with the crawler rules. Net: {surface, turn, modeT, icon}. Can be a RESERVE minion (`makeReserve`). Test arena
   `tools/levelgen/arenas/cueva_oscura.json` (`make_cueva_oscura.py`). Harness `gloomy_rules`.
+
+- **Echo** (deep caves): level `echo` (default = `dark`; JSON `"echo": true/false` forces it; editor toggle "Eco")
+  → `Sound.setEcho(1)` on entering the level (0 on `leaveMatch`). Every `Sound.play` schedules delayed, quieter,
+  slightly lower repeats (`ECHO_DELAY` 0.21 s, ×0.5 each, up to 3) and the LOUDER it arrives (volume after distance ×
+  `ECHO_W[name]`: a slam booms, a step barely) the more echo it leaves. Done with delayed clones in `Sound.update`
+  (OpenAL effects aren't available on every platform). Music has no echo.
+- **Mega Gloomy Crabby** (`types/megagloomy.lua`, "Mega Crabby lúgubre", `boss.megagloomy`; boss of the dark
+  levels). NOT a big Gloomy: you barely see it and the fight is knowing WHERE it is. Art: the SAME pixel grid as the
+  small one at scale 10 with its own leg poses (4 pairs, higher and wider: `MEGA_B` in make_gloomy_sprites.py, 9 frames
+  38x21 + glow sheet); x,y = centre of its BODY box (13x9 art px; legs don't count), drawn rotated by `ang`.
+  READING IT (all in `renderGlow`, over the darkness): three glow points, ECHOLOCATION every `pingEvery` s (click +
+  a growing ring from where it is; phases 2-3 add fainter FAKE rings from other points), the long hiss before an
+  attack. Few sounds on purpose (a rare leg scrape; losing the trail = the "…" icon). STATES: 'stalk' (moves along a
+  path on the zone's edge — left wall up, ceiling, right wall down: `MG:path(u)` — towards the perimeter point nearest
+  the last noise it heard, `Noise.heard` ×4) → 'listen' (`LISTEN_T`; LIT by a flashlight here → 'flinch': attack
+  cancelled) → locks the spot of the LAST NOISE (a silent player who moved away is missed) and marks it on the floor
+  for `MARK_SHOW` s → 'drop' (parametric jump, contact 1 HP + push) → `slam`: shake, `Noise.emit` boss radius (Gloomies
+  come), `pa:blindLight(blindTime)` for players within `blindRange` tiles, 1 HP + strong push under it → 'grounded'
+  (`GROUND_T`): immune (bounce) UNLESS a flashlight lights its body → 'dazzled' (`DAZZLE_T`): the ONLY vulnerable
+  state (stomp 1 / GP 2, one hit) → 'recover' → 'climb_wind'/'climb' back to the nearest wall. So: bait a noise, dodge
+  FAR (≥ blindRange, or your light is off), light it, stomp. Phase 2 (hp ≤ 66 %): fake rings + every other attack is a
+  'lunge' to the wall beyond the noise at its height. Phase 3 (≤ 33 %): 'shriek' every `shriekEvery` s →
+  `level.lightScale` = `dimScale` for `dimTime` s (`Lights.range`; sent in netPackExtra so clients draw it) and
+  summons reserve Gloomies on the walls (`def.summons`, 4). Generic intro (eyes fade in on the ceiling, a ping, a
+  roar). netPackExtra: phase, ang, frame, mark, light scale, icon, pings {id,x,y,t,fake}. Arena
+  `tools/levelgen/arenas/jefe_lugubre.json` (`make_jefe_lugubre.py`: 24-tile-wide flat floor so you can get away,
+  two side platforms, dark, cave). Harnesses `megagloomy_rules` (+ `LOOK=1`), `boss_sim` / `boss_intro` /
+  `online_boss` with `LEVEL=` that arena.
 
 ## Terrain blocks, subtiles and physical particles
 
@@ -1492,7 +1523,7 @@ join), copies `tools/levelgen/arenas/*.json` to a temp `assets/levels/zz_tmp_*`
 it, its env vars) + rules for new ones. When a test needs something new, fix
 or extend the HARNESS (and its README row) instead of working around it in a
 scratch copy: the time spent fighting test setups was the user's complaint.
-Harnesses: flyers, crawler_drop, mechanics, sounds, boss_sim, sp_boss, boss_frames, megagummy_rules,
+Harnesses: flyers, crawler_drop, mechanics, sounds, boss_sim, sp_boss, boss_frames, megagummy_rules, gloomy_rules, megagloomy_rules,
 editor_open, free_play, update_boot, online_smoke, online_boss, online_helmet,
 level_check, level_solve. `tools/` is not shipped (.love / updates).
 

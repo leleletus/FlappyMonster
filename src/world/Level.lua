@@ -355,6 +355,8 @@ function Level.fromData(lvl)
     -- Música del nivel: id de assets/music/index.json (nil = la de siempre)
     self.music     = type(lvl.music) == 'string' and lvl.music or nil
     self.snow      = lvl.snow == true                  -- (nieve cayendo: src/fx/Snowfall.lua, solo visual)
+    -- (ECO en los sonidos, Sound.setEcho: por defecto, el de los niveles a oscuras; "echo": true/false lo fuerza)
+    self.echo      = lvl.echo == true or (lvl.echo == nil and lvl.dark == true)
     self.dark      = lvl.dark == true                  -- (nivel a OSCURAS: linternas, src/world/Lights.lua; afecta al juego)
     self.spikeSkin = lvl.spikeSkin                     -- (aspecto de los pinchos: src/world/SpikeSkins.lua, solo visual)
     self.background, self.timeOfDay, self.clouds = lvl.background, lvl.time, lvl.clouds   -- (fondo y hora: src/fx/Sky.lua)
