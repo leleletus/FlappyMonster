@@ -283,7 +283,19 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     its last chord C# is the dominant of the F# minor riff) | Tentacle pass 2 (denser). The Christmas
                     music-box motif is NOT used: v1 put it in the gaps of Tentacle's melody and the user found it
                     forced in almost every appearance — don't graft a motif onto another song's sections; give it
-                    its own section. Strings swap to the root (or drop) when the lead rubs them. Break bell plinks have NO echo (winter's
+                    its own section. SECTION CHANGES must not also be instrument changes (user: entry and exit felt
+                    strange): the winter melody is sung by the SAME voice as Tentacle's (`Part.note` adds the music box
+                    + pulse to `lead3`), Tentacle's chop (on the notes of winter's pad) and tresillo kick run under the
+                    whole winter section, winter's shimmer + high strings already play in the last 8 bars before the
+                    bridge and stay (fading) over the first 8 bars of the returning riff (with octave pulse/saw,
+                    four-on-the-floor, pump bass), and the section is levelled in the mix (`W_DB` −0.8, its last 4
+                    bars −1 more). Boundary jumps (MFCC, 4 bars before vs after): winter→riff 17 → 13.4, final→bridge
+                    27.6 → 24.2 (ordinary section changes: 16-31). MELODY VARIATIONS (`vary`, so it isn't
+                    tentacle_nes note for note; all derived from the melody itself): chorus = an ANSWER in the bars
+                    the melody leaves empty (27, 31, 35, 39): the previous bar's phrase in sequence a diatonic third
+                    down (pass 2: a sixth up), avoid notes snapped to the chord, never over an original note; riff =
+                    mordents on long notes (bars 9-16; pass 2 from 5) and pass 2 bars 5-8 / 13-16 an octave up; riff
+                    bars 1-4, scales and final untouched (650 of 686 original notes kept, 816 total). Strings swap to the root (or drop) when the lead rubs them. Break bell plinks have NO echo (winter's
                     3/16 echo on offbeat plinks sounded out of phase). Strength = sustained
                     BODY, not louder drums: with the kick at +1.5 dB the crest factor was 11 dB vs winter's 9.7 and
                     sections 1-2 dB weaker → kick +0.3, bass 0, pad −5, master −9.3 LUFS (no quiet stretches like
