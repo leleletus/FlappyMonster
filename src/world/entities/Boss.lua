@@ -201,6 +201,53 @@ function Boss:canBeStomped() return self:isVulnerable() end
 function Boss:canBeKnocked() return self:isVulnerable() and self.inv <= 0 and not self:isStunned() end
 function Boss:knockback(dir) self:onKnocked(dir) end
 function Boss:isObstacle() return self.alive and not self:isDying() end
+
+-- ── Utilidades comunes de los jefes (antes cada uno traía su copia) ──────────
+-- Cambio de estado: estado nuevo y su reloj a 0 (lo que se dibuja sale de state + deadTimer)
+function Boss:enter(st) self.state, self.deadTimer = st, 0 end
+-- Su zona (x0, x1, y0, y1); sin zona, un recuadro alrededor de donde está
+function Boss:zoneBounds()
+    local z = self.zone
+    if z then return z.x0, z.x1, z.y0, z.y1 end
+    local T = TILE_PX
+    return self.x - 12 * T, self.x + 12 * T, self.y - 8 * T, self.y + 2 * T
+end
+-- Sus súbditos de reserva (los que el nivel creó para él: `summons` del tipo; self.summonKey)
+function Boss:minions(level)
+    local out = {}
+    for _, e in ipairs(level.liveEntities or {}) do
+        if e.summonOf == self.summonKey then out[#out + 1] = e end
+    end
+    return out
+end
+-- El jugador vivo más cercano (lo vertical cuenta menos) y su distancia
+function Boss:nearestPlayer(level)
+    local best, bd
+    for _, pa in ipairs(level.players or {}) do
+        if not pa.dying and pa.alive ~= false then
+            local d = math.abs(pa.x - self.x) + math.abs(pa.y - self.y) * 0.3
+            if not bd or d < bd then best, bd = pa, d end
+        end
+    end
+    return best, bd
+end
+-- Golpe del jefe a un jugador: hit = { vida, vx, vy, s sin control, s aturdido }, dir = ±1.
+-- false si no le da (invulnerable, muriendo). El daño queda atribuido (Boss.withPlayer).
+function Boss.strike(pa, hit, dir)
+    if pa.dying or pa.alive == false or pa:isInvulnerable() then return false end
+    Boss.withPlayer(pa, function()
+        if pa:hurt(hit[1]) or pa.dying then return end
+        pa.vx, pa.vy = dir * hit[2], hit[3]
+        pa.onGround, pa.crouching = false, false
+        pa.gpPhase, pa.gpT = nil, 0
+        pa.ctrlLockT = math.max(pa.ctrlLockT or 0, hit[4])
+        if hit[5] > 0 then
+            pa.stunT = math.max(pa.stunT or 0, hit[5])
+            Sound.play('stunned')
+        end
+    end)
+    return true
+end
 function Boss:isGhost() return false end
 function Boss:collect() return false end
 

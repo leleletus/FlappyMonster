@@ -129,21 +129,9 @@ function Crabby:init()
     end
 end
 
--- ── Súbdito de reserva (ver Level: def.summons; lo activa su jefe) ──────────
-function Crabby:makeReserve(key)
-    self.summonOf = key
-    self.alive, self.state = false, 'reserve'
-    -- Sin ruta: se mueven libres por toda la zona de su jefe. (Heredaban la ruta
-    -- por defecto de un Crabby alrededor del sitio del jefe; trepando no la
-    -- miraban, pero el empujón de un ground pound la aplicaba y los "teletrans-
-    -- portaba" de golpe al borde de la ruta, a veces encima del jugador.)
-    self.leftBoundPx, self.rightBoundPx = -math.huge, math.huge
-end
--- En reserva (o ya muerto) no se envía por red: el cliente lo sabe
-function Crabby:netAtRest() return self.state == 'reserve' or (self.summonOf ~= nil and not self.alive) end
-function Crabby:netRest()
-    if self.summonOf then self.alive, self.state = false, 'reserve' end
-end
+-- (Súbdito de reserva: Entity:makeReserve / netAtRest / netRest, genérico. Sin ruta: heredaban la
+-- ruta por defecto de un Crabby alrededor del sitio del jefe y el empujón de un ground pound los
+-- "teletransportaba" al borde de esa ruta, a veces encima del jugador.)
 
 -- Atado a una zona (súbditos): los bordes de la zona cuentan como paredes
 function Crabby:crawlSolidAt(level, x, y)

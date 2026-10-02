@@ -1,6 +1,6 @@
 -- MEGA CRABBY HELADO: el Mega Crabby (megacrabby.lua: TODOS sus estados, ataques, entrada,
 -- descansos, súbditos y muerte) con el aspecto del cangrejo antártico Paralomis birsteini
--- (assets/images/megacrabby_ice/, tools/ui/make_icecrab_sprites.py) y tres cosas de hielo:
+-- (assets/images/bosses/megacrabby_ice/, tools/ui/make_icecrab_sprites.py) y tres cosas de hielo:
 --  1. PALMADA HELADA: al acabar cada embestida da un golpe con las pinzas en el suelo ('clap'):
 --     dos ondas de escarcha corren por el suelo (una a cada lado) y CONGELAN `waveFreeze` s a
 --     quien pillen (se esquivan saltando). Las pinzas se quedan pegadas al suelo por el hielo
@@ -46,11 +46,11 @@ function IM.loadAssets()
     Mega.loadAssets()
     if rawget(IM, 'art') then return end
     -- (pinzas a la escala del cuerpo y más bajas, junto a las patas: ver la vista previa)
-    IM.art = Mega.loadArt('assets/images/megacrabby_ice/', 18, 13, 10, 7, 1.0, 5.4, -1.2, 1.5, 2)
-    rageBody = SpriteStrip.load('assets/images/megacrabby_ice/rage_body-Sheet.png', RAGE_BW)
-    rageClaw = SpriteStrip.load('assets/images/megacrabby_ice/rage_claw-Sheet.png', RAGE_CW)
+    IM.art = Mega.loadArt('assets/images/bosses/megacrabby_ice/', 18, 13, 10, 7, 1.0, 5.4, -1.2, 1.5, 2)
+    rageBody = SpriteStrip.load('assets/images/bosses/megacrabby_ice/rage_body-Sheet.png', RAGE_BW)
+    rageClaw = SpriteStrip.load('assets/images/bosses/megacrabby_ice/rage_claw-Sheet.png', RAGE_CW)
     shock = SpriteStrip.load('assets/images/bosses/snowboss/shock-Sheet.png', 16)
-    fieldS = SpriteStrip.load('assets/images/megacrabby_ice/ice_field-Sheet.png', 8)
+    fieldS = SpriteStrip.load('assets/images/bosses/megacrabby_ice/ice_field-Sheet.png', 8)
 end
 function IM.sizePx() return 18 * MS, 13 * MS end
 
@@ -488,7 +488,7 @@ return {
     hide = Boss.HIDE,
     defaults = { points = 60 },
     props = props,
-    editor = { sprite = 'assets/images/megacrabby_ice/crab1.png' },
+    editor = { sprite = 'assets/images/bosses/megacrabby_ice/crab1.png' },
     summons = function(pl)
         local out = baseDef.summons(pl)
         for _, s in ipairs(out) do s.type = (s.type == 'crabbytramp') and 'crabbytramp_ice' or 'crabby_ice' end

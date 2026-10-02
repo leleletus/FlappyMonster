@@ -284,6 +284,35 @@ function Crawler.entityAhead(e, level)
     return nil
 end
 
+-- TREPADOR "de serie": una clase que solo quiere andar por superficies llama a Crawler.mixin(Clase)
+-- y recibe lo que todo trepador necesita (cajas giradas con su pose, normal para las reglas de
+-- pisotón, soltarse, no caer mientras está agarrado). El Crabby tiene las suyas (se esconde, se
+-- clava...); el Crabby lúgubre usa estas tal cual.
+function Crawler.mixin(Cls)
+    local Entity = require 'src/world/entities/Entity'
+    local function box(self, w, h, base)
+        if Crawler.turning(self) then return Crawler.poseBox(self, -w / 2, -h / 2, w, h) end
+        if Crawler.onWall(self) and self.cattached then
+            return { x = self.x - h / 2, y = self.y - w / 2, w = h, h = w }
+        end
+        return base(self)
+    end
+    function Cls:getOuterBounds() return box(self, self.outerW, self.outerH, Entity.getOuterBounds) end
+    function Cls:getInnerBounds() return box(self, self.innerW, self.innerH, Entity.getInnerBounds) end
+    function Cls:surfaceNormal()
+        if self.crawl and self.cattached then return Crawler.poseNormal(self) end
+        return nil
+    end
+    function Cls:releaseCrawl()
+        Crawler.detach(self)
+        self.flipped = false
+    end
+    function Cls:fall(level, dt)
+        if self.cattached then return end
+        Entity.fall(self, level, dt)
+    end
+end
+
 function Crawler.netPack(e)
     local surf = 0
     if e.crawl and e.cattached then

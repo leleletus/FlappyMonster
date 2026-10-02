@@ -51,7 +51,8 @@ local Boss        = require 'src/world/entities/Boss'
 local Lights      = require 'src/world/Lights'
 local Noise       = require 'src/world/Noise'
 local SpriteStrip = require 'src/fx/SpriteStrip'
-local strike      = require('src/world/entities/types/snowboss').class.strike
+local BossFx      = require 'src/fx/BossFx'
+local strike      = Boss.strike
 
 local T = TILE_PX
 local MS = 10                              -- escala (el pequeño: 4)
@@ -104,7 +105,7 @@ local WARN       = { 1, 0.28, 0.2 }
 local CLAW_DY    = 2                        -- unión de las pinzas, en px de arte bajo el centro (bajas: salen de debajo del caparazón)
 local CRYS       = { 0.85, 0.66, 1 }        -- cristales de la rabia
 
-local body, glow, clawS, clawR, clawRG, markS, icons, starsS, anger
+local body, glow, clawS, clawR, clawRG, icons
 function MG.loadAssets()
     if body then return end
     local D = 'assets/images/bosses/megagloomy/'
@@ -113,12 +114,7 @@ function MG.loadAssets()
     clawS = SpriteStrip.load(D .. 'claw_left-Sheet.png', CLAW_W)
     clawR = SpriteStrip.load(D .. 'claw_rage_left-Sheet.png', CLAW_W)        -- (rabia: con cristales en el dorso)
     clawRG = SpriteStrip.load(D .. 'claw_rage_glow-Sheet.png', CLAW_W)       -- (… y sus puntas, que brillan a oscuras)
-    markS = SpriteStrip.load('assets/images/bosses/megagummy/target-Sheet.png', 16)
     icons = SpriteStrip.load('assets/images/gloomy/icons-Sheet.png', 7)
-    starsS = SpriteStrip.load('assets/images/bosses/megagummy/stars-Sheet.png', 5)      -- (las estrellitas de aturdido de siempre)
-    anger = { vein = SpriteStrip.load('assets/images/MegaCrabby/anger_vein.png', 11),   -- (el enfado del Mega Crabby)
-              steam = SpriteStrip.load('assets/images/MegaCrabby/anger_steam.png', 9),
-              scribble = SpriteStrip.load('assets/images/MegaCrabby/anger_scribble.png', 9) }
 end
 function MG.sizePx() return BW, BH end
 
@@ -140,13 +136,7 @@ end
 function MG:bossPhase() return self.phase or 1 end
 -- Ritmo: la fila de las tablas (1, 2) y el multiplicador de la rabia
 function MG:pace() return math.min(2, self.phase or 1), self.rage and (self.props.rageSpeed or 1.45) or 1 end
-function MG:enter(st) self.state, self.deadTimer = st, 0 end
-function MG:zoneBounds()
-    local z = self.zone
-    if z then return z.x0, z.x1, z.y0, z.y1 end
-    return self.x - 12 * T, self.x + 12 * T, self.y - 8 * T, self.y + 2 * T
-end
-
+-- (enter, zoneBounds, minions, strike: los de Boss)
 function MG:floorY(level, x)
     local _, _, zy0, zy1 = self:zoneBounds()
     local _, top = level:landingCross(x, zy1 - T + 2, zy1 + T)       -- (el suelo de la zona, no una plataforma)
@@ -213,15 +203,7 @@ function MG:updatePings(level, dt)
     end
 end
 
--- ── Súbditos (Crabbies lúgubres de reserva) ──────────────────────────────────
-function MG:minions(level)
-    local out = {}
-    for _, e in ipairs(level.liveEntities or {}) do
-        if e.summonOf == self.summonKey then out[#out + 1] = e end
-    end
-    return out
-end
-
+-- ── Súbditos (Crabbies lúgubres de reserva: Boss:minions) ───────────────────
 function MG:summon(level)
     local zx0, zx1, zy0, zy1 = self:zoneBounds()
     local alive, free = 0, {}
@@ -815,48 +797,6 @@ function MG:render(camX, camY)
     love.graphics.setColor(1, 1, 1, 1)
 end
 
--- RABIA: símbolos de enfado que saltan alrededor de su cabeza (los del Mega Crabby). Solo dibujo
-local ANGER_KINDS = { 'vein', 'vein', 'steam', 'scribble', 'vein', 'steam' }
-local ANGER_LIFE = { vein = 0.8, steam = 0.6, scribble = 0.7 }
-function MG:renderAnger(now, camX, camY)
-    local list = self._anger or {}
-    self._anger = list
-    if self:angry() and now >= (self._angerNext or 0) and #list < 3 then
-        self._angerNext = now + 0.3 + math.random() * 0.55
-        self._angerSide = -(self._angerSide or 1)           -- (a un lado y a otro, nunca dos seguidos en el mismo)
-        local a = self._angerSide * (0.35 + math.random() * 0.8)
-        local r = 75 + math.random() * 30
-        list[#list + 1] = { kind = ANGER_KINDS[math.random(#ANGER_KINDS)], born = now, ox = math.sin(a) * r, oy = -math.cos(a) * r * 0.5 - 40 }
-    end
-    for i = #list, 1, -1 do
-        local q = list[i]
-        local age, life = now - q.born, ANGER_LIFE[q.kind]
-        if age >= life then
-            table.remove(list, i)
-        else
-            local x, y = self.x + q.ox - camX, self.y + q.oy - camY
-            local k, frame = 3, 1
-            local alpha = math.min(1, (life - age) / 0.15)
-            if q.kind == 'vein' then
-                k = 3 * ((age < 0.1) and (0.5 + age / 0.1 * 0.75) or 1)          -- aparece de golpe y late
-                frame = (math.floor(age * 7) % 2 == 0) and 1 or 2
-            elseif q.kind == 'steam' then
-                frame = math.min(3, math.floor(age / life * 3) + 1)
-                y, x = y - age * 60, x + math.sin(age * 12) * 3
-            else
-                frame = math.floor(age * 12) % 2 + 1
-                x = x + math.floor(math.sin(age * 40) * 2)
-            end
-            k = math.floor(k + 0.5)
-            x, y = math.floor(x + 0.5), math.floor(y + 0.5)
-            love.graphics.setColor(0, 0, 0, 0.5 * alpha)
-            anger[q.kind]:draw(frame, x + 3, y + 3, 0, k, k)
-            love.graphics.setColor(1, 1, 1, alpha)
-            anger[q.kind]:draw(frame, x, y, 0, k, k)
-        end
-    end
-end
-
 local function dashH(x0, x1, y, a, thick)
     if x1 < x0 then x0, x1 = x1, x0 end
     love.graphics.setColor(WARN[1], WARN[2], WARN[3], a)
@@ -891,7 +831,7 @@ function MG:renderGlow(camX, camY)
         end
     elseif ((st == 'aim' or st == 'pounce') and self.kind == KIND.pounce) or ((st == 'aim' or st == 'dive') and self.kind == KIND.dive) then
         love.graphics.setColor(WARN[1], WARN[2], WARN[3], blink)
-        markS:draw((math.floor(now * 12) % 2) + 1, math.floor(self.markX - camX), math.floor(self.markY - camY - 16), 0, 8, 8)
+        BossFx.target((math.floor(now * 12) % 2) + 1, math.floor(self.markX - camX), math.floor(self.markY - camY - 16), 8, 8)
     end
     -- ojos (y cristales de la rabia): parpadean al apuntar y al burlarse; se apagan al morir
     local a = 0.95
@@ -922,15 +862,9 @@ function MG:renderGlow(camX, camY)
         if turned then love.graphics.pop() end
     end
     -- DESLUMBRADO: estrellitas girando sobre él (ahora es vulnerable)
-    if st == 'dazzled' then
-        love.graphics.setColor(1, 1, 1, 1)
-        for i = 0, 2 do
-            local an = now * 5 + i * (math.pi * 2 / 3)
-            starsS:draw((math.floor(now * 8) + i) % 2 + 1, math.floor(self.x - camX + math.cos(an) * 8 * MS),
-                        math.floor(self.y - camY - 7 * MS + math.sin(an) * 1.5 * MS), 0, 7, 7, 2.5, 2.5)
-        end
-    end
-    self:renderAnger(now, camX, camY)
+    if st == 'dazzled' then BossFx.stars(self.x - camX, self.y - camY - 7 * MS, 8 * MS, 1.5 * MS, 7) end
+    -- RABIA: símbolos de enfado alrededor de su cabeza (los de todos los jefes: BossFx)
+    BossFx.anger(self, self:angry(), self.x - camX, self.y - camY - 40)
     if (self.icon or 0) > 0 then                          -- ("…": la luz lo ha asustado)
         love.graphics.setColor(0.8, 0.85, 1, 0.95)
         love.graphics.draw(icons.image, icons.quads[self.icon], math.floor(self.x - camX), math.floor(self.y - camY - 90), 0, 6, 6, 3.5, 9)

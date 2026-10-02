@@ -6,7 +6,7 @@
 #   crabby_ice/dead.png      Crabby helado aplastado: naranja, con sus cerdas, patas y pinzas tiradas
 #                            (antes los dos usaban gummy/dead.png: valía cuando todos eran blancos)
 #   gummy/parachute.png      paracaídas de la guardia del Rey Gummy (entra por el techo)
-#   megacrabby_ice/ice_field-Sheet.png   campo de carámbanos del Mega Crabby helado, 3 cuadros
+#   bosses/megacrabby_ice/ice_field-Sheet.png   campo de carámbanos del Mega Crabby helado, 3 cuadros
 #                            8x16: grietas de aviso, carámbano, carámbano con brillo
 # (Las pinzas del Mega Crabby ya NO salen de aquí: las dibujó el usuario — 2 cuadros 10x7 como
 #  las del Mega helado — tras dos propuestas de este script que no le convencieron; `CLAW` queda
@@ -120,7 +120,7 @@ OUT = {
     'crabby/dead.png': CRAB_DEAD,
     'crabby_ice/dead.png': ICE_DEAD,
     'gummy/parachute.png': PARACHUTE,
-    'megacrabby_ice/ice_field-Sheet.png': FIELD,
+    'bosses/megacrabby_ice/ice_field-Sheet.png': FIELD,
 }
 
 
@@ -133,7 +133,7 @@ def preview():
         bg.alpha_composite(big, (x, 16))
         x += big.width + 24
     # El Mega Crabby con sus pinzas nuevas (como en el juego: escala 0.85 del cuerpo) y, al lado, las de antes
-    body = Image.open(os.path.join(IMG, 'MegaCrabby', 'crab1.png')).convert('RGBA')
+    body = Image.open(os.path.join(IMG, 'bosses', 'megacrabby', 'crab1.png')).convert('RGBA')
     S = 10
     def mega(claw, fw, ox):
         b = body.resize((body.width * S, body.height * S), Image.NEAREST)
@@ -151,12 +151,12 @@ def preview():
             bg.alpha_composite(c, (int(cx - c.width / 2), int(cy - c.height / 2)))
     import importlib.util
     try:
-        old = Image.open(os.path.join(IMG, 'MegaCrabby', 'claw_left-Sheet.png')).convert('RGBA')
+        old = Image.open(os.path.join(IMG, 'bosses', 'megacrabby', 'claw_left-Sheet.png')).convert('RGBA')
         if old.size == (14, 6):
             mega(old, 7, 620)
     except Exception:
         pass
-    ice = Image.open(os.path.join(IMG, 'megacrabby_ice', 'claw_left-Sheet.png')).convert('RGBA')
+    ice = Image.open(os.path.join(IMG, 'bosses', 'megacrabby_ice', 'claw_left-Sheet.png')).convert('RGBA')
     bg.alpha_composite(ice.resize((ice.width * 8, ice.height * 8), Image.NEAREST), (860, 420))
     os.makedirs(os.path.dirname(PREVIEW), exist_ok=True)
     bg.save(PREVIEW)

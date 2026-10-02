@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # tools/sounds/gloomy.py
-# Sonidos de la LINTERNA y del CRABBY LÚGUBRE (assets/sounds/gloomy/*.wav), todos con el tramo
+# Sonidos de la LINTERNA y del CRABBY LÚGUBRE (assets/sounds/player/light_*.wav, assets/sounds/enemies/gloomy_*.wav), todos con el tramo
 # más fuerte de 100 ms a -12 dBFS (GAIN 1 en Sound.lua):
 #   light_on     clic de interruptor que sube       light_off   clic que baja
 #   light_out    se agota: zumbido que cae y chasquido   light_dead  no enciende: doble clic sordo
@@ -15,7 +15,7 @@ import os, wave
 import numpy as np
 
 SR = 44100
-OUT = 'assets/sounds/gloomy'
+OUT = None
 rng = np.random.default_rng(1977)
 
 
@@ -51,8 +51,14 @@ def save(name, x):
     best = max(np.mean(x[i:i + n] ** 2) for i in range(0, max(1, len(x) - n + 1), max(1, n // 4))) if len(x) > n else np.mean(x ** 2) * len(x) / n
     x = x * (10 ** (-12 / 20) / np.sqrt(best + 1e-12))
     x = np.clip(x, -0.98, 0.98)
-    os.makedirs(OUT, exist_ok=True)
-    with wave.open(os.path.join(OUT, name + '.wav'), 'wb') as w:
+    # (la linterna es del jugador; lo del Crabby lúgubre, con los demás enemigos; lo del jefe, en su carpeta)
+    if OUT is None:
+        path = os.path.join('assets/sounds/player', name + '.wav') if name.startswith('light_') \
+            else os.path.join('assets/sounds/enemies', 'gloomy_' + name + '.wav')
+    else:
+        os.makedirs(OUT, exist_ok=True)
+        path = os.path.join(OUT, name + '.wav')
+    with wave.open(path, 'wb') as w:
         w.setnchannels(1); w.setsampwidth(2); w.setframerate(SR)
         w.writeframes((x * 32767).astype('<i2').tobytes())
     print('%-11s %.2f s' % (name, len(x) / SR))

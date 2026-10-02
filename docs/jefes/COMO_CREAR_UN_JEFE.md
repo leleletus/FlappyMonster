@@ -16,6 +16,13 @@ Jefes de referencia (copia del que más se parezca a lo que quieres):
 
 ---
 
+> **Antes de nada:** lo común de los jefes YA está en la base — no lo copies de otro jefe.
+> `Boss:enter(st)`, `Boss:zoneBounds()`, `Boss:minions(level)`, `Boss:nearestPlayer(level)`,
+> `Boss.strike(pa, {vida, vx, vy, sinControl, aturdido}, dir)`; efectos compartidos en
+> `src/fx/BossFx.lua` (`stars`, `anger`, `target`; sprites en `assets/images/bosses/common/`);
+> súbditos de reserva: cualquier entidad (`Entity:makeReserve`). El arte de cada jefe va en
+> `assets/images/bosses/<jefe>/`. Rasgos y demás: `docs/entidades/COMO_CREAR_UN_ENEMIGO.md`.
+
 ## 0. Diseño (antes de escribir código)
 
 Escribe en 10 líneas (luego van a la cabecera del archivo del jefe):

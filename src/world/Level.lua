@@ -677,8 +677,11 @@ end
 -- (col, row). Solo donde se deciden los tiles (un jugador / servidor).
 function Level:forStanders(col, row, fn)
     for _, e in ipairs(self.liveEntities or {}) do
-        if e.standingOnCell and e.def and e.def.category == 'Enemigos' and not e.def.boss
-           and not e.solidFull and e:standingOnCell(col, row) then   -- (los trepadores: el bloque al que se agarran)
+        -- (por defecto los enemigos que no son jefes ni bloques; un tipo lo cambia con el rasgo
+        -- `diesWithBlock = true / false`. Los trepadores: el bloque al que se agarran)
+        local on = e.diesWithBlock
+        if on == nil then on = e.def and e.def.category == 'Enemigos' and not e.def.boss and not e.solidFull end
+        if on and e.standingOnCell and e:standingOnCell(col, row) then
             fn(e)
         end
     end

@@ -189,10 +189,10 @@ function Sound.load()
     end
     -- Linterna y Crabby lúgubre (tools/sounds/gloomy.py)
     for _, n in ipairs({ 'on', 'off', 'out', 'dead' }) do
-        load('light' .. n:gsub('^%l', string.upper), 'assets/sounds/gloomy/light_' .. n .. '.wav', 'static')
+        load('light' .. n:gsub('^%l', string.upper), 'assets/sounds/player/light_' .. n .. '.wav', 'static')
     end
     for _, n in ipairs({ 'wind', 'leap' }) do
-        load('gloomy' .. n:gsub('^%l', string.upper), 'assets/sounds/gloomy/' .. n .. '.wav', 'static')
+        load('gloomy' .. n:gsub('^%l', string.upper), 'assets/sounds/enemies/gloomy_' .. n .. '.wav', 'static')
     end
     for _, n in ipairs({ 'ping', 'listen', 'drop', 'slam', 'dazzled', 'shriek', 'hurt', 'step', 'roar' }) do
         load('mgloomy' .. n:gsub('^%l', string.upper), 'assets/sounds/bosses/megagloomy/' .. n .. '.wav', 'static')

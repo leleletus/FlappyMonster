@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # tools/ui/make_snowboss_sprites.py
 # Arte del jefe GRAN BOLA DE NIEVE (assets/images/bosses/snowboss/) a partir del
-# dibujo del usuario (assets/images/snowball/ball.png: 4x2 caras de 16x16 + la bola
+# dibujo del usuario (el original, fuera del repo: snowball/ball-orig.png: 4x2 caras de 16x16 + la bola
 # pequeña; el original se guarda FUERA del repo, tools/ui/originals.py, y se parte
 # siempre de él). Misma forma (cada píxel), estilo nuevo como el resto de
 # personajes: contorno azul muy oscuro, blanco con brillo arriba-izquierda y sombra
@@ -30,7 +30,7 @@ import originals   # noqa: E402
 A = 'assets/images/'
 OUTD = A + 'bosses/snowboss/'
 PREVIEW = next((x for x in sys.argv[1:] if not x.startswith('--')), None)
-SRC = A + 'snowball/ball.png'
+SRC = A + 'snowball/ball.png'        # (ya no está en el repo: solo es la CLAVE de su original de fuera, <originales>/assets/images/snowball/ball-orig.png)
 
 
 def rgb(h, a=255): return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16), a)

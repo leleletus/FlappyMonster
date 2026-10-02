@@ -51,17 +51,7 @@ function Gummy:init()
     self.bonkT  = 0
 end
 
--- ── Guardia de reserva (los llama el Rey Gummy: types/megagummy.lua, def.summons) ──
-function Gummy:makeReserve(key)
-    self.summonOf = key
-    self.alive, self.state = false, 'reserve'
-    self.leftBoundPx, self.rightBoundPx = -math.huge, math.huge     -- (sin ruta: la pone el jefe al llamarlo)
-end
--- En reserva (o ya muerto) no se envía por red: el cliente lo sabe
-function Gummy:netAtRest() return self.state == 'reserve' or (self.summonOf ~= nil and not self.alive) end
-function Gummy:netRest()
-    if self.summonOf then self.alive, self.state = false, 'reserve' end
-end
+-- (Guardia de reserva del Rey Gummy: Entity:makeReserve, genérico)
 
 -- ── Paracaídas (la guardia del Rey Gummy que entra por el techo) ─────────────
 -- Estado 'para': baja despacio, en vertical, hasta posarse en lo primero que encuentre (suelo o

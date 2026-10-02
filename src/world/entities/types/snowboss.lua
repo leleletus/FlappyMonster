@@ -370,21 +370,7 @@ end
 
 -- Golpe a un jugador (un jugador / servidor): `hit` = { vida, vx, vy, bloqueo, aturdido },
 -- empujado hacia `dir`. Invulnerable o congelado: nada (ni empujón). true si le dio.
-local function strike(pa, hit, dir)
-    if pa.dying or pa.alive == false or pa:isInvulnerable() then return false end
-    Boss.withPlayer(pa, function()
-        if pa:hurt(hit[1]) or pa.dying then return end
-        pa.vx, pa.vy = dir * hit[2], hit[3]
-        pa.onGround, pa.crouching = false, false
-        pa.gpPhase, pa.gpT = nil, 0
-        pa.ctrlLockT = math.max(pa.ctrlLockT or 0, hit[4])
-        if hit[5] > 0 then
-            pa.stunT = math.max(pa.stunT or 0, hit[5])
-            Sound.play('stunned')
-        end
-    end)
-    return true
-end
+local strike = Boss.strike                -- (genérico: Boss.strike)
 Snow.strike = strike
 
 -- Onda del aterrizaje del gran golpe: a quien esté cerca y a ras de suelo, 1 de vida

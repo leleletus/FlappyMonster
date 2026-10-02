@@ -273,10 +273,10 @@ def boss_art(dst):
     sheet(wave).save(os.path.join(dst, 'wave-Sheet.png'))
     stars = [grid(["..o..", ".oyo.", "oyyYo", ".oYo.", "..o.."], P),
              grid([".....", ".oyo.", ".yYy.", ".oyo.", "....."], P)]
-    sheet(stars).save(os.path.join(dst, 'stars-Sheet.png'))
+    sheet(stars).save(os.path.join(dst, '..', 'common', 'stars-Sheet.png'))       # (compartidas por los jefes)
     target = [grid(["rr..r..rr..r..rr", "rR.rRr.rR.rRr.Rr", "r..............r", "rrrrrrrrrrrrrrrr"], P),
               grid(["ww..w..ww..w..ww", "wb.wbw.wb.wbw.bw", "w..............w", "wwwwwwwwwwwwwwww"], P)]
-    sheet(target).save(os.path.join(dst, 'target-Sheet.png'))
+    sheet(target).save(os.path.join(dst, '..', 'common', 'target-Sheet.png'))
     sh = Image.new('RGBA', (16, 3), (0, 0, 0, 0))
     for x in range(16):
         for y in range(3):

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # tools/ui/make_icecrabby_claws.py — PINZAS PEQUEÑAS del Crabby helado (propuestas).
-# El Mega Crabby helado tiene las pinzas grandes (assets/images/megacrabby_ice/claw_left-Sheet.png,
+# El Mega Crabby helado tiene las pinzas grandes (assets/images/bosses/megacrabby_ice/claw_left-Sheet.png,
 # 10x7, dedos hacia dentro, 3 púas en el dorso). El Crabby helado normal lleva una versión
 # MÁS PEQUEÑA y MÁS FINA, distinta de la del Mega pero de la misma familia: mismo contorno,
 # mismos tonos naranja, dedos hacia dentro, dos cuadros (abierta / cerrada) como el Mega.
@@ -24,7 +24,7 @@ from PIL import Image, ImageDraw, ImageFont
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..'))
 ICE = os.path.join(ROOT, 'assets', 'images', 'crabby_ice')
-MEGA = os.path.join(ROOT, 'assets', 'images', 'megacrabby_ice')
+MEGA = os.path.join(ROOT, 'assets', 'images', 'bosses', 'megacrabby_ice')
 NORMAL = os.path.join(ROOT, 'assets', 'images', 'crabby')
 
 PAL = {

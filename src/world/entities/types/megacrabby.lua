@@ -23,7 +23,7 @@
 --  * Descansos = "emotes" (rest + restKind, en orden fijo): rugido, amenaza
 --    con las pinzas o sacar pecho con el pincho.
 --
--- Sprites: assets/images/MegaCrabby/ (crab1-3 como el Crabby, claw_left-Sheet
+-- Sprites: assets/images/bosses/megacrabby/ (crab1-3 como el Crabby, claw_left-Sheet
 -- = pinza izquierda 10x7 abierta/cerrada (dibujada por el usuario); la derecha es la misma volteada;
 -- spike.png = el pincho del Crabby, al doble). Sonidos: bosses/megacrabby/.
 
@@ -102,11 +102,11 @@ function Mega.loadArt(dir, w, h, cw, ch, k, cx, cy, cin, spikeDy)
 end
 function Mega.loadAssets()
     if Mega.art then return end
-    Mega.art = Mega.loadArt('assets/images/MegaCrabby/', 16, 9, 10, 7, CLAW_K, CLAW_X, CLAW_Y, CLAW_IN)
+    Mega.art = Mega.loadArt('assets/images/bosses/megacrabby/', 16, 9, 10, 7, CLAW_K, CLAW_X, CLAW_Y, CLAW_IN)
     -- Enfado (solo dibujo): vena 💢, vapor y garabato
-    anger = { vein = SpriteStrip.load('assets/images/MegaCrabby/anger_vein.png', 11),
-              steam = SpriteStrip.load('assets/images/MegaCrabby/anger_steam.png', 9),
-              scribble = SpriteStrip.load('assets/images/MegaCrabby/anger_scribble.png', 9) }
+    anger = { vein = SpriteStrip.load('assets/images/bosses/common/anger_vein.png', 11),
+              steam = SpriteStrip.load('assets/images/bosses/common/anger_steam.png', 9),
+              scribble = SpriteStrip.load('assets/images/bosses/common/anger_scribble.png', 9) }
 end
 function Mega.sizePx() return 16 * MS, 9 * MS end
 Mega.MS = MS
@@ -534,14 +534,7 @@ function Mega:floorBelow(level, x, fromY)
     return hit and top or floorLine
 end
 
--- Súbditos: los Crabbies de reserva que el nivel crea para él (ver `summons`)
-function Mega:minions(level)
-    local out = {}
-    for _, e in ipairs(level.liveEntities or {}) do
-        if e.summonOf == self.summonKey then out[#out + 1] = e end
-    end
-    return out
-end
+-- (Súbditos — los Crabbies de reserva que el nivel crea para él, ver `summons` —: Boss:minions)
 
 -- ¿Cuántos puede invocar ahora? (libres en la reserva, sin pasar del máximo)
 function Mega:summonable(level)
@@ -1587,7 +1580,7 @@ return {
         { key='rageStuck', kind='number', label='Enfadado: tiempo clavado x', group='Enfado', default=0.75,
           min=0.2, max=1, step=0.05 },
     }),
-    editor = { sprite = 'assets/images/MegaCrabby/crab1.png' },
+    editor = { sprite = 'assets/images/bosses/megacrabby/crab1.png' },
     -- Súbditos: Crabbies escaladores de reserva que el nivel crea al cargar
     -- (Level.fromData), después de las entidades del JSON: así el servidor y
     -- los clientes tienen la misma lista. Empiezan fuera de juego y el jefe

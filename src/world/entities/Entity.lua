@@ -70,6 +70,10 @@ function Entity.create(cls, data)
     local e = setmetatable({}, cls)
     local p, tn, T = data.props, cls.tuning, TILE_PX
     e.def, e.typeName, e.props = cls.def, cls.def.name, p
+    -- RASGOS del tipo (`traits = { needsPound = true, ... }` en su definición): interruptores de
+    -- las reglas base, sin escribir código (lista en docs/entidades/COMO_CREAR_UN_ENEMIGO.md).
+    -- Van en la instancia: varios tipos pueden compartir clase con rasgos distintos.
+    if cls.def.traits then for k, v in pairs(cls.def.traits) do e[k] = v end end
     e.col, e.row = data.col, data.row
 
     e.x = (data.col - 1) * T + T / 2
@@ -407,8 +411,24 @@ function Entity:netApply(a, b, f) end
 -- Red: una entidad "en reposo" (quieta en su estado de siempre, p. ej. un
 -- pincho colgando) no se envía en los snapshots; el cliente la devuelve a ese
 -- estado con netRest(). Ahorra muchísimo con cientos de pinchos.
-function Entity:netAtRest() return false end
-function Entity:netRest() end
+-- Por defecto solo las de RESERVA (ver makeReserve) mientras no están en juego.
+function Entity:netAtRest() return self.summonOf ~= nil and (self.state == 'reserve' or not self.alive) end
+function Entity:netRest()
+    if self.summonOf then self.alive, self.state = false, 'reserve' end
+end
+
+-- ── Súbdito de RESERVA (cualquier entidad puede serlo) ──────────────────────
+-- El tipo de un jefe declara `summons(placement)` → Level.fromData añade esas colocaciones de
+-- reserva detrás de las del JSON (mismos índices en servidor y clientes) y Entities.create llama
+-- aquí: fuera de juego (no viva, estado 'reserve', no se envía por red) hasta que su jefe la
+-- active (resetToHome + estado). Sin ruta: se mueve libre por la zona del jefe. Gancho opcional
+-- `onMakeReserve(key)` para lo propio de cada tipo.
+function Entity:makeReserve(key)
+    self.summonOf = key
+    self.alive, self.state = false, 'reserve'
+    self.leftBoundPx, self.rightBoundPx = -math.huge, math.huge
+    if self.onMakeReserve then self:onMakeReserve(key) end
+end
 
 -- ── Hitboxes ──────────────────────────────────────────────────────────────────
 function Entity:getOuterBounds()

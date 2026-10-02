@@ -78,15 +78,14 @@ MG.HOP_GAP, MG.FLOP_EVERY, MG.DAZE_T, MG.WAVE_LIFE = HOP_GAP, FLOP_EVERY, DAZE_T
 local F_IDLE, F_WALK1, F_WALK2, F_JUMP, F_DAZED, F_HURT, F_LAUGH, F_SHOUT = 1, 2, 3, 4, 5, 6, 7, 8
 
 -- ── Arte ──────────────────────────────────────────────────────────────────────
-local body, crownImg, waveS, starsS, targetS, shadowImg
+local body, crownImg, waveS, targetS, shadowImg
 function MG.loadAssets()
     if body then return end
     local D = 'assets/images/bosses/megagummy/'
     body      = SpriteStrip.load(D .. 'body-Sheet.png', 16)
     crownImg  = SpriteStrip.load(D .. 'crown.png', 16)
     waveS     = SpriteStrip.load(D .. 'wave-Sheet.png', 12)
-    starsS    = SpriteStrip.load(D .. 'stars-Sheet.png', 5)
-    targetS   = SpriteStrip.load(D .. 'target-Sheet.png', 16)
+    targetS   = SpriteStrip.load('assets/images/bosses/common/target-Sheet.png', 16)
     shadowImg = SpriteStrip.load(D .. 'shadow.png', 16)
 end
 function MG.sizePx() return 16 * MS, 16 * MS end
@@ -239,14 +238,7 @@ function MG:landFlop(level)
     end
 end
 
--- ── Guardia real (súbditos de reserva) ───────────────────────────────────────
-function MG:minions(level)
-    local out = {}
-    for _, e in ipairs(level.liveEntities or {}) do
-        if e.summonOf == self.summonKey then out[#out + 1] = e end
-    end
-    return out
-end
+-- ── Guardia real (súbditos de reserva: Boss:minions) ────────────────────────
 
 function MG:summonable(level)
     local p = self.props
@@ -972,13 +964,7 @@ function MG:render(camX, camY)
         end
         -- Mareado: estrellitas girando sobre la cabeza
         if st == 'dazed' then
-            love.graphics.setColor(1, 1, 1, alpha)
-            for i = 0, 2 do
-                local a = now * 5 + i * (math.pi * 2 / 3)
-                local x = math.floor(fx + math.cos(a) * 6 * MS)
-                local y = math.floor(fy - 15 * MS + math.sin(a) * 1.5 * MS)
-                starsS:draw((math.floor(now * 8) + i) % 2 + 1, x, y, 0, 4, 4)
-            end
+            require('src/fx/BossFx').stars(fx, fy - 15 * MS, 6 * MS, 1.5 * MS, 4, alpha)
         end
         -- Goterones de gelatina al aterrizar / al temblar antes de dividirse
         if st == 'split' and (self.lastDrip or 0) + 0.06 < now then

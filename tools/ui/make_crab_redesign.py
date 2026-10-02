@@ -115,8 +115,8 @@ def fit(art, cw, ch, k, down=False):
 
 def claws():
     """Las pinzas: cada uno de los 2 cuadros (7x6) por separado."""
-    o = originals.path(SRC + 'MegaCrabby/claw_left-Sheet.png')
-    src = Image.open(o if os.path.exists(o) else SRC + 'MegaCrabby/claw_left-Sheet.png').convert('RGBA')
+    o = originals.path(SRC + 'bosses/megacrabby/claw_left-Sheet.png')
+    src = Image.open(o if os.path.exists(o) else SRC + 'bosses/megacrabby/claw_left-Sheet.png').convert('RGBA')
     out = Image.new('RGBA', src.size, (0, 0, 0, 0))
     tmp = '/tmp/_claw_frame.png'
     for i in range(src.width // 7):
@@ -142,13 +142,13 @@ def apply():
         'crabby/crab1.png': crab(0), 'crabby/crab2.png': crab(1), 'crabby/crab3.png': crab(2),
         'crabby/hid.png': hid(), 'crabby/lookin.png': lookin(),
         'crabby/MeatCrabby.png': restyle(SRC + 'crabby/MeatCrabby.png'),
-        'MegaCrabby/crab1.png': restyle(SRC + 'MegaCrabby/crab1.png'),
-        'MegaCrabby/crab2.png': restyle(SRC + 'MegaCrabby/crab2.png'),
-        'MegaCrabby/crab3.png': restyle(SRC + 'MegaCrabby/crab3.png'),
+        'bosses/megacrabby/crab1.png': restyle(SRC + 'bosses/megacrabby/crab1.png'),
+        'bosses/megacrabby/crab2.png': restyle(SRC + 'bosses/megacrabby/crab2.png'),
+        'bosses/megacrabby/crab3.png': restyle(SRC + 'bosses/megacrabby/crab3.png'),
         # (las pinzas del Mega ya no salen de aquí: son un diseño nuevo, tools/ui/make_enemy_extras.py)
         'trampoline/normal.png': trampoline(False), 'trampoline/extended.png': trampoline(True),
         'crabby/spike.png': fit(spike_art(9, 9), 38, 38, 4),
-        'MegaCrabby/spike.png': fit(spike_art(9, 9), 38, 38, 4),
+        'bosses/megacrabby/spike.png': fit(spike_art(9, 9), 38, 38, 4),
         'spikes/spike.png': fit(spike_art(8, 8), 32, 32, 4),
         'bosses/miniboss1/spike.png': fit(spike_art(13, 13, True), 26, 27, 2, True),
         'items/spikefall.png': fit(spike_art(8, 4, True), 8, 8, 1, True),

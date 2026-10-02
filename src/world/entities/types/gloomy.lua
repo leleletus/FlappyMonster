@@ -66,6 +66,7 @@ local body, glow, icons
 -- DURO: un pisotón normal solo rebota en él; hace falta un GROUND POUND para matarlo (regla
 -- genérica de Interactions.check: `needsPound`)
 Gloomy.needsPound = true
+Crawler.mixin(Gloomy)                     -- trepador: cajas giradas, normal de su superficie, soltarse, caer
 -- (encima de él no hace daño: solo de lado… o cuando es ÉL quien salta sobre ti)
 function Gloomy:hurtsFromAbove() return self.state == 'leap' end
 
@@ -92,52 +93,11 @@ function Gloomy:init()
     self.icon, self.iconT = 0, 0
 end
 
--- ── Súbdito de reserva (los llama el Mega Crabby lúgubre: def.summons) ──────
-function Gloomy:makeReserve(key)
-    self.summonOf = key
-    self.alive, self.state = false, 'reserve'
-end
-function Gloomy:netAtRest() return self.state == 'reserve' or (self.summonOf ~= nil and not self.alive) end
-function Gloomy:netRest()
-    if self.summonOf then self.alive, self.state = false, 'reserve' end
-end
-
--- ── Trepador: cajas giradas y reglas de pisotón (como el Crabby) ─────────────
-function Gloomy:getOuterBounds()
-    if Crawler.turning(self) then
-        return Crawler.poseBox(self, -self.outerW / 2, -self.outerH / 2, self.outerW, self.outerH)
-    end
-    if Crawler.onWall(self) and self.cattached then
-        return { x = self.x - self.outerH / 2, y = self.y - self.outerW / 2, w = self.outerH, h = self.outerW }
-    end
-    return Entity.getOuterBounds(self)
-end
-function Gloomy:getInnerBounds()
-    if Crawler.turning(self) then
-        return Crawler.poseBox(self, -self.innerW / 2, -self.innerH / 2, self.innerW, self.innerH)
-    end
-    if Crawler.onWall(self) and self.cattached then
-        return { x = self.x - self.innerH / 2, y = self.y - self.innerW / 2, w = self.innerH, h = self.innerW }
-    end
-    return Entity.getInnerBounds(self)
-end
-function Gloomy:surfaceNormal()
-    if self.crawl and self.cattached then return Crawler.poseNormal(self) end
-    return nil
-end
-
-function Gloomy:releaseCrawl()
-    Crawler.detach(self)
-    self.flipped = false
-end
+-- (Súbdito de reserva: Entity:makeReserve. Cajas giradas, normal y soltarse: Crawler.mixin, abajo)
 function Gloomy:knockback(dir)
     self:releaseCrawl()
     self.goalX = nil
     Entity.knockback(self, dir)
-end
-function Gloomy:fall(level, dt)
-    if self.cattached then return end
-    Entity.fall(self, level, dt)
 end
 -- (los trampolines no lo lanzan estando agarrado; suelto, sí)
 function Gloomy:canBeLaunched() return not self.cattached and Entity.canBeLaunched(self) end

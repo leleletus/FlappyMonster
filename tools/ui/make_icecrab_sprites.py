@@ -2,12 +2,12 @@
 # tools/ui/make_icecrab_sprites.py — sprites del MEGA CRABBY HELADO (variante de hielo del jefe
 # Mega Crabby), inspirado en el cangrejo antártico Paralomis birsteini: naranja, caparazón
 # redondeado y lleno de espinas, patas y pinzas más LARGAS y espinosas (sin escarcha).
-# Mismo estilo y mismas piezas que el Mega Crabby (assets/images/MegaCrabby/): contorno azul
+# Mismo estilo y mismas piezas que el Mega Crabby (assets/images/bosses/megacrabby/): contorno azul
 # marino oscuro, luz arriba a la izquierda, sombra abajo a la derecha, ojos de 1 px y boca
 # ancha; así se reconoce como "su versión helada" y no como otro enemigo.
 #
 #   python3 tools/ui/make_icecrab_sprites.py                 # sprites + maqueta en --out
-#   python3 tools/ui/make_icecrab_sprites.py --apply         # escribe assets/images/megacrabby_ice/
+#   python3 tools/ui/make_icecrab_sprites.py --apply         # escribe assets/images/bosses/megacrabby_ice/
 #   (--out DIR: carpeta de la vista previa; por defecto $FM_PREVIEWS/megacrabby_ice o
 #    /home/mtvemo/FlappyMonster_pruebas/megacrabby_ice — fuera del repo)
 #
@@ -29,8 +29,8 @@ from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..'))
-SRC = os.path.join(ROOT, 'assets', 'images', 'MegaCrabby')
-DST = os.path.join(ROOT, 'assets', 'images', 'megacrabby_ice')
+SRC = os.path.join(ROOT, 'assets', 'images', 'bosses', 'megacrabby')
+DST = os.path.join(ROOT, 'assets', 'images', 'bosses', 'megacrabby_ice')
 
 PAL = {
     '.': None,
@@ -381,8 +381,8 @@ def crab_game(canvas, sp, cx, floor, s, rage=None, frames=(0, 1), spike_dy=SPIKE
             c = up(L, cs)
             canvas.alpha_composite(c, (int(ccx - c.width / 2), int(ccy - c.height / 2)))
     if rage and anger:                                    # vena y vapor (los del Mega)
-        vein = Image.open(os.path.join(SRC, 'anger_vein.png')).convert('RGBA').crop((0, 0, 11, 11))
-        steam = Image.open(os.path.join(SRC, 'anger_steam.png')).convert('RGBA')
+        vein = Image.open(os.path.join(SRC, '..', 'common', 'anger_vein.png')).convert('RGBA').crop((0, 0, 11, 11))
+        steam = Image.open(os.path.join(SRC, '..', 'common', 'anger_steam.png')).convert('RGBA')
         steam = steam.crop((9, 0, 18, steam.height))
         hy = floor - ih * s
         for im, x, y in ((vein, cx - 0.4 * body.width * s, hy + 0.1 * ih * s),

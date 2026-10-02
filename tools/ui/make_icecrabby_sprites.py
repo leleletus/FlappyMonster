@@ -13,7 +13,7 @@
 #   (--out: $FM_PREVIEWS/crabby_ice o /home/mtvemo/FlappyMonster_pruebas/crabby_ice, fuera del repo)
 #
 # Salida (como assets/images/crabby/ + tapas):
-#   crab1/2/3.png   andar (18x13; los de assets/images/megacrabby_ice)
+#   crab1/2/3.png   andar (18x13; los de assets/images/bosses/megacrabby_ice)
 #   meat.png        el cuerpo sin patas, lookin.png (solo asoma), hid.png
 #   hide-Sheet.png  8 cuadros 18x8: se hunde fila a fila en la superficie (esconderse / salir al revés);
 #                   también sueltos: sink1..8.png (los usa el juego)

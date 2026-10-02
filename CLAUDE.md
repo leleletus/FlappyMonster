@@ -416,7 +416,7 @@ Small enemy sprites drawn by hand as character maps: `tools/ui/make_enemy_extras
                        `crabby_ice/dead.png` (each Crabby skin loads its own `dead.png`; they used to share
                        gummy/dead.png, fine while everything was white), the guard's parachute, the Icy Mega's icicle
                        field (the Mega Crabby's CLAWS are NOT generated any more: after two proposals from this script — a
-                       raised hermit-crab pincer and a fat shore-crab one — the USER drew them: `MegaCrabby/
+                       raised hermit-crab pincer and a fat shore-crab one — the USER drew them: `bosses/megacrabby/
                        claw_left-Sheet.png`, 2 frames 10x7 like the Icy Mega's, no bristles; never overwrite it).
                        Drawn at `CLAW_K` 0.7 (at the body scale, 1.0, the user found them enormous), `CLAW_X` 4.8, `CLAW_Y` −1.4,
                        `CLAW_IN` 1.5) with the Mega's shared claw animation (`pose2d`); art only, not hitboxes.
@@ -493,6 +493,19 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   otherwise reconciliation desyncs.
 
 ## Entities
+
+**Flexibility rule (user's priority): base behaviours live in the BASE and a type only switches them on** — never
+copy another entity's code. Guide: `docs/entidades/COMO_CREAR_UN_ENEMIGO.md` (every def field, trait and hook).
+Switches on the type def: `traits = { needsPound, diesWithBlock, solidFull, renderFront, wantsLevel, freezeFloats }`
+(copied onto each instance by `Entity.create`), `noises = { sound = tiles }` / `noise` (see Noise), `summons`,
+`activatable`. In the base: RESERVE minions for ANY entity (`Entity:makeReserve` + default `netAtRest/netRest`; hook
+`onMakeReserve`), stock crawler (`Crawler.mixin(Class)`: rotated boxes, surface normal, release, no fall while
+attached; `Crawler.entityAhead`), block-break deaths (`Level:forStanders`, crawlers included), and for bosses
+`Boss:enter(st)`, `Boss:zoneBounds()`, `Boss:minions(level)`, `Boss:nearestPlayer(level)`, `Boss.strike(pa, hit, dir)`
+(the Snowball Boss's, now shared) and `src/fx/BossFx.lua` (`stars` = stun stars, `anger` = anger symbols, `target` =
+landing mark; sprites in `assets/images/bosses/common/`). Asset layout: enemies `assets/images/<enemy>/`, EVERY boss
+`assets/images/bosses/<boss>/` (megacrabby and megacrabby_ice moved there), sounds `player/` (incl. the flashlight
+`light_*.wav`), `enemies/` (incl. `gloomy_*.wav`), `bosses/<boss>/`, `ambience/`...
 
 - Instance = `Entity.create(cls, placement)`; placement `{type,col,row,sub,props}`.
   `x,y` = center; hitboxes `outerW/H`, `innerW/H` from `tuning.hitbox` × sprite size.
@@ -654,7 +667,7 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   total, `patchTime` s): floor cracks blink for `FIELD_WARN` 0.45 s (no damage), then icicles sprout from the inside
   out (`FIELD_SPREAD`), one every 32 px where there is floor (`fieldSpikes`, a pure function of field + level: the client
   needs `levelRef`); touching one that is out = 1 HP + recoil (SP/server, `Boss.withPlayer`); they shatter at the end;
-  cleared on death; `unsafeAt` keeps respawns out. Art `megacrabby_ice/ice_field-Sheet.png` (3 frames 8x16: cracks,
+  cleared on death; `unsafeAt` keeps respawns out. Art `bosses/megacrabby_ice/ice_field-Sheet.png` (3 frames 8x16: cracks,
   icicle, glint; drawn rising with a quad). (3) RAGE: sharp ice shards on shell AND claws (user's
   pick: body "A: Esquirlas" + claws "B: Corona" of 4 options, `--rabia A --rabia-pinza B`; `rage_body-Sheet.png` 26x21 / `rage_claw-Sheet.png` 18x15, 2 frames
   normal/glint, from `make_icecrab_sprites.py --rabia A`: procedural tapered shards, coverage-rasterised) drawn
@@ -1008,7 +1021,7 @@ list no mode until the user places a Point Area in them).
   LIT while aiming on the floor → 'flinch' ("…"), cancelled. Phase 2 (`phase2`): faster tables. RAGE (hp ≤ `rageAt`
   0.4): 'roar' (claws up), EVERYTHING × `rageSpeed` 1.45 (`MG:pace()` → table row + multiplier: walk, charge, aim,
   cooldown, climb, dive; like the Mega Crabby's `rageSpeed`), and it SHOWS like the Mega Crabby (`MG:angry()`): slight
-  1-px tremble, soft reddish pulse, anger symbols (`MegaCrabby/anger_*.png`, `renderAnger`, drawn in `renderGlow` so
+  1-px tremble, soft reddish pulse, anger symbols (`BossFx.anger`, drawn in `renderGlow` so
   they show in the dark); 'shriek' every `shriekEvery` s (`level.lightScale` for `dimTime` s + reserve Gloomies);
   CRYSTALS grow ON THE CLAWS — never on the shell: crystals on the head look like spikes and the head is what you
   stomp. 'taunt' after an attack that hit somebody. DEATH is a crab's, not a robot's (`MG:defeat` override, no
@@ -1022,7 +1035,9 @@ list no mode until the user places a Point Area in them).
   OUTWARD. `MG:clawPose(side, now)` → out, dy, raised, frame, outward (render-only). Rage crystals = mix of options
   B "Espinas" × C "Corona" (`CLAW_CRYSTALS`): `claw_rage_left-Sheet.png` (14x12: 5 crystal rows above the claw) +
   `claw_rage_glow-Sheet.png` (their tips, drawn in `renderGlow`). All from `tools/ui/make_gloomy_sprites.py --apply
-  [--pinzas X]` (montages `pinzas` / `cristales` → `FlappyMonster_pruebas/gloomy/`).
+  [--pinzas X]` (montages `pinzas` / `cristales` → `FlappyMonster_pruebas/gloomy/`). The USER then HAND-EDITED
+  `body-Sheet.png`, `glow-Sheet.png`, `claw_left-Sheet.png` and `claw_rage_left-Sheet.png` (3.34.0): running `--apply`
+  again would overwrite their work — don't, unless they ask (then port their edits into the generator first).
   netPackExtra: phase, frame, face, mark x/y (claw: the aim point), endX, attack kind (1 charge, 2 claw, 3 pounce,
   4 dive), light scale, icon, rage, ang·100, pings {id,x,y,t,max} (protocol v46). Arena
   `tools/levelgen/arenas/jefe_lugubre.json`; real level **gruta_lugubre** "Gruta Lúgubre" / "Gloomy Grotto"
@@ -1275,7 +1290,7 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   flies `lift` px (default 32) above its placement cell; 1 full-size spike per
   broken block + 1. The hurt face has no eyes: X eyes are drawn on it (hit +
   death hold) and on the thrown dead sprites, at positions measured per sprite.
-- **MegaCrabby** (`types/megacrabby.lua`, sprites `assets/images/MegaCrabby/`, sounds
+- **MegaCrabby** (`types/megacrabby.lua`, sprites `assets/images/bosses/megacrabby/`, sounds
   `bosses/megacrabby/` from `tools/sounds/megacrabby.py`): Crabby ×2.5 (MS=10), always spiked,
   two claws (`claw_left-Sheet.png` 2×7x6 at 0.7 of the body scale, right = flipped,
   drawn IN FRONT of the body beside the legs; `CLAW_*` constants) that snap at random.
@@ -1340,7 +1355,7 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   `crawler_drop SUMMON=1`). Test arena: `tools/levelgen/arenas/jefe_cangrejo.json`.
 - **Snowball Boss** (`types/snowboss.lua`, "Gran Bola de Nieve", `boss.snowboss`; REBUILT from zero in 3.22.0
   — the old gate/bombs/burial/avalanche version was "overcomplicated"; sprites `assets/images/bosses/snowboss/`
-  from `tools/ui/make_snowboss_sprites.py` (the user's `snowball/ball.png` restyled, original outside the repo);
+  from `tools/ui/make_snowboss_sprites.py` (the user's ball drawing restyled; that original lives ONLY outside the repo, `<originals>/assets/images/snowball/ball-orig.png`);
   sounds `bosses/snowboss/` from `tools/sounds/snowboss.py`; music `winter_nes`). renderFront. NEVER hurt
   directly: only VULNERABLE states take stomp 1 / GP 2 (one hit per opening, then 'recover'):
   'dizzy' (rolling into a wall/step at ≥ `CRASH_SPD` after ≥ `CRASH_RUN` tiles since the last crash, on its

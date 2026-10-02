@@ -413,6 +413,36 @@ function cases.distraer()
          tostring(got.pufferInflate), nowhere, silent, tostring(order), (e.x - x0) / T, e.state))
 end
 
+-- BASE genérica (lo que cualquier entidad nueva hereda sin código propio):
+--   · RASGOS del tipo (`traits`): un Gummy con needsPound = true ya solo muere con ground pound
+--   · RESERVA: cualquier entidad puede ser súbdito de reserva (Entity:makeReserve), p. ej. una bomba
+--   · un trepador "de serie" (Crawler.mixin) tiene cajas giradas y normal
+function cases.base()
+    local ET = require 'src/world/entities/EntityTypes'
+    local def = ET.byName.gummy
+    def.class.def.traits = { needsPound = true }
+    local level, es, e = room(20, 9, { { type = 'gummy', col = 8, row = 8, props = { movement = 'static' } } })
+    def.class.def.traits = nil
+    step(level, es, 0.2)
+    local pa = player(level, 8, 9)
+    pa.x, pa.y, pa.vy, pa.onGround = e.x, e.y - 120, 300, false
+    local up = false
+    step(level, es, 0.6, function() if pa.vy < -200 then up = true end; return up end)
+    local trait = e.needsPound == true and e.state ~= 'dead' and up
+    local l2, es2, plain = room(20, 9, { { type = 'gummy', col = 8, row = 8, props = { movement = 'static' } } })
+    local l3, es3, bomb = room(20, 9, { { type = 'bomb', col = 8, row = 8, props = {} } })
+    bomb:makeReserve('k')
+    local reserve = not bomb.alive and bomb.state == 'reserve' and bomb:netAtRest() and bomb.summonOf == 'k' and not plain:netAtRest()
+    local l4, es4, g = room(20, 9, { gl(8, 8, { pauses = false }) })
+    step(l4, es4, 0.2)
+    g.cnx, g.cny = 1, 0
+    local b = g:getOuterBounds()
+    local nx = g:surfaceNormal()
+    check('base', trait and plain.needsPound == nil and reserve and b.w == g.outerH and nx ~= nil,
+        ('rasgo needsPound en un Gummy: rebota sin morir=%s (otro Gummy sin el rasgo: %s); bomba de reserva=%s; trepador de serie: caja girada=%s'):format(
+         tostring(trait), tostring(plain.needsPound), tostring(reserve), tostring(b.w == g.outerH)))
+end
+
 function cases.techo()
     local level, es, e = room(24, 7, { gl(8, 2, { pauses = false, attach = 'ceiling' }) })
     e.flipped = true; e:init()
@@ -482,7 +512,7 @@ end
 function love.load()
     local only = os.getenv('CASE')
     for _, n in ipairs({ 'linterna', 'luz_pared', 'estado_propio', 'oye', 'marca', 'navega', 'burla', 'busca', 'salta', 'contacto', 'huye', 'pisoton',
-                         'bloque', 'choque', 'distraer', 'techo', 'explora', 'red' }) do
+                         'bloque', 'choque', 'distraer', 'base', 'techo', 'explora', 'red' }) do
         if not only or only == n then
             local ok, err = pcall(cases[n])
             if not ok then check(n, false, 'ERROR ' .. tostring(err)) end
