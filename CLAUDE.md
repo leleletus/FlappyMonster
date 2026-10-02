@@ -275,26 +275,27 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     final — with the VRC6 saw as main lead the user still heard Tentacle's instrument —, harmonized
                     lead in chorus/final, hollow strings, pad, tri sub + slap, low comp doubling,
                     8th "pump" bass, offbeat open hats, four-on-the-floor, crashes, shimmer) + sleigh bells. FORM
-                    (188 bars, 243.9 s): Tentacle pass 1 (72) | 4-bar BRIDGE (`bridge()`: B B C# C# = the final's first two
-                    chords turned into IV–V of F#; the final's melodic cell, a rising C# arpeggio, drums emptied then a
-                    snare build + toms + riser, swelling strings, music-box arpeggio; a bare cut was "abrupt") | a NEW SECTION = winter's 1:48 melody (Smooth Synth,
-                    bars 85-116) with winter_nes's WHOLE arrangement (class `Part` wraps the song while `W.build`
-                    runs: keeps only those bars, shifted and transposed +1 → F# MAJOR: enters from the final's D#,
-                    its last chord C# is the dominant of the F# minor riff) + winter's bars 117-124 (the first pass of the
-                    CHRISTMAS MOTIF of winter's final, as the section's payoff; also ends on C#) | Tentacle pass 2
-                    (denser). The Christmas music-box motif appears TWICE, both in its own harmony and key: in the
-                    bridge (IV–IV–V–V → I are exactly the motif's chords in winter; `MOTIF_F` + 1 on the music box,
-                    a note that rubs the lead is dropped, the landing note falls on the new section's downbeat) and
-                    as that payoff. v1 put it in the gaps of Tentacle's melody (other keys, bent by fits) and the user
-                    found it forced in almost every appearance — don't graft a motif onto another song's sections;
-                    put it where its own chords already are. SECTION CHANGES must not also be instrument changes (user: entry and exit felt
+                    (164 bars, 212.8 s): Tentacle pass 1 (72) | 4-bar BRIDGE (`bridge()`: IV–IV–V–V of the new
+                    section, B♭ B♭ C C = exactly the chords of winter's CHRISTMAS MOTIF, which carries the bridge
+                    alone on the music box (`MOTIF_F`; a lead cell from Tentacle's final used to play over it: the
+                    user had it removed); drums emptied then a snare build + toms + riser, swelling strings; a bare
+                    cut was "abrupt") | a NEW SECTION = winter's 1:48 melody (Smooth Synth, bars 85-116) + the first
+                    pass of the motif from winter's final (117-124) as its payoff, with winter_nes's WHOLE arrangement
+                    (class `Part` wraps the song while `W.build` runs: keeps only those bars, shifted), UNTRANSPOSED
+                    (F major): enters from the final's D# through B♭ (its dominant) and its last chord C resolves into
+                    Tentacle's CHORUS (D minor: V → vi, same scale as the motif) | pass 2 = chorus, scales, final only
+                    (`SKIP2` 24 bars, denser). Going back to the riff after that payoff sounded like "the song
+                    restarted" and made the track a minute longer than the originals (an earlier version had the
+                    section in F# major to cadence into the F# minor riff). The motif appears only in those two places,
+                    where its own chords are: v1 put it in the gaps of Tentacle's melody (other keys, bent by fits)
+                    and the user found it forced in almost every appearance — don't graft a motif onto another song's
+                    sections. SECTION CHANGES must not also be instrument changes (user: entry and exit felt
                     strange): the winter melody is sung by the SAME voice as Tentacle's (`Part.note` adds the music box
                     + pulse to `lead3`), Tentacle's chop (on the notes of winter's pad) and tresillo kick run under the
                     whole winter section, winter's shimmer + high strings already play in the last 8 bars before the
-                    bridge and stay (fading) over the first 8 bars of the returning riff (with octave pulse/saw,
-                    four-on-the-floor, pump bass), and the section is levelled in the mix (`W_DB` −0.8, its last 4
-                    bars −1 more). Boundary jumps (MFCC, 4 bars before vs after): winter→riff 17 → 13.4, final→bridge
-                    27.6 → 24.2 (ordinary section changes: 16-31). MELODY VARIATIONS (`vary`, so it isn't
+                    bridge and stay (fading) over the first 8 bars of the chorus that follows (with octave pulse/saw),
+                    and the section is levelled in the mix (`W_DB` −0.8). Boundary jumps (MFCC, 4 bars before vs
+                    after): motif→chorus 14.4 (−1.3 dB), final→bridge 25.3 (ordinary section changes: 15-31). MELODY VARIATIONS (`vary`, so it isn't
                     tentacle_nes note for note; all derived from the melody itself): chorus = an ANSWER in the bars
                     the melody leaves empty (27, 31, 35, 39): the previous bar's phrase in sequence a diatonic third
                     down (pass 2: a sixth up), avoid notes snapped to the chord, never over an original note. The
