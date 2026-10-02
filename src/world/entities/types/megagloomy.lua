@@ -1,36 +1,43 @@
--- MEGA CRABBY LÚGUBRE (jefe de los niveles A OSCURAS). Ciego: no te ve, te OYE. Toda la pelea
--- sale de UNA regla, la misma de los Crabbies lúgubres, y se ve en pantalla:
+-- MEGA CRABBY LÚGUBRE (jefe de los niveles A OSCURAS). Ciego: no te ve, te OYE. Es de TIERRA,
+-- como los Crabbies de fuera: anda por el suelo de su arena buscándote y solo te EMBISTE si te
+-- ha detectado. Toda la pelea sale de una regla que se ve en pantalla:
 --
---     ATACA EL ÚLTIMO "!" ROJO.   (y solo se le daña alumbrándolo cuando está en el suelo)
+--     SOLO ATACA SI HAY UN "!" ROJO, Y ATACA ESE "!".   (y solo se le daña alumbrándolo cuando
+--                                                         se queda agotado tras embestir o saltar)
 --
--- Un "!" rojo (src/fx/NoiseMarks.lua) aparece donde algo hace ruido: saltar, un ground pound,
--- recibir un golpe, matar a un enemigo. ANDAR no hace ruido. Ese sitio es el que el jefe conoce.
+-- El "!" rojo (src/fx/NoiseMarks.lua) sale donde algo hace ruido: saltar, un ground pound,
+-- recibir un golpe, matar a un enemigo. ANDAR no hace ruido.
+-- ECOLOCALIZACIÓN ('ping'): cada `pingEvery` s se para, alza las pinzas y las chasquea: sale un
+-- ARO desde su cuerpo. Si el aro pasa por un jugador que SE MUEVE, lo detecta (su "!"). Quieto
+-- mientras pasa = no te encuentra.
+-- SIN "!" reciente solo ronda ('prowl'): anda hacia el último sitio que conoce y luego de un lado
+-- a otro. CON un "!" nuevo APUNTA ('aim': ojos que parpadean, su aviso, y la marca del ataque,
+-- fija desde el principio) y ataca:
+--   PINZAS    ('claw')   si el "!" está cerca (≤ CLAW_REACH): una barra corta delante → estocada
+--                        con la pinza larga de ese lado. Agachado no te da; detrás tampoco.
+--   EMBESTIDA ('charge') si está lejos: una línea por el suelo hasta la pared → corre hasta ella.
+--                        Se esquiva AGACHÁNDOSE (pasa por encima: sus patas no cuentan) o saltándolo
+--                        con doble salto. Al llegar a la pared queda AGOTADO ('tired').
+--   SALTO     ('pounce', desde la fase 2, alternando con la embestida): una diana en el suelo →
+--                        salta ahí y cae de golpe. También queda agotado.
+--   Tocarlo en un ataque = 1 de vida + empujón. Si mientras apunta le da una LINTERNA, se asusta
+--   y cancela ("…").
+-- CÓMO SE LE DAÑA: AGOTADO (`TIRED_T` s) es inmune sin luz (rebotas); alumbrado → DESLUMBRADO
+--   ('dazzled': se tapa con las pinzas): pisotón 1 / ground pound 2 (un golpe).
+-- FASE 2 (vida ≤ `phase2`): añade el salto y va más rápido.
+-- RABIA (vida ≤ `rageAt`): RUGE ('roar', pinzas en alto), le salen CRISTALES que brillan en las
+--   PINZAS (no en el lomo: ahí parecerían pinchos y es donde se le pisa; hojas claw_rage_left /
+--   claw_rage_glow), va más rápido y cada `shriekEvery` s GRITA: las linternas
+--   alcanzan la mitad `dimTime` s (level.lightScale) y llama a Crabbies lúgubres.
+-- BURLA ('taunt'): si un ataque le da a alguien, se queda un momento chasqueando las pinzas.
+-- MUERTE de cangrejo (sin explosiones): se encoge temblando ('dying_curl') y se apaga ('dying_out').
 --
--- ECOLOCALIZACIÓN (para qué son los aros): cada `pingEvery` s suelta un ARO que crece desde su
--- cuerpo (así se sabe dónde está). Si el aro pasa por un jugador que SE MUEVE, lo detecta: sale
--- un "!" encima de él. Quieto mientras pasa el aro = no te encuentra. (Un aro por vez, siempre
--- desde él: sin aros falsos.)
---
--- ATAQUES. Antes de cada uno APUNTA ('aim'): los ojos parpadean, suena su aviso y se dibuja,
--- desde el primer momento y ya fijo, DÓNDE va a dar — cada ataque con su marca:
---   CAÍDA   ('drop')   una diana en el suelo → salta ahí. Al caer queda EN EL SUELO ('grounded').
---   PATAS   ('stab')   tres líneas verticales → se coloca en el techo y clava tres patas, una
---                      tras otra, de arriba abajo. Refugio: cualquier sitio entre las líneas.
---   EMBESTIDA ('lunge', fase 2+)   una línea horizontal a la altura del "!" → se pone en una
---                      pared a esa altura y cruza la arena hasta la otra. Se salta o se agacha.
---   Tocarlo en cualquier ataque = 1 de vida + empujón. Van siempre en el mismo orden (SEQ).
---   Si mientras apunta le da una LINTERNA, se asusta y cancela el ataque ("…").
--- CÓMO SE LE DAÑA: tras la CAÍDA se queda en el suelo `GROUND_T` s. Sin luz es inmune (rebotas).
---   Alumbrado ahí → DESLUMBRADO ('dazzled', se encoge): pisotón 1 / ground pound 2 (un golpe).
--- FASE 2 (vida ≤ 66 %): añade la embestida y va más rápido.
--- FASE 3 (≤ 33 %): GRITO ('shriek', cada `shriekEvery` s): las linternas alcanzan la mitad
---   `dimTime` s (level.lightScale) y llama a Crabbies lúgubres por las paredes.
--- BURLA ('taunt'): si un ataque le da a alguien, luego se queda un momento haciendo flexiones.
--- MUERTE (es un cangrejo, no un robot: nada de explosiones): cae, se encoge temblando
---   ('dying_curl'), se queda patas arriba y sus luces se apagan ('dying_out').
---
--- Posición = el centro de su CAPARAZÓN (su caja: el cuerpo que se ve; las patas no cuentan).
--- Todo lo que se dibuja sale de state + deadTimer + x, y + netPackExtra (igual online).
+-- PINZAS: largas y afiladas, en hoz (las de los otros Megas son robustas); en reposo miran hacia
+-- DENTRO ("C Ↄ"); en una hoja aparte
+-- (claw_left-Sheet: abierta / cerrada; la derecha es su espejo) y con su pose en cada momento
+-- (MG:clawPose: alzadas al rugir y en la ecolocalización, atrás al apuntar, estocada, caídas,
+-- tapándose...). Solo dibujo: sale de state + deadTimer.
+-- Posición = el centro de su CAPARAZÓN (su caja: lo que se ve; las patas no cuentan).
 -- Arte: assets/images/bosses/megagloomy/ (el MISMO píxel que el pequeño, a escala 10; tools/ui/
 -- make_gloomy_sprites.py); sonidos: tools/sounds/gloomy.py (MEGA).
 
@@ -44,9 +51,10 @@ local strike      = require('src/world/entities/types/snowboss').class.strike
 local T = TILE_PX
 local MS = 10                              -- escala (el pequeño: 4)
 local FW, FH = 38, 21                      -- cuadro (px de arte)
-local BODY_ROW = 11                        -- fila del centro del CAPARAZÓN en el cuadro (las pinzas van encima)
+local BODY_ROW = 11                        -- fila del centro del CAPARAZÓN en el cuadro
 local BW, BH = 11 * MS, 6 * MS             -- caja: el caparazón
-local REST = (FH - BODY_ROW) * MS          -- del centro del caparazón a la superficie en la que se apoya
+local REST = (FH - BODY_ROW) * MS          -- del centro del caparazón al suelo
+local CLAW_W, CLAW_H = 14, 7               -- cuadro de la pinza
 local F_IDLE, F_CROUCH, F_LEAP, F_SCARED, F_DEAD = 5, 6, 7, 8, 9
 
 local MG = Entity.extend(Boss, {
@@ -54,60 +62,60 @@ local MG = Entity.extend(Boss, {
     hitbox = { outerW = 1, outerH = 1, innerW = 0.9, innerH = 0.9 },
 })
 MG.hurtSound   = 'mgloomyHurt'
-MG.introLength = 3.2
+MG.introLength = 3.4
 MG.wantsLevel  = true
 
--- Orden de los ataques por fase (siempre el mismo: se aprende)
-local SEQ = { { 'drop', 'stab' }, { 'drop', 'lunge', 'stab' }, { 'drop', 'stab', 'lunge' } }
-local KIND = { drop = 1, stab = 2, lunge = 3 }
--- Ritmo por fase
-local SPEED      = { 260, 320, 380 }       -- px/s por el borde de la zona
-local STALK_T    = { 2.4, 2.0, 1.6 }       -- s rondando entre ataques
-local AIM_T      = { 1.0, 0.85, 0.7 }      -- s apuntando (con la marca puesta) como mínimo
-local AIM_MAX    = 2.6                     -- … y como máximo (si tiene que colocarse)
-local GROUND_T   = { 2.2, 1.9, 1.6 }       -- s en el suelo tras la caída (hay que alumbrarlo aquí)
-local JUMP_T     = 0.7
-local LUNGE_T    = 0.75
-local CLIMB_T    = 0.5
+local KIND = { charge = 1, claw = 2, pounce = 3 }
+-- Ritmo por fase (1, 2, rabia)
+local WALK       = { 95, 115, 140 }        -- px/s rondando
+local CHARGE     = { 640, 730, 820 }       -- px/s embistiendo
+local AIM_T      = { 0.9, 0.8, 0.65 }      -- s apuntando (con la marca puesta)
+local TIRED_T    = { 2.3, 2.0, 1.7 }       -- s agotado (hay que alumbrarlo aquí)
+local ATTACK_CD  = { 1.3, 1.0, 0.7 }       -- s entre ataques
+local FRESH      = 4.0                     -- s que un "!" sirve para atacar
+local CLAW_REACH = 4.2 * T                 -- alcance de la estocada (y distancia para elegirla)
+local CLAW_T     = 0.4                     -- s de la estocada (daña los primeros 0.22)
+local JUMP_T     = 0.8
+local PING_T     = 0.6                     -- s de la pose de la ecolocalización (el aro sale a los 0.2)
+local ROAR_T     = 1.4
 local DAZZLE_T   = 2.6
 local FLINCH_T   = 0.6
 local TAUNT_T    = 0.9
-local STAB_GAP   = 0.24                    -- s entre pata y pata
-local STAB_HIT   = 0.2                     -- s que cada pata hace daño
-local STAB_DX    = 1.6 * T                 -- separación de las tres
-local STAB_W     = 36                      -- ancho de la zona de daño de cada pata
 local CURL_T, OUT_T = 1.5, 1.8             -- muerte
 local HEAR_K     = 4                       -- oído: × el radio de cada ruido (oye toda la arena)
 local RING_SPD   = 560                     -- px/s a los que crece el aro
 local RING_MAX   = 9 * T
 local STILL_SPD  = 30
+local EDGE       = BW / 2 + 70             -- hasta dónde se acerca a las paredes
 local HIT_AIR    = { 1, 620, -460, 0.25, 0 }
 local HIT_SLAM   = { 1, 900, -560, 0.3, 0.3 }
 local GLOW       = { 1, 0.77, 0.35 }
 local RING       = { 0.55, 0.95, 1 }
 local WARN       = { 1, 0.28, 0.2 }
+local CLAW_DY    = 2                        -- unión de las pinzas, en px de arte bajo el centro (bajas: salen de debajo del caparazón)
+local CRYS       = { 0.85, 0.66, 1 }        -- cristales de la rabia
 
-local body, glow, markS, icons, legImg, tipImg
+local body, glow, clawS, clawR, clawRG, markS, icons
 function MG.loadAssets()
     if body then return end
-    body  = SpriteStrip.load('assets/images/bosses/megagloomy/body-Sheet.png', FW)
-    glow  = SpriteStrip.load('assets/images/bosses/megagloomy/glow-Sheet.png', FW)
+    local D = 'assets/images/bosses/megagloomy/'
+    body  = SpriteStrip.load(D .. 'body-Sheet.png', FW)
+    glow  = SpriteStrip.load(D .. 'glow-Sheet.png', FW)
+    clawS = SpriteStrip.load(D .. 'claw_left-Sheet.png', CLAW_W)
+    clawR = SpriteStrip.load(D .. 'claw_rage_left-Sheet.png', CLAW_W)        -- (rabia: con cristales en el dorso)
+    clawRG = SpriteStrip.load(D .. 'claw_rage_glow-Sheet.png', CLAW_W)       -- (… y sus puntas, que brillan a oscuras)
     markS = SpriteStrip.load('assets/images/bosses/megagummy/target-Sheet.png', 16)
     icons = SpriteStrip.load('assets/images/gloomy/icons-Sheet.png', 7)
-    legImg = love.graphics.newImage('assets/images/bosses/megagloomy/leg.png')
-    tipImg = love.graphics.newImage('assets/images/bosses/megagloomy/leg_tip.png')
-    for _, i in ipairs({ legImg, tipImg }) do if i.setFilter then i:setFilter('nearest', 'nearest') end end
 end
 function MG.sizePx() return BW, BH end
 
 function MG:initBoss()
-    self.phase = 1
-    self.ang = 0
-    self.u, self.dir = 0, 1
+    self.phase, self.rage = 1, false
+    self.face, self.dir = 1, 1
     self.pings, self.nextPing = {}, 0
-    self.pingT, self.stalkT, self.shriekT, self.dimT = 0, 0, 0, 0
+    self.pingT, self.cdT, self.shriekT, self.dimT, self.flinchCd = 0, 0, 0, 0, 0
     self.tx, self.ty, self.tAge = nil, nil, 99
-    self.markX, self.markY, self.lockY, self.kind = 0, 0, 0, 0
+    self.markX, self.markY, self.endX, self.kind = 0, 0, 0, 0
     self.hitOnce, self.gloat = false, false
     self.attackN = 0
     self.frame, self.animT = 1, 0
@@ -123,60 +131,16 @@ function MG:zoneBounds()
     return self.x - 12 * T, self.x + 12 * T, self.y - 8 * T, self.y + 2 * T
 end
 
--- ── El camino por el borde de la zona: pared izquierda ↑, techo →, pared derecha ↓ ───────
-function MG:path(u)
-    local zx0, zx1, zy0, zy1 = self:zoneBounds()
-    local x0, x1, y0, y1 = zx0 + REST, zx1 - REST, zy0 + REST, zy1 - REST
-    local h, w = math.max(1, y1 - y0), math.max(1, x1 - x0)
-    local total = 2 * h + w
-    u = math.max(0, math.min(total, u))
-    local C = 90                                           -- px de camino en los que gira en cada esquina
-    local function turn(d) return math.max(0, math.min(1, 0.5 + d / (2 * C))) end
-    if u <= h then
-        return x0, y1 - u, math.pi / 2 + (math.pi / 2) * turn(u - h) * ((u > h - C) and 1 or 0), total
-    elseif u <= h + w then
-        local v = u - h
-        local a = math.pi
-        if v < C then a = math.pi / 2 + (math.pi / 2) * turn(v) end
-        if v > w - C then a = math.pi + (math.pi / 2) * turn(v - w) end
-        return x0 + v, y0, a, total
-    end
-    local v = u - h - w
-    local a = 1.5 * math.pi
-    if v < C then a = math.pi + (math.pi / 2) * turn(v) end
-    return x1, y0 + v, a, total
-end
-
-function MG:nearestU(x, y)
-    local _, _, _, total = self:path(0)
-    local best, bd = 0, nil
-    for u = 0, total, 16 do
-        local px, py = self:path(u)
-        local d = (px - x) ^ 2 + (py - y) ^ 2
-        if not bd or d < bd then best, bd = u, d end
-    end
-    return best
-end
-
--- Anda por el borde hacia `goal` (px de camino). true si ya está
-function MG:walkTo(goal, dt, speed)
-    local d = goal - self.u
-    if math.abs(d) <= speed * dt then
-        self.u = goal
-        self.x, self.y, self.ang = self:path(self.u)
-        return true
-    end
-    self.dir = (d > 0) and 1 or -1
-    self.u = self.u + self.dir * speed * dt
-    self.x, self.y, self.ang = self:path(self.u)
-    self:walkAnim(dt)
-    return false
-end
-
 function MG:floorY(level, x)
     local _, _, zy0, zy1 = self:zoneBounds()
-    local _, top = level:landingCross(x, zy0 + T, zy1 + T)
+    local _, top = level:landingCross(x, zy1 - T + 2, zy1 + T)       -- (el suelo de la zona, no una plataforma)
     return top or zy1
+end
+-- De pie en el suelo, en x (dentro de la zona)
+function MG:stand(level, x)
+    local zx0, zx1 = self:zoneBounds()
+    self.x = math.max(zx0 + EDGE, math.min(zx1 - EDGE, x))
+    self.y = self:floorY(level, self.x) - REST
 end
 
 -- ── Sentidos: el último "!" ──────────────────────────────────────────────────
@@ -264,9 +228,11 @@ function MG:hitBox(level, box, hit, cx)
     end
 end
 
+-- Su cuerpo en un ataque (embestida, salto): el caparazón con un margen. Las patas no: agachado
+-- se pasa por debajo
 function MG:touch(level)
     local ob = self:getOuterBounds()
-    self:hitBox(level, { x = ob.x - 14, y = ob.y - 14, w = ob.w + 28, h = ob.h + 28 }, HIT_AIR, self.x)
+    self:hitBox(level, { x = ob.x - 30, y = ob.y - 12, w = ob.w + 60, h = ob.h + 20 }, HIT_AIR, self.x)
 end
 
 function MG:slam(level)
@@ -278,12 +244,10 @@ function MG:slam(level)
     self:hitBox(level, { x = self.x - BW / 2 - 50, y = self.y - BH / 2, w = BW + 100, h = REST + BH / 2 + 8 }, HIT_SLAM, self.x)
 end
 
--- Las tres patas: x de cada una (función pura de la marca: igual en el cliente)
-function MG:stabXs()
-    local zx0, zx1 = self:zoneBounds()
-    local out = {}
-    for i = -1, 1 do out[#out + 1] = math.max(zx0 + 24, math.min(zx1 - 24, self.markX + i * STAB_DX)) end
-    return out
+-- Zona de la estocada: delante, a la altura de las pinzas (agachado no te da)
+function MG:clawBox()
+    local x0 = (self.face > 0) and self.x or (self.x - CLAW_REACH)
+    return { x = x0, y = self.y - 20, w = CLAW_REACH, h = 68 }       -- (baja la pinza: de pie te da; agachado, no)
 end
 
 -- ── Reglas con el jugador (sin efectos: el cliente predice el rebote) ────────
@@ -291,12 +255,11 @@ local DEATH = { dying_curl = true, dying_out = true }
 function MG:isDying() return DEATH[self.state] == true or Boss.isDying(self) end
 function MG:releasesZone() return self.state == 'dying_out' or self.state == 'dead' end
 function MG:isVulnerable() return self.state == 'dazzled' and not self.hitOnce end
-function MG:isSolidBody()
-    return Boss.isSolidBody(self) and (self.state == 'grounded' or self.state == 'dazzled')
-end
+local SOLID = { prowl = true, ping = true, tired = true, dazzled = true, aim = true, flinch = true, taunt = true, recover = true }
+function MG:isSolidBody() return Boss.isSolidBody(self) and SOLID[self.state] == true end
 function MG:interact(pa)
     local st = self.state
-    if st ~= 'grounded' and st ~= 'dazzled' and st ~= 'recover' then return nil end   -- (en paredes / aire: touch)
+    if st == 'charge' or st == 'pounce' or st == 'claw' or st == 'roar' or st == 'shriek' then return nil end   -- (touch / nada)
     return Boss.interact(self, pa)
 end
 function MG:onDamaged(n, kind)
@@ -310,103 +273,86 @@ function MG:defeat()
     self.vx, self.vy = 0, 0
     self.pings, self.dimT, self.icon, self.kind = {}, 0, 0, 0
     local level = self.levelRef
-    if level then level.lightScale = nil end
+    if level then
+        level.lightScale = nil
+        self.dieY0, self.dieY1 = self.y, self:floorY(level, self.x) - REST
+    else
+        self.dieY0, self.dieY1 = self.y, self.y
+    end
     for _, e in ipairs(level and self:minions(level) or {}) do
         if e.alive and e.state ~= 'dead' then e.state, e.deadTimer, e.vx, e.vy = 'dead', 0, 0, 0 end
     end
-    -- (si estaba en una pared o en el techo, cae al suelo)
-    local _, _, _, zy1 = self:zoneBounds()
-    local fy = level and self:floorY(level, self.x) or zy1
-    self.dieY0, self.dieY1, self.dieA0, self.dieLanded = self.y, fy - REST, self.ang, false
+    self.dieLanded = false
     self:enter('dying_curl')
     Sound.play('mgloomyDazzled', 0.7)
     self:onDefeat()
 end
 
--- ── Saltos (paramétricos: van de un punto suyo a otro) ───────────────────────
-function MG:jump(tx, ty, dur, ang1, flat)
-    self.jx0, self.jy0, self.jx1, self.jy1 = self.x, self.y, tx, ty
-    self.jDur, self.jFlat = dur, flat
-    self.jAng0, self.jAng1 = self.ang, ang1
-end
-function MG:jumpStep(t)
-    local k = math.min(1, t / self.jDur)
-    self.x = self.jx0 + (self.jx1 - self.jx0) * k
-    if self.jFlat then
-        self.y = self.jy0 + (self.jy1 - self.jy0) * k
-    else
-        local arc = math.sin(k * math.pi) * math.min(140, math.abs(self.jx1 - self.jx0) * 0.25 + 40)
-        self.y = self.jy0 + (self.jy1 - self.jy0) * (k * k) - arc * (1 - k)
-    end
-    local da = (self.jAng1 - self.jAng0 + math.pi) % (2 * math.pi) - math.pi
-    self.ang = self.jAng0 + da * k
-    return k >= 1
-end
-
--- ── Update ───────────────────────────────────────────────────────────────────
+-- ── Entrada: cae de la oscuridad del techo, aterriza y RUGE ──────────────────
 function MG:onFightStart()
-    self.u = self:nearestU(self.x, self.y)
-    self.x, self.y, self.ang = self:path(self.u)
-    self.stalkT, self.pingT = 0, 1.2
+    self.pingT, self.cdT = 1.2, 1.0
 end
-
 function MG:onIntroStart(level)
-    local zx0, zx1 = self:zoneBounds()
-    self.u = self:nearestU((zx0 + zx1) / 2, -1e9)             -- en el techo, en el centro
-    self.x, self.y, self.ang = self:path(self.u)
+    local zx0, zx1, zy0 = self:zoneBounds()
+    self:stand(level, (zx0 + zx1) / 2)
+    self.introY1, self.introY0 = self.y, zy0 - 3 * T
+    self.y = self.introY0
     self.introStep = 0
 end
 function MG:updateIntro(dt, level, t)
     self:updatePings(nil, dt)
-    if t >= 0.9 and self.introStep < 1 then self.introStep = 1; self:ping(); self.pings[#self.pings].hit = nil end
-    if t >= 1.8 and self.introStep < 2 then
+    local k = math.max(0, math.min(1, (t - 0.3) / 0.6))
+    self.y = self.introY0 + (self.introY1 - self.introY0) * k * k
+    if k >= 1 and self.introStep < 1 then
+        self.introStep = 1
+        Sound.play('mgloomySlam')
+        Entity.emitFx('gp_land', self.x, self.y + REST)
+        Entity.emitFx('shake_big', self.x, self.y)
+    end
+    if t >= 1.5 and self.introStep < 2 then
         self.introStep = 2
         Sound.play('mgloomyRoar')
-        Entity.emitFx('shake_small', self.x, self.y)
+        Entity.emitFx('shake_roar', self.x, self.y)
     end
 end
 
-function MG:walkAnim(dt)
+function MG:walkAnim(dt, fast)
     self.animT = self.animT + dt
-    if self.animT >= 0.09 then
-        self.animT = self.animT - 0.09
+    local step = fast and 0.05 or 0.11
+    if self.animT >= step then
+        self.animT = self.animT - step
         self.frame = self.frame % 4 + 1
         -- (un roce de vez en cuando, no cada paso: el silencio es la tensión)
         self.stepN = (self.stepN or 0) + 1
-        if self.stepN % 8 == 0 then Sound.play('mgloomyStep') end
+        if self.stepN % (fast and 3 or 8) == 0 then Sound.play('mgloomyStep') end
     end
 end
 
 -- Vuelve a rondar (o se burla, si acaba de darle a alguien)
 function MG:afterAttack()
     self.kind = 0
-    if self.gloat then self.gloat = false; self:enter('taunt') else self:enter('stalk') end
+    local ph = self.rage and 3 or self.phase
+    self.cdT = ATTACK_CD[ph]
+    if self.gloat then self.gloat = false; self:enter('taunt') else self:enter('prowl') end
 end
 
+-- Apunta al último "!": elige el ataque y pone su marca (fija)
 function MG:startAim(level)
-    local ph = math.max(1, math.min(3, self.phase))
-    local seq = SEQ[ph]
-    self.attackN = self.attackN + 1
-    local kind = seq[(self.attackN - 1) % #seq + 1]
-    local zx0, zx1, zy0, zy1 = self:zoneBounds()
-    -- FIJA el objetivo: el último "!" (si no ha oído nada, el centro de la arena)
-    local tx = self.tx or (zx0 + zx1) / 2
-    local ty = self.ty or (zy1 - 40)
-    tx = math.max(zx0 + BW / 2 + 12, math.min(zx1 - BW / 2 - 12, tx))
+    local zx0, zx1 = self:zoneBounds()
+    local tx = math.max(zx0 + EDGE, math.min(zx1 - EDGE, self.tx))
+    self.face = (self.tx >= self.x) and 1 or -1
     self.markX, self.markY = math.floor(tx), math.floor(self:floorY(level, tx))
-    self.lockY = math.floor(math.max(zy0 + REST, math.min(zy1 - REST, ty - 10)))
-    self.kind = KIND[kind]
-    self.aimGoal = nil
-    if kind == 'stab' then
-        self.aimGoal = self:nearestU(self.markX, -1e9)                       -- en el techo, encima
-    elseif kind == 'lunge' then
-        local left = self.x < (zx0 + zx1) / 2
-        self.aimGoal = self:nearestU(left and -1e9 or 1e9, self.lockY)       -- en su pared, a esa altura
-        local _, gy = self:path(self.aimGoal)
-        self.lockY = math.floor(gy)                                          -- (la línea, justo por donde va a cruzar)
+    local kind
+    if math.abs(self.tx - self.x) <= CLAW_REACH then
+        kind = 'claw'
+    else
+        self.attackN = self.attackN + 1
+        kind = (self.phase >= 2 and self.attackN % 2 == 0) and 'pounce' or 'charge'
     end
-    self.aimed = self.aimGoal == nil
+    self.kind = KIND[kind]
+    self.endX = math.floor((self.face > 0) and (zx1 - EDGE) or (zx0 + EDGE))      -- (la embestida llega hasta la pared)
     self.gloat = false
+    self.tAge = FRESH + 1                                   -- (ese "!" ya está gastado: hace falta otro)
     self:enter('aim')
     Sound.play('mgloomyListen')
 end
@@ -416,19 +362,17 @@ function MG:updateBoss(dt, level)
     self.levelRef = self.levelRef or level
     self.deadTimer = self.deadTimer + dt
     local st, t = self.state, self.deadTimer
-    local ph = math.max(1, math.min(3, self.phase))
     local p = self.props
 
-    -- Muerte: cae al suelo encogiéndose y se apaga
     if st == 'dying_curl' then
-        local k = math.min(1, t / 0.5)
+        local k = math.min(1, t / 0.4)
         self.y = self.dieY0 + (self.dieY1 - self.dieY0) * k * k
-        local da = (0 - self.dieA0 + math.pi) % (2 * math.pi) - math.pi
-        self.ang = self.dieA0 + da * k
         if k >= 1 and not self.dieLanded then
             self.dieLanded = true
-            Sound.play('mgloomySlam', 0.8)
-            Entity.emitFx('gp_land', self.x, self.y + REST)
+            if math.abs(self.dieY1 - self.dieY0) > 20 then
+                Sound.play('mgloomySlam', 0.8)
+                Entity.emitFx('gp_land', self.x, self.y + REST)
+            end
             Entity.emitFx('shake_small', self.x, self.y)
         end
         if t >= CURL_T then self:enter('dying_out') end
@@ -444,140 +388,65 @@ function MG:updateBoss(dt, level)
         self.iconT = self.iconT - dt
         if self.iconT <= 0 then self.icon = 0 end
     end
-    local frac = self.hp / math.max(1, self.hpMax)
-    local want = (frac <= (p.phase3 or 0.33)) and 3 or ((frac <= (p.phase2 or 0.66)) and 2 or 1)
-    if want > self.phase then self.phase = want end
+    if self.cdT > 0 then self.cdT = self.cdT - dt end
+    if self.flinchCd > 0 then self.flinchCd = self.flinchCd - dt end
     if self.dimT > 0 then
         self.dimT = self.dimT - dt
         if self.dimT <= 0 then level.lightScale = nil end
     end
+    local frac = self.hp / math.max(1, self.hpMax)
+    if self.phase < 2 and frac <= (p.phase2 or 0.66) then self.phase = 2 end
+    local ph = self.rage and 3 or self.phase
+    local zx0, zx1 = self:zoneBounds()
 
-    if st == 'fight' then self:enter('stalk'); return end
+    if st == 'fight' then self:stand(level, self.x); self:enter('prowl'); return end
 
-    if st == 'stalk' then
-        self.stalkT = self.stalkT + dt
+    if st == 'prowl' then
+        -- RABIA: la primera vez que baja de rageAt, ruge y le salen los cristales
+        if not self.rage and frac <= (p.rageAt or 0.4) then
+            self.rage, self.phase = true, 3
+            self:enter('roar')
+            Sound.play('mgloomyRoar')
+            Entity.emitFx('shake_roar', self.x, self.y)
+            return
+        end
+        if self.rage then self.shriekT = self.shriekT + dt end
         self.pingT = self.pingT + dt
-        if self.phase >= 3 then self.shriekT = self.shriekT + dt end
-        if self.pingT >= (p.pingEvery or 2.4) then self.pingT = 0; self:ping() end
-        -- ronda hacia el punto del borde que queda encima del último "!"
-        local _, _, _, total = self:path(0)
-        if self.tx and self.tAge < 8 then
-            self:walkTo(self:nearestU(self.tx, self.ty - 4 * T), dt, SPEED[ph])
-        else
-            self.u = self.u + self.dir * SPEED[ph] * 0.6 * dt
-            if self.u <= 0 then self.u, self.dir = 0, 1 elseif self.u >= total then self.u, self.dir = total, -1 end
-            self.x, self.y, self.ang = self:path(self.u)
-            self:walkAnim(dt)
-        end
-        if self.phase >= 3 and self.shriekT >= (p.shriekEvery or 13) then
-            self.shriekT = 0
-            self:enter('shriek')
-            Sound.play('mgloomyShriek')
-        elseif self.stalkT >= STALK_T[ph] then
-            self.stalkT = 0
-            self:startAim(level)
-        end
-
-    elseif st == 'aim' then
-        if self:lit(level) and t > 0.1 then                 -- la luz lo asusta: cancela
-            self.icon, self.iconT, self.kind = 3, 1.4, 0
-            self.attackN = self.attackN - 1                 -- (repetirá este mismo ataque)
+        -- la luz lo asusta un momento
+        if self.flinchCd <= 0 and self:lit(level) then
+            self.flinchCd = 2.5
             self:enter('flinch')
             return
         end
-        if not self.aimed then self.aimed = self:walkTo(self.aimGoal, dt, SPEED[ph] * 1.6) end
-        if (self.aimed and t >= AIM_T[ph]) or t >= AIM_MAX then
-            if not self.aimed then                          -- (no llegó: se coloca de un salto)
-                self.u = self.aimGoal
-                self.x, self.y, self.ang = self:path(self.u)
-            end
-            local zx0, zx1 = self:zoneBounds()
-            if self.kind == KIND.drop then
-                self:jump(self.markX, self.markY - REST, JUMP_T, 0)
-                self:enter('drop')
-                Sound.play('mgloomyDrop')
-            elseif self.kind == KIND.stab then
-                self.stabDone = 0
-                self:enter('stab')
-            else
-                local left = self.x < (zx0 + zx1) / 2
-                self:jump(left and (zx1 - REST) or (zx0 + REST), self.y, LUNGE_T, left and 1.5 * math.pi or math.pi / 2, true)
-                self:enter('lunge')
-                Sound.play('mgloomyDrop')
-            end
+        -- un "!" reciente: a por él
+        if self.tx and self.tAge <= FRESH and self.cdT <= 0 then
+            self:startAim(level)
+            return
         end
-
-    elseif st == 'flinch' then
-        if t >= FLINCH_T then self.stalkT = STALK_T[ph] * 0.3; self:enter('stalk') end
-
-    elseif st == 'drop' then
-        local done = self:jumpStep(t)
-        self:touch(level)
-        if done then
-            self.ang = 0
-            self:slam(level)
-            self.hitOnce, self.kind = false, 0
-            self:enter('grounded')
+        if self.rage and self.shriekT >= (p.shriekEvery or 13) then
+            self.shriekT = 0
+            self:enter('shriek')
+            Sound.play('mgloomyShriek')
+            return
         end
-
-    elseif st == 'lunge' then
-        local done = self:jumpStep(t)
-        self:touch(level)
-        if done then
-            self.u = self:nearestU(self.x, self.y)
-            self.x, self.y, self.ang = self:path(self.u)
-            self:afterAttack()
+        if self.pingT >= (p.pingEvery or 2.4) then
+            self.pingT = 0
+            self:enter('ping')
+            return
         end
+        -- ronda: de un lado a otro de su arena, buscando
+        local nx = self.x + self.dir * WALK[ph] * dt
+        if nx <= zx0 + EDGE then nx, self.dir = zx0 + EDGE, 1 elseif nx >= zx1 - EDGE then nx, self.dir = zx1 - EDGE, -1 end
+        self.face = self.dir
+        self:stand(level, nx)
+        self:walkAnim(dt)
 
-    elseif st == 'stab' then
-        -- tres patas, una tras otra; cada una daña STAB_HIT s en su columna
-        local xs = self:stabXs()
-        for i, x in ipairs(xs) do
-            local t0 = (i - 1) * STAB_GAP
-            if t >= t0 and self.stabDone < i then
-                self.stabDone = i
-                Sound.play('mgloomyStep', 0.7)
-                Entity.emitFx('shake_small', x, self.markY)
-                Entity.emitFx('gp_land', x, self.markY)
-            end
-            if t >= t0 and t < t0 + STAB_HIT then
-                self:hitBox(level, { x = x - STAB_W / 2, y = self.y, w = STAB_W, h = self.markY - self.y }, HIT_AIR, x)
-            end
-        end
-        if t >= 2 * STAB_GAP + STAB_HIT + 0.35 then self:afterAttack() end
+    elseif st == 'ping' then
+        if t >= 0.2 and not self.pinged then self.pinged = true; self:ping() end
+        if t >= PING_T then self.pinged = nil; self:enter('prowl') end
 
-    elseif st == 'grounded' then
-        if self:lit(level) then
-            Sound.play('mgloomyDazzled')
-            self:enter('dazzled')
-        elseif t >= GROUND_T[ph] then
-            self:enter('climb_wind')
-        end
-
-    elseif st == 'dazzled' then
-        if t >= DAZZLE_T then self:enter('climb_wind') end
-
-    elseif st == 'recover' then
-        if t >= 0.5 then self:enter('climb_wind') end
-
-    elseif st == 'climb_wind' then
-        if t >= 0.2 then
-            local u = self:nearestU(self.x, self.y - 3 * T)
-            local tx, ty, ang = self:path(u)
-            self.u = u
-            self:jump(tx, ty, CLIMB_T, ang)
-            self:enter('climb')
-            Sound.play('mgloomyDrop', 1.3)
-        end
-
-    elseif st == 'climb' then
-        if self:jumpStep(t) then
-            self.x, self.y, self.ang = self:path(self.u)
-            self:afterAttack()
-        end
-
-    elseif st == 'taunt' then
-        if t >= TAUNT_T then self:enter('stalk') end
+    elseif st == 'roar' then
+        if t >= ROAR_T then self:enter('prowl') end
 
     elseif st == 'shriek' then
         if t >= 0.5 and self.dimT <= 0 then
@@ -586,17 +455,90 @@ function MG:updateBoss(dt, level)
             self:summon(level)
             Entity.emitFx('shake_roar', self.x, self.y)
         end
-        if t >= 1.1 then self:enter('stalk') end
+        if t >= ROAR_T then self:enter('prowl') end
+
+    elseif st == 'aim' then
+        if self:lit(level) and t > 0.1 then                 -- la luz lo asusta: cancela
+            self.icon, self.iconT, self.kind = 3, 1.4, 0
+            self.cdT = 0.8
+            self:enter('flinch')
+            return
+        end
+        if t >= AIM_T[ph] then
+            if self.kind == KIND.claw then
+                self:enter('claw')
+                Sound.play('megaClack', 1.3)
+            elseif self.kind == KIND.charge then
+                self:enter('charge')
+                Sound.play('mgloomyDrop')
+            else
+                self.jx0, self.jy0 = self.x, self.y
+                self:enter('pounce')
+                Sound.play('mgloomyDrop')
+            end
+        end
+
+    elseif st == 'flinch' then
+        if t >= FLINCH_T then self:enter('prowl') end
+
+    elseif st == 'claw' then
+        if t <= 0.22 then self:hitBox(level, self:clawBox(), HIT_AIR, self.x) end
+        if t >= CLAW_T + 0.35 then self:afterAttack() end
+
+    elseif st == 'charge' then
+        local nx = self.x + self.face * CHARGE[ph] * dt
+        local done = (self.face > 0 and nx >= self.endX) or (self.face < 0 and nx <= self.endX)
+        if done then nx = self.endX end
+        self:stand(level, nx)
+        self:walkAnim(dt, true)
+        self:touch(level)
+        if done then
+            Sound.play('mgloomySlam', 1.2)
+            Entity.emitFx('shake_small', self.x, self.y)
+            self.hitOnce, self.kind = false, 0
+            self:enter('tired')
+        end
+
+    elseif st == 'pounce' then
+        local k = math.min(1, t / JUMP_T)
+        local y1 = self.markY - REST
+        self.x = self.jx0 + (self.markX - self.jx0) * k
+        self.y = self.jy0 + (y1 - self.jy0) * k - math.sin(k * math.pi) * 300
+        self:touch(level)
+        if k >= 1 then
+            self.x, self.y = self.markX, y1
+            self:slam(level)
+            self.hitOnce, self.kind = false, 0
+            self:enter('tired')
+        end
+
+    elseif st == 'tired' then
+        if self:lit(level) then
+            Sound.play('mgloomyDazzled')
+            self:enter('dazzled')
+        elseif t >= TIRED_T[ph] then
+            self:afterAttack()
+        end
+
+    elseif st == 'dazzled' then
+        if t >= DAZZLE_T then self:afterAttack() end
+
+    elseif st == 'recover' then
+        if t >= 0.6 then self:afterAttack() end
+
+    elseif st == 'taunt' then
+        if t >= TAUNT_T then self:enter('prowl') end
     end
 end
 
 -- ── Red ──────────────────────────────────────────────────────────────────────
--- { fase, ángulo·100, cuadro, marca x, y, altura de la embestida, ataque (0 ninguno, 1 caída,
---   2 patas, 3 embestida), luz·100 (0 = normal), icono, nAros, {id, x, y, t·100}… }
-local NB = 9
+-- { fase, cuadro, hacia dónde mira, marca x, y, fin de la embestida, ataque (0 ninguno, 1 embestida,
+--   2 pinzas, 3 salto), luz·100 (0 = normal), icono, rabia, nAros, {id, x, y, t·100}… }
+local NB = 10
 function MG:netPackExtra()
-    local out = { self.phase, math.floor(self.ang * 100), self.frame, self.markX, self.markY, self.lockY, self.kind,
-                  (self.dimT > 0) and math.floor((self.props.dimScale or 0.5) * 100) or 0, self.icon or 0, #self.pings }
+    local out = { self.phase, self.frame, self.face, self.markX, self.markY, self.endX, self.kind,
+                  (self.dimT > 0) and math.floor((self.props.dimScale or 0.5) * 100) or 0, self.icon or 0,
+                  self.rage and 1 or 0, #self.pings }
     for _, p in ipairs(self.pings) do
         out[#out + 1] = p.id; out[#out + 1] = p.x; out[#out + 1] = p.y; out[#out + 1] = math.floor(p.t * 100)
     end
@@ -604,13 +546,11 @@ function MG:netPackExtra()
 end
 function MG:netApplyExtra(a, b, f)
     if type(b[1]) ~= 'number' then return end
-    self.phase, self.frame, self.markX, self.markY, self.lockY, self.kind = b[1], b[3], b[4], b[5], b[6], b[7]
-    local a0, a1 = (type(a[2]) == 'number' and a[2] or b[2]) / 100, b[2] / 100
-    local da = (a1 - a0 + math.pi) % (2 * math.pi) - math.pi
-    self.ang = a0 + da * f
+    self.phase, self.frame, self.face, self.markX, self.markY, self.endX, self.kind = b[1], b[2], b[3], b[4], b[5], b[6], b[7]
     if self.levelRef then self.levelRef.lightScale = (b[8] > 0) and (b[8] / 100) or nil end
     self.dimT = (b[8] > 0) and 1 or 0
     self.icon = b[9] or 0
+    self.rage = b[10] == 1
     self.pings = {}
     for i = 0, (b[NB + 1] or 0) - 1 do
         local j = NB + 2 + i * 4
@@ -623,66 +563,111 @@ function MG:frameNow()
     local st, t = self.state, self.deadTimer or 0
     if st == 'dying_out' or st == 'dead' then return F_DEAD end
     if st == 'dying_curl' then return F_SCARED end
-    if st == 'drop' or st == 'lunge' or st == 'climb' then return F_LEAP end
-    if st == 'taunt' then return (math.floor(t * 8) % 2 == 0) and F_CROUCH or F_IDLE end      -- flexiones
-    if st == 'aim' or st == 'dazzled' or st == 'climb_wind' or st == 'recover' or st == 'stab' then return F_CROUCH end
-    if st == 'flinch' or st == 'shriek' then return F_SCARED end
-    if st == 'grounded' or st == 'intro' or st == 'ready' or st == 'dormant' then return F_IDLE end
+    if st == 'pounce' then return F_LEAP end
+    if st == 'taunt' then return (math.floor(t * 8) % 2 == 0) and F_CROUCH or F_IDLE end
+    if st == 'aim' or st == 'dazzled' or st == 'recover' or st == 'tired' or st == 'flinch' then return F_CROUCH end
+    if st == 'roar' or st == 'shriek' then return F_SCARED end              -- (patas abiertas, cuerpo en alto)
+    if st == 'intro' or st == 'ready' then return (t >= 1.5 and t < 2.9) and F_SCARED or F_IDLE end
+    if st == 'ping' or st == 'claw' or st == 'dormant' then return F_IDLE end
     return math.max(1, math.min(4, self.frame or 1))
+end
+
+-- ¿Ruge ahora? (pinzas en alto temblando: el rugido de la rabia, el grito y el de la entrada)
+function MG:roaring()
+    local st, t = self.state, self.deadTimer or 0
+    return st == 'roar' or st == 'shriek' or ((st == 'intro' or st == 'ready') and t >= 1.5 and t < 2.9)
+end
+
+-- Pose de la pinza de `side` (-1 izquierda, 1 derecha): cuánto sale hacia fuera y baja (px de
+-- arte), si va alzada (punta arriba) y su cuadro (1 abierta, 2 cerrada)
+function MG:clawPose(side, now)
+    local st, t = self.state, self.deadTimer or 0
+    local out, dy, raised, fr, outward = 0, 0, false, 1, false
+    local facing = side == (self.face or 1)
+    if self:roaring() then
+        raised, out, dy = true, 1 + math.sin(now * 50 + side) * 0.5, -1 + math.sin(now * 43) * 0.4
+    elseif st == 'ping' or st == 'taunt' then
+        raised, dy = true, -1
+        fr = (math.floor(t * 9) % 2 == 0) and 2 or 1                    -- chasquea
+    elseif st == 'aim' then
+        fr = 2
+        if self.kind == KIND.claw then out, outward = facing and -3 or 0, facing      -- la pinza de ese lado, atrás y ya hacia fuera
+        else out, dy = 0, -0.5 + math.sin(now * 40) * 0.3 end
+    elseif st == 'claw' then
+        if facing then
+            local k = math.min(1, t / 0.07)
+            if t > CLAW_T then k = math.max(0, 1 - (t - CLAW_T) / 0.2) end
+            out, dy, fr, outward = 9 * k, 2.5 * k, (t < 0.22) and 1 or 2, true   -- estocada (baja a la altura del jugador)
+        else out = -1 end
+    elseif st == 'charge' then
+        out, fr, outward = facing and 2.5 or 0, facing and 1 or 2, facing
+    elseif st == 'pounce' then
+        raised, out = true, 1
+    elseif st == 'tired' then
+        dy = 2 + math.sin(now * 5) * 0.4
+    elseif st == 'dazzled' or st == 'flinch' then
+        out, dy, fr = -4, -1.5, 2                                       -- se tapa
+    elseif st == 'dying_curl' or st == 'dying_out' then
+        dy, fr = 3, 2
+    else
+        dy = math.sin(now * 4 + side * 1.3) * 0.4
+        if math.floor(now * 0.6 + side * 0.37) % 4 == 0 and (now * 0.6 + side * 0.37) % 1 < 0.15 then fr = 2 end
+    end
+    return out, dy, raised, fr, outward
+end
+
+-- Dibuja las pinzas con `sheet` (la normal, la de la rabia o el brillo de sus cristales). La hoja
+-- es la pinza con la punta a la izquierda y la unión a la derecha. En reposo miran HACIA DENTRO
+-- ("C Ↄ": la punta hacia el cuerpo, la palma fuera, como las de los otros Megas); al dar la
+-- estocada y al embestir, la de ese lado se estira hacia FUERA; alzadas = giradas 90° exactos.
+function MG:drawClaws(camX, camY, now, sheet)
+    local st = self.state
+    if st == 'dying_out' and (self.deadTimer or 0) > 0.4 then return end
+    sheet = sheet or (self.rage and clawR or clawS)
+    local oy = (sheet == clawS) and CLAW_H / 2 or (5 + CLAW_H / 2)      -- (las de la rabia llevan 5 filas de cristales encima)
+    for _, side in ipairs({ -1, 1 }) do
+        local out, dy, raised, fr, outward = self:clawPose(side, now)
+        local ax = self.x - camX + side * (5.5 * MS + out * MS)
+        local ay = self.y - camY + CLAW_DY * MS + dy * MS
+        if raised then
+            local rot = (side < 0) and (math.pi / 2) or (-math.pi / 2)
+            -- (espejadas a lo largo: el dorso, con los cristales de la rabia, queda hacia FUERA y no sobre la cabeza)
+            love.graphics.draw(sheet.image, sheet.quads[fr], math.floor(ax), math.floor(ay), -rot, side * MS, MS, CLAW_W, oy)
+        elseif outward then
+            love.graphics.draw(sheet.image, sheet.quads[fr], math.floor(ax), math.floor(ay), 0, -side * MS, MS, CLAW_W, oy)
+        else
+            love.graphics.draw(sheet.image, sheet.quads[fr], math.floor(ax), math.floor(ay), 0, side * MS, MS, 0, oy)
+        end
+    end
 end
 
 function MG:drawSheet(sheet, camX, camY, ox, oy)
     local sx, sy = math.floor(self.x - camX + (ox or 0)), math.floor(self.y - camY + (oy or 0))
     local st = self.state
-    if st == 'dazzled' or st == 'dying_curl' then sx = sx + math.floor(math.sin(love.timer.getTime() * 50) * 2) end
-    love.graphics.draw(sheet.image, sheet.quads[self:frameNow()], sx, sy, self.ang or 0, MS, MS, FW / 2, BODY_ROW)
+    if st == 'dazzled' or st == 'dying_curl' or self:roaring() then sx = sx + math.floor(math.sin(love.timer.getTime() * 50) * 2) end
+    love.graphics.draw(sheet.image, sheet.quads[self:frameNow()], sx, sy, 0, MS, MS, FW / 2, BODY_ROW)
 end
 
 function MG:visible() return self.state ~= 'dormant' and self.state ~= 'dead' end
-
--- Una pata clavándose: del cuerpo al suelo, en la columna x; k = cuánto ha bajado (0..1)
-local function drawLeg(x, y0, y1, k, camX, camY)
-    local len = (y1 - y0) * k
-    if len < 30 then return end
-    local sx = math.floor(x - camX)
-    love.graphics.draw(legImg, sx, math.floor(y0 - camY), 0, 4, (len - 24) / 4, 2.5, 0)
-    love.graphics.draw(tipImg, sx, math.floor(y0 - camY + len - 24), 0, 4, 4, 2.5, 0)
-end
-
-function MG:drawLegs(camX, camY)
-    if self.state ~= 'stab' then return end
-    local t = self.deadTimer or 0
-    for i, x in ipairs(self:stabXs()) do
-        local lt = t - (i - 1) * STAB_GAP
-        if lt >= 0 then
-            local k = math.min(1, lt / 0.07)
-            local out = lt - (STAB_HIT + 0.25)
-            if out > 0 then k = math.max(0, 1 - out / 0.12) end
-            drawLeg(x, self.y, self.markY, k, camX, camY)
-        end
-    end
-end
 
 function MG:render(camX, camY)
     if not self:visible() then return end
     local a = self:ghostAlpha()
     if self.state == 'dying_out' then a = math.max(0, 1 - math.max(0, (self.deadTimer or 0) - (OUT_T - 0.7)) / 0.7) end
     if self:flashRed() then love.graphics.setColor(1, 0.4, 0.4, a) else love.graphics.setColor(1, 1, 1, a) end
-    self:drawLegs(camX, camY)
     self:drawSheet(body, camX, camY)
+    self:drawClaws(camX, camY, love.timer.getTime())
     love.graphics.setColor(1, 1, 1, 1)
 end
 
-local function dashV(x, y0, y1, a)
+local function dashH(x0, x1, y, a, thick)
+    if x1 < x0 then x0, x1 = x1, x0 end
     love.graphics.setColor(WARN[1], WARN[2], WARN[3], a)
-    for y = y0, y1 - 1, 28 do love.graphics.rectangle('fill', x - 3, y, 6, math.min(16, y1 - y)) end
-end
-local function dashH(x0, x1, y, a)
-    love.graphics.setColor(WARN[1], WARN[2], WARN[3], a)
-    for x = x0, x1 - 1, 28 do love.graphics.rectangle('fill', x, y - 3, math.min(16, x1 - x), 6) end
+    local h = thick or 6
+    for x = x0, x1 - 1, 28 do love.graphics.rectangle('fill', x, y - h / 2, math.min(16, x1 - x), h) end
 end
 
--- Lo que se ve a oscuras: el aro de la ecolocalización, la marca del ataque, sus patas y sus ojos
+-- Lo que se ve a oscuras: el aro de la ecolocalización, la marca del ataque y sus ojos (y cristales)
 function MG:renderGlow(camX, camY)
     if not self:visible() then return end
     local now = love.timer.getTime()
@@ -697,30 +682,23 @@ function MG:renderGlow(camX, camY)
     love.graphics.setLineWidth(1)
     -- la marca del ataque (desde que empieza a apuntar)
     local blink = (math.floor(now * 12) % 2 == 0) and 0.95 or 0.55
-    local zx0, zx1, zy0 = self:zoneBounds()
-    if (st == 'aim' or st == 'drop') and self.kind == KIND.drop then
+    local fy = math.floor(self.y + REST - camY)
+    if (st == 'aim' or st == 'charge') and self.kind == KIND.charge then
+        dashH(math.floor(self.x - camX), math.floor(self.endX - camX), fy - 10, blink)
+    elseif (st == 'aim' or st == 'claw') and self.kind == KIND.claw then
+        dashH(math.floor(self.x - camX), math.floor(self.x + self.face * CLAW_REACH - camX), math.floor(self.y - camY + 16), blink, 10)
+    elseif (st == 'aim' or st == 'pounce') and self.kind == KIND.pounce then
         love.graphics.setColor(WARN[1], WARN[2], WARN[3], blink)
         markS:draw((math.floor(now * 12) % 2) + 1, math.floor(self.markX - camX), math.floor(self.markY - camY - 16), 0, 8, 8)
-    elseif (st == 'aim' or st == 'stab') and self.kind == KIND.stab then
-        for i, x in ipairs(self:stabXs()) do
-            if st == 'aim' or t < (i - 1) * STAB_GAP then
-                dashV(math.floor(x - camX), math.floor(zy0 - camY), math.floor(self.markY - camY), blink)
-            end
-        end
-    elseif (st == 'aim' or st == 'lunge') and self.kind == KIND.lunge then
-        dashH(math.floor(zx0 - camX), math.floor(zx1 - camX), math.floor(self.lockY - camY), blink)
     end
-    -- las patas clavándose también se ven a oscuras (tenues)
-    love.graphics.setColor(1, 1, 1, 0.55)
-    self:drawLegs(camX, camY)
-    -- ojos: parpadean al apuntar y al burlarse; se apagan al morir
+    -- ojos (y cristales de la rabia): parpadean al apuntar y al burlarse; se apagan al morir
     local a = 0.95
     if st == 'aim' then a = (math.floor(now * 20) % 2 == 0) and 1 or 0.3
-    elseif st == 'taunt' then a = (math.floor(now * 8) % 2 == 0) and 1 or 0.5
+    elseif st == 'taunt' or st == 'ping' then a = (math.floor(now * 9) % 2 == 0) and 1 or 0.55
     elseif st == 'dazzled' then a = 0.35 + 0.2 * math.sin(now * 30)
     elseif st == 'dying_curl' then a = 0.5 + 0.4 * math.sin(now * 40)
     elseif st == 'dying_out' then a = math.max(0, 0.7 * (1 - t / (OUT_T * 0.7)))
-    elseif st == 'intro' then a = math.min(1, t / 0.8) end
+    elseif st == 'intro' then a = math.min(1, t / 0.6) end
     if a > 0.01 then
         love.graphics.setColor(GLOW[1], GLOW[2], GLOW[3], a)
         self:drawSheet(glow, camX, camY)
@@ -728,10 +706,20 @@ function MG:renderGlow(camX, camY)
         love.graphics.setColor(GLOW[1], GLOW[2], GLOW[3], 0.22 * a)
         for _, o in ipairs({ { MS, 0 }, { -MS, 0 }, { 0, MS }, { 0, -MS } }) do self:drawSheet(glow, camX, camY, o[1], o[2]) end
         love.graphics.setBlendMode('alpha')
+        -- rabia: las puntas de los cristales de las pinzas brillan (a oscuras se ve por dónde andan)
+        if self.rage then
+            love.graphics.setColor(CRYS[1], CRYS[2], CRYS[3], a)
+            self:drawClaws(camX, camY, now, clawRG)
+            love.graphics.setBlendMode('add')
+            love.graphics.setColor(CRYS[1], CRYS[2], CRYS[3], 0.3 * a)
+            self:drawClaws(camX + MS, camY, now, clawRG); self:drawClaws(camX - MS, camY, now, clawRG)
+            self:drawClaws(camX, camY + MS, now, clawRG); self:drawClaws(camX, camY - MS, now, clawRG)
+            love.graphics.setBlendMode('alpha')
+        end
     end
     if (self.icon or 0) > 0 then                          -- ("…": la luz lo ha asustado)
         love.graphics.setColor(0.8, 0.85, 1, 0.95)
-        love.graphics.draw(icons.image, icons.quads[self.icon], math.floor(self.x - camX), math.floor(self.y - camY - 80), 0, 6, 6, 3.5, 9)
+        love.graphics.draw(icons.image, icons.quads[self.icon], math.floor(self.x - camX), math.floor(self.y - camY - 90), 0, 6, 6, 3.5, 9)
     end
     love.graphics.setColor(1, 1, 1, 1)
 end
@@ -739,22 +727,22 @@ end
 local G = 'Mega Crabby lúgubre'
 return {
     name = 'megagloomy', label = 'Mega Crabby lúgubre', category = 'Jefes',
-    description = 'Jefe de los niveles A OSCURAS. Ciego: ATACA EL ÚLTIMO "!" ROJO (el último ruido). Sus aros detectan '
-               .. 'a quien se mueve. Antes de atacar marca dónde: diana = cae ahí; tres líneas = clava las patas; línea '
-               .. 'horizontal = cruza de pared a pared. Solo se le daña alumbrándolo cuando queda en el suelo tras caer. '
-               .. 'Al final grita (oscurece) y llama a Crabbies lúgubres.',
+    description = 'Jefe de los niveles A OSCURAS, de tierra. Ciego: ronda buscándote y SOLO ataca si hay un "!" ROJO '
+               .. '(un ruido, o su aro te pilla moviéndote). Marca cada ataque: línea por el suelo = embestida (agáchate), '
+               .. 'barra corta = estocada con la pinza, diana = salto. Solo se le daña alumbrándolo cuando queda agotado. '
+               .. 'Con poca vida ruge, le salen cristales, oscurece la arena y llama a Crabbies lúgubres.',
     class = MG,
     boss = { title = 'MEGA CRABBY LÚGUBRE' },
     hide = Boss.HIDE,
     defaults = { points = 60 },
     props = Boss.props({ hp = 8, hpPerPlayer = 3 }, {
         { key='pingEvery', kind='number', label='Ecolocalización cada (s)', group=G, default=2.4, min=0.8, max=8, step=0.1,
-          help='Un aro que crece desde él: detecta ("!" rojo) a los jugadores que se mueven cuando les pasa por encima' },
+          help='Alza las pinzas y suelta un aro: detecta ("!" rojo) a los jugadores que se mueven cuando les pasa por encima' },
         { key='phase2', kind='number', label='Fase 2 con vida ≤', group=G, default=0.66, min=0.1, max=0.95, step=0.01,
-          help='Añade la embestida de pared a pared y va más rápido' },
-        { key='phase3', kind='number', label='Fase 3 con vida ≤', group=G, default=0.33, min=0.05, max=0.9, step=0.01,
-          help='Grito que acorta las linternas y llama a Crabbies lúgubres' },
-        { key='shriekEvery', kind='number', label='Grita cada (s)', group=G, default=13, min=4, max=60, step=0.5 },
+          help='Añade el salto (alternando con la embestida) y va más rápido' },
+        { key='rageAt', kind='number', label='Rabia con vida ≤', group=G, default=0.4, min=0.05, max=0.9, step=0.01,
+          help='Ruge, le salen cristales, va más rápido y grita' },
+        { key='shriekEvery', kind='number', label='Rabia: grita cada (s)', group=G, default=13, min=4, max=60, step=0.5 },
         { key='dimTime', kind='number', label='El grito oscurece (s)', group=G, default=6, min=1, max=20, step=0.5 },
         { key='dimScale', kind='number', label='… linternas a (× alcance)', group=G, default=0.5, min=0.2, max=1, step=0.05 },
         { key='summonCount', kind='int', label='Crabbies lúgubres por grito', group=G, default=2, min=0, max=4, step=1 },

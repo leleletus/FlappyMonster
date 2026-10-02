@@ -136,6 +136,151 @@ MEGA_B = dict(OPTIONS['B'],
     glow=[(-2, 6), (2, 6), (0, 7)], mega_glow=[(-2, 6), (2, 6), (0, 7)], mega_extra=[],
 )
 
+# ── El Mega, definitivo: cuerpo SIN pinzas (van aparte, animadas), opciones de PINZAS y de CRISTALES ──
+def _no_claws(rows):
+    return [r.replace('c', '.') for r in rows]
+
+MEGA_BODY = dict(MEGA_B, body=_no_claws(MEGA_B['body']))
+
+# Pinzas del Mega lúgubre: LARGAS y AFILADAS (las de los otros Megas son robustas). Pinza IZQUIERDA
+# (la punta a la izquierda, se une al cuerpo por la derecha), 2 cuadros 14x7: abierta / cerrada
+CLAW_PAL = dict(o='#27304a', h='#ffffff', w='#f2f7ff', s='#b9cde6')      # (contorno más oscuro y más blancas que las patas: se leen)
+CLAWS = {
+    'A': ('Aguja', 'dos hojas rectas y finísimas, paralelas',
+          ['owwwwwwwo.....', '.oooooooowo...', '.........owwoo', '.........owwso', '.oooooooowso..', 'owwwwwwwwo....', '.oooooooo.....'],
+          ['..............', '.ooooooooo....', 'ohwwwwwwwwooo.', 'osssssssswwwso', '.oooooooowwso.', '.........ooo..', '..............']),
+    'B': ('Hoz', 'hojas curvas con la punta en gancho hacia dentro',
+          ['.oooooo.......', 'owwwwwwoo.....', 'oo....owwo....', '........owwoo.', 'oo....oowwwso.', 'owwwwwwwwsso..', '.oooooooooo...'],
+          ['..............', '.ooooooo......', 'owwwwwwwoo....', 'oooooooowwwoo.', 'owwwwwwwwwwso.', '.ooooooooooo..', '..............']),
+    'C': ('Tijera', 'dos hojas rectas que se cruzan en un eje',
+          ['oo............', 'owwoo.........', '.oowwwoo......', '....oowwwwooo.', '.oowwwsswwwso.', 'owwoo..ooooo..', 'oo............'],
+          ['..............', '..............', 'ooooooooo.....', 'owwwwwwwwwwoo.', 'ossssssswwwso.', 'oooooooooooo..', '..............']),
+    'D': ('Arpón', 'una hoja larga con púas y un pulgar corto',
+          ['...o..o.......', 'ooowoowoo.....', 'owwwwwwwwwooo.', '.ooooooooowwso', '.....oowwwwwso', '....owwoooooo.', '....ooo.......'],
+          ['...o..o.......', 'ooowoowoo.....', 'owwwwwwwwwooo.', '.oooooowwwwwso', '....owwwwwwso.', '....ooooooo...', '..............']),
+}
+
+# Cristales de la rabia (como las esquirlas del Mega Crabby helado, aquí cristal de cueva que BRILLA
+# en la oscuridad): P punta (brilla), L claro, D oscuro, G veta (brilla)
+CRYSTAL = dict(P='#f0dcff', L='#c79bff', D='#7a4fc4', G='#e2b8ff')
+CRYSTALS = {
+    'A': ('Geoda', 'tres cristales gordos en el lomo',
+          ['......P......', '.....PLD..P..', '..P..PLD.PLD.', '.PLD.PLD.PLD.', '.PLDPPLDDPLD.'], -1),
+    'B': ('Espinas', 'una cresta de agujas finas y altas',
+          ['..P...P...P..', '..L...L...L..', '..L.P.L.P.L..', '..D.L.D.L.D..', '..D.D.D.D.D..'], -1),
+    'C': ('Corona', 'uno grande en el centro y pequeños alrededor',
+          ['......P......', '.....PLD.....', '.P...PLD...P.', 'PLD..PLD..PLD', 'PLD.PPLDD.PLD'], -1),
+    'D': ('Vetas', 'vetas que brillan en el caparazón y dos cristales a los lados',
+          ['.............', '.P.........P.', 'PLD.......PLD', 'PLD.......PLD', '.D..G.G.G..D.', '.....GGG.....', '....G.G.G....'], -1),
+}
+
+
+def claw_sheet(key):
+    _, _, op, cl = CLAWS[key]
+    out = Image.new('RGBA', (28, 7), (0, 0, 0, 0))
+    for i, rows in enumerate((op, cl)):
+        for y, r in enumerate(rows):
+            for x, ch in enumerate(r):
+                if ch != '.':
+                    out.putpixel((i * 14 + x, y), rgb(CLAW_PAL[ch]))
+    return out
+
+
+# ELEGIDO por el usuario: pinzas B "Hoz"; cristales = mezcla de B "Espinas" y C "Corona" (una aguja
+# alta en el centro y otras más cortas alrededor), pero EN LAS PINZAS, no en el lomo: al jefe se le
+# pisa la cabeza, y unos cristales ahí parecerían pinchos (no se sabría si se le puede pisar).
+CLAW_CRYSTALS = ['..........P...',
+                 '..........L...',
+                 '.......P..L.P.',
+                 '.......L.PD.L.',
+                 '......PD.LD.D.']
+
+
+def claw_rage_sheets(key):
+    """Pinzas de la RABIA: la misma pinza con cristales en el dorso (2 cuadros 14x12: los cristales, 5
+    filas, encima de la pinza) y, aparte, sus puntas luminosas (se ven a oscuras: delatan las pinzas)"""
+    base = claw_sheet(key)
+    out = Image.new('RGBA', (28, 12), (0, 0, 0, 0))
+    glow = Image.new('RGBA', (28, 12), (0, 0, 0, 0))
+    for i in range(2):
+        out.paste(base.crop((i * 14, 0, i * 14 + 14, 7)), (i * 14, 5))
+        for y, r in enumerate(CLAW_CRYSTALS):
+            for x, ch in enumerate(r):
+                if ch != '.':
+                    out.putpixel((i * 14 + x, y + (1 if i == 1 else 0)), rgb(CRYSTAL[ch]))
+                    if ch == 'P':
+                        glow.putpixel((i * 14 + x, y + (1 if i == 1 else 0)), (255, 255, 255, 255))
+    return out, glow
+
+
+def rage_option(key):
+    name, note, rows, dy = CRYSTALS[key]
+    return dict(MEGA_BODY, crystals=rows, crystal_dy=4 - len(rows) + 1 + dy)
+
+
+def put_mega(dst, o, pose, x, y, k, lit, claws=None, raised=False, frame_i=0):
+    """El Mega con sus pinzas (aparte) y, si las hay, el brillo de los cristales"""
+    im, glow = frame(o, pose, False)
+    cglow = list(frame.crystal_glow)
+    w, h = im.size
+    big = up(im, k)
+    if lit < 1:
+        r, g, b, a = big.split()
+        big = Image.merge('RGBA', (r.point(lambda v: int(v * (0.05 + 0.95 * lit))), g.point(lambda v: int(v * (0.06 + 0.94 * lit))),
+                                   b.point(lambda v: int(v * (0.1 + 0.9 * lit))), a.point(lambda v: int(v * (0.35 + 0.65 * lit)))))
+    ox, oy = x - big.width // 2, y - big.height
+    dst.alpha_composite(big, (int(ox), int(oy)))
+    if claws:
+        sh = claw_sheet(claws)
+        fr = sh.crop((frame_i * 14, 0, frame_i * 14 + 14, 7))
+        by = oy + 10 * k                                   # altura del caparazón
+        for side in (-1, 1):
+            # (hacia DENTRO, "C Ↄ": la punta mira al cuerpo, la palma queda fuera)
+            c = fr.transpose(Image.FLIP_LEFT_RIGHT) if side < 0 else fr
+            if raised:
+                c = c.rotate(90 if side < 0 else -90, expand=True)
+            c = up(c, k)
+            if lit < 1:
+                r, g, b, a = c.split()
+                c = Image.merge('RGBA', (r.point(lambda v: int(v * (0.05 + 0.95 * lit))), g.point(lambda v: int(v * (0.06 + 0.94 * lit))),
+                                         b.point(lambda v: int(v * (0.1 + 0.9 * lit))), a.point(lambda v: int(v * (0.35 + 0.65 * lit)))))
+            ax = x + side * 5 * k
+            if raised:
+                dst.alpha_composite(c, (int(ax - c.width // 2 + side * 2 * k), int(by - c.height + 1 * k)))
+            else:
+                dst.alpha_composite(c, (int(ax - c.width) if side < 0 else int(ax), int(by - 3 * k)))
+    for gx, gy in glow:
+        draw_glow(dst, int(ox + gx * k), int(oy + gy * k), k, o['glow_col'], 1.0, halo=lit < 1)
+    for gx, gy in cglow:
+        draw_glow(dst, int(ox + gx * k), int(oy + gy * k), k, '#d9a8ff', 0.9 if lit < 1 else 0.0, halo=lit < 1)
+
+
+def montage(kind):
+    """Montaje de opciones: 'pinzas' o 'cristales'. Cada opción: a la luz (pose normal y con las pinzas
+    alzadas = rugido / ecolocalización) y a oscuras"""
+    opts = CLAWS if kind == 'pinzas' else CRYSTALS
+    K = 8
+    pw, ph = 720, 300
+    sheet = Image.new('RGBA', (pw * 2, ph * len(opts) + 8), (0, 0, 0, 255))
+    for i, key in enumerate(opts):
+        o = MEGA_BODY if kind == 'pinzas' else rage_option(key)
+        claws = key if kind == 'pinzas' else 'B'
+        name, note = opts[key][0], opts[key][1]
+        lit = Image.new('RGBA', (pw, ph - 4), rgb('#2a3044'))
+        dark = Image.new('RGBA', (pw, ph - 4), rgb('#07080f'))
+        d = ImageDraw.Draw(lit)
+        d.text((10, 6), 'Opción %s: %s — %s' % (key, name, note), fill=(240, 240, 250, 255), font=FONT)
+        put_mega(lit, o, 'quieto', 200, ph - 24, K, 1.0, claws, False, 0)
+        put_mega(lit, o, 'agachado', 530, ph - 24, K, 1.0, claws, True, 1)
+        put_mega(dark, o, 'quieto', 200, ph - 24, K, 0.0, claws, False, 0)
+        put_mega(dark, o, 'agachado', 530, ph - 24, K, 0.0, claws, True, 1)
+        sheet.paste(lit, (0, i * ph))
+        sheet.paste(dark, (pw, i * ph))
+    if kind == 'pinzas':                                   # (las de los otros Megas, para comparar)
+        ImageDraw.Draw(sheet).text((10, ph * len(opts) - 14), '', fill=(255, 255, 255, 255))
+    sheet.save(os.path.join(OUT, 'mega_%s.png' % kind))
+
+
 POSES = ['andar1', 'andar2', 'andar3', 'andar4', 'quieto', 'agachado', 'salto', 'susto', 'aplastado']
 
 
@@ -222,11 +367,23 @@ def frame(o, pose, mega=False):
     if mega:
         for dx, dy, ch in o['mega_extra']:
             px[(CX + dx, by0 + dy)] = pal[ch]
+    cglow = []
+    if o.get('crystals'):                                  # (rabia: cristales sobre el caparazón, con su brillo)
+        rows = o['crystals']
+        cy0 = by0 + o.get('crystal_dy', 0)
+        cx0 = CX - len(rows[0]) // 2
+        for y, row in enumerate(rows):
+            for x, ch in enumerate(row):
+                if ch != '.':
+                    px[(cx0 + x, cy0 + y)] = rgb(CRYSTAL[ch])
+                    if ch in 'PG':
+                        cglow.append((cx0 + x, cy0 + y))
     im = Image.new('RGBA', (W, H), (0, 0, 0, 0))
     for (x, y), c in px.items():
         if 0 <= x < W and 0 <= y < H:
             im.putpixel((x, y), c)
     glow = [(CX + dx, by0 + dy) for dx, dy in (o['mega_glow'] if mega else o['glow'])]
+    frame.crystal_glow = cglow
     return im, glow
 
 
@@ -510,10 +667,13 @@ def mockup_mega_b():
     strip.save(os.path.join(OUT, 'mega_B_retoques_cuadros.png'))
 
 
-def sheets(o, mega=False):
+def sheets(o, mega=False, crystal_glow=False):
     """Tira con todos los cuadros (POSES) y, aparte, la de los PUNTOS LUMINOSOS (la misma rejilla,
     solo esos píxeles, en blanco: el juego los tiñe y los dibuja ENCIMA de la oscuridad)"""
-    fr = [frame(o, pz, mega) for pz in POSES]
+    fr = []
+    for pz in POSES:
+        im, pts = frame(o, pz, mega)
+        fr.append((im, list(pts) + (list(frame.crystal_glow) if crystal_glow else [])))
     w, h = fr[0][0].size
     body = Image.new('RGBA', (w * len(fr), h), (0, 0, 0, 0))
     glow = Image.new('RGBA', (w * len(fr), h), (0, 0, 0, 0))
@@ -615,12 +775,18 @@ def leg_spear():
 def apply():
     o = OPTIONS['B']
     body, glow = sheets(o)
-    mbody, mglow = sheets(MEGA_B)
+    # El Mega: cuerpo SIN pinzas (van aparte: claw_left-Sheet), y el de la RABIA con sus cristales
+    # (--pinzas X elige otra opción del montaje; la del usuario: B "Hoz". Los cristales de la rabia van
+    # en las PINZAS: CLAW_CRYSTALS)
+    ck = sys.argv[sys.argv.index('--pinzas') + 1] if '--pinzas' in sys.argv else 'B'
+    mbody, mglow = sheets(MEGA_BODY)
+    crage, cglow = claw_rage_sheets(ck)
     out = {
         'gloomy/gloomy-Sheet.png': body, 'gloomy/glow-Sheet.png': glow,
         'bosses/megagloomy/body-Sheet.png': mbody, 'bosses/megagloomy/glow-Sheet.png': mglow,
+        'bosses/megagloomy/claw_left-Sheet.png': claw_sheet(ck),
+        'bosses/megagloomy/claw_rage_left-Sheet.png': crage, 'bosses/megagloomy/claw_rage_glow-Sheet.png': cglow,
         'gloomy/icons-Sheet.png': icons(), 'fx/noise_mark.png': noise_mark(),
-        'bosses/megagloomy/leg.png': leg_spear()[0], 'bosses/megagloomy/leg_tip.png': leg_spear()[1],
         'ui/flashlight-Sheet.png': flashlight_icon(), 'ui/touch/light-Sheet.png': touch_light(),
     }
     for name, im in out.items():
@@ -641,4 +807,6 @@ if __name__ == '__main__':
         walk_gif(k)
     mockup_mega()
     mockup_mega_b()
+    montage('pinzas')
+    montage('cristales')
     print('vista previa en', OUT)

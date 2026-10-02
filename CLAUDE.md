@@ -934,30 +934,39 @@ list no mode until the user places a Point Area in them).
   `ECHO_W[name]`: a slam booms, a step barely) the more echo it leaves. Done with delayed clones in `Sound.update`
   (OpenAL effects aren't available on every platform). Music has no echo.
 - **Mega Gloomy Crabby** (`types/megagloomy.lua`, "Mega Crabby lúgubre", `boss.megagloomy`; boss of the dark
-  levels). REBUILT after the user found the first version "tedious, boring and confusing" (the marker said "lands
-  here" and it lunged at a wall; nobody knew what the rings meant). ONE RULE, visible on screen: **it attacks the
-  last red "!"** (blind: it knows only where noise happened). Art: the SAME pixel grid as the small one at scale 10
-  with its own leg poses (`MEGA_B`, 9 frames 38x21 + glow sheet); x,y = centre of its SHELL (`BODY_ROW` 11: the box
-  is the shell you see, 11x6 art px — it used to sit on the claws, above the body), drawn rotated by `ang`.
-  ECHOLOCATION has a meaning: every `pingEvery` s ONE ring grows from its body (so you know where it is) and DETECTS
-  any player who is MOVING when it passes (`updatePings` → `Noise.emit` on them = their "!"); stand still and it
-  doesn't find you. No fake rings. It moves along a path on the zone's edge (`MG:path(u)`: left wall, ceiling, right
-  wall; `walkTo`). ATTACKS in a fixed order per phase (`SEQ`): 'aim' (`AIM_T`, eyes blink, hiss) locks the last "!"
-  at once and shows THAT attack's own mark the whole time — DROP: a target on the floor → jumps there → `slam` →
-  'grounded'; STAB: three vertical dashed lines → it goes to the ceiling above and drives three legs down one after
-  another (`stabXs`, `STAB_W` columns; safe between lines; sprites `leg.png` / `leg_tip.png`); LUNGE (phase 2+): a
-  horizontal dashed line → it goes to its wall at that height and crosses to the other (jump or crouch). Contact =
-  1 HP + push. LIT while aiming → 'flinch' ("…"), the attack is cancelled and repeated later. DAMAGE: only after a
-  DROP — on the floor (`GROUND_T`) it is immune (bounce) unless a flashlight lights its body → 'dazzled'
-  (`DAZZLE_T`): stomp 1 / GP 2, one hit → 'recover' → climbs back. (The slam no longer switches flashlights off.)
-  Phase 3: 'shriek' → `level.lightScale` for `dimTime` s + reserve Gloomies on the walls. 'taunt' (push-ups) after an
-  attack that hit somebody. DEATH is a crab's, not a robot's (`MG:defeat` override, no explosions): 'dying_curl'
-  (falls to the floor trembling) → 'dying_out' (flat, its lights fade; `releasesZone`). netPackExtra: phase, ang,
-  frame, mark x/y, lockY, attack kind, light scale, icon, pings {id,x,y,t}. Arena
-  `tools/levelgen/arenas/jefe_lugubre.json`; real level **gruta_lugubre** "Gruta Lúgubre" / "Gloomy Grotto"
+  levels). Third version, TERRESTRIAL (v1 = "tedious, boring, confusing"; v2 walked walls/ceiling and stabbed its legs
+  down from the ceiling: the user found the stab odd and wanted a ground crab). ONE RULE, visible on screen: **it only
+  attacks if there is a red "!", and it attacks THAT "!"** (blind: it knows only where noise happened). Art: the SAME
+  pixel grid as the small one at scale 10 (`MEGA_B`, 9 frames 38x21 + glow sheet); x,y = centre of its SHELL
+  (`BODY_ROW` 11: the box is the shell you see, 11x6 art px; legs don't count). It walks the zone FLOOR only
+  (`MG:stand`, `floorY`: never the side platforms). 'prowl' = walks to the last known spot, then back and forth.
+  ECHOLOCATION 'ping' every `pingEvery` s: stops, raises the claws and snaps them → ONE ring from its body that
+  DETECTS any player MOVING when it passes (`Noise.emit` on them = their "!"); stand still and it doesn't find you.
+  With a fresh "!" (`tAge ≤ FRESH` 4 s, cooldown over) → 'aim' (eyes blink, hiss; the mark of THAT attack fixed from
+  the start; `startAim` spends the "!") → CLAW ('claw', "!" within `CLAW_REACH` 4.2 tiles: short thick bar in front →
+  thrust of that side's claw; crouching or being behind = safe), CHARGE ('charge', far: dashed floor line to the wall
+  `endX` → runs to it; crouch under it or double-jump it) or POUNCE ('pounce', phase 2+, alternating with the charge:
+  target on the floor → jumps there and slams). Contact in an attack = 1 HP + push. LIT while aiming → 'flinch' ("…"),
+  cancelled. DAMAGE: after a charge/pounce it is 'tired' (`TIRED_T`): immune (bounce) unless a flashlight lights its
+  body → 'dazzled' (covers itself with the claws): stomp 1 / GP 2, one hit. RAGE (hp ≤ `rageAt` 0.4): 'roar' (claws
+  up), faster, 'shriek' every `shriekEvery` s (`level.lightScale` for `dimTime` s + reserve Gloomies) and CRYSTALS grow
+  ON THE CLAWS — never on the shell: the user's rule, crystals on the head look like spikes and the head is what you
+  stomp. 'taunt' (claw snaps) after an attack that hit somebody. DEATH is a crab's, not a robot's (`MG:defeat`
+  override, no explosions): 'dying_curl' → 'dying_out' (`releasesZone`).
+  CLAWS (user's picks): option B "Hoz" (long sharp sickle, 2 frames 14x7 `claw_left-Sheet.png`, right = mirror), at
+  rest pointing INWARD ("C Ↄ": tips toward the body's centre) and LOW on the body (`CLAW_DY` 2 art px under the shell
+  centre; the mockups had them too high); thrust/charge = that side's claw turned outward; raised (ping, roar) =
+  exact 90° turn, mirrored so the dorsal crystals face OUTWARD. `MG:clawPose(side, now)` → out, dy, raised, frame,
+  outward (render-only, from state + deadTimer). Rage crystals = mix of options B "Espinas" × C "Corona"
+  (`CLAW_CRYSTALS`): `claw_rage_left-Sheet.png` (14x12: 5 crystal rows above the claw) + `claw_rage_glow-Sheet.png`
+  (their tips, drawn in `renderGlow`: visible in the dark). All from `tools/ui/make_gloomy_sprites.py --apply
+  [--pinzas X]` (montages `pinzas` / `cristales` → `FlappyMonster_pruebas/gloomy/`).
+  netPackExtra: phase, frame, face, mark x/y, endX, attack kind, light scale, icon, rage, pings {id,x,y,t}
+  (protocol v45). Arena `tools/levelgen/arenas/jefe_lugubre.json`; real level **gruta_lugubre** "Gruta Lúgubre" /
+  "Gloomy Grotto"
   (`levels_boss.py`, cave theme, dark: no spikes or pits, Gloomies, then the arena, zone from column 88).
   `retheme.py` has NO --help: any unknown flag runs it over EVERY level — pass level names. Harnesses
-  `megagloomy_rules` (+ `LOOK=1`: each telegraph, the box, the death), `boss_sim` / `boss_intro` / `online_boss`
+  `megagloomy_rules` (+ `LOOK=1`: claws, ring, rage, each telegraph in the dark), `boss_sim` / `boss_intro` / `online_boss`
   with `LEVEL=` that arena.
 
 ## Terrain blocks, subtiles and physical particles
