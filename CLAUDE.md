@@ -1654,7 +1654,8 @@ punches / spike flex / roar; Mega Gloomy: `ping` ring / `taunt` / `roar`), and i
 (Megas: hp → 30 %, so anger symbols + shards; Gloomy: `rage` crystals). The Flappy Monster logo bops on every beat
 (`SHOWS[...].bpm`; stronger on the bar's first beat) and the track title is in the corner. Mega Gloomy only: a light
 BULB hangs from the zone ceiling and swings one full cycle every 8 beats — three fake decorations with `light` are
-injected into `level.decorations` so `Darkness` lights the arena and the boss as it moves.
+injected into `level.decorations` so `Darkness` lights the arena and the boss as it moves. Every 16 bars the bulb
+FAILS: it flickers, stays off for 2 bars (only the crab's glowing points show) and flickers back on.
 
 ## Testing without a human
 

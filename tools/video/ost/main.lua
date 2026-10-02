@@ -13,7 +13,8 @@
 -- ffmpeg por una tubería. El jefe hace su ENTRADA real al empezar (cae, ruge) y luego se queda en
 -- reposo; cada 8 compases, un gesto; en el último cuarto de la canción se ENFADA. Para el Mega
 -- Crabby lúgubre (arena a oscuras) cuelga del techo una BOMBILLA que se balancea al compás e
--- ilumina y oscurece la arena y al jefe.
+-- ilumina y oscurece la arena y al jefe; cada 16 compases FALLA y todo queda a oscuras 2 compases
+-- (se ven solo los puntos luminosos del cangrejo).
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
 require 'settings'
@@ -192,7 +193,19 @@ local function drawBulb(camX, camY)
     -- péndulo: un vaivén completo cada 8 pulsos
     local a = 0.62 * math.sin(vt * 2 * math.pi / (beat() * 8))
     local bx, by = lamp.px + math.sin(a) * lamp.len, lamp.py + math.cos(a) * lamp.len
-    for _, d in ipairs(lamp.lights) do d.x, d.y = bx, by + 14 end
+    -- APAGONES: cada 16 compases la bombilla falla — parpadea, se queda a oscuras 2 compases (solo se ven
+    -- los puntos luminosos del cangrejo) y vuelve parpadeando
+    local barLen = beat() * 4
+    local pos = (vt / barLen) % 16
+    local on = 1
+    if pos >= 12 and pos < 14 then on = 0
+    elseif pos >= 11.6 and pos < 12 then on = (math.floor(vt * 22) % 3 == 0) and 0.15 or 1        -- parpadeo antes de irse
+    elseif pos >= 14 and pos < 14.3 then on = (math.floor(vt * 22) % 2 == 0) and 1 or 0.1 end     -- … y al volver
+    for _, d in ipairs(lamp.lights) do
+        d.x, d.y = bx, by + 14
+        d.def.light.a0 = d.def.light.a0 or d.def.light.a
+        d.def.light.a = d.def.light.a0 * on
+    end
     return function()
         local sx, sy = math.floor(lamp.px - camX), math.floor(lamp.py - camY)
         local ex, ey = math.floor(bx - camX), math.floor(by - camY)
@@ -203,11 +216,12 @@ local function drawBulb(camX, camY)
         end
         love.graphics.setColor(0.42, 0.42, 0.48, 1); love.graphics.rectangle('fill', ex - 8, ey - 4, 16, 12)      -- casquillo
         love.graphics.setColor(0.25, 0.25, 0.3, 1); love.graphics.rectangle('fill', ex - 8, ey + 4, 16, 4)
-        love.graphics.setColor(1, 0.93, 0.6, 1); love.graphics.rectangle('fill', ex - 10, ey + 8, 20, 20)        -- bombilla
+        local g = 0.22 + 0.78 * on                               -- (apagada: el cristal, gris)
+        love.graphics.setColor(g, 0.93 * g, 0.6 * g + 0.1 * (1 - on), 1); love.graphics.rectangle('fill', ex - 10, ey + 8, 20, 20)        -- bombilla
         love.graphics.rectangle('fill', ex - 6, ey + 28, 12, 4)
-        love.graphics.setColor(1, 1, 0.92, 1); love.graphics.rectangle('fill', ex - 6, ey + 12, 8, 8)
+        love.graphics.setColor(g, g, 0.92 * g, 1); love.graphics.rectangle('fill', ex - 6, ey + 12, 8, 8)
         love.graphics.setBlendMode('add')
-        love.graphics.setColor(1, 0.85, 0.5, 0.18); love.graphics.rectangle('fill', ex - 18, ey, 36, 36)
+        love.graphics.setColor(1, 0.85, 0.5, 0.18 * on); love.graphics.rectangle('fill', ex - 18, ey, 36, 36)
         love.graphics.setBlendMode('alpha')
     end
 end
