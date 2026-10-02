@@ -249,7 +249,9 @@ function FreePlayState:drawCard(i, x, y)
         if info.finish > 0 then l1[#l1 + 1] = L('msm.finish') end
         lines[#lines + 1] = table.concat(l1, ' · ')
         local l2 = {}
-        for _, b in ipairs(info.bossTypes) do l2[#l2 + 1] = L('free.boss', { name = L('boss.' .. b) }) end
+        for _, b in ipairs(info.bossNames or {}) do
+            l2[#l2 + 1] = L('free.boss', { name = L.bossName(b.type, b.props) or b.type })
+        end
         if info.water then l2[#l2 + 1] = L('free.water') end
         if info.floods > 0 then l2[#l2 + 1] = L('free.floods') end
         if info.autoScroll then l2[#l2 + 1] = L('free.autoscroll') end

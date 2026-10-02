@@ -113,12 +113,22 @@ function LevelCatalog.info(lv, path, file)
     end
     -- Contenido
     info.monsters, info.bossTypes, info.stars, info.lives, info.checkpoints = 0, {}, 0, 0, 0
+    info.bossNames = {}
     local seenBoss = {}
     for _, e in ipairs(lv.entities) do
         local d = EntityTypes.get(e.type)
         if d then
             if d.category == 'Enemigos' or d.category == 'Jefes' then info.monsters = info.monsters + 1 end
-            if d.boss and not seenBoss[e.type] then seenBoss[e.type] = true; info.bossTypes[#info.bossTypes + 1] = e.type end
+            -- (bossNames: tipo + nombres propios del nivel, para Lang.bossName; uno por nombre distinto)
+            local p = e.props or {}
+            local nk = e.type .. '|' .. tostring(p.title or '')
+            if d.boss and not seenBoss[nk] then
+                if not seenBoss[e.type] then info.bossTypes[#info.bossTypes + 1] = e.type end
+                seenBoss[nk], seenBoss[e.type] = true, true
+                local names = {}
+                for k, v in pairs(p) do if type(k) == 'string' and k:match('^title') then names[k] = v end end
+                info.bossNames[#info.bossNames + 1] = { type = e.type, props = names }
+            end
         end
         if e.type == 'star' then info.stars = info.stars + 1
         elseif e.type == 'extralife' then info.lives = info.lives + 1

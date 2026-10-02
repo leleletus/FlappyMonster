@@ -82,6 +82,11 @@ function Boss.props(defaults, extra)
         { key='hpPerPlayer', kind='int', label='Vida extra por jugador', group='Jefe',
           default=defaults.hpPerPlayer or 4, min=0, max=100, step=1,
           help='Se suma por cada jugador además del primero al empezar la pelea' },
+        -- Nombre propio en este nivel, en cada idioma (como el nombre del nivel: Nivel → General)
+        { key='title', kind='text', label='Nombre en la barra (español)', group='Nombre', default='', maxLen=28,
+          help='Vacío = el nombre de siempre del jefe (traducido). En MAYÚSCULAS, como las barras' },
+        { key='title_en', kind='text', label='Nombre en inglés', group='Nombre', default='', maxLen=28,
+          help='Vacío = el nombre en español de arriba (o el de siempre si tampoco hay)' },
     }
     for _, p in ipairs(extra or {}) do list[#list+1] = p end
     return list
@@ -121,11 +126,10 @@ function Boss:startFight(nPlayers)
     self:onFightStart(nPlayers or 1)
 end
 
--- Nombre en la barra: clave de idioma boss.<tipo> si existe; si no, def.boss.title
+-- Nombre en la barra (y en la entrada): el que le puso el nivel en su idioma (props title /
+-- title_en), si no la clave de idioma boss.<tipo>; si no, def.boss.title (Lang.bossName)
 function Boss:title()
-    local key = 'boss.' .. self.def.name
-    if Lang.has(key) then return Lang(key) end
-    return (self.def.boss and self.def.boss.title) or self.def.label
+    return Lang.bossName(self.def.name, self.props) or (self.def.boss and self.def.boss.title) or self.def.label
 end
 
 function Boss:isDying()

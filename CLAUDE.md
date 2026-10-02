@@ -100,7 +100,11 @@ code, comments (Spanish), commits, docs or game text — those keep their usual 
 - Modes: text fields are keys `mode.<id>.label|tagline|objective|empty_hint`
   resolved on read by `ModeTypes` (`m.label` is already translated).
   `reasonText(reason)` and `rank` notes return KEYS; `Modes.reasonText(mode,
-  reason)` translates. Boss bar names: `boss.<type>`.
+  reason)` translates. Boss names: `boss.<type>` (every boss type in EVERY language file); a level can
+  give one boss its OWN name like level names — props `title` (Spanish) / `title_en` (`title_<lang>`), editor
+  group "Nombre" of every boss (`Boss.props`); `Lang.bossName(type, props)` = custom name in the current language
+  (no title_en → the Spanish one) or the type's translated name; used by `Boss:title()` (bars, intro cinema) and
+  Free Play cards (`LevelCatalog` `info.bossNames`). Harness `lang_names` (also warns about levels without name_en).
 - Server messages: `Lang.message(key, args, extra)` → `{key, args, msg(es)}`;
   clients show `L.fromServer(data, fallbackKey)` in their own language.
   `round_end` carries `reason` + `noteKey` (plus Spanish text for old clients).

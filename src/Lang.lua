@@ -109,6 +109,23 @@ function Lang.localName(t)
     return (type(v) == 'string' and v ~= '') and v or t.name
 end
 
+-- Nombre de un jefe en el idioma elegido: el que le puso el nivel (props `title` = español,
+-- `title_en`, `title_<idioma>`: como "name"/"name_en" de los niveles) o, si no tiene, el de
+-- siempre del tipo (clave boss.<tipo>). nil si no hay ninguno.
+function Lang.bossName(typeName, props)
+    local custom = props and props.title
+    if type(custom) == 'string' and custom ~= '' then
+        local t = { name = custom }
+        for k, v in pairs(props) do
+            local l = type(k) == 'string' and k:match('^title_(.+)$')
+            if l then t['name_' .. l] = v end
+        end
+        return Lang.localName(t)
+    end
+    local key = 'boss.' .. tostring(typeName)
+    if Lang.has(key) then return Lang.get(key) end
+end
+
 function Lang.set(id)
     local valid = false
     for _, l in ipairs(Lang.LANGUAGES) do if l.id == id then valid = true end end

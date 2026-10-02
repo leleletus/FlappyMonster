@@ -236,7 +236,7 @@ function love.load()
                 spawnMinBoss = math.min(spawnMinBoss, gb)
                 for _, o in ipairs(ents) do
                     if o ~= e and o.summonOf and o.alive then
-                        local g = math.abs(o.x - e.x)
+                        local g = math.sqrt((o.x - e.x) ^ 2 + (o.y - e.y) ^ 2)   -- (2D: uno en el techo encima no choca)
                         spawnMinGap = math.min(spawnMinGap, g)
                         if g < T then spawnBad = spawnBad + 1 end
                     end
