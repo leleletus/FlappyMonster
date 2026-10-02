@@ -79,8 +79,8 @@ OPTIONS = {
               '.ooooooo.'],
         top=4,
         legs=[(0, 4, -4, 7, -6), (0, 5, -7, 7, -9), (1, 6, -9, 4, -12)],
-        glow=[(-1, 4), (1, 4)], glow_col='#ffc45a',
-        mega_extra=[(-3, 3, 'o'), (3, 3, 'o')], mega_glow=[(-1, 4), (1, 4), (0, 5)],
+        glow=[(-2, 4), (2, 4)], glow_col='#ffc45a',          # (algo separados, simétricos: los pidió el usuario)
+        mega_extra=[], mega_glow=[(-2, 4), (2, 4)],
     ),
     'C': dict(
         name='Farolero', note='bola sobre zancos casi rectos (muy alto); las PUNTAS de las pinzas son la luz; crema',
@@ -113,6 +113,25 @@ OPTIONS = {
     ),
 }
 
+# MEGA de la opción B con retoques (misma rejilla de píxel, a escala 10): las patas son lo que lo
+# hace imponente — 4 pares (a x10 caben sin enredarse), más altas y abiertas, el cuerpo más arriba
+# —, pinzas algo mayores, tres púas en el caparazón y un tercer punto de luz dentro
+MEGA_B = dict(OPTIONS['B'],
+    canvas=(38, 21),
+    body=['..cc.....cc..',
+          '.c..c...c..c.',
+          '.c.........c.',
+          '.c...o.o...c.',
+          '..c.ooooo.c..',
+          '...oohwwoo...',
+          '..owwtttwso..',
+          '..owwwtwsso..',
+          '...ooooooo...'],
+    top=7,
+    legs=[(2, 6, -5, 12, -6), (2, 7, -8, 13, -10), (2, 7, -11, 11, -14), (3, 8, -13, 7, -18)],
+    glow=[(-2, 6), (2, 6), (0, 7)], mega_glow=[(-2, 6), (2, 6), (0, 7)], mega_extra=[],
+)
+
 POSES = ['andar1', 'andar2', 'andar3', 'andar4', 'quieto', 'agachado', 'salto', 'susto', 'aplastado']
 
 
@@ -135,6 +154,9 @@ def line(px, x0, y0, x1, y1, col):
 
 def frame(o, pose, mega=False):
     """Un cuadro (W x H). Devuelve (imagen, puntos luminosos en px del cuadro)"""
+    global W, H, CX
+    W, H = o.get('canvas', (26, 15))
+    CX = W // 2
     pal = {k: rgb(v) for k, v in o['pal'].items()}
     body = o['body']
     bw, bh = len(body[0]), len(body)
@@ -177,7 +199,7 @@ def frame(o, pose, mega=False):
             hip = (CX + side * (bw // 2 - hdx), by0 + hdy)
             kx, ky, fx, fy = kdx * spread, kdy + knee_up, fdx * spread * foot_in, 0
             if phase is not None:
-                a = 2 * math.pi * (phase + i / 3.0 + (0.5 if side > 0 else 0))
+                a = 2 * math.pi * (phase + i / float(len(o['legs'])) + (0.5 if side > 0 else 0))
                 fx += math.sin(a) * 1.4
                 fy = max(0, math.cos(a)) * 1.2            # (el pie se alza al adelantarse)
                 kx += math.sin(a) * 0.7
@@ -437,6 +459,53 @@ def walk_gif(key):
     frames[0].save(os.path.join(OUT, 'andar_%s.gif' % key), save_all=True, append_images=frames[1:], duration=110, loop=0)
 
 
+def mockup_mega_b():
+    """El Mega de la opción elegida (B), de dos maneras: solo escalado / con retoques. Arriba, a la
+    luz (con el pequeño y el jugador para comparar); abajo, en la arena a oscuras"""
+    o = OPTIONS['B']
+    wt, ht = 11, 7
+    variants = (('1. Solo escalado: el sprite del pequeño a x10', o, True), ('2. Con retoques: 4 pares de patas más altas y abiertas, pinzas mayores, púas', MEGA_B, False))
+    panels = []
+    for title, ov, mg in variants:
+        col = []
+        for dark in (False, True):
+            scene = cave(wt, ht, set())
+            floor = (ht - 1) * T
+            pl = up(Image.open(os.path.join(IMG, 'player', 'monstrito1.png')).convert('RGBA'), 6)
+            px, py = 2 * T, floor
+            scene.alpha_composite(pl, (px - pl.width // 2, py - pl.height))
+            mx = 6 * T + 32
+            lit = scene.copy()
+            put(lit, ov, 'andar2', mx, floor, MEGA, 1.0, mega=mg)
+            put(lit, o, 'andar1', 3 * T + 40, floor, SMALL, 1.0)
+            if not dark:
+                out = Image.blend(Image.new('RGBA', lit.size, (8, 9, 18, 255)), lit, 0.8)
+            else:
+                out, mask = darkness(lit, [(px + 20, py - 56, -10, 330, 30), (px, py - 50, None, 86, 0)])
+                ghost = Image.new('RGBA', out.size, (0, 0, 0, 0))
+                put(ghost, ov, 'andar2', mx, floor, MEGA, 0.0, mega=mg)
+                inv = mask.point(lambda v: 255 if v < 100 else 0)
+                out.paste(Image.alpha_composite(out, ghost), (0, 0), inv)
+            ImageDraw.Draw(out).text((16, 12), title + (' (a oscuras)' if dark else ' (a la luz)'), fill=(230, 230, 240, 255), font=FONT)
+            col.append(out)
+        panels.append(col)
+    w, h = panels[0][0].size
+    sheet = Image.new('RGBA', (w * 2 + 8, h * 2 + 8), (0, 0, 0, 255))
+    for i, col in enumerate(panels):
+        for j, p in enumerate(col):
+            sheet.paste(p, (i * (w + 8), j * (h + 8)))
+    sheet.save(os.path.join(OUT, 'mega_B_comparacion.png'))
+    # y sus cuadros, ampliados
+    K = 5
+    fr = [frame(MEGA_B, pz, False)[0] for pz in POSES]
+    strip = Image.new('RGBA', (sum(f.width * K + 8 for f in fr), fr[0].height * K + 8), rgb('#2a3044'))
+    x = 4
+    for pz in POSES:
+        put(strip, MEGA_B, pz, x + fr[0].width * K // 2, fr[0].height * K + 4, K, 1.0)
+        x += fr[0].width * K + 8
+    strip.save(os.path.join(OUT, 'mega_B_retoques_cuadros.png'))
+
+
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
     options_sheet()
@@ -444,4 +513,5 @@ if __name__ == '__main__':
         mockup(k)
         walk_gif(k)
     mockup_mega()
+    mockup_mega_b()
     print('vista previa en', OUT)
