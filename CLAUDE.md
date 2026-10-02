@@ -266,6 +266,23 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     bar 26 ambiguous), missing notes 966 → ~780 over the song. The final was then SLIMMED (user: overloaded
                     and too strong for chiptune): no duplicate octave, no thirds above, no bell unison/thirds/
                     double octave, 2-octave pedal, softer shimmer/pump/hats, crash every 2 bars.
+                    `tools/music/tentacle_winter.py` → `tentacle_winter.ogg` + `.mid` (catalog `tentacle_winter`, the
+                    Icy Mega Crabby: jefe_cangrejo_helado arena + glaciar_cangrejo): a NEW arrangement, not a blend of
+                    the two files (both are 185 BPM, 144 bars). FOUNDATION = tentacle_nes (imports its `load_midi`/
+                    `voices`/`HARM`/`chord_at`/`section`: melody note for note, bass, harmony, drum patterns); PALETTE =
+                    winter_nes (imports its `Song`, instruments, kit: saw lead + sheen, music box + echo, hollow strings,
+                    tri sub + slap, shimmer) + sleigh bells (short 2A03 noise on 8ths). The winter MOTIF (scale degrees
+                    `MOTIF`) is placed by form: chorus = call and response in the GAPS of Tentacle's melody (bars 27-28,
+                    31-32, 35-36, 39-40: D minor = the motif's own F major, and those gaps sit on B♭ B♭ / B♭ C, the
+                    motif's chords in winter); riff = its head transposed DIATONICALLY (from the 5th of the minor),
+                    alternate bars (whole motif on pass 2); scales = when the harmony reaches F (49-53; E too on pass 2);
+                    final = in the final's scale (B natural over B/C#, C over D#), fifth harmony on pass 2. Every ADDED
+                    note goes through `fit`: avoid note of the chord → nearest chord tone that doesn't repeat the
+                    previous one; a semitone from the lead sounding in that quarter → dropped (silence beats bending the
+                    motif); strings swap to the root (or drop) when the lead rubs them. Mix = winter's per-group levels
+                    + octave-band EQ toward winter_nes.ogg. Measured: MFCC distance to winter 12 vs tentacle 24
+                    (winter↔tentacle 26), centroid 2913 Hz (winter 2945, tentacle 2151), percussive ratio 0.30, chroma
+                    energy on avoid notes 20.2 % = tentacle_nes's own (the additions add no dissonance), −10 LUFS.
 src/entities/
   PlayerAdventure.lua  THE player physics (shared by SP, server and client prediction)
   OnlinePlayer.lua     remote player renderer (tinted by player color, name tag)
