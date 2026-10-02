@@ -159,7 +159,7 @@ def mega_frame(opt, i, dead=False):
 
 
 MEGA = {'A': ('Grandullon', 'cejas enfadadas y boca abierta con colmillos'),
-        'B': ('Rey Gummy', 'cejas enfadadas y coronita de oro'),
+        'B': ('Rey Gummy', 'cejas enfadadas y coronita de oro (elegida)'),
         'C': ('Gelatina', 'rosa, cejas, colmillos y goterones')}
 
 
@@ -284,6 +284,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--apply-helado', action='store_true',
                     help='escribe el Gummy helado elegido (A "Escarcha" sin carámbanos) en assets/images/gummy_ice/')
+    ap.add_argument('--apply-mega', action='store_true',
+                    help='escribe el Mega Gummy elegido (B "Rey Gummy") en assets/images/gummy_mega/')
     ap.add_argument('--out', default=os.path.join(os.environ.get('FM_PREVIEWS', '/home/mtvemo/FlappyMonster_pruebas'),
                                                   'gummy_variantes'))
     a = ap.parse_args()
@@ -293,6 +295,15 @@ def main():
         os.makedirs(dst, exist_ok=True)
         for n, f in zip(('gummy.png', 'gummy1.png', 'gummy2.png', 'dead.png'), icy_frames('A')):
             f.save(os.path.join(dst, n))
+        print('escrito', dst)
+    if a.apply_mega:
+        dst = os.path.join(ROOT, 'assets', 'images', 'gummy_mega')
+        os.makedirs(dst, exist_ok=True)
+        for n, f in zip(('gummy.png', 'gummy1.png', 'gummy2.png', 'dead.png'), mega_frames('B')):
+            f.save(os.path.join(dst, n))
+        c = Image.new('RGBA', (MW, MH), (0, 0, 0, 0))     # la corona sola (misma rejilla 16x16)
+        crown(c)
+        c.save(os.path.join(dst, 'crown.png'))
         print('escrito', dst)
 
 
