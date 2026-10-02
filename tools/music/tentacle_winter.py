@@ -368,10 +368,13 @@ def build():
         t = at(s)
         gate = 0.55 if sec == 'BR' else 0.92
         lead(t, dur, n, sec, gate, vs_)
-        if lap == 2 and sec == 'B' and fb <= 32:
-            # (la octava de pulso de la sección de invierno se queda 8 compases sobre el estribillo)
-            S.note('lay_lead8', 'pulse', t, dur, n + 12, W.I_OCT, vs=0.75 - 0.04 * (fb - 24), gate=gate, midi='lead')
-            S.note('lead_saw', 'saw', t, dur, n + 12, W.I_SAW, vs=0.75 - 0.04 * (fb - 24), gate=gate, midi='lead')
+        if lap == 2:
+            # 2ª vuelta: la intensidad de la sección de invierno NO se va (el usuario: tras el relevo
+            # tiene que seguir igual de cargada y rápida, o más, hasta el final): la melodía sigue con
+            # la octava de pulso y la sierra de winter
+            S.note('lay_lead8', 'pulse', t, dur, n + 12, W.I_OCT, vs=0.6, gate=gate, midi='lead')
+            if sec != 'D':                                # (en el final la sierra ya va en `lead`)
+                S.note('lead_saw', 'saw', t, dur, n + 12, W.I_SAW, vs=0.6 if sec == 'B' else 0.5, gate=gate, midi='lead')
         if (sec == 'D' or (lap == 2 and sec == 'B')) and dur >= E * 0.9:
             # armonizada (como la melodía de winter): la nota del acorde que queda una tercera
             # o más por debajo, en un pulso del VRC6
@@ -439,8 +442,9 @@ def build():
                     S.note('chord1', 'vrc6', tt, E, base + q[2] - 12, W.I_CHORD2, vs=0.8, gate=0.6, midi='keys')
             # Bajo a corcheas (el "pump" del final de winter: raíz, alternando la octava)
             if sec == 'D' or (hi and sec in ('B', 'C')) :
-                for k in range(4):
-                    S.note('lay_pump', 'n163', th + k * E, E / 2, 36 + r % 12 + (12 if k % 2 else 0), W.I_PUMP, midi='bass')
+                for k in range(8 if (hi and sec == 'D') else 4):     # (el final de la 2ª vuelta: a semicorcheas)
+                    step = S16 if (hi and sec == 'D') else E
+                    S.note('lay_pump', 'n163', th + k * step, step / 2, 36 + r % 12 + (12 if k % 2 else 0), W.I_PUMP, midi='bass')
             # Colchón (seno de winter): raíz y quinta, graves
             if sec != 'BR':
                 S.note('pad0', 'n163', th, BAR / 2, 48 + r % 12, W.I_PAD, vs=0.9, gate=0.98, midi='keys')
@@ -459,19 +463,19 @@ def build():
                         if any((m - l) % 12 in (1, 11) for l in ld):
                             continue
                     S.note(nm_, 'n163', th, BAR / 2, m, ins, vs=vs, gate=0.98, midi='keys')
-                    if hi and sec in ('B', 'D') and nm_ == 'str0':
+                    if hi and nm_ == 'str0':
                         S.note('strh0', 'n163', th, BAR / 2, m + 12, W.I_STR2, vs=vs * 0.8, gate=0.98, midi='keys')
             # Centelleo (arpegio en semicorcheas): las escalas y el final de la 2ª vuelta; y, para
-            # que la sección de invierno no llegue ni se vaya de golpe, ya suena en los 8 últimos
-            # compases antes del puente y se queda (apagándose) los 8 primeros del estribillo que sigue
-            shim = 0.5 if sec == 'C' else 0.75 if (sec == 'D' and hi) else (0.3 + 0.03 * (fb - 64)) if (sec == 'D' and fb >= 65) \
-                else (0.6 - 0.04 * (fb - 24)) if (sec == 'B' and hi and fb <= 32) else 0
+            # que la sección de invierno no llegue de golpe, ya suena en los 8 últimos compases antes
+            # del puente; y después de ella no se va: toda la 2ª vuelta lo lleva
+            shim = {'B': 0.6, 'C': 0.65, 'D': 0.8}[sec] if hi else 0.5 if sec == 'C' \
+                else (0.3 + 0.03 * (fb - 64)) if (sec == 'D' and fb >= 65) else 0
             if shim:
                 notes = sorted(72 + ((r + x) % 12) for x in q)
                 for k in range(8):
                     S.note('lay_shim', 'pulse', th + k * S16, S16, notes[k % 3] + (12 if 3 <= k < 6 else 0),
                            W.I_SHIM, vs=shim, gate=0.7, midi='keys')
-            if (sec == 'D' and not hi and fb >= 65) or (sec == 'B' and hi and fb <= 32):
+            if (sec == 'D' and not hi and fb >= 65) or hi:
                 # … y las cuerdas agudas de winter, lo mismo
                 S.note('strh1', 'n163', th, BAR / 2, 72 + (r + q[2]) % 12, W.I_STR2, vs=0.6, gate=0.98, midi='keys')
         # Break: la caja de música puntea el acorde con los golpes (frío, vacío). SIN eco: el eco de
@@ -486,8 +490,8 @@ def build():
         # ── Batería: los patrones de Tentacle con la batería de winter ───────
         if sec == 'BR':
             kicks, snares = (0, 2, 4, 6), (2, 6)
-        elif sec == 'C':
-            kicks, snares = (0, 3, 6), (4,)
+        elif sec == 'C' and not hi:
+            kicks, snares = (0, 3, 6), (4,)                           # (medio tiempo: solo la 1ª vuelta)
         else:
             kicks, snares = (0, 3, 5), (2, 6)
         if sec == 'D' and fb % 2 == 0:
@@ -496,7 +500,7 @@ def build():
             S.drum(t0 + st * E, 36, 1.0)
         for st in snares:
             S.drum(t0 + st * E, 40, 1.0)
-        if sec == 'C':
+        if sec == 'C' and not hi:
             S.drum(t0 + 2 * E, 40, 0.45)                              # (fantasma del medio tiempo)
         # … y el empuje de winter (bus x): hats abiertos a contratiempo, bombo a negras
         opened = sec in ('B', 'D') or (hi and sec in ('A', 'C'))
@@ -509,17 +513,28 @@ def build():
                 S.drum(t0 + st * E, 42, 1.0 if st % 2 else 0.65)
             if sec != 'BR' and (sec != 'A' or hi) and st + 1 not in snares:
                 S.NZ['hat'].hit(t0 + st * E + S16, 0, [4, 2, 1])      # (semicorchea fantasma)
-        if sec == 'D' or (hi and sec == 'B'):
+            if hi:                                                    # (2ª vuelta: hats a semicorcheas, como el final de winter)
+                S.NZ['xhat'].hit(t0 + st * E + S16, 0, [5, 3, 1] if sec != 'D' else [6, 4, 2])
+        if sec == 'D' or hi:
             for st in (2, 4, 6):
                 if st not in kicks:
                     S.drum(t0 + st * E, 36, 0.7, bus='x')
         if fb in (1, 17, 25, 41, 49, 57):
             S.drum(t0, 49, 1.0)
-        elif (sec in ('B', 'C', 'D') and fb % 4 == 1) or (hi and sec == 'D' and fb % 2 == 1) or (hi and sec == 'A' and fb % 8 == 1):
+        elif (sec in ('B', 'C', 'D') and fb % 4 == 1) or (hi and fb % 2 == 1):
             S.drum(t0, 49, 0.9, bus='x')
         if fb in (16, 24, 40, 56, 72):                                # redoble antes de cada sección
             for k in range(8):
                 S.drum(t0 + 4 * E + k * S16, 40, 0.5 + 0.06 * k)
+        if hi and fb % 4 == 0 and fb not in (40, 56, 72):             # 2ª vuelta: remate de caja cada 4 compases
+            for k in range(4):
+                S.drum(t0 + 6 * E + k * S16, 40, 0.5 + 0.08 * k, bus='x')
+        if hi and sec == 'D' and fb >= 65:                            # … y los 8 últimos, el bombo a corcheas
+            for st in (1, 3, 5, 7):
+                if st not in kicks:
+                    S.drum(t0 + st * E, 36, 0.55, bus='x')
+        if hi and fb == 71:                                           # subida de ruido hacia el bucle (el riff del principio)
+            S.riser(t0, t0 + 2 * BAR, top=12)
         if fb == 72 and hi:                                           # … y toms al cerrar la vuelta
             for k, n in ((0, 50), (1, 48), (2, 47), (3, 45)):
                 S.drum(t0 + 2 * E + k * S16, n, 1.0, bus='x')
@@ -529,7 +544,7 @@ def build():
         if sec in ('B', 'C', 'D') or (sec == 'A' and hi) or (sec == 'BR' and fb >= 23):
             for st in range(8):
                 S.NZ['sleigh'].hit(t0 + st * E, 1, I_SLEIGH if st % 2 == 0 else I_SLEIGH_OFF, short=1)
-                if sec == 'BR' or (sec == 'D' and hi):                # (trémolo en semicorcheas)
+                if sec == 'BR' or hi:                                 # (trémolo en semicorcheas)
                     S.NZ['sleigh'].hit(t0 + st * E + S16, 1, I_SLEIGH_OFF, short=1)
     bridge(S, top, lead)
     for b in range(W_AT, W_AT + W_LEN):                                   # (y en la sección nueva)
@@ -627,7 +642,7 @@ def report(y, st, g):
     # ¿Tapa algo a la melodía? (1-5 kHz, por sección: acompañamiento / melodía)
     lead = sum(st[k] * g[k] for k in st if group_of(k) == 'lead')
     rows = []
-    for name, a, b in SECT:
+    for name, a, b in SECT + [(n + '2', a + LAP2, b + LAP2) for n, a, b in SECT[2:5]]:
         t0, t1 = (a - 1) * BAR, b * BAR
         L = W.band_rms(lead, t0, t1)
         r = {gr: W.band_rms(sum(st[k] * g[k] for k in st if group_of(k) == gr), t0, t1) / max(L, 1e-9)

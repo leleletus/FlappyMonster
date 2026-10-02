@@ -289,7 +289,10 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     (class `Part` wraps the song while `W.build` runs: keeps only those bars, shifted), UNTRANSPOSED
                     (F major): enters from the final's D# through B♭ (its dominant) and that C resolves into
                     Tentacle's CHORUS (D minor: V → vi, same scale as the motif) | pass 2 = chorus, scales, final only
-                    (`SKIP2` 24 bars, denser). Going back to the riff after that payoff sounded like "the song
+                    (`SKIP2` 24 bars), which KEEPS the winter section's intensity to the end (user: after the hand-off
+                    it must not let up): octave pulse + saw on the lead, shimmer, high strings, 16th hats, four-on-the-
+                    floor, crash every 2 bars, snare fill every 4, scales in full time (not half-time), 16th pump bass
+                    and 8th kicks in the final, riser + toms into the loop (levels: W 0, pass 2 −0.5…−0.1 dB). Going back to the riff after that payoff sounded like "the song
                     restarted" and made the track a minute longer than the originals (an earlier version had the
                     section in F# major to cadence into the F# minor riff). The motif appears only in those two places,
                     where its own chords are: v1 put it in the gaps of Tentacle's melody (other keys, bent by fits)
