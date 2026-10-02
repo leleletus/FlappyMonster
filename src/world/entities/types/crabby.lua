@@ -93,6 +93,11 @@ function Crabby.loadAssets()
     local sk = addSkin('normal', 'assets/images/crabby/', { meat = 'MeatCrabby.png' })
     imgIdle1, imgIdle2, imgHid = sk.idle1, sk.idle2, sk.hid
     addSkin('ice', 'assets/images/crabby_ice/', { sink = 8 })
+    -- Pinzas pequeñas del Crabby helado (tools/ui/make_icecrabby_claws.py, opción A "Mini Mega"):
+    -- 2 cuadros 7x7 (abierta / cerrada), pinza IZQUIERDA (la derecha es su espejo); dónde van en
+    -- px de arte del cuerpo como en el Mega (x desde el centro, y desde los pies, hacia dentro)
+    Crabby.SKINS.ice.claw = { file = 'assets/images/crabby_ice/claw_left-Sheet.png', w = 7,
+                              x = 5.6, y = -0.6, inset = 1.0 }
 end
 
 function Crabby.sizeImage() return imgIdle1 end
@@ -565,6 +570,67 @@ function Crabby:drawStuckTopper(cx, baseY)
 end
 function Crabby:bounceRotation() return 0 end
 
+-- ── Pinzas (solo dibujo; skins con `claw`: el Crabby helado) ─────────────────
+-- La animación de las pinzas del Mega, en pequeño: al andar se balancean con el paso y
+-- chasquean al azar (se cierran un momento); al pararse (idle) las levantan y chasquean dos
+-- veces; escondiéndose / saliendo van cerradas y BAJAN con el caparazón fila a fila (lo que
+-- queda por debajo de la superficie no se dibuja); escondido / asomándose / muerto, nada.
+-- Todo sale del estado, del cuadro actual y del reloj: igual en un jugador y online.
+local clawArt = {}
+local CLAW_CLOSED = { hide_in = true, hide_out = true, drop_shake = true, drop_fall = true,
+                      drop_stuck = true, drop_getup = true, drop_bounce = true, snow_crack = true }
+function Crabby:drawClaws(drawX, feetY, flipped)
+    local cfg = self.sk.claw
+    if not cfg then return end
+    local img = self.currentImg or self.sk.idle2
+    local st = self.state or 'walk'
+    if img == self.sk.hid or img == self.sk.lookin or img == imgDead or st:sub(1, 4) == 'dead'
+       or st == 'hidden' or st == 'reserve' then return end
+    local a = clawArt[cfg.file]
+    if not a then
+        local im = love.graphics.newImage(cfg.file)
+        im:setFilter('nearest', 'nearest')
+        a = { img = im, quad = love.graphics.newQuad(0, 0, 1, 1, im:getDimensions()) }
+        clawArt[cfg.file] = a
+    end
+    local S = GUMMY_SCALE
+    local now = love.timer.getTime()
+    local fw, fh = cfg.w, a.img:getHeight()
+    local inset = self.sk.inset and self.sk.inset[img]
+    local sink = inset and (inset + 1) or 0               -- (hundiéndose: filas que ha bajado)
+    if st ~= self._clawSt then self._clawSt, self._clawAt = st, now end
+    local since = now - (self._clawAt or now)
+    self._claws = self._claws or { { next = now + math.random() * 1.5 }, { next = now + math.random() * 1.5 } }
+    love.graphics.push()
+    love.graphics.translate(drawX, feetY)
+    if flipped then love.graphics.scale(1, -1) end
+    love.graphics.setColor(1, 1, 1, 1)
+    for i, side in ipairs({ -1, 1 }) do
+        local cl = self._claws[i]
+        local fr, dy = 1, 0                               -- 1 abierta, 2 cerrada
+        if CLAW_CLOSED[st] or sink > 0 then
+            fr, dy = 2, sink
+        elseif st == 'idle' and since < 0.67 then         -- chasquido doble con las pinzas arriba
+            local ph = math.floor(since * 6) % 4
+            if ph < 2 then fr, dy = 1, -2 else fr, dy = 2, -1 end
+        else
+            if st == 'walk' then
+                dy = math.floor(math.sin(now * 4 * math.pi + (side > 0 and math.pi or 0)) * 0.6 + 0.5)
+            end
+            if now >= cl.next then cl.snapTo, cl.next = now + 0.12, now + 0.6 + math.random() * 1.8 end
+            if now < (cl.snapTo or 0) then fr = 2 end
+        end
+        local cx = side * (cfg.x * S + fw * S / 2 - cfg.inset * S)
+        local top = cfg.y * S - fh * S + dy * S
+        local rows = math.min(fh, math.floor(-top / S))   -- (filas por encima de la superficie)
+        if rows > 0 then
+            a.quad:setViewport((fr - 1) * fw, 0, fw, rows)
+            love.graphics.draw(a.img, a.quad, cx, top, 0, -side * S, S, fw / 2, 0)
+        end
+    end
+    love.graphics.pop()
+end
+
 -- Dibuja "como en el suelo" con los pies en (px, py) de pantalla, girado `ang`
 function Crabby:renderLocal(px, py, ang)
     local fl, fc, ox, oy = self.flipped, self.facing, self.x, self.y
@@ -663,6 +729,7 @@ function Crabby:renderBody(camX, camY)
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.draw(img, drawX, feetY, 0, scaleX, flipped and -scaleY or scaleY,
                        img:getWidth() / 2, ih)
+    if self.sk.claw then self:drawClaws(drawX, feetY, flipped) end
     -- Tapa DELANTE (montón de nieve): sale de la superficie, por delante del cangrejo
     if self.coverFront and self.spikeProgress > 0 and not stuck then
         self:drawTopper(drawX, feetY, self.spikeProgress, flipped and 1 or -1)

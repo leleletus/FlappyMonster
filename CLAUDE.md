@@ -510,6 +510,11 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   art px: the ice spike and icicle sit 2 px into the shell, like the Mega's spike); before, the cover floated up to
   32 px above the sinking shell. Harness `icecrabby_rules tapa_pegada` (measures the opaque top in the PNGs;
   `LOOK=1` → icecrabby_esconderse.png).
+  SMALL CLAWS (user's pick "A: Mini Mega" of 3, `tools/ui/make_icecrabby_claws.py --apply A`): `crabby_ice/claw_left-Sheet.png`
+  2 frames 7x7 (open / closed; right = mirror), skin field `claw` {file, w, x, y, inset} (art px like the Mega);
+  render-only `Crabby:drawClaws` after the body: walking = sway with the step + random snaps, `idle` = raised double
+  snap, hiding / out / drops = closed and SINKING with the shell row by row (`inset + 1`; rows under the surface are
+  cut with a quad viewport), hidden / peeking / dead = none; mirrored on the ceiling. Harness `icecrabby_rules pinzas`.
   Covers (on floor, walls and ceiling): ice spike = the normal spike (kills); icicle = the Snowball Boss icicle,
   always an icicle, hazard `effect='hurt', dmg=2` + `onHurtPlayer` recoil (Interactions 'hurt' now takes the
   damage from `hb.dmg`), drops from the ceiling like the spike (2 HP) and sticks; trampoline = the Crabby

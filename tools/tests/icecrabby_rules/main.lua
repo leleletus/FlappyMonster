@@ -4,6 +4,8 @@
 --   tapa_pegada   púa / carámbano / trampolín bien pegados a la cabeza en TODO el esconderse y
 --                 el salir: la base de su caja = la fila de arriba OPACA del cuadro actual (medida en
 --                 el PNG) menos 2 px de arte (púa y carámbano encajados; el trampolín encima), ±1 px
+--   pinzas        Crabby helado con pinzas pequeñas (dibujo): andando se ven a los dos lados
+--                 por fuera del cuerpo; escondido, no; el Crabby normal no tiene
 --   escombros     al esconderse suelta piedrecitas del bloque de debajo (Crabby normal y helado)
 --   pua           escondido bajo la púa de hielo: tocarla mata (como el Crabby)
 --   carambano     escondido bajo un carámbano: tocarlo = -2 de vida + empujón
@@ -151,6 +153,40 @@ function cases.tapa_pegada()
     end
     check('tapa_pegada', worst <= 1 and seen > 30,
         ('desfase máximo base de la tapa / cabeza (px): %s · %d pasos medidos'):format(table.concat(info, ', '), seen))
+end
+
+function cases.pinzas()
+    local function sides(ty, hidden)
+        local level, es, e = room(8, 4, { ent(ty, 4, 3) })
+        step(level, es, 0.2)
+        if hidden then hide(e) else e.state, e.currentImg = 'walk', e.sk.idle1 end
+        local cv = love.graphics.newCanvas(8 * T, 4 * T)
+        love.graphics.setCanvas(cv)
+        love.graphics.clear(0, 0, 0, 0)
+        e:render(0, 0)
+        love.graphics.setCanvas()
+        local d = cv:newImageData()
+        local n = { 0, 0 }
+        local cx = math.floor(e.x)
+        local half = e.sk.idle1:getWidth() * GUMMY_SCALE / 2
+        for y = 0, d:getHeight() - 1 do
+            for i, sd in ipairs({ -1, 1 }) do
+                for k = half + 1, half + 12 do
+                    local r, g, b, a = d:getPixel(cx + sd * k, y)
+                    if a > 0 and r > 0.6 and g < 0.8 then n[i] = n[i] + 1 end   -- (naranja)
+                end
+            end
+        end
+        return n
+    end
+    local walk = sides('crabby_ice')
+    local hid = sides('crabby_ice', true)
+    local tramp = sides('crabbytramp_ice')
+    local normal = sides('crabby')
+    check('pinzas', walk[1] > 10 and walk[2] > 10 and hid[1] + hid[2] == 0 and tramp[1] > 10 and tramp[2] > 10
+        and normal[1] + normal[2] == 0,
+        ('píxeles de pinza fuera del cuerpo (izq/der): andando %d/%d · escondido %d/%d · trampolín %d/%d · Crabby normal %d/%d'):format(
+            walk[1], walk[2], hid[1], hid[2], tramp[1], tramp[2], normal[1], normal[2]))
 end
 
 function cases.hundirse()
@@ -563,7 +599,7 @@ end
 function love.load()
     if os.getenv('LOOK') then look(); lookMega(); lookSpikes(); lookHide() end
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'tapa_pegada', 'hundirse', 'escombros', 'pua', 'carambano', 'nieve_toque', 'nieve_encima', 'nieve_gp',
+    for _, n in ipairs({ 'tapa_pegada', 'pinzas', 'hundirse', 'escombros', 'pua', 'carambano', 'nieve_toque', 'nieve_encima', 'nieve_gp',
                          'nieve_techo', 'carambano_techo', 'trampolin', 'pared',
                          'mega_palmada', 'mega_pinzas', 'mega_placa', 'mega_red', 'pinchos_skin' }) do
         if not only or only == n then
