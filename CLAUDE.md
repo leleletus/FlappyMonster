@@ -1636,6 +1636,22 @@ scripts in `Scripts/Assembly-CSharp/`, real inspector values in
 `Scenes/Level1.unity`. Port *behaviour and timings*; the physics differ, so
 don't copy speeds/forces literally (the user tunes feel by hand).
 
+## OST presentation videos (`tools/video/`)
+
+`tools/video/make_ost.sh [megacrabby megacrabby_ice megagloomy]` → `FlappyMonster_pruebas/videos/<track>.mp4` (outside
+the repo; 1280x720, 30 fps, H.264 + AAC, the full track once with a 2 s fade-out). `tools/video/ost/main.lua` is a
+LÖVE app that renders OFFLINE with the real game code (not a screen recording): the boss's REAL arena level (its zone
+of guarida_cangrejo_rey / glaciar_cangrejo / gruta_lugubre, with sky, decorations, water, snow, particles), frame by
+frame into a canvas piped raw to ffmpeg; `love.timer.getTime/getDelta` are replaced by a virtual clock so everything
+that animates from the timer runs at video time. `Sound` is a silent stub (the boss makes no sound; its fx and
+particles stay). The boss does its real INTRO (an invisible dummy player enters the zone), then the tool takes over:
+idle state (`ready`), one gesture every 8 bars through the boss's own update (Megas: `rest` + `restKind` = claw
+punches / spike flex / roar; Mega Gloomy: `ping` ring / `taunt` / `roar`), and it gets ANGRY in the last quarter
+(Megas: hp → 30 %, so anger symbols + shards; Gloomy: `rage` crystals). The Flappy Monster logo bops on every beat
+(`SHOWS[...].bpm`; stronger on the bar's first beat) and the track title is in the corner. Mega Gloomy only: a light
+BULB hangs from the zone ceiling and swings one full cycle every 8 beats — three fake decorations with `light` are
+injected into `level.decorations` so `Darkness` lights the arena and the boss as it moves.
+
 ## Testing without a human
 
 **ALWAYS start here — don't rebuild test setups by hand.** Every harness lives
