@@ -270,16 +270,21 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     Icy Mega Crabby: jefe_cangrejo_helado arena + glaciar_cangrejo): a NEW arrangement, not a blend of
                     the two files (both are 185 BPM). FOUNDATION = tentacle_nes (imports its `load_midi`/`voices`/
                     `HARM`/`chord_at`/`section`: melody note for note, bass, harmony, drum patterns); PALETTE and
-                    DRIVE = winter_nes (imports its `Song`, instruments, kit, `LEVEL_DB`: saw lead + sheen + low N163
-                    body, harmonized lead in chorus/final, hollow strings, pad, tri sub + slap, low comp doubling,
+                    DRIVE = winter_nes (imports its `Song`, instruments, kit, `LEVEL_DB`: LEAD = winter's Smooth Synth
+                    N163 + MUSIC BOX doubling every note an octave up + winter's pulse lead, saw only added in the
+                    final — with the VRC6 saw as main lead the user still heard Tentacle's instrument —, harmonized
+                    lead in chorus/final, hollow strings, pad, tri sub + slap, low comp doubling,
                     8th "pump" bass, offbeat open hats, four-on-the-floor, crashes, shimmer) + sleigh bells. FORM
-                    (176 bars, 228 s): Tentacle pass 1 (72) | a NEW SECTION = winter's 1:48 melody (Smooth Synth,
+                    (180 bars, 233.5 s): Tentacle pass 1 (72) | 4-bar BRIDGE (`bridge()`: B B C# C# = the final's first two
+                    chords turned into IV–V of F#; the final's melodic cell, a rising C# arpeggio, drums emptied then a
+                    snare build + toms + riser, swelling strings, music-box arpeggio; a bare cut was "abrupt") | a NEW SECTION = winter's 1:48 melody (Smooth Synth,
                     bars 85-116) with winter_nes's WHOLE arrangement (class `Part` wraps the song while `W.build`
                     runs: keeps only those bars, shifted and transposed +1 → F# MAJOR: enters from the final's D#,
                     its last chord C# is the dominant of the F# minor riff) | Tentacle pass 2 (denser). The Christmas
                     music-box motif is NOT used: v1 put it in the gaps of Tentacle's melody and the user found it
                     forced in almost every appearance — don't graft a motif onto another song's sections; give it
-                    its own section. Strings swap to the root (or drop) when the lead rubs them. Strength = sustained
+                    its own section. Strings swap to the root (or drop) when the lead rubs them. Break bell plinks have NO echo (winter's
+                    3/16 echo on offbeat plinks sounded out of phase). Strength = sustained
                     BODY, not louder drums: with the kick at +1.5 dB the crest factor was 11 dB vs winter's 9.7 and
                     sections 1-2 dB weaker → kick +0.3, bass 0, pad −5, master −9.3 LUFS (no quiet stretches like
                     winter's intro). Measured vs winter 85-116 (rms −10.5, 64 spectral peaks/frame, crest 9.7):

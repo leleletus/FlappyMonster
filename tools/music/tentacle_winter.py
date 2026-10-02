@@ -38,9 +38,11 @@ OUT = W.OUT
 NAME = 'tentacle_winter'
 W_FROM, W_TO, W_UP = 85, 116, 1                # el tramo de winter y su transposición
 W_LEN = W_TO - W_FROM + 1
-NB = 144 + W_LEN
-LAP2 = 72 + W_LEN                              # compases que se desplaza la 2ª vuelta
-SECT = [('A', 1, 16), ('BR', 17, 24), ('B', 25, 40), ('C', 41, 56), ('D', 57, 72), ('W', 73, 72 + W_LEN)]
+TR = 4                                         # compases del puente hacia la sección nueva
+W_AT = 73 + TR                                 # donde empieza la sección nueva
+NB = 144 + TR + W_LEN
+LAP2 = 72 + TR + W_LEN                              # compases que se desplaza la 2ª vuelta
+SECT = [('A', 1, 16), ('BR', 17, 24), ('B', 25, 40), ('C', 41, 56), ('D', 57, 72), ('TR', 73, 72 + TR), ('W', W_AT, W_AT + W_LEN - 1)]
 
 
 def bar_of(t):
@@ -54,7 +56,7 @@ def loc(b):
 
 def at(t):
     """Tiempo en Tentacle (144 compases) → tiempo en esta pista (la 2ª vuelta, tras la sección nueva)"""
-    return t + (W_LEN * BAR if t >= 72 * BAR - 1e-6 else 0.0)
+    return t + ((TR + W_LEN) * BAR if t >= 72 * BAR - 1e-6 else 0.0)
 
 
 class Part:
@@ -94,6 +96,57 @@ I_STAB = {'vol': [15, 13, 11, 8, 6, 4], 'sus': 3}
 STATS = {'strings': 0, 'harm': 0}
 
 
+def bridge(S, top, lead):
+    """El PUENTE hacia la sección nueva (4 compases): que el cambio avise y tenga sentido.
+    Armonía: Si – Si – Do# – Do# = los dos primeros acordes del final de Tentacle (que acaba
+    de sonar: Si – Do# – Re#), pero ahora son el IV y el V de Fa# mayor y resuelven en la
+    sección nueva. La melodía repite la célula del final sobre esos acordes y sube por el
+    arpegio de Do#; la batería se vacía y vuelve creciendo (caja a negras → corcheas →
+    semicorcheas, toms, subida de ruido); cuerdas que crecen y la caja de música anunciando"""
+    t0 = 72 * BAR
+    cell = {b: [(s - (b - 1) * BAR, e - s, n) for s, e, n in top if bar_of(s) == b] for b in (57, 58)}
+    for i in range(3):                                     # la célula del final: Si, Si, Do#
+        for dt, d, n in cell[57 if i < 2 else 58]:
+            if i == 2 and n % 12 == 7:
+                n += 1                                     # (Sol → Sol#: ya estamos en Fa# mayor)
+            lead(t0 + i * BAR + dt, d, n, 'A', 0.92, vs=0.85 + 0.05 * i)
+    for k, n in enumerate((68, 73, 77, 80, 85, 89)):       # arpegio de Do# hacia arriba, y se queda
+        lead(t0 + 3 * BAR + k * E, E if k < 5 else 3 * E, n, 'B', 0.95)
+    for i in range(4):
+        tb = t0 + i * BAR
+        r = 11 if i < 2 else 1                             # Si / Do#
+        S.note('bass_tri', 'tri', tb, BAR, 35 + (r - 11), W.I_TRI, gate=0.97, midi='bass')
+        for k in range(8 if i >= 2 else 4):                # bajo: negras, luego corcheas
+            step = BAR / (8 if i >= 2 else 4)
+            S.note('bass_n', 'n163', tb + k * step, S16 * 1.6, 35 + (r - 11) + (12 if (i >= 2 and k % 2) else 0), W.I_BASSN, gate=0.9, midi='bass')
+        vs = 0.55 + 0.15 * i
+        for nm_, ins, m in (('pad0', W.I_PAD, 48 + r), ('pad1', W.I_PAD, 55 + r), ('str0', W.I_STR, 60 + r + 4 - (12 if r == 11 else 0) + 12),
+                            ('str1', W.I_STR2, 67 + r), ('strh0', W.I_STR2, 72 + r)):
+            S.note(nm_, 'n163', tb, BAR, m, ins, vs=min(1, vs), gate=0.99, midi='keys')
+        # Caja de música: arpegio del acorde en corcheas, cada compás una octava más de recorrido
+        tri = [r, r + 4, r + 7]
+        for k in range(8):
+            m = 72 + tri[k % 3] + 12 * ((k // 3) if i >= 1 else 0) - (12 if r == 11 else 0)
+            S.note('bell0', 'n163', tb + k * E, E, m, W.I_BELL, vs=0.35 + 0.1 * i, gate=1.2, midi='keys', release=5)
+        # Batería: se vacía y vuelve creciendo
+        for beat in range(4):
+            S.drum(tb + beat * BAR / 4, 36, 0.8 + 0.05 * i)
+            S.drum(tb + beat * BAR / 4 + E, 42, 0.8)
+        n = (0, 4, 8, 16)[i]
+        for k in range(n):
+            if i == 3 and k >= 12:
+                continue
+            S.drum(tb + k * BAR / n, 40, 0.4 + 0.5 * (i * 16 + k * 16 / n) / 64)
+        for st in range(8):
+            S.NZ['sleigh'].hit(tb + st * E, 1, I_SLEIGH if st % 2 == 0 else I_SLEIGH_OFF, short=1)
+            if i >= 2:
+                S.NZ['sleigh'].hit(tb + st * E + S16, 1, I_SLEIGH_OFF, short=1)
+    S.drum(t0, 49, 1.0)
+    for k, n in ((12, 50), (13, 48), (14, 47), (15, 45)):
+        S.drum(t0 + 3 * BAR + k * S16, n, 1.0, bus='x')
+    S.riser(t0 + 2 * BAR, t0 + 4 * BAR, top=12)
+
+
 def build():
     rh, lh = TN.load_midi()
     top, _ = TN.voices(rh)
@@ -103,13 +156,36 @@ def build():
 
     # ── La sección nueva: winter 85-116 con su arreglo entero, en Fa# mayor ──
     real_song = W.Song
-    W.Song = lambda nb: Part(S, W_FROM, W_TO, 73, W_UP)
+    W.Song = lambda nb: Part(S, W_FROM, W_TO, W_AT, W_UP)
     try:
         W.build(W.load_midi())
     finally:
         W.Song = real_song
 
-    # Melodía de Tentacle con el lead de winter (sierra + brillo); en el break, golpes cortos
+    # Melodía de Tentacle con las voces de winter (NO la sierra: con ella seguía sonando a
+    # Tentacle): el Smooth Synth (N163, el de la sección nueva) + la CAJA DE MÚSICA doblando
+    # cada nota una octava arriba + el pulso "8-Bit Square" de winter en estribillo y final;
+    # en las escalas, caja de música + Smooth Synth + pulso; en el break, punteo (pluck); en el final se
+    # suma la sierra una octava arriba, como en el final de winter
+    def lead(t, dur, n, sec, gate, vs=1.0):
+        hi_n = n + 12 if n + 12 <= 98 else n
+        if sec == 'BR':
+            S.note('lead3', 'n163', t, dur, n, W.I_PLUCK, vs=vs, gate=gate, midi='lead')
+            S.note('lead_bell', 'n163', t, dur, hi_n, W.I_BELL, vs=0.8 * vs, gate=1.0, midi='lead', release=5)
+            return
+        if sec == 'C':
+            S.note('lead_bell', 'n163', t, dur, hi_n, W.I_BELL, vs=vs, gate=1.1, midi='lead', release=5)
+            S.note('lead3', 'n163', t, dur, n, W.I_LEAD_N, vs=0.85 * vs, gate=gate, midi='lead')
+            S.note('lead2', 'pulse', t, dur, n, W.I_LEAD_P, vs=0.75 * vs, gate=gate, midi='lead')
+            return
+        S.note('lead3', 'n163', t, dur, n, W.I_LEAD_N, vs=vs, gate=gate, midi='lead')
+        S.note('lead_bell', 'n163', t, dur, hi_n, W.I_BELL, vs=0.9 * vs, gate=1.1, midi='lead', release=5)
+        S.note('lead_low', 'n163', t, dur, n - 12, W.I_LEAD_N, vs=0.6 * vs, gate=gate, midi='lead')
+        # (el pulso da la presencia en 1-5 kHz que tenía la sierra; en el riff, a la misma altura)
+        S.note('lead2', 'pulse', t, dur, hi_n if sec in ('B', 'D') else n, W.I_LEAD_P, vs=0.7 * vs, gate=gate, midi='lead')
+        if sec == 'D':
+            S.note('lead_saw', 'saw', t, dur, hi_n, W.I_SAW, vs=0.7 * vs, gate=gate, midi='lead')
+
     lead_at = {}                                # semicorchea → notas de la melodía sonando
     for s, e, n in top:
         b = bar_of(s)
@@ -118,11 +194,7 @@ def build():
         dur = e - s
         t = at(s)
         gate = 0.55 if sec == 'BR' else 0.92
-        S.note('lead_saw', 'saw', t, dur, n, I_STAB if sec == 'BR' else W.I_SAW, gate=gate, midi='lead')
-        S.note('lead_sheen', 'pulse', t, dur, n + 12, W.I_SHEEN, gate=gate, midi='lead')
-        if sec in ('A', 'B', 'D'):
-            # con cuerpo: la onda de lead de winter a la octava baja
-            S.note('lead_low', 'n163', t, dur, n - 12, W.I_LEAD_N, vs=0.8, gate=gate, midi='lead')
+        lead(t, dur, n, sec, gate)
         if (sec == 'D' or (lap == 2 and sec == 'B')) and dur >= E * 0.9:
             # armonizada (como la melodía de winter): la nota del acorde que queda una tercera
             # o más por debajo, en un pulso del VRC6
@@ -214,14 +286,14 @@ def build():
                 for k in range(8):
                     S.note('lay_shim', 'pulse', th + k * S16, S16, notes[k % 3] + (12 if 3 <= k < 6 else 0),
                            W.I_SHIM, vs=0.5 if sec == 'C' else 0.75, gate=0.7, midi='keys')
-        # Break: la caja de música puntea el acorde con los golpes (frío, vacío)
+        # Break: la caja de música puntea el acorde con los golpes (frío, vacío). SIN eco: el eco de
+        # winter (3 semicorcheas después) sobre este punteo a contratiempo sonaba desfasado
         if sec == 'BR' and fb <= 22:
             r, q = TN.chord_at(b, 0)
             base = 84 + (r - 84) % 12
             for st, x in ((6, q[2]), (10, q[1]), (14, 0)):
-                S.note('bell0', 'n163', t0 + st * S16, S16 * 2, base + x - 12, W.I_BELL, vs=0.35, gate=1.2,
+                S.note('bell0', 'n163', t0 + st * S16, S16 * 2, base + x - 12, W.I_BELL, vs=0.4, gate=1.2,
                        midi='keys', release=5)
-                S.note('echo', 'n163', t0 + (st + 3) * S16, S16 * 2, base + x - 12, W.I_ECHO, vs=0.6, gate=1.2, midi='keys', release=4)
 
         # ── Batería: los patrones de Tentacle con la batería de winter ───────
         if sec == 'BR':
@@ -263,7 +335,7 @@ def build():
         if fb == 72 and hi:                                           # … y toms al cerrar la vuelta
             for k, n in ((0, 50), (1, 48), (2, 47), (3, 45)):
                 S.drum(t0 + 2 * E + k * S16, n, 1.0, bus='x')
-        if fb in (24, 56) or (fb == 72 and not hi):                   # subida de ruido a lo que viene
+        if fb in (24, 56):                   # subida de ruido a lo que viene
             S.riser(t0 - BAR, t0 + BAR, top=10)
         # Cascabeles: en corcheas (acento en los tiempos); en el riff solo la 2ª vuelta
         if sec in ('B', 'C', 'D') or (sec == 'A' and hi) or (sec == 'BR' and fb >= 23):
@@ -271,7 +343,8 @@ def build():
                 S.NZ['sleigh'].hit(t0 + st * E, 1, I_SLEIGH if st % 2 == 0 else I_SLEIGH_OFF, short=1)
                 if sec == 'BR' or (sec == 'D' and hi):                # (trémolo en semicorcheas)
                     S.NZ['sleigh'].hit(t0 + st * E + S16, 1, I_SLEIGH_OFF, short=1)
-    for b in range(73, 73 + W_LEN):                                   # (y en la sección nueva)
+    bridge(S, top, lead)
+    for b in range(W_AT, W_AT + W_LEN):                                   # (y en la sección nueva)
         for st in range(8):
             S.NZ['sleigh'].hit((b - 1) * BAR + st * E, 1, I_SLEIGH if st % 2 == 0 else I_SLEIGH_OFF, short=1)
     return S
@@ -331,7 +404,7 @@ def mixdown(st, g):
     x = sosfilt(butter(1, 30, btype='high', fs=SR, output='sos'), x)
     x = sosfilt(butter(1, 15000, btype='low', fs=SR, output='sos'), x)
     side = np.zeros_like(x)
-    for k, p in (('lead_sheen', 0.25), ('lead_h1', -0.3), ('lead_h2', 0.3), ('chord0', -0.3), ('chord1', 0.3), ('bell1', 0.3),
+    for k, p in (('lead_sheen', 0.25), ('lead_bell', 0.25), ('lead2', -0.2), ('lead_h1', -0.3), ('lead_h2', 0.3), ('chord0', -0.3), ('chord1', 0.3), ('bell1', 0.3),
                  ('echo', -0.4), ('arp', 0.25), ('lay_shim', 0.25), ('str0', -0.25), ('str1', 0.25), ('flute0', -0.25),
                  ('flute1', 0.25), ('pad1', -0.2), ('hat', 0.2), ('xhat', -0.2), ('sleigh', -0.3)):
         if k in st and k in use:
