@@ -49,6 +49,21 @@ function Interactions.check(pa, e)
     -- Enemigos DUROS (`needsPound` en su clase): un pisotón normal solo rebota; hace falta un
     -- ground pound para matarlos
     if r == 'stomp' and e.needsPound and pa.gpPhase ~= 'fall' then return 'bounce', a, c end
+    -- … y encima de ellos NO hacen daño (solo de lado, o con su ataque: `hurtsFromAbove()`): tras el
+    -- rebote el jugador sigue un momento dentro de su caja, subiendo, y eso contaba como tocarlo
+    if e.needsPound and (r == 'hurt' or r == 'kill') and not (e.hurtsFromAbove and e:hurtsFromAbove()) then
+        local pob, gob = pa:getOuterBounds(), e:getOuterBounds()
+        local nx, ny = 0, -1
+        if e.surfaceNormal then
+            local sx, sy = e:surfaceNormal()
+            if sx then nx, ny = sx, sy end
+        end
+        local above
+        if nx ~= 0 then above = (pa.x - (gob.x + gob.w / 2)) * nx > gob.w * 0.25          -- (en una pared: por su lado abierto)
+        elseif ny > 0 then above = pob.y > gob.y + gob.h * 0.4                              -- (en el techo: por debajo)
+        else above = pob.y + pob.h < gob.y + gob.h * 0.6 end                               -- (en el suelo: los pies por encima)
+        if above then return nil end
+    end
     return r, a, b, c
 end
 

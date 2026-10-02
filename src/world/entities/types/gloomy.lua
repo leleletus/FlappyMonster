@@ -66,6 +66,8 @@ local body, glow, icons
 -- DURO: un pisotón normal solo rebota en él; hace falta un GROUND POUND para matarlo (regla
 -- genérica de Interactions.check: `needsPound`)
 Gloomy.needsPound = true
+-- (encima de él no hace daño: solo de lado… o cuando es ÉL quien salta sobre ti)
+function Gloomy:hurtsFromAbove() return self.state == 'leap' end
 
 function Gloomy.loadAssets()
     if body then return end

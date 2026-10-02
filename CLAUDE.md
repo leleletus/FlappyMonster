@@ -963,7 +963,9 @@ list no mode until the user places a Point Area in them).
   'taunt' (1.1 s push-ups, crouch ↔ idle frames, eyes blinking) after hurting a player, by leap or by touch. LIT by a
   flashlight → 'flee' (plans away from the light every `FLEE_PLAN` 0.6 s, ×2 speed; calms `calmTime` s after dark).
   NEEDS A GROUND POUND: class flag `needsPound` (generic, `Interactions.check`: a normal 'stomp' on such an entity
-  becomes 'bounce'; the GP and its landing zone still kill). Dies flung when the block it GRIPS breaks (floor, wall
+  becomes 'bounce'; the GP and its landing zone still kill; and contact from ABOVE such an entity never hurts — only
+  from the side, or when `e:hurtsFromAbove()` says so = its own leap; after the bounce the player was still inside its
+  box going up and took damage). Dies flung when the block it GRIPS breaks (floor, wall
   or ceiling: `Entity:standingOnCell` now handles crawlers, which have no `onGround`). Doesn't walk through other
   enemies: `Crawler.entityAhead(e, level)` (generic, shared with Crabby) → turns round and drops its plan.
   Net: {surface, turn, modeT, icon}. Can be a RESERVE minion (`makeReserve`). Test

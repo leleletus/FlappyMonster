@@ -327,12 +327,13 @@ function cases.pisoton()
         local hp0, up = pa.hp, false
         if gp then pa.gpPhase, pa.vy = 'fall', 900 end
         step(level, es, 0.6, function() if pa.vy < -200 then up = true end; return e.state == 'dead' or up end)
+        if not gp then step(level, es, 1.2, function() e.state = 'idle'; e.idleTimer, e.idleDuration = 0, 99; pa.x = e.x end) end   -- (sigue rebotando encima)
         return e.state, hp0 - pa.hp, up
     end
     local st1, d1, up1 = try(false)
     local st2, d2 = try(true)
     check('pisoton', st1 ~= 'dead' and d1 == 0 and up1 and st2 == 'dead' and d2 == 0,
-        ('pisotón normal: %s, rebota=%s, vida -%d; ground pound: %s, vida -%d'):format(st1, tostring(up1), d1, st2, d2))
+        ('pisotón normal (y 1,2 s más rebotando encima): %s, rebota=%s, vida -%d; ground pound: %s, vida -%d'):format(st1, tostring(up1), d1, st2, d2))
 end
 
 -- BLOQUE: si se rompe el bloque al que está agarrado (suelo o techo), muere despedido
