@@ -204,7 +204,7 @@ local function solve(path)
         local miss, total = {}, 0
         for _, e in ipairs(data.entities or {}) do
             local d = e.type
-            if d == 'gummy' or d == 'crabby' or d == 'crabbytramp' or d == 'star' or d == 'extralife' or d == 'checkpoint' or d == 'mortar' then
+            if d:match('^gummy') or d:match('^crabby') or d == 'gloomy' or d == 'bomb' or d == 'star' or d == 'extralife' or d == 'checkpoint' or d == 'mortar' then
                 total = total + 1
                 local ok = false
                 for dr = -2, 2 do for dc = -1, 1 do

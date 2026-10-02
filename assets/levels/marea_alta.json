@@ -34,10 +34,7 @@
     {"col":24,"row":10,"sub":1,"type":"stretch"},
     {"col":37,"row":5,"type":"palmtree"},
     {"col":5,"row":5,"type":"palmtree"},
-    {"col":8,"props":{"layer":"back"},"row":5,"type":"butterflies"},
-    {"col":39,"props":{"layer":"back"},"row":5,"sub":4,"type":"hibiscus"},
-    {"col":14,"props":{"flip":true,"layer":"back"},"row":6,"sub":4,"type":"hibiscus"},
-    {"col":17,"props":{"layer":"back"},"row":6,"sub":4,"type":"hibiscus"}
+    {"col":39,"props":{"layer":"back"},"row":5,"sub":4,"type":"hibiscus"}
   ],
   "vents": [],
   "modes": ["koth"],

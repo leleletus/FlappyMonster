@@ -48,7 +48,6 @@
     {"col":92,"props":{"corner":{"col":109,"row":12}},"row":12,"type":"bossglass"}
   ],
   "foliage": [
-    {"col":118,"props":{"flip":true,"layer":"back"},"row":10,"sub":3,"type":"hibiscus"},
     {"col":2,"props":{"flip":true,"layer":"back"},"row":13,"sub":4,"type":"tulip"},
     {"col":2,"props":{"layer":"back"},"row":13,"sub":3,"type":"stretch"},
     {"col":4,"props":{"layer":"back"},"row":13,"type":"butterflies"},

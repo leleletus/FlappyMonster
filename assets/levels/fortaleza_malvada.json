@@ -47,10 +47,8 @@
     {"col":112,"props":{"corner":{"col":112,"row":12}},"row":2,"type":"bosswall"}
   ],
   "foliage": [
-    {"col":115,"row":12,"type":"palmtree"},
-    {"col":24,"row":13,"type":"palmtree"},
     {"col":21,"props":{"layer":"back"},"row":5,"sub":3,"type":"torch"},
-    {"col":60,"props":{"flip":true,"layer":"back"},"row":7,"sub":3,"type":"stalagmite_small"},
+    {"col":60,"props":{"flip":true,"layer":"back"},"row":7,"sub":3,"type":"bones"},
     {"col":31,"props":{"layer":"back"},"row":10,"sub":4,"type":"bones"},
     {"col":31,"props":{"layer":"back"},"row":10,"sub":3,"type":"bones"},
     {"col":58,"props":{"flip":true,"layer":"back"},"row":10,"sub":3,"type":"torch"},

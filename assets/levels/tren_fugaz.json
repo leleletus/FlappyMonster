@@ -44,7 +44,6 @@
   ],
   "foliage": [
     {"col":103,"props":{"flip":true,"layer":"back"},"row":7,"sub":3,"type":"hibiscus"},
-    {"col":125,"props":{"flip":true,"layer":"back"},"row":7,"sub":4,"type":"tulip"},
     {"col":7,"props":{"layer":"back"},"row":9,"sub":4,"type":"tulip"},
     {"col":12,"props":{"layer":"back"},"row":9,"sub":3,"type":"tulip"},
     {"col":44,"row":9,"type":"tropical_bush"},

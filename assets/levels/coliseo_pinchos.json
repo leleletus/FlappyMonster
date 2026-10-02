@@ -103,7 +103,6 @@
     {"col":32,"row":12,"type":"star"}
   ],
   "foliage": [
-    {"col":2,"props":{"layer":"back"},"row":2,"type":"cobweb"},
     {"col":19,"props":{"layer":"back"},"row":12,"sub":4,"type":"bones"},
     {"col":21,"props":{"layer":"back"},"row":12,"sub":3,"type":"bones"},
     {"col":44,"props":{"flip":true,"layer":"back"},"row":12,"sub":3,"type":"torch"},

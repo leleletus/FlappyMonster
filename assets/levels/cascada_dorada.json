@@ -49,13 +49,8 @@
     {"col":20,"row":10,"type":"bomb"}
   ],
   "foliage": [
-    {"col":31,"props":{"flip":true},"row":25,"type":"fern"},
-    {"col":17,"row":25,"type":"coral"},
     {"col":18,"row":12,"sub":1,"type":"starfish"},
-    {"col":34,"row":25,"sub":4,"type":"clam"},
-    {"col":33,"row":16,"sub":4,"type":"clam"},
-    {"col":44,"row":18,"sub":4,"type":"anemone"},
-    {"col":9,"row":14,"sub":4,"type":"anemone"}
+    {"col":34,"row":25,"sub":4,"type":"shell"}
   ],
   "vents": [
     {"col":6,"row":26,"sub":3},

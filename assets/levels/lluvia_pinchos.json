@@ -320,9 +320,6 @@
     {"col":59,"row":9,"type":"mortar"}
   ],
   "foliage": [
-    {"col":90,"props":{"layer":"back"},"row":7,"sub":4,"type":"stretch"},
-    {"col":88,"props":{"flip":true,"layer":"back"},"row":8,"sub":3,"type":"stretch"},
-    {"col":3,"props":{"layer":"back"},"row":9,"type":"butterflies"},
     {"col":98,"props":{"flip":true,"layer":"back"},"row":9,"sub":4,"type":"seaweed_small"},
     {"col":98,"props":{"layer":"back"},"row":9,"sub":3,"type":"anemone"},
     {"col":100,"props":{"layer":"back"},"row":9,"sub":4,"type":"clam"},
@@ -337,7 +334,7 @@
     {"col":77,"row":4,"sub":3,"type":"torch"},
     {"col":82,"row":4,"sub":4,"type":"torch"},
     {"col":89,"row":7,"sub":4,"type":"torch"},
-    {"col":96,"row":8,"sub":3,"type":"torch"},
+    {"col":96,"row":8,"sub":3,"type":"shell"},
     {"col":108,"row":6,"sub":3,"type":"torch"},
     {"col":128,"row":5,"sub":3,"type":"torch"},
     {"col":140,"row":9,"sub":4,"type":"torch"},

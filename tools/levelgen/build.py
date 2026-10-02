@@ -10,15 +10,21 @@ import os, re, sys
 sys.path.insert(0, os.path.dirname(__file__))
 import levels_run
 mods = [levels_run]
-for name in ('levels_hunt', 'levels_koth', 'levels_boss', 'levels_water'):
+for name in ('levels_hunt', 'levels_koth', 'levels_boss', 'levels_water', 'levels_batch2'):
     try:
         mods.append(__import__(name))
     except ImportError:
         pass
 only = None
 if '--only' in sys.argv:
-    only = set(a for a in sys.argv[sys.argv.index('--only') + 1:] if not a.startswith('--'))
+    only = set()
+    for a in sys.argv[sys.argv.index('--only') + 1:]:
+        if a.startswith('--'): break
+        only.add(a)
 out = os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'levels')
+if '--out' in sys.argv:                 # (otra carpeta: p. ej. la variante resuelta, OPEN=1, para level_solve)
+    out = sys.argv[sys.argv.index('--out') + 1]
+    os.makedirs(out, exist_ok=True)
 for m in mods:
     for b in m.BUILDERS:
         fn = re.sub(r'\W+', '_', b.__name__)

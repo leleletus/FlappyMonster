@@ -57,12 +57,11 @@
     {"col":107,"row":11,"type":"mortar"}
   ],
   "foliage": [
-    {"col":2,"props":{"layer":"back"},"row":2,"type":"cobweb"},
     {"col":30,"props":{"flip":true,"layer":"back"},"row":5,"sub":3,"type":"torch"},
     {"col":32,"props":{"layer":"back"},"row":7,"type":"cobweb"},
     {"col":10,"props":{"flip":true,"layer":"back"},"row":10,"sub":3,"type":"torch"},
     {"col":10,"props":{"layer":"back"},"row":10,"sub":4,"type":"torch"},
-    {"col":36,"props":{"flip":true,"layer":"back"},"row":10,"sub":4,"type":"stalagmite_small"},
+    {"col":36,"props":{"flip":true,"layer":"back"},"row":10,"sub":4,"type":"bones"},
     {"col":27,"props":{"layer":"back"},"row":11,"sub":4,"type":"torch"},
     {"col":70,"props":{"flip":true,"layer":"back"},"row":11,"sub":4,"type":"bones"},
     {"col":70,"props":{"layer":"back"},"row":11,"sub":3,"type":"torch"},

@@ -1171,6 +1171,34 @@ time only into levels that don't set them. The user edits levels by hand afterwa
 narrow modes (`--deep`, `--sky`, `--tiles`) over `--force`/`--terrain` on levels they touched. Seeded per level (stable). Writes the
 editor's JSON format. Run it again after `build.py --only x`. New levels: add a THEMES row.
 
+**Decorations go on THEIR material** (user's rule: no plants, palms or flowers growing out of rock, snow, sand or a
+girder). `retheme.py` table `REQ` = the tile that must support each decoration type (the one below; hanging ones, the one
+above): plants → grass/dirt (tropical ones also sand), snow things → snow (piles also on planks), rock formations →
+stone/deep stone/border (+ dirt), mushrooms also on wood, shells/starfish → sand, aquatic ones only in water; nothing
+hangs from the top FRAME under an open sky (only in closed themes `CLOSED` / levels in `ROOFED`). The placer filters by
+it, and `retheme.py --decor [--fix] [levels]` audits EVERY decoration of every level (auto or hand-placed): `--fix`
+swaps a misplaced one for something of the theme that fits there, or removes it (251 + 113 fixed in the old levels:
+palm trees on stone in fortaleza_malvada, tulips on girders, icicles hanging from the sky...). Themes added: `forest`,
+`volcano`.
+
+**Batch 2** (`tools/levelgen/levels_batch2.py`, 15 levels, 3.35.0): 10 race + hunt (pradera_explosiva, bosque_interruptores,
+playa_rebotes, arrecife_globo, cantera_dinamita, cumbres_escarcha, fabrica_criogenica, templo_del_eco (dark),
+jungla_colgante, caldera_roja; ~140-170 x 28) and 5 KOTH arenas 92 x 28 (cantera_real, lago_de_cristal,
+ciudadela_alterna, cala_de_los_muelles, cripta_del_silencio (dark)); `modes` also list `hide` (the planned Hide and Seek
+mode: unknown ids are ignored today). Built from PIECES laid with a cursor (`c = L.piece(c)`: can't overlap; `put()`
+asserts on collisions; `check()` warns about pits inside cellars and patrols without floor): bomb_vault / bomb_wall
+(breakable walls a bomb opens; bombs respawn), switch_bridge / switch_door (ON/OFF, with explicit `blockLinks`), lake
+(thin ice) / dive_pool (puffers; STEPS on both sides: under water you can't swim up, one jump = 1 tile), freezer_hall,
+ice_run, lava_hops, tramp_cliff / tramp_gap, crouch_tunnel, spikefall_hall, mortar_nest, cellar (basement with stair /
+breakable-floor entrances), stairs + `upper()`. Built things use `STRUCT` = border rock (retheme doesn't turn it into
+grass). RULES learnt: (1) the mandatory route never depends on something that can be lost — only Activators, head
+bumps and ground pounds; bombs guard shortcuts and loot. (2) NO continuous upper walkway (v1 had one: the user saw you
+could clear the level in a straight line on top) — `upper()` makes SHORT separate sections, one per stairway, with
+≥ 9-tile voids between them. (3) Solver flow: `OPEN=1 python3 tools/levelgen/build.py --only x --out assets/levels/_open`
+writes the SOLVED variant (breakables removed, ON/OFF as after hitting the Activator) for `level_solve` (which can't
+break blocks or use Activators); then build + `retheme.py x` + `level_check`. `level_solve EXPLORE=1` = every enemy and
+pickup reachable. Harness `level_shots` renders a whole level to a PNG to review its look.
+
 ## Level JSON
 
 `{name,width,height,playerStart:[c,r],tiles:[[raw...]],entities:[...],
@@ -1624,7 +1652,7 @@ or extend the HARNESS (and its README row) instead of working around it in a
 scratch copy: the time spent fighting test setups was the user's complaint.
 Harnesses: flyers, crawler_drop, mechanics, sounds, boss_sim, sp_boss, boss_frames, megagummy_rules, gloomy_rules, megagloomy_rules,
 editor_open, free_play, update_boot, online_smoke, online_boss, online_helmet,
-level_check, level_solve. `tools/` is not shipped (.love / updates).
+level_check, level_solve, level_shots. `tools/` is not shipped (.love / updates).
 
 Low-level notes (for writing NEW harnesses):
 - Headless sim (no window): a scratch LÖVE app with `t.window=false`,

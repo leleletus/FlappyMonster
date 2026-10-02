@@ -30,6 +30,8 @@ Uso (desde la raíz del repo):
   --tiles   solo el terreno: no toca las decoraciones (las del usuario se quedan)
   --sky     solo escribe el fondo y la hora (tabla SKY) en los niveles que no los tengan
   --deep    solo pasa a roca abisal el terreno hondo bajo el agua (nada más cambia)
+  --decor [--fix]  revisa las decoraciones de TODOS los niveles (o los nombrados): cada una sobre su
+            material (tabla REQ); con --fix cambia las que no por otra que valga ahí, o las quita
 Tras `build.py --only x` (que reescribe el nivel) hay que volver a pasarlo.
 """
 import json, os, random, sys, hashlib
@@ -37,8 +39,9 @@ import json, os, random, sys, hashlib
 LEVELS = 'assets/levels'
 ID_HIGH = 2 ** 17
 EMPTY, SOLID, SLAB, BORDER, WATER, DROP, FINISH, BREAK = 0, 1, 2, 4, 9, 10, 11, 12
-DIRT, GRASS, SNOW, ICE, SAND, DEEP = 16, 17, 29, 30, 35, 36
-GROUND = {SOLID, BORDER, DIRT, GRASS, SNOW, ICE, SAND, DEEP}
+DIRT, GRASS, SNOW, ICE, SAND, DEEP, PACKED = 16, 17, 29, 30, 35, 36, 37
+THIN_ICE = {31, 32, 33, 34}
+GROUND = {SOLID, BORDER, DIRT, GRASS, SNOW, ICE, SAND, DEEP, PACKED}
 DEEP_ROWS = 4                     # bajo ≥ 4 filas de agua: roca abisal
 
 THEMES = {
@@ -50,6 +53,11 @@ THEMES = {
     'cavernas_cristal': 'cave', 'mina_inundada': 'mine', 'laberinto_submarino': 'underwater',
     'fabrica_morteros': 'fortress', 'fortaleza_malvada': 'fortress', 'taller_trampas': 'fortress',
     'coliseo_pinchos': 'fortress',
+    # tanda 2 (tools/levelgen/levels_batch2.py)
+    'pradera_explosiva': 'meadow', 'bosque_interruptores': 'forest', 'playa_rebotes': 'tropical', 'arrecife_globo': 'tropical',
+    'cantera_dinamita': 'mine', 'cumbres_escarcha': 'snow', 'fabrica_criogenica': 'fortress', 'templo_del_eco': 'cave',
+    'jungla_colgante': 'tropical', 'caldera_roja': 'volcano', 'cantera_real': 'mine', 'lago_de_cristal': 'snow',
+    'ciudadela_alterna': 'fortress', 'cala_de_los_muelles': 'tropical', 'cripta_del_silencio': 'cave',
 }
 
 # Fondo de superficie (src/fx/Sky.lua), hora y fondo de profundidad (opcional) de cada nivel: `--sky` los escribe SOLO si el nivel
@@ -87,6 +95,8 @@ TERRAIN = {
     'mine':       (DIRT, DIRT, SOLID),
     'underwater': (SOLID, SOLID, SOLID),
     'fortress':   (SOLID, SOLID, SOLID),
+    'forest':     (GRASS, DIRT, SOLID),
+    'volcano':    (SOLID, SOLID, SOLID),
 }
 
 # Decoraciones: (tipo, peso, 'cell'|'sub', casillas libres que necesita hacia arriba)
@@ -103,6 +113,9 @@ FLOOR = {
                  ('cave_crystals', 1, 'cell', 1), ('stalagmite', 1, 'cell', 1)],
     'underwater': [('stalagmite_small', 3, 'sub', 1), ('glow_mushroom', 3, 'sub', 1), ('cave_crystals', 1, 'cell', 1)],
     'fortress': [('torch', 4, 'sub', 1), ('bones', 2, 'sub', 1), ('stalagmite_small', 1, 'sub', 1)],
+    'forest':   [('fern', 5, 'cell', 1), ('tropical_bush', 4, 'cell', 1), ('tulip', 3, 'sub', 1), ('stretch', 2, 'sub', 2), ('butterflies', 1, 'cell', 1),
+                 ('glow_mushroom', 1, 'sub', 1)],
+    'volcano':  [('stalagmite_small', 4, 'sub', 1), ('bones', 3, 'sub', 1), ('stalagmite', 2, 'cell', 1)],
 }
 BEACH = [('shell', 3, 'sub', 1), ('starfish', 2, 'sub', 1), ('palmtree', 2, 'cell', 3), ('pineapple', 1, 'sub', 1)]
 WATER_FLOOR = [('seaweed', 4, 'cell', 2), ('seaweed_small', 5, 'sub', 1), ('coral', 3, 'cell', 1), ('coral_fan', 2, 'cell', 1),
@@ -113,7 +126,34 @@ CEIL = {
     'mine':     [('stalactite', 3, 'cell'), ('cobweb', 2, 'corner')],
     'underwater': [('stalactite', 2, 'cell')],
     'fortress': [('cobweb', 3, 'corner')],
+    'volcano':  [('stalactite', 3, 'cell')],
 }
+# ── Cada decoración, SOLO sobre el material que le toca ─────────────────────────
+# (el usuario: nada de plantas, palmeras ni flores saliendo de la roca, la nieve, la arena o
+# una viga; cada material lleva lo suyo). REQ = materiales del bloque que la sostiene (el de
+# debajo; las que cuelgan, el de encima). Lo que no esté aquí no se pone en ningún sitio.
+ROCK = {SOLID, BORDER, DEEP}
+SOIL = {GRASS, DIRT}
+SNOWY = {SNOW, PACKED}
+REQ = {
+    # plantas: tierra o césped (las tropicales, también arena)
+    'tulip': SOIL, 'stretch': SOIL, 'fern': SOIL, 'tropical_bush': SOIL, 'hibiscus': SOIL, 'butterflies': {GRASS},
+    'palmtree': SOIL | {SAND}, 'pineapple': SOIL | {SAND}, 'tiki_torch': SOIL | {SAND},
+    # nieve y hielo
+    'snowy_pine': SNOWY, 'frozen_bush': SNOWY, 'snowman': SNOWY, 'snow_pile': SNOWY | {ICE, SLAB, DROP}, 'ice_crystal': SNOWY | {ICE},   # (la nieve sí se amontona en una tabla)
+    # roca (cuevas, minas, fortalezas)
+    'stalagmite': ROCK | {DIRT}, 'stalagmite_small': ROCK | {DIRT}, 'cave_crystals': ROCK, 'glow_mushroom': ROCK | {DIRT, DROP},   # (setas: también en madera)
+    'bones': ROCK | {DIRT, SAND, SLAB, DROP}, 'torch': ROCK | {DIRT, SLAB, DROP},
+    # playa
+    'shell': {SAND}, 'starfish': {SAND},
+    # colgando (el bloque de ENCIMA)
+    'icicle': SNOWY | {ICE} | ROCK, 'icicle_small': SNOWY | {ICE} | ROCK, 'stalactite': ROCK | {DIRT}, 'cobweb': GROUND,
+}
+HANGING = {'icicle', 'icicle_small', 'stalactite', 'cobweb'}
+ROOFED = {'cavernas_cristal', 'mina_inundada', 'gruta_lugubre', 'laberinto_submarino', 'taller_trampas'}   # niveles bajo techo aunque su tema no sea de cueva
+AQUATIC = {'seaweed', 'seaweed_small', 'coral', 'coral_fan', 'anemone', 'clam'}     # dentro del agua, sobre cualquier fondo salvo hielo
+WET_OK = AQUATIC | {'starfish', 'shell'}
+CLOSED = {'cave', 'underwater'}        # temas de cueva cerrada: el marco de arriba sí es un techo de roca
 DENSITY = {'floor': 0.2, 'water': 0.24, 'ceil': 0.15}
 PLANKS = {SLAB, DROP}            # plataformas: solo decoraciones pequeñas encima
 NEW_TYPES = {t for L in list(FLOOR.values()) + [WATER_FLOOR] for t, *_ in L if t not in ('tulip', 'stretch', 'palmtree')} | \
@@ -294,8 +334,11 @@ def retheme(name, force=False, dry=False, terrain=False, tiles_only=False):
             plank = tid(below) in PLANKS
             if (tid(below) in GROUND or plank) and not spiky(below):
                 wet = tid(T[r][c]) == WATER or waterlogged(T[r][c])
-                opts = WATER_FLOOR if wet else (BEACH if tid(below) == SAND else FLOOR[theme])
+                opts = WATER_FLOOR if wet else (BEACH if tid(below) == SAND and theme in ('meadow', 'tropical', 'forest') else FLOOR[theme])
+                if not wet: opts = [o for o in opts if tid(below) in REQ.get(o[0], ())]      # (cada cosa en su material)
                 if plank: opts = [o for o in opts if o[2] == 'sub' and o[3] == 1]
+                elif tid(below) == ICE: opts = []
+                if not opts: continue
                 dens = DENSITY['water' if wet else 'floor']
                 if free(c, r, wet) and rnd.random() < dens and abs(lastCol.get(r, -9) - c) > 1:
                     tp, _, kind, need = pick(opts)
@@ -303,7 +346,7 @@ def retheme(name, force=False, dry=False, terrain=False, tiles_only=False):
                         if kind == 'sub':
                             subs = [3, 4]; rnd.shuffle(subs)
                             place(tp, c, r, subs[0])
-                            if rnd.random() < 0.3:
+                            if rnd.random() < 0.3 and any(o[2] == 'sub' for o in opts):
                                 tp2, _, k2, n2 = pick([o for o in opts if o[2] == 'sub'])
                                 added.append({'type': tp2, 'col': c + 1, 'row': r + 1, 'sub': subs[1], 'props': {'layer': 'back'}})
                         else:
@@ -314,7 +357,10 @@ def retheme(name, force=False, dry=False, terrain=False, tiles_only=False):
             above = at(c, r - 1)
             if theme in CEIL and tid(above) in GROUND and r - 1 >= 0 and free(c, r, False) and rnd.random() < DENSITY['ceil']:
                 if tid(at(c, r + 1)) in GROUND: continue          # (hueco de una casilla: nada)
-                tp, _, kind = pick(CEIL[theme])
+                if r - 1 == 0 and theme not in CLOSED: continue   # (bajo el marco de arriba: es CIELO abierto, no un techo)
+                copts = [o for o in CEIL[theme] if tid(above) in REQ.get(o[0], ())]
+                if not copts: continue
+                tp, _, kind = pick(copts)
                 if kind == 'corner':
                     wl, wr = tid(at(c - 1, r)) in GROUND, tid(at(c + 1, r)) in GROUND
                     if not (wl or wr): continue
@@ -332,6 +378,71 @@ def retheme(name, force=False, dry=False, terrain=False, tiles_only=False):
     print('  %-22s %-10s bloques cambiados %4d · decoraciones +%d' % (name, theme, changed, len(added)))
     if not dry:
         save(path, lv)
+
+
+def audit(name, fix=False):
+    """Revisa TODAS las decoraciones del nivel (las de este script y las puestas a mano): cada una
+    debe estar sobre (o colgar de) un material que le corresponda. Con `fix`, la que no, se cambia por
+    otra del tema que sí valga ahí o, si no hay ninguna, se quita. Lo que flota sin bloque debajo
+    (mini bloques, cosas a propósito) no se toca."""
+    path = os.path.join(LEVELS, name + '.json')
+    lv = json.load(open(path))
+    theme = THEMES.get(name, 'meadow')
+    T = lv['tiles']
+    H, W = len(T), len(T[0])
+    rnd = random.Random(int(hashlib.md5((name + 'decor').encode()).hexdigest()[:8], 16))
+    subs = {(s_['col'] - 1, s_['row'] - 1) for s_ in lv.get('subtiles', []) or []}
+    bad, out = [], []
+    for f in lv.get('foliage', []):
+        tp, c, r = f['type'], f['col'] - 1, f['row'] - 1
+        hang = tp in HANGING
+        sr = r - 1 if hang else r + 1
+        if not (0 <= sr < H and 0 <= c < W) or (c, r) in subs or (c, sr) in subs:
+            out.append(f); continue
+        sup = tid(T[sr][c])
+        here = T[r][c]
+        wet = tid(here) == WATER or waterlogged(here)
+        if sup in (EMPTY, WATER) and not hang:               # sin bloque debajo: no es cosa nuestra
+            out.append(f); continue
+        if hang and sr == 0 and theme not in CLOSED and name not in ROOFED:
+            ok = False                                       # colgando del marco de arriba a cielo abierto
+        elif tp in AQUATIC:
+            ok = wet and sup != ICE
+        elif wet:
+            ok = tp in WET_OK
+        else:
+            ok = sup in REQ.get(tp, ())
+        if ok:
+            out.append(f); continue
+        new = None
+        if fix and not hang:
+            kind = 'sub' if f.get('sub') else 'cell'
+            if wet:
+                opts = [o for o in WATER_FLOOR if o[2] == kind] if sup != ICE else []
+            else:
+                base = BEACH if sup == SAND and theme in ('meadow', 'tropical', 'forest') else FLOOR.get(theme, [])
+                opts = [o for o in base if o[2] == kind and sup in REQ.get(o[0], ()) and o[3] <= 1]
+            if opts:
+                tot = sum(o[1] for o in opts); x = rnd.random() * tot
+                for o in opts:
+                    x -= o[1]
+                    if x <= 0: break
+                new = dict(f, type=o[0])
+        bad.append((tp, f['col'], f['row'], sup, new and new['type']))
+        if new: out.append(new)
+        elif not fix: out.append(f)
+    names = {SOLID: 'piedra', BORDER: 'roca', DEEP: 'roca abisal', GRASS: 'césped', DIRT: 'tierra', SNOW: 'nieve', PACKED: 'nieve',
+             ICE: 'hielo', SAND: 'arena', SLAB: 'viga', DROP: 'tabla', BREAK: 'rompible'}
+    if bad:
+        import collections
+        cnt = collections.Counter((b[0], names.get(b[3], 'tile %d' % b[3])) for b in bad)
+        print('  %-22s %3d fuera de sitio: %s' % (name, len(bad), ', '.join('%s en %s ×%d' % (a, m, n) for (a, m), n in cnt.most_common(6))))
+        if fix:
+            lv['foliage'] = out
+            save(path, lv)
+    else:
+        print('  %-22s bien' % name)
+    return len(bad)
 
 
 ICY_CRABS = {'crabby': 'crabby_ice', 'crabbytramp': 'crabbytramp_ice', 'gummy': 'gummy_ice'}
@@ -358,6 +469,13 @@ if __name__ == '__main__':
     if '--sky' in sys.argv:
         print('Fondo y hora:')
         for n in (args or sorted(SKY)): set_sky(n)
+        sys.exit(0)
+    if '--decor' in sys.argv:           # revisar (y con --fix arreglar) las decoraciones fuera de su material
+        print('Decoraciones y su material:')
+        import glob
+        names = args or sorted(os.path.basename(p_)[:-5] for p_ in glob.glob(os.path.join(LEVELS, '*.json')))
+        total = sum(audit(n, '--fix' in sys.argv) for n in names)
+        print('  total: %d' % total)
         sys.exit(0)
     print('Re-vestir niveles:')
     for n in (args or sorted(THEMES)):

@@ -53,10 +53,6 @@
     {"col":25,"props":{"corner":{"col":31,"row":6},"points":4},"row":4,"type":"pointarea"}
   ],
   "foliage": [
-    {"col":19,"props":{"flip":true,"layer":"back"},"row":6,"sub":4,"type":"pineapple"},
-    {"col":25,"props":{"flip":true,"layer":"back"},"row":6,"sub":3,"type":"hibiscus"},
-    {"col":25,"props":{"layer":"back"},"row":6,"sub":4,"type":"pineapple"},
-    {"col":28,"props":{"flip":true,"layer":"back"},"row":6,"sub":4,"type":"hibiscus"},
     {"col":18,"props":{"flip":true,"layer":"back"},"row":8,"sub":4,"type":"hibiscus"},
     {"col":2,"props":{"flip":true,"layer":"back"},"row":9,"sub":3,"type":"hibiscus"},
     {"col":8,"props":{"flip":true,"layer":"back"},"row":9,"sub":3,"type":"pineapple"},

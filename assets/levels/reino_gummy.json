@@ -42,9 +42,6 @@
     {"col":85,"props":{"corner":{"col":110,"row":2},"zone":1},"row":2,"type":"bosswall"}
   ],
   "foliage": [
-    {"col":41,"props":{"layer":"back"},"row":8,"sub":3,"type":"tulip"},
-    {"col":29,"props":{"flip":true,"layer":"back"},"row":9,"sub":3,"type":"tulip"},
-    {"col":29,"props":{"layer":"back"},"row":9,"sub":4,"type":"tulip"},
     {"col":18,"props":{"flip":true,"layer":"back"},"row":10,"sub":3,"type":"tulip"},
     {"col":18,"props":{"layer":"back"},"row":10,"sub":4,"type":"stretch"},
     {"col":21,"row":10,"type":"tropical_bush"},

@@ -27,8 +27,7 @@
   ],
   "foliage": [
     {"col":14,"row":4,"type":"palmtree"},
-    {"col":14,"row":9,"type":"fern"},
-    {"col":23,"row":7,"sub":4,"type":"hibiscus"},
+    {"col":23,"row":7,"sub":4,"type":"snow_pile"},
     {"col":5,"row":9,"sub":4,"type":"pineapple"}
   ],
   "vents": [],
