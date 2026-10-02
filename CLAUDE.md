@@ -275,14 +275,19 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     final — with the VRC6 saw as main lead the user still heard Tentacle's instrument —, harmonized
                     lead in chorus/final, hollow strings, pad, tri sub + slap, low comp doubling,
                     8th "pump" bass, offbeat open hats, four-on-the-floor, crashes, shimmer) + sleigh bells. FORM
-                    (164 bars, 212.8 s): Tentacle pass 1 (72) | 4-bar BRIDGE (`bridge()`: IV–IV–V–V of the new
+                    (172 bars, 223.1 s): Tentacle pass 1 (72) | 4-bar BRIDGE (`bridge()`: IV–IV–V–V of the new
                     section, B♭ B♭ C C = exactly the chords of winter's CHRISTMAS MOTIF, which carries the bridge
                     alone on the music box (`MOTIF_F`; a lead cell from Tentacle's final used to play over it: the
                     user had it removed); drums emptied then a snare build + toms + riser, swelling strings; a bare
-                    cut was "abrupt") | a NEW SECTION = winter's 1:48 melody (Smooth Synth, bars 85-116) + the first
-                    pass of the motif from winter's final (117-124) as its payoff, with winter_nes's WHOLE arrangement
+                    cut was "abrupt") | a NEW SECTION = winter's 1:48 melody (Smooth Synth, bars 85-116) + BOTH passes
+                    of the motif from winter's final (117-132) as its payoff; the tail of pass 2 (129-132) is the
+                    HAND-OFF (`handoff()`): winter's lead is muted there (`Part.mute`), Tentacle's lead voice already
+                    sings the CHORUS phrase (its bars 25-26, then 25 and 34) over winter's backing while the music box
+                    answers with motif fragments, and the last bar is turned from D minor into C (V) with a snare
+                    build + riser, so the chorus arrives with a phrase already heard instead of replacing the
+                    section; with winter_nes's WHOLE arrangement
                     (class `Part` wraps the song while `W.build` runs: keeps only those bars, shifted), UNTRANSPOSED
-                    (F major): enters from the final's D# through B♭ (its dominant) and its last chord C resolves into
+                    (F major): enters from the final's D# through B♭ (its dominant) and that C resolves into
                     Tentacle's CHORUS (D minor: V → vi, same scale as the motif) | pass 2 = chorus, scales, final only
                     (`SKIP2` 24 bars, denser). Going back to the riff after that payoff sounded like "the song
                     restarted" and made the track a minute longer than the originals (an earlier version had the
@@ -299,6 +304,11 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     tentacle_nes note for note; all derived from the melody itself): chorus = an ANSWER in the bars
                     the melody leaves empty (27, 31, 35, 39): the previous bar's phrase in sequence a diatonic third
                     down (pass 2: a sixth up), avoid notes snapped to the chord, never over an original note. The
+                    `vary` groups notes with `bar_strict`
+                    (no tolerance) ON PURPOSE: that is how the approved answers were built. Everything else uses
+                    `bar_of` with a 1/64-bar tolerance — the MIDI starts some notes a hair BEFORE the bar line, and
+                    the riff's first note of pass 2 counted as pass 1 and played alone in the bridge (the "missed
+                    dissonant note" at 1:33). The
                     riff, scales and final stay as the original: riff mordents + octave-up bars were tried and the
                     user found them odd. Strings swap to the root (or drop) when the lead rubs them. Break bell plinks have NO echo (winter's
                     3/16 echo on offbeat plinks sounded out of phase). Strength = sustained

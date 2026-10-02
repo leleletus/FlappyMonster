@@ -40,14 +40,15 @@ assert abs(BAR - TN.BAR) < 1e-9, 'las dos canciones van al mismo tempo (185 BPM)
 OUT = W.OUT
 NAME = 'tentacle_winter'
 # El tramo de winter y su transposición: la melodía de 1:48 (85-116) y, como su remate, la
-# primera vuelta del MOTIVO NAVIDEÑO del final de winter (117-124): ahí el motivo está en su
+# MOTIVO NAVIDEÑO del final de winter con sus DOS vueltas (117-124 y 125-132; la 2ª, más
+# grande, y su cola es el relevo hacia el estribillo: ver `handoff`): ahí el motivo está en su
 # sitio (es lo que sigue a esa melodía en winter, con su armonía y su arreglo) y acaba en la
 # dominante, igual que el 116 → el riff vuelve por la misma cadencia
 # SIN transponer (Fa mayor): su último acorde, Do, resuelve en el ESTRIBILLO de Tentacle (Re
 # menor = el relativo de Fa: cadencia V → vi, y el motivo y el estribillo comparten escala);
 # entra desde el Re# del final por Si♭, su dominante. (Antes iba en Fa# para volver al riff:
 # tras un remate así, volver al principio sonaba a "la canción se reinicia")
-W_FROM, W_TO, W_UP = 85, 124, 0
+W_FROM, W_TO, W_UP = 85, 132, 0
 W_LEN = W_TO - W_FROM + 1
 W_DB = -0.8                                    # nivel de la sección nueva en la mezcla
 TR = 4                                         # compases del puente hacia la sección nueva
@@ -59,6 +60,12 @@ SECT = [('A', 1, 16), ('BR', 17, 24), ('B', 25, 40), ('C', 41, 56), ('D', 57, 72
 
 
 def bar_of(t):
+    # (tolerancia de 1/64 de compás: la primera nota del riff de la 2ª vuelta empieza una pizca
+    # ANTES del compás 73 en el MIDI; contaba como de la 1ª y sonaba, suelta y disonante, en el puente)
+    return int(t / BAR + 1 / 64) + 1
+
+
+def bar_strict(t):
     return int(t / BAR + 1e-6) + 1
 
 
@@ -69,7 +76,7 @@ def loc(b):
 
 def at(t):
     """Tiempo en Tentacle (144 compases) → tiempo en esta pista (la 2ª vuelta, tras la sección nueva)"""
-    return t + ((TR + W_LEN - SKIP2) * BAR if t >= 72 * BAR - 1e-6 else 0.0)
+    return t + ((TR + W_LEN - SKIP2) * BAR if t >= 72 * BAR - BAR / 64 else 0.0)
 
 
 class Part:
@@ -85,14 +92,17 @@ class Part:
                 if part.ok(t):
                     real.NZ[self.k].hit(t + part.sh, *a_, **k_)
         self.NZ = {k: NZ(k) for k in real.NZ}
+        self.mute = []                                   # (prefijos, t0, t1) de winter que NO se escriben
         self.pads = []                                   # (t, dur, nota) del colchón: la armonía de la sección
 
     def ok(self, t):
         return self.t0 - 1e-6 <= t < self.t1 - 1e-6
 
     def note(self, name, kind, t0, dur, m, inst, **k):
-        if self.ok(t0):
+        if self.ok(t0) and not any(a <= t0 + 1e-6 < b and name.startswith(pre) for pre, a, b in self.mute):
             d = min(dur, self.t1 - t0)
+            if name.startswith('lay_ped') and t0 > 128 * BAR - 1e-3:
+                d = 3 * BAR - S16                        # (el pedal de Fa acaba antes del Do del último compás)
             self.real.note(name, kind, t0 + self.sh, d, m + self.up, inst, **k)
             if name == 'lead3':
                 # la MISMA voz que lleva la melodía de Tentacle (caja de música a la octava + pulso):
@@ -132,17 +142,19 @@ def vary(top):
     El riff, las escalas y el final quedan como en el original (en el riff se probaron
     mordentes en las notas largas y compases a la octava: al usuario le sonaban raros).
     → (s, e, n, vs)"""
+    # (compases SIN tolerancia, `bar_strict`: las respuestas se hicieron así — las notas que el MIDI
+    # empieza una pizca antes de la barra cuentan en el compás anterior — y así las aprobó el usuario)
     out = []
     by_bar = {}
     for s, e, n in top:
-        by_bar.setdefault(bar_of(s), []).append((s, e, n))
+        by_bar.setdefault(bar_strict(s), []).append((s, e, n))
     # escala de cada frase de 8 compases del riff = las notas que la melodía usa en ella
     scale = {}
     for b, ns in by_bar.items():
         fb, _ = loc(b)
         scale.setdefault((fb - 1) // 8, set()).update(n % 12 for _, _, n in ns)
     for s, e, n in top:
-        b = bar_of(s)
+        b = bar_strict(s)
         fb, lap = loc(b)
         sec = TN.section(b)
         hi = lap == 2
@@ -235,6 +247,56 @@ def bridge(S, top, lead):
     S.riser(t0 + 2 * BAR, t0 + 4 * BAR, top=12)
 
 
+def handoff(S, top, part):
+    """El RELEVO (los 4 últimos compases de la sección de invierno = la cola de la 2ª vuelta del
+    motivo, Fa Fa Fa Do): las dos melodías se cruzan para que el estribillo no llegue de golpe.
+    La voz de Tentacle (Smooth Synth + pulso, sin caja de música) entra ya con la frase del
+    ESTRIBILLO (sus compases 25-26, luego 25 y 34, que acaba subiendo) sobre el acompañamiento
+    de winter, y la caja de música le contesta con trozos del motivo (su 2º compás, luego el
+    3º); una nota del motivo que roce a la melodía se calla. El último compás va en Do (V) con
+    redoble y subida de ruido → el estribillo (Re menor) entra con su misma frase, ya oída"""
+    b0 = W_AT + W_LEN - 4                                   # primer compás del relevo
+    sung = []
+    for i, src in enumerate((25, 26, 25, 34)):
+        tb = (b0 + i - 1) * BAR
+        for s, e, n in top:
+            if bar_of(s) == src:
+                t, d = tb + max(0.0, s - (src - 1) * BAR), e - s
+                vs = 0.8 + 0.06 * i
+                S.note('lead3', 'n163', t, d, n, W.I_LEAD_N, vs=vs, midi='lead')
+                S.note('lead2', 'pulse', t, d, n + 12, W.I_LEAD_P, vs=0.65 * vs, midi='lead')
+                S.note('lead_low', 'n163', t, d, n - 12, W.I_LEAD_N, vs=0.55 * vs, midi='lead')
+                sung.append((t, d, n))
+    for i, mb in ((1, 1), (3, 2)):                          # la caja de música contesta
+        tb = (b0 + i - 1) * BAR
+        for k, m in enumerate(MOTIF_F[mb]):
+            t, m = tb + k * BAR / 4, m + W_UP
+            if any(ls < t + BAR / 4 and ls + ld > t and (m - ln) % 12 in (1, 11) for ls, ld, ln in sung):
+                STATS['motif_drop'] += 1
+                continue
+            S.note('bell0', 'n163', t, BAR / 4, m, W.I_BELL, vs=0.85, gate=1.2, midi='keys', release=6)
+            S.note('bell1', 'n163', t, BAR / 4, m - 12, W.I_BELL, vs=0.7, gate=1.2, midi='keys', release=6)
+            S.note('echo', 'n163', t + 3 * S16, BAR / 4, m, W.I_ECHO, gate=1.2, midi='keys', release=4)
+            STATS['motif'] += 1
+    # el último compás, en Do (la dominante): colchón, cuerdas, bajo a corcheas
+    tl = (b0 + 2) * BAR
+    part.pads = [x for x in part.pads if x[0] < tl - 1e-3] + [(tl, BAR, 48 + W_UP), (tl, BAR, 55 + W_UP)]
+    for nm_, ins, m in (('pad0', W.I_PAD, 48), ('pad1', W.I_PAD, 55), ('str0', W.I_STR, 76), ('str1', W.I_STR2, 79), ('strh0', W.I_STR2, 84)):
+        S.note(nm_, 'n163', tl, BAR, m + W_UP, ins, gate=0.99, midi='keys')
+    S.note('bass_tri', 'tri', tl, BAR, 36 + W_UP, W.I_TRI, gate=0.97, midi='bass')
+    for k in range(8):
+        S.note('bass_n', 'n163', tl + k * E, S16 * 1.6, 36 + W_UP + (12 if k % 2 else 0), W.I_BASSN, gate=0.9, midi='bass')
+    # crece: caja a corcheas y luego semicorcheas (los toms del final son de winter), subida de ruido
+    for k in range(8):
+        S.drum(tl - BAR + k * E, 40, 0.4 + 0.04 * k, bus='x')
+    for k in range(8):
+        S.drum(tl + k * S16, 40, 0.6 + 0.04 * k, bus='x')
+    S.riser(tl - BAR, tl + BAR, top=12)
+    for b in (b0 + 2, b0 + 3):
+        for st in range(8):
+            S.NZ['sleigh'].hit((b - 1) * BAR + st * E + S16, 1, I_SLEIGH_OFF, short=1)
+
+
 def build():
     rh, lh = TN.load_midi()
     top, _ = TN.voices(rh)
@@ -245,6 +307,10 @@ def build():
     # ── La sección nueva: winter 85-116 con su arreglo entero, en Fa# mayor ──
     real_song = W.Song
     part = Part(S, W_FROM, W_TO, W_AT, W_UP)
+    # (la cola de la 2ª vuelta del motivo, 129-132, es el relevo: calla la melodía de winter —
+    # la toma la de Tentacle — y el último compás cambia su Re menor por Do, la dominante)
+    part.mute = [(('lead', 'lay_lead'), 128 * BAR, 132 * BAR),
+                 (('pad', 'str', 'bass', 'lay_pump', 'pluck', 'arp', 'flute', 'chord'), 131 * BAR, 132 * BAR)]
     W.Song = lambda nb: part
     try:
         W.build(W.load_midi())
@@ -253,6 +319,7 @@ def build():
     # … y con el ACOMPAÑAMIENTO de Tentacle por debajo, para que el cambio de sección no sea un
     # cambio de banda: su "chop" en 2 y 4 (con las notas del colchón de winter: la armonía de
     # esta sección) y su bombo en tresillo
+    handoff(S, top, part)
     for b in range(W_AT, W_AT + W_LEN):
         t0 = (b - 1) * BAR
         for st in (2, 6):
@@ -330,7 +397,7 @@ def build():
         S.note('bass_tri', 'tri', t0, t1 - t0, n - 12 if (n >= 40 and sub) else n, W.I_TRI, gate=1.0, midi='bass')
         S.note('bass_n', 'n163', t0, min(t1 - t0, S16 * 1.6), n, W.I_BASSN, gate=0.9, midi='bass')
     for s, e, n in lh:
-        if s >= 72 * BAR - 1e-6 and loc(bar_of(s))[0] <= SKIP2:
+        if s >= 72 * BAR - BAR / 64 and loc(bar_of(s))[0] <= SKIP2:
             continue
         sec = TN.section(bar_of(s))
         if sec == 'D':
@@ -580,7 +647,7 @@ if __name__ == '__main__':
     import librosa
     S = build()
     print('  cuerdas a la raíz por roce con la melodía: %d · notas de la melodía armonizadas: %d' % (STATS['strings'], STATS['harm']) + ' · variaciones de la melodía: %d' % STATS['var']
-          + ' · motivo en el puente: %d notas (calladas por roce: %d)' % (STATS['motif'], STATS['motif_drop']))
+          + ' · motivo en el puente y el relevo: %d notas (calladas por roce: %d)' % (STATS['motif'], STATS['motif_drop']))
     st = stems(S)
     g = balance(st)
     n = int(NB * BAR * SR)
