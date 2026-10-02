@@ -53,13 +53,18 @@ function IceDrips.render(level, camX, camY)
         local d = list[i]
         d.t = d.t + dt
         if d.phase == 'form' then
-            if d.t >= FORM_T then d.phase, d.t = 'fall', 0 end
+            if d.t >= FORM_T then
+                d.phase, d.t = 'fall', 0
+                if Sound.playAt then Sound.playAt('dripFall', d.x, d.y, 0.9 + math.random() * 0.4, 0.7) end
+            end
         elseif d.phase == 'fall' then
             local y0 = d.y
             d.vy = math.min(d.vy + 1200 * dt, 900)
             d.y = d.y + d.vy * dt
             local hit, top = level:landingCross(d.x, y0 + 6, d.y + 6)
-            if hit then d.y, d.phase, d.t = top - 2, 'splash', 0
+            if hit then
+                d.y, d.phase, d.t = top - 2, 'splash', 0
+                if Sound.playAt then Sound.playAt('dripSplash', d.x, d.y, 0.9 + math.random() * 0.4, 0.7) end
             elseif level:liquidAt(d.x, d.y) or d.y > level.heightPx then table.remove(list, i); d = nil end
         elseif d.t >= SPLASH_T then
             table.remove(list, i); d = nil

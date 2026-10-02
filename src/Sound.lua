@@ -110,6 +110,12 @@ function Sound.load()
     load('bombBlast',   'assets/sounds/enemies/bomb_blast.wav',         'static')   -- bomba: explota
     load('bombKick',    'assets/sounds/enemies/bomb_kick.wav',          'static')   -- bomba: pisada / pateada
     load('iceCrack',    'assets/sounds/mechanics/ice_crack.wav',        'static')   -- hielo fino: se agrieta
+    -- Ambiente (tools/sounds/ambience.py): gotas de las estalactitas y la cueva de fondo (src/fx/CaveAmbience.lua)
+    load('dripFall',    'assets/sounds/ambience/drip_fall.wav',         'static')   -- la gota se suelta
+    load('dripSplash',  'assets/sounds/ambience/drip_splash.wav',       'static')   -- la gota llega al suelo
+    load('caveDrip',    'assets/sounds/ambience/cave_drip.wav',         'static')   -- gota lejana (ambiente)
+    load('caveRumble',  'assets/sounds/ambience/cave_rumble.wav',       'static')   -- rumor de la roca (ambiente)
+    load('cavePebble',  'assets/sounds/ambience/cave_pebble.wav',       'static')   -- piedrecita que rueda (ambiente)
     load('iceBreak',    'assets/sounds/mechanics/ice_break.wav',        'static')   -- hielo fino: se rompe
     load('cryoWindup',  'assets/sounds/traps/cryo_windup.wav',         'static')   -- congelador: carga
     load('cryoBlast',   'assets/sounds/traps/cryo_blast.wav',          'static')   -- congelador: chorro
@@ -251,6 +257,7 @@ local emitterX, emitterY   = nil, nil
 function Sound.setListener(x, y) listenerX, listenerY = x, y end
 function Sound.getListener() return listenerX, listenerY end
 function Sound.setEmitter(x, y) emitterX, emitterY = x, y end
+function Sound.getEmitter() return emitterX, emitterY end
 function Sound.clearEmitter() emitterX, emitterY = nil, nil end
 function Sound.getEmitter() return emitterX, emitterY end
 
@@ -299,6 +306,7 @@ local ECHO_W = {
     bossHurt = 1.0, bossExplode = 1.0, mgloomySlam = 1.0, mgloomyShriek = 1.0, mgloomyRoar = 1.0, mgloomyPing = 0.9,
     mgloomyDazzled = 0.9, mgloomyHurt = 0.9, mgloomyListen = 0.7, mgloomyStep = 0.5, gloomyWind = 0.5, gloomyLeap = 0.6,
     megaSlam = 1.0, megaRoar = 1.0, megaStep = 0.7, bombBlast = 1.0, stunned = 0.6, collect = 0.5,
+    dripFall = 0.5, dripSplash = 0.9, caveDrip = 0.3, cavePebble = 0.3, caveRumble = 0,   -- (los de ambiente ya traen su cola)
 }
 local echoK, echoes = 0, {}
 function Sound.setEcho(k)

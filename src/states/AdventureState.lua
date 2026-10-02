@@ -475,7 +475,7 @@ function AdventureState:renderBossHud()
 end
 
 -- ── HUD: vidas ────────────────────────────────────────────────────────────────
-local function renderLivesHud(player)
+local function renderLivesHud(player, dark)
     local iconW = imgIcon:getWidth()  * ICON_SCALE
     local iconH = imgIcon:getHeight() * ICON_SCALE
 
@@ -491,8 +491,15 @@ local function renderLivesHud(player)
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.draw(imgIcon, sx, sy, 0, ICON_SCALE, ICON_SCALE)
 
-    love.graphics.setColor(0, 0, 0, 0.85)
-    love.graphics.print(label, sx + iconW + gap, sy + iconH/2 - FONT_BIG:getHeight()/2)
+    local lx, ly = sx + iconW + gap, sy + iconH/2 - FONT_BIG:getHeight()/2
+    if dark then                                        -- (a oscuras el texto negro no se ve: blanco con sombra)
+        love.graphics.setColor(0, 0, 0, 0.85)
+        love.graphics.print(label, lx + 3, ly + 3)
+        love.graphics.setColor(1, 1, 1, 0.95)
+    else
+        love.graphics.setColor(0, 0, 0, 0.85)
+    end
+    love.graphics.print(label, lx, ly)
 end
 
 -- ── Render ────────────────────────────────────────────────────────────────────
@@ -528,6 +535,7 @@ function AdventureState:_renderScene()
 
     self.level:render(self.camX, self.camY)
     IceDrips.render(self.level, self.camX, self.camY)      -- (gotas del hielo: solo dibujo)
+    require('src/fx/CaveAmbience').tick(self.level)        -- (cuevas: gotas lejanas, rumor... solo sonido)
     LavaFx.render(self.level, self.camX, self.camY)        -- (burbujas de la lava: solo dibujo)
     self.level:renderVents(self.camX, self.camY)
     self.level:renderFoliageBack(self.camX, self.camY)
@@ -647,7 +655,7 @@ function AdventureState:_renderScene()
     printOutlined(L('hud.time'),   labelX,          row2Y, tr, tg, tb, ta)
     printOutlined(timeStr,  valueEndX - tw,  row2Y, vr, vg, vb, va)
 
-    renderLivesHud(self.player)
+    renderLivesHud(self.player, self.level.dark)
     if self.level.dark then LightHud.draw(self.player, WINDOW_W - 206, 76) end      -- (bajo las vidas)
     self:renderBossHud()
     self.player:renderAirBar()

@@ -72,6 +72,7 @@ return {
     },
     base {
         name = 'ice_crystal', label = 'Cristal de hielo', placement = 'sub',
+        light = { r = 76, color = { 0.75, 0.9, 1 }, a = 0.16, dy = -14 },
         editor = { previewScale = 1.5 },
         update = function(d, dt)
             if DecoFx.every(d, 'glint', dt, 0.8, 2.2) then glint(d, 6, 7) end

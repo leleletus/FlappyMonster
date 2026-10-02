@@ -26,10 +26,9 @@
 # 2) dark_cave.ogg (catálogo `dark_cave`, música de nivel de las cavernas a oscuras): lenta
 #    (72 BPM) y tensa, en Re menor sin resolver (acaba en La mayor y un silencio). El CONTRASTE:
 #    abajo, lo oscuro (bordón de triángulo, latido de bombo grave, colchón que se hincha); arriba,
-#    lo delicado: una CAJA DE MÚSICA con eco de cueva y gotas de agua. La caja de música toca la
-#    célula del riff de Tentacle Tantrum (Re · · Re Sol Fa · Re) a cámara lenta: el mismo motivo
-#    que luego canta el jefe (leitmotiv con otro arreglo). En la 3ª frase se oyen, lejos, las
-#    PATAS de la música del jefe (un grupo de 8 de vez en cuando).
+#    lo delicado: una CAJA DE MÚSICA con eco de cueva y gotas de agua. La caja de música canta una
+#    nana en secuencia (sube por el acorde y se posa; baja por grados y se posa), forma A A' B A''.
+#    En la 3ª frase se oyen, lejos, las PATAS de la música del jefe (un grupo de 8 de vez en cuando).
 #
 # Se comprueba con números (no se ha escuchado): duración, sonoridad, reparto de energía, que las
 # patas no fallen ni una semicorchea fuera de las pausas, y que no tapen la melodía (1-5 kHz).
@@ -303,16 +302,35 @@ CH = ([(D, MIN), (D, MIN), (Bb, MAJ), (Bb, MAJ), (G, MIN), (G, MIN), (A, MAJ), (
       [(D, MIN), (D, MIN), (Bb, MAJ), (Bb, MAJ), (Eb, MAJ), (Eb, MAJ), (A, MAJ), (A, MAJ)] +        # (Mi♭: la napolitana)
       [(G, MIN), (G, MIN), (D, MIN), (D, MIN), (Eb, MAJ), (Eb, MAJ), (A, MAJ), (A, MAJ)] +
       [(D, MIN), (D, MIN), (Bb, MAJ), (Bb, MAJ), (G, MIN), (Eb, MAJ), (A, MAJ), (A, MAJ)])           # acaba en La: sin resolver
-# La caja de música: (compás, semicorchea, nota). La célula del riff de Tentacle (Re · · Re Sol Fa · Re), lenta
-M = lambda b, base, last: [(b, 0, base), (b, 6, base), (b, 8, base + 5), (b, 10, base + 3), (b, 14, last)]
-BELL = (M(3, 74, 74) + [(4, 4, 69)] + M(7, 74, 76) + [(8, 4, 73)] +
-        M(9, 77, 77) + [(10, 4, 74)] + M(11, 74, 74) + [(12, 4, 70)] +
-        [(13, 0, 75), (13, 6, 75), (13, 8, 79), (13, 10, 77), (13, 14, 75), (14, 4, 70), (14, 12, 67)] +
-        [(15, 0, 76), (15, 6, 76), (15, 8, 81), (15, 10, 79), (15, 14, 76), (16, 4, 73)] +
-        [(17, 0, 70), (17, 8, 74), (17, 12, 79), (19, 0, 69), (19, 8, 74), (19, 12, 77),
-         (21, 0, 67), (21, 8, 70), (21, 12, 75), (23, 0, 76), (23, 4, 73), (23, 8, 69)] +
-        M(27, 86, 86) + [(28, 4, 81)] + M(29, 74, 74) + [(30, 4, 75), (30, 12, 70)] +
-        [(31, 0, 76), (31, 6, 76), (31, 8, 81), (31, 10, 79), (31, 14, 76), (32, 2, 73)])
+# La caja de música: (compás, semicorchea, nota). Una melodía de VERDAD, de nana (la 1ª versión
+# troceaba la célula del riff de Tentacle a cámara lenta: el usuario no le encontró sentido musical,
+# aunque el ambiente sí encajaba). Una idea de 2 compases — SUBE por el acorde en negras y se posa
+# en una blanca; luego BAJA por grados y se posa — que se repite en secuencia sobre cada acorde
+# (pregunta / respuesta), frases de 8 compases en forma A A' B A'', todas las notas largas son del
+# acorde y el final se queda en la sensible (Do#): sin resolver.
+def Q(b, n1, n2, n3):                         # negra, negra, blanca
+    return [(b, 0, n1), (b, 4, n2), (b, 8, n3)]
+
+
+def H(b, n1, n2):                             # dos blancas
+    return [(b, 0, n1), (b, 8, n2)]
+
+
+A4, Bb4, C5, Cs5, D5, Eb5, E5, F5, G5, A5, Bb5, G4 = 69, 70, 72, 73, 74, 75, 76, 77, 79, 81, 82, 67
+PHRASE_A = (Q(1, A4, D5, F5) + Q(2, E5, D5, A4) +             # Rem: sube La-Re-Fa; baja Mi-Re-La
+            Q(3, Bb4, D5, F5) + Q(4, G5, F5, D5) +            # Si♭: lo mismo un grado arriba, la respuesta llega más alto
+            Q(5, G4, Bb4, D5) + Q(6, D5, C5, Bb4) +           # Solm
+            Q(7, A4, Cs5, E5))                                # La: sube a la 5ª…
+BELL = (PHRASE_A + H(8, E5, Cs5) +                            # … y cae a la sensible (pregunta abierta)
+        [(b + 8, k, n) for b, k, n in PHRASE_A if b <= 4] + [(10, 12, D5)] +      # A': igual, con una nota de paso
+        Q(13, G4, Bb4, Eb5) + Q(14, Eb5, D5, Bb4) +           # Mi♭ (la napolitana): el giro oscuro
+        Q(15, A4, Cs5, E5) + [(16, 0, A5)] +
+        H(17, D5, G5) + H(18, Bb5, G5) +                      # B: arriba y en blancas (respira)
+        H(19, A5, F5) + [(20, 0, D5)] +
+        H(21, Eb5, G5) + H(22, Bb5, G5) +
+        H(23, A5, E5) + [(24, 0, Cs5)] +
+        [(b + 24, k, n) for b, k, n in PHRASE_A if b <= 5] +  # A'': vuelve la primera frase
+        Q(30, Eb5, D5, Bb4) + Q(31, A4, Cs5, E5) + [(32, 0, Cs5)])   # … y se queda en la sensible, y silencio
 I_BELL = {'vol': [15, 13, 12, 11, 10, 9, 8, 8, 7, 7, 6, 6, 5, 5, 4, 4, 4, 3, 3, 3, 2, 2, 2, 1, 1, 1], 'sus': 0}
 I_PADC = {'vol': [1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6], 'sus': 6, 'vib': (30, 0.14, 4.5)}
 I_DRIP = {'vol': [9, 6, 3, 1], 'sus': 0, 'duty': 0.125, 'drop': [-5, -2, 0]}

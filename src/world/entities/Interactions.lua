@@ -44,8 +44,12 @@ function Interactions.check(pa, e)
     if e.state == 'frozen' and not e.interact then return Interactions.frozenCheck(pa, e) end
     -- Reglas propias (jefes: ver entities/Boss.lua). Debe ser una consulta
     -- sin efectos: el cliente online la usa para predecir rebotes.
-    if e.interact then return e:interact(pa) end
-    return Interactions.defaultCheck(pa, e)
+    local r, a, b, c
+    if e.interact then r, a, b, c = e:interact(pa) else r, a, b, c = Interactions.defaultCheck(pa, e) end
+    -- Enemigos DUROS (`needsPound` en su clase): un pisotón normal solo rebota; hace falta un
+    -- ground pound para matarlos
+    if r == 'stomp' and e.needsPound and pa.gpPhase ~= 'fall' then return 'bounce', a, c end
+    return r, a, b, c
 end
 
 -- Enemigo congelado: solo cuenta caerle encima (o un ground pound): rompe el
@@ -151,21 +155,23 @@ end
 --                           del enemigo que veía el jugador
 function Interactions.run(pa, entities, cb, rewind)
     if pa.dying or not pa.alive then return end
+    local Noise = require 'src/world/Noise'
     for i, e in ipairs(entities) do
         local result, a, b, c
+        Noise.src(e.x, e.y)                           -- (los sonidos-ruido de lo que pase con ella salen de ella)
         if rewind then
             result, a, b, c = rewind(i, e, function() return Interactions.check(pa, e) end)
         else
             result, a, b, c = Interactions.check(pa, e)
         end
         if result == 'kill' then
-            if pa:die() ~= false then return end      -- (invulnerable al reaparecer: sigue)
+            if pa:die() ~= false then Noise.src(nil); return end      -- (invulnerable al reaparecer: sigue)
         elseif result == 'hurt' then
             -- (e:onHurtPlayer: solo si de verdad le quitó vida; p. ej. el pinchazo del pez globo)
             local hp0 = pa.hp
             local killed = pa:hurt(a)                       -- (a = vida que quita: hb.dmg; nil = 1)
             if pa.hp < hp0 and e.onHurtPlayer then e:onHurtPlayer(pa) end
-            if killed then return end
+            if killed then Noise.src(nil); return end
         elseif result == 'stomp' then
             e:stomp()
             pa:bounce(a, c, true)
@@ -192,11 +198,15 @@ function Interactions.run(pa, entities, cb, rewind)
             pa:launch(a, b, c)
             if e.onLaunch then e:onLaunch(pa) end
         elseif result == 'pickup' then
-            if e:collect() and cb.pickup then cb.pickup(e, e.def.pickup, i) end
+            if e:collect() then
+                Noise.emit(e.x, e.y, e.def.noise or (e.def.pickup and e.def.pickup.lives and Noise.R.life) or Noise.R.pickup)
+                if cb.pickup then cb.pickup(e, e.def.pickup, i) end
+            end
         elseif result == 'checkpoint' then
             if cb.checkpoint then cb.checkpoint(e, i) end
         end
     end
+    Noise.src(nil)
     -- Impacto del ground pound: muere solo lo que queda aplastado justo
     -- debajo; lo que está cerca sale despedido y queda aturdido, igual que
     -- los otros jugadores.

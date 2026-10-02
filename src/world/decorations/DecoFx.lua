@@ -164,6 +164,12 @@ function DecoFx.draw(d, sx, sy)
     love.graphics.setColor(1, 1, 1, 1)
 end
 
+-- Sonido de ambiente de una decoración, donde está (se atenúa con la distancia; en las cuevas
+-- lleva eco). Solo en el cliente (el servidor no tiene playAt); tono algo distinto cada vez
+function DecoFx.sound(name, x, y, vol)
+    if Sound and Sound.playAt then Sound.playAt(name, x, y, 0.85 + math.random() * 0.4, vol or 1) end
+end
+
 -- Gota que cae (estalactitas, carámbanos): se forma colgando, cae y salpica al
 -- tocar el suelo del nivel (d.level), o se va a la casilla y media sin nivel
 function DecoFx.drip(d, x, y, color)
@@ -173,13 +179,19 @@ function DecoFx.drip(d, x, y, color)
         onUpdate = function(p, dt, dd)
             if p.phase == 'form' then
                 p.vy = 0
-                if p.t > 0.5 then p.phase, p.g = 'fall', 1200 end
+                if p.t > 0.5 then
+                    p.phase, p.g = 'fall', 1200
+                    DecoFx.sound('dripFall', dd.x + p.x, dd.y + p.y)
+                end
             elseif p.phase == 'fall' then
                 local wx, wy = dd.x + p.x, dd.y + p.y
                 local lv = dd.level
                 if lv and lv.landingCross then
                     local hit, top = lv:landingCross(wx, wy - p.vy * dt + 6, wy + 6)
-                    if hit then p.y, p.vy, p.g, p.phase, p.frame, p.life = top - dd.y - 4, 0, 0, 'splash', 2, p.t + 0.16 end
+                    if hit then
+                        p.y, p.vy, p.g, p.phase, p.frame, p.life = top - dd.y - 4, 0, 0, 'splash', 2, p.t + 0.16
+                        DecoFx.sound('dripSplash', wx, top)
+                    end
                     if lv:liquidAt(wx, wy) or wy > (lv.heightPx or 1e9) then return false end
                 elseif p.y > TILE_PX * 1.5 then
                     return false

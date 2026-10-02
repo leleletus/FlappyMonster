@@ -2,6 +2,7 @@
 -- OSCURIDAD de los niveles a oscuras (level.dark): solo se ve lo que alumbran las linternas.
 -- Se dibuja DESPUÉS de la escena (y del efecto del agua) y ANTES del HUD:
 --   Darkness.render(level, camX, camY, sources)   sources = { {x, y, facing, on}, ... } (jugadores)
+-- Las decoraciones con `light` en su tipo (setas luminosas, cristales, antorchas) dan una luz tenue.
 -- Cómo: un lienzo pequeño (1/4: la luz queda pixelada, como el resto del juego) que empieza en
 -- la luz AMBIENTE (casi negro) y al que cada jugador suma, en escalones, su halo (siempre: se ve
 -- a sí mismo y lo que pisa) y, con la linterna encendida, su cono — trazado con rayos que los
@@ -71,6 +72,21 @@ function Darkness.render(level, camX, camY, sources)
                     love.graphics.polygon('fill', ox, oy, cache[i + 100], cache[i + 200], cache[i + 101], cache[i + 201])
                 end
             end
+        end
+    end
+    -- Decoraciones LUMINOSAS (su tipo declara `light = { r = px, color = {r, g, b}, a = fuerza, dy = px }`:
+    -- setas luminosas, cristales, antorchas...): una luz MUY tenue, en dos escalones. No es una
+    -- linterna (no cuenta para la simulación: Lights), solo hace que se vean ellas y lo de al lado
+    for _, d in ipairs(level.decorations or {}) do
+        local L = d.def and d.def.light
+        if L and d.x > camX - L.r and d.x < camX + WINDOW_W + L.r and d.y > camY - L.r and d.y < camY + WINDOW_H + L.r then
+            local c = L.color or { 1, 1, 1 }
+            local a = (L.a or 0.14) * (1 + 0.12 * math.sin(love.timer.getTime() * (L.pulse or 1.7) + d.x * 0.05))
+            local lx, ly = d.x, d.y + (L.dy or -16)
+            love.graphics.setColor(c[1] * a * 0.5, c[2] * a * 0.5, c[3] * a * 0.5, 1)
+            love.graphics.circle('fill', lx, ly, L.r)
+            love.graphics.setColor(c[1] * a, c[2] * a, c[3] * a, 1)
+            love.graphics.circle('fill', lx, ly, L.r * 0.55)
         end
     end
     love.graphics.setCanvas(prevCanvas)

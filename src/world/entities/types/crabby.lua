@@ -192,14 +192,7 @@ function Crabby:crawlWalk(dt, level)
         if self.idleCountdown <= 0 then self:startIdle(); return true end
     end
     -- Otra entidad delante: media vuelta
-    local tx, ty = -self.cny * self.cdir, self.cnx * self.cdir
-    for _, o in ipairs(level.liveEntities or {}) do
-        if o ~= self and not o.solidFull and o:isObstacle() then     -- (a los sólidos se sube)
-            local b = o:getOuterBounds()
-            local px, py = self.x + tx * (self.sprW * 0.5 + 4), self.y + ty * (self.sprW * 0.5 + 4)
-            if px > b.x and px < b.x + b.w and py > b.y and py < b.y + b.h then self.cdir = -self.cdir; break end
-        end
-    end
+    if Crawler.entityAhead(self, level) then self.cdir = -self.cdir end
     if not Crawler.move(self, level, self.speed * dt) then return true end
     -- Encima de la cara que lanza de un trampolín: ¡BOOM!
     local body, face = Crawler.supportBody(self, level)

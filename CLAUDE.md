@@ -339,8 +339,10 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     never resolves (ends on A major + a silence). The CONTRAST the user asked for: dark below
                     (triangle drone, a deep two-beat "heartbeat" kick, a swelling N163 pad) vs delicate above (a MUSIC
                     BOX with cave echo — sample-domain `delay` — and water drips: pulse blips with an upward chirp).
-                    The music box plays the cell of Tentacle's riff slowed down (D · · D G F · D): the same motif the
-                    boss sings later (recycled leitmotif); in phrase 3 the boss's LEGS are heard far away (one group
+                    The music box sings a real lullaby (`BELL`): a 2-bar idea — climb the chord in quarters and rest on
+                    a half note, then step down and rest — in sequence over each chord, 8-bar phrases A A' B A'', every
+                    long note a chord tone, ending on the leading tone (v1 chopped Tentacle's riff cell in slow motion:
+                    the user liked the atmosphere but "the melody doesn't make much sense musically"); in phrase 3 the boss's LEGS are heard far away (one group
                     of 8 now and then). Master −13 LUFS (ambient: SFX and silence carry the tension), catalog volume
                     0.8. Both loops are seamless (`fold`: the tail is added onto the start).
 src/entities/
@@ -922,10 +924,18 @@ list no mode until the user places a Point Area in them).
   then it is MULTIPLIED over the screen (no shaders/stencils). It restores the previous canvas (harness captures).
   What must always show is drawn after it: entities with `renderGlow(camX, camY)` (`Darkness.renderGlow`). HUD:
   `src/ui/LightHud.lua` (icon `ui/flashlight-Sheet.png` + 8 segments, under the lives).
-- **Noise** (`src/world/Noise.lua`): `Noise.emit(x, y, radius in tiles[, quiet])`. Only SIGNIFICANT sounds count
-  (user's rule), each louder than the previous (`Noise.R`): dealing damage to a boss `hit` 8 (`Boss:damage`) < a hurt
-  player `hurt` 10 < a killed enemy `kill` 12 < ground pound `pound` 15. WALKING AND JUMPING MAKE NO NOISE (jumps
-  used to: marks everywhere). `faint` 3.5 = the Mega Gloomy's echolocation mark (not a player noise). Only recorded in
+- **Noise** (`src/world/Noise.lua`) = what enemies can HEAR, and what the player can use as a DISTRACTION (Gloomies go
+  look where it sounded). GENERIC: everything that makes noise and how STRONG it is (radius in tiles) lives in two
+  tables there — `Noise.R` (things that are not an entity's sound, emitted with `Noise.emit(x, y, Noise.R.x)`: pickup 4,
+  life 5, thin-ice crack 4, ON/OFF switch 7, hitting a boss 8, ice break 8, breaking a block 9, a hurt player 10, a
+  killed enemy 12, ground pound 15) and `Noise.SOUNDS` (SOUND names that are also noise: trampoline 8, helmetBounce 6,
+  helmetBreak 8, mortarShoot 10, spikeHit 8, cryoBlast 9, pufferInflate 7, bombIgnite 4, bombKick 6, bombBlast 26).
+  `Noise.bind(level)` wraps the current global `Sound.play` once: any listed sound played while simulating emits its
+  noise where its maker is = `Noise.src(x, y)` (set by `Interactions.run` around each entity) or else Sound's emitter
+  (`Sound.getEmitter`, set by the states around each entity update); no position → nothing (UI, the player's own
+  sounds). A NEW entity needs no change here: its type def declares `noises = { itsSound = tiles }` (registered by
+  `EntityTypes.register`) or, for a pickup, `noise = tiles`. WALKING AND JUMPING MAKE NO NOISE. `faint` 3.5 = the
+  Mega Gloomy's echolocation mark. Only recorded in
   DARK levels, in `level.noises` of the level bound with `Noise.bind(level)` (AdventureState
   on enter, server every `stepRoom`; the online client binds nil). Listeners: `Noise.heard(level, x, y, sinceSeq, k)`.
   Every noise leaves a NOISE MARK (the user's rule made visible: noise → mark → that's where they go look): fx
@@ -952,8 +962,21 @@ list no mode until the user places a Point Area in them).
   'leap' (ballistic; contact = 1 HP + recoil via `onHurtPlayer`; grabs whatever it touches, never sticks) → 'rest'.
   'taunt' (1.1 s push-ups, crouch ↔ idle frames, eyes blinking) after hurting a player, by leap or by touch. LIT by a
   flashlight → 'flee' (plans away from the light every `FLEE_PLAN` 0.6 s, ×2 speed; calms `calmTime` s after dark).
-  Stompable with the crawler rules. Net: {surface, turn, modeT, icon}. Can be a RESERVE minion (`makeReserve`). Test
+  NEEDS A GROUND POUND: class flag `needsPound` (generic, `Interactions.check`: a normal 'stomp' on such an entity
+  becomes 'bounce'; the GP and its landing zone still kill). Dies flung when the block it GRIPS breaks (floor, wall
+  or ceiling: `Entity:standingOnCell` now handles crawlers, which have no `onGround`). Doesn't walk through other
+  enemies: `Crawler.entityAhead(e, level)` (generic, shared with Crabby) → turns round and drops its plan.
+  Net: {surface, turn, modeT, icon}. Can be a RESERVE minion (`makeReserve`). Test
   arena `tools/levelgen/arenas/cueva_oscura.json`. Harness `gloomy_rules` (cases `navega`, `marca`, `burla`...).
+- **Glowing decorations**: a decoration type with `light = { r = px, color, a, dy, pulse }` (glow_mushroom,
+  cave_crystals, torch, ice_crystal) adds a VERY subtle two-step light to the Darkness canvas (render only: it is not
+  a flashlight for `Lights`). New luminous decoration = that one field.
+- **Cave ambience** (render-only sound, per client; never Noise): `DecoFx.drip` (stalactites) and `IceDrips` play
+  'dripFall' when the drop lets go and 'dripSplash' where it lands (`DecoFx.sound` → `Sound.playAt`, random pitch,
+  attenuated, with the cave echo); `src/fx/CaveAmbience.lua` (`tick(level)` from both level states, only when
+  `level.echo`) plays far drips every 2.5-7 s, a rolling pebble every 14-32 s and a low rock rumble every 24-50 s at
+  random pitch/volume. Files `assets/sounds/ambience/` from `tools/sounds/ambience.py`.
+- Lives HUD: in dark levels the "x3" is white with a black shadow (black text was invisible).
 - **Echo** (deep caves): level `echo` (default = `dark`; JSON `"echo": true/false` forces it; editor toggle "Eco")
   → `Sound.setEcho(1)` on entering the level (0 on `leaveMatch`). Every `Sound.play` schedules delayed, quieter,
   slightly lower repeats (`ECHO_DELAY` 0.21 s, ×0.5 each, up to 3) and the LOUDER it arrives (volume after distance ×

@@ -266,6 +266,24 @@ end
 -- Superficie: 0 = normal / suelto, 1 suelo, 2 techo, 3 pared (normal +x),
 -- 4 pared (normal -x). Giro: progreso + 1 (0 = no gira).
 local SURF = { { 0, -1 }, { 0, 1 }, { 1, 0 }, { -1, 0 } }
+-- ¿Otra entidad (obstáculo) justo DELANTE, en el sentido en que avanza por su superficie? Los
+-- trepadores no se atraviesan entre sí ni a los demás enemigos: quien lo use da media vuelta
+-- (Crabby, Crabby lúgubre...). A los cuerpos sólidos (trampolines, morteros) se suben: no cuentan.
+function Crawler.entityAhead(e, level)
+    local tx, ty = -e.cny * e.cdir, e.cnx * e.cdir
+    local px, py = e.x + tx * (e.sprW * 0.5 + 4), e.y + ty * (e.sprW * 0.5 + 4)
+    if e.outerW and e.outerW < e.sprW then                -- (caja más estrecha que el dibujo: desde la caja)
+        px, py = e.x + tx * (e.outerW * 0.5 + 4), e.y + ty * (e.outerW * 0.5 + 4)
+    end
+    for _, o in ipairs(level.liveEntities or {}) do
+        if o ~= e and not o.solidFull and o:isObstacle() then
+            local b = o:getOuterBounds()
+            if px > b.x and px < b.x + b.w and py > b.y and py < b.y + b.h then return o end
+        end
+    end
+    return nil
+end
+
 function Crawler.netPack(e)
     local surf = 0
     if e.crawl and e.cattached then

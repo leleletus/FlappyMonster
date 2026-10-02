@@ -15,7 +15,10 @@
 --   salta         de cerca se agacha (aviso) y salta: 1 de vida + empujón; nunca mata
 --   contacto      tocarlo quita 1 de vida, no mata
 --   huye          con la linterna encima huye de la luz y se aleja; a oscuras se calma
---   pisoton       caerle encima lo mata
+--   pisoton       un pisotón normal solo rebota; un ground pound lo mata
+--   bloque        muere si se rompe el bloque al que se agarra (suelo o techo)
+--   choque        dos lúgubres no se atraviesan: se dan la vuelta
+--   distraer      estrella, bloque, trampolín, mortero, bomba... suenan con su fuerza y va a mirar ahí
 --   techo         desde el techo salta sobre el jugador y NO se queda clavado: se agarra y sigue
 --   explora       sin ruta: en 40 s recorre suelo, paredes y techo de la sala
 --   red           netPack → netApply: superficie y estado iguales en el cliente
@@ -38,6 +41,7 @@ local PlayerAdventure = require 'src/entities/PlayerAdventure'
 local Lights = require 'src/world/Lights'
 local Noise = require 'src/world/Noise'
 local T = TILE_PX
+local BREAK = require('src/world/tiles/TileTypes').byName.breakable.id
 
 local fails = 0
 local function check(case, ok, msg)
@@ -313,14 +317,99 @@ function cases.huye()
          d0 / T, d1 / T, tostring(lit), e.state))
 end
 
+-- DURO: un pisotón normal solo REBOTA (no lo mata, no hace daño); un GROUND POUND sí lo mata
 function cases.pisoton()
-    local level, es, e = room(20, 9, { gl(8, 8, { pauses = false, senseRange = 0.01, hearing = 0 }) })
+    local function try(gp)
+        local level, es, e = room(20, 9, { gl(8, 8, { pauses = false, senseRange = 0.01, hearing = 0 }) })
+        step(level, es, 0.3)
+        local pa = player(level, 8, 9)
+        pa.x, pa.y, pa.vy, pa.onGround = e.x, e.y - 150, 300, false
+        local hp0, up = pa.hp, false
+        if gp then pa.gpPhase, pa.vy = 'fall', 900 end
+        step(level, es, 0.6, function() if pa.vy < -200 then up = true end; return e.state == 'dead' or up end)
+        return e.state, hp0 - pa.hp, up
+    end
+    local st1, d1, up1 = try(false)
+    local st2, d2 = try(true)
+    check('pisoton', st1 ~= 'dead' and d1 == 0 and up1 and st2 == 'dead' and d2 == 0,
+        ('pisotón normal: %s, rebota=%s, vida -%d; ground pound: %s, vida -%d'):format(st1, tostring(up1), d1, st2, d2))
+end
+
+-- BLOQUE: si se rompe el bloque al que está agarrado (suelo o techo), muere despedido
+function cases.bloque()
+    local function try(col, row, bc, br, attach)
+        local level, es, e = room(20, 9, { gl(col, row, { pauses = false, senseRange = 0.01, hearing = 0 }) }, nil)
+        level.tiles[br][bc] = BREAK
+        if attach then e.cnx, e.cny, e.cattached = attach[1], attach[2], nil end
+        step(level, es, 0.3, function() e.state = 'idle'; e.idleTimer, e.idleDuration = 0, 99 end)
+        local was = e.cattached and true or false
+        level:breakTile(bc, br)
+        return e.state, was
+    end
+    local floor, a1 = try(8, 8, 8, 9)                       -- de pie sobre el bloque del suelo
+    local ceil, a2 = try(8, 2, 8, 1, { 0, 1 })              -- colgado del techo
+    local other = try(8, 8, 12, 9)                          -- otro bloque: no le pasa nada
+    check('bloque', floor == 'dead_fling' and a1 and ceil == 'dead_fling' and a2 and other ~= 'dead_fling',
+        ('se rompe el de debajo: %s; el del techo del que cuelga: %s; otro bloque: %s'):format(floor, ceil, other))
+end
+
+-- CHOQUE: dos lúgubres no se atraviesan (ni a otros enemigos): se dan la vuelta
+function cases.choque()
+    local level, es = room(24, 8, { gl(6, 7, { pauses = false, senseRange = 0.01, hearing = 0 }),
+                                    gl(12, 7, { pauses = false, senseRange = 0.01, hearing = 0 }) })
+    local a, b = es[1], es[2]
     step(level, es, 0.3)
-    local pa = player(level, 8, 9)
-    pa.x, pa.y, pa.vy, pa.onGround = e.x, e.y - 120, 300, false
-    local hp0 = pa.hp
-    step(level, es, 0.6, function() return e.state == 'dead' end)
-    check('pisoton', e.state == 'dead' and pa.hp == hp0, ('estado %s, vida %d→%d'):format(e.state, hp0, pa.hp))
+    local minGap, turns, last = 1e9, 0, nil
+    step(level, es, 14, function()
+        a.wanderT, b.wanderT = 9, 9                         -- (sin medias vueltas al azar)
+        a.state, b.state = 'walk', 'walk'
+        if (b.x - a.x) > 3 * T then a.cdir, b.cdir = 1, -1 end          -- (siempre el uno hacia el otro)
+        local ba, bb = a:getOuterBounds(), b:getOuterBounds()
+        minGap = math.min(minGap, math.max(bb.x - (ba.x + ba.w), ba.x - (bb.x + bb.w)))
+        local k = a.cdir * 10 + b.cdir
+        if last and k ~= last then turns = turns + 1 end
+        last = k
+    end)
+    check('choque', minGap >= 0 and turns >= 2 and a.x < b.x,
+        ('hueco mínimo entre sus cajas %.0f px (nunca se solapan); cambios de sentido %d; siguen en su lado=%s'):format(minGap, turns,
+         tostring(a.x < b.x)))
+end
+
+-- RUIDOS para DISTRAER: coger una estrella, romper un bloque, un trampolín, un mortero, una bomba...
+-- suenan (cada uno con su fuerza: Noise.R / Noise.SOUNDS) y el lúgubre va a mirar AHÍ, no al jugador
+function cases.distraer()
+    -- (1) cada cosa apunta su ruido, del tamaño que toca
+    local level, es = room(30, 9, { { type = 'star', col = 6, row = 8, props = {} } })
+    local got = {}
+    local function last() local n = level.noises; return n and n.list[#n.list] end
+    local pa = player(level, 6, 9)
+    step(level, es, 0.4)
+    got.star = last() and last().r / T
+    level.tiles[6][10] = BREAK; level:breakTile(10, 6); got.tile = last().r / T
+    for _, n in ipairs({ 'trampoline', 'mortarShoot', 'bombBlast', 'pufferInflate' }) do
+        local n0 = level.noises.seq
+        Noise.src(500, 300); Sound.play(n); Noise.src(nil)
+        got[n] = (level.noises.seq > n0) and last().r / T or 0
+    end
+    local n0 = level.noises.seq
+    Sound.play('bombBlast')                                 -- (sin sitio: no es de nadie → nada)
+    local nowhere = level.noises.seq - n0
+    Noise.src(500, 300); Sound.play('jump'); Noise.src(nil)
+    local silent = level.noises.seq - n0
+    local order = (got.star or 99) < got.tile and got.tile < Noise.R.pound and Noise.R.pound < got.bombBlast
+    -- (2) distracción: el jugador a la izquierda, callado; una bomba estalla a la derecha → va a la derecha
+    local l2, es2, e = room(34, 8, { gl(16, 7, { pauses = false, senseRange = 0.01 }) })
+    local p2 = player(l2, 6, 8)
+    step(l2, es2, 0.3)
+    local x0 = e.x
+    Noise.src(28 * T, 7 * T); Sound.play('bombBlast'); Noise.src(nil)
+    step(l2, es2, 2.5)
+    check('distraer', got.star == Noise.R.pickup and got.tile == Noise.R.tile and got.trampoline == 8 and got.mortarShoot == 10
+        and got.bombBlast == 26 and got.pufferInflate == 7 and nowhere == 0 and silent == 0 and order and e.x - x0 > 2 * T,
+        ('casillas: estrella %s, bloque %s, trampolín %s, mortero %s, bomba %s, pez globo %s; sin sitio %d, salto %d; '
+         .. 'estrella < bloque < ground pound < bomba=%s; bomba a la derecha: va %.1f casillas hacia ella (%s)'):format(
+         tostring(got.star), tostring(got.tile), tostring(got.trampoline), tostring(got.mortarShoot), tostring(got.bombBlast),
+         tostring(got.pufferInflate), nowhere, silent, tostring(order), (e.x - x0) / T, e.state))
 end
 
 function cases.techo()
@@ -392,7 +481,7 @@ end
 function love.load()
     local only = os.getenv('CASE')
     for _, n in ipairs({ 'linterna', 'luz_pared', 'estado_propio', 'oye', 'marca', 'navega', 'burla', 'busca', 'salta', 'contacto', 'huye', 'pisoton',
-                         'techo', 'explora', 'red' }) do
+                         'bloque', 'choque', 'distraer', 'techo', 'explora', 'red' }) do
         if not only or only == n then
             local ok, err = pcall(cases[n])
             if not ok then check(n, false, 'ERROR ' .. tostring(err)) end

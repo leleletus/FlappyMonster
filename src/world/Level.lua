@@ -663,6 +663,8 @@ function Level:breakTile(col, row)
     self.tiles[row][col] = new
     self.brokenQueue = self.brokenQueue or {}
     table.insert(self.brokenQueue, { col, row, new })
+    local Noise = require 'src/world/Noise'
+    Noise.emit((col - 0.5) * TILE_PX, (row - 0.5) * TILE_PX, Noise.R.tile)       -- (romper un bloque se oye)
     -- Enemigos de pie encima: mueren despedidos girando (no se quedan flotando)
     self:forStanders(col, row, function(e)
         local cx = (col - 0.5) * TILE_PX
@@ -676,7 +678,7 @@ end
 function Level:forStanders(col, row, fn)
     for _, e in ipairs(self.liveEntities or {}) do
         if e.standingOnCell and e.def and e.def.category == 'Enemigos' and not e.def.boss
-           and not e.solidFull and e:standingOnCell(col, row) then
+           and not e.solidFull and e:standingOnCell(col, row) then   -- (los trepadores: el bloque al que se agarran)
             fn(e)
         end
     end
@@ -704,6 +706,7 @@ function Level:hitTile(col, row, from)
     self.brokenQueue = self.brokenQueue or {}
     table.insert(self.brokenQueue, { col, row, new, 'toggle', from })
     self:tileBump(col, row, from)
+    require('src/world/Noise').emit((col - 0.5) * TILE_PX, (row - 0.5) * TILE_PX, require('src/world/Noise').R.switch)
     -- Enemigos encima del activador: un saltito con el golpe (no mueren)
     self:forStanders(col, row, function(e)
         if e.releaseCrawl then e:releaseCrawl() end
@@ -815,6 +818,10 @@ function Level:crackIce(col, row, n, from)
     if self.iceWear then self.iceWear[row * 65536 + col] = nil end
     self.brokenQueue = self.brokenQueue or {}
     table.insert(self.brokenQueue, { col, row, new, kind, from })
+    if from ~= 'wear' then                             -- (el hielo que cruje / se rompe se oye; el desgaste de estar encima, no)
+        local Noise = require 'src/world/Noise'
+        Noise.emit((col - 0.5) * TILE_PX, (row - 0.5) * TILE_PX, (kind == 'icebreak') and Noise.R.icebreak or Noise.R.crack)
+    end
     if kind == 'crack' then self:tileBump(col, row, 'crack') end
     if self.tileFx then self.tileFx(kind, col, row) end
     return (kind == 'icebreak') and 'break' or 'crack'

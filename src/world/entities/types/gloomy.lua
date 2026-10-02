@@ -63,6 +63,10 @@ local STILL_SPD  = 30                     -- px/s: por debajo, el jugador está 
 local GLOW       = { 1, 0.77, 0.35 }      -- ámbar
 
 local body, glow, icons
+-- DURO: un pisotón normal solo rebota en él; hace falta un GROUND POUND para matarlo (regla
+-- genérica de Interactions.check: `needsPound`)
+Gloomy.needsPound = true
+
 function Gloomy.loadAssets()
     if body then return end
     icons = SpriteStrip.load('assets/images/gloomy/icons-Sheet.png', 7)
@@ -227,6 +231,13 @@ function Gloomy:plan(level, gx, gy, away)
 end
 
 function Gloomy:crawl_(level, dt, speed)
+    -- Otro enemigo delante: no lo atraviesa. Media vuelta y, si iba a algún sitio, deja ese camino
+    -- (cazando: llega hasta ahí y busca o salta; huyendo: vuelve a planear en un momento)
+    if Crawler.entityAhead(self, level) then
+        self.cdir = -self.cdir
+        self.planLeft = 0
+        return false
+    end
     if not Crawler.move(self, level, speed * dt) then return false end
     self.flipped = (self.cny == 1)
     if self.cnx ~= 0 then self.facing = self.cdir

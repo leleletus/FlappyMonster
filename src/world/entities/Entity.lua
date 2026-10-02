@@ -366,9 +366,24 @@ end
 
 -- Está de pie sobre la casilla (c, r)? (pies en su cara de arriba)
 function Entity:standingOnCell(c, r)
-    if not self.alive or self.flying or not self.onGround then return false end
+    if not self.alive or self.flying then return false end
     if Entity.SPECIAL_DEATH[self.state] or self.state == 'dead' or self.state == 'gone' then return false end
     local T = TILE_PX
+    -- Trepadores (Crawler): la casilla a la que están AGARRADOS, sea suelo, pared o techo
+    -- (no tienen `onGround`: por eso a los Crabbies lúgubres no les pasaba nada)
+    if self.crawl and self.cattached then
+        local Crawler = require 'src/world/entities/Crawler'
+        local fx, fy = Crawler.feet(self)
+        local px, py = fx - self.cnx * 6, fy - self.cny * 6            -- (un poco dentro del bloque)
+        if math.floor(px / T) + 1 == c and math.floor(py / T) + 1 == r then return true end
+        -- (en el suelo: también los bloques bajo los extremos de su caja, como los que caminan)
+        if self.cny == -1 then
+            local b = self:getOuterBounds()
+            return r == math.floor(py / T) + 1 and b.x < c * T and b.x + b.w > (c - 1) * T
+        end
+        return false
+    end
+    if not self.onGround then return false end
     local b = self:getOuterBounds()
     local x0, x1 = (c - 1) * T, c * T
     local top = (r - 1) * T

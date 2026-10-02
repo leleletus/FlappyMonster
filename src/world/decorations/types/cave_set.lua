@@ -64,6 +64,7 @@ return {
     static('stalagmite_small', 'Estalagmita pequeña', 'sub', 'stalagmite_small.png', 8),
     base {
         name = 'cave_crystals', label = 'Cristales brillantes', placement = 'cell', layer = 'back',
+        light = { r = 120, color = { 0.8, 0.6, 1 }, a = 0.2, dy = -24, pulse = 1.6 },      -- (a oscuras: luz tenue, Darkness)
         editor = { previewScale = 0.8 },
         update = function(d, dt)
             if DecoFx.every(d, 'spark', dt, 0.4, 1.2) then
@@ -82,6 +83,7 @@ return {
     },
     base {
         name = 'glow_mushroom', label = 'Seta luminosa', placement = 'sub',
+        light = { r = 84, color = { 0.5, 1, 1 }, a = 0.18, dy = -16, pulse = 1.9 },
         editor = { previewScale = 1.5 },
         update = function(d, dt)
             if DecoFx.every(d, 'spore', dt, 0.6, 1.6) then
@@ -100,6 +102,7 @@ return {
     },
     base {
         name = 'torch', label = 'Antorcha', placement = 'sub',
+        light = { r = 170, color = { 1, 0.75, 0.45 }, a = 0.42, dy = -40, pulse = 9 },
         editor = { previewScale = 1.2 },
         update = function(d, dt)
             if DecoFx.every(d, 'ember', dt, 0.25, 0.7) then ember(d, 0, -40) end

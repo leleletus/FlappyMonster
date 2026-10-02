@@ -128,6 +128,8 @@ function EntityTypes.register(def)
     for k, v in pairs(def) do t[k] = v end
     t.label    = t.label or t.name
     t.category = t.category or 'Enemigos'
+    -- Sonidos suyos que además son RUIDO (lo oyen los Crabbies lúgubres): `noises = { sonido = casillas }`
+    if t.noises then require('src/world/Noise').register(t.noises) end
 
     -- Esquema final: comunes (con defaults del tipo) + propios
     local hide = {}
