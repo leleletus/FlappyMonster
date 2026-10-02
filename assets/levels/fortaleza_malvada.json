@@ -32,7 +32,7 @@
     {"col":78,"props":{"patrol":{"left":75,"right":82}},"row":13,"type":"crabby"},
     {"col":84,"props":{"delayMax":5,"delayMin":3,"range":10},"row":13,"type":"mortar"},
     {"col":88,"row":13,"type":"checkpoint"},
-    {"col":103,"props":{"detectTime":0.15,"hp":8,"hpPerPlayer":4,"moveSpeed":240,"slamSpeed":1050,"waypoints":[{"col":95,"row":6},{"col":110,"row":6},{"col":103,"row":8}]},"row":6,"type":"miniboss1"},
+    {"col":103,"props":{"detectTime":0.15,"hp":10,"hpPerPlayer":4,"moveSpeed":240,"slamSpeed":1000,"waypoints":[{"col":95,"row":6},{"col":110,"row":6}]},"row":6,"type":"miniboss1"},
     {"col":29,"row":2,"sub":1,"type":"spikefall"},
     {"col":30,"row":2,"sub":1,"type":"spikefall"},
     {"col":31,"row":2,"sub":2,"type":"spikefall"},
