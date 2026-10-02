@@ -1655,7 +1655,9 @@ punches / spike flex / roar; Mega Gloomy: `ping` ring / `taunt` / `roar`), and i
 (`SHOWS[...].bpm`; stronger on the bar's first beat) and the track title is in the corner. Mega Gloomy only: a light
 BULB hangs from the zone ceiling and swings one full cycle every 8 beats — three fake decorations with `light` are
 injected into `level.decorations` so `Darkness` lights the arena and the boss as it moves. Every 16 bars the bulb
-FAILS: it flickers, stays off for 2 bars (only the crab's glowing points show) and flickers back on.
+FAILS: it flickers, stays off for 2 bars (only the crab's glowing points show) and flickers back on. Now and then, at
+random, it also dims in a short flicker. The cable and the bulb glass are drawn BEFORE `Darkness` (so they go dark
+with the scene); only the lit filament and its halo are drawn after it, scaled by how lit it is.
 
 ## Testing without a human
 

@@ -201,14 +201,22 @@ local function drawBulb(camX, camY)
     if pos >= 12 and pos < 14 then on = 0
     elseif pos >= 11.6 and pos < 12 then on = (math.floor(vt * 22) % 3 == 0) and 0.15 or 1        -- parpadeo antes de irse
     elseif pos >= 14 and pos < 14.3 then on = (math.floor(vt * 22) % 2 == 0) and 1 or 0.1 end     -- … y al volver
+    -- … y de vez en cuando, sin patrón, TITILA: un rato corto en el que la luz baja a saltos
+    local function rnd(n) local x = math.sin(n * 127.1 + 311.7) * 43758.5453; return x - math.floor(x) end
+    local ep = math.floor(vt / 0.8)
+    if on == 1 and rnd(ep) < 0.16 then
+        on = 0.5 + 0.5 * rnd(math.floor(vt * 18) + ep * 7.3)
+    end
     for _, d in ipairs(lamp.lights) do
         d.x, d.y = bx, by + 14
         d.def.light.a0 = d.def.light.a0 or d.def.light.a
         d.def.light.a = d.def.light.a0 * on
     end
-    return function()
-        local sx, sy = math.floor(lamp.px - camX), math.floor(lamp.py - camY)
-        local ex, ey = math.floor(bx - camX), math.floor(by - camY)
+    -- Dos partes: el cable y la bombilla se dibujan ANTES de la oscuridad (les afecta la luz como a todo:
+    -- apagada, casi no se ven); después, solo lo que BRILLA (el filamento y su halo), según lo encendida que esté
+    local sx, sy = math.floor(lamp.px - camX), math.floor(lamp.py - camY)
+    local ex, ey = math.floor(bx - camX), math.floor(by - camY)
+    local function body()
         love.graphics.setColor(0.5, 0.5, 0.56, 1)
         for i = 0, 24 do                                         -- el cable, a trocitos (píxel)
             local k = i / 24
@@ -216,14 +224,21 @@ local function drawBulb(camX, camY)
         end
         love.graphics.setColor(0.42, 0.42, 0.48, 1); love.graphics.rectangle('fill', ex - 8, ey - 4, 16, 12)      -- casquillo
         love.graphics.setColor(0.25, 0.25, 0.3, 1); love.graphics.rectangle('fill', ex - 8, ey + 4, 16, 4)
-        local g = 0.22 + 0.78 * on                               -- (apagada: el cristal, gris)
-        love.graphics.setColor(g, 0.93 * g, 0.6 * g + 0.1 * (1 - on), 1); love.graphics.rectangle('fill', ex - 10, ey + 8, 20, 20)        -- bombilla
+        love.graphics.setColor(0.75, 0.72, 0.6, 1); love.graphics.rectangle('fill', ex - 10, ey + 8, 20, 20)     -- el cristal
         love.graphics.rectangle('fill', ex - 6, ey + 28, 12, 4)
-        love.graphics.setColor(g, g, 0.92 * g, 1); love.graphics.rectangle('fill', ex - 6, ey + 12, 8, 8)
+        love.graphics.setColor(1, 1, 1, 1)
+    end
+    local function glow()
+        if on <= 0.02 then return end
+        love.graphics.setColor(1, 0.93, 0.6, on); love.graphics.rectangle('fill', ex - 10, ey + 8, 20, 20)
+        love.graphics.rectangle('fill', ex - 6, ey + 28, 12, 4)
+        love.graphics.setColor(1, 1, 0.92, on); love.graphics.rectangle('fill', ex - 6, ey + 12, 8, 8)
         love.graphics.setBlendMode('add')
         love.graphics.setColor(1, 0.85, 0.5, 0.18 * on); love.graphics.rectangle('fill', ex - 18, ey, 36, 36)
         love.graphics.setBlendMode('alpha')
+        love.graphics.setColor(1, 1, 1, 1)
     end
+    return body, glow
 end
 
 local function drawLogo()
@@ -249,7 +264,8 @@ local function render()
     local shx, shy = Particles.shakeOffset()
     local camX = math.floor((zone.x0 + zone.x1) / 2 - W / 2 + shx + 0.5)
     local camY = math.floor(math.min(level.tileH * T - H, zone.y1 + 1.5 * T - H) + shy + 0.5)
-    local bulb = lamp and drawBulb(camX, camY)
+    local bulbBody, bulbGlow
+    if lamp then bulbBody, bulbGlow = drawBulb(camX, camY) end
     love.graphics.setCanvas(scene)
     love.graphics.clear(0, 0, 0, 1)
     love.graphics.setColor(1, 1, 1, 1)
@@ -269,11 +285,12 @@ local function render()
     love.graphics.clear(0, 0, 0, 1)
     love.graphics.setColor(1, 1, 1, 1)
     level:renderWaterEffect(camX, camY, scene)
+    if bulbBody then bulbBody() end
     if level.dark then
         Darkness.render(level, camX, camY, {})
         Darkness.renderGlow(level, es, camX, camY)
     end
-    if bulb then bulb() end
+    if bulbGlow then bulbGlow() end
     drawLogo()
     love.graphics.setCanvas()
 end
