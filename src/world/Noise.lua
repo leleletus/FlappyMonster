@@ -1,6 +1,6 @@
 -- src/world/Noise.lua
 -- RUIDOS que los enemigos pueden OÍR (el Crabby lúgubre caza de oído). Quien hace ruido llama a
--- Noise.emit(x, y, radio en casillas): pasos, saltos, ground pound, un golpe a un jugador, un
+-- Noise.emit(x, y, radio en casillas): saltos, ground pound, un golpe a un jugador, un
 -- enemigo que muere, un bloque que se rompe... Se apuntan en el nivel que está simulando
 -- (Noise.bind(level): lo pone el modo un jugador y el servidor en cada paso; en la predicción
 -- del cliente no hay ninguno y no se apunta nada). Cada oyente recuerda el último que procesó
@@ -8,18 +8,29 @@
 local Noise = {}
 
 local KEEP = 24
-Noise.R = { step = 2.5, jump = 3.5, land = 4, bump = 5, hurt = 9, kill = 9, tile = 10, pound = 15, boss = 22 }
+-- Radio (casillas) de cada ruido. NO hay ruido de pasos: andar es silencioso (así se puede pasar
+-- con sigilo y las marcas no llenan la pantalla). Saltar se oye cerca; un golpe, lejos.
+Noise.R = { jump = 3.5, bump = 5, hurt = 9, kill = 9, tile = 10, pound = 15, boss = 22 }
 
 function Noise.bind(level) Noise.level = level end
 
-function Noise.emit(x, y, r)
+-- Apunta el ruido (solo en niveles a oscuras: es donde hay quien lo oiga) y suelta su MARCA: un
+-- "!" rojo en el sitio, con un aro hasta donde se oye (fx 'noise_s' / 'noise_m' / 'noise_l' →
+-- src/fx/NoiseMarks.lua; llega igual a los clientes online). Así el jugador ve qué ha hecho
+-- ruido, dónde y hasta dónde: es adonde irán los Crabbies lúgubres.
+-- `quiet` = sin marca (el golpe del propio jefe, que ya se ve).
+function Noise.emit(x, y, r, quiet)
     local level = Noise.level
-    if not level or not x then return end
+    if not level or not level.dark or not x or not r then return end
     local n = level.noises
     if not n then n = { seq = 0, list = {} }; level.noises = n end
     n.seq = n.seq + 1
     n.list[#n.list + 1] = { x = x, y = y, r = r * TILE_PX, seq = n.seq }
     if #n.list > KEEP then table.remove(n.list, 1) end
+    if not quiet then
+        local Entity = require 'src/world/entities/Entity'
+        Entity.emitFx((r >= 12) and 'noise_l' or ((r >= 6) and 'noise_m' or 'noise_s'), x, y)
+    end
 end
 
 -- El ruido nuevo (posterior a `since`) más fuerte que se oye desde (x, y) con un oído `k`

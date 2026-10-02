@@ -1095,7 +1095,7 @@ function PlayerAdventure:_update(dt, level)
         if self.animT>=1/WALK_FPS then
             self.animT=self.animT-1/WALK_FPS
             self.frame=(self.frame==3) and 2 or 3
-            if self.frame==3 then self.puff=1.08; Sound.play('step'); Noise.emit(self.x, self.y, Noise.R.step) end
+            if self.frame==3 then self.puff=1.08; Sound.play('step') end
         end
     else
         self.frame=3; self.animT=0

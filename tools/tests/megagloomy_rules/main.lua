@@ -1,17 +1,18 @@
 -- Arnés: MEGA CRABBY LÚGUBRE caso a caso, en su arena (tools/levelgen/arenas/jefe_lugubre.json).
---   acecha        recorre paredes y techo (nunca el suelo), suelta aros de ecolocalización y va
---                 hacia el lado donde suena algo
---   luz_cancela   alumbrarlo mientras ESCUCHA le hace perder el rastro: no ataca (icono "…")
---   cae_donde_sono marca y cae donde sonó el último ruido (no donde está el jugador, que se fue
---                 sin hacer ruido): no le da
---   golpe         al caer apaga la linterna del que está cerca (y no la del que está lejos) y los
---                 Crabbies lúgubres lo oyen
---   deslumbrado   en el suelo y SIN luz es inmune (rebotas); alumbrado queda deslumbrado: pisotón
---                 -1, y solo un golpe; luego trepa
---   fases         fase 2: aros falsos y salto de pared a pared; fase 3: grita, las linternas alcanzan
---                 la mitad un rato y llama a Crabbies lúgubres
---   muerte        al morir vuelve la luz normal y se van los súbditos
---   red           netPackExtra → netApplyExtra: fase, ángulo, marca, aros y luz en el cliente
+--   acecha        recorre paredes y techo, suelta aros de ecolocalización y va hacia donde suena algo
+--   aro_detecta   el aro detecta (le sale su "!") al jugador que se mueve; al que está quieto, no
+--   marca_y_ataque cada ataque con SU marca (diana / tres líneas / línea horizontal), fija desde que
+--                 empieza a apuntar aunque suene otra cosa después, y hace justo ese ataque en ese sitio
+--   patas         las tres patas dan en sus líneas y no entre ellas; si da a alguien, luego se burla
+--   luz_cancela   alumbrarlo mientras apunta lo asusta: cancela (icono "…") y repetirá ese ataque
+--   caja          la caja es el caparazón que se ve (antes quedaba más arriba, sobre las pinzas)
+--   deslumbrado   en el suelo y SIN luz es inmune (rebotas); alumbrado desde el suelo queda deslumbrado:
+--                 pisotón -1, y solo un golpe; luego trepa
+--   fases         fase 1: caída y patas (sin embestida); fase 2: embestida; fase 3: grito que acorta las
+--                 linternas y llama a Crabbies lúgubres
+--   muerte        de cangrejo: cae, se encoge y se apaga, sin explosiones; libera la zona, vuelve la luz y
+--                 se van los súbditos
+--   red           netPackExtra → netApplyExtra
 --   LOOK=1        <save>/megagloomy_look.png: la arena a oscuras en 4 momentos
 --
 --   tools/tests/run.sh megagloomy_rules   (CASE=nombre)
@@ -81,102 +82,161 @@ end
 
 local cases = {}
 
+-- Pone al jefe a apuntar el ataque `kind` ('drop' | 'stab' | 'lunge') y devuelve lo que vio
+local function forceAim(boss, level, phase, n)
+    boss.phase = phase
+    boss.attackN = n - 1
+    boss:startAim(level)
+end
+
 function cases.acecha()
     local level, es, boss = arena()
     local zx0, zx1, zy0, zy1 = boss:zoneBounds()
-    local onEdge, pings, floor = true, 0, false
+    local onEdge, floor = true, false
     local seen = {}
-    boss.stalkT = -99                                      -- (que no ataque)
-    local x0
-    stepAll(level, es, {}, 1, function() end)
-    x0 = boss.x
+    stepAll(level, es, {}, 1, function() boss.stalkT = -99 end)
+    local x0 = boss.x
     Noise.emit(zx1 - 2 * T, zy1 - 40, Noise.R.pound)       -- suena a la derecha
     stepAll(level, es, {}, 6, function()
-        boss.stalkT = -99
-        local wall = math.abs(boss.x - zx0) < 160 or math.abs(boss.x - zx1) < 160
-        local ceil = math.abs(boss.y - zy0) < 160
+        boss.stalkT = -99                                  -- (que no ataque)
+        local wall = math.abs(boss.x - zx0) < 110 or math.abs(boss.x - zx1) < 110
+        local ceil = math.abs(boss.y - zy0) < 110
         if not (wall or ceil) then onEdge = false end
-        if boss.y > zy1 - 150 and not wall then floor = true end
         for _, p in ipairs(boss.pings) do seen[p.id] = true end
     end)
+    local pings = 0
     for _ in pairs(seen) do pings = pings + 1 end
-    check('acecha', onEdge and not floor and pings >= 2 and boss.x > x0 + 3 * T,
+    check('acecha', onEdge and pings >= 2 and boss.x > x0 + 3 * T,
         ('siempre en paredes/techo=%s; aros %d; hacia el ruido: x %.0f → %.0f'):format(tostring(onEdge), pings, x0, boss.x))
+end
+
+-- El aro detecta al que se mueve (le sale su "!") y no al que está quieto
+function cases.aro_detecta()
+    local function try(moving)
+        local level, es, boss = arena()
+        stepAll(level, es, {}, 0.3)
+        local pa = playerAt(level, 20)
+        boss.stalkT, boss.pingT = -99, 0
+        boss.tx = nil
+        boss:ping()
+        local n0 = level.noises and level.noises.seq or 0
+        stepAll(level, es, { pa }, 1.6, function()
+            boss.stalkT, boss.pingT = -99, 0
+            stub.state.right = moving and (math.floor(love.timer.getTime() * 0) == 0) or false
+            if moving and pa.x > 22 * T then pa.x = 20 * T end
+        end)
+        stub.state.right = false
+        return (level.noises and level.noises.seq or 0) - n0, boss.tx
+    end
+    local nMove, txMove = try(true)
+    local nStill, txStill = try(false)
+    check('aro_detecta', nMove == 1 and txMove ~= nil and nStill == 0 and txStill == nil,
+        ('moviéndose: %d marca (el jefe ya sabe dónde=%s); quieto: %d (sabe dónde=%s)'):format(nMove, tostring(txMove ~= nil),
+         nStill, tostring(txStill ~= nil)))
+end
+
+-- Cada ataque con SU marca, fija desde que empieza a apuntar, y da donde marcó (el último "!")
+function cases.marca_y_ataque()
+    local msg, ok = {}, true
+    for i, kind in ipairs({ 'drop', 'stab', 'lunge' }) do
+        local level, es, boss = arena()
+        stepAll(level, es, {}, 0.4)
+        local zx0, zx1, zy0, zy1 = boss:zoneBounds()
+        local nx, ny = zx0 + 8 * T, zy1 - 40
+        Noise.emit(nx, ny, Noise.R.jump)
+        stepAll(level, es, {}, 0.1, function() boss.stalkT = -99 end)
+        forceAim(boss, level, 2, ({ drop = 1, lunge = 2, stab = 3 })[kind])     -- (SEQ de la fase 2: caída, embestida, patas)
+        local k0, mx0, my0, ly0 = boss.kind, boss.markX, boss.markY, boss.lockY
+        Noise.emit(zx1 - 3 * T, ny, Noise.R.jump)           -- otro ruido DESPUÉS de apuntar: ya no cambia
+        local stable, aimT, seen, landX, minY, maxY = true, 0, {}, nil, 1e9, -1e9
+        stepAll(level, es, {}, 6, function()
+            seen[boss.state] = true
+            if boss.state == 'aim' then
+                aimT = aimT + DT
+                if boss.kind ~= k0 or boss.markX ~= mx0 or boss.lockY ~= ly0 then stable = false end
+            end
+            if boss.state == 'grounded' and not landX then landX = boss.x end
+            if boss.state == 'lunge' then minY, maxY = math.min(minY, boss.y), math.max(maxY, boss.y) end
+            return boss.state == 'stalk' or boss.state == 'grounded'
+        end)
+        local good = stable and aimT >= 0.75 and math.abs(mx0 - nx) < 2
+        if kind == 'drop' then good = good and k0 == 1 and seen.drop and not seen.lunge and not seen.stab and landX and math.abs(landX - nx) < 4
+        elseif kind == 'stab' then good = good and k0 == 2 and seen.stab and not seen.drop and not seen.lunge
+        else good = good and k0 == 3 and seen.lunge and not seen.drop and not seen.stab and math.abs(minY - ly0) <= 16 and math.abs(maxY - ly0) <= 16 end
+        ok = ok and good
+        msg[#msg + 1] = ('%s: marca %d fija=%s (%.1f s apuntando), ataca %s'):format(kind, k0, tostring(stable), aimT,
+            seen.drop and 'caída' or seen.stab and 'patas' or seen.lunge and 'embestida' or '?')
+    end
+    check('marca_y_ataque', ok, table.concat(msg, ' · '))
+end
+
+-- Patas: da en las tres columnas marcadas; entre ellas, no
+function cases.patas()
+    local function try(dx)
+        local level, es, boss = arena()
+        stepAll(level, es, {}, 0.4)
+        local zx0, zx1, zy0, zy1 = boss:zoneBounds()
+        local nx = zx0 + 10 * T
+        Noise.emit(nx, zy1 - 40, Noise.R.jump)
+        stepAll(level, es, {}, 0.1, function() boss.stalkT = -99 end)
+        local pa = playerAt(level, 1)
+        pa.x = nx + dx
+        for _ = 1, 20 do pa:update(DT, level) end
+        local hp0 = pa.hp
+        forceAim(boss, level, 1, 2)
+        stepAll(level, es, { pa }, 5, function() return boss.state == 'stalk' or boss.state == 'taunt' end)
+        return hp0 - pa.hp, boss.state
+    end
+    local onMid, st1 = try(0)
+    local onSide = try(1.6 * T)
+    local between = try(0.8 * T)
+    check('patas', onMid == 1 and onSide == 1 and between == 0 and st1 == 'taunt',
+        ('en la línea del medio -%d (y se burla: %s), en la de un lado -%d, entre dos líneas -%d'):format(onMid, st1, onSide, between))
 end
 
 function cases.luz_cancela()
     local level, es, boss = arena()
     stepAll(level, es, {}, 0.5)
     local pa = playerAt(level, 20)
-    -- el jefe, en el techo delante del jugador, escuchando; el jugador lo alumbra
     boss.u = boss:nearestU(pa.x + 3 * T, -1e9); boss.x, boss.y, boss.ang = boss:path(boss.u)
-    boss:enter('listen')
+    forceAim(boss, level, 1, 1)
     pa.facing, pa.lightOn = 1, true
     pa.y = boss.y + 30                                     -- (a su altura: el cono es horizontal)
     local seen = {}
     level.players = { pa }
     local lit = Lights.lit(level, boss.x, boss.y)
-    local icon = 0
+    local icon, n0 = 0, boss.attackN
     for _ = 1, 90 do
         level.players = { pa }
         boss:update(DT, level)
         seen[boss.state] = true
         icon = math.max(icon, boss.icon or 0)
     end
-    check('luz_cancela', lit and seen.flinch and not seen.drop and icon == 3,
-        ('alumbrado=%s; pierde el rastro=%s (icono %d); ataca=%s'):format(tostring(lit), tostring(seen.flinch), icon,
-         tostring(seen.drop)))
+    check('luz_cancela', lit and seen.flinch and not seen.drop and icon == 3 and boss.attackN == n0 - 1,
+        ('alumbrado=%s; se asusta=%s (icono %d); ataca=%s; repetirá ese ataque=%s'):format(tostring(lit), tostring(seen.flinch),
+         icon, tostring(seen.drop), tostring(boss.attackN == n0 - 1)))
 end
 
-function cases.cae_donde_sono()
+-- La caja es el caparazón que se ve (no más arriba): en el suelo, su borde de abajo queda REST − BH/2 sobre el suelo
+function cases.caja()
     local level, es, boss = arena()
     stepAll(level, es, {}, 0.5)
-    local pa = playerAt(level, 16)
-    local nx = pa.x
-    Noise.emit(nx, pa.y, Noise.R.jump)                     -- hizo ruido aquí…
-    stepAll(level, es, {}, 0.1)
-    pa.x = pa.x + 9 * T                                    -- …y se fue sin hacer ruido
-    local hp0 = pa.hp
-    boss.stalkT = 99
-    local landed
-    stepAll(level, es, { pa }, 6, function()
-        pa.vx = 0
-        if boss.state == 'grounded' and not landed then landed = boss.x; return true end
-    end)
-    check('cae_donde_sono', landed and math.abs(landed - nx) < 40 and math.abs(boss.markX - nx) < 40 and pa.hp == hp0,
-        ('sonó en x %.0f; marca %.0f; cae en %.0f; el jugador (en %.0f) vida %d→%d'):format(nx, boss.markX, landed or -1,
-         pa.x, hp0, pa.hp))
-end
-
-function cases.golpe()
-    local level, es, boss = arena()
-    stepAll(level, es, {}, 0.5)
-    local near, far = playerAt(level, 22), playerAt(level, 33)
-    near.lightOn, far.lightOn = true, true
-    near.invT, far.invT = 9, 9
-    -- un Crabby lúgubre en la arena (un súbdito, despierto) para ver que lo oye
-    local g
-    for _, e in ipairs(boss:minions(level)) do g = g or e end
-    g.home.x, g.home.y = 14 * T, 12 * T - 30
-    g:resetToHome(); g.state = 'walk'
-    stepAll(level, es, { near, far }, 0.3, function() near.vx, far.vx = 0, 0; near.lightOn, far.lightOn = true, true end)
-    boss.x, boss.y = near.x + 2 * T, 12.5 * T - 145
-    boss:slam(level)
-    local nOff, nCd, fOn = not near.lightOn, near.lightCd, far.lightOn
-    local st
-    stepAll(level, es, { near, far }, 0.4, function() near.vx, far.vx = 0, 0; if g.state == 'hunt' then st = true end end)
-    check('golpe', nOff and nCd > 2 and fOn and st,
-        ('linterna del cercano apagada=%s (%.1f s); la del lejano encendida=%s; el Crabby lúgubre va hacia el golpe=%s'):format(
-         tostring(nOff), nCd, tostring(fOn), tostring(st)))
+    local zx0, zx1, zy0, zy1 = boss:zoneBounds()
+    boss.x, boss.y, boss.ang = (zx0 + zx1) / 2, zy1 - 100, 0
+    boss:enter('grounded')
+    local b = boss:getOuterBounds()
+    -- filas del caparazón en el cuadro: de la 9 a la 13 (de 21) → de 120 a 70 px sobre el suelo
+    local top, bottom = zy1 - b.y, zy1 - (b.y + b.h)
+    check('caja', b.w == 110 and b.h == 60 and math.abs(top - 130) <= 12 and math.abs(bottom - 70) <= 12,
+        ('caja %dx%d; de %.0f a %.0f px sobre el suelo (el caparazón dibujado: de 70 a 120)'):format(b.w, b.h, bottom, top))
 end
 
 function cases.deslumbrado()
     local level, es, boss = arena()
     stepAll(level, es, {}, 0.5)
     local pa = playerAt(level, 18)
-    boss.x, boss.y, boss.ang = pa.x + 4.5 * T, 12 * T - 145, 0
+    boss.x, boss.y, boss.ang = pa.x + 4.5 * T, 12 * T - 100, 0
     boss:enter('grounded'); boss.hitOnce = false
-    -- sin luz: caerle encima rebota
     pa.x, pa.y, pa.vy, pa.onGround = boss.x, boss.y - 140, 300, false
     local r1
     for _ = 1, 40 do
@@ -184,10 +244,8 @@ function cases.deslumbrado()
         r1 = Interactions.check(pa, boss)
         if r1 then break end
     end
-    -- con luz: deslumbrado
-    local p2 = playerAt(level, 18)
+    local p2 = playerAt(level, 18)                         -- de pie en el suelo, a 4,5 casillas, con la linterna
     p2.facing, p2.lightOn = 1, true
-    p2.y = boss.y + 22
     boss:enter('grounded')
     level.players = { p2 }
     for _ = 1, 10 do boss:update(DT, level) end
@@ -202,29 +260,26 @@ function cases.deslumbrado()
     end
     boss:stomp()
     local hp1, st2 = boss.hp, boss.state
-    boss:stomp()                                           -- (un solo golpe por vez)
+    boss:stomp()
     local hp2 = boss.hp
     local seen = {}
     level.players = {}
     for _ = 1, 150 do boss:update(DT, level); seen[boss.state] = true end
     check('deslumbrado', r1 == 'bounce' and st1 == 'dazzled' and r2 == 'stomp' and hp1 == hp0 - 1 and hp2 == hp1
         and st2 == 'recover' and seen.climb and seen.stalk,
-        ('sin luz: %s; con luz: %s, caerle encima %s, vida %d→%d (otro golpe: %d), luego %s y trepa=%s'):format(tostring(r1), st1,
-         tostring(r2), hp0, hp1, hp2, st2, tostring(seen.climb)))
+        ('sin luz: %s; alumbrado desde el suelo: %s, caerle encima %s, vida %d→%d (otro golpe: %d), luego %s y trepa=%s'):format(
+         tostring(r1), st1, tostring(r2), hp0, hp1, hp2, st2, tostring(seen.climb)))
 end
 
 function cases.fases()
     local level, es, boss = arena()
     stepAll(level, es, {}, 0.5)
     local pa = playerAt(level, 24)
+    local seen1 = {}
+    stepAll(level, es, { pa }, 16, function() pa.invT, pa.vx = 9, 0; seen1[boss.state] = true end)
     boss.hp = math.floor(boss.hpMax * 0.6)
-    local seen, fakes = {}, 0
-    stepAll(level, es, { pa }, 22, function()
-        pa.invT, pa.vx = 9, 0
-        if math.random() < 0.05 then Noise.emit(pa.x, pa.y, Noise.R.jump) end
-        seen[boss.state] = true
-        for _, p in ipairs(boss.pings) do if p.fake == 1 then fakes = fakes + 1 end end
-    end)
+    local seen = {}
+    stepAll(level, es, { pa }, 22, function() pa.invT, pa.vx = 9, 0; seen[boss.state] = true end)
     local ph2 = boss.phase
     boss.hp = math.floor(boss.hpMax * 0.3)
     boss.shriekT = 99
@@ -239,58 +294,76 @@ function cases.fases()
     end)
     local back
     stepAll(level, es, { pa }, 8, function() pa.invT, pa.vx = 9, 0; boss.shriekT = 0; if not level.lightScale then back = true end end)
-    check('fases', ph2 == 2 and seen.lunge and fakes > 0 and boss.phase == 3 and seen.shriek and dim and minions >= 1
-        and range < Lights.RANGE * 0.6 and back,
-        ('fase 2: salto de pared a pared=%s, aros falsos=%s; fase 3: grito=%s, alcance de la linterna %.1f → %.1f casillas, '
-         .. 'súbditos %d; la luz vuelve=%s'):format(tostring(seen.lunge), tostring(fakes > 0), tostring(seen.shriek),
-         Lights.RANGE / T, range / T, minions, tostring(back)))
+    check('fases', seen1.drop and seen1.stab and not seen1.lunge and ph2 == 2 and seen.lunge and boss.phase == 3 and seen.shriek
+        and dim and minions >= 1 and range < Lights.RANGE * 0.6 and back,
+        ('fase 1: caída=%s patas=%s embestida=%s; fase 2: embestida=%s; fase 3: grito=%s, linterna %.1f → %.1f casillas, '
+         .. 'súbditos %d; la luz vuelve=%s'):format(tostring(seen1.drop), tostring(seen1.stab), tostring(seen1.lunge),
+         tostring(seen.lunge), tostring(seen.shriek), Lights.RANGE / T, range / T, minions, tostring(back)))
 end
 
+-- Muerte de cangrejo: sin explosiones; cae, se encoge y se apaga; libera la zona
 function cases.muerte()
     local level, es, boss = arena()
     stepAll(level, es, {}, 0.5)
-    boss.hp = 2
-    boss.phase = 3
+    boss.hp, boss.phase = 2, 3
     level.lightScale, boss.dimT = 0.5, 5
     boss:summon(level)
     local n0 = 0
     for _, e in ipairs(boss:minions(level)) do if e.alive then n0 = n0 + 1 end end
     boss:enter('dazzled'); boss.hitOnce = false
+    played = {}
     boss:pound()
-    stepAll(level, es, {}, 8)
+    local seen, released = {}, false
+    stepAll(level, es, {}, 5, function()
+        seen[boss.state] = true
+        if boss:releasesZone() then released = true end
+    end)
     local n1 = 0
     for _, e in ipairs(boss:minions(level)) do if e.alive and e.state ~= 'dead' then n1 = n1 + 1 end end
-    check('muerte', not boss.alive and level.lightScale == nil and n0 > 0 and n1 == 0,
-        ('vivo=%s; luz normal=%s; súbditos %d → %d'):format(tostring(boss.alive), tostring(level.lightScale == nil), n0, n1))
+    check('muerte', not boss.alive and seen.dying_curl and seen.dying_out and not seen.dying_hold and released
+        and (played.bossExplode or 0) == 0 and level.lightScale == nil and n0 > 0 and n1 == 0,
+        ('vivo=%s; se encoge=%s y se apaga=%s (explosiones %d); libera la zona=%s; luz normal=%s; súbditos %d → %d'):format(
+         tostring(boss.alive), tostring(seen.dying_curl), tostring(seen.dying_out), played.bossExplode or 0, tostring(released),
+         tostring(level.lightScale == nil), n0, n1))
 end
 
 function cases.red()
     local level, es, boss = arena()
     stepAll(level, es, {}, 3)
-    boss.phase, boss.markX, boss.markY, boss.dimT = 2, 1234, 800, 3
-    boss:ping(level)
+    boss.phase, boss.markX, boss.markY, boss.lockY, boss.kind, boss.dimT = 2, 1234, 800, 555, 3, 3
+    boss:ping()
     local pk = boss:netPackExtra()
     local l2, es2, r = arena()
     r:netApplyExtra(pk, pk, 1)
-    check('red', r.phase == 2 and r.markX == 1234 and math.abs(r.ang - boss.ang) < 0.02 and #r.pings == #boss.pings
-        and l2.lightScale == 0.5,
-        ('fase %d, marca %d, ángulo %.2f/%.2f, aros %d/%d, luz ×%s'):format(r.phase, r.markX, r.ang, boss.ang, #r.pings,
-         #boss.pings, tostring(l2.lightScale)))
+    check('red', r.phase == 2 and r.markX == 1234 and r.lockY == 555 and r.kind == 3 and math.abs(r.ang - boss.ang) < 0.02
+        and #r.pings == #boss.pings and l2.lightScale == 0.5,
+        ('fase %d, marca %d, altura %d, ataque %d, ángulo %.2f/%.2f, aros %d/%d, luz ×%s'):format(r.phase, r.markX, r.lockY,
+         r.kind, r.ang, boss.ang, #r.pings, #boss.pings, tostring(l2.lightScale)))
 end
 
 local function look()
     local Darkness = require 'src/fx/Darkness'
     WINDOW_W, WINDOW_H = 1280, 720
-    local shots = { { 'stalk', 0 }, { 'listen', 0.8 }, { 'grounded', 0.5 }, { 'dazzled', 0.5 } }
-    local cv = love.graphics.newCanvas(1280 * 2, 720 * 2)
+    -- caída (apuntando) · patas (apuntando) · patas (clavando) · embestida (apuntando) · deslumbrado · muerte
+    local shots = { { 1, 1, 'aim' }, { 1, 2, 'aim' }, { 1, 2, 'stab' }, { 2, 2, 'aim' }, { 1, 1, 'dazzled' }, { 1, 1, 'dying_out' } }
+    local cv = love.graphics.newCanvas(1280 * 3, 720 * 2)
     for i, sh in ipairs(shots) do
         local level, es, boss = arena()
-        stepAll(level, es, {}, 2.3)
+        stepAll(level, es, {}, 0.5)
         local pa = playerAt(level, 17)
-        pa.facing, pa.lightOn = 1, (i >= 3)
-        if i >= 3 then boss.x, boss.y, boss.ang = pa.x + 4.5 * T, 12 * T - 145, 0; pa.y = boss.y + 22 end
-        if i == 2 then boss.markX, boss.markY = pa.x + 2 * T, 12 * T; boss:ping(level); boss.pings[1].t = 0.4 end
-        boss.state, boss.deadTimer = sh[1], sh[2]
+        pa.facing = 1
+        Noise.emit(pa.x + 4 * T, pa.y, Noise.R.jump)
+        stepAll(level, es, {}, 0.1, function() boss.stalkT = -99 end)
+        forceAim(boss, level, sh[1], sh[2])
+        if sh[3] == 'aim' then
+            stepAll(level, es, {}, 0.7)
+        elseif sh[3] == 'stab' then
+            stepAll(level, es, {}, 6, function() return boss.state == 'stab' and boss.deadTimer > 0.36 end)
+        else
+            boss.x, boss.y, boss.ang, boss.kind = pa.x + 4.5 * T, 12 * T - 100, 0, 0
+            boss.state, boss.deadTimer = sh[3], 0.5
+            pa.lightOn = sh[3] == 'dazzled'
+        end
         local camX, camY = 9 * T, 1.5 * T
         local sub = love.graphics.newCanvas(1280, 720)
         love.graphics.setCanvas(sub)
@@ -300,9 +373,14 @@ local function look()
         pa:render(camX, camY)
         Darkness.render(level, camX, camY, { { x = pa.x, y = pa.y, facing = 1, on = pa.lightOn } })
         Darkness.renderGlow(level, es, camX, camY)
+        if DEBUG_BOX ~= false then
+            local b = boss:getOuterBounds()
+            love.graphics.setColor(0.3, 1, 0.4, 0.8)
+            love.graphics.rectangle('line', b.x - camX, b.y - camY, b.w, b.h)
+        end
         love.graphics.setCanvas(cv)
         love.graphics.setColor(1, 1, 1, 1)
-        love.graphics.draw(sub, ((i - 1) % 2) * 1280, math.floor((i - 1) / 2) * 720)
+        love.graphics.draw(sub, ((i - 1) % 3) * 1280, math.floor((i - 1) / 3) * 720)
         love.graphics.setCanvas()
     end
     cv:newImageData():encode('png', 'megagloomy_look.png')
@@ -311,7 +389,7 @@ end
 
 function love.load()
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'acecha', 'luz_cancela', 'cae_donde_sono', 'golpe', 'deslumbrado', 'fases', 'muerte', 'red' }) do
+    for _, n in ipairs({ 'acecha', 'aro_detecta', 'marca_y_ataque', 'patas', 'luz_cancela', 'caja', 'deslumbrado', 'fases', 'muerte', 'red' }) do
         if not only or only == n then
             local ok, err = pcall(cases[n])
             if not ok then check(n, false, 'ERROR ' .. tostring(err)) end

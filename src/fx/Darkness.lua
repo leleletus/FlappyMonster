@@ -90,6 +90,7 @@ function Darkness.renderGlow(level, entities, camX, camY)
     for _, e in pairs(entities) do
         if e.alive and e.renderGlow then e:renderGlow(camX, camY) end
     end
+    require('src/fx/NoiseMarks').render(camX, camY)       -- (los "!" rojos de los ruidos)
     love.graphics.setColor(1, 1, 1, 1)
 end
 

@@ -5,8 +5,12 @@
 --   luz_pared     Lights.lit: dentro del cono sí; detrás del jugador, fuera de alcance o con una
 --                 pared en medio, no
 --   estado_propio la linterna viaja en el estado propio (pack → apply) y en el bit de input
---   oye           un ground pound lejos (10 casillas) lo atrae; unos pasos a esa distancia, no; unos
---                 pasos cerca, sí
+--   oye           un ground pound lejos (10 casillas) lo atrae; un salto a esa distancia, no; un salto
+--                 cerca, sí; ANDAR no hace ruido
+--   marca         cada ruido deja su "!" (fx noise_s/m/l); en niveles con luz no hay ruidos
+--   navega        planea el camino: baja de una plataforma al ruido de debajo, rodea una columna, va del
+--                 techo a una repisa; sin ir y venir (≤ 3 cambios de sentido)
+--   burla         tras darle a un jugador, se para a burlarse
 --   busca         llega donde sonó, ronda por allí y, sin más ruidos, lo deja: sin sonidos, con sus iconos (! ? …)
 --   salta         de cerca se agacha (aviso) y salta: 1 de vida + empujón; nunca mata
 --   contacto      tocarlo quita 1 de vida, no mata
@@ -154,11 +158,85 @@ function cases.oye()
         return e.x - x0, e.state
     end
     local farPound, st1 = try(10, Noise.R.pound)
-    local farStep, st2 = try(10, Noise.R.step)
-    local nearStep, st3 = try(2, Noise.R.step)
-    check('oye', farPound > 2 * T and st2 ~= 'hunt' and farStep < T and nearStep > 0.5 * T,
-        ('ground pound a 10 casillas: se acerca %.1f (%s); pasos a 10: %.1f (%s); pasos a 2: %.1f (%s)'):format(
-         farPound / T, st1, farStep / T, st2, nearStep / T, st3))
+    local farJump, st2 = try(10, Noise.R.jump)
+    local nearJump, st3 = try(2.5, Noise.R.jump)
+    -- andar no hace ruido; saltar sí
+    local level = room(20, 8, {})
+    local pa = player(level, 6, 8)
+    local n0 = level.noises and level.noises.seq or 0
+    stub.state.right = true; step(level, {}, 1.0); stub.state.right = false
+    local walkN = (level.noises and level.noises.seq or 0) - n0
+    stub.state.jump_pressed = true; step(level, {}, 0.1)
+    local jumpN = (level.noises and level.noises.seq or 0) - n0 - walkN
+    check('oye', farPound > 2 * T and st2 ~= 'hunt' and farJump < T and nearJump > 0.5 * T and walkN == 0 and jumpN == 1,
+        ('ground pound a 10 casillas: se acerca %.1f (%s); salto a 10: %.1f (%s); salto a 2,5: %.1f (%s); ruidos andando 1 s: %d; al saltar: %d'):format(
+         farPound / T, st1, farJump / T, st2, nearJump / T, st3, walkN, jumpN))
+end
+
+-- Cada ruido deja su marca "!" (fx) del tamaño de lo que se oye; en un nivel CON luz, nada
+function cases.marca()
+    local Entity = require 'src/world/entities/Entity'
+    local got = {}
+    Entity.fx = function(kind) got[#got + 1] = kind end
+    local level = room(20, 8, {})
+    Noise.emit(100, 100, Noise.R.jump); Noise.emit(100, 100, Noise.R.kill); Noise.emit(100, 100, Noise.R.pound)
+    local l2 = room(20, 8, {}, nil, false)
+    Noise.emit(100, 100, Noise.R.pound)
+    Entity.fx = nil
+    check('marca', #got == 3 and got[1] == 'noise_s' and got[2] == 'noise_m' and got[3] == 'noise_l' and not l2.noises,
+        ('marcas: %s; en un nivel con luz se apunta=%s'):format(table.concat(got, ', '), tostring(l2.noises ~= nil)))
+end
+
+-- NAVEGAR sin titubeos: (1) en lo alto de una plataforma y el ruido en el suelo, DEBAJO de ella;
+-- (2) el ruido al otro lado de una columna. Llega cerca y cambia de sentido muy pocas veces
+function cases.navega()
+    local msg, ok = {}, true
+    local function try(name, ents, blocks, gx, gy, W)
+        local level, es, e = room(W or 22, 10, ents, blocks)
+        step(level, es, 0.4)
+        Noise.emit(gx, gy, Noise.R.pound)
+        local flips, last, best, tBest, t = 0, e.cdir, 1e9, 0, 0
+        step(level, es, 9, function()
+            t = t + 1 / 60
+            if e.cattached and e.cdir ~= last then flips = flips + 1; last = e.cdir end
+            local d = math.sqrt((e.x - gx) ^ 2 + (e.y - gy) ^ 2)
+            if d < best then best, tBest = d, t end
+            return e.state == 'search' and d < 1.5 * T
+        end)
+        local good = best < 1.5 * T and flips <= 3
+        ok = ok and good
+        msg[#msg + 1] = ('%s: llega a %.1f casillas en %.1f s, cambios de sentido %d'):format(name, best / T, tBest, flips)
+    end
+    -- (1) plataforma de 5 a 2 casillas del suelo; él arriba; el ruido justo debajo
+    try('bajar', { gl(10, 6, { pauses = false }) }, { { 8, 7 }, { 9, 7 }, { 10, 7 }, { 11, 7 }, { 12, 7 } }, 9.5 * T, 9 * T - 20)
+    -- (2) columna de 3 de alto en medio; el ruido al otro lado, en el suelo
+    try('columna', { gl(6, 9, { pauses = false }) }, { { 10, 9 }, { 10, 8 }, { 10, 7 } }, 14.5 * T, 9 * T - 20)
+    -- (3) en el techo, el ruido en una repisa de la pared contraria
+    try('techo→repisa', { gl(9, 2, { pauses = false }) }, { { 18, 6 }, { 19, 6 }, { 20, 6 }, { 21, 6 } }, 19.5 * T, 5 * T - 20)
+    check('navega', ok, table.concat(msg, ' · '))
+end
+
+-- Burla: tras darle a un jugador se queda quieto haciendo flexiones (da tiempo a apartarse)
+function cases.burla()
+    local level, es, e = room(20, 8, { gl(8, 7, { pauses = false, senseRange = 0.01, hearing = 0 }) })
+    step(level, es, 0.3)
+    local pa = player(level, 8, 8)
+    pa.x = e.x
+    local x0
+    local seen, frames = false, {}
+    step(level, es, 0.8, function()
+        pa.x = pa.x + 6                                   -- (el jugador sale empujado: se aparta)
+        if e.state == 'taunt' then
+            seen = true
+            x0 = x0 or e.x
+            frames[e:frameNow()] = true
+        end
+    end)
+    local n = 0
+    for _ in pairs(frames) do n = n + 1 end
+    step(level, es, 2)
+    check('burla', seen and n == 2 and math.abs(e.x - (x0 or 0)) > 1 and e.state ~= 'taunt',
+        ('se burla=%s (cuadros distintos %d, quieto mientras); después %s'):format(tostring(seen), n, e.state))
 end
 
 function cases.busca()
@@ -296,7 +374,6 @@ local function look()
     local pa = player(level, 6, 12)
     pa.facing, pa.lightOn = 1, true
     es[1].state = 'flee'; es[1].modeT = 0.05
-    es[2].state, es[2].icon = 'hunt', 1; es[3].state, es[3].icon = 'search', 2; es[4].state, es[4].icon = 'walk', 3     -- (sus iconos)
     local cv = love.graphics.newCanvas(1280, 720)
     love.graphics.setCanvas(cv)
     love.graphics.clear(0.12, 0.13, 0.18, 1)
@@ -313,7 +390,7 @@ end
 
 function love.load()
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'linterna', 'luz_pared', 'estado_propio', 'oye', 'busca', 'salta', 'contacto', 'huye', 'pisoton',
+    for _, n in ipairs({ 'linterna', 'luz_pared', 'estado_propio', 'oye', 'marca', 'navega', 'burla', 'busca', 'salta', 'contacto', 'huye', 'pisoton',
                          'techo', 'explora', 'red' }) do
         if not only or only == n then
             local ok, err = pcall(cases[n])

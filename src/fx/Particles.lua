@@ -123,8 +123,10 @@ local function dustOf(pal)
     return { 0.5 + c[1] * 0.42, 0.48 + c[2] * 0.42, 0.44 + c[3] * 0.42 }
 end
 
+local NoiseMarks = require 'src/fx/NoiseMarks'
 function Particles.emit(kind, x, y, opts)
     opts = opts or {}
+    if NoiseMarks.is(kind) then return NoiseMarks.add(kind, x, y) end     -- (marcas de ruido: no son partículas)
     if kind == 'gp_land' then
         local pal = paletteAt(x, y, opts)
         local dust = dustOf(pal)

@@ -562,23 +562,54 @@ def touch_light():
 
 def icons():
     """Iconos que flotan sobre un lúgubre en vez de sonidos (el silencio es parte del nivel): 3 cuadros
-    10x11 en blanco con contorno oscuro (el juego los tiñe): ! ha oído algo · ? busca · … ha perdido el
-    rastro. Trazo de 2 px: con 1 px no se veían en la oscuridad"""
-    glyphs = [['..xx....', '..xx....', '..xx....', '..xx....', '..xx....', '..xx....', '........', '..xx....', '..xx....'],
-              ['.xxxx...', 'xx..xx..', '....xx..', '...xx...', '..xx....', '..xx....', '........', '..xx....', '..xx....'],
-              ['........', '........', '........', '........', '........', '........', '........', 'xx.xx.xx', 'xx.xx.xx']]
-    FWI, FHI = 10, 11
-    out = Image.new('RGBA', (FWI * 3, FHI), (0, 0, 0, 0))
-    for i, g in enumerate(glyphs):
-        on = {(x + 1, y + 1) for y, r in enumerate(g) for x, ch in enumerate(r) if ch == 'x'}
-        for (x, y) in on:
-            for dx in (-1, 0, 1):
-                for dy in (-1, 0, 1):
-                    if (x + dx, y + dy) not in on and 0 <= x + dx < FWI and 0 <= y + dy < FHI:
-                        out.putpixel((i * FWI + x + dx, y + dy), (20, 20, 30, 255))
-        for (x, y) in on:
-            out.putpixel((i * FWI + x, y), (255, 255, 255, 255))
+    7x9 en blanco (el juego los tiñe): ! ha oído algo · ? busca · … ha perdido el rastro"""
+    rows = [['..ooo..', '..oxo..', '..oxo..', '..oxo..', '..oxo..', '..ooo..', '..oxo..', '..ooo..', '.......'],
+            ['.oooo..', 'oxxxxo.', 'oooxxo.', '..oxxo.', '..oxo..', '..ooo..', '..oxo..', '..ooo..', '.......'],
+            ['.......', '.......', '.......', '.......', '.......', 'ooooooo', 'xoxoxox'.replace('o', 'o'), 'ooooooo', '.......']]
+    out = Image.new('RGBA', (21, 9), (0, 0, 0, 0))
+    for i, fr in enumerate(rows):
+        for y, r in enumerate(fr):
+            for x, ch in enumerate(r):
+                if ch == 'x':
+                    out.putpixel((i * 7 + x, y), (255, 255, 255, 255))
+                elif ch == 'o':
+                    out.putpixel((i * 7 + x, y), (20, 20, 30, 255))
     return out
+
+
+def noise_mark():
+    """El "!" de las marcas de ruido (src/fx/NoiseMarks.lua): trazo de 2 px, blanco con contorno oscuro
+    (el juego lo tiñe de rojo), 6x11"""
+    g = ['.xx.', '.xx.', '.xx.', '.xx.', '.xx.', '.xx.', '....', '.xx.', '.xx.']
+    out = Image.new('RGBA', (6, 11), (0, 0, 0, 0))
+    on = {(x + 1, y + 1) for y, r in enumerate(g) for x, ch in enumerate(r) if ch == 'x'}
+    for (x, y) in on:
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                if (x + dx, y + dy) not in on and 0 <= x + dx < 6 and 0 <= y + dy < 11:
+                    out.putpixel((x + dx, y + dy), (20, 20, 30, 255))
+    for (x, y) in on:
+        out.putpixel((x, y), (255, 255, 255, 255))
+    return out
+
+
+def leg_spear():
+    """Pata del Mega clavándose (ataque de las patas): tramo que se repite (3x4) y punta (3x5), del color
+    de sus patas, con contorno; el juego estira el tramo desde el cuerpo hasta el suelo"""
+    pal = OPTIONS['B']['pal']
+    seg = Image.new('RGBA', (5, 4), (0, 0, 0, 0))
+    tip = Image.new('RGBA', (5, 6), (0, 0, 0, 0))
+    o, l, j = rgb(pal['o']), rgb(pal['l']), rgb(pal['j'])
+    for y in range(4):
+        for x, c in enumerate((o, l, l, j, o)):
+            seg.putpixel((x, y), c)
+    rows = ['ollo'.center(5, '.'), 'olljo', 'olljo', '.olo.', '.olo.', '..o..']
+    rows[0] = 'olljo'
+    for y, r in enumerate(rows):
+        for x, ch in enumerate(r):
+            if ch != '.':
+                tip.putpixel((x, y), {'o': o, 'l': l, 'j': j}[ch])
+    return seg, tip
 
 
 def apply():
@@ -588,7 +619,8 @@ def apply():
     out = {
         'gloomy/gloomy-Sheet.png': body, 'gloomy/glow-Sheet.png': glow,
         'bosses/megagloomy/body-Sheet.png': mbody, 'bosses/megagloomy/glow-Sheet.png': mglow,
-        'gloomy/icons-Sheet.png': icons(),
+        'gloomy/icons-Sheet.png': icons(), 'fx/noise_mark.png': noise_mark(),
+        'bosses/megagloomy/leg.png': leg_spear()[0], 'bosses/megagloomy/leg_tip.png': leg_spear()[1],
         'ui/flashlight-Sheet.png': flashlight_icon(), 'ui/touch/light-Sheet.png': touch_light(),
     }
     for name, im in out.items():

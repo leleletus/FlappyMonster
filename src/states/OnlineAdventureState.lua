@@ -186,6 +186,7 @@ function OnlineAdventureState:_buildWorld(data)
     end
     self.level = level or Level.new('assets/levels/nivel01.json')
     Particles.setLevel(self.level)                 -- (las partículas físicas chocan con él)
+    require('src/fx/NoiseMarks').clear()
     require('src/world/Noise').bind(nil)                -- (online: los ruidos son cosa del servidor)
     if self.mode then self.level.hiddenTriggers = Modes.hiddenTriggers(self.mode) end
     -- Música del nivel (la misma para todos: viene en el nivel que manda el

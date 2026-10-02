@@ -45,7 +45,7 @@ local GAIN = {
     lightOn = 1.0, lightOff = 1.0, lightOut = 1.0, lightDead = 1.0,
     mgloomyPing = 1.0, mgloomyListen = 1.0, mgloomyDrop = 1.0, mgloomySlam = 1.25, mgloomyDazzled = 1.0,
     mgloomyShriek = 1.0, mgloomyHurt = 1.0, mgloomyStep = 0.5, mgloomyRoar = 1.1,
-    gloomyWind = 0.7, gloomyLeap = 0.8,
+    gloomyWind = 0.8, gloomyLeap = 0.8,
 }
 Sound.GAIN = GAIN
 

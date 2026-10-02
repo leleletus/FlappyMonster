@@ -4,7 +4,8 @@
 # más fuerte de 100 ms a -12 dBFS (GAIN 1 en Sound.lua):
 #   light_on     clic de interruptor que sube       light_off   clic que baja
 #   light_out    se agota: zumbido que cae y chasquido   light_dead  no enciende: doble clic sordo
-#   wind         va a saltar: siseo que sube (el aviso del salto)
+#   wind         va a saltar: castañeteo seco y grave que se acelera (como un insecto de cueva; el
+#                siseo con tono de antes no pegaba con el bicho)
 #   leap         salta: silbido corto
 # (Solo esos dos del Crabby lúgubre: el usuario lo encontró ruidoso. Oír algo, buscar y perder el rastro
 #  son ICONOS sobre él — assets/images/gloomy/icons-Sheet.png —, no sonidos: el silencio es la tensión.)
@@ -63,8 +64,9 @@ SOUNDS = {
     'light_out':  lambda: at([(0, tone(900, 140, 0.32, (1, 0.5, 0.3, 0.2)) * env(int(SR * 0.32), 0.005, 0.12) * (1 + 0.5 * np.sin(2 * np.pi * 38 * t_(0.32)))),
                               (0.3, click(700, 0.06, 0.015))], 0.4),
     'light_dead': lambda: at([(0, click(500, 0.04, 0.008)), (0.07, click(420, 0.04, 0.008))], 0.14),
-    'wind':       lambda: (bp(noise(0.42), 2200, 9000) * (0.4 + 0.6 * t_(0.42) / 0.42) + 0.35 * tone(700, 1700, 0.42, (1, 0.6, 0.3))
-                           * (1 + 0.6 * np.sin(2 * np.pi * 31 * t_(0.42)))) * env(int(SR * 0.42), 0.04, 0.03),
+    'wind':       lambda: at([(t0, (tone(520 + 30 * i, 300, 0.035, (1, 0.6, 0.35)) + 0.5 * bp(noise(0.035), 500, 3500)) * decay(0.035, 0.009)
+                               * (0.45 + 0.07 * i))
+                              for i, t0 in enumerate([0.0, 0.085, 0.16, 0.225, 0.28, 0.325, 0.36, 0.39, 0.415])], 0.46),
     'leap':       lambda: (bp(noise(0.2), 900, 6000) * 0.8 + 0.5 * tone(1300, 500, 0.2)) * env(int(SR * 0.2), 0.004, 0.14),
 }
 
