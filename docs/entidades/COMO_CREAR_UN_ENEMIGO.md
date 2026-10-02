@@ -85,7 +85,7 @@ los rasgos distintos por definición no valen; usa subclases.)
 - Tiles: `src/world/tiles/types/` (receta en `Tiles.lua`). Decoraciones: `src/world/decorations/types/`
   (con `light = { r, color, a, dy }` dan luz tenue en los niveles a oscuras). Modos: `src/world/modes/`.
 - Sonidos: un archivo en `assets/sounds/<grupo>/` + una línea `load(...)` en `Sound.lua` (y su
-  generador en `tools/sounds/`). Carpetas: `player/`, `enemies/`, `bosses/<jefe>/`, `items/`,
+  generador en `tools/sounds/`). Carpetas: `player/`, `enemies/<enemigo>/` (lo de todos: `enemies/common/`), `bosses/<jefe>/`, `items/`,
   `mechanics/`, `traps/`, `water/`, `ambience/`, `jingles/`, `ui/`.
 - Imágenes: `assets/images/<enemigo>/` en minúsculas; los jefes, `assets/images/bosses/<jefe>/`;
   lo que comparten los jefes (estrellas de aturdido, símbolos de enfado, diana), en

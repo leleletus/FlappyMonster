@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # tools/sounds/bomb.py
-# Sonidos de las bombas (assets/sounds/enemies/bomb_*.wav):
+# Sonidos de las bombas (assets/sounds/enemies/bomb/*.wav):
 #   bomb_ignite  se enciende la mecha: "chisss" de cerilla + chispazo
 #   bomb_fizz    la mecha chisporrotea (0,5 s: la bomba lo repite mientras arde)
 #   bomb_blast   la explosión: golpe grave, estallido de ruido y cola de escombros
@@ -12,7 +12,7 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(__file__))
 from megacrabby import SR, t_, env, lowpass, highpass, noise, pad, mix, at, reson, sweep   # noqa: E402
 
-OUT = 'assets/sounds/enemies'
+OUT = 'assets/sounds/enemies/bomb'
 rng = np.random.default_rng(21)
 
 
@@ -22,6 +22,7 @@ def save(name, x, peak=0.95, drive=2.5):
     x = x / (np.max(np.abs(x)) + 1e-9) * peak
     fade = min(len(x), int(SR * 0.004))
     x[-fade:] *= np.linspace(1, 0, fade)
+    name = name.replace('bomb_', '')                    # (archivo: enemies/bomb/ignite.wav...)
     with wave.open(os.path.join(OUT, name + '.wav'), 'wb') as w:
         w.setnchannels(1); w.setsampwidth(2); w.setframerate(SR)
         w.writeframes((x * 32767).astype('<i2').tobytes())

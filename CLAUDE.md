@@ -170,7 +170,7 @@ input.lua           baton-based Input (keyboard/gamepad/touch VirtualPad)
 src/Sound.lua       Sound.play(name,pitch,vol), playMusic(name), stopMusic, tracked sounds,
                     per-sound GAIN baked at load. ALL sounds are files (no procedural
                     audio): add one with load('name', 'assets/sounds/<group>/x.wav', 'static')
-                    in Sound.load(), then Sound.play('name'). Folders: player/, enemies/,
+                    in Sound.load(), then Sound.play('name'). Folders: player/, enemies/<enemy>/ (shared ones in enemies/common/),
                     bosses/<boss>/, items/, mechanics/, traps/, water/, jingles/, ui/,
                     flappy/, fireworks/. Images: assets/images/<thing>/ (bosses/<boss>/),
                     all lowercase; music: assets/music/snake_case.wav
@@ -505,7 +505,7 @@ attached; `Crawler.entityAhead`), block-break deaths (`Level:forStanders`, crawl
 (the Snowball Boss's, now shared) and `src/fx/BossFx.lua` (`stars` = stun stars, `anger` = anger symbols, `target` =
 landing mark; sprites in `assets/images/bosses/common/`). Asset layout: enemies `assets/images/<enemy>/`, EVERY boss
 `assets/images/bosses/<boss>/` (megacrabby and megacrabby_ice moved there), sounds `player/` (incl. the flashlight
-`light_*.wav`), `enemies/` (incl. `gloomy_*.wav`), `bosses/<boss>/`, `ambience/`...
+`light_*.wav`), `enemies/<enemy>/` (bomb, crabby, gloomy, gummy, mortar, pufferfish; `common/` = explode, respawn), `bosses/<boss>/`, `ambience/`...
 
 - Instance = `Entity.create(cls, placement)`; placement `{type,col,row,sub,props}`.
   `x,y` = center; hitboxes `outerW/H`, `innerW/H` from `tuning.hitbox` × sprite size.

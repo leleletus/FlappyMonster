@@ -95,20 +95,20 @@ function Sound.load()
     load('blockBreak',  'assets/sounds/traps/block_break.wav',          'static')
     load('switchOn',    'assets/sounds/mechanics/switch_on.wav',        'static')   -- bloque ON/OFF → ON
     load('switchOff',   'assets/sounds/mechanics/switch_off.wav',       'static')   -- bloque ON/OFF → OFF
-    load('helmetBreak', 'assets/sounds/enemies/helmet_break.wav',       'static')   -- ground pound: se rompe el casco de un Gummy
-    load('helmetBounce','assets/sounds/enemies/helmet_bounce.wav',      'static')   -- rebote en el casco de un Gummy
-    load('pufferWarn',  'assets/sounds/enemies/puffer_warn.wav',        'static')   -- pez globo: medio hinchado (aviso)
-    load('pufferInflate','assets/sounds/enemies/puffer_inflate.wav',    'static')   -- pez globo: hinchado del todo
-    load('pufferDeflate','assets/sounds/enemies/puffer_deflate.wav',    'static')   -- pez globo: se deshincha
-    load('pufferPrick', 'assets/sounds/enemies/puffer_prick.wav',       'static')   -- pez globo: pincha al jugador
+    load('helmetBreak', 'assets/sounds/enemies/gummy/helmet_break.wav',       'static')   -- ground pound: se rompe el casco de un Gummy
+    load('helmetBounce','assets/sounds/enemies/gummy/helmet_bounce.wav',      'static')   -- rebote en el casco de un Gummy
+    load('pufferWarn',  'assets/sounds/enemies/pufferfish/warn.wav',        'static')   -- pez globo: medio hinchado (aviso)
+    load('pufferInflate','assets/sounds/enemies/pufferfish/inflate.wav',    'static')   -- pez globo: hinchado del todo
+    load('pufferDeflate','assets/sounds/enemies/pufferfish/deflate.wav',    'static')   -- pez globo: se deshincha
+    load('pufferPrick', 'assets/sounds/enemies/pufferfish/prick.wav',       'static')   -- pez globo: pincha al jugador
     load('spikeShake',  'assets/sounds/traps/spike_shake.wav',          'static')
     load('fireFizzle',  'assets/sounds/traps/fire_fizzle.wav',          'static')   -- bola del mortero que se apaga
-    load('respawnFx',   'assets/sounds/enemies/respawn.wav',            'static')   -- una entidad reaparece
-    load('crabPop',     'assets/sounds/enemies/crab_pop.wav',           'static')   -- el Crabby arranca su pincho
-    load('bombIgnite',  'assets/sounds/enemies/bomb_ignite.wav',        'static')   -- bomba: se enciende la mecha
-    load('bombFizz',    'assets/sounds/enemies/bomb_fizz.wav',          'static')   -- bomba: la mecha chisporrotea
-    load('bombBlast',   'assets/sounds/enemies/bomb_blast.wav',         'static')   -- bomba: explota
-    load('bombKick',    'assets/sounds/enemies/bomb_kick.wav',          'static')   -- bomba: pisada / pateada
+    load('respawnFx',   'assets/sounds/enemies/common/respawn.wav',            'static')   -- una entidad reaparece
+    load('crabPop',     'assets/sounds/enemies/crabby/pop.wav',           'static')   -- el Crabby arranca su pincho
+    load('bombIgnite',  'assets/sounds/enemies/bomb/ignite.wav',        'static')   -- bomba: se enciende la mecha
+    load('bombFizz',    'assets/sounds/enemies/bomb/fizz.wav',          'static')   -- bomba: la mecha chisporrotea
+    load('bombBlast',   'assets/sounds/enemies/bomb/blast.wav',         'static')   -- bomba: explota
+    load('bombKick',    'assets/sounds/enemies/bomb/kick.wav',          'static')   -- bomba: pisada / pateada
     load('iceCrack',    'assets/sounds/mechanics/ice_crack.wav',        'static')   -- hielo fino: se agrieta
     -- Ambiente (tools/sounds/ambience.py): gotas de las estalactitas y la cueva de fondo (src/fx/CaveAmbience.lua)
     load('dripFall',    'assets/sounds/ambience/drip_fall.wav',         'static')   -- la gota se suelta
@@ -135,7 +135,7 @@ function Sound.load()
     load('jump',          'assets/sounds/player/jump.ogg',          'static')
     load('step',          'assets/sounds/player/step.ogg',          'static')
     load('dies2',         'assets/sounds/player/death.ogg',         'static')
-    load('enemyExplode',  'assets/sounds/enemies/enemy_explode.ogg',  'static')
+    load('enemyExplode',  'assets/sounds/enemies/common/explode.ogg',  'static')
     load('waterWarning',   'assets/sounds/water/warning.ogg',          'static')
     load('airGasp',        'assets/sounds/water/air_gasp.ogg',        'static')
     load('waterSplash',    'assets/sounds/water/splash_in.ogg',     'static')
@@ -154,7 +154,7 @@ function Sound.load()
     load('spikeHit',      'assets/sounds/traps/spike_hit.wav',     'static')
 
     -- Jefes
-    load('mortarShoot',   'assets/sounds/enemies/mortar_shoot.wav',        'static')
+    load('mortarShoot',   'assets/sounds/enemies/mortar/shoot.wav',        'static')
     load('trampoline',    'assets/sounds/mechanics/trampoline.wav',         'static')
     load('miniAppear',    'assets/sounds/bosses/miniboss1/appear.wav', 'static')
     load('bossHurt',      'assets/sounds/bosses/boss_hurt.wav',    'static')
@@ -192,7 +192,7 @@ function Sound.load()
         load('light' .. n:gsub('^%l', string.upper), 'assets/sounds/player/light_' .. n .. '.wav', 'static')
     end
     for _, n in ipairs({ 'wind', 'leap' }) do
-        load('gloomy' .. n:gsub('^%l', string.upper), 'assets/sounds/enemies/gloomy_' .. n .. '.wav', 'static')
+        load('gloomy' .. n:gsub('^%l', string.upper), 'assets/sounds/enemies/gloomy/' .. n .. '.wav', 'static')
     end
     for _, n in ipairs({ 'ping', 'listen', 'drop', 'slam', 'dazzled', 'shriek', 'hurt', 'step', 'roar' }) do
         load('mgloomy' .. n:gsub('^%l', string.upper), 'assets/sounds/bosses/megagloomy/' .. n .. '.wav', 'static')
