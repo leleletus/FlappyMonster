@@ -46,7 +46,7 @@ THEMES = {
     'lluvia_pinchos': 'meadow', 'tren_fugaz': 'meadow', 'ruta_del_espejo': 'meadow', 'ciudadela_cangrejos': 'meadow',
     'marea_alta': 'tropical', 'cascada_dorada': 'tropical', 'isla_flotante': 'tropical', 'canon_trampolines': 'tropical',
     'rebote_real': 'tropical', 'guarida_cangrejo_rey': 'tropical',
-    'cumbre_cangrejo': 'snow', 'torre_viento': 'snow', 'lago_helado': 'snow', 'glaciar_cangrejo': 'snow', 'reino_gummy': 'meadow',
+    'cumbre_cangrejo': 'snow', 'torre_viento': 'snow', 'lago_helado': 'snow', 'glaciar_cangrejo': 'snow', 'reino_gummy': 'meadow', 'gruta_lugubre': 'cave',
     'cavernas_cristal': 'cave', 'mina_inundada': 'mine', 'laberinto_submarino': 'underwater',
     'fabrica_morteros': 'fortress', 'fortaleza_malvada': 'fortress', 'taller_trampas': 'fortress',
     'coliseo_pinchos': 'fortress',
@@ -60,7 +60,7 @@ SKY = {
     'ruta_del_espejo': ('meadow', 'night'), 'ciudadela_cangrejos': ('coast', 'day'), 'marea_alta': ('coast', 'dusk'),
     'cascada_dorada': ('forest', 'day'), 'isla_flotante': ('meadow', 'day'), 'canon_trampolines': ('coast', 'day'),
     'rebote_real': ('forest', 'day'), 'guarida_cangrejo_rey': ('coast', 'day'), 'cumbre_cangrejo': ('coast', 'dusk'),
-    'torre_viento': ('snow', 'night'), 'lago_helado': ('snow', 'dusk'), 'glaciar_cangrejo': ('snow', 'day'), 'reino_gummy': ('meadow', 'day'), 'cavernas_cristal': ('cave', 'day'), 'mina_inundada': ('mountain', 'day', 'cave'),
+    'torre_viento': ('snow', 'night'), 'lago_helado': ('snow', 'dusk'), 'glaciar_cangrejo': ('snow', 'day'), 'reino_gummy': ('meadow', 'day'), 'gruta_lugubre': ('cave', 'night'), 'cavernas_cristal': ('cave', 'day'), 'mina_inundada': ('mountain', 'day', 'cave'),
     'laberinto_submarino': ('coast', 'day', 'underwater'), 'fabrica_morteros': ('fortress', 'dusk'),
     'fortaleza_malvada': ('fortress', 'night'), 'taller_trampas': ('fortress', 'day', 'cave'), 'coliseo_pinchos': ('fortress', 'dusk'),
 }

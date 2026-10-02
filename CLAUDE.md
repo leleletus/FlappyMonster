@@ -944,7 +944,11 @@ list no mode until the user places a Point Area in them).
   summons reserve Gloomies on the walls (`def.summons`, 4). Generic intro (eyes fade in on the ceiling, a ping, a
   roar). netPackExtra: phase, ang, frame, mark, light scale, icon, pings {id,x,y,t,fake}. Arena
   `tools/levelgen/arenas/jefe_lugubre.json` (`make_jefe_lugubre.py`: 24-tile-wide flat floor so you can get away,
-  two side platforms, dark, cave). Harnesses `megagloomy_rules` (+ `LOOK=1`), `boss_sim` / `boss_intro` /
+  two side platforms, dark, cave); real level **gruta_lugubre** "Gruta Lúgubre" / "Gloomy Grotto" (`levels_boss.py`,
+  cave theme, dark): no spikes or pits (unfair in the dark), Gloomies on the floor, under low ceilings and in a big
+  room with a Gummy (killing it makes noise), then that arena grafted (zone from column 88). `retheme.py` has NO
+  --help: any unknown flag runs it over EVERY level (it re-dressed two by accident once) — pass level names.
+  Harnesses `megagloomy_rules` (+ `LOOK=1`), `boss_sim` / `boss_intro` /
   `online_boss` with `LEVEL=` that arena.
 
 ## Terrain blocks, subtiles and physical particles
@@ -1575,7 +1579,7 @@ Low-level notes (for writing NEW harnesses):
   Batch of 15 (race: valle_soleado, cavernas_cristal, torre_viento, fabrica_morteros,
   tren_fugaz (auto-scroll), canon_trampolines; hunt: ciudadela_cangrejos,
   jardin_gummies, mina_inundada; koth: isla_flotante, coliseo_pinchos, cascada_dorada;
-  race+boss: ruta_del_espejo, fortaleza_malvada, guarida_cangrejo_rey, lago_helado, glaciar_cangrejo, reino_gummy). Each level
+  race+boss: ruta_del_espejo, fortaleza_malvada, guarida_cangrejo_rey, lago_helado, glaciar_cangrejo, reino_gummy, gruta_lugubre). Each level
   whitelists its mode with `"modes"`. Ship = bump `version.txt`.
 - Bots: send `in` only when there are new inputs, or the server kicks them
   for flooding.

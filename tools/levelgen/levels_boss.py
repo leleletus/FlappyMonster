@@ -325,4 +325,44 @@ def reino_gummy():
     return L
 
 
-BUILDERS = [ruta_del_espejo, fortaleza_malvada, guarida_cangrejo_rey, lago_helado, glaciar_cangrejo, reino_gummy]
+def gruta_lugubre():
+    """Gruta Lúgubre: una cueva A OSCURAS (linterna) con Crabbies lúgubres — cazan de oído y huyen de
+    la luz — y el MEGA CRABBY LÚGUBRE al final (arena jefe_lugubre: la sima). Sin pinchos ni fosos:
+    a oscuras serían injustos; el peligro es lo que no se ve."""
+    src = load_src('jefe_lugubre.json')
+    L = Level('Gruta Lúgubre', 124, 15, (4, 12))
+    L.extra.update({'name_en': 'Gloomy Grotto', 'dark': True, 'background': 'cave', 'time': 'night'})
+    G = 13
+    L.rect(2, G, 82, 14, SOLID)
+    L.rect(2, 2, 82, 2, SOLID)                       # techo de roca (por él trepan)
+    # entrada tranquila: aquí se prueba la linterna
+    L.ent('star', 9, G - 2)
+    # el primero, solo y de frente: alumbrarlo lo hace huir
+    L.ent('gloomy', 19, G - 1)
+    # un escalón y una columna: por ellos sube y baja
+    L.rect(25, G - 2, 28, G - 1, SOLID)
+    L.ent('star', 26, G - 4)
+    L.rect(33, G - 3, 33, G - 1, SOLID)
+    L.ent('checkpoint', 30, G - 1)
+    # techo bajo con uno colgado: cae donde oye ruido (pasar despacio o espantarlo)
+    L.rect(37, 3, 46, 6, SOLID)
+    L.ent('gloomy', 41, 7)
+    L.ent('star', 42, G - 2)
+    # la sala grande: plataformas, un Gummy (matarlo hace ruido) y dos lúgubres
+    L.plat(50, 54, G - 3, DROP)
+    L.plat(57, 61, G - 5, DROP)
+    L.ent('extralife', 59, G - 6)
+    L.walker('gummy', 55, G - 1, 51, 60)
+    L.ent('gloomy', 52, G - 4)
+    L.ent('gloomy', 63, G - 1)
+    L.rect(66, G - 2, 67, G - 1, SOLID)
+    # el último tramo, estrecho, con uno en el techo
+    L.rect(70, 3, 76, 5, SOLID)
+    L.ent('gloomy', 73, 6)
+    L.ent('checkpoint', 78, G - 1)
+    # arena del Mega Crabby lúgubre (la zona empieza en la columna 88)
+    graft(L, src, 6, 82)
+    return L
+
+
+BUILDERS = [ruta_del_espejo, fortaleza_malvada, guarida_cangrejo_rey, lago_helado, glaciar_cangrejo, reino_gummy, gruta_lugubre]
