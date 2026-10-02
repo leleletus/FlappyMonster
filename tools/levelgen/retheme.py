@@ -327,14 +327,14 @@ def retheme(name, force=False, dry=False, terrain=False, tiles_only=False):
     lv.setdefault('foliage', []).extend(added)
     if theme == 'snow':
         lv['snow'], lv['spikeSkin'] = True, 'ice'      # (nieve cayendo, pinchos de hielo)
-        for e in lv.get('entities', []):               # Crabbies → Crabbies helados (mismas propiedades)
+        for e in lv.get('entities', []):               # Crabbies / Gummies → helados (mismas propiedades)
             e['type'] = ICY_CRABS.get(e['type'], e['type'])
     print('  %-22s %-10s bloques cambiados %4d · decoraciones +%d' % (name, theme, changed, len(added)))
     if not dry:
         save(path, lv)
 
 
-ICY_CRABS = {'crabby': 'crabby_ice', 'crabbytramp': 'crabbytramp_ice'}
+ICY_CRABS = {'crabby': 'crabby_ice', 'crabbytramp': 'crabbytramp_ice', 'gummy': 'gummy_ice'}
 
 
 def save(path, lv):

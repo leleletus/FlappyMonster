@@ -53,8 +53,9 @@ def put(im, pts, col):
 
 # ── Gummy helado: opciones (sobre cada cuadro del original) ───────────────────
 # Filas del Gummy: cuerpo 2..12 (contorno arriba en la fila 2), patas 13..15.
-def icy_A(im, dead=False):
-    """Escarcha: cuerpo de hielo + gorro de nieve en lo alto + carámbanos colgando de la barriga"""
+def icy_A(im, dead=False, icicles=False):
+    """Escarcha: cuerpo de hielo + gorro de nieve en lo alto (+ carámbanos colgando: descartados
+    por el usuario; la versión del juego va SIN ellos)"""
     im = recolor(im, ICE)
     if dead:
         put(im, [(4, 11), (5, 11), (6, 11), (7, 11)], FROST)
@@ -64,9 +65,9 @@ def icy_A(im, dead=False):
     put(im, [(3, 2), (4, 2), (5, 2), (6, 2), (7, 2), (8, 2), (9, 2), (10, 2)], FROST)
     put(im, [(6, 1)], FROST)
     put(im, [(3, 3), (4, 3), (8, 3), (9, 3)], FROST_S)
-    # carámbanos bajo la barriga (entre las patas no: a los lados)
-    put(im, [(3, 13), (11, 13)], DEEP)
-    put(im, [(3, 14), (11, 14)], OUT_C)
+    if icicles:                       # carámbanos bajo la barriga (a los lados)
+        put(im, [(3, 13), (11, 13)], DEEP)
+        put(im, [(3, 14), (11, 14)], OUT_C)
     return im
 
 
@@ -95,7 +96,7 @@ def icy_C(im, dead=False):
     return im
 
 
-ICY = {'A': ('Escarcha', 'nieve en la cabeza y carambanos', icy_A),
+ICY = {'A': ('Escarcha', 'nieve en la cabeza (elegida, sin carambanos)', icy_A),
        'B': ('Cubito', 'hielo translucido, brillo y mejillas frias', icy_B),
        'C': ('Cristal', 'dos cristales de hielo en la cabeza', icy_C)}
 
@@ -105,108 +106,61 @@ def icy_frames(opt):
     return [f(load(n)) for n in ('gummy.png', 'gummy1.png', 'gummy2.png')] + [f(load('dead.png'), dead=True)]
 
 
-# ── Mega Gummy: cuerpo grande (elipse con el estilo del Gummy) + cara + extras ─
-MW, MH = 20, 20                       # lienzo del Mega Gummy (px de arte; escala 10 en el juego)
+# ── Mega Gummy: el MISMO sprite del Gummy (16x16) dibujado a escala 10, como el Mega Crabby es
+# el Crabby a escala 10: misma resolución (un píxel del Gummy = un píxel del Mega) y solo
+# retoques de 1 px sobre su rejilla (el usuario rechazó un cuerpo nuevo con más detalle).
+MW, MH = 16, 16
 WHITE, BODY, SHADE = (255, 255, 255), (242, 242, 246), (196, 200, 214)
 PINK = {WHITE: (255, 214, 232), BODY: (248, 160, 200), SHADE: (214, 104, 158)}
 MOUTH = (110, 34, 52)
+GOLD, GOLD_S = (255, 210, 70), (220, 160, 40)
 
 
-def mega_body(pal=None):
-    im = Image.new('RGBA', (MW, MH), (0, 0, 0, 0))
-    cx, cy, rx, ry = 9.5, 8.5, 9.4, 8.4
-    inside = set()
-    for y in range(MH):
-        for x in range(MW):
-            if ((x + 0.5 - cx) / rx) ** 2 + ((y + 0.5 - cy) / ry) ** 2 <= 1.0:
-                inside.add((x, y))
-    for (x, y) in inside:
-        edge = any((x + dx, y + dy) not in inside for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
-        if edge:
-            c = OUT_C
-        else:
-            nx, ny = (x + 0.5 - cx) / rx, (y + 0.5 - cy) / ry
-            d = nx * 0.6 + ny * 0.8
-            c = WHITE if d < -0.55 else (SHADE if d > 0.45 else BODY)
-            if pal: c = pal[c]
-        im.putpixel((x, y), c + (255,))
-    return im
+def brows(im):
+    """cejas enfadadas: 1 px encima de cada ojo, inclinado hacia dentro (ojos en x5 y x9)"""
+    put(im, [(4, 4), (10, 4)], OUT_C)
+    put(im, [(5, 4), (9, 4)], BODY)
 
 
-def mega_face(im, brows=False, mouth='smile', cheeks=None):
-    for x in (6, 13):                                      # ojos: rayas de 3, como el Gummy
-        put(im, [(x, 5), (x, 6), (x, 7)], OUT_C)
-    if brows:                                              # cejas enfadadas
-        put(im, [(4, 3), (5, 4), (15, 3), (14, 4)], OUT_C)
-    if cheeks:
-        put(im, [(4, 9), (15, 9)], cheeks)
-    if mouth == 'smile':                                   # la sonrisa del Gummy, más ancha
-        put(im, [(6, 10), (13, 10)], OUT_C)
-        put(im, [(x, 11) for x in range(6, 14)], OUT_C)
-    else:                                                  # boca abierta con dos colmillos
-        put(im, [(x, 10) for x in range(6, 14)], OUT_C)
-        put(im, [(6, 11), (13, 11)], OUT_C)
-        put(im, [(x, 11) for x in range(7, 13)], MOUTH)
-        put(im, [(8, 11), (11, 11)], WHITE)
-        put(im, [(x, 12) for x in range(7, 13)], OUT_C)
-    return im
+def fangs(im):
+    """boca abierta: la sonrisa del Gummy (fila 10, x5-9) se abre una fila con dos colmillos"""
+    put(im, [(5, 10), (6, 10), (7, 10), (8, 10), (9, 10)], MOUTH)
+    put(im, [(5, 10), (9, 10)], WHITE)
+    put(im, [(4, 10), (10, 10)], OUT_C)
+    put(im, [(5, 11), (6, 11), (7, 11), (8, 11), (9, 11)], OUT_C)
 
 
-LEGS = [  # (quieto, andar 1, andar 2): patas de 2 px y pies de 4
-    ((6, 0), (12, 0)), ((5, -1), (12, 0)), ((6, 0), (13, 1)),
-]
+def crown(im):
+    put(im, [(5, 0), (7, 0), (9, 0)], OUT_C)
+    put(im, [(4, 1), (10, 1)], OUT_C)
+    put(im, [(5, 1), (7, 1), (9, 1)], GOLD)
+    put(im, [(6, 1), (8, 1)], GOLD_S)
 
 
-def mega_legs(im, i):
-    for lx, foot in LEGS[i]:
-        put(im, [(lx, 17), (lx + 1, 17), (lx, 18), (lx + 1, 18)], OUT_C)
-        put(im, [(lx - 1 + foot + k, 19) for k in range(4)], OUT_C)
-
-
-def mega_crown(im):
-    put(im, [(7, 0), (9, 0), (11, 0)], OUT_C)
-    put(im, [(x, 1) for x in range(6, 14)], OUT_C)
-    put(im, [(7, 1), (9, 1), (11, 1)], (255, 210, 70))
-    put(im, [(8, 1), (10, 1), (12, 1)], (230, 170, 40))
-    return im
-
-
-def mega_drips(im, pal):
-    """Gelatina: goterones colgando del borde de abajo y burbujas dentro"""
-    for x, h in ((3, 1), (9, 2), (16, 1)):
-        for k in range(h):
-            put(im, [(x, 16 + k)], pal[BODY])
-        put(im, [(x - 1, 16), (x + 1, 16)], OUT_C)
-        put(im, [(x, 16 + h)], OUT_C)
-    put(im, [(4, 6), (16, 12), (15, 5)], pal[WHITE])
-    return im
+def drips(im, pal):
+    for x in (3, 8, 11):
+        put(im, [(x, 12)], pal[BODY])
+        put(im, [(x, 13)], OUT_C)
 
 
 def mega_frame(opt, i, dead=False):
+    src = load(('gummy.png', 'gummy1.png', 'gummy2.png')[i] if not dead else 'dead.png')
     pal = PINK if opt == 'C' else None
-    if dead:                                    # aplastado (como dead.png), ojos en X
-        im = Image.new('RGBA', (MW, MH), (0, 0, 0, 0))
-        b = mega_body(pal).resize((MW, 7), Image.NEAREST)
-        im.alpha_composite(b, (0, MH - 7))
-        for x in (6, 13):
-            put(im, [(x - 1, MH - 5), (x, MH - 4), (x + 1, MH - 5), (x - 1, MH - 3), (x + 1, MH - 3)], OUT_C)
+    im = recolor(src, pal) if pal else src.copy()
+    if dead:
         return im
-    im = mega_body(pal)
-    mega_legs(im, i)
     if opt == 'A':
-        mega_face(im, brows=True, mouth='fangs')
+        brows(im); fangs(im)
     elif opt == 'B':
-        mega_face(im, brows=True, cheeks=(255, 190, 200))
-        mega_crown(im)
+        brows(im); crown(im)
     else:
-        mega_face(im, mouth='fangs')
-        mega_drips(im, pal)
+        brows(im); fangs(im); drips(im, pal)
     return im
 
 
-MEGA = {'A': ('Grandullon', 'cejas enfadadas, boca abierta con colmillos'),
-        'B': ('Rey Gummy', 'cejas, mofletes y coronita de oro'),
-        'C': ('Gelatina', 'rosa, goterones colgando, burbujas y colmillos')}
+MEGA = {'A': ('Grandullon', 'cejas enfadadas y boca abierta con colmillos'),
+        'B': ('Rey Gummy', 'cejas enfadadas y coronita de oro'),
+        'C': ('Gelatina', 'rosa, cejas, colmillos y goterones')}
 
 
 def mega_frames(opt):
@@ -257,14 +211,14 @@ def preview(out):
             im.alpha_composite(up(f, Z), (150 + i * 140, y))
         y += 140
     x0 = 760
-    text(d, (x0, 10), 'MEGA GUMMY (20x19, escala 10 como el Mega Crabby)')
+    text(d, (x0, 10), 'MEGA GUMMY (el sprite del Gummy 16x16 a escala 10, como el Mega Crabby)')
     y = 30
     for k, (nm, desc) in sorted(MEGA.items()):
         text(d, (x0, y), 'OPCION %s: %s' % (k, nm))
         text(d, (x0, y + 14), desc)
         for i, f in enumerate(mega_frames(k)):
-            im.alpha_composite(up(f, Zm), (x0 + 130 + i * 125 - 60, y + 30))
-        y += 160 + 120
+            im.alpha_composite(up(f, Z), (x0 + i * 140, y + 30))
+        y += 200
     im.convert('RGB').save(os.path.join(out, 'opciones.png'))
 
     # 2) maqueta a escala de juego
@@ -293,7 +247,7 @@ def preview(out):
                 x += 200
         for k in sorted(MEGA):
             f = up(mega_frames(k)[0], 10)
-            bg.alpha_composite(f, (x, floor - f.height + 10))
+            bg.alpha_composite(f, (x, floor - f.height))
             text(d, (x + 40, floor + 20), 'Mega %s' % k, (40, 40, 60))
             x += 230
         mc = os.path.join(ROOT, 'assets', 'images', 'MegaCrabby', 'crab1.png')
@@ -319,7 +273,7 @@ def preview(out):
                     k2 = 1 + 0.06 * math.sin((f - 16) / 8 * math.pi * 2)
                     img = img.resize((img.width, max(1, round(img.height * k2))), Image.NEAREST)
                 s = up(img, sc)
-                bg.alpha_composite(s, (130 - s.width // 2, 200 - s.height + (10 if kind == 'mega' else 0)))
+                bg.alpha_composite(s, (130 - s.width // 2, 200 - s.height))
                 frames.append(bg.convert('RGB'))
             frames[0].save(os.path.join(out, 'anim_%s_%s.gif' % (kind, k)), save_all=True,
                            append_images=frames[1:], duration=110, loop=0)
@@ -328,10 +282,18 @@ def preview(out):
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument('--apply-helado', action='store_true',
+                    help='escribe el Gummy helado elegido (A "Escarcha" sin carámbanos) en assets/images/gummy_ice/')
     ap.add_argument('--out', default=os.path.join(os.environ.get('FM_PREVIEWS', '/home/mtvemo/FlappyMonster_pruebas'),
                                                   'gummy_variantes'))
     a = ap.parse_args()
     preview(a.out)
+    if a.apply_helado:
+        dst = os.path.join(ROOT, 'assets', 'images', 'gummy_ice')
+        os.makedirs(dst, exist_ok=True)
+        for n, f in zip(('gummy.png', 'gummy1.png', 'gummy2.png', 'dead.png'), icy_frames('A')):
+            f.save(os.path.join(dst, n))
+        print('escrito', dst)
 
 
 if __name__ == '__main__':

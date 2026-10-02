@@ -588,6 +588,14 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   droppers, a wall-walking climber, an icy trampoline Crabby, then that arena grafted (zone from column 89).
   Harnesses: `icecrabby_rules` (mega_* cases, `LOOK=1` → icemega_look.png), `boss_sim`/`boss_intro`/`online_boss`
   with `LEVEL=` that arena. Protocol v40.
+- **Icy Gummy** (`types/gummy_ice.lua`, "Gummy helado"): the Gummy class with its own art folder (`artDir`;
+  `Gummy.loadArt(dir)` / `Gummy:art()` = idle, walk1/2, dead per folder) — `assets/images/gummy_ice/` from
+  `tools/ui/make_gummy_variants.py --apply-helado` (user's pick: option A "Escarcha" WITHOUT the icicles = the
+  exact Gummy shape in ice + snow on its head). Same behaviour (walk/fly, helmet...). Used in the icy levels
+  (lago_helado, torre_viento, glaciar_cangrejo; retheme `ICY_CRABS` also maps gummy → gummy_ice). Harness
+  `icecrabby_rules gummy_helado`. MEGA GUMMY: designs only (same script; the user rejected a new 20x20 body —
+  like the Icy Mega Crabby, a Mega must keep the SMALL sprite's resolution: the 16x16 Gummy drawn at scale 10,
+  1-px edits only).
 - **Gummy helmet** (prop `helmet`, Gummies only; `assets/images/gummy/casco.png`
   drawn over the sprite on the same 16x16 grid, scaled `HELMET_K` 1.10 around its
   bottom edge; the outer box grows up by what the helmet sticks out). `Gummy:interact`

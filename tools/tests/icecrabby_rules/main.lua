@@ -24,6 +24,8 @@
 --   mega_placa    al caer del salto desde la pared deja una placa que resbala; dura patchTime,
 --                 ragePatchTime enfadado; se acaba al morir
 --   mega_red      netPackExtra → netApplyExtra: ondas y placas iguales en el cliente (y en su nivel)
+-- GUMMY HELADO (types/gummy_ice.lua):
+--   gummy_helado  como el Gummy: pisotón lo mata, con casco rebota; se dibuja con su arte de hielo
 -- PINCHOS DE HIELO (src/world/SpikeSkins.lua, JSON "spikeSkin"):
 --   pinchos_skin  el nivel guarda su aspecto (Level y el modelo del editor, ida y vuelta) y los
 --                 niveles helados lo usan
@@ -484,6 +486,33 @@ local function look()
 end
 
 -- LOOK=1: el Mega Crabby helado en 4 momentos (palmada, pinzas pegadas con ondas y placa, enfadado)
+function cases.gummy_helado()
+    local function stompOn(props)
+        local level, es, g = room(12, 6, { ent('gummy_ice', 6, 5, props) })
+        step(level, es, 0.2)
+        local pa = player(level, g.x, g.y - g.outerH / 2 - 60)
+        pa.vy = 500
+        step(level, es, 0.6, function() return g.state == 'dead' end)
+        return g.state, pa
+    end
+    local s1 = stompOn({ pauses = false })
+    local s2 = stompOn({ pauses = false, helmet = true })
+    -- dibujo: color medio de su sprite (azul hielo, no el blanco del Gummy)
+    local level, es, g = room(6, 4, { ent('gummy_ice', 3, 3, { pauses = false }) })
+    step(level, es, 0.1)
+    local cv = love.graphics.newCanvas(6 * T, 4 * T)
+    love.graphics.setCanvas(cv); love.graphics.clear(0, 0, 0, 0); g:render(0, 0); love.graphics.setCanvas()
+    local d = cv:newImageData()
+    local r, gg, b, n = 0, 0, 0, 0
+    for y = 0, d:getHeight() - 1 do for x = 0, d:getWidth() - 1 do
+        local pr, pg, pb, pa = d:getPixel(x, y)
+        if pa > 0 and pr + pg + pb > 1.5 then r, gg, b, n = r + pr, gg + pg, b + pb, n + 1 end
+    end end
+    local icy = n > 50 and b / n > r / n + 0.08
+    check('gummy_helado', s1 == 'dead' and s2 ~= 'dead' and icy,
+        ('pisotón: %s · con casco: %s · color medio r%.2f g%.2f b%.2f (%d px)'):format(s1, s2, r / math.max(1, n), gg / math.max(1, n), b / math.max(1, n), n))
+end
+
 function cases.pinchos_skin()
     local SpikeSkins = require 'src/world/SpikeSkins'
     local Model = require 'src/editor/EditorModel'
@@ -601,7 +630,7 @@ function love.load()
     local only = os.getenv('CASE')
     for _, n in ipairs({ 'tapa_pegada', 'pinzas', 'hundirse', 'escombros', 'pua', 'carambano', 'nieve_toque', 'nieve_encima', 'nieve_gp',
                          'nieve_techo', 'carambano_techo', 'trampolin', 'pared',
-                         'mega_palmada', 'mega_pinzas', 'mega_placa', 'mega_red', 'pinchos_skin' }) do
+                         'mega_palmada', 'mega_pinzas', 'mega_placa', 'mega_red', 'gummy_helado', 'pinchos_skin' }) do
         if not only or only == n then
             local ok, err = pcall(cases[n])
             if not ok then check(n, false, 'error: ' .. tostring(err)) end

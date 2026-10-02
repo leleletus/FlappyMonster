@@ -278,7 +278,7 @@ def glaciar_cangrejo():
     L.walker('crabbytramp_ice', 71, G - 1, 69, 74)
     L.rect(76, G - 2, 80, G - 1, SNOW)
     L.ent('checkpoint', 78, G - 3)
-    L.walker('gummy', 73, G - 5, 70, 75, movement='fly')
+    L.walker('gummy_ice', 73, G - 5, 70, 75, movement='fly')
     # arena del Mega Crabby helado (la zona empieza en la columna 89)
     graft(L, src, 6, 82)
     return L

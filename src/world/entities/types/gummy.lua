@@ -24,14 +24,23 @@ local Gummy = Entity.extend(Entity, {
     debugColor = { 1, 0.55, 0 },
 })
 
-local imgIdle, imgWalk1, imgWalk2, imgDead, imgHelmet
+local imgHelmet
+
+-- Arte por carpeta (el Gummy normal y sus variantes: gummy_ice.lua pone `artDir`):
+-- gummy.png (quieto), gummy1/2.png (andar), dead.png, todos en la misma rejilla 16x16
+local ART_DIR = 'assets/images/gummy/'
+local arts = {}
+function Gummy.loadArt(dir)
+    if arts[dir] then return arts[dir] end
+    local function img(f) return love.graphics.newImage(dir .. f) end
+    arts[dir] = { idle = img('gummy.png'), walk1 = img('gummy1.png'), walk2 = img('gummy2.png'), dead = img('dead.png') }
+    return arts[dir]
+end
+function Gummy:art() return arts[self.artDir or ART_DIR] or Gummy.loadArt(self.artDir or ART_DIR) end
 
 function Gummy.loadAssets()
-    if imgIdle then return end
-    imgIdle  = love.graphics.newImage('assets/images/gummy/gummy.png')
-    imgWalk1 = love.graphics.newImage('assets/images/gummy/gummy1.png')
-    imgWalk2 = love.graphics.newImage('assets/images/gummy/gummy2.png')
-    imgDead  = love.graphics.newImage('assets/images/gummy/dead.png')
+    if imgHelmet then return end
+    Gummy.loadArt(ART_DIR)
     imgHelmet = love.graphics.newImage('assets/images/gummy/casco.png')
     if imgHelmet.setFilter then imgHelmet:setFilter('nearest', 'nearest') end
 end
@@ -108,17 +117,18 @@ function Gummy:netApply(a, b)
     self.bonkT  = (tonumber(b[2]) or 0) / 100
 end
 
-function Gummy.sizeImage() return imgIdle end
+function Gummy.sizeImage() return Gummy.loadArt(ART_DIR).idle end
 
 function Gummy:render(camX, camY)
     local img
+    local A = self:art()
     local bx, by = self:breatheScale()
     if self.state == 'dead' then
-        img = imgDead
+        img = A.dead
     elseif self.state == 'idle' then
-        img = imgIdle
+        img = A.idle
     else
-        img = (self.frame == 1) and imgWalk1 or imgWalk2
+        img = (self.frame == 1) and A.walk1 or A.walk2
     end
     local scaleX = GUMMY_SCALE * self.facing * bx
     local scaleY = GUMMY_SCALE * by

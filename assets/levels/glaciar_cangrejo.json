@@ -34,7 +34,7 @@
     {"col":66,"row":8,"type":"star"},
     {"col":71,"props":{"patrol":{"left":69,"right":74}},"row":12,"type":"crabbytramp_ice"},
     {"col":78,"row":10,"type":"checkpoint"},
-    {"col":73,"props":{"movement":"fly","patrol":{"left":70,"right":75}},"row":8,"type":"gummy"},
+    {"col":73,"props":{"movement":"fly","patrol":{"left":70,"right":75}},"row":8,"type":"gummy_ice"},
     {"col":98,"props":{"aimTime":2,"ceilingEvery":5,"pounceHeight":5,"rageAt":0.4,"rageSpeed":1.45,"rageStuck":0.6,"restEvery":6,"restTime":1.5,"stuckTime":2,"summonCount":3,"summonEvery":10,"summonMax":6,"summonPool":6},"row":11,"type":"megacrabby_ice"},
     {"col":86,"props":{"corner":{"col":88,"row":12},"material":"snow","zone":1},"row":3,"type":"bosswall"},
     {"col":107,"props":{"corner":{"col":109,"row":12},"material":"snow","zone":1},"row":3,"type":"bosswall"},
