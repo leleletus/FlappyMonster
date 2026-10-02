@@ -41,7 +41,7 @@ local HIDE_TRANSITION  = SPIKE_GROW_TIME + SPRITE_SEQ_TIME
 -- helado (crabby_ice.lua) usa 'ice': su propio cangrejo y, al esconderse, se HUNDE fila a
 -- fila (8 cuadros) en vez de pasar de golpe de meat → lookin → nada. Cada instancia guarda
 -- el suyo en self.sk (los nombres de red llevan el prefijo de la skin: son únicos).
-local imgIdle1, imgIdle2, imgDead, imgHid
+local imgIdle1, imgIdle2, imgHid
 local IMG_NAMES, IMG_BY_NAME = {}, {}
 Crabby.SKINS = {}
 
@@ -49,7 +49,7 @@ local function addSkin(id, dir, o)
     local sk = { id = id }
     local function img(f) return love.graphics.newImage(dir .. f) end
     sk.idle1, sk.idle2, sk.idle3 = img('crab1.png'), img('crab2.png'), img('crab3.png')
-    sk.dead   = imgDead
+    sk.dead   = img('dead.png')                           -- (aplastado: el suyo, no el del Gummy)
     sk.hid    = img('hid.png')
     sk.lookin = img(o.lookin or 'lookin.png')
     sk.meat   = img(o.meat or 'meat.png')
@@ -76,7 +76,7 @@ local function addSkin(id, dir, o)
     sk.frameDur = (0.25 * 3) / #sk.hideIn
     local pre = (id == 'normal') and '' or (id .. '_')
     for n, im in pairs({ idle1 = sk.idle1, idle2 = sk.idle2, idle3 = sk.idle3, hid = sk.hid,
-                         lookin = sk.lookin, meat = sk.meat }) do
+                         lookin = sk.lookin, meat = sk.meat, dead = sk.dead }) do
         IMG_NAMES[im], IMG_BY_NAME[pre .. n] = pre .. n, im
     end
     for i, im in ipairs(sk.hideIn) do
@@ -88,8 +88,6 @@ end
 
 function Crabby.loadAssets()
     if imgIdle1 then return end
-    imgDead   = love.graphics.newImage('assets/images/gummy/dead.png')
-    IMG_NAMES[imgDead], IMG_BY_NAME.dead = 'dead', imgDead
     local sk = addSkin('normal', 'assets/images/crabby/', { meat = 'MeatCrabby.png' })
     imgIdle1, imgIdle2, imgHid = sk.idle1, sk.idle2, sk.hid
     addSkin('ice', 'assets/images/crabby_ice/', { sink = 8 })
@@ -584,7 +582,7 @@ function Crabby:drawClaws(drawX, feetY, flipped)
     if not cfg then return end
     local img = self.currentImg or self.sk.idle2
     local st = self.state or 'walk'
-    if img == self.sk.hid or img == self.sk.lookin or img == imgDead or st:sub(1, 4) == 'dead'
+    if img == self.sk.hid or img == self.sk.lookin or img == self.sk.dead or st:sub(1, 4) == 'dead'
        or st == 'hidden' or st == 'reserve' then return end
     local a = clawArt[cfg.file]
     if not a then

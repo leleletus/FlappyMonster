@@ -384,6 +384,15 @@ Character restyles keep EVERY pixel of the user's original shape and only add th
                        `tools/ui/make_gummy_redesign.py --apply` (Gummies, helmet, dead.png; the WINGS are a new design: curved
                        leading edge + fan of 3 long feathers, 2 flap frames, still 9x13). Both read the
                        originals kept outside the repo, so they can be re-run safely.
+Small enemy sprites drawn by hand as character maps: `tools/ui/make_enemy_extras.py --apply` (preview in
+                       FlappyMonster_pruebas/extras/): CRUSHED Crabby `crabby/dead.png` and crushed Icy Crabby
+                       `crabby_ice/dead.png` (each Crabby skin loads its own `dead.png`; they used to share
+                       gummy/dead.png, fine while everything was white), the guard's parachute, the Icy Mega's icicle
+                       field and the Mega Crabby's CLAWS (`MegaCrabby/claw_left-Sheet.png`, 2 frames 11x10; the user:
+                       the 7x6 ones looked like little fingers): a fat hermit-crab pincer held UP, big hooked outer
+                       finger + short thumb — on purpose nothing like the Icy Mega's (king crab: long, low, horizontal);
+                       `CLAW_K` 0.75, `CLAW_X` 6.8 so they don't cover the body. Art only (the Mega's claws are not
+                       hitboxes). make_crab_redesign.py no longer writes that sheet.
 Spikes are images too: assets/images/spikes/spike.png (tile spikes, rotated/flipped
                        for the 4 directions; falling spike) — SPIKE SKINS: level JSON `"spikeSkin": "ice"`
                        (editor Nivel → Fondo y clima → Pinchos; `src/world/SpikeSkins.lua` LIST = id + PNG, new skin =
@@ -523,7 +532,18 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   entity doesn't turn if it can't go the other way (entity behind, patrol limit or
   wall: `Entity:canGo`) and, after turning for an entity, ignores entities for
   `FLY_TURN_CD` 0.8 s (it passes through): no convulsing, no pinning at a limit.
-  The `flyers` harness uses fixed random sequences: `SEED=n` tries others. Wings:
+  The `flyers` harness uses fixed random sequences: `SEED=n` tries others.
+  **FREE FLIGHT** (`src/world/entities/FreeFlight.lua`; common props `flyMode` = 'route' | 'free' and `flyRange`
+  tiles around its home; or `e.freeFly` + `e.flyArea` {x0,y0,x1,y1} set by whoever spawns it): instead of going back
+  and forth it picks a DESTINATION inside its area — a point where its box fits with margin (`FF.fits`) and that it
+  reaches in a straight clear line (`FF.clear`) — flies to it with smooth steering and picks another on arrival / when
+  slowed (`BLOCK_T`) / on timeout. Half the picks go to the candidate nearest a player (a real obstacle), the other
+  half explore: the least-visited 3-tile sector of its area (`ffSeen`), farthest on ties. Never trapped: under a
+  platform / in a pocket / in a corner it only accepts destinations with a clear path; with none in sight, short
+  escapes in 8 directions; INSIDE something (a boss wall appeared on it) it goes to the nearest free spot through it
+  (`ffGhost`, no collisions). Sim only (SP/server; clients draw snapshots). Any flying entity can use it. Harness
+  `mechanics vuelo_libre` (out of a U pocket, from under a platform, out of a block; ≥ 11 of 15 sectors visited, never
+  still > 2.5 s, never inside a block, approaches the player). Wings:
   `EntityTypes.drawWings` in the render wrapper (so every flying entity type gets
   them, behind the body): `assets/images/wings/wings-Sheet.png` (LEFT wing, 2
   frames 9x13, root at the right edge) + its mirror, integer scale; placed
@@ -536,7 +556,7 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   'stomp' with 4th return dirX = cnx → `pa:bounce(vy, dirX, soft=true)` (vx 300 +
   ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill; v17: crawler turn in snapshots; v18: MegaCrabby;
   v19: boss walls, Mega minions/pounce; v20: post-hit protection; v21: unified invulnerability;
-  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks; v30: boss broken glass; v31: special enemy deaths; v32: bombs; v33: snow/ice/thin ice; v34: sand; v35: deep stone; v36: freezer; v37: Snowball Boss; v38: Snowball Boss rebuilt, zone phases, phase blocks; v39: Icy Crabby; v40: Icy Mega Crabby; v41: Rey Gummy + reserve Gummies).
+  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks; v30: boss broken glass; v31: special enemy deaths; v32: bombs; v33: snow/ice/thin ice; v34: sand; v35: deep stone; v36: freezer; v37: Snowball Boss; v38: Snowball Boss rebuilt, zone phases, phase blocks; v39: Icy Crabby; v40: Icy Mega Crabby; v41: Rey Gummy + reserve Gummies; v42: icicle field, guard entries/parachute, free flight).
 - **Crawler** (`src/world/entities/Crawler.lua`): surface-following movement
   (floor ↔ walls ↔ ceiling, concave and convex corners) for Crabbies with prop
   `wallWalk` (`Crabby.WALL_PROP`, off by default so old levels don't change).
@@ -592,20 +612,24 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   `pa:freeze(waveFreeze)`; then 'clap_stuck' (`clapStuck` s, claws in ice blocks). WEAK POINT = a frozen CLAW
   (`clawBoxes()`, outside the body): ground pound on one = 2 dmg (once per clap, then recover); a normal stomp
   on a claw bounces; the back keeps its head spike → immune bounce (the user: "how is it vulnerable with that
-  spike?"). (2) FROST PATCHES where the wall pounce lands (`patchWidth` tiles, `patchTime` s): `level.frostPatches`
-  {x0,x1,y,left} → PlayerAdventure caps ground friction at 0.2× (also in prediction: the client sets them from
-  netPackExtra on `levelRef`); cleared on death. (3) RAGE: sharp ice shards on shell AND claws (user's
+  spike?"). (2) ICICLE FIELD where the wall pounce lands (it used to leave a slippery frost patch: pointless on a
+  floor that is already ice): `fields` {x0,x1,y,dir,t,life}, one at each side OUTSIDE the claws (`patchWidth` tiles in
+  total, `patchTime` s): floor cracks blink for `FIELD_WARN` 0.45 s (no damage), then icicles sprout from the inside
+  out (`FIELD_SPREAD`), one every 32 px where there is floor (`fieldSpikes`, a pure function of field + level: the client
+  needs `levelRef`); touching one that is out = 1 HP + recoil (SP/server, `Boss.withPlayer`); they shatter at the end;
+  cleared on death; `unsafeAt` keeps respawns out. Art `megacrabby_ice/ice_field-Sheet.png` (3 frames 8x16: cracks,
+  icicle, glint; drawn rising with a quad). (3) RAGE: sharp ice shards on shell AND claws (user's
   pick: body "A: Esquirlas" + claws "B: Corona" of 4 options, `--rabia A --rabia-pinza B`; `rage_body-Sheet.png` 26x21 / `rage_claw-Sheet.png` 18x15, 2 frames
   normal/glint, from `make_icecrab_sprites.py --rabia A`: procedural tapered shards, coverage-rasterised) drawn
   by Mega.drawLocal hooks `drawBodyOverlay` / `drawClawOverlay` (same transform: follow squash/claws), white
   flash when they appear; no red pulse; anger symbols = vein + steam only (`angerKinds`, no scribble);
-  patches last `ragePatchTime`. Its head spike sits 2 art px lower (`Mega.loadArt(..., spikeDy)`). netPackExtra = the
-  Mega's 9 fields + waves {id,x,y,dir,t} + patches. Arena `tools/levelgen/arenas/jefe_cangrejo_helado.json` (music `tentacle_nes`);
+  icicle fields last `ragePatchTime`. Its head spike sits 2 art px lower (`Mega.loadArt(..., spikeDy)`). netPackExtra = the
+  Mega's 9 fields + waves {id,x,y,dir,t} + fields {x0,x1,y,dir,t,life}. Arena `tools/levelgen/arenas/jefe_cangrejo_helado.json` (music `tentacle_nes`);
   real level **glaciar_cangrejo** "Glaciar del Cangrejo" / "Crab Glacier" (`levels_boss.py`, snow theme): thin ice
   over water, ice track with a snow-mound Crabby, ice-spike pit with an icicle Crabby, low ceiling with icicle/snow
   droppers, a wall-walking climber, an icy trampoline Crabby, then that arena grafted (zone from column 89).
   Harnesses: `icecrabby_rules` (mega_* cases, `LOOK=1` → icemega_look.png), `boss_sim`/`boss_intro`/`online_boss`
-  with `LEVEL=` that arena. Protocol v40.
+  with `LEVEL=` that arena. Protocol v40 (v42: icicle field).
 - **Icy Gummy** (`types/gummy_ice.lua`, "Gummy helado"): the Gummy class with its own art folder (`artDir`;
   `Gummy.loadArt(dir)` / `Gummy:art()` = idle, walk1/2, dead per folder) — `assets/images/gummy_ice/` from
   `tools/ui/make_gummy_variants.py --apply-helado` (user's pick: option A "Escarcha" WITHOUT the icicles = the
@@ -1222,16 +1246,24 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   body state: stomp 1 / GP 2, one hit) → 'recover'. Phase 2 chains `FLOP_CHAIN` 2 ('flop_land' between). (2) ROYAL
   GUARD: phase 2 (`phase2` = fraction of the BODY hp) starts with 'phase_up' (fanfare) and then 'summon' every
   `guardEvery` s: reserve Gummies (`def.summons`: normal / helmet / flyer cycling, pool `guardPool`, max `guardMax`)
-  enter from the zone EDGES, bounded to the zone; they vanish when it dies. (3) SPLIT: hp = body + `splitCount` ×
+  enter from ANY valid place (the user found "always from the sides" too predictable), by kind (`guardSpot`):
+  1 FLOOR (pops out of any standable cell, platforms too), 2 SIDE (next to a zone wall, floor or platform), 3 SKY
+  (PARACHUTE from under the ceiling: Gummy state 'para', `Gummy:startParachute`, falls at `PARA_SPEED` onto the first
+  surface under its WHOLE box, still a normal Gummy on contact/stomp; `gummy/parachute.png`), 4 AIR (flyers, upper
+  half; then FREE FLIGHT over the zone, `e.flyArea`). Walkers rotate floor → sky → side. Every entry is chosen when the
+  call STARTS and MARKED until the guard is out (the parachutist's until it lands): `self.marks` {x,y,kind} in
+  netPackExtra, drawn with the target sprite; a spot is valid only ≥ `GUARD_FAR` 2.5 tiles from every player, clear of
+  the boss, other marks and live guards (`spotFree`); fallback = a side. Bounded to the zone; they vanish when it dies.
+  It does NOT laugh when a player dies (only in its intro; that is the Mirror's thing). (3) SPLIT: hp = body + `splitCount` ×
   `partHp`; the hit that reaches that budget is CLAMPED (`MG:damage`) and starts 'split' (crown flies to `crownX/Y`)
   → 'parts': medium Gummies (scale 6, `Part` objects with the Snow physics) that hop at players; contact 1 HP; stomp 1 /
   GP 2 per part (`interact` notes `_hitPart`, side-effect-free otherwise); hp bar = sum of parts. Last part →
   'dying_pop' (big confetti, the crown hops and fades; `releasesZone`) → dead. netPackExtra: phase, landX/Y, splitX/Y,
-  crownX/Y, waves {id,x,y,dir,t}, parts {x,y,hp,inv,st,facing}. Arena `tools/levelgen/arenas/jefe_gummy.json` (from
+  crownX/Y, waves {id,x,y,dir,t}, parts {x,y,hp,inv,st,facing}, marks {x,y,kind}. Arena `tools/levelgen/arenas/jefe_gummy.json` (from
   `make_jefe_gummy.py`: flat throne hall, side platforms row 10 + middle row 7, music `boss_nes`); real level
   **reino_gummy** "Reino Gummy" / "Gummy Kingdom" (`levels_boss.py`, meadow theme; every Gummy kind on the way).
   Harnesses: `megagummy_rules` (every rule), `boss_sim` / `boss_intro` / `online_boss` / `boss_frames` with
-  `LEVEL=tools/levelgen/arenas/jefe_gummy.json`. Protocol v41.
+  `LEVEL=tools/levelgen/arenas/jefe_gummy.json`. Protocol v41 (v42: guard entries + marks).
 - **Phase system** (generic, any boss): `Boss:bossPhase()` (default 1) → the controller keeps
   `z.phase` = the highest of its bosses (4th field of the `bz` snapshot) and calls `PhaseBlocks.update`.
   **Phase blocks** (`src/world/PhaseBlocks.lua`, entity `phaseblock` "Bloques de fase", Mecanismos: rect

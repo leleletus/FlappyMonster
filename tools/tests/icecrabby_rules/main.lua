@@ -21,9 +21,10 @@
 --                 (no a quien salta por encima) → pinzas pegadas → recover → chase
 --   mega_pinzas   pinzas pegadas: pisar el lomo rebota sin daño, pisotón en una pinza rebota sin
 --                 daño, ground pound en una pinza = -2 y se suelta (un golpe por palmada)
---   mega_placa    al caer del salto desde la pared deja una placa que resbala; dura patchTime,
---                 ragePatchTime enfadado; se acaba al morir
---   mega_red      netPackExtra → netApplyExtra: ondas y placas iguales en el cliente (y en su nivel)
+--   mega_carambanos  al caer del salto desde la pared: grietas (aviso, sin daño) y luego carámbanos a los dos
+--                 lados que quitan 1 y empujan; caducan (patchTime; enfadado, más), se van al morir y
+--                 no se reaparece dentro
+--   mega_red      netPackExtra → netApplyExtra: ondas y campos de carámbanos iguales en el cliente
 -- GUMMY HELADO (types/gummy_ice.lua):
 --   gummy_helado  como el Gummy: pisotón lo mata, con casco rebota; se dibuja con su arte de hielo
 -- PINCHOS DE HIELO (src/world/SpikeSkins.lua, JSON "spikeSkin"):
@@ -408,53 +409,54 @@ function cases.mega_pinzas()
         ('daño: lomo %d, pisotón en pinza %d, GP en pinza %d; luego %s'):format(d1, d2, d3, st))
 end
 
-function cases.mega_placa()
+function cases.mega_carambanos()
     local level, es, e = mega()
     e.state, e.deadTimer = 'pounce', 0
     e.vy, e.onGround = 0, true
     e.props.patchTime = 2
-    e:addPatch(level)
-    local fp = e.patches[1]
+    e:addField(level)
+    local n = #e.fields
+    local fp = e.fields[#e.fields]                               -- (el de la derecha)
+    local cx = (fp.x0 + fp.x1) / 2
     e.state, e.recoverFor = 'recover', 99
-    e.x = 30 * T                                                 -- (fuera de la placa)
-    step(level, es, 0.05)
-    local function slide(x)
-        local pa = player(level, x, 9 * T - 40)
-        step(level, es, 0.4)
-        pa.vx = ADV_MOVE_SPD
-        local x0 = pa.x
-        step(level, es, 0.35)
-        return pa.x - x0
-    end
-    local onP = slide((fp.x0 + fp.x1) / 2 - 60)
-    local offP = slide(4 * T)
-    step(level, es, 2)
-    local gone = level.frostPatches == nil or #level.frostPatches == 0
+    local pa = player(level, cx, 9 * T - 40)
+    local unsafe = e:unsafeAt(cx, 9 * T - 40) and not e:unsafeAt(4 * T, 9 * T - 40)
+    pa.invT = 0
+    local hp0 = pa.hp
+    step(level, es, 0.3)                                         -- (aviso: grietas, aún no dañan)
+    local warnHp = pa.hp
+    local x0 = pa.x
+    step(level, es, 0.6)
+    local hitHp, pushed = pa.hp, math.abs(pa.x - x0) > 20
+    step(level, es, 2.5)
+    local gone = #e.fields == 0
     e.hp = 1
-    e:addPatch(level)
-    local rageLife = e.patches[#e.patches].left
+    e:addField(level)
+    local rageLife = e.fields[#e.fields].life
     e:defeat()
     step(level, es, 0.05)
-    check('mega_placa', onP > offP * 1.8 and gone and math.abs(rageLife - (e.props.ragePatchTime or 8)) < 0.01
-        and level.frostPatches == nil,
-        ('resbala %.0f px en la placa / %.0f fuera; caduca %s; enfadado dura %.1f s; al morir %s'):format(
-        onP, offP, tostring(gone), rageLife, tostring(level.frostPatches)))
+    check('mega_carambanos', n == 2 and unsafe and warnHp == hp0 and hitHp == hp0 - 1 and pushed and gone
+        and rageLife > (e.props.ragePatchTime or 8) and #e.fields == 0,
+        ('campos %d (a los dos lados); no reaparecer dentro=%s; vida en el aviso %d→%d, con carámbanos %d (empujado=%s); '
+         .. 'caduca %s; enfadado dura %.1f s; al morir quedan %d'):format(
+        n, tostring(unsafe), hp0, warnHp, hitHp, tostring(pushed), tostring(gone), rageLife, #e.fields))
 end
 
 function cases.mega_red()
     local level, es, e = mega()
     e:spawnWaves()
-    e:addPatch(level)
+    e:addField(level)
+    e.fields[1].t = 0.7
     local pk = e:netPackExtra()
     local level2 = room(34, 10, {})
     local r = Entities.create({ type = 'megacrabby_ice', col = 17, row = 9, props = {} })
     r.levelRef = level2
     r.state = 'clap'
     r:netApplyExtra(pk, pk, 1)
-    local ok = #r.waves == 2 and #r.patches == 1 and level2.frostPatches == r.patches
-        and math.abs(r.waves[2].x - math.floor(e.waves[2].x)) < 1 and r.patches[1].x0 == e.patches[1].x0
-    check('mega_red', ok, ('ondas %d, placas %d, en el nivel del cliente %s'):format(
-        #r.waves, #r.patches, tostring(level2.frostPatches ~= nil)))
+    local ok = #r.waves == 2 and #r.fields == 2 and r.fields[1].x0 == e.fields[1].x0 and r.fields[2].dir == e.fields[2].dir
+        and math.abs(r.waves[2].x - math.floor(e.waves[2].x)) < 1 and math.abs(r.fields[1].t - 0.7) < 0.011
+        and math.abs(r.fields[1].life - e.fields[1].life) < 0.011
+    check('mega_red', ok, ('ondas %d, campos %d (edad %.2f)'):format(#r.waves, #r.fields, r.fields[1] and r.fields[1].t or -1))
 end
 
 local function look()
@@ -601,14 +603,16 @@ local function lookHide()
 end
 
 local function lookMega()
-    local CW, CH = 9 * T, 5 * T
-    local moments = { { 'clap', 0.15 }, { 'clap_stuck', 0.3 }, { 'chase', 0, true }, { 'rest', 0.5, true } }
+    local CW, CH = 11 * T, 5 * T
+    local moments = { { 'clap', 0.15 }, { 'clap_stuck', 0.3 }, { 'chase', 0, true }, { 'rest', 0.5, true },
+                      { 'recover', 0.2, false, 0.3 }, { 'recover', 0.6, false, 1.5 } }      -- campo de carámbanos: aviso / fuera
     local cv = love.graphics.newCanvas(CW * #moments, CH)
     love.graphics.setCanvas(cv)
     love.graphics.clear(0.35, 0.42, 0.62, 1)
     for i, m in ipairs(moments) do
         local level, es, e = mega(40)
-        if i == 2 then e:spawnWaves(); for _, w in ipairs(e.waves) do w.x = w.x + w.dir * 150 end; e:addPatch(level) end
+        if i == 2 then e:spawnWaves(); for _, w in ipairs(e.waves) do w.x = w.x + w.dir * 150 end end
+        if m[4] then e.levelRef = level; e:addField(level); for _, fp in ipairs(e.fields) do fp.t = m[4] end end
         e.state, e.deadTimer = m[1], m[2]
         if m[3] then e.hp = 1 end
         love.timer.getTime = function() return 10 + i end
@@ -625,12 +629,31 @@ local function lookMega()
     print('guardado ' .. love.filesystem.getSaveDirectory() .. '/icemega_look.png')
 end
 
+-- LOOK=1: los sprites nuevos en el juego: Crabby y Crabby helado APLASTADOS, Gummy en paracaídas
+-- y el Mega Crabby (normal) con sus pinzas, abiertas y cerradas
+local function lookExtras()
+    local level, es = room(20, 8, { ent('crabby', 3, 7), ent('crabby_ice', 6, 7), ent('gummy', 9, 4),
+                                    ent('megacrabby', 13, 7), ent('megacrabby', 17, 7) })
+    step(level, es, 0.1)
+    for i = 1, 2 do es[i]:onStomp(); es[i].state, es[i].deadTimer = 'dead', 0 end
+    es[3]:startParachute(); es[3].deadTimer = 1
+    for i = 4, 5 do es[i].state, es[i].deadTimer, es[i].alive = 'chase', 0, true; es[i]._clawForce = { i - 3, i - 3 } end
+    local cv = love.graphics.newCanvas(20 * T, 8 * T)
+    love.graphics.setCanvas(cv)
+    love.graphics.clear(0.35, 0.42, 0.62, 1)
+    level:render(0, 0)
+    for _, e in ipairs(es) do e:render(0, 0) end
+    love.graphics.setCanvas()
+    cv:newImageData():encode('png', 'extras_look.png')
+    print('guardado ' .. love.filesystem.getSaveDirectory() .. '/extras_look.png')
+end
+
 function love.load()
-    if os.getenv('LOOK') then look(); lookMega(); lookSpikes(); lookHide() end
+    if os.getenv('LOOK') then look(); lookMega(); lookSpikes(); lookHide(); lookExtras() end
     local only = os.getenv('CASE')
     for _, n in ipairs({ 'tapa_pegada', 'pinzas', 'hundirse', 'escombros', 'pua', 'carambano', 'nieve_toque', 'nieve_encima', 'nieve_gp',
                          'nieve_techo', 'carambano_techo', 'trampolin', 'pared',
-                         'mega_palmada', 'mega_pinzas', 'mega_placa', 'mega_red', 'gummy_helado', 'pinchos_skin' }) do
+                         'mega_palmada', 'mega_pinzas', 'mega_carambanos', 'mega_red', 'gummy_helado', 'pinchos_skin' }) do
         if not only or only == n then
             local ok, err = pcall(cases[n])
             if not ok then check(n, false, 'error: ' .. tostring(err)) end

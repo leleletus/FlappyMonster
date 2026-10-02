@@ -24,7 +24,7 @@ local Gummy = Entity.extend(Entity, {
     debugColor = { 1, 0.55, 0 },
 })
 
-local imgHelmet
+local imgHelmet, imgChute
 
 -- Arte por carpeta (el Gummy normal y sus variantes: gummy_ice.lua pone `artDir`):
 -- gummy.png (quieto), gummy1/2.png (andar), dead.png, todos en la misma rejilla 16x16
@@ -42,7 +42,8 @@ function Gummy.loadAssets()
     if imgHelmet then return end
     Gummy.loadArt(ART_DIR)
     imgHelmet = love.graphics.newImage('assets/images/gummy/casco.png')
-    if imgHelmet.setFilter then imgHelmet:setFilter('nearest', 'nearest') end
+    imgChute = love.graphics.newImage('assets/images/gummy/parachute.png')
+    for _, i in ipairs({ imgHelmet, imgChute }) do if i.setFilter then i:setFilter('nearest', 'nearest') end end
 end
 
 function Gummy:init()
@@ -62,8 +63,33 @@ function Gummy:netRest()
     if self.summonOf then self.alive, self.state = false, 'reserve' end
 end
 
-function Gummy:updateCustom(dt)
+-- ── Paracaídas (la guardia del Rey Gummy que entra por el techo) ─────────────
+-- Estado 'para': baja despacio, en vertical, hasta posarse en lo primero que encuentre (suelo o
+-- plataforma: quien lo suelta marca ese sitio). Sigue siendo un Gummy: de lado hace daño y se
+-- le puede pisotear en el aire. Al posarse suelta el paracaídas y echa a andar.
+local PARA_SPEED = 150               -- px/s de caída con el paracaídas
+function Gummy:startParachute()
+    self.state, self.deadTimer = 'para', 0
+    self.vx, self.vy, self.onGround = 0, 0, false
+end
+
+function Gummy:updateCustom(dt, level)
     if self.state == 'reserve' then return true end
+    if self.state == 'para' then
+        self.deadTimer = self.deadTimer + dt
+        local facing = self.facing
+        self:moveAndCollide(level, 0, PARA_SPEED * dt)
+        self.facing = facing
+        if self.onGround then
+            self.vx = self.speed * self.facing
+            self:startWalk()
+            Sound.play('gpImpact', 1.5, 0.5)
+            Entity.emitFx('spawn', self.x, self.y - self.sprH / 2 - 20)
+        elseif level and self.y > (level.heightPx or 1e9) + TILE_PX * 4 then
+            self.alive = false
+        end
+        return true
+    end
     if self.bonkT > 0 then self.bonkT = math.max(0, self.bonkT - dt) end
     return false                       -- (el resto: comportamiento normal)
 end
@@ -153,6 +179,15 @@ function Gummy:render(camX, camY)
     local feetY = self.flipped and math.floor(self.y - camY - self.sprH / 2)
                                or math.floor(self.y - camY + self.sprH / 2)
     love.graphics.setColor(1, 1, 1, 1)
+    if self.state == 'para' then
+        -- Paracaídas: encima de la cabeza, meciéndose; se abre al empezar
+        local t = self.deadTimer or 0
+        local open = math.min(1, t / 0.25)
+        local sway = math.sin(t * 3.2) * 0.12
+        love.graphics.draw(imgChute, drawX, math.floor(feetY - self.sprH + 3 * GUMMY_SCALE), sway, GUMMY_SCALE * open, GUMMY_SCALE * open,
+                           imgChute:getWidth() / 2, imgChute:getHeight())
+        img = A.idle
+    end
     love.graphics.draw(img, drawX, feetY, 0, scaleX, scaleY, img:getWidth() / 2, img:getHeight())
     -- Casco: la misma rejilla que el sprite, algo más grande alrededor de su borde de abajo
     if self.helmet and self.state ~= 'dead' then

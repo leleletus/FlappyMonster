@@ -57,6 +57,7 @@ function Entity.extend(base, tuning)
     return cls
 end
 
+local FreeFlight
 local function randRange(a, b)
     return a + math.random() * (b - a)
 end
@@ -84,6 +85,7 @@ function Entity.create(cls, data)
     e.speed   = p.speed or 0
     e.moving  = p.movement ~= 'static'
     e.flying  = p.movement == 'fly'
+    e.freeFly = e.flying and p.flyMode == 'free'      -- (vuelo libre: entities/FreeFlight.lua)
     e.flipped = (p.movement == 'walk') and p.attach == 'ceiling'
     e.vx = e.moving and e.speed * dir or 0
     e.vy = 0
@@ -176,6 +178,7 @@ function Entity:resetToHome()
     self.facing, self.flipped = h.facing, h.flipped
     self.baseY = h.y
     self.onGround, self.alive = false, true
+    self.ffx, self.ffy, self.ffArea, self.fvx, self.fvy, self.ffBlock, self.ffSeen = nil, nil, nil, nil, nil, nil, nil   -- (vuelo libre)
     self.animT, self.frame = 0, 1
     self.dropped = false
     self:init()
@@ -716,7 +719,12 @@ function Entity:update(dt, level)
         end
     end
 
-    if self.flying then
+    if self.flying and self.freeFly then
+        -- Vuelo libre: recorre toda su zona sin quedarse atrapado (FreeFlight.lua)
+        self.flyT = self.flyT + dt
+        FreeFlight = FreeFlight or require 'src/world/entities/FreeFlight'
+        FreeFlight.update(self, dt, level)
+    elseif self.flying then
         -- Vuela: patrulla horizontal sin gravedad con oscilación vertical. La
         -- oscilación también choca (no se mete en el suelo, techo, losas ni
         -- objetos sólidos): se queda en la cara y la sigue cuando se aparta.

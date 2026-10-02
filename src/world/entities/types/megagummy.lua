@@ -7,7 +7,7 @@
 --      MAREADO ('dazed', estrellitas): es lo ÚNICO vulnerable del cuerpo → pisotón 1 / ground pound 2,
 --      un golpe por ocasión. En la fase 2 encadena 2 panzazos antes de marearse.
 --   2. GUARDIA REAL (fase 2, `phase2`): toca la fanfarria y entran Gummies (normal, con casco y
---      volador) por los lados de la arena. Son entidades de reserva del nivel (def.summons, como los
+--      volador) por cualquier sitio de la arena (suelo, lados, techo en paracaídas, aire), marcado antes. Son entidades de reserva del nivel (def.summons, como los
 --      súbditos del Mega Crabby): mismos índices en servidor y clientes; mueren con él.
 --   3. SE DIVIDE (fase 3): cuando le quedan `splitCount` × `partHp` de vida, la corona sale volando
 --      y revienta en `splitCount` Gummies medianos (escala 6) que persiguen a saltos. Cada trozo:
@@ -107,6 +107,7 @@ function MG:initBoss()
     self.splitX, self.splitY, self.crownX, self.crownY = 0, 0, 0, 0
     self.flopT, self.summonT, self.hopT, self.graceT = 0, 0, 0, 0
     self.flopsLeft = 0
+    self.marks = {}
     self.summonKey = 'mg' .. self.col .. ',' .. self.row
 end
 
@@ -256,31 +257,152 @@ function MG:summonable(level)
     return math.min(#free, p.guardCount or 2, math.max(0, (p.guardMax or 3) - active)), free
 end
 
--- Entran por los lados de la arena (alternando), mirando hacia dentro; los voladores, en alto
-function MG:summonGuards(level)
-    local n, free = self:summonable(level)
-    if n <= 0 then return end
+-- POR DÓNDE ENTRA cada guardia (antes siempre por los dos lados: demasiado previsible). Según
+-- la clase de Gummy, por cualquier sitio válido de la arena:
+--   1 SUELO   brota del suelo o de una plataforma (cualquier celda donde quepa de pie)
+--   2 LADO    aparece junto a una pared de la zona, en el suelo o en una plataforma
+--   3 CIELO   baja del techo en PARACAÍDAS hasta lo primero que haya debajo
+--   4 AIRE    los voladores: aparecen en el aire, en la mitad de arriba (y luego vuelo libre)
+-- Cada sitio se elige al EMPEZAR la llamada y se MARCA (self.marks, en netPackExtra) hasta que
+-- el guardia sale — el del paracaídas, hasta que se posa —: nadie muere sin haberlo visto venir.
+-- Un sitio vale si no pisa a un jugador (≥ GUARD_FAR casillas), al jefe, a otra marca ni a otro
+-- guardia vivo; si no hay ninguno de una clase, prueba las otras y, al final, el lado de siempre.
+local GUARD_FAR, GUARD_GAP = 2.5, 1.5            -- casillas: de un jugador / entre guardias
+local K_FLOOR, K_SIDE, K_SKY, K_AIR = 1, 2, 3, 4
+local WALK_ENTRIES = { K_FLOOR, K_SKY, K_SIDE }
+
+function MG:spotFree(level, x, y, far)
+    for _, pa in ipairs(level.players or {}) do
+        if pa.alive ~= false and (pa.x - x) ^ 2 + (pa.y - y) ^ 2 < (far * T) ^ 2 then return false end
+    end
+    if math.abs(x - self.x) < self.outerW / 2 + T and y > self.y - self.outerH / 2 - T then return false end
+    for _, m in ipairs(self.marks) do
+        if (m.x - x) ^ 2 + (m.y - y) ^ 2 < (GUARD_GAP * T) ^ 2 then return false end
+    end
+    for _, e in ipairs(self:minions(level)) do
+        if e.alive and (e.x - x) ^ 2 + (e.y - y) ^ 2 < (GUARD_GAP * T) ^ 2 then return false end
+    end
+    return true
+end
+
+-- Sitio para un guardia de la clase `kind`: x, y (la superficie; en el aire, el centro) o nil
+function MG:guardSpot(level, e, kind)
     local zx0, zx1, zy0, zy1 = self:zoneBounds()
-    self.guardSide = self.guardSide or 1
+    local c0, c1 = math.floor(zx0 / T) + 1, math.floor((zx1 - 1) / T) + 1
+    local r0, r1 = math.floor(zy0 / T) + 2, math.floor((zy1 - 1) / T) + 1
+    for _ = 1, 30 do
+        if kind == K_AIR then
+            local FF = require 'src/world/entities/FreeFlight'
+            local a = { x0 = zx0, y0 = zy0, x1 = zx1, y1 = zy1 }
+            local x = zx0 + T + math.random() * (zx1 - zx0 - 2 * T)
+            local y = zy0 + T + math.random() * (zy1 - zy0) * 0.45
+            if FF.fits(e, level, x, y, a) and self:spotFree(level, x, y, GUARD_FAR + 0.5) then return math.floor(x), math.floor(y) end
+        elseif kind == K_SKY then
+            local x = zx0 + T + math.random() * (zx1 - zx0 - 2 * T)
+            local top = zy0 + T * 0.5
+            local okCol = true
+            for _, px in ipairs({ x - e.outerW / 2, x, x + e.outerW / 2 }) do
+                if level:entitySolidAt(px, top, e) or level:entitySolidAt(px, top + e.outerH, e) then okCol = false end
+            end
+            -- (lo primero que toque CUALQUIER parte de su caja: el borde de una plataforma también)
+            local land
+            for _, px in ipairs({ x - e.outerW / 2 + 4, x, x + e.outerW / 2 - 4 }) do
+                local _, t2 = level:landingCross(px, top + e.outerH, zy1 + T)
+                if t2 and (not land or t2 < land) then land = t2 end
+            end
+            land = land or zy1
+            if okCol and land - top > 3 * T and level:isStandable(math.floor(x / T) + 1, math.floor((land - 2) / T) + 1)
+               and self:spotFree(level, x, land - e.outerH / 2, GUARD_FAR - 0.5) then
+                return math.floor(x), math.floor(land)
+            end
+        else
+            local c = math.random(c0, c1)
+            if kind == K_SIDE then c = (math.random() < 0.5) and c0 or c1 end
+            local r = math.random(r0, r1)
+            if level:isStandable(c, r) then
+                local x, y = (c - 0.5) * T, r * T
+                if kind == K_SIDE then x = (c == c0) and (zx0 + T * 0.8) or (zx1 - T * 0.8) end
+                if self:spotFree(level, x, y - e.outerH / 2, GUARD_FAR) then return math.floor(x), math.floor(y) end
+            end
+        end
+    end
+    return nil
+end
+
+-- Elige y marca por dónde entrará cada guardia de esta llamada
+function MG:planGuards(level)
+    local n, free = self:summonable(level)
+    self.marks = self.marks or {}
+    self.guardTurn = self.guardTurn or 0
+    local zx0, zx1, _, zy1 = self:zoneBounds()
     for i = 1, n do
         local e = free[i]
-        self.guardSide = -self.guardSide
-        local dir = -self.guardSide                         -- (izquierda → mira a la derecha)
-        local x = (self.guardSide < 0) and (zx0 + T * 0.8) or (zx1 - T * 0.8)
-        local _, top = level:landingCross(x, zy1 - 2 * T, zy1 + T)
-        local floorY = top or zy1
-        local y = floorY - e.outerH / 2
-        if e.flying then y = math.max(zy0 + T, floorY - 3 * T) end
-        local h = e.home
-        h.x, h.y, h.facing, h.flipped, h.state = x, y, dir, false, 'walk'
-        h.vx = e.speed * dir
-        e:resetToHome()
-        e.state, e.deadTimer = 'spawning', 0
-        e.leftBoundPx, e.rightBoundPx = zx0, zx1
-        Entity.emitFx('spawn', x, y)
-        Entity.emitFx('king_sparkle', x, y)
+        local tries = { K_AIR }
+        if not e.flying then
+            self.guardTurn = self.guardTurn + 1
+            tries = {}
+            for k = 0, 2 do tries[#tries + 1] = WALK_ENTRIES[(self.guardTurn + k - 1) % 3 + 1] end
+        end
+        local x, y, kind
+        for _, k in ipairs(tries) do
+            x, y = self:guardSpot(level, e, k)
+            if x then kind = k; break end
+        end
+        if not x then                                    -- (sin sitio: por un lado, como antes)
+            local side = (self.guardTurn % 2 == 0) and -1 or 1
+            x = (side < 0) and (zx0 + T * 0.8) or (zx1 - T * 0.8)
+            local _, top = level:landingCross(x, zy1 - 2 * T, zy1 + T)
+            y, kind = math.floor(top or zy1), K_SIDE
+            if e.flying then y, kind = y - 3 * T, K_AIR end
+        end
+        self.marks[#self.marks + 1] = { x = x, y = y, kind = kind, e = e }
     end
-    Sound.play('respawnFx', 0.9)
+end
+
+-- Salen por sus marcas, mirando hacia el centro de la zona
+function MG:summonGuards(level)
+    local pending = false
+    for _, m in ipairs(self.marks or {}) do if m.e and not m.out then pending = true end end
+    if not pending then self:planGuards(level) end
+    local zx0, zx1, zy0, zy1 = self:zoneBounds()
+    local any = false
+    for i = #self.marks, 1, -1 do
+        local m = self.marks[i]
+        local e = m.e
+        if e and not m.out then
+            m.out, any = true, true
+            local dir = (m.x < (zx0 + zx1) / 2) and 1 or -1
+            local h = e.home
+            local y = (m.kind == K_AIR) and m.y or (m.y - e.outerH / 2)
+            if m.kind == K_SKY then y = zy0 + T * 0.5 + e.outerH / 2 end
+            h.x, h.y, h.facing, h.flipped, h.state = m.x, y, dir, false, 'walk'
+            h.vx = e.speed * dir
+            e:resetToHome()
+            e.leftBoundPx, e.rightBoundPx = zx0, zx1
+            if e.flying then
+                e.freeFly, e.flyArea = true, { x0 = zx0, y0 = zy0, x1 = zx1, y1 = zy1 }
+            end
+            if m.kind == K_SKY then
+                e:startParachute()                        -- (la marca sigue hasta que se pose)
+            else
+                e.state, e.deadTimer = 'spawning', 0
+                table.remove(self.marks, i)
+                if m.kind == K_FLOOR then Entity.emitFx('gp_land', m.x, m.y) end
+            end
+            Entity.emitFx('spawn', m.x, y)
+            Entity.emitFx('king_sparkle', m.x, y)
+        end
+    end
+    if any then Sound.play('respawnFx', 0.9) end
+end
+
+-- Las marcas de los paracaidistas se quitan al posarse (o si mueren en el aire)
+function MG:updateMarks()
+    if self.state == 'dead' or self.state:sub(1, 6) == 'dying_' then self.marks = {}; return end
+    for i = #(self.marks or {}), 1, -1 do
+        local m = self.marks[i]
+        if m.out and (not m.e or not m.e.alive or m.e.state ~= 'para') then table.remove(self.marks, i) end
+    end
 end
 
 -- ── Se divide ─────────────────────────────────────────────────────────────────
@@ -487,9 +609,7 @@ function MG:defeat()
     self:onDefeat()
 end
 
-function MG:onPlayerDeath(pa)
-    if self:isActive() and not SPLIT[self.state] then Sound.play('kingLaugh') end
-end
+-- (NO se ríe cuando muere un jugador: eso es cosa del Espejo. Solo su risa de la entrada)
 
 -- ── Update ────────────────────────────────────────────────────────────────────
 function MG:updateBoss(dt, level)
@@ -498,6 +618,7 @@ function MG:updateBoss(dt, level)
     self.deadTimer = self.deadTimer + dt
     if self.graceT > 0 then self.graceT = math.max(0, self.graceT - dt) end
     self:updateWaves(level, dt)
+    self:updateMarks()
     local st, t = self.state, self.deadTimer
     local ph = math.min(2, self.phase)
 
@@ -568,6 +689,7 @@ function MG:updateBoss(dt, level)
     elseif st == 'summon' or st == 'phase_up' then
         self:physics(level, dt); self:friction(level, dt)
         local len = (st == 'summon') and SUMMON_T or PHASE_T
+        if not self.planned then self.planned = true; self:planGuards(level) end     -- (marcas: desde ya)
         if t >= FANFARE_AT and not self.tooted then
             self.tooted = true
             Sound.play('kingFanfare')
@@ -579,7 +701,7 @@ function MG:updateBoss(dt, level)
             self:summonGuards(level)
         end
         if t >= len then
-            self.tooted, self.called = nil, nil
+            self.tooted, self.called, self.planned = nil, nil, nil
             if st == 'phase_up' then self.phase, self.summonT = 2, 0 end
             self.flopT, self.hopT = 0, 0
             self:enter('chase')
@@ -643,7 +765,7 @@ end
 
 -- ── Red ───────────────────────────────────────────────────────────────────────
 -- { fase, marca x, y, división x, y, corona x, y, nOlas, {id, x, y, dir, t·100}…,
---   nTrozos, {x, y, vida, inv·100, estado, mira}… }
+--   nTrozos, {x, y, vida, inv·100, estado, mira}…, nMarcas, {x, y, clase}… }
 local NB = 7
 function MG:netPackExtra()
     local out = { self.phase, self.landX or 0, self.landY or 0, self.splitX, self.splitY, self.crownX, self.crownY,
@@ -656,6 +778,10 @@ function MG:netPackExtra()
     for _, p in ipairs(self.parts) do
         out[#out + 1] = math.floor(p.x); out[#out + 1] = math.floor(p.y); out[#out + 1] = p.hp
         out[#out + 1] = math.floor(p.inv * 100); out[#out + 1] = p.st; out[#out + 1] = p.facing
+    end
+    out[#out + 1] = #self.marks                            -- marcas de la guardia: x, y, clase
+    for _, m in ipairs(self.marks) do
+        out[#out + 1] = m.x; out[#out + 1] = m.y; out[#out + 1] = m.kind
     end
     return out
 end
@@ -688,7 +814,9 @@ function MG:netApplyExtra(a, b, f)
         if o and type(o[2]) == 'number' then x = o[2] + (x - o[2]) * f end
         self.waves[#self.waves + 1] = { id = e[1], x = x, y = e[3], dir = e[4], t = e[5] / 100, hit = {} }
     end
-    local pb = readList(b, k, 6)
+    local pb, km = readList(b, k, 6)
+    self.marks = {}
+    for _, e in ipairs(readList(b, km, 3)) do self.marks[#self.marks + 1] = { x = e[1], y = e[2], kind = e[3] } end
     local pa = ka and readList(a, ka, 6) or {}
     local parts = {}
     for i, e in ipairs(pb) do
@@ -809,6 +937,18 @@ function MG:render(camX, camY)
         end
     end
 
+    -- Marcas de por dónde entra la guardia (parpadean; la del paracaídas, hasta que se posa)
+    for i, m in ipairs(self.marks or {}) do
+        local fr2 = (math.floor(now * 10 + i) % 2) + 1
+        local sc = 4
+        love.graphics.setColor(1, 0.95, 0.35, 0.65 + 0.35 * math.sin(now * 14 + i))
+        targetS:draw(fr2, math.floor(m.x - camX), math.floor(m.y - camY - 2 * sc), 0, sc, sc)
+        if m.kind == 4 then                               -- (en el aire: otra encima, como un aro)
+            targetS:draw(fr2, math.floor(m.x - camX), math.floor(m.y - camY - 28), 0, sc, -sc)
+        end
+        if not EDITOR_VIEW and math.random() < 0.06 then emit('king_sparkle', m.x, m.y - 10) end
+    end
+
     local fr, sx, sy, lying, shake, visible = self:pose()
     if visible then
         local fx = math.floor(self.x - camX)
@@ -899,7 +1039,7 @@ return {
     name = 'megagummy', label = 'Rey Gummy', category = 'Jefes',
     description = 'Un Gummy gigante con corona. Persigue a saltitos; su PANZAZO (marca dónde cae) suelta olas de '
                .. 'gelatina que se saltan y lo deja MAREADO: solo entonces se le daña. En la fase 2 llama a su '
-               .. 'guardia (Gummies por los lados). Al final se DIVIDE en Gummies medianos: hay que acabar con todos.',
+               .. 'guardia (Gummies que brotan del suelo, entran por los lados, bajan en paracaídas o vuelan libres; cada entrada se marca antes). Al final se DIVIDE en Gummies medianos: hay que acabar con todos.',
     class = MG,
     boss = { title = 'REY GUMMY' },
     hide = Boss.HIDE,
@@ -931,7 +1071,7 @@ return {
             out[#out + 1] = {
                 type = 'gummy', col = pl.col, row = pl.row,
                 summonKey = 'mg' .. pl.col .. ',' .. pl.row,
-                props = { movement = (kind == 0) and 'fly' or 'walk', speed = p.guardSpeed or 90,
+                props = { movement = (kind == 0) and 'fly' or 'walk', flyMode = (kind == 0) and 'free' or nil, speed = p.guardSpeed or 90,
                           helmet = (kind == 2) or nil, respawn = 0, points = 5 },
             }
         end

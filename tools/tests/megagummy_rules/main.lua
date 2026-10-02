@@ -9,7 +9,8 @@
 --                 encima, nada; se para en la pared de la zona
 --   inmune        persiguiendo: caerle encima solo rebota (sin daño); mareado: pisotón -1
 --                 (y se recupera: un golpe por ocasión), ground pound -2
---   guardia       al pasar a la fase 2: fanfarria y entran Gummies por los LADOS de la arena,
+--   guardia       al pasar a la fase 2: fanfarria y entran Gummies por CUALQUIER sitio (suelo, lado, cielo en
+--                 paracaídas, aire), cada uno por su marca puesta antes y lejos del jugador; el volador recorre la arena; no se ríe si muere un jugador;
 --                 dentro de la zona, de 3 clases (normal / casco / volador entre los de la
 --                 reserva); nunca más de `guardMax` a la vez
 --   division      el golpe que lo deja en la vida de los trozos lo DIVIDE (no se pierde vida de
@@ -212,36 +213,73 @@ function cases.guardia()
     boss:enter('dazed')
     boss:stomp()
     local st = boss.state
-    local seen, kinds, inside, maxAlive = {}, {}, true, 0
+    local seen, kinds, entries, inside, maxAlive = {}, {}, {}, true, 0
+    local marked, unmarked, near, landOff, fly = {}, 0, 0, 0, {}
     local pool = #boss:minions(level)
-    stepAll(level, es, { pa }, 40, function()
+    local laughs, play = 0, Sound.play
+    Sound.play = function(n, ...) if n == 'kingLaugh' then laughs = laughs + 1 end; return play(n, ...) end
+    local tt = 0
+    stepAll(level, es, { pa }, 75, function()
+        tt = tt + DT
         pa.x, pa.y, pa.vx, pa.invT = 15.5 * T, pa.y, 0, 5          -- (invulnerable: no muere)
         boss.flopT = 0                                             -- (solo persigue y llama)
+        for _, m in ipairs(boss.marks) do
+            if not marked[m] then
+                marked[m] = tt
+                entries[m.kind] = true
+                if (m.x - pa.x) ^ 2 + (m.y - pa.y) ^ 2 < (2 * T) ^ 2 then near = near + 1 end
+            end
+        end
         local alive = 0
         for _, e in ipairs(boss:minions(level)) do
             if e.alive then
                 alive = alive + 1
                 if not seen[e] then
-                    seen[e] = { x = e.x }
-                    local k = e.flying and 'vuela' or (e.helmet and 'casco' or 'normal')
-                    kinds[k] = true
+                    seen[e] = { t = tt }
+                    kinds[e.flying and 'vuela' or (e.helmet and 'casco' or 'normal')] = true
+                    -- ¿salió por una marca que ya llevaba un rato puesta?
+                    local ok, newest = false, -1
+                    for m, t0 in pairs(marked) do                 -- (su marca: la más reciente)
+                        if m.e == e and t0 > newest then
+                            newest = t0
+                            ok = tt - t0 >= 0.5 and math.abs(m.x - e.x) < 2
+                            seen[e].m = m
+                        end
+                    end
+                    if not ok then unmarked = unmarked + 1 end
+                end
+                local sn = seen[e]
+                if sn.m and sn.m.kind == 3 and e.state ~= 'para' and not sn.landed then        -- (paracaídas: ¿dónde se posó?)
+                    sn.landed = true
+                    landOff = math.max(landOff, math.abs(e.x - sn.m.x), math.abs((e.y + e.outerH / 2) - sn.m.y))
+                end
+                if e.flying then
+                    fly[e] = fly[e] or { x0 = e.x, x1 = e.x, y0 = e.y, y1 = e.y }
+                    local f = fly[e]
+                    f.x0, f.x1, f.y0, f.y1 = math.min(f.x0, e.x), math.max(f.x1, e.x), math.min(f.y0, e.y), math.max(f.y1, e.y)
                 end
                 if e.x < zx0 - 4 or e.x > zx1 + 4 or e.y < zy0 - 4 or e.y > zy1 + 4 then inside = false end
+                if tt - sn.t > 14 then e.alive, e.state = false, 'reserve'; seen[e] = nil end   -- (lo retiramos: que llame más)
             end
         end
         maxAlive = math.max(maxAlive, alive)
     end)
-    local n, sides = 0, true
-    for _, s in pairs(seen) do
-        n = n + 1
-        if math.min(s.x - zx0, zx1 - s.x) > 1.5 * T then sides = false end
-    end
-    local nk = 0
+    -- un jugador muere en la zona: el Rey NO se ríe (eso es del Espejo)
+    boss:onPlayerDeath(pa)
+    Sound.play = play
+    local nk, ne, roam = 0, 0, 0
     for _ in pairs(kinds) do nk = nk + 1 end
-    check('guardia', st == 'phase_up' and boss.phase == 2 and pool == 6 and n >= 3 and sides and inside
-                     and maxAlive <= (boss.props.guardMax or 3) and nk >= 2,
-        ('tras el golpe: %s, fase %d; reserva %d; llamados %d (por los lados=%s, dentro=%s), clases %d, a la vez máx %d'):format(
-            st, boss.phase, pool, n, tostring(sides), tostring(inside), nk, maxAlive))
+    for _ in pairs(entries) do ne = ne + 1 end
+    for _, f in pairs(fly) do roam = math.max(roam, math.min((f.x1 - f.x0) / T, 99), 0); roam = math.max(roam, 0) end
+    local roamY = 0
+    for _, f in pairs(fly) do roamY = math.max(roamY, (f.y1 - f.y0) / T) end
+    check('guardia', st == 'phase_up' and boss.phase == 2 and pool == 6 and ne == 4 and unmarked == 0 and near == 0
+                     and landOff <= 6 and inside and maxAlive <= (boss.props.guardMax or 3) and nk >= 3
+                     and roam >= 8 and roamY >= 3 and laughs == 0,
+        ('tras el golpe: %s, fase %d; reserva %d; entradas distintas %d de 4 (suelo, lado, cielo, aire); sin marca previa %d; '
+         .. 'marcas a < 2 casillas del jugador %d; paracaídas a %d px de su marca; dentro=%s; clases %d; a la vez máx %d; '
+         .. 'el volador recorre %.0f x %.0f casillas; risas al morir un jugador %d'):format(
+            st, boss.phase, pool, ne, unmarked, near, landOff, tostring(inside), nk, maxAlive, roam, roamY, laughs))
 end
 
 function cases.division()

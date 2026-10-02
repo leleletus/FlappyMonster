@@ -52,6 +52,8 @@
 --                  y pisado muere; un Gummy volador congelado cae al suelo
 --   cryo_activador modo Activador: no dispara solo; al cambiar el Activador conectado, sí
 --   cryo_corte     el chorro se corta en el primer bloque sólido
+--   vuelo_libre    voladores en vuelo libre: salen de un hueco, de debajo de una plataforma y de dentro
+--                  de un bloque, recorren toda la sala sin pararse y se acercan al jugador
 --   encerrado      un Gummy sin sitio para andar (bloques a los dos lados) pasa a
 --                  reposo (idle) y NO vuelve a andar (ni un cuadro); al quitar un
 --                  bloque echa a andar
@@ -924,6 +926,62 @@ function cases.ping_icono()
     check('ping_icono', ok, ('niveles %s; parpadeo: %d %d %d %d'):format(table.concat(lv, ','), a, b, c, d))
 end
 
+-- Vuelo libre (flyMode = 'free'): sale de un hueco en U, de debajo de una plataforma y de DENTRO de
+-- un bloque; recorre toda la sala (todos sus sectores), nunca se queda parado, nunca acaba dentro
+-- de algo y, con un jugador, se le acerca
+function cases.vuelo_libre()
+    local put = {}
+    for _, c in ipairs({ 5, 9 }) do for r = 9, 12 do put[#put + 1] = { c, r, 'solid' } end end   -- hueco en U (cols 6-8)
+    for c = 5, 9 do put[#put + 1] = { c, 13, 'solid' } end
+    for c = 14, 20 do put[#put + 1] = { c, 8, 'platform' } end                                    -- plataforma
+    for c = 22, 25 do put[#put + 1] = { c, 5, 'solid' } end                                       -- repisa
+    put[#put + 1] = { 25, 6, 'solid' }; put[#put + 1] = { 25, 7, 'solid' }                        -- esquina
+    put[#put + 1] = { 12, 4, 'solid' }                                                            -- (uno nace DENTRO de este)
+    local fp = { movement = 'fly', flyMode = 'free', flyRange = 40, speed = 110 }
+    local level, es = room(28, 15, put, {
+        { type = 'gummy', col = 7, row = 12, props = fp },             -- en el fondo del hueco
+        { type = 'gummy', col = 17, row = 9, props = fp },             -- pegado bajo la plataforma
+        { type = 'gummy', col = 12, row = 4, props = fp },             -- dentro de un bloque
+        { type = 'gummy', col = 24, row = 6, props = fp } })           -- en la esquina
+    level.players = {}
+    local W, H = 27 * T, 14 * T
+    local stuck, inSolid, sect = 0, 0, {}
+    local last = {}
+    for i = 1, #es do sect[i], last[i] = {}, { x = es[i].x, y = es[i].y, t = 0 } end
+    local out = {}
+    for f = 1, 60 * 70 do
+        for i, e in ipairs(es) do
+            e:update(1 / 60, level)
+            sect[i][math.floor(e.x / (W / 5)) .. ',' .. math.floor(e.y / (H / 3))] = true
+            local l = last[i]
+            if (e.x - l.x) ^ 2 + (e.y - l.y) ^ 2 > 24 ^ 2 then l.x, l.y, l.t = e.x, e.y, 0 else l.t = l.t + 1 / 60 end
+            stuck = math.max(stuck, l.t)
+            if f > 180 and level:isEnemySolidAt(e.x, e.y) then inSolid = inSolid + 1 end
+            if i == 1 and not out[1] and e.y < 8 * T then out[1] = f / 60 end
+            if i == 3 and not out[3] and not level:isEnemySolidAt(e.x, e.y) then out[3] = f / 60 end
+        end
+    end
+    local minSect = 99
+    for i = 1, #es do
+        local n = 0
+        for _ in pairs(sect[i]) do n = n + 1 end
+        minSect = math.min(minSect, n)
+    end
+    -- con un jugador quieto en una esquina: se le acerca
+    local pa = playerAt(level, 3, 14)
+    local near = 1e9
+    for _ = 1, 60 * 40 do
+        for _, e in ipairs(es) do
+            e:update(1 / 60, level)
+            near = math.min(near, math.sqrt((e.x - pa.x) ^ 2 + (e.y - pa.y) ^ 2) / T)
+        end
+    end
+    check('vuelo_libre', out[1] and out[3] and out[3] < 3 and minSect >= 11 and stuck < 2.5 and inSolid == 0 and near < 2.5,
+        ('sale del hueco a los %.1f s y del bloque a los %.1f s; sectores visitados (de 15) mín. %d; parado como mucho %.1f s; '
+         .. 'pasos dentro de un bloque %d; al jugador se acerca a %.1f casillas'):format(
+            out[1] or -1, out[3] or -1, minSect, stuck, inSolid, near))
+end
+
 -- Voladores: nunca en idle (patitas siempre moviéndose); uno de suelo sí para
 function cases.flyer_anim()
     local level, es = room(14, 8, {}, {
@@ -1016,7 +1074,7 @@ local shot
 function love.load()
     for _, n in ipairs({ 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
                          'helmet_jump', 'helmet_ride', 'helmet_gp', 'helmet_side', 'stomp_fast',
-                         'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'boxed_in',
+                         'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
                          'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'hielo_resbala',

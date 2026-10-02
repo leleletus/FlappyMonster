@@ -145,7 +145,7 @@ def apply():
         'MegaCrabby/crab1.png': restyle(SRC + 'MegaCrabby/crab1.png'),
         'MegaCrabby/crab2.png': restyle(SRC + 'MegaCrabby/crab2.png'),
         'MegaCrabby/crab3.png': restyle(SRC + 'MegaCrabby/crab3.png'),
-        'MegaCrabby/claw_left-Sheet.png': claws(),
+        # (las pinzas del Mega ya no salen de aquí: son un diseño nuevo, tools/ui/make_enemy_extras.py)
         'trampoline/normal.png': trampoline(False), 'trampoline/extended.png': trampoline(True),
         'crabby/spike.png': fit(spike_art(9, 9), 38, 38, 4),
         'MegaCrabby/spike.png': fit(spike_art(9, 9), 38, 38, 4),
