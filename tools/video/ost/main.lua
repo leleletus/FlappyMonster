@@ -49,6 +49,7 @@ love.timer.getDelta = function() return 1 / FPS end
 
 local show, level, es, boss, zone, player, ctl, canvas, scene, pipe, logo
 local total, frameN, manual, emoteN, raged, lamp = 0, 0, false, 0, false, nil
+local muxCmd
 
 local function duration(path)
     local f = io.popen(('ffprobe -v error -show_entries format=duration -of csv=p=0 "%s"'):format(path))
@@ -95,11 +96,16 @@ function love.load(arg)
     local out = (os.getenv('FM_PREVIEWS') or '/home/mtvemo/FlappyMonster_pruebas') .. '/videos'
     os.execute('mkdir -p "' .. out .. '"')
     local file = out .. '/' .. show.track .. '.mp4'
+    -- En DOS pasos: primero solo la imagen (por la tubería) y, al acabar, se le pone la música. (En
+    -- uno solo, con -shortest, ffmpeg terminaba el audio mucho antes de que llegaran los fotogramas
+    -- y cortaba el vídeo a los pocos segundos.)
     local fade = math.max(0, total - 2)
-    pipe = assert(io.popen(('ffmpeg -v error -y -f rawvideo -pix_fmt rgba -s %dx%d -r %d -i - -t %.3f -i "%s" '
-        .. '-vf "fade=t=in:st=0:d=0.6,fade=t=out:st=%.2f:d=2" -af "afade=t=out:st=%.2f:d=2" '
-        .. '-c:v libx264 -preset medium -crf 17 -pix_fmt yuv420p -c:a aac -b:a 256k -shortest -movflags +faststart "%s"')
-        :format(W, H, FPS, total, audioPath, fade, fade, file), 'w'))
+    local silent = file .. '.video.mp4'
+    pipe = assert(io.popen(('ffmpeg -v error -y -f rawvideo -pix_fmt rgba -s %dx%d -r %d -i - '
+        .. '-vf "fade=t=in:st=0:d=0.6,fade=t=out:st=%.2f:d=2" -c:v libx264 -preset medium -crf 17 -pix_fmt yuv420p "%s"')
+        :format(W, H, FPS, fade, silent), 'w'))
+    muxCmd = ('ffmpeg -v error -y -i "%s" -t %.3f -i "%s" -af "afade=t=out:st=%.2f:d=2" -c:v copy -c:a aac -b:a 256k '
+        .. '-movflags +faststart "%s" && rm -f "%s"'):format(silent, total, audioPath, fade, file, silent)
     print(('%s: %.1f s, %d fotogramas → %s'):format(show.track, total, math.floor(total * FPS), file))
 end
 
@@ -259,6 +265,7 @@ end
 function love.update()
     if frameN >= math.floor(total * FPS) then
         pipe:close()
+        os.execute(muxCmd)
         print('hecho')
         love.event.quit(0)
         return
