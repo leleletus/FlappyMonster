@@ -39,6 +39,9 @@ local GAIN = {
     -- tools/sounds/mechanics.py (medidos: → ≈ -12 dBFS)
     switchOn     = 0.77, switchOff  = 0.76, helmetBounce = 1.15, helmetBreak = 0.72,
     pufferWarn   = 1.0,  pufferInflate = 0.81, pufferDeflate = 0.77, pufferPrick = 0.67,
+    -- Linterna y Crabby lúgubre (tools/sounds/gloomy.py ya los deja a -12 dBFS; el tic, más flojo)
+    lightOn = 1.0, lightOff = 1.0, lightOut = 1.0, lightDead = 1.0,
+    gloomyTick = 0.75, gloomyAlert = 1.0, gloomyWind = 1.0, gloomyLeap = 1.0, gloomyScared = 1.0, gloomyLost = 1.0,
 }
 Sound.GAIN = GAIN
 
@@ -173,6 +176,13 @@ function Sound.load()
     for _, n in ipairs({ 'hop', 'charge', 'jump', 'flop', 'wave', 'fanfare', 'laugh', 'hurt', 'split', 'pop',
                          'crown', 'land' }) do
         load('king' .. n:gsub('^%l', string.upper), 'assets/sounds/bosses/megagummy/' .. n .. '.wav', 'static')
+    end
+    -- Linterna y Crabby lúgubre (tools/sounds/gloomy.py)
+    for _, n in ipairs({ 'on', 'off', 'out', 'dead' }) do
+        load('light' .. n:gsub('^%l', string.upper), 'assets/sounds/gloomy/light_' .. n .. '.wav', 'static')
+    end
+    for _, n in ipairs({ 'tick', 'alert', 'wind', 'leap', 'scared', 'lost' }) do
+        load('gloomy' .. n:gsub('^%l', string.upper), 'assets/sounds/gloomy/' .. n .. '.wav', 'static')
     end
     -- Música: todas las pistas del índice (assets/music/index.json)
     for _, tr in ipairs(Music.list) do Sound.loadTrack(tr) end

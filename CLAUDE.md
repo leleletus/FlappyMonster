@@ -342,7 +342,8 @@ src/world/
                        flood (editor-only placeholder for a Floods area),
                        bomb / bombobject (bombs, see Bombs), bossglass, bosswall, cryo (Freezer),
                        snowboss (Gran Bola de Nieve), phaseblock (Bloques de fase), crabby_ice (Crabby helado: 4 defs),
-                       megacrabby_ice (Mega Crabby helado), megagummy (Rey Gummy), gummy_ice (Gummy helado)
+                       megacrabby_ice (Mega Crabby helado), megagummy (Rey Gummy), gummy_ice (Gummy helado),
+                       gloomy (Crabby lúgubre: niveles a oscuras)
   AutoScroll.lua       auto-scrolling camera levels (see below)
   Floods.lua           rising/falling water areas (see below)
   BossZones.lua        boss arenas (see below)
@@ -564,7 +565,7 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   'stomp' with 4th return dirX = cnx → `pa:bounce(vy, dirX, soft=true)` (vx 300 +
   ctrlLockT, no stun); predicted via `recordBounce(vy, dir, soft)`. Protocol v15 (v16: King of the Hill; v17: crawler turn in snapshots; v18: MegaCrabby;
   v19: boss walls, Mega minions/pounce; v20: post-hit protection; v21: unified invulnerability;
-  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks; v30: boss broken glass; v31: special enemy deaths; v32: bombs; v33: snow/ice/thin ice; v34: sand; v35: deep stone; v36: freezer; v37: Snowball Boss; v38: Snowball Boss rebuilt, zone phases, phase blocks; v39: Icy Crabby; v40: Icy Mega Crabby; v41: Rey Gummy + reserve Gummies; v42: icicle field, guard entries/parachute, free flight).
+  v23: boss intro + Mega emotes; v24: subtiles, dirt/grass; v25: connected floods; v26: generic links `to`; v27: ON/OFF blocks; v28: generic boss intros; v29: Mirror arena attacks; v30: boss broken glass; v31: special enemy deaths; v32: bombs; v33: snow/ice/thin ice; v34: sand; v35: deep stone; v36: freezer; v37: Snowball Boss; v38: Snowball Boss rebuilt, zone phases, phase blocks; v39: Icy Crabby; v40: Icy Mega Crabby; v41: Rey Gummy + reserve Gummies; v42: icicle field, guard entries/parachute, free flight; v43: dark levels, flashlight, Gloomy Crabby).
 - **Crawler** (`src/world/entities/Crawler.lua`): surface-following movement
   (floor ↔ walls ↔ ceiling, concave and convex corners) for Crabbies with prop
   `wallWalk` (`Crabby.WALL_PROP`, off by default so old levels don't change).
@@ -880,6 +881,40 @@ list no mode until the user places a Point Area in them).
   hangs from the top of its cell). Test arena `tools/levelgen/arenas/hielo.json`.
 - Harness: `tools/tests/run.sh mechanics` (also covers the Gummy helmet, the
   pufferfish and thin ice: `hielo_*`). Protocol v22 (ON/OFF + invisible blocks + helmet + pufferfish).
+
+## Dark levels, flashlight, noise and the Gloomy Crabby
+
+- **Dark level** = JSON `"dark": true` (editor Nivel → Fondo y clima → "A oscuras (linterna)"). It AFFECTS
+  GAMEPLAY (not just a look). The only light is each player's FLASHLIGHT: action `light` (keyboard F / LShift,
+  gamepad X / Y, touch = small button above the jump: `TouchControls.update(active, level.dark)`, sprite
+  `ui/touch/light-Sheet.png`). `PlayerAdventure:updateLight`: toggles; on = drains `LIGHT_TIME` 7 s; off = recharges in
+  `LIGHT_RECHARGE` 9 s; if it runs OUT it turns off and can't be lit for `LIGHT_COOL` 3.5 s; `pa:blindLight(t)` (a boss
+  hit) forces it off. Part of the SIM: input bit `IN_LIGHT_P` 64, own-state 31-33 (`lightOn`, `lightBat`, `lightCd`),
+  others see `PF_LIGHT` 256. Protocol v43. Sounds lightOn/Off/Out/Dead.
+- `src/world/Lights.lua` (pure geometry, shared by sim and drawing): cone towards `facing`, `RANGE` 5.2 tiles, `HALF`
+  27°, cut by solid blocks (`Lights.ray`); `Lights.lit(level, x, y)` → true + the light's origin.
+- `src/fx/Darkness.lua` (render): after the scene + water effect and BEFORE the HUD, a quarter-res canvas starts at
+  `AMBIENT` and each player adds, in steps, a halo (always: you see yourself) and, lit, the cone traced with rays;
+  then it is MULTIPLIED over the screen (no shaders/stencils). It restores the previous canvas (harness captures).
+  What must always show is drawn after it: entities with `renderGlow(camX, camY)` (`Darkness.renderGlow`). HUD:
+  `src/ui/LightHud.lua` (icon `ui/flashlight-Sheet.png` + 8 segments, under the lives).
+- **Noise** (`src/world/Noise.lua`): `Noise.emit(x, y, radius in tiles)` from steps 2.5, jump 3.5, a hurt player /
+  a stomped enemy 9, ground pound 15 (`Noise.R`); stored in `level.noises` of the level bound with `Noise.bind(level)`
+  (AdventureState on enter, server every `stepRoom`; the online client binds nil). Listeners: `Noise.heard(level, x, y,
+  sinceSeq, k)`.
+- **Gloomy Crabby** (`types/gloomy.lua`, "Crabby lúgubre", Cancrocaeca xenomorpha; art `assets/images/gloomy/`
+  = the user's pick, option B "Fantasma", 9 frames 26x15 at scale 4 + `glow-Sheet.png`, from
+  `tools/ui/make_gloomy_sprites.py --apply`: body hand-drawn, LEGS traced by code hip–knee–foot so every pose comes
+  from the same legs; sounds `tools/sounds/gloomy.py`). A different archetype: no route, never hides, never kills on
+  touch (`onTouch = 'hurt'`), always a Crawler. In the dark only its two glow points show. States: 'walk' (wanders
+  floor/walls/ceiling, random reversals, 'idle') → HEARS a noise → 'hunt' (goes to WHERE IT SOUNDED along the surface,
+  `steerTo`; stalled 1.2 s with the spot within `LEAP_MAX` 5 tiles and a clear line → leaps to it, e.g. down from the
+  ceiling) → 'search' (`searchTime` s around the spot, then gloomyLost → walk). SENSES a player within `senseRange`
+  2.6 tiles if moving (half if still) → 'crouch' (`leapWind` 0.45 s: glow blinks + hiss = the tell) → 'leap'
+  (ballistic; contact in the air = 1 HP + recoil via `onHurtPlayer`; grabs whatever it touches, never sticks like
+  other Crabbies) → 'rest'. LIT by a flashlight → 'flee' (away from the light at ×2, forgets its goal; calms
+  `calmTime` s after the dark returns). Stompable with the crawler rules. Net: {surface, turn, modeT}. Test arena
+  `tools/levelgen/arenas/cueva_oscura.json` (`make_cueva_oscura.py`). Harness `gloomy_rules`.
 
 ## Terrain blocks, subtiles and physical particles
 

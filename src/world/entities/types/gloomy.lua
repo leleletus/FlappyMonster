@@ -1,0 +1,436 @@
+-- CRABBY LÚGUBRE ("Gloomy Crabby", Cancrocaeca xenomorpha: cangrejo de cueva, ciego y sin
+-- pigmento, de patas larguísimas). Un enemigo de OTRA clase, para los niveles a oscuras
+-- (level.dark): no tiene ruta, no se esconde, no mata al tocarlo. Caza DE OÍDO y huye de la LUZ.
+--
+--   A oscuras solo se le ven dos puntos luminosos (renderGlow: encima de la oscuridad).
+--   explorar ('walk')   recorre suelo, paredes y techo (Crawler) a su aire: cambia de sentido cada
+--                       cierto tiempo y a veces se para ('idle').
+--   OYE (src/world/Noise.lua): cada ruido tiene un radio — pasos 2,5 casillas, salto 3,5, un
+--                       golpe a un jugador o un enemigo muerto 9, ground pound 15 —; el suyo de
+--                       oído lo multiplica (`hearing`). Si lo oye → 'hunt': va hacia donde SONÓ
+--                       (no hacia el jugador: no sabe dónde está), por la superficie.
+--   'search'            llega al sitio y no hay nadie: ronda por allí `searchTime` s y, si no
+--                       vuelve a oír nada, lo deja (sonido gloomyLost) y sigue explorando.
+--   SIENTE de cerca     a un jugador que se MUEVE a menos de `senseRange` casillas (a uno quieto,
+--                       solo a la mitad): entonces se agacha ('crouch', `leapWind` s: los puntos
+--                       parpadean y sisea = el aviso) y SALTA hacia él ('leap', balístico). En el
+--                       aire, tocarlo = 1 de vida + empujón. Cae donde caiga y se agarra a lo que
+--                       toque (nunca se queda clavado como los otros Crabbies); luego 'rest'.
+--   LUZ ('flee')        si le da la linterna de un jugador (Lights.lit: cono, alcance y sin pared
+--                       en medio) se ASUSTA: huye de la luz al doble de velocidad y olvida lo que
+--                       perseguía; a oscuras otra vez, tarda `calmTime` s en calmarse.
+--   Tocarlo = 1 de vida (nunca mata). Se le pisotea como a cualquier Crabby (también en paredes
+--   y techo, con las reglas del trepador).
+-- Todo lo que se dibuja sale de state + frame + deadTimer + la superficie (red: Crawler.netPack).
+-- Arte: assets/images/gloomy/ (tools/ui/make_gloomy_sprites.py); sonidos: tools/sounds/gloomy.py.
+
+local Entity      = require 'src/world/entities/Entity'
+local Crawler     = require 'src/world/entities/Crawler'
+local Lights      = require 'src/world/Lights'
+local Noise       = require 'src/world/Noise'
+local SpriteStrip = require 'src/fx/SpriteStrip'
+
+local T = TILE_PX
+local S = GUMMY_SCALE
+local FW, FH = 26, 15                     -- cuadro (px de arte)
+local F_IDLE, F_CROUCH, F_LEAP, F_SCARED, F_DEAD = 5, 6, 7, 8, 9
+
+local Gloomy = Entity.extend(Entity, {
+    walkFps = 11, walkFrames = 4,
+    idleEvery = { 3.0, 7.0 }, idleFor = { 0.8, 1.8 },
+    debugColor = { 0.6, 0.8, 1 },
+    -- (la caja de fuera, todo el alto: el trepador se apoya a outerH/2 de la superficie; de ancho,
+    -- el cuerpo y el arranque de las patas — las patas largas no cuentan)
+    hitbox = { outerW = 12 / FW, outerH = 1, innerW = 9 / FW, innerH = 8 / FH },
+})
+
+local REST_T     = 0.7                    -- s quieto tras un salto
+local LEAP_T     = 0.5                    -- s de vuelo del salto (lo que tarda en llegar al objetivo)
+local LEAP_MAX   = 5.0                    -- casillas: no salta más lejos
+local FLEE_K     = 2.0                    -- velocidad huyendo (× la suya)
+local HUNT_K     = 1.5                    -- velocidad yendo a un ruido
+local ARRIVE     = 0.9 * T                -- "ha llegado" al sitio del ruido
+local STILL_SPD  = 30                     -- px/s: por debajo, el jugador está "quieto"
+local GLOW       = { 1, 0.77, 0.35 }      -- ámbar
+
+local body, glow
+function Gloomy.loadAssets()
+    if body then return end
+    body = SpriteStrip.load('assets/images/gloomy/gloomy-Sheet.png', FW)
+    glow = SpriteStrip.load('assets/images/gloomy/glow-Sheet.png', FW)
+end
+function Gloomy.sizePx() return FW * S, FH * S end
+
+function Gloomy:init()
+    self.crawl = true
+    self.cnx, self.cny = 0, self.flipped and 1 or -1
+    self.cdir = self.flipped and -self.facing or self.facing
+    self.cattached = nil
+    self.leftBoundPx, self.rightBoundPx = -math.huge, math.huge      -- (sin ruta)
+    self.heardSeq = nil               -- (el primer paso: desde los ruidos de ahora)
+    self.goalX, self.goalY = nil, nil
+    self.wanderT = 1 + math.random() * 3
+    self.modeT, self.stallT, self.bestD = 0, 0, nil
+    self.calmT = 0
+    self.leapCd = 0
+end
+
+-- ── Trepador: cajas giradas y reglas de pisotón (como el Crabby) ─────────────
+function Gloomy:getOuterBounds()
+    if Crawler.turning(self) then
+        return Crawler.poseBox(self, -self.outerW / 2, -self.outerH / 2, self.outerW, self.outerH)
+    end
+    if Crawler.onWall(self) and self.cattached then
+        return { x = self.x - self.outerH / 2, y = self.y - self.outerW / 2, w = self.outerH, h = self.outerW }
+    end
+    return Entity.getOuterBounds(self)
+end
+function Gloomy:getInnerBounds()
+    if Crawler.turning(self) then
+        return Crawler.poseBox(self, -self.innerW / 2, -self.innerH / 2, self.innerW, self.innerH)
+    end
+    if Crawler.onWall(self) and self.cattached then
+        return { x = self.x - self.innerH / 2, y = self.y - self.innerW / 2, w = self.innerH, h = self.innerW }
+    end
+    return Entity.getInnerBounds(self)
+end
+function Gloomy:surfaceNormal()
+    if self.crawl and self.cattached then return Crawler.poseNormal(self) end
+    return nil
+end
+
+function Gloomy:releaseCrawl()
+    Crawler.detach(self)
+    self.flipped = false
+end
+function Gloomy:knockback(dir)
+    self:releaseCrawl()
+    self.goalX = nil
+    Entity.knockback(self, dir)
+end
+function Gloomy:fall(level, dt)
+    if self.cattached then return end
+    Entity.fall(self, level, dt)
+end
+-- (los trampolines no lo lanzan estando agarrado; suelto, sí)
+function Gloomy:canBeLaunched() return not self.cattached and Entity.canBeLaunched(self) end
+
+-- El empujón del salto (Interactions.run lo llama solo si el golpe quitó vida)
+function Gloomy:onHurtPlayer(pa)
+    if self.state == 'leap' then pa:recoil((pa.x >= self.x) and 1 or -1) end
+end
+
+-- ── Sentidos ─────────────────────────────────────────────────────────────────
+function Gloomy:setMode(st)
+    self.state, self.modeT = st, 0
+    self.deadTimer = 0
+    self.stallT, self.bestD = 0, nil
+end
+
+local function alive(pa) return pa.alive ~= false and not pa.dying end
+
+-- Jugador que nota cerca (por lo que se mueve): el más próximo dentro de su alcance
+function Gloomy:sensed(level)
+    local r = (self.props.senseRange or 2.6) * T
+    local best, bd
+    for _, pa in ipairs(level.players or {}) do
+        if alive(pa) then
+            local d = math.sqrt((pa.x - self.x) ^ 2 + (pa.y - self.y) ^ 2)
+            local moving = math.abs(pa.vx or 0) > STILL_SPD or math.abs(pa.vy or 0) > STILL_SPD
+            if d <= (moving and r or r * 0.5) and (not bd or d < bd) then best, bd = pa, d end
+        end
+    end
+    return best, bd
+end
+
+-- ¿Camino libre para saltar hasta (x, y)? (sin bloque sólido en la recta)
+local function clearTo(level, x0, y0, x1, y1)
+    local d = math.sqrt((x1 - x0) ^ 2 + (y1 - y0) ^ 2)
+    local n = math.max(1, math.floor(d / 16))
+    for i = 1, n - 1 do
+        if level:collisionAt(x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n) then return false end
+    end
+    return true
+end
+
+function Gloomy:hear(level)
+    if not self.heardSeq then self.heardSeq = (level.noises and level.noises.seq) or 0; return nil end
+    local z, seq = Noise.heard(level, self.x, self.y, self.heardSeq, self.props.hearing or 1)
+    self.heardSeq = seq
+    return z
+end
+
+-- Sentido de avance por la superficie que más acerca a (gx, gy)
+function Gloomy:steerTo(gx, gy, away)
+    local tx, ty = -self.cny, self.cnx                       -- tangente (cdir = +1)
+    local dot = tx * (gx - self.x) + ty * (gy - self.y)
+    if away then dot = -dot end
+    if math.abs(dot) > 10 then self.cdir = (dot > 0) and 1 or -1 end
+end
+
+function Gloomy:crawl_(level, dt, speed)
+    if not Crawler.move(self, level, speed * dt) then return false end
+    self.flipped = (self.cny == 1)
+    if self.cnx ~= 0 then self.facing = self.cdir
+    else self.facing = ((-self.cny * self.cdir) >= 0) and 1 or -1 end
+    self:animateWalk(dt)
+    return true
+end
+
+function Gloomy:animateWalk(dt)
+    local tn = self.tuning
+    self.animT = self.animT + dt
+    if self.animT >= 1 / tn.walkFps then
+        self.animT = self.animT - 1 / tn.walkFps
+        self.frame = (self.frame % tn.walkFrames) + 1
+        if self.frame % 2 == 1 and self.state ~= 'walk' then Sound.play('gloomyTick') end
+    end
+end
+
+function Gloomy:startLeap(level, tx, ty)
+    local dx, dy = tx - self.x, ty - self.y
+    self:releaseCrawl()
+    self.vx = dx / LEAP_T
+    self.vy = dy / LEAP_T - ADV_GRAVITY * LEAP_T / 2
+    self.facing = (dx >= 0) and 1 or -1
+    self.onGround = false
+    self:setMode('leap')
+    self.leapCd = (self.props.leapEvery or 2.5)
+    Sound.play('gloomyLeap')
+end
+
+-- ── Update ───────────────────────────────────────────────────────────────────
+function Gloomy:updateCustom(dt, level)
+    Crawler.advanceTurn(self, dt)
+    if self.cattached == nil then Crawler.attach(self, level, T) end        -- (al colocarlo)
+    local st = self.state
+    self.modeT = (self.modeT or 0) + dt
+    self.deadTimer = self.modeT
+    if self.leapCd > 0 then self.leapCd = self.leapCd - dt end
+    local p = self.props
+
+    -- En el aire (salto / soltado): balístico hasta tocar algo y agarrarse
+    if st == 'leap' or not self.cattached then
+        self.turnT = nil
+        self.flipped = false
+        self.vy = math.min(self.vy + ADV_GRAVITY * dt, 1400)
+        local vx = self.vx
+        self:moveAndCollide(level, vx * dt, self.vy * dt)
+        local hitWall = st == 'leap' and self.vx ~= vx
+        if self.onGround or hitWall or (st == 'leap' and self.modeT > 0.08 and self.vy == 0) then
+            -- (se agarra a lo primero que toque: suelo, pared o techo)
+            self.cnx, self.cny = 0, -1
+            if hitWall and not self.onGround then self.cnx, self.cny = (vx > 0) and -1 or 1, 0 end
+            Crawler.attach(self, level, T * 0.75)
+            self.vx, self.vy = 0, 0
+            if self.cattached then
+                self.cdir = (self.facing >= 0) and 1 or -1
+                self:setMode('rest')
+            end
+        elseif self.y > (level.heightPx or 1e9) + T * 4 then
+            self.alive = false
+        end
+        if st ~= 'leap' and self.cattached then self:setMode('rest') end
+        return true
+    end
+
+    -- LUZ: huye (manda sobre todo lo demás, salvo que ya esté en el aire)
+    local lit, lx, ly = Lights.lit(level, self.x, self.y)
+    if lit then
+        if st ~= 'flee' then
+            self:setMode('flee')
+            Sound.play('gloomyScared')
+        end
+        self.calmT = p.calmTime or 1.2
+        self.goalX, self.lightX, self.lightY = nil, lx, ly
+    end
+    if st == 'flee' or self.state == 'flee' then
+        if not lit then
+            self.calmT = self.calmT - dt
+            if self.calmT <= 0 then self:setMode('walk'); self.wanderT = 2 + math.random() * 2; return true end
+        end
+        if self.modeT < 0.12 then self.frame = self.frame; return true end      -- (el respingo)
+        self:steerTo(self.lightX or self.x, self.lightY or self.y, true)
+        self:crawl_(level, dt, self.speed * FLEE_K)
+        return true
+    end
+
+    -- OÍDO: un ruido nuevo lo pone a cazar (o le cambia de sitio si ya cazaba)
+    local z = self:hear(level)
+    if z and st ~= 'crouch' then
+        if st ~= 'hunt' then Sound.play('gloomyAlert') end
+        self.goalX, self.goalY = z.x, z.y
+        self:setMode('hunt')
+        st = 'hunt'
+    end
+
+    -- De cerca: a por él de un salto
+    if (st == 'hunt' or st == 'search' or st == 'walk' or st == 'idle') and self.leapCd <= 0 then
+        local pa, d = self:sensed(level)
+        if pa and d <= LEAP_MAX * T and clearTo(level, self.x, self.y, pa.x, pa.y) then
+            self.leapX, self.leapY = pa.x, pa.y
+            self.facing = (pa.x >= self.x) and 1 or -1
+            self:setMode('crouch')
+            Sound.play('gloomyWind')
+            return true
+        end
+    end
+
+    if st == 'crouch' then
+        if self.modeT >= (p.leapWind or 0.45) then self:startLeap(level, self.leapX, self.leapY) end
+        return true
+    elseif st == 'rest' then
+        if self.modeT >= REST_T then
+            if self.goalX then self:setMode('search') else self:setMode('walk') end
+        end
+        return true
+    elseif st == 'hunt' then
+        local d = math.sqrt((self.goalX - self.x) ^ 2 + (self.goalY - self.y) ^ 2)
+        if d <= ARRIVE then self:setMode('search'); return true end
+        -- ¿Avanza? Si lleva un rato sin acercarse (el sitio está al otro lado de un hueco), salta
+        -- hacia él si puede; si no, a rondar
+        if not self.bestD or d < self.bestD - 8 then self.bestD, self.stallT = d, 0
+        else self.stallT = self.stallT + dt end
+        if self.stallT > 1.2 then
+            if d <= LEAP_MAX * T and self.leapCd <= 0 and clearTo(level, self.x, self.y, self.goalX, self.goalY) then
+                self.leapX, self.leapY = self.goalX, self.goalY
+                self:setMode('crouch')
+                Sound.play('gloomyWind')
+            else
+                self:setMode('search')
+            end
+            return true
+        end
+        if self.modeT % 0.3 < dt then self:steerTo(self.goalX, self.goalY) end
+        self:crawl_(level, dt, self.speed * HUNT_K)
+        return true
+    elseif st == 'search' then
+        -- Ronda el último sitio: va y viene sin alejarse de él
+        if self.modeT >= (p.searchTime or 4) then
+            self.goalX = nil
+            Sound.play('gloomyLost')
+            self:setMode('walk')
+            return true
+        end
+        local d = self.goalX and math.sqrt((self.goalX - self.x) ^ 2 + (self.goalY - self.y) ^ 2) or 0
+        if d > 2.2 * T then self:steerTo(self.goalX, self.goalY)
+        elseif self.modeT % 0.9 < dt and math.random() < 0.5 then self.cdir = -self.cdir end
+        self:crawl_(level, dt, self.speed)
+        return true
+    elseif st == 'idle' then
+        self.idleTimer = self.idleTimer + dt
+        self.breatheT = self.breatheT + dt
+        if self.idleTimer >= self.idleDuration then self:setMode('walk') end
+        return true
+    end
+
+    -- Explorar a su aire
+    self.state = 'walk'
+    self.wanderT = self.wanderT - dt
+    if self.wanderT <= 0 then
+        self.wanderT = 2 + math.random() * 4
+        local r = math.random()
+        if r < 0.45 then self.cdir = -self.cdir
+        elseif r < 0.65 and p.pauses ~= false then self:startIdle(); self.modeT = 0; return true end
+    end
+    self:crawl_(level, dt, self.speed)
+    return true
+end
+
+-- ── Red ──────────────────────────────────────────────────────────────────────
+function Gloomy:netPack()
+    local surf, turn = Crawler.netPack(self)
+    return { surf, turn, math.floor((self.modeT or 0) * 100) }
+end
+function Gloomy:netApply(a, b, f)
+    a = a or b
+    Crawler.netApply(self, b[1], a[2], b[2], f, self.state == 'leap')
+    self.modeT = (tonumber(b[3]) or 0) / 100
+    self.flipped = self.cattached and self.cny == 1 or false
+end
+
+-- ── Dibujo ───────────────────────────────────────────────────────────────────
+function Gloomy:frameNow()
+    local st = self.state
+    if st == 'dead' then return F_DEAD end
+    if st == 'leap' then return F_LEAP end
+    if st == 'crouch' then return F_CROUCH end
+    if st == 'idle' or st == 'rest' then return F_IDLE end
+    if st == 'flee' and (self.modeT or 0) < 0.12 then return F_SCARED end
+    if st == 'stunned' or st == 'frozen' then return F_SCARED end
+    return math.max(1, math.min(4, self.frame or 1))
+end
+
+-- Pies (px de pantalla) y ángulo de dibujo
+function Gloomy:pose(camX, camY)
+    if self.crawl and self.cattached and self.state ~= 'leap' then
+        local fx, fy, ang = Crawler.pose(self)
+        return math.floor(fx - camX + 0.5), math.floor(fy - camY + 0.5), ang
+    end
+    local ang = 0
+    if self.state == 'leap' then ang = math.atan2(self.vy or 0, math.abs(self.vx or 0) + 1) * 0.5 * (self.facing or 1) end
+    return math.floor(self.x - camX), math.floor(self.y - camY + self.sprH / 2), ang
+end
+
+function Gloomy:drawSheet(sheet, camX, camY)
+    local px, py, ang = self:pose(camX, camY)
+    local bx, by = self:breatheScale()
+    local fr = self:frameNow()
+    local face = self.facing or 1
+    if self.crawl and self.cattached and self.cny == 1 then face = -face end
+    love.graphics.draw(sheet.image, sheet.quads[fr], px, py, ang, S * face * bx, S * by, FW / 2, FH)
+end
+
+function Gloomy:render(camX, camY)
+    love.graphics.setColor(1, 1, 1, 1)
+    self:drawSheet(body, camX, camY)
+end
+
+-- Los dos puntos: SIEMPRE visibles (los estados lo llaman encima de la oscuridad; a la luz, ya
+-- van en el propio cuerpo). Parpadean deprisa antes del salto (el aviso) y se apagan al morir
+function Gloomy:renderGlow(camX, camY)
+    local st = self.state
+    if st == 'dead' or st == 'gone' or st == 'spawning' then return end
+    local a = 0.9
+    if st == 'crouch' then a = (math.floor(love.timer.getTime() * 22) % 2 == 0) and 1 or 0.25
+    elseif st == 'flee' then a = 0.55
+    elseif st == 'idle' or st == 'rest' then a = 0.6 + 0.3 * math.sin(love.timer.getTime() * 3 + self.x) end
+    love.graphics.setColor(GLOW[1], GLOW[2], GLOW[3], a)
+    self:drawSheet(glow, camX, camY)
+    -- un halo pequeño: los mismos puntos, tenues, un píxel de arte hacia cada lado
+    love.graphics.setBlendMode('add')
+    love.graphics.setColor(GLOW[1], GLOW[2], GLOW[3], 0.22 * a)
+    for _, o in ipairs({ { S, 0 }, { -S, 0 }, { 0, S }, { 0, -S } }) do
+        self:drawSheet(glow, camX - o[1], camY - o[2])
+    end
+    love.graphics.setBlendMode('alpha')
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
+function Gloomy.drawEditorOverlay(props, cx, cy, zoom)
+    love.graphics.setColor(1, 0.77, 0.35, 0.35)
+    love.graphics.circle('line', cx, cy, (props.senseRange or 2.6) * T * zoom)
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
+local GG = 'Crabby lúgubre'
+return {
+    name = 'gloomy', label = 'Crabby lúgubre', category = 'Enemigos',
+    description = 'Cangrejo de cueva ciego, para niveles A OSCURAS: explora suelo, paredes y techo sin ruta, va hacia '
+               .. 'los RUIDOS (pasos, saltos, ground pound...), de cerca salta sobre el jugador (1 de vida + empujón) '
+               .. 'y HUYE de la linterna. Tocarlo quita 1 de vida. Se le pisotea.',
+    class = Gloomy,
+    defaults = { speed = 70, points = 15, onTouch = 'hurt', pauses = true },
+    hide = { 'movement', 'attach', 'patrol', 'turnAtEdges', 'bobAmp', 'flyMode', 'flyRange', 'dropOnSight', 'detectRange' },
+    props = {
+        { key='hearing', kind='number', label='Oído (× el radio de cada ruido)', group=GG, default=1, min=0, max=3, step=0.1,
+          help='Pasos 2,5 casillas · salto 3,5 · golpe a un jugador o enemigo muerto 9 · ground pound 15. 0 = sordo' },
+        { key='senseRange', kind='number', label='Nota a un jugador a (casillas)', group=GG, default=2.6, min=0.5, max=8, step=0.1,
+          help='Si se mueve; a uno quieto, a la mitad. Entonces se agacha y salta sobre él' },
+        { key='leapWind', kind='number', label='Aviso antes de saltar (s)', group=GG, default=0.45, min=0.15, max=2, step=0.05 },
+        { key='leapEvery', kind='number', label='Entre saltos (s)', group=GG, default=2.5, min=0.5, max=10, step=0.1 },
+        { key='searchTime', kind='number', label='Busca donde oyó algo (s)', group=GG, default=4, min=0, max=20, step=0.5 },
+        { key='calmTime', kind='number', label='Tras la luz, se calma en (s)', group=GG, default=1.2, min=0, max=10, step=0.1 },
+    },
+    editor = { sprite = 'assets/images/gloomy/gloomy-Sheet.png', frameW = FW },
+}

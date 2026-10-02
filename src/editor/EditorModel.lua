@@ -99,6 +99,7 @@ function Model.fromData(lvl, path)
     m.matchTime = tonumber(lvl.matchTime)
     m.music     = type(lvl.music) == 'string' and lvl.music or nil
     m.snow      = lvl.snow == true or nil                 -- (nieve cayendo: solo visual)
+    m.dark      = lvl.dark == true or nil                 -- (nivel a oscuras, con linterna)
     m.spikeSkin = (lvl.spikeSkin ~= 'normal') and lvl.spikeSkin or nil   -- (aspecto de los pinchos: solo visual)
     m.background = lvl.background                          -- (fondo: bioma de src/fx/Sky.lua)
     m.time      = lvl.time                                 -- (hora: day/dusk/night)
@@ -139,7 +140,7 @@ function Model:toData()
         playerStart = self.playerStart, tiles = self.tiles,
         entities = ents, foliage = decos, vents = self.vents, bossZones = zones, subtiles = subs, links = self.links or {}, blockLinks = self.blockLinks or {},
         autoScroll = AutoScroll.serialize(self.autoScroll),
-        modes = self.modes, matchTime = self.matchTime, music = self.music, snow = self.snow, spikeSkin = self.spikeSkin,
+        modes = self.modes, matchTime = self.matchTime, music = self.music, snow = self.snow, dark = self.dark, spikeSkin = self.spikeSkin,
         background = self.background, time = self.time, clouds = self.clouds,
         depth = self.depth, surfaceRow = self.surfaceRow,
     }
@@ -192,6 +193,7 @@ function Model:encode()
     if d.matchTime then tail[#tail+1] = function(last) line('"matchTime": ' .. json.encode(d.matchTime), last) end end
     if d.music then tail[#tail+1] = function(last) line('"music": ' .. json.encode(d.music), last) end end
     if d.snow then tail[#tail+1] = function(last) line('"snow": true', last) end end
+    if d.dark then tail[#tail+1] = function(last) line('"dark": true', last) end end
     if d.spikeSkin then tail[#tail+1] = function(last) line('"spikeSkin": "' .. d.spikeSkin .. '"', last) end end
     if d.background then tail[#tail+1] = function(last) line('"background": ' .. json.encode(d.background), last) end end
     if d.time then tail[#tail+1] = function(last) line('"time": ' .. json.encode(d.time), last) end end
@@ -231,7 +233,7 @@ function Model:snapshot()
     return deepcopy({ name=self.name, name_en=self.name_en, width=self.width, height=self.height, tiles=self.tiles,
                       playerStart=self.playerStart, entities=self.entities,
                       foliage=self.foliage, vents=self.vents, bossZones=self.bossZones, subtiles=self.subtiles, links=self.links, blockLinks=self.blockLinks,
-                      autoScroll=self.autoScroll, modes=self.modes, matchTime=self.matchTime, music=self.music, snow=self.snow, spikeSkin=self.spikeSkin,
+                      autoScroll=self.autoScroll, modes=self.modes, matchTime=self.matchTime, music=self.music, snow=self.snow, dark=self.dark, spikeSkin=self.spikeSkin,
                       background=self.background, time=self.time, clouds=self.clouds,
                       depth=self.depth, surfaceRow=self.surfaceRow })
 end
@@ -240,6 +242,7 @@ function Model:restore(s)
     s = deepcopy(s)
     -- (los campos opcionales pueden faltar en la copia: se vacían a mano)
     self.autoScroll, self.modes, self.matchTime, self.music, self.snow = nil, nil, nil, nil, nil
+    self.dark = nil
     self.spikeSkin = nil
     self.background, self.time, self.clouds, self.depth, self.surfaceRow = nil, nil, nil, nil, nil
     self.name_en = nil

@@ -584,6 +584,7 @@ local function stepRoom(room)
     local sim = room.sim
     if not sim then return end
     _currentSim = sim
+    require('src/world/Noise').bind(sim.level)        -- (los ruidos de este paso, a este nivel)
 
     sim.tick = sim.tick + 1
     _soundEvents = {}
@@ -862,6 +863,7 @@ local function broadcastSnapshot(room)
             if (pa.invT or 0) > 0 and not pa.dying then flags = flags + Protocol.PF_INVULN end
             if (pa.squashT or 0) > 0 and not pa.dying then flags = flags + Protocol.PF_SQUASH end
             if (pa.iceT or 0) > 0 and not pa.dying then flags = flags + Protocol.PF_ICE end
+            if pa.lightOn and not pa.dying then flags = flags + Protocol.PF_LIGHT end
             table.insert(plist, {
                 ps.idx, round(pa.x), round(pa.y), pa.facing, pa.frame, flags,
                 pa.lives, pa.hp, ps.score, Protocol.drownCode(pa.drownPhase),

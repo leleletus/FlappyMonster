@@ -36,6 +36,8 @@ local PointAreas           = require 'src/world/PointAreas'
 local json                 = require 'libs/json'
 local PingIcon             = require 'src/ui/PingIcon'
 local TouchControls        = require 'src/ui/TouchControls'
+local Darkness             = require 'src/fx/Darkness'
+local LightHud             = require 'src/ui/LightHud'
 
 local OnlineAdventureState = BaseState:new()
 
@@ -184,6 +186,7 @@ function OnlineAdventureState:_buildWorld(data)
     end
     self.level = level or Level.new('assets/levels/nivel01.json')
     Particles.setLevel(self.level)                 -- (las partículas físicas chocan con él)
+    require('src/world/Noise').bind(nil)                -- (online: los ruidos son cosa del servidor)
     if self.mode then self.level.hiddenTriggers = Modes.hiddenTriggers(self.mode) end
     -- Música del nivel (la misma para todos: viene en el nivel que manda el
     -- servidor). Si ya sonaba otra, se cambia.
@@ -401,6 +404,7 @@ function OnlineAdventureState:_applyInterpolation()
                 invuln      = Protocol.band(d[6], Protocol.PF_INVULN) ~= 0,
                 squashed    = Protocol.band(d[6], Protocol.PF_SQUASH) ~= 0,
                 iced        = Protocol.band(d[6], Protocol.PF_ICE) ~= 0,
+                lightOn     = Protocol.band(d[6], Protocol.PF_LIGHT) ~= 0,
                 place       = d[12],
             })
         else
@@ -689,6 +693,7 @@ function OnlineAdventureState:_collectInput()
     self.inputState.crouch = Input.down('crouch')
     if Input.pressed('jump')   then self.pendingJump   = true end
     if Input.pressed('crouch') then self.pendingCrouch = true end
+    if Input.pressed('light')  then self.pendingLight  = true end
 end
 
 function OnlineAdventureState:_clearInput()
@@ -809,7 +814,8 @@ function OnlineAdventureState:update(dt)
     local age = self.lastSnapAt and (love.timer.getTime() - self.lastSnapAt) or 0
     self.pingIcon:update(dt, NC:getPing(), age, NC.connected ~= false)
     -- Controles táctiles (móvil): cruceta + salto en píxeles de pantalla
-    TouchControls.update(not self.showPause and not self.showGameOver and not (self.ownData and self.ownData.isSpectator))
+    TouchControls.update(not self.showPause and not self.showGameOver and not (self.ownData and self.ownData.isSpectator),
+                         self.level and self.level.dark)
     -- ── Game Over ─────────────────────────────────────────────────────────────
     if self.showGameOver then
         self.gameOverTimer = self.gameOverTimer + dt
@@ -973,8 +979,8 @@ function OnlineAdventureState:update(dt)
             ticks = ticks + 1
             local s = self.inputState
             local bits = Protocol.encodeInput(s.left, s.right, s.jump, s.crouch,
-                                              self.pendingJump, self.pendingCrouch)
-            self.pendingJump, self.pendingCrouch = false, false
+                                              self.pendingJump, self.pendingCrouch, self.pendingLight)
+            self.pendingJump, self.pendingCrouch, self.pendingLight = false, false, false
             self.predictor:tick(bits)
             if not self.localPa.dying then self:_checkLocalBounce() end
         end
@@ -1170,6 +1176,20 @@ function OnlineAdventureState:_renderScene()
     -- Efecto agua
     love.graphics.setColor(1, 1, 1, 1)
     self.level:renderWaterEffect(self.camX, self.camY, self.sceneCanvas)
+
+    -- A oscuras: las linternas de todos los jugadores; encima, los puntos luminosos
+    if self.level.dark then
+        local src = {}
+        for _, rp in pairs(self.remotePlayers) do
+            if rp.visible and not rp.dying then src[#src + 1] = { x = rp.x, y = rp.y, facing = rp.facing, on = rp.lightOn } end
+        end
+        if self.localPaInit and not self.ownData.isSpectator then
+            local pa = self.localPa
+            src[#src + 1] = { x = self.renderX, y = self.renderY, facing = pa.facing, on = pa.lightOn and not pa.dying }
+        end
+        Darkness.render(self.level, self.camX, self.camY, src)
+        Darkness.renderGlow(self.level, self.enemyRenderers, self.camX, self.camY)
+    end
 
     -- HUD (antes, las franjas de cine de la entrada de un jefe: el HUD va encima)
     BossHud.drawCinema(self.level)
@@ -1419,6 +1439,9 @@ end
 -- ── HUD ───────────────────────────────────────────────────────────────────────
 
 function OnlineAdventureState:_renderHUD()
+    if self.level and self.level.dark and self.localPaInit and not self.ownData.isSpectator then
+        LightHud.draw(self.localPa, WINDOW_W - 206, 76)             -- (bajo las vidas)
+    end
     -- Antena de conexión: abajo a la izquierda; con los controles táctiles a la
     -- vista, abajo en el CENTRO (a los lados van la cruceta y el salto, y
     -- arriba el HUD)

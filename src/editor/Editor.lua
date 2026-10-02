@@ -1582,6 +1582,10 @@ local function drawLevelTab(x, y, w)
         y = y + 28
         if ch then pushUndo(); m.snow = v or nil; markDirty() end
         y = y + ui.hint('Copos de nieve cayendo por todo el nivel. Solo es visual: no afecta al juego.', x, y, w, th.border) + 8
+        v, ch = ui.toggle('A oscuras (linterna)', m.dark == true, x, y, w)
+        y = y + 28
+        if ch then pushUndo(); m.dark = v or nil; markDirty() end
+        y = y + ui.hint('Cueva sin luz: solo se ve lo que alumbra la linterna de cada jugador (se enciende y apaga; la batería se gasta y, si se agota, tarda en volver). AFECTA AL JUEGO: los Crabbies lúgubres huyen de la luz. En el editor el mapa se ve entero.', x, y, w, th.border) + 8
         local sopts = {}
         for _, sk in ipairs(SpikeSkins.LIST) do sopts[#sopts + 1] = { value = sk.id, label = sk.label } end
         v, ch = ui.enum('Pinchos', m.spikeSkin or 'normal', sopts, x, y, w)

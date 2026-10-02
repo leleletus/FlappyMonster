@@ -100,6 +100,8 @@ local SQUASH_OUTER_H  = CROUCH_OUTER_H * SQUASH_K
 local SQUASH_INNER_H  = CROUCH_INNER_H * SQUASH_K
 PlayerAdventure.SQUASH_K = SQUASH_K
 
+local Noise = require 'src/world/Noise'       -- (ruidos que oyen los enemigos: pasos, saltos, ground pound...)
+
 function PlayerAdventure:new(x, y)
     loadSprites()
     local o = setmetatable({}, self)
@@ -140,6 +142,9 @@ function PlayerAdventure:new(x, y)
     o.squashT=0           -- aplastado (agachado y aturdido)
     o.iceT=0              -- congelado en un bloque de hielo (congelador)
     o.ctrlLockT=0         -- sin control un instante (lanzado de lado por un trampolín)
+    o.lightOn=false       -- linterna (niveles a oscuras): encendida
+    o.lightBat=1          -- batería 0..1
+    o.lightCd=0           -- s sin poder encenderla (agotada / apagada por un golpe)
     return o
 end
 
@@ -462,7 +467,7 @@ function PlayerAdventure:jump()
     if self.jumpsLeft > 0 then
         local vel = ADV_JUMP_VEL * (self.inWater and self.liquid.jumpMult or 1.0) * (self.jumpMult or 1)
         self.vy=vel; self.jumpsLeft=self.jumpsLeft-1
-        self.puff=PUFF_SCALE; Sound.play('jump')
+        self.puff=PUFF_SCALE; Sound.play('jump'); Noise.emit(self.x, self.y, Noise.R.jump)
     end
 end
 
@@ -492,7 +497,7 @@ function PlayerAdventure:takeDamage()
     if self.dying or not self.alive or self:isInvulnerable() then return false end
     self.hp=self.hp-1
     if self.hp<=0 then self.hp=self.hpMax; self:die(); return true end
-    Sound.play('dies'); return false
+    Sound.play('dies'); Noise.emit(self.x, self.y, Noise.R.hurt); return false
 end
 
 -- Golpe de `n` de vida (1 por defecto): tiles 'hurt', entidades onTouch='hurt',
@@ -537,6 +542,7 @@ function PlayerAdventure:respawn()
     self.prevInWater=false
     self.splashSt='out'; self.splashCD=0
     self.gpPhase=nil; self.gpT=0; self.gpLanded=false; self.stunT=0; self.squashT=0; self.ctrlLockT=0; self.iceT=0
+    self.lightOn=false; self.lightBat=1; self.lightCd=0
     self:grantInvulnerability(SPAWN_INV)
     Sound.stopTracked('drowning')
     Sound.playMusic('level')
@@ -756,7 +762,7 @@ function PlayerAdventure:updateGroundPound(dt, level)
                 self.gpLanded  = true
                 self.jumpsLeft = 2
                 self.puff      = PUFF_SCALE
-                Sound.play('gpImpact')
+                Sound.play('gpImpact'); Noise.emit(self.x, self.y, Noise.R.pound)
                 fx(self, 'gp_land', self.x, ob.y + ob.h)
             end
         end
@@ -902,6 +908,48 @@ function PlayerAdventure:update(dt, level)
     return self:_update(dt, level)
 end
 
+-- ── Linterna (niveles a oscuras: level.dark) ─────────────────────────────────
+-- Se enciende y apaga con 'light'. Encendida gasta batería (LIGHT_TIME s de luz seguida); apagada
+-- se recarga (LIGHT_RECHARGE s de vacía a llena). Si se AGOTA se apaga sola y no se puede volver
+-- a encender en LIGHT_COOL s (y hasta entonces no recarga). Parte de la simulación (los Crabbies
+-- lúgubres huyen de ella): va en el estado propio (31-33) y los demás la ven con PF_LIGHT.
+local LIGHT_TIME, LIGHT_RECHARGE, LIGHT_COOL, LIGHT_MIN = 7.0, 9.0, 3.5, 0.12
+PlayerAdventure.LIGHT_TIME, PlayerAdventure.LIGHT_COOL = LIGHT_TIME, LIGHT_COOL
+function PlayerAdventure:updateLight(dt, level, pressed)
+    if not (level and level.dark) then
+        self.lightOn = false
+        return
+    end
+    if (self.lightCd or 0) > 0 then self.lightCd = math.max(0, self.lightCd - dt) end
+    if pressed then
+        if self.lightOn then
+            self.lightOn = false
+            Sound.play('lightOff')
+        elseif self.lightCd <= 0 and (self.lightBat or 1) >= LIGHT_MIN then
+            self.lightOn = true
+            Sound.play('lightOn')
+        else
+            Sound.play('lightDead')
+        end
+    end
+    if self.lightOn then
+        self.lightBat = (self.lightBat or 1) - dt / LIGHT_TIME
+        if self.lightBat <= 0 then
+            self.lightBat, self.lightOn, self.lightCd = 0, false, LIGHT_COOL
+            Sound.play('lightOut')
+        end
+    elseif self.lightCd <= 0 then
+        self.lightBat = math.min(1, (self.lightBat or 1) + dt / LIGHT_RECHARGE)
+    end
+end
+
+-- Un golpe fuerte (jefe) le apaga la linterna `t` s (sin gastar batería)
+function PlayerAdventure:blindLight(t)
+    if self.lightOn then Sound.play('lightOut') end
+    self.lightOn = false
+    self.lightCd = math.max(self.lightCd or 0, t)
+end
+
 function PlayerAdventure:_update(dt, level)
     self.hitNow = nil
     if self.dying then
@@ -930,6 +978,7 @@ function PlayerAdventure:_update(dt, level)
     -- los consume). Se apunta lo que el jugador PULSA, pueda o no hacerlo:
     -- el jefe espejo lo reproduce con retardo (ver entities/types/mirror.lua).
     local pJump, pCrouch = Input.pressed('jump'), Input.pressed('crouch')
+    self:updateLight(dt, level, Input.pressed('light'))
     local hCrouch = Input.down('crouch')
     local inX = Input.down('move_left') and -1 or (Input.down('move_right') and 1 or 0)
     self.inMoveX, self.inCrouch = inX, hCrouch
@@ -1046,7 +1095,7 @@ function PlayerAdventure:_update(dt, level)
         if self.animT>=1/WALK_FPS then
             self.animT=self.animT-1/WALK_FPS
             self.frame=(self.frame==3) and 2 or 3
-            if self.frame==3 then self.puff=1.08; Sound.play('step') end
+            if self.frame==3 then self.puff=1.08; Sound.play('step'); Noise.emit(self.x, self.y, Noise.R.step) end
         end
     else
         self.frame=3; self.animT=0

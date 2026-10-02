@@ -3,6 +3,9 @@ local LavaFx   = require 'src/fx/LavaFx'
 local Sky      = require 'src/fx/Sky'
 local Snowfall = require 'src/fx/Snowfall'
 local TouchControls = require 'src/ui/TouchControls'
+local Darkness      = require 'src/fx/Darkness'
+local LightHud      = require 'src/ui/LightHud'
+local Noise         = require 'src/world/Noise'
 local CornerButtons = require 'src/ui/CornerButtons'
 local L = require 'src/Lang'
 -- src/states/AdventureState.lua
@@ -87,6 +90,7 @@ function AdventureState:enter(args)
     -- Efectos del jugador (ground pound, bloques rotos...)
     Particles.clear()
     Particles.setLevel(self.level)                 -- (las partículas físicas chocan con él)
+    require('src/world/Noise').bind(self.level)         -- (ruidos que oyen los enemigos)
     PlayerAdventure.fx = function(kind, x, y)
         Particles.emit(kind, x, y)
         if kind == 'block_break' then Sound.play('blockBreak') end
@@ -343,7 +347,7 @@ function AdventureState:update(dt)
     end
 
     -- ── Controles táctiles (móvil): cruceta + salto, ver src/ui/TouchControls ──
-    TouchControls.update(not self.dead)
+    TouchControls.update(not self.dead, self.level.dark)
 
     if Input.pressed('pause') then
         gStateMachine:push('pause')
@@ -556,6 +560,14 @@ function AdventureState:_renderScene()
 
     self.level:renderWaterEffect(self.camX, self.camY, self.sceneCanvas)
 
+    -- A oscuras: solo se ve lo que alumbra la linterna; encima, los puntos luminosos
+    if self.level.dark then
+        local p = self.player
+        Darkness.render(self.level, self.camX, self.camY,
+                        { { x = p.x, y = p.y, facing = p.facing, on = p.lightOn and not p.dying } })
+        Darkness.renderGlow(self.level, self.enemies, self.camX, self.camY)
+    end
+
     -- ── Debug hitboxes (F1) ───────────────────────────────────────────────────
     if DEBUG_HITBOX then
         self.player:renderDebug(self.camX, self.camY)
@@ -634,6 +646,7 @@ function AdventureState:_renderScene()
     printOutlined(timeStr,  valueEndX - tw,  row2Y, vr, vg, vb, va)
 
     renderLivesHud(self.player)
+    if self.level.dark then LightHud.draw(self.player, WINDOW_W - 206, 76) end      -- (bajo las vidas)
     self:renderBossHud()
     self.player:renderAirBar()
     self.player:renderDrownCountdown(self.player.x - self.camX, self.player.y - self.camY)

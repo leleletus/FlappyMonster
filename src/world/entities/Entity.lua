@@ -892,6 +892,7 @@ function Entity:stomp()
     self.vy        = 0
     self:onStomp()
     Sound.play('enemyExplode')
+    require('src/world/Noise').emit(self.x, self.y, 9)        -- (un enemigo que muere se oye)
 end
 
 -- Escala de "respiración" durante las pausas: sx, sy multiplicadores.

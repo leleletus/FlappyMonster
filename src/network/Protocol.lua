@@ -7,7 +7,7 @@ local Tiles = require 'src/world/Tiles'
 local P = {}
 
 -- ── Versión / red ─────────────────────────────────────────────────────────────
-P.VERSION = 42        -- el servidor rechaza clientes con otra versión (42: campo de carámbanos del Mega Crabby helado, guardia del Rey Gummy por todos lados (paracaídas), vuelo libre; 41: Rey Gummy, guardias Gummy de reserva; 40: Mega Crabby helado; 39: Crabby helado; 38: Gran Bola de Nieve rehecha, fases de zona, bloques de fase; 37: Gran Bola de Nieve; 36: congelador; 27: Bloques ON/OFF, vista fija en niveles; 28: entradas de jefe genéricas; 29: ataques de arena del Espejo; 30: cristal roto de jefe; 31: muertes especiales de enemigos; 32: bombas; 33: nieve, hielo y hielo fino; 34: arena; 35: roca abisal)
+P.VERSION = 43        -- el servidor rechaza clientes con otra versión (43: niveles a oscuras, linterna (bit de input, estado propio 31-33, PF_LIGHT), Crabby lúgubre; 42: campo de carámbanos del Mega Crabby helado, guardia del Rey Gummy por todos lados (paracaídas), vuelo libre; 41: Rey Gummy, guardias Gummy de reserva; 40: Mega Crabby helado; 39: Crabby helado; 38: Gran Bola de Nieve rehecha, fases de zona, bloques de fase; 37: Gran Bola de Nieve; 36: congelador; 27: Bloques ON/OFF, vista fija en niveles; 28: entradas de jefe genéricas; 29: ataques de arena del Espejo; 30: cristal roto de jefe; 31: muertes especiales de enemigos; 32: bombas; 33: nieve, hielo y hielo fino; 34: arena; 35: roca abisal)
 
 -- Sonidos PRIVADOS: solo los oye el jugador que los causa (su cliente ya los
 -- genera con la predicción), así que el servidor no los manda a nadie. P. ej.
@@ -38,7 +38,8 @@ P.IN_JUMP      = 4
 P.IN_CROUCH    = 8
 P.IN_JUMP_P    = 16    -- salto recién presionado en este tick
 P.IN_CROUCH_P  = 32    -- agacharse recién presionado en este tick
-P.IN_MAX       = 63
+P.IN_LIGHT_P   = 64    -- linterna recién pulsada en este tick (niveles a oscuras)
+P.IN_MAX       = 127
 P.IN_HELD_MASK = 15    -- sin flags de "recién presionado"
 
 local band = bit and bit.band or function(a, b)
@@ -55,7 +56,7 @@ function P.bor(a, b)
     return a + b - band(a, b)
 end
 
-function P.encodeInput(left, right, jump, crouch, jumpPressed, crouchPressed)
+function P.encodeInput(left, right, jump, crouch, jumpPressed, crouchPressed, lightPressed)
     local b = 0
     if left          then b = b + P.IN_LEFT     end
     if right         then b = b + P.IN_RIGHT    end
@@ -63,6 +64,7 @@ function P.encodeInput(left, right, jump, crouch, jumpPressed, crouchPressed)
     if crouch        then b = b + P.IN_CROUCH   end
     if jumpPressed   then b = b + P.IN_JUMP_P   end
     if crouchPressed then b = b + P.IN_CROUCH_P end
+    if lightPressed  then b = b + P.IN_LIGHT_P  end
     return b
 end
 
@@ -74,6 +76,7 @@ function P.decodeInput(bits, out)
     out.crouch         = band(bits, P.IN_CROUCH)   ~= 0
     out.jump_pressed   = band(bits, P.IN_JUMP_P)   ~= 0
     out.crouch_pressed = band(bits, P.IN_CROUCH_P) ~= 0
+    out.light_pressed  = band(bits, P.IN_LIGHT_P)  ~= 0
     return out
 end
 
@@ -82,7 +85,7 @@ end
 -- input del tick en vez del teclado real.
 function P.newInputStub()
     local inp = { left=false, right=false, jump=false, crouch=false,
-                  jump_pressed=false, crouch_pressed=false }
+                  jump_pressed=false, crouch_pressed=false, light_pressed=false }
     local stub = {}
     stub.state = inp
     function stub.pressed(action)
@@ -91,6 +94,9 @@ function P.newInputStub()
         end
         if action == 'crouch' then
             local v = inp.crouch_pressed; inp.crouch_pressed = false; return v
+        end
+        if action == 'light' then
+            local v = inp.light_pressed; inp.light_pressed = false; return v
         end
         return false
     end
@@ -150,6 +156,7 @@ function P.packOwnState(pa)
         (pa.gpPhase == 'windup' and 1) or (pa.gpPhase == 'fall' and 2) or 0,
         pa.gpT or 0, pa.stunT or 0, pa.invT or 0, pa.squashT or 0, pa.ctrlLockT or 0,
         pa.iceT or 0,
+        pa.lightOn and 1 or 0, pa.lightBat or 1, pa.lightCd or 0,
     }
 end
 
@@ -189,12 +196,15 @@ function P.applyOwnState(s, pa)
     pa.squashT     = s[28]
     pa.ctrlLockT   = s[29]
     pa.iceT        = s[30]
+    pa.lightOn     = s[31] == 1
+    pa.lightBat    = s[32]
+    pa.lightCd     = s[33]
 end
 
 -- Estructura mínima para validar un estado propio recibido del servidor.
 function P.isValidOwnState(s)
-    if type(s) ~= 'table' or #s < 30 then return false end
-    for i = 1, 30 do if type(s[i]) ~= 'number' then return false end end
+    if type(s) ~= 'table' or #s < 33 then return false end
+    for i = 1, 33 do if type(s[i]) ~= 'number' then return false end end
     return true
 end
 
@@ -205,6 +215,7 @@ P.PF_HURT = 16      -- acaba de recibir daño (parpadea en rojo)
 P.PF_INVULN = 32    -- recién reaparecido: invulnerable (parpadea)
 P.PF_SQUASH = 64    -- aplastado (sprite achatado)
 P.PF_ICE = 128      -- congelado en un bloque de hielo (congelador)
+P.PF_LIGHT = 256    -- linterna encendida (niveles a oscuras)
 
 -- ── Utilidades ────────────────────────────────────────────────────────────────
 function P.round(x) return math.floor(x + 0.5) end

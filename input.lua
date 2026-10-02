@@ -26,6 +26,8 @@ local controls = {
     jump       = {'key:space', 'key:up', 'key:w',
                    'button:b', 'button:dpup'},
     crouch     = {'key:down', 'key:s', 'button:dpdown', 'axis:lefty+'},
+    -- Linterna (niveles a oscuras): encender / apagar
+    light      = {'key:f', 'key:lshift', 'button:x', 'button:y'},
 }
 
 local labelsConsole = {
@@ -33,14 +35,14 @@ local labelsConsole = {
     back       = "[-]",    nav_up    = "[^]",     nav_down  = "[v]",
     nav_left   = "[<]",    nav_right = "[>]",     confirm   = "[A]",
     move_left  = "[<]",    move_right= "[>]",     jump      = "[A]",
-    crouch     = "[v]",
+    crouch     = "[v]",    light     = "[Y]",
 }
 local labelsPC = {
     flap       = "[Space]", pause  = "[Esc]",   resume = "[Enter]",
     back       = "[Esc]",   nav_up  = "[^]",    nav_down  = "[v]",
     nav_left   = "[<]",     nav_right= "[>]",   confirm   = "[Enter]",
     move_left  = "[<]",     move_right= "[>]",  jump      = "[Space]",
-    crouch     = "[Down]",
+    crouch     = "[Down]",  light = "[F]",
 }
 
 function Input.label(action)

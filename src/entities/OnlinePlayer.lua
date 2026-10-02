@@ -74,6 +74,7 @@ function OnlinePlayer:applyData(data)
     self.squashed    = data.squashed    or false
     if data.iced and not self.iced then self.icedAt = love.timer.getTime() end
     self.iced        = data.iced        or false
+    self.lightOn     = data.lightOn     or false     -- (linterna encendida: la dibuja Darkness)
     self.color       = data.color       or self.color
 
     self.renderX = self.x

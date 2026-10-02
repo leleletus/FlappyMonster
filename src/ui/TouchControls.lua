@@ -23,9 +23,11 @@
 local SpriteStrip = require 'src/fx/SpriteStrip'
 
 local TC = {}
-local dpad, jump
-local state = { l = false, r = false, d = false, j = false }
-local prev = { d = false, j = false }
+local dpad, jump, lightBtn
+local state = { l = false, r = false, d = false, j = false, f = false }
+local prev = { d = false, j = false, f = false }
+local withLight = false       -- (niveles a oscuras: botón de la linterna, encima del salto)
+local LIGHT_FRAC = 0.13       -- su tamaño (fracción del alto)
 
 local TOP_FRAC  = 0.30        -- por encima de esta altura (fracción) no hay controles
 local PAD_FRAC  = 0.30        -- diámetro visual de la cruceta (fracción del alto)
@@ -35,6 +37,7 @@ local DEAD_FRAC = 0.16        -- zona muerta del centro de la cruceta (fracción
 local function assets()
     dpad = dpad or SpriteStrip.load('assets/images/ui/touch/dpad-Sheet.png', 40)
     jump = jump or SpriteStrip.load('assets/images/ui/touch/jump-Sheet.png', 32)
+    lightBtn = lightBtn or SpriteStrip.load('assets/images/ui/touch/light-Sheet.png', 24)
 end
 
 -- Rectángulo del juego (lovesize) en la pantalla real
@@ -63,12 +66,17 @@ function TC.layout(sw, sh)
         jumpY = math.floor(sh - jumpW / 2 - sh * 0.11),
         topY = sh * TOP_FRAC,
     }
+    -- Linterna: botón pequeño encima y hacia dentro del de salto
+    L.lightPx = math.max(2, math.floor(sh * LIGHT_FRAC / 24))
+    L.lightW = 24 * L.lightPx
+    L.lightX = math.floor(L.jumpX - jumpW * 0.55)
+    L.lightY = math.floor(L.jumpY - jumpW * 0.5 - L.lightW * 0.75)
     return L
 end
 
 -- ¿Qué pulsa cada dedo? (posiciones de pantalla)
-function TC.read(L, touches)
-    local s = { l = false, r = false, d = false, j = false }
+function TC.read(L, touches, light)
+    local s = { l = false, r = false, d = false, j = false, f = false }
     local dead = L.padW * DEAD_FRAC
     for _, t in ipairs(touches) do
         local x, y = t[1], t[2]
@@ -79,6 +87,8 @@ function TC.read(L, touches)
                     if dx < 0 then s.l = true else s.r = true end
                 end
                 if dy > dead and dy > 0.45 * math.abs(dx) then s.d = true end
+            elseif light and (x - L.lightX) ^ 2 + (y - L.lightY) ^ 2 <= (L.lightW * 0.75) ^ 2 then
+                s.f = true                                  -- (la linterna tiene prioridad sobre el salto)
             else
                 s.j = true
             end
@@ -89,11 +99,12 @@ end
 
 -- Cada frame: lee los dedos y pone las acciones del jugador. `active` = el
 -- estado quiere controles (nivel en marcha, no muerto / espectador)
-function TC.update(active)
+function TC.update(active, light)
     local VP = Input.VirtualPad
+    withLight = light == true
     if not (active and Input.isMobile) then
-        state = { l = false, r = false, d = false, j = false }
-        prev.d, prev.j = false, false
+        state = { l = false, r = false, d = false, j = false, f = false }
+        prev.d, prev.j, prev.f = false, false, false
         return
     end
     local sw, sh = love.graphics.getDimensions()
@@ -103,13 +114,14 @@ function TC.update(active)
         local x, y = love.touch.getPosition(id)
         touches[#touches + 1] = { x, y }
     end
-    state = TC.read(L, touches)
+    state = TC.read(L, touches, withLight)
     VP.down['move_left'], VP.down['move_right'] = state.l, state.r
     VP.down['crouch'], VP.down['jump'] = state.d, state.j
     -- "Recién pulsado" (este mismo frame: saltar, y abajo en el aire = ground pound)
     if state.j and not prev.j then VP.pressed['jump'] = true end
     if state.d and not prev.d then VP.pressed['crouch'] = true end
-    prev.d, prev.j = state.d, state.j
+    if state.f and not prev.f then VP.pressed['light'] = true end
+    prev.d, prev.j, prev.f = state.d, state.j, state.f
 end
 
 -- Cuadro de la cruceta según lo pulsado
@@ -142,6 +154,12 @@ function TC.draw(L, st, fade)
     dpad:draw(padFrame(st), L.padX, L.padY, 0, L.padPx, L.padPx)
     love.graphics.setColor(1, 1, 1, (st.j and 0.8 or a) * fade)
     jump:draw(st.j and 2 or 1, L.jumpX, L.jumpY + (st.j and L.jumpPx or 0), 0, L.jumpPx, L.jumpPx)
+    if withLight then
+        love.graphics.setColor(0, 0, 0, 0.35 * a / 0.7 * fade)
+        lightBtn:draw(st.f and 2 or 1, L.lightX + sh, L.lightY + sh, 0, L.lightPx, L.lightPx)
+        love.graphics.setColor(1, 1, 1, (st.f and 0.8 or a) * fade)
+        lightBtn:draw(st.f and 2 or 1, L.lightX, L.lightY, 0, L.lightPx, L.lightPx)
+    end
     love.graphics.setColor(1, 1, 1, 1)
 end
 

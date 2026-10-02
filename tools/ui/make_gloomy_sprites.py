@@ -18,7 +18,11 @@
 #       maqueta_<X>.png     cada opción en una cueva a oscuras con la linterna del jugador
 #       maqueta_mega.png    el Mega de cada opción, a escala de juego, en su arena a oscuras
 #       andar_<X>.gif       ciclo de andar
-#   (aún NO escribe assets: primero el usuario elige; luego --apply <opción>)
+#   python3 tools/ui/make_gloomy_sprites.py --apply  → escribe los assets de la opción elegida por el
+#       usuario: B "Fantasma" (ojos algo separados) y su Mega CON retoques (MEGA_B):
+#       assets/images/gloomy/gloomy-Sheet.png (9 cuadros 26x15: andar 1-4, quieto, agachado, salto,
+#       susto, aplastado) + glow-Sheet.png (sus puntos luminosos), bosses/megagloomy/body-Sheet.png
+#       (9 cuadros 38x21, la MISMA rejilla de píxel) + glow-Sheet.png, ui/flashlight-Sheet.png
 import math
 import os
 import sys
@@ -506,7 +510,76 @@ def mockup_mega_b():
     strip.save(os.path.join(OUT, 'mega_B_retoques_cuadros.png'))
 
 
+def sheets(o, mega=False):
+    """Tira con todos los cuadros (POSES) y, aparte, la de los PUNTOS LUMINOSOS (la misma rejilla,
+    solo esos píxeles, en blanco: el juego los tiñe y los dibuja ENCIMA de la oscuridad)"""
+    fr = [frame(o, pz, mega) for pz in POSES]
+    w, h = fr[0][0].size
+    body = Image.new('RGBA', (w * len(fr), h), (0, 0, 0, 0))
+    glow = Image.new('RGBA', (w * len(fr), h), (0, 0, 0, 0))
+    for i, (im, pts) in enumerate(fr):
+        body.paste(im, (i * w, 0))
+        for gx, gy in pts:
+            glow.putpixel((i * w + gx, gy), (255, 255, 255, 255))
+    return body, glow
+
+
+def flashlight_icon():
+    """Icono de la linterna del HUD, 3 cuadros 12x8: encendida, apagada, agotada (enfriándose)"""
+    rows_on = ['....oooo....',
+               'ooooyyyyoo..',
+               'oggoyyyyowo.',
+               'oggoyyyyowwo',
+               'oggoyyyyowwo',
+               'oggoyyyyowo.',
+               'ooooyyyyoo..',
+               '....oooo....']
+    pals = [dict(o='#1e1e2a', g='#8a8fa6', y='#ffe27a', w='#fff8d0'),
+            dict(o='#1e1e2a', g='#8a8fa6', y='#b9bccb', w='#5a5f78'),
+            dict(o='#1e1e2a', g='#8a8fa6', y='#e2603c', w='#7a2e24')]
+    out = Image.new('RGBA', (36, 8), (0, 0, 0, 0))
+    for i, pal in enumerate(pals):
+        for y, r in enumerate(rows_on):
+            for x, ch in enumerate(r):
+                if ch != '.':
+                    out.putpixel((i * 12 + x, y), rgb(pal[ch]))
+    return out
+
+
+def touch_light():
+    """Botón táctil de la linterna: 2 cuadros 24x24 (suelto / pulsado), como los de la cruceta y el salto"""
+    out = Image.new('RGBA', (48, 24), (0, 0, 0, 0))
+    ico = flashlight_icon().crop((0, 0, 12, 8))
+    for i in range(2):
+        d = ImageDraw.Draw(out)
+        d.ellipse([i * 24 + 1, 1, i * 24 + 22, 22], fill=rgb('#1e1e2a'))
+        d.ellipse([i * 24 + 2, 2, i * 24 + 21, 21], fill=rgb('#f2f2f6') if i == 0 else rgb('#ffe27a'))
+        d.ellipse([i * 24 + 4, 5, i * 24 + 21, 21], fill=rgb('#c4c8d6') if i == 0 else rgb('#e6b84a'))
+        d.ellipse([i * 24 + 3, 3, i * 24 + 19, 19], fill=rgb('#f2f2f6') if i == 0 else rgb('#ffe27a'))
+        out.alpha_composite(ico, (i * 24 + 6, 8))
+    return out
+
+
+def apply():
+    o = OPTIONS['B']
+    body, glow = sheets(o)
+    mbody, mglow = sheets(MEGA_B)
+    out = {
+        'gloomy/gloomy-Sheet.png': body, 'gloomy/glow-Sheet.png': glow,
+        'bosses/megagloomy/body-Sheet.png': mbody, 'bosses/megagloomy/glow-Sheet.png': mglow,
+        'ui/flashlight-Sheet.png': flashlight_icon(), 'ui/touch/light-Sheet.png': touch_light(),
+    }
+    for name, im in out.items():
+        p = os.path.join(IMG, name)
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        im.save(p)
+        print('escrito', os.path.relpath(p, ROOT), im.size)
+
+
 if __name__ == '__main__':
+    if '--apply' in sys.argv:
+        apply()
+        sys.exit(0)
     os.makedirs(OUT, exist_ok=True)
     options_sheet()
     for k in OPTIONS:
