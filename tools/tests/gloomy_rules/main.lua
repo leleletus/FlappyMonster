@@ -158,9 +158,9 @@ function cases.oye()
         return e.x - x0, e.state
     end
     local farPound, st1 = try(10, Noise.R.pound)
-    local farJump, st2 = try(10, Noise.R.jump)
-    local nearJump, st3 = try(2.5, Noise.R.jump)
-    -- andar no hace ruido; saltar sí
+    local farJump, st2 = try(10, Noise.R.faint)
+    local nearJump, st3 = try(2.5, Noise.R.faint)
+    -- ni andar ni saltar hacen ruido
     local level = room(20, 8, {})
     local pa = player(level, 6, 8)
     local n0 = level.noises and level.noises.seq or 0
@@ -168,8 +168,9 @@ function cases.oye()
     local walkN = (level.noises and level.noises.seq or 0) - n0
     stub.state.jump_pressed = true; step(level, {}, 0.1)
     local jumpN = (level.noises and level.noises.seq or 0) - n0 - walkN
-    check('oye', farPound > 2 * T and st2 ~= 'hunt' and farJump < T and nearJump > 0.5 * T and walkN == 0 and jumpN == 1,
-        ('ground pound a 10 casillas: se acerca %.1f (%s); salto a 10: %.1f (%s); salto a 2,5: %.1f (%s); ruidos andando 1 s: %d; al saltar: %d'):format(
+    check('oye', farPound > 2 * T and st2 ~= 'hunt' and farJump < T and nearJump > 0.5 * T and walkN == 0 and jumpN == 0
+        and Noise.R.hit < Noise.R.hurt and Noise.R.hurt < Noise.R.kill and Noise.R.kill < Noise.R.pound,
+        ('ground pound a 10 casillas: se acerca %.1f (%s); ruido flojo a 10: %.1f (%s); a 2,5: %.1f (%s); ruidos andando 1 s: %d; al saltar: %d'):format(
          farPound / T, st1, farJump / T, st2, nearJump / T, st3, walkN, jumpN))
 end
 
@@ -179,7 +180,7 @@ function cases.marca()
     local got = {}
     Entity.fx = function(kind) got[#got + 1] = kind end
     local level = room(20, 8, {})
-    Noise.emit(100, 100, Noise.R.jump); Noise.emit(100, 100, Noise.R.kill); Noise.emit(100, 100, Noise.R.pound)
+    Noise.emit(100, 100, Noise.R.faint); Noise.emit(100, 100, Noise.R.hurt); Noise.emit(100, 100, Noise.R.pound)
     local l2 = room(20, 8, {}, nil, false)
     Noise.emit(100, 100, Noise.R.pound)
     Entity.fx = nil
@@ -329,7 +330,7 @@ function cases.techo()
     local onCeil = e.cattached and e.cny == 1
     local pa = player(level, 8, 7)
     pa.x = e.x + 20
-    Noise.emit(pa.x, pa.y, Noise.R.jump * 2)               -- (un ruido justo debajo: baja a por él)
+    Noise.emit(pa.x, pa.y, Noise.R.faint * 2)               -- (un ruido justo debajo: baja a por él)
     local seen = {}
     step(level, es, 5, function()
         pa.invT = 3

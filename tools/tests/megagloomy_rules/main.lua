@@ -4,7 +4,7 @@
 --   embestida     con un "!" lejos apunta (línea fija hasta la pared), corre hasta ella y queda agotado; de pie
 --                 te da, agachado pasa por encima
 --   pinzas        con el "!" cerca, estocada con la pinza de ese lado: delante da; detrás y agachado, no
---   salto         fase 2: alterna el salto con la embestida; cae en su diana y queda agotado
+--   techo         trepa la pared, va por el techo, aro grande, se lanza a donde detecta y queda agotado
 --   luz           alumbrarlo mientras apunta lo asusta y cancela; agotado sin luz es inmune y con luz queda
 --                 deslumbrado (se tapa con las pinzas): un golpe
 --   caja          la caja es el caparazón que se ve
@@ -89,6 +89,7 @@ function cases.ronda()
     local zx0, zx1, zy0, zy1 = floorPos(boss)
     local onFloor, seen, pings, raised, x0, x1 = true, {}, {}, false, 1e9, -1e9
     stepAll(level, es, {}, 14, function()
+        boss.ceilT = -99                                    -- (el techo: caso aparte)
         seen[boss.state] = true
         if boss.state ~= 'fight' and math.abs((boss.y + 100) - zy1) > 2 then onFloor = false end
         for _, p in ipairs(boss.pings) do pings[p.id] = true end
@@ -105,29 +106,33 @@ function cases.ronda()
          n, tostring(raised), (x1 - x0) / T, tostring(seen.aim)))
 end
 
--- El aro detecta al que se mueve (le sale su "!") y no al que está quieto
+-- El aro detecta a quien TOCA, aunque esté quieto y callado: le sale su "!" y el jefe SALTA ahí
+-- (nunca embiste: eso es para los ruidos) y queda agotado
 function cases.aro_detecta()
-    local function try(moving)
-        local level, es, boss = arena()
-        stepAll(level, es, {}, 0.3)
-        local pa = playerAt(level, 20)
-        boss.pingT, boss.cdT = 0, 99
-        boss.tx = nil
-        boss:ping()
-        local n0 = level.noises and level.noises.seq or 0
-        stepAll(level, es, { pa }, 1.6, function()
-            boss.pingT, boss.cdT = 0, 99
-            stub.state.right = moving
-            if moving and pa.x > 22 * T then pa.x = 20 * T end
-        end)
-        stub.state.right = false
-        return (level.noises and level.noises.seq or 0) - n0, boss.tx
-    end
-    local nMove, txMove = try(true)
-    local nStill, txStill = try(false)
-    check('aro_detecta', nMove == 1 and txMove ~= nil and nStill == 0 and txStill == nil,
-        ('moviéndose: %d marca (el jefe ya sabe dónde=%s); quieto: %d (sabe dónde=%s)'):format(nMove, tostring(txMove ~= nil),
-         nStill, tostring(txStill ~= nil)))
+    local level, es, boss = arena()
+    stepAll(level, es, {}, 0.3)
+    local zx0, zx1 = floorPos(boss)
+    boss:stand(level, zx0 + 3 * T)
+    local pa = playerAt(level, 1)
+    pa.x = zx0 + 10 * T
+    for _ = 1, 20 do pa:update(DT, level) end
+    local px = pa.x
+    boss.pingT, boss.cdT, boss.tx = 99, 0, nil
+    local n0 = level.noises and level.noises.seq or 0
+    local seen, marks, top = {}, 0, 1e9
+    stepAll(level, es, { pa }, 6, function()
+        boss.ceilT = -99
+        if boss.state ~= 'prowl' and boss.state ~= 'ping' then boss.pingT = -99 end
+        pa.invT = 9
+        seen[boss.state] = true
+        if boss.state == 'aim' then marks = (level.noises and level.noises.seq or 0) - n0 end
+        top = math.min(top, boss.y)
+        return boss.state == 'tired'
+    end)
+    check('aro_detecta', marks == 1 and seen.ping and seen.pounce and not seen.charge and boss.state == 'tired'
+        and math.abs(boss.x - px) < 3 and top < boss.y - 150,
+        ('jugador quieto y callado: %d marca; salta=%s (sube %.0f px), embiste=%s; cae a %.0f px de donde lo detectó, queda %s'):format(
+         marks, tostring(seen.pounce), boss.y - top, tostring(seen.charge), math.abs(boss.x - px), boss.state))
 end
 
 -- EMBESTIDA: con un "!" lejos apunta (línea fija hasta la pared), corre hasta ella y queda agotado;
@@ -142,10 +147,10 @@ function cases.embestida()
         pa.x = zx0 + 12 * T
         for _ = 1, 20 do pa:update(DT, level) end
         local hp0 = pa.hp
-        Noise.emit(pa.x, pa.y, Noise.R.jump)
+        Noise.emit(pa.x, pa.y, Noise.R.faint)
         local seen, endX, stable, aimT = {}, nil, true, 0
         stepAll(level, es, { pa }, 6, function()
-            boss.pingT = -99
+            boss.pingT, boss.ceilT = -99, -99
             stub.state.crouch = crouch
             pa.vx = 0
             seen[boss.state] = true
@@ -167,9 +172,10 @@ function cases.embestida()
          aimT, tostring(stable), off, st, hitStand, hitCrouch))
 end
 
--- PINZAS: con el "!" cerca, estocada hacia ese lado; delante te da, detrás no, agachado no
+-- PINZAS: con el "!" cerca, la pinza MÁS CERCANA apunta al jugador desde su unión y lo sigue
+-- (también hacia arriba); da donde apunta; si el jugador se aparta tras fijarse, falla
 function cases.pinzas()
-    local function try(dx, crouch)
+    local function try(dx, mode)
         local level, es, boss = arena()
         stepAll(level, es, {}, 0.3)
         local zx0, zx1 = floorPos(boss)
@@ -178,48 +184,64 @@ function cases.pinzas()
         local pa = playerAt(level, 1)
         pa.x = bx + dx
         for _ = 1, 20 do pa:update(DT, level) end
-        local hp0 = pa.hp
-        Noise.emit(bx + 2.5 * T, pa.y, Noise.R.jump)           -- el "!" a la DERECHA, cerca
-        local seen, out = {}, 0
+        local hp0, y0 = pa.hp, pa.y
+        Noise.emit(pa.x, pa.y, Noise.R.hit)
+        local seen, out, uyMin, face, follow = {}, 0, 1, 0, true
         stepAll(level, es, { pa }, 4, function()
-            boss.pingT = -99
-            stub.state.crouch = crouch or false
+            boss.pingT, boss.ceilT = -99, -99
             pa.vx = 0
+            if mode == 'up' then pa.y, pa.vy = y0 - 150, 0 end               -- (en el aire, encima)
+            if mode == 'away' and boss.state == 'claw' then pa.x = bx + dx * 4 end   -- (se aparta cuando ya ha fijado)
             seen[boss.state] = true
-            if boss.state == 'claw' then out = math.max(out, (boss:clawPose(1, 0))) end
+            if boss.state == 'aim' and boss.deadTimer > 0.1 and boss.deadTimer < 0.6 then
+                local _, _, _, uy = boss:clawAim()
+                uyMin = math.min(uyMin, uy)
+                if math.abs(boss.markX - pa.x) > 2 or math.abs(boss.markY - pa.y) > 2 then follow = false end
+            end
+            if boss.state == 'claw' then face = boss.face; out = math.max(out, (boss:clawPose(boss.face, 0))) end
             return boss.state == 'prowl' or boss.state == 'taunt'
         end)
-        stub.state.crouch = false
-        return hp0 - pa.hp, seen, out, boss.kind
+        return hp0 - pa.hp, seen, out, face, uyMin, follow
     end
-    local front, seen, out = try(2.5 * T)
-    local behind = try(-2.5 * T)
-    local crouched = try(2.5 * T, true)
-    check('pinzas', seen.claw and not seen.charge and out > 6 and front == 1 and behind == 0 and crouched == 0,
-        ('estocada=%s (la pinza sale %.0f px de arte); delante -%d, detrás -%d, agachado -%d'):format(tostring(seen.claw), out, front,
-         behind, crouched))
+    local right, seen, out, f1, _, follow = try(2.5 * T)
+    local left, _, _, f2 = try(-2.5 * T)
+    local up, _, _, _, uy = try(2.5 * T, 'up')
+    local away = try(2.5 * T, 'away')
+    check('pinzas', seen.claw and not seen.charge and out > 6 and right == 1 and f1 == 1 and left == 1 and f2 == -1 and follow
+        and up == 1 and uy < -0.3 and away == 0,
+        ('estocada=%s (sale %.0f px de arte); a la derecha -%d con la pinza %d, a la izquierda -%d con la %d; la marca sigue al jugador=%s; '
+         .. 'arriba: apunta hacia arriba (uy %.2f) -%d; se aparta tras fijar: -%d'):format(tostring(seen.claw), out, right, f1, left, f2,
+         tostring(follow), uy, up, away))
 end
 
--- SALTO (fase 2): alterna con la embestida; cae en su diana y queda agotado
-function cases.salto()
+-- TECHO: corre a la pared, la trepa, va por el techo (girado), suelta su aro grande, marca donde
+-- detecta al jugador y se LANZA ahí; queda agotado en el suelo, de pie
+function cases.techo()
     local level, es, boss = arena()
     stepAll(level, es, {}, 0.3)
-    local zx0, zx1 = floorPos(boss)
-    boss.phase, boss.attackN = 2, 1                        -- (el siguiente lejano: salto)
-    boss:stand(level, zx0 + 3 * T); boss.cdT, boss.pingT = 0, -99
-    local nx = zx0 + 13 * T
-    Noise.emit(nx, boss.y + 60, Noise.R.jump)
-    local seen, top = {}, 1e9
-    stepAll(level, es, {}, 5, function()
+    local zx0, zx1, zy0, zy1 = floorPos(boss)
+    boss:stand(level, zx0 + 5 * T); boss.cdT, boss.pingT = 0, -99
+    local pa = playerAt(level, 1)
+    pa.x = zx0 + 15 * T
+    for _ = 1, 20 do pa:update(DT, level) end
+    local px, hp0 = pa.x, pa.hp
+    boss.ceilT = 99
+    local seen, wall, ceil, mark, solid = {}, false, false, nil, false
+    stepAll(level, es, { pa }, 12, function()
         boss.pingT = -99
+        if boss.state ~= 'prowl' then boss.ceilT = -99 end
         seen[boss.state] = true
-        top = math.min(top, boss.y)
+        if boss.state == 'climb' and math.abs(math.abs(boss.ang) - math.pi / 2) < 0.01 and boss.x < zx0 + 101 then wall = true end
+        if boss.state == 'ceil_ping' and math.abs(math.abs(boss.ang) - math.pi) < 0.01 and math.abs(boss.y - (zy0 + 100)) < 2 then ceil = true end
+        if boss.state == 'aim' and boss.kind == 4 then mark = boss.markX; if boss:isSolidBody() then solid = true end end
+        if boss.state == 'dive' then pa.x = px + 6 * T end                  -- (el jugador se quita de la diana)
         return boss.state == 'tired'
     end)
-    check('salto', seen.pounce and not seen.charge and boss.kind == 0 and math.abs(boss.x - nx) < 2 and boss.state == 'tired'
-        and top < boss.y - 150,
-        ('salta=%s (sube %.0f px), cae a %.0f px de la diana, queda %s'):format(tostring(seen.pounce), boss.y - top,
-         math.abs(boss.x - nx), boss.state))
+    check('techo', seen.climb and wall and ceil and seen.ceil_wait and mark and math.abs(mark - px) < 3 and seen.dive and boss.state == 'tired'
+        and math.abs(boss.x - px) < 3 and boss.ang == 0 and math.abs((boss.y + 100) - zy1) < 2 and not solid and pa.hp == hp0,
+        ('trepa la pared=%s, por el techo=%s; diana a %.0f px del jugador; se lanza=%s y queda %s a %.0f px, de pie=%s; apartándose: -%d'):format(
+         tostring(wall), tostring(ceil), math.abs((mark or 0) - px), tostring(seen.dive), boss.state, math.abs(boss.x - px),
+         tostring(boss.ang == 0), hp0 - pa.hp))
 end
 
 function cases.luz()
@@ -232,10 +254,10 @@ function cases.luz()
     for _ = 1, 20 do pa:update(DT, level) end
     pa.facing = 1
     -- apuntando + luz → se asusta y cancela
-    Noise.emit(boss.x + 8 * T, pa.y, Noise.R.jump)
+    Noise.emit(boss.x + 8 * T, pa.y, Noise.R.hit)
     local seen, icon = {}, 0
     stepAll(level, es, { pa }, 2.5, function()
-        boss.pingT = -99
+        boss.pingT, boss.ceilT = -99, -99
         pa.vx = 0
         if boss.state == 'aim' then pa.lightOn = true end
         seen[boss.state] = true
@@ -265,6 +287,7 @@ function cases.luz()
     local covered = false
     boss:enter('dazzled')
     covered = (boss:clawPose(-1, 0)) < -3
+    local vuln = boss:isVulnerable() == false                  -- (ya recibió su golpe)
     check('luz', cancelled and r1 == 'bounce' and st1 == 'dazzled' and r2 == 'stomp' and hp1 == hp0 - 1 and boss.hp == hp1 and covered,
         ('apuntando + luz: cancela=%s (icono %d); agotado sin luz: %s; con luz: %s, %s, vida %d→%d (otro golpe: %d); se tapa con las pinzas=%s'):format(
          tostring(cancelled), icon, tostring(r1), st1, tostring(r2), hp0, hp1, boss.hp, tostring(covered)))
@@ -292,6 +315,7 @@ function cases.rabia()
     played = {}
     stepAll(level, es, { pa }, 4, function()
         pa.invT, pa.vx = 9, 0
+        boss.ceilT, boss.pingT = -99, -99
         seen[boss.state] = true
         if boss.state == 'roar' then
             local _, _, r = boss:clawPose(1, 0)
@@ -299,9 +323,12 @@ function cases.rabia()
         end
     end)
     local rage = boss.rage
+    local _, mult = boss:pace()
+    local angry = boss:angry()
     boss.shriekT = 99
     stepAll(level, es, { pa }, 9, function()
         pa.invT, pa.vx = 9, 0
+        boss.ceilT, boss.pingT = -99, -99
         seen[boss.state] = true
         if level.lightScale then dim = true; range = math.min(range, Lights.range(level)) end
         local n = 0
@@ -309,10 +336,10 @@ function cases.rabia()
         minions = math.max(minions, n)
     end)
     local back
-    stepAll(level, es, { pa }, 8, function() pa.invT, pa.vx = 9, 0; boss.shriekT = 0; if not level.lightScale then back = true end end)
+    stepAll(level, es, { pa }, 8, function() pa.invT, pa.vx = 9, 0; boss.shriekT = 0; boss.ceilT, boss.pingT = -99, -99; if not level.lightScale then back = true end end)
     check('rabia', seen.roar and roarClaws and rage and (played.mgloomyRoar or 0) >= 1 and seen.shriek and dim and minions >= 1
-        and range < Lights.RANGE * 0.6 and back,
-        ('ruge=%s con las pinzas en alto y otro cuadro=%s; rabia=%s; grito=%s: linterna %.1f → %.1f casillas, súbditos %d; la luz vuelve=%s'):format(
+        and range < Lights.RANGE * 0.6 and back and mult >= 1.4 and angry,
+        ('ruge=%s con las pinzas en alto y otro cuadro=%s; rabia=%s (velocidad ×' .. mult .. ', se le nota=' .. tostring(angry) .. '); grito=%s: linterna %.1f → %.1f casillas, súbditos %d; la luz vuelve=%s'):format(
          tostring(seen.roar), tostring(roarClaws), tostring(rage), tostring(seen.shriek), Lights.RANGE / T, range / T, minions, tostring(back)))
 end
 
@@ -346,12 +373,13 @@ function cases.red()
     local level, es, boss = arena()
     stepAll(level, es, {}, 3)
     boss.phase, boss.markX, boss.markY, boss.endX, boss.kind, boss.dimT, boss.rage, boss.face = 2, 1234, 800, 555, 3, 3, true, -1
-    boss:ping()
+    boss.ang = math.pi
+    boss:ping(); boss:ping(900)
     local pk = boss:netPackExtra()
     local l2, es2, r = arena()
     r:netApplyExtra(pk, pk, 1)
     check('red', r.phase == 2 and r.markX == 1234 and r.endX == 555 and r.kind == 3 and r.rage == true and r.face == -1
-        and #r.pings == #boss.pings and l2.lightScale == 0.5,
+        and #r.pings == #boss.pings and r.pings[#r.pings].max == 900 and math.abs(r.ang - math.pi) < 0.01 and l2.lightScale == 0.5,
         ('fase %d, marca %d, fin %d, ataque %d, rabia %s, mira %d, aros %d/%d, luz ×%s'):format(r.phase, r.markX, r.endX,
          r.kind, tostring(r.rage), r.face, #r.pings, #boss.pings, tostring(l2.lightScale)))
 end
@@ -361,8 +389,8 @@ local function look()
     WINDOW_W, WINDOW_H = 1280, 720
     -- arriba (A LA LUZ, para ver las poses): rondar · ecolocalización · rugido con cristales
     -- abajo (a oscuras, como en el juego): embestida apuntando · estocada · deslumbrado
-    local shots = { { 'prowl', 0.3, false }, { 'ping', 0.3, false }, { 'roar', 0.5, false, true },
-                    { 'aim', 0.5, true, false, 1 }, { 'claw', 0.1, true, false, 2 }, { 'dazzled', 0.5, true } }
+    local shots = { { 'aim', 0.5, false, false, 2, 'up' }, { 'claw', 0.1, false, true, 2, 'up' }, { 'prowl', 0.5, false, true },
+                    { 'aim', 0.3, true, false, 4, 'ceil' }, { 'claw', 0.1, true, false, 2 }, { 'dazzled', 0.5, true } }
     local cv = love.graphics.newCanvas(1280 * 3, 720 * 2)
     for i, sh in ipairs(shots) do
         local level, es, boss = arena()
@@ -374,8 +402,16 @@ local function look()
         for _ = 1, 20 do pa:update(DT, level) end
         pa.facing = 1
         pa.lightOn = sh[1] == 'dazzled'
-        boss.state, boss.deadTimer, boss.rage, boss.kind, boss.face = sh[1], sh[2], sh[4] == true, sh[5] or 0, 1
+        boss.state, boss.deadTimer, boss.rage, boss.kind, boss.face = sh[1], sh[2], sh[4] == true, sh[5] or 0, -1
         boss.endX = zx1 - 125
+        boss.markX, boss.markY = pa.x, pa.y
+        if sh[6] == 'up' then boss.face, boss.markX, boss.markY = 1, boss.x + 2.2 * T, boss.y - 2 * T; pa.x, pa.y = boss.markX, boss.markY end
+        if sh[6] == 'ceil' then
+            local _, _, zy0 = floorPos(boss)
+            boss.markX, boss.markY = pa.x, boss.y + 100
+            boss.y, boss.ang = zy0 + 100, math.pi
+        end
+        if sh[1] ~= 'aim' or sh[5] ~= 2 then boss.face = (sh[6] == 'up') and 1 or -1 end
         if sh[1] == 'ping' then boss:ping(); boss.pings[1].t = 0.3 end
         level.dark = sh[3]
         local camX, camY = 9 * T, 1.5 * T
@@ -402,7 +438,7 @@ end
 
 function love.load()
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'ronda', 'aro_detecta', 'embestida', 'pinzas', 'salto', 'luz', 'caja', 'rabia', 'muerte', 'red' }) do
+    for _, n in ipairs({ 'ronda', 'aro_detecta', 'embestida', 'pinzas', 'techo', 'luz', 'caja', 'rabia', 'muerte', 'red' }) do
         if not only or only == n then
             local ok, err = pcall(cases[n])
             if not ok then check(n, false, 'ERROR ' .. tostring(err)) end

@@ -166,6 +166,7 @@ function Boss:damage(n, kind)
     self.hp = math.max(0, self.hp - (n or 1))
     Sound.play(self.hurtSound or 'bossHurt')
     Entity.emitFx('boss_hit', self.x, self.y)
+    require('src/world/Noise').emit(self.x, self.y, require('src/world/Noise').R.hit)   -- (dar un golpe se oye: niveles a oscuras)
     if self.hp <= 0 then self:defeat(); return true end
     if wasStunned then
         -- El único golpe que admite aturdido: se despierta, invulnerable un rato

@@ -898,9 +898,11 @@ list no mode until the user places a Point Area in them).
   then it is MULTIPLIED over the screen (no shaders/stencils). It restores the previous canvas (harness captures).
   What must always show is drawn after it: entities with `renderGlow(camX, camY)` (`Darkness.renderGlow`). HUD:
   `src/ui/LightHud.lua` (icon `ui/flashlight-Sheet.png` + 8 segments, under the lives).
-- **Noise** (`src/world/Noise.lua`): `Noise.emit(x, y, radius in tiles[, quiet])` from a jump 3.5, a hurt player /
-  a stomped enemy 9, ground pound 15 (`Noise.R`). WALKING MAKES NO NOISE (sneaking; and marks would flood the
-  screen). Only recorded in DARK levels, in `level.noises` of the level bound with `Noise.bind(level)` (AdventureState
+- **Noise** (`src/world/Noise.lua`): `Noise.emit(x, y, radius in tiles[, quiet])`. Only SIGNIFICANT sounds count
+  (user's rule), each louder than the previous (`Noise.R`): dealing damage to a boss `hit` 8 (`Boss:damage`) < a hurt
+  player `hurt` 10 < a killed enemy `kill` 12 < ground pound `pound` 15. WALKING AND JUMPING MAKE NO NOISE (jumps
+  used to: marks everywhere). `faint` 3.5 = the Mega Gloomy's echolocation mark (not a player noise). Only recorded in
+  DARK levels, in `level.noises` of the level bound with `Noise.bind(level)` (AdventureState
   on enter, server every `stepRoom`; the online client binds nil). Listeners: `Noise.heard(level, x, y, sinceSeq, k)`.
   Every noise leaves a NOISE MARK (the user's rule made visible: noise → mark → that's where they go look): fx
   `noise_s` / `noise_m` / `noise_l` → `Particles.emit` forwards them to `src/fx/NoiseMarks.lua` (SP and online, same
@@ -934,36 +936,44 @@ list no mode until the user places a Point Area in them).
   `ECHO_W[name]`: a slam booms, a step barely) the more echo it leaves. Done with delayed clones in `Sound.update`
   (OpenAL effects aren't available on every platform). Music has no echo.
 - **Mega Gloomy Crabby** (`types/megagloomy.lua`, "Mega Crabby lúgubre", `boss.megagloomy`; boss of the dark
-  levels). Third version, TERRESTRIAL (v1 = "tedious, boring, confusing"; v2 walked walls/ceiling and stabbed its legs
-  down from the ceiling: the user found the stab odd and wanted a ground crab). ONE RULE, visible on screen: **it only
-  attacks if there is a red "!", and it attacks THAT "!"** (blind: it knows only where noise happened). Art: the SAME
-  pixel grid as the small one at scale 10 (`MEGA_B`, 9 frames 38x21 + glow sheet); x,y = centre of its SHELL
-  (`BODY_ROW` 11: the box is the shell you see, 11x6 art px; legs don't count). It walks the zone FLOOR only
-  (`MG:stand`, `floorY`: never the side platforms). 'prowl' = walks to the last known spot, then back and forth.
-  ECHOLOCATION 'ping' every `pingEvery` s: stops, raises the claws and snaps them → ONE ring from its body that
-  DETECTS any player MOVING when it passes (`Noise.emit` on them = their "!"); stand still and it doesn't find you.
-  With a fresh "!" (`tAge ≤ FRESH` 4 s, cooldown over) → 'aim' (eyes blink, hiss; the mark of THAT attack fixed from
-  the start; `startAim` spends the "!") → CLAW ('claw', "!" within `CLAW_REACH` 4.2 tiles: short thick bar in front →
-  thrust of that side's claw; crouching or being behind = safe), CHARGE ('charge', far: dashed floor line to the wall
-  `endX` → runs to it; crouch under it or double-jump it) or POUNCE ('pounce', phase 2+, alternating with the charge:
-  target on the floor → jumps there and slams). Contact in an attack = 1 HP + push. LIT while aiming → 'flinch' ("…"),
-  cancelled. DAMAGE: after a charge/pounce it is 'tired' (`TIRED_T`): immune (bounce) unless a flashlight lights its
-  body → 'dazzled' (covers itself with the claws): stomp 1 / GP 2, one hit. RAGE (hp ≤ `rageAt` 0.4): 'roar' (claws
-  up), faster, 'shriek' every `shriekEvery` s (`level.lightScale` for `dimTime` s + reserve Gloomies) and CRYSTALS grow
-  ON THE CLAWS — never on the shell: the user's rule, crystals on the head look like spikes and the head is what you
-  stomp. 'taunt' (claw snaps) after an attack that hit somebody. DEATH is a crab's, not a robot's (`MG:defeat`
-  override, no explosions): 'dying_curl' → 'dying_out' (`releasesZone`).
+  levels). Fourth version: MOSTLY terrestrial + its ceiling attack (v1 = "tedious, boring, confusing"; v2 lived on
+  walls/ceiling and stabbed its legs down: odd; v3 was ground-only: the user wanted the ceiling launch back). ONE RULE,
+  visible on screen: **it only attacks if there is a red "!", and it attacks THAT "!"**. Two sources of "!":
+  (a) ECHOLOCATION 'ping' every `pingEvery` s (stops, raises the claws, snaps): ONE ring from its body that detects
+  whoever it TOUCHES, even standing still and silent (user: echolocation doesn't need the target to make sound) →
+  "!" there (`Noise.emit` faint + `tEcho`) → it JUMPS there ('pounce'); (b) player NOISES (see Noise: hit < hurt <
+  kill < ground pound; jumps and steps are silent) = investigation points → it CHARGES toward them ('charge': dashed
+  floor line to the wall `endX`; crouch under it or jump it). Either one within `CLAW_PICK` 4 tiles → CLAW instead.
+  With a fresh "!" (`tAge ≤ FRESH` 4 s, cooldown over) → 'aim' (eyes blink, hiss, the attack's mark; `startAim`
+  spends the "!"). CLAW ('claw'): the NEAREST claw aims at the player from its joint (`MG:clawAim()` = pivot +
+  direction to `markX/markY`, used by sim, red dotted line and drawing alike): during 'aim' the mark FOLLOWS the
+  player (`tPa`), any direction incl. up, locked the last `CLAW_LOCK` 0.2 s; the thrust hits along that line up to
+  `CLAW_REACH` 240 px (`clawHit`) — the old horizontal box hit jumping players it didn't visibly touch. CEILING every
+  `ceilingEvery` s (14; first at half): 'climb' (parametric path floor → nearest wall → ceiling, `MG:pathAt(u)`, body
+  rotated by `ang`: ±90° wall, 180° ceiling) → 'ceil_ping' (a BIG ring, `RING_CEIL`) → 'ceil_wait' (mark = where the
+  ring found a player, else straight below) → 'aim' (kind dive, target sprite on the floor; light doesn't cancel it)
+  → 'dive' (launches itself there, flips to land upright, `slam`). After charge / pounce / dive it is 'tired'
+  (`TIRED_T`): immune (bounce) unless a flashlight lights its body → 'dazzled' (covers itself with the claws + the
+  usual STUN STARS orbiting over it = "vulnerable now"): stomp 1 / GP 2, one hit. Contact in an attack = 1 HP + push;
+  LIT while aiming on the floor → 'flinch' ("…"), cancelled. Phase 2 (`phase2`): faster tables. RAGE (hp ≤ `rageAt`
+  0.4): 'roar' (claws up), EVERYTHING × `rageSpeed` 1.45 (`MG:pace()` → table row + multiplier: walk, charge, aim,
+  cooldown, climb, dive; like the Mega Crabby's `rageSpeed`), and it SHOWS like the Mega Crabby (`MG:angry()`): slight
+  1-px tremble, soft reddish pulse, anger symbols (`MegaCrabby/anger_*.png`, `renderAnger`, drawn in `renderGlow` so
+  they show in the dark); 'shriek' every `shriekEvery` s (`level.lightScale` for `dimTime` s + reserve Gloomies);
+  CRYSTALS grow ON THE CLAWS — never on the shell: crystals on the head look like spikes and the head is what you
+  stomp. 'taunt' after an attack that hit somebody. DEATH is a crab's, not a robot's (`MG:defeat` override, no
+  explosions): 'dying_curl' → 'dying_out' (`releasesZone`). x,y = centre of its SHELL (`BODY_ROW` 11, box 11x6 art
+  px; legs don't count); art = the SAME pixel grid as the small one at scale 10 (`MEGA_B`, 9 frames 38x21 + glow).
   CLAWS (user's picks): option B "Hoz" (long sharp sickle, 2 frames 14x7 `claw_left-Sheet.png`, right = mirror), at
   rest pointing INWARD ("C Ↄ": tips toward the body's centre) and LOW on the body (`CLAW_DY` 2 art px under the shell
-  centre; the mockups had them too high); thrust/charge = that side's claw turned outward; raised (ping, roar) =
-  exact 90° turn, mirrored so the dorsal crystals face OUTWARD. `MG:clawPose(side, now)` → out, dy, raised, frame,
-  outward (render-only, from state + deadTimer). Rage crystals = mix of options B "Espinas" × C "Corona"
-  (`CLAW_CRYSTALS`): `claw_rage_left-Sheet.png` (14x12: 5 crystal rows above the claw) + `claw_rage_glow-Sheet.png`
-  (their tips, drawn in `renderGlow`: visible in the dark). All from `tools/ui/make_gloomy_sprites.py --apply
+  centre; the mockups had them too high); raised (ping, roar) = exact 90° turn, mirrored so the dorsal crystals face
+  OUTWARD. `MG:clawPose(side, now)` → out, dy, raised, frame, outward (render-only). Rage crystals = mix of options
+  B "Espinas" × C "Corona" (`CLAW_CRYSTALS`): `claw_rage_left-Sheet.png` (14x12: 5 crystal rows above the claw) +
+  `claw_rage_glow-Sheet.png` (their tips, drawn in `renderGlow`). All from `tools/ui/make_gloomy_sprites.py --apply
   [--pinzas X]` (montages `pinzas` / `cristales` → `FlappyMonster_pruebas/gloomy/`).
-  netPackExtra: phase, frame, face, mark x/y, endX, attack kind, light scale, icon, rage, pings {id,x,y,t}
-  (protocol v45). Arena `tools/levelgen/arenas/jefe_lugubre.json`; real level **gruta_lugubre** "Gruta Lúgubre" /
-  "Gloomy Grotto"
+  netPackExtra: phase, frame, face, mark x/y (claw: the aim point), endX, attack kind (1 charge, 2 claw, 3 pounce,
+  4 dive), light scale, icon, rage, ang·100, pings {id,x,y,t,max} (protocol v46). Arena
+  `tools/levelgen/arenas/jefe_lugubre.json`; real level **gruta_lugubre** "Gruta Lúgubre" / "Gloomy Grotto"
   (`levels_boss.py`, cave theme, dark: no spikes or pits, Gloomies, then the arena, zone from column 88).
   `retheme.py` has NO --help: any unknown flag runs it over EVERY level — pass level names. Harnesses
   `megagloomy_rules` (+ `LOOK=1`: claws, ring, rage, each telegraph in the dark), `boss_sim` / `boss_intro` / `online_boss`

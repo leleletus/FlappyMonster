@@ -1,6 +1,6 @@
 -- src/world/Noise.lua
 -- RUIDOS que los enemigos pueden OÍR (el Crabby lúgubre caza de oído). Quien hace ruido llama a
--- Noise.emit(x, y, radio en casillas): saltos, ground pound, un golpe a un jugador, un
+-- Noise.emit(x, y, radio en casillas): un ground pound, un golpe a un jugador, un
 -- enemigo que muere, un bloque que se rompe... Se apuntan en el nivel que está simulando
 -- (Noise.bind(level): lo pone el modo un jugador y el servidor en cada paso; en la predicción
 -- del cliente no hay ninguno y no se apunta nada). Cada oyente recuerda el último que procesó
@@ -8,9 +8,12 @@
 local Noise = {}
 
 local KEEP = 24
--- Radio (casillas) de cada ruido. NO hay ruido de pasos: andar es silencioso (así se puede pasar
--- con sigilo y las marcas no llenan la pantalla). Saltar se oye cerca; un golpe, lejos.
-Noise.R = { jump = 3.5, bump = 5, hurt = 9, kill = 9, tile = 10, pound = 15, boss = 22 }
+-- Radio (casillas) de cada ruido. Andar y SALTAR no hacen ruido (así se puede pasar con sigilo y
+-- las marcas no llenan la pantalla). Solo cuenta lo importante, y cada cosa suena más que la
+-- anterior: dar un golpe (a un jefe) < recibirlo < matar a un enemigo < un ground pound.
+-- `faint` = la marca de la ecolocalización del jefe (no es un ruido del jugador: es donde lo ha
+-- detectado; de cerca también atrae a los Crabbies lúgubres).
+Noise.R = { faint = 3.5, hit = 8, hurt = 10, kill = 12, tile = 10, pound = 15, boss = 22 }
 
 function Noise.bind(level) Noise.level = level end
 

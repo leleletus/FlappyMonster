@@ -467,7 +467,7 @@ function PlayerAdventure:jump()
     if self.jumpsLeft > 0 then
         local vel = ADV_JUMP_VEL * (self.inWater and self.liquid.jumpMult or 1.0) * (self.jumpMult or 1)
         self.vy=vel; self.jumpsLeft=self.jumpsLeft-1
-        self.puff=PUFF_SCALE; Sound.play('jump'); Noise.emit(self.x, self.y, Noise.R.jump)
+        self.puff=PUFF_SCALE; Sound.play('jump')
     end
 end
 
