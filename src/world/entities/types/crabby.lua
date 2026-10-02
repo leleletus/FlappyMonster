@@ -220,12 +220,16 @@ function Crabby:crawlWalk(dt, level)
 end
 
 -- En una pared la hitbox está girada; girando en una esquina, con la pose real
+local stuckCenterY, dropTipY      -- (del clavado boca abajo: se definen con la caída, más abajo)
 function Crabby:getOuterBounds()
     if Crawler.turning(self) then
         return Crawler.poseBox(self, -self.outerW / 2, -self.outerH / 2, self.outerW, self.outerH)
     end
     if Crawler.onWall(self) and self.cattached then
         return { x = self.x - self.outerH / 2, y = self.y - self.outerW / 2, w = self.outerH, h = self.outerW }
+    end
+    if self.state == 'drop_stuck' then              -- (clavado boca abajo: la caja, donde se ve el cuerpo)
+        return { x = self.x - self.outerW / 2, y = stuckCenterY(self) - self.outerH / 2, w = self.outerW, h = self.outerH }
     end
     return Entity.getOuterBounds(self)
 end
@@ -235,6 +239,9 @@ function Crabby:getInnerBounds()
     end
     if Crawler.onWall(self) and self.cattached then
         return { x = self.x - self.innerH / 2, y = self.y - self.innerW / 2, w = self.innerH, h = self.innerW }
+    end
+    if self.state == 'drop_stuck' then
+        return { x = self.x - self.innerW / 2, y = stuckCenterY(self) - self.innerH / 2, w = self.innerW, h = self.innerH }
     end
     return Entity.getInnerBounds(self)
 end
@@ -270,6 +277,22 @@ function Crabby:onStomp()
     self.currentImg    = self.sk.dead
 end
 
+-- Aplastado mientras estaba clavado boca abajo: queda boca abajo (flipped viaja por red) y en
+-- el suelo donde tenía clavado el pincho, no dibujado de pie donde estaba su caja
+function Crabby:stomp()
+    local stuck = self.state == 'drop_stuck'
+    local floorY
+    if stuck then
+        local _, maxH = self:spikeDims()
+        floorY = dropTipY(self) - maxH * STUCK_EMBED
+    end
+    Entity.stomp(self)
+    if stuck and self.state == 'dead' then
+        self.flipped = true
+        self.y = floorY - self.sk.dead:getHeight() * GUMMY_SCALE + self.sprH / 2
+    end
+end
+
 function Crabby:canBeStomped() return not self:isBodyDisabled() end
 
 -- Del techo: detecta al jugador también escondido y cae directamente
@@ -295,10 +318,19 @@ function Crabby:spikeDims() return spikeDims() end
 local function dropSpikeBaseY(self)
     return self.y - self.sprH / 2 + self.sk.hid:getHeight() * GUMMY_SCALE
 end
-local function dropTipY(self)
+dropTipY = function(self)
     local _, maxH = self:spikeDims()
     return dropSpikeBaseY(self) + maxH
 end
+-- Clavado (boca abajo): la línea de la CABEZA. El pincho no se mueve; la cabeza se apoya en su
+-- base, `topperDy` px de arte más adentro (la púa de hielo y el carámbano van encajados en el
+-- caparazón, igual que de pie: sin esto quedaba un hueco de 2 px entre la púa y la cabeza)
+local function stuckHeadY(self)
+    return dropSpikeBaseY(self) + (self.topperDy or 0) * GUMMY_SCALE
+end
+-- … y el centro de su CUERPO: está ENCIMA del pincho, no donde dice self.y (que es donde está
+-- el pincho). Lo usan sus cajas (el pisotón) y el dibujo.
+stuckCenterY = function(self) return stuckHeadY(self) - self.sprH / 2 end
 
 function Crabby:updateDrop(dt, level)
     local st = self.state
@@ -605,22 +637,37 @@ function Crabby:drawClaws(drawX, feetY, flipped)
     love.graphics.setColor(1, 1, 1, 1)
     for i, side in ipairs({ -1, 1 }) do
         local cl = self._claws[i]
-        local fr, dy = 1, 0                               -- 1 abierta, 2 cerrada
-        if CLAW_CLOSED[st] or sink > 0 then
+        local fr, dx, dy = 1, 0, 0                        -- 1 abierta, 2 cerrada; desplazamiento en px de arte
+        if sink > 0 then
             fr, dy = 2, sink
-        elseif st == 'idle' and since < 0.67 then         -- chasquido doble con las pinzas arriba
-            local ph = math.floor(since * 6) % 4
-            if ph < 2 then fr, dy = 1, -2 else fr, dy = 2, -1 end
+        elseif CLAW_CLOSED[st] then
+            fr = 2
+        elseif st == 'idle' and since < 0.9 then
+            -- Parado: las alza (subida y bajada suaves) y chasquea dos veces arriba
+            local up = math.min(1, since / 0.14) * math.min(1, (0.9 - since) / 0.18)
+            up = up * up * (3 - 2 * up)
+            dy, dx = -2.2 * up, side * 0.5 * up
+            local ph = (since - 0.14) * 7
+            if since > 0.14 and since < 0.72 and ph % 2 >= 1 then fr = 2 end
         else
             if st == 'walk' then
-                dy = math.floor(math.sin(now * 4 * math.pi + (side > 0 and math.pi or 0)) * 0.6 + 0.5)
+                -- Andando: se balancean con el paso, cada una a su fase (como las del Mega)
+                local ph = (i == 1) and 0 or 1.9
+                dy = math.sin(now * 9 + ph) * 0.55
+                dx = side * (0.15 + 0.15 * math.sin(now * 4.5 + ph))
+            else
+                dy = math.sin(now * 3 + i) * 0.2            -- (quieto de otro modo: respira)
             end
             if now >= cl.next then cl.snapTo, cl.next = now + 0.12, now + 0.6 + math.random() * 1.8 end
             if now < (cl.snapTo or 0) then fr = 2 end
         end
-        local cx = side * (cfg.x * S + fw * S / 2 - cfg.inset * S)
-        local top = cfg.y * S - fh * S + dy * S
-        local rows = math.min(fh, math.floor(-top / S))   -- (filas por encima de la superficie)
+        -- (posición al píxel de PANTALLA: pasos de 1/4 de píxel de arte, sin saltos de un píxel
+        -- entero; y solo se recorta lo que queda bajo la superficie AL HUNDIRSE — antes se
+        -- recortaba siempre contra la línea de los pies y al bajar la pinza perdía una fila)
+        local cx = side * (cfg.x * S + fw * S / 2 - cfg.inset * S) + math.floor(dx * S + 0.5)
+        local top = math.floor(cfg.y * S - fh * S + dy * S + 0.5)
+        local rows = fh
+        if sink > 0 then rows = math.min(fh, math.floor(-top / S)) end
         if rows > 0 then
             a.quad:setViewport((fr - 1) * fw, 0, fw, rows)
             love.graphics.draw(a.img, a.quad, cx, top, 0, -side * S, S, fw / 2, 0)
@@ -698,11 +745,17 @@ function Crabby:renderBody(camX, camY)
     local feetY = flipped and math.floor(self.y - camY - self.sprH / 2)
                           or math.floor(self.y - camY + self.sprH / 2)
     local spriteVisH = ih * math.abs(scaleY)
+    local stuckBase, partial
     if stuck then
-        -- El pincho queda fijo; la cabeza del cangrejo se apoya en su base y
-        -- el cuerpo crece hacia arriba según el sprite de cada momento
-        local baseY = math.floor(dropSpikeBaseY(self) - camY)
-        feetY = baseY - spriteVisH
+        -- El pincho queda fijo; la cabeza del cangrejo se apoya en su base (encajada `topperDy`)
+        -- y el cuerpo crece hacia ARRIBA según el sprite de cada momento. Los cuadros que dejan
+        -- filas vacías arriba (hundirse del helado: sk.inset) se colocan por su parte VISIBLE:
+        -- si no, el cuerpo aparecía arriba, separado de la púa, y bajaba hacia ella
+        stuckBase = math.floor(dropSpikeBaseY(self) - camY)
+        local inset = (self.sk.inset and self.sk.inset[img]) or 0
+        partial = inset > 0 and img ~= self.sk.hid
+        if img == self.sk.hid then inset = 0 end
+        feetY = math.floor(stuckHeadY(self) - camY) - (ih - inset) * math.abs(scaleY)
     end
 
     -- Levantándose: gira 180° alrededor de su centro
@@ -717,7 +770,7 @@ function Crabby:renderBody(camX, camY)
 
     if stuck then
         -- Entero, igual que un pincho que cae clavado (la punta dentro del suelo)
-        self:drawStuckTopper(math.floor(self.x - camX), feetY + spriteVisH)
+        self:drawStuckTopper(math.floor(self.x - camX), stuckBase)
     elseif self.spikeProgress > 0 and not self.coverFront then
         local headH = self:headH(img) * math.abs(by)              -- (sigue a la cabeza: respira, se hunde)
         if flipped then self:drawTopper(drawX, feetY + headH, self.spikeProgress, 1)
@@ -727,7 +780,7 @@ function Crabby:renderBody(camX, camY)
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.draw(img, drawX, feetY, 0, scaleX, flipped and -scaleY or scaleY,
                        img:getWidth() / 2, ih)
-    if self.sk.claw then self:drawClaws(drawX, feetY, flipped) end
+    if self.sk.claw and not partial then self:drawClaws(drawX, feetY, flipped) end
     -- Tapa DELANTE (montón de nieve): sale de la superficie, por delante del cangrejo
     if self.coverFront and self.spikeProgress > 0 and not stuck then
         self:drawTopper(drawX, feetY, self.spikeProgress, flipped and 1 or -1)

@@ -21,6 +21,8 @@
 --                 (no a quien salta por encima) → pinzas pegadas → recover → chase
 --   mega_pinzas   pinzas pegadas: pisar el lomo rebota sin daño, pisotón en una pinza rebota sin
 --                 daño, ground pound en una pinza = -2 y se suelta (un golpe por palmada)
+--   clavado       clavado boca abajo tras caer del techo (helado y normal): la caja de pisotón, en el cuerpo
+--                 que se ve (no en el pincho); caerle encima lo mata; aplastado, boca abajo y en el suelo
 --   mega_carambanos  al caer del salto desde la pared: grietas (aviso, sin daño) y luego carámbanos a los dos
 --                 lados que quitan 1 y empujan; caducan (patchTime; enfadado, más), se van al morir y
 --                 no se reaparece dentro
@@ -319,6 +321,44 @@ end
 function cases.carambano_techo()
     local _, _, e, pa, hp0 = ceilingDrop('crabby_ice_icicle')
     check('carambano_techo', pa.hp == hp0 - 2, ('vida %d→%d (cangrejo %s)'):format(hp0, pa.hp, e.state))
+end
+
+-- Clavado boca abajo tras caer del techo (Crabby helado Y normal): la caja de pisotón está donde se
+-- ve el cuerpo (encima del pincho, no en el pincho), la cabeza toca la púa (encajada topperDy),
+-- caerle encima lo mata y queda aplastado BOCA ABAJO en el suelo
+function cases.clavado()
+    local Interactions = require 'src/world/entities/Interactions'
+    local ok, msg = true, {}
+    for _, ty in ipairs({ 'crabby_ice_icicle', 'crabby_ice', 'crabby' }) do
+        local level, es, e = room(8, 8, { ent(ty, 4, 7) })
+        step(level, es, 0.3)
+        local floorY = e.y + e.sprH / 2
+        e.state, e.deadTimer, e.spikeProgress = 'drop_stuck', 2, 1
+        e.y = e.y - 20
+        e:updateCustom(0, level)
+        e.deadTimer = 2
+        local b = e:getOuterBounds()
+        local baseY = e.y - e.sprH / 2 + e.sk.hid:getHeight() * GUMMY_SCALE          -- base del pincho
+        local headY = baseY + (e.topperDy or 0) * GUMMY_SCALE
+        local onBody = math.abs((b.y + b.h / 2) - (headY - e.sprH / 2)) < 1 and b.y + b.h <= headY + 1
+        -- un jugador cayendo sobre el cuerpo (por encima de la púa)
+        local pa = player(level, e.x, b.y - 30)
+        pa.vy, pa.onGround = 300, false
+        local hit
+        for _ = 1, 30 do
+            pa.y = pa.y + 4
+            hit = Interactions.check(pa, e)
+            if hit then break end
+        end
+        local topAt = pa:getOuterBounds().y + pa:getOuterBounds().h
+        e:stomp()
+        local deadOk = e.state == 'dead' and e.flipped == true and e.y < floorY and e.y > floorY - 2 * T
+        local good = onBody and hit == 'stomp' and topAt < headY and deadOk
+        ok = ok and good
+        msg[#msg + 1] = ('%s: caja en el cuerpo=%s, cayéndole encima %s (pies a %d px sobre la púa), aplastado boca abajo=%s'):format(
+            ty, tostring(onBody), tostring(hit), headY - topAt, tostring(deadOk))
+    end
+    check('clavado', ok, table.concat(msg, ' · '))
 end
 
 function cases.trampolin()
@@ -629,6 +669,62 @@ local function lookMega()
     print('guardado ' .. love.filesystem.getSaveDirectory() .. '/icemega_look.png')
 end
 
+-- LOOK=1: BOCA ABAJO (<save>/icecrabby_techo.png). Filas: Crabby helado de carámbano y de púa en el
+-- TECHO escondiéndose (6) y saliendo (6); y, clavado en el suelo tras caer (drop_stuck), el de
+-- carámbano, el de púa y el Crabby normal: escondido → saliendo → pataleando (12 momentos), con su
+-- caja de pisotón (rojo) y, al final, aplastado
+local function lookCeiling()
+    local N = 13
+    local W, H = 2 * T, 3 * T
+    local rows = { { 'crabby_ice_icicle', 'techo' }, { 'crabby_ice', 'techo' },
+                   { 'crabby_ice_icicle', 'clavado' }, { 'crabby_ice', 'clavado' }, { 'crabby', 'clavado' } }
+    local cv = love.graphics.newCanvas(N * W, #rows * H)
+    love.graphics.setCanvas(cv)
+    love.graphics.clear(0.35, 0.42, 0.62, 1)
+    for row, r in ipairs(rows) do
+        local level, es, e
+        if r[2] == 'techo' then
+            level, es = room(6, 5, { ent(r[1], 3, 2, { attach = 'ceiling' }) })
+        else
+            level, es = room(6, 5, { ent(r[1], 3, 4) })
+        end
+        e = es[1]
+        step(level, es, 0.3)
+        local y0 = e.y
+        for i = 1, N do
+            if r[2] == 'techo' then
+                local k = (i - 1) % 6
+                if i <= 6 then e.state, e.hideTransTimer = 'hide_in', k * 0.2
+                elseif i <= 12 then e.state, e.hideTransTimer = 'hide_out', k * 0.2
+                else e.state = 'walk'; e:stomp() end
+                if i <= 12 then e:updateCustom(0, level) end
+            else
+                if i == 1 then
+                    e.state, e.deadTimer, e.spikeProgress = 'drop_stuck', 0, 1
+                    e.y = y0 - 12
+                end
+                if i <= 12 then e.deadTimer = (i - 1) * 0.16; e:updateCustom(0, level); e.deadTimer = (i - 1) * 0.16
+                else e:stomp() end
+            end
+            local camX, camY = e.x - W / 2 - (i - 1) * W, 1 * T - (row - 1) * H
+            love.graphics.setScissor((i - 1) * W, (row - 1) * H, W, H)
+            love.graphics.clear(0.35, 0.42, 0.62, 1)
+            level:render(camX, camY)
+            e:render(camX, camY)
+            if e.state ~= 'dead' and not e:isBodyDisabled() then
+                local b = e:getOuterBounds()
+                love.graphics.setColor(1, 0.2, 0.2, 0.9)
+                love.graphics.rectangle('line', b.x - camX, b.y - camY, b.w, b.h)
+                love.graphics.setColor(1, 1, 1, 1)
+            end
+            love.graphics.setScissor()
+        end
+    end
+    love.graphics.setCanvas()
+    cv:newImageData():encode('png', 'icecrabby_techo.png')
+    print('guardado ' .. love.filesystem.getSaveDirectory() .. '/icecrabby_techo.png')
+end
+
 -- LOOK=1: los sprites nuevos en el juego: Crabby y Crabby helado APLASTADOS, Gummy en paracaídas
 -- y el Mega Crabby (normal) con sus pinzas, abiertas y cerradas
 local function lookExtras()
@@ -649,10 +745,10 @@ local function lookExtras()
 end
 
 function love.load()
-    if os.getenv('LOOK') then look(); lookMega(); lookSpikes(); lookHide(); lookExtras() end
+    if os.getenv('LOOK') then look(); lookMega(); lookSpikes(); lookHide(); lookExtras(); lookCeiling() end
     local only = os.getenv('CASE')
     for _, n in ipairs({ 'tapa_pegada', 'pinzas', 'hundirse', 'escombros', 'pua', 'carambano', 'nieve_toque', 'nieve_encima', 'nieve_gp',
-                         'nieve_techo', 'carambano_techo', 'trampolin', 'pared',
+                         'nieve_techo', 'carambano_techo', 'clavado', 'trampolin', 'pared',
                          'mega_palmada', 'mega_pinzas', 'mega_carambanos', 'mega_red', 'gummy_helado', 'pinchos_skin' }) do
         if not only or only == n then
             local ok, err = pcall(cases[n])

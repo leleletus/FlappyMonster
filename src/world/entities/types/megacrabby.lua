@@ -81,7 +81,7 @@ local REST_KINDS = { 1, 2, 1, 3 }
 -- del sprite desde los pies, el punto donde se unen); se solapan CLAW_IN
 -- píxeles de pinza con el cuerpo. La derecha es la izquierda volteada.
 -- (con las pinzas grandes 11x10: algo más pequeñas de escala y más afuera, para que no tapen el cuerpo)
-local CLAW_K, CLAW_X, CLAW_Y, CLAW_IN = 0.75, 6.8, -1.6, 1.5
+local CLAW_K, CLAW_X, CLAW_Y, CLAW_IN = 0.68, 6.6, -1.2, 1.5
 local CS = MS * CLAW_K
 
 -- ARTE por clase (Mega.art; el Mega Crabby helado, megacrabby_ice.lua, pone el suyo):

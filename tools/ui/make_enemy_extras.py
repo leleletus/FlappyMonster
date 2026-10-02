@@ -8,10 +8,12 @@
 #   gummy/parachute.png      paracaídas de la guardia del Rey Gummy (entra por el techo)
 #   megacrabby_ice/ice_field-Sheet.png   campo de carámbanos del Mega Crabby helado, 3 cuadros
 #                            8x16: grietas de aviso, carámbano, carámbano con brillo
-#   MegaCrabby/claw_left-Sheet.png       PINZAS NUEVAS del Mega Crabby (2 cuadros 11x10: abierta /
-#                            cerrada): pinza gorda de cangrejo ermitaño, alzada, con el dedo de fuera
-#                            grande y ganchudo y el pulgar corto. Nada que ver con la del Mega
-#                            Crabby helado (centolla: larga, baja y horizontal). El original del
+#   MegaCrabby/claw_left-Sheet.png       PINZAS del Mega Crabby (2 cuadros 11x10: abierta /
+#                            cerrada): pinza de cangrejo de costa templada (buey de mar): horizontal
+#                            como la del helado, pero GORDA — palma redonda, dos dedos gruesos y
+#                            curvos que abren como una boca y puntas oscuras —, sin cerdas. La del
+#                            helado (centolla) es larga, baja y fina. (Una versión alzada, tipo
+#                            ermitaño, no le pegaba: el usuario la descartó.) El original del
 #                            usuario sigue fuera del repo (tools/ui/originals.py).
 #
 #   python3 tools/ui/make_enemy_extras.py            → solo la vista previa
@@ -26,6 +28,7 @@ PREVIEW = '/home/mtvemo/FlappyMonster_pruebas/extras/vista_previa.png'
 WHITE = {'a': '#1e1e2a', 'h': '#ffffff', 'w': '#f2f2f6', 's': '#c4c8d6'}
 ORANGE = {'a': '#1e1e2a', 'h': '#ffd8a8', 'w': '#f89e58', 's': '#e26832', 'd': '#a83e28'}
 CHUTE = {'a': '#1e1e2a', 'h': '#ffffff', 'w': '#f2f2f6', 's': '#c4c8d6', 'r': '#e04848', 'q': '#a82c3c'}
+CRAB = dict(WHITE, t='#5a5f78')            # (puntas de los dedos, oscuras: cangrejo de roca)
 ICE = {'o': '#3c6cb4', 'h': '#ffffff', 'w': '#c8e6ff', 's': '#8cc0ee'}
 
 
@@ -92,29 +95,29 @@ FIELD = strip([
 # Pinza del Mega Crabby (izquierda; se une al cuerpo por abajo a la derecha): abierta / cerrada
 CLAW = strip([
     art([
-        'aa.........',
-        'ahaa....a..',
-        'ahwwa..awa.',
-        'awwwa.aawa.',
-        'awwwwaawsa.',
-        'awwwaawwsa.',
-        'awwwwwwwssa',
-        '.awwwwwwssa',
-        '..awwwsssa.',
-        '...aaaaaa..',
-    ], WHITE),
+        '......aaaa.',
+        '.aaaaahwwwa',
+        'athwwwwwwwa',
+        '.atwwwwwwwa',
+        '..aaaawwwsa',
+        '.....awwwsa',
+        '..aaaawwssa',
+        '.atwwwwsssa',
+        'attwwwsssa.',
+        '.aaaaaaaa..',
+    ], CRAB),
     art([
         '...........',
-        '.aaa...a...',
-        'ahwwaaawa..',
-        'ahwwwawwsa.',
-        'awwwaawwsa.',
-        'awwwwawwsa.',
-        'awwwwwwwssa',
-        '.awwwwwwssa',
-        '..awwwsssa.',
-        '...aaaaaa..',
-    ], WHITE),
+        '......aaaa.',
+        '.aaaaahwwwa',
+        'athwwwwwwwa',
+        '.atwwwwwwsa',
+        '..aaaaawwsa',
+        '.atwwwwwssa',
+        'attwwwsssa.',
+        '.aaaaaaaa..',
+        '...........',
+    ], CRAB),
 ])
 
 OUT = {

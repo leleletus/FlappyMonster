@@ -389,10 +389,12 @@ Small enemy sprites drawn by hand as character maps: `tools/ui/make_enemy_extras
                        `crabby_ice/dead.png` (each Crabby skin loads its own `dead.png`; they used to share
                        gummy/dead.png, fine while everything was white), the guard's parachute, the Icy Mega's icicle
                        field and the Mega Crabby's CLAWS (`MegaCrabby/claw_left-Sheet.png`, 2 frames 11x10; the user:
-                       the 7x6 ones looked like little fingers): a fat hermit-crab pincer held UP, big hooked outer
-                       finger + short thumb — on purpose nothing like the Icy Mega's (king crab: long, low, horizontal);
-                       `CLAW_K` 0.75, `CLAW_X` 6.8 so they don't cover the body. Art only (the Mega's claws are not
-                       hitboxes). make_crab_redesign.py no longer writes that sheet.
+                       the 7x6 ones looked like little fingers): a TEMPERATE shore-crab pincer — horizontal like the Icy
+                       Mega's, but FAT: round palm, two thick curved fingers that open like a mouth, dark finger tips,
+                       no bristles (the icy one, king crab, is long, low and thin). A raised hermit-crab pincer was
+                       tried first and rejected ("fits another kind of crab"). `CLAW_K` 0.68, `CLAW_X` 6.6 so they
+                       don't cover the body. Art only (the Mega's claws are not hitboxes). make_crab_redesign.py no
+                       longer writes that sheet.
 Spikes are images too: assets/images/spikes/spike.png (tile spikes, rotated/flipped
                        for the 4 directions; falling spike) — SPIKE SKINS: level JSON `"spikeSkin": "ice"`
                        (editor Nivel → Fondo y clima → Pinchos; `src/world/SpikeSkins.lua` LIST = id + PNG, new skin =
@@ -519,7 +521,15 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   common state 'launched' (gravity, lands → walk; patrol bounds dropped). Flyers
   aren't launched. Crawlers: `Crawler.supportBody` (face from the normal).
 - Ceiling Crabbies detect players while hidden (`canDropNow`/`isHiding`) and drop
-  straight from the shell (`dropHidden`). A wall-walking one RELEASES the crawl when
+  straight from the shell (`dropHidden`). STUCK UPSIDE DOWN (`drop_stuck`: spike in the floor, body above it): `self.y`
+  is where the SPIKE is, so everything about the body uses `stuckHeadY` (spike base + `topperDy` art px: the ice spike /
+  icicle sit 2 px into the shell there too — it left a 2-px gap) and `stuckCenterY`: `getOuterBounds/getInnerBounds`
+  (the stomp box used to sit on the spike, under the visible body), and the drawing, which places each frame by its
+  VISIBLE rows (`sk.inset`: the icy sink frames have empty top rows, so flipped they appeared at the top, detached,
+  and grew DOWN towards the spike; now the body grows up out of the spike and stays attached; no claws on partial
+  frames). Stomped while stuck (`Crabby:stomp`): `flipped = true` and `y` on the floor, so the crushed sprite lies
+  upside down where the spike was (both travel in snapshots). Harness `icecrabby_rules clavado` (+ `LOOK=1` →
+  icecrabby_techo.png: ceiling hide/unhide and the stuck sequence with its box). A wall-walking one RELEASES the crawl when
   it starts falling (`releaseCrawl` at drop_fall; otherwise the stomp rules kept
   seeing a ceiling normal and a stuck Crabby killed whoever jumped on it) and, once
   back on the ceiling, clears `dropped` → it drops again (a plain ceiling Crabby
@@ -589,8 +599,10 @@ assets/levels/*.json   levels (server scans this dir; files starting with _ hidd
   `LOOK=1` → icecrabby_esconderse.png).
   SMALL CLAWS (user's pick "A: Mini Mega" of 3, `tools/ui/make_icecrabby_claws.py --apply A`): `crabby_ice/claw_left-Sheet.png`
   2 frames 7x7 (open / closed; right = mirror), skin field `claw` {file, w, x, y, inset} (art px like the Mega);
-  render-only `Crabby:drawClaws` after the body: walking = sway with the step + random snaps, `idle` = raised double
-  snap, hiding / out / drops = closed and SINKING with the shell row by row (`inset + 1`; rows under the surface are
+  render-only `Crabby:drawClaws` after the body, animated like the Mega's (continuous offsets in art px placed to the
+  SCREEN pixel = quarter-art-pixel steps; integer art-pixel steps looked choppy, and clipping every frame against the
+  feet line cut the bottom row whenever a claw dipped — now only sinking frames are clipped): walking = each claw sways
+  on its own phase + random snaps, `idle` = eased raise with a double snap, hiding / out / drops = closed and SINKING with the shell row by row (`inset + 1`; rows under the surface are
   cut with a quad viewport), hidden / peeking / dead = none; mirrored on the ceiling. Harness `icecrabby_rules pinzas`.
   Covers (on floor, walls and ceiling): ice spike = the normal spike (kills); icicle = the Snowball Boss icicle,
   always an icicle, hazard `effect='hurt', dmg=2` + `onHurtPlayer` recoil (Interactions 'hurt' now takes the
