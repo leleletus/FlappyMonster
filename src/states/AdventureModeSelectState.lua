@@ -1,5 +1,5 @@
 -- src/states/AdventureModeSelectState.lua
--- Menú intermedio: SOLO (singleplayer) u ONLINE (multijugador).
+-- Menú intermedio: HISTORIA (un jugador), ONLINE (multijugador) o JUEGO LIBRE (pruebas: todos los niveles).
 -- Se muestra al elegir Adventure en el menú principal.
 
 local CornerButtons = require 'src/ui/CornerButtons'
@@ -13,8 +13,8 @@ local function loadAssets()
     imgBg = love.graphics.newImage('assets/images/menus/MenuDif.png')
 end
 
-local OPTIONS = { 'adv.solo', 'adv.online' }   -- claves de idioma
-local BTN_W   = 320
+local OPTIONS = { 'adv.story', 'adv.online', 'adv.free' }   -- claves de idioma
+local BTN_W   = 420
 local BTN_H   = 58
 local BTN_GAP = 30
 
@@ -85,9 +85,11 @@ end
 
 function AdventureModeSelectState:_select(i)
     if i == 1 then
-        gStateMachine:change('free_play')           -- Juego libre: elegir nivel
-    else
+        gStateMachine:change('story_slots')         -- Modo historia: elegir partida
+    elseif i == 2 then
         gStateMachine:change('online_login')
+    else
+        gStateMachine:change('free_play')           -- Juego libre: cualquier nivel, para probar
     end
 end
 

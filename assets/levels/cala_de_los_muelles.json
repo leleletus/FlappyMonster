@@ -1,5 +1,6 @@
 {
   "name": "Cala de los Muelles",
+  "name_en": "Spring Cove",
   "width": 92,
   "height": 28,
   "playerStart": [6,21],
@@ -50,12 +51,12 @@
     {"col":46,"row":26,"type":"extralife"}
   ],
   "foliage": [
-    {"col":19,"props":{"flip":true,"layer":"back"},"row":13,"type":"tropical_bush"},
+    {"col":19,"props":{"flip":true},"row":13,"type":"tropical_bush"},
     {"col":63,"props":{"flip":true,"layer":"back"},"row":13,"sub":4,"type":"hibiscus"},
-    {"col":42,"props":{"flip":true,"layer":"back"},"row":14,"type":"tropical_bush"},
-    {"col":54,"props":{"layer":"back"},"row":14,"type":"fern"},
+    {"col":42,"props":{"flip":true},"row":14,"type":"tropical_bush"},
+    {"col":54,"row":14,"type":"fern"},
     {"col":11,"props":{"layer":"back"},"row":21,"type":"butterflies"},
-    {"col":17,"props":{"flip":true,"layer":"back"},"row":21,"type":"fern"},
+    {"col":17,"props":{"flip":true},"row":21,"type":"fern"},
     {"col":19,"props":{"layer":"back"},"row":21,"type":"palmtree"},
     {"col":28,"props":{"layer":"back"},"row":21,"sub":3,"type":"pineapple"},
     {"col":63,"props":{"flip":true,"layer":"back"},"row":21,"sub":3,"type":"hibiscus"},
@@ -71,5 +72,5 @@
   "matchTime": 180,
   "music": "hidro_city",
   "background": "coast",
-  "name_en": "Spring Cove"
+  "surfaceRow": 22
 }

@@ -60,7 +60,9 @@ function love.load()
         adventure          = function() return AdventureState:new() end,
         -- Modo online
         adv_mode_select    = function() return AdventureModeSelectState:new() end,
-        free_play          = function() return FreePlayState:new() end,       -- Juego libre (SOLO)
+        free_play          = function() return FreePlayState:new() end,       -- Juego libre (pruebas)
+        story_slots        = function() return require('src/states/StorySlotState'):new() end,   -- Historia: partidas
+        story_map          = function() return require('src/states/StoryMapState'):new() end,    -- Historia: el mapa
         online_login       = function() return OnlineLoginState:new() end,
         online_hub         = function() return OnlineHubState:new() end,
         online_room        = function() return OnlineRoomState:new() end,

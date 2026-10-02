@@ -1636,6 +1636,30 @@ scripts in `Scripts/Assembly-CSharp/`, real inspector values in
 `Scenes/Level1.unity`. Port *behaviour and timings*; the physics differ, so
 don't copy speeds/forces literally (the user tunes feel by hand).
 
+## Story Mode (`src/story/`, in progress by STAGES)
+
+Plan (approved by the user; file `~/.claude/plans/rippling-swinging-seal.md`): 1 foundation ✔ · 2 generic difficulty
+framework (`src/Difficulty.lua`: named modifiers read by the base code; `level.difficulty`, same in SP / server /
+prediction; Easy · Normal = levels as today · Hard = today's bosses · Extreme · Xtra Extreme) · 3 lives carried between
+levels + Game Over restarts the world (Xtra: the whole game) · 4 results screen + grades · 5 full map polish · 6
+difficulty unlocks (Extreme after Hard, Xtra after Extreme; double bosses) · 7 final level order by difficulty · 8 KOTH
+arenas as bonus nodes vs an expert BOT. User's decisions: world map with a path, 3 save slots, KOTH = bonus vs a bot.
+- Menu: Aventura → HISTORIA (`story_slots`) / ONLINE / JUEGO LIBRE (PRUEBAS) (`free_play` stays as the debug hub).
+- `src/story/Worlds.lua` = the story as DATA: ordered worlds `{ id, levels = {...}, boss }` (provisional order by
+  theme; every story level needs a FINISH — hunt-only levels have none). `Worlds.nodes(w)`, `levelName(id)`.
+- `src/story/Save.lua`: 3 slots `story1..3.sav` + global `story.sav` (unlocks) in the save dir — Lua tables loaded
+  without an environment; never a `.lua` name. `src/story/Run.lua`: the open slot; `state(w, k)` = done / open /
+  locked (levels open in order, the next world when the boss is beaten), `complete(id, result)` saves, `frontier()`.
+- `StorySlotState` (pick / create / delete with confirmation) and `StoryMapState` (one world per screen: path of nodes,
+  boss node last, hero hops between nodes; ←→ node, ↑↓ world; mouse/touch; layout computed at draw time).
+  `PixelFont` always draws on a tight black box: never pass it a dark text colour.
+- **Level complete now exists in single player** (it didn't: reaching the finish did nothing): `AdventureState`
+  detects the `finish` trigger → `win()` (fanfare, banner `hud.level_clear`, invulnerable) → after `WIN_TIME` calls
+  `args.onFinish(result {score, time, lives})` or goes to `returnTo`. The story passes `onFinish`; Free Play and the
+  editor just return.
+- Harness `story_flow` (real game: slots, locked nodes, clearing levels, save reloaded from disk, world 2 unlock,
+  delete; screenshots at 1280 / 960 / 1600).
+
 ## OST presentation videos (`tools/video/`)
 
 TRACK NAMES (user): the game's own versions are called **Crab Tantrum (X)** — catalog `name` of `tentacle_nes` (NES),
@@ -1675,7 +1699,7 @@ or extend the HARNESS (and its README row) instead of working around it in a
 scratch copy: the time spent fighting test setups was the user's complaint.
 Harnesses: flyers, crawler_drop, mechanics, sounds, boss_sim, sp_boss, boss_frames, megagummy_rules, gloomy_rules, megagloomy_rules,
 editor_open, free_play, update_boot, online_smoke, online_boss, online_helmet,
-level_check, level_solve, level_shots. `tools/` is not shipped (.love / updates).
+level_check, level_solve, level_shots, story_flow. `tools/` is not shipped (.love / updates).
 
 Low-level notes (for writing NEW harnesses):
 - Headless sim (no window): a scratch LÖVE app with `t.window=false`,

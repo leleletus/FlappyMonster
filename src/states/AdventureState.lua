@@ -73,6 +73,10 @@ function AdventureState:enter(args)
     args = args or {}
     self.levelPath = args.level or 'assets/levels/nivel01.json'
     self.returnTo  = args.returnTo or 'main_menu'   -- a dónde se sale (Juego libre → free_play)
+    -- Al llegar a la META el nivel termina: `onFinish(result)` decide qué pasa (el modo historia
+    -- apunta el nivel y vuelve a su mapa); sin él se vuelve a `returnTo`.
+    self.onFinish  = args.onFinish
+    self.won, self.wonT = false, 0
 
     self.level  = Level.new(self.levelPath)
     -- Hielo fino que se agrieta / rompe (lo decide el nivel): partículas y sonido
@@ -291,6 +295,16 @@ function AdventureState:checkEnemyCollisions()
     })
 end
 
+-- Ha llegado a la meta: ya no le pasa nada, suena la fanfarria y sale el cartel
+AdventureState.WIN_TIME = 2.6
+function AdventureState:win()
+    self.won, self.wonT = true, 0
+    self.player:grantInvulnerability(AdventureState.WIN_TIME + 2)
+    Sound.stopMusic()
+    Sound.play('fanfare')
+    self.bossBanner = { text = L('hud.level_clear'), t = 0, col = { 1, 0.9, 0.25 } }
+end
+
 -- ── Update ────────────────────────────────────────────────────────────────────
 function AdventureState:update(dt)
     -- ── Game over ─────────────────────────────────────────────────────────────
@@ -356,9 +370,19 @@ function AdventureState:update(dt)
         return
     end
 
+    -- ── Nivel superado: un momento de celebración y se sale ───────────────────
+    if self.won then
+        self.wonT = self.wonT + dt
+        if self.wonT >= AdventureState.WIN_TIME then
+            local result = { score = self.score, time = self.levelTime, lives = self.player.lives }
+            if self.onFinish then self.onFinish(result) else gStateMachine:change(self.returnTo) end
+            return
+        end
+    end
+
     -- ── Lógica normal ─────────────────────────────────────────────────────────
     -- Cap del tiempo: congelar en 600 al morir por tiempo
-    if not self.player.dying then
+    if not self.player.dying and not self.won then
         self.levelTime = math.min(self.levelTime + dt, 600)
     end
 
@@ -409,6 +433,12 @@ function AdventureState:update(dt)
 
     self:updateCamera(dt)
     if self.rec then self.rec:step(dt, self) end
+
+    -- ── META: tocarla termina el nivel ────────────────────────────────────────
+    if not self.won and not self.player.dying then
+        local ob = self.player:getOuterBounds()
+        if self.level:triggerInBox(ob.x, ob.y, ob.w, ob.h, 'finish') then self:win() end
+    end
 
     -- ── Detectar muerte del jugador ───────────────────────────────────────────
     if self.player.dying and not self.player.alive then
