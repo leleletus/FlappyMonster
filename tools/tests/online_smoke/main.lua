@@ -54,7 +54,7 @@ function love.load()
     NC:on('room_update', function(d)
         if not st and d.state == 'IN_GAME' then gStateMachine:change('online_adventure', { room = d }); st = gStateMachine:_top() end
         if phase == 0 then phase = 1
-            NC:send('set_mode', { mode = os.getenv('MODE') or 'race', level = LEVEL })
+            NC:send('set_mode', { mode = os.getenv('MODE') or 'race', level = LEVEL, difficulty = os.getenv('DIFF') })
             bot.roomId = d.id end        -- (el bot entra cuando haya iniciado sesión)
     end)
     NC:connect('localhost', 22122, 'Prueba')     -- (nunca el servidor real)
@@ -112,6 +112,11 @@ function love.update(dt)
         clk.last, clk.lastT = left, t
     end
     if t > (tonumber(os.getenv('SECS')) or 16) then
+        if os.getenv('DIFF') and st and st.level then      -- la dificultad de la sala llega al cliente y a su jugador
+            local want = ({ easy = 4 })[os.getenv('DIFF')] or 3
+            print(('dificultad: sala %s → cliente %s, vida del jugador %s'):format(os.getenv('DIFF'), tostring(st.level.difficulty), tostring(st.localPa and st.localPa.hpMax)))
+            if st.level.difficulty ~= os.getenv('DIFF') or (st.localPa and st.localPa.hpMax) ~= want then print('Error: la dificultad no llegó al cliente') end
+        end
         if clk then
             local fell = clk.first - clk.last
             print(('reloj: %.1f s → %.1f s (baja %.1f s en %.1f s)'):format(clk.first, clk.last, fell, clk.lastT - clk.t))

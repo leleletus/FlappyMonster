@@ -8,6 +8,7 @@ local PixelFont     = require 'src/ui/PixelFont'
 local Save          = require 'src/story/Save'
 local Run           = require 'src/story/Run'
 local Worlds        = require 'src/story/Worlds'
+local Difficulty    = require 'src/Difficulty'
 local L = require 'src/Lang'
 
 local StorySlotState = BaseState:new()
@@ -59,10 +60,34 @@ function StorySlotState:reload()
     end
 end
 
+-- Un hueco usado continúa; uno vacío pregunta antes la DIFICULTAD (src/Difficulty.lua): Fácil,
+-- Normal y Difícil desde el principio; Extremo y Xtra extremo, cerradas hasta desbloquearlas
 function StorySlotState:_open(i)
     Sound.play('select')
-    Run.open(i, 'normal')                    -- (la dificultad se elegirá aquí: etapa 2)
+    if not self.slots[i] and not self.pick then
+        self.unlocked = Save.global().unlocked
+        self.pick = { slot = i, sel = 2 }
+        return
+    end
+    Run.open(i, self.pick and Difficulty.ORDER[self.pick.sel] or nil)
+    self.pick = nil
     gStateMachine:change('story_map')
+end
+
+function StorySlotState:_diffOpen(k)
+    local id = Difficulty.ORDER[k]
+    return Difficulty.START[id] == true or (self.unlocked and self.unlocked[id] == true)
+end
+
+local function pickRect(k)
+    local w, h, gap = math.min(620, WINDOW_W - 60), 58, 12
+    local total = #Difficulty.ORDER * h + (#Difficulty.ORDER - 1) * gap
+    return math.floor((WINDOW_W - w) / 2), math.floor(WINDOW_H / 2 - total / 2 + 40) + (k - 1) * (h + gap), w, h
+end
+
+function StorySlotState:_pickConfirm()
+    if not self:_diffOpen(self.pick.sel) then Sound.play('headBump'); return end
+    self:_open(self.pick.slot)
 end
 
 function StorySlotState:_delete(i)
@@ -75,6 +100,14 @@ function StorySlotState:_delete(i)
 end
 
 function StorySlotState:update(dt)
+    if self.pick then
+        local n = #Difficulty.ORDER
+        if Input.pressed('nav_up') then self.pick.sel = (self.pick.sel - 2) % n + 1; Sound.play('select') end
+        if Input.pressed('nav_down') then self.pick.sel = self.pick.sel % n + 1; Sound.play('select') end
+        if Input.pressed('confirm') or Input.pressed('flap') then self:_pickConfirm(); return end
+        if Input.pressed('back') then self.pick = nil; Sound.play('select') end
+        return
+    end
     if Input.pressed('nav_up') then self.sel = (self.sel - 2) % Save.SLOTS + 1; self.confirm = nil; Sound.play('select') end
     if Input.pressed('nav_down') then self.sel = self.sel % Save.SLOTS + 1; self.confirm = nil; Sound.play('select') end
     if Input.pressed('confirm') or Input.pressed('flap') then
@@ -93,12 +126,23 @@ end
 
 function StorySlotState:mousemoved(x, y)
     self.backHover = CornerButtons.hitBack(x, y)
+    if self.pick then
+        for k = 1, #Difficulty.ORDER do if inside(x, y, pickRect(k)) then self.pick.sel = k end end
+        return
+    end
     for i = 1, Save.SLOTS do
         if inside(x, y, cardRect(i)) and self.sel ~= i then self.sel = i; self.confirm = nil end
     end
 end
 
 function StorySlotState:touchpressed(id, x, y)
+    if self.pick then
+        if CornerButtons.hitBack(x, y) then self.pick = nil; Sound.play('select'); return end
+        for k = 1, #Difficulty.ORDER do
+            if inside(x, y, pickRect(k)) then self.pick.sel = k; self:_pickConfirm(); return end
+        end
+        return
+    end
     if CornerButtons.hitBack(x, y) then Sound.play('select'); gStateMachine:change('adv_mode_select'); return end
     for i = 1, Save.SLOTS do
         if self.slots[i] and inside(x, y, delRect(i)) then self.sel = i; self:_delete(i); return end
@@ -142,7 +186,8 @@ function StorySlotState:render()
             local W = Worlds.get(s.world)
             love.graphics.setColor(ink[1], ink[2], ink[3], 0.9)
             love.graphics.print(L('story.slot_world', { n = s.world, name = L('story.world.' .. W.id) }), x + 18, y + 58)
-            love.graphics.print(L('story.slot_progress', { done = s.done, total = s.total, lives = s.data.lives }), x + 18, y + 86)
+            love.graphics.print(L('story.slot_progress', { done = s.done, total = s.total, lives = s.data.lives })
+                .. '   ·   ' .. L('diff.' .. s.data.difficulty), x + 18, y + 86)
             -- BORRAR (segunda pulsación = confirmar)
             local dx, dy, dw, dh = delRect(i)
             local ask = self.confirm == i
@@ -156,9 +201,36 @@ function StorySlotState:render()
             love.graphics.print(L('story.slot_empty'), x + 18, y + 66)
         end
     end
+    -- Elegir dificultad (partida nueva)
+    if self.pick then
+        love.graphics.setColor(0, 0, 0, 0.78)
+        love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
+        local t2 = L('diff.title')
+        PixelFont.draw(t2, math.floor((WINDOW_W - PixelFont.width(t2, 5)) / 2), 70, 5, 1, { 1, 0.95, 0.15 })
+        for k, id in ipairs(Difficulty.ORDER) do
+            local x, y, w, h = pickRect(k)
+            local sel, open = k == self.pick.sel, self:_diffOpen(k)
+            love.graphics.setColor(0, 0, 0, 0.6); love.graphics.rectangle('fill', x + 4, y + 4, w, h)
+            if sel then love.graphics.setColor(1, 1, 1, 1) else love.graphics.setColor(0.1, 0.1, 0.14, 1) end
+            love.graphics.rectangle('fill', x, y, w, h)
+            love.graphics.setColor(sel and 1 or 0.6, sel and 0.85 or 0.6, sel and 0 or 0.65, 1)
+            love.graphics.setLineWidth(sel and 4 or 2); love.graphics.rectangle('line', x, y, w, h); love.graphics.setLineWidth(1)
+            local c = sel and 0 or 1
+            love.graphics.setFont(FONT_MED)
+            love.graphics.setColor(c, c, c, open and 1 or 0.45)
+            love.graphics.print(L('diff.' .. id), x + 16, y + 10)
+            love.graphics.setFont(FONT_SMALL)
+            love.graphics.setColor(c, c, c, open and 0.8 or 0.45)
+            love.graphics.print(open and L('diff.desc.' .. id) or L('diff.locked.' .. id), x + 16, y + 36)
+            if not open then
+                local PixelIcons = require 'src/ui/PixelIcons'
+                PixelIcons.draw('lock', x + w - 42, y + h / 2 - 15, 3)
+            end
+        end
+    end
     love.graphics.setFont(FONT_SMALL)
     love.graphics.setColor(1, 1, 1, 0.7)
-    love.graphics.printf(L('story.slot_hint'), 0, WINDOW_H - 34, WINDOW_W, 'center')
+    love.graphics.printf(L(self.pick and 'diff.hint' or 'story.slot_hint'), 0, WINDOW_H - 34, WINDOW_W, 'center')
     love.graphics.setFont(FONT_MED)
     love.graphics.setColor(1, 1, 1, 1)
     CornerButtons.drawBack(self.backHover)

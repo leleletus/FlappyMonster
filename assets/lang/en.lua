@@ -41,6 +41,23 @@ return {
         online = "ONLINE",
         free = "FREE PLAY (TESTING)",
     },
+    diff = {
+        title = "CHOOSE THE DIFFICULTY",
+        hint = "[ARROWS] choose    [ENTER] start    [ESC] back",
+        easy = "EASY", normal = "NORMAL", hard = "HARD", extreme = "EXTREME", xtra = "XTRA EXTREME",
+        desc = {
+            easy = "Everything slower, 4 HP; spikes and lava don't kill outright",
+            normal = "Levels as designed; bosses a bit calmer",
+            hard = "Faster enemies; bosses at full strength",
+            extreme = "Everything much faster, with less margin",
+            xtra = "Extreme... and the bosses bring surprises",
+        },
+        locked = {
+            easy = "", normal = "", hard = "",
+            extreme = "Beat the game on HARD",
+            xtra = "Beat the game on EXTREME",
+        },
+    },
     story = {
         title = "STORY MODE",
         pick_slot = "Choose a save",

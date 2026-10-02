@@ -120,6 +120,8 @@ end
 function Boss:startFight(nPlayers)
     local p = self.props
     self.hpMax = (p.hp or 1) + (p.hpPerPlayer or 0) * math.max(0, (nPlayers or 1) - 1)
+    -- (la dificultad: más o menos vida — src/Difficulty.lua; su ritmo va con Difficulty.dt)
+    self.hpMax = math.max(1, math.floor(self.hpMax * require('src/Difficulty').k('bossHp') + 0.5))
     self.hp    = self.hpMax
     self.inv   = 0
     self.state, self.deadTimer = 'fight', 0

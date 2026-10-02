@@ -41,6 +41,23 @@ return {
         online = "ONLINE",
         free = "JUEGO LIBRE (PRUEBAS)",
     },
+    diff = {
+        title = "ELIGE LA DIFICULTAD",
+        hint = "[FLECHAS] elegir    [ENTER] empezar    [ESC] volver",
+        easy = "FÁCIL", normal = "NORMAL", hard = "DIFÍCIL", extreme = "EXTREMO", xtra = "XTRA EXTREMO",
+        desc = {
+            easy = "Todo más lento, 4 de vida; pinchos y lava no matan de golpe",
+            normal = "Los niveles tal cual; jefes algo más tranquilos",
+            hard = "Enemigos más rápidos; los jefes, sin rebajas",
+            extreme = "Todo mucho más rápido y con menos margen",
+            xtra = "Extremo... y los jefes traen sorpresas",
+        },
+        locked = {
+            easy = "", normal = "", hard = "",
+            extreme = "Supera el juego en DIFÍCIL",
+            xtra = "Supera el juego en EXTREMO",
+        },
+    },
     story = {
         title = "MODO HISTORIA",
         pick_slot = "Elige una partida",

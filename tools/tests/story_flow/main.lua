@@ -1,5 +1,6 @@
 -- tools/tests/story_flow — el MODO HISTORIA con el juego real (etapa 1: cimientos):
---  1. partidas: tres huecos vacíos; ENTER en el 1 crea la partida y abre el mapa;
+--  1. partidas: tres huecos vacíos; ENTER en el 1 pregunta la DIFICULTAD (Extremo y Xtra cerradas),
+--     se elige Fácil, crea la partida y abre el mapa; el nivel se juega en esa dificultad (4 de vida);
 --  2. mapa: el mundo 1 con su camino; el nodo 2 está CERRADO (ENTER no entra) y el mundo 2 también;
 --  3. jugar el nivel 1 y llegar a la META (se teletransporta al jugador): cartel, y vuelve al
 --     mapa con el nivel superado, el siguiente abierto y el monstruo ya en él;
@@ -70,9 +71,23 @@ function love.update(dt)
         check('huecos', st.slots ~= nil and empty, ('%d huecos, todos vacíos=%s'):format(Save.SLOTS, tostring(empty)))
         shot('slots_1280'); go('open')
     elseif step == 'open' and t - T > 0.3 then
+        pressNext('confirm'); go('pick')
+    elseif step == 'pick' and t - T > 0.3 then
+        -- partida nueva: pregunta la dificultad (Normal elegida; Extremo y Xtra, cerradas)
+        local p = st.pick
+        local Difficulty = require 'src/Difficulty'
+        check('dificultad', p ~= nil and Difficulty.ORDER[p.sel] == 'normal' and st:_diffOpen(1) and st:_diffOpen(3)
+            and not st:_diffOpen(4) and not st:_diffOpen(5),
+            ('pide dificultad=%s (elegida %s); fácil/difícil abiertas=%s/%s; extremo/xtra cerradas=%s/%s'):format(tostring(p ~= nil),
+             tostring(p and Difficulty.ORDER[p.sel]), tostring(st:_diffOpen(1)), tostring(st:_diffOpen(3)),
+             tostring(not st:_diffOpen(4)), tostring(not st:_diffOpen(5))))
+        shot('difficulty')
+        pressNext('nav_up'); go('pick2')
+    elseif step == 'pick2' and t - T > 0.3 then
         pressNext('confirm'); go('map')
     elseif step == 'map' and t - T > 0.4 then
-        check('mapa', st.world == 1 and st.node == 1 and Run.active() and love.filesystem.getInfo('story1.sav') ~= nil,
+        check('mapa', st.world == 1 and st.node == 1 and Run.active() and love.filesystem.getInfo('story1.sav') ~= nil
+            and Run.data.difficulty == 'easy',
             ('mundo %s nodo %s; partida creada en disco=%s'):format(tostring(st.world), tostring(st.node),
              tostring(love.filesystem.getInfo('story1.sav') ~= nil)))
         shot('map_1280')
@@ -89,7 +104,8 @@ function love.update(dt)
     elseif step == 'play1' and t - T > 0.3 then
         pressNext('confirm'); go('in1')
     elseif step == 'in1' and t - T > 0.6 then
-        IN1 = st.levelPath == Worlds.path(W1[1].id) and st.returnTo == 'story_map'
+        IN1 = st.levelPath == Worlds.path(W1[1].id) and st.returnTo == 'story_map' and st.level.difficulty == 'easy'
+              and st.player.hpMax == 4
         toFinish(st); go('won1')
     elseif step == 'won1' and t - T > 0.5 then
         WON1 = st.won == true

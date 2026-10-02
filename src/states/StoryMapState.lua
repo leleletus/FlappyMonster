@@ -88,7 +88,7 @@ function StoryMapState:_play()
     self:_remember()
     Sound.play('select')
     gStateMachine:change('adventure', {
-        level = Worlds.path(n.id), returnTo = 'story_map',
+        level = Worlds.path(n.id), returnTo = 'story_map', difficulty = Run.data.difficulty,
         onFinish = function(result)
             Run.complete(n.id, result)
             -- de vuelta al mapa, ya en el siguiente (tras el jefe: al mundo que se abre)
@@ -180,7 +180,8 @@ function StoryMapState:render()
     local allDone, allTotal = Run.progress()
     love.graphics.setFont(FONT_MED)
     love.graphics.setColor(1, 1, 1, 0.9)
-    love.graphics.printf(L('story.progress', { done = done, total = total, all = allDone, allTotal = allTotal }), 0, 98, WINDOW_W, 'center')
+    love.graphics.printf(L('story.progress', { done = done, total = total, all = allDone, allTotal = allTotal })
+        .. '     ' .. L('diff.' .. Run.data.difficulty), 0, 98, WINDOW_W, 'center')
 
     -- El camino (punteado) entre nodos
     for k = 1, n - 1 do

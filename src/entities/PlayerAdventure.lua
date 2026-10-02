@@ -1,4 +1,5 @@
 -- src/entities/PlayerAdventure.lua
+local Difficulty = require 'src/Difficulty'
 local Class = require 'libs/class'
 local DeadEyes = require 'src/entities/DeadEyes'
 local Tiles = require 'src/world/Tiles'
@@ -444,7 +445,7 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
     for _,c in ipairs(corners) do
         local t = level:contactAt(c[1],c[2])
         if t then
-            if t.mat.contact == 'kill' and self:die() ~= false then return end
+            if t.mat.contact == 'kill' and self:hazardHit() then return end
             if t.mat.contact == 'hurt' and self:hurt() then return end
         end
     end
@@ -453,7 +454,7 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
     local ob = self:getOuterBounds()
     local spikeList = level:getSpikesInBox(ob.x, ob.y, ob.w, ob.h)
     for _, sp in ipairs(spikeList) do
-        if spikeHitsPlayer(sp, ob) and self:die() ~= false then return end
+        if spikeHitsPlayer(sp, ob) and self:hazardHit() then return end
     end
 
     -- Líquidos
@@ -507,7 +508,7 @@ function PlayerAdventure:hurt(n)
     for _ = 1, math.max(1, n or 1) do
         if self:takeDamage() then return true end
     end
-    self:grantInvulnerability(HIT_INV)
+    self:grantInvulnerability(HIT_INV * Difficulty.k('invuln'))
     self.hurtT, self.hitNow = HURT_FLASH, true
     return false
 end
@@ -530,6 +531,24 @@ function PlayerAdventure:die(drownDeath, force)
     self.airBarAlpha=0; self.airBarBobT=0; self.airBarBobOn=false; self.airBarShakeX=0
 end
 
+-- La dificultad del nivel (src/Difficulty.lua) en lo que es del jugador: su vida. Lo llama quien lo
+-- crea, con el nivel ya enlazado (un jugador, el servidor y el cliente: los tres igual).
+function PlayerAdventure:applyDifficulty()
+    self.hpMax = Difficulty.k('playerHp', 3)
+    self.hp = self.hpMax
+end
+
+-- Pinchos y lava: matan… salvo que la dificultad los rebaje a 1 de vida (`hazardHurt`): entonces
+-- hacen daño y te sacan de un bote hacia arriba (para poder salir del foso). true = ha muerto.
+function PlayerAdventure:hazardHit()
+    if not Difficulty.flag('hazardHurt') then return self:die() ~= false end
+    if self:isInvulnerable() then return false end
+    if self:hurt() then return true end
+    self.vy, self.onGround = -620, false
+    self.gpPhase, self.gpT = nil, 0
+    return false
+end
+
 function PlayerAdventure:respawn()
     self.x=self.spawnX; self.y=self.spawnY
     self.vx=0; self.vy=0; self.onGround=false; self.jumpsLeft=2
@@ -543,7 +562,7 @@ function PlayerAdventure:respawn()
     self.splashSt='out'; self.splashCD=0
     self.gpPhase=nil; self.gpT=0; self.gpLanded=false; self.stunT=0; self.squashT=0; self.ctrlLockT=0; self.iceT=0
     self.lightOn=false; self.lightBat=1; self.lightCd=0
-    self:grantInvulnerability(SPAWN_INV)
+    self:grantInvulnerability(SPAWN_INV * Difficulty.k('invuln'))
     Sound.stopTracked('drowning')
     Sound.playMusic('level')
     self.airBarAlpha=0; self.airBarBobT=0; self.airBarBobOn=false; self.airBarShakeX=0
@@ -589,14 +608,15 @@ function PlayerAdventure:updateDrowning(dt, level)
         self.drownTimer = self.drownTimer + dt
 
         -- Chimes cada DROWN_CHIME_INT segundos (máx DROWN_CHIMES)
-        local needed = math.floor(self.drownTimer / DROWN_CHIME_INT)
+        local air = Difficulty.k('airTime')                 -- (la dificultad da más o menos aire)
+        local needed = math.floor(self.drownTimer / (DROWN_CHIME_INT * air))
         while self.drownChime < needed and self.drownChime < DROWN_CHIMES do
             self.drownChime = self.drownChime + 1
             Sound.play('waterWarning')
         end
 
         -- A los 20 s arrancar drowning.ogg
-        if self.drownTimer >= DROWN_TOTAL then
+        if self.drownTimer >= DROWN_TOTAL * air then
             self.drownPhase = 'drowning'
             self.drownAudT  = 0
             self.drownTimer = 0

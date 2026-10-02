@@ -5,6 +5,7 @@ local Snowfall = require 'src/fx/Snowfall'
 local TouchControls = require 'src/ui/TouchControls'
 local Darkness      = require 'src/fx/Darkness'
 local LightHud      = require 'src/ui/LightHud'
+local Difficulty    = require 'src/Difficulty'
 local Noise         = require 'src/world/Noise'
 local CornerButtons = require 'src/ui/CornerButtons'
 local L = require 'src/Lang'
@@ -64,6 +65,7 @@ function AdventureState:exit()
     -- a entrar (reintentar tras perder todas las vidas, desde el editor...)
     -- todo empieza como la primera vez, la música desde el principio
     Sound.leaveMatch()
+    Difficulty.bind(nil)
     if self.rec then self.rec:finish(self); self.rec = nil end
 end
 
@@ -79,6 +81,9 @@ function AdventureState:enter(args)
     self.won, self.wonT = false, 0
 
     self.level  = Level.new(self.levelPath)
+    -- Dificultad (src/Difficulty.lua): la del modo historia; sin ella, el juego de siempre
+    self.level.difficulty = Difficulty.valid(args.difficulty) and args.difficulty or nil
+    Difficulty.bind(self.level)
     -- Hielo fino que se agrieta / rompe (lo decide el nivel): partículas y sonido
     self.level.tileFx = function(kind, c, r)
         local x, y = (c - 0.5) * TILE_PX, (r - 1) * TILE_PX + TILE_PX / 4
@@ -87,6 +92,7 @@ function AdventureState:enter(args)
     end
     local sx, sy = self.level:getSpawnPx()
     self.player = PlayerAdventure:new(sx, sy)
+    self.player:applyDifficulty()
     self.level.players = { self.player }       -- para trampas/entidades que "ven" al jugador
     -- Grabación de la partida para analizarla (FM_RECORD=1; ver src/PlayRecorder.lua)
     if PlayRecorder.enabled() then self.rec = PlayRecorder.new(self.levelPath, self.level.name) end
@@ -295,6 +301,11 @@ function AdventureState:checkEnemyCollisions()
     })
 end
 
+-- Reintentar (tras perder todas las vidas): el mismo nivel con lo mismo que traía
+function AdventureState:retryArgs()
+    return { level = self.levelPath, returnTo = self.returnTo, onFinish = self.onFinish, difficulty = self.level.difficulty }
+end
+
 -- Ha llegado a la meta: ya no le pasa nada, suena la fanfarria y sale el cartel
 AdventureState.WIN_TIME = 2.6
 function AdventureState:win()
@@ -330,7 +341,7 @@ function AdventureState:update(dt)
             if Input.pressed('confirm') then
                 Sound.play('select')
                 if self.selectedOpt == 1 then
-                    gStateMachine:change('adventure', { level = self.levelPath, returnTo = self.returnTo })
+                    gStateMachine:change('adventure', self:retryArgs())
                 else
                     gStateMachine:change(self.returnTo)
                 end
@@ -413,7 +424,7 @@ function AdventureState:update(dt)
     for i = #self.enemies, 1, -1 do
         local g = self.enemies[i]
         Sound.setEmitter(g.x, g.y)
-        g:update(dt, self.level)
+        g:update(Difficulty.dt(g, dt), self.level)          -- (su ritmo: la dificultad)
         Sound.clearEmitter()
         -- (los súbditos de reserva de un jefe se quedan: el jefe los reutiliza)
         if not g.alive and not g.summonOf then
@@ -767,7 +778,7 @@ function AdventureState:touchpressed(id, tx, ty, dx, dy, pressure)
             if tx >= bx-10 and tx <= bx+btnW+10 and ty >= by-5 and ty <= by+btnH+5 then
                 Sound.play('select')
                 if i == 1 then
-                    gStateMachine:change('adventure', { level = self.levelPath, returnTo = self.returnTo })
+                    gStateMachine:change('adventure', self:retryArgs())
                 else
                     gStateMachine:change(self.returnTo)
                 end

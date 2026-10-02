@@ -115,6 +115,7 @@ Input = Protocol.newInputStub()
 local _inp = Input.state
 
 -- Clases de entidades (cargadas en love.load).
+local Difficulty
 local Level, PlayerAdventure, Entities, BossZones, AutoScroll, Floods, PointAreas
 local buildResults   -- definida más abajo
 
@@ -275,6 +276,8 @@ end
 
 local function initRoomSim(room)
     local level = Level.new(room.level)
+    level.difficulty = room.difficulty               -- (src/Difficulty.lua; nil = el juego de siempre)
+    Difficulty.bind(level)
     local sx, sy = level:getSpawnPx()
     local N = #room.playerIds
 
@@ -297,6 +300,7 @@ local function initRoomSim(room)
         if c then
             local spawnX = sx + (i - 1 - (N - 1) / 2) * SPAWN_STAGGER
             local pa = PlayerAdventure:new(spawnX, sy)
+            pa:applyDifficulty()
             pa.lives = PLAYER_LIVES
             pa.netId = pid          -- a quién atribuir sus sonidos (golpes de jefe)
             sim.playerSims[pid] = {
@@ -585,6 +589,7 @@ local function stepRoom(room)
     if not sim then return end
     _currentSim = sim
     require('src/world/Noise').bind(sim.level)        -- (los ruidos de este paso, a este nivel)
+    Difficulty.bind(sim.level)                        -- (… y su dificultad)
 
     sim.tick = sim.tick + 1
     _soundEvents = {}
@@ -636,7 +641,7 @@ local function stepRoom(room)
     sim.level.liveEntities = sim.enemies        -- obstáculos entre entidades
     for _, e in ipairs(sim.enemies) do
         _emitX, _emitY = e.x, e.y
-        e:update(TICK_DT, sim.level)
+        e:update(Difficulty.dt(e, TICK_DT), sim.level)       -- (su ritmo: la dificultad)
     end
     _emitX, _emitY = nil, nil
     recordEnemyHistory(sim)
@@ -823,6 +828,7 @@ local function sendGameInit(room)
                 tickRate = Protocol.TICK_RATE,
                 snapEvery= SNAPSHOT_EVERY,
                 mode     = room.mode,
+                difficulty = room.difficulty,   -- (nil = sin dificultad)
                 level    = sim.levelRaw,        -- el nivel viaja al cliente
             })
         end
@@ -1217,6 +1223,9 @@ on("set_mode", function(data, client, player)
     -- Nivel elegido junto al modo (menú del lobby); si no sirve, uno compatible
     local info = type(data.level) == "string" and levelInfo(data.level)
     if info and info.modes[room.mode] then room.level = info.path end
+    -- Dificultad de la sala (opcional): un id de src/Difficulty.lua o 'none'
+    if data.difficulty == 'none' then room.difficulty = nil
+    elseif Difficulty.valid(data.difficulty) then room.difficulty = data.difficulty end
     ensureRoomLevel(room)
     log(player.name .. " cambio el modo a " .. Modes.get(room.mode).label)
     broadcastRoomUpdate(room)
@@ -1499,6 +1508,7 @@ function love.load()
     AutoScroll      = require 'src/world/AutoScroll'
     Floods          = require 'src/world/Floods'
     PointAreas      = require 'src/world/PointAreas'
+    Difficulty      = require 'src/Difficulty'
     -- Lo que un jefe le hace a un jugador (daño, muerte) suena como suyo:
     -- su cliente lo reproduce al ver bajar su vida en la reconciliación
     PlayerAdventure.soundOwner = function(pa, fn)

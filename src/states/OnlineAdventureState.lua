@@ -224,6 +224,7 @@ function OnlineAdventureState:exit()
     require('src/ui/View').unlock()
     NC:off("s"); NC:off("ev"); NC:off("game_init")
     NC.pendingGameInit = nil
+    require('src/Difficulty').bind(nil)
     -- Fuera de la partida (sala, hub, resultados, error): nada de la partida
     -- sigue sonando — música del nivel/jefe, ahogamiento...
     Sound.leaveMatch()
@@ -269,6 +270,11 @@ function OnlineAdventureState:_onGameInit(data)
         if ok and type(lv) == 'table' then self:_buildWorld(lv) end
     end
     self.mode   = Modes.get(data.mode) or self.mode
+    -- Dificultad de la sala (src/Difficulty.lua): la misma que simula el servidor
+    local Difficulty = require 'src/Difficulty'
+    self.level.difficulty = Difficulty.valid(data.difficulty) and data.difficulty or nil
+    Difficulty.bind(self.level)
+    self.localPa:applyDifficulty()
     self.level.hiddenTriggers = Modes.hiddenTriggers(self.mode)   -- (la meta, fuera de Carrera)
     self.introT = 0
 

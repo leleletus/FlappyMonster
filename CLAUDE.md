@@ -1639,11 +1639,26 @@ don't copy speeds/forces literally (the user tunes feel by hand).
 ## Story Mode (`src/story/`, in progress by STAGES)
 
 Plan (approved by the user; file `~/.claude/plans/rippling-swinging-seal.md`): 1 foundation ✔ · 2 generic difficulty
-framework (`src/Difficulty.lua`: named modifiers read by the base code; `level.difficulty`, same in SP / server /
-prediction; Easy · Normal = levels as today · Hard = today's bosses · Extreme · Xtra Extreme) · 3 lives carried between
+framework ✔ · 3 lives carried between
 levels + Game Over restarts the world (Xtra: the whole game) · 4 results screen + grades · 5 full map polish · 6
 difficulty unlocks (Extreme after Hard, Xtra after Extreme; double bosses) · 7 final level order by difficulty · 8 KOTH
 arenas as bonus nodes vs an expert BOT. User's decisions: world map with a path, 3 save slots, KOTH = bonus vs a bot.
+- **Stage 2 ✔ — DIFFICULTY = generic modifier framework** (`src/Difficulty.lua`): each difficulty id (`easy, normal,
+  hard, extreme, xtra`) is a table of NAMED modifiers; base code asks `Difficulty.k('airTime')` / `flag(...)`, never
+  the difficulty's name. It is a property of the level being simulated: `level.difficulty` (nil = NEUTRAL: everything
+  1 = the game as it was — Free Play, editor, harnesses, online rooms without one), bound with
+  `Difficulty.bind(level)` (AdventureState enter/exit, server `initRoomSim` + every `stepRoom`, client on `game_init`).
+  PACE = time scale per entity category: `Difficulty.dt(e, dt)` in the entity update loops (SP + server) scales the
+  whole entity (walk, fall, telegraphs, cooldowns, projectiles) — `enemyPace` (Enemigos), `trapPace` (Trampas),
+  `bossPace` (Jefes); a type opts out with `pace = false` or picks one with `pace = '...'`. No boss was retuned by
+  hand. Others: `bossHp` (`Boss:startFight`), `playerHp` (`pa:applyDifficulty()`, called by whoever creates the player
+  after binding), `invuln` (hit / respawn), `airTime` (drowning), `hazardHurt` (spikes and lava: `pa:hazardHit()` =
+  1 HP + a hop instead of death), `bossExtra` (stage 6). Values: easy .8/.8/.7 pace, boss hp .75, 4 HP, invuln 1.3,
+  air 1.4, hazardHurt; normal = boss pace .85, hp .9 (levels as today); hard = enemies/traps 1.1, air .9 (bosses as
+  today); extreme 1.25/1.3/1.2, boss hp 1.15, invuln .75, air .8. Online: `set_mode { difficulty = id | 'none' }` →
+  `room.difficulty` → `game_init.difficulty` (no room UI yet; additive, no protocol bump). Story: a NEW save asks the
+  difficulty (`StorySlotState` picker; Extreme / Xtra locked until `Save.global().unlocked`); `AdventureState` takes
+  `args.difficulty`. Harness `difficulty_rules`; `online_smoke DIFF=easy`.
 - Menu: Aventura → HISTORIA (`story_slots`) / ONLINE / JUEGO LIBRE (PRUEBAS) (`free_play` stays as the debug hub).
 - `src/story/Worlds.lua` = the story as DATA: ordered worlds `{ id, levels = {...}, boss }` (provisional order by
   theme; every story level needs a FINISH — hunt-only levels have none). `Worlds.nodes(w)`, `levelName(id)`.
@@ -1699,7 +1714,7 @@ or extend the HARNESS (and its README row) instead of working around it in a
 scratch copy: the time spent fighting test setups was the user's complaint.
 Harnesses: flyers, crawler_drop, mechanics, sounds, boss_sim, sp_boss, boss_frames, megagummy_rules, gloomy_rules, megagloomy_rules,
 editor_open, free_play, update_boot, online_smoke, online_boss, online_helmet,
-level_check, level_solve, level_shots, story_flow. `tools/` is not shipped (.love / updates).
+level_check, level_solve, level_shots, story_flow, difficulty_rules. `tools/` is not shipped (.love / updates).
 
 Low-level notes (for writing NEW harnesses):
 - Headless sim (no window): a scratch LÖVE app with `t.window=false`,
