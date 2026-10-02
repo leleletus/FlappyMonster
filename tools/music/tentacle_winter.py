@@ -117,10 +117,9 @@ def vary(top):
       · estribillo: en los compases que la melodía deja vacíos (27, 31, 35, 39) una RESPUESTA:
         la frase del compás anterior en secuencia, una tercera diatónica abajo (la 2ª vuelta,
         una sexta arriba), ajustada al acorde;
-      · riff: mordente (nota – vecina de arriba – nota) en las notas largas, compases 9-16 (la
-        2ª vuelta desde el 5), y la 2ª vuelta los compases 5-8 y 13-16 una octava arriba.
-    Los 4 primeros compases del riff, las escalas y el final quedan como en el original
-    (el final ya va rearticulado: no tiene notas largas que variar). → (s, e, n, vs)"""
+    El riff, las escalas y el final quedan como en el original (en el riff se probaron
+    mordentes en las notas largas y compases a la octava: al usuario le sonaban raros).
+    → (s, e, n, vs)"""
     out = []
     by_bar = {}
     for s, e, n in top:
@@ -136,15 +135,6 @@ def vary(top):
         sec = TN.section(b)
         hi = lap == 2
         d = e - s
-        if sec == 'A':
-            if hi and (5 <= fb <= 8 or 13 <= fb <= 16) and n + 12 <= 86:
-                n += 12
-            if d >= 2 * E * 0.95 and fb >= (5 if hi else 9):
-                up = next((m for m in (n + 1, n + 2) if m % 12 in scale[(fb - 1) // 8]), None)
-                if up:
-                    out += [(s, s + S16, n, 1.0), (s + S16, s + 2 * S16, up, 0.9), (s + 2 * S16, e, n, 1.0)]
-                    STATS['var'] += 1
-                    continue
         out.append((s, e, n, 1.0))
     # respuestas del estribillo
     for lap in (1, 2):

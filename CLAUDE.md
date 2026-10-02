@@ -293,9 +293,9 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     27.6 → 24.2 (ordinary section changes: 16-31). MELODY VARIATIONS (`vary`, so it isn't
                     tentacle_nes note for note; all derived from the melody itself): chorus = an ANSWER in the bars
                     the melody leaves empty (27, 31, 35, 39): the previous bar's phrase in sequence a diatonic third
-                    down (pass 2: a sixth up), avoid notes snapped to the chord, never over an original note; riff =
-                    mordents on long notes (bars 9-16; pass 2 from 5) and pass 2 bars 5-8 / 13-16 an octave up; riff
-                    bars 1-4, scales and final untouched (650 of 686 original notes kept, 816 total). Strings swap to the root (or drop) when the lead rubs them. Break bell plinks have NO echo (winter's
+                    down (pass 2: a sixth up), avoid notes snapped to the chord, never over an original note. The
+                    riff, scales and final stay as the original: riff mordents + octave-up bars were tried and the
+                    user found them odd. Strings swap to the root (or drop) when the lead rubs them. Break bell plinks have NO echo (winter's
                     3/16 echo on offbeat plinks sounded out of phase). Strength = sustained
                     BODY, not louder drums: with the kick at +1.5 dB the crest factor was 11 dB vs winter's 9.7 and
                     sections 1-2 dB weaker → kick +0.3, bass 0, pad −5, master −9.3 LUFS (no quiet stretches like
