@@ -391,7 +391,7 @@ Small enemy sprites drawn by hand as character maps: `tools/ui/make_enemy_extras
                        field (the Mega Crabby's CLAWS are NOT generated any more: after two proposals from this script — a
                        raised hermit-crab pincer and a fat shore-crab one — the USER drew them: `MegaCrabby/
                        claw_left-Sheet.png`, 2 frames 10x7 like the Icy Mega's, no bristles; never overwrite it).
-                       They are drawn at the body's own pixel size (`CLAW_K` 1.0, `CLAW_X` 5.6, `CLAW_Y` −1.2,
+                       Drawn at `CLAW_K` 0.7 (at the body scale, 1.0, the user found them enormous), `CLAW_X` 4.8, `CLAW_Y` −1.4,
                        `CLAW_IN` 1.5) with the Mega's shared claw animation (`pose2d`); art only, not hitboxes.
 Spikes are images too: assets/images/spikes/spike.png (tile spikes, rotated/flipped
                        for the 4 directions; falling spike) — SPIKE SKINS: level JSON `"spikeSkin": "ice"`

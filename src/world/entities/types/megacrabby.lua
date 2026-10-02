@@ -80,10 +80,10 @@ local REST_KINDS = { 1, 2, 1, 3 }
 -- costado, a la altura del arranque de las patas (CLAW_X, CLAW_Y en píxeles
 -- del sprite desde los pies, el punto donde se unen); se solapan CLAW_IN
 -- píxeles de pinza con el cuerpo. La derecha es la izquierda volteada.
--- (pinzas del usuario, 2 cuadros 10x7 como las del Mega helado: a la MISMA escala que el cuerpo
--- — CLAW_K 1: sus píxeles miden lo mismo que los del cangrejo — y saliendo del costado junto a
--- las patas, como las originales de 7x6, algo más afuera porque son más largas)
-local CLAW_K, CLAW_X, CLAW_Y, CLAW_IN = 1.0, 5.6, -1.2, 1.5
+-- (pinzas del usuario, 2 cuadros 10x7 como las del Mega helado. A la escala del cuerpo (1.0)
+-- eran descomunales y se salían mucho de él: a 0.7 abultan como las originales de 7x6 a 0.85 —
+-- 70 px de largo frente a 60 — y salen del costado junto a las patas)
+local CLAW_K, CLAW_X, CLAW_Y, CLAW_IN = 0.7, 4.8, -1.4, 1.5
 local CS = MS * CLAW_K
 
 -- ARTE por clase (Mega.art; el Mega Crabby helado, megacrabby_ice.lua, pone el suyo):
