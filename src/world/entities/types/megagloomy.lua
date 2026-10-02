@@ -358,7 +358,8 @@ function MG:onFightStart()
 end
 function MG:onIntroStart(level)
     local zx0, zx1, zy0 = self:zoneBounds()
-    self:stand(level, (zx0 + zx1) / 2)
+    -- (cae DONDE lo ha puesto el editor: antes caía siempre en el centro de la zona, estuviera donde estuviera)
+    self:stand(level, self.x)
     self.introY1, self.introY0 = self.y, zy0 - 3 * T
     self.y = self.introY0
     self.introStep = 0

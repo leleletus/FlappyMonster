@@ -45,7 +45,7 @@ def build():
         'name': 'Jefe: Mega Crabby lúgubre', 'name_en': 'Boss: Mega Gloomy Crabby',
         'width': W, 'height': H, 'playerStart': [4, 12],
         'tiles': t, 'entities': ents, 'foliage': [], 'vents': [],
-        'bossZones': [{'id': 1, 'col': Z0, 'row': 3, 'w': Z1 - Z0 + 1, 'h': 10, 'music': 'boss_nes'}],
+        'bossZones': [{'id': 1, 'col': Z0, 'row': 3, 'w': Z1 - Z0 + 1, 'h': 10, 'music': 'tentacle_gloomy'}],
         'background': 'cave', 'time': 'night', 'dark': True,
     }
 

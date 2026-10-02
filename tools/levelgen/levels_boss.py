@@ -330,7 +330,7 @@ def gruta_lugubre():
     la luz — y el MEGA CRABBY LÚGUBRE al final (arena jefe_lugubre: la sima). Sin pinchos ni fosos:
     a oscuras serían injustos; el peligro es lo que no se ve."""
     src = load_src('jefe_lugubre.json')
-    L = Level('Gruta Lúgubre', 124, 15, (4, 12))
+    L = Level('Gruta Lúgubre', 124, 15, (4, 12), music='dark_cave')
     L.extra.update({'name_en': 'Gloomy Grotto', 'dark': True, 'background': 'cave', 'time': 'night'})
     G = 13
     L.rect(2, G, 82, 14, SOLID)

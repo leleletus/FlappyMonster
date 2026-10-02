@@ -1,5 +1,6 @@
 {
   "name": "Gruta Lúgubre",
+  "music": "dark_cave",
   "width": 124,
   "height": 15,
   "playerStart": [4,12],
@@ -76,7 +77,7 @@
   ],
   "vents": [],
   "bossZones": [
-    {"col":88,"h":10,"id":1,"music":"boss_nes","row":3,"w":24}
+    {"col":88,"h":10,"id":1,"music":"tentacle_gloomy","row":3,"w":24}
   ],
   "background": "cave",
   "dark": true,

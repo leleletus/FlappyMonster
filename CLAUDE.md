@@ -319,6 +319,30 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     sections 1-2 dB weaker → kick +0.3, bass 0, pad −5, master −9.3 LUFS (no quiet stretches like
                     winter's intro). Measured vs winter 85-116 (rms −10.5, 64 spectral peaks/frame, crest 9.7):
                     sections −11.9…−10.7, 65-93 peaks, crest 9.9-10.7.
+                    `tools/music/gloomy_nes.py [jefe|cueva]` → the DARK levels' music (verified by numbers only):
+                    (1) `tentacle_gloomy.ogg` (catalog `tentacle_gloomy`, the Mega Gloomy fight: jefe_lugubre arena +
+                    gruta_lugubre zone): Tentacle Tantrum (imports tentacle_nes's `load_midi`/`voices`/`chord_at`/
+                    `section`: melody + bass note for note) SLOWER (150 BPM, times × 185/150), cave-like and LESS
+                    LOADED (no saw, no 2nd voice, no pad/chop; bass = triangle only), with the SPIDER effect of Toby
+                    Fox's "Spider Dance" (the user's brief): LEGS = 2A03 pulse 12.5 %, very short envelope, constant
+                    16ths in groups of 8 on the chord's minor pentatonic + the blue note (♭5 passing to the 5th;
+                    `LEG8`), never stopping — foreground (envelope ×1.0, octave up in intro/break) when the melody
+                    rests, background (×0.4) under it; PAUSES at the end of every 8-bar phrase (half a bar of chromatic
+                    run down, then half a bar of SILENCE except the melody; crash on re-entry = the "drop"); a second
+                    DESYNCED pattern of 6 notes against the 8 (`LEG6`, VRC6, from the chorus on); register jumps every
+                    4 bars; lead on a hollow N163 wave (odd harmonics) with a short bend-in + fast vibrato on long
+                    notes and an echo 3 sixteenths later; dry drums (kick, short-mode noise "claw clacks" on 2 and 4,
+                    offbeat hats only in chorus/final). Form: 4-bar intro (legs alone, then bass) + the 72 bars once
+                    (121.6 s). Mix = per-group dB relative to the lead (`level`), legs capped at 50 % of the melody in
+                    1-5 kHz while it sings, master −11 LUFS. (2) `dark_cave.ogg` (catalog `dark_cave`, LEVEL music of
+                    the dark caves: gruta_lugubre, cueva_oscura): slow (72 BPM, 32 bars, 106.7 s), tense, D minor that
+                    never resolves (ends on A major + a silence). The CONTRAST the user asked for: dark below
+                    (triangle drone, a deep two-beat "heartbeat" kick, a swelling N163 pad) vs delicate above (a MUSIC
+                    BOX with cave echo — sample-domain `delay` — and water drips: pulse blips with an upward chirp).
+                    The music box plays the cell of Tentacle's riff slowed down (D · · D G F · D): the same motif the
+                    boss sings later (recycled leitmotif); in phrase 3 the boss's LEGS are heard far away (one group
+                    of 8 now and then). Master −13 LUFS (ambient: SFX and silence carry the tension), catalog volume
+                    0.8. Both loops are seamless (`fold`: the tail is added onto the start).
 src/entities/
   PlayerAdventure.lua  THE player physics (shared by SP, server and client prediction)
   OnlinePlayer.lua     remote player renderer (tinted by player color, name tag)
@@ -964,6 +988,8 @@ list no mode until the user places a Point Area in them).
   stomp. 'taunt' after an attack that hit somebody. DEATH is a crab's, not a robot's (`MG:defeat` override, no
   explosions): 'dying_curl' → 'dying_out' (`releasesZone`). x,y = centre of its SHELL (`BODY_ROW` 11, box 11x6 art
   px; legs don't count); art = the SAME pixel grid as the small one at scale 10 (`MEGA_B`, 9 frames 38x21 + glow).
+  Intro: falls from the dark AT ITS EDITOR x (`onIntroStart` → `stand(level, self.x)`; it used to land at the zone
+  centre wherever it was placed, while the camera looked at the editor spot). Music: zone `tentacle_gloomy`.
   CLAWS (user's picks): option B "Hoz" (long sharp sickle, 2 frames 14x7 `claw_left-Sheet.png`, right = mirror), at
   rest pointing INWARD ("C Ↄ": tips toward the body's centre) and LOW on the body (`CLAW_DY` 2 art px under the shell
   centre; the mockups had them too high); raised (ping, roar) = exact 90° turn, mirrored so the dorsal crystals face
