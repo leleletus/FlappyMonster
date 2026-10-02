@@ -59,7 +59,7 @@ local GLOW       = { 1, 0.77, 0.35 }      -- ámbar
 local body, glow, icons
 function Gloomy.loadAssets()
     if body then return end
-    icons = SpriteStrip.load('assets/images/gloomy/icons-Sheet.png', 7)
+    icons = SpriteStrip.load('assets/images/gloomy/icons-Sheet.png', 10)
     body = SpriteStrip.load('assets/images/gloomy/gloomy-Sheet.png', FW)
     glow = SpriteStrip.load('assets/images/gloomy/glow-Sheet.png', FW)
 end
@@ -228,6 +228,7 @@ function Gloomy:updateCustom(dt, level)
         if self.iconT <= 0 then self.icon = 0 end
     end
     if st == 'search' then self.icon, self.iconT = 2, 0.2 end
+    if st == 'hunt' then self.icon, self.iconT = 1, 0.2 end              -- ("!" todo el rato que va hacia el ruido)
     local p = self.props
 
     -- En el aire (salto / soltado): balístico hasta tocar algo y agarrarse
@@ -427,13 +428,17 @@ function Gloomy:renderGlow(camX, camY)
         self:drawSheet(glow, camX - o[1], camY - o[2])
     end
     love.graphics.setBlendMode('alpha')
-    -- icono flotando sobre él (siempre derecho, esté en el suelo, la pared o el techo)
+    -- icono flotando junto a él, SIEMPRE derecho y hacia el lado del aire (encima si va por el
+    -- suelo, debajo si cuelga del techo, al lado en una pared): grande y de trazo gordo, que se vea
     local ic = self.icon or 0
     if ic > 0 and st ~= 'flee' and st ~= 'leap' and st ~= 'crouch' then
-        local bob = math.floor(math.sin(love.timer.getTime() * 6) * 2)
-        local col = (ic == 1) and { 1, 0.85, 0.3 } or ((ic == 2) and { 0.75, 0.9, 1 } or { 0.7, 0.72, 0.8 })
-        love.graphics.setColor(col[1], col[2], col[3], 0.95)
-        love.graphics.draw(icons.image, icons.quads[ic], math.floor(self.x - camX), math.floor(self.y - camY - 46 + bob), 0, 3, 3, 3.5, 9)
+        local nx, ny = 0, -1
+        if self.crawl and self.cattached then nx, ny = self.cnx or 0, self.cny or -1 end
+        local bob = math.floor(math.sin(love.timer.getTime() * 6) * 3)
+        local col = (ic == 1) and { 1, 0.85, 0.3 } or ((ic == 2) and { 0.75, 0.92, 1 } or { 0.85, 0.87, 0.95 })
+        love.graphics.setColor(col[1], col[2], col[3], 1)
+        love.graphics.draw(icons.image, icons.quads[ic], math.floor(self.x - camX + nx * 56),
+                           math.floor(self.y - camY + ny * 56 + bob), 0, 4, 4, 5, 5.5)
     end
     love.graphics.setColor(1, 1, 1, 1)
 end

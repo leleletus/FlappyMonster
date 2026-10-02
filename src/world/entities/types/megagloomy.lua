@@ -87,7 +87,7 @@ function MG.loadAssets()
     body  = SpriteStrip.load('assets/images/bosses/megagloomy/body-Sheet.png', FW)
     glow  = SpriteStrip.load('assets/images/bosses/megagloomy/glow-Sheet.png', FW)
     markS = SpriteStrip.load('assets/images/bosses/megagummy/target-Sheet.png', 16)
-    icons = SpriteStrip.load('assets/images/gloomy/icons-Sheet.png', 7)
+    icons = SpriteStrip.load('assets/images/gloomy/icons-Sheet.png', 10)
 end
 function MG.sizePx() return BW, BH end
 
@@ -569,7 +569,9 @@ function MG:renderGlow(camX, camY)
     love.graphics.setBlendMode('alpha')
     if (self.icon or 0) > 0 then                          -- ("…": la luz le hizo perder el rastro)
         love.graphics.setColor(0.8, 0.85, 1, 0.95)
-        love.graphics.draw(icons.image, icons.quads[self.icon], math.floor(self.x - camX), math.floor(self.y - camY - 80), 0, 6, 6, 3.5, 9)
+        local nx, ny = math.sin(self.ang or 0), -math.cos(self.ang or 0)         -- (hacia el aire, esté donde esté)
+        love.graphics.draw(icons.image, icons.quads[self.icon], math.floor(self.x - camX + nx * 120),
+                           math.floor(self.y - camY + ny * 120), 0, 7, 7, 5, 5.5)
     end
     love.graphics.setColor(1, 1, 1, 1)
 end

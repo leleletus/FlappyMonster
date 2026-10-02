@@ -907,7 +907,8 @@ list no mode until the user places a Point Area in them).
   `tools/ui/make_gloomy_sprites.py --apply`: body hand-drawn, LEGS traced by code hip–knee–foot so every pose comes
   from the same legs; sounds `tools/sounds/gloomy.py`). ALMOST SILENT (the user found it noisy: silence is the
   level's tension): only the hiss before the leap and the leap sound; what happens to it is told by an ICON floating
-  over it, visible in the dark (`gloomy/icons-Sheet.png`, 3 frames 7x9 tinted in code: "!" heard something, "?"
+  over it, visible in the dark (`gloomy/icons-Sheet.png`, 3 frames 10x11 with 2-px strokes at scale 4 — the first 1-px ones were invisible in
+  the dark —, drawn upright on the AIR side of its surface: above on a floor, below under a ceiling; tinted in code: "!" heard something, "?"
   searching, "…" lost the trail; `icon` in netPack). A different archetype: no route, never hides, never kills on
   touch (`onTouch = 'hurt'`), always a Crawler. In the dark only its two glow points show. States: 'walk' (wanders
   floor/walls/ceiling, random reversals, 'idle') → HEARS a noise → 'hunt' (goes to WHERE IT SOUNDED along the surface,

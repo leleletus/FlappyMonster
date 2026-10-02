@@ -562,18 +562,22 @@ def touch_light():
 
 def icons():
     """Iconos que flotan sobre un lúgubre en vez de sonidos (el silencio es parte del nivel): 3 cuadros
-    7x9 en blanco (el juego los tiñe): ! ha oído algo · ? busca · … ha perdido el rastro"""
-    rows = [['..ooo..', '..oxo..', '..oxo..', '..oxo..', '..oxo..', '..ooo..', '..oxo..', '..ooo..', '.......'],
-            ['.oooo..', 'oxxxxo.', 'oooxxo.', '..oxxo.', '..oxo..', '..ooo..', '..oxo..', '..ooo..', '.......'],
-            ['.......', '.......', '.......', '.......', '.......', 'ooooooo', 'xoxoxox'.replace('o', 'o'), 'ooooooo', '.......']]
-    out = Image.new('RGBA', (21, 9), (0, 0, 0, 0))
-    for i, fr in enumerate(rows):
-        for y, r in enumerate(fr):
-            for x, ch in enumerate(r):
-                if ch == 'x':
-                    out.putpixel((i * 7 + x, y), (255, 255, 255, 255))
-                elif ch == 'o':
-                    out.putpixel((i * 7 + x, y), (20, 20, 30, 255))
+    10x11 en blanco con contorno oscuro (el juego los tiñe): ! ha oído algo · ? busca · … ha perdido el
+    rastro. Trazo de 2 px: con 1 px no se veían en la oscuridad"""
+    glyphs = [['..xx....', '..xx....', '..xx....', '..xx....', '..xx....', '..xx....', '........', '..xx....', '..xx....'],
+              ['.xxxx...', 'xx..xx..', '....xx..', '...xx...', '..xx....', '..xx....', '........', '..xx....', '..xx....'],
+              ['........', '........', '........', '........', '........', '........', '........', 'xx.xx.xx', 'xx.xx.xx']]
+    FWI, FHI = 10, 11
+    out = Image.new('RGBA', (FWI * 3, FHI), (0, 0, 0, 0))
+    for i, g in enumerate(glyphs):
+        on = {(x + 1, y + 1) for y, r in enumerate(g) for x, ch in enumerate(r) if ch == 'x'}
+        for (x, y) in on:
+            for dx in (-1, 0, 1):
+                for dy in (-1, 0, 1):
+                    if (x + dx, y + dy) not in on and 0 <= x + dx < FWI and 0 <= y + dy < FHI:
+                        out.putpixel((i * FWI + x + dx, y + dy), (20, 20, 30, 255))
+        for (x, y) in on:
+            out.putpixel((i * FWI + x, y), (255, 255, 255, 255))
     return out
 
 

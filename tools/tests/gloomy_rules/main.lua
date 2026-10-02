@@ -296,6 +296,7 @@ local function look()
     local pa = player(level, 6, 12)
     pa.facing, pa.lightOn = 1, true
     es[1].state = 'flee'; es[1].modeT = 0.05
+    es[2].state, es[2].icon = 'hunt', 1; es[3].state, es[3].icon = 'search', 2; es[4].state, es[4].icon = 'walk', 3     -- (sus iconos)
     local cv = love.graphics.newCanvas(1280, 720)
     love.graphics.setCanvas(cv)
     love.graphics.clear(0.12, 0.13, 0.18, 1)
