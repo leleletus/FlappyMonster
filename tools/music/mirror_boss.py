@@ -19,7 +19,8 @@
 # despacio) · A 8 (tema) · A' 8 (más capas) · B 8 (desarrollo: secuencia con hemiolia que sube, napolitana, el motivo)
 # · C 8 (PUENTE tranquilo: caja de música y voz suave en el relativo mayor, arpegios, sin caja) · D 4 (SUBIDA sobre
 # la dominante: redoble que crece, el motivo trepando) · A'' 8 (tema + su espejo + doble bombo) · E 8 (CLÍMAX en Fa#
-# mayor: la llamada; los dos últimos compases vuelven a la dominante con el motivo del espejo) = bucle de 52 compases.
+# mayor: la llamada; los dos últimos compases vuelven a la dominante con el motivo del espejo). Entre A'' y E va F 8
+# ("el tema del héroe": la muestra de la antigua música de nivel, ver T_F) = bucle de 60 compases.
 #
 #   python tools/music/mirror_boss.py   → assets/music/bosses/mirror_boss_{intro,loop}.ogg + .mid
 #   REPORT=1 → solo números. Se comprueba con números (NO se ha escuchado).
@@ -79,6 +80,17 @@ T_E = ["0:C#5/3 3:F#5/3 6:A#5/3 9:C#6/3",                    # LA LLAMADA, por f
        "0:D#6/6 6:B5/3 9:D#6/3", "0:F6/6 6:C#6/3 9:G#5/3", "0:A#5/3 3:C#6/3 6:F#6/6",
        "0:F#6/6 6:D6/3 9:A5/3", "0:G#5/3 3:B5/3 6:E6/6", MIRROR, "0:C#5/2 2:F5/2 4:G#5/2 6:C#6/6"]
 CH_E = ['F#', 'B', 'C#', 'F#', 'D', 'E', 'C#', 'C#']
+# F — "EL TEMA DEL HÉROE": la muestra de la antigua música de nivel del juego (level.ogg, 0:40-1:01 = sus compases
+# 25-28 y el cierre 33-36), pedida por el usuario. Estaba en Do menor (Fam · Sol · Dom | Fam · Sol · La♭ · Si♭): subida
+# un tritono cae en Sim · Do# · Fa#m | Sim · Do# · Re · Mi, que son los acordes de ESTE tema; sus ritmos 3+3+2 pasan a
+# tres negras (la hemiolia que el tema ya usa en su compás 7); y su cierre ♭VI–♭VII (Re–Mi, con La-Sol#-La-Si subiendo)
+# desemboca en el clímax en Fa# MAYOR, donde contesta la llamada. Va justo antes del clímax: la música de los niveles
+# vuelve en la batalla final.
+T_F = ["0:A5/6 6:F#5/6", "0:C#6/2 2:B5/2 4:A5/2 6:G#5/2 8:A5/2 10:B5/2",
+       "0:C#5/2 2:E5/2 4:A5/2 6:G#5/3 9:E5/2 11:F#5/1", "0:C#5/9",
+       "0:D5/3 4:D5/1 5:E5/1 6:F#5/2 8:E5/2 10:D5/2", "0:E5/3 4:E5/1 5:F#5/1 6:G#5/2 8:F#5/2 10:E5/2",
+       "0:F#5/6 6:D5/6", "0:A5/3 3:G#5/3 6:A5/3 9:B5/3"]
+CH_F = ['Bm', 'C#', 'F#m', 'F#m', 'Bm', 'C#', 'D', 'E']
 T_IN = ["0:C#6/6 6:G#5/6", "0:F5/6 6:C#5/6", "0:C#5/3 3:G#4/3 6:F4/3 9:C#4/3", "0:C#5/12"]
 CH_IN = ['C#'] * 4
 
@@ -100,7 +112,9 @@ def song():
     section('C', T_C, CH_C)
     section('D', T_D, CH_D)
     section('A3', T_A + A_END, CH_A)
+    section('F', T_F, CH_F)
     section('E', T_E, CH_E)
+    SAMPLE.clear(); SAMPLE.update(range(starts[7], starts[7] + 8))
     return mel, chords, tag, starts
 
 
@@ -116,9 +130,12 @@ def invert(n, chord):
     return min(tones, key=lambda t: abs(t - m))
 
 
+SAMPLE = set()                           # compases de la muestra prestada (sus séptimas y notas de paso no cuentan)
+
+
 def check(mel, chords):
     """Las notas que duran un tiempo (≥ 3 corcheas) son del acorde que suena cuando empiezan"""
-    return [(b, st) for b, st, n, d in mel if d >= 3 and (n - chords[b - 1][0 if st < 6 else 1][0]) % 12 not in chords[b - 1][0 if st < 6 else 1][1]]
+    return [(b, st) for b, st, n, d in mel if d >= 3 and b not in SAMPLE and (n - chords[b - 1][0 if st < 6 else 1][0]) % 12 not in chords[b - 1][0 if st < 6 else 1][1]]
 
 
 WAVES = [wavetable([1.0, 0.5, 0.33, 0.2, 0.12]),               # 0 voz suave (puente)
@@ -135,7 +152,7 @@ I_BDEF = {'vol': [12, 9, 6, 4, 3, 2], 'sus': 2, 'duty': 0.5}
 I_STAB = {'vol': [13, 11, 8, 5, 3, 2], 'sus': 1, 'duty': 0.25}
 I_ARP = {'vol': [7, 5, 3, 2], 'sus': 1, 'duty': 0.125}
 SNARE_N, CRASH = [14, 10, 6, 3, 1], [14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
-LOUD = ('A', 'A2', 'A3', 'B', 'E')
+LOUD = ('A', 'A2', 'A3', 'B', 'E', 'F')
 
 
 def build(lufs=-9.5):
@@ -170,8 +187,8 @@ def build(lufs=-9.5):
             play(Cn['dbl'], t0, t1, n, I_PUL, vs=0.8 + 0.12 * (b - starts[4]), release=2)
         else:
             play(Cn['lead'], t0, t1, n - 12, I_SAW, q=q_saw, release=3)
-            play(Cn['dbl'], t0, t1, n + (12 if kind == 'E' else 0), I_PUL, release=2)
-            if kind in ('A2', 'A3', 'E'): play(Cn['bell'], t0, t0 + max(d, 3) * S8, n + 12, I_BELL, q=q_n163, release=6)
+            play(Cn['dbl'], t0, t1, n + (12 if kind in ('E', 'F') else 0), I_PUL, release=2)
+            if kind in ('A2', 'A3', 'E', 'F'): play(Cn['bell'], t0, t0 + max(d, 3) * S8, n + 12, I_BELL, q=q_n163, release=6)
             if kind == 'A3':                                   # el ESPEJO: la inversión, a la vez, una octava abajo
                 play(Cn['ctr'], t0, t1, invert(int(n), chords[b - 1][0 if st < 6 else 1]) - 12, I_CTR, release=2)
 
@@ -182,7 +199,7 @@ def build(lufs=-9.5):
 
     for b in range(1, NB + 1):
         kind = tag[b - 1]
-        k = b - starts[['IN', 'A', 'A2', 'B', 'C', 'D', 'A3', 'E'].index(kind)] + 1          # compás dentro de la sección
+        k = b - starts[['IN', 'A', 'A2', 'B', 'C', 'D', 'A3', 'F', 'E'].index(kind)] + 1          # compás dentro de la sección
         last = (b + 1) in starts or b == NB
         lo = lambda r: 30 + (r - 30) % 12                      # (el bajo, de Fa#1 hacia arriba)
         for half, (r, q) in enumerate(chords[b - 1]):
@@ -199,18 +216,18 @@ def build(lufs=-9.5):
                 for bt in (0, 3):
                     bass(b, s0 + bt, 1.8, lo(r)); bass(b, s0 + bt + 2, 0.9, lo(r) + (12 if kind != 'B' else 7))
             # ── CORO (colchón): tercera y quinta; fuerte en el clímax ──
-            if kind in ('A2', 'A3', 'B', 'C', 'E', 'D'):
-                vs = {'E': 1.5, 'C': 0.9, 'D': 0.6 + 0.2 * k}.get(kind, 0.8)
+            if kind in ('A2', 'A3', 'B', 'C', 'E', 'D', 'F'):
+                vs = {'E': 1.5, 'F': 1.2, 'C': 0.9, 'D': 0.6 + 0.2 * k}.get(kind, 0.8)
                 play(Cn['p1'], tv(b, s0), tv(b, s0) + 5.7 * S8, notes[1], I_CHOIR, q=q_n163, vs=vs, release=5)
                 play(Cn['p2'], tv(b, s0), tv(b, s0) + 5.7 * S8, notes[2], I_CHOIR, q=q_n163, vs=vs, release=5)
             # ── GOLPES de quinta en cada tiempo fuerte ──
             if kind in LOUD:
-                for bt in ((0, 3) if kind in ('A3', 'E') else (0,)):
+                for bt in ((0, 3) if kind in ('A3', 'E', 'F') else (0,)):
                     root = 54 + (r - 54) % 12
                     play(Cn['c1'], tv(b, s0 + bt), tv(b, s0 + bt) + 2.2 * S8, root, I_STAB, release=2)
                     play(Cn['c2'], tv(b, s0 + bt), tv(b, s0 + bt) + 2.2 * S8, root + 7, I_STAB, release=2)
             # ── ARPEGIO en corcheas: el acompañamiento del puente, y brillo en A', A'' y el clímax ──
-            if kind in ('C', 'A2', 'A3', 'E'):
+            if kind in ('C', 'A2', 'A3', 'E', 'F'):
                 for st in range(6):
                     nn = notes[(0, 1, 2, 1, 2, 1)[st] if kind == 'C' else st % 3] + (12 if kind != 'C' else 0) + (12 if st >= 3 and kind != 'C' else 0)
                     play(Cn['arp'], tv(b, s0 + st), tv(b, s0 + st) + S8 * (1.6 if kind == 'C' else 0.7), nn, I_ARP, vs=1.4 if kind == 'C' else 1.0, release=2 if kind == 'C' else 0)
@@ -233,7 +250,7 @@ def build(lufs=-9.5):
                 if st % 3 == 0: hit(kick, TN.KICK, t, 0.8)
                 if k == 4 and st >= 6: hit(tom, W.TOMS[min(2, (st - 6) // 2)], t, 1.0)
             else:
-                heavy = kind in ('A3', 'E')
+                heavy = kind in ('A3', 'E', 'F')
                 if st in (0, 6) or (st in (5, 11)) or (heavy and st in (2, 3, 8, 9)) or (kind == 'B' and st == 2): hit(kick, TN.KICK, t, 1.0 if st in (0, 6) else 0.8)
                 if st in (3, 9): snare(t, 1.0)
                 elif heavy and st in (7, 10): snare(t, 0.35, [6, 3, 1])
@@ -244,7 +261,7 @@ def build(lufs=-9.5):
             # platillos: al entrar cada sección; cada 2 compases en las fuertes; cada compás en el clímax
             if st == 0 and b > 1 and (k == 1 and kind != 'C' or (kind in LOUD and k % 2 == 1) or kind == 'E'): NZ['crash'].hit(t, 3, CRASH)
         # subida de ruido en el último compás de la intro y de D, y antes del clímax
-        if (kind in ('IN', 'D') and k == 4) or (kind == 'A3' and k == 8):
+        if (kind in ('IN', 'D') and k == 4) or (kind == 'F' and k == 8):
             n_ = int(BAR * 60)
             for i_ in range(n_):
                 x_ = i_ / (n_ - 1)
@@ -277,7 +294,7 @@ def build(lufs=-9.5):
     side = S['arp'] * g['arp'] * 0.6 + S['choir'] * g['choir'] * 0.4 - S['mirror'] * g['mirror'] * 0.5 + S['bell'] * g['bell'] * 0.3 + S['hat'] * g['hat'] * 0.3
     # DINÁMICA por secciones (dB): la mezcla por capas deja todo igual de fuerte — el puente salía MÁS alto que el
     # tema —; aquí se dibuja la escalada: intro contenida, respiro en el puente, la subida crece y el clímax es el techo
-    DYN = {'IN': (-3.5, -2.0), 'A': (0, 0), 'A2': (0.5, 0.5), 'B': (0.5, 1.0), 'C': (-6.0, -5.0), 'D': (-6.0, -0.5), 'A3': (1.0, 1.5), 'E': (2.5, 2.5)}
+    DYN = {'IN': (-3.5, -2.0), 'A': (0, 0), 'A2': (0.5, 0.5), 'B': (0.5, 1.0), 'C': (-6.0, -5.0), 'D': (-6.0, -0.5), 'A3': (1.0, 1.5), 'F': (1.5, 2.5), 'E': (3.0, 3.0)}
     env = np.ones(len(x))
     for b in range(1, NB + 1):
         a_, e_ = DYN[tag[b - 1]]
@@ -292,7 +309,7 @@ def build(lufs=-9.5):
     # cuánto suena cada sección (la escalada y los respiros, en dB respecto al tema A)
     mono = y.mean(1)
     def rms(i0, i1): return 20 * np.log10(np.sqrt(np.mean(mono[int((i0 - 1) * BAR * SR):int((i1 - 1) * BAR * SR)] ** 2)) + 1e-9)
-    names = ['intro', 'A', "A'", 'B', 'C puente', 'D subida', "A''", 'E clímax']
+    names = ['intro', 'A', "A'", 'B', 'C puente', 'D subida', "A''", 'F héroe', 'E clímax']
     ends = starts[1:] + [NB + 1]
     ref = rms(starts[1], ends[1])
     print('  secciones (dB respecto a A): ' + ' · '.join('%s %+.1f' % (nm, rms(a, e) - ref) for nm, a, e in zip(names, starts, ends)))

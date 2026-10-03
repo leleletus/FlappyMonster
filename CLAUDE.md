@@ -2129,6 +2129,13 @@ Low-level notes (for writing NEW harnesses):
   (`DYN`, dB: per-stem levelling alone left the bridge LOUDER than the theme): measured vs A — intro −4.4, A' +1.3,
   B +1.3, bridge −3.5, build −1.6, A'' +4.0, climax +4.1. The old `mirror_boss` / `mirror_boss_inst` (tentacle_chip) are
   outside the repo; `mirror_boss_inst` is now an alias. No borrowed tune is left in the game. Pending: `victory`.
+  3.61.1 (user's request): a SAMPLE of the game's OLD level music (level.ogg 0:40-1:01 = its bars 25-28 and the ending
+  33-36; the tune that was classic → pradera_1 → fortaleza_1 and then left the repo) as a new section F, "the hero's
+  theme", between A'' and the climax: it was C minor (Fm · G · Cm | Fm · G · A♭ · B♭); a tritone up it lands on Bm · C# ·
+  F#m | Bm · C# · D · E = this theme's own chords; its 3+3+2 rhythms become three quarter notes (the hemiola bar 7
+  already uses); and its ♭VI–♭VII ending (D–E under A-G#-A-B rising) resolves into the F# MAJOR climax where the
+  llamada answers. Loop = 60 bars (96 s); sections vs A: F +3.6 dB, climax +4.7. So the game DOES quote that tune
+  here, as a sample (8 bars).
 - Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
   cuevas_oscuras; other cave levels → cuevas_1; non-story levels by their retheme theme).
 - Generators keep their internal names; `famicom.PATHS` / `famicom.out(name, ext)` map them to the new folders;
