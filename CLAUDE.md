@@ -2173,6 +2173,17 @@ Low-level notes (for writing NEW harnesses):
   equally loud IN GAME (file loudness + volume): levels and map −14.5 effective LUFS, calm tracks −15.3, bosses −13,
   final boss −12.5, results −15, menus −15.5. Before, volumes were set for the borrowed tracks and the new bosses came
   out ~3.5 dB above the levels. RE-RUN it whenever a track is added or regenerated.
+- 3.63.2 (after the user played it): (1) the background glow no longer showed at night — LÖVE's 'subtract' blend
+  does NOT touch destination alpha, so nothing was being marked; `Sky` now builds a "hole" image per glowing layer
+  (alpha 0 on glow, 1 elsewhere) and writes it with colour mask alpha-only + blend 'replace' (verified: pixels marked,
+  streams bright, clipped by the boss walls). (2) Volcano blocks kept the GREY light edge the game draws on exposed
+  faces: basalt/ash edges (and editor colours) now use the rock's and the ash's own light tones. (3) FINAL BOSS form:
+  the fury was 8 bars and after the climax the loop jumped STRAIGHT to theme A ("it ends before the fury finishes
+  developing; odd loop from the most intense to the calm start") → fury is 16 bars (2nd half: the riff a fourth up, Bm /
+  C, then its hammered ending) and after the climax a 4-bar FALL = the intro again (mirror motif slowly over the
+  dominant, timpani, the music empties and the roll rises), so A re-enters exactly as the first time. Loop 80 bars
+  (121.5 s); vs A: fury +4.1 / +4.7, climax +5.4, fall −2.9 dB. Lesson: a long boss loop needs its own way back —
+  never cut from the peak to the opening.
 - Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
   cuevas_oscuras; other cave levels → cuevas_1; non-story levels by their retheme theme).
 - Generators keep their internal names; `famicom.PATHS` / `famicom.out(name, ext)` map them to the new folders;

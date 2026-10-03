@@ -20,8 +20,9 @@
 # despacio) · A 8 (tema) · A' 8 (más capas) · B 8 (desarrollo: secuencia con hemiolia que sube, napolitana, el motivo)
 # · C 8 (PUENTE tranquilo: caja de música y voz suave en el relativo mayor, arpegios, sin caja) · D 4 (SUBIDA sobre
 # la dominante: redoble que crece, el motivo trepando) · A'' 8 (tema + su espejo + doble bombo) · F 8 ("el tema del
-# héroe": la muestra de la antigua música de nivel, ver T_F) · G 8 (FURIA: riff en picado) · E 8 (CLÍMAX: la llamada
-# martilleada; acaba en la dominante con el motivo del espejo) = bucle de 68 compases.
+# héroe": la muestra de la antigua música de nivel, ver T_F) · G 16 (FURIA: riff en picado, y otra vez una cuarta arriba) · E 8
+# (CLÍMAX: la llamada martilleada) · H 4 (CAÍDA: la intro otra vez, para que el bucle vuelva al tema como la primera
+# vez) = bucle de 80 compases.
 #
 #   python tools/music/mirror_boss.py   → assets/music/bosses/mirror_boss_{intro,loop}.ogg + .mid
 #   REPORT=1 → solo números. Se comprueba con números (NO se ha escuchado).
@@ -97,6 +98,25 @@ T_G = ["0:F#5/1 1:F#5/1 2:A5/1 3:F#5/1 4:F#5/1 5:C#6/1 6:F#5/1 7:F#5/1 8:A5/1 9:
        "0:C#6/1 1:C#6/1 2:C#6/1 3:G#5/1 4:G#5/1 5:G#5/1 6:F5/1 7:F5/1 8:F5/1 9:C#5/1 10:C#5/1 11:C#5/1",
        "0:C#5/1 1:F5/1 2:G#5/1 3:C#6/1 4:G#5/1 5:F5/1 6:C#6/2 8:C#6/2 10:C#6/2"]
 CH_G = ['F#m', 'F#m', 'G', 'F#m', 'F#m', 'G', 'C#', 'C#']
+# (3ª versión del final. La furia duraba 8 compases y tras el clímax el bucle saltaba DIRECTO al tema A: "se acaba
+# antes de que la furia termine de desarrollarse y el bucle queda raro, de lo más intenso a la parte inicial más
+# calmada". Ahora la furia tiene una segunda mitad — el riff una cuarta arriba (Sim, Do) y su remate martilleado —
+# y después del clímax hay una CAÍDA de 4 compases que es la intro otra vez (el motivo del espejo despacio sobre la
+# dominante, timbales, la música se vacía y el redoble vuelve a subir): el tema A entra igual que la primera vez.)
+def _up(bars, semis):
+    out = []
+    for txt in bars:
+        toks = []
+        for tok in txt.split():
+            st, rest = tok.split(':'); nm, d = rest.split('/')
+            m = 12 * (int(nm[-1]) + 1) + N[nm[:-1]] + semis
+            toks.append('%s:%s%d/%s' % (st, [k for k, v in N.items() if v == m % 12][0], m // 12 - 1, d))
+        out.append(' '.join(toks))
+    return out
+T_G2 = _up(T_G[:4], 5) + T_G[4:]
+CH_G2 = ['Bm', 'Bm', 'C', 'Bm', 'F#m', 'G', 'C#', 'C#']
+T_H = ["0:C#6/6 6:G#5/6", "0:F5/6 6:C#5/6", "0:C#5/3 3:G#4/3 6:F4/3 9:C#4/3", "0:C#5/12"]
+CH_H = ['C#'] * 4
 T_E = ["0:C#5/1 1:C#5/1 2:C#5/1 3:F#5/1 4:F#5/1 5:F#5/1 6:A5/1 7:A5/1 8:A5/1 9:C#6/3",          # LA LLAMADA, martilleada
        "0:D6/2 2:D6/1 3:A5/2 5:A5/1 6:F#5/2 8:F#5/1 9:A5/3", "0:E6/2 2:E6/1 3:B5/2 5:B5/1 6:G#5/2 8:G#5/1 9:B5/3",
        "0:F#6/3 3:C#6/1 4:C#6/1 5:C#6/1 6:F#6/6",
@@ -145,9 +165,11 @@ def song():
     section('A3', T_A + A_END, CH_A)
     section('F', T_F, CH_F)
     section('G', T_G, CH_G)
+    section('G2', T_G2, CH_G2)
     section('E', T_E, CH_E)
+    section('H', T_H, CH_H)
     SAMPLE.clear(); SAMPLE.update(range(starts[7], starts[7] + 8))
-    SAMPLE.update(range(starts[8], starts[8] + 8))                # (la furia: riff de notas de paso, no cuenta)
+    SAMPLE.update(range(starts[8], starts[8] + 16))                # (la furia: riff de notas de paso, no cuenta)
     return mel, chords, tag, starts
 
 
@@ -207,8 +229,9 @@ def build(lufs=-9.5):
         NZ['snare'].hit(t, 4, vols); hit(sn, TN.SNARE_BODY, t, g)
 
     # ── MELODÍA y sus capas ──
+    ALIAS = {'G2': 'G', 'H': 'IN'}                             # (la 2ª mitad de la furia y la caída se arreglan como G y la intro)
     for b, st, n, d in mel:
-        kind = tag[b - 1]
+        kind = ALIAS.get(tag[b - 1], tag[b - 1])
         t0, t1 = tv(b, st), tv(b, st) + d * S8 * 0.93
         if kind == 'C':                                        # el puente: voz suave + caja de música una octava arriba
             play(Cn['soft'], t0, t1, n, I_SOFT, q=q_n163, release=4)
@@ -238,7 +261,8 @@ def build(lufs=-9.5):
 
     for b in range(1, NB + 1):
         kind = tag[b - 1]
-        k = b - starts[['IN', 'A', 'A2', 'B', 'C', 'D', 'A3', 'F', 'G', 'E'].index(kind)] + 1          # compás dentro de la sección
+        k = b - starts[['IN', 'A', 'A2', 'B', 'C', 'D', 'A3', 'F', 'G', 'G2', 'E', 'H'].index(kind)] + 1
+        kind = ALIAS.get(kind, kind)          # compás dentro de la sección
         last = (b + 1) in starts or b == NB
         lo = lambda r: 30 + (r - 30) % 12                      # (el bajo, de Fa#1 hacia arriba)
         for half, (r, q) in enumerate(chords[b - 1]):
@@ -301,7 +325,7 @@ def build(lufs=-9.5):
                 if kind == 'E' and st == 0: hit(tom, W.TOMS[2], t, 0.9)       # timbal en cada compás del clímax
                 if last and st >= 6: snare(t, 0.5 + (st - 6) * 0.08, [8 + (st - 6), 5, 2]); hit(tom, W.TOMS[min(2, (st - 6) // 2)], t, 0.7)
             # platillos: al entrar cada sección; cada 2 compases en las fuertes; cada compás en el clímax
-            if st == 0 and b > 1 and (k == 1 and kind != 'C' or (kind in LOUD and k % 2 == 1) or kind in ('E', 'G')): NZ['crash'].hit(t, 3, CRASH)
+            if st == 0 and b > INTRO and (k == 1 and kind != 'C' or (kind in LOUD and k % 2 == 1) or kind in ('E', 'G')): NZ['crash'].hit(t, 3, CRASH)
         # subida de ruido en el último compás de la intro y de D, y antes del clímax
         if (kind in ('IN', 'D') and k == 4) or (kind in ('F', 'G') and k == 8):
             n_ = int(BAR * 60)
@@ -336,7 +360,7 @@ def build(lufs=-9.5):
     side = S['arp'] * g['arp'] * 0.6 + S['choir'] * g['choir'] * 0.4 - S['mirror'] * g['mirror'] * 0.5 + S['bell'] * g['bell'] * 0.3 + S['hat'] * g['hat'] * 0.3
     # DINÁMICA por secciones (dB): la mezcla por capas deja todo igual de fuerte — el puente salía MÁS alto que el
     # tema —; aquí se dibuja la escalada: intro contenida, respiro en el puente, la subida crece y el clímax es el techo
-    DYN = {'IN': (-3.5, -2.0), 'A': (0, 0), 'A2': (0.5, 0.5), 'B': (0.5, 1.0), 'C': (-6.0, -5.0), 'D': (-6.0, -0.5), 'A3': (1.0, 1.5), 'F': (1.5, 2.0), 'G': (2.5, 3.0), 'E': (3.5, 3.5)}
+    DYN = {'IN': (-3.5, -2.0), 'A': (0, 0), 'A2': (0.5, 0.5), 'B': (0.5, 1.0), 'C': (-6.0, -5.0), 'D': (-6.0, -0.5), 'A3': (1.0, 1.5), 'F': (1.5, 2.0), 'G': (2.5, 3.0), 'G2': (3.0, 3.5), 'E': (4.0, 4.0), 'H': (1.5, -2.5)}
     env = np.ones(len(x))
     for b in range(1, NB + 1):
         a_, e_ = DYN[tag[b - 1]]
@@ -351,7 +375,7 @@ def build(lufs=-9.5):
     # cuánto suena cada sección (la escalada y los respiros, en dB respecto al tema A)
     mono = y.mean(1)
     def rms(i0, i1): return 20 * np.log10(np.sqrt(np.mean(mono[int((i0 - 1) * BAR * SR):int((i1 - 1) * BAR * SR)] ** 2)) + 1e-9)
-    names = ['intro', 'A', "A'", 'B', 'C puente', 'D subida', "A''", 'F héroe', 'G furia', 'E clímax']
+    names = ['intro', 'A', "A'", 'B', 'C puente', 'D subida', "A''", 'F héroe', 'G furia', 'G furia 2', 'E clímax', 'H caída']
     ends = starts[1:] + [NB + 1]
     ref = rms(starts[1], ends[1])
     print('  secciones (dB respecto a A): ' + ' · '.join('%s %+.1f' % (nm, rms(a, e) - ref) for nm, a, e in zip(names, starts, ends)))

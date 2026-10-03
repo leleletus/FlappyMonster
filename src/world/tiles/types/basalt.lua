@@ -8,11 +8,11 @@ local TEX = { image = 'assets/images/tiles/basalt.png', span = 2 }
 return {
     id = 38, name = 'basalt', label = 'Basalto', category = 'Terreno',
     collision = 'solid', material = 'basalt', joinGroup = 'ground',
-    editorColor = { 0.18, 0.16, 0.2 },
+    editorColor = { 0.36, 0.16, 0.15 },
     texture = TEX,
     draw = function(t, ctx)
         TileTypes.drawTexture(TEX, ctx)
-        love.graphics.setColor(0.32, 0.29, 0.36, 1)
+        love.graphics.setColor(0.5, 0.26, 0.22, 1)          -- (el filo, del tono claro de la roca: antes gris)
         TileTypes.drawEdges(ctx, TileTypes.edges(t, ctx), 2)
     end,
 }

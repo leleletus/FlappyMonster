@@ -93,6 +93,14 @@ local function img(name)
                 if any then
                     cache[name].glow = love.graphics.newImage(glow)
                     cache[name].glow:setFilter('nearest', 'nearest')
+                    -- y su "molde": alfa 0 donde hay brillo y 1 en el resto (para marcar el lienzo: ver Sky.punch)
+                    local hole = love.image.newImageData(data:getWidth(), data:getHeight())
+                    hole:mapPixel(function(x, y)
+                        local _, _, _, a = glow:getPixel(x, y)
+                        return 1, 1, 1, a > 0 and 0 or 1
+                    end)
+                    cache[name].hole = love.graphics.newImage(hole)
+                    cache[name].hole:setFilter('nearest', 'nearest')
                 end
             end
         else
@@ -188,10 +196,12 @@ local function drawLayers(biome, tint, camX, ground, top, now)
                     love.graphics.setBlendMode('alpha')
                     love.graphics.setColor(1, 1, 1, 0.92)
                     love.graphics.draw(e.glow, x, y, 0, S, S)
+                    -- (solo el canal alfa, y 'replace': el modo 'subtract' de LÖVE NO toca el alfa del destino — con él
+                    -- no se marcaba nada y el brillo dejó de verse de noche)
                     love.graphics.setColorMask(false, false, false, true)
-                    love.graphics.setBlendMode('subtract', 'premultiplied')
+                    love.graphics.setBlendMode('replace', 'premultiplied')
                     love.graphics.setColor(1, 1, 1, 1)
-                    love.graphics.draw(e.glow, x, y, 0, S, S)
+                    love.graphics.draw(e.hole, x, y, 0, S, S)
                     love.graphics.setColorMask(true, true, true, true)
                     love.graphics.setBlendMode(bm, bam)
                     love.graphics.setColor(r_, g_, b_, a_)
