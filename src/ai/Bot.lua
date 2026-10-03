@@ -24,6 +24,7 @@ Bot.CHASE_R = 7              -- casillas: si estás a menos de esto, va a por ti
 Bot.ATTACK_R = 3.2           -- casillas: a esta distancia (y casi a su altura) salta a por ti
 Bot.REPLAN = 0.5             -- s: replanea aunque no haya cambiado de casilla
 Bot.STUCK = 2.5              -- s sin avanzar → replanea desde donde esté
+Bot.GIVE_UP = 2.5           -- s sin camino a su destino antes de irse a vagar a otra parte
 Bot.PUSH_R = 1.8             -- casillas: radio del empujón de su ground pound
 Bot.PUSH_VX, Bot.PUSH_VY = 1150, -700   -- el empujón: te lanza LEJOS (fuera de la zona), sin control un momento
 
@@ -188,6 +189,13 @@ function Bot:think(dt, level, target)
         goals = { [self.roamTo] = true }
         kind = 'roam'
     end
+    -- VAGAR: si su destino resultó inalcanzable (ver "SIN CAMINO" más abajo), anda un rato hacia otra casilla a la
+    -- que SÍ sabe llegar, en vez de quedarse saltando en el sitio; perseguirte sigue teniendo prioridad
+    if self.wander then
+        local here = pa.onGround and BotNav.nodeAt(self.nav, pa.x, pa.y, self:_h())
+        if self.clock > self.wanderUntil or here == self.wander then self.wander = nil
+        elseif kind ~= 'hunt' then goals, kind = { [self.wander] = true }, 'wander' end
+    end
     self.kind = kind
     -- ── RUTA por el grafo ──
     self.planT = self.planT - dt
@@ -208,12 +216,33 @@ function Bot:think(dt, level, target)
         if self.stuckT > Bot.STUCK then self.stuckT = 0 end
     end
     local e = self.path and self.path[1]
+    if e then self.noPathT = 0
+    elseif kind ~= 'roam' and kind ~= 'hunt' then self.noPathT = (self.noPathT or 0) + dt end      -- (también en el aire: a lo bruto se pasa el rato saltando)
     if not e then
         if not pa.onGround then return self:_emit(self.escBits or 0) end
         -- (paseando por su zona y sin camino a esa casilla: se queda donde está; a lo bruto se salía de la zona)
         if kind == 'roam' then self.roamTo = nil; return self:_emit(0) end
         -- (no hay cómo llegar hasta ti — un hoyo, un bloque roto —: deja de perseguirte un rato y vuelve a su zona)
         if kind == 'hunt' then self.noHuntT = self.clock + 2.5; return self:_emit(0) end
+        if kind == 'wander' then self.wander = nil; return self:_emit(0) end
+        -- NUNCA se queda intentándolo sin fin (en cumbre_cangrejo se pasó la partida saltando en el sitio): tras
+        -- `GIVE_UP` s sin camino, se va a VAGAR a una casilla alcanzable al azar y vuelve a probar después
+        if self.noPathT > Bot.GIVE_UP and cur then
+            self.noPathT = 0
+            if not self.nav.ids then
+                self.nav.ids = {}
+                for id in pairs(self.nav.nodes) do self.nav.ids[#self.nav.ids + 1] = id end
+                table.sort(self.nav.ids)
+            end
+            for _ = 1, 16 do
+                local id = self.nav.ids[math.random(#self.nav.ids)]
+                if id ~= cur and BotNav.path(self.nav, cur, { [id] = true }) then
+                    self.wander, self.wanderUntil = id, self.clock + 4 + math.random() * 3
+                    self.path = nil
+                    return self:_emit(0)
+                end
+            end
+        end
         -- SIN CAMINO (fuera del grafo: un bloque roto, un foso, una casilla rara): hacia el destino a lo bruto,
         -- saltando (doble) cuando algo lo frena
         local gx
@@ -242,6 +271,9 @@ function Bot:think(dt, level, target)
     local dx = from.x - pa.x
     if math.abs(dx) > 5 then return self:_emit((dx < 0) and L or R) end
     if math.abs(pa.vx) > 25 then return self:_emit(0) end
+    -- (el movimiento se grabó desde el CENTRO exacto de la casilla: se coloca ahí — como mucho 5 px — y parado. Los
+    -- saltos justos — 3 bloques de alto, huecos de 5 — fallaban por esos píxeles y lo dejaban fuera del grafo)
+    pa.x, pa.vx = from.x, 0
     self.edge, self.edgeF, self.edgeFrom, self.edgeAir = e, 1, cur, false
     return self:_emit(BotNav.bitsAt(e, 1))
 end

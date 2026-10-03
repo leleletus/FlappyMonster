@@ -42,6 +42,7 @@ local function play(level, nav, withTarget)
     end
     local stubT = P.newInputStub()
     local t, arrive, inside, pushes, tIn = 0, nil, 0, 0, 0
+    local ax, ay, still, worst = bpa.x, bpa.y, 0, 0             -- lo más que pasa PARADO en un sitio fuera de una zona
     local dt = 1 / 60
     while t < SECS do
         level.players = tgt and { bpa, tgt } or { bpa }
@@ -84,14 +85,18 @@ local function play(level, nav, withTarget)
             print(('  %.1f bot %d,%d %s/' .. tostring(bot.kind) .. ' cd %.1f path %s · objetivo %d,%d stun %.1f'):format(t, bpa.x, bpa.y, bot.mode, bot.cd,
                 bot.path and #bot.path or '-', tgt and tgt.x or 0, tgt and tgt.y or 0, tgt and tgt.stunT or 0))
         end
+        if isIn or math.abs(bpa.x - ax) > 40 or math.abs(bpa.y - ay) > 100 then ax, ay, still = bpa.x, bpa.y, 0
+        else still = still + dt; worst = math.max(worst, still) end
         if arrive and isIn then inside = inside + dt end
         t = t + dt
     end
-    return arrive, arrive and inside / (SECS - arrive) or 0, pushes, tIn / SECS
+    return arrive, arrive and inside / (SECS - arrive) or 0, pushes, tIn / SECS, worst
 end
 
+-- TODOS los niveles con zonas de puntos (los 6 bonus de la historia y los demás de Rey de la Colina, que en Juego
+-- libre también se juegan contra el bot)
 local DEFAULT = { 'cala_de_los_muelles', 'cantera_real', 'ciudadela_alterna', 'cripta_del_silencio', 'lago_de_cristal',
-                  'isla_flotante', 'coliseo_pinchos', 'cascada_dorada' }
+                  'isla_flotante', 'coliseo_pinchos', 'cascada_dorada', 'cumbre_cangrejo', 'marea_alta', 'rebote_real' }
 local fails = 0
 
 function love.load(arg)
@@ -116,12 +121,13 @@ function love.load(arg)
                 fails = fails + 1
                 print(('%-22s %s'):format(name, g and 'DESACTUALIZADO (BUILD=1)' or 'FALTA (BUILD=1)'))
             else
-                local arrive, frac = play(Level.new(path), g, false)
-                local _, _, pushes, tIn = play(Level.new(path), g, true)
-                local good = arrive ~= nil and arrive < 25 and frac > 0.5 and pushes >= 3     -- (0.5: en cala_de_los_muelles un enemigo lo tira de la zona y tarda en volver)
+                local arrive, frac, _, _, w1 = play(Level.new(path), g, false)
+                local _, _, pushes, tIn, w2 = play(Level.new(path), g, true)
+                local stuck = math.max(w1, w2)                  -- (nunca clavado en un sitio fuera de una zona más de 6 s)
+                local good = arrive ~= nil and arrive < 25 and frac > 0.5 and pushes >= 3 and stuck < 6     -- (0.5: en cala_de_los_muelles un enemigo lo tira de la zona y tarda en volver)
                 if not good then fails = fails + 1 end
-                print(('%-22s %s  sola: llega a la zona en %s s, dentro el %d %% después · caza: %d empujones, el jugador quieto en la zona el %d %% del tiempo'):format(
-                    name, good and 'OK   ' or 'FALLA', arrive and string.format('%.1f', arrive) or '—', math.floor(frac * 100), pushes, math.floor(tIn * 100)))
+                print(('%-22s %s  sola: llega a la zona en %s s, dentro el %d %% después · caza: %d empujones, el jugador quieto en la zona el %d %% del tiempo · parado fuera de zona como mucho %.1f s'):format(
+                    name, good and 'OK   ' or 'FALLA', arrive and string.format('%.1f', arrive) or '—', math.floor(frac * 100), pushes, math.floor(tIn * 100), stuck))
             end
         end
     end

@@ -1817,6 +1817,16 @@ arenas as bonus nodes vs an expert BOT ✔. User's decisions: world map with a p
   its zone every few seconds). FREE PLAY: a level with point zones and no finish starts as a match vs the bot too
   (`FreePlayState:_play`; arenas without a nav file build it on entering). Harness `bot_nav` (per arena: reaches a zone and stays; with a dummy player in the zone it
   must push it ≥ 3 times in 40 s) and `story_flow bonus`.
+- BOT, 3.64.0 (user: in cumbre_cangrejo "the bot had a stroke: the whole match jumping in one place"): (1) that
+  arena had NO nav file and its only way up needs a 5-tile gap jump: new macros in `BotNav` v2 (`VERSION` 2 → every nav
+  rebuilt): the 2nd jump exactly at the apex, and LONG jumps (2nd jump late) with a +400 cost `PENALTY` — last resort,
+  they are tight (in isla_flotante one failed and dropped the bot off the graph). (2) Recorded moves now start from
+  the EXACT cell centre (`pa.x = from.x` once within 5 px). (3) NEVER stuck: with no path for `Bot.GIVE_UP` 2.5 s
+  (airborne time counts) it WANDERS to a random reachable cell for 4-7 s and tries again; chasing you keeps priority.
+  (4) Harness `bot_nav` now runs ALL 11 levels with point zones (6 story bonuses + coliseo_pinchos, cascada_dorada,
+  cumbre_cangrejo, marea_alta, rebote_real) and fails if the bot stays within 40 px outside a zone for 6 s.
+  cumbre_cangrejo itself: renamed "Peñón del Cangrejo" / "Crab Rock" (it is a beach level: sand, crabs, coast sky),
+  music costa_1, its stray snow_pile removed (file id unchanged).
 - Menu: Aventura → HISTORIA (`story_slots`) / ONLINE / JUEGO LIBRE (PRUEBAS) (`free_play` stays as the debug hub).
 - `src/story/Worlds.lua` = the story as DATA: ordered worlds `{ id, levels = {...}, boss }` (stage 7 order; every
   story level needs a FINISH — hunt-only levels have none). `Worlds.nodes(w)`, `levelName(id)`.
@@ -1932,6 +1942,9 @@ Low-level notes (for writing NEW harnesses):
   water: exit a 3-deep pool needs a ledge at the surface (drag eats the jumps).
   `build.py` WITHOUT `--only` rewrites every generated level and loses the user's editor
   touch-ups: always `python3 tools/levelgen/build.py --only name`.
+  **`build.py --show name` ALSO rewrites every level** (it happened on 2026-10-03: 36 files had to be restored with
+  `git checkout HEAD -- assets/levels`). To LOOK at a level, read its JSON (tile id = `raw % 16 + 16 * (raw / 2^17 % 16)`,
+  `TileCodec`); never call build.py without `--only`.
   Underwater design numbers: one jump ≈ 1.1 tiles, double ≈ 2.1 (jumps only come back on
   ground) → vertical climbs need footholds: ladders of waterlogged drop-through
   platforms (`DROP + 16`, one per row). Surfacing (head in air) refills air at once;

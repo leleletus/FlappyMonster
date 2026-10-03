@@ -16,7 +16,7 @@
 local P = require 'src/network/Protocol'
 local json = require 'libs/json'
 
-local BotNav = { VERSION = 1, DIR = 'assets/nav/' }
+local BotNav = { VERSION = 2, DIR = 'assets/nav/' }
 
 local T = function() return TILE_PX end
 local DT = 1 / 60
@@ -57,6 +57,7 @@ local function macro(d, hold, dirFrom, dirTo, dbl, kind)
 end
 
 local MACROS
+local PENALTY = {}             -- movimiento → coste extra (los arriesgados: último recurso)
 local function macros()
     if MACROS then return MACROS end
     MACROS = {}
@@ -75,11 +76,24 @@ local function macros()
         add(macro(d, 30, 30, MAXF, 28))               -- el 2º salto en lo más alto: lo máximo que sube (3 casillas)
         add(macro(d, 30, 36, MAXF, 34))
         add(macro(d, 30, 0, MAXF, 28))
+        -- (v2) el 2º salto EXACTO en lo más alto (cuadro 21): los 3 bloques justos — con el de antes (28) se quedaba
+        -- a 2 px y en cumbre_cangrejo el bot no subía nunca a las plataformas: saltaba sin parar en el sitio
+        add(macro(d, 30, 24, MAXF, 21))
+        add(macro(d, 30, 32, MAXF, 21))
+        -- (v2) saltos LARGOS: el 2º salto tarde, casi al volver a la altura de salida (huecos de 5 casillas: en
+        -- cumbre_cangrejo es la única forma de pasar de los salientes a las plataformas). Son JUSTOS — en
+        -- isla_flotante el bot falló uno y cayó fuera del grafo —, así que cuestan mucho: solo se usan si no hay otra ruta
+        for _, at in ipairs({ 36, 41 }) do
+            local m = macro(d, 30, 0, MAXF, at)
+            PENALTY[m] = 400
+            add(m)
+        end
     end
     for _, hold in ipairs({ 6, 30 }) do
         add(macro(0, hold, 0, 0))
         add(macro(0, hold, 0, 0, 18))
     end
+    add(macro(0, 30, 0, 0, 21))                       -- (v2) recto hacia arriba, lo máximo
     add(macro(0, 0, 0, 0, nil, 'drop'))
     return MACROS
 end
@@ -237,26 +251,28 @@ function BotNav.buildOne(level, opts)
             end
             -- movimientos grabados
             local best = {}
-            for _, bits in ipairs(macros()) do
+            -- un movimiento desde `dx` px del centro de la casilla → fotograma en que aterriza y dónde
+            local function try(bits, dx)
                 P.applyOwnState(s0, pa)
+                pa.x = pa.x + dx
                 pa.dying, pa.alive = false, true
-                local air, landed = false, nil
+                local air = false
                 for f = 1, MAXF do
                     P.decodeInput(bits[f], stub.state)
                     step()
                     steps = steps + 1
-                    if pa.dying or pa.alive == false or (pa.hurtT or 0) > 0 then break end
+                    if pa.dying or pa.alive == false or (pa.hurtT or 0) > 0 then return nil end
                     if not pa.onGround then air = true
                     elseif air and f > 3 then
-                        landed = f
-                        break
+                        return f, BotNav.nodeAt(g, pa.x, pa.y, h)
                     end
                 end
+            end
+            for _, bits in ipairs(macros()) do
+                local landed, to = try(bits, 0)
                 if landed then
-                    -- (que se quede quieto: unos fotogramas sin tocar nada no deben tirarlo)
-                    local to = BotNav.nodeAt(g, pa.x, pa.y, h)
                     if to and to ~= id then
-                        local cost = landed + 6
+                        local cost = landed + 6 + (PENALTY[bits] or 0)
                         if not best[to] or cost < best[to].cost then
                             best[to] = { to = to, cost = cost, seq = rle(bits, landed) }
                         end

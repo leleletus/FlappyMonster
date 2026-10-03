@@ -1,6 +1,6 @@
 {
-  "name": "Cumbre del Cangrejo",
-  "name_en": "Crab Summit",
+  "name": "Peñón del Cangrejo",
+  "name_en": "Crab Rock",
   "width": 24,
   "height": 11,
   "playerStart": [3,8],
@@ -27,12 +27,11 @@
   ],
   "foliage": [
     {"col":14,"row":4,"type":"palmtree"},
-    {"col":23,"row":7,"sub":4,"type":"snow_pile"},
     {"col":5,"row":9,"sub":4,"type":"pineapple"}
   ],
   "vents": [],
   "modes": ["koth"],
-  "music": "nieve_1",
+  "music": "costa_1",
   "background": "coast",
   "time": "dusk",
   "surfaceRow": 9
