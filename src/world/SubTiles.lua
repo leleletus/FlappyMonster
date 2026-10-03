@@ -20,7 +20,7 @@ local TileCodec = require 'src/world/tiles/TileCodec'
 
 local SubTiles = {}
 
-SubTiles.KINDS = { 'solid', 'dirt', 'grass', 'sand', 'deep_stone' }     -- piedra, tierra, césped, arena, roca abisal
+SubTiles.KINDS = { 'solid', 'dirt', 'grass', 'sand', 'deep_stone', 'basalt', 'ash' }     -- piedra, tierra, césped, arena, roca abisal, basalto, ceniza
 
 local QUAD = { { 0, 0 }, { 0.5, 0 }, { 0, 0.5 }, { 0.5, 0.5 } }   -- esquina de cada subcelda (fracción)
 SubTiles.QUAD = QUAD

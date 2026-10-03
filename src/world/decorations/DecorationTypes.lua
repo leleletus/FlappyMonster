@@ -25,7 +25,7 @@ local Props = require 'src/world/entities/Props'
 local DecorationTypes = { byName = {}, list = {} }
 
 -- Orden de las categorías en la paleta del editor (las que no estén, al final)
-DecorationTypes.CATEGORIES = { 'Plantas', 'Grandes', 'Pequeñas (subcelda)', 'Hielo y nieve', 'Cueva', 'Acuático', 'Tropical' }
+DecorationTypes.CATEGORIES = { 'Plantas', 'Grandes', 'Pequeñas (subcelda)', 'Pradera', 'Hielo y nieve', 'Cueva', 'Acuático', 'Tropical', 'Volcán' }
 function DecorationTypes.categoryOrder(cat)
     for i, c in ipairs(DecorationTypes.CATEGORIES) do if c == cat then return i end end
     return #DecorationTypes.CATEGORIES + 1

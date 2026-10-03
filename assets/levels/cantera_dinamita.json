@@ -120,7 +120,8 @@
   "vents": [],
   "modes": ["race","hunt","hide"],
   "music": "flying_machine",
-  "background": "mountain",
+  "background": "fortress",
   "depth": "underground",
-  "name_en": "Dynamite Quarry"
+  "name_en": "Dynamite Quarry",
+  "time": "dusk"
 }

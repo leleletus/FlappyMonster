@@ -54,9 +54,7 @@
     {"col":61,"props":{"flip":true,"layer":"back"},"row":9,"sub":4,"type":"snow_pile"},
     {"col":66,"props":{"flip":true},"row":9,"type":"frozen_bush"},
     {"col":50,"props":{"flip":true,"layer":"back"},"row":12,"sub":1,"type":"icicle_small"},
-    {"col":56,"props":{"layer":"back"},"row":12,"type":"icicle"},
-    {"col":51,"props":{"flip":true},"row":13,"type":"coral"},
-    {"col":55,"props":{"flip":true,"layer":"back"},"row":13,"sub":3,"type":"anemone"}
+    {"col":56,"props":{"layer":"back"},"row":12,"type":"icicle"}
   ],
   "vents": [],
   "links": [

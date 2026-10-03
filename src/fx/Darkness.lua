@@ -2,8 +2,9 @@
 -- LUZ AMBIENTE de los niveles (solo visual), con un mismo lienzo de luz para todos los casos:
 --   * A OSCURAS (level.dark): solo se ve lo que alumbran las linternas (esto sí cuenta para el juego: Lights).
 --   * level.light (src/world/Level.lua lightMood): 'dusk' = tono cálido; 'night' = frío y más oscuro, con las
---     antorchas / lava / setas brillando y un halo tenue alrededor de cada jugador; 'cave' = PENUMBRA con un halo
---     amplio alrededor del jugador (se juega normal: se ve bastante); 'day' / 'none' = nada.
+--     antorchas / lava / setas brillando; 'cave' = PENUMBRA (se juega normal: se ve bastante); 'day' / 'none' = nada.
+--     El jugador NO da luz en estos (el usuario: de noche tiene que ser de noche): solo en los niveles a oscuras,
+--     donde la linterna es una mecánica. (`halo` en un ánimo lo volvería a encender.)
 --   * Con fondo de PROFUNDIDAD (level.depth), lo que queda bajo la línea de superficie va en penumbra de cueva
 --     (con una franja de transición), aunque arriba sea de día.
 --   Las fuentes de luz: el halo de los jugadores, las decoraciones con `light` en su tipo y los TILES con
@@ -35,8 +36,8 @@ local canvas
 -- lights = × la fuerza de las luces de decoraciones y tiles
 Darkness.MOODS = {
     dusk  = { amb = { 1.0, 0.84, 0.68 }, lights = 0.8 },
-    night = { amb = { 0.46, 0.52, 0.78 }, halo = 150, haloA = 0.2, lights = 1.6 },
-    cave  = { amb = { 0.4, 0.4, 0.5 }, halo = 200, haloA = 0.42, lights = 2.0 },
+    night = { amb = { 0.46, 0.52, 0.78 }, lights = 1.6 },
+    cave  = { amb = { 0.5, 0.5, 0.6 }, lights = 2.0 },
 }
 local DEEP = Darkness.MOODS.cave
 local RINGS = 5                        -- escalones de las luces suaves (noche, cueva)

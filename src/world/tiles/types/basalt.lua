@@ -1,0 +1,18 @@
+-- Basalto: roca volcánica oscura (isla volcánica). Como la piedra: bloque sólido de terreno cuyo dibujo
+-- cubre 2x2 casillas y se repite: assets/images/tiles/basalt.png (tools/ui/make_biome_art.py). Se une con
+-- 'ground'. Mismo comportamiento que la piedra: solo cambia el aspecto.
+local TileTypes = require 'src/world/tiles/TileTypes'
+
+local TEX = { image = 'assets/images/tiles/basalt.png', span = 2 }
+
+return {
+    id = 38, name = 'basalt', label = 'Basalto', category = 'Terreno',
+    collision = 'solid', material = 'basalt', joinGroup = 'ground',
+    editorColor = { 0.18, 0.16, 0.2 },
+    texture = TEX,
+    draw = function(t, ctx)
+        TileTypes.drawTexture(TEX, ctx)
+        love.graphics.setColor(0.32, 0.29, 0.36, 1)
+        TileTypes.drawEdges(ctx, TileTypes.edges(t, ctx), 2)
+    end,
+}

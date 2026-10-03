@@ -16,14 +16,14 @@ Worlds.LIST = {
     { id = 'pradera',   levels = { 'valle_soleado', 'pradera_explosiva', 'bosque_interruptores' },                           boss = 'reino_gummy' },
     -- 2 La Costa: trampolines y agua; del más suelto al más denso, y el arrecife (bucear) al final
     { id = 'costa',     levels = { 'playa_rebotes', 'jungla_colgante', 'canon_trampolines', 'arrecife_globo' },              boss = 'guarida_cangrejo_rey' },
-    -- 3 La Fortaleza: morteros y bombas primero; luego el taller denso y las dos de cámara automática
-    { id = 'fortaleza', levels = { 'fabrica_morteros', 'cantera_dinamita', 'taller_trampas', 'tren_fugaz', 'lluvia_pinchos' }, boss = 'fortaleza_malvada' },
+    -- 3 La Fortaleza: morteros y bombas primero; luego el taller denso y el tren (cámara automática)
+    { id = 'fortaleza', levels = { 'fabrica_morteros', 'cantera_dinamita', 'taller_trampas', 'tren_fugaz' },               boss = 'fortaleza_malvada' },
     -- 4 Las Cumbres: nieve y congeladores; la Bola de Nieve a media isla; la torre (subir) antes del jefe
     { id = 'nieve',     levels = { 'cumbres_escarcha', 'fabrica_criogenica', 'lago_helado', 'torre_viento' },              boss = 'glaciar_cangrejo' },
     -- 5 Las Cuevas: cristal, los dos laberintos de agua y el templo a oscuras justo antes del jefe a oscuras
     { id = 'cuevas',    levels = { 'cavernas_cristal', 'nivel01', 'laberinto_submarino', 'templo_del_eco' },             boss = 'gruta_lugubre' },
-    -- 6 El Final (el volcán): lava
-    { id = 'final',     levels = { 'carrera01', 'caldera_roja' },                                                          boss = 'ruta_del_espejo' },
+    -- 6 El Final (el volcán): lava; la lluvia de pinchos (cámara automática) es la erupción, antes del Espejo
+    { id = 'final',     levels = { 'carrera01', 'caldera_roja', 'lluvia_pinchos' },                                       boss = 'ruta_del_espejo' },
 }
 
 function Worlds.count() return #Worlds.LIST end

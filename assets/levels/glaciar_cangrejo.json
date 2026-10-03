@@ -61,10 +61,7 @@
     {"col":82,"props":{"flip":true},"row":12,"type":"snowy_pine"},
     {"col":85,"props":{"layer":"back"},"row":12,"sub":3,"type":"snow_pile"},
     {"col":112,"row":12,"type":"snowman"},
-    {"col":114,"props":{"layer":"back"},"row":12,"sub":3,"type":"ice_crystal"},
-    {"col":15,"row":14,"type":"coral"},
-    {"col":19,"props":{"layer":"back"},"row":14,"sub":4,"type":"shell"},
-    {"col":19,"props":{"layer":"back"},"row":14,"sub":3,"type":"shell"}
+    {"col":114,"props":{"layer":"back"},"row":12,"sub":3,"type":"ice_crystal"}
   ],
   "vents": [],
   "bossZones": [

@@ -27,7 +27,7 @@ local DIR = 'assets/images/sky/'
 local S = 4                              -- escala del arte
 
 -- Degradados (cuadros de gradients.png)
-local GRAD = { day = 1, dusk = 2, night = 3, cave = 4, water = 5, abyss = 6, icecave = 7, underground = 8 }
+local GRAD = { day = 1, dusk = 2, night = 3, cave = 4, water = 5, abyss = 6, icecave = 7, underground = 8, volcano = 9, magma = 10 }
 
 Sky.TIMES = {
     { id = 'day',   label = 'Día',       tint = { 1, 1, 1 } },
@@ -43,6 +43,9 @@ Sky.BIOMES = {
     { id = 'snow',     label = 'Nieve',     sky = true, layers = { { 'snow_far', 0.08 }, { 'snow_mid', 0.2 }, { 'snow_near', 0.38 } } },
     { id = 'forest',   label = 'Bosque / selva', sky = true, layers = { { 'forest_far', 0.1 }, { 'forest_mid', 0.22 }, { 'forest_near', 0.4 } } },
     { id = 'fortress', label = 'Fortaleza', sky = true, layers = { { 'fortress_far', 0.08 }, { 'fortress_mid', 0.25 } } },
+    -- (isla volcánica: cielo de ceniza al rojo, propio, que la hora tiñe)
+    { id = 'volcano',  label = 'Volcán',    sky = true, grad = 'volcano',
+      layers = { { 'volcano_far', 0.08 }, { 'volcano_mid', 0.2 }, { 'volcano_near', 0.38 } } },
     -- (estos también valen de PROFUNDIDAD: depth = true)
     { id = 'cave',     label = 'Cueva',     grad = 'cave', depth = true,
       wall = 'cave_wall', layers = { { 'cave_far', 0.12 }, { 'cave_mid', 0.28 }, { 'cave_top', 0.2, top = true } } },
@@ -52,6 +55,8 @@ Sky.BIOMES = {
       layers = { { 'abyss_far', 0.12 }, { 'abyss_mid', 0.28 }, { 'abyss_top', 0.2, top = true } } },
     { id = 'icecave',  label = 'Cueva helada', grad = 'icecave', depth = true, onlyDepth = true, wall = 'icecave_wall',
       layers = { { 'icecave_far', 0.12 }, { 'icecave_mid', 0.28 }, { 'icecave_top', 0.2, top = true } } },
+    { id = 'magma',    label = 'Magma (bajo el volcán)', grad = 'magma', depth = true, onlyDepth = true, wall = 'magma_wall',
+      layers = { { 'magma_far', 0.12 }, { 'magma_mid', 0.28 }, { 'magma_top', 0.2, top = true } } },
     { id = 'underground', label = 'Subsuelo', grad = 'underground', depth = true, onlyDepth = true, wall = 'underground_wall',
       layers = { { 'underground_far', 0.12 }, { 'underground_mid', 0.28 }, { 'underground_top', 0.2, top = true } } },
 }

@@ -30,8 +30,9 @@ Uso (desde la raíz del repo):
   --tiles   solo el terreno: no toca las decoraciones (las del usuario se quedan)
   --sky     solo escribe el fondo y la hora (tabla SKY) en los niveles que no los tengan
   --deep    solo pasa a roca abisal el terreno hondo bajo el agua (nada más cambia)
-  --decor [--fix]  revisa las decoraciones de TODOS los niveles (o los nombrados): cada una sobre su
-            material (tabla REQ); con --fix cambia las que no por otra que valga ahí, o las quita
+  --decor [--fix] [--theme]  revisa las decoraciones de TODOS los niveles (o los nombrados): cada una sobre
+            su material (tabla REQ); con --fix cambia las que no por otra que valga ahí, o las quita; con
+            --theme, también las de OTRO bioma (palmeras en la pradera, corales en la nieve): tabla THEMES
 Tras `build.py --only x` (que reescribe el nivel) hay que volver a pasarlo.
 """
 import json, os, random, sys, hashlib
@@ -40,22 +41,24 @@ LEVELS = 'assets/levels'
 ID_HIGH = 2 ** 17
 EMPTY, SOLID, SLAB, BORDER, WATER, DROP, FINISH, BREAK = 0, 1, 2, 4, 9, 10, 11, 12
 DIRT, GRASS, SNOW, ICE, SAND, DEEP, PACKED = 16, 17, 29, 30, 35, 36, 37
+BASALT, ASH = 38, 39                  # isla volcánica (tools/ui/make_biome_art.py)
 THIN_ICE = {31, 32, 33, 34}
-GROUND = {SOLID, BORDER, DIRT, GRASS, SNOW, ICE, SAND, DEEP, PACKED}
+GROUND = {SOLID, BORDER, DIRT, GRASS, SNOW, ICE, SAND, DEEP, PACKED, BASALT, ASH}
 DEEP_ROWS = 4                     # bajo ≥ 4 filas de agua: roca abisal
 
 THEMES = {
-    'valle_soleado': 'meadow', 'jardin_gummies': 'meadow', 'carrera01': 'meadow', 'nivel01': 'meadow',
-    'lluvia_pinchos': 'meadow', 'tren_fugaz': 'meadow', 'ruta_del_espejo': 'meadow', 'ciudadela_cangrejos': 'meadow',
+    # (modo historia: cada nivel con el tema de SU isla — src/story/Worlds.lua)
+    'valle_soleado': 'meadow', 'jardin_gummies': 'meadow', 'carrera01': 'volcano', 'nivel01': 'cave',
+    'lluvia_pinchos': 'volcano', 'tren_fugaz': 'fortress', 'ruta_del_espejo': 'volcano', 'ciudadela_cangrejos': 'meadow',
     'marea_alta': 'tropical', 'cascada_dorada': 'tropical', 'isla_flotante': 'tropical', 'canon_trampolines': 'tropical',
     'rebote_real': 'tropical', 'guarida_cangrejo_rey': 'tropical',
     'cumbre_cangrejo': 'snow', 'torre_viento': 'snow', 'lago_helado': 'snow', 'glaciar_cangrejo': 'snow', 'reino_gummy': 'meadow', 'gruta_lugubre': 'cave',
-    'cavernas_cristal': 'cave', 'mina_inundada': 'mine', 'laberinto_submarino': 'underwater',
+    'cavernas_cristal': 'cave', 'mina_inundada': 'mine', 'laberinto_submarino': 'cave',
     'fabrica_morteros': 'fortress', 'fortaleza_malvada': 'fortress', 'taller_trampas': 'fortress',
     'coliseo_pinchos': 'fortress',
     # tanda 2 (tools/levelgen/levels_batch2.py)
-    'pradera_explosiva': 'meadow', 'bosque_interruptores': 'forest', 'playa_rebotes': 'tropical', 'arrecife_globo': 'tropical',
-    'cantera_dinamita': 'mine', 'cumbres_escarcha': 'snow', 'fabrica_criogenica': 'fortress', 'templo_del_eco': 'cave',
+    'pradera_explosiva': 'meadow', 'bosque_interruptores': 'forest', 'playa_rebotes': 'beach', 'arrecife_globo': 'tropical',
+    'cantera_dinamita': 'mine', 'cumbres_escarcha': 'snow', 'fabrica_criogenica': 'snow', 'templo_del_eco': 'cave',
     'jungla_colgante': 'tropical', 'caldera_roja': 'volcano', 'cantera_real': 'mine', 'lago_de_cristal': 'snow',
     'ciudadela_alterna': 'fortress', 'cala_de_los_muelles': 'tropical', 'cripta_del_silencio': 'cave',
 }
@@ -96,13 +99,18 @@ TERRAIN = {
     'underwater': (SOLID, SOLID, SOLID),
     'fortress':   (SOLID, SOLID, SOLID),
     'forest':     (GRASS, DIRT, SOLID),
-    'volcano':    (SOLID, SOLID, SOLID),
+    'volcano':    (ASH, BASALT, BASALT),
+    'beach':      (SAND, SAND, SOLID),            # playa: arena hasta 3 de hondo
 }
 
 # Decoraciones: (tipo, peso, 'cell'|'sub', casillas libres que necesita hacia arriba)
 FLOOR = {
-    'meadow':   [('tulip', 5, 'sub', 1), ('fern', 4, 'cell', 1), ('tropical_bush', 3, 'cell', 1), ('butterflies', 1, 'cell', 1),
-                 ('hibiscus', 2, 'sub', 1), ('stretch', 1, 'sub', 2), ('palmtree', 1, 'cell', 3)],
+    # (pradera: árboles y plantas de clima templado — nada tropical: ni palmeras, ni helechos, ni hibiscos)
+    'meadow':   [('tulip', 4, 'sub', 1), ('flower_patch', 4, 'sub', 1), ('tall_grass', 4, 'sub', 1), ('round_bush', 3, 'cell', 1),
+                 ('oak_tree', 2, 'cell', 3), ('pine_tree', 1, 'cell', 3), ('sunflower', 2, 'sub', 2), ('red_mushroom', 1, 'sub', 1),
+                 ('mossy_rock', 2, 'sub', 1), ('fallen_log', 1, 'cell', 1), ('butterflies', 1, 'cell', 1), ('stretch', 1, 'sub', 2)],
+    'beach':    [('palmtree', 3, 'cell', 3), ('hibiscus', 2, 'sub', 1), ('pineapple', 2, 'sub', 1), ('tiki_torch', 1, 'cell', 2),
+                 ('shell', 3, 'sub', 1), ('starfish', 2, 'sub', 1)],
     'tropical': [('palmtree', 3, 'cell', 3), ('fern', 3, 'cell', 1), ('tropical_bush', 3, 'cell', 1), ('hibiscus', 4, 'sub', 1),
                  ('pineapple', 2, 'sub', 1), ('tiki_torch', 1, 'cell', 2), ('butterflies', 1, 'cell', 1)],
     'snow':     [('snowy_pine', 4, 'cell', 2), ('frozen_bush', 3, 'cell', 1), ('snow_pile', 5, 'sub', 1), ('ice_crystal', 3, 'sub', 1),
@@ -114,8 +122,10 @@ FLOOR = {
     'underwater': [('stalagmite_small', 3, 'sub', 1), ('glow_mushroom', 3, 'sub', 1), ('cave_crystals', 1, 'cell', 1)],
     'fortress': [('torch', 4, 'sub', 1), ('bones', 2, 'sub', 1), ('stalagmite_small', 1, 'sub', 1)],
     'forest':   [('fern', 5, 'cell', 1), ('tropical_bush', 4, 'cell', 1), ('tulip', 3, 'sub', 1), ('stretch', 2, 'sub', 2), ('butterflies', 1, 'cell', 1),
-                 ('glow_mushroom', 1, 'sub', 1)],
-    'volcano':  [('stalagmite_small', 4, 'sub', 1), ('bones', 3, 'sub', 1), ('stalagmite', 2, 'cell', 1)],
+                 ('glow_mushroom', 1, 'sub', 1), ('oak_tree', 2, 'cell', 3), ('pine_tree', 2, 'cell', 3), ('round_bush', 2, 'cell', 1),
+                 ('red_mushroom', 2, 'sub', 1), ('tall_grass', 2, 'sub', 1), ('fallen_log', 1, 'cell', 1)],
+    'volcano':  [('charred_tree', 2, 'cell', 3), ('dead_bush', 4, 'sub', 1), ('basalt_rock', 3, 'cell', 1), ('basalt_pebbles', 4, 'sub', 1),
+                 ('ash_pile', 3, 'sub', 1), ('lava_vent', 2, 'sub', 1), ('glow_rock', 2, 'sub', 1), ('bones', 1, 'sub', 1)],
 }
 BEACH = [('shell', 3, 'sub', 1), ('starfish', 2, 'sub', 1), ('palmtree', 2, 'cell', 3), ('pineapple', 1, 'sub', 1)]
 WATER_FLOOR = [('seaweed', 4, 'cell', 2), ('seaweed_small', 5, 'sub', 1), ('coral', 3, 'cell', 1), ('coral_fan', 2, 'cell', 1),
@@ -126,13 +136,14 @@ CEIL = {
     'mine':     [('stalactite', 3, 'cell'), ('cobweb', 2, 'corner')],
     'underwater': [('stalactite', 2, 'cell')],
     'fortress': [('cobweb', 3, 'corner')],
-    'volcano':  [('stalactite', 3, 'cell')],
+    'volcano':  [('stalactite', 3, 'cell'), ('lava_fall', 1, 'cell')],
 }
 # ── Cada decoración, SOLO sobre el material que le toca ─────────────────────────
 # (el usuario: nada de plantas, palmeras ni flores saliendo de la roca, la nieve, la arena o
 # una viga; cada material lleva lo suyo). REQ = materiales del bloque que la sostiene (el de
 # debajo; las que cuelgan, el de encima). Lo que no esté aquí no se pone en ningún sitio.
-ROCK = {SOLID, BORDER, DEEP}
+ROCK = {SOLID, BORDER, DEEP, BASALT}
+VOLC = {ASH, BASALT}
 SOIL = {GRASS, DIRT}
 SNOWY = {SNOW, PACKED}
 REQ = {
@@ -148,7 +159,20 @@ REQ = {
     'shell': {SAND}, 'starfish': {SAND},
     # colgando (el bloque de ENCIMA)
     'icicle': SNOWY | {ICE} | ROCK, 'icicle_small': SNOWY | {ICE} | ROCK, 'stalactite': ROCK | {DIRT}, 'cobweb': GROUND,
+    # pradera (tools/ui/make_biome_art.py)
+    'oak_tree': SOIL, 'pine_tree': SOIL, 'round_bush': SOIL, 'fallen_log': SOIL, 'flower_patch': SOIL, 'tall_grass': SOIL,
+    'sunflower': SOIL, 'red_mushroom': SOIL, 'mossy_rock': SOIL | ROCK,
+    # volcán
+    'charred_tree': VOLC, 'dead_bush': VOLC, 'basalt_rock': VOLC | ROCK, 'basalt_pebbles': VOLC | ROCK | {SLAB, DROP},
+    'ash_pile': VOLC | {SLAB, DROP}, 'lava_vent': VOLC, 'glow_rock': VOLC | ROCK, 'lava_fall': ROCK | VOLC,
+    'steam_stones': VOLC | ROCK | {SAND},
 }
+# Qué decoraciones PEGAN en cada tema (--theme: las de otro bioma se cambian por una de este; las del agua
+# se quedan si el tema tiene agua de verdad). Sale de FLOOR/CEIL/BEACH; más las sueltas que también valen.
+EXTRA_OK = {'tropical': {'shell', 'starfish'}, 'cave': {'bones', 'torch', 'cobweb'}, 'volcano': {'steam_stones'},
+            'snow': {'icicle', 'icicle_small'}, 'fortress': {'stalactite', 'cave_crystals'}, 'mine': {'cave_crystals'}}
+NO_SEA = {'meadow', 'forest', 'snow', 'fortress', 'volcano', 'mine'}     # (algas sí; corales, conchas y estrellas de mar, no)
+SEA_LIFE = {'coral', 'coral_fan', 'anemone', 'clam', 'shell', 'starfish'}
 HANGING = {'icicle', 'icicle_small', 'stalactite', 'cobweb'}
 ROOFED = {'cavernas_cristal', 'mina_inundada', 'gruta_lugubre', 'laberinto_submarino', 'taller_trampas'}   # niveles bajo techo aunque su tema no sea de cueva
 AQUATIC = {'seaweed', 'seaweed_small', 'coral', 'coral_fan', 'anemone', 'clam'}     # dentro del agua, sobre cualquier fondo salvo hielo
@@ -192,10 +216,10 @@ def retheme(name, force=False, dry=False, terrain=False, tiles_only=False):
         return tid(raw) == WATER or (tid(raw) not in GROUND and waterlogged(raw))
 
     def beach(c, r):
-        if theme not in ('meadow', 'tropical'): return False
+        if theme not in ('tropical',): return False         # (la pradera no tiene playa: está tierra adentro)
         return any(wet(c + dx, r + dy) for dx in range(-3, 4) for dy in (-1, 0, 1))
 
-    CONVERT = {SOLID, BORDER} | ({DIRT, GRASS, SNOW, SAND, DEEP} if terrain else set())
+    CONVERT = {SOLID, BORDER} | ({DIRT, GRASS, SNOW, SAND, DEEP, ASH, BASALT} if terrain else set())
 
     # Profundidad bajo el agua por casilla: filas desde la superficie del agua de su
     # columna (atravesando agua y terreno; el aire la reinicia)
@@ -229,12 +253,12 @@ def retheme(name, force=False, dry=False, terrain=False, tiles_only=False):
                 else:
                     w_ = above == WATER or waterlogged(at(c, r - 1))
                     depth, top = 0, ('water' if w_ else 'air')
-                    sandy = (w_ and theme not in ('snow', 'fortress')) or (not w_ and beach(c, r))
+                    sandy = (w_ and theme not in ('snow', 'fortress', 'volcano')) or (not w_ and beach(c, r))
             else:
                 depth += 1
             if frame(c, r) or i not in CONVERT or (i == BORDER and r != H - 1):
                 continue
-            if theme != 'snow' and (deepAt.get((c, r), 0) >= DEEP_ROWS or (theme == 'underwater' and r >= H * 0.45)):
+            if theme not in ('snow', 'volcano') and (deepAt.get((c, r), 0) >= DEEP_ROWS or (theme == 'underwater' and r >= H * 0.45)):
                 want = DEEP
             elif depth <= 1 and top != 'rock' and sandy:
                 want = SAND
@@ -318,6 +342,10 @@ def retheme(name, force=False, dry=False, terrain=False, tiles_only=False):
     added = []
     lastCol = {}
 
+    def wet_(c, r):
+        raw = at(c, r)
+        return tid(raw) == WATER or (tid(raw) not in GROUND and waterlogged(raw))
+
     def place(tp, c, r, sub=None):
         f = {'type': tp, 'col': c + 1, 'row': r + 1}
         if sub: f['sub'] = sub
@@ -334,12 +362,16 @@ def retheme(name, force=False, dry=False, terrain=False, tiles_only=False):
             plank = tid(below) in PLANKS
             if (tid(below) in GROUND or plank) and not spiky(below):
                 wet = tid(T[r][c]) == WATER or waterlogged(T[r][c])
-                opts = WATER_FLOOR if wet else (BEACH if tid(below) == SAND and theme in ('meadow', 'tropical', 'forest') else FLOOR[theme])
+                opts = WATER_FLOOR if wet else (BEACH if tid(below) == SAND and theme in ('tropical',) else FLOOR[theme])
+                if wet and theme in NO_SEA: opts = [o for o in opts if o[0] not in SEA_LIFE]
+                # volcán: junto al agua (aguas termales) un corro de piedras con vapor
+                near_water = theme == 'volcano' and not wet and any(wet_(c + dx, r + dy) for dx in (-2, -1, 1, 2) for dy in (0, 1))
+                if near_water: opts = [('steam_stones', 1, 'sub', 1)]
                 if not wet: opts = [o for o in opts if tid(below) in REQ.get(o[0], ())]      # (cada cosa en su material)
                 if plank: opts = [o for o in opts if o[2] == 'sub' and o[3] == 1]
                 elif tid(below) == ICE: opts = []
                 if not opts: continue
-                dens = DENSITY['water' if wet else 'floor']
+                dens = 0.5 if near_water else DENSITY['water' if wet else 'floor']
                 if free(c, r, wet) and rnd.random() < dens and abs(lastCol.get(r, -9) - c) > 1:
                     tp, _, kind, need = pick(opts)
                     if all(free(c, r - k, wet) for k in range(need)):
@@ -431,8 +463,34 @@ def audit(name, fix=False):
         bad.append((tp, f['col'], f['row'], sup, new and new['type']))
         if new: out.append(new)
         elif not fix: out.append(f)
+    # --theme: lo de OTRO bioma (palmeras en la pradera, corales en la nieve...) por algo de este tema
+    if THEME_CHECK:
+        allowed = {t for t, *_ in FLOOR.get(theme, [])} | {t for t, *_ in CEIL.get(theme, [])} | EXTRA_OK.get(theme, set())
+        if theme == 'tropical': allowed |= {t for t, *_ in BEACH}
+        keep = []
+        for f in out:
+            tp, c, r = f['type'], f['col'] - 1, f['row'] - 1
+            here = T[r][c] if 0 <= r < H and 0 <= c < W else 0
+            wet = tid(here) == WATER or waterlogged(here)
+            if tp in allowed or (wet and tp in AQUATIC and not (theme in NO_SEA and tp in SEA_LIFE)):
+                keep.append(f); continue
+            kind = 'sub' if f.get('sub') else 'cell'
+            sr = r + 1
+            sup = tid(T[sr][c]) if 0 <= sr < H and 0 <= c < W else 0
+            opts = [o for o in FLOOR.get(theme, []) if o[2] == kind and sup in REQ.get(o[0], ()) and o[3] <= 1] if not wet else []
+            new = None
+            if opts:
+                tot = sum(o[1] for o in opts); x = rnd.random() * tot
+                for o in opts:
+                    x -= o[1]
+                    if x <= 0: break
+                new = dict(f, type=o[0])
+            bad.append((tp, f['col'], f['row'], sup, new and new['type']))
+            if new: keep.append(new)
+            elif not fix: keep.append(f)
+        out = keep
     names = {SOLID: 'piedra', BORDER: 'roca', DEEP: 'roca abisal', GRASS: 'césped', DIRT: 'tierra', SNOW: 'nieve', PACKED: 'nieve',
-             ICE: 'hielo', SAND: 'arena', SLAB: 'viga', DROP: 'tabla', BREAK: 'rompible'}
+             ICE: 'hielo', SAND: 'arena', SLAB: 'viga', DROP: 'tabla', BREAK: 'rompible', BASALT: 'basalto', ASH: 'ceniza'}
     if bad:
         import collections
         cnt = collections.Counter((b[0], names.get(b[3], 'tile %d' % b[3])) for b in bad)
@@ -462,6 +520,7 @@ def save(path, lv):
 
 
 DEEP_ONLY = '--deep' in sys.argv
+THEME_CHECK = '--theme' in sys.argv     # con --decor: también lo que no es del bioma del nivel
 if DEEP_ONLY: sys.argv += ['--tiles', '--terrain']
 
 if __name__ == '__main__':

@@ -986,8 +986,8 @@ list no mode until the user places a Point Area in them).
 - **LIGHT MOODS (all levels, render only)**: `level.light` = JSON `"light"` (day | dusk | night | cave | none) or auto
   (`Level.lightMood`: background 'cave' → cave, time dusk/night → that, else day; editor Nivel → Fondo y clima → "Luz").
   `src/fx/Darkness.lua` draws them with the SAME light canvas as the dark levels (`Darkness.MOODS`: ambient colour that
-  multiplies the screen, a soft halo around each player, × strength of the lights): dusk warm, night cool and darker
-  with torches/lava glowing, cave = PENUMBRA (playable, halo 200 px). With a `depth` biome, everything below the surface
+  multiplies the screen, × strength of the lights): dusk warm, night cool and darker with torches/lava glowing, cave =
+  PENUMBRA (playable). The PLAYER gives NO light in these (user: night must feel like night) — only in dark levels. With a `depth` biome, everything below the surface
   line is cave penumbra (stepped transition band) even on a day level. Light sources: decorations with `light`, TILES
   with `light` in their def (lava) and the players. Soft lights = `RINGS` stepped circles (flat discs looked wrong).
   Cave mood also turns the ECHO on by default (`level.echo`). `level_shots` draws the mood (`LIGHT=0` = without).
@@ -1160,7 +1160,32 @@ Sky clips with `Clip` so it works inside the editor's zoom transform), so surfac
 changes show without playtesting (at zoom ≠ 1 the view is larger than a game screen). Art: `assets/images/sky/` from
 `tools/ui/make_sky.py` (simple 2-3 tone silhouettes). New biome = PNGs + one BIOMES entry.
 
+## Biome art: volcano + meadow (`tools/ui/make_biome_art.py`)
+
+Made for the "retheme" stage (every story level must look like ITS island). Style = the game's: parts with a 4-tone
+palette (outline = the darkest tone of the object's OWN colour, never black; light from the top-left), 1-px margin;
+the user rejected a first version with black outlines and flat colours ("too simple"). `Canvas.part(mask, pal)`.
+- Tiles: **Basalto** `basalt` 38 (dark volcanic rock, 2x2 drawing like stone, very few marks) and **Ceniza** `ash` 39
+  (ash cap with embers over basalt when its top is in the air, like grass over dirt); materials `basalt` / `ash`
+  (debris), sub-tile kinds, thumbnails 'V' / 'H', sand blends, boss-wall `material` options.
+- Sky (`tools/ui/make_sky.py`): surface biome **volcano** (own red ash gradient tinted by the time: volcano with a
+  glowing crater and lava streams, basalt ridges, charred trees) and depth **magma** (rock with magma veins, hanging
+  basalt with glowing tips, `magma_wall`). Gradients 9 / 10.
+- Decorations: `volcano_set` (category Volcán): charred_tree, basalt_rock, lava_fall (hangs, lights, embers),
+  dead_bush, basalt_pebbles, ash_pile, lava_vent (smoke + embers, light), glow_rock (light), steam_stones (HOT SPRINGS:
+  steam puffs; retheme puts them next to water in volcano levels — carrera01's pools are hot springs, same gameplay);
+  `meadow_set` (category Pradera): oak_tree, pine_tree, round_bush, fallen_log, flower_patch, tall_grass, sunflower,
+  red_mushroom, mossy_rock. Particle sprite `fx/smoke-Sheet.png`. Preview: `FlappyMonster_pruebas/biomas/vista_previa.png`.
+
 ## Level themes (`tools/levelgen/retheme.py`)
+
+**Story retheme (by island)**: THEMES now follows `src/story/Worlds.lua` — meadow (temperate: no palms/ferns/hibiscus),
+`beach` (sand, playa_rebotes), fortress (tren_fugaz), snow (fabrica_criogenica), cave (nivel01, laberinto_submarino:
+background cave, music dark_cave), volcano (carrera01, caldera_roja, lluvia_pinchos — moved to the Volcano world —,
+ruta_del_espejo: terrain → ash/basalt, sky volcano, depth magma, boss walls basalt). `--decor --fix --theme` also swaps
+decorations of ANOTHER biome (palms in the meadow, corals/shells in snow or fortress water: `NO_SEA`, `SEA_LIFE`,
+`EXTRA_OK`) for one of the level's theme.
+
 
 The levels were built when stone was the only block. `retheme.py` re-dresses them by
 THEME (table `THEMES`: meadow, tropical, snow, cave, mine, underwater, fortress) with

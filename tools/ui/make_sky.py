@@ -73,6 +73,8 @@ GRADS = {
     'abyss': ['3a1424', '2e1020', '240c1a', '1a0814', '12060e'],
     'icecave': ['4a6c9a', '3e5e8a', '34507a', '2a446a', '22385a'],
     'underground': ['3a2a1e', '33251a', '2c2016', '251b12', '1e160e'],
+    'volcano': ['2a161c', '4a1e20', '7a2c22', 'b0441e', 'e06c28'],      # cielo de ceniza al rojo (se tiñe por la hora)
+    'magma': ['2a100c', '230c0a', '1c0a08', '160806', '100604'],        # bajo el volcán
 }
 
 
@@ -372,6 +374,79 @@ def layer_underground():
     return far, mid, top
 
 
+def layer_volcano():
+    """Isla volcánica: lejos el VOLCÁN (cono con el cráter al rojo y coladas), en medio crestas de basalto con
+    filo incandescente, cerca rocas y árboles calcinados."""
+    far = Image.new('RGBA', (W, 130), (0, 0, 0, 0))
+    body, edge = rgb('3a2226'), rgb('4e2e30')
+    for x in range(W):
+        # un volcán grande y otro pequeño por repetición (W = 320)
+        d1, d2 = abs(x - 110), abs(x - 255)
+        hgt = max(0, 118 - d1 * 0.9, 74 - d2 * 1.0, 28 + 6 * math.sin(2 * math.pi * 3 * x / W))
+        top = 130 - int(min(hgt, 112 if d1 < 14 else hgt))
+        for y in range(max(0, top), 130):
+            far.putpixel((x, y), edge if y == top else body)
+    for x in range(98, 123):                 # cráter: boca roja y resplandor
+        for y in range(18, 22):
+            if far.getpixel((x, y))[3]: far.putpixel((x, y), rgb('ff8a2a') if y < 20 else rgb('c8401c'))
+    for sx, n in ((104, 46), (117, 38), (250, 26)):       # coladas de lava por la ladera
+        x = float(sx)
+        y0 = 22 if sx < 200 else 58
+        for i in range(n):
+            x += rnd.choice((-0.5, 0, 0.5, 0.8)) * (1 if sx > 110 else -1)
+            y = y0 + i
+            if 0 <= y < 130 and far.getpixel((int(x) % W, y))[3]:
+                far.putpixel((int(x) % W, y), rgb('e85a20') if i % 7 else rgb('ffb040'))
+    midp = profile([(14, 5, 0.7), (7, 11, 2.1), (3, 23, 0.4)], 42)
+    mid = fill_profile(90, midp, rgb('241618'), rgb('8a3a20'))
+    for x in range(W):                       # grietas con brillo
+        if x % 37 in (5, 6):
+            y0 = int(round(90 - midp[x])) + 4
+            for y in range(y0, min(90, y0 + 10 + x % 9)):
+                mid.putpixel((x, y), rgb('6a2a1a'))
+    nearp = profile([(4, 4, 1.2), (3, 9, 0.5)], 14)
+    near = fill_profile(60, nearp, rgb('140c0e'), rgb('2a181a'))
+    for x0 in range(12, W, 41):              # árboles calcinados: tronco y ramas secas
+        base = int(round(60 - nearp[x0 % W]))
+        h = 16 + rnd.randrange(10)
+        for y in range(base - h, base):
+            near.putpixel((x0 % W, y), rgb('140c0e'))
+            near.putpixel(((x0 + 1) % W, y), rgb('140c0e'))
+        for k in range(3):
+            by = base - h + 3 + k * 4
+            dx = -1 if k % 2 else 1
+            for i in range(4 + rnd.randrange(3)):
+                yy = by - i // 2
+                if 0 <= yy < 60: near.putpixel(((x0 + dx * (i + 1)) % W, yy), rgb('140c0e'))
+    return far, mid, near
+
+
+def layer_magma():
+    """Bajo el volcán: roca oscura con vetas de magma, pilares y basalto colgando con gotas al rojo."""
+    farp = profile([(9, 3, 1.1), (5, 7, 0.3)], 36)
+    far = fill_profile(80, farp, rgb('3a1a16'), rgb('4c2218'))
+    for x0 in range(8, W, 29):               # vetas de magma
+        x = float(x0)
+        y0 = int(round(80 - farp[x0 % W])) + 3
+        for y in range(y0, 80):
+            x += rnd.choice((-0.7, 0, 0.7))
+            far.putpixel((int(x) % W, y), rgb('a83a18') if y % 5 else rgb('e8682a'))
+    mid = fill_profile(60, profile([(6, 5, 0.7), (4, 11, 2.0)], 20), rgb('24100e'), rgb('5a2416'))
+    top = Image.new('RGBA', (W, 70), (0, 0, 0, 0))
+    topp = profile([(3, 4, 0.5), (2, 9, 1.3)], 8)
+    for x in range(W):
+        for y in range(0, int(topp[x])): top.putpixel((x, y), rgb('1c0c0a'))
+    for x0 in range(6, W, 17):               # basalto colgando (columnas) con la punta incandescente
+        L = 8 + rnd.randrange(22)
+        w = 1 + rnd.randrange(2)
+        for y in range(int(topp[x0 % W]), min(70, int(topp[x0 % W]) + L)):
+            for dx in range(-w, w + 1):
+                top.putpixel(((x0 + dx) % W, y), rgb('1c0c0a'))
+        yt = min(69, int(topp[x0 % W]) + L)
+        top.putpixel((x0 % W, yt), rgb('e8682a'))
+    return far, mid, top
+
+
 def blend():
     """Tramado (blanco, se tiñe): de lleno arriba a casi nada abajo; une el suelo de la
     superficie con el fondo de profundidad."""
@@ -426,6 +501,7 @@ def walls():
         'abyss_wall': wall(rgb('2a0c18'), rgb('3a1424'), 3, 'rock'),
         'icecave_wall': wall(rgb('2e4a74'), rgb('5a80b0'), 4, 'crystal'),
         'underground_wall': wall(rgb('2a1e14'), rgb('36281a'), 5, 'rock'),
+        'magma_wall': wall(rgb('2a120e'), rgb('4a1e14'), 6, 'rock'),
     }
 
 
@@ -436,10 +512,11 @@ if __name__ == '__main__':
     sets = {'meadow': layer_meadow(), 'coast': layer_coast(), 'mountain': layer_mountain(),
             'snow': layer_mountain(True), 'forest': layer_forest(), 'cave': layer_cave(),
             'underwater': layer_underwater(), 'fortress': layer_fortress(),
-            'abyss': layer_abyss(), 'icecave': layer_icecave(), 'underground': layer_underground()}
+            'abyss': layer_abyss(), 'icecave': layer_icecave(), 'underground': layer_underground(),
+            'volcano': layer_volcano(), 'magma': layer_magma()}
     for b, layers in sets.items():
         names = {'cave': ('far', 'mid', 'top'), 'underwater': ('far', 'mid', 'rays')}.get(b, ('far', 'mid', 'near'))
-        if b in ('abyss', 'icecave', 'underground'): names = ('far', 'mid', 'top')
+        if b in ('abyss', 'icecave', 'underground', 'magma'): names = ('far', 'mid', 'top')
         for n, im in zip(names, layers):
             if b == 'cave' and n == 'top': save('cave_top', im)
             elif n == 'rays': save('rays', im)

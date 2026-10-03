@@ -20,7 +20,7 @@
 
 local DecorationTypes = require 'src/world/decorations/DecorationTypes'
 
-local TYPES = { 'tulip', 'stretch', 'palmtree', 'icicle', 'ice_set', 'cave_set', 'water_set', 'tropical_set' }
+local TYPES = { 'tulip', 'stretch', 'palmtree', 'icicle', 'ice_set', 'cave_set', 'water_set', 'tropical_set', 'meadow_set', 'volcano_set' }
 
 for _, name in ipairs(TYPES) do
     local def = require('src/world/decorations/types/' .. name)
