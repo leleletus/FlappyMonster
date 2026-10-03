@@ -132,7 +132,7 @@ function OnlineResultsState:enter(args)
     -- La música de victoria arranca YA; más baja mientras suben los puntos
     -- (para oír el conteo) y luego a volumen normal
     self.musicVol = self.celebrate and 0.6 or 0.35
-    Sound.playMusic('youWin', self.musicVol * 0.45)
+    Sound.playMusic('victory', self.musicVol * 0.45)
 end
 
 function OnlineResultsState:exit()

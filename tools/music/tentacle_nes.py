@@ -35,6 +35,7 @@ import os, sys
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(__file__))
+import famicom as _fam
 from famicom import (master, biquad, SR, FPS, CPU, FRAME_S, frames_for, t_, Chan, fr, hz, q_pulse, q_tri, q_vrc6, q_saw, q_n163,
                      play, per_sample, render_pulse, render_tri, render_saw, render_noise, dpcm, wavetable,
                      render_wave, Noise, pulse_dac, tnd_dac, OCT, band_power, write_wav)   # (motor de Famicom)
@@ -343,7 +344,7 @@ def fit_gains(S):
     parezca al del original (TentacleTantrum.ogg, desfase 0.042 s)"""
     import librosa
     from scipy.optimize import lsq_linear
-    ref, _ = librosa.load(os.path.join(OUT, 'TentacleTantrum.ogg'), sr=SR, mono=True)
+    ref, _ = librosa.load(_fam.ref('TentacleTantrum.ogg'), sr=SR, mono=True)
     names = list(S)
     rows, tgt = [], []
     for sec, (b0, b1) in SECS.items():
@@ -444,10 +445,10 @@ def write_midi(path, ev):
 if __name__ == '__main__':
     C, NZ, DM, ev = arrange()
     y = mix(C, NZ, DM)
-    wav = os.path.join(OUT, NAME + '.wav')
+    wav = _fam.out(NAME, 'wav')
     write_wav(wav, y)
-    write_midi(os.path.join(OUT, NAME + '.mid'), ev)
-    ogg = os.path.join(OUT, NAME + '.ogg')
+    write_midi(_fam.out(NAME, 'mid'), ev)
+    ogg = _fam.out(NAME, 'ogg')
     os.system(f'ffmpeg -v quiet -y -i "{wav}" -c:a libvorbis -q:a 6 "{ogg}"')
     os.remove(wav)
     print(f'  {ogg}  {len(y) / SR:.1f} s  (+ {NAME}.mid)')

@@ -36,11 +36,11 @@ local Darkness = require 'src/fx/Darkness'
 local PixelFont = require 'src/ui/PixelFont'
 
 local SHOWS = {
-    megacrabby     = { level = 'assets/levels/guarida_cangrejo_rey.json', track = 'tentacle_nes', bpm = 185, title = 'CRAB TANTRUM (NES)', file = 'crab_tantrum_nes',
+    megacrabby     = { level = 'assets/levels/guarida_cangrejo_rey.json', track = 'crab_tantrum_normal', bpm = 185, title = 'CRAB TANTRUM (NES)', file = 'crab_tantrum_nes',
                        sub = 'MEGA CRABBY' },
-    megacrabby_ice = { level = 'assets/levels/glaciar_cangrejo.json', track = 'tentacle_winter', bpm = 185, title = 'CRAB TANTRUM (WINTER)', file = 'crab_tantrum_winter',
+    megacrabby_ice = { level = 'assets/levels/glaciar_cangrejo.json', track = 'crab_tantrum_icy', bpm = 185, title = 'CRAB TANTRUM (WINTER)', file = 'crab_tantrum_winter',
                        sub = 'MEGA CRABBY HELADO' },
-    megagloomy     = { level = 'assets/levels/gruta_lugubre.json', track = 'tentacle_gloomy', bpm = 150, title = 'CRAB TANTRUM (GLOOMY)', file = 'crab_tantrum_gloomy',
+    megagloomy     = { level = 'assets/levels/gruta_lugubre.json', track = 'crab_tantrum_gloomy', bpm = 150, title = 'CRAB TANTRUM (GLOOMY)', file = 'crab_tantrum_gloomy',
                        sub = 'MEGA CRABBY LÚGUBRE', bulb = true },
 }
 local FPS, W, H, T = 30, 1280, 720, TILE_PX
@@ -60,7 +60,7 @@ end
 
 function love.load(arg)
     show = assert(SHOWS[arg[1] or ''], 'jefe: megacrabby | megacrabby_ice | megagloomy')
-    local audio = love.filesystem.getRealDirectory(show.level) and ('assets/music/' .. show.track .. '.ogg')
+    local audio = love.filesystem.getRealDirectory(show.level) and ('assets/music/bosses/' .. show.track .. '.ogg')
     local base = love.filesystem.getSource()
     local audioPath = base .. '/' .. audio
     total = tonumber(arg[2]) or duration(audioPath)

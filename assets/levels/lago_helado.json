@@ -62,9 +62,9 @@
     {"col":90,"row":13,"to":12}
   ],
   "bossZones": [
-    {"col":75,"h":11,"id":1,"music":"winter_nes","row":4,"w":24}
+    {"col":75,"h":11,"id":1,"music":"snowball_boss","row":4,"w":24}
   ],
-  "music": "classic",
+  "music": "nieve_1",
   "snow": true,
   "spikeSkin": "ice",
   "background": "snow",

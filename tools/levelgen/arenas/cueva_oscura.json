@@ -1,7 +1,7 @@
 {
   "name": "Prueba: cueva a oscuras",
   "name_en": "Test: dark cave",
-  "music": "dark_cave",
+  "music": "cuevas_oscuras",
   "width": 44,
   "height": 13,
   "playerStart": [3,11],

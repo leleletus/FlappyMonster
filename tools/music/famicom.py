@@ -282,3 +282,39 @@ def biquad(x, kind, f0, gain_db, q=0.9):
         a = [(A + 1) - (A - 1) * cw + sA, 2 * ((A - 1) - (A + 1) * cw), (A + 1) - (A - 1) * cw - sA]
     return lfilter(np.array(b) / a[0], np.array(a) / a[0], x, axis=0)
 
+
+
+# ── Dónde va cada pista (assets/music/ está ordenada por carpetas; ver su index.json) ─────────────
+# nombre con el que la conoce su generador → ruta (sin extensión) desde assets/music/. Los .mid no se
+# envían a los jugadores: van a tools/music/mid/. Las grabaciones de referencia (las pistas prestadas
+# que hubo de relleno) están FUERA del repo: FlappyMonster_originals/music/placeholders/ (o $FM_ORIGINALS).
+import os as _os
+MUSIC_DIR = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '..', '..', 'assets', 'music')
+MID_DIR = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'mid')
+REF_DIR = _os.path.join(_os.environ.get('FM_ORIGINALS', '/home/mtvemo/FlappyMonster_originals'), 'music', 'placeholders')
+PATHS = {
+    'level_nes': 'worlds/pradera/pradera_1', 'dark_cave': 'worlds/cuevas/cuevas_oscuras',
+    'boss_nes_intro': 'bosses/boss_generic_intro', 'boss_nes_loop': 'bosses/boss_generic_loop',
+    'tentacle_nes': 'bosses/crab_tantrum_normal', 'tentacle_winter': 'bosses/crab_tantrum_icy',
+    'tentacle_gloomy': 'bosses/crab_tantrum_gloomy', 'winter_nes': 'bosses/snowball_boss',
+    'tentacle_chip': 'bosses/extras/crab_tantrum_chip', 'tentacle_chip_instrumental': 'bosses/extras/crab_tantrum_chip_instrumental',
+    'menus_chip': 'menus/menus_chip', 'menus': 'menus/menus',
+    'map_pradera': 'map/map_pradera', 'map_costa': 'map/map_costa', 'map_fortaleza': 'map/map_fortaleza',
+    'map_nieve': 'map/map_nieve', 'map_cuevas': 'map/map_cuevas', 'map_final': 'map/map_final',
+}
+
+
+def out(name, ext):
+    """Ruta de salida de la pista `name` (.ogg / .wav en su carpeta de assets/music; .mid en tools/music/mid)"""
+    rel = PATHS.get(name, name)
+    if ext == 'mid':
+        path = _os.path.join(MID_DIR, _os.path.basename(rel) + '.mid')
+    else:
+        path = _os.path.join(MUSIC_DIR, rel + '.' + ext)
+    _os.makedirs(_os.path.dirname(path), exist_ok=True)
+    return path
+
+
+def ref(filename):
+    """Una grabación de referencia archivada fuera del repo (TentacleTantrum.ogg, winter.ogg, level.ogg...)"""
+    return _os.path.join(REF_DIR, filename)

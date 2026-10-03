@@ -71,7 +71,7 @@
   "vents": [],
   "autoScroll": {"countdown":3,"endCol":170,"margin":0.6,"speed":105,"startCol":1,"width":20},
   "modes": ["race"],
-  "music": "flying_machine",
+  "music": "fortaleza_2",
   "background": "fortress",
   "time": "dusk"
 }

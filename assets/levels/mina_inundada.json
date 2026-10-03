@@ -151,7 +151,7 @@
     {"col":50,"row":25,"sub":1}
   ],
   "modes": ["hunt"],
-  "music": "labyrinth",
+  "music": "fortaleza_1",
   "background": "mountain",
   "depth": "cave",
   "surfaceRow": 12

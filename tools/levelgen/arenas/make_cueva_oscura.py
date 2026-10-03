@@ -38,7 +38,7 @@ def build():
         'name': 'Prueba: cueva a oscuras', 'name_en': 'Test: dark cave',
         'width': W, 'height': H, 'playerStart': [3, 11],
         'tiles': t, 'entities': ents, 'foliage': [], 'vents': [],
-        'background': 'cave', 'time': 'night', 'dark': True, 'modes': ['race'], 'music': 'dark_cave',
+        'background': 'cave', 'time': 'night', 'dark': True, 'modes': ['race'], 'music': 'cuevas_oscuras',
     }
 
 

@@ -39,6 +39,7 @@ import os, sys
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(__file__))
+import famicom as _fam
 from famicom import (master, SR, FRAME_S, frames_for, t_, Chan, q_pulse, q_tri, q_vrc6, q_saw, q_n163, play,
                      render_pulse, render_tri, render_saw, dpcm, wavetable, render_wave, Noise, pulse_dac,
                      tnd_dac, band_power, OCT, write_wav)
@@ -419,7 +420,8 @@ def build_boss(T):
 # ── Mezcla ───────────────────────────────────────────────────────────────────
 def load_ref(name):
     import librosa
-    return librosa.load(os.path.join(OUT, name), sr=SR, mono=True)[0]
+    # (referencias: las pistas originales, archivadas fuera del repo — famicom.ref)
+    return librosa.load(_fam.ref(name), sr=SR, mono=True)[0]
 
 
 # Grupos de instrumentos (las voces de un instrumento van juntas) con su
@@ -518,10 +520,10 @@ def balance(S, rows_spec, boost, ver):
 
 
 def export(name, y, ev):
-    wav = os.path.join(OUT, name + '.wav')
+    wav = _fam.out(name, 'wav')
     write_wav(wav, y)
-    write_midi(os.path.join(OUT, name + '.mid'), ev)
-    ogg = os.path.join(OUT, name + '.ogg')
+    write_midi(_fam.out(name, 'mid'), ev)
+    ogg = _fam.out(name, 'ogg')
     os.system(f'ffmpeg -v quiet -y -i "{wav}" -c:a libvorbis -q:a 6 "{ogg}"')
     os.remove(wav)
     print(f'  {ogg}  {len(y) / SR:.2f} s')

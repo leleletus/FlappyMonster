@@ -651,7 +651,7 @@ def fabrica_criogenica():
 def templo_del_eco():
     """Cueva A OSCURAS: Crabbies lúgubres. Lo que hace ruido los distrae (bloques rompibles,
     trampolines, bombas, estrellas): úsalo para alejarlos de tu camino."""
-    L = B('Templo del Eco', 'Echo Temple', 190, music='dark_cave', background='cave', time='night', dark=True)
+    L = B('Templo del Eco', 'Echo Temple', 190, music='cuevas_oscuras', background='cave', time='night', dark=True)
     c = L.flat(2, 10); L.stars((8, G - 3),)
     s1 = c; c = L.stairs(c)
     c = L.flat(c, 6); L.ent('gloomy', c - 3, G - 1)
@@ -839,7 +839,7 @@ def cala_de_los_muelles():
 def cripta_del_silencio():
     """Arena A OSCURAS: dos colinas y Crabbies lúgubres que acuden al ruido. Quedarse quieto en la
     colina es fácil… hasta que alguien hace sonar algo."""
-    L = arena('Cripta del Silencio', 'Silent Crypt', music='dark_cave', background='cave', time='night', dark=True)
+    L = arena('Cripta del Silencio', 'Silent Crypt', music='cuevas_oscuras', background='cave', time='night', dark=True)
     L.rect(2, 2, 91, 3, SOLID)
     L.rect(38, G - 2, 54, G - 1, SOLID)
     L.koth_zone(40, G - 7, 52, G - 3)

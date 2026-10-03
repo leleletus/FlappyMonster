@@ -104,5 +104,6 @@
   ],
   "depth": "magma",
   "surfaceRow": 10,
-  "background": "volcano"
+  "background": "volcano",
+  "music": "volcan_1"
 }

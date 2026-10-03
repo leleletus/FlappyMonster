@@ -158,7 +158,7 @@
     {"col":116,"from":[107,18],"row":22}
   ],
   "modes": ["race","hunt","hide"],
-  "music": "dark_cave",
+  "music": "cuevas_oscuras",
   "dark": true,
   "background": "cave",
   "time": "night"

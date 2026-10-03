@@ -36,6 +36,7 @@ import os, sys
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(__file__))
+import famicom as _fam
 import famicom as F
 from famicom import SR, Chan, Noise, play, wavetable, q_n163, q_tri, q_vrc6, q_pulse
 import tentacle_nes as TN
@@ -80,9 +81,9 @@ def fold(y, n):
 
 
 def export(name, y):
-    wav = os.path.join(OUT, name + '.wav')
+    wav = _fam.out(name, 'wav')
     F.write_wav(wav, y)
-    ogg = os.path.join(OUT, name + '.ogg')
+    ogg = _fam.out(name, 'ogg')
     os.system(f'ffmpeg -v quiet -y -i "{wav}" -c:a libvorbis -q:a 6 "{ogg}"')
     os.remove(wav)
     print(f'  {ogg}')

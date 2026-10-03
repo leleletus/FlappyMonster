@@ -204,6 +204,7 @@ end
 -- Carga una pista del catálogo de música (src/Music.lua)
 function Sound.loadTrack(tr)
     trackVol[tr.id] = tr.volume
+    if tr.pending then return end                    -- (hueco: su archivo aún no existe)
     if tr.intro then
         Sound.loadMusic(tr.id, tr.intro, tr.loopFile)
     elseif tr.loopFile then
@@ -390,8 +391,8 @@ function Sound.getBaseLevelMusic() return baseLevelMusic or Music.DEFAULT end
 -- 'level' = lo que deba sonar en el nivel: la del jefe (si manda), la del
 -- nivel o la de siempre
 local function resolve(name)
-    if name == 'level' then return levelMusic or baseLevelMusic or Music.DEFAULT end
-    return name
+    if name == 'level' then name = levelMusic or baseLevelMusic or Music.DEFAULT end
+    return Music.playable(name)          -- (ids antiguos y huecos sin pista todavía: src/Music.lua)
 end
 Sound.resolveMusic = resolve
 

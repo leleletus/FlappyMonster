@@ -35,6 +35,8 @@
 # Lo que es de aquí (nuevo): todas las melodías, los contracantos, los
 # arpegios, los rellenos y los sonidos.
 import os, sys, wave
+import sys as _sys; _sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import famicom as _fam
 import numpy as np
 
 SR = 44100
@@ -707,11 +709,11 @@ def write_midi(path, ev):
 
 if __name__ == '__main__':
     x, ev = render()
-    wav = os.path.join(OUT, NAME + '.wav')
+    wav = _fam.out(NAME, 'wav')
     write_wav(wav, x)
     if not INSTRUMENTAL:                                     # (el .mid es el de la versión completa)
-        write_midi(os.path.join(OUT, NAME + '.mid'), ev)
-    ogg = os.path.join(OUT, NAME + '.ogg')
+        write_midi(_fam.out(NAME, 'mid'), ev)
+    ogg = _fam.out(NAME, 'ogg')
     os.system(f'ffmpeg -v quiet -y -i "{wav}" -c:a libvorbis -q:a 5 "{ogg}"')
     os.remove(wav)
     print(f'  {ogg}  {len(x) / SR:.1f} s' + ('' if INSTRUMENTAL else f'  (+ {NAME}.mid)'))

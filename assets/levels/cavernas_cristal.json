@@ -107,6 +107,6 @@
     {"col":50,"row":20,"sub":4}
   ],
   "modes": ["race"],
-  "music": "dark_cave",
+  "music": "cuevas_1",
   "background": "cave"
 }

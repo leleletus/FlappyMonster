@@ -30,6 +30,7 @@ import os, sys
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(__file__))
+import famicom as _fam
 import tentacle_nes as TN                      # melodía, bajo, armonía, forma
 import winter_nes as W                         # paleta: canción, instrumentos, batería
 from famicom import (master, SR, Noise, tnd_dac, band_power, OCT, write_wav, loudness, biquad)
@@ -673,17 +674,17 @@ if __name__ == '__main__':
     a_, b_ = (W_AT - 1) * BAR, (W_AT - 1 + W_LEN) * BAR
     env = np.clip((tt - a_) / (BAR / 2) + 1, 0, 1) * np.clip((b_ - tt) / (BAR / 2) + 1, 0, 1)
     y = y * (10 ** (W_DB * env / 20))[:, None]
-    y = eq_to(y, librosa.load(os.path.join(OUT, 'winter_nes.ogg'), sr=SR, mono=True)[0])
+    y = eq_to(y, librosa.load(_fam.out('winter_nes', 'ogg'), sr=SR, mono=True)[0])
     y = master(y, lufs=-9.3)       # (sin tramos flojos como la intro de winter: así sus secciones igualan a las fuertes de winter)
     f = int(0.003 * SR)
     y[:f] *= np.linspace(0, 1, f)[:, None]
     y[-f:] *= np.linspace(1, 0, f)[:, None]
     report(y, st, g)
     if not os.environ.get('REPORT') and not os.environ.get('SOLO'):
-        wav = os.path.join(OUT, NAME + '.wav')
+        wav = _fam.out(NAME, 'wav')
         write_wav(wav, y)
-        W.write_midi(os.path.join(OUT, NAME + '.mid'), S.ev)
-        ogg = os.path.join(OUT, NAME + '.ogg')
+        W.write_midi(_fam.out(NAME, 'mid'), S.ev)
+        ogg = _fam.out(NAME, 'ogg')
         os.system(f'ffmpeg -v quiet -y -i "{wav}" -c:a libvorbis -q:a 6 "{ogg}"')
         os.remove(wav)
         print(f'  {ogg}  {len(y) / SR:.2f} s')

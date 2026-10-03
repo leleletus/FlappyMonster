@@ -103,7 +103,7 @@ function StoryResultsState:enter(args)
     self.fx = Celebration.new()
     Sound.stopMusic()
     self.musicVol = self.celebrate and 0.6 or 0.4
-    Sound.playMusic('youWin', self.musicVol * 0.45)
+    Sound.playMusic('victory', self.musicVol * 0.45)
 end
 
 function StoryResultsState:exit() Sound.stopMusic() end

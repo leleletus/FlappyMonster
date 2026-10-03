@@ -79,9 +79,9 @@
   ],
   "vents": [],
   "bossZones": [
-    {"col":91,"h":10,"id":1,"music":"tentacle_gloomy","row":3,"w":20}
+    {"col":91,"h":10,"id":1,"music":"crab_tantrum_gloomy","row":3,"w":20}
   ],
-  "music": "dark_cave",
+  "music": "cuevas_oscuras",
   "dark": true,
   "background": "cave",
   "time": "night"

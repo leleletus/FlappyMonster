@@ -74,9 +74,9 @@
     {"col":25,"kind":"sand","row":13,"sub":2}
   ],
   "bossZones": [
-    {"col":91,"h":10,"id":1,"music":"tentacle_nes","row":3,"w":18}
+    {"col":91,"h":10,"id":1,"music":"crab_tantrum_normal","row":3,"w":18}
   ],
-  "music": "hidro_city",
+  "music": "costa_1",
   "background": "coast",
   "surfaceRow": 11
 }

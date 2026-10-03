@@ -150,7 +150,7 @@
     {"col":120,"from":[110,18],"row":22}
   ],
   "modes": ["race","hunt","hide"],
-  "music": "labyrinth",
+  "music": "pradera_1",
   "background": "forest",
   "time": "dusk",
   "surfaceRow": 23

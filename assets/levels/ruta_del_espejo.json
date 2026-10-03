@@ -88,9 +88,9 @@
     {"col":110,"kind":"solid","row":13,"sub":3}
   ],
   "bossZones": [
-    {"col":92,"h":10,"id":1,"music":"tentacle_chip_instrumental","row":4,"w":18}
+    {"col":92,"h":10,"id":1,"music":"crab_tantrum_chip_instrumental","row":4,"w":18}
   ],
-  "music": "classic",
+  "music": "volcan_2",
   "time": "night",
   "surfaceRow": 13,
   "background": "volcano"

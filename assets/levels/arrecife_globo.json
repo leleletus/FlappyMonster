@@ -142,7 +142,7 @@
     {"col":120,"row":21,"sub":3}
   ],
   "modes": ["race","hunt","hide"],
-  "music": "hidro_city",
+  "music": "costa_2",
   "background": "coast",
   "depth": "underwater",
   "surfaceRow": 12

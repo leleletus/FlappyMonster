@@ -1925,6 +1925,27 @@ Low-level notes (for writing NEW harnesses):
 - Bots: send `in` only when there are new inputs, or the server kicks them
   for flooding.
 
+## Music catalog layout (REORGANIZED in 3.48.0 — older notes in this file still use the OLD names)
+
+`assets/music/`: `menus/`, `map/` (map_<world>), `worlds/<pradera|costa|fortaleza|nieve|cuevas|volcan>/` (LEVEL music:
+2-3 themed tracks per world, ids `<world>_<n>`), `bosses/` (+ `extras/`), `jingles/`. `index.json` documents it.
+- Renames (old → id/file now): classic / level_nes → `pradera_1`; dark_cave → `cuevas_oscuras`; boss / boss_nes →
+  `boss_generic` (intro + loop); tentacle_nes → `crab_tantrum_normal`; tentacle_winter → `crab_tantrum_icy`;
+  tentacle_gloomy → `crab_tantrum_gloomy`; winter_nes → `snowball_boss`; tentacle_chip(_instrumental) →
+  `crab_tantrum_chip(_instrumental)` (extras); youWin → `victory`. Old ids still work: `"aliases"` in index.json →
+  `Music.id(id)` (levels, zones, old rooms).
+- PENDING SLOTS (`"pending": true`, file path already set, `fallback` id plays meanwhile via `Music.playable` in
+  `Sound.resolve`; a listed file that doesn't exist also counts as pending): pradera_2, costa_1/2, fortaleza_1/2,
+  nieve_1/2, cuevas_1, volcan_1/2 (fallback pradera_1; cuevas_1 → cuevas_oscuras) and `victory` (no fallback: silent).
+  To fill a slot: drop the file at that path and remove `pending`/`fallback`.
+- The BORROWED placeholder tracks the user removed (flying_machine, hidro_city, labyrinth intro/loop, boss_battle
+  intro/loop, TentacleTantrum.ogg, winter.ogg, victory.ogg, and the old level.ogg) are archived OUTSIDE the repo:
+  `FlappyMonster_originals/music/placeholders/` (generators read their references from there: `famicom.ref(name)`).
+- Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
+  cuevas_oscuras; other cave levels → cuevas_1; non-story levels by their retheme theme).
+- Generators keep their internal names; `famicom.PATHS` / `famicom.out(name, ext)` map them to the new folders;
+  `.mid` files are no longer shipped: `tools/music/mid/`.
+
 ## Music generation: lessons learned (tools/music/)
 
 - Engine: `famicom.py` (shared). Generators: tentacle_nes.py, melody_nes.py (level +

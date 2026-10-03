@@ -134,7 +134,7 @@
     {"col":113,"from":[104,18],"row":22}
   ],
   "modes": ["race","hunt","hide"],
-  "music": "flying_machine",
+  "music": "nieve_2",
   "snow": true,
   "spikeSkin": "ice",
   "background": "snow",

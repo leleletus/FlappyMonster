@@ -27,6 +27,7 @@ import os, sys, wave
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(__file__))
+import famicom as _fam
 from tentacle_chip import pulse, tri, noise, adsr, lowpass, highpass, Track, t_, hz, SR   # (síntesis chip común)
 
 BPM = 140
@@ -224,10 +225,10 @@ def write_midi(path, ev):
 
 if __name__ == '__main__':
     x, ev = render()
-    wav = os.path.join(OUT, NAME + '.wav')
+    wav = _fam.out(NAME, 'wav')
     write_wav(wav, x)
-    write_midi(os.path.join(OUT, NAME + '.mid'), ev)
-    ogg = os.path.join(OUT, NAME + '.ogg')
+    write_midi(_fam.out(NAME, 'mid'), ev)
+    ogg = _fam.out(NAME, 'ogg')
     os.system(f'ffmpeg -v quiet -y -i "{wav}" -c:a libvorbis -q:a 5 "{ogg}"')
     os.remove(wav)
     print(f'  {ogg}  {len(x) / SR:.2f} s  (+ {NAME}.mid)')

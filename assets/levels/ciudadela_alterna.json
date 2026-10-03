@@ -81,7 +81,7 @@
   "vents": [],
   "modes": ["koth","hide"],
   "matchTime": 100,
-  "music": "labyrinth",
+  "music": "fortaleza_1",
   "background": "fortress",
   "blockLinks": [
     {"col":26,"from":[46,18],"row":22},

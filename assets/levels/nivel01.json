@@ -137,7 +137,7 @@
     {"col":39,"kind":"solid","row":17,"sub":3},
     {"col":39,"kind":"solid","row":17,"sub":4}
   ],
-  "music": "dark_cave",
+  "music": "cuevas_1",
   "background": "cave",
   "depth": "abyss",
   "surfaceRow": 10

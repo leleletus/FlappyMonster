@@ -106,7 +106,7 @@
     {"col":28,"kind":"dirt","row":15,"sub":2}
   ],
   "modes": ["race"],
-  "music": "hidro_city",
+  "music": "costa_1",
   "background": "coast",
   "surfaceRow": 19
 }

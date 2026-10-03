@@ -44,6 +44,7 @@ import os, sys
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(__file__))
+import famicom as _fam
 from famicom import (master, SR, FRAME_S, frames_for, t_, Chan, q_pulse, q_tri, q_vrc6, q_saw, q_n163, play,
                      render_pulse, render_tri, render_saw, dpcm, wavetable, render_wave, Noise, pulse_dac,
                      tnd_dac, band_power, OCT, write_wav, loudness, biquad)
@@ -56,7 +57,7 @@ OFF = 0.045                                  # la canción empieza así de tarde
 HERE = os.path.dirname(__file__)
 OUT = os.path.join(HERE, '..', '..', 'assets', 'music')
 MIDI_IN = os.path.join(HERE, 'ref', 'winter.mid')
-REF = os.path.join(OUT, 'winter.ogg')
+REF = _fam.ref('winter.ogg')
 rng = np.random.default_rng(144)
 
 # Secciones (compases, ambos incluidos) medidas en el ogg: (nombre, a, b, nivel relativo)
@@ -749,10 +750,10 @@ if __name__ == '__main__':
     y[-f:] *= np.linspace(1, 0, f)[:, None]
     report(y, ref, st, g)
     if not os.environ.get('REPORT') and not os.environ.get('SOLO'):
-        wav = os.path.join(OUT, 'winter_nes.wav')
+        wav = _fam.out('winter_nes', 'wav')
         write_wav(wav, y)
-        write_midi(os.path.join(OUT, 'winter_nes.mid'), S.ev)
-        ogg = os.path.join(OUT, 'winter_nes.ogg')
+        write_midi(_fam.out('winter_nes', 'mid'), S.ev)
+        ogg = _fam.out('winter_nes', 'ogg')
         os.system(f'ffmpeg -v quiet -y -i "{wav}" -c:a libvorbis -q:a 6 "{ogg}"')
         os.remove(wav)
         print(f'  {ogg}  {len(y) / SR:.2f} s')

@@ -30,7 +30,7 @@
   "foliage": [],
   "vents": [],
   "bossZones": [
-    {"col":12,"h":10,"id":1,"music":"boss_nes","row":3,"w":22}
+    {"col":12,"h":10,"id":1,"music":"boss_generic","row":3,"w":22}
   ],
   "background": "meadow",
   "time": "day"
