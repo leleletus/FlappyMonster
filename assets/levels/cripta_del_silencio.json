@@ -129,7 +129,7 @@
   "vents": [],
   "modes": ["koth","hide"],
   "matchTime": 100,
-  "music": "cuevas_oscuras",
+  "music": "cuevas_bonus",
   "background": "cave",
   "dark": true,
   "name_en": "Silent Crypt",

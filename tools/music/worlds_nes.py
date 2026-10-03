@@ -418,6 +418,33 @@ SAMPLE_BARS = {'cumbres': {'B': (1, 2, 3, 4, 7, 8), 'C': (1, 2, 3, 4)}, 'ventisc
                'bola': {'B': (1, 2, 3, 4, 7, 8), 'C': (1, 2, 3, 4)}}
 
 
+# ══ CUEVAS ═══════════════════════════════════════════════════════════════════
+#   cuevas_1   "Ecos de cristal": Re dórico (Si natural: el acorde de Sol mayor), 104 BPM a medio tiempo; la melodía
+#              en la caja de música CON ECO de cueva, notas largas y huecos para que el eco conteste; colchón, bajo en
+#              redondas, bombo hondo y un chasquido, sin platos; acento: GOTAS
+#   cuevas_2   "Laberinto sumergido": La menor, 92; voz de flauta hueca con eco que va y viene por grados, arpa en
+#              corcheas, casi sin batería; acento: un SONAR (una nota que se repite más lejos) — el laberinto de agua
+#   (cuevas_oscuras, la de los niveles a oscuras, ya era propia: gloomy_nes.py cueva)
+C_A = PH("0:D5/6 6:F5/2 8:A5/8", "0:B5/6 6:A5/2 8:G5/4 12:D5/4", "0:F5/6 6:A5/2 8:D6/8", "0:E6/6 6:D6/2 8:C6/4 12:G5/4",
+         "0:A5/4 4:F5/4 8:D5/6 14:E5/2", "0:G5/4 4:B5/4 8:D6/6 14:B5/2", "0:C6/6 6:B5/2 8:A5/4 12:E5/4")
+C_END = P(8, "0:F5/4 4:A5/4 8:D5/8")
+C_END2 = P(8, "0:A5/4 4:F5/4 8:D6/8")
+C_B = PH("0:C6/4 4:A5/2 6:F5/2 8:A5/8", "0:G5/4 4:E5/2 6:C5/2 8:E5/8", "0:B5/4 4:G5/2 6:D5/2 8:G5/8", "0:A5/4 4:F5/2 6:D5/2 8:F5/8",
+         "0:F5/2 2:A5/2 4:C6/4 8:C6/8", "0:E5/2 2:G5/2 4:C6/4 8:E6/8", "0:E6/4 4:C6/4 8:A5/4 12:E5/4", "0:A4/4 4:D5/2 6:F5/2 8:A5/6")
+CCH_A = [(D, MIN), (G, MAJ), (D, MIN), (C, MAJ), (D, MIN), (G, MAJ), (A, MIN), (D, MIN)]
+CCH_B = [(Fr_, MAJ), (C, MAJ), (G, MAJ), (D, MIN), (Fr_, MAJ), (C, MAJ), (A, MIN), (D, MIN)]
+SCALE_Ddor = {2, 4, 5, 7, 9, 11, 0}
+U_A = PH("0:E5/4 4:A5/2 6:B5/2 8:C6/6 14:B5/2", "0:A5/8 8:F5/4 12:A5/4", "0:D5/4 4:G5/2 6:A5/2 8:B5/6 14:A5/2", "0:E5/8 8:C5/4 12:E5/4",
+         "0:E5/4 4:A5/2 6:B5/2 8:C6/6 14:B5/2", "0:C6/4 4:A5/4 8:F5/6 14:A5/2", "0:B5/4 4:G5/4 8:E5/4 12:G5/4")
+U_END = P(8, "0:A5/4 4:E5/4 8:C5/8")
+U_END2 = P(8, "0:C6/4 4:E6/4 8:A5/8")
+U_B = PH("0:F5/2 2:A5/2 4:C6/4 8:A5/8", "0:G5/2 2:B5/2 4:D6/4 8:B5/8", "0:A5/2 2:C6/2 4:E6/4 8:C6/8", "0:E6/6 6:D6/2 8:C6/4 12:A5/4",
+         "0:F5/4 4:A5/4 8:D6/8", "0:C6/4 4:A5/4 8:F5/8", "0:G5/2 2:B5/2 4:D6/2 6:B5/2 8:G5/4 12:D5/4", "0:E5/4 4:A5/2 6:C6/2 8:E6/6")
+UCH_A = [(A, MIN), (Fr_, MAJ), (G, MAJ), (A, MIN), (A, MIN), (Fr_, MAJ), ((G, MAJ), (E, MIN)), (A, MIN)]
+UCH_B = [(Fr_, MAJ), (G, MAJ), (A, MIN), (A, MIN), (D, MIN), (Fr_, MAJ), (G, MAJ), (A, MIN)]
+SCALE_Am = {9, 11, 0, 2, 4, 5, 7}
+
+
 # ── gummy_king_boss, 2ª versión: "Su Majestad Gummy" de CORTE (el usuario: más regio y menos parecido a la pradera).
 # La 1ª iba en Sol mayor con el bajo saltarín, los acordes a contratiempo y el trino de la pradera. Ahora: Si♭ mayor
 # (tonalidad de metales), fanfarria de trompeta A TIEMPO (nada de síncopas juguetonas) con su llamada "ta-ta taa",
@@ -443,8 +470,10 @@ def song(variant, minor=False, solo=False, theme=None):
     compás ('intro' | 'A' | 'B' | 'solo') y los compases donde EMPIEZA una frase"""
     global SCALE
     SCALE = {'galope': SCALE_C, 'calipso': SCALE_F, 'arrecife': SCALE_Bb, 'marcha': SCALE_Cm, 'engranajes': SCALE_Gm, 'persecucion': SCALE_Cm,
-             'cumbres': SCALE_F, 'ventisca': SCALE_Dm, 'bola': SCALE_Fm, 'majestad': SCALE_Bb}.get(theme, SCALE_G)
-    if theme == 'cumbres': pa, e1, e2, pb, ca, cb, tonic = S_A, S_END, S_END2, S_B, SCH_A, SCH_B, (Fr_, MAJ)
+             'cumbres': SCALE_F, 'ventisca': SCALE_Dm, 'bola': SCALE_Fm, 'majestad': SCALE_Bb, 'ecos': SCALE_Ddor, 'laberinto': SCALE_Am}.get(theme, SCALE_G)
+    if theme == 'ecos': pa, e1, e2, pb, ca, cb, tonic = C_A, C_END, C_END2, C_B, CCH_A, CCH_B, (D, MIN)
+    elif theme == 'laberinto': pa, e1, e2, pb, ca, cb, tonic = U_A, U_END, U_END2, U_B, UCH_A, UCH_B, (A, MIN)
+    elif theme == 'cumbres': pa, e1, e2, pb, ca, cb, tonic = S_A, S_END, S_END2, S_B, SCH_A, SCH_B, (Fr_, MAJ)
     elif theme == 'ventisca': pa, e1, e2, pb, ca, cb, tonic = V_A, V_END, V_END2, V_B, VCH_A, VCH_B, (D, MIN)
     elif theme == 'bola': pa, e1, e2, pb, ca, cb, tonic = O_A, O_END, O_END2, O_B, OCH_A, OCH_B, (Fr_, MIN)
     elif theme == 'majestad': pa, e1, e2, pb, ca, cb, tonic = R2_A, R2_END, R2_END2, R2_B, R2CH_A, R2CH_B, (Bbr_, MAJ)
@@ -511,7 +540,11 @@ I_SOFT = {'vol': [5, 7, 8, 8, 7, 7], 'sus': 7, 'vib': (14, 0.15, 5.0), 'duty': 0
 I_FLAKE = {'vol': [7, 4, 2, 1], 'sus': 0, 'duty': 0.125}
 I_FALL = {'vol': [10, 7, 5, 3, 2, 1], 'sus': 0, 'duty': 0.125}
 SNOW = ('nieve', 'ventisca', 'bola')
+I_HARP = {'vol': [8, 6, 5, 4, 3, 2, 1], 'sus': 0, 'duty': 0.5}
+CAVE = ('cueva', 'sumergida')
 ISLE_LV = {
+    'cueva':     {'lead': -9, 'bell': 0, 'echo': -10, 'chords': -9, 'bass': -2, 'trill': -2, 'kick': -3, 'snare': -10, 'hat': -14, 'crash': -14, 'toms': 0},
+    'sumergida': {'lead': 0, 'echo': -8, 'chords': -10, 'bass': -3, 'trill': -9, 'kick': -6, 'snare': -15, 'hat': -15, 'crash': -14, 'toms': 0},
     'nieve':    {'lead': -5, 'bell': 0, 'echo': -12, 'chords': -11, 'bass': -3, 'trill': -5, 'kick': -5, 'snare': -10, 'hat': -11, 'crash': -13, 'toms': 0},
     'ventisca': {'lead': 0, 'bell': -6, 'echo': -11, 'chords': -11, 'bass': -1, 'trill': -10, 'kick': -2, 'snare': -5, 'hat': -12, 'crash': -11, 'toms': 0},
     'bola':     {'lead': 0, 'bell': -4, 'echo': -12, 'chords': -7, 'bass': -1, 'trill': -5, 'kick': 0, 'snare': -3, 'hat': -10, 'crash': -9, 'toms': -1},
@@ -519,8 +552,8 @@ ISLE_LV = {
     'nave': {'lead': 0, 'dbl': -9, 'echo': -12, 'chords': -8, 'bass': -1, 'trill': -6, 'kick': 0, 'snare': -3, 'hat': -9, 'crash': -9, 'toms': 0},
     'fortaleza': {'lead': 0, 'dbl': -9, 'echo': -12, 'chords': -8, 'bass': -1, 'trill': -6, 'kick': -2, 'snare': -4, 'hat': -11, 'crash': -11, 'toms': 2},
     'maquina':   {'lead': 0, 'dbl': -9, 'echo': -11, 'chords': -10, 'bass': -1, 'trill': -7, 'kick': -3, 'snare': -7, 'hat': -10, 'crash': -12, 'toms': 2},
-    'costa':    {'lead': 0, 'echo': -10, 'chords': -8, 'bass': -2, 'trill': -8, 'kick': -4, 'snare': -8, 'hat': -11, 'crash': -12, 'toms': 2},
-    'arrecife': {'lead': 0, 'echo': -9, 'chords': -7, 'bass': -3, 'trill': -11, 'kick': -7, 'snare': -13, 'hat': -15, 'crash': -14, 'toms': 0},
+    'costa':    {'lead': 0, 'echo': -10, 'chords': -8, 'bass': -2, 'trill': -13, 'kick': -4, 'snare': -8, 'hat': -11, 'crash': -12, 'toms': 2},
+    'arrecife': {'lead': 0, 'echo': -9, 'chords': -7, 'bass': -3, 'trill': -16, 'kick': -7, 'snare': -13, 'hat': -15, 'crash': -14, 'toms': 0},
 }
 HAT, SNARE_N, CRASH = [5, 2, 1], [13, 9, 5, 2], [13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
 
@@ -591,7 +624,12 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
     busy = set()
     for b, st, n, d in mel:
         t0, t1 = tv(b, st), tv(b, st) + d * S16 * 0.94
-        if isle == 'nieve':                                  # la CAJA DE MÚSICA una octava arriba + un pulso suave a su altura
+        if isle == 'cueva':                                  # la caja de música (el eco de cueva va en la mezcla) + un pulso muy suave abajo
+            play(Cn['bell'], t0, t0 + max(d, 4) * S16, n, I_BOX, q=q_n163, release=6)
+            play(Cn['lead'], t0, t1, n - 12, I_SOFT, release=3)
+        elif isle == 'sumergida':                            # flauta hueca
+            play(Cn['lead'], t0, t1, n, dict(I_FLUTE, duty=0.0), q=q_n163, release=4)
+        elif isle == 'nieve':                                # la CAJA DE MÚSICA una octava arriba + un pulso suave a su altura
             play(Cn['bell'], t0, t0 + max(d, 4) * S16, n + 12, I_BOX, q=q_n163, release=6)
             play(Cn['lead'], t0, t1, n, I_SOFT, release=3)
         elif isle in ('ventisca', 'bola'):                   # pulso; la campana dobla (ventisca: solo las notas largas)
@@ -632,6 +670,7 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
                 if galop and not in_b: pat = ((0, 0, 2.6), (3, 0, 0.9), (4, 7, 2.6), (7, 7, 0.9))     # (tan-ta tan-ta)
                 if isle == 'costa' and drive < 2: pat = ((0, 0, 2.7), (3, 7, 0.9), (4, 12, 3.3))             # calipso: 1, 1y, 3
                 if isle == 'fortaleza' and drive < 2: pat = ((0, 0, 3.2), (4, 12, 3.2)) if in_b else ((0, 0, 1.5), (2, 12, 1.5), (4, 0, 1.5), (6, 12, 1.5))   # octavas
+                if isle in CAVE and drive < 2: pat = ((0, 0, 7.7),)                                          # redondas
                 if isle == 'nieve' and drive < 2: pat = ((0, 0, 7.5),)                                       # blancas
                 if isle == 'ventisca': pat = ((0, 0, 1.6), (2, 0, 1.6), (4, 12, 1.6), (6, 0, 1.6))
                 if isle == 'bola' and in_b: pat = ((0, 0, 1.6), (2, 0, 1.6), (4, 12, 1.6), (6, 0, 1.6))       # (el puente: corcheas)
@@ -642,6 +681,14 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
                 if isle == 'arrecife': pat = ((0, 0, 5.4), (6, 7, 1.8))                                    # bossa: largo y la quinta
                 for st, iv, ln in pat:
                     play(Cn['bass'], tv(b, s0 + st), tv(b, s0 + st) + ln * S16, root + iv, I_TRI, q=q_tri, release=0)
+            if isle == 'cueva':                              # colchón
+                play(Cn['c1'], tv(b, s0), tv(b, s0) + 7.6 * S16, notes[1], I_PADP, release=6)
+                play(Cn['c2'], tv(b, s0), tv(b, s0) + 7.6 * S16, notes[2], I_PADP, release=6)
+                continue
+            if isle == 'sumergida':                          # arpa: el acorde en corcheas, sube y baja
+                for k_, st in enumerate((0, 2, 4, 6)):
+                    play(Cn['c1'], tv(b, s0 + st), tv(b, s0 + st) + S16 * 1.8, notes[(0, 1, 2, 1)[k_]] + (12 if half else 0), I_HARP, release=2)
+                continue
             if isle == 'rey':
                 if in_b:                                     # clavecín: el acorde en semicorcheas (bajo de Alberti)
                     for st in range(8):
@@ -696,7 +743,8 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
         free_from = last_in_bar.get(b, 0)
         long_tail = any(bb == b and st + d >= 14 and d >= 6 for bb, st, n, d in mel)
         snow_tail = isle in SNOW and b % 2 == 0 and not intro and any(bb == b and st == 12 and d == 4 for bb, st, n, d in mel)   # (sus frases cierran en negra)
-        if (intro and b % 2 == 0) or (long_tail and not in_b) or snow_tail:
+        if isle in CAVE and b % 2 == 1 and not intro: long_tail = False        # (cuevas: un acento cada dos compases, no más)
+        if (intro and b % 2 == 0) or (long_tail and not in_b) or snow_tail or (isle in CAVE and long_tail):
             r, q = ch[b - 1][1]
             top = 84 + (r - 84) % 12 + q[2] - 12
             up = 2 if (top + 2) % 12 in SCALE else 1          # (la nota de al lado, DE LA ESCALA: +2 sobre Si daba Do#)
@@ -715,7 +763,13 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
                     v_ = np.sin(np.pi * x_) if shape == 'wave' else x_ ** 1.5
                     pp = per if not isinstance(per, tuple) else int(round(per[0] + (per[1] - per[0]) * x_))
                     NZ['fx'].hit(t8(st0) + i_ / 60.0, pp, [max(1, int(round(peak * v_)))], short=short)
-            if isle == 'nieve':                               # un cascabeleo y UNA campana que se queda sonando
+            if isle == 'cueva':                               # GOTAS: dos, que caen (la quinta y, más abajo, la tónica)
+                for st, iv in ((11, 12 + q[2]), (14, 12)):
+                    play(Cn['trill'], t8(st), t8(st) + 0.07, 72 + (r - 72) % 12 + iv, GN.I_DRIP, release=0)
+            elif isle == 'sumergida':                         # SONAR: una nota y su repetición, más lejos
+                play(Cn['trill'], t8(9), t8(9) + S16 * 3, 84 + (r - 84) % 12 + q[2], I_DING, release=6)
+                play(Cn['trill'], t8(13), t8(13) + S16 * 3, 84 + (r - 84) % 12 + q[2], I_DING, vs=0.45, release=6)
+            elif isle == 'nieve':                             # un cascabeleo y UNA campana que se queda sonando
                 for st in (10, 11, 12): NZ['fx'].hit(t8(st), 0, [7, 3, 1])
                 play(Cn['trill'], t8(12), t8(12) + S16 * 6, 84 + (r - 84) % 12 + q[2], I_DING, release=8)
             elif isle == 'ventisca':                          # una racha de viento
@@ -753,12 +807,18 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
         for st in range(16):
             t = tv(b, st)
             if intro and b < 3:
-                if st % 4 == 2: NZ['hat'].hit(t, 0, HAT)
+                if st % 4 == 2 and isle not in CAVE: NZ['hat'].hit(t, 0, HAT)
                 continue
             if drive == 2:                                   # competición: bombo a negras, caja en 2 y 4, platos en semicorcheas
                 if st % 4 == 0: hit(kick, TN.KICK, t, 0.95)
                 if st in (4, 12): NZ['snare'].hit(t, 4, SNARE_N); hit(sn, TN.SNARE_BODY, t, 0.8)
                 NZ['hat'].hit(t, 0, HAT if st % 2 == 0 else [3, 1])
+            elif isle == 'cueva':                            # medio tiempo: bombo hondo en 1 y 3y, un chasquido en el 3; sin platos
+                if st in (0, 10): hit(kick, TN.KICK_DEEP, t, 0.9 if st == 0 else 0.6)
+                if st == 8: NZ['snare'].hit(t, 3, [8, 4, 1], short=1)
+            elif isle == 'sumergida':                        # casi nada: un bombo hondo y una escobilla
+                if st == 0: hit(kick, TN.KICK_DEEP, t, 0.8)
+                if st == 8: NZ['snare'].hit(t, 6, [4, 2, 1])
             elif isle == 'nieve':                            # suave: bombo en 1 · 2y · 3, escobilla en 2 y 4, cascabeles
                 if st in (0, 6, 8): hit(kick, TN.KICK, t, 0.7)
                 if st in (4, 12): NZ['snare'].hit(t, 6, [7, 3, 1])
@@ -806,12 +866,12 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
                 if st in (4, 12): NZ['snare'].hit(t, 4, SNARE_N); hit(sn, TN.SNARE_BODY, t, 0.55 + 0.2 * drive)
                 if st % 2 == 0: NZ['hat'].hit(t, 0, HAT)
                 elif drive: NZ['hat'].hit(t, 0, [3, 1])
-            if st == 0 and b in starts and isle != 'arrecife': NZ['crash'].hit(t, 3, CRASH)
+            if st == 0 and b in starts and isle != 'arrecife' and (isle not in CAVE or drive == 2): NZ['crash'].hit(t, 3, CRASH)
             if boss and not intro:                           # jefe: platillo cada 2 compases y redoble de caja cada 4
                 if st == 0 and b % 2 == 1 and b not in starts: NZ['crash'].hit(t, 3, CRASH[2:])
                 if b % 4 == 0 and st >= 8 and (b + 1) not in starts: NZ['snare'].hit(t, 4, [8 + (st - 8) // 2, 4, 2]); hit(sn, TN.SNARE_BODY, t, 0.5 + (st - 8) * 0.05)
             # redoble de entrada: el último medio compás antes de cada frase
-            if (b + 1) in starts and st >= 12 and isle != 'arrecife': NZ['snare'].hit(t, 4, [9, 5, 2])
+            if (b + 1) in starts and st >= 12 and isle != 'arrecife' and (isle not in CAVE or drive == 2): NZ['snare'].hit(t, 4, [9, 5, 2])
 
     n = int(NB * BAR * SR)
     tail = 3 * SR
@@ -819,7 +879,7 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
     pulse = lambda k: cut(F.pulse_dac(F.render_pulse(Cn[k])))
     base = F.tnd_dac(np.full(NS, 64 / 22638.0))
     S = {
-        'lead': cut(F.render_wave(Cn['lead'], WAVES) * 0.0075) if (flute and isle == 'pradera') or isle == 'costa'
+        'lead': cut(F.render_wave(Cn['lead'], WAVES) * 0.0075) if (flute and isle == 'pradera') or isle in ('costa', 'sumergida')
                 else cut(F.pulse_dac(F.render_saw(Cn['lead']))) if isle in ('fortaleza', 'nave') else pulse('lead'),
         'dbl': pulse('dbl'), 'bell': cut(F.render_wave(Cn['bell'], WAVES) * 0.0075),
         'echo': pulse('echo'), 'chords': pulse('c1') + pulse('c2'),
@@ -830,13 +890,16 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
     }
     n_i = int(INTRO * BAR * SR)                 # la INTRO suena una vez (su propio archivo); el bucle empieza aquí
     S = {k: GN.fold(v, n, n_i) for k, v in S.items() if np.abs(v).max() > 0}
-    LV = ISLE_LV.get(isle) or {'lead': 0, 'echo': -11, 'chords': -6, 'bass': -2, 'trill': -6, 'kick': -2 + drive, 'snare': -5 + drive, 'hat': -12, 'crash': -11, 'toms': 2}
+    if isle == 'cueva': S['bell'] = GN.delay(S['bell'], 3 * S16, 0.45, 3, 2600)[:len(S['bell'])]        # el eco de la cueva
+    if isle == 'sumergida': S['lead'] = GN.delay(S['lead'], 3 * S16, 0.35, 3, 2200)[:len(S['lead'])]
+    LV = ISLE_LV.get(isle) or {'lead': 0, 'echo': -11, 'chords': -6, 'bass': -2, 'trill': -11, 'kick': -2 + drive, 'snare': -5 + drive, 'hat': -12, 'crash': -11, 'toms': 2}
     LV = dict(LV); LV['kick'] = LV['kick'] + (drive if isle != 'pradera' else 0); LV['snare'] = LV['snare'] + (drive if isle != 'pradera' else 0)
     g = GN.level(S, {k: LV[k] for k in S}, 'lead')
     from scipy.signal import butter, sosfilt
     x = sum(S[k] * g[k] for k in S)
     x = sosfilt(butter(1, 30, btype='high', fs=SR, output='sos'), x)
-    side = S['chords'] * g['chords'] * 0.35 - S['echo'] * g['echo'] * 0.6 + S['trill'] * g['trill'] * 0.4 + S['hat'] * g['hat'] * 0.3 + (S['bell'] * g['bell'] * 0.25 if 'bell' in S else 0)
+    sd_ = lambda k, w: S[k] * g[k] * w if k in S else 0.0
+    side = sd_('chords', 0.35) - sd_('echo', 0.6) + sd_('trill', 0.4) + sd_('hat', 0.3) + sd_('bell', 0.25)
     y = F.master(np.stack([x + side, x - side], 1), lufs=lufs)
     if STEMS_TO:
         # CAPAS por separado (para que el usuario señale cuál es cuál): cada una con la MISMA ganancia, muestra a
@@ -887,6 +950,9 @@ TRACKS = {
     'fortaleza_1':     dict(theme='marcha', isle='fortaleza', bpm=140),
     'fortaleza_2':     dict(theme='engranajes', isle='maquina', bpm=126),
     'fortaleza_bonus': dict(theme='marcha', isle='fortaleza', bpm=156, drive=2, lufs=-11.0, solo=True),
+    'cuevas_1':      dict(theme='ecos', isle='cueva', bpm=104, lufs=-12.0),
+    'cuevas_2':      dict(theme='laberinto', isle='sumergida', bpm=92, lufs=-12.5),
+    'cuevas_bonus':  dict(theme='ecos', isle='cueva', bpm=132, drive=2, lufs=-11.0, solo=True),
     'nieve_1':       dict(theme='cumbres', isle='nieve', bpm=148),
     'nieve_2':       dict(theme='ventisca', isle='ventisca', bpm=156),
     'nieve_bonus':   dict(theme='cumbres', isle='nieve', bpm=166, drive=2, lufs=-11.0, solo=True),

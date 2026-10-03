@@ -2085,6 +2085,13 @@ Low-level notes (for writing NEW harnesses):
   snowball_boss rolling toms + a low two-note "laugh"; gummy_king_boss a growing timpani roll + cymbal swell;
   evil_ship_boss a low wailing SIREN (one note, ±2 semitones). Stem name: `acento_del_sitio`. Rule for new themes:
   never reuse another place's accent; give each its own sound.
+- CAVES (3.59.0, `worlds_nes.py`, intro + loop; verified by numbers only): `cuevas_1` "Ecos de cristal" (D DORIAN —
+  B natural, the G major chord —, 104 BPM half time: melody on the music box with a sample-domain cave ECHO, long notes
+  with gaps for the echo, pad, whole-note bass, deep kick + one clack, no hats; accent = two falling DRIPS, every other
+  bar; cavernas_cristal, nivel01), `cuevas_2` "Laberinto sumergido" (A minor, 92: hollow flute voice with echo moving
+  by step, harp 8ths, almost no drums; accent = a SONAR ping and its fainter repeat; laberinto_submarino),
+  `cuevas_bonus` (cuevas_1 at 132 + percussion solo; cripta_del_silencio). `cuevas_oscuras` (dark levels) stays.
+  Also: the accents of the MEADOW and COAST tracks were "very loud" → 5 dB quieter (fortress and snow were fine).
 - Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
   cuevas_oscuras; other cave levels → cuevas_1; non-story levels by their retheme theme).
 - Generators keep their internal names; `famicom.PATHS` / `famicom.out(name, ext)` map them to the new folders;

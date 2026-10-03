@@ -441,7 +441,7 @@
     {"col":95,"row":18,"sub":1}
   ],
   "modes": ["race"],
-  "music": "cuevas_1",
+  "music": "cuevas_2",
   "background": "cave",
   "depth": "abyss"
 }
