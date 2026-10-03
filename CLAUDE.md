@@ -2254,6 +2254,13 @@ Low-level notes (for writing NEW harnesses):
   FINAL BOSS, fury "integrated" (good, but its contrast with the rest was too marked): the fury keeps the theme's
   galloping bass and kick (straight 8ths only in its last 4 bars), the same shimmer arpeggio and the choir with its
   third, notes a little less dry, and it enters at the level where the hero's theme ended (+3.4 → +4.3 dB vs A).
+- `crab_tantrum_icy` v2 (3.65.1; user: "it has the music-box motif; the other, more important sample is missing: 1:48-2:08").
+  The whole 1:48 PHRASE of Winter Fallympics (its bars 85-92, an octave up; `PH_148`) is now section B — the calm-but-
+  driving BRIDGE, over the relative minor's chords (Dm · Gm F · B♭ · C · Dm · C · Gm · C), lighter arrangement (`calm`:
+  no stabs or toms, tresillo kick, soft backbeat, sleigh bells, shimmer) — and its closing figure (three repeated notes
+  + a leap, twice) leads into the motif chorus, which starts on B♭: the same order as in the song both come from. Form:
+  intro (motif, music box alone) · A · A' · B (1:48 phrase) · B' (CHORUS: the motif sung + the war chant) · the base
+  theme's tribal bridge · A'' · coda. The motif now sounds twice, not four times (no motif in B or the bridge).
 - Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
   cuevas_oscuras; other cave levels → cuevas_1; non-story levels by their retheme theme).
 - Generators keep their internal names; `famicom.PATHS` / `famicom.out(name, ext)` map them to the new folders;

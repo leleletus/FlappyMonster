@@ -336,7 +336,7 @@ local function clock(s)
     return ('%d:%02d'):format(math.floor(s / 60), s % 60)
 end
 
-local camF, logoA = nil, 1
+local camF, camFY, logoA = nil, nil, 1
 local BAND_H = 124                                            -- el rótulo: una franja abajo
 local overlayCam
 local function drawOverlay()
@@ -405,7 +405,15 @@ local function render()
     end
     local camX = math.floor(fx + shx + 0.5)
     -- (la franja del rótulo tapa lo de abajo: la arena se sube para que su suelo quede a la vista)
-    local camY = math.floor(math.min(level.tileH * T - H, zone.y1 + 1.5 * T - H) + (BAND_H - 1.2 * T) + shy + 0.5)
+    local baseY = math.min(level.tileH * T - H, zone.y1 + 1.5 * T - H) + (BAND_H - 1.2 * T)
+    -- (la arena es más ALTA que lo que queda a la vista sobre el rótulo: cuando el jefe sube — los Mega Crabbies al techo —
+    -- la cámara sube con él, suave, hasta enseñar el techo entero; al bajar, vuelve al suelo. Antes solo se le veía
+    -- asomar la cabeza por arriba)
+    local bb = boss:getOuterBounds()
+    local top = math.min(bb.y, boss.y - (boss.sprH or 0) / 2) - 90
+    local wantY = math.max(zone.y0 - 1.2 * T, math.min(baseY, top))
+    camFY = camFY and (camFY + (wantY - camFY) * 0.07) or baseY
+    local camY = math.floor(camFY + shy + 0.5)
     local bulbBody, bulbGlow
     if lamp then bulbBody, bulbGlow = drawBulb(camX, camY) end
     love.graphics.setCanvas(scene)

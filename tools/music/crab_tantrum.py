@@ -133,6 +133,18 @@ DEV = [(5, 0, D5, 4), (5, 4, D6, 4), (5, 8, A5, 4), (5, 12, F5, 4),
        (7, 0, Bb4, 4), (7, 4, Bb5, 4), (7, 8, F5, 4), (7, 12, D5, 4),
        (8, 0, E5, 4), (8, 4, G5, 4), (8, 8, C6, 8)]
 CH_MOT = ['Bb', 'Bb', 'C', 'C']
+# (helada, 2ª versión — el usuario: "ya tiene el motivo de la caja de música; falta el otro, el más importante: 1:48-2:08".)
+# LA FRASE DE 1:48 de Winter Fallympics (sus compases 85-92, una octava arriba), entera, como en el original: es la
+# parte "tranquila sin perder energía" y el PUENTE hacia el estribillo del motivo. Estaba en Fa mayor; aquí va sobre el
+# relativo — Rem · Solm Fa · Si♭ · Do · Rem · Do · Solm · Do — y su cierre (tres notas repetidas y un salto, dos veces)
+# desemboca en el motivo, que empieza en Si♭: igual que en la canción de la que salen los dos. Con eso la forma queda:
+# intro (el motivo, caja sola) · A · A' · B (la frase de 1:48, arreglo más ligero) · B' (ESTRIBILLO: el motivo cantado y
+# el grito de guerra) · puente tribal (el del tema base) · A'' · coda. El motivo suena dos veces, no cuatro.
+PH_148 = W.PH("0:F4/2 2:A4/2 4:C5/2 6:F5/4 10:C5/2 12:F5/2 14:G5/4", "2:C5/2 4:G5/2 6:A5/4 12:C6/2",
+              "0:C6/2 2:Bb5/2 4:A5/2 6:G5/4 10:F5/2 12:G5/2 14:A5/4", "2:G5/2 4:F5/2 6:E5/4 10:D5/2 12:E5/4",
+              "0:F5/2 2:C5/2 4:F5/2 6:G5/4 10:C5/2 12:E5/2 14:G5/2", "0:C5/2 2:Bb5/2 4:C6/2 6:G5/4 10:F5/2 12:E5/4",
+              "0:D5/3 4:D5/3 8:D5/3 12:Bb5/4", "0:E5/3 4:E5/3 8:E5/3 12:G5/4")
+CH_148 = ['Dm', ['Gm', 'F'], 'Bb', 'C', 'Dm', 'C', 'Gm', 'C']
 
 
 def song(style='normal'):
@@ -160,9 +172,9 @@ def song(style='normal'):
     section('A', PH_A + A_END2, CH_A)
     if style == 'icy':
         late = [x for x in PH_B + B_END2 if x[0] >= 5]
-        motif(); section('B', DEV, CH_MOT + ['Dm', 'Dm', 'Bb', 'C'])                    # el motivo (caja sola) y su respuesta
-        section('B2', [(b, st, n - 12, d) for b, st, n, d in MOTIF_PH] + late, CH_MOT + ['Dm', 'Dm', 'Bb', 'C'])   # lo canta la voz; remata el grito
-        motif(); section('BR', PH_BR, CH_MOT + ['Dm'] * 4)
+        section('B', PH_148, CH_148)                                                    # el puente: la frase de 1:48
+        section('B2', [(b, st, n - 12, d) for b, st, n, d in MOTIF_PH] + late, CH_MOT + ['Dm', 'Dm', 'Bb', 'C'])   # el motivo, cantado; remata el grito
+        section('BR', PH_BR, CH_BR)
     else:
         section('B', PH_B + B_END, CH_B)
         section('B2', PH_B + B_END2, CH_B2)
@@ -269,7 +281,8 @@ def build(style='normal'):
         lo = lambda r: 38 + (r - 38) % 12                      # (el bajo, de Re1 hacia arriba)
         nxt = chords[b % NB][0][0] if b < NB else chords[INTRO][0][0]
         # ── BAJO ──
-        mot = icy and (kind == 'intro' or (kind == 'BR' and b - starts[5] < 4))    # compases del motivo sin la banda
+        mot = icy and kind == 'intro'                          # compases del motivo sin la banda
+        calm = icy and kind == 'B'                             # la frase de 1:48: más ligera (sin golpes ni timbales)
         if mot:
             if kind != 'intro' or b >= 3:
                 bass(b, 0, 5.5, lo(r1)); bass(b, 6, 5.5, lo(r1)); bass(b, 12, 3.6, lo(r1))
@@ -312,7 +325,7 @@ def build(style='normal'):
                 r, q = (r1, q1) if st < 8 else (r2, q2)
                 if (b, st) not in {(bb, s_) for bb, s_, _, _ in bell}:
                     play(Cn['shim'], tv(b, st), tv(b, st) + S16 * 0.7, 72 + (r - 72) % 12 + (q + (12,))[st % 4], I_SHIM, release=0)
-        if kind in ('A', 'CODA', 'B', 'B2') and not dark:
+        if kind in ('A', 'CODA', 'B', 'B2') and not dark and not calm:
             for st in TRES:
                 r, q = (r1, q1) if st < 8 else (Q4[b] if st >= 12 and b in Q4 else chords[b - 1][1])
                 root = 50 + (r - 50) % 12
@@ -345,6 +358,10 @@ def build(style='normal'):
                 if not dark and st % 2 == 1 and st not in pat and (kind == 'BR' or k >= 3): NZ['hat'].hit(t, 1 if not icy else 0, [3, 1])
                 if not dark and kind == 'BR' and k >= 5 and st == 10: hit(kick, TN.KICK, t, 0.9)
                 if last and st >= 8 and not dark: snare(t, 0.4 + (st - 8) * 0.07, [7 + (st - 8), 5, 2])
+            elif calm:                                         # (helada, la frase de 1:48) bombo en el tresillo, caja suave en 2 y 4, cascabeles
+                if st in TRES: hit(kick, TN.KICK, t, 0.9)
+                if st in (4, 12): snare(t, 0.55, [9, 5, 2])
+                else: NZ['hat'].hit(t, 0, [5, 3, 1] if st % 2 == 0 else [2, 1])
             else:                                              # A y coda: tresillo en el bombo, caja en el 3 (medio tiempo), timbales
                 if st in TRES or st == 10 or (st == 3 and b % 2 == 0 and kind != 'A'): hit(kick, TN.KICK, t, 1.0 if st in TRES else 0.85)
                 if st in (4, 12): snare(t, 1.0)                                      # a tiempo entero: caja en 2 y 4
@@ -355,7 +372,7 @@ def build(style='normal'):
                 else: NZ['hat'].hit(t, 1, [4, 2, 1] if st % 2 == 0 else [3, 1])        # maraca en semicorcheas
             if last and kind not in ('intro', 'BR') and st >= 12 and not dark:                       # entrada a la frase siguiente
                 snare(t, 0.6 + (st - 12) * 0.1, [9 + (st - 12), 5, 2]); hit(tom, W.TOMS[min(2, st - 12)], t, 0.7)
-            if st == 0 and (b in starts or (kind in ('B', 'B2', 'CODA') and b % 2 == 1) or (fast and kind == 'A' and (b - 1) % 4 == 0)) and b > 1: NZ['crash'].hit(t, 3, CRASH)
+            if st == 0 and (b in starts or (kind in ('B', 'B2', 'CODA') and b % 2 == 1 and not calm) or (fast and kind == 'A' and (b - 1) % 4 == 0)) and b > 1: NZ['crash'].hit(t, 3, CRASH)
 
     n = int(NB * BAR * SR)
     n_i = int(INTRO * BAR * SR)
@@ -386,7 +403,7 @@ def build(style='normal'):
     side = sd('mar', 0.5) - sd('echo', 0.6) + sd('stabs', 0.3) + sd('hat', 0.3) + sd('shim', 0.5) + sd('legs', 0.35) - sd('legs2', 0.5)
     y = F.master(np.stack([x + side, x - side], 1), lufs=lufs)
     GN.report(cfg['out'], y, S, g, n)
-    bad, out = check(mel, chords, {b for b, st, nn, d in bell} | ({b for b in range(starts[4], starts[4] + 4)} if icy else set()))
+    bad, out = check(mel, chords, {b for b, st, nn, d in bell} | ({b for b in range(starts[3], starts[4] + 4)} if icy else set()))
     drums = sum(np.mean((S[k][:n] * g[k]) ** 2) for k in ('kick', 'toms', 'snare', 'hat', 'crash')) / sum(np.mean((S[k][:n] * g[k]) ** 2) for k in S)
     print(f'  {bpm} BPM, intro {INTRO} + bucle {NB - INTRO} compases ({(NB - INTRO) * BAR:.1f} s); melodía {len(mel)} notas; batería {100 * drums:.0f} % de la energía')
     print(f'  notas largas fuera del acorde: {bad or "ninguna"} · fuera de la escala: {out or "ninguna"}')
