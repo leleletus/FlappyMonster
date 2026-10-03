@@ -119,10 +119,11 @@ Q4 = {}                                            # compás → acorde de su ú
 # la marimba), cascabeles, arpegio brillante en semicorcheas.
 STYLES = {
     # (normal y helada: 180 con la caja en el 3 = medio tiempo, se sentían a 90 — "demasiado lentas" en el juego, dijo el
-    # usuario; la lúgubre así está bien. Ahora 200 y a TIEMPO ENTERO: caja en 2 y 4, bombo doble, redoblitos, platos)
-    'normal': dict(bpm=200, lufs=-10.0, out='crab_tantrum'),
+    # usuario; la lúgubre así está bien. A 200 y a TIEMPO ENTERO (caja en 2 y 4, bombo doble, redoblitos, platos) "te pasaste un poco": punto medio = el mismo
+    # ritmo a tiempo entero, a 172)
+    'normal': dict(bpm=172, lufs=-10.0, out='crab_tantrum'),
     'gloomy': dict(bpm=144, lufs=-11.0, out='crab_tantrum_gloomy'),
-    'icy':    dict(bpm=200, lufs=-10.0, out='crab_tantrum_icy'),
+    'icy':    dict(bpm=172, lufs=-10.0, out='crab_tantrum_icy'),
 }
 MOTIF = [[77, 89, 88, 86], [84, 82, 81, 82], [84, 86, 84, 82], [81, 79, 77, 79]]      # (negras; 4 compases: Si♭ Si♭ Do Do)
 MOTIF_PH = [(i + 1, k * 4, m, 4) for i, bar in enumerate(MOTIF) for k, m in enumerate(bar)]
