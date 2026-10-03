@@ -258,7 +258,7 @@ function Gloomy:updateCustom(dt, level)
             -- (se agarra a lo primero que toque: suelo, pared o techo)
             self.cnx, self.cny = 0, -1
             if hitWall and not self.onGround then self.cnx, self.cny = (vx > 0) and -1 or 1, 0 end
-            Crawler.attach(self, level, T * 0.75)
+            if not Crawler.attach(self, level, T * 0.75) and self.onGround then Crawler.edgeRescue(self, level, dt) end
             self.vx, self.vy = 0, 0
             if self.cattached then
                 self.cdir = (self.facing >= 0) and 1 or -1

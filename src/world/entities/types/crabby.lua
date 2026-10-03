@@ -171,7 +171,12 @@ function Crabby:crawlWalk(dt, level)
         -- Suelto: cae hasta el suelo y se vuelve a agarrar
         self.flipped = false
         Entity.fall(self, level, dt)
-        if self.onGround then self.cnx, self.cny = 0, -1; Crawler.attach(self, level); self.cdir = self.facing end
+        if self.onGround then
+            self.cnx, self.cny = 0, -1
+            -- (en el canto de una plataforma no hay superficie bajo su centro: se arrima hasta poder agarrarse)
+            if not Crawler.attach(self, level) then Crawler.edgeRescue(self, level, dt) end
+            self.cdir = self.facing
+        end
         return true
     end
     self:onWalk(dt)

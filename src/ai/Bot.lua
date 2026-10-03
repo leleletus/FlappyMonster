@@ -160,6 +160,21 @@ function Bot:think(dt, level, target)
         end
     end
     local goals, kind = self:_goal(level, target)
+    -- REBOTANDO sin tocar suelo (cayó sobre un Crabby trampolín, un trampolín...): en el aire no daba ninguna orden y
+    -- se quedaba botando hasta que el Crabby se iba. Pasado un momento en el aire, tira hacia su destino para salirse.
+    self.airT = pa.onGround and 0 or ((self.airT or 0) + dt)
+    if self.airT > 0.9 then
+        local gx
+        for id in pairs(goals or {}) do local n = self.nav.nodes[id]; if n then gx = n.x; break end end
+        if not gx then
+            local z = Bot.pickZone(self.nav, level, pa.x, pa.y, self.clock)
+            gx = z and (z.x0 + z.x1) / 2 or pa.x
+        end
+        if math.abs(gx - pa.x) < 40 then gx = pa.x + (self.airSide or 1) * 200 end       -- (justo debajo: a un lado)
+        self.airSide = (gx < pa.x) and -1 or 1
+        self.path = nil
+        return self:_emit((gx < pa.x) and L or R)
+    end
     -- cerca de ti y casi a tu altura: al ataque (estés o no en una zona, vaya adonde vaya)
     if target and not target.dying and not target:isPushProtected() and pa.onGround and self.cd <= 0 then
         local dx, dy = target.x - pa.x, target.y - pa.y

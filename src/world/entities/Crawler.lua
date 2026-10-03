@@ -183,6 +183,22 @@ function Crawler.attach(e, level, maxD)
     return false
 end
 
+-- APOYADO SOLO CON EL CANTO: lo empujaron (otro enemigo, un golpe) y quedó con el centro FUERA de la superficie —
+-- en el borde de una plataforma, de un bloque —: `attach` busca la superficie bajo el centro, no la encuentra y el
+-- trepador se quedaba ahí parado para siempre, como si no tuviera adónde ir. Aquí camina hacia el lado donde SÍ
+-- hay superficie bajo su caja hasta poder agarrarse. Devuelve true si se movió.
+function Crawler.edgeRescue(e, level, dt)
+    local b = e:getOuterBounds()
+    local fy = b.y + b.h + 3
+    local left = level:entitySolidAt(b.x + 2, fy, e)
+    local right = level:entitySolidAt(b.x + b.w - 2, fy, e)
+    local dir = (left and not right) and -1 or ((right and not left) and 1 or 0)
+    if dir == 0 then return false end
+    e.x = e.x + dir * math.max(40, e.speed or 60) * dt
+    e.facing = dir
+    return true
+end
+
 -- Objeto sólido (trampolín...) sobre el que está apoyado y cuál de sus caras
 -- pisa (según la normal: suelo → su cara 'top', techo → 'bottom'...), o nil
 local FACE_OF = { ['0,-1'] = 'top', ['0,1'] = 'bottom', ['1,0'] = 'right', ['-1,0'] = 'left' }

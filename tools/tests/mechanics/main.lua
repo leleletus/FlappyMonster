@@ -905,6 +905,27 @@ function cases.encerrado()
             g.state, walked, tostring(walkedAfter)))
 end
 
+-- Un Crabby TREPADOR empujado al canto de una plataforma (su centro, fuera): antes no encontraba superficie bajo el
+-- centro, no se agarraba y se quedaba parado para siempre; ahora se arrima, se agarra y sigue andando
+function cases.trepador_canto()
+    -- plataforma de 3 bloques (casillas 6-8, fila 7) en el aire; el Crabby, suelto y con el centro 10 px más allá
+    local level, es = room(16, 10, { { 6, 7, 'solid' }, { 7, 7, 'solid' }, { 8, 7, 'solid' } },
+        { { type = 'crabby', col = 8, row = 6, props = { pauses = false, wallWalk = true, canHide = false } } })
+    level.players = {}
+    local c = es[1]
+    stepEnts(level, es, 0.5)
+    local Crawler = require 'src/world/entities/Crawler'
+    Crawler.detach(c)
+    c.x, c.vx, c.vy = 8 * T + 10, 0, 0                -- (el borde derecho de la plataforma está en 8*T)
+    local x0, got, moved = c.x, false, 0
+    stepEnts(level, es, 3, function()
+        if c.cattached then got = true end
+        moved = math.max(moved, math.abs(c.x - x0))
+    end)
+    check('trepador_canto', got and moved > T,
+        ('se agarra=%s · se movió %.1f casillas en 3 s'):format(tostring(got), moved / T))
+end
+
 function cases.ping_icono()
     local PingIcon = require 'src/ui/PingIcon'
     local L = PingIcon.level
@@ -1077,7 +1098,7 @@ function love.load()
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
-                         'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'hielo_resbala',
+                         'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte' }) do cases[n]() end
     if os.getenv('SHOT_BOMB') then bombShot() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))

@@ -1827,6 +1827,14 @@ arenas as bonus nodes vs an expert BOT ✔. User's decisions: world map with a p
   cumbre_cangrejo, marea_alta, rebote_real) and fails if the bot stays within 40 px outside a zone for 6 s.
   cumbre_cangrejo itself: renamed "Peñón del Cangrejo" / "Crab Rock" (it is a beach level: sand, crabs, coast sky),
   music costa_1, its stray snow_pile removed (file id unchanged).
+- 3.64.2: (1) RULE: every level with point zones (KOTH) plays its island's BONUS track — cumbre_cangrejo, cascada_dorada,
+  marea_alta, rebote_real → `costa_bonus`, coliseo_pinchos → `fortaleza_bonus` (the six story bonuses already did).
+  (2) CLIMBER ON AN EDGE: a wall-walking Crabby shoved so its centre ends beyond the platform edge (another enemy, a
+  hit) never re-attached — `Crawler.attach` looks for the surface under the CENTRE — and stood there forever as if it
+  had nowhere to go. `Crawler.edgeRescue(e, level, dt)`: with no surface under the centre but some under its box, it
+  walks toward that side until it can attach (Crabby `crawlWalk`, Gloomy). Harness `mechanics trepador_canto`.
+  (3) BOT bouncing on a Crabby trampolín: airborne it gave no input and kept bouncing until the crab left; after 0.9 s
+  without touching ground (`airT`) it steers toward its goal (or sideways if right under it) to get off.
 - Menu: Aventura → HISTORIA (`story_slots`) / ONLINE / JUEGO LIBRE (PRUEBAS) (`free_play` stays as the debug hub).
 - `src/story/Worlds.lua` = the story as DATA: ordered worlds `{ id, levels = {...}, boss }` (stage 7 order; every
   story level needs a FINISH — hunt-only levels have none). `Worlds.nodes(w)`, `levelName(id)`.

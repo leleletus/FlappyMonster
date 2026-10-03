@@ -59,7 +59,7 @@
   ],
   "modes": ["koth"],
   "matchTime": 100,
-  "music": "costa_1",
+  "music": "costa_bonus",
   "background": "coast",
   "depth": "cave",
   "surfaceRow": 10

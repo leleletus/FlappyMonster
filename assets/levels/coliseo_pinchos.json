@@ -120,7 +120,7 @@
   "vents": [],
   "modes": ["koth"],
   "matchTime": 100,
-  "music": "fortaleza_1",
+  "music": "fortaleza_bonus",
   "background": "fortress",
   "time": "dusk",
   "surfaceRow": 18
