@@ -1997,7 +1997,11 @@ Low-level notes (for writing NEW harnesses):
   NATURAL minor only (v2, 3.53.1): v1 cadenced on A major (C#) next to C-natural chords and its chorus was F–C–Dm–B♭
   (happy) — the user liked the theme and the samples but in the non-sample parts "the melody didn't quite fit the other
   instruments, harmony a bit odd" (the pradera_2 lesson again: no bright major section inside an aggressive minor
-  arrangement, no leading tone mixed with ♭VII). Now phrases end on C (♭VII) and the chorus is i–♭VI–♭VII–i · iv–♭VI–♭VII.
+  arrangement, no leading tone mixed with ♭VII). v2 (all natural minor, new chorus progression i–♭VI–♭VII–i · iv–♭VI–♭VII
+  with a new melody) was "weirder than before". v3 (3.53.2): no cadences and no new progression at all — the non-sample
+  parts use the riff's OWN language: tonic + the ♭VI–♭VII turn, melody in D minor PENTATONIC (the cell's notes, 89 %);
+  A = Dm | Dm B♭ | Dm | Dm C | B♭ | B♭ C | Dm | B♭ C; chorus = the chorus gesture in a descending sequence, two bars
+  per chord (Dm · C · B♭ · C). Only bars 7-8 of A and the chorus have ever been changed; the rest was approved.
   COAST link: D minor = relative of costa_1's F major, the coast's marimba plays the tresillo, 16th shaker,
   ends with "la llamada". Character (user): powerful, TRIBAL, aggressive — tom ostinato, deep kick, clearly drawn bass
   (triangle + a pulse an octave up), VRC6 saw + pulse lead. 180 BPM (felt at 90); intro 4 (drums; own file) · A · A' ·

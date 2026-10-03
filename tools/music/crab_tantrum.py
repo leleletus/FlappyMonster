@@ -55,25 +55,27 @@ PH_A = CELL + [
     (4, 2, A5, 4), (4, 6, G5, 2), (4, 8, G5, 2), (4, 10, E5, 2), (4, 12, C5, 4),
     (5, 0, D5, 6), (5, 6, D5, 2), (5, 8, F5, 2), (5, 10, D5, 4), (5, 14, Bb4, 4),       # su ritmo sobre Si♭
     (6, 2, Bb4, 4), (6, 6, D5, 2), (6, 8, E5, 4), (6, 12, G5, 4),
-    (7, 0, G5, 3), (7, 3, F5, 3), (7, 6, D5, 2), (7, 8, Bb4, 3), (7, 11, D5, 3), (7, 14, G5, 2),   # tresillos que bajan
+    (7, 0, A5, 3), (7, 3, G5, 3), (7, 6, F5, 2), (7, 8, D5, 3), (7, 11, F5, 3), (7, 14, G5, 2),    # vuelve a la tónica: tresillos pentatónicos
 ]
-# (Los finales de frase van a Do, el ♭VII: TODO el tema es Re menor NATURAL, como el riff. La primera versión cerraba
-# en La mayor — con Do# — al lado de acordes con Do natural, y el estribillo era Fa–Do–Rem–Si♭, alegre: al usuario la
-# melodía "no terminaba de encajar" con el resto y la armonía quedaba rara. Nada de sensible ni de estribillo mayor.)
-A_END = [(8, 0, G5, 6), (8, 6, E5, 2), (8, 8, C5, 2), (8, 10, E5, 4), (8, 14, C5, 2)]   # ♭VII: pregunta
-A_END2 = [(8, 0, E5, 3), (8, 3, G5, 3), (8, 6, E5, 2), (8, 8, C6, 8)]                   # ♭VII: sube al estribillo
+# TERCER ENFOQUE para lo que no es muestra (los dos compases que cierran A y el estribillo). v1: cadencia en La mayor
+# y estribillo en Fa mayor ("la melodía no termina de encajar, armonía rara"); v2: todo menor natural con otra
+# progresión y otra melodía de estribillo ("más raro que antes"). Ahora NO hay cadencias ni progresión nueva: todo
+# sale del lenguaje del propio riff — tónica y el giro ♭VI–♭VII que vuelve a ella — y la melodía es PENTATÓNICA menor
+# (Re Fa Sol La Do, las notas de la célula). El estribillo es el giro del estribillo (nota larga + bordadura) en
+# secuencia descendente, dos compases por acorde: Rem · Do · Si♭ · Do.
+A_END = [(8, 0, F5, 6), (8, 6, D5, 2), (8, 8, G5, 8)]                                   # ♭VI–♭VII: queda arriba (pregunta)
+A_END2 = [(8, 0, F5, 6), (8, 6, F5, 2), (8, 8, G5, 4), (8, 12, C6, 4)]                  # ♭VI–♭VII: sube al estribillo
 PH_B = [
     (1, 0, A5, 12), (1, 12, G5, 2), (1, 14, A5, 2),                                     # el giro del estribillo
-    (2, 0, Bb5, 6), (2, 6, A5, 2), (2, 8, F5, 4), (2, 12, D5, 4),
-    (3, 0, G5, 12), (3, 12, F5, 2), (3, 14, G5, 2),                                     # el giro, un grado más abajo
-    (4, 0, A5, 6), (4, 6, F5, 2), (4, 8, D5, 8),
-    (5, 0, Bb5, 6), (5, 6, G5, 2), (5, 8, D5, 4), (5, 12, G5, 4),
-    (6, 0, F5, 6), (6, 6, D5, 2), (6, 8, F5, 4), (6, 12, Bb5, 4),
+    (2, 0, F5, 3), (2, 3, G5, 3), (2, 6, A5, 2), (2, 8, D5, 8),
+    (3, 0, G5, 12), (3, 12, F5, 2), (3, 14, G5, 2),                                     # un grado más abajo
+    (4, 0, E5, 3), (4, 3, G5, 3), (4, 6, E5, 2), (4, 8, C5, 8),
+    (5, 0, F5, 12), (5, 12, D5, 2), (5, 14, F5, 2),                                     # y otro
+    (6, 0, G5, 3), (6, 3, F5, 3), (6, 6, D5, 2), (6, 8, Bb4, 8),
+    (7, 0, C5, 3), (7, 3, E5, 3), (7, 6, G5, 2), (7, 8, C6, 6), (7, 14, G5, 2),
 ]
-B_END = [(7, 0, C6, 3), (7, 3, Bb5, 3), (7, 6, G5, 2), (7, 8, E5, 3), (7, 11, G5, 3), (7, 14, C6, 2),
-         (8, 0, G5, 6), (8, 6, E5, 2), (8, 8, C5, 8)]
-B_END2 = [(7, 0, E5, 3), (7, 3, G5, 3), (7, 6, E5, 2), (7, 8, C5, 3), (7, 11, E5, 3), (7, 14, G5, 2),
-          (8, 0, C6, 6), (8, 6, G5, 2), (8, 8, E5, 4), (8, 12, G5, 4)]
+B_END = [(8, 0, A5, 3), (8, 3, G5, 3), (8, 6, E5, 2), (8, 8, G5, 8)]
+B_END2 = [(8, 0, G5, 3), (8, 3, A5, 3), (8, 6, C6, 2), (8, 8, C6, 8)]
 # Puente tribal: tambores y el riff en el BAJO; la voz contesta desde el 5º compás (la célula, una octava abajo)
 PH_BR = [(5, 0, D5 - 12, 6), (5, 6, D5 - 12, 2), (5, 8, G5 - 12, 2), (5, 10, F5 - 12, 4),
          (7, 0, D5, 6), (7, 6, D5, 2), (7, 8, G5, 2), (7, 10, F5, 4), (7, 14, A5, 4)]
@@ -89,8 +91,8 @@ PH_CODA = [
     (8, 0, A4, 4), (8, 4, D5, 2), (8, 6, F5, 2), (8, 8, A5, 6),                         # la llamada: La-Re-Fa-La
 ]
 # Armonía: por compás, uno o dos acordes (medio compás cada uno)
-CH_A = ['Dm', ['Dm', 'Bb'], 'Dm', ['Dm', 'C'], 'Bb', ['Bb', 'C'], 'Gm', 'C']
-CH_B = ['Dm', 'Bb', 'C', 'Dm', 'Gm', 'Bb', 'C', 'C']        # i–♭VI–♭VII–i · iv–♭VI–♭VII
+CH_A = ['Dm', ['Dm', 'Bb'], 'Dm', ['Dm', 'C'], 'Bb', ['Bb', 'C'], 'Dm', ['Bb', 'C']]
+CH_B = ['Dm', 'Dm', 'C', 'C', 'Bb', 'Bb', 'C', 'C']          # i · ♭VII · ♭VI · ♭VII, dos compases cada uno
 CH_B2 = CH_B
 CH_BR = ['Dm'] * 8
 CH_CODA = ['Bb', 'C', 'Dm', 'Dm', 'Bb', 'C', 'Dm', 'Dm']
