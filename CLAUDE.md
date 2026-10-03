@@ -2016,6 +2016,24 @@ Low-level notes (for writing NEW harnesses):
   12.5 % pulse, pauses at phrase ends — `how_to_spider.txt` in the repo root); Icy = keeps and develops the
   Christmas/music-box motif of Winter Fallympics on this foundation. Reinterpretations, never copies; the three must
   clearly be the same Mega Crabby identity. NOTE: `GN.export(name, y, intro)` DELETES the old single `<name>.ogg`.
+- **CRAB TANTRUM: the user APPROVED the main theme (3.53.3 = definitive) and the two variants were built from it
+  (3.54.0, `crab_tantrum.py [normal gloomy icy]`, `build(style)`; the normal render is bit-identical to the approved
+  one; verified by numbers only).** Same song for the three (cell, tail, war chant, bridge, coda, D minor), other
+  atmosphere. GLOOMY (`crab_tantrum_gloomy`, 144 BPM, −11 LUFS): hollow N163 voice with cave echo, triangle bass only,
+  no stabs/marimba/doubling, dry drums (deep tresillo kick, short-noise claw clack on 3, far toms) and the spider LEGS
+  (`how_to_spider.txt`; `GN.LEG8/LEG6/I_LEG`): non-stop 16ths in groups of 8, 12.5 % pulse, chord's minor pentatonic +
+  blue note, foreground when the melody rests / background (×0.4) under it, 6-against-8 second pattern from the
+  chorus on, octave jump every 4th bar, and the PAUSE at each phrase end (chromatic run down, then the last beat silent
+  except the melody = the riff's tail; crash on re-entry). ICY (`crab_tantrum_icy`, 180): the Winter Fallympics
+  CHRISTMAS / music-box MOTIF (`MOTIF`, 4 bars over B♭ B♭ C C) as the second idea, only where ITS harmony is — which
+  here is the riff's own ♭VI–♭VII turn resolving to D minor: the intro (music box alone + sleigh bells), the first
+  half of both choruses (1st: box alone over the band, answered by a NEW phrase built on its octave leap `DEV`; 2nd:
+  the voice sings it too and the war chant finishes) and the first half of the bridge (drums empty out). Ice palette:
+  smooth N163 voice doubled by the music box an octave up, ice chimes on the tresillo (where the marimba was), sleigh
+  bells, 16th shimmer. The old arrangements (tentacle_winter / tentacle_gloomy) are outside the repo
+  (`placeholders/crab_tantrum_icy_tentacle_winter.ogg`, `..._gloomy_tentacle_gloomy_{intro,loop}.ogg`); their
+  generators write there. Older notes in this file about tentacle_nes / tentacle_winter / gloomy_nes `jefe` describe
+  those RETIRED arrangements.
 - Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
   cuevas_oscuras; other cave levels → cuevas_1; non-story levels by their retheme theme).
 - Generators keep their internal names; `famicom.PATHS` / `famicom.out(name, ext)` map them to the new folders;

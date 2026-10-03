@@ -15,8 +15,8 @@ autor del juego manda sobre cualquier número de aquí.
 | `cuevas_oscuras` | nivel a oscuras | 72 | Re menor (acaba en La, sin resolver) | A A' B A'', 32 compases | caja de música con eco sobre bordón y latido; 2,6 ataques/s, 6 % percusivo |
 | `gummy_king_boss` / `evil_ship_boss` | jefes de la Pradera y la Fortaleza | 152 / 160 | Sol mayor / Do menor | intro 4 + bucle 32 | NUEVAS (la genérica, arreglo de una canción ajena, retirada) |
 | `crab_tantrum_normal` | Mega Crabby | 180 (se siente a 90: tresillo 3+3+2) | Re menor (estribillo en Fa mayor) | intro 4 + bucle 56 | NUEVA composición (`crab_tantrum.py`): de Tentacle Tantrum solo muestras (célula del riff, tresillo, giro del estribillo, síncopas del final); tribal: timbales, bajo dibujado, sierra |
-| `crab_tantrum_icy` | Mega Crabby helado | 185 | Sol menor → Fa mayor (sección de invierno) | 172 compases | lo anterior + caja de música, cascabeles, arpegios 16ª constantes (8,8 notas/s) |
-| `crab_tantrum_gloomy` | Mega Crabby lúgubre | 150 | Sol menor | intro 4 + 72 | menos cargada; "patas" en semicorcheas de pulso 12,5 %, silencios al cerrar frase |
+| `crab_tantrum_icy` | Mega Crabby helado | 180 | Re menor | intro 4 + bucle 56 | el tema del Mega Crabby (`crab_tantrum.py icy`) + el motivo navideño de la caja de música donde está su armonía (♭VI–♭VII); voz suave + caja de música, cascabeles |
+| `crab_tantrum_gloomy` | Mega Crabby lúgubre | 144 | Re menor | intro 4 + bucle 56 | el tema del Mega Crabby (`crab_tantrum.py gloomy`) casi sin carga + las "patas" (semicorcheas de pulso 12,5 % en grupos de 8, pausa al cerrar frase) |
 | `snowball_boss` | Gran Bola de Nieve | 185 | Fa mayor | 144 compases | caja de música, arpegios, crece por DENSIDAD (dinámica 8,8 dB) |
 | `mirror_boss` (+ `_inst`) | Jefe Espejo | 92,5 (3+3+2) | Sol menor | 36 compases ×2 | melodía NUEVA sobre un motivo de nota vecina (Sol–Fa#–Sol), skank a contratiempo |
 
