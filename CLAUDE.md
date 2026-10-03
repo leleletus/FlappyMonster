@@ -1702,7 +1702,10 @@ arenas as bonus nodes vs an expert BOT. User's decisions: world map with a path,
   worlds over the bridge; a locked stop stops it with a bump), ↑↓ = walk to the next world's first level / previous
   world's boss; long trips speed up (~1 s). `self.world/self.node` change at once (the walk is visual; ENTER while walking
   snaps and plays). Tap a node = walk there (tap your own = play); bottom arrows = previous / next. Camera follows the
-  hero between the top band (TOP_H) and the level card (BOT_H), clamped to the map. Bonus nodes (KOTH vs bot) = stage 8.
+  hero between the top band (TOP_H) and the level card (BOT_H), clamped to the map. The boss stands on the side of
+  its castle that has LAND (`bossDx/bossDy`, right → left → below). Bridges are always opaque (locked = darker) and run
+  2 planks onto each shore. FULL MAP for review: `StoryMapState:renderFull()` → `story_flow` writes
+  `story_map_full.png` (2688x1536, every world open); copy it to `FlappyMonster_pruebas/mapa/mapa_completo.png`. Bonus nodes (KOTH vs bot) = stage 8.
   `PixelFont.draw` draws ONLY the letters (it used to fill a tight black box behind them: fine on the black menus,
   odd everywhere else — the user had it removed); over coloured backgrounds use `PixelFont.shadow` (1-font-pixel black
   drop shadow).

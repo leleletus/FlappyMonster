@@ -148,6 +148,19 @@ local function loadMap()
         for k = 1, n - 1 do M.seg[k] = subPath(p, acc, s[k], s[k + 1]) end
         local c = d.connect[w]
         if c and w < Worlds.count() then M.bridge = px(c) end
+        -- el jefe, al lado del castillo que tenga TIERRA (derecha, izquierda o debajo); nunca en el agua
+        local bx, by = M.node[n][1], M.node[n][2]
+        local function land(x, y)
+            local row = d.rows[math.floor(y / C) + 1]
+            local ch = row and row:sub(math.floor(x / C) + 1, math.floor(x / C) + 1)
+            return ch and ch ~= '' and ch ~= '~' and ch ~= 'L'
+        end
+        M.bossDx, M.bossDy = 58, 0
+        for _, o in ipairs({ { 58, 0 }, { -58, 0 }, { 40, 40 }, { -40, 40 }, { 0, 52 } }) do
+            if land(bx + o[1], by + o[2]) and land(bx + o[1] - 14, by + o[2]) and land(bx + o[1] + 14, by + o[2]) then
+                M.bossDx, M.bossDy = o[1], o[2]; break
+            end
+        end
         MAP.worlds[w] = M
     end
     -- los PUNTOS del camino (cada 16 px), con la llave que dice si ese tramo está abierto
@@ -155,13 +168,19 @@ local function loadMap()
         local acc = polyLen(pts)
         local total = acc[#acc]
         local n = math.max(1, math.floor(total / 16))
+        local list = {}
         for i = 1, n - 1 do
             local x, y = pointAt(pts, acc, total * i / n)
             local x2, y2 = pointAt(pts, acc, math.min(total, total * i / n + 2))
             local cx, cy = math.floor(x / C), math.floor(y / C)
             local row = d.rows[cy + 1]
             local water = row and row:sub(cx + 1, cx + 1) == '~'
-            MAP.dots[#MAP.dots + 1] = { x = x, y = y, ang = math.atan2(y2 - y, x2 - x), water = water, key = key }
+            list[i] = { x = x, y = y, ang = math.atan2(y2 - y, x2 - x), wet = water, key = key }
+        end
+        -- el puente sigue dos tablones más sobre la orilla de cada lado (si no, acababa cortado en el borde)
+        for i, dt in ipairs(list) do
+            for j = math.max(1, i - 2), math.min(#list, i + 2) do if list[j].wet then dt.water = true end end
+            MAP.dots[#MAP.dots + 1] = dt
         end
     end
     for w, M in ipairs(MAP.worlds) do
@@ -481,7 +500,8 @@ function StoryMapState:_drawPaths(cx, cy)
         if x > -20 and x < WINDOW_W + 20 and y > -20 and y < WINDOW_H + 20 then
             local open = Run.state(d.key[1], d.key[2]) ~= 'locked'
             if d.water then
-                love.graphics.setColor(1, 1, 1, open and 1 or 0.55)
+                -- (siempre opaco: cerrado = más oscuro, nunca transparente)
+                love.graphics.setColor(open and 1 or 0.5, open and 1 or 0.5, open and 1 or 0.56, 1)
                 love.graphics.draw(bridge, math.floor(x), math.floor(y), d.ang, 2.25, 4, 4, 2)
             else
                 love.graphics.setColor(open and 1 or 0.35, open and 1 or 0.35, open and 1 or 0.4, open and 1 or 0.6)
@@ -566,8 +586,9 @@ function StoryMapState:_drawCastle(w, x, y, beaten)
     if beaten or not art then return end
     local im = img(art.img)
     local fw = art.fw or im:getWidth()
-    local bx = x + 58
-    local by = y + 12 - (art.fly and (22 + math.floor(math.sin(self.t * 2) * 4)) or 0)
+    local M = loadMap().worlds[w]
+    local bx = x + M.bossDx
+    local by = y + 12 + M.bossDy - (art.fly and (22 + math.floor(math.sin(self.t * 2) * 4)) or 0)
     local s = (fw > 20) and 2 or 3
     local squash = art.fly and 1 or (1 + 0.06 * math.sin(self.t * 4))
     local shader = art.invert and getInvert()
@@ -643,6 +664,30 @@ function StoryMapState:render()
     self:_drawNodes(cx, cy)
     self:_drawHero(cx, cy)
     self:_drawHud()
+end
+
+-- El mapa ENTERO en una imagen (sin cabecera ni ficha), para revisarlo: lo usa el harness story_flow
+-- (story_map_full.png). Devuelve el ImageData.
+function StoryMapState:renderFull()
+    local M = loadMap()
+    local canvas = love.graphics.newCanvas(M.pw, M.ph)
+    local ww, wh = WINDOW_W, WINDOW_H
+    love.graphics.push('all')
+    love.graphics.origin()
+    love.graphics.setScissor()
+    love.graphics.setCanvas(canvas)
+    love.graphics.clear(0, 0, 0, 1)
+    WINDOW_W, WINDOW_H = M.pw, M.ph                  -- (los recortes de dibujo usan el tamaño de pantalla)
+    self:_drawTerrain(0, 0)
+    self:_drawPaths(0, 0)
+    self:_drawDecos(0, 0)
+    self:_drawCritters(0, 0)
+    self:_drawNodes(0, 0)
+    self:_drawHero(0, 0)
+    WINDOW_W, WINDOW_H = ww, wh
+    love.graphics.setCanvas()
+    love.graphics.pop()
+    return canvas:newImageData()
 end
 
 function StoryMapState:_drawHud()

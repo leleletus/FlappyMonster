@@ -285,7 +285,11 @@ function love.update(dt)
         else
             gStateMachine:change('story_map', { world = TOUR, node = 1 }); go('tour2')
         end
-    elseif step == 'tour2' and t - T > 0.6 then shot('world_' .. TOUR); go('tour')
+    elseif step == 'tour2' and t - T > 0.6 then
+        shot('world_' .. TOUR)
+        -- el MAPA ENTERO en una imagen (2688x1536), para revisarlo: story_map_full.png
+        if TOUR == Worlds.count() then top():renderFull():encode('png', 'story_map_full.png') end
+        go('tour')
     elseif step == 'del' and t - T > 0.3 then
         resize(1280, 720)
         pressNext('back'); go('del2')
