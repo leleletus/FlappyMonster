@@ -1770,7 +1770,9 @@ arenas as bonus nodes vs an expert BOT ✔. User's decisions: world map with a p
   for simplicity — `pa.immortal`: hits, knockback and enemies still affect it, but no HP loss, death or drowning; a
   kill = a hop + blink): a real `PlayerAdventure` driven by input bits each frame. If you are in a zone and its cooldown
   is over it hunts you through the nav graph and, within `ATTACK_R`, jumps at you and GROUND-POUNDS on top: `Bot:push`
-  launches you far (`PUSH_VX` 1150) with a short stun; then `attackCd` (1.4 s / the difficulty's `enemyPace`).
+  launches you far (`PUSH_VX` 1150) with a short stun; then `attackCd` (`ATTACK_CD` 0.45 s × 0.7-1.5 / the difficulty's
+  `enemyPace`). VERY HOSTILE (user): it also chases you when you are within `CHASE_R` 7 tiles even outside a zone, and
+  attacks whenever you are in range, whatever it was doing.
   Otherwise it goes to the best zone that has FLOOR NOW (`Bot.pickZone`: more points first, all-thin-ice zones
   penalised, ON/OFF floors re-checked every second) and holds it. NAVIGATION (`src/ai/BotNav.lua`): a graph per level
   built with the REAL physics — nodes = standable cells, edges = walk to the next cell or a recorded MACRO (≈30 input

@@ -39,7 +39,7 @@ function BonusMatch.new(state, opts)
         time = level.matchTime or 120, t = 0, over = false, endT = 0,
         botScore = 0,
         -- (más rápido en atacar cuanto más difícil: el ritmo de los enemigos de la dificultad)
-        bot = Bot.new(pa, nav, { firstDelay = 3, attackCd = 1.4 / Difficulty.k('enemyPace') }),
+        bot = Bot.new(pa, nav, { firstDelay = 1.5, attackCd = Bot.ATTACK_CD / Difficulty.k('enemyPace') }),
         view = OnlinePlayer:new('bot', L('story.bonus.bot'), BonusMatch.BOT_COLOR),
     }, BonusMatch)
     state.player.lives = 99

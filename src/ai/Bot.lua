@@ -19,7 +19,8 @@ local BotNav = require 'src/ai/BotNav'
 local Bot = {}
 Bot.__index = Bot
 
-Bot.ATTACK_CD = 1.1          -- s entre ground pounds (experto)
+Bot.ATTACK_CD = 0.45         -- s entre ground pounds: MUY hostil (el usuario: casi siempre que te tenga cerca)
+Bot.CHASE_R = 7              -- casillas: si estás a menos de esto, va a por ti aunque no estés en una zona
 Bot.ATTACK_R = 3.2           -- casillas: a esta distancia (y casi a su altura) salta a por ti
 Bot.REPLAN = 0.5             -- s: replanea aunque no haya cambiado de casilla
 Bot.STUCK = 2.5              -- s sin avanzar → replanea desde donde esté
@@ -86,8 +87,10 @@ function Bot:_h() return self.pa:getOuterBounds().h end
 -- Elige el destino: tú (si estás puntuando en una zona) o la mejor zona
 function Bot:_goal(level, target)
     local pa = self.pa
-    local area = target and not target.dying and areaOf(level, target)
-    if area and self.cd <= 0 then
+    local alive = target and not target.dying
+    local area = alive and areaOf(level, target)
+    local close = alive and math.abs(target.x - pa.x) < Bot.CHASE_R * TILE_PX and math.abs(target.y - pa.y) < 4 * TILE_PX
+    if (area or close) and self.cd <= 0 then
         local tn = BotNav.nodeAt(self.nav, target.x, target.y, target:getOuterBounds().h)
         if tn then
             local set = { [tn] = true }
@@ -139,8 +142,8 @@ function Bot:think(dt, level, target)
         return self:_emit(bits)
     end
     local goals, kind = self:_goal(level, target)
-    -- cerca de ti y casi a tu altura: al ataque
-    if kind == 'hunt' and pa.onGround and self.cd <= 0 then
+    -- cerca de ti y casi a tu altura: al ataque (estés o no en una zona, vaya adonde vaya)
+    if target and not target.dying and not target:isPushProtected() and pa.onGround and self.cd <= 0 then
         local dx, dy = target.x - pa.x, target.y - pa.y
         if math.abs(dx) < Bot.ATTACK_R * TILE_PX and dy > -1.6 * TILE_PX and dy < 0.8 * TILE_PX then
             self.mode, self.atkT = 'attack', 0
@@ -230,7 +233,7 @@ function Bot:think(dt, level, target)
 end
 
 -- Descanso entre ataques: no siempre igual (× 0,8-1,6), para que no sea un metrónomo
-function Bot:_rest() return self.attackCd * (0.8 + math.random() * 0.8) end
+function Bot:_rest() return self.attackCd * (0.7 + math.random() * 0.8) end
 
 function Bot:_fail(u, e)
     if not (u and e) then return end

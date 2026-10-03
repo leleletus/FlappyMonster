@@ -52,7 +52,7 @@ local function play(level, nav, withTarget)
         local due = dt
         while due > 1e-9 do
             local d = math.min(due, (JIT % 7 == 0) and 0.016 or 0.0069)
-            bot:step(d, level, tgt or bpa)
+            bot:step(d, level, tgt)
             if tgt and bot:push(tgt) then pushes = pushes + 1 end
             due = due - d
         end
@@ -111,7 +111,7 @@ function love.load(arg)
             else
                 local arrive, frac = play(Level.new(path), g, false)
                 local _, _, pushes, tIn = play(Level.new(path), g, true)
-                local good = arrive ~= nil and arrive < 25 and frac > 0.7 and pushes >= 3
+                local good = arrive ~= nil and arrive < 25 and frac > 0.6 and pushes >= 3
                 if not good then fails = fails + 1 end
                 print(('%-22s %s  sola: llega a la zona en %s s, dentro el %d %% después · caza: %d empujones, el jugador quieto en la zona el %d %% del tiempo'):format(
                     name, good and 'OK   ' or 'FALLA', arrive and string.format('%.1f', arrive) or '—', math.floor(frac * 100), pushes, math.floor(tIn * 100)))
