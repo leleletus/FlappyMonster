@@ -90,7 +90,7 @@ function Bot:_goal(level, target)
     local alive = target and not target.dying
     local area = alive and areaOf(level, target)
     local close = alive and math.abs(target.x - pa.x) < self.chaseR * TILE_PX and math.abs(target.y - pa.y) < 4 * TILE_PX
-    if (area or close) and self.cd <= 0 then
+    if (area or close) and self.cd <= 0 and self.clock >= (self.noHuntT or 0) then
         local tn = BotNav.nodeAt(self.nav, target.x, target.y, target:getOuterBounds().h)
         if tn then
             local set = { [tn] = true }
@@ -141,34 +141,8 @@ function Bot:think(dt, level, target)
         if self.atkT > 1.6 then self.mode, self.cd = 'route', self:_rest() end
         return self:_emit(bits)
     end
-    local goals, kind = self:_goal(level, target)
-    -- cerca de ti y casi a tu altura: al ataque (estés o no en una zona, vaya adonde vaya)
-    if target and not target.dying and not target:isPushProtected() and pa.onGround and self.cd <= 0 then
-        local dx, dy = target.x - pa.x, target.y - pa.y
-        if math.abs(dx) < Bot.ATTACK_R * TILE_PX and dy > -1.6 * TILE_PX and dy < 0.8 * TILE_PX then
-            self.mode, self.atkT = 'attack', 0
-            pa.facing = (dx < 0) and -1 or 1
-            return self:_emit(J + JP + ((dx < 0) and L or R))
-        end
-    end
-    if not goals then
-        -- en la zona: no se queda clavado — cada pocos segundos se cambia a otra casilla de la zona, al azar
-        self.roamT = (self.roamT or (2 + math.random() * 3)) - dt
-        local z = Bot.pickZone(self.nav, level, pa.x, pa.y, self.clock)
-        if self.roamT <= 0 and z and z._nodes then
-            local list = {}
-            for id in pairs(z._nodes) do list[#list + 1] = id end
-            table.sort(list)
-            self.roamTo, self.roamT = list[math.random(#list)], 2.5 + math.random() * 4
-        end
-        local here = pa.onGround and BotNav.nodeAt(self.nav, pa.x, pa.y, self:_h())
-        if not self.roamTo or here == self.roamTo then self.roamTo = nil; return self:_emit(0) end
-        goals = { [self.roamTo] = true }
-    end
-    -- ── RUTA por el grafo ──
-    self.planT = self.planT - dt
-    local cur = pa.onGround and BotNav.nodeAt(self.nav, pa.x, pa.y, self:_h()) or nil
-    if math.abs(pa.x - self.lastX) > 2 then self.stuckT, self.lastX = 0, pa.x else self.stuckT = self.stuckT + dt end
+    -- un movimiento grabado A MEDIAS se termina siempre, decida lo que decida después (si no, quedaba colgado al
+    -- llegar a la zona y se reanudaba más tarde, fuera de sitio: se tiraba de la plataforma)
     if self.edge and self.edge.seq and self.edgeF > 0 then
         -- reproduciendo un movimiento grabado
         self.edgeF = self.edgeF + 1
@@ -184,12 +158,48 @@ function Bot:think(dt, level, target)
             return self:_emit(BotNav.bitsAt(self.edge, self.edgeF))
         end
     end
+    local goals, kind = self:_goal(level, target)
+    -- cerca de ti y casi a tu altura: al ataque (estés o no en una zona, vaya adonde vaya)
+    if target and not target.dying and not target:isPushProtected() and pa.onGround and self.cd <= 0 then
+        local dx, dy = target.x - pa.x, target.y - pa.y
+        if math.abs(dx) < Bot.ATTACK_R * TILE_PX and dy > -1.6 * TILE_PX and dy < 0.8 * TILE_PX then
+            self.mode, self.atkT = 'attack', 0
+            self.edge, self.edgeF = nil, 0
+            pa.facing = (dx < 0) and -1 or 1
+            return self:_emit(J + JP + ((dx < 0) and L or R))
+        end
+    end
+    if not goals then
+        -- en la zona: no se queda clavado — cada pocos segundos se cambia a otra casilla de la zona, al azar
+        self.roamT = (self.roamT or (2 + math.random() * 3)) - dt
+        local z = Bot.pickZone(self.nav, level, pa.x, pa.y, self.clock)
+        if self.roamT <= 0 and z and z._nodes then
+            local list = {}
+            -- (solo casillas de SU misma fila: ir a otra altura lo sacaba de la zona por el camino)
+            local here = pa.onGround and BotNav.nodeAt(self.nav, pa.x, pa.y, self:_h())
+            local row = here and self.nav.nodes[here].r
+            for id in pairs(z._nodes) do if self.nav.nodes[id].r == row then list[#list + 1] = id end end
+            if #list == 0 then list[1] = here end
+            table.sort(list)
+            self.roamTo, self.roamT = list[math.random(#list)], 2.5 + math.random() * 4
+        end
+        local here = pa.onGround and BotNav.nodeAt(self.nav, pa.x, pa.y, self:_h())
+        if not self.roamTo or here == self.roamTo then self.roamTo = nil; return self:_emit(0) end
+        goals = { [self.roamTo] = true }
+        kind = 'roam'
+    end
+    self.kind = kind
+    -- ── RUTA por el grafo ──
+    self.planT = self.planT - dt
+    local cur = pa.onGround and BotNav.nodeAt(self.nav, pa.x, pa.y, self:_h()) or nil
+    if math.abs(pa.x - self.lastX) > 2 then self.stuckT, self.lastX = 0, pa.x else self.stuckT = self.stuckT + dt end
     if not cur and pa.onGround then self.path = nil end
     if cur and (not self.path or self.planT <= 0 or self.pathFrom ~= cur or self.stuckT > Bot.STUCK) then
         if self.stuckT > Bot.STUCK and self.path and self.path[1] then self:_fail(cur, self.path[1]) end
         self.path = BotNav.path(self.nav, cur, goals, nil, function(u, e)
             local b = self.banned[u * 1048576 + e.to]
             if b ~= nil and b > self.clock then return true end
+            if kind == 'roam' and not e.walk then return true end      -- (paseando por la zona: solo andando)
             -- (el grafo junta los dos estados de los bloques ON/OFF: fuera lo que AHORA no tiene suelo)
             local n = self.nav.nodes[e.to]
             return n == nil or not level:isStandable(n.c, n.r)
@@ -200,6 +210,10 @@ function Bot:think(dt, level, target)
     local e = self.path and self.path[1]
     if not e then
         if not pa.onGround then return self:_emit(self.escBits or 0) end
+        -- (paseando por su zona y sin camino a esa casilla: se queda donde está; a lo bruto se salía de la zona)
+        if kind == 'roam' then self.roamTo = nil; return self:_emit(0) end
+        -- (no hay cómo llegar hasta ti — un hoyo, un bloque roto —: deja de perseguirte un rato y vuelve a su zona)
+        if kind == 'hunt' then self.noHuntT = self.clock + 2.5; return self:_emit(0) end
         -- SIN CAMINO (fuera del grafo: un bloque roto, un foso, una casilla rara): hacia el destino a lo bruto,
         -- saltando (doble) cuando algo lo frena
         local gx
