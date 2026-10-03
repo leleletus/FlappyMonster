@@ -6,16 +6,24 @@
 --   boss    el nivel del jefe: el último nodo del mundo; al superarlo se abre el mundo siguiente
 --   bonus   (más adelante) niveles opcionales: arenas contra el bot
 -- Todo nivel de la historia necesita META (los de solo Cazamonstruos no la tienen).
--- El orden de ahora es PROVISIONAL (por ambiente); el definitivo, por dificultad, es la etapa 7.
+-- Orden (etapa 7): cada mundo agrupa los niveles de SU ambiente (las islas del mapa) y dentro van del más fácil al
+-- más difícil, según los datos (enemigos y pinchos por casilla de ancho, mecánicas nuevas primero; cámara
+-- automática, laberintos, a oscuras y muy altos al final) y lo que diga el usuario al jugarlos.
 local Worlds = {}
 
 Worlds.LIST = {
-    { id = 'pradera',   levels = { 'valle_soleado', 'pradera_explosiva', 'bosque_interruptores' },                         boss = 'reino_gummy' },
-    { id = 'costa',     levels = { 'canon_trampolines', 'playa_rebotes', 'jungla_colgante', 'arrecife_globo' },            boss = 'guarida_cangrejo_rey' },
-    { id = 'fortaleza', levels = { 'taller_trampas', 'fabrica_morteros', 'cantera_dinamita', 'lluvia_pinchos', 'tren_fugaz' }, boss = 'fortaleza_malvada' },
-    { id = 'nieve',     levels = { 'cumbres_escarcha', 'torre_viento', 'fabrica_criogenica', 'lago_helado' },              boss = 'glaciar_cangrejo' },
-    { id = 'cuevas',    levels = { 'cavernas_cristal', 'laberinto_submarino', 'templo_del_eco' },                          boss = 'gruta_lugubre' },
-    { id = 'final',     levels = { 'caldera_roja' },                                                                       boss = 'ruta_del_espejo' },
+    -- 1 La Pradera: lo básico; luego bombas e interruptores
+    { id = 'pradera',   levels = { 'valle_soleado', 'pradera_explosiva', 'bosque_interruptores' },                           boss = 'reino_gummy' },
+    -- 2 La Costa: trampolines y agua; del más suelto al más denso, y el arrecife (bucear) al final
+    { id = 'costa',     levels = { 'playa_rebotes', 'jungla_colgante', 'canon_trampolines', 'arrecife_globo' },              boss = 'guarida_cangrejo_rey' },
+    -- 3 La Fortaleza: morteros y bombas primero; luego el taller denso y las dos de cámara automática
+    { id = 'fortaleza', levels = { 'fabrica_morteros', 'cantera_dinamita', 'taller_trampas', 'tren_fugaz', 'lluvia_pinchos' }, boss = 'fortaleza_malvada' },
+    -- 4 Las Cumbres: nieve y congeladores; la Bola de Nieve a media isla; la torre (subir) antes del jefe
+    { id = 'nieve',     levels = { 'cumbres_escarcha', 'fabrica_criogenica', 'lago_helado', 'torre_viento' },              boss = 'glaciar_cangrejo' },
+    -- 5 Las Cuevas: cristal, los dos laberintos de agua y el templo a oscuras justo antes del jefe a oscuras
+    { id = 'cuevas',    levels = { 'cavernas_cristal', 'nivel01', 'laberinto_submarino', 'templo_del_eco' },             boss = 'gruta_lugubre' },
+    -- 6 El Final (el volcán): lava
+    { id = 'final',     levels = { 'carrera01', 'caldera_roja' },                                                          boss = 'ruta_del_espejo' },
 }
 
 function Worlds.count() return #Worlds.LIST end

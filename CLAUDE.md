@@ -1640,7 +1640,9 @@ don't copy speeds/forces literally (the user tunes feel by hand).
 
 Plan (approved by the user; file `~/.claude/plans/rippling-swinging-seal.md`): 1 foundation ✔ · 2 generic difficulty
 framework ✔ · 3 lives + Game Over ✔ · 4 results + grades ✔ · 5 world map ✔ · 6
-difficulty unlocks + double bosses ✔ · 7 final level order by difficulty (+ carrera01 / nivel01, old races not placed yet) · 8 KOTH
+difficulty unlocks + double bosses ✔ · 7 level order ✔ (28 levels: every race level; each world = its island's
+theme, easiest first by enemy/spike density, new mechanics first, auto-scroll / mazes / dark / very tall last — see the
+comments in `Worlds.LIST`; the Snowball Boss `lago_helado` is a mid-world boss node in the Summits) · 8 KOTH
 arenas as bonus nodes vs an expert BOT. User's decisions: world map with a path, 3 save slots, KOTH = bonus vs a bot.
 - **Stage 2 ✔ — DIFFICULTY = generic modifier framework** (`src/Difficulty.lua`): each difficulty id (`easy, normal,
   hard, extreme, xtra`) is a table of NAMED modifiers; base code asks `Difficulty.k('airTime')` / `flag(...)`, never
@@ -1707,8 +1709,8 @@ arenas as bonus nodes vs an expert BOT. User's decisions: world map with a path,
   (`sentidos`, `doble`), `story_flow` (`desbloqueo`), `sp_boss DIFF=xtra` (prints the bosses + "Aliados": fails if both attack at once
   > 0.5 s), `online_smoke DIFF=xtra` (the client has both).
 - Menu: Aventura → HISTORIA (`story_slots`) / ONLINE / JUEGO LIBRE (PRUEBAS) (`free_play` stays as the debug hub).
-- `src/story/Worlds.lua` = the story as DATA: ordered worlds `{ id, levels = {...}, boss }` (provisional order by
-  theme; every story level needs a FINISH — hunt-only levels have none). `Worlds.nodes(w)`, `levelName(id)`.
+- `src/story/Worlds.lua` = the story as DATA: ordered worlds `{ id, levels = {...}, boss }` (stage 7 order; every
+  story level needs a FINISH — hunt-only levels have none). `Worlds.nodes(w)`, `levelName(id)`.
 - `src/story/Save.lua`: 3 slots `story1..3.sav` + global `story.sav` (unlocks) in the save dir — Lua tables loaded
   without an environment; never a `.lua` name. `src/story/Run.lua`: the open slot; `state(w, k)` = done / open /
   locked (levels open in order, the next world when the boss is beaten), `complete(id, result)` saves, `frontier()`.
