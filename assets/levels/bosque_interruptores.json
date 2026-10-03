@@ -51,7 +51,6 @@
     {"col":107,"row":21,"type":"checkpoint"},
     {"col":126,"props":{"patrol":{"left":124,"right":128}},"row":21,"type":"crabby"},
     {"col":140,"row":21,"type":"star"},
-    {"col":150,"row":21,"type":"checkpoint"},
     {"col":34,"row":14,"type":"star"},
     {"col":41,"row":14,"type":"star"},
     {"col":37,"props":{"movement":"fly","patrol":{"left":34,"right":41}},"row":14,"type":"gummy"},

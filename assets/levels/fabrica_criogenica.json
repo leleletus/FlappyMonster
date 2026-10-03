@@ -57,7 +57,6 @@
     {"col":139,"row":18,"sub":2,"type":"spikefall"},
     {"col":142,"row":18,"sub":1,"type":"spikefall"},
     {"col":138,"props":{"patrol":{"left":136,"right":141}},"row":21,"type":"crabby_ice"},
-    {"col":148,"row":21,"type":"checkpoint"},
     {"col":23,"props":{"patrol":{"left":20,"right":27}},"row":13,"type":"crabby_ice"},
     {"col":36,"row":12,"type":"star"},
     {"col":39,"row":12,"type":"star"},

@@ -46,7 +46,6 @@
     {"col":109,"row":21,"type":"checkpoint"},
     {"col":124,"props":{"patrol":false,"speed":60,"wallWalk":true},"row":17,"type":"crabby"},
     {"col":137,"props":{"helmet":true,"patrol":{"left":135,"right":140}},"row":21,"type":"gummy"},
-    {"col":144,"row":21,"type":"checkpoint"},
     {"col":23,"props":{"patrol":{"left":20,"right":27}},"row":13,"type":"gummy"},
     {"col":29,"row":4,"type":"star"},
     {"col":31,"row":4,"type":"star"},

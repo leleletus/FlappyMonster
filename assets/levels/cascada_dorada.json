@@ -46,7 +46,7 @@
     {"col":40,"row":9,"type":"star"},
     {"col":8,"row":18,"type":"mortar"},
     {"col":11,"props":{"points":6,"respawn":1},"row":14,"type":"crabby"},
-    {"col":20,"row":10,"type":"bomb"}
+    {"col":20,"props":{"respawn":6},"row":10,"type":"bomb"}
   ],
   "foliage": [
     {"col":18,"row":12,"sub":1,"type":"starfish"},

@@ -47,7 +47,6 @@
     {"col":119,"row":21,"type":"checkpoint"},
     {"col":129,"props":{"area":[{"col":127,"row":24},{"col":132,"row":24},{"col":132,"row":26},{"col":127,"row":26}]},"row":26,"type":"pufferfish"},
     {"col":143,"props":{"patrol":{"left":140,"right":147}},"row":21,"type":"crabby_ice"},
-    {"col":157,"row":21,"type":"checkpoint"},
     {"col":23,"props":{"patrol":{"left":20,"right":27}},"row":13,"type":"gummy_ice"},
     {"col":36,"row":12,"type":"star"},
     {"col":39,"row":12,"type":"star"},

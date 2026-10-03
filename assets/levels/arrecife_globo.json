@@ -65,8 +65,7 @@
     {"col":98,"row":12,"type":"checkpoint"},
     {"col":32,"props":{"movement":"fly","patrol":{"left":27,"right":38}},"row":8,"type":"gummy"},
     {"col":76,"props":{"movement":"fly","patrol":{"left":71,"right":82}},"row":8,"type":"gummy"},
-    {"col":115,"props":{"movement":"fly","patrol":{"left":110,"right":121}},"row":8,"type":"gummy"},
-    {"col":130,"row":11,"type":"checkpoint"}
+    {"col":115,"props":{"movement":"fly","patrol":{"left":110,"right":121}},"row":8,"type":"gummy"}
   ],
   "foliage": [
     {"col":7,"props":{"flip":true},"row":11,"type":"fern"},

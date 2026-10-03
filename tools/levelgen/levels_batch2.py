@@ -398,14 +398,14 @@ class B(Level):
         self.ent('pointarea', c0, r0, corner={'col': c1, 'row': r1}, points=points)
 
     def end(self, c):
-        """Los últimos 12: punto de control y la meta. `c` = primera columna"""
+        """Los últimos 12: la meta. `c` = primera columna"""
         assert c + 13 <= self.w, '%s: no cabe el final (c=%d, ancho %d)' % (self.name, c, self.w)
         W = c + 13                                          # el nivel acaba aquí: se recorta a su ancho
         self.g = [row[:W] for row in self.g]
         self.w = W
         for r in range(1, self.h + 1):
             self.set(W, r, BORDER)
-        self.ent('checkpoint', c + 2, G - 1)
+        # (sin punto de control aquí: a 4 casillas de la meta no sirve de nada y queda mal — el usuario)
         self.finish(self.w - 7, G - 1)
 
 
@@ -556,7 +556,6 @@ def arrecife_globo():
     for i, a_ in enumerate((30, 52, 74, 96, 113)):
         if i % 2 == 0:
             L.fly('gummy', a_ - 3, a_ + 8, S - 5)
-    L.ent('checkpoint', 130, S - 2)
     L.finish(136, S - 2)
     return L
 

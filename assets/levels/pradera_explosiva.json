@@ -61,7 +61,6 @@
     {"col":125,"props":{"patrol":{"left":123,"right":128}},"row":21,"type":"gummy"},
     {"col":141,"props":{"respawn":5,"speed":0},"row":21,"type":"bomb"},
     {"col":150,"props":{"patrol":{"left":148,"right":152}},"row":21,"type":"crabby"},
-    {"col":155,"row":21,"type":"checkpoint"},
     {"col":25,"props":{"patrol":{"left":22,"right":29}},"row":13,"type":"gummy"},
     {"col":38,"row":12,"type":"star"},
     {"col":41,"row":12,"type":"star"},

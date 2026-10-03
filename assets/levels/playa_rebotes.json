@@ -57,7 +57,6 @@
     {"col":142,"row":16,"type":"star"},
     {"col":143,"row":16,"type":"star"},
     {"col":152,"props":{"patrol":{"left":150,"right":155}},"row":21,"type":"crabbytramp"},
-    {"col":159,"row":21,"type":"checkpoint"},
     {"col":23,"props":{"patrol":{"left":20,"right":27}},"row":13,"type":"crabby"},
     {"col":36,"row":12,"type":"star"},
     {"col":39,"row":12,"type":"star"},
