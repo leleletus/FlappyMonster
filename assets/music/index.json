@@ -21,8 +21,9 @@
     "están guardadas FUERA del repositorio: FlappyMonster_originals/music/placeholders/."
   ],
   "tracks": [
-    { "id": "pradera_1",  "name": "Pradera 1 (pendiente)",  "file": "worlds/pradera/pradera_1.ogg",   "pending": true, "fallback": "fortaleza_1" },
-    { "id": "pradera_2",  "name": "Pradera 2 (pendiente)",  "file": "worlds/pradera/pradera_2.ogg",   "pending": true, "fallback": "fortaleza_1" },
+    { "id": "pradera_1",  "name": "Pradera 1 (tema)",       "file": "worlds/pradera/pradera_1.ogg" },
+    { "id": "pradera_2",  "name": "Pradera 2 (menor)",      "file": "worlds/pradera/pradera_2.ogg" },
+    { "id": "pradera_bonus", "name": "Pradera (bonus)",     "file": "worlds/pradera/pradera_bonus.ogg" },
     { "id": "costa_1",    "name": "Costa 1 (pendiente)",    "file": "worlds/costa/costa_1.ogg",       "pending": true, "fallback": "fortaleza_1" },
     { "id": "costa_2",    "name": "Costa 2 (pendiente)",    "file": "worlds/costa/costa_2.ogg",       "pending": true, "fallback": "fortaleza_1" },
     { "id": "fortaleza_1", "name": "Fortaleza 1",          "file": "worlds/fortaleza/fortaleza_1.ogg" },

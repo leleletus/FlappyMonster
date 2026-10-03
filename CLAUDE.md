@@ -1943,6 +1943,13 @@ Low-level notes (for writing NEW harnesses):
   `FlappyMonster_originals/music/placeholders/` (generators read their references from there: `famicom.ref(name)`).
 - STUDY + STYLE GUIDE for all new music: `docs/musica/GUIA_MUSICAL.md` (what exists, the house style measured, the game leitmotif "la llamada", per-island palette, composition rules); `tools/music/study.py` measures any .mid.
 - User renames after the reorg: the level tune is `fortaleza_1` (never meant for the meadow; `pradera_1` is a pending slot, default fallback = fortaleza_1) and the chip tracks are `mirror_boss` / `mirror_boss_inst` (the Mirror fight).
+- ISLAND LEVEL MUSIC = `tools/music/worlds_nes.py` (follows the guide: intro 4 · A · A' · B · A'', 3+3+2 kick, the
+  game motif "la llamada" closing phrase B). MEADOW done (3.49.0, verified by numbers only): `pradera_1` (G major,
+  136 BPM, pulse lead + echo, hopping bass, offbeat chords, bird trill; 3 variants for the user to pick: `previas` →
+  `FlappyMonster_pruebas/musica/pradera_1_{A,B,C}.ogg`, A installed), `pradera_2` (same tune in E minor, 140, more
+  drive), `pradera_bonus` (152, four-on-the-floor; isla_flotante). Other islands: add their melody + arrangement there.
+  User's decisions: the island table of the guide is approved; arrangements of borrowed tunes stay FOR NOW but get
+  replacements with a similar vibe that keep a motif or a recognizable element as a "sample", never a copy.
 - Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
   cuevas_oscuras; other cave levels → cuevas_1; non-story levels by their retheme theme).
 - Generators keep their internal names; `famicom.PATHS` / `famicom.out(name, ext)` map them to the new folders;
