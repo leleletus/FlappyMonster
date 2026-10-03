@@ -2075,6 +2075,16 @@ Low-level notes (for writing NEW harnesses):
   the track; `STEM_NAMES`). Made for pradera_1 because the user hears "little bell-like sounds every 2 beats" in the
   meadow, coast, fortress and summits tracks and wants to point at the layer before anything is changed — WAITING for
   them to say which (candidates: the offbeat chord plucks, the island motif on long tails, the melody echo).
+- ACCENTS PER PLACE (3.58.0): with the stems the user identified the `trino_adorno` layer: nearly every level and boss
+  theme had "a few high pulse notes in 16ths in the same slot" (the meadow trill adapted), and since the meadow is heard
+  first, everything sounded like a meadow remix. The decorative accent stays (same slot: where the melody rests, and in
+  the intro) but each is now its own thing — other timbre, rhythm, register, often UNPITCHED (noise channel `fx`,
+  helper `swell`): pradera_1/bonus the bird trill (ONLY there); pradera_2 horse hooves (clip-clop); costa_1/bonus a
+  WAVE breaking (noise swell); costa_2 bubbles; fortaleza_1/bonus a LOW horn answer (fifth → root) + snare roll;
+  fortaleza_2 steam + two unpitched anvil hits; nieve_1/bonus a sleigh shake + ONE ringing bell; nieve_2 a wind gust;
+  snowball_boss rolling toms + a low two-note "laugh"; gummy_king_boss a growing timpani roll + cymbal swell;
+  evil_ship_boss a low wailing SIREN (one note, ±2 semitones). Stem name: `acento_del_sitio`. Rule for new themes:
+  never reuse another place's accent; give each its own sound.
 - Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
   cuevas_oscuras; other cave levels → cuevas_1; non-story levels by their retheme theme).
 - Generators keep their internal names; `famicom.PATHS` / `famicom.out(name, ext)` map them to the new folders;

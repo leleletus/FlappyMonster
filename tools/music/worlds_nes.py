@@ -489,6 +489,12 @@ I_MARIMBA = {'vol': [10, 7, 5, 3, 2, 1], 'sus': 0, 'duty': 0.5}
 I_OCA = {'vol': [6, 10, 12, 12, 11, 11], 'sus': 11, 'vib': (14, 0.22, 5.0), 'duty': 0.5}
 I_PADP = {'vol': [1, 2, 2, 3, 3, 4], 'sus': 4, 'duty': 0.25}
 WAVES.append(wavetable([1.0, 0.7, 0.35, 0.45, 0.1, 0.2]))    # 2 steel drum (metálico, brillante)
+I_DING = {'vol': [13, 11, 10, 9, 8, 7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1], 'sus': 1, 'duty': 0.25}       # una campana que se apaga
+I_LAUGH = {'vol': [12, 10, 7, 4, 2], 'sus': 1, 'duty': 0.5, 'drop': [2, 1, 0]}
+I_SIREN = {'vol': [8, 10, 11, 11, 10, 10], 'sus': 10, 'vib': (0, 2.0, 2.6), 'duty': 0.25}             # aúlla ±2 semitonos
+I_HORNLOW = {'vol': [9, 12, 13, 12, 11, 11], 'sus': 11, 'duty': 0.5}
+I_BUBBLE = {'vol': [12, 9, 6, 3, 1], 'sus': 0, 'duty': 0.5, 'drop': [-7, -4, -2, 0]}                  # sube al nacer
+I_CLOP = {'vol': [13, 6, 2], 'sus': 0, 'duty': 0.5, 'drop': [5, 0]}                                   # madera
 I_BRASS = {'vol': [10, 14, 15, 14, 13, 13], 'sus': 13, 'vib': (16, 0.15, 5.5), 'duty': 0.25}      # trompeta
 I_HORN = {'vol': [6, 9, 10, 10, 9, 9], 'sus': 9, 'duty': 0.5}                                    # trompas
 I_ORG = {'vol': [5, 6, 7, 7, 6, 6], 'sus': 6, 'duty': 0.5}                                       # acordes tenidos
@@ -506,15 +512,15 @@ I_FLAKE = {'vol': [7, 4, 2, 1], 'sus': 0, 'duty': 0.125}
 I_FALL = {'vol': [10, 7, 5, 3, 2, 1], 'sus': 0, 'duty': 0.125}
 SNOW = ('nieve', 'ventisca', 'bola')
 ISLE_LV = {
-    'nieve':    {'lead': -5, 'bell': 0, 'echo': -12, 'chords': -11, 'bass': -3, 'trill': -7, 'kick': -5, 'snare': -10, 'hat': -11, 'crash': -13, 'toms': 0},
-    'ventisca': {'lead': 0, 'bell': -6, 'echo': -11, 'chords': -11, 'bass': -1, 'trill': -7, 'kick': -2, 'snare': -5, 'hat': -12, 'crash': -11, 'toms': 0},
-    'bola':     {'lead': 0, 'bell': -4, 'echo': -12, 'chords': -7, 'bass': -1, 'trill': -6, 'kick': 0, 'snare': -3, 'hat': -10, 'crash': -9, 'toms': -1},
-    'rey':  {'lead': 0, 'dbl': -7, 'echo': -13, 'chords': -9, 'bass': -1.5, 'trill': -5, 'kick': 0, 'snare': -3, 'hat': -14, 'crash': -9, 'toms': -1},
-    'nave': {'lead': 0, 'dbl': -9, 'echo': -12, 'chords': -8, 'bass': -1, 'trill': -5, 'kick': 0, 'snare': -3, 'hat': -9, 'crash': -9, 'toms': 0},
-    'fortaleza': {'lead': 0, 'dbl': -9, 'echo': -12, 'chords': -8, 'bass': -1, 'trill': -5, 'kick': -2, 'snare': -4, 'hat': -11, 'crash': -11, 'toms': 2},
-    'maquina':   {'lead': 0, 'dbl': -9, 'echo': -11, 'chords': -10, 'bass': -1, 'trill': -3, 'kick': -3, 'snare': -7, 'hat': -10, 'crash': -12, 'toms': 2},
-    'costa':    {'lead': 0, 'echo': -10, 'chords': -8, 'bass': -2, 'trill': -5, 'kick': -4, 'snare': -8, 'hat': -11, 'crash': -12, 'toms': 2},
-    'arrecife': {'lead': 0, 'echo': -9, 'chords': -7, 'bass': -3, 'trill': -3, 'kick': -7, 'snare': -13, 'hat': -15, 'crash': -14, 'toms': 0},
+    'nieve':    {'lead': -5, 'bell': 0, 'echo': -12, 'chords': -11, 'bass': -3, 'trill': -5, 'kick': -5, 'snare': -10, 'hat': -11, 'crash': -13, 'toms': 0},
+    'ventisca': {'lead': 0, 'bell': -6, 'echo': -11, 'chords': -11, 'bass': -1, 'trill': -10, 'kick': -2, 'snare': -5, 'hat': -12, 'crash': -11, 'toms': 0},
+    'bola':     {'lead': 0, 'bell': -4, 'echo': -12, 'chords': -7, 'bass': -1, 'trill': -5, 'kick': 0, 'snare': -3, 'hat': -10, 'crash': -9, 'toms': -1},
+    'rey':  {'lead': 0, 'dbl': -7, 'echo': -13, 'chords': -9, 'bass': -1.5, 'trill': -8, 'kick': 0, 'snare': -3, 'hat': -14, 'crash': -9, 'toms': -1},
+    'nave': {'lead': 0, 'dbl': -9, 'echo': -12, 'chords': -8, 'bass': -1, 'trill': -6, 'kick': 0, 'snare': -3, 'hat': -9, 'crash': -9, 'toms': 0},
+    'fortaleza': {'lead': 0, 'dbl': -9, 'echo': -12, 'chords': -8, 'bass': -1, 'trill': -6, 'kick': -2, 'snare': -4, 'hat': -11, 'crash': -11, 'toms': 2},
+    'maquina':   {'lead': 0, 'dbl': -9, 'echo': -11, 'chords': -10, 'bass': -1, 'trill': -7, 'kick': -3, 'snare': -7, 'hat': -10, 'crash': -12, 'toms': 2},
+    'costa':    {'lead': 0, 'echo': -10, 'chords': -8, 'bass': -2, 'trill': -8, 'kick': -4, 'snare': -8, 'hat': -11, 'crash': -12, 'toms': 2},
+    'arrecife': {'lead': 0, 'echo': -9, 'chords': -7, 'bass': -3, 'trill': -11, 'kick': -7, 'snare': -13, 'hat': -15, 'crash': -14, 'toms': 0},
 }
 HAT, SNARE_N, CRASH = [5, 2, 1], [13, 9, 5, 2], [13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
 
@@ -558,7 +564,7 @@ def solo_bar(k, at, kick, sn, tom, NZ, hit):
 
 STEMS_TO = None
 STEM_NAMES = [('lead', 'melodia'), ('echo', 'eco_de_la_melodia'), ('dbl', 'melodia_doblada'), ('bell', 'caja_de_musica'),
-              ('chords', 'acordes_a_contratiempo'), ('trill', 'trino_adorno'), ('bass', 'bajo'), ('kick', 'bombo'),
+              ('chords', 'acordes_a_contratiempo'), ('trill', 'acento_del_sitio'), ('bass', 'bajo'), ('kick', 'bombo'),
               ('snare', 'caja'), ('hat', 'platos'), ('crash', 'platillo'), ('toms', 'timbales')]
 
 
@@ -570,7 +576,7 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
     NB = len(ch)
     NF = F.frames_for(NB * BAR + 3)
     Cn = {k: Chan(NF) for k in ('lead', 'echo', 'c1', 'c2', 'bass', 'trill', 'dbl', 'bell')}
-    NZ = {k: Noise(NF) for k in ('hat', 'snare', 'crash')}
+    NZ = {k: Noise(NF) for k in ('hat', 'snare', 'crash', 'fx')}
     NS = int(NF * F.FRAME_S) + SR
     kick, sn, tom = np.zeros(NS), np.zeros(NS), np.zeros(NS)
     tv = lambda b, st: (b - 1) * BAR + st * S16
@@ -694,39 +700,53 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
             r, q = ch[b - 1][1]
             top = 84 + (r - 84) % 12 + q[2] - 12
             up = 2 if (top + 2) % 12 in SCALE else 1          # (la nota de al lado, DE LA ESCALA: +2 sobre Si daba Do#)
-            if isle in SNOW:                                  # campanitas que CAEN por el acorde
-                base_ = 84 + (r - 84) % 12
-                for i, st in enumerate((10, 11, 12, 13, 14) if long_tail else (11, 12, 13, 14, 15)):
-                    play(Cn['trill'], tv(b, st), tv(b, st) + S16 * 1.1, base_ + (12 + q[1], 12, q[2], q[1], 0)[i], I_FALL, release=1)
-                if isle == 'bola' and not in_b:               # (y la bola rueda)
-                    for st in (12, 13, 14, 15): hit(tom, TOMS[min(2, (st - 12) // 2 + 1)], tv(b, st), 0.8)
-            elif isle == 'nave':                              # la ALARMA: dos notas vecinas en corcheas
-                for i, st in enumerate((8, 10, 12, 14)):
-                    play(Cn['trill'], tv(b, st), tv(b, st) + S16 * 1.6, top + (up if i % 2 else 0), I_FANF, release=1)
-            elif isle == 'rey':                               # toque de corneta (ta-ta-ta taa, sobre la quinta) y timbales
-                base_ = 72 + (r - 72) % 12
-                for st, ln, iv in ((10, 0.8, q[2]), (11, 0.8, q[2]), (12, 0.8, q[2]), (13, 2.8, 12)):
-                    play(Cn['trill'], tv(b, st), tv(b, st) + ln * S16, base_ + iv, I_FANF, release=1)
-                for st in (12, 13, 14, 15): hit(tom, TOMS[2 if st < 14 else 1], tv(b, st), 0.9)
-            elif isle == 'fortaleza':                         # fanfarria: una corchea y un TRESILLO que sube por el acorde
-                base_ = 72 + (r - 72) % 12
-                play(Cn['trill'], tv(b, 10), tv(b, 10) + S16 * 1.6, base_, I_FANF, release=1)
-                for i in range(3):
-                    tt = tv(b, 12) + i * 4 * S16 / 3
-                    play(Cn['trill'], tt, tt + S16 * 1.1, base_ + (q[1], q[2], 12)[i], I_FANF, release=1)
-            elif isle == 'maquina':                           # yunque: tin · tin-tin (la quinta, aguda)
-                for st in (10, 12, 13):
-                    play(Cn['trill'], tv(b, st), tv(b, st) + S16 * 0.9, 84 + (r - 84) % 12 + q[2] - 12, I_ANVIL, release=0)
-                    NZ['crash'].hit(tv(b, st), 2, [7, 4, 2], short=1)
-            elif isle == 'costa':                             # el motivo de la costa: la marimba SUBE por el acorde
-                base_ = 72 + (r - 72) % 12
-                for i, st in enumerate((10, 11, 12, 13, 14)):
-                    play(Cn['trill'], tv(b, st), tv(b, st) + S16 * 1.2, base_ + (q + (12,) + (12 + q[1],))[i], I_MARIMBA, vs=1.2, release=1)
-            elif isle == 'arrecife':                          # burbujas: tres notitas del acorde que suben
+            # EL ACENTO DE CADA SITIO. Antes casi todos eran "unas notitas agudas de pulso en semicorcheas en el mismo
+            # hueco" — el trino de la pradera adaptado —, y como la pradera es lo primero que se oye, todo sonaba a
+            # remezcla de la pradera (el usuario lo localizó con las capas: `trino_adorno`). Ahora cada uno es de
+            # su sitio: otro timbre, otro ritmo y muchas veces sin altura (ruido, tambores). El trino queda SOLO
+            # para pradera_1 y su bonus.
+            t8 = lambda st: tv(b, st)
+            lowr = 60 + (r - 60) % 12
+            def swell(st0, st1, per, peak, shape='wave', short=0):
+                """ruido que crece y se va ('wave': ola) o que crece y corta ('gust': racha / redoble de plato)"""
+                n_ = max(2, int((st1 - st0) * S16 * 60))
+                for i_ in range(n_):
+                    x_ = i_ / (n_ - 1)
+                    v_ = np.sin(np.pi * x_) if shape == 'wave' else x_ ** 1.5
+                    pp = per if not isinstance(per, tuple) else int(round(per[0] + (per[1] - per[0]) * x_))
+                    NZ['fx'].hit(t8(st0) + i_ / 60.0, pp, [max(1, int(round(peak * v_)))], short=short)
+            if isle == 'nieve':                               # un cascabeleo y UNA campana que se queda sonando
+                for st in (10, 11, 12): NZ['fx'].hit(t8(st), 0, [7, 3, 1])
+                play(Cn['trill'], t8(12), t8(12) + S16 * 6, 84 + (r - 84) % 12 + q[2], I_DING, release=8)
+            elif isle == 'ventisca':                          # una racha de viento
+                swell(8, 15.5, (7, 2), 9, 'gust')
+            elif isle == 'bola':                              # la bola rueda (timbales) y se le oye la risa: dos notas graves que bajan
+                if not in_b:
+                    for st in (12, 13, 14, 15): hit(tom, TOMS[min(2, (st - 12) // 2 + 1)], t8(st), 0.8)
+                for st, iv in ((10, 7), (12, 3), (13, 0)):
+                    play(Cn['trill'], t8(st), t8(st) + S16 * (1.6 if st == 10 else 0.9), lowr + iv, I_LAUGH, release=1)
+            elif isle == 'nave':                              # la SIRENA: una nota grave que aúlla arriba y abajo
+                play(Cn['trill'], t8(8), t8(15.5), lowr + q[2], I_SIREN, release=2)
+            elif isle == 'rey':                               # redoble de timbales que crece y platillo
+                for st in range(8, 16): hit(tom, TOMS[2 if st % 2 == 0 else 1], t8(st), 0.45 + (st - 8) * 0.07)
+                swell(10, 15.5, 3, 8, 'gust')
+            elif isle == 'fortaleza':                         # la respuesta de las trompas, GRAVE: quinta y tónica, con redoble de caja
+                play(Cn['trill'], t8(10), t8(10) + S16 * 1.7, lowr - 12 + q[2], I_HORNLOW, release=1)
+                play(Cn['trill'], t8(12), t8(12) + S16 * 3.6, lowr, I_HORNLOW, release=2)
+                for st in (12, 13, 14, 15): NZ['fx'].hit(t8(st), 5, [6 + (st - 12), 3, 1])
+            elif isle == 'maquina':                           # vapor y dos golpes de yunque (metal, sin nota)
+                swell(8, 11.5, 2, 7, 'wave')
+                for st in (12, 14): NZ['fx'].hit(t8(st), 3, [11, 7, 4, 2, 1], short=1)
+            elif isle == 'costa':                             # una OLA que rompe
+                swell(8, 15.8, (6, 3), 9, 'wave')
+            elif isle == 'arrecife':                          # burbujas: notitas que suben "con chirrido"
                 base_ = 84 + (r - 84) % 12
                 for i, st in enumerate((9, 12, 14)):
-                    play(Cn['trill'], tv(b, st), tv(b, st) + 0.07, base_ + q[i], GN.I_DRIP, release=0)
-            else:
+                    play(Cn['trill'], t8(st), t8(st) + 0.09, base_ + q[i], I_BUBBLE, release=0)
+            elif galop:                                       # (pradera_2) cascos de caballo: clip-clop, clip-clop
+                for st, hi in ((10, 1), (11, 0), (14, 1), (15, 0)):
+                    play(Cn['trill'], t8(st), t8(st) + S16 * 0.6, 76 if hi else 71, I_CLOP, release=0)
+            else:                                             # (pradera_1) el trino de pájaro
                 for i, st in enumerate(range(10, 16)):
                     play(Cn['trill'], tv(b, st), tv(b, st) + S16 * 0.9, top + (up if i % 2 else 0), I_TRILL, release=0)
         # BATERÍA
@@ -803,7 +823,7 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
                 else cut(F.pulse_dac(F.render_saw(Cn['lead']))) if isle in ('fortaleza', 'nave') else pulse('lead'),
         'dbl': pulse('dbl'), 'bell': cut(F.render_wave(Cn['bell'], WAVES) * 0.0075),
         'echo': pulse('echo'), 'chords': pulse('c1') + pulse('c2'),
-        'bass': cut(F.tnd_dac(F.render_tri(Cn['bass']) / 8227.0)), 'trill': pulse('trill'),
+        'bass': cut(F.tnd_dac(F.render_tri(Cn['bass']) / 8227.0)), 'trill': pulse('trill') + cut(F.tnd_dac(NZ['fx'].render() / 22638.0 * 12)),
         'kick': cut(F.tnd_dac((kick + 64) / 22638.0) - base), 'toms': cut(F.tnd_dac((tom + 64) / 22638.0) - base),
         'snare': cut(F.tnd_dac((sn + 64) / 22638.0) - base) + cut(F.tnd_dac(NZ['snare'].render() / 22638.0 * 12)),
         'hat': cut(F.tnd_dac(NZ['hat'].render() / 22638.0 * 12)), 'crash': cut(F.tnd_dac(NZ['crash'].render() / 22638.0 * 12)),
