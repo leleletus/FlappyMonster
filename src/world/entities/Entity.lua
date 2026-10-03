@@ -155,6 +155,7 @@ Entity.SPAWN_ANIM = SPAWN_ANIM
 -- (sin paredes en medio)? Lo usan los pinchos que caen y las entidades de techo.
 function Entity:seesPlayerBelow(level, rangeTiles, halfW)
     local T = TILE_PX
+    rangeTiles = rangeTiles * require('src/Difficulty').k('sense')     -- (la dificultad: más o menos vista)
     halfW = halfW or (self.outerW / 2 + 20)
     for _, pa in ipairs(level.players or {}) do
         if not pa.dying and pa.alive ~= false and math.abs(pa.x - self.x) <= halfW then

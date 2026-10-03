@@ -149,7 +149,7 @@ end
 
 -- El jugador más cercano que esté en el agua y a su alcance
 function Puffer:targetIn(level)
-    local r = (self.props.range or 2.5) * TILE_PX
+    local r = (self.props.range or 2.5) * TILE_PX * require('src/Difficulty').k('sense')
     local best, bd
     for _, pa in ipairs(level.players or {}) do
         if pa.inWater and not pa.dying and pa.alive ~= false then

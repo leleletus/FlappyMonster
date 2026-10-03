@@ -38,6 +38,7 @@ function love.load(a)
     realInput = Input
     Save, Run, Worlds = require 'src/story/Save', require 'src/story/Run', require 'src/story/Worlds'
     for i = 1, Save.SLOTS do Save.delete(i) end
+    pcall(love.filesystem.remove, 'story.sav')          -- (desbloqueos globales de una pasada anterior)
     gStateMachine:change('story_slots')
 end
 
@@ -240,6 +241,28 @@ function love.update(dt)
             ('primera S: +%s vida (vidas %d), puntos ×1,2 en Difícil = %d; repetirla: premio=%s; mundo completo: nota %s, +%s vidas'):format(
              tostring(r1.reward and r1.reward.lives), l1, r1.points, tostring(r2.reward), tostring(rb.world and rb.world.grade),
              tostring(rb.world and rb.world.reward and rb.world.reward.lives)))
+        -- DESBLOQUEOS: acabar el juego (jefe del último mundo) en Difícil abre Extremo; en Extremo, Xtra; una vez
+        local keepSlot, keepData = Run.slot, Run.data
+        local lastW = Worlds.nodes(Worlds.count())
+        local lastBoss = lastW[#lastW].id
+        local function finish(diff)
+            Run.slot, Run.data = 3, Save.new(diff)
+            for w = 1, Worlds.count() do for _, n in ipairs(Worlds.nodes(w)) do Run.data.done[n.id] = true end end
+            Run.data.done[lastBoss] = nil
+            return Run.complete(lastBoss, { score = 10, time = 60, width = 100, lives = 3 })
+        end
+        local before = Save.global().unlocked.extreme
+        local u1 = finish('normal').unlocked
+        local u2 = finish('hard').unlocked
+        local u3 = finish('hard').unlocked
+        local u4 = finish('extreme').unlocked
+        local g = Save.global()
+        Save.delete(3)
+        pcall(love.filesystem.remove, 'story.sav')
+        Run.slot, Run.data = keepSlot, keepData
+        check('desbloqueo', not before and u1 == nil and u2 == 'extreme' and u3 == nil and u4 == 'xtra' and g.unlocked.extreme and g.unlocked.xtra,
+            ('acabar el juego en Normal desbloquea=%s; en Difícil=%s (otra vez=%s); en Extremo=%s; guardado global: extremo=%s xtra=%s'):format(
+             tostring(u1), tostring(u2), tostring(u3), tostring(u4), tostring(g.unlocked.extreme), tostring(g.unlocked.xtra)))
         MOODS = { { 'S', 98, 'happy' }, { 'C', 60, 'meh' }, { 'D', 40, 'sad' }, { 'D', 10, 'dead' } }
         MI = 0
         go('mood')

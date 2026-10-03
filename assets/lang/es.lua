@@ -49,8 +49,8 @@ return {
             easy = "Todo más lento, 4 de vida; pinchos y lava no matan de golpe",
             normal = "Los niveles tal cual; jefes algo más tranquilos",
             hard = "Enemigos más rápidos; los jefes, sin rebajas",
-            extreme = "Todo mucho más rápido y con menos margen",
-            xtra = "Extremo... y los jefes traen sorpresas",
+            extreme = "Más rápido y con menos margen; te ven y te oyen de más lejos",
+            xtra = "Extremo con DOS jefes en cada arena; sin vidas, desde el principio",
         },
         locked = {
             easy = "", normal = "", hard = "",
@@ -65,6 +65,7 @@ return {
             points = "Puntos", grade = "NOTA", record = "¡NUEVA MEJOR NOTA!",
             reward_lives = "PREMIO: +{n} VIDA", reward_points = "PREMIO: +{n} PUNTOS",
             world = "MUNDO COMPLETADO  ·  NOTA {grade}",
+            unlocked = "¡NUEVA DIFICULTAD: {name}!",
             hint = "[ENTER] continuar",
         },
         title = "MODO HISTORIA",

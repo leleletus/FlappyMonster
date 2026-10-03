@@ -275,7 +275,7 @@ local function ensureRoomLevel(room)
 end
 
 local function initRoomSim(room)
-    local level = Level.new(room.level)
+    local level = Level.new(room.level, room.difficulty)
     level.difficulty = room.difficulty               -- (src/Difficulty.lua; nil = el juego de siempre)
     Difficulty.bind(level)
     local sx, sy = level:getSpawnPx()

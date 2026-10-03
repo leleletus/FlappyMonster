@@ -26,7 +26,10 @@
 --   invuln                          × tiempo invulnerable tras un golpe o al reaparecer
 --   airTime                         × aire bajo el agua
 --   hazardHurt                      pinchos y lava quitan 1 de vida (y te sacan de un bote) en vez de matar
---   bossExtra                       (etapa 6) segundo jefe en la arena
+--   bossExtra                       un SEGUNDO jefe en cada arena (src/world/XtraBosses.lua; Xtra extremo)
+--   pairHp                          × vida de cada jefe cuando van DOS a la vez (bossExtra)
+--   sense                           × alcance con que los enemigos te notan: ver desde el techo, oír ruidos,
+--                                   sentirte cerca, alcance de morteros y peces globo (Fácil 0,8; Extremo 1,3)
 --   scoreMult                       (historia) × los puntos del nivel al apuntarlos (Fácil 0,8 … Xtra extremo 2)
 --   livesStart                      (historia) vidas con las que empieza la aventura: 3; Extremo 4; Xtra extremo 6
 --   restartGame                     (historia) un Game Over reinicia el JUEGO entero, no solo el mundo (Xtra extremo)
@@ -37,13 +40,17 @@ Difficulty.START = { easy = true, normal = true, hard = true }       -- disponib
 Difficulty.DEFAULT = 'normal'
 
 Difficulty.MODS = {
-    easy    = { scoreMult = 0.8, enemyPace = 0.8, trapPace = 0.8, bossPace = 0.7, bossHp = 0.75, playerHp = 4, invuln = 1.3, airTime = 1.4, hazardHurt = true },
+    easy    = { scoreMult = 0.8, enemyPace = 0.8, trapPace = 0.8, bossPace = 0.7, bossHp = 0.75, playerHp = 4, invuln = 1.3, airTime = 1.4, hazardHurt = true,
+                sense = 0.8 },
     normal  = { bossPace = 0.85, bossHp = 0.9 },
     hard    = { scoreMult = 1.2, enemyPace = 1.1, trapPace = 1.1, airTime = 0.9 },
-    extreme = { scoreMult = 1.5, enemyPace = 1.25, trapPace = 1.3, bossPace = 1.2, bossHp = 1.15, invuln = 0.75, airTime = 0.8, livesStart = 4 },
+    extreme = { scoreMult = 1.5, enemyPace = 1.25, trapPace = 1.3, bossPace = 1.2, bossHp = 1.15, invuln = 0.75, airTime = 0.8, livesStart = 4,
+                sense = 1.3 },
     xtra    = { scoreMult = 2, enemyPace = 1.25, trapPace = 1.3, bossPace = 1.2, bossHp = 1.15, invuln = 0.75, airTime = 0.8, livesStart = 6,
-                bossExtra = true, restartGame = true },
+                sense = 1.3, bossExtra = true, pairHp = 0.65, restartGame = true },
 }
+-- DESBLOQUEOS (historia, globales): acabar el juego (el jefe del último mundo) en esta dificultad abre esta otra
+Difficulty.UNLOCKS = { hard = 'extreme', extreme = 'xtra' }
 -- Qué ritmo lleva cada categoría de entidad
 Difficulty.PACE_OF = { Enemigos = 'enemyPace', Trampas = 'trapPace', Jefes = 'bossPace' }
 

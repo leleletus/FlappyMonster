@@ -178,10 +178,10 @@ end
 
 -- (Re)construye el nivel, los renderers de entidades y el jugador local.
 -- `data` = tabla del nivel (del servidor); nil = nivel por defecto local.
-function OnlineAdventureState:_buildWorld(data)
+function OnlineAdventureState:_buildWorld(data, difficulty)
     local level
     if data then
-        local ok, lv = pcall(Level.fromData, data)
+        local ok, lv = pcall(Level.fromData, data, difficulty)
         if ok then level = lv else print('[online] nivel del servidor invalido: ' .. tostring(lv)) end
     end
     self.level = level or Level.new('assets/levels/nivel01.json')
@@ -267,7 +267,7 @@ function OnlineAdventureState:_onGameInit(data)
     -- Nivel y modo enviados por el servidor
     if type(data.level) == 'string' then
         local ok, lv = pcall(json.decode, data.level)
-        if ok and type(lv) == 'table' then self:_buildWorld(lv) end
+        if ok and type(lv) == 'table' then self:_buildWorld(lv, data.difficulty) end   -- (la dificultad cambia qué hay)
     end
     self.mode   = Modes.get(data.mode) or self.mode
     -- Dificultad de la sala (src/Difficulty.lua): la misma que simula el servidor

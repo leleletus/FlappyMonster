@@ -123,7 +123,7 @@ local function alive(pa) return pa.alive ~= false and not pa.dying end
 
 -- Jugador que nota cerca (por lo que se mueve): el más próximo dentro de su alcance
 function Gloomy:sensed(level)
-    local r = (self.props.senseRange or 2.6) * T
+    local r = (self.props.senseRange or 2.6) * T * require('src/Difficulty').k('sense')
     local best, bd
     for _, pa in ipairs(level.players or {}) do
         if alive(pa) then

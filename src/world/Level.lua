@@ -212,15 +212,17 @@ local function findWaterBodies(level)
 end
 
 -- ── Constructor ───────────────────────────────────────────────────────────────
-function Level.new(path)
+function Level.new(path, difficulty)
     local data = love.filesystem.read(path)
     assert(data, "No se pudo leer: "..tostring(path))
-    return Level.fromData(json.decode(data))
+    return Level.fromData(json.decode(data), difficulty)
 end
 
 -- Construye el nivel desde la tabla ya decodificada (el editor la usa para
--- mostrar su nivel en memoria sin guardarlo).
-function Level.fromData(lvl)
+-- mostrar su nivel en memoria sin guardarlo). `difficulty` (src/Difficulty.lua) se conoce YA al construirlo
+-- porque cambia QUÉ hay en el nivel (Xtra extremo: un segundo jefe, src/world/XtraBosses.lua); servidor,
+-- cliente y un jugador lo construyen igual, con los mismos índices.
+function Level.fromData(lvl, difficulty)
     local self = setmetatable({}, Level)
     loadWaterShader()
     loadBubbleImgs()
@@ -239,6 +241,11 @@ function Level.fromData(lvl)
     for _, ed in ipairs(lvl.entities or lvl.enemies or {}) do
         local n = EntityTypes.normalize(ed)
         if n then table.insert(self.entities, n) end
+    end
+    local Difficulty = require 'src/Difficulty'
+    self.difficulty = Difficulty.valid(difficulty) and difficulty or nil
+    if Difficulty.of(self.difficulty, 'bossExtra', false) then
+        require('src/world/XtraBosses').apply(self, lvl)
     end
     -- Entidades de reserva que algunas crean (p. ej. los súbditos del Mega
     -- Crabby, def.summons): van DESPUÉS de las del JSON, así el servidor y los

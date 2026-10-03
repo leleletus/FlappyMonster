@@ -90,6 +90,8 @@ function StoryResultsState:enter(args)
         add(L('story.results.world', { grade = s.world.grade }), (GRADE[s.world.grade] or GRADE.C).col)
         reward(s.world.reward)
     end
+    -- juego acabado: dificultad nueva (para todas las partidas)
+    if s.unlocked then add(L('story.results.unlocked', { name = L('difficulty.' .. s.unlocked) }), { 1, 0.45, 0.25 }) end
     self.tEnd = self.tStamp + 0.6 + #self.extra * 0.4
     self.celebrate = s.grade == 'S' or s.grade == 'A'
     -- Cómo se lo toma el monstruo: contento (S A B), sin más (C), triste (D) o… se muere del disgusto

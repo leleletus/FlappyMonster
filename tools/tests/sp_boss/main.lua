@@ -22,7 +22,7 @@ function love.load(a)
     gameLoad(a); love.audio.setVolume(0)
     -- (MOBILE=1: como en un móvil, con los controles táctiles a la vista)
     if os.getenv('MOBILE') then package.loaded['input'].isMobile = true; package.loaded['input'].lastDevice = 'touch' end
-    gStateMachine:change('adventure', { level = os.getenv('LEVEL') or 'assets/levels/guarida_cangrejo_rey.json' })
+    gStateMachine:change('adventure', { level = os.getenv('LEVEL') or 'assets/levels/guarida_cangrejo_rey.json', difficulty = os.getenv('DIFF') })
     st = gStateMachine:_top()
 end
 function love.update(dt)
@@ -142,6 +142,11 @@ function love.update(dt)
     end
     if t > SECS then
         print(('Menor tiempo entre dos golpes: %.2f s'):format(last.minGap or -1))
+        -- (DIFF=xtra: dos jefes en la arena; los dos pelean)
+        local list, sts = {}, {}
+        for _, e in ipairs(st.enemies or {}) do if e.def.boss then list[#list + 1] = e; sts[#sts + 1] = e.state .. ' ' .. tostring(e.hp) .. '/' .. tostring(e.hpMax) end end
+        print(('Jefes: %d (%s) · zona %s · dificultad %s'):format(#list, table.concat(sts, ', '),
+            boss and boss.zone and boss.zone.state or '?', tostring(st.level and st.level.difficulty)))
         love.event.quit()
     end
 end

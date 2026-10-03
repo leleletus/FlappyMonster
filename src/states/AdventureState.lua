@@ -86,7 +86,7 @@ function AdventureState:enter(args)
     self.onLeave, self.onGameOver, self.gameOverNote = args.onLeave, args.onGameOver, args.gameOverNote
     self.won, self.wonT = false, 0
 
-    self.level  = Level.new(self.levelPath)
+    self.level  = Level.new(self.levelPath, args.difficulty)
     -- Dificultad (src/Difficulty.lua): la del modo historia; sin ella, el juego de siempre
     self.level.difficulty = Difficulty.valid(args.difficulty) and args.difficulty or nil
     Difficulty.bind(self.level)

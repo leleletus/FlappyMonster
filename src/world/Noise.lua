@@ -91,7 +91,7 @@ function Noise.heard(level, x, y, since, k)
     for _, z in ipairs(n.list) do
         if z.seq > (since or 0) then
             local d = math.sqrt((z.x - x) ^ 2 + (z.y - y) ^ 2)
-            local r = z.r * (k or 1)
+            local r = z.r * (k or 1) * require('src/Difficulty').k('sense')      -- (la dificultad: más o menos oído)
             if d <= r then
                 local s = r - d                                   -- cuánto "sobra": lo fuerte que llega
                 if not bs or s > bs then best, bs = z, s end

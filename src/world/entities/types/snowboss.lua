@@ -1747,6 +1747,7 @@ return {
                .. 'EMPAPADA (cae al agua del lago) o CONGELADA (empapada + chorro de un Congelador).',
     class = Snow,
     boss = { title = 'GRAN BOLA DE NIEVE' },
+    xtraStrip = { 'icicles' },          -- (Xtra extremo: los carámbanos del techo son de UNA bola, no de las dos)
     hide = Boss.HIDE,
     defaults = { points = 30 },
     props = Boss.props({ hp = 14, hpPerPlayer = 4 }, {

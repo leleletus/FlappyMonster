@@ -1639,8 +1639,8 @@ don't copy speeds/forces literally (the user tunes feel by hand).
 ## Story Mode (`src/story/`, in progress by STAGES)
 
 Plan (approved by the user; file `~/.claude/plans/rippling-swinging-seal.md`): 1 foundation ✔ · 2 generic difficulty
-framework ✔ · 3 lives + Game Over ✔ · 4 results + grades ✔ · 5 full map polish · 6
-difficulty unlocks (Extreme after Hard, Xtra after Extreme; double bosses) · 7 final level order by difficulty · 8 KOTH
+framework ✔ · 3 lives + Game Over ✔ · 4 results + grades ✔ · 5 world map ✔ · 6
+difficulty unlocks + double bosses ✔ · 7 final level order by difficulty (+ carrera01 / nivel01, old races not placed yet) · 8 KOTH
 arenas as bonus nodes vs an expert BOT. User's decisions: world map with a path, 3 save slots, KOTH = bonus vs a bot.
 - **Stage 2 ✔ — DIFFICULTY = generic modifier framework** (`src/Difficulty.lua`): each difficulty id (`easy, normal,
   hard, extreme, xtra`) is a table of NAMED modifiers; base code asks `Difficulty.k('airTime')` / `flag(...)`, never
@@ -1683,6 +1683,20 @@ arenas as bonus nodes vs an expert BOT. User's decisions: world map with a path,
   sighing (C), sad crouched with its back turned (D), and below 25/100 a comic DEATH (the game's death sprite with X
   eyes, jumps and falls out, then drops back in sad) — visual only. Confetti and fireworks are a shared module, `src/ui/Celebration.lua` (also used by
   the online results). The map shows each cleared node's grade and the world grade.
+- **Stage 6 ✔ — unlocks and the extremes.** Beating the game (the LAST world's boss) on a difficulty unlocks the next
+  one for all 3 saves: `Difficulty.UNLOCKS` = { hard → extreme, extreme → xtra } → `Run.unlockAfter` → global
+  `story.sav` {unlocked, cleared}; the results screen says "NEW DIFFICULTY: X" (`summary.unlocked`). Extreme =
+  faster + `sense` 1.3 (Easy 0.8): × every enemy detection range — `Entity:seesPlayerBelow` (ceiling droppers,
+  falling spikes), `Noise.heard` (hearing), Gloomy `senseRange`, mortar and pufferfish `range`. XTRA EXTREME = Extreme
+  + `bossExtra`: TWO bosses per arena (`src/world/XtraBosses.lua`, applied by `Level.fromData(lvl, difficulty)` — the
+  difficulty is now known WHILE building, `Level.new(path, difficulty)`; AdventureState, server `initRoomSim` and the
+  client `_buildWorld(lv, data.difficulty)` all pass it, so indices match): the level's JSON `"xtraBosses": [...]` or,
+  by default, each boss in a zone mirrored across the zone centre (≥ `MIN_SEP` 5 cells apart, `point`/`points`/
+  `patrol` props mirrored, the def's `xtraStrip` props removed — the Snowball Boss's `icicles` belong to the arena);
+  both get `props.xtraPair` → hp × `pairHp` 0.65 (`Boss:startFight`). Their reserve minions double too. Also fixed:
+  a world reward was skipped when the level gave none (`ipairs` stopped at the nil). Harnesses: `difficulty_rules`
+  (`sentidos`, `doble`), `story_flow` (`desbloqueo`), `sp_boss DIFF=xtra` (prints the bosses: every story boss level
+  fights with 2), `online_smoke DIFF=xtra` (the client has both).
 - Menu: Aventura → HISTORIA (`story_slots`) / ONLINE / JUEGO LIBRE (PRUEBAS) (`free_play` stays as the debug hub).
 - `src/story/Worlds.lua` = the story as DATA: ordered worlds `{ id, levels = {...}, boss }` (provisional order by
   theme; every story level needs a FINISH — hunt-only levels have none). `Worlds.nodes(w)`, `levelName(id)`.

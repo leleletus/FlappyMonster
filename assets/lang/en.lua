@@ -49,8 +49,8 @@ return {
             easy = "Everything slower, 4 HP; spikes and lava don't kill outright",
             normal = "Levels as designed; bosses a bit calmer",
             hard = "Faster enemies; bosses at full strength",
-            extreme = "Everything much faster, with less margin",
-            xtra = "Extreme... and the bosses bring surprises",
+            extreme = "Faster, less margin; enemies see and hear you from farther",
+            xtra = "Extreme with TWO bosses per arena; no lives = from the very start",
         },
         locked = {
             easy = "", normal = "", hard = "",
@@ -65,6 +65,7 @@ return {
             points = "Points", grade = "GRADE", record = "NEW BEST GRADE!",
             reward_lives = "REWARD: +{n} LIFE", reward_points = "REWARD: +{n} POINTS",
             world = "WORLD COMPLETE  ·  GRADE {grade}",
+            unlocked = "NEW DIFFICULTY: {name}!",
             hint = "[ENTER] continue",
         },
         title = "STORY MODE",

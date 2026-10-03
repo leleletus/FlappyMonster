@@ -60,7 +60,7 @@ end
 
 -- Cualquier jugador dentro del alcance (IsPlayerInRange)
 function Mortar:playerInRange(level)
-    local r = (self.props.range or 12) * TILE_PX
+    local r = (self.props.range or 12) * TILE_PX * require('src/Difficulty').k('sense')
     for _, pa in ipairs(level.players or {}) do
         if not pa.dying and pa.alive ~= false then
             local dx, dy = pa.x - self.x, pa.y - self.y

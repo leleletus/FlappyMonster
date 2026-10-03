@@ -8,6 +8,11 @@
 --              aire bajo el agua × airTime
 --   peligros   los pinchos matan… salvo en Fácil: 1 de vida y un bote hacia arriba
 --   salas      varias a la vez (servidor): Difficulty.bind cambia de una a otra sin mezclarlas
+--   sentidos   los enemigos te ven desde el techo y oyen ruidos de más lejos en Extremo (× sense) y de más
+--              cerca en Fácil
+--   doble      XTRA EXTREMO: cada nivel de jefe de la historia lleva DOS jefes (src/world/XtraBosses.lua):
+--              la copia dentro de su zona y separada, la misma lista al construir dos veces (servidor y
+--              cliente: mismos índices), súbditos de reserva de los dos, vida de cada uno × bossHp × pairHp
 --   tools/tests/run.sh difficulty_rules   (CASE=nombre: solo ese)
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
@@ -184,9 +189,84 @@ function cases.salas()
         ('tres salas (fácil, extremo, ninguna): ritmo del jefe %s, %s, %s; y de vuelta a la primera %s'):format(ka, kb, kc, ka2))
 end
 
+function cases.sentidos()
+    local function sees(diff)
+        local level, es, e = room(20, 14, { { type = 'gummy', col = 10, row = 2 } }, diff)
+        level.players = { { x = e.x, y = e.y + 7 * T, alive = true } }
+        local Noise = require 'src/world/Noise'
+        level.noises = { seq = 1, list = { { seq = 1, x = e.x + 10.5 * T, y = e.y, r = 9 * T } } }
+        return e:seesPlayerBelow(level, 6), Noise.heard(level, e.x, e.y, 0) ~= nil
+    end
+    local sN, hN = sees('normal')
+    local sX, hX = sees('extreme')
+    local sE, hE = sees('easy')
+    check('sentidos', not sN and sX and not sE and not hN and hX and not hE,
+        ('alcance 6 casillas, jugador a 7 debajo: lo ve en Normal=%s, Extremo=%s, Fácil=%s; ruido de 9 a 10,5: lo oye %s / %s / %s'):format(
+         tostring(sN), tostring(sX), tostring(sE), tostring(hN), tostring(hX), tostring(hE)))
+end
+
+function cases.doble()
+    local Worlds = require 'src/story/Worlds'
+    local EntityTypes = require 'src/world/entities/EntityTypes'
+    local list = {}
+    for w = 1, Worlds.count() do
+        for _, n in ipairs(Worlds.nodes(w)) do
+            local d = json.decode(love.filesystem.read(Worlds.path(n.id)))
+            if d.bossZones and #d.bossZones > 0 then list[#list + 1] = n.id end
+        end
+    end
+    local function bosses(level)
+        local b, res = {}, 0
+        for _, n in ipairs(level.entities) do
+            local def = EntityTypes.byName[n.type]
+            if def and def.category == 'Jefes' then b[#b + 1] = n end
+            if n.reserve then res = res + 1 end
+        end
+        return b, res
+    end
+    local bad = {}
+    for _, id in ipairs(list) do
+        local path = Worlds.path(id)
+        local one, r1 = bosses(Level.new(path))
+        local lv2 = Level.new(path, 'xtra')
+        local two, r2 = bosses(lv2)
+        local again = Level.new(path, 'xtra')
+        local same = #again.entities == #lv2.entities
+        for i, n in ipairs(lv2.entities) do
+            local m = again.entities[i]
+            if not m or m.type ~= n.type or m.col ~= n.col or m.row ~= n.row then same = false end
+        end
+        local inside, sep, pair = true, true, true
+        for _, z in ipairs(lv2.bossZones) do end
+        local d = json.decode(love.filesystem.read(path))
+        for i, b in ipairs(two) do
+            local inZ = false
+            for _, z in ipairs(d.bossZones) do
+                if b.col >= z.col and b.col < z.col + z.w and b.row >= z.row and b.row < z.row + z.h then inZ = true end
+            end
+            inside = inside and inZ
+            pair = pair and b.props.xtraPair == true
+            if i > #one then sep = sep and math.abs(b.col - two[i - #one].col) >= 5 end
+        end
+        -- vida de cada uno al empezar la pelea
+        lv2.difficulty = 'xtra'
+        Difficulty.bind(lv2)
+        local e = Entities.create(two[1])
+        e:startFight(1)
+        local want = math.floor(((two[1].props.hp or 1) * 1.15 * 0.65) + 0.5)
+        local hpOk = e.hpMax == math.max(want, e.hpMax) and e.hpMax <= math.max(want, (two[1].props.hp or 1))
+        Difficulty.bind(nil)
+        local ok = #two == 2 * #one and #one > 0 and r2 == 2 * r1 and same and inside and sep and pair and hpOk
+        if not ok then bad[#bad + 1] = ('%s (jefes %d→%d, reserva %d→%d, igual=%s, dentro=%s, separados=%s, pareja=%s, vida %d)'):format(
+            id, #one, #two, r1, r2, tostring(same), tostring(inside), tostring(sep), tostring(pair), e.hpMax) end
+    end
+    check('doble', #list >= 6 and #bad == 0,
+        ('%d niveles de jefe en la historia, todos con dos jefes en Xtra extremo%s'):format(#list, #bad > 0 and (': MAL ' .. table.concat(bad, '; ')) or ''))
+end
+
 function love.load()
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'neutro', 'enemigos', 'categorias', 'jefe', 'jugador', 'peligros', 'salas' }) do
+    for _, n in ipairs({ 'neutro', 'enemigos', 'categorias', 'jefe', 'jugador', 'peligros', 'salas', 'sentidos', 'doble' }) do
         if not only or only == n then
             local ok, err = pcall(cases[n])
             if not ok then check(n, false, 'ERROR ' .. tostring(err)) end

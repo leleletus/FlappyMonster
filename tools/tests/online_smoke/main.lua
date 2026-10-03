@@ -116,6 +116,11 @@ function love.update(dt)
             local want = ({ easy = 4 })[os.getenv('DIFF')] or 3
             print(('dificultad: sala %s → cliente %s, vida del jugador %s'):format(os.getenv('DIFF'), tostring(st.level.difficulty), tostring(st.localPa and st.localPa.hpMax)))
             if st.level.difficulty ~= os.getenv('DIFF') or (st.localPa and st.localPa.hpMax) ~= want then print('Error: la dificultad no llegó al cliente') end
+            -- (Xtra extremo cambia QUÉ hay: el cliente construye el nivel con la dificultad y le salen los dos jefes)
+            local nb = 0
+            for _, e in pairs(st.enemyRenderers or {}) do if e.def and e.def.boss then nb = nb + 1 end end
+            print(('jefes en el cliente: %d'):format(nb))
+            if os.getenv('DIFF') == 'xtra' and #(st.level.bossZones or {}) > 0 and nb < 2 then print('Error: el cliente no tiene los dos jefes de Xtra extremo') end
         end
         if clk then
             local fell = clk.first - clk.last

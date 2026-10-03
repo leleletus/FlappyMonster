@@ -106,12 +106,33 @@ function Run.complete(id, result)
             end
         end
     end
-    for _, rw in ipairs({ out.reward, out.world and out.world.reward }) do
+    -- (los dos premios, cada uno si lo hay: con ipairs un nil delante se saltaba el del mundo)
+    for _, rw in pairs({ a = out.reward, b = out.world and out.world.reward or nil }) do
         if rw.lives then d.lives = math.min(99, d.lives + rw.lives) end
         if rw.points then d.points = d.points + rw.points end
     end
+    -- ¿JUEGO ACABADO (el jefe del último mundo)? → desbloquea la dificultad siguiente (global, para las 3
+    -- partidas: Difícil → Extremo, Extremo → Xtra extremo; src/Difficulty.lua UNLOCKS)
+    local lastNodes = Worlds.nodes(Worlds.count())
+    if lastNodes[#lastNodes] and lastNodes[#lastNodes].id == id then
+        out.unlocked = Run.unlockAfter(d.difficulty)
+    end
     Run.save()
     return out
+end
+
+-- Desbloqueo por acabar el juego en `difficulty`: devuelve el id NUEVO desbloqueado (nil si ya lo estaba)
+function Run.unlockAfter(difficulty)
+    local Save = require 'src/story/Save'
+    local nxt = require('src/Difficulty').UNLOCKS[difficulty or '']
+    if not nxt then return nil end
+    local g = Save.global()
+    if g.unlocked[nxt] then return nil end
+    g.unlocked[nxt] = true
+    g.cleared = type(g.cleared) == 'table' and g.cleared or {}
+    g.cleared[difficulty] = true
+    Save.writeGlobal(g)
+    return nxt
 end
 
 -- Nota de un mundo: la media de la mejor valoración de cada nivel suyo (los no superados, 0)
