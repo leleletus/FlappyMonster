@@ -2052,6 +2052,17 @@ Low-level notes (for writing NEW harnesses):
   ♭VII of F minor); nieve_2 has none (`wmotif(up)`, `MOTIF_THEMES`). The old `snowball_boss` (the Winter Fallympics
   arrangement, winter_nes.py) is outside the repo (`placeholders/snowball_boss_winter_nes.ogg`). Only the two
   `mirror_boss` tracks still carry a borrowed tune.
+- SUMMITS v2 (3.56.0): the user found nieve_1/2 (hence the bonus and the boss) "very much like pradera_1/2" — v1 reused
+  the meadow's rhythmic mould (dotted 3+3+2 hits, the same B phrase shape) — and asked for a SECOND Winter Fallympics
+  sample: the phrase of 1:48-2:08 (Smooth Synth, bars 85-92; `W148` + `W148_END`), the "calm part that loses no energy"
+  and BRIDGE to the final chorus. Melodies rewritten with the samples' own vocabulary (three rising 8ths + an offbeat
+  quarter, 2-2-2-4 · 2-2-4→; quarter-note leaps like the motif) so own tune and samples are one family; phrases as
+  text (`P` / `PH`: "0:Bb4/2 2:C5/2"). Form of nieve_1 and the boss: intro · A · A' · B (bridge = the 1:48 sample:
+  its bars 1-4 and its repeated-note build 7-8, two own bars between) · C (chorus = the Christmas motif + answer + la
+  llamada; `song()` optional `pc, cc`, tag 'C') · A''. nieve_2: no chorus; its bridge quotes only the first two bars of
+  1:48 over the relative minor. Boss: both samples a minor third up (A♭ = relative of F minor). Each sample once per
+  loop. `SAMPLE_BARS` = bars excluded from the chord-tone check. Lesson: a new island must not reuse another island's
+  rhythmic template — measure attack-position overlap of phrase A against the other themes (now 33-35 % vs pradera).
 - Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
   cuevas_oscuras; other cave levels → cuevas_1; non-story levels by their retheme theme).
 - Generators keep their internal names; `famicom.PATHS` / `famicom.out(name, ext)` map them to the new folders;
