@@ -464,6 +464,10 @@ function love.update()
     if os.getenv('SHOT') and frameN == tonumber(os.getenv('SHOT')) then
         canvas:newImageData():encode('png', 'ost_' .. show.id .. '.png')
     end
+    if os.getenv('SHOT_STATE') and not SHOT_DONE and boss.state == os.getenv('SHOT_STATE') then
+        SHOT_T = (SHOT_T or 0) + 1
+        if SHOT_T == 25 then SHOT_DONE = true; canvas:newImageData():encode('png', 'ost_' .. show.id .. '_' .. boss.state .. '.png') end
+    end
     frameN = frameN + 1
     if frameN % 300 == 0 then print(('  %d s / %d s · jefe: %s (x %d) · señuelo x %d, rescates %d'):format(frameN / FPS, total, tostring(boss.state), boss.x - zone.x0, lure.x - zone.x0, RESCUES or 0)) end
 end
