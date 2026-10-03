@@ -2113,6 +2113,22 @@ Low-level notes (for writing NEW harnesses):
   anvil), gummy_king_boss a trumpet answer climbing the chord in dotted rhythm + one timpani hit (not a timpani roll +
   cymbal swell). Rule: an accent is a short pitched figure in the track's own instrument, with its own rhythm — never
   noise only, never the meadow trill. Left to do: the Mirror boss theme and the `victory` jingle.
+- **MIRROR BOSS = the FINAL BOSS theme (3.61.0, `tools/music/mirror_boss.py`, id `mirror_boss`, intro + loop; verified
+  by numbers only; waiting for the user's verdict).** Brief: the ultimate confrontation, unlike anything before, epic,
+  layered, with quiet bridges (like winter's 1:48) and escalation to a climax that culminates the soundtrack; its own
+  instruments, motifs, harmony, structure. What sets it apart: 12/8 METER (everything else is 4/4 in 16ths; `PH` here
+  counts 8ths, 12 per bar, ♩. = 150); F# HARMONIC minor (dominant C# with E#, Neapolitan G) and an F# MAJOR climax; the
+  MIRROR MOTIF = the game's "llamada" (5-1-3-5 rising) with its intervals INVERTED → C#-G#-E#-C# falling = the dominant
+  chord (the boss is your reflection); it closes the theme's first half, opens the intro alone and climbs in the
+  build-up; MIRROR COUNTERPOINT: in the last pass of the theme its diatonic inversion sounds at the same time
+  (`invert`, stem 'mirror'); in the climax the real llamada finally answers, rising, in major, with choir + bells +
+  octaves. FORM: intro 4 (dominant pedal, timpani, the motif slowly) · A 8 · A' 8 (more layers) · B 8 (development:
+  hemiola sequence, Neapolitan, the motif) · C 8 (CALM BRIDGE in the relative major: soft voice + music box, 8th
+  arpeggio, no snare) · D 4 (BUILD on the dominant: growing roll, noise riser) · A'' 8 (theme + its mirror + double
+  kick) · E 8 (CLIMAX; last 2 bars back to the dominant) = 52-bar loop (83.2 s). DYNAMICS are drawn per section
+  (`DYN`, dB: per-stem levelling alone left the bridge LOUDER than the theme): measured vs A — intro −4.4, A' +1.3,
+  B +1.3, bridge −3.5, build −1.6, A'' +4.0, climax +4.1. The old `mirror_boss` / `mirror_boss_inst` (tentacle_chip) are
+  outside the repo; `mirror_boss_inst` is now an alias. No borrowed tune is left in the game. Pending: `victory`.
 - Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
   cuevas_oscuras; other cave levels → cuevas_1; non-story levels by their retheme theme).
 - Generators keep their internal names; `famicom.PATHS` / `famicom.out(name, ext)` map them to the new folders;

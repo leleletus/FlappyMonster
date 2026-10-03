@@ -47,8 +47,7 @@
     { "id": "crab_tantrum_icy",    "name": "Crab Tantrum (Mega Crabby helado)",  "intro": "bosses/crab_tantrum_icy_intro.ogg", "loop": "bosses/crab_tantrum_icy_loop.ogg", "level": false, "boss": true, "volume": 0.9 },
     { "id": "crab_tantrum_gloomy", "name": "Crab Tantrum (Mega Crabby lúgubre)", "intro": "bosses/crab_tantrum_gloomy_intro.ogg", "loop": "bosses/crab_tantrum_gloomy_loop.ogg", "level": false, "boss": true, "volume": 0.9 },
     { "id": "snowball_boss",       "name": "La Gran Bola (Gran Bola de Nieve)",  "intro": "bosses/snowball_boss_intro.ogg", "loop": "bosses/snowball_boss_loop.ogg", "level": false, "boss": true, "volume": 0.9 },
-    { "id": "mirror_boss",      "name": "Jefe Espejo",                 "file": "bosses/mirror_boss.ogg",      "level": false, "boss": true },
-    { "id": "mirror_boss_inst", "name": "Jefe Espejo (instrumental)",   "file": "bosses/mirror_boss_inst.ogg", "level": false, "boss": true },
+    { "id": "mirror_boss",      "name": "El Espejo (jefe final)",      "intro": "bosses/mirror_boss_intro.ogg", "loop": "bosses/mirror_boss_loop.ogg", "level": false, "boss": true, "volume": 0.9 },
 
     { "id": "menus",         "name": "Menús",                         "file": "menus/menus.ogg",       "level": false },
     { "id": "map_pradera",   "name": "Rumbo a las islas (Pradera)",   "file": "map/map_pradera.ogg",   "level": false, "volume": 0.75 },
@@ -63,8 +62,8 @@
     "classic": "fortaleza_1", "flying_machine": "fortaleza_1", "hidro_city": "costa_1", "labyrinth": "cuevas_1", "dark_cave": "cuevas_oscuras",
     "boss": "evil_ship_boss", "boss_nes": "evil_ship_boss", "boss_generic": "evil_ship_boss",
     "Tentacle_Tantrum": "crab_tantrum_normal", "tentacle_nes": "crab_tantrum_normal", "tentacle_winter": "crab_tantrum_icy",
-    "tentacle_gloomy": "crab_tantrum_gloomy", "tentacle_chip": "mirror_boss", "tentacle_chip_instrumental": "mirror_boss_inst",
-    "crab_tantrum_chip": "mirror_boss", "crab_tantrum_chip_instrumental": "mirror_boss_inst",
+    "tentacle_gloomy": "crab_tantrum_gloomy", "tentacle_chip": "mirror_boss", "tentacle_chip_instrumental": "mirror_boss",
+    "crab_tantrum_chip": "mirror_boss", "crab_tantrum_chip_instrumental": "mirror_boss", "mirror_boss_inst": "mirror_boss",
     "WinterFallympics": "snowball_boss", "winter_nes": "snowball_boss", "youWin": "victory"
   }
 }

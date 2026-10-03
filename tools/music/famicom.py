@@ -310,7 +310,9 @@ PATHS = {
     'cuevas_1': 'worlds/cuevas/cuevas_1', 'cuevas_2': 'worlds/cuevas/cuevas_2', 'cuevas_bonus': 'worlds/cuevas/cuevas_bonus',
     'volcan_1': 'worlds/volcan/volcan_1', 'volcan_2': 'worlds/volcan/volcan_2', 'volcan_bonus': 'worlds/volcan/volcan_bonus',
     'snowball_boss': 'bosses/snowball_boss', 'nieve_1': 'worlds/nieve/nieve_1', 'nieve_2': 'worlds/nieve/nieve_2', 'nieve_bonus': 'worlds/nieve/nieve_bonus',
-    'tentacle_chip': 'bosses/mirror_boss', 'tentacle_chip_instrumental': 'bosses/mirror_boss_inst',
+    # (tentacle_chip = las pistas "chip" antiguas del Espejo: retiradas; si se regeneran, van FUERA del repo)
+    'tentacle_chip': '../../../FlappyMonster_originals/music/placeholders/mirror_boss_tentacle_chip', 'tentacle_chip_instrumental': '../../../FlappyMonster_originals/music/placeholders/mirror_boss_inst_tentacle_chip',
+    'mirror_boss': 'bosses/mirror_boss',
     'pradera_1': 'worlds/pradera/pradera_1', 'pradera_2': 'worlds/pradera/pradera_2', 'pradera_bonus': 'worlds/pradera/pradera_bonus',
     'costa_1': 'worlds/costa/costa_1', 'costa_2': 'worlds/costa/costa_2', 'costa_bonus': 'worlds/costa/costa_bonus',
     'menus_chip': 'menus/menus_chip', 'menus': 'menus/menus',
