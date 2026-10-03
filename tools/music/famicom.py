@@ -300,7 +300,9 @@ PATHS = {
     # (boss_nes = el mismo arreglo ajeno en versión de jefe: retirado; si se regenera, va FUERA del repo)
     'boss_nes_intro': '../../../FlappyMonster_originals/music/placeholders/boss_generic_intro', 'boss_nes_loop': '../../../FlappyMonster_originals/music/placeholders/boss_generic_loop',
     'gummy_king_boss': 'bosses/gummy_king_boss', 'evil_ship_boss': 'bosses/evil_ship_boss',
-    'tentacle_nes': 'bosses/crab_tantrum_normal', 'tentacle_winter': 'bosses/crab_tantrum_icy',
+    # (tentacle_nes = el arreglo nota a nota de la canción ajena: retirado; si se regenera, va FUERA del repo)
+    'tentacle_nes': '../../../FlappyMonster_originals/music/placeholders/crab_tantrum_normal_tentacle_nes',
+    'crab_tantrum': 'bosses/crab_tantrum_normal', 'tentacle_winter': 'bosses/crab_tantrum_icy',
     'tentacle_gloomy': 'bosses/crab_tantrum_gloomy', 'winter_nes': 'bosses/snowball_boss',
     'tentacle_chip': 'bosses/mirror_boss', 'tentacle_chip_instrumental': 'bosses/mirror_boss_inst',
     'pradera_1': 'worlds/pradera/pradera_1', 'pradera_2': 'worlds/pradera/pradera_2', 'pradera_bonus': 'worlds/pradera/pradera_bonus',

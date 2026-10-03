@@ -1986,6 +1986,22 @@ Low-level notes (for writing NEW harnesses):
   chase — driving 8ths, saw, non-stop bass, 3+3+2 fifth stabs, metallic 16ths, ALARM motif; fortaleza_malvada).
   `boss_generic` (the borrowed tune) is OUT of the repo (`FlappyMonster_originals/music/placeholders/`); ids boss /
   boss_nes / boss_generic are aliases of `evil_ship_boss`, which is also `BossZones.DEFAULT_MUSIC`.
+- **CRAB TANTRUM REMADE (3.53.0, `tools/music/crab_tantrum.py`; verified by numbers only; WAITING for the user's
+  approval — then the Gloomy and Icy variants are built FROM it)**: `crab_tantrum_normal` is now an original
+  composition, the FOUNDATION of the three Mega Crabby themes; the old note-for-note arrangement is outside the repo
+  (`placeholders/crab_tantrum_normal_tentacle_nes.ogg`; `tentacle_nes.py` now writes there; icy/gloomy still import it
+  until they are remade). From Tentacle Tantrum only SAMPLES: (1) the riff CELL (long tonic, tonic, up a 4th, down to
+  the 3rd; rhythm 6-2-2-4) opening bars 1/3 of phrase A (and, varied, 5) and played by the BASS in the bridge, (2) the
+  3+3+2 tresillo in bass and kick, (3) the chorus gesture (long note + lower neighbour) once per B phrase, (4) the
+  finale's syncopated repeated notes (6-4-4-4) over rising chords in the coda. Everything else is new. COAST link: D
+  minor = relative of costa_1's F major, chorus opens to F major, the coast's marimba plays the tresillo, 16th shaker,
+  ends with "la llamada". Character (user): powerful, TRIBAL, aggressive — tom ostinato, deep kick, clearly drawn bass
+  (triangle + a pulse an octave up), VRC6 saw + pulse lead. 180 BPM (felt at 90); intro 4 (drums; own file) · A · A' ·
+  B · B' · tribal BRIDGE · A'' · CODA = 56-bar loop (74.7 s); drums 46 % of the energy, bass 23 %, lead 20 %.
+  PLAN for the variants (user): Gloomy = slower, cave-like, with the spider "legs" (constant 16ths in groups of 8,
+  12.5 % pulse, pauses at phrase ends — `how_to_spider.txt` in the repo root); Icy = keeps and develops the
+  Christmas/music-box motif of Winter Fallympics on this foundation. Reinterpretations, never copies; the three must
+  clearly be the same Mega Crabby identity. NOTE: `GN.export(name, y, intro)` DELETES the old single `<name>.ogg`.
 - Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
   cuevas_oscuras; other cave levels → cuevas_1; non-story levels by their retheme theme).
 - Generators keep their internal names; `famicom.PATHS` / `famicom.out(name, ext)` map them to the new folders;

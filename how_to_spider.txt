@@ -1,0 +1,41 @@
+El autor explica tres ideas:
+
+Notas rápidas y breves (staccato). Usa onda de pulso de 8 bits con una envolvente muy corta, lo que suena a patitas caminando. El número de patas importa: casi todo va en semicorcheas agrupadas de a 8, como las 8 patas de una araña. Ese "andar" no se detiene en toda la canción, ya sea en primer o segundo plano, y solo hay pequeñas pausas al cerrar frases. Las pausas funcionan como el "drop" de la música electrónica.
+Leitmotiv reciclado. La melodía viene de Ghost Fight, la pelea contra Napstablook, y también aparece en Pathetic House y Dummy!. Lo que cambia es el arreglo. En Ghost Fight tiene swing, y en Spider Dance es rítmica recta con semicorcheas constantes. El autor admite que su teoría de por qué se reutiliza es una opinión. Cree que Toby Fox compuso primero Ghost Fight y que Muffet no estaba planeada originalmente.
+Escala blues. La melodía usa la pentatónica menor de Fa más la blue note. Eso le da un sabor jazzy/bluesero que se mantiene aunque se quite el swing.
+
+La transcripción automática tiene errores, como "Spider-Tense", "Matt Domi" o "Napstadlock". Así que traté esos nombres como errores de la transcripción.
+
+Cómo replicarlo en una canción chiptune
+
+Canal principal (la "pata")
+
+Usa una onda de pulso con duty cycle de 12.5% o 25%. Suena más delgada y puntiaguda que el 50%.
+Haz que el volumen caiga casi a cero rápido (decay corto, sin sustain), para que cada nota suene como un toque seco. Si tu tracker permite note cut, también sirve.
+Escribe en semicorcheas constantes, en grupos de 8, y deja que el patrón corra sin parar.
+
+Melodía
+
+Usa la pentatónica menor (en Fa: Fa, La♭, Si♭, Do, Mi♭) y añade la blue note (la 5ª bemol). Esa nota extra da el toque inquietante sin sonar demasiado disonante.
+Si ya tienes una melodía, prueba quitarle el swing y pasarla a ritmo recto. Es justo lo que convierte un tema jazzy en uno "arácnido".
+
+Estructura
+
+Deja una capa de semicorcheas siempre sonando y pon encima otra melodía.
+Reserva silencios cortos antes de entradas importantes. El silencio hace que el regreso de las notas pegue más.
+Reutiliza un motivo en varias pistas con arreglos distintos, como hace Toby Fox.
+
+Canales extra
+
+Triángulo o pulso grave para el bajo.
+Ruido para percusión seca (hi-hat corto).
+Un eco o delay en el lead, que da la sensación de más patas de las que realmente tocan.
+Otros trucos para lo "spooky"
+
+No vienen del video, son recursos generales de música de terror. Úsalos como ideas, no como lo que hizo Toby Fox:
+
+Cromatismo: movimientos de semitono entre notas, que dan tensión.
+Saltos de registro repentinos y cambios de dirección bruscos en el patrón, como una araña que de pronto gira.
+Pitch bends cortos o vibrato rápido en notas largas para dar sensación de algo que se retuerce.
+Dos patrones desfasados (por ejemplo, uno de 8 notas y otro de 6) que se desencuentran un poco, para sonar a patas que no van a la par.
+Armonía menor sin resolver: quedarte en la tónica o en un acorde de tensión sin cerrar la frase.

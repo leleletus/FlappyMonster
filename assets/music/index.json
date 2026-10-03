@@ -39,7 +39,7 @@
 
     { "id": "gummy_king_boss", "name": "Su Majestad Gummy (Rey Gummy)", "intro": "bosses/gummy_king_boss_intro.ogg", "loop": "bosses/gummy_king_boss_loop.ogg", "level": false, "boss": true, "volume": 0.9 },
     { "id": "evil_ship_boss",  "name": "Persecución (Nave Malvada)",   "intro": "bosses/evil_ship_boss_intro.ogg",  "loop": "bosses/evil_ship_boss_loop.ogg",  "level": false, "boss": true, "volume": 0.9 },
-    { "id": "crab_tantrum_normal", "name": "Crab Tantrum (Mega Crabby)",         "file": "bosses/crab_tantrum_normal.ogg", "level": false, "boss": true, "volume": 0.9 },
+    { "id": "crab_tantrum_normal", "name": "Crab Tantrum (Mega Crabby)",         "intro": "bosses/crab_tantrum_normal_intro.ogg", "loop": "bosses/crab_tantrum_normal_loop.ogg", "level": false, "boss": true, "volume": 0.9 },
     { "id": "crab_tantrum_icy",    "name": "Crab Tantrum (Mega Crabby helado)",  "file": "bosses/crab_tantrum_icy.ogg",    "level": false, "boss": true, "volume": 0.9 },
     { "id": "crab_tantrum_gloomy", "name": "Crab Tantrum (Mega Crabby lúgubre)", "intro": "bosses/crab_tantrum_gloomy_intro.ogg", "loop": "bosses/crab_tantrum_gloomy_loop.ogg", "level": false, "boss": true, "volume": 0.9 },
     { "id": "snowball_boss",       "name": "Gran Bola de Nieve",                 "file": "bosses/snowball_boss.ogg",       "level": false, "boss": true, "volume": 0.9 },
