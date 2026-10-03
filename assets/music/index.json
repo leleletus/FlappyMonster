@@ -37,8 +37,9 @@
     { "id": "cuevas_2",   "name": "Cuevas 2 (Laberinto sumergido)", "intro": "worlds/cuevas/cuevas_2_intro.ogg", "loop": "worlds/cuevas/cuevas_2_loop.ogg" },
     { "id": "cuevas_bonus", "name": "Cuevas (bonus)", "intro": "worlds/cuevas/cuevas_bonus_intro.ogg", "loop": "worlds/cuevas/cuevas_bonus_loop.ogg" },
     { "id": "cuevas_oscuras", "name": "Cuevas a oscuras",   "file": "worlds/cuevas/cuevas_oscuras.ogg", "volume": 0.8 },
-    { "id": "volcan_1",   "name": "Volcán 1 (pendiente)",   "file": "worlds/volcan/volcan_1.ogg",     "pending": true, "fallback": "fortaleza_1" },
-    { "id": "volcan_2",   "name": "Volcán 2 (pendiente)",   "file": "worlds/volcan/volcan_2.ogg",     "pending": true, "fallback": "fortaleza_1" },
+    { "id": "volcan_1",   "name": "Volcán 1 (Sendero de ceniza)", "intro": "worlds/volcan/volcan_1_intro.ogg", "loop": "worlds/volcan/volcan_1_loop.ogg" },
+    { "id": "volcan_2",   "name": "Volcán 2 (Lluvia de fuego)", "intro": "worlds/volcan/volcan_2_intro.ogg", "loop": "worlds/volcan/volcan_2_loop.ogg" },
+    { "id": "volcan_bonus", "name": "Volcán (bonus)", "intro": "worlds/volcan/volcan_bonus_intro.ogg", "loop": "worlds/volcan/volcan_bonus_loop.ogg" },
 
     { "id": "gummy_king_boss", "name": "Su Majestad Gummy (Rey Gummy)", "intro": "bosses/gummy_king_boss_intro.ogg", "loop": "bosses/gummy_king_boss_loop.ogg", "level": false, "boss": true, "volume": 0.9 },
     { "id": "evil_ship_boss",  "name": "Persecución (Nave Malvada)",   "intro": "bosses/evil_ship_boss_intro.ogg",  "loop": "bosses/evil_ship_boss_loop.ogg",  "level": false, "boss": true, "volume": 0.9 },

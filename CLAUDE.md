@@ -2092,6 +2092,14 @@ Low-level notes (for writing NEW harnesses):
   by step, harp 8ths, almost no drums; accent = a SONAR ping and its fainter repeat; laberinto_submarino),
   `cuevas_bonus` (cuevas_1 at 132 + percussion solo; cripta_del_silencio). `cuevas_oscuras` (dark levels) stays.
   Also: the accents of the MEADOW and COAST tracks were "very loud" → 5 dB quieter (fortress and snow were fine).
+- VOLCANO (3.60.0, `worlds_nes.py`, intro + loop; verified by numbers only): `volcan_1` "Sendero de ceniza" (E
+  PHRYGIAN — F natural, the F major chord —, 164: melody in SNAPS, a 16th then a dotted 8th (attacks 0-1 · 4-5 · 8-9 ·
+  12; two earlier rhythms were dropped for sharing 71 % of attack positions with nieve_1 / 58 % with pradera_1), on a harsh
+  N163 wave with horns below; 16th tremolo fifths, 8th bass, double kick; accent = ERUPTION: a deep boom + a noise
+  swell), `volcan_2` "Lluvia de fuego" (A phrygian — B♭ —, 172: whip-like 16th phrygian runs ending on a long note,
+  bass and kick GALLOPING, held fifths; accent = a fireball falling and bursting; the auto-scroll level), `volcan_bonus`
+  (volcan_1 at 178 + percussion solo; cantera_real). With this every island has its set; all pending slots are filled
+  except `victory`; the only borrowed tune left is in `mirror_boss` / `mirror_boss_inst`.
 - Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
   cuevas_oscuras; other cave levels → cuevas_1; non-story levels by their retheme theme).
 - Generators keep their internal names; `famicom.PATHS` / `famicom.out(name, ext)` map them to the new folders;

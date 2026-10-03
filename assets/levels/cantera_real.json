@@ -90,7 +90,7 @@
   "vents": [],
   "modes": ["koth","hide"],
   "matchTime": 100,
-  "music": "volcan_1",
+  "music": "volcan_bonus",
   "background": "volcano",
   "name_en": "Royal Quarry",
   "depth": "magma"
