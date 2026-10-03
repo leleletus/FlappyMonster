@@ -23,6 +23,8 @@
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
 require 'settings'
+love.graphics.setDefaultFilter('nearest', 'nearest')      -- (como game.lua: sin esto, los sprites que no fijan su filtro — el
+                                                          -- Espejo, que dibuja un jugador — salían BORROSOS)
 Sound = setmetatable({ play = function() end }, { __index = function() return function() end end })   -- (el jefe, mudo)
 local P = require 'src/network/Protocol'
 Input = P.newInputStub()
@@ -42,22 +44,23 @@ local Snowfall = require 'src/fx/Snowfall'
 local Darkness = require 'src/fx/Darkness'
 local PixelFont = require 'src/ui/PixelFont'
 
+-- TEXTOS EN INGLÉS (los vídeos se comparten en inglés): título de la pista y nombre del jefe como en assets/lang/en.lua.
 -- bpm = pulsos por minuto del logo; hp = { fracción de la canción, fracción de vida } (la vida baja sola)
 local SHOWS = {
-    megagummy      = { level = 'assets/levels/reino_gummy.json', track = 'gummy_king_boss', bpm = 148, title = 'SU MAJESTAD GUMMY',
-                       sub = 'REY GUMMY', color = { 1, 0.82, 0.3 }, phase2 = 0.45 },
+    megagummy      = { level = 'assets/levels/reino_gummy.json', track = 'gummy_king_boss', bpm = 148, title = 'HIS MAJESTY GUMMY',
+                       sub = 'GUMMY KING', color = { 1, 0.82, 0.3 }, phase2 = 0.45 },
     megacrabby     = { level = 'assets/levels/guarida_cangrejo_rey.json', track = 'crab_tantrum_normal', bpm = 186, title = 'CRAB TANTRUM',
                        sub = 'MEGA CRABBY', color = { 1, 0.55, 0.3 }, hp = { { 0.68, 0.3 } } },
-    miniboss1      = { level = 'assets/levels/fortaleza_malvada.json', track = 'evil_ship_boss', bpm = 160, title = 'PERSECUCIÓN',
-                       sub = 'NAVE MALVADA', color = { 0.75, 0.5, 1 }, noBreak = true },
-    snowboss       = { level = 'assets/levels/lago_helado.json', track = 'snowball_boss', bpm = 168, title = 'LA GRAN BOLA',
-                       sub = 'GRAN BOLA DE NIEVE', color = { 0.6, 0.85, 1 }, hp = { { 0.34, 0.6 }, { 0.67, 0.3 } } },
+    miniboss1      = { level = 'assets/levels/fortaleza_malvada.json', track = 'evil_ship_boss', bpm = 160, title = 'PURSUIT',
+                       sub = 'EVIL MONSTER', color = { 0.75, 0.5, 1 }, noBreak = true, flooded = true },
+    snowboss       = { level = 'assets/levels/lago_helado.json', track = 'snowball_boss', bpm = 168, title = 'THE BIG SNOWBALL',
+                       sub = 'BIG SNOWBALL', color = { 0.6, 0.85, 1 }, hp = { { 0.34, 0.6 }, { 0.67, 0.3 } } },
     megacrabby_ice = { level = 'assets/levels/glaciar_cangrejo.json', track = 'crab_tantrum_icy', bpm = 186, title = 'CRAB TANTRUM (ICY)',
-                       sub = 'MEGA CRABBY HELADO', color = { 0.55, 0.85, 1 }, hp = { { 0.68, 0.3 } } },
+                       sub = 'ICY MEGA CRABBY', color = { 0.55, 0.85, 1 }, hp = { { 0.68, 0.3 } } },
     megagloomy     = { level = 'assets/levels/gruta_lugubre.json', track = 'crab_tantrum_gloomy', bpm = 144, title = 'CRAB TANTRUM (GLOOMY)',
-                       sub = 'MEGA CRABBY LÚGUBRE', color = { 0.7, 0.6, 1 }, bulb = true, rage = 0.7 },
-    mirror         = { level = 'assets/levels/ruta_del_espejo.json', track = 'mirror_boss', bpm = 158, title = 'EL ESPEJO',
-                       sub = 'JEFE FINAL', color = { 1, 0.35, 0.4 }, hp = { { 0.34, 0.6 }, { 0.67, 0.3 } }, laugh = 22, lively = true },
+                       sub = 'MEGA GLOOMY CRABBY', color = { 0.7, 0.6, 1 }, bulb = true, rage = 0.7 },
+    mirror         = { level = 'assets/levels/ruta_del_espejo.json', track = 'mirror_boss', bpm = 158, title = 'THE MIRROR',
+                       sub = 'MIRROR  ·  FINAL BOSS', color = { 1, 0.35, 0.4 }, hp = { { 0.34, 0.6 }, { 0.67, 0.3 } }, laugh = 22, lively = true },
 }
 local FPS, W, H, T = 30, 1280, 720, TILE_PX
 local PACE = 0.85                                         -- el jefe, un poco más despacio que en el juego
@@ -68,6 +71,7 @@ love.timer.getDelta = function() return 1 / FPS end
 
 local show, level, es, boss, zone, lure, ctl, canvas, scene, pipe, logo
 local total, frameN, lamp, spectrum = 0, 0, nil, {}
+local SAFE = {}
 local muxCmd
 
 local function sh(cmd) local f = io.popen(cmd); local s = f:read('*a'); f:close(); return s end
@@ -124,9 +128,36 @@ function love.load(arg)
         if boss.x >= z.x0 and boss.x <= z.x1 and boss.y >= z.y0 and boss.y <= z.y1 then zone = z end
     end
     -- el SEÑUELO: un jugador de pega, invisible e inmortal; entra en la zona y el jefe hace su entrada de verdad
-    lure = PlayerAdventure:new(zone.x0 + 2.5 * T, zone.y1 - 60)
+    -- CASILLAS SEGURAS para el señuelo: las del SUELO principal de la arena (la fila con más casillas donde se puede
+    -- estar de pie), sin hielo fino ni agua, y dentro de lo que se ve. Solo pasea por ellas; si se queda atascado (metido
+    -- en un escalón, en una poza, empujado contra una pared), vuelve a una de golpe — es invisible —. Antes entraba por
+    -- una esquina y a veces se quedaba dentro del escenario: el jefe se pasaba el vídeo atacando una pared.
+    local cxz = (zone.x0 + zone.x1) / 2
+    local halfV = math.min((zone.x1 - zone.x0) / 2 - 2.5 * T, W / 2 - 4 * T)
+    local rows = {}
+    for r = math.floor(zone.y0 / T) + 1, math.floor(zone.y1 / T) + 1 do
+        for c = math.floor(zone.x0 / T) + 2, math.floor(zone.x1 / T) do
+            local x, y = (c - 0.5) * T, (r - 0.5) * T
+            if math.abs(x - cxz) <= halfV and level:isStandable(c, r) and not level:liquidAt(x, y) then
+                local under = level:getDefAt(x, y + T)
+                if not tostring(under.name):find('thin_ice') then
+                    rows[r] = rows[r] or {}
+                    table.insert(rows[r], { x = x, y = y })
+                end
+            end
+        end
+    end
+    local best
+    for r, list in pairs(rows) do if not best or #list > #rows[best] or (#list == #rows[best] and r > best) then best = r end end
+    SAFE = rows[best] or { { x = cxz, y = zone.y1 - 60 } }
+    table.sort(SAFE, function(a, b) return math.abs(a.x - cxz) < math.abs(b.x - cxz) end)
+    -- (durante la ENTRADA del jefe el señuelo espera en la casilla segura más a la IZQUIERDA, no en el centro: los Mega
+    -- Crabbies caen en su sitio — el centro — solo si no hay un jugador cerca; con el señuelo en medio caían en una esquina)
+    local first = SAFE[1]
+    for _, c in ipairs(SAFE) do if c.x < first.x then first = c end end
+    lure = PlayerAdventure:new(first.x, first.y)
     lure.immortal = true
-    lure.brain = { wait = 1.5, tx = (zone.x0 + zone.x1) / 2, stuck = 0, lastX = 0 }
+    lure.brain = { wait = 1.5, tx = first.x, stuck = 0, lastX = 0, bad = 0 }
     level.players = { lure }
     ctl = BossZones.newController(level, es)
 
@@ -158,11 +189,24 @@ end
 -- ── El señuelo: pasea por el centro de la arena, se para, salta de vez en cuando ─────────────────────────────
 local function lureBits(dt)
     local b = lure.brain
-    local cx, half = (zone.x0 + zone.x1) / 2, (zone.x1 - zone.x0) * (show.lively and 0.4 or 0.3)
+    if zone.state ~= 'fight' then return 0 end                -- (quieto hasta que acaba la entrada del jefe)
+    -- ¿atascado o fuera de sitio? (dentro de un bloque, en el agua, lejos de su suelo, sin poder avanzar): a una casilla segura
+    local home = SAFE[1]
+    local off = math.abs(lure.y - home.y) > 2.2 * T and lure.onGround
+    local wet = level:liquidAt(lure.x, lure.y) and not show.flooded
+    local inside = level:collisionAt(lure.x, lure.y)
+    if off or wet or inside or b.stuck > 1.0 then b.bad = b.bad + dt else b.bad = math.max(0, b.bad - dt) end
+    if inside or b.bad > 0.8 then
+        local c = SAFE[love.math.random(math.min(#SAFE, 6))]
+        lure.x, lure.y, lure.vx, lure.vy = c.x, c.y, 0, 0
+        b.bad, b.stuck, b.wait, b.tx = 0, 0, 0.8, c.x
+        RESCUES = (RESCUES or 0) + 1
+        return 0
+    end
     if b.wait > 0 then
         b.wait = b.wait - dt
         if b.wait <= 0 then
-            b.tx = cx + (love.math.random() * 2 - 1) * half
+            b.tx = SAFE[love.math.random(#SAFE)].x
             b.jump = love.math.random() < (show.lively and 0.6 or 0.25)
         end
         return 0
@@ -170,14 +214,15 @@ local function lureBits(dt)
     local dx = b.tx - lure.x
     if math.abs(dx) < 14 then
         b.wait = show.lively and (0.6 + love.math.random() * 1.6) or (1.5 + love.math.random() * 3)
+        b.stuck = 0
         return 0
     end
     local bits = (dx < 0) and P.IN_LEFT or P.IN_RIGHT
     if math.abs(lure.x - b.lastX) < 0.5 then b.stuck = b.stuck + dt else b.stuck = 0 end
     b.lastX = lure.x
-    if lure.onGround and (b.jump or b.stuck > 0.3) then
+    if lure.onGround and (b.jump or (b.stuck > 0.3 and (b.hold or 0) <= 0)) then
         bits = bits + P.IN_JUMP + P.IN_JUMP_P
-        b.jump, b.stuck, b.hold = false, 0, 0.25
+        b.jump, b.hold = false, 0.25
     elseif (b.hold or 0) > 0 then
         b.hold = b.hold - dt; bits = bits + P.IN_JUMP
     end
@@ -291,19 +336,30 @@ local function clock(s)
     return ('%d:%02d'):format(math.floor(s / 60), s % 60)
 end
 
+local camF, logoA = nil, 1
 local BAND_H = 124                                            -- el rótulo: una franja abajo
+local overlayCam
 local function drawOverlay()
-    -- LOGO: botecito en cada pulso (en el primero de cada compás, un poco más)
+    -- LOGO: arriba a la IZQUIERDA (en el centro tapaba al jefe cuando subía a las plataformas, y a la Nave siempre), con su
+    -- botecito en cada pulso; si aun así el jefe pasa por detrás, se transparenta mientras tanto
     local b = vt / beat()
     local ph = b - math.floor(b)
     local strong = math.floor(b) % 4 == 0
     local k = math.exp(-ph * 7)
     local s = 6 * (1 + (strong and 0.15 or 0.08) * k)
     local rot = (strong and 0.035 or 0.02) * k * ((math.floor(b) % 2 == 0) and 1 or -1)
-    local cx, cy = W / 2, 88 - 6 * k
-    love.graphics.setColor(0, 0, 0, 0.55)
+    local lw, lh = logo:getWidth() * 6, logo:getHeight() * 6
+    local cx, cy = 34 + lw / 2, 30 + lh / 2 - 6 * k
+    local hidden = false
+    if boss and boss.alive and overlayCam then
+        local bb = boss:getOuterBounds()
+        local x0, y0 = bb.x - overlayCam[1], bb.y - overlayCam[2]
+        hidden = x0 < cx + lw / 2 + 30 and x0 + bb.w > cx - lw / 2 - 30 and y0 < cy + lh / 2 + 30 and y0 + bb.h > cy - lh / 2 - 30
+    end
+    logoA = logoA + ((hidden and 0.16 or 1) - logoA) * 0.18
+    love.graphics.setColor(0, 0, 0, 0.55 * logoA)
     love.graphics.draw(logo, cx + 5, cy + 5, rot, s, s, logo:getWidth() / 2, logo:getHeight() / 2)
-    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.setColor(1, 1, 1, logoA)
     love.graphics.draw(logo, cx, cy, rot, s, s, logo:getWidth() / 2, logo:getHeight() / 2)
     -- RÓTULO: franja oscura con su filo, la pista, el jefe y el tiempo
     local a = math.min(1, math.max(0, (vt - 0.4) / 0.6))
@@ -340,7 +396,14 @@ end
 
 local function render()
     local shx, shy = Particles.shakeOffset()
-    local camX = math.floor((zone.x0 + zone.x1) / 2 - W / 2 + shx + 0.5)
+    -- (arena más ANCHA que la pantalla — la de la Bola de Nieve —: la cámara sigue al jefe, suave, sin salirse de la zona)
+    local fx = (zone.x0 + zone.x1) / 2 - W / 2
+    if zone.x1 - zone.x0 > W then
+        local want = math.max(zone.x0 - T, math.min(zone.x1 + T - W, boss.x - W / 2))
+        camF = camF and (camF + (want - camF) * 0.06) or want
+        fx = camF
+    end
+    local camX = math.floor(fx + shx + 0.5)
     -- (la franja del rótulo tapa lo de abajo: la arena se sube para que su suelo quede a la vista)
     local camY = math.floor(math.min(level.tileH * T - H, zone.y1 + 1.5 * T - H) + (BAND_H - 1.2 * T) + shy + 0.5)
     local bulbBody, bulbGlow
@@ -372,6 +435,7 @@ local function render()
         Darkness.renderGlow(level, es, camX, camY)
     end
     if bulbGlow then bulbGlow() end
+    overlayCam = { camX, camY }
     drawOverlay()
     love.graphics.setCanvas()
 end
@@ -393,7 +457,7 @@ function love.update()
         canvas:newImageData():encode('png', 'ost_' .. show.id .. '.png')
     end
     frameN = frameN + 1
-    if frameN % 300 == 0 then print(('  %d s / %d s · jefe: %s'):format(frameN / FPS, total, tostring(boss.state))) end
+    if frameN % 300 == 0 then print(('  %d s / %d s · jefe: %s (x %d) · señuelo x %d, rescates %d'):format(frameN / FPS, total, tostring(boss.state), boss.x - zone.x0, lure.x - zone.x0, RESCUES or 0)) end
 end
 
 function love.draw()

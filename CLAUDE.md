@@ -1905,7 +1905,14 @@ drops by itself along the song (`SHOWS[...].hp`, `phase2`, `rage`) to show later
 `laugh` s (`onPlayerDeath`). Overlay: logo ×6 bopping on the beat; a dark bottom BANNER with title, boss name, time
 elapsed / total in the boss's accent colour; a 64-bar spectrum VISUALIZER (from `tools/video/spectrum.py`: per-frame
 log bands 40 Hz-12 kHz, each normalised to its own peak) whose already-played bars are lit = the progress bar. The
-camera is raised so the arena floor sits above the banner. `love tools/video/ost <boss> 20` = a 20 s test; `SHOT=n`
+camera is raised so the arena floor sits above the banner. v2.1 (after the user watched them): ALL TEXT IN ENGLISH (shared in
+English; boss names as in `assets/lang/en.lua`); `love.graphics.setDefaultFilter('nearest')` like game.lua (the Mirror
+was BLURRY: it draws a player body, whose images don't set their own filter); the lure only walks on SAFE cells (the
+arena's main floor row, no thin ice / water, inside the visible width) and teleports back to one when stuck, inside a
+block or in water (it used to get wedged in the scenery and the boss attacked a wall for the whole video); it waits at
+the LEFT side, still, until the boss intro ends (a Mega Crabby lands on its own spot only if no player is near — with
+the lure in the centre it fell in a corner); in arenas wider than the screen (Snowball: 24 tiles) the camera follows
+the boss smoothly; the logo sits TOP-LEFT and fades to 16 % while the boss passes behind it. `love tools/video/ost <boss> 20` = a 20 s test; `SHOT=n`
 saves frame n to the save dir. Needs `~/.venvs/fm-music` (numpy, soundfile) or `FM_PYTHON`.
 
 TRACK NAMES (user): the game's own versions are called **Crab Tantrum (X)** — catalog `name` of `tentacle_nes` (NES),
