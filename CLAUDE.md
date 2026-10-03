@@ -2002,6 +2002,12 @@ Low-level notes (for writing NEW harnesses):
   parts use the riff's OWN language: tonic + the ♭VI–♭VII turn, melody in D minor PENTATONIC (the cell's notes, 89 %);
   A = Dm | Dm B♭ | Dm | Dm C | B♭ | B♭ C | Dm | B♭ C; chorus = the chorus gesture in a descending sequence, two bars
   per chord (Dm · C · B♭ · C). Only bars 7-8 of A and the chorus have ever been changed; the rest was approved.
+  v3 verdict: "better, but it doesn't fully fit the character, and going from the good parts into these is odd". v4
+  (3.53.3): (a) A closes with the riff itself — bar 7 = the cell, bar 8 = the riff's TAIL (tonic, tonic, ♭VI, ♭VII; one
+  more sample; a third chord in a bar = its last quarter, `Q4`); (b) the chorus is no longer sung in long notes: a WAR
+  CHANT (short repeated notes on the 3+3+2, then a fall in the cell's rhythm; Dm Dm B♭ C ×2) and it KEEPS A's half-time
+  tresillo groove with more toms (it used to switch to four-on-the-floor + 8th bass: the odd transition). Lesson: for
+  this character, sections differ by intensity and register, not by groove or by turning lyrical.
   COAST link: D minor = relative of costa_1's F major, the coast's marimba plays the tresillo, 16th shaker,
   ends with "la llamada". Character (user): powerful, TRIBAL, aggressive — tom ostinato, deep kick, clearly drawn bass
   (triangle + a pulse an octave up), VRC6 saw + pulse lead. 180 BPM (felt at 90); intro 4 (drums; own file) · A · A' ·

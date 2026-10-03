@@ -55,26 +55,28 @@ PH_A = CELL + [
     (4, 2, A5, 4), (4, 6, G5, 2), (4, 8, G5, 2), (4, 10, E5, 2), (4, 12, C5, 4),
     (5, 0, D5, 6), (5, 6, D5, 2), (5, 8, F5, 2), (5, 10, D5, 4), (5, 14, Bb4, 4),       # su ritmo sobre Si♭
     (6, 2, Bb4, 4), (6, 6, D5, 2), (6, 8, E5, 4), (6, 12, G5, 4),
-    (7, 0, A5, 3), (7, 3, G5, 3), (7, 6, F5, 2), (7, 8, D5, 3), (7, 11, F5, 3), (7, 14, G5, 2),    # vuelve a la tónica: tresillos pentatónicos
+    (7, 0, D5, 6), (7, 6, D5, 2), (7, 8, G5, 2), (7, 10, F5, 4), (7, 14, D5, 4),        # la célula otra vez…
 ]
-# TERCER ENFOQUE para lo que no es muestra (los dos compases que cierran A y el estribillo). v1: cadencia en La mayor
-# y estribillo en Fa mayor ("la melodía no termina de encajar, armonía rara"); v2: todo menor natural con otra
-# progresión y otra melodía de estribillo ("más raro que antes"). Ahora NO hay cadencias ni progresión nueva: todo
-# sale del lenguaje del propio riff — tónica y el giro ♭VI–♭VII que vuelve a ella — y la melodía es PENTATÓNICA menor
-# (Re Fa Sol La Do, las notas de la célula). El estribillo es el giro del estribillo (nota larga + bordadura) en
-# secuencia descendente, dos compases por acorde: Rem · Do · Si♭ · Do.
-A_END = [(8, 0, F5, 6), (8, 6, D5, 2), (8, 8, G5, 8)]                                   # ♭VI–♭VII: queda arriba (pregunta)
-A_END2 = [(8, 0, F5, 6), (8, 6, F5, 2), (8, 8, G5, 4), (8, 12, C6, 4)]                  # ♭VI–♭VII: sube al estribillo
+# CUARTO ENFOQUE para lo que no es muestra (el cierre de A y el estribillo). v1: cadencia en La mayor y estribillo en
+# Fa mayor ("la melodía no encaja, armonía rara"); v2: otra progresión menor y otra melodía ("más raro"); v3:
+# pentatónica y estribillo de notas largas en secuencia ("mejor, pero no encaja del todo con el personaje, y el paso
+# de lo que estaba bien a estas partes es raro"). Ahora: (a) A se cierra con el propio riff — la célula y su COLA
+# (tónica, tónica, ♭VI, ♭VII: la segunda mitad del riff original, otra muestra), nada inventado encima; (b) el
+# estribillo ya no es "cantado": es un GRITO DE GUERRA — notas cortas repetidas a golpe de tresillo (3+3+2) y una
+# caída con el ritmo de la célula —, y NO cambia de ritmo: sigue el mismo tresillo a medio tiempo de A, con más
+# timbales (antes pasaba a bombo a negras y bajo en corcheas: de ahí la transición rara).
+A_END = [(8, 2, D5, 4), (8, 6, D5, 2), (8, 8, Bb4, 4), (8, 12, C5, 4)]                  # …y su cola: ♭VI–♭VII
+A_END2 = [(8, 2, D5, 4), (8, 6, D5, 2), (8, 8, F5, 4), (8, 12, G5, 4)]                  # la cola, hacia arriba (al estribillo)
 PH_B = [
-    (1, 0, A5, 12), (1, 12, G5, 2), (1, 14, A5, 2),                                     # el giro del estribillo
-    (2, 0, F5, 3), (2, 3, G5, 3), (2, 6, A5, 2), (2, 8, D5, 8),
-    (3, 0, G5, 12), (3, 12, F5, 2), (3, 14, G5, 2),                                     # un grado más abajo
-    (4, 0, E5, 3), (4, 3, G5, 3), (4, 6, E5, 2), (4, 8, C5, 8),
-    (5, 0, F5, 12), (5, 12, D5, 2), (5, 14, F5, 2),                                     # y otro
-    (6, 0, G5, 3), (6, 3, F5, 3), (6, 6, D5, 2), (6, 8, Bb4, 8),
-    (7, 0, C5, 3), (7, 3, E5, 3), (7, 6, G5, 2), (7, 8, C6, 6), (7, 14, G5, 2),
+    (1, 0, D5, 2), (1, 3, D5, 2), (1, 6, D5, 2), (1, 8, F5, 2), (1, 11, F5, 2), (1, 14, G5, 2),      # el grito: 3+3+2
+    (2, 0, A5, 6), (2, 6, G5, 2), (2, 8, F5, 2), (2, 10, D5, 4),                                     # la caída
+    (3, 0, D5, 2), (3, 3, D5, 2), (3, 6, D5, 2), (3, 8, F5, 2), (3, 11, F5, 2), (3, 14, Bb5, 2),
+    (4, 0, C6, 6), (4, 6, A5, 2), (4, 8, G5, 6),
+    (5, 0, A5, 2), (5, 3, A5, 2), (5, 6, A5, 2), (5, 8, C6, 2), (5, 11, C6, 2), (5, 14, D6, 2),      # más arriba
+    (6, 0, D6, 6), (6, 6, C6, 2), (6, 8, A5, 2), (6, 10, F5, 4),
+    (7, 0, F5, 2), (7, 3, F5, 2), (7, 6, F5, 2), (7, 8, D5, 2), (7, 11, D5, 2), (7, 14, F5, 2),
 ]
-B_END = [(8, 0, A5, 3), (8, 3, G5, 3), (8, 6, E5, 2), (8, 8, G5, 8)]
+B_END = [(8, 0, G5, 6), (8, 6, G5, 2), (8, 8, E5, 2), (8, 10, G5, 4)]
 B_END2 = [(8, 0, G5, 3), (8, 3, A5, 3), (8, 6, C6, 2), (8, 8, C6, 8)]
 # Puente tribal: tambores y el riff en el BAJO; la voz contesta desde el 5º compás (la célula, una octava abajo)
 PH_BR = [(5, 0, D5 - 12, 6), (5, 6, D5 - 12, 2), (5, 8, G5 - 12, 2), (5, 10, F5 - 12, 4),
@@ -91,11 +93,14 @@ PH_CODA = [
     (8, 0, A4, 4), (8, 4, D5, 2), (8, 6, F5, 2), (8, 8, A5, 6),                         # la llamada: La-Re-Fa-La
 ]
 # Armonía: por compás, uno o dos acordes (medio compás cada uno)
-CH_A = ['Dm', ['Dm', 'Bb'], 'Dm', ['Dm', 'C'], 'Bb', ['Bb', 'C'], 'Dm', ['Bb', 'C']]
-CH_B = ['Dm', 'Dm', 'C', 'C', 'Bb', 'Bb', 'C', 'C']          # i · ♭VII · ♭VI · ♭VII, dos compases cada uno
+CH_A = ['Dm', ['Dm', 'Bb'], 'Dm', ['Dm', 'C'], 'Bb', ['Bb', 'C'], 'Dm', ['Dm', 'Bb', 'C']]    # (la cola: Si♭ y Do, una negra cada uno)
+CH_B = ['Dm', 'Dm', 'Bb', 'C', 'Dm', 'Dm', 'Bb', 'C']
 CH_B2 = CH_B
 CH_BR = ['Dm'] * 8
 CH_CODA = ['Bb', 'C', 'Dm', 'Dm', 'Bb', 'C', 'Dm', 'Dm']
+
+
+Q4 = {}                                            # compás → acorde de su última negra (la cola del riff)
 
 
 def song():
@@ -108,6 +113,7 @@ def song():
         for b, st, n, d in ph: mel.append((base + b, st, n, d))
         for c in cs:
             chords.append((ch(c[0]), ch(c[1])) if isinstance(c, list) else (ch(c), ch(c)))
+            if isinstance(c, list) and len(c) == 3: Q4[len(chords)] = ch(c[2])      # (tercer acorde: la última negra)
             tag.append(kind)
     section('intro', [], ['Dm'] * INTRO)
     section('A', PH_A + A_END, CH_A)
@@ -124,6 +130,7 @@ def check(mel, chords):
     """Las reglas del usuario: notas largas (≥ 4) del acorde que suena cuando empiezan; todo dentro de la escala"""
     def at(b, st):                                 # (una nota que entra en la última corchea y cruza la barra ANTICIPA el compás siguiente)
         if st >= 14: return chords[b % len(chords)][0]
+        if st >= 12 and b in Q4: return Q4[b]
         return chords[b - 1][0 if st < 8 else 1]
     bad = [(b, st) for b, st, n, d in mel if d >= 4 and (n - at(b, st)[0]) % 12 not in at(b, st)[1]]
     out = [(b, st) for b, st, n, d in mel if n % 12 not in SCALE]
@@ -183,13 +190,10 @@ def build(lufs=-10.0):
                 for st, ln, iv in ((0, 5.5, 0), (6, 1.8, 0), (8, 1.8, 5), (10, 3.6, 3), (14, 1.8, 0)): bass(b, st, ln, lo(r1) + iv)
         elif kind == 'BR':                                     # el riff, en el bajo
             for st, ln, iv in ((0, 5.5, 0), (6, 1.8, 0), (8, 1.8, 5), (10, 3.6, 3), (14, 1.8, -2 if b % 2 == 0 else 0)): bass(b, st, ln, lo(r1) + iv)
-        elif kind in ('B', 'B2'):                              # estribillo: corcheas que empujan, octava en las "y" del 2 y el 4
-            for st in range(0, 16, 2):
-                r = r1 if st < 8 else r2
-                bass(b, st, 1.7, lo(r) + (12 if st in (6, 14) else 0))
         else:                                                  # tresillo 6-6-4 y una nota de paso hacia el compás siguiente
             bass(b, 0, 5.5, lo(r1)); bass(b, 6, 1.8 if r2 != r1 else 5.5, lo(r1))
             if r2 != r1: bass(b, 8, 3.6, lo(r2))
+            if b in Q4: r2 = Q4[b][0]                          # (la cola: el bajo pasa a ♭VII en la última negra)
             step = lo(r2) + (7 if (lo(r2) + 7 - nxt) % 12 in (0, 5, 7) else 12)
             bass(b, 12, 1.8, lo(r2)); bass(b, 14, 1.8, step if kind != 'CODA' else lo(r2) + 12)
         # ── MARIMBA (la costa): el acorde en el tresillo 3+3+2 de semicorcheas; calla en el puente hasta el 5º compás ──
@@ -198,13 +202,14 @@ def build(lufs=-10.0):
                 for half, (r, q) in enumerate(((r1, q1), (r2, q2))):
                     notes = [72 + (r - 72) % 12 + iv for iv in q]
                     for k, st in enumerate((0, 3, 6)):
+                        if half == 1 and st == 6 and b in Q4: notes = [72 + (Q4[b][0] - 72) % 12 + iv for iv in Q4[b][1]]
                         play(Cn['mar'], tv(b, half * 8 + st), tv(b, half * 8 + st) + S16 * 1.5, notes[(k + half) % 3], I_MAR, release=1)
         # ── GOLPES de quinta (potencia): en el tresillo, en A y la coda; a tiempo en el estribillo ──
         if kind in ('A', 'CODA', 'B', 'B2'):
-            for st in (TRES if kind in ('A', 'CODA') else (0, 8)):
-                r, q = (r1, q1) if st < 8 else (r2, q2)
+            for st in TRES:
+                r, q = (r1, q1) if st < 8 else (Q4[b] if st >= 12 and b in Q4 else chords[b - 1][1])
                 root = 50 + (r - 50) % 12
-                ln = 2.5 if kind in ('A', 'CODA') else 6.5
+                ln = 2.5
                 play(Cn['c1'], tv(b, st), tv(b, st) + ln * S16, root, I_STAB, release=2)
                 play(Cn['c2'], tv(b, st), tv(b, st) + ln * S16, root + 7, I_STAB, release=2)
         # ── BATERÍA ──
@@ -220,15 +225,11 @@ def build(lufs=-10.0):
                 if kind == 'BR' and st % 2 == 0: NZ['hat'].hit(t, 1, [4, 2, 1])
                 if kind == 'BR' and k >= 5 and st == 8: snare(t, 0.9)
                 if last and st >= 8: snare(t, 0.4 + (st - 8) * 0.07, [7 + (st - 8), 5, 2])
-            elif kind in ('B', 'B2'):                          # estribillo: bombo a negras, caja en 2 y 4 (doble tiempo)
-                if st % 4 == 0: hit(kick, TN.KICK, t, 1.0)
-                if st in (4, 12): snare(t, 0.95)
-                else: NZ['hat'].hit(t, 1, [5, 2, 1] if st % 2 == 0 else [3, 1])
-                if st in (10, 11) and b % 2 == 0: hit(tom, W.TOMS[1 if st == 10 else 2], t, 0.8)
             else:                                              # A y coda: tresillo en el bombo, caja en el 3 (medio tiempo), timbales
                 if st in TRES or (st == 10 and b % 2 == 0): hit(kick, TN.KICK, t, 1.0)
                 if st == 8 or (kind == 'CODA' and st == 4): snare(t, 1.0)
-                elif st in (3, 14, 15): hit(tom, W.TOMS[2 if st == 3 else (1 if st == 14 else 2)], t, 0.85)
+                elif st in (3, 14, 15) or (kind in ('B', 'B2') and st in (2, 10, 11)):       # (el estribillo: el mismo ritmo, más timbales)
+                    hit(tom, W.TOMS[{2: 0, 3: 2, 10: 0, 11: 1, 14: 1, 15: 2}[st]], t, 0.9)
                 else: NZ['hat'].hit(t, 1, [4, 2, 1] if st % 2 == 0 else [3, 1])        # maraca en semicorcheas
             if last and kind not in ('intro', 'BR') and st >= 12:                       # entrada a la frase siguiente
                 snare(t, 0.6 + (st - 12) * 0.1, [9 + (st - 12), 5, 2]); hit(tom, W.TOMS[min(2, st - 12)], t, 0.7)
