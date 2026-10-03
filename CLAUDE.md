@@ -2100,6 +2100,13 @@ Low-level notes (for writing NEW harnesses):
   bass and kick GALLOPING, held fifths; accent = a fireball falling and bursting; the auto-scroll level), `volcan_bonus`
   (volcan_1 at 178 + percussion solo; cantera_real). With this every island has its set; all pending slots are filled
   except `victory`; the only borrowed tune left is in `mirror_boss` / `mirror_boss_inst`.
+- VOLCANO v2 (3.60.1): the user had `volcan_1` (and so the bonus) remade completely and the volcano ACCENTS made
+  melodic (the noise eruption / fireball "didn't sit well"). volcan_1 is now a singable heroic tune: quarter, two 16ths
+  and the long note pushed an 8th early (taa ta-ta-TAAA), 2-bar phrases that climb and answer; E minor with F natural
+  (♭II) mid-phrase and at the cadence; B opens to the relative major; lead = warm N163 brass (was a harsh wave) with
+  horns below; tremolo fifths, 8th bass and double kick stay. Accents = a plucked figure (`I_GTR`): volcan_1/bonus a
+  flourish (fifth, its upper scale neighbour, fifth → root); volcan_2 the chord climbing in 8ths. The snap-rhythm
+  version (16th + dotted 8th) is gone.
 - Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
   cuevas_oscuras; other cave levels → cuevas_1; non-story levels by their retheme theme).
 - Generators keep their internal names; `famicom.PATHS` / `famicom.out(name, ext)` map them to the new folders;

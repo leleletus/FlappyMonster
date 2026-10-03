@@ -446,25 +446,26 @@ SCALE_Am = {9, 11, 0, 2, 4, 5, 7}
 
 
 # ══ VOLCÁN ═══════════════════════════════════════════════════════════════════
-#   volcan_1   "Sendero de ceniza": Mi frigio (el Fa natural, ♭II: el acorde de Fa mayor), 164 BPM; la melodía a chispazos
-#              (semicorchea + corchea con puntillo), en una onda áspera del N163 con
-#              trompas abajo; quintas en trémolo de semicorcheas, bajo en corcheas, doble bombo; acento: ERUPCIÓN
+#   volcan_1   "Sendero de ceniza": Mi frigio (el Fa natural, ♭II: el acorde de Fa mayor), 164 BPM; tema cantable y heroico (ver L_A), metal cálido del N163 con
+#              trompas abajo; quintas en trémolo de semicorcheas, bajo en corcheas, doble bombo; acento: un floreo punteado
 #   volcan_2   "Lluvia de fuego": La frigio (Si♭), 172; latigazos — escalas frigias en semicorcheas que rematan en una
-#              nota larga —, bajo y bombo al GALOPE (ta-ta-tan), quintas tenidas; acento: una bola de fuego que cae
+#              nota larga —, bajo y bombo al GALOPE (ta-ta-tan), quintas tenidas; acento: el acorde que sube punteado
 #              (cámara automática, lluvia de pinchos)
-# (la frase A va a CHISPAZOS — semicorchea + corchea con puntillo, la corta primero: ataques en 0-1 · 4-5 · 8-9 · 12 —.
-# Ideas descartadas por parecerse a otra isla en dónde caen los ataques: corcheas tras el golpe del 1 (71 % en común
-# con nieve_1) y la hemiolia 0·3·6·9·12 (58 % con pradera_1: sus tres primeros golpes son el 3+3+2 de la pradera))
-L_A = PH("0:E5/1 1:G5/3 4:G5/1 5:B5/3 8:B5/1 9:A5/3 12:G5/4", "0:F5/1 1:A5/3 4:A5/1 5:C6/3 8:C6/1 9:A5/3 12:F5/4",
-         "0:E5/1 1:G5/3 4:G5/1 5:B5/3 8:B5/1 9:C6/3 12:B5/4", "0:A5/1 1:C6/3 4:C6/1 5:A5/3 8:B5/1 9:D6/3 12:D6/4",
-         "0:E6/1 1:C6/3 4:C6/1 5:A5/3 8:A5/1 9:C6/3 12:E6/4", "0:D6/1 1:B5/3 4:B5/1 5:G5/3 8:G5/1 9:B5/3 12:D6/4",
-         "0:C6/2 2:A5/2 4:F5/2 6:A5/2 8:C6/2 10:A5/2 12:F5/2 14:E5/2")
-L_END = P(8, "0:E5/6 6:G5/2 8:B5/8")
-L_END2 = P(8, "0:B5/6 6:G5/2 8:E5/8")
-L_B = PH("0:G5/8 8:E5/4 12:G5/4", "0:B5/8 8:G5/4 12:D5/4", "0:C6/6 6:B5/2 8:A5/4 12:E5/4", "0:G5/6 6:F5/2 8:E5/8",
-         "0:A5/8 8:C6/4 12:A5/4", "0:B5/8 8:D6/4 12:B5/4", "0:C6/2 2:A5/2 4:F5/2 6:A5/2 8:C6/4 12:F6/4", "0:B4/4 4:E5/2 6:G5/2 8:B5/6")
-LCH_A = [(E, MIN), (Fr_, MAJ), (E, MIN), ((Fr_, MAJ), (G, MAJ)), (A, MIN), (G, MAJ), (Fr_, MAJ), (E, MIN)]
-LCH_B = [(C, MAJ), (G, MAJ), (A, MIN), (E, MIN), (Fr_, MAJ), (G, MAJ), (Fr_, MAJ), (E, MIN)]
+# volcan_1, SEGUNDA VERSIÓN (el usuario pidió rehacerla entera; la primera iba "a chispazos" — semicorchea + corchea
+# con puntillo — sobre una onda áspera y con una erupción de ruido como acento, y no quedaba bien). Ahora es un tema
+# CANTABLE y heroico, el de la última isla: negra, dos semicorcheas y la nota larga ADELANTADA una corchea (taa ta-ta-TAAA: empuja), frases
+# de 2 compases que suben y se contestan; Mi menor con el Fa natural (♭II) en mitad y al cierre de la frase; la parte
+# B se abre al relativo mayor. Voz de metal cálido (N163) con trompas abajo.
+L_A = PH("0:E5/4 4:G5/1 5:A5/1 6:B5/8 14:G5/2", "0:E6/4 4:D6/1 5:C6/1 6:G5/10",
+         "0:D6/4 4:B5/1 5:G5/1 6:B5/8 14:D6/2", "0:C6/4 4:A5/1 5:F5/1 6:A5/10",
+         "0:E5/4 4:G5/1 5:A5/1 6:B5/8 14:G5/2", "0:C6/4 4:E6/1 5:D6/1 6:C6/8 14:G5/2",
+         "0:A5/2 2:C6/2 4:E6/4 8:F6/2 10:C6/2 12:A5/2 14:F5/2")
+L_END = P(8, "0:E5/4 4:G5/4 8:B5/8")
+L_END2 = P(8, "0:G5/4 4:F5/2 6:E5/2 8:E5/8")
+L_B = PH("0:G5/6 6:E5/2 8:C6/8", "0:B5/6 6:G5/2 8:D6/8", "0:C6/4 4:E6/4 8:A5/6 14:C6/2", "0:B5/6 6:G5/2 8:E5/8",
+         "0:A5/6 6:F5/2 8:C6/8", "0:G5/6 6:E5/2 8:E6/8", "0:F6/4 4:C6/4 8:A5/4 12:F5/4", "0:B4/4 4:E5/2 6:G5/2 8:B5/6")
+LCH_A = [(E, MIN), (C, MAJ), (G, MAJ), (Fr_, MAJ), (E, MIN), (C, MAJ), ((A, MIN), (Fr_, MAJ)), (E, MIN)]
+LCH_B = [(C, MAJ), (G, MAJ), (A, MIN), (E, MIN), (Fr_, MAJ), (C, MAJ), (Fr_, MAJ), (E, MIN)]
 SCALE_Ephr = {4, 5, 7, 9, 11, 0, 2}
 F_A = PH("0:A5/1 1:Bb5/1 2:C6/1 3:D6/1 4:E6/6 10:D6/2 12:C6/4", "0:E6/1 1:D6/1 2:C6/1 3:Bb5/1 4:A5/6 10:C6/2 12:E5/4",
          "0:Bb5/1 1:C6/1 2:D6/1 3:E6/1 4:F6/6 10:D6/2 12:Bb5/4", "0:E6/1 1:D6/1 2:C6/1 3:Bb5/1 4:A5/8 12:E5/4",
@@ -576,15 +577,16 @@ I_SOFT = {'vol': [5, 7, 8, 8, 7, 7], 'sus': 7, 'vib': (14, 0.15, 5.0), 'duty': 0
 I_FLAKE = {'vol': [7, 4, 2, 1], 'sus': 0, 'duty': 0.125}
 I_FALL = {'vol': [10, 7, 5, 3, 2, 1], 'sus': 0, 'duty': 0.125}
 SNOW = ('nieve', 'ventisca', 'bola')
-WAVES.append(wavetable([1.0, 0.9, 0.7, 0.6, 0.5, 0.35, 0.3]))    # 4 voz áspera (volcán)
-I_HOT = {'vol': [13, 15, 15, 14, 13, 13], 'sus': 13, 'vib': (10, 0.25, 6.5), 'duty': 4.0}
+WAVES.append(wavetable([1.0, 0.6, 0.4, 0.25, 0.15]))             # 4 metal cálido (volcán; antes una onda áspera)
+I_HOT = {'vol': [11, 14, 15, 14, 13, 13], 'sus': 13, 'vib': (14, 0.18, 5.5), 'duty': 4.0}
+I_GTR = {'vol': [13, 10, 8, 6, 5, 4, 3, 2], 'sus': 2, 'duty': 0.125}                 # punteo (el acento del volcán)
 I_TREM = {'vol': [7, 4, 2], 'sus': 0, 'duty': 0.25}
 VOLC = ('volcan', 'lava')
 I_HARP = {'vol': [8, 6, 5, 4, 3, 2, 1], 'sus': 0, 'duty': 0.5}
 CAVE = ('cueva', 'sumergida')
 ISLE_LV = {
-    'volcan': {'lead': 0, 'dbl': -8, 'echo': -13, 'chords': -10, 'bass': -1, 'trill': -5, 'kick': 0, 'snare': -3, 'hat': -12, 'crash': -10, 'toms': 0},
-    'lava':   {'lead': 0, 'dbl': -9, 'echo': -13, 'chords': -9, 'bass': -1, 'trill': -6, 'kick': 0, 'snare': -3, 'hat': -12, 'crash': -10, 'toms': 0},
+    'volcan': {'lead': 0, 'dbl': -8, 'echo': -13, 'chords': -10, 'bass': -1, 'trill': -6, 'kick': 0, 'snare': -3, 'hat': -12, 'crash': -10, 'toms': 0},
+    'lava':   {'lead': 0, 'dbl': -9, 'echo': -13, 'chords': -9, 'bass': -1, 'trill': -7, 'kick': 0, 'snare': -3, 'hat': -12, 'crash': -10, 'toms': 0},
     'cueva':     {'lead': -9, 'bell': 0, 'echo': -10, 'chords': -9, 'bass': -2, 'trill': -2, 'kick': -3, 'snare': -10, 'hat': -14, 'crash': -14, 'toms': 0},
     'sumergida': {'lead': 0, 'echo': -8, 'chords': -10, 'bass': -3, 'trill': -9, 'kick': -6, 'snare': -15, 'hat': -15, 'crash': -14, 'toms': 0},
     'nieve':    {'lead': -5, 'bell': 0, 'echo': -12, 'chords': -11, 'bass': -3, 'trill': -5, 'kick': -5, 'snare': -10, 'hat': -11, 'crash': -13, 'toms': 0},
@@ -822,12 +824,16 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
                     v_ = np.sin(np.pi * x_) if shape == 'wave' else x_ ** 1.5
                     pp = per if not isinstance(per, tuple) else int(round(per[0] + (per[1] - per[0]) * x_))
                     NZ['fx'].hit(t8(st0) + i_ / 60.0, pp, [max(1, int(round(peak * v_)))], short=short)
-            if isle == 'volcan':                              # ERUPCIÓN: un bombazo y el ruido que sube y se va
-                hit(kick, TN.KICK_DEEP, t8(8), 1.0); hit(tom, TOMS[2], t8(8), 1.0)
-                swell(8, 15.5, (7, 3), 10, 'wave')
-            elif isle == 'lava':                              # una bola de fuego que CAE (el ruido baja) y revienta
-                swell(8, 13, (1, 7), 8, 'gust')
-                hit(kick, TN.KICK_DEEP, t8(13), 1.0); NZ['fx'].hit(t8(13), 6, [12, 9, 6, 4, 2, 1])
+            # (volcán: el acento era ruido — una erupción, una bola de fuego — y el usuario lo pidió MELÓDICO: un punteo)
+            if isle == 'volcan':                              # floreo: la quinta, su vecina de arriba (de la escala), la quinta… y cae a la tónica
+                fth = 72 + (r - 72) % 12 + q[2] - (12 if q[2] + (r - 72) % 12 > 9 else 0)
+                nb = 1 if (fth + 1) % 12 in SCALE else 2
+                for st, ln, nn in ((10, 0.9, fth), (11, 0.9, fth + nb), (12, 0.9, fth), (13, 2.8, 72 + (r - 72) % 12)):
+                    play(Cn['trill'], t8(st), t8(st) + ln * S16, nn, I_GTR, release=2)
+            elif isle == 'lava':                              # el acorde que SUBE punteado, en corcheas
+                base_ = 72 + (r - 72) % 12
+                for st, iv in ((8, 0), (10, q[1]), (12, q[2]), (14, 12)):
+                    play(Cn['trill'], t8(st), t8(st) + S16 * 1.8, base_ + iv, I_GTR, release=2)
             elif isle == 'cueva':                             # GOTAS: dos, que caen (la quinta y, más abajo, la tónica)
                 for st, iv in ((11, 12 + q[2]), (14, 12)):
                     play(Cn['trill'], t8(st), t8(st) + 0.07, 72 + (r - 72) % 12 + iv, GN.I_DRIP, release=0)
