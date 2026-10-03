@@ -331,8 +331,66 @@ function Boss:update(dt, level)
         end
         return
     end
+    -- (con un ALIADO en la zona — Xtra extremo —: se turnan y no se pisan)
+    if self:inFight() then self.fightT = (self.fightT or 0) + dt end
     self:updateBoss(dt, level)
+    if self.props and self.props.xtraPair then self:trackAttack() end
 end
+
+-- ── ALIADOS: dos jefes en la misma zona (Xtra extremo, src/world/XtraBosses.lua) ─────────────────────
+-- Genérico para todos: cada tipo solo dice qué estados son ATAQUE (`ATTACKS = { estado = true }`, en su
+-- tuning) y pregunta Boss:mayAttack donde decide atacar.
+--   * SE TURNAN: un jefe solo EMPIEZA un ataque si su aliado no está atacando ni acaba de hacerlo (`ALLY_GAP`
+--     s: un respiro para el jugador) — Boss:mayAttack, que cada tipo pregunta donde decide atacar (sus relojes
+--     siguen corriendo: en cuanto le toca, ataca). La copia no ataca hasta `ALLY_START` s.
+--   * Nada más, A PROPÓSITO: se mueven a su ritmo y se atraviesan. Se probó que chocaran / se apartaran
+--     (empujones, cargas cortadas) y frenar al que espera (quedaban flotando a cámara lenta): más problemas que
+--     ventajas (el usuario).
+-- Todo esto es simulación (un jugador y servidor); el cliente lo ve en los snapshots.
+Boss.ALLY_START, Boss.ALLY_GAP = 2.5, 0.8
+
+function Boss:allies(level)
+    local out = {}
+    if not self.zone then return out end
+    for _, e in ipairs(level.liveEntities or {}) do
+        if e ~= self and e.zone == self.zone and e.alive and e.isDying and not e:isDying() and e.def
+           and e.def.category == 'Jefes' then
+            out[#out + 1] = e
+        end
+    end
+    return out
+end
+-- ¿En plena pelea? (la zona luchando; no en su entrada, que cada jefe hace a su manera)
+function Boss:inFight() return self.zone ~= nil and self.zone.state == 'fight' and self:isActive() end
+-- (la tabla va en el `tuning` del tipo: Entity.extend(Boss, { ATTACKS = { estado = true, ... } }))
+function Boss:isAttacking()
+    local a = self.tuning and self.tuning.ATTACKS
+    return a ~= nil and a[self.state] == true
+end
+
+-- Cuándo empezó / acabó su último ataque (para los turnos con un aliado)
+function Boss:trackAttack()
+    local now = self:isAttacking()
+    if now and not self._wasAttacking then self.attackSince = self.fightT or 0 end
+    if not now and self._wasAttacking then self.attackEnd = self.fightT or 0 end
+    self._wasAttacking = now
+end
+
+-- ¿Puede EMPEZAR un ataque ya? (cada tipo lo pregunta donde decide atacar). Con un aliado: no mientras el
+-- otro ataca ni hasta `ALLY_GAP` s después (un respiro para el jugador), y la copia no antes de `ALLY_START`.
+-- Sin aliado, siempre. Los relojes de sus ataques siguen corriendo: en cuanto le toca, ataca.
+function Boss:mayAttack(level)
+    if not (self.props and self.props.xtraPair) or not self:inFight() then return true end
+    local t = self.fightT or 0
+    if self.props.xtraCopy and t < Boss.ALLY_START then return false end
+    for _, a in ipairs(self:allies(level)) do
+        if a:isActive() and ((a.isAttacking and a:isAttacking()) or (a.attackEnd and t - a.attackEnd < Boss.ALLY_GAP)) then
+            return false
+        end
+    end
+    return true
+end
+
 
 -- ¿Se dibuja en rojo ahora? (tras un golpe y mientras explota)
 function Boss:flashRed()

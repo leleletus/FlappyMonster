@@ -520,11 +520,7 @@ function AdventureState:renderBossHud()
     local z = BossZones.fighting(self.level)
     if z then
         local y = 18
-        for _, b in ipairs(z.bosses) do
-            if b.alive then
-                BossHud.drawBoss(b, y, math.min(1, self.bossFightT / 0.8)); y = y + 72
-            end
-        end
+        y = BossHud.drawZone(z, y, math.min(1, self.bossFightT / 0.8))
         local p = self.player
         BossHud.drawPlayers({ { name = L('hud.you'), color = { 1, 0.95, 0.2 }, hp = p.hp, hpMax = p.hpMax,
                                 key = p, dead = p.dying } }, 20, 110)

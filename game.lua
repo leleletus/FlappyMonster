@@ -138,6 +138,9 @@ function love.touchpressed(id, x, y, dx, dy, pressure)
 end
 
 function love.focus(f)
+    -- (los arneses de tools/tests corren con FM_TEST=1: perder el foco no pausa ni silencia, así la
+    -- prueba sigue aunque se use otra ventana)
+    if os.getenv('FM_TEST') then return end
     if not f then
         if gStateMachine then
             local state = gStateMachine:_top()

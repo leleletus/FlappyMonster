@@ -32,7 +32,11 @@ local Boss        = require 'src/world/entities/Boss'
 local Crawler     = require 'src/world/entities/Crawler'
 local SpriteStrip = require 'src/fx/SpriteStrip'
 
+-- (aliados en Xtra extremo, Boss:mayAttack: qué estados son atacar)
+local ATTACKS = { windup = true, charge = true, wallclimb = true, wallaim = true, pounce = true, climb = true,
+                  ceiling = true, aim = true, drop = true, summon = true, clap = true }
 local Mega = Entity.extend(Boss, {
+    ATTACKS = ATTACKS,
     walkFps = 6, walkFrames = 3,
     debugColor = { 1, 0.45, 0.2 },
     -- (alto completo: apoya las patas justo en el suelo y en las paredes)
@@ -679,6 +683,7 @@ function Mega:updateBoss(dt, level)
         self.summonT = self.summonT + dt
         self.restT = (self.restT or 0) + dt
         local summonsOn = (p.summonCount or 2) > 0 and (p.summonPool or 4) > 0
+        local may = self:mayAttack(level)                   -- (con un aliado: por turnos, Boss:mayAttack)
         if self.onGround and (p.restEvery or 5) > 0 and self.restT >= (p.restEvery or 5) then
             -- Descanso: se queda quieto respirando (un respiro para él y para el
             -- jugador); mientras tanto no cuentan los tiempos de los ataques
@@ -691,12 +696,12 @@ function Mega:updateBoss(dt, level)
             self.state, self.deadTimer = 'rest', 0
             if self.restKind == 1 then self:roar(1.1)
             elseif self.restKind == 3 then Sound.play('spikeShake', 0.8) end
-        elseif self.onGround and self.ceilT >= (p.ceilingEvery or 7) then
+        elseif may and self.onGround and self.ceilT >= (p.ceilingEvery or 7) then
             if self:startClimb(level) then self.ceilT = 0 else self.ceilT = 0 end
-        elseif self.onGround and (p.pounceEvery or 9) > 0 and self.pounceT >= (p.pounceEvery or 9) then
+        elseif may and self.onGround and (p.pounceEvery or 9) > 0 and self.pounceT >= (p.pounceEvery or 9) then
             self.pounceT = 0
             self:startClimb(level, 'wallclimb')
-        elseif self.onGround and summonsOn and self.summonT >= (p.summonEvery or 12) then
+        elseif may and self.onGround and summonsOn and self.summonT >= (p.summonEvery or 12) then
             -- Solo si puede sacar alguno (con el máximo vivo no lo intenta:
             -- lo vuelve a mirar un poco después)
             local n = self:summonable(level)
@@ -710,7 +715,7 @@ function Mega:updateBoss(dt, level)
             else
                 self.summonT = (p.summonEvery or 12) * 0.8
             end
-        elseif self.onGround and tgt and self.chargeCd <= 0 and math.abs(dx) <= (p.chargeRange or 5) * T
+        elseif may and self.onGround and tgt and self.chargeCd <= 0 and math.abs(dx) <= (p.chargeRange or 5) * T
                and math.abs(tgt.y - self.y) <= 1.5 * T then
             self.state, self.deadTimer = 'windup', 0
             self.facing = sign(dx) ~= 0 and sign(dx) or self.facing

@@ -83,6 +83,42 @@ function BossHud.drawBoss(boss, y, appear)
     love.graphics.setColor(1, 1, 1, 1)
 end
 
+-- Las barras de los jefes de una zona, desde `y`; devuelve la `y` siguiente. Los jefes ALIADOS (Xtra extremo:
+-- `props.xtraPair`) comparten UNA barra con la vida de los dos: es una sola pelea, no dos.
+local duoBars = setmetatable({}, { __mode = 'k' })
+local function duoName(list)
+    local names, seen = {}, {}
+    for _, b in ipairs(list) do
+        local n = b.title and b:title() or L('boss.default')
+        if not seen[n] then seen[n] = true; names[#names + 1] = n end
+    end
+    if #names == 1 and #list > 1 then return L('boss.duo', { name = names[1] }) end
+    return table.concat(names, ' & ')
+end
+BossHud.duoName = duoName
+
+function BossHud.drawZone(z, y, appear)
+    local pair = {}
+    for _, b in ipairs(z.bosses or {}) do if b.props and b.props.xtraPair then pair[#pair + 1] = b end end
+    if #pair >= 2 then
+        local bar = duoBars[z] or {}
+        duoBars[z] = bar
+        bar.hp, bar.hpMax = 0, 0
+        for _, b in ipairs(pair) do
+            bar.hpMax = bar.hpMax + math.max(1, b.hpMax or 1)
+            if b.alive then bar.hp = bar.hp + math.max(0, b.hp or 0) end
+        end
+        local name = duoName(pair)
+        bar.title = function() return name end
+        BossHud.drawBoss(bar, y, appear)
+        y = y + 72
+    end
+    for _, b in ipairs(z.bosses or {}) do
+        if b.alive and not (#pair >= 2 and b.props and b.props.xtraPair) then BossHud.drawBoss(b, y, appear); y = y + 72 end
+    end
+    return y
+end
+
 -- Barras de los jugadores: list = { {name, color, hp, hpMax, key, dead}, ... }
 function BossHud.drawPlayers(list, x, y)
     love.graphics.setFont(FONT_MED)
@@ -153,9 +189,7 @@ function BossHud.drawCinema(level)
         if cine.k == 0 then cine.t = 0 end
         cine.k = math.min(1, cine.k + dt / CINE_IN)
         cine.t = cine.t + dt
-        local names = {}
-        for _, b in ipairs(zone.bosses or {}) do if b.title then names[#names + 1] = b:title() end end
-        cine.title = table.concat(names, ' & ')
+        cine.title = duoName(zone.bosses or {})              -- (dos iguales: "NOMBRE ×2")
     else
         cine.k = math.max(0, cine.k - dt / CINE_OUT)
     end

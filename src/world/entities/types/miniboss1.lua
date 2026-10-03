@@ -33,6 +33,8 @@ local Boss     = require 'src/world/entities/Boss'
 local DeadEyes = require 'src/entities/DeadEyes'
 
 local Ship = Entity.extend(Boss, {
+    -- (aliados en Xtra extremo: qué estados son atacar)
+    ATTACKS = { prep = true, slam = true },
     debugColor = { 0.3, 0.9, 1 },
     hitbox = { outerW = 0.92, outerH = 0.95, innerW = 0.8, innerH = 0.8 },
 })
@@ -233,7 +235,7 @@ function Ship:updateBoss(dt, level)
         -- DetectPlayer: un jugador debajo un rato → ataque
         if self:playerBelow(level) then
             self.detectT = self.detectT + dt
-            if self.detectT >= (p.detectTime or 0.25) then
+            if self.detectT >= (p.detectTime or 0.25) and self:mayAttack(level) then   -- (aliado: por turnos)
                 self.state, self.deadTimer, self.detectT = 'prep', 0, 0
                 Sound.play('spikesOut')
                 Entity.emitFx('sparks', self.x, self.y + self.sprH / 2)

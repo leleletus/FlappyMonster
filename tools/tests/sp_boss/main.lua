@@ -140,7 +140,28 @@ function love.update(dt)
             return
         end
     end
+    -- (DIFF=xtra: aliados — cuánto rato se solapan y cuánto atacan a la vez)
+    if st and st.enemies and boss and boss.zone and boss.zone.state == 'fight' then
+        local list = {}
+        for _, e in ipairs(st.enemies) do if e.def.boss and e.alive and e:isActive() then list[#list + 1] = e end end
+        if #list >= 2 then
+            last.duoT = (last.duoT or 0) + dt
+            local a, b = list[1]:getOuterBounds(), list[2]:getOuterBounds()
+            local ov = math.min(a.x + a.w, b.x + b.w) - math.max(a.x, b.x)
+            local ovy = math.min(a.y + a.h, b.y + b.h) - math.max(a.y, b.y)
+            if ov > 8 and ovy > 8 then last.overT = (last.overT or 0) + dt end
+            if list[1]:isAttacking() and list[2]:isAttacking() then last.bothT = (last.bothT or 0) + dt end
+            if list[1]:isAttacking() or list[2]:isAttacking() then last.anyT = (last.anyT or 0) + dt end
+        end
+    end
     if t > SECS then
+        if last.duoT then
+            -- los aliados se turnan: nunca atacan los dos a la vez (Boss:mayAttack); se atraviesan, no chocan
+            local ok = (last.bothT or 0) <= 0.5      -- (un instante: la bola sale del agua de un salto sin esperar)
+            print(('Aliados %s %.1f s juntos · atacando alguno %.1f s, los dos a la vez %.1f s (se atraviesan: solapados %.1f s)'):format(
+                ok and 'OK   ' or 'FALLA', last.duoT, last.anyT or 0, last.bothT or 0, last.overT or 0))
+            if not ok then love.event.quit(1); return end
+        end
         print(('Menor tiempo entre dos golpes: %.2f s'):format(last.minGap or -1))
         -- (DIFF=xtra: dos jefes en la arena; los dos pelean)
         local list, sts = {}, {}

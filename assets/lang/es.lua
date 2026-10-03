@@ -331,6 +331,7 @@ return {
     },
     boss = {
         default = "JEFE",
+        duo = "{name} ×2",
         waiting = "ESPERANDO A LOS DEMÁS  {n}/{max}",
         miniboss1 = "MONSTRUO MALVADO",
         mirror = "ESPEJO",

@@ -1693,10 +1693,19 @@ arenas as bonus nodes vs an expert BOT. User's decisions: world map with a path,
   client `_buildWorld(lv, data.difficulty)` all pass it, so indices match): the level's JSON `"xtraBosses": [...]` or,
   by default, each boss in a zone mirrored across the zone centre (≥ `MIN_SEP` 5 cells apart, `point`/`points`/
   `patrol` props mirrored, the def's `xtraStrip` props removed — the Snowball Boss's `icicles` belong to the arena);
-  both get `props.xtraPair` → hp × `pairHp` 0.65 (`Boss:startFight`). Their reserve minions double too. Also fixed:
+  both get `props.xtraPair` → hp × `pairHp` 0.65 (`Boss:startFight`). Their reserve minions double too. The pair
+  starts SYMMETRIC (original at a third of the zone, the copy mirrored; `props.xtraCopy`). ALLY RULE (Boss base,
+  generic): a boss may only START an attack when its ally isn't attacking nor just did (`ALLY_GAP` 0.8 s) and the copy
+  waits `ALLY_START` 2.5 s — `Boss:mayAttack(level)`, asked by each type where it decides to attack; each type lists its
+  attack states in its tuning `ATTACKS = {...}` (the Mirror's perch is positioning, not attack: it waits perched). That's
+  ALL on purpose: allies move at their own pace and pass through each other — pushing/separating them (charges cut) and
+  slowing the waiting one (floated in slow motion) were tried and the user preferred simple turns. One SHARED health
+  bar for the pair (`BossHud.drawZone`, title "NAME ×2", also in the intro cinema). Bosses ignore other bosses' slam
+  noises (`Noise.emit(..., from='boss')`, `Noise.heard(..., ignore)`: a Mega Gloomy charged at its ally). Tests don't
+  pause when the window loses focus (`run.sh` exports `FM_TEST=1`, `game.lua love.focus`). Also fixed:
   a world reward was skipped when the level gave none (`ipairs` stopped at the nil). Harnesses: `difficulty_rules`
-  (`sentidos`, `doble`), `story_flow` (`desbloqueo`), `sp_boss DIFF=xtra` (prints the bosses: every story boss level
-  fights with 2), `online_smoke DIFF=xtra` (the client has both).
+  (`sentidos`, `doble`), `story_flow` (`desbloqueo`), `sp_boss DIFF=xtra` (prints the bosses + "Aliados": fails if both attack at once
+  > 0.5 s), `online_smoke DIFF=xtra` (the client has both).
 - Menu: Aventura → HISTORIA (`story_slots`) / ONLINE / JUEGO LIBRE (PRUEBAS) (`free_play` stays as the debug hub).
 - `src/story/Worlds.lua` = the story as DATA: ordered worlds `{ id, levels = {...}, boss }` (provisional order by
   theme; every story level needs a FINISH — hunt-only levels have none). `Worlds.nodes(w)`, `levelName(id)`.

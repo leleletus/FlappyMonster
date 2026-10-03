@@ -68,13 +68,14 @@ function Noise.src(x, y) Noise.srcX, Noise.srcY = x, y end
 -- src/fx/NoiseMarks.lua; llega igual a los clientes online). Así el jugador ve qué ha hecho
 -- ruido, dónde y hasta dónde: es adonde irán los Crabbies lúgubres.
 -- `quiet` = sin marca (el golpe del propio jefe, que ya se ve).
-function Noise.emit(x, y, r, quiet)
+-- `from` = quién lo hace, si importa ('boss': los golpes de un jefe; otro jefe no va a por ellos).
+function Noise.emit(x, y, r, quiet, from)
     local level = Noise.level
     if not level or not level.dark or not x or not r then return end
     local n = level.noises
     if not n then n = { seq = 0, list = {} }; level.noises = n end
     n.seq = n.seq + 1
-    n.list[#n.list + 1] = { x = x, y = y, r = r * TILE_PX, seq = n.seq }
+    n.list[#n.list + 1] = { x = x, y = y, r = r * TILE_PX, seq = n.seq, from = from }
     if #n.list > KEEP then table.remove(n.list, 1) end
     if not quiet then
         local Entity = require 'src/world/entities/Entity'
@@ -84,12 +85,12 @@ end
 
 -- El ruido nuevo (posterior a `since`) más fuerte que se oye desde (x, y) con un oído `k`
 -- (multiplica el radio: 1 = normal). Devuelve el ruido y el último seq visto.
-function Noise.heard(level, x, y, since, k)
+function Noise.heard(level, x, y, since, k, ignore)
     local n = level and level.noises
     if not n then return nil, since or 0 end
     local best, bs
     for _, z in ipairs(n.list) do
-        if z.seq > (since or 0) then
+        if z.seq > (since or 0) and not (ignore and z.from == ignore) then
             local d = math.sqrt((z.x - x) ^ 2 + (z.y - y) ^ 2)
             local r = z.r * (k or 1) * require('src/Difficulty').k('sense')      -- (la dificultad: más o menos oído)
             if d <= r then

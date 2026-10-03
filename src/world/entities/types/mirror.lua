@@ -49,6 +49,10 @@ local DeadEyes        = require 'src/entities/DeadEyes'
 local BossZones       = require 'src/world/BossZones'
 
 local Mirror = Entity.extend(Boss, {
+    -- (aliados en Xtra extremo: qué estados son atacar)
+    -- (posarse en una plataforma es SITUARSE, no atacar — con el cristal roto los dos se suben —: el ataque
+    -- es el salto; si no le toca, espera posado)
+    ATTACKS = { portal = true, leap = true, dive = true },
     debugColor = { 0.75, 0.35, 1 },
     hitbox = { outerW = 0.72, outerH = 1.0, innerW = 0.43, innerH = 0.5 },
 })
@@ -479,7 +483,7 @@ function Mirror:updateBoss(dt, level)
     -- Ataque de arena cada cierto tiempo (solo desde el suelo, sin nada raro)
     self.attackT = (self.attackT or 0) + dt
     if self.props.arenaAttacks ~= false and self.zone and self.attackT >= self:phase().every * (self.props.attackEvery or 7) / 7
-       and b.onGround and not b.gpPhase and self.target then
+       and b.onGround and not b.gpPhase and self.target and self:mayAttack(level) then   -- (aliado: por turnos)
         self.attackT, self.chainLeft = 0, self:phase().chain
         return self:startWarp(level)
     end
@@ -705,7 +709,9 @@ function Mirror:updateAttack(dt, level)
         -- traspasable la atraviesa)
         self:runBody(dt, level, 0)
         self.crouching = self.deadTimer > PERCH_T * 0.5
-        if self.deadTimer >= PERCH_T then
+        if self.deadTimer >= PERCH_T and not self:mayAttack(level) then
+            self.deadTimer = PERCH_T                       -- (aliado atacando: espera su turno, posado)
+        elseif self.deadTimer >= PERCH_T then
             -- Salto hacia él: en lo alto, ground pound (cae justo encima)
             -- (sin chocar con el techo de la zona: si no, cortaba el salto a medias)
             local ob = b:getOuterBounds()
@@ -756,6 +762,7 @@ function Mirror:updateAttack(dt, level)
         if self.deadTimer >= (self.props.recoverTime or RECOVER_T) then
             self.chainLeft = (self.chainLeft or 1) - 1
             if self:glassDanger(level) then return self:toPlatforms(level) end
+            if self.chainLeft > 0 and not self:mayAttack(level) then self.chainLeft = 0 end   -- (aliado: por turnos)
             if self.chainLeft > 0 and self.target then return self:startWarp(level) or true end
             self.state, self.deadTimer = 'fight', 0
             self.memoryFrom = self.clock          -- (vuelve a copiar desde ahora)

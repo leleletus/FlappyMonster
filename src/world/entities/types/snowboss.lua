@@ -33,6 +33,9 @@ local TileCodec   = require 'src/world/tiles/TileCodec'
 local IceEncase                         -- (solo dibujo)
 
 local Snow = Entity.extend(Boss, {
+    -- (aliados en Xtra extremo: qué estados son atacar)
+    ATTACKS = { windup = true, roll = true, slide = true, shoot = true, hop = true, leap_wind = true, leap = true,
+                slam_up = true, slam_hold = true, slam_fall = true, slam_land = true },
     debugColor = { 0.7, 0.85, 1 },
     hitbox = { outerW = 13 / 16, outerH = 13 / 16, innerW = 12 / 16, innerH = 12 / 16 },
 })
@@ -758,6 +761,8 @@ end
 function Snow:nextAttack(level)
     if self:phaseNow() then return end
     local pa = self:target(level)
+    -- (con un aliado: por turnos — sigue quieta hasta que le toque; salir del agua no espera)
+    if not self:inWater(level) and not self:mayAttack(level) then return end
     -- En el agua (se le pasó el remojo): sale de un salto a lo seco
     if self:inWater(level) then
         self.escaping = true

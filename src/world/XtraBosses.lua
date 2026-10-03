@@ -34,13 +34,12 @@ function XB.mirror(n, zones)
     local zc, zr, zw = zoneOf(zones, n.col, n.row)
     if not zc then return nil end
     local function mx(c) return 2 * zc + zw - 1 - c end
-    local lo, hi = zc + XB.MARGIN, zc + zw - 1 - XB.MARGIN
+    -- los dos SIMÉTRICOS: el original a un tercio de la zona (del lado donde estaba) y la copia en el otro
+    -- tercio, en espejo (si no, uno quedaba casi en el centro y el otro pegado a la pared)
+    local third = math.floor(zw / 3 + 0.5)
+    local left = (n.col - zc) <= (zc + zw - 1 - n.col)
+    n.col = left and (zc + third) or (zc + zw - 1 - third)
     local col = mx(n.col)
-    if math.abs(col - n.col) < XB.MIN_SEP then
-        local dir = (n.col - zc < zc + zw - 1 - n.col) and 1 or -1     -- (hacia donde haya más sitio)
-        col = n.col + dir * XB.MIN_SEP
-    end
-    col = math.max(lo, math.min(hi, col))
     local def = EntityTypes.byName[n.type]
     local props = copyTable(n.props)
     -- puntos del jefe, en espejo
@@ -77,7 +76,7 @@ function XB.apply(level, lvl)
         end
     end
     for _, m in ipairs(add) do
-        m.props.xtraPair, m.xtra = true, true
+        m.props.xtraPair, m.props.xtraCopy, m.xtra = true, true, true
         level.entities[#level.entities + 1] = m
     end
     -- (con la lista a mano, los jefes de la zona también van de dos en dos)

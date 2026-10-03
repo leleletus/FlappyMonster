@@ -1054,9 +1054,7 @@ function OnlineAdventureState:_renderBossHUD()
     local z = BossZones.fighting(self.level)
     if z and not self.showGameOver then
         local y = 48
-        for _, b in ipairs(z.bosses) do
-            if b.alive then BossHud.drawBoss(b, y, math.min(1, self.bossFightT / 0.8)); y = y + 72 end
-        end
+        y = BossHud.drawZone(z, y, math.min(1, self.bossFightT / 0.8))
         -- Un jugador por fila, con su color de la sala
         local list = {}
         for idx = 1, 16 do

@@ -64,6 +64,9 @@ local CLAW_W, CLAW_H = 14, 7               -- cuadro de la pinza
 local F_IDLE, F_CROUCH, F_LEAP, F_SCARED, F_DEAD = 5, 6, 7, 8, 9
 
 local MG = Entity.extend(Boss, {
+    -- (aliados en Xtra extremo: qué estados son atacar)
+    ATTACKS = { aim = true, charge = true, claw = true, pounce = true, climb = true, ceil_ping = true, ceil_wait = true,
+                dive = true, ping = true },
     debugColor = { 0.6, 0.8, 1 },
     hitbox = { outerW = 1, outerH = 1, innerW = 0.9, innerH = 0.9 },
 })
@@ -153,7 +156,8 @@ end
 function MG:hear(level, dt)
     self.tAge = self.tAge + dt
     if not self.heardSeq then self.heardSeq = (level.noises and level.noises.seq) or 0; return end
-    local z, seq = Noise.heard(level, self.x, self.y, self.heardSeq, HEAR_K)
+    -- (los golpes de un jefe no cuentan: con un aliado — Xtra extremo — iba a por el otro jefe)
+    local z, seq = Noise.heard(level, self.x, self.y, self.heardSeq, HEAR_K, 'boss')
     self.heardSeq = seq
     if z then
         local zx0, zx1, zy0, zy1 = self:zoneBounds()
@@ -245,7 +249,7 @@ function MG:slam(level)
     Sound.play('mgloomySlam')
     Entity.emitFx('gp_land', self.x, self.y + REST)
     Entity.emitFx('shake_big', self.x, self.y)
-    Noise.emit(self.x, self.y, Noise.R.boss, true)         -- (los Crabbies lúgubres lo oyen y vienen; sin marca)
+    Noise.emit(self.x, self.y, Noise.R.boss, true, 'boss')         -- (los Crabbies lúgubres lo oyen y vienen; sin marca)
     self.heardSeq = (level.noises and level.noises.seq) or self.heardSeq     -- (su propio golpe no cuenta)
     self:hitBox(level, { x = self.x - BW / 2 - 50, y = self.y - BH / 2, w = BW + 100, h = REST + BH / 2 + 8 }, HIT_SLAM, self.x)
 end
@@ -468,7 +472,8 @@ function MG:updateBoss(dt, level)
             return
         end
         -- un "!" reciente: a por él
-        if self.tx and self.tAge <= FRESH and self.cdT <= 0 then
+        local may = self:mayAttack(level)                       -- (con un aliado: por turnos, Boss:mayAttack)
+        if may and self.tx and self.tAge <= FRESH and self.cdT <= 0 then
             self:startAim(level)
             return
         end
@@ -479,11 +484,11 @@ function MG:updateBoss(dt, level)
             return
         end
         -- al techo, a lanzarse desde arriba
-        if self.ceilT >= (p.ceilingEvery or 14) / k and self.cdT <= 0 then
+        if may and self.ceilT >= (p.ceilingEvery or 14) / k and self.cdT <= 0 then
             self:startClimb(level)
             return
         end
-        if self.pingT >= (p.pingEvery or 2.4) then
+        if may and self.pingT >= (p.pingEvery or 2.4) then
             self.pingT = 0
             self:enter('ping')
             return

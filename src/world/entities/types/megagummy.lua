@@ -26,6 +26,8 @@ local SpriteStrip = require 'src/fx/SpriteStrip'
 local Snow        = require('src/world/entities/types/snowboss').class
 
 local MG = Entity.extend(Boss, {
+    -- (aliados en Xtra extremo: qué estados son atacar)
+    ATTACKS = { flop_wind = true, flop_air = true, flop_land = true, summon = true },
     debugColor = { 1, 0.95, 0.6 },
     hitbox = { outerW = 12 / 16, outerH = 13 / 16, innerW = 11 / 16, innerH = 12 / 16 },
 })
@@ -630,10 +632,11 @@ function MG:updateBoss(dt, level)
         self.flopT = self.flopT + dt
         if self.phase >= 2 then self.summonT = self.summonT + dt end
         if self.onGround then
-            if self.phase >= 2 and self.summonT >= (self.props.guardEvery or 9) and self:summonable(level) > 0 then
+            local may = self:mayAttack(level)                   -- (con un aliado: por turnos, Boss:mayAttack)
+            if may and self.phase >= 2 and self.summonT >= (self.props.guardEvery or 9) and self:summonable(level) > 0 then
                 self.summonT = 0
                 self:enter('summon')
-            elseif self.flopT >= FLOP_EVERY[ph] then
+            elseif may and self.flopT >= FLOP_EVERY[ph] then
                 self.flopT = 0
                 self:startFlop(level)
             elseif self.hopT >= HOP_GAP[ph] then
