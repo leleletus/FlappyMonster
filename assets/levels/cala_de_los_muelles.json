@@ -75,7 +75,7 @@
   "vents": [],
   "modes": ["koth","hide"],
   "matchTime": 100,
-  "music": "costa_1",
+  "music": "costa_bonus",
   "background": "coast",
   "surfaceRow": 22
 }

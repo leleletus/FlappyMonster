@@ -329,6 +329,16 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     octave pulse, 8th bass, double kick, "eruption" hits. `StoryMapState:_music` plays the island
                     nearest the hero and `Sound.switchMusic(name)` jumps to the other arrangement at the SAME
                     position (the beat goes on, only the instruments change).
+                    `tools/music/worlds_nes.py <track>` → the ISLANDS' level music (original tunes; phrases as note lists,
+                    `song()` = intro·A·A'·B·[8-bar percussion solo]·A'', `build(..., isle=)` = the arrangement). Meadow:
+                    `pradera_1` (G major, 136), `pradera_2` "Galope" (C major, 144, flute, galop rhythm), `pradera_bonus`
+                    (152, four-on-the-floor + solo). Coast: `costa_1` "Calipso" (F major, 122: steel-drum N163 lead, calypso
+                    bass 1-1y-3, marimba 8th arpeggios + a rising marimba motif, 16th shaker), `costa_2` "Arrecife" (B♭ major,
+                    108: ocarina pulse, pad, bossa clave on the rim, bubbles; wave-like melody in long notes — the water
+                    levels), `costa_bonus` (costa_1 at 138 + solo; cala_de_los_muelles). USER'S RULES for a world's second
+                    track: change KEY, RHYTHM and TIMBRE and give it its OWN melody, never the mode or a transposition;
+                    long notes are chord tones; ornaments stay in the scale (both asserted by a check); bonus = faster +
+                    an intense percussion solo.
                     `tools/music/gloomy_nes.py [jefe|cueva]` → the DARK levels' music (verified by numbers only):
                     (1) `tentacle_gloomy.ogg` (catalog `tentacle_gloomy`, the Mega Gloomy fight: jefe_lugubre arena +
                     gruta_lugubre zone): Tentacle Tantrum (imports tentacle_nes's `load_midi`/`voices`/`chord_at`/

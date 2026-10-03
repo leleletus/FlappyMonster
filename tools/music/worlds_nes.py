@@ -154,12 +154,75 @@ SCALE_C = {0, 2, 4, 5, 7, 9, 11}
 SCALE = SCALE_G                                   # (la de la pieza que se está montando: la pone song())
 
 
+# ══ COSTA ═════════════════════════════════════════════════════════════════════
+# Con lo aprendido en la pradera: el modo va con el arreglo (isla alegre = mayor); la SEGUNDA CARA cambia de
+# tonalidad, de ritmo y de timbre, no de modo, y lleva su propia melodía; las notas largas, siempre del acorde;
+# los adornos, dentro de la escala; el bonus, con solo de percusión.
+#   costa_1  "Calipso": Fa mayor, 122 BPM, steel drum, bajo de calipso (1, 1y, 3), maraca en semicorcheas,
+#            marimba que sube donde la melodía se posa
+#   costa_2  "Arrecife": Si♭ mayor, 108 BPM, ocarina (pulso suave) sobre un colchón y arpegios lentos, aire de
+#            bossa (clave en el aro), burbujas — para los niveles de agua: melodía en ondas, notas largas
+Bb4, Eb5, Bb5, F4, A4_ = 70, 75, 82, 65, 69
+K_A = [
+    (1, 0, A4, 2), (1, 2, C5, 1), (1, 3, F5, 3), (1, 6, F5, 2), (1, 8, E5, 2), (1, 10, C5, 2), (1, 12, A4, 2), (1, 14, C5, 2),
+    (2, 0, D5, 3), (2, 3, C5, 3), (2, 6, A4, 2), (2, 8, C5, 6),
+    (3, 0, Bb4, 2), (3, 2, D5, 1), (3, 3, F5, 3), (3, 6, F5, 2), (3, 8, G5, 2), (3, 10, F5, 2), (3, 12, D5, 2), (3, 14, Bb4, 2),
+    (4, 0, C5, 3), (4, 3, E5, 3), (4, 6, G5, 2), (4, 8, E5, 6),
+    (5, 0, A4, 2), (5, 2, C5, 1), (5, 3, F5, 3), (5, 6, F5, 2), (5, 8, E5, 2), (5, 10, C5, 2), (5, 12, A4, 2), (5, 14, C5, 2),
+    (6, 0, D5, 2), (6, 2, F5, 1), (6, 3, A5, 3), (6, 6, A5, 2), (6, 8, G5, 2), (6, 10, F5, 2), (6, 12, D5, 2), (6, 14, F5, 2),
+    (7, 0, G5, 2), (7, 2, F5, 2), (7, 4, D5, 2), (7, 6, Bb4, 2), (7, 8, C5, 2), (7, 10, E5, 2), (7, 12, G5, 2), (7, 14, E5, 2),
+]
+K_END = [(8, 0, F5, 2), (8, 2, A5, 2), (8, 4, C6, 8)]
+K_END2 = [(8, 0, A5, 3), (8, 3, G5, 3), (8, 6, F5, 2), (8, 8, F5, 8)]
+K_B = [
+    (1, 0, D5, 4), (1, 4, F5, 4), (1, 8, Bb5, 6), (1, 14, A5, 2),
+    (2, 0, A5, 6), (2, 6, F5, 2), (2, 8, C5, 4), (2, 12, F5, 4),
+    (3, 0, Bb4, 4), (3, 4, D5, 4), (3, 8, G5, 6), (3, 14, F5, 2),
+    (4, 0, E5, 6), (4, 6, D5, 2), (4, 8, C5, 8),
+    (5, 0, D5, 3), (5, 3, F5, 3), (5, 6, D5, 2), (5, 8, Bb4, 3), (5, 11, D5, 3), (5, 14, F5, 2),
+    (6, 0, C5, 3), (6, 3, F5, 3), (6, 6, C5, 2), (6, 8, A4, 3), (6, 11, C5, 3), (6, 14, F5, 2),
+    (7, 0, G5, 2), (7, 2, F5, 2), (7, 4, D5, 2), (7, 6, Bb4, 2), (7, 8, C5, 2), (7, 10, E5, 2), (7, 12, G5, 4),
+    (8, 0, C5, 4), (8, 4, F5, 2), (8, 6, A5, 2), (8, 8, C6, 6),              # la llamada en Fa: Do-Fa-La-Do
+]
+Bbr = 10
+KCH_A = [(Fr, MAJ), (Fr, MAJ), (Bbr, MAJ), (C, MAJ), (Fr, MAJ), (D, MIN), ((Bbr, MAJ), (C, MAJ)), (Fr, MAJ)]
+KCH_B = [(Bbr, MAJ), (Fr, MAJ), (G, MIN), (C, MAJ), (Bbr, MAJ), (Fr, MAJ), ((G, MIN), (C, MAJ)), (Fr, MAJ)]
+SCALE_F = {5, 7, 9, 10, 0, 2, 4}
+R_A = [
+    (1, 0, D5, 4), (1, 4, F5, 2), (1, 6, D5, 2), (1, 8, Bb4, 4), (1, 12, D5, 2), (1, 14, F5, 2),
+    (2, 0, G5, 6), (2, 6, F5, 2), (2, 8, D5, 8),
+    (3, 0, Eb5, 4), (3, 4, G5, 2), (3, 6, Eb5, 2), (3, 8, Bb4, 4), (3, 12, Eb5, 2), (3, 14, G5, 2),
+    (4, 0, A5, 6), (4, 6, G5, 2), (4, 8, F5, 8),
+    (5, 0, D5, 4), (5, 4, F5, 2), (5, 6, D5, 2), (5, 8, Bb4, 4), (5, 12, D5, 2), (5, 14, F5, 2),
+    (6, 0, Bb5, 6), (6, 6, A5, 2), (6, 8, G5, 4), (6, 12, D5, 4),
+    (7, 0, G5, 2), (7, 2, Eb5, 2), (7, 4, Bb4, 4), (7, 8, A4_, 2), (7, 10, C5, 2), (7, 12, F5, 4),
+]
+R_END = [(8, 0, D5, 4), (8, 4, F5, 10)]
+R_END2 = [(8, 0, F5, 4), (8, 4, D5, 4), (8, 8, Bb4, 8)]
+R_B = [
+    (1, 0, G5, 8), (1, 8, Eb5, 4), (1, 12, G5, 4),
+    (2, 0, F5, 8), (2, 8, D5, 4), (2, 12, F5, 4),
+    (3, 0, Eb5, 8), (3, 8, C5, 4), (3, 12, Eb5, 4),
+    (4, 0, C5, 4), (4, 4, F5, 4), (4, 8, A5, 8),
+    (5, 0, Bb5, 6), (5, 6, G5, 2), (5, 8, Eb5, 6), (5, 14, G5, 2),
+    (6, 0, F5, 6), (6, 6, D5, 2), (6, 8, Bb4, 6), (6, 14, D5, 2),
+    (7, 0, Eb5, 4), (7, 4, C5, 4), (7, 8, F5, 4), (7, 12, A5, 4),
+    (8, 0, F4, 4), (8, 4, Bb4, 2), (8, 6, D5, 2), (8, 8, F5, 6),              # la llamada en Si♭: Fa-Si♭-Re-Fa
+]
+Ebr = 3
+RCH_A = [(Bbr, MAJ), (G, MIN), (Ebr, MAJ), (Fr, MAJ), (Bbr, MAJ), (G, MIN), ((Ebr, MAJ), (Fr, MAJ)), (Bbr, MAJ)]
+RCH_B = [(Ebr, MAJ), (Bbr, MAJ), (C, MIN), (Fr, MAJ), (Ebr, MAJ), (Bbr, MAJ), ((C, MIN), (Fr, MAJ)), (Bbr, MAJ)]
+SCALE_Bb = {10, 0, 2, 3, 5, 7, 9}
+
+
 def song(variant, minor=False, solo=False, theme=None):
     """→ melodía [(compás, semicorchea, nota, dur)], acordes [(1ª mitad, 2ª mitad)] por compás, etiqueta de cada
     compás ('intro' | 'A' | 'B' | 'solo') y los compases donde EMPIEZA una frase"""
     global SCALE
-    SCALE = SCALE_C if theme == 'galope' else SCALE_G
-    if theme == 'galope': pa, e1, e2, pb, ca, cb, tonic = P_A, P_END, P_END2, P_B, PCH_A, PCH_B, (C, MAJ)
+    SCALE = {'galope': SCALE_C, 'calipso': SCALE_F, 'arrecife': SCALE_Bb}.get(theme, SCALE_G)
+    if theme == 'calipso': pa, e1, e2, pb, ca, cb, tonic = K_A, K_END, K_END2, K_B, KCH_A, KCH_B, (Fr, MAJ)
+    elif theme == 'arrecife': pa, e1, e2, pb, ca, cb, tonic = R_A, R_END, R_END2, R_B, RCH_A, RCH_B, (Bbr, MAJ)
+    elif theme == 'galope': pa, e1, e2, pb, ca, cb, tonic = P_A, P_END, P_END2, P_B, PCH_A, PCH_B, (C, MAJ)
     elif minor: pa, e1, e2, pb, ca, cb, tonic = M_A, M_END, M_END2, M_B, MCH_A, MCH_B, (E, MIN)
     elif variant == 'B': pa, e1, e2, pb, ca, cb, tonic = A_SONG, A_SONG_END, A_SONG_END2, PH_B, GCH_A, GCH_B, (G, MAJ)
     else: pa, e1, e2, pb, ca, cb, tonic = A_HOP, A_HOP_END, A_HOP_END2, PH_B, GCH_A, GCH_B, (G, MAJ)
@@ -188,6 +251,15 @@ I_TRILL = {'vol': [9, 8, 7, 6, 5, 4], 'sus': 3, 'duty': 0.125}
 I_ECHO = {'vol': [5, 5, 4, 3], 'sus': 2, 'duty': 0.5}
 WAVES = [wavetable([1.0, 0.45, 0.12, 0.2, 0.03]),            # 0 flauta
          wavetable([1.0, 0.3, 0.1])]                         # 1 colchón
+I_STEEL = {'vol': [15, 14, 12, 11, 10, 9, 8, 7, 6, 6, 5, 5, 4, 4, 3, 3], 'sus': 3, 'vib': (10, 0.12, 6)}
+I_MARIMBA = {'vol': [10, 7, 5, 3, 2, 1], 'sus': 0, 'duty': 0.5}
+I_OCA = {'vol': [6, 10, 12, 12, 11, 11], 'sus': 11, 'vib': (14, 0.22, 5.0), 'duty': 0.5}
+I_PADP = {'vol': [1, 2, 2, 3, 3, 4], 'sus': 4, 'duty': 0.25}
+WAVES.append(wavetable([1.0, 0.7, 0.35, 0.45, 0.1, 0.2]))    # 2 steel drum (metálico, brillante)
+ISLE_LV = {
+    'costa':    {'lead': 0, 'echo': -10, 'chords': -8, 'bass': -2, 'trill': -5, 'kick': -4, 'snare': -8, 'hat': -11, 'crash': -12, 'toms': 2},
+    'arrecife': {'lead': 0, 'echo': -9, 'chords': -7, 'bass': -3, 'trill': -3, 'kick': -7, 'snare': -13, 'hat': -15, 'crash': -14, 'toms': 0},
+}
 HAT, SNARE_N, CRASH = [5, 2, 1], [13, 9, 5, 2], [13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
 
 
@@ -228,8 +300,8 @@ def solo_bar(k, at, kick, sn, tom, NZ, hit):
         if st == 0 and k in (1, 5): NZ['crash'].hit(t, 3, CRASH)
 
 
-def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=False, theme=None, flute=None):
-    """drive: 0 = tema (batería ligera) · 1 = segunda cara (más empuje) · 2 = bonus (competición)"""
+def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=False, theme=None, flute=None, isle='pradera'):
+    """isle: el arreglo ('pradera' | 'costa' = calipso | 'arrecife' = bossa de agua). drive: 0 = tema (batería ligera) · 1 = segunda cara (más empuje) · 2 = bonus (competición)"""
     S16 = 60.0 / bpm / 4
     BAR = 16 * S16
     mel, ch, tag, starts = song(variant, minor, solo, theme)
@@ -251,7 +323,9 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
     busy = set()
     for b, st, n, d in mel:
         t0, t1 = tv(b, st), tv(b, st) + d * S16 * 0.94
-        if flute: play(Cn['lead'], t0, t1, n, dict(I_FLUTE, duty=0.0), q=q_n163, release=3)
+        if isle == 'costa': play(Cn['lead'], t0, tv(b, st) + max(d, 3) * S16, n, dict(I_STEEL, duty=2.0), q=q_n163, release=4)
+        elif isle == 'arrecife': play(Cn['lead'], t0, t1, n, I_OCA, release=4)
+        elif flute: play(Cn['lead'], t0, t1, n, dict(I_FLUTE, duty=0.0), q=q_n163, release=3)
         else: play(Cn['lead'], t0, t1, n, I_LEAD, release=3)
         # eco: la misma nota 3 semicorcheas después, floja (más melodía de la que se toca)
         if d >= 3: play(Cn['echo'], t0 + 3 * S16, t0 + 3 * S16 + min(d, 3) * S16 * 0.8, n, I_ECHO, release=1)
@@ -275,8 +349,21 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
                 pat = ((0, 0, 3.4), (4, 12, 3.4)) if in_b else ((0, 0, 1.7), (2, 7, 1.7), (4, 12, 1.7), (6, 7, 1.7))
                 if drive: pat = ((0, 0, 1.6), (2, 12, 1.6), (4, 0, 1.6), (6, 7, 1.6))
                 if galop and not in_b: pat = ((0, 0, 2.6), (3, 0, 0.9), (4, 7, 2.6), (7, 7, 0.9))     # (tan-ta tan-ta)
+                if isle == 'costa' and drive < 2: pat = ((0, 0, 2.7), (3, 7, 0.9), (4, 12, 3.3))             # calipso: 1, 1y, 3
+                if isle == 'arrecife': pat = ((0, 0, 5.4), (6, 7, 1.8))                                    # bossa: largo y la quinta
                 for st, iv, ln in pat:
                     play(Cn['bass'], tv(b, s0 + st), tv(b, s0 + st) + ln * S16, root + iv, I_TRI, q=q_tri, release=0)
+            if isle == 'costa':
+                # MARIMBA: el acorde arpegiado en corcheas (suave)
+                for k_, st in enumerate((0, 2, 4, 6)):
+                    nn = notes[(k_ + half) % 3] + (12 if k_ == 3 else 0)
+                    play(Cn['c1'], tv(b, s0 + st), tv(b, s0 + st) + S16 * 1.4, nn, I_MARIMBA, release=1)
+                continue
+            if isle == 'arrecife':
+                # colchón (dos notas largas) y un arpegio lento en negras
+                play(Cn['c1'], tv(b, s0), tv(b, s0) + 7.6 * S16, notes[1], I_PADP, release=6)
+                play(Cn['c2'], tv(b, s0), tv(b, s0) + 7.6 * S16, notes[2], I_PADP, release=6)
+                continue
             # ACORDES a contratiempo (en las "y")
             for st in (2, 6):
                 play(Cn['c1'], tv(b, s0 + st), tv(b, s0 + st) + S16, notes[0] + 12 if notes[0] < 64 else notes[0], I_PLUCK, release=1)
@@ -288,8 +375,17 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
             r, q = ch[b - 1][1]
             top = 84 + (r - 84) % 12 + q[2] - 12
             up = 2 if (top + 2) % 12 in SCALE else 1          # (la nota de al lado, DE LA ESCALA: +2 sobre Si daba Do#)
-            for i, st in enumerate(range(10, 16)):
-                play(Cn['trill'], tv(b, st), tv(b, st) + S16 * 0.9, top + (up if i % 2 else 0), I_TRILL, release=0)
+            if isle == 'costa':                               # el motivo de la costa: la marimba SUBE por el acorde
+                base_ = 72 + (r - 72) % 12
+                for i, st in enumerate((10, 11, 12, 13, 14)):
+                    play(Cn['trill'], tv(b, st), tv(b, st) + S16 * 1.2, base_ + (q + (12,) + (12 + q[1],))[i], I_MARIMBA, vs=1.2, release=1)
+            elif isle == 'arrecife':                          # burbujas: tres notitas del acorde que suben
+                base_ = 84 + (r - 84) % 12
+                for i, st in enumerate((9, 12, 14)):
+                    play(Cn['trill'], tv(b, st), tv(b, st) + 0.07, base_ + q[i], GN.I_DRIP, release=0)
+            else:
+                for i, st in enumerate(range(10, 16)):
+                    play(Cn['trill'], tv(b, st), tv(b, st) + S16 * 0.9, top + (up if i % 2 else 0), I_TRILL, release=0)
         # BATERÍA
         for st in range(16):
             t = tv(b, st)
@@ -300,6 +396,14 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
                 if st % 4 == 0: hit(kick, TN.KICK, t, 0.95)
                 if st in (4, 12): NZ['snare'].hit(t, 4, SNARE_N); hit(sn, TN.SNARE_BODY, t, 0.8)
                 NZ['hat'].hit(t, 0, HAT if st % 2 == 0 else [3, 1])
+            elif isle == 'costa':                            # calipso: bombo 1 · 2y · 3 · 4y, aro en 2 y 4, maraca en semicorcheas
+                if st in (0, 6, 8, 14): hit(kick, TN.KICK, t, 0.8 if st % 8 == 0 else 0.6)
+                if st in (4, 12): NZ['snare'].hit(t, 5, [10, 5, 2]); hit(sn, TN.SNARE_BODY, t, 0.4)
+                NZ['hat'].hit(t, 1, [4, 2, 1] if st % 2 == 0 else [3, 1], short=0)
+            elif isle == 'arrecife':                         # bossa: bombo suave en 1 y 3, clave en el aro, maraca en corcheas
+                if st in (0, 8): hit(kick, TN.KICK, t, 0.6)
+                if st in (0, 3, 6, 10, 13) and not in_b or (in_b and st in (4, 12)): NZ['snare'].hit(t, 7, [6, 3, 1])
+                if st % 2 == 0: NZ['hat'].hit(t, 1, [3, 1])
             else:
                 if galop:
                     if st in (0, 8) or st in (3, 11): hit(kick, TN.KICK, t, 0.85 if st % 8 == 0 else 0.55)   # galope: tan-ta
@@ -307,9 +411,9 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
                 if st in (4, 12): NZ['snare'].hit(t, 4, SNARE_N); hit(sn, TN.SNARE_BODY, t, 0.55 + 0.2 * drive)
                 if st % 2 == 0: NZ['hat'].hit(t, 0, HAT)
                 elif drive: NZ['hat'].hit(t, 0, [3, 1])
-            if st == 0 and b in starts: NZ['crash'].hit(t, 3, CRASH)
+            if st == 0 and b in starts and isle != 'arrecife': NZ['crash'].hit(t, 3, CRASH)
             # redoble de entrada: el último medio compás antes de cada frase
-            if (b + 1) in starts and st >= 12: NZ['snare'].hit(t, 4, [9, 5, 2])
+            if (b + 1) in starts and st >= 12 and isle != 'arrecife': NZ['snare'].hit(t, 4, [9, 5, 2])
 
     n = int(NB * BAR * SR)
     tail = 3 * SR
@@ -317,7 +421,7 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
     pulse = lambda k: cut(F.pulse_dac(F.render_pulse(Cn[k])))
     base = F.tnd_dac(np.full(NS, 64 / 22638.0))
     S = {
-        'lead': cut(F.render_wave(Cn['lead'], WAVES) * 0.0075) if flute else pulse('lead'),
+        'lead': cut(F.render_wave(Cn['lead'], WAVES) * 0.0075) if (flute and isle == 'pradera') or isle == 'costa' else pulse('lead'),
         'echo': pulse('echo'), 'chords': pulse('c1') + pulse('c2'),
         'bass': cut(F.tnd_dac(F.render_tri(Cn['bass']) / 8227.0)), 'trill': pulse('trill'),
         'kick': cut(F.tnd_dac((kick + 64) / 22638.0) - base), 'toms': cut(F.tnd_dac((tom + 64) / 22638.0) - base),
@@ -325,7 +429,8 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
         'hat': cut(F.tnd_dac(NZ['hat'].render() / 22638.0 * 12)), 'crash': cut(F.tnd_dac(NZ['crash'].render() / 22638.0 * 12)),
     }
     S = {k: GN.fold(v, n) for k, v in S.items() if np.abs(v).max() > 0}
-    LV = {'lead': 0, 'echo': -11, 'chords': -6, 'bass': -2, 'trill': -6, 'kick': -2 + drive, 'snare': -5 + drive, 'hat': -12, 'crash': -11, 'toms': 2}
+    LV = ISLE_LV.get(isle) or {'lead': 0, 'echo': -11, 'chords': -6, 'bass': -2, 'trill': -6, 'kick': -2 + drive, 'snare': -5 + drive, 'hat': -12, 'crash': -11, 'toms': 2}
+    LV = dict(LV); LV['kick'] = LV['kick'] + (drive if isle != 'pradera' else 0); LV['snare'] = LV['snare'] + (drive if isle != 'pradera' else 0)
     g = GN.level(S, {k: LV[k] for k in S}, 'lead')
     from scipy.signal import butter, sosfilt
     x = sum(S[k] * g[k] for k in S)
@@ -358,6 +463,9 @@ TRACKS = {
     'pradera_1':     dict(variant='A', bpm=136),
     'pradera_2':     dict(theme='galope', bpm=144, flute=True),
     'pradera_bonus': dict(variant='A', bpm=152, drive=2, lufs=-11.0, solo=True),
+    'costa_1':       dict(theme='calipso', isle='costa', bpm=122),
+    'costa_2':       dict(theme='arrecife', isle='arrecife', bpm=108, lufs=-12.5),
+    'costa_bonus':   dict(theme='calipso', isle='costa', bpm=138, drive=2, lufs=-11.0, solo=True),
 }
 VARIANTS = {'A': dict(variant='A', bpm=136), 'B': dict(variant='B', bpm=132), 'C': dict(variant='C', bpm=140)}
 
