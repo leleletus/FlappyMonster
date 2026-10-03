@@ -89,7 +89,29 @@ end
 
 -- entities = las entidades (las que tengan `e:lights()` → { {x, y, r, color, a}, ... } dan luz: el fuego de los
 -- morteros...); sin ellas, level.liveEntities
-function Darkness.render(level, camX, camY, sources, entities)
+-- Repone, sin oscurecer, los píxeles de la escena marcados con alfa 0 (lo incandescente del fondo que NO quedó tapado
+-- por nada: src/fx/Sky.lua). Se dibuja con la transformación y el recorte de ahora: nunca sale de la zona de juego.
+local glowShader
+local function restoreGlow(scene)
+    if glowShader == nil then
+        local ok, sh = pcall(love.graphics.newShader, [[
+            vec4 effect(vec4 color, Image tex, vec2 uv, vec2 sc) {
+                vec4 p = Texel(tex, uv);
+                if (p.a > 0.5) discard;
+                return vec4(p.rgb, 1.0);
+            }
+        ]])
+        glowShader = ok and sh or false
+    end
+    if not glowShader then return end
+    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.setShader(glowShader)
+    love.graphics.draw(scene, 0, 0)
+    love.graphics.setShader()
+end
+
+-- `scene` = el lienzo de la escena (opcional): con él, lo incandescente del fondo sigue brillando de noche
+function Darkness.render(level, camX, camY, sources, entities, scene)
     if not Darkness.active(level) then return end
     local mood = moodOf(level)
     local dark = mood == 'dark'
@@ -222,7 +244,7 @@ function Darkness.render(level, camX, camY, sources, entities)
     love.graphics.draw(canvas, 0, 0, 0, DS, DS)
     love.graphics.setBlendMode('alpha')
     -- lo incandescente del fondo (volcanes, coladas, magma) sigue brillando
-    if not dark then require('src/fx/Sky').renderGlow() end
+    if not dark and scene then restoreGlow(scene) end
 end
 
 -- Puntos luminosos y demás cosas que se ven en la oscuridad (encima de ella)

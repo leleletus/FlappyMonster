@@ -569,13 +569,11 @@ local function renderLivesHud(player, dark)
     love.graphics.draw(imgIcon, sx, sy, 0, ICON_SCALE, ICON_SCALE)
 
     local lx, ly = sx + iconW + gap, sy + iconH/2 - FONT_BIG:getHeight()/2
-    if dark then                                        -- (a oscuras el texto negro no se ve: blanco con sombra)
-        love.graphics.setColor(0, 0, 0, 0.85)
-        love.graphics.print(label, lx + 3, ly + 3)
-        love.graphics.setColor(1, 1, 1, 0.95)
-    else
-        love.graphics.setColor(0, 0, 0, 0.85)
-    end
+    -- SIEMPRE blanco con sombra negra, como el resto del HUD: en negro no se leía de noche, al atardecer, en cuevas
+    -- ni sobre fondos oscuros (antes solo se cambiaba en los niveles a oscuras)
+    love.graphics.setColor(0, 0, 0, 0.9)
+    love.graphics.print(label, lx + 3, ly + 3)
+    love.graphics.setColor(1, 1, 1, 1)
     love.graphics.print(label, lx, ly)
 end
 
@@ -608,7 +606,9 @@ function AdventureState:_renderScene()
     love.graphics.setCanvas(self.sceneCanvas)
     love.graphics.clear(0, 0, 0, 1)
 
+    Sky.punch = Darkness.active(self.level) and not self.level.dark      -- (lo incandescente del fondo: ver Sky.lua)
     Sky.render(self.level, self.camX, self.camY)          -- (cielo y fondo con paralaje)
+    Sky.punch = false
 
     self.level:render(self.camX, self.camY)
     IceDrips.render(self.level, self.camX, self.camY)      -- (gotas del hielo: solo dibujo)
@@ -653,7 +653,7 @@ function AdventureState:_renderScene()
     if Darkness.active(self.level) then
         local p = self.player
         Darkness.render(self.level, self.camX, self.camY,
-                        { { x = p.x, y = p.y, facing = p.facing, on = p.lightOn and not p.dying } }, self.enemies)
+                        { { x = p.x, y = p.y, facing = p.facing, on = p.lightOn and not p.dying } }, self.enemies, self.sceneCanvas)
         Darkness.renderGlow(self.level, self.enemies, self.camX, self.camY)
     end
 

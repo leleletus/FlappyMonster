@@ -153,22 +153,10 @@ end
 
 -- Capas de un bioma. ground(p, h) / top(p) = y de pantalla de las capas de suelo
 -- (arriba del dibujo) y de techo, según su paralaje
--- Lo incandescente de las capas dibujadas este fotograma (ver img(); lo vacía Sky.render)
-Sky.glowQueue = {}
+-- Sky.punch = true (lo ponen los estados de nivel antes de Sky.render cuando hay luz ambiente): marca lo
+-- incandescente en el alfa del lienzo de la escena (ver más abajo). Sin ello el fondo se dibuja normal.
+Sky.punch = false
 
--- Después de la luz ambiente (src/fx/Darkness.lua): lo incandescente del fondo, otra vez, sin oscurecer
-function Sky.renderGlow()
-    if #Sky.glowQueue == 0 then return end
-    -- (el cielo se dibuja en el lienzo de la escena, en coordenadas lógicas: su recorte también lo era;
-    -- aquí se repite con Clip, que lo pasa por la transformación de pantalla de ahora)
-    love.graphics.setColor(1, 1, 1, 0.92)
-    for _, g in ipairs(Sky.glowQueue) do
-        if g[4] then Clip.push(g[4], g[5], g[6], g[7]) end
-        love.graphics.draw(g[1], g[2], g[3], 0, S, S)
-        if g[4] then Clip.pop() end
-    end
-    love.graphics.setColor(1, 1, 1, 1)
-end
 
 local function drawLayers(biome, tint, camX, ground, top, now)
     local W, H = WINDOW_W, WINDOW_H
@@ -189,9 +177,24 @@ local function drawLayers(biome, tint, camX, ground, top, now)
             local x = math.floor(x0)
             while x < W do
                 love.graphics.draw(e.img, x, y, 0, S, S)
-                if e.glow then
-                    local sx, sy, sw, sh = love.graphics.getScissor()
-                    Sky.glowQueue[#Sky.glowQueue + 1] = { e.glow, x, y, sx, sy, sw, sh }
+                if e.glow and Sky.punch then
+                    -- Lo incandescente no se oscurece de noche. Antes se VOLVÍA A DIBUJAR encima de la luz ambiente:
+                    -- tapaba bloques, muros de jefe y personajes que estaban delante, y se salía de la zona de
+                    -- juego (a las bandas negras). Ahora se marca en el propio lienzo de la escena: se pinta sin
+                    -- teñir y se deja su ALFA a 0; todo lo que se dibuje encima después lo vuelve a poner a 1, así
+                    -- que al final solo queda marcado lo que de verdad se ve. Darkness.render repone esos píxeles.
+                    local r_, g_, b_, a_ = love.graphics.getColor()
+                    local bm, bam = love.graphics.getBlendMode()
+                    love.graphics.setBlendMode('alpha')
+                    love.graphics.setColor(1, 1, 1, 0.92)
+                    love.graphics.draw(e.glow, x, y, 0, S, S)
+                    love.graphics.setColorMask(false, false, false, true)
+                    love.graphics.setBlendMode('subtract', 'premultiplied')
+                    love.graphics.setColor(1, 1, 1, 1)
+                    love.graphics.draw(e.glow, x, y, 0, S, S)
+                    love.graphics.setColorMask(true, true, true, true)
+                    love.graphics.setBlendMode(bm, bam)
+                    love.graphics.setColor(r_, g_, b_, a_)
                 end
                 x = x + w
             end
@@ -221,7 +224,6 @@ local function gradBottom(frame)
 end
 
 function Sky.render(level, camX, camY)
-    Sky.glowQueue = {}
     local biome, time = Sky.biomeOf(level), Sky.timeOf(level)
     local tint = time.tint
     local W, H = WINDOW_W, WINDOW_H

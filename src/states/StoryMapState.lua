@@ -62,7 +62,10 @@ local CRITTER = {
     gummy = { files = { 'assets/images/gummy/gummy1.png', 'assets/images/gummy/gummy2.png' }, spd = 1.2 },
     gummy_ice = { files = { 'assets/images/gummy_ice/gummy1.png', 'assets/images/gummy_ice/gummy2.png' }, spd = 1.2 },
     crabby = { files = { 'assets/images/crabby/crab1.png', 'assets/images/crabby/crab2.png', 'assets/images/crabby/crab3.png' }, spd = 1.6 },
-    crabby_ice = { files = { 'assets/images/crabby_ice/crab1.png', 'assets/images/crabby_ice/crab2.png', 'assets/images/crabby_ice/crab3.png' }, spd = 1.4 },
+    -- (el Crabby helado lleva sus PINZAS pequeñas, como en el juego: la misma tira y la misma colocación que su
+    -- aspecto — `Crabby.SKINS.ice.claw` en types/crabby.lua —; en el mapa iba sin ellas)
+    crabby_ice = { files = { 'assets/images/crabby_ice/crab1.png', 'assets/images/crabby_ice/crab2.png', 'assets/images/crabby_ice/crab3.png' }, spd = 1.4,
+                   claw = { file = 'assets/images/crabby_ice/claw_left-Sheet.png', w = 7, x = 5.6, y = -0.6, inset = 1.0 } },
     bomb = { sheet = 'assets/images/bomb/bomb-Sheet.png', fw = 15, frames = { 2, 3 }, spd = 1.1 },
     puffer = { sheet = 'assets/images/puffer_fish/puffer_fish-Sheet.png', fw = 16, frames = { 1, 2 }, spd = 0.9, swim = true },
     gloomy = { sheet = 'assets/images/gloomy/gloomy-Sheet.png', fw = 26, frames = { 1, 2, 3 }, spd = 1.0,
@@ -669,6 +672,20 @@ function StoryMapState:_drawCritters(cx, cy)
                 if def.files then
                     local im = img(def.files[fi])
                     drawBottom(im, frameQ(im, im:getWidth(), 1), x, y, 2, im:getWidth(), im:getHeight(), dir < 0)
+                    if def.claw then
+                        local cl = def.claw
+                        local ci = img(cl.file)
+                        local fh = ci:getHeight()
+                        for k, side in ipairs({ -1, 1 }) do
+                            local ph = (k == 1) and 0 or 1.9
+                            local snap = (math.floor(self.t * 1.3 + i * 0.7 + k * 0.5) % 4 == 0) and (self.t * 1.3 + i * 0.7 + k * 0.5) % 1 < 0.2
+                            local dy = math.sin(self.t * 9 + ph + i) * 0.55
+                            local dx = side * (0.15 + 0.15 * math.sin(self.t * 4.5 + ph + i))
+                            local px = side * (cl.x * 2 + cl.w - cl.inset * 2) + math.floor(dx * 2 + 0.5)
+                            local py = math.floor(cl.y * 2 - fh * 2 + dy * 2 + 0.5)
+                            love.graphics.draw(ci, frameQ(ci, cl.w, snap and 2 or 1), math.floor(x) + px, math.floor(y) + py, 0, -side * 2, 2, cl.w / 2, 0)
+                        end
+                    end
                 else
                     local im = img(def.sheet)
                     drawBottom(im, frameQ(im, def.fw, def.frames[fi]), x, y, 2, def.fw, im:getHeight(), dir < 0)

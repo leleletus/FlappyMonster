@@ -1123,7 +1123,9 @@ function OnlineAdventureState:_renderScene()
     love.graphics.clear(0, 0, 0, 1)
 
     -- Cielo y fondo con paralaje (bioma del nivel; src/fx/Sky.lua)
+    Sky.punch = Darkness.active(self.level) and not self.level.dark      -- (lo incandescente del fondo: ver Sky.lua)
     Sky.render(self.level, self.camX, self.camY)
+    Sky.punch = false
 
     -- Nivel
     self.level:render(self.camX, self.camY)
@@ -1195,7 +1197,7 @@ function OnlineAdventureState:_renderScene()
             local pa = self.localPa
             src[#src + 1] = { x = self.renderX, y = self.renderY, facing = pa.facing, on = pa.lightOn and not pa.dying }
         end
-        Darkness.render(self.level, self.camX, self.camY, src, self.enemyRenderers)
+        Darkness.render(self.level, self.camX, self.camY, src, self.enemyRenderers, self.sceneCanvas)
         Darkness.renderGlow(self.level, self.enemyRenderers, self.camX, self.camY)
     end
 
@@ -1523,13 +1525,10 @@ function OnlineAdventureState:_renderHUD()
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.draw(imgIcon, sx, sy, 0, ICON_SCALE, ICON_SCALE)
         local lx, ly = sx+iconW+gap, sy+iconH/2-FONT_BIG:getHeight()/2
-        if self.level and self.level.dark then          -- (a oscuras el texto negro no se ve: blanco con sombra)
-            love.graphics.setColor(0, 0, 0, 0.85)
-            love.graphics.print(label, lx + 3, ly + 3)
-            love.graphics.setColor(1, 1, 1, 0.95)
-        else
-            love.graphics.setColor(0, 0, 0, 0.85)
-        end
+        -- SIEMPRE blanco con sombra negra, como el resto del HUD (en negro no se leía en niveles oscuros)
+        love.graphics.setColor(0, 0, 0, 0.9)
+        love.graphics.print(label, lx + 3, ly + 3)
+        love.graphics.setColor(1, 1, 1, 1)
         love.graphics.print(label, lx, ly)
 
         -- Barra de aire (ahogamiento) — delegada al jugador local

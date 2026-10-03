@@ -1017,6 +1017,16 @@ list no mode until the user places a Point Area in them).
   from its bright orange/red pixels — craters, lava streams, magma veins — and `Sky.renderGlow()` redraws them after the
   darkness, with the same clip via `Clip`). Mortar fireball REDESIGNED (`tools/ui/make_biome_art.py mortar_flame`, 6
   frames; the user's original in `FlappyMonster_originals/assets/images/mortar/flame-orig.png`). `level_shots` draws the mood (`LIGHT=0` = without).
+- **Background glow at night, FIXED (3.62.1)**: `Sky.renderGlow` used to REDRAW the red-hot pixels of the sky layers on
+  top of the darkness — over blocks, boss walls and characters in front, and outside the gameplay viewport (into the
+  letterbox bands). Now nothing is redrawn on top: with `Sky.punch` (set by the level states around `Sky.render` when a
+  light mood is active) the glow is painted untinted into the scene canvas and its ALPHA is set to 0 (colour mask +
+  'subtract'); whatever is drawn over it afterwards puts alpha back to 1, so only glow that is really visible stays
+  marked; `Darkness.render(..., scene)` then restores exactly those pixels from the scene canvas with a shader
+  (`restoreGlow`), under the current transform and scissor. Tools that don't pass the scene just get a darkened glow.
+- Lives HUD "x3": ALWAYS white with a black shadow (it was black except in dark levels: unreadable at night, dusk and
+  in caves). The Icy Crabbies walking on the world map now have their small claws (`CRITTER.crabby_ice.claw`, same
+  sheet and placement as `Crabby.SKINS.ice.claw`).
 - **Glowing decorations**: a decoration type with `light = { r = px, color, a, dy, pulse }` (glow_mushroom,
   cave_crystals, torch, ice_crystal) adds a VERY subtle two-step light to the Darkness canvas (render only: it is not
   a flashlight for `Lights`). New luminous decoration = that one field.
