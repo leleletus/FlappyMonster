@@ -10,8 +10,9 @@
 #                      A  melodía a saltitos sobre el tresillo, con la subida pentatónica Sol-La-Si-Re
 #                      B  melodía "de canción", en corcheas y por grados
 #                      C  la A con flauta (tabla de onda) en vez de pulso, algo más rápida (140)
-#     pradera_2      su segunda cara: el mismo motivo en Mi menor (el relativo), 140 BPM, más empuje
-#     pradera_bonus  el tema a 152 BPM con batería de "competición" (la arena de Rey de la Colina de la isla)
+#     pradera_2      su segunda cara: tema PROPIO en Mi menor (misma familia de motivos), 140 BPM, más empuje
+#     pradera_bonus  el tema a 152 BPM con batería de "competición" y un SOLO DE PERCUSIÓN de 8 compases antes de la
+#                    última vuelta (la arena de Rey de la Colina de la isla)
 #
 #   python3 tools/music/worlds_nes.py pradera_1 [--variante B] | pradera_2 | pradera_bonus | previas
 #   `previas` = las tres variantes de pradera_1 en FlappyMonster_pruebas/musica/ (fuera del repo), sin tocar el juego.
@@ -87,26 +88,59 @@ def shift_diatonic(n, steps, scale=(7, 9, 11, 0, 2, 4, 6)):
     return (octv + o2) * 12 + pcs[order[k2]]
 
 
-def song(variant, minor=False):
-    """→ (melodía [(compás, semicorchea, nota, dur)], acordes por medio compás [(raíz, tipo)] ×2 por compás, nº de compases)"""
-    pa, e1, e2 = (A_SONG, A_SONG_END, A_SONG_END2) if variant == 'B' else (A_HOP, A_HOP_END, A_HOP_END2)
-    mel, ch = [], []
-    def add(ph, base):
+# ── PRADERA 2: tema PROPIO en Mi menor (no el de pradera_1 transportado: al usuario le sonó parecido y con roces
+# armónicos). Mismo aire — golpes 3+3+2, subida pentatónica (aquí Mi-Sol-La-Si) —, otra melodía y armonía de menor
+# con su dominante (Si mayor: Re#).
+E4m, Ds5 = 64, 75
+M_A = [
+    (1, 0, E5, 3), (1, 3, B4, 3), (1, 6, E5, 2), (1, 8, G5, 4), (1, 12, Fs5, 2), (1, 14, E5, 2),
+    (2, 0, B4, 3), (2, 3, G4, 3), (2, 6, B4, 2), (2, 8, E5, 6),
+    (3, 0, E5, 3), (3, 3, C5, 3), (3, 6, E5, 2), (3, 8, G5, 4), (3, 12, E5, 2), (3, 14, C5, 2),
+    (4, 0, D5, 3), (4, 3, Fs5, 3), (4, 6, A5, 2), (4, 8, Fs5, 6),
+    (5, 0, E5, 3), (5, 3, B4, 3), (5, 6, E5, 2), (5, 8, G5, 4), (5, 12, Fs5, 2), (5, 14, E5, 2),
+    (6, 0, G5, 3), (6, 3, E5, 3), (6, 6, C5, 2), (6, 8, E5, 4), (6, 12, G5, 2), (6, 14, E5, 2),
+    (7, 0, A5, 2), (7, 2, E5, 2), (7, 4, C5, 2), (7, 6, E5, 2), (7, 8, Fs5, 2), (7, 10, Ds5, 2), (7, 12, B4, 2), (7, 14, Ds5, 2),
+]
+M_END = [(8, 0, E5, 2), (8, 2, G5, 2), (8, 4, B5, 8)]
+M_END2 = [(8, 0, E5, 3), (8, 3, G5, 3), (8, 6, B5, 2), (8, 8, E5, 8)]
+M_B = [
+    (1, 0, G5, 6), (1, 6, E5, 2), (1, 8, C5, 4), (1, 12, E5, 4),
+    (2, 0, D5, 6), (2, 6, B4, 2), (2, 8, G4, 4), (2, 12, B4, 4),
+    (3, 0, C5, 4), (3, 4, E5, 4), (3, 8, A5, 6), (3, 14, G5, 2),
+    (4, 0, Fs5, 6), (4, 6, Ds5, 2), (4, 8, B4, 8),
+    (5, 0, E5, 3), (5, 3, G5, 3), (5, 6, E5, 2), (5, 8, C5, 3), (5, 11, E5, 3), (5, 14, G5, 2),
+    (6, 0, Fs5, 3), (6, 3, A5, 3), (6, 6, Fs5, 2), (6, 8, D5, 3), (6, 11, Fs5, 3), (6, 14, A5, 2),
+    (7, 0, A5, 2), (7, 2, G5, 2), (7, 4, E5, 2), (7, 6, C5, 2), (7, 8, B4, 2), (7, 10, Ds5, 2), (7, 12, Fs5, 4),
+    (8, 0, B4, 4), (8, 4, E5, 2), (8, 6, G5, 2), (8, 8, B5, 6),              # la llamada, en Mi menor: Si-Mi-Sol-Si
+]
+MCH_A = [(E, MIN), (E, MIN), (C, MAJ), (D, MAJ), (E, MIN), (C, MAJ), ((A, MIN), (B, MAJ)), (E, MIN)]
+MCH_B = [(C, MAJ), (G, MAJ), (A, MIN), (B, MAJ), (C, MAJ), (D, MAJ), ((A, MIN), (B, MAJ)), (E, MIN)]
+GCH_A = [(G, MAJ), (G, MAJ), (E, MIN), (C, MAJ), (G, MAJ), (D, MAJ), ((C, MAJ), (D, MAJ)), (G, MAJ)]
+GCH_B = [(C, MAJ), (G, MAJ), (A, MIN), (D, MAJ), (C, MAJ), (G, MAJ), ((A, MIN), (D, MAJ)), (G, MAJ)]
+SCALE_G = {7, 9, 11, 0, 2, 4, 6}                 # Sol mayor = Mi menor natural
+
+
+def song(variant, minor=False, solo=False):
+    """→ melodía [(compás, semicorchea, nota, dur)], acordes [(1ª mitad, 2ª mitad)] por compás, etiqueta de cada
+    compás ('intro' | 'A' | 'B' | 'solo') y los compases donde EMPIEZA una frase"""
+    if minor: pa, e1, e2, pb, ca, cb, tonic = M_A, M_END, M_END2, M_B, MCH_A, MCH_B, (E, MIN)
+    elif variant == 'B': pa, e1, e2, pb, ca, cb, tonic = A_SONG, A_SONG_END, A_SONG_END2, PH_B, GCH_A, GCH_B, (G, MAJ)
+    else: pa, e1, e2, pb, ca, cb, tonic = A_HOP, A_HOP_END, A_HOP_END2, PH_B, GCH_A, GCH_B, (G, MAJ)
+    mel, ch, tag, starts = [], [], [], []
+    def section(kind, ph, chords):
+        base = len(ch)
+        starts.append(base + 1)
         for b, st, n, d in ph: mel.append((base + b, st, n, d))
-    def chords(seq, seventh):
-        for i, c in enumerate(seq):
-            ch.append((c, seventh if (seventh and i == 6) else c))
-    for _ in range(INTRO): ch.append(((G, MAJ), (G, MAJ)))
-    add(pa + e1, INTRO); chords(CH_A, CH_A7)
-    add(pa + e2, INTRO + 8); chords(CH_A, CH_A7)
-    add(PH_B, INTRO + 16); chords(CH_B, CH_A7)
-    add(pa + e2, INTRO + 24); chords(CH_A, CH_A7)
-    if minor:
-        # el relativo: todo dos grados abajo (Sol mayor → Mi menor); acordes: su relativo
-        REL = {(G, MAJ): (E, MIN), (E, MIN): (C, MAJ), (C, MAJ): (A, MIN), (D, MAJ): (B, MIN), (A, MIN): (D, MAJ)}
-        mel = [(b, st, shift_diatonic(n, -2), d) for b, st, n, d in mel]
-        ch = [(REL[a], REL[b_]) for a, b_ in ch]
-    return mel, ch, INTRO + 32
+        for c in chords:
+            ch.append(c if isinstance(c[0], tuple) else (c, c))
+            tag.append(kind)
+    section('intro', [], [tonic] * INTRO)
+    section('A', pa + e1, ca)
+    section('A', pa + e2, ca)
+    section('B', pb, cb)
+    if solo: section('solo', [], [tonic] * 8)          # (solo de percusión: sin melodía ni acordes)
+    section('A', pa + e2, ca)
+    return mel, ch, tag, starts[1:]
 
 
 I_LEAD = {'vol': [15, 14, 13, 13, 12, 12], 'sus': 12, 'vib': (12, 0.22, 5.6), 'duty': [0.25, 0.5]}
@@ -120,16 +154,54 @@ WAVES = [wavetable([1.0, 0.45, 0.12, 0.2, 0.03]),            # 0 flauta
 HAT, SNARE_N, CRASH = [5, 2, 1], [13, 9, 5, 2], [13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
 
 
-def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5):
+# Timbales (DPCM): seno que cae, tres alturas
+def _tom(f0):
+    t = F.t_(int(0.22 * SR))
+    return F.dpcm(np.sin(2 * np.pi * np.cumsum(f0 * (0.55 + 0.45 * np.exp(-t / 0.05))) / SR) * np.exp(-t / 0.09))
+TOMS = [_tom(260), _tom(190), _tom(130)]
+
+
+def solo_bar(k, at, kick, sn, tom, NZ, hit):
+    """SOLO DE PERCUSIÓN (8 compases, k = 1..8), intenso y cada vez más lleno: llamada y respuesta entre caja y
+    timbales (2 compases cada idea), bombo que pasa de negras a corcheas, redoble final en semicorcheas que sube
+    de volumen y platillo."""
+    for st in range(16):
+        t = at(st)
+        # bombo: negras; desde el 5º compás, corcheas
+        if st % (4 if k <= 4 else 2) == 0: hit(kick, TN.KICK, t, 0.95)
+        # platos en semicorcheas (abiertos en las "y")
+        NZ['hat'].hit(t, 0, [6, 3, 1] if st % 4 == 2 else [4, 1])
+        if k in (1, 3):                                   # la caja pregunta: 3+3+2 y un redoblito
+            if st in (0, 3, 6, 8, 11, 14): NZ['snare'].hit(t, 4, SNARE_N); hit(sn, TN.SNARE_BODY, t, 0.9)
+            if st in (12, 13): NZ['snare'].hit(t, 4, [8, 4, 2])
+        elif k in (2, 4):                                 # los timbales contestan bajando (agudo, medio, grave)
+            pat = {0: 0, 2: 0, 3: 1, 6: 1, 8: 2, 10: 0, 11: 1, 12: 2, 14: 2} if k == 2 else {0: 0, 1: 0, 3: 1, 4: 1, 6: 2, 8: 0, 9: 1, 10: 2, 12: 2, 13: 2, 14: 1, 15: 0}
+            if st in pat: hit(tom, TOMS[pat[st]], t, 1.0)
+            if st in (4, 12): NZ['snare'].hit(t, 4, SNARE_N); hit(sn, TN.SNARE_BODY, t, 0.8)
+        elif k in (5, 6):                                 # todo a la vez: caja en 2 y 4 + síncopas, timbales entre medias
+            if st in (4, 12) or (k == 6 and st in (7, 10, 15)): NZ['snare'].hit(t, 4, SNARE_N); hit(sn, TN.SNARE_BODY, t, 0.95)
+            if st in (2, 3, 6, 9, 11, 14): hit(tom, TOMS[(st // 3) % 3], t, 0.9)
+        elif k == 7:                                      # timbales corridos de agudo a grave, dos veces
+            hit(tom, TOMS[min(2, (st % 8) // 3)], t, 0.85 + 0.15 * (st % 2 == 0))
+            if st % 4 == 0: NZ['snare'].hit(t, 4, SNARE_N)
+        else:                                             # redoble de caja que crece + platillo al entrar la frase
+            v = 5 + int(st * 0.6)
+            NZ['snare'].hit(t, 4, [v, max(1, v - 4), 1]); hit(sn, TN.SNARE_BODY, t, 0.4 + st * 0.04)
+            if st >= 12: hit(tom, TOMS[2], t, 0.9)
+        if st == 0 and k in (1, 5): NZ['crash'].hit(t, 3, CRASH)
+
+
+def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=False):
     """drive: 0 = tema (batería ligera) · 1 = segunda cara (más empuje) · 2 = bonus (competición)"""
     S16 = 60.0 / bpm / 4
     BAR = 16 * S16
-    mel, ch, NB = song(variant, minor)
+    mel, ch, tag, starts = song(variant, minor, solo)
+    NB = len(ch)
     NF = F.frames_for(NB * BAR + 3)
     Cn = {k: Chan(NF) for k in ('lead', 'echo', 'c1', 'c2', 'bass', 'trill')}
     NZ = {k: Noise(NF) for k in ('hat', 'snare', 'crash')}
     NS = int(NF * F.FRAME_S) + SR
-    kick, sn = np.zeros(NS), np.zeros(NS)
+    kick, sn, tom = np.zeros(NS), np.zeros(NS), np.zeros(NS)
     tv = lambda b, st: (b - 1) * BAR + st * S16
     flute = variant == 'C'
 
@@ -150,8 +222,11 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5):
     for b, st, n, d in mel: last_in_bar[b] = max(last_in_bar.get(b, 0), st + d)
 
     for b in range(1, NB + 1):
-        intro = b <= INTRO
-        in_b = INTRO + 16 < b <= INTRO + 24
+        intro = tag[b - 1] == 'intro'
+        in_b = tag[b - 1] == 'B'
+        if tag[b - 1] == 'solo':
+            solo_bar(b - starts[3] + 1 if len(starts) > 3 else 1, lambda st: tv(b, st), kick, sn, tom, NZ, hit)
+            continue
         for half in (0, 1):
             r, q = ch[b - 1][half]
             root = 36 + (r - 36) % 12
@@ -173,8 +248,9 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5):
         if (intro and b % 2 == 0) or (long_tail and not in_b):
             r, q = ch[b - 1][1]
             top = 84 + (r - 84) % 12 + q[2] - 12
+            up = 2 if (top + 2) % 12 in SCALE_G else 1          # (la nota de al lado, DE LA ESCALA: +2 sobre Si daba Do#)
             for i, st in enumerate(range(10, 16)):
-                play(Cn['trill'], tv(b, st), tv(b, st) + S16 * 0.9, top + (2 if i % 2 else 0), I_TRILL, release=0)
+                play(Cn['trill'], tv(b, st), tv(b, st) + S16 * 0.9, top + (up if i % 2 else 0), I_TRILL, release=0)
         # BATERÍA
         for st in range(16):
             t = tv(b, st)
@@ -190,9 +266,9 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5):
                 if st in (4, 12): NZ['snare'].hit(t, 4, SNARE_N); hit(sn, TN.SNARE_BODY, t, 0.55 + 0.2 * drive)
                 if st % 2 == 0: NZ['hat'].hit(t, 0, HAT)
                 elif drive: NZ['hat'].hit(t, 0, [3, 1])
-            if st == 0 and b in (INTRO + 1, INTRO + 9, INTRO + 17, INTRO + 25): NZ['crash'].hit(t, 3, CRASH)
+            if st == 0 and b in starts: NZ['crash'].hit(t, 3, CRASH)
             # redoble de entrada: el último medio compás antes de cada frase
-            if b in (INTRO, INTRO + 8, INTRO + 16, INTRO + 24) and st >= 12: NZ['snare'].hit(t, 4, [9, 5, 2])
+            if (b + 1) in starts and st >= 12: NZ['snare'].hit(t, 4, [9, 5, 2])
 
     n = int(NB * BAR * SR)
     tail = 3 * SR
@@ -203,12 +279,12 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5):
         'lead': cut(F.render_wave(Cn['lead'], WAVES) * 0.0075) if flute else pulse('lead'),
         'echo': pulse('echo'), 'chords': pulse('c1') + pulse('c2'),
         'bass': cut(F.tnd_dac(F.render_tri(Cn['bass']) / 8227.0)), 'trill': pulse('trill'),
-        'kick': cut(F.tnd_dac((kick + 64) / 22638.0) - base),
+        'kick': cut(F.tnd_dac((kick + 64) / 22638.0) - base), 'toms': cut(F.tnd_dac((tom + 64) / 22638.0) - base),
         'snare': cut(F.tnd_dac((sn + 64) / 22638.0) - base) + cut(F.tnd_dac(NZ['snare'].render() / 22638.0 * 12)),
         'hat': cut(F.tnd_dac(NZ['hat'].render() / 22638.0 * 12)), 'crash': cut(F.tnd_dac(NZ['crash'].render() / 22638.0 * 12)),
     }
     S = {k: GN.fold(v, n) for k, v in S.items() if np.abs(v).max() > 0}
-    LV = {'lead': 0, 'echo': -11, 'chords': -6, 'bass': -2, 'trill': -6, 'kick': -2 + drive, 'snare': -5 + drive, 'hat': -12, 'crash': -11}
+    LV = {'lead': 0, 'echo': -11, 'chords': -6, 'bass': -2, 'trill': -6, 'kick': -2 + drive, 'snare': -5 + drive, 'hat': -12, 'crash': -11, 'toms': 2}
     g = GN.level(S, {k: LV[k] for k in S}, 'lead')
     from scipy.signal import butter, sosfilt
     x = sum(S[k] * g[k] for k in S)
@@ -240,7 +316,7 @@ def write_mid(path, mel, bpm):
 TRACKS = {
     'pradera_1':     dict(variant='A', bpm=136),
     'pradera_2':     dict(variant='A', bpm=140, minor=True, drive=1),
-    'pradera_bonus': dict(variant='A', bpm=152, drive=2, lufs=-11.0),
+    'pradera_bonus': dict(variant='A', bpm=152, drive=2, lufs=-11.0, solo=True),
 }
 VARIANTS = {'A': dict(variant='A', bpm=136), 'B': dict(variant='B', bpm=132), 'C': dict(variant='C', bpm=140)}
 
