@@ -11,7 +11,7 @@ autor del juego manda sobre cualquier número de aquí.
 |---|---|---|---|---|---|
 | `menus` | menús | 140 | La menor / Do mayor | 18 compases | bajo de boogie, acordes de sexta, giro de blues (descenso cromático) |
 | `map_<mundo>` ×6 | mapa del mundo | 120 | Do mayor | A-B-A, 24 compases, 48 s | una melodía, seis arreglos; cada isla, su instrumento y su motivo |
-| `fortaleza_1` | nivel (Fortaleza) | 137,5 | Do menor | 36 compases, 63 s | saltos de 7ª/8ª que rebotan, arpegios en semicorcheas, muy denso (dinámica 3,9 dB) |
+| `fortaleza_1` | nivel (Fortaleza) | 140 | Do menor | intro 4 + bucle 32 | NUEVA (la anterior era un arreglo de una canción ajena: retirada). Marcha: tan · ta-ta, sierra + pulso, fanfarria de tresillos |
 | `cuevas_oscuras` | nivel a oscuras | 72 | Re menor (acaba en La, sin resolver) | A A' B A'', 32 compases | caja de música con eco sobre bordón y latido; 2,6 ataques/s, 6 % percusivo |
 | `boss_generic` | jefe genérico | 148 | Do menor | intro 4 + bucle 36 | las notas de `fortaleza_1` con timbres de jefe y batería "industrial" |
 | `crab_tantrum_normal` | Mega Crabby | 185 (se siente a 92,5: tresillo 3+3+2) | Sol menor | 72 compases ×2 | melodía por grados (67 %), notas repetidas (26 %), bombo en tresillo |

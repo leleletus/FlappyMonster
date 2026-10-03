@@ -1971,6 +1971,14 @@ Low-level notes (for writing NEW harnesses):
   already was). `Sound.update` starts the loop when the intro has < 9 ms left (it used to wait until the intro had
   STOPPED = a frame of silence, late on the beat). Harness `sounds` checks every intro track. Every new track with an
   intro must be exported this way.
+- FORTRESS (3.51.0, all new; verified by numbers only): the old `fortaleza_1` (level_nes, an arrangement of a
+  BORROWED tune) was removed from the game → `FlappyMonster_originals/music/placeholders/fortaleza_1_level_nes.ogg`
+  (`melody_nes.py`'s level output now goes there too). New set in `worlds_nes.py`: `fortaleza_1` "Marcha de hierro"
+  (C minor, 140: VRC6 saw an octave down + pulse, march rhythm tan · ta-ta in melody, fifth stabs and snare, octave
+  bass, metal noise offbeats, triplet FANFARE motif), `fortaleza_2` "Engranajes" (G minor, 126: thin staccato pulse,
+  fifth/root tick-tock, locomotive bass, metallic 16th noise, anvil motif — factories, quarry, the train),
+  `fortaleza_bonus` (the march at 156 + percussion solo; ciudadela_alterna). `boss_generic` still uses the borrowed
+  tune (pending replacement, like the Crab Tantrums and snowball_boss).
 - Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
   cuevas_oscuras; other cave levels → cuevas_1; non-story levels by their retheme theme).
 - Generators keep their internal names; `famicom.PATHS` / `famicom.out(name, ext)` map them to the new folders;

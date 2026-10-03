@@ -451,7 +451,7 @@ function Sound.update(dt)
             local d = music:getDuration()
             left = d > 0 and (d - music:tell()) / math.max(0.1, music:getPitch()) or 1
         end
-        if left <= INTRO_LEAD then
+        if left <= math.max(INTRO_LEAD, math.min(0.03, (dt or 0) * 0.6)) then      -- (a ≤ medio frame de su final)
             lp:setPitch(music:getPitch()); lp:setVolume(music:getVolume())
             lp:seek(0); lp:play()
             music = lp

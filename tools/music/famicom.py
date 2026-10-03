@@ -293,7 +293,10 @@ MUSIC_DIR = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '..', '.
 MID_DIR = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'mid')
 REF_DIR = _os.path.join(_os.environ.get('FM_ORIGINALS', '/home/mtvemo/FlappyMonster_originals'), 'music', 'placeholders')
 PATHS = {
-    'level_nes': 'worlds/fortaleza/fortaleza_1', 'dark_cave': 'worlds/cuevas/cuevas_oscuras',
+    # (level_nes = arreglo de una canción ajena: retirado del juego; si se regenera, va FUERA del repo)
+    'level_nes': '../../../FlappyMonster_originals/music/placeholders/fortaleza_1_level_nes',
+    'fortaleza_1': 'worlds/fortaleza/fortaleza_1', 'fortaleza_2': 'worlds/fortaleza/fortaleza_2', 'fortaleza_bonus': 'worlds/fortaleza/fortaleza_bonus',
+    'dark_cave': 'worlds/cuevas/cuevas_oscuras',
     'boss_nes_intro': 'bosses/boss_generic_intro', 'boss_nes_loop': 'bosses/boss_generic_loop',
     'tentacle_nes': 'bosses/crab_tantrum_normal', 'tentacle_winter': 'bosses/crab_tantrum_icy',
     'tentacle_gloomy': 'bosses/crab_tantrum_gloomy', 'winter_nes': 'bosses/snowball_boss',

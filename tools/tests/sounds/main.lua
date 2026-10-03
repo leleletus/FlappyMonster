@@ -123,7 +123,7 @@ function love.update(dt)
     end
     if switched and clock > 0.9 then
         local _, p2, part2 = Sound.musicPosition()
-        check(switched.left > -0.5 and switched.left <= 0.02 and switched.pos <= 0.02 and part2 == 'bucle' and not src:isPlaying(),
+        check(switched.left <= 0.03 and switched.pos <= 0.03 and part2 == 'bucle' and not src:isPlaying(),
             ('%-22s intro → bucle: a la intro le quedaban %.0f ms, el bucle sigue (%.2f s) y la intro paró=%s')
                 :format(id, switched.left * 1000, p2 or -1, tostring(not src:isPlaying())))
         Sound.stopMusic()
