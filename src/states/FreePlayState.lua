@@ -107,7 +107,10 @@ function FreePlayState:_play(i)
     Sound.play('select')
     self.sel = i
     last.sel, last.scroll = self.sel, self.scrollTarget
-    gStateMachine:change('adventure', { level = info.path, returnTo = 'free_play' })
+    -- (arena de Rey de la Colina: contra el BOT, como los bonus de la historia — src/story/BonusMatch.lua)
+    local bonus = (info.pointAreas or 0) > 0 and (info.finish or 0) == 0
+                  and { onEnd = function() gStateMachine:change('free_play') end } or nil
+    gStateMachine:change('adventure', { level = info.path, returnTo = 'free_play', bonus = bonus })
 end
 
 function FreePlayState:_back()

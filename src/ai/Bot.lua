@@ -6,7 +6,10 @@
 --   * si tú estás en una zona de puntos, va a por ti (por el grafo de navegación, src/ai/BotNav.lua) y, al
 --     tenerte cerca, salta hacia ti y hace un GROUND POUND encima: si cae cerca te empuja y te aturde
 --     (AdventureState: knockback); entre ataque y ataque descansa `ATTACK_CD` s;
---   * si no, va a la zona que más puntos da y se queda dentro (también suma puntos: gana quien más tenga).
+--   * si no, va a la zona que más puntos da y se queda dentro (también suma puntos: gana quien más tenga),
+--     cambiando de casilla dentro de ella cada pocos segundos.
+-- NO hace siempre lo mismo: el grafo es solo el MAPA de por dónde se puede ir; qué hace lo decide cada fotograma
+-- según dónde estás tú y cómo está el nivel, y con algo de azar (descansos, a qué casilla de la zona va).
 -- La ejecución de cada arista: andar = bucle cerrado hacia el centro de la casilla de al lado; un movimiento
 -- grabado = se coloca quieto en el centro de su casilla y reproduce los inputs fotograma a fotograma (la física
 -- es determinista: cae donde se grabó; si cae en otro sitio, vuelve a planear desde ahí).
@@ -122,7 +125,7 @@ function Bot:think(dt, level, target)
         self.atkT = self.atkT + dt
         local dx = target.x - pa.x
         if pa.onGround and self.atkT > 0.15 then
-            self.mode, self.path, self.cd = 'route', nil, self.attackCd
+            self.mode, self.path, self.cd = 'route', nil, self:_rest()
             return self:_emit(0)
         end
         if pa.gpPhase then return self:_emit(0) end
@@ -132,7 +135,7 @@ function Bot:think(dt, level, target)
         if math.abs(dx) < 22 and pa.vy > -220 and pa.y < target.y - 20 then bits = bits + C + CP end
         -- (si estás más alto, el segundo salto)
         if self.atkT > 0.32 and self.atkT < 0.36 and target.y < pa.y - TILE_PX and pa.jumpsLeft > 0 then bits = bits + J + JP end
-        if self.atkT > 1.6 then self.mode, self.cd = 'route', self.attackCd end
+        if self.atkT > 1.6 then self.mode, self.cd = 'route', self:_rest() end
         return self:_emit(bits)
     end
     local goals, kind = self:_goal(level, target)
@@ -146,8 +149,18 @@ function Bot:think(dt, level, target)
         end
     end
     if not goals then
-        -- quieto en la zona: mirando hacia ti
-        return self:_emit(0)
+        -- en la zona: no se queda clavado — cada pocos segundos se cambia a otra casilla de la zona, al azar
+        self.roamT = (self.roamT or (2 + math.random() * 3)) - dt
+        local z = Bot.pickZone(self.nav, level, pa.x, pa.y, self.clock)
+        if self.roamT <= 0 and z and z._nodes then
+            local list = {}
+            for id in pairs(z._nodes) do list[#list + 1] = id end
+            table.sort(list)
+            self.roamTo, self.roamT = list[math.random(#list)], 2.5 + math.random() * 4
+        end
+        local here = pa.onGround and BotNav.nodeAt(self.nav, pa.x, pa.y, self:_h())
+        if not self.roamTo or here == self.roamTo then self.roamTo = nil; return self:_emit(0) end
+        goals = { [self.roamTo] = true }
     end
     -- ── RUTA por el grafo ──
     self.planT = self.planT - dt
@@ -215,6 +228,9 @@ function Bot:think(dt, level, target)
     self.edge, self.edgeF, self.edgeFrom, self.edgeAir = e, 1, cur, false
     return self:_emit(BotNav.bitsAt(e, 1))
 end
+
+-- Descanso entre ataques: no siempre igual (× 0,8-1,6), para que no sea un metrónomo
+function Bot:_rest() return self.attackCd * (0.8 + math.random() * 0.8) end
 
 function Bot:_fail(u, e)
     if not (u and e) then return end
