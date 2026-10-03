@@ -293,11 +293,11 @@ MUSIC_DIR = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '..', '.
 MID_DIR = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'mid')
 REF_DIR = _os.path.join(_os.environ.get('FM_ORIGINALS', '/home/mtvemo/FlappyMonster_originals'), 'music', 'placeholders')
 PATHS = {
-    'level_nes': 'worlds/pradera/pradera_1', 'dark_cave': 'worlds/cuevas/cuevas_oscuras',
+    'level_nes': 'worlds/fortaleza/fortaleza_1', 'dark_cave': 'worlds/cuevas/cuevas_oscuras',
     'boss_nes_intro': 'bosses/boss_generic_intro', 'boss_nes_loop': 'bosses/boss_generic_loop',
     'tentacle_nes': 'bosses/crab_tantrum_normal', 'tentacle_winter': 'bosses/crab_tantrum_icy',
     'tentacle_gloomy': 'bosses/crab_tantrum_gloomy', 'winter_nes': 'bosses/snowball_boss',
-    'tentacle_chip': 'bosses/extras/crab_tantrum_chip', 'tentacle_chip_instrumental': 'bosses/extras/crab_tantrum_chip_instrumental',
+    'tentacle_chip': 'bosses/mirror_boss', 'tentacle_chip_instrumental': 'bosses/mirror_boss_inst',
     'menus_chip': 'menus/menus_chip', 'menus': 'menus/menus',
     'map_pradera': 'map/map_pradera', 'map_costa': 'map/map_costa', 'map_fortaleza': 'map/map_fortaleza',
     'map_nieve': 'map/map_nieve', 'map_cuevas': 'map/map_cuevas', 'map_final': 'map/map_final',

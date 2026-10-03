@@ -3,7 +3,7 @@
     "Índice de la música del juego. Carpetas de assets/music/:",
     "  menus/     menús              map/    el mapa del mundo (un arreglo por isla)",
     "  worlds/<mundo>/  música de NIVEL de cada mundo o zona: 2-3 pistas temáticas por mundo (pradera, costa, fortaleza, nieve, cuevas, volcan)",
-    "  bosses/    peleas de jefe (extras/ = versiones alternativas)        jingles/  sintonías cortas",
+    "  bosses/    peleas de jefe        jingles/  sintonías cortas",
     "Para añadir una canción: copia el archivo en su carpeta y añade una entrada aquí. Sale sola en el editor.",
     "Campos de cada pista:",
     "  id          identificador único (lo que guarda el nivel en \"music\"): <mundo>_<n>, crab_tantrum_<jefe>, map_<mundo>...",
@@ -21,26 +21,26 @@
     "están guardadas FUERA del repositorio: FlappyMonster_originals/music/placeholders/."
   ],
   "tracks": [
-    { "id": "pradera_1",  "name": "Pradera 1 (pendiente)",              "file": "worlds/pradera/pradera_1.ogg" },
-    { "id": "pradera_2",  "name": "Pradera 2 (pendiente)",  "file": "worlds/pradera/pradera_2.ogg",   "pending": true, "fallback": "pradera_1" },
-    { "id": "costa_1",    "name": "Costa 1 (pendiente)",    "file": "worlds/costa/costa_1.ogg",       "pending": true, "fallback": "pradera_1" },
-    { "id": "costa_2",    "name": "Costa 2 (pendiente)",    "file": "worlds/costa/costa_2.ogg",       "pending": true, "fallback": "pradera_1" },
-    { "id": "fortaleza_1", "name": "Fortaleza 1", "file": "worlds/fortaleza/fortaleza_1.ogg", "pending": true, "fallback": "pradera_1" },
-    { "id": "fortaleza_2", "name": "Fortaleza 2 (pendiente)", "file": "worlds/fortaleza/fortaleza_2.ogg", "pending": true, "fallback": "pradera_1" },
-    { "id": "nieve_1",    "name": "Cumbres 1 (pendiente)",  "file": "worlds/nieve/nieve_1.ogg",       "pending": true, "fallback": "pradera_1" },
-    { "id": "nieve_2",    "name": "Cumbres 2 (pendiente)",  "file": "worlds/nieve/nieve_2.ogg",       "pending": true, "fallback": "pradera_1" },
+    { "id": "pradera_1",  "name": "Pradera 1 (pendiente)",  "file": "worlds/pradera/pradera_1.ogg",   "pending": true, "fallback": "fortaleza_1" },
+    { "id": "pradera_2",  "name": "Pradera 2 (pendiente)",  "file": "worlds/pradera/pradera_2.ogg",   "pending": true, "fallback": "fortaleza_1" },
+    { "id": "costa_1",    "name": "Costa 1 (pendiente)",    "file": "worlds/costa/costa_1.ogg",       "pending": true, "fallback": "fortaleza_1" },
+    { "id": "costa_2",    "name": "Costa 2 (pendiente)",    "file": "worlds/costa/costa_2.ogg",       "pending": true, "fallback": "fortaleza_1" },
+    { "id": "fortaleza_1", "name": "Fortaleza 1",          "file": "worlds/fortaleza/fortaleza_1.ogg" },
+    { "id": "fortaleza_2", "name": "Fortaleza 2 (pendiente)", "file": "worlds/fortaleza/fortaleza_2.ogg", "pending": true, "fallback": "fortaleza_1" },
+    { "id": "nieve_1",    "name": "Cumbres 1 (pendiente)",  "file": "worlds/nieve/nieve_1.ogg",       "pending": true, "fallback": "fortaleza_1" },
+    { "id": "nieve_2",    "name": "Cumbres 2 (pendiente)",  "file": "worlds/nieve/nieve_2.ogg",       "pending": true, "fallback": "fortaleza_1" },
     { "id": "cuevas_1",   "name": "Cuevas 1 (pendiente)",   "file": "worlds/cuevas/cuevas_1.ogg",     "pending": true, "fallback": "cuevas_oscuras" },
     { "id": "cuevas_oscuras", "name": "Cuevas a oscuras",   "file": "worlds/cuevas/cuevas_oscuras.ogg", "volume": 0.8 },
-    { "id": "volcan_1",   "name": "Volcán 1 (pendiente)",   "file": "worlds/volcan/volcan_1.ogg",     "pending": true, "fallback": "pradera_1" },
-    { "id": "volcan_2",   "name": "Volcán 2 (pendiente)",   "file": "worlds/volcan/volcan_2.ogg",     "pending": true, "fallback": "pradera_1" },
+    { "id": "volcan_1",   "name": "Volcán 1 (pendiente)",   "file": "worlds/volcan/volcan_1.ogg",     "pending": true, "fallback": "fortaleza_1" },
+    { "id": "volcan_2",   "name": "Volcán 2 (pendiente)",   "file": "worlds/volcan/volcan_2.ogg",     "pending": true, "fallback": "fortaleza_1" },
 
     { "id": "boss_generic",        "name": "Jefe (genérica)",        "intro": "bosses/boss_generic_intro.ogg", "loop": "bosses/boss_generic_loop.ogg", "level": false, "boss": true, "volume": 0.9 },
     { "id": "crab_tantrum_normal", "name": "Crab Tantrum (Mega Crabby)",         "file": "bosses/crab_tantrum_normal.ogg", "level": false, "boss": true, "volume": 0.9 },
     { "id": "crab_tantrum_icy",    "name": "Crab Tantrum (Mega Crabby helado)",  "file": "bosses/crab_tantrum_icy.ogg",    "level": false, "boss": true, "volume": 0.9 },
     { "id": "crab_tantrum_gloomy", "name": "Crab Tantrum (Mega Crabby lúgubre)", "file": "bosses/crab_tantrum_gloomy.ogg", "level": false, "boss": true, "volume": 0.9 },
     { "id": "snowball_boss",       "name": "Gran Bola de Nieve",                 "file": "bosses/snowball_boss.ogg",       "level": false, "boss": true, "volume": 0.9 },
-    { "id": "crab_tantrum_chip",   "name": "Crab Tantrum (Chip, extra)",         "file": "bosses/extras/crab_tantrum_chip.ogg", "level": false, "boss": true },
-    { "id": "crab_tantrum_chip_instrumental", "name": "Crab Tantrum (Chip instrumental, extra)", "file": "bosses/extras/crab_tantrum_chip_instrumental.ogg", "level": false, "boss": true },
+    { "id": "mirror_boss",      "name": "Jefe Espejo",                 "file": "bosses/mirror_boss.ogg",      "level": false, "boss": true },
+    { "id": "mirror_boss_inst", "name": "Jefe Espejo (instrumental)",   "file": "bosses/mirror_boss_inst.ogg", "level": false, "boss": true },
 
     { "id": "menus",         "name": "Menús",                         "file": "menus/menus.ogg",       "level": false },
     { "id": "map_pradera",   "name": "Rumbo a las islas (Pradera)",   "file": "map/map_pradera.ogg",   "level": false, "volume": 0.75 },
@@ -52,10 +52,11 @@
     { "id": "victory",       "name": "Victoria (pendiente)",          "file": "jingles/victory.ogg",   "level": false, "loop": false, "pending": true }
   ],
   "aliases": {
-    "classic": "pradera_1", "flying_machine": "fortaleza_1", "hidro_city": "costa_1", "labyrinth": "cuevas_1", "dark_cave": "cuevas_oscuras",
+    "classic": "fortaleza_1", "flying_machine": "fortaleza_1", "hidro_city": "costa_1", "labyrinth": "cuevas_1", "dark_cave": "cuevas_oscuras",
     "boss": "boss_generic", "boss_nes": "boss_generic",
     "Tentacle_Tantrum": "crab_tantrum_normal", "tentacle_nes": "crab_tantrum_normal", "tentacle_winter": "crab_tantrum_icy",
-    "tentacle_gloomy": "crab_tantrum_gloomy", "tentacle_chip": "crab_tantrum_chip", "tentacle_chip_instrumental": "crab_tantrum_chip_instrumental",
+    "tentacle_gloomy": "crab_tantrum_gloomy", "tentacle_chip": "mirror_boss", "tentacle_chip_instrumental": "mirror_boss_inst",
+    "crab_tantrum_chip": "mirror_boss", "crab_tantrum_chip_instrumental": "mirror_boss_inst",
     "WinterFallympics": "snowball_boss", "winter_nes": "snowball_boss", "youWin": "victory"
   }
 }

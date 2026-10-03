@@ -1941,6 +1941,8 @@ Low-level notes (for writing NEW harnesses):
 - The BORROWED placeholder tracks the user removed (flying_machine, hidro_city, labyrinth intro/loop, boss_battle
   intro/loop, TentacleTantrum.ogg, winter.ogg, victory.ogg, and the old level.ogg) are archived OUTSIDE the repo:
   `FlappyMonster_originals/music/placeholders/` (generators read their references from there: `famicom.ref(name)`).
+- STUDY + STYLE GUIDE for all new music: `docs/musica/GUIA_MUSICAL.md` (what exists, the house style measured, the game leitmotif "la llamada", per-island palette, composition rules); `tools/music/study.py` measures any .mid.
+- User renames after the reorg: the level tune is `fortaleza_1` (never meant for the meadow; `pradera_1` is a pending slot, default fallback = fortaleza_1) and the chip tracks are `mirror_boss` / `mirror_boss_inst` (the Mirror fight).
 - Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
   cuevas_oscuras; other cave levels → cuevas_1; non-story levels by their retheme theme).
 - Generators keep their internal names; `famicom.PATHS` / `famicom.out(name, ext)` map them to the new folders;

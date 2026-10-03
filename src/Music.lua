@@ -24,7 +24,7 @@ local function load()
     local ok, idx = pcall(json.decode, data or '')
     if not ok or type(idx) ~= 'table' or type(idx.tracks) ~= 'table' then
         print('[Music] No se pudo leer ' .. Music.INDEX)
-        idx = { tracks = { { id = 'pradera_1', name = 'Pradera 1', file = 'worlds/pradera/pradera_1.ogg' } } }
+        idx = { tracks = { { id = 'fortaleza_1', name = 'Fortaleza 1', file = 'worlds/fortaleza/fortaleza_1.ogg' } } }
     end
     for _, t in ipairs(idx.tracks) do
         if type(t) == 'table' and type(t.id) == 'string' and (t.file or (t.intro and t.loop) or t.loop) then
