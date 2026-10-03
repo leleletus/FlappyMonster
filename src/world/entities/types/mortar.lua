@@ -218,6 +218,17 @@ end
 
 -- ── Dibujo ────────────────────────────────────────────────────────────────────
 local Particles
+-- Luz de sus bolas de fuego (de noche / en cueva: src/fx/Darkness.lua)
+local FIRE_LIGHT = { 1, 0.55, 0.2 }
+function Mortar:lights()
+    local out = {}
+    for _, f in ipairs(self.proj) do
+        local sc = f.scale or 1
+        if sc > 0.05 then out[#out + 1] = { x = f.x, y = f.y, r = 130 * sc, color = FIRE_LIGHT, a = 0.4 * sc, pulse = 7 } end
+    end
+    return out
+end
+
 function Mortar:render(camX, camY)
     local p   = self.props
     local img = (self.shotT > 0) and imgShoot or imgNormal

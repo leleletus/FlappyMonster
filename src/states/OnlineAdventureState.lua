@@ -1195,7 +1195,7 @@ function OnlineAdventureState:_renderScene()
             local pa = self.localPa
             src[#src + 1] = { x = self.renderX, y = self.renderY, facing = pa.facing, on = pa.lightOn and not pa.dying }
         end
-        Darkness.render(self.level, self.camX, self.camY, src)
+        Darkness.render(self.level, self.camX, self.camY, src, self.enemyRenderers)
         Darkness.renderGlow(self.level, self.enemyRenderers, self.camX, self.camY)
     end
 

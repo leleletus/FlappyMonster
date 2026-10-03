@@ -990,7 +990,12 @@ list no mode until the user places a Point Area in them).
   PENUMBRA (playable). The PLAYER gives NO light in these (user: night must feel like night) — only in dark levels. With a `depth` biome, everything below the surface
   line is cave penumbra (stepped transition band) even on a day level. Light sources: decorations with `light`, TILES
   with `light` in their def (lava) and the players. Soft lights = `RINGS` stepped circles (flat discs looked wrong).
-  Cave mood also turns the ECHO on by default (`level.echo`). `level_shots` draws the mood (`LIGHT=0` = without).
+  Cave mood also turns the ECHO on by default (`level.echo`). What is HOT keeps glowing: tile lights with `emissive`
+  (lava: the cell itself is never darkened, bigger glow), entities with `e:lights()` → {x, y, r, color, a} (the mortar's
+  fireballs; `Darkness.render(..., entities)`), and the red-hot pixels of sky layers (`Sky` builds a glow image per layer
+  from its bright orange/red pixels — craters, lava streams, magma veins — and `Sky.renderGlow()` redraws them after the
+  darkness, with the same clip via `Clip`). Mortar fireball REDESIGNED (`tools/ui/make_biome_art.py mortar_flame`, 6
+  frames; the user's original in `FlappyMonster_originals/assets/images/mortar/flame-orig.png`). `level_shots` draws the mood (`LIGHT=0` = without).
 - **Glowing decorations**: a decoration type with `light = { r = px, color, a, dy, pulse }` (glow_mushroom,
   cave_crystals, torch, ice_crystal) adds a VERY subtle two-step light to the Darkness canvas (render only: it is not
   a flashlight for `Lights`). New luminous decoration = that one field.

@@ -636,7 +636,7 @@ function AdventureState:_renderScene()
     if Darkness.active(self.level) then
         local p = self.player
         Darkness.render(self.level, self.camX, self.camY,
-                        { { x = p.x, y = p.y, facing = p.facing, on = p.lightOn and not p.dying } })
+                        { { x = p.x, y = p.y, facing = p.facing, on = p.lightOn and not p.dying } }, self.enemies)
         Darkness.renderGlow(self.level, self.enemies, self.camX, self.camY)
     end
 

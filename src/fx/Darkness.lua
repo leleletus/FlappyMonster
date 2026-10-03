@@ -87,7 +87,9 @@ local function fan(ox, oy, dir, k, level, cache)
     end
 end
 
-function Darkness.render(level, camX, camY, sources)
+-- entities = las entidades (las que tengan `e:lights()` → { {x, y, r, color, a}, ... } dan luz: el fuego de los
+-- morteros...); sin ellas, level.liveEntities
+function Darkness.render(level, camX, camY, sources, entities)
     if not Darkness.active(level) then return end
     local mood = moodOf(level)
     local dark = mood == 'dark'
@@ -193,6 +195,21 @@ function Darkness.render(level, camX, camY, sources)
         if t.x > camX - L.r and t.x < camX + WINDOW_W + L.r and t.y > camY - L.r and t.y < camY + WINDOW_H + L.r then
             local k = lightsMult(t.y)
             if k > 0 then glow(t.x, t.y, L, k) end
+            -- (EMISIVO: la propia casilla — la lava — no se oscurece nunca)
+            if L.emissive and not dark then
+                love.graphics.setColor(1, 1, 1, 1)
+                love.graphics.rectangle('fill', t.x - TILE_PX / 2, t.y - TILE_PX / 2, TILE_PX, TILE_PX)
+            end
+        end
+    end
+    for _, e in pairs(entities or level.liveEntities or {}) do
+        if e.alive ~= false and e.lights then
+            for _, L in ipairs(e:lights() or {}) do
+                if L.x > camX - L.r and L.x < camX + WINDOW_W + L.r and L.y > camY - L.r and L.y < camY + WINDOW_H + L.r then
+                    local k = lightsMult(L.y)
+                    if k > 0 then glow(L.x, L.y, L, k) end
+                end
+            end
         end
     end
     love.graphics.setCanvas(prevCanvas)
@@ -204,6 +221,8 @@ function Darkness.render(level, camX, camY, sources)
     love.graphics.setBlendMode('multiply', 'premultiplied')
     love.graphics.draw(canvas, 0, 0, 0, DS, DS)
     love.graphics.setBlendMode('alpha')
+    -- lo incandescente del fondo (volcanes, coladas, magma) sigue brillando
+    if not dark then require('src/fx/Sky').renderGlow() end
 end
 
 -- Puntos luminosos y demás cosas que se ven en la oscuridad (encima de ella)

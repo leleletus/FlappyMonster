@@ -10,6 +10,7 @@
 #   assets/images/decorations/meadow/    oak_tree, pine_tree, round_bush, flower_patch, tall_grass, red_mushroom,
 #                                        mossy_rock, fallen_log, sunflower
 #   assets/images/decorations/fx/smoke-Sheet.png   bocanadas de humo / vapor (3 cuadros, blancas: se tiñen)
+#   assets/images/mortar/flame.png       bola de fuego del mortero (6 cuadros de 16x16; rediseño, ver mortar_flame)
 # Las decoraciones llevan 1 px de margen (a los lados y arriba; abajo si cuelgan) con el contorno cerrado.
 # No pisa lo que ya existe (--force [nombres] para rehacerlo). Desde la raíz del repo:
 #     python3 tools/ui/make_biome_art.py [--force] [nombre ...]
@@ -363,6 +364,41 @@ def sunflower():
     return c.image()
 
 
+# ── FUEGO DEL MORTERO (rediseño; el original del usuario está fuera del repo:
+#    FlappyMonster_originals/assets/images/mortar/flame-orig.png) ──────────────
+FIRE_OUT = (rgb('7a160a'), rgb('d03a12'), rgb('ec5a18'), rgb('f87a22'))     # capa de fuera: rojo (contorno rojo oscuro)
+FIRE_MID = (rgb('f07a1e'), rgb('f8902a'), rgb('ffa632'), rgb('ffc04a'))     # medio: naranja (su borde, naranja)
+FIRE_IN = (rgb('ffc040'), rgb('ffd858'), rgb('ffea80'), rgb('fff8c8'))      # núcleo: amarillo claro
+
+
+def tongue(cx, base, tip, w, lean):
+    """llama: de ancha en la base a punta arriba, algo inclinada"""
+    def f(x, y):
+        if not (tip <= y <= base): return False
+        k = (y - tip) / max(1, base - tip)
+        return abs(x + 0.5 - (cx + lean * (1 - k))) <= w * k
+    return f
+
+
+def mortar_flame():
+    """bola de fuego (6 cuadros de 16x16): núcleo amarillo claro, capa naranja grande y llamas que suben
+    y tiemblan; contorno rojo oscuro solo por fuera (no negro)"""
+    frames = []
+    for f in range(6):
+        a = f / 6 * 2 * math.pi
+        h1, h2, h3 = 1.5 + 1.5 * math.sin(a), 0.5 + 1.2 * math.sin(a + 2.1), 2.5 + 1.5 * math.sin(a + 4.2)
+        c = Canvas(16, 16)
+        c.part(lambda x, y: ell(8, 10.5, 6.3, 5.4)(x, y) or tongue(4.5, 9, h1, 2.8, -1)(x, y)
+               or tongue(8.5, 8, h2, 3.0, 0.5)(x, y) or tongue(12, 10, h3, 2.4, 1)(x, y), FIRE_OUT, 0.5)
+        c.part(lambda x, y: ell(8, 10.6, 5, 4.4)(x, y) or tongue(6, 9, h1 + 2, 2.2, -0.5)(x, y)
+               or tongue(10, 9, h2 + 2.5, 2.2, 0.6)(x, y), FIRE_MID, 0.5)
+        c.part(lambda x, y: ell(7.8 + 0.4 * math.sin(a), 10.8, 3.2, 2.9)(x, y)
+               or tongue(8, 10, h2 + 5, 1.4, 0.3)(x, y), FIRE_IN, 0.7)
+        c.dot(7, 10, rgb('ffffff')); c.dot(8, 10, rgb('ffffff'))
+        frames.append(c.image())
+    return strip(frames)
+
+
 if __name__ == '__main__':
     print('Arte de los biomas:')
     save('tiles/basalt.png', basalt_tile(), 4)
@@ -380,3 +416,4 @@ if __name__ == '__main__':
                      ('mossy_rock', mossy_rock), ('fallen_log', fallen_log), ('sunflower', sunflower)):
         save(M + name + '.png', pad(fn()))
     save('decorations/fx/smoke-Sheet.png', smoke())
+    save('mortar/flame.png', mortar_flame())

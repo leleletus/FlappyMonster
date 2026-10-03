@@ -81,6 +81,20 @@ local function img(name)
             end
             cache[name] = { img = im, w = im:getWidth(), h = im:getHeight(),
                             bottom = at(im:getHeight() - 1), top = at(0) }
+            -- Lo INCANDESCENTE de la capa (cráteres, coladas, vetas de magma: píxeles rojo-anaranjados vivos):
+            -- se vuelve a dibujar encima de la luz ambiente (Sky.renderGlow), así de noche sigue brillando
+            if okd then
+                local glow, any = love.image.newImageData(data:getWidth(), data:getHeight()), false
+                glow:mapPixel(function(x, y)
+                    local r, g, b, a = data:getPixel(x, y)
+                    if a > 0 and r >= 0.6 and g <= r * 0.72 and b <= 0.3 then any = true; return r, g, b, a end
+                    return 0, 0, 0, 0
+                end)
+                if any then
+                    cache[name].glow = love.graphics.newImage(glow)
+                    cache[name].glow:setFilter('nearest', 'nearest')
+                end
+            end
         else
             cache[name] = false
         end
@@ -139,6 +153,23 @@ end
 
 -- Capas de un bioma. ground(p, h) / top(p) = y de pantalla de las capas de suelo
 -- (arriba del dibujo) y de techo, según su paralaje
+-- Lo incandescente de las capas dibujadas este fotograma (ver img(); lo vacía Sky.render)
+Sky.glowQueue = {}
+
+-- Después de la luz ambiente (src/fx/Darkness.lua): lo incandescente del fondo, otra vez, sin oscurecer
+function Sky.renderGlow()
+    if #Sky.glowQueue == 0 then return end
+    -- (el cielo se dibuja en el lienzo de la escena, en coordenadas lógicas: su recorte también lo era;
+    -- aquí se repite con Clip, que lo pasa por la transformación de pantalla de ahora)
+    love.graphics.setColor(1, 1, 1, 0.92)
+    for _, g in ipairs(Sky.glowQueue) do
+        if g[4] then Clip.push(g[4], g[5], g[6], g[7]) end
+        love.graphics.draw(g[1], g[2], g[3], 0, S, S)
+        if g[4] then Clip.pop() end
+    end
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
 local function drawLayers(biome, tint, camX, ground, top, now)
     local W, H = WINDOW_W, WINDOW_H
     local mode, am = love.graphics.getBlendMode()
@@ -158,6 +189,10 @@ local function drawLayers(biome, tint, camX, ground, top, now)
             local x = math.floor(x0)
             while x < W do
                 love.graphics.draw(e.img, x, y, 0, S, S)
+                if e.glow then
+                    local sx, sy, sw, sh = love.graphics.getScissor()
+                    Sky.glowQueue[#Sky.glowQueue + 1] = { e.glow, x, y, sx, sy, sw, sh }
+                end
                 x = x + w
             end
             if not L.add then
@@ -186,6 +221,7 @@ local function gradBottom(frame)
 end
 
 function Sky.render(level, camX, camY)
+    Sky.glowQueue = {}
     local biome, time = Sky.biomeOf(level), Sky.timeOf(level)
     local tint = time.tint
     local W, H = WINDOW_W, WINDOW_H
