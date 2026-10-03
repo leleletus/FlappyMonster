@@ -2041,6 +2041,17 @@ Low-level notes (for writing NEW harnesses):
   boss, judge tempo by where the SNARE falls, not by the BPM number. 200 was "a bit too much" → 3.54.2: the same full-time
   groove at 172 BPM (loop 78.1 s), the middle point the user asked for. 172 was "very slow" → 3.54.3: 186 BPM (loop 72.3 s). Tried so far, full
   time: 200 too fast, 172 too slow.
+- SUMMITS (3.55.0, `worlds_nes.py`, all new, intro + loop; verified by numbers only): `nieve_1` "Cumbres de cristal"
+  (F major, 148: the melody on the MUSIC BOX an octave up over a soft pulse, half-note bass, 8th "snowflake" chord
+  notes, sleigh bells, brushed snare; island motif = falling bells), `nieve_2` "Ventisca" (D natural minor, 156: pulse
+  lead with bell sparkles on long notes, 16th wind arpeggio, 8th bass, backbeat — fabrica_criogenica, torre_viento),
+  `nieve_bonus` (nieve_1 at 166 + percussion solo; lago_de_cristal), and the new `snowball_boss` "La Gran Bola" (F
+  minor, 168, `boss=True`: hopping mocking tune, bass ROLLING in 16ths, rolling toms, sleigh bells, bell doubling). The
+  Winter Fallympics CHRISTMAS MOTIF is a sample used SPARINGLY (user: "without abusing"): once per loop, the first 4
+  bars of phrase B over its own harmony — nieve_1/bonus in F (IV IV V V) and the boss a minor third up (♭VI ♭VI ♭VII
+  ♭VII of F minor); nieve_2 has none (`wmotif(up)`, `MOTIF_THEMES`). The old `snowball_boss` (the Winter Fallympics
+  arrangement, winter_nes.py) is outside the repo (`placeholders/snowball_boss_winter_nes.ogg`). Only the two
+  `mirror_boss` tracks still carry a borrowed tune.
 - Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
   cuevas_oscuras; other cave levels → cuevas_1; non-story levels by their retheme theme).
 - Generators keep their internal names; `famicom.PATHS` / `famicom.out(name, ext)` map them to the new folders;

@@ -17,7 +17,7 @@ autor del juego manda sobre cualquier número de aquí.
 | `crab_tantrum_normal` | Mega Crabby | 186 (a tiempo entero: caja en 2 y 4; tresillo 3+3+2 en bombo y bajo) | Re menor (estribillo en Fa mayor) | intro 4 + bucle 56 | NUEVA composición (`crab_tantrum.py`): de Tentacle Tantrum solo muestras (célula del riff, tresillo, giro del estribillo, síncopas del final); tribal: timbales, bajo dibujado, sierra |
 | `crab_tantrum_icy` | Mega Crabby helado | 186 | Re menor | intro 4 + bucle 56 | el tema del Mega Crabby (`crab_tantrum.py icy`) + el motivo navideño de la caja de música donde está su armonía (♭VI–♭VII); voz suave + caja de música, cascabeles |
 | `crab_tantrum_gloomy` | Mega Crabby lúgubre | 144 | Re menor | intro 4 + bucle 56 | el tema del Mega Crabby (`crab_tantrum.py gloomy`) casi sin carga + las "patas" (semicorcheas de pulso 12,5 % en grupos de 8, pausa al cerrar frase) |
-| `snowball_boss` | Gran Bola de Nieve | 185 | Fa mayor | 144 compases | caja de música, arpegios, crece por DENSIDAD (dinámica 8,8 dB) |
+| `snowball_boss` | Gran Bola de Nieve | 168 | Fa menor | intro 4 + bucle 32 | NUEVA ("La Gran Bola"): bajo que rueda en semicorcheas, cascabeles; el motivo navideño una vez por vuelta |
 | `mirror_boss` (+ `_inst`) | Jefe Espejo | 92,5 (3+3+2) | Sol menor | 36 compases ×2 | melodía NUEVA sobre un motivo de nota vecina (Sol–Fa#–Sol), skank a contratiempo |
 
 Huecos sin música todavía: `pradera_1/2`, `costa_1/2`, `fortaleza_2`, `nieve_1/2`, `cuevas_1`, `volcan_1/2`, `victory`.

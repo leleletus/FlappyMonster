@@ -84,7 +84,7 @@
   "vents": [],
   "modes": ["koth","hide"],
   "matchTime": 100,
-  "music": "nieve_1",
+  "music": "nieve_bonus",
   "snow": true,
   "spikeSkin": "ice",
   "background": "snow",

@@ -305,7 +305,9 @@ PATHS = {
     'crab_tantrum': 'bosses/crab_tantrum_normal', 'crab_tantrum_gloomy': 'bosses/crab_tantrum_gloomy', 'crab_tantrum_icy': 'bosses/crab_tantrum_icy',
     'tentacle_winter': '../../../FlappyMonster_originals/music/placeholders/crab_tantrum_icy_tentacle_winter',
     'tentacle_gloomy': '../../../FlappyMonster_originals/music/placeholders/crab_tantrum_gloomy_tentacle_gloomy',
-    'winter_nes': 'bosses/snowball_boss',
+    # (winter_nes = arreglo de "Winter Fallympics": retirado; si se regenera, va FUERA del repo)
+    'winter_nes': '../../../FlappyMonster_originals/music/placeholders/snowball_boss_winter_nes',
+    'snowball_boss': 'bosses/snowball_boss', 'nieve_1': 'worlds/nieve/nieve_1', 'nieve_2': 'worlds/nieve/nieve_2', 'nieve_bonus': 'worlds/nieve/nieve_bonus',
     'tentacle_chip': 'bosses/mirror_boss', 'tentacle_chip_instrumental': 'bosses/mirror_boss_inst',
     'pradera_1': 'worlds/pradera/pradera_1', 'pradera_2': 'worlds/pradera/pradera_2', 'pradera_bonus': 'worlds/pradera/pradera_bonus',
     'costa_1': 'worlds/costa/costa_1', 'costa_2': 'worlds/costa/costa_2', 'costa_bonus': 'worlds/costa/costa_bonus',
