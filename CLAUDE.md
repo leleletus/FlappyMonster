@@ -1201,6 +1201,11 @@ changes show without playtesting (at zoom ≠ 1 the view is larger than a game s
 Made for the "retheme" stage (every story level must look like ITS island). Style = the game's: parts with a 4-tone
 palette (outline = the darkest tone of the object's OWN colour, never black; light from the top-left), 1-px margin;
 the user rejected a first version with black outlines and flat colours ("too simple"). `Canvas.part(mask, pal)`.
+- VOLCANO PALETTE v2 (3.63.1): on the world map the volcano island is reddish and so is the levels' sky, but the
+  ground was charcoal grey. `BASALT` and `ASH` in `make_biome_art.py` are now REDDISH (old lava / scoria: 200d10 ·
+  3e1a1c · 5c2a26 · 804238; ash 4c1e18 · 8c3e2c · b25c3c · d88856): the two tiles, the rock decorations (basalt_rock,
+  basalt_pebbles, ash_pile, lava_vent, glow_rock, steam_stones, lava_fall), the materials' debris colours and the
+  thumbnail colours. Charred trees and bushes stay dark. Before / after: `FlappyMonster_pruebas/volcan/`.
 - Tiles: **Basalto** `basalt` 38 (dark volcanic rock, 2x2 drawing like stone, very few marks) and **Ceniza** `ash` 39
   (ash cap with embers over basalt when its top is in the air, like grass over dirt); materials `basalt` / `ash`
   (debris), sub-tile kinds, thumbnails 'V' / 'H', sand blends, boss-wall `material` options.

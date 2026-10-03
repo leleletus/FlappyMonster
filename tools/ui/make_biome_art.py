@@ -126,9 +126,12 @@ LEAF = (rgb('0e3a1c'), rgb('1c6a34'), rgb('2e9a48'), rgb('62cc5a'))       # = ar
 LEAF_D = (rgb('14281f'), rgb('1f4a37'), rgb('2f6b4f'), rgb('43896a'))     # = pino nevado
 BARK = (rgb('2a1a10'), rgb('553620'), rgb('7a5030'), rgb('a06e44'))
 ROCK = (rgb('2e2826'), rgb('584e48'), rgb('7c7068'), rgb('a09488'))       # = estalagmita
-BASALT = (rgb('16121a'), rgb('2c2630'), rgb('403a46'), rgb('5c5464'))
+# (2ª paleta del volcán: en el mapa la isla es ROJIZA y en los niveles el fondo también, pero el suelo era gris
+# carbón; ahora la roca es basalto ROJIZO —lava vieja, escoria— y la ceniza, ceniza volcánica rojiza: siguen
+# pareciendo roca, pero del color de la isla. Antes: BASALT 16121a·2c2630·403a46·5c5464, ASH 3c3840·6e6a72·928e96·bab6be)
+BASALT = (rgb('200d10'), rgb('3e1a1c'), rgb('5c2a26'), rgb('804238'))
 CHAR = (rgb('180f0d'), rgb('30201c'), rgb('463028'), rgb('604234'))
-ASH = (rgb('3c3840'), rgb('6e6a72'), rgb('928e96'), rgb('bab6be'))
+ASH = (rgb('4c1e18'), rgb('8c3e2c'), rgb('b25c3c'), rgb('d88856'))
 LAVA = (rgb('6e140c'), rgb('c83c18'), rgb('f07822'), rgb('ffc848'))
 OBSID = (rgb('120a18'), rgb('281c34'), rgb('3e2e4e'), rgb('604e78'))
 PETAL = (rgb('8a8070'), rgb('d8d0c0'), rgb('f0ead8'), rgb('ffffff'))

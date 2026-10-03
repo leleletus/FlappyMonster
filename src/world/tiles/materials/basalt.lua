@@ -1,3 +1,3 @@
--- Basalto (isla volcánica): solo aspecto y color de las partículas
-return { name = 'basalt', label = 'Basalto', color = { 0.18, 0.16, 0.2 },
-         debris = { { 0.18, 0.16, 0.2 }, { 0.27, 0.25, 0.3 }, { 0.12, 0.1, 0.14 } } }
+-- Basalto (isla volcánica): solo aspecto y color de las partículas (rojizo, como la textura)
+return { name = 'basalt', label = 'Basalto', color = { 0.36, 0.16, 0.15 },
+         debris = { { 0.36, 0.16, 0.15 }, { 0.5, 0.26, 0.22 }, { 0.24, 0.1, 0.11 } } }
