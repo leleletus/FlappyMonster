@@ -903,6 +903,9 @@ end
 local FROZEN_INPUT = { pressed = function() return false end, down = function() return false end }
 function PlayerAdventure:update(dt, level)
     self.frozen = level ~= nil and level.frozenAt ~= nil and not self.dying and level:frozenAt(self.x, self.y)
+    -- (`forceFrozen`: lo pone quien lleva la partida cuando ya ha terminado — el bonus contra el bot —: sin control
+    -- e invulnerable, como en la entrada de un jefe)
+    if self.forceFrozen and not self.dying then self.frozen = true end
     if (self.iceT or 0) > 0 and not self.dying then
         -- Congelado: las pulsaciones rompen el hielo antes; el cuerpo se queda en
         -- su pose (cuadro y escala) y resbala/cae como un bloque

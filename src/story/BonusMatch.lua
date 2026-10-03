@@ -53,6 +53,8 @@ function BonusMatch.new(state, opts)
         self.bots[i] = bot
     end
     self.bot = self.bots[1]
+    -- (el bonus no gasta las vidas de la aventura ni puede acabar en Game Over: por dentro lleva 99 para que morir solo
+    -- sea reaparecer; el contador de vidas NO se dibuja en el bonus — AdventureState —, antes salía "x99")
     state.player.lives = 99
     return self
 end
@@ -106,6 +108,9 @@ function BonusMatch:update(dt)
     end
     if self:left() <= 0 then
         self.over, self.won = true, st.score > self.botScore
+        -- (se acabó: el jugador queda CONGELADO — sin control e invulnerable — hasta salir; antes seguía
+        -- moviéndose y hasta podía morir con el cartel del resultado en pantalla)
+        st.player.forceFrozen = true
         Sound.stopMusic()
         Sound.play(self.won and 'fanfare' or 'dies2')
     end

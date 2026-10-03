@@ -1835,6 +1835,11 @@ arenas as bonus nodes vs an expert BOT ✔. User's decisions: world map with a p
   walks toward that side until it can attach (Crabby `crawlWalk`, Gloomy). Harness `mechanics trepador_canto`.
   (3) BOT bouncing on a Crabby trampolín: airborne it gave no input and kept bouncing until the crab left; after 0.9 s
   without touching ground (`airT`) it steers toward its goal (or sideways if right under it) to get off.
+- 3.64.3 (bonus match): the lives counter is NOT drawn in a bonus (it showed "x99": internally the bonus gives the
+  player 99 lives so dying is only a respawn and never a Game Over, and adventure lives are untouched); when the match
+  ends the player is FROZEN — no control, invulnerable — until the screen leaves (`pa.forceFrozen`, honoured by
+  `PlayerAdventure:update` like a boss intro; before, you could still move and even die under the result banner).
+  Free Play bonus matches share the same code. Harness `story_flow bonus` checks the freeze.
 - Menu: Aventura → HISTORIA (`story_slots`) / ONLINE / JUEGO LIBRE (PRUEBAS) (`free_play` stays as the debug hub).
 - `src/story/Worlds.lua` = the story as DATA: ordered worlds `{ id, levels = {...}, boss }` (stage 7 order; every
   story level needs a FINISH — hunt-only levels have none). `Worlds.nodes(w)`, `levelName(id)`.

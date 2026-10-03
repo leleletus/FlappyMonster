@@ -734,7 +734,7 @@ function AdventureState:_renderScene()
     printOutlined(L('hud.time'),   labelX,          row2Y, tr, tg, tb, ta)
     printOutlined(timeStr,  valueEndX - tw,  row2Y, vr, vg, vb, va)
 
-    renderLivesHud(self.player, self.level.dark)
+    if not self.bonus then renderLivesHud(self.player, self.level.dark) end     -- (en el bonus no hay vidas: ver BonusMatch)
     if self.level.dark then LightHud.draw(self.player, WINDOW_W - 206, 76) end      -- (bajo las vidas)
     self:renderBossHud()
     if self.bonus then self.bonus:renderHud() end

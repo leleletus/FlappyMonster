@@ -344,16 +344,18 @@ function love.update(dt)
         b.t = b.time - 0.2                                      -- (se acaba el tiempo, ganando)
         go('bonus4')
     elseif step == 'bonus4' and t - T > 1.0 then
+        -- (terminado el bonus el jugador queda CONGELADO: sin control e invulnerable)
+        BON4 = st.bonus and st.bonus.over and st.player.frozen == true and st.player:isInvulnerable()
         shot('bonus_end')
         go('bonus5')
     elseif step == 'bonus5' and t - T > 3.5 then
         local id = Worlds.bonus(1).id
         local d = Run.data.bonus[id]
         local again = Run.bonusResult(id, { won = true, score = 1 })
-        check('bonus', BON1 and BON2 and BON3 and st.world == 1 and st.node == #Worlds.nodes(1) + 1 and d and d.won
+        check('bonus', BON1 and BON2 and BON3 and BON4 and st.world == 1 and st.node == #Worlds.nodes(1) + 1 and d and d.won
             and Run.data.lives == LIVES_B + 1 and Run.bonusState(1) == 'done' and again == nil and st.notice ~= nil,
-            ('cerrado sin jefe / abierto con jefe=%s; partida con bot y vidas aparte=%s; el bot llega a la zona y puntúa=%s; ganar: bonus %s, vidas %s → %s; repetir: premio=%s'):format(
-             tostring(BON1), tostring(BON2), tostring(BON3), Run.bonusState(1), tostring(LIVES_B), tostring(Run.data.lives), tostring(again)))
+            ('cerrado sin jefe / abierto con jefe=%s; partida con bot y vidas aparte=%s; el bot llega a la zona y puntúa=%s; al acabar el jugador queda congelado=%s; ganar: bonus %s, vidas %s → %s; repetir: premio=%s'):format(
+             tostring(BON1), tostring(BON2), tostring(BON3), tostring(BON4), Run.bonusState(1), tostring(LIVES_B), tostring(Run.data.lives), tostring(again)))
         shot('bonus_won')
         Run.data.done = KEEP; Run.data.bonus = {}; Run.data.lives = LIVES_B; Run.save()
         -- Xtra extremo: DOS bots, y más hostiles que en Fácil
