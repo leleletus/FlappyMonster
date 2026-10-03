@@ -2039,7 +2039,8 @@ Low-level notes (for writing NEW harnesses):
   on 2 and 4 with ghost 16ths, tresillo kick + extra kicks, 16th hats, crash every 4 bars in A, backbeat in the second
   half of the bridge; notes, bass and mix unchanged (loop 67.2 s). The gloomy render is bit-identical. Lesson: for a
   boss, judge tempo by where the SNARE falls, not by the BPM number. 200 was "a bit too much" → 3.54.2: the same full-time
-  groove at 172 BPM (loop 78.1 s), the middle point the user asked for.
+  groove at 172 BPM (loop 78.1 s), the middle point the user asked for. 172 was "very slow" → 3.54.3: 186 BPM (loop 72.3 s). Tried so far, full
+  time: 200 too fast, 172 too slow.
 - Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
   cuevas_oscuras; other cave levels → cuevas_1; non-story levels by their retheme theme).
 - Generators keep their internal names; `famicom.PATHS` / `famicom.out(name, ext)` map them to the new folders;
