@@ -66,7 +66,7 @@ function AdventureState:exit()
     -- todo empieza como la primera vez, la música desde el principio
     Sound.leaveMatch()
     Difficulty.bind(nil)
-    if self.onLeave and self.player and self.player.lives > 0 then self.onLeave(self.player.lives) end
+    if self.onLeave and not self.bonus and self.player and self.player.lives > 0 then self.onLeave(self.player.lives) end
     if self.rec then self.rec:finish(self); self.rec = nil end
 end
 
@@ -129,6 +129,9 @@ function AdventureState:enter(args)
         local e = Entities.create(placement)
         if e then table.insert(self.enemies, e) end
     end
+
+    -- BONUS del modo historia: Rey de la Colina contra el bot (src/story/BonusMatch.lua)
+    self.bonus = args.bonus and require('src/story/BonusMatch').new(self, args.bonus) or nil
 
     -- Zonas de jefe: la pelea empieza al entrar (un solo jugador)
     self.bossCtl    = BossZones.newController(self.level, self.enemies)
@@ -369,6 +372,7 @@ function AdventureState:update(dt)
 
     -- ── Respawn ───────────────────────────────────────────────────────────────
     if self.respawning then
+        if self.bonus then self.bonus:update(dt); if self.bonus.sent then return end end   -- (el reloj y el bot siguen)
         self.player:update(dt, self.level)
         self.respawnTimer = self.respawnTimer + dt
         if self.respawnTimer >= RESPAWN_DELAY then
@@ -428,13 +432,24 @@ function AdventureState:update(dt)
     Floods.advance(self.level, dt)                 -- inundaciones: el agua sube y baja
     Floods.updateFx(self.level, dt)
     -- Zonas de puntos: estar dentro da puntos cada cierto tiempo
-    PointAreas.update(self.level, dt, self.player.dying and {} or { self.player }, function(pa, pts)
+    local inZones = self.bonus and self.bonus:players() or (self.player.dying and {} or { self.player })
+    if self.bonus and self.bonus.over then inZones = {} end
+    PointAreas.update(self.level, dt, inZones, function(pa, pts)
+        if self.bonus and not self.bonus:award(pa, pts) then
+            Particles.emit('points', pa.x, pa.y)
+            return
+        end
         self.score = self.score + pts
         self:spawnPopup('+' .. pts, pa.x, pa.y - 60)
         Sound.play('pointGain'); Particles.emit('points', pa.x, pa.y)
     end)
     self.level.solidBodies = Entities.solidBodies(self.enemies)   -- jefes sólidos
     self.player:update(dt, self.level)
+    if self.bonus then
+        self.level.players = { self.player, self.bonus.bot.pa }       -- (los enemigos ven a los dos)
+        self.bonus:update(dt)
+        if self.bonus.sent then return end
+    end
 
     -- Actualizar enemigos y limpiar los que ya murieron. Sus sonidos se
     -- atenúan según lo lejos que estén del jugador (Sound.setEmitter).
@@ -606,6 +621,7 @@ function AdventureState:_renderScene()
         if g.alive and not g.renderFront then g:render(self.camX, self.camY) end      -- (reservas: no)
     end
 
+    if self.bonus then self.bonus:render(self.camX, self.camY) end
     self.player:render(self.camX, self.camY)
     PointAreas.drawProgress(self.level, self.player, self.player.x - self.camX, self.player.y - self.camY)
     Particles.render(self.camX, self.camY)
@@ -720,6 +736,7 @@ function AdventureState:_renderScene()
     renderLivesHud(self.player, self.level.dark)
     if self.level.dark then LightHud.draw(self.player, WINDOW_W - 206, 76) end      -- (bajo las vidas)
     self:renderBossHud()
+    if self.bonus then self.bonus:renderHud() end
     self.player:renderAirBar()
     self.player:renderDrownCountdown(self.player.x - self.camX, self.player.y - self.camY)
     self:renderPopups()

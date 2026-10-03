@@ -105,6 +105,25 @@ local function getInvert()
     return invertShader or nil
 end
 
+-- Los nodos de un mundo EN EL MAPA: sus niveles, el jefe y, detrás, su BONUS (arena contra el bot; un ramal
+-- desde el castillo). El bonus no es un nodo de Worlds.nodes (no cuenta para el progreso): su estado es aparte.
+local mapCache = {}
+local function mapNodes(w)
+    if not mapCache[w] then
+        local list = {}
+        for _, n in ipairs(Worlds.nodes(w)) do list[#list + 1] = n end
+        local b = Worlds.bonus(w)
+        if b then list[#list + 1] = b end
+        mapCache[w] = list
+    end
+    return mapCache[w]
+end
+local function stateOf(w, k)
+    local n = mapNodes(w)[k]
+    if n and n.bonus then return Run.bonusState(w) end
+    return Run.state(w, k)
+end
+
 -- ── El mapa (datos) y su geometría en píxeles ───────────────────────────────
 local MAP
 local function polyLen(p)
@@ -159,6 +178,10 @@ local function loadMap()
         for k = 1, n - 1 do M.seg[k] = subPath(p, acc, s[k], s[k + 1]) end
         local c = d.connect[w]
         if c and w < Worlds.count() then M.bridge = px(c) end
+        if def.bonus and Worlds.bonus(w) then
+            M.branch = px(def.bonus)
+            M.node[n + 1] = M.branch[#M.branch]
+        end
         -- el jefe, al lado del castillo que tenga TIERRA (derecha, izquierda o debajo); nunca en el agua
         local bx, by = M.node[n][1], M.node[n][2]
         local function land(x, y)
@@ -197,6 +220,7 @@ local function loadMap()
     for w, M in ipairs(MAP.worlds) do
         for k, seg in ipairs(M.seg) do dots(seg, { w, k + 1 }) end
         if M.bridge then dots(M.bridge, { w + 1, 1 }) end
+        if M.branch then dots(M.branch, { w, #Worlds.nodes(w) + 1 }) end
     end
     return MAP
 end
@@ -205,23 +229,28 @@ StoryMapState.loadMap = loadMap
 -- Todas las paradas en orden (mundo, nodo) y el camino de una a la siguiente
 local function stopIndex(w, k)
     local i = 0
-    for ww = 1, w - 1 do i = i + #Worlds.nodes(ww) end
+    for ww = 1, w - 1 do i = i + #mapNodes(ww) end
     return i + k
 end
 local function stopAt(i)
     for w = 1, Worlds.count() do
-        local n = #Worlds.nodes(w)
+        local n = #mapNodes(w)
         if i <= n then return w, i end
         i = i - n
     end
 end
-local function totalStops() return stopIndex(Worlds.count(), #Worlds.nodes(Worlds.count())) end
+local function totalStops() return stopIndex(Worlds.count(), #mapNodes(Worlds.count())) end
 -- puntos del camino de la parada i a la i+1
 local function legForward(i)
     local w, k = stopAt(i)
     local M = loadMap().worlds[w]
-    if k < #Worlds.nodes(w) then return M.seg[k] end
-    return M.bridge or { M.node[k], loadMap().worlds[w + 1].node[1] }
+    local n = #Worlds.nodes(w)
+    if k < n then return M.seg[k] end
+    if k == n and M.branch then return M.branch end                       -- del castillo a su bonus
+    local out = {}
+    if k == n + 1 then for _, p in ipairs(reversed(M.branch)) do out[#out + 1] = p end end   -- del bonus, de vuelta al castillo…
+    for _, p in ipairs(M.bridge or { M.node[n], (loadMap().worlds[w + 1] or M).node[1] }) do out[#out + 1] = p end   -- … y el puente
+    return out
 end
 
 local function nodeXY(w, k)
@@ -238,14 +267,15 @@ function StoryMapState:enter(args)
     self.world = args.world or Run.data.world or w
     if not Run.worldOpen(self.world) then self.world = w end
     self.node = args.node or ((self.world == w) and k or Run.data.node or 1)
-    self.node = math.max(1, math.min(#Worlds.nodes(self.world), self.node))
+    self.node = math.max(1, math.min(#mapNodes(self.world), self.node))
     self.t, self.shake = 0, 0
     self.heroX, self.heroY = nodeXY(self.world, self.node)
     self.queue = {}                               -- puntos que le quedan por andar
     self.facing = 1
     self.camX, self.camY = nil, nil
     self.justCleared = args.cleared               -- (acaba de superar ese nivel: destello)
-    self.notice, self.noticeT = args.notice, 0    -- (aviso un momento: tras un Game Over)
+    self.notice, self.noticeT = args.notice, 0    -- (aviso un momento: tras un Game Over, tras un bonus)
+    self.noticeGood = args.good
     self.musicIsland = nil
     self:_music()
 end
@@ -255,7 +285,7 @@ end
 function StoryMapState:_music()
     local best, bd
     for w = 1, Worlds.count() do
-        for k = 1, #Worlds.nodes(w) do
+        for k = 1, #mapNodes(w) do
             local x, y = nodeXY(w, k)
             local d = (x - self.heroX) ^ 2 + (y - self.heroY) ^ 2
             if not bd or d < bd then best, bd = w, d end
@@ -275,7 +305,7 @@ end
 
 local function stopOpen(i)
     local w, k = stopAt(i)
-    return Run.state(w, k) ~= 'locked'
+    return stateOf(w, k) ~= 'locked'
 end
 
 -- Anda de parada en parada hasta la `target` (si alguna está cerrada, se para delante y "choca")
@@ -313,15 +343,28 @@ function StoryMapState:_world(d)
 end
 
 function StoryMapState:_play()
-    local st = Run.state(self.world, self.node)
+    local st = stateOf(self.world, self.node)
     if st == 'locked' then self.shake = 0.3; Sound.play('headBump'); return end
     local nodes = Worlds.nodes(self.world)
-    local n = nodes[self.node]
+    local n = mapNodes(self.world)[self.node]
     local world, node = self.world, self.node
     self.queue = {}
     self.heroX, self.heroY = nodeXY(world, node)
     self:_remember()
     Sound.play('select')
+    if n.bonus then
+        -- BONUS: Rey de la Colina contra el bot (src/story/BonusMatch.lua); las vidas de la aventura no se tocan
+        gStateMachine:change('adventure', {
+            level = Worlds.path(n.id), returnTo = 'story_map', difficulty = Run.data.difficulty,
+            bonus = { onEnd = function(result)
+                local reward = Run.bonusResult(n.id, result)
+                gStateMachine:change('story_map', { world = world, node = node,
+                    notice = reward and 'story.bonus.won_notice' or (result.won and 'story.bonus.again_notice' or 'story.bonus.lost_notice'),
+                    good = result.won })
+            end },
+        })
+        return
+    end
     gStateMachine:change('adventure', {
         level = Worlds.path(n.id), returnTo = 'story_map', difficulty = Run.data.difficulty,
         -- las VIDAS son de la aventura: entran con las que lleva y, salga como salga, se guardan
@@ -410,7 +453,7 @@ local function inside(px, py, x, y, w, h) return px >= x and px <= x + w and py 
 function StoryMapState:_nodeAt(x, y)
     local cx, cy = math.floor(self.camX or 0), math.floor(self.camY or 0)
     for w = 1, Worlds.count() do
-        for k, node in ipairs(Worlds.nodes(w)) do
+        for k, node in ipairs(mapNodes(w)) do
             local nx, ny = nodeXY(w, k)
             local r = node.boss and 40 or 26
             if math.abs(x + cx - nx) <= r and math.abs(y + cy - (ny - (node.boss and 16 or 0))) <= r then return w, k end
@@ -562,7 +605,7 @@ function StoryMapState:_drawPaths(cx, cy)
     for _, d in ipairs(M.dots) do
         local x, y = d.x - cx, d.y - cy
         if x > -20 and x < WINDOW_W + 20 and y > -20 and y < WINDOW_H + 20 then
-            local open = Run.state(d.key[1], d.key[2]) ~= 'locked'
+            local open = stateOf(d.key[1], d.key[2]) ~= 'locked'
             if d.water then
                 -- (siempre opaco: cerrado = más oscuro, nunca transparente)
                 love.graphics.setColor(open and 1 or 0.5, open and 1 or 0.5, open and 1 or 0.56, 1)
@@ -676,16 +719,16 @@ end
 function StoryMapState:_drawNodes(cx, cy)
     local nodeImg = img('assets/images/story/node-Sheet.png')
     for w = 1, Worlds.count() do
-        for k, node in ipairs(Worlds.nodes(w)) do
+        for k, node in ipairs(mapNodes(w)) do
             local nx, ny = nodeXY(w, k)
             local x, y = math.floor(nx - cx), math.floor(ny - cy)
             if x > -120 and x < WINDOW_W + 120 and y > -120 and y < WINDOW_H + 80 then
-                local st = Run.state(w, k)
+                local st = stateOf(w, k)
                 if node.boss then
                     self:_drawCastle(w, x, y, st == 'done')
                 else
                     love.graphics.setColor(1, 1, 1, 1)
-                    local fi = (st == 'done') and 3 or (st == 'open') and 2 or 1
+                    local fi = (st == 'done') and 3 or (st == 'open') and (node.bonus and 4 or 2) or 1
                     love.graphics.draw(nodeImg, frameQ(nodeImg, 8, fi), x - 16, y - 16, 0, 4, 4)
                 end
                 if w == self.world and k == self.node then
@@ -697,7 +740,10 @@ function StoryMapState:_drawNodes(cx, cy)
                     love.graphics.rectangle('line', x - r - p, y + oy - r - p, 2 * (r + p), 2 * (r + p))
                     love.graphics.setLineWidth(1)
                 end
-                local b = st == 'done' and Run.data.best[node.id]
+                if node.bonus and st ~= 'locked' then
+                    PixelFont.shadow('B', x - math.floor(PixelFont.width('B', 3) / 2), y - 40, 3, 1, { 0.6, 0.85, 1 })
+                end
+                local b = st == 'done' and not node.bonus and Run.data.best[node.id]
                 if b and b.grade then
                     PixelFont.shadow(b.grade, x - math.floor(PixelFont.width(b.grade, 3) / 2) + (node.boss and -40 or 0), y + 20, 3, 1, GRADE_COLOR[b.grade])
                 end
@@ -782,7 +828,7 @@ function StoryMapState:_drawHud()
         local mw = PixelFont.width(msg, 4)
         love.graphics.setColor(0, 0, 0, 0.6 * a)
         love.graphics.rectangle('fill', math.floor((WINDOW_W - mw) / 2) - 12, TOP_H + 16, mw + 24, PixelFont.height(4) + 20)
-        PixelFont.shadow(msg, math.floor((WINDOW_W - mw) / 2), TOP_H + 26, 4, a, { 1, 0.35, 0.3 })
+        PixelFont.shadow(msg, math.floor((WINDOW_W - mw) / 2), TOP_H + 26, 4, a, self.noticeGood and { 1, 0.9, 0.25 } or { 1, 0.35, 0.3 })
     end
 
     -- Ficha del nivel elegido (abajo)
@@ -791,16 +837,21 @@ function StoryMapState:_drawHud()
     love.graphics.rectangle('fill', 0, by - 4, WINDOW_W, 4)
     love.graphics.setColor(0, 0, 0, 0.8)
     love.graphics.rectangle('fill', 0, by, WINDOW_W, BOT_H)
-    local node = Worlds.nodes(self.world)[self.node]
-    local st = Run.state(self.world, self.node)
+    local node = mapNodes(self.world)[self.node]
+    local st = stateOf(self.world, self.node)
     local name = (st == 'locked') and L('story.locked') or Worlds.levelName(node.id)
+    if node.bonus and st ~= 'locked' then name = L('story.bonus.name', { name = name }) end
     love.graphics.setFont(FONT_BIG)
     local nameW = WINDOW_W - 2 * 100
     love.graphics.setColor(0, 0, 0, 0.7); love.graphics.printf(name, 103, by + 15, nameW, 'center')
     love.graphics.setColor(1, 1, 1, 1); love.graphics.printf(name, 100, by + 12, nameW, 'center')
     love.graphics.setFont(FONT_MED)
     local line
-    if st == 'locked' then line = L('story.locked_hint')
+    if node.bonus then
+        local b = Run.data.bonus[node.id]
+        line = (st == 'locked') and L('story.bonus.locked_hint')
+               or (st == 'done') and L('story.bonus.done_line', { score = b and b.best or 0 }) or L('story.bonus.line')
+    elseif st == 'locked' then line = L('story.locked_hint')
     elseif st == 'done' then
         local b = Run.data.best[node.id] or {}
         line = L('story.done_line', { grade = b.grade or '-', score = b.score or 0, time = string.format('%d:%02d', math.floor((b.time or 0) / 60), math.floor((b.time or 0) % 60)) })

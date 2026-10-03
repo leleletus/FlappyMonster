@@ -304,7 +304,12 @@ function love.update(dt)
         end
         TOUR = TOUR + 1
         if TOUR > Worlds.count() then
-            Run.data.done = KEEP; Run.save(); go('del')
+            -- BONUS (arena contra el bot): cerrado sin vencer al jefe; abierto con él; se juega, se gana y da premio una vez
+            local lockedB = Run.bonusState(Worlds.count())
+            local openB = Run.bonusState(1)
+            LIVES_B = Run.data.lives
+            BON1 = lockedB == 'locked' and openB == 'open'
+            gStateMachine:change('story_map', { world = 1, node = #Worlds.nodes(1) + 1 }); go('bonus1')
         else
             gStateMachine:change('story_map', { world = TOUR, node = 1 }); go('tour2')
         end
@@ -321,6 +326,34 @@ function love.update(dt)
         -- el MAPA ENTERO en una imagen (2688x1536), para revisarlo: story_map_full.png
         if TOUR == Worlds.count() then top():renderFull():encode('png', 'story_map_full.png') end
         go('tour')
+    elseif step == 'bonus1' and t - T > 0.5 then
+        shot('bonus_node')
+        pressNext('confirm'); go('bonus2')
+    elseif step == 'bonus2' and t - T > 2.5 then
+        local b = st.bonus
+        BON2 = b ~= nil and b.bot ~= nil and st.levelPath == Worlds.path(Worlds.bonus(1).id) and st.player.lives == 99
+        BOTX0 = b and b.bot.pa.x
+        go('bonus3')
+    elseif step == 'bonus3' and t - T > 6 then
+        local b = st.bonus
+        BON3 = b and math.abs(b.bot.pa.x - BOTX0) > 64          -- (el bot se mueve)
+        shot('bonus_match')
+        st.score = b.botScore + 40
+        b.t = b.time - 0.2                                      -- (se acaba el tiempo, ganando)
+        go('bonus4')
+    elseif step == 'bonus4' and t - T > 1.0 then
+        shot('bonus_end')
+        go('bonus5')
+    elseif step == 'bonus5' and t - T > 3.5 then
+        local id = Worlds.bonus(1).id
+        local d = Run.data.bonus[id]
+        local again = Run.bonusResult(id, { won = true, score = 1 })
+        check('bonus', BON1 and BON2 and BON3 and st.world == 1 and st.node == #Worlds.nodes(1) + 1 and d and d.won
+            and Run.data.lives == LIVES_B + 1 and Run.bonusState(1) == 'done' and again == nil and st.notice ~= nil,
+            ('cerrado sin jefe / abierto con jefe=%s; partida con bot y vidas aparte=%s; el bot se mueve=%s; ganar: bonus %s, vidas %s → %s; repetir: premio=%s'):format(
+             tostring(BON1), tostring(BON2), tostring(BON3), Run.bonusState(1), tostring(LIVES_B), tostring(Run.data.lives), tostring(again)))
+        shot('bonus_won')
+        Run.data.done = KEEP; Run.data.bonus = {}; Run.data.lives = LIVES_B; Run.save(); go('del')
     elseif step == 'del' and t - T > 0.3 then
         resize(1280, 720)
         pressNext('back'); go('del2')

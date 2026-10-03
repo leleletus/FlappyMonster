@@ -121,6 +121,33 @@ function Run.complete(id, result)
     return out
 end
 
+-- BONUS (arena contra el bot): 'done' ganado · 'open' con el jefe del mundo vencido · 'locked'
+Run.BONUS_REWARD = { lives = 1, points = 1000 }
+function Run.bonusState(w)
+    local W, b = Worlds.get(w), Worlds.bonus(w)
+    if not (b and Run.data) then return 'locked' end
+    if Run.data.bonus[b.id] and Run.data.bonus[b.id].won then return 'done' end
+    return Run.isDone(W.boss) and 'open' or 'locked'
+end
+
+-- Fin de una partida bonus: apunta la mejor puntuación; la PRIMERA victoria da el premio. Devuelve el premio o nil.
+function Run.bonusResult(id, result)
+    local d = Run.data
+    if not d then return nil end
+    local b = d.bonus[id] or {}
+    local reward
+    if result.won and not b.won then
+        b.won, reward = true, Run.BONUS_REWARD
+        d.lives = math.min(99, d.lives + reward.lives)
+        d.points = (d.points or 0) + reward.points
+    end
+    b.best = math.max(b.best or 0, result.score or 0)
+    b.played = (b.played or 0) + 1
+    d.bonus[id] = b
+    Run.save()
+    return reward
+end
+
 -- Desbloqueo por acabar el juego en `difficulty`: devuelve el id NUEVO desbloqueado (nil si ya lo estaba)
 function Run.unlockAfter(difficulty)
     local Save = require 'src/story/Save'

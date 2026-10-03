@@ -85,6 +85,16 @@ return {
         boss_line = "BOSS!  [ENTER] play",
         done_line = "Grade {grade}  ·  {score} points  ·  {time}",
         world_grade = "World grade: {grade}",
+        bonus = {
+            you = "YOU", bot = "BOT", win = "YOU WIN!", lose = "THE BOT WINS",
+            name = "BONUS: {name}",
+            line = "King of the Hill against the BOT  ·  [ENTER] play",
+            done_line = "Won!  ·  best: {score} points",
+            locked_hint = "Beat this world's boss",
+            won_notice = "BONUS WON!  +1 LIFE  +1000 POINTS",
+            again_notice = "YOU BEAT THE BOT!",
+            lost_notice = "THE BOT WINS... TRY AGAIN!",
+        },
 
         go_continue = "CONTINUE",
         go_world = "No lives left: back to the start of this world",

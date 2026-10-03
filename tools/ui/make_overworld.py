@@ -74,6 +74,12 @@ CONNECT = [
 ]
 
 
+# BONUS de cada mundo (arena contra el bot): un ramal corto desde el castillo hasta su nodo
+BONUS = {'pradera': [(24, 31), (24, 27.5), (22, 24.5)], 'costa': [(50, 38), (52.5, 40), (52, 43)],
+         'fortaleza': [(77, 27), (74.5, 25.5), (71.5, 26.5)], 'nieve': [(73, 9), (76.5, 8), (78.5, 5.5)],
+         'cuevas': [(23, 17), (26, 18.5), (26.5, 21)], 'final': [(42, 14), (45, 13), (47.5, 14)]}
+
+
 def catmull(pts, n=8):
     """Curva que pasa por todos los puntos de control (sin esquinas)"""
     P = [pts[0]] + list(pts) + [pts[-1]]
@@ -91,7 +97,8 @@ def catmull(pts, n=8):
 
 SPATHS = {k: catmull(v) for k, v in PATHS.items()}
 SCONNECT = [catmull(c) for c in CONNECT]
-LINES = list(SPATHS.values()) + SCONNECT
+SBONUS = {k: catmull(v) for k, v in BONUS.items()}
+LINES = list(SPATHS.values()) + SCONNECT + list(SBONUS.values())
 
 
 def seg_dist(px, py, a, b):
@@ -110,7 +117,7 @@ LAND = {'pradera': 'g', 'costa': 'g', 'fortaleza': 'f', 'nieve': 'w', 'cuevas': 
 for k in ORDER:
     for y in range(H):
         for x in range(W):
-            if grid[y][x] == '~' and min(seg_dist(x + 0.5, y + 0.5, SPATHS[k][i], SPATHS[k][i + 1]) for i in range(len(SPATHS[k]) - 1)) < 1.3:
+            if grid[y][x] == '~' and min(seg_dist(x + 0.5, y + 0.5, l[i], l[i + 1]) for l in (SPATHS[k], SBONUS[k]) for i in range(len(l) - 1)) < 1.3:
                 grid[y][x] = LAND[k]
 
 # ── Relieve: mesetas (2), cumbres (3), hoyos (0) y el cráter del volcán ──────
@@ -294,7 +301,7 @@ data = {
     'cell': 32, 'w': W, 'h': H,
     'rows': [''.join(r) for r in grid],
     'heights': [''.join(str(v) for v in r) for r in hgt],
-    'worlds': [{'id': k, 'path': [list(p) for p in SPATHS[k]], 'boss': BOSS_ART[k]} for k in ORDER],
+    'worlds': [{'id': k, 'path': [list(p) for p in SPATHS[k]], 'boss': BOSS_ART[k], 'bonus': [list(p) for p in SBONUS[k]]} for k in ORDER],
     'connect': [[list(p) for p in c] for c in SCONNECT],
     'decos': decos, 'critters': critters,
 }
@@ -328,7 +335,7 @@ node_pals = [
     {'o': OUT, 'a': (70, 70, 84, 255), 'b': (110, 110, 124, 255), 'c': (88, 88, 100, 255)},      # cerrado
     {'o': OUT, 'a': (150, 30, 30, 255), 'b': (232, 64, 56, 255), 'c': (186, 44, 40, 255)},       # abierto
     {'o': OUT, 'a': (170, 120, 20, 255), 'b': (255, 214, 70, 255), 'c': (220, 170, 40, 255)},    # superado
-    {'o': OUT, 'a': (40, 90, 170, 255), 'b': (90, 170, 255, 255), 'c': (60, 130, 220, 255)},     # (resaltado)
+    {'o': OUT, 'a': (40, 90, 170, 255), 'b': (90, 170, 255, 255), 'c': (60, 130, 220, 255)},     # bonus abierto (azul)
 ]
 sheet([grid_img(NODE, p) for p in node_pals], IMG + 'node-Sheet.png')
 

@@ -494,8 +494,11 @@ function PlayerAdventure:isPushProtected()
     return self:isInvulnerable() and not self.hitNow
 end
 
+-- INMORTAL (`immortal = true`: los bots rivales del modo historia, src/ai/Bot.lua): los golpes y los empujones
+-- le llegan (destello, invulnerable un momento, sale despedido), pero ni pierde vida ni muere ni se ahoga.
 function PlayerAdventure:takeDamage()
     if self.dying or not self.alive or self:isInvulnerable() then return false end
+    if self.immortal then return false end
     self.hp=self.hp-1
     if self.hp<=0 then self.hp=self.hpMax; self:die(); return true end
     Sound.play('dies'); Noise.emit(self.x, self.y, Noise.R.hurt); return false
@@ -517,6 +520,15 @@ end
 -- igual (límite de tiempo del nivel).
 function PlayerAdventure:die(drownDeath, force)
     if self.dying then return end
+    if self.immortal then                                  -- (pinchos, lava, un aplastón: un bote y sigue)
+        if self:isInvulnerable() then return false end
+        self.vy, self.onGround = -620, false
+        self.gpPhase, self.gpT = nil, 0
+        self:grantInvulnerability(1.2)
+        self.hurtT, self.hitNow = HURT_FLASH, true
+        Sound.play('dies')
+        return false
+    end
     if self:isInvulnerable() and not drownDeath and not force then return false end
     self.dying=true; self.vx=0; self.vy=0
     self.gpPhase=nil; self.stunT=0; self.squashT=0; self.iceT=0
@@ -573,7 +585,7 @@ end
 -- La "cabeza" es la franja superior del 25% de la outerBounds.
 -- Mientras esté sumergida avanza el temporizador; al salir → reset total.
 function PlayerAdventure:updateDrowning(dt, level)
-    if self.dying then return end
+    if self.dying or self.immortal then return end
 
     local headX, headY = self:getHeadPoint()
     local liq = level:liquidAt(headX, headY)

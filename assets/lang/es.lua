@@ -85,6 +85,16 @@ return {
         boss_line = "¡JEFE!  [ENTER] jugar",
         done_line = "Nota {grade}  ·  {score} puntos  ·  {time}",
         world_grade = "Nota del mundo: {grade}",
+        bonus = {
+            you = "TÚ", bot = "BOT", win = "¡HAS GANADO!", lose = "GANA EL BOT",
+            name = "BONUS: {name}",
+            line = "Rey de la colina contra el BOT  ·  [ENTER] jugar",
+            done_line = "¡Ganado!  ·  mejor: {score} puntos",
+            locked_hint = "Vence al jefe de este mundo",
+            won_notice = "¡BONUS GANADO!  +1 VIDA  +1000 PUNTOS",
+            again_notice = "¡GANAS AL BOT!",
+            lost_notice = "GANA EL BOT... ¡INTÉNTALO OTRA VEZ!",
+        },
 
         go_continue = "CONTINUAR",
         go_world = "Sin vidas: vuelves al principio de este mundo",

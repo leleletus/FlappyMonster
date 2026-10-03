@@ -1691,7 +1691,7 @@ framework ✔ · 3 lives + Game Over ✔ · 4 results + grades ✔ · 5 world ma
 difficulty unlocks + double bosses ✔ · 7 level order ✔ (28 levels: every race level; each world = its island's
 theme, easiest first by enemy/spike density, new mechanics first, auto-scroll / mazes / dark / very tall last — see the
 comments in `Worlds.LIST`; the Snowball Boss `lago_helado` is a mid-world boss node in the Summits) · 8 KOTH
-arenas as bonus nodes vs an expert BOT. User's decisions: world map with a path, 3 save slots, KOTH = bonus vs a bot.
+arenas as bonus nodes vs an expert BOT ✔. User's decisions: world map with a path, 3 save slots, KOTH = bonus vs a bot.
 - **Stage 2 ✔ — DIFFICULTY = generic modifier framework** (`src/Difficulty.lua`): each difficulty id (`easy, normal,
   hard, extreme, xtra`) is a table of NAMED modifiers; base code asks `Difficulty.k('airTime')` / `flag(...)`, never
   the difficulty's name. It is a property of the level being simulated: `level.difficulty` (nil = NEUTRAL: everything
@@ -1756,6 +1756,29 @@ arenas as bonus nodes vs an expert BOT. User's decisions: world map with a path,
   a world reward was skipped when the level gave none (`ipairs` stopped at the nil). Harnesses: `difficulty_rules`
   (`sentidos`, `doble`), `story_flow` (`desbloqueo`), `sp_boss DIFF=xtra` (prints the bosses + "Aliados": fails if both attack at once
   > 0.5 s), `online_smoke DIFF=xtra` (the client has both).
+- **Stage 8 ✔ — BONUS: King of the Hill vs the BOT.** One optional bonus per world (`Worlds.LIST[w].bonus`,
+  `Worlds.bonus(w)`; NOT in `Worlds.nodes`: it doesn't count for progress or unlocks): pradera isla_flotante, costa
+  cala_de_los_muelles, fortaleza ciudadela_alterna, nieve lago_de_cristal, cuevas cripta_del_silencio (dark), final
+  cantera_real. Opens when the world's boss is beaten (`Run.bonusState(w)`); FIRST win = +1 life +1000 points
+  (`Run.bonusResult`, save field `bonus[id] = {won, best, played}`). Map: a blue "B" node on a short branch from the
+  castle (`overworld.json worlds[i].bonus`; in `StoryMapState` it is stop n+1 of its world: `mapNodes` / `stateOf`).
+  MATCH = `src/story/BonusMatch.lua` inside AdventureState (`args.bonus = { onEnd }`): `level.matchTime` s, both score
+  from the point zones, more points wins (tie = not won), HUD "TÚ n · clock · BOT n"; your adventure lives are NOT
+  used (99, never written back); your ground pound near the bot shoves it too.
+  THE BOT (`src/ai/Bot.lua`; user's brief: its job is to keep you from sitting in the zone, by ground pounds; IMMORTAL
+  for simplicity — `pa.immortal`: hits, knockback and enemies still affect it, but no HP loss, death or drowning; a
+  kill = a hop + blink): a real `PlayerAdventure` driven by input bits each frame. If you are in a zone and its cooldown
+  is over it hunts you through the nav graph and, within `ATTACK_R`, jumps at you and GROUND-POUNDS on top: `Bot:push`
+  launches you far (`PUSH_VX` 1150) with a short stun; then `attackCd` (1.4 s / the difficulty's `enemyPace`).
+  Otherwise it goes to the best zone that has FLOOR NOW (`Bot.pickZone`: more points first, all-thin-ice zones
+  penalised, ON/OFF floors re-checked every second) and holds it. NAVIGATION (`src/ai/BotNav.lua`): a graph per level
+  built with the REAL physics — nodes = standable cells, edges = walk to the next cell or a recorded MACRO (≈30 input
+  sequences from each cell: jumps, double jumps at several timings, drops, walk-offs; trampolines included via their
+  `interact`) → `assets/nav/<level>.json` (`run.sh bot_nav BUILD=1`, ~1 s per arena; signature of the tiles: stale →
+  the game rebuilds it on entering). Levels with ON/OFF blocks are built in BOTH states and merged; at run time edges
+  whose target has no floor now are skipped, an edge that fails twice is banned 15 s, and with no path it brute-forces
+  toward the goal jumping. Harness `bot_nav` (per arena: reaches a zone and stays; with a dummy player in the zone it
+  must push it ≥ 3 times in 40 s) and `story_flow bonus`.
 - Menu: Aventura → HISTORIA (`story_slots`) / ONLINE / JUEGO LIBRE (PRUEBAS) (`free_play` stays as the debug hub).
 - `src/story/Worlds.lua` = the story as DATA: ordered worlds `{ id, levels = {...}, boss }` (stage 7 order; every
   story level needs a FINISH — hunt-only levels have none). `Worlds.nodes(w)`, `levelName(id)`.
@@ -1834,7 +1857,7 @@ or extend the HARNESS (and its README row) instead of working around it in a
 scratch copy: the time spent fighting test setups was the user's complaint.
 Harnesses: flyers, crawler_drop, mechanics, sounds, boss_sim, sp_boss, boss_frames, megagummy_rules, gloomy_rules, megagloomy_rules,
 editor_open, free_play, update_boot, online_smoke, online_boss, online_helmet,
-level_check, level_solve, level_shots, story_flow, difficulty_rules. `tools/` is not shipped (.love / updates).
+level_check, level_solve, level_shots, story_flow, difficulty_rules, bot_nav. `tools/` is not shipped (.love / updates).
 
 Low-level notes (for writing NEW harnesses):
 - Headless sim (no window): a scratch LÖVE app with `t.window=false`,
