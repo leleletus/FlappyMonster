@@ -56,7 +56,7 @@
     { "id": "map_nieve",     "name": "Rumbo a las islas (Cumbres)",   "file": "map/map_nieve.ogg",     "level": false, "volume": 0.75 },
     { "id": "map_cuevas",    "name": "Rumbo a las islas (Cuevas)",    "file": "map/map_cuevas.ogg",    "level": false, "volume": 0.75 },
     { "id": "map_final",     "name": "Rumbo a las islas (Volcán)",    "file": "map/map_final.ogg",     "level": false, "volume": 0.75 },
-    { "id": "victory",       "name": "Victoria (pendiente)",          "file": "jingles/victory.ogg",   "level": false, "loop": false, "pending": true }
+    { "id": "victory",       "name": "Victoria (resultados)",         "intro": "jingles/victory_intro.ogg", "loop": "jingles/victory_loop.ogg", "level": false }
   ],
   "aliases": {
     "classic": "fortaleza_1", "flying_machine": "fortaleza_1", "hidro_city": "costa_1", "labyrinth": "cuevas_1", "dark_cave": "cuevas_oscuras",

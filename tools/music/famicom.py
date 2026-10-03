@@ -309,6 +309,7 @@ PATHS = {
     'winter_nes': '../../../FlappyMonster_originals/music/placeholders/snowball_boss_winter_nes',
     'cuevas_1': 'worlds/cuevas/cuevas_1', 'cuevas_2': 'worlds/cuevas/cuevas_2', 'cuevas_bonus': 'worlds/cuevas/cuevas_bonus',
     'volcan_1': 'worlds/volcan/volcan_1', 'volcan_2': 'worlds/volcan/volcan_2', 'volcan_bonus': 'worlds/volcan/volcan_bonus',
+    'victory': 'jingles/victory',
     'snowball_boss': 'bosses/snowball_boss', 'nieve_1': 'worlds/nieve/nieve_1', 'nieve_2': 'worlds/nieve/nieve_2', 'nieve_bonus': 'worlds/nieve/nieve_bonus',
     # (tentacle_chip = las pistas "chip" antiguas del Espejo: retiradas; si se regeneran, van FUERA del repo)
     'tentacle_chip': '../../../FlappyMonster_originals/music/placeholders/mirror_boss_tentacle_chip', 'tentacle_chip_instrumental': '../../../FlappyMonster_originals/music/placeholders/mirror_boss_inst_tentacle_chip',

@@ -2136,6 +2136,15 @@ Low-level notes (for writing NEW harnesses):
   already uses); and its ♭VI–♭VII ending (D–E under A-G#-A-B rising) resolves into the F# MAJOR climax where the
   llamada answers. Loop = 60 bars (96 s); sections vs A: F +3.6 dB, climax +4.7. So the game DOES quote that tune
   here, as a sample (8 bars).
+- `victory` (3.62.0, `worlds_nes.py victory`; verified by numbers only): the results-screen music, the LAST empty slot.
+  Intro = a FANFARE that plays once (the whole "llamada" G-C-E-G on trumpet with timpani on every note, cymbal, a roll
+  into the cadence; 7.3 s) + a light celebration LOOP for as long as the screen lasts (C major, 132: trumpet + octave,
+  bass walking through the chord, claps on 2 and 4, tambourine, accent "ta-da"; 58 s; the borrowed track it replaces
+  was 85 s and simply ended). `song()` themes may now give the intro its own melody and chords (`pi`, `ci`).
+  **THE SOUNDTRACK IS COMPLETE (2026-10-03)**: every island has `_1`, `_2`, bonus; every boss its own theme; map,
+  menus, results. Nothing pending in `index.json`; no borrowed tune ships except the two samples the user asked for
+  (Tentacle Tantrum cells in the Crab Tantrums, Winter Fallympics motif + 1:48 phrase in the snow set and the icy
+  crab, the old level tune's 8 bars in the final boss). Retired audio lives in `FlappyMonster_originals/music/placeholders/`.
 - Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
   cuevas_oscuras; other cave levels → cuevas_1; non-story levels by their retheme theme).
 - Generators keep their internal names; `famicom.PATHS` / `famicom.out(name, ext)` map them to the new folders;

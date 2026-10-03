@@ -123,3 +123,19 @@ tonalidad y con su instrumento. Así el mapa y los niveles son la misma música.
 Una pista con intro son DOS archivos: `<pista>_intro.ogg` (suena una vez al entrar) y `<pista>_loop.ogg` (se repite
 sin volver a la intro); en `index.json`, `"intro"` + `"loop"`. La cola del final de la canción se pliega sobre el
 principio DEL BUCLE (`GN.fold(y, n, at)`), no sobre la intro, y `GN.export(nombre, y, intro)` hace el corte.
+
+## Estado (3.62.0): banda sonora completa
+
+Todas las islas tienen `_1`, `_2` y bonus; cada jefe, su tema; mapa, menús y resultados (`victory`). No queda ningún
+hueco en `index.json`. Lecciones de esta tanda, para lo que venga:
+- La segunda cara de una isla cambia de tonalidad, de ritmo y de timbre, y lleva su propia melodía (nunca el modo ni
+  un transporte); un tema en menor necesita un arreglo que vaya con él.
+- Notas largas, del acorde; adornos, de la escala. Comprobarlo con números antes de exportar.
+- Una isla no reutiliza el molde rítmico de otra: medir en qué posiciones caen los ataques de la frase A frente a los
+  demás temas.
+- El ACENTO de cada tema (la figura que suena donde la melodía se posa) es suyo y es MELÓDICO: su instrumento, su
+  ritmo; nunca el trino de la pradera adaptado, nunca solo ruido.
+- Intro y bucle, en archivos separados. Un jefe se juzga por dónde cae la caja, no por el número de BPM.
+- Las muestras de canciones ajenas, pocas, donde está su armonía, y con melodía propia alrededor hecha con su mismo
+  vocabulario.
+- `--capas` saca cualquier pista por capas para señalar qué elemento es cuál.

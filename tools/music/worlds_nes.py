@@ -480,6 +480,25 @@ FCH_B = [(Fr_, MAJ), (G, MIN), (C, MAJ), (Bbr_, MAJ), (A, MIN), (Fr_, MAJ), ((G,
 SCALE_Aphr = {9, 10, 0, 2, 4, 5, 7}
 
 
+# ══ VICTORIA (la pantalla de resultados; id `victory`) ═════════════════════════
+# Una FANFARRIA (la intro, suena una vez: "la llamada" entera — Sol-Do-Mi-Sol — con timbales y platillo, y su cierre
+# en la tónica) y después un bucle de celebración, ligero, para lo que dure la pantalla (la pista prestada de antes
+# duraba 85 s y se acababa). Do mayor, 132 BPM; la melodía, a saltitos con un adelanto (2-1-3); bajo que camina por el
+# acorde, palmas en 2 y 4, pandereta; cierra la frase B con la llamada.
+W_IN = PH("0:G4/4 4:C5/4 8:E5/4 12:G5/4", "0:C6/12 12:G5/4", "0:A5/4 4:F5/4 8:B5/4 12:D6/4", "0:C6/16")
+WCH_IN = [(C, MAJ), (C, MAJ), ((Fr_, MAJ), (G, MAJ)), (C, MAJ)]
+W_A = PH("0:E5/2 2:G5/1 3:C6/3 6:G5/2 8:E5/4 12:G5/4", "0:A5/2 2:C6/1 3:E6/3 6:C6/2 8:A5/8",
+         "0:F5/2 2:A5/1 3:C6/3 6:A5/2 8:F5/4 12:A5/4", "0:G5/2 2:B5/1 3:D6/3 6:B5/2 8:G5/8",
+         "0:E5/2 2:G5/1 3:C6/3 6:G5/2 8:E5/4 12:G5/4", "0:E6/4 4:C6/4 8:A5/4 12:C6/4",
+         "0:A5/2 2:C6/2 4:F6/4 8:B5/2 10:D6/2 12:G5/4")
+W_END = P(8, "0:C6/4 4:G5/4 8:E5/8")
+W_END2 = P(8, "0:E6/4 4:G5/4 8:C6/8")
+W_B = PH("0:A5/8 8:F5/4 12:A5/4", "0:G5/8 8:E5/4 12:G5/4", "0:B5/8 8:D6/4 12:B5/4", "0:C6/6 6:G5/2 8:E5/8",
+         "0:C6/8 8:A5/4 12:F5/4", "0:E6/8 8:C6/4 12:G5/4", "0:D6/4 4:A5/4 8:B5/4 12:D6/4", "0:G4/4 4:C5/2 6:E5/2 8:G5/6")
+WCH_A = [(C, MAJ), (A, MIN), (Fr_, MAJ), (G, MAJ), (C, MAJ), (A, MIN), ((Fr_, MAJ), (G, MAJ)), (C, MAJ)]
+WCH_B = [(Fr_, MAJ), (C, MAJ), (G, MAJ), (C, MAJ), (Fr_, MAJ), (C, MAJ), ((D, MIN), (G, MAJ)), (C, MAJ)]
+
+
 # ── gummy_king_boss, 2ª versión: "Su Majestad Gummy" de CORTE (el usuario: más regio y menos parecido a la pradera).
 # La 1ª iba en Sol mayor con el bajo saltarín, los acordes a contratiempo y el trino de la pradera. Ahora: Si♭ mayor
 # (tonalidad de metales), fanfarria de trompeta A TIEMPO (nada de síncopas juguetonas) con su llamada "ta-ta taa",
@@ -505,8 +524,10 @@ def song(variant, minor=False, solo=False, theme=None):
     compás ('intro' | 'A' | 'B' | 'solo') y los compases donde EMPIEZA una frase"""
     global SCALE
     SCALE = {'galope': SCALE_C, 'calipso': SCALE_F, 'arrecife': SCALE_Bb, 'marcha': SCALE_Cm, 'engranajes': SCALE_Gm, 'persecucion': SCALE_Cm,
-             'cumbres': SCALE_F, 'ventisca': SCALE_Dm, 'bola': SCALE_Fm, 'majestad': SCALE_Bb, 'ecos': SCALE_Ddor, 'laberinto': SCALE_Am, 'ceniza': SCALE_Ephr, 'fuego': SCALE_Aphr}.get(theme, SCALE_G)
-    if theme == 'ceniza': pa, e1, e2, pb, ca, cb, tonic = L_A, L_END, L_END2, L_B, LCH_A, LCH_B, (E, MIN)
+             'cumbres': SCALE_F, 'ventisca': SCALE_Dm, 'bola': SCALE_Fm, 'majestad': SCALE_Bb, 'ecos': SCALE_Ddor, 'laberinto': SCALE_Am, 'ceniza': SCALE_Ephr, 'fuego': SCALE_Aphr, 'victoria': SCALE_C}.get(theme, SCALE_G)
+    pi, ci = [], None                                  # (la intro puede llevar melodía y acordes propios: la fanfarria)
+    if theme == 'victoria': pa, e1, e2, pb, ca, cb, tonic, pi, ci = W_A, W_END, W_END2, W_B, WCH_A, WCH_B, (C, MAJ), W_IN, WCH_IN
+    elif theme == 'ceniza': pa, e1, e2, pb, ca, cb, tonic = L_A, L_END, L_END2, L_B, LCH_A, LCH_B, (E, MIN)
     elif theme == 'fuego': pa, e1, e2, pb, ca, cb, tonic = F_A, F_END, F_END2, F_B, FCH_A, FCH_B, (A, MIN)
     elif theme == 'ecos': pa, e1, e2, pb, ca, cb, tonic = C_A, C_END, C_END2, C_B, CCH_A, CCH_B, (D, MIN)
     elif theme == 'laberinto': pa, e1, e2, pb, ca, cb, tonic = U_A, U_END, U_END2, U_B, UCH_A, UCH_B, (A, MIN)
@@ -532,7 +553,7 @@ def song(variant, minor=False, solo=False, theme=None):
         for c in chords:
             ch.append(c if isinstance(c[0], tuple) else (c, c))
             tag.append(kind)
-    section('intro', [], [tonic] * INTRO)
+    section('intro', pi, ci or [tonic] * INTRO)
     section('A', pa + e1, ca)
     section('A', pa + e2, ca)
     section('B', pb, cb)
@@ -585,6 +606,7 @@ VOLC = ('volcan', 'lava')
 I_HARP = {'vol': [8, 6, 5, 4, 3, 2, 1], 'sus': 0, 'duty': 0.5}
 CAVE = ('cueva', 'sumergida')
 ISLE_LV = {
+    'fiesta': {'lead': 0, 'dbl': -9, 'echo': -12, 'chords': -10, 'bass': -2, 'trill': -8, 'kick': -2, 'snare': -5, 'hat': -12, 'crash': -9, 'toms': -1},
     'volcan': {'lead': 0, 'dbl': -8, 'echo': -13, 'chords': -10, 'bass': -1, 'trill': -6, 'kick': 0, 'snare': -3, 'hat': -12, 'crash': -10, 'toms': 0},
     'lava':   {'lead': 0, 'dbl': -9, 'echo': -13, 'chords': -9, 'bass': -1, 'trill': -7, 'kick': 0, 'snare': -3, 'hat': -12, 'crash': -10, 'toms': 0},
     'cueva':     {'lead': -9, 'bell': 0, 'echo': -10, 'chords': -9, 'bass': -2, 'trill': -2, 'kick': -3, 'snare': -10, 'hat': -14, 'crash': -14, 'toms': 0},
@@ -668,7 +690,10 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
     busy = set()
     for b, st, n, d in mel:
         t0, t1 = tv(b, st), tv(b, st) + d * S16 * 0.94
-        if isle == 'volcan':                                 # voz áspera (N163) + trompas una octava abajo
+        if isle == 'fiesta':                                 # trompeta + su octava
+            play(Cn['lead'], t0, t1, n, I_BRASS, release=3)
+            play(Cn['dbl'], t0, t1, n + 12, I_DBL, release=2)
+        elif isle == 'volcan':                               # voz áspera (N163) + trompas una octava abajo
             play(Cn['lead'], t0, t1, n, I_HOT, q=q_n163, release=3)
             play(Cn['dbl'], t0, t1, n - 12, I_HORN, release=2)
         elif isle == 'lava':                                 # pulso una octava abajo (el latigazo es agudo) + su octava
@@ -714,12 +739,14 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
             notes = [60 + (r - 60) % 12 + iv for iv in q]
             s0 = half * 8
             # BAJO saltarín: 1-5-8-5 en corcheas (en la intro entra en el compás 3; en B, negras)
-            if not intro or b >= 3:
+            if not intro or b >= 3 or isle == 'fiesta':
                 pat = ((0, 0, 3.4), (4, 12, 3.4)) if in_b else ((0, 0, 1.7), (2, 7, 1.7), (4, 12, 1.7), (6, 7, 1.7))
                 if drive: pat = ((0, 0, 1.6), (2, 12, 1.6), (4, 0, 1.6), (6, 7, 1.6))
                 if galop and not in_b: pat = ((0, 0, 2.6), (3, 0, 0.9), (4, 7, 2.6), (7, 7, 0.9))     # (tan-ta tan-ta)
                 if isle == 'costa' and drive < 2: pat = ((0, 0, 2.7), (3, 7, 0.9), (4, 12, 3.3))             # calipso: 1, 1y, 3
                 if isle == 'fortaleza' and drive < 2: pat = ((0, 0, 3.2), (4, 12, 3.2)) if in_b else ((0, 0, 1.5), (2, 12, 1.5), (4, 0, 1.5), (6, 12, 1.5))   # octavas
+                if isle == 'fiesta': pat = ((0, 0, 1.6), (2, q[1], 1.6), (4, 7, 1.6), (6, q[1], 1.6))                    # camina por el acorde
+                if isle == 'fiesta' and intro: pat = ((0, 0, 7.6),)
                 if isle == 'volcan': pat = ((0, 0, 1.6), (2, 0, 1.6), (4, 0, 1.6), (6, 12, 1.6))                       # corcheas
                 if isle == 'lava': pat = ((0, 0, 0.9), (1, 0, 0.9), (2, 0, 1.7), (4, 0, 0.9), (5, 0, 0.9), (6, 12, 1.7))     # galope
                 if isle in CAVE and drive < 2: pat = ((0, 0, 7.7),)                                          # redondas
@@ -733,6 +760,10 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
                 if isle == 'arrecife': pat = ((0, 0, 5.4), (6, 7, 1.8))                                    # bossa: largo y la quinta
                 for st, iv, ln in pat:
                     play(Cn['bass'], tv(b, s0 + st), tv(b, s0 + st) + ln * S16, root + iv, I_TRI, q=q_tri, release=0)
+            if isle == 'fiesta':                             # acordes tenidos, flojos
+                play(Cn['c1'], tv(b, s0), tv(b, s0) + 7.4 * S16, notes[1], I_ORG, release=3)
+                play(Cn['c2'], tv(b, s0), tv(b, s0) + 7.4 * S16, notes[2], I_ORG, release=3)
+                continue
             if isle == 'volcan' and not in_b:                # quintas en TRÉMOLO de semicorcheas
                 for st in range(8):
                     play(Cn['c1'], tv(b, s0 + st), tv(b, s0 + st) + S16 * 0.6, notes[0] - 12, I_TREM, release=0)
@@ -805,7 +836,8 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
         long_tail = any(bb == b and st + d >= 14 and d >= 6 for bb, st, n, d in mel)
         snow_tail = isle in SNOW and b % 2 == 0 and not intro and any(bb == b and st == 12 and d == 4 for bb, st, n, d in mel)   # (sus frases cierran en negra)
         if isle in CAVE and b % 2 == 1 and not intro: long_tail = False        # (cuevas: un acento cada dos compases, no más)
-        if (intro and b % 2 == 0) or (long_tail and not in_b) or snow_tail or (isle in CAVE and long_tail):
+        if isle == 'fiesta' and intro: long_tail = False
+        if (intro and b % 2 == 0 and isle != 'fiesta') or (long_tail and not in_b) or snow_tail or (isle in CAVE and long_tail):
             r, q = ch[b - 1][1]
             top = 84 + (r - 84) % 12 + q[2] - 12
             up = 2 if (top + 2) % 12 in SCALE else 1          # (la nota de al lado, DE LA ESCALA: +2 sobre Si daba Do#)
@@ -825,7 +857,10 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
                     pp = per if not isinstance(per, tuple) else int(round(per[0] + (per[1] - per[0]) * x_))
                     NZ['fx'].hit(t8(st0) + i_ / 60.0, pp, [max(1, int(round(peak * v_)))], short=short)
             # (volcán: el acento era ruido — una erupción, una bola de fuego — y el usuario lo pidió MELÓDICO: un punteo)
-            if isle == 'volcan':                              # floreo: la quinta, su vecina de arriba (de la escala), la quinta… y cae a la tónica
+            if isle == 'fiesta':                              # "¡ta-chán!": la quinta y la tónica de arriba
+                for st, iv, ln in ((12, q[2], 1.6), (14, 12, 3)):
+                    play(Cn['trill'], t8(st), t8(st) + ln * S16, 84 + (r - 84) % 12 + iv - 12, I_DING, release=4)
+            elif isle == 'volcan':                            # floreo: la quinta, su vecina de arriba (de la escala), la quinta… y cae a la tónica
                 fth = 72 + (r - 72) % 12 + q[2] - (12 if q[2] + (r - 72) % 12 > 9 else 0)
                 nb = 1 if (fth + 1) % 12 in SCALE else 2
                 for st, ln, nn in ((10, 0.9, fth), (11, 0.9, fth + nb), (12, 0.9, fth), (13, 2.8, 72 + (r - 72) % 12)):
@@ -883,6 +918,11 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
         # BATERÍA
         for st in range(16):
             t = tv(b, st)
+            if isle == 'fiesta' and intro:                   # la FANFARRIA: timbales con cada nota, platillo y redoble
+                if any(bb == b and s_ == st for bb, s_, _, _ in mel): hit(tom, TOMS[2 if st % 8 == 0 else 1], t, 1.0); hit(kick, TN.KICK_DEEP, t, 0.8)
+                if st == 0 and b in (2, 4): NZ['crash'].hit(t, 3, CRASH)
+                if b == 4 and st >= 4: NZ['snare'].hit(t, 4, [6 + st // 2, 4, 2]); hit(sn, TN.SNARE_BODY, t, 0.3 + st * 0.04)
+                continue
             if intro and b < 3:
                 if st % 4 == 2 and isle not in CAVE: NZ['hat'].hit(t, 0, HAT)
                 continue
@@ -890,6 +930,10 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
                 if st % 4 == 0: hit(kick, TN.KICK, t, 0.95)
                 if st in (4, 12): NZ['snare'].hit(t, 4, SNARE_N); hit(sn, TN.SNARE_BODY, t, 0.8)
                 NZ['hat'].hit(t, 0, HAT if st % 2 == 0 else [3, 1])
+            elif isle == 'fiesta':                           # bombo 1 · 3 · 3y, palmas en 2 y 4, pandereta en semicorcheas
+                if st in (0, 8, 10): hit(kick, TN.KICK, t, 0.85 if st != 10 else 0.6)
+                if st in (4, 12): NZ['snare'].hit(t, 3, [12, 7, 3, 1]); hit(sn, TN.SNARE_BODY, t, 0.5)
+                else: NZ['hat'].hit(t, 0, [4, 2, 1] if st % 4 == 2 else [2, 1])
             elif isle == 'volcan':                           # doble bombo (1, 2y-y, 3, 4y-y), caja en 2 y 4
                 if st in (0, 6, 7, 8, 14, 15): hit(kick, TN.KICK, t, 0.95 if st in (0, 8) else 0.8)
                 if st in (4, 12): NZ['snare'].hit(t, 4, SNARE_N); hit(sn, TN.SNARE_BODY, t, 0.9)
@@ -1036,6 +1080,7 @@ TRACKS = {
     'fortaleza_1':     dict(theme='marcha', isle='fortaleza', bpm=140),
     'fortaleza_2':     dict(theme='engranajes', isle='maquina', bpm=126),
     'fortaleza_bonus': dict(theme='marcha', isle='fortaleza', bpm=156, drive=2, lufs=-11.0, solo=True),
+    'victory':       dict(theme='victoria', isle='fiesta', bpm=132, lufs=-12.0),
     'volcan_1':      dict(theme='ceniza', isle='volcan', bpm=164, lufs=-11.0),
     'volcan_2':      dict(theme='fuego', isle='lava', bpm=172, lufs=-11.0),
     'volcan_bonus':  dict(theme='ceniza', isle='volcan', bpm=178, drive=2, lufs=-10.5, solo=True),
