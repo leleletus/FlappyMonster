@@ -212,6 +212,15 @@ local function findWaterBodies(level)
 end
 
 -- ── Constructor ───────────────────────────────────────────────────────────────
+-- La luz ambiente de un nivel (ver Level.fromData; el editor la usa para su opción "Luz")
+Level.LIGHTS = { day = true, dusk = true, night = true, cave = true, none = true }
+function Level.lightMood(lvl)
+    if Level.LIGHTS[lvl.light or ''] then return lvl.light end
+    if lvl.background == 'cave' then return 'cave' end
+    if lvl.time == 'dusk' or lvl.time == 'night' then return lvl.time end
+    return 'day'
+end
+
 function Level.new(path, difficulty)
     local data = love.filesystem.read(path)
     assert(data, "No se pudo leer: "..tostring(path))
@@ -362,9 +371,12 @@ function Level.fromData(lvl, difficulty)
     -- Música del nivel: id de assets/music/index.json (nil = la de siempre)
     self.music     = type(lvl.music) == 'string' and lvl.music or nil
     self.snow      = lvl.snow == true                  -- (nieve cayendo: src/fx/Snowfall.lua, solo visual)
-    -- (ECO en los sonidos, Sound.setEcho: por defecto, el de los niveles a oscuras; "echo": true/false lo fuerza)
-    self.echo      = lvl.echo == true or (lvl.echo == nil and lvl.dark == true)
     self.dark      = lvl.dark == true                  -- (nivel a OSCURAS: linternas, src/world/Lights.lua; afecta al juego)
+    -- LUZ AMBIENTE (solo visual, src/fx/Darkness.lua): "light": day | dusk | night | cave | none; sin ella, de su
+    -- hora ("time") y, con fondo de cueva, cueva. La profundidad (debajo de la superficie) va en penumbra.
+    self.light     = Level.lightMood(lvl)
+    -- (ECO en los sonidos, Sound.setEcho: por defecto, el de las cuevas — a oscuras o en penumbra —; "echo": true/false lo fuerza)
+    self.echo      = lvl.echo == true or (lvl.echo == nil and (lvl.dark == true or self.light == 'cave'))
     self.spikeSkin = lvl.spikeSkin                     -- (aspecto de los pinchos: src/world/SpikeSkins.lua, solo visual)
     self.background, self.timeOfDay, self.clouds = lvl.background, lvl.time, lvl.clouds   -- (fondo y hora: src/fx/Sky.lua)
     self.depth, self.surfaceRow = lvl.depth, tonumber(lvl.surfaceRow)                    -- (fondo de profundidad y su línea)

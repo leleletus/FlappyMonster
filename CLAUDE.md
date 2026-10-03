@@ -983,6 +983,14 @@ list no mode until the user places a Point Area in them).
   enemies: `Crawler.entityAhead(e, level)` (generic, shared with Crabby) → turns round and drops its plan.
   Net: {surface, turn, modeT, icon}. Can be a RESERVE minion (`makeReserve`). Test
   arena `tools/levelgen/arenas/cueva_oscura.json`. Harness `gloomy_rules` (cases `navega`, `marca`, `burla`...).
+- **LIGHT MOODS (all levels, render only)**: `level.light` = JSON `"light"` (day | dusk | night | cave | none) or auto
+  (`Level.lightMood`: background 'cave' → cave, time dusk/night → that, else day; editor Nivel → Fondo y clima → "Luz").
+  `src/fx/Darkness.lua` draws them with the SAME light canvas as the dark levels (`Darkness.MOODS`: ambient colour that
+  multiplies the screen, a soft halo around each player, × strength of the lights): dusk warm, night cool and darker
+  with torches/lava glowing, cave = PENUMBRA (playable, halo 200 px). With a `depth` biome, everything below the surface
+  line is cave penumbra (stepped transition band) even on a day level. Light sources: decorations with `light`, TILES
+  with `light` in their def (lava) and the players. Soft lights = `RINGS` stepped circles (flat discs looked wrong).
+  Cave mood also turns the ECHO on by default (`level.echo`). `level_shots` draws the mood (`LIGHT=0` = without).
 - **Glowing decorations**: a decoration type with `light = { r = px, color, a, dy, pulse }` (glow_mushroom,
   cave_crystals, torch, ice_crystal) adds a VERY subtle two-step light to the Darkness canvas (render only: it is not
   a flashlight for `Lights`). New luminous decoration = that one field.

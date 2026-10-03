@@ -1,5 +1,13 @@
 -- src/fx/Darkness.lua
--- OSCURIDAD de los niveles a oscuras (level.dark): solo se ve lo que alumbran las linternas.
+-- LUZ AMBIENTE de los niveles (solo visual), con un mismo lienzo de luz para todos los casos:
+--   * A OSCURAS (level.dark): solo se ve lo que alumbran las linternas (esto sí cuenta para el juego: Lights).
+--   * level.light (src/world/Level.lua lightMood): 'dusk' = tono cálido; 'night' = frío y más oscuro, con las
+--     antorchas / lava / setas brillando y un halo tenue alrededor de cada jugador; 'cave' = PENUMBRA con un halo
+--     amplio alrededor del jugador (se juega normal: se ve bastante); 'day' / 'none' = nada.
+--   * Con fondo de PROFUNDIDAD (level.depth), lo que queda bajo la línea de superficie va en penumbra de cueva
+--     (con una franja de transición), aunque arriba sea de día.
+--   Las fuentes de luz: el halo de los jugadores, las decoraciones con `light` en su tipo y los TILES con
+--   `light` en su definición (la lava). Valores por ánimo en Darkness.MOODS.
 -- Se dibuja DESPUÉS de la escena (y del efecto del agua) y ANTES del HUD:
 --   Darkness.render(level, camX, camY, sources)   sources = { {x, y, facing, on}, ... } (jugadores)
 -- Las decoraciones con `light` en su tipo (setas luminosas, cristales, antorchas) dan una luz tenue.
@@ -23,7 +31,48 @@ local BANDS = { { 1.0, 0.26 }, { 0.74, 0.3 }, { 0.46, 0.44 } }
 
 local canvas
 
-function Darkness.active(level) return level ~= nil and level.dark == true end
+-- amb = luz ambiente (multiplica la pantalla); halo = radio y fuerza alrededor de cada jugador;
+-- lights = × la fuerza de las luces de decoraciones y tiles
+Darkness.MOODS = {
+    dusk  = { amb = { 1.0, 0.84, 0.68 }, lights = 0.8 },
+    night = { amb = { 0.46, 0.52, 0.78 }, halo = 150, haloA = 0.2, lights = 1.6 },
+    cave  = { amb = { 0.4, 0.4, 0.5 }, halo = 200, haloA = 0.42, lights = 2.0 },
+}
+local DEEP = Darkness.MOODS.cave
+local RINGS = 5                        -- escalones de las luces suaves (noche, cueva)
+local BAND = 2                         -- casillas de transición entre la superficie y la penumbra de abajo
+
+local function moodOf(level)
+    if not level then return nil end
+    if level.dark then return 'dark' end
+    return level.light
+end
+
+-- ¿Hay que dibujar luz en este nivel? (día sin profundidad: no)
+function Darkness.active(level)
+    local m = moodOf(level)
+    if m == 'dark' then return true end
+    if not level or m == 'none' then return false end
+    return Darkness.MOODS[m] ~= nil or level.depth ~= nil
+end
+
+-- Tiles que dan luz (su definición: `light = { r = px, color, a }`), una vez por nivel
+local TileTypes, TileCodec
+local function lightTiles(level)
+    if level._lightTiles then return level._lightTiles end
+    TileTypes = TileTypes or require 'src/world/tiles/TileTypes'
+    TileCodec = TileCodec or require 'src/world/tiles/TileCodec'
+    local out = {}
+    for r = 1, level.tileH or 0 do
+        for c = 1, level.tileW or 0 do
+            local def = TileTypes.get(TileCodec.id(level:getRaw(c, r)))
+            if def and def.light then out[#out + 1] = { x = (c - 0.5) * TILE_PX, y = (r - 0.5) * TILE_PX, L = def.light } end
+        end
+    end
+    level._lightTiles = out
+    return out
+end
+function Darkness.invalidate(level) if level then level._lightTiles = nil end end
 
 local function fan(ox, oy, dir, k, level, cache)
     local pts = cache
@@ -39,6 +88,9 @@ end
 
 function Darkness.render(level, camX, camY, sources)
     if not Darkness.active(level) then return end
+    local mood = moodOf(level)
+    local dark = mood == 'dark'
+    local M = Darkness.MOODS[mood]
     local w, h = math.ceil(WINDOW_W / DS), math.ceil(WINDOW_H / DS)
     if not canvas or canvas:getWidth() ~= w or canvas:getHeight() ~= h then
         canvas = love.graphics.newCanvas(w, h)
@@ -51,18 +103,46 @@ function Darkness.render(level, camX, camY, sources)
     love.graphics.setScissor()
     local prevCanvas = love.graphics.getCanvas()
     love.graphics.setCanvas(canvas)
-    love.graphics.clear(AMBIENT, AMBIENT, AMBIENT * 1.5, 1)
+    -- 1) la luz AMBIENTE: la del ánimo arriba y, con profundidad, la penumbra de cueva bajo la superficie
+    local top = dark and { AMBIENT, AMBIENT, AMBIENT * 1.5 } or (M and M.amb) or { 1, 1, 1 }
+    love.graphics.clear(top[1], top[2], top[3], 1)
+    local deepY
+    if not dark and level.depth and mood ~= 'cave' then
+        deepY = require('src/fx/Sky').surfaceY(level)
+        local y0 = math.floor((deepY - camY) / DS)
+        local band = BAND * TILE_PX / DS
+        for i = 0, 3 do                                        -- (transición en escalones, pixelada)
+            local k = (i + 1) / 5
+            love.graphics.setColor(top[1] + (DEEP.amb[1] - top[1]) * k, top[2] + (DEEP.amb[2] - top[2]) * k,
+                                   top[3] + (DEEP.amb[3] - top[3]) * k, 1)
+            love.graphics.rectangle('fill', 0, y0 + band * i / 4, w, band / 4 + 1)
+        end
+        love.graphics.setColor(DEEP.amb[1], DEEP.amb[2], DEEP.amb[3], 1)
+        love.graphics.rectangle('fill', 0, y0 + band, w, h)
+    end
     love.graphics.setBlendMode('add')
     love.graphics.scale(1 / DS, 1 / DS)
     love.graphics.translate(-camX, -camY)
     for _, s in ipairs(sources or {}) do
         local hx, hy = s.x, s.y - 14
-        local r = s.on and HALO_ON or HALO
-        love.graphics.setColor(0.24, 0.24, 0.27, 1)
-        love.graphics.circle('fill', hx, hy, r)
-        love.graphics.setColor(0.3, 0.3, 0.33, 1)
-        love.graphics.circle('fill', hx, hy, r * 0.6)
-        if s.on then
+        if dark then
+            local r = s.on and HALO_ON or HALO
+            love.graphics.setColor(0.24, 0.24, 0.27, 1)
+            love.graphics.circle('fill', hx, hy, r)
+            love.graphics.setColor(0.3, 0.3, 0.33, 1)
+            love.graphics.circle('fill', hx, hy, r * 0.6)
+        else
+            -- (penumbra / noche: un halo amplio y suave, para jugar normal)
+            local H = (deepY and hy > deepY) and DEEP or M
+            if H and H.halo then
+                for i = 0, RINGS - 1 do
+                    local q = H.haloA / RINGS
+                    love.graphics.setColor(q, q, q * 0.92, 1)
+                    love.graphics.circle('fill', hx, hy, H.halo * (1 - i / RINGS * 0.8))
+                end
+            end
+        end
+        if dark and s.on then
             local ox, oy, dir = Lights.origin(s.x, s.y, s.facing or 1)
             local cache = {}
             for _, b in ipairs(BANDS) do
@@ -74,19 +154,44 @@ function Darkness.render(level, camX, camY, sources)
             end
         end
     end
-    -- Decoraciones LUMINOSAS (su tipo declara `light = { r = px, color = {r, g, b}, a = fuerza, dy = px }`:
-    -- setas luminosas, cristales, antorchas...): una luz MUY tenue, en dos escalones. No es una
-    -- linterna (no cuenta para la simulación: Lights), solo hace que se vean ellas y lo de al lado
-    for _, d in ipairs(level.decorations or {}) do
-        local L = d.def and d.def.light
-        if L and d.x > camX - L.r and d.x < camX + WINDOW_W + L.r and d.y > camY - L.r and d.y < camY + WINDOW_H + L.r then
-            local c = L.color or { 1, 1, 1 }
-            local a = (L.a or 0.14) * (1 + 0.12 * math.sin(love.timer.getTime() * (L.pulse or 1.7) + d.x * 0.05))
-            local lx, ly = d.x, d.y + (L.dy or -16)
+    -- 2) LUCES de decoraciones (su tipo declara `light = { r = px, color = {r, g, b}, a = fuerza, dy = px }`:
+    -- setas luminosas, cristales, antorchas...) y de tiles (la lava), en dos escalones. No son linternas (no
+    -- cuentan para la simulación: Lights); a oscuras, muy tenues; de noche y en cueva, más
+    local now = love.timer.getTime()
+    local function glow(lx, ly, L, mult)
+        local c = L.color or { 1, 1, 1 }
+        local a = (L.a or 0.14) * mult * (1 + 0.12 * math.sin(now * (L.pulse or 1.7) + lx * 0.05))
+        if dark then
             love.graphics.setColor(c[1] * a * 0.5, c[2] * a * 0.5, c[3] * a * 0.5, 1)
             love.graphics.circle('fill', lx, ly, L.r)
             love.graphics.setColor(c[1] * a, c[2] * a, c[3] * a, 1)
             love.graphics.circle('fill', lx, ly, L.r * 0.55)
+        else
+            -- (degradado en RINGS escalones: la luz se va apagando hacia fuera, sin borde de disco)
+            for i = 0, RINGS - 1 do
+                local q = a / RINGS
+                love.graphics.setColor(c[1] * q, c[2] * q, c[3] * q, 1)
+                love.graphics.circle('fill', lx, ly, L.r * (1 - i / RINGS * 0.85))
+            end
+        end
+    end
+    local function lightsMult(y)
+        if dark then return 1 end
+        local H = (deepY and y > deepY) and DEEP or M
+        return H and H.lights or 0
+    end
+    for _, d in ipairs(level.decorations or {}) do
+        local L = d.def and d.def.light
+        if L and d.x > camX - L.r and d.x < camX + WINDOW_W + L.r and d.y > camY - L.r and d.y < camY + WINDOW_H + L.r then
+            local k = lightsMult(d.y)
+            if k > 0 then glow(d.x, d.y + (L.dy or -16), L, k) end
+        end
+    end
+    for _, t in ipairs(lightTiles(level)) do
+        local L = t.L
+        if t.x > camX - L.r and t.x < camX + WINDOW_W + L.r and t.y > camY - L.r and t.y < camY + WINDOW_H + L.r then
+            local k = lightsMult(t.y)
+            if k > 0 then glow(t.x, t.y, L, k) end
         end
     end
     love.graphics.setCanvas(prevCanvas)
@@ -102,7 +207,7 @@ end
 
 -- Puntos luminosos y demás cosas que se ven en la oscuridad (encima de ella)
 function Darkness.renderGlow(level, entities, camX, camY)
-    if not Darkness.active(level) then return end
+    if not (level and level.dark) then return end
     for _, e in pairs(entities) do
         if e.alive and e.renderGlow then e:renderGlow(camX, camY) end
     end

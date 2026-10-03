@@ -1185,7 +1185,8 @@ function OnlineAdventureState:_renderScene()
     self.level:renderWaterEffect(self.camX, self.camY, self.sceneCanvas)
 
     -- A oscuras: las linternas de todos los jugadores; encima, los puntos luminosos
-    if self.level.dark then
+    -- (y la luz ambiente de cada nivel: atardecer, noche, cueva en penumbra — src/fx/Darkness.lua)
+    if Darkness.active(self.level) then
         local src = {}
         for _, rp in pairs(self.remotePlayers) do
             if rp.visible and not rp.dying then src[#src + 1] = { x = rp.x, y = rp.y, facing = rp.facing, on = rp.lightOn } end

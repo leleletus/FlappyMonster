@@ -14,6 +14,7 @@ local json = require 'libs/json'
 local Level = require 'src/world/Level'
 local Entities = require 'src/world/Entities'
 local Sky = require 'src/fx/Sky'
+local Darkness = require 'src/fx/Darkness'
 local BossZones = require 'src/world/BossZones'
 
 local function shot(path)
@@ -45,6 +46,13 @@ local function shot(path)
             for _, e in ipairs(es) do if e.alive and e.renderFront then e:render(cx, cy) end end
             level:renderFoliage(cx, cy)
             if level.renderWaterEffect then pcall(level.renderWaterEffect, level, cx, cy, view) end
+            -- la LUZ AMBIENTE del nivel (atardecer, noche, cueva, a oscuras; src/fx/Darkness.lua), con un "jugador"
+            -- en su salida para ver el halo (LIGHT=0: sin luz, el nivel tal cual)
+            if os.getenv('LIGHT') ~= '0' and Darkness.active(level) then
+                local sx, sy = level:getSpawnPx()
+                Darkness.render(level, cx, cy, { { x = sx, y = sy, facing = 1, on = true } })
+                Darkness.renderGlow(level, es, cx, cy)
+            end
             love.graphics.setCanvas(out)
             love.graphics.setColor(1, 1, 1, 1)
             love.graphics.draw(view, math.floor(cx * k), math.floor(cy * k), 0, k, k)

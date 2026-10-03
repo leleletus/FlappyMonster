@@ -632,7 +632,8 @@ function AdventureState:_renderScene()
     self.level:renderWaterEffect(self.camX, self.camY, self.sceneCanvas)
 
     -- A oscuras: solo se ve lo que alumbra la linterna; encima, los puntos luminosos
-    if self.level.dark then
+    -- (y la luz ambiente de cada nivel: atardecer, noche, cueva en penumbra — src/fx/Darkness.lua)
+    if Darkness.active(self.level) then
         local p = self.player
         Darkness.render(self.level, self.camX, self.camY,
                         { { x = p.x, y = p.y, facing = p.facing, on = p.lightOn and not p.dying } })

@@ -1585,10 +1585,21 @@ local function drawLevelTab(x, y, w)
         v, ch = ui.toggle('A oscuras (linterna)', m.dark == true, x, y, w)
         y = y + 28
         if ch then pushUndo(); m.dark = v or nil; markDirty() end
-        local echoOn = m.echo == true or (m.echo == nil and m.dark == true)
+        do
+            local auto = require('src/world/Level').lightMood({ background = m.background, time = m.time })
+            local names = { day = 'Día', dusk = 'Atardecer', night = 'Noche', cave = 'Cueva', none = 'Sin' }
+            local lopts = { { value = 'auto', label = 'Auto (' .. names[auto] .. ')' } }
+            for _, k in ipairs({ 'day', 'dusk', 'night', 'cave', 'none' }) do lopts[#lopts + 1] = { value = k, label = names[k] } end
+            v, ch = ui.enum('Luz', m.light or 'auto', lopts, x, y, w)
+            y = y + ui.ENUM_H
+            if ch then pushUndo(); m.light = (v ~= 'auto') and v or nil; markDirty() end
+            y = y + ui.hint('Luz ambiente (solo visual): atardecer cálido, noche fría y oscura con las antorchas brillando, cueva en penumbra con un halo alrededor del jugador. Lo que queda bajo la superficie (con profundidad) va en penumbra.', x, y, w, th.border) + 8
+        end
+        local autoEcho = m.dark == true or require('src/world/Level').lightMood({ background = m.background, time = m.time, light = m.light }) == 'cave'
+        local echoOn = m.echo == true or (m.echo == nil and autoEcho)
         v, ch = ui.toggle('Eco (cueva profunda)', echoOn, x, y, w)
         y = y + 28
-        if ch then pushUndo(); if v == (m.dark == true) then m.echo = nil else m.echo = v end; markDirty() end
+        if ch then pushUndo(); if v == autoEcho then m.echo = nil else m.echo = v end; markDirty() end
         y = y + ui.hint('Cueva sin luz: solo se ve lo que alumbra la linterna de cada jugador (se enciende y apaga; la batería se gasta y, si se agota, tarda en volver). AFECTA AL JUEGO: los Crabbies lúgubres huyen de la luz. En el editor el mapa se ve entero.', x, y, w, th.border) + 8
         local sopts = {}
         for _, sk in ipairs(SpikeSkins.LIST) do sopts[#sopts + 1] = { value = sk.id, label = sk.label } end

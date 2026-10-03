@@ -32,6 +32,7 @@ end
 
 return {
     id = 3, name = 'danger', label = 'Lava', category = 'Peligros',
+    light = { r = 110, color = { 1, 0.5, 0.18 }, a = 0.22, pulse = 2.3 },   -- (da luz de noche / en cueva: src/fx/Darkness.lua)
     collision = 'none', material = 'deadly', enemySolid = false, lava = true,
     editorColor = { 0.94, 0.42, 0.12 },
     texture = { image = 'assets/images/tiles/lava_top.png', frames = 4, fps = FPS },
