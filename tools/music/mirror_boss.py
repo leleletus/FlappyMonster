@@ -229,6 +229,9 @@ def build(lufs=-9.5):
         NZ['snare'].hit(t, 4, vols); hit(sn, TN.SNARE_BODY, t, g)
 
     # ── MELODÍA y sus capas ──
+    # LA FURIA, INTEGRADA (el usuario: buena, pero contrasta demasiado con el resto): mismo bajo al galope que el tema
+    # (el unísono en corcheas solo en su remate), bombo al galope hasta ese remate, el mismo arpegio brillante y el
+    # coro con tercera que llevan las demás secciones, notas un poco menos secas, y entra al volumen en que acabó F
     ALIAS = {'G2': 'G', 'H': 'IN'}                             # (la 2ª mitad de la furia y la caída se arreglan como G y la intro)
     for b, st, n, d in mel:
         kind = ALIAS.get(tag[b - 1], tag[b - 1])
@@ -242,7 +245,7 @@ def build(lufs=-9.5):
         elif kind == 'D':                                      # la subida: solo el pulso, cada vez más fuerte
             play(Cn['dbl'], t0, t1, n, I_PUL, vs=0.8 + 0.12 * (b - starts[4]), release=2)
         else:
-            if d <= 2: t1 = tv(b, st) + d * S8 * 0.7              # picado: las notas cortas, más cortas
+            if d <= 2: t1 = tv(b, st) + d * S8 * (0.85 if kind == 'G' else 0.7)     # picado: las notas cortas, más cortas
             play(Cn['lead'], t0, t1, n - 12, I_SAW, q=q_saw, release=2 if d <= 2 else 3)
             up = 12 if kind in ('E', 'F', 'G') else 0
             if d >= 4:                                             # sobre las notas largas el pulso TREMOLA en corcheas
@@ -262,7 +265,9 @@ def build(lufs=-9.5):
     for b in range(1, NB + 1):
         kind = tag[b - 1]
         k = b - starts[['IN', 'A', 'A2', 'B', 'C', 'D', 'A3', 'F', 'G', 'G2', 'E', 'H'].index(kind)] + 1
-        kind = ALIAS.get(kind, kind)          # compás dentro de la sección
+        raw = kind                            # compás dentro de la sección
+        kind = ALIAS.get(kind, kind)
+        fin = raw == 'G2' and k >= 5          # el remate de la furia: ahí sí, todo a corcheas
         last = (b + 1) in starts or b == NB
         lo = lambda r: 30 + (r - 30) % 12                      # (el bajo, de Fa#1 hacia arriba)
         for half, (r, q) in enumerate(chords[b - 1]):
@@ -273,14 +278,14 @@ def build(lufs=-9.5):
                 if half == 0: bass(b, 0, 11.5, lo(r), False)                  # pedal
             elif kind == 'C':
                 bass(b, s0, 5.6, lo(r) + 12, False)                           # notas largas, una octava arriba
-            elif kind in ('D', 'G'):
-                for st in range(6): bass(b, s0 + st, 0.9, lo(r) + (12 if kind == 'G' and st in (2, 5) else 0))   # corcheas (G: al unísono con el riff)
+            elif kind == 'D' or fin:
+                for st in range(6): bass(b, s0 + st, 0.9, lo(r) + (12 if fin and st in (2, 5) else 0))   # corcheas (remate de la furia: al unísono con el riff)
             else:                                                             # GALOPE: larga-corta, la corta en la octava
                 for bt in (0, 3):
                     bass(b, s0 + bt, 1.8, lo(r)); bass(b, s0 + bt + 2, 0.9, lo(r) + (12 if kind != 'B' else 7))
             # ── CORO (colchón): tercera y quinta; fuerte en el clímax ──
             if kind in ('A2', 'A3', 'B', 'C', 'E', 'D', 'F', 'G'):
-                if kind in ('E', 'G'): notes = [notes[0], notes[0] + 12, notes[2]]        # (quintas: sin la tercera)
+                if kind == 'E': notes = [notes[0], notes[0] + 12, notes[2]]                # (clímax: quintas, sin la tercera)
                 vs = {'E': 1.5, 'G': 1.1, 'F': 1.2, 'C': 0.9, 'D': 0.6 + 0.2 * k}.get(kind, 0.8)
                 play(Cn['p1'], tv(b, s0), tv(b, s0) + 5.7 * S8, notes[1], I_CHOIR, q=q_n163, vs=vs, release=5)
                 play(Cn['p2'], tv(b, s0), tv(b, s0) + 5.7 * S8, notes[2], I_CHOIR, q=q_n163, vs=vs, release=5)
@@ -291,7 +296,7 @@ def build(lufs=-9.5):
                     play(Cn['c1'], tv(b, s0 + bt), tv(b, s0 + bt) + 2.2 * S8, root, I_STAB, release=2)
                     play(Cn['c2'], tv(b, s0 + bt), tv(b, s0 + bt) + 2.2 * S8, root + 7, I_STAB, release=2)
             # ── ARPEGIO en corcheas: el acompañamiento del puente, y brillo en A', A'' y el clímax ──
-            if kind in ('C', 'A2', 'A3', 'E', 'F'):
+            if kind in ('C', 'A2', 'A3', 'E', 'F', 'G'):
                 if kind == 'E': notes = [66 + (r - 66) % 12 + iv for iv in q]
                 for st in range(6):
                     nn = notes[(0, 1, 2, 1, 2, 1)[st] if kind == 'C' else st % 3] + (12 if kind != 'C' else 0) + (12 if st >= 3 and kind != 'C' else 0)
@@ -317,7 +322,7 @@ def build(lufs=-9.5):
             else:
                 heavy = kind in ('A3', 'E', 'F', 'G')
                 # bombo al GALOPE en todo lo fuerte (0·2·3·5·6·8·9·11); en la furia y el clímax, corcheas seguidas
-                if st % 3 != 1 or kind in ('G', 'E'): hit(kick, TN.KICK, t, 1.0 if st in (0, 6) else (0.85 if st % 3 == 0 else 0.7))
+                if st % 3 != 1 or kind == 'E' or fin: hit(kick, TN.KICK, t, 1.0 if st in (0, 6) else (0.85 if st % 3 == 0 else 0.7))
                 if st in (3, 9): snare(t, 1.0)
                 elif heavy and st in (7, 10): snare(t, 0.35, [6, 3, 1])
                 NZ['hat'].hit(t, 1, [5, 2, 1] if st % 3 == 0 else [3, 1]) if st not in (3, 9) else None
@@ -353,6 +358,8 @@ def build(lufs=-9.5):
     S['bell'] = GN.delay(S['bell'], 2 * S8, 0.3, 2, 3000)[:len(S['bell'])]
     LV = {'lead': 0, 'dbl': -7, 'mirror': -5, 'soft': -3, 'bell': -5, 'choir': -6, 'stabs': -9, 'arp': -12,
           'bass': 0, 'bdef': -8, 'kick': 0, 'toms': -2, 'snare': -2, 'hat': -12, 'crash': -9}
+    # (el acompañamiento, +3 dB respecto a la melodía: en el juego la melodía tapaba lo demás — BACKING, worlds_nes.py)
+    for k_ in ('choir', 'stabs', 'arp', 'bass', 'bdef', 'kick', 'toms', 'snare', 'hat', 'crash'): LV[k_] = LV[k_] + 3.0
     g = GN.level(S, LV, 'lead')
     from scipy.signal import butter, sosfilt
     x = sum(S[k_] * g[k_] for k_ in S)
@@ -360,7 +367,7 @@ def build(lufs=-9.5):
     side = S['arp'] * g['arp'] * 0.6 + S['choir'] * g['choir'] * 0.4 - S['mirror'] * g['mirror'] * 0.5 + S['bell'] * g['bell'] * 0.3 + S['hat'] * g['hat'] * 0.3
     # DINÁMICA por secciones (dB): la mezcla por capas deja todo igual de fuerte — el puente salía MÁS alto que el
     # tema —; aquí se dibuja la escalada: intro contenida, respiro en el puente, la subida crece y el clímax es el techo
-    DYN = {'IN': (-3.5, -2.0), 'A': (0, 0), 'A2': (0.5, 0.5), 'B': (0.5, 1.0), 'C': (-6.0, -5.0), 'D': (-6.0, -0.5), 'A3': (1.0, 1.5), 'F': (1.5, 2.0), 'G': (2.5, 3.0), 'G2': (3.0, 3.5), 'E': (4.0, 4.0), 'H': (1.5, -2.5)}
+    DYN = {'IN': (-3.5, -2.0), 'A': (0, 0), 'A2': (0.5, 0.5), 'B': (0.5, 1.0), 'C': (-6.0, -5.0), 'D': (-6.0, -0.5), 'A3': (1.0, 1.5), 'F': (1.5, 2.0), 'G': (2.0, 2.8), 'G2': (2.8, 3.5), 'E': (4.0, 4.0), 'H': (1.5, -2.5)}
     env = np.ones(len(x))
     for b in range(1, NB + 1):
         a_, e_ = DYN[tag[b - 1]]

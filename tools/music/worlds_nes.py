@@ -661,6 +661,8 @@ def solo_bar(k, at, kick, sn, tom, NZ, hit):
         if st == 0 and k in (1, 5): NZ['crash'].hit(t, 3, CRASH)
 
 
+BACKING = 4.0                # dB que sube el acompañamiento respecto a la melodía (ver build)
+BACKING_KEYS = ('chords', 'bass', 'kick', 'snare', 'hat', 'crash', 'toms')
 STEMS_TO = None
 STEM_NAMES = [('lead', 'melodia'), ('echo', 'eco_de_la_melodia'), ('dbl', 'melodia_doblada'), ('bell', 'caja_de_musica'),
               ('chords', 'acordes_a_contratiempo'), ('trill', 'acento_del_sitio'), ('bass', 'bajo'), ('kick', 'bombo'),
@@ -1024,6 +1026,14 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
     if isle == 'sumergida': S['lead'] = GN.delay(S['lead'], 3 * S16, 0.35, 3, 2200)[:len(S['lead'])]
     LV = ISLE_LV.get(isle) or {'lead': 0, 'echo': -11, 'chords': -6, 'bass': -2, 'trill': -11, 'kick': -2 + drive, 'snare': -5 + drive, 'hat': -12, 'crash': -11, 'toms': 2}
     LV = dict(LV); LV['kick'] = LV['kick'] + (drive if isle != 'pradera' else 0); LV['snare'] = LV['snare'] + (drive if isle != 'pradera' else 0)
+    # EL ACOMPAÑAMIENTO, MÁS ARRIBA (el usuario, tras jugar: "en el juego las melodías suenan mucho más fuertes que
+    # el resto, sobre todo el bajo; canciones equilibradas al oírlas sueltas quedan vacías"). En el juego la música
+    # va más baja y entre efectos de sonido: lo primero que se pierde es lo grave y lo que acompaña, y queda la
+    # melodía sola. Las mezclas tenían la melodía en el 25-35 % de la energía; la regla de la casa era 10-15 %.
+    # Todo lo que no es melodía sube BACKING dB respecto a ella (el acento del sitio, la mitad).
+    for k_ in LV:
+        if k_ in BACKING_KEYS: LV[k_] = LV[k_] + BACKING
+        elif k_ == 'trill': LV[k_] = LV[k_] + BACKING / 2
     g = GN.level(S, {k: LV[k] for k in S}, 'lead')
     from scipy.signal import butter, sosfilt
     x = sum(S[k] * g[k] for k in S)

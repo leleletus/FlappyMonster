@@ -375,7 +375,10 @@ def build(style='normal'):
     }
     S = {k: GN.fold(v, n, n_i) for k, v in S.items() if np.abs(v).max() > 0}
     if dark: S['lead'] = GN.delay(S['lead'], 3 * S16, 0.22, 2)             # (un poco de cueva en la voz)
-    g = GN.level(S, {k: LEVELS[style][k] for k in S}, 'lead')
+    # (el acompañamiento, +3 dB respecto a la melodía en las versiones normal y helada: en el juego la melodía tapaba
+    # el bajo y la batería — ver BACKING en worlds_nes.py —; la lúgubre, que el usuario dio por buena, no se toca)
+    LVS = {k: LEVELS[style][k] + (3.0 if not dark and k in ('stabs', 'mar', 'shim', 'bass', 'bdef', 'kick', 'toms', 'snare', 'hat', 'crash') else 0) for k in S}
+    g = GN.level(S, LVS, 'lead')
     from scipy.signal import butter, sosfilt
     x = sum(S[k] * g[k] for k in S)
     x = sosfilt(butter(1, 30, btype='high', fs=SR, output='sos'), x)

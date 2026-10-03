@@ -2197,6 +2197,16 @@ Low-level notes (for writing NEW harnesses):
   dominant, timpani, the music empties and the roll rises), so A re-enters exactly as the first time. Loop 80 bars
   (121.5 s); vs A: fury +4.1 / +4.7, climax +5.4, fall −2.9 dB. Lesson: a long boss loop needs its own way back —
   never cut from the peak to the opening.
+- MIX FOR THE GAME (3.64.1; user after playing: "in game the melodies are much louder than the rest, above all the
+  bass; songs that were balanced in the editor sound empty"): in game the music plays lower and under sound effects,
+  so the low end and the backing go first and the melody is left alone. The new mixes had the lead at 25-35 % of the
+  energy (the house rule was 10-15 %). Now everything that is not melody is raised against it: `BACKING` +4 dB in
+  `worlds_nes.py` (chords, bass, kick, snare, hats, crash, toms; the accent +2), +3 dB in `crab_tantrum.py` (normal and
+  icy; gloomy untouched) and `mirror_boss.py`. All 25 tracks regenerated; lead now ≈ 10-17 % (calm tracks more), then
+  `levels.py`. Check a NEW track's energy line before exporting: lead ≤ ~17 %.
+  FINAL BOSS, fury "integrated" (good, but its contrast with the rest was too marked): the fury keeps the theme's
+  galloping bass and kick (straight 8ths only in its last 4 bars), the same shimmer arpeggio and the choir with its
+  third, notes a little less dry, and it enters at the level where the hero's theme ended (+3.4 → +4.3 dB vs A).
 - Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
   cuevas_oscuras; other cave levels → cuevas_1; non-story levels by their retheme theme).
 - Generators keep their internal names; `famicom.PATHS` / `famicom.out(name, ext)` map them to the new folders;
