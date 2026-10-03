@@ -48,7 +48,12 @@
     {"col":46,"props":{"movement":"fly","patrol":{"left":38,"right":54},"points":6,"respawn":8},"row":5,"type":"gummy"},
     {"col":22,"row":11,"type":"star"},
     {"col":70,"row":11,"type":"star"},
-    {"col":46,"row":26,"type":"extralife"}
+    {"col":46,"row":26,"type":"extralife"},
+    {"col":44,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":40,"right":52},"respawn":1},"row":2,"type":"crabbytramp"},
+    {"col":49,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":40,"right":52},"respawn":1},"row":2,"type":"crabbytramp"},
+    {"col":42,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":38,"right":50},"respawn":1},"row":8,"type":"crabbytramp"},
+    {"col":46,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":42,"right":54},"respawn":1},"row":8,"type":"crabbytramp"},
+    {"col":50,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":46,"right":54},"respawn":1},"row":8,"type":"crabbytramp"}
   ],
   "foliage": [
     {"col":19,"props":{"flip":true},"row":13,"type":"tropical_bush"},
