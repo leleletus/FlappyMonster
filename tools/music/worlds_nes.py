@@ -590,13 +590,13 @@ ISLE_LV = {
     'cueva':     {'lead': -9, 'bell': 0, 'echo': -10, 'chords': -9, 'bass': -2, 'trill': -2, 'kick': -3, 'snare': -10, 'hat': -14, 'crash': -14, 'toms': 0},
     'sumergida': {'lead': 0, 'echo': -8, 'chords': -10, 'bass': -3, 'trill': -9, 'kick': -6, 'snare': -15, 'hat': -15, 'crash': -14, 'toms': 0},
     'nieve':    {'lead': -5, 'bell': 0, 'echo': -12, 'chords': -11, 'bass': -3, 'trill': -5, 'kick': -5, 'snare': -10, 'hat': -11, 'crash': -13, 'toms': 0},
-    'ventisca': {'lead': 0, 'bell': -6, 'echo': -11, 'chords': -11, 'bass': -1, 'trill': -10, 'kick': -2, 'snare': -5, 'hat': -12, 'crash': -11, 'toms': 0},
+    'ventisca': {'lead': 0, 'bell': -6, 'echo': -11, 'chords': -11, 'bass': -1, 'trill': -7, 'kick': -2, 'snare': -5, 'hat': -12, 'crash': -11, 'toms': 0},
     'bola':     {'lead': 0, 'bell': -4, 'echo': -12, 'chords': -7, 'bass': -1, 'trill': -5, 'kick': 0, 'snare': -3, 'hat': -10, 'crash': -9, 'toms': -1},
-    'rey':  {'lead': 0, 'dbl': -7, 'echo': -13, 'chords': -9, 'bass': -1.5, 'trill': -8, 'kick': 0, 'snare': -3, 'hat': -14, 'crash': -9, 'toms': -1},
+    'rey':  {'lead': 0, 'dbl': -7, 'echo': -13, 'chords': -9, 'bass': -1.5, 'trill': -6, 'kick': 0, 'snare': -3, 'hat': -14, 'crash': -9, 'toms': -1},
     'nave': {'lead': 0, 'dbl': -9, 'echo': -12, 'chords': -8, 'bass': -1, 'trill': -6, 'kick': 0, 'snare': -3, 'hat': -9, 'crash': -9, 'toms': 0},
     'fortaleza': {'lead': 0, 'dbl': -9, 'echo': -12, 'chords': -8, 'bass': -1, 'trill': -6, 'kick': -2, 'snare': -4, 'hat': -11, 'crash': -11, 'toms': 2},
-    'maquina':   {'lead': 0, 'dbl': -9, 'echo': -11, 'chords': -10, 'bass': -1, 'trill': -7, 'kick': -3, 'snare': -7, 'hat': -10, 'crash': -12, 'toms': 2},
-    'costa':    {'lead': 0, 'echo': -10, 'chords': -8, 'bass': -2, 'trill': -13, 'kick': -4, 'snare': -8, 'hat': -11, 'crash': -12, 'toms': 2},
+    'maquina':   {'lead': 0, 'dbl': -9, 'echo': -11, 'chords': -10, 'bass': -1, 'trill': -6, 'kick': -3, 'snare': -7, 'hat': -10, 'crash': -12, 'toms': 2},
+    'costa':    {'lead': 0, 'echo': -10, 'chords': -8, 'bass': -2, 'trill': -10, 'kick': -4, 'snare': -8, 'hat': -11, 'crash': -12, 'toms': 2},
     'arrecife': {'lead': 0, 'echo': -9, 'chords': -7, 'bass': -3, 'trill': -16, 'kick': -7, 'snare': -13, 'hat': -15, 'crash': -14, 'toms': 0},
 }
 HAT, SNARE_N, CRASH = [5, 2, 1], [13, 9, 5, 2], [13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
@@ -843,8 +843,9 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
             elif isle == 'nieve':                             # un cascabeleo y UNA campana que se queda sonando
                 for st in (10, 11, 12): NZ['fx'].hit(t8(st), 0, [7, 3, 1])
                 play(Cn['trill'], t8(12), t8(12) + S16 * 6, 84 + (r - 84) % 12 + q[2], I_DING, release=8)
-            elif isle == 'ventisca':                          # una racha de viento
-                swell(8, 15.5, (7, 2), 9, 'gust')
+            elif isle == 'ventisca':                          # tres campanillas que bajan, espaciadas (cada tres semicorcheas)
+                for st, iv in ((8, 12), (11, q[2]), (14, q[1])):
+                    play(Cn['trill'], t8(st), t8(st) + S16 * 2.6, 84 + (r - 84) % 12 + iv - 12, I_DING, vs=0.9, release=4)
             elif isle == 'bola':                              # la bola rueda (timbales) y se le oye la risa: dos notas graves que bajan
                 if not in_b:
                     for st in (12, 13, 14, 15): hit(tom, TOMS[min(2, (st - 12) // 2 + 1)], t8(st), 0.8)
@@ -852,18 +853,23 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
                     play(Cn['trill'], t8(st), t8(st) + S16 * (1.6 if st == 10 else 0.9), lowr + iv, I_LAUGH, release=1)
             elif isle == 'nave':                              # la SIRENA: una nota grave que aúlla arriba y abajo
                 play(Cn['trill'], t8(8), t8(15.5), lowr + q[2], I_SIREN, release=2)
-            elif isle == 'rey':                               # redoble de timbales que crece y platillo
-                for st in range(8, 16): hit(tom, TOMS[2 if st % 2 == 0 else 1], t8(st), 0.45 + (st - 8) * 0.07)
-                swell(10, 15.5, 3, 8, 'gust')
+            elif isle == 'rey':                               # respuesta de las trompetas: el acorde sube con puntillo (taa-ta-taaa) y un timbal
+                base_ = 72 + (r - 72) % 12
+                for st, ln, iv in ((8, 2.8, 0), (11, 0.9, q[1]), (12, 3.6, q[2])):
+                    play(Cn['trill'], t8(st), t8(st) + ln * S16, base_ + iv, I_FANF, release=2)
+                hit(tom, TOMS[2], t8(12), 0.9)
             elif isle == 'fortaleza':                         # la respuesta de las trompas, GRAVE: quinta y tónica, con redoble de caja
                 play(Cn['trill'], t8(10), t8(10) + S16 * 1.7, lowr - 12 + q[2], I_HORNLOW, release=1)
                 play(Cn['trill'], t8(12), t8(12) + S16 * 3.6, lowr, I_HORNLOW, release=2)
                 for st in (12, 13, 14, 15): NZ['fx'].hit(t8(st), 5, [6 + (st - 12), 3, 1])
-            elif isle == 'maquina':                           # vapor y dos golpes de yunque (metal, sin nota)
-                swell(8, 11.5, 2, 7, 'wave')
-                for st in (12, 14): NZ['fx'].hit(t8(st), 3, [11, 7, 4, 2, 1], short=1)
-            elif isle == 'costa':                             # una OLA que rompe
-                swell(8, 15.8, (6, 3), 9, 'wave')
+            elif isle == 'maquina':                           # el carillón del reloj: quinta-tercera, dos veces (din-don, din-don)
+                base_ = 72 + (r - 72) % 12
+                for st, iv in ((10, q[2]), (11, q[1]), (13, q[2]), (14, q[1])):
+                    play(Cn['trill'], t8(st), t8(st) + S16 * 0.9, base_ + iv, I_ANVIL, release=1)
+            elif isle == 'costa':                             # la marimba contesta sincopada (ta · ta-ta · ta), no en carrerilla
+                base_ = 72 + (r - 72) % 12
+                for st, iv in ((9, q[2]), (11, q[1]), (12, q[2]), (14, 12)):
+                    play(Cn['trill'], t8(st), t8(st) + S16 * 1.3, base_ + iv, I_MARIMBA, vs=1.2, release=1)
             elif isle == 'arrecife':                          # burbujas: notitas que suben "con chirrido"
                 base_ = 84 + (r - 84) % 12
                 for i, st in enumerate((9, 12, 14)):

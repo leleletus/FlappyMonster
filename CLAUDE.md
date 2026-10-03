@@ -2107,6 +2107,12 @@ Low-level notes (for writing NEW harnesses):
   horns below; tremolo fifths, 8th bass and double kick stay. Accents = a plucked figure (`I_GTR`): volcan_1/bonus a
   flourish (fifth, its upper scale neighbour, fifth → root); volcan_2 the chord climbing in 8ths. The snap-rhythm
   version (16th + dotted 8th) is gone.
+- 3.60.2: the user wants ALL accents MELODIC — the unpitched ones "didn't sit well" (the volcano set is now approved).
+  Changed: costa_1/bonus the marimba answering SYNCOPATED (steps 9 · 11-12 · 14; not a run, not a wave), nieve_2 three
+  bells falling, one every three 16ths (not a wind gust), fortaleza_2 a clock chime, fifth-third twice (not steam +
+  anvil), gummy_king_boss a trumpet answer climbing the chord in dotted rhythm + one timpani hit (not a timpani roll +
+  cymbal swell). Rule: an accent is a short pitched figure in the track's own instrument, with its own rhythm — never
+  noise only, never the meadow trill. Left to do: the Mirror boss theme and the `victory` jingle.
 - Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
   cuevas_oscuras; other cave levels → cuevas_1; non-story levels by their retheme theme).
 - Generators keep their internal names; `famicom.PATHS` / `famicom.out(name, ext)` map them to the new folders;
