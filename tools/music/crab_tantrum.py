@@ -10,8 +10,8 @@
 #   2. el TRESILLO 3+3+2 (6-6-4 semicorcheas) del bajo y el bombo
 #   3. el giro del estribillo: nota larga y bordadura inferior (una vez por frase de B)
 #   4. la idea rítmica del final: notas repetidas sincopadas (6-4-4-4) sobre acordes que suben
-# Y es de la COSTA, la isla del Mega Crabby: Re menor = el relativo de Fa mayor (costa_1); el estribillo se abre a Fa
-# mayor; la marimba de la costa toca el tresillo; la maraca en semicorcheas; cierra con "la llamada" (La-Re-Fa-La).
+# Y es de la COSTA, la isla del Mega Crabby: Re menor = el relativo de Fa
+# mayor (la primera versión abría el estribillo a Fa mayor: quitado, ver PH_B); la marimba de la costa toca el tresillo; la maraca en semicorcheas; cierra con "la llamada" (La-Re-Fa-La).
 # Carácter (el usuario): potente, TRIBAL y agresivo — timbales en ostinato, bombo marcado, bajo bien definido
 # (triángulo + un pulso que lo dibuja una octava arriba), sierra del VRC6 + pulso en la melodía.
 #
@@ -37,7 +37,7 @@ INTRO = 4
 
 N = {'C': 0, 'C#': 1, 'D': 2, 'Eb': 3, 'E': 4, 'F': 5, 'F#': 6, 'G': 7, 'Ab': 8, 'A': 9, 'Bb': 10, 'B': 11}
 MAJ, MIN = (0, 4, 7), (0, 3, 7)
-SCALE = {2, 4, 5, 7, 9, 10, 0, 1}                 # Re menor (+ Do#, la sensible, en la dominante)
+SCALE = {2, 4, 5, 7, 9, 10, 0}                    # Re menor natural
 
 
 def ch(s):
@@ -57,20 +57,23 @@ PH_A = CELL + [
     (6, 2, Bb4, 4), (6, 6, D5, 2), (6, 8, E5, 4), (6, 12, G5, 4),
     (7, 0, G5, 3), (7, 3, F5, 3), (7, 6, D5, 2), (7, 8, Bb4, 3), (7, 11, D5, 3), (7, 14, G5, 2),   # tresillos que bajan
 ]
-A_END = [(8, 0, A5, 6), (8, 6, G5, 2), (8, 8, E5, 2), (8, 10, Cs5, 4), (8, 14, A4, 2)]  # dominante: pregunta
-A_END2 = [(8, 0, E5, 3), (8, 3, Cs5, 3), (8, 6, E5, 2), (8, 8, A5, 8)]                  # dominante: sube al estribillo
+# (Los finales de frase van a Do, el ♭VII: TODO el tema es Re menor NATURAL, como el riff. La primera versión cerraba
+# en La mayor — con Do# — al lado de acordes con Do natural, y el estribillo era Fa–Do–Rem–Si♭, alegre: al usuario la
+# melodía "no terminaba de encajar" con el resto y la armonía quedaba rara. Nada de sensible ni de estribillo mayor.)
+A_END = [(8, 0, G5, 6), (8, 6, E5, 2), (8, 8, C5, 2), (8, 10, E5, 4), (8, 14, C5, 2)]   # ♭VII: pregunta
+A_END2 = [(8, 0, E5, 3), (8, 3, G5, 3), (8, 6, E5, 2), (8, 8, C6, 8)]                   # ♭VII: sube al estribillo
 PH_B = [
     (1, 0, A5, 12), (1, 12, G5, 2), (1, 14, A5, 2),                                     # el giro del estribillo
-    (2, 0, G5, 6), (2, 6, E5, 2), (2, 8, C5, 4), (2, 12, E5, 4),
-    (3, 0, F5, 12), (3, 12, E5, 2), (3, 14, F5, 2),
-    (4, 0, D5, 6), (4, 6, F5, 2), (4, 8, Bb5, 8),
-    (5, 0, C6, 6), (5, 6, A5, 2), (5, 8, F5, 4), (5, 12, A5, 4),
-    (6, 0, G5, 6), (6, 6, E5, 2), (6, 8, G5, 4), (6, 12, C6, 4),
+    (2, 0, Bb5, 6), (2, 6, A5, 2), (2, 8, F5, 4), (2, 12, D5, 4),
+    (3, 0, G5, 12), (3, 12, F5, 2), (3, 14, G5, 2),                                     # el giro, un grado más abajo
+    (4, 0, A5, 6), (4, 6, F5, 2), (4, 8, D5, 8),
+    (5, 0, Bb5, 6), (5, 6, G5, 2), (5, 8, D5, 4), (5, 12, G5, 4),
+    (6, 0, F5, 6), (6, 6, D5, 2), (6, 8, F5, 4), (6, 12, Bb5, 4),
 ]
-B_END = [(7, 0, Bb5, 3), (7, 3, A5, 3), (7, 6, F5, 2), (7, 8, D5, 3), (7, 11, F5, 3), (7, 14, Bb5, 2),
-         (8, 0, E5, 6), (8, 6, Cs5, 2), (8, 8, A4, 8)]
-B_END2 = [(7, 0, G5, 3), (7, 3, Bb5, 3), (7, 6, G5, 2), (7, 8, D5, 3), (7, 11, G5, 3), (7, 14, Bb5, 2),
-          (8, 0, A5, 6), (8, 6, G5, 2), (8, 8, E5, 4), (8, 12, Cs5, 4)]
+B_END = [(7, 0, C6, 3), (7, 3, Bb5, 3), (7, 6, G5, 2), (7, 8, E5, 3), (7, 11, G5, 3), (7, 14, C6, 2),
+         (8, 0, G5, 6), (8, 6, E5, 2), (8, 8, C5, 8)]
+B_END2 = [(7, 0, E5, 3), (7, 3, G5, 3), (7, 6, E5, 2), (7, 8, C5, 3), (7, 11, E5, 3), (7, 14, G5, 2),
+          (8, 0, C6, 6), (8, 6, G5, 2), (8, 8, E5, 4), (8, 12, G5, 4)]
 # Puente tribal: tambores y el riff en el BAJO; la voz contesta desde el 5º compás (la célula, una octava abajo)
 PH_BR = [(5, 0, D5 - 12, 6), (5, 6, D5 - 12, 2), (5, 8, G5 - 12, 2), (5, 10, F5 - 12, 4),
          (7, 0, D5, 6), (7, 6, D5, 2), (7, 8, G5, 2), (7, 10, F5, 4), (7, 14, A5, 4)]
@@ -86,9 +89,9 @@ PH_CODA = [
     (8, 0, A4, 4), (8, 4, D5, 2), (8, 6, F5, 2), (8, 8, A5, 6),                         # la llamada: La-Re-Fa-La
 ]
 # Armonía: por compás, uno o dos acordes (medio compás cada uno)
-CH_A = ['Dm', ['Dm', 'Bb'], 'Dm', ['Dm', 'C'], 'Bb', ['Bb', 'C'], 'Gm', 'A']
-CH_B = ['F', 'C', 'Dm', 'Bb', 'F', 'C', 'Bb', 'A']
-CH_B2 = ['F', 'C', 'Dm', 'Bb', 'F', 'C', 'Gm', 'A']
+CH_A = ['Dm', ['Dm', 'Bb'], 'Dm', ['Dm', 'C'], 'Bb', ['Bb', 'C'], 'Gm', 'C']
+CH_B = ['Dm', 'Bb', 'C', 'Dm', 'Gm', 'Bb', 'C', 'C']        # i–♭VI–♭VII–i · iv–♭VI–♭VII
+CH_B2 = CH_B
 CH_BR = ['Dm'] * 8
 CH_CODA = ['Bb', 'C', 'Dm', 'Dm', 'Bb', 'C', 'Dm', 'Dm']
 

@@ -1993,8 +1993,12 @@ Low-level notes (for writing NEW harnesses):
   until they are remade). From Tentacle Tantrum only SAMPLES: (1) the riff CELL (long tonic, tonic, up a 4th, down to
   the 3rd; rhythm 6-2-2-4) opening bars 1/3 of phrase A (and, varied, 5) and played by the BASS in the bridge, (2) the
   3+3+2 tresillo in bass and kick, (3) the chorus gesture (long note + lower neighbour) once per B phrase, (4) the
-  finale's syncopated repeated notes (6-4-4-4) over rising chords in the coda. Everything else is new. COAST link: D
-  minor = relative of costa_1's F major, chorus opens to F major, the coast's marimba plays the tresillo, 16th shaker,
+  finale's syncopated repeated notes (6-4-4-4) over rising chords in the coda. Everything else is new. HARMONY = D
+  NATURAL minor only (v2, 3.53.1): v1 cadenced on A major (C#) next to C-natural chords and its chorus was F–C–Dm–B♭
+  (happy) — the user liked the theme and the samples but in the non-sample parts "the melody didn't quite fit the other
+  instruments, harmony a bit odd" (the pradera_2 lesson again: no bright major section inside an aggressive minor
+  arrangement, no leading tone mixed with ♭VII). Now phrases end on C (♭VII) and the chorus is i–♭VI–♭VII–i · iv–♭VI–♭VII.
+  COAST link: D minor = relative of costa_1's F major, the coast's marimba plays the tresillo, 16th shaker,
   ends with "la llamada". Character (user): powerful, TRIBAL, aggressive — tom ostinato, deep kick, clearly drawn bass
   (triangle + a pulse an octave up), VRC6 saw + pulse lead. 180 BPM (felt at 90); intro 4 (drums; own file) · A · A' ·
   B · B' · tribal BRIDGE · A'' · CODA = 56-bar loop (74.7 s); drums 46 % of the energy, bass 23 %, lead 20 %.
