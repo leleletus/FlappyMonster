@@ -53,7 +53,7 @@ def build():
         'tiles': t, 'entities': ents,
         'foliage': [],
         'vents': [],
-        'bossZones': [{'id': 1, 'col': Z0, 'row': 3, 'w': Z1 - Z0 + 1, 'h': 10, 'music': 'boss_generic'}],
+        'bossZones': [{'id': 1, 'col': Z0, 'row': 3, 'w': Z1 - Z0 + 1, 'h': 10, 'music': 'gummy_king_boss'}],
         'background': 'meadow', 'time': 'day',
     }
 

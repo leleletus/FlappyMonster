@@ -1979,6 +1979,13 @@ Low-level notes (for writing NEW harnesses):
   fifth/root tick-tock, locomotive bass, metallic 16th noise, anvil motif — factories, quarry, the train),
   `fortaleza_bonus` (the march at 156 + percussion solo; ciudadela_alterna). `boss_generic` still uses the borrowed
   tune (pending replacement, like the Crab Tantrums and snowball_boss).
+- ISLAND BOSS THEMES (3.52.0, `worlds_nes.py`, `boss=True` = crash every 2 bars + snare fill every 4; intro + loop;
+  verified by numbers only): `gummy_king_boss` "Su Majestad Gummy" (G major like the meadow, 152: dotted pompous
+  fanfare, pulse + its octave, jelly bass hopping to the octave, timpani + the meadow trill; B in E minor;
+  reino_gummy + jefe_gummy arena) and `evil_ship_boss` "Persecución" (C minor like the fortress, 160: the march as a
+  chase — driving 8ths, saw, non-stop bass, 3+3+2 fifth stabs, metallic 16ths, ALARM motif; fortaleza_malvada).
+  `boss_generic` (the borrowed tune) is OUT of the repo (`FlappyMonster_originals/music/placeholders/`); ids boss /
+  boss_nes / boss_generic are aliases of `evil_ship_boss`, which is also `BossZones.DEFAULT_MUSIC`.
 - Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
   cuevas_oscuras; other cave levels → cuevas_1; non-story levels by their retheme theme).
 - Generators keep their internal names; `famicom.PATHS` / `famicom.out(name, ext)` map them to the new folders;

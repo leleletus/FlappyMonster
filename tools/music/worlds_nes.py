@@ -276,12 +276,68 @@ NCH_B = [(C, MIN), (G, MIN), (Ebr_, MAJ), (D, MAJ), (C, MIN), (G, MIN), ((Ebr_, 
 SCALE_Gm = {7, 9, 10, 0, 2, 3, 5, 6}
 
 
+# ══ JEFES DE ISLA (sustituyen a la genérica, que era un arreglo de una canción ajena) ══════════════════════════
+#   gummy_king_boss  "Su Majestad Gummy": Sol mayor (la tonalidad de la pradera), 152 BPM; fanfarria pomposa de
+#                    ritmo con puntillo (tan-ta), bajo de gelatina que salta en octavas, timbales; B en Mi menor
+#   evil_ship_boss   "Persecución": Do menor (la de la fortaleza), 160 BPM; la marcha convertida en persecución:
+#                    corcheas que empujan, sierra, bajo que no para, máquina metálica; motivo: la ALARMA (dos notas)
+Y_A = [
+    (1, 0, G4, 3), (1, 3, G4, 1), (1, 4, B4, 2), (1, 6, D5, 2), (1, 8, G5, 4), (1, 12, D5, 2), (1, 14, B4, 2),
+    (2, 0, A4, 3), (2, 3, A4, 1), (2, 4, D5, 2), (2, 6, Fs5, 2), (2, 8, A5, 6),
+    (3, 0, G5, 3), (3, 3, Fs5, 1), (3, 4, E5, 2), (3, 6, B4, 2), (3, 8, E5, 4), (3, 12, G5, 2), (3, 14, E5, 2),
+    (4, 0, E5, 3), (4, 3, D5, 1), (4, 4, C5, 2), (4, 6, E5, 2), (4, 8, G5, 6),
+    (5, 0, G4, 3), (5, 3, G4, 1), (5, 4, B4, 2), (5, 6, D5, 2), (5, 8, G5, 4), (5, 12, D5, 2), (5, 14, B4, 2),
+    (6, 0, Fs5, 3), (6, 3, Fs5, 1), (6, 4, A5, 2), (6, 6, Fs5, 2), (6, 8, D5, 4), (6, 12, Fs5, 2), (6, 14, A5, 2),
+    (7, 0, E5, 2), (7, 2, G5, 2), (7, 4, E5, 2), (7, 6, C5, 2), (7, 8, D5, 2), (7, 10, Fs5, 2), (7, 12, A5, 2), (7, 14, Fs5, 2),
+]
+Y_END = [(8, 0, G5, 3), (8, 3, Fs5, 1), (8, 4, G5, 2), (8, 6, B5, 2), (8, 8, D5, 8)]
+Y_END2 = [(8, 0, G5, 3), (8, 3, G5, 1), (8, 4, B5, 4), (8, 8, G5, 8)]
+Y_B = [
+    (1, 0, E5, 4), (1, 4, G5, 4), (1, 8, B5, 6), (1, 14, G5, 2),
+    (2, 0, Fs5, 6), (2, 6, D5, 2), (2, 8, B4, 4), (2, 12, D5, 4),
+    (3, 0, E5, 4), (3, 4, G5, 4), (3, 8, G5, 6), (3, 14, E5, 2),
+    (4, 0, Fs5, 6), (4, 6, E5, 2), (4, 8, D5, 8),
+    (5, 0, E5, 3), (5, 3, G5, 3), (5, 6, E5, 2), (5, 8, B4, 3), (5, 11, E5, 3), (5, 14, G5, 2),
+    (6, 0, D5, 3), (6, 3, Fs5, 3), (6, 6, D5, 2), (6, 8, B4, 3), (6, 11, D5, 3), (6, 14, Fs5, 2),
+    (7, 0, E5, 2), (7, 2, G5, 2), (7, 4, E5, 2), (7, 6, C5, 2), (7, 8, D5, 2), (7, 10, Fs5, 2), (7, 12, A5, 4),
+    (8, 0, D5, 4), (8, 4, G5, 2), (8, 6, B5, 2), (8, 8, D6, 6),              # la llamada: Re-Sol-Si-Re
+]
+YCH_A = [(G, MAJ), (D, MAJ), (E, MIN), (C, MAJ), (G, MAJ), (D, MAJ), ((C, MAJ), (D, MAJ)), (G, MAJ)]
+YCH_B = [(E, MIN), (B, MIN), (C, MAJ), (D, MAJ), (E, MIN), (B, MIN), ((C, MAJ), (D, MAJ)), (G, MAJ)]
+Bbr_ = 10
+X_A = [
+    (1, 0, C5, 2), (1, 2, C5, 2), (1, 4, Eb5_, 2), (1, 6, C5, 2), (1, 8, G5, 4), (1, 12, Eb5_, 2), (1, 14, C5, 2),
+    (2, 0, Ab5, 2), (2, 2, G5, 2), (2, 4, Ab5, 2), (2, 6, G5, 2), (2, 8, Eb5_, 6),
+    (3, 0, D5, 2), (3, 2, D5, 2), (3, 4, F5_, 2), (3, 6, D5, 2), (3, 8, Bb5_, 4), (3, 12, F5_, 2), (3, 14, D5, 2),
+    (4, 0, G5, 2), (4, 2, B4_, 2), (4, 4, D5, 2), (4, 6, G5, 2), (4, 8, D5, 6),
+    (5, 0, C5, 2), (5, 2, C5, 2), (5, 4, Eb5_, 2), (5, 6, C5, 2), (5, 8, G5, 4), (5, 12, Eb5_, 2), (5, 14, C5, 2),
+    (6, 0, Ab5, 4), (6, 4, Eb5_, 2), (6, 6, C5, 2), (6, 8, Eb5_, 4), (6, 12, Ab5, 2), (6, 14, C6_, 2),
+    (7, 0, C6_, 2), (7, 2, Ab5, 2), (7, 4, F5_, 2), (7, 6, Ab5, 2), (7, 8, G5, 2), (7, 10, D5, 2), (7, 12, B4_, 2), (7, 14, D5, 2),
+]
+X_END = [(8, 0, Eb5_, 2), (8, 2, C5, 2), (8, 4, G4_, 8)]
+X_END2 = [(8, 0, C5, 2), (8, 2, Eb5_, 2), (8, 4, G5, 2), (8, 6, Eb5_, 2), (8, 8, C5, 8)]
+X_B = [
+    (1, 0, Ab5, 8), (1, 8, F5_, 6), (1, 14, Ab5, 2),
+    (2, 0, G5, 8), (2, 8, Eb5_, 4), (2, 12, G5, 4),
+    (3, 0, Ab5, 6), (3, 6, G5, 2), (3, 8, Eb5_, 6), (3, 14, C5, 2),
+    (4, 0, D5, 6), (4, 6, B4_, 2), (4, 8, D5, 8),
+    (5, 0, F5_, 3), (5, 3, Ab5, 3), (5, 6, F5_, 2), (5, 8, C5, 3), (5, 11, F5_, 3), (5, 14, Ab5, 2),
+    (6, 0, Eb5_, 3), (6, 3, G5, 3), (6, 6, Eb5_, 2), (6, 8, C5, 3), (6, 11, Eb5_, 3), (6, 14, G5, 2),
+    (7, 0, Ab5, 2), (7, 2, Eb5_, 2), (7, 4, C5, 2), (7, 6, Eb5_, 2), (7, 8, D5, 2), (7, 10, B4_, 2), (7, 12, G5, 4),
+    (8, 0, G4_, 4), (8, 4, C5, 2), (8, 6, Eb5_, 2), (8, 8, G5, 6),            # la llamada en Do menor
+]
+XCH_A = [(C, MIN), (Abr, MAJ), (Bbr_, MAJ), (G, MAJ), (C, MIN), (Abr, MAJ), ((Fr_, MIN), (G, MAJ)), (C, MIN)]
+XCH_B = [(Fr_, MIN), (C, MIN), (Abr, MAJ), (G, MAJ), (Fr_, MIN), (C, MIN), ((Abr, MAJ), (G, MAJ)), (C, MIN)]
+
+
 def song(variant, minor=False, solo=False, theme=None):
     """→ melodía [(compás, semicorchea, nota, dur)], acordes [(1ª mitad, 2ª mitad)] por compás, etiqueta de cada
     compás ('intro' | 'A' | 'B' | 'solo') y los compases donde EMPIEZA una frase"""
     global SCALE
-    SCALE = {'galope': SCALE_C, 'calipso': SCALE_F, 'arrecife': SCALE_Bb, 'marcha': SCALE_Cm, 'engranajes': SCALE_Gm}.get(theme, SCALE_G)
-    if theme == 'marcha': pa, e1, e2, pb, ca, cb, tonic = H_A, H_END, H_END2, H_B, HCH_A, HCH_B, (C, MIN)
+    SCALE = {'galope': SCALE_C, 'calipso': SCALE_F, 'arrecife': SCALE_Bb, 'marcha': SCALE_Cm, 'engranajes': SCALE_Gm, 'persecucion': SCALE_Cm}.get(theme, SCALE_G)
+    if theme == 'majestad': pa, e1, e2, pb, ca, cb, tonic = Y_A, Y_END, Y_END2, Y_B, YCH_A, YCH_B, (G, MAJ)
+    elif theme == 'persecucion': pa, e1, e2, pb, ca, cb, tonic = X_A, X_END, X_END2, X_B, XCH_A, XCH_B, (C, MIN)
+    elif theme == 'marcha': pa, e1, e2, pb, ca, cb, tonic = H_A, H_END, H_END2, H_B, HCH_A, HCH_B, (C, MIN)
     elif theme == 'engranajes': pa, e1, e2, pb, ca, cb, tonic = N_A, N_END, N_END2, N_B, NCH_A, NCH_B, (G, MIN)
     elif theme == 'calipso': pa, e1, e2, pb, ca, cb, tonic = K_A, K_END, K_END2, K_B, KCH_A, KCH_B, (Fr, MAJ)
     elif theme == 'arrecife': pa, e1, e2, pb, ca, cb, tonic = R_A, R_END, R_END2, R_B, RCH_A, RCH_B, (Bbr, MAJ)
@@ -327,6 +383,8 @@ I_CLOCK = {'vol': [15, 13, 11, 10, 9, 9], 'sus': 8, 'vib': (16, 0.15, 6), 'duty'
 I_TICK = {'vol': [9, 5, 2, 1], 'sus': 0, 'duty': 0.125}
 I_ANVIL = {'vol': [14, 9, 6, 4, 3, 2, 1], 'sus': 0, 'duty': 0.125}
 ISLE_LV = {
+    'rey':  {'lead': 0, 'dbl': -10, 'echo': -11, 'chords': -6, 'bass': -1.5, 'trill': -6, 'kick': 0, 'snare': -3, 'hat': -11, 'crash': -9, 'toms': 0},
+    'nave': {'lead': 0, 'dbl': -9, 'echo': -12, 'chords': -8, 'bass': -1, 'trill': -5, 'kick': 0, 'snare': -3, 'hat': -9, 'crash': -9, 'toms': 0},
     'fortaleza': {'lead': 0, 'dbl': -9, 'echo': -12, 'chords': -8, 'bass': -1, 'trill': -5, 'kick': -2, 'snare': -4, 'hat': -11, 'crash': -11, 'toms': 2},
     'maquina':   {'lead': 0, 'dbl': -9, 'echo': -11, 'chords': -10, 'bass': -1, 'trill': -3, 'kick': -3, 'snare': -7, 'hat': -10, 'crash': -12, 'toms': 2},
     'costa':    {'lead': 0, 'echo': -10, 'chords': -8, 'bass': -2, 'trill': -5, 'kick': -4, 'snare': -8, 'hat': -11, 'crash': -12, 'toms': 2},
@@ -372,7 +430,7 @@ def solo_bar(k, at, kick, sn, tom, NZ, hit):
         if st == 0 and k in (1, 5): NZ['crash'].hit(t, 3, CRASH)
 
 
-def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=False, theme=None, flute=None, isle='pradera'):
+def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=False, theme=None, flute=None, isle='pradera', boss=False):
     """isle: el arreglo ('pradera' | 'costa' = calipso | 'arrecife' = bossa de agua). drive: 0 = tema (batería ligera) · 1 = segunda cara (más empuje) · 2 = bonus (competición)"""
     S16 = 60.0 / bpm / 4
     BAR = 16 * S16
@@ -395,7 +453,10 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
     busy = set()
     for b, st, n, d in mel:
         t0, t1 = tv(b, st), tv(b, st) + d * S16 * 0.94
-        if isle == 'fortaleza':                              # sierra (una octava abajo: cuerpo) + pulso a su altura
+        if isle == 'rey':                                    # pulso + su octava (pomposo)
+            play(Cn['lead'], t0, t1, n, I_LEAD, release=3)
+            play(Cn['dbl'], t0, t1, n + 12, I_DBL, release=2)
+        elif isle in ('fortaleza', 'nave'):                  # sierra (una octava abajo: cuerpo) + pulso a su altura
             play(Cn['lead'], t0, t1, n - 12, I_SAWL, q=q_saw, release=3)
             play(Cn['dbl'], t0, t1, n, I_DBL, release=2)
         elif isle == 'maquina': play(Cn['lead'], t0, tv(b, st) + (d * 0.94 if d >= 4 else d * 0.6) * S16, n, I_CLOCK, release=2)
@@ -427,10 +488,18 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
                 if galop and not in_b: pat = ((0, 0, 2.6), (3, 0, 0.9), (4, 7, 2.6), (7, 7, 0.9))     # (tan-ta tan-ta)
                 if isle == 'costa' and drive < 2: pat = ((0, 0, 2.7), (3, 7, 0.9), (4, 12, 3.3))             # calipso: 1, 1y, 3
                 if isle == 'fortaleza' and drive < 2: pat = ((0, 0, 3.2), (4, 12, 3.2)) if in_b else ((0, 0, 1.5), (2, 12, 1.5), (4, 0, 1.5), (6, 12, 1.5))   # octavas
+                if isle == 'rey': pat = ((0, 0, 1.4), (2, 12, 1.0), (4, 7, 1.4), (6, 12, 1.0))               # gelatina: salta a la octava
+                if isle == 'nave': pat = ((0, 0, 1.5), (2, 0, 1.5), (4, 12, 1.5), (6, 0, 1.5))              # no para
                 if isle == 'maquina': pat = ((0, 0, 1.6), (2, 0, 0.8), (3, 12, 0.8), (4, 0, 1.6), (6, 0, 0.8), (7, 12, 0.8))   # locomotora
                 if isle == 'arrecife': pat = ((0, 0, 5.4), (6, 7, 1.8))                                    # bossa: largo y la quinta
                 for st, iv, ln in pat:
                     play(Cn['bass'], tv(b, s0 + st), tv(b, s0 + st) + ln * S16, root + iv, I_TRI, q=q_tri, release=0)
+            if isle == 'nave':
+                # golpes de quinta 3+3+2 (empujan)
+                for st in (0, 3, 6):
+                    play(Cn['c1'], tv(b, s0 + st), tv(b, s0 + st) + 1.5 * S16, notes[0], I_STAB, release=1)
+                    play(Cn['c2'], tv(b, s0 + st), tv(b, s0 + st) + 1.5 * S16, notes[2], I_STAB, release=1)
+                continue
             if isle == 'fortaleza':
                 # golpes de QUINTA (sin tercera: duro) con el ritmo de la marcha: tan · ta-ta
                 for st, ln in ((0, 1.6), (6, 0.8), (7, 0.8)) if not in_b else ((0, 3.0), (4, 3.0)):
@@ -464,7 +533,14 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
             r, q = ch[b - 1][1]
             top = 84 + (r - 84) % 12 + q[2] - 12
             up = 2 if (top + 2) % 12 in SCALE else 1          # (la nota de al lado, DE LA ESCALA: +2 sobre Si daba Do#)
-            if isle == 'fortaleza':                           # fanfarria: una corchea y un TRESILLO que sube por el acorde
+            if isle == 'nave':                                # la ALARMA: dos notas vecinas en corcheas
+                for i, st in enumerate((8, 10, 12, 14)):
+                    play(Cn['trill'], tv(b, st), tv(b, st) + S16 * 1.6, top + (up if i % 2 else 0), I_FANF, release=1)
+            elif isle == 'rey':                               # timbales reales (tónica) + el trino de la pradera
+                for st in (10, 12, 14, 15): hit(tom, TOMS[2 if st < 14 else 1], tv(b, st), 0.9)
+                for i, st in enumerate(range(10, 16)):
+                    play(Cn['trill'], tv(b, st), tv(b, st) + S16 * 0.9, top + (up if i % 2 else 0), I_TRILL, release=0)
+            elif isle == 'fortaleza':                         # fanfarria: una corchea y un TRESILLO que sube por el acorde
                 base_ = 72 + (r - 72) % 12
                 play(Cn['trill'], tv(b, 10), tv(b, 10) + S16 * 1.6, base_, I_FANF, release=1)
                 for i in range(3):
@@ -495,6 +571,14 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
                 if st % 4 == 0: hit(kick, TN.KICK, t, 0.95)
                 if st in (4, 12): NZ['snare'].hit(t, 4, SNARE_N); hit(sn, TN.SNARE_BODY, t, 0.8)
                 NZ['hat'].hit(t, 0, HAT if st % 2 == 0 else [3, 1])
+            elif isle == 'rey':                              # jefe saltarín: bombo 1 · 2y · 3 · 4y, caja fuerte, platos en semicorcheas
+                if st in (0, 6, 8, 14): hit(kick, TN.KICK, t, 0.95)
+                if st in (4, 12): NZ['snare'].hit(t, 4, SNARE_N); hit(sn, TN.SNARE_BODY, t, 0.9)
+                else: NZ['hat'].hit(t, 0, HAT if st % 2 == 0 else [3, 1])
+            elif isle == 'nave':                             # persecución: bombo a negras + 4y, caja en 2 y 4, máquina metálica
+                if st % 4 == 0 or st == 14: hit(kick, TN.KICK, t, 0.95)
+                if st in (4, 12): NZ['snare'].hit(t, 4, SNARE_N); hit(sn, TN.SNARE_BODY, t, 0.9)
+                else: NZ['hat'].hit(t, 2, [5, 2] if st % 2 == 0 else [4, 1], short=1)
             elif isle == 'fortaleza':                        # marcha: bombo en 1 y 3, caja en 2 y 4 con su ta-ta, metal a contratiempo
                 if st in (0, 8): hit(kick, TN.KICK, t, 0.9)
                 if st in (4, 12): NZ['snare'].hit(t, 4, SNARE_N); hit(sn, TN.SNARE_BODY, t, 0.75)
@@ -521,6 +605,9 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
                 if st % 2 == 0: NZ['hat'].hit(t, 0, HAT)
                 elif drive: NZ['hat'].hit(t, 0, [3, 1])
             if st == 0 and b in starts and isle != 'arrecife': NZ['crash'].hit(t, 3, CRASH)
+            if boss and not intro:                           # jefe: platillo cada 2 compases y redoble de caja cada 4
+                if st == 0 and b % 2 == 1 and b not in starts: NZ['crash'].hit(t, 3, CRASH[2:])
+                if b % 4 == 0 and st >= 8 and (b + 1) not in starts: NZ['snare'].hit(t, 4, [8 + (st - 8) // 2, 4, 2]); hit(sn, TN.SNARE_BODY, t, 0.5 + (st - 8) * 0.05)
             # redoble de entrada: el último medio compás antes de cada frase
             if (b + 1) in starts and st >= 12 and isle != 'arrecife': NZ['snare'].hit(t, 4, [9, 5, 2])
 
@@ -531,7 +618,7 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
     base = F.tnd_dac(np.full(NS, 64 / 22638.0))
     S = {
         'lead': cut(F.render_wave(Cn['lead'], WAVES) * 0.0075) if (flute and isle == 'pradera') or isle == 'costa'
-                else cut(F.pulse_dac(F.render_saw(Cn['lead']))) if isle == 'fortaleza' else pulse('lead'),
+                else cut(F.pulse_dac(F.render_saw(Cn['lead']))) if isle in ('fortaleza', 'nave') else pulse('lead'),
         'dbl': pulse('dbl'),
         'echo': pulse('echo'), 'chords': pulse('c1') + pulse('c2'),
         'bass': cut(F.tnd_dac(F.render_tri(Cn['bass']) / 8227.0)), 'trill': pulse('trill'),
@@ -580,6 +667,8 @@ TRACKS = {
     'fortaleza_1':     dict(theme='marcha', isle='fortaleza', bpm=140),
     'fortaleza_2':     dict(theme='engranajes', isle='maquina', bpm=126),
     'fortaleza_bonus': dict(theme='marcha', isle='fortaleza', bpm=156, drive=2, lufs=-11.0, solo=True),
+    'gummy_king_boss': dict(theme='majestad', isle='rey', bpm=152, boss=True, lufs=-10.5),
+    'evil_ship_boss':  dict(theme='persecucion', isle='nave', bpm=160, boss=True, lufs=-10.5),
     'costa_bonus':   dict(theme='calipso', isle='costa', bpm=138, drive=2, lufs=-11.0, solo=True),
 }
 VARIANTS = {'A': dict(variant='A', bpm=136), 'B': dict(variant='B', bpm=132), 'C': dict(variant='C', bpm=140)}

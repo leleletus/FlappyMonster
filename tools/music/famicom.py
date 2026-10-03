@@ -297,7 +297,9 @@ PATHS = {
     'level_nes': '../../../FlappyMonster_originals/music/placeholders/fortaleza_1_level_nes',
     'fortaleza_1': 'worlds/fortaleza/fortaleza_1', 'fortaleza_2': 'worlds/fortaleza/fortaleza_2', 'fortaleza_bonus': 'worlds/fortaleza/fortaleza_bonus',
     'dark_cave': 'worlds/cuevas/cuevas_oscuras',
-    'boss_nes_intro': 'bosses/boss_generic_intro', 'boss_nes_loop': 'bosses/boss_generic_loop',
+    # (boss_nes = el mismo arreglo ajeno en versión de jefe: retirado; si se regenera, va FUERA del repo)
+    'boss_nes_intro': '../../../FlappyMonster_originals/music/placeholders/boss_generic_intro', 'boss_nes_loop': '../../../FlappyMonster_originals/music/placeholders/boss_generic_loop',
+    'gummy_king_boss': 'bosses/gummy_king_boss', 'evil_ship_boss': 'bosses/evil_ship_boss',
     'tentacle_nes': 'bosses/crab_tantrum_normal', 'tentacle_winter': 'bosses/crab_tantrum_icy',
     'tentacle_gloomy': 'bosses/crab_tantrum_gloomy', 'winter_nes': 'bosses/snowball_boss',
     'tentacle_chip': 'bosses/mirror_boss', 'tentacle_chip_instrumental': 'bosses/mirror_boss_inst',

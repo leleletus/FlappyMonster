@@ -26,7 +26,7 @@
 --    (b:bossPhase()); va en el snapshot. Con ella aparecen los bloques de fase
 --    (src/world/PhaseBlocks.lua) y las entidades con prop `phase` (Congeladores).
 --
--- En el JSON del nivel:  "bossZones": [ { "id":1, "col":40, "row":2, "w":20, "h":11, "music":"boss_generic" } ]
+-- En el JSON del nivel:  "bossZones": [ { "id":1, "col":40, "row":2, "w":20, "h":11, "music":"evil_ship_boss" } ]
 
 local BossZones = {}
 local PhaseBlocks = require 'src/world/PhaseBlocks'
@@ -38,12 +38,12 @@ for i, s in ipairs(BossZones.STATES) do CODE[s] = i end
 
 -- Música de la pelea: las pistas marcadas "boss": true en assets/music/index.json
 -- (una canción nueva de jefe sale sola aquí y en el editor) o 'level' = la
--- del nivel. Por defecto la genérica ('boss_generic').
+-- del nivel. Por defecto 'evil_ship_boss'.
 local Music = require 'src/Music'
 BossZones.MUSIC = {}
 for _, tr in ipairs(Music.bossList) do BossZones.MUSIC[#BossZones.MUSIC + 1] = { value = tr.id, label = tr.name } end
 BossZones.MUSIC[#BossZones.MUSIC + 1] = { value = 'level', label = 'La del nivel' }
-BossZones.DEFAULT_MUSIC = Music.byId.boss_generic and 'boss_generic' or (BossZones.MUSIC[1] and BossZones.MUSIC[1].value) or 'level'
+BossZones.DEFAULT_MUSIC = Music.byId.evil_ship_boss and 'evil_ship_boss' or (BossZones.MUSIC[1] and BossZones.MUSIC[1].value) or 'level'
 
 local function int(v, d) v = tonumber(v); return v and math.floor(v) or d end
 

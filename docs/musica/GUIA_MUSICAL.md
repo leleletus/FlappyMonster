@@ -13,7 +13,7 @@ autor del juego manda sobre cualquier número de aquí.
 | `map_<mundo>` ×6 | mapa del mundo | 120 | Do mayor | A-B-A, 24 compases, 48 s | una melodía, seis arreglos; cada isla, su instrumento y su motivo |
 | `fortaleza_1` | nivel (Fortaleza) | 140 | Do menor | intro 4 + bucle 32 | NUEVA (la anterior era un arreglo de una canción ajena: retirada). Marcha: tan · ta-ta, sierra + pulso, fanfarria de tresillos |
 | `cuevas_oscuras` | nivel a oscuras | 72 | Re menor (acaba en La, sin resolver) | A A' B A'', 32 compases | caja de música con eco sobre bordón y latido; 2,6 ataques/s, 6 % percusivo |
-| `boss_generic` | jefe genérico | 148 | Do menor | intro 4 + bucle 36 | las notas de `fortaleza_1` con timbres de jefe y batería "industrial" |
+| `gummy_king_boss` / `evil_ship_boss` | jefes de la Pradera y la Fortaleza | 152 / 160 | Sol mayor / Do menor | intro 4 + bucle 32 | NUEVAS (la genérica, arreglo de una canción ajena, retirada) |
 | `crab_tantrum_normal` | Mega Crabby | 185 (se siente a 92,5: tresillo 3+3+2) | Sol menor | 72 compases ×2 | melodía por grados (67 %), notas repetidas (26 %), bombo en tresillo |
 | `crab_tantrum_icy` | Mega Crabby helado | 185 | Sol menor → Fa mayor (sección de invierno) | 172 compases | lo anterior + caja de música, cascabeles, arpegios 16ª constantes (8,8 notas/s) |
 | `crab_tantrum_gloomy` | Mega Crabby lúgubre | 150 | Sol menor | intro 4 + 72 | menos cargada; "patas" en semicorcheas de pulso 12,5 %, silencios al cerrar frase |

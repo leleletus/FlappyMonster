@@ -37,7 +37,8 @@
     { "id": "volcan_1",   "name": "Volcán 1 (pendiente)",   "file": "worlds/volcan/volcan_1.ogg",     "pending": true, "fallback": "fortaleza_1" },
     { "id": "volcan_2",   "name": "Volcán 2 (pendiente)",   "file": "worlds/volcan/volcan_2.ogg",     "pending": true, "fallback": "fortaleza_1" },
 
-    { "id": "boss_generic",        "name": "Jefe (genérica)",        "intro": "bosses/boss_generic_intro.ogg", "loop": "bosses/boss_generic_loop.ogg", "level": false, "boss": true, "volume": 0.9 },
+    { "id": "gummy_king_boss", "name": "Su Majestad Gummy (Rey Gummy)", "intro": "bosses/gummy_king_boss_intro.ogg", "loop": "bosses/gummy_king_boss_loop.ogg", "level": false, "boss": true, "volume": 0.9 },
+    { "id": "evil_ship_boss",  "name": "Persecución (Nave Malvada)",   "intro": "bosses/evil_ship_boss_intro.ogg",  "loop": "bosses/evil_ship_boss_loop.ogg",  "level": false, "boss": true, "volume": 0.9 },
     { "id": "crab_tantrum_normal", "name": "Crab Tantrum (Mega Crabby)",         "file": "bosses/crab_tantrum_normal.ogg", "level": false, "boss": true, "volume": 0.9 },
     { "id": "crab_tantrum_icy",    "name": "Crab Tantrum (Mega Crabby helado)",  "file": "bosses/crab_tantrum_icy.ogg",    "level": false, "boss": true, "volume": 0.9 },
     { "id": "crab_tantrum_gloomy", "name": "Crab Tantrum (Mega Crabby lúgubre)", "intro": "bosses/crab_tantrum_gloomy_intro.ogg", "loop": "bosses/crab_tantrum_gloomy_loop.ogg", "level": false, "boss": true, "volume": 0.9 },
@@ -56,7 +57,7 @@
   ],
   "aliases": {
     "classic": "fortaleza_1", "flying_machine": "fortaleza_1", "hidro_city": "costa_1", "labyrinth": "cuevas_1", "dark_cave": "cuevas_oscuras",
-    "boss": "boss_generic", "boss_nes": "boss_generic",
+    "boss": "evil_ship_boss", "boss_nes": "evil_ship_boss", "boss_generic": "evil_ship_boss",
     "Tentacle_Tantrum": "crab_tantrum_normal", "tentacle_nes": "crab_tantrum_normal", "tentacle_winter": "crab_tantrum_icy",
     "tentacle_gloomy": "crab_tantrum_gloomy", "tentacle_chip": "mirror_boss", "tentacle_chip_instrumental": "mirror_boss_inst",
     "crab_tantrum_chip": "mirror_boss", "crab_tantrum_chip_instrumental": "mirror_boss_inst",
