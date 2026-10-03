@@ -31,6 +31,12 @@
     { "id": "tentacle_nes", "name": "Crab Tantrum (NES)", "file": "tentacle_nes.ogg", "level": false, "boss": true, "volume": 0.9 },
     { "id": "boss_nes", "name": "Boss Battle (NES)", "intro": "boss_nes_intro.ogg", "loop": "boss_nes_loop.ogg", "level": false, "boss": true, "volume": 0.9 },
     { "id": "menus",  "name": "Menús",       "file": "menus.ogg",   "level": false },
+    { "id": "map_pradera",   "name": "Rumbo a las islas (Pradera)",   "file": "map_pradera.ogg",   "level": false, "volume": 0.75 },
+    { "id": "map_costa",     "name": "Rumbo a las islas (Costa)",     "file": "map_costa.ogg",     "level": false, "volume": 0.75 },
+    { "id": "map_fortaleza", "name": "Rumbo a las islas (Fortaleza)", "file": "map_fortaleza.ogg", "level": false, "volume": 0.75 },
+    { "id": "map_nieve",     "name": "Rumbo a las islas (Cumbres)",   "file": "map_nieve.ogg",     "level": false, "volume": 0.75 },
+    { "id": "map_cuevas",    "name": "Rumbo a las islas (Cuevas)",    "file": "map_cuevas.ogg",    "level": false, "volume": 0.8 },
+    { "id": "map_final",     "name": "Rumbo a las islas (Volcán)",    "file": "map_final.ogg",     "level": false, "volume": 0.75 },
     { "id": "youWin", "name": "Victoria",    "file": "victory.ogg", "level": false, "loop": false }
   ]
 }

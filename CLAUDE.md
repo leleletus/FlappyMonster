@@ -319,6 +319,16 @@ src/Music.lua       MUSIC CATALOG from assets/music/index.json (id, name, file |
                     sections 1-2 dB weaker → kick +0.3, bass 0, pad −5, master −9.3 LUFS (no quiet stretches like
                     winter's intro). Measured vs winter 85-116 (rms −10.5, 64 spectral peaks/frame, crest 9.7):
                     sections −11.9…−10.7, 65-93 peaks, crest 9.9-10.7.
+                    `tools/music/worldmap_nes.py [isla ...]` → the WORLD MAP music "Rumbo a las islas" (an original
+                    tune, 120 BPM, C major, A-B-A = 24 bars = 48 s loop; verified by numbers only): SIX arrangements
+                    with the SAME melody, chords, tempo and length — catalog `map_pradera|costa|fortaleza|nieve|
+                    cuevas|final` — each with its own instruments and a LEITMOTIF that answers the melody in the bars
+                    where it holds (4, 8, 12, 20, 24): meadow pulse + bird trill; coast steel drum, calypso bass,
+                    rising marimba; fortress VRC6 saw + march snare rolls + triplet fanfare; snow music box an octave
+                    up, sleigh bells, falling bells; caves music box with cave echo, half time, drips; volcano saw +
+                    octave pulse, 8th bass, double kick, "eruption" hits. `StoryMapState:_music` plays the island
+                    nearest the hero and `Sound.switchMusic(name)` jumps to the other arrangement at the SAME
+                    position (the beat goes on, only the instruments change).
                     `tools/music/gloomy_nes.py [jefe|cueva]` → the DARK levels' music (verified by numbers only):
                     (1) `tentacle_gloomy.ogg` (catalog `tentacle_gloomy`, the Mega Gloomy fight: jefe_lugubre arena +
                     gruta_lugubre zone): Tentacle Tantrum (imports tentacle_nes's `load_midi`/`voices`/`chord_at`/

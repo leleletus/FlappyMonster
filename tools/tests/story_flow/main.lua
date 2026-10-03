@@ -310,6 +310,14 @@ function love.update(dt)
         end
     elseif step == 'tour2' and t - T > 0.6 then
         shot('world_' .. TOUR)
+        -- la música del mapa: el arreglo de ESA isla (tools/music/worldmap_nes.py)
+        local name = Sound.musicPosition()
+        local want = 'map_' .. Worlds.get(TOUR).id
+        MUSIC_OK = (MUSIC_OK ~= false) and (name == want)
+        if name ~= want then print(('  (isla %d: suena %s, tocaba %s)'):format(TOUR, tostring(name), want)) end
+        if TOUR == Worlds.count() then
+            check('musica', MUSIC_OK, 'cada isla del mapa suena con su arreglo de "Rumbo a las islas": ' .. tostring(MUSIC_OK))
+        end
         -- el MAPA ENTERO en una imagen (2688x1536), para revisarlo: story_map_full.png
         if TOUR == Worlds.count() then top():renderFull():encode('png', 'story_map_full.png') end
         go('tour')

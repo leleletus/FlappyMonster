@@ -246,7 +246,26 @@ function StoryMapState:enter(args)
     self.camX, self.camY = nil, nil
     self.justCleared = args.cleared               -- (acaba de superar ese nivel: destello)
     self.notice, self.noticeT = args.notice, 0    -- (aviso un momento: tras un Game Over)
-    Sound.playMusic('menus')
+    self.musicIsland = nil
+    self:_music()
+end
+
+-- MÚSICA: la canción del mapa en el arreglo de la isla donde está el monstruo (la más cercana a él, así cambia
+-- al cruzar el puente, no al pulsar); el mismo compás en todas (Sound.switchMusic)
+function StoryMapState:_music()
+    local best, bd
+    for w = 1, Worlds.count() do
+        for k = 1, #Worlds.nodes(w) do
+            local x, y = nodeXY(w, k)
+            local d = (x - self.heroX) ^ 2 + (y - self.heroY) ^ 2
+            if not bd or d < bd then best, bd = w, d end
+        end
+    end
+    local id = best and Worlds.get(best).id
+    if id == self.musicIsland then return end
+    self.musicIsland = id
+    local track = require('src/Music').get('map_' .. tostring(id)) and ('map_' .. id) or 'menus'
+    if self.musicStarted then Sound.switchMusic(track) else Sound.playMusic(track); self.musicStarted = true end
 end
 
 function StoryMapState:_remember()
@@ -367,6 +386,7 @@ function StoryMapState:update(dt)
             end
         end
     end
+    self:_music()
     local tx, ty = self:_camTarget()
     if not self.camX then self.camX, self.camY = tx, ty end
     local k = math.min(1, dt * 8)

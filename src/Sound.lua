@@ -493,6 +493,15 @@ function Sound.syncMusic(name, t, tol)
     return true
 end
 
+-- Cambia a OTRA versión de la misma canción en el mismo punto (el mapa del mundo: cada isla su arreglo,
+-- mismo tempo y largo — tools/music/worldmap_nes.py): sigue el compás, solo cambian los instrumentos
+function Sound.switchMusic(name)
+    local cur, pos = Sound.musicPosition()
+    if cur and resolve(name) == cur then return end
+    Sound.playMusic(name)
+    if pos then Sound.syncMusic(name, pos, 0) end
+end
+
 -- Pista que suena y su posición (s) dentro del archivo actual (intro o bucle)
 function Sound.musicPosition()
     if not music or not music:isPlaying() then return nil end
