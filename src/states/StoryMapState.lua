@@ -45,7 +45,7 @@ local DECO = {
     fern = { 'assets/images/decorations/tropical/fern.png' },
     hibiscus = { 'assets/images/decorations/tropical/hibiscus.png' },
     pineapple = { 'assets/images/decorations/tropical/pineapple.png' },
-    palm = { 'assets/images/foliage/palmtree/palmtree.png', over = { 'assets/images/foliage/palmtree/palmleaves.png', 'assets/images/foliage/palmtree/coques.png' } },
+    palm = { 'assets/images/foliage/palmtree/palmtree.png', over = { 'assets/images/foliage/palmtree/coques.png', 'assets/images/foliage/palmtree/palmleaves.png' } },
     torch = { 'assets/images/decorations/cave/torch-Sheet.png', fw = 10, fps = 8, glow = { 1, 0.6, 0.2 } },
     bones = { 'assets/images/decorations/cave/bones.png' },
     stalagmite = { 'assets/images/decorations/cave/stalagmite.png' },
@@ -68,6 +68,17 @@ local CRITTER = {
     gloomy = { sheet = 'assets/images/gloomy/gloomy-Sheet.png', fw = 26, frames = { 1, 2, 3 }, spd = 1.0,
                glow = 'assets/images/gloomy/glow-Sheet.png' },
 }
+
+-- Formaciones del relieve del mapa (colinas, picos, rocas, bocas de cueva…): una nueva = un PNG en
+-- assets/images/story/features/ + su nombre en el overworld.json
+local features = {}
+local function featureDef(t)
+    if features[t] == nil then
+        local path = 'assets/images/story/features/' .. t .. '.png'
+        features[t] = love.filesystem.getInfo(path) and { path, scale = 3 } or false
+    end
+    return features[t] or nil
+end
 
 local imgs = {}
 local function img(path)
@@ -409,11 +420,16 @@ local function drawBottom(im, q, x, y, s, fw, fh, flip)
     love.graphics.draw(im, q, math.floor(x - (flip and -1 or 1) * fw * s / 2), math.floor(y - fh * s), 0, sx, s)
 end
 
+-- Luz del suelo por altura (los hoyos, oscuros; lo alto, más claro) y textura del CUERPO del acantilado
+-- (bajo el labio, que es la textura de su bloque: el césped enseña tierra debajo, la nieve roca…)
+local LIT = { [0] = 0.4, 0.78, 0.9, 1 }
+local CLIFF_BODY = { g = 'dirt', s = 'sand', w = 'stone', c = 'border', f = 'stone', l = 'deep_stone' }
+
 function StoryMapState:_drawTerrain(cx, cy)
     local M = loadMap()
-    local C, rows = M.C, M.d.rows
+    local C, rows, hrows = M.C, M.d.rows, M.d.heights
     local c0, c1 = math.max(0, math.floor(cx / C) - 1), math.floor((cx + WINDOW_W) / C) + 1
-    local r0, r1 = math.max(0, math.floor(cy / C) - 1), math.floor((cy + WINDOW_H) / C) + 1
+    local r0, r1 = math.max(0, math.floor(cy / C) - 2), math.floor((cy + WINDOW_H) / C) + 1
     local water = img('assets/images/story/water-Sheet.png')
     local wq = frameQ(water, 16, (math.floor(self.t * 1.6) % 2) + 1)
     local ground = img('assets/images/story/ground-Sheet.png')
@@ -424,60 +440,88 @@ function StoryMapState:_drawTerrain(cx, cy)
         if not row or c < 0 or c >= M.w then return '~' end
         return row:sub(c + 1, c + 1)
     end
+    -- altura para el relieve: el mar y los hoyos cuentan como 0
+    local function ht(c, r)
+        if at(c, r) == '~' then return 0 end
+        local row = hrows and hrows[r + 1]
+        return row and tonumber(row:sub(c + 1, c + 1)) or 1
+    end
     love.graphics.setColor(1, 1, 1, 1)
-    -- 1) el mar (también fuera del mapa) y el suelo
+    -- 1) el mar (también fuera del mapa) y el suelo, con su luz por altura
     for r = math.floor(cy / C) - 1, math.floor((cy + WINDOW_H) / C) + 1 do
         for c = math.floor(cx / C) - 1, math.floor((cx + WINDOW_W) / C) + 1 do
             local ch = at(c, r)
             local x, y = c * C - cx, r * C - cy
-            if ch == '~' then love.graphics.draw(water, wq, x, y, 0, C / 16, C / 16)
-            elseif ch == 'L' then love.graphics.draw(lava, frameQ(lava, 64, (math.floor(self.t * 6) % 4) + 1), x, y, 0, C / 64, C / 64)
+            if ch == '~' then love.graphics.setColor(1, 1, 1, 1); love.graphics.draw(water, wq, x, y, 0, C / 16, C / 16)
+            elseif ch == 'L' then love.graphics.setColor(1, 1, 1, 1); love.graphics.draw(lava, frameQ(lava, 64, (math.floor(self.t * 6) % 4) + 1), x, y, 0, C / 64, C / 64)
             else
+                local l = LIT[ht(c, r)] or 1
+                love.graphics.setColor(l, l, l, 1)
                 -- variante por casilla (fija): casi siempre lisa, a veces con motas o una mancha
                 local h = (c * 73 + r * 151) % 17
                 local v = (h < 11) and 1 or (h < 15) and 2 or 3
                 love.graphics.draw(ground, frameQ(ground, 16, ((GROUND[ch] or 1) - 1) * 3 + v), x, y, 0, C / 16, C / 16)
                 -- hierba alta (las briznas del bloque de césped del juego) sobre algo de la pradera
-                if ch == 'g' and (c * 31 + r * 17) % 7 == 0 then
+                if ch == 'g' and (c * 31 + r * 17) % 7 == 0 and ht(c, r) > 0 then
                     local bl = img('assets/images/tiles/grass_blades.png')
                     love.graphics.draw(bl, frameQ(bl, 64, (c + r) % 3 + 1), x, y + math.floor(C * 0.4), 0, C / 64, C / 64)
                 end
             end
         end
     end
-    -- bordes de la tierra que da al mar: contorno oscuro + brillo (arriba y a los lados)
+    -- bordes de lo alto (contorno oscuro + brillo) arriba y a los lados, donde el vecino está más bajo
+    love.graphics.setColor(1, 1, 1, 1)
     local edge = img('assets/images/story/edge-Sheet.png')
     for r = r0, r1 do
         for c = c0, c1 do
             local ch = at(c, r)
-            if ch ~= '~' then
-                local q = frameQ(edge, 16, GROUND[ch == 'L' and 'l' or ch] or 1)
+            if ch ~= '~' and ch ~= 'L' then
+                local h = ht(c, r)
+                local q = frameQ(edge, 16, GROUND[ch] or 1)
                 local x, y = c * C - cx, r * C - cy
-                if at(c, r - 1) == '~' then love.graphics.draw(edge, q, x, y, 0, C / 16, 2) end
-                if at(c - 1, r) == '~' then love.graphics.draw(edge, q, x, y + C, -math.pi / 2, C / 16, 2) end
-                if at(c + 1, r) == '~' then love.graphics.draw(edge, q, x + C, y, math.pi / 2, C / 16, 2) end
+                local function lower(cc, rr) return at(cc, rr) == '~' or (at(cc, rr) ~= 'L' and ht(cc, rr) < h) end
+                if lower(c, r - 1) then love.graphics.draw(edge, q, x, y, 0, C / 16, 2) end
+                if lower(c - 1, r) then love.graphics.draw(edge, q, x, y + C, -math.pi / 2, C / 16, 2) end
+                if lower(c + 1, r) then love.graphics.draw(edge, q, x + C, y, math.pi / 2, C / 16, 2) end
             end
         end
     end
-    -- 2) acantilados: la cara del bloque (su textura del juego, de lado) bajo la tierra que da al mar
+    -- 2) acantilados: bajo toda casilla más alta que la de abajo, la cara del bloque (vista de lado): el labio con
+    --    la textura de su bloque y, si el salto es de más de un nivel, el cuerpo de roca / tierra debajo
     local FACE = math.floor(C * 0.75)
     for r = r0, r1 do
         for c = c0, c1 do
             local ch = at(c, r)
-            if ch ~= '~' and at(c, r + 1) == '~' then
-                local tex = img('assets/images/tiles/' .. (CLIFF[ch == 'L' and 'l' or ch] or 'dirt') .. '.png')
-                local span = tex:getWidth() / 64
-                local q = quad(tex, (c % span) * 64, 0, 64, FACE * 64 / C)
+            local below = at(c, r + 1)
+            local diff = (ch ~= '~') and (ht(c, r) - ht(c, r + 1)) or 0
+            if ch == 'L' and below ~= '~' then diff = 0 end
+            if diff > 0 then
+                local key = (ch == 'L') and 'l' or ch
                 local x, y = c * C - cx, (r + 1) * C - cy
-                love.graphics.draw(tex, q, x, y, 0, C / 64, C / 64)
-                love.graphics.setColor(0, 0, 0, 0.35)
-                love.graphics.rectangle('fill', x, y + FACE, C, 4)
+                -- labio (la parte de arriba de su bloque: césped, nieve…) y debajo el cuerpo de roca / tierra
+                local LIP = math.floor(C * 0.34)
+                local tex = img('assets/images/tiles/' .. (CLIFF[key] or 'dirt') .. '.png')
+                local span = tex:getWidth() / 64
                 love.graphics.setColor(1, 1, 1, 1)
-                love.graphics.draw(foam, x, y + FACE + 4 + math.floor(math.sin(self.t * 2 + c) * 1.5), 0, C / 16, 2)
+                love.graphics.draw(tex, quad(tex, (c % span) * 64, 0, 64, LIP * 64 / C), x, y, 0, C / 64, C / 64)
+                local body = img('assets/images/tiles/' .. (CLIFF_BODY[key] or 'dirt') .. '.png')
+                body:setWrap('repeat', 'repeat')
+                local bspan = body:getWidth() / 64
+                local bh = FACE * diff - LIP
+                love.graphics.setColor(0.66, 0.66, 0.72, 1)
+                love.graphics.draw(body, quad(body, (c % bspan) * 64, 20, 64, bh * 64 / C), x, y + LIP, 0, C / 64, C / 64)
+                local fh = FACE * diff
+                love.graphics.setColor(0, 0, 0, 0.35)
+                love.graphics.rectangle('fill', x, y + fh, C, 4)
+                love.graphics.setColor(1, 1, 1, 1)
+                if below == '~' then
+                    love.graphics.draw(foam, x, y + fh + 4 + math.floor(math.sin(self.t * 2 + c) * 1.5), 0, C / 16, 2)
+                end
             end
         end
     end
     -- 3) espuma en las orillas de los lados y de arriba
+    love.graphics.setColor(1, 1, 1, 1)
     for r = r0, r1 do
         for c = c0, c1 do
             if at(c, r) == '~' then
@@ -516,14 +560,14 @@ function StoryMapState:_drawDecos(cx, cy)
     local M = loadMap()
     local C = M.C
     for _, d in ipairs(M.d.decos) do
-        local def = DECO[d.t]
-        local x, y = (d.x + 0.5) * C - cx, (d.y + 1) * C - cy - 4
+        local def = DECO[d.t] or featureDef(d.t)
+        local x, y = (d.x + 0.5) * C - cx, (d.oy and (d.y + d.oy) * C or (d.y + 1) * C - 4) - cy
         if def and x > -80 and x < WINDOW_W + 80 and y > -40 and y < WINDOW_H + 120 then
             local im = img(def[1])
             local fw = def.fw or im:getWidth()
             local nf = math.floor(im:getWidth() / fw)
             local fi = def.fps and (math.floor(self.t * def.fps + d.x) % nf) + 1 or 1
-            local s = 2
+            local s = def.scale or 2
             if def.glow then
                 love.graphics.setBlendMode('add')
                 local g = def.glow

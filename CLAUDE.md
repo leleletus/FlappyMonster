@@ -1693,7 +1693,13 @@ arenas as bonus nodes vs an expert BOT. User's decisions: world map with a path,
   World style): ONE big scrolling map (84x48 cells of 32 px) from DATA `assets/story/overworld.json`, written by
   `tools/ui/make_overworld.py` (deterministic; also writes `assets/images/story/` node/castle/water/path/bridge/ground/
   edge/foam sprites): terrain letters per cell (`~` sea, g grass, s sand, w snow, c cave rock, f fortress stone, l volcanic
-  rock, L lava = the game's lava.png animated), one PATH polyline per world (its `Worlds` levels are spread evenly along it
+  rock, L lava = the game's lava.png animated) + `heights` per cell (0 pit, 1 plain, 2 plateau, 3 summit; RELIEF table
+  of wobbly blobs per island, never within ~2 cells of a path — paths run along the VALLEYS —, min 2x2, cave pits,
+  the volcano's lava crater): the game tints tops by height (`LIT`) and draws a CLIFF under every cell higher than the
+  one below (lip = its block texture, body = `CLIFF_BODY`, 0.75 cell per level) + rim edges where a neighbour is
+  lower. Landmarks = `assets/images/story/features/*.png` (hill, dune, peak, spire*, rock_*, cave_mouth; drawn ×3; a
+  deco name not in `DECO` is looked up there; `oy` = feet offset in cells, used by cave mouths on cliff faces). Paths
+  and bridges are Catmull-Rom curves through control points (generator `catmull`, stored smoothed). One PATH per world (its `Worlds` levels are spread evenly along it
   by arc length, however many there are, boss last = a CASTLE with the boss sprite small beside it, gold flag once beaten),
   bridges between worlds (`connect`; planks over water), decorations and wandering critters (the game's own sprites at ×2),
   per-world boss art (`worlds[i].boss` {img, fw, over, glow, fly, invert}). Island tops = ground tiles coloured from the
