@@ -2155,6 +2155,19 @@ Low-level notes (for writing NEW harnesses):
   menus, results. Nothing pending in `index.json`; no borrowed tune ships except the two samples the user asked for
   (Tentacle Tantrum cells in the Crab Tantrums, Winter Fallympics motif + 1:48 phrase in the snow set and the icy
   crab, the old level tune's 8 bars in the final boss). Retired audio lives in `FlappyMonster_originals/music/placeholders/`.
+- 3.63.0: (1) FINAL BOSS v2 — after playing it the user found it "melancholically epic" and wanted AGGRESSIVELY epic,
+  above all after the level sample: shorter punchier notes, more rhythmic drive, urgency (the quiet parts and the
+  atmosphere are right). Changes: 158 (was 150); in every loud section the theme GALLOPS (each dotted quarter split
+  long-short, the short one repeating the note: `GALLOP`), short notes are cut earlier, the doubling pulse TREMOLOS in
+  8ths over long notes, the kick gallops; new section G "FURY" after the hero's theme (staccato 8th riff, repeated note
+  + leap, F#m with the Neapolitan, the mirror motif HAMMERED three times per note, unison 8th bass, continuous double
+  kick); the CLIMAX is no longer F# major with the llamada in long notes (triumphant, sweet) but minor with FIFTHS (no
+  thirds): the llamada hammered (C#×3 F#×3 A×3 C#) and galloping phrases over i–♭VI–♭VII–i, ending with the mirror motif
+  in blows on the dominant. Loop 68 bars (103.3 s); sections vs A: hero +2.7, fury +4.2, climax +5.0 dB.
+  (2) OST LEVELS: `tools/music/levels.py` measures each track's LUFS and writes its catalog `volume` so everything is
+  equally loud IN GAME (file loudness + volume): levels and map −14.5 effective LUFS, calm tracks −15.3, bosses −13,
+  final boss −12.5, results −15, menus −15.5. Before, volumes were set for the borrowed tracks and the new bosses came
+  out ~3.5 dB above the levels. RE-RUN it whenever a track is added or regenerated.
 - Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
   cuevas_oscuras; other cave levels → cuevas_1; non-story levels by their retheme theme).
 - Generators keep their internal names; `famicom.PATHS` / `famicom.out(name, ext)` map them to the new folders;
