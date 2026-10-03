@@ -1,8 +1,9 @@
 -- src/story/BonusMatch.lua
 -- PARTIDA BONUS del modo historia: una arena de Rey de la Colina contra el BOT (src/ai/Bot.lua), dentro de
 -- AdventureState (`args.bonus = { onEnd = function(result) end }`). Reglas:
---   * dura `level.matchTime` s (o 120); estar en una zona de puntos da puntos (src/world/PointAreas.lua), a ti
+--   * dura `BonusMatch.TIME` s (60); estar en una zona de puntos da puntos (src/world/PointAreas.lua), a ti
 --     y al bot por separado; gana quien tenga más al acabar el tiempo (empate = no ganas);
+--   * según la dificultad el bot es más o menos hostil y en Xtra extremo son DOS (cuenta el mejor de los dos);
 --   * el bot es INMORTAL (los golpes le llegan, no muere) y te echa de la zona a ground pounds (te lanza lejos);
 --     tu ground pound cerca de él también lo empuja a él;
 --   * aquí tus vidas no cuentan: caer o morir solo te hace perder tiempo (vidas de sobra, no vuelven a la aventura).
@@ -22,6 +23,9 @@ BonusMatch.__index = BonusMatch
 
 BonusMatch.END_T = 3.2                   -- s del cartel final antes de volver
 BonusMatch.BOT_COLOR = { 1, 0.35, 0.3 }
+BonusMatch.BOT_COLORS = { { 1, 0.35, 0.3 }, { 0.75, 0.4, 1 } }
+
+BonusMatch.TIME = 60                     -- s (el usuario: más se hace largo; el online tiene su propio tiempo)
 
 function BonusMatch.new(state, opts)
     local level = state.level
@@ -29,19 +33,26 @@ function BonusMatch.new(state, opts)
     local nav = BotNav.load(name, level)
     if not nav or nav.stale then nav = BotNav.build(level) end          -- (sin archivo o nivel cambiado: se hace ahora)
     local sx, sy = level:getSpawnPx()
-    -- el bot sale del otro lado de la arena (en espejo), sobre suelo
-    local bx, by = level:findGround(level.tileW - (level.playerStart[1] or 2) + 1)
-    local pa = PlayerAdventure:new(bx or (sx + TILE_PX), by or sy)
-    pa.spawnX, pa.spawnY = pa.x, pa.y
-    pa.facing = -1
     local self = setmetatable({
         state = state, level = level, opts = opts or {},
-        time = level.matchTime or 120, t = 0, over = false, endT = 0,
-        botScore = 0,
-        -- (más rápido en atacar cuanto más difícil: el ritmo de los enemigos de la dificultad)
-        bot = Bot.new(pa, nav, { firstDelay = 1.5, attackCd = Bot.ATTACK_CD / Difficulty.k('enemyPace') }),
-        view = OnlinePlayer:new('bot', L('story.bonus.bot'), BonusMatch.BOT_COLOR),
+        time = BonusMatch.TIME, t = 0, over = false, endT = 0, botScore = 0, bots = {},
     }, BonusMatch)
+    -- La dificultad decide lo HOSTIL que es (src/Difficulty.lua: botRest, botChase) y cuántos son (Xtra extremo: 2).
+    -- El primero sale del otro lado de la arena (en espejo); el segundo, del centro.
+    local n = math.max(1, math.floor(Difficulty.k('botCount')))
+    for i = 1, n do
+        local col = (i == 1) and (level.tileW - (level.playerStart[1] or 2) + 1) or math.floor(level.tileW / 2)
+        local bx, by = level:findGround(col)
+        local pa = PlayerAdventure:new(bx or (sx + TILE_PX), by or sy)
+        pa.spawnX, pa.spawnY = pa.x, pa.y
+        pa.facing = -1
+        local bot = Bot.new(pa, nav, { firstDelay = 1.5 + (i - 1) * 1.2, attackCd = Bot.ATTACK_CD * Difficulty.k('botRest'),
+                                       chase = Difficulty.k('botChase', Bot.CHASE_R) })
+        bot.score = 0
+        bot.view = OnlinePlayer:new('bot' .. i, L('story.bonus.bot') .. (n > 1 and (' ' .. i) or ''), BonusMatch.BOT_COLORS[i] or BonusMatch.BOT_COLOR)
+        self.bots[i] = bot
+    end
+    self.bot = self.bots[1]
     state.player.lives = 99
     return self
 end
@@ -49,13 +60,19 @@ end
 function BonusMatch:players()
     local list = {}
     if not self.state.player.dying then list[#list + 1] = self.state.player end
-    list[#list + 1] = self.bot.pa
+    for _, b in ipairs(self.bots) do list[#list + 1] = b.pa end
     return list
 end
 
--- Puntos de una zona: al jugador (true) o al bot
+-- Puntos de una zona: al jugador (true) o a un bot (la marca a batir es la del MEJOR bot)
 function BonusMatch:award(pa, pts)
-    if pa == self.bot.pa then self.botScore = self.botScore + pts; return false end
+    for _, b in ipairs(self.bots) do
+        if pa == b.pa then
+            b.score = b.score + pts
+            self.botScore = math.max(self.botScore, b.score)
+            return false
+        end
+    end
     return true
 end
 
@@ -73,18 +90,18 @@ function BonusMatch:update(dt)
     end
     self.t = self.t + dt
     local player = st.player
-    bot:step(dt, self.level, player)
-    Interactions.run(bot.pa, st.enemies, {})                       -- (los enemigos le pegan y lo empujan; no muere)
-    if not player.dying and bot:push(player) then
-        Sound.play('gpImpact')
-    end
-    -- tu ground pound cerca de él: lo empujas tú
-    if player.gpLanded and not player.dying then
-        local dx, dy = bot.pa.x - player.x, bot.pa.y - player.y
-        if math.abs(dx) < Bot.PUSH_R * TILE_PX and math.abs(dy) < 1.3 * TILE_PX then
-            bot.pa:launch(((dx < 0) and -1 or 1) * Bot.PUSH_VX * 0.8, Bot.PUSH_VY)
-            bot.pa.stunT = math.max(bot.pa.stunT or 0, 0.6)
-            Sound.play('stunned')
+    for _, bot in ipairs(self.bots) do
+        bot:step(dt, self.level, player)
+        Interactions.run(bot.pa, st.enemies, {})                   -- (los enemigos le pegan y lo empujan; no muere)
+        if not player.dying and bot:push(player) then Sound.play('gpImpact') end
+        -- tu ground pound cerca de él: lo empujas tú
+        if player.gpLanded and not player.dying then
+            local dx, dy = bot.pa.x - player.x, bot.pa.y - player.y
+            if math.abs(dx) < Bot.PUSH_R * TILE_PX and math.abs(dy) < 1.3 * TILE_PX then
+                bot.pa:launch(((dx < 0) and -1 or 1) * Bot.PUSH_VX * 0.8, Bot.PUSH_VY)
+                bot.pa.stunT = math.max(bot.pa.stunT or 0, 0.6)
+                Sound.play('stunned')
+            end
         end
     end
     if self:left() <= 0 then
@@ -95,11 +112,14 @@ function BonusMatch:update(dt)
 end
 
 function BonusMatch:render(camX, camY)
-    local pa, v = self.bot.pa, self.view
-    v:applyData({ x = pa.x, y = pa.y, facing = pa.facing, frame = pa.frame, dying = false,
-                  stunned = (pa.stunT or 0) > 0, hurt = (pa.hurtT or 0) > 0, invuln = pa:isInvulnerable(),
-                  squashed = (pa.squashT or 0) > 0, iced = (pa.iceT or 0) > 0, color = BonusMatch.BOT_COLOR })
-    v:render(camX, camY)
+    for i, bot in ipairs(self.bots) do
+        local pa, v = bot.pa, bot.view
+        v:applyData({ x = pa.x, y = pa.y, facing = pa.facing, frame = pa.frame, dying = false,
+                      stunned = (pa.stunT or 0) > 0, hurt = (pa.hurtT or 0) > 0, invuln = pa:isInvulnerable(),
+                      squashed = (pa.squashT or 0) > 0, iced = (pa.iceT or 0) > 0,
+                      color = BonusMatch.BOT_COLORS[i] or BonusMatch.BOT_COLOR })
+        v:render(camX, camY)
+    end
 end
 
 function BonusMatch:renderHud()

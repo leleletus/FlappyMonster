@@ -53,7 +53,7 @@
   ],
   "vents": [],
   "modes": ["koth"],
-  "matchTime": 150,
+  "matchTime": 100,
   "music": "flying_machine",
   "surfaceRow": 20
 }

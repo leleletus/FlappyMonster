@@ -119,7 +119,7 @@
   ],
   "vents": [],
   "modes": ["koth"],
-  "matchTime": 180,
+  "matchTime": 100,
   "music": "flying_machine",
   "background": "fortress",
   "time": "dusk",

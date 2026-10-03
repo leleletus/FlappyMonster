@@ -446,7 +446,8 @@ function AdventureState:update(dt)
     self.level.solidBodies = Entities.solidBodies(self.enemies)   -- jefes sólidos
     self.player:update(dt, self.level)
     if self.bonus then
-        self.level.players = { self.player, self.bonus.bot.pa }       -- (los enemigos ven a los dos)
+        self.level.players = { self.player }                          -- (los enemigos ven a todos)
+        for _, b in ipairs(self.bonus.bots) do self.level.players[#self.level.players + 1] = b.pa end
         self.bonus:update(dt)
         if self.bonus.sent then return end
     end

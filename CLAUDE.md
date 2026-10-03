@@ -1760,10 +1760,14 @@ arenas as bonus nodes vs an expert BOT ✔. User's decisions: world map with a p
 - **Stage 8 ✔ — BONUS: King of the Hill vs the BOT.** One optional bonus per world (`Worlds.LIST[w].bonus`,
   `Worlds.bonus(w)`; NOT in `Worlds.nodes`: it doesn't count for progress or unlocks): pradera isla_flotante, costa
   cala_de_los_muelles, fortaleza ciudadela_alterna, nieve lago_de_cristal, cuevas cripta_del_silencio (dark), final
-  cantera_real. Opens when the world's boss is beaten (`Run.bonusState(w)`); FIRST win = +1 life +1000 points
+  cantera_real (rethemed volcano). Opens when the world's boss is beaten (`Run.bonusState(w)`); FIRST win = +1 life +1000 points
   (`Run.bonusResult`, save field `bonus[id] = {won, best, played}`). Map: a blue "B" node on a short branch from the
   castle (`overworld.json worlds[i].bonus`; in `StoryMapState` it is stop n+1 of its world: `mapNodes` / `stateOf`).
-  MATCH = `src/story/BonusMatch.lua` inside AdventureState (`args.bonus = { onEnd }`): `level.matchTime` s, both score
+  MATCH = `src/story/BonusMatch.lua` inside AdventureState (`args.bonus = { onEnd }`): `BonusMatch.TIME` 60 s (story and
+  Free Play; ONLINE King of the Hill = 100 s: koth `DEFAULT_TIME` and every arena's `matchTime`), HOSTILITY BY
+  DIFFICULTY (`Difficulty` `botRest` × the rest between ground pounds, `botChase` tiles, `botCount`): easy 3.5 / 3,
+  normal 2 / 5, hard and no difficulty 1 / 7 (the user's reference), extreme 0.7 / 10, Xtra the same with TWO bots
+  (second one from the centre; the score to beat is the BEST bot's; `bonus.bots`), both score
   from the point zones, more points wins (tie = not won), HUD "TÚ n · clock · BOT n"; your adventure lives are NOT
   used (99, never written back); your ground pound near the bot shoves it too.
   THE BOT (`src/ai/Bot.lua`; user's brief: its job is to keep you from sitting in the zone, by ground pounds; IMMORTAL

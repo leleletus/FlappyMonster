@@ -80,7 +80,7 @@
   ],
   "vents": [],
   "modes": ["koth","hide"],
-  "matchTime": 180,
+  "matchTime": 100,
   "music": "labyrinth",
   "background": "fortress",
   "blockLinks": [

@@ -331,7 +331,7 @@ function love.update(dt)
         pressNext('confirm'); go('bonus2')
     elseif step == 'bonus2' and t - T > 2.5 then
         local b = st.bonus
-        BON2 = b ~= nil and b.bot ~= nil and st.levelPath == Worlds.path(Worlds.bonus(1).id) and st.player.lives == 99
+        BON2 = b ~= nil and b.bot ~= nil and st.levelPath == Worlds.path(Worlds.bonus(1).id) and st.player.lives == 99 and #b.bots == 1 and b.time == 60
         BOTX0 = b and b.bot.pa.x
         go('bonus3')
     elseif step == 'bonus3' and (t - T > 30 or (st.bonus and st.bonus.botScore > 0 and t - T > 6)) then
@@ -355,7 +355,19 @@ function love.update(dt)
             ('cerrado sin jefe / abierto con jefe=%s; partida con bot y vidas aparte=%s; el bot llega a la zona y puntúa=%s; ganar: bonus %s, vidas %s → %s; repetir: premio=%s'):format(
              tostring(BON1), tostring(BON2), tostring(BON3), Run.bonusState(1), tostring(LIVES_B), tostring(Run.data.lives), tostring(again)))
         shot('bonus_won')
-        Run.data.done = KEEP; Run.data.bonus = {}; Run.data.lives = LIVES_B; Run.save(); go('del')
+        Run.data.done = KEEP; Run.data.bonus = {}; Run.data.lives = LIVES_B; Run.save()
+        -- Xtra extremo: DOS bots, y más hostiles que en Fácil
+        gStateMachine:change('adventure', { level = Worlds.path(id), returnTo = 'story_map', difficulty = 'xtra', bonus = {} }); go('bonusx')
+    elseif step == 'bonusx' and t - T > 3 then
+        local b = st.bonus
+        local cdX = b.bots[1].attackCd
+        gStateMachine:change('adventure', { level = st.levelPath, returnTo = 'story_map', difficulty = 'easy', bonus = {} })
+        local e = top().bonus
+        check('bonus_dif', #b.bots == 2 and #e.bots == 1 and cdX < e.bots[1].attackCd and b.bots[1].chaseR > e.bots[1].chaseR,
+            ('Xtra extremo: %d bots, descanso %.2f s, persigue a %d casillas; Fácil: %d bot, descanso %.2f s, a %d casillas'):format(
+             #b.bots, cdX, b.bots[1].chaseR, #e.bots, e.bots[1].attackCd, e.bots[1].chaseR))
+        shot('bonus_xtra')
+        gStateMachine:change('story_map', { world = 1, node = 1 }); go('del')
     elseif step == 'del' and t - T > 0.3 then
         resize(1280, 720)
         pressNext('back'); go('del2')

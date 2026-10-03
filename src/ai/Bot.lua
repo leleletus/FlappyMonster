@@ -37,7 +37,7 @@ function Bot.new(pa, nav, opts)
         cd = opts.firstDelay or 1.5, attackCd = opts.attackCd or Bot.ATTACK_CD,
         path = nil, edgeF = 0, planT = 0, stuckT = 0, lastX = pa.x, mode = 'route',
         prevBits = 0, score = 0, name = opts.name, color = opts.color,
-        fails = {}, banned = {}, clock = 0,
+        fails = {}, banned = {}, clock = 0, chaseR = opts.chase or Bot.CHASE_R,
     }, Bot)
 end
 
@@ -89,7 +89,7 @@ function Bot:_goal(level, target)
     local pa = self.pa
     local alive = target and not target.dying
     local area = alive and areaOf(level, target)
-    local close = alive and math.abs(target.x - pa.x) < Bot.CHASE_R * TILE_PX and math.abs(target.y - pa.y) < 4 * TILE_PX
+    local close = alive and math.abs(target.x - pa.x) < self.chaseR * TILE_PX and math.abs(target.y - pa.y) < 4 * TILE_PX
     if (area or close) and self.cd <= 0 then
         local tn = BotNav.nodeAt(self.nav, target.x, target.y, target:getOuterBounds().h)
         if tn then

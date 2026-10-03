@@ -58,7 +58,7 @@
     {"col":25,"row":26,"sub":3}
   ],
   "modes": ["koth"],
-  "matchTime": 180,
+  "matchTime": 100,
   "music": "hidro_city",
   "background": "coast",
   "depth": "cave",

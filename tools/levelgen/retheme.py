@@ -59,7 +59,7 @@ THEMES = {
     # tanda 2 (tools/levelgen/levels_batch2.py)
     'pradera_explosiva': 'meadow', 'bosque_interruptores': 'forest', 'playa_rebotes': 'beach', 'arrecife_globo': 'tropical',
     'cantera_dinamita': 'mine', 'cumbres_escarcha': 'snow', 'fabrica_criogenica': 'snow', 'templo_del_eco': 'cave',
-    'jungla_colgante': 'tropical', 'caldera_roja': 'volcano', 'cantera_real': 'mine', 'lago_de_cristal': 'snow',
+    'jungla_colgante': 'tropical', 'caldera_roja': 'volcano', 'cantera_real': 'volcano', 'lago_de_cristal': 'snow',
     'ciudadela_alterna': 'fortress', 'cala_de_los_muelles': 'tropical', 'cripta_del_silencio': 'cave',
 }
 

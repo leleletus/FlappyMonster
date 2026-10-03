@@ -5,7 +5,7 @@
 -- 'last_standing' del servidor) y, si caen todos, gana el que más puntos tenía.
 local L = require 'src/Lang'
 
-local DEFAULT_TIME = 150        -- s (el nivel puede cambiarlo: "matchTime")
+local DEFAULT_TIME = 100        -- s: poco más de 1:30 (el usuario); el nivel puede cambiarlo: "matchTime"
 
 local function timeLeft(m) return math.max(0, (m.data.duration or DEFAULT_TIME) - m.time) end
 
