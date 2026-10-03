@@ -2063,6 +2063,18 @@ Low-level notes (for writing NEW harnesses):
   1:48 over the relative minor. Boss: both samples a minor third up (A♭ = relative of F minor). Each sample once per
   loop. `SAMPLE_BARS` = bars excluded from the chord-tone check. Lesson: a new island must not reuse another island's
   rhythmic template — measure attack-position overlap of phrase A against the other themes (now 33-35 % vs pradera).
+- 3.57.0 (verified by numbers only): (1) `snowball_boss` phrase A remade — v2 had nieve_1's rhythm bar by bar in minor
+  ("not convinced; more distinct from nieve_1, built from the established samples"): its riff is now the 1:48 phrase's
+  closing cell (three repeated notes + a leap, `W148_END`), answered by a stepwise descent like the motif's 2nd bar, and
+  the motif's octave leap ends the phrase; bridge and chorus unchanged. (2) `gummy_king_boss` REMADE to be regal and
+  not meadow-like (v1: G major, hopping bass, offbeat plucks, bird trill): B♭ major, 148, trumpet fanfare ON the beat
+  with a "ta-ta taa" call, horns an octave below, held chords, march bass (root/fifth in quarters), military snare
+  with drags, timpani, bugle call as its motif; B = a court dance in G minor, baroque stepwise sequence over a 16th
+  harpsichord (Alberti). (3) STEMS: `python tools/music/worlds_nes.py <track> --capas` writes every layer as WAV to
+  `FlappyMonster_pruebas/musica/<track>_capas/` (each layer gets the master's per-sample gain, so they sum EXACTLY to
+  the track; `STEM_NAMES`). Made for pradera_1 because the user hears "little bell-like sounds every 2 beats" in the
+  meadow, coast, fortress and summits tracks and wants to point at the layer before anything is changed — WAITING for
+  them to say which (candidates: the offbeat chord plucks, the island motif on long tails, the melody echo).
 - Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
   cuevas_oscuras; other cave levels → cuevas_1; non-story levels by their retheme theme).
 - Generators keep their internal names; `famicom.PATHS` / `famicom.out(name, ext)` map them to the new folders;
