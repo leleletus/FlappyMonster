@@ -102,8 +102,11 @@ function StoryResultsState:enter(args)
     self.landed, self.stamped = false, false
     self.fx = Celebration.new()
     Sound.stopMusic()
-    self.musicVol = self.celebrate and 0.6 or 0.4
-    Sound.playMusic('victory', self.musicVol * 0.45)
+    -- (el volumen sale del CATÁLOGO — tools/music/levels.py —: antes iba fijo a 0.6 / 0.4, puesto para la pista prestada, y
+    -- la nueva sonaba muy baja; mientras cuenta baja al 60 %, no al 45 %)
+    local tv = (require('src/Music').get('victory') or {}).volume or 0.7
+    self.musicVol = tv * (self.celebrate and 1 or 0.75)
+    Sound.playMusic('victory', self.musicVol * 0.6)
 end
 
 function StoryResultsState:exit() Sound.stopMusic() end
@@ -157,7 +160,7 @@ function StoryResultsState:update(dt)
     end
     self.fx:update(dt)
     -- música: más baja mientras cuenta (para oír los tics), luego normal
-    local duck = 0.45 + 0.55 * clamp01((t - self.tStamp) / 0.8)
+    local duck = 0.6 + 0.4 * clamp01((t - self.tStamp) / 0.8)
     Sound.setMusicVolume(self.musicVol * duck)
     if Input.pressed('confirm') or Input.pressed('flap') or Input.pressed('back') then self:_continue() end
 end

@@ -44,12 +44,12 @@
     {"col":52,"props":{"patrol":{"left":48,"right":57},"points":4,"respawn":1},"row":19,"type":"gummy"}
   ],
   "foliage": [
-    {"col":31,"row":2,"type":"fern"},
+    {"col":31,"row":2,"type":"fallen_log"},
     {"col":34,"props":{"layer":"back"},"row":2,"type":"butterflies"},
-    {"col":34,"row":11,"type":"tropical_bush"},
+    {"col":34,"row":11,"type":"round_bush"},
     {"col":7,"props":{"layer":"back"},"row":19,"type":"butterflies"},
-    {"col":11,"row":19,"type":"fern"},
-    {"col":49,"props":{"flip":true,"layer":"back"},"row":19,"sub":3,"type":"hibiscus"}
+    {"col":11,"row":19,"type":"round_bush"},
+    {"col":49,"props":{"flip":true,"layer":"back"},"row":19,"sub":3,"type":"flower_patch"}
   ],
   "vents": [],
   "modes": ["koth"],

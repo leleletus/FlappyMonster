@@ -47,20 +47,21 @@ GROUND = {SOLID, BORDER, DIRT, GRASS, SNOW, ICE, SAND, DEEP, PACKED, BASALT, ASH
 DEEP_ROWS = 4                     # bajo ≥ 4 filas de agua: roca abisal
 
 THEMES = {
-    # (modo historia: cada nivel con el tema de SU isla — src/story/Worlds.lua)
+    # (modo historia: cada nivel con el tema de SU isla — src/story/Worlds.lua). La COSTA es 'beach' (arena): con
+    # 'tropical' (césped + palmeras) sus niveles parecían de la pradera con agua — el usuario lo notó en jungla_colgante
     'valle_soleado': 'meadow', 'jardin_gummies': 'meadow', 'carrera01': 'volcano', 'nivel01': 'cave',
     'lluvia_pinchos': 'volcano', 'tren_fugaz': 'fortress', 'ruta_del_espejo': 'volcano', 'ciudadela_cangrejos': 'meadow',
-    'marea_alta': 'tropical', 'cascada_dorada': 'tropical', 'isla_flotante': 'tropical', 'canon_trampolines': 'tropical',
+    'marea_alta': 'tropical', 'cascada_dorada': 'tropical', 'isla_flotante': 'meadow', 'canon_trampolines': 'beach',
     'rebote_real': 'tropical', 'guarida_cangrejo_rey': 'tropical',
-    'cumbre_cangrejo': 'snow', 'torre_viento': 'snow', 'lago_helado': 'snow', 'glaciar_cangrejo': 'snow', 'reino_gummy': 'meadow', 'gruta_lugubre': 'cave',
+    'cumbre_cangrejo': 'beach', 'torre_viento': 'snow', 'lago_helado': 'snow', 'glaciar_cangrejo': 'snow', 'reino_gummy': 'meadow', 'gruta_lugubre': 'cave',
     'cavernas_cristal': 'cave', 'mina_inundada': 'mine', 'laberinto_submarino': 'cave',
     'fabrica_morteros': 'fortress', 'fortaleza_malvada': 'fortress', 'taller_trampas': 'fortress',
     'coliseo_pinchos': 'fortress',
     # tanda 2 (tools/levelgen/levels_batch2.py)
     'pradera_explosiva': 'meadow', 'bosque_interruptores': 'forest', 'playa_rebotes': 'beach', 'arrecife_globo': 'tropical',
     'cantera_dinamita': 'mine', 'cumbres_escarcha': 'snow', 'fabrica_criogenica': 'snow', 'templo_del_eco': 'cave',
-    'jungla_colgante': 'tropical', 'caldera_roja': 'volcano', 'cantera_real': 'volcano', 'lago_de_cristal': 'snow',
-    'ciudadela_alterna': 'fortress', 'cala_de_los_muelles': 'tropical', 'cripta_del_silencio': 'cave',
+    'jungla_colgante': 'beach', 'caldera_roja': 'volcano', 'cantera_real': 'volcano', 'lago_de_cristal': 'snow',
+    'ciudadela_alterna': 'fortress', 'cala_de_los_muelles': 'beach', 'cripta_del_silencio': 'cave',
 }
 
 # Fondo de superficie (src/fx/Sky.lua), hora y fondo de profundidad (opcional) de cada nivel: `--sky` los escribe SOLO si el nivel

@@ -162,6 +162,36 @@ local function loadMap()
     local d = json.decode(love.filesystem.read('assets/story/overworld.json'))
     local C = d.cell
     MAP = { d = d, C = C, w = d.w, h = d.h, pw = d.w * C, ph = d.h * C, worlds = {}, dots = {} }
+    -- Los PECES nadan por el MAR: su recorrido venía con coordenadas fijas y alguno cruzaba la arena. Aquí se lleva
+    -- cada uno al tramo de mar abierto más cercano (agua también encima, debajo y a los lados)
+    local function sea(x, y)
+        local row = d.rows[y + 1]
+        return row ~= nil and x >= 0 and x < d.w and row:sub(x + 1, x + 1) == '~'
+    end
+    local function open(x, y) return sea(x, y) and sea(x, y - 1) and sea(x, y + 1) end
+    for _, c in ipairs(d.critters or {}) do
+        if c.t == 'puffer' then
+            local best
+            for dyi = 0, 8 do
+                for _, sy in ipairs(dyi == 0 and { 0 } or { dyi, -dyi }) do
+                    local y, run = c.y + sy, {}
+                    for x = c.x0 - 8, c.x1 + 9 do
+                        if open(x, y) and open(x - 1, y) and open(x + 1, y) and x <= c.x1 + 8 then run[#run + 1] = x
+                        else
+                            if #run >= 4 and (not best or #run > best.n) then best = { x0 = run[1], x1 = run[#run], y = y, n = #run } end
+                            run = {}
+                        end
+                    end
+                end
+                if best then break end
+            end
+            if best then
+                local len = math.min(best.n, c.x1 - c.x0 + 1) - 1
+                local x0 = math.max(best.x0, math.min(c.x0, best.x1 - len))
+                c.x0, c.x1, c.y = x0, x0 + len, best.y
+            end
+        end
+    end
     local function px(p)
         local out = {}
         for i, q in ipairs(p) do out[i] = { (q[1] + 0.5) * C, (q[2] + 0.5) * C } end
@@ -701,6 +731,17 @@ function StoryMapState:_drawCritters(cx, cy)
     end
 end
 
+-- Las PINZAS de los Mega Crabbies en el mapa (iban sin ellas): la misma tira y la misma colocación que en el juego
+-- (megacrabby.lua `Mega.loadArt`: escala de la pinza respecto al cuerpo, x desde el centro, y desde los pies, cuánto
+-- se mete; megagloomy.lua: unión a 5,5 px del centro y 2 bajo el centro del caparazón, apuntando hacia dentro)
+local BOSS_CLAWS = {
+    ['assets/images/bosses/megacrabby/crab1.png'] = { file = 'assets/images/bosses/megacrabby/claw_left-Sheet.png', w = 10, k = 0.7, x = 4.8, y = -1.4, inset = 1.5,
+        spike = 'assets/images/bosses/megacrabby/spike.png', spikeDy = 0 },
+    ['assets/images/bosses/megacrabby_ice/crab1.png'] = { file = 'assets/images/bosses/megacrabby_ice/claw_left-Sheet.png', w = 10, k = 1.0, x = 5.4, y = -1.2, inset = 1.5,
+        spike = 'assets/images/bosses/megacrabby_ice/spike.png', spikeDy = 2 },
+    ['assets/images/bosses/megagloomy/body-Sheet.png'] = { file = 'assets/images/bosses/megagloomy/claw_left-Sheet.png', w = 14, sickle = true, x = 5.5, up = 8 },
+}
+
 -- El castillo del jefe (bandera roja; dorada al vencerlo) y el jefe en pequeño a su lado
 function StoryMapState:_drawCastle(w, x, y, beaten)
     local castle = img('assets/images/story/castle-Sheet.png')
@@ -718,6 +759,13 @@ function StoryMapState:_drawCastle(w, x, y, beaten)
     local shader = art.invert and getInvert()
     if shader then love.graphics.setShader(shader) end
     local fi = 1
+    -- (el PINCHO de la cabeza de los Mega Crabbies, detrás del cuerpo, como en el juego: megacrabby.lua drawLocal)
+    local bc = BOSS_CLAWS[art.img]
+    if bc and bc.spike then
+        local sp = img(bc.spike)
+        love.graphics.draw(sp, math.floor(bx), math.floor(by - (im:getHeight() - bc.spikeDy) * s * squash), 0, s / 4, s / 4,
+                           sp:getWidth() / 2, sp:getHeight() - 1)
+    end
     love.graphics.draw(im, frameQ(im, fw, fi), math.floor(bx - fw * s / 2), math.floor(by - im:getHeight() * s * squash),
                        0, s, s * squash)
     if art.over then
@@ -725,6 +773,28 @@ function StoryMapState:_drawCastle(w, x, y, beaten)
         love.graphics.draw(oi, math.floor(bx - oi:getWidth() * s / 2), math.floor(by - oi:getHeight() * s * squash), 0, s, s * squash)
     end
     if shader then love.graphics.setShader() end
+    local cl = BOSS_CLAWS[art.img]
+    if cl then
+        local ci = img(cl.file)
+        local fh = ci:getHeight()
+        for k, side in ipairs({ -1, 1 }) do
+            local ph = (k == 1) and 0 or 1.9
+            local q = self.t * 1.1 + w * 0.6 + k * 0.5
+            local fr = (math.floor(q) % 3 == 0 and q % 1 < 0.22) and 2 or 1          -- un chasquido de vez en cuando
+            if cl.sickle then
+                local dy = math.sin(self.t * 2.4 + ph) * 0.4
+                love.graphics.draw(ci, frameQ(ci, cl.w, fr), math.floor(bx + side * cl.x * s), math.floor(by - cl.up * s + dy * s),
+                                   0, side * s, s, 0, fh / 2)
+            else
+                local cs = s * cl.k
+                local dy = math.sin(self.t * 5 + ph) * 0.5
+                local dx = side * (0.15 + 0.15 * math.sin(self.t * 2.5 + ph))
+                local px = side * (cl.x * s + cl.w * cs / 2 - cl.inset * cs) + math.floor(dx * cs + 0.5)
+                local py = cl.y * s - fh * cs / 2 + math.floor(dy * cs + 0.5)
+                love.graphics.draw(ci, frameQ(ci, cl.w, fr), math.floor(bx + px), math.floor(by + py), 0, -side * cs, cs, cl.w / 2, fh / 2)
+            end
+        end
+    end
     if art.glow then
         local gi = img(art.glow)
         love.graphics.setBlendMode('add')
@@ -742,7 +812,7 @@ function StoryMapState:_drawNodes(cx, cy)
             if x > -120 and x < WINDOW_W + 120 and y > -120 and y < WINDOW_H + 80 then
                 local st = stateOf(w, k)
                 if node.boss then
-                    self:_drawCastle(w, x, y, st == 'done')
+                    self:_drawCastle(w, x, y, st == 'done' and not self.showBosses)     -- (showBosses: para revisar el mapa con todos los jefes)
                 else
                     love.graphics.setColor(1, 1, 1, 1)
                     local fi = (st == 'done') and 3 or (st == 'open') and (node.bonus and 4 or 2) or 1

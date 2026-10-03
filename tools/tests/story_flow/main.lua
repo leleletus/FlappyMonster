@@ -324,7 +324,12 @@ function love.update(dt)
             check('musica', MUSIC_OK, 'cada isla del mapa suena con su arreglo de "Rumbo a las islas": ' .. tostring(MUSIC_OK))
         end
         -- el MAPA ENTERO en una imagen (2688x1536), para revisarlo: story_map_full.png
-        if TOUR == Worlds.count() then top():renderFull():encode('png', 'story_map_full.png') end
+        if TOUR == Worlds.count() then
+            top():renderFull():encode('png', 'story_map_full.png')
+            top().showBosses = true                       -- (otra vez con los jefes junto a sus castillos: sus pinzas, la corona)
+            top():renderFull():encode('png', 'story_map_bosses.png')
+            top().showBosses = nil
+        end
         go('tour')
     elseif step == 'bonus1' and t - T > 0.5 then
         shot('bonus_node')

@@ -77,8 +77,6 @@
     {"col":83,"props":{"layer":"back"},"row":21,"sub":3,"type":"ice_crystal"},
     {"col":89,"props":{"flip":true},"row":21,"type":"frozen_bush"},
     {"col":58,"row":22,"type":"snowman"},
-    {"col":55,"props":{"layer":"back"},"row":25,"sub":3,"type":"clam"},
-    {"col":48,"props":{"layer":"back"},"row":26,"sub":3,"type":"clam"},
     {"col":51,"row":26,"type":"seaweed"}
   ],
   "vents": [],

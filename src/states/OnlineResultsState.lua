@@ -131,8 +131,11 @@ function OnlineResultsState:enter(args)
     Sound.stopMusic()
     -- La música de victoria arranca YA; más baja mientras suben los puntos
     -- (para oír el conteo) y luego a volumen normal
-    self.musicVol = self.celebrate and 0.6 or 0.35
-    Sound.playMusic('victory', self.musicVol * 0.45)
+    -- (el volumen sale del CATÁLOGO — tools/music/levels.py —: antes iba fijo a 0.6 / 0.4, puesto para la pista prestada, y
+    -- la nueva sonaba muy baja; mientras cuenta baja al 60 %, no al 45 %)
+    local tv = (require('src/Music').get('victory') or {}).volume or 0.7
+    self.musicVol = tv * (self.celebrate and 1 or 0.7)
+    Sound.playMusic('victory', self.musicVol * 0.6)
 end
 
 function OnlineResultsState:exit()
@@ -234,7 +237,7 @@ function OnlineResultsState:update(dt)
 
     -- Música de victoria: baja durante el conteo de puntos, fundido al final
     local countEnd = T_ROWS + #self.entries * T_ROW_GAP + COUNT_DUR + 0.3
-    local duck = 0.45 + 0.55 * math.max(0, math.min(1, (t - countEnd) / 0.8))
+    local duck = 0.6 + 0.4 * math.max(0, math.min(1, (t - countEnd) / 0.8))
     local fade = math.max(0, math.min(1, (DURATION - t) / MUSIC_FADE))
     Sound.setMusicVolume(self.musicVol * duck * fade)
 

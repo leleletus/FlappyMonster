@@ -1840,6 +1840,20 @@ arenas as bonus nodes vs an expert BOT ✔. User's decisions: world map with a p
   ends the player is FROZEN — no control, invulnerable — until the screen leaves (`pa.forceFrozen`, honoured by
   `PlayerAdventure:update` like a boss intro; before, you could still move and even die under the result banner).
   Free Play bonus matches share the same code. Harness `story_flow bonus` checks the freeze.
+- 3.65.0: (1) WORLD MAP: the Mega Crabbies beside their castles now have their CLAWS (`BOSS_CLAWS` in StoryMapState: same
+  sheets and placement as in game — megacrabby 0.7 scale, icy 1.0, gloomy sickles pointing inward — swaying, with a snap
+  now and then) and the two spiked ones their head SPIKE behind the body; the Gummy King's crown was already drawn. The PUFFERFISH swim only in OPEN SEA: `loadMap` moves each
+  one to the nearest run of sea cells with water above, below and beside (their hand-written coordinates crossed sand).
+  `story_flow` also writes `story_map_bosses.png` (every boss shown: `state.showBosses`). (2) COAST = SAND: the user
+  found jungla_colgante (2nd coast level) looked like a meadow level with water — theme 'tropical' = grass + palms. In
+  `retheme.py` the coast levels are now 'beach' (jungla_colgante, canon_trampolines, cala_de_los_muelles; also
+  cumbre_cangrejo), re-dressed with `--terrain --force` + `--decor --fix --theme`, jungla's background forest → coast;
+  nav of the changed arenas rebuilt. Audit of every story level vs its island: also fixed isla_flotante (tropical
+  decorations in the meadow → theme 'meadow') and lago_de_cristal (clams in the snow). Left as is on purpose:
+  bosque_interruptores (forest look inside the Meadow), the underwater caves (corals in nivel01 / laberinto_submarino).
+  Before/after: `FlappyMonster_pruebas/retema_costa/`. (3) VICTORY music was very quiet: the results screens used fixed
+  volumes (0.6 / 0.4, tuned for the borrowed track) × 0.45 while counting; now they take the catalog volume (levels.py,
+  victory target −14 LUFS effective) and duck to 60 %.
 - Menu: Aventura → HISTORIA (`story_slots`) / ONLINE / JUEGO LIBRE (PRUEBAS) (`free_play` stays as the debug hub).
 - `src/story/Worlds.lua` = the story as DATA: ordered worlds `{ id, levels = {...}, boss }` (stage 7 order; every
   story level needs a FINISH — hunt-only levels have none). `Worlds.nodes(w)`, `levelName(id)`.

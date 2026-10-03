@@ -271,7 +271,7 @@ CRITTERS = [
 ]
 critters = []
 for t, x0, x1, y in CRITTERS:
-    if t == 'puffer':
+    if t == 'puffer':      # (coordenadas a mano: el juego los lleva al mar abierto más cercano — StoryMapState loadMap)
         critters.append({'t': t, 'x0': x0, 'x1': x1, 'y': y})
         continue
     # el tramo más largo de casillas de tierra seguidas a la misma altura (sin cruzar paredes)

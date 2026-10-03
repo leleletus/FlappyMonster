@@ -18,7 +18,7 @@ def target(t):
     if i == 'mirror_boss': return -12.5
     if t.get('boss'): return -13.0
     if i == 'menus': return -15.5
-    if i == 'victory': return -15.0
+    if i == 'victory': return -14.0          # (la pantalla de resultados la baja aún más mientras cuenta)
     if i in CALM: return -15.3
     return -14.5
 
