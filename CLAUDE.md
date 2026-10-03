@@ -1895,6 +1895,19 @@ arenas as bonus nodes vs an expert BOT ✔. User's decisions: world map with a p
 
 ## OST presentation videos (`tools/video/`)
 
+**v2 (2026-10-03, with the FINAL soundtrack; the description further down is v1, kept for the bulb details):**
+`tools/video/make_ost.sh [megagummy megacrabby miniboss1 snowboss megacrabby_ice megagloomy mirror]` → one video per
+BOSS theme, `FlappyMonster_pruebas/videos/<track id>.mp4`. Audio = the track's intro + loop once, NO fade-out (ends
+where the track ends). The boss runs its REAL AI against an invisible, immortal dummy player (the "lure",
+`PlayerAdventure` with `immortal`, scripted input: wanders around the arena centre, stops, jumps now and then; no
+`Interactions`, so it never hurts the boss) through the real `BossZones` controller, at `PACE` 0.85; the boss's HP
+drops by itself along the song (`SHOWS[...].hp`, `phase2`, `rage`) to show later phases; the Mirror laughs every
+`laugh` s (`onPlayerDeath`). Overlay: logo ×6 bopping on the beat; a dark bottom BANNER with title, boss name, time
+elapsed / total in the boss's accent colour; a 64-bar spectrum VISUALIZER (from `tools/video/spectrum.py`: per-frame
+log bands 40 Hz-12 kHz, each normalised to its own peak) whose already-played bars are lit = the progress bar. The
+camera is raised so the arena floor sits above the banner. `love tools/video/ost <boss> 20` = a 20 s test; `SHOT=n`
+saves frame n to the save dir. Needs `~/.venvs/fm-music` (numpy, soundfile) or `FM_PYTHON`.
+
 TRACK NAMES (user): the game's own versions are called **Crab Tantrum (X)** — catalog `name` of `tentacle_nes` (NES),
 `tentacle_winter` (Winter), `tentacle_gloomy` (Gloomy), `tentacle_chip` (Chip / Chip instrumental); ids and files keep
 `tentacle_*` (levels reference the ids). Only the original recording stays "Tentacle Tantrum".

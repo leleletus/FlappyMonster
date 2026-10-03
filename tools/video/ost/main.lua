@@ -1,20 +1,25 @@
--- tools/video/ost — VÍDEOS de presentación de la banda sonora: una escena del juego DE VERDAD
--- (la arena real del jefe, con su fondo, decoraciones y lo que se mueve) con el jefe en reposo y,
--- de vez en cuando, alguna de sus otras animaciones (rugido, pinzas...), SIN sonido suyo, y el
--- logo de Flappy Monster dando un botecito en cada pulso de la canción. La música se añade al
--- vídeo tal cual (el archivo del juego).
+-- tools/video/ost — VÍDEOS de presentación de la banda sonora (2ª versión, con la banda sonora definitiva): cada
+-- tema de jefe sobre una MINIATURA VIVA de su pelea — la arena real del jefe, con su fondo, su luz y sus cosas, y el
+-- jefe haciendo lo suyo (anda, trepa, carga, salta, rueda, se teletransporta...), sin sonido suyo —, el logo de
+-- Flappy Monster botando en cada pulso, un rótulo con la pista y un VISUALIZADOR de barras que reacciona a la música
+-- y marca por dónde va la canción.
 --
---   love tools/video/ost <jefe> [segundos]      jefe: megacrabby | megacrabby_ice | megagloomy
+--   love tools/video/ost <jefe> [segundos]   jefe: megagummy | megacrabby | miniboss1 | snowboss | megacrabby_ice |
+--                                                  megagloomy | mirror
 --   → $FM_PREVIEWS/videos/<pista>.mp4 (por defecto /home/mtvemo/FlappyMonster_pruebas/videos/)
---   tools/video/make_ost.sh                      los tres
+--   tools/video/make_ost.sh                  todos
 --
--- Cómo: no se graba la pantalla; se dibuja fotograma a fotograma (30 fps, reloj virtual: lo que
--- anima con love.timer va al tiempo del vídeo) en un lienzo de 1280x720 y se le pasa en crudo a
--- ffmpeg por una tubería. El jefe hace su ENTRADA real al empezar (cae, ruge) y luego se queda en
--- reposo; cada 8 compases, un gesto; en el último cuarto de la canción se ENFADA. Para el Mega
--- Crabby lúgubre (arena a oscuras) cuelga del techo una BOMBILLA que se balancea al compás e
--- ilumina y oscurece la arena y al jefe; cada 16 compases FALLA y todo queda a oscuras 2 compases
--- (se ven solo los puntos luminosos del cangrejo).
+-- Cómo: no se graba la pantalla; se dibuja fotograma a fotograma (30 fps, reloj virtual: lo que anima con love.timer
+-- va al tiempo del vídeo) en un lienzo de 1280x720 que se pasa en crudo a ffmpeg por una tubería.
+--   · MÚSICA: la intro y el bucle de la pista (los archivos del juego), seguidos, UNA vez; el vídeo dura eso y se
+--     acaba donde acaba la pista, sin fundido.
+--   · EL JEFE corre con su IA DE VERDAD: un jugador de pega, INVISIBLE e inmortal (el "señuelo"), pasea por el centro
+--     de la arena y el jefe le hace lo que le haría a un jugador. Va a un ritmo algo más lento que en el juego (PACE)
+--     y no hay nadie que le pegue; para que enseñe lo que hace más adelante en la pelea, su vida BAJA SOLA con la
+--     canción (fases de la Bola de Nieve, guardia del Rey Gummy, rabia de los Mega Crabbies, fases del Espejo).
+--   · VISUALIZADOR: tools/video/spectrum.py saca el espectro de la pista por fotograma; las barras ya "sonadas" van
+--     encendidas y las demás apagadas (la propia fila de barras es la barra de progreso), más el tiempo en cifras.
+--   · Mega Crabby lúgubre (arena a oscuras): la BOMBILLA que cuelga del techo y se balancea al compás, con sus apagones.
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
 require 'settings'
@@ -26,6 +31,8 @@ local Level = require 'src/world/Level'
 local Entities = require 'src/world/Entities'
 local Entity = require 'src/world/entities/Entity'
 local BossZones = require 'src/world/BossZones'
+local Floods = require 'src/world/Floods'
+local Noise = require 'src/world/Noise'
 local PlayerAdventure = require 'src/entities/PlayerAdventure'
 local Particles = require 'src/fx/Particles'
 local Sky = require 'src/fx/Sky'
@@ -35,50 +42,92 @@ local Snowfall = require 'src/fx/Snowfall'
 local Darkness = require 'src/fx/Darkness'
 local PixelFont = require 'src/ui/PixelFont'
 
+-- bpm = pulsos por minuto del logo; hp = { fracción de la canción, fracción de vida } (la vida baja sola)
 local SHOWS = {
-    megacrabby     = { level = 'assets/levels/guarida_cangrejo_rey.json', track = 'crab_tantrum_normal', bpm = 186, title = 'CRAB TANTRUM', file = 'crab_tantrum_nes',
-                       sub = 'MEGA CRABBY' },
-    megacrabby_ice = { level = 'assets/levels/glaciar_cangrejo.json', track = 'crab_tantrum_icy', bpm = 186, title = 'CRAB TANTRUM (WINTER)', file = 'crab_tantrum_winter',
-                       sub = 'MEGA CRABBY HELADO' },
-    megagloomy     = { level = 'assets/levels/gruta_lugubre.json', track = 'crab_tantrum_gloomy', bpm = 144, title = 'CRAB TANTRUM (GLOOMY)', file = 'crab_tantrum_gloomy',
-                       sub = 'MEGA CRABBY LÚGUBRE', bulb = true },
+    megagummy      = { level = 'assets/levels/reino_gummy.json', track = 'gummy_king_boss', bpm = 148, title = 'SU MAJESTAD GUMMY',
+                       sub = 'REY GUMMY', color = { 1, 0.82, 0.3 }, phase2 = 0.45 },
+    megacrabby     = { level = 'assets/levels/guarida_cangrejo_rey.json', track = 'crab_tantrum_normal', bpm = 186, title = 'CRAB TANTRUM',
+                       sub = 'MEGA CRABBY', color = { 1, 0.55, 0.3 }, hp = { { 0.68, 0.3 } } },
+    miniboss1      = { level = 'assets/levels/fortaleza_malvada.json', track = 'evil_ship_boss', bpm = 160, title = 'PERSECUCIÓN',
+                       sub = 'NAVE MALVADA', color = { 0.75, 0.5, 1 }, noBreak = true },
+    snowboss       = { level = 'assets/levels/lago_helado.json', track = 'snowball_boss', bpm = 168, title = 'LA GRAN BOLA',
+                       sub = 'GRAN BOLA DE NIEVE', color = { 0.6, 0.85, 1 }, hp = { { 0.34, 0.6 }, { 0.67, 0.3 } } },
+    megacrabby_ice = { level = 'assets/levels/glaciar_cangrejo.json', track = 'crab_tantrum_icy', bpm = 186, title = 'CRAB TANTRUM (ICY)',
+                       sub = 'MEGA CRABBY HELADO', color = { 0.55, 0.85, 1 }, hp = { { 0.68, 0.3 } } },
+    megagloomy     = { level = 'assets/levels/gruta_lugubre.json', track = 'crab_tantrum_gloomy', bpm = 144, title = 'CRAB TANTRUM (GLOOMY)',
+                       sub = 'MEGA CRABBY LÚGUBRE', color = { 0.7, 0.6, 1 }, bulb = true, rage = 0.7 },
+    mirror         = { level = 'assets/levels/ruta_del_espejo.json', track = 'mirror_boss', bpm = 158, title = 'EL ESPEJO',
+                       sub = 'JEFE FINAL', color = { 1, 0.35, 0.4 }, hp = { { 0.34, 0.6 }, { 0.67, 0.3 } }, laugh = 22, lively = true },
 }
 local FPS, W, H, T = 30, 1280, 720, TILE_PX
+local PACE = 0.85                                         -- el jefe, un poco más despacio que en el juego
+local NB = 64                                             -- barras del visualizador
 local vt = 0                                              -- reloj virtual (s de vídeo)
 love.timer.getTime = function() return vt end
 love.timer.getDelta = function() return 1 / FPS end
 
-local show, level, es, boss, zone, player, ctl, canvas, scene, pipe, logo
-local total, frameN, manual, emoteN, raged, lamp = 0, 0, false, 0, false, nil
+local show, level, es, boss, zone, lure, ctl, canvas, scene, pipe, logo
+local total, frameN, lamp, spectrum = 0, 0, nil, {}
 local muxCmd
 
-local function duration(path)
-    local f = io.popen(('ffprobe -v error -show_entries format=duration -of csv=p=0 "%s"'):format(path))
-    local d = tonumber(f:read('*a')); f:close()
-    return d
-end
+local function sh(cmd) local f = io.popen(cmd); local s = f:read('*a'); f:close(); return s end
 
 function love.load(arg)
-    show = assert(SHOWS[arg[1] or ''], 'jefe: megacrabby | megacrabby_ice | megagloomy')
-    local audio = love.filesystem.getRealDirectory(show.level) and ('assets/music/bosses/' .. show.track .. '.ogg')
-    local base = love.filesystem.getSource()
-    local audioPath = base .. '/' .. audio
-    total = tonumber(arg[2]) or duration(audioPath)
+    show = assert(SHOWS[arg[1] or ''], 'jefe: megagummy | megacrabby | miniboss1 | snowboss | megacrabby_ice | megagloomy | mirror')
+    show.id = arg[1]
+    local base = love.filesystem.getSource() .. '/'
+    local out = (os.getenv('FM_PREVIEWS') or '/home/mtvemo/FlappyMonster_pruebas') .. '/videos'
+    os.execute('mkdir -p "' .. out .. '"')
+    -- LA PISTA: intro + bucle, seguidos (del catálogo de música del juego)
+    local idx = json.decode(love.filesystem.read('assets/music/index.json'))
+    local tr
+    for _, t in ipairs(idx.tracks) do if t.id == show.track then tr = t end end
+    assert(tr, 'pista ' .. show.track)
+    local wav = out .. '/' .. show.track .. '.tmp.wav'
+    local M = base .. 'assets/music/'
+    if tr.intro then
+        os.execute(('ffmpeg -v error -y -i "%s" -i "%s" -filter_complex "[0:a][1:a]concat=n=2:v=0:a=1" "%s"'):format(M .. tr.intro, M .. tr.loop, wav))
+    else
+        os.execute(('ffmpeg -v error -y -i "%s" "%s"'):format(M .. (tr.file or tr.loop), wav))
+    end
+    local full = tonumber(sh(('ffprobe -v error -show_entries format=duration -of csv=p=0 "%s"'):format(wav)))
+    total = tonumber(arg[2]) or full
+    -- el espectro, por fotograma
+    local spec = out .. '/' .. show.track .. '.tmp.txt'
+    local py = os.getenv('FM_PYTHON') or (os.getenv('HOME') .. '/.venvs/fm-music/bin/python')
+    os.execute(('"%s" "%s" "%s" %d %d "%s"'):format(py, base .. '../spectrum.py', wav, FPS, NB, spec))
+    local f = io.open(spec, 'r')
+    if f then
+        for line in f:lines() do
+            local row = {}
+            for n in line:gmatch('%d+') do row[#row + 1] = tonumber(n) / 99 end
+            spectrum[#spectrum + 1] = row
+        end
+        f:close(); os.remove(spec)
+    end
     WINDOW_W, WINDOW_H = W, H
+    love.math.setRandomSeed(7); math.randomseed(7)
 
     local data = json.decode(love.filesystem.read(show.level))
     level = Level.fromData(data)
+    if show.noBreak then level.canBreak = false end           -- (la Nave no se come el suelo de la arena)
     es = {}
     for _, pl in ipairs(level.entities) do es[#es + 1] = Entities.create(pl) end
     level.liveEntities = es
     BossZones.link(level, es)
+    Noise.bind(level)
     Particles.setLevel(level); Particles.clear()
     Entity.fx = function(kind, x, y, opts) Particles.emit(kind, x, y, opts) end
-    for _, e in ipairs(es) do if e.def.boss then boss = e end end
-    zone = level.bossZones[1]
-    -- un jugador de pega, invisible, entra en la zona para que el jefe haga su ENTRADA de verdad
-    player = PlayerAdventure:new(zone.x0 + 2.5 * T, zone.y1 - 60)
-    level.players = { player }
+    for _, e in ipairs(es) do if e.def.boss and not e.summonOf then boss = boss or e end end
+    zone = boss.zone or level.bossZones[1]
+    for _, z in ipairs(level.bossZones) do
+        if boss.x >= z.x0 and boss.x <= z.x1 and boss.y >= z.y0 and boss.y <= z.y1 then zone = z end
+    end
+    -- el SEÑUELO: un jugador de pega, invisible e inmortal; entra en la zona y el jefe hace su entrada de verdad
+    lure = PlayerAdventure:new(zone.x0 + 2.5 * T, zone.y1 - 60)
+    lure.immortal = true
+    lure.brain = { wait = 1.5, tx = (zone.x0 + zone.x1) / 2, stuck = 0, lastX = 0 }
+    level.players = { lure }
     ctl = BossZones.newController(level, es)
 
     canvas = love.graphics.newCanvas(W, H)
@@ -94,97 +143,93 @@ function love.load(arg)
         end
     end
 
-    local out = (os.getenv('FM_PREVIEWS') or '/home/mtvemo/FlappyMonster_pruebas') .. '/videos'
-    os.execute('mkdir -p "' .. out .. '"')
-    local file = out .. '/' .. show.file .. '.mp4'
-    -- En DOS pasos: primero solo la imagen (por la tubería) y, al acabar, se le pone la música. (En
-    -- uno solo, con -shortest, ffmpeg terminaba el audio mucho antes de que llegaran los fotogramas
-    -- y cortaba el vídeo a los pocos segundos.)
-    local fade = math.max(0, total - 2)
+    local file = out .. '/' .. show.track .. '.mp4'
+    -- En DOS pasos: primero solo la imagen (por la tubería) y, al acabar, se le pone la música. SIN fundido de salida:
+    -- el vídeo y la música se acaban donde se acaba la pista.
     local silent = file .. '.video.mp4'
     pipe = assert(io.popen(('ffmpeg -v error -y -f rawvideo -pix_fmt rgba -s %dx%d -r %d -i - '
-        .. '-vf "fade=t=in:st=0:d=0.6,fade=t=out:st=%.2f:d=2" -c:v libx264 -preset medium -crf 17 -pix_fmt yuv420p "%s"')
-        :format(W, H, FPS, fade, silent), 'w'))
-    muxCmd = ('ffmpeg -v error -y -i "%s" -t %.3f -i "%s" -af "afade=t=out:st=%.2f:d=2" -c:v copy -c:a aac -b:a 256k '
-        .. '-movflags +faststart "%s" && rm -f "%s"'):format(silent, total, audioPath, fade, file, silent)
+        .. '-vf "fade=t=in:st=0:d=0.5" -c:v libx264 -preset medium -crf 17 -pix_fmt yuv420p "%s"')
+        :format(W, H, FPS, silent), 'w'))
+    muxCmd = ('ffmpeg -v error -y -i "%s" -t %.3f -i "%s" -c:v copy -c:a aac -b:a 256k -movflags +faststart "%s" && rm -f "%s" "%s"')
+        :format(silent, total, wav, file, silent, wav)
     print(('%s: %.1f s, %d fotogramas → %s'):format(show.track, total, math.floor(total * FPS), file))
 end
 
--- ── Simulación (pasos de 1/60) ───────────────────────────────────────────────
-local function beat() return 60 / show.bpm end
--- (los Megas, en 'recover': misma pose de reposo que 'ready', pero 'ready' es de la ENTRADA y ahí no se
--- dibuja el enfado — las esquirlas de hielo y los símbolos solo salían durante los gestos)
-local IDLE = { megacrabby = 'recover', megacrabby_ice = 'recover', megagloomy = 'ready' }
-
-local function emote()
-    emoteN = emoteN + 1
-    local name = boss.def.name
-    if name == 'megagloomy' then
-        local k = ({ 'ping', 'taunt', 'ping', 'roar' })[(emoteN - 1) % 4 + 1]
-        boss.pinged = nil
-        boss:enter(k)
-        if k == 'roar' then Entity.emitFx('shake_roar', boss.x, boss.y) end
-    else
-        boss.restKind = ({ 2, 3, 1, 2, 1, 3 })[(emoteN - 1) % 6 + 1]      -- (pinzas, pincho, rugido...)
-        boss.restFor = 1.8
-        boss.state, boss.deadTimer = 'rest', 0
+-- ── El señuelo: pasea por el centro de la arena, se para, salta de vez en cuando ─────────────────────────────
+local function lureBits(dt)
+    local b = lure.brain
+    local cx, half = (zone.x0 + zone.x1) / 2, (zone.x1 - zone.x0) * (show.lively and 0.4 or 0.3)
+    if b.wait > 0 then
+        b.wait = b.wait - dt
+        if b.wait <= 0 then
+            b.tx = cx + (love.math.random() * 2 - 1) * half
+            b.jump = love.math.random() < (show.lively and 0.6 or 0.25)
+        end
+        return 0
     end
+    local dx = b.tx - lure.x
+    if math.abs(dx) < 14 then
+        b.wait = show.lively and (0.6 + love.math.random() * 1.6) or (1.5 + love.math.random() * 3)
+        return 0
+    end
+    local bits = (dx < 0) and P.IN_LEFT or P.IN_RIGHT
+    if math.abs(lure.x - b.lastX) < 0.5 then b.stuck = b.stuck + dt else b.stuck = 0 end
+    b.lastX = lure.x
+    if lure.onGround and (b.jump or b.stuck > 0.3) then
+        bits = bits + P.IN_JUMP + P.IN_JUMP_P
+        b.jump, b.stuck, b.hold = false, 0, 0.25
+    elseif (b.hold or 0) > 0 then
+        b.hold = b.hold - dt; bits = bits + P.IN_JUMP
+    end
+    return bits
 end
 
-local function enrage()
-    raged = true
-    if boss.def.name == 'megagloomy' then
+-- ── Simulación (pasos de 1/60): la pelea de verdad, con el señuelo ───────────────────────────────────────────
+local function beat() return 60 / show.bpm end
+local hpStep, raged, laughAt = 0, false, nil
+
+local function progress(k)
+    -- la vida del jefe baja sola con la canción (sin golpes): así enseña sus fases
+    for i, s in ipairs(show.hp or {}) do
+        if i > hpStep and k >= s[1] and boss.hpMax then
+            hpStep = i
+            boss.hp = math.max(1, math.floor(boss.hpMax * s[2]))
+        end
+    end
+    if show.phase2 and not raged and k >= show.phase2 and boss.phase2Hp then
+        raged = true
+        boss.hp = math.min(boss.hp, math.floor(boss:phase2Hp()))
+    end
+    if show.rage and not raged and k >= show.rage and (boss.state == 'prowl' or boss.state == 'walk' or boss.state == 'tired') then
+        raged = true
         boss.rage, boss.phase = true, 3
         boss:enter('roar'); Entity.emitFx('shake_roar', boss.x, boss.y)
-    else
-        boss.hp = math.max(1, math.floor(boss.hpMax * 0.3))               -- (enfadado: símbolos, temblor, esquirlas)
-        boss.restKind, boss.restFor = 1, 1.8
-        boss.state, boss.deadTimer = 'rest', 0
+    end
+    if show.laugh and zone.state == 'fight' then
+        laughAt = laughAt or (vt + show.laugh * 0.6)
+        if vt >= laughAt then laughAt = vt + show.laugh; if boss.onPlayerDeath then boss:onPlayerDeath(lure) end end
     end
 end
 
-local lastBar = -1
 local function step(dt)
-    for k in pairs(Input.state) do Input.state[k] = false end
+    P.decodeInput(lureBits(dt), Input.state)
+    level.players = { lure }
     level.solidBodies = Entities.solidBodies(es)
-    if not manual then
-        player:update(dt, level)
-        ctl:update(dt)
-        -- la entrada ha terminado y empieza la pelea: a partir de aquí lo llevamos nosotros
-        if zone.state == 'fight' and boss.state ~= 'intro' and boss.state ~= 'ready' and boss.state ~= 'fall_in'
-           and boss.state ~= 'land_in' and boss.state ~= 'roar_in' and boss.state ~= 'dormant' then
-            manual = true
-            level.players = {}
-            if boss.def.name == 'megagloomy' then boss:stand(level, boss.x) end
-            boss.state, boss.deadTimer = IDLE[boss.def.name], 10
-        end
+    lure:update(dt, level)
+    if lure.dying or lure.alive == false then                 -- (por si acaso: vuelve al centro)
+        lure:respawn(); lure.x, lure.y = (zone.x0 + zone.x1) / 2, zone.y1 - 60
     end
+    lure.hp = lure.hpMax
+    for k in pairs(Input.state) do Input.state[k] = false end
+    Floods.advance(level, dt)
     level:update(dt); level:updateFoliage(dt)
     for _, e in ipairs(es) do
-        if e ~= boss and (e.alive or e.summonOf) then e:update(dt, level) end
-    end
-    if not manual then
-        boss:update(dt, level)
-    else
-        local st = boss.state
-        if st == IDLE[boss.def.name] then
-            if boss.updatePings then boss:updatePings(nil, dt) end
-        else
-            boss:update(dt, level)                               -- (el gesto, con sus efectos de verdad)
-            st = boss.state
-            if st == 'chase' or st == 'prowl' or st == 'fight' or (st == 'recover' and IDLE[boss.def.name] ~= 'recover') then
-                boss.state, boss.deadTimer = IDLE[boss.def.name], 10
-                boss.vx = 0
-            end
-        end
-        -- gestos: uno cada 8 compases; en el último cuarto, se enfada
-        local bar = math.floor(vt / (beat() * 4))
-        if bar ~= lastBar and boss.state == IDLE[boss.def.name] then
-            lastBar = bar
-            if not raged and vt >= total * 0.74 then enrage()
-            elseif bar % 8 == 4 then emote() end
+        if e.alive or e.summonOf then
+            e:update((e.def.category == 'Jefes') and dt * PACE or dt, level)
         end
     end
+    ctl:update(dt)
+    if zone.state == 'fight' then progress(vt / total) end
     Particles.update(dt)
 end
 
@@ -241,35 +286,71 @@ local function drawBulb(camX, camY)
     return body, glow
 end
 
-local function drawLogo()
-    -- botecito en cada pulso: crece de golpe y vuelve; en el primero de cada compás, un poco más
+local function clock(s)
+    s = math.max(0, math.floor(s))
+    return ('%d:%02d'):format(math.floor(s / 60), s % 60)
+end
+
+local BAND_H = 124                                            -- el rótulo: una franja abajo
+local function drawOverlay()
+    -- LOGO: botecito en cada pulso (en el primero de cada compás, un poco más)
     local b = vt / beat()
     local ph = b - math.floor(b)
     local strong = math.floor(b) % 4 == 0
     local k = math.exp(-ph * 7)
-    local s = 5 * (1 + (strong and 0.16 or 0.09) * k)
+    local s = 6 * (1 + (strong and 0.15 or 0.08) * k)
     local rot = (strong and 0.035 or 0.02) * k * ((math.floor(b) % 2 == 0) and 1 or -1)
-    local cx, cy = W / 2, 74 - 6 * k
+    local cx, cy = W / 2, 88 - 6 * k
     love.graphics.setColor(0, 0, 0, 0.55)
-    love.graphics.draw(logo, cx + 4, cy + 4, rot, s, s, logo:getWidth() / 2, logo:getHeight() / 2)
+    love.graphics.draw(logo, cx + 5, cy + 5, rot, s, s, logo:getWidth() / 2, logo:getHeight() / 2)
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.draw(logo, cx, cy, rot, s, s, logo:getWidth() / 2, logo:getHeight() / 2)
-    -- la pista
-    local a = math.min(1, math.max(0, (vt - 0.8) / 0.8))
-    PixelFont.shadow(show.title, 28, H - 62, 3, a)
-    PixelFont.shadow(show.sub .. '  ·  FLAPPY MONSTER OST', 28, H - 34, 2, 0.8 * a)
+    -- RÓTULO: franja oscura con su filo, la pista, el jefe y el tiempo
+    local a = math.min(1, math.max(0, (vt - 0.4) / 0.6))
+    local y0 = H - BAND_H
+    local col = show.color
+    love.graphics.setColor(0, 0, 0, 0.72 * a); love.graphics.rectangle('fill', 0, y0, W, BAND_H)
+    love.graphics.setColor(col[1], col[2], col[3], 0.9 * a); love.graphics.rectangle('fill', 0, y0, W, 4)
+    love.graphics.setColor(0, 0, 0, 0.5 * a); love.graphics.rectangle('fill', 0, y0 + 4, W, 2)
+    PixelFont.draw(show.title, 28, y0 + 16, 4, a)
+    PixelFont.draw(show.sub .. '  ·  FLAPPY MONSTER OST', 28, y0 + 46, 2, 0.75 * a, col)
+    local tx = clock(vt) .. ' / ' .. clock(total)
+    PixelFont.draw(tx, W - 28 - PixelFont.width(tx, 3), y0 + 18, 3, 0.9 * a)
+    -- VISUALIZADOR: barras del espectro; las ya sonadas, encendidas (es también la barra de progreso)
+    local row = spectrum[math.min(#spectrum, frameN + 1)] or {}
+    local x0, x1, yb, hmax = 28, W - 28, H - 14, 46
+    local bw = (x1 - x0) / NB
+    local done = vt / total
+    love.graphics.setColor(1, 1, 1, 0.12 * a); love.graphics.rectangle('fill', x0, yb, x1 - x0, 3)
+    love.graphics.setColor(col[1], col[2], col[3], a); love.graphics.rectangle('fill', x0, yb, math.floor((x1 - x0) * done), 3)
+    for i = 1, NB do
+        local v = row[i] or 0
+        local hgt = math.max(2, math.floor(v * hmax / 2) * 2)
+        local bx = math.floor(x0 + (i - 1) * bw)
+        local played = (i - 0.5) / NB <= done
+        if played then love.graphics.setColor(col[1], col[2], col[3], (0.55 + 0.45 * v) * a)
+        else love.graphics.setColor(1, 1, 1, (0.16 + 0.3 * v) * a) end
+        love.graphics.rectangle('fill', bx + 1, yb - 3 - hgt, math.floor(bw) - 2, hgt)
+    end
+    -- el cursor de la canción
+    local mx = math.floor(x0 + (x1 - x0) * done)
+    love.graphics.setColor(1, 1, 1, a); love.graphics.rectangle('fill', mx - 2, yb - 3, 4, 9)
+    love.graphics.setColor(1, 1, 1, 1)
 end
 
 local function render()
     local shx, shy = Particles.shakeOffset()
     local camX = math.floor((zone.x0 + zone.x1) / 2 - W / 2 + shx + 0.5)
-    local camY = math.floor(math.min(level.tileH * T - H, zone.y1 + 1.5 * T - H) + shy + 0.5)
+    -- (la franja del rótulo tapa lo de abajo: la arena se sube para que su suelo quede a la vista)
+    local camY = math.floor(math.min(level.tileH * T - H, zone.y1 + 1.5 * T - H) + (BAND_H - 1.2 * T) + shy + 0.5)
     local bulbBody, bulbGlow
     if lamp then bulbBody, bulbGlow = drawBulb(camX, camY) end
     love.graphics.setCanvas(scene)
     love.graphics.clear(0, 0, 0, 1)
     love.graphics.setColor(1, 1, 1, 1)
+    Sky.punch = Darkness.active(level) and not level.dark
     Sky.render(level, camX, camY)
+    Sky.punch = false
     level:render(camX, camY)
     IceDrips.render(level, camX, camY)
     LavaFx.render(level, camX, camY)
@@ -286,12 +367,12 @@ local function render()
     love.graphics.setColor(1, 1, 1, 1)
     level:renderWaterEffect(camX, camY, scene)
     if bulbBody then bulbBody() end
-    if level.dark then
-        Darkness.render(level, camX, camY, {})
+    if Darkness.active(level) then
+        Darkness.render(level, camX, camY, {}, es, scene)
         Darkness.renderGlow(level, es, camX, camY)
     end
     if bulbGlow then bulbGlow() end
-    drawLogo()
+    drawOverlay()
     love.graphics.setCanvas()
 end
 
@@ -308,8 +389,11 @@ function love.update()
     love.graphics.origin()
     render()
     pipe:write(canvas:newImageData():getString())
+    if os.getenv('SHOT') and frameN == tonumber(os.getenv('SHOT')) then
+        canvas:newImageData():encode('png', 'ost_' .. show.id .. '.png')
+    end
     frameN = frameN + 1
-    if frameN % 300 == 0 then print(('  %d s / %d s'):format(frameN / FPS, total)) end
+    if frameN % 300 == 0 then print(('  %d s / %d s · jefe: %s'):format(frameN / FPS, total, tostring(boss.state))) end
 end
 
 function love.draw()
