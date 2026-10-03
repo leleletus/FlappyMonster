@@ -2261,6 +2261,24 @@ Low-level notes (for writing NEW harnesses):
   + a leap, twice) leads into the motif chorus, which starts on B♭: the same order as in the song both come from. Form:
   intro (motif, music box alone) · A · A' · B (1:48 phrase) · B' (CHORUS: the motif sung + the war chant) · the base
   theme's tribal bridge · A'' · coda. The motif now sounds twice, not four times (no motif in B or the bridge).
+- **`crab_tantrum_icy` v3 = a NEW COMPOSITION (3.66.0, `tools/music/crab_icy.py`; verified by numbers only; waiting for
+  the user's verdict; its video is NOT re-rendered until then).** v1 put the Winter motif into the crab theme in four
+  places and v2 added the whole 1:48 phrase: "you have basically copied and pasted the original melodies" — the user
+  wants what the final boss does: motifs as MATERIAL to reinterpret and develop; it may be longer, with more sections
+  and new melodies, and sound quite different from the other two crab themes as long as something of the Tentacle
+  Tantrum motif is recognisable. Now NO bar is copied from winter (measured: 0 of 71 melody bars share rhythm +
+  intervals with a bar of the 1:48 phrase or the motif). From TENTACLE TANTRUM: the riff CELL (bars 3 and 7 of the
+  theme, the end of the chorus, the bass in the breather; 6 bars) and the 3+3+2. From WINTER, three IDEAS: (a) the
+  motif's OCTAVE LEAP + stepwise descent → theme A starts with the cell's rhythm but THAT contour; the CHORUS is the
+  contour in minor, from the 5th degree, in the crab's 3+3+2 rhythm instead of even quarters, in sequence; the
+  BREATHER sings it on the music box in long values and continues on its own; (b) the 1:48 gesture (three 8ths + an
+  offbeat long note) → section B INVERTS it (the 8ths fall) over a new progression; once upright in the theme (bar 4);
+  (c) its closing figure (three repeated notes + a leap) on other degrees, closing B and the breather. And they MEET:
+  in the third pass of the theme the music box sings a new long-note counter-melody above the crab's tune. D natural
+  minor; chorus i–♭VI–III–♭VII (F major, winter's key, as III). Form: intro 4 (music box alone) · A · A' · B (thaw,
+  lighter) · C (chorus) · K (breather: music box, the bass brings the cell, drums return) · A'' (+ counterpoint) · B ·
+  C' (full) · coda 4 = 68-bar loop (87.7 s). Section dynamics drawn (`DYN`). `crab_tantrum.py icy` no longer generates
+  it (it only does normal and gloomy).
 - Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
   cuevas_oscuras; other cave levels → cuevas_1; non-story levels by their retheme theme).
 - Generators keep their internal names; `famicom.PATHS` / `famicom.out(name, ext)` map them to the new folders;

@@ -412,6 +412,8 @@ def build(style='normal'):
 
 if __name__ == '__main__':
     for style in (sys.argv[1:] or ['normal']):
+        if style == 'icy':                 # (la helada es ya una composición aparte: tools/music/crab_icy.py)
+            print('crab_tantrum_icy se genera con tools/music/crab_icy.py'); continue
         y, mel, n_i, bpm = build(style)
         if not os.environ.get('REPORT'):
             GN.export(STYLES[style]['out'], y, n_i)
