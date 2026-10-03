@@ -64,6 +64,8 @@ local function loudness(path, gain)
     return 10 * math.log10(best + 1e-12)
 end
 
+local introTracks, cur, started, switched, clock, left = {}, 1, false, nil, 0, 0
+
 function love.load()
     Sound.load()
     love.audio.setVolume(0)            -- (se reproducen de verdad, pero en silencio)
@@ -90,6 +92,45 @@ function love.load()
                 ('%-14s suena=%s  GAIN=%.2f  %.1f dBFS  (%s)'):format(name, tostring(playing), g, db, path))
         end
     end
-    print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
-    love.event.quit(fails == 0 and 0 or 1)
+    -- 4. pistas con INTRO + BUCLE: la intro suena una vez y el bucle entra pegado a su final (love.update)
+    local Music = require 'src/Music'
+    for _, tr in ipairs(Music.list) do
+        if tr.intro and not tr.pending then table.insert(introTracks, tr.id) end
+    end
+end
+
+-- Cada pista: se coloca la intro a 0.3 s de su final y se mira, frame a frame, cuándo entra el bucle
+function love.update(dt)
+    local id = introTracks[cur]
+    if not id then
+        print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
+        return love.event.quit(fails == 0 and 0 or 1)
+    end
+    if not started then
+        Sound.playMusic(id)
+        local src = Sound.source(id)
+        src:seek(src:getDuration() - 0.3)
+        started, clock, left = true, 0, 0.3
+        return
+    end
+    clock = clock + dt
+    local src = Sound.source(id)
+    local before = src:isPlaying() and (src:getDuration() - src:tell()) or -1     -- lo que le quedaba a la intro
+    Sound.update(dt)
+    local _, pos, part = Sound.musicPosition()
+    if part == 'bucle' and not switched then
+        switched = { left = before, pos = pos }
+    end
+    if switched and clock > 0.9 then
+        local _, p2, part2 = Sound.musicPosition()
+        check(switched.left > -0.5 and switched.left <= 0.02 and switched.pos <= 0.02 and part2 == 'bucle' and not src:isPlaying(),
+            ('%-22s intro → bucle: a la intro le quedaban %.0f ms, el bucle sigue (%.2f s) y la intro paró=%s')
+                :format(id, switched.left * 1000, p2 or -1, tostring(not src:isPlaying())))
+        Sound.stopMusic()
+        cur, started, switched = cur + 1, false, nil
+    elseif clock > 3 then
+        check(false, id .. ': el bucle no llegó a entrar')
+        Sound.stopMusic()
+        cur, started, switched = cur + 1, false, nil
+    end
 end

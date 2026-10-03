@@ -1964,6 +1964,13 @@ Low-level notes (for writing NEW harnesses):
   user approved pradera_1 (variant A) and pradera_bonus. Other islands: add their melody + arrangement there.
   User's decisions: the island table of the guide is approved; arrangements of borrowed tunes stay FOR NOW but get
   replacements with a similar vibe that keep a motif or a recognizable element as a "sample", never a copy.
+- INTRO + LOOP (user's rule, 3.50.1): a track with an intro is TWO files — `<track>_intro.ogg` (plays once on entering)
+  and `<track>_loop.ogg` (repeats forever, never back to the intro); index entry `"intro"` + `"loop"`. Generators:
+  `GN.fold(y, n, at)` folds the song's tail onto the LOOP start (`at` = intro length), and `GN.export(name, y, intro)`
+  splits (the intro's last 6 ms fade). Done for pradera_1/2/bonus, costa_1/2/bonus, crab_tantrum_gloomy (boss_generic
+  already was). `Sound.update` starts the loop when the intro has < 9 ms left (it used to wait until the intro had
+  STOPPED = a frame of silence, late on the beat). Harness `sounds` checks every intro track. Every new track with an
+  intro must be exported this way.
 - Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
   cuevas_oscuras; other cave levels → cuevas_1; non-story levels by their retheme theme).
 - Generators keep their internal names; `famicom.PATHS` / `famicom.out(name, ext)` map them to the new folders;

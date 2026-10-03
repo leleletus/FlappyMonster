@@ -430,6 +430,7 @@ end
 
 -- Cambio intro → bucle de las pistas con intro (llamar cada frame).
 local paused = nil
+local INTRO_LEAD = 0.009
 function Sound.update(dt)
     if echoes[1] then                                      -- ecos pendientes
         local now = love.timer.getTime()
@@ -441,11 +442,20 @@ function Sound.update(dt)
             end
         end
     end
+    -- El bucle arranca cuando a la intro le queda menos de medio frame (su final va apagado: tools/music
+    -- `export`), no un frame DESPUÉS de que se pare: así no hay hueco de silencio ni llega tarde al compás
     local lp = musicName and loops[musicName]
-    if lp and music ~= lp and not paused and not music:isPlaying() then
-        lp:setPitch(music:getPitch()); lp:setVolume(music:getVolume())
-        lp:seek(0); lp:play()
-        music = lp
+    if lp and music ~= lp and not paused then
+        local left = 0
+        if music:isPlaying() then
+            local d = music:getDuration()
+            left = d > 0 and (d - music:tell()) / math.max(0.1, music:getPitch()) or 1
+        end
+        if left <= INTRO_LEAD then
+            lp:setPitch(music:getPitch()); lp:setVolume(music:getVolume())
+            lp:seek(0); lp:play()
+            music = lp
+        end
     end
 end
 

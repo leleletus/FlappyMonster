@@ -117,3 +117,9 @@ tonalidad y con su instrumento. Así el mapa y los niveles son la misma música.
 - `tools/music/study.py`: tonalidad, ámbito, intervalos, síncopa y células de cualquier .mid.
 - `~/.venvs/fm-music` (librosa, pyloudnorm, mido, demucs, basic-pitch) para medir audio.
 - Límite: no hay oído. Cada pieza debería salir con 2-3 variantes cortas para que elija el autor.
+
+## Intro y bucle (regla del usuario)
+
+Una pista con intro son DOS archivos: `<pista>_intro.ogg` (suena una vez al entrar) y `<pista>_loop.ogg` (se repite
+sin volver a la intro); en `index.json`, `"intro"` + `"loop"`. La cola del final de la canción se pliega sobre el
+principio DEL BUCLE (`GN.fold(y, n, at)`), no sobre la intro, y `GN.export(nombre, y, intro)` hace el corte.

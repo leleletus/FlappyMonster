@@ -428,7 +428,8 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
         'snare': cut(F.tnd_dac((sn + 64) / 22638.0) - base) + cut(F.tnd_dac(NZ['snare'].render() / 22638.0 * 12)),
         'hat': cut(F.tnd_dac(NZ['hat'].render() / 22638.0 * 12)), 'crash': cut(F.tnd_dac(NZ['crash'].render() / 22638.0 * 12)),
     }
-    S = {k: GN.fold(v, n) for k, v in S.items() if np.abs(v).max() > 0}
+    n_i = int(INTRO * BAR * SR)                 # la INTRO suena una vez (su propio archivo); el bucle empieza aquí
+    S = {k: GN.fold(v, n, n_i) for k, v in S.items() if np.abs(v).max() > 0}
     LV = ISLE_LV.get(isle) or {'lead': 0, 'echo': -11, 'chords': -6, 'bass': -2, 'trill': -6, 'kick': -2 + drive, 'snare': -5 + drive, 'hat': -12, 'crash': -11, 'toms': 2}
     LV = dict(LV); LV['kick'] = LV['kick'] + (drive if isle != 'pradera' else 0); LV['snare'] = LV['snare'] + (drive if isle != 'pradera' else 0)
     g = GN.level(S, {k: LV[k] for k in S}, 'lead')
@@ -441,7 +442,7 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
     off = np.mean([st % 4 != 0 for b, st, nn, d in mel])
     print(f'  {bpm} BPM, {NB} compases ({NB * BAR:.1f} s); melodía: {len(mel)} notas, {100 * off:.0f} % fuera del tiempo, '
           f'ámbito {min(m[2] for m in mel)}-{max(m[2] for m in mel)}')
-    return y, mel, bpm
+    return y, mel, bpm, n_i
 
 
 def write_mid(path, mel, bpm):
@@ -477,7 +478,7 @@ if __name__ == '__main__':
             out = os.path.join(os.environ.get('FM_PRUEBAS', '/home/mtvemo/FlappyMonster_pruebas'), 'musica')
             os.makedirs(out, exist_ok=True)
             for v, kw in VARIANTS.items():
-                y, mel, bpm = build('pradera_1 variante ' + v, **kw)
+                y, mel, bpm, _ = build('pradera_1 variante ' + v, **kw)
                 wav = os.path.join(out, 'pradera_1_%s.wav' % v)
                 F.write_wav(wav, y)
                 os.system(f'ffmpeg -v quiet -y -i "{wav}" -c:a libvorbis -q:a 6 "{wav[:-4]}.ogg"'); os.remove(wav)
@@ -485,7 +486,7 @@ if __name__ == '__main__':
             continue
         kw = dict(TRACKS[a])
         if var and a == 'pradera_1': kw = dict(VARIANTS[var])
-        y, mel, bpm = build(a, **kw)
+        y, mel, bpm, n_i = build(a, **kw)
         if not os.environ.get('REPORT'):
-            GN.export(a, y)
+            GN.export(a, y, n_i)
             write_mid(F.out(a, 'mid'), mel, bpm)

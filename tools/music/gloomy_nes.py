@@ -72,21 +72,34 @@ def level(S, db, ref):
     return {k: (r * 10 ** (db[k] / 20) / rms_on(S[k]) if rms_on(S[k]) > 0 else 0.0) for k in S}
 
 
-def fold(y, n):
-    """Bucle sin costura: la cola (lo que suena después del final) se suma al principio"""
+def fold(y, n, at=0):
+    """Bucle sin costura: la cola (lo que suena después del final) se suma al principio DEL BUCLE (`at`: la
+    muestra donde empieza; lo de antes es la intro, que suena una sola vez y va en su propio archivo)"""
     out = y[:n].copy()
     tail = y[n:]
-    out[:len(tail)] += tail
+    out[at:at + len(tail)] += tail
     return out
 
 
-def export(name, y):
-    wav = _fam.out(name, 'wav')
-    F.write_wav(wav, y)
+def export(name, y, intro=0):
+    """`intro` (muestras) > 0: DOS archivos, <pista>_intro.ogg (suena una vez; sus últimos 6 ms se apagan) y
+    <pista>_loop.ogg (se repite sin volver a la intro) — el índice los lleva como intro + loop"""
+    def enc(x, ogg):
+        wav = ogg[:-4] + '.wav'
+        F.write_wav(wav, x)
+        os.system(f'ffmpeg -v quiet -y -i "{wav}" -c:a libvorbis -q:a 6 "{ogg}"')
+        os.remove(wav)
+        print(f'  {ogg}')
     ogg = _fam.out(name, 'ogg')
-    os.system(f'ffmpeg -v quiet -y -i "{wav}" -c:a libvorbis -q:a 6 "{ogg}"')
-    os.remove(wav)
-    print(f'  {ogg}')
+    if not intro:
+        return enc(y, ogg)
+    a = y[:intro].copy()
+    k = int(0.006 * SR)
+    ramp = np.linspace(1, 0, k)
+    a[-k:] = a[-k:] * (ramp[:, None] if a.ndim == 2 else ramp)
+    enc(a, ogg[:-4] + '_intro.ogg')
+    enc(y[intro:], ogg[:-4] + '_loop.ogg')
+    if os.path.exists(ogg): os.remove(ogg)
 
 
 def report(name, y, S, g, n):
@@ -250,7 +263,7 @@ def boss():
             NZ['crash'].hit(t0, 3, CRASH)
 
     n = int(NB * BAR * SR)
-    cut = lambda x: fold(x[:n + SR] - np.mean(x[:n]), n)
+    cut = lambda x: fold(x[:n + SR] - np.mean(x[:n]), n, int(INTRO * BAR * SR))     # (la intro no entra en el bucle)
     S = {
         'lead':  cut(F.render_wave(C['lead'], WAVES) * 0.0075),
         'echo':  cut(F.pulse_dac(F.render_pulse(C['echo']))),
@@ -406,4 +419,4 @@ if __name__ == '__main__':
     for w in which:
         y = boss() if w == 'jefe' else cave()
         if not os.environ.get('REPORT'):
-            export('tentacle_gloomy' if w == 'jefe' else 'dark_cave', y)
+            export('tentacle_gloomy' if w == 'jefe' else 'dark_cave', y, int(INTRO * BAR * SR) if w == 'jefe' else 0)
