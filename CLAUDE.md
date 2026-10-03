@@ -1946,11 +1946,12 @@ Low-level notes (for writing NEW harnesses):
 - ISLAND LEVEL MUSIC = `tools/music/worlds_nes.py` (follows the guide: intro 4 · A · A' · B · A'', 3+3+2 kick, the
   game motif "la llamada" closing phrase B). MEADOW done (3.49.0, verified by numbers only): `pradera_1` (G major,
   136 BPM, pulse lead + echo, hopping bass, offbeat chords, bird trill; 3 variants for the user to pick: `previas` →
-  `FlappyMonster_pruebas/musica/pradera_1_{A,B,C}.ogg`, A installed), `pradera_2` (its OWN tune written in E minor with
-  its dominant, 140, more drive — v1 was pradera_1 transposed: the user found it too similar and with harmonic rubs;
-  never transpose a tune diatonically to get the 'second face'), `pradera_bonus` (152, four-on-the-floor + an 8-bar
+  `FlappyMonster_pruebas/musica/pradera_1_{A,B,C}.ogg`, A installed), `pradera_2` (v3 "Galope": C MAJOR, 144, galop rhythm
+  dotted-8th + 16th in melody, bass and kick, flute lead — v1 was pradera_1 transposed to E minor (too similar,
+  harmonic rubs), v2 its own E-minor tune (the user: melody and instrumentation didn't fit each other): a minor tune
+  over the meadow's happy hopping arrangement doesn't work; the 'second face' changes KEY, RHYTHM and TIMBRE, not mode), `pradera_bonus` (152, four-on-the-floor + an 8-bar
   PERCUSSION SOLO before the last pass: snare/tom call and response, running toms, growing roll; isla_flotante). The
-  user approved pradera_1 (variant A). Other islands: add their melody + arrangement there.
+  user approved pradera_1 (variant A) and pradera_bonus. Other islands: add their melody + arrangement there.
   User's decisions: the island table of the guide is approved; arrangements of borrowed tunes stay FOR NOW but get
   replacements with a similar vibe that keep a motif or a recognizable element as a "sample", never a copy.
 - Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
