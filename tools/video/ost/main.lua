@@ -36,9 +36,9 @@ local Darkness = require 'src/fx/Darkness'
 local PixelFont = require 'src/ui/PixelFont'
 
 local SHOWS = {
-    megacrabby     = { level = 'assets/levels/guarida_cangrejo_rey.json', track = 'crab_tantrum_normal', bpm = 180, title = 'CRAB TANTRUM', file = 'crab_tantrum_nes',
+    megacrabby     = { level = 'assets/levels/guarida_cangrejo_rey.json', track = 'crab_tantrum_normal', bpm = 200, title = 'CRAB TANTRUM', file = 'crab_tantrum_nes',
                        sub = 'MEGA CRABBY' },
-    megacrabby_ice = { level = 'assets/levels/glaciar_cangrejo.json', track = 'crab_tantrum_icy', bpm = 180, title = 'CRAB TANTRUM (WINTER)', file = 'crab_tantrum_winter',
+    megacrabby_ice = { level = 'assets/levels/glaciar_cangrejo.json', track = 'crab_tantrum_icy', bpm = 200, title = 'CRAB TANTRUM (WINTER)', file = 'crab_tantrum_winter',
                        sub = 'MEGA CRABBY HELADO' },
     megagloomy     = { level = 'assets/levels/gruta_lugubre.json', track = 'crab_tantrum_gloomy', bpm = 144, title = 'CRAB TANTRUM (GLOOMY)', file = 'crab_tantrum_gloomy',
                        sub = 'MEGA CRABBY LÚGUBRE', bulb = true },

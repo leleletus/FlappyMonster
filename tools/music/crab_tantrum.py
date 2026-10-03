@@ -118,9 +118,11 @@ Q4 = {}                                            # compás → acorde de su ú
 # hielo: voz suave del N163 doblada por la caja de música una octava arriba, campanillas en el tresillo (donde iba
 # la marimba), cascabeles, arpegio brillante en semicorcheas.
 STYLES = {
-    'normal': dict(bpm=180, lufs=-10.0, out='crab_tantrum'),
+    # (normal y helada: 180 con la caja en el 3 = medio tiempo, se sentían a 90 — "demasiado lentas" en el juego, dijo el
+    # usuario; la lúgubre así está bien. Ahora 200 y a TIEMPO ENTERO: caja en 2 y 4, bombo doble, redoblitos, platos)
+    'normal': dict(bpm=200, lufs=-10.0, out='crab_tantrum'),
     'gloomy': dict(bpm=144, lufs=-11.0, out='crab_tantrum_gloomy'),
-    'icy':    dict(bpm=180, lufs=-10.0, out='crab_tantrum_icy'),
+    'icy':    dict(bpm=200, lufs=-10.0, out='crab_tantrum_icy'),
 }
 MOTIF = [[77, 89, 88, 86], [84, 82, 81, 82], [84, 86, 84, 82], [81, 79, 77, 79]]      # (negras; 4 compases: Si♭ Si♭ Do Do)
 MOTIF_PH = [(i + 1, k * 4, m, 4) for i, bar in enumerate(MOTIF) for k, m in enumerate(bar)]
@@ -215,6 +217,7 @@ def build(style='normal'):
     S16 = 60.0 / bpm / 4
     BAR = 16 * S16
     icy, dark = style == 'icy', style == 'gloomy'
+    fast = not dark
     mel, chords, tag, starts, bell = song(style)
     NB = len(chords)
     NF = F.frames_for(NB * BAR + 3)
@@ -337,18 +340,21 @@ def build(style='normal'):
                 if k % 2 == 0: pat = {2: 0, 3: 0, 4: 1, 8: 2, 9: 2, 10: 1, 11: 0, 14: 2, 15: 1}
                 if st in pat: hit(tom, W.TOMS[pat[st]], t, 1.0)
                 if kind == 'BR' and st % 2 == 0 and not dark: NZ['hat'].hit(t, 1 if not icy else 0, [4, 2, 1])
-                if kind == 'BR' and k >= 5 and st == 8 and not dark: snare(t, 0.9)
+                if kind == 'BR' and k >= 5 and not dark and st in (4, 12): snare(t, 0.95)
+                if not dark and st % 2 == 1 and st not in pat and (kind == 'BR' or k >= 3): NZ['hat'].hit(t, 1 if not icy else 0, [3, 1])
+                if not dark and kind == 'BR' and k >= 5 and st == 10: hit(kick, TN.KICK, t, 0.9)
                 if last and st >= 8 and not dark: snare(t, 0.4 + (st - 8) * 0.07, [7 + (st - 8), 5, 2])
             else:                                              # A y coda: tresillo en el bombo, caja en el 3 (medio tiempo), timbales
-                if st in TRES or (st == 10 and b % 2 == 0): hit(kick, TN.KICK, t, 1.0)
-                if st == 8 or (kind == 'CODA' and st == 4): snare(t, 1.0)
-                elif st in (3, 14, 15) or (kind in ('B', 'B2') and st in (2, 10, 11)):       # (el estribillo: el mismo ritmo, más timbales)
-                    hit(tom, W.TOMS[{2: 0, 3: 2, 10: 0, 11: 1, 14: 1, 15: 2}[st]], t, 0.9)
+                if st in TRES or st == 10 or (st == 3 and b % 2 == 0 and kind != 'A'): hit(kick, TN.KICK, t, 1.0 if st in TRES else 0.85)
+                if st in (4, 12): snare(t, 1.0)                                      # a tiempo entero: caja en 2 y 4
+                elif st in (7, 15) and (kind != 'A' or b % 2 == 0): snare(t, 0.35, [6, 3, 1])      # redoblitos
+                elif st in (3, 14) or (kind in ('B', 'B2') and st in (2, 10, 11)):       # (el estribillo: el mismo ritmo, más timbales)
+                    hit(tom, W.TOMS[{2: 0, 3: 2, 10: 0, 11: 1, 14: 1}[st]], t, 0.9)
                 elif icy: NZ['hat'].hit(t, 0, [5, 3, 1] if st % 2 == 0 else [2, 1])     # cascabeles
                 else: NZ['hat'].hit(t, 1, [4, 2, 1] if st % 2 == 0 else [3, 1])        # maraca en semicorcheas
             if last and kind not in ('intro', 'BR') and st >= 12 and not dark:                       # entrada a la frase siguiente
                 snare(t, 0.6 + (st - 12) * 0.1, [9 + (st - 12), 5, 2]); hit(tom, W.TOMS[min(2, st - 12)], t, 0.7)
-            if st == 0 and (b in starts or (kind in ('B', 'B2', 'CODA') and b % 2 == 1)) and b > 1: NZ['crash'].hit(t, 3, CRASH)
+            if st == 0 and (b in starts or (kind in ('B', 'B2', 'CODA') and b % 2 == 1) or (fast and kind == 'A' and (b - 1) % 4 == 0)) and b > 1: NZ['crash'].hit(t, 3, CRASH)
 
     n = int(NB * BAR * SR)
     n_i = int(INTRO * BAR * SR)

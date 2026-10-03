@@ -2034,6 +2034,11 @@ Low-level notes (for writing NEW harnesses):
   (`placeholders/crab_tantrum_icy_tentacle_winter.ogg`, `..._gloomy_tentacle_gloomy_{intro,loop}.ogg`); their
   generators write there. Older notes in this file about tentacle_nes / tentacle_winter / gloomy_nes `jefe` describe
   those RETIRED arrangements.
+- Crab Tantrum TEMPO (3.54.1): the user approved `crab_tantrum_gloomy` as is (144, half-time) but found normal and icy
+  "too slow" in game: at 180 with the snare on beat 3 they FELT at 90. Now both are 200 BPM in FULL time (`fast`): snare
+  on 2 and 4 with ghost 16ths, tresillo kick + extra kicks, 16th hats, crash every 4 bars in A, backbeat in the second
+  half of the bridge; notes, bass and mix unchanged (loop 67.2 s). The gloomy render is bit-identical. Lesson: for a
+  boss, judge tempo by where the SNARE falls, not by the BPM number.
 - Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
   cuevas_oscuras; other cave levels → cuevas_1; non-story levels by their retheme theme).
 - Generators keep their internal names; `famicom.PATHS` / `famicom.out(name, ext)` map them to the new folders;
