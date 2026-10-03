@@ -251,7 +251,21 @@ function Bot:_emit(bits)
 end
 
 -- Un paso de física del bot con su input (como el servidor: Input = su stub mientras se actualiza)
+-- PASO FIJO de 1/60 s: los movimientos del grafo se grabaron fotograma a fotograma a 60 Hz; con el dt real del
+-- juego (variable: 144 Hz, tirones...) los mismos inputs caían en otro sitio y el bot no llegaba a ninguna parte
+-- (pasaba en el juego y no en el arnés, que iba a 1/60 clavado). El dt real se acumula y se dan los pasos que quepan.
+Bot.DT = 1 / 60
 function Bot:step(dt, level, target)
+    self.acc = math.min((self.acc or 0) + dt, 0.1)
+    self.landed = false
+    while self.acc >= Bot.DT do
+        self.acc = self.acc - Bot.DT
+        self:_step(Bot.DT, level, target)
+        if self.pa.gpLanded then self.landed = true end
+    end
+end
+
+function Bot:_step(dt, level, target)
     self:think(dt, level, target)
     local real = Input
     Input = self.stub
@@ -278,7 +292,7 @@ end
 
 -- Su ground pound acaba de caer: ¿a quién empuja? (lo aplica quien llama)
 function Bot:poundHits(target)
-    if not self.pa.gpLanded or not target or target.dying then return false end
+    if not self.landed or not target or target.dying then return false end
     local dx, dy = target.x - self.pa.x, target.y - self.pa.y
     return math.abs(dx) < Bot.PUSH_R * TILE_PX and math.abs(dy) < 1.3 * TILE_PX, (dx < 0) and -1 or 1
 end

@@ -21,6 +21,7 @@ local S             = GUMMY_SCALE     -- 16x16 → una casilla
 local BOUNCE_WINDOW = 0.1             -- s en los que lanza a todos los que lleguen a la vez
 local RETRACT_T     = 0.15            -- s recogiéndose
 local MIN_SPEED     = 120             -- px/s: apoyarse quieto no lanza
+local MIN_SPEED_WATER = 25           -- (en el agua la caída es lenta)
 local PAD_TOP       = { normal = 7, extended = 4 }   -- fila del cojín en el sprite (mirando arriba)
 
 -- Cara del CUERPO que lanza, según hacia dónde mira el trampolín
@@ -84,7 +85,10 @@ function Tramp:interact(pa)
     -- Cayendo encima / saltando contra él: con velocidad (apoyarse quieto no
     -- lanza). De lado basta con empujarlo, aunque sea despacio.
     local sideways = (self.face == 'left' or self.face == 'right')
-    if (h.speed or 0) < (sideways and 1 or MIN_SPEED) then return nil end
+    -- (bajo el agua se cae muy despacio — nunca se llegaba a MIN_SPEED y solo lanzaba con un ground pound —:
+    -- ahí basta con caerle encima)
+    local min = sideways and 1 or ((pa.inWater and MIN_SPEED_WATER) or MIN_SPEED)
+    if (h.speed or 0) < min then return nil end
     if self.state ~= 'ready' and self.state ~= 'bounce' then return nil end      -- extendido: pared
     return 'launch', self:launchVelocity()
 end

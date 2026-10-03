@@ -334,9 +334,11 @@ function love.update(dt)
         BON2 = b ~= nil and b.bot ~= nil and st.levelPath == Worlds.path(Worlds.bonus(1).id) and st.player.lives == 99
         BOTX0 = b and b.bot.pa.x
         go('bonus3')
-    elseif step == 'bonus3' and t - T > 6 then
+    elseif step == 'bonus3' and (t - T > 30 or (st.bonus and st.bonus.botScore > 0 and t - T > 6)) then
         local b = st.bonus
-        BON3 = b and math.abs(b.bot.pa.x - BOTX0) > 64          -- (el bot se mueve)
+        -- (en el JUEGO DE VERDAD, con su dt variable: el bot llega a la zona y puntúa)
+        BON3 = b and math.abs(b.bot.pa.x - BOTX0) > 64 and b.botScore > 0
+        print(('  (bot: %d puntos a los %.0f s)'):format(b.botScore, t - T))
         shot('bonus_match')
         st.score = b.botScore + 40
         b.t = b.time - 0.2                                      -- (se acaba el tiempo, ganando)
@@ -350,7 +352,7 @@ function love.update(dt)
         local again = Run.bonusResult(id, { won = true, score = 1 })
         check('bonus', BON1 and BON2 and BON3 and st.world == 1 and st.node == #Worlds.nodes(1) + 1 and d and d.won
             and Run.data.lives == LIVES_B + 1 and Run.bonusState(1) == 'done' and again == nil and st.notice ~= nil,
-            ('cerrado sin jefe / abierto con jefe=%s; partida con bot y vidas aparte=%s; el bot se mueve=%s; ganar: bonus %s, vidas %s → %s; repetir: premio=%s'):format(
+            ('cerrado sin jefe / abierto con jefe=%s; partida con bot y vidas aparte=%s; el bot llega a la zona y puntúa=%s; ganar: bonus %s, vidas %s → %s; repetir: premio=%s'):format(
              tostring(BON1), tostring(BON2), tostring(BON3), Run.bonusState(1), tostring(LIVES_B), tostring(Run.data.lives), tostring(again)))
         shot('bonus_won')
         Run.data.done = KEEP; Run.data.bonus = {}; Run.data.lives = LIVES_B; Run.save(); go('del')

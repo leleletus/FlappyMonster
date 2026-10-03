@@ -535,7 +535,8 @@ landing mark; sprites in `assets/images/bosses/common/`). Asset layout: enemies 
   when the entity is selected (mortar detection radius).
 - A type file may return a LIST of defs (Entities.lua registers each), e.g.
   trampoline.lua → 4 palette entries sharing one class.
-- Trampolines: `solidFull` bodies with `bouncyFace`. The player's
+- Trampolines (top/bottom faces need 120 px/s; UNDER WATER 25: the slow fall never reached 120 and only a ground
+  pound launched): `solidFull` bodies with `bouncyFace`. The player's
   `moveAndCollide` records `pa.bodyHit = {o, face, speed}` (face of the BODY it
   hit this step). `e:interact` returns `'launch', vx, vy` when the face and
   speed match → `pa:launch(vx, vy)` + `e:onLaunch(pa)`; predicted on the client
@@ -1777,7 +1778,10 @@ arenas as bonus nodes vs an expert BOT ✔. User's decisions: world map with a p
   `interact`) → `assets/nav/<level>.json` (`run.sh bot_nav BUILD=1`, ~1 s per arena; signature of the tiles: stale →
   the game rebuilds it on entering). Levels with ON/OFF blocks are built in BOTH states and merged; at run time edges
   whose target has no floor now are skipped, an edge that fails twice is banned 15 s, and with no path it brute-forces
-  toward the goal jumping. The graph is only the MAP of possible moves: what the bot does is decided every frame
+  toward the goal jumping. The bot runs at a FIXED 1/60 step inside (`Bot:step` accumulates the real dt): the macros
+  were recorded per frame at 60 Hz, and with the game's variable dt they landed elsewhere — in the user's first test
+  the bot never reached a zone while the harness (exact 1/60) passed; the harness now feeds an irregular dt and
+  `story_flow` checks in the real game that the bot scores. The graph is only the MAP of possible moves: what the bot does is decided every frame
   (where you are, the level's state) plus some chance (rest between attacks × 0.8-1.6, it roams to a random cell of
   its zone every few seconds). FREE PLAY: a level with point zones and no finish starts as a match vs the bot too
   (`FreePlayState:_play`; arenas without a nav file build it on entering). Harness `bot_nav` (per arena: reaches a zone and stays; with a dummy player in the zone it

@@ -47,7 +47,15 @@ local function play(level, nav, withTarget)
         level.players = tgt and { bpa, tgt } or { bpa }
         level.solidBodies = Entities.solidBodies(es)          -- (trampolines, morteros: como en AdventureState)
         level:update(dt)
-        bot:step(dt, level, tgt or bpa)
+        -- (el bot, con un dt IRREGULAR como el del juego de verdad: 144 Hz con tirones; él va a paso fijo por dentro)
+        JIT = (JIT or 0) + 1
+        local due = dt
+        while due > 1e-9 do
+            local d = math.min(due, (JIT % 7 == 0) and 0.016 or 0.0069)
+            bot:step(d, level, tgt or bpa)
+            if tgt and bot:push(tgt) then pushes = pushes + 1 end
+            due = due - d
+        end
         if tgt then
             local real = Input; Input = stubT; P.decodeInput(0, stubT.state)
             tgt:update(dt, level); Input = real
@@ -59,7 +67,6 @@ local function play(level, nav, withTarget)
                     tgt.x, tgt.y, tgt.vx, tgt.vy, tgt.outT = tgt.spawnX, tgt.spawnY, 0, 0, 0
                 end
             else tgt.outT = 0 end
-            if bot:push(tgt) then pushes = pushes + 1 end
             if PointAreas.inside(best, tgt.x, tgt.y) then tIn = tIn + dt end
         end
         for _, e in ipairs(es) do if e.alive then e:update(dt, level) end end
