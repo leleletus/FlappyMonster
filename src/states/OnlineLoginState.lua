@@ -26,7 +26,8 @@ function OnlineLoginState:enter(args)
     loadAssets()
 
     self.fields = {
-        [FIELD_NICK] = NC.myName or "",
+        -- (el último nombre con el que se entró, guardado en las opciones: ya no hay que escribirlo cada vez)
+        [FIELD_NICK] = (NC.myName and NC.myName ~= '' and NC.myName) or require('src/Settings').onlineName or "",
     }
     self.activeField = FIELD_NICK
     self.connecting  = false
@@ -43,6 +44,7 @@ function OnlineLoginState:enter(args)
     -- Handlers de red
     NC:on("login_success", function(data)
         self.connecting = false
+        require('src/Settings').setOnlineName((self.fields[FIELD_NICK] or ''):match('^%s*(.-)%s*$'))
         gStateMachine:change('online_hub')
     end)
     NC:on("connection_lost", function(data)

@@ -112,6 +112,8 @@ code, comments (Spanish), commits, docs or game text — those keep their usual 
 - `src/Settings.lua`: player options saved as `options.cfg` in the save dir
   (NEVER a name like settings.lua: the save dir shadows the game's modules).
   `SettingsState` = language selector (main menu → CONFIGURACIÓN).
+  `options.cfg` also keeps `onlineName` = the last name the server accepted (`Settings.setOnlineName`, saved on
+  `login_success`): the online login field comes PREFILLED with it (3.66.3).
 - Level names: JSON `"name"` (Spanish) + `"name_en"` (+ `name_<lang>` for new languages);
   show them with `Lang.localName(t)` (FreePlay cards, mode menu, online room; the server sends
   `name_en` / `levelName_en` too). Editor: Nivel → General → "Inglés".
