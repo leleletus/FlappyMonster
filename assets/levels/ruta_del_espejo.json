@@ -39,7 +39,7 @@
     {"col":74,"row":13,"type":"gummy"},
     {"col":69,"row":11,"type":"checkpoint"},
     {"col":69,"row":10,"type":"extralife"},
-    {"col":106,"props":{"attackEvery":2,"glassJump":1000,"hp":10,"hpPerPlayer":5,"portalAim":0.4},"row":12,"type":"mirror"},
+    {"col":106,"props":{"attackEvery":2,"glassJump":1000,"hp":18,"hpPerPlayer":2,"portalAim":0.4,"recoverTime":0.15},"row":12,"type":"mirror"},
     {"col":79,"row":13,"type":"mortar"},
     {"col":87,"props":{"attach":"ceiling","detectRange":12,"dropOnSight":true,"patrol":{"left":85,"right":89}},"row":2,"type":"crabbytramp"},
     {"col":122,"props":{"sides":"left"},"row":13,"type":"mortar"},
@@ -60,14 +60,14 @@
     {"col":116,"props":{"flip":true},"row":13,"type":"basalt_rock"},
     {"col":118,"props":{"flip":true},"row":13,"type":"basalt_rock"},
     {"col":26,"props":{"layer":"back"},"row":10,"sub":3,"type":"basalt_pebbles"},
-    {"col":51,"props":{"layer":"back"},"row":10,"type":"stalactite"},
-    {"col":57,"props":{"flip":true,"layer":"back"},"row":10,"type":"stalactite"},
+    {"col":51,"row":10,"type":"stalactite"},
+    {"col":57,"props":{"flip":true},"row":10,"type":"stalactite"},
     {"col":116,"props":{"flip":true,"layer":"back"},"row":10,"sub":4,"type":"basalt_pebbles"},
     {"col":70,"props":{"flip":true,"layer":"back"},"row":11,"sub":3,"type":"dead_bush"},
     {"col":12,"props":{"flip":true,"layer":"back"},"row":13,"sub":4,"type":"glow_rock"},
     {"col":12,"props":{"layer":"back"},"row":13,"sub":3,"type":"dead_bush"},
-    {"col":16,"props":{"flip":true,"layer":"back"},"row":13,"type":"charred_tree"},
-    {"col":33,"props":{"flip":true,"layer":"back"},"row":13,"type":"charred_tree"},
+    {"col":16,"props":{"flip":true},"row":13,"type":"charred_tree"},
+    {"col":33,"props":{"flip":true},"row":13,"type":"charred_tree"},
     {"col":45,"props":{"layer":"back"},"row":13,"sub":3,"type":"glow_rock"},
     {"col":48,"props":{"flip":true,"layer":"back"},"row":13,"sub":4,"type":"lava_vent"},
     {"col":51,"props":{"flip":true,"layer":"back"},"row":13,"sub":4,"type":"lava_vent"},
@@ -88,10 +88,10 @@
     {"col":110,"kind":"solid","row":13,"sub":3}
   ],
   "bossZones": [
-    {"col":92,"h":10,"id":1,"music": "mirror_boss","row":4,"w":18}
+    {"col":92,"h":10,"id":1,"music":"mirror_boss","row":4,"w":18}
   ],
   "music": "volcan_2",
+  "background": "volcano",
   "time": "night",
-  "surfaceRow": 13,
-  "background": "volcano"
+  "surfaceRow": 13
 }
