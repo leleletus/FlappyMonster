@@ -1966,7 +1966,18 @@ again. No dialogue or text: animation + music.
   `overBig` = the `over` image only at full size (the crown: only the Gummy King has it); small = no Mega claws.
 - Harnesses: `story_film` (both films through the real state, durations, music clock, skip; 3 captures per scene;
   `XTRA=1`), `story_flow` (`fragmento`, `final`, `migrar`). Contact sheets: `FlappyMonster_pruebas/historia/`.
-- NOT seen in motion or heard by anyone yet: pacing, framing and music wait for the user's verdict.
+- User's verdict after watching (3.68.2): "incredible"; fixed on request — (1) Flappy → volcano TRANSITION: the Flappy
+  background slides away with its edge and the real (meadow) sky appears, a glint far away, then a cut to the WORLD
+  MAP: the monster flaps across the sea from the Meadow to the volcano (the old crossfade into the volcano sky "didn't
+  feel right"); cue beats unchanged, so the music still fits. (2) The monster is almost black: inside a set it gets a
+  thin light-blue RIM (`Stage.monster` silhouette at 4 offsets; `o.outline`). (3) REFLECTION = `K.reflect(x, y, o)`:
+  the monster's real mirror image (same pose, flipped, smaller with distance, moving the opposite way), drawn into a
+  canvas and cut to the GLASS SHAPE with a mask shader, glass sheen on top. (4) Monster poses as in the levels
+  (`K.pose`: idle = frame 3, walk = 3↔2 at 8 fps + puff + 'step' every other frame via `K.steps`, rising 2, falling
+  1↔3 at 6 fps, crouch 5 at the SAME centre — it used to be pushed 18 px into the floor; `K.hop` = idle the moment
+  it lands). (5) BEFORE its shard each boss is its NORMAL enemy (`K.NORMAL`, drawn by `K.drawExtras`): Gummy, Crabby
+  (no claws/spike), the ship small, a snowball, Icy Crabby with its small claws, Gloomy Crabby; after shrinking too.
+  Still open (user's optional idea): Evil Monster sprites standing outside its ship, the shard summoning the ship.
 
 ## OST presentation videos (`tools/video/`)
 

@@ -33,12 +33,8 @@ F.seven = {
         c.shared.ids = Stage.shardIds(c.xtra)
         c.v.out = 0
     end,
-    events = {
-        { beat = 0.2, fn = function(c) c.sfx('step') end },
-        { beat = 0.9, fn = function(c) c.sfx('step') end },
-        { beat = 1.6, fn = function(c) c.sfx('step') end },
-    },
     update = function(c, t, dt)
+        K.steps(c, t, dt, 0, c.at('out'))
         local ids = c.shared.ids
         local gap = c.b(3.2) / #ids
         for i = c.v.out + 1, #ids do
@@ -56,7 +52,7 @@ F.seven = {
         local gap = c.b(3.2) / #ids
         Stage.drawSet(c.v.set, K.CAMX, K.CAMY, function()
             Stage.mirror(K.MX, K.MF, {})
-            Stage.monster(mx, K.FLOOR, { frame = (wu < 1) and (math.floor(t * 9) % 3 + 1) or 1 })
+            Stage.monster(mx, K.FLOOR, (wu < 1) and K.pose('walk', t) or K.pose('idle'))
             for i, id in ipairs(ids) do
                 local u = (t - (c.at('out') + (i - 1) * gap)) / c.b(0.9)
                 if u > 0 then
@@ -106,7 +102,7 @@ F.pieces = {
         if c.v.placed > 0 then pulse = math.max(0, 1 - (t - arrival(c, c.v.placed)) / 0.3) end
         Stage.drawSet(c.v.set, K.CAMX, K.CAMY, function()
             Stage.mirror(K.MX, K.MF, { shards = placed })
-            Stage.monster(MONSTER_X, K.FLOOR, { frame = 1 })
+            Stage.monster(MONSTER_X, K.FLOOR, K.pose('idle'))
             for _, f in ipairs(flying) do
                 local ox, oy = orbit(f.i, #ids, gt)
                 if f.u > 0 then
@@ -135,11 +131,11 @@ F.whole = {
     draw = function(c, t)
         local gx, gy = Stage.glassCenter(K.MX, K.MF)
         Stage.drawSet(c.v.set, K.CAMX, K.CAMY, function()
-            Stage.mirror(K.MX, K.MF, { whole = true })
-            Stage.monster(MONSTER_X, K.FLOOR, { frame = 1 })
+            Stage.mirror(K.MX, K.MF, { whole = true, reflection = K.reflect(MONSTER_X, K.FLOOR, K.pose('idle')) })
+            Stage.monster(MONSTER_X, K.FLOOR, K.pose('idle'))
         end, { Stage.mirrorLight(K.MX, K.MF, 1.0, 520) }, function()
             Stage.rays(gx, gy, t * 2, 10, 360, 0.16 + 0.1 * (1 - c.k(0, c.dur)))
-            Stage.mirror(K.MX, K.MF, { whole = true })                   -- (el espejo, encima de sus rayos: brilla)
+            Stage.mirror(K.MX, K.MF, { whole = true, reflection = K.reflect(MONSTER_X, K.FLOOR, K.pose('idle')) })   -- (el espejo, encima de sus rayos: brilla)
         end)
     end,
 }
@@ -170,7 +166,7 @@ F['return'] = {
         local sx, sy = Particles.shakeOffset()
         Stage.drawSet(c.v.set, K.CAMX + sx, K.CAMY + sy, function()
             Stage.mirror(K.MX, K.MF, { whole = true })
-            Stage.monster(MONSTER_X, K.FLOOR, { frame = 1 })
+            Stage.monster(MONSTER_X, K.FLOOR, K.pose('idle'))
             if t >= pull and t < inside then
                 -- arrastrado desde la chimenea: patalea, se agarra al aire, encoge al entrar
                 local u = c.k(pull, inside)
@@ -229,7 +225,7 @@ F.light = {
         map:filmDraw(cx, cy, ZOOM_FAR, { extra = function(ox, oy)
             love.graphics.push()
             love.graphics.translate(-ox, -oy)
-            K.drawSnow(map, 1)
+            K.drawExtras(map, { 1, 1, 1, 1, 1, 1 })
             Stage.rays(vx, vy - 30, t * 2, 8, 150, 0.35)
             if t >= c.at('wave') then                             -- la onda: tres anillos duros
                 love.graphics.setBlendMode('add')
@@ -273,13 +269,13 @@ F.shrink = {
         local wide = t >= c.at('first') + 6 * each
         for n = 1, 6 do
             local t0 = c.at('first') + (n - 1) * each + c.b(0.5)
-            c.v.sizes[n] = (t < t0) and 1 or lerp(1, K.SMALL, K.elastic((t - t0) / c.b(0.9)))
+            c.v.sizes[n] = (t < t0) and 1 or ((t >= t0 + c.b(0.9)) and K.SMALL or lerp(1, K.SMALL, K.elastic((t - t0) / c.b(0.9))))
         end
         K.setBosses(map, c.v.sizes, 0)
         local function extra(ox, oy)
             love.graphics.push()
             love.graphics.translate(-ox, -oy)
-            K.drawSnow(map, c.v.sizes[4])
+            K.drawExtras(map, c.v.sizes)
             Stage.drawSparks()
             love.graphics.pop()
         end
@@ -344,14 +340,13 @@ F.flap = {
         local x = lerp(MONSTER_X, K.HOLE_X + 30, smooth(c.k(c.at('rise'), c.dur)))
         local y = K.FLOOR + dy
         c.v.x, c.v.y = x, y
-        local puff = math.max(K.puff(t, got), last and K.puff(t, last) or 1)
-        local frame = (dy < -2) and 2 or 1
+        local o = K.pose('idle')                                  -- (en el suelo: quieto al momento)
+        if dy < -1 then o = (last and t - last < 0.2) and K.pose('rise') or K.pose('fall', t) end
+        o.puff = math.max(K.puff(t, got), last and K.puff(t, last) or 1)
         local ou = easeIn(c.k(c.at('orb'), got))
         Stage.drawSet(c.v.set, K.CAMX, K.CAMY, function()
-            Stage.mirror(K.MX, K.MF, { whole = true, reflection = function(gx, gy)
-                Stage.monster(gx + (MONSTER_X - x) * 0.2, gy + 34 + dy * 0.66, { facing = -1, scale = 4, alpha = 0.8, color = { 0.75, 0.88, 1 }, frame = frame, puff = puff })
-            end })
-            Stage.monster(x, y, { frame = frame, puff = puff })
+            Stage.mirror(K.MX, K.MF, { whole = true, reflection = K.reflect(x, y, o) })
+            Stage.monster(x, y, o)
         end, { Stage.mirrorLight(K.MX, K.MF, 0.6), Stage.light(x, y, 200, (t >= got) and 0.3 or 0) }, function()
             if t < got then Stage.orb(lerp(ORB_X, MONSTER_X, ou), lerp(ORB_Y, K.FLOOR - 10, ou) + math.sin(t * 3) * 6 * (1 - ou), t, 4) end
         end)

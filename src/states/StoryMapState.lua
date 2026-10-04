@@ -749,6 +749,8 @@ local BOSS_CLAWS = {
         spike = 'assets/images/bosses/megacrabby/spike.png', spikeDy = 0 },
     ['assets/images/bosses/megacrabby_ice/crab1.png'] = { file = 'assets/images/bosses/megacrabby_ice/claw_left-Sheet.png', w = 10, k = 1.0, x = 5.4, y = -1.2, inset = 1.5, small = true,
         spike = 'assets/images/bosses/megacrabby_ice/spike.png', spikeDy = 2 },
+    -- (el Crabby helado NORMAL — el jefe antes de su fragmento, en las cinemáticas —: sus pinzas pequeñas, sin pincho)
+    ['assets/images/crabby_ice/crab1.png'] = { file = 'assets/images/crabby_ice/claw_left-Sheet.png', w = 7, k = 1.0, x = 5.6, y = -0.6, inset = 1.0, small = true },
     ['assets/images/bosses/megagloomy/body-Sheet.png'] = { file = 'assets/images/bosses/megagloomy/claw_left-Sheet.png', w = 14, sickle = true, x = 5.5, up = 8 },
 }
 

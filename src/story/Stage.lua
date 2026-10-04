@@ -56,6 +56,28 @@ local function invert(on)
     if invertShader then love.graphics.setShader(invertShader) end
 end
 
+local silShader, maskShader
+local function silhouetteShader()
+    if silShader == nil then
+        local ok, sh = pcall(love.graphics.newShader, [[
+            vec4 effect(vec4 c, Image t, vec2 uv, vec2 sc) { return vec4(c.rgb, Texel(t, uv).a * c.a); }
+        ]])
+        silShader = ok and sh or false
+    end
+    return silShader or nil
+end
+-- (recorta una imagen con el alfa de otra: el reflejo, con la forma del cristal)
+local function getMaskShader()
+    if maskShader == nil then
+        local ok, sh = pcall(love.graphics.newShader, [[
+            extern Image mask;
+            vec4 effect(vec4 c, Image t, vec2 uv, vec2 sc) { vec4 p = Texel(t, uv); return vec4(p.rgb, p.a * Texel(mask, uv).a) * c; }
+        ]])
+        maskShader = ok and sh or false
+    end
+    return maskShader or nil
+end
+
 -- ── El monstruo ─────────────────────────────────────────────────────────────
 -- x, y = el centro del sprite (como PlayerAdventure). o: frame 1-3 andar / 2 subir / 4 caído / 5 agachado,
 -- facing, puff (el "hinchazo" del aleteo), angle, alpha, scale, invert (el Reflejo), eyes (ojos en X)
@@ -65,6 +87,20 @@ function Stage.monster(x, y, o)
     if not im then return end
     local s = (o.scale or PLAYER_SCALE) * (o.puff or 1)
     local f = o.facing or 1
+    -- CONTORNO claro: el monstruo es casi negro y en los decorados en penumbra solo se le veía la cara. Dentro de
+    -- un decorado (o con o.outline) se dibuja antes su silueta en claro, desplazada a los cuatro lados
+    if (o.outline or (Stage._lit and o.outline ~= false)) and not o.invert and (o.alpha or 1) > 0.5 then
+        local sh = silhouetteShader()
+        if sh then
+            local w = math.max(1, floor((o.scale or PLAYER_SCALE) / 3))      -- (un tercio de píxel de arte: un filo, no un borde blanco)
+            love.graphics.setShader(sh)
+            love.graphics.setColor(0.55, 0.66, 0.9, 0.9)
+            for _, d in ipairs({ { -w, 0 }, { w, 0 }, { 0, -w }, { 0, w } }) do
+                love.graphics.draw(im, floor(x) + d[1], floor(y) + d[2], o.angle or 0, s * f * (o.sx or 1), s * (o.sy or 1), im:getWidth() / 2, im:getHeight() / 2)
+            end
+            love.graphics.setShader()
+        end
+    end
     invert(o.invert)
     local c = o.color or { 1, 1, 1 }
     love.graphics.setColor(c[1], c[2], c[3], o.alpha or 1)
@@ -185,12 +221,34 @@ function Stage.mirror(x, feetY, o)
         local b = shardInfo(id)
         if b then love.graphics.draw(b.im, ox, oy, 0, s, s) end
     end
-    if o.reflection then
-        -- (lo de dentro, recortado al cristal: su caja; las figuras son pequeñas y no llegan al borde del óvalo)
-        Clip.push(ox + 9 * s, oy + 6 * s, 30 * s, 44 * s)
+    if o.reflection and glass then
+        -- LO REFLEJADO: se dibuja en un lienzo del tamaño del espejo y se recorta con la FORMA del cristal (su
+        -- alfa); encima, el brillo del propio cristal, para que quede "dentro". `reflection(gx, gy)` dibuja en
+        -- las mismas coordenadas que el resto (gx, gy = centro del cristal)
+        local cw, chh = Stage.MIRROR_W * s, Stage.MIRROR_H * s
+        if not Stage._refl or Stage._refl:getWidth() ~= cw or Stage._refl:getHeight() ~= chh then
+            Stage._refl = love.graphics.newCanvas(cw, chh)
+            Stage._refl:setFilter('nearest', 'nearest')
+        end
         local gx, gy = Stage.glassCenter(x + sx, feetY, s)
+        local lit = Stage._lit
+        Stage._lit = nil                                   -- (lo reflejado no da luz ni lleva contorno)
+        love.graphics.push('all')
+        love.graphics.setCanvas(Stage._refl)
+        love.graphics.clear(0, 0, 0, 0)
+        love.graphics.origin()
+        love.graphics.setScissor()
+        love.graphics.translate(-ox, -oy)
         o.reflection(gx, gy)
-        Clip.pop()
+        love.graphics.pop()
+        Stage._lit = lit
+        local sh = getMaskShader()
+        if sh then sh:send('mask', glass); love.graphics.setShader(sh) end
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.draw(Stage._refl, ox, oy)
+        love.graphics.setShader()
+        love.graphics.setColor(1, 1, 1, 0.3)               -- el brillo del cristal, por encima
+        love.graphics.draw(glass, ox, oy, 0, s, s)
     end
     love.graphics.setColor(1, 1, 1, 1)
 end

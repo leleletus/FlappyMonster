@@ -21,6 +21,50 @@ end
 -- el "hinchazo" del aleteo: 1.18 al aletear y vuelve a 1 (como Player.lua)
 function C.puff(t, at) return (t >= at) and (1 + 0.18 * math.exp(-(t - at) * 12)) or 1 end
 
+-- ── El monstruo, como en los niveles (PlayerAdventure): quieto = cuadro 3; andar = 3↔2 a 8 por segundo (con su
+-- "hinchazo" y su PASO en cada 3); subiendo = 2; cayendo = 1↔3 a 6 por segundo; agachado = 5 (mismo centro: no se hunde)
+function C.pose(kind, t)
+    t = t or 0
+    if kind == 'walk' then
+        local k = math.floor(t * 8)
+        local on3 = k % 2 == 0
+        return { frame = on3 and 3 or 2, puff = on3 and (1 + 0.08 * math.exp(-(t * 8 - k) * 3)) or 1 }
+    elseif kind == 'rise' then return { frame = 2 }
+    elseif kind == 'fall' then return { frame = (math.floor(t * 6) % 2 == 0) and 1 or 3 }
+    elseif kind == 'crouch' then return { frame = 5 }
+    end
+    return { frame = 3 }
+end
+-- Un salto: altura (px hacia arriba) en u = 0..1 y la pose que toca (sube / cae / ya en el suelo: quieto al momento)
+function C.hop(u, h, t)
+    if u <= 0 or u >= 1 then return 0, C.pose('idle') end
+    return math.sin(u * math.pi) * h, C.pose(u < 0.5 and 'rise' or 'fall', t)
+end
+-- Los PASOS de un tramo andando (t0..t1): suenan como en el juego, uno cada dos cuadros. Llamar desde update
+function C.steps(c, t, dt, t0, t1)
+    if t < t0 or t - dt >= t1 then return end
+    local prev = t - dt
+    if prev < t0 or math.floor((math.min(t, t1) - t0) * 4) > math.floor((prev - t0) * 4) then c.sfx('step') end
+end
+
+-- EL REFLEJO del monstruo en el espejo: su imagen de verdad — misma pose, vuelta, más pequeña cuanto más lejos
+-- está del cristal, con los pies en el suelo de "dentro" y moviéndose al revés. (x, y, o) = lo mismo que se le
+-- pasa a Stage.monster para el de fuera
+function C.reflect(x, y, o)
+    return function(gx, gy)
+        local dist = math.max(0, C.MX - x)
+        local k = C.clamp(dist / 560)
+        local sc = 5.2 - 2.4 * k                                  -- cerca, casi a su tamaño; lejos, pequeño
+        local q = {}
+        for key, v in pairs(o or {}) do q[key] = v end
+        q.scale, q.facing = sc, -(o and o.facing or 1)
+        q.angle = o and o.angle and -o.angle or nil
+        q.color, q.alpha, q.outline, q.noLight = { 0.78, 0.9, 1 }, 0.92, false, true
+        local floorY = gy + 76 - 30 * k                           -- el suelo de dentro sube al alejarse (perspectiva)
+        Stage.monster(gx - dist * 0.085, floorY - 8 * sc + (y - C.FLOOR) * sc / PLAYER_SCALE, q)
+    end
+end
+
 -- ── El cráter (assets/story/sets/crater.json; tools/story/make_sets.py) ──────
 C.CAMX, C.CAMY = 64, 112            -- la cámara del decorado (22x13 casillas: se ven 20 x 11,25)
 C.FLOOR = 592                       -- y del centro del monstruo de pie en el suelo (suelo en y = 640)
@@ -116,22 +160,45 @@ function C.targets()
     return out
 end
 
--- Tamaño de los jefes en el mapa: `sizes[i]` para cada uno de C.targets(); `mirror` = el del volcán
+C.SMALL = 0.42          -- un enemigo normal, al lado de su versión gigante
+
+-- ANTES del fragmento cada jefe es un enemigo NORMAL, con su sprite de siempre: un Gummy (sin corona), un Crabby
+-- (sin pinzas ni pincho), el Monstruo Malvado en su nave (pequeña), una bola de nieve, un Crabby helado (con sus
+-- pinzas pequeñas, sin pincho) y un Crabby lúgubre. nil = el mismo dibujo del jefe, en pequeño
+C.NORMAL = {
+    { img = 'assets/images/gummy/gummy.png' },
+    { img = 'assets/images/crabby/crab1.png' },
+    nil,
+    nil,
+    { img = 'assets/images/crabby_ice/crab1.png' },
+    { img = 'assets/images/gloomy/gloomy-Sheet.png', fw = 26, glow = 'assets/images/gloomy/glow-Sheet.png' },
+}
+local function isSmall(size) return size and size <= C.SMALL + 0.005 end
+
+-- Tamaño de los jefes en el mapa: `sizes[i]` para cada uno de C.targets() (C.SMALL = todavía un enemigo normal);
+-- `mirror` = el del volcán. Los que tienen sprite de enemigo normal los dibuja C.drawExtras
 function C.setBosses(map, sizes, mirror)
     for i, tg in ipairs(C.targets()) do
-        if tg.w then map.filmBoss[tg.w] = sizes[i] or 0 end
+        if tg.w then
+            local size = sizes[i] or 0
+            map.filmBoss[tg.w] = (isSmall(size) and C.NORMAL[i]) and 0 or size
+        end
     end
     map.filmBoss[6] = mirror or 0
 end
 
--- La Bola de Nieve no tiene castillo: se dibuja aparte (dentro de `extra` de filmDraw, en coordenadas del mapa)
-function C.drawSnow(map, size)
-    if not size or size <= 0 then return end
-    local tg = C.targets()[4]
+-- Lo que el mapa no dibuja solo (dentro de `extra` de filmDraw, en coordenadas del mapa): la Bola de Nieve (no
+-- tiene castillo) y los enemigos normales de antes del fragmento
+function C.drawExtras(map, sizes)
     love.graphics.setColor(1, 1, 1, 1)
-    map:_drawBossArt(SNOW_ART, tg.x, tg.y, 4, size)
+    for i, tg in ipairs(C.targets()) do
+        local size = sizes[i] or 0
+        if tg.snow then
+            if size > 0 then map:_drawBossArt(SNOW_ART, tg.x, tg.y, 4, size) end
+        elseif isSmall(size) and C.NORMAL[i] then
+            map:_drawBossArt(C.NORMAL[i], tg.x, tg.y, tg.w, 0.62)       -- (su sprite, al tamaño de un enemigo del mapa)
+        end
+    end
 end
-
-C.SMALL = 0.36          -- un enemigo normal, al lado de su versión gigante
 
 return C

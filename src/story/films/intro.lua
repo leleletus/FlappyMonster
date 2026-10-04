@@ -32,48 +32,89 @@ F.flappy = {
 }
 
 -- ── 2. El destello ──────────────────────────────────────────────────────────
-local GLINT_X, GLINT_Y = 440, 282                 -- (el cráter del volcán del fondo, con la cámara del cielo en 0)
+-- Sale del modo Flappy: las tuberías se acaban y su fondo se queda ATRÁS (se va por la izquierda, con su borde)
+-- y aparece el cielo de verdad, el de la Pradera. A lo lejos, algo brilla. Corte al MAPA: cruza el mar, de la
+-- Pradera al volcán, hacia el destello.
+local GLINT_X, GLINT_Y = 1090, 300
+local ZOOM_FAR = 0.5
+local function farCam()
+    local _, SM = Stage.map()
+    local pw, ph = SM.mapSize()
+    return (pw - WINDOW_W / ZOOM_FAR) / 2, (ph - WINDOW_H / ZOOM_FAR) / 2
+end
+
 F.glint = {
     enter = function(c)
         c.shared.rig = c.shared.rig or K.flappyRig(-999, 0)
-        c.v.camX = 0
+        c.v.flaps = 0
+        local map = Stage.map()
+        K.setBosses(map, { K.SMALL, K.SMALL, K.SMALL, K.SMALL, K.SMALL, K.SMALL }, 0)
     end,
     events = {
         { cue = 'glint', fn = function(c) c.sfx('storyGlint'); Stage.spark(GLINT_X, GLINT_Y, 10, 6, 90, { life = 0.7, s = 4 }) end },
-        { cue = 'turn', fn = function(c) c.sfx('storyGlint', 1.25, 0.7); Stage.spark(GLINT_X, GLINT_Y, 8, 6, 70, { life = 0.6, s = 4 }) end },
+        { cue = 'turn', fn = function(c) c.sfx('storyGlint', 1.25, 0.7) end },
     },
     update = function(c, t, dt)
         local rig = c.shared.rig
-        -- desde que lo ve, va hacia allí: avanza por la pantalla y busca su altura
-        local k = c.k(c.at('turn'), c.dur)
-        rig.player.x = lerp(PLAYER_START_X, 330, smooth(k))
-        rig.targetY = lerp(360, GLINT_Y + 60, smooth(k))
-        K.flappyStep(rig, dt)
+        if t < c.at('turn') then
+            -- desde que lo ve, sube hacia allí
+            rig.targetY = lerp(360, GLINT_Y + 70, smooth(c.k(c.at('glint'), c.at('turn'))))
+            K.flappyStep(rig, dt)
+        else
+            -- sobre el mapa: un aleteo cada medio pulso
+            local n = math.floor((t - c.at('turn')) / c.b(0.5)) + 1
+            if n > c.v.flaps then c.v.flaps = n; c.v.flapT = t; c.sfx('jump', 1, 0.7) end
+        end
     end,
     draw = function(c, t)
         local rig = c.shared.rig
-        local k = c.k(c.at('cross'), c.dur - c.b(1))          -- el cielo del Flappy se deshace en el del volcán
-        local col = K.mix(K.SKY_BLUE, K.SKY_DUSK, smooth(c.k(0, c.at('cross'))))
-        if k > 0 then Stage.sky({ background = 'volcano', time = 'dusk', clouds = false }, c.v.camX, 0) end
-        if k < 1 then Stage.flappyBg(rig.scroll, col, 1 - smooth(k)) end
-        K.flappyDraw(rig)
-        -- el destello: parpadea desde que aparece
-        if t >= c.at('glint') then
-            local tw = 0.5 + 0.5 * math.sin((t - c.at('glint')) * 9)
-            Stage.rays(GLINT_X, GLINT_Y, t * 3, 4, 26 + 22 * tw, 0.55, { 0.8, 0.95, 1 })
-            if math.random() < 0.25 then Stage.spark(GLINT_X, GLINT_Y, 1, 14, 30, { life = 0.4, s = 3 }) end
+        local turn = c.at('turn')
+        if t < turn then
+            -- el cielo de la Pradera, y encima el fondo del Flappy yéndose con su borde
+            Stage.sky({ background = 'meadow', time = 'day' }, rig.scroll * 2, 0)
+            local edge = WINDOW_W + 200 - (WINDOW_W + 400) * easeIn(c.k(0, c.at('glint')))
+            if edge > 0 then
+                local Clip = require 'src/ui/Clip'
+                Clip.push(0, 0, edge, WINDOW_H)
+                Stage.flappyBg(rig.scroll, K.SKY_BLUE)
+                Clip.pop()
+                love.graphics.setColor(0, 0, 0, 1)
+                love.graphics.rectangle('fill', math.floor(edge), 0, 8, WINDOW_H)        -- el borde del fondo
+                love.graphics.setColor(1, 1, 1, 1)
+            end
+            K.flappyDraw(rig)
+            if t >= c.at('glint') then
+                local tw = 0.5 + 0.5 * math.sin((t - c.at('glint')) * 9)
+                Stage.rays(GLINT_X, GLINT_Y, t * 3, 4, 26 + 22 * tw, 0.6, { 0.8, 0.95, 1 })
+            end
+            Stage.drawSparks()
+        else
+            -- el mapa: de la Pradera al volcán, aleteando sobre el mar
+            local map, SM = Stage.map()
+            local cx, cy = farCam()
+            local hx, hy = SM.nodeXY(1, 1)
+            local vx, vy = SM.bossXY(6)
+            local u = smooth(c.k(turn, c.dur))
+            local ft = c.v.flapT or turn
+            local ph = (t - ft) / c.b(0.5)                                     -- cada aleteo: sube y cae un poco
+            local bob = -44 * ph * (1 - ph) * 4 * 0.5
+            map:filmDraw(cx, cy, ZOOM_FAR, { extra = function(ox, oy)
+                love.graphics.push()
+                love.graphics.translate(-ox, -oy)
+                K.drawExtras(map, { K.SMALL, K.SMALL, K.SMALL, K.SMALL, K.SMALL, K.SMALL })
+                local tw = 0.5 + 0.5 * math.sin(t * 9)
+                Stage.rays(vx, vy - 40, t * 3, 4, 50 + 40 * tw, 0.7, { 0.8, 0.95, 1 })
+                local x, y = lerp(hx, vx - 30, u), lerp(hy - 120, vy - 110, u) + bob
+                love.graphics.setColor(0, 0, 0, 0.25)
+                love.graphics.rectangle('fill', math.floor(x) - 16, math.floor(lerp(hy, vy, u)) + 6, 32, 8)   -- su sombra
+                Stage.monster(x, y, { frame = (ph < 0.35) and 2 or 1, scale = 5, puff = K.puff(t, ft), outline = true })
+                love.graphics.pop()
+            end })
         end
-        Stage.drawSparks()
     end,
 }
 
 -- ── 3. El espejo antiguo ────────────────────────────────────────────────────
--- (el reflejo dentro del cristal: el propio monstruo, vuelto, algo azulado)
-local function reflection(dx, hop, frame)
-    return function(gx, gy)
-        Stage.monster(gx + dx, gy + 34 - hop, { facing = -1, scale = 4, alpha = 0.8, color = { 0.75, 0.88, 1 }, frame = frame })
-    end
-end
 local MIRROR_X0 = 620                                -- donde aterriza, frente al espejo
 
 F.mirror = {
@@ -91,16 +132,20 @@ F.mirror = {
         -- baja por la chimenea aleteando: tres aleteos (cada uno, un saltito hacia arriba)
         local x = lerp(K.HOLE_X, MIRROR_X0, smooth(u))
         local y = lerp(60, K.FLOOR, easeIn(u)) - math.abs(math.sin(u * math.pi * 3)) * 46 * (1 - u)
-        local puff = math.max(K.puff(t, c.b(0.1)), K.puff(t, c.b(1.1)), K.puff(t, c.b(2.0)))
-        local hop = 0
-        if t >= c.at('wave') then                    -- saluda con un saltito; su reflejo, igual
-            local h = c.k(c.at('wave'), c.at('wave') + c.b(1))
-            hop = math.sin(h * math.pi) * 44
+        local o
+        if u < 1 then
+            local last = (t >= c.b(2.0)) and c.b(2.0) or ((t >= c.b(1.1)) and c.b(1.1) or c.b(0.1))
+            o = (t - last < 0.2) and K.pose('rise') or K.pose('fall', t)
+            o.puff = K.puff(t, last)
+        else
+            -- saluda con un saltito (su reflejo, igual): en cuanto toca el suelo, quieto
+            local h
+            h, o = K.hop(c.k(c.at('wave'), c.at('wave') + c.b(0.8)), 44, t)
+            y = y - h
         end
-        local frame = (u < 1) and 2 or 1
         Stage.drawSet(c.v.set, K.CAMX, K.CAMY, function()
-            Stage.mirror(K.MX, K.MF, { whole = true, reflection = (u >= 0.75) and reflection((1 - c.k(land * 0.75, land)) * 52, hop, frame) or nil })
-            Stage.monster(x, y - hop, { frame = (hop > 0) and 2 or frame, puff = puff })
+            Stage.mirror(K.MX, K.MF, { whole = true, reflection = K.reflect(x, y, o) })
+            Stage.monster(x, y, o)
         end, { Stage.mirrorLight(K.MX, K.MF, 0.55) })
     end,
 }
@@ -124,15 +169,15 @@ F.crash = {
     },
     draw = function(c, t)
         local flap, crash = c.at('flap'), c.at('crash')
-        local x, y, o = MIRROR_X0, K.FLOOR, { frame = 1 }
+        local x, y, o = MIRROR_X0, K.FLOOR, K.pose('idle')
         local shake = 0
         if t >= crash then
             -- rebota hacia atrás, dando vueltas, y cae al suelo
             local u = c.k(crash, crash + c.b(1.4))
             x = lerp(HIT_X, 500, u)
-            y = lerp(HIT_Y, K.FLOOR + 18, u) - math.sin(u * math.pi) * 120
-            o = (u < 1) and { frame = 4, angle = -u * math.pi * 2 } or { frame = 5 }
-            if u >= 1 then y = K.FLOOR + 18 end
+            y = lerp(HIT_Y, K.FLOOR, u) - math.sin(u * math.pi) * 120
+            o = (u < 1) and { frame = 4, angle = -u * math.pi * 2 } or K.pose('crouch')
+            if u >= 1 then y = K.FLOOR end
             shake = math.max(0, 10 * (1 - (t - crash) / 0.5))
         elseif t >= flap then
             -- aletea hacia su reflejo, demasiado cerca
@@ -144,10 +189,7 @@ F.crash = {
         local sx, sy = Particles.shakeOffset()
         Stage.drawSet(c.v.set, K.CAMX + sx, K.CAMY + sy, function()
             if t < crash then
-                local u = c.k(flap, crash)
-                Stage.mirror(K.MX, K.MF, { whole = true, reflection = function(gx, gy)
-                    Stage.monster(gx + lerp(0, -12, u), gy + lerp(34, -40, easeOut(u)), { facing = -1, scale = 4, alpha = 0.8, color = { 0.75, 0.88, 1 }, frame = (t >= flap) and 2 or 1 })
-                end })
+                Stage.mirror(K.MX, K.MF, { whole = true, reflection = K.reflect(x, y, o) })
             else
                 Stage.mirror(K.MX, K.MF, { shards = ALL, shake = shake })      -- (agrietado: los siete trozos, aún en su sitio)
             end
@@ -178,26 +220,28 @@ F.reflex = {
         { cue = 'step', fn = function(c) c.sfx('jump', 0.8) end },
         { cue = 'land', fn = function(c) c.sfx('gpImpact', 0.9, 0.6); Particles.emit('shake_small', REF_X, K.FLOOR) end },
     },
+    update = function(c, t, dt) K.steps(c, t, dt, c.b(2), c.b(6)) end,
     draw = function(c, t)
         local peek, step, land = c.at('peek'), c.at('step'), c.at('land')
         local out = easeOut(c.k(0, c.b(1.2)))
         -- el monstruo: caído; se levanta y retrocede
         local mu = c.k(c.b(2), c.b(6))
         local mx = lerp(500, 440, smooth(mu))
-        local mo = (t < c.b(2)) and { frame = 5 } or { frame = (mu > 0 and mu < 1) and (math.floor(t * 8) % 3 + 1) or 1 }
-        local my = (t < c.b(2)) and K.FLOOR + 18 or K.FLOOR
+        local mo = (t < c.b(2)) and K.pose('crouch') or ((mu > 0 and mu < 1) and K.pose('walk', t - c.b(2)) or K.pose('idle'))
+        mo.facing = 1
+        local my = K.FLOOR
         local gx, gy = Stage.glassCenter(K.MX, K.MF)
         local sx, sy = Particles.shakeOffset()
         Stage.drawSet(c.v.set, K.CAMX + sx, K.CAMY + sy, function()
             Stage.mirror(K.MX, K.MF, { reflection = (t >= peek and t < step) and function(x, y)
-                Stage.monster(x, y + 34, { facing = -1, scale = 5, invert = true, alpha = smooth(c.k(peek, peek + c.b(1))) })
+                Stage.monster(x, y + 34, { facing = -1, scale = 5, invert = true, frame = 3, alpha = smooth(c.k(peek, peek + c.b(1))) })
             end or nil })
             floating(out, t)
             if t >= step then
                 local u = c.k(step, land)
                 local x = lerp(gx, REF_X, u)
                 local y = lerp(gy + 34, K.FLOOR, u) - math.sin(u * math.pi) * 90
-                Stage.monster(x, y, { facing = -1, invert = true, frame = (u < 1) and 2 or 1, scale = lerp(5, PLAYER_SCALE, u) })
+                Stage.monster(x, y, { facing = -1, invert = true, frame = (u >= 1) and 3 or ((u < 0.5) and 2 or 1), scale = lerp(5, PLAYER_SCALE, u) })
             end
             Stage.monster(mx, my, mo)
         end, { Stage.mirrorLight(K.MX, K.MF, 0.22) })
@@ -233,12 +277,12 @@ F.steal = {
         local pull, got, laugh, try, blast = c.at('pull'), c.at('got'), c.at('laugh'), c.at('try'), c.at('blast')
         local bk = c.k(blast, c.dur)                              -- la explosión final: todo sale despedido
         -- el monstruo
-        local mx, my, mo = 440, K.FLOOR, { frame = 1 }
+        local mx, my, mo = 440, K.FLOOR, K.pose('idle')
         if t >= pull and t < got then                             -- tira de él: lo arrastra
             mx = lerp(440, 500, c.k(pull, got)) + math.sin(t * 40) * 2
-            mo = { frame = 2 }
+            mo = K.pose('idle')                                    -- (se resiste, con los pies en el suelo)
         elseif t >= got and t < try then                          -- se queda sin fuerzas, de rodillas
-            mx, my, mo = 500, K.FLOOR + 18, { frame = 5 }
+            mx, my, mo = 500, K.FLOOR, K.pose('crouch')
         elseif t >= try then
             mx = 500
             -- intenta aletear: salta... un segundo salto en el aire (lo poco que le queda) y cae
@@ -246,13 +290,13 @@ F.steal = {
             if t < b2 then
                 local u = (t - a) / (b2 - a)
                 my = K.FLOOR - math.sin(u * math.pi * 0.5) * 100
-                mo = { frame = 2 }
+                mo = K.pose('rise')
             elseif t < e then
                 local u = (t - b2) / (e - b2)
                 my = K.FLOOR - 100 - math.sin(u * math.pi) * 70 + easeIn(u) * 118
-                mo = { frame = (u < 0.5) and 2 or 3 }
+                mo = (u < 0.35) and K.pose('rise') or K.pose('fall', t)
             else
-                my, mo = K.FLOOR + 18, { frame = 5 }
+                my, mo = K.FLOOR, K.pose((t < c.b(10.4)) and 'crouch' or 'idle')
             end
         end
         if bk > 0 then                                             -- sale volando por la chimenea
@@ -286,7 +330,7 @@ F.steal = {
             if t >= laugh and t < try then
                 Stage.laugh(REF_X, ry, t - laugh, { facing = -1, puff = rpuff })
             else
-                Stage.monster(REF_X, ry, { facing = -1, invert = true, frame = (t >= got) and 2 or 1, puff = rpuff })
+                Stage.monster(REF_X, ry, { facing = -1, invert = true, frame = (t >= got) and 2 or 3, puff = rpuff })
             end
             Stage.monster(mx, my, mo)
         end, { Stage.mirrorLight(K.MX, K.MF, 0.2), Stage.light(ox, oy, 150, (t >= pull and t < got) and 0.5 or 0) },
@@ -298,13 +342,6 @@ F.steal = {
 }
 
 -- ── 7. Seis fragmentos, seis sitios ─────────────────────────────────────────
-local ZOOM_FAR = 0.5
-local function farCam()
-    local _, SM = Stage.map()
-    local pw, ph = SM.mapSize()
-    return (pw - WINDOW_W / ZOOM_FAR) / 2, (ph - WINDOW_H / ZOOM_FAR) / 2
-end
-
 F.scatter = {
     enter = function(c)
         local map = Stage.map()
@@ -330,7 +367,7 @@ F.scatter = {
         map:filmDraw(cx, cy, ZOOM_FAR, { extra = function(ox, oy)
             love.graphics.push()
             love.graphics.translate(-ox, -oy)
-            K.drawSnow(map, K.SMALL)
+            K.drawExtras(map, { K.SMALL, K.SMALL, K.SMALL, K.SMALL, K.SMALL, K.SMALL })
             for i, tg in ipairs(K.targets()) do
                 local t0 = c.at('first') + c.b(i - 1)
                 local u = (t - t0) / c.b(1.2)
@@ -345,7 +382,7 @@ F.scatter = {
             -- el monstruo, lanzado desde el volcán hasta la Pradera
             local u = c.k(c.b(0.3), c.dur - c.b(0.4))
             if u < 1 then
-                Stage.monster(lerp(vx, hx, u), lerp(vy - 40, hy - 20, u) - math.sin(u * math.pi) * 420, { frame = 4, angle = t * 7, scale = 5 })
+                Stage.monster(lerp(vx, hx, u), lerp(vy - 40, hy - 20, u) - math.sin(u * math.pi) * 420, { frame = 4, angle = t * 7, scale = 5, outline = true })
             end
             Stage.drawSparks()
             love.graphics.pop()
@@ -376,13 +413,13 @@ F.fury = {
         -- tamaños: los que ya crecieron, grandes; el de ahora, creciendo
         for n = 1, 6 do
             local t0 = c.at('first') + (n - 1) * each + c.b(0.5)
-            c.v.sizes[n] = (t < t0) and K.SMALL or lerp(K.SMALL, 1, K.elastic((t - t0) / c.b(0.9)))
+            c.v.sizes[n] = (t < t0) and K.SMALL or math.max(K.SMALL + 0.02, lerp(K.SMALL, 1, K.elastic((t - t0) / c.b(0.9))))
         end
         K.setBosses(map, c.v.sizes, 1)
         local function extra(ox, oy)
             love.graphics.push()
             love.graphics.translate(-ox, -oy)
-            K.drawSnow(map, c.v.sizes[4])
+            K.drawExtras(map, c.v.sizes)
             if not wide then
                 local tg = tgs[i]
                 local u = c.k(c.at('first') + (i - 1) * each, c.at('first') + (i - 1) * each + c.b(0.5))
@@ -423,10 +460,8 @@ F.onfoot = {
             Stage.spark(hx, hy, 8, 10, 110, { life = 0.4, s = 3, vy = -40 })
         end },
         { beat = 6.5, fn = function(c) c.sfx('jump') end },
-        { cue = 'walk', fn = function(c) c.sfx('step') end },
-        { beat = 8.5, fn = function(c) c.sfx('step') end },
-        { beat = 9, fn = function(c) c.sfx('step') end },
     },
+    update = function(c, t, dt) K.steps(c, t, dt, c.at('walk'), c.dur - 0.3) end,
     draw = function(c, t)
         local map, SM = Stage.map()
         local hx, hy = SM.nodeXY(1, 1)
@@ -437,26 +472,26 @@ F.onfoot = {
         map:filmDraw(cx, cy, 1, { extra = function(ox, oy)
             love.graphics.push()
             love.graphics.translate(-ox, -oy)
-            K.drawSnow(map, 1)
+            K.drawExtras(map, { 1, 1, 1, 1, 1, 1 })
             local y0 = hy - 16                                       -- (el centro del monstruo de pie en su nodo)
-            local x, y, o = hx, y0, { scale = 3, frame = 1 }
+            local x, y, o = hx, y0, K.pose('idle')
             if t < land then
                 local u = t / land
-                y = lerp(y0 - 620, y0, easeIn(u)); o = { scale = 3, frame = 4, angle = t * 9 }
+                y = lerp(y0 - 620, y0, easeIn(u)); o = { frame = 4, angle = t * 9 }
             elseif t < up then
-                y, o = y0 + 9, { scale = 3, frame = 5 }
+                o = K.pose('crouch')
             elseif t < walk then
                 -- se levanta, mira el volcán (a lo lejos) e intenta aletear: solo un saltito
-                local h = c.k(c.b(6.5), c.b(7.5))
-                y = y0 - math.sin(h * math.pi) * 26
-                o = { scale = 3, frame = (h > 0 and h < 1) and 2 or 1, facing = (t > c.b(5.8)) and 1 or -1 }
+                local h
+                h, o = K.hop(c.k(c.b(6.5), c.b(7.3)), 26, t)
+                y = y0 - h
+                o.facing = (t > c.b(5.8)) and 1 or -1
             else
-                local u = c.k(walk, c.dur)                            -- ... y echa a andar
-                o = { scale = 3, frame = math.floor(t * 9) % 3 + 1 }
-                y = y0 - math.abs(math.sin(u * math.pi * 6)) * 4
+                o = K.pose('walk', t - walk)                          -- ... y echa a andar
             end
             love.graphics.setColor(0, 0, 0, 0.35)
             love.graphics.rectangle('fill', math.floor(hx) - 12, math.floor(hy) + 6, 24, 6)
+            o.scale = 3
             Stage.monster(x, y, o)
             Stage.drawSparks()
             love.graphics.pop()
