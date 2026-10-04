@@ -1,5 +1,6 @@
 {
   "name": "Ciudadela Alterna",
+  "name_en": "Flip Citadel",
   "width": 92,
   "height": 28,
   "playerStart": [6,21],
@@ -43,8 +44,7 @@
     {"col":34,"props":{"detectRange":14},"row":2,"sub":1,"type":"spikefall"},
     {"col":58,"props":{"detectRange":14},"row":2,"sub":2,"type":"spikefall"},
     {"col":19,"row":12,"type":"star"},
-    {"col":73,"row":12,"type":"star"},
-    {"col":46,"row":11,"type":"extralife"}
+    {"col":73,"row":12,"type":"star"}
   ],
   "foliage": [
     {"col":10,"props":{"layer":"back"},"row":13,"sub":4,"type":"torch"},
@@ -79,10 +79,6 @@
     {"col":87,"props":{"flip":true,"layer":"back"},"row":21,"sub":3,"type":"torch"}
   ],
   "vents": [],
-  "modes": ["koth","hide"],
-  "matchTime": 100,
-  "music": "fortaleza_bonus",
-  "background": "fortress",
   "blockLinks": [
     {"col":26,"from":[46,18],"row":22},
     {"col":27,"from":[46,18],"row":22},
@@ -115,6 +111,9 @@
     {"col":65,"from":[46,18],"row":22},
     {"col":66,"from":[46,18],"row":22}
   ],
-  "name_en": "Flip Citadel",
+  "modes": ["koth","hide"],
+  "matchTime": 100,
+  "music": "fortaleza_bonus",
+  "background": "fortress",
   "time": "dusk"
 }

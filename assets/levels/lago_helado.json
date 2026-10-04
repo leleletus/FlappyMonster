@@ -33,10 +33,10 @@
     {"col":65,"props":{"patrol":{"left":58,"right":69}},"row":9,"type":"crabby_ice"},
     {"col":66,"row":6,"type":"extralife"},
     {"col":70,"row":9,"type":"checkpoint"},
-    {"col":87,"props":{"icicles":[{"col":76,"row":4},{"col":81,"row":4},{"col":86,"row":4},{"col":91,"row":4},{"col":96,"row":4}]},"row":12,"type":"snowboss"},
-    {"col":72,"props":{"corner":{"col":74,"row":9},"material":"snow","zone":1},"row":4,"type":"bosswall"},
-    {"col":99,"props":{"corner":{"col":101,"row":9},"material":"snow","zone":1},"row":4,"type":"bosswall"},
-    {"col":72,"props":{"corner":{"col":101,"row":3},"material":"snow","zone":1},"row":2,"type":"bosswall"},
+    {"col":87,"props":{"icicles":[{"col":78,"row":4},{"col":83,"row":4},{"col":87,"row":4},{"col":91,"row":4},{"col":95,"row":4}]},"row":12,"type":"snowboss"},
+    {"col":74,"props":{"corner":{"col":76,"row":9},"material":"snow","zone":1},"row":4,"type":"bosswall"},
+    {"col":97,"props":{"corner":{"col":99,"row":9},"material":"snow","zone":1},"row":4,"type":"bosswall"},
+    {"col":74,"props":{"corner":{"col":99,"row":3},"material":"snow","zone":1},"row":2,"type":"bosswall"},
     {"col":80,"props":{"burst":0.9,"dir":"down","id":11,"mode":"switch","phase":3,"range":11,"windup":0.5},"row":5,"type":"cryo"},
     {"col":93,"props":{"burst":0.9,"dir":"down","id":12,"mode":"switch","phase":3,"range":11,"windup":0.5},"row":5,"type":"cryo"},
     {"col":83,"props":{"hiddenAs":"ice"},"row":13,"type":"phaseblock"},
@@ -62,7 +62,7 @@
     {"col":90,"row":13,"to":12}
   ],
   "bossZones": [
-    {"col":75,"h":11,"id":1,"music":"snowball_boss","row":4,"w":24}
+    {"col":77,"h":11,"id":1,"music":"snowball_boss","row":4,"w":20}
   ],
   "music": "nieve_1",
   "snow": true,

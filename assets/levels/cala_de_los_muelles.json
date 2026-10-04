@@ -35,7 +35,7 @@
     [4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,262148,262148,262148,262148,262148,262148,262148,262148,262148,262148,262148,262148,262148,262148,262148,262148,262148,262148,262148,262148,262148,262148,262148,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4]
   ],
   "entities": [
-    {"col":46,"props":{"area":[{"col":39,"row":24},{"col":53,"row":24},{"col":53,"row":26},{"col":39,"row":26}]},"row":26,"type":"pufferfish"},
+    {"col":46,"props":{"area":[{"col":35,"row":23},{"col":57,"row":23},{"col":54,"row":26},{"col":38,"row":26}]},"row":26,"type":"pufferfish"},
     {"col":46,"row":20,"type":"trampoline"},
     {"col":38,"props":{"corner":{"col":54,"row":14},"points":4},"row":10,"type":"pointarea"},
     {"col":31,"row":21,"type":"trampoline"},
@@ -48,19 +48,18 @@
     {"col":46,"props":{"movement":"fly","patrol":{"left":38,"right":54},"points":6,"respawn":8},"row":5,"type":"gummy"},
     {"col":22,"row":11,"type":"star"},
     {"col":70,"row":11,"type":"star"},
-    {"col":46,"row":26,"type":"extralife"},
-    {"col":44,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":40,"right":52},"respawn":1},"row":2,"type":"crabbytramp"},
-    {"col":49,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":40,"right":52},"respawn":1},"row":2,"type":"crabbytramp"},
-    {"col":42,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":38,"right":50},"respawn":1},"row":8,"type":"crabbytramp"},
-    {"col":46,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":42,"right":54},"respawn":1},"row":8,"type":"crabbytramp"},
-    {"col":50,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":46,"right":54},"respawn":1},"row":8,"type":"crabbytramp"}
+    {"col":44,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":40,"right":52},"points":5,"respawn":1},"row":2,"type":"crabbytramp"},
+    {"col":49,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":40,"right":52},"points":5,"respawn":1},"row":2,"type":"crabbytramp"},
+    {"col":42,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":38,"right":50},"points":5,"respawn":1},"row":8,"type":"crabbytramp"},
+    {"col":46,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":42,"right":54},"points":5,"respawn":1},"row":8,"type":"crabbytramp"},
+    {"col":50,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":46,"right":54},"points":5,"respawn":1},"row":8,"type":"crabbytramp"}
   ],
   "foliage": [
     {"col":20,"props":{"flip":true,"layer":"back"},"row":13,"sub":3,"type":"pineapple"},
     {"col":29,"props":{"flip":true,"layer":"back"},"row":13,"sub":3,"type":"shell"},
     {"col":62,"props":{"flip":true,"layer":"back"},"row":13,"sub":4,"type":"pineapple"},
     {"col":64,"props":{"flip":true,"layer":"back"},"row":13,"type":"palmtree"},
-    {"col":38,"props":{"flip":true,"layer":"back"},"row":14,"type":"tiki_torch"},
+    {"col":38,"props":{"flip":true},"row":14,"type":"tiki_torch"},
     {"col":51,"props":{"layer":"back"},"row":14,"sub":3,"type":"pineapple"},
     {"col":7,"props":{"layer":"back"},"row":21,"sub":3,"type":"starfish"},
     {"col":9,"props":{"layer":"back"},"row":21,"sub":4,"type":"shell"},

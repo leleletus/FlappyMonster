@@ -35,7 +35,7 @@
     [4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4]
   ],
   "entities": [
-    {"col":46,"props":{"area":[{"col":39,"row":24},{"col":53,"row":24},{"col":53,"row":26},{"col":39,"row":26}]},"row":26,"type":"pufferfish"},
+    {"col":46,"props":{"area":[{"col":35,"row":23},{"col":57,"row":23},{"col":54,"row":26},{"col":38,"row":26}]},"row":26,"type":"pufferfish"},
     {"col":39,"props":{"corner":{"col":53,"row":21},"points":4},"row":17,"type":"pointarea"},
     {"col":22,"props":{"patrol":{"left":16,"right":28},"points":6,"respawn":8},"row":21,"type":"crabby_ice"},
     {"col":70,"props":{"patrol":{"left":64,"right":76},"points":6,"respawn":8},"row":21,"type":"crabby_ice"},
@@ -45,8 +45,7 @@
     {"col":23,"props":{"patrol":{"left":16,"right":30},"points":6,"respawn":8},"row":13,"type":"gummy_ice"},
     {"col":69,"props":{"helmet":true,"patrol":{"left":62,"right":76},"points":6,"respawn":8},"row":13,"type":"gummy_ice"},
     {"col":23,"row":11,"type":"star"},
-    {"col":69,"row":11,"type":"star"},
-    {"col":46,"row":6,"type":"extralife"}
+    {"col":69,"row":11,"type":"star"}
   ],
   "foliage": [
     {"col":44,"props":{"layer":"back"},"row":7,"sub":3,"type":"snow_pile"},

@@ -30,7 +30,7 @@
     {"col":38,"props":{"patrol":{"left":36,"right":42}},"row":12,"type":"gummy"},
     {"col":45,"props":{"helmet":true,"patrol":{"left":43,"right":48}},"row":12,"type":"gummy"},
     {"col":42,"row":8,"type":"star"},
-    {"col":42,"props":{"movement":"fly","patrol":{"left":38,"right":47}},"row":6,"type":"gummy"},
+    {"col":42,"props":{"movement":"fly","patrol":{"left":38,"right":47}},"row":7,"type":"gummy"},
     {"col":56,"row":6,"type":"extralife"},
     {"col":54,"props":{"helmet":true,"movement":"fly","patrol":{"left":50,"right":58}},"row":8,"type":"gummy"},
     {"col":62,"props":{"helmet":true,"patrol":{"left":60,"right":66}},"row":12,"type":"gummy"},
@@ -46,14 +46,14 @@
     {"col":14,"row":12,"type":"round_bush"},
     {"col":63,"row":12,"type":"round_bush"},
     {"col":78,"props":{"flip":true},"row":12,"type":"round_bush"},
-    {"col":3,"props":{"flip":true,"layer":"back"},"row":12,"type":"oak_tree"},
+    {"col":3,"props":{"flip":true},"row":12,"type":"oak_tree"},
     {"col":13,"props":{"flip":true,"layer":"back"},"row":12,"sub":3,"type":"tall_grass"},
     {"col":13,"props":{"layer":"back"},"row":12,"sub":4,"type":"tulip"},
     {"col":32,"props":{"flip":true,"layer":"back"},"row":12,"sub":3,"type":"tulip"},
     {"col":32,"props":{"layer":"back"},"row":12,"sub":4,"type":"stretch"},
-    {"col":35,"props":{"layer":"back"},"row":12,"type":"round_bush"},
+    {"col":35,"row":12,"type":"round_bush"},
     {"col":46,"props":{"flip":true,"layer":"back"},"row":12,"sub":3,"type":"sunflower"},
-    {"col":49,"props":{"layer":"back"},"row":12,"type":"round_bush"},
+    {"col":49,"row":12,"type":"round_bush"},
     {"col":64,"props":{"layer":"back"},"row":12,"sub":4,"type":"tulip"},
     {"col":64,"props":{"layer":"back"},"row":12,"sub":3,"type":"sunflower"},
     {"col":68,"props":{"flip":true,"layer":"back"},"row":12,"sub":4,"type":"flower_patch"},
@@ -64,7 +64,7 @@
   ],
   "vents": [],
   "bossZones": [
-    {"col":88,"h":10,"id":1,"music": "gummy_king_boss","row":3,"w":20}
+    {"col":88,"h":10,"id":1,"music":"gummy_king_boss","row":3,"w":20}
   ],
   "music": "pradera_2"
 }

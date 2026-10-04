@@ -72,7 +72,7 @@
   ],
   "vents": [],
   "bossZones": [
-    {"col":94,"h":9,"id":1,"music": "evil_ship_boss","row":4,"w":18}
+    {"col":94,"h":9,"id":1,"row":4,"w":18}
   ],
   "music": "fortaleza_1",
   "background": "fortress",

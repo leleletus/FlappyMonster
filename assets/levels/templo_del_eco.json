@@ -65,7 +65,16 @@
     {"col":123,"row":13,"type":"gloomy"},
     {"col":123,"row":10,"type":"extralife"},
     {"col":74,"row":21,"type":"gloomy"},
-    {"col":85,"row":17,"type":"gloomy"}
+    {"col":85,"row":17,"type":"gloomy"},
+    {"col":108,"row":21,"type":"gloomy"},
+    {"col":109,"row":13,"type":"gloomy"},
+    {"col":124,"row":16,"type":"gloomy"},
+    {"col":140,"row":21,"type":"gloomy"},
+    {"col":63,"row":21,"type":"gloomy"},
+    {"col":47,"row":21,"type":"gloomy"},
+    {"col":67,"row":24,"type":"gloomy"},
+    {"col":19,"row":13,"type":"gloomy"},
+    {"col":28,"row":19,"type":"gloomy"}
   ],
   "foliage": [
     {"col":5,"row":4,"type":"stalactite"},
