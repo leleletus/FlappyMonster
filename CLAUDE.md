@@ -1922,6 +1922,23 @@ arenas as bonus nodes vs an expert BOT ✔. User's decisions: world map with a p
 - Harness `story_flow` (real game: slots, locked nodes, clearing levels, save reloaded from disk, world 2 unlock,
   delete; screenshots at 1280 / 960 / 1600, plus a tour with every world open: `story_world_<n>.png`).
 
+## The story: "El Espejo Roto" (plan approved 2026-10-03; `docs/historia/HISTORIA.md` is the reference)
+
+The monster could FLAP (Flappy mode); it crashed into an old mirror in the volcano, which broke into 7 SHARDS; its
+REFLECTION (the Mirror boss) walked out and stole the flap (so the adventure is on foot); whoever finds a shard grows
+huge and furious (= every boss). Each boss drops its shard; all 7 restore the mirror, the bosses shrink back and the
+monster flaps again. No dialogue: told with animation + music.
+- Shards: `assets/images/story/mirror/` from `tools/ui/make_mirror_shards.py --apply` — `frame.png`, `glass.png` (whole,
+  no cracks), `shard_1..7.png` (story order: Gummy King, Mega Crabby, Evil Ship, Snowball, Icy Mega, Mega Gloomy, Mirror
+  = the CENTRE piece) and `shard_<n>a/b.png` (Xtra Extreme: one half per boss of the pair). All share one 48x64 canvas:
+  drawn at the same point they assemble. Preview `FlappyMonster_pruebas/espejo/`.
+- Storyboard: `tools/story/storyboard.py` (scene table = ids, seconds, what happens, sound; `--md` prints the table of
+  the doc) → `FlappyMonster_pruebas/historia/storyboard_{intro,final}.png` (9 scenes each, 50 s / 55 s).
+- USER'S ORDER: shards ✔ → storyboard ✔ (both waiting for approval) → exact timing per scene → MUSIC composed on that
+  timing (never the reverse) + scene sprites/sfx → in game: bosses drop their shard, the player picks it up, saved in
+  the slot, map shows "Mirror Shards n / 7" (Xtra n / 14), beating the Mirror starts the ending without touching the
+  finish. Open: the threat's name ("la furia del espejo" proposed), the Evil Ship's role, skippable intro.
+
 ## OST presentation videos (`tools/video/`)
 
 **v2 (2026-10-03, with the FINAL soundtrack; the description further down is v1, kept for the bulb details):**
