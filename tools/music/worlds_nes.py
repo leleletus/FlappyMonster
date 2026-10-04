@@ -576,6 +576,7 @@ I_MARIMBA = {'vol': [10, 7, 5, 3, 2, 1], 'sus': 0, 'duty': 0.5}
 I_OCA = {'vol': [6, 10, 12, 12, 11, 11], 'sus': 11, 'vib': (14, 0.22, 5.0), 'duty': 0.5}
 I_PADP = {'vol': [1, 2, 2, 3, 3, 4], 'sus': 4, 'duty': 0.25}
 WAVES.append(wavetable([1.0, 0.7, 0.35, 0.45, 0.1, 0.2]))    # 2 steel drum (metálico, brillante)
+I_SOFTACC = {'vol': [7, 6, 5, 4, 3, 2], 'sus': 2, 'duty': 0.5}              # acento discreto (jefes)
 I_DING = {'vol': [13, 11, 10, 9, 8, 7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1], 'sus': 1, 'duty': 0.25}       # una campana que se apaga
 I_LAUGH = {'vol': [12, 10, 7, 4, 2], 'sus': 1, 'duty': 0.5, 'drop': [2, 1, 0]}
 I_SIREN = {'vol': [8, 10, 11, 11, 10, 10], 'sus': 10, 'vib': (0, 2.0, 2.6), 'duty': 0.25}             # aúlla ±2 semitonos
@@ -613,9 +614,9 @@ ISLE_LV = {
     'sumergida': {'lead': 0, 'echo': -8, 'chords': -10, 'bass': -3, 'trill': -9, 'kick': -6, 'snare': -15, 'hat': -15, 'crash': -14, 'toms': 0},
     'nieve':    {'lead': -5, 'bell': 0, 'echo': -12, 'chords': -11, 'bass': -3, 'trill': -5, 'kick': -5, 'snare': -10, 'hat': -11, 'crash': -13, 'toms': 0},
     'ventisca': {'lead': 0, 'bell': -6, 'echo': -11, 'chords': -11, 'bass': -1, 'trill': -7, 'kick': -2, 'snare': -5, 'hat': -12, 'crash': -11, 'toms': 0},
-    'bola':     {'lead': 0, 'bell': -4, 'echo': -12, 'chords': -7, 'bass': -1, 'trill': -5, 'kick': 0, 'snare': -3, 'hat': -10, 'crash': -9, 'toms': -1},
+    'bola':     {'lead': 0, 'bell': -4, 'echo': -12, 'chords': -7, 'bass': -1, 'trill': -14, 'kick': 0, 'snare': -3, 'hat': -10, 'crash': -9, 'toms': -1},
     'rey':  {'lead': 0, 'dbl': -7, 'echo': -13, 'chords': -9, 'bass': -1.5, 'trill': -6, 'kick': 0, 'snare': -3, 'hat': -14, 'crash': -9, 'toms': -1},
-    'nave': {'lead': 0, 'dbl': -9, 'echo': -12, 'chords': -8, 'bass': -1, 'trill': -6, 'kick': 0, 'snare': -3, 'hat': -9, 'crash': -9, 'toms': 0},
+    'nave': {'lead': 0, 'dbl': -9, 'echo': -12, 'chords': -8, 'bass': -1, 'trill': -15, 'kick': 0, 'snare': -3, 'hat': -9, 'crash': -9, 'toms': 0},
     'fortaleza': {'lead': 0, 'dbl': -9, 'echo': -12, 'chords': -8, 'bass': -1, 'trill': -6, 'kick': -2, 'snare': -4, 'hat': -11, 'crash': -11, 'toms': 2},
     'maquina':   {'lead': 0, 'dbl': -9, 'echo': -11, 'chords': -10, 'bass': -1, 'trill': -6, 'kick': -3, 'snare': -7, 'hat': -10, 'crash': -12, 'toms': 2},
     'costa':    {'lead': 0, 'echo': -10, 'chords': -8, 'bass': -2, 'trill': -10, 'kick': -4, 'snare': -8, 'hat': -11, 'crash': -12, 'toms': 2},
@@ -883,13 +884,19 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
             elif isle == 'ventisca':                          # tres campanillas que bajan, espaciadas (cada tres semicorcheas)
                 for st, iv in ((8, 12), (11, q[2]), (14, q[1])):
                     play(Cn['trill'], t8(st), t8(st) + S16 * 2.6, 84 + (r - 84) % 12 + iv - 12, I_DING, vs=0.9, release=4)
-            elif isle == 'bola':                              # la bola rueda (timbales) y se le oye la risa: dos notas graves que bajan
+            elif isle == 'bola':                              # la bola rueda (timbales, flojos) y tres notas DEL ACORDE que bajan
+                # (antes una "risa" grave con caída de tono, y muy fuerte: el usuario la oía como si fuera la melodía y
+                # no casaba con la armonía. Ahora es un acompañamiento: notas del acorde, sin desafinar, apenas se nota)
                 if not in_b:
-                    for st in (12, 13, 14, 15): hit(tom, TOMS[min(2, (st - 12) // 2 + 1)], t8(st), 0.8)
-                for st, iv in ((10, 7), (12, 3), (13, 0)):
-                    play(Cn['trill'], t8(st), t8(st) + S16 * (1.6 if st == 10 else 0.9), lowr + iv, I_LAUGH, release=1)
-            elif isle == 'nave':                              # la SIRENA: una nota grave que aúlla arriba y abajo
-                play(Cn['trill'], t8(8), t8(15.5), lowr + q[2], I_SIREN, release=2)
+                    for st in (12, 13, 14, 15): hit(tom, TOMS[min(2, (st - 12) // 2 + 1)], t8(st), 0.5)
+                base_ = 72 + (r - 72) % 12
+                for st, iv in ((10, 12), (12, q[2]), (14, q[1])):
+                    play(Cn['trill'], t8(st), t8(st) + S16 * 1.5, base_ + iv, I_SOFTACC, release=2)
+            elif isle == 'nave':                              # dos notas del acorde que se alternan en corcheas (quinta y tónica)
+                # (antes una "sirena" que aullaba ±2 semitonos: se salía de la armonía y sonaba más que la melodía)
+                base_ = 72 + (r - 72) % 12
+                for i, st in enumerate((8, 10, 12, 14)):
+                    play(Cn['trill'], t8(st), t8(st) + S16 * 1.5, base_ + (q[2] if i % 2 == 0 else 12), I_SOFTACC, release=2)
             elif isle == 'rey':                               # respuesta de las trompetas: el acorde sube con puntillo (taa-ta-taaa) y un timbal
                 base_ = 72 + (r - 72) % 12
                 for st, ln, iv in ((8, 2.8, 0), (11, 0.9, q[1]), (12, 3.6, q[2])):

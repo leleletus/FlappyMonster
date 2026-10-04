@@ -2282,6 +2282,11 @@ Low-level notes (for writing NEW harnesses):
   lighter) · C (chorus) · K (breather: music box, the bass brings the cell, drums return) · A'' (+ counterpoint) · B ·
   C' (full) · coda 4 = 68-bar loop (87.7 s). Section dynamics drawn (`DYN`). `crab_tantrum.py icy` no longer generates
   it (it only does normal and gloomy).
+- 3.66.2 (accents of `evil_ship_boss` and `snowball_boss`): they were "very loud, as if they were the main melody" and
+  out of harmony — a wailing siren (±2 semitones of vibrato) and a low "laugh" with a pitch drop. Now both are a quiet
+  ACCOMPANIMENT made only of CHORD TONES, no bends (`I_SOFTACC`): the ship alternates fifth and root in 8ths; the
+  snowball has three chord notes stepping down (its tom roll halved). Level −15 / −14 dB vs the lead (≈1 % of the
+  energy, was 6 %). Rule: an accent is never louder than a backing layer and never leaves the chord.
 - Levels: every level's `"music"` = a slot of ITS world (story order: odd → `_1`, even → `_2`; dark levels →
   cuevas_oscuras; other cave levels → cuevas_1; non-story levels by their retheme theme).
 - Generators keep their internal names; `famicom.PATHS` / `famicom.out(name, ext)` map them to the new folders;
