@@ -28,6 +28,8 @@ local function check(name, ok, msg)
     if not ok then fails = fails + 1 end
 end
 local step, t, T, shotQ = 'start', 0, 0, {}
+local introSeen
+local SHIDS, DROPPED, ENDING, FILMS
 local Save, Run, Worlds
 
 function love.load(a)
@@ -70,6 +72,13 @@ function love.update(dt)
     Input = realInput
     local st = top()
     local W1 = Worlds.nodes(1)
+    -- (una partida nueva empieza con la INTRO de la historia: aquí se pasa de largo; la prueba tools/tests/story_film)
+    if st.film and st._finish then
+        introSeen = (introSeen or 0) + 1
+        if FILMS then FILMS[#FILMS + 1] = st.film.name end
+        st:_finish()
+        return
+    end
 
     if step == 'start' and t > 0.4 then
         local empty = true
@@ -374,6 +383,64 @@ function love.update(dt)
             ('Xtra extremo: %d bots, descanso %.2f s, persigue a %d casillas; Fácil: %d bot, descanso %.2f s, a %d casillas'):format(
              #b.bots, cdX, b.bots[1].chaseR, #e.bots, e.bots[1].attackCd, e.bots[1].chaseR))
         shot('bonus_xtra')
+        go('sh0')
+    -- ── FRAGMENTOS DEL ESPEJO: el jefe suelta el suyo, se recoge y queda guardado; con el último, el final ──
+    elseif step == 'sh0' and t - T > 0.2 then
+        local d = Run.data
+        d.difficulty, d.done, d.shards, d.lives = 'normal', {}, {}, 5
+        for k = 1, #W1 - 1 do d.done[W1[k].id] = true end
+        Run.save()
+        gStateMachine:change('story_map', { world = 1, node = #W1 }); go('sh1')
+    elseif step == 'sh1' and t - T > 0.5 then
+        pressNext('confirm'); go('sh2')
+    elseif (step == 'sh2' or step == 'fin2') and t - T > 0.8 then
+        -- al centro de la arena: empieza la pelea
+        local z = st.level.bossZones[1]
+        st.player.x, st.player.y = require('src/world/BossZones').safeSpawn(st.level, z)
+        st.player.spawnX, st.player.spawnY = st.player.x, st.player.y
+        SHIDS = st.shards and table.concat(st.shards.ids, ',') or 'ninguno'
+        go(step == 'sh2' and 'sh3' or 'fin3')
+    elseif (step == 'sh3' or step == 'fin3') and (st.level.bossZones[1].state == 'fight' or t - T > 25) then
+        for _, e in ipairs(st.enemies) do if e.def.category == 'Jefes' then e:defeat() end end
+        st.player:grantInvulnerability(60)
+        go(step == 'sh3' and 'sh4' or 'fin4')
+    elseif (step == 'sh4' or step == 'fin4') and ((st.shards and #st.shards.list > 0 and st.shards.list[1].t > 0.9) or t - T > 25) then
+        local s1 = st.shards and st.shards.list[1]
+        DROPPED = s1 ~= nil
+        if s1 then shot(step == 'sh4' and 'shard_drop' or 'shard_final'); st.player.x, st.player.y, st.player.vx, st.player.vy = s1.x, s1.y, 0, 0 end
+        go(step == 'sh4' and 'sh5' or 'fin5')
+    elseif step == 'sh5' and t - T > 0.4 then
+        local disk = Save.load(1)
+        local have, total = Run.shards()
+        check('fragmento', SHIDS == '1' and DROPPED and Run.data.shards['1'] == true and disk.shards['1'] == true and have == 1 and total == 7 and not st.endingT,
+            ('el jefe del mundo 1 guarda el %s; lo suelta=%s; recogido=%s, en disco=%s; cuenta %d/%d'):format(
+             SHIDS, tostring(DROPPED), tostring(Run.data.shards['1']), tostring(disk.shards['1']), have, total))
+        -- ahora, el último: todo superado menos el jefe Espejo, con los seis primeros
+        local d = Run.data
+        for w = 1, Worlds.count() do for _, n in ipairs(Worlds.nodes(w)) do d.done[n.id] = true end end
+        local last = Worlds.nodes(Worlds.count())
+        d.done[last[#last].id] = nil
+        for n = 1, 6 do d.shards[tostring(n)] = true end
+        Run.save()
+        FILMS = {}
+        gStateMachine:change('story_map', { world = Worlds.count(), node = #last }); go('fin1')
+    elseif step == 'fin1' and t - T > 0.6 then
+        shot('map_shards'); pressNext('confirm'); go('fin2')
+    elseif step == 'fin5' and t - T > 0.4 then
+        ENDING = st.endingT ~= nil and st.player.forceFrozen == true
+        go('fin6')
+    elseif step == 'fin6' and ((st.args and st.args.summary ~= nil) or t - T > 12) then
+        local have, total = Run.shards()
+        local last = Worlds.nodes(Worlds.count())
+        check('final', SHIDS == '7' and DROPPED and ENDING and FILMS[1] == 'ending' and st.args and st.args.summary ~= nil and Run.isDone(last[#last].id) and have == 7,
+            ('el Espejo guarda el %s; lo suelta=%s; al recogerlo se queda quieto y a blanco=%s; película=%s; luego resultados=%s; nivel superado=%s sin tocar la meta; %d/%d'):format(
+             SHIDS, tostring(DROPPED), tostring(ENDING), tostring(FILMS[1]), tostring(st.args ~= nil and st.args.summary ~= nil), tostring(Run.isDone(last[#last].id)), have, total))
+        -- partida antigua (sin fragmentos): los de los jefes ya vencidos se dan por recogidos
+        local old = { difficulty = 'xtra', done = { reino_gummy = true, lago_helado = true } }
+        require('src/story/Shards').migrate(old)
+        local n = 0
+        for _ in pairs(old.shards) do n = n + 1 end
+        check('migrar', n == 4 and old.shards['1a'] and old.shards['4b'], ('partida antigua en Xtra con 2 jefes vencidos: %d mitades'):format(n))
         gStateMachine:change('story_map', { world = 1, node = 1 }); go('del')
     elseif step == 'del' and t - T > 0.3 then
         resize(1280, 720)

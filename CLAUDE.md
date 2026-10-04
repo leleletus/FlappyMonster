@@ -1924,20 +1924,49 @@ arenas as bonus nodes vs an expert BOT ✔. User's decisions: world map with a p
 
 ## The story: "El Espejo Roto" (plan approved 2026-10-03; `docs/historia/HISTORIA.md` is the reference)
 
-The monster could FLAP (Flappy mode); it crashed into an old mirror in the volcano, which broke into 7 SHARDS; its
-REFLECTION (the Mirror boss) walked out and stole the flap (so the adventure is on foot); whoever finds a shard grows
-huge and furious (= every boss). Each boss drops its shard; all 7 restore the mirror, the bosses shrink back and the
-monster flaps again. No dialogue: told with animation + music.
-- Shards: `assets/images/story/mirror/` from `tools/ui/make_mirror_shards.py --apply` — `frame.png`, `glass.png` (whole,
-  no cracks), `shard_1..7.png` (story order: Gummy King, Mega Crabby, Evil Ship, Snowball, Icy Mega, Mega Gloomy, Mirror
-  = the CENTRE piece) and `shard_<n>a/b.png` (Xtra Extreme: one half per boss of the pair). All share one 48x64 canvas:
-  drawn at the same point they assemble. Preview `FlappyMonster_pruebas/espejo/`.
-- Storyboard: `tools/story/storyboard.py` (scene table = ids, seconds, what happens, sound; `--md` prints the table of
-  the doc) → `FlappyMonster_pruebas/historia/storyboard_{intro,final}.png` (9 scenes each, 50 s / 55 s).
-- USER'S ORDER: shards ✔ → storyboard ✔ (both waiting for approval) → exact timing per scene → MUSIC composed on that
-  timing (never the reverse) + scene sprites/sfx → in game: bosses drop their shard, the player picks it up, saved in
-  the slot, map shows "Mirror Shards n / 7" (Xtra n / 14), beating the Mirror starts the ending without touching the
-  finish. Open: the threat's name ("la furia del espejo" proposed), the Evil Ship's role, skippable intro.
+The monster could FLAP (Flappy mode) — by a MAGIC of its own: it has NO WINGS, never draw or mention wings. It crashed
+into an old mirror in the volcano, which broke into 7 SHARDS; its REFLECTION (the Mirror boss) walked out and stole
+the flap, so the adventure is on foot with only the double jump (the little magic left). Whoever finds a shard grows
+huge and furious = "LA FURIA DEL ESPEJO" / "The Fury of the Mirror" (every boss; the Evil Ship's pilot found one
+like the rest). Each boss drops its shard; all 7 restore the mirror, the bosses shrink back and the monster flaps
+again. No dialogue or text: animation + music.
+- **Shards** (3.68.0): images `assets/images/story/mirror/` from `tools/ui/make_mirror_shards.py --apply` (`frame.png`,
+  `glass.png` whole, `shard_1..7.png` in story order — Gummy King, Mega Crabby, Evil Ship, Snowball, Icy Mega, Mega
+  Gloomy, Mirror = the CENTRE piece — and `shard_<n>a/b.png` for Xtra Extreme; all on one 48x64 canvas so they
+  assemble). Logic `src/story/Shards.lua`: `Shards.LEVEL[level] = n`, `pending(level, data)`, `owned/count(data)`
+  (7, or 14 halves when the difficulty has `bossExtra`), `migrate` (old saves: shards of beaten bosses granted).
+  In a level (STORY + single player only, not part of the shared sim): `AdventureState` `args.shards = { ids, onGet,
+  final }` → `Shards.drops`: every boss that dies (or `releasesZone()`) drops the next id (Xtra: original 'a', copy
+  'b'); it rises and hovers, is picked up by touch (after 5 s it homes to the player; touching the finish collects
+  it), saved at once (`Run.addShard`; save field `shards`), popup `hud.shard`. `final` (the Mirror's): on pickup the
+  player is frozen + invulnerable, the screen fades to white (`ENDING_TIME`) and `onFinish(result)` gets
+  `result.ending = true` WITHOUT touching the finish → the map plays the ending film, then the usual results. The
+  world map shows a card with the mirror (owned shards in place) and "n / 7" (`story.shards`). Xtra's game-over
+  restart also clears the shards.
+- **Cinematics are rendered BY THE GAME** (user's rule: never pre-rendered or animated outside it; real sprites,
+  backgrounds, sets, effects): `src/story/Film.lua` (player: scenes, cue events, fades, letterbox bars; with its
+  music playing the film clock = the music position), `src/story/Stage.lua` (pieces: `monster`, `laugh` (the Mirror's
+  laugh animation), `mirror` / `shard` / `shardSlot`, `orb` + `spark` (the flap as magic: `story/fx/` sprites from
+  `tools/ui/make_story_fx.py`), `flappyBg`, `sky`, `set` + `drawSet` = a REAL LEVEL drawn like the game does (sky,
+  tiles, lava, decorations, light mood; every monster drawn in a set gets a halo), `map()` = the world map as a set
+  via `StoryMapState:stage()/filmDraw(cx, cy, zoom, o)` with `filmBoss[w]` = boss size override), scenes in
+  `src/story/films/intro.lua` / `ending.lua` (+ `common.lua`: the REAL Flappy `Player` and `Pipe` objects piloted,
+  crater measurements, map targets), state `story_film` (`StoryFilmState`: `{ film, xtra, onDone }`; SKIP = hold any
+  button / finger / mouse for 1 s, hint `story.skip_hint`). Intro plays when a NEW save is created
+  (`StorySlotState:_open`); ending after the final shard.
+- **TIMING = `assets/story/films.json`** (per scene: bpm, beats, `cues` in beats, `in` = cut|fade|white): the ONE
+  source for picture and music. `tools/music/story_music.py [intro ending]` reads it and composes ON it → catalog
+  `story_intro` / `story_ending` (`assets/music/story/`, no loop; verified by numbers only: track = film length,
+  hits land on the cues). Change a time in films.json → regenerate the music (+ `levels.py`). Material: the map tune
+  (= the monster), "la llamada" on the music box, the mirror motif + the Mirror boss theme's head in A minor (= the
+  Reflection); the ending is in A major and its seven rising notes are the pitches the `storyClink` sfx sings.
+- Set: `assets/story/sets/crater.json` (`tools/story/make_sets.py`; a real level, opens in the editor). Sounds
+  `assets/sounds/story/` (`tools/sounds/story.py`, ids `story*`, `shardDrop`, `shardGet`).
+- Map boss art data (`overworld.json` `worlds[i].boss`): `under` = drawn inside (the Evil Monster in its ship),
+  `overBig` = the `over` image only at full size (the crown: only the Gummy King has it); small = no Mega claws.
+- Harnesses: `story_film` (both films through the real state, durations, music clock, skip; 3 captures per scene;
+  `XTRA=1`), `story_flow` (`fragmento`, `final`, `migrar`). Contact sheets: `FlappyMonster_pruebas/historia/`.
+- NOT seen in motion or heard by anyone yet: pacing, framing and music wait for the user's verdict.
 
 ## OST presentation videos (`tools/video/`)
 

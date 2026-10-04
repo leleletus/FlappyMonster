@@ -59,6 +59,8 @@ return {
         },
     },
     story = {
+        shards = "Mirror Shards",
+        skip_hint = "HOLD TO SKIP",
         results = {
             title = "LEVEL CLEAR",
             time = "Time", lives = "Lives lost", hits = "Hits taken", kills = "Enemies", stars = "Stars",
@@ -127,6 +129,7 @@ return {
         checkpoint = "CHECKPOINT",
         go = "GO!",
         boss = "BOSS!",
+        shard = "MIRROR SHARD!",
         boss_defeated = "BOSS DEFEATED!",
         you = "YOU",
     },

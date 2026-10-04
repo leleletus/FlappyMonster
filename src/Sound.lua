@@ -197,6 +197,12 @@ function Sound.load()
     for _, n in ipairs({ 'ping', 'listen', 'drop', 'slam', 'dazzled', 'shriek', 'hurt', 'step', 'roar' }) do
         load('mgloomy' .. n:gsub('^%l', string.upper), 'assets/sounds/bosses/megagloomy/' .. n .. '.wav', 'static')
     end
+    -- La historia (tools/sounds/story.py): cinemáticas y fragmentos del espejo
+    for _, n in ipairs({ 'glint', 'crash', 'orb', 'blast', 'shard', 'grow', 'clink', 'restore', 'bell', 'shrink', 'wave' }) do
+        load('story' .. n:gsub('^%l', string.upper), 'assets/sounds/story/' .. n .. '.wav', 'static')
+    end
+    load('shardDrop', 'assets/sounds/story/shard_drop.wav', 'static')      -- un jefe suelta su fragmento
+    load('shardGet',  'assets/sounds/story/shard_get.wav',  'static')      -- el jugador lo recoge
     -- Música: todas las pistas del índice (assets/music/index.json)
     for _, tr in ipairs(Music.list) do Sound.loadTrack(tr) end
 end

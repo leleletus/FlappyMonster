@@ -1,0 +1,30 @@
+{
+  "_": "TIEMPOS de las cinemáticas de la historia: la ÚNICA fuente para la imagen (src/story/Film.lua + src/story/films/) y para la música (tools/music/story_music.py). Cada escena dura `beats` pulsos a `bpm`; `cues` = momentos, en pulsos desde el principio de la escena. `in` = cómo entra (cut, fade, white).",
+  "intro": {
+    "music": "story_intro",
+    "scenes": [
+      { "id": "flappy",  "bpm": 132, "beats": 16, "in": "fade",  "cues": { "glance": 12 } },
+      { "id": "glint",   "bpm": 132, "beats": 12, "in": "cut",   "cues": { "glint": 2, "turn": 5, "cross": 6 } },
+      { "id": "mirror",  "bpm": 84,  "beats": 8,  "in": "fade",  "cues": { "land": 3, "wave": 5 } },
+      { "id": "crash",   "bpm": 84,  "beats": 4,  "in": "cut",   "cues": { "flap": 1, "crash": 2 } },
+      { "id": "reflex",  "bpm": 96,  "beats": 8,  "in": "cut",   "cues": { "peek": 1, "step": 3, "land": 4 } },
+      { "id": "steal",   "bpm": 96,  "beats": 12, "in": "cut",   "cues": { "pull": 1, "got": 4, "laugh": 5, "try": 8, "fall": 9, "blast": 11 } },
+      { "id": "scatter", "bpm": 96,  "beats": 8,  "in": "white", "cues": { "first": 1 } },
+      { "id": "fury",    "bpm": 120, "beats": 14, "in": "cut",   "cues": { "first": 0, "each": 2 } },
+      { "id": "onfoot",  "bpm": 120, "beats": 12, "in": "fade",  "cues": { "land": 2, "up": 5, "walk": 8 } }
+    ]
+  },
+  "ending": {
+    "music": "story_ending",
+    "scenes": [
+      { "id": "seven",   "bpm": 84,  "beats": 8,  "in": "white", "cues": { "out": 2 } },
+      { "id": "pieces",  "bpm": 96,  "beats": 16, "in": "cut",   "cues": { "first": 1, "each": 2 } },
+      { "id": "whole",   "bpm": 96,  "beats": 4,  "in": "white", "cues": {} },
+      { "id": "return",  "bpm": 96,  "beats": 8,  "in": "cut",   "cues": { "pull": 1, "inside": 5, "orb": 6 } },
+      { "id": "light",   "bpm": 120, "beats": 12, "in": "white", "cues": { "wave": 1 } },
+      { "id": "shrink",  "bpm": 120, "beats": 14, "in": "cut",   "cues": { "first": 0, "each": 2 } },
+      { "id": "flap",    "bpm": 100, "beats": 12, "in": "fade",  "cues": { "orb": 1, "try1": 4, "try2": 6, "rise": 8 } },
+      { "id": "home",    "bpm": 132, "beats": 20, "in": "fade",  "cues": { "cross": 6, "pipes": 8, "logo": 12 } }
+    ]
+  }
+}

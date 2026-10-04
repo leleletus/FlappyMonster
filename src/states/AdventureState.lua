@@ -133,6 +133,11 @@ function AdventureState:enter(args)
     -- BONUS del modo historia: Rey de la Colina contra el bot (src/story/BonusMatch.lua)
     self.bonus = args.bonus and require('src/story/BonusMatch').new(self, args.bonus) or nil
 
+    -- FRAGMENTOS DEL ESPEJO (modo historia, src/story/Shards.lua): los jefes de este nivel sueltan los suyos
+    -- al caer. `shards.final` = es el último (el del jefe Espejo): al recogerlo el nivel acaba SIN tocar la meta.
+    self.shards = (args.shards and #(args.shards.ids or {}) > 0) and require('src/story/Shards').drops(self, args.shards) or nil
+    self.endingT, self.shardArgs = nil, args.shards
+
     -- Zonas de jefe: la pelea empieza al entrar (un solo jugador)
     self.bossCtl    = BossZones.newController(self.level, self.enemies)
     self.bossBanner = nil       -- { text, t, col }
@@ -321,13 +326,42 @@ end
 
 -- Reintentar (tras perder todas las vidas): el mismo nivel con lo mismo que traía
 function AdventureState:retryArgs()
-    return { level = self.levelPath, returnTo = self.returnTo, onFinish = self.onFinish, difficulty = self.level.difficulty }
+    return { level = self.levelPath, returnTo = self.returnTo, onFinish = self.onFinish, difficulty = self.level.difficulty,
+             shards = self.shardArgs }
+end
+
+-- Lo que se lleva del nivel (para la nota del modo historia: src/story/Score.lua)
+function AdventureState:result()
+    local st = self.stats
+    return { score = self.score, time = self.levelTime, lives = self.player.lives, width = self.level.tileW,
+             kills = st.kills, killable = st.killable, stars = st.stars, starsTotal = st.starsTotal,
+             deaths = st.deaths, hits = st.hits }
+end
+
+-- Fragmentos del espejo: cada jefe vencido suelta el suyo; al recogerlo se apunta en la partida (onGet). Con el
+-- último del juego (shards.final), el jugador se queda quieto y a salvo y la pantalla se funde a blanco
+AdventureState.ENDING_TIME = 2.2
+function AdventureState:updateShards(dt)
+    local sh = self.shards
+    if not sh then return end
+    local before = sh.got
+    sh:update(dt)
+    if sh.got > before then
+        self:spawnPopup(L('hud.shard'), self.player.x, self.player.y - 70)
+        if sh.final and sh:allGot() and not self.endingT and not self.won then
+            self.endingT = 0
+            self.player.forceFrozen = true
+            self.player:grantInvulnerability(AdventureState.ENDING_TIME + 2)
+            Sound.stopMusic()
+        end
+    end
 end
 
 -- Ha llegado a la meta: ya no le pasa nada, suena la fanfarria y sale el cartel
 AdventureState.WIN_TIME = 2.6
 function AdventureState:win()
     self.won, self.wonT = true, 0
+    if self.shards then self.shards:collectAll() end       -- (un fragmento suelto sin recoger no se pierde)
     self.player:grantInvulnerability(AdventureState.WIN_TIME + 2)
     Sound.stopMusic()
     Sound.play('fanfare')
@@ -405,11 +439,17 @@ function AdventureState:update(dt)
     if self.won then
         self.wonT = self.wonT + dt
         if self.wonT >= AdventureState.WIN_TIME then
-            local st = self.stats
-            local result = { score = self.score, time = self.levelTime, lives = self.player.lives, width = self.level.tileW,
-                             kills = st.kills, killable = st.killable, stars = st.stars, starsTotal = st.starsTotal,
-                             deaths = st.deaths, hits = st.hits }
-            if self.onFinish then self.onFinish(result) else gStateMachine:change(self.returnTo) end
+            if self.onFinish then self.onFinish(self:result()) else gStateMachine:change(self.returnTo) end
+            return
+        end
+    end
+    -- ── El ÚLTIMO fragmento, recogido: la pantalla se va a blanco y empieza el final de la historia ──
+    if self.endingT then
+        self.endingT = self.endingT + dt
+        if self.endingT >= AdventureState.ENDING_TIME then
+            local r = self:result()
+            r.ending = true
+            if self.onFinish then self.onFinish(r) else gStateMachine:change(self.returnTo) end
             return
         end
     end
@@ -477,6 +517,7 @@ function AdventureState:update(dt)
     self:checkVentOxyCollisions()
     self:updatePopups(dt)
 
+    self:updateShards(dt)
     self:updateCamera(dt)
     if self.rec then self.rec:step(dt, self) end
 
@@ -485,7 +526,7 @@ function AdventureState:update(dt)
     self.prevHp = self.player.hp
 
     -- ── META: tocarla termina el nivel ────────────────────────────────────────
-    if not self.won and not self.player.dying then
+    if not self.won and not self.endingT and not self.player.dying then
         local ob = self.player:getOuterBounds()
         if self.level:triggerInBox(ob.x, ob.y, ob.w, ob.h, 'finish') then self:win() end
     end
@@ -589,6 +630,12 @@ function AdventureState:render()
     self.camX, self.camY = math.floor(self.camX + shx + 0.5), math.floor(self.camY + shy + 0.5)
     self:_renderScene()
     self.camX, self.camY = realCamX, realCamY
+    -- (el último fragmento: a blanco, y de ahí al final de la historia)
+    if self.endingT then
+        love.graphics.setColor(1, 1, 1, math.max(0, math.min(1, (self.endingT - 0.9) / (AdventureState.ENDING_TIME - 1.0))))
+        love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
+        love.graphics.setColor(1, 1, 1, 1)
+    end
 end
 
 function AdventureState:_renderScene()
@@ -656,6 +703,9 @@ function AdventureState:_renderScene()
                         { { x = p.x, y = p.y, facing = p.facing, on = p.lightOn and not p.dying } }, self.enemies, self.sceneCanvas)
         Darkness.renderGlow(self.level, self.enemies, self.camX, self.camY)
     end
+
+    -- Fragmentos del espejo que han soltado los jefes (brillan: encima de la oscuridad)
+    if self.shards then self.shards:render(self.camX, self.camY) end
 
     -- ── Debug hitboxes (F1) ───────────────────────────────────────────────────
     if DEBUG_HITBOX then

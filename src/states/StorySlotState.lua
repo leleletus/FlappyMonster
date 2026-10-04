@@ -69,9 +69,15 @@ function StorySlotState:_open(i)
         self.pick = { slot = i, sel = 2 }
         return
     end
+    local new = not self.slots[i]
     Run.open(i, self.pick and Difficulty.ORDER[self.pick.sel] or nil)
     self.pick = nil
-    gStateMachine:change('story_map')
+    -- una partida NUEVA empieza con la intro de la historia (se puede saltar manteniendo pulsado)
+    if new then
+        gStateMachine:change('story_film', { film = 'intro', onDone = function() gStateMachine:change('story_map') end })
+    else
+        gStateMachine:change('story_map')
+    end
 end
 
 function StorySlotState:_diffOpen(k)

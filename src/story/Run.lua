@@ -173,6 +173,16 @@ function Run.worldRating(w)
     return Score.average(list, #nodes)
 end
 
+-- FRAGMENTOS DEL ESPEJO (src/story/Shards.lua): recogido uno, queda en la partida al momento
+function Run.addShard(id)
+    local d = Run.data
+    if not d then return end
+    d.shards = d.shards or {}
+    d.shards[id] = true
+    Run.save()
+end
+function Run.shards() return require('src/story/Shards').count(Run.data or { shards = {} }) end
+
 -- Vidas con las que sigue la aventura (al salir de un nivel sin acabarlo también cuentan las perdidas)
 function Run.setLives(n)
     if not Run.data then return end
@@ -190,7 +200,7 @@ function Run.gameOver(w)
     d.lives = Difficulty.of(d.difficulty, 'livesStart', 3)
     d.gameOvers = (d.gameOvers or 0) + 1
     if Difficulty.of(d.difficulty, 'restartGame', false) then
-        d.done, w = {}, 1
+        d.done, d.shards, w = {}, {}, 1          -- (todo el juego otra vez: también los fragmentos)
     else
         for _, n in ipairs(Worlds.nodes(w)) do d.done[n.id] = nil end
     end

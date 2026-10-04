@@ -289,9 +289,9 @@ for t, x0, x1, y in CRITTERS:
 
 # El jefe de cada mundo, en pequeño junto a su castillo (sus sprites del juego; fw = ancho de cuadro)
 BOSS_ART = {
-    'pradera':   {'img': 'assets/images/bosses/megagummy/body-Sheet.png', 'fw': 16, 'over': 'assets/images/bosses/megagummy/crown.png'},
+    'pradera':   {'img': 'assets/images/bosses/megagummy/body-Sheet.png', 'fw': 16, 'over': 'assets/images/bosses/megagummy/crown.png', 'overBig': True},
     'costa':     {'img': 'assets/images/bosses/megacrabby/crab1.png'},
-    'fortaleza': {'img': 'assets/images/bosses/miniboss1/ship.png', 'fly': True},
+    'fortaleza': {'img': 'assets/images/bosses/miniboss1/ship.png', 'fly': True, 'under': 'assets/images/bosses/miniboss1/monster/Idle1.png'},
     'nieve':     {'img': 'assets/images/bosses/megacrabby_ice/crab1.png'},
     'cuevas':    {'img': 'assets/images/bosses/megagloomy/body-Sheet.png', 'fw': 38, 'glow': 'assets/images/bosses/megagloomy/glow-Sheet.png'},
     'final':     {'img': 'assets/images/bosses/mirror/Body_ArmsDown.png', 'over': 'assets/images/bosses/mirror/Head_Down.png', 'invert': True},

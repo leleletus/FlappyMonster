@@ -16,6 +16,7 @@ local CornerButtons = require 'src/ui/CornerButtons'
 local PixelFont     = require 'src/ui/PixelFont'
 local Run           = require 'src/story/Run'
 local Worlds        = require 'src/story/Worlds'
+local Shards = require 'src/story/Shards'
 local Difficulty    = require 'src/Difficulty'
 local json          = require 'libs/json'
 local L = require 'src/Lang'
@@ -403,6 +404,9 @@ function StoryMapState:_play()
         -- las VIDAS son de la aventura: entran con las que lleva y, salga como salga, se guardan
         lives = Run.data.lives,
         onLeave = function(lives) Run.setLives(lives) end,
+        -- los FRAGMENTOS DEL ESPEJO que guarda el jefe de este nivel (los que aún no tiene); con el último, el final
+        shards = { ids = Shards.pending(n.id, Run.data), final = Shards.LEVEL[n.id] == Shards.FINAL,
+                   onGet = function(id) Run.addShard(id) end },
         gameOverNote = L(Difficulty.of(Run.data.difficulty, 'restartGame', false) and 'story.go_game' or 'story.go_world'),
         onGameOver = function()
             local w = Run.gameOver(world)                 -- al principio del mundo (o del juego)
@@ -415,8 +419,14 @@ function StoryMapState:_play()
             if node == #nodes and Run.worldOpen(world + 1) then nw, nk = world + 1, 1 end
             Run.data.world, Run.data.node = nw, nk
             Run.save()
-            gStateMachine:change('story_results', { level = n.id, result = result, summary = summary, color = THEME[Worlds.get(world).id],
-                                                    map = { world = nw, node = nk, cleared = n.id } })
+            local function results()
+                gStateMachine:change('story_results', { level = n.id, result = result, summary = summary, color = THEME[Worlds.get(world).id],
+                                                        map = { world = nw, node = nk, cleared = n.id } })
+            end
+            -- (con el último fragmento: antes de los resultados, el FINAL de la historia)
+            if result.ending then
+                gStateMachine:change('story_film', { film = 'ending', xtra = Shards.isXtra(Run.data.difficulty), onDone = results })
+            else results() end
         end,
     })
 end
@@ -737,7 +747,7 @@ end
 local BOSS_CLAWS = {
     ['assets/images/bosses/megacrabby/crab1.png'] = { file = 'assets/images/bosses/megacrabby/claw_left-Sheet.png', w = 10, k = 0.7, x = 4.8, y = -1.4, inset = 1.5,
         spike = 'assets/images/bosses/megacrabby/spike.png', spikeDy = 0 },
-    ['assets/images/bosses/megacrabby_ice/crab1.png'] = { file = 'assets/images/bosses/megacrabby_ice/claw_left-Sheet.png', w = 10, k = 1.0, x = 5.4, y = -1.2, inset = 1.5,
+    ['assets/images/bosses/megacrabby_ice/crab1.png'] = { file = 'assets/images/bosses/megacrabby_ice/claw_left-Sheet.png', w = 10, k = 1.0, x = 5.4, y = -1.2, inset = 1.5, small = true,
         spike = 'assets/images/bosses/megacrabby_ice/spike.png', spikeDy = 2 },
     ['assets/images/bosses/megagloomy/body-Sheet.png'] = { file = 'assets/images/bosses/megagloomy/claw_left-Sheet.png', w = 14, sickle = true, x = 5.5, up = 8 },
 }
@@ -748,13 +758,20 @@ function StoryMapState:_drawCastle(w, x, y, beaten)
     love.graphics.setColor(1, 1, 1, 1)
     drawBottom(castle, frameQ(castle, 16, beaten and 2 or 1), x, y + 12, 4, 16, 16)
     local art = loadMap().worlds[w].def.boss
+    -- (cinemáticas, src/story/Stage.lua: `filmBoss[w]` = tamaño del jefe, 0..1; se dibuja aunque esté vencido)
+    local mul = self.filmBoss and self.filmBoss[w]
+    if mul then beaten = mul <= 0 end
     if beaten or not art then return end
+    local M = loadMap().worlds[w]
+    self:_drawBossArt(art, x + M.bossDx, y + 12 + M.bossDy, w, mul or 1)
+end
+
+-- Un jefe en pequeño, con sus pinzas, su pincho, su corona...: `mul` = tamaño (1 = el del mapa)
+function StoryMapState:_drawBossArt(art, bx, by, w, mul)
     local im = img(art.img)
     local fw = art.fw or im:getWidth()
-    local M = loadMap().worlds[w]
-    local bx = x + M.bossDx
-    local by = y + 12 + M.bossDy - (art.fly and (22 + math.floor(math.sin(self.t * 2) * 4)) or 0)
-    local s = (fw > 20) and 2 or 3
+    by = by - (art.fly and (22 + math.floor(math.sin(self.t * 2) * 4)) or 0)
+    local s = ((fw > 20) and 2 or 3) * (mul or 1)
     local squash = art.fly and 1 or (1 + 0.06 * math.sin(self.t * 4))
     local shader = art.invert and getInvert()
     if shader then love.graphics.setShader(shader) end
@@ -766,15 +783,21 @@ function StoryMapState:_drawCastle(w, x, y, beaten)
         love.graphics.draw(sp, math.floor(bx), math.floor(by - (im:getHeight() - bc.spikeDy) * s * squash), 0, s / 4, s / 4,
                            sp:getWidth() / 2, sp:getHeight() - 1)
     end
+    -- (lo que va DENTRO: el Monstruo Malvado tras el cristal de su nave, como en el juego — miniboss1.lua)
+    if art.under then
+        local ui = img(art.under)
+        love.graphics.draw(ui, math.floor(bx - ui:getWidth() * s / 2), math.floor(by - ui:getHeight() * s * squash), 0, s, s * squash)
+    end
     love.graphics.draw(im, frameQ(im, fw, fi), math.floor(bx - fw * s / 2), math.floor(by - im:getHeight() * s * squash),
                        0, s, s * squash)
-    if art.over then
+    local big = (mul or 1) > 0.6          -- (en pequeño es un enemigo normal: sin corona ni pinzas de Mega)
+    if art.over and (big or not art.overBig) then
         local oi = img(art.over)
         love.graphics.draw(oi, math.floor(bx - oi:getWidth() * s / 2), math.floor(by - oi:getHeight() * s * squash), 0, s, s * squash)
     end
     if shader then love.graphics.setShader() end
     local cl = BOSS_CLAWS[art.img]
-    if cl then
+    if cl and (big or cl.small) then
         local ci = img(cl.file)
         local fh = ci:getHeight()
         for k, side in ipairs({ -1, 1 }) do
@@ -852,6 +875,42 @@ function StoryMapState:_drawHero(cx, cy)
     drawBottom(im, frameQ(im, 9, 1), x, y + 8 - bob, 3, 9, 16, self.facing < 0)
 end
 
+-- CINEMÁTICAS (src/story/Stage.lua): el mapa como decorado, sin estar en él. `stage()` lo prepara y
+-- `filmDraw(cx, cy, zoom, o)` lo dibuja con la cámara y el zoom que pida la escena (o.hero: el monstruo;
+-- o.nodes = false: sin nodos ni castillos). `filmBoss[w]` = tamaño del jefe del mundo w (ver _drawCastle).
+function StoryMapState:stage()
+    loadMap()
+    self.t, self.shake, self.queue, self.facing = 0, 0, {}, 1
+    self.world, self.node = 0, 0                    -- (sin recuadro de selección)
+    self.heroX, self.heroY = nodeXY(1, 1)
+    self.filmBoss = {}
+    return self
+end
+function StoryMapState.nodeXY(w, k) return nodeXY(w, k) end
+function StoryMapState.bossXY(w)
+    local M = loadMap().worlds[w]
+    local n = M.node[#Worlds.nodes(w)]
+    return n[1] + M.bossDx, n[2] + 12 + M.bossDy, n[1], n[2]
+end
+function StoryMapState.mapSize() local M = loadMap(); return M.pw, M.ph end
+function StoryMapState:filmDraw(cx, cy, zoom, o)
+    o = o or {}
+    local ww, wh = WINDOW_W, WINDOW_H
+    love.graphics.push()
+    love.graphics.scale(zoom, zoom)
+    WINDOW_W, WINDOW_H = math.ceil(ww / zoom), math.ceil(wh / zoom)      -- (los recortes de dibujo usan el tamaño de pantalla)
+    cx, cy = math.floor(cx), math.floor(cy)
+    self:_drawTerrain(cx, cy)
+    self:_drawPaths(cx, cy)
+    self:_drawDecos(cx, cy)
+    self:_drawCritters(cx, cy)
+    if o.nodes ~= false then self:_drawNodes(cx, cy) end
+    if o.extra then o.extra(cx, cy) end
+    if o.hero then self:_drawHero(cx, cy) end
+    WINDOW_W, WINDOW_H = ww, wh
+    love.graphics.pop()
+end
+
 function StoryMapState:render()
     local cx, cy = math.floor(self.camX or 0), math.floor(self.camY or 0)
     self:_drawTerrain(cx, cy)
@@ -904,6 +963,19 @@ function StoryMapState:_drawHud()
     love.graphics.printf(L('story.progress', { done = done, total = total, all = allDone, allTotal = allTotal })
         .. '     ' .. L('difficulty.' .. Run.data.difficulty)
         .. ((done > 0) and ('     ' .. L('story.world_grade', { grade = select(2, Run.worldRating(self.world)) })) or ''), 0, 72, WINDOW_W, 'center')
+    -- Fragmentos del espejo: una ficha bajo la cabecera, a la derecha, con el espejo (los que lleva, puestos) y
+    -- la cuenta (Xtra extremo: 14 mitades)
+    local owned, shardTotal = Shards.owned(Run.data)
+    local Stage = require 'src/story/Stage'
+    local sx, sy, sw, sh = WINDOW_W - 316, TOP_H + 16, 300, 112
+    love.graphics.setColor(0, 0, 0, 0.5); love.graphics.rectangle('fill', sx + 4, sy + 4, sw, sh)
+    love.graphics.setColor(0.07, 0.08, 0.13, 0.9); love.graphics.rectangle('fill', sx, sy, sw, sh)
+    Stage.mirror(sx + 48, sy + sh - 8, { s = 1.5, shards = (#owned < shardTotal) and owned or nil, whole = #owned >= shardTotal })
+    love.graphics.setFont(FONT_SMALL)
+    love.graphics.setColor(1, 1, 1, 0.85)
+    love.graphics.printf(L('story.shards'), sx + 96, sy + 20, sw - 104, 'left')
+    love.graphics.setColor(1, 1, 1, 1)
+    PixelFont.shadow(#owned .. ' / ' .. shardTotal, sx + 96, sy + 58, 5, 1, (#owned >= shardTotal) and { 1, 0.9, 0.25 } or { 0.75, 0.9, 1 })
     -- Vidas de la aventura (arriba a la derecha, como en el nivel)
     love.graphics.setColor(1, 1, 1, 1)
     local icon = img('assets/images/player/icon.png')

@@ -59,6 +59,8 @@ return {
         },
     },
     story = {
+        shards = "Fragmentos del espejo",
+        skip_hint = "MANTÉN PARA SALTAR",
         results = {
             title = "NIVEL SUPERADO",
             time = "Tiempo", lives = "Vidas perdidas", hits = "Golpes recibidos", kills = "Enemigos", stars = "Estrellas",
@@ -127,6 +129,7 @@ return {
         checkpoint = "CHECKPOINT",
         go = "¡YA!",
         boss = "¡JEFE!",
+        shard = "¡FRAGMENTO DEL ESPEJO!",
         boss_defeated = "¡JEFE DERROTADO!",
         you = "TÚ",
     },

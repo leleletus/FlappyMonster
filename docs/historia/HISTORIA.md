@@ -1,24 +1,26 @@
 # La historia de Flappy Monster: «El Espejo Roto»
 
-Plan aprobado por el usuario (2026-10-03). Este documento es la referencia de la historia; el guion gráfico sale de
-`tools/story/storyboard.py` (la tabla de escenas de abajo se genera con `--md`; no editarla a mano).
+Plan aprobado por el usuario (2026-10-03). Este documento es la referencia de la historia.
 
 ## Premisa
 
-El monstruo sabía **aletear** (el modo Flappy). Un día vuela hasta un espejo antiguo escondido en el volcán y choca
-con él: el cristal se rompe en **siete fragmentos**.
+El monstruo sabía **aletear** (el modo Flappy). No tiene alas: aletea por una **magia** suya. Un día vuela hasta un
+espejo antiguo escondido en el volcán y choca con él: el cristal se rompe en **siete fragmentos**.
 
-- Su **Reflejo** sale del marco, le roba el aleteo y se queda en el volcán con el fragmento del centro. Por eso la
-  aventura es a pie (solo salto doble).
-- Los otros seis fragmentos caen por las islas. Quien encuentra uno **crece y se enfurece** («la furia del espejo»):
-  por eso cada jefe es la versión gigante de un enemigo normal.
+- Su **Reflejo** sale del marco, le roba el aleteo y se queda en el volcán con el fragmento del centro. Al monstruo
+  solo le queda lo que puede hacer físicamente y la poca magia que le resta: el **doble salto**. Por eso la aventura
+  es a pie.
+- Los otros seis fragmentos caen por las islas. Quien encuentra uno **crece y se enfurece**: es **LA FURIA DEL
+  ESPEJO**, y por eso cada jefe es la versión gigante de un enemigo normal (el piloto de la Nave Malvada encontró
+  el suyo como los demás).
 
 Cada jefe vencido suelta su fragmento; con los siete el espejo se restaura, el Reflejo vuelve dentro, la furia se
 apaga (los jefes encogen) y el monstruo **recupera el aleteo**.
 
-## Los fragmentos (`assets/images/story/mirror/`, de `tools/ui/make_mirror_shards.py`)
+## Los fragmentos
 
-Todas las imágenes comparten un lienzo de 48x64: dibujadas en el mismo punto, encajan y el espejo se va completando.
+Imágenes: `assets/images/story/mirror/` (de `tools/ui/make_mirror_shards.py`); todas comparten un lienzo de 48x64:
+dibujadas en el mismo punto, encajan y el espejo se va completando. Lógica: `src/story/Shards.lua`.
 
 | Nº | Jefe | Nivel | Posición en el espejo |
 |---|---|---|---|
@@ -30,54 +32,60 @@ Todas las imágenes comparten un lienzo de 48x64: dibujadas en el mismo punto, e
 | 6 | Mega Crabby lúgubre | gruta_lugubre | izquierda |
 | 7 | El Espejo | ruta_del_espejo | centro (donde chocó) |
 
-- `frame.png` (marco), `glass.png` (cristal entero, sin grietas), `shard_1..7.png`.
-- **Xtra Extremo**: `shard_<n>a.png` / `shard_<n>b.png`, cada fragmento partido en dos (uno por cada jefe de la
-  pareja). Contador del mapa: 14 mitades.
+- En el nivel: al caer el jefe, su fragmento sale de él y se queda flotando; el jugador lo recoge tocándolo (si a los
+  5 s nadie lo ha recogido, va él hacia el jugador; si se toca la meta antes, se recoge solo). Queda guardado en la
+  partida al momento. Un jefe ya vencido con su fragmento recogido no lo vuelve a soltar.
+- **Xtra extremo** (dos jefes por arena): cada uno suelta MEDIO fragmento (`3a` el original, `3b` la copia): 14 mitades.
+- El mapa muestra el espejo con los fragmentos que se llevan y la cuenta («Fragmentos del espejo 4 / 7»; Xtra: n / 14).
+- El del jefe Espejo es el último: al recogerlo el jugador se queda quieto, la pantalla se va a blanco y empieza el
+  FINAL, sin tocar la meta; después, la pantalla de resultados de siempre.
 
-## Guion gráfico
+## Las cinemáticas
 
-Bocetos: `FlappyMonster_pruebas/historia/storyboard_intro.png` y `storyboard_final.png`. Sin diálogos ni texto: todo
-se cuenta con imagen, sonido y música.
+Las dibuja el JUEGO, en el momento, con sus sprites, fondos, decorados y efectos (nada pregrabado): `src/story/Film.lua`
+(el reproductor), `src/story/Stage.lua` (las piezas), `src/story/films/intro.lua` y `ending.lua` (las escenas),
+`src/states/StoryFilmState.lua` (el estado; se saltan MANTENIENDO pulsado un botón o el dedo 1 s). Sin texto.
 
-### Intro (50.0 s)
+- **Tiempos: `assets/story/films.json`** — cada escena dura `beats` pulsos a `bpm`, con sus momentos (`cues`). Es la
+  única fuente: el juego dibuja con ella y la música (`tools/music/story_music.py`) se compone SOBRE ella. Cambiar un
+  tiempo = volver a generar la música.
+- Decorado del cráter: `assets/story/sets/crater.json`, un nivel de verdad (`tools/story/make_sets.py`; se abre en el
+  editor). El mapa del mundo también hace de decorado (`StoryMapState:filmDraw`).
+- Con su música sonando, el reloj de la película es el de la música.
+- Capturas de cada escena: `tools/tests/run.sh story_film` (hojas en `FlappyMonster_pruebas/historia/`).
 
-| Escena | Tiempo | Qué se ve | Sonido y música |
+### Intro (al crear una partida) — 51.8 s
+
+| Escena | Tiempo | Qué se ve | Música y sonido |
 |---|---|---|---|
-| **I1** Un día cualquiera | 0.0–6.0 s | El monstruo ALETEA entre las tuberías (el modo Flappy), feliz. Cielo azul. | Música: tema del juego, ligero ("la llamada"). Aleteos. |
-| **I2** El destello | 6.0–11.0 s | Atardecer: algo brilla dentro del volcán. Curioso, vuela hacia allí. | La música se queda en una nota; un brillo (campanita). |
-| **I3** El espejo antiguo | 11.0–17.0 s | Dentro del cráter: un espejo dorado. Se acerca; su reflejo lo imita. | Caja de música: "la llamada" y su eco INVERTIDO (el reflejo). |
-| **I4** ¡CRAC! | 17.0–19.5 s | Aletea demasiado cerca y choca. Destello blanco: el cristal se parte en 7. | Silencio de medio segundo → golpe + cristal roto. Corte seco. |
-| **I5** El Reflejo sale | 19.5–25.5 s | Del marco vacío sale su reflejo (colores invertidos). Los fragmentos flotan. | Entra el motivo del Espejo (grave, 12/8). Tintineo de cristales. |
-| **I6** Le roba las alas | 25.5–31.5 s | El Reflejo le quita el ALETEO, se ríe y se guarda el fragmento del centro. El monstruo salta... y cae. | Risa del Espejo. Golpe sordo al caer (sin alas). |
-| **I7** Seis fragmentos, seis islas | 31.5–37.5 s | El Reflejo lanza los otros seis: cruzan el cielo y caen uno en cada isla (el mapa). | Seis notas descendentes, una por fragmento. |
-| **I8** La furia del espejo | 37.5–44.5 s | Quien encuentra un fragmento crece y se enfurece: Rey Gummy, Mega Crabby, la Nave, la Bola, el helado, el lúgubre. | Seis golpes de timbal, uno por jefe; crece. |
-| **I9** A pie | 44.5–50.0 s | El monstruo, en la orilla de la Pradera, mira el volcán a lo lejos... y echa a andar. → MAPA. | La llamada, decidida, en trompeta: enlaza con la música del mapa. |
+| `flappy` Un día cualquiera | 0.0–7.3 s | El monstruo ALETEA entre las tuberías: el modo Flappy de verdad (su fondo, sus tuberías, su jugador, pilotado). | Su tema («Rumbo a las islas», que empieza con la llamada), ligero. Cada aleteo suena. |
+| `glint` El destello | 7.3–12.7 s | Las tuberías se acaban; algo brilla a lo lejos; el fondo del Flappy se deshace en el cielo del volcán y va hacia el cráter. | El tema se queda colgado; dos campanas (el destello); el bajo se oscurece. |
+| `mirror` El espejo antiguo | 12.7–18.4 s | Baja por la chimenea del cráter (decorado: un nivel de verdad). Un espejo dorado; su reflejo lo imita. | Caja de música: la llamada… y el espejo la devuelve AL REVÉS. |
+| `crash` ¡CRAC! | 18.4–21.3 s | Aletea demasiado cerca y choca: destello, temblor, el cristal partido en siete. | Dos latidos, un trémolo… y el golpe (cristal). |
+| `reflex` El Reflejo sale | 21.3–26.3 s | Los fragmentos flotan alrededor del marco vacío; dentro aparece su REFLEJO (colores invertidos) y salta fuera. | Bordón grave al galope; el motivo del espejo; al plantarse, la cabeza del tema del jefe Espejo. |
+| `steal` Le roba el aleteo | 26.3–33.8 s | El Reflejo le arranca el aleteo (un orbe de magia), sube aleteando y se ríe; se queda el fragmento del centro. El monstruo lo intenta: salta, un segundo salto… y cae. El Reflejo lo echa todo del cráter. | La llamada, arrancada, se desinfla; el Reflejo la canta con su voz; la risa; redoble. |
+| `scatter` Seis fragmentos | 33.8–38.8 s | En el mapa: los seis fragmentos (y el monstruo) cruzan el cielo desde el volcán y caen uno a uno. | Seis campanas que BAJAN, una por fragmento. |
+| `fury` La furia del espejo | 38.8–45.8 s | Uno a uno, de cerca: quien encuentra un fragmento crece y se enfurece. Luego, todas las islas, enrojecidas. | Seis golpes que SUBEN, uno por jefe; la dominante con redoble. |
+| `onfoot` A pie | 45.8–51.8 s | El monstruo cae en la Pradera. Se levanta, intenta aletear (solo un saltito)… y echa a andar. → MAPA. | Silencio; la llamada no le sale; y entonces sí, decidida: enlaza con la música del mapa. |
 
-### Final (55.0 s)
+### Final (al recoger el último fragmento) — 52.5 s
 
-| Escena | Tiempo | Qué se ve | Sonido y música |
+| Escena | Tiempo | Qué se ve | Música y sonido |
 |---|---|---|---|
-| **F1** El Espejo cae | 0.0–4.0 s | En el juego: el jefe Espejo, vencido, cae y suelta el ÚLTIMO fragmento (no hay meta que tocar). | Se corta la música del jefe. Cristal. |
-| **F2** Los siete | 4.0–9.0 s | El monstruo lo recoge: los siete fragmentos salen y giran a su alrededor. | Caja de música: la llamada, despacio. Un tintineo por fragmento. |
-| **F3** Pieza a pieza | 9.0–17.0 s | Vuelan al marco y encajan uno a uno, en el orden en que se ganaron (el del centro, el último). | Siete notas ASCENDENTES (la escala de la llamada), una por pieza. |
-| **F4** El espejo, entero | 17.0–20.0 s | La última pieza: destello. Las grietas se borran. | Acorde mayor lleno + platillo. |
-| **F5** El Reflejo vuelve | 20.0–25.0 s | El espejo tira del Reflejo: vuelve dentro, rabiando, y suelta lo que robó. | El motivo del Espejo, al revés (= la llamada). Succión. |
-| **F6** La luz recorre las islas | 25.0–32.0 s | Del cráter sale una onda de luz que barre el mapa, isla a isla: LA FURIA DEL ESPEJO se apaga. | Tema del mapa, a pleno. Seis campanas. |
-| **F7** Todos, pequeños otra vez | 32.0–39.0 s | Los jefes encogen: un Gummy con una corona enorme, un Crabby, la nave diminuta, una bolita... | Seis "pop" cómicos sobre la música. |
-| **F8** Las alas | 39.0–46.0 s | Ante el espejo, su reflejo ya es solo eso. Prueba: un aleteo... dos... ¡se eleva! | Pausa. Aleteo, aleteo → la llamada completa, por fin resuelta. |
-| **F9** Volando a casa | 46.0–55.0 s | Sale del cráter y vuela sobre las islas al amanecer; vuelven las tuberías. Logo. FIN → créditos. | Tema del juego a pleno; termina con el aleteo. |
+| `seven` Los siete | 0.0–5.7 s | En el cráter, ante el marco vacío: los fragmentos salen y giran a su alrededor (Xtra extremo: las 14 mitades). | La llamada en la caja de música; arpegios que suben. |
+| `pieces` Pieza a pieza | 5.7–15.7 s | Vuelan al marco y encajan uno a uno, en el orden en que se ganaron (el del centro, el último). | Siete notas que SUBEN la escala, una por fragmento (las mismas que canta el efecto al encajar). |
+| `whole` El espejo, entero | 15.7–18.2 s | Destello: las grietas se borran; rayos de luz. | El acorde entero y la llamada, deprisa, en lo alto. |
+| `return` El Reflejo vuelve | 18.2–23.2 s | El espejo tira del Reflejo, que entra pataleando; del cristal sale lo que robó: el orbe del aleteo. | Su tema se deshace hacia abajo; el golpe; dos notas de la llamada. |
+| `light` La luz recorre las islas | 23.2–29.2 s | En el mapa: una onda de luz sale del volcán y llega a cada isla: la FURIA DEL ESPEJO se apaga. | El tema del mapa, a pleno; una campana por isla. |
+| `shrink` Pequeños otra vez | 29.2–36.2 s | Uno a uno, de cerca: los jefes encogen (el Gummy, ya sin corona). | El tema sigue, juguetón; un «pop» por jefe. |
+| `flap` El aleteo | 36.2–43.4 s | El orbe vuelve al monstruo. Prueba: un aleteo… dos… y sube sin parar hasta salir por la chimenea; su reflejo, ya solo un reflejo, lo imita. | Silencio; con cada aleteo, una nota más de la llamada; y sube. |
+| `home` Volando a casa | 43.4–52.5 s | Vuela sobre el volcán; el cielo vuelve a ser el del modo Flappy, vuelven las tuberías; el logo. | El tema entero; con el logo, el acorde final y la llamada en campanas. |
 
-## Pendiente de decidir (usuario)
+## Hecho y pendiente
 
-1. El nombre de la amenaza: aquí «la furia del espejo» (lo que agranda y enfurece a quien toca un fragmento).
-2. La Nave Malvada: ¿su piloto encontró un fragmento como los demás (así está en el guion) o es un esbirro del Reflejo?
-3. Duraciones (intro 50 s, final 55 s) y si la intro se puede saltar (propuesta: sí, manteniendo pulsado).
+Hecho (3.68.0): fragmentos (imágenes, recogida, guardado, contador del mapa), las dos cinemáticas en el juego, sus
+efectos de sonido (`tools/sounds/story.py`) y su música, el final sin tocar la meta.
 
-## Orden de trabajo (del usuario)
-
-1. Texturas de los fragmentos ✔ (a falta de su visto bueno).
-2. Guion gráfico ✔ (bocetos; a falta de su visto bueno).
-3. Con el guion aprobado: tiempos exactos, qué hay en pantalla en cada escena y transiciones.
-4. Música compuesta SOBRE esos tiempos (nunca al revés), sprites de las escenas, efectos y sonidos sincronizados.
-5. En el juego: cada jefe suelta su fragmento al morir, el jugador lo recoge y se guarda en la partida; el mapa
-   muestra «Fragmentos: n / 7» (Xtra: n / 14); vencer al Espejo lanza el final sin tocar la meta.
+Pendiente de la opinión del usuario (no se ha visto en movimiento ni escuchado: solo capturas y números): el ritmo
+de cada escena, los encuadres, la música. Los sprites de las escenas son los del juego; si alguna pide un dibujo
+propio (el Reflejo saliendo del marco, los jefes pequeños antes de crecer), se añade.
