@@ -674,6 +674,9 @@ landing mark; sprites in `assets/images/bosses/common/`). Asset layout: enemies 
   small physical debris of the block under it while hiding/unhiding (render-only `Crabby:renderDig` →
   particle `crab_dig`, colours from the surface, along its normal). Harness `icecrabby_rules` (+`LOOK=1`),
   online `online_smoke LEVEL=tools/levelgen/arenas/crabby_helado.json WATCH=crabby_ice_snow`. Protocol v39.
+- **HAND-EDITED by the user (3.66.1): the icy crab bodies** — `bosses/megacrabby_ice/crab1-3.png` and `crabby_ice/`
+  crab1-3, hide-Sheet, meat, sink1-5 (same sizes). Do NOT re-run `make_icecrab_sprites.py` / `make_icecrabby_sprites.py`
+  over them unless asked (port the edits into the generators first).
 - **Icy Mega Crabby** (`types/megacrabby_ice.lua`, "Mega Crabby helado", `boss.megacrabby_ice`): subclass of
   the Mega (ALL its states/attacks/intro/rests/death); art per class (`Mega.loadArt(dir, w, h, cw, ch, clawK,
   clawX, clawY, clawIn)` → `self.art`; the icy one 18x13 at MS 10 from `tools/ui/make_icecrab_sprites.py`,
