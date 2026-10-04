@@ -34,6 +34,7 @@ local OnlineAdventureState = require 'src/states/OnlineAdventureState'
 local LEVEL = os.getenv('LEVEL')
 local t, st, frames = 0, nil, 0
 local stub = P.newInputStub()
+local bad, ADM, GIVE1, GIVE2, BADNAME
 local bot = { seq = 0, acc = 0, bits = {} }
 function love.load()
     love.graphics.setDefaultFilter('nearest', 'nearest')
@@ -53,6 +54,7 @@ function love.load()
     local phase = 0
     NC:on('room_update', function(d)
         if not st and d.state == 'IN_GAME' then gStateMachine:change('online_adventure', { room = d }); st = gStateMachine:_top() end
+        ADM = d.adminId                                    -- (quién es el admin, visto por el cliente)
         if phase == 0 then phase = 1
             NC:send('set_mode', { mode = os.getenv('MODE') or 'race', level = LEVEL, difficulty = os.getenv('DIFF') })
             bot.roomId = d.id end        -- (el bot entra cuando haya iniciado sesión)
@@ -61,15 +63,27 @@ function love.load()
     bot.c = sock.newClient('localhost', 22122, P.CHANNELS)
     bot.c:setSerialization(bitser.dumps, bitser.loads)
     bot.c:on('game_init', function() bot.inGame = true end)
-    bot.c:on('login_success', function() bot.logged = true end)
+    bot.c:on('login_success', function(d) bot.logged = true; bot.id = d.id end)
     bot.c:connect()
+    -- un segundo cliente con un nombre NO permitido (disfrazado con números y guiones): el servidor lo rechaza
+    bad = sock.newClient('localhost', 22122, P.CHANNELS)
+    bad:setSerialization(bitser.dumps, bitser.loads)
+    bad:on('login_error', function(d) BADNAME = d and d.key end)
+    bad:on('login_success', function() BADNAME = 'ACEPTADO' end)
+    bad:connect()
 end
 function love.update(dt)
     t = t + dt
-    Timer.update(dt); Sound.update(dt); NC:update(dt); bot.c:update()
+    Timer.update(dt); Sound.update(dt); NC:update(dt); bot.c:update(); bad:update()
+    if not bad.hello and bad:isConnected() then bad.hello = true; bad:send('hello', { v = P.VERSION, name = 'xX_PuT4_Xx' }) end
     if not bot.hello and bot.c:isConnected() then bot.hello = true; bot.c:send('hello', { v = P.VERSION, name = 'Bot' }) end
     if bot.logged and bot.roomId and not bot.joined then
-        bot.joined = true; bot.c:send('join_room', { id = bot.roomId }); bot.readyAt = t + 1.2 end
+        bot.joined = true; bot.c:send('join_room', { id = bot.roomId }); bot.giveAt = t + 0.6 end
+    -- CEDER EL ADMIN: el cliente se lo da al bot (todos ven al bot de admin y el cliente deja de serlo) y el bot se lo devuelve
+    if bot.giveAt and t > bot.giveAt then bot.giveAt = nil; bot.giveT = t; NC:send('give_admin', { playerId = bot.id }) end
+    if bot.giveT and not GIVE1 and ADM == bot.id then GIVE1 = true; bot.c:send('give_admin', { playerId = NC.myId }) end
+    if bot.giveT and GIVE1 and not GIVE2 and ADM == NC.myId then GIVE2 = true end
+    if bot.giveT and (GIVE2 or t > bot.giveT + 4) then bot.giveT = nil; bot.readyAt = t + 0.4 end
     if bot.readyAt and t > bot.readyAt then bot.readyAt = nil
         bot.c:send('set_ready', { ready = true }); NC:send('set_ready', { ready = true }); bot.startAt = t + 0.6 end
     if bot.startAt and t > bot.startAt then bot.startAt = nil; NC:send('start_game', {}) end
@@ -149,6 +163,9 @@ function love.update(dt)
                 if not watch.states[w] then print('Error: el cliente no vio el estado ' .. w) end
             end
         end
+        if not GIVE2 then print('Error: ceder el admin (cliente → bot → cliente): ida=' .. tostring(GIVE1) .. ' vuelta=' .. tostring(GIVE2)) end
+        if BADNAME ~= 'srv.name_blocked' then print('Error: el servidor no rechazó el nombre vetado (' .. tostring(BADNAME) .. ')') end
+        print(('admin cedido y devuelto=%s · nombre vetado rechazado por el servidor=%s'):format(tostring(GIVE2), tostring(BADNAME)))
         print(('OK: %d fotogramas de partida sin errores; iconos: skull %dx%d, flag %dx%d, hill %dx%d, corona %dx%d'):format(frames,
             PixelIcons.size('skull'), select(2, PixelIcons.size('skull')), PixelIcons.size('flag'), select(2, PixelIcons.size('flag')),
             PixelIcons.size('hill'), select(2, PixelIcons.size('hill')), PixelIcons.CROWN_W, PixelIcons.CROWN_H))

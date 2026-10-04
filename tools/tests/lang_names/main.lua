@@ -82,6 +82,20 @@ function love.load()
     end
     print(('niveles     AVISO  sin "name_en": %s'):format(#sin > 0 and table.concat(sin, ', ') or 'ninguno'))
 
+    -- FILTRO DE NOMBRES de jugador (src/network/NameFilter.lua): largo, caracteres, palabras vetadas y sus disfraces
+    local NF = require 'src/network/NameFilter'
+    local bad = { 'puta', 'PuT4', 'P_U_T_4', 'puuuta', 'xXfuckXx', 'F-U-C-K', 'sh1t', 'n1gg3r', 'Admin', 'ADM1N', 'el_culo', 'ass', 'a55',
+                  'server', 'mod', 'h1tler', 'B1TCH', 'cabr0n', 'xx_sex_xx', 'c0ck', 'ab', 'con espacio', 'ñandú', 'aaaaaaaaaaaaaaaaaaaa',
+                  '1234', 'kys', 'm1erda', 'KKK', 'fuuuuck', 'p0rn', 'mi-erda', 'a\nb', 'x<y>z' }
+    local good = { 'Mtvemo', 'Bot', 'Prueba', 'Player_1', 'Cassandra', 'Pollo', 'Apollo11', 'Dickens', 'Cumbia', 'Final_Boss', 'Animal',
+                   'Tarzan', 'Conocido', 'Assassin', 'Bass', 'Class', 'Peacock', 'Torpedo', 'Mongolia', 'Hello', 'Anakin', 'Tetris',
+                   'Modesto', 'Hostal', 'Luna-9', 'Analia', 'Kiko', 'Monika', 'Kakashi', 'Mario64', 'xX_Pro_Xx', 'Jugador1' }
+    local wrong = {}
+    for _, n in ipairs(bad) do if NF.check(n) then wrong[#wrong + 1] = n .. ' (aceptado)' end end
+    for _, n in ipairs(good) do if not NF.check(n) then wrong[#wrong + 1] = n .. ' (rechazado)' end end
+    check('nombres', #wrong == 0 and NF.typed('a b!c_d-é9') == 'abc_d-9',
+        ('%d no permitidos y %d válidos; mal clasificados: %s'):format(#bad, #good, #wrong > 0 and table.concat(wrong, ', ') or 'ninguno'))
+
     print(fails == 0 and 'TODO OK' or ('FALLOS: ' .. fails))
     love.event.quit(fails == 0 and 0 or 1)
 end

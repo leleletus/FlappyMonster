@@ -20,13 +20,17 @@
 -- FM_UPDATE=1 lo fuerza (pruebas).
 --
 -- El montaje se COMPRUEBA (version.txt tiene que ser el de la versión activa).
--- Si en este aparato no funciona (pasó en Switch: la carpeta de guardado no se
--- monta con la ruta relativa), se prueba con la ruta absoluta y, si tampoco,
--- se vuelve a la versión instalada y se apunta `nomount` = versión instalada:
--- con eso UpdateState no vuelve a buscar actualizaciones en este aparato (si no,
--- descargaría → reiniciaría → no montaría → descargaría... sin fin). Se vuelve a
--- intentar cuando cambia la versión instalada (reinstalar). Cada arranque deja
--- update/boot.log con lo que pasó (en Switch no hay consola).
+-- En la SWITCH `fs.mount` no funciona (ni con la ruta relativa ni con la
+-- absoluta): la 1ª versión entraba en bucle (descargar → reiniciar → sigue la
+-- vieja → descargar...) y la 2ª, para cortarlo, dejaba ese aparato SIN
+-- actualizaciones para siempre (`nomount`). Ahora, si no se puede montar, la
+-- versión se usa por SUPERPOSICIÓN (`overlay`): sin montar nada, cada lectura
+-- de un archivo del juego mira primero en la carpeta de la versión — se
+-- envuelven love.filesystem (read, getInfo, getDirectoryItems...), los
+-- cargadores de imágenes, sonidos y fuentes, y `require` —. Solo necesita poder
+-- LEER la carpeta de guardado, que es donde se descargó. Si ni eso (no se lee
+-- su version.txt), se vuelve a la instalada y se apunta `nomount` (sin bucle).
+-- Cada arranque deja update/boot.log con lo que pasó (en Switch no hay consola).
 
 local UPD       = 'update'
 local STATE     = UPD .. '/state.lua'
@@ -96,12 +100,67 @@ local function mountSlot(v)
     return false
 end
 
+-- SUPERPOSICIÓN: la versión v, sin montarla (ver arriba). Devuelve false si no se puede ni leer.
+local function overlay(v)
+    local base = slotDir(v) .. '/'
+    local rawInfo, rawRead, rawItems = fs.getInfo, fs.read, fs.getDirectoryItems
+    local okv, ver = pcall(rawRead, base .. 'version.txt')
+    blog(string.format('overlay %s (version.txt = %s)', base, tostring(okv and trim(ver))))
+    if not (okv and ver and trim(ver) == v) then return false end
+    local function res(p)
+        if type(p) ~= 'string' or p:sub(1, #UPD + 1) == UPD .. '/' then return p end
+        local q = base .. (p:gsub('^/+', ''))
+        if rawInfo(q) then return q end
+        return p
+    end
+    UPDATE_RESOLVE = res
+    local function wrap(t, names)
+        for _, n in ipairs(names) do
+            local f = t and t[n]
+            if f then t[n] = function(p, ...) return f(res(p), ...) end end
+        end
+    end
+    wrap(fs, { 'getInfo', 'lines', 'load', 'newFile', 'newFileData', 'getRealDirectory' })
+    fs.read = function(a, b, ...)                              -- read(nombre[, n]) o read('string'|'data', nombre[, n])
+        if (a == 'string' or a == 'data') and type(b) == 'string' then return rawRead(a, res(b), ...) end
+        return rawRead(res(a), b, ...)
+    end
+    fs.getDirectoryItems = function(dir, ...)                  -- lo de la versión + lo instalado
+        local out, seen = {}, {}
+        local dirs = { dir }
+        if type(dir) == 'string' and dir:sub(1, #UPD) ~= UPD and rawInfo(base .. dir) then dirs[2] = base .. dir end
+        for _, d in ipairs(dirs) do
+            for _, it in ipairs(rawItems(d)) do
+                if not seen[it] then seen[it] = true; out[#out + 1] = it end
+            end
+        end
+        return out
+    end
+    wrap(love.graphics, { 'newImage', 'newFont', 'newImageFont', 'newVideo' })
+    wrap(love.image, { 'newImageData', 'newCompressedData' })
+    wrap(love.audio, { 'newSource' })
+    wrap(love.sound, { 'newSoundData', 'newDecoder' })
+    wrap(love.thread, { 'newThread' })
+    table.insert(package.loaders, 2, function(name)            -- require: primero la versión
+        local n = name:gsub('%.', '/')
+        for _, p in ipairs({ n .. '.lua', name .. '.lua', n .. '/init.lua' }) do
+            if rawInfo(base .. p) then
+                local chunk, err = loadstring(rawRead(base .. p), '@' .. p)
+                return chunk or ('\n\t' .. tostring(err))
+            end
+        end
+    end)
+    return fileVersion() == v
+end
+
+local BOOT = 3                    -- versión de ESTE arranque (al cambiar se olvida `nomount`: hay otra forma de montar)
 local st
 if UPDATE_ENABLED then
     st = readState()
     local installed = fileVersion()                             -- (antes de montar nada)
     blog('instalada ' .. installed .. ', activa ' .. tostring(st.active) .. ', pendiente ' .. tostring(st.pending))
-    if st.nomount and st.nomount ~= installed then st.nomount = nil; writeState(st) end   -- (reinstalado)
+    if st.nomount and (st.nomount ~= installed or st.boot ~= BOOT) then st.nomount = nil end    -- (reinstalado, o arranque nuevo)
+    if st.boot ~= BOOT then st.boot = BOOT; writeState(st) end
     if st.trash then rmrf(slotDir(st.trash)); st.trash = nil; writeState(st) end
     if st.pending then
         st.boots = (st.boots or 0) + 1
@@ -113,10 +172,14 @@ if UPDATE_ENABLED then
         writeState(st)
     end
     if st.active and fs.getInfo(slotDir(st.active), 'directory') then
-        if not mountSlot(st.active) then
-            -- Este aparato no puede usar las actualizaciones: volver a la
-            -- instalada y no volver a intentarlo hasta reinstalar
-            blog('no se puede montar ' .. st.active .. ': se usa la instalada y no se buscan más actualizaciones')
+        if mountSlot(st.active) then UPDATE_MODE = 'mount'
+        elseif overlay(st.active) then
+            UPDATE_MODE = 'overlay'
+            blog('no se puede montar ' .. st.active .. ': se usa por superposición')
+        else
+            -- Ni montar ni leer la versión: volver a la instalada y no volver
+            -- a intentarlo hasta reinstalar (sin esto: bucle de descargas)
+            blog('no se puede montar ni leer ' .. st.active .. ': se usa la instalada y no se buscan más actualizaciones')
             print('[update] no se pudo montar ' .. st.active)
             st.trash, st.active, st.previous, st.pending, st.boots = st.active, nil, nil, nil, nil
             st.nomount = installed

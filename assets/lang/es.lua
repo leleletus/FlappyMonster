@@ -146,6 +146,10 @@ return {
         hint = "[ENTER] conectar   [ESC] volver",
         title = "ONLINE",
         enter_name = "Ingresa un nombre de jugador.",
+        name_short = "El nombre necesita al menos 3 caracteres.",
+        name_long = "El nombre es demasiado largo.",
+        name_chars = "Solo letras, números, - y _ (sin espacios).",
+        name_blocked = "Ese nombre no está permitido.",
         failed = "No se pudo iniciar sesión.",
     },
     err = {
@@ -200,6 +204,7 @@ return {
         join_hint = "[ENTER] Unirse   [ESC] Cancelar",
     },
     room = {
+        give_admin = "DAR ADMIN",
         kick = "EXPULSAR",
         ban = "BANEAR",
         not_ready = "NO LISTO",
@@ -272,6 +277,8 @@ return {
         version = "Versión incompatible. Actualiza el juego.",
         bad_name = "Nombre inválido.",
         name_taken = "Ese nombre ya está en uso.",
+        name_blocked = "Ese nombre no está permitido.",
+        cant_admin_self = "Ya eres el admin.",
         outdated = "Versión desactualizada. Actualiza el juego.",
         already_in_room = "Ya estás en una sala.",
         max_players = "Máximo de jugadores: 1-8.",

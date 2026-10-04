@@ -2,6 +2,7 @@
 -- Pantalla de login: ingresa nickname, host y puerto antes de conectar.
 
 local BaseState        = require 'src/BaseState'
+local NameFilter = require 'src/network/NameFilter'
 local NC               = require 'src/network/NetworkClient'
 local Protocol         = require 'src/network/Protocol'
 local Lang = require 'src/Lang'
@@ -79,9 +80,9 @@ end
 
 function OnlineLoginState:textinput(t)
     if self.connecting then return end
+    -- (solo los caracteres que puede llevar un nombre, y hasta su largo máximo: src/network/NameFilter.lua)
     local cur = self.fields[FIELD_NICK] or ""
-    if #cur >= Protocol.NAME_MAX then return end
-    self.fields[FIELD_NICK] = cur .. t
+    self.fields[FIELD_NICK] = (cur .. NameFilter.typed(t)):sub(1, NameFilter.MAX)
 end
 
 -- ── keypressed (forwarded desde main.lua) ────────────────────────────────────
@@ -123,6 +124,12 @@ function OnlineLoginState:_tryConnect()
 
     if #nick == 0 then
         self:_showError(Lang('login.enter_name'))
+        return
+    end
+    -- antes de enviarlo: largo, caracteres y palabras no permitidas (el servidor lo vuelve a comprobar)
+    local okName, why = NameFilter.check(nick)
+    if not okName then
+        self:_showError(Lang('login.name_' .. why))
         return
     end
 

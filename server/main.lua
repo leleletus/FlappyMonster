@@ -23,6 +23,7 @@ local parentDir = love.filesystem.getSourceBaseDirectory():gsub("\\", "/")
 package.path = parentDir .. "/?.lua;" .. package.path
 
 local Protocol = require 'src/network/Protocol'
+local NameFilter = require 'src/network/NameFilter'
 local Modes    = require 'src/world/Modes'
 local Lang     = require 'src/Lang'
 local json     = require 'libs/json'
@@ -1065,9 +1066,12 @@ on("hello", function(data, client, p)
         client:send("login_error", Lang.message('srv.version'))
         return
     end
-    local name = Protocol.sanitizeName(data.name)
-    if not name then
-        client:send("login_error", Lang.message('srv.bad_name')); return
+    -- El nombre se valida AQUÍ también (longitud, caracteres, palabras vetadas: src/network/NameFilter.lua): el
+    -- cliente ya lo comprueba antes de enviar, pero uno modificado podría saltárselo
+    local name = type(data.name) == 'string' and data.name:match('^%s*(.-)%s*$') or nil
+    local okName, why = NameFilter.check(name)
+    if not okName then
+        client:send("login_error", Lang.message(why == 'blocked' and 'srv.name_blocked' or 'srv.bad_name')); return
     end
     local lname = name:lower()
     for _, other in pairs(players) do
@@ -1092,7 +1096,9 @@ end)
 on("create_room", function(data, client, player)
     if type(data) ~= "table" then return end
     if player.roomId then client:send("room_error",Lang.message('srv.already_in_room')); return end
-    local name = Protocol.sanitizeName(data.name, ROOM_NAME_MAX) or ("Sala de " .. player.name)
+    local name = Protocol.sanitizeName(data.name, ROOM_NAME_MAX)
+    if name and NameFilter.isBlocked(name) then name = nil end        -- (nombres de sala: el mismo filtro de palabras)
+    name = name or ("Sala de " .. player.name)
     local isPublic   = (data.isPublic ~= false)
     local password   = cleanText(data.password, PASSWORD_MAX)
     local maxPlayers = tonumber(data.maxPlayers) or 4
@@ -1277,6 +1283,18 @@ on("kick_player", function(data, client, admin)
     removePlayerFromRoom(players[tc], room, true)
     announceToRoom(room, 'srv.was_kicked', { name = tname }, 'kick')
     log(admin.name .. " kickeo a " .. tname)
+end)
+
+-- CEDER EL ADMIN a otro jugador de la sala: él pasa a ser el admin y quien lo cede deja de serlo en el acto (solo hay
+-- un admin, `room.adminId`); todos lo ven en el siguiente room_update. Vale en la sala de espera y con la partida en marcha.
+on("give_admin", function(data, client, admin)
+    local room, tc = adminTarget(data, client, admin, 'srv.cant_admin_self')
+    if not room then return end
+    local target = players[tc]
+    room.adminId = target.id
+    announceToRoom(room, 'srv.new_host', { name = target.name }, 'admin')
+    broadcastRoomUpdate(room)
+    log(admin.name .. " cedio el admin de '" .. room.name .. "' a " .. target.name)
 end)
 
 on("ban_player", function(data, client, admin)

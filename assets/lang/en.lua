@@ -146,6 +146,10 @@ return {
         hint = "[ENTER] connect   [ESC] back",
         title = "ONLINE",
         enter_name = "Enter a player name.",
+        name_short = "The name needs at least 3 characters.",
+        name_long = "The name is too long.",
+        name_chars = "Letters, numbers, - and _ only (no spaces).",
+        name_blocked = "That name is not allowed.",
         failed = "Could not log in.",
     },
     err = {
@@ -200,6 +204,7 @@ return {
         join_hint = "[ENTER] Join   [ESC] Cancel",
     },
     room = {
+        give_admin = "GIVE ADMIN",
         kick = "KICK",
         ban = "BAN",
         not_ready = "NOT READY",
@@ -272,6 +277,8 @@ return {
         version = "Incompatible version. Update the game.",
         bad_name = "Invalid name.",
         name_taken = "That name is already in use.",
+        name_blocked = "That name is not allowed.",
+        cant_admin_self = "You are already the admin.",
         outdated = "Outdated version. Update the game.",
         already_in_room = "You're already in a room.",
         max_players = "Max players: 1-8.",

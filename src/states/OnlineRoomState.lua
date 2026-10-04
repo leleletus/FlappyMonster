@@ -27,11 +27,12 @@ local FOCUS_PLAYERS = 'players'
 local FOCUS_ACTIONS = 'actions'
 
 -- Opciones del menú de jugador
-local PMENU_KICK   = 1
-local PMENU_BAN    = 2
-local PMENU_CANCEL = 3
-local PMENU_LABELS = { 'room.kick', 'room.ban', 'hub.cancel' }   -- claves de idioma
-local PMENU_COLORS = { {1,0.65,0.1}, {1,0.25,0.25}, {0.55,0.55,0.55} }
+local PMENU_ADMIN  = 1     -- ceder el admin a ese jugador (quien lo cede deja de serlo)
+local PMENU_KICK   = 2
+local PMENU_BAN    = 3
+local PMENU_CANCEL = 4
+local PMENU_LABELS = { 'room.give_admin', 'room.kick', 'room.ban', 'hub.cancel' }   -- claves de idioma
+local PMENU_COLORS = { {1,0.85,0.25}, {1,0.65,0.1}, {1,0.25,0.25}, {0.55,0.55,0.55} }
 
 -- ── Enter ─────────────────────────────────────────────────────────────────────
 
@@ -285,7 +286,9 @@ end
 
 function OnlineRoomState:_executePmenu(players)
     local target = players[self.playerSel]
-    if self.pmenuSel == PMENU_KICK and target then
+    if self.pmenuSel == PMENU_ADMIN and target then
+        NC:send("give_admin", { playerId = target.id })
+    elseif self.pmenuSel == PMENU_KICK and target then
         NC:send("kick_player", { playerId = target.id })
     elseif self.pmenuSel == PMENU_BAN and target then
         NC:send("ban_player",  { playerId = target.id })

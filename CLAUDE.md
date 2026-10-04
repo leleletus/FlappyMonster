@@ -147,6 +147,16 @@ code, comments (Spanish), commits, docs or game text — those keep their usual 
   (sha256-checked), copies unchanged ones from the old slot, then
   `love.event.quit('restart')`. Files deleted from the repo can't be hidden if
   the INSTALLED build has them (only matters for directory scans).
+- **SWITCH, 3rd attempt (3.67.0; main.lua `BOOT` 3 → needs ONE reinstall on every device to take effect):** v1 looped
+  (download → restart → old version → download...), v2 cut the loop by BLOCKING updates on any device where `fs.mount`
+  fails (`nomount`) — so the Switch never updated again. Now a version that cannot be mounted is used by OVERLAY
+  (`overlay(v)` in main.lua, `UPDATE_MODE = 'mount' | 'overlay'`): nothing is mounted; `love.filesystem.read/getInfo/
+  lines/load/newFile/newFileData/getDirectoryItems` (union), the image / font / sound / thread loaders and `require`
+  (a `package.loaders` entry) look first in `update/slots/<v>/`. It only needs to READ the save dir. If even that fails
+  (the slot's version.txt can't be read) → back to the installed game + `nomount` as before (no loop). A device left
+  blocked by the old bootstrap is unblocked (`st.boot ~= BOOT` clears `nomount`). Harness `update_boot`: no_monta /
+  no_tapa now expect overlay (new module, new level file, directory union, 2nd boot the same), `ilegible`, `viejo`.
+  NOT verified on a real Switch — `update/boot.log` in the save dir says which mode was used.
 - Server `server/updates.lua`: publishes a snapshot of `git ls-files` (game.lua,
   input.lua, settings.lua, version.txt, src/, libs/, assets/) into
   `server/published/current/` ONLY when `version.txt` changes (checked at start
@@ -1859,6 +1869,20 @@ arenas as bonus nodes vs an expert BOT ✔. User's decisions: world map with a p
   Before/after: `FlappyMonster_pruebas/retema_costa/`. (3) VICTORY music was very quiet: the results screens used fixed
   volumes (0.6 / 0.4, tuned for the borrowed track) × 0.45 while counting; now they take the catalog volume (levels.py,
   victory target −14 LUFS effective) and duck to 60 %.
+- **Player NAMES (3.67.0)** — `src/network/NameFilter.lua`, shared by client and server: 3-14 characters, only
+  unaccented letters, digits, `-` and `_` (no spaces), at least one letter, and no blocked word. `NameFilter.check(name)`
+  → ok | false, 'short' | 'long' | 'chars' | 'blocked'; `typed(text)` strips what can't be typed (login field);
+  `isBlocked(text)` (also applied to ROOM names → default name). Words: `BLOCKED` (found INSIDE the name), `EXACT` (only
+  as the whole name or a token: short words that occur in innocent ones), `RESERVED` (admin, mod, server...), `ALLOWED`
+  (innocent words containing a blocked one). Before comparing, the name is NORMALISED: lower case, leetspeak (4→a 3→e
+  1→i 0→o 5→s 7→t), separators removed, repeated letters collapsed — "P_U_T_4", "puuuta", "PuT4" all match "puta".
+  To maintain: add the word in lower case, no accents, no doubled letters. The client validates before sending
+  (`login.name_short|long|chars|blocked`); the server validates again in `hello` (`srv.bad_name` / `srv.name_blocked`).
+  Harness `lang_names nombres` (33 bad / 32 good) and `online_smoke` (a disguised name is rejected by the server).
+- **Give admin (3.67.0)**: message `give_admin { playerId }` (server `adminTarget`: sender must be the admin, target in
+  the room, not self) → `room.adminId = target`, announce `srv.new_host`, `room_update` to everyone; works in any room
+  state. Client: first option of the player menu in the room ("DAR ADMIN" / "GIVE ADMIN", `PMENU_ADMIN`). No in-match
+  UI. `online_smoke` checks the round trip (client → bot → client).
 - Menu: Aventura → HISTORIA (`story_slots`) / ONLINE / JUEGO LIBRE (PRUEBAS) (`free_play` stays as the debug hub).
 - `src/story/Worlds.lua` = the story as DATA: ordered worlds `{ id, levels = {...}, boss }` (stage 7 order; every
   story level needs a FINISH — hunt-only levels have none). `Worlds.nodes(w)`, `levelName(id)`.
