@@ -40,7 +40,8 @@ function StoryFilmState:update(dt)
     if self.left then return end
     self.film:update(dt)
     -- (el dedo o el ratón, MIRANDO si siguen puestos: un clic suelto no la salta)
-    local down = #love.touch.getTouches() > 0 or love.mouse.isDown(1)
+    -- (en la Switch no existe el módulo del ratón; en algunos PC, tampoco el táctil)
+    local down = (love.touch ~= nil and #love.touch.getTouches() > 0) or (love.mouse ~= nil and love.mouse.isDown(1))
     for _, k in ipairs(KEYS) do if Input.down(k) then down = true end end
     if down then
         self.hold, self.hintT = self.hold + dt, HINT
