@@ -47,7 +47,7 @@
     { "id": "crab_tantrum_icy",    "name": "Crab Tantrum (Mega Crabby helado)",  "intro": "bosses/crab_tantrum_icy_intro.ogg", "loop": "bosses/crab_tantrum_icy_loop.ogg", "level": false, "boss": true, "volume": 0.70 },
     { "id": "crab_tantrum_gloomy", "name": "Crab Tantrum (Mega Crabby lúgubre)", "intro": "bosses/crab_tantrum_gloomy_intro.ogg", "loop": "bosses/crab_tantrum_gloomy_loop.ogg", "level": false, "boss": true, "volume": 0.79 },
     { "id": "snowball_boss",       "name": "La Gran Bola (Gran Bola de Nieve)",  "intro": "bosses/snowball_boss_intro.ogg", "loop": "bosses/snowball_boss_loop.ogg", "level": false, "boss": true, "volume": 0.75 },
-    { "id": "snowball_verity",     "name": "¿La Gran Bola? (Verity, huevo de Pascua)", "intro": "bosses/snowball_verity_intro.ogg", "loop": "bosses/snowball_verity_loop.ogg", "level": false, "boss": true, "volume": 0.74 },
+    { "id": "snowball_verity",     "name": "¿La Gran Bola? (Verity, huevo de Pascua)", "intro": "bosses/snowball_verity_intro.ogg", "loop": "bosses/snowball_verity_loop.ogg", "level": false, "boss": true, "volume": 0.75 },
     { "id": "mirror_boss",      "name": "El Espejo (jefe final)",      "intro": "bosses/mirror_boss_intro.ogg", "loop": "bosses/mirror_boss_loop.ogg", "level": false, "boss": true, "volume": 0.71 },
 
     { "id": "menus",         "name": "Menús",                         "file": "menus/menus.ogg",       "level": false, "volume": 0.93 },

@@ -23,7 +23,7 @@
 #   "equivocado" (Sol♭, el napolitano): el momento raro del huevo de Pascua; en la última vuelta del tema la caja de
 #   música canta por encima una voz en notas largas.
 #
-# Fa menor (el tono de la Bola) con la sensible Mi (de Verity). 150 BPM (entre las dos). Forma: INTRO 4 (caja de
+# Fa menor (el tono de la Bola) con la sensible Mi (de Verity). 150 BPM (entre las dos). Forma: INTRO 4 (3 de caja de música + el compás de VUELTA; suena una vez) · … · CODA 3 + VUELTA. Antes: INTRO 4 (caja de
 # música sola; suena una vez) · A 8 · A' 8 · B 8 · C 8 · K 8 · A'' 8 (+ contrapunto) · C' 8 · CODA 4 = bucle de 60
 # compases (96 s).
 #
@@ -77,24 +77,28 @@ CH_B = ['Bbm', 'Fm', 'Db', 'C', 'Bbm', 'Fm', 'Db', 'C']
 # el motivo reconocible; tiene que notarse que es una referencia". Suena tres veces: la caja de música sola en la
 # intro y, con todo, abriendo los dos estribillos (donde el riff de la Bola le contesta por debajo, en sus huecos)
 HOOK = ["0:F5/2 6:Ab5/2 8:F5/2 14:Ab5/2", "0:C6/2 2:Ab5/2 4:F5/2", "0:C6/2 4:Db6/2 8:C6/2 10:Ab5/2 14:G5/2", "14:Ab5/2"]
-T_C = HOOK + [
-       "0:F5/6 6:F6/2 8:C6/6 14:Ab5/2",                                    # … y sigue lo propio: su ritmo mecido con el salto de octava
-       "0:F6/2 2:F6/2 4:Eb6/2 6:Eb6/2 8:Db6/2 10:Db6/2 12:Ab5/4",
-       "0:Bb5/3 4:Bb5/3 8:C6/3 12:E6/4",                                   # sube a la sensible…
-       "0:F6/4 4:C6/4 8:F5/8"]                                             # … y resuelve
-CH_C = ['Fm', 'Fm', 'Db', 'C', 'Fm', 'Db', ['Bbm', 'C'], 'Fm']             # (los cuatro primeros: la armonía del gancho, i–i–♭VI–V)
+# … y su SEGUNDA MITAD (el usuario: "la muestra son dos"): la frase que le contesta en el piano eléctrico (sus compases
+# 10-13: tres corcheas de anacrusa, la nota larga con su bordadura, y cae a la tónica), sobre su armonía i–♭VI–V–i
+HOOK2 = ["0:F5/2 10:C6/2 12:Eb6/2 14:Eb6/2", "0:Db6/6 10:Db6/2 12:C6/2 14:Db6/2", "0:C6/8 12:G5/4", "0:F5/8"]
+T_C = HOOK + HOOK2                                                         # el ESTRIBILLO es la muestra entera (8 compases)
+CH_C = ['Fm', 'Fm', 'Db', 'C', 'Fm', 'Db', 'C', 'Fm']
 T_K = ["0:F5/8 8:Ab5/8", "0:C6/8 8:Ab5/2 10:G5/2 12:F5/4", "0:Gb5/8 8:Bb5/8", "0:C6/8 8:Db6/2 10:C6/2 12:G5/4",
        RIFF, "0:Ab5/3 4:Ab5/3 8:G5/2 10:Ab5/2 12:Db6/4", "0:Bb5/4 4:Gb5/4 8:Db5/8", "0:G5/3 4:G5/3 8:Ab5/2 10:G5/2 12:C6/4"]
 CH_K = ['Fm', 'Fm', 'Gb', 'C', 'Fm', 'Db', 'Gb', 'C']
 # el CONTRAPUNTO de la última vuelta del tema: la caja de música, en notas largas
 T_DESC = ["0:C5/8 8:Ab4/8", "0:F4/8 8:Ab4/8", "0:F4/8 8:Ab4/8", "0:G4/8 8:E4/8",
           "0:Ab4/8 8:C5/8", "0:C5/8 8:F5/8", "0:F5/8 8:E5/8", "0:F5/16"]
+# LA VUELTA: el MISMO compás (toda la banda, sobre la dominante) cierra la intro y cierra la coda, así lo que queda
+# sonando al empezar el bucle es igual venga de donde venga (antes la intro acababa con la caja de música sola y la
+# coda con la banda: el bucle arrancaba con la cola de las dos, y la intro "no cortaba limpio ni enlazaba")
+TURN = ["0:G5/3 4:G5/3 8:Ab5/2 10:G5/2 12:C6/2"]
 T_CODA = ["0:F6/2 2:F6/2 4:Eb6/2 6:Eb6/2 8:Db6/2 10:Db6/2 12:C6/4", "0:Ab5/3 4:Ab5/3 8:G5/2 10:Ab5/2 12:Db6/4",
-          "0:C6/2 2:Db6/2 4:C6/2 6:Db6/2 8:C6/2 10:Db6/2 12:C6/4", "0:G5/3 4:G5/3 8:G5/3 12:E5/4"]
-CH_CODA = ['Fm', 'Db', 'C', 'C']
-T_IN = HOOK
-CH_IN = ['Fm', 'Fm', 'Db', 'C']
-ORDER = ['IN', 'A', 'A2', 'B', 'C', 'K', 'A3', 'C2', 'CODA']
+          "0:C6/2 2:Db6/2 4:C6/2 6:Db6/2 8:C6/2 10:Db6/2 12:C6/4"]
+CH_CODA = ['Fm', 'Db', 'C']
+T_IN = HOOK[:3]
+CH_IN = ['Fm', 'Fm', 'Db']
+TURNS = ('T1', 'T2')
+ORDER = ['IN', 'T1', 'A', 'A2', 'B', 'C', 'K', 'A3', 'C2', 'CODA', 'T2']
 Q4 = {}
 
 
@@ -110,6 +114,7 @@ def song():
             chords.append((ch(c[0]), ch(c[1])) if isinstance(c, list) else (ch(c), ch(c)))
             tag.append(kind)
     section('IN', T_IN, CH_IN)
+    section('T1', TURN, ['C'])
     section('A', T_A + A_END, CH_A)
     section('A2', T_A + A_END2, CH_A)
     section('B', T_B, CH_B)
@@ -118,6 +123,7 @@ def song():
     section('A3', T_A + A_END2, CH_A, T_DESC)
     section('C2', T_C, CH_C)
     section('CODA', T_CODA, CH_CODA)
+    section('T2', TURN, ['C'])
     return mel, chords, tag, starts, desc
 
 
@@ -157,7 +163,7 @@ def copied(mel, tag):
     sample = ('IN', 'C', 'C2')                    # (los 4 primeros compases de estas secciones SON la muestra)
     first = {}
     for b, t in enumerate(tag, 1): first.setdefault(t, b)
-    return sorted(b for b, v in mine.items() if len(v) >= 3 and sig(v) in src and not (tag[b - 1] in sample and b - first[tag[b - 1]] < 4))
+    return sorted(b for b, v in mine.items() if len(v) >= 3 and sig(v) in src and not (tag[b - 1] in sample))
 
 
 WAVES = [wavetable([1.0, 0.0, 0.5, 0.12, 0.25, 0.0, 0.12]),     # 0 voz HUECA (armónicos impares: rara, de feria)
@@ -175,7 +181,7 @@ I_SHIM = {'vol': [6, 4, 2, 1], 'sus': 0, 'duty': 0.25}
 I_STAB = {'vol': [13, 11, 8, 5, 3, 2], 'sus': 1, 'duty': 0.25}
 I_ECHO = {'vol': [5, 5, 4, 3], 'sus': 2, 'duty': 0.5}
 SNARE_N, CRASH = [14, 10, 6, 3, 1], [14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
-THEME = ('A', 'A2', 'A3', 'CODA')
+THEME = ('A', 'A2', 'A3', 'CODA', 'T1', 'T2')
 CHORUS = ('C', 'C2')
 ROLL = (0, 0, 12, 0, 0, 0, 12, 7)                    # el bajo de la Bola: RUEDA en semicorcheas
 
@@ -226,7 +232,7 @@ def build(lufs=-10.5):
         last = (b + 1) in starts or b == NB
         # ── BAJO ──
         if kind == 'IN':
-            if k >= 3: bass(b, 0, 15.5, lo(r1), False)
+            if k >= 2: bass(b, 0, 15.5, lo(r1), False)
         elif kind == 'K':
             if k <= 4: bass(b, 0, 15.5, lo(r1), False)
             else: bass(b, 0, 3.5, lo(r1)); bass(b, 8, 3.5, lo(r2) + 7 - (12 if lo(r2) + 7 > 47 else 0))      # um-pa, a medio gas
@@ -273,8 +279,8 @@ def build(lufs=-10.5):
             sleigh = lambda: NZ['hat'].hit(t, 0, [5, 3, 1] if st % 2 == 0 else [2, 1])
             if kind == 'IN':
                 if st % 2 == 0: NZ['hat'].hit(t, 0, [5, 3, 1])
-                if k >= 3 and st in (0, 8): hit(kick, TN.KICK_DEEP, t, 0.9)
-                if k == 4 and st >= 4: snare(t, 0.3 + st * 0.04, [5 + st // 2, 4, 2])
+                if k >= 2 and st in (0, 8): hit(kick, TN.KICK_DEEP, t, 0.9)
+                if k == 3 and st >= 8: snare(t, 0.3 + st * 0.04, [5 + st // 2, 4, 2])
             elif kind == 'K':                                  # respiro: cascabeles; del 5º compás, bombo y timbales que vuelven
                 if st % 2 == 0: NZ['hat'].hit(t, 0, [5, 3, 1])
                 if k >= 5 and st in (0, 8): hit(kick, TN.KICK_DEEP, t, 0.9)
@@ -293,8 +299,8 @@ def build(lufs=-10.5):
                 else: sleigh()
             if last and kind not in ('IN', 'K') and st >= 12:                      # entrada a la sección siguiente
                 snare(t, 0.6 + (st - 12) * 0.1, [9 + (st - 12), 5, 2]); hit(tom, W.TOMS[min(2, st - 12)], t, 0.7)
-            if st == 0 and b > INTRO and (k == 1 and kind not in ('B', 'K') or (kind in CHORUS and k % 2 == 1)
-                                          or (kind in THEME and (k - 1) % 4 == 0)): NZ['crash'].hit(t, 3, CRASH)
+            if st == 0 and (kind in TURNS or (b > INTRO and (k == 1 and kind not in ('B', 'K') or (kind in CHORUS and k % 2 == 1)
+                                                      or (kind in THEME and (k - 1) % 4 == 0)))): NZ['crash'].hit(t, 3, CRASH)
         if kind in ('IN', 'K') and last:                       # subida de ruido hacia el tema
             n_ = int(BAR * 60)
             for i_ in range(n_):
@@ -317,7 +323,9 @@ def build(lufs=-10.5):
         'hat': cut(F.tnd_dac(NZ['hat'].render() / 22638.0 * 12)),
         'crash': cut(F.tnd_dac(NZ['crash'].render() / 22638.0 * 12)) + cut(F.tnd_dac(NZ['fx'].render() / 22638.0 * 12)),
     }
-    S = {k_: GN.fold(v, n, n_i) for k_, v in S.items()}
+    # (SIN doblar la cola sobre el principio del bucle: el compás de vuelta es el mismo en la intro y en la coda, así que
+    # la cola que hace falta ya está ahí — la de la intro —; doblar la de la coda la pondría dos veces)
+    S = {k_: v[:n].copy() for k_, v in S.items()}
     S['bell'] = GN.delay(S['bell'], 3 * S16, 0.25, 2, 3200)[:len(S['bell'])]
     # (niveles respecto a la voz; el acompañamiento ya va alto para que en el juego no se quede sola la melodía)
     LV = {'lead': 0, 'bell': -2, 'dbl': -8, 'echo': -12, 'choir': -7, 'stabs': -7, 'ice': -7, 'shim': -10,
@@ -328,8 +336,8 @@ def build(lufs=-10.5):
     x = sosfilt(butter(1, 30, btype='high', fs=SR, output='sos'), x)
     side = S['ice'] * g['ice'] * 0.5 + S['shim'] * g['shim'] * 0.5 + S['choir'] * g['choir'] * 0.4 - S['echo'] * g['echo'] * 0.6 + S['hat'] * g['hat'] * 0.3
     # dinámica por secciones (dB): B más ligera, el respiro abajo y creciendo, el último estribillo arriba
-    DYN = {'IN': (-4, -2), 'A': (0, 0), 'A2': (0.3, 0.3), 'B': (-1.5, -0.5), 'C': (1, 1), 'K': (-6, -2.5), 'A3': (0.8, 0.8),
-           'C2': (1.8, 1.8), 'CODA': (1.5, 1.5)}
+    DYN = {'IN': (-4, -2.5), 'T1': (1.2, 1.2), 'T2': (1.2, 1.2), 'A': (0, 0), 'A2': (0.3, 0.3), 'B': (-1.5, -0.5), 'C': (1, 1), 'K': (-6, -2.5), 'A3': (0.8, 0.8),
+           'C2': (1.8, 1.8), 'CODA': (1.5, 1.2)}
     env = np.ones(len(x))
     for b in range(1, NB + 1):
         a_, e_ = DYN[tag[b - 1]]
@@ -346,6 +354,30 @@ def build(lufs=-10.5):
     print(f'  {BPM} BPM, intro {INTRO} + bucle {NB - INTRO} compases ({(NB - INTRO) * BAR:.1f} s); melodía {len(mel)} notas; batería {100 * drums:.0f} % de la energía')
     print(f'  notas largas fuera del acorde: {bad or "ninguna"} · fuera de la escala: {out or "ninguna"}')
     print(f'  compases iguales a uno de las fuentes, fuera de la muestra (ritmo + intervalos): {copied(mel, tag) or "ninguno"}')
+    # ── ¿enlaza? el compás de vuelta de la intro y el de la coda tienen que ser el mismo sonido, y secciones parejas ──
+    nb = int(BAR * SR)
+    a_, c_ = y[n_i - nb:n_i], y[n - nb:n]
+    half = nb // 2
+    # (se comparan los ESPECTROS por tramos, no las muestras: el ruido y la fase de los osciladores no se repiten)
+    def spec(v):
+        v = v.mean(1) if v.ndim == 2 else v
+        fr = [np.abs(np.fft.rfft(v[i:i + 4096] * np.hanning(4096))) for i in range(0, len(v) - 4096, 2048)]
+        m = np.array(fr)
+        edges = np.geomspace(4, m.shape[1] - 1, 13).astype(int)
+        return np.array([[np.sqrt(np.mean(r[e0:e1] ** 2)) for e0, e1 in zip(edges, edges[1:])] for r in m])
+    sa, sc = spec(a_[half:]), spec(c_[half:])
+    diff = np.mean(np.abs(20 * np.log10((sa + 1e-4) / (sc + 1e-4))))
+    lvl = 10 * np.log10(np.mean(a_[half:] ** 2) / np.mean(c_[half:] ** 2))
+    print(f'  vuelta: 2ª mitad del último compás, intro frente a coda: nivel {lvl:+.1f} dB, espectro por bandas a {diff:.1f} dB de media')
+    ref = None
+    line = []
+    for i_, kind in enumerate(ORDER):
+        b0 = starts[i_]; b1 = (starts[i_ + 1] if i_ + 1 < len(starts) else NB + 1)
+        seg = y[int((b0 - 1) * BAR * SR):int((b1 - 1) * BAR * SR)]
+        db = 10 * np.log10(np.mean(seg ** 2) + 1e-12)
+        if kind == 'A': ref = db
+        line.append((kind, db))
+    print('  secciones (dB respecto a A): ' + ' · '.join(f'{k_} {d_ - ref:+.1f}' for k_, d_ in line))
     return y, mel, n_i
 
 

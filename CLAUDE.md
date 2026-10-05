@@ -1553,6 +1553,14 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   HOOK (its bars 1-4, over i–i–♭VI–V) is now quoted literally in F minor (`HOOK`): music box alone in the intro and
   opening both choruses (loop file 0:38 and 1:17), the Ball's riff answering below in its gaps. Reinterpreting it only
   was not recognizable — when the user names a motif as the reference, quote it.
+  3.71.2: (a) the sample has TWO halves (user) — the chorus is now the whole thing, 8 bars: the hook + the e-piano's
+  answering phrase (`HOOK2`, its bars 10-13: three-8th pickup, long note with its neighbour, fall to the tonic; i–♭VI–V–i).
+  (b) INTRO → LOOP: the intro ended with the music box alone and the coda with the band, and the coda's tail was folded
+  onto the loop start, so the loop began with BOTH tails and the intro "didn't cut clean". Now ONE turnaround bar
+  (`TURN`, full band on the dominant) closes both the intro (3 music-box bars + it) and the coda, and nothing is folded:
+  the tail at the loop start is the same wherever you come from (measured: same level, band spectra within 1.4 dB).
+  RULE for intro + loop tracks whose intro ends differently from the loop's end: give both the same last bar and skip
+  `GN.fold`. The generator prints the turnaround comparison and every section's level against A.
 - **Rey Gummy** (`types/megagummy.lua`, "Rey Gummy", `boss.megagummy` = REY GUMMY / GUMMY KING): the Gummy's
   16x16 sprite at scale 10 (`MS`) with brows + a gold crown (crown = separate `crown.png` on the same grid, drawn
   over the body so it can fly off). Art `assets/images/bosses/megagummy/` from `tools/ui/make_gummy_variants.py
