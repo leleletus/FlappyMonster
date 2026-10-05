@@ -2438,6 +2438,13 @@ Low-level notes (for writing NEW harnesses):
   lighter) · C (chorus) · K (breather: music box, the bass brings the cell, drums return) · A'' (+ counterpoint) · B ·
   C' (full) · coda 4 = 68-bar loop (87.7 s). Section dynamics drawn (`DYN`). `crab_tantrum.py icy` no longer generates
   it (it only does normal and gloomy).
+- `crab_tantrum_icy` 3.72.0 (user's verdict on v3: the theme is GOOD; only "make the 1:48 phrase and the music-box /
+  Christmas motif sound more like the real reference, recognizable, without changing anything else"): section B (both
+  passes) is the 1:48 phrase of Winter Fallympics as is (bars 85-92; chords Dm · Gm F · B♭ · C · Dm · C · Gm · C) instead
+  of its inverted gesture (`T_B_OLD` kept), and the Christmas motif is literal on the music box (`MOTIF`, quarter notes
+  over B♭ B♭ C C) in the intro and in the first 4 bars of the breather K. Theme A, chorus, counterpoint, arrangement,
+  form and mix untouched. Same lesson as Verity: a motif the user calls a reference must be QUOTED somewhere, even in
+  a piece that otherwise develops it. Loop times: B 0:21 / 1:02, breather 0:41. OST video not re-rendered.
 - 3.66.2 (accents of `evil_ship_boss` and `snowball_boss`): they were "very loud, as if they were the main melody" and
   out of harmony — a wailing siren (±2 semitones of vibrato) and a low "laugh" with a pitch drop. Now both are a quiet
   ACCOMPANIMENT made only of CHORD TONES, no bends (`I_SOFTACC`): the ship alternates fifth and root in 8ths; the
