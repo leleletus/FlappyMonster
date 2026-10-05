@@ -297,11 +297,16 @@ BOSS_ART = {
     'final':     {'img': 'assets/images/bosses/mirror/Body_ArmsDown.png', 'over': 'assets/images/bosses/mirror/Head_Down.png', 'invert': True},
 }
 
+# Jefes de MITAD de isla (un nivel normal con jefe: no tiene castillo): se dibujan junto a SU nodo
+NODE_BOSS = {
+    'nieve': {'lago_helado': {'img': 'assets/images/bosses/snowboss/body-Sheet.png', 'fw': 16}},
+}
+
 data = {
     'cell': 32, 'w': W, 'h': H,
     'rows': [''.join(r) for r in grid],
     'heights': [''.join(str(v) for v in r) for r in hgt],
-    'worlds': [{'id': k, 'path': [list(p) for p in SPATHS[k]], 'boss': BOSS_ART[k], 'bonus': [list(p) for p in SBONUS[k]]} for k in ORDER],
+    'worlds': [{'id': k, 'path': [list(p) for p in SPATHS[k]], 'boss': BOSS_ART[k], 'nodeBoss': NODE_BOSS.get(k, {}), 'bonus': [list(p) for p in SBONUS[k]]} for k in ORDER],
     'connect': [[list(p) for p in c] for c in SCONNECT],
     'decos': decos, 'critters': critters,
 }

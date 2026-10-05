@@ -100,6 +100,7 @@ local HIT_BALL   = { 1, 620, -360, 0.22, 0 }       -- bola de nieve: empujón fu
 local HIT_ICICLE = { 2, 320, -280, 0.12, 0 }       -- carámbano en la cabeza
 local HIT_WAVE   = { 1, 1000, -560, 0.30, 0.35 }   -- ola de nieve del gran golpe
 local HIT_SLAM   = { 1, 1350, -700, 0.38, 0.55 }   -- onda del aterrizaje del gran golpe: MUY fuerte
+local HIT_SPLASH = { 1, 760, -900, 0.32, 0.4 }     -- cae al agua: la ola echa de la charca a quien esté dentro
 local SLAM_R     = 3.5                  -- casillas (además del medio cuerpo) que alcanza la onda
 local DEATH = { dying_crack = true, dying_burst = true, dying_flee = true }
 local CRACK_T, BURST_T, FLEE_T = 2.0, 0.6, 3.2
@@ -638,12 +639,41 @@ function Snow:checkSoak(level)
             level:crackIce(cr[1], cr[2], 4, 'pound')
         end
     end
+    -- EL CHAPUZÓN PEGA (antes no: quedarse en el agua era un sitio seguro — la bola caía, no hacía daño y se
+    -- quedaba empapada y a tiro; se podía repetir toda la pelea): aplasta a quien pille debajo y la ola echa de
+    -- la charca, con 1 de vida, a todo el que esté nadando en ella
+    -- (primero la ola: a un nadador no se le aplasta, se le echa)
+    local x0, x1 = self:poolSpan(level)
+    for _, pa in ipairs(level.players or {}) do
+        if pa.x >= x0 - 8 and pa.x <= x1 + 8 and level:liquidAt(pa.x, pa.y) then
+            if strike(pa, HIT_SPLASH, (pa.x >= self.x) and 1 or -1) then self.splashed = pa.vy end
+        end
+    end
+    self:hitPlayers(level, true)
     Sound.play('waterSplash', 0.7)
     Sound.play('snowDizzy', 0.9)
     Entity.emitFx('snow_puff', self.x, self:feetY() - 20)
     Entity.emitFx('shake_small', self.x, self.y)
 end
 function Snow:inWater(level) return level:liquidAt(self.x, self:feetY() - 8) ~= nil end
+
+-- La CHARCA en la que está: de dónde a dónde llega el agua a su altura (x0, x1)
+function Snow:poolSpan(level)
+    local y = self:feetY() - 8
+    local x0, x1 = self.x, self.x
+    for _ = 1, 48 do if level:liquidAt(x0 - 16, y) then x0 = x0 - 16 else break end end
+    for _ = 1, 48 do if level:liquidAt(x1 + 16, y) then x1 = x1 + 16 else break end end
+    return x0, x1
+end
+
+-- El chorro de un Congelador TOCA EL AGUA en (x, y) (types/cryo.lua lo avisa). En la FASE 3 basta con que la bola
+-- esté en esa agua para congelarse: ya no hay que tenerla justo debajo del chorro (el usuario: pedía una puntería
+-- innecesaria). En las otras fases sigue haciendo falta que el chorro le dé.
+function Snow:onChilledWater(level, x, y, t)
+    if (self.phase or 1) < 3 or not self:inWater(level) or not self:canFreeze() then return end
+    local x0, x1 = self:poolSpan(level)
+    if x >= x0 - 20 and x <= x1 + 20 then self:freeze(t) end
+end
 
 -- ── Pelea ─────────────────────────────────────────────────────────────────────
 function Snow:onFightStart(n)
@@ -782,6 +812,8 @@ function Snow:nextAttack(level)
     local cyc = CYCLE[self.phase]
     self.cycleI = self.cycleI % #cyc + 1
     local a = cyc[self.cycleI]
+    -- (contra alguien que está NADANDO no salta ni se deja caer encima — acabaría en el agua —: le escupe bolas)
+    if pa and level:liquidAt(pa.x, pa.y) and (a == 'hop' or a == 'leap' or a == 'slam') then a = 'shoot' end
     self.dir = (pa and pa.x < self.x) and -1 or 1
     self.facing = self.dir
     if a == 'hop' then
@@ -888,7 +920,13 @@ end
 local VULN = { dizzy = true, frozen = true, soaked = true }
 function Snow:isActive() return Boss.isActive(self) and not DEATH[self.state] end
 function Snow:isDying() return DEATH[self.state] == true or Boss.isDying(self) end
-function Snow:isVulnerable() return self:isActive() and VULN[self.state] == true end
+-- FASE 3 (el usuario: que sea distinta y obligue a usar el Congelador): ni mareada ni empapada se la puede golpear;
+-- solo CONGELADA
+function Snow:isVulnerable()
+    if not self:isActive() then return false end
+    if (self.phase or 1) >= 3 then return self.state == 'frozen' end
+    return VULN[self.state] == true
+end
 function Snow:releasesZone() return self.state == 'dying_flee' or self.state == 'dead' end
 
 function Snow:stomp()
@@ -1246,7 +1284,8 @@ function Snow:crash(level, def)
         return
     end
     self:stopRoll()
-    if speed >= CRASH_SPD and (self.rollRun or 0) >= CRASH_RUN * T then
+    -- (en la fase 3 NO se marea al chocar: rebota y sigue; ahí solo vale congelarla)
+    if (self.phase or 1) < 3 and speed >= CRASH_SPD and (self.rollRun or 0) >= CRASH_RUN * T then
         self.vx = -self.dir * 140
         self.vy = -380
         self.dizzyFor = DIZZY_T
@@ -1749,13 +1788,14 @@ return {
     name = 'snowboss', label = 'Gran Bola de Nieve', category = 'Jefes',
     description = 'Jefe de hielo en 3 fases que la encogen: rueda, escupe bolas, salta a las plataformas y da '
                .. 'un gran golpe. Solo se le daña MAREADA (choca rodando contra una pared o le cae un carámbano), '
-               .. 'EMPAPADA (cae al agua del lago) o CONGELADA (empapada + chorro de un Congelador).',
+               .. 'EMPAPADA (cae al agua del lago) o CONGELADA (en el agua + un Congelador). En la FASE 3 solo CONGELADA: '
+               .. 'no se marea al chocar y basta con que el chorro toque el agua en la que está.',
     class = Snow,
     boss = { title = 'GRAN BOLA DE NIEVE' },
     xtraStrip = { 'icicles' },          -- (Xtra extremo: los carámbanos del techo son de UNA bola, no de las dos)
     hide = Boss.HIDE,
     defaults = { points = 30 },
-    props = Boss.props({ hp = 14, hpPerPlayer = 4 }, {
+    props = Boss.props({ hp = 13, hpPerPlayer = 4 }, {       -- (13: uno menos desde que en la fase 3 solo vale congelarla)
         { key='phase2', kind='number', label='Fase 2 con vida ≤', group=G, default=0.66,
           min=0.1, max=0.95, step=0.01, help='Fracción de vida: encoge, salta a las plataformas y salen los carámbanos' },
         { key='phase3', kind='number', label='Fase 3 con vida ≤', group=G, default=0.33,

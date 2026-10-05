@@ -8,7 +8,11 @@
 --   ola           la ola de nieve del gran golpe: -1 y empujón hacia donde va la ola
 --   onda_golpe    al aterrizar el gran golpe: cerca y a ras de suelo -1 y empujón MUY
 --                 fuerte hacia fuera (y aturdido); lejos o en lo alto, nada
---   rueda_pared   rodando contra la pared: fase 1 mareada al primer choque, fase 2 tras 1
+--   agua_trampa   quedarse en el agua NO es un sitio seguro: al caer la bola en la charca, quien nada en ella
+--                 pierde 1 de vida y sale despedido; y a un nadador no le salta encima: le escupe bolas
+--   fase3_hielo   fase 3: empapada NO es vulnerable (solo congelada) y se congela con que el chorro toque el
+--                 agua de SU charca, aunque no le dé; en la fase 2, no
+--   rueda_pared   rodando contra la pared: fase 1 mareada al primer choque, fase 2 tras 1 (fase 3: no se marea)
 --                 rebote, fase 3 tras 2
 --   rueda_escalon rodando contra un escalón de 1 casilla: se estampa (no lo sube)
 --   rueda_activa  rodando contra un Activador ON/OFF lo cambia
@@ -291,7 +295,8 @@ function cases.rueda_pared()
             if boss.state ~= 'windup' and boss.state ~= 'roll' and boss.state ~= 'slide' then break end
         end
         out[#out + 1] = ('fase %d: %s tras %d choques'):format(ph, boss.state, boss.crashes or 0)
-        if boss.state ~= 'dizzy' or (boss.crashes or 0) ~= ph then ok = false end
+        -- (fases 1 y 2: mareada en su último choque; FASE 3: choca las mismas veces pero NO se marea)
+        if (boss.state == 'dizzy') ~= (ph < 3) or (boss.crashes or 0) ~= ph then ok = false end
     end
     check('rueda_pared', ok, table.concat(out, ' · '))
 end
@@ -522,6 +527,64 @@ function cases.congelada()
             tostring(soaked), tostring(frozen or false), hp0, boss.hp))
 end
 
+function cases.agua_trampa()
+    local level, es, boss = lago()
+    fight(boss)
+    boss:findLake(level)
+    putBoss(boss, 80)
+    for c = 79, 81 do level:crackIce(c, 13, 4, 'pound') end
+    -- un jugador nadando en esa charca, a un lado de donde cae
+    local pa = PlayerAdventure:new((81 - 0.5) * T + 20, 13 * T + 40)
+    level.players = { pa }
+    local wet = level:liquidAt(pa.x, pa.y) ~= nil
+    local hp0, vy = pa.hp, 0
+    local soaked = step(level, es, 1.5, function()
+        return boss.state == 'soaked'
+    end)
+    vy = boss.splashed or 0
+    local hurt = pa.hp == hp0 - 1
+    -- y a un nadador no le salta encima (fase 2: su ciclo empieza con el SALTO): dispara
+    local level2, es2, boss2 = lago()
+    fight(boss2)
+    boss2:findLake(level2)
+    boss2.phase = 2; boss2:setScale(boss2.SC[2])
+    putBoss(boss2, 88)
+    step(level2, es2, 0.6)
+    for c = 79, 81 do level2:crackIce(c, 13, 4, 'pound') end
+    local pb = PlayerAdventure:new((80 - 0.5) * T, 13 * T + 40)
+    level2.players = { pb }
+    boss2.cycleI, boss2.streak, boss2.state = 0, 0, 'idle'
+    local first = ({ 'leap' })[1]
+    boss2:nextAttack(level2)
+    check('agua_trampa', wet and soaked == true and hurt and vy < -400 and boss2.state == 'shoot',
+        ('nadando=%s · la bola cae al agua (empapada=%s): vida %d→%d, sale despedido vy=%d · a un nadador le toca "%s": hace %s'):format(
+            tostring(wet), tostring(soaked), hp0, pa.hp, vy, first, boss2.state))
+end
+
+function cases.fase3_hielo()
+    local out, ok = {}, true
+    for _, ph in ipairs({ 2, 3 }) do
+        local level, es, boss = lago()
+        fight(boss)
+        boss:findLake(level)
+        boss.phase = ph; boss:setScale(boss.SC[ph])
+        putBoss(boss, 80)
+        for c = 79, 81 do level:crackIce(c, 13, 4, 'pound') end
+        local soaked = step(level, es, 1.5, function() return boss.state == 'soaked' end)
+        local vulnWet = boss:isVulnerable()
+        -- el chorro toca el agua en el borde de la charca, lejos de su cuerpo
+        local x0 = boss:poolSpan(level)
+        boss:onChilledWater(level, x0, boss:feetY() - 8, 3)
+        local frozen = boss.state == 'frozen'
+        local vulnIce = boss:isVulnerable()
+        out[#out + 1] = ('fase %d: empapada=%s vulnerable=%s · chorro en su agua → congelada=%s%s'):format(
+            ph, tostring(soaked), tostring(vulnWet), tostring(frozen), frozen and (' vulnerable=' .. tostring(vulnIce)) or '')
+        if ph == 2 and not (soaked == true and vulnWet and not frozen) then ok = false end
+        if ph == 3 and not (soaked == true and not vulnWet and frozen and vulnIce) then ok = false end
+    end
+    check('fase3_hielo', ok, table.concat(out, ' · '))
+end
+
 function cases.seca_aturdida()
     local level, es, boss = room(20, 10, nil, { { type = 'snowboss', col = 8, row = 9 } })
     fight(boss)
@@ -540,7 +603,7 @@ function cases.encoge()
     fight(boss)
     local sc = { boss.sc }
     local grew
-    boss.hp, boss.hpMax = 9, 14
+    boss.hp, boss.hpMax = 8, 13
     boss:phaseNow()
     for _ = 1, 150 do boss:update(1 / 60, level) end
     sc[#sc + 1] = boss.sc
@@ -576,7 +639,7 @@ end
 function cases.carambano_fase3()
     local level, es, boss = room(30, 12, nil, { { type = 'snowboss', col = 15, row = 11 } })
     fight(boss)
-    boss.hp, boss.hpMax = 9, 14
+    boss.hp, boss.hpMax = 8, 13
     boss:phaseNow()
     for _ = 1, 200 do boss:update(1 / 60, level) end           -- fase 2: crecen
     local list = boss:icicleList()
@@ -602,6 +665,7 @@ function love.load(arg)
                          'rueda_pared', 'rueda_escalon', 'rueda_activa', 'rueda_rompe', 'rueda_nieve', 'rueda_fin',
                          'salto_plataforma', 'salto_debajo', 'empapada', 'romper', 'bola_plataforma', 'salto_bajar',
                          'risa', 'descansa', 'fase3_aparece', 'congelada', 'congelada_saliendo', 'carambano_fase3',
+                         'agua_trampa', 'fase3_hielo',
                          'seca_aturdida', 'encoge' }) do
         if not only or only == n then
             local ok, err = pcall(cases[n])

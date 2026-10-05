@@ -65,7 +65,7 @@ function love.load()
     local mirror = boss.def.name == 'mirror'
     local VULN = { stuck = true, recover = mirror }
     local snow = boss.def.name == 'snowboss'
-    if snow then VULN = { dizzy = true, frozen = true, soaked = true } end
+    if snow then VULN = { dizzy = true, frozen = true, soaked = true } end      -- (fase 3: solo congelada; lo decide isVulnerable)
     local king = boss.def.name == 'megagummy'
     if king then VULN = { dazed = true } end
     local kg = { phases = {}, maxGuards = 0, flopOff = {}, waveHits = 0, partHits = 0, lastPartT = -9 }
@@ -217,7 +217,7 @@ function love.load()
             end
             if VULN[boss.state] and not waitFreeze and not (mirror and ((boss.chainLeft or 1) > 1 or t - (lastHitT or -99) < 10)) then
                 if mirror then lastHitT = t end
-                attack = { t0 = t, n = 0, kind = (attacksDone % 2 == 0) and 'stomp' or 'pound' } end
+                attack = { t0 = t, n = 0, kind = (attacksDone % 2 == 0 and not (snow and boss.state == 'frozen')) and 'stomp' or 'pound' } end       -- (congelada: siempre ground pound, que vale 3)
         end
         -- Gran Bola de Nieve: el jugador juega como se espera (ver la cabecera) y se registra
         if snow and z.state == 'fight' then
@@ -359,7 +359,7 @@ function love.load()
                 pa.hurtT = 0
                 Entities.interactions.run(pa, ents, {})
                 print(('%6.1fs     %s #%d al jefe (%s): hp %d -> %d'):format(t, attack.kind, attack.n + 1, boss.state, hp0, boss.hp))
-                if snow and lastState == 'frozen' and attack.kind == 'pound' and boss.hp > 0 then sn.frozenHits[#sn.frozenHits + 1] = hp0 - boss.hp end
+                if snow and lastState == 'frozen' and attack.kind == 'pound' and hp0 >= 3 then sn.frozenHits[#sn.frozenHits + 1] = hp0 - boss.hp end
                 attack.n = attack.n + 1
                 if attack.n == 2 then attacksDone = attacksDone + 1; attack = nil end
             end

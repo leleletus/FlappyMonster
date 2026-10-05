@@ -200,6 +200,19 @@ function Cryo:updateCustom(dt, level)
                     e:freeze(p.freezeTime or 3)
                 end
             end
+            -- El chorro que TOCA AGUA la enfría: se avisa a quien le importe (`e:onChilledWater(level, x, y, t)`;
+            -- la Gran Bola de Nieve en su fase 3 se congela con estar en esa agua, sin que el chorro le dé)
+            local nx, ny = self:nozzle()
+            local dx, dy = self:dirVec()
+            for d = tail, head, 24 do
+                local wx, wy = nx + dx * d, ny + dy * d
+                if level:liquidAt(wx, wy) then
+                    for _, e in ipairs(level.liveEntities or {}) do
+                        if e ~= self and e.alive and e.onChilledWater then e:onChilledWater(level, wx, wy, p.freezeTime or 3) end
+                    end
+                    break
+                end
+            end
         end
         if self.deadTimer >= (p.burst or 0.8) + self.reach / STREAM_SPEED + 0.05 then
             self.state, self.deadTimer = 'idle', 0

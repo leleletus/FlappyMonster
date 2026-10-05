@@ -1524,6 +1524,17 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   freeze it soaked), `online_boss LEVEL=tools/tests/online_boss/nieve_fases.json` (3 HP: the client sees
   scales 10/8/6, zone phase 3, icicles, Activadores and Freezers only in phase 3), `snowboss_look`
   (`snow_arena.png` per phase), `boss_intro`.
+- **Snowball Boss, 3.70.0 (user's report: water exploit + final phase)**: hp 13 (was 14; phase 2 at ≤ 8, phase 3 at
+  ≤ 4 → 1-2 freeze cycles). (1) WATER IS NOT A SAFE SPOT: when the ball falls into a pool (`checkSoak`) everyone
+  swimming in THAT pool (`Snow:poolSpan`) takes `HIT_SPLASH` (1 HP, thrown up and out) before the crush check, and a
+  target that is swimming never gets a hop / leap / slam — `nextAttack` turns it into 'shoot' (the exploit: wait in
+  the water, the ball jumps in harmlessly, is soaked = hittable, repeat). (2) PHASE 3 = ONLY FROZEN is vulnerable
+  (`isVulnerable`): soaked is not, and wall crashes no longer daze it (`crash` → 'recover'); the freezing mechanic is
+  the only way. (3) Freezing needs no aim in phase 3: the Freezer's stream reports where it touches water (cryo.lua,
+  every 24 px of the stream → `e:onChilledWater(level, x, y, t)` on any entity that has it, a generic hook) and the
+  ball freezes if it is in that pool. Phases 1-2 keep the old rule (stream on the body). Map: mid-island bosses
+  stand beside their node until beaten (`overworld.json worlds[i].nodeBoss[levelId]` = art, `make_overworld.py`
+  `NODE_BOSS`; `StoryMapState:_drawNodes`). Harness `snowboss_rules` agua_trampa / fase3_hielo.
 - **Rey Gummy** (`types/megagummy.lua`, "Rey Gummy", `boss.megagummy` = REY GUMMY / GUMMY KING): the Gummy's
   16x16 sprite at scale 10 (`MS`) with brows + a gold crown (crown = separate `crown.png` on the same grid, drawn
   over the body so it can fly off). Art `assets/images/bosses/megagummy/` from `tools/ui/make_gummy_variants.py

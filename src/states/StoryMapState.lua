@@ -842,6 +842,14 @@ function StoryMapState:_drawNodes(cx, cy)
                     love.graphics.setColor(1, 1, 1, 1)
                     local fi = (st == 'done') and 3 or (st == 'open') and (node.bonus and 4 or 2) or 1
                     love.graphics.draw(nodeImg, frameQ(nodeImg, 8, fi), x - 16, y - 16, 0, 4, 4)
+                    -- (jefe de MITAD de isla — la Gran Bola de Nieve —: no tiene castillo, va junto a su nodo hasta
+                    -- vencerlo; overworld.json `nodeBoss`. En las cinemáticas lo dibuja la película: K.drawExtras)
+                    local nb = loadMap().worlds[w].def.nodeBoss
+                    local art = nb and nb[node.id]
+                    if art and not self.filmBoss and (st ~= 'done' or self.showBosses) then
+                        self:_drawBossArt(art, x + 44, y + 14, w, 1)
+                        love.graphics.setColor(1, 1, 1, 1)
+                    end
                 end
                 if w == self.world and k == self.node then
                     local p = 4 + math.floor(math.abs(math.sin(self.t * 5)) * 3)
