@@ -3,7 +3,13 @@
 --   (sin BUILD) comprueba que cada grafo existe y está al día con su nivel (firma) y JUEGA, sin ventana:
 --     sola   el bot llega a la zona que más da y se queda (% del tiempo dentro, tras llegar)
 --     caza   con un "jugador" quieto dentro de la zona: el bot va a por él y lo saca a ground pounds
---            (cuántas veces lo empuja en SECS s)
+--            (cuántas veces lo empuja en SECS s); sobre suelo ROMPIBLE no ataca (lo rompería): se queda en la zona;
+--            con Activadores ON/OFF cuenta también las veces que le quita el suelo pulsándolo
+--     cebo   con un "jugador" quieto FUERA de las zonas, cerca: el bot NO deja su zona para ir a por él (puntuar
+--            es lo primero): dentro ≥ 80 % del tiempo tras llegar
+--     agua   (niveles con inundación, que aquí sube y baja como en el juego) no se vuelve loco: dentro del agua
+--            pulsa el salto menos de 1,2 veces por segundo de media (nadar sí; aporrear el botón sin salir, no)
+--     datos  en estos niveles TODOS los enemigos reaparecen y dan el 40 % de sus puntos (15 → 6, 10 → 4)
 --   tools/tests/run.sh bot_nav [BUILD=1] [-- assets/levels/a.json ...]   (sin niveles: las arenas de los bonus)
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
@@ -18,9 +24,11 @@ local PlayerAdventure = require 'src/entities/PlayerAdventure'
 local Entities = require 'src/world/Entities'
 local Interactions = require 'src/world/entities/Interactions'
 local PointAreas = require 'src/world/PointAreas'
+local Floods = require 'src/world/Floods'
+local EntityTypes = require 'src/world/entities/EntityTypes'
 local SECS = tonumber(os.getenv('SECS')) or 40
 
-local function play(level, nav, withTarget)
+local function play(level, nav, withTarget, lure)
     local sx, sy = level:getSpawnPx()
     local bpa = PlayerAdventure:new(sx + TILE_PX, sy)
     bpa.spawnX, bpa.spawnY = bpa.x, bpa.y
@@ -37,9 +45,32 @@ local function play(level, nav, withTarget)
         local zn = {}
         for id in pairs(best._nodes or {}) do zn[#zn + 1] = nav.nodes[id] end
         table.sort(zn, function(a, b) return math.abs(a.x - (best.x0 + best.x1) / 2) < math.abs(b.x - (best.x0 + best.x1) / 2) end)
-        tgt = PlayerAdventure:new(zn[1].x, zn[1].y)
-        tgt.spawnX, tgt.spawnY = tgt.x, tgt.y
+        local at = zn[1]
+        if lure then
+            -- el CEBO: fuera de toda zona, en una casilla a la que el bot sabe ir, a 3-7 casillas de la suya
+            local bd
+            at = nil
+            for id, n in pairs(nav.nodes) do
+                local out = true
+                for _, a in ipairs(level.pointAreas) do if PointAreas.inside(a, n.x, n.y) then out = false end end
+                local d = math.abs(n.x - zn[1].x) / TILE_PX + math.abs(n.y - zn[1].y) / TILE_PX
+                if out and d >= 3 and d <= 7 and level:isStandable(n.c, n.r) and BotNav.path(nav, next(best._nodes), { [id] = true }) and (not bd or d < bd) then bd, at = d, n end
+            end
+        end
+        if at then
+            tgt = PlayerAdventure:new(at.x, at.y)
+            tgt.spawnX, tgt.spawnY = tgt.x, tgt.y
+            tgt.immortal = lure or nil
+        end
     end
+    local toggles, lastSw, wetT, wetJ, prevJ, breakable = 0, nil, 0, 0, false, false
+    local swCells = BotNav._switchCells(level)
+    local function swKey()
+        local k = 0
+        for _, c in ipairs(swCells) do k = (k * 31 + level:getRaw(c[1], c[2])) % 2147483647 end
+        return k
+    end
+    lastSw = swKey()
     local stubT = P.newInputStub()
     local t, arrive, inside, pushes, tIn = 0, nil, 0, 0, 0
     local ax, ay, still, worst = bpa.x, bpa.y, 0, 0             -- lo más que pasa PARADO en un sitio fuera de una zona
@@ -48,6 +79,7 @@ local function play(level, nav, withTarget)
         level.players = tgt and { bpa, tgt } or { bpa }
         level.solidBodies = Entities.solidBodies(es)          -- (trampolines, morteros: como en AdventureState)
         level:update(dt)
+        Floods.advance(level, dt)                              -- (el agua sube y baja, como en la partida)
         -- (el bot, con un dt IRREGULAR como el del juego de verdad: 144 Hz con tirones; él va a paso fijo por dentro)
         JIT = (JIT or 0) + 1
         local due = dt
@@ -57,12 +89,27 @@ local function play(level, nav, withTarget)
             if tgt and bot:push(tgt) then pushes = pushes + 1 end
             due = due - d
         end
+        -- (dentro del agua de una inundación: cuántas veces pulsa el salto)
+        if bpa.inWater and Bot.flooded(level, bpa.x, bpa.y) then
+            wetT = wetT + dt
+            local jp = math.floor(bot.prevBits / P.IN_JUMP_P) % 2 == 1
+            if jp and not prevJ then wetJ = wetJ + 1 end
+            prevJ = jp
+        end
+        if #swCells > 0 then local k = swKey(); if k ~= lastSw then toggles, lastSw = toggles + 1, k end end
         if tgt then
             local real = Input; Input = stubT; P.decodeInput(0, stubT.state)
             tgt:update(dt, level); Input = real
             if tgt.dying then tgt:respawn() end
             -- (como un jugador: si lo echan, vuelve a la zona — aquí, de golpe, a los 2 s fuera)
-            if not PointAreas.inside(best, tgt.x, tgt.y) then
+            if not lure and tgt.onGround then
+                local ob = tgt:getOuterBounds()
+                local d = level:getDef(math.floor(tgt.x / TILE_PX) + 1, math.floor((ob.y + ob.h + 6) / TILE_PX) + 1)
+                if d and d.breakable then breakable = true end
+            end
+            if lure then                                       -- (el cebo no se mueve de su sitio)
+                if math.abs(tgt.x - tgt.spawnX) > 6 or math.abs(tgt.y - tgt.spawnY) > 40 then tgt.x, tgt.y, tgt.vx, tgt.vy = tgt.spawnX, tgt.spawnY, 0, 0 end
+            elseif not PointAreas.inside(best, tgt.x, tgt.y) then
                 tgt.outT = (tgt.outT or 0) + dt
                 if tgt.outT > 2 and tgt.onGround then
                     -- (a una casilla de la zona que tenga suelo AHORA: el del principio puede estar roto)
@@ -79,18 +126,44 @@ local function play(level, nav, withTarget)
         end
         for _, e in ipairs(es) do if e.alive then e:update(dt, level) end end
         Interactions.run(bpa, es, {})
-        local isIn = PointAreas.inside(best, bpa.x, bpa.y)
+        local isIn = false                                     -- (en CUALQUIER zona: puede cambiar de zona si le conviene)
+        for _, a in ipairs(level.pointAreas) do if PointAreas.inside(a, bpa.x, bpa.y) then isIn = true end end
         if isIn and not arrive then arrive = t end
         if os.getenv('DEBUG') and (withTarget or os.getenv('SOLO')) and (withTarget ~= (os.getenv('SOLO') ~= nil)) and math.floor(t * 2) ~= math.floor((t - dt) * 2) then
             print(('  %.1f bot %d,%d %s/' .. tostring(bot.kind) .. ' cd %.1f path %s · objetivo %d,%d stun %.1f'):format(t, bpa.x, bpa.y, bot.mode, bot.cd,
                 bot.path and #bot.path or '-', tgt and tgt.x or 0, tgt and tgt.y or 0, tgt and tgt.stunT or 0))
         end
-        if isIn or math.abs(bpa.x - ax) > 40 or math.abs(bpa.y - ay) > 100 then ax, ay, still = bpa.x, bpa.y, 0
+        -- (esperar a que baje el agua no es quedarse atascado)
+        if isIn or bot.kind == 'wait' or math.abs(bpa.x - ax) > 40 or math.abs(bpa.y - ay) > 100 then ax, ay, still = bpa.x, bpa.y, 0
         else still = still + dt; worst = math.max(worst, still) end
         if arrive and isIn then inside = inside + dt end
         t = t + dt
     end
-    return arrive, arrive and inside / (SECS - arrive) or 0, pushes, tIn / SECS, worst
+    return arrive, arrive and inside / (SECS - arrive) or 0, pushes, tIn / SECS, worst,
+           { toggles = toggles, wetT = wetT, wetJ = wetJ, breakable = breakable, lured = tgt ~= nil }
+end
+
+-- DATOS: en un nivel con zonas de puntos todo enemigo que se puede pisar REAPARECE y da el 40 % de sus puntos
+-- (redondeado hacia abajo: Crabbies y lúgubres 15 → 6, Gummies 10 → 4)
+local function dataCheck(level)
+    local bad = {}
+    for _, pl in ipairs(level.entities) do
+        local def = EntityTypes.byName[pl.type]
+        local okE, ent = pcall(Entities.create, pl)
+        if def and def.category == 'Enemigos' and okE and ent then
+            local p = ent.props or {}                              -- (con los valores por defecto del tipo ya puestos)
+            local base = (def.defaults or {}).points
+            if base == nil then base = 10 end
+            if p.stompable and base > 0 then
+                local want = math.floor(base * 0.4)
+                if p.points ~= want then bad[#bad + 1] = ('%s en %d,%d da %s (debe dar %d)'):format(pl.type, pl.col, pl.row, tostring(p.points), want) end
+                if not (tonumber(p.respawn) and p.respawn > 0) then bad[#bad + 1] = ('%s en %d,%d no reaparece'):format(pl.type, pl.col, pl.row) end
+            elseif def.name == 'bomb' and not (tonumber(p.respawn) and p.respawn > 0) then
+                bad[#bad + 1] = ('bomba en %d,%d no reaparece'):format(pl.col, pl.row)
+            end
+        end
+    end
+    return bad
 end
 
 -- TODOS los niveles con zonas de puntos (los 6 bonus de la historia y los demás de Rey de la Colina, que en Juego
@@ -121,13 +194,24 @@ function love.load(arg)
                 fails = fails + 1
                 print(('%-22s %s'):format(name, g and 'DESACTUALIZADO (BUILD=1)' or 'FALTA (BUILD=1)'))
             else
-                local arrive, frac, _, _, w1 = play(Level.new(path), g, false)
-                local _, _, pushes, tIn, w2 = play(Level.new(path), g, true)
+                local arrive, frac, _, _, w1, x1 = play(Level.new(path), g, false)
+                local _, fracH, pushes, tIn, w2, x2 = play(Level.new(path), g, true)
+                local arrL, fracL, _, _, _, x3 = play(Level.new(path), g, true, true)
                 local stuck = math.max(w1, w2)                  -- (nunca clavado en un sitio fuera de una zona más de 6 s)
-                local good = arrive ~= nil and arrive < 25 and frac > 0.5 and pushes >= 3 and stuck < 6     -- (0.5: en cala_de_los_muelles un enemigo lo tira de la zona y tarda en volver)
+                -- echarlo: a empujones, o quitándole el suelo con el Activador; sobre suelo rompible no ataca: se queda
+                local kicks = pushes + x2.toggles
+                local hunted = kicks >= 3 or (x2.breakable and fracH > 0.5)
+                local wetT, wetJ = x1.wetT + x2.wetT + x3.wetT, x1.wetJ + x2.wetJ + x3.wetJ
+                local calm = wetT < 3 or wetJ / wetT < 1.2
+                local keeps = not x3.lured or (arrL ~= nil and (fracL >= 0.8 or fracL >= frac - 0.1))       -- (igual que sin cebo: en cala un enemigo lo tira de la zona)
+                local bad = dataCheck(level)
+                local good = arrive ~= nil and arrive < 25 and frac > 0.5 and hunted and stuck < 6 and calm and keeps and #bad == 0     -- (0.5: en cala_de_los_muelles un enemigo lo tira de la zona y tarda en volver)
                 if not good then fails = fails + 1 end
-                print(('%-22s %s  sola: llega a la zona en %s s, dentro el %d %% después · caza: %d empujones, el jugador quieto en la zona el %d %% del tiempo · parado fuera de zona como mucho %.1f s'):format(
-                    name, good and 'OK   ' or 'FALLA', arrive and string.format('%.1f', arrive) or '—', math.floor(frac * 100), pushes, math.floor(tIn * 100), stuck))
+                print(('%-22s %s  sola: llega en %s s, dentro el %d %% · caza: %d empujones%s%s, el jugador en la zona el %d %% · cebo: dentro el %s · agua: %.0f s, %.1f saltos/s · parado como mucho %.1f s'):format(
+                    name, good and 'OK   ' or 'FALLA', arrive and string.format('%.1f', arrive) or '—', math.floor(frac * 100), pushes,
+                    x2.toggles > 0 and (' + ' .. x2.toggles .. ' Activador') or '', x2.breakable and ' (suelo rompible: no ataca)' or '', math.floor(tIn * 100),
+                    x3.lured and (math.floor(fracL * 100) .. ' %') or 'sin cebo', wetT, wetT > 0 and wetJ / wetT or 0, stuck))
+                for _, b in ipairs(bad) do print('    datos: ' .. b) end
             end
         end
     end

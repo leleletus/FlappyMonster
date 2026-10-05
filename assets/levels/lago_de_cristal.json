@@ -42,8 +42,8 @@
     {"col":43,"props":{"dir":"down","firstDelay":1,"freezeTime":2,"range":4},"row":9,"type":"cryo"},
     {"col":49,"props":{"dir":"down","firstDelay":3,"freezeTime":2,"id":2,"range":4},"row":9,"type":"cryo"},
     {"col":40,"props":{"corner":{"col":52,"row":13},"points":3},"row":10,"type":"pointarea"},
-    {"col":23,"props":{"patrol":{"left":16,"right":30},"points":6,"respawn":8},"row":13,"type":"gummy_ice"},
-    {"col":69,"props":{"helmet":true,"patrol":{"left":62,"right":76},"points":6,"respawn":8},"row":13,"type":"gummy_ice"},
+    {"col":23,"props":{"patrol":{"left":16,"right":30},"points":4,"respawn":8},"row":13,"type":"gummy_ice"},
+    {"col":69,"props":{"helmet":true,"patrol":{"left":62,"right":76},"points":4,"respawn":8},"row":13,"type":"gummy_ice"},
     {"col":23,"row":11,"type":"star"},
     {"col":69,"row":11,"type":"star"}
   ],

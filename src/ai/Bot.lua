@@ -10,11 +10,23 @@
 --     cambiando de casilla dentro de ella cada pocos segundos.
 -- NO hace siempre lo mismo: el grafo es solo el MAPA de por dónde se puede ir; qué hace lo decide cada fotograma
 -- según dónde estás tú y cómo está el nivel, y con algo de azar (descansos, a qué casilla de la zona va).
+-- PRIORIDADES (3.69.0; el usuario: a veces dejaba su zona para perseguirte y perdía sus puntos): lo PRIMERO es
+-- PUNTUAR — estar en la zona que más da y quedarse —; atacar es un medio para eso, no el fin:
+--   1. si está puntuando en una zona NO la deja para perseguirte: solo te ataca si estás en SU zona (o a su lado);
+--   2. si no está en una zona, va a la mejor; si tú estás puntuando en una (y el descanso ha pasado) va a echarte de
+--      ella; de camino solo te ataca si te tiene al alcance (no se desvía);
+--   3. no hace ground pound sobre suelo ROMPIBLE (rompería el suelo de la zona y caería él también);
+--   4. Activadores ON/OFF (ciudadela_alterna): si pulsarlo le deja una zona mejor, o te quita el suelo de la tuya
+--      sin quitarle la suya, va y lo pulsa (cabezazo desde abajo o ground pound encima) — `_switchPlan`;
+--   5. AGUA que sube (inundaciones): no planea por casillas que AHORA están bajo el agua; si el agua lo pilla, sale
+--      nadando hacia lo seco más cercano y, si no avanza (un foso del que no se sale con el agua alta), ESPERA
+--      quieto a que baje en vez de saltar sin parar — `_water`.
 -- La ejecución de cada arista: andar = bucle cerrado hacia el centro de la casilla de al lado; un movimiento
 -- grabado = se coloca quieto en el centro de su casilla y reproduce los inputs fotograma a fotograma (la física
 -- es determinista: cae donde se grabó; si cae en otro sitio, vuelve a planear desde ahí).
 local P = require 'src/network/Protocol'
 local BotNav = require 'src/ai/BotNav'
+local Floods = require 'src/world/Floods'
 
 local Bot = {}
 Bot.__index = Bot
@@ -27,6 +39,35 @@ Bot.STUCK = 2.5              -- s sin avanzar → replanea desde donde esté
 Bot.GIVE_UP = 2.5           -- s sin camino a su destino antes de irse a vagar a otra parte
 Bot.PUSH_R = 1.8             -- casillas: radio del empujón de su ground pound
 Bot.PUSH_VX, Bot.PUSH_VY = 1150, -700   -- el empujón: te lanza LEJOS (fuera de la zona), sin control un momento
+Bot.SWITCH_CD = 6            -- s entre dos pulsaciones suyas de un Activador
+Bot.WATER_TRY = 2.2          -- s nadando sin acercarse a lo seco antes de quedarse a esperar
+Bot.WATER_WAIT = 15          -- s como mucho esperando a que baje el agua antes de volver a probar
+Bot.WATER_DROP = 24          -- px que tiene que bajar el agua para volver a intentarlo
+
+-- ¿Agua de una inundación SUBIDA ahí ahora? El grafo se grabó con cada inundación en su nivel MÍNIMO (así
+-- empieza el nivel): mientras el agua está ahí, vale. Cuando ha subido, todo lo que cubre — también lo que ya
+-- estaba mojado, porque ahora tiene más agua encima — deja de valer: otra física, y de un hoyo no se sale.
+-- (El agua fija de los niveles ya está en el grafo.)
+local function flooded(level, x, y)
+    local fl = level.floods
+    if not (fl and fl[1]) then return false end
+    for _, f in ipairs(fl) do
+        if x >= f.x0 and x < f.x1 and y >= f.surf and y < f.y1 and f.surf < (f.y1 - f.lo * TILE_PX) - 20 then return true end
+    end
+    return false
+end
+Bot.flooded = flooded
+
+-- ¿El suelo bajo ese jugador es ROMPIBLE? (un ground pound lo rompería)
+local function breakableUnder(level, pa)
+    local ob = pa:getOuterBounds()
+    local r = math.floor((ob.y + ob.h + 6) / TILE_PX) + 1
+    for _, x in ipairs({ ob.x + 2, ob.x + ob.w - 2 }) do
+        local d = level:getDef(math.floor(x / TILE_PX) + 1, r)
+        if d and d.breakable then return true end
+    end
+    return false
+end
 
 local L, R, J, JP, C, CP = P.IN_LEFT, P.IN_RIGHT, P.IN_JUMP, P.IN_JUMP_P, P.IN_CROUCH, P.IN_CROUCH_P
 
@@ -49,7 +90,8 @@ local function zoneNodes(nav, area, level)
     local firm, all, anyF, anyA = {}, {}, false, false
     for id, n in pairs(nav.nodes) do
         local y = n.y or (n.r * TILE_PX - 40)
-        if n.x >= area.x0 and n.x < area.x1 and y >= area.y0 and y < area.y1 and level:isStandable(n.c, n.r) then
+        if n.x >= area.x0 and n.x < area.x1 and y >= area.y0 and y < area.y1 and level:isStandable(n.c, n.r)
+           and not flooded(level, n.x, y) then                    -- (ni lo que ahora está bajo el agua)
             all[id], anyA = true, true
             if not level:getDef(n.c, n.r + 1).thinIce then firm[id], anyF = true, true end
         end
@@ -85,13 +127,30 @@ end
 
 function Bot:_h() return self.pa:getOuterBounds().h end
 
--- Elige el destino: tú (si estás puntuando en una zona) o la mejor zona
+-- ¿Puede atacarte ahí con su ground pound? (no sobre suelo rompible: lo rompería)
+function Bot:_canPound(level, target)
+    return target ~= nil and not target.dying and not breakableUnder(level, target)
+end
+
+-- Elige el destino. PUNTUAR primero: si ya está en una zona, se queda (y solo va a por ti si estás en ella);
+-- si no, a la mejor zona — o a echarte de la tuya si estás puntuando.
 function Bot:_goal(level, target)
     local pa = self.pa
     local alive = target and not target.dying
-    local area = alive and areaOf(level, target)
-    local close = alive and math.abs(target.x - pa.x) < self.chaseR * TILE_PX and math.abs(target.y - pa.y) < 4 * TILE_PX
-    if (area or close) and self.cd <= 0 and self.clock >= (self.noHuntT or 0) then
+    local mine = pa.onGround and areaOf(level, pa) or self.myArea           -- (en el aire: la última en que estuvo)
+    if pa.onGround then self.myArea = mine end
+    local theirs = alive and areaOf(level, target)
+    local ready = alive and self.cd <= 0 and self.clock >= (self.noHuntT or 0) and self:_canPound(level, target)
+    -- ¿a por ti? Solo si estás en SU zona, o si él no está puntuando y tú sí (o te tiene muy cerca)
+    local hunt = false
+    if ready then
+        if mine then hunt = theirs == mine
+        else
+            local close = math.abs(target.x - pa.x) < self.chaseR * TILE_PX and math.abs(target.y - pa.y) < 4 * TILE_PX
+            hunt = theirs ~= nil and close
+        end
+    end
+    if hunt then
         local tn = BotNav.nodeAt(self.nav, target.x, target.y, target:getOuterBounds().h)
         if tn then
             local set = { [tn] = true }
@@ -109,9 +168,152 @@ function Bot:_goal(level, target)
         if not best._nodes then return nil, 'hold' end
         local here = pa.onGround and BotNav.nodeAt(self.nav, pa.x, pa.y, self:_h())
         if inArea(best, pa.x, pa.y) and pa.onGround and (not best._nodes or (here and best._nodes[here])) then return nil, 'hold' end
+        -- (ya puntúa en otra zona que da lo mismo: no la deja por ir a la "mejor")
+        if mine and mine ~= best and mine._nodes and here and mine._nodes[here] and (mine.points or 1) >= (best.points or 1) then
+            return nil, 'hold'
+        end
         return best._nodes, 'zone'
     end
     return nil, 'hold'
+end
+
+-- ── ACTIVADORES ON/OFF ────────────────────────────────────────────────────────
+-- Los Activadores del nivel y desde qué casilla se pulsan: de pie debajo (cabezazo) o encima (ground pound)
+local function activators(nav, level)
+    if nav.switches then return nav.switches end
+    local TileTypes = require 'src/world/tiles/TileTypes'
+    local TileCodec = require 'src/world/tiles/TileCodec'
+    local list = {}
+    for r = 1, level.tileH do
+        for c = 1, level.tileW do
+            local def = TileTypes.get(TileCodec.id(level:getRaw(c, r)))
+            if def and def.toggle and not def.switchBlock then
+                local a = { c = c, r = r, press = {} }
+                for k = 2, 3 do                              -- debajo: los pies 2 o 3 filas más abajo, con hueco entre medias
+                    local id = (r + k) * 4096 + c
+                    local free = true
+                    for rr = r + 1, r + k - 1 do if level:getDef(c, rr).collision == 'solid' then free = false end end
+                    if nav.nodes[id] and free then a.press[id] = 'bump' end
+                end
+                local top = (r - 1) * 4096 + c
+                if nav.nodes[top] then a.press[top] = 'pound' end
+                if next(a.press) then list[#list + 1] = a end
+            end
+        end
+    end
+    nav.switches = list
+    return list
+end
+
+-- Qué zonas tendrían suelo si se pulsara el Activador (los Bloques ON/OFF cambiados): { [zona] = true }, y
+-- cuánto da la mejor. Se recalcula solo cuando cambia el estado de los bloques.
+local function flippedZones(nav, level)
+    local cells = BotNav._switchCells(level)
+    if #cells == 0 then return nil end
+    local key = 0
+    for _, k in ipairs(cells) do key = (key * 31 + level:getRaw(k[1], k[2])) % 2147483647 end
+    if nav._flipKey == key then return nav._flip, nav._flipBest end
+    local TileTypes = require 'src/world/tiles/TileTypes'
+    local TileCodec = require 'src/world/tiles/TileCodec'
+    for _, k in ipairs(cells) do
+        local other = TileTypes.byName[k[4].switchBlock.other]
+        local _, wet, spikes = TileCodec.decode(k[3])
+        level.tiles[k[2]][k[1]] = TileCodec.encode(other.id, wet, spikes)
+    end
+    local set, best = {}, 0
+    for _, a in ipairs(level.pointAreas or {}) do
+        if zoneNodes(nav, a, level) then set[a] = true; best = math.max(best, a.points or 1) end
+    end
+    for _, k in ipairs(cells) do level.tiles[k[2]][k[1]] = k[3] end
+    nav._flipKey, nav._flip, nav._flipBest = key, set, best
+    return set, best
+end
+
+-- ¿Le conviene pulsar un Activador ahora? → set de casillas desde las que pulsarlo (o nil)
+function Bot:_switchPlan(level, target)
+    if self.clock < (self.switchCd or 0) then return nil end
+    local acts = activators(self.nav, level)
+    if #acts == 0 then return nil end
+    local flip, flipBest = flippedZones(self.nav, level)
+    if not flip then return nil end
+    local nowBest = 0
+    for _, a in ipairs(level.pointAreas or {}) do
+        if a._nodes then nowBest = math.max(nowBest, a.points or 1) end
+    end
+    local pa = self.pa
+    local mine = pa.onGround and areaOf(level, pa)
+    local theirs = target and not target.dying and areaOf(level, target)
+    -- (a) pulsándolo habría una zona mejor que cualquiera de ahora (o ahora no hay ninguna con suelo)
+    local want = flipBest > nowBest
+    -- (b) tú puntúas en una zona que se quedaría sin suelo, él no está en ella y a él le queda otra igual o mejor
+    if not want and theirs and theirs._nodes and not flip[theirs] and theirs ~= mine and flipBest >= nowBest and flipBest > 0 then want = true end
+    if not want then return nil end
+    local set = {}
+    for _, a in ipairs(acts) do for id, how in pairs(a.press) do set[id] = how end end
+    return set
+end
+
+-- ── AGUA QUE SUBE ─────────────────────────────────────────────────────────────
+-- La altura (y) de la superficie del agua sobre ese punto
+local function surfaceAt(level, x, y)
+    for _, f in ipairs(level.floods or {}) do
+        if x >= f.x0 and x < f.x1 and y >= f.surf and y < f.y1 then return f.surf end
+    end
+    return y
+end
+
+-- Dentro del agua de una inundación: los movimientos grabados no valen (otra física). Nada hacia la casilla SECA
+-- más cercana (de su destino, si hay; si no, cualquiera): de lado y saltando; y si en `WATER_TRY` s no se acerca
+-- — un foso del que no se sale con el agua alta —, se queda QUIETO esperando a que baje.
+function Bot:_water(dt, level, goals)
+    local pa = self.pa
+    local w = self.wt
+    if not w then w = { t = 0, best = math.huge, scan = 0, hold = 0 }; self.wt = w end
+    self.path, self.edge, self.edgeF = nil, nil, 0
+    local surf = surfaceAt(level, pa.x, pa.y)
+    if w.wait then
+        self.kind = 'wait'
+        if surf > w.waitSurf + Bot.WATER_DROP or self.clock > w.waitUntil then w.wait, w.t, w.best = nil, 0, math.huge end
+        return self:_emit(0)
+    end
+    self.kind = 'water'
+    w.scan = w.scan - dt
+    if w.scan <= 0 or not w.gx then
+        w.scan = 0.5
+        local bd
+        w.gx, w.gy = nil, nil
+        for pass = 1, 2 do                               -- primero lo seco de su destino; si no hay, cualquier casilla seca
+            for id, n in pairs(self.nav.nodes) do
+                if (pass == 2 or (goals and goals[id])) and n.y and not flooded(level, n.x, n.y) and level:isStandable(n.c, n.r) then
+                    local d = math.abs(n.x - pa.x) + 2.5 * math.abs(n.y - pa.y)
+                    if not bd or d < bd then bd, w.gx, w.gy = d, n.x, n.y end
+                end
+            end
+            if w.gx then break end
+        end
+    end
+    if not w.gx then return self:_emit(0) end
+    local d = math.abs(w.gx - pa.x) + math.abs(w.gy - pa.y)
+    if d < w.best - 12 then w.best, w.t = d, 0 else w.t = w.t + dt end
+    if w.t > Bot.WATER_TRY then
+        w.wait, w.waitSurf, w.waitUntil = true, surf, self.clock + Bot.WATER_WAIT
+        self.kind = 'wait'
+        return self:_emit(0)
+    end
+    local bits = 0
+    local dx = w.gx - pa.x
+    if math.abs(dx) > 10 then bits = (dx < 0) and L or R end
+    w.still = (math.abs(pa.x - (w.lastX or pa.x)) < 0.3) and ((w.still or 0) + dt) or 0
+    w.lastX = pa.x
+    if pa.onGround then w.dbl = false end
+    if pa.onGround and (w.gy < pa.y - 20 or w.still > 0.25) then
+        bits, w.hold = bits + J + JP, 0.4                 -- salta (para subir o porque algo lo frena)
+    elseif w.hold > 0 then
+        bits, w.hold = bits + J, w.hold - dt
+    elseif not pa.onGround and pa.vy > -40 and (pa.jumpsLeft or 0) > 0 and w.gy < pa.y - 30 and not w.dbl then
+        bits, w.hold, w.dbl = bits + J + JP, 0.4, true     -- y el segundo salto en lo alto
+    end
+    return self:_emit(bits)
 end
 
 -- Los bits de este fotograma
@@ -123,6 +325,23 @@ function Bot:think(dt, level, target)
     if pa.dying or (pa.stunT or 0) > 0 or (pa.ctrlLockT or 0) > 0 or (pa.iceT or 0) > 0 then
         self.mode, self.path = 'route', nil
         return self:_emit(0)
+    end
+    -- ── PULSANDO un Activador: cabezazo desde abajo (salto, y el segundo en lo alto) o ground pound encima ──
+    if self.mode == 'press' then
+        self.pressT = self.pressT + dt
+        if (pa.onGround and self.pressT > 0.2) or self.pressT > 1.6 then
+            self.mode, self.path, self.switchCd = 'route', nil, self.clock + Bot.SWITCH_CD
+            return self:_emit(0)
+        end
+        if self.pressHow == 'pound' then
+            if self.pressT < 0.2 then bits = J elseif not pa.gpPhase then bits = C + CP end
+        else
+            bits = J
+            if not pa.onGround and pa.vy > -60 and (pa.jumpsLeft or 0) > 0 and not self.pressDbl then
+                bits, self.pressDbl = J + JP, true
+            end
+        end
+        return self:_emit(bits)
     end
     -- ── ATAQUE (bucle cerrado): salta hacia ti y, encima, ground pound ──
     if self.mode == 'attack' then
@@ -160,6 +379,23 @@ function Bot:think(dt, level, target)
         end
     end
     local goals, kind = self:_goal(level, target)
+    -- ACTIVADOR ON/OFF: si pulsarlo le conviene (y no está persiguiéndote), va a por él
+    local press = (kind ~= 'hunt') and self:_switchPlan(level, target) or nil
+    if press then
+        local here = pa.onGround and BotNav.nodeAt(self.nav, pa.x, pa.y, self:_h())
+        if here and press[here] then
+            local n = self.nav.nodes[here]
+            if math.abs(n.x - pa.x) > 5 then return self:_emit((n.x < pa.x) and L or R) end
+            if math.abs(pa.vx) > 25 then return self:_emit(0) end
+            self.mode, self.pressT, self.pressHow, self.pressDbl = 'press', 0, press[here], false
+            self.edge, self.edgeF, self.path = nil, 0, nil
+            return self:_emit(J + JP)
+        end
+        goals, kind = press, 'switch'
+    end
+    -- AGUA de una inundación: nada hacia lo seco o espera a que baje (los movimientos grabados no valen ahí)
+    if pa.inWater and flooded(level, pa.x, pa.y) then return self:_water(dt, level, goals) end
+    self.wt = nil
     -- REBOTANDO sin tocar suelo (cayó sobre un Crabby trampolín, un trampolín...): en el aire no daba ninguna orden y
     -- se quedaba botando hasta que el Crabby se iba. Pasado un momento en el aire, tira hacia su destino para salirse.
     self.airT = pa.onGround and 0 or ((self.airT or 0) + dt)
@@ -176,7 +412,10 @@ function Bot:think(dt, level, target)
         return self:_emit((gx < pa.x) and L or R)
     end
     -- cerca de ti y casi a tu altura: al ataque (estés o no en una zona, vaya adonde vaya)
-    if target and not target.dying and not target:isPushProtected() and pa.onGround and self.cd <= 0 then
+    -- (puntuando en una zona solo ataca si tú estás en ELLA: no la deja por ti; y nunca sobre suelo rompible)
+    local myZone = pa.onGround and areaOf(level, pa)
+    if target and not target.dying and not target:isPushProtected() and pa.onGround and self.cd <= 0
+       and (not myZone or areaOf(level, target) == myZone) and self:_canPound(level, target) and not breakableUnder(level, pa) then
         local dx, dy = target.x - pa.x, target.y - pa.y
         if math.abs(dx) < Bot.ATTACK_R * TILE_PX and dy > -1.6 * TILE_PX and dy < 0.8 * TILE_PX then
             self.mode, self.atkT = 'attack', 0
@@ -225,7 +464,9 @@ function Bot:think(dt, level, target)
             if kind == 'roam' and not e.walk then return true end      -- (paseando por la zona: solo andando)
             -- (el grafo junta los dos estados de los bloques ON/OFF: fuera lo que AHORA no tiene suelo)
             local n = self.nav.nodes[e.to]
-            return n == nil or not level:isStandable(n.c, n.r)
+            if n == nil or not level:isStandable(n.c, n.r) then return true end
+            -- (ni lo que AHORA está bajo el agua de una inundación: ahí la física es otra y no se sale igual)
+            return n.y ~= nil and flooded(level, n.x, n.y)
         end)
         self.pathFrom, self.planT, self.edge, self.edgeF = cur, Bot.REPLAN, nil, 0
         if self.stuckT > Bot.STUCK then self.stuckT = 0 end
@@ -240,6 +481,7 @@ function Bot:think(dt, level, target)
         -- (no hay cómo llegar hasta ti — un hoyo, un bloque roto —: deja de perseguirte un rato y vuelve a su zona)
         if kind == 'hunt' then self.noHuntT = self.clock + 2.5; return self:_emit(0) end
         if kind == 'wander' then self.wander = nil; return self:_emit(0) end
+        if kind == 'switch' then self.switchCd = self.clock + 3; return self:_emit(0) end      -- (no llega al Activador: lo deja)
         -- NUNCA se queda intentándolo sin fin (en cumbre_cangrejo se pasó la partida saltando en el sitio): tras
         -- `GIVE_UP` s sin camino, se va a VAGAR a una casilla alcanzable al azar y vuelve a probar después
         if self.noPathT > Bot.GIVE_UP and cur then

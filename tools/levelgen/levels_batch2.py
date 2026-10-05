@@ -409,7 +409,8 @@ class B(Level):
         self.finish(self.w - 7, G - 1)
 
 
-K = dict(points=6, respawn=8)          # enemigos de las arenas: reaparecen y dan menos puntos
+K = dict(points=6, respawn=8)          # enemigos de las arenas: reaparecen y dan el 40 % de sus puntos (Crabbies 15 → 6)
+KG = dict(points=4, respawn=8)         # (Gummies 10 → 4)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -757,7 +758,7 @@ def cantera_real():
     L.island(13, 30); L.island(62, 79)
     L.deck(34, 58)
     L.koth_zone(40, U - 5, 52, U - 1, points=3)
-    L.fly('gummy', 38, 54, U - 4, **K)
+    L.fly('gummy', 38, 54, U - 4, **KG)
     L.ent('mortar', 22, U - 1, range=8); L.ent('mortar', 70, U - 1, range=8)
     L.ladder(43, base=U, top=TOP + 2)
     L.deck(49, 55, TOP + 2); L.ent('extralife', 52, TOP)
@@ -780,7 +781,7 @@ def lago_de_cristal():
     L.ent('cryo', 43, U - 5, dir='down', interval=4, firstDelay=1, range=4, freezeTime=2)
     L.ent('cryo', 49, U - 5, dir='down', interval=4, firstDelay=3, range=4, freezeTime=2)
     L.koth_zone(40, U - 4, 52, U - 1, points=3)
-    L.walk('gummy', 16, 30, U - 1, **K); L.walk('gummy', 62, 76, U - 1, helmet=True, **K)
+    L.walk('gummy', 16, 30, U - 1, **KG); L.walk('gummy', 62, 76, U - 1, helmet=True, **KG)
     L.stars((23, U - 3), (69, U - 3))
     L.ent('extralife', 46, U - 8)
     L.ladder(33, base=U, top=U - 6); L.ladder(54, base=U, top=U - 6, right=False)
@@ -803,7 +804,7 @@ def ciudadela_alterna():
     L.island(13, 24); L.island(68, 79)
     L.deck(28, 40); L.deck(52, 64)
     L.island(43, 49)
-    L.walk('gummy', 28, 40, U - 1, **K); L.walk('gummy', 52, 64, U - 1, **K)
+    L.walk('gummy', 28, 40, U - 1, **KG); L.walk('gummy', 52, 64, U - 1, **KG)
     L.ent('spikefall', 34, 2, sub=1, detectRange=14); L.ent('spikefall', 58, 2, sub=2, detectRange=14)
     L.stars((19, U - 2), (73, U - 2))
     L.ent('extralife', 46, U - 3)
@@ -826,11 +827,11 @@ def cala_de_los_muelles():
     L.walk('crabbytramp', 14, 26, **K); L.walk('crabbytramp', 66, 78, **K)
     L.ladder(7); L.ladder(80, right=False)
     L.island(13, 30); L.island(62, 79)
-    L.walk('gummy', 16, 28, U - 1, **K); L.walk('gummy', 64, 76, U - 1, **K)
+    L.walk('gummy', 16, 28, U - 1, **KG); L.walk('gummy', 64, 76, U - 1, **KG)
     L.ladder(24, base=U, top=TOP + 2); L.ladder(63, base=U, top=TOP + 2, right=False)
     L.deck(30, 62, TOP + 2)
     L.koth_zone(40, TOP - 3, 52, TOP + 1, points=3)
-    L.fly('gummy', 38, 54, TOP - 1, **K)
+    L.fly('gummy', 38, 54, TOP - 1, **KG)
     L.stars((22, U - 3), (70, U - 3))
     L.ent('extralife', 46, G + 4)
     return L

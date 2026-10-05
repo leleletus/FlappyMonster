@@ -1850,6 +1850,27 @@ arenas as bonus nodes vs an expert BOT ✔. User's decisions: world map with a p
   walks toward that side until it can attach (Crabby `crawlWalk`, Gloomy). Harness `mechanics trepador_canto`.
   (3) BOT bouncing on a Crabby trampolín: airborne it gave no input and kept bouncing until the crab left; after 0.9 s
   without touching ground (`airT`) it steers toward its goal (or sideways if right under it) to get off.
+- **BOT 3.69.0 (user: "prioritize points; it melts down in water; it doesn't press the ON/OFF activator")** —
+  PRIORITIES (`Bot:_goal`): scoring comes first. In a zone it never leaves to chase you: it attacks only if you are in
+  ITS zone; outside a zone it goes to the best zone, or to throw you out of yours if you are scoring within its chase
+  radius; an equal-value zone it already holds is not abandoned for the "best" one. It never ground-pounds over
+  BREAKABLE floor (`breakableUnder`: it used to break its own zone floor and fall in — cantera_real, whose spike pit
+  the user then turned into a pit with drop-through STAIRS; there the bot just holds the zone). ACTIVATORS
+  (`_switchPlan`, `activators`, `flippedZones`): the bot evaluates the zones' floors with the switch blocks flipped
+  and goes to press the activator (head bump from the node 2-3 rows below, or ground pound from on top; mode
+  'press', `SWITCH_CD` 6 s) when that gives a better zone, or takes YOUR zone's floor away while leaving it one at
+  least as good and it is not standing in yours (ciudadela_alterna's only mechanic). WATER: the nav graph is recorded
+  with every flood at its MINIMUM level; `flooded()` = covered by a flood that is ABOVE its minimum → such nodes are
+  not zone nodes nor path targets, and if the bot itself is in it → `_water`: swim to the nearest dry node and, with
+  no progress for `WATER_TRY` 2.2 s (a pit you can't leave at high water), WAIT still (`kind = 'wait'`) until the
+  surface drops `WATER_DROP` 24 px (or 15 s). Static water tiles are part of the graph as before.
+  NAV v3 (`BotNav.VERSION`): the signature now includes every entity placement (moving a mortar/trampoline makes
+  the file stale) and cells occupied by a solid object are not nodes (the bot pushed against a mortar for 5 s).
+  KOTH DATA RULE, enforced by the harness (`bot_nav` `datos`): in every level with point zones stompable enemies
+  respawn and give floor(40 %) of their type's points — Crabbies / Gloomies 15 → 6, Gummies 10 → 4 (several arenas
+  had Gummies at 6 and Trampoline Crabbies at 5: fixed, also in `levels_batch2.py` `K` / `KG`).
+  Harness `bot_nav`: floods now ADVANCE, plus `cebo` (a dummy standing OUTSIDE the zones: the bot stays in),
+  `agua` (jump presses per second while in flood water), activator presses, breakable floor.
 - 3.64.3 (bonus match): the lives counter is NOT drawn in a bonus (it showed "x99": internally the bonus gives the
   player 99 lives so dying is only a respawn and never a Game Over, and adventure lives are untouched); when the match
   ends the player is FROZEN — no control, invulnerable — until the screen leaves (`pa.forceFrozen`, honoured by

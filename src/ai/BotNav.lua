@@ -16,7 +16,7 @@
 local P = require 'src/network/Protocol'
 local json = require 'libs/json'
 
-local BotNav = { VERSION = 2, DIR = 'assets/nav/' }
+local BotNav = { VERSION = 3, DIR = 'assets/nav/' }    -- (3: los objetos sólidos — morteros, trampolines — cuentan)
 
 local T = function() return TILE_PX end
 local DT = 1 / 60
@@ -28,6 +28,12 @@ function BotNav.signature(level)
         for c = 1, level.tileW do
             h = (h * 31 + (level:getRaw(c, r) or 0) % 1000003) % 2147483647
         end
+    end
+    -- (y dónde está cada entidad colocada: mover un mortero o un trampolín — objetos sólidos — cambia por dónde se pasa)
+    for _, pl in ipairs(level.entities or {}) do
+        local k = 0
+        for i = 1, #tostring(pl.type) do k = (k * 131 + tostring(pl.type):byte(i)) % 1000003 end
+        h = (h * 31 + k + (pl.col or 0) * 7919 + (pl.row or 0) * 104729 + (pl.sub or 0)) % 2147483647
     end
     return tostring(h) .. ':' .. level.tileW .. 'x' .. level.tileH
 end
@@ -221,6 +227,18 @@ function BotNav.buildOne(level, opts)
         if ok and e and e.solidFull then bodies[#bodies + 1] = e end
     end
     level.solidBodies = bodies
+    -- Las casillas OCUPADAS por un objeto sólido (un mortero, un trampolín) no son sitios donde estar ni por donde
+    -- andar: el bot se quedaba empujando contra el mortero (cantera_real)
+    for id, n in pairs(g.nodes) do
+        local cy = (n.r - 0.5) * TILE_PX
+        for _, e in ipairs(bodies) do
+            local ok, ob = pcall(e.getOuterBounds, e)
+            if ok and ob and n.x > ob.x - 10 and n.x < ob.x + ob.w + 10 and cy > ob.y - 4 and cy < ob.y + ob.h + 4 then
+                g.nodes[id] = nil
+                break
+            end
+        end
+    end
     local function step()
         pa:update(DT, level)
         for _, e in ipairs(bodies) do
