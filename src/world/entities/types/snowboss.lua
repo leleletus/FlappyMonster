@@ -118,7 +118,7 @@ local IC_HIDDEN, IC_GROW, IC_READY, IC_SHAKE, IC_FALL, IC_WAIT = 0, 1, 2, 3, 4, 
 Snow.IC = { hidden = IC_HIDDEN, grow = IC_GROW, ready = IC_READY, shake = IC_SHAKE, fall = IC_FALL, wait = IC_WAIT }
 
 -- ── Arte ──────────────────────────────────────────────────────────────────────
-local body, rollH, rollA, cracksB, cracksR, sweat, ballImg, flee, icicleImg, shock, splat
+local body, rollH, rollA, cracksB, cracksR, sweat, ballImg, flee, icicleImg, shock, splat, normalArt, verityArt
 function Snow.loadAssets()
     if body then return end
     local D = 'assets/images/bosses/snowboss/'
@@ -134,7 +134,25 @@ function Snow.loadAssets()
     icicleImg = SpriteStrip.load(D .. 'icicle.png', 8)
     shock    = SpriteStrip.load(D .. 'shock-Sheet.png', 16)
     splat    = SpriteStrip.load(D .. 'splat-Sheet.png', 64)
+    -- HUEVO DE PASCUA "Verity": la misma bola con otra cara (carpeta verity/: las hojas del usuario + body-Sheet de
+    -- tools/ui/make_verity_body.py, su cambio de paleta). Grietas, sudor, carámbanos... son los de siempre
+    local V = D .. 'verity/'
+    verityArt = { body = SpriteStrip.load(V .. 'body-Sheet.png', 16), rollH = SpriteStrip.load(V .. 'roll_happy-Sheet.png', 16),
+                  rollA = SpriteStrip.load(V .. 'roll_angry-Sheet.png', 16), ball = SpriteStrip.load(V .. 'ball.png', 8),
+                  flee = SpriteStrip.load(V .. 'flee-Sheet.png', 12) }
+    normalArt = { body = body, rollH = rollH, rollA = rollA, ball = ballImg, flee = flee }
 end
+function Snow:art() return self.verity and verityArt or normalArt end
+
+-- Muy de vez en cuando la bola es VERITY (se decide al empezar su entrada, en un jugador / el servidor; va en la
+-- red): otra cara y OTRA MÚSICA (Boss:musicOverride → BossZones.music). `FM_VERITY=1 love .` la fuerza (para verla)
+Snow.VERITY_CHANCE = 0.02
+Snow.VERITY_MUSIC = 'snowball_verity'
+function Snow:rollVerity()
+    local force = os.getenv and os.getenv('FM_VERITY')
+    self.verity = (force == '1') or (force ~= '0' and math.random() < Snow.VERITY_CHANCE)
+end
+function Snow:musicOverride() return self.verity and Snow.VERITY_MUSIC or nil end
 function Snow.sizePx() return 16 * SC[1], 16 * SC[1] end
 
 local function rand(a, b) return a + math.random() * (b - a) end
@@ -1381,6 +1399,7 @@ function Snow:introFocus()
 end
 
 function Snow:onIntroStart(level, players)
+    self:rollVerity()
     self.introStep = 0
     self:planIntro(level)
     self.x, self.y = self:introPath(0)
@@ -1437,6 +1456,7 @@ function Snow:netPackExtra()
     for _, c in ipairs(ics) do
         out[#out + 1] = c.st; out[#out + 1] = math.floor(c.y); out[#out + 1] = math.floor(c.t * 100)
     end
+    out[#out + 1] = self.verity and 1 or 0           -- (al final: un cliente antiguo no lo lee)
     return out
 end
 
@@ -1469,7 +1489,8 @@ function Snow:netApplyExtra(a, b, f)
         if o and type(o[2]) == 'number' and type(o[3]) == 'number' then x, y = o[2] + (x - o[2]) * f, o[3] + (y - o[3]) * f end
         self.proj[#self.proj + 1] = { id = e[1], x = x, y = y }
     end
-    local ib = readList(b, k, 3)
+    local ib, kv = readList(b, k, 3)
+    self.verity = b[kv] == 1
     local ka = (type(a[NB + 1]) == 'number') and (NB + 2 + (a[NB + 1] or 0) * 3) or nil
     local ia = ka and readList(a, ka, 3) or {}
     local ics = self:icicleList()
@@ -1587,7 +1608,8 @@ function Snow:drawBody(camX, camY, alpha)
     end
     if self:flashRed() then r, g, bl = 1, 0.35, 0.35 end
     love.graphics.setColor(r, g, bl, alpha)
-    local strip = (kind == 'roll') and (((self.phase or 1) >= 2) and rollA or rollH) or body
+    local art = self:art()
+    local strip = (kind == 'roll') and (((self.phase or 1) >= 2) and art.rollA or art.rollH) or art.body
     love.graphics.draw(strip.image, strip.quads[fr], fx, fy, 0, sc, sc, 8, 15)
     -- Grietas (fase 3; muriendo cada vez más)
     local ck = nil
@@ -1662,7 +1684,7 @@ function Snow:render(camX, camY)
     elseif st == 'dying_flee' then
         local k = math.max(0, 1 - math.max(0, t - FLEE_T + 1))
         love.graphics.setColor(1, 1, 1, k)
-        flee:draw(math.floor(t * 10) % 2 + 1, math.floor(self.x - camX), math.floor((self.fleeY or self:feetY()) - camY - 6 * 5),
+        self:art().flee:draw(math.floor(t * 10) % 2 + 1, math.floor(self.x - camX), math.floor((self.fleeY or self:feetY()) - camY - 6 * 5),
                   0, 5 * (self.fleeDir or 1), 5)
     else
         local _, _, sc = self:drawBody(camX, camY, alpha)
@@ -1686,7 +1708,7 @@ function Snow:render(camX, camY)
     -- Bolas
     for _, b in ipairs(self.proj or {}) do
         love.graphics.setColor(1, 1, 1, 1)
-        ballImg:draw(1, math.floor(b.x - camX), math.floor(b.y - camY), 0, 4, 4)
+        self:art().ball:draw(1, math.floor(b.x - camX), math.floor(b.y - camY), 0, 4, 4)
     end
     -- Carámbanos del techo: crecen, tiemblan (sombra donde caerán) y caen
     for _, c in ipairs(self.icicles or {}) do
@@ -1751,7 +1773,7 @@ function Snow:renderSplat(camX, camY, now)
             local y = y0 + (y1 - y0) * e - math.sin(u * math.pi) * 70
             local k = math.floor(4 + 26 * e * e + 0.5)            -- 8 px → ~240 px
             love.graphics.setColor(1, 1, 1, (i == 0) and 1 or (0.35 - i * 0.08))
-            ballImg:draw(1, math.floor(x), math.floor(y), u * 7, k, k)
+            self:art().ball:draw(1, math.floor(x), math.floor(y), u * 7, k, k)
         end
     end
     if self.state == 'intro' and t >= SPLAT_AT and not self.splatAt then self.splatAt = now end
@@ -1795,7 +1817,7 @@ return {
     xtraStrip = { 'icicles' },          -- (Xtra extremo: los carámbanos del techo son de UNA bola, no de las dos)
     hide = Boss.HIDE,
     defaults = { points = 30 },
-    props = Boss.props({ hp = 13, hpPerPlayer = 4 }, {       -- (13: uno menos desde que en la fase 3 solo vale congelarla)
+    props = Boss.props({ hp = 14, hpPerPlayer = 4 }, {       -- (14: con 13 la fase 3 se acababa de un ground pound congelada, que vale 3)
         { key='phase2', kind='number', label='Fase 2 con vida ≤', group=G, default=0.66,
           min=0.1, max=0.95, step=0.01, help='Fracción de vida: encoge, salta a las plataformas y salen los carámbanos' },
         { key='phase3', kind='number', label='Fase 3 con vida ≤', group=G, default=0.33,

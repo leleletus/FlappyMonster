@@ -12,6 +12,7 @@
 --                 pierde 1 de vida y sale despedido; y a un nadador no le salta encima: le escupe bolas
 --   fase3_hielo   fase 3: empapada NO es vulnerable (solo congelada) y se congela con que el chorro toque el
 --                 agua de SU charca, aunque no le dé; en la fase 2, no
+--   verity        el huevo de Pascua: probabilidad, su música manda en la pelea, viaja por la red
 --   rueda_pared   rodando contra la pared: fase 1 mareada al primer choque, fase 2 tras 1 (fase 3: no se marea)
 --                 rebote, fase 3 tras 2
 --   rueda_escalon rodando contra un escalón de 1 casilla: se estampa (no lo sube)
@@ -585,6 +586,38 @@ function cases.fase3_hielo()
     check('fase3_hielo', ok, table.concat(out, ' · '))
 end
 
+function cases.verity()
+    local level, es, boss = lago()
+    local Snow = getmetatable(boss).__index
+    local keep = Snow.VERITY_CHANCE
+    local z = boss.zone
+    -- nunca / siempre
+    Snow.VERITY_CHANCE = 0; boss:rollVerity(); local never = boss.verity
+    Snow.VERITY_CHANCE = 1; boss:rollVerity(); local always = boss.verity
+    -- su música manda sobre la de la zona mientras pelea
+    z.state = 'fight'
+    local music = BossZones.music(level)
+    -- por la red: el cliente la ve igual
+    local level2, es2, boss2 = lago()
+    local pk = boss:netPackExtra()
+    boss2:netApplyExtra(pk, pk, 1)
+    local seen = boss2.verity
+    boss.verity = false
+    local musicN = BossZones.music(level)
+    pk = boss:netPackExtra(); boss2:netApplyExtra(pk, pk, 1)
+    -- cuántas veces sale con su probabilidad de verdad
+    Snow.VERITY_CHANCE = keep
+    local n = 0
+    for _ = 1, 20000 do boss:rollVerity(); if boss.verity then n = n + 1 end end
+    boss.verity = false
+    local Music = require 'src/Music'
+    local has = love.filesystem.getInfo('assets/music/bosses/snowball_verity_loop.ogg') ~= nil
+    check('verity', never == false and always == true and music == 'snowball_verity' and seen == true and boss2.verity == false
+        and musicN ~= 'snowball_verity' and n > 200 and n < 700 and has,
+        ('probabilidad 0 → %s, 1 → %s · música en la pelea "%s" (normal: "%s") · el cliente la ve=%s y deja de verla=%s · sale %.1f %% de las veces · pista=%s'):format(
+            tostring(never), tostring(always), tostring(music), tostring(musicN), tostring(seen), tostring(not boss2.verity), n / 200, tostring(has)))
+end
+
 function cases.seca_aturdida()
     local level, es, boss = room(20, 10, nil, { { type = 'snowboss', col = 8, row = 9 } })
     fight(boss)
@@ -665,7 +698,7 @@ function love.load(arg)
                          'rueda_pared', 'rueda_escalon', 'rueda_activa', 'rueda_rompe', 'rueda_nieve', 'rueda_fin',
                          'salto_plataforma', 'salto_debajo', 'empapada', 'romper', 'bola_plataforma', 'salto_bajar',
                          'risa', 'descansa', 'fase3_aparece', 'congelada', 'congelada_saliendo', 'carambano_fase3',
-                         'agua_trampa', 'fase3_hielo',
+                         'agua_trampa', 'fase3_hielo', 'verity',
                          'seca_aturdida', 'encoge' }) do
         if not only or only == n then
             local ok, err = pcall(cases[n])

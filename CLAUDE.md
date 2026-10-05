@@ -1524,8 +1524,8 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   freeze it soaked), `online_boss LEVEL=tools/tests/online_boss/nieve_fases.json` (3 HP: the client sees
   scales 10/8/6, zone phase 3, icicles, Activadores and Freezers only in phase 3), `snowboss_look`
   (`snow_arena.png` per phase), `boss_intro`.
-- **Snowball Boss, 3.70.0 (user's report: water exploit + final phase)**: hp 13 (was 14; phase 2 at ≤ 8, phase 3 at
-  ≤ 4 → 1-2 freeze cycles). (1) WATER IS NOT A SAFE SPOT: when the ball falls into a pool (`checkSoak`) everyone
+- **Snowball Boss, 3.70.0 (user's report: water exploit + final phase)**: hp 14 (13 was tried in 3.70.0 and reverted in
+  3.71.0: a frozen ground pound = 3, so phase 3 died in one hit; phase 2 at ≤ 9, phase 3 at ≤ 4 → two freeze cycles). (1) WATER IS NOT A SAFE SPOT: when the ball falls into a pool (`checkSoak`) everyone
   swimming in THAT pool (`Snow:poolSpan`) takes `HIT_SPLASH` (1 HP, thrown up and out) before the crush check, and a
   target that is swimming never gets a hop / leap / slam — `nextAttack` turns it into 'shoot' (the exploit: wait in
   the water, the ball jumps in harmlessly, is soaked = hittable, repeat). (2) PHASE 3 = ONLY FROZEN is vulnerable
@@ -1535,6 +1535,20 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   ball freezes if it is in that pool. Phases 1-2 keep the old rule (stream on the body). Map: mid-island bosses
   stand beside their node until beaten (`overworld.json worlds[i].nodeBoss[levelId]` = art, `make_overworld.py`
   `NODE_BOSS`; `StoryMapState:_drawNodes`). Harness `snowboss_rules` agua_trampa / fase3_hielo.
+- **VERITY, the Snowball's Easter egg (3.71.0)**: `Snow.VERITY_CHANCE` 2 % of the fights (rolled in `onIntroStart`, SP /
+  server; `self.verity` = LAST field of netPackExtra; `FM_VERITY=1 love .` forces it, `0` forbids) the ball is the
+  yellow smiley: `Snow:art()` → `bosses/snowboss/verity/` (the USER's roll_happy / roll_angry / flee / ball +
+  `body-Sheet.png` = their palette applied to the normal body by `tools/ui/make_verity_body.py --apply`, colour map
+  measured from their sheets; re-run it if they edit the palette). Cracks, sweat, icicles, snow particles are shared.
+  It brings ITS MUSIC: generic hook `Boss:musicOverride()` read by `BossZones.music` (before the zone's track) →
+  catalog `snowball_verity` (`tools/music/verity_boss.py`, intro + loop; verified by numbers only): a NEW composition
+  from the ideas of La Gran Bola (three repeated notes + a leap, octave leap, 16th rolling bass, rolling toms, sleigh
+  bells) and "It's me, It's Verity" by Horror Skunx (C harmonic minor, 126; refs local only in `tools/music/ref/
+  verity.mid|wav`): the lower-neighbour on the leading tone, the 5–♭6–5 trill, the rocking 0·6·8·14 rhythm, descending
+  pairs, oom-pah bass + offbeat chords, four-on-the-floor, i–i–♭VI–V with a MAJOR dominant. F minor + E natural, 150
+  BPM; intro 4 · A · A' · B (rolling bass) · C (chorus + the Ball's riff as 2nd voice) · K (music box alone, Neapolitan
+  G♭) · A'' (+ music-box descant) · C' · coda = 60-bar loop (96 s). `copied()` asserts no bar equals a bar of either
+  source (rhythm + intervals). Harness `snowboss_rules verity`, `snowboss_look VERITY=1`.
 - **Rey Gummy** (`types/megagummy.lua`, "Rey Gummy", `boss.megagummy` = REY GUMMY / GUMMY KING): the Gummy's
   16x16 sprite at scale 10 (`MS`) with brows + a gold crown (crown = separate `crown.png` on the same grid, drawn
   over the body so it can fly off). Art `assets/images/bosses/megagummy/` from `tools/ui/make_gummy_variants.py

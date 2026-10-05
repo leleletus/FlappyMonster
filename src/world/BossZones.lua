@@ -414,6 +414,13 @@ function BossZones.music(level)
         if zz.state == 'intro' then return BossZones.SILENCE end
     end
     local z = BossZones.fighting(level)
+    if z then
+        -- (un jefe puede traer SU música: Boss:musicOverride() — la Gran Bola de Nieve cuando es "Verity")
+        for _, b in ipairs(z.bosses or {}) do
+            local m = b.musicOverride and b:musicOverride()
+            if m then return m end
+        end
+    end
     if z and z.music ~= 'level' then return z.music end
     return nil
 end

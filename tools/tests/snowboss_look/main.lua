@@ -39,6 +39,7 @@ local function lago()
     BossZones.link(level, es)
     local boss
     for _, e in ipairs(es) do if e.def.name == 'snowboss' then boss = e end end
+    if boss and os.getenv('VERITY') == '1' then boss.verity = true end      -- (VERITY=1: con la cara del huevo de Pascua)
     return level, es, boss
 end
 
