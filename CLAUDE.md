@@ -2006,8 +2006,11 @@ again. No dialogue or text: animation + music.
   amounts — don't scale) → offset copies at 1 art px ("much too thick") → 1/3. One helper for every place where the
   almost-black monster was lost: the cinematics (`Stage.monster` inside a set / `o.outline`), the results screen, and
   the LEVELS that are dark, at night, caves or under the surface line of a level with a depth (`Silhouette.on(level,
-  y)` → `PlayerAdventure.backlit`, set by AdventureState / OnlineAdventureState around drawing the players; local
-  player and remote `OnlinePlayer`s). Render only; drawn before the darkness, so it dims with the scene.
+  y)`). PER CHARACTER (3.69.1): the states only say WHICH LEVEL is being drawn (`PlayerAdventure.lightLevel`) and each
+  `PlayerAdventure` / `OnlinePlayer` (other players, the KOTH bot) asks `Silhouette.on(level, ITS y)` — it used to be
+  one yes/no set from the local player's position, so standing in the dark lit everybody's edge. Nothing to send
+  online: it is a pure function of the level and that character's position, which every client already has.
+  Render only; drawn before the darkness, so it dims with the scene. Harness `mechanics filo_propio`.
 
 ## OST presentation videos (`tools/video/`)
 

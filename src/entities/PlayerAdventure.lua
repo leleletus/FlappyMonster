@@ -1173,10 +1173,11 @@ function PlayerAdventure:render(camX, camY)
         love.graphics.draw(spriteCrouch, math.floor(self.x-camX), math.floor(self.y-camY+SPRITE_H/2),
             0, s*self.facing, s*SQUASH_K, iw/2, ih)
     else
-        -- En lo oscuro (niveles a oscuras, de noche, cuevas: `PlayerAdventure.backlit`, lo pone quien dibuja)
-        -- su fondo blanco: el mismo sprite, algo más grande y en blanco, detrás (src/fx/Silhouette.lua)
-        if PlayerAdventure.backlit and not iced then
-            Silhouette = Silhouette or require 'src/fx/Silhouette'
+        -- En lo oscuro (niveles a oscuras, de noche, cuevas, bajo la superficie) su filo blanco (src/fx/Silhouette.lua).
+        -- CADA monstruo lo decide por SU sitio: quien dibuja solo dice en qué nivel (`PlayerAdventure.lightLevel`);
+        -- antes era un sí/no común y el del jugador local encendía o apagaba el de todos los demás
+        Silhouette = Silhouette or require 'src/fx/Silhouette'
+        if PlayerAdventure.lightLevel and not iced and Silhouette.on(PlayerAdventure.lightLevel, self.y) then
             local _, _, _, al = love.graphics.getColor()
             Silhouette.draw(img, self.x-camX, self.y-camY, 0, s*self.facing, s, al)
         end

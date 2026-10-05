@@ -44,6 +44,7 @@
 --                  eventos de red ('crack' / 'icebreak') en cada paso
 --   hielo_gp       ground pound: 3 estados de golpe (normal → a punto); otro lo rompe
 --   hielo_bomba    una explosión rompe el hielo fino
+--   filo_propio    el filo blanco en lo oscuro: cada monstruo según SU posición (jugador, otros, bot)
 --   hielo_resbala  el hielo (y el hielo fino) resbala: corriendo y soltando, se frena
 --                  en mucha más distancia que en piedra; también tarda más en arrancar
 --   cryo_jugador   congelador (cada X s): carga → chorro → el jugador queda congelado
@@ -756,6 +757,32 @@ function cases.hielo_bomba()
         ('hielo fino tras la explosión: %s, %s'):format(name(level, 7, 7), name(level, 8, 7)))
 end
 
+-- El FILO BLANCO del monstruo en lo oscuro (src/fx/Silhouette.lua) lo decide CADA monstruo por su sitio: en un
+-- nivel con profundidad, el que está bajo la superficie lo lleva y el que está arriba, a la luz, no — sea el
+-- jugador propio, otro jugador (OnlinePlayer) o el bot (que se dibuja con un OnlinePlayer). Antes era un sí/no
+-- común que ponía el jugador local.
+function cases.filo_propio()
+    local Sil = require 'src/fx/Silhouette'
+    local OnlinePlayer = require 'src/entities/OnlinePlayer'
+    local level = { depth = 'cave', surfaceRow = 6 }               -- superficie en y = 320
+    FONT_SMALL, FONT_MED, FONT_BIG = FONT_SMALL or love.graphics.getFont(), FONT_MED or love.graphics.getFont(), FONT_BIG or love.graphics.getFont()   -- (el nombre sobre el otro jugador)
+    local real, drawn = Sil.draw, {}
+    Sil.draw = function(img, x, y) drawn[#drawn + 1] = y end
+    local function count(fn) drawn = {}; fn(); return #drawn end
+    local up, down = PlayerAdventure:new(200, 150), PlayerAdventure:new(300, 600)
+    local rUp, rDown = OnlinePlayer:new('a', 'A', { 1, 0.4, 0.3 }), OnlinePlayer:new('b', 'B', { 0.4, 1, 0.3 })
+    rUp:applyData({ x = 400, y = 150, facing = 1, frame = 3 }); rDown:applyData({ x = 500, y = 600, facing = 1, frame = 3 })
+    rUp.renderX, rUp.renderY, rDown.renderX, rDown.renderY = 400, 150, 500, 600
+    PlayerAdventure.lightLevel = level
+    local a, b = count(function() up:render(0, 0) end), count(function() down:render(0, 0) end)
+    local c, d = count(function() rUp:render(0, 0) end), count(function() rDown:render(0, 0) end)
+    PlayerAdventure.lightLevel = nil
+    local off = count(function() down:render(0, 0); rDown:render(0, 0) end)
+    Sil.draw = real
+    check('filo_propio', a == 0 and b == 1 and c == 0 and d == 1 and off == 0,
+        ('arriba (a la luz): jugador %d, otro %d · abajo (penumbra): jugador %d, otro %d · sin nivel: %d'):format(a, c, b, d, off))
+end
+
 function cases.hielo_resbala()
     local function run(kind)
         -- suelo de 24 casillas del material en la fila 8
@@ -1098,7 +1125,7 @@ function love.load()
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
-                         'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala',
+                         'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte' }) do cases[n]() end
     if os.getenv('SHOT_BOMB') then bombShot() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
