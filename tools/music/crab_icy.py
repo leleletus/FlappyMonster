@@ -64,28 +64,15 @@ T_A = ["0:D5/6 6:D5/2 8:D6/2 10:C6/2 12:A5/2 14:F5/4",                          
 A_END = ["2:D5/4 6:D5/2 8:Bb4/4 12:C5/4"]                                   # la cola del riff: ♭VI–♭VII
 A_END2 = ["2:D5/4 6:D5/2 8:F5/4 12:G5/4"]
 CH_A = ['Dm', ['Dm', 'Bb'], 'Dm', ['Dm', 'C'], 'Bb', ['Bb', 'C'], 'Dm', ['Dm', 'Bb', 'C']]
-# LAS DOS REFERENCIAS DE WINTER, a medio camino (3.72.1). Historia: v3 las disfrazaba tanto (el gesto de 1:48 INVERTIDO,
-# el motivo a mitad de velocidad) que no se reconocían; 3.72.0 las puso literales y al usuario le sonó a "copiar y
-# pegar: antes la transición y la inclusión eran más naturales; el punto era hacerlas un poco más reconocibles, no
-# literalmente iguales". Ahora cada una conserva su HUELLA y lo demás es propio, sobre la armonía de la v3:
-#   · frase de 1:48: su RITMO (tres corcheas y una nota larga a contratiempo; 2-2-2-4 · 2-2-4→) y el contorno de su
-#     cabeza (sube por el acorde hasta la octava), del DERECHO, pero en Sol menor y siguiendo en secuencia por la
-#     progresión de la v3 — no sus notas ni su continuación; el cierre (tres notas y un salto) como estaba.
-#   · motivo navideño: su primer compás como es (negras: salto de octava y bajada) y a partir de ahí sigue por su cuenta.
-T_B_OLD = ["0:D6/2 2:Bb5/2 4:G5/2 6:D5/4 10:G5/2 12:Bb5/2 14:A5/4", "2:F5/2 4:D5/2 6:A5/4 12:F5/4",
-           "0:D6/2 2:Bb5/2 4:F5/2 6:D5/4 10:F5/2 12:Bb5/2 14:C6/4", "2:A5/2 4:F5/2 6:C6/4 12:A5/4",
-           "0:Bb5/2 2:G5/2 4:D5/2 6:G5/4 10:Bb5/2 12:D6/2 14:D6/4", "2:A5/2 4:F5/2 6:D5/4 12:F5/4",
-           "0:F5/3 4:F5/3 8:F5/3 12:Bb5/4", "0:G5/3 4:G5/3 8:G5/3 12:C6/4"]             # (la v3: el gesto invertido)
-T_B = ["0:G4/2 2:Bb4/2 4:D5/2 6:G5/4 10:D5/2 12:G5/2 14:A5/4",             # la cabeza de 1:48, del derecho, en Sol menor
-       "2:F5/2 4:A5/2 6:D6/4 12:A5/4",
-       "0:D6/2 2:C6/2 4:Bb5/2 6:F5/4 10:D5/2 12:F5/2 14:A5/4",             # baja (el ritmo de su 3er compás) por Si♭
-       "2:G5/2 4:F5/2 6:C5/4 10:A4/2 12:C5/4",
-       "0:Bb4/2 2:D5/2 4:G5/2 6:Bb5/4 10:G5/2 12:Bb5/2 14:D6/4",           # la cabeza otra vez, una tercera más arriba
+T_B = ["0:D6/2 2:Bb5/2 4:G5/2 6:D5/4 10:G5/2 12:Bb5/2 14:A5/4",            # el gesto de 1:48, INVERTIDO, en secuencia
+       "2:F5/2 4:D5/2 6:A5/4 12:F5/4",
+       "0:D6/2 2:Bb5/2 4:F5/2 6:D5/4 10:F5/2 12:Bb5/2 14:C6/4",
+       "2:A5/2 4:F5/2 6:C6/4 12:A5/4",
+       "0:Bb5/2 2:G5/2 4:D5/2 6:G5/4 10:Bb5/2 12:D6/2 14:D6/4",
        "2:A5/2 4:F5/2 6:D5/4 12:F5/4",
        "0:F5/3 4:F5/3 8:F5/3 12:Bb5/4",                                    # su cierre (tres notas y un salto), en otros grados
        "0:G5/3 4:G5/3 8:G5/3 12:C6/4"]
 CH_B = ['Gm', 'Dm', 'Bb', 'F', 'Gm', 'Dm', 'Bb', 'C']
-MOTIF = ["0:F5/4 4:F6/4 8:E6/4 12:D6/4", "0:C6/4 4:Bb5/4 8:G5/8"]            # el primer compás del motivo, como es, y gira por su cuenta
 T_C = ["0:A4/3 3:A5/3 6:G5/2 8:F5/3 11:E5/3 14:D5/2",                      # el contorno del motivo navideño, en menor y en 3+3+2
        "0:D5/3 3:F5/3 6:A5/2 8:Bb5/4 12:F5/4",
        "0:C5/3 3:C6/3 6:Bb5/2 8:A5/3 11:G5/3 14:F5/2",                     # … una tercera más arriba
@@ -95,8 +82,8 @@ T_C = ["0:A4/3 3:A5/3 6:G5/2 8:F5/3 11:E5/3 14:D5/2",                      # el 
        "0:E5/2 2:G5/2 4:C6/4 8:Bb5/2 10:G5/2 12:E5/4",
        "0:D5/6 6:D5/2 8:G5/2 10:F5/4 14:D5/2"]                             # … y cierra con la célula del cangrejo
 CH_C = ['Dm', 'Bb', 'F', 'C', 'Dm', 'Bb', 'C', 'Dm']
-T_K = MOTIF + ["0:A5/4 4:D6/4 8:F6/8", "0:D6/8 8:A5/8",
-                "0:Bb5/8 8:G5/8", "0:F5/8 8:D5/8", "0:E5/4 4:G5/4 8:C6/8", "0:G5/3 4:G5/3 8:G5/3 12:C6/4"]     # … y sigue por su cuenta (como en la v3)
+T_K = ["0:F5/8 8:F6/8", "0:E6/8 8:C6/8", "0:D6/8 8:A5/8", "0:F5/4 4:A5/4 8:D6/8",       # el salto y la bajada, en valores largos…
+       "0:Bb5/8 8:G5/8", "0:F5/8 8:D5/8", "0:E5/4 4:G5/4 8:C6/8", "0:G5/3 4:G5/3 8:G5/3 12:C6/4"]     # … y sigue por su cuenta
 CH_K = ['Bb', 'C', 'Dm', 'Dm', 'Gm', 'Bb', 'C', 'C']
 # el CONTRAPUNTO de la tercera vuelta del tema: la caja de música, en notas largas (medio compás cada una)
 T_DESC = ["0:F5/8 8:A5/8", "0:D6/8 8:Bb5/8", "0:A5/8 8:F5/8", "0:D5/8 8:E5/8",
@@ -104,7 +91,7 @@ T_DESC = ["0:F5/8 8:A5/8", "0:D6/8 8:Bb5/8", "0:A5/8 8:F5/8", "0:D5/8 8:E5/8",
 T_CODA = ["0:F5/6 6:F5/4 10:F5/4 14:G5/4", "2:G5/6 8:G5/4 12:G5/4", "0:A5/6 6:A5/4 10:A5/4 14:D6/2",
           "0:A4/4 4:D5/2 6:F5/2 8:A5/6"]                                   # la llamada del juego
 CH_CODA = ['Bb', 'C', 'Dm', 'Dm']
-T_IN = MOTIF + ["0:A5/4 4:D6/4 8:F6/8", "0:D6/8"]
+T_IN = ["0:F5/8 8:F6/8", "0:E6/8 8:C6/8", "0:D6/16", ""]
 CH_IN = ['Bb', 'C', 'Dm', 'Dm']
 ORDER = ['IN', 'A', 'A2', 'B', 'C', 'K', 'A3', 'B2', 'C2', 'CODA']
 Q4 = {}
@@ -332,9 +319,7 @@ def build(lufs=-10.0):
     x, side = x * env, side * env
     y = F.master(np.stack([x + side, x - side], 1), lufs=lufs)
     GN.report('crab_tantrum_icy', y, S, g, n)
-    # (los dos compases del motivo navideño — intro y respiro — llevan sus notas de paso: no cuentan)
-    own = [x for x in mel + desc if not ((tag[x[0] - 1] == 'IN' and x[0] <= 2) or (tag[x[0] - 1] == 'K' and x[0] - starts[ORDER.index('K')] < 2))]
-    bad, out = check(own, chords)
+    bad, out = check(mel + desc, chords)
     drums = sum(np.mean((S[k_][:n] * g[k_]) ** 2) for k_ in ('kick', 'toms', 'snare', 'hat', 'crash')) / sum(np.mean((S[k_][:n] * g[k_]) ** 2) for k_ in S)
     print(f'  {BPM} BPM, intro {INTRO} + bucle {NB - INTRO} compases ({(NB - INTRO) * BAR:.1f} s); melodía {len(mel)} notas; batería {100 * drums:.0f} % de la energía')
     print(f'  notas largas fuera del acorde: {bad or "ninguna"} · fuera de la escala: {out or "ninguna"}')

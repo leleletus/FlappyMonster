@@ -2454,6 +2454,10 @@ Low-level notes (for writing NEW harnesses):
   user: inverted / half-speed = not recognizable; whole phrase literal = copy-paste; RIGHT = the motif's rhythm and
   head contour (or one literal bar) leading into own material. (Verity's hook is the exception: the user asked for
   that one literal.)
+  3.72.2: THE USER WENT BACK TO v3 (3.66.0) — audio, .mid and `crab_icy.py` restored exactly; v3 is the definitive
+  `crab_tantrum_icy`. Don't touch its winter references again unless asked. Archived outside the repo:
+  `FlappyMonster_originals/music/versiones/crab_tantrum_icy_v3/` (the restored one) and
+  `.../crab_tantrum_icy_3.72.1_intermedia/` (the middle-ground attempt, with its generator).
 - 3.66.2 (accents of `evil_ship_boss` and `snowball_boss`): they were "very loud, as if they were the main melody" and
   out of harmony — a wailing siren (±2 semitones of vibrato) and a low "laugh" with a pitch drop. Now both are a quiet
   ACCOMPANIMENT made only of CHORD TONES, no bends (`I_SOFTACC`): the ship alternates fifth and root in 8ths; the
