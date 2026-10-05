@@ -2445,6 +2445,15 @@ Low-level notes (for writing NEW harnesses):
   over B♭ B♭ C C) in the intro and in the first 4 bars of the breather K. Theme A, chorus, counterpoint, arrangement,
   form and mix untouched. Same lesson as Verity: a motif the user calls a reference must be QUOTED somewhere, even in
   a piece that otherwise develops it. Loop times: B 0:21 / 1:02, breather 0:41. OST video not re-rendered.
+  3.72.1: that was TOO literal ("practically a copy/paste; v3's transitions and inclusion were more natural; the point
+  was a bit more recognizable, not literally the same"). MIDDLE GROUND, v3's harmony and form restored: section B keeps
+  the 1:48 phrase's FINGERPRINT — its rhythm (three 8ths + an offbeat long note) and the contour of its head (up the
+  chord to the octave), UPRIGHT (v3 inverted it) — but in G minor, continued in sequence over v3's progression, not
+  its notes; the Christmas motif = its FIRST BAR as is (quarter notes: octave leap + descent) in the intro and opening
+  the breather, then it goes its own way. Literal bars vs winter: 2 of 72 (that motif bar, twice). THE SCALE for this
+  user: inverted / half-speed = not recognizable; whole phrase literal = copy-paste; RIGHT = the motif's rhythm and
+  head contour (or one literal bar) leading into own material. (Verity's hook is the exception: the user asked for
+  that one literal.)
 - 3.66.2 (accents of `evil_ship_boss` and `snowball_boss`): they were "very loud, as if they were the main melody" and
   out of harmony — a wailing siren (±2 semitones of vibrato) and a low "laugh" with a pitch drop. Now both are a quiet
   ACCOMPANIMENT made only of CHORD TONES, no bends (`I_SOFTACC`): the ship alternates fifth and root in 8ths; the
