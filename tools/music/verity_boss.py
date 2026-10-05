@@ -12,6 +12,8 @@
 #       c) las PAREJAS que bajan del piano (Do-Do Si♭-Si♭ La♭-La♭ Sol);
 #       d) el acompañamiento "um-pa" (bajo fundamental–quinta a negras, acordes a contratiempo), el bombo a negras, y
 #          la armonía i–i–♭VI–V con la DOMINANTE MAYOR (la sensible: lo que le da el aire de feria siniestra).
+#   Y UNA MUESTRA literal (a petición del usuario, para que se reconozca la referencia): el gancho del piano eléctrico
+#   de Verity, sus cuatro primeros compases, en la intro y abriendo cada estribillo (`HOOK`).
 #   Cómo se juntan: el TEMA (A) es el riff de la Bola con la bordadura de Verity DENTRO (Fa-Fa-Mi-Fa y salto), sobre el
 #   um-pa y la progresión de Verity; el PUENTE (B) pone el bajo rodante de la Bola bajo una frase nueva: tres notas
 #   repetidas de anacrusa (la célula de la Bola en el sitio rítmico de la 2ª frase de Verity) que SALTAN a una nota
@@ -71,15 +73,16 @@ T_B = ["0:Db6/8 10:Bb5/2 12:Bb5/2 14:Bb5/2",                               # tre
        "0:C6/2 2:Db6/2 4:C6/2 6:Db6/2 8:C6/2 10:Db6/2 12:Ab5/4",           # el trino
        "0:G5/3 4:G5/3 8:Ab5/2 10:G5/2 12:C6/4"]                                     # la célula de la Bola, en la dominante, con la bordadura ♭6ª–5ª
 CH_B = ['Bbm', 'Fm', 'Db', 'C', 'Bbm', 'Fm', 'Db', 'C']
-T_C = ["0:F5/6 6:F6/2 8:C6/6 14:Ab5/2",                                    # el ritmo mecido, con el salto de octava
-       "0:Ab5/2 2:F5/2 4:Db5/4 10:F5/2 12:Ab5/2 14:Db6/2",                 # cae por el acorde y vuelve a subir
-       "0:Eb5/6 6:Eb6/2 8:Bb5/6 14:G5/2",
-       "0:G5/2 2:E5/2 4:C5/4 8:C6/2 10:Db6/2 12:C6/4",
-       "0:F5/6 6:F6/2 8:C6/6 14:Ab5/2",
+# LA MUESTRA: el gancho del piano eléctrico de Verity (sus compases 1-4), TAL CUAL, llevado a Fa menor — el usuario: "es
+# el motivo reconocible; tiene que notarse que es una referencia". Suena tres veces: la caja de música sola en la
+# intro y, con todo, abriendo los dos estribillos (donde el riff de la Bola le contesta por debajo, en sus huecos)
+HOOK = ["0:F5/2 6:Ab5/2 8:F5/2 14:Ab5/2", "0:C6/2 2:Ab5/2 4:F5/2", "0:C6/2 4:Db6/2 8:C6/2 10:Ab5/2 14:G5/2", "14:Ab5/2"]
+T_C = HOOK + [
+       "0:F5/6 6:F6/2 8:C6/6 14:Ab5/2",                                    # … y sigue lo propio: su ritmo mecido con el salto de octava
        "0:F6/2 2:F6/2 4:Eb6/2 6:Eb6/2 8:Db6/2 10:Db6/2 12:Ab5/4",
        "0:Bb5/3 4:Bb5/3 8:C6/3 12:E6/4",                                   # sube a la sensible…
        "0:F6/4 4:C6/4 8:F5/8"]                                             # … y resuelve
-CH_C = ['Fm', 'Db', 'Eb', 'C', 'Fm', 'Db', ['Bbm', 'C'], 'Fm']
+CH_C = ['Fm', 'Fm', 'Db', 'C', 'Fm', 'Db', ['Bbm', 'C'], 'Fm']             # (los cuatro primeros: la armonía del gancho, i–i–♭VI–V)
 T_K = ["0:F5/8 8:Ab5/8", "0:C6/8 8:Ab5/2 10:G5/2 12:F5/4", "0:Gb5/8 8:Bb5/8", "0:C6/8 8:Db6/2 10:C6/2 12:G5/4",
        RIFF, "0:Ab5/3 4:Ab5/3 8:G5/2 10:Ab5/2 12:Db6/4", "0:Bb5/4 4:Gb5/4 8:Db5/8", "0:G5/3 4:G5/3 8:Ab5/2 10:G5/2 12:C6/4"]
 CH_K = ['Fm', 'Fm', 'Gb', 'C', 'Fm', 'Db', 'Gb', 'C']
@@ -89,7 +92,7 @@ T_DESC = ["0:C5/8 8:Ab4/8", "0:F4/8 8:Ab4/8", "0:F4/8 8:Ab4/8", "0:G4/8 8:E4/8",
 T_CODA = ["0:F6/2 2:F6/2 4:Eb6/2 6:Eb6/2 8:Db6/2 10:Db6/2 12:C6/4", "0:Ab5/3 4:Ab5/3 8:G5/2 10:Ab5/2 12:Db6/4",
           "0:C6/2 2:Db6/2 4:C6/2 6:Db6/2 8:C6/2 10:Db6/2 12:C6/4", "0:G5/3 4:G5/3 8:G5/3 12:E5/4"]
 CH_CODA = ['Fm', 'Db', 'C', 'C']
-T_IN = ["0:F5/8 8:F5/8", "0:E5/2 2:F5/6 8:C6/8", "0:Db6/8 8:Ab5/8", "0:C6/8"]
+T_IN = HOOK
 CH_IN = ['Fm', 'Fm', 'Db', 'C']
 ORDER = ['IN', 'A', 'A2', 'B', 'C', 'K', 'A3', 'C2', 'CODA']
 Q4 = {}
@@ -151,7 +154,10 @@ def copied(mel, tag):
         print('  (sin el MIDI de Verity: solo se compara con La Gran Bola)', e)
     mine = {}
     for b, st, n, d in mel: mine.setdefault(b, []).append((st, n))
-    return sorted(b for b, v in mine.items() if len(v) >= 3 and sig(v) in src)
+    sample = ('IN', 'C', 'C2')                    # (los 4 primeros compases de estas secciones SON la muestra)
+    first = {}
+    for b, t in enumerate(tag, 1): first.setdefault(t, b)
+    return sorted(b for b, v in mine.items() if len(v) >= 3 and sig(v) in src and not (tag[b - 1] in sample and b - first[tag[b - 1]] < 4))
 
 
 WAVES = [wavetable([1.0, 0.0, 0.5, 0.12, 0.25, 0.0, 0.12]),     # 0 voz HUECA (armónicos impares: rara, de feria)
@@ -339,7 +345,7 @@ def build(lufs=-10.5):
     drums = sum(np.mean((S[k_][:n] * g[k_]) ** 2) for k_ in ('kick', 'toms', 'snare', 'hat', 'crash')) / sum(np.mean((S[k_][:n] * g[k_]) ** 2) for k_ in S)
     print(f'  {BPM} BPM, intro {INTRO} + bucle {NB - INTRO} compases ({(NB - INTRO) * BAR:.1f} s); melodía {len(mel)} notas; batería {100 * drums:.0f} % de la energía')
     print(f'  notas largas fuera del acorde: {bad or "ninguna"} · fuera de la escala: {out or "ninguna"}')
-    print(f'  compases iguales a uno de las fuentes (ritmo + intervalos): {copied(mel, tag) or "ninguno"}')
+    print(f'  compases iguales a uno de las fuentes, fuera de la muestra (ritmo + intervalos): {copied(mel, tag) or "ninguno"}')
     return y, mel, n_i
 
 

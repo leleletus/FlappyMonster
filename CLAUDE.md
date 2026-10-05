@@ -1549,6 +1549,10 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   BPM; intro 4 · A · A' · B (rolling bass) · C (chorus + the Ball's riff as 2nd voice) · K (music box alone, Neapolitan
   G♭) · A'' (+ music-box descant) · C' · coda = 60-bar loop (96 s). `copied()` asserts no bar equals a bar of either
   source (rhythm + intervals). Harness `snowboss_rules verity`, `snowboss_look VERITY=1`.
+  3.71.1 (user: "the electric piano line is THE recognizable motif; it has to be heard as a reference"): Verity's e-piano
+  HOOK (its bars 1-4, over i–i–♭VI–V) is now quoted literally in F minor (`HOOK`): music box alone in the intro and
+  opening both choruses (loop file 0:38 and 1:17), the Ball's riff answering below in its gaps. Reinterpreting it only
+  was not recognizable — when the user names a motif as the reference, quote it.
 - **Rey Gummy** (`types/megagummy.lua`, "Rey Gummy", `boss.megagummy` = REY GUMMY / GUMMY KING): the Gummy's
   16x16 sprite at scale 10 (`MS`) with brows + a gold crown (crown = separate `crown.png` on the same grid, drawn
   over the body so it can fly off). Art `assets/images/bosses/megagummy/` from `tools/ui/make_gummy_variants.py
