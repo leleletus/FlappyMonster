@@ -564,6 +564,17 @@ landing mark; sprites in `assets/images/bosses/common/`). Asset layout: enemies 
   speed match → `pa:launch(vx, vy)` + `e:onLaunch(pa)`; predicted on the client
   (`Predictor:recordLaunch`). States ready → bounce (0.1 s: everyone touching
   bounces) → extended (`cooldown`, just a wall) → retract → ready.
+- FROZEN TRAMPOLINES (3.73.0): trampoline prop `skin` = 'auto' (default) | 'normal' | 'ice' (render only; editor
+  "Aspecto"). Auto = the ICE texture (`trampoline/ice_normal.png` / `ice_extended.png`, the same art as the Icy
+  Crabby's trampoline) in snowy levels — `level.spikeSkin == 'ice'` or `level.snow` — so no level data had to change
+  and none can be left mixed (`Tramp.skinFor(props, level)`, needs `levelRef`: `wantsLevel`). New skin = 2 PNGs + one
+  `SKINS` line. Today only lago_helado has a plain trampoline among the icy levels.
+- ENEMY DESIGN PROPOSALS (3.73.0, WAITING for the user's picks — nothing is in the game yet):
+  `tools/ui/make_enemy_designs.py` → `FlappyMonster_pruebas/enemigos/*.png`: 3 options each for Cave Gummy, Magma
+  Gummy, River Crabby (meadow, freshwater), Lava Crabby, the Fortress pair (steel / rust / guard with red plume), all
+  = the exact base sprite with another palette + a 1-3 px detail; and the HOPPER ("Saltarín", the next enemy: jumps in
+  an arc at the player) in 3 designs (A frog, B spring-ball, C hare) × 3 frames (sit, crouch, air) × 6 islands (palette
+  + spots + a head feature per island: sprout, shell, plume, snow cap, angler lure, flame).
 - Crabby spike hazard = tile-spike proportions (base rectangle, 60% × 40% of the
   visible spike: `spikeDims` in crabby.lua), like `Level._spikeHitbox`.
 - Crabby hooks: `drawTopper(cx, baseY, progress, dir)` (spike by default) and

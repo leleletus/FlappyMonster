@@ -28,12 +28,27 @@ local PAD_TOP       = { normal = 7, extended = 4 }   -- fila del cojín en el sp
 local FACE = { up = 'top', down = 'bottom', left = 'left', right = 'right' }
 local ROT  = { up = 0, right = math.pi / 2, down = math.pi, left = -math.pi / 2 }
 
+-- ASPECTOS (solo dibujo; prop `skin`): 'normal' y 'ice' = el trampolín HELADO (la misma textura que el de los Crabbies
+-- helados). 'auto' (por defecto) = helado en los niveles nevados — los de pinchos de hielo o nieve cayendo
+-- (level.spikeSkin == 'ice' / level.snow) —, así ninguno se queda sin cambiar; un aspecto nuevo = dos PNG + una línea
+local SKINS = { normal = { 'normal.png', 'extended.png' }, ice = { 'ice_normal.png', 'ice_extended.png' } }
 local imgNormal, imgExtended
+local skinImg = {}
 function Tramp.loadAssets()
     if imgNormal then return end
-    imgNormal   = love.graphics.newImage('assets/images/trampoline/normal.png')
-    imgExtended = love.graphics.newImage('assets/images/trampoline/extended.png')
-    if imgNormal.setFilter then imgNormal:setFilter('nearest', 'nearest'); imgExtended:setFilter('nearest', 'nearest') end
+    for id, f in pairs(SKINS) do
+        local a = love.graphics.newImage('assets/images/trampoline/' .. f[1])
+        local b = love.graphics.newImage('assets/images/trampoline/' .. f[2])
+        if a.setFilter then a:setFilter('nearest', 'nearest'); b:setFilter('nearest', 'nearest') end
+        skinImg[id] = { a, b }
+    end
+    imgNormal, imgExtended = skinImg.normal[1], skinImg.normal[2]
+end
+Tramp.wantsLevel = true                      -- (BossZones.link / el editor le dan el nivel: levelRef)
+function Tramp.skinFor(props, level)
+    local id = props and props.skin or 'auto'
+    if id == 'auto' then id = (level and (level.spikeSkin == 'ice' or level.snow)) and 'ice' or 'normal' end
+    return SKINS[id] and id or 'normal'
 end
 function Tramp.sizePx() return TILE_PX, TILE_PX end
 
@@ -129,7 +144,8 @@ local function drawTramp(img, cx, cy, rot, sc, squash)
 end
 
 function Tramp:render(camX, camY)
-    local img = self:isExtended() and imgExtended or imgNormal
+    local sk = skinImg[Tramp.skinFor(self.props, self.levelRef)]
+    local img = self:isExtended() and sk[2] or sk[1]
     -- "Boing": al lanzar se estira un poco y vuelve
     local sq = 1
     if self.state == 'bounce' then sq = 1.12 end
@@ -151,6 +167,9 @@ local PROPS = {
       help='Multiplicador del salto normal (1.75 = unas 5 casillas)' },
     { key='cooldown', kind='number', label='Extendido tras lanzar (s)', group='Trampolín', default=0.6,
       min=0, max=10, step=0.05, help='Mientras está extendido no lanza: solo es una pared' },
+    { key='skin', kind='enum', label='Aspecto', group='Trampolín', default='auto',
+      options = { { value = 'auto', label = 'Auto' }, { value = 'normal', label = 'Normal' }, { value = 'ice', label = 'Helado' } },
+      help='Auto: helado en los niveles nevados (pinchos de hielo o nieve), normal en los demás' },
 }
 
 local defs = {}
