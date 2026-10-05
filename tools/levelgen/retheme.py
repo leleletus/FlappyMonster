@@ -505,6 +505,27 @@ def audit(name, fix=False):
 
 
 ICY_CRABS = {'crabby': 'crabby_ice', 'crabbytramp': 'crabbytramp_ice', 'gummy': 'gummy_ice'}
+# Los enemigos de CADA ISLA (mismo enemigo, su variante): `--enemies [niveles]` solo cambia eso (nada de terreno ni
+# decoraciones). Nieve: los helados; volcán: Gummy de magma; fortaleza: Crabby de acero
+ISLAND_ENEMIES = {
+    'snow': ICY_CRABS,
+    'volcano': {'gummy': 'gummy_magma'},
+    'fortress': {'crabby': 'crabby_fortress', 'crabbytramp': 'crabbytramp_fortress'},
+}
+
+
+def enemies(name, dry=False):
+    path = os.path.join(LEVELS, name + '.json')
+    lv = json.load(open(path))
+    table = ISLAND_ENEMIES.get(THEMES.get(name))
+    n = 0
+    for e in lv.get('entities', []) if table else []:
+        if e['type'] in table:
+            e['type'] = table[e['type']]; n += 1
+    if n:
+        print('  %-22s %-9s enemigos cambiados %d' % (name, THEMES.get(name), n))
+        if not dry: save(path, lv)
+    return n
 
 
 def save(path, lv):
@@ -529,6 +550,10 @@ if __name__ == '__main__':
     if '--sky' in sys.argv:
         print('Fondo y hora:')
         for n in (args or sorted(SKY)): set_sky(n)
+        sys.exit(0)
+    if '--enemies' in sys.argv:         # solo los enemigos de la isla
+        names = args or sorted(THEMES)
+        print('enemigos cambiados en total: %d' % sum(enemies(n, '--dry' in sys.argv) for n in names if os.path.exists(os.path.join(LEVELS, n + '.json'))))
         sys.exit(0)
     if '--decor' in sys.argv:           # revisar (y con --fix arreglar) las decoraciones fuera de su material
         print('Decoraciones y su material:')

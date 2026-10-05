@@ -585,6 +585,24 @@ landing mark; sprites in `assets/images/bosses/common/`). Asset layout: enemies 
   `tools/sounds/hopper.py`. Test arena `tools/levelgen/arenas/saltarines.json` (one per skin); harness `mechanics
   saltarin`, `online_smoke LEVEL=<that arena> WATCH=hopper`. NOT placed in any real level yet (waiting for the user).
   Not done: glow of the cave lure / volcano eyes in dark levels (`renderGlow`).
+- 3.75.0 (user's verdicts on the Hopper and the variants; protocol v49):
+  HOPPER: (a) with nobody near it ROAMS — random hops (lower, shorter, quieter) inside its route; no route
+  (`patrol = false`) = anywhere (`careful` still keeps it out of pits); default `movement = 'walk'` ONLY so the editor
+  shows the route (it never walks). (b) its art faces LEFT (the face sits 1 px to that side), so it is drawn mirrored
+  when facing right — it used to turn its back on the player.
+  IMPLEMENTED (the user kept the FIRST-round design A for these two, i.e. the original sprite recoloured + a detail;
+  `tools/ui/make_variant_skins.py --apply`): **Gummy de magma** (`gummy_magma`, the Gummy class with
+  `assets/images/gummy_magma/`: dark rock, glowing cracks, eyes and mouth) and **Crabby de la fortaleza**
+  (`crabby_fortress` + `crabbytramp_fortress`, Crabby skin `fortress` = `assets/images/crabby_fortress/`: steel with
+  rivets). Placed by `retheme.py --enemies [levels]` (ONLY swaps enemy types by the level's theme: `ISLAND_ENEMIES` —
+  snow → icy, volcano → gummy_magma, fortress → crabby_fortress; 39 enemies in 11 levels; bot nav rebuilt). The Magma
+  Gummy is dark on dark in the night volcano levels (no glow yet).
+  STILL OPEN — third round of mockups, `FlappyMonster_pruebas/enemigos/variantes_v3.png` (maps `V3_*`): Cave Gummy
+  A pear / B gem with crystal ears / C low and wide; Fortress Gummy (square wind-up toy, approved concept) with feet
+  A Gummy / B boots / C pistons and the brass KEY turning with the walk (tall → medium → thin); River Crabby A stocky
+  / B claws up / C slim; Lava Crabby with claws 1 sides-inward / 2 raised / 3 maces / 4 tongs. USER'S RULES for all
+  variants: legs 1 px wide with only the foot wider (like the Gummy), SYMMETRIC faces (body an odd number of pixels
+  wide, eyes mirrored), claws that read as claws and point inward.
 - SECOND ROUND of variants (3.74.0, WAITING for approval; `FlappyMonster_pruebas/enemigos/variantes_v2.png`, maps `V2`
   in `make_enemy_designs.py`): the user's picks, redrawn as DIFFERENT SPECIES ("like the Icy Crabby vs the Crabby: other
   body shape, proportions, silhouette — not a recolour"): Cave Gummy = lilac PEAR with cut crystals; Magma Gummy =

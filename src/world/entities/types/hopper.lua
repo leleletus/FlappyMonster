@@ -1,6 +1,6 @@
 -- SALTARÍN: una bola con cara sobre un muelle. No anda: SALTA. Se queda quieto, se agacha un instante (el aviso) y
--- salta en arco hacia el jugador más cercano; al caer descansa y vuelve a empezar. Sin nadie cerca da saltitos en
--- el sitio. Es la amenaza "desde arriba" que no tenía ningún enemigo: se le esquiva pasando por debajo de su salto
+-- salta en arco hacia el jugador más cercano; al caer descansa y vuelve a empezar. Sin nadie cerca se PASEA a saltos
+-- al azar por su ruta (prop común `patrol`; sin ruta, por todo el nivel). Es la amenaza "desde arriba" que no tenía ningún enemigo: se le esquiva pasando por debajo de su salto
 -- o se le pisa (en el suelo o en el aire). Reglas con el jugador: las normales (Interactions.defaultCheck).
 --
 -- Estados: 'idle' (quieto; deadTimer = lo que lleva) → 'crouch' (WINDUP s) → 'hop' (balístico) → 'idle'.
@@ -48,7 +48,7 @@ function Hopper.skinFor(props, level)
 end
 
 function Hopper:init()
-    self.moving, self.vx = false, 0
+    self.moving, self.vx, self.flipped = false, 0, false
     self.state, self.deadTimer = 'idle', 0
     self.wait = (self.props.jumpEvery or 1.4) * (0.5 + 0.5 * math.random())    -- (no todos a la vez)
 end
@@ -83,34 +83,47 @@ function Hopper:groundAt(level, x, top)
     return col(x - hw) and col(x + hw)
 end
 
+-- No se tira al vacío: acorta el salto hasta donde haya suelo (o salta en el sitio)
+function Hopper:safeDx(level, dx, top)
+    if self.props.careful == false then return dx end
+    local step = (dx >= 0) and -TILE_PX / 2 or TILE_PX / 2
+    while math.abs(dx) > 1 and not self:groundAt(level, self.x + dx, top) do
+        dx = dx + step
+        if (step < 0 and dx < 0) or (step > 0 and dx > 0) then dx = 0 end
+    end
+    return dx
+end
+
 function Hopper:startHop(level)
     local T, g = TILE_PX, ADV_GRAVITY
     local pa = self:target(level)
-    local h, dx = IDLE_HOP, 0
+    local maxD = (self.props.jumpDist or 4.5) * T
+    local h, dx = self.props.jumpH or 3, 0
+    -- su RUTA (la del editor; sin ruta: todo el nivel)
+    local lo, hi = self.leftBoundPx - self.x + self.outerW / 2, self.rightBoundPx - self.x - self.outerW / 2
     if pa then
-        h = self.props.jumpH or 3
         local up = (self.y - pa.y) / T                              -- el jugador está más arriba: salta más
         if up > h - 1 then h = math.min(MAX_H, up + 1) end
-        local maxD = (self.props.jumpDist or 4.5) * T
         dx = math.max(-maxD, math.min(maxD, pa.x - self.x))
-        -- no se tira al vacío: acorta el salto hasta donde haya suelo (o salta en el sitio)
-        if self.props.careful ~= false then
-            local top = self.y - h * T
-            local step = (dx >= 0) and -T / 2 or T / 2
-            while math.abs(dx) > 1 and not self:groundAt(level, self.x + dx, top) do
-                dx = dx + step
-                if (step < 0 and dx < 0) or (step > 0 and dx > 0) then dx = 0 end
-            end
+        dx = self:safeDx(level, math.max(lo, math.min(hi, dx)), self.y - h * T)
+    else
+        -- SIN NADIE CERCA: se pasea a saltos al azar por su ruta (sin ruta, por donde quiera), más bajos y cortos.
+        -- Prueba unos cuantos destinos y se queda con el primero al que de verdad pueda ir
+        h = h * (0.45 + 0.3 * math.random())
+        for _ = 1, 6 do
+            local d = (0.25 + 0.75 * math.random()) * maxD * 0.8 * ((math.random() < 0.5) and -1 or 1)
+            d = self:safeDx(level, math.max(lo, math.min(hi, d)), self.y - h * T)
+            if math.abs(d) >= T * 0.5 then dx = d; break end
         end
-        -- y no se sale de su RUTA (la del editor: por defecto, unas casillas a cada lado de donde está puesto)
-        dx = math.max(self.leftBoundPx - self.x + self.outerW / 2, math.min(self.rightBoundPx - self.x - self.outerW / 2, dx))
-        if math.abs(dx) > 4 then self.facing = (dx > 0) and 1 or -1 end
+        if dx == 0 then h = IDLE_HOP end                            -- (no tiene adónde: un saltito en el sitio)
     end
+    if math.abs(dx) > 4 then self.facing = (dx > 0) and 1 or -1 end
     self.vy = -math.sqrt(2 * g * h * T)
     self.vx = dx / (2 * -self.vy / g)                               -- (cae a su misma altura al cabo de 2·vy/g)
     self.onGround = false
     self.state, self.deadTimer = 'hop', 0
-    Sound.play('hopJump', pa and 1 or 1.25, pa and 1 or 0.5)
+    self.roaming = not pa                                           -- (paseando suena más flojo)
+    Sound.play('hopJump', pa and 1 or 1.25, pa and 1 or 0.4)
 end
 
 function Hopper:updateCustom(dt, level)
@@ -150,7 +163,7 @@ function Hopper:updateCustom(dt, level)
             self.state, self.deadTimer = 'idle', 0
             local every = self.props.jumpEvery or 1.4
             self.wait = every * (0.85 + 0.3 * math.random())
-            Sound.play('hopLand', 1, 0.8)
+            Sound.play('hopLand', 1, self.roaming and 0.35 or 0.8)
         elseif self.y > level.heightPx + TILE_PX * 4 then
             self.alive = false
         end
@@ -182,7 +195,9 @@ function Hopper:render(camX, camY)
     local x = math.floor(self.x - camX)
     local feet = math.floor(self.y - camY + self.sprH / 2)
     love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.draw(sh.image, sh.quads[fr], x, feet, 0, S * self.facing * sx, S * sy, FW / 2, FH)
+    -- (el dibujo mira a la IZQUIERDA — la cara está un píxel hacia ese lado —: mirando a la derecha va espejado. Antes
+    -- iba al revés y al ver a un jugador le daba la espalda)
+    love.graphics.draw(sh.image, sh.quads[fr], x, feet, 0, -S * self.facing * sx, S * sy, FW / 2, FH)
 end
 
 local G = 'Saltarín'
@@ -193,9 +208,10 @@ local skinOpts = { { value = 'auto', label = 'Auto' }, { value = 'pradera', labe
 return {
     name = 'hopper', label = 'Saltarín', category = 'Enemigos', class = Hopper,
     description = 'Una bola sobre un muelle: se agacha un instante y salta en arco hacia el jugador más cercano. '
-               .. 'Se le esquiva pasando por debajo o se le pisa. Sin nadie cerca da saltitos en el sitio.',
+               .. 'Se le esquiva pasando por debajo o se le pisa. Sin nadie cerca se pasea a saltos por su ruta (sin ruta, por donde quiera).',
     traits = { wantsLevel = true },
-    defaults = { movement = 'static', points = 15, onTouch = 'hurt' },
+    -- (movement = 'walk' solo para que el editor enseñe la RUTA; no anda: lo mueve updateCustom)
+    defaults = { movement = 'walk', points = 15, onTouch = 'hurt' },
     hide = { 'movement', 'attach', 'speed', 'startDir', 'turnAtEdges', 'flyMode', 'flyRange', 'bobAmp', 'pauses', 'dropOnSight', 'detectRange' },
     props = {
         { key='skin', kind='enum', label='Aspecto', group=G, default='auto', options=skinOpts,

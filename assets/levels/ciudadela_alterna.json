@@ -37,8 +37,8 @@
   "entities": [
     {"col":28,"props":{"corner":{"col":38,"row":21},"points":4},"row":17,"type":"pointarea"},
     {"col":54,"props":{"corner":{"col":64,"row":21},"points":4},"row":17,"type":"pointarea"},
-    {"col":18,"props":{"patrol":{"left":14,"right":22},"points":6,"respawn":8},"row":21,"type":"crabby"},
-    {"col":74,"props":{"patrol":{"left":70,"right":78},"points":6,"respawn":8},"row":21,"type":"crabby"},
+    {"col":18,"props":{"patrol":{"left":14,"right":22},"points":6,"respawn":8},"row":21,"type":"crabby_fortress"},
+    {"col":74,"props":{"patrol":{"left":70,"right":78},"points":6,"respawn":8},"row":21,"type":"crabby_fortress"},
     {"col":34,"props":{"patrol":{"left":28,"right":40},"points":4,"respawn":8},"row":13,"type":"gummy"},
     {"col":58,"props":{"patrol":{"left":52,"right":64},"points":4,"respawn":8},"row":13,"type":"gummy"},
     {"col":34,"props":{"detectRange":14},"row":2,"sub":1,"type":"spikefall"},

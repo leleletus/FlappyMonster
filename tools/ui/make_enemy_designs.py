@@ -14,7 +14,7 @@ ROOT = os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'images')
 OUT = '/home/mtvemo/FlappyMonster_pruebas/enemigos'
 NAVY = '1e1e2a'
 BG = {'pradera': '8cc8f0', 'costa': '9cdcf0', 'fortaleza': '8a8ea8', 'nieve': 'b8d4f0', 'cueva': '3a3450', 'volcan': '6a2c2c',
-      'neutro': '6e9a6e'}
+      'neutro': '6e9a6e', 'ceniza': 'c08868'}
 
 
 def rgb(h): return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4)) + (255,)
@@ -395,6 +395,101 @@ def sheet_v2():
     sheet('variantes_v2', 'VARIANTES, 2a ronda  -  a la izquierda el de siempre, a la derecha la especie nueva', rows, 'neutro', scale=9)
 
 
+# ══ TERCERA RONDA (varias versiones de cada una, para comparar). Reglas del usuario: PATAS FINAS (1 px, solo el pie
+# más ancho, como el Gummy), caras SIMÉTRICAS, pinzas que parezcan pinzas y miren hacia dentro ═════════════════════
+LEGS_G = [".....o...o......", ".....o...o......", "....ooo.ooo....."]            # las del Gummy (cuerpo centrado en x = 7)
+CAVE = P('efe6ff', 'c9b8e0', '8c78b4', e=NAVY, g=GLOW, G=GLOW2, t='2ea8b8')
+V3_CAVE = [
+    ('A  Pera\ncuerpo de pera,\ncristales tallados\na un lado', [
+        "................", ".....o..........", "....oGo...o.....", "....oGgo.oGo....", "....oGgtooGto...",
+        "...ohbbbbbso....", "..ohbebbbebso...", "..obbebbbebso...", ".obbbebbbebbso..", ".obbbbbbbbbbso..",
+        ".obbebbbbbebso..", ".oobbeeeeebsoo..", "..oosssssssoo..."] + LEGS_G),
+    ('B  Gema\ncuerpo tallado que\nse estrecha abajo,\ncristales de orejas', [
+        "................", "................", "...o.......o....", "..oGo.....oGo...", "..oGgoooooGgo...",
+        "..otbhhbbbsto...", "..obbebbbebso...", "..obbebbbebso...", "..obbebbbebso...", "..obbbbbbbbso...",
+        "..obebbbbbeso...", "...obeeeeeso....", "....ooooooo....."] + LEGS_G),
+    ('C  Bajo\nancho y bajito,\nojos separados,\nun solo cristal', [
+        "................", "................", "................", "................", "................",
+        ".......o........", "......oGo.......", "...oooGgtooo....", "..ohhbbbbbbso...", ".obbebbbbbebso..",
+        ".obbebbbbbebso..", ".obbbbeeebbbso..", "..oosssssssoo..."] + LEGS_G),
+]
+STEEL = P('eef2f6', 'b8c0cc', '7c8698', e=NAVY, r=RIV, k='d8a838', K='f4d878')
+FORT_BODY = ["................", "................", "..ooooooooooo...", "..ohhbbbbbbso...", "..obrbbbbbrso...",
+             "..obbebbbebso...", "..obbebbbebso...", "..obbebbbebso...", "..obbbbbbbbso...", "..obebbbbbeso...",
+             "..obbeeeeebso...", "..obrbbbbbrso...", "..oosssssssoo..."]
+FORT_FEET = {
+    'A': [".....o...o......", ".....o...o......", "....ooo.ooo....."],            # las del Gummy
+    'A1': [".....o...o......", "....ooo..o......", ".........ooo...."],           # paso
+    'B': [".....o...o......", ".....o...o......", "...ooo...ooo...."],            # botas: la punta hacia fuera
+    'B1': [".....o...o......", "...ooo...o......", ".........ooo...."],
+    'C': ["....ooo.ooo.....", ".....o...o......", "....ooo.ooo....."],            # pistones: casquillo arriba y pie abajo
+    'C1': ["....ooo.ooo.....", "....ooo..o......", ".........ooo...."],
+}
+# la LLAVE de cuerda (en el costado): gira con el paso — de canto (fina) / de frente (alta)
+KEY = {'alta': [(13, 7, 'o'), (14, 5, 'o'), (14, 6, 'K'), (14, 7, 'k'), (14, 8, 'k'), (14, 9, 'o'), (15, 6, 'o'), (15, 7, 'o'), (15, 8, 'o')],
+       'media': [(13, 7, 'o'), (14, 6, 'o'), (14, 7, 'K'), (14, 8, 'o'), (15, 6, 'o'), (15, 7, 'k'), (15, 8, 'o')],
+       'fina': [(13, 7, 'o'), (14, 6, 'o'), (14, 7, 'k'), (14, 8, 'o'), (15, 7, 'o')]}
+RIVER = P('d8cc8c', 'a89c5a', '6e6638', e=NAVY, m='5aa040', M='8cd060', c='e4d8a0')
+V3_RIVER = [
+    ('A  Robusto\ncaparazon alto,\npatas largas,\npinzas a los lados', [
+        "......mMm.........", ".....ommmoooo.....", "...oohmmbbbbboo...", "...ohbbbbbbbbbso..".replace('so..', 'so...')[:18],
+        "...obebbbbbbeso...", "occobbbeeeebbsocco", "oc.oossssssssoo.co", "occ.o..o..o..o.cco",
+        "...o...o..o...o...", "..oo..oo..oo..oo.."]),
+    ('B  Pinzas arriba\nlas pinzas\nlevantadas, como\nsaludando', [
+        "......mMm.........", "o.o..ommmoooo..o.o", "occoohmmbbbbboocco", ".ooohbbbbbbbbbsoo.",
+        "...obebbbbbbeso...", "...obbbeeeebbso...", "...oossssssssoo...", "....o..o..o..o....",
+        "...o...o..o...o...", "..oo..oo..oo..oo.."]),
+    ('C  Esbelto\ncaparazon mas\nestrecho, patas\naun mas largas', [
+        ".......mMm........", ".....ommmoooo.....", "....oohmmbbboo....", "....ohbbbbbbso....", "....obebbbbeso....",
+        "occ.obbeeeebso.cco", "ocoooossssssooooco", "occ..o.o..o.o..cco", "....o..o..o..o....",
+        "....o..o..o..o....", "...oo.oo..oo.oo..."]),
+]
+LAVA = P('804238', '5c2a26', '3e1a1c', e=FIRE3, E=FIRE2, f=FIRE)
+LAVA_BODY = [".....oooooooo.....", "....ohbbffbbso....", "...ohbbbffbbbso...", "...obEbbffbbEso...", "...obbbeeeebbso...",
+             "...oossssssssoo...", "...o.o.o..o.o.o...", "..o..o.o..o.o..o..", ".o...o.o..o.o...o."]
+# pinza IZQUIERDA (filas desde y0, columnas desde x = 0); la derecha es su espejo
+LAVA_CLAWS = [
+    ('1  A los lados,\nhacia dentro\n(como los demas\nCrabbies)', 2, ["oo.", "obo", "ob.", "obo", ".o."]),
+    ('2  Levantadas,\nabiertas hacia\ndentro', 0, [".oo", "ob.", "obo", "obo", ".oo"]),
+    ('3  Mazas\ngordas, cerradas,\ncon la grieta\nencendida', 1, ["ooo", "obbo", "obfo", "obbo", ".oo."]),
+    ('4  Tenazas\nlargas hacia\ndelante y abajo', 3, ["oo.", "obo", "obo", "ob.", "oo."]),
+]
+
+
+def maps(rows, pal, edits=()):
+    w = len(rows[0])
+    for r in rows: assert len(r) == w, (r, len(r), w)
+    return paint([list(r) for r in rows], pal, edits)
+
+
+def lava(y0, claw):
+    g = [list(r) for r in LAVA_BODY]
+    for dy, row in enumerate(claw):
+        for dx, c in enumerate(row):
+            if c == '.': continue
+            for x in (dx, 17 - dx):
+                if g[y0 + dy][x] == '.' or c != 'o': g[y0 + dy][x] = c
+    return paint(g, LAVA)
+
+
+def sheet_v3():
+    white = P('ffffff', 'f2f2f6', 'c4c8d6')
+    og, oc = gummy(white)[0], crab(white)[0]
+    rows = [('GUMMY DE CUEVA\n' + lab, [og, maps(m, CAVE)], 'cueva') for lab, m in V3_CAVE]
+    rows.append(('GUMMY FORTALEZA\nA  pies de Gummy\n(quieto, 2 pasos:\nla llave gira)',
+                 [og, maps(FORT_BODY + FORT_FEET['A'], STEEL, KEY['alta']), maps(FORT_BODY + FORT_FEET['A1'], STEEL, KEY['media']),
+                  maps(FORT_BODY + FORT_FEET['A'], STEEL, KEY['fina']), maps(FORT_BODY + FORT_FEET['A1'], STEEL, KEY['media'])], 'fortaleza'))
+    rows.append(('GUMMY FORTALEZA\nB  botas con la\npunta hacia fuera',
+                 [og, maps(FORT_BODY + FORT_FEET['B'], STEEL, KEY['alta']), maps(FORT_BODY + FORT_FEET['B1'], STEEL, KEY['media']),
+                  maps(FORT_BODY + FORT_FEET['B'], STEEL, KEY['fina'])], 'fortaleza'))
+    rows.append(('GUMMY FORTALEZA\nC  patas de piston\n(casquillo y pie)',
+                 [og, maps(FORT_BODY + FORT_FEET['C'], STEEL, KEY['alta']), maps(FORT_BODY + FORT_FEET['C1'], STEEL, KEY['media']),
+                  maps(FORT_BODY + FORT_FEET['C'], STEEL, KEY['fina'])], 'fortaleza'))
+    rows += [('CRABBY DE RIO\n' + lab, [oc, maps(m, RIVER)], 'pradera') for lab, m in V3_RIVER]
+    rows += [('CRABBY DE LAVA\n' + lab, [oc, lava(y0, claw)], 'ceniza') for lab, y0, claw in LAVA_CLAWS]      # (fondo claro: sobre el rojo oscuro no se veían las pinzas)
+    sheet('variantes_v3', 'VARIANTES, 3a ronda  -  a la izquierda el de siempre; elige una version de cada', rows, 'neutro', scale=8)
+
+
 if __name__ == '__main__':
     for key, (title, bg, opts) in GUMMY_SETS.items():
         sheet(key, title + '  -  quieto, paso 1, paso 2   (arriba: el Gummy de siempre)',
@@ -413,3 +508,4 @@ if __name__ == '__main__':
     sheet('saltarin_los_tres', 'SALTARIN  -  los tres disenos, lado a lado (pradera)',
           [(d, hopper(d, pal, cap)) for d in HOP], 'pradera')
     sheet_v2()
+    sheet_v3()

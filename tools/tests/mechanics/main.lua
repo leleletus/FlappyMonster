@@ -970,10 +970,26 @@ function cases.saltarin()
         end
         burst = st.dead_burst == true
     end
-    check('saltarin', chase and stays and leaves and stomped and hurt and burst ~= false,
+    -- (5) sin nadie: se pasea a saltos por su ruta sin salirse; sin ruta, por donde quiera. Y mira hacia donde salta
+    local function roam(patrol)
+        local lv, e = room(40, 10, {}, { { type = 'hopper', col = 20, row = 9, props = { jumpEvery = 0.3, patrol = patrol } } })
+        lv.players = {}
+        local lo, hi, faceOk = 99, 0, true
+        for _ = 1, 60 * 40 do
+            e[1]:update(1 / 60, lv)
+            lo, hi = math.min(lo, e[1].x / T), math.max(hi, e[1].x / T)
+            if e[1].state == 'hop' and math.abs(e[1].vx) > 5 and (e[1].vx > 0) ~= (e[1].facing > 0) then faceOk = false end
+        end
+        return lo, hi, faceOk
+    end
+    local r0, r1, f1 = roam({ left = 16, right = 24 })
+    local w0, w1, f2 = roam(false)
+    local roams = r0 >= 15 and r1 <= 24 and r1 - r0 > 4 and w1 - w0 > 9 and f1 and f2
+    check('saltarin', chase and stays and leaves and stomped and hurt and burst ~= false and roams,
         ('persigue: agachado=%s salto=%s, %d saltos, altura %.1f casillas, llega a %.1f del jugador · plataforma (acaba en %s): se queda=%s, sin cuidado se va=%s · pisotón lo mata=%s · de lado quita 1=%s · pinchos: %s'):format(
             tostring(seen.crouch), tostring(seen.hop), hops, apex, near, table.concat(ledgePos, ' / '), tostring(stays), tostring(leaves), tostring(stomped), tostring(hurt),
-            burst == nil and 'sin probar' or ('revienta=' .. tostring(burst))))
+            (burst == nil and 'sin probar' or ('revienta=' .. tostring(burst)))
+            .. (' · pasea: con ruta 16-24 va de %.1f a %.1f, sin ruta de %.1f a %.1f, mira adonde salta=%s'):format(r0, r1, w0, w1, tostring(f1 and f2))))
 end
 
 function cases.encerrado()

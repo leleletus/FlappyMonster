@@ -31,7 +31,8 @@ local Props        = require 'src/world/entities/Props'
 local TYPES = { 'gummy', 'crabby', 'spikefall', 'star', 'extralife', 'checkpoint',
                 'mortar', 'rainspike', 'spikerain', 'trampoline', 'crabbytramp',
                 'flood', 'pointarea', 'bosswall', 'mirror', 'miniboss1', 'megacrabby', 'pufferfish', 'bossglass', 'bomb', 'bombobject',
-                'cryo', 'snowboss', 'phaseblock', 'crabby_ice', 'megacrabby_ice', 'gummy_ice', 'megagummy', 'gloomy', 'megagloomy', 'hopper' }
+                'cryo', 'snowboss', 'phaseblock', 'crabby_ice', 'megacrabby_ice', 'gummy_ice', 'megagummy', 'gloomy', 'megagloomy', 'hopper',
+                'gummy_magma', 'crabby_fortress' }
 
 -- Un archivo puede definir varios tipos (p. ej. el trampolín en sus 4 direcciones)
 for _, name in ipairs(TYPES) do

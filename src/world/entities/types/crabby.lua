@@ -91,6 +91,7 @@ function Crabby.loadAssets()
     local sk = addSkin('normal', 'assets/images/crabby/', { meat = 'MeatCrabby.png' })
     imgIdle1, imgIdle2, imgHid = sk.idle1, sk.idle2, sk.hid
     addSkin('ice', 'assets/images/crabby_ice/', { sink = 8 })
+    addSkin('fortress', 'assets/images/crabby_fortress/', {})        -- (acero con remaches: types/crabby_fortress.lua)
     -- Pinzas pequeñas del Crabby helado (tools/ui/make_icecrabby_claws.py, opción A "Mini Mega"):
     -- 2 cuadros 7x7 (abierta / cerrada), pinza IZQUIERDA (la derecha es su espejo); dónde van en
     -- px de arte del cuerpo como en el Mega (x desde el centro, y desde los pies, hacia dentro)
