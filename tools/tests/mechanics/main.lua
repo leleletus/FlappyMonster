@@ -912,6 +912,70 @@ function cases.cryo_corte()
         ('punta del chorro %d px (bloque a %d px)'):format(maxHead, want))
 end
 
+-- SALTARÍN: se agacha, salta en arco hacia el jugador y cae cerca; no se tira al vacío (salvo que se lo permitan);
+-- se le pisa (muere) y de lado hace daño; al caer en pinchos revienta
+function cases.saltarin()
+    -- (1) persigue a saltos por un suelo llano
+    local level, es = room(24, 12, {}, { { type = 'hopper', col = 5, row = 11, props = { jumpEvery = 0.6, range = 12, patrol = { left = 2, right = 22 } } } })
+    local h = es[1]
+    local pa = playerAt(level, 13, 11)
+    pa.immortal = true
+    local seen, apex, hops, x0, last, minNear = {}, 0, 0, h.x, 'idle', 99
+    stepEnts(level, es, 6, function()
+        seen[h.state] = true
+        apex = math.max(apex, (11 * T - (h.y + h.outerH / 2)) / T)
+        if h.state == 'hop' and last ~= 'hop' then hops = hops + 1 end
+        minNear = math.min(minNear, math.abs(h.x - pa.x) / T)
+        last = h.state
+    end)
+    local near = minNear                   -- (lo más cerca que llegó: al golpearlo, el jugador sale empujado)
+    local chase = seen.crouch and seen.hop and hops >= 2 and apex > 2.4 and apex < 3.6 and near < 1.6 and h.x > x0 + 4 * T
+    -- (2) en una plataforma alta: no salta al vacío; sin "cuidado", sí
+    local ledgePos = {}
+    local function ledge(careful)
+        local put = {}
+        for c = 4, 8 do put[#put + 1] = { c, 4, 'solid' } end
+        local lv, e2 = room(24, 13, put, { { type = 'hopper', col = 6, row = 3, props = { jumpEvery = 0.5, careful = careful, range = 20, patrol = { left = 2, right = 22 } } } })
+        local p2 = playerAt(lv, 16, 12)
+        p2.immortal = true
+        stepEnts(lv, e2, 6)
+        ledgePos[#ledgePos + 1] = ('%.1f,%.1f'):format(e2[1].x / T, e2[1].y / T)
+        return e2[1].alive and e2[1].y < 4 * T and e2[1].x > 3 * T and e2[1].x < 8 * T
+    end
+    local stays, leaves = ledge(true), not ledge(false)
+    -- (3) pisarlo lo mata; tocarlo de lado quita vida
+    local lv3, e3 = room(12, 8, {}, { { type = 'hopper', col = 6, row = 7, props = { jumpEvery = 99 } } })
+    lv3.players = {}
+    stepEnts(lv3, e3, 0.3)
+    local out = dropOn(e3[1], lv3, 0, 300, false, 1)
+    local stomped = e3[1].state == 'dead' or not e3[1].alive
+    local lv4, e4 = room(12, 8, {}, { { type = 'hopper', col = 6, row = 7, props = { jumpEvery = 99 } } })
+    local p4 = playerAt(lv4, 5, 7)
+    local hp0 = p4.hp
+    p4.x = e4[1].x - 20
+    stepEnts(lv4, e4, 0.3)
+    local hurt = p4.hp == hp0 - 1 and e4[1].alive
+    -- (4) cae en pinchos: revienta
+    local lv5, e5 = room(16, 10, {}, { { type = 'hopper', col = 4, row = 9, props = { jumpEvery = 0.4, careful = false, range = 20, patrol = { left = 2, right = 14 } } } })
+    local sp = require('src/world/tiles/TileCodec').encode(0, false, { [3] = { present = true, dir = 0 }, [4] = { present = true, dir = 0 } })
+    for c = 7, 9 do lv5:setTileRaw(c, 9, sp) end
+    local spikes = #lv5:getSpikesInBox(6 * T, 8 * T, 3 * T, T) > 0
+    local burst = nil
+    if spikes then
+        lv5.players = { { x = 7.5 * T, y = 8.5 * T, alive = true } }
+        local st = {}
+        for _ = 1, 360 do
+            for _, e in ipairs(e5) do if e.alive then e:update(1 / 60, lv5) end end
+            st[e5[1].state] = true
+        end
+        burst = st.dead_burst == true
+    end
+    check('saltarin', chase and stays and leaves and stomped and hurt and burst ~= false,
+        ('persigue: agachado=%s salto=%s, %d saltos, altura %.1f casillas, llega a %.1f del jugador · plataforma (acaba en %s): se queda=%s, sin cuidado se va=%s · pisotón lo mata=%s · de lado quita 1=%s · pinchos: %s'):format(
+            tostring(seen.crouch), tostring(seen.hop), hops, apex, near, table.concat(ledgePos, ' / '), tostring(stays), tostring(leaves), tostring(stomped), tostring(hurt),
+            burst == nil and 'sin probar' or ('revienta=' .. tostring(burst))))
+end
+
 function cases.encerrado()
     -- Gummy en la casilla 8, bloques en la 7 y la 9 (fila 8, suelo en la 9)
     local level, es = room(16, 10, { { 7, 9, 'solid' }, { 9, 9, 'solid' } },
@@ -1125,7 +1189,7 @@ function love.load()
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
-                         'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio',
+                         'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte' }) do cases[n]() end
     if os.getenv('SHOT_BOMB') then bombShot() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))

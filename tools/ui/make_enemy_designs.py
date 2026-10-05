@@ -273,6 +273,128 @@ def hopper(design, pal, cap):
     return out
 
 
+# ══ SEGUNDA RONDA (elegidos por el usuario; "que sean otra ESPECIE, como el Crabby helado respecto al Crabby: otra
+# forma de cuerpo, otras proporciones, otra silueta — no el de siempre con otra paleta") ═══════════════════════════
+V2 = {
+    # Gummy de cueva: colores de la opción B (lila) + los cristales de la A, estilizados. Cuerpo de PERA (ancho abajo),
+    # patas cortas y gruesas, y un racimo de cristales tallados que le sale de la cabeza, hacia un lado
+    'gummy_cueva': (16, P('efe6ff', 'c9b8e0', '8c78b4', e=NAVY, g=GLOW, G=GLOW2, t='2ea8b8'), [
+        ".....o..........",
+        "....oGo....o....",
+        "....oGgo..oGo...",
+        "....oGgtooGgto..",
+        "...ohGgtbbGgtso.",
+        "..ohbbbbbbbbbso.",
+        "..obbebbbebbbso.",
+        ".obbbebbbebbbbso",
+        ".obbbebbbebbbbso",
+        ".obbbbbbbbbbbbso",
+        ".obbebbbbbebbsso",
+        ".oobbeeeeebbssoo",
+        "..oosssssssssoo.",
+        "....oo....oo....",
+        "....oo....oo....",
+        "...ooo...ooo...."]),
+    # Gummy de magma: la opción A (roca, grietas, ojos y boca encendidos) con forma de VOLCANCITO: ancho abajo,
+    # estrecho arriba y con el cráter encendido en la coronilla (plano: no es un pincho, se le puede pisar)
+    'gummy_magma': (16, P('804238', '5c2a26', '3e1a1c', e=FIRE2, f=FIRE, F=FIRE2, c=FIRE3), [
+        "................",
+        "................",
+        ".....offffo.....",
+        "....ohFFFFso....",
+        "....obbbbbso....",
+        "...ohbbbbbbso...",
+        "...obebbbebso...",
+        "..ohbebbbebbso..",
+        "..obbebbbebbso..",
+        ".ohbbbbbbbbbbso.",
+        ".obbcbbbbbcbbso.",
+        ".obbbffffffbbso.",
+        ".oosbbcbbbbssoo.",
+        "..oooooooooooo..",
+        "....oo....oo....",
+        "...ooo...ooo...."]),
+    # Crabby de río: color entre la A y la C (oliva pardo) con el musgo de la A. Cangrejo de agua dulce: caparazón
+    # ALTO y redondo como un canto rodado, pinzas pequeñas por delante, patas cortas
+    'crabby_rio': (18, P('d8cc8c', 'a89c5a', '6e6638', e=NAVY, m='5aa040', M='8cd060'), [
+        "......mMm.........",
+        ".....ommmoooo.....",
+        "...oohmmbbbbboo...",
+        "..ohhbbbbbbbbbbso.",
+        "..obbbbbbbbbbbbso.",
+        "..obbebbbbbbebbso.",
+        "..obbbbeeeebbbsso.",
+        ".oooosssssssssooo.",
+        "ohho.o..oo..o.ohso",
+        ".oo.o...oo...o.oo."]),
+    # Crabby de lava: la opción A (basalto, grietas, ojos encendidos) como cangrejo de roca ANCHO y bajo, con dos
+    # pinzas gruesas levantadas y tres pares de patas
+    'crabby_lava': (18, P('804238', '5c2a26', '3e1a1c', e=FIRE3, E=FIRE2, f=FIRE), [
+        "o..o.oooooooo.o..o",
+        "obbo.ohbfbbso.obbo",
+        "obboohbbfbbbsoobbo",
+        ".ooobEbbfbbEbsooo.",
+        "..oobbbeeeebbsoo..",
+        "...oossssssssoo...",
+        "...o.o.o..o.o.o...",
+        "..o..o.o..o.o..o..",
+        ".o...o.o..o.o...o."]),
+    # Fortaleza, Gummy: la opción A (acero con remaches) como MUÑECO DE CUERDA: cuerpo cuadrado y una llave de latón
+    # en el costado
+    'gummy_fortaleza': (16, P('eef2f6', 'b8c0cc', '7c8698', e=NAVY, r=RIV, k='d8a838'), [
+        "................",
+        "................",
+        "..oooooooooooo..",
+        "..ohhbbbbbbbso..",
+        "..obrbbbbbbrso..",
+        "..obbebbbebbso.o",
+        "..obbebbbebbsooo",
+        "..obbebbbebbsokk",
+        "..obbbbbbbbbsooo",
+        "..obbebbbbebso.o",
+        "..obbbeeeebbso..",
+        "..obrbbbbbbrso..",
+        "..oossssssssoo..",
+        "....oo....oo....",
+        "....oo....oo....",
+        "...ooo...ooo...."]),
+    # Fortaleza, Crabby: acero con remaches como una TORRETA: cúpula chata con faldón, rejilla por boca y cuatro patas
+    # de pistón con pie
+    'crabby_fortaleza': (16, P('eef2f6', 'b8c0cc', '7c8698', e=NAVY, r=RIV), [
+        "....oooooooo....",
+        "...ohhbbbbbso...",
+        "..ohbrbbbbrbso..",
+        "..obbebbbbebso..",
+        ".oobbbbbbbbbbsoo",
+        ".osseeeeeeeesso.",
+        ".oooooooooooooo.",
+        "..oo.oo..oo.oo..",
+        "..o...o..o...o..",
+        ".ooo.ooo.ooo.ooo"]),
+}
+V2_ROWS = [('GUMMY DE CUEVA\npera lila con\ncristales tallados', 'gummy_cueva', 'cueva', 'g'),
+           ('GUMMY DE MAGMA\nvolcancito con el\ncrater encendido', 'gummy_magma', 'volcan', 'g'),
+           ('GUMMY DE LA\nFORTALEZA\nmuneco de cuerda', 'gummy_fortaleza', 'fortaleza', 'g'),
+           ('CRABBY DE RIO\ncanto rodado con\nmusgo y pincitas', 'crabby_rio', 'pradera', 'c'),
+           ('CRABBY DE LAVA\nroca ancha, pinzas\nlevantadas', 'crabby_lava', 'volcan', 'c'),
+           ('CRABBY DE LA\nFORTALEZA\ntorreta con patas', 'crabby_fortaleza', 'fortaleza', 'c')]
+
+
+def v2(key):
+    w, pal, rows = V2[key]
+    for r in rows: assert len(r) == w, (key, r, len(r))
+    return paint([list(r) for r in rows], pal)
+
+
+def sheet_v2():
+    white = P('ffffff', 'f2f2f6', 'c4c8d6')
+    rows = []
+    for lab, key, isle, kind in V2_ROWS:
+        orig = gummy(white)[0] if kind == 'g' else crab(white)[0]
+        rows.append((lab, [orig, v2(key)], isle))
+    sheet('variantes_v2', 'VARIANTES, 2a ronda  -  a la izquierda el de siempre, a la derecha la especie nueva', rows, 'neutro', scale=9)
+
+
 if __name__ == '__main__':
     for key, (title, bg, opts) in GUMMY_SETS.items():
         sheet(key, title + '  -  quieto, paso 1, paso 2   (arriba: el Gummy de siempre)',
@@ -290,3 +412,4 @@ if __name__ == '__main__':
     isle, lab, pal, cap = ISLES[0]
     sheet('saltarin_los_tres', 'SALTARIN  -  los tres disenos, lado a lado (pradera)',
           [(d, hopper(d, pal, cap)) for d in HOP], 'pradera')
+    sheet_v2()

@@ -401,7 +401,7 @@ src/world/
                        bomb / bombobject (bombs, see Bombs), bossglass, bosswall, cryo (Freezer),
                        snowboss (Gran Bola de Nieve), phaseblock (Bloques de fase), crabby_ice (Crabby helado: 4 defs),
                        megacrabby_ice (Mega Crabby helado), megagummy (Rey Gummy), gummy_ice (Gummy helado),
-                       gloomy (Crabby lúgubre: niveles a oscuras)
+                       gloomy (Crabby lúgubre: niveles a oscuras), hopper (Saltarín)
   AutoScroll.lua       auto-scrolling camera levels (see below)
   Floods.lua           rising/falling water areas (see below)
   BossZones.lua        boss arenas (see below)
@@ -569,6 +569,29 @@ landing mark; sprites in `assets/images/bosses/common/`). Asset layout: enemies 
   Crabby's trampoline) in snowy levels — `level.spikeSkin == 'ice'` or `level.snow` — so no level data had to change
   and none can be left mixed (`Tramp.skinFor(props, level)`, needs `levelRef`: `wantsLevel`). New skin = 2 PNGs + one
   `SKINS` line. Today only lago_helado has a plain trampoline among the icy levels.
+- **HOPPER / Saltarín (3.74.0; `types/hopper.lua`, protocol v48 = new entity type)**: the user's pick, design B
+  "Muelle" (a ball with a face on a spring). It never walks: 'idle' (rests `jumpEvery` s, faces the nearest player in
+  `range` tiles × difficulty `sense`) → 'crouch' (`WINDUP` 0.35 s = the telegraph, hopWind) → 'hop' (ballistic toward
+  the player: `jumpH` tiles high — higher if the player is above, cap `MAX_H` —, at most `jumpDist` tiles; hopJump) →
+  lands (hopLand) → idle. Nobody in range = small hops in place. `careful` (default): it shortens the jump to where
+  there is floor under BOTH its edges (`groundAt`; above the level everything reads solid → the probe starts at y 8).
+  It stays inside its editor ROUTE (`patrol`; every entity gets a default one a few tiles around its cell — the test
+  needed a wide one). Player rules = the defaults (`onTouch = 'hurt'`, stompable on the ground or in the air, 15
+  points); lands on spikes / lava → `dieBurst`. Everything drawn comes from state + deadTimer. SKINS per island: prop
+  `skin` 'auto' (by `level.background`; snowy level → nieve) | pradera | costa | fortaleza | nieve | cueva | volcan —
+  `assets/images/hopper/<isla>-Sheet.png` (4 frames 16x21: idle, crouch, air, flat) from
+  `tools/ui/make_hopper_sprites.py --apply`, which builds them from the pixel maps in `make_enemy_designs.py` (HOP,
+  ISLES, HEAD: same shape, own palette, spots and head feature per island). Sounds `enemies/hopper/` from
+  `tools/sounds/hopper.py`. Test arena `tools/levelgen/arenas/saltarines.json` (one per skin); harness `mechanics
+  saltarin`, `online_smoke LEVEL=<that arena> WATCH=hopper`. NOT placed in any real level yet (waiting for the user).
+  Not done: glow of the cave lure / volcano eyes in dark levels (`renderGlow`).
+- SECOND ROUND of variants (3.74.0, WAITING for approval; `FlappyMonster_pruebas/enemigos/variantes_v2.png`, maps `V2`
+  in `make_enemy_designs.py`): the user's picks, redrawn as DIFFERENT SPECIES ("like the Icy Crabby vs the Crabby: other
+  body shape, proportions, silhouette — not a recolour"): Cave Gummy = lilac PEAR with cut crystals; Magma Gummy =
+  little VOLCANO with a lit crater (flat top: still stompable-looking); Fortress Gummy = square steel WIND-UP toy with
+  a brass key; River Crabby = tall mossy river-stone shell with small claws (olive-brown, A × C); Lava Crabby = wide
+  basalt rock crab with raised claws and glowing cracks; Fortress Crabby = riveted TURRET dome with a grille and
+  piston legs. Only one idle frame each so far; walk / hide / dead frames come after approval.
 - ENEMY DESIGN PROPOSALS (3.73.0, WAITING for the user's picks — nothing is in the game yet):
   `tools/ui/make_enemy_designs.py` → `FlappyMonster_pruebas/enemigos/*.png`: 3 options each for Cave Gummy, Magma
   Gummy, River Crabby (meadow, freshwater), Lava Crabby, the Fortress pair (steel / rust / guard with red plume), all

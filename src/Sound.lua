@@ -187,6 +187,10 @@ function Sound.load()
                          'crown', 'land' }) do
         load('king' .. n:gsub('^%l', string.upper), 'assets/sounds/bosses/megagummy/' .. n .. '.wav', 'static')
     end
+    -- Saltarín (tools/sounds/hopper.py)
+    for _, n in ipairs({ 'wind', 'jump', 'land' }) do
+        load('hop' .. n:gsub('^%l', string.upper), 'assets/sounds/enemies/hopper/' .. n .. '.wav', 'static')
+    end
     -- Linterna y Crabby lúgubre (tools/sounds/gloomy.py)
     for _, n in ipairs({ 'on', 'off', 'out', 'dead' }) do
         load('light' .. n:gsub('^%l', string.upper), 'assets/sounds/player/light_' .. n .. '.wav', 'static')
