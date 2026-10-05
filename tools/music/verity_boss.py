@@ -77,11 +77,11 @@ CH_B = ['Bbm', 'Fm', 'Db', 'C', 'Bbm', 'Fm', 'Db', 'C']
 # el motivo reconocible; tiene que notarse que es una referencia". Suena tres veces: la caja de música sola en la
 # intro y, con todo, abriendo los dos estribillos (donde el riff de la Bola le contesta por debajo, en sus huecos)
 HOOK = ["0:F5/2 6:Ab5/2 8:F5/2 14:Ab5/2", "0:C6/2 2:Ab5/2 4:F5/2", "0:C6/2 4:Db6/2 8:C6/2 10:Ab5/2 14:G5/2", "14:Ab5/2"]
-# … y su SEGUNDA MITAD (el usuario: "la muestra son dos"): la frase que le contesta en el piano eléctrico (sus compases
-# 10-13: tres corcheas de anacrusa, la nota larga con su bordadura, y cae a la tónica), sobre su armonía i–♭VI–V–i
-HOOK2 = ["0:F5/2 10:C6/2 12:Eb6/2 14:Eb6/2", "0:Db6/6 10:Db6/2 12:C6/2 14:Db6/2", "0:C6/8 12:G5/4", "0:F5/8"]
-T_C = HOOK + HOOK2                                                         # el ESTRIBILLO es la muestra entera (8 compases)
-CH_C = ['Fm', 'Fm', 'Db', 'C', 'Fm', 'Db', 'C', 'Fm']
+# La muestra ENTERA son los primeros 14 segundos del piano eléctrico (el usuario lo precisó): el gancho DOS veces — la
+# primera acaba con la anacrusa que lo relanza, la segunda se queda abierta en el 2º grado y calla un compás —, sobre
+# i–i–♭VI–V dos veces. (Una versión intermedia puso de segunda mitad la frase de sus compases 10-13: no era eso.)
+T_C = HOOK + HOOK[:3] + [""]                                               # el ESTRIBILLO es la muestra (8 compases)
+CH_C = ['Fm', 'Fm', 'Db', 'C', 'Fm', 'Fm', 'Db', 'C']
 T_K = ["0:F5/8 8:Ab5/8", "0:C6/8 8:Ab5/2 10:G5/2 12:F5/4", "0:Gb5/8 8:Bb5/8", "0:C6/8 8:Db6/2 10:C6/2 12:G5/4",
        RIFF, "0:Ab5/3 4:Ab5/3 8:G5/2 10:Ab5/2 12:Db6/4", "0:Bb5/4 4:Gb5/4 8:Db5/8", "0:G5/3 4:G5/3 8:Ab5/2 10:G5/2 12:C6/4"]
 CH_K = ['Fm', 'Fm', 'Gb', 'C', 'Fm', 'Db', 'Gb', 'C']

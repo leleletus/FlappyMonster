@@ -1561,6 +1561,9 @@ Files: `src/world/BossZones.lua` (zones + fight controller),
   the tail at the loop start is the same wherever you come from (measured: same level, band spectra within 1.4 dB).
   RULE for intro + loop tracks whose intro ends differently from the loop's end: give both the same last bar and skip
   `GN.fold`. The generator prints the turnaround comparison and every section's level against A.
+  3.71.3: the user pinned the sample down — the e-piano's FIRST 14 SECONDS = the hook TWICE (bars 1-8: first time with
+  the pickup that relaunches it, second time left open on the 2nd degree + a silent bar), over i–i–♭VI–V twice. That is
+  the chorus now (`T_C = HOOK + HOOK[:3] + [""]`); the bars 10-13 phrase tried in 3.71.2 was NOT it and is gone.
 - **Rey Gummy** (`types/megagummy.lua`, "Rey Gummy", `boss.megagummy` = REY GUMMY / GUMMY KING): the Gummy's
   16x16 sprite at scale 10 (`MS`) with brows + a gold crown (crown = separate `crown.png` on the same grid, drawn
   over the body so it can fly off). Art `assets/images/bosses/megagummy/` from `tools/ui/make_gummy_variants.py
