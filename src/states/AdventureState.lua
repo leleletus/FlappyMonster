@@ -669,8 +669,10 @@ function AdventureState:_renderScene()
         if g.alive and not g.renderFront then g:render(self.camX, self.camY) end      -- (reservas: no)
     end
 
+    PlayerAdventure.backlit = require('src/fx/Silhouette').on(self.level, self.player.y)   -- (en lo oscuro: fondo blanco)
     if self.bonus then self.bonus:render(self.camX, self.camY) end
     self.player:render(self.camX, self.camY)
+    PlayerAdventure.backlit = false
     PointAreas.drawProgress(self.level, self.player, self.player.x - self.camX, self.player.y - self.camY)
     Particles.render(self.camX, self.camY)
 

@@ -175,12 +175,8 @@ function StoryResultsState:touchpressed() self:_continue() end
 -- caer, triste). Solo dibujo.
 local function drawSprite(img, x, y, sc, face, outline)
     local ox, oy = img:getWidth() / 2, img:getHeight() / 2
-    love.graphics.setShader(silhouette)
-    love.graphics.setColor(outline[1], outline[2], outline[3], outline[4] or 1)
-    for _, d in ipairs({ { -3, 0 }, { 3, 0 }, { 0, -3 }, { 0, 3 } }) do
-        love.graphics.draw(img, x + d[1], y + d[2], 0, sc * face, sc, ox, oy)
-    end
-    love.graphics.setShader()
+    -- (el mismo sprite, algo más grande y en blanco, detrás: src/fx/Silhouette.lua)
+    require('src/fx/Silhouette').draw(img, x, y, 0, sc * face, sc, outline[4] or 1)
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.draw(img, x, y, 0, sc * face, sc, ox, oy)
 end

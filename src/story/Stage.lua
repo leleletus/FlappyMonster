@@ -18,6 +18,7 @@ local LavaFx = require 'src/fx/LavaFx'
 local Particles = require 'src/fx/Particles'
 local DeadEyes = require 'src/entities/DeadEyes'
 local Clip = require 'src/ui/Clip'
+local Silhouette = require 'src/fx/Silhouette'
 
 local Stage = {}
 local floor = math.floor
@@ -87,19 +88,10 @@ function Stage.monster(x, y, o)
     if not im then return end
     local s = (o.scale or PLAYER_SCALE) * (o.puff or 1)
     local f = o.facing or 1
-    -- CONTORNO claro: el monstruo es casi negro y en los decorados en penumbra solo se le veía la cara. Dentro de
-    -- un decorado (o con o.outline) se dibuja antes su silueta en claro, desplazada a los cuatro lados
+    -- FONDO BLANCO (src/fx/Silhouette.lua): dentro de un decorado (o con o.outline) el mismo sprite, algo más
+    -- grande y en blanco, detrás: el monstruo es casi negro y en la penumbra solo se le veía la cara
     if (o.outline or (Stage._lit and o.outline ~= false)) and not o.invert and (o.alpha or 1) > 0.5 then
-        local sh = silhouetteShader()
-        if sh then
-            local w = math.max(1, floor((o.scale or PLAYER_SCALE) / 3))      -- (un tercio de píxel de arte: un filo, no un borde blanco)
-            love.graphics.setShader(sh)
-            love.graphics.setColor(0.55, 0.66, 0.9, 0.9)
-            for _, d in ipairs({ { -w, 0 }, { w, 0 }, { 0, -w }, { 0, w } }) do
-                love.graphics.draw(im, floor(x) + d[1], floor(y) + d[2], o.angle or 0, s * f * (o.sx or 1), s * (o.sy or 1), im:getWidth() / 2, im:getHeight() / 2)
-            end
-            love.graphics.setShader()
-        end
+        Silhouette.draw(im, x, y, o.angle or 0, s * f * (o.sx or 1), s * (o.sy or 1), o.alpha or 1)
     end
     invert(o.invert)
     local c = o.color or { 1, 1, 1 }

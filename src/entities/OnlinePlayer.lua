@@ -136,6 +136,10 @@ function OnlinePlayer:render(camX, camY)
         love.graphics.draw(spriteCrouch, sx, sy + 16 * PLAYER_SCALE / 2, 0, sc * self.facing, sc * PAm.SQUASH_K,
                            iw/2, spriteCrouch:getHeight())
     else
+        if PAm.backlit then          -- (en lo oscuro: su fondo blanco, como el jugador propio)
+            local _, _, _, al = love.graphics.getColor()
+            require('src/fx/Silhouette').draw(img, sx, sy, 0, sc * self.facing, sc, al)
+        end
         love.graphics.draw(img, sx, sy, 0, sc * self.facing, sc, iw/2, ih/2)
     end
     if iced then love.graphics.setShader() end

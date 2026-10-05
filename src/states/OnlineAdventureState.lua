@@ -1142,6 +1142,8 @@ function OnlineAdventureState:_renderScene()
         end
     end
 
+    -- (en lo oscuro —a oscuras, noche, cuevas— los monstruos llevan su fondo blanco: src/fx/Silhouette.lua)
+    PlayerAdventure.backlit = require('src/fx/Silhouette').on(self.level, self.renderY or (self.localPa and self.localPa.y))
     -- Jugadores remotos via OnlinePlayer (excluye al propio)
     local adminId = self.currentRoom and self.currentRoom.adminId
     for _, rp in pairs(self.remotePlayers) do
@@ -1167,6 +1169,7 @@ function OnlineAdventureState:_renderScene()
         if DEBUG_HITBOX then pa:renderDebug(self.camX, self.camY); self.level:renderDebug(self.camX, self.camY) end
         pa.x, pa.y = sx, sy
     end
+    PlayerAdventure.backlit = false
 
     -- Entidades en un plano por delante de los jugadores (renderFront: pez globo)
     for _, er in pairs(self.enemyRenderers) do

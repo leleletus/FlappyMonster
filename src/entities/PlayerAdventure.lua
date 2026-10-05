@@ -4,6 +4,7 @@ local Class = require 'libs/class'
 local DeadEyes = require 'src/entities/DeadEyes'
 local Tiles = require 'src/world/Tiles'
 local IceEncase            -- (solo dibujo: se carga al dibujar el hielo)
+local Silhouette
 local PlayerAdventure = Class:new()
 
 local sprites    = nil
@@ -1172,6 +1173,13 @@ function PlayerAdventure:render(camX, camY)
         love.graphics.draw(spriteCrouch, math.floor(self.x-camX), math.floor(self.y-camY+SPRITE_H/2),
             0, s*self.facing, s*SQUASH_K, iw/2, ih)
     else
+        -- En lo oscuro (niveles a oscuras, de noche, cuevas: `PlayerAdventure.backlit`, lo pone quien dibuja)
+        -- su fondo blanco: el mismo sprite, algo más grande y en blanco, detrás (src/fx/Silhouette.lua)
+        if PlayerAdventure.backlit and not iced then
+            Silhouette = Silhouette or require 'src/fx/Silhouette'
+            local _, _, _, al = love.graphics.getColor()
+            Silhouette.draw(img, self.x-camX, self.y-camY, 0, s*self.facing, s, al)
+        end
         love.graphics.draw(img,
             math.floor(self.x-camX), math.floor(self.y-camY),
             0, s*self.facing, s, iw/2, ih/2)

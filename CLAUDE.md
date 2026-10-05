@@ -1978,6 +1978,15 @@ again. No dialogue or text: animation + music.
   it lands). (5) BEFORE its shard each boss is its NORMAL enemy (`K.NORMAL`, drawn by `K.drawExtras`): Gummy, Crabby
   (no claws/spike), the ship small, a snowball, Icy Crabby with its small claws, Gloomy Crabby; after shrinking too.
   Still open (user's optional idea): Evil Monster sprites standing outside its ship, the shard summoning the ship.
+- **WHITE EDGE of the monster (3.68.6)**: `src/fx/Silhouette.lua` — the monster's own sprite, fully white, drawn
+  BEHIND it shifted to the 8 sides by `Silhouette.WIDTH` (1/3 of an art pixel = 2 px at scale 6): an even thin white
+  edge. HISTORY: a blue 4-offset rim (3.68.2) → the user's idea "same sprite scaled up, white, behind" (looked
+  MISPLACED: on such a thin figure uniform scaling moves arms, legs and antennae away from the body by different
+  amounts — don't scale) → offset copies at 1 art px ("much too thick") → 1/3. One helper for every place where the
+  almost-black monster was lost: the cinematics (`Stage.monster` inside a set / `o.outline`), the results screen, and
+  the LEVELS that are dark, at night, caves or under the surface line of a level with a depth (`Silhouette.on(level,
+  y)` → `PlayerAdventure.backlit`, set by AdventureState / OnlineAdventureState around drawing the players; local
+  player and remote `OnlinePlayer`s). Render only; drawn before the darkness, so it dims with the scene.
 
 ## OST presentation videos (`tools/video/`)
 
