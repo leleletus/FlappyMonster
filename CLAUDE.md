@@ -2205,6 +2205,16 @@ again. No dialogue or text: animation + music.
   Lead = two detuned saws + octave, with a ping-pong echo (3 and 6 sixteenths, opposite sides). Master −9 LUFS.
   Measured against the reference: energy below 120 Hz 55 % (ref 56), 20-60 Hz 15 % (ref 29), crest 9.2 dB (ref 10.1).
   The level lasts ~86 s, so in a clean run you hear the intro, drop 1, the breakdown, the build and ~14 s of drop 2.
+- CHASE 3.82.0 (user: v3 is right but maybe too hard): everything it does runs at `SLOW` 0.9 × the difficulty's
+  `bossPace` (applied INSIDE `updateCustom`, def `pace = false`: what travels with the camera uses the real dt via
+  `self.camK`, the camera itself is not slowed) — easy 0.63, normal 0.77, hard / none 0.9, extreme 1.08; and TOUCHING
+  it while it walks (or recovers) no longer hurts: `HIT_TOUCH[1] = 0` = push only (`Boss.strike` with 0 HP: no damage,
+  no invulnerability; generic). Its attacks (dive, dash, shove) still take 1 HP.
+- **Harmless test levels**: level JSON `"peaceful": true` (editor Nivel → Modos de juego → "Enemigos inofensivos
+  (prueba)") → `pa.peaceful` (set in `PlayerAdventure:update` from the level) → `Interactions.check` drops 'hurt' /
+  'kill' (stomps, bounces, pickups still work; bosses that hit from their own update are not covered). Never listed
+  in an online mode (`LevelCatalog`). `assets/levels/EnemyTest.json` (the user's enemy gallery, Free Play): every Gummy,
+  Crabby (+ Gloomy) and Hopper skin, each species in island order. Harness `mechanics inofensivos`.
 - HUD: `BossHud.drawRun(level, entities)` (both level states): **"¡CORRE!" / "RUN!"** (`hud.run`) top centre while
   the camera runs, instead of any boss bar.
 - Music `mirror_chase` (`tools/music/mirror_chase.py`, intro + loop, verified by numbers only): DRUM & BASS as fast

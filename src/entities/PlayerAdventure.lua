@@ -903,6 +903,7 @@ end
 -- la gravedad y lo demás siguen). Igual en un jugador, servidor y predicción.
 local FROZEN_INPUT = { pressed = function() return false end, down = function() return false end }
 function PlayerAdventure:update(dt, level)
+    self.peaceful = level ~= nil and level.peaceful == true          -- (nivel de enemigos inofensivos)
     self.frozen = level ~= nil and level.frozenAt ~= nil and not self.dying and level:frozenAt(self.x, self.y)
     -- (`forceFrozen`: lo pone quien lleva la partida cuando ya ha terminado — el bonus contra el bot —: sin control
     -- e invulnerable, como en la entrada de un jefe)

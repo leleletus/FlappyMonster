@@ -107,6 +107,7 @@ function LevelCatalog.info(lv, path, file)
     info.modes, info.modeList = {}, {}
     local allowed
     if lv.modes then allowed = {}; for _, id in ipairs(lv.modes) do allowed[id] = true end end
+    if lv.peaceful then allowed = {} end                     -- (nivel de prueba, enemigos inofensivos: en ningún modo)
     for _, m in ipairs(Modes.list) do
         if (not allowed or allowed[m.id]) and m.requires(info) then
             info.modes[m.id] = true

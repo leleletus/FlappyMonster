@@ -99,6 +99,7 @@ function Model.fromData(lvl, path)
     m.matchTime = tonumber(lvl.matchTime)
     m.music     = type(lvl.music) == 'string' and lvl.music or nil
     m.snow      = lvl.snow == true or nil                 -- (nieve cayendo: solo visual)
+    m.peaceful  = lvl.peaceful == true or nil             -- (enemigos inofensivos: niveles de prueba)
     m.dark      = lvl.dark == true or nil                 -- (nivel a oscuras, con linterna)
     m.echo      = lvl.echo                                 -- (eco: nil = como 'dark')
     m.light     = lvl.light                                -- (luz ambiente: nil = automática, Level.lightMood)
@@ -142,7 +143,7 @@ function Model:toData()
         playerStart = self.playerStart, tiles = self.tiles,
         entities = ents, foliage = decos, vents = self.vents, bossZones = zones, subtiles = subs, links = self.links or {}, blockLinks = self.blockLinks or {},
         autoScroll = AutoScroll.serialize(self.autoScroll),
-        modes = self.modes, matchTime = self.matchTime, music = self.music, snow = self.snow, dark = self.dark, echo = self.echo, light = self.light, spikeSkin = self.spikeSkin,
+        modes = self.modes, matchTime = self.matchTime, music = self.music, snow = self.snow, peaceful = self.peaceful, dark = self.dark, echo = self.echo, light = self.light, spikeSkin = self.spikeSkin,
         background = self.background, time = self.time, clouds = self.clouds,
         depth = self.depth, surfaceRow = self.surfaceRow,
     }
@@ -195,6 +196,7 @@ function Model:encode()
     if d.matchTime then tail[#tail+1] = function(last) line('"matchTime": ' .. json.encode(d.matchTime), last) end end
     if d.music then tail[#tail+1] = function(last) line('"music": ' .. json.encode(d.music), last) end end
     if d.snow then tail[#tail+1] = function(last) line('"snow": true', last) end end
+    if d.peaceful then tail[#tail+1] = function(last) line('"peaceful": true', last) end end
     if d.dark then tail[#tail+1] = function(last) line('"dark": true', last) end end
     if d.echo ~= nil then tail[#tail+1] = function(last) line('"echo": ' .. tostring(d.echo == true), last) end end
     if d.light then tail[#tail+1] = function(last) line('"light": "' .. d.light .. '"', last) end end
@@ -237,7 +239,7 @@ function Model:snapshot()
     return deepcopy({ name=self.name, name_en=self.name_en, width=self.width, height=self.height, tiles=self.tiles,
                       playerStart=self.playerStart, entities=self.entities,
                       foliage=self.foliage, vents=self.vents, bossZones=self.bossZones, subtiles=self.subtiles, links=self.links, blockLinks=self.blockLinks,
-                      autoScroll=self.autoScroll, modes=self.modes, matchTime=self.matchTime, music=self.music, snow=self.snow, dark=self.dark, echo=self.echo, light=self.light, spikeSkin=self.spikeSkin,
+                      autoScroll=self.autoScroll, modes=self.modes, matchTime=self.matchTime, music=self.music, snow=self.snow, peaceful=self.peaceful, dark=self.dark, echo=self.echo, light=self.light, spikeSkin=self.spikeSkin,
                       background=self.background, time=self.time, clouds=self.clouds,
                       depth=self.depth, surfaceRow=self.surfaceRow })
 end
@@ -246,7 +248,7 @@ function Model:restore(s)
     s = deepcopy(s)
     -- (los campos opcionales pueden faltar en la copia: se vacían a mano)
     self.autoScroll, self.modes, self.matchTime, self.music, self.snow = nil, nil, nil, nil, nil
-    self.dark, self.echo, self.light = nil, nil, nil
+    self.dark, self.echo, self.light, self.peaceful = nil, nil, nil, nil
     self.spikeSkin = nil
     self.background, self.time, self.clouds, self.depth, self.surfaceRow = nil, nil, nil, nil, nil
     self.name_en = nil

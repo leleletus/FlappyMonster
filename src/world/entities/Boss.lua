@@ -240,7 +240,9 @@ end
 function Boss.strike(pa, hit, dir)
     if pa.dying or pa.alive == false or pa:isInvulnerable() then return false end
     Boss.withPlayer(pa, function()
-        if pa:hurt(hit[1]) or pa.dying then return end
+        -- (hit[1] = 0: solo empuja, sin daño ni invulnerabilidad)
+        if hit[1] > 0 and pa:hurt(hit[1]) then return end
+        if pa.dying then return end
         pa.vx, pa.vy = dir * hit[2], hit[3]
         pa.onGround, pa.crouching = false, false
         pa.gpPhase, pa.gpT = nil, 0

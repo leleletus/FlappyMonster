@@ -64,6 +64,8 @@ function Interactions.check(pa, e)
         else above = pob.y + pob.h < gob.y + gob.h * 0.6 end                               -- (en el suelo: los pies por encima)
         if above then return nil end
     end
+    -- Nivel de enemigos INOFENSIVOS ("peaceful": true): tocarlos no hace nada (pisarlos, rebotar... sí)
+    if pa.peaceful and (r == 'hurt' or r == 'kill') then return nil end
     return r, a, b, c
 end
 

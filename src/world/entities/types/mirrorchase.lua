@@ -23,6 +23,7 @@
 -- → 'stalk' … → 'left' (la carrera acabó: se rompe y desaparece).
 local Entity = require 'src/world/entities/Entity'
 local Boss   = require 'src/world/entities/Boss'
+local Difficulty = require 'src/Difficulty'
 
 local Chase = Entity.extend(Entity, {
     debugColor = { 0.9, 0.2, 0.9 },
@@ -46,7 +47,9 @@ local GRACE   = 0.7                  -- s sin volver a golpear tras un golpe
 -- {vida, vx, vy, s sin control, s aturdido} (Boss.strike)
 local HIT_DIVE  = { 1, 620, -420, 0.3, 0.35 }
 local HIT_RUSH  = { 1, 980, -340, 0.4, 0.3 }
-local HIT_TOUCH = { 1, 560, -320, 0.25, 0 }
+local HIT_TOUCH = { 0, 560, -320, 0.25, 0 }      -- (tocarlo NO quita vida: solo empuja)
+-- RITMO: todo él (andar, saltos, avisos, ataques, descansos) va a SLOW × el `bossPace` de la dificultad
+local SLOW    = 0.9
 local KINDS   = { 'pounce', 'dash', 'dive', 'shove', 'pounce', 'dash', 'dive' }
 local RUN     = 430                  -- px/s andando suelto (el jugador: 240; la cámara: ~160)
 local JUMP_H  = { 2.2, 4.3 }         -- casillas: salto normal / salto alto (para subir adonde esté el jugador)
@@ -142,7 +145,7 @@ function Chase:roam(dt, level, a, pa)
     local dx = tx - self.x
     local dir = (dx > 12) and 1 or (dx < -12) and -1 or 0
     -- (parado en su punto, corre con la cámara para no quedarse atrás)
-    local vx = (dir ~= 0) and dir * RUN or a.speed
+    local vx = (dir ~= 0) and dir * RUN or a.speed * (self.camK or 1)
     if dir ~= 0 then self.facing = dir end
     self.vy = self.vy + g * dt
     local x0, wasGround = self.x, self.onGround
@@ -209,6 +212,10 @@ end
 
 function Chase:updateCustom(dt, level)
     local a = level.autoScroll
+    -- (la cámara NO se frena con él: lo que viaja con ella usa el tiempo real, `self.camK` × su dt)
+    local k = SLOW * Difficulty.k('bossPace')
+    self.camK = 1 / k
+    dt = dt * k
     local st = self.state
     if st == 'walk' then st = 'lurk'; self.state = 'lurk' end
     self.deadTimer = self.deadTimer + dt
@@ -310,8 +317,8 @@ function Chase:updateCustom(dt, level)
     elseif st == 'aim' then
         local shove = self.kind == 'shove'
         -- (mientras avisa viaja con la cámara: si no, la pantalla se lo comería)
-        self.x = self.x + a.speed * dt
-        self.markX = self.markX + a.speed * dt
+        self.x = self.x + a.speed * dt * self.camK
+        self.markX = self.markX + a.speed * dt * self.camK
         if pa and t < (shove and AIM_SHOVE or AIM_DASH) * 0.6 then self.y = self.y + (pa.y - self.y) * math.min(1, dt * 10); self.markY = self.y end
         if t >= (shove and AIM_SHOVE or AIM_DASH) then self:enter('rush'); Sound.play('mirrorWarp', 1.3) end
     elseif st == 'rush' then
@@ -406,9 +413,9 @@ return {
     name = 'mirrorchase', label = 'Espejo perseguidor', category = 'Jefes', class = Chase,
     description = 'El Espejo persiguiendo en un nivel de CÁMARA AUTOMÁTICA: va suelto, se teletransporta y ataca sin parar '
                .. '(cae en picado desde un espejo, cruza la pantalla embistiendo, empuja de frente). No se le puede hacer nada; '
-               .. 'cada golpe quita 1 de vida y empuja hacia el borde. El HUD dice ¡CORRE!',
+               .. 'sus ataques quitan 1 de vida y empujan hacia el borde; tocarlo mientras anda solo empuja. Su ritmo depende de la dificultad. El HUD dice ¡CORRE!',
     traits = { diesWithBlock = false, renderFront = true },
-    pace = false,                              -- (su ritmo no lo acelera la dificultad aparte)
+    pace = false,                              -- (la dificultad lo escala DENTRO: ver SLOW; la cámara sigue a su paso)
     hide = 'all', defaults = { movement = 'static' },
     props = {
         { key='rest', kind='number', label='Descanso entre ataques (s)', group=G, default=1.1, min=0.2, max=10, step=0.1,

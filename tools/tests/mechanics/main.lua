@@ -1016,10 +1016,13 @@ function cases.persecucion()
     local a = level.autoScroll
     local seen, kinds, hits, back, strike0 = {}, {}, 0, 0, Boss.strike
     local sides, lastSide, jumped, atEdge, frames = 0, 0, false, 0, 0
+    local touches, touchHurt = 0, false
     ch._quiet = true
     Boss.strike = function(p, hit, dir)
+        local hp0 = p.hp
         local ok = strike0(p, hit, dir)
         if ok then hits = hits + 1; if dir < 0 then back = back + 1 end end
+        if ok and hit[1] == 0 then touches = touches + 1; if p.hp < hp0 or p:isInvulnerable() then touchHurt = true end end
         return ok
     end
     local inside = true
@@ -1046,11 +1049,62 @@ function cases.persecucion()
     local r1 = Interactions.check(pa, ch)                              -- (las reglas normales: nada)
     a.state = 'stop'                                                   -- (la carrera acaba)
     for _ = 1, 60 do ch:update(1 / 60, level) end
+    -- RITMO por dificultad: cuánto tarda en empezar su primer ataque (más lento en fácil que en extremo)
+    local Difficulty = require 'src/Difficulty'
+    local function firstAttack(diff)
+        local lv = Level.fromData({ name = 'huida', width = 140, height = 11, playerStart = { 10, 10 }, tiles = tiles,
+            entities = { { type = 'mirrorchase', col = 3, row = 8, props = { rest = 2 } } },
+            autoScroll = { startCol = 1, endCol = 140, speed = 160, width = 20, margin = 0.6, countdown = 0.1 } })
+        lv.difficulty = diff
+        Difficulty.bind(lv)
+        local c = Entities.create(lv.entities[1]); c._quiet = true
+        lv.liveEntities = { c }
+        local p = playerAt(lv, 10, 10)
+        local n
+        for i = 1, 60 * 12 do
+            if lv.autoScroll.state == 'run' then p.x, p.vx = lv.autoScroll.x + 11 * T, 0; n = (n or 0) + 1 end
+            p.hp, p.dying, p.alive = 3, false, true
+            AutoScroll.update(lv, 1 / 60, function() end)
+            p:update(1 / 60, lv); c:update(1 / 60, lv)
+            if c.state ~= 'lurk' and c.state ~= 'stalk' and c.kind ~= 'blink' then break end
+        end
+        Difficulty.bind(nil)
+        return n or 0
+    end
+    local tE, tN, tX = firstAttack('easy'), firstAttack(nil), firstAttack('extreme')
+    local paced = tE > tN and tN > tX
     local all = seen.stalk and seen.warp_out and seen.portal and seen.dive and seen.aim and seen.rush
+    all = all and paced and touches > 0 and not touchHurt
     local ok = all and seen.pounce and kinds.dive and kinds.dash and kinds.shove and kinds.pounce and hits >= 4 and inside and r1 == nil and not ch.alive
-        and sides >= 6 and jumped and atEdge / math.max(1, frames) < 0.35
-    check('persecucion', ok, ('estados vistos todos=%s · ataques: picado=%s embestida=%s empujón=%s · golpes al jugador %d (hacia atrás %d) · no se sale de la pantalla=%s · reglas normales con él=%s · al acabar se va=%s · SUELTO: cambia de lado del jugador %d veces, salta=%s, salto-ataque=%s, pegado al borde izquierdo el %d %% del tiempo'):format(
-        tostring(all), tostring(kinds.dive), tostring(kinds.dash), tostring(kinds.shove), hits, back, tostring(inside), tostring(r1), tostring(not ch.alive), sides, tostring(jumped), tostring(kinds.pounce), math.floor(100 * atEdge / math.max(1, frames))))
+        and sides >= 5 and jumped and atEdge / math.max(1, frames) < 0.35
+    check('persecucion', ok, ('estados vistos todos=%s · ataques: picado=%s embestida=%s empujón=%s · golpes al jugador %d (hacia atrás %d) · no se sale de la pantalla=%s · reglas normales con él=%s · al acabar se va=%s · SUELTO: cambia de lado del jugador %d veces, salta=%s, salto-ataque=%s, pegado al borde izquierdo el %d %% del tiempo · toques que solo empujan %d (con daño=%s) · primer ataque: fácil %d, neutro %d, extremo %d pasos'):format(
+        tostring(all), tostring(kinds.dive), tostring(kinds.dash), tostring(kinds.shove), hits, back, tostring(inside), tostring(r1), tostring(not ch.alive), sides, tostring(jumped), tostring(kinds.pounce), math.floor(100 * atEdge / math.max(1, frames)), touches, tostring(touchHurt), tE, tN, tX))
+end
+
+-- Nivel de enemigos INOFENSIVOS ("peaceful"): tocarlos no hace nada; pisarlos sigue contando
+function cases.inofensivos()
+    local function touch(peaceful)
+        local level, es = room(16, 10, {}, { { type = 'gummy', col = 8, row = 9, props = { pauses = false } } })
+        level.peaceful = peaceful
+        local g = es[1]
+        local pa = playerAt(level, 8, 9)
+        pa.x, pa.y = g.x + 10, g.y
+        pa:update(1 / 60, level)
+        pa.x, pa.y, pa.vy = g.x + 10, g.y, 0
+        local side = Interactions.check(pa, g)
+        pa.x, pa.y, pa.vx, pa.vy, pa.onGround = g.x, g.y - 220, 0, 0, false      -- (ahora le cae encima)
+        local top
+        for _ = 1, 90 do
+            pa:update(1 / 60, level)
+            top = Interactions.check(pa, g)
+            if top or pa.onGround then break end
+        end
+        return side, top
+    end
+    local s0, t0 = touch(false)
+    local s1, t1 = touch(true)
+    check('inofensivos', (s0 == 'hurt' or s0 == 'kill') and s1 == nil and t0 == 'stomp' and t1 == 'stomp',
+        ('normal: de lado=%s encima=%s · inofensivo: de lado=%s encima=%s'):format(tostring(s0), tostring(t0), tostring(s1), tostring(t1)))
 end
 
 function cases.encerrado()
@@ -1266,7 +1320,7 @@ function love.load()
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
-                         'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'persecucion',
+                         'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'persecucion', 'inofensivos',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte' }) do cases[n]() end
     if os.getenv('SHOT_BOMB') then bombShot() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
