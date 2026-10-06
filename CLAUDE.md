@@ -168,10 +168,10 @@ code, comments (Spanish), commits, docs or game text — those keep their usual 
   too whenever `Protocol.VERSION` changes, or old clients can't join.
 - DEPLOY (user's standing request: after EVERY push, update the server): `tools/deploy_server.sh` (ssh host
   `dj-vera-server`, repo `~/FlappyMonsterOnLain`, screen `flappy`: closes the screen, waits for port 22122, `git pull
-  --ff-only`, restarts `love server --headless` in the screen, checks the port; `--status` = look only). It stores NO
-  secret: the key's passphrase must already be in an ssh-agent the session can see (`SSH_AUTH_SOCK`); without one the
-  script cannot authenticate from Claude's shell — say so and give the user the command to run. NOT yet run against the
-  real server (the launch command there is assumed: `FM_SERVER_CMD`).
+  --ff-only`, restarts `love server --headless` in the screen with its output to `~/flappy.log`, checks the port;
+  `--status` = look only). The script holds NO secret: the key's passphrase comes from an ssh-agent or from the user's
+  own file `~/.ssh/id_rsa_pass` (through `SSH_ASKPASS`; never print, copy or commit it). Working since 2026-10-06
+  (server went 3.68.5 → 3.84.1). Restarting drops whoever is playing online.
 - `SERVER_HOST`/`SERVER_PORT` in settings.lua (`FM_SERVER=localhost` for tests).
 - In-match connection indicator: `src/ui/PingIcon.lua`, sprites `assets/images/ui/ping/ping-Sheet.png`
   (5 frames 20x12: 0 = red X, 1..4 bars; bottom-left, bottom-CENTRE when touch controls show): level from ENet RTT AND the age of the last snapshot (RTT freezes when packets

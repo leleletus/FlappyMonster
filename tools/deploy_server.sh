@@ -5,9 +5,9 @@
 #   tools/deploy_server.sh            actualiza y reinicia
 #   tools/deploy_server.sh --status   solo mira: versión, commit, screen, proceso y puerto (no toca nada)
 #
-# NO guarda ninguna clave: usa tu ssh tal cual (el host de ~/.ssh/config). Si la llave tiene passphrase, tiene que
-# estar cargada en un ssh-agent ANTES (una vez por sesión):   eval "$(ssh-agent -s)" && ssh-add ~/.ssh/id_rsa
-# Sin agente, ssh la pedirá por teclado (a mano funciona igual).
+# NO lleva ninguna clave dentro: usa tu ssh tal cual (el host de ~/.ssh/config). La passphrase de la llave sale,
+# por este orden, de: un ssh-agent con la llave cargada · el archivo FM_SSH_PASSFILE (~/.ssh/id_rsa_pass, solo tuyo:
+# chmod 600; lo lee ssh a través de SSH_ASKPASS, nunca se escribe ni se muestra) · el teclado.
 #
 # Ajustes (variables de entorno):
 #   FM_SSH_HOST    host de ssh                     (dj-vera-server)
@@ -27,9 +27,21 @@ BRANCH="${FM_BRANCH:-master}"
 PORT=22122
 MODE="${1:-deploy}"
 
+# Sin agente y con el archivo de la passphrase: ssh se la pide a un ayudante que solo lee ese archivo
+PASSFILE="${FM_SSH_PASSFILE:-$HOME/.ssh/id_rsa_pass}"
+ASKPASS=""
+if ! ssh-add -l >/dev/null 2>&1 && [ -r "$PASSFILE" ]; then
+    ASKPASS="$(mktemp)"
+    trap 'rm -f "$ASKPASS"' EXIT
+    printf '#!/bin/sh\nexec cat "%s"\n' "$PASSFILE" > "$ASKPASS"
+    chmod 700 "$ASKPASS"
+    export SSH_ASKPASS="$ASKPASS" SSH_ASKPASS_REQUIRE=force
+fi
+
 # (lo que se ejecuta ALLÍ; las variables de arriba viajan como argumentos, sin comillas raras)
 remote() {
-    ssh -o ConnectTimeout=15 "$HOST" bash -s -- "$MODE" "$DIR" "$SCREEN" "$CMD" "$LOG" "$BRANCH" "$PORT" <<'REMOTE'
+    # (ssh junta los argumentos en UNA línea: van entrecomillados con %q, o "love server --headless" llegaba partido)
+    ssh -o ConnectTimeout=15 "$HOST" "bash -s -- $(printf '%q ' "$MODE" "$DIR" "$SCREEN" "$CMD" "$LOG" "$BRANCH" "$PORT")" <<'REMOTE'
 set -euo pipefail
 MODE="$1"; DIR="$2"; SCREEN="$3"; CMD="$4"; LOG="$5"; BRANCH="$6"; PORT="$7"
 cd "$HOME/$DIR" 2>/dev/null || cd "$DIR"
@@ -37,7 +49,7 @@ cd "$HOME/$DIR" 2>/dev/null || cd "$DIR"
 status() {
     echo "  versión:  $(cat version.txt 2>/dev/null || echo '?')   commit: $(git log --oneline -1 | cut -c1-70)"
     echo "  screen:   $(screen -ls 2>/dev/null | grep -E "[0-9]+\.$SCREEN[[:space:]]" | tr -s '[:space:]' ' ' || true)"
-    echo "  proceso:  $(pgrep -af 'love.*server' | head -1 || true)"
+    echo "  proceso:  $(pgrep -af 'love.*server' | grep -v 'bash -s' | head -1 || true)"
     echo "  puerto:   $(ss -lunH 2>/dev/null | grep -c ":$PORT " || true) escuchando en $PORT/udp"
 }
 
