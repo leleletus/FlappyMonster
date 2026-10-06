@@ -738,7 +738,9 @@ function AdventureState:_renderScene()
 
     -- ── Debug hitboxes (F1) ───────────────────────────────────────────────────
     if DEBUG_HITBOX then
+        love.graphics.setLineWidth(2)                    -- (a 1 px y medio transparentes casi no se veían)
         self.player:renderDebug(self.camX, self.camY)
+        if self.bonus then for _, b in ipairs(self.bonus.bots or {}) do b.pa:renderDebug(self.camX, self.camY) end end      -- (los bots)
 
         -- Hitboxes de enemigos
         for _, g in ipairs(self.enemies) do
@@ -747,6 +749,7 @@ function AdventureState:_renderScene()
 
         -- Hitboxes reales del nivel (pinchos, contacto, formas de colisión)
         self.level:renderDebug(self.camX, self.camY)
+        love.graphics.setLineWidth(1)
 
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1, 1, 0, 1)

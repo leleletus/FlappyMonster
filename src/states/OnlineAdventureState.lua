@@ -1172,7 +1172,29 @@ function OnlineAdventureState:_renderScene()
         pa.isLocalView = true
         PointAreas.drawProgress(self.level, pa, self.renderX - self.camX, self.renderY - self.camY)
         Particles.render(self.camX, self.camY)
-        if DEBUG_HITBOX then pa:renderDebug(self.camX, self.camY); self.level:renderDebug(self.camX, self.camY) end
+        if DEBUG_HITBOX then
+            -- (F1 online: también las ENTIDADES — con su estado del snapshot — y los demás jugadores; antes solo
+            -- salían el jugador propio y el nivel)
+            love.graphics.setLineWidth(2)
+            pa:renderDebug(self.camX, self.camY)
+            for _, er in pairs(self.enemyRenderers) do
+                if er.alive and er.renderDebug then
+                    -- (protegido: un tipo cuyas cajas pidan algo que solo existe al simular no tumba la partida)
+                    local ok, err = pcall(er.renderDebug, er, self.camX, self.camY)
+                    if not ok and not self._dbgErr then self._dbgErr = true; print('[hitbox] ' .. tostring(err)) end
+                end
+            end
+            for _, rp in pairs(self.remotePlayers) do
+                if rp.renderX and not rp.hidden then
+                    local b = PlayerAdventure.outerBoxAt(rp.renderX, rp.renderY)
+                    love.graphics.setColor(0, 1, 0, 0.4)
+                    love.graphics.rectangle('line', b.x - self.camX, b.y - self.camY, b.w, b.h)
+                end
+            end
+            love.graphics.setColor(1, 1, 1, 1)
+            self.level:renderDebug(self.camX, self.camY)
+            love.graphics.setLineWidth(1)
+        end
         pa.x, pa.y = sx, sy
     end
     PlayerAdventure.lightLevel = nil

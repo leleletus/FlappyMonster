@@ -243,6 +243,23 @@ function IM:updateFields(dt, level)
 end
 
 -- (BossZones.safeSpawn: no reaparecer dentro de un campo)
+-- F1: además de lo del Mega, las pinzas congeladas (ahí se le pega), las ondas y los carámbanos que ya dañan
+function IM:debugBoxes()
+    local out = Mega.debugBoxes(self) or {}
+    if self.state == 'clap_stuck' then
+        for _, cb in ipairs(self:clawBoxes()) do out[#out + 1] = { x = cb.x, y = cb.y, w = cb.w, h = cb.h, kind = 'weak' } end
+    end
+    for _, w in ipairs(self.waves or {}) do out[#out + 1] = { x = w.x - 22, y = w.y - WAVE_H, w = 44, h = WAVE_H } end
+    if self.levelRef then
+        for _, fp in ipairs(self.fields or {}) do
+            for _, sp in ipairs(fieldSpikes(fp, self.levelRef)) do
+                if spikeUp(fp, sp) >= 0.6 then out[#out + 1] = { x = sp.x - ICI_HW / 2, y = fp.y - ICI_HH, w = ICI_HW, h = ICI_HH } end
+            end
+        end
+    end
+    return out
+end
+
 function IM:unsafeAt(x, y)
     for _, fp in ipairs(self.fields or {}) do
         if x > fp.x0 - T / 2 and x < fp.x1 + T / 2 and y > fp.y - 2.5 * T and y < fp.y + T / 2 then return true end

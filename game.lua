@@ -29,7 +29,7 @@ local SettingsState               = require 'src/states/SettingsState'
 local UpdateState                 = require 'src/states/UpdateState'
 local Settings                    = require 'src/Settings'
 
-DEBUG_HITBOX = false   -- F1 para activar/desactivar hitboxes
+DEBUG_HITBOX = DEBUG_HITBOX or false   -- F1 para activar/desactivar hitboxes (FM_HITBOX=1: ya encendidas — settings.lua —, para las pruebas)
 
 function love.load()
     -- Autoadaptar la resolución lógica para móviles y tablets (Evitar Zoom excesivo)

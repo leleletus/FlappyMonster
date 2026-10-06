@@ -958,6 +958,18 @@ function Entity:renderDebug(camX, camY)
         love.graphics.setColor(1, 0.3, 0.3, 0.6)
         love.graphics.rectangle('line', hb.x - camX, hb.y - camY, hb.w, hb.h)
     end
+    -- ZONAS PROPIAS del tipo (`debugBoxes()`): todo lo que golpea o se puede golpear y NO es su caja ni una zona de
+    -- peligro corriente (pinzas, ondas, trozos, el cuerpo que copia el Espejo, el radio de una bomba…).
+    --   { x, y, w, h, kind }  o  { cx, cy, r, kind }   kind: 'hurt' rojo · 'weak' amarillo (ahí se le pega) · 'area' blanco
+    if self.debugBoxes then
+        for _, b in ipairs(self:debugBoxes() or {}) do
+            if b.kind == 'weak' then love.graphics.setColor(1, 0.9, 0.2, 0.8)
+            elseif b.kind == 'area' then love.graphics.setColor(1, 1, 1, 0.5)
+            else love.graphics.setColor(1, 0.3, 0.3, 0.7) end
+            if b.r then love.graphics.circle('line', b.cx - camX, b.cy - camY, b.r)
+            else love.graphics.rectangle('line', b.x - camX, b.y - camY, b.w, b.h) end
+        end
+    end
     if self.leftBoundPx > -math.huge then
         love.graphics.setColor(0.2, 1, 1, 0.22)
         love.graphics.line(self.leftBoundPx  - camX, 0, self.leftBoundPx  - camX, WINDOW_H)

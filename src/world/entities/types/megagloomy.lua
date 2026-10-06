@@ -265,6 +265,21 @@ function MG:clawAim()
     return px, py, dx / d, dy / d
 end
 
+-- F1: lo que golpea en cada ataque (el caparazón con margen en la embestida, el salto y el picado; la pinza estirada)
+function MG:debugBoxes()
+    local st, out = self.state, {}
+    if st == 'dive' or st == 'charge' or st == 'pounce' then
+        local ob = self:getOuterBounds()
+        out[1] = { x = ob.x - 30, y = ob.y - 12, w = ob.w + 60, h = ob.h + 20 }
+    elseif st == 'claw' or st == 'aim' then
+        local px, py, ux, uy = self:clawAim()
+        for d = 40, CLAW_REACH, 30 do
+            out[#out + 1] = { x = px + ux * d - 20, y = py + uy * d - 20, w = 40, h = 40, kind = (st == 'aim') and 'area' or nil }
+        end
+    end
+    return out
+end
+
 -- Da a lo largo de la pinza, hasta donde ha salido (k 0..1)
 function MG:clawHit(level, k)
     local px, py, ux, uy = self:clawAim()

@@ -109,6 +109,11 @@ end
 
 -- ── Nieve: el montón ──────────────────────────────────────────────────────────
 -- Caja del montón (sobre la superficie: suelo, techo o pared)
+function Ice:debugBoxes()                                 -- (F1: el montón de nieve bajo el que se esconde)
+    if self.cover ~= 'snow' or self.spikeProgress <= 0 then return nil end
+    local b = self:moundBox()
+    return { { x = b.x, y = b.y, w = b.w, h = b.h, kind = (self.state == 'snow_burst') and 'hurt' or 'area' } }
+end
 function Ice:moundBox()
     local h = SNOW_H * math.max(0.3, self.spikeProgress)
     if (Crawler.onWall(self) and self.cattached) or Crawler.turning(self) then

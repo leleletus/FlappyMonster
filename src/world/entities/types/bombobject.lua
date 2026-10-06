@@ -57,6 +57,14 @@ function BombObject:isGhost() return self.state == 'exploding' or Entity.isGhost
 function BombObject:isObstacle() return self.alive and self.state ~= 'exploding' end
 
 -- Sin efectos (el cliente lo usa para predecir)
+-- F1: con la mecha encendida, los tres radios de su explosión (mata / hiere / empuja)
+function BombObject:debugBoxes()
+    if self.state ~= 'lit' and self.state ~= 'exploding' then return nil end
+    local r = Core.radii(self)
+    return { { cx = self.x, cy = self.y, r = r.kill * TILE_PX }, { cx = self.x, cy = self.y, r = r.hurt * TILE_PX, kind = 'weak' },
+             { cx = self.x, cy = self.y, r = r.push * TILE_PX, kind = 'area' } }
+end
+
 function BombObject:interact(pa)
     if self.state == 'exploding' then return nil end
     local pob, b = pa:getOuterBounds(), self:getOuterBounds()

@@ -73,6 +73,11 @@ end
 function G:isGhost() return not self:isActiveGlass() end
 
 -- Caja que hace daño: los cristales, apoyados en el borde de abajo
+function G:debugBoxes()                                   -- (F1: los cristales, cuando lanzan y dañan)
+    if not self:isDanger() then return nil end
+    local b = self:glassBox()
+    return { b }
+end
 function G:glassBox()
     local h = SHARD_H * TILE_PX
     return { x = self.x0, y = self.y1 - h, w = self.x1 - self.x0, h = h }

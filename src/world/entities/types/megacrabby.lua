@@ -382,15 +382,20 @@ end
 
 -- Tocarlo (cuerpo y base del pincho) quita 1 de vida y empuja.
 -- Tras golpear a alguien se para un momento (no lo aplasta contra una pared).
-function Mega:hitPlayers(level)
-    if not CONTACT[self.state] or (self.graceT or 0) > 0 then return end
+-- Lo que quita vida al tocarlo: el cuerpo (sin las pinzas) y la base del pincho de la cabeza, con la caja de un
+-- pincho normal (se le puede saltar por encima)
+function Mega:contactBoxes()
     local ob = self:getOuterBounds()
-    -- (el cuerpo, sin las pinzas, y la base del pincho de la cabeza, con la
-    -- caja de un pincho normal: se le puede saltar por encima)
-    local boxes = {
+    return {
         { x = ob.x - CONTACT_PAD, y = ob.y - CONTACT_PAD, w = ob.w + 2 * CONTACT_PAD, h = ob.h + 2 * CONTACT_PAD },
         self:footBox(-SPIKE_HW / 2, -self.sprH - SPIKE_HH, SPIKE_HW, SPIKE_HH),
     }
+end
+function Mega:debugBoxes() return CONTACT[self.state] and self:contactBoxes() or nil end      -- (F1)
+
+function Mega:hitPlayers(level)
+    if not CONTACT[self.state] or (self.graceT or 0) > 0 then return end
+    local boxes = self:contactBoxes()
     self._dbgBoxes = boxes                    -- (para ver las cajas en las pruebas)
     for _, pa in ipairs(level.players or {}) do
         if not pa.dying and pa.alive ~= false and not pa:isInvulnerable() then

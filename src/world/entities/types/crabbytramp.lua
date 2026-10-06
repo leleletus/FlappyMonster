@@ -51,6 +51,10 @@ function TC:trampActive()
 end
 
 -- Caja del cojín (encima del caparazón, o debajo si está en el techo)
+function TC:debugBoxes()                                  -- (F1: la cara que lanza)
+    local b = self.spikeProgress > 0 and self:trampBox()
+    return b and { { x = b.x, y = b.y, w = b.w, h = b.h, kind = 'area' } } or nil
+end
 function TC:trampBox()
     local imgH = self:headH()                         -- (parte de arriba visible del caparazón)
     local h = TRAMP_H * self.spikeProgress

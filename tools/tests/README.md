@@ -78,3 +78,5 @@ tools/levelgen/build.py [--show nombre]`) se comprueban con `level_solve`.
   (`game.lua love.focus`), así se puede usar otra ventana mientras corren.
 - Las carpetas de guardado de las pruebas (`~/.local/share/love/fm_test_*`) se
   pueden borrar después.
+
+**Hitboxes (F1):** `FM_HITBOX=1 tools/tests/run.sh <arnés>` arranca con las hitboxes a la vista (settings.lua): sirve para comprobar que dibujarlas no falla con ningún enemigo ni jefe, en un jugador (`sp_boss`, `all`) y online (`online_boss`, `online_smoke`: un fallo sale como `[hitbox] …`).

@@ -1014,6 +1014,15 @@ function MG:render(camX, camY)
 end
 
 -- Cajas de peligro (solo para F1: los golpes los dan touch / crush / updateWaves)
+-- F1: los TROZOS en que se divide (cada uno con su caja; la del jefe ya no cuenta)
+function MG:debugBoxes()
+    local out = {}
+    for _, p in ipairs(self.parts or {}) do
+        if p.st ~= 0 then local b = p:innerBox(); b.kind = 'weak'; out[#out + 1] = b end
+    end
+    return out
+end
+
 function MG:getHazardBoxes()
     local out = {}
     for _, w in ipairs(self.waves or {}) do

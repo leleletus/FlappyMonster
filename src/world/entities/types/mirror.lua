@@ -811,6 +811,14 @@ function Mirror:startPerch(level)
 end
 
 -- Cae sobre la cabeza de un jugador / su ground pound impacta
+-- F1: el CUERPO que copia al jugador (sus dos cajas, las de un jugador)
+function Mirror:debugBoxes()
+    local b = self.body
+    if not (b and b.getOuterBounds) then return nil end
+    local o, i = b:getOuterBounds(), b:getInnerBounds()
+    return { { x = o.x, y = o.y, w = o.w, h = o.h, kind = 'area' }, { x = i.x, y = i.y, w = i.w, h = i.h } }
+end
+
 function Mirror:hitPlayers(level)
     local b = self.body
     local gob = self:getOuterBounds()

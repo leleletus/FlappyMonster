@@ -2277,6 +2277,18 @@ again. No dialogue or text: animation + music.
   save fields `bonus[id].rating/grade/wonGrade`. `AdventureState.stats.items / itemsTotal` = pickups taken / in the level.
   NO EXTRA LIFE in any level with point zones (the reward gives the lives): cripta_del_silencio's became an apple, the
   KOTH arenas in `levels_batch2.py` place apples, and `bot_nav` `datos` fails on an `extralife` in an arena.
+- **3.84.1 — F1 HITBOXES reviewed** (user: not everything that has a hitbox showed one). (1) ONLINE drew only the
+  local player and the level: now also every entity (from its snapshot state; each `renderDebug` under `pcall`, the
+  first error printed as `[hitbox] …`) and the other players' boxes. (2) Generic hook `Entity:debugBoxes()` → list of
+  `{ x, y, w, h, kind }` / `{ cx, cy, r, kind }` (kind: nil / 'hurt' red, 'weak' yellow = where you hit it, 'area'
+  white) drawn by the base `renderDebug` after the outer / inner / hazard boxes — for everything that hits or can be
+  hit and is NOT one of those: Mega Crabby contact boxes (`Mega:contactBoxes()`, now also used by `hitPlayers`), Icy
+  Mega (frozen claws, frost waves, field icicles that already hurt), Mega Gloomy (attack body box, claw line: white
+  while aiming, red when it strikes), Gummy King's PARTS, the Mirror's copied body, Crabby trampoline face, Icy Crabby
+  snow mound, boss glass, bombs' three blast radii while lit; SP also draws the bonus BOTS. A new type with its own hit
+  area must implement `debugBoxes()`. (3) Lines are 2 px (1 px at ~0.5 alpha was nearly invisible). `FM_HITBOX=1`
+  (read in settings.lua) starts with them ON: `FM_HITBOX=1 tools/tests/run.sh all|sp_boss|online_boss …` checks that
+  drawing them never errors.
 - HUD: `BossHud.drawRun(level, entities)` (both level states): **"¡CORRE!" / "RUN!"** (`hud.run`) top centre while
   the camera runs, instead of any boss bar.
 - Music `mirror_chase` (`tools/music/mirror_chase.py`, intro + loop, verified by numbers only): DRUM & BASS as fast
