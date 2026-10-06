@@ -1096,6 +1096,7 @@ function OnlineAdventureState:_renderBossHUD()
         BossHud.drawBanner(self.bossBanner.text, self.bossBanner.t, 2.2, self.bossBanner.col)
     end
     if not self.showGameOver then BossHud.drawScrollCountdown(self.level.autoScroll) end
+    if not self.showGameOver then BossHud.drawRun(self.level, self.enemyRenderers) end
 end
 
 -- ── Render ────────────────────────────────────────────────────────────────────

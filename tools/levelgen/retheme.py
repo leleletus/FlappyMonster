@@ -50,7 +50,7 @@ THEMES = {
     # (modo historia: cada nivel con el tema de SU isla — src/story/Worlds.lua). La COSTA es 'beach' (arena): con
     # 'tropical' (césped + palmeras) sus niveles parecían de la pradera con agua — el usuario lo notó en jungla_colgante
     'valle_soleado': 'meadow', 'jardin_gummies': 'meadow', 'carrera01': 'volcano', 'nivel01': 'cave',
-    'lluvia_pinchos': 'volcano', 'tren_fugaz': 'fortress', 'ruta_del_espejo': 'volcano', 'ciudadela_cangrejos': 'meadow',
+    'lluvia_pinchos': 'volcano', 'tren_fugaz': 'fortress', 'ruta_del_espejo': 'volcano', 'huida_del_espejo': 'volcano', 'ciudadela_cangrejos': 'meadow',
     'marea_alta': 'tropical', 'cascada_dorada': 'tropical', 'isla_flotante': 'meadow', 'canon_trampolines': 'beach',
     'rebote_real': 'tropical', 'guarida_cangrejo_rey': 'tropical',
     'cumbre_cangrejo': 'beach', 'torre_viento': 'snow', 'lago_helado': 'snow', 'glaciar_cangrejo': 'snow', 'reino_gummy': 'meadow', 'gruta_lugubre': 'cave',

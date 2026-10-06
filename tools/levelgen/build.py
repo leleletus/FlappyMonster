@@ -10,7 +10,7 @@ import os, re, sys
 sys.path.insert(0, os.path.dirname(__file__))
 import levels_run
 mods = [levels_run]
-for name in ('levels_hunt', 'levels_koth', 'levels_boss', 'levels_water', 'levels_batch2'):
+for name in ('levels_hunt', 'levels_koth', 'levels_boss', 'levels_water', 'levels_batch2', 'levels_chase'):
     try:
         mods.append(__import__(name))
     except ImportError:

@@ -992,6 +992,62 @@ function cases.saltarin()
             .. (' · pasea: con ruta 16-24 va de %.1f a %.1f, sin ruta de %.1f a %.1f, mira adonde salta=%s'):format(r0, r1, w0, w1, tostring(f1 and f2))))
 end
 
+-- EL ESPEJO PERSIGUIENDO (mirrorchase): va en el borde izquierdo de la cámara automática, embiste y vuelve, mata al
+-- tocarlo (no con la invulnerabilidad de reaparecer), no se le puede pisar, y al acabar la carrera se va
+function cases.persecucion()
+    local AutoScroll = require 'src/world/AutoScroll'
+    local tiles = {}
+    for r = 1, 11 do
+        local row = {}
+        for c = 1, 70 do row[c] = (r == 11 or r == 1 or c == 1 or c == 70) and 1 or 0 end
+        tiles[r] = row
+    end
+    local level = Level.fromData({ name = 'huida', width = 70, height = 11, playerStart = { 10, 10 }, tiles = tiles,
+        entities = { { type = 'mirrorchase', col = 3, row = 8, props = { lungeEvery = 2, lungeDist = 5 } } },
+        autoScroll = { startCol = 1, endCol = 70, speed = 160, width = 20, margin = 0.6, countdown = 1 } })
+    local es = {}
+    for _, pl in ipairs(level.entities) do es[#es + 1] = Entities.create(pl) end
+    level.liveEntities = es
+    local ch = es[1]
+    local pa = playerAt(level, 10, 10)
+    pa.immortal = true
+    local a = level.autoScroll
+    local seen, lead, maxExtra, offRun = {}, nil, 0, 0
+    for _ = 1, 60 * 14 do
+        if a.state == 'run' then pa.x = a.x + 15 * T end            -- (el jugador, siempre por delante)
+        AutoScroll.update(level, 1 / 60, function() end)
+        ch:update(1 / 60, level)
+        seen[ch.state] = true
+        if a.state == 'run' and ch.state == 'chase' and (ch.extra or 0) == 0 then
+            lead = ch.x - a.x
+            offRun = math.abs(ch.y - pa.y)                          -- (la última: al principio aún sube a buscarlo)
+        end
+        if ch.state == 'dash' then maxExtra = math.max(maxExtra, (ch.x - a.x - (lead or 0)) / T) end
+        if a.state == 'stop' then break end
+    end
+    -- tocarlo mata; pisarlo no le hace nada; invulnerable (recién reaparecido) no muere
+    local lv2 = Level.fromData({ name = 'huida2', width = 70, height = 11, playerStart = { 10, 10 }, tiles = tiles,
+        entities = { { type = 'mirrorchase', col = 3, row = 8, props = { lungeEvery = 0 } } },
+        autoScroll = { startCol = 1, endCol = 70, speed = 160, width = 20, margin = 0.6, countdown = 0.2 } })
+    local e2 = Entities.create(lv2.entities[1])
+    local p2 = playerAt(lv2, 10, 10)
+    for _ = 1, 60 do AutoScroll.update(lv2, 1 / 60, function() end); e2:update(1 / 60, lv2) end
+    p2.x, p2.y, p2.invT = e2.x, e2.y, 0
+    local r1 = Interactions.check(p2, e2)
+    p2.y, p2.vy = e2.y - 70, 300                                    -- cayéndole encima
+    local r2 = Interactions.check(p2, e2)
+    p2.y = e2.y; p2:grantInvulnerability(1)
+    local r3 = Interactions.check(p2, e2)
+    -- la carrera acaba: se va
+    lv2.autoScroll.state = 'stop'
+    for _ = 1, 60 do e2:update(1 / 60, lv2) end
+    local ok = seen.lurk and seen.chase and seen.wind and seen.dash and lead and math.abs(lead - 1.1 * T) < 2 and maxExtra > 4.5 and maxExtra < 5.5
+        and offRun < 40 and r1 == 'kill' and r2 ~= 'stomp' and r3 == nil and not e2.alive
+    check('persecucion', ok, ('estados: espera=%s corre=%s avisa=%s embiste=%s · va %.2f casillas dentro del borde · embestida de %.1f casillas · sigue la altura (%.0f px) · tocarlo=%s, caerle encima=%s, invulnerable=%s · al acabar se va=%s'):format(
+        tostring(seen.lurk), tostring(seen.chase), tostring(seen.wind), tostring(seen.dash), (lead or 0) / T, maxExtra, offRun,
+        tostring(r1), tostring(r2), tostring(r3), tostring(not e2.alive)))
+end
+
 function cases.encerrado()
     -- Gummy en la casilla 8, bloques en la 7 y la 9 (fila 8, suelo en la 9)
     local level, es = room(16, 10, { { 7, 9, 'solid' }, { 9, 9, 'solid' } },
@@ -1205,7 +1261,7 @@ function love.load()
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
-                         'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin',
+                         'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'persecucion',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte' }) do cases[n]() end
     if os.getenv('SHOT_BOMB') then bombShot() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))

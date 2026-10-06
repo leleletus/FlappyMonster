@@ -2150,6 +2150,36 @@ again. No dialogue or text: animation + music.
   online: it is a pure function of the level and that character's position, which every client already has.
   Render only; drawn before the darkness, so it dims with the scene. Harness `mechanics filo_propio`.
 
+## The Mirror CHASE (3.79.0, protocol v53) — the level before the final boss
+
+- Level **huida_del_espejo** "La Huida del Espejo" / "Mirror Escape" (`tools/levelgen/levels_chase.py`,
+  `build.py --only huida_del_espejo` + `retheme.py huida_del_espejo`; volcano, dusk, 214x11): story world 6, between
+  lluvia_pinchos and the boss (`Worlds.LIST`). An AUTO-SCROLL level (160 px/s; the player runs at 240) built from 9
+  repeating motifs: lava pits (LAVA tiles at floor level), steps, a lava lake with slabs, falling spikes under a low
+  ceiling, a Hopper, a trampoline wall, three pits in rhythm, a mortar, a slab staircase over lava. It lasts about one
+  loop of its music. `level_solve` finds the route; NOT played by a human yet (speed and fairness are the user's call).
+- Entity **`mirrorchase`** ("Espejo perseguidor", `types/mirrorchase.lua`): not a fight — it can't be hurt, stomped,
+  frozen or pushed, and touching it KILLS (not while invulnerable after respawning). Its x comes from the level's
+  auto-scroll camera (`a.x + LEAD` 1.1 tiles inside the left edge + the lunge), it flies through everything at the
+  nearest player's height, and every `lungeEvery` s it LUNGES: 'wind' (0.6 s: shrinks and shakes) → 'dash'
+  (`lungeDist` tiles out and back) → 'chase'. 'lurk' before the camera runs (laughs at the countdown); 'left' when the
+  run ends (shatters, gone). SP/server compute it; clients draw x, y, state, deadTimer from snapshots. Drawn like the
+  Mirror (the player's sprites through an invert shader) with a trail and hard dark bands behind it. Not a `boss` for
+  the systems (no zone, no bar, no shard).
+- HUD: `BossHud.drawRun(level, entities)` (both level states): **"¡CORRE!" / "RUN!"** (`hud.run`) top centre while
+  the camera runs, instead of any boss bar.
+- Music `mirror_chase` (`tools/music/mirror_chase.py`, intro + loop, verified by numbers only): DRUM & BASS as fast
+  chiptune (the user's reference for genre/energy only: Stonebank "Losing Control (Sophon Remix)"), 174 BPM, F# harmonic
+  minor like the boss. The NOTES come from the Mirror boss theme, re-cut into short syncopated 4/4 hits: the theme's
+  HEAD = the drop hook (A), the MIRROR MOTIF closes each half phrase / is sung slowly by the bell in the breather /
+  climbs in the builds, the HERO'S THEME (the old level tune sample, level.ogg 0:41-1:02) = section B with its 3+3+2
+  back as repeated hits, the FURY riff = section G in running 16ths. Two-step drums (kick on 1 and the "and" of 3, snare
+  on 2 and 4, ghost snares, 16th hats), bass = triangle sub + a trembling saw an octave up. Form: intro 4 + BUILD 4 |
+  A · A' · B · B' · K (half-time breather) · G · A'' · BUILD 4 = 60-bar loop (82.8 s). The BUILD is the same bar at the
+  end of the intro and of the loop (no tail folding) and ends in one beat of SILENCE before the drop. Energy: drums
+  51 %, bass 30 %, lead 10 %.
+- Harness `mechanics persecucion`; `online_smoke LEVEL=assets/levels/huida_del_espejo.json WATCH=mirrorchase`.
+
 ## OST presentation videos (`tools/video/`)
 
 **v2 (2026-10-03, with the FINAL soundtrack; the description further down is v1, kept for the bulb details):**

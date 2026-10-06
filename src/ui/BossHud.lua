@@ -152,6 +152,34 @@ function BossHud.drawWaiting(arrived, needed)
 end
 
 -- Cámara automática: "esperando a todos" y cuenta atrás grande 3, 2, 1
+-- "¡CORRE!" — el nivel de la persecución del Espejo (entidad `mirrorchase`): no hay barra de vida, no es una pelea.
+-- Arriba en el centro mientras la cámara corre; al empezar sale grande y se encoge, luego late. `entities` = las
+-- del nivel (un jugador) o sus dibujos (online): se mira una vez si hay perseguidor.
+function BossHud.drawRun(level, entities)
+    local a = level and level.autoScroll
+    if not a then return end
+    if level._chase == nil then
+        level._chase = false
+        for _, e in pairs(entities or {}) do
+            if type(e) == 'table' and e.def and e.def.name == 'mirrorchase' then level._chase = true; break end
+        end
+    end
+    if not level._chase then return end
+    local now = love.timer.getTime()
+    if a.state ~= 'run' then level._runAt = nil; return end
+    level._runAt = level._runAt or now
+    local t = now - level._runAt
+    local PixelFont = require 'src/ui/PixelFont'
+    local text = require('src/Lang')('hud.run')
+    local s = (t < 0.5) and math.floor(12 - 12 * t + 0.5) or 6          -- entra grande y se encoge
+    if s < 6 then s = 6 end
+    local beat = 0.5 + 0.5 * math.sin(now * 10)
+    local w = PixelFont.width(text, s)
+    local x, y = math.floor((WINDOW_W - w) / 2 + ((t < 0.5) and math.sin(now * 80) * 4 or 0)), 44
+    PixelFont.shadow(text, x, y, s, 1, { 1, 0.25 + 0.35 * beat, 0.25 + 0.2 * beat })
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
 function BossHud.drawScrollCountdown(a)
     if not a then return end
     if a.state == 'wait' and (a.needed or 0) > 1 then

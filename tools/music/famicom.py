@@ -304,7 +304,7 @@ PATHS = {
     'gummy_king_boss': 'bosses/gummy_king_boss', 'evil_ship_boss': 'bosses/evil_ship_boss',
     # (tentacle_nes = el arreglo nota a nota de la canción ajena: retirado; si se regenera, va FUERA del repo)
     'tentacle_nes': '../../../FlappyMonster_originals/music/placeholders/crab_tantrum_normal_tentacle_nes',
-    'crab_tantrum': 'bosses/crab_tantrum_normal', 'crab_tantrum_gloomy': 'bosses/crab_tantrum_gloomy', 'crab_tantrum_icy': 'bosses/crab_tantrum_icy', 'snowball_verity': 'bosses/snowball_verity',
+    'crab_tantrum': 'bosses/crab_tantrum_normal', 'crab_tantrum_gloomy': 'bosses/crab_tantrum_gloomy', 'crab_tantrum_icy': 'bosses/crab_tantrum_icy', 'snowball_verity': 'bosses/snowball_verity', 'mirror_chase': 'bosses/mirror_chase',
     'tentacle_winter': '../../../FlappyMonster_originals/music/placeholders/crab_tantrum_icy_tentacle_winter',
     'tentacle_gloomy': '../../../FlappyMonster_originals/music/placeholders/crab_tantrum_gloomy_tentacle_gloomy',
     # (winter_nes = arreglo de "Winter Fallympics": retirado; si se regenera, va FUERA del repo)

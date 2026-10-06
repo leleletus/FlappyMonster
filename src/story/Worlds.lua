@@ -24,7 +24,7 @@ Worlds.LIST = {
     -- 5 Las Cuevas: cristal, los dos laberintos de agua y el templo a oscuras justo antes del jefe a oscuras
     { id = 'cuevas',    levels = { 'cavernas_cristal', 'nivel01', 'laberinto_submarino', 'templo_del_eco' },             boss = 'gruta_lugubre', bonus = 'cripta_del_silencio' },
     -- 6 El Final (el volcán): lava; la lluvia de pinchos (cámara automática) es la erupción, antes del Espejo
-    { id = 'final',     levels = { 'carrera01', 'caldera_roja', 'lluvia_pinchos' },                                       boss = 'ruta_del_espejo', bonus = 'cantera_real' },
+    { id = 'final',     levels = { 'carrera01', 'caldera_roja', 'lluvia_pinchos', 'huida_del_espejo' },                                       boss = 'ruta_del_espejo', bonus = 'cantera_real' },
 }
 
 function Worlds.count() return #Worlds.LIST end

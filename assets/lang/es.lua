@@ -121,6 +121,7 @@ return {
         hard = "DIFÍCIL",
     },
     hud = {
+        run = "¡CORRE!",
         game_over = "GAME OVER",
         level_clear = "¡NIVEL SUPERADO!",
         score = "PUNTOS",
