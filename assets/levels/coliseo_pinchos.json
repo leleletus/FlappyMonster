@@ -99,7 +99,7 @@
     {"col":48,"row":3,"sub":2,"type":"rainspike"},
     {"col":20,"props":{"patrol":{"left":18,"right":23},"points":6,"respawn":1},"row":17,"type":"crabby_fortress"},
     {"col":44,"props":{"patrol":{"left":41,"right":46},"points":6,"respawn":1},"row":17,"type":"crabby_fortress"},
-    {"col":30,"props":{"patrol":{"left":25,"right":39},"points":4,"respawn":1},"row":14,"type":"gummy"},
+    {"col":30,"props":{"patrol":{"left":25,"right":39},"points":4,"respawn":1},"row":14,"type":"gummy_fortress"},
     {"col":32,"row":12,"type":"star"}
   ],
   "foliage": [

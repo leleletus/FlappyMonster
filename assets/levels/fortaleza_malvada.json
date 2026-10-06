@@ -22,11 +22,11 @@
     [4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,73728,73728,73728,73728,73728,73728,73728,73728,73728,73728,73728,73728,73728,73728,73728,73728,73728,73728,1,1,1,1,1,1,1,1,1,4]
   ],
   "entities": [
-    {"col":10,"props":{"patrol":{"left":6,"right":14}},"row":13,"type":"gummy"},
+    {"col":10,"props":{"patrol":{"left":6,"right":14}},"row":13,"type":"gummy_fortress"},
     {"col":18,"row":13,"type":"trampoline"},
     {"col":23,"row":5,"type":"crabby_fortress"},
     {"col":37,"row":8,"type":"trampoline"},
-    {"col":44,"props":{"patrol":{"left":43,"right":45}},"row":10,"type":"gummy"},
+    {"col":44,"props":{"patrol":{"left":43,"right":45}},"row":10,"type":"gummy_fortress"},
     {"col":62,"props":{"patrol":{"left":58,"right":66}},"row":13,"type":"crabby_fortress"},
     {"col":62,"row":7,"type":"star"},
     {"col":78,"props":{"patrol":{"left":75,"right":82}},"row":13,"type":"crabby_fortress"},

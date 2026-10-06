@@ -29,7 +29,7 @@
     {"col":41,"row":7,"type":"gloomy"},
     {"col":42,"row":11,"type":"star"},
     {"col":59,"row":7,"type":"extralife"},
-    {"col":55,"props":{"patrol":{"left":51,"right":60}},"row":12,"type":"gummy"},
+    {"col":55,"props":{"patrol":{"left":51,"right":60}},"row":12,"type":"gummy_cave"},
     {"col":52,"row":9,"type":"gloomy"},
     {"col":63,"row":12,"type":"gloomy"},
     {"col":73,"row":6,"type":"gloomy"},

@@ -603,6 +603,20 @@ landing mark; sprites in `assets/images/bosses/common/`). Asset layout: enemies 
   / B claws up / C slim; Lava Crabby with claws 1 sides-inward / 2 raised / 3 maces / 4 tongs. USER'S RULES for all
   variants: legs 1 px wide with only the foot wider (like the Gummy), SYMMETRIC faces (body an odd number of pixels
   wide, eyes mirrored), claws that read as claws and point inward.
+- 3.76.0 (user's picks from the third round; protocol v50): IMPLEMENTED as real enemies, new SHAPES with the Gummy
+  class (`tools/ui/make_variant_skins.py --apply`, maps in `make_enemy_designs.py`): **Gummy de cueva** (`gummy_cave`,
+  version C: low and wide, wide-set eyes, one crystal; `helmetDy = 5` — generic Gummy field: its head sits 5 art px
+  lower, so the helmet and its box go down with it) and **Gummy de la fortaleza** (`gummy_fortress`, version A: square
+  steel wind-up toy, Gummy feet; the brass KEY turns with the walk: idle = medium, walk1 = tall, walk2 = thin).
+  Placed by `retheme.py --enemies` (`ISLAND_ENEMIES` cave → gummy_cave, fortress also gummy → gummy_fortress;
+  `ENEMY_ISLAND` = levels whose island differs from their terrain theme: cantera_dinamita → fortress, mina_inundada →
+  cave; 57 enemies in 11 levels; bot nav rebuilt).
+  STILL OPEN — fourth round, the two Crabbies, `FlappyMonster_pruebas/enemigos/variantes_v4.png` (`sheet_v4`). USER'S
+  RULES: NO Crabby has a MOUTH (eyes only); claws must use the GAME'S claw drawing (the Icy Crabby's 7x7 sheet / the
+  Mega's 10x7, open + closed, at the sides pointing inward) — the tiny blob claws of rounds 2-3 were rejected.
+  River Crabby = body C (slim mossy shell) + Icy-Crabby-like legs with HAIRS; claws 1 the game's small claw / 2 furry
+  "mitten" claws / 3 the Mega's big claw. Lava Crabby = wide basalt shell, claws A small / B big / C small with a
+  red-hot edge; faces 1 ember eyes + loose cracks / 2 slit eyes with rock brows / 3 dark Crabby eyes + red-hot plates.
 - SECOND ROUND of variants (3.74.0, WAITING for approval; `FlappyMonster_pruebas/enemigos/variantes_v2.png`, maps `V2`
   in `make_enemy_designs.py`): the user's picks, redrawn as DIFFERENT SPECIES ("like the Icy Crabby vs the Crabby: other
   body shape, proportions, silhouette — not a recolour"): Cave Gummy = lilac PEAR with cut crystals; Magma Gummy =

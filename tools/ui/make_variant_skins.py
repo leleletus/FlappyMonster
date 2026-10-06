@@ -34,4 +34,23 @@ if __name__ == '__main__':
     recolor('crabby/lookin.png', 'crabby_fortress/lookin.png', pal)
     recolor('crabby/MeatCrabby.png', 'crabby_fortress/meat.png', pal)
     for f in ('hid.png', 'spike.png'): shutil.copy(os.path.join(IMG, 'crabby', f), os.path.join(IMG, 'crabby_fortress', f))
+
+    # ── Los que cambian de FORMA (3ª ronda, elegidos por el usuario) ──
+    W1, W2 = [''.join(r) for r in D.base('gummy/gummy1.png')[13:16]], [''.join(r) for r in D.base('gummy/gummy2.png')[13:16]]
+
+    def put(dst, rows, pal, edits=()):
+        os.makedirs(os.path.dirname(os.path.join(IMG, dst)), exist_ok=True)
+        D.maps(rows, pal, edits).save(os.path.join(IMG, dst))
+    # Gummy de CUEVA (versión C "Bajo": ancho y bajito, ojos separados, un cristal)
+    cave = D.V3_CAVE[2][1][:13]
+    put('gummy_cave/gummy.png', cave + D.LEGS_G, D.CAVE)
+    put('gummy_cave/gummy1.png', cave + W1, D.CAVE)
+    put('gummy_cave/gummy2.png', cave + W2, D.CAVE)
+    put('gummy_cave/dead.png', ['.' * 16] * 10 + ["......oGo.......", "..oooogtooooo...", ".ohbeebbbeebso..", ".oossssssssoo...", "..oooooooooo...."], D.CAVE)
+    # Gummy de la FORTALEZA (versión A: muñeco de cuerda con pies de Gummy; la LLAVE gira con el paso)
+    put('gummy_fortress/gummy.png', D.FORT_BODY + D.FORT_FEET['A'], D.STEEL, D.KEY['media'])
+    put('gummy_fortress/gummy1.png', D.FORT_BODY + W1, D.STEEL, D.KEY['alta'])
+    put('gummy_fortress/gummy2.png', D.FORT_BODY + W2, D.STEEL, D.KEY['fina'])
+    put('gummy_fortress/dead.png', ['.' * 16] * 11 + ["..ooooooooooo...", "..ohrbbbbbrso...", "..obeebbbeeso...", "..oosssssssoo.kk", "...ooooooooo...."], D.STEEL)
+    print('  assets/images/gummy_cave/ y assets/images/gummy_fortress/')
     print('  assets/images/gummy_magma/ y assets/images/crabby_fortress/')

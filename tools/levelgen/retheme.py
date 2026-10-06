@@ -510,14 +510,17 @@ ICY_CRABS = {'crabby': 'crabby_ice', 'crabbytramp': 'crabbytramp_ice', 'gummy': 
 ISLAND_ENEMIES = {
     'snow': ICY_CRABS,
     'volcano': {'gummy': 'gummy_magma'},
-    'fortress': {'crabby': 'crabby_fortress', 'crabbytramp': 'crabbytramp_fortress'},
+    'fortress': {'crabby': 'crabby_fortress', 'crabbytramp': 'crabbytramp_fortress', 'gummy': 'gummy_fortress'},
+    'cave': {'gummy': 'gummy_cave'},
 }
+# niveles cuya ISLA no es la de su tema de terreno (la cantera es de la isla de la fortaleza; la mina, de cuevas)
+ENEMY_ISLAND = {'cantera_dinamita': 'fortress', 'mina_inundada': 'cave'}
 
 
 def enemies(name, dry=False):
     path = os.path.join(LEVELS, name + '.json')
     lv = json.load(open(path))
-    table = ISLAND_ENEMIES.get(THEMES.get(name))
+    table = ISLAND_ENEMIES.get(ENEMY_ISLAND.get(name, THEMES.get(name)))
     n = 0
     for e in lv.get('entities', []) if table else []:
         if e['type'] in table:

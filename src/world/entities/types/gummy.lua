@@ -86,7 +86,7 @@ end
 
 -- Cuánto sobresale el casco por encima de la caja exterior normal (px)
 local function helmetExtra(self)
-    local top = self.y - self.sprH / 2 + (HELMET_AY - (HELMET_AY - HELMET_TOP) * HELMET_K) * GUMMY_SCALE
+    local top = self.y - self.sprH / 2 + ((self.helmetDy or 0) + HELMET_AY - (HELMET_AY - HELMET_TOP) * HELMET_K) * GUMMY_SCALE
     return math.max(0, (self.y - self.outerH / 2) - top)
 end
 
@@ -183,7 +183,7 @@ function Gummy:render(camX, camY)
     if self.helmet and self.state ~= 'dead' then
         local ox, oy = img:getWidth() / 2, img:getHeight()
         local hx = drawX + (HELMET_AX - ox) * scaleX
-        local hy = feetY + (HELMET_AY - oy) * scaleY
+        local hy = feetY + (HELMET_AY + (self.helmetDy or 0) - oy) * scaleY          -- (helmetDy: variantes con la cabeza más baja)
         -- Bonk: el casco se aplasta un poco y vuelve
         local k = self.bonkT > 0 and math.sin((1 - self.bonkT / BONK_TIME) * math.pi) or 0
         love.graphics.draw(imgHelmet, math.floor(hx), math.floor(hy + k * 4), 0,

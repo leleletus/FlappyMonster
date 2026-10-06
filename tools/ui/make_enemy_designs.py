@@ -490,6 +490,91 @@ def sheet_v3():
     sheet('variantes_v3', 'VARIANTES, 3a ronda  -  a la izquierda el de siempre; elige una version de cada', rows, 'neutro', scale=8)
 
 
+# ══ CUARTA RONDA: los dos Crabbies que faltan. Del usuario: NINGÚN Crabby tiene boca; el de río = el cuerpo de la C
+# con patas como las del Crabby helado y PELITOS (cangrejo de río grande), y las pinzas con otro enfoque; el de lava =
+# pinzas a los lados hacia dentro pero CON EL DIBUJO de las de los demás Crabbies / Megas, y otra "cara" ════════════
+CLAW_ROLE = {'1e1e2a': 'o', 'ffd8a8': 'h', 'f89e58': 'b', 'e26832': 's', 'a83e28': 's', 'ffffff': 'h', 'f2f2f6': 'b', 'c4c8d6': 's'}
+
+
+def claw_frames(path, fw, skip_top=0):
+    """Las pinzas del juego (tira de 2 cuadros: abierta / cerrada, pinza IZQUIERDA) como mapas de papeles"""
+    im = Image.open(os.path.join(ROOT, path)).convert('RGBA')
+    out = []
+    for f in range(im.width // fw):
+        g = []
+        for y in range(skip_top, im.height):
+            g.append([CLAW_ROLE['%02x%02x%02x' % im.getpixel((f * fw + x, y))[:3]] if im.getpixel((f * fw + x, y))[3] else '.' for x in range(fw)])
+        out.append(g)
+    return out
+
+
+SMALL_CLAW = lambda: claw_frames('crabby_ice/claw_left-Sheet.png', 7, 1)        # la del Crabby helado (sin sus cerdas)
+MEGA_CLAW = lambda: claw_frames('bosses/megacrabby/claw_left-Sheet.png', 10, 1)  # la del Mega Crabby (del usuario)
+MITTEN = [[list(r) for r in ("..qq...", ".qqqqcc", "qqqqq..", ".qqqqcc", "..qq...")],       # "manopla" peluda, abierta
+          [list(r) for r in ("..qq...", ".qqqqc.", "qqqqqcc", ".qqqqc.", "..qq...")]]       # cerrada
+
+RIVER4 = P('d8cc8c', 'a89c5a', '6e6638', e=NAVY, m='5aa040', M='8cd060', l='8a7c44', q='4a4020', c='efe6c0')
+RIVER_BODY = [".......mMm........", ".....ommmoooo.....", "....oohmmbbboo....", "....ohbbbbbbso....", "....obebbbbeso....",
+              "....obbbbbbbso....", "....oossssssoo....",
+              "..ol.ol....lo.lo..", ".ol..ol....lo..lo.", "ol...ol....lo...lo", "ol....ol..lo....lo", "o.....o....o.....o"]
+RIVER_HAIR = [(4, 8), (3, 9), (2, 11), (4, 10), (5, 11), (7, 8), (8, 10)]            # pelitos (lado izquierdo; el derecho, espejo)
+
+LAVA4 = P('804238', '5c2a26', '3e1a1c', e=FIRE3, E=FIRE2, f=FIRE)
+LAVA_SHELL = [".....oooooooo.....", "....ohbbbbbbso....", "...ohbbbbbbbbso...", "...obbbbbbbbbso...", "...obbbbbbbbbso...",
+              "...oossssssssoo...", "...o.o.o..o.o.o...", "..o..o.o..o.o..o..", ".o...o.o..o.o...o."]
+LAVA_FACES = [
+    ('ojos de brasa\ny grietas sueltas', [(5, 3, 'E'), (12, 3, 'E'), (8, 1, 'f'), (8, 2, 'f'), (9, 2, 'e'), (4, 4, 'e'), (5, 4, 'f'), (13, 2, 'f'), (11, 4, 'e')]),
+    # (sin la "costura" de lava que llevaba debajo: parecía una boca, y ningún Crabby la tiene)
+    ('mirada rasgada\n(ojos de rendija,\ncejas de roca)', [(5, 3, 'E'), (6, 3, 'E'), (11, 3, 'E'), (12, 3, 'E'), (4, 2, 'o'), (5, 2, 'o'), (12, 2, 'o'), (13, 2, 'o'),
+                                                         (8, 1, 'f'), (9, 1, 'e')]),
+    ('ojos oscuros como\nlos demas Crabbies\ny placas al rojo', [(6, 2, 'o'), (11, 2, 'o'), (8, 1, 'f'), (9, 1, 'e'), (8, 2, 'e'), (9, 3, 'f'), (8, 4, 'f'),
+                                                           (4, 3, 'f'), (5, 3, 'e'), (12, 3, 'e'), (13, 3, 'f')]),
+]
+
+
+def with_claws(body, pal, claw, at, edits=(), hair=(), pad=5, claw_pal=None):
+    """El cuerpo con sus dos pinzas (la izquierda en `at` = (x, y) de su esquina; la derecha, espejo), por delante"""
+    w = len(body[0]) + 2 * pad
+    g = [['.'] * w for _ in body]
+    for y, r in enumerate(body):
+        for x, c in enumerate(r): g[y][x + pad] = c
+    for x, y, c in edits: g[y][x + pad] = c
+    for x, y in hair:
+        for xx in (x, len(body[0]) - 1 - x): g[y][xx + pad] = 'q'
+    im = paint(g, pal)
+    cw = len(claw[0])
+    ci = paint(claw, claw_pal or pal)
+    im.alpha_composite(ci, (at[0] + pad, at[1]))
+    im.alpha_composite(ci.transpose(Image.FLIP_LEFT_RIGHT), (w - (at[0] + pad) - cw, at[1]))
+    return im
+
+
+def sheet_v4():
+    white = P('ffffff', 'f2f2f6', 'c4c8d6')
+    oc = crab(white)[0]
+    small, mega = SMALL_CLAW(), MEGA_CLAW()
+    body = [list(r) for r in RIVER_BODY]
+    rows = [
+        ('CRABBY DE RIO\n1  pinzas del juego\n(la del Crabby\nhelado), abierta\ny cerrada',
+         [oc, with_claws(body, RIVER4, small[0], (-3, 4), hair=RIVER_HAIR), with_claws(body, RIVER4, small[1], (-3, 4), hair=RIVER_HAIR)], 'pradera'),
+        ('CRABBY DE RIO\n2  manoplas peludas\n(cangrejo de rio),\nabierta y cerrada',
+         [oc, with_claws(body, RIVER4, MITTEN[0], (-3, 4), hair=RIVER_HAIR), with_claws(body, RIVER4, MITTEN[1], (-3, 4), hair=RIVER_HAIR)], 'pradera'),
+        ('CRABBY DE RIO\n3  pinzas grandes\n(la del Mega, a su\ntamano)',
+         [oc, with_claws(body, RIVER4, mega[0], (-5, 4), hair=RIVER_HAIR), with_claws(body, RIVER4, mega[1], (-5, 4), hair=RIVER_HAIR)], 'pradera'),
+    ]
+    shell = [list(r) for r in LAVA_SHELL]
+    hot = dict(LAVA4, h=FIRE3)                                # pinzas con el filo al rojo
+    for i, (lab, face) in enumerate(LAVA_FACES):
+        rows.append(('CRABBY DE LAVA\ncara %d: %s' % (i + 1, lab),
+                     [oc, with_claws(shell, LAVA4, small[0], (-4, 2), face), with_claws(shell, LAVA4, small[1], (-4, 2), face)], 'ceniza'))
+    rows.append(('CRABBY DE LAVA\npinzas B: grandes\n(la del Mega),\ncara 1',
+                 [oc, with_claws(shell, LAVA4, mega[0], (-6, 2), LAVA_FACES[0][1]), with_claws(shell, LAVA4, mega[1], (-6, 2), LAVA_FACES[0][1])], 'ceniza'))
+    rows.append(('CRABBY DE LAVA\npinzas C: como la A\ncon el filo al rojo,\ncara 1',
+                 [oc, with_claws(shell, LAVA4, small[0], (-4, 2), LAVA_FACES[0][1], claw_pal=hot),
+                  with_claws(shell, LAVA4, small[1], (-4, 2), LAVA_FACES[0][1], claw_pal=hot)], 'ceniza'))
+    sheet('variantes_v4', 'CRABBIES, 4a ronda  -  el de siempre, y cada version con la pinza abierta y cerrada (sin boca)', rows, 'neutro', scale=8)
+
+
 if __name__ == '__main__':
     for key, (title, bg, opts) in GUMMY_SETS.items():
         sheet(key, title + '  -  quieto, paso 1, paso 2   (arriba: el Gummy de siempre)',
@@ -509,3 +594,4 @@ if __name__ == '__main__':
           [(d, hopper(d, pal, cap)) for d in HOP], 'pradera')
     sheet_v2()
     sheet_v3()
+    sheet_v4()
