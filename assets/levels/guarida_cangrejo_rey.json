@@ -41,7 +41,9 @@
     {"col":40,"row":13,"type":"trampoline"},
     {"col":92,"props":{"area":[{"col":90,"row":12},{"col":108,"row":12},{"col":108,"row":13},{"col":90,"row":13}]},"row":13,"type":"pufferfish"},
     {"col":101,"props":{"area":[{"col":90,"row":12},{"col":108,"row":12},{"col":108,"row":13},{"col":90,"row":13}]},"row":13,"type":"pufferfish"},
-    {"col":107,"props":{"area":[{"col":90,"row":12},{"col":108,"row":12},{"col":108,"row":13},{"col":90,"row":13}]},"row":12,"type":"pufferfish"}
+    {"col":107,"props":{"area":[{"col":90,"row":12},{"col":108,"row":12},{"col":108,"row":13},{"col":90,"row":13}]},"row":12,"type":"pufferfish"},
+    {"col":44,"row":10,"type":"apple"},
+    {"col":85,"row":12,"type":"apple"}
   ],
   "foliage": [
     {"col":9,"row":13,"type":"palmtree"},

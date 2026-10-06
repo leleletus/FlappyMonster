@@ -64,6 +64,7 @@ return {
         results = {
             title = "LEVEL CLEAR",
             time = "Time", lives = "Lives lost", hits = "Hits taken", kills = "Enemies", stars = "Stars",
+            duel = "You - Bot", items = "Items", falls = "Falls",
             points = "Points", grade = "GRADE", record = "NEW BEST GRADE!",
             reward_lives = "REWARD: +{n} LIFE", reward_points = "REWARD: +{n} POINTS",
             world = "WORLD COMPLETE  ·  GRADE {grade}",
@@ -127,6 +128,7 @@ return {
         score = "SCORE",
         time = "TIME",
         plus_life = "+1 LIFE",
+        plus_hp = "+1 HP",
         checkpoint = "CHECKPOINT",
         go = "GO!",
         boss = "BOSS!",

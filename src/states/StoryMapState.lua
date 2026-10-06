@@ -15,6 +15,7 @@ local BaseState     = require 'src/BaseState'
 local CornerButtons = require 'src/ui/CornerButtons'
 local PixelFont     = require 'src/ui/PixelFont'
 local Run           = require 'src/story/Run'
+local Score = require 'src/story/Score'
 local Worlds        = require 'src/story/Worlds'
 local Shards = require 'src/story/Shards'
 local Difficulty    = require 'src/Difficulty'
@@ -407,10 +408,20 @@ function StoryMapState:_play()
         gStateMachine:change('adventure', {
             level = Worlds.path(n.id), returnTo = 'story_map', difficulty = Run.data.difficulty,
             bonus = { onEnd = function(result)
-                local reward = Run.bonusResult(n.id, result)
-                gStateMachine:change('story_map', { world = world, node = node,
-                    notice = reward and 'story.bonus.won_notice' or (result.won and 'story.bonus.again_notice' or 'story.bonus.lost_notice'),
-                    good = result.won })
+                -- a la pantalla de RESULTADOS (la misma de los niveles, con las líneas del bonus) y de ahí al mapa
+                local summary = Run.bonusResult(n.id, result)
+                local function count(v) return function(k) return tostring(math.floor((v or 0) * k + 0.5)) end end
+                local W, P = Score.BONUS_WEIGHTS, summary.parts
+                gStateMachine:change('story_results', {
+                    level = n.id, result = result, summary = summary, color = THEME[Worlds.get(world).id],
+                    title = L(result.won and 'story.bonus.win' or 'story.bonus.lose'),
+                    rows = {
+                        { L('story.results.duel'), function(k) return count(result.score)(k) .. ' - ' .. count(result.botScore)(k) end, P.duel, W.duel },
+                        { L('story.results.items'), function(k) return count(result.items)(k) .. '/' .. (result.itemsTotal or 0) end, P.items, W.items },
+                        { L('story.results.kills'), count(result.kills), P.kills, W.kills },
+                        { L('story.results.falls'), count(result.deaths), P.falls, W.falls },
+                    },
+                    map = { world = world, node = node } })
             end },
         })
         return

@@ -122,7 +122,6 @@ function Run.complete(id, result)
 end
 
 -- BONUS (arena contra el bot): 'done' ganado · 'open' con el jefe del mundo vencido · 'locked'
-Run.BONUS_REWARD = { lives = 1, points = 1000 }
 function Run.bonusState(w)
     local W, b = Worlds.get(w), Worlds.bonus(w)
     if not (b and Run.data) then return 'locked' end
@@ -130,22 +129,38 @@ function Run.bonusState(w)
     return Run.isDone(W.boss) and 'open' or 'locked'
 end
 
--- Fin de una partida bonus: apunta la mejor puntuación; la PRIMERA victoria da el premio. Devuelve el premio o nil.
+-- Fin de una partida bonus: su NOTA (Score.bonus), sus puntos (solo si se gana, × la dificultad) y sus premios — la
+-- PRIMERA victoria, y la primera vez que se gana con cada letra —. Devuelve el resumen para la pantalla de resultados:
+--   { rating, grade, parts, points, record, won, rewards = { {lives|points}, ... } }
 function Run.bonusResult(id, result)
     local d = Run.data
     if not d then return nil end
+    local Score = require 'src/story/Score'
+    local Difficulty = require 'src/Difficulty'
     local b = d.bonus[id] or {}
-    local reward
-    if result.won and not b.won then
-        b.won, reward = true, Run.BONUS_REWARD
-        d.lives = math.min(99, d.lives + reward.lives)
-        d.points = (d.points or 0) + reward.points
+    local sc = Score.bonus(result)
+    local out = { rating = sc.rating, grade = sc.grade, parts = sc.parts, won = result.won == true, rewards = {},
+                  points = 0, record = sc.rating > (b.rating or -1) }
+    if result.won then
+        out.points = math.floor((result.score or 0) * Difficulty.of(d.difficulty, 'scoreMult', 1) + 0.5)
+        d.points = (d.points or 0) + out.points
+        if not b.won then b.won = true; out.rewards[#out.rewards + 1] = Score.BONUS_WIN end
+        local order = { S = 4, A = 3, B = 2, C = 1, D = 0 }
+        if (order[sc.grade] or 0) > (order[b.wonGrade or ''] or -1) then
+            b.wonGrade = sc.grade
+            if Score.BONUS_GRADE_REWARD[sc.grade] then out.rewards[#out.rewards + 1] = Score.BONUS_GRADE_REWARD[sc.grade] end
+        end
+        for _, rw in ipairs(out.rewards) do
+            if rw.lives then d.lives = math.min(99, d.lives + rw.lives) end
+            if rw.points then d.points = d.points + rw.points end
+        end
     end
+    if sc.rating > (b.rating or -1) then b.rating, b.grade = sc.rating, sc.grade end
     b.best = math.max(b.best or 0, result.score or 0)
     b.played = (b.played or 0) + 1
     d.bonus[id] = b
     Run.save()
-    return reward
+    return out
 end
 
 -- Desbloqueo por acabar el juego en `difficulty`: devuelve el id NUEVO desbloqueado (nil si ya lo estaba)

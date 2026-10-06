@@ -317,7 +317,11 @@
     {"col":79,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":75,"right":84}},"row":6,"type":"crabby_lava"},
     {"col":93,"row":9,"type":"gummy_magma"},
     {"col":94,"row":5,"type":"mortar"},
-    {"col":59,"row":9,"type":"mortar"}
+    {"col":59,"row":9,"type":"mortar"},
+    {"col":32,"row":9,"type":"apple"},
+    {"col":68,"row":9,"type":"apple"},
+    {"col":105,"row":9,"type":"apple"},
+    {"col":140,"row":9,"type":"apple"}
   ],
   "foliage": [
     {"col":7,"row":9,"sub":3,"type":"dead_bush"},

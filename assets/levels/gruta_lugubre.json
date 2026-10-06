@@ -43,7 +43,9 @@
     {"col":67,"row":10,"type":"gloomy"},
     {"col":79,"row":3,"type":"gloomy"},
     {"col":48,"row":3,"type":"gloomy"},
-    {"col":23,"row":3,"type":"gloomy"}
+    {"col":23,"row":3,"type":"gloomy"},
+    {"col":45,"row":12,"type":"apple"},
+    {"col":83,"row":12,"type":"apple"}
   ],
   "foliage": [
     {"col":2,"props":{"flip":true},"row":3,"type":"stalactite"},

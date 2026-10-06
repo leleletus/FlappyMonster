@@ -64,6 +64,7 @@ return {
         results = {
             title = "NIVEL SUPERADO",
             time = "Tiempo", lives = "Vidas perdidas", hits = "Golpes recibidos", kills = "Enemigos", stars = "Estrellas",
+            duel = "Tú - Bot", items = "Objetos", falls = "Caídas",
             points = "Puntos", grade = "NOTA", record = "¡NUEVA MEJOR NOTA!",
             reward_lives = "PREMIO: +{n} VIDA", reward_points = "PREMIO: +{n} PUNTOS",
             world = "MUNDO COMPLETADO  ·  NOTA {grade}",
@@ -127,6 +128,7 @@ return {
         score = "PUNTOS",
         time = "TIEMPO",
         plus_life = "+1 VIDA",
+        plus_hp = "+1 SALUD",
         checkpoint = "CHECKPOINT",
         go = "¡YA!",
         boss = "¡JEFE!",

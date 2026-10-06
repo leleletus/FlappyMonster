@@ -86,7 +86,11 @@ function BonusMatch:update(dt)
         self.endT = self.endT + dt
         if self.endT >= BonusMatch.END_T and not self.sent then
             self.sent = true
-            if self.opts.onEnd then self.opts.onEnd({ won = self.won, score = st.score, botScore = self.botScore }) end
+            if self.opts.onEnd then
+                local s = st.stats or {}
+                self.opts.onEnd({ won = self.won, score = st.score, botScore = self.botScore, kills = s.kills, killable = s.killable,
+                                  deaths = s.deaths, items = s.items, itemsTotal = s.itemsTotal })
+            end
         end
         return
     end

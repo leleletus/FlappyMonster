@@ -40,7 +40,11 @@
     {"col":82,"row":9,"type":"mortar"},
     {"col":97,"row":8,"type":"mortar"},
     {"col":124,"row":7,"type":"mortar"},
-    {"col":137,"row":9,"type":"mortar"}
+    {"col":137,"row":9,"type":"mortar"},
+    {"col":34,"row":9,"type":"apple"},
+    {"col":66,"row":9,"type":"apple"},
+    {"col":105,"row":9,"type":"apple"},
+    {"col":140,"row":9,"type":"apple"}
   ],
   "foliage": [
     {"col":50,"props":{"layer":"back"},"row":5,"sub":4,"type":"torch"},

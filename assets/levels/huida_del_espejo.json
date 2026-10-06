@@ -31,7 +31,11 @@
     {"col":123,"row":6,"type":"star"},
     {"col":140,"row":5,"type":"star"},
     {"col":149,"props":{"patrol":{"left":147,"right":152}},"row":9,"type":"gummy_magma"},
-    {"col":163,"row":5,"type":"star"}
+    {"col":163,"row":5,"type":"star"},
+    {"col":40,"row":8,"type":"apple"},
+    {"col":84,"row":9,"type":"apple"},
+    {"col":129,"row":9,"type":"apple"},
+    {"col":169,"row":9,"type":"apple"}
   ],
   "foliage": [
     {"col":41,"props":{"layer":"back"},"row":7,"type":"basalt_rock"},

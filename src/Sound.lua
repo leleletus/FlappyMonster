@@ -91,6 +91,7 @@ function Sound.load()
     load('stunned',     'assets/sounds/player/stunned.wav',             'static')
     load('collect',     'assets/sounds/items/collect.wav',              'static')
     load('oneUp',       'assets/sounds/items/one_up.wav',               'static')
+    load('appleHeal',   'assets/sounds/items/apple.wav',                'static')      -- (tools/sounds/items.py)
     load('checkpoint',  'assets/sounds/items/checkpoint.wav',           'static')
     load('blockBreak',  'assets/sounds/traps/block_break.wav',          'static')
     load('switchOn',    'assets/sounds/mechanics/switch_on.wav',        'static')   -- bloque ON/OFF → ON

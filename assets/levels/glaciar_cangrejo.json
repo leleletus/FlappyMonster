@@ -39,7 +39,9 @@
     {"col":98,"props":{"aimTime":2,"ceilingEvery":5,"hp":12,"hpPerPlayer":3,"pounceHeight":5,"rageAt":0.4,"rageSpeed":1.45,"rageStuck":0.6,"restEvery":6,"restTime":1.5,"stuckTime":2,"summonCount":3,"summonEvery":10,"summonMax":6,"summonPool":6},"row":10,"type":"megacrabby_ice"},
     {"col":86,"props":{"corner":{"col":88,"row":12},"material":"snow","zone":1},"row":3,"type":"bosswall"},
     {"col":107,"props":{"corner":{"col":109,"row":12},"material":"snow","zone":1},"row":3,"type":"bosswall"},
-    {"col":86,"props":{"corner":{"col":109,"row":2},"material":"snow"},"row":2,"type":"bosswall"}
+    {"col":86,"props":{"corner":{"col":109,"row":2},"material":"snow"},"row":2,"type":"bosswall"},
+    {"col":46,"row":9,"type":"apple"},
+    {"col":84,"row":12,"type":"apple"}
   ],
   "foliage": [
     {"col":52,"props":{"layer":"back"},"row":8,"type":"icicle"},

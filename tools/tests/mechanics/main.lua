@@ -1102,6 +1102,24 @@ function cases.tapa_base()
             #bad == 0 and 'ninguna' or table.concat(bad, ' '), tostring(edges), tostring(dim)))
 end
 
+-- MANZANA: con vida de menos cura 1 (sin puntos); con la vida llena, da sus puntos
+function cases.manzana()
+    local function take(hp)
+        local level, es = room(16, 10, {}, { { type = 'apple', col = 8, row = 9 } })
+        local a = es[1]
+        local pa = playerAt(level, 8, 9)
+        pa.x, pa.y, pa.hp = a.x, a.y, hp
+        local got
+        Interactions.run(pa, es, { pickup = function(e, pk) got = Interactions.pickupEffect(pa, pk) end })
+        return got or {}, a
+    end
+    local hurt, a1 = take(1)
+    local full, a2 = take(3)
+    check('manzana', hurt.heal == 1 and hurt.score == nil and full.heal == nil and full.score == 20 and a1.state == 'dead' and a2.state == 'dead',
+        ('con 1 de vida: cura %s, puntos %s · con la vida llena: cura %s, puntos %s · se consume=%s'):format(
+            tostring(hurt.heal), tostring(hurt.score), tostring(full.heal), tostring(full.score), tostring(a1.state == 'dead')))
+end
+
 -- Nivel de enemigos INOFENSIVOS ("peaceful"): tocarlos no hace nada; pisarlos sigue contando
 function cases.inofensivos()
     local function touch(peaceful)
@@ -1341,7 +1359,7 @@ function love.load()
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
-                         'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'persecucion', 'inofensivos', 'tapa_base',
+                         'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'persecucion', 'inofensivos', 'tapa_base', 'manzana',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte' }) do cases[n]() end
     if os.getenv('SHOT_BOMB') then bombShot() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))

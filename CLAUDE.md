@@ -2261,6 +2261,22 @@ again. No dialogue or text: animation + music.
   `Run.addShard` runs in `onFinish` (they used to be saved at once on pickup). Points, grades and rewards were already
   saved only by `Run.complete`. Any NEW thing a level gives must follow the same rule. Harness `story_flow`
   (`game_over`: −1 life +2 pickups then quit → only the loss is saved; `fragmento`: picked up, not saved).
+- **3.84.0 (protocol v55) — APPLE, bonus RESULTS, no lives in arenas.**
+  APPLE (`types/apple.lua`, "Manzana", Objetos; the USER's sprite `items/apple.png` — and their hand-edited
+  `items/checkpoint_on|off.png`: don't regenerate them with `make_world_art.py`): `pickup = { heal = 1, score = 20 }` →
+  ONE rule for SP and server, `Interactions.pickupEffect(pa, pk)`: a healing pickup gives back HP if any is missing, else
+  its points. SP: popup `hud.plus_hp`, sound `appleHeal` (`tools/sounds/items.py`); server: `pa.hp` (own state) + pickup
+  event `kind = 'heal'`. PLACED by `tools/levelgen/add_apples.py <levels>` (appends lines to "entities" without touching
+  the rest; skips a level that already has apples; re-run it after `build.py --only`): 4 along each AUTO-SCROLL level
+  (huida_del_espejo, lluvia_pinchos, tren_fugaz) and 2 in every BOSS level (mid-way and right before the arena).
+  BONUS RESULTS: a bonus (KOTH vs bot) now ends in `story_results` — made generic: `args.rows` ({label, value fn, points,
+  max}), `args.title`, `summary.rewards` (list) — instead of a notice on the map. `Score.bonus(stats)`
+  (`BONUS_WEIGHTS`: duel 50 = your points / (2 × the bot's), items 15, enemies 15 = kills / 5, falls 20; LOSING caps the
+  rating at 49 = D) → `Run.bonusResult` returns the summary: match points × difficulty (only when won), rewards = first
+  win `Score.BONUS_WIN` (+1 life +1000) and the first win with each grade `BONUS_GRADE_REWARD` (S +1 life, A +500);
+  save fields `bonus[id].rating/grade/wonGrade`. `AdventureState.stats.items / itemsTotal` = pickups taken / in the level.
+  NO EXTRA LIFE in any level with point zones (the reward gives the lives): cripta_del_silencio's became an apple, the
+  KOTH arenas in `levels_batch2.py` place apples, and `bot_nav` `datos` fails on an `extralife` in an arena.
 - HUD: `BossHud.drawRun(level, entities)` (both level states): **"¡CORRE!" / "RUN!"** (`hud.run`) top centre while
   the camera runs, instead of any boss bar.
 - Music `mirror_chase` (`tools/music/mirror_chase.py`, intro + loop, verified by numbers only): DRUM & BASS as fast

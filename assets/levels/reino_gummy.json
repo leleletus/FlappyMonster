@@ -39,7 +39,9 @@
     {"col":98,"props":{"guardCount":4,"guardEvery":6,"guardMax":6,"guardPool":8,"hp":14,"hpPerPlayer":2,"phase2":0.6},"row":11,"type":"megagummy"},
     {"col":85,"props":{"corner":{"col":87,"row":12},"zone":1},"row":3,"type":"bosswall"},
     {"col":108,"props":{"corner":{"col":110,"row":12},"zone":1},"row":3,"type":"bosswall"},
-    {"col":85,"props":{"corner":{"col":110,"row":2},"zone":1},"row":2,"type":"bosswall"}
+    {"col":85,"props":{"corner":{"col":110,"row":2},"zone":1},"row":2,"type":"bosswall"},
+    {"col":45,"row":8,"type":"apple"},
+    {"col":83,"row":12,"type":"apple"}
   ],
   "foliage": [
     {"col":21,"row":10,"type":"butterflies"},

@@ -69,7 +69,8 @@ function StoryResultsState:enter(args)
     local W, P = Score.WEIGHTS, s.parts or {}
     -- { texto, valor mostrado (fn de k 0..1), puntos de la línea, máximo }
     local function count(n) return function(k) return tostring(math.floor((n or 0) * k + 0.5)) end end
-    self.rows = {
+    -- (`args.rows`: otra partida con sus propias líneas — el bonus contra el bot —; `args.title`: su título)
+    self.rows = self.args.rows or {
         { L('story.results.time'), function(k) return mmss((r.time or 0) * k) end, P.time, W.time },
         { L('story.results.lives'), count(r.deaths), P.lives, W.lives },
         { L('story.results.hits'), count(r.hits), P.hits, W.hits },
@@ -86,6 +87,10 @@ function StoryResultsState:enter(args)
         if rw then add(rw.lives and L('story.results.reward_lives', { n = rw.lives }) or L('story.results.reward_points', { n = rw.points }), { 0.5, 1, 0.5 }) end
     end
     reward(s.reward)
+    for _, rw in ipairs(s.rewards or {}) do                                -- (varios premios: el bonus)
+        if rw.lives then reward({ lives = rw.lives }) end
+        if rw.points then reward({ points = rw.points }) end
+    end
     if s.world then
         add(L('story.results.world', { grade = s.world.grade }), (GRADE[s.world.grade] or GRADE.C).col)
         reward(s.world.reward)
@@ -269,7 +274,7 @@ function StoryResultsState:render()
     love.graphics.scale(sc * 1.5, sc * 1.5)
     love.graphics.rotate(self.celebrate and math.sin(t * 3) * 0.03 or 0)
     love.graphics.setFont(FONT_BIG)
-    shadowText(L('hud.level_clear'), -WINDOW_W / 2, -FONT_BIG:getHeight() / 2, WINDOW_W, 'center', { 1, 0.95, 0.4 }, ta)
+    shadowText(self.args.title or L('hud.level_clear'), -WINDOW_W / 2, -FONT_BIG:getHeight() / 2, WINDOW_W, 'center', { 1, 0.95, 0.4 }, ta)
     love.graphics.pop()
     love.graphics.setFont(FONT_MED)
     local sa = clamp01((t - T_TITLE - 0.35) / 0.3)

@@ -44,7 +44,9 @@
     {"col":23,"row":3,"type":"extralife"},
     {"col":94,"props":{"control":"boss","corner":{"col":111,"row":15},"holdTime":5,"maxLevel":6.75},"row":7,"type":"flood"},
     {"col":93,"props":{"corner":{"col":93,"row":12}},"row":2,"type":"bosswall"},
-    {"col":112,"props":{"corner":{"col":112,"row":12}},"row":2,"type":"bosswall"}
+    {"col":112,"props":{"corner":{"col":112,"row":12}},"row":2,"type":"bosswall"},
+    {"col":50,"row":8,"type":"apple"},
+    {"col":91,"row":12,"type":"apple"}
   ],
   "foliage": [
     {"col":21,"props":{"layer":"back"},"row":5,"sub":3,"type":"torch"},

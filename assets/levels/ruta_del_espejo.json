@@ -45,7 +45,9 @@
     {"col":122,"props":{"sides":"left"},"row":13,"type":"mortar"},
     {"col":89,"props":{"corner":{"col":91,"row":13},"material":"basalt"},"row":3,"type":"bosswall"},
     {"col":110,"props":{"corner":{"col":112,"row":13},"material":"basalt"},"row":3,"type":"bosswall"},
-    {"col":92,"props":{"corner":{"col":109,"row":12}},"row":12,"type":"bossglass"}
+    {"col":92,"props":{"corner":{"col":109,"row":12}},"row":12,"type":"bossglass"},
+    {"col":46,"row":13,"type":"apple"},
+    {"col":87,"row":13,"type":"apple"}
   ],
   "foliage": [
     {"col":11,"row":13,"type":"basalt_rock"},

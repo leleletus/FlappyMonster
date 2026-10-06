@@ -42,7 +42,9 @@
     {"col":90,"props":{"hiddenAs":"ice"},"row":13,"type":"phaseblock"},
     {"col":31,"props":{"dir":"left","range":13},"row":9,"type":"cryo"},
     {"col":49,"row":13,"type":"trampoline"},
-    {"col":70,"props":{"dir":"down","id":13},"row":4,"type":"cryo"}
+    {"col":70,"props":{"dir":"down","id":13},"row":4,"type":"cryo"},
+    {"col":38,"row":9,"type":"apple"},
+    {"col":73,"row":9,"type":"apple"}
   ],
   "foliage": [
     {"col":38,"props":{"flip":true,"layer":"back"},"row":5,"sub":3,"type":"snow_pile"},

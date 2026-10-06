@@ -761,7 +761,7 @@ def cantera_real():
     L.fly('gummy', 38, 54, U - 4, **KG)
     L.ent('mortar', 22, U - 1, range=8); L.ent('mortar', 70, U - 1, range=8)
     L.ladder(43, base=U, top=TOP + 2)
-    L.deck(49, 55, TOP + 2); L.ent('extralife', 52, TOP)
+    L.deck(49, 55, TOP + 2); L.ent('apple', 52, TOP)
     L.stars((18, U - 2), (74, U - 2))
     return L
 
@@ -783,7 +783,7 @@ def lago_de_cristal():
     L.koth_zone(40, U - 4, 52, U - 1, points=3)
     L.walk('gummy', 16, 30, U - 1, **KG); L.walk('gummy', 62, 76, U - 1, helmet=True, **KG)
     L.stars((23, U - 3), (69, U - 3))
-    L.ent('extralife', 46, U - 8)
+    L.ent('apple', 46, U - 8)
     L.ladder(33, base=U, top=U - 6); L.ladder(54, base=U, top=U - 6, right=False)
     return L
 
@@ -807,7 +807,7 @@ def ciudadela_alterna():
     L.walk('gummy', 28, 40, U - 1, **KG); L.walk('gummy', 52, 64, U - 1, **KG)
     L.ent('spikefall', 34, 2, sub=1, detectRange=14); L.ent('spikefall', 58, 2, sub=2, detectRange=14)
     L.stars((19, U - 2), (73, U - 2))
-    L.ent('extralife', 46, U - 3)
+    L.ent('apple', 46, U - 3)
     return L
 
 
@@ -833,7 +833,7 @@ def cala_de_los_muelles():
     L.koth_zone(40, TOP - 3, 52, TOP + 1, points=3)
     L.fly('gummy', 38, 54, TOP - 1, **KG)
     L.stars((22, U - 3), (70, U - 3))
-    L.ent('extralife', 46, G + 4)
+    L.ent('apple', 46, G + 4)
     return L
 
 
@@ -856,7 +856,7 @@ def cripta_del_silencio():
     L.stars((24, U - 2), (68, U - 2), (46, U - 3))
     k = L.cellar(12, 68, stairs=(4, 62), breaks=(32, 36))
     L.ent('gloomy', 46, G + 2, respawn=10, points=6)
-    L.stars((30, G + 1), (60, G + 1)); L.ent('extralife', 40, G + 1)
+    L.stars((30, G + 1), (60, G + 1)); L.ent('apple', 40, G + 1)
     return L
 
 

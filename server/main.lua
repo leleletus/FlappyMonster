@@ -414,12 +414,14 @@ local function checkPlayerEnemyCollisions(sim, pid, ps, seq)
             pushEvent(sim, { type='score', playerId=pid, delta=pts, x=round(g.x), y=round(g.y) })
         end,
         pickup = function(e, pk)
+            pk = Entities.interactions.pickupEffect(pa, pk)
+            if pk.heal then pa.hp = pa.hp + pk.heal end                 -- (manzana: la vida va en el estado propio)
             if pk.score then
                 ps.score = ps.score + pk.score
                 ps.scoreT = sim.levelTime
             end
             if pk.lives then pa.lives = math.min(99, pa.lives + pk.lives) end
-            pushEvent(sim, { type='pickup', playerId=pid, kind = pk.lives and 'life' or 'star',
+            pushEvent(sim, { type='pickup', playerId=pid, kind = (pk.heal and 'heal') or (pk.lives and 'life') or 'star',
                              delta = pk.score, x=round(e.x), y=round(e.y) })
         end,
         checkpoint = function(e, i)

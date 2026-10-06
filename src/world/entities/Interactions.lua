@@ -161,6 +161,17 @@ end
 
 -- Zona aplastada al impactar un ground pound: SOLO justo bajo los pies (lo
 -- que queda debajo del jugador; lo de los lados solo sale despedido)
+-- Qué hace DE VERDAD un coleccionable a ese jugador (uno para todos: un jugador y servidor). Uno que CURA
+-- (`pickup = { heal = n, score = p }`, la manzana) devuelve vida si le falta; con la vida llena da sus puntos.
+--   → { heal = n } | { score = p, lives = n }
+function Interactions.pickupEffect(pa, pk)
+    if pk.heal then
+        if (pa.hp or 0) < (pa.hpMax or 0) then return { heal = math.min(pk.heal, pa.hpMax - pa.hp) } end
+        return { score = pk.score }
+    end
+    return pk
+end
+
 function Interactions.poundZone(pa)
     local ob = pa:getOuterBounds()
     return { x = ob.x + 4, y = ob.y + ob.h - 24, w = ob.w - 8, h = 30 }

@@ -566,6 +566,9 @@ function OnlineAdventureState:_processEvent(ev)
         if ev.kind == 'life' then
             Sound.play('oneUp'); Particles.emit('oneup', x, y)
             if ev.playerId == NC.myId then self:_spawnPopup(L('hud.plus_life'), x, y - 30) end
+        elseif ev.kind == 'heal' then
+            Sound.play('appleHeal'); Particles.emit('collect', x, y)
+            if ev.playerId == NC.myId then self:_spawnPopup(L('hud.plus_hp'), x, y - 30) end
         else
             Sound.play('collect'); Particles.emit('collect', x, y)
             if ev.playerId == NC.myId and ev.delta then self:_spawnPopup('+' .. ev.delta .. '!', x, y - 30) end

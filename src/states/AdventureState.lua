@@ -177,7 +177,11 @@ function AdventureState:enter(args)
     local stars = 0
     for _, e in ipairs(self.level.entities) do if e.type == 'star' then stars = stars + 1 end end
     self.stats = { kills = 0, killable = require('src/world/Modes').entityInfo(self.level.entities).killable or 0,
-                   stars = 0, starsTotal = stars, deaths = 0, hits = 0 }
+                   stars = 0, starsTotal = stars, deaths = 0, hits = 0, items = 0, itemsTotal = 0 }
+    for _, e in ipairs(self.level.entities) do
+        local def = require('src/world/entities/EntityTypes').get(e.type)
+        if def and def.pickup then self.stats.itemsTotal = self.stats.itemsTotal + 1 end
+    end
     self.prevHp = self.player.hp
     self.levelTime  = 0   -- segundos transcurridos
     self.popups     = {}  -- lista de textos flotantes de puntos
@@ -311,6 +315,14 @@ function AdventureState:checkEnemyCollisions()
             self:spawnPopup('+' .. (pts or 0) .. '!', g.x, popY)
         end,
         pickup = function(e, pk)
+            pk = Entities.interactions.pickupEffect(player, pk)
+            self.stats.items = self.stats.items + 1
+            if pk.heal then
+                player.hp = player.hp + pk.heal
+                self.prevHp = player.hp
+                self:spawnPopup(L('hud.plus_hp'), e.x, e.y - e.outerH / 2)
+                Sound.play('appleHeal'); Particles.emit('collect', e.x, e.y)
+            end
             if pk.score then
                 self.score = self.score + pk.score
                 if e.def.name == 'star' then self.stats.stars = self.stats.stars + 1 end

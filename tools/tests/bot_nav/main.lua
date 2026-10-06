@@ -9,7 +9,8 @@
 --            es lo primero): dentro ≥ 80 % del tiempo tras llegar
 --     agua   (niveles con inundación, que aquí sube y baja como en el juego) no se vuelve loco: dentro del agua
 --            pulsa el salto menos de 1,2 veces por segundo de media (nadar sí; aporrear el botón sin salir, no)
---     datos  en estos niveles TODOS los enemigos reaparecen y dan el 40 % de sus puntos (15 → 6, 10 → 4)
+--     datos  en estos niveles TODOS los enemigos reaparecen y dan el 40 % de sus puntos (15 → 6, 10 → 4),
+--            y no hay ninguna VIDA EXTRA (las vidas las da el premio del bonus)
 --   tools/tests/run.sh bot_nav [BUILD=1] [-- assets/levels/a.json ...]   (sin niveles: las arenas de los bonus)
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
@@ -149,6 +150,8 @@ local function dataCheck(level)
     local bad = {}
     for _, pl in ipairs(level.entities) do
         local def = EntityTypes.byName[pl.type]
+        -- (ni una VIDA EXTRA en una arena: las vidas las da la pantalla de resultados del bonus)
+        if pl.type == 'extralife' then bad[#bad + 1] = ('vida extra en %d,%d (en las arenas no: las da el premio)'):format(pl.col, pl.row) end
         local okE, ent = pcall(Entities.create, pl)
         if def and def.category == 'Enemigos' and okE and ent then
             local p = ent.props or {}                              -- (con los valores por defecto del tipo ya puestos)

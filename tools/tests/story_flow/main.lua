@@ -367,11 +367,26 @@ function love.update(dt)
     elseif step == 'bonus5' and t - T > 3.5 then
         local id = Worlds.bonus(1).id
         local d = Run.data.bonus[id]
-        local again = Run.bonusResult(id, { won = true, score = 1 })
-        check('bonus', BON1 and BON2 and BON3 and BON4 and st.world == 1 and st.node == #Worlds.nodes(1) + 1 and d and d.won
-            and Run.data.lives == LIVES_B + 1 and Run.bonusState(1) == 'done' and again == nil and st.notice ~= nil,
-            ('cerrado sin jefe / abierto con jefe=%s; partida con bot y vidas aparte=%s; el bot llega a la zona y puntúa=%s; al acabar el jugador queda congelado=%s; ganar: bonus %s, vidas %s → %s; repetir: premio=%s'):format(
-             tostring(BON1), tostring(BON2), tostring(BON3), tostring(BON4), Run.bonusState(1), tostring(LIVES_B), tostring(Run.data.lives), tostring(again)))
+        -- ahora sale la pantalla de RESULTADOS (la de los niveles, con las líneas del bonus) y de ahí se vuelve al mapa
+        local sum = st.args and st.args.summary
+        local RES = sum ~= nil and st.rows ~= nil and #st.rows == 4 and sum.won == true and #sum.rewards >= 1 and sum.points > 0
+        local gain = 0
+        for _, rw in ipairs(sum and sum.rewards or {}) do gain = gain + (rw.lives or 0) end
+        local again = Run.bonusResult(id, { won = true, score = 1, botScore = 50 })
+        local lost = Run.bonusResult(id, { won = false, score = 1000, botScore = 1 })
+        BONUS_OK = BON1 and BON2 and BON3 and BON4 and RES and d and d.won and gain >= 1
+            and Run.data.lives == LIVES_B + gain and Run.bonusState(1) == 'done' and #again.rewards == 0 and lost.grade == 'D' and lost.points == 0
+        BONUS_MSG = ('cerrado sin jefe / abierto con jefe=%s; partida con bot y vidas aparte=%s; el bot llega a la zona y puntúa=%s; al acabar el jugador queda congelado=%s; RESULTADOS con 4 líneas=%s, nota %s (%s/100), %s puntos, premios %d; ganar: bonus %s, vidas %s → %s; repetir con peor nota: premios=%d; perder: nota %s'):format(
+             tostring(BON1), tostring(BON2), tostring(BON3), tostring(BON4), tostring(RES), tostring(sum and sum.grade), tostring(sum and sum.rating), tostring(sum and sum.points),
+             sum and #sum.rewards or -1, Run.bonusState(1), tostring(LIVES_B), tostring(Run.data.lives), #again.rewards, lost.grade)
+        st.t = st.tEnd or 99
+        shot('bonus_results')
+        pressNext('confirm'); go('bonus5b')
+    elseif step == 'bonus5b' and t - T > 0.3 then
+        go('bonus5c')                                    -- (la animación ya estaba al final: un toque vuelve al mapa)
+    elseif step == 'bonus5c' and t - T > 0.5 then
+        local id = Worlds.bonus(1).id
+        check('bonus', BONUS_OK and st.world == 1 and st.node == #Worlds.nodes(1) + 1, BONUS_MSG .. ('; de vuelta al mapa en el nodo %s'):format(tostring(st.node)))
         shot('bonus_won')
         Run.data.done = KEEP; Run.data.bonus = {}; Run.data.lives = LIVES_B; Run.save()
         -- Xtra extremo: DOS bots, y más hostiles que en Fácil
