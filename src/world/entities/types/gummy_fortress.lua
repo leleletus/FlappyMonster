@@ -7,6 +7,7 @@ local Gummy  = base.class
 
 local GummyFortress = Entity.extend(Gummy, { debugColor = { 0.7, 0.75, 0.8 } })
 GummyFortress.artDir = 'assets/images/gummy_fortress/'
+GummyFortress.helmetDx = 1       -- (su cuerpo va 1 px de arte a la derecha del del Gummy: la llave ocupa la izquierda)
 function GummyFortress.loadAssets() Gummy.loadAssets(); Gummy.loadArt(GummyFortress.artDir) end
 
 local def = {}

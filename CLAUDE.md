@@ -2219,7 +2219,9 @@ again. No dialogue or text: animation + music.
   the spike: their `hid.png` is one EMPTY row and only the sinking skins had `sk.inset[sk.hid] = 1`; now every skin
   does, so `Crabby:headH` = 0 when hidden (drawing, hazard box and trampoline box sit on the surface). (2) FORTRESS
   GUMMY key: the Gummy art faces RIGHT (drawn unflipped when walking right), so the wind-up key goes on the LEFT = its
-  back (`back()` in `make_variant_skins.py`; it stuck out in front). (3) **DARK EDGE for dark enemies** (generic):
+  back (`back()` in `make_variant_skins.py`; it stuck out in front). 3.82.2: the SAME drawing mirrored, 1-px stem
+  included (3.82.1 dropped the stem to fit and the user wanted it back): body and feet moved one column right (cols
+  3-13), key in cols 0-2; `helmetDx = 1` (new generic Gummy field) keeps the helmet on its head. (3) **DARK EDGE for dark enemies** (generic):
   class field / trait `darkEdge = { r, g, b, a }` → the `EntityTypes` render wrapper draws the entity's OWN silhouette
   in that flat colour 1 screen px around it (`Silhouette.around`: the body's render called 8 times shifted, under a
   flat-colour shader; `self._edgePass` = skip render side effects such as `Crabby:renderDig`), then the normal drawing —

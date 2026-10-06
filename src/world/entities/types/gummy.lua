@@ -182,7 +182,7 @@ function Gummy:render(camX, camY)
     -- Casco: la misma rejilla que el sprite, algo más grande alrededor de su borde de abajo
     if self.helmet and self.state ~= 'dead' then
         local ox, oy = img:getWidth() / 2, img:getHeight()
-        local hx = drawX + (HELMET_AX - ox) * scaleX
+        local hx = drawX + (HELMET_AX + (self.helmetDx or 0) - ox) * scaleX        -- (helmetDx: la cabeza corrida de lado)
         local hy = feetY + (HELMET_AY + (self.helmetDy or 0) - oy) * scaleY          -- (helmetDy: variantes con la cabeza más baja)
         -- Bonk: el casco se aplasta un poco y vuelve
         local k = self.bonkT > 0 and math.sin((1 - self.bonkT / BONK_TIME) * math.pi) or 0
