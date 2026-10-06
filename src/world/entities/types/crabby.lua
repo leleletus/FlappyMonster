@@ -96,6 +96,7 @@ function Crabby.loadAssets()
     -- pinzas del juego en su color. `claw`: x desde el centro, y desde los pies (px de arte), cuánto se mete
     addSkin('river', 'assets/images/crabby_river/', { sink = 5 })    -- (types/crabby_river.lua)
     Crabby.SKINS.river.claw = { file = 'assets/images/crabby_river/claw_left-Sheet.png', w = 5, x = 4.4, y = -1.6, inset = 0.5 }
+    addSkin('cave', 'assets/images/crabby_cave/', { sink = 6 })      -- (types/crabby_cave.lua; sin pinzas)
     addSkin('lava', 'assets/images/crabby_lava/', { sink = 6 })      -- (types/crabby_lava.lua)
     Crabby.SKINS.lava.claw = { file = 'assets/images/crabby_lava/claw_left-Sheet.png', w = 5, x = 5.4, y = -1.6, inset = 0.5 }
     -- Pinzas pequeñas del Crabby helado (tools/ui/make_icecrabby_claws.py, opción A "Mini Mega"):

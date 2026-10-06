@@ -5,7 +5,7 @@ local Entity = require 'src/world/entities/Entity'
 
 local V = {}
 
-function V.defs(skin, label, name, trampName, desc, tuning)
+function V.defs(skin, label, name, trampName, desc, tuning, fields)
     local base  = require 'src/world/entities/types/crabby'
     local tbase = require 'src/world/entities/types/crabbytramp'
     local Crabby, TC = base.class, tbase.class
@@ -13,6 +13,7 @@ function V.defs(skin, label, name, trampName, desc, tuning)
     local function class(parent)
         local cls = Entity.extend(parent, tuning or {})
         cls.skinId = skin
+        for k, v in pairs(fields or {}) do cls[k] = v end          -- (p. ej. topperDy: la tapa encajada en el lomo)
         function cls.sizeImage() Crabby.loadAssets(); return Crabby.SKINS[skin].idle1 end
         return cls
     end

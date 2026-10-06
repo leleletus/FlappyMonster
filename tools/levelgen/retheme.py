@@ -513,7 +513,7 @@ ISLAND_ENEMIES = {
     'meadow': {'crabby': 'crabby_river', 'crabbytramp': 'crabbytramp_river'},
     'forest': {'crabby': 'crabby_river', 'crabbytramp': 'crabbytramp_river'},
     'fortress': {'crabby': 'crabby_fortress', 'crabbytramp': 'crabbytramp_fortress', 'gummy': 'gummy_fortress'},
-    'cave': {'gummy': 'gummy_cave'},
+    'cave': {'gummy': 'gummy_cave', 'crabby': 'crabby_cave', 'crabbytramp': 'crabbytramp_cave'},
 }
 # niveles cuya ISLA no es la de su tema de terreno (la cantera es de la isla de la fortaleza; la mina, de cuevas)
 ENEMY_ISLAND = {'cantera_dinamita': 'fortress', 'mina_inundada': 'cave'}

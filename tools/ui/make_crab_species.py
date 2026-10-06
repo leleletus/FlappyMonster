@@ -18,6 +18,7 @@ import make_enemy_designs as D
 IMG = D.ROOT
 RIVER = D.P('d8cc8c', 'a89c5a', '6e6638', e=D.NAVY, m='5aa040', M='8cd060', n='3e7a2e')
 LAVA = D.P('804238', '5c2a26', '3e1a1c', e=D.FIRE3, E=D.FIRE2, f=D.FIRE)
+CAVE = D.CAVE_CRAB
 
 SPECIES = {
     'crabby_river': dict(
@@ -55,6 +56,20 @@ SPECIES = {
               "o.oobEEbbbbbbbEEbsoo.o",
               ".oossssssssssssssssoo.",
               "o..oooooooooooooooo..o"]),
+    # CRABBY DE CUEVA (versión A "Geoda", elegida por el usuario): caparazón redondo lila con un racimo de cristales,
+    # SIN pinzas (ni sueltas ni dibujadas), sin boca → assets/images/crabby_cave/
+    'crabby_cave': dict(
+        pal=CAVE, claw_pal=None,
+        shell=D.V5[0][1][:6],
+        legs=[D.V5[0][1][6:],
+              ["...o..o....o..o...", "...o..o....o...o..", "..o...o.....o..o.."],
+              ["...o..o....o..o...", "..o..o......o..o..", ".o...o......o...o."]],
+        look=3,
+        dead=["..........oo..........",
+              ".....oooooGgooooo.....",
+              "o.oohbeebbggbbeebsoo.o",
+              ".oossssssssssssssssoo.",
+              "o..oooooooooooooooo..o"]),
 }
 
 
@@ -90,10 +105,11 @@ def build(name, sp):
     out['dead.png'] = img(sp['dead'], sp['pal'])
     # La pinza: el MISMO dibujo que las de los demás Crabbies (dedo de arriba largo con su gancho, hueco, dedo de abajo
     # corto), a la medida de estos, que son más bajos: 5x5 en vez de 7x7 (la del helado les llegaba de la cabeza al suelo)
-    claw = Image.new('RGBA', (CLAW_W * 2, 5))
-    for k, g in enumerate(CLAW):
-        claw.alpha_composite(D.maps(g, sp['claw_pal']), (k * CLAW_W, 0))
-    out['claw_left-Sheet.png'] = claw
+    if sp['claw_pal']:                                     # (el de cueva no lleva pinzas)
+        claw = Image.new('RGBA', (CLAW_W * 2, 5))
+        for k, g in enumerate(CLAW):
+            claw.alpha_composite(D.maps(g, sp['claw_pal']), (k * CLAW_W, 0))
+        out['claw_left-Sheet.png'] = claw
     return out
 
 

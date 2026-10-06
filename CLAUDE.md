@@ -636,6 +636,13 @@ landing mark; sprites in `assets/images/bosses/common/`). Asset layout: enemies 
   fixed, and `make_crab_species.py` now ASSERTS that shell, standing legs and dead frame have a symmetric silhouette.
   River Crabby legs: the moss is no longer one flat green column down to the foot — three greens (M light, m, n dark),
   only on the UPPER part of each leg, the bottom 2 pixel rows clean (it must not reach the ground).
+- **Crabby de cueva** IMPLEMENTED (3.78.0, protocol v52; the user picked version A "Geoda" — "perfect"): `crabby_cave` +
+  `crabbytramp_cave`, Crabby skin `cave` (`assets/images/crabby_cave/` from `make_crab_species.py`; 18x9, lilac round
+  shell with a crystal cluster, NO claws at all, sinks to hide, `topperDy = 2` so the spike / trampoline sit on the
+  shell between the crystals — `CrabVariant.defs(..., tuning, fields)`). `retheme.py --enemies`: cave → crabby_cave (22
+  in cavernas_cristal, nivel01, mina_inundada). Dark levels keep the Gloomy only. EVERY island now has its own Gummy
+  and Crabby: meadow (Gummy / River Crabby), coast (the originals), fortress (wind-up Gummy / steel Crabby), snow (icy),
+  caves (cave Gummy / cave Crabby), volcano (magma Gummy / lava Crabby).
 - CAVE CRABBY (proposal, WAITING for the user's pick; `FlappyMonster_pruebas/enemigos/crabby_cueva.png`, maps `V5` /
   `sheet_v5` in `make_enemy_designs.py`): for the REGULAR cave levels (cavernas_cristal, nivel01, mina_inundada still
   use the white Crabby; the Gloomy is only for the dark-level mechanic). USER'S RULE for this one: NO separate claws
