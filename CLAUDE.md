@@ -636,6 +636,12 @@ landing mark; sprites in `assets/images/bosses/common/`). Asset layout: enemies 
   fixed, and `make_crab_species.py` now ASSERTS that shell, standing legs and dead frame have a symmetric silhouette.
   River Crabby legs: the moss is no longer one flat green column down to the foot — three greens (M light, m, n dark),
   only on the UPPER part of each leg, the bottom 2 pixel rows clean (it must not reach the ground).
+- CAVE CRABBY (proposal, WAITING for the user's pick; `FlappyMonster_pruebas/enemigos/crabby_cueva.png`, maps `V5` /
+  `sheet_v5` in `make_enemy_designs.py`): for the REGULAR cave levels (cavernas_cristal, nivel01, mina_inundada still
+  use the white Crabby; the Gloomy is only for the dark-level mechanic). USER'S RULE for this one: NO separate claws
+  like the icy / lava / river ones — none, or drawn INTO the sprite like the Gloomy's. Lilac + crystals (the Cave
+  Gummy's family). A geode shell with a crystal cluster, no claws · B two crystals held up as its "claws" · C wide and
+  flat, three-crystal crest, glowing eyes, no claws · D small pincers that are part of the body + one crystal.
 - SECOND ROUND of variants (3.74.0, WAITING for approval; `FlappyMonster_pruebas/enemigos/variantes_v2.png`, maps `V2`
   in `make_enemy_designs.py`): the user's picks, redrawn as DIFFERENT SPECIES ("like the Icy Crabby vs the Crabby: other
   body shape, proportions, silhouette — not a recolour"): Cave Gummy = lilac PEAR with cut crystals; Magma Gummy =

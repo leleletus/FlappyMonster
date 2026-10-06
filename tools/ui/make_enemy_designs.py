@@ -575,6 +575,40 @@ def sheet_v4():
     sheet('variantes_v4', 'CRABBIES, 4a ronda  -  el de siempre, y cada version con la pinza abierta y cerrada (sin boca)', rows, 'neutro', scale=8)
 
 
+# ══ CRABBY DE CUEVA (propuestas). Del usuario: SIN pinzas sueltas como las del helado / lava / río — o ninguna, o
+# dibujadas DENTRO del sprite, como las del Crabby lúgubre —; y lo de siempre: sin boca, simétrico, patas finas, no
+# más alto que el Crabby. Familia del Gummy de cueva (lila + cristal), no del lúgubre (pálido y zancudo) ═══════════
+CAVE_CRAB = P('efe6ff', 'c9b8e0', '8c78b4', e=NAVY, E=GLOW, g=GLOW, G=GLOW2, t='2ea8b8')
+V5 = [
+    ('A  Geoda\nsin pinzas: caparazon\nredondo con un racimo\nde cristales',
+     ["........oo........", ".....o.oGGo.o.....", "....oGooGgooGo....", "...oohbbggbbsoo...", "...obebbbbbbeso...", "...oossssssssoo...",
+      "...o..o....o..o...", "..o...o....o...o..", "..o..o......o..o.."]),
+    ('B  Pinzas de cristal\nsus "pinzas" son dos\ncristales que lleva\nen alto (como los\nbrazos del lugubre)',
+     ["..o............o..", ".oGo..........oGo.", ".ogo..oooooo..ogo.", "..oooohbbbbsoooo..", "....obebbbbeso....", "....oossssssoo....",
+      "....o..o..o..o....", "...o...o..o...o...", "...o..o....o..o..."]),
+    ('C  Cresta\nsin pinzas: ancho y\nchato, cresta de tres\ncristales y ojos\nque brillan',
+     ["......o.oo.o......", ".....oGoGgoGo.....", "...ooogogtogooo...", "..ohbbbbbbbbbbso..", "..obEbbbbbbbbEso..", "...oossssssssoo...",
+      "...o.o......o.o...", "..o..o......o..o..", "..o...o....o...o.."]),
+    ('D  Pinzas pegadas\npinzas pequenas que\nson parte del cuerpo,\na los lados, y un\ncristal en el lomo',
+     ["........oo........", ".......oGgo.......", ".oo..oooGgooo..oo.", "ob.oohbbbbbbsoo.bo", "obooobebbbbebooobo", ".oo.oossssssoo.oo.",
+      ".....o.o..o.o.....", "....o..o..o..o....", "....o.o....o.o...."]),
+]
+
+
+def sheet_v5():
+    white = P('ffffff', 'f2f2f6', 'c4c8d6')
+    oc = crab(white)[0]
+    gum = Image.open(os.path.join(ROOT, 'gummy_cave', 'gummy.png')).convert('RGBA')
+    gl = Image.open(os.path.join(ROOT, 'gloomy', 'gloomy-Sheet.png')).convert('RGBA').crop((0, 0, 26, 15))
+    rows = []
+    for lab, m in V5:
+        for r in m:
+            assert len(r) == 18 and [c != '.' for c in r] == [c != '.' for c in reversed(r)], (lab, r)     # simétrico
+        rows.append(('CRABBY DE CUEVA\n' + lab, [oc, maps(m, CAVE_CRAB), gum, gl], 'cueva'))
+    sheet('crabby_cueva', 'CRABBY DE CUEVA  -  el Crabby de siempre · la propuesta · (para comparar) el Gummy de cueva y el Crabby lugubre',
+          rows, 'cueva', scale=8, colw=30)
+
+
 if __name__ == '__main__':
     for key, (title, bg, opts) in GUMMY_SETS.items():
         sheet(key, title + '  -  quieto, paso 1, paso 2   (arriba: el Gummy de siempre)',
@@ -595,3 +629,4 @@ if __name__ == '__main__':
     sheet_v2()
     sheet_v3()
     sheet_v4()
+    sheet_v5()
