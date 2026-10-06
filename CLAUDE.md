@@ -2236,6 +2236,15 @@ again. No dialogue or text: animation + music.
   legs): one side OPENS (hip out, feet 0-3-8) while the other gathers straight, and frame 3 is its mirror. The user was
   HAND-EDITING `assets/images/gummy_fortress/*.png` at that moment: don't re-run `make_variant_skins.py --apply` over
   them without porting their edits first.
+- 3.83.0 (user): the Fortress Gummy sprites and the Lava Crabby's legs (crab1-3) are now HAND-EDITED by the user —
+  don't re-run `make_variant_skins.py` / `make_crab_species.py` over them without porting the edits first. ICY CRABS
+  SMALLER (user: slightly smaller than they were, still bigger than the other Crabbies): the pixel scale is now PER
+  CLASS — small Crabby `artScale` (class field, default `GUMMY_SCALE` 4; read by `Entity.create` for the sprite size and
+  by crabby.lua for body, claws, sinking and the stuck pose): Icy Crabby 3.5 (63x45 px, was 72x52; a non-integer
+  scale: art pixels are 3 or 4 screen px); its COVERS (ice spike, icicle, snow mound, trampoline) keep their size.
+  Mega: class field `MS` (Mega 10, Icy Mega 9 = 162x117, was 180x130; `self.MS` in size and drawing) and
+  `Mega:smallK()` (`smallPx` = the scale of its small crab when it deflates and flees). Head spike, claw offsets (art
+  px) and hitbox fractions follow the body. Harness `icecrabby_rules` measures with each crab's own scale.
 - HUD: `BossHud.drawRun(level, entities)` (both level states): **"¡CORRE!" / "RUN!"** (`hud.run`) top centre while
   the camera runs, instead of any boss bar.
 - Music `mirror_chase` (`tools/music/mirror_chase.py`, intro + loop, verified by numbers only): DRUM & BASS as fast

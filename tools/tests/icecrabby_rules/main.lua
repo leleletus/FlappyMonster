@@ -134,7 +134,6 @@ local function opaqueRows(img)
 end
 
 function cases.tapa_pegada()
-    local S = GUMMY_SCALE
     local worst, seen, info = 0, 0, {}
     for _, t in ipairs({ { 'crabby_ice', 2 }, { 'crabby_ice_icicle', 2 }, { 'crabbytramp_ice', 0 } }) do
         local level, es, e = room(20, 8, { ent(t[1], 10, 7) })
@@ -144,7 +143,7 @@ function cases.tapa_pegada()
         local function measure()
             local box = e.trampBox and e:trampBox() or e:getSpikeHitbox()
             if not box or box.h < 2 then return end
-            local want = feet - math.max(0, opaqueRows(e.currentImg) - t[2]) * S
+            local want = feet - math.max(0, opaqueRows(e.currentImg) - t[2]) * (e.artScale or GUMMY_SCALE)
             local d = math.abs((box.y + box.h) - want)
             if d > maxd then maxd = d end
             seen = seen + 1
@@ -173,7 +172,7 @@ function cases.pinzas()
         local d = cv:newImageData()
         local n = { 0, 0 }
         local cx = math.floor(e.x)
-        local half = e.sk.idle1:getWidth() * GUMMY_SCALE / 2
+        local half = e.sk.idle1:getWidth() * (e.artScale or GUMMY_SCALE) / 2
         for y = 0, d:getHeight() - 1 do
             for i, sd in ipairs({ -1, 1 }) do
                 for k = half + 1, half + 12 do
@@ -338,8 +337,8 @@ function cases.clavado()
         e:updateCustom(0, level)
         e.deadTimer = 2
         local b = e:getOuterBounds()
-        local baseY = e.y - e.sprH / 2 + e.sk.hid:getHeight() * GUMMY_SCALE          -- base del pincho
-        local headY = baseY + (e.topperDy or 0) * GUMMY_SCALE
+        local baseY = e.y - e.sprH / 2 + e.sk.hid:getHeight() * (e.artScale or GUMMY_SCALE)          -- base del pincho
+        local headY = baseY + (e.topperDy or 0) * (e.artScale or GUMMY_SCALE)
         local onBody = math.abs((b.y + b.h / 2) - (headY - e.sprH / 2)) < 1 and b.y + b.h <= headY + 1
         -- un jugador cayendo sobre el cuerpo (por encima de la púa)
         local pa = player(level, e.x, b.y - 30)

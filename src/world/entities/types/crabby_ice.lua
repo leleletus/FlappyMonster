@@ -49,6 +49,8 @@ end
 
 local Ice = Entity.extend(Crabby, { debugColor = { 1, 0.55, 0.25 } })
 Ice.skinId = 'ice'
+Ice.artScale = 3.5              -- (el cuerpo, algo más pequeño que a la escala de siempre, 4: mide 18x13 y quedaba enorme
+                                -- al lado de los demás Crabbies; las tapas — púa, carámbano, nieve, trampolín — no cambian)
 function Ice.loadAssets() Crabby.loadAssets(); loadIce() end
 function Ice.sizeImage() return Crabby.SKINS.ice.idle1 end
 
@@ -273,6 +275,7 @@ end
 -- ── Trampolín helado ──────────────────────────────────────────────────────────
 local IceTramp = Entity.extend(TC, { debugColor = { 1, 0.55, 0.25 } })
 IceTramp.skinId = 'ice'
+IceTramp.artScale = Ice.artScale
 function IceTramp.loadAssets() TC.loadAssets(); loadIce() end
 function IceTramp.sizeImage() return Crabby.SKINS.ice.idle1 end
 function IceTramp:trampImages() return imgTN, imgTE end

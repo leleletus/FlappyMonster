@@ -26,7 +26,7 @@ local IceEncase, Particles
 local IM = Entity.extend(Mega, { debugColor = { 1, 0.55, 0.25 } })
 IM.wantsLevel = true                -- (BossZones.link: el cliente necesita el nivel para ver qué carámbanos tienen suelo)
 
-local MS = Mega.MS
+local MS = 9                         -- (el Mega mide 10: el helado, de cuerpo más alto, va algo más pequeño — el usuario)
 local T = TILE_PX
 local CLAP_AT, CLAP_END = 0.32, 0.6 -- s: golpe de pinzas y fin de la palmada
 local WAVE_LIFE = 1.4               -- s que corre cada onda
@@ -53,6 +53,8 @@ function IM.loadAssets()
     fieldS = SpriteStrip.load('assets/images/bosses/megacrabby_ice/ice_field-Sheet.png', 8)
 end
 function IM.sizePx() return 18 * MS, 13 * MS end
+IM.MS = MS
+IM.smallPx = 3.5                     -- (la escala del Crabby helado: Crabby.SKINS.ice / Ice.artScale)
 
 function IM:initBoss()
     Mega.initBoss(self)
@@ -67,7 +69,7 @@ end
 -- un pisotón normal rebota (el hielo aguanta).
 local CLAW_OUT, CLAW_DOWN = 1.6, 1.2      -- desplazamiento de las pinzas en la palmada (px de arte)
 function IM:clawBoxes()
-    local A, s = self.art, MS
+    local A, s = self.art, self.MS
     local cs = s * A.clawK
     local fx, fy = self.x, self.y + self.sprH / 2
     local out = {}

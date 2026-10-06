@@ -113,7 +113,9 @@ function Mega.loadAssets()
               scribble = SpriteStrip.load('assets/images/bosses/common/anger_scribble.png', 9) }
 end
 function Mega.sizePx() return 16 * MS, 9 * MS end
-Mega.MS = MS
+Mega.MS = MS                        -- (por clase: el helado es algo más pequeño; el dibujo y el tamaño usan self.MS)
+-- Al desinflarse queda del tamaño de SU cangrejo pequeño (`smallPx` = la escala de ese; el normal, GUMMY_SCALE)
+function Mega:smallK() return (self.smallPx or GUMMY_SCALE) / self.MS end
 
 -- Estados en los que va pegado a una superficie (trepando)
 local CRAWL = { climb = true, ceiling = true, aim = true, wallclimb = true, wallaim = true }
@@ -126,9 +128,9 @@ local CONTACT = { chase = true, windup = true, charge = true, recover = true, su
 function Mega:setSmall(small)
     if self.small == small then return end
     self.small = small
-    local k = small and SMALL or 1
+    local k = small and self:smallK() or 1
     local tn = self.tuning.hitbox
-    self.sprW, self.sprH = self.art.w * MS * k, self.art.h * MS * k
+    self.sprW, self.sprH = self.art.w * self.MS * k, self.art.h * self.MS * k
     self.outerW, self.outerH = self.sprW * tn.outerW, self.sprH * tn.outerH
     self.innerW, self.innerH = self.sprW * tn.innerW, self.sprH * tn.innerH
 end
@@ -1094,7 +1096,7 @@ function Mega:pose2d(now, moving, walkPhase)
             local k = math.min(1, (rt - 0.25) / 0.12)
             local tr = math.sin(now * 48) * 0.025
             sx, sy = 1 - 0.07 * k - tr, 1 + 0.16 * k + tr
-            shx = math.floor(math.sin(now * 61) * 2 * MS / 4)
+            shx = math.floor(math.sin(now * 61) * 2 * self.MS / 4)
             spikeK = 1 + 0.1 * k + math.sin(now * 40) * 0.04
             for i, side in ipairs({ -1, 1 }) do
                 claws[i][1] = side * 1.4 * k
@@ -1198,7 +1200,7 @@ function Mega:pose2d(now, moving, walkPhase)
         -- (WINDUP_SNAPS) la pinza que toca da un tirón hacia delante
         local k = math.min(1, t / 0.2)
         sx, sy = 1 + 0.10 * k, 1 - 0.14 * k
-        shx = math.floor(math.sin(t * 38) * 2 * MS / 4)
+        shx = math.floor(math.sin(t * 38) * 2 * self.MS / 4)
         local snap, which = windupSnap(t)
         for i, side in ipairs({ -1, 1 }) do
             local jab = (snap and (which == 0 or which == i)) and 1 or 0
@@ -1229,7 +1231,7 @@ function Mega:pose2d(now, moving, walkPhase)
         local q = spring(t, 0.28, 22, 7)
         local fury = (st == 'dying_kick') and 1.8 or 1
         sx, sy = 1 + q + 0.04 * math.sin(now * 13) * fury, 1 - q - 0.04 * math.sin(now * 13) * fury
-        if t > 0.3 then shx = math.floor(math.sin(now * 45) * 2 * fury * MS / 4) end
+        if t > 0.3 then shx = math.floor(math.sin(now * 45) * 2 * fury * self.MS / 4) end
         for i = 1, 2 do
             claws[i][1] = math.cos(now * 17 * fury + i * 2.3) * 1.0
             claws[i][2] = math.sin(now * 22 * fury + i * 3.1) * 2.0
@@ -1399,7 +1401,7 @@ function Mega:render(camX, camY)
         love.graphics.rectangle('fill', math.floor(self.x - camX - w / 2), math.floor(self.floorY - camY - 6), w, 6)
         love.graphics.setColor(1, 1, 1, 1)
     end
-    local s, alpha = MS, 1
+    local s, alpha = self.MS, 1
     local emote = st == 'rest' and t < 1.2 and (self.restKind or 0) or 0
     local nervous = st == 'windup' or st == 'aim' or st == 'stuck' or st == 'dying_kick' or st == 'intro'
                     or st == 'charge' or st == 'summon' or st == 'wallaim' or st == 'pounce'
@@ -1476,7 +1478,7 @@ function Mega:render(camX, camY)
             -- Se desinfla: del tamaño colosal al de un Crabby con un temblor
             -- elástico, dándose la vuelta y posándose en el suelo
             local q = math.min(1, t / SHRINK_T)
-            s = MS * (1 - (1 - SMALL) * q) * (1 + 0.12 * math.sin(q * math.pi * 7) * (1 - q))
+            s = self.MS * (1 - (1 - self:smallK()) * q) * (1 + 0.12 * math.sin(q * math.pi * 7) * (1 - q))
             ang = math.pi * (1 - q)
             withSpike = q < 0.15
             H = self.art.h * s
@@ -1488,7 +1490,7 @@ function Mega:render(camX, camY)
     end
     local noClaws = false
     if st == 'dying_flee' then
-        s, withSpike, noClaws = MS * SMALL, false, true
+        s, withSpike, noClaws = self.MS * self:smallK(), false, true
         alpha = math.max(0, math.min(1, (FLEE_T - t) / FLEE_FADE))
     elseif st == 'dying_shrink' and t > SHRINK_T * 0.4 then
         noClaws = true                            -- (las pierde al desinflarse)

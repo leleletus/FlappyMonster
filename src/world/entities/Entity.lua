@@ -106,7 +106,8 @@ function Entity.create(cls, data)
         iw, ih = cls.sizePx()
     else
         local img = cls.sizeImage()
-        iw, ih = img:getWidth() * GUMMY_SCALE, img:getHeight() * GUMMY_SCALE
+        local k = cls.artScale or GUMMY_SCALE                  -- (artScale: tipos dibujados a otra escala, p. ej. el Crabby helado)
+        iw, ih = img:getWidth() * k, img:getHeight() * k
     end
     local hb = tn.hitbox
     e.sprW, e.sprH = iw, ih

@@ -286,7 +286,7 @@ function Crabby:stomp()
     Entity.stomp(self)
     if stuck and self.state == 'dead' then
         self.flipped = true
-        self.y = floorY - self.sk.dead:getHeight() * GUMMY_SCALE + self.sprH / 2
+        self.y = floorY - self.sk.dead:getHeight() * (self.artScale or GUMMY_SCALE) + self.sprH / 2
     end
 end
 
@@ -313,7 +313,7 @@ end
 function Crabby:spikeDims() return spikeDims() end
 
 local function dropSpikeBaseY(self)
-    return self.y - self.sprH / 2 + self.sk.hid:getHeight() * GUMMY_SCALE
+    return self.y - self.sprH / 2 + self.sk.hid:getHeight() * (self.artScale or GUMMY_SCALE)
 end
 dropTipY = function(self)
     local _, maxH = self:spikeDims()
@@ -323,7 +323,7 @@ end
 -- base, `topperDy` px de arte más adentro (la púa de hielo y el carámbano van encajados en el
 -- caparazón, igual que de pie: sin esto quedaba un hueco de 2 px entre la púa y la cabeza)
 local function stuckHeadY(self)
-    return dropSpikeBaseY(self) + (self.topperDy or 0) * GUMMY_SCALE
+    return dropSpikeBaseY(self) + (self.topperDy or 0) * (self.artScale or GUMMY_SCALE)
 end
 -- … y el centro de su CUERPO: está ENCIMA del pincho, no donde dice self.y (que es donde está
 -- el pincho). Lo usan sus cajas (el pisotón) y el dibujo.
@@ -506,7 +506,7 @@ end
 function Crabby:headH(img)
     img = img or self.currentImg or self.sk.idle2
     local rows = img:getHeight() - ((self.sk.inset and self.sk.inset[img]) or 0)
-    return math.max(0, rows - (self.topperDy or 0)) * GUMMY_SCALE
+    return math.max(0, rows - (self.topperDy or 0)) * (self.artScale or GUMMY_SCALE)
 end
 
 function Crabby:getSpikeHitbox()
@@ -620,7 +620,7 @@ function Crabby:drawClaws(drawX, feetY, flipped)
         a = { img = im, quad = love.graphics.newQuad(0, 0, 1, 1, im:getDimensions()) }
         clawArt[cfg.file] = a
     end
-    local S = GUMMY_SCALE
+    local S = (self.artScale or GUMMY_SCALE)
     local now = love.timer.getTime()
     local fw, fh = cfg.w, a.img:getHeight()
     local inset = self.sk.inset and self.sk.inset[img]
@@ -729,8 +729,8 @@ function Crabby:renderBody(camX, camY)
     local img = self.currentImg or self.sk.idle2
     local st  = self.state
     local bx, by = self:breatheScale()
-    local scaleX = GUMMY_SCALE * self.facing * bx
-    local scaleY = GUMMY_SCALE * by
+    local scaleX = (self.artScale or GUMMY_SCALE) * self.facing * bx
+    local scaleY = (self.artScale or GUMMY_SCALE) * by
     local ih = img:getHeight()
     local drawX = math.floor(self.x - camX)
     -- Clavado en el suelo: boca abajo (pies arriba) aunque ya cuente como de suelo
