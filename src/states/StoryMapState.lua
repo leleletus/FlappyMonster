@@ -415,20 +415,23 @@ function StoryMapState:_play()
         })
         return
     end
+    local gotShards = {}
     gStateMachine:change('adventure', {
         level = Worlds.path(n.id), returnTo = 'story_map', difficulty = Run.data.difficulty,
-        -- las VIDAS son de la aventura: entran con las que lleva y, salga como salga, se guardan
+        -- las VIDAS son de la aventura: entran con las que lleva; las PERDIDAS se guardan salga como salga, las
+        -- ganadas (como todo lo demás del nivel: puntos, fragmentos) solo si lo TERMINA (AdventureState:exit)
         lives = Run.data.lives,
         onLeave = function(lives) Run.setLives(lives) end,
         -- los FRAGMENTOS DEL ESPEJO que guarda el jefe de este nivel (los que aún no tiene); con el último, el final
         shards = { ids = Shards.pending(n.id, Run.data), final = Shards.LEVEL[n.id] == Shards.FINAL,
-                   onGet = function(id) Run.addShard(id) end },
+                   onGet = function(id) gotShards[#gotShards + 1] = id end },      -- (se apuntan al TERMINAR el nivel)
         gameOverNote = L(Difficulty.of(Run.data.difficulty, 'restartGame', false) and 'story.go_game' or 'story.go_world'),
         onGameOver = function()
             local w = Run.gameOver(world)                 -- al principio del mundo (o del juego)
             gStateMachine:change('story_map', { world = w, node = 1, notice = 'story.go_notice' })
         end,
         onFinish = function(result)
+            for _, id in ipairs(gotShards) do Run.addShard(id) end
             local summary = Run.complete(n.id, result)
             -- a los RESULTADOS y, de ahí, al mapa, ya en el siguiente (tras el jefe: al mundo que se abre)
             local nw, nk = world, math.min(#nodes, node + 1)

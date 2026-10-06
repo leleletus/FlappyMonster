@@ -67,7 +67,16 @@ function AdventureState:exit()
     -- todo empieza como la primera vez, la música desde el principio
     Sound.leaveMatch()
     Difficulty.bind(nil)
-    if self.onLeave and not self.bonus and self.player and self.player.lives > 0 then self.onLeave(self.player.lives) end
+    -- NADA de lo conseguido en el nivel se guarda si no se TERMINA (vidas extra, puntos, fragmentos...): si no, se
+    -- entraba, se cogía la vida, se salía y otra vez, sin fin. Saliendo a medias cuentan solo las vidas PERDIDAS:
+    -- las de entrada menos las muertes (nunca menos de 1: quedarse sin ninguna es el Game Over, que va aparte).
+    if self.onLeave and not self.bonus and self.player and self.player.lives > 0 then
+        local lives = self.player.lives
+        if not self.finished and self.startLives then
+            lives = math.max(1, math.min(lives, self.startLives - (self.stats and self.stats.deaths or 0)))
+        end
+        self.onLeave(lives)
+    end
     if self.rec then self.rec:finish(self); self.rec = nil end
 end
 
@@ -86,6 +95,7 @@ function AdventureState:enter(args)
     self.startLives = args.lives
     self.onLeave, self.onGameOver, self.gameOverNote = args.onLeave, args.onGameOver, args.gameOverNote
     self.won, self.wonT = false, 0
+    self.finished = false
 
     self.level  = Level.new(self.levelPath, args.difficulty)
     -- Dificultad (src/Difficulty.lua): la del modo historia; sin ella, el juego de siempre
@@ -440,6 +450,7 @@ function AdventureState:update(dt)
     if self.won then
         self.wonT = self.wonT + dt
         if self.wonT >= AdventureState.WIN_TIME then
+            self.finished = true                              -- (terminado: lo conseguido SÍ se guarda; ver exit)
             if self.onFinish then self.onFinish(self:result()) else gStateMachine:change(self.returnTo) end
             return
         end
@@ -450,6 +461,7 @@ function AdventureState:update(dt)
         if self.endingT >= AdventureState.ENDING_TIME then
             local r = self:result()
             r.ending = true
+            self.finished = true
             if self.onFinish then self.onFinish(r) else gStateMachine:change(self.returnTo) end
             return
         end

@@ -173,7 +173,8 @@ function Run.worldRating(w)
     return Score.average(list, #nodes)
 end
 
--- FRAGMENTOS DEL ESPEJO (src/story/Shards.lua): recogido uno, queda en la partida al momento
+-- FRAGMENTOS DEL ESPEJO (src/story/Shards.lua): quedan en la partida al TERMINAR el nivel en que se recogieron
+-- (StoryMapState: salir a medias no guarda nada de lo conseguido)
 function Run.addShard(id)
     local d = Run.data
     if not d then return end

@@ -187,7 +187,9 @@ function love.update(dt)
     elseif step == 'go1' and t - T > 0.3 then
         pressNext('confirm'); go('go2')
     elseif step == 'go2' and t - T > 0.6 then
-        st.player.lives = st.player.lives - 1
+        -- pierde una vida y coge DOS vidas extra: saliendo a medias cuenta la perdida y no las ganadas
+        st.player.lives = st.player.lives - 1 + 2
+        st.stats.deaths = st.stats.deaths + 1
         gStateMachine:push('pause'); top().selected = 2
         pressNext('confirm'); go('go3')
     elseif step == 'go3' and t - T > 0.5 then
@@ -412,8 +414,10 @@ function love.update(dt)
     elseif step == 'sh5' and t - T > 0.4 then
         local disk = Save.load(1)
         local have, total = Run.shards()
-        check('fragmento', SHIDS == '1' and DROPPED and Run.data.shards['1'] == true and disk.shards['1'] == true and have == 1 and total == 7 and not st.endingT,
-            ('el jefe del mundo 1 guarda el %s; lo suelta=%s; recogido=%s, en disco=%s; cuenta %d/%d'):format(
+        -- (recogido, pero el nivel SIN terminar: aún no está en la partida ni en disco; se apunta al acabarlo)
+        local held = st.shards and st.shards.got == 1
+        check('fragmento', SHIDS == '1' and DROPPED and held and Run.data.shards['1'] == nil and disk.shards['1'] == nil and have == 0 and total == 7 and not st.endingT,
+            ('el jefe del mundo 1 guarda el %s; lo suelta=%s; sin terminar el nivel: en la partida=%s, en disco=%s; cuenta %d/%d'):format(
              SHIDS, tostring(DROPPED), tostring(Run.data.shards['1']), tostring(disk.shards['1']), have, total))
         -- ahora, el último: todo superado menos el jefe Espejo, con los seis primeros
         local d = Run.data

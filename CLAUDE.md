@@ -2253,6 +2253,14 @@ again. No dialogue or text: animation + music.
   and a HOPPER of its skin on every island. `StoryMapState` `CRITTER`: the new types (river / lava claws like in game)
   and `hopper_<isla>` (`hop = true`: stands, crouches, jumps in an arc, ~1 hop per second; `left` = art faces left).
   Hoppers are still in NO story level except huida_del_espejo (and the EnemyTest gallery).
+- **3.83.2 — NOTHING GAINED IN A LEVEL IS SAVED UNTIL IT IS FINISHED** (user's rule, after an exploit: enter, grab the
+  extra life, leave by the pause menu, repeat forever). `AdventureState.finished` (set when `onFinish` is called: the
+  finish or the final shard); `exit()` → `onLeave(lives)`: finished = the player's lives; left halfway = the lives it
+  ENTERED with minus its deaths (never more than it has, never below 1 — 0 lives is the Game Over, handled apart): lost
+  lives count, picked-up ones don't. Mirror SHARDS: `onGet` only notes them (`gotShards` in `StoryMapState`) and
+  `Run.addShard` runs in `onFinish` (they used to be saved at once on pickup). Points, grades and rewards were already
+  saved only by `Run.complete`. Any NEW thing a level gives must follow the same rule. Harness `story_flow`
+  (`game_over`: −1 life +2 pickups then quit → only the loss is saved; `fragmento`: picked up, not saved).
 - HUD: `BossHud.drawRun(level, entities)` (both level states): **"¡CORRE!" / "RUN!"** (`hud.run`) top centre while
   the camera runs, instead of any boss bar.
 - Music `mirror_chase` (`tools/music/mirror_chase.py`, intro + loop, verified by numbers only): DRUM & BASS as fast
