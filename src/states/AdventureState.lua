@@ -60,6 +60,7 @@ end
 -- ── Enter ─────────────────────────────────────────────────────────────────────
 -- Al salir del nivel: cerrar la grabación (si la hay)
 function AdventureState:exit()
+    require('src/fx/Silhouette').level = nil
     require('src/ui/View').unlock()
     -- Música y sonidos de partida a cero (también la pista de jefe): al volver
     -- a entrar (reintentar tras perder todas las vidas, desde el editor...)
@@ -665,6 +666,7 @@ function AdventureState:_renderScene()
     self.level:renderVents(self.camX, self.camY)
     self.level:renderFoliageBack(self.camX, self.camY)
 
+    require('src/fx/Silhouette').level = self.level      -- (filo de los enemigos oscuros en lo oscuro: `darkEdge`)
     -- Renderizar enemigos (entre tiles y jugador)
     for _, g in ipairs(self.enemies) do
         if g.alive and not g.renderFront then g:render(self.camX, self.camY) end      -- (reservas: no)

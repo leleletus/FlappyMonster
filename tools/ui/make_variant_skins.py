@@ -48,9 +48,13 @@ if __name__ == '__main__':
     put('gummy_cave/gummy2.png', cave + W2, D.CAVE)
     put('gummy_cave/dead.png', ['.' * 16] * 10 + ["......oGo.......", "..oooogtooooo...", ".ohbeebbbeebso..", ".oossssssssoo...", "..oooooooooo...."], D.CAVE)
     # Gummy de la FORTALEZA (versión A: muñeco de cuerda con pies de Gummy; la LLAVE gira con el paso)
-    put('gummy_fortress/gummy.png', D.FORT_BODY + D.FORT_FEET['A'], D.STEEL, D.KEY['media'])
-    put('gummy_fortress/gummy1.png', D.FORT_BODY + W1, D.STEEL, D.KEY['alta'])
-    put('gummy_fortress/gummy2.png', D.FORT_BODY + W2, D.STEEL, D.KEY['fina'])
-    put('gummy_fortress/dead.png', ['.' * 16] * 11 + ["..ooooooooooo...", "..ohrbbbbbrso...", "..obeebbbeeso...", "..oosssssssoo.kk", "...ooooooooo...."], D.STEEL)
+    # (el arte mira a la DERECHA — el juego lo dibuja tal cual cuando anda hacia la derecha —, así que la llave va
+    # en el costado IZQUIERDO = su ESPALDA; estaba a la derecha y le salía por delante. Pegada al contorno: a la
+    # izquierda solo quedan 2 columnas libres, el vástago es el propio borde del cuerpo)
+    def back(key): return [(15 - x, y, c) for x, y, c in key if x != 13]
+    put('gummy_fortress/gummy.png', D.FORT_BODY + D.FORT_FEET['A'], D.STEEL, back(D.KEY['media']))
+    put('gummy_fortress/gummy1.png', D.FORT_BODY + W1, D.STEEL, back(D.KEY['alta']))
+    put('gummy_fortress/gummy2.png', D.FORT_BODY + W2, D.STEEL, back(D.KEY['fina']))
+    put('gummy_fortress/dead.png', ['.' * 16] * 11 + ["..ooooooooooo...", "..ohrbbbbbrso...", "..obeebbbeeso...", "kkoosssssssoo...", "...ooooooooo...."], D.STEEL)
     print('  assets/images/gummy_cave/ y assets/images/gummy_fortress/')
     print('  assets/images/gummy_magma/ y assets/images/crabby_fortress/')

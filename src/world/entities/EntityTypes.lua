@@ -36,6 +36,7 @@
 local Props = require 'src/world/entities/Props'
 local IceEncase           -- (solo dibujo: el bloque de hielo de lo congelado)
 
+local Silhouette
 local EntityTypes = { byName = {}, list = {}, variants = {} }
 
 -- Categorías de la paleta del editor, en este orden (una categoría nueva que
@@ -193,6 +194,17 @@ function EntityTypes.register(def)
         local drawBody = cls.render
         local draw = function(self, camX, camY)
             if self.state ~= 'frozen' then EntityTypes.drawWings(self, camX, camY) end   -- (detrás del cuerpo)
+            -- FILO en lo oscuro (rasgo `darkEdge` = color {r, g, b, a}): enemigos de colores oscuros que se
+            -- pierden de noche, en cuevas, a oscuras... Su propia silueta, 1 px alrededor, conservando sus colores
+            local edge = self.darkEdge
+            if edge and self.state ~= 'frozen' then
+                Silhouette = Silhouette or require 'src/fx/Silhouette'
+                if Silhouette.level and Silhouette.dim(Silhouette.level, self.y) then
+                    self._edgePass = true
+                    Silhouette.around(function(dx, dy) drawBody(self, camX - dx, camY - dy) end, edge)
+                    self._edgePass = nil
+                end
+            end
             drawBody(self, camX, camY)
         end
         cls._wrappedRender = true

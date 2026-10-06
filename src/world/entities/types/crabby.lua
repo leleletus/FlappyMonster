@@ -69,6 +69,9 @@ local function addSkin(id, dir, o)
         sk.hideOut[#sk.hideOut + 1] = sk.idle2
     else
         sk.hideIn  = { sk.meat, sk.lookin, sk.hid }       -- crab2 → Meat → lookin → hid
+        -- (escondido: hid.png es UNA fila vacía; sin esto la tapa quedaba 1 px de arte por encima de la
+        -- superficie, con un hueco debajo — los de hundirse ya lo tenían)
+        sk.inset[sk.hid] = 1
         sk.hideOut = { sk.lookin, sk.meat, sk.idle2 }     -- hid → lookin → Meat → crab2
     end
     sk.walk = { sk.idle1, sk.idle2, sk.idle3 }
@@ -688,6 +691,7 @@ end
 local Particles
 local DIG = { hide_in = 0.07, hide_out = 0.12, drop_shake = 0.08 }
 function Crabby:renderDig()
+    if self._edgePass then return end                     -- (pasada del filo de lo oscuro: no es un dibujo de verdad)
     local every = DIG[self.state]
     if not every or EDITOR_VIEW then return end
     local img = self.currentImg

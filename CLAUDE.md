@@ -2215,6 +2215,19 @@ again. No dialogue or text: animation + music.
   'kill' (stomps, bounces, pickups still work; bosses that hit from their own update are not covered). Never listed
   in an online mode (`LevelCatalog`). `assets/levels/EnemyTest.json` (the user's enemy gallery, Free Play): every Gummy,
   Crabby (+ Gloomy) and Hopper skin, each species in island order. Harness `mechanics inofensivos`.
+- 3.82.1 (user's review of the enemy gallery): (1) HIDDEN base Crabbies (normal, fortress) left a 1-art-px gap under
+  the spike: their `hid.png` is one EMPTY row and only the sinking skins had `sk.inset[sk.hid] = 1`; now every skin
+  does, so `Crabby:headH` = 0 when hidden (drawing, hazard box and trampoline box sit on the surface). (2) FORTRESS
+  GUMMY key: the Gummy art faces RIGHT (drawn unflipped when walking right), so the wind-up key goes on the LEFT = its
+  back (`back()` in `make_variant_skins.py`; it stuck out in front). (3) **DARK EDGE for dark enemies** (generic):
+  class field / trait `darkEdge = { r, g, b, a }` → the `EntityTypes` render wrapper draws the entity's OWN silhouette
+  in that flat colour 1 screen px around it (`Silhouette.around`: the body's render called 8 times shifted, under a
+  flat-colour shader; `self._edgePass` = skip render side effects such as `Crabby:renderDig`), then the normal drawing —
+  colours untouched. Only where it is dark: `Silhouette.dim(level, y)` = dusk + everything `Silhouette.on` covers
+  (dark levels, night, caves, under the surface line), with `Silhouette.level` set by both level states while drawing
+  (nil elsewhere: editor, map). A pure function of level + position: same in SP, online and for bots. Not when frozen.
+  On: `gummy_magma`, `crabby_lava`, `crabbytramp_lava` (warm light grey, thinner than the player's white edge). Drawn
+  before the darkness (it dims with the scene). Harness `mechanics tapa_base`; `level_shots` shows it.
 - HUD: `BossHud.drawRun(level, entities)` (both level states): **"¡CORRE!" / "RUN!"** (`hud.run`) top centre while
   the camera runs, instead of any boss bar.
 - Music `mirror_chase` (`tools/music/mirror_chase.py`, intro + loop, verified by numbers only): DRUM & BASS as fast

@@ -7,6 +7,7 @@ local Gummy  = base.class
 
 local GummyMagma = Entity.extend(Gummy, { debugColor = { 1, 0.5, 0.2 } })
 GummyMagma.artDir = 'assets/images/gummy_magma/'
+GummyMagma.darkEdge = { 1, 0.8, 0.55, 0.9 }      -- (roca oscura: en lo oscuro lleva un filo fino; EntityTypes / Silhouette)
 function GummyMagma.loadAssets() Gummy.loadAssets(); Gummy.loadArt(GummyMagma.artDir) end
 
 local def = {}

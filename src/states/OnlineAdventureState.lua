@@ -221,6 +221,7 @@ function OnlineAdventureState:_buildWorld(data, difficulty)
 end
 
 function OnlineAdventureState:exit()
+    require('src/fx/Silhouette').level = nil
     require('src/ui/View').unlock()
     NC:off("s"); NC:off("ev"); NC:off("game_init")
     NC.pendingGameInit = nil
@@ -1137,6 +1138,7 @@ function OnlineAdventureState:_renderScene()
     self.level:renderFoliageBack(self.camX, self.camY)
 
     -- Enemigos (estado controlado por el servidor)
+    require('src/fx/Silhouette').level = self.level      -- (filo de los enemigos oscuros en lo oscuro: `darkEdge`)
     for i, er in pairs(self.enemyRenderers) do
         if er.alive and not er.renderFront then
             er:render(self.camX, self.camY)

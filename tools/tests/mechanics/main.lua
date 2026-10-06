@@ -1081,6 +1081,27 @@ function cases.persecucion()
         tostring(all), tostring(kinds.dive), tostring(kinds.dash), tostring(kinds.shove), hits, back, tostring(inside), tostring(r1), tostring(not ch.alive), sides, tostring(jumped), tostring(kinds.pounce), math.floor(100 * atEdge / math.max(1, frames)), touches, tostring(touchHurt), tE, tN, tX))
 end
 
+-- Crabby escondido: la tapa (pincho) apoya EN la superficie en todas las pieles (las de base dejaban 1 px de arte
+-- de hueco); y el filo de lo oscuro (`darkEdge`) lo llevan los de roca volcánica, solo donde está oscuro
+function cases.tapa_base()
+    local Silhouette = require 'src/fx/Silhouette'
+    local bad = {}
+    for _, ty in ipairs({ 'crabby', 'crabby_fortress', 'crabbytramp', 'crabby_ice', 'crabby_river', 'crabby_cave', 'crabby_lava' }) do
+        local e = Entities.create({ type = ty, col = 5, row = 5, props = {} })
+        e.currentImg = e.sk.hid
+        if e:headH() ~= 0 then bad[#bad + 1] = ty .. '=' .. e:headH() end
+    end
+    local lava = Entities.create({ type = 'crabby_lava', col = 5, row = 5, props = {} })
+    local magma = Entities.create({ type = 'gummy_magma', col = 5, row = 5, props = {} })
+    local plain = Entities.create({ type = 'crabby', col = 5, row = 5, props = {} })
+    local edges = lava.darkEdge ~= nil and magma.darkEdge ~= nil and plain.darkEdge == nil
+    local dim = Silhouette.dim({ light = 'night' }, 0) and Silhouette.dim({ light = 'dusk' }, 0) and Silhouette.dim({ dark = true }, 0)
+        and Silhouette.dim({ light = 'cave' }, 0) and not Silhouette.dim({ light = 'day' }, 0) and not Silhouette.dim(nil, 0)
+    check('tapa_base', #bad == 0 and edges and dim,
+        ('tapa con hueco: %s · filo en lava/magma y no en el normal=%s · solo en lo oscuro=%s'):format(
+            #bad == 0 and 'ninguna' or table.concat(bad, ' '), tostring(edges), tostring(dim)))
+end
+
 -- Nivel de enemigos INOFENSIVOS ("peaceful"): tocarlos no hace nada; pisarlos sigue contando
 function cases.inofensivos()
     local function touch(peaceful)
@@ -1320,7 +1341,7 @@ function love.load()
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
-                         'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'persecucion', 'inofensivos',
+                         'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'persecucion', 'inofensivos', 'tapa_base',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte' }) do cases[n]() end
     if os.getenv('SHOT_BOMB') then bombShot() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))

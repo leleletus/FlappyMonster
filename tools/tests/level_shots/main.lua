@@ -42,6 +42,7 @@ local function shot(path)
             Sky.render(level, cx, cy)
             level:render(cx, cy)
             level:renderFoliageBack(cx, cy)
+            require('src/fx/Silhouette').level = level        -- (filo de los enemigos oscuros: `darkEdge`)
             for _, e in ipairs(es) do if e.alive and not e.renderFront then e:render(cx, cy) end end
             for _, e in ipairs(es) do if e.alive and e.renderFront then e:render(cx, cy) end end
             level:renderFoliage(cx, cy)

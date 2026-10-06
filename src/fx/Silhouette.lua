@@ -57,4 +57,33 @@ function Silhouette.on(level, y)
     return false
 end
 
+-- ── ENEMIGOS que se pierden en lo oscuro (rasgo `darkEdge` de su tipo: EntityTypes) ──────────────
+-- Los estados dicen QUÉ NIVEL se está dibujando (`Silhouette.level`, nil fuera de un nivel: editor, mapa...)
+-- y cada entidad pregunta por SU sitio: igual en un jugador, online y con bots (solo depende del nivel y
+-- de dónde está). `dim` = lo de `on` y además el atardecer (roca oscura sobre roca oscura ya se pierde).
+function Silhouette.dim(level, y)
+    if not level then return false end
+    return level.light == 'dusk' or Silhouette.on(level, y)
+end
+
+-- Todo lo que dibuje `fn(dx, dy)` (corrido esos píxeles) sale de UN color liso con su propia forma: se llama
+-- 8 veces alrededor, y encima va el dibujo normal. 1 px de pantalla: más fino que el del jugador.
+local flat
+function Silhouette.around(fn, color)
+    if flat == nil then
+        local ok, sh = pcall(love.graphics.newShader, [[
+            extern vec4 tint;
+            vec4 effect(vec4 c, Image t, vec2 uv, vec2 sc) { return vec4(tint.rgb, Texel(t, uv).a * tint.a * c.a); }
+        ]])
+        flat = ok and sh or false
+    end
+    if not flat then return end
+    local prev = love.graphics.getShader()
+    flat:send('tint', { color[1], color[2], color[3], color[4] or 1 })
+    love.graphics.setShader(flat)
+    for _, d in ipairs(DIRS) do fn(d[1], d[2]) end
+    love.graphics.setShader(prev)
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
 return Silhouette
