@@ -2230,6 +2230,12 @@ again. No dialogue or text: animation + music.
   (nil elsewhere: editor, map). A pure function of level + position: same in SP, online and for bots. Not when frozen.
   On: `gummy_magma`, `crabby_lava`, `crabbytramp_lava` (warm light grey, thinner than the player's white edge). Drawn
   before the darkness (it dims with the scene). Harness `mechanics tapa_base`; `level_shots` shows it.
+- 3.82.3: WALK frames of the Cave and Lava Crabby redrawn (`make_crab_species.py`, only crab2 / crab3; crab1 = the
+  approved standing pose): they barely moved (cave: one foot, 1 px; lava: the middle legs never). Cave = the base
+  Crabby's three gestures one column to the right (open → all four tucked in → off-step with the hip shifted). Lava (six
+  legs): one side OPENS (hip out, feet 0-3-8) while the other gathers straight, and frame 3 is its mirror. The user was
+  HAND-EDITING `assets/images/gummy_fortress/*.png` at that moment: don't re-run `make_variant_skins.py --apply` over
+  them without porting their edits first.
 - HUD: `BossHud.drawRun(level, entities)` (both level states): **"¡CORRE!" / "RUN!"** (`hud.run`) top centre while
   the camera runs, instead of any boss bar.
 - Music `mirror_chase` (`tools/music/mirror_chase.py`, intro + loop, verified by numbers only): DRUM & BASS as fast

@@ -48,8 +48,11 @@ SPECIES = {
                "...obefbbbbebso...",
                "...oossssssssoo..."],
         legs=[["...o.o.o..o.o.o...", "..o..o.o..o.o..o..", ".o...o.o..o.o...o."],
-              ["...o.o.o..o.o.o...", "...o.o..o.o..o.o..", "..o..o..o.o..o..o."],
-              ["...o.o.o..o.o.o...", "..o.o.o....o.o.o..", ".o..o.o....o.o..o."]],
+              # ANDAR (como el Crabby: las patas de un lado se ABREN mientras las del otro se RECOGEN, y al revés; antes
+              # las de en medio no se movían y las de fuera, 1 px): cuadro 2 = izquierda abierta + derecha recogida,
+              # cuadro 3 = su espejo
+              ["..o..o.o..o.o.o...", ".o..o...o.o.o.o...", "o..o....o.o.o.o..."],
+              ["...o.o.o..o.o..o..", "...o.o.o.o...o..o.", "...o.o.o.o....o..o"]],
         look=2,
         dead=["......oooooooooo......",
               "...oohbbfbbbbfbbsoo...",
@@ -62,8 +65,10 @@ SPECIES = {
         pal=CAVE, claw_pal=None,
         shell=D.V5[0][1][:6],
         legs=[D.V5[0][1][6:],
-              ["...o..o....o..o...", "...o..o....o...o..", "..o...o.....o..o.."],
-              ["...o..o....o..o...", "..o..o......o..o..", ".o...o......o...o."]],
+              # ANDAR (los mismos tres gestos del Crabby, una columna a la derecha: quieto = abiertas, luego las
+              # cuatro RECOGIDAS hacia dentro, luego a contrapié con la cadera corrida; antes solo se movía 1 px una pata)
+              ["...o..o....o..o...", "...o...o..o...o...", "....o..o..o..o...."],
+              ["..o..o.....o...o..", "..o..oo....o..o...", "...o...o..o....o.."]],
         look=3,
         dead=["..........oo..........",
               ".....oooooGgooooo.....",
