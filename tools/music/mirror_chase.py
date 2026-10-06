@@ -18,9 +18,22 @@
 # Fa# menor armónico, como el jefe. Batería de DnB "two-step": bombo en 1 y en el "y" del 3, caja en 2 y 4, cajas
 # fantasma, charles a semicorcheas; bajo = sub (triángulo) + un diente de sierra que tiembla una octava arriba.
 #
-# Forma: INTRO 4 (charles, el bajo, el motivo a golpes) + SUBIDA 4 | A 8 · A' 8 (drop: el tema) · B 8 · B' 8 (el héroe)
-# · K 8 (respiro a medio tiempo: campana y colchón; vuelve el bombo) · G 8 (furia) · A'' 8 (el tema con todo) ·
-# SUBIDA 4 = bucle de 60 compases (82,8 s). La SUBIDA es el MISMO compás al final de la intro y al final del bucle
+# SEGUNDA VERSIÓN (3.81.0), con la guía de género que pasó el usuario ("está bien, pero no sigue de verdad el género")
+# y lo MEDIDO en la referencia (56 % de la energía por debajo de 120 Hz, drops de 32 compases, un respiro 8 dB abajo):
+#   · FORMA de dancefloor: intro + subida · DROP 1 de 32 compases · BREAKDOWN melódico (i–VI–III–VII, 8 dB abajo) ·
+#     subida · DROP 2 de 32 · subida. (La intro es corta a propósito — 8 compases —: es un nivel de persecución y la
+#     música tiene que arrancar ya; el respiro largo del género va en medio.)
+#   · BAJO en dos capas: SUB casi puro (triángulo) una octava más abajo que antes (Fa#1 = 46 Hz), sostenido, y encima
+#     un "REESE": dos dientes de sierra desafinados entre sí + un pulso, con su propio ritmo a golpes (3+3+2).
+#   · SIDECHAIN: el bajo, el colchón, los arpegios y la voz se agachan con cada bombo (y un poco con la caja).
+#   · BATERÍA: el dos pasos (bombo en 1 y en el "y" del 3; caja en 2 y 4) con la caja en DOS capas (seca + cuerpo), cajas
+#     fantasma, charles a semicorcheas con acentos y abiertos a contratiempo, plato "ride" en el 2º drop, un "break"
+#     distinto cada 4 compases y un relleno cada 8; impacto (bombo hondo + plato) al caer cada drop.
+#   · VOZ tipo "supersaw": dos sierras desafinadas + la octava, con eco que rebota de lado a lado.
+#   · MASTER más apretado (−8,5 LUFS).
+# Forma: INTRO 4 + SUBIDA 4 | A 8 · A' 8 · B 8 · B' 8 (DROP 1: el tema y el héroe) · K 8 (breakdown) · SUBIDA 4 ·
+# G 8 · A'' 8 · B'' 8 · A''' 8 (DROP 2: la furia, el tema, el héroe arriba, el tema con todo) · SUBIDA 4 = bucle de
+# 80 compases (110,3 s). La SUBIDA es el MISMO compás al final de la intro y al final del bucle
 # (regla de las pistas con intro: mismo último compás y sin doblar colas), y acaba en un silencio de un tiempo antes
 # del drop.
 #
@@ -82,10 +95,10 @@ T_B = ["0:A5/3 3:A5/3 6:A5/2 8:F#5/3 11:F#5/3 14:F#5/2",                    # el
        "0:F#5/3 3:F#5/3 6:F#5/2 8:D5/3 11:D5/3 14:D5/2",
        "0:A5/3 3:G#5/3 6:A5/2 8:B5/4 12:B5/2 14:C#6/2"]
 CH_B = ['Bm', 'C#', 'F#m', 'F#m', 'Bm', 'C#', 'D', 'E']
-T_K = ["0:C#6/8 8:A5/8", "0:F#5/8 8:A5/8", "0:B5/8 8:D6/8", "0:C#6/4 4:G#5/4 8:F5/4 12:C#5/4",          # el espejo, despacio
-       "0:F#5/6 6:C#5/2 8:F#5/4 12:A5/4", "0:A5/6 6:F#5/2 8:A5/4 12:D6/4", "0:D6/4 4:B5/4 8:G5/8",
-       "0:C#5/2 2:F5/2 4:G#5/2 6:C#6/2 " + ' '.join('%d:C#6/1' % i for i in range(8, 16))]
-CH_K = ['F#m', 'D', 'Bm', 'C#', 'F#m', 'D', 'G', 'C#']
+T_K = ["0:C#6/8 8:A5/8", "0:F#5/8 8:A5/8", "0:E5/8 8:A5/8", "0:B5/8 8:G#5/8",                       # i–VI–III–VII, cantado despacio
+       "0:F#5/6 6:C#5/2 8:F#5/4 12:A5/4", "0:A5/6 6:F#5/2 8:A5/4 12:D6/4", "0:C#6/4 4:A5/4 8:E5/8",
+       "0:C#6/4 4:G#5/4 8:F5/4 12:C#5/4"]                                                         # … y el espejo, hacia la subida
+CH_K = ['F#m', 'D', 'A', 'E', 'F#m', 'D', 'A', 'C#']
 T_G = [run("F#5 F#5 A5 F#5 F#5 C#6 F#5 F#5 A5 G#5 F#5 E5 F#5 A5 C#6 A5"),                                # la furia, corrida
        run("F#5 F#5 A5 F#5 F#5 C#6 F#5 F#5") + " 8:B5/2 10:A5/2 12:G#5/2 14:F#5/2",
        run("G5 G5 B5 G5 G5 D6 G5 G5 B5 A5 G5 F#5 G5 B5 D6 B5"),
@@ -102,11 +115,12 @@ T_U = ["0:C#5/3 3:F5/3 6:G#5/2 8:C#6/8", "0:F5/3 3:G#5/3 6:C#6/2 8:F6/8",
        "0:C#6/2 2:C#6/2 4:C#6/2 6:C#6/2 " + ' '.join('%d:C#6/1' % i for i in range(8, 16)),
        ' '.join('%d:F6/1' % i for i in range(0, 12))]
 CH_U = ['C#'] * 4
-ORDER = ['IN', 'U1', 'A', 'A2', 'B', 'B2', 'K', 'G', 'A3', 'U2']
+ORDER = ['IN', 'U1', 'A', 'A2', 'B', 'B2', 'K', 'UM', 'G', 'A3', 'B3', 'A4', 'U2']
 INTRO = 8
-BUILD = ('U1', 'U2')
-THEME = ('A', 'A2', 'A3')
-HERO = ('B', 'B2')
+BUILD = ('U1', 'UM', 'U2')
+THEME = ('A', 'A2', 'A3', 'A4')
+HERO = ('B', 'B2', 'B3')
+DROP2 = ('G', 'A3', 'B3', 'A4')
 FAST = ('G',)                                  # (notas de paso corridas: no cuentan en la comprobación del acorde)
 
 
@@ -127,8 +141,11 @@ def song():
     section('B', T_B, CH_B)
     section('B2', T_B, CH_B, 12)
     section('K', T_K, CH_K)
+    section('UM', T_U, CH_U)
     section('G', T_G, CH_G)
-    section('A3', T_A + A_END2, CH_A)
+    section('A3', T_A + A_END, CH_A)
+    section('B3', T_B, CH_B, 12)
+    section('A4', T_A + A_END2, CH_A)
     section('U2', T_U, CH_U)
     return mel, chords, tag, starts
 
@@ -144,7 +161,11 @@ def check(mel, chords, tag):
 WAVES = [wavetable([1.0, 0.5, 0.33, 0.2, 0.12]), GN.CWAVES[0], wavetable([1.0, 0.25, 0.4, 0.1, 0.2])]
 I_SAW = {'vol': [15, 15, 14, 13, 12, 11], 'sus': 11}                         # la voz: picada, sin vibrato
 I_PUL = {'vol': [12, 11, 9, 8, 7, 6], 'sus': 6, 'duty': [0.125, 0.25]}
-I_REESE = {'vol': [13, 14, 14, 13], 'sus': 13, 'vib': (0, 0.35, 8.5)}          # el bajo que TIEMBLA (diente de sierra)
+I_REESE = {'vol': [14, 14, 13, 12], 'sus': 12, 'vib': (0, 0.22, 6.5)}          # el REESE: sierras desafinadas que baten
+I_GROWL = {'vol': [12, 11, 10, 9, 8], 'sus': 8, 'duty': [0.125, 0.25, 0.5, 0.25], 'vib': (0, 0.3, 11)}
+I_ECHO = {'vol': [6, 5, 4, 3], 'sus': 2, 'duty': 0.25}
+RIDE = [9, 7, 6, 5, 4, 3, 2, 1]
+OPEN = [8, 7, 6, 5, 4, 3, 2]
 I_TRI = {'vol': [15], 'sus': 15}
 I_BELL = dict(GN.I_BELL, duty=1.0)
 I_CHOIR = {'vol': [3, 5, 7, 8, 9, 9, 10], 'sus': 10, 'vib': (20, 0.12, 4.5), 'duty': 2.0}
@@ -154,12 +175,13 @@ SNARE_N, CRASH = [15, 12, 8, 5, 3, 1], [14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3,
 GHOST = [6, 3, 1]
 
 
-def build(lufs=-9.5):
+def build(lufs=-9.0):
     mel, chords, tag, starts = song()
     NB = len(chords)
     NF = F.frames_for(NB * BAR + 3)
-    Cn = {k: Chan(NF) for k in ('lead', 'dbl', 'bell', 'p1', 'p2', 'c1', 'c2', 'arp', 'bass', 'reese')}
-    NZ = {k: Noise(NF) for k in ('hat', 'snare', 'crash', 'fx')}
+    Cn = {k: Chan(NF) for k in ('lead', 'lead2', 'dbl', 'echo', 'echo2', 'bell', 'p1', 'p2', 'c1', 'c2', 'arp', 'bass', 'reese', 'reese2', 'growl')}
+    NZ = {k: Noise(NF) for k in ('hat', 'snare', 'crack', 'crash', 'fx')}
+    kicks_t, snares_t = [], []                             # (para el sidechain)
     NS = int(NF * F.FRAME_S) + SR
     kick, sn, tom = np.zeros(NS), np.zeros(NS), np.zeros(NS)
     tv = lambda b, st: (b - 1) * BAR + st * S16
@@ -171,6 +193,11 @@ def build(lufs=-9.5):
 
     def snare(t, g=1.0, vols=SNARE_N):
         NZ['snare'].hit(t, 4, vols); hit(sn, TN.SNARE_BODY, t, g)
+        if g >= 0.8:                                           # la segunda capa: un chasquido seco y agudo
+            NZ['crack'].hit(t, 1, [15, 9, 4, 1]); snares_t.append(t)
+
+    def kickhit(t, g=1.0, deep=False):
+        hit(kick, TN.KICK_DEEP if deep else TN.KICK, t, g); kicks_t.append(t)
 
     # ── MELODÍA ──
     for b, st, n, d in mel:
@@ -181,35 +208,50 @@ def build(lufs=-9.5):
             continue
         gate = 0.8 if d <= 2 else 0.9                          # picado
         play(Cn['lead'], t0, t0 + d * S16 * gate, n, I_SAW, q=q_saw, release=1)
-        if kind in ('A2', 'A3', 'B2', 'G') or kind in BUILD:   # la octava (pulso) en las vueltas con todo
-            play(Cn['dbl'], t0, t0 + d * S16 * gate, n + (12 if kind != 'B2' else -12), I_PUL, release=1)
+        play(Cn['lead2'], t0, t0 + d * S16 * gate, n + 0.13, I_SAW, q=q_saw, vs=0.8, release=1)     # 2ª sierra, desafinada
+        if d >= 2 and kind not in FAST:                        # eco que rebota (a 3 y a 6 semicorcheas)
+            play(Cn['echo'], t0 + 3 * S16, t0 + 3 * S16 + 1.4 * S16, n, I_ECHO, release=1)
+            play(Cn['echo2'], t0 + 6 * S16, t0 + 6 * S16 + 1.2 * S16, n, I_ECHO, vs=0.6, release=1)
+        if kind in ('A2', 'A3', 'A4', 'B2', 'B3', 'G') or kind in BUILD:   # la octava (pulso) en las vueltas con todo
+            play(Cn['dbl'], t0, t0 + d * S16 * gate, n + (12 if kind not in ('B2', 'B3') else -12), I_PUL, release=1)
         if kind in ('IN',): play(Cn['bell'], t0, t0 + 3 * S16, n, I_BELL, q=q_n163, release=4)
 
     for b in range(1, NB + 1):
         kind = tag[b - 1]
         k = b - starts[ORDER.index(kind)] + 1                  # compás dentro de la sección
         (r1, q1), (r2, q2) = chords[b - 1]
-        lo = lambda r: 30 + (r - 30) % 12                      # (Fa#1 … Fa2)
+        lo = lambda r: 30 + (r - 30) % 12                      # (Fa#1 = 46 Hz … Fa2)
         last = (b + 1) in starts or b == NB
         gap = kind in BUILD and k == 4                         # el último compás de la subida: se corta en el 4º tiempo
 
-        def bass(st, ln, r, up=0):
+        def sub(st, ln, r, up=0):                              # el SUB: casi puro, abajo del todo, sostenido
             if gap and st >= 12: return
             t = tv(b, st)
-            play(Cn['bass'], t, t + ln * S16, lo(r) + 12 + up, I_TRI, q=q_tri, release=0)
-            if kind not in ('IN', 'K') or (kind == 'K' and k >= 5):
-                play(Cn['reese'], t, t + ln * S16 * 0.92, lo(r) + 24 + up, I_REESE, q=q_saw, release=1)
-        # ── BAJO: empuja con el bombo (0 y el "y" del 3) y contesta ──
-        if kind == 'K' and k <= 4:
-            bass(0, 15.5, r1)
+            play(Cn['bass'], t, t + ln * S16, lo(r) + up, I_TRI, q=q_tri, release=0)
+
+        def reese(st, ln, r, up=0, growl=False):               # el REESE: dos sierras desafinadas (+ un pulso que gruñe)
+            if gap and st >= 12: return
+            t = tv(b, st)
+            play(Cn['reese'], t, t + ln * S16 * 0.9, lo(r) + 24 + up, I_REESE, q=q_saw, release=1)
+            play(Cn['reese2'], t, t + ln * S16 * 0.9, lo(r) + 24 + up + 0.17, I_REESE, q=q_saw, release=1)
+            if growl: play(Cn['growl'], t, t + ln * S16 * 0.85, lo(r) + 36 + up, I_GROWL, release=1)
+        # ── BAJO ──
+        if kind == 'K':
+            sub(0, 15.5, r1)
+            if k >= 5: reese(0, 7.5, r1); reese(8, 7.5, r2)
         elif kind in BUILD:
-            for st in range(0, 16, 2 if k <= 2 else 1): bass(st, 1.6 if k <= 2 else 0.8, r1, 12 if (st // 2) % 2 and k > 2 else 0)
+            for st in range(0, 16, 2 if k <= 2 else 1):
+                sub(st, 1.6 if k <= 2 else 0.8, r1)
+                reese(st, 1.4 if k <= 2 else 0.7, r1, 12 if (st // 2) % 2 and k > 2 else 0)
         elif kind == 'IN':
-            if k >= 3: bass(0, 5.5, r1); bass(10, 5.5, r1)
-        elif kind in FAST:                                     # la furia: corcheas al unísono, sin parar
-            for st in range(0, 16, 2): bass(st, 1.7, r1 if st < 8 else r2, 12 if st % 8 == 6 else 0)
-        else:
-            bass(0, 5.5, r1); bass(6, 3.5, r1, 12); bass(10, 3.5, r2); bass(14, 1.8, r2, 7 if q2 == MAJ or True else 0)
+            if k >= 3: sub(0, 9.5, r1); sub(10, 5.5, r1)
+        elif kind in FAST:                                     # la furia: el sub aguanta, el reese corre en corcheas
+            sub(0, 9.5, r1); sub(10, 5.5, r2)
+            for st in range(0, 16, 2): reese(st, 1.7, r1 if st < 8 else r2, 12 if st % 8 == 6 else 0, growl=st % 4 == 2)
+        else:                                                  # drops: el sub va con el bombo; el reese, a golpes 3+3+2
+            sub(0, 9.5, r1); sub(10, 5.5, r2)
+            for st, ln, up in ((0, 2.6, 0), (3, 2.6, 0), (6, 1.8, 12), (8, 2.6, 0), (11, 2.6, 0), (14, 1.8, 7)):
+                reese(st, ln, r1 if st < 8 else r2, up, growl=(st in (6, 14)) or kind in DROP2)
         for half, (r, q) in enumerate(((r1, q1), (r2, q2))):
             s0 = half * 8
             notes = [66 + (r - 66) % 12 + iv for iv in q]
@@ -220,44 +262,52 @@ def build(lufs=-9.5):
                     play(Cn['c1'], tv(b, s0 + st), tv(b, s0 + st) + 1.4 * S16, notes[0], I_STAB, release=1)
                     play(Cn['c2'], tv(b, s0 + st), tv(b, s0 + st) + 1.4 * S16, notes[2], I_STAB, release=1)
             # arpegio en semicorcheas (2ª vuelta del héroe, tema final y respiro tardío)
-            if kind in ('B2', 'A3') or (kind == 'K' and k >= 5):
+            if kind in ('B2', 'B3', 'A4') or kind == 'K':
                 for st in range(8):
                     play(Cn['arp'], tv(b, s0 + st), tv(b, s0 + st) + S16 * 0.7, notes[(0, 1, 2, 1)[st % 4]] + (12 if st >= 4 else 0) + 12, I_ARP, release=0)
             # colchón: el respiro y la intro
-            if kind in ('K', 'IN'):
-                vs = 1.0 if kind == 'K' else 0.6
+            if kind in ('K', 'IN', 'B3', 'A4'):
+                vs = {'K': 1.0, 'IN': 0.6}.get(kind, 0.8)
                 play(Cn['p1'], tv(b, s0), tv(b, s0) + 7.6 * S16, notes[1], I_CHOIR, q=q_n163, vs=vs, release=5)
                 play(Cn['p2'], tv(b, s0), tv(b, s0) + 7.6 * S16, notes[2], I_CHOIR, q=q_n163, vs=vs, release=5)
-        # ── BATERÍA (DnB two-step) ──
+        # ── BATERÍA (DnB de dos pasos) ──
         for st in range(16):
             t = tv(b, st)
             if gap and st >= 12: break
-            hat = lambda v=None: NZ['hat'].hit(t, 0, v or ([6, 3, 1] if st % 4 == 2 else [4, 2] if st % 2 == 0 else [2, 1]))
+
+            def hat():
+                if st % 4 == 2: NZ['hat'].hit(t, 0, OPEN)                    # abierto a contratiempo
+                else: NZ['hat'].hit(t, 0, [5, 3, 1] if st % 2 == 0 else [3, 1] if st % 4 == 1 else [2, 1])
             if kind == 'IN':
                 hat()
-                if k >= 3 and st in (0, 10): hit(kick, TN.KICK, t, 0.9)
+                if k >= 3 and st in (0, 10): kickhit(t, 0.9)
             elif kind in BUILD:                                # redoble que se acelera: negras, corcheas, semicorcheas
-                if st % 4 == 0: hit(kick, TN.KICK, t, 1.0)
+                if st % 4 == 0: kickhit(t, 1.0)
                 step = (4, 2, 1, 1)[k - 1]
                 if st % step == 0:
                     u = ((k - 1) * 16 + st) / 60.0
-                    snare(t, 0.35 + 0.65 * u, [int(6 + 9 * u), int(4 + 6 * u), 3, 1])
+                    snare(t, 0.35 + 0.44 * u, [int(6 + 9 * u), int(4 + 6 * u), 3, 1])
                 if k >= 3 and st % 4 == 0: hit(tom, W.TOMS[2 - (st // 4) % 3], t, 0.8)
-            elif kind == 'K':                                  # medio tiempo; del 5º compás vuelve el bombo de dos pasos
-                if st % 2 == 0: hat()
-                if st == 0 or (k >= 5 and st == 10): hit(kick, TN.KICK_DEEP if k <= 4 else TN.KICK, t, 0.95)
-                if st == 8: snare(t, 0.8)
-                if k == 8 and st >= 8: snare(t, 0.4 + (st - 8) * 0.07, [7 + (st - 8), 5, 2])
+            elif kind == 'K':                                  # breakdown: sin bombo al principio; charles y un golpe a medio tiempo
+                if k >= 3 and st % 2 == 0: NZ['hat'].hit(t, 0, [4, 2, 1])
+                if k >= 5 and st in (0, 10): kickhit(t, 0.8)
+                if k >= 5 and st == 8: snare(t, 0.7)
+                if k == 8 and st >= 8: snare(t, 0.3 + (st - 8) * 0.06, [7 + (st - 8), 5, 2])
             else:
-                var = k % 4 == 0                               # cada 4 compases, una variación de "break"
+                var, fill = k % 4 == 0, k == 8                 # cada 4 compases un "break"; cada 8, un relleno
                 kicks = (0, 6, 10) if var else (0, 10)
                 if kind in FAST: kicks = (0, 3, 6, 10, 13)
-                if st in kicks: hit(kick, TN.KICK, t, 1.0)
+                if st in kicks: kickhit(t, 1.0)
+                sn_main = (4, 7, 9, 12, 14, 15) if fill else (4, 12)
                 if st in (4, 12): snare(t, 1.0)
+                elif st in sn_main: snare(t, 0.6, [10, 7, 4, 2])
                 elif st in ((7, 9, 14, 15) if var else (7, 15) if k % 2 else (9, 15)): snare(t, 0.3, GHOST)
                 hat()
+                if kind in DROP2 and st % 4 == 0: NZ['crash'].hit(t, 1, RIDE)       # el "ride" del segundo drop
                 if last and st >= 12 and kind not in FAST: hit(tom, W.TOMS[min(2, st - 12)], t, 0.8)
             if st == 0 and (k == 1 and kind not in ('IN', 'K') or (kind in THEME + HERO + FAST and k == 5)): NZ['crash'].hit(t, 3, CRASH)
+            if st == 0 and k == 1 and kind in ('A', 'G'):      # el IMPACTO al caer el drop
+                hit(kick, TN.KICK_DEEP, t, 1.2); hit(tom, W.TOMS[2], t, 1.0)
         if kind in BUILD:                                      # ruido que sube durante toda la subida
             n_ = int(BAR * 60 * (0.75 if k == 4 else 1))
             for i_ in range(n_):
@@ -272,11 +322,14 @@ def build(lufs=-9.5):
     wave = lambda k_: cut(F.render_wave(Cn[k_], WAVES) * 0.0075)
     base = F.tnd_dac(np.full(NS, 64 / 22638.0))
     S = {
-        'lead': cut(F.pulse_dac(F.render_saw(Cn['lead']))), 'dbl': pulse('dbl'), 'bell': wave('bell'), 'choir': wave('p1') + wave('p2'),
+        'lead': cut(F.pulse_dac(F.render_saw(Cn['lead']))) + cut(F.pulse_dac(F.render_saw(Cn['lead2']))), 'dbl': pulse('dbl'),
+        'echo': pulse('echo'), 'echo2': pulse('echo2'), 'bell': wave('bell'), 'choir': wave('p1') + wave('p2'),
         'stabs': pulse('c1') + pulse('c2'), 'arp': pulse('arp'),
-        'bass': cut(F.tnd_dac(F.render_tri(Cn['bass']) / 8227.0)), 'reese': cut(F.pulse_dac(F.render_saw(Cn['reese']))),
+        'bass': cut(F.tnd_dac(F.render_tri(Cn['bass']) / 8227.0)),
+        'reese': cut(F.pulse_dac(F.render_saw(Cn['reese']))) + cut(F.pulse_dac(F.render_saw(Cn['reese2']))) + 0.6 * pulse('growl'),
         'kick': cut(F.tnd_dac((kick + 64) / 22638.0) - base), 'toms': cut(F.tnd_dac((tom + 64) / 22638.0) - base),
-        'snare': cut(F.tnd_dac((sn + 64) / 22638.0) - base) + cut(F.tnd_dac(NZ['snare'].render() / 22638.0 * 12)),
+        'snare': cut(F.tnd_dac((sn + 64) / 22638.0) - base) + cut(F.tnd_dac(NZ['snare'].render() / 22638.0 * 12))
+                 + 0.7 * cut(F.tnd_dac(NZ['crack'].render() / 22638.0 * 12)),
         'hat': cut(F.tnd_dac(NZ['hat'].render() / 22638.0 * 12)),
         'crash': cut(F.tnd_dac(NZ['crash'].render() / 22638.0 * 12)) + cut(F.tnd_dac(NZ['fx'].render() / 22638.0 * 12)),
     }
@@ -284,15 +337,29 @@ def build(lufs=-9.5):
     S = {k_: v[:n].copy() for k_, v in S.items()}
     S['bell'] = GN.delay(S['bell'], 3 * S16, 0.3, 2, 3000)[:len(S['bell'])]
     # niveles respecto a la voz: aquí mandan la batería y el bajo (DnB)
-    LV = {'lead': 0, 'dbl': -8, 'bell': -3, 'choir': -6, 'stabs': -6, 'arp': -9, 'bass': 4, 'reese': -3,
-          'kick': 4, 'toms': 0, 'snare': 3, 'hat': -5, 'crash': -5}
+    # SIDECHAIN: lo que no es batería se agacha con cada bombo (y algo con la caja) y vuelve en ~0,13 s
+    duck = np.ones(n)
+    tt = np.arange(int(0.25 * SR)) / SR
+    for times, depth in ((kicks_t, 1.0), (snares_t, 0.45)):
+        shape = depth * np.exp(-tt / 0.055)
+        for t0 in times:
+            i0 = int(t0 * SR)
+            if i0 >= n: continue
+            m = min(len(shape), n - i0)
+            duck[i0:i0 + m] = np.minimum(duck[i0:i0 + m], 1 - shape[:m])
+    for k_, amt in (('bass', 0.45), ('reese', 0.7), ('choir', 0.7), ('arp', 0.6), ('stabs', 0.4), ('lead', 0.3), ('dbl', 0.3), ('bell', 0.3)):
+        S[k_] = S[k_] * (1 - amt * (1 - duck))
+    LV = {'lead': 0, 'dbl': -8, 'echo': -12, 'echo2': -15, 'bell': -3, 'choir': -6, 'stabs': -7, 'arp': -9, 'bass': 7, 'reese': 1,
+          'kick': 5, 'toms': 0, 'snare': 3, 'hat': -6, 'crash': -7}
     g = GN.level(S, LV, 'lead')
     from scipy.signal import butter, sosfilt
     x = sum(S[k_] * g[k_] for k_ in S)
     x = sosfilt(butter(1, 30, btype='high', fs=SR, output='sos'), x)
-    side = S['arp'] * g['arp'] * 0.6 + S['choir'] * g['choir'] * 0.4 + S['hat'] * g['hat'] * 0.35 - S['stabs'] * g['stabs'] * 0.3 + S['bell'] * g['bell'] * 0.3
-    DYN = {'IN': (-5.0, -3.5), 'U1': (-3.0, 1.0), 'U2': (-3.0, 1.0), 'A': (0, 0), 'A2': (0.5, 0.5), 'B': (0.3, 0.8), 'B2': (1.2, 1.5),
-           'K': (-6.0, -2.5), 'G': (1.5, 2.2), 'A3': (2.0, 2.2)}
+    # (el grave, al centro; lo ancho, arriba: arpegios, colchón, charles… y el eco, que REBOTA: primero a un lado, luego al otro)
+    side = S['arp'] * g['arp'] * 0.6 + S['choir'] * g['choir'] * 0.4 + S['hat'] * g['hat'] * 0.35 - S['stabs'] * g['stabs'] * 0.3 + S['bell'] * g['bell'] * 0.3 \
+        + S['echo'] * g['echo'] * 0.9 - S['echo2'] * g['echo2'] * 0.9
+    DYN = {'IN': (-5.0, -3.5), 'U1': (-3.0, 1.0), 'UM': (-3.0, 1.0), 'U2': (-3.0, 1.0), 'A': (0, 0), 'A2': (0.3, 0.3), 'B': (0.3, 0.6), 'B2': (0.8, 1.0),
+           'K': (-8.0, -5.0), 'G': (1.0, 1.4), 'A3': (1.2, 1.4), 'B3': (1.4, 1.6), 'A4': (1.6, 1.8)}
     env = np.ones(len(x))
     for b in range(1, NB + 1):
         a_, e_ = DYN[tag[b - 1]]
@@ -310,12 +377,19 @@ def build(lufs=-9.5):
     ref = rms(starts[2], ends[2])
     print('  secciones (dB respecto a A): ' + ' · '.join('%s %+.1f' % (nm, rms(a, e) - ref) for nm, a, e in zip(ORDER, starts, ends)))
     drums = sum(np.mean((S[k_] * g[k_]) ** 2) for k_ in ('kick', 'toms', 'snare', 'hat', 'crash')) / sum(np.mean((S[k_] * g[k_]) ** 2) for k_ in S)
+    # el espectro, como se midió en la referencia (56 % por debajo de 120 Hz; 29 % en 20-60) y lo apretado del master
+    sp = np.abs(np.fft.rfft(mono[n_i:n_i + int(32 * BAR * SR)])) ** 2
+    fq = np.fft.rfftfreq(int(32 * BAR * SR), 1 / SR)[:len(sp)]
+    tot = sp[fq >= 20].sum()
+    crest = 20 * np.log10(np.abs(mono).max() / np.sqrt(np.mean(mono[n_i:] ** 2)))
+    print('  drop 1: %.0f %% de la energía por debajo de 120 Hz (%.0f %% en 20-60 Hz); cresta %.1f dB' % (
+        100 * sp[(fq >= 20) & (fq < 120)].sum() / tot, 100 * sp[(fq >= 20) & (fq < 60)].sum() / tot, crest))
     low = sum(np.mean((S[k_] * g[k_]) ** 2) for k_ in ('bass', 'reese')) / sum(np.mean((S[k_] * g[k_]) ** 2) for k_ in S)
     nb = int(BAR * SR)
     a_, c_ = mono[n_i - nb:n_i], mono[n - nb:n]
     lvl = 10 * np.log10(np.mean(a_ ** 2) / np.mean(c_ ** 2))
     quiet = 10 * np.log10(np.mean(c_[int(nb * 0.8):] ** 2) / np.mean(c_[:nb // 2] ** 2) + 1e-12)
-    per_s = len([1 for b, st, nn, d in mel if tag[b - 1] in THEME]) / (24 * BAR)
+    per_s = len([1 for b, st, nn, d in mel if tag[b - 1] in THEME]) / (32 * BAR)
     print(f'  {BPM} BPM, intro {INTRO} + bucle {NB - INTRO} compases ({(NB - INTRO) * BAR:.1f} s); batería {100 * drums:.0f} % de la energía, bajo {100 * low:.0f} %; '
           f'{per_s:.1f} notas de melodía por segundo en el tema')
     print(f'  subida de la intro frente a la del bucle: nivel {lvl:+.1f} dB · silencio antes del drop: {quiet:.0f} dB respecto al compás')

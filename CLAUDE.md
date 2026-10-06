@@ -2183,6 +2183,28 @@ again. No dialogue or text: animation + music.
   has 56 % of its energy BELOW 120 Hz (29 % at 20-60 Hz: a real sub) where ours has 29 % (3 % at 20-60 Hz; our bass
   lives at 120-250 Hz), crest factor 10 dB vs our 13, and its form is long: ~16 quiet bars (−8 dB), a build, a drop
   held ~32 bars at full level, a breakdown back at −8 dB, a second drop. Ours: 8-bar sections, breather only −4 dB.
+- **CHASE v3 (3.81.0; the user: "it still stays fixed at the left wall — it should WALK around, cross from side to
+  side, climb platforms and attack organically").** 'stalk' is now `Chase:roam`: a walking body (gravity +
+  `Entity.moveAndCollide`, no route) that runs at `RUN` 430 px/s to a point `SIDE_D` tiles to one SIDE of the player
+  and then the other (switching every 1.1-2.4 s, clamped to the screen), jumps walls and gaps, takes a high (and
+  double) jump when blocked or when the player is above, hops out of lava / spikes unharmed (`onDeadlyGround`), and
+  ploughs through the player on the way (`HIT_TOUCH` in its direction). Stuck `STUCK_T`, left behind or off screen →
+  it shatters and reappears standing next to the player (`kind = 'blink'`, `blinkSpot`). New attack from wherever it
+  stands, POUNCE ('pounce': arcs up over the player in 0.45 s with a floor mark, then the usual 'dive'); `KINDS` =
+  pounce, dash, dive, shove... After any attack it keeps walking from where it ended (no return to the edge). The
+  walk / jump frame travels in the standard `frame` field (6 run, 2 rise, 1 fall). Harness `persecucion`: switches
+  sides ≥ 6 times, jumps the low walls, near the left edge < 35 % of the time (measured 4 %).
+- `mirror_chase` v2 (3.81.0, from the user's written genre guide + the measurements; verified by numbers only):
+  dancefloor FORM — intro 4 + build 4 | DROP 1 = 32 bars (A A' B B') · BREAKDOWN 8 (i–VI–III–VII on the bell, no kick
+  at first, −7 dB) · build 4 · DROP 2 = 32 bars (G A'' B'' A''') · build 4 = 80-bar loop (110.3 s; the intro stays
+  short on purpose: it is a chase level). BASS in two layers: an almost pure SUB (triangle) an octave lower (F#1 = 46
+  Hz), held with the kick, and a REESE on top (two saws 0.17 semitone apart + a growling pulse) with its own 3+3+2
+  stabs. SIDECHAIN in the sample domain: bass, pad, arps, stabs and lead duck on every kick (and a little on the
+  snare). Drums: two-step with a two-layer snare (dry crack + body), ghost notes, 16th hats with accents and open
+  offbeats, a ride in drop 2, a break every 4 bars and a fill every 8, an impact (deep kick + crash) on each drop.
+  Lead = two detuned saws + octave, with a ping-pong echo (3 and 6 sixteenths, opposite sides). Master −9 LUFS.
+  Measured against the reference: energy below 120 Hz 55 % (ref 56), 20-60 Hz 15 % (ref 29), crest 9.2 dB (ref 10.1).
+  The level lasts ~86 s, so in a clean run you hear the intro, drop 1, the breakdown, the build and ~14 s of drop 2.
 - HUD: `BossHud.drawRun(level, entities)` (both level states): **"¡CORRE!" / "RUN!"** (`hud.run`) top centre while
   the camera runs, instead of any boss bar.
 - Music `mirror_chase` (`tools/music/mirror_chase.py`, intro + loop, verified by numbers only): DRUM & BASS as fast

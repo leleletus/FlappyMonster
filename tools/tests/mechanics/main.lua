@@ -992,8 +992,8 @@ function cases.saltarin()
             .. (' · pasea: con ruta 16-24 va de %.1f a %.1f, sin ruta de %.1f a %.1f, mira adonde salta=%s'):format(r0, r1, w0, w1, tostring(f1 and f2))))
 end
 
--- EL ESPEJO PERSIGUIENDO (mirrorchase), suelto por el nivel: encadena sus tres ataques (picado desde el espejo,
--- embestida de lado a lado, empujón de frente), golpea y EMPUJA al jugador (hacia atrás), no se le puede hacer nada
+-- EL ESPEJO PERSIGUIENDO (mirrorchase), suelto por el nivel: ANDA (cambia de lado, salta muretes, no vive pegado al
+-- borde) y encadena sus ataques (salto-ataque, picado desde el espejo, embestida de lado a lado, empujón de frente), golpea y EMPUJA al jugador (hacia atrás), no se le puede hacer nada
 -- (las reglas normales no van con él) y al acabar la carrera se va
 function cases.persecucion()
     local AutoScroll = require 'src/world/AutoScroll'
@@ -1004,6 +1004,7 @@ function cases.persecucion()
         for c = 1, 140 do row[c] = (r == 11 or r == 1 or c == 1 or c == 140) and 1 or 0 end
         tiles[r] = row
     end
+    for c = 30, 120, 18 do tiles[10][c], tiles[9][c], tiles[10][c + 1] = 1, 1, 1 end      -- muretes de 2 por el camino: los salta
     local level = Level.fromData({ name = 'huida', width = 140, height = 11, playerStart = { 10, 10 }, tiles = tiles,
         entities = { { type = 'mirrorchase', col = 3, row = 8, props = { rest = 0.5 } } },
         autoScroll = { startCol = 1, endCol = 140, speed = 160, width = 20, margin = 0.6, countdown = 0.5 } })
@@ -1014,6 +1015,8 @@ function cases.persecucion()
     local pa = playerAt(level, 10, 10)
     local a = level.autoScroll
     local seen, kinds, hits, back, strike0 = {}, {}, 0, 0, Boss.strike
+    local sides, lastSide, jumped, atEdge, frames = 0, 0, false, 0, 0
+    ch._quiet = true
     Boss.strike = function(p, hit, dir)
         local ok = strike0(p, hit, dir)
         if ok then hits = hits + 1; if dir < 0 then back = back + 1 end end
@@ -1028,7 +1031,14 @@ function cases.persecucion()
         pa:update(1 / 60, level)
         ch:update(1 / 60, level)
         seen[ch.state] = true
-        if ch.state == 'portal' or ch.state == 'aim' then kinds[ch.kind] = true end
+        if ch.state == 'portal' or ch.state == 'aim' or ch.state == 'pounce' then kinds[ch.kind] = true end
+        if ch.state == 'stalk' and a.state == 'run' then
+            local sd = (ch.x > pa.x) and 1 or -1
+            if sd ~= lastSide then sides, lastSide = sides + 1, sd end
+            if not ch.onGround and ch.vy < 0 then jumped = true end
+            frames = frames + 1
+            if ch.x < a.x + 2.5 * T then atEdge = atEdge + 1 end
+        end
         if a.state == 'run' and (ch.x < a.x - 4 * T or ch.x > a.x + a.W + 2 * T) then inside = false end
         if a.state == 'stop' then break end
     end
@@ -1037,9 +1047,10 @@ function cases.persecucion()
     a.state = 'stop'                                                   -- (la carrera acaba)
     for _ = 1, 60 do ch:update(1 / 60, level) end
     local all = seen.stalk and seen.warp_out and seen.portal and seen.dive and seen.aim and seen.rush
-    local ok = all and kinds.dive and kinds.dash and kinds.shove and hits >= 4 and back >= 2 and inside and r1 == nil and not ch.alive
-    check('persecucion', ok, ('estados vistos todos=%s · ataques: picado=%s embestida=%s empujón=%s · golpes al jugador %d (hacia atrás %d) · no se sale de la pantalla=%s · reglas normales con él=%s · al acabar se va=%s'):format(
-        tostring(all), tostring(kinds.dive), tostring(kinds.dash), tostring(kinds.shove), hits, back, tostring(inside), tostring(r1), tostring(not ch.alive)))
+    local ok = all and seen.pounce and kinds.dive and kinds.dash and kinds.shove and kinds.pounce and hits >= 4 and inside and r1 == nil and not ch.alive
+        and sides >= 6 and jumped and atEdge / math.max(1, frames) < 0.35
+    check('persecucion', ok, ('estados vistos todos=%s · ataques: picado=%s embestida=%s empujón=%s · golpes al jugador %d (hacia atrás %d) · no se sale de la pantalla=%s · reglas normales con él=%s · al acabar se va=%s · SUELTO: cambia de lado del jugador %d veces, salta=%s, salto-ataque=%s, pegado al borde izquierdo el %d %% del tiempo'):format(
+        tostring(all), tostring(kinds.dive), tostring(kinds.dash), tostring(kinds.shove), hits, back, tostring(inside), tostring(r1), tostring(not ch.alive), sides, tostring(jumped), tostring(kinds.pounce), math.floor(100 * atEdge / math.max(1, frames))))
 end
 
 function cases.encerrado()

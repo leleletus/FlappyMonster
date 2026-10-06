@@ -9,7 +9,13 @@
 --   · EMBESTIDA (dash): aparece en el lado DERECHO de la pantalla a la altura del jugador, avisa con una línea y
 --     cruza la pantalla entera hacia la izquierda. Se salta.
 --   · EMPUJÓN (shove): aparece justo delante del jugador y carga corto contra él.
--- Entre ataques ('stalk') vuelve al borde izquierdo un instante. Si alguien muere, se ríe.
+-- Entre ataques ('stalk') ANDA SUELTO por el nivel como un jugador más (3ª versión; el usuario: que no se quede fijo
+-- en la pared izquierda — "que camine por ahí, pase de un lado a otro, suba a plataformas y ataque de forma más
+-- orgánica"): corre (más que el jugador) hacia un punto a un lado u otro de él, alternando, salta paredes y huecos,
+-- sube a donde esté el jugador (salto alto y doble), y al cruzarse con él lo arrolla y lo empuja. La lava y los
+-- pinchos no le hacen nada (sale de un salto). Si se queda atrás, fuera de la pantalla o atascado, se rompe y
+-- reaparece junto al jugador. Y también ataca desde donde esté: SALTO (pounce) — brinca por encima y cae en picado.
+-- Si alguien muere, se ríe.
 --
 -- Solo simula en un jugador / el servidor; el cliente dibuja lo que llega (x, y, estado, deadTimer + netPack: la
 -- marca, hacia dónde va y qué ataque es). Sin cámara automática en el nivel se queda quieto.
@@ -41,8 +47,12 @@ local GRACE   = 0.7                  -- s sin volver a golpear tras un golpe
 local HIT_DIVE  = { 1, 620, -420, 0.3, 0.35 }
 local HIT_RUSH  = { 1, 980, -340, 0.4, 0.3 }
 local HIT_TOUCH = { 1, 560, -320, 0.25, 0 }
-local KINDS   = { 'dive', 'dash', 'shove', 'dash', 'dive', 'shove' }
-local DANGER  = { stalk = true, dive = true, rush = true, recover = true, aim = true }
+local KINDS   = { 'pounce', 'dash', 'dive', 'shove', 'pounce', 'dash', 'dive' }
+local RUN     = 430                  -- px/s andando suelto (el jugador: 240; la cámara: ~160)
+local JUMP_H  = { 2.2, 4.3 }         -- casillas: salto normal / salto alto (para subir adonde esté el jugador)
+local SIDE_D  = { 3, 6 }             -- a cuántas casillas del jugador va (a un lado y luego al otro)
+local STUCK_T = 0.9                  -- s sin avanzar → se teletransporta
+local POUNCE_UP = 3.6 * T
 local HIDDEN  = { warp_out = true, left = true }
 
 local frames, Mirror
@@ -57,13 +67,16 @@ end
 function Chase.sizePx() return FW * S, FH * S end
 
 function Chase:init()
-    self.moving, self.flying, self.vx, self.vy = false, true, 0, 0
+    self.moving, self.flying, self.vx, self.vy = false, false, 0, 0      -- (anda: la gravedad la lleva él en roam)
     self.state, self.deadTimer = 'lurk', 0
     self.facing = 1
     self.restT = 1.6
     self.kindI, self.kind = 0, 'dive'
     self.markX, self.markY, self.dir = self.x, self.y, 1
     self.graceT = 0
+    self.leftBoundPx, self.rightBoundPx = -math.huge, math.huge       -- (sin ruta)
+    self.speed = 0
+    self.side, self.sideT, self.stuckT, self.jumps = 1, 0, 0, 0
 end
 
 function Chase:canBeStomped() return false end
@@ -115,9 +128,78 @@ function Chase:hitPlayers(level, hit, dir)
     return any
 end
 
+-- ANDAR SUELTO: corre hacia un punto a un lado del jugador (y luego al otro), salta lo que haga falta
+function Chase:roam(dt, level, a, pa)
+    local g = ADV_GRAVITY
+    self.sideT = self.sideT - dt
+    if self.sideT <= 0 then                                             -- cambia de lado
+        self.side = -self.side
+        self.sideT = 1.1 + math.random() * 1.3
+        self.sideD = (SIDE_D[1] + math.random() * (SIDE_D[2] - SIDE_D[1])) * T
+    end
+    local tx = (pa and pa.x or (a.x + a.W / 2)) + self.side * (self.sideD or 4 * T)
+    tx = math.max(a.x + 1.2 * T, math.min(a.x + a.W - 1.2 * T, tx))     -- dentro de la pantalla
+    local dx = tx - self.x
+    local dir = (dx > 12) and 1 or (dx < -12) and -1 or 0
+    -- (parado en su punto, corre con la cámara para no quedarse atrás)
+    local vx = (dir ~= 0) and dir * RUN or a.speed
+    if dir ~= 0 then self.facing = dir end
+    self.vy = self.vy + g * dt
+    local x0, wasGround = self.x, self.onGround
+    self:moveAndCollide(level, vx * dt, self.vy * dt)
+    self.vx = vx
+    local moved = math.abs(self.x - x0)
+    local jump
+    if self.onGround then
+        self.jumps = 0
+        local hw, feet = self.outerW / 2, self.y + self.outerH / 2
+        local ahead = self.x + (dir ~= 0 and dir or 1) * (hw + 20)
+        local blocked = dir ~= 0 and moved < math.abs(vx * dt) * 0.4
+        local gap = dir ~= 0 and not level:isEnemySolidAt(ahead, feet + 8) and not level:isEnemySolidAt(ahead, feet + 8 + T)
+        local up = pa and (feet - (pa.y + 40)) > 1.2 * T and math.abs(pa.x - self.x) < 5 * T
+        if blocked or up then jump = JUMP_H[2] elseif gap then jump = JUMP_H[1] end
+    elseif self.jumps < 2 and self.vy > 0 and dir ~= 0 and moved < math.abs(vx * dt) * 0.4 then
+        jump = JUMP_H[2]                                                -- (doble salto contra una pared)
+    end
+    -- la lava / los pinchos no le hacen nada: sale de un salto
+    if self:onDeadlyGround(level) then jump = JUMP_H[2]; self.jumps = 0 end
+    if jump then
+        self.vy = -math.sqrt(2 * g * jump * T)
+        self.onGround = false
+        self.jumps = self.jumps + 1
+        if not self._quiet then Sound.play('jump', 0.7, 0.6) end
+    end
+    self.frame = self.onGround and (dir ~= 0 and 6 or 3) or (self.vy < 0 and 2 or 1)
+    self:hitPlayers(level, HIT_TOUCH, dir ~= 0 and dir or 0)
+    -- atascado, atrás o fuera: se rompe y reaparece junto al jugador
+    if dir ~= 0 and moved < 1 then self.stuckT = self.stuckT + dt else self.stuckT = 0 end
+    if self.stuckT > STUCK_T or self.x < a.x - 1.5 * T or self.x > a.x + a.W + 2 * T or self.y > level.heightPx + T then
+        self.stuckT = 0
+        self.kind = 'blink'
+        self:enter('warp_out')
+        Entity.emitFx('mirror_shards', self.x, self.y)
+        Sound.play('mirrorWarp')
+    end
+end
+
+-- Dónde reaparecer de pie: cerca del jugador (al lado que toque), sobre el primer suelo
+function Chase:blinkSpot(level, a, pa)
+    local x = (pa and pa.x or (a.x + a.W / 2)) + self.side * 4 * T
+    x = math.max(a.x + 2 * T, math.min(a.x + a.W - 2 * T, x))
+    local fy = self:floorBelow(level, x, (pa and pa.y or self.y) - 2 * T)
+    return x, fy - self.outerH / 2 - 2
+end
+
 function Chase:pickAttack(level, a, pa)
     self.kindI = self.kindI % #KINDS + 1
     self.kind = KINDS[self.kindI]
+    if self.kind == 'pounce' then                                       -- SALTO: sin romperse, desde donde está
+        self.markX, self.markY = pa.x, self:floorBelow(level, pa.x, pa.y)
+        self.px0, self.py0 = self.x, self.y
+        self.facing = (pa.x >= self.x) and 1 or -1
+        self:enter('pounce'); Sound.play('jump', 0.6, 0.9)
+        return
+    end
     -- (el empujón de frente necesita sitio por delante dentro de la pantalla)
     if self.kind == 'shove' and pa.x + SHOVE_FROM > a.x + a.W - T then self.kind = 'dash' end
     self:enter('warp_out')
@@ -158,19 +240,22 @@ function Chase:updateCustom(dt, level)
     local every = (self.props.rest or 1.1)
     if st == 'lurk' then
         self:enter('stalk'); self.restT = every
+        self.vy, self.onGround = 0, false
         Sound.play('mirrorAppear')
     elseif st == 'stalk' then
-        -- vuelve al borde izquierdo y busca la altura del jugador
-        local tx = a.x + LEAD
-        self.x = self.x + (tx - self.x) * math.min(1, dt * 8)
-        if pa then self.y = self.y + math.max(-340 * dt, math.min(340 * dt, pa.y - self.y)) end
-        self.facing = 1
-        self:hitPlayers(level, HIT_TOUCH, 1)
+        self:roam(dt, level, a, pa)
+        if self.state ~= 'stalk' then return true end                    -- (se teletransportó)
         self.restT = self.restT - dt
-        if self.restT <= 0 and pa then self:pickAttack(level, a, pa) end
+        if self.restT <= 0 and pa and (self.onGround or self.kindI % #KINDS + 1 ~= 1) then self:pickAttack(level, a, pa) end
     elseif st == 'warp_out' then
         if t >= WARP_T then
-            if not pa then self:enter('stalk'); self.restT = 0.3; self.x = a.x + LEAD; return true end
+            if not pa or self.kind == 'blink' then                       -- (solo se recoloca: reaparece andando)
+                self.x, self.y = self:blinkSpot(level, a, pa)
+                self.vy, self.onGround = 0, false
+                self:enter('stalk'); self.restT = math.max(self.restT, 0.5)
+                Sound.play('mirrorAppear')
+                return true
+            end
             if self.kind == 'dive' then
                 self.x = pa.x
                 self.y = math.max(1.5 * T, pa.y - PORTAL_UP)
@@ -194,6 +279,16 @@ function Chase:updateCustom(dt, level)
         end
         self.x = self.x + a.speed * dt * 0                               -- (el espejo NO viaja con la cámara: se queda atrás)
         if t >= PORTAL_T then self:enter('dive'); Sound.play('gpStart') end
+    elseif st == 'pounce' then
+        -- brinca en arco hasta encima del jugador (0,45 s) y de ahí cae en picado sobre la marca
+        local u = math.min(1, t / 0.45)
+        if pa and u < 0.7 then self.markX = self.markX + math.max(-300 * dt, math.min(300 * dt, pa.x - self.markX)) end
+        self.markY = self:floorBelow(level, self.markX, (pa and pa.y or self.markY) - T)
+        local topY = math.max(1.5 * T, self.markY - self.outerH / 2 - POUNCE_UP)
+        self.x = self.px0 + (self.markX - self.px0) * u
+        self.y = self.py0 + (topY - self.py0) * (1 - (1 - u) * (1 - u))
+        self.frame = 2
+        if u >= 1 then self:enter('dive'); Sound.play('gpStart') end
     elseif st == 'dive' then
         local y1 = self.markY - self.outerH / 2
         self.y = math.min(y1, self.y + DIVE_V * dt)
@@ -211,7 +306,7 @@ function Chase:updateCustom(dt, level)
         end
     elseif st == 'recover' then
         self:hitPlayers(level, HIT_TOUCH, 0)
-        if t >= RECOVER_T then self:enter('stalk'); self.restT = every * (0.7 + 0.6 * math.random()) end
+        if t >= RECOVER_T then self:enter('stalk'); self.restT = every * (0.7 + 0.6 * math.random()); self.vy, self.onGround = 0, false end
     elseif st == 'aim' then
         local shove = self.kind == 'shove'
         -- (mientras avisa viaja con la cámara: si no, la pantalla se lo comería)
@@ -224,14 +319,14 @@ function Chase:updateCustom(dt, level)
         self:hitPlayers(level, HIT_RUSH, self.dir)
         if self.kind ~= 'shove' then self.markX = a.x - 1.5 * T end       -- (la embestida acaba al salir por el borde de AHORA)
         if (self.dir < 0 and self.x <= self.markX) or (self.dir > 0 and self.x >= self.markX) or t > 1.6 then
-            self:enter('stalk'); self.restT = every * (0.7 + 0.6 * math.random())
+            self:enter('stalk'); self.restT = every * (0.7 + 0.6 * math.random()); self.vy, self.onGround = 0, false
         end
     end
     return true
 end
 
 function Chase:netPack()
-    return { math.floor(self.markX or 0), math.floor(self.markY or 0), self.dir or 1, (self.kind == 'dive' and 1) or (self.kind == 'shove' and 3) or 2 }
+    return { math.floor(self.markX or 0), math.floor(self.markY or 0), self.dir or 1, (self.kind == 'dive' and 1) or (self.kind == 'shove' and 3) or 2 }      -- (el cuadro de andar / saltar va en `frame`, que ya viaja)
 end
 function Chase:netApply(a, b)
     if type(b[1]) ~= 'number' then return end
@@ -262,7 +357,9 @@ function Chase:render(camX, camY)
     local x, y = math.floor(self.x - camX), math.floor(self.y - camY)
     if st == 'warp_out' then return end                                  -- (roto en pedazos: las partículas)
     -- avisos
-    if st == 'portal' then
+    if st == 'pounce' then
+        Mirror.drawMark(math.floor((self.markX or self.x) - camX), math.floor((self.markY or self.y) - camY), now)
+    elseif st == 'portal' then
         Mirror.drawMark(math.floor((self.markX or self.x) - camX), math.floor((self.markY or self.y) - camY), now)
         Mirror.drawPortal(x, y, math.min(1, t / 0.2), now)
     elseif st == 'dive' then
@@ -280,7 +377,8 @@ function Chase:render(camX, camY)
         end
     end
     local fr, sx, sy, dx, dy = 3, 1, 1, 0, 0
-    if st == 'stalk' then fr, dy = (math.floor(now * 12) % 3) + 1, math.floor(math.sin(now * 5) * 4)
+    if st == 'stalk' then fr = (self.frame == 6 and (math.floor(now * 14) % 3) + 1) or (self.frame == 2 and 2) or (self.frame == 1 and ((math.floor(now * 6) % 2 == 0) and 1 or 3)) or 3
+    elseif st == 'pounce' then fr, sx, sy = 2, 0.9, 1.15
     elseif st == 'portal' then fr, sx, sy = 5, 0.9, 0.9
     elseif st == 'dive' then fr, sx, sy = 2, 0.85, 1.3
     elseif st == 'recover' then fr, sx, sy = 5, 1.15, 0.85
@@ -293,7 +391,7 @@ function Chase:render(camX, camY)
     if st == 'rush' or st == 'dive' or st == 'stalk' then                -- estela
         for i = 3, 1, -1 do
             love.graphics.setColor(1, 1, 1, 0.14 * (4 - i))
-            local ox = (st == 'rush') and -(self.dir or -1) * i * 38 or (st == 'stalk' and -i * 12 or 0)
+            local ox = (st == 'rush') and -(self.dir or -1) * i * 38 or (st == 'stalk' and -f * i * 12 or 0)
             local oy = (st == 'dive') and -i * 40 or 0
             love.graphics.draw(img, x + ox + dx, y + oy + dy, 0, S * sx * f, S * sy, FW / 2, FH / 2)
         end
