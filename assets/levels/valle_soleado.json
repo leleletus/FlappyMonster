@@ -27,23 +27,23 @@
   "entities": [
     {"col":16,"props":{"patrol":{"left":12,"right":21}},"row":14,"type":"gummy"},
     {"col":9,"row":11,"type":"star"},
-    {"col":30,"props":{"patrol":{"left":26,"right":34}},"row":13,"type":"crabby"},
+    {"col":30,"props":{"patrol":{"left":26,"right":34}},"row":13,"type":"crabby_river"},
     {"col":40,"row":8,"type":"star"},
     {"col":40,"props":{"patrol":{"left":38,"right":42}},"row":9,"type":"gummy"},
     {"col":56,"row":12,"type":"checkpoint"},
-    {"col":61,"props":{"patrol":{"left":53,"right":65}},"row":12,"type":"crabby"},
+    {"col":61,"props":{"patrol":{"left":53,"right":65}},"row":12,"type":"crabby_river"},
     {"col":70,"props":{"patrol":{"left":68,"right":73}},"row":14,"type":"gummy"},
     {"col":76,"row":10,"sub":1,"type":"spikefall"},
     {"col":79,"row":10,"sub":2,"type":"spikefall"},
     {"col":83,"row":10,"sub":1,"type":"spikefall"},
-    {"col":80,"props":{"patrol":{"left":75,"right":86}},"row":14,"type":"crabby"},
+    {"col":80,"props":{"patrol":{"left":75,"right":86}},"row":14,"type":"crabby_river"},
     {"col":78,"row":13,"type":"extralife"},
     {"col":95,"props":{"patrol":{"left":94,"right":96}},"row":11,"type":"gummy"},
     {"col":105,"props":{"patrol":{"left":104,"right":106}},"row":11,"type":"gummy"},
     {"col":99,"row":9,"type":"star"},
     {"col":106,"row":9,"type":"star"},
     {"col":111,"row":14,"type":"checkpoint"},
-    {"col":116,"props":{"patrol":false,"speed":60,"wallWalk":true},"row":14,"type":"crabby"}
+    {"col":116,"props":{"patrol":false,"speed":60,"wallWalk":true},"row":14,"type":"crabby_river"}
   ],
   "foliage": [
     {"col":4,"row":14,"type":"butterflies"},

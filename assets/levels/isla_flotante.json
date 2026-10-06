@@ -38,8 +38,8 @@
     {"col":47,"row":19,"type":"trampoline"},
     {"col":18,"row":7,"type":"star"},
     {"col":42,"row":7,"type":"star"},
-    {"col":25,"props":{"patrol":false,"points":6,"respawn":1,"speed":60,"wallWalk":true},"row":13,"type":"crabbytramp"},
-    {"col":36,"props":{"patrol":false,"points":6,"respawn":1,"speed":70,"wallWalk":true},"row":13,"type":"crabby"},
+    {"col":25,"props":{"patrol":false,"points":6,"respawn":1,"speed":60,"wallWalk":true},"row":13,"type":"crabbytramp_river"},
+    {"col":36,"props":{"patrol":false,"points":6,"respawn":1,"speed":70,"wallWalk":true},"row":13,"type":"crabby_river"},
     {"col":8,"props":{"patrol":{"left":4,"right":13},"points":4,"respawn":1},"row":19,"type":"gummy"},
     {"col":52,"props":{"patrol":{"left":48,"right":57},"points":4,"respawn":1},"row":19,"type":"gummy"}
   ],

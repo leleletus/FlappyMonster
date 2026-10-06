@@ -617,6 +617,21 @@ landing mark; sprites in `assets/images/bosses/common/`). Asset layout: enemies 
   River Crabby = body C (slim mossy shell) + Icy-Crabby-like legs with HAIRS; claws 1 the game's small claw / 2 furry
   "mitten" claws / 3 the Mega's big claw. Lava Crabby = wide basalt shell, claws A small / B big / C small with a
   red-hot edge; faces 1 ember eyes + loose cracks / 2 slit eyes with rock brows / 3 dark Crabby eyes + red-hot plates.
+- 3.77.0 (the last two variants, user's final picks; protocol v51): **Crabby de río** (`crabby_river` +
+  `crabbytramp_river`, meadow / forest levels) and **Crabby de lava** (`crabby_lava` + `crabbytramp_lava`, volcano).
+  Crabby SKINS `river` / `lava` with their own SHAPE (`tools/ui/make_crab_species.py --apply` → `assets/images/
+  crabby_river|crabby_lava/`: crab1-3, sink1..N — they SINK row by row like the icy one, `addSkin(..., { sink = n })` —,
+  hid, lookin, meat, dead, spike, claw_left-Sheet). River: 18x9 (NOT taller than the Crabby: user's rule), narrow
+  mossy shell, long legs with ONE green pixel column hugging them (like the Icy Crabby's orange; the loose "hairs" were
+  removed), no mouth. Lava: 18x9, wide low basalt shell, "face 1" (ember eyes + loose cracks, no mouth). CLAWS: the
+  same drawing language as the other Crabbies' (long hooked top finger, gap, short lower finger) but 5x5 — the Icy
+  Crabby's 7x7 reached from head to floor on these low bodies —, lava's with a red-hot edge; placed beside the shell
+  (`Crabby.SKINS.river.claw` x 4.4 / `lava` 5.4, y −1.6, inset 0.5) and animated by the shared `Crabby:drawClaws`.
+  Types come from ONE helper, `src/world/entities/CrabVariant.lua` (`defs(skin, label, name, trampName, desc)` = the
+  spike and trampoline defs as one editor card). `retheme.py --enemies`: meadow / forest → river, volcano → lava
+  (54 enemies in 11 levels; nav rebuilt). Test arena `tools/levelgen/arenas/crabbies_nuevos.json`. With this EVERY
+  island has its own Gummy and Crabby (coast = the originals). Not done: special covers (flower tuft / lava vent)
+  — they hide under the normal spike.
 - SECOND ROUND of variants (3.74.0, WAITING for approval; `FlappyMonster_pruebas/enemigos/variantes_v2.png`, maps `V2`
   in `make_enemy_designs.py`): the user's picks, redrawn as DIFFERENT SPECIES ("like the Icy Crabby vs the Crabby: other
   body shape, proportions, silhouette — not a recolour"): Cave Gummy = lilac PEAR with cut crystals; Magma Gummy =

@@ -509,7 +509,9 @@ ICY_CRABS = {'crabby': 'crabby_ice', 'crabbytramp': 'crabbytramp_ice', 'gummy': 
 # decoraciones). Nieve: los helados; volcán: Gummy de magma; fortaleza: Crabby de acero
 ISLAND_ENEMIES = {
     'snow': ICY_CRABS,
-    'volcano': {'gummy': 'gummy_magma'},
+    'volcano': {'gummy': 'gummy_magma', 'crabby': 'crabby_lava', 'crabbytramp': 'crabbytramp_lava'},
+    'meadow': {'crabby': 'crabby_river', 'crabbytramp': 'crabbytramp_river'},
+    'forest': {'crabby': 'crabby_river', 'crabbytramp': 'crabbytramp_river'},
     'fortress': {'crabby': 'crabby_fortress', 'crabbytramp': 'crabbytramp_fortress', 'gummy': 'gummy_fortress'},
     'cave': {'gummy': 'gummy_cave'},
 }

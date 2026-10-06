@@ -92,6 +92,12 @@ function Crabby.loadAssets()
     imgIdle1, imgIdle2, imgHid = sk.idle1, sk.idle2, sk.hid
     addSkin('ice', 'assets/images/crabby_ice/', { sink = 8 })
     addSkin('fortress', 'assets/images/crabby_fortress/', {})        -- (acero con remaches: types/crabby_fortress.lua)
+    -- Especies con OTRA forma (tools/ui/make_crab_species.py): se hunden fila a fila como el helado y llevan las
+    -- pinzas del juego en su color. `claw`: x desde el centro, y desde los pies (px de arte), cuánto se mete
+    addSkin('river', 'assets/images/crabby_river/', { sink = 5 })    -- (types/crabby_river.lua)
+    Crabby.SKINS.river.claw = { file = 'assets/images/crabby_river/claw_left-Sheet.png', w = 5, x = 4.4, y = -1.6, inset = 0.5 }
+    addSkin('lava', 'assets/images/crabby_lava/', { sink = 6 })      -- (types/crabby_lava.lua)
+    Crabby.SKINS.lava.claw = { file = 'assets/images/crabby_lava/claw_left-Sheet.png', w = 5, x = 5.4, y = -1.6, inset = 0.5 }
     -- Pinzas pequeñas del Crabby helado (tools/ui/make_icecrabby_claws.py, opción A "Mini Mega"):
     -- 2 cuadros 7x7 (abierta / cerrada), pinza IZQUIERDA (la derecha es su espejo); dónde van en
     -- px de arte del cuerpo como en el Mega (x desde el centro, y desde los pies, hacia dentro)
