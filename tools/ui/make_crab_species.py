@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 import make_enemy_designs as D
 
 IMG = D.ROOT
-RIVER = D.P('d8cc8c', 'a89c5a', '6e6638', e=D.NAVY, m='5aa040', M='8cd060')
+RIVER = D.P('d8cc8c', 'a89c5a', '6e6638', e=D.NAVY, m='5aa040', M='8cd060', n='3e7a2e')
 LAVA = D.P('804238', '5c2a26', '3e1a1c', e=D.FIRE3, E=D.FIRE2, f=D.FIRE)
 
 SPECIES = {
@@ -27,9 +27,11 @@ SPECIES = {
                "....ohbbbbbbso....",
                "....obebbbbeso....",
                "....oossssssoo...."],
-        legs=[["..om.om....mo.mo..", ".om..om....mo..mo.", "om...om....mo...mo", "o.....o....o.....o"],
-              ["..om.om....mo.mo..", "..om..om....mo.mo.", ".om...om....mo.mo.", ".o...o.......o.o.."],
-              ["..om.om....mo.mo..", ".om.om....mo..mo..", ".om.om....mo...mo.", "..o.o......o....o."]],
+        # (el verdín de las patas: en TONOS de verde — claro M, medio m, oscuro n —, solo en su parte de arriba: las dos
+        # filas de abajo van limpias, no llega al suelo. Antes era una columna de un solo verde hasta el pie)
+        legs=[["..om.oM....Mo.mo..", ".on..om....mo..no.", "o....o......o....o", "o.....o....o.....o"],
+              ["..om.oM....Mo.mo..", "..on..om....mo.no.", ".o....o......o..o.", ".o...o.......o.o.."],
+              ["..om.oM....Mo.mo..", ".on.om....mo..no..", ".o..o......o....o.", "..o.o......o....o."]],
         look=2,                                            # el "asomado": desde esta fila del caparazón
         dead=["........oommoo........",
               "....oohhbbmmbbbboo....",
@@ -40,16 +42,16 @@ SPECIES = {
         pal=LAVA, claw_pal=dict(LAVA, h=D.FIRE3),
         shell=[".....oooooooo.....",
                "....ohbbfbbbso....",
-               "...ohbbbfebbbfso..",
-               "...obEbbbbbbEbso..",
-               "...obefbbbbbebso..",
+               "...ohbbbfebbfso...",
+               "...obEbbbbbbEso...",
+               "...obefbbbbebso...",
                "...oossssssssoo..."],
         legs=[["...o.o.o..o.o.o...", "..o..o.o..o.o..o..", ".o...o.o..o.o...o."],
               ["...o.o.o..o.o.o...", "...o.o..o.o..o.o..", "..o..o..o.o..o..o."],
               ["...o.o.o..o.o.o...", "..o.o.o....o.o.o..", ".o..o.o....o.o..o."]],
         look=2,
         dead=["......oooooooooo......",
-              "...oohbbbfbbbbfbbsoo..",
+              "...oohbbfbbbbfbbsoo...",
               "o.oobEEbbbbbbbEEbsoo.o",
               ".oossssssssssssssssoo.",
               "o..oooooooooooooooo..o"]),
@@ -65,7 +67,15 @@ def img(rows, pal):
     return D.maps(rows, pal)
 
 
+def symmetric(rows):
+    """¿La SILUETA (lo que no es transparente) es simétrica? (el Crabby de lava salió con un bulto a un lado)"""
+    return all([c != '.' for c in r] == [c != '.' for c in reversed(r)] for r in rows)
+
+
 def build(name, sp):
+    assert symmetric(sp['shell']), name + ': caparazón asimétrico'
+    assert symmetric(sp['legs'][0]), name + ': patas (quieto) asimétricas'
+    assert symmetric(sp['dead']), name + ': aplastado asimétrico'
     out = {}
     shell, n = sp['shell'], len(sp['shell'])
     w = len(shell[0])

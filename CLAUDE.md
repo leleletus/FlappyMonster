@@ -632,6 +632,10 @@ landing mark; sprites in `assets/images/bosses/common/`). Asset layout: enemies 
   (54 enemies in 11 levels; nav rebuilt). Test arena `tools/levelgen/arenas/crabbies_nuevos.json`. With this EVERY
   island has its own Gummy and Crabby (coast = the originals). Not done: special covers (flower tuft / lava vent)
   — they hide under the normal spike.
+  3.77.1 (user): the Lava Crabby's shell had a BULGE on one side (three rows were 13 px wide in an 18-px canvas) —
+  fixed, and `make_crab_species.py` now ASSERTS that shell, standing legs and dead frame have a symmetric silhouette.
+  River Crabby legs: the moss is no longer one flat green column down to the foot — three greens (M light, m, n dark),
+  only on the UPPER part of each leg, the bottom 2 pixel rows clean (it must not reach the ground).
 - SECOND ROUND of variants (3.74.0, WAITING for approval; `FlappyMonster_pruebas/enemigos/variantes_v2.png`, maps `V2`
   in `make_enemy_designs.py`): the user's picks, redrawn as DIFFERENT SPECIES ("like the Icy Crabby vs the Crabby: other
   body shape, proportions, silhouette — not a recolour"): Cave Gummy = lilac PEAR with cut crystals; Magma Gummy =
