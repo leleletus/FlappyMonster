@@ -261,14 +261,40 @@ for y in range(3, H - 2):
             mouths += 1
 
 # ── Bichos que pasean (de un lado a otro por el MISMO llano; peces en el agua) ─
+# (el TIPO sale de la ISLA donde caen — `critter_type` —: cada isla enseña SUS Gummies, Crabbies y Saltarines, como
+# en los niveles; en las cuevas, además del Crabby de cueva, el lúgubre)
 CRITTERS = [
-    ('gummy', 6, 11, 41), ('crabby', 17, 22, 36), ('gummy', 9, 14, 28), ('crabby', 3, 7, 35),
-    ('crabby', 33, 38, 36), ('gummy', 43, 47, 41), ('puffer', 28, 33, 44), ('puffer', 50, 55, 44),
-    ('bomb', 60, 65, 35), ('crabby', 70, 75, 41), ('bomb', 64, 69, 30),
-    ('crabby_ice', 62, 67, 14), ('gummy_ice', 69, 74, 15), ('crabby_ice', 56, 60, 19),
-    ('gloomy', 12, 17, 12), ('gloomy', 21, 26, 9), ('gloomy', 8, 11, 18),
+    # pradera
+    ('gummy', 6, 11, 41), ('crabby', 17, 22, 36), ('gummy', 9, 14, 28), ('crabby', 3, 7, 35), ('hopper', 12, 17, 32), ('hopper', 5, 10, 38),
+    # costa
+    ('crabby', 33, 38, 36), ('gummy', 43, 47, 41), ('hopper', 36, 41, 43), ('crabby', 30, 34, 39),
+    ('puffer', 28, 33, 44), ('puffer', 50, 55, 44),
+    # fortaleza
+    ('bomb', 60, 65, 35), ('crabby', 70, 75, 41), ('bomb', 64, 69, 30), ('gummy', 62, 67, 38), ('hopper', 72, 77, 33),
+    # cumbres
+    ('crabby', 62, 67, 14), ('gummy', 69, 74, 15), ('crabby', 56, 60, 19), ('hopper', 60, 65, 9),
+    # cuevas
+    ('gloomy', 12, 17, 12), ('gloomy', 21, 26, 9), ('gloomy', 8, 11, 18), ('crabby', 14, 19, 7), ('gummy', 22, 27, 14), ('hopper', 10, 15, 15),
+    # volcán
+    ('gummy', 39, 44, 14), ('crabby', 40, 45, 21), ('hopper', 37, 42, 23),
     ('puffer', 36, 41, 8), ('puffer', 52, 57, 26),
 ]
+ISLE_OF = {'w': 'nieve', 'c': 'cueva', 'f': 'fortaleza', 'l': 'volcan'}
+ISLE_TYPES = {
+    'pradera':   {'crabby': 'crabby_river', 'hopper': 'hopper_pradera'},
+    'costa':     {'hopper': 'hopper_costa'},
+    'fortaleza': {'gummy': 'gummy_fortress', 'crabby': 'crabby_fortress', 'hopper': 'hopper_fortaleza'},
+    'nieve':     {'gummy': 'gummy_ice', 'crabby': 'crabby_ice', 'hopper': 'hopper_nieve'},
+    'cueva':     {'gummy': 'gummy_cave', 'crabby': 'crabby_cave', 'hopper': 'hopper_cueva'},
+    'volcan':    {'gummy': 'gummy_magma', 'crabby': 'crabby_lava', 'hopper': 'hopper_volcan'},
+}
+
+
+def critter_type(t, x, y):
+    isle = ISLE_OF.get(grid[y][x]) or ('pradera' if x <= 26 else 'costa')      # (hierba y arena: pradera al oeste, costa al este)
+    return ISLE_TYPES[isle].get(t, t)
+
+
 critters = []
 for t, x0, x1, y in CRITTERS:
     if t == 'puffer':      # (coordenadas a mano: el juego los lleva al mar abierto más cercano — StoryMapState loadMap)
@@ -285,7 +311,9 @@ for t, x0, x1, y in CRITTERS:
                 best = run
             run = [x] if ok and run and h(x, y) != h(run[0], y) else ([] if not ok else run)
     if best and len(best) >= 3:
-        critters.append({'t': t, 'x0': best[0], 'x1': best[-1], 'y': y})
+        critters.append({'t': critter_type(t, best[0], y), 'x0': best[0], 'x1': best[-1], 'y': y})
+    else:
+        print('  (bicho sin sitio: %s %d-%d fila %d)' % (t, x0, x1, y))
 
 # El jefe de cada mundo, en pequeño junto a su castillo (sus sprites del juego; fw = ancho de cuadro)
 BOSS_ART = {

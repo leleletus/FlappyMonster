@@ -2245,6 +2245,14 @@ again. No dialogue or text: animation + music.
   Mega: class field `MS` (Mega 10, Icy Mega 9 = 162x117, was 180x130; `self.MS` in size and drawing) and
   `Mega:smallK()` (`smallPx` = the scale of its small crab when it deflates and flees). Head spike, claw offsets (art
   px) and hitbox fractions follow the body. Harness `icecrabby_rules` measures with each crab's own scale.
+- 3.83.1 WORLD MAP critters per island (it only had the plain Gummy / Crabby + icy ones + Gloomies): in
+  `make_overworld.py` the `CRITTERS` list says KIND (gummy / crabby / hopper / gloomy / bomb / puffer) and
+  `critter_type` picks the type from the ISLAND where its run lands (`ISLE_TYPES`; grass and sand: x ≤ 26 = meadow,
+  else coast): meadow Gummy + River Crabby, coast the originals, fortress wind-up Gummy + steel Crabby (+ bombs),
+  summits icy, caves Cave Gummy + Cave Crabby + Gloomies, volcano Magma Gummy + Lava Crabby (the volcano had none) —
+  and a HOPPER of its skin on every island. `StoryMapState` `CRITTER`: the new types (river / lava claws like in game)
+  and `hopper_<isla>` (`hop = true`: stands, crouches, jumps in an arc, ~1 hop per second; `left` = art faces left).
+  Hoppers are still in NO story level except huida_del_espejo (and the EnemyTest gallery).
 - HUD: `BossHud.drawRun(level, entities)` (both level states): **"¡CORRE!" / "RUN!"** (`hud.run`) top centre while
   the camera runs, instead of any boss bar.
 - Music `mirror_chase` (`tools/music/mirror_chase.py`, intro + loop, verified by numbers only): DRUM & BASS as fast

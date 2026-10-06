@@ -67,11 +67,27 @@ local CRITTER = {
     -- aspecto — `Crabby.SKINS.ice.claw` en types/crabby.lua —; en el mapa iba sin ellas)
     crabby_ice = { files = { 'assets/images/crabby_ice/crab1.png', 'assets/images/crabby_ice/crab2.png', 'assets/images/crabby_ice/crab3.png' }, spd = 1.4,
                    claw = { file = 'assets/images/crabby_ice/claw_left-Sheet.png', w = 7, x = 5.6, y = -0.6, inset = 1.0 } },
+    -- CADA ISLA con los suyos (los mismos sprites y las mismas pinzas que en los niveles: `Crabby.SKINS[..].claw`)
+    gummy_fortress = { files = { 'assets/images/gummy_fortress/gummy1.png', 'assets/images/gummy_fortress/gummy2.png' }, spd = 1.2 },
+    gummy_cave = { files = { 'assets/images/gummy_cave/gummy1.png', 'assets/images/gummy_cave/gummy2.png' }, spd = 1.2 },
+    gummy_magma = { files = { 'assets/images/gummy_magma/gummy1.png', 'assets/images/gummy_magma/gummy2.png' }, spd = 1.2 },
+    crabby_river = { files = { 'assets/images/crabby_river/crab1.png', 'assets/images/crabby_river/crab2.png', 'assets/images/crabby_river/crab3.png' }, spd = 1.6,
+                     claw = { file = 'assets/images/crabby_river/claw_left-Sheet.png', w = 5, x = 4.4, y = -1.6, inset = 0.5 } },
+    crabby_fortress = { files = { 'assets/images/crabby_fortress/crab1.png', 'assets/images/crabby_fortress/crab2.png', 'assets/images/crabby_fortress/crab3.png' }, spd = 1.6 },
+    crabby_cave = { files = { 'assets/images/crabby_cave/crab1.png', 'assets/images/crabby_cave/crab2.png', 'assets/images/crabby_cave/crab3.png' }, spd = 1.5 },
+    crabby_lava = { files = { 'assets/images/crabby_lava/crab1.png', 'assets/images/crabby_lava/crab2.png', 'assets/images/crabby_lava/crab3.png' }, spd = 1.5,
+                    claw = { file = 'assets/images/crabby_lava/claw_left-Sheet.png', w = 5, x = 5.4, y = -1.6, inset = 0.5 } },
     bomb = { sheet = 'assets/images/bomb/bomb-Sheet.png', fw = 15, frames = { 2, 3 }, spd = 1.1 },
     puffer = { sheet = 'assets/images/puffer_fish/puffer_fish-Sheet.png', fw = 16, frames = { 1, 2 }, spd = 0.9, swim = true },
     gloomy = { sheet = 'assets/images/gloomy/gloomy-Sheet.png', fw = 26, frames = { 1, 2, 3 }, spd = 1.0,
                glow = 'assets/images/gloomy/glow-Sheet.png' },
 }
+
+-- SALTARINES (uno por isla): no andan, van a BOTES (se agachan, saltan en arco, caen). Su arte mira a la IZQUIERDA.
+-- Cuadros de su tira: 1 quieto, 2 agachado, 3 en el aire
+for _, isle in ipairs({ 'pradera', 'costa', 'fortaleza', 'nieve', 'cueva', 'volcan' }) do
+    CRITTER['hopper_' .. isle] = { sheet = 'assets/images/hopper/' .. isle .. '-Sheet.png', fw = 16, hop = true, spd = 1.5, left = true }
+end
 
 -- Formaciones del relieve del mapa (colinas, picos, rocas, bocas de cueva…): una nueva = un PNG en
 -- assets/images/story/features/ + su nombre en el overworld.json
@@ -704,10 +720,24 @@ function StoryMapState:_drawCritters(cx, cy)
             local dir = (u < 1) and 1 or -1
             local q = (u < 1) and u or (2 - u)
             q = q * q * (3 - 2 * q)
+            local hopFrame
+            if def.hop then
+                -- a botes de ~1,5 casillas: parado (quieto → agachado) y luego el salto en arco
+                local raw = (u < 1) and u or (2 - u)
+                local n = math.max(1, math.floor(len / 1.5 + 0.5))
+                local k = math.min(n - 1, math.floor(raw * n))
+                local f = raw * n - k
+                if dir < 0 then f = 1 - f end                             -- (de vuelta: el mismo bote al revés)
+                local a = math.max(0, (f - 0.4) / 0.6)
+                hopFrame = (f < 0.22 and 1) or (f < 0.4 and 2) or 3
+                q = (k + ((dir < 0) and (1 - a) or a)) / n
+                self._hopDy = -math.sin(a * math.pi) * 14
+            end
             local x = (c.x0 + 0.5 + len * q) * C - cx
             local y = (c.y + 1) * C - cy - 6 + (def.swim and math.floor(math.sin(self.t * 2 + i) * 3) or 0)
+            if def.hop then y = y + math.floor(self._hopDy) end
             if x > -60 and x < WINDOW_W + 60 and y > -20 and y < WINDOW_H + 60 then
-                local fi = (math.floor(self.t * 6 + i) % #(def.files or def.frames)) + 1
+                local fi = (math.floor(self.t * 6 + i) % #(def.files or def.frames or { 1 })) + 1
                 love.graphics.setColor(1, 1, 1, 1)
                 if def.files then
                     local im = img(def.files[fi])
@@ -728,7 +758,9 @@ function StoryMapState:_drawCritters(cx, cy)
                     end
                 else
                     local im = img(def.sheet)
-                    drawBottom(im, frameQ(im, def.fw, def.frames[fi]), x, y, 2, def.fw, im:getHeight(), dir < 0)
+                    local flip = dir < 0
+                    if def.left then flip = not flip end
+                    drawBottom(im, frameQ(im, def.fw, hopFrame or def.frames[fi]), x, y, 2, def.fw, im:getHeight(), flip)
                     if def.glow then
                         local gi = img(def.glow)
                         love.graphics.setBlendMode('add')
