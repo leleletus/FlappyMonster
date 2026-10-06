@@ -24,7 +24,7 @@ def huida_del_espejo():
     L.extra.update(name_en='Mirror Escape', background='volcano', time='dusk')
     L.auto_scroll = {'countdown': 3, 'endCol': W, 'margin': 0.6, 'speed': 160, 'startCol': 1, 'width': 20}
     L.terrain(2, W - 1, G)
-    L.ent('mirrorchase', 3, G - 2, lungeEvery=7, lungeDist=5)
+    L.ent('mirrorchase', 3, G - 2)
     c, m = 24, 0
     while c < W - 30:
         k = m % 9

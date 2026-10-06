@@ -2166,6 +2166,23 @@ again. No dialogue or text: animation + music.
   run ends (shatters, gone). SP/server compute it; clients draw x, y, state, deadTimer from snapshots. Drawn like the
   Mirror (the player's sprites through an invert shader) with a trail and hard dark bands behind it. Not a `boss` for
   the systems (no zone, no bar, no shard).
+- **CHASE v2 (3.80.0, protocol v54; the user: glued to the edge with a little lunge now and then was "very easy" — he
+  wanted the boss FREE in the level, immune to it, teleporting, attacking and PUSHING: intense, frantic).** The
+  paragraph above describes v1; `mirrorchase` now: collides with nothing, `isGhost` (the normal player ↔ entity rules
+  don't apply; it hits from its own update with `Boss.strike`), and chains attacks with `rest` s between them (prop,
+  default 1.1): 'stalk' (back at the left edge, following the player's height; touching it = 1 HP + a shove forward) →
+  'warp_out' (shatters) → one of `KINDS` in order: DIVE ('portal': the floating mirror — `Mirror.drawPortal/drawMark`,
+  now exported by mirror.lua — above the player, follows then locks, floor mark → 'dive' → hit + a knockback wave →
+  'recover'), DASH ('aim' at the RIGHT edge at the player's height with a dashed line, travelling with the camera →
+  'rush' across the whole screen to the left), SHOVE (appears 4 tiles ahead of the player, short charge at them).
+  Every hit = 1 HP and a push, almost always BACKWARD, toward the auto-scroll edge, which is what kills (`GRACE` 0.7 s
+  between hits). Laughs when a player dies. netPack {markX, markY, dir, kind}. Harness `mechanics persecucion` (all
+  states and the three attacks seen, hits push backward, never leaves the screen, leaves at the end).
+- GENRE CHECK of `mirror_chase` against the user's reference (measured, not listened; the user: "fine, but it doesn't
+  really follow the genre"; a written guide is coming — DON'T rework the track before it): the reference is 172 BPM,
+  has 56 % of its energy BELOW 120 Hz (29 % at 20-60 Hz: a real sub) where ours has 29 % (3 % at 20-60 Hz; our bass
+  lives at 120-250 Hz), crest factor 10 dB vs our 13, and its form is long: ~16 quiet bars (−8 dB), a build, a drop
+  held ~32 bars at full level, a breakdown back at −8 dB, a second drop. Ours: 8-bar sections, breather only −4 dB.
 - HUD: `BossHud.drawRun(level, entities)` (both level states): **"¡CORRE!" / "RUN!"** (`hud.run`) top centre while
   the camera runs, instead of any boss bar.
 - Music `mirror_chase` (`tools/music/mirror_chase.py`, intro + loop, verified by numbers only): DRUM & BASS as fast

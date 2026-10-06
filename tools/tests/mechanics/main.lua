@@ -992,60 +992,54 @@ function cases.saltarin()
             .. (' · pasea: con ruta 16-24 va de %.1f a %.1f, sin ruta de %.1f a %.1f, mira adonde salta=%s'):format(r0, r1, w0, w1, tostring(f1 and f2))))
 end
 
--- EL ESPEJO PERSIGUIENDO (mirrorchase): va en el borde izquierdo de la cámara automática, embiste y vuelve, mata al
--- tocarlo (no con la invulnerabilidad de reaparecer), no se le puede pisar, y al acabar la carrera se va
+-- EL ESPEJO PERSIGUIENDO (mirrorchase), suelto por el nivel: encadena sus tres ataques (picado desde el espejo,
+-- embestida de lado a lado, empujón de frente), golpea y EMPUJA al jugador (hacia atrás), no se le puede hacer nada
+-- (las reglas normales no van con él) y al acabar la carrera se va
 function cases.persecucion()
     local AutoScroll = require 'src/world/AutoScroll'
+    local Boss = require 'src/world/entities/Boss'
     local tiles = {}
     for r = 1, 11 do
         local row = {}
-        for c = 1, 70 do row[c] = (r == 11 or r == 1 or c == 1 or c == 70) and 1 or 0 end
+        for c = 1, 140 do row[c] = (r == 11 or r == 1 or c == 1 or c == 140) and 1 or 0 end
         tiles[r] = row
     end
-    local level = Level.fromData({ name = 'huida', width = 70, height = 11, playerStart = { 10, 10 }, tiles = tiles,
-        entities = { { type = 'mirrorchase', col = 3, row = 8, props = { lungeEvery = 2, lungeDist = 5 } } },
-        autoScroll = { startCol = 1, endCol = 70, speed = 160, width = 20, margin = 0.6, countdown = 1 } })
+    local level = Level.fromData({ name = 'huida', width = 140, height = 11, playerStart = { 10, 10 }, tiles = tiles,
+        entities = { { type = 'mirrorchase', col = 3, row = 8, props = { rest = 0.5 } } },
+        autoScroll = { startCol = 1, endCol = 140, speed = 160, width = 20, margin = 0.6, countdown = 0.5 } })
     local es = {}
     for _, pl in ipairs(level.entities) do es[#es + 1] = Entities.create(pl) end
     level.liveEntities = es
     local ch = es[1]
     local pa = playerAt(level, 10, 10)
-    pa.immortal = true
     local a = level.autoScroll
-    local seen, lead, maxExtra, offRun = {}, nil, 0, 0
-    for _ = 1, 60 * 14 do
-        if a.state == 'run' then pa.x = a.x + 15 * T end            -- (el jugador, siempre por delante)
+    local seen, kinds, hits, back, strike0 = {}, {}, 0, 0, Boss.strike
+    Boss.strike = function(p, hit, dir)
+        local ok = strike0(p, hit, dir)
+        if ok then hits = hits + 1; if dir < 0 then back = back + 1 end end
+        return ok
+    end
+    local inside = true
+    for _ = 1, 60 * 40 do
+        -- el jugador, parado a media pantalla (se le recoloca si la cámara lo deja atrás o sale despedido), con vida de sobra
+        if a.state == 'run' and (pa.x < a.x + 6 * T or pa.x > a.x + 16 * T) then pa.x, pa.vx = a.x + 11 * T, 0 end
+        pa.hp, pa.dying, pa.alive = 3, false, true
         AutoScroll.update(level, 1 / 60, function() end)
+        pa:update(1 / 60, level)
         ch:update(1 / 60, level)
         seen[ch.state] = true
-        if a.state == 'run' and ch.state == 'chase' and (ch.extra or 0) == 0 then
-            lead = ch.x - a.x
-            offRun = math.abs(ch.y - pa.y)                          -- (la última: al principio aún sube a buscarlo)
-        end
-        if ch.state == 'dash' then maxExtra = math.max(maxExtra, (ch.x - a.x - (lead or 0)) / T) end
+        if ch.state == 'portal' or ch.state == 'aim' then kinds[ch.kind] = true end
+        if a.state == 'run' and (ch.x < a.x - 4 * T or ch.x > a.x + a.W + 2 * T) then inside = false end
         if a.state == 'stop' then break end
     end
-    -- tocarlo mata; pisarlo no le hace nada; invulnerable (recién reaparecido) no muere
-    local lv2 = Level.fromData({ name = 'huida2', width = 70, height = 11, playerStart = { 10, 10 }, tiles = tiles,
-        entities = { { type = 'mirrorchase', col = 3, row = 8, props = { lungeEvery = 0 } } },
-        autoScroll = { startCol = 1, endCol = 70, speed = 160, width = 20, margin = 0.6, countdown = 0.2 } })
-    local e2 = Entities.create(lv2.entities[1])
-    local p2 = playerAt(lv2, 10, 10)
-    for _ = 1, 60 do AutoScroll.update(lv2, 1 / 60, function() end); e2:update(1 / 60, lv2) end
-    p2.x, p2.y, p2.invT = e2.x, e2.y, 0
-    local r1 = Interactions.check(p2, e2)
-    p2.y, p2.vy = e2.y - 70, 300                                    -- cayéndole encima
-    local r2 = Interactions.check(p2, e2)
-    p2.y = e2.y; p2:grantInvulnerability(1)
-    local r3 = Interactions.check(p2, e2)
-    -- la carrera acaba: se va
-    lv2.autoScroll.state = 'stop'
-    for _ = 1, 60 do e2:update(1 / 60, lv2) end
-    local ok = seen.lurk and seen.chase and seen.wind and seen.dash and lead and math.abs(lead - 1.1 * T) < 2 and maxExtra > 4.5 and maxExtra < 5.5
-        and offRun < 40 and r1 == 'kill' and r2 ~= 'stomp' and r3 == nil and not e2.alive
-    check('persecucion', ok, ('estados: espera=%s corre=%s avisa=%s embiste=%s · va %.2f casillas dentro del borde · embestida de %.1f casillas · sigue la altura (%.0f px) · tocarlo=%s, caerle encima=%s, invulnerable=%s · al acabar se va=%s'):format(
-        tostring(seen.lurk), tostring(seen.chase), tostring(seen.wind), tostring(seen.dash), (lead or 0) / T, maxExtra, offRun,
-        tostring(r1), tostring(r2), tostring(r3), tostring(not e2.alive)))
+    Boss.strike = strike0
+    local r1 = Interactions.check(pa, ch)                              -- (las reglas normales: nada)
+    a.state = 'stop'                                                   -- (la carrera acaba)
+    for _ = 1, 60 do ch:update(1 / 60, level) end
+    local all = seen.stalk and seen.warp_out and seen.portal and seen.dive and seen.aim and seen.rush
+    local ok = all and kinds.dive and kinds.dash and kinds.shove and hits >= 4 and back >= 2 and inside and r1 == nil and not ch.alive
+    check('persecucion', ok, ('estados vistos todos=%s · ataques: picado=%s embestida=%s empujón=%s · golpes al jugador %d (hacia atrás %d) · no se sale de la pantalla=%s · reglas normales con él=%s · al acabar se va=%s'):format(
+        tostring(all), tostring(kinds.dive), tostring(kinds.dash), tostring(kinds.shove), hits, back, tostring(inside), tostring(r1), tostring(not ch.alive)))
 end
 
 function cases.encerrado()

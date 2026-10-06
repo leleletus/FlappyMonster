@@ -980,6 +980,9 @@ local function drawPortal(x, y, k, now)
     end
 end
 
+-- (el Espejo perseguidor — types/mirrorchase.lua — dibuja el mismo espejo flotante y la misma marca)
+Mirror.drawPortal, Mirror.drawMark = drawPortal, drawMark
+
 function Mirror:render(camX, camY)
     local x, y = math.floor(self.x - camX), math.floor(self.y - camY)
     local st   = self.state
