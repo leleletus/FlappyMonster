@@ -10,6 +10,8 @@
 --   marca         cada ruido deja su "!" (fx noise_s/m/l); en niveles con luz no hay ruidos
 --   navega        planea el camino: baja de una plataforma al ruido de debajo, rodea una columna, va del
 --                 techo a una repisa; sin ir y venir (≤ 3 cambios de sentido)
+--   parkour       llega a sitios fuera de su superficie (plataforma en el aire, escalera de plataformas, isla) trepando y
+--                 saltando; tres a la vez al mismo ruido
 --   burla         tras darle a un jugador, se para a burlarse
 --   busca         llega donde sonó, ronda por allí y, sin más ruidos, lo deja: sin sonidos, con sus iconos (! ? …)
 --   salta         de cerca se agacha (aviso) y salta: 1 de vida + empujón; nunca mata
@@ -194,6 +196,80 @@ end
 
 -- NAVEGAR sin titubeos: (1) en lo alto de una plataforma y el ruido en el suelo, DEBAJO de ella;
 -- (2) el ruido al otro lado de una columna. Llega cerca y cambia de sentido muy pocas veces
+-- PARKOUR: el ruido está en un sitio al que NO se llega por su superficie (una plataforma en el aire, una repisa
+-- al otro lado de un hueco…): tiene que encadenar trepar y saltar (src/world/entities/GloomyNav.lua). Antes se
+-- quedaba debajo. Y con varios a la vez: llegan (o esperan cerca), ninguno se queda atascado dando vueltas.
+function cases.parkour()
+    local msg, ok = {}, true
+    local function try(name, ents, blocks, gx, gy, W, H, secs)
+        local level, es = room(W or 24, H or 14, ents, blocks)
+        step(level, es, 0.4)
+        Noise.emit(gx, gy, Noise.R.pound)
+        local best, t, tBest, leaps, prev = {}, 0, 0, 0, {}
+        step(level, es, secs or 14, function()
+            t = t + 1 / 60
+            local all = true
+            if os.getenv('TRACE') == name and math.floor(t * 6) ~= math.floor((t - 1 / 60) * 6) then
+                local e = es[1]
+                local st = e.path and e.path[e.pathI]
+                print(('   %.2f %s (%d,%d) n=%d,%d att=%s paso %s/%s %s left=%s → (%s,%s) replans=%s'):format(t, e.state, e.x, e.y, e.cnx or 9, e.cny or 9, tostring(e.cattached),
+                    tostring(e.pathI), tostring(e.path and #e.path), st and st.kind or '-', st and st.left and math.floor(st.left) or '-', st and math.floor(st.x) or '-', st and math.floor(st.y) or '-', tostring(e.replans)))
+            end
+            for i, e in ipairs(es) do
+                local d = math.sqrt((e.x - gx) ^ 2 + (e.y - gy) ^ 2)
+                if not best[i] or d < best[i] then best[i] = d; tBest = t end
+                if e.state == 'leap' and prev[i] ~= 'leap' then leaps = leaps + 1 end
+                prev[i] = e.state
+                if best[i] > 1.6 * T then all = false end
+            end
+            return all
+        end)
+        local worst = 0
+        for i = 1, #es do worst = math.max(worst, best[i] or 99 * T) end
+        -- (uno solo: tiene que LLEGAR; varios: el primero llega y los demás quedan cerca — no se atraviesan)
+        local near = 0
+        for i = 1, #es do if (best[i] or 1e9) <= 1.6 * T then near = near + 1 end end
+        local good = (#es == 1 and near == 1) or (#es > 1 and near >= 1 and worst <= 4.5 * T)
+        ok = ok and good
+        msg[#msg + 1] = ('%s: %d de %d llegan (el más lejano se queda a %.1f casillas) en %.1f s, %d saltos'):format(name, near, #es, worst / T, tBest, leaps)
+    end
+    -- (1) plataforma SUELTA en el aire, a 5 casillas del suelo: él abajo; el ruido encima de ella
+    local plat = { { 10, 8 }, { 11, 8 }, { 12, 8 }, { 13, 8 }, { 14, 8 } }
+    try('plataforma alta', { gl(4, 13, { pauses = false }) }, plat, 11.5 * T, 7 * T - 20)
+    -- (2) dos plataformas en escalera, la de arriba lejos del suelo: hay que pasar por la de abajo
+    local stair = { { 6, 10 }, { 7, 10 }, { 8, 10 }, { 12, 6 }, { 13, 6 }, { 14, 6 }, { 15, 6 } }
+    try('escalera de plataformas', { gl(3, 13, { pauses = false }) }, stair, 13.5 * T, 5 * T - 20, 24, 14, 18)
+    -- (3) él en el techo; el ruido en una isla en medio de la sala
+    try('techo → isla', { gl(18, 2, { pauses = false }) }, { { 9, 9 }, { 10, 9 }, { 11, 9 } }, 9.5 * T, 8 * T - 20)
+    -- (4) TRES a la vez al mismo ruido en la plataforma alta
+    try('tres a la vez', { gl(3, 13, { pauses = false }), gl(7, 13, { pauses = false }), gl(20, 13, { pauses = false }) }, plat, 11.5 * T, 7 * T - 20, 24, 14, 18)
+    -- COSTE en un nivel de verdad (templo_del_eco, 21 lúgubres): buscar el camino de cada uno a un punto a ~10
+    -- casillas no puede notarse (es una vez por ruido, pero pueden ser varios a la vez)
+    do
+        local json = require 'libs/json'
+        local GloomyNav = require 'src/world/entities/GloomyNav'
+        local level = Level.fromData(json.decode(love.filesystem.read('assets/levels/templo_del_eco.json')))
+        local es = {}
+        for _, pl in ipairs(level.entities) do es[#es + 1] = Entities.create(pl) end
+        level.liveEntities, level.players = es, {}
+        for _ = 1, 30 do for _, e in ipairs(es) do if e.alive then e:update(1 / 60, level) end end end
+        local worst, total, n, found = 0, 0, 0, 0
+        for _, e in ipairs(es) do
+            if e.def.name == 'gloomy' and e.cattached then
+                local t0 = os.clock()
+                local steps = GloomyNav.path(e, level, e.x + 7 * T, e.y - 4 * T)
+                local ms = (os.clock() - t0) * 1000
+                worst, total, n = math.max(worst, ms), total + ms, n + 1
+                if steps then found = found + 1 end
+            end
+        end
+        local fast = worst < 40
+        ok = ok and fast and n > 0
+        msg[#msg + 1] = ('coste en templo_del_eco: %d lúgubres, %.1f ms de media, %.1f ms el peor; con camino %d'):format(n, total / math.max(1, n), worst, found)
+    end
+    check('parkour', ok, table.concat(msg, ' · '))
+end
+
 function cases.navega()
     local msg, ok = {}, true
     local function try(name, ents, blocks, gx, gy, W)
@@ -455,11 +531,14 @@ function cases.techo()
     step(level, es, 5, function()
         pa.invT = 3
         seen[e.state] = true
+        -- (tras saltar / soltarse, ¿vuelve a quedar agarrado a algo? — no se mira un instante suelto: de cerca
+        -- sigue saltando al jugador y el final puede pillarlo en el aire)
+        if seen.leap and e.cattached and e.state ~= 'leap' then seen.grabbed = true end
+        if tostring(e.state):find('drop') then seen.dropState = true end
     end)
-    step(level, es, 3)
-    check('techo', onCeil and seen.leap and e.cattached and e.state ~= 'leap' and not tostring(e.state):find('drop'),
-        ('en el techo=%s; oye algo debajo y salta=%s; después: agarrado=%s (normal %d,%d), estado %s'):format(tostring(onCeil),
-         tostring(seen.leap), tostring(e.cattached), e.cnx, e.cny, e.state))
+    check('techo', onCeil and seen.leap and seen.grabbed and not seen.dropState,
+        ('en el techo=%s; oye algo debajo y salta=%s; después vuelve a agarrarse=%s (normal %d,%d), estado final %s'):format(tostring(onCeil),
+         tostring(seen.leap), tostring(seen.grabbed), e.cnx, e.cny, e.state))
 end
 
 function cases.explora()
@@ -511,7 +590,7 @@ end
 
 function love.load()
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'linterna', 'luz_pared', 'estado_propio', 'oye', 'marca', 'navega', 'burla', 'busca', 'salta', 'contacto', 'huye', 'pisoton',
+    for _, n in ipairs({ 'linterna', 'luz_pared', 'estado_propio', 'oye', 'marca', 'navega', 'parkour', 'burla', 'busca', 'salta', 'contacto', 'huye', 'pisoton',
                          'bloque', 'choque', 'distraer', 'base', 'techo', 'explora', 'red' }) do
         if not only or only == n then
             local ok, err = pcall(cases[n])

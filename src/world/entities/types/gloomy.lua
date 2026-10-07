@@ -33,6 +33,7 @@
 
 local Entity      = require 'src/world/entities/Entity'
 local Crawler     = require 'src/world/entities/Crawler'
+local GloomyNav = require 'src/world/entities/GloomyNav'
 local Lights      = require 'src/world/Lights'
 local Noise       = require 'src/world/Noise'
 local SpriteStrip = require 'src/fx/SpriteStrip'
@@ -192,10 +193,12 @@ function Gloomy:plan(level, gx, gy, away)
     self.planBest = (pick == 1) and b1 or b2
 end
 
-function Gloomy:crawl_(level, dt, speed)
+function Gloomy:crawl_(level, dt, speed, hold)
     -- Otro enemigo delante: no lo atraviesa. Media vuelta y, si iba a algún sitio, deja ese camino
-    -- (cazando: llega hasta ahí y busca o salta; huyendo: vuelve a planear en un momento)
+    -- (cazando: llega hasta ahí y busca o salta; huyendo: vuelve a planear en un momento).
+    -- `hold` (siguiendo un camino buscado): no se da la vuelta, ESPERA — quien llama decide qué hacer.
     if Crawler.entityAhead(self, level) then
+        if hold then return false, 'blocked' end
         self.cdir = -self.cdir
         self.planLeft = 0
         return false
@@ -217,6 +220,84 @@ function Gloomy:animateWalk(dt)
     end
 end
 
+-- ── Camino buscado: trepar + saltar de superficie en superficie ───────────────
+-- Busca el camino al sitio del ruido. Sin camino (no hay por dónde, o ya está lo más cerca que se puede): el plan
+-- de siempre por su superficie.
+function Gloomy:findPath(level)
+    self.path, self.pathI, self.blockT = nil, 1, 0
+    local steps = GloomyNav.path(self, level, self.goalX, self.goalY)
+    if steps and #steps > 0 then
+        self.path = steps
+        self.stepNew = true
+    else
+        self:plan(level, self.goalX, self.goalY)
+    end
+end
+
+-- Un tramo cada vez. Devuelve true (ya ha hecho lo de este paso).
+function Gloomy:followPath(level, dt, d)
+    local step = self.path[self.pathI]
+    if not step then                                   -- camino acabado: ronda por allí
+        self.path = nil
+        self:setMode('search')
+        return true
+    end
+    if step.kind == 'drop' then                        -- se SUELTA y cae hasta el suelo de debajo
+        self.pathI, self.stepNew = self.pathI + 1, true
+        self:releaseCrawl()
+        self.vx, self.vy, self.onGround = 0, 0, false
+        self:setMode('leap')
+        self.leapCd = 0.4
+        return true
+    end
+    if step.kind == 'leap' then
+        if self.leapCd > 0 then return true end        -- (recuperándose del anterior)
+        -- (apunta un poco DENTRO de la superficie a la que va — techo, pared —: si llega justo rozándola no la toca,
+        -- no se agarra y cae)
+        self.leapX, self.leapY = step.x - step.nx * 18, step.y - step.ny * 18
+        self.facing = (step.x >= self.x) and 1 or -1
+        self.pathI, self.stepNew = self.pathI + 1, true
+        self.pathLeap = true                           -- (salto DE CAMINO: el siguiente llega antes)
+        self:setMode('crouch')
+        Sound.play('gloomyWind')
+        return true
+    end
+    -- TREPAR ese tramo: el sentido se fija al empezarlo (en una esquina lo cambia él solo)
+    if self.stepNew then
+        self.stepNew = false
+        -- ¿está donde el camino creía? (un salto que acabó en otro sitio, un empujón…): si no, a buscar otro
+        if self.cnx ~= (step.fnx or self.cnx) or self.cny ~= (step.fny or self.cny) then return self:repath(level) end
+        self.cdir = step.dir
+    end
+    local sp = self.speed * HUNT_K
+    local ok, why = self:crawl_(level, dt, sp, true)
+    if why == 'blocked' then
+        -- otro enemigo delante (varios yendo al mismo ruido): espera un momento; si no se quita, ya está bastante
+        -- cerca: se pone a rondar
+        self.blockT = (self.blockT or 0) + dt
+        if self.blockT > 1.2 then self.path = nil; self:setMode('search') end
+        return true
+    end
+    self.blockT = 0
+    if not ok then return self:repath(level) end       -- (se soltó: ya caerá y se agarrará; luego, otro camino)
+    step.left = step.left - sp * dt
+    if step.left <= 0 then
+        local off = math.abs(self.x - step.x) + math.abs(self.y - step.y)
+        if off > T or self.cnx ~= step.nx or self.cny ~= step.ny then return self:repath(level) end
+        self.pathI, self.stepNew = self.pathI + 1, true
+    end
+    return true
+end
+
+-- El camino ya no vale: busca otro desde donde está (pocas veces: si no, ronda)
+function Gloomy:repath(level)
+    self.replans = (self.replans or 0) + 1
+    self.path = nil
+    if self.replans > 4 or not self.cattached then self:setMode('search'); return true end
+    self:findPath(level)
+    return true
+end
+
 function Gloomy:startLeap(level, tx, ty)
     local dx, dy = tx - self.x, ty - self.y
     self:releaseCrawl()
@@ -225,7 +306,8 @@ function Gloomy:startLeap(level, tx, ty)
     self.facing = (dx >= 0) and 1 or -1
     self.onGround = false
     self:setMode('leap')
-    self.leapCd = (self.props.leapEvery or 2.5)
+    self.leapCd = self.pathLeap and 0.5 or (self.props.leapEvery or 2.5)
+    self.pathLeap = nil
     Sound.play('gloomyLeap')
 end
 
@@ -302,7 +384,9 @@ function Gloomy:updateCustom(dt, level)
     local z = self:hear(level)
     if z and st ~= 'crouch' then
         if st ~= 'hunt' then self.icon, self.iconT = 1, 0.9 end          -- ("!": lo ha oído)
-        self.goalX, self.goalY = z.x, z.y
+        -- (otro ruido casi en el mismo sitio y ya va de camino: no vuelve a buscar el camino entero)
+        local same = st == 'hunt' and self.path and self.goalX and math.abs(z.x - self.goalX) + math.abs(z.y - self.goalY) < 1.5 * T
+        if not same then self.goalX, self.goalY = z.x, z.y end
         self:setMode('hunt')
         st = 'hunt'
     end
@@ -313,6 +397,7 @@ function Gloomy:updateCustom(dt, level)
         if pa and d <= LEAP_MAX * T and clearTo(level, self.x, self.y, pa.x, pa.y) then
             self.leapX, self.leapY = pa.x, pa.y
             self.facing = (pa.x >= self.x) and 1 or -1
+            self.path, self.planFor = nil, nil                -- (el camino que llevara ya no vale: tras el salto, otro)
             self:setMode('crouch')
             Sound.play('gloomyWind')
             return true
@@ -323,8 +408,11 @@ function Gloomy:updateCustom(dt, level)
         if self.modeT >= (p.leapWind or 0.45) then self:startLeap(level, self.leapX, self.leapY) end
         return true
     elseif st == 'rest' then
-        if self.modeT >= REST_T then
-            if self.goalX then self:setMode('search') else self:setMode('walk') end
+        -- (a mitad de un camino con saltos: descansa menos y sigue por donde iba)
+        local more = self.goalX and self.path and self.pathI <= #self.path
+        if self.modeT >= (more and REST_T * 0.5 or REST_T) then
+            if more then self:setMode('hunt')
+            elseif self.goalX then self:setMode('search') else self:setMode('walk') end
         end
         return true
     elseif st == 'taunt' then
@@ -338,8 +426,11 @@ function Gloomy:updateCustom(dt, level)
         if d <= ARRIVE then self:setMode('search'); return true end
         if self.planFor ~= self.goalX * 100000 + self.goalY then            -- sitio nuevo: planea el camino
             self.planFor = self.goalX * 100000 + self.goalY
-            self:plan(level, self.goalX, self.goalY)
+            self.replans = 0
+            self:findPath(level)
         end
+        -- CAMINO BUSCADO (src/world/entities/GloomyNav.lua): trepa y salta de superficie en superficie hasta el sitio
+        if self.path then return self:followPath(level, dt, d) end
         -- ATAJO: si andando queda mucho rodeo (≥ 3 casillas y bastante más que en línea recta) y el sitio está a tiro y a la vista,
         -- salta ya (del techo al suelo, de una pared a la otra); se mira cada poco, no cada paso
         self.cutT = (self.cutT or 0) - dt

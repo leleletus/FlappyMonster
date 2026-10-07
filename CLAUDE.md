@@ -2295,6 +2295,44 @@ again. No dialogue or text: animation + music.
   area must implement `debugBoxes()`. (3) Lines are 2 px (1 px at ~0.5 alpha was nearly invisible). `FM_HITBOX=1`
   (read in settings.lua) starts with them ON: `FM_HITBOX=1 tools/tests/run.sh all|sp_boss|online_boss …` checks that
   drawing them never errors.
+- **3.85.0 (protocol v56; the user's nine-point list).**
+  (1) BONUS RESULTS: the "enemies" row is gone (they always respawn in arenas) → "time in the zone" (`stats.zoneT`,
+  `Score.BONUS_WEIGHTS.zone` 15 = seconds inside the active zone / half the match).
+  (2) TIME TARGET PER LEVEL: JSON `"parTime"` (s; editor Nivel → General → "Tiempo objetivo (s)", 0 = automatic by
+  width as before) → `level.parTime` → `result.par` → `Run.complete`; the results row shows "time / target".
+  laberinto_submarino = 300 s.
+  (3) VENTS: `Difficulty` `ventDelay` × the delay between oxygen bubbles (easy 0.8, hard 1.15, extreme / xtra 1.35).
+  (4) DIFFICULTY PICKERS: Free Play — chip top-right, key F (action `light`) or tap; ORIGINAL (none) → easy → … → xtra;
+  remembered. Online — the HOST's room button "DIFICULTAD: X" (`set_difficulty { difficulty }`, admin only, WAITING),
+  `room_update.difficulty`, shown to everyone on the game card; it reaches the match in `game_init` as before. Verity is
+  the same Snowball class, so the difficulty applies to it too.
+  (5) ONE ACTIVE POINT ZONE (`src/world/PointAreas.lua`; the user: with several at once everybody sits in their own):
+  with ≥ 2 zones in a level their rects are the STOPS of one zone that travels: `HOLD` 18 s at each (`FIRST` +6 at the
+  first, the most central), `MOVE` 2.5 s travelling (no points). A pure function of `level.zoneClock`
+  (`PointAreas.state/isActive/target/live`); SP and server advance it in `update`, the server sends it (`zc` in the
+  snapshot), the client applies it. Drawing: active zone as before, other stops a faint outline (the next one blinks
+  3 s before), the travelling rect, and an edge ARROW when the zone is off screen. BOT: goes to
+  `PointAreas.target` (the active one, or already the next when it is about to leave), never holds a stop the zone
+  left, re-evaluates the ON/OFF plan per stop, and enters a zone whose floor is gone (broken ice). lago_de_cristal's
+  lake zone now reaches the lake bottom (swimming in the hole counts). Harness `bot_nav` (60 s, follows the stops).
+  (6) WORLD MAP ARROWS BY DIRECTION: `StoryMapState:_dirMove(dx, dy)` goes to the neighbouring stop whose path leaves
+  toward the pressed direction (previous / next; from a castle also the next world over the bridge); no path that way
+  → the old meaning (left / right = previous / next, up / down = previous / next world). `_walkTo` crosses castle ↔
+  next world by the bridge without detouring to the bonus node.
+  (7) AFTER A LEVEL the hero stays on the node JUST CLEARED and the newly opened stops unlock on screen
+  (`args.opened` → `self.opening`: locked for `OPEN_AT` 0.7 s, then a hop + rings + sound).
+  (8) FOOD PER ISLAND: the `apple` type is now "Comida" with prop `skin` (auto by the level's background, the same
+  rule as the Hopper's): meadow apple (user's sprite), coast pineapple, fortress drumstick, snow ice pop, cave glowing
+  berries (they give a little light: `lights()`), volcano chili — `items/food_<isla>.png` from
+  `tools/ui/make_food_sprites.py`. Placed: 5 in laberinto_submarino (beside every 2nd checkpoint:
+  `add_apples.py --checkpoints 2`, water cells allowed) and 3 in templo_del_eco (`--at`).
+  (9) GLOOMY PATHFINDING (`src/world/entities/GloomyNav.lua`, sim only): A* over what it can really do — CRAWL 48 px
+  along its surface (the real `Crawler.move` on a copy), LEAP to a perch (floor / wall / ceiling of a nearby cell, ≤ 5
+  tiles, clear line + arc) and LET GO (drop from a ceiling / wall to the floor below) — bounded to 600 expansions,
+  weighted (`GREED`); returns steps the 'hunt' state follows (`Gloomy:findPath/followPath/repath`): waits when another
+  enemy blocks it (then searches there), re-plans (≤ 4) when it ends off the path, keeps its path for a new noise at the
+  same spot. No path → the old one-surface plan. ~5 ms per search in templo_del_eco. Harness `gloomy_rules parkour`
+  (floating platform, platform stairs, ceiling → island, three at once, cost).
 - HUD: `BossHud.drawRun(level, entities)` (both level states): **"¡CORRE!" / "RUN!"** (`hud.run`) top centre while
   the camera runs, instead of any boss bar.
 - Music `mirror_chase` (`tools/music/mirror_chase.py`, intro + loop, verified by numbers only): DRUM & BASS as fast
