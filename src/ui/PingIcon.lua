@@ -27,7 +27,7 @@ function PingIcon.level(ping, snapAge, connected)
 end
 
 -- Sprites: assets/images/ui/ping/ping-Sheet.png, 5 cuadros de 20x12 (0 = X
--- roja, 1..4 = barras; los genera tools/ui/make_sprites.py y se pueden retocar)
+-- roja, 1..4 = barras; los genera tools/art/ui/make_sprites.py y se pueden retocar)
 local SpriteStrip = require 'src/fx/SpriteStrip'
 local sheet
 local TEXT_COL = { [1] = { 0.95, 0.2, 0.2 }, [2] = { 1, 0.82, 0.15 }, [3] = { 1, 0.82, 0.15 }, [4] = { 0.3, 0.9, 0.35 } }

@@ -1,5 +1,5 @@
 -- Crabby HELADO: el mismo Crabby (anda, trepa, cae del techo, súbdito...) con el aspecto del
--- cangrejo antártico (assets/images/enemies/crabby_ice/, tools/ui/make_icecrabby_sprites.py) y una TAPA
+-- cangrejo antártico (assets/images/enemies/crabby_ice/, tools/art/enemies/make_icecrabby_sprites.py) y una TAPA
 -- a elegir para esconderse, en suelo, pared o techo (en el editor: una sola ficha "Crabby
 -- helado" con selector "Se esconde bajo"):
 --   púa de hielo  como el Crabby normal: tocarla mata; cae del techo como un pincho (mata)

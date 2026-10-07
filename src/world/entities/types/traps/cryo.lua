@@ -48,12 +48,12 @@ local function nearest(path)
 end
 function Cryo.loadAssets()
     if bodyStrip then return end
-    -- por piezas (tools/ui/make_cryo_parts.py): el depósito siempre derecho, el cañón girado
+    -- por piezas (tools/art/world/make_cryo_parts.py): el depósito siempre derecho, el cañón girado
     -- hacia donde dispara y las patas hacia lo que lo sostiene (16x16, centradas en la casilla)
     bodyStrip   = SpriteStrip.load('assets/images/traps/cryo/cryo_body-Sheet.png', 16)
     cannonStrip = SpriteStrip.load('assets/images/traps/cryo/cryo_cannon-Sheet.png', 16)
     feetImg     = nearest('assets/images/traps/cryo/cryo_feet.png')
-    -- soporte colgante (tools/ui/make_cryo_chain.py)
+    -- soporte colgante (tools/art/world/make_cryo_chain.py)
     chainImg, anchorImg, clampImg = nearest('assets/images/traps/cryo/chain.png'), nearest('assets/images/traps/cryo/anchor.png'),
                                     nearest('assets/images/traps/cryo/clamp.png')
     streamImg = love.graphics.newImage('assets/images/traps/cryo/stream-Sheet.png')

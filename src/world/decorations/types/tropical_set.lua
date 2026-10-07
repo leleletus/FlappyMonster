@@ -1,5 +1,5 @@
 -- Decoraciones TROPICALES (sprites: assets/images/world/decorations/tropical/,
--- generados por tools/ui/make_decorations.py). No chocan ni hacen daño.
+-- generados por tools/art/world/make_decorations.py). No chocan ni hacen daño.
 -- (La Palmera, palmtree.lua, también es de esta categoría.)
 --   celda:    Helecho, Arbusto tropical (se mecen; al arbusto se le cae alguna
 --             hoja), Antorcha tiki (llama, luz y brasas), Mariposas (revolotean

@@ -65,7 +65,7 @@ function C.reflect(x, y, o)
     end
 end
 
--- ── El cráter (assets/story/sets/crater.json; tools/story/make_sets.py) ──────
+-- ── El cráter (assets/story/sets/crater.json; tools/levelgen/make_sets.py) ──────
 C.CAMX, C.CAMY = 64, 112            -- la cámara del decorado (22x13 casillas: se ven 20 x 11,25)
 C.FLOOR = 592                       -- y del centro del monstruo de pie en el suelo (suelo en y = 640)
 C.MX, C.MF = 928, 576               -- el espejo: x de su centro, y de sus pies (sobre el pedestal)

@@ -4,7 +4,7 @@
 -- ASPECTO por isla (prop `skin`; 'auto' = según el fondo del nivel, como el Saltarín): pradera = la MANZANA (dibujo
 -- del usuario), costa = piña, fortaleza = muslo asado, nieve = polo de hielo, cueva = bayas luminosas (dan un poco
 -- de luz en lo oscuro), volcán = guindilla. assets/images/items/apple.png y food_<isla>.png
--- (tools/ui/make_food_sprites.py). Uno nuevo = un PNG + una línea en FILES.
+-- (tools/art/world/make_food_sprites.py). Uno nuevo = un PNG + una línea en FILES.
 local Entity = require 'src/world/entities/base/Entity'
 local Hopper = require('src/world/entities/types/enemies/hopper').class
 

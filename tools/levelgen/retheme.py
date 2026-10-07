@@ -41,7 +41,7 @@ LEVELS = 'assets/levels'
 ID_HIGH = 2 ** 17
 EMPTY, SOLID, SLAB, BORDER, WATER, DROP, FINISH, BREAK = 0, 1, 2, 4, 9, 10, 11, 12
 DIRT, GRASS, SNOW, ICE, SAND, DEEP, PACKED = 16, 17, 29, 30, 35, 36, 37
-BASALT, ASH = 38, 39                  # isla volcánica (tools/ui/make_biome_art.py)
+BASALT, ASH = 38, 39                  # isla volcánica (tools/art/world/make_biome_art.py)
 THIN_ICE = {31, 32, 33, 34}
 GROUND = {SOLID, BORDER, DIRT, GRASS, SNOW, ICE, SAND, DEEP, PACKED, BASALT, ASH}
 DEEP_ROWS = 4                     # bajo ≥ 4 filas de agua: roca abisal
@@ -160,7 +160,7 @@ REQ = {
     'shell': {SAND}, 'starfish': {SAND},
     # colgando (el bloque de ENCIMA)
     'icicle': SNOWY | {ICE} | ROCK, 'icicle_small': SNOWY | {ICE} | ROCK, 'stalactite': ROCK | {DIRT}, 'cobweb': GROUND,
-    # pradera (tools/ui/make_biome_art.py)
+    # pradera (tools/art/world/make_biome_art.py)
     'oak_tree': SOIL, 'pine_tree': SOIL, 'round_bush': SOIL, 'fallen_log': SOIL, 'flower_patch': SOIL, 'tall_grass': SOIL,
     'sunflower': SOIL, 'red_mushroom': SOIL, 'mossy_rock': SOIL | ROCK,
     # volcán

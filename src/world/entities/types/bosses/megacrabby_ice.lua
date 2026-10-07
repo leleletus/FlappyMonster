@@ -1,6 +1,6 @@
 -- MEGA CRABBY HELADO: el Mega Crabby (megacrabby.lua: TODOS sus estados, ataques, entrada,
 -- descansos, súbditos y muerte) con el aspecto del cangrejo antártico Paralomis birsteini
--- (assets/images/bosses/megacrabby_ice/, tools/ui/make_icecrab_sprites.py) y tres cosas de hielo:
+-- (assets/images/bosses/megacrabby_ice/, tools/art/bosses/make_icecrab_sprites.py) y tres cosas de hielo:
 --  1. PALMADA HELADA: al acabar cada embestida da un golpe con las pinzas en el suelo ('clap'):
 --     dos ondas de escarcha corren por el suelo (una a cada lado) y CONGELAN `waveFreeze` s a
 --     quien pillen (se esquivan saltando). Las pinzas se quedan pegadas al suelo por el hielo

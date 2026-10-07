@@ -9,7 +9,7 @@
 --
 -- ASPECTOS por isla (prop `skin`; 'auto' = según el fondo del nivel): pradera, costa, fortaleza, nieve, cueva,
 -- volcán — la misma forma con otra paleta, otras motas y otra cosa en la cabeza. Hojas de 4 cuadros 16x21 (quieto,
--- agachado, en el aire, aplastado): assets/images/enemies/hopper/<isla>-Sheet.png, de tools/ui/make_hopper_sprites.py.
+-- agachado, en el aire, aplastado): assets/images/enemies/hopper/<isla>-Sheet.png, de tools/art/enemies/make_hopper_sprites.py.
 -- Sonidos hopWind / hopJump / hopLand (tools/sounds/hopper.py).
 local Entity      = require 'src/world/entities/base/Entity'
 local SpriteStrip = require 'src/fx/SpriteStrip'

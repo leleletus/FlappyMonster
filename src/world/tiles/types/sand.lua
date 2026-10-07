@@ -4,7 +4,7 @@
 -- ese lado una franja tramada con los colores del vecino
 -- (assets/images/world/tiles/sand_blend.png: cuadro 1 tierra —también bajo el césped—,
 -- 2 piedra, 3 roca abisal, 4 borde; la franja está a la izquierda y se gira para
--- cada lado). sand.png: tools/ui/make_terrain.py; sand_blend.png: make_world_art.py.
+-- cada lado). sand.png: tools/art/world/make_terrain.py; sand_blend.png: make_world_art.py.
 local TileTypes = require 'src/world/tiles/TileTypes'
 
 local TEX = { image = 'assets/images/world/tiles/sand.png' }

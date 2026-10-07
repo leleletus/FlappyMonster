@@ -1,5 +1,5 @@
 -- Decoraciones de la ISLA VOLCÁNICA (sprites: assets/images/world/decorations/volcano/, generados por
--- tools/ui/make_biome_art.py). No chocan ni hacen daño.
+-- tools/art/world/make_biome_art.py). No chocan ni hacen daño.
 --   celda:    Árbol calcinado (suelta alguna brasa), Columnas de basalto, Cascada de lava (cuelga del techo,
 --             fluye, alumbra y gotea brasas)
 --   subcelda: Matorral seco, Piedras de basalto, Montón de ceniza, Respiradero (humo y brasas, alumbra),

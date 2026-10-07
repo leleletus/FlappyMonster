@@ -1,5 +1,5 @@
 -- Decoraciones de CUEVA (sprites: assets/images/world/decorations/cave/, generados por
--- tools/ui/make_decorations.py). No chocan ni hacen daño.
+-- tools/art/world/make_decorations.py). No chocan ni hacen daño.
 --   celda:    Estalactita (cuelga y gotea), Estalagmita, Cristales brillantes
 --             (brillan y sueltan destellos), Telaraña (en la esquina de arriba de
 --             su casilla; Espejar = la otra esquina; con araña que sube y baja)

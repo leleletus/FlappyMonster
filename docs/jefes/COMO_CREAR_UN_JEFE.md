@@ -45,7 +45,7 @@ Vida por defecto: `hp` para 1 jugador (8-14) y `hpPerPlayer` (3-4) por cada juga
 - Si el jefe es la versión "Mega" de un enemigo: **la MISMA rejilla del sprite pequeño** (p. ej.
   el Gummy 16x16) dibujada a escala grande (10). Solo retoques de 1 píxel. Un cuerpo nuevo con más
   resolución NO pega con el juego (el usuario lo rechazó dos veces).
-- Si rediseñas una imagen que ya existe: el original va FUERA del repo (`tools/ui/originals.py`).
+- Si rediseñas una imagen que ya existe: el original va FUERA del repo (`tools/art/lib/originals.py`).
 - Tiras de cuadros (`<algo>-Sheet.png`, cuadros del mismo ancho uno al lado del otro) y en el
   código `SpriteStrip.load(path, anchoCuadro)` → `:draw(i, x, y, r, sx, sy)` / `.image`, `.quads[i]`.
 - Lo que se suele necesitar: quieto, andar (2), saltar/aire, aturdido/mareado, dolor, risa, grito;
@@ -54,7 +54,7 @@ Vida por defecto: `hp` para 1 jugador (8-14) y `hpPerPlayer` (3-4) por cada juga
   el mismo origen, dibujadas encima → luego pueden salir volando.
 - Antes de aplicar, enseña opciones al usuario: vista previa en
   `/home/mtvemo/FlappyMonster_pruebas/<cosa>/vista_previa.png` (o `$FM_PREVIEWS`), con un `--apply`.
-- Ejemplo: `tools/ui/make_gummy_variants.py --apply-mega` (función `boss_art`).
+- Ejemplo: `tools/art/enemies/make_gummy_variants.py --apply-mega` (función `boss_art`).
 
 ## 2. Sonidos
 

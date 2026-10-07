@@ -4,7 +4,7 @@
 -- visible: hacer ruido → marca → ahí van a mirar. Solo dibujo; las suelta Noise.emit como fx
 -- ('noise_s' salto · 'noise_m' golpe / enemigo muerto / bloque roto · 'noise_l' ground pound),
 -- Particles.emit las trae aquí (un jugador y online) y Darkness.renderGlow las dibuja ENCIMA de la
--- oscuridad. Imagen: assets/images/fx/noise_mark.png (tools/ui/make_gloomy_sprites.py).
+-- oscuridad. Imagen: assets/images/fx/noise_mark.png (tools/art/enemies/make_gloomy_sprites.py).
 local NoiseMarks = {}
 
 local T = TILE_PX

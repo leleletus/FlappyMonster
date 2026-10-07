@@ -29,7 +29,7 @@
 --   Tocarlo = 1 de vida (nunca mata). Se le pisotea como a cualquier Crabby (también en paredes
 --   y techo, con las reglas del trepador).
 -- Todo lo que se dibuja sale de state + frame + deadTimer + la superficie (red: Crawler.netPack).
--- Arte: assets/images/enemies/gloomy/ (tools/ui/make_gloomy_sprites.py); sonidos: tools/sounds/gloomy.py.
+-- Arte: assets/images/enemies/gloomy/ (tools/art/enemies/make_gloomy_sprites.py); sonidos: tools/sounds/gloomy.py.
 
 local Entity      = require 'src/world/entities/base/Entity'
 local Crawler     = require 'src/world/entities/base/Crawler'

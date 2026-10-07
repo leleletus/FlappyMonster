@@ -1,6 +1,6 @@
 -- Plataforma NO traspasable: se atraviesa subiendo, pero no se puede bajar
 -- agachándose. Viga de acero remachada (≈¾ del alto; el resto de la imagen es
--- transparente): assets/images/world/tiles/platform.png (tools/ui/make_world_art.py).
+-- transparente): assets/images/world/tiles/platform.png (tools/art/world/make_world_art.py).
 return {
     id = 2, name = 'platform', label = 'Plataforma', category = 'Plataformas',
     collision = 'oneway', dropThrough = false, material = 'stone',

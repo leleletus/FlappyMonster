@@ -1,5 +1,5 @@
 -- Gummy HELADO (niveles helados): el MISMO Gummy (movimiento, pausas, alas, casco, reglas) con
--- su arte de hielo: assets/images/enemies/gummy_ice/ (tools/ui/make_gummy_variants.py --apply-helado,
+-- su arte de hielo: assets/images/enemies/gummy_ice/ (tools/art/enemies/make_gummy_variants.py --apply-helado,
 -- opción A "Escarcha" sin carámbanos: la forma exacta del Gummy en hielo con nieve en la cabeza).
 local Entity = require 'src/world/entities/base/Entity'
 local base   = require 'src/world/entities/types/enemies/gummy'

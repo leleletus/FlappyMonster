@@ -1,5 +1,5 @@
 -- Decoraciones de HIELO Y NIEVE (sprites: assets/images/world/decorations/ice/,
--- generados por tools/ui/make_decorations.py). No chocan ni hacen daño.
+-- generados por tools/art/world/make_decorations.py). No chocan ni hacen daño.
 --   subcelda: Carámbanos pequeños (cuelgan y gotean), Montón de nieve (brillos),
 --             Cristal de hielo (brilla)
 --   celda:    Arbusto helado, Pino nevado (2 casillas de alto; se mecen y les cae

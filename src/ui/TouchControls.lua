@@ -13,7 +13,7 @@
 -- Arriba de la pantalla (HUD, pausa) no cuenta como control.
 -- Sprites: assets/images/ui/touch/dpad-Sheet.png (7 cuadros de 40x40: neutra,
 -- izq, der, abajo, abajo-izq, abajo-der, arriba) y jump-Sheet.png (2 de 32x32),
--- generados por tools/ui/make_sprites.py (se pueden retocar a mano).
+-- generados por tools/art/ui/make_sprites.py (se pueden retocar a mano).
 --
 --   TouchControls.update(active)   cada frame, en el update del estado (pone
 --                                  Input.VirtualPad.down / pressed)

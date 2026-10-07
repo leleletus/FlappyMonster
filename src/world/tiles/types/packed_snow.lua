@@ -2,7 +2,7 @@
 -- como el bloque rompible pero de nieve. La Gran Bola de Nieve tapa con él los
 -- Activadores de su arena (fase 3). Sólido para todos: la bola rodando choca y rebota
 -- (nunca lo rompe). Textura: assets/images/world/tiles/packed_snow.png
--- (tools/ui/make_snowboss_sprites.py).
+-- (tools/art/bosses/make_snowboss_sprites.py).
 return {
     id = 37, name = 'packed_snow', label = 'Nieve prensada (rompible)', category = 'Terreno',
     collision = 'solid', material = 'snow', breakable = true,

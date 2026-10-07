@@ -24,7 +24,7 @@ Core.KICK_VX, Core.KICK_VY = 380, -330
 Core.CHAIN_FUSE = 0.35        -- mecha al encenderla otra explosión
 Core.FIZZ_EVERY = 0.5         -- s entre chisporroteos (bomb_fizz dura 0,5 s)
 Core.FW, Core.FH = 15, 16     -- cuadro de las hojas
--- Punta de la mecha por cuadro (píxeles de la hoja; ver tools/ui/make_bomb_sprites.py)
+-- Punta de la mecha por cuadro (píxeles de la hoja; ver tools/art/enemies/make_bomb_sprites.py)
 Core.TIPS = {
     bomb   = { { 6, 0 }, { 4, 0 }, { 10, 0 }, { 7, 0 } },
     object = { { 6, 1 }, { 4, 1 }, { 10, 1 }, { 6, 0 } },

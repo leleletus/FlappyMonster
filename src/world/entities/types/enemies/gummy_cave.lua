@@ -1,6 +1,6 @@
 -- GUMMY DE CUEVA: el MISMO Gummy (movimiento, pausas, alas, casco, reglas) con OTRA FORMA — una especie distinta, no
--- un cambio de color —: assets/images/enemies/gummy_cave/ (tools/ui/make_variant_skins.py --apply; mapas de píxeles en
--- tools/ui/make_enemy_designs.py, 3ª ronda, versión elegida por el usuario).
+-- un cambio de color —: assets/images/enemies/gummy_cave/ (tools/art/enemies/make_variant_skins.py --apply; mapas de píxeles en
+-- tools/art/enemies/make_enemy_designs.py, 3ª ronda, versión elegida por el usuario).
 local Entity = require 'src/world/entities/base/Entity'
 local base   = require 'src/world/entities/types/enemies/gummy'
 local Gummy  = base.class

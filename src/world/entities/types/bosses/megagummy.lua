@@ -1,5 +1,5 @@
 -- Jefe REY GUMMY (types/megagummy.lua): el Gummy en grande (su MISMO sprite 16x16 a escala 10,
--- con cejas y una coronita de oro; tools/ui/make_gummy_variants.py --apply-mega). Persigue a
+-- con cejas y una coronita de oro; tools/art/enemies/make_gummy_variants.py --apply-mega). Persigue a
 -- saltitos (contacto = 1 de vida y empujón; de lado es sólido; encima solo rebota) y:
 --   1. PANZAZO ('flop_wind' → 'flop_air' → 'flop_land'): se agacha (la MARCA de dónde caerá sigue
 --      al jugador y se fija al final), salta muy alto y cae de barriga: aplasta (2 de vida) y salen

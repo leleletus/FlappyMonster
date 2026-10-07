@@ -1,5 +1,5 @@
 -- Decoraciones ACUÁTICAS (sprites: assets/images/world/decorations/water/, generados
--- por tools/ui/make_decorations.py). No chocan ni hacen daño. Las burbujas que
+-- por tools/art/world/make_decorations.py). No chocan ni hacen daño. Las burbujas que
 -- sueltan solo suben dentro del agua (fuera, revientan al salir).
 --   celda:    Alga (2 casillas de alto, ondea), Coral, Abanico de coral (ondea)
 --   subcelda: Alga pequeña, Anémona (tentáculos animados), Estrella de mar,

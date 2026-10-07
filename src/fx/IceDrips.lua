@@ -4,7 +4,7 @@
 -- juego), y solo de las celdas que se ven. La gota se forma colgando bajo el
 -- bloque, cae, y al tocar algo salpica.
 -- Sprite: assets/images/fx/ice_drop.png (2 cuadros de 3x5: gota, salpicadura),
--- generado por tools/ui/make_snow_sprites.py.
+-- generado por tools/art/world/make_snow_sprites.py.
 --   IceDrips.render(level, camX, camY)   (Level:render lo llama)
 
 local SpriteStrip = require 'src/fx/SpriteStrip'

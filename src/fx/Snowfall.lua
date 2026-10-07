@@ -5,7 +5,7 @@
 -- "profundidades": los de lejos, pequeños, lentos y más tenues; los de cerca,
 -- grandes y rápidos. Se mecen con un viento suave.
 -- Sprites: assets/images/fx/snowflakes.png (4 cuadros de 7x7), generados por
--- tools/ui/make_snow_sprites.py.
+-- tools/art/world/make_snow_sprites.py.
 --   Snowfall.render(level, camX, camY)   (delante de todo, antes del HUD)
 
 local SpriteStrip = require 'src/fx/SpriteStrip'

@@ -6,7 +6,7 @@
 --   superado = punto dorado (+ su nota) · abierto = rojo · cerrado = gris (camino apagado)
 --   ← → anda al nivel anterior / siguiente (cruza de mundo por el puente) · ↑ ↓ salta de mundo
 --   ENTER juega · tocar un nivel: anda hasta él (tocar el suyo: juega) · flechas abajo: anterior / siguiente
--- El mapa son DATOS: assets/story/overworld.json (tools/ui/make_overworld.py) = el terreno por casillas,
+-- El mapa son DATOS: assets/story/overworld.json (tools/art/story/make_overworld.py) = el terreno por casillas,
 -- el camino de cada mundo como polilínea (sus niveles, sean cuantos sean, se reparten por ella, el jefe
 -- al final), los puentes entre mundos, las decoraciones, los bichos y el jefe de cada castillo. El orden
 -- de mundos y niveles sigue siendo src/story/Worlds.lua; el progreso, src/story/Run.lua.

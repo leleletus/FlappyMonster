@@ -19,7 +19,7 @@ apaga (los jefes encogen) y el monstruo **recupera el aleteo**.
 
 ## Los fragmentos
 
-Imágenes: `assets/images/story/mirror/` (de `tools/ui/make_mirror_shards.py`); todas comparten un lienzo de 48x64:
+Imágenes: `assets/images/story/mirror/` (de `tools/art/story/make_mirror_shards.py`); todas comparten un lienzo de 48x64:
 dibujadas en el mismo punto, encajan y el espejo se va completando. Lógica: `src/story/Shards.lua`.
 
 | Nº | Jefe | Nivel | Posición en el espejo |
@@ -49,7 +49,7 @@ Las dibuja el JUEGO, en el momento, con sus sprites, fondos, decorados y efectos
 - **Tiempos: `assets/story/films.json`** — cada escena dura `beats` pulsos a `bpm`, con sus momentos (`cues`). Es la
   única fuente: el juego dibuja con ella y la música (`tools/music/story_music.py`) se compone SOBRE ella. Cambiar un
   tiempo = volver a generar la música.
-- Decorado del cráter: `assets/story/sets/crater.json`, un nivel de verdad (`tools/story/make_sets.py`; se abre en el
+- Decorado del cráter: `assets/story/sets/crater.json`, un nivel de verdad (`tools/levelgen/make_sets.py`; se abre en el
   editor). El mapa del mundo también hace de decorado (`StoryMapState:filmDraw`).
 - Con su música sonando, el reloj de la película es el de la música.
 - Capturas de cada escena: `tools/tests/run.sh story_film` (hojas en `FlappyMonster_pruebas/historia/`).

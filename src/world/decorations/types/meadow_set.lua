@@ -1,4 +1,4 @@
--- Decoraciones de PRADERA (sprites: assets/images/world/decorations/meadow/, generados por tools/ui/make_biome_art.py).
+-- Decoraciones de PRADERA (sprites: assets/images/world/decorations/meadow/, generados por tools/art/world/make_biome_art.py).
 -- No chocan ni hacen daño.
 --   grandes:  Roble, Pino (se mecen un poco; del roble cae alguna hoja)
 --   celda:    Arbusto redondo, Tronco caído

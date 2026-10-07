@@ -22,7 +22,7 @@
 -- botando y creciendo, se estampa, se ríe y escupe una bola a la cámara. Muerte: se
 -- agrieta → revienta en nieve → una bolita con cara huye (libera la zona antes).
 -- Todo lo que se dibuja sale de state + deadTimer + x, y (+ netPackExtra): igual online.
--- Sprites: assets/images/bosses/snowboss/ (tools/ui/make_snowboss_sprites.py);
+-- Sprites: assets/images/bosses/snowboss/ (tools/art/bosses/make_snowboss_sprites.py);
 -- sonidos: assets/sounds/bosses/snowboss/ (tools/sounds/snowboss.py).
 
 local Entity      = require 'src/world/entities/base/Entity'
@@ -125,7 +125,7 @@ function Snow.loadAssets()
     body     = SpriteStrip.load(D .. 'body-Sheet.png', 16)
     rollH    = SpriteStrip.load(D .. 'roll_happy-Sheet.png', 16)
     rollA    = SpriteStrip.load(D .. 'roll_angry-Sheet.png', 16)
-    -- grietas adaptadas a cada cuadro del cuerpo y de rodar (tools/ui/make_snowboss_cracks.py)
+    -- grietas adaptadas a cada cuadro del cuerpo y de rodar (tools/art/bosses/make_snowboss_cracks.py)
     cracksB  = SpriteStrip.load(D .. 'cracks_body-Sheet.png', 16)
     cracksR  = SpriteStrip.load(D .. 'cracks_roll-Sheet.png', 16)
     sweat    = SpriteStrip.load(D .. 'sweat-Sheet.png', 5)
@@ -135,7 +135,7 @@ function Snow.loadAssets()
     shock    = SpriteStrip.load(D .. 'shock-Sheet.png', 16)
     splat    = SpriteStrip.load(D .. 'splat-Sheet.png', 64)
     -- HUEVO DE PASCUA "Verity": la misma bola con otra cara (carpeta verity/: las hojas del usuario + body-Sheet de
-    -- tools/ui/make_verity_body.py, su cambio de paleta). Grietas, sudor, carámbanos... son los de siempre
+    -- tools/art/bosses/make_verity_body.py, su cambio de paleta). Grietas, sudor, carámbanos... son los de siempre
     local V = D .. 'verity/'
     verityArt = { body = SpriteStrip.load(V .. 'body-Sheet.png', 16), rollH = SpriteStrip.load(V .. 'roll_happy-Sheet.png', 16),
                   rollA = SpriteStrip.load(V .. 'roll_angry-Sheet.png', 16), ball = SpriteStrip.load(V .. 'ball.png', 8),

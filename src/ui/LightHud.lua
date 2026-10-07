@@ -1,6 +1,6 @@
 -- src/ui/LightHud.lua
 -- Linterna en el HUD (niveles a oscuras): icono (encendida / apagada / agotada) + batería en
--- 8 segmentos. assets/images/ui/flashlight-Sheet.png (3 cuadros 12x8, tools/ui/make_gloomy_sprites.py)
+-- 8 segmentos. assets/images/ui/flashlight-Sheet.png (3 cuadros 12x8, tools/art/enemies/make_gloomy_sprites.py)
 local SpriteStrip = require 'src/fx/SpriteStrip'
 
 local LightHud = {}

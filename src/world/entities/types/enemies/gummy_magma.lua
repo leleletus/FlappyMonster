@@ -1,5 +1,5 @@
 -- Gummy DE MAGMA (isla del volcán): el MISMO Gummy (movimiento, pausas, alas, casco, reglas) con su arte de roca
--- encendida: assets/images/enemies/gummy_magma/ (tools/ui/make_variant_skins.py --apply; opción A "Brasa" elegida por el
+-- encendida: assets/images/enemies/gummy_magma/ (tools/art/enemies/make_variant_skins.py --apply; opción A "Brasa" elegida por el
 -- usuario: roca oscura con grietas, ojos y boca al rojo).
 local Entity = require 'src/world/entities/base/Entity'
 local base   = require 'src/world/entities/types/enemies/gummy'

@@ -1,6 +1,6 @@
 -- Borde: roca durísima y compacta (el marco del nivel). Su dibujo cubre 2x2
 -- casillas y se repite sin costura: assets/images/world/tiles/border.png
--- (tools/ui/make_world_art.py). Se une con 'ground'.
+-- (tools/art/world/make_world_art.py). Se une con 'ground'.
 local TileTypes = require 'src/world/tiles/TileTypes'
 
 local TEX = { image = 'assets/images/world/tiles/border.png', span = 2 }

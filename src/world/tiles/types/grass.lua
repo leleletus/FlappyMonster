@@ -1,6 +1,6 @@
 -- Césped: tierra con una capa de hierba cuando su cara de arriba da al aire
 -- (tapado por otro bloque se ve como tierra) y unos tallitos que asoman por
--- encima. Texturas (tools/ui/make_terrain.py): assets/images/world/tiles/grass.png,
+-- encima. Texturas (tools/art/world/make_terrain.py): assets/images/world/tiles/grass.png,
 -- dirt.png y grass_blades.png (3 variantes de 16x4, se elige una por celda).
 -- Se une con 'ground'.
 local TileTypes = require 'src/world/tiles/TileTypes'

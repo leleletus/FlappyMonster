@@ -3,7 +3,7 @@
 -- mata. Textura animada (4 cuadros de 16x16 x4, se repite sin costura):
 -- assets/images/world/tiles/lava.png y, con la cara de arriba al aire, lava_top.png
 -- (cresta brillante). Burbujas y salpicaduras: src/fx/LavaFx.lua (solo dibujo).
--- Arte: tools/ui/make_world_art.py.
+-- Arte: tools/art/world/make_world_art.py.
 local FPS = 4
 local imgs, quads = {}, {}
 

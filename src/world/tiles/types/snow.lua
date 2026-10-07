@@ -1,6 +1,6 @@
 -- Nieve: bloque sólido de terreno (se une con 'ground' como la tierra y el
 -- césped). Textura: assets/images/world/tiles/snow.png (arte 16x16 x4; ver
--- tools/ui/make_snow_sprites.py; el original del usuario, snow-orig.png).
+-- tools/art/world/make_snow_sprites.py; el original del usuario, snow-orig.png).
 local TileTypes = require 'src/world/tiles/TileTypes'
 
 local TEX = { image = 'assets/images/world/tiles/snow.png' }
