@@ -3,6 +3,8 @@
 -- simulación) a trozos de pantalla y los junta en una imagen reducida.
 --   tools/tests/run.sh level_shots -- assets/levels/a.json [b.json ...]
 --   SCALE=0.25 (por defecto; 1 = tamaño real)   LIGHT=1 (los niveles a oscuras, sin la oscuridad)
+--   FIXED=1  foto REPETIBLE (azar con semilla fija y reloj parado): dos ejecuciones dan el mismo PNG, para
+--            comparar antes / después de mover o rehacer algo que no debe cambiar el dibujo
 -- Salida: <save>/shot_<nivel>.png  (~/.local/share/love/fm_test_levelshots/)
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
@@ -17,7 +19,11 @@ local Sky = require 'src/fx/Sky'
 local Darkness = require 'src/fx/Darkness'
 local BossZones = require 'src/world/BossZones'
 
+local FIXED = os.getenv('FIXED') == '1'
+if FIXED then love.timer.getTime = function() return 100 end end
+
 local function shot(path)
+    if FIXED then math.randomseed(7); love.math.setRandomSeed(7) end
     local data = json.decode(love.filesystem.read(path))
     local level = Level.fromData(data)
     local es = {}
