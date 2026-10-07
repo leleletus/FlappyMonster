@@ -7,7 +7,7 @@
 --     a quien golpee.
 -- Para un jefe futuro: BombObject:throw(vx, vy, lit, fuse) la lanza (ya
 -- encendida si lit).
--- Sprites: assets/images/bomb/bombObject-Sheet.png (+ bombObject-fuse-Sheet.png).
+-- Sprites: assets/images/enemies/bomb/bombObject-Sheet.png (+ bombObject-fuse-Sheet.png).
 local Entity       = require 'src/world/entities/base/Entity'
 local Interactions = require 'src/world/entities/base/Interactions'
 local Core         = require 'src/world/entities/base/BombCore'
@@ -21,8 +21,8 @@ local HIT_SPEED = 260          -- px/s: más rápido que esto (en el aire) golpe
 local sheet, fuseSheet
 function BombObject.loadAssets()
     if sheet then return end
-    sheet = SpriteStrip.load('assets/images/bomb/bombObject-Sheet.png', Core.FW)
-    fuseSheet = SpriteStrip.load('assets/images/bomb/bombObject-fuse-Sheet.png', Core.FW)
+    sheet = SpriteStrip.load('assets/images/enemies/bomb/bombObject-Sheet.png', Core.FW)
+    fuseSheet = SpriteStrip.load('assets/images/enemies/bomb/bombObject-fuse-Sheet.png', Core.FW)
     Core.loadExplosion()
 end
 function BombObject.sizePx() return Core.FW * GUMMY_SCALE, Core.FH * GUMMY_SCALE end
@@ -120,5 +120,5 @@ return {
     hide = 'all',
     defaults = { movement = 'static' },
     props = Core.props(),
-    editor = { sprite = 'assets/images/bomb/bombObject-Sheet.png', frameW = Core.FW },
+    editor = { sprite = 'assets/images/enemies/bomb/bombObject-Sheet.png', frameW = Core.FW },
 }

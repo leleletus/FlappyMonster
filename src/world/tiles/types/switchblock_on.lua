@@ -11,7 +11,7 @@ return {
         collision = 'solid', material = 'stone',
         switchBlock = { kind = 'on', active = true, other = 'switchblock_on_x' },
         editorColor = { 0.05, 0.2, 0.75 },
-        texture = { image = 'assets/images/tiles/activated_on_block.png' },
+        texture = { image = 'assets/images/world/tiles/activated_on_block.png' },
         debris = { { 0.05, 0.2, 0.75 }, { 0.02, 0.12, 0.5 }, { 0.5, 0.6, 1.0 } },
     },
     {
@@ -19,14 +19,14 @@ return {
         collision = 'none', material = 'default', enemySolid = false, editorHide = true,
         switchBlock = { kind = 'on', active = false, other = 'switchblock_on' },
         editorColor = { 0.05, 0.2, 0.75 },
-        texture = { image = 'assets/images/tiles/deactivated_on_block.png' },
+        texture = { image = 'assets/images/world/tiles/deactivated_on_block.png' },
     },
     {
         id = 27, name = 'switchblock_off', label = 'Bloque OFF', category = 'Mecanismos',
         collision = 'solid', material = 'stone',
         switchBlock = { kind = 'off', active = true, other = 'switchblock_off_x' },
         editorColor = { 0.6, 0.02, 0.02 },
-        texture = { image = 'assets/images/tiles/activated_off_block.png' },
+        texture = { image = 'assets/images/world/tiles/activated_off_block.png' },
         debris = { { 0.6, 0.02, 0.02 }, { 0.4, 0.0, 0.0 }, { 1.0, 0.5, 0.5 } },
     },
     {
@@ -34,6 +34,6 @@ return {
         collision = 'none', material = 'default', enemySolid = false, editorHide = true,
         switchBlock = { kind = 'off', active = false, other = 'switchblock_off' },
         editorColor = { 0.6, 0.02, 0.02 },
-        texture = { image = 'assets/images/tiles/deactivated_off_block.png' },
+        texture = { image = 'assets/images/world/tiles/deactivated_off_block.png' },
     },
 }

@@ -91,21 +91,21 @@ end
 
 function Crabby.loadAssets()
     if imgIdle1 then return end
-    local sk = addSkin('normal', 'assets/images/crabby/', { meat = 'MeatCrabby.png' })
+    local sk = addSkin('normal', 'assets/images/enemies/crabby/', { meat = 'MeatCrabby.png' })
     imgIdle1, imgIdle2, imgHid = sk.idle1, sk.idle2, sk.hid
-    addSkin('ice', 'assets/images/crabby_ice/', { sink = 8 })
-    addSkin('fortress', 'assets/images/crabby_fortress/', {})        -- (acero con remaches: types/crabby_fortress.lua)
+    addSkin('ice', 'assets/images/enemies/crabby_ice/', { sink = 8 })
+    addSkin('fortress', 'assets/images/enemies/crabby_fortress/', {})        -- (acero con remaches: types/crabby_fortress.lua)
     -- Especies con OTRA forma (tools/ui/make_crab_species.py): se hunden fila a fila como el helado y llevan las
     -- pinzas del juego en su color. `claw`: x desde el centro, y desde los pies (px de arte), cuánto se mete
-    addSkin('river', 'assets/images/crabby_river/', { sink = 5 })    -- (types/crabby_river.lua)
-    Crabby.SKINS.river.claw = { file = 'assets/images/crabby_river/claw_left-Sheet.png', w = 5, x = 4.4, y = -1.6, inset = 0.5 }
-    addSkin('cave', 'assets/images/crabby_cave/', { sink = 6 })      -- (types/crabby_cave.lua; sin pinzas)
-    addSkin('lava', 'assets/images/crabby_lava/', { sink = 6 })      -- (types/crabby_lava.lua)
-    Crabby.SKINS.lava.claw = { file = 'assets/images/crabby_lava/claw_left-Sheet.png', w = 5, x = 5.4, y = -1.6, inset = 0.5 }
+    addSkin('river', 'assets/images/enemies/crabby_river/', { sink = 5 })    -- (types/crabby_river.lua)
+    Crabby.SKINS.river.claw = { file = 'assets/images/enemies/crabby_river/claw_left-Sheet.png', w = 5, x = 4.4, y = -1.6, inset = 0.5 }
+    addSkin('cave', 'assets/images/enemies/crabby_cave/', { sink = 6 })      -- (types/crabby_cave.lua; sin pinzas)
+    addSkin('lava', 'assets/images/enemies/crabby_lava/', { sink = 6 })      -- (types/crabby_lava.lua)
+    Crabby.SKINS.lava.claw = { file = 'assets/images/enemies/crabby_lava/claw_left-Sheet.png', w = 5, x = 5.4, y = -1.6, inset = 0.5 }
     -- Pinzas pequeñas del Crabby helado (tools/ui/make_icecrabby_claws.py, opción A "Mini Mega"):
     -- 2 cuadros 7x7 (abierta / cerrada), pinza IZQUIERDA (la derecha es su espejo); dónde van en
     -- px de arte del cuerpo como en el Mega (x desde el centro, y desde los pies, hacia dentro)
-    Crabby.SKINS.ice.claw = { file = 'assets/images/crabby_ice/claw_left-Sheet.png', w = 7,
+    Crabby.SKINS.ice.claw = { file = 'assets/images/enemies/crabby_ice/claw_left-Sheet.png', w = 7,
                               x = 5.6, y = -0.6, inset = 1.0 }
 end
 
@@ -566,12 +566,12 @@ function Crabby:netApply(a, b, f)
 end
 
 -- ── Render ────────────────────────────────────────────────────────────────────
--- Pincho: assets/images/crabby/spike.png (36x36 hacia arriba + 1 px de margen
+-- Pincho: assets/images/enemies/crabby/spike.png (36x36 hacia arriba + 1 px de margen
 -- para el contorno). Al salir crece desde la base: se estira en alto.
 local spikeImgs = {}
 local function drawSpike(cx, baseY, sH, dir, file)
     if sH < 1 then return end
-    file = file or 'assets/images/crabby/spike.png'
+    file = file or 'assets/images/enemies/crabby/spike.png'
     local spikeImg = spikeImgs[file]
     if not spikeImg then
         spikeImg = love.graphics.newImage(file)
@@ -800,5 +800,5 @@ return {
           showIf=function(p) return p.pauses and p.canHide end },
         Crabby.WALL_PROP,
     },
-    editor = { sprite = 'assets/images/crabby/crab1.png' },
+    editor = { sprite = 'assets/images/enemies/crabby/crab1.png' },
 }

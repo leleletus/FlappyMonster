@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # VARIANTES APROBADAS que son el dibujo de siempre con otra paleta y un detalle (las demás, que cambian de forma,
 # tendrán su propio generador cuando el usuario elija):
-#   · GUMMY DE MAGMA (opción A "Brasa"): roca oscura con grietas, ojos y boca encendidos → assets/images/gummy_magma/
-#   · CRABBY DE LA FORTALEZA (opción A "Acero"): chapa gris con remaches → assets/images/crabby_fortress/
+#   · GUMMY DE MAGMA (opción A "Brasa"): roca oscura con grietas, ojos y boca encendidos → assets/images/enemies/gummy_magma/
+#   · CRABBY DE LA FORTALEZA (opción A "Acero"): chapa gris con remaches → assets/images/enemies/crabby_fortress/
 # Paletas y detalles: tools/ui/make_enemy_designs.py (GUMMY_SETS, FORT). Se parte de los sprites del juego.
 #   python3 tools/ui/make_variant_skins.py --apply
 import os, shutil, sys
@@ -58,5 +58,5 @@ if __name__ == '__main__':
     put('gummy_fortress/gummy1.png', right(D.FORT_BODY + W1), D.STEEL, back(D.KEY['alta']))
     put('gummy_fortress/gummy2.png', right(D.FORT_BODY + W2), D.STEEL, back(D.KEY['fina']))
     put('gummy_fortress/dead.png', ['.' * 16] * 11 + ["...ooooooooooo..", "...ohrbbbbbrso..", "...obeebbbeeso..", "kk.oosssssssoo..", "....ooooooooo..."], D.STEEL)
-    print('  assets/images/gummy_cave/ y assets/images/gummy_fortress/')
-    print('  assets/images/gummy_magma/ y assets/images/crabby_fortress/')
+    print('  assets/images/enemies/gummy_cave/ y assets/images/enemies/gummy_fortress/')
+    print('  assets/images/enemies/gummy_magma/ y assets/images/enemies/crabby_fortress/')

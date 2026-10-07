@@ -11,7 +11,7 @@ local OnlineLoginState = BaseState:new()
 local imgBg = nil
 local function loadAssets()
     if imgBg then return end
-    imgBg = love.graphics.newImage('assets/images/menus/MenuDif.png')
+    imgBg = love.graphics.newImage('assets/images/ui/menus/MenuDif.png')
 end
 
 -- Campos del formulario (HOST y PORT fijos, solo se muestra NOMBRE)

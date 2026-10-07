@@ -166,12 +166,12 @@ C.SMALL = 0.42          -- un enemigo normal, al lado de su versión gigante
 -- (sin pinzas ni pincho), el Monstruo Malvado en su nave (pequeña), una bola de nieve, un Crabby helado (con sus
 -- pinzas pequeñas, sin pincho) y un Crabby lúgubre. nil = el mismo dibujo del jefe, en pequeño
 C.NORMAL = {
-    { img = 'assets/images/gummy/gummy.png' },
-    { img = 'assets/images/crabby/crab1.png' },
+    { img = 'assets/images/enemies/gummy/gummy.png' },
+    { img = 'assets/images/enemies/crabby/crab1.png' },
     nil,
     nil,
-    { img = 'assets/images/crabby_ice/crab1.png' },
-    { img = 'assets/images/gloomy/gloomy-Sheet.png', fw = 26, glow = 'assets/images/gloomy/glow-Sheet.png' },
+    { img = 'assets/images/enemies/crabby_ice/crab1.png' },
+    { img = 'assets/images/enemies/gloomy/gloomy-Sheet.png', fw = 26, glow = 'assets/images/enemies/gloomy/glow-Sheet.png' },
 }
 local function isSmall(size) return size and size <= C.SMALL + 0.005 end
 

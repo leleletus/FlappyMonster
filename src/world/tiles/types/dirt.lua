@@ -1,8 +1,8 @@
--- Tierra: bloque sólido de terreno. Textura assets/images/tiles/dirt.png
+-- Tierra: bloque sólido de terreno. Textura assets/images/world/tiles/dirt.png
 -- (tools/ui/make_terrain.py); bordes claros solo en las caras al aire.
 local TileTypes = require 'src/world/tiles/TileTypes'
 
-local TEX = { image = 'assets/images/tiles/dirt.png' }
+local TEX = { image = 'assets/images/world/tiles/dirt.png' }
 
 return {
     id = 16, name = 'dirt', label = 'Tierra', category = 'Terreno',

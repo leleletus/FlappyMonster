@@ -4,8 +4,8 @@
 local SpikeSkins = {}
 
 SpikeSkins.LIST = {
-    { id = 'normal', label = 'Normales', file = 'assets/images/spikes/spike.png' },
-    { id = 'ice',    label = 'De hielo', file = 'assets/images/spikes/spike_ice.png' },  -- (tools/ui/make_ice_spikes.py)
+    { id = 'normal', label = 'Normales', file = 'assets/images/traps/spikes/spike.png' },
+    { id = 'ice',    label = 'De hielo', file = 'assets/images/traps/spikes/spike_ice.png' },  -- (tools/ui/make_ice_spikes.py)
 }
 local byId = {}
 for _, s in ipairs(SpikeSkins.LIST) do byId[s.id] = s end

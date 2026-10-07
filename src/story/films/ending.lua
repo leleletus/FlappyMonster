@@ -378,7 +378,7 @@ F.home = {
         if k > 0 then Stage.flappyBg(rig.scroll, K.SKY_BLUE, k) end
         K.flappyDraw(rig)
         if t >= c.at('logo') then
-            local logo = Stage.img('assets/images/menus/logo.png')
+            local logo = Stage.img('assets/images/ui/menus/logo.png')
             if logo then
                 local u = c.k(c.at('logo'), c.at('logo') + c.b(1.5))
                 local s = 12

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # tools/ui/make_puffer_redesign.py
-# Rediseño del pez globo (assets/images/puffer_fish/puffer_fish-Sheet.png, 4 cuadros
+# Rediseño del pez globo (assets/images/enemies/pufferfish/puffer_fish-Sheet.png, 4 cuadros
 # de 16x16: nadar 1-2, medio hinchado, hinchado), como el de los Crabbies: la MISMA
 # forma (cada píxel) con el estilo nuevo, cuadro a cuadro:
 #   negro → contorno azul muy oscuro; grises oscuros (cola) → azules marinos
@@ -14,7 +14,7 @@ from PIL import Image
 sys.path.insert(0, os.path.dirname(__file__))
 import originals   # noqa: E402
 
-SRC = 'assets/images/puffer_fish/puffer_fish-Sheet.png'
+SRC = 'assets/images/enemies/pufferfish/puffer_fish-Sheet.png'
 APPLY = '--apply' in sys.argv
 OUT = next((a for a in sys.argv[1:] if not a.startswith('--')), '/tmp/puffer_redesign')
 FW = 16

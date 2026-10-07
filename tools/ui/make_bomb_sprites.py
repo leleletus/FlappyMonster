@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # tools/ui/make_bomb_sprites.py
-# Sprites derivados de las bombas del usuario (assets/images/bomb/):
+# Sprites derivados de las bombas del usuario (assets/images/enemies/bomb/):
 #   bomb-fuse-Sheet.png        mecha ENCENDIDA de bomb-Sheet.png (bomba viva)
 #   bombObject-fuse-Sheet.png  mecha encendida de bombObject-Sheet.png (objeto)
 #       8 cuadros de 15x16: 1-4 = los 4 cuadros de la hoja con la mecha en
@@ -14,7 +14,7 @@ import os, sys, math, random
 from PIL import Image
 
 FORCE = '--force' in sys.argv
-DIR = 'assets/images/bomb'
+DIR = 'assets/images/enemies/bomb'
 FUSE = (164, 120, 72, 255)                  # color de la mecha en las hojas (cuerda; ver retouch_bomb.py)
 FW = 15
 

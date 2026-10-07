@@ -6,7 +6,7 @@
 # mismos tonos naranja, dedos hacia dentro, dos cuadros (abierta / cerrada) como el Mega.
 #
 #   python3 tools/ui/make_icecrabby_claws.py            # vista previa de las opciones (fuera del repo)
-#   python3 tools/ui/make_icecrabby_claws.py --apply X  # escribe la opción X en assets/images/crabby_ice/
+#   python3 tools/ui/make_icecrabby_claws.py --apply X  # escribe la opción X en assets/images/enemies/crabby_ice/
 #   (--out DIR: carpeta de la vista previa; por defecto $FM_PREVIEWS/crabby_ice_claws o
 #    /home/mtvemo/FlappyMonster_pruebas/crabby_ice_claws)
 #
@@ -23,9 +23,9 @@ from PIL import Image, ImageDraw, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..'))
-ICE = os.path.join(ROOT, 'assets', 'images', 'crabby_ice')
+ICE = os.path.join(ROOT, 'assets', 'images', 'enemies', 'crabby_ice')
 MEGA = os.path.join(ROOT, 'assets', 'images', 'bosses', 'megacrabby_ice')
-NORMAL = os.path.join(ROOT, 'assets', 'images', 'crabby')
+NORMAL = os.path.join(ROOT, 'assets', 'images', 'enemies', 'crabby')
 
 PAL = {
     '.': None,

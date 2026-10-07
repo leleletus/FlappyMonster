@@ -7,10 +7,10 @@ local img
 
 return {
     name = 'tulip', label = 'Tulipán', placement = 'sub', category = 'Plantas',
-    editor = { icon = 'assets/images/foliage/tulip.png' },
+    editor = { icon = 'assets/images/world/decorations/foliage/tulip.png' },
     loadAssets = function()
         if img == nil then
-            local ok, i = pcall(love.graphics.newImage, 'assets/images/foliage/tulip.png')
+            local ok, i = pcall(love.graphics.newImage, 'assets/images/world/decorations/foliage/tulip.png')
             img = ok and i or false
         end
     end,

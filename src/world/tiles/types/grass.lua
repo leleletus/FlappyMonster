@@ -1,17 +1,17 @@
 -- Césped: tierra con una capa de hierba cuando su cara de arriba da al aire
 -- (tapado por otro bloque se ve como tierra) y unos tallitos que asoman por
--- encima. Texturas (tools/ui/make_terrain.py): assets/images/tiles/grass.png,
+-- encima. Texturas (tools/ui/make_terrain.py): assets/images/world/tiles/grass.png,
 -- dirt.png y grass_blades.png (3 variantes de 16x4, se elige una por celda).
 -- Se une con 'ground'.
 local TileTypes = require 'src/world/tiles/TileTypes'
 
-local TOP  = { image = 'assets/images/tiles/grass.png' }
-local DIRT = { image = 'assets/images/tiles/dirt.png' }
+local TOP  = { image = 'assets/images/world/tiles/grass.png' }
+local DIRT = { image = 'assets/images/world/tiles/dirt.png' }
 local blades, quads
 
 local function loadBlades()
     if blades == nil then
-        local ok, img = pcall(love.graphics.newImage, 'assets/images/tiles/grass_blades.png')
+        local ok, img = pcall(love.graphics.newImage, 'assets/images/world/tiles/grass_blades.png')
         blades = ok and img or false
         if blades then
             blades:setFilter('nearest', 'nearest')

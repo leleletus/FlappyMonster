@@ -10,7 +10,7 @@
 --   empujón) → deflate → sigue nadando (`cooldown` s sin volver a hincharse).
 -- Deshinchado no hace nada. No se le puede matar (no cuenta para Cacería).
 --
--- Sprites: assets/images/puffer_fish/puffer_fish-Sheet.png, cuadros de 16x16
+-- Sprites: assets/images/enemies/pufferfish/puffer_fish-Sheet.png, cuadros de 16x16
 -- mirando a la DERECHA (a la izquierda se espeja): nadar (1 o 2 cuadros, se
 -- alternan), medio hinchado, hinchado. Con 3 cuadros nada con el primero.
 -- Sonidos: pufferWarn / pufferInflate / pufferDeflate / pufferPrick.
@@ -18,7 +18,7 @@ local Entity      = require 'src/world/entities/base/Entity'
 local SpriteStrip = require 'src/fx/SpriteStrip'
 
 local S = 5                    -- escala del pixel art
-local SHEET = 'assets/images/puffer_fish/puffer_fish-Sheet.png'
+local SHEET = 'assets/images/enemies/pufferfish/puffer_fish-Sheet.png'
 -- Cuerpo hinchado dentro del cuadro (px del sprite, mirando a la derecha):
 -- columnas 4..14, filas 4..13 (sin la cola). La caja que pincha es un poco
 -- menor (HURT_K) para que no pinche "por el aire" en las esquinas.

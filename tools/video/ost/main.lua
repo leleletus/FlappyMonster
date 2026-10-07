@@ -163,7 +163,7 @@ function love.load(arg)
 
     canvas = love.graphics.newCanvas(W, H)
     scene = love.graphics.newCanvas(W, H)
-    logo = love.graphics.newImage('assets/images/menus/logo.png'); logo:setFilter('nearest', 'nearest')
+    logo = love.graphics.newImage('assets/images/ui/menus/logo.png'); logo:setFilter('nearest', 'nearest')
     if show.bulb then
         lamp = { px = (zone.x0 + zone.x1) / 2, py = zone.y0 + 8, len = 4.6 * T, lights = {} }
         for _, l in ipairs({ { 620, 0.4 }, { 440, 0.7 }, { 260, 1.0 } }) do    -- (tres luces a la vez: una bombilla con caída suave)

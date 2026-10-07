@@ -78,10 +78,10 @@ end
 local bubbleImgs = nil
 
 local BUBBLE_DEFS = {
-    { path='assets/images/bubbles/bubble1.png', w=16, h=16 },
-    { path='assets/images/bubbles/bubble2.png', w=6,  h=5  },
-    { path='assets/images/bubbles/bubble3.png', w=3,  h=3  },
-    { path='assets/images/bubbles/bubble4.png', w=16, h=16 },
+    { path='assets/images/world/bubbles/bubble1.png', w=16, h=16 },
+    { path='assets/images/world/bubbles/bubble2.png', w=6,  h=5  },
+    { path='assets/images/world/bubbles/bubble3.png', w=3,  h=3  },
+    { path='assets/images/world/bubbles/bubble4.png', w=16, h=16 },
 }
 
 local function loadBubbleImgs()
@@ -110,7 +110,7 @@ local VENT_SCALE = 2     -- 6×2 = 12px visual
 
 local function loadVentImg()
     if ventImg then return end
-    local ok, img = pcall(love.graphics.newImage, 'assets/images/level/crack.png')
+    local ok, img = pcall(love.graphics.newImage, 'assets/images/world/crack.png')
     if ok then ventImg = img end
 end
 

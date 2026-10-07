@@ -12,7 +12,7 @@ local GAP   = 60
 
 local function loadAssets()
     if imgBg then return end
-    imgBg = love.graphics.newImage('assets/images/menus/MenuDif.png')
+    imgBg = love.graphics.newImage('assets/images/ui/menus/MenuDif.png')
 end
 
 -- Rectángulos de las dificultades (dibujo, ratón y táctil)

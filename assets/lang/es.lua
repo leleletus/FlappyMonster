@@ -1,6 +1,6 @@
 -- assets/lang/es.lua — Español
 -- Textos del juego por pantalla. La clave es "grupo.nombre" (p. ej. menu.settings);
--- {n}, {name}... se sustituyen al mostrarlos. Ver src/Lang.lua.
+-- {n}, {name}... se sustituyen al mostrarlos. Ver src/core/Lang.lua.
 return {
     common = {
         retry = "Reintentar",

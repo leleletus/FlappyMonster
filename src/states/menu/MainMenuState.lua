@@ -24,7 +24,7 @@ local OPTIONS = {
 
 local function loadAssets()
     if imgBg then return end
-    imgBg = love.graphics.newImage('assets/images/menus/MenuDif.png')
+    imgBg = love.graphics.newImage('assets/images/ui/menus/MenuDif.png')
 end
 
 -- Rectángulos de los botones (única fuente de geometría: dibujo, ratón, táctil)

@@ -274,7 +274,7 @@ end
 -- ── Fondos ──────────────────────────────────────────────────────────────────
 local FLAPPY_BG_SCALE = 15
 function Stage.flappyBg(scroll, col, alpha)
-    local im = img('assets/images/level/Background.png')
+    local im = img('assets/images/flappy/Background.png')
     alpha = alpha or 1
     love.graphics.setColor(col[1], col[2], col[3], alpha)
     love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)

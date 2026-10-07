@@ -117,7 +117,7 @@ function MG.loadAssets()
     clawS = SpriteStrip.load(D .. 'claw_left-Sheet.png', CLAW_W)
     clawR = SpriteStrip.load(D .. 'claw_rage_left-Sheet.png', CLAW_W)        -- (rabia: con cristales en el dorso)
     clawRG = SpriteStrip.load(D .. 'claw_rage_glow-Sheet.png', CLAW_W)       -- (… y sus puntas, que brillan a oscuras)
-    icons = SpriteStrip.load('assets/images/gloomy/icons-Sheet.png', 7)
+    icons = SpriteStrip.load('assets/images/enemies/gloomy/icons-Sheet.png', 7)
 end
 function MG.sizePx() return BW, BH end
 

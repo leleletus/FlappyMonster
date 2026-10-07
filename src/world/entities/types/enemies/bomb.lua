@@ -4,7 +4,7 @@
 -- jugador; pisarla = rebote + patada; el empujón de un ground pound también.
 -- Pateada sale despedida (también fuera de su ruta) y se enciende. Encendida parpadea cada vez más deprisa, se pone roja y explota
 -- (ver entities/BombCore.lua y world/Explosions.lua).
--- Sprites: assets/images/bomb/bomb-Sheet.png (4 cuadros 15x16: quieta, andar
+-- Sprites: assets/images/enemies/bomb/bomb-Sheet.png (4 cuadros 15x16: quieta, andar
 -- 1-2, a punto de explotar) + bomb-fuse-Sheet.png (mecha encendida) +
 -- explosion-Sheet.png. Sonidos bomb_* (tools/sounds/bomb.py).
 local Entity       = require 'src/world/entities/base/Entity'
@@ -26,8 +26,8 @@ local KICK_CD = 0.35          -- s entre patadas (un empujón no cuenta como var
 local sheet, fuseSheet
 function Bomb.loadAssets()
     if sheet then return end
-    sheet = SpriteStrip.load('assets/images/bomb/bomb-Sheet.png', Core.FW)
-    fuseSheet = SpriteStrip.load('assets/images/bomb/bomb-fuse-Sheet.png', Core.FW)
+    sheet = SpriteStrip.load('assets/images/enemies/bomb/bomb-Sheet.png', Core.FW)
+    fuseSheet = SpriteStrip.load('assets/images/enemies/bomb/bomb-fuse-Sheet.png', Core.FW)
     Core.loadExplosion()
 end
 function Bomb.sizePx() return Core.FW * GUMMY_SCALE, Core.FH * GUMMY_SCALE end
@@ -129,5 +129,5 @@ return {
     defaults = { speed = 55, points = 0 },
     hide = { 'onTouch', 'stompable', 'points', 'dropOnSight', 'detectRange' },
     props = props,
-    editor = { sprite = 'assets/images/bomb/bomb-Sheet.png', frameW = Core.FW },
+    editor = { sprite = 'assets/images/enemies/bomb/bomb-Sheet.png', frameW = Core.FW },
 }

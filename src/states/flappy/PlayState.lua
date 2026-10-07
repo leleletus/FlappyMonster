@@ -34,7 +34,7 @@ local GAMEOVER_OPTIONS = { 'common.retry', 'common.menu' }   -- claves de idioma
 local imgBg = nil
 local function loadBg()
     if imgBg then return end
-    imgBg = love.graphics.newImage('assets/images/level/Background.png')
+    imgBg = love.graphics.newImage('assets/images/flappy/Background.png')
 end
 
 -- ── Helper: botón cuadrado pixel art ─────────────────────────────────────────

@@ -8,7 +8,7 @@
 --       subiendo (acaba de rebotar) → nada. Nunca daña al jugador.
 --   · de lado o desde abajo: las reglas normales del Gummy (le hace daño).
 -- La caja exterior sube lo que sobresale el casco (se rebota en lo que se ve).
--- assets/images/gummy/casco.png va dibujado encima del sprite (misma rejilla de
+-- assets/images/enemies/gummy/casco.png va dibujado encima del sprite (misma rejilla de
 -- 16x16), algo más grande (HELMET_K) alrededor de su borde de abajo.
 local Entity       = require 'src/world/entities/base/Entity'
 local Interactions = require 'src/world/entities/base/Interactions'
@@ -28,7 +28,7 @@ local imgHelmet, imgChute
 
 -- Arte por carpeta (el Gummy normal y sus variantes: gummy_ice.lua pone `artDir`):
 -- gummy.png (quieto), gummy1/2.png (andar), dead.png, todos en la misma rejilla 16x16
-local ART_DIR = 'assets/images/gummy/'
+local ART_DIR = 'assets/images/enemies/gummy/'
 local arts = {}
 function Gummy.loadArt(dir)
     if arts[dir] then return arts[dir] end
@@ -41,8 +41,8 @@ function Gummy:art() return arts[self.artDir or ART_DIR] or Gummy.loadArt(self.a
 function Gummy.loadAssets()
     if imgHelmet then return end
     Gummy.loadArt(ART_DIR)
-    imgHelmet = love.graphics.newImage('assets/images/gummy/casco.png')
-    imgChute = love.graphics.newImage('assets/images/gummy/parachute.png')
+    imgHelmet = love.graphics.newImage('assets/images/enemies/gummy/casco.png')
+    imgChute = love.graphics.newImage('assets/images/enemies/gummy/parachute.png')
     for _, i in ipairs({ imgHelmet, imgChute }) do if i.setFilter then i:setFilter('nearest', 'nearest') end end
 end
 
@@ -200,5 +200,5 @@ return {
         { key='helmet', kind='bool', label='Casco', group='Combate', default=false,
           help='Saltarle encima solo hace rebotar (el casco aguanta). Solo el ground pound rompe el casco y lo mata' },
     },
-    editor = { sprite = 'assets/images/gummy/gummy.png' },
+    editor = { sprite = 'assets/images/enemies/gummy/gummy.png' },
 }

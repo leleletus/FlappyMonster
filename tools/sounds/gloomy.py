@@ -8,7 +8,7 @@
 #                siseo con tono de antes no pegaba con el bicho)
 #   leap         salta: silbido corto
 # (Solo esos dos del Crabby lúgubre: el usuario lo encontró ruidoso. Oír algo, buscar y perder el rastro
-#  son ICONOS sobre él — assets/images/gloomy/icons-Sheet.png —, no sonidos: el silencio es la tensión.)
+#  son ICONOS sobre él — assets/images/enemies/gloomy/icons-Sheet.png —, no sonidos: el silencio es la tensión.)
 # … y los del jefe, el Mega Crabby lúgubre (más abajo: MEGA → assets/sounds/bosses/megagloomy/).
 # Desde la raíz del repo:  python3 tools/sounds/gloomy.py
 import os, wave

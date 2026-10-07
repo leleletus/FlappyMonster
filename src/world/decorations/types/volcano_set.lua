@@ -1,4 +1,4 @@
--- Decoraciones de la ISLA VOLCÁNICA (sprites: assets/images/decorations/volcano/, generados por
+-- Decoraciones de la ISLA VOLCÁNICA (sprites: assets/images/world/decorations/volcano/, generados por
 -- tools/ui/make_biome_art.py). No chocan ni hacen daño.
 --   celda:    Árbol calcinado (suelta alguna brasa), Columnas de basalto, Cascada de lava (cuelga del techo,
 --             fluye, alumbra y gotea brasas)
@@ -6,7 +6,7 @@
 --             Obsidiana ardiente (brilla), Aguas termales (corro de piedras que suelta VAPOR: para charcas)
 local DecoFx = require 'src/world/decorations/DecoFx'
 
-local DIR = 'assets/images/decorations/volcano/'
+local DIR = 'assets/images/world/decorations/volcano/'
 local CAT = 'Volcán'
 local FIRE = { 1, 0.5, 0.18 }
 

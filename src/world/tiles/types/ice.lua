@@ -1,9 +1,9 @@
 -- Hielo: bloque sólido SEMITRANSPARENTE (se ve lo de detrás). Se une con otros
 -- bloques de hielo. Si debajo no hay nada, gotea (src/fx/IceDrips.lua, solo
--- dibujo). Textura: assets/images/tiles/ice.png (original: ice-orig.png).
+-- dibujo). Textura: assets/images/world/tiles/ice.png (original: ice-orig.png).
 local TileTypes = require 'src/world/tiles/TileTypes'
 
-local TEX = { image = 'assets/images/tiles/ice.png' }
+local TEX = { image = 'assets/images/world/tiles/ice.png' }
 local ALPHA = 0.78
 
 return {

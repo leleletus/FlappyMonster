@@ -1,4 +1,4 @@
--- Decoraciones ACUÁTICAS (sprites: assets/images/decorations/water/, generados
+-- Decoraciones ACUÁTICAS (sprites: assets/images/world/decorations/water/, generados
 -- por tools/ui/make_decorations.py). No chocan ni hacen daño. Las burbujas que
 -- sueltan solo suben dentro del agua (fuera, revientan al salir).
 --   celda:    Alga (2 casillas de alto, ondea), Coral, Abanico de coral (ondea)
@@ -6,7 +6,7 @@
 --             Concha, Almeja (se abre de vez en cuando y suelta burbujas)
 local DecoFx = require 'src/world/decorations/DecoFx'
 
-local DIR = 'assets/images/decorations/water/'
+local DIR = 'assets/images/world/decorations/water/'
 local CAT = 'Acuático'
 
 local function base(def)

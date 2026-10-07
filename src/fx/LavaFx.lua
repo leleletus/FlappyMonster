@@ -26,7 +26,7 @@ end
 function LavaFx.render(level, camX, camY)
     sheet = sheet or SpriteStrip.load('assets/images/fx/lava_fx.png', 5)
     if glow == nil then
-        local ok, s = pcall(SpriteStrip.load, 'assets/images/decorations/fx/glow.png', 32)
+        local ok, s = pcall(SpriteStrip.load, 'assets/images/world/decorations/fx/glow.png', 32)
         glow = ok and s or false
     end
     local dt = math.min(0.05, love.timer.getDelta())

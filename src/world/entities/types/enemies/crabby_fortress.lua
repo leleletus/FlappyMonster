@@ -1,11 +1,11 @@
 -- Crabby DE LA FORTALEZA: el MISMO Crabby (y el mismo Crabby trampolín) con chapa de acero y remaches:
--- assets/images/crabby_fortress/ (tools/ui/make_variant_skins.py --apply; opción A "Acero" elegida por el usuario).
+-- assets/images/enemies/crabby_fortress/ (tools/ui/make_variant_skins.py --apply; opción A "Acero" elegida por el usuario).
 -- Es un ASPECTO del Crabby (Crabby.SKINS.fortress): mismas reglas, mismos tamaños.
 local Entity  = require 'src/world/entities/base/Entity'
 local base    = require 'src/world/entities/types/enemies/crabby'
 local tbase   = require 'src/world/entities/types/enemies/crabbytramp'
 local Crabby, TC = base.class, tbase.class
-local D = 'assets/images/crabby_fortress/'
+local D = 'assets/images/enemies/crabby_fortress/'
 
 local Fort = Entity.extend(Crabby, { debugColor = { 0.7, 0.75, 0.8 } })
 Fort.skinId = 'fortress'

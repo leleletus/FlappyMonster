@@ -15,7 +15,7 @@
 --           lejos se mueven menos): las de suelo se apoyan en el fondo del nivel
 --           (en niveles altos se van quedando abajo y se ve más cielo) y las de
 --           techo (cueva) cuelgan de arriba del nivel
--- De noche / al atardecer las capas y nubes se tiñen. Arte en assets/images/sky/
+-- De noche / al atardecer las capas y nubes se tiñen. Arte en assets/images/world/sky/
 -- (tools/ui/make_sky.py). Un bioma nuevo = sus PNG + una entrada en BIOMES.
 --   Sky.render(level, camX, camY)   (antes que el nivel, en lugar del fondo; el editor
 --   también lo dibuja bajo el mapa, con WINDOW_W/H = la zona visible)
@@ -23,7 +23,7 @@ local Clip = require 'src/ui/Clip'
 
 local Sky = {}
 
-local DIR = 'assets/images/sky/'
+local DIR = 'assets/images/world/sky/'
 local S = 4                              -- escala del arte
 
 -- Degradados (cuadros de gradients.png)

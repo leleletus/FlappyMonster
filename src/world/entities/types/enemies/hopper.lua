@@ -9,7 +9,7 @@
 --
 -- ASPECTOS por isla (prop `skin`; 'auto' = según el fondo del nivel): pradera, costa, fortaleza, nieve, cueva,
 -- volcán — la misma forma con otra paleta, otras motas y otra cosa en la cabeza. Hojas de 4 cuadros 16x21 (quieto,
--- agachado, en el aire, aplastado): assets/images/hopper/<isla>-Sheet.png, de tools/ui/make_hopper_sprites.py.
+-- agachado, en el aire, aplastado): assets/images/enemies/hopper/<isla>-Sheet.png, de tools/ui/make_hopper_sprites.py.
 -- Sonidos hopWind / hopJump / hopLand (tools/sounds/hopper.py).
 local Entity      = require 'src/world/entities/base/Entity'
 local SpriteStrip = require 'src/fx/SpriteStrip'
@@ -35,7 +35,7 @@ local BY_BG = { meadow = 'pradera', forest = 'pradera', coast = 'costa', fortres
 local sheets = {}
 function Hopper.loadAssets()
     if sheets.pradera then return end
-    for _, id in ipairs(Hopper.SKINS) do sheets[id] = SpriteStrip.load('assets/images/hopper/' .. id .. '-Sheet.png', FW) end
+    for _, id in ipairs(Hopper.SKINS) do sheets[id] = SpriteStrip.load('assets/images/enemies/hopper/' .. id .. '-Sheet.png', FW) end
 end
 function Hopper.sizePx() return FW * S, BODY_H * S end
 
@@ -226,5 +226,5 @@ return {
           help='Acorta el salto hasta donde haya suelo. Sin esto persigue aunque se caiga' },
     },
     noises = { hopLand = 4 },
-    editor = { sprite = 'assets/images/hopper/pradera-Sheet.png', frameW = FW },
+    editor = { sprite = 'assets/images/enemies/hopper/pradera-Sheet.png', frameW = FW },
 }

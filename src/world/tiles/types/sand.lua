@@ -1,13 +1,13 @@
 -- Arena: bloque sólido de terreno (se une con 'ground'). Textura
--- assets/images/tiles/sand.png. Donde toca tierra, césped o piedra (bloque grande o
+-- assets/images/world/tiles/sand.png. Donde toca tierra, césped o piedra (bloque grande o
 -- mini bloque, también siendo ella un mini bloque) no cambia de golpe: dibuja por
 -- ese lado una franja tramada con los colores del vecino
--- (assets/images/tiles/sand_blend.png: cuadro 1 tierra —también bajo el césped—,
+-- (assets/images/world/tiles/sand_blend.png: cuadro 1 tierra —también bajo el césped—,
 -- 2 piedra, 3 roca abisal, 4 borde; la franja está a la izquierda y se gira para
 -- cada lado). sand.png: tools/ui/make_terrain.py; sand_blend.png: make_world_art.py.
 local TileTypes = require 'src/world/tiles/TileTypes'
 
-local TEX = { image = 'assets/images/tiles/sand.png' }
+local TEX = { image = 'assets/images/world/tiles/sand.png' }
 local BLEND_OF = { dirt = 1, grass = 1, solid = 2, deep_stone = 3, border = 4, basalt = 4, ash = 4 }
 -- lado → { dx, dy en medias casillas, ángulo } (la franja del dibujo está a la izquierda)
 local SIDES = { { -1, 0, 0 }, { 0, -1, math.pi / 2 }, { 1, 0, math.pi }, { 0, 1, -math.pi / 2 } }
@@ -16,7 +16,7 @@ local blend, quads
 
 local function loadBlend()
     if blend == nil then
-        local ok, img = pcall(love.graphics.newImage, 'assets/images/tiles/sand_blend.png')
+        local ok, img = pcall(love.graphics.newImage, 'assets/images/world/tiles/sand_blend.png')
         blend = ok and img or false
         if blend then
             blend:setFilter('nearest', 'nearest')

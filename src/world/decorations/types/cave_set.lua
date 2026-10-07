@@ -1,4 +1,4 @@
--- Decoraciones de CUEVA (sprites: assets/images/decorations/cave/, generados por
+-- Decoraciones de CUEVA (sprites: assets/images/world/decorations/cave/, generados por
 -- tools/ui/make_decorations.py). No chocan ni hacen daño.
 --   celda:    Estalactita (cuelga y gotea), Estalagmita, Cristales brillantes
 --             (brillan y sueltan destellos), Telaraña (en la esquina de arriba de
@@ -7,7 +7,7 @@
 --             Antorcha (llama animada, luz y brasas), Huesos
 local DecoFx = require 'src/world/decorations/DecoFx'
 
-local DIR = 'assets/images/decorations/cave/'
+local DIR = 'assets/images/world/decorations/cave/'
 local CAT = 'Cueva'
 local S = DecoFx.SCALE
 local WATER = { 0.7, 0.8, 0.95 }

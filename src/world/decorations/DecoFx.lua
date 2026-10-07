@@ -20,7 +20,7 @@ local SpriteStrip = require 'src/fx/SpriteStrip'
 
 local DecoFx = {}
 DecoFx.SCALE = 4                 -- escala del arte de las decoraciones
-DecoFx.FX = 'assets/images/decorations/fx/'
+DecoFx.FX = 'assets/images/world/decorations/fx/'
 local MAX_FX = 24                -- partículas por decoración
 
 local strips = {}

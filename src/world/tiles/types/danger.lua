@@ -1,7 +1,7 @@
 -- Lava (antes "Peligro"; se mantiene el nombre interno 'danger' y el id 3 para
 -- que los niveles no cambien): se atraviesa, pero tocarla con la hitbox interna
 -- mata. Textura animada (4 cuadros de 16x16 x4, se repite sin costura):
--- assets/images/tiles/lava.png y, con la cara de arriba al aire, lava_top.png
+-- assets/images/world/tiles/lava.png y, con la cara de arriba al aire, lava_top.png
 -- (cresta brillante). Burbujas y salpicaduras: src/fx/LavaFx.lua (solo dibujo).
 -- Arte: tools/ui/make_world_art.py.
 local FPS = 4
@@ -36,9 +36,9 @@ return {
     light = { r = 160, color = { 1, 0.5, 0.18 }, a = 0.3, pulse = 2.3, emissive = true },
     collision = 'none', material = 'deadly', enemySolid = false, lava = true,
     editorColor = { 0.94, 0.42, 0.12 },
-    texture = { image = 'assets/images/tiles/lava_top.png', frames = 4, fps = FPS },
+    texture = { image = 'assets/images/world/tiles/lava_top.png', frames = 4, fps = FPS },
     draw = function(t, ctx)
-        local path = lavaAbove(t, ctx) and 'assets/images/tiles/lava.png' or 'assets/images/tiles/lava_top.png'
+        local path = lavaAbove(t, ctx) and 'assets/images/world/tiles/lava.png' or 'assets/images/world/tiles/lava_top.png'
         local img, q = frames(path)
         if not img then return end
         local f = math.floor((ctx.time or love.timer.getTime()) * FPS) % #q + 1

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # tools/ui/make_sky.py
-# Cielo y fondos con paralaje (assets/images/sky/, arte a 1x; el juego lo dibuja a x4):
+# Cielo y fondos con paralaje (assets/images/world/sky/, arte a 1x; el juego lo dibuja a x4):
 #   gradients.png   degradados del cielo en franjas de píxel: 5 cuadros de 8x180
 #                   (día, atardecer, noche, cueva, submarino)
 #   sun.png, moon.png, stars.png (3 cuadros de 3x3: centelleo), clouds.png (3 nubes de 48x16)
@@ -21,7 +21,7 @@ from PIL import Image
 
 FORCE = '--force' in sys.argv
 ONLY = {a for a in sys.argv[1:] if not a.startswith('--')}
-OUT = 'assets/images/sky'
+OUT = 'assets/images/world/sky'
 W = 320
 
 

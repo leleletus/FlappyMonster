@@ -1,11 +1,11 @@
--- Decoraciones de PRADERA (sprites: assets/images/decorations/meadow/, generados por tools/ui/make_biome_art.py).
+-- Decoraciones de PRADERA (sprites: assets/images/world/decorations/meadow/, generados por tools/ui/make_biome_art.py).
 -- No chocan ni hacen daño.
 --   grandes:  Roble, Pino (se mecen un poco; del roble cae alguna hoja)
 --   celda:    Arbusto redondo, Tronco caído
 --   subcelda: Margaritas, Hierba alta (se mece), Seta roja, Roca con musgo, Girasol (se balancea)
 local DecoFx = require 'src/world/decorations/DecoFx'
 
-local DIR = 'assets/images/decorations/meadow/'
+local DIR = 'assets/images/world/decorations/meadow/'
 local CAT = 'Pradera'
 
 local function base(def)

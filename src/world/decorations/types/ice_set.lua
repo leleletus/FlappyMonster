@@ -1,4 +1,4 @@
--- Decoraciones de HIELO Y NIEVE (sprites: assets/images/decorations/ice/,
+-- Decoraciones de HIELO Y NIEVE (sprites: assets/images/world/decorations/ice/,
 -- generados por tools/ui/make_decorations.py). No chocan ni hacen daño.
 --   subcelda: Carámbanos pequeños (cuelgan y gotean), Montón de nieve (brillos),
 --             Cristal de hielo (brilla)
@@ -6,7 +6,7 @@
 --             nieve), Muñeco de nieve (parpadea, la bufanda ondea)
 local DecoFx = require 'src/world/decorations/DecoFx'
 
-local DIR = 'assets/images/decorations/ice/'
+local DIR = 'assets/images/world/decorations/ice/'
 local CAT = 'Hielo y nieve'
 local S = DecoFx.SCALE
 local ICE = { 0.75, 0.88, 1 }

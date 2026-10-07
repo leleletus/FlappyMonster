@@ -5,7 +5,7 @@ local Pipe  = Class:new()
 local img = nil
 local function loadSprite()
     if img then return end
-    img = love.graphics.newImage('assets/images/pipes/pipe.png')
+    img = love.graphics.newImage('assets/images/flappy/pipe.png')
 end
 
 -- Duración de las animaciones en segundos

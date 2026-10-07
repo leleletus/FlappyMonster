@@ -16,8 +16,8 @@ local MAX_SPEED     = 250
 
 local function loadAssets()
     if imgBg then return end
-    imgBg   = love.graphics.newImage('assets/images/menus/Menu.png')
-    imgLogo = love.graphics.newImage('assets/images/menus/logo.png')
+    imgBg   = love.graphics.newImage('assets/images/ui/menus/Menu.png')
+    imgLogo = love.graphics.newImage('assets/images/ui/menus/logo.png')
     imgMons = {
         love.graphics.newImage('assets/images/player/monstrito1.png'),
         love.graphics.newImage('assets/images/player/monstrito2.png'),

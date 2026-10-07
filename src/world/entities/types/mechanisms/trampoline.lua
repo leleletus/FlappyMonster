@@ -37,8 +37,8 @@ local skinImg = {}
 function Tramp.loadAssets()
     if imgNormal then return end
     for id, f in pairs(SKINS) do
-        local a = love.graphics.newImage('assets/images/trampoline/' .. f[1])
-        local b = love.graphics.newImage('assets/images/trampoline/' .. f[2])
+        local a = love.graphics.newImage('assets/images/mechanisms/trampoline/' .. f[1])
+        local b = love.graphics.newImage('assets/images/mechanisms/trampoline/' .. f[2])
         if a.setFilter then a:setFilter('nearest', 'nearest'); b:setFilter('nearest', 'nearest') end
         skinImg[id] = { a, b }
     end
@@ -183,7 +183,7 @@ for _, d in ipairs({ { 'up', 'trampoline', 'Arriba' }, { 'down', 'trampoline_dow
         description = 'Bloque sólido con una cara que lanza a jugadores y enemigos por los aires.',
         variant = { group = 'trampoline', label = d[3], groupLabel = 'Trampolín', prop = 'Dirección' },
         hide = 'all', defaults = { movement = 'static' }, props = PROPS,
-        editor = { sprite = 'assets/images/trampoline/normal.png', draw = editorIcon(d[1]) },
+        editor = { sprite = 'assets/images/mechanisms/trampoline/normal.png', draw = editorIcon(d[1]) },
     }
 end
 return defs

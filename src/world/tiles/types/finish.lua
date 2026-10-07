@@ -8,10 +8,10 @@ return {
     collision = 'none', trigger = 'finish',
     editorColor = { 0.95, 0.95, 0.95 },
     draw = function(t, ctx)
-        -- Ajedrez (assets/images/tiles/finish.png) que ondea: cada columna de
+        -- Ajedrez (assets/images/world/tiles/finish.png) que ondea: cada columna de
         -- cuadros sube/baja un poco. El marco dorado no ondea.
         if not img then
-            img = love.graphics.newImage('assets/images/tiles/finish.png')
+            img = love.graphics.newImage('assets/images/world/tiles/finish.png')
             img:setFilter('nearest', 'nearest')
         end
         local x, y, s = ctx.x, ctx.y, ctx.size

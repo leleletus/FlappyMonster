@@ -1,10 +1,10 @@
 -- Ceniza: basalto con una capa de ceniza gris (y alguna brasa) cuando su cara de arriba da al aire; tapado
 -- por otro bloque se ve como basalto (como el césped sobre la tierra). Texturas (tools/ui/make_biome_art.py):
--- assets/images/tiles/ash.png y basalt.png. Se une con 'ground'. Se comporta como la tierra.
+-- assets/images/world/tiles/ash.png y basalt.png. Se une con 'ground'. Se comporta como la tierra.
 local TileTypes = require 'src/world/tiles/TileTypes'
 
-local TOP  = { image = 'assets/images/tiles/ash.png' }
-local BODY = { image = 'assets/images/tiles/basalt.png', span = 2 }
+local TOP  = { image = 'assets/images/world/tiles/ash.png' }
+local BODY = { image = 'assets/images/world/tiles/basalt.png', span = 2 }
 
 return {
     id = 39, name = 'ash', label = 'Ceniza', category = 'Terreno',

@@ -1,9 +1,9 @@
--- Piedra: bloque sólido de terreno. Textura assets/images/tiles/stone.png
+-- Piedra: bloque sólido de terreno. Textura assets/images/world/tiles/stone.png
 -- (tools/ui/make_world_art.py): cubre 2x2 casillas y se repite, así las grietas
 -- siguen de un bloque al de al lado; bordes claros solo en las caras al aire.
 local TileTypes = require 'src/world/tiles/TileTypes'
 
-local TEX = { image = 'assets/images/tiles/stone.png', span = 2 }
+local TEX = { image = 'assets/images/world/tiles/stone.png', span = 2 }
 
 return {
     id = 1, name = 'solid', label = 'Piedra', category = 'Terreno',

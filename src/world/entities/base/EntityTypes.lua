@@ -295,7 +295,7 @@ end
 
 -- ── Alas de los voladores ────────────────────────────────────────────────────
 -- Toda entidad con movimiento 'fly' lleva un ala a cada lado, DETRÁS del
--- sprite: assets/images/wings/wings-Sheet.png (ala IZQUIERDA, 2 cuadros de
+-- sprite: assets/images/enemies/wings/wings-Sheet.png (ala IZQUIERDA, 2 cuadros de
 -- 9x13 de aleteo, unida al cuerpo por su borde derecho); la derecha es la misma
 -- espejada. Se colocan SIMÉTRICAS respecto a lo que se VE: la caja de píxeles
 -- visibles del sprite del tipo (editor.sprite, medida una vez), con su lado y su
@@ -333,7 +333,7 @@ end
 
 function EntityTypes.drawWings(e, camX, camY)
     if not (e.props and e.props.movement == 'fly') or e.state == 'dead' then return end
-    wingStrip = wingStrip or require('src/fx/SpriteStrip').load('assets/images/wings/wings-Sheet.png', 9)
+    wingStrip = wingStrip or require('src/fx/SpriteStrip').load('assets/images/enemies/wings/wings-Sheet.png', 9)
     -- Cuerpo visible (centro x, arriba y alto en px de mundo)
     local cxw, top, bw, bh
     local vb = e.sprW and e.sprH and visibleBox(e.def or (e.class and e.class.def))

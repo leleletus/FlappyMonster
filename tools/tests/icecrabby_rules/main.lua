@@ -119,7 +119,7 @@ local function opaqueRows(img)
         local file = name:gsub('^ice_', '')
         file = ({ idle1 = 'crab1', idle2 = 'crab2', idle3 = 'crab3' })[file] or file
         file = file:match('^s(%d)$') and ('sink' .. file:sub(2)) or file
-        local ok, d = pcall(love.image.newImageData, 'assets/images/crabby_ice/' .. file .. '.png')
+        local ok, d = pcall(love.image.newImageData, 'assets/images/enemies/crabby_ice/' .. file .. '.png')
         local rows = 0
         if ok then
             for y = 0, d:getHeight() - 1 do

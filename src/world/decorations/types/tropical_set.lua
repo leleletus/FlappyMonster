@@ -1,4 +1,4 @@
--- Decoraciones TROPICALES (sprites: assets/images/decorations/tropical/,
+-- Decoraciones TROPICALES (sprites: assets/images/world/decorations/tropical/,
 -- generados por tools/ui/make_decorations.py). No chocan ni hacen daño.
 -- (La Palmera, palmtree.lua, también es de esta categoría.)
 --   celda:    Helecho, Arbusto tropical (se mecen; al arbusto se le cae alguna
@@ -7,7 +7,7 @@
 --   subcelda: Hibisco (se balancea), Piña
 local DecoFx = require 'src/world/decorations/DecoFx'
 
-local DIR = 'assets/images/decorations/tropical/'
+local DIR = 'assets/images/world/decorations/tropical/'
 local CAT = 'Tropical'
 local FIRE = { 1, 0.62, 0.25 }
 

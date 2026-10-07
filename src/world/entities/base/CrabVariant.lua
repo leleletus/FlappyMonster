@@ -9,7 +9,7 @@ function V.defs(skin, label, name, trampName, desc, tuning, fields)
     local base  = require 'src/world/entities/types/enemies/crabby'
     local tbase = require 'src/world/entities/types/enemies/crabbytramp'
     local Crabby, TC = base.class, tbase.class
-    local D = 'assets/images/crabby_' .. (skin == 'fortress' and 'fortress' or skin) .. '/'
+    local D = 'assets/images/enemies/crabby_' .. (skin == 'fortress' and 'fortress' or skin) .. '/'
     local function class(parent)
         local cls = Entity.extend(parent, tuning or {})
         cls.skinId = skin

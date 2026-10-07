@@ -3,9 +3,9 @@
 # (tools/ui/make_enemy_designs.py guarda las propuestas):
 #   · CRABBY DE RÍO (pradera, agua dulce): caparazón estrecho con musgo, NO más alto que el Crabby de siempre (9 px),
 #     patas largas con una fila VERDE pegada (como las naranjas del Crabby helado; sin más pelitos), sin boca, y las
-#     pinzas del juego (el dibujo de las del Crabby helado) en su color → assets/images/crabby_river/
+#     pinzas del juego (el dibujo de las del Crabby helado) en su color → assets/images/enemies/crabby_river/
 #   · CRABBY DE LAVA: roca ancha y baja, "cara 1" (ojos de brasa y grietas sueltas, sin boca) y las mismas pinzas con
-#     el filo al rojo ("pinzas C") → assets/images/crabby_lava/
+#     el filo al rojo ("pinzas C") → assets/images/enemies/crabby_lava/
 # Cada carpeta: crab1-3 (andar), sink1..N (se HUNDE fila a fila al esconderse, como el helado), hid, lookin, meat,
 # dead (aplastado), spike (la púa del Crabby) y claw_left-Sheet (2 cuadros 5x5: abierta / cerrada).
 #   python3 tools/ui/make_crab_species.py --apply      (sin --apply: solo la vista previa en FlappyMonster_pruebas)
@@ -60,7 +60,7 @@ SPECIES = {
               ".oossssssssssssssssoo.",
               "o..oooooooooooooooo..o"]),
     # CRABBY DE CUEVA (versión A "Geoda", elegida por el usuario): caparazón redondo lila con un racimo de cristales,
-    # SIN pinzas (ni sueltas ni dibujadas), sin boca → assets/images/crabby_cave/
+    # SIN pinzas (ni sueltas ni dibujadas), sin boca → assets/images/enemies/crabby_cave/
     'crabby_cave': dict(
         pal=CAVE, claw_pal=None,
         shell=D.V5[0][1][:6],

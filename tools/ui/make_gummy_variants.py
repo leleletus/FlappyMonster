@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # tools/ui/make_gummy_variants.py — variantes del GUMMY (propuestas para elegir):
 #   · Gummy HELADO (niveles helados): la MISMA forma del Gummy (cada píxel del original:
-#     assets/images/gummy/gummy*.png, 16x16) con su estilo de hielo + detalles por opción.
+#     assets/images/enemies/gummy/gummy*.png, 16x16) con su estilo de hielo + detalles por opción.
 #   · MEGA GUMMY (jefe o enemigo grande): el Gummy en grande, al mismo tamaño de píxel que el
 #     Mega Crabby (escala 10), con su misma cara y detalles propios por opción.
 #
@@ -20,7 +20,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..'))
-SRC = os.path.join(ROOT, 'assets', 'images', 'gummy')
+SRC = os.path.join(ROOT, 'assets', 'images', 'enemies', 'gummy')
 
 OUT_C = (30, 30, 42)
 # Paleta del Gummy original → hielo
@@ -403,7 +403,7 @@ def preview(out):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--apply-helado', action='store_true',
-                    help='escribe el Gummy helado elegido (A "Escarcha" sin carámbanos) en assets/images/gummy_ice/')
+                    help='escribe el Gummy helado elegido (A "Escarcha" sin carámbanos) en assets/images/enemies/gummy_ice/')
     ap.add_argument('--apply-mega', action='store_true',
                     help='escribe el jefe Rey Gummy (opción B) en assets/images/bosses/megagummy/ (boss_art)')
     ap.add_argument('--out', default=os.path.join(os.environ.get('FM_PREVIEWS', '/home/mtvemo/FlappyMonster_pruebas'),
@@ -411,7 +411,7 @@ def main():
     a = ap.parse_args()
     preview(a.out)
     if a.apply_helado:
-        dst = os.path.join(ROOT, 'assets', 'images', 'gummy_ice')
+        dst = os.path.join(ROOT, 'assets', 'images', 'enemies', 'gummy_ice')
         os.makedirs(dst, exist_ok=True)
         for n, f in zip(('gummy.png', 'gummy1.png', 'gummy2.png', 'dead.png'), icy_frames('A')):
             f.save(os.path.join(dst, n))

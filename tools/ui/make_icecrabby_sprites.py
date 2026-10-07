@@ -9,10 +9,10 @@
 #                   superficie (siempre carámbano, apuntando hacia fuera de la superficie)
 #
 #   python3 tools/ui/make_icecrabby_sprites.py            # vista previa en --out
-#   python3 tools/ui/make_icecrabby_sprites.py --apply    # escribe assets/images/crabby_ice/
+#   python3 tools/ui/make_icecrabby_sprites.py --apply    # escribe assets/images/enemies/crabby_ice/
 #   (--out: $FM_PREVIEWS/crabby_ice o /home/mtvemo/FlappyMonster_pruebas/crabby_ice, fuera del repo)
 #
-# Salida (como assets/images/crabby/ + tapas):
+# Salida (como assets/images/enemies/crabby/ + tapas):
 #   crab1/2/3.png   andar (18x13; los de assets/images/bosses/megacrabby_ice)
 #   meat.png        el cuerpo sin patas, lookin.png (solo asoma), hid.png
 #   hide-Sheet.png  8 cuadros 18x8: se hunde fila a fila en la superficie (esconderse / salir al revés);
@@ -30,7 +30,7 @@ from PIL import Image, ImageDraw, ImageFont
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..'))
 ICE_MEGA = os.path.join(ROOT, 'assets', 'images', 'megacrabby_ice')
-DST = os.path.join(ROOT, 'assets', 'images', 'crabby_ice')
+DST = os.path.join(ROOT, 'assets', 'images', 'enemies', 'crabby_ice')
 S = 4                                   # escala del Crabby en el juego
 
 PAL = {'.': None, 'O': (30, 30, 42)}
@@ -102,8 +102,8 @@ def build():
     out['hide-Sheet.png'] = sheet
     for i in range(8):                                           # (y suelto: el juego usa imágenes)
         out['sink%d.png' % (i + 1)] = sheet.crop((i * shell.width, 0, (i + 1) * shell.width, shell.height))
-    out['tramp_normal.png'] = recolor(os.path.join(ROOT, 'assets/images/trampoline/normal.png'), TRAMP)
-    out['tramp_extended.png'] = recolor(os.path.join(ROOT, 'assets/images/trampoline/extended.png'), TRAMP)
+    out['tramp_normal.png'] = recolor(os.path.join(ROOT, 'assets/images/mechanisms/trampoline/normal.png'), TRAMP)
+    out['tramp_extended.png'] = recolor(os.path.join(ROOT, 'assets/images/mechanisms/trampoline/extended.png'), TRAMP)
     out['snow.png'] = grid(SNOW)
     out['snow_cracked.png'] = grid(SNOW_CRACKED)
     out['icicle.png'] = Image.open(os.path.join(ROOT, 'assets/images/bosses/snowboss/icicle.png')).convert('RGBA')
@@ -163,7 +163,7 @@ def mockup(sp, out):
     y1 = 150
     floor_line(y1)
     d.text((20, 10), 'CRABBY HELADO (escala 4, como el Crabby) - andar, esconderse con cada tapa, en pared y techo, y el montón de nieve que revienta', fill=(255, 255, 255), font=font)
-    normal = Image.open(os.path.join(ROOT, 'assets/images/crabby/crab1.png')).convert('RGBA')
+    normal = Image.open(os.path.join(ROOT, 'assets/images/enemies/crabby/crab1.png')).convert('RGBA')
     paste_bottom(im, up(normal, S), 80, y1)
     d.text((40, 30), 'Crabby', fill=(255, 255, 255), font=font)
     pl = Image.open(os.path.join(ROOT, 'assets/images/player/monstrito1.png')).convert('RGBA')

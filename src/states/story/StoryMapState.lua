@@ -42,52 +42,52 @@ local GROUND = { g = 1, s = 2, w = 3, c = 4, f = 5, l = 6 }
 local CLIFF = { g = 'grass', s = 'sand', w = 'snow', c = 'border', f = 'stone', l = 'deep_stone' }
 -- Decoraciones: imagen + ancho de cuadro (animadas) + brillo
 local DECO = {
-    tulip = { 'assets/images/foliage/tulip.png' },
-    bush = { 'assets/images/decorations/tropical/bush.png' },
-    fern = { 'assets/images/decorations/tropical/fern.png' },
-    hibiscus = { 'assets/images/decorations/tropical/hibiscus.png' },
-    pineapple = { 'assets/images/decorations/tropical/pineapple.png' },
-    palm = { 'assets/images/foliage/palmtree/palmtree.png', over = { 'assets/images/foliage/palmtree/coques.png', 'assets/images/foliage/palmtree/palmleaves.png' } },
-    torch = { 'assets/images/decorations/cave/torch-Sheet.png', fw = 10, fps = 8, glow = { 1, 0.6, 0.2 } },
-    bones = { 'assets/images/decorations/cave/bones.png' },
-    stalagmite = { 'assets/images/decorations/cave/stalagmite.png' },
-    stalagmite_small = { 'assets/images/decorations/cave/stalagmite_small.png' },
-    snowy_pine = { 'assets/images/decorations/ice/snowy_pine.png' },
-    snowman = { 'assets/images/decorations/ice/snowman-Sheet.png', fw = 18, fps = 1.5 },
-    frozen_bush = { 'assets/images/decorations/ice/frozen_bush.png' },
-    snow_pile = { 'assets/images/decorations/ice/snow_pile.png' },
-    crystals = { 'assets/images/decorations/cave/crystals.png', glow = { 0.5, 0.7, 1 } },
-    glow_mushroom = { 'assets/images/decorations/cave/glow_mushroom.png', glow = { 0.4, 1, 0.7 } },
+    tulip = { 'assets/images/world/decorations/foliage/tulip.png' },
+    bush = { 'assets/images/world/decorations/tropical/bush.png' },
+    fern = { 'assets/images/world/decorations/tropical/fern.png' },
+    hibiscus = { 'assets/images/world/decorations/tropical/hibiscus.png' },
+    pineapple = { 'assets/images/world/decorations/tropical/pineapple.png' },
+    palm = { 'assets/images/world/decorations/foliage/palmtree/palmtree.png', over = { 'assets/images/world/decorations/foliage/palmtree/coques.png', 'assets/images/world/decorations/foliage/palmtree/palmleaves.png' } },
+    torch = { 'assets/images/world/decorations/cave/torch-Sheet.png', fw = 10, fps = 8, glow = { 1, 0.6, 0.2 } },
+    bones = { 'assets/images/world/decorations/cave/bones.png' },
+    stalagmite = { 'assets/images/world/decorations/cave/stalagmite.png' },
+    stalagmite_small = { 'assets/images/world/decorations/cave/stalagmite_small.png' },
+    snowy_pine = { 'assets/images/world/decorations/ice/snowy_pine.png' },
+    snowman = { 'assets/images/world/decorations/ice/snowman-Sheet.png', fw = 18, fps = 1.5 },
+    frozen_bush = { 'assets/images/world/decorations/ice/frozen_bush.png' },
+    snow_pile = { 'assets/images/world/decorations/ice/snow_pile.png' },
+    crystals = { 'assets/images/world/decorations/cave/crystals.png', glow = { 0.5, 0.7, 1 } },
+    glow_mushroom = { 'assets/images/world/decorations/cave/glow_mushroom.png', glow = { 0.4, 1, 0.7 } },
 }
 -- Bichos: cuadros para andar (archivos o cuadros de una tira) y si se voltean al girar
 local CRITTER = {
-    gummy = { files = { 'assets/images/gummy/gummy1.png', 'assets/images/gummy/gummy2.png' }, spd = 1.2 },
-    gummy_ice = { files = { 'assets/images/gummy_ice/gummy1.png', 'assets/images/gummy_ice/gummy2.png' }, spd = 1.2 },
-    crabby = { files = { 'assets/images/crabby/crab1.png', 'assets/images/crabby/crab2.png', 'assets/images/crabby/crab3.png' }, spd = 1.6 },
+    gummy = { files = { 'assets/images/enemies/gummy/gummy1.png', 'assets/images/enemies/gummy/gummy2.png' }, spd = 1.2 },
+    gummy_ice = { files = { 'assets/images/enemies/gummy_ice/gummy1.png', 'assets/images/enemies/gummy_ice/gummy2.png' }, spd = 1.2 },
+    crabby = { files = { 'assets/images/enemies/crabby/crab1.png', 'assets/images/enemies/crabby/crab2.png', 'assets/images/enemies/crabby/crab3.png' }, spd = 1.6 },
     -- (el Crabby helado lleva sus PINZAS pequeñas, como en el juego: la misma tira y la misma colocación que su
     -- aspecto — `Crabby.SKINS.ice.claw` en types/crabby.lua —; en el mapa iba sin ellas)
-    crabby_ice = { files = { 'assets/images/crabby_ice/crab1.png', 'assets/images/crabby_ice/crab2.png', 'assets/images/crabby_ice/crab3.png' }, spd = 1.4,
-                   claw = { file = 'assets/images/crabby_ice/claw_left-Sheet.png', w = 7, x = 5.6, y = -0.6, inset = 1.0 } },
+    crabby_ice = { files = { 'assets/images/enemies/crabby_ice/crab1.png', 'assets/images/enemies/crabby_ice/crab2.png', 'assets/images/enemies/crabby_ice/crab3.png' }, spd = 1.4,
+                   claw = { file = 'assets/images/enemies/crabby_ice/claw_left-Sheet.png', w = 7, x = 5.6, y = -0.6, inset = 1.0 } },
     -- CADA ISLA con los suyos (los mismos sprites y las mismas pinzas que en los niveles: `Crabby.SKINS[..].claw`)
-    gummy_fortress = { files = { 'assets/images/gummy_fortress/gummy1.png', 'assets/images/gummy_fortress/gummy2.png' }, spd = 1.2 },
-    gummy_cave = { files = { 'assets/images/gummy_cave/gummy1.png', 'assets/images/gummy_cave/gummy2.png' }, spd = 1.2 },
-    gummy_magma = { files = { 'assets/images/gummy_magma/gummy1.png', 'assets/images/gummy_magma/gummy2.png' }, spd = 1.2 },
-    crabby_river = { files = { 'assets/images/crabby_river/crab1.png', 'assets/images/crabby_river/crab2.png', 'assets/images/crabby_river/crab3.png' }, spd = 1.6,
-                     claw = { file = 'assets/images/crabby_river/claw_left-Sheet.png', w = 5, x = 4.4, y = -1.6, inset = 0.5 } },
-    crabby_fortress = { files = { 'assets/images/crabby_fortress/crab1.png', 'assets/images/crabby_fortress/crab2.png', 'assets/images/crabby_fortress/crab3.png' }, spd = 1.6 },
-    crabby_cave = { files = { 'assets/images/crabby_cave/crab1.png', 'assets/images/crabby_cave/crab2.png', 'assets/images/crabby_cave/crab3.png' }, spd = 1.5 },
-    crabby_lava = { files = { 'assets/images/crabby_lava/crab1.png', 'assets/images/crabby_lava/crab2.png', 'assets/images/crabby_lava/crab3.png' }, spd = 1.5,
-                    claw = { file = 'assets/images/crabby_lava/claw_left-Sheet.png', w = 5, x = 5.4, y = -1.6, inset = 0.5 } },
-    bomb = { sheet = 'assets/images/bomb/bomb-Sheet.png', fw = 15, frames = { 2, 3 }, spd = 1.1 },
-    puffer = { sheet = 'assets/images/puffer_fish/puffer_fish-Sheet.png', fw = 16, frames = { 1, 2 }, spd = 0.9, swim = true },
-    gloomy = { sheet = 'assets/images/gloomy/gloomy-Sheet.png', fw = 26, frames = { 1, 2, 3 }, spd = 1.0,
-               glow = 'assets/images/gloomy/glow-Sheet.png' },
+    gummy_fortress = { files = { 'assets/images/enemies/gummy_fortress/gummy1.png', 'assets/images/enemies/gummy_fortress/gummy2.png' }, spd = 1.2 },
+    gummy_cave = { files = { 'assets/images/enemies/gummy_cave/gummy1.png', 'assets/images/enemies/gummy_cave/gummy2.png' }, spd = 1.2 },
+    gummy_magma = { files = { 'assets/images/enemies/gummy_magma/gummy1.png', 'assets/images/enemies/gummy_magma/gummy2.png' }, spd = 1.2 },
+    crabby_river = { files = { 'assets/images/enemies/crabby_river/crab1.png', 'assets/images/enemies/crabby_river/crab2.png', 'assets/images/enemies/crabby_river/crab3.png' }, spd = 1.6,
+                     claw = { file = 'assets/images/enemies/crabby_river/claw_left-Sheet.png', w = 5, x = 4.4, y = -1.6, inset = 0.5 } },
+    crabby_fortress = { files = { 'assets/images/enemies/crabby_fortress/crab1.png', 'assets/images/enemies/crabby_fortress/crab2.png', 'assets/images/enemies/crabby_fortress/crab3.png' }, spd = 1.6 },
+    crabby_cave = { files = { 'assets/images/enemies/crabby_cave/crab1.png', 'assets/images/enemies/crabby_cave/crab2.png', 'assets/images/enemies/crabby_cave/crab3.png' }, spd = 1.5 },
+    crabby_lava = { files = { 'assets/images/enemies/crabby_lava/crab1.png', 'assets/images/enemies/crabby_lava/crab2.png', 'assets/images/enemies/crabby_lava/crab3.png' }, spd = 1.5,
+                    claw = { file = 'assets/images/enemies/crabby_lava/claw_left-Sheet.png', w = 5, x = 5.4, y = -1.6, inset = 0.5 } },
+    bomb = { sheet = 'assets/images/enemies/bomb/bomb-Sheet.png', fw = 15, frames = { 2, 3 }, spd = 1.1 },
+    puffer = { sheet = 'assets/images/enemies/pufferfish/puffer_fish-Sheet.png', fw = 16, frames = { 1, 2 }, spd = 0.9, swim = true },
+    gloomy = { sheet = 'assets/images/enemies/gloomy/gloomy-Sheet.png', fw = 26, frames = { 1, 2, 3 }, spd = 1.0,
+               glow = 'assets/images/enemies/gloomy/glow-Sheet.png' },
 }
 
 -- SALTARINES (uno por isla): no andan, van a BOTES (se agachan, saltan en arco, caen). Su arte mira a la IZQUIERDA.
 -- Cuadros de su tira: 1 quieto, 2 agachado, 3 en el aire
 for _, isle in ipairs({ 'pradera', 'costa', 'fortaleza', 'nieve', 'cueva', 'volcan' }) do
-    CRITTER['hopper_' .. isle] = { sheet = 'assets/images/hopper/' .. isle .. '-Sheet.png', fw = 16, hop = true, spd = 1.5, left = true }
+    CRITTER['hopper_' .. isle] = { sheet = 'assets/images/enemies/hopper/' .. isle .. '-Sheet.png', fw = 16, hop = true, spd = 1.5, left = true }
 end
 
 -- Formaciones del relieve del mapa (colinas, picos, rocas, bocas de cueva…): una nueva = un PNG en
@@ -650,7 +650,7 @@ function StoryMapState:_drawTerrain(cx, cy)
     local water = img('assets/images/story/water-Sheet.png')
     local wq = frameQ(water, 16, (math.floor(self.t * 1.6) % 2) + 1)
     local ground = img('assets/images/story/ground-Sheet.png')
-    local lava = img('assets/images/tiles/lava.png')
+    local lava = img('assets/images/world/tiles/lava.png')
     local foam = img('assets/images/story/foam.png')
     local function at(c, r)
         local row = rows[r + 1]
@@ -680,7 +680,7 @@ function StoryMapState:_drawTerrain(cx, cy)
                 love.graphics.draw(ground, frameQ(ground, 16, ((GROUND[ch] or 1) - 1) * 3 + v), x, y, 0, C / 16, C / 16)
                 -- hierba alta (las briznas del bloque de césped del juego) sobre algo de la pradera
                 if ch == 'g' and (c * 31 + r * 17) % 7 == 0 and ht(c, r) > 0 then
-                    local bl = img('assets/images/tiles/grass_blades.png')
+                    local bl = img('assets/images/world/tiles/grass_blades.png')
                     love.graphics.draw(bl, frameQ(bl, 64, (c + r) % 3 + 1), x, y + math.floor(C * 0.4), 0, C / 64, C / 64)
                 end
             end
@@ -717,11 +717,11 @@ function StoryMapState:_drawTerrain(cx, cy)
                 local x, y = c * C - cx, (r + 1) * C - cy
                 -- labio (la parte de arriba de su bloque: césped, nieve…) y debajo el cuerpo de roca / tierra
                 local LIP = math.floor(C * 0.34)
-                local tex = img('assets/images/tiles/' .. (CLIFF[key] or 'dirt') .. '.png')
+                local tex = img('assets/images/world/tiles/' .. (CLIFF[key] or 'dirt') .. '.png')
                 local span = tex:getWidth() / 64
                 love.graphics.setColor(1, 1, 1, 1)
                 love.graphics.draw(tex, quad(tex, (c % span) * 64, 0, 64, LIP * 64 / C), x, y, 0, C / 64, C / 64)
-                local body = img('assets/images/tiles/' .. (CLIFF_BODY[key] or 'dirt') .. '.png')
+                local body = img('assets/images/world/tiles/' .. (CLIFF_BODY[key] or 'dirt') .. '.png')
                 body:setWrap('repeat', 'repeat')
                 local bspan = body:getWidth() / 64
                 local bh = FACE * diff - LIP
@@ -789,7 +789,7 @@ function StoryMapState:_drawDecos(cx, cy)
                 love.graphics.setBlendMode('add')
                 local g = def.glow
                 love.graphics.setColor(g[1], g[2], g[3], 0.25 + 0.08 * math.sin(self.t * 3 + d.x))
-                local gi = img('assets/images/decorations/fx/glow.png')
+                local gi = img('assets/images/world/decorations/fx/glow.png')
                 love.graphics.draw(gi, math.floor(x - 32), math.floor(y - im:getHeight() - 24), 0, 2, 2)
                 love.graphics.setBlendMode('alpha')
             end
@@ -877,7 +877,7 @@ local BOSS_CLAWS = {
     ['assets/images/bosses/megacrabby_ice/crab1.png'] = { file = 'assets/images/bosses/megacrabby_ice/claw_left-Sheet.png', w = 10, k = 1.0, x = 5.4, y = -1.2, inset = 1.5, small = true,
         spike = 'assets/images/bosses/megacrabby_ice/spike.png', spikeDy = 2 },
     -- (el Crabby helado NORMAL — el jefe antes de su fragmento, en las cinemáticas —: sus pinzas pequeñas, sin pincho)
-    ['assets/images/crabby_ice/crab1.png'] = { file = 'assets/images/crabby_ice/claw_left-Sheet.png', w = 7, k = 1.0, x = 5.6, y = -0.6, inset = 1.0, small = true },
+    ['assets/images/enemies/crabby_ice/crab1.png'] = { file = 'assets/images/enemies/crabby_ice/claw_left-Sheet.png', w = 7, k = 1.0, x = 5.6, y = -0.6, inset = 1.0, small = true },
     ['assets/images/bosses/megagloomy/body-Sheet.png'] = { file = 'assets/images/bosses/megagloomy/claw_left-Sheet.png', w = 14, sickle = true, x = 5.5, up = 8 },
 }
 

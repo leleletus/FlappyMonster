@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # tools/ui/retouch_bomb.py
-# Retoque de las hojas de la bomba del usuario (assets/images/bomb/bomb-Sheet.png
+# Retoque de las hojas de la bomba del usuario (assets/images/enemies/bomb/bomb-Sheet.png
 # y bombObject-Sheet.png), a partir de su dibujo:
 #   * ojos: de un punto a 1x2 (más expresivos); los ojos en raya del cuadro 4
 #     (a punto de explotar) se quedan
@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 import originals   # noqa: E402
 from PIL import Image
 
-DIR = 'assets/images/bomb'
+DIR = 'assets/images/enemies/bomb'
 FW, FH = 15, 16
 OLD_FUSE = (37, 37, 37, 255)
 ROPE = (164, 120, 72, 255)          # mecha (cuerda)

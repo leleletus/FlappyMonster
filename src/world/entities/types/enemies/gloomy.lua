@@ -29,7 +29,7 @@
 --   Tocarlo = 1 de vida (nunca mata). Se le pisotea como a cualquier Crabby (también en paredes
 --   y techo, con las reglas del trepador).
 -- Todo lo que se dibuja sale de state + frame + deadTimer + la superficie (red: Crawler.netPack).
--- Arte: assets/images/gloomy/ (tools/ui/make_gloomy_sprites.py); sonidos: tools/sounds/gloomy.py.
+-- Arte: assets/images/enemies/gloomy/ (tools/ui/make_gloomy_sprites.py); sonidos: tools/sounds/gloomy.py.
 
 local Entity      = require 'src/world/entities/base/Entity'
 local Crawler     = require 'src/world/entities/base/Crawler'
@@ -73,9 +73,9 @@ function Gloomy:hurtsFromAbove() return self.state == 'leap' end
 
 function Gloomy.loadAssets()
     if body then return end
-    icons = SpriteStrip.load('assets/images/gloomy/icons-Sheet.png', 7)
-    body = SpriteStrip.load('assets/images/gloomy/gloomy-Sheet.png', FW)
-    glow = SpriteStrip.load('assets/images/gloomy/glow-Sheet.png', FW)
+    icons = SpriteStrip.load('assets/images/enemies/gloomy/icons-Sheet.png', 7)
+    body = SpriteStrip.load('assets/images/enemies/gloomy/gloomy-Sheet.png', FW)
+    glow = SpriteStrip.load('assets/images/enemies/gloomy/glow-Sheet.png', FW)
 end
 function Gloomy.sizePx() return FW * S, FH * S end
 
@@ -602,5 +602,5 @@ return {
         { key='searchTime', kind='number', label='Busca donde oyó algo (s)', group=GG, default=4, min=0, max=20, step=0.5 },
         { key='calmTime', kind='number', label='Tras la luz, se calma en (s)', group=GG, default=1.2, min=0, max=10, step=0.1 },
     },
-    editor = { sprite = 'assets/images/gloomy/gloomy-Sheet.png', frameW = FW },
+    editor = { sprite = 'assets/images/enemies/gloomy/gloomy-Sheet.png', frameW = FW },
 }

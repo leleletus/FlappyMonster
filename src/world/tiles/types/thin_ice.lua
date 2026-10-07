@@ -14,7 +14,7 @@ local LABELS = { 'Hielo fino', 'Hielo fino (dañado)', 'Hielo fino (muy dañado)
 
 local defs = {}
 for i = 1, 4 do
-    local tex = { image = ('assets/images/tiles/thin_ice_%d.png'):format(i - 1) }
+    local tex = { image = ('assets/images/world/tiles/thin_ice_%d.png'):format(i - 1) }
     defs[i] = {
         id = 30 + i, name = NAMES[i], label = LABELS[i], category = 'Plataformas',
         collision = 'solid', material = 'ice', iceDrip = true,

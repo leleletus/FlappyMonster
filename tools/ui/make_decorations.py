@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # tools/ui/make_decorations.py
 # Sprites de las decoraciones temáticas (arte a 1x; el juego las dibuja a x4):
-#   assets/images/decorations/ice/      Hielo y nieve
-#   assets/images/decorations/cave/     Cueva
-#   assets/images/decorations/water/    Acuático
-#   assets/images/decorations/tropical/ Tropical
-#   assets/images/decorations/fx/       partículas y brillos que comparten
+#   assets/images/world/decorations/ice/      Hielo y nieve
+#   assets/images/world/decorations/cave/     Cueva
+#   assets/images/world/decorations/water/    Acuático
+#   assets/images/world/decorations/tropical/ Tropical
+#   assets/images/world/decorations/fx/       partículas y brillos que comparten
 # Tamaños: las de SUBCELDA son de 8 px de ancho (32 px en juego = un cuarto de
 # casilla); las de CELDA, de 16 (64 px = una casilla). Las tiras de animación
 # llevan los cuadros uno al lado del otro (SpriteStrip).
@@ -18,7 +18,7 @@ import originals   # noqa: E402
 
 FORCE = '--force' in sys.argv
 ONLY = {a for a in sys.argv[1:] if not a.startswith('--')}
-OUT = 'assets/images/decorations'
+OUT = 'assets/images/world/decorations'
 N = None                                  # transparente
 
 
@@ -728,11 +728,11 @@ def leaf():
 # sombra abajo-derecha en los trazos planos. El original se guarda UNA vez FUERA
 # del repo (tools/ui/originals.py) y siempre se parte de él (se puede rehacer).
 OLD = [
-    'assets/images/foliage/tulip.png',
-    'assets/images/foliage/palmtree/palmtree.png',
-    'assets/images/foliage/palmtree/coques.png',
-    'assets/images/foliage/palmtree/palmleaves.png',
-] + ['assets/images/foliage/stretch/stretch%d.png' % i for i in range(1, 6)]
+    'assets/images/world/decorations/foliage/tulip.png',
+    'assets/images/world/decorations/foliage/palmtree/palmtree.png',
+    'assets/images/world/decorations/foliage/palmtree/coques.png',
+    'assets/images/world/decorations/foliage/palmtree/palmleaves.png',
+] + ['assets/images/world/decorations/foliage/stretch/stretch%d.png' % i for i in range(1, 6)]
 
 
 def restyle(im, flat_shade):

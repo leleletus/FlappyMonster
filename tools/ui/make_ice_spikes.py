@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-# tools/ui/make_ice_spikes.py — pinchos de HIELO: la púa de los pinchos (assets/images/spikes/spike.png,
+# tools/ui/make_ice_spikes.py — pinchos de HIELO: la púa de los pinchos (assets/images/traps/spikes/spike.png,
 # acero) recoloreada a hielo con la misma paleta que la púa del Mega Crabby helado. La usan los
 # pinchos de casilla y los pinchos que caen en los niveles con "spikeSkin": "ice"
 # (src/world/level/SpikeSkins.lua; editor: Nivel → Fondo y clima → Pinchos).
-#   python3 tools/ui/make_ice_spikes.py      → assets/images/spikes/spike_ice.png
+#   python3 tools/ui/make_ice_spikes.py      → assets/images/traps/spikes/spike_ice.png
 import os
 from PIL import Image
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
-SRC = os.path.join(ROOT, 'assets', 'images', 'spikes', 'spike.png')
-DST = os.path.join(ROOT, 'assets', 'images', 'spikes', 'spike_ice.png')
+SRC = os.path.join(ROOT, 'assets', 'images', 'traps', 'spikes', 'spike.png')
+DST = os.path.join(ROOT, 'assets', 'images', 'traps', 'spikes', 'spike_ice.png')
 ICE = {(255, 255, 255): (226, 246, 255), (242, 242, 246): (186, 226, 250),
        (196, 200, 214): (118, 172, 222), (30, 30, 42): (30, 30, 42)}
 

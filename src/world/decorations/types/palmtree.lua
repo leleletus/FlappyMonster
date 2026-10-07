@@ -8,12 +8,12 @@ local parts   -- { {img, swayMult}, ... } de atrás hacia delante
 
 return {
     name = 'palmtree', label = 'Palmera', placement = 'cell', category = 'Tropical',
-    editor = { icon = 'assets/images/foliage/palmtree/palmtree.png', previewScale = 0.36 },
+    editor = { icon = 'assets/images/world/decorations/foliage/palmtree/palmtree.png', previewScale = 0.36 },
     loadAssets = function()
         if parts then return end
         parts = {}
         for _, p in ipairs({ { 'palmtree.png', 0.3 }, { 'coques.png', 0.8 }, { 'palmleaves.png', 1.0 } }) do
-            local ok, im = pcall(love.graphics.newImage, 'assets/images/foliage/palmtree/' .. p[1])
+            local ok, im = pcall(love.graphics.newImage, 'assets/images/world/decorations/foliage/palmtree/' .. p[1])
             if ok then parts[#parts+1] = { img = im, swayMult = p[2] } end
         end
     end,

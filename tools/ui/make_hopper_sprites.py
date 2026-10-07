@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # EL SALTARÍN (enemigo: src/world/entities/types/enemies/hopper.lua). Diseño B "Muelle" elegido por el usuario: una bola con
 # cara sobre un muelle. Sus píxeles y sus seis aspectos de isla están en tools/ui/make_enemy_designs.py (HOP, ISLES,
-# HEAD); aquí se montan las hojas del juego: assets/images/hopper/<isla>-Sheet.png, 4 cuadros de 16x21 con los pies
+# HEAD); aquí se montan las hojas del juego: assets/images/enemies/hopper/<isla>-Sheet.png, 4 cuadros de 16x21 con los pies
 # abajo: 1 quieto · 2 agachado (va a saltar) · 3 en el aire (muelle estirado) · 4 aplastado.
 #   python3 tools/ui/make_hopper_sprites.py           → vista previa (FlappyMonster_pruebas/enemigos/saltarin_hojas.png)
 #   python3 tools/ui/make_hopper_sprites.py --apply   → escribe las hojas
@@ -18,7 +18,7 @@ DEAD = ["..oooooooooo....",
         ".obeebbbbeebso..",
         ".oosssssssssoo..",
         "...ooooooooo...."]
-OUT = os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'images', 'hopper')
+OUT = os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'images', 'enemies', 'hopper')
 
 
 def frames(pal, cap):

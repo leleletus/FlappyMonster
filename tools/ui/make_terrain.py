@@ -2,11 +2,11 @@
 # tools/ui/make_terrain.py
 # Texturas de los bloques de terreno (arte 16x16 escalado x4 = 64x64, se repiten
 # sin costura; los bordes claros los dibuja el juego solo en las caras al aire):
-#   assets/images/tiles/dirt.png          Tierra
-#   assets/images/tiles/grass.png         Césped con la cara de arriba al aire
+#   assets/images/world/tiles/dirt.png          Tierra
+#   assets/images/world/tiles/grass.png         Césped con la cara de arriba al aire
 #                                         (capa verde sobre tierra; tapado = dirt.png)
-#   assets/images/tiles/grass_blades.png  tallitos que asoman encima (3 variantes 16x4)
-#   assets/images/tiles/sand.png          Arena
+#   assets/images/world/tiles/grass_blades.png  tallitos que asoman encima (3 variantes 16x4)
+#   assets/images/world/tiles/sand.png          Arena
 #   (piedra, borde y transiciones de la arena: tools/ui/make_world_art.py)
 # Antes estos bloques se dibujaban con código. No pisa lo que ya existe
 # (--force para rehacerlo). Desde la raíz del repo:
@@ -15,7 +15,7 @@ import os, sys
 from PIL import Image
 
 FORCE = '--force' in sys.argv
-T = 'assets/images/tiles'
+T = 'assets/images/world/tiles'
 
 
 def rgb(h): return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16), 255)

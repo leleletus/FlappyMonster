@@ -4,10 +4,10 @@
 
 local PixelIcons = {}
 
--- Los iconos son PNG en assets/images/icons/<nombre>.png (1 píxel del icono =
+-- Los iconos son PNG en assets/images/ui/icons/<nombre>.png (1 píxel del icono =
 -- 1 píxel de la imagen). Un icono nuevo (p. ej. el de un modo, campo `icon`)
 -- es solo un archivo más. Se dibujan a escala entera `px`, con sombra.
-local DIR = 'assets/images/icons/'
+local DIR = 'assets/images/ui/icons/'
 local images, dims = {}, {}
 
 local function dimsOf(name)

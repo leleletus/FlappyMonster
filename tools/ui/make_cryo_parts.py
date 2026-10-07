@@ -20,7 +20,7 @@ from PIL import Image
 sys.path.insert(0, os.path.dirname(__file__))
 from make_cryo_sprites import PAL, grid, sheet  # noqa: E402
 
-D = 'assets/images/cryo/'
+D = 'assets/images/traps/cryo/'
 CLEAR = (0, 0, 0, 0)
 
 # Depósito 10x10 (columnas 3-12, filas 3-12 de la casilla)

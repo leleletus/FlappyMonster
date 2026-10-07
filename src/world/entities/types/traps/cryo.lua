@@ -50,19 +50,19 @@ function Cryo.loadAssets()
     if bodyStrip then return end
     -- por piezas (tools/ui/make_cryo_parts.py): el depósito siempre derecho, el cañón girado
     -- hacia donde dispara y las patas hacia lo que lo sostiene (16x16, centradas en la casilla)
-    bodyStrip   = SpriteStrip.load('assets/images/cryo/cryo_body-Sheet.png', 16)
-    cannonStrip = SpriteStrip.load('assets/images/cryo/cryo_cannon-Sheet.png', 16)
-    feetImg     = nearest('assets/images/cryo/cryo_feet.png')
+    bodyStrip   = SpriteStrip.load('assets/images/traps/cryo/cryo_body-Sheet.png', 16)
+    cannonStrip = SpriteStrip.load('assets/images/traps/cryo/cryo_cannon-Sheet.png', 16)
+    feetImg     = nearest('assets/images/traps/cryo/cryo_feet.png')
     -- soporte colgante (tools/ui/make_cryo_chain.py)
-    chainImg, anchorImg, clampImg = nearest('assets/images/cryo/chain.png'), nearest('assets/images/cryo/anchor.png'),
-                                    nearest('assets/images/cryo/clamp.png')
-    streamImg = love.graphics.newImage('assets/images/cryo/stream-Sheet.png')
+    chainImg, anchorImg, clampImg = nearest('assets/images/traps/cryo/chain.png'), nearest('assets/images/traps/cryo/anchor.png'),
+                                    nearest('assets/images/traps/cryo/clamp.png')
+    streamImg = love.graphics.newImage('assets/images/traps/cryo/stream-Sheet.png')
     if streamImg.setFilter then streamImg:setFilter('nearest', 'nearest') end
     streamQuads = {}
     for i = 1, 3 do
         streamQuads[i] = love.graphics.newQuad((i - 1) * 16, 0, 16, 10, streamImg:getWidth(), streamImg:getHeight())
     end
-    headStrip = SpriteStrip.load('assets/images/cryo/stream_head-Sheet.png', 12)
+    headStrip = SpriteStrip.load('assets/images/traps/cryo/stream_head-Sheet.png', 12)
 end
 function Cryo.sizePx() return 16 * SCALE, 16 * SCALE end
 
@@ -503,5 +503,5 @@ return {
         { key='zone', kind='int', label='Zona de jefe', group='Aparición', default=0, min=0, max=20, step=1,
           help='Id de la zona cuya fase mira (0 = la que lo contiene o la más cercana)' },
     },
-    editor = { sprite = 'assets/images/cryo/cryo-Sheet.png', frameW = 16 },
+    editor = { sprite = 'assets/images/traps/cryo/cryo-Sheet.png', frameW = 16 },
 }

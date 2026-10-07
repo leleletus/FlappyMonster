@@ -2,11 +2,11 @@
 # tools/ui/make_snow_sprites.py
 # Sprites del hielo y la nieve (arte de 16x16 escalado x4, como el resto de
 # texturas de tiles):
-#   assets/images/tiles/snow.png        Nieve (a partir del color del usuario;
+#   assets/images/world/tiles/snow.png        Nieve (a partir del color del usuario;
 #                                       su original, fuera del repo: tools/ui/originals.py)
-#   assets/images/tiles/ice.png         Hielo (sus burbujas, con brillos y grietas;
+#   assets/images/world/tiles/ice.png         Hielo (sus burbujas, con brillos y grietas;
 #                                       original fuera del repo). Se dibuja semitransparente
-#   assets/images/tiles/thin_ice_0..3.png  Hielo fino (losa de media casilla):
+#   assets/images/world/tiles/thin_ice_0..3.png  Hielo fino (losa de media casilla):
 #                                       normal, dañado, muy dañado, a punto de romperse
 #   assets/images/fx/snowflakes.png     copos de nieve, 4 cuadros de 7x7
 #   assets/images/fx/ice_drop.png       gota que cae del hielo, 2 cuadros de 3x5
@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 import originals   # noqa: E402
 
 FORCE = '--force' in sys.argv
-T = 'assets/images/tiles'
+T = 'assets/images/world/tiles'
 FX = 'assets/images/fx'
 
 

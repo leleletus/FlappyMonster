@@ -20,7 +20,7 @@
 #       andar_<X>.gif       ciclo de andar
 #   python3 tools/ui/make_gloomy_sprites.py --apply  → escribe los assets de la opción elegida por el
 #       usuario: B "Fantasma" (ojos algo separados) y su Mega CON retoques (MEGA_B):
-#       assets/images/gloomy/gloomy-Sheet.png (9 cuadros 26x15: andar 1-4, quieto, agachado, salto,
+#       assets/images/enemies/gloomy/gloomy-Sheet.png (9 cuadros 26x15: andar 1-4, quieto, agachado, salto,
 #       susto, aplastado) + glow-Sheet.png (sus puntos luminosos), bosses/megagloomy/body-Sheet.png
 #       (9 cuadros 38x21, la MISMA rejilla de píxel) + glow-Sheet.png, ui/flashlight-Sheet.png
 import math

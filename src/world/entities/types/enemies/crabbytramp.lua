@@ -30,9 +30,9 @@ local imgTNormal, imgTExt, imgShell
 function TC.loadAssets()
     Crabby.loadAssets()
     if imgTNormal then return end
-    imgTNormal = love.graphics.newImage('assets/images/trampoline/normal.png')
-    imgTExt    = love.graphics.newImage('assets/images/trampoline/extended.png')
-    imgShell   = love.graphics.newImage('assets/images/crabby/hid.png')
+    imgTNormal = love.graphics.newImage('assets/images/mechanisms/trampoline/normal.png')
+    imgTExt    = love.graphics.newImage('assets/images/mechanisms/trampoline/extended.png')
+    imgShell   = love.graphics.newImage('assets/images/enemies/crabby/hid.png')
     if imgTNormal.setFilter then imgTNormal:setFilter('nearest', 'nearest'); imgTExt:setFilter('nearest', 'nearest') end
 end
 
@@ -239,5 +239,5 @@ return {
           min=0, max=3, step=1, help='Vida que quita si cae del techo sobre un jugador (siempre lo aplasta y aturde)' },
         Crabby.WALL_PROP,
     },
-    editor = { sprite = 'assets/images/crabby/crab1.png', draw = editorIcon },
+    editor = { sprite = 'assets/images/enemies/crabby/crab1.png', draw = editorIcon },
 }

@@ -430,7 +430,7 @@ def ground(base, dots, seed):
     return im
 
 
-T = 'assets/images/tiles/'
+T = 'assets/images/world/tiles/'
 g0 = tone(T + 'grass.png', 30, 2)
 # (base, oscuro, claro) de cada terreno, de los colores de su bloque del juego
 TERR = [

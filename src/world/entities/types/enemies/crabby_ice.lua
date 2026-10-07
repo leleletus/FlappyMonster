@@ -1,5 +1,5 @@
 -- Crabby HELADO: el mismo Crabby (anda, trepa, cae del techo, súbdito...) con el aspecto del
--- cangrejo antártico (assets/images/crabby_ice/, tools/ui/make_icecrabby_sprites.py) y una TAPA
+-- cangrejo antártico (assets/images/enemies/crabby_ice/, tools/ui/make_icecrabby_sprites.py) y una TAPA
 -- a elegir para esconderse, en suelo, pared o techo (en el editor: una sola ficha "Crabby
 -- helado" con selector "Se esconde bajo"):
 --   púa de hielo  como el Crabby normal: tocarla mata; cae del techo como un pincho (mata)
@@ -23,7 +23,7 @@ local Crabby          = require('src/world/entities/types/enemies/crabby').class
 local TC              = require('src/world/entities/types/enemies/crabbytramp').class
 
 local S = GUMMY_SCALE
-local D = 'assets/images/crabby_ice/'
+local D = 'assets/images/enemies/crabby_ice/'
 local SNOW_CRACK = 0.25          -- s agrietándose (sin daño) antes de reventar
 local SNOW_BURST = 0.35          -- s saliendo del montón
 local SNOW_W, SNOW_H = 18 * S, 8 * S

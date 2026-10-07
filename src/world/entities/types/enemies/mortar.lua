@@ -39,9 +39,9 @@ local function rand(a, b) return a + math.random() * (b - a) end
 local imgNormal, imgShoot, fireStrip
 function Mortar.loadAssets()
     if imgNormal then return end
-    imgNormal = love.graphics.newImage('assets/images/mortar/normal.png')
-    imgShoot  = love.graphics.newImage('assets/images/mortar/shooting.png')
-    fireStrip = SpriteStrip.load('assets/images/mortar/flame.png')
+    imgNormal = love.graphics.newImage('assets/images/enemies/mortar/normal.png')
+    imgShoot  = love.graphics.newImage('assets/images/enemies/mortar/shooting.png')
+    fireStrip = SpriteStrip.load('assets/images/enemies/mortar/flame.png')
     if imgNormal.setFilter then imgNormal:setFilter('nearest', 'nearest'); imgShoot:setFilter('nearest', 'nearest') end
 end
 function Mortar.sizePx() return 16 * SCALE, 16 * SCALE end
@@ -317,5 +317,5 @@ return {
         { key='burnTime', kind='number', label='Arde en el suelo (s)', group='Disparo', default=1.2,
           min=0, max=10, step=0.1, help='Lo que tarda la bola en consumirse tras caer (0 = se apaga al tocar el suelo)' },
     },
-    editor = { sprite = 'assets/images/mortar/normal.png' },
+    editor = { sprite = 'assets/images/enemies/mortar/normal.png' },
 }

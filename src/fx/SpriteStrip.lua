@@ -1,9 +1,9 @@
 -- src/fx/SpriteStrip.lua
 -- Tiras de animación: una imagen con los cuadros uno al lado del otro (p. ej.
--- assets/images/mortar/flame.png, 48x16 = 3 cuadros de 16x16).
+-- assets/images/enemies/mortar/flame.png, 48x16 = 3 cuadros de 16x16).
 --
 --   local SpriteStrip = require 'src/fx/SpriteStrip'
---   local fire = SpriteStrip.load('assets/images/mortar/flame.png')   -- cuadros cuadrados
+--   local fire = SpriteStrip.load('assets/images/enemies/mortar/flame.png')   -- cuadros cuadrados
 --   local run  = SpriteStrip.load('assets/.../run.png', 24)         -- cuadros de 24 px de ancho
 --   fire:draw(fire:frameAt(t, 10), x, y, 0, 4, 4)                   -- centrado en x, y
 --

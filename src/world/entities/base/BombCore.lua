@@ -32,7 +32,7 @@ Core.TIPS = {
 
 local explosionSheet
 function Core.loadExplosion()
-    explosionSheet = explosionSheet or SpriteStrip.load('assets/images/bomb/explosion-Sheet.png', 48)
+    explosionSheet = explosionSheet or SpriteStrip.load('assets/images/enemies/bomb/explosion-Sheet.png', 48)
     return explosionSheet
 end
 

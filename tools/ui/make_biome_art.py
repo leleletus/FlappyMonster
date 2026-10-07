@@ -3,14 +3,14 @@
 # Arte de los biomas que faltaban (etapa de "retematizar" las islas del modo historia), en el estilo del juego:
 # contorno oscuro de 1 px + 3 tonos (luz arriba-izquierda, sombra abajo-derecha), sin ruido. Arte a 1x; el
 # juego lo dibuja a x4. Formas hechas con funciones (máscaras), así se pueden retocar a mano después.
-#   assets/images/tiles/basalt.png       Basalto: roca volcánica oscura, dibujo de 2x2 casillas (juntas de columna)
-#   assets/images/tiles/ash.png          Ceniza: capa gris (con alguna brasa) sobre basalto, si su cara de arriba da al aire
-#   assets/images/decorations/volcano/   charred_tree, dead_bush, basalt_rock, basalt_pebbles, ash_pile,
+#   assets/images/world/tiles/basalt.png       Basalto: roca volcánica oscura, dibujo de 2x2 casillas (juntas de columna)
+#   assets/images/world/tiles/ash.png          Ceniza: capa gris (con alguna brasa) sobre basalto, si su cara de arriba da al aire
+#   assets/images/world/decorations/volcano/   charred_tree, dead_bush, basalt_rock, basalt_pebbles, ash_pile,
 #                                        lava_vent, glow_rock, lava_fall-Sheet (cae del techo), steam_stones (aguas termales)
-#   assets/images/decorations/meadow/    oak_tree, pine_tree, round_bush, flower_patch, tall_grass, red_mushroom,
+#   assets/images/world/decorations/meadow/    oak_tree, pine_tree, round_bush, flower_patch, tall_grass, red_mushroom,
 #                                        mossy_rock, fallen_log, sunflower
-#   assets/images/decorations/fx/smoke-Sheet.png   bocanadas de humo / vapor (3 cuadros, blancas: se tiñen)
-#   assets/images/mortar/flame.png       bola de fuego del mortero (6 cuadros de 16x16; rediseño, ver mortar_flame)
+#   assets/images/world/decorations/fx/smoke-Sheet.png   bocanadas de humo / vapor (3 cuadros, blancas: se tiñen)
+#   assets/images/enemies/mortar/flame.png       bola de fuego del mortero (6 cuadros de 16x16; rediseño, ver mortar_flame)
 # Las decoraciones llevan 1 px de margen (a los lados y arriba; abajo si cuelgan) con el contorno cerrado.
 # No pisa lo que ya existe (--force [nombres] para rehacerlo). Desde la raíz del repo:
 #     python3 tools/ui/make_biome_art.py [--force] [nombre ...]
@@ -368,7 +368,7 @@ def sunflower():
 
 
 # ── FUEGO DEL MORTERO (rediseño; el original del usuario está fuera del repo:
-#    FlappyMonster_originals/assets/images/mortar/flame-orig.png) ──────────────
+#    FlappyMonster_originals/assets/images/enemies/mortar/flame-orig.png) ──────────────
 FIRE_OUT = (rgb('7a160a'), rgb('d03a12'), rgb('ec5a18'), rgb('f87a22'))     # capa de fuera: rojo (contorno rojo oscuro)
 FIRE_MID = (rgb('f07a1e'), rgb('f8902a'), rgb('ffa632'), rgb('ffc04a'))     # medio: naranja (su borde, naranja)
 FIRE_IN = (rgb('ffc040'), rgb('ffd858'), rgb('ffea80'), rgb('fff8c8'))      # núcleo: amarillo claro
