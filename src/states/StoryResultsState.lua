@@ -71,7 +71,7 @@ function StoryResultsState:enter(args)
     local function count(n) return function(k) return tostring(math.floor((n or 0) * k + 0.5)) end end
     -- (`args.rows`: otra partida con sus propias líneas — el bonus contra el bot —; `args.title`: su título)
     self.rows = self.args.rows or {
-        { L('story.results.time'), function(k) return mmss((r.time or 0) * k) end, P.time, W.time },
+        { L('story.results.time'), function(k) return mmss((r.time or 0) * k) .. (s.par and (' / ' .. mmss(s.par)) or '') end, P.time, W.time },
         { L('story.results.lives'), count(r.deaths), P.lives, W.lives },
         { L('story.results.hits'), count(r.hits), P.hits, W.hits },
         { L('story.results.kills'), function(k) return count(r.kills)(k) .. '/' .. (r.killable or 0) end, P.kills, W.kills },

@@ -317,8 +317,9 @@ function Level.fromData(lvl, difficulty)
                 spawnDelay = VENT_NORM_SPAWN_MIN + math.random()*(VENT_NORM_SPAWN_MAX-VENT_NORM_SPAWN_MIN),
                 particles  = {},
                 oxyBubbles = {},
+                -- (`ventDelay` de la dificultad: en las altas las burbujas de aire tardan más en salir)
                 oxyTimer   = VENT_OXY_DELAY_MIN + math.random()*(VENT_OXY_DELAY_MAX-VENT_OXY_DELAY_MIN),
-                oxyDelay   = VENT_OXY_DELAY_MIN + math.random()*(VENT_OXY_DELAY_MAX-VENT_OXY_DELAY_MIN),
+                oxyDelay   = (VENT_OXY_DELAY_MIN + math.random()*(VENT_OXY_DELAY_MAX-VENT_OXY_DELAY_MIN)) * Difficulty.of(self.difficulty, 'ventDelay', 1),
             })
         end
     end
@@ -371,6 +372,7 @@ function Level.fromData(lvl, difficulty)
     -- Música del nivel: id de assets/music/index.json (nil = la de siempre)
     self.music     = type(lvl.music) == 'string' and lvl.music or nil
     self.snow      = lvl.snow == true                  -- (nieve cayendo: src/fx/Snowfall.lua, solo visual)
+    self.parTime   = tonumber(lvl.parTime)             -- (tiempo objetivo del nivel, s: la nota del modo historia; nil = según su ancho)
     self.peaceful  = lvl.peaceful == true              -- (enemigos INOFENSIVOS: niveles de prueba; Interactions.check)
     self.dark      = lvl.dark == true                  -- (nivel a OSCURAS: linternas, src/world/Lights.lua; afecta al juego)
     -- LUZ AMBIENTE (solo visual, src/fx/Darkness.lua): "light": day | dusk | night | cave | none; sin ella, de su
@@ -1374,7 +1376,7 @@ function Level:update(dt)
             vent.oxyTimer = vent.oxyTimer + dt
             if vent.oxyTimer >= vent.oxyDelay and hasBubbles then
                 vent.oxyTimer = 0
-                vent.oxyDelay = VENT_OXY_DELAY_MIN + math.random()*(VENT_OXY_DELAY_MAX-VENT_OXY_DELAY_MIN)
+                vent.oxyDelay = (VENT_OXY_DELAY_MIN + math.random()*(VENT_OXY_DELAY_MAX-VENT_OXY_DELAY_MIN)) * require('src/Difficulty').of(self.difficulty, 'ventDelay', 1)
                 spawnVentParticle(vent, true)
             end
         end

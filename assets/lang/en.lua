@@ -64,7 +64,7 @@ return {
         results = {
             title = "LEVEL CLEAR",
             time = "Time", lives = "Lives lost", hits = "Hits taken", kills = "Enemies", stars = "Stars",
-            duel = "You - Bot", items = "Items", falls = "Falls",
+            duel = "You - Bot", items = "Items", falls = "Falls", zone = "Time in the zone",
             points = "Points", grade = "GRADE", record = "NEW BEST GRADE!",
             reward_lives = "REWARD: +{n} LIFE", reward_points = "REWARD: +{n} POINTS",
             world = "WORLD COMPLETE  ·  GRADE {grade}",

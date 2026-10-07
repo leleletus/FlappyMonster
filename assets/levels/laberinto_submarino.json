@@ -1,6 +1,7 @@
 {
   "name": "Laberinto Submarino",
   "name_en": "Undersea Labyrinth",
+  "parTime": 300,
   "width": 134,
   "height": 55,
   "playerStart": [5,9],

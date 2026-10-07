@@ -21,6 +21,7 @@
 -- XTRA EXTREMO = extremo + cambios en los jefes (dos a la vez...: `bossExtra`, etapa 6).
 -- Modificadores:
 --   enemyPace, trapPace, bossPace   ritmo (× tiempo) de enemigos / trampas / jefes
+--   ventDelay                       × lo que tardan los respiraderos en soltar una burbuja de aire
 --   bossHp                          × vida de los jefes
 --   playerHp                        vida del jugador (3)
 --   invuln                          × tiempo invulnerable tras un golpe o al reaparecer
@@ -44,13 +45,13 @@ Difficulty.DEFAULT = 'normal'
 
 Difficulty.MODS = {
     easy    = { scoreMult = 0.8, enemyPace = 0.8, trapPace = 0.8, bossPace = 0.7, bossHp = 0.75, playerHp = 4, invuln = 1.3, airTime = 1.4, hazardHurt = true,
-                sense = 0.8, botRest = 3.5, botChase = 3 },
+                sense = 0.8, botRest = 3.5, botChase = 3, ventDelay = 0.8 },
     normal  = { bossPace = 0.85, bossHp = 0.9, botRest = 2, botChase = 5 },
-    hard    = { scoreMult = 1.2, enemyPace = 1.1, trapPace = 1.1, airTime = 0.9 },
+    hard    = { scoreMult = 1.2, enemyPace = 1.1, trapPace = 1.1, airTime = 0.9, ventDelay = 1.15 },
     extreme = { scoreMult = 1.5, enemyPace = 1.25, trapPace = 1.3, bossPace = 1.2, bossHp = 1.15, invuln = 0.75, airTime = 0.8, livesStart = 4,
-                sense = 1.3, botRest = 0.7, botChase = 10 },
+                sense = 1.3, botRest = 0.7, botChase = 10, ventDelay = 1.35 },
     xtra    = { scoreMult = 2, enemyPace = 1.25, trapPace = 1.3, bossPace = 1.2, bossHp = 1.15, invuln = 0.75, airTime = 0.8, livesStart = 6,
-                sense = 1.3, botRest = 0.7, botChase = 10, botCount = 2, bossExtra = true, pairHp = 0.65, restartGame = true },
+                sense = 1.3, botRest = 0.7, botChase = 10, ventDelay = 1.35, botCount = 2, bossExtra = true, pairHp = 0.65, restartGame = true },
 }
 -- DESBLOQUEOS (historia, globales): acabar el juego (el jefe del último mundo) en esta dificultad abre esta otra
 Difficulty.UNLOCKS = { hard = 'extreme', extreme = 'xtra' }

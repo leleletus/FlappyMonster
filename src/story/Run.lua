@@ -79,11 +79,12 @@ function Run.complete(id, result)
     local first = not d.done[id]
     d.done[id] = true
     if result.lives then d.lives = result.lives end      -- (las vidas se llevan al nivel siguiente)
-    local sc = Score.level({ time = result.time, par = Score.par(result.width), deaths = result.deaths, hits = result.hits,
+    local sc = Score.level({ time = result.time, par = result.par or Score.par(result.width), deaths = result.deaths, hits = result.hits,
                              kills = result.kills, killable = result.killable, stars = result.stars, starsTotal = result.starsTotal })
     local points = math.floor((result.score or 0) * Difficulty.of(d.difficulty, 'scoreMult', 1) + 0.5)
     local b = d.best[id] or {}
-    local out = { rating = sc.rating, grade = sc.grade, parts = sc.parts, points = points, record = sc.rating > (b.rating or -1) }
+    local out = { rating = sc.rating, grade = sc.grade, parts = sc.parts, points = points, record = sc.rating > (b.rating or -1),
+                  par = result.par or Score.par(result.width) }
     -- premio del nivel: solo la primera vez que se llega a esa letra
     local had = b.grade
     local order = { S = 4, A = 3, B = 2, C = 1, D = 0 }

@@ -49,18 +49,19 @@ end
 -- BONUS (Rey de la Colina contra el bot): la misma idea con otro reparto.
 --   duelo     50   × tus puntos / (BONUS_LEAD × los del bot): doblarle = entero
 --   objetos   15   × los cogidos de los que hay (sin objetos: entero)
---   enemigos  15   × los eliminados / BONUS_KILLS (reaparecen: no hay un total; sin enemigos: entero)
+--   zona      15   × el tiempo dentro de una zona de puntos / (BONUS_ZONE × la duración): la mitad de la partida = entero
+--                  (los ENEMIGOS no cuentan: en las arenas reaparecen siempre)
 --   caídas    20   -1/3 por cada vez que se muere
 -- PERDER contra el bot nunca pasa de BONUS_LOST_MAX (una D), se haga lo que se haga.
--- stats: { score, botScore, won, items, itemsTotal, kills, killable, deaths }
-Score.BONUS_WEIGHTS = { duel = 50, items = 15, kills = 15, falls = 20 }
-Score.BONUS_LEAD, Score.BONUS_KILLS, Score.BONUS_LOST_MAX = 2, 5, 49
+-- stats: { score, botScore, won, items, itemsTotal, zoneT, time, deaths }
+Score.BONUS_WEIGHTS = { duel = 50, items = 15, zone = 15, falls = 20 }
+Score.BONUS_LEAD, Score.BONUS_ZONE, Score.BONUS_LOST_MAX = 2, 0.5, 49
 function Score.bonus(st)
     local W = Score.BONUS_WEIGHTS
     local parts = {
         duel  = W.duel * clamp((st.score or 0) / (Score.BONUS_LEAD * math.max(1, st.botScore or 0))),
         items = W.items * (((st.itemsTotal or 0) > 0) and clamp((st.items or 0) / st.itemsTotal) or 1),
-        kills = W.kills * (((st.killable or 0) > 0) and clamp((st.kills or 0) / Score.BONUS_KILLS) or 1),
+        zone  = W.zone * clamp((st.zoneT or 0) / (Score.BONUS_ZONE * math.max(1, st.time or 60))),
         falls = W.falls * clamp(1 - (st.deaths or 0) / 3),
     }
     local total = 0

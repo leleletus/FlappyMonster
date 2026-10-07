@@ -177,7 +177,7 @@ function AdventureState:enter(args)
     local stars = 0
     for _, e in ipairs(self.level.entities) do if e.type == 'star' then stars = stars + 1 end end
     self.stats = { kills = 0, killable = require('src/world/Modes').entityInfo(self.level.entities).killable or 0,
-                   stars = 0, starsTotal = stars, deaths = 0, hits = 0, items = 0, itemsTotal = 0 }
+                   stars = 0, starsTotal = stars, deaths = 0, hits = 0, items = 0, itemsTotal = 0, zoneT = 0 }
     for _, e in ipairs(self.level.entities) do
         local def = require('src/world/entities/EntityTypes').get(e.type)
         if def and def.pickup then self.stats.itemsTotal = self.stats.itemsTotal + 1 end
@@ -356,7 +356,7 @@ end
 -- Lo que se lleva del nivel (para la nota del modo historia: src/story/Score.lua)
 function AdventureState:result()
     local st = self.stats
-    return { score = self.score, time = self.levelTime, lives = self.player.lives, width = self.level.tileW,
+    return { score = self.score, time = self.levelTime, lives = self.player.lives, width = self.level.tileW, par = self.level.parTime,
              kills = st.kills, killable = st.killable, stars = st.stars, starsTotal = st.starsTotal,
              deaths = st.deaths, hits = st.hits }
 end
@@ -499,6 +499,14 @@ function AdventureState:update(dt)
     -- Zonas de puntos: estar dentro da puntos cada cierto tiempo
     local inZones = self.bonus and self.bonus:players() or (self.player.dying and {} or { self.player })
     if self.bonus and self.bonus.over then inZones = {} end
+    -- (cuánto tiempo pasa el jugador DENTRO de una zona: los resultados del bonus)
+    if #inZones > 0 and not self.player.dying then
+        for _, a in ipairs(self.level.pointAreas or {}) do
+            if PointAreas.isActive(self.level, a) and PointAreas.inside(a, self.player.x, self.player.y) then
+                self.stats.zoneT = self.stats.zoneT + dt; break
+            end
+        end
+    end
     PointAreas.update(self.level, dt, inZones, function(pa, pts)
         if self.bonus and not self.bonus:award(pa, pts) then
             Particles.emit('points', pa.x, pa.y)

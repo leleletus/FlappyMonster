@@ -309,6 +309,8 @@ local function nodeXY(w, k)
     return p[1], p[2]
 end
 
+local OPEN_AT = 0.7          -- s tras llegar al mapa en que se abre lo recién desbloqueado
+
 -- ── Estado ──────────────────────────────────────────────────────────────────
 function StoryMapState:enter(args)
     loadMap()
@@ -325,6 +327,10 @@ function StoryMapState:enter(args)
     self.facing = 1
     self.camX, self.camY = nil, nil
     self.justCleared = args.cleared               -- (acaba de superar ese nivel: destello)
+    -- paradas que se ABREN ahora (tras superar un nivel): un momento cerradas y se abren a la vista
+    self.opening = {}
+    for _, i in ipairs(args.opened or {}) do self.opening[i] = true end
+    self.openSound = next(self.opening) ~= nil
     self.notice, self.noticeT = args.notice, 0    -- (aviso un momento: tras un Game Over, tras un bonus)
     self.noticeGood = args.good
     self.musicIsland = nil
@@ -368,8 +374,19 @@ function StoryMapState:_walkTo(target)
     local moved = false
     while cur ~= target do
         local nxt = cur + d
+        local leg
+        -- (del CASTILLO al mundo siguiente — o de vuelta — se va por el puente: sin el rodeo hasta el bonus)
+        local w, k = stopAt(cur)
+        local M = loadMap().worlds[w]
+        local n = #Worlds.nodes(w)
+        if d > 0 and k == n and M.branch and M.bridge and target >= cur + 2 and stopOpen(cur + 2) then
+            nxt, leg = cur + 2, M.bridge
+        elseif d < 0 and k == 1 and w > 1 and target <= cur - 2 then
+            local P = loadMap().worlds[w - 1]
+            if P.branch and P.bridge and stopOpen(cur - 2) then nxt, leg = cur - 2, reversed(P.bridge) end
+        end
         if not stopOpen(nxt) then break end
-        local leg = (d > 0) and legForward(cur) or reversed(legForward(nxt))
+        leg = leg or ((d > 0) and legForward(cur) or reversed(legForward(nxt)))
         for _, p in ipairs(leg) do self.queue[#self.queue + 1] = p end
         cur, moved = nxt, true
     end
@@ -383,6 +400,60 @@ end
 
 function StoryMapState:_move(d)
     self:_walkTo(stopIndex(self.world, self.node) + d)
+end
+
+-- Hacia dónde SALE un tramo desde su principio (unitario): el punto a ~2 casillas por el camino
+local function legDir(leg)
+    local x0, y0 = leg[1][1], leg[1][2]
+    for i = 2, #leg do
+        local dx, dy = leg[i][1] - x0, leg[i][2] - y0
+        local d = math.sqrt(dx * dx + dy * dy)
+        if d >= 64 or i == #leg then
+            if d < 1 then return 0, 0 end
+            return dx / d, dy / d
+        end
+    end
+    return 0, 0
+end
+
+-- (para las pruebas: dónde está un nodo y hacia dónde sale el tramo al vecino `d` = ±1)
+function StoryMapState:_nodeXY(w, k) return nodeXY(w, k) end
+function StoryMapState:_legTo(w, k, d)
+    local cur = stopIndex(w, k)
+    local vx, vy = legDir((d > 0) and legForward(cur) or reversed(legForward(cur - 1)))
+    return { vx, vy }
+end
+
+-- FLECHAS = DIRECCIÓN REAL en el mapa: va a la parada vecina cuyo camino sale hacia donde se pulsa (antes
+-- derecha era siempre "siguiente" e izquierda "anterior", aunque el siguiente nivel quedara a la izquierda).
+-- Vecinas: la anterior y la siguiente por el camino; desde un castillo, además, el mundo siguiente por el puente
+-- (y desde el primer nivel de un mundo, el castillo anterior). Devuelve false si por ahí no hay camino.
+function StoryMapState:_dirMove(dx, dy)
+    if #self.queue > 0 then return true end              -- (andando: espera a llegar)
+    local cur = stopIndex(self.world, self.node)
+    local w, k = self.world, self.node
+    local M = loadMap().worlds[w]
+    local n = #Worlds.nodes(w)
+    local cands = {}
+    if cur < totalStops() then cands[#cands + 1] = { cur + 1, legForward(cur) } end
+    if cur > 1 then cands[#cands + 1] = { cur - 1, reversed(legForward(cur - 1)) } end
+    if k == n and M.branch and M.bridge and cur + 2 <= totalStops() then cands[#cands + 1] = { cur + 2, M.bridge } end
+    if k == 1 and w > 1 then
+        local P = loadMap().worlds[w - 1]
+        if P.branch and P.bridge then cands[#cands + 1] = { cur - 2, reversed(P.bridge) } end
+    end
+    local best, bd
+    for _, c in ipairs(cands) do
+        local vx, vy = legDir(c[2])
+        local dot = vx * dx + vy * dy
+        -- (a igualdad — el bonus y el castillo salen por el mismo sitio — gana la parada más cercana por el camino)
+        if dot > 0.45 and (not bd or dot > bd + 0.05 or (math.abs(dot - bd) <= 0.05 and math.abs(c[1] - cur) < math.abs(best - cur))) then
+            best, bd = c[1], dot
+        end
+    end
+    if not best then return false end
+    self:_walkTo(best)
+    return true
 end
 
 -- ↑ ↓: al mundo anterior (a su jefe) o al siguiente (a su primer nivel), andando por el camino
@@ -418,7 +489,7 @@ function StoryMapState:_play()
                     rows = {
                         { L('story.results.duel'), function(k) return count(result.score)(k) .. ' - ' .. count(result.botScore)(k) end, P.duel, W.duel },
                         { L('story.results.items'), function(k) return count(result.items)(k) .. '/' .. (result.itemsTotal or 0) end, P.items, W.items },
-                        { L('story.results.kills'), count(result.kills), P.kills, W.kills },
+                        { L('story.results.zone'), function(k) return count(result.zoneT)(k) .. ' s' end, P.zone, W.zone },
                         { L('story.results.falls'), count(result.deaths), P.falls, W.falls },
                     },
                     map = { world = world, node = node } })
@@ -443,15 +514,22 @@ function StoryMapState:_play()
         end,
         onFinish = function(result)
             for _, id in ipairs(gotShards) do Run.addShard(id) end
+            local was = {}
+            for i = 1, totalStops() do was[i] = stateOf(stopAt(i)) end
             local summary = Run.complete(n.id, result)
             -- a los RESULTADOS y, de ahí, al mapa, ya en el siguiente (tras el jefe: al mundo que se abre)
-            local nw, nk = world, math.min(#nodes, node + 1)
-            if node == #nodes and Run.worldOpen(world + 1) then nw, nk = world + 1, 1 end
+            -- de vuelta al mapa se queda en el nodo que ACABA de superar y ve abrirse lo siguiente (antes aparecía ya
+            -- colocado en el nivel nuevo): las paradas que estaban cerradas y ahora no
+            local opened = {}
+            for i = 1, totalStops() do
+                if was[i] == 'locked' and stateOf(stopAt(i)) ~= 'locked' then opened[#opened + 1] = i end
+            end
+            local nw, nk = world, node
             Run.data.world, Run.data.node = nw, nk
             Run.save()
             local function results()
                 gStateMachine:change('story_results', { level = n.id, result = result, summary = summary, color = THEME[Worlds.get(world).id],
-                                                        map = { world = nw, node = nk, cleared = n.id } })
+                                                        map = { world = nw, node = nk, cleared = n.id, opened = opened } })
             end
             -- (con el último fragmento: antes de los resultados, el FINAL de la historia)
             if result.ending then
@@ -480,6 +558,7 @@ end
 
 function StoryMapState:update(dt)
     self.t = self.t + dt
+    if self.openSound and self.t >= OPEN_AT then self.openSound = false; Sound.play('checkpoint') end
     self.noticeT = (self.noticeT or 0) + dt
     self.shake = math.max(0, self.shake - dt)
     -- andar por el camino (en viajes largos, más deprisa: llega en ~1 s)
@@ -508,10 +587,12 @@ function StoryMapState:update(dt)
     local k = math.min(1, dt * 8)
     self.camX, self.camY = self.camX + (tx - self.camX) * k, self.camY + (ty - self.camY) * k
 
-    if Input.pressed('nav_left') then self:_move(-1) end
-    if Input.pressed('nav_right') then self:_move(1) end
-    if Input.pressed('nav_up') then self:_world(-1) end
-    if Input.pressed('nav_down') then self:_world(1) end
+    -- (por DIRECCIÓN; si por ahí no sale ningún camino: izquierda / derecha = anterior / siguiente y arriba / abajo =
+    -- mundo anterior / siguiente, como siempre)
+    if Input.pressed('nav_left') and not self:_dirMove(-1, 0) then self:_move(-1) end
+    if Input.pressed('nav_right') and not self:_dirMove(1, 0) then self:_move(1) end
+    if Input.pressed('nav_up') and not self:_dirMove(0, -1) then self:_world(-1) end
+    if Input.pressed('nav_down') and not self:_dirMove(0, 1) then self:_world(1) end
     if Input.pressed('confirm') or Input.pressed('flap') then self:_play(); return end
     if Input.pressed('back') then self:_back() end
 end
@@ -882,6 +963,23 @@ function StoryMapState:_drawNodes(cx, cy)
             local x, y = math.floor(nx - cx), math.floor(ny - cy)
             if x > -120 and x < WINDOW_W + 120 and y > -120 and y < WINDOW_H + 80 then
                 local st = stateOf(w, k)
+                -- (recién abierta: aún cerrada OPEN_AT s, luego salta y suelta unos aros)
+                local opening = self.opening and self.opening[stopIndex(w, k)]
+                if opening and self.t < OPEN_AT then st = 'locked' end
+                if opening and self.t >= OPEN_AT and self.t < OPEN_AT + 1.2 then
+                    local u = (self.t - OPEN_AT) / 1.2
+                    love.graphics.setLineWidth(3)
+                    for ring = 0, 1 do
+                        local q = math.min(1, u * 1.4 - ring * 0.25)
+                        if q > 0 then
+                            love.graphics.setColor(1, 0.95, 0.5, (1 - q) * 0.9)
+                            local r = 18 + q * 46
+                            love.graphics.rectangle('line', x - r, y - r, 2 * r, 2 * r)
+                        end
+                    end
+                    love.graphics.setLineWidth(1)
+                    y = y - math.floor(math.abs(math.sin(math.min(1, u * 2) * math.pi)) * 10)
+                end
                 if node.boss then
                     self:_drawCastle(w, x, y, st == 'done' and not self.showBosses)     -- (showBosses: para revisar el mapa con todos los jefes)
                 else

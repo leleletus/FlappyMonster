@@ -106,7 +106,7 @@ function love.update(dt)
             ('mundo %s nodo %s; partida creada en disco=%s'):format(tostring(st.world), tostring(st.node),
              tostring(love.filesystem.getInfo('story1.sav') ~= nil)))
         shot('map_1280')
-        pressNext('nav_right'); go('locked')
+        top():_move(1); go('locked')                     -- (al nodo siguiente: está cerrado)
     elseif step == 'locked' and t - T > 0.3 then
         -- el camino al nodo 2 está cerrado: el monstruo no anda (choca) y ABAJO no pasa al mundo 2
         LOCK1 = top().node == 1 and top().world == 1 and #top().queue == 0 and top().levelPath == nil
@@ -139,10 +139,44 @@ function love.update(dt)
         shot('results')
         pressNext('confirm'); go('back1b')
     elseif step == 'back1b' and t - T > 0.5 then
-        check('superar', IN1 and WON1 and st.world == 1 and st.node == 2 and Run.isDone(W1[1].id) and Run.state(1, 2) == 'open',
-            ('entra en %s=%s; meta=%s; vuelve al mapa en el nodo %s; nivel 1 superado=%s, nodo 2 %s'):format(W1[1].id, tostring(IN1),
-             tostring(WON1), tostring(st.node), tostring(Run.isDone(W1[1].id)), Run.state(1, 2)))
+        -- vuelve al mapa en el nodo que ACABA de superar (no en el nuevo) y el siguiente se abre a la vista
+        local opens = st.opening and st.opening[2] == true
+        check('superar', IN1 and WON1 and st.world == 1 and st.node == 1 and opens and Run.isDone(W1[1].id) and Run.state(1, 2) == 'open',
+            ('entra en %s=%s; meta=%s; vuelve al mapa en el nodo %s (el superado); el nodo 2 se abre a la vista=%s; nivel 1 superado=%s, nodo 2 %s'):format(W1[1].id, tostring(IN1),
+             tostring(WON1), tostring(st.node), tostring(opens), tostring(Run.isDone(W1[1].id)), Run.state(1, 2)))
         shot('map_done')
+        -- FLECHAS POR DIRECCIÓN: desde cada parada, pulsar hacia donde sale el camino a la siguiente lleva a ella
+        -- (aunque quede a la izquierda), y hacia donde sale el de la anterior, a la anterior
+        local bad, tested = {}, 0
+        local keep = { st.world, st.node, Run.data.done }
+        local all = {}
+        for w = 1, Worlds.count() do for _, n in ipairs(Worlds.nodes(w)) do all[n.id] = true end end
+        Run.data.done = all
+        local total = 0
+        for w = 1, Worlds.count() do total = total + #Worlds.nodes(w) end
+        for w = 1, Worlds.count() do
+            for k = 1, #Worlds.nodes(w) - 1 do
+                for _, d in ipairs({ 1, -1 }) do
+                    local from, to = (d > 0) and k or k + 1, (d > 0) and k + 1 or k
+                    st.world, st.node, st.queue = w, from, {}
+                    st.heroX, st.heroY = st:_nodeXY(w, from)
+                    local tx, ty = st:_nodeXY(w, to)
+                    local leg = st:_legTo(w, from, d)
+                    local vx, vy = leg[1], leg[2]
+                    local ax, ay = (math.abs(vx) >= math.abs(vy)) and (vx > 0 and 1 or -1) or 0, (math.abs(vx) < math.abs(vy)) and (vy > 0 and 1 or -1) or 0
+                    st:_dirMove(ax, ay)
+                    tested = tested + 1
+                    if not (st.world == w and st.node == to) then bad[#bad + 1] = ('%d:%d→%d'):format(w, from, to) end
+                end
+            end
+        end
+        st.world, st.node, Run.data.done = keep[1], keep[2], keep[3]
+        st.queue = {}
+        st.heroX, st.heroY = st:_nodeXY(st.world, st.node)
+        check('direccion', #bad <= math.floor(tested * 0.1), ('%d tramos probados en los dos sentidos; por dirección NO llega a la vecina en %d: %s'):format(
+            tested, #bad, table.concat(bad, ' ')))
+        top():_move(1); go('in2a')
+    elseif step == 'in2a' and t - T > 0.3 then
         pressNext('confirm'); go('in2')
     elseif step == 'in2' and t - T > 0.6 then
         check('vidas', LIVES0 == 3 and Run.data.lives == 2 and st.player.lives == 2,
@@ -154,7 +188,7 @@ function love.update(dt)
     elseif step == 'back2a' and t - T > 0.2 then
         pressNext('confirm'); go('back2b')
     elseif step == 'back2b' and t - T > 0.5 then
-        OK2 = Run.isDone(W1[2].id) and st.node == 3
+        OK2 = Run.isDone(W1[2].id) and st.node == 2
         pressNext('back'); go('slots2')
     elseif step == 'slots2' and t - T > 0.4 then
         local s = st.slots and st.slots[1]
@@ -163,7 +197,7 @@ function love.update(dt)
         -- releer del disco, como al reabrir el juego
         package.loaded['src/story/Run'] = nil
         local d = Save.load(1)
-        check('guardado', d ~= nil and d.done[W1[1].id] == true and d.done[W1[2].id] == true and d.world == 1 and d.node == 3,
+        check('guardado', d ~= nil and d.done[W1[1].id] == true and d.done[W1[2].id] == true and d.world == 1 and d.node == 2,
             ('en disco: %s y %s superados, mundo %s nodo %s'):format(tostring(d and d.done[W1[1].id]), tostring(d and d.done[W1[2].id]),
              tostring(d and d.world), tostring(d and d.node)))
         -- todo el mundo 1 superado → se abre el 2
@@ -173,7 +207,7 @@ function love.update(dt)
     elseif step == 'world2' and t - T > 0.4 then
         local open = Run.worldOpen(2)
         local w0 = st.world
-        pressNext('nav_down'); go('world2b'); OPEN2, W0 = open, w0
+        top():_world(1); go('world2b'); OPEN2, W0 = open, w0
     elseif step == 'world2b' and t - T > 0.3 then
         check('mundo2', OPEN2 and st.world == 2 and Run.state(2, 1) == 'open' and Run.state(2, 2) == 'locked',
             ('mundo 1 completo → mundo 2 abierto=%s; ABAJO pasa al mundo %s; su nodo 1 %s, el 2 %s'):format(tostring(OPEN2), tostring(st.world),
@@ -183,7 +217,7 @@ function love.update(dt)
         -- menos (se guarda), vuelve a entrar y se queda sin vidas
         local W2 = Worlds.nodes(2)
         Run.data.done[W2[1].id] = true; Run.save()
-        pressNext('nav_right'); go('go1')
+        top():_move(1); go('go1')
     elseif step == 'go1' and t - T > 0.3 then
         pressNext('confirm'); go('go2')
     elseif step == 'go2' and t - T > 0.6 then

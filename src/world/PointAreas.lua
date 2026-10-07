@@ -47,6 +47,7 @@ function PointAreas.build(placements)
 end
 
 local function inside(a, x, y) return x >= a.x0 and x < a.x1 and y >= a.y0 and y < a.y1 end
+function PointAreas.isActive(level, a) return true end
 PointAreas.inside = inside
 
 -- Autoritativo (un jugador y servidor). players = lista de PlayerAdventure

@@ -49,6 +49,7 @@ function Model.fromData(lvl, path)
     local m = setmetatable({}, Model)
     m.name   = lvl.name or 'nivel'
     m.name_en = lvl.name_en                                -- (nombre en inglés)
+    m.parTime = tonumber(lvl.parTime)                      -- (tiempo objetivo, s; nil = automático por el ancho)
     m.width  = lvl.width
     m.height = lvl.height
     m.tiles  = {}
@@ -139,7 +140,7 @@ function Model:toData()
         subs[#subs+1] = d
     end
     return {
-        name = self.name, name_en = self.name_en, width = self.width, height = self.height,
+        name = self.name, name_en = self.name_en, parTime = self.parTime, width = self.width, height = self.height,
         playerStart = self.playerStart, tiles = self.tiles,
         entities = ents, foliage = decos, vents = self.vents, bossZones = zones, subtiles = subs, links = self.links or {}, blockLinks = self.blockLinks or {},
         autoScroll = AutoScroll.serialize(self.autoScroll),
@@ -171,6 +172,7 @@ function Model:encode()
     local function line(s, last) out[#out+1] = '  ' .. s .. (last and '' or ',') end
     line('"name": ' .. json.encode(d.name))
     if d.name_en and d.name_en ~= '' then line('"name_en": ' .. json.encode(d.name_en)) end
+    if d.parTime then line('"parTime": ' .. json.encode(d.parTime)) end
     line('"width": ' .. d.width)
     line('"height": ' .. d.height)
     line('"playerStart": ' .. enc(d.playerStart))
@@ -236,7 +238,7 @@ end
 
 -- ── Copias (deshacer) ─────────────────────────────────────────────────────────
 function Model:snapshot()
-    return deepcopy({ name=self.name, name_en=self.name_en, width=self.width, height=self.height, tiles=self.tiles,
+    return deepcopy({ name=self.name, name_en=self.name_en, parTime=self.parTime, width=self.width, height=self.height, tiles=self.tiles,
                       playerStart=self.playerStart, entities=self.entities,
                       foliage=self.foliage, vents=self.vents, bossZones=self.bossZones, subtiles=self.subtiles, links=self.links, blockLinks=self.blockLinks,
                       autoScroll=self.autoScroll, modes=self.modes, matchTime=self.matchTime, music=self.music, snow=self.snow, peaceful=self.peaceful, dark=self.dark, echo=self.echo, light=self.light, spikeSkin=self.spikeSkin,
@@ -252,6 +254,7 @@ function Model:restore(s)
     self.spikeSkin = nil
     self.background, self.time, self.clouds, self.depth, self.surfaceRow = nil, nil, nil, nil, nil
     self.name_en = nil
+    self.parTime = nil
     for k, v in pairs(s) do self[k] = v end
 end
 

@@ -1485,6 +1485,17 @@ local function drawLevelTab(x, y, w)
         local ne, nech = ui.textField('lvl_name_en', m.name_en or '', x + 70, y, w - 70, 40, 'Nombre en inglés (si no, el de arriba)')
         if nech then m.name_en = (ne ~= '') and ne or nil; E.unsaved = true end
         y = y + 34
+        -- TIEMPO OBJETIVO (la nota del modo historia): 0 = automático (0,75 s por casilla de ancho, mínimo 40 s)
+        do
+            local auto = math.max(40, math.floor(m.width * 0.75 + 0.5))
+            local pv, pch = ui.number('Tiempo objetivo (s)', m.parTime or 0, x, y, w,
+                { kind = 'int', min = 0, max = 3600, step = 10,
+                  help = 'Hasta ese tiempo, la parte de tiempo de la nota va entera; baja hasta 0 al triple. 0 = automático (' .. auto .. ' s para este ancho)' })
+            if pch then pushUndo(); m.parTime = (pv > 0) and pv or nil; markDirty() end
+            y = y + 28
+            y = y + ui.hint('Cuánto se tarda en pasarlo jugando bien. Los niveles largos (laberintos) necesitan el suyo. Ahora: '
+                            .. ((m.parTime and (m.parTime .. ' s')) or ('automático, ' .. auto .. ' s')), x, y, w, th.border) + 6
+        end
         E.newW = E.newW or m.width
         E.newH = E.newH or m.height
         E.newW = ui.number('Ancho (casillas)', E.newW, x, y, w, { kind = 'int', min = 8, max = 400 }); y = y + 28
