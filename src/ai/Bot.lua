@@ -25,6 +25,7 @@
 -- grabado = se coloca quieto en el centro de su casilla y reproduce los inputs fotograma a fotograma (la física
 -- es determinista: cae donde se grabó; si cae en otro sitio, vuelve a planear desde ahí).
 local P = require 'src/network/Protocol'
+local PointAreas = require 'src/world/PointAreas'
 local BotNav = require 'src/ai/BotNav'
 local Floods = require 'src/world/Floods'
 
@@ -88,21 +89,35 @@ end
 -- ninguna firme, todas las que tengan suelo. Devuelve el set (o nil) y si hay firmes.
 local function zoneNodes(nav, area, level)
     local firm, all, anyF, anyA = {}, {}, false, false
+    local rect, anyR = {}, false
     for id, n in pairs(nav.nodes) do
         local y = n.y or (n.r * TILE_PX - 40)
-        if n.x >= area.x0 and n.x < area.x1 and y >= area.y0 and y < area.y1 and level:isStandable(n.c, n.r)
-           and not flooded(level, n.x, y) then                    -- (ni lo que ahora está bajo el agua)
-            all[id], anyA = true, true
-            if not level:getDef(n.c, n.r + 1).thinIce then firm[id], anyF = true, true end
+        if n.x >= area.x0 and n.x < area.x1 and y >= area.y0 and y < area.y1 and not flooded(level, n.x, y) then   -- (ni lo que ahora está bajo el agua)
+            rect[id], anyR = true, true
+            if level:isStandable(n.c, n.r) then
+                all[id], anyA = true, true
+                if not level:getDef(n.c, n.r + 1).thinIce then firm[id], anyF = true, true end
+            end
         end
     end
-    return anyF and firm or (anyA and all or nil), anyF
+    -- (con UNA sola zona activa no hay otra a la que irse: si ahora no le queda suelo — el hielo se rompió —, entra
+    -- igual, a donde lo había: dentro de la zona se puntúa también nadando)
+    -- (no si el suelo depende de un Activador ON/OFF: ahí lo suyo es ir a pulsarlo)
+    if not anyA and anyR and #BotNav._switchCells(level) > 0 then anyR = false end
+    return anyF and firm or (anyA and all) or (anyR and rect or nil), anyF
+end
+
+-- Las zonas a las que tiene sentido ir: con la zona ÚNICA que se mueve (PointAreas), la activa — o ya la
+-- siguiente parada si está a punto de irse o va de camino: el bot se adelanta —; es su objetivo principal
+local function goalZones(level)
+    local a = PointAreas.target(level)
+    return a and { a } or {}
 end
 
 -- La zona que le conviene al bot ahora (se recalcula cada segundo)
 function Bot.pickZone(nav, level, x, y, clock)
     local best, bs
-    for _, a in ipairs(level.pointAreas or {}) do
+    for _, a in ipairs(goalZones(level)) do
         if not a._navAt or clock - a._navAt > 1 or clock < a._navAt then
             a._nodes, a._firm = zoneNodes(nav, a, level)
             a._navAt = clock
@@ -120,7 +135,7 @@ local function inArea(a, x, y) return x >= a.x0 and x < a.x1 and y >= a.y0 and y
 
 -- ¿En qué zona está ese jugador (o nil)?
 local function areaOf(level, pa)
-    for _, a in ipairs(level.pointAreas or {}) do
+    for _, a in ipairs(PointAreas.live(level)) do                -- (solo cuenta la zona ACTIVA)
         if inArea(a, pa.x, pa.y) then return a end
     end
 end
@@ -137,8 +152,11 @@ end
 function Bot:_goal(level, target)
     local pa = self.pa
     local alive = target and not target.dying
-    local mine = pa.onGround and areaOf(level, pa) or self.myArea           -- (en el aire: la última en que estuvo)
-    if pa.onGround then self.myArea = mine end
+    -- (en el aire: la última en que estuvo, si SIGUE siendo la activa — la zona se mueve: PointAreas —)
+    local mine
+    if pa.onGround then mine = areaOf(level, pa); self.myArea = mine
+    else mine = self.myArea end
+    if mine and not PointAreas.isActive(level, mine) then mine, self.myArea = nil, nil end
     local theirs = alive and areaOf(level, target)
     local ready = alive and self.cd <= 0 and self.clock >= (self.noHuntT or 0) and self:_canPound(level, target)
     -- ¿a por ti? Solo si estás en SU zona, o si él no está puntuando y tú sí (o te tiene muy cerca)
@@ -212,6 +230,8 @@ local function flippedZones(nav, level)
     if #cells == 0 then return nil end
     local key = 0
     for _, k in ipairs(cells) do key = (key * 31 + level:getRaw(k[1], k[2])) % 2147483647 end
+    -- (… y de CUÁL es la zona a la que ir ahora: se mueve de parada en parada)
+    for _, a in ipairs(goalZones(level)) do key = (key * 31 + a.col0 * 131 + a.row0) % 2147483647 end
     if nav._flipKey == key then return nav._flip, nav._flipBest end
     local TileTypes = require 'src/world/tiles/TileTypes'
     local TileCodec = require 'src/world/tiles/TileCodec'
@@ -221,7 +241,7 @@ local function flippedZones(nav, level)
         level.tiles[k[2]][k[1]] = TileCodec.encode(other.id, wet, spikes)
     end
     local set, best = {}, 0
-    for _, a in ipairs(level.pointAreas or {}) do
+    for _, a in ipairs(goalZones(level)) do
         if zoneNodes(nav, a, level) then set[a] = true; best = math.max(best, a.points or 1) end
     end
     for _, k in ipairs(cells) do level.tiles[k[2]][k[1]] = k[3] end
@@ -237,11 +257,11 @@ function Bot:_switchPlan(level, target)
     local flip, flipBest = flippedZones(self.nav, level)
     if not flip then return nil end
     local nowBest = 0
-    for _, a in ipairs(level.pointAreas or {}) do
+    for _, a in ipairs(goalZones(level)) do
         if a._nodes then nowBest = math.max(nowBest, a.points or 1) end
     end
     local pa = self.pa
-    local mine = pa.onGround and areaOf(level, pa)
+    local mine = pa.onGround and areaOf(level, pa) or nil
     local theirs = target and not target.dying and areaOf(level, target)
     -- (a) pulsándolo habría una zona mejor que cualquiera de ahora (o ahora no hay ninguna con suelo)
     local want = flipBest > nowBest

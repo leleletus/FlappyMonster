@@ -36,7 +36,7 @@
   ],
   "entities": [
     {"col":46,"props":{"area":[{"col":35,"row":23},{"col":57,"row":23},{"col":54,"row":26},{"col":38,"row":26}]},"row":26,"type":"pufferfish"},
-    {"col":39,"props":{"corner":{"col":53,"row":21},"points":4},"row":17,"type":"pointarea"},
+    {"col":39,"props":{"corner":{"col":53,"row":26},"points":4},"row":17,"type":"pointarea"},
     {"col":22,"props":{"patrol":{"left":16,"right":28},"points":6,"respawn":8},"row":21,"type":"crabby_ice"},
     {"col":70,"props":{"patrol":{"left":64,"right":76},"points":6,"respawn":8},"row":21,"type":"crabby_ice"},
     {"col":43,"props":{"dir":"down","firstDelay":1,"freezeTime":2,"range":4},"row":9,"type":"cryo"},

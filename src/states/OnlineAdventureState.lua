@@ -346,6 +346,7 @@ function OnlineAdventureState:_onSnapshot(snap)
     BossZones.netApply(self.level, snap.bz)
     AutoScroll.netApply(self.level, snap.sc)     -- cámara automática (paredes de la predicción)
     Floods.netApply(self.level, snap.fc, TICK_DT) -- inundaciones controladas (el agua: en su tiempo predicho)
+    PointAreas.netApply(self.level, snap.zc)      -- la zona de puntos que se mueve: su reloj
     self.modeHud = type(snap.md) == 'table' and snap.md or nil
     -- Modo con tiempo (hud `tl` = centésimas que quedan, p. ej. Rey de la
     -- Colina): el reloj del HUD cuenta hacia atrás hasta este instante

@@ -9,6 +9,15 @@
 --  * `contested`: si hay más de un jugador dentro, nadie suma (hay que
 --    echar a los demás).
 --
+--  * UNA SOLA ZONA ACTIVA A LA VEZ (el usuario: con varias a la vez cada uno se queda en la suya sumando y nadie
+--    se pelea): con dos o más zonas en el nivel, sus sitios son las PARADAS de una única zona que va de una a
+--    otra — `HOLD` s en cada parada (`FIRST` más en la primera) y `MOVE` s de viaje hasta la siguiente (viajando no da puntos) —. Cuál toca
+--    es una función pura del reloj de las zonas (`level.zoneClock`): igual en un jugador, en el servidor (que lo
+--    manda en la instantánea, `zc`) y en el cliente. Con una sola zona, nada cambia.
+--      PointAreas.state(level)  → activa | nil, desde, hacia, u (0..1 del viaje), s que le quedan en la parada
+--      PointAreas.isActive(level, a) · PointAreas.target(level) (adónde ir: la activa, o ya la siguiente si
+--      está a punto de irse) · PointAreas.live(level) (lista con la activa, o vacía mientras viaja)
+--
 -- Los puntos los reparte quien manda: el modo un jugador y el servidor
 -- (PointAreas.update con una función `award`). El cliente online solo dibuja:
 -- PointAreas.clientUpdate calcula quién está dentro y el progreso del
@@ -47,16 +56,77 @@ function PointAreas.build(placements)
 end
 
 local function inside(a, x, y) return x >= a.x0 and x < a.x1 and y >= a.y0 and y < a.y1 end
-function PointAreas.isActive(level, a) return true end
+
+-- ── La zona única que se mueve ───────────────────────────────────────────────
+PointAreas.HOLD = 18          -- s en cada parada (con 12 casi no daba tiempo a llegar: las paradas pueden quedar a 10 s de camino)
+PointAreas.FIRST = 6          -- s de más en la PRIMERA (todos salen lejos de ella)
+PointAreas.MOVE = 2.5         -- s de viaje a la siguiente
+PointAreas.SOON = 3           -- s antes de irse en que la siguiente parada ya avisa (parpadea)
+PointAreas.LEAVE = 1.2        -- s antes de irse en que `target` ya es la siguiente (el bot sale con ventaja)
+
+-- Orden de las paradas: empieza por la más CÉNTRICA (ni tu lado ni el del rival) y sigue en el orden del nivel
+local function order(level)
+    local list = level.pointAreas or {}
+    if level._zoneOrder and #level._zoneOrder == #list then return level._zoneOrder end
+    local mid = (level.tileW or 0) * TILE_PX / 2
+    local first, bd = 1, nil
+    for i, a in ipairs(list) do
+        local d = math.abs((a.x0 + a.x1) / 2 - mid)
+        if not bd or d < bd - 1 then first, bd = i, d end
+    end
+    local o = {}
+    for k = 0, #list - 1 do o[#o + 1] = (first - 1 + k) % #list + 1 end
+    level._zoneOrder = o
+    return o
+end
+
+function PointAreas.state(level)
+    local list = level.pointAreas or {}
+    local n = #list
+    if n == 0 then return nil end
+    if n == 1 then return list[1], list[1], list[1], 0, math.huge end
+    local o = order(level)
+    local C = PointAreas.HOLD + PointAreas.MOVE
+    local t = math.max(0, level.zoneClock or 0)
+    if t < PointAreas.HOLD + PointAreas.FIRST then return list[o[1]], list[o[1]], list[o[2]], 0, PointAreas.HOLD + PointAreas.FIRST - t end
+    t = t - PointAreas.FIRST
+    local k = math.floor(t / C)
+    local ph = t - k * C
+    local from, to = list[o[k % n + 1]], list[o[(k + 1) % n + 1]]
+    if ph < PointAreas.HOLD then return from, from, to, 0, PointAreas.HOLD - ph end
+    return nil, from, to, (ph - PointAreas.HOLD) / PointAreas.MOVE, 0
+end
+function PointAreas.isActive(level, a) return (PointAreas.state(level)) == a end
+function PointAreas.live(level)
+    local a = PointAreas.state(level)
+    return a and { a } or {}
+end
+-- Adónde conviene ir: la activa; si se va a ir enseguida (o ya viaja), la siguiente
+function PointAreas.target(level)
+    local a, _, to, _, left = PointAreas.state(level)
+    if not a or left < PointAreas.LEAVE then return to end
+    return a
+end
+function PointAreas.netPack(level)
+    if #(level.pointAreas or {}) < 2 then return nil end
+    return math.floor((level.zoneClock or 0) * 100 + 0.5)
+end
+function PointAreas.netApply(level, zc)
+    if zc then level.zoneClock = zc / 100 end
+end
 PointAreas.inside = inside
 
 -- Autoritativo (un jugador y servidor). players = lista de PlayerAdventure
 -- activos; award(pa, points, area) reparte los puntos.
 function PointAreas.update(level, dt, players, award)
+    level.zoneClock = (level.zoneClock or 0) + dt
+    local active = PointAreas.state(level)
     for _, a in ipairs(level.pointAreas or {}) do
         local here = {}
-        for _, pa in ipairs(players) do
-            if not pa.dying and pa.alive ~= false and inside(a, pa.x, pa.y) then here[#here+1] = pa end
+        if a == active then
+            for _, pa in ipairs(players) do
+                if not pa.dying and pa.alive ~= false and inside(a, pa.x, pa.y) then here[#here+1] = pa end
+            end
         end
         a.count = #here
         a.scoring = #here > 0 and not (a.contested and #here > 1)
@@ -83,10 +153,14 @@ end
 
 -- Cliente online: solo lo visual. `positions` = { {x, y, isLocal}, ... }
 function PointAreas.clientUpdate(level, dt, positions)
+    level.zoneClock = (level.zoneClock or 0) + dt          -- (entre instantáneas; el servidor la corrige: netApply)
+    local active = PointAreas.state(level)
     for _, a in ipairs(level.pointAreas or {}) do
         local n, localIn = 0, false
-        for _, p in ipairs(positions) do
-            if inside(a, p[1], p[2]) then n = n + 1; if p[3] then localIn = true end end
+        if a == active then
+            for _, p in ipairs(positions) do
+                if inside(a, p[1], p[2]) then n = n + 1; if p[3] then localIn = true end end
+            end
         end
         a.count = n
         a.scoring = n > 0 and not (a.contested and n > 1)
@@ -111,7 +185,7 @@ end
 function PointAreas.progressOf(level, pa)
     for _, a in ipairs(level.pointAreas or {}) do
         local t = a.timers[pa] or (pa.isLocalView and a.localT)
-        if t and inside(a, pa.x, pa.y) then return t / a.interval, a end
+        if t and PointAreas.isActive(level, a) and inside(a, pa.x, pa.y) then return t / a.interval, a end
     end
     return nil
 end
@@ -122,12 +196,30 @@ local RED   = { 1.00, 0.35, 0.30 }
 
 -- Área: suelo dorado que late, borde a trazos que avanza y esquinas marcadas.
 -- Disputada (varios dentro sin sumar): roja.
+-- Contorno de una parada (o de la zona viajando): esquinas + borde fino
+local function ghost(x, y, w, h, col, alpha)
+    love.graphics.setColor(col[1], col[2], col[3], alpha)
+    for _, c in ipairs({ { x, y, 1, 1 }, { x + w, y, -1, 1 }, { x, y + h, 1, -1 }, { x + w, y + h, -1, -1 } }) do
+        love.graphics.rectangle('fill', c[3] > 0 and c[1] or c[1] - 12, c[4] > 0 and c[2] or c[2] - 4, 12, 4)
+        love.graphics.rectangle('fill', c[3] > 0 and c[1] or c[1] - 4, c[4] > 0 and c[2] or c[2] - 12, 4, 12)
+    end
+    love.graphics.setColor(col[1], col[2], col[3], alpha * 0.35)
+    love.graphics.rectangle('line', x, y, w, h)
+end
+
 function PointAreas.render(level, camX, camY)
     local t = love.timer.getTime()
+    local active, from, to, u, left = PointAreas.state(level)
     for _, a in ipairs(level.pointAreas or {}) do
         local x, y = math.floor(a.x0 - camX), math.floor(a.y0 - camY)
         local w, h = a.x1 - a.x0, a.y1 - a.y0
-        if x < WINDOW_W and y < WINDOW_H and x + w > 0 and y + h > 0 then
+        if a ~= active then
+            -- una PARADA sin la zona: su contorno tenue; la siguiente parpadea cuando la zona está al llegar
+            if x < WINDOW_W and y < WINDOW_H and x + w > 0 and y + h > 0 then
+                local soon = a == to and (not active or left < PointAreas.SOON)
+                ghost(x, y, w, h, GOLD, soon and (0.35 + 0.45 * math.abs(math.sin(t * 9))) or 0.22)
+            end
+        elseif x < WINDOW_W and y < WINDOW_H and x + w > 0 and y + h > 0 then
             local col = (a.count > 0 and not a.scoring) and RED or GOLD
             local on  = a.scoring and 1 or 0
             -- Relleno (más vivo cuando da puntos) + destello
@@ -175,6 +267,36 @@ function PointAreas.render(level, camX, camY)
                 love.graphics.setColor(col[1], col[2], col[3], 0.9)
                 love.graphics.print(label, lx, ly)
             end
+        end
+    end
+    -- VIAJANDO: el rectángulo entre las dos paradas (no da puntos) con su estela
+    if not active and from and to then
+        local q = u * u * (3 - 2 * u)
+        local function lerp(a, b) return a + (b - a) * q end
+        local x, y = math.floor(lerp(from.x0, to.x0) - camX), math.floor(lerp(from.y0, to.y0) - camY)
+        local w, h = lerp(from.x1 - from.x0, to.x1 - to.x0), lerp(from.y1 - from.y0, to.y1 - to.y0)
+        love.graphics.setColor(GOLD[1], GOLD[2], GOLD[3], 0.16)
+        love.graphics.rectangle('fill', x, y, w, h)
+        ghost(x, y, w, h, GOLD, 0.9)
+    end
+    -- ¿La zona (o adonde va) queda FUERA de la pantalla? Una flecha en el borde dice hacia dónde está
+    if #(level.pointAreas or {}) > 1 then
+        local a = active or to
+        local ax, ay = (a.x0 + a.x1) / 2 - camX, (a.y0 + a.y1) / 2 - camY
+        if ax < 0 or ax > WINDOW_W or ay < 0 or ay > WINDOW_H then
+            local m = 54
+            local px, py = math.max(m, math.min(WINDOW_W - m, ax)), math.max(m + 60, math.min(WINDOW_H - m, ay))
+            local ang = math.atan2(ay - py, ax - px)
+            local k = 1 + 0.15 * math.sin(t * 8)
+            love.graphics.push()
+            love.graphics.translate(math.floor(px), math.floor(py))
+            love.graphics.rotate(ang)
+            love.graphics.scale(k, k)
+            love.graphics.setColor(0, 0, 0, 0.7)
+            love.graphics.polygon('fill', 22, 3, -12, -15, -12, 21)
+            love.graphics.setColor(GOLD[1], GOLD[2], GOLD[3], active and 1 or 0.6)
+            love.graphics.polygon('fill', 20, 0, -12, -16, -12, 16)
+            love.graphics.pop()
         end
     end
     love.graphics.setColor(1, 1, 1, 1)

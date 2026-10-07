@@ -917,11 +917,12 @@ local function broadcastSnapshot(room)
     local bz = BossZones.netPack(sim.level)
     local sc = AutoScroll.netPack(sim.level)
     local fc = Floods.netPack(sim.level, TICK_DT)     -- inundaciones controladas (jefe / ON-OFF)
+    local zc = PointAreas.netPack(sim.level)          -- reloj de la zona de puntos que se mueve (nil con una sola)
     for _, pid in ipairs(room.playerIds) do
         local c  = findClientById(pid)
         local ps = sim.playerSims[pid]
         if c then
-            local snap = { t=sim.tick, lt=lt, p=plist, e=elist, vb=vb, md=md, bz=bz, sc=sc, fc=fc }
+            local snap = { t=sim.tick, lt=lt, p=plist, e=elist, vb=vb, md=md, bz=bz, sc=sc, fc=fc, zc=zc }
             if ps and not ps.isSpectator then
                 snap.a  = ps.lastProcSeq
                 snap.o  = Protocol.packOwnState(ps.pa)

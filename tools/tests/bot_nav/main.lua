@@ -27,7 +27,7 @@ local Interactions = require 'src/world/entities/Interactions'
 local PointAreas = require 'src/world/PointAreas'
 local Floods = require 'src/world/Floods'
 local EntityTypes = require 'src/world/entities/EntityTypes'
-local SECS = tonumber(os.getenv('SECS')) or 40
+local SECS = tonumber(os.getenv('SECS')) or 60                 -- (una partida bonus entera: la zona cambia de parada)
 
 local function play(level, nav, withTarget, lure)
     local sx, sy = level:getSpawnPx()
@@ -73,13 +73,30 @@ local function play(level, nav, withTarget, lure)
     end
     lastSw = swKey()
     local stubT = P.newInputStub()
-    local t, arrive, inside, pushes, tIn = 0, nil, 0, 0, 0
+    local t, arrive, inside, pushes, tIn, activeT = 0, nil, 0, 0, 0, 0
+    local curStop, stopT, stopIn, stops, reached = nil, 0, 0, 0, 0
     local ax, ay, still, worst = bpa.x, bpa.y, 0, 0             -- lo más que pasa PARADO en un sitio fuera de una zona
     local dt = 1 / 60
     while t < SECS do
         level.players = tgt and { bpa, tgt } or { bpa }
         level.solidBodies = Entities.solidBodies(es)          -- (trampolines, morteros: como en AdventureState)
         level:update(dt)
+        level.zoneClock = t                                    -- (la zona ÚNICA que se mueve de parada en parada: PointAreas)
+        do                                                     -- el "jugador" sigue a la zona: su sitio es la parada de ahora
+            local z = PointAreas.target(level)
+            if z and z ~= best and not lure then best = z end
+        end
+        local active = PointAreas.state(level)
+        if active then activeT = activeT + dt end
+        -- (cada PARADA de la zona: ¿llega el bot a estar dentro mientras dura?)
+        if active ~= curStop then
+            if curStop and stopT > 6 then stops = stops + 1; if stopIn >= 1 then reached = reached + 1 end end
+            curStop, stopT, stopIn = active, 0, 0
+        end
+        if active then
+            stopT = stopT + dt
+            if PointAreas.inside(active, bpa.x, bpa.y) then stopIn = stopIn + dt end
+        end
         Floods.advance(level, dt)                              -- (el agua sube y baja, como en la partida)
         -- (el bot, con un dt IRREGULAR como el del juego de verdad: 144 Hz con tirones; él va a paso fijo por dentro)
         JIT = (JIT or 0) + 1
@@ -127,8 +144,10 @@ local function play(level, nav, withTarget, lure)
         end
         for _, e in ipairs(es) do if e.alive then e:update(dt, level) end end
         Interactions.run(bpa, es, {})
-        local isIn = false                                     -- (en CUALQUIER zona: puede cambiar de zona si le conviene)
-        for _, a in ipairs(level.pointAreas) do if PointAreas.inside(a, bpa.x, bpa.y) then isIn = true end end
+        -- (dentro de la zona ACTIVA; mientras viaja a la parada siguiente, ir hacia ella no es estar parado)
+        local isIn = active ~= nil and PointAreas.inside(active, bpa.x, bpa.y)
+        local zt = PointAreas.target(level)
+        if not active and zt and PointAreas.inside(zt, bpa.x, bpa.y) then ax, ay, still = bpa.x, bpa.y, 0 end
         if isIn and not arrive then arrive = t end
         if os.getenv('DEBUG') and (withTarget or os.getenv('SOLO')) and (withTarget ~= (os.getenv('SOLO') ~= nil)) and math.floor(t * 2) ~= math.floor((t - dt) * 2) then
             print(('  %.1f bot %d,%d %s/' .. tostring(bot.kind) .. ' cd %.1f path %s · objetivo %d,%d stun %.1f'):format(t, bpa.x, bpa.y, bot.mode, bot.cd,
@@ -137,11 +156,12 @@ local function play(level, nav, withTarget, lure)
         -- (esperar a que baje el agua no es quedarse atascado)
         if isIn or bot.kind == 'wait' or math.abs(bpa.x - ax) > 40 or math.abs(bpa.y - ay) > 100 then ax, ay, still = bpa.x, bpa.y, 0
         else still = still + dt; worst = math.max(worst, still) end
-        if arrive and isIn then inside = inside + dt end
+        if isIn then inside = inside + dt end
         t = t + dt
     end
-    return arrive, arrive and inside / (SECS - arrive) or 0, pushes, tIn / SECS, worst,
-           { toggles = toggles, wetT = wetT, wetJ = wetJ, breakable = breakable, lured = tgt ~= nil }
+    return arrive, inside / math.max(1, activeT), pushes, tIn / SECS, worst,
+           { toggles = toggles, wetT = wetT, wetJ = wetJ, breakable = breakable, lured = tgt ~= nil, stops = stops, reached = reached,
+             moving = #level.pointAreas > 1 }
 end
 
 -- DATOS: en un nivel con zonas de puntos todo enemigo que se puede pisar REAPARECE y da el 40 % de sus puntos
@@ -203,17 +223,20 @@ function love.load(arg)
                 local stuck = math.max(w1, w2)                  -- (nunca clavado en un sitio fuera de una zona más de 6 s)
                 -- echarlo: a empujones, o quitándole el suelo con el Activador; sobre suelo rompible no ataca: se queda
                 local kicks = pushes + x2.toggles
-                local hunted = kicks >= 3 or (x2.breakable and fracH > 0.5)
+                local hunted = kicks >= (x1.moving and 2 or 3) or (x2.breakable and fracH > (x1.moving and 0.3 or 0.5))     -- (zona que se mueve: menos tiempo juntos)
                 local wetT, wetJ = x1.wetT + x2.wetT + x3.wetT, x1.wetJ + x2.wetJ + x3.wetJ
                 local calm = wetT < 3 or wetJ / wetT < 1.2
-                local keeps = not x3.lured or (arrL ~= nil and (fracL >= 0.8 or fracL >= frac - 0.1))       -- (igual que sin cebo: en cala un enemigo lo tira de la zona)
+                local keeps = not x3.lured or (arrL ~= nil and (fracL >= 0.8 or fracL >= frac - 0.1 or (x1.moving and fracL >= 0.3)))       -- (igual que sin cebo: en cala un enemigo lo tira de la zona)
                 local bad = dataCheck(level)
-                local good = arrive ~= nil and arrive < 25 and frac > 0.5 and hunted and stuck < 6 and calm and keeps and #bad == 0     -- (0.5: en cala_de_los_muelles un enemigo lo tira de la zona y tarda en volver)
+                local need = x1.moving and 0.3 or 0.5                    -- (zona que se mueve: parte del tiempo es ir de parada en parada)
+                if wetT > 30 then need = math.min(need, 0.4) end        -- (media partida con la zona bajo el agua)
+                local follows = not x1.moving or x1.reached >= x1.stops - 1
+                local good = arrive ~= nil and arrive < 25 and frac > need and follows and hunted and stuck < 6 and calm and keeps and #bad == 0     -- (0.5: en cala_de_los_muelles un enemigo lo tira de la zona y tarda en volver)
                 if not good then fails = fails + 1 end
-                print(('%-22s %s  sola: llega en %s s, dentro el %d %% · caza: %d empujones%s%s, el jugador en la zona el %d %% · cebo: dentro el %s · agua: %.0f s, %.1f saltos/s · parado como mucho %.1f s'):format(
+                print(('%-22s %s  sola: llega en %s s, dentro el %d %% · caza: %d empujones%s%s, el jugador en la zona el %d %% · cebo: dentro el %s · agua: %.0f s, %.1f saltos/s · parado como mucho %.1f s · paradas alcanzadas %d/%d'):format(
                     name, good and 'OK   ' or 'FALLA', arrive and string.format('%.1f', arrive) or '—', math.floor(frac * 100), pushes,
                     x2.toggles > 0 and (' + ' .. x2.toggles .. ' Activador') or '', x2.breakable and ' (suelo rompible: no ataca)' or '', math.floor(tIn * 100),
-                    x3.lured and (math.floor(fracL * 100) .. ' %') or 'sin cebo', wetT, wetT > 0 and wetJ / wetT or 0, stuck))
+                    x3.lured and (math.floor(fracL * 100) .. ' %') or 'sin cebo', wetT, wetT > 0 and wetJ / wetT or 0, stuck, x1.reached, x1.stops))
                 for _, b in ipairs(bad) do print('    datos: ' .. b) end
             end
         end
