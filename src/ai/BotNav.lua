@@ -200,7 +200,7 @@ end
 
 function BotNav.buildOne(level, opts)
     opts = opts or {}
-    local PlayerAdventure = require 'src/entities/PlayerAdventure'
+    local PlayerAdventure = require 'src/player/PlayerAdventure'
     local stub = P.newInputStub()
     local realInput, realSound = Input, Sound
     Sound = setmetatable({}, { __index = function() return function() end end })
@@ -220,7 +220,7 @@ function BotNav.buildOne(level, opts)
     level.players = { pa }
     -- objetos SÓLIDOS del nivel (trampolines, morteros): con sus caras de rebote. Un trampolín siempre "listo"
     -- (se pregunta su interact, sin gastarlo); en la partida, si está recargando, la arista falla y se descarta
-    local Entities = require 'src/world/Entities'
+    local Entities = require 'src/world/entities/Entities'
     local bodies = {}
     for _, pl in ipairs(level.entities or {}) do
         local ok, e = pcall(Entities.create, pl)

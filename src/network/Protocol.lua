@@ -2,7 +2,7 @@
 -- Constantes y codificación compartidas entre cliente y servidor online.
 -- Cualquier cambio aquí que rompa compatibilidad debe subir VERSION.
 
-local Tiles = require 'src/world/Tiles'
+local Tiles = require 'src/world/tiles/Tiles'
 
 local P = {}
 

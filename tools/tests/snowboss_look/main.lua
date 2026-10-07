@@ -20,11 +20,11 @@ Sound = setmetatable({}, { __index = function() return function() end end })
 local P = require 'src/network/Protocol'
 Input = P.newInputStub()
 local json = require 'libs/json'
-local Level = require 'src/world/Level'
-local Entities = require 'src/world/Entities'
-local BossZones = require 'src/world/BossZones'
+local Level = require 'src/world/level/Level'
+local Entities = require 'src/world/entities/Entities'
+local BossZones = require 'src/world/systems/BossZones'
 local TileCodec = require 'src/world/tiles/TileCodec'
-local PhaseBlocks = require 'src/world/PhaseBlocks'
+local PhaseBlocks = require 'src/world/systems/PhaseBlocks'
 local T = TILE_PX
 
 local clock = 0

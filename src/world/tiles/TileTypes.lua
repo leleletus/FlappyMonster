@@ -44,7 +44,7 @@
 --               los del material; ver TileTypes.debris)
 --
 --   ctx (dibujo): { x, y, size, col, row, raw, level, time [, edges] }
---   (`edges` ya calculadas: las subceldas de src/world/SubTiles.lua)
+--   (`edges` ya calculadas: las subceldas de src/world/level/SubTiles.lua)
 --   `level` es nil al dibujar miniaturas del editor: el dibujo debe tolerarlo.
 
 local TileCodec = require 'src/world/tiles/TileCodec'
@@ -126,7 +126,7 @@ end
 -- borde que mira al agua). Sin nivel (miniaturas) todas están expuestas.
 --
 -- UNA sola regla para todo lo que se dibuja como bloque (bloques grandes,
--- mini bloques de src/world/SubTiles.lua y bloques de jefe): se unen si son
+-- mini bloques de src/world/level/SubTiles.lua y bloques de jefe): se unen si son
 -- del mismo joinGroup. Una arista puede estar expuesta entera (true), oculta
 -- (false) o solo a medias ({ primera, segunda } = mitad izquierda/arriba y
 -- derecha/abajo) cuando al otro lado hay mini bloques que cubren solo media.

@@ -13,8 +13,8 @@ local P = require 'src/network/Protocol'
 local stub = P.newInputStub()
 Input = stub
 local json = require 'libs/json'
-local Level = require 'src/world/Level'
-local PlayerAdventure = require 'src/entities/PlayerAdventure'
+local Level = require 'src/world/level/Level'
+local PlayerAdventure = require 'src/player/PlayerAdventure'
 
 local DT, K = 1 / 60, 6
 local NODROWN = os.getenv('NODROWN')    -- (sin ahogarse: ¿el terreno se puede recorrer?)

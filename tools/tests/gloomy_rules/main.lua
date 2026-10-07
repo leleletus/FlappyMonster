@@ -36,12 +36,12 @@ Sound = setmetatable({ play = function(n) played[n] = (played[n] or 0) + 1 end }
 local P = require 'src/network/Protocol'
 local stub = P.newInputStub()
 Input = stub
-local Level = require 'src/world/Level'
-local Entities = require 'src/world/Entities'
-local Interactions = require 'src/world/entities/Interactions'
-local PlayerAdventure = require 'src/entities/PlayerAdventure'
-local Lights = require 'src/world/Lights'
-local Noise = require 'src/world/Noise'
+local Level = require 'src/world/level/Level'
+local Entities = require 'src/world/entities/Entities'
+local Interactions = require 'src/world/entities/base/Interactions'
+local PlayerAdventure = require 'src/player/PlayerAdventure'
+local Lights = require 'src/world/level/Lights'
+local Noise = require 'src/world/systems/Noise'
 local T = TILE_PX
 local BREAK = require('src/world/tiles/TileTypes').byName.breakable.id
 
@@ -182,7 +182,7 @@ end
 
 -- Cada ruido deja su marca "!" (fx) del tamaño de lo que se oye; en un nivel CON luz, nada
 function cases.marca()
-    local Entity = require 'src/world/entities/Entity'
+    local Entity = require 'src/world/entities/base/Entity'
     local got = {}
     Entity.fx = function(kind) got[#got + 1] = kind end
     local level = room(20, 8, {})
@@ -197,7 +197,7 @@ end
 -- NAVEGAR sin titubeos: (1) en lo alto de una plataforma y el ruido en el suelo, DEBAJO de ella;
 -- (2) el ruido al otro lado de una columna. Llega cerca y cambia de sentido muy pocas veces
 -- PARKOUR: el ruido está en un sitio al que NO se llega por su superficie (una plataforma en el aire, una repisa
--- al otro lado de un hueco…): tiene que encadenar trepar y saltar (src/world/entities/GloomyNav.lua). Antes se
+-- al otro lado de un hueco…): tiene que encadenar trepar y saltar (src/world/entities/base/GloomyNav.lua). Antes se
 -- quedaba debajo. Y con varios a la vez: llegan (o esperan cerca), ninguno se queda atascado dando vueltas.
 function cases.parkour()
     local msg, ok = {}, true
@@ -247,7 +247,7 @@ function cases.parkour()
     -- casillas no puede notarse (es una vez por ruido, pero pueden ser varios a la vez)
     do
         local json = require 'libs/json'
-        local GloomyNav = require 'src/world/entities/GloomyNav'
+        local GloomyNav = require 'src/world/entities/base/GloomyNav'
         local level = Level.fromData(json.decode(love.filesystem.read('assets/levels/templo_del_eco.json')))
         local es = {}
         for _, pl in ipairs(level.entities) do es[#es + 1] = Entities.create(pl) end
@@ -494,7 +494,7 @@ end
 --   · RESERVA: cualquier entidad puede ser súbdito de reserva (Entity:makeReserve), p. ej. una bomba
 --   · un trepador "de serie" (Crawler.mixin) tiene cajas giradas y normal
 function cases.base()
-    local ET = require 'src/world/entities/EntityTypes'
+    local ET = require 'src/world/entities/base/EntityTypes'
     local def = ET.byName.gummy
     def.class.def.traits = { needsPound = true }
     local level, es, e = room(20, 9, { { type = 'gummy', col = 8, row = 8, props = { movement = 'static' } } })

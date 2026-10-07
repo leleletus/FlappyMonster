@@ -2,7 +2,7 @@
 -- PARTIDAS del modo historia: 3 huecos, cada uno una aventura con su dificultad, sus vidas y lo
 -- que lleva superado. En la carpeta de guardado de LÖVE: story1.sav, story2.sav, story3.sav y
 -- story.sav (lo GLOBAL: dificultades desbloqueadas). OJO: nunca nombres .lua del juego (ver
--- src/Settings.lua: la carpeta de guardado tapa los módulos).
+-- src/core/Settings.lua: la carpeta de guardado tapa los módulos).
 -- El archivo es una tabla de Lua (`return { ... }`) que se carga sin entorno: no puede ejecutar nada.
 local Save = { SLOTS = 3, VERSION = 1 }
 
@@ -43,7 +43,7 @@ end
 function Save.new(difficulty)
     difficulty = difficulty or 'normal'
     return { version = Save.VERSION, difficulty = difficulty, world = 1, node = 1,
-             lives = require('src/Difficulty').of(difficulty, 'livesStart', 3),     -- (3; Extremo 4; Xtra extremo 6)
+             lives = require('src/core/Difficulty').of(difficulty, 'livesStart', 3),     -- (3; Extremo 4; Xtra extremo 6)
              done = {}, best = {}, playTime = 0, gameOvers = 0, points = 0, worldReward = {}, bonus = {},
              shards = {} }                                     -- (fragmentos del espejo: src/story/Shards.lua)
 end

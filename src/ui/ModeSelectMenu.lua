@@ -1,6 +1,6 @@
 -- src/ui/ModeSelectMenu.lua
 -- Menú "MODO DE JUEGO" del lobby de la sala (solo el host).
---   * Arriba, una pestaña por modo (src/world/Modes.lua).
+--   * Arriba, una pestaña por modo (src/world/modes/Modes.lua).
 --   * Debajo, el objetivo del modo elegido.
 --   * Tarjetas con miniatura de los niveles que admite ese modo; flechas si
 --     hay más de las que caben.
@@ -8,11 +8,11 @@
 -- → 'level_catalog'); mientras llega se usa la lista de room_update.
 
 local NC         = require 'src/network/NetworkClient'
-local Modes      = require 'src/world/Modes'
+local Modes      = require 'src/world/modes/Modes'
 local Clip        = require 'src/ui/Clip'
 local PixelIcons = require 'src/ui/PixelIcons'
 local fitText    = require('src/ui/TextUtil').fit
-local L = require 'src/Lang'
+local L = require 'src/core/Lang'
 
 local ModeSelectMenu = {}
 ModeSelectMenu.__index = ModeSelectMenu

@@ -3,7 +3,7 @@
 -- contador de vidas) y VOLVER (arriba a la izquierda) en menús que solo se
 -- podían dejar con teclado/mando.
 -- Solo se dibujan si el último dispositivo usado fue ratón o táctil.
-local L = require 'src/Lang'
+local L = require 'src/core/Lang'
 
 local CornerButtons = {}
 

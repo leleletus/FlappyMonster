@@ -4,30 +4,30 @@ Timer        = require 'libs/timer'
 
 require 'settings'
 Input        = require 'input'
-Sound        = require 'src/Sound'
-StateMachine = require 'src/StateMachine'
+Sound        = require 'src/audio/Sound'
+StateMachine = require 'src/core/StateMachine'
 
 -- NetworkClient: singleton global para el modo online
 NC = require 'src/network/NetworkClient'
 Notify = require 'src/ui/Notify'   -- avisos globales (toasts y ventanas)
 
-local TitleState                  = require 'src/states/TitleState'
-local MainMenuState               = require 'src/states/MainMenuState'
-local DifficultySelectionState    = require 'src/states/DifficultySelectionState'
-local PlayState                   = require 'src/states/PlayState'
-local PauseState                  = require 'src/states/PauseState'
-local AdventureState              = require 'src/states/AdventureState'
-local AdventureModeSelectState    = require 'src/states/AdventureModeSelectState'
-local FreePlayState               = require 'src/states/FreePlayState'
-local OnlineLoginState            = require 'src/states/OnlineLoginState'
-local OnlineHubState              = require 'src/states/OnlineHubState'
-local OnlineRoomState             = require 'src/states/OnlineRoomState'
-local OnlineAdventureState        = require 'src/states/OnlineAdventureState'
-local OnlineErrorState            = require 'src/states/OnlineErrorState'
-local OnlineResultsState          = require 'src/states/OnlineResultsState'
-local SettingsState               = require 'src/states/SettingsState'
-local UpdateState                 = require 'src/states/UpdateState'
-local Settings                    = require 'src/Settings'
+local TitleState                  = require 'src/states/menu/TitleState'
+local MainMenuState               = require 'src/states/menu/MainMenuState'
+local DifficultySelectionState    = require 'src/states/flappy/DifficultySelectionState'
+local PlayState                   = require 'src/states/flappy/PlayState'
+local PauseState                  = require 'src/states/adventure/PauseState'
+local AdventureState              = require 'src/states/adventure/AdventureState'
+local AdventureModeSelectState    = require 'src/states/menu/AdventureModeSelectState'
+local FreePlayState               = require 'src/states/adventure/FreePlayState'
+local OnlineLoginState            = require 'src/states/online/OnlineLoginState'
+local OnlineHubState              = require 'src/states/online/OnlineHubState'
+local OnlineRoomState             = require 'src/states/online/OnlineRoomState'
+local OnlineAdventureState        = require 'src/states/online/OnlineAdventureState'
+local OnlineErrorState            = require 'src/states/online/OnlineErrorState'
+local OnlineResultsState          = require 'src/states/online/OnlineResultsState'
+local SettingsState               = require 'src/states/menu/SettingsState'
+local UpdateState                 = require 'src/states/menu/UpdateState'
+local Settings                    = require 'src/core/Settings'
 
 DEBUG_HITBOX = DEBUG_HITBOX or false   -- F1 para activar/desactivar hitboxes (FM_HITBOX=1: ya encendidas — settings.lua —, para las pruebas)
 
@@ -44,7 +44,7 @@ function love.load()
     FONT_BIG   = love.graphics.newFont('assets/fonts/PressStart2P.ttf', 28)
     love.graphics.setFont(FONT_MED)
 
-    Settings.load()                 -- idioma guardado (src/Lang.lua)
+    Settings.load()                 -- idioma guardado (src/core/Lang.lua)
     Input.load()
     Input.lastDevice = Input.isMobile and 'touch' or 'keyboard'
     Sound.load()
@@ -61,10 +61,10 @@ function love.load()
         -- Modo online
         adv_mode_select    = function() return AdventureModeSelectState:new() end,
         free_play          = function() return FreePlayState:new() end,       -- Juego libre (pruebas)
-        story_slots        = function() return require('src/states/StorySlotState'):new() end,   -- Historia: partidas
-        story_results      = function() return require('src/states/StoryResultsState'):new() end, -- Historia: resultados del nivel
-        story_map          = function() return require('src/states/StoryMapState'):new() end,    -- Historia: el mapa
-        story_film         = function() return require('src/states/StoryFilmState'):new() end,   -- Historia: cinemáticas (intro y final)
+        story_slots        = function() return require('src/states/story/StorySlotState'):new() end,   -- Historia: partidas
+        story_results      = function() return require('src/states/story/StoryResultsState'):new() end, -- Historia: resultados del nivel
+        story_map          = function() return require('src/states/story/StoryMapState'):new() end,    -- Historia: el mapa
+        story_film         = function() return require('src/states/story/StoryFilmState'):new() end,   -- Historia: cinemáticas (intro y final)
         online_login       = function() return OnlineLoginState:new() end,
         online_hub         = function() return OnlineHubState:new() end,
         online_room        = function() return OnlineRoomState:new() end,

@@ -29,7 +29,7 @@
 --   mega_red      netPackExtra → netApplyExtra: ondas y campos de carámbanos iguales en el cliente
 -- GUMMY HELADO (types/gummy_ice.lua):
 --   gummy_helado  como el Gummy: pisotón lo mata, con casco rebota; se dibuja con su arte de hielo
--- PINCHOS DE HIELO (src/world/SpikeSkins.lua, JSON "spikeSkin"):
+-- PINCHOS DE HIELO (src/world/level/SpikeSkins.lua, JSON "spikeSkin"):
 --   pinchos_skin  el nivel guarda su aspecto (Level y el modelo del editor, ida y vuelta) y los
 --                 niveles helados lo usan
 --   LOOK=1        además guarda <save>/icecrabby_look.png: las 4 tapas andando y escondidas, en
@@ -45,10 +45,10 @@ Sound = setmetatable({ play = function(n) played[n] = (played[n] or 0) + 1 end }
 local P = require 'src/network/Protocol'
 local stub = P.newInputStub()
 Input = stub
-local Level = require 'src/world/Level'
-local Entities = require 'src/world/Entities'
-local Interactions = require 'src/world/entities/Interactions'
-local PlayerAdventure = require 'src/entities/PlayerAdventure'
+local Level = require 'src/world/level/Level'
+local Entities = require 'src/world/entities/Entities'
+local Interactions = require 'src/world/entities/base/Interactions'
+local PlayerAdventure = require 'src/player/PlayerAdventure'
 local T = TILE_PX
 
 local fails = 0
@@ -114,7 +114,7 @@ local cases = {}
 local topRows = {}
 local function opaqueRows(img)
     if topRows[img] == nil then
-        local Crabby = require('src/world/entities/types/crabby').class
+        local Crabby = require('src/world/entities/types/enemies/crabby').class
         local name = Crabby.getImgName({ currentImg = img, sk = Crabby.SKINS.ice })
         local file = name:gsub('^ice_', '')
         file = ({ idle1 = 'crab1', idle2 = 'crab2', idle3 = 'crab3' })[file] or file
@@ -326,7 +326,7 @@ end
 -- ve el cuerpo (encima del pincho, no en el pincho), la cabeza toca la púa (encajada topperDy),
 -- caerle encima lo mata y queda aplastado BOCA ABAJO en el suelo
 function cases.clavado()
-    local Interactions = require 'src/world/entities/Interactions'
+    local Interactions = require 'src/world/entities/base/Interactions'
     local ok, msg = true, {}
     for _, ty in ipairs({ 'crabby_ice_icicle', 'crabby_ice', 'crabby' }) do
         local level, es, e = room(8, 8, { ent(ty, 4, 7) })
@@ -555,7 +555,7 @@ function cases.gummy_helado()
 end
 
 function cases.pinchos_skin()
-    local SpikeSkins = require 'src/world/SpikeSkins'
+    local SpikeSkins = require 'src/world/level/SpikeSkins'
     local Model = require 'src/editor/EditorModel'
     local json = require 'libs/json'
     local d = json.decode(love.filesystem.read('assets/levels/lago_helado.json'))

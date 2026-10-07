@@ -1,0 +1,289 @@
+-- src/states/online/OnlineLoginState.lua
+-- Pantalla de login: ingresa nickname, host y puerto antes de conectar.
+
+local BaseState        = require 'src/core/BaseState'
+local NameFilter = require 'src/network/NameFilter'
+local NC               = require 'src/network/NetworkClient'
+local Protocol         = require 'src/network/Protocol'
+local Lang = require 'src/core/Lang'
+local OnlineLoginState = BaseState:new()
+
+local imgBg = nil
+local function loadAssets()
+    if imgBg then return end
+    imgBg = love.graphics.newImage('assets/images/menus/MenuDif.png')
+end
+
+-- Campos del formulario (HOST y PORT fijos, solo se muestra NOMBRE)
+local FIELD_NICK   = 1
+local FIELD_LABELS = { 'login.name' }   -- claves de idioma
+
+local FIXED_HOST = SERVER_HOST     -- (settings.lua)
+local FIXED_PORT = SERVER_PORT
+
+-- ── Enter ─────────────────────────────────────────────────────────────────────
+
+function OnlineLoginState:enter(args)
+    loadAssets()
+
+    self.fields = {
+        -- (el último nombre con el que se entró, guardado en las opciones: ya no hay que escribirlo cada vez)
+        [FIELD_NICK] = (NC.myName and NC.myName ~= '' and NC.myName) or require('src/core/Settings').onlineName or "",
+    }
+    self.activeField = FIELD_NICK
+    self.connecting  = false
+
+    -- Si ya estamos conectados, ir directo al hub
+    if NC:isConnected() then
+        gStateMachine:change('online_hub')
+        return
+    end
+
+    -- En móvil / Android: abrir teclado virtual al entrar (hay un único campo de texto)
+    love.keyboard.setTextInput(true)
+
+    -- Handlers de red
+    NC:on("login_success", function(data)
+        self.connecting = false
+        require('src/core/Settings').setOnlineName((self.fields[FIELD_NICK] or ''):match('^%s*(.-)%s*$'))
+        gStateMachine:change('online_hub')
+    end)
+    NC:on("connection_lost", function(data)
+        self.connecting = false
+        gStateMachine:change('online_error', {
+            code = "ERR_SERVER_UNREACHABLE",
+            msg  = data.msg or Lang('err.unreachable'),
+        })
+    end)
+    NC:on("room_error", function(data)
+        self.connecting = false
+        self:_showError(Lang.fromServer(data, 'err.unknown'))
+    end)
+    -- Rechazo del handshake (versión incompatible, nombre en uso o inválido)
+    NC:on("login_error", function(data)
+        self.connecting = false
+        -- Versión incompatible: intentar actualizar el juego (y volver aquí)
+        if type(data) == 'table' and data.key == 'srv.version' and UPDATE_ENABLED and not UPDATE_TRIED then
+            UPDATE_TRIED = true                  -- (una vez por sesión: sin bucles)
+            gStateMachine:change('update', { after = 'online_login' })
+            return
+        end
+        self:_showError(Lang.fromServer(data, 'login.failed'))
+    end)
+end
+
+function OnlineLoginState:_showError(msg)
+    Notify.toast(msg, 'error')
+end
+
+-- ── textinput (forwarded desde main.lua) ─────────────────────────────────────
+
+function OnlineLoginState:textinput(t)
+    if self.connecting then return end
+    -- (solo los caracteres que puede llevar un nombre, y hasta su largo máximo: src/network/NameFilter.lua)
+    local cur = self.fields[FIELD_NICK] or ""
+    self.fields[FIELD_NICK] = (cur .. NameFilter.typed(t)):sub(1, NameFilter.MAX)
+end
+
+-- ── keypressed (forwarded desde main.lua) ────────────────────────────────────
+
+function OnlineLoginState:keypressed(k)
+    if k == "backspace" then
+        local cur = self.fields[self.activeField] or ""
+        if #cur > 0 then
+            self.fields[self.activeField] = cur:sub(1, -2)
+        end
+    elseif k == "return" or k == "kpenter" then
+        self:_tryConnect()
+    elseif k == "escape" then
+        self:_back()
+    end
+end
+
+-- ── Update ────────────────────────────────────────────────────────────────────
+
+function OnlineLoginState:update(dt)
+    if not self.btnIndex then self.btnIndex = 1 end
+
+    if Input.pressed('nav_left') or Input.pressed('nav_right') then
+        self.btnIndex = self.btnIndex == 1 and 2 or 1
+        Sound.play('select')
+    end
+
+    if Input.pressed('confirm') then
+        if self.btnIndex == 1 then self:_tryConnect() else self:_back() end
+    end
+    if Input.pressed('back') then self:_back() end
+end
+
+function OnlineLoginState:_tryConnect()
+    if self.connecting then return end
+    if NC:isConnected() then gStateMachine:change('online_hub'); return end
+
+    local nick = (self.fields[FIELD_NICK] or ""):match("^%s*(.-)%s*$")
+
+    if #nick == 0 then
+        self:_showError(Lang('login.enter_name'))
+        return
+    end
+    -- antes de enviarlo: largo, caracteres y palabras no permitidas (el servidor lo vuelve a comprobar)
+    local okName, why = NameFilter.check(nick)
+    if not okName then
+        self:_showError(Lang('login.name_' .. why))
+        return
+    end
+
+    self.connecting = true
+    NC:connect(FIXED_HOST, FIXED_PORT, nick)
+end
+
+-- ── Geometría (compartida por render, ratón y táctil) ────────────────────────
+
+local function layout()
+    local panelW, panelH = 600, 160
+    local panelX = math.floor((WINDOW_W - panelW) / 2)
+    local panelY = math.floor(WINDOW_H / 2 - panelH / 2 + 20)
+    local labelW, fieldH = 120, 52
+    local L = {
+        panel = { x = panelX, y = panelY, w = panelW, h = panelH },
+        field = { x = panelX + labelW + 30, y = panelY + 30, w = panelW - labelW - 60, h = fieldH },
+    }
+    local bw, bh, gap = 240, 48, 24
+    local bx = math.floor(WINDOW_W / 2 - bw - gap / 2)
+    local by = panelY + panelH + 18
+    L.buttons = {
+        { id = 'connect', label = Lang('login.connect'), x = bx,            y = by, w = bw, h = bh },
+        { id = 'back',    label = Lang('common.back'),   x = bx + bw + gap, y = by, w = bw, h = bh },
+    }
+    L.errorY = by + bh + 16
+    return L
+end
+
+local function inRect(r, x, y, pad)
+    pad = pad or 0
+    return x >= r.x - pad and x <= r.x + r.w + pad and y >= r.y - pad and y <= r.y + r.h + pad
+end
+
+function OnlineLoginState:_back()
+    NC:disconnect()
+    gStateMachine:change('adv_mode_select')
+end
+
+-- ── Render ────────────────────────────────────────────────────────────────────
+
+function OnlineLoginState:render()
+    local bx = WINDOW_W / imgBg:getWidth()
+    local by = WINDOW_H / imgBg:getHeight()
+    love.graphics.setColor(COLOR_WHITE)
+    love.graphics.draw(imgBg, 0, 0, 0, bx, by)
+
+    -- Título
+    love.graphics.setFont(FONT_BIG)
+    love.graphics.setColor(0, 0, 0, 0.6)
+    love.graphics.printf(Lang('login.title'), 2, 162, WINDOW_W, 'center')
+    love.graphics.setColor(1, 0.95, 0.15, 1)
+    love.graphics.printf(Lang('login.title'), 0, 160, WINDOW_W, 'center')
+
+    -- Panel central
+    local panelW = 600
+    local panelH = 160
+    local panelX = math.floor((WINDOW_W - panelW) / 2)
+    local panelY = math.floor(WINDOW_H / 2 - panelH / 2 + 20)
+
+    love.graphics.setColor(0, 0, 0, 0.55)
+    love.graphics.rectangle('fill', panelX, panelY, panelW, panelH)
+    love.graphics.setColor(1, 0.85, 0, 0.55)
+    love.graphics.rectangle('line', panelX, panelY, panelW, panelH)
+    love.graphics.rectangle('line', panelX+2, panelY+2, panelW-4, panelH-4)
+
+    -- Campo NOMBRE (único)
+    local fieldH  = 52
+    local labelW  = 120
+    local inputX  = panelX + labelW + 30
+    local inputW  = panelW - labelW - 60
+    local fy      = panelY + 30
+    local val     = self.fields[FIELD_NICK] or ""
+    local display = val .. "_"
+
+    love.graphics.setFont(FONT_SMALL)
+    love.graphics.setColor(1, 0.85, 0, 0.9)
+    love.graphics.print(Lang(FIELD_LABELS[FIELD_NICK]), panelX + 20, fy + fieldH/2 - FONT_SMALL:getHeight()/2)
+
+    love.graphics.setColor(1, 1, 1, 0.15)
+    love.graphics.rectangle('fill', inputX, fy, inputW, fieldH)
+    love.graphics.setColor(1, 0.85, 0, 0.9)
+    love.graphics.rectangle('line', inputX, fy, inputW, fieldH)
+
+    love.graphics.setFont(FONT_MED)
+    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.printf(display, inputX + 10, fy + fieldH/2 - FONT_MED:getHeight()/2, inputW - 20, 'left')
+
+    -- Hint / estado de conexión
+    local hintY = panelY + panelH - 44
+    love.graphics.setFont(FONT_SMALL)
+    if self.connecting then
+        love.graphics.setColor(1, 1, 1, 0.6)
+        love.graphics.printf(Lang('login.connecting'), 0, hintY, WINDOW_W, 'center')
+    else
+        love.graphics.setColor(1, 1, 1, 0.35)
+        love.graphics.printf(Lang('login.hint'),
+            0, hintY, WINDOW_W, 'center')
+    end
+
+    -- Botones (ratón / táctil / también reflejan ENTER y ESC)
+    local L = layout()
+    love.graphics.setFont(FONT_MED)
+    for i, b in ipairs(L.buttons) do
+        local hov = (self.hoverBtn == i)
+        local primary = (b.id == 'connect')
+        if hov or (self.btnIndex == i and not self.hoverBtn) then
+            love.graphics.setColor(0, 0, 0, 0.5)
+            love.graphics.rectangle('fill', b.x + 4, b.y + 4, b.w, b.h)
+            love.graphics.setColor(1, 1, 1, self.connecting and primary and 0.5 or 1)
+            love.graphics.rectangle('fill', b.x, b.y, b.w, b.h)
+            love.graphics.setColor(0, 0, 0, 1)
+        else
+            love.graphics.setColor(0, 0, 0, 0.6)
+            love.graphics.rectangle('fill', b.x, b.y, b.w, b.h)
+            love.graphics.setColor(1, 1, 1, 0.5)
+            love.graphics.rectangle('line', b.x, b.y, b.w, b.h)
+            love.graphics.setColor(1, 1, 1, 0.8)
+        end
+        love.graphics.printf(b.label, b.x, b.y + b.h / 2 - FONT_MED:getHeight() / 2, b.w, 'center')
+    end
+
+    love.graphics.setColor(COLOR_WHITE)
+end
+
+-- ── Exit ──────────────────────────────────────────────────────────────────────
+
+function OnlineLoginState:exit()
+    love.keyboard.setTextInput(false)
+end
+
+-- ── Touch ─────────────────────────────────────────────────────────────────────
+
+function OnlineLoginState:mousemoved(tx, ty)
+    local prev = self.hoverBtn
+    self.hoverBtn = nil
+    for i, b in ipairs(layout().buttons) do
+        if inRect(b, tx, ty, 4) then self.hoverBtn = i end
+    end
+    if self.hoverBtn and self.hoverBtn ~= prev then Sound.play('select') end
+end
+
+function OnlineLoginState:touchpressed(id, tx, ty)
+    local L = layout()
+    for _, b in ipairs(L.buttons) do
+        if inRect(b, tx, ty, 6) then
+            Sound.play('select')
+            if b.id == 'back' then self:_back() else self:_tryConnect() end
+            return
+        end
+    end
+    if self.connecting then return end
+    -- Toque sobre el campo de texto → mostrar teclado (móvil)
+    if inRect(L.field, tx, ty) then love.keyboard.setTextInput(true) end
+end
+
+return OnlineLoginState

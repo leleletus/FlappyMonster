@@ -13,11 +13,11 @@ Sound = setmetatable({ play = function() end }, { __index = function() return fu
 local P = require 'src/network/Protocol'
 Input = P.newInputStub()
 local json = require 'libs/json'
-local Level = require 'src/world/Level'
-local Entities = require 'src/world/Entities'
+local Level = require 'src/world/level/Level'
+local Entities = require 'src/world/entities/Entities'
 local Sky = require 'src/fx/Sky'
 local Darkness = require 'src/fx/Darkness'
-local BossZones = require 'src/world/BossZones'
+local BossZones = require 'src/world/systems/BossZones'
 
 local FIXED = os.getenv('FIXED') == '1'
 if FIXED then love.timer.getTime = function() return 100 end end

@@ -4,7 +4,7 @@
 -- rectángulos finos separados por un hueco, con borde negro, luz arriba y
 -- sombra abajo como el resto de la interfaz.
 
-local L = require 'src/Lang'
+local L = require 'src/core/Lang'
 local utf8 = require 'utf8'
 
 local BossHud = {}
@@ -170,7 +170,7 @@ function BossHud.drawRun(level, entities)
     level._runAt = level._runAt or now
     local t = now - level._runAt
     local PixelFont = require 'src/ui/PixelFont'
-    local text = require('src/Lang')('hud.run')
+    local text = require('src/core/Lang')('hud.run')
     local s = (t < 0.5) and math.floor(12 - 12 * t + 0.5) or 6          -- entra grande y se encoge
     if s < 6 then s = 6 end
     local beat = 0.5 + 0.5 * math.sin(now * 10)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # tools/ui/make_cryo_parts.py
 # El CONGELADOR por piezas (el juego las monta según dónde está apoyado, ver
-# src/world/entities/types/cryo.lua). Todas en un lienzo de 16x16 = la casilla, con el
+# src/world/entities/types/traps/cryo.lua). Todas en un lienzo de 16x16 = la casilla, con el
 # cuerpo centrado y 3 px libres a cada lado, para poder girar las piezas sobre el centro:
 #   cryo_body-Sheet.png    4 cuadros: el depósito SIEMPRE derecho (reposo, carga 1, carga 2,
 #                          disparo: el indicador se llena y brilla)

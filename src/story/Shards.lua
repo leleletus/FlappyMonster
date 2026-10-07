@@ -8,7 +8,7 @@
 --     def = { ids = { ... }, onGet = function(id) end, final = bool }
 -- Solo existe en el modo historia de un jugador (no es parte de la simulación compartida: no toca la física
 -- de nadie; el fragmento flota y se recoge al tocarlo).
-local Difficulty = require 'src/Difficulty'
+local Difficulty = require 'src/core/Difficulty'
 
 local Shards = {}
 

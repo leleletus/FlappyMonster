@@ -16,7 +16,7 @@ local Sky = require 'src/fx/Sky'
 local Darkness = require 'src/fx/Darkness'
 local LavaFx = require 'src/fx/LavaFx'
 local Particles = require 'src/fx/Particles'
-local DeadEyes = require 'src/entities/DeadEyes'
+local DeadEyes = require 'src/player/DeadEyes'
 local Clip = require 'src/ui/Clip'
 local Silhouette = require 'src/fx/Silhouette'
 
@@ -304,7 +304,7 @@ end
 local sets = {}
 function Stage.set(name)
     if not sets[name] then
-        local Level = require 'src/world/Level'
+        local Level = require 'src/world/level/Level'
         local lv = Level.new('assets/story/sets/' .. name .. '.json')
         lv.players, lv.canBreak = {}, false
         sets[name] = { level = lv }
@@ -368,7 +368,7 @@ end
 -- ── El mapa ─────────────────────────────────────────────────────────────────
 local mapState
 function Stage.map()
-    local SM = require 'src/states/StoryMapState'
+    local SM = require 'src/states/story/StoryMapState'
     if not mapState then mapState = SM:new():stage() end
     return mapState, SM
 end

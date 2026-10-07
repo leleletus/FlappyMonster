@@ -60,7 +60,7 @@ function Worlds.levelName(id)
         local data = ok and src and select(2, pcall(require('libs/json').decode, src))
         names[id] = type(data) == 'table' and { name = data.name, name_en = data.name_en } or false
     end
-    return names[id] and require('src/Lang').localName(names[id]) or id
+    return names[id] and require('src/core/Lang').localName(names[id]) or id
 end
 
 return Worlds

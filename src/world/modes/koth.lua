@@ -3,7 +3,7 @@
 -- tiempo gana quien tenga más puntos; empates: más vidas y luego quien llegó
 -- antes a esa puntuación. Si solo queda uno en pie, gana él (regla genérica
 -- 'last_standing' del servidor) y, si caen todos, gana el que más puntos tenía.
-local L = require 'src/Lang'
+local L = require 'src/core/Lang'
 
 local DEFAULT_TIME = 100        -- s: poco más de 1:30 (el usuario); el nivel puede cambiarlo: "matchTime"
 

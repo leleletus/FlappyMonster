@@ -18,15 +18,15 @@ require 'settings'
 Sound = setmetatable({}, { __index = function() return function() end end })
 local P = require 'src/network/Protocol'
 Input = P.newInputStub()
-local Level = require 'src/world/Level'
+local Level = require 'src/world/level/Level'
 local BotNav = require 'src/ai/BotNav'
 local Bot = require 'src/ai/Bot'
-local PlayerAdventure = require 'src/entities/PlayerAdventure'
-local Entities = require 'src/world/Entities'
-local Interactions = require 'src/world/entities/Interactions'
-local PointAreas = require 'src/world/PointAreas'
-local Floods = require 'src/world/Floods'
-local EntityTypes = require 'src/world/entities/EntityTypes'
+local PlayerAdventure = require 'src/player/PlayerAdventure'
+local Entities = require 'src/world/entities/Entities'
+local Interactions = require 'src/world/entities/base/Interactions'
+local PointAreas = require 'src/world/systems/PointAreas'
+local Floods = require 'src/world/systems/Floods'
+local EntityTypes = require 'src/world/entities/base/EntityTypes'
 local SECS = tonumber(os.getenv('SECS')) or 60                 -- (una partida bonus entera: la zona cambia de parada)
 
 local function play(level, nav, withTarget, lure)

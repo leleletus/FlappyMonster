@@ -55,12 +55,12 @@ local P = require 'src/network/Protocol'
 local stub = P.newInputStub()
 Input = stub
 local json = require 'libs/json'
-local Level = require 'src/world/Level'
-local Entities = require 'src/world/Entities'
-local BossZones = require 'src/world/BossZones'
-local PlayerAdventure = require 'src/entities/PlayerAdventure'
+local Level = require 'src/world/level/Level'
+local Entities = require 'src/world/entities/Entities'
+local BossZones = require 'src/world/systems/BossZones'
+local PlayerAdventure = require 'src/player/PlayerAdventure'
 local TileCodec = require 'src/world/tiles/TileCodec'
-local PhaseBlocks = require 'src/world/PhaseBlocks'
+local PhaseBlocks = require 'src/world/systems/PhaseBlocks'
 local T = TILE_PX
 
 local fails = 0
@@ -610,7 +610,7 @@ function cases.verity()
     local n = 0
     for _ = 1, 20000 do boss:rollVerity(); if boss.verity then n = n + 1 end end
     boss.verity = false
-    local Music = require 'src/Music'
+    local Music = require 'src/audio/Music'
     local has = love.filesystem.getInfo('assets/music/bosses/snowball_verity_loop.ogg') ~= nil
     check('verity', never == false and always == true and music == 'snowball_verity' and seen == true and boss2.verity == false
         and musicN ~= 'snowball_verity' and n > 200 and n < 700 and has,

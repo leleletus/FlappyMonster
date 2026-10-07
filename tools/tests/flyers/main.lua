@@ -18,9 +18,9 @@ require 'settings'
 Sound = setmetatable({}, { __index = function() return function() end end })
 Input = require('src/network/Protocol').newInputStub()
 local json = require 'libs/json'
-local Level = require 'src/world/Level'
-local Entities = require 'src/world/Entities'
-local EntityTypes = require 'src/world/entities/EntityTypes'
+local Level = require 'src/world/level/Level'
+local Entities = require 'src/world/entities/Entities'
+local EntityTypes = require 'src/world/entities/base/EntityTypes'
 
 local BOB = tonumber(os.getenv('BOB')) or 40
 

@@ -22,10 +22,10 @@ function love.load()
     love.graphics.newImage = function() return { getWidth = function() return 16 end, getHeight = function() return 16 end,
         getDimensions = function() return 16, 16 end, setFilter = function() end, setWrap = function() end } end
     love.graphics.newQuad = function() return { setViewport = function() end } end
-    local Lang = require 'src/Lang'
-    local Entities = require 'src/world/Entities'
-    local EntityTypes = require 'src/world/entities/EntityTypes'
-    local LevelCatalog = require 'src/world/LevelCatalog'
+    local Lang = require 'src/core/Lang'
+    local Entities = require 'src/world/entities/Entities'
+    local EntityTypes = require 'src/world/entities/base/EntityTypes'
+    local LevelCatalog = require 'src/world/level/LevelCatalog'
 
     -- jefes_tipo
     local missing, n = {}, 0
@@ -64,7 +64,7 @@ function love.load()
     for _, e in ipairs(d.entities) do
         if e.type == 'megacrabby_ice' then e.props = e.props or {}; e.props.title, e.props.title_en = 'REY HELADO', 'ICE KING' end
     end
-    local info = LevelCatalog.info(require('src/world/Level').fromData(d), 'x.json')
+    local info = LevelCatalog.info(require('src/world/level/Level').fromData(d), 'x.json')
     local names = {}
     for _, l in ipairs({ 'es', 'en' }) do
         Lang.set(l)

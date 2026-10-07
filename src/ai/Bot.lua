@@ -25,9 +25,9 @@
 -- grabado = se coloca quieto en el centro de su casilla y reproduce los inputs fotograma a fotograma (la física
 -- es determinista: cae donde se grabó; si cae en otro sitio, vuelve a planear desde ahí).
 local P = require 'src/network/Protocol'
-local PointAreas = require 'src/world/PointAreas'
+local PointAreas = require 'src/world/systems/PointAreas'
 local BotNav = require 'src/ai/BotNav'
-local Floods = require 'src/world/Floods'
+local Floods = require 'src/world/systems/Floods'
 
 local Bot = {}
 Bot.__index = Bot

@@ -44,7 +44,7 @@ dibujadas en el mismo punto, encajan y el espejo se va completando. Lógica: `sr
 
 Las dibuja el JUEGO, en el momento, con sus sprites, fondos, decorados y efectos (nada pregrabado): `src/story/Film.lua`
 (el reproductor), `src/story/Stage.lua` (las piezas), `src/story/films/intro.lua` y `ending.lua` (las escenas),
-`src/states/StoryFilmState.lua` (el estado; se saltan MANTENIENDO pulsado un botón o el dedo 1 s). Sin texto.
+`src/states/story/StoryFilmState.lua` (el estado; se saltan MANTENIENDO pulsado un botón o el dedo 1 s). Sin texto.
 
 - **Tiempos: `assets/story/films.json`** — cada escena dura `beats` pulsos a `bpm`, con sus momentos (`cues`). Es la
   única fuente: el juego dibuja con ella y la música (`tools/music/story_music.py`) se compone SOBRE ella. Cambiar un

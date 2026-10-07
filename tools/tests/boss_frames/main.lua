@@ -15,12 +15,12 @@ Sound = setmetatable({}, { __index = function() return function() end end })
 local P = require 'src/network/Protocol'
 Input = P.newInputStub()
 local json = require 'libs/json'
-local Level = require 'src/world/Level'
-local Entities = require 'src/world/Entities'
-local BossZones = require 'src/world/BossZones'
-local PlayerAdventure = require 'src/entities/PlayerAdventure'
+local Level = require 'src/world/level/Level'
+local Entities = require 'src/world/entities/Entities'
+local BossZones = require 'src/world/systems/BossZones'
+local PlayerAdventure = require 'src/player/PlayerAdventure'
 local Particles = require 'src/fx/Particles'
-local Entity = require 'src/world/entities/Entity'
+local Entity = require 'src/world/entities/base/Entity'
 
 local COLS, ROWS, CW, CH = 5, 6, 360, 240
 local FX = os.getenv('FX') ~= nil

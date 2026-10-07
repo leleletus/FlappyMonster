@@ -38,10 +38,10 @@ local P = require 'src/network/Protocol'
 local stub = P.newInputStub()
 Input = stub
 local json = require 'libs/json'
-local Level = require 'src/world/Level'
-local Entities = require 'src/world/Entities'
-local BossZones = require 'src/world/BossZones'
-local PlayerAdventure = require 'src/entities/PlayerAdventure'
+local Level = require 'src/world/level/Level'
+local Entities = require 'src/world/entities/Entities'
+local BossZones = require 'src/world/systems/BossZones'
+local PlayerAdventure = require 'src/player/PlayerAdventure'
 
 function love.load()
     math.randomseed(tonumber(os.getenv('SEED')) or 3)
@@ -169,7 +169,7 @@ function love.load()
         end
         -- continuidad del dibujo al trepar (DEBUG_POSE=1)
         if os.getenv('DEBUG_POSE') and boss.crawl and boss.cattached then
-            local Crawler = require 'src/world/entities/Crawler'
+            local Crawler = require 'src/world/entities/base/Crawler'
             local fx, fy = Crawler.pose(boss)
             if boss._pfx then
                 local j = math.sqrt((fx - boss._pfx) ^ 2 + (fy - boss._pfy) ^ 2)

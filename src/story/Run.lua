@@ -74,7 +74,7 @@ function Run.complete(id, result)
     local d = Run.data
     if not d then return nil end
     local Score = require 'src/story/Score'
-    local Difficulty = require 'src/Difficulty'
+    local Difficulty = require 'src/core/Difficulty'
     result = result or {}
     local first = not d.done[id]
     d.done[id] = true
@@ -113,7 +113,7 @@ function Run.complete(id, result)
         if rw.points then d.points = d.points + rw.points end
     end
     -- ¿JUEGO ACABADO (el jefe del último mundo)? → desbloquea la dificultad siguiente (global, para las 3
-    -- partidas: Difícil → Extremo, Extremo → Xtra extremo; src/Difficulty.lua UNLOCKS)
+    -- partidas: Difícil → Extremo, Extremo → Xtra extremo; src/core/Difficulty.lua UNLOCKS)
     local lastNodes = Worlds.nodes(Worlds.count())
     if lastNodes[#lastNodes] and lastNodes[#lastNodes].id == id then
         out.unlocked = Run.unlockAfter(d.difficulty)
@@ -137,7 +137,7 @@ function Run.bonusResult(id, result)
     local d = Run.data
     if not d then return nil end
     local Score = require 'src/story/Score'
-    local Difficulty = require 'src/Difficulty'
+    local Difficulty = require 'src/core/Difficulty'
     local b = d.bonus[id] or {}
     local sc = Score.bonus(result)
     local out = { rating = sc.rating, grade = sc.grade, parts = sc.parts, won = result.won == true, rewards = {},
@@ -167,7 +167,7 @@ end
 -- Desbloqueo por acabar el juego en `difficulty`: devuelve el id NUEVO desbloqueado (nil si ya lo estaba)
 function Run.unlockAfter(difficulty)
     local Save = require 'src/story/Save'
-    local nxt = require('src/Difficulty').UNLOCKS[difficulty or '']
+    local nxt = require('src/core/Difficulty').UNLOCKS[difficulty or '']
     if not nxt then return nil end
     local g = Save.global()
     if g.unlocked[nxt] then return nil end
@@ -213,7 +213,7 @@ end
 function Run.gameOver(w)
     local d = Run.data
     if not d then return 1 end
-    local Difficulty = require 'src/Difficulty'
+    local Difficulty = require 'src/core/Difficulty'
     d.lives = Difficulty.of(d.difficulty, 'livesStart', 3)
     d.gameOvers = (d.gameOvers or 0) + 1
     if Difficulty.of(d.difficulty, 'restartGame', false) then

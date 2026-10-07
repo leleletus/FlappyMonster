@@ -12,7 +12,7 @@
 -- main.lua llama a update/render/touch/hover y cede la entrada al modal.
 
 local PixelIcons = require 'src/ui/PixelIcons'
-local Lang = require 'src/Lang'
+local Lang = require 'src/core/Lang'
 
 local Notify = {}
 

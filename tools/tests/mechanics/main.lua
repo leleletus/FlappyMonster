@@ -73,10 +73,10 @@ Sound = setmetatable({}, { __index = function() return function() end end })
 local P = require 'src/network/Protocol'
 local stub = P.newInputStub()
 Input = stub
-local Level = require 'src/world/Level'
-local Entities = require 'src/world/Entities'
-local Interactions = require 'src/world/entities/Interactions'
-local PlayerAdventure = require 'src/entities/PlayerAdventure'
+local Level = require 'src/world/level/Level'
+local Entities = require 'src/world/entities/Entities'
+local Interactions = require 'src/world/entities/base/Interactions'
+local PlayerAdventure = require 'src/player/PlayerAdventure'
 local T = TILE_PX
 
 -- Sala W x H con suelo y paredes; `put` = { {col,row,tileName}, ... }
@@ -584,7 +584,7 @@ end
 
 -- Enciende la bomba `b` con mecha corta y avanza hasta que explote
 local function detonate(level, es, b, secs)
-    require('src/world/entities/BombCore').light(b, 0.1)
+    require('src/world/entities/base/BombCore').light(b, 0.1)
     local exploded = false
     stepEnts(level, es, secs or 0.5, function() if b.state == 'exploding' then exploded = true end end)
     return exploded
@@ -751,7 +751,7 @@ function cases.hielo_bomba()
         { { type = 'bombobject', col = 8, row = 8 } })
     level.players = {}
     stepEnts(level, es, 0.3)
-    require('src/world/entities/BombCore').light(es[1], 0.1)
+    require('src/world/entities/base/BombCore').light(es[1], 0.1)
     stepEnts(level, es, 0.3)
     check('hielo_bomba', name(level, 7, 7) == 'empty' and name(level, 8, 7) == 'empty',
         ('hielo fino tras la explosión: %s, %s'):format(name(level, 7, 7), name(level, 8, 7)))
@@ -763,7 +763,7 @@ end
 -- común que ponía el jugador local.
 function cases.filo_propio()
     local Sil = require 'src/fx/Silhouette'
-    local OnlinePlayer = require 'src/entities/OnlinePlayer'
+    local OnlinePlayer = require 'src/player/OnlinePlayer'
     local level = { depth = 'cave', surfaceRow = 6 }               -- superficie en y = 320
     FONT_SMALL, FONT_MED, FONT_BIG = FONT_SMALL or love.graphics.getFont(), FONT_MED or love.graphics.getFont(), FONT_BIG or love.graphics.getFont()   -- (el nombre sobre el otro jugador)
     local real, drawn = Sil.draw, {}
@@ -996,8 +996,8 @@ end
 -- borde) y encadena sus ataques (salto-ataque, picado desde el espejo, embestida de lado a lado, empujón de frente), golpea y EMPUJA al jugador (hacia atrás), no se le puede hacer nada
 -- (las reglas normales no van con él) y al acabar la carrera se va
 function cases.persecucion()
-    local AutoScroll = require 'src/world/AutoScroll'
-    local Boss = require 'src/world/entities/Boss'
+    local AutoScroll = require 'src/world/systems/AutoScroll'
+    local Boss = require 'src/world/entities/base/Boss'
     local tiles = {}
     for r = 1, 11 do
         local row = {}
@@ -1050,7 +1050,7 @@ function cases.persecucion()
     a.state = 'stop'                                                   -- (la carrera acaba)
     for _ = 1, 60 do ch:update(1 / 60, level) end
     -- RITMO por dificultad: cuánto tarda en empezar su primer ataque (más lento en fácil que en extremo)
-    local Difficulty = require 'src/Difficulty'
+    local Difficulty = require 'src/core/Difficulty'
     local function firstAttack(diff)
         local lv = Level.fromData({ name = 'huida', width = 140, height = 11, playerStart = { 10, 10 }, tiles = tiles,
             entities = { { type = 'mirrorchase', col = 3, row = 8, props = { rest = 2 } } },
@@ -1175,7 +1175,7 @@ function cases.trepador_canto()
     level.players = {}
     local c = es[1]
     stepEnts(level, es, 0.5)
-    local Crawler = require 'src/world/entities/Crawler'
+    local Crawler = require 'src/world/entities/base/Crawler'
     Crawler.detach(c)
     c.x, c.vx, c.vy = 8 * T + 10, 0, 0                -- (el borde derecho de la plataforma está en 8*T)
     local x0, got, moved = c.x, false, 0
@@ -1328,7 +1328,7 @@ end
 
 -- SHOT_BOMB=1: bombas en todos sus estados → <save>/mechanics_bombs.png
 local function bombShot()
-    local Core = require 'src/world/entities/BombCore'
+    local Core = require 'src/world/entities/base/BombCore'
     local level, es = bombRoom({
         { type = 'bomb', col = 3, row = 8, props = { pauses = false, speed = 40 } },
         { type = 'bomb', col = 6, row = 8, props = { speed = 0, fuseTime = 2 } },

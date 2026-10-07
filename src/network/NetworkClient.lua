@@ -7,7 +7,7 @@ local sock     = require 'libs/sock'
 local bitser   = require 'libs/bitser'
 local Protocol = require 'src/network/Protocol'
 local Resolver = require 'src/network/Resolver'
-local Lang = require 'src/Lang'
+local Lang = require 'src/core/Lang'
 
 -- Nunca reconstruir metatablas desde datos de red.
 bitser.includeMetatables(false)

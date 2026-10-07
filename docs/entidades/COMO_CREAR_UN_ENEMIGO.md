@@ -1,7 +1,7 @@
 # Cómo crear un enemigo (o cualquier entidad) sin tocar el código interno
 
 Un enemigo nuevo es **un archivo** en `src/world/entities/types/<nombre>.lua` + **su nombre** en la
-lista `TYPES` de `src/world/Entities.lua`. El editor, el servidor y el cliente lo recogen solos.
+lista `TYPES` de `src/world/entities/Entities.lua`. El editor, el servidor y el cliente lo recogen solos.
 Todo lo que es "de base" (moverse, chocar, morir, sonar, ser súbdito…) ya existe: el tipo solo lo
 **enciende** con un rasgo o una tabla. Si para tu enemigo hace falta cambiar `Entity.lua`,
 `Interactions.lua`, `Level.lua`… es que falta una regla base: añádela ahí, genérica, y enciéndela
@@ -12,7 +12,7 @@ Para un JEFE, sigue además `docs/jefes/COMO_CREAR_UN_JEFE.md`.
 ## 1. El esqueleto
 
 ```lua
-local Entity = require 'src/world/entities/Entity'
+local Entity = require 'src/world/entities/base/Entity'
 local Bicho = Entity.extend(Entity, {
     hitbox = { outerW = 0.8, outerH = 0.9, innerW = 0.6, innerH = 0.7 },   -- × el tamaño del sprite
 })

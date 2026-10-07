@@ -8,7 +8,7 @@ Jefes de referencia (copia del que más se parezca a lo que quieres):
 
 | Jefe | Archivo | Qué copiar de él |
 |---|---|---|
-| Nave Malvada | `src/world/entities/types/miniboss1.lua` | vuelo por puntos (`points`), caída sobre el suelo, romper bloques |
+| Nave Malvada | `src/world/entities/types/bosses/miniboss1.lua` | vuelo por puntos (`points`), caída sobre el suelo, romper bloques |
 | Espejo | `types/mirror.lua` | jefe que copia al jugador (cuerpo `PlayerAdventure` propio), portales, plataformas de la arena |
 | Mega Crabby (+ helado) | `types/megacrabby.lua`, `megacrabby_ice.lua` | trepar paredes/techo (Crawler), **súbditos de reserva**, entrada con estados propios, subclase con otro arte |
 | Gran Bola de Nieve | `types/snowboss.lua` | **física propia** (choques, saltos a una marca, zona), proyectiles, fases que cambian el tamaño, objetos del escenario por fase |
@@ -61,7 +61,7 @@ Vida por defecto: `hp` para 1 jugador (8-14) y `hpPerPlayer` (3-4) por cada juga
 - Generador `tools/sounds/<jefe>.py` → `assets/sounds/bosses/<jefe>/*.wav`. Reutiliza las ayudas de
   `tools/sounds/megacrabby.py` (`env`, `sweep`, `noise`, `lowpass`, `reson`...) y de `snowboss.py`
   (`save`, `voice`, `tink`). Ejemplo completo y corto: `tools/sounds/megagummy.py`.
-- Registro en `src/Sound.lua` (3 sitios):
+- Registro en `src/audio/Sound.lua` (3 sitios):
   1. `GAIN` (arriba): ganancia por sonido para quedar en ≈ -12 dBFS (el tramo más fuerte de 100 ms).
      Mídela con este Python y pon `g = 10 ** ((-12 - dB) / 20)` (golpes muy grandes: hasta -9):
      ```python
@@ -92,10 +92,10 @@ Vida por defecto: `hp` para 1 jugador (8-14) y `hpPerPlayer` (3-4) por cada juga
 Esqueleto mínimo (ver `megagummy.lua` entero como modelo):
 
 ```lua
-local Entity = require 'src/world/entities/Entity'
-local Boss   = require 'src/world/entities/Boss'
+local Entity = require 'src/world/entities/base/Entity'
+local Boss   = require 'src/world/entities/base/Boss'
 local SpriteStrip = require 'src/fx/SpriteStrip'
-local Snow = require('src/world/entities/types/snowboss').class   -- (física reutilizable)
+local Snow = require('src/world/entities/types/bosses/snowboss').class   -- (física reutilizable)
 
 local X = Entity.extend(Boss, { hitbox = { outerW = 12/16, outerH = 13/16, innerW = 11/16, innerH = 12/16 } })
 X.hurtSound   = 'xHurt'
@@ -173,7 +173,7 @@ Antes de la entrada (`'dormant'`) no se dibuja (salvo `EDITOR_VIEW`).
 
 ## 6. Registro
 
-- `src/world/Entities.lua`: el nombre en `TYPES`.
+- `src/world/entities/Entities.lua`: el nombre en `TYPES`.
 - Idiomas: `boss.<tipo>` en **TODOS** los `assets/lang/*.lua` (es y en). El arnés `lang_names` lo exige.
 - `src/network/Protocol.lua`: `P.VERSION` + 1 (con nota en el comentario).
 - `version.txt`: subir (3.x.0 para un jefe nuevo).

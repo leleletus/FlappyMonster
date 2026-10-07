@@ -2,7 +2,7 @@
 # tools/music/worldmap_nes.py
 # La música del MAPA DEL MUNDO del modo historia (música de Famicom; motor: famicom.py): UNA canción —
 # "Rumbo a las islas" — con la MISMA melodía, acordes, tempo y largo en seis arreglos, uno por isla, para que
-# el mapa cambie de versión al cruzar a otra isla sin perder el compás (src/states/StoryMapState.lua salta a la
+# el mapa cambie de versión al cruzar a otra isla sin perder el compás (src/states/story/StoryMapState.lua salta a la
 # misma posición de la nueva). Cada isla tiene su instrumentación y su LEITMOTIV (un motivo propio que contesta
 # a la melodía en los compases en que esta se queda quieta):
 #   map_pradera    pulso cantarín + pulso al 25 % en acordes a contratiempo, triángulo saltarín, batería

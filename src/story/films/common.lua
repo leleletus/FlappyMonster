@@ -88,8 +88,8 @@ end
 -- rig = { player, pipes, scroll, spawn (¿siguen saliendo tuberías?), targetY (sin tubería delante) }
 local GAPS = { 330, 430, 300, 400, 340, 420, 310 }
 function C.flappyRig(firstX, n)
-    local Player = require 'src/entities/Player'
-    local Pipe = require 'src/entities/Pipe'
+    local Player = require 'src/flappy/Player'
+    local Pipe = require 'src/flappy/Pipe'
     local rig = { player = Player:new(), pipes = {}, scroll = 0, targetY = 360, speed = PIPE_SPEED, flaps = 0, quiet = false }
     for i = 1, n or 0 do
         local p = Pipe:new(firstX + (i - 1) * 380, GAPS[(i - 1) % #GAPS + 1])
@@ -100,7 +100,7 @@ function C.flappyRig(firstX, n)
 end
 
 function C.addPipe(rig, x, i)
-    local Pipe = require 'src/entities/Pipe'
+    local Pipe = require 'src/flappy/Pipe'
     rig.pipes[#rig.pipes + 1] = Pipe:new(x, GAPS[(i - 1) % #GAPS + 1])
 end
 

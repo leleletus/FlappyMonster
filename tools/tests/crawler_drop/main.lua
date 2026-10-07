@@ -16,10 +16,10 @@ require 'settings'
 Sound = setmetatable({}, { __index = function() return function() end end })
 local P = require 'src/network/Protocol'
 Input = P.newInputStub()
-local Level = require 'src/world/Level'
-local Entities = require 'src/world/Entities'
-local Interactions = require 'src/world/entities/Interactions'
-local PlayerAdventure = require 'src/entities/PlayerAdventure'
+local Level = require 'src/world/level/Level'
+local Entities = require 'src/world/entities/Entities'
+local Interactions = require 'src/world/entities/base/Interactions'
+local PlayerAdventure = require 'src/player/PlayerAdventure'
 
 local W, H = 16, 9
 local function room()

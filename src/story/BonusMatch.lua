@@ -1,7 +1,7 @@
 -- src/story/BonusMatch.lua
 -- PARTIDA BONUS del modo historia: una arena de Rey de la Colina contra el BOT (src/ai/Bot.lua), dentro de
 -- AdventureState (`args.bonus = { onEnd = function(result) end }`). Reglas:
---   * dura `BonusMatch.TIME` s (60); estar en una zona de puntos da puntos (src/world/PointAreas.lua), a ti
+--   * dura `BonusMatch.TIME` s (60); estar en una zona de puntos da puntos (src/world/systems/PointAreas.lua), a ti
 --     y al bot por separado; gana quien tenga más al acabar el tiempo (empate = no ganas);
 --   * según la dificultad el bot es más o menos hostil y en Xtra extremo son DOS (cuenta el mejor de los dos);
 --   * el bot es INMORTAL (los golpes le llegan, no muere) y te echa de la zona a ground pounds (te lanza lejos);
@@ -11,12 +11,12 @@
 -- :render(camX, camY), :renderHud(); `state.bonus.over` = ha terminado.
 local Bot = require 'src/ai/Bot'
 local BotNav = require 'src/ai/BotNav'
-local PlayerAdventure = require 'src/entities/PlayerAdventure'
-local OnlinePlayer = require 'src/entities/OnlinePlayer'
-local Interactions = require 'src/world/entities/Interactions'
-local Difficulty = require 'src/Difficulty'
+local PlayerAdventure = require 'src/player/PlayerAdventure'
+local OnlinePlayer = require 'src/player/OnlinePlayer'
+local Interactions = require 'src/world/entities/base/Interactions'
+local Difficulty = require 'src/core/Difficulty'
 local PixelFont = require 'src/ui/PixelFont'
-local L = require 'src/Lang'
+local L = require 'src/core/Lang'
 
 local BonusMatch = {}
 BonusMatch.__index = BonusMatch
@@ -37,7 +37,7 @@ function BonusMatch.new(state, opts)
         state = state, level = level, opts = opts or {},
         time = BonusMatch.TIME, t = 0, over = false, endT = 0, botScore = 0, bots = {},
     }, BonusMatch)
-    -- La dificultad decide lo HOSTIL que es (src/Difficulty.lua: botRest, botChase) y cuántos son (Xtra extremo: 2).
+    -- La dificultad decide lo HOSTIL que es (src/core/Difficulty.lua: botRest, botChase) y cuántos son (Xtra extremo: 2).
     -- El primero sale del otro lado de la arena (en espejo); el segundo, del centro.
     local n = math.max(1, math.floor(Difficulty.k('botCount')))
     for i = 1, n do

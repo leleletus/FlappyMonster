@@ -24,8 +24,8 @@ package.path = parentDir .. "/?.lua;" .. package.path
 
 local Protocol = require 'src/network/Protocol'
 local NameFilter = require 'src/network/NameFilter'
-local Modes    = require 'src/world/Modes'
-local Lang     = require 'src/Lang'
+local Modes    = require 'src/world/modes/Modes'
+local Lang     = require 'src/core/Lang'
 local json     = require 'libs/json'
 local Updates  = require 'updates'            -- server/updates.lua
 local TICK_DT        = Protocol.TICK_DT
@@ -92,7 +92,7 @@ Sound = {
                                          x = _emitX and math.floor(_emitX + 0.5), y = _emitY and math.floor(_emitY + 0.5) })
         end
     end,
-    -- Emisor del sonido: cada cliente atenúa según SU distancia (ver src/Sound.lua)
+    -- Emisor del sonido: cada cliente atenúa según SU distancia (ver src/audio/Sound.lua)
     setEmitter   = function(x, y) _emitX, _emitY = x, y end,
     clearEmitter = function() _emitX, _emitY = nil, nil end,
     getEmitter   = function() return _emitX, _emitY end,
@@ -235,13 +235,13 @@ local function listLevelFiles()
     return out
 end
 
--- Ficha de cada nivel (modos, monstruos, miniatura...): src/world/LevelCatalog.lua
+-- Ficha de cada nivel (modos, monstruos, miniatura...): src/world/level/LevelCatalog.lua
 -- (la misma que usa el Juego libre del cliente)
 local function scanLevels(force)
     local now = love.timer.getTime()
     if levelCache and not force and now - levelCacheT < 10 then return levelCache end
     -- (se carga aquí: necesita Level y los stubs del servidor ya puestos)
-    local LevelCatalog = require 'src/world/LevelCatalog'
+    local LevelCatalog = require 'src/world/level/LevelCatalog'
     local list = {}
     for _, f in ipairs(listLevelFiles()) do
         if LevelCatalog.isListed(f) then
@@ -277,7 +277,7 @@ end
 
 local function initRoomSim(room)
     local level = Level.new(room.level, room.difficulty)
-    level.difficulty = room.difficulty               -- (src/Difficulty.lua; nil = el juego de siempre)
+    level.difficulty = room.difficulty               -- (src/core/Difficulty.lua; nil = el juego de siempre)
     Difficulty.bind(level)
     local sx, sy = level:getSpawnPx()
     local N = #room.playerIds
@@ -591,7 +591,7 @@ local function stepRoom(room)
     local sim = room.sim
     if not sim then return end
     _currentSim = sim
-    require('src/world/Noise').bind(sim.level)        -- (los ruidos de este paso, a este nivel)
+    require('src/world/systems/Noise').bind(sim.level)        -- (los ruidos de este paso, a este nivel)
     Difficulty.bind(sim.level)                        -- (… y su dificultad)
 
     sim.tick = sim.tick + 1
@@ -775,7 +775,7 @@ local function broadcastRoomUpdate(room)
         hasPassword=(room.password~=""), maxPlayers=room.maxPlayers,
         state=room.state, adminId=room.adminId, players=playerList,
         mode=room.mode, level=room.level, levelName=cur and cur.name or nil, levelName_en=cur and cur.name_en or nil, levels=levels,
-        difficulty=room.difficulty,                      -- (id de src/Difficulty.lua; nil = sin dificultad)
+        difficulty=room.difficulty,                      -- (id de src/core/Difficulty.lua; nil = sin dificultad)
     }
     for _, pid in ipairs(room.playerIds) do
         local c = findClientById(pid)
@@ -1233,7 +1233,7 @@ on("set_mode", function(data, client, player)
     -- Nivel elegido junto al modo (menú del lobby); si no sirve, uno compatible
     local info = type(data.level) == "string" and levelInfo(data.level)
     if info and info.modes[room.mode] then room.level = info.path end
-    -- Dificultad de la sala (opcional): un id de src/Difficulty.lua o 'none'
+    -- Dificultad de la sala (opcional): un id de src/core/Difficulty.lua o 'none'
     if data.difficulty == 'none' then room.difficulty = nil
     elseif Difficulty.valid(data.difficulty) then room.difficulty = data.difficulty end
     ensureRoomLevel(room)
@@ -1242,7 +1242,7 @@ on("set_mode", function(data, client, player)
 end)
 
 -- DIFICULTAD de la sala (la elige el host en la sala de espera; todos la ven en el room_update y llega a la
--- partida en game_init): un id de src/Difficulty.lua o 'none' (el juego de siempre)
+-- partida en game_init): un id de src/core/Difficulty.lua o 'none' (el juego de siempre)
 on("set_difficulty", function(data, client, player)
     if type(data) ~= "table" then return end
     local room = adminRoom(client, player)
@@ -1529,8 +1529,8 @@ function love.load()
     require 'settings'
 
     -- Cargar entidades (en modo ventana usa graphics real; en headless usa stubs)
-    Level           = require 'src/world/Level'
-    PlayerAdventure = require 'src/entities/PlayerAdventure'
+    Level           = require 'src/world/level/Level'
+    PlayerAdventure = require 'src/player/PlayerAdventure'
     -- Efectos visuales del jugador (ground pound, bloques rotos): el servidor
     -- no dibuja; los reenvía a los clientes para que pongan las partículas
     PlayerAdventure.fx = function(kind, x, y)
@@ -1538,12 +1538,12 @@ function love.load()
             pushEvent(_currentSim, { type='fx', kind=kind, x=round(x), y=round(y), playerId=_currentSoundPlayerId })
         end
     end
-    Entities        = require 'src/world/Entities'
-    BossZones       = require 'src/world/BossZones'
-    AutoScroll      = require 'src/world/AutoScroll'
-    Floods          = require 'src/world/Floods'
-    PointAreas      = require 'src/world/PointAreas'
-    Difficulty      = require 'src/Difficulty'
+    Entities        = require 'src/world/entities/Entities'
+    BossZones       = require 'src/world/systems/BossZones'
+    AutoScroll      = require 'src/world/systems/AutoScroll'
+    Floods          = require 'src/world/systems/Floods'
+    PointAreas      = require 'src/world/systems/PointAreas'
+    Difficulty      = require 'src/core/Difficulty'
     -- Lo que un jefe le hace a un jugador (daño, muerte) suena como suyo:
     -- su cliente lo reproduce al ver bajar su vida en la reconciliación
     PlayerAdventure.soundOwner = function(pa, fn)
@@ -1555,7 +1555,7 @@ function love.load()
         if not ok then error(err, 0) end
     end
     -- Efectos de las entidades (pinchos que se clavan...): para todos
-    require('src/world/entities/Entity').fx = function(kind, x, y)
+    require('src/world/entities/base/Entity').fx = function(kind, x, y)
         if _currentSim then
             pushEvent(_currentSim, { type='fx', kind=kind, x=round(x), y=round(y) })
         end

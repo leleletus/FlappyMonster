@@ -1,4 +1,4 @@
--- tools/tests/subtiles — mini bloques (subtiles, src/world/SubTiles.lua), los
+-- tools/tests/subtiles — mini bloques (subtiles, src/world/level/SubTiles.lua), los
 -- bloques Tierra / Césped y las partículas físicas, con el jugador real
 -- (PlayerAdventure + Input de prueba), entidades reales y Particles:
 --   de_pie       de pie sobre dos subtiles (mitad de abajo): pies en la mitad de la celda
@@ -32,9 +32,9 @@ local P = require 'src/network/Protocol'
 local stub = P.newInputStub()
 Input = stub
 local json = require 'libs/json'
-local Level = require 'src/world/Level'
-local Entities = require 'src/world/Entities'
-local PlayerAdventure = require 'src/entities/PlayerAdventure'
+local Level = require 'src/world/level/Level'
+local Entities = require 'src/world/entities/Entities'
+local PlayerAdventure = require 'src/player/PlayerAdventure'
 local Particles = require 'src/fx/Particles'
 local TileTypes = require 'src/world/tiles/TileTypes'
 local TileCodec = require 'src/world/tiles/TileCodec'
@@ -244,7 +244,7 @@ function cases.debris_pared()
 end
 
 function cases.inundacion()
-    local Floods = require 'src/world/Floods'
+    local Floods = require 'src/world/systems/Floods'
     local function pixel(withFlood)
         local ents = withFlood and { { type = 'flood', col = 2, row = 4, props = { corner = { col = 9, row = 9 },
                                        startLevel = 6, maxLevel = 6 } } } or {}
@@ -281,7 +281,7 @@ function cases.editor()
 end
 
 function cases.union()
-    local BossZones = require 'src/world/BossZones'
+    local BossZones = require 'src/world/systems/BossZones'
     local subs = { S(6, 5, 1), S(6, 5, 3),              -- piedra pequeña: toda la columna izquierda
                    S(6, 3, 1),                          -- solo el cuarto de arriba
                    S(6, 7, 1, 'dirt'), S(6, 7, 3, 'dirt'),
@@ -351,8 +351,8 @@ local function scene()
         { type = 'bosswall', col = 12, row = 2, props = { corner = { col = 13, row = 4 } } },
         -- (como en las arenas: el bloque de jefe baja hasta la fila del suelo, pegado a él)
         { type = 'bosswall', col = 7, row = 7, props = { corner = { col = 7, row = 10 } } } })
-    require('src/world/Floods').setTime(level, 0)
-    require('src/world/BossZones').link(level, es)
+    require('src/world/systems/Floods').setTime(level, 0)
+    require('src/world/systems/BossZones').link(level, es)
     for _, e in ipairs(es) do if e.def.name == 'bosswall' then e.state = 'solid' end end
     level.sceneEntities = es
     return level

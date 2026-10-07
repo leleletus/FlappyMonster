@@ -1,4 +1,4 @@
--- tools/tests/flood_control — inundaciones CONECTADAS (src/world/Floods.lua):
+-- tools/tests/flood_control — inundaciones CONECTADAS (src/world/systems/Floods.lua):
 --   jefe_antes   (fortaleza_malvada, su inundación con control 'boss' y el jefe
 --                real) antes de la pelea está en su mínimo
 --   jefe_ciclo   durante la pelea hace su ciclo: llega al máximo y vuelve al mínimo,
@@ -28,11 +28,11 @@ local P = require 'src/network/Protocol'
 local stub = P.newInputStub()
 Input = stub
 local json = require 'libs/json'
-local Level = require 'src/world/Level'
-local Entities = require 'src/world/Entities'
-local BossZones = require 'src/world/BossZones'
-local Floods = require 'src/world/Floods'
-local PlayerAdventure = require 'src/entities/PlayerAdventure'
+local Level = require 'src/world/level/Level'
+local Entities = require 'src/world/entities/Entities'
+local BossZones = require 'src/world/systems/BossZones'
+local Floods = require 'src/world/systems/Floods'
+local PlayerAdventure = require 'src/player/PlayerAdventure'
 local TileTypes = require 'src/world/tiles/TileTypes'
 local T = TILE_PX
 local DT = 1 / 60

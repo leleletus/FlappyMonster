@@ -11,12 +11,12 @@ Sound = setmetatable({ play = function() end }, { __index = function() return fu
 local P = require 'src/network/Protocol'
 Input = P.newInputStub()
 local json = require 'libs/json'
-local Level = require 'src/world/Level'
-local Entities = require 'src/world/Entities'
-local Modes = require 'src/world/Modes'
-local BossZones = require 'src/world/BossZones'
+local Level = require 'src/world/level/Level'
+local Entities = require 'src/world/entities/Entities'
+local Modes = require 'src/world/modes/Modes'
+local BossZones = require 'src/world/systems/BossZones'
 local Model = require 'src/editor/EditorModel'
-local PlayerAdventure = require 'src/entities/PlayerAdventure'
+local PlayerAdventure = require 'src/player/PlayerAdventure'
 
 local function check(path)
     local bad = 0

@@ -37,7 +37,7 @@ end
 -- cuadrado de pantalla (x, y, u): por cada lado cuyo vecino (bloque grande o mini
 -- bloque) es tierra, césped, piedra, roca abisal o borde
 local function bands(level, gx, gy, x, y, u)
-    SubTiles = SubTiles or require 'src/world/SubTiles'
+    SubTiles = SubTiles or require 'src/world/level/SubTiles'
     local fh = blend:getHeight()
     local k = u / (fh / 2)
     for _, sd in ipairs(SIDES) do

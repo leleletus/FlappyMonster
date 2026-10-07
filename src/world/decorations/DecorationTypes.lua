@@ -1,7 +1,7 @@
 -- src/world/decorations/DecorationTypes.lua
 -- Registro de DECORACIONES (plantas, árboles, adornos): no colisionan, solo se
 -- dibujan (y se animan). Cada tipo es un archivo en
--- src/world/decorations/types/ listado en src/world/Decorations.lua.
+-- src/world/decorations/types/ listado en src/world/decorations/Decorations.lua.
 --
 -- Definición de un tipo:
 --   name, label, category      identificación y grupo en la paleta del editor
@@ -20,7 +20,7 @@
 --   draw(d, sx, sy)            dibujo en pantalla; (sx,sy) = punto de anclaje.
 --                              d.flip = -1 si está espejada, 1 si no.
 
-local Props = require 'src/world/entities/Props'
+local Props = require 'src/world/entities/base/Props'
 
 local DecorationTypes = { byName = {}, list = {} }
 

@@ -46,7 +46,7 @@ function love.load()
     require 'settings'
     FONT_SMALL = love.graphics.newFont(8); FONT_MED = FONT_SMALL; FONT_BIG = FONT_SMALL
     Input = require('src/network/Protocol').newInputStub()
-    Sound = require 'src/Sound'
+    Sound = require 'src/audio/Sound'
     pcall(Sound.load)
 
     -- modulos
@@ -58,7 +58,7 @@ function love.load()
     check('modulos', #bad == 0, ('%d módulos; no cargan: %s'):format(#files, #bad > 0 and list(bad, 6) or 'ninguno'))
 
     -- catalogos
-    local Entities = require 'src/world/Entities'
+    local Entities = require 'src/world/entities/Entities'
     local EntityTypes = Entities.types
     local nE, badE = 0, {}
     for name in pairs(EntityTypes.byName) do
@@ -66,9 +66,9 @@ function love.load()
         local ok, err = pcall(Entities.create, { type = name, col = 5, row = 5, props = {} })
         if not ok then badE[#badE + 1] = name .. ' → ' .. tostring(err):gsub('\n.*', '') end
     end
-    local Tiles = require 'src/world/Tiles'
-    local Decorations = require 'src/world/Decorations'
-    local Modes = require 'src/world/Modes'
+    local Tiles = require 'src/world/tiles/Tiles'
+    local Decorations = require 'src/world/decorations/Decorations'
+    local Modes = require 'src/world/modes/Modes'
     local function count(t) local n = 0; for _ in pairs(t or {}) do n = n + 1 end; return n end
     local nT, nD, nM = count(Tiles.types.byName), count(Decorations.types.byName), count(Modes.types and Modes.types.byId or Modes.byId)
     for _, d in pairs(Decorations.types.byName or {}) do if d.loadAssets then pcall(d.loadAssets) end end
@@ -92,7 +92,7 @@ function love.load()
     check('rutas', #lost == 0 and nPaths > 150, ('%d rutas escritas; no existen: %s'):format(nPaths, #lost > 0 and list(lost, 8) or 'ninguna'))
 
     -- música del catálogo + todo lo que se intentó cargar
-    local Music = require 'src/Music'
+    local Music = require 'src/audio/Music'
     for _, tr in ipairs(Music.list) do
         for _, k in ipairs({ 'file', 'intro', 'loop' }) do
             if tr[k] and not love.filesystem.getInfo(tr[k]) and not tr.pending then missing[#missing + 1] = tr[k] end

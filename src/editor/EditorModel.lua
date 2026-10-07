@@ -3,13 +3,13 @@
 -- El formato de salida es el mismo que carga el juego (Level.fromData).
 
 local json     = require 'libs/json'
-local Tiles    = require 'src/world/Tiles'
-local Entities = require 'src/world/Entities'
-local Level    = require 'src/world/Level'
-local DT       = require('src/world/Decorations').types
-local BossZones = require 'src/world/BossZones'
-local AutoScroll = require 'src/world/AutoScroll'
-local SubTiles  = require 'src/world/SubTiles'
+local Tiles    = require 'src/world/tiles/Tiles'
+local Entities = require 'src/world/entities/Entities'
+local Level    = require 'src/world/level/Level'
+local DT       = require('src/world/decorations/Decorations').types
+local BossZones = require 'src/world/systems/BossZones'
+local AutoScroll = require 'src/world/systems/AutoScroll'
+local SubTiles  = require 'src/world/level/SubTiles'
 
 local Codec = Tiles.codec
 local ET    = Entities.types
@@ -485,7 +485,7 @@ function Model:findObject(list, c, r, sub)
     end
 end
 
--- ── Subtiles (bloques de un cuarto de casilla, src/world/SubTiles.lua) ───────
+-- ── Subtiles (bloques de un cuarto de casilla, src/world/level/SubTiles.lua) ───────
 function Model:subtileAt(c, r, sub)
     return self:findObject(self.subtiles, c, r, sub)
 end
@@ -648,7 +648,7 @@ function Model:validate()
         end
     end
     if #self.entities == 0 then w[#w+1] = { 'info', 'El nivel no tiene entidades' } end
-    local Music = require 'src/Music'
+    local Music = require 'src/audio/Music'
     if self.music and not (Music.get(self.music) and Music.get(self.music).level) then
         w[#w+1] = { 'warn', 'La música "' .. self.music .. '" no está en assets/music/index.json: sonará la de siempre' }
     end

@@ -1,4 +1,4 @@
--- Arnés: la DIFICULTAD como marco genérico de modificadores (src/Difficulty.lua), caso a caso:
+-- Arnés: la DIFICULTAD como marco genérico de modificadores (src/core/Difficulty.lua), caso a caso:
 --   neutro     sin dificultad (juego libre, online sin elegirla, los demás arneses) todo vale 1: nada cambia
 --   enemigos   un Gummy anda 0,8× en Fácil y 1,25× en Extremo (su tiempo escalado: Difficulty.dt)
 --   categorias enemigos, trampas y jefes llevan cada uno su ritmo; lo demás (objetos, mecanismos), ninguno;
@@ -10,7 +10,7 @@
 --   salas      varias a la vez (servidor): Difficulty.bind cambia de una a otra sin mezclarlas
 --   sentidos   los enemigos te ven desde el techo y oyen ruidos de más lejos en Extremo (× sense) y de más
 --              cerca en Fácil
---   doble      XTRA EXTREMO: cada nivel de jefe de la historia lleva DOS jefes (src/world/XtraBosses.lua):
+--   doble      XTRA EXTREMO: cada nivel de jefe de la historia lleva DOS jefes (src/world/systems/XtraBosses.lua):
 --              la copia dentro de su zona y separada, la misma lista al construir dos veces (servidor y
 --              cliente: mismos índices), súbditos de reserva de los dos, vida de cada uno × bossHp × pairHp
 --   tools/tests/run.sh difficulty_rules   (CASE=nombre: solo ese)
@@ -21,12 +21,12 @@ Sound = setmetatable({ play = function() end }, { __index = function() return fu
 local P = require 'src/network/Protocol'
 local stub = P.newInputStub()
 Input = stub
-local Level = require 'src/world/Level'
-local Entities = require 'src/world/Entities'
-local Interactions = require 'src/world/entities/Interactions'
-local PlayerAdventure = require 'src/entities/PlayerAdventure'
-local Difficulty = require 'src/Difficulty'
-local BossZones = require 'src/world/BossZones'
+local Level = require 'src/world/level/Level'
+local Entities = require 'src/world/entities/Entities'
+local Interactions = require 'src/world/entities/base/Interactions'
+local PlayerAdventure = require 'src/player/PlayerAdventure'
+local Difficulty = require 'src/core/Difficulty'
+local BossZones = require 'src/world/systems/BossZones'
 local json = require 'libs/json'
 local T = TILE_PX
 
@@ -193,7 +193,7 @@ function cases.sentidos()
     local function sees(diff)
         local level, es, e = room(20, 14, { { type = 'gummy', col = 10, row = 2 } }, diff)
         level.players = { { x = e.x, y = e.y + 7 * T, alive = true } }
-        local Noise = require 'src/world/Noise'
+        local Noise = require 'src/world/systems/Noise'
         level.noises = { seq = 1, list = { { seq = 1, x = e.x + 10.5 * T, y = e.y, r = 9 * T } } }
         return e:seesPlayerBelow(level, 6), Noise.heard(level, e.x, e.y, 0) ~= nil
     end
@@ -207,7 +207,7 @@ end
 
 function cases.doble()
     local Worlds = require 'src/story/Worlds'
-    local EntityTypes = require 'src/world/entities/EntityTypes'
+    local EntityTypes = require 'src/world/entities/base/EntityTypes'
     local list = {}
     for w = 1, Worlds.count() do
         for _, n in ipairs(Worlds.nodes(w)) do

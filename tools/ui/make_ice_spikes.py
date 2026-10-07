@@ -2,7 +2,7 @@
 # tools/ui/make_ice_spikes.py — pinchos de HIELO: la púa de los pinchos (assets/images/spikes/spike.png,
 # acero) recoloreada a hielo con la misma paleta que la púa del Mega Crabby helado. La usan los
 # pinchos de casilla y los pinchos que caen en los niveles con "spikeSkin": "ice"
-# (src/world/SpikeSkins.lua; editor: Nivel → Fondo y clima → Pinchos).
+# (src/world/level/SpikeSkins.lua; editor: Nivel → Fondo y clima → Pinchos).
 #   python3 tools/ui/make_ice_spikes.py      → assets/images/spikes/spike_ice.png
 import os
 from PIL import Image

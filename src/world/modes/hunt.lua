@@ -1,7 +1,7 @@
 -- Cazamonstruos: elimina a todos los enemigos pisoteables. Cuando no queda ninguno,
 -- gana quien más puntos tenga (empates: ganan todos los empatados). Si todos
 -- los jugadores caen antes, nadie gana.
-local L = require 'src/Lang'
+local L = require 'src/core/Lang'
 
 local function killableAlive(m)
     local n = 0

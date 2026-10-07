@@ -82,7 +82,7 @@ function love.update(dt)
         last.shotAt = t + 0.021
         love.graphics.captureScreenshot(function(img) img:encode('png', 'hit_' .. last.shots .. '.png') end)
         print(('  captura %d: invT=%.2f alfa=%.2f'):format(last.shots, pa.invT or 0,
-            require('src/entities/PlayerAdventure').invulnAlpha(pa.invT or 0)))
+            require('src/player/PlayerAdventure').invulnAlpha(pa.invT or 0)))
     end
     -- (INTRO_SHOTS=1: capturas de la entrada del jefe cada 0.6 s → intro_N.png:
     -- franjas de cine con el nombre, cámara centrada en el jefe)
@@ -126,7 +126,7 @@ function love.update(dt)
             local walls = 0
             for _, e in ipairs(st.enemies) do if e.def.name == 'bosswall' and e.state ~= 'hidden' then walls = walls + 1 end end
             local name, pos = Sound.musicPosition()
-            local fresh = require('src/world/Level').new(st.levelPath)
+            local fresh = require('src/world/level/Level').new(st.levelPath)
             local same = true
             for r = 1, fresh.tileH do for c = 1, fresh.tileW do
                 if fresh:getRaw(c, r) ~= st.level:getRaw(c, r) then same = false end

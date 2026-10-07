@@ -90,7 +90,7 @@ function love.update(dt)
     elseif step == 'pick' and t - T > 0.3 then
         -- partida nueva: pregunta la dificultad (Normal elegida; Extremo y Xtra, cerradas)
         local p = st.pick
-        local Difficulty = require 'src/Difficulty'
+        local Difficulty = require 'src/core/Difficulty'
         check('dificultad', p ~= nil and Difficulty.ORDER[p.sel] == 'normal' and st:_diffOpen(1) and st:_diffOpen(3)
             and not st:_diffOpen(4) and not st:_diffOpen(5),
             ('pide dificultad=%s (elegida %s); fácil/difícil abiertas=%s/%s; extremo/xtra cerradas=%s/%s'):format(tostring(p ~= nil),
@@ -447,7 +447,7 @@ function love.update(dt)
     elseif (step == 'sh2' or step == 'fin2') and t - T > 0.8 then
         -- al centro de la arena: empieza la pelea
         local z = st.level.bossZones[1]
-        st.player.x, st.player.y = require('src/world/BossZones').safeSpawn(st.level, z)
+        st.player.x, st.player.y = require('src/world/systems/BossZones').safeSpawn(st.level, z)
         st.player.spawnX, st.player.spawnY = st.player.x, st.player.y
         SHIDS = st.shards and table.concat(st.shards.ids, ',') or 'ninguno'
         go(step == 'sh2' and 'sh3' or 'fin3')

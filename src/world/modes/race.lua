@@ -1,7 +1,7 @@
 -- Carrera Relámpago: el primero en tocar la meta activa una cuenta atrás de
 -- GRACE segundos para el resto. Al acabar (o cuando nadie más puede llegar),
 -- ganan solo los que llegaron, ordenados por orden de llegada.
-local L = require 'src/Lang'
+local L = require 'src/core/Lang'
 
 local GRACE = 15
 

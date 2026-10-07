@@ -10,7 +10,7 @@
 -- absorbe suavemente en unos frames en vez de teletransportar al jugador.
 
 local Protocol = require 'src/network/Protocol'
-local PlayerAdventure = require 'src/entities/PlayerAdventure'
+local PlayerAdventure = require 'src/player/PlayerAdventure'
 
 local Predictor = {}
 Predictor.__index = Predictor

@@ -1,6 +1,6 @@
 -- src/world/modes/ModeTypes.lua
 -- Registro de MODOS DE JUEGO (objetivos de una ronda online). Cada modo es un
--- archivo en src/world/modes/ listado en src/world/Modes.lua. El servidor
+-- archivo en src/world/modes/ listado en src/world/modes/Modes.lua. El servidor
 -- ejecuta sus reglas (autoritativo); el cliente usa sus textos y colores.
 --
 -- Definición de un modo:
@@ -35,7 +35,7 @@
 -- `m` (match) lo crea el servidor: m.players (playerSims), m.enemies, m.time,
 -- m.level, m.event(ev) para emitir eventos, m.data (estado libre del modo).
 
-local Lang = require 'src/Lang'
+local Lang = require 'src/core/Lang'
 
 local ModeTypes = { byId = {}, list = {} }
 
@@ -82,7 +82,7 @@ function ModeTypes.get(id) return ModeTypes.byId[id] end
 -- servidor, el editor y las pruebas: un solo cálculo). `list` = colocaciones
 -- normalizadas ({type, props}). respawning = enemigos pisoteables que reaparecen.
 function ModeTypes.entityInfo(list)
-    local ET = require 'src/world/entities/EntityTypes'
+    local ET = require 'src/world/entities/base/EntityTypes'
     local info = { enemies = #list, killable = 0, bosses = 0, pointAreas = 0, respawning = 0 }
     for _, e in ipairs(list) do
         local t, p = ET.get(e.type), e.props or {}

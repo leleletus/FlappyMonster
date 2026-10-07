@@ -48,7 +48,7 @@ SCORE_FILE = "highscore.dat"
 TILE_PX        = 16 * 4     -- 64px
 
 -- Los IDs de tile (TILE_SOLID, TILE_WATER...) los genera el catálogo de tiles
--- (src/world/Tiles.lua), cargado al final de este archivo.
+-- (src/world/tiles/Tiles.lua), cargado al final de este archivo.
 
 -- Física del plataformero
 ADV_GRAVITY    = 1600
@@ -67,7 +67,7 @@ SERVER_PORT = 22122          -- puerto del servidor
 -- ── Catálogo de tiles y materiales ────────────────────────────────────────────
 -- Registra los tipos de tile (y sus constantes TILE_*). La física del agua y de
 -- cualquier material vive ahora en src/world/tiles/materials/.
-require 'src/world/Tiles'
+require 'src/world/tiles/Tiles'
 
 -- Hitboxes a la vista (F1 en el juego). FM_HITBOX=1 las enciende desde el arranque: los arneses de tools/tests
 -- la usan para comprobar que dibujarlas no falla con ningún enemigo ni jefe (un jugador y online).

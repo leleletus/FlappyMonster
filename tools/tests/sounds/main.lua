@@ -1,4 +1,4 @@
--- tools/tests/sounds — los sonidos del juego, de verdad (src/Sound.lua):
+-- tools/tests/sounds — los sonidos del juego, de verdad (src/audio/Sound.lua):
 --  1. todo nombre usado en el código con Sound.play / playAt / playTracked
 --     ('literal') está cargado (un nombre mal escrito no sonaría nunca);
 --  2. los sonidos de NAMES (por defecto, los nuevos) se reproducen: la fuente
@@ -13,7 +13,7 @@ io.stdout:setvbuf('no')
 LOUD = { bombBlast = true }
 love.filesystem.setSymlinksEnabled(true)
 require 'settings'
-Sound = require 'src/Sound'
+Sound = require 'src/audio/Sound'
 
 local NAMES = os.getenv('NAMES') or
     'switchOn,switchOff,helmetBounce,helmetBreak,pufferWarn,pufferInflate,pufferDeflate,pufferPrick,cryoWindup,cryoBlast,cryoFreeze,cryoFree,snowLaugh,snowRoar,snowSpit,snowSplat,snowRoll,snowLand,snowSlam,snowCrash,snowDizzy,snowCrack,snowBurst,snowFlee,snowIntroRoll,snowBreath'
@@ -93,7 +93,7 @@ function love.load()
         end
     end
     -- 4. pistas con INTRO + BUCLE: la intro suena una vez y el bucle entra pegado a su final (love.update)
-    local Music = require 'src/Music'
+    local Music = require 'src/audio/Music'
     for _, tr in ipairs(Music.list) do
         if tr.intro and not tr.pending then table.insert(introTracks, tr.id) end
     end

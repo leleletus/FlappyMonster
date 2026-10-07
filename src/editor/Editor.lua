@@ -1,25 +1,25 @@
 -- src/editor/Editor.lua
 -- Editor de niveles de FlappyMonster.  Uso:  love . --editor [assets/levels/x.json]
 --
--- Corre dentro del propio juego: usa los mismos catálogos (src/world/Tiles.lua,
--- src/world/Entities.lua), el mismo dibujo y los mismos assets, así que todo
+-- Corre dentro del propio juego: usa los mismos catálogos (src/world/tiles/Tiles.lua,
+-- src/world/entities/Entities.lua), el mismo dibujo y los mismos assets, así que todo
 -- tile, material o entidad nuevo aparece aquí solo. "Probar" (F5) juega el
 -- nivel en el mismo proceso y F10 vuelve al editor.
 
 local ui       = require 'src/editor/ui'
 local Model    = require 'src/editor/EditorModel'
-local Tiles    = require 'src/world/Tiles'
-local Entities = require 'src/world/Entities'
-local Level    = require 'src/world/Level'
-local DT       = require('src/world/Decorations').types
+local Tiles    = require 'src/world/tiles/Tiles'
+local Entities = require 'src/world/entities/Entities'
+local Level    = require 'src/world/level/Level'
+local DT       = require('src/world/decorations/Decorations').types
 local Clip     = require 'src/ui/Clip'
-local SpikeSkins = require 'src/world/SpikeSkins'
+local SpikeSkins = require 'src/world/level/SpikeSkins'
 local Sky      = require 'src/fx/Sky'
-local BossZones = require 'src/world/BossZones'
-local AutoScroll = require 'src/world/AutoScroll'
-local Modes     = require 'src/world/Modes'
-local Music     = require 'src/Music'
-local SubTiles  = require 'src/world/SubTiles'
+local BossZones = require 'src/world/systems/BossZones'
+local AutoScroll = require 'src/world/systems/AutoScroll'
+local Modes     = require 'src/world/modes/Modes'
+local Music     = require 'src/audio/Music'
+local SubTiles  = require 'src/world/level/SubTiles'
 
 local Codec, TT, ET, Props = Tiles.codec, Tiles.types, Entities.types, Entities.props
 local th = ui.theme
@@ -1597,7 +1597,7 @@ local function drawLevelTab(x, y, w)
         y = y + 28
         if ch then pushUndo(); m.dark = v or nil; markDirty() end
         do
-            local auto = require('src/world/Level').lightMood({ background = m.background, time = m.time })
+            local auto = require('src/world/level/Level').lightMood({ background = m.background, time = m.time })
             local names = { day = 'Día', dusk = 'Atardecer', night = 'Noche', cave = 'Cueva', none = 'Sin' }
             local lopts = { { value = 'auto', label = 'Auto (' .. names[auto] .. ')' } }
             for _, k in ipairs({ 'day', 'dusk', 'night', 'cave', 'none' }) do lopts[#lopts + 1] = { value = k, label = names[k] } end
@@ -1606,7 +1606,7 @@ local function drawLevelTab(x, y, w)
             if ch then pushUndo(); m.light = (v ~= 'auto') and v or nil; markDirty() end
             y = y + ui.hint('Luz ambiente (solo visual): atardecer cálido, noche fría y oscura con las antorchas brillando, cueva en penumbra con un halo alrededor del jugador. Lo que queda bajo la superficie (con profundidad) va en penumbra.', x, y, w, th.border) + 8
         end
-        local autoEcho = m.dark == true or require('src/world/Level').lightMood({ background = m.background, time = m.time, light = m.light }) == 'cave'
+        local autoEcho = m.dark == true or require('src/world/level/Level').lightMood({ background = m.background, time = m.time, light = m.light }) == 'cave'
         local echoOn = m.echo == true or (m.echo == nil and autoEcho)
         v, ch = ui.toggle('Eco (cueva profunda)', echoOn, x, y, w)
         y = y + 28

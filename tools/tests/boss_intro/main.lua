@@ -38,10 +38,10 @@ local P = require 'src/network/Protocol'
 local stub = P.newInputStub()
 Input = stub
 local json = require 'libs/json'
-local Level = require 'src/world/Level'
-local Entities = require 'src/world/Entities'
-local BossZones = require 'src/world/BossZones'
-local PlayerAdventure = require 'src/entities/PlayerAdventure'
+local Level = require 'src/world/level/Level'
+local Entities = require 'src/world/entities/Entities'
+local BossZones = require 'src/world/systems/BossZones'
+local PlayerAdventure = require 'src/player/PlayerAdventure'
 
 local fails = 0
 local function check(name, ok, msg)
@@ -94,7 +94,7 @@ function love.load()
     local lastPos, jumps, gps, worstJump = {}, {}, 0, 0
     -- (DEBUG_JUMP=1: dice qué función movió de golpe a un súbdito)
     if os.getenv('DEBUG_JUMP') then
-        local Crawler = require 'src/world/entities/Crawler'
+        local Crawler = require 'src/world/entities/base/Crawler'
         local function wrap(tbl, name, getE)
             local f = tbl[name]
             tbl[name] = function(...)
@@ -108,7 +108,7 @@ function love.load()
                 return unpack(r)
             end
         end
-        local Entity = require 'src/world/entities/Entity'
+        local Entity = require 'src/world/entities/base/Entity'
         wrap(Entity, 'moveAndCollide', function(e) return e end)
         wrap(Crawler, 'attach', function(e) return e end)
         wrap(Crawler, 'move', function(e) return e end)

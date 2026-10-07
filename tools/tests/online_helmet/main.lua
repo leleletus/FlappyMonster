@@ -15,14 +15,14 @@ lovesize = require 'libs/lovesize'
 Timer    = require 'libs/timer'
 require 'settings'
 Input = require 'input'
-Sound = require 'src/Sound'
-StateMachine = require 'src/StateMachine'
+Sound = require 'src/audio/Sound'
+StateMachine = require 'src/core/StateMachine'
 NC = require 'src/network/NetworkClient'
 Notify = require 'src/ui/Notify'
 local sock = require 'libs/sock'
 local bitser = require 'libs/bitser'
 local P = require 'src/network/Protocol'
-local OnlineAdventureState = require 'src/states/OnlineAdventureState'
+local OnlineAdventureState = require 'src/states/online/OnlineAdventureState'
 local LEVEL = os.getenv('LEVEL')
 local t, st = 0, nil
 local stub = P.newInputStub()

@@ -1,7 +1,7 @@
 -- src/fx/Darkness.lua
 -- LUZ AMBIENTE de los niveles (solo visual), con un mismo lienzo de luz para todos los casos:
 --   * A OSCURAS (level.dark): solo se ve lo que alumbran las linternas (esto sí cuenta para el juego: Lights).
---   * level.light (src/world/Level.lua lightMood): 'dusk' = tono cálido; 'night' = frío y más oscuro, con las
+--   * level.light (src/world/level/Level.lua lightMood): 'dusk' = tono cálido; 'night' = frío y más oscuro, con las
 --     antorchas / lava / setas brillando; 'cave' = PENUMBRA (se juega normal: se ve bastante); 'day' / 'none' = nada.
 --     El jugador NO da luz en estos (el usuario: de noche tiene que ser de noche): solo en los niveles a oscuras,
 --     donde la linterna es una mecánica. (`halo` en un ánimo lo volvería a encender.)
@@ -19,7 +19,7 @@
 -- pantalla. Sin sombreadores ni stencil (Switch / Android).
 -- Lo que debe verse SIEMPRE (los puntos luminosos de los Crabbies lúgubres) se dibuja después:
 -- las entidades con `renderGlow(camX, camY)`.
-local Lights = require 'src/world/Lights'
+local Lights = require 'src/world/level/Lights'
 
 local Darkness = {}
 
