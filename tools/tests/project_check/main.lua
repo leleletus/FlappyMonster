@@ -4,6 +4,8 @@
 --   rutas       toda ruta 'assets/...' escrita en el código (src/, server/, game.lua) existe
 --   cargas      nada de lo que se carga de verdad (imágenes, sonidos, música del catálogo) falta en disco
 --   idiomas     es.lua y en.lua tienen las mismas claves
+--   docs        toda ruta del repo escrita entre `comillas` en docs/, CLAUDE.md, README.md y tools/README.md existe,
+--               y todo enlace entre páginas de docs/ lleva a una página que existe
 --
 --   tools/tests/run.sh project_check
 io.stdout:setvbuf('no')
@@ -94,8 +96,8 @@ function love.load()
     -- música del catálogo + todo lo que se intentó cargar
     local Music = require 'src/audio/Music'
     for _, tr in ipairs(Music.list) do
-        for _, k in ipairs({ 'file', 'intro', 'loop' }) do
-            if tr[k] and not love.filesystem.getInfo(tr[k]) and not tr.pending then missing[#missing + 1] = tr[k] end
+        for _, k in ipairs({ 'file', 'intro', 'loopFile' }) do
+            if tr[k] and not love.filesystem.getInfo(tr[k]) then missing[#missing + 1] = tr[k] end
         end
     end
     local uniq, m2 = {}, {}
@@ -116,6 +118,48 @@ function love.load()
     for k in pairs(es) do n = n + 1; if not en[k] then diff[#diff + 1] = 'en:' .. k end end
     for k in pairs(en) do if not es[k] then diff[#diff + 1] = 'es:' .. k end end
     check('idiomas', #diff == 0, ('%d claves; faltan: %s'):format(n, #diff > 0 and list(diff, 10) or 'ninguna'))
+
+    -- docs: rutas y enlaces
+    local ROOT = love.filesystem.getSource() .. '/../../../'
+    local function exists(p) local f = io.open(ROOT .. p, 'rb'); if f then f:close(); return true end; return false end
+    local pages = {}
+    local function walkMd(dir)
+        for _, f in ipairs(love.filesystem.getDirectoryItems(dir .. '/.')) do
+            local p = dir .. '/' .. f
+            local info = love.filesystem.getInfo(p)
+            if info and info.type == 'directory' then walkMd(p) elseif f:match('%.md$') then pages[#pages + 1] = p end
+        end
+    end
+    walkMd('docs')
+    for _, f in ipairs({ 'CLAUDE.md', 'README.md', 'tools/README.md' }) do pages[#pages + 1] = f end
+    local broken, nRefs = {}, 0
+    for _, page in ipairs(pages) do
+        local fh = io.open(ROOT .. page, 'rb')
+        local text = fh and fh:read('*a') or ''
+        if fh then fh:close() end
+        for p in text:gmatch('`([^`%s]+)`') do
+            local root = p:match('^(%a+)/')
+            if (root == 'src' or root == 'assets' or root == 'tools' or root == 'server' or root == 'libs' or root == 'docs')
+               and not p:find('[<>*{}|$…]') and not p:find('...', 1, true) and not p:find('^server/published') then
+                nRefs = nRefs + 1
+                local q = p:gsub('[.,;:)]+$', ''):gsub('/$', '')
+                if not exists(q) then broken[#broken + 1] = q .. ' (' .. page .. ')' end
+            end
+        end
+        local dir = page:match('^(.*)/[^/]+$') or ''
+        for link in text:gmatch('%]%(([^)#%s]+%.md)[^)]*%)') do
+            if not link:match('^%a+://') then
+                nRefs = nRefs + 1
+                local parts = {}
+                for seg in ((dir ~= '' and (dir .. '/') or '') .. link):gmatch('[^/]+') do
+                    if seg == '..' then parts[#parts] = nil elseif seg ~= '.' then parts[#parts + 1] = seg end
+                end
+                local t = table.concat(parts, '/')
+                if not exists(t) then broken[#broken + 1] = 'enlace ' .. link .. ' (' .. page .. ')' end
+            end
+        end
+    end
+    check('docs', #broken == 0 and #pages > 40, ('%d páginas, %d rutas y enlaces; rotos: %s'):format(#pages, nRefs, #broken > 0 and list(broken, 8) or 'ninguno'))
 
     print(fails == 0 and 'RESULTADO: OK' or ('RESULTADO: ' .. fails .. ' FALLOS'))
     love.event.quit(fails == 0 and 0 or 1)
