@@ -32,7 +32,8 @@ return {
         checkpoints = "{n} checkpoints", checkpoints_one = "{n} checkpoint",
         music = "Música: {name}",
         no_modes = "sin modo online",
-        hint = "[FLECHAS] elegir    [ENTER] jugar    [ESC] volver",
+        hint = "[FLECHAS] elegir    [ENTER] jugar    [F] dificultad    [ESC] volver",
+        difficulty = "DIFICULTAD: {name}",
     },
     adv = {
         title = "AVENTURA",
@@ -44,7 +45,7 @@ return {
     difficulty = {
         title = "ELIGE LA DIFICULTAD",
         hint = "[FLECHAS] elegir    [ENTER] empezar    [ESC] volver",
-        easy = "FÁCIL", normal = "NORMAL", hard = "DIFÍCIL", extreme = "EXTREMO", xtra = "XTRA EXTREMO",
+        easy = "FÁCIL", normal = "NORMAL", hard = "DIFÍCIL", extreme = "EXTREMO", xtra = "XTRA EXTREMO", none = "ORIGINAL",
         desc = {
             easy = "Todo más lento, 4 de vida; pinchos y lava no matan de golpe",
             normal = "Los niveles tal cual; jefes algo más tranquilos",
@@ -216,6 +217,7 @@ return {
         not_ready = "NO LISTO",
         ready = "LISTO",
         game_mode = "MODO DE JUEGO",
+        difficulty = "DIFICULTAD: {name}",
         start = "INICIAR PARTIDA",
         stop = "DETENER PARTIDA",
         leave = "SALIR DE LA SALA",

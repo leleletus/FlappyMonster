@@ -39,6 +39,7 @@ function Hopper.loadAssets()
 end
 function Hopper.sizePx() return FW * S, BODY_H * S end
 
+Hopper.BY_BG = BY_BG                 -- (qué isla es cada fondo: lo usa también la comida, types/apple.lua)
 function Hopper.skinFor(props, level)
     local id = props and props.skin or 'auto'
     if id == 'auto' then

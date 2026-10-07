@@ -164,7 +164,12 @@
     {"col":118,"props":{"area":[{"col":117,"row":10},{"col":120,"row":10},{"col":120,"row":47},{"col":117,"row":47}]},"row":23,"type":"pufferfish"},
     {"col":119,"props":{"area":[{"col":117,"row":10},{"col":120,"row":10},{"col":120,"row":47},{"col":117,"row":47}]},"row":36,"type":"pufferfish"},
     {"col":120,"props":{"area":[{"col":117,"row":10},{"col":120,"row":10},{"col":120,"row":47},{"col":117,"row":47}]},"row":45,"type":"pufferfish"},
-    {"col":104,"row":37,"type":"checkpoint"}
+    {"col":104,"row":37,"type":"checkpoint"},
+    {"col":41,"row":42,"type":"apple"},
+    {"col":46,"row":12,"type":"apple"},
+    {"col":56,"row":37,"type":"apple"},
+    {"col":66,"row":32,"type":"apple"},
+    {"col":102,"row":37,"type":"apple"}
   ],
   "foliage": [
     {"col":19,"row":12,"sub":3,"type":"anemone"},

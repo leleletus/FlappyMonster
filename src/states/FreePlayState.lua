@@ -110,7 +110,26 @@ function FreePlayState:_play(i)
     -- (arena de Rey de la Colina: contra el BOT, como los bonus de la historia — src/story/BonusMatch.lua)
     local bonus = (info.pointAreas or 0) > 0 and (info.finish or 0) == 0
                   and { onEnd = function() gStateMachine:change('free_play') end } or nil
-    gStateMachine:change('adventure', { level = info.path, returnTo = 'free_play', bonus = bonus })
+    gStateMachine:change('adventure', { level = info.path, returnTo = 'free_play', bonus = bonus, difficulty = last.diff })
+end
+
+-- DIFICULTAD con la que se prueban los niveles (src/Difficulty.lua): ORIGINAL (ninguna: el juego de siempre) →
+-- fácil → normal → difícil → extremo → xtra extremo. Se recuerda entre visitas. Tecla de la linterna (F) o tocar
+-- la etiqueta de arriba a la derecha.
+local DIFFS = { false, 'easy', 'normal', 'hard', 'extreme', 'xtra' }
+function FreePlayState:_cycleDifficulty()
+    local cur = last.diff or false
+    for i, id in ipairs(DIFFS) do
+        if id == cur then last.diff = DIFFS[i % #DIFFS + 1] or nil; break end
+    end
+    if last.diff == false then last.diff = nil end
+    Sound.play('select')
+end
+function FreePlayState:_diffRect()
+    love.graphics.setFont(FONT_SMALL)
+    local label = L('free.difficulty', { name = L('difficulty.' .. (last.diff or 'none')) })
+    local w = FONT_SMALL:getWidth(label) + 24
+    return WINDOW_W - w - 20, 22, w, 30, label
 end
 
 function FreePlayState:_back()
@@ -157,6 +176,7 @@ function FreePlayState:update(dt)
     if Input.pressed('nav_up')    then self:_move(-cols2) end
     if Input.pressed('nav_down')  then self:_move(cols2) end
     if Input.pressed('confirm') or Input.pressed('flap') then self:_play(self.sel) end
+    if Input.pressed('light') then self:_cycleDifficulty() end
     if Input.pressed('back') then self:_back() end
 
     self:_clampScroll()
@@ -177,6 +197,10 @@ end
 
 function FreePlayState:touchpressed(id, x, y)
     if CornerButtons.hitBack(x, y) then self:_back(); return end
+    do                                            -- la etiqueta de la dificultad: tocarla pasa a la siguiente
+        local dx, dy, dw, dh = self:_diffRect()
+        if x >= dx and x <= dx + dw and y >= dy and y <= dy + dh then self:_cycleDifficulty(); return end
+    end
     if id == 'mouse' then                         -- ratón: clic = jugar (pasar por encima ya elige)
         local i = self:_cardAt(x, y)
         if i then self:_play(i) end
@@ -325,6 +349,16 @@ function FreePlayState:render()
     love.graphics.setFont(FONT_SMALL)
     love.graphics.setColor(1, 1, 1, 0.7)
     love.graphics.printf(L('free.subtitle', { n = #self.files }), 0, 68, WINDOW_W, 'center')
+    do                                            -- dificultad con la que se probará el nivel
+        local dx, dy, dw, dh, label = self:_diffRect()
+        love.graphics.setColor(0, 0, 0, 0.6)
+        love.graphics.rectangle('fill', dx + 3, dy + 3, dw, dh)
+        love.graphics.setColor(0.1, 0.16, 0.26, 1)
+        love.graphics.rectangle('fill', dx, dy, dw, dh)
+        love.graphics.setColor(0.6, 0.85, 1, 1)
+        love.graphics.rectangle('line', dx, dy, dw, dh)
+        love.graphics.print(label, dx + 12, dy + math.floor((dh - FONT_SMALL:getHeight()) / 2))
+    end
 
     local cols, x0, viewH = layout()
     if #self.files == 0 then

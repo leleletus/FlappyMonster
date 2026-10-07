@@ -775,6 +775,7 @@ local function broadcastRoomUpdate(room)
         hasPassword=(room.password~=""), maxPlayers=room.maxPlayers,
         state=room.state, adminId=room.adminId, players=playerList,
         mode=room.mode, level=room.level, levelName=cur and cur.name or nil, levelName_en=cur and cur.name_en or nil, levels=levels,
+        difficulty=room.difficulty,                      -- (id de src/Difficulty.lua; nil = sin dificultad)
     }
     for _, pid in ipairs(room.playerIds) do
         local c = findClientById(pid)
@@ -1236,6 +1237,19 @@ on("set_mode", function(data, client, player)
     elseif Difficulty.valid(data.difficulty) then room.difficulty = data.difficulty end
     ensureRoomLevel(room)
     log(player.name .. " cambio el modo a " .. Modes.get(room.mode).label)
+    broadcastRoomUpdate(room)
+end)
+
+-- DIFICULTAD de la sala (la elige el host en la sala de espera; todos la ven en el room_update y llega a la
+-- partida en game_init): un id de src/Difficulty.lua o 'none' (el juego de siempre)
+on("set_difficulty", function(data, client, player)
+    if type(data) ~= "table" then return end
+    local room = adminRoom(client, player)
+    if not room then return end
+    if data.difficulty == 'none' then room.difficulty = nil
+    elseif Difficulty.valid(data.difficulty) then room.difficulty = data.difficulty
+    else return end
+    log(player.name .. " cambio la dificultad a " .. tostring(room.difficulty or 'ninguna'))
     broadcastRoomUpdate(room)
 end)
 

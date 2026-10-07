@@ -118,6 +118,9 @@ function OnlineRoomState:_buildActions()
         if room.state == "WAITING" then
             -- El host elige el objetivo de la ronda y el nivel en su menú
             table.insert(list, { id='gamemode', label=Lang('room.game_mode') })
+            -- … y la DIFICULTAD (cada pulsación pasa a la siguiente; todos la ven en la tarjeta de la partida)
+            table.insert(list, { id='difficulty', label=Lang('room.difficulty', { name = Lang('difficulty.' .. (room.difficulty or 'none')) }),
+                                 color = {0.6, 0.85, 1} })
             local why = self:_startBlocker()
             table.insert(list, { id='start', label=Lang('room.start'), color={0.3,1,0.3},
                                  disabled = why ~= nil, why = why })
@@ -172,6 +175,13 @@ function OnlineRoomState:_executeAction(id)
     elseif id == 'gamemode' then
         self.sub      = SUB_MODES
         self.modeMenu = ModeSelectMenu.new(self.currentRoom, self.catalog)
+    elseif id == 'difficulty' then
+        -- sin dificultad → fácil → normal → difícil → extremo → xtra extremo → sin dificultad
+        local order = { 'none', 'easy', 'normal', 'hard', 'extreme', 'xtra' }
+        local cur = (self.currentRoom and self.currentRoom.difficulty) or 'none'
+        local nxt = order[1]
+        for i, id2 in ipairs(order) do if id2 == cur then nxt = order[i % #order + 1] end end
+        NC:send("set_difficulty", { difficulty = nxt })
     elseif id == 'start' then
         local why = self:_startBlocker()
         if why then Notify.toast(why, 'warn') else NC:send("start_game", {}) end
@@ -537,6 +547,13 @@ function OnlineRoomState:_renderGameCard(r, isAdmin)
     love.graphics.setFont(FONT_MED)
     love.graphics.setColor(col[1], col[2], col[3], 1)
     love.graphics.print(fitText(FONT_MED, mode.label, x + w - pad - tx), tx, y + 30)
+    -- La DIFICULTAD de la sala (la elige el host), arriba a la derecha
+    do
+        local dl = Lang('room.difficulty', { name = Lang('difficulty.' .. (room.difficulty or 'none')) })
+        love.graphics.setFont(FONT_SMALL)
+        love.graphics.setColor(0.6, 0.85, 1, 0.95)
+        love.graphics.print(dl, x + w - pad - FONT_SMALL:getWidth(dl), y + 14)
+    end
 
     -- Objetivo
     love.graphics.setFont(FONT_SMALL)

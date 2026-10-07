@@ -32,7 +32,8 @@ return {
         checkpoints = "{n} checkpoints", checkpoints_one = "{n} checkpoint",
         music = "Music: {name}",
         no_modes = "no online mode",
-        hint = "[ARROWS] choose    [ENTER] play    [ESC] back",
+        hint = "[ARROWS] choose    [ENTER] play    [F] difficulty    [ESC] back",
+        difficulty = "DIFFICULTY: {name}",
     },
     adv = {
         title = "ADVENTURE",
@@ -44,7 +45,7 @@ return {
     difficulty = {
         title = "CHOOSE THE DIFFICULTY",
         hint = "[ARROWS] choose    [ENTER] start    [ESC] back",
-        easy = "EASY", normal = "NORMAL", hard = "HARD", extreme = "EXTREME", xtra = "XTRA EXTREME",
+        easy = "EASY", normal = "NORMAL", hard = "HARD", extreme = "EXTREME", xtra = "XTRA EXTREME", none = "ORIGINAL",
         desc = {
             easy = "Everything slower, 4 HP; spikes and lava don't kill outright",
             normal = "Levels as designed; bosses a bit calmer",
@@ -216,6 +217,7 @@ return {
         not_ready = "NOT READY",
         ready = "READY",
         game_mode = "GAME MODE",
+        difficulty = "DIFFICULTY: {name}",
         start = "START MATCH",
         stop = "STOP MATCH",
         leave = "LEAVE ROOM",
