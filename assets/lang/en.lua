@@ -37,7 +37,6 @@ return {
     },
     adv = {
         title = "ADVENTURE",
-        solo = "SOLO",
         story = "STORY",
         online = "ONLINE",
         free = "FREE PLAY (TESTING)",
@@ -63,7 +62,6 @@ return {
         shards = "Mirror Shards",
         skip_hint = "HOLD TO SKIP",
         results = {
-            title = "LEVEL CLEAR",
             time = "Time", lives = "Lives lost", hits = "Hits taken", kills = "Enemies", stars = "Stars",
             duel = "You - Bot", items = "Items", falls = "Falls", zone = "Time in the zone",
             points = "Points", grade = "GRADE", record = "NEW BEST GRADE!",
@@ -95,9 +93,6 @@ return {
             line = "King of the Hill against the BOT  ·  [ENTER] play",
             done_line = "Won!  ·  best: {score} points",
             locked_hint = "Beat this world's boss",
-            won_notice = "BONUS WON!  +1 LIFE  +1000 POINTS",
-            again_notice = "YOU BEAT THE BOT!",
-            lost_notice = "THE BOT WINS... TRY AGAIN!",
         },
 
         go_continue = "CONTINUE",
@@ -111,9 +106,6 @@ return {
         },
     },
     flappy = {
-        score = "Score: {n}",
-        best = "Best: {n}",
-        final_score = "Score: {n}",
         best_label = "BEST",
         new_best = "NEW BEST!",
     },

@@ -61,30 +61,16 @@ console: lovefile switch
 
 
 # ── lovefile ──────────────────────────────────────────────────────────────────
-# Crea el .love (ZIP del código fuente).
-# Excluye: build/, resources/, tools/, archivos de build y de sistema.
+# Crea el .love: EXACTAMENTE los archivos del juego que están en git (el arranque + lo mismo que
+# reparte el servidor de actualizaciones, server/updates.lua). Nada más puede colarse: ni tools/,
+# ni docs/, ni server/, ni un archivo suelto sin versionar que haya en la carpeta.
+DIST := main.lua conf.lua game.lua input.lua settings.lua version.txt src libs assets
 lovefile:
 	@echo "━━━ [LOVEFILE] Empaquetando código fuente ━━━"
 	@rm -rf $(BUILD_DIR)/lovefile
 	@mkdir -p $(BUILD_DIR)/lovefile
 
-	@zip -9 -r $(BUILD_DIR)/lovefile/$(GAME_LOWER).love $(SRC_DIR) \
-		-x "build/*" \
-		-x "server/published/*" \
-		-x "resources/*" \
-		-x "tools/*" \
-		-x "*.love" \
-		-x "*.nro" \
-		-x "*.nsp" \
-		-x "*.nacp" \
-		-x "*.elf" \
-		-x "*.AppImage" \
-		-x "Makefile" \
-		-x "*.sh" \
-		-x "*.md" \
-		-x ".git/*" \
-		-x ".gitignore" \
-		-x "keys.dat"
+	@git ls-files -z -- $(DIST) | xargs -0 zip -9 -q $(BUILD_DIR)/lovefile/$(GAME_LOWER).love
 
 	@mkdir -p $(RELEASE_DIR)
 	@rm -f $(RELEASE_DIR)/$(GAME_LOWER)-lovefile.zip

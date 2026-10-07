@@ -8,8 +8,6 @@ GUMMY_SCALE   = 4
 
 -- ── Jugador ───────────────────────────────────────────────────────────────────
 PLAYER_SCALE   = 6
-PLAYER_W       = 9  * PLAYER_SCALE   -- 36
-PLAYER_H       = 16 * PLAYER_SCALE   -- 64
 PLAYER_START_X = 200
 PLAYER_START_Y = WINDOW_H / 2
 GRAVITY        = 1800
@@ -20,9 +18,6 @@ PIPE_SCALE      = 13
 PIPE_W          = 6 * PIPE_SCALE    -- 78
 PIPE_GAP        = 200
 PIPE_SPEED      = 220
-PIPE_SPAWN_TIME = 1.6
-PIPE_MIN_Y      = 80
-PIPE_MAX_Y      = WINDOW_H - 80 - PIPE_GAP
 
 -- ── Dificultades ──────────────────────────────────────────────────────────────
 -- speedMult/gapMult: sobre PIPE_SPEED / PIPE_GAP; spacing: px entre tuberías (se
@@ -38,36 +33,18 @@ DIFFICULTIES = {
 DIFFICULTY_ORDER = { 'easy', 'normal', 'hard' }  -- orden de selección
 
 -- ── Escalas de menú ───────────────────────────────────────────────────────────
--- Imágenes pixel art → escala entera para que llenen la pantalla limpio
--- Menu.png    104x48  * 15 = 1560x720  (se centra horizontal)
--- MenuDif.png  84x48  * 15 = 1260x720  (se centra horizontal)
--- logo.png     42x16  * 10 =  420x160
--- easy.png     20x5   *  8 =  160x40
--- normal.png   30x5   *  8 =  240x40
--- hard.png     38x5   *  8 =  304x40
-MENU_BG_SCALE   = 15
+-- (logo.png 42x16 * 10; los rótulos de dificultad son texto de PixelFont a esta escala)
 LOGO_SCALE      = 10
 DIFF_IMG_SCALE  = 8
 
--- ── Scroll / Suelo ────────────────────────────────────────────────────────────
-BG_SCROLL_SPEED = 60
-GROUND_HEIGHT   = 60
-
 -- ── Colores ───────────────────────────────────────────────────────────────────
 COLOR_WHITE  = {1,   1,   1,   1}
-COLOR_BLACK  = {0,   0,   0,   1}
 COLOR_RED    = {1,   0.2, 0.2, 1}
-COLOR_SKY    = {1,   1,   1,   1}   -- fondo blanco en PlayState
-COLOR_GROUND = {0,   0,   0,   1}   -- suelo negro en PlayState
-COLOR_PIPE   = {1,   1,   1,   1}   -- pipes usan sprite, color neutro
-COLOR_PLAYER = {1,   0.85,0.10,1}
 
 -- ── Puntuación ────────────────────────────────────────────────────────────────
 SCORE_FILE = "highscore.dat"
 
 -- ── Modo Aventura ─────────────────────────────────────────────────────────────
-TILE_SIZE      = 16          -- px del sprite de tile
-TILE_SCALE     = 4           -- 16 * 4 = 64px en pantalla
 TILE_PX        = 16 * 4     -- 64px
 
 -- Los IDs de tile (TILE_SOLID, TILE_WATER...) los genera el catálogo de tiles

@@ -37,7 +37,6 @@ return {
     },
     adv = {
         title = "AVENTURA",
-        solo = "SOLO",
         story = "HISTORIA",
         online = "ONLINE",
         free = "JUEGO LIBRE (PRUEBAS)",
@@ -63,7 +62,6 @@ return {
         shards = "Fragmentos del espejo",
         skip_hint = "MANTÉN PARA SALTAR",
         results = {
-            title = "NIVEL SUPERADO",
             time = "Tiempo", lives = "Vidas perdidas", hits = "Golpes recibidos", kills = "Enemigos", stars = "Estrellas",
             duel = "Tú - Bot", items = "Objetos", falls = "Caídas", zone = "Tiempo en la zona",
             points = "Puntos", grade = "NOTA", record = "¡NUEVA MEJOR NOTA!",
@@ -95,9 +93,6 @@ return {
             line = "Rey de la colina contra el BOT  ·  [ENTER] jugar",
             done_line = "¡Ganado!  ·  mejor: {score} puntos",
             locked_hint = "Vence al jefe de este mundo",
-            won_notice = "¡BONUS GANADO!  +1 VIDA  +1000 PUNTOS",
-            again_notice = "¡GANAS AL BOT!",
-            lost_notice = "GANA EL BOT... ¡INTÉNTALO OTRA VEZ!",
         },
 
         go_continue = "CONTINUAR",
@@ -111,9 +106,6 @@ return {
         },
     },
     flappy = {
-        score = "Puntos: {n}",
-        best = "Récord: {n}",
-        final_score = "Puntuación: {n}",
         best_label = "RÉCORD",
         new_best = "¡NUEVO RÉCORD!",
     },

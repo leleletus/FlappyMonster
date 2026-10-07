@@ -57,16 +57,7 @@ local function invert(on)
     if invertShader then love.graphics.setShader(invertShader) end
 end
 
-local silShader, maskShader
-local function silhouetteShader()
-    if silShader == nil then
-        local ok, sh = pcall(love.graphics.newShader, [[
-            vec4 effect(vec4 c, Image t, vec2 uv, vec2 sc) { return vec4(c.rgb, Texel(t, uv).a * c.a); }
-        ]])
-        silShader = ok and sh or false
-    end
-    return silShader or nil
-end
+local maskShader
 -- (recorta una imagen con el alfa de otra: el reflejo, con la forma del cristal)
 local function getMaskShader()
     if maskShader == nil then
