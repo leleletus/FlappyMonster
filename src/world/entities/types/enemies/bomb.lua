@@ -103,8 +103,9 @@ function Bomb:render(camX, camY)
     if self.state == 'walk' then name, k = 'walk', self.frame or 1 end
     local s = GUMMY_SCALE
     local fx = self.x - camX
-    local fy = self.y - camY + self.sprH / 2                           -- pies
-    if self.flipped then fy = self.y - camY + self.sprH / 2 end
+    -- (pies = la base de su CAJA, que es lo que pisa el suelo: las bombas llegan hasta la última fila de su cuadro;
+    -- con sprH se hundían un píxel y medio en el suelo)
+    local fy = self.y - camY + self.outerH / 2
     local bx, by = 1, 1
     if self.state == 'idle' or self.state == 'walk' then bx, by = self:breatheScale() end   -- (como el Gummy)
     Core.draw(self, '', fx, fy, s, name, k, 1, camX, camY, bx, by)

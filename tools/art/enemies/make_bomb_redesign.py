@@ -7,9 +7,9 @@
 #   bomb-fuse-Sheet.png / bombObject-fuse-Sheet.png   15x16 x8: la chispa de la mecha (4 cuadros) en la punta de la
 #                             bomba quieta y en la de la hinchada; solo los píxeles de la chispa (va ENCIMA)
 #   explosion-Sheet.png       48x48 x10: destello, bola de fuego con onda, se rompe en llamas, humo que se deshace
-# y, con --anims, rehace las animaciones del conjunto assets/anim/enemies/bomb.json (cuadros, ritmo y la punta de la
-# mecha "tip" de cada cuadro). Sin argumentos solo escribe la vista previa en FlappyMonster_pruebas/bombas/.
-#   python3 tools/art/enemies/make_bomb_redesign.py [--apply] [--anims]
+# DESDE EL 2026-10-08 SOLO ESCRIBE LA EXPLOSIÓN (--apply): el usuario redibujó a mano los cuerpos (no se tocan) y la
+# cuerda va aparte (make_bomb_fuses.py, que también rehace las animaciones). Sin argumentos, la vista previa.
+#   python3 tools/art/enemies/make_bomb_redesign.py [--apply]
 import json, math, os, random, shutil, sys
 from PIL import Image
 
@@ -228,10 +228,10 @@ if __name__ == '__main__':
         prev.paste(b, (0, y), b); y += b.height + 8
     prev.save(os.path.join(PREVIEW, 'vista_previa.png'))
     print('  vista previa:', os.path.join(PREVIEW, 'vista_previa.png'))
+    # OJO (2026-10-08): el usuario REDIBUJÓ a mano bomb-Sheet.png y bombObject-Sheet.png después de este rediseño y
+    # las cuerdas van aparte (make_bomb_fuses.py). Este script ya SOLO escribe la explosión; lo demás queda como
+    # referencia de cómo se hicieron (vista previa).
     if '--apply' in sys.argv:
-        os.makedirs(ORIG, exist_ok=True)
-        for name, s in sheets.items():
-            dst = os.path.join(ORIG, name[:-4] + '-orig.png')
-            if not os.path.exists(dst): shutil.copy(os.path.join(DIR, name), dst)
-            s.save(os.path.join(DIR, name)); print('  ' + name, s.size)
-    if '--anims' in sys.argv: anims(tips)
+        s = sheets['explosion-Sheet.png']
+        s.save(os.path.join(DIR, 'explosion-Sheet.png')); print('  explosion-Sheet.png', s.size)
+        print('  (cuerpos: del usuario, no se tocan; cuerdas y animaciones: tools/art/enemies/make_bomb_fuses.py --apply)')

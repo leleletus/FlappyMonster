@@ -233,14 +233,19 @@ sprite's pixel grid.
 
 - **Bombs** (`types/enemies/bomb.lua` living bomb, Enemigos; `types/items/bombobject.lua` Bomba objeto,
   Objetos; shared `entities/base/BombCore.lua`; effects `src/world/systems/Explosions.lua`). Sprites
-  `assets/images/enemies/bomb/`, all written by `tools/art/enemies/make_bomb_redesign.py` (`--apply`; `--anims` also
-  rebuilds the set `enemies/bomb`): `bomb-Sheet.png` (9 frames 15x16: idle, blink, walk 1-4, about-to-explode 1-3),
-  `bombObject-Sheet.png` (5: the item, no boots), `*-fuse-Sheet.png` (the fuse spark, 4 frames, at the idle tip and
-  at the swollen tip) and `explosion-Sheet.png` (10 frames 48x48). **Redesigned 2026-10-08** at the user's request
-  ("they do not look enough like bombs"): dark round body with a highlight, metal collar, rope fuse, white eyes,
-  boots; it blinks when idle, walks in 4 steps, and swells, shakes and glows from inside before exploding. The
-  previous sheets (white body; the user's, retouched) are in `FlappyMonster_originals/…/bomb/*-orig.png` and their
-  scripts in `herramientas_retiradas/art/`. Not yet judged by the user. Sounds bomb_ignite/fizz/blast/kick
+  `assets/images/enemies/bomb/`: the BODIES are **the user's, hand-drawn** (2026-10-08, over Claude's redesign of the
+  same day — dark round body, metal collar, white eyes, boots; do not regenerate): `bomb-Sheet.png` (6 bombs: idle,
+  blink, walk 1-2, about-to-explode 1-2; 135x18, NOT on a fixed grid — the swollen ones are 13 px wide) and
+  `bombObject-Sheet.png` (4: idle, blink, about-to-explode 1-2; the last two touch each other). The **rope is no
+  longer inside the body**: `tools/art/enemies/make_bomb_fuses.py --apply` measures each bomb in those sheets (its
+  13x16 crop and where its collar is) and writes `bomb-rope-Sheet.png` / `bombObject-rope-Sheet.png` (the unlit
+  rope for each body frame), `bomb-fuse-Sheet.png` / `bombObject-fuse-Sheet.png` (the burning rope, shorter, with a
+  4-frame spark, for each frame that can burn) and the animations of the set `enemies/bomb`: body `idle` / `walk`
+  (walk 1, idle, walk 2, idle) / `lit`, `rope_<body>` (same steps as the body) and `fuse_<body>_<step>`. `BombCore`
+  draws the body, then the rope of that same step, or the burning one when lit; sparks come from the fuse frame's
+  `tip`. The bombs stand on the bottom of their hit box (their art reaches the last row of the frame). **Run the
+  script again whenever the body sheets change.** `explosion-Sheet.png` (10 frames 48x48) is from
+  `make_bomb_redesign.py`. Earlier sheets are in `FlappyMonster_originals/…/bomb/`. Not yet judged by the user. Sounds bomb_ignite/fizz/blast/kick
   (`tools/sounds/bomb.py`; the blast is in the harness `LOUD` list, up to −4 dBFS, RANGE 4; the kick is metallic). Living bomb
   walks/flies like a Gummy (no helmet, breathes when idle), NO contact damage and NEVER lit by
   proximity: touching it KICKS it in the player's walking direction (`touchKick`, cooldown

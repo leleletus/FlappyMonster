@@ -30,7 +30,8 @@ and their own folder to `sys.path`; scripts that import each other sit in the sa
 | `enemies/make_crab_redesign.py` | restyle of Crabbies, trampolines and ALL spikes from the originals | not re-run since the reorganisation |
 | `enemies/make_gummy_redesign.py` | restyle of Gummies, helmet, wings | not re-run |
 | `enemies/make_puffer_redesign.py` | `enemies/pufferfish/` | not re-run |
-| `enemies/make_bomb_redesign.py` | `enemies/bomb/` every sheet (body, item, fuse spark, explosion); `--anims` rebuilds the set `enemies/bomb` | yes (`--apply`; `--anims` overwrites that set's animations) |
+| `enemies/make_bomb_fuses.py` | `enemies/bomb/*-rope-Sheet.png`, `*-fuse-Sheet.png` (the rope, unlit and burning, matched to each bomb of the user's body sheets) and the animations of the set `enemies/bomb` | yes (`--apply`); re-run when the body sheets change; rewrites that set's animations |
+| `enemies/make_bomb_redesign.py` | `enemies/bomb/explosion-Sheet.png` only (the bodies are the user's) | yes (`--apply`) |
 | `enemies/make_enemy_designs.py` | design PROPOSALS (previews) — and the pixel maps other scripts import | previews only |
 | `enemies/make_variant_skins.py` | `enemies/gummy_magma/`, `gummy_cave/`, `gummy_fortress/`, `crabby_fortress/` | **NO: gummy_fortress is hand-edited** |
 | `enemies/make_crab_species.py` | `enemies/crabby_river/`, `crabby_lava/`, `crabby_cave/` | **NO: lava legs are hand-edited** |

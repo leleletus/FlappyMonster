@@ -98,7 +98,7 @@ end
 -- ── Dibujo ────────────────────────────────────────────────────────────────────
 function BombObject:render(camX, camY)
     local fx = self.x - camX
-    local fy = self.y - camY + self.sprH / 2
+    local fy = self.y - camY + self.outerH / 2          -- (la base de su caja: lo que toca el suelo)
     Core.draw(self, 'object_', fx, fy, GUMMY_SCALE, 'idle', nil, 1, camX, camY)
 end
 

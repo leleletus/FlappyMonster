@@ -19,6 +19,7 @@ the generator first, or edit the PNG directly.
 | `assets/images/bosses/megagloomy/` body-Sheet, glow-Sheet, claw_left-Sheet, claw_rage_left-Sheet | `tools/art/enemies/make_gloomy_sprites.py` |
 | `assets/images/items/apple.png`, `checkpoint_on.png`, `checkpoint_off.png` | `tools/art/world/make_world_art.py` (checkpoints) |
 | `assets/images/bosses/snowboss/verity/` roll_happy, roll_angry, flee, ball | (the user's; `make_verity_body.py` only derives `body-Sheet.png` from them) |
+| `assets/images/enemies/bomb/bomb-Sheet.png`, `bombObject-Sheet.png` (redrawn by the user on 2026-10-08) | none writes them: `make_bomb_redesign.py` now only writes the explosion; `make_bomb_fuses.py` only READS them to build the rope sheets and the animations |
 | `assets/images/enemies/claudio/` claudio1, claudio2, claudio_idle, claudio_idle2, claudio_idle3, squish (Claudio: the user's character for Claude, 2026-10-08; the user allows Claude to change them) | (the user's; `tools/art/enemies/make_claudio_extras.py` only derives `claudio_blink.png` from `claudio_idle.png`) |
 | `assets/startup/mtvemo_logo.png` | (the user's logo; `tools/art/ui/make_logo_parts.py` only cuts it into `assets/startup/parts/`) |
 
@@ -27,9 +28,6 @@ Safe to re-run (verified on 2026-10-07 to reproduce the committed pixels exactly
 `make_ice_spikes`, `make_cryo_chain`, `make_sprites`. The others were moved and had their paths updated but were
 NOT executed after the 2026-10-07 reorganisation (their outputs are hand-edited or they need the originals): check
 the diff before committing anything they write.
-
-**No longer hand-edited:** the bomb sheets — redesigned from scratch on 2026-10-08 at the user's request by
-`tools/art/enemies/make_bomb_redesign.py` (safe to re-run; originals in `FlappyMonster_originals`).
 
 ## Notes on specific generators
 

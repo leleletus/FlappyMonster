@@ -149,14 +149,62 @@ function love.load()
         -- Bomba (rehecha el 2026-10-08: ya no se compara con el dibujo viejo): tiene sus animaciones, la chispa de cada
         -- cuerpo, la punta de la mecha en cada cuadro del cuerpo, y la explosión dura los 0,6 s de la simulación
         local bset = Anim.load('enemies/bomb')
-        for _, n in ipairs({ 'idle', 'walk', 'lit', 'object_idle', 'object_lit', 'fuse_idle', 'fuse_lit', 'object_fuse_idle', 'object_fuse_lit', 'explosion' }) do
+        for _, n in ipairs({ 'idle', 'walk', 'lit', 'object_idle', 'object_lit', 'rope_idle', 'rope_walk', 'object_rope_idle', 'explosion' }) do
             n2 = n2 + 1
             if not bset:has(n) then diffs[#diffs + 1] = 'bomba: falta la animación ' .. n end
         end
+        -- la cuerda va aparte y CASADA con el cuerpo: apagada, tantos pasos como el cuerpo; encendida, una por paso,
+        -- con la punta ("tip") por encima del cuerpo; y ningún recorte del cuerpo se sale de su hoja ni pisa a otro
+        for _, pre in ipairs({ '', 'object_' }) do
+            for _, n in ipairs(pre == '' and { 'idle', 'walk' } or { 'idle' }) do
+                n2 = n2 + 1
+                if bset:count(pre .. 'rope_' .. n) ~= bset:count(pre .. n) then diffs[#diffs + 1] = 'bomba: ' .. pre .. 'rope_' .. n .. ' no tiene los pasos del cuerpo' end
+            end
+            for _, n in ipairs({ 'idle', 'lit' }) do
+                for k = 1, bset:count(pre .. n) do
+                    n2 = n2 + 1
+                    local fz = pre .. 'fuse_' .. n .. '_' .. k
+                    local tip = bset:has(fz) and bset:frame(bset:frameN(fz, 1)).data.tip
+                    if not tip or tip[2] > -6 or math.abs(tip[1]) > 6 then diffs[#diffs + 1] = 'bomba: ' .. fz .. ' sin mecha o con la punta fuera de sitio' end
+                end
+            end
+        end
+        local boxes = {}
         for _, n in ipairs({ 'idle', 'walk', 'lit', 'object_idle', 'object_lit' }) do
             for k = 1, bset:count(n) do
+                local f = bset:frame(bset:frameN(n, k))
+                boxes[f.path .. ':' .. f.x] = f
                 n2 = n2 + 1
-                if type(bset:frame(bset:frameN(n, k)).data.tip) ~= 'table' then diffs[#diffs + 1] = 'bomba: ' .. n .. ' sin punta de mecha' end
+                local okImg, data = pcall(love.image.newImageData, f.path)          -- (el tamaño de verdad de la hoja)
+                if not okImg or f.x < 0 or f.y < 0 or f.x + f.w > data:getWidth() or f.y + f.h > data:getHeight() then
+                    diffs[#diffs + 1] = 'bomba: un cuadro de ' .. n .. ' se sale de la hoja'
+                else
+                    -- … y la bomba entera cabe en su recorte: ninguna columna ni fila pegada al recorte tiene tinta fuera
+                    local cut = false
+                    for y = 0, data:getHeight() - 1 do
+                        for _, x in ipairs({ f.x - 1, f.x + f.w }) do
+                            if x >= 0 and x < data:getWidth() and select(4, data:getPixel(x, y)) > 0 then
+                                -- (tinta justo al lado: solo es un corte si toca tinta de DENTRO del recorte)
+                                local inside = (x < f.x) and f.x or (f.x + f.w - 1)
+                                -- (… y no es otra bomba de la hoja pegada a esta: su recorte empieza justo ahí)
+                                local other = false
+                                for _, n3 in ipairs({ 'idle', 'walk', 'lit', 'object_idle', 'object_lit' }) do
+                                    for k3 = 1, bset:count(n3) do
+                                        local g = bset:frame(bset:frameN(n3, k3))
+                                        if g.path == f.path and g.x ~= f.x and x >= g.x and x < g.x + g.w then other = true end
+                                    end
+                                end
+                                if not other and y >= f.y and y < f.y + f.h and select(4, data:getPixel(inside, y)) > 0 then cut = true end
+                            end
+                        end
+                    end
+                    if cut then diffs[#diffs + 1] = 'bomba: un cuadro de ' .. n .. ' sale cortado' end
+                end
+            end
+        end
+        for ka, a in pairs(boxes) do
+            for kb, b in pairs(boxes) do
+                if ka < kb and a.path == b.path and a.x < b.x + b.w and b.x < a.x + a.w then diffs[#diffs + 1] = 'bomba: dos recortes del cuerpo se pisan' end
             end
         end
         if math.abs(bset:length('explosion') - 0.6) > 0.01 or bset.anims.explosion.loop then diffs[#diffs + 1] = 'bomba: la explosión no dura 0,6 s' end

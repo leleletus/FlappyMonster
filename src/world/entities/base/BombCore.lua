@@ -25,9 +25,10 @@ Core.CHAIN_FUSE = 0.35        -- mecha al encenderla otra explosión
 Core.FIZZ_EVERY = 0.5         -- s entre chisporroteos (bomb_fizz dura 0,5 s)
 Core.FW, Core.FH = 15, 16     -- cuadro de las hojas
 -- ANIMACIONES (assets/anim/enemies/bomb.json, `love . --anim`), pedidas por nombre: el cuerpo `idle` / `walk` /
--- `lit` (con `object_` delante las de la bomba-objeto), la mecha encendida `fuse_<la del cuerpo>` (o
--- `fuse_<…>_<paso>` si hay una por paso de andar) y `explosion`. La punta de la mecha de cada cuadro del cuerpo
--- (de dónde salen las chispas) es el dato "tip" de ese cuadro en el conjunto.
+-- `lit` (con `object_` delante las de la bomba-objeto); la CUERDA, aparte del cuerpo y casada con cada cuadro suyo:
+-- apagada `rope_<la del cuerpo>` (mismos pasos), encendida `fuse_<la del cuerpo>_<paso>` (con la chispa; su dato
+-- "tip" = la punta, de donde salen las chispas); y `explosion`. Los cuerpos los dibuja el usuario; las cuerdas las
+-- genera tools/art/enemies/make_bomb_fuses.py midiendo cada bomba de sus hojas.
 Core.ANIM = 'enemies/bomb'
 local Anim
 function Core.set()
@@ -178,23 +179,33 @@ function Core.draw(self, pre, fx, fy, s, name, k, alpha, camX, camY, bx, by)
     local cx = math.floor(fx)
     local cy = math.floor(fy - Core.FH * sy / 2)
     local body = pre .. name
-    local fi = k and set:frameN(body, k) or (set:frameAt(body, t))
-    set:drawFrame(fi, cx, cy, 0, sx, sy, 0.5, 0.5)
+    -- el paso del cuerpo que toca (el contador de andar, o el que diga su reloj)
+    local bk
+    if k then bk = (k - 1) % math.max(1, set:count(body)) + 1
+    else bk = select(3, set:frameAt(body, t)) end
+    set:drawFrame(set:frameN(body, bk), cx, cy, 0, sx, sy, 0.5, 0.5)
+    -- LA CUERDA va aparte del cuerpo, casada con cada uno de sus cuadros: apagada, `rope_<cuerpo>` (el mismo paso
+    -- que el cuerpo); ardiendo, `fuse_<cuerpo>_<paso>` (más corta, con la chispa parpadeando a su ritmo)
     if lit then
-        -- Mecha encendida (parpadea a su ritmo) y chispas en la punta
         love.graphics.setColor(1, 1, 1, alpha or 1)
-        local fz = pre .. 'fuse_' .. name
-        if k and set:has(fz .. '_' .. ((k - 1) % math.max(1, set:count(body)) + 1)) then fz = fz .. '_' .. ((k - 1) % set:count(body) + 1) end
-        if set:has(fz) then set:draw(fz, now, cx, cy, 0, sx, sy, 0.5, 0.5) end
-        local tip = set:frame(fi).data.tip or { Core.FW / 2, 0 }
-        local tx = cx + (tip[1] + 0.5 - Core.FW / 2) * sx
-        local ty = cy + (tip[2] + 0.5 - Core.FH / 2) * sy
-        self._sparkT = self._sparkT or 0
-        if not EDITOR_VIEW and now - self._sparkT > 0.05 then
-            self._sparkT = now
-            Particles = Particles or require 'src/fx/Particles'
-            Particles.emit('fuse_spark', tx + (camX or 0), ty + (camY or 0))
+        local fz = pre .. 'fuse_' .. name .. '_' .. bk
+        if not set:has(fz) then fz = pre .. 'fuse_' .. name end
+        if set:has(fz) then
+            local zi = set:frameAt(fz, now)
+            set:drawFrame(zi, cx, cy, 0, sx, sy)
+            -- chispas en la punta ("tip" del cuadro: respecto al centro del cuerpo, en píxeles de arte)
+            local tip = set:frame(zi).data.tip or { 0, -Core.FH / 2 }
+            local tx, ty = cx + tip[1] * sx, cy + tip[2] * sy
+            self._sparkT = self._sparkT or 0
+            if not EDITOR_VIEW and now - self._sparkT > 0.05 then
+                self._sparkT = now
+                Particles = Particles or require 'src/fx/Particles'
+                Particles.emit('fuse_spark', tx + (camX or 0), ty + (camY or 0))
+            end
         end
+    else
+        local rp = pre .. 'rope_' .. name
+        if set:has(rp) then set:drawFrame(set:frameN(rp, bk), cx, cy, 0, sx, sy) end
     end
     love.graphics.setColor(1, 1, 1, 1)
 end
