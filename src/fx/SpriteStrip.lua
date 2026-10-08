@@ -16,8 +16,9 @@
 -- de esa animación, en su orden y con su número (cada uno con la imagen o el recorte que tenga), y su velocidad
 -- también: "codeFps" guarda los cuadros/s que pide el código; si la animación va a otra velocidad (o tiene
 -- duraciones por cuadro), el tiempo se escala para que el juego la vea así.
--- (El código que elige un cuadro por su número — p. ej. por lo cerca que está la bomba de estallar — ve los cuadros
--- de la animación numerados en su orden.) Sin animación para la tira, se corta la imagen tal cual.
+-- Una hoja con varios ESTADOS (la del Gloomy: andar, quieto, agachado, salto, susto, muerto) va repartida en una
+-- animación por estado; cada una dice con "at" qué números de cuadro de la hoja son los suyos (los que pide el código).
+-- Sin animación para la tira, se corta la imagen tal cual.
 -- FM_ANIM_CAPTURE=<archivo>: apunta ahí cada tira que se carga sin animación y, de todas, a qué velocidad las pide
 -- el código (tools/anim/make_strip_sets.py las añade al conjunto de su carpeta).
 
@@ -35,23 +36,33 @@ local function fromSet(path, frameW)
     if not dir then return nil end
     local data = Anim.read(dir)
     if not data then return nil end
-    local name, raw
+    -- Una hoja puede estar repartida en VARIAS animaciones (una por estado: quieto, andar, saltar…): cada una dice
+    -- con "at" a qué números de cuadro de la hoja responde (los que usa el código); sin "at", es la hoja entera.
+    local parts = {}
     for n, a in pairs(data.anims or {}) do
-        if a.sheet == file and (not frameW or a.frameW == frameW) then name, raw = n, a; break end
+        if a.sheet == file and (not frameW or a.frameW == frameW) then parts[#parts + 1] = { name = n, raw = a } end
     end
-    if not name then return nil end
+    if #parts == 0 then return nil end
     local set = Anim.load(dir)
-    local seq = set.anims[name]
-    local n = #seq.frames
-    local s = setmetatable({ quads = {}, images = {}, count = n, set = set, seq = seq, anim = name, nominal = tonumber(raw.codeFps) }, SpriteStrip)
-    s.custom = type(raw.durations) == 'table' and #raw.durations > 0
-    for i = 1, n do
-        local f = set.frames[seq.frames[i]]
-        if not (f and f.image) then return nil end
-        s.quads[i], s.images[i] = f.quad, f.image
+    local s = setmetatable({ quads = {}, images = {}, count = 0, set = set }, SpriteStrip)
+    for _, p in ipairs(parts) do
+        local seq = set.anims[p.name]
+        local at = p.raw.at
+        for k = 1, at and #at or #seq.frames do
+            local idx = at and at[k] or k
+            local f = set.frames[seq.frames[(k - 1) % #seq.frames + 1]]      -- (con menos cuadros que huecos, se repiten)
+            if not (f and f.image) then return nil end
+            s.quads[idx], s.images[idx] = f.quad, f.image
+            s.count = math.max(s.count, idx)
+            if idx == 1 then s.image, s.w, s.h = f.image, f.w, f.h end
+        end
     end
-    local f1 = set.frames[seq.frames[1]]
-    s.image, s.w, s.h = f1.image, f1.w, f1.h
+    for i = 1, s.count do if not s.quads[i] then return nil end end           -- (un número sin cuadro: se corta la imagen)
+    if #parts == 1 and not parts[1].raw.at then
+        local raw = parts[1].raw
+        s.seq, s.anim, s.nominal = set.anims[parts[1].name], parts[1].name, tonumber(raw.codeFps)
+        s.custom = type(raw.durations) == 'table' and #raw.durations > 0
+    end
     return s
 end
 

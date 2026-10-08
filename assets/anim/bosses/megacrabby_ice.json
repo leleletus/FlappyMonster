@@ -2,7 +2,7 @@
   "id": "bosses/megacrabby_ice",
   "scale": 4,
   "origin": [0.5, 1],
-  "fallback": "all",
+  "fallback": "claw_closed",
   "frames": [
     {"image": "assets/images/bosses/megacrabby_ice/crab1.png", "key": "crab1.png"},
     {"image": "assets/images/bosses/megacrabby_ice/crab2.png", "key": "crab2.png"},
@@ -19,11 +19,13 @@
     {"h": 15, "image": "assets/images/bosses/megacrabby_ice/rage_claw-Sheet.png", "w": 18, "x": 18, "y": 0}
   ],
   "anims": {
-    "all": {"fps": 3, "frames": [1, 2, 3, 4], "loop": true},
-    "claw_left": {"fps": 8, "frameW": 10, "frames": [5, 6], "loop": true, "sheet": "claw_left-Sheet.png"},
-    "crab": {"fps": 6, "frames": [1, 2, 3], "loop": true},
+    "claw_closed": {"at": [2], "fps": 8, "frameW": 10, "frames": [6], "loop": true, "sheet": "claw_left-Sheet.png"},
+    "claw_open": {"at": [1], "fps": 8, "frameW": 10, "frames": [5], "loop": true, "sheet": "claw_left-Sheet.png"},
     "ice_field": {"fps": 8, "frameW": 8, "frames": [7, 8, 9], "loop": true, "sheet": "ice_field-Sheet.png"},
     "rage_body": {"fps": 8, "frameW": 26, "frames": [10, 11], "loop": true, "sheet": "rage_body-Sheet.png"},
-    "rage_claw": {"fps": 8, "frameW": 18, "frames": [12, 13], "loop": true, "sheet": "rage_claw-Sheet.png"}
+    "rage_claw_closed": {"at": [2], "fps": 8, "frameW": 18, "frames": [13], "loop": true, "sheet": "rage_claw-Sheet.png"},
+    "rage_claw_open": {"at": [1], "fps": 8, "frameW": 18, "frames": [12], "loop": true, "sheet": "rage_claw-Sheet.png"},
+    "spike": {"fps": 4, "frames": [4], "loop": true},
+    "walk": {"fps": 4, "frames": [1, 2, 3], "loop": true}
   }
 }

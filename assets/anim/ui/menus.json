@@ -2,13 +2,15 @@
   "id": "ui/menus",
   "scale": 4,
   "origin": [0.5, 1],
-  "fallback": "all",
+  "fallback": "Menu",
   "frames": [
     {"image": "assets/images/ui/menus/Menu.png", "key": "Menu.png"},
     {"image": "assets/images/ui/menus/MenuDif.png", "key": "MenuDif.png"},
     {"image": "assets/images/ui/menus/logo.png", "key": "logo.png"}
   ],
   "anims": {
-    "all": {"fps": 3, "frames": [1, 2, 3], "loop": true}
+    "Menu": {"fps": 4, "frames": [1], "loop": true},
+    "MenuDif": {"fps": 4, "frames": [2], "loop": true},
+    "logo": {"fps": 4, "frames": [3], "loop": true}
   }
 }

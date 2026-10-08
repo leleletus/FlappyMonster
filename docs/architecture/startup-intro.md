@@ -10,7 +10,7 @@ to black → title. About 4 s; any button or a touch skips it (fades out in 0.25
 |---|---|
 | `src/states/menu/StartupState.lua` | the state (`startup`); timings at the top (`T_WHITE`, `T_FIRST`, `T_HOLD`, `T_OUT`, `T_SKIP`) |
 | `assets/startup/mtvemo_logo.png` | the logo, **drawn by the user — never regenerate or edit** |
-| `assets/startup/parts/*.png`, `assets/startup/logo.json` | the six letters cut out and where each goes; written by `tools/art/ui/make_logo_parts.py` (each loose stroke goes to its letter; 29 near-invisible specks of the source are left out) |
+| `assets/startup/parts/*.png`, `assets/startup/logo.json` | the six letters **in pixel art** and where each goes; written by `tools/art/ui/make_logo_parts.py`: each loose stroke goes to its letter, then the logo is reduced to 1/16 (`PX`; a pixel is black when ink covers ≥ `COVER` of its block) → 104x58 px, ink 87 px wide |
 | `assets/sounds/jingles/startup.wav` | the melody; written by `tools/sounds/startup.py` |
 
 **Flow:** `game.lua` starts in `update` with `after = 'startup'`; `StartupState` then goes to `title`. It is shown
@@ -22,9 +22,9 @@ chord that rings while the logo is whole. 25 % pulse + triangle, like the rest o
 `CHORD_AT` in the state must match `STEP` and `CHORD_AT` in the generator. **Verified by numbers only** (2.6 s, peak
 -2 dBFS, no clipping): it has not been listened to.
 
-**Drawing:** the white screen covers the logical screen (`WINDOW_W` × `WINDOW_H`, read at draw time); the logo's
-ink is 56 % of the screen width, linear-filtered with mipmaps (it is not pixel art; the user's logo is the one
-exception to the pixel-art rule).
+**Drawing:** the white screen covers the logical screen (`WINDOW_W` × `WINDOW_H`, read at draw time). The logo is
+pixel art like the rest of the game: nearest filter, INTEGER scale (ink ≈ 56 % of the screen width → ×8 at 1280),
+letters rise in whole logo pixels, and the "beat" on the chord is a one-pixel hop.
 
 **Tests:** `startup_intro` — boot goes through `startup`; black at the start, white with no ink before the first
 note, the melody plays once and exactly with the first letter, all letters by the chord, black at the end, title at
@@ -32,4 +32,6 @@ the planned time; skipping.
 
 **Decisions:** requested by the user on 2026-10-08 ("black screen that fades to white, revealing my logo with a
 short representative melody, then fade back to black"); cutting the logo by letters to animate with the music was
-the user's suggestion. Not yet judged by the user: the melody and the look of the animation.
+the user's suggestion. History: the first version (3.89) drew the smooth original scaled down — the user: it does not fit the game's style,
+make it pixel art. The first pixel version (1/8, ×4) was "considerably higher resolution than it should be": halved
+to 1/16 (×8); 1/20 was tried and the strokes turn uneven. Not yet judged by the user: the melody.

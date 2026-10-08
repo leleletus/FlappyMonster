@@ -1,8 +1,8 @@
 -- src/states/menu/StartupState.lua
 -- PANTALLA DE INICIO: el logo de mtvemo antes del título. Negro → funde a blanco → las seis letras del logo salen
 -- una a una, cada una con su nota de la melodía (assets/sounds/jingles/startup.wav, tools/sounds/startup.py) → con
--- el acorde final el logo entero da un pequeño latido → funde a negro → título.
--- El logo (assets/startup/mtvemo_logo.png) lo dibujó el usuario; sus letras recortadas y dónde va cada una salen de
+-- el acorde final el logo entero da un saltito → funde a negro → título. Todo en PIXEL ART (escala entera).
+-- El logo (assets/startup/mtvemo_logo.png) lo dibujó el usuario; su versión en píxeles, letra a letra, sale de
 -- tools/art/ui/make_logo_parts.py (assets/startup/parts/, assets/startup/logo.json).
 -- Se salta con cualquier botón o tocando la pantalla (funde a negro enseguida). Solo sale al arrancar el juego.
 
@@ -18,7 +18,8 @@ StartupState.T_HOLD  = 1.6        -- s con el logo entero (desde el acorde)
 StartupState.T_OUT   = 0.6        -- s de fundido a negro
 StartupState.T_SKIP  = 0.25       -- … si se salta
 local POP = 0.16                  -- s que tarda una letra en asentarse
-local LOGO_W = 0.56               -- ancho del logo (su tinta) respecto al ancho de la pantalla
+local LOGO_W = 0.56               -- ancho del logo (su tinta) respecto al ancho de la pantalla (se redondea a escala entera)
+local RISE = 3                    -- píxeles DEL LOGO que sube cada letra al salir
 
 local art
 local function loadArt()
@@ -26,8 +27,8 @@ local function loadArt()
     local data = json.decode(love.filesystem.read('assets/startup/logo.json'))
     art = { parts = {}, x0 = math.huge, y0 = math.huge, x1 = -math.huge, y1 = -math.huge }
     for i, p in ipairs(data.parts) do
-        local img = love.graphics.newImage('assets/startup/parts/' .. p.file, { mipmaps = true })
-        img:setFilter('linear', 'linear')
+        local img = love.graphics.newImage('assets/startup/parts/' .. p.file)
+        img:setFilter('nearest', 'nearest')                   -- (pixel art: píxeles duros, escala entera)
         art.parts[i] = { img = img, x = p.x, y = p.y, w = p.w, h = p.h }
         art.x0, art.y0 = math.min(art.x0, p.x), math.min(art.y0, p.y)
         art.x1, art.y1 = math.max(art.x1, p.x + p.w), math.max(art.y1, p.y + p.h)
@@ -77,18 +78,19 @@ function StartupState:render()
     local white = math.max(0, math.min(1, t / StartupState.T_WHITE))
     love.graphics.setColor(white, white, white, 1)
     love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
-    -- el logo, centrado; con el acorde, un latido
-    local sc = WINDOW_W * LOGO_W / (a.x1 - a.x0)
+    -- el logo, centrado, a escala ENTERA y moviéndose de píxel en píxel del logo; con el acorde, un saltito
+    local sc = math.max(1, math.floor(WINDOW_W * LOGO_W / (a.x1 - a.x0) + 0.5))
     local tc = t - (StartupState.T_FIRST + CHORD_AT)
-    if tc > 0 then sc = sc * (1 + 0.04 * math.exp(-tc / 0.16)) end
-    local cx, cy = (a.x0 + a.x1) / 2, (a.y0 + a.y1) / 2
+    local hop = (tc > 0 and tc < 0.09) and -sc or 0
+    local ox = math.floor(WINDOW_W / 2 - (a.x0 + a.x1) / 2 * sc)
+    local oy = math.floor(WINDOW_H / 2 - (a.y0 + a.y1) / 2 * sc) + hop
     for i, p in ipairs(a.parts) do
         local k = (t - (StartupState.T_FIRST + (i - 1) * NOTE_STEP)) / POP
         if k > 0 then
             k = math.min(1, k)
-            local rise = (1 - back(k)) * 34 * sc
-            love.graphics.setColor(1, 1, 1, math.min(1, k * 2))
-            love.graphics.draw(p.img, WINDOW_W / 2 + (p.x - cx) * sc, WINDOW_H / 2 + (p.y - cy) * sc + rise, 0, sc, sc)
+            local rise = math.floor((1 - back(k)) * RISE + 0.5) * sc
+            love.graphics.setColor(1, 1, 1, k < 0.34 and 0.4 or (k < 0.67 and 0.75 or 1))
+            love.graphics.draw(p.img, ox + p.x * sc, oy + p.y * sc + rise, 0, sc, sc)
         end
     end
     if self.outAt then

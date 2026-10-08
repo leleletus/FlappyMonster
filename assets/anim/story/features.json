@@ -2,7 +2,7 @@
   "id": "story/features",
   "scale": 4,
   "origin": [0.5, 1],
-  "fallback": "all",
+  "fallback": "cave_mouth",
   "frames": [
     {"image": "assets/images/story/features/cave_mouth.png", "key": "cave_mouth.png"},
     {"image": "assets/images/story/features/dune.png", "key": "dune.png"},
@@ -17,6 +17,16 @@
     {"image": "assets/images/story/features/spire_red.png", "key": "spire_red.png"}
   ],
   "anims": {
-    "all": {"fps": 3, "frames": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], "loop": true}
+    "cave_mouth": {"fps": 4, "frames": [1], "loop": true},
+    "dune": {"fps": 4, "frames": [2], "loop": true},
+    "hill": {"fps": 4, "frames": [3], "loop": true},
+    "peak": {"fps": 4, "frames": [4], "loop": true},
+    "rock_brown": {"fps": 4, "frames": [5], "loop": true},
+    "rock_dark": {"fps": 4, "frames": [6], "loop": true},
+    "rock_grey": {"fps": 4, "frames": [7], "loop": true},
+    "rock_red": {"fps": 4, "frames": [8], "loop": true},
+    "spire": {"fps": 4, "frames": [9], "loop": true},
+    "spire_grey": {"fps": 4, "frames": [10], "loop": true},
+    "spire_red": {"fps": 4, "frames": [11], "loop": true}
   }
 }

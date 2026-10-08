@@ -2,12 +2,13 @@
   "id": "bosses/miniboss1",
   "scale": 4,
   "origin": [0.5, 1],
-  "fallback": "all",
+  "fallback": "ship",
   "frames": [
     {"image": "assets/images/bosses/miniboss1/ship.png", "key": "ship.png"},
     {"image": "assets/images/bosses/miniboss1/spike.png", "key": "spike.png"}
   ],
   "anims": {
-    "all": {"fps": 3, "frames": [1, 2], "loop": true}
+    "ship": {"fps": 4, "frames": [1], "loop": true},
+    "spike": {"fps": 4, "frames": [2], "loop": true}
   }
 }

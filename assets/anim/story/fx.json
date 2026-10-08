@@ -2,12 +2,13 @@
   "id": "story/fx",
   "scale": 4,
   "origin": [0.5, 1],
-  "fallback": "all",
+  "fallback": "magic",
   "frames": [
     {"image": "assets/images/story/fx/magic-Sheet.png", "key": "magic-Sheet.png"},
     {"image": "assets/images/story/fx/sparkle-Sheet.png", "key": "sparkle-Sheet.png"}
   ],
   "anims": {
-    "all": {"fps": 3, "frames": [1, 2], "loop": true}
+    "magic": {"fps": 4, "frames": [1], "loop": true},
+    "sparkle": {"fps": 4, "frames": [2], "loop": true}
   }
 }

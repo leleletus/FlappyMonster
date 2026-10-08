@@ -2,7 +2,7 @@
   "id": "player",
   "scale": 4,
   "origin": [0.5, 1],
-  "fallback": "all",
+  "fallback": "dedais",
   "frames": [
     {"image": "assets/images/player/dedais.png", "key": "dedais.png"},
     {"image": "assets/images/player/icon.png", "key": "icon.png"},
@@ -13,7 +13,8 @@
     {"image": "assets/images/player/monstrito5.png", "key": "monstrito5.png"}
   ],
   "anims": {
-    "all": {"fps": 3, "frames": [1, 2, 3, 4, 5, 6, 7], "loop": true},
+    "dedais": {"fps": 4, "frames": [1], "loop": true},
+    "icon": {"fps": 4, "frames": [2], "loop": true},
     "monstrito": {"fps": 6, "frames": [3, 4, 5, 6, 7], "loop": true}
   }
 }

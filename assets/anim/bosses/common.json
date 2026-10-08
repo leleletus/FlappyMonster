@@ -2,7 +2,7 @@
   "id": "bosses/common",
   "scale": 4,
   "origin": [0.5, 1],
-  "fallback": "all",
+  "fallback": "anger_scribble",
   "frames": [
     {"image": "assets/images/bosses/common/stars-Sheet.png", "key": "stars-Sheet.png"},
     {"h": 8, "image": "assets/images/bosses/common/anger_scribble.png", "w": 9, "x": 0, "y": 0},
@@ -16,10 +16,10 @@
     {"h": 4, "image": "assets/images/bosses/common/target-Sheet.png", "w": 16, "x": 16, "y": 0}
   ],
   "anims": {
-    "all": {"fps": 3, "frames": [1], "loop": true},
     "anger_scribble": {"fps": 8, "frameW": 9, "frames": [2, 3], "loop": true, "sheet": "anger_scribble.png"},
     "anger_steam": {"fps": 8, "frameW": 9, "frames": [4, 5, 6], "loop": true, "sheet": "anger_steam.png"},
     "anger_vein": {"fps": 8, "frameW": 11, "frames": [7, 8], "loop": true, "sheet": "anger_vein.png"},
+    "stars": {"fps": 4, "frames": [1], "loop": true},
     "target": {"fps": 8, "frameW": 16, "frames": [9, 10], "loop": true, "sheet": "target-Sheet.png"}
   }
 }

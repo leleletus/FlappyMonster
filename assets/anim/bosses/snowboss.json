@@ -2,7 +2,7 @@
   "id": "bosses/snowboss",
   "scale": 4,
   "origin": [0.5, 1],
-  "fallback": "all",
+  "fallback": "idle",
   "frames": [
     {"image": "assets/images/bosses/snowboss/cracks-Sheet.png", "key": "cracks-Sheet.png"},
     {"h": 8, "image": "assets/images/bosses/snowboss/ball.png", "w": 8, "x": 0, "y": 0},
@@ -106,17 +106,29 @@
     {"h": 7, "image": "assets/images/bosses/snowboss/sweat-Sheet.png", "w": 5, "x": 5, "y": 0}
   ],
   "anims": {
-    "all": {"fps": 3, "frames": [1], "loop": true},
+    "angry_hurt": {"at": [10], "fps": 8, "frameW": 16, "frames": [12], "loop": true, "sheet": "body-Sheet.png"},
+    "angry_idle": {"at": [5], "fps": 8, "frameW": 16, "frames": [7], "loop": true, "sheet": "body-Sheet.png"},
+    "angry_spit": {"at": [8], "fps": 8, "frameW": 16, "frames": [10], "loop": true, "sheet": "body-Sheet.png"},
+    "angry_squash": {"at": [6, 7], "fps": 8, "frameW": 16, "frames": [8, 9], "loop": true, "sheet": "body-Sheet.png"},
     "ball": {"fps": 8, "frameW": 8, "frames": [2], "loop": true, "sheet": "ball.png"},
-    "body": {"fps": 8, "frameW": 16, "frames": [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], "loop": true, "sheet": "body-Sheet.png"},
-    "cracks_body": {"fps": 8, "frameW": 16, "frames": [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50], "loop": true, "sheet": "cracks_body-Sheet.png"},
-    "cracks_roll": {"fps": 8, "frameW": 16, "frames": [51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74], "loop": true, "sheet": "cracks_roll-Sheet.png"},
+    "cracks": {"fps": 4, "frames": [1], "loop": true},
+    "cracks_body_1": {"at": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "fps": 8, "frameW": 16, "frames": [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26], "loop": true, "sheet": "cracks_body-Sheet.png"},
+    "cracks_body_2": {"at": [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24], "fps": 8, "frameW": 16, "frames": [27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38], "loop": true, "sheet": "cracks_body-Sheet.png"},
+    "cracks_body_3": {"at": [25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36], "fps": 8, "frameW": 16, "frames": [39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50], "loop": true, "sheet": "cracks_body-Sheet.png"},
+    "cracks_roll_1": {"at": [1, 2, 3, 4, 5, 6, 7, 8], "fps": 8, "frameW": 16, "frames": [51, 52, 53, 54, 55, 56, 57, 58], "loop": true, "sheet": "cracks_roll-Sheet.png"},
+    "cracks_roll_2": {"at": [9, 10, 11, 12, 13, 14, 15, 16], "fps": 8, "frameW": 16, "frames": [59, 60, 61, 62, 63, 64, 65, 66], "loop": true, "sheet": "cracks_roll-Sheet.png"},
+    "cracks_roll_3": {"at": [17, 18, 19, 20, 21, 22, 23, 24], "fps": 8, "frameW": 16, "frames": [67, 68, 69, 70, 71, 72, 73, 74], "loop": true, "sheet": "cracks_roll-Sheet.png"},
+    "dizzy": {"at": [11, 12], "fps": 8, "frameW": 16, "frames": [13, 14], "loop": true, "sheet": "body-Sheet.png"},
     "flee": {"fps": 8, "frameW": 12, "frames": [75, 76], "loop": true, "sheet": "flee-Sheet.png"},
+    "hurt": {"at": [9], "fps": 8, "frameW": 16, "frames": [11], "loop": true, "sheet": "body-Sheet.png"},
     "icicle": {"fps": 8, "frameW": 8, "frames": [77], "loop": true, "sheet": "icicle.png"},
+    "idle": {"at": [1], "fps": 8, "frameW": 16, "frames": [3], "loop": true, "sheet": "body-Sheet.png"},
     "roll_angry": {"fps": 8, "frameW": 16, "frames": [78, 79, 80, 81, 82, 83, 84, 85], "loop": true, "sheet": "roll_angry-Sheet.png"},
     "roll_happy": {"fps": 8, "frameW": 16, "frames": [86, 87, 88, 89, 90, 91, 92, 93], "loop": true, "sheet": "roll_happy-Sheet.png"},
     "shock": {"fps": 8, "frameW": 16, "frames": [94, 95], "loop": true, "sheet": "shock-Sheet.png"},
+    "spit": {"at": [4], "fps": 8, "frameW": 16, "frames": [6], "loop": true, "sheet": "body-Sheet.png"},
     "splat": {"fps": 8, "frameW": 64, "frames": [96, 97, 98], "loop": true, "sheet": "splat-Sheet.png"},
+    "squash": {"at": [2, 3], "fps": 8, "frameW": 16, "frames": [4, 5], "loop": true, "sheet": "body-Sheet.png"},
     "sweat": {"fps": 8, "frameW": 5, "frames": [99, 100], "loop": true, "sheet": "sweat-Sheet.png"}
   }
 }

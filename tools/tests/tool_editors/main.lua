@@ -69,13 +69,18 @@ function love.update(dt)
             -- las TIRAS del juego salen de la animación con su "sheet" en el conjunto de su carpeta, y su velocidad manda
             do
                 local AnimM, SpriteStrip = require 'src/fx/Anim', require 'src/fx/SpriteStrip'
-                local n, via, timed = 0, 0, nil
+                local n, via, timed, split = 0, 0, nil, 0
                 for _, id in ipairs(AnimM.list()) do
                     for _, a in pairs((AnimM.read(id) or {}).anims or {}) do
                         if a.sheet then
                             n = n + 1
                             local st = SpriteStrip.load('assets/images/' .. id .. '/' .. a.sheet, a.frameW)
-                            if st.set and st.count == #a.frames then via = via + 1 end
+                            -- (una hoja repartida por estados: cada animación responde a sus números "at")
+                            local okPart = st.set ~= nil
+                            for k = 1, a.at and #a.at or #a.frames do if not st.quads[a.at and a.at[k] or k] then okPart = false end end
+                            if not a.at and st.count ~= #a.frames then okPart = false end
+                            if a.at then split = split + 1 end
+                            if okPart then via = via + 1 end
                             if a.codeFps and st.count > 2 then timed = timed or { st, a.codeFps } end
                         end
                     end
@@ -90,7 +95,7 @@ function love.update(dt)
                     for i = 0, 40 do local t = i * 0.037; if st:frameAt(t, fps / 2) ~= math.floor(t * fps + 1e-9) % st.count + 1 then scaled = false end end
                     st.nominal = fps
                 end
-                check('tiras', n >= 100 and via == n and same and scaled, ('%d tiras, %d leídas de su conjunto; al ritmo del código igual=%s; el conjunto cambia el ritmo=%s'):format(n, via, tostring(same), tostring(scaled)))
+                check('tiras', n >= 100 and via == n and split >= 60 and same and scaled, ('%d animaciones de hoja (%d son estados de una hoja repartida), %d leídas de su conjunto; al ritmo del código igual=%s; el conjunto cambia el ritmo=%s'):format(n, split, via, tostring(same), tostring(scaled)))
             end
             check('abre', A.id == 'enemies/gummy' and A.doc and #A.doc.frames == 4, ('conjunto %s con %d cuadros'):format(tostring(A.id), A.doc and #A.doc.frames or 0))
             A.panel.anim = 'walk'

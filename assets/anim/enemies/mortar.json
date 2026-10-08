@@ -2,7 +2,7 @@
   "id": "enemies/mortar",
   "scale": 4,
   "origin": [0.5, 1],
-  "fallback": "all",
+  "fallback": "idle",
   "frames": [
     {"image": "assets/images/enemies/mortar/normal.png", "key": "normal.png"},
     {"image": "assets/images/enemies/mortar/shooting.png", "key": "shooting.png"},
@@ -14,7 +14,8 @@
     {"h": 16, "image": "assets/images/enemies/mortar/flame.png", "w": 16, "x": 80, "y": 0}
   ],
   "anims": {
-    "all": {"fps": 3, "frames": [1, 2], "loop": true},
-    "flame": {"fps": 8, "frameW": 16, "frames": [3, 4, 5, 6, 7, 8], "loop": true, "sheet": "flame.png"}
+    "flame": {"fps": 8, "frameW": 16, "frames": [3, 4, 5, 6, 7, 8], "loop": true, "sheet": "flame.png"},
+    "idle": {"fps": 4, "frames": [1], "loop": true},
+    "shoot": {"fps": 4, "frames": [2], "loop": true}
   }
 }

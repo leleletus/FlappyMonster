@@ -2,7 +2,7 @@
   "id": "ui/icons",
   "scale": 4,
   "origin": [0.5, 1],
-  "fallback": "all",
+  "fallback": "check",
   "frames": [
     {"image": "assets/images/ui/icons/check.png", "key": "check.png"},
     {"image": "assets/images/ui/icons/crown.png", "key": "crown.png"},
@@ -12,6 +12,11 @@
     {"image": "assets/images/ui/icons/skull.png", "key": "skull.png"}
   ],
   "anims": {
-    "all": {"fps": 3, "frames": [1, 2, 3, 4, 5, 6], "loop": true}
+    "check": {"fps": 4, "frames": [1], "loop": true},
+    "crown": {"fps": 4, "frames": [2], "loop": true},
+    "flag": {"fps": 4, "frames": [3], "loop": true},
+    "hill": {"fps": 4, "frames": [4], "loop": true},
+    "lock": {"fps": 4, "frames": [5], "loop": true},
+    "skull": {"fps": 4, "frames": [6], "loop": true}
   }
 }

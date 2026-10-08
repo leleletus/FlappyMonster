@@ -2,7 +2,7 @@
   "id": "world/tiles",
   "scale": 4,
   "origin": [0.5, 1],
-  "fallback": "all",
+  "fallback": "activated_off_block",
   "frames": [
     {"image": "assets/images/world/tiles/activated_off_block.png", "key": "activated_off_block.png"},
     {"image": "assets/images/world/tiles/activated_on_block.png", "key": "activated_on_block.png"},
@@ -35,7 +35,31 @@
     {"image": "assets/images/world/tiles/thin_ice_3.png", "key": "thin_ice_3.png"}
   ],
   "anims": {
-    "all": {"fps": 3, "frames": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29], "loop": true},
+    "activated_off_block": {"fps": 4, "frames": [1], "loop": true},
+    "activated_on_block": {"fps": 4, "frames": [2], "loop": true},
+    "ash": {"fps": 4, "frames": [3], "loop": true},
+    "basalt": {"fps": 4, "frames": [4], "loop": true},
+    "border": {"fps": 4, "frames": [5], "loop": true},
+    "breakable": {"fps": 4, "frames": [6], "loop": true},
+    "deactivated_off_block": {"fps": 4, "frames": [7], "loop": true},
+    "deactivated_on_block": {"fps": 4, "frames": [8], "loop": true},
+    "deep_stone": {"fps": 4, "frames": [9], "loop": true},
+    "dirt": {"fps": 4, "frames": [10], "loop": true},
+    "finish": {"fps": 4, "frames": [11], "loop": true},
+    "grass": {"fps": 4, "frames": [12], "loop": true},
+    "grass_blades": {"fps": 4, "frames": [13], "loop": true},
+    "ice": {"fps": 4, "frames": [14], "loop": true},
+    "lava": {"fps": 4, "frames": [15], "loop": true},
+    "lava_top": {"fps": 4, "frames": [16], "loop": true},
+    "packed_snow": {"fps": 4, "frames": [17], "loop": true},
+    "platform": {"fps": 4, "frames": [18], "loop": true},
+    "platform_drop": {"fps": 4, "frames": [19], "loop": true},
+    "sand": {"fps": 4, "frames": [20], "loop": true},
+    "sand_blend": {"fps": 4, "frames": [21], "loop": true},
+    "snow": {"fps": 4, "frames": [22], "loop": true},
+    "stone": {"fps": 4, "frames": [23], "loop": true},
+    "switch_off": {"fps": 4, "frames": [24], "loop": true},
+    "switch_on": {"fps": 4, "frames": [25], "loop": true},
     "thin_ice": {"fps": 6, "frames": [26, 27, 28, 29], "loop": true}
   }
 }

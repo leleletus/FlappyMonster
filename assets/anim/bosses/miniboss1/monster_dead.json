@@ -2,12 +2,12 @@
   "id": "bosses/miniboss1/monster_dead",
   "scale": 4,
   "origin": [0.5, 1],
-  "fallback": "all",
+  "fallback": "dead",
   "frames": [
     {"image": "assets/images/bosses/miniboss1/monster_dead/down.png", "key": "down.png"},
     {"image": "assets/images/bosses/miniboss1/monster_dead/up.png", "key": "up.png"}
   ],
   "anims": {
-    "all": {"fps": 3, "frames": [1, 2], "loop": true}
+    "dead": {"fps": 4, "frames": [1, 2], "loop": true}
   }
 }

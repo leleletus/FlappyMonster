@@ -2,7 +2,7 @@
   "id": "mechanisms/trampoline",
   "scale": 4,
   "origin": [0.5, 1],
-  "fallback": "all",
+  "fallback": "idle",
   "frames": [
     {"image": "assets/images/mechanisms/trampoline/extended.png", "key": "extended.png"},
     {"image": "assets/images/mechanisms/trampoline/ice_extended.png", "key": "ice_extended.png"},
@@ -10,6 +10,9 @@
     {"image": "assets/images/mechanisms/trampoline/normal.png", "key": "normal.png"}
   ],
   "anims": {
-    "all": {"fps": 3, "frames": [1, 2, 3, 4], "loop": true}
+    "bounce": {"fps": 4, "frames": [1], "loop": true},
+    "bounce_ice": {"fps": 4, "frames": [2], "loop": true},
+    "idle": {"fps": 4, "frames": [4], "loop": true},
+    "idle_ice": {"fps": 4, "frames": [3], "loop": true}
   }
 }

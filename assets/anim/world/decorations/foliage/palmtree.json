@@ -2,13 +2,15 @@
   "id": "world/decorations/foliage/palmtree",
   "scale": 4,
   "origin": [0.5, 1],
-  "fallback": "all",
+  "fallback": "coques",
   "frames": [
     {"image": "assets/images/world/decorations/foliage/palmtree/coques.png", "key": "coques.png"},
     {"image": "assets/images/world/decorations/foliage/palmtree/palmleaves.png", "key": "palmleaves.png"},
     {"image": "assets/images/world/decorations/foliage/palmtree/palmtree.png", "key": "palmtree.png"}
   ],
   "anims": {
-    "all": {"fps": 3, "frames": [1, 2, 3], "loop": true}
+    "coques": {"fps": 4, "frames": [1], "loop": true},
+    "palmleaves": {"fps": 4, "frames": [2], "loop": true},
+    "palmtree": {"fps": 4, "frames": [3], "loop": true}
   }
 }

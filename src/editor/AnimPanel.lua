@@ -306,9 +306,15 @@ function AnimPanel:draw(doc, x, y, w, h)
         if c2 then A.loop = v; touch() end
         if A.sheet then
             -- (animación que el juego lee de una hoja: qué llega al juego de lo que se cambie aquí)
-            py = py + ui.hint(A.codeFps
-                and 'El juego la reproduce tal como está aquí: cuadros, orden y velocidad.'
-                or 'El juego usa sus cuadros en este orden; cuándo pasa de uno a otro depende de lo que ocurre en la partida (no del reloj), así que la velocidad de aquí solo vale para verla.', px, py, pw) + 6
+            local txt
+            if A.at then
+                txt = ('El juego enseña esta animación cuando toca este estado y usa %d cuadro%s de ella (con menos, los repite; los de más no salen). El ritmo lo lleva el juego.'):format(#A.at, #A.at == 1 and '' or 's')
+            elseif A.codeFps then
+                txt = 'El juego la reproduce tal como está aquí: cuadros, orden y velocidad.'
+            else
+                txt = 'El juego usa sus cuadros en este orden; cuándo pasa de uno a otro depende de lo que ocurre en la partida, así que la velocidad de aquí solo vale para verla.'
+            end
+            py = py + ui.hint(txt, px, py, pw) + 6
         end
         if A.loop == false then
             local opts = { { value = '', label = '(se queda en el último)' } }

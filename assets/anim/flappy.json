@@ -2,12 +2,13 @@
   "id": "flappy",
   "scale": 4,
   "origin": [0.5, 1],
-  "fallback": "all",
+  "fallback": "Background",
   "frames": [
     {"image": "assets/images/flappy/Background.png", "key": "Background.png"},
     {"image": "assets/images/flappy/pipe.png", "key": "pipe.png"}
   ],
   "anims": {
-    "all": {"fps": 3, "frames": [1, 2], "loop": true}
+    "Background": {"fps": 4, "frames": [1], "loop": true},
+    "pipe": {"fps": 4, "frames": [2], "loop": true}
   }
 }

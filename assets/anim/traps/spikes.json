@@ -2,12 +2,13 @@
   "id": "traps/spikes",
   "scale": 4,
   "origin": [0.5, 1],
-  "fallback": "all",
+  "fallback": "spike",
   "frames": [
     {"image": "assets/images/traps/spikes/spike.png", "key": "spike.png"},
     {"image": "assets/images/traps/spikes/spike_ice.png", "key": "spike_ice.png"}
   ],
   "anims": {
-    "all": {"fps": 3, "frames": [1, 2], "loop": true}
+    "spike": {"fps": 4, "frames": [1], "loop": true},
+    "spike_ice": {"fps": 4, "frames": [2], "loop": true}
   }
 }

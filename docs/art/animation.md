@@ -89,6 +89,19 @@ What is in a set:
 | **A sheet as an animation** — marked `"sheet": "<file>"` and `"frameW"`: e.g. `bomb-fuse-Sheet.png` is the animation `bomb-fuse` of `enemies/bomb` | `SpriteStrip.load(path, frameW)` finds the animation with that `sheet` in the folder's set; the strip's frames are that animation's frames, in its order | each frame's picture and crop, the order and number of frames. Speed too when the code plays it by the clock (`"codeFps"` is present: the editor says "the game plays it exactly as it is here"). When the code picks the frame from what is happening (how close a bomb is to exploding, a boss pose) the editor says so: the speed there is only for viewing, and removing frames makes the code clamp to the last one |
 | **Loose images** — frames with `"key": "<file name>"` | `Anim.image(path)` (every loose-image load in `src/world`, `src/player`, `src/flappy`) | which picture that file name resolves to. Their animations (`all`, …) are for viewing them together |
 
+**One animation per state** (the user, 2026-10-08: "each distinct state managed as its own animation, not one long
+animation"). A sheet where the code uses each frame for a different state is split into one animation per state,
+all pointing at the same `sheet`; each says with `"at"` which frame numbers of the sheet are its own — the numbers
+the code asks for. Gloomy: `walk` (at 1-4), `idle` (5), `crouch` (6), `leap` (7), `scared` (8), `dead` (9), and the
+same for its glow overlay (`glow_walk`…). Split this way: Gloomy, Mega Gloomy (body, glow, claws), Mega Gummy, the
+Mega Crabby claws, the Snow Ball and Verity (body, cracks by level), bombs (body and fuse), pufferfish, cryo, touch
+buttons, ping. Loose images are no longer lumped in an `all` animation either: one animation per object or state
+(trampoline `idle` / `bounce` / `idle_ice` / `bounce_ice`, mortar `idle` / `shoot`, spikes `spike` / `spike_ice`…).
+The table lives in `tools/anim/split_states.py` (re-runnable; add a row when a new multi-state sheet appears).
+In such an animation the frames and their order are yours; the game uses as many frames as its `at` lists (fewer →
+they repeat, extra → not shown) and its own rhythm, because those sprites' code still steps the frames. Making one
+of them free in count and speed means porting its code to ask by name, as Gummy, Hopper and the Crabbies do.
+
 A sheet animation can be renamed freely (the game finds it by `sheet`, not by name). If its animation is deleted
 the game falls back to cutting the image as before.
 

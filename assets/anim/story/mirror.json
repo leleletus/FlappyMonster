@@ -2,7 +2,7 @@
   "id": "story/mirror",
   "scale": 4,
   "origin": [0.5, 1],
-  "fallback": "all",
+  "fallback": "frame",
   "frames": [
     {"image": "assets/images/story/mirror/frame.png", "key": "frame.png"},
     {"image": "assets/images/story/mirror/glass.png", "key": "glass.png"},
@@ -29,7 +29,22 @@
     {"image": "assets/images/story/mirror/shard_7b.png", "key": "shard_7b.png"}
   ],
   "anims": {
-    "all": {"fps": 3, "frames": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], "loop": true},
-    "shard": {"fps": 6, "frames": [3, 6, 9, 12, 15, 18, 21], "loop": true}
+    "frame": {"fps": 4, "frames": [1], "loop": true},
+    "glass": {"fps": 4, "frames": [2], "loop": true},
+    "shard": {"fps": 6, "frames": [3, 6, 9, 12, 15, 18, 21], "loop": true},
+    "shard_1a": {"fps": 4, "frames": [4], "loop": true},
+    "shard_1b": {"fps": 4, "frames": [5], "loop": true},
+    "shard_2a": {"fps": 4, "frames": [7], "loop": true},
+    "shard_2b": {"fps": 4, "frames": [8], "loop": true},
+    "shard_3a": {"fps": 4, "frames": [10], "loop": true},
+    "shard_3b": {"fps": 4, "frames": [11], "loop": true},
+    "shard_4a": {"fps": 4, "frames": [13], "loop": true},
+    "shard_4b": {"fps": 4, "frames": [14], "loop": true},
+    "shard_5a": {"fps": 4, "frames": [16], "loop": true},
+    "shard_5b": {"fps": 4, "frames": [17], "loop": true},
+    "shard_6a": {"fps": 4, "frames": [19], "loop": true},
+    "shard_6b": {"fps": 4, "frames": [20], "loop": true},
+    "shard_7a": {"fps": 4, "frames": [22], "loop": true},
+    "shard_7b": {"fps": 4, "frames": [23], "loop": true}
   }
 }

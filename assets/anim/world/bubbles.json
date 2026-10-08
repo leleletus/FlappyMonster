@@ -2,7 +2,7 @@
   "id": "world/bubbles",
   "scale": 4,
   "origin": [0.5, 1],
-  "fallback": "all",
+  "fallback": "bubble",
   "frames": [
     {"image": "assets/images/world/bubbles/bubble1.png", "key": "bubble1.png"},
     {"image": "assets/images/world/bubbles/bubble2.png", "key": "bubble2.png"},
@@ -10,7 +10,6 @@
     {"image": "assets/images/world/bubbles/bubble4.png", "key": "bubble4.png"}
   ],
   "anims": {
-    "all": {"fps": 3, "frames": [1, 2, 3, 4], "loop": true},
     "bubble": {"fps": 6, "frames": [1, 2, 3, 4], "loop": true}
   }
 }

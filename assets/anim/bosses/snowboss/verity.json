@@ -37,10 +37,18 @@
     {"h": 16, "image": "assets/images/bosses/snowboss/verity/roll_happy-Sheet.png", "w": 16, "x": 112, "y": 0}
   ],
   "anims": {
+    "angry_hurt": {"at": [10], "fps": 8, "frameW": 16, "frames": [11], "loop": true, "sheet": "body-Sheet.png"},
+    "angry_idle": {"at": [5], "fps": 8, "frameW": 16, "frames": [6], "loop": true, "sheet": "body-Sheet.png"},
+    "angry_spit": {"at": [8], "fps": 8, "frameW": 16, "frames": [9], "loop": true, "sheet": "body-Sheet.png"},
+    "angry_squash": {"at": [6, 7], "fps": 8, "frameW": 16, "frames": [7, 8], "loop": true, "sheet": "body-Sheet.png"},
     "ball": {"fps": 8, "frameW": 8, "frames": [1], "loop": true, "sheet": "ball.png"},
-    "body": {"fps": 8, "frameW": 16, "frames": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], "loop": true, "sheet": "body-Sheet.png"},
+    "dizzy": {"at": [11, 12], "fps": 8, "frameW": 16, "frames": [12, 13], "loop": true, "sheet": "body-Sheet.png"},
     "flee": {"fps": 8, "frameW": 12, "frames": [14, 15], "loop": true, "sheet": "flee-Sheet.png"},
+    "hurt": {"at": [9], "fps": 8, "frameW": 16, "frames": [10], "loop": true, "sheet": "body-Sheet.png"},
+    "idle": {"at": [1], "fps": 8, "frameW": 16, "frames": [2], "loop": true, "sheet": "body-Sheet.png"},
     "roll_angry": {"fps": 8, "frameW": 16, "frames": [16, 17, 18, 19, 20, 21, 22, 23], "loop": true, "sheet": "roll_angry-Sheet.png"},
-    "roll_happy": {"fps": 8, "frameW": 16, "frames": [24, 25, 26, 27, 28, 29, 30, 31], "loop": true, "sheet": "roll_happy-Sheet.png"}
+    "roll_happy": {"fps": 8, "frameW": 16, "frames": [24, 25, 26, 27, 28, 29, 30, 31], "loop": true, "sheet": "roll_happy-Sheet.png"},
+    "spit": {"at": [4], "fps": 8, "frameW": 16, "frames": [5], "loop": true, "sheet": "body-Sheet.png"},
+    "squash": {"at": [2, 3], "fps": 8, "frameW": 16, "frames": [3, 4], "loop": true, "sheet": "body-Sheet.png"}
   }
 }

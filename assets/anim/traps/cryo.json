@@ -2,7 +2,7 @@
   "id": "traps/cryo",
   "scale": 4,
   "origin": [0.5, 1],
-  "fallback": "all",
+  "fallback": "idle",
   "frames": [
     {"image": "assets/images/traps/cryo/anchor.png", "key": "anchor.png"},
     {"image": "assets/images/traps/cryo/chain.png", "key": "chain.png"},
@@ -22,9 +22,18 @@
     {"h": 14, "image": "assets/images/traps/cryo/stream_head-Sheet.png", "w": 12, "x": 12, "y": 0}
   ],
   "anims": {
-    "all": {"fps": 3, "frames": [1, 2, 3, 4, 5, 6], "loop": true},
-    "cryo_body": {"fps": 8, "frameW": 16, "frames": [7, 8, 9, 10], "loop": true, "sheet": "cryo_body-Sheet.png"},
-    "cryo_cannon": {"fps": 8, "frameW": 16, "frames": [11, 12, 13, 14], "loop": true, "sheet": "cryo_cannon-Sheet.png"},
+    "anchor": {"fps": 4, "frames": [1], "loop": true},
+    "cannon_charge": {"at": [2, 3], "fps": 8, "frameW": 16, "frames": [12, 13], "loop": true, "sheet": "cryo_cannon-Sheet.png"},
+    "cannon_fire": {"at": [4], "fps": 8, "frameW": 16, "frames": [14], "loop": true, "sheet": "cryo_cannon-Sheet.png"},
+    "cannon_idle": {"at": [1], "fps": 8, "frameW": 16, "frames": [11], "loop": true, "sheet": "cryo_cannon-Sheet.png"},
+    "chain": {"fps": 4, "frames": [2], "loop": true},
+    "charge": {"at": [2, 3], "fps": 8, "frameW": 16, "frames": [8, 9], "loop": true, "sheet": "cryo_body-Sheet.png"},
+    "clamp": {"fps": 4, "frames": [3], "loop": true},
+    "cryo": {"fps": 4, "frames": [4], "loop": true},
+    "cryo_feet": {"fps": 4, "frames": [5], "loop": true},
+    "fire": {"at": [4], "fps": 8, "frameW": 16, "frames": [10], "loop": true, "sheet": "cryo_body-Sheet.png"},
+    "idle": {"at": [1], "fps": 8, "frameW": 16, "frames": [7], "loop": true, "sheet": "cryo_body-Sheet.png"},
+    "stream": {"fps": 4, "frames": [6], "loop": true},
     "stream_head": {"fps": 8, "frameW": 12, "frames": [15, 16], "loop": true, "sheet": "stream_head-Sheet.png"}
   }
 }
