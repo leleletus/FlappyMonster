@@ -6,7 +6,7 @@ local SCALE = 4
 local img
 function Star.loadAssets()
     if img then return end
-    img = require('src/fx/Anim').image('assets/images/items/star.png')
+    img = require('src/fx/Anim').part('assets/images/items/star.png')
     img:setFilter('nearest', 'nearest')
 end
 function Star.sizePx() return img:getWidth() * SCALE, img:getHeight() * SCALE end
@@ -33,7 +33,7 @@ function Star:render(camX, camY)
         a, s = 1 - k, 1 + k * 0.8
     end
     love.graphics.setColor(1, 1, 1, a)
-    love.graphics.draw(img, x, y, 0, SCALE * sx * s, SCALE * s, img:getWidth() / 2, img:getHeight() / 2)
+    img:show(x, y, 0, SCALE * sx * s, SCALE * s, img:getWidth() / 2, img:getHeight() / 2)
     love.graphics.setColor(1, 1, 1, 1)
 end
 

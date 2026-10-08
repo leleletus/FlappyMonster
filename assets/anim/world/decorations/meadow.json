@@ -15,14 +15,14 @@
     {"h": 11, "image": "assets/images/world/decorations/meadow/tall_grass.png", "w": 10, "x": 0, "y": 0}
   ],
   "anims": {
-    "fallen_log": {"fps": 8, "frameW": 18, "frames": [1], "loop": true, "sheet": "fallen_log.png"},
-    "flower_patch": {"fps": 8, "frameW": 10, "frames": [2], "loop": true, "sheet": "flower_patch.png"},
-    "mossy_rock": {"fps": 8, "frameW": 12, "frames": [3], "loop": true, "sheet": "mossy_rock.png"},
-    "oak_tree": {"fps": 8, "frameW": 32, "frames": [4], "loop": true, "sheet": "oak_tree.png"},
-    "pine_tree": {"fps": 8, "frameW": 20, "frames": [5], "loop": true, "sheet": "pine_tree.png"},
-    "red_mushroom": {"fps": 8, "frameW": 10, "frames": [6], "loop": true, "sheet": "red_mushroom.png"},
-    "round_bush": {"fps": 8, "frameW": 18, "frames": [7], "loop": true, "sheet": "round_bush.png"},
-    "sunflower": {"fps": 8, "frameW": 10, "frames": [8], "loop": true, "sheet": "sunflower.png"},
-    "tall_grass": {"fps": 8, "frameW": 10, "frames": [9], "loop": true, "sheet": "tall_grass.png"}
+    "fallen_log": {"fps": 8, "frames": [1], "loop": true},
+    "flower_patch": {"fps": 8, "frames": [2], "loop": true},
+    "mossy_rock": {"fps": 8, "frames": [3], "loop": true},
+    "oak_tree": {"fps": 8, "frames": [4], "loop": true},
+    "pine_tree": {"fps": 8, "frames": [5], "loop": true},
+    "red_mushroom": {"fps": 8, "frames": [6], "loop": true},
+    "round_bush": {"fps": 8, "frames": [7], "loop": true},
+    "sunflower": {"fps": 8, "frames": [8], "loop": true},
+    "tall_grass": {"fps": 8, "frames": [9], "loop": true}
   }
 }

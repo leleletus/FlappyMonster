@@ -270,15 +270,9 @@ function Puffer.drawEditorOverlay(props, cx, cy, zoom, ctx)
 end
 
 -- Icono de la paleta: el primer cuadro
-local iconImg, iconQuad
 local function drawIcon(x, y, s)
-    if not iconImg then
-        iconImg = require('src/fx/Anim').image(SHEET)
-        iconImg:setFilter('nearest', 'nearest')
-        iconQuad = love.graphics.newQuad(0, 0, 16, 16, iconImg:getWidth(), iconImg:getHeight())
-    end
-    love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.draw(iconImg, iconQuad, x, y, 0, s / 16, s / 16)
+    local c = Puffer.anims(Puffer) and require('src/fx/Anim').clip(Puffer.animId, 'swim')
+    c:drawPx(1, x, y, 0, s / c.w, s / c.w)
 end
 
 return {

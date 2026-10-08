@@ -2,14 +2,15 @@
   "id": "bosses/miniboss1/monster",
   "scale": 4,
   "origin": [0.5, 1],
-  "fallback": "idle",
+  "fallback": "idle_a",
   "frames": [
     {"image": "assets/images/bosses/miniboss1/monster/Idle1.png", "key": "Idle1.png"},
     {"image": "assets/images/bosses/miniboss1/monster/hurt.png", "key": "hurt.png"},
     {"image": "assets/images/bosses/miniboss1/monster/idle2_forflipping.png", "key": "idle2_forflipping.png"}
   ],
   "anims": {
-    "hurt": {"fps": 4, "frames": [2], "loop": true},
-    "idle": {"fps": 4, "frames": [1, 3], "loop": true}
+    "hurt": {"fps": 8, "frames": [2], "loop": true},
+    "idle_a": {"fps": 8, "frames": [1], "loop": true},
+    "idle_b": {"fps": 8, "frames": [3], "loop": true}
   }
 }

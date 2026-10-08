@@ -5,7 +5,7 @@ local Pipe  = Class:new()
 local img = nil
 local function loadSprite()
     if img then return end
-    img = require('src/fx/Anim').image('assets/images/flappy/pipe.png')
+    img = require('src/fx/Anim').part('assets/images/flappy/pipe.png')
 end
 
 -- Duración de las animaciones en segundos
@@ -110,14 +110,14 @@ function Pipe:render()
     love.graphics.push()
     love.graphics.translate(self.x, topPipeBottom + topOffset)
     love.graphics.scale(sx, -sy * stretchY)
-    love.graphics.draw(img, 0, 0)
+    img:show(0, 0)
     love.graphics.pop()
 
     -- ── Tubería inferior (normal, cap hacia arriba) ───────────────────────────
     love.graphics.push()
     love.graphics.translate(self.x, botPipeTop + botOffset)
     love.graphics.scale(sx, sy * stretchY)
-    love.graphics.draw(img, 0, 0)
+    img:show(0, 0)
     love.graphics.pop()
 
     love.graphics.setColor(COLOR_WHITE)

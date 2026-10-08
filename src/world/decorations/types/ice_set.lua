@@ -7,28 +7,30 @@
 local DecoFx = require 'src/world/decorations/DecoFx'
 
 local DIR = 'assets/images/world/decorations/ice/'
+-- (sus animaciones, por nombre: assets/anim/world/decorations/ice.json)
+local function A(n) return DecoFx.anim('world/decorations/ice', n) end
 local CAT = 'Hielo y nieve'
 local S = DecoFx.SCALE
 local ICE = { 0.75, 0.88, 1 }
 
-local function sparkle() return DecoFx.strip(DecoFx.FX .. 'sparkle-Sheet.png', 5) end
-local function clump() return DecoFx.strip(DecoFx.FX .. 'clump-Sheet.png', 3) end
+local function sparkle() return DecoFx.fx('sparkle') end
+local function clump() return DecoFx.fx('clump') end
 
 -- Destello en un punto al azar de la mitad de arriba del dibujo (w, h en px de arte)
 local function glint(d, w, h, hang)
     local x = (math.random() - 0.5) * w * S
     local y = hang and (-(d.def.placement == 'sub' and TILE_PX / 2 or TILE_PX) + math.random() * h * S * 0.6)
                    or (-h * S + math.random() * h * S * 0.6)
-    DecoFx.emit(d, { x = x, y = y, life = 0.45, sheet = sparkle(), frames = true, fps = 7, scale = 2, fade = 0.15, add = true })
+    DecoFx.emit(d, { x = x, y = y, life = 0.45, sheet = sparkle(), scale = 2, fade = 0.15, add = true })
 end
 
 -- Pegote de nieve que cae de las ramas
 local function fallSnow(d, x, y)
-    DecoFx.emit(d, { x = x, y = y, vx = (math.random() - 0.5) * 20, g = 500, life = 0.9, sheet = clump(), frame = 1,
+    DecoFx.emit(d, { x = x, y = y, vx = (math.random() - 0.5) * 20, g = 500, life = 0.9, sheet = clump(),
                      scale = 3, fade = 0.3 })
     for _ = 1, 3 do
         DecoFx.emit(d, { x = x + (math.random() - 0.5) * 10, y = y, vx = (math.random() - 0.5) * 60, vy = -30 - math.random() * 40,
-                         g = 300, drag = 2, life = 0.6, sheet = clump(), frame = 2, scale = 2, fade = 0.3 })
+                         g = 300, drag = 2, life = 0.6, sheet = DecoFx.fx('clump_puff'), scale = 2, fade = 0.3 })
     end
 end
 
@@ -53,7 +55,7 @@ return {
         end,
         draw = function(d, sx, sy)
             DecoFx.seen(d)
-            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'icicle_small.png'), 1, { hang = true, alpha = 0.92 })
+            DecoFx.sheet(d, sx, sy, A('icicle_small'), nil, { hang = true, alpha = 0.92 })
             DecoFx.draw(d, sx, sy)
         end,
     },
@@ -66,7 +68,7 @@ return {
         end,
         draw = function(d, sx, sy)
             DecoFx.seen(d)
-            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'snow_pile.png'), 1)
+            DecoFx.sheet(d, sx, sy, A('snow_pile'))
             DecoFx.draw(d, sx, sy)
         end,
     },
@@ -82,7 +84,7 @@ return {
             DecoFx.seen(d)
             local pulse = 0.14 + 0.06 * math.sin(d.animT * 2.2)
             DecoFx.glow(sx, sy - 14, 24, ICE, pulse)
-            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'ice_crystal.png'), 1, { alpha = 0.9 })
+            DecoFx.sheet(d, sx, sy, A('ice_crystal'), nil, { alpha = 0.9 })
             DecoFx.draw(d, sx, sy)
         end,
     },
@@ -96,7 +98,7 @@ return {
         end,
         draw = function(d, sx, sy)
             DecoFx.seen(d)
-            DecoFx.wave(d, sx, sy, DecoFx.strip(DIR .. 'frozen_bush.png'), 1, 0.6, 1.1)
+            DecoFx.wave(d, sx, sy, A('frozen_bush'), nil, 0.6, 1.1)
             DecoFx.draw(d, sx, sy)
         end,
     },
@@ -114,7 +116,7 @@ return {
         end,
         draw = function(d, sx, sy)
             DecoFx.seen(d)
-            DecoFx.wave(d, sx, sy, DecoFx.strip(DIR .. 'snowy_pine.png'), 1, 1.2, 0.9)
+            DecoFx.wave(d, sx, sy, A('snowy_pine'), nil, 1.2, 0.9)
             DecoFx.draw(d, sx, sy)
         end,
     },
@@ -125,8 +127,8 @@ return {
             DecoFx.seen(d)
             -- Parpadea 0.15 s cada ~4 s; la bufanda cambia cada 0.5 s
             local t = d.animT
-            local frame = (t % 4.1 < 0.15) and 2 or ((math.floor(t / 0.5) % 2 == 0) and 1 or 3)
-            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'snowman-Sheet.png', 18), frame)
+            local s = (t % 4.1 < 0.15) and A('snowman_blink') or A('snowman')
+            DecoFx.sheet(d, sx, sy, s, s and s:at(t))
             DecoFx.draw(d, sx, sy)
         end,
     },

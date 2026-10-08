@@ -118,31 +118,26 @@ local IC_HIDDEN, IC_GROW, IC_READY, IC_SHAKE, IC_FALL, IC_WAIT = 0, 1, 2, 3, 4, 
 Snow.IC = { hidden = IC_HIDDEN, grow = IC_GROW, ready = IC_READY, shake = IC_SHAKE, fall = IC_FALL, wait = IC_WAIT }
 
 -- ── Arte ──────────────────────────────────────────────────────────────────────
-local body, rollH, rollA, cracksB, cracksR, sweat, ballImg, flee, icicleImg, shock, splat, normalArt, verityArt
-function Snow.loadAssets()
-    if body then return end
-    local D = 'assets/images/bosses/snowboss/'
-    body     = SpriteStrip.load(D .. 'body-Sheet.png', 16)
-    rollH    = SpriteStrip.load(D .. 'roll_happy-Sheet.png', 16)
-    rollA    = SpriteStrip.load(D .. 'roll_angry-Sheet.png', 16)
-    -- grietas adaptadas a cada cuadro del cuerpo y de rodar (tools/art/bosses/make_snowboss_cracks.py)
-    cracksB  = SpriteStrip.load(D .. 'cracks_body-Sheet.png', 16)
-    cracksR  = SpriteStrip.load(D .. 'cracks_roll-Sheet.png', 16)
-    sweat    = SpriteStrip.load(D .. 'sweat-Sheet.png', 5)
-    ballImg  = SpriteStrip.load(D .. 'ball.png', 8)
-    flee     = SpriteStrip.load(D .. 'flee-Sheet.png', 12)
-    icicleImg = SpriteStrip.load(D .. 'icicle.png', 8)
-    shock    = SpriteStrip.load(D .. 'shock-Sheet.png', 16)
-    splat    = SpriteStrip.load(D .. 'splat-Sheet.png', 64)
-    -- HUEVO DE PASCUA "Verity": la misma bola con otra cara (carpeta verity/: las hojas del usuario + body-Sheet de
-    -- tools/art/bosses/make_verity_body.py, su cambio de paleta). Grietas, sudor, carámbanos... son los de siempre
-    local V = D .. 'verity/'
-    verityArt = { body = SpriteStrip.load(V .. 'body-Sheet.png', 16), rollH = SpriteStrip.load(V .. 'roll_happy-Sheet.png', 16),
-                  rollA = SpriteStrip.load(V .. 'roll_angry-Sheet.png', 16), ball = SpriteStrip.load(V .. 'ball.png', 8),
-                  flee = SpriteStrip.load(V .. 'flee-Sheet.png', 12) }
-    normalArt = { body = body, rollH = rollH, rollA = rollA, ball = ballImg, flee = flee }
+-- ANIMACIONES (assets/anim/bosses/snowboss.json), pedidas por nombre. El cuerpo, una por lo que hace: `idle`, `rest`,
+-- `windup`, `land`, `leap`, `slam_hold`, `shoot_wind`, `shoot`, `hurt` (con `angry_` delante desde la fase 2), `dizzy`,
+-- `dying`, `phase_up` y las de la entrada (`intro_flinch`, `intro_chatter`, `intro_inhale`, `intro_spit`); rodando,
+-- `roll_happy` / `roll_angry` (una vuelta entera); `flee`, `ball`, `icicle`, `shock`, `splat`, `sweat`. Las grietas
+-- `cracks_body_<nivel>` / `cracks_roll_<nivel>`: cada cuadro del cuerpo dice en su dato "ck" cuál le encaja.
+-- HUEVO DE PASCUA "Verity": la misma bola con otra cara = el conjunto bosses/snowboss/verity, con las mismas
+-- animaciones (las hojas del usuario + body-Sheet de tools/art/bosses/make_verity_body.py). Grietas, sudor,
+-- carámbanos... son los de siempre.
+Snow.animId = 'bosses/snowboss'
+local Anim
+local function S(name)
+    Anim = Anim or require 'src/fx/Anim'
+    return Anim.clip('bosses/snowboss', name)
 end
-function Snow:art() return self.verity and verityArt or normalArt end
+local function V(name)
+    Anim = Anim or require 'src/fx/Anim'
+    return Anim.clip('bosses/snowboss/verity', name) or S(name)
+end
+function Snow.loadAssets() S('idle') end
+function Snow:art() return self.verity and V or S end       -- (→ función: nombre → clip)
 
 -- Muy de vez en cuando la bola es VERITY (se decide al empezar su entrada, en un jugador / el servidor; va en la
 -- red): otra cara y OTRA MÚSICA (Boss:musicOverride → BossZones.music). `FM_VERITY=1 love .` la fuerza (para verla)
@@ -1512,66 +1507,79 @@ local function emit(kind, x, y, o)
     Particles.emit(kind, x, y, o)
 end
 
--- Fila de arriba (arte) de cada cuadro del cuerpo: el sudor y las estrellas de mareo se
--- apoyan en la cabeza también cuando está aplastada (se mide del PNG: solo dibujo)
-local bodyTop
-local function topRow(fr)
-    if not bodyTop then
-        bodyTop = {}
-        local ok, data = pcall(love.image.newImageData, 'assets/images/bosses/snowboss/body-Sheet.png')
-        if ok and data then
-            for i = 1, math.floor(data:getWidth() / 16) do
-                for y = 0, 15 do
-                    local found = false
-                    for x = (i - 1) * 16, i * 16 - 1 do
-                        local _, _, _, a = data:getPixel(x, y)
-                        if a > 0 then found = true; break end
-                    end
-                    if found then bodyTop[i] = y; break end
+-- Fila de arriba (arte) de un cuadro del cuerpo: el sudor y las estrellas de mareo se
+-- apoyan en la cabeza también cuando está aplastada (se mide de la imagen del cuadro: solo dibujo)
+local tops, datas = {}, {}
+local function topRow(f)
+    local key = f.path .. ':' .. f.x .. ':' .. f.y
+    if tops[key] == nil then
+        tops[key] = 1
+        if datas[f.path] == nil then
+            local ok, data = pcall(love.image.newImageData, f.path)
+            datas[f.path] = ok and data or false
+        end
+        local data = datas[f.path]
+        if data then
+            for y = 0, f.h - 1 do
+                local found = false
+                for x = f.x, f.x + f.w - 1 do
+                    local _, _, _, a = data:getPixel(x, f.y + y)
+                    if a > 0 then found = true; break end
                 end
+                if found then tops[key] = y; break end
             end
         end
     end
-    return bodyTop[fr] or 1
+    return tops[key]
 end
 
 -- Cuadro del cuerpo (1-12) o, rodando, de la tira de rodar
+-- QUÉ ANIMACIÓN toca y en qué paso: 'body' | 'roll', el clip y el paso
 function Snow:pose()
     local st, t = self.state, self.deadTimer or 0
     local angry = (self.phase or 1) >= 2
-    local b = angry and 4 or 0
+    local C = self:art()
     if st == 'roll' or st == 'slide' or (st == 'intro' and t < ROLL_IN) then
+        -- (rodando: la vuelta entera de la animación repartida en un giro de la bola)
         local r = 7 * self.sc
         local ang = -(self.x / r)
-        return 'roll', math.floor(ang / (math.pi / 4)) % 8 + 1
+        local c = C(angry and 'roll_angry' or 'roll_happy')
+        return 'roll', c, c:atProgress((ang / (2 * math.pi)) % 1)
     end
-    if st == 'dizzy' or st == 'soaked' then return 'body', 11 + math.floor(t * 6) % 2 end
-    if st == 'dying_crack' then return 'body', 10 end
-    if self.inv > 0 and not self.ghost and self.state == 'recover' then return 'body', angry and 10 or 9 end
-    if st == 'land' or st == 'slam_land' or st == 'leap_land' then return 'body', b + ((t < 0.12) and 3 or 2) end
-    if st == 'windup' or st == 'leap_wind' then return 'body', b + 3 end
-    if st == 'leap' then return 'body', b + 4 end
+    local function B(name, time, plain)
+        local c = (not plain and angry and C('angry_' .. name)) or C(name)
+        return 'body', c, c:at(time or t)
+    end
+    if st == 'dizzy' or st == 'soaked' then return B('dizzy', t, true) end
+    if st == 'dying_crack' then return B('dying', t, true) end
+    if self.inv > 0 and not self.ghost and self.state == 'recover' then return B('hurt') end
+    if st == 'land' or st == 'slam_land' or st == 'leap_land' then return B('land') end
+    if st == 'windup' or st == 'leap_wind' then return B('windup') end
+    if st == 'leap' then return B('leap') end
     if st == 'shoot' then
         local ph = self.phase or 1
         local u = t - SHOOT_WIND[ph]
-        if u < 0 then return 'body', b + 2 end
-        return 'body', b + ((u % SHOOT_GAP[ph]) < SHOOT_GAP[ph] * 0.6 and 4 or 1)
+        if u < 0 then return B('shoot_wind') end
+        -- (una pasada de `shoot` por disparo: boca abierta y vuelta)
+        local c = (angry and C('angry_shoot')) or C('shoot')
+        return 'body', c, c:atFraction((u % SHOOT_GAP[ph]) / SHOOT_GAP[ph])
     end
-    if st == 'phase_up' then return 'body', 8 end
-    if st == 'slam_hold' then return 'body', b + 4 end
-    if st == 'rest' then return 'body', b + ((math.floor(t * 3) % 2 == 0) and 1 or 2) end
+    if st == 'phase_up' then return B('phase_up', t, true) end
+    if st == 'slam_hold' then return B('slam_hold') end
+    if st == 'rest' then return B('rest') end
     if st == 'intro' or st == 'ready' then
-        if t >= 2.2 and t < 2.45 then return 'body', 3 end
-        if t >= 2.6 and t < SPIT_WIND then return 'body', (math.floor((t - 2.6) * 8) % 2 == 0) and 4 or 2 end
-        if t >= SPIT_WIND and t < SPIT_AT then return 'body', (t < SPIT_WIND + 0.1) and 2 or 3 end   -- coge aire
-        if t >= SPIT_AT and t < SPLAT_AT + 0.15 then return 'body', 4 end                          -- boca abierta
-        return 'body', 1
+        if t >= 2.2 and t < 2.45 then return B('intro_flinch', t - 2.2, true) end
+        if t >= 2.6 and t < SPIT_WIND then return B('intro_chatter', t - 2.6, true) end
+        if t >= SPIT_WIND and t < SPIT_AT then return B('intro_inhale', t - SPIT_WIND, true) end      -- coge aire
+        if t >= SPIT_AT and t < SPLAT_AT + 0.15 then return B('intro_spit', t - SPIT_AT, true) end   -- boca abierta
+        return B('idle', t, true)
     end
-    return 'body', b + 1
+    return B('idle')
 end
 
 function Snow:drawBody(camX, camY, alpha)
-    local kind, fr = self:pose()
+    local kind, clip, step = self:pose()
+    local fr = clip:rec(step)                              -- (el cuadro que toca)
     local sc = self.sc
     local st, t = self.state, self.deadTimer or 0
     local now = love.timer.getTime()
@@ -1608,25 +1616,22 @@ function Snow:drawBody(camX, camY, alpha)
     end
     if self:flashRed() then r, g, bl = 1, 0.35, 0.35 end
     love.graphics.setColor(r, g, bl, alpha)
-    local art = self:art()
-    local strip = (kind == 'roll') and (((self.phase or 1) >= 2) and art.rollA or art.rollH) or art.body
-    love.graphics.draw(strip.image, strip.quads[fr], fx, fy, 0, sc, sc, 8, 15)
+    love.graphics.draw(fr.image, fr.quad, fx, fy, 0, sc, sc, 8, 15)
     -- Grietas (fase 3; muriendo cada vez más)
     local ck = nil
     if st == 'dying_crack' then ck = math.min(3, 1 + math.floor(t / (CRACK_T / 3)))
     elseif (self.phase or 1) >= 3 then ck = 2 end
     if ck then
         -- (una tira por cuadro: siguen el aplastamiento y giran al rodar)
-        local cs, n = cracksB, 12
-        if kind == 'roll' then cs, n = cracksR, 8 end
+        local cr = S((kind == 'roll' and 'cracks_roll_' or 'cracks_body_') .. ck):rec(fr.data.ck or 1)
         love.graphics.setColor(r, g, bl, alpha)
-        love.graphics.draw(cs.image, cs.quads[(ck - 1) * n + fr], fx, fy, 0, sc, sc, 8, 15)
+        love.graphics.draw(cr.image, cr.quad, fx, fy, 0, sc, sc, 8, 15)
     end
     -- Sudor (fase 3 / mareada)
     if ((self.phase or 1) >= 3 or st == 'dizzy') and kind ~= 'roll' and st ~= 'frozen' and st ~= 'soaked' then
         local k = (now * 1.4) % 1
         love.graphics.setColor(1, 1, 1, alpha * (1 - k))
-        sweat:draw(math.floor(now * 4) % 2 + 1, fx + 6 * sc, fy - (15 - topRow(fr)) * sc + k * 3 * sc, 0, sc * 0.5, sc * 0.5)
+        S('sweat'):play(now, fx + 6 * sc, fy - (15 - topRow(fr)) * sc + k * 3 * sc, 0, sc * 0.5, sc * 0.5)
     end
     -- Mareada / empapada: estrellas (gotas azules empapada) girando
     if st == 'dizzy' or st == 'soaked' then
@@ -1684,7 +1689,7 @@ function Snow:render(camX, camY)
     elseif st == 'dying_flee' then
         local k = math.max(0, 1 - math.max(0, t - FLEE_T + 1))
         love.graphics.setColor(1, 1, 1, k)
-        self:art().flee:draw(math.floor(t * 10) % 2 + 1, math.floor(self.x - camX), math.floor((self.fleeY or self:feetY()) - camY - 6 * 5),
+        self:art()('flee'):play(t, math.floor(self.x - camX), math.floor((self.fleeY or self:feetY()) - camY - 6 * 5),
                   0, 5 * (self.fleeDir or 1), 5)
     else
         local _, _, sc = self:drawBody(camX, camY, alpha)
@@ -1708,7 +1713,7 @@ function Snow:render(camX, camY)
     -- Bolas
     for _, b in ipairs(self.proj or {}) do
         love.graphics.setColor(1, 1, 1, 1)
-        self:art().ball:draw(1, math.floor(b.x - camX), math.floor(b.y - camY), 0, 4, 4)
+        self:art()('ball'):play(now, math.floor(b.x - camX), math.floor(b.y - camY), 0, 4, 4)
     end
     -- Carámbanos del techo: crecen, tiemblan (sombra donde caerán) y caen
     for _, c in ipairs(self.icicles or {}) do
@@ -1725,10 +1730,10 @@ function Snow:render(camX, camY)
             end
             love.graphics.setColor(1, 1, 1, 1)
             -- (crece hacia abajo desde el techo)
-            love.graphics.draw(icicleImg.image, icicleImg.quads[1], cx, math.floor(c.top - camY), 0, 4, 4 * k, 4, 0)
+            S('icicle'):playPx(now, cx, math.floor(c.top - camY), 0, 4, 4 * k, 4, 0)
         elseif c.st == IC_FALL then
             love.graphics.setColor(1, 1, 1, 1)
-            love.graphics.draw(icicleImg.image, icicleImg.quads[1], cx, math.floor(c.y - camY), 0, 4, 4, 4, 0)
+            S('icicle'):playPx(now, cx, math.floor(c.y - camY), 0, 4, 4, 4, 0)
         end
     end
     -- Olas de nieve del gran golpe
@@ -1736,9 +1741,8 @@ function Snow:render(camX, camY)
         local d = self.shockT * SHOCK_SPD
         local a = math.min(1, (SHOCK_LIFE - self.shockT) / 0.3)
         love.graphics.setColor(1, 1, 1, a)
-        local fr = math.floor(now * 10) % 2 + 1
         for _, s in ipairs({ -1, 1 }) do
-            shock:draw(fr, math.floor(self.shockX + s * d - camX), math.floor(self.shockY - camY - 16), 0, 4 * s, 4)
+            S('shock'):play(now, math.floor(self.shockX + s * d - camX), math.floor(self.shockY - camY - 16), 0, 4 * s, 4)
         end
     end
     self:renderSplat(camX, camY, now)
@@ -1773,7 +1777,7 @@ function Snow:renderSplat(camX, camY, now)
             local y = y0 + (y1 - y0) * e - math.sin(u * math.pi) * 70
             local k = math.floor(4 + 26 * e * e + 0.5)            -- 8 px → ~240 px
             love.graphics.setColor(1, 1, 1, (i == 0) and 1 or (0.35 - i * 0.08))
-            self:art().ball:draw(1, math.floor(x), math.floor(y), u * 7, k, k)
+            self:art()('ball'):play(love.timer.getTime(), math.floor(x), math.floor(y), u * 7, k, k)
         end
     end
     if self.state == 'intro' and t >= SPLAT_AT and not self.splatAt then self.splatAt = now end
@@ -1785,11 +1789,10 @@ function Snow:renderSplat(camX, camY, now)
         love.graphics.setColor(1, 1, 1, 0.45 * (1 - u / 0.09))
         love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
     end
-    local fr = (u < 0.55) and 1 or ((u < 1.1) and 2 or 3)
     local slide = math.max(0, u - 0.55) * 180
     local sc = (u < 0.06) and 14 or 12                             -- (aplasta un instante al chocar)
     love.graphics.setColor(1, 1, 1, math.min(1, (1.6 - u) / 0.4))
-    splat:draw(fr, math.floor(WINDOW_W / 2), math.floor(WINDOW_H * 0.46 + slide), 0, sc, sc)
+    S('splat'):play(u, math.floor(WINDOW_W / 2), math.floor(WINDOW_H * 0.46 + slide), 0, sc, sc)
 end
 
 -- Editor: cada carámbano (línea) y lo que alcanza la sacudida de un aterrizaje

@@ -9,8 +9,8 @@ local SCALE = 6
 local imgOff, imgOn
 function Checkpoint.loadAssets()
     if imgOff then return end
-    imgOff = require('src/fx/Anim').image('assets/images/items/checkpoint_off.png')
-    imgOn  = require('src/fx/Anim').image('assets/images/items/checkpoint_on.png')
+    imgOff = require('src/fx/Anim').part('assets/images/items/checkpoint_off.png')
+    imgOn  = require('src/fx/Anim').part('assets/images/items/checkpoint_on.png')
     imgOff:setFilter('nearest', 'nearest'); imgOn:setFilter('nearest', 'nearest')
 end
 function Checkpoint.sizePx() return imgOff:getWidth() * SCALE, imgOff:getHeight() * SCALE end
@@ -49,7 +49,7 @@ function Checkpoint:render(camX, camY)
         sy = SCALE * (0.8 + 0.2 * k)
     end
     love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.draw(im, x, bot, 0, SCALE, sy, im:getWidth() / 2, im:getHeight())
+    im:show(x, bot, 0, SCALE, sy, im:getWidth() / 2, im:getHeight())
     love.graphics.setColor(1, 1, 1, 1)
 end
 

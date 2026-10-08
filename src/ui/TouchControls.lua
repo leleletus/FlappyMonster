@@ -35,9 +35,6 @@ local JUMP_FRAC = 0.22        -- del botón de salto
 local DEAD_FRAC = 0.16        -- zona muerta del centro de la cruceta (fracción de su tamaño)
 
 local function assets()
-    dpad = dpad or SpriteStrip.load('assets/images/ui/touch/dpad-Sheet.png', 40)
-    jump = jump or SpriteStrip.load('assets/images/ui/touch/jump-Sheet.png', 32)
-    lightBtn = lightBtn or SpriteStrip.load('assets/images/ui/touch/light-Sheet.png', 24)
 end
 
 -- Rectángulo del juego (lovesize) en la pantalla real
@@ -125,14 +122,17 @@ function TC.update(active, light)
 end
 
 -- Cuadro de la cruceta según lo pulsado
+-- La animación de la cruceta según lo pulsado (conjunto ui/touch)
 local function padFrame(s)
-    if s.d and s.l then return 5 end
-    if s.d and s.r then return 6 end
-    if s.d then return 4 end
-    if s.l then return 2 end
-    if s.r then return 3 end
-    return 1
+    if s.d and s.l then return 'dpad_down_left' end
+    if s.d and s.r then return 'dpad_down_right' end
+    if s.d then return 'dpad_down' end
+    if s.l then return 'dpad_left' end
+    if s.r then return 'dpad_right' end
+    return 'dpad_neutral'
 end
+local function T(name) return require('src/fx/Anim').clip('ui/touch', name) end
+local function show(name, x, y, px) T(name):play(love.timer.getTime(), x, y, 0, px, px) end
 
 -- Dibuja en píxeles de pantalla (fuera de lovesize). `st` = lo pulsado (por
 -- defecto, lo del último update)
@@ -148,17 +148,17 @@ function TC.draw(L, st, fade)
     -- (sombra negra, como el resto de la interfaz)
     local sh = math.max(2, math.floor(L.padPx))
     love.graphics.setColor(0, 0, 0, 0.35 * a / 0.7 * fade)
-    dpad:draw(padFrame(st), L.padX + sh, L.padY + sh, 0, L.padPx, L.padPx)
-    jump:draw(st.j and 2 or 1, L.jumpX + sh, L.jumpY + sh, 0, L.jumpPx, L.jumpPx)
+    show(padFrame(st), L.padX + sh, L.padY + sh, L.padPx)
+    show(st.j and 'jump_pressed' or 'jump_up', L.jumpX + sh, L.jumpY + sh, L.jumpPx)
     love.graphics.setColor(1, 1, 1, ((st.l or st.r or st.d) and 0.8 or a) * fade)
-    dpad:draw(padFrame(st), L.padX, L.padY, 0, L.padPx, L.padPx)
+    show(padFrame(st), L.padX, L.padY, L.padPx)
     love.graphics.setColor(1, 1, 1, (st.j and 0.8 or a) * fade)
-    jump:draw(st.j and 2 or 1, L.jumpX, L.jumpY + (st.j and L.jumpPx or 0), 0, L.jumpPx, L.jumpPx)
+    show(st.j and 'jump_pressed' or 'jump_up', L.jumpX, L.jumpY + (st.j and L.jumpPx or 0), L.jumpPx)
     if withLight then
         love.graphics.setColor(0, 0, 0, 0.35 * a / 0.7 * fade)
-        lightBtn:draw(st.f and 2 or 1, L.lightX + sh, L.lightY + sh, 0, L.lightPx, L.lightPx)
+        show(st.f and 'light_pressed' or 'light_up', L.lightX + sh, L.lightY + sh, L.lightPx)
         love.graphics.setColor(1, 1, 1, (st.f and 0.8 or a) * fade)
-        lightBtn:draw(st.f and 2 or 1, L.lightX, L.lightY, 0, L.lightPx, L.lightPx)
+        show(st.f and 'light_pressed' or 'light_up', L.lightX, L.lightY, L.lightPx)
     end
     love.graphics.setColor(1, 1, 1, 1)
 end

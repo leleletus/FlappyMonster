@@ -27,7 +27,8 @@ local function drips(level, c, r)
 end
 
 function IceDrips.render(level, camX, camY)
-    sheet = sheet or SpriteStrip.load('assets/images/fx/ice_drop.png', 3)
+    -- (animaciones `ice_drop` e `ice_splash` del conjunto fx)
+    local drop, splash, now = require('src/fx/Anim').clip('fx', 'ice_drop'), require('src/fx/Anim').clip('fx', 'ice_splash'), love.timer.getTime()
     local dt = math.min(0.05, love.timer.getDelta())
     local T = TILE_PX
     local list = level._iceDrops or {}
@@ -73,11 +74,11 @@ function IceDrips.render(level, camX, camY)
             local sx, sy = math.floor(d.x - camX), math.floor(d.y - camY)
             love.graphics.setColor(1, 1, 1, 0.9)
             if d.phase == 'splash' then
-                sheet:draw(2, sx, sy - 2 * SCALE, 0, SCALE, SCALE)
+                splash:play(now, sx, sy - 2 * SCALE, 0, SCALE, SCALE)
             else
                 -- (colgando: crece desde el borde de abajo del bloque)
                 local k = (d.phase == 'form') and math.min(1, d.t / FORM_T) or 1
-                sheet:draw(1, sx, sy + 2.5 * SCALE * k, 0, SCALE, SCALE * k)
+                drop:play(now, sx, sy + 2.5 * SCALE * k, 0, SCALE, SCALE * k)
             end
         end
     end

@@ -1,3 +1,4 @@
+local DecoFx = require 'src/world/decorations/DecoFx'
 -- Palmera: ocupa una celda; tronco, cocos y hojas se mecen con distinta
 -- intensidad.
 local SCALE      = 4
@@ -12,17 +13,17 @@ return {
     loadAssets = function()
         if parts then return end
         parts = {}
-        for _, p in ipairs({ { 'palmtree.png', 0.3 }, { 'coques.png', 0.8 }, { 'palmleaves.png', 1.0 } }) do
-            local ok, im = pcall(require('src/fx/Anim').image, 'assets/images/world/decorations/foliage/palmtree/' .. p[1])
-            if ok then parts[#parts+1] = { img = im, swayMult = p[2] } end
+        -- (animaciones del conjunto world/decorations/foliage/palmtree, de atrás hacia delante)
+        for _, p in ipairs({ { 'palmtree', 0.3 }, { 'coques', 0.8 }, { 'palmleaves', 1.0 } }) do
+            local c = DecoFx.anim('world/decorations/foliage/palmtree', p[1])
+            if c then parts[#parts+1] = { clip = c, swayMult = p[2] } end
         end
     end,
     draw = function(d, sx, sy)
         local sway = math.sin(d.animT * SWAY_SPEED * math.pi) * SWAY_AMP
         love.graphics.setColor(1, 1, 1, 1)
         for _, part in ipairs(parts) do
-            love.graphics.draw(part.img, sx, sy, sway * part.swayMult * d.flip,
-                               SCALE * d.flip, SCALE, part.img:getWidth()/2, part.img:getHeight())
+            part.clip:play(d.animT, sx, sy, sway * part.swayMult * d.flip, SCALE * d.flip, SCALE, 0.5, 1)
         end
     end,
 }

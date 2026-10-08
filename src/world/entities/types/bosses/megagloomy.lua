@@ -108,17 +108,19 @@ local WARN       = { 1, 0.28, 0.2 }
 local CLAW_DY    = 2                        -- unión de las pinzas, en px de arte bajo el centro (bajas: salen de debajo del caparazón)
 local CRYS       = { 0.85, 0.66, 1 }        -- cristales de la rabia
 
-local clawS, clawR, clawRG, icons
--- Sus animaciones del cuerpo (assets/anim/bosses/megagloomy.json), pedidas por nombre
+-- Sus animaciones (assets/anim/bosses/megagloomy.json), pedidas por nombre: el cuerpo (MG:animNow), y las pinzas
+-- `claw_open` / `claw_closed`, con `rage_` delante las de la rabia (cristales en el dorso) y `rage_glow_` sus puntas,
+-- que brillan a oscuras. Los iconos son los del Gloomy (`icon_alert` "!", `icon_doubt` "?", `icon_lost` "…").
 MG.animId = 'bosses/megagloomy'
-function MG.loadAssets()
-    if clawS then return end
-    local D = 'assets/images/bosses/megagloomy/'
-    clawS = SpriteStrip.load(D .. 'claw_left-Sheet.png', CLAW_W)
-    clawR = SpriteStrip.load(D .. 'claw_rage_left-Sheet.png', CLAW_W)        -- (rabia: con cristales en el dorso)
-    clawRG = SpriteStrip.load(D .. 'claw_rage_glow-Sheet.png', CLAW_W)       -- (… y sus puntas, que brillan a oscuras)
-    icons = SpriteStrip.load('assets/images/enemies/gloomy/icons-Sheet.png', 7)
+local Anim
+local CLAW = { 'claw_open', 'claw_closed' }
+local ICONS = { 'icon_alert', 'icon_doubt', 'icon_lost' }
+local function clawRec(pre, fr)
+    Anim = Anim or require 'src/fx/Anim'
+    local c = Anim.clip(MG.animId, pre .. (CLAW[fr] or CLAW[1]))
+    return c:rec(c:at(love.timer.getTime()))
 end
+function MG.loadAssets() MG.anims(MG) end
 function MG.sizePx() return BW, BH end
 
 function MG:initBoss()
@@ -762,27 +764,28 @@ end
 function MG:drawClaws(camX, camY, now, sheet)
     local st = self.state
     if st == 'dying_out' and (self.deadTimer or 0) > 0.4 then return end
-    sheet = sheet or (self.rage and clawR or clawS)
-    local oy = (sheet == clawS) and CLAW_H / 2 or (5 + CLAW_H / 2)      -- (las de la rabia llevan 5 filas de cristales encima)
+    sheet = sheet or (self.rage and 'rage_' or '')          -- (qué pinzas: prefijo de sus animaciones)
+    local oy = (sheet == '') and CLAW_H / 2 or (5 + CLAW_H / 2)      -- (las de la rabia llevan 5 filas de cristales encima)
     for _, side in ipairs({ -1, 1 }) do
         local out, dy, raised, fr, outward = self:clawPose(side, now)
+        local cr = clawRec(sheet, fr)
         local ax = self.x - camX + side * (5.5 * MS + out * MS)
         local ay = self.y - camY + CLAW_DY * MS + dy * MS
         if raised then
             local rot = (side < 0) and (math.pi / 2) or (-math.pi / 2)
             -- (espejadas a lo largo: el dorso, con los cristales de la rabia, queda hacia FUERA y no sobre la cabeza)
-            love.graphics.draw(sheet.image, sheet.quads[fr], math.floor(ax), math.floor(ay), -rot, side * MS, MS, CLAW_W, oy)
+            love.graphics.draw(cr.image, cr.quad, math.floor(ax), math.floor(ay), -rot, side * MS, MS, CLAW_W, oy)
         elseif outward and self.kind == KIND.claw and (st == 'aim' or st == 'claw') then
             -- la estocada: girada hacia donde apunta, desde su unión
             local px, py, ux, uy = self:clawAim()
             local th = math.atan2(uy, ux)
             local jx, jy = math.floor(px + ux * out * MS - camX), math.floor(py + uy * out * MS - camY)
-            if side > 0 then love.graphics.draw(sheet.image, sheet.quads[fr], jx, jy, th, -MS, MS, CLAW_W, oy)
-            else love.graphics.draw(sheet.image, sheet.quads[fr], jx, jy, th - math.pi, MS, MS, CLAW_W, oy) end
+            if side > 0 then love.graphics.draw(cr.image, cr.quad, jx, jy, th, -MS, MS, CLAW_W, oy)
+            else love.graphics.draw(cr.image, cr.quad, jx, jy, th - math.pi, MS, MS, CLAW_W, oy) end
         elseif outward then
-            love.graphics.draw(sheet.image, sheet.quads[fr], math.floor(ax), math.floor(ay), 0, -side * MS, MS, CLAW_W, oy)
+            love.graphics.draw(cr.image, cr.quad, math.floor(ax), math.floor(ay), 0, -side * MS, MS, CLAW_W, oy)
         else
-            love.graphics.draw(sheet.image, sheet.quads[fr], math.floor(ax), math.floor(ay), 0, side * MS, MS, 0, oy)
+            love.graphics.draw(cr.image, cr.quad, math.floor(ax), math.floor(ay), 0, side * MS, MS, 0, oy)
         end
     end
 end
@@ -863,7 +866,7 @@ function MG:renderGlow(camX, camY)
         end
     elseif ((st == 'aim' or st == 'pounce') and self.kind == KIND.pounce) or ((st == 'aim' or st == 'dive') and self.kind == KIND.dive) then
         love.graphics.setColor(WARN[1], WARN[2], WARN[3], blink)
-        BossFx.target((math.floor(now * 12) % 2) + 1, math.floor(self.markX - camX), math.floor(self.markY - camY - 16), 8, 8)
+        BossFx.target(now * 1.2, math.floor(self.markX - camX), math.floor(self.markY - camY - 16), 8, 8)
     end
     -- ojos (y cristales de la rabia): parpadean al apuntar y al burlarse; se apagan al morir
     local a = 0.95
@@ -884,11 +887,11 @@ function MG:renderGlow(camX, camY)
         -- rabia: las puntas de los cristales de las pinzas brillan (a oscuras se ve por dónde andan)
         if self.rage then
             love.graphics.setColor(CRYS[1], CRYS[2], CRYS[3], a)
-            self:drawClaws(camX, camY, now, clawRG)
+            self:drawClaws(camX, camY, now, 'rage_glow_')
             love.graphics.setBlendMode('add')
             love.graphics.setColor(CRYS[1], CRYS[2], CRYS[3], 0.3 * a)
-            self:drawClaws(camX + MS, camY, now, clawRG); self:drawClaws(camX - MS, camY, now, clawRG)
-            self:drawClaws(camX, camY + MS, now, clawRG); self:drawClaws(camX, camY - MS, now, clawRG)
+            self:drawClaws(camX + MS, camY, now, 'rage_glow_'); self:drawClaws(camX - MS, camY, now, 'rage_glow_')
+            self:drawClaws(camX, camY + MS, now, 'rage_glow_'); self:drawClaws(camX, camY - MS, now, 'rage_glow_')
             love.graphics.setBlendMode('alpha')
         end
         if turned then love.graphics.pop() end
@@ -899,7 +902,7 @@ function MG:renderGlow(camX, camY)
     BossFx.anger(self, self:angry(), self.x - camX, self.y - camY - 40)
     if (self.icon or 0) > 0 then                          -- ("…": la luz lo ha asustado)
         love.graphics.setColor(0.8, 0.85, 1, 0.95)
-        love.graphics.draw(icons.image, icons.quads[self.icon], math.floor(self.x - camX), math.floor(self.y - camY - 90), 0, 6, 6, 3.5, 9)
+        Anim.clip('enemies/gloomy', ICONS[self.icon] or ICONS[1]):playPx(love.timer.getTime(), math.floor(self.x - camX), math.floor(self.y - camY - 90), 0, 6, 6, 3.5, 9)
     end
     love.graphics.setColor(1, 1, 1, 1)
 end

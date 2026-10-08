@@ -17,7 +17,7 @@ return {
     end,
     draw = function(d, sx, sy)
         DecoFx.seen(d)
-        DecoFx.sheet(d, sx, sy, DecoFx.strip('assets/images/world/decorations/ice/icicle.png'), 1, { hang = true, alpha = 0.92 })
+        DecoFx.sheet(d, sx, sy, DecoFx.anim('world/decorations/ice', 'icicle'), nil, { hang = true, alpha = 0.92 })
         DecoFx.draw(d, sx, sy)
     end,
 }

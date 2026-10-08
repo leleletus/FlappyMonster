@@ -44,8 +44,8 @@ function Gummy:art() return arts[self.artDir or ART_DIR] or Gummy.loadArt(self.a
 function Gummy.loadAssets()
     if imgHelmet then return end
     Gummy.loadArt(ART_DIR)
-    imgHelmet = require('src/fx/Anim').image('assets/images/enemies/gummy/casco.png')
-    imgChute = require('src/fx/Anim').image('assets/images/enemies/gummy/parachute.png')
+    imgHelmet = require('src/fx/Anim').part('assets/images/enemies/gummy/casco.png')
+    imgChute = require('src/fx/Anim').part('assets/images/enemies/gummy/parachute.png')
     for _, i in ipairs({ imgHelmet, imgChute }) do if i.setFilter then i:setFilter('nearest', 'nearest') end end
 end
 
@@ -177,7 +177,7 @@ function Gummy:render(camX, camY)
         local t = self.deadTimer or 0
         local open = math.min(1, t / 0.25)
         local sway = math.sin(t * 3.2) * 0.12
-        love.graphics.draw(imgChute, drawX, math.floor(feetY - self.sprH + 3 * GUMMY_SCALE), sway, GUMMY_SCALE * open, GUMMY_SCALE * open,
+        imgChute:show(drawX, math.floor(feetY - self.sprH + 3 * GUMMY_SCALE), sway, GUMMY_SCALE * open, GUMMY_SCALE * open,
                            imgChute:getWidth() / 2, imgChute:getHeight())
         img = A.idle
     end
@@ -189,7 +189,7 @@ function Gummy:render(camX, camY)
         local hy = feetY + (HELMET_AY + (self.helmetDy or 0) - oy) * scaleY          -- (helmetDy: variantes con la cabeza más baja)
         -- Bonk: el casco se aplasta un poco y vuelve
         local k = self.bonkT > 0 and math.sin((1 - self.bonkT / BONK_TIME) * math.pi) or 0
-        love.graphics.draw(imgHelmet, math.floor(hx), math.floor(hy + k * 4), 0,
+        imgHelmet:show(math.floor(hx), math.floor(hy + k * 4), 0,
                            scaleX * HELMET_K * (1 + 0.12 * k), scaleY * HELMET_K * (1 - 0.18 * k), HELMET_AX, HELMET_AY)
     end
 end

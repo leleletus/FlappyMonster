@@ -8,6 +8,6 @@
     {"h": 13, "image": "assets/images/enemies/wings/wings-Sheet.png", "w": 9, "x": 9, "y": 0}
   ],
   "anims": {
-    "wings": {"codeFps": 9, "fps": 9, "frameW": 9, "frames": [1, 2], "loop": true, "sheet": "wings-Sheet.png"}
+    "wings": {"fps": 9, "frames": [1, 2], "loop": true}
   }
 }

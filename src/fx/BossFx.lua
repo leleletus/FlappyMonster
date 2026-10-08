@@ -5,21 +5,21 @@
 --   BossFx.anger(holder, on, x, y[, opts])         símbolos de ENFADO que saltan alrededor de (x, y): vena,
 --                                                  vapor, garabato. `holder` guarda los que hay (el jefe);
 --                                                  `on` = si salen nuevos. opts: r (radio), kinds, scale
---   BossFx.target(frame, x, y, sx, sy)             la DIANA de "voy a caer aquí" (2 cuadros 16x4)
+--   BossFx.target(t, x, y, sx, sy)    (t = reloj: parpadea a su ritmo)             la DIANA de "voy a caer aquí" (2 cuadros 16x4)
 -- Solo dibujo (cada cliente a su aire): nada de esto es simulación.
-local SpriteStrip = require 'src/fx/SpriteStrip'
+local Anim = require 'src/fx/Anim'
 
 local BossFx = {}
-local D = 'assets/images/bosses/common/'
-local starsS, targetS, anger
-
-local function load()
-    if starsS then return end
-    starsS  = SpriteStrip.load(D .. 'stars-Sheet.png', 5)
-    targetS = SpriteStrip.load(D .. 'target-Sheet.png', 16)
-    anger = { vein = SpriteStrip.load(D .. 'anger_vein.png', 11),
-              steam = SpriteStrip.load(D .. 'anger_steam.png', 9),
-              scribble = SpriteStrip.load(D .. 'anger_scribble.png', 9) }
+-- Animaciones compartidas de los jefes (assets/anim/bosses/common.json), por nombre: `stars`, `target` y las marcas
+-- de enfado `anger_vein` (late), `anger_steam` (una pasada en lo que dura) y `anger_scribble`.
+local function clip(name) return Anim.clip('bosses/common', name) end
+local function load() end
+-- La marca de enfado `kind` y el paso que le toca a los `age` s de salir (de `life` que dura)
+function BossFx.angerClip(kind) return clip('anger_' .. kind) end
+function BossFx.angerStep(kind, age, life)
+    local c = clip('anger_' .. kind)
+    if kind == 'steam' then return c:atProgress(age / life) end        -- (el vapor: una pasada en su vida)
+    return c:at(age)
 end
 
 function BossFx.stars(cx, cy, rx, ry, scale, alpha)
@@ -28,14 +28,12 @@ function BossFx.stars(cx, cy, rx, ry, scale, alpha)
     love.graphics.setColor(1, 1, 1, alpha or 1)
     for i = 0, 2 do
         local a = now * 5 + i * (math.pi * 2 / 3)
-        starsS:draw((math.floor(now * 8) + i) % 2 + 1, math.floor(cx + math.cos(a) * rx), math.floor(cy + math.sin(a) * ry),
-                    0, scale, scale, 2.5, 2.5)
+        clip('stars'):play(now + i / 8, math.floor(cx + math.cos(a) * rx), math.floor(cy + math.sin(a) * ry), 0, scale, scale)
     end
 end
 
-function BossFx.target(frame, x, y, sx, sy)
-    load()
-    targetS:draw(frame, x, y, 0, sx, sy)
+function BossFx.target(t, x, y, sx, sy)
+    clip('target'):play(t, x, y, 0, sx, sy)
 end
 
 local KINDS = { 'vein', 'vein', 'steam', 'scribble', 'vein', 'steam' }
@@ -62,24 +60,21 @@ function BossFx.anger(holder, on, x, y, opts)
             table.remove(list, i)
         else
             local px, py = x + q.ox, y + q.oy
-            local k, frame = S, 1
+            local k, frame = S, BossFx.angerStep(q.kind, age, life)
             local alpha = math.min(1, (life - age) / 0.15)
             if q.kind == 'vein' then
                 k = S * ((age < 0.1) and (0.5 + age / 0.1 * 0.75) or 1)          -- aparece de golpe y late
-                frame = (math.floor(age * 7) % 2 == 0) and 1 or 2
             elseif q.kind == 'steam' then
-                frame = math.min(3, math.floor(age / life * 3) + 1)
                 py, px = py - age * 60, px + math.sin(age * 12) * 3
             else
-                frame = math.floor(age * 12) % 2 + 1
                 px = px + math.floor(math.sin(age * 40) * 2)
             end
             k = math.floor(k + 0.5)
             px, py = math.floor(px + 0.5), math.floor(py + 0.5)
             love.graphics.setColor(0, 0, 0, 0.5 * alpha)
-            anger[q.kind]:draw(frame, px + 3, py + 3, 0, k, k)
+            BossFx.angerClip(q.kind):draw(frame, px + 3, py + 3, 0, k, k)
             love.graphics.setColor(1, 1, 1, alpha)
-            anger[q.kind]:draw(frame, px, py, 0, k, k)
+            BossFx.angerClip(q.kind):draw(frame, px, py, 0, k, k)
         end
     end
     love.graphics.setColor(1, 1, 1, 1)

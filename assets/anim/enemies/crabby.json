@@ -14,7 +14,8 @@
     {"image": "assets/images/enemies/crabby/dead.png"},
     {"image": "assets/images/enemies/crabby/hid.png", "inset": 1},
     {"image": "assets/images/enemies/crabby/lookin.png"},
-    {"image": "assets/images/enemies/crabby/MeatCrabby.png"}
+    {"image": "assets/images/enemies/crabby/MeatCrabby.png"},
+    {"image": "assets/images/enemies/crabby/spike.png", "key": "spike.png"}
   ],
   "anims": {
     "dead": {"fps": 5, "frames": [4], "loop": false},
@@ -22,6 +23,7 @@
     "hide": {"fps": 4.0, "frames": [7, 6, 5], "loop": false},
     "meat": {"fps": 5, "frames": [7], "loop": true},
     "peek": {"fps": 5, "frames": [6], "loop": true},
+    "spike": {"fps": 4, "frames": [8], "loop": true},
     "unhide": {"fps": 4.0, "frames": [6, 7, 2], "loop": false},
     "walk": {"fps": 5, "frames": [1, 2, 3], "loop": true}
   }

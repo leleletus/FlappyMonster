@@ -33,37 +33,24 @@ local Cryo = Entity.extend(Entity, {
 local SCALE        = GUMMY_SCALE       -- 16x16 → 64 px, una casilla
 local STREAM_SPEED = 1800              -- px/s a los que avanza (y se va) el chorro
 local STREAM_HALF  = 16                -- media anchura de la caja que congela (px)
-local STREAM_FPS   = 16
 local DIRS = { right = { 1, 0 }, left = { -1, 0 }, up = { 0, -1 }, down = { 0, 1 } }
 local DESCEND_T    = 1.1               -- s bajando del techo al llegar su fase
 local PhaseBlocks, Clip
 
 Cryo.wantsLevel = true        -- (solo dibujo: mira los bloques de alrededor para apoyarse; BossZones.link / editor)
 
-local bodyStrip, cannonStrip, feetImg, streamImg, streamQuads, headStrip, chainImg, anchorImg, clampImg
-local function nearest(path)
-    local im = require('src/fx/Anim').image(path)
-    if im.setFilter then im:setFilter('nearest', 'nearest') end
-    return im
+-- ANIMACIONES (assets/anim/traps/cryo.json), por nombre: el depósito `idle` / `charge` / `fire` y el cañón
+-- `cannon_<la misma>`; las patas `cryo_feet`; el soporte `chain` / `anchor` / `clamp`; el chorro `stream` (se repite
+-- a lo largo) y su punta `stream_head`. Por piezas: el depósito siempre derecho, el cañón girado hacia donde dispara
+-- y las patas hacia lo que lo sostiene (centradas en la casilla).
+Cryo.animId = 'traps/cryo'
+local Anim
+local function C(name)
+    Anim = Anim or require 'src/fx/Anim'
+    return Anim.clip(Cryo.animId, name)
 end
-function Cryo.loadAssets()
-    if bodyStrip then return end
-    -- por piezas (tools/art/world/make_cryo_parts.py): el depósito siempre derecho, el cañón girado
-    -- hacia donde dispara y las patas hacia lo que lo sostiene (16x16, centradas en la casilla)
-    bodyStrip   = SpriteStrip.load('assets/images/traps/cryo/cryo_body-Sheet.png', 16)
-    cannonStrip = SpriteStrip.load('assets/images/traps/cryo/cryo_cannon-Sheet.png', 16)
-    feetImg     = nearest('assets/images/traps/cryo/cryo_feet.png')
-    -- soporte colgante (tools/art/world/make_cryo_chain.py)
-    chainImg, anchorImg, clampImg = nearest('assets/images/traps/cryo/chain.png'), nearest('assets/images/traps/cryo/anchor.png'),
-                                    nearest('assets/images/traps/cryo/clamp.png')
-    streamImg = require('src/fx/Anim').image('assets/images/traps/cryo/stream-Sheet.png')
-    if streamImg.setFilter then streamImg:setFilter('nearest', 'nearest') end
-    streamQuads = {}
-    for i = 1, 3 do
-        streamQuads[i] = love.graphics.newQuad((i - 1) * 16, 0, 16, 10, streamImg:getWidth(), streamImg:getHeight())
-    end
-    headStrip = SpriteStrip.load('assets/images/traps/cryo/stream_head-Sheet.png', 12)
-end
+local streamQuad
+function Cryo.loadAssets() C('idle') end
 function Cryo.sizePx() return 16 * SCALE, 16 * SCALE end
 
 function Cryo:init()
@@ -303,20 +290,24 @@ function Cryo:drawHanger(camX, camY, sx, sy)
         local top = math.floor(ceil - camY)
         local bottom = sy - 5 * S                                   -- (lo alto del depósito)
         local y = top + 2 * S
+        local chain, anchor, clamp, now = C('chain'), C('anchor'), C('clamp'), love.timer.getTime()
         while y < bottom do
-            love.graphics.draw(chainImg, x - math.floor(chainImg:getWidth() * S / 2), y, 0, S, S)
-            y = y + chainImg:getHeight() * S
+            chain:playPx(now, x - math.floor(chain.w * S / 2), y, 0, S, S)
+            y = y + chain.h * S
         end
-        love.graphics.draw(anchorImg, x - math.floor(anchorImg:getWidth() * S / 2), top, 0, S, S)
-        love.graphics.draw(clampImg, x - math.floor(clampImg:getWidth() * S / 2), bottom - 2 * S, 0, S, S)
+        anchor:playPx(now, x - math.floor(anchor.w * S / 2), top, 0, S, S)
+        clamp:playPx(now, x - math.floor(clamp.w * S / 2), bottom - 2 * S, 0, S, S)
     end
 end
 
 -- Monta las piezas en (sx, sy) = centro de la casilla en pantalla
-function Cryo:drawParts(frame, sx, sy, side)
-    if side then love.graphics.draw(feetImg, sx, sy, FEET_ANG[side], SCALE, SCALE, 8, 8) end
-    bodyStrip:draw(frame, sx, sy, 0, SCALE, SCALE)
-    cannonStrip:draw(frame, sx, sy, CANNON_ANG[self.dir] or 0, SCALE, SCALE)
+-- name = la animación del depósito (el cañón, la suya `cannon_<name>`); prog = avance 0..1 si es una carga
+function Cryo:drawParts(name, prog, sx, sy, side)
+    local now = love.timer.getTime()
+    if side then C('cryo_feet'):play(now, sx, sy, FEET_ANG[side], SCALE, SCALE) end
+    local body, cannon = C(name), C('cannon_' .. name) or C('cannon_idle')
+    body:draw(prog and body:atProgress(prog) or body:at(now), sx, sy, 0, SCALE, SCALE)
+    cannon:draw(prog and cannon:atProgress(prog) or cannon:at(now), sx, sy, CANNON_ANG[self.dir] or 0, SCALE, SCALE)
 end
 
 function Cryo:drawStream(camX, camY, tail, head, now)
@@ -327,22 +318,22 @@ function Cryo:drawStream(camX, camY, tail, head, now)
     love.graphics.translate(math.floor(nx - camX), math.floor(ny - camY))
     love.graphics.rotate(ang)
     love.graphics.setColor(1, 1, 1, 1)
-    local fi = math.floor(now * STREAM_FPS) % 3 + 1
-    local seg = 16 * SCALE
+    local stream = C('stream')
+    local r = stream:rec(stream:at(now))                  -- (el cuadro del chorro que toca: fluye a su ritmo)
+    local seg = r.w * SCALE
+    streamQuad = streamQuad or love.graphics.newQuad(0, 0, 1, 1, 1, 1)
     -- (el dibujo se repite desde la boquilla: así "fluye" sin saltos al cortarse la cola)
     local x = math.floor(tail / seg) * seg
     while x < head do
         local a, b = math.max(x, tail), math.min(x + seg, head)
         if b > a then
-            local q = streamQuads[fi]
-            q:setViewport((fi - 1) * 16 + (a - x) / SCALE, 0, (b - a) / SCALE, 10)
-            love.graphics.draw(streamImg, q, math.floor(a), -5 * SCALE, 0, SCALE, SCALE)
+            streamQuad:setViewport(r.x + (a - x) / SCALE, r.y, (b - a) / SCALE, r.h, r.iw, r.ih)
+            love.graphics.draw(r.image, streamQuad, math.floor(a), -r.h / 2 * SCALE, 0, SCALE, SCALE)
         end
         x = x + seg
     end
     -- La punta: nube helada (mientras el chorro avanza y al chocar)
-    local hf = headStrip:frameAt(now, 10)
-    headStrip:draw(hf, math.floor(head - 3 * SCALE), 0, 0, SCALE, SCALE)
+    C('stream_head'):play(now, math.floor(head - 3 * SCALE), 0, 0, SCALE, SCALE)
     love.graphics.pop()
     -- Bruma que cae del chorro (solo dibujo)
     if (self.lastMist or 0) + 0.03 < now then
@@ -392,11 +383,11 @@ function Cryo:render(camX, camY)
     end
     local st  = self.state
     local t   = self.deadTimer or 0
-    local frame, shake = 1, 0
+    local name, prog, shake = 'idle', nil, 0
     local wind = p.windup or 0.8
     if st == 'windup' then
         local k = math.min(1, t / math.max(0.05, wind))
-        frame = (k < 0.5) and 2 or 3
+        name, prog = 'charge', k
         shake = math.floor(k * 2.99)
         -- Escarcha por la boquilla, cada vez más seguida
         if (self.lastPuff or 0) + (0.12 - 0.08 * k) < now then
@@ -407,7 +398,7 @@ function Cryo:render(camX, camY)
         end
     elseif st == 'fire' then
         local tail = self:streamSpan()
-        frame = (tail == 0 or t < 0.15) and 4 or 1
+        name = (tail == 0 or t < 0.15) and 'fire' or 'idle'
         if t < 0.05 and not self.blasted then
             self.blasted = true
             local dx, dy = self:dirVec()
@@ -427,14 +418,14 @@ function Cryo:render(camX, camY)
     local sx = math.floor(self.x - camX) + ((shake > 0) and math.floor((math.random() * 2 - 1) * shake + 0.5) or 0)
     local sy = math.floor(self.y - camY) + dropY + ((shake > 0) and math.floor((math.random() * 2 - 1) * shake + 0.5) or 0)
     love.graphics.setColor(1, 1, 1, 1)
-    self:drawParts(frame, sx, sy, side)
+    self:drawParts(name, prog, sx, sy, side)
     if st == 'windup' then
         -- Brillo azul que crece (aditivo) sobre todo el aparato
         local k = math.min(1, t / math.max(0.05, wind))
         local pulse = 0.5 + 0.5 * math.sin(now * (10 + 20 * k))
         love.graphics.setBlendMode('add')
         love.graphics.setColor(0.25 * k, 0.6 * k, 0.9 * k, 0.35 + 0.35 * pulse)
-        self:drawParts(frame, sx, sy, side)
+        self:drawParts(name, prog, sx, sy, side)
         love.graphics.setBlendMode('alpha')
     end
     if dk < 1 then Clip.pop() end

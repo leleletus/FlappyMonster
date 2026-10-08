@@ -20,7 +20,8 @@
     {"image": "assets/images/enemies/crabby_cave/sink3.png", "inset": 2},
     {"image": "assets/images/enemies/crabby_cave/sink4.png", "inset": 3},
     {"image": "assets/images/enemies/crabby_cave/sink5.png", "inset": 4},
-    {"image": "assets/images/enemies/crabby_cave/sink6.png", "inset": 5}
+    {"image": "assets/images/enemies/crabby_cave/sink6.png", "inset": 5},
+    {"image": "assets/images/enemies/crabby_cave/spike.png", "key": "spike.png"}
   ],
   "anims": {
     "dead": {"fps": 5, "frames": [4], "loop": false},
@@ -28,6 +29,7 @@
     "hide": {"fps": 9.333333333, "frames": [8, 9, 10, 11, 12, 13, 5], "loop": false},
     "meat": {"fps": 5, "frames": [7], "loop": true},
     "peek": {"fps": 5, "frames": [6], "loop": true},
+    "spike": {"fps": 4, "frames": [14], "loop": true},
     "unhide": {"fps": 9.333333333, "frames": [13, 12, 11, 10, 9, 8, 2], "loop": false},
     "walk": {"fps": 5, "frames": [1, 2, 3], "loop": true}
   }

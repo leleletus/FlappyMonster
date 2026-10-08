@@ -2,16 +2,8 @@
 local Class = require 'libs/class'
 local Player = Class:new()
 
-local sprites = nil
-
-local function loadSprites()
-    if sprites then return end
-    sprites = {
-        require('src/fx/Anim').image('assets/images/player/monstrito1.png'),
-        require('src/fx/Anim').image('assets/images/player/monstrito2.png'),
-        require('src/fx/Anim').image('assets/images/player/monstrito3.png'),
-    }
-end
+local PS = require 'src/player/PlayerSprite'       -- (el sprite del monstruo: animaciones por nombre)
+local function loadSprites() end
 
 local IDLE_FPS   = 4
 local JUMP_HOLD  = 0.2
@@ -97,19 +89,19 @@ end
 function Player:render()
     local img
     if self.jumpTimer > 0 then
-        img = sprites[2]
+        img = PS.rec('jump')
     elseif self.idleFrame == 1 then
-        img = sprites[1]
+        img = PS.rec('glide')
     else
-        img = sprites[3]
+        img = PS.rec('idle')
     end
     local s = self.scale * self.puff
     love.graphics.push()
     love.graphics.translate(self.x, self.y)
     love.graphics.rotate(self.angle)
     love.graphics.setColor(COLOR_WHITE)
-    love.graphics.draw(img, 0, 0, 0, s, s,
-        img:getWidth() / 2, img:getHeight() / 2)
+    PS.draw(img, 0, 0, 0, s, s,
+        img.w / 2, img.h / 2)
     love.graphics.pop()
 end
 

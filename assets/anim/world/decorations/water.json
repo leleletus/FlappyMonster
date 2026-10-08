@@ -18,13 +18,13 @@
     {"h": 9, "image": "assets/images/world/decorations/water/starfish.png", "w": 10, "x": 0, "y": 0}
   ],
   "anims": {
-    "anemone": {"fps": 8, "frameW": 10, "frames": [1, 2, 3], "loop": true, "sheet": "anemone-Sheet.png"},
-    "clam": {"fps": 8, "frameW": 10, "frames": [4, 5, 6], "loop": true, "sheet": "clam-Sheet.png"},
-    "coral": {"fps": 8, "frameW": 18, "frames": [7], "loop": true, "sheet": "coral.png"},
-    "coral_fan": {"fps": 8, "frameW": 18, "frames": [8], "loop": true, "sheet": "coral_fan.png"},
-    "seaweed": {"fps": 8, "frameW": 18, "frames": [9], "loop": true, "sheet": "seaweed.png"},
-    "seaweed_small": {"fps": 8, "frameW": 10, "frames": [10], "loop": true, "sheet": "seaweed_small.png"},
-    "shell": {"fps": 8, "frameW": 10, "frames": [11], "loop": true, "sheet": "shell.png"},
-    "starfish": {"fps": 8, "frameW": 10, "frames": [12], "loop": true, "sheet": "starfish.png"}
+    "anemone": {"fps": 3.5, "frames": [1, 2, 3, 2], "loop": true},
+    "clam": {"durations": [4.2, 0.2, 1.4, 0.2], "fps": 1, "frames": [4, 5, 6, 5], "loop": true},
+    "coral": {"fps": 8, "frames": [7], "loop": true},
+    "coral_fan": {"fps": 8, "frames": [8], "loop": true},
+    "seaweed": {"fps": 8, "frames": [9], "loop": true},
+    "seaweed_small": {"fps": 8, "frames": [10], "loop": true},
+    "shell": {"fps": 8, "frames": [11], "loop": true},
+    "starfish": {"fps": 8, "frames": [12], "loop": true}
   }
 }

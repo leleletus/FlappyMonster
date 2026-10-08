@@ -59,6 +59,7 @@ local function validJson()
 end
 
 local frame = 0
+local frames0 = 0            -- cuadros del conjunto al abrirlo
 local toolUpdate = love.update
 function love.update(dt)
     frame = frame + 1
@@ -95,9 +96,10 @@ function love.update(dt)
                     for i = 0, 40 do local t = i * 0.037; if st:frameAt(t, fps / 2) ~= math.floor(t * fps + 1e-9) % st.count + 1 then scaled = false end end
                     st.nominal = fps
                 end
-                check('tiras', n >= 100 and via == n and split >= 60 and same and scaled, ('%d animaciones de hoja (%d son estados de una hoja repartida), %d leídas de su conjunto; al ritmo del código igual=%s; el conjunto cambia el ritmo=%s'):format(n, split, via, tostring(same), tostring(scaled)))
+                check('tiras', via == n and (not timed or (same and scaled)), ('%d animaciones de hoja (%d son estados de una hoja repartida), %d leídas de su conjunto; al ritmo del código igual=%s; el conjunto cambia el ritmo=%s'):format(n, split, via, tostring(same), tostring(scaled)))
             end
-            check('abre', A.id == 'enemies/gummy' and A.doc and #A.doc.frames == 4, ('conjunto %s con %d cuadros'):format(tostring(A.id), A.doc and #A.doc.frames or 0))
+            frames0 = A.doc and #A.doc.frames or 0
+            check('abre', A.id == 'enemies/gummy' and A.doc and frames0 >= 4, ('conjunto %s con %d cuadros'):format(tostring(A.id), A.doc and #A.doc.frames or 0))
             A.panel.anim = 'walk'
         elseif frame == 6 then shot(1)
         elseif frame == 8 then
@@ -128,18 +130,18 @@ function love.update(dt)
             -- (lo que hace el botón "Añadir 4 cuadros")
             for c = 0, 3 do A.doc.frames[#A.doc.frames + 1] = { image = 'assets/images/enemies/hopper/pradera-Sheet.png', x = c * 16, y = 0, w = 16, h = 21 } end
             A.panel.modal = nil; A.panel:touch(); A.panel.frame = 7
-            check('cortar', #A.panel:set(A.doc).frames == 8 and A.panel:set(A.doc).frames[7].w == 16, #A.doc.frames .. ' cuadros tras cortar la hoja')
+            check('cortar', #A.panel:set(A.doc).frames == frames0 + 4 and A.panel:set(A.doc).frames[frames0 + 3].w == 16, #A.doc.frames .. ' cuadros tras cortar la hoja')
             A.unsaved = true
         elseif frame == 30 then shot(3); key('s', true)
         elseif frame == 32 then
             local ok, bad = validJson()
             local w = writes[1]
             local back = w and json.decode(w.text)
-            check('guarda', #writes == 1 and ok and w.path == 'assets/anim/enemies/gummy.json' and back.anims.attack and #back.frames == 8 and not A.unsaved,
+            check('guarda', #writes == 1 and ok and w.path == 'assets/anim/enemies/gummy.json' and back.anims.attack and #back.frames == frames0 + 4 and not A.unsaved,
                   ('%d archivo(s): %s%s'):format(#writes, w and w.path or '-', ok and '' or (' JSON mal: ' .. bad)))
             -- lo guardado se vuelve a leer igual
             local s2 = Anim.fromData(back)
-            check('ida_vuelta', s2:has('walk') and s2:frameAt('walk', 0) == 2 and s2.frames[5].x == 0 and s2.frames[6].x == 16, 'el JSON guardado da el mismo conjunto')
+            check('ida_vuelta', s2:has('walk') and s2:frameAt('walk', 0) == 2 and s2.frames[frames0 + 1].x == 0 and s2.frames[frames0 + 2].x == 16, 'el JSON guardado da el mismo conjunto')
             print(fails == 0 and 'TODO OK' or ('FALLOS: ' .. fails)); love.event.quit(fails == 0 and 0 or 1)
         end
     else

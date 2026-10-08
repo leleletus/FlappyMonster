@@ -29,6 +29,10 @@ invulnerability system (`invT`) for hits and respawns.
 and bump `Protocol.VERSION`, or reconciliation desyncs. **Harnesses:** `mechanics`, `level_solve` (searches with the
 real physics), `difficulty_rules`.
 
+**Sprite:** `src/player/PlayerSprite.lua` — the monster's animations come from the set `player`, by name; the pose
+number that the simulation and the network carry (`frame`: 1 glide, 2 jump, 3 idle, 5 crouch; 4 = dead) is mapped
+there to its animation. Used by the player, online players, Flappy mode and both Mirror bosses.
+
 ## Fields, input and moves
 
 - Fields: `x,y` = sprite center; `vx,vy`, `onGround`, `facing`, `frame`

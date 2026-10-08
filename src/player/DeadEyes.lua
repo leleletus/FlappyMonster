@@ -15,19 +15,15 @@ local EYE_DX, EYE_DY = 1.2, -2.5
 -- s: escala del sprite. Sirve para cualquier personaje (cada uno sabe dónde
 -- tiene los ojos, p. ej. el Monstruo Malvado de la Nave Malvada).
 function DeadEyes.drawPair(mx, my, sep, s, r, g, b, a)
-    if not img then
-        local ok, im = pcall(require('src/fx/Anim').image, 'assets/images/player/dedais.png')
-        img = ok and im or false
-        if img then img:setFilter('nearest', 'nearest') end
-    end
+    img = require('src/player/PlayerSprite').rec('dead_eyes')
     if not img then return end
     local cell = math.max(1, math.floor(s / 2 + 0.5))      -- píxel de la X en pantalla
-    local iw, ih = img:getDimensions()
+    local iw, ih = img.w, img.h
     love.graphics.setColor(r or 1, g or 1, b or 1, a or 1)
     for _, side in ipairs({ -1, 1 }) do
         local cx = math.floor(mx + side * sep * s + 0.5)
         local cy = math.floor(my + 0.5)
-        love.graphics.draw(img, cx - math.floor(iw * cell / 2), cy - math.floor(ih * cell / 2), 0, cell, cell)
+        require('src/player/PlayerSprite').draw(img, cx - math.floor(iw * cell / 2), cy - math.floor(ih * cell / 2), 0, cell, cell)
     end
 end
 

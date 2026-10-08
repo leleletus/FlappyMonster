@@ -30,11 +30,16 @@
     {"h": 7, "image": "assets/images/fx/snowflakes.png", "w": 7, "x": 21, "y": 0}
   ],
   "anims": {
+    "flake_far": {"fps": 8, "frames": [24, 21], "loop": true},
+    "flake_mid": {"fps": 8, "frames": [21, 22, 24], "loop": true},
+    "flake_near": {"fps": 8, "frames": [22, 23], "loop": true},
     "ice_block": {"fps": 4, "frames": [1], "loop": true},
-    "ice_drop": {"at": [1], "fps": 8, "frameW": 3, "frames": [3], "loop": true, "sheet": "ice_drop.png"},
-    "ice_splash": {"at": [2], "fps": 8, "frameW": 3, "frames": [4], "loop": true, "sheet": "ice_drop.png"},
-    "lava_fx": {"fps": 8, "frameW": 5, "frames": [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], "loop": true, "sheet": "lava_fx.png"},
-    "noise_mark": {"fps": 4, "frames": [2], "loop": true},
-    "snowflakes": {"fps": 8, "frameW": 7, "frames": [21, 22, 23, 24], "loop": true, "sheet": "snowflakes.png"}
+    "ice_drop": {"fps": 8, "frames": [3], "loop": true},
+    "ice_splash": {"fps": 8, "frames": [4], "loop": true},
+    "lava_bubble": {"fps": 8, "frames": [5], "loop": true},
+    "lava_bubble_big": {"fps": 8, "frames": [6], "loop": true},
+    "lava_drop": {"fps": 8, "frames": [8], "loop": true},
+    "lava_pop": {"fps": 8, "frames": [7], "loop": true},
+    "noise_mark": {"fps": 4, "frames": [2], "loop": true}
   }
 }

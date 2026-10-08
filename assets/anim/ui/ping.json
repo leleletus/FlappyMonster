@@ -11,7 +11,7 @@
     {"h": 12, "image": "assets/images/ui/ping/ping-Sheet.png", "w": 20, "x": 80, "y": 0}
   ],
   "anims": {
-    "bars": {"at": [2, 3, 4, 5], "fps": 8, "frameW": 20, "frames": [2, 3, 4, 5], "loop": true, "sheet": "ping-Sheet.png"},
-    "no_connection": {"at": [1], "fps": 8, "frameW": 20, "frames": [1], "loop": true, "sheet": "ping-Sheet.png"}
+    "bars": {"fps": 8, "frames": [2, 3, 4, 5], "loop": true},
+    "no_connection": {"fps": 8, "frames": [1], "loop": true}
   }
 }

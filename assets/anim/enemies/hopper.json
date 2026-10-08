@@ -4,16 +4,26 @@
   "origin": [0.5, 1],
   "fallback": "idle",
   "frames": [
-    {"image": "assets/images/enemies/hopper/pradera-Sheet.png", "x": 0, "y": 0, "w": 16, "h": 21},
-    {"image": "assets/images/enemies/hopper/pradera-Sheet.png", "x": 16, "y": 0, "w": 16, "h": 21},
-    {"image": "assets/images/enemies/hopper/pradera-Sheet.png", "x": 32, "y": 0, "w": 16, "h": 21},
-    {"image": "assets/images/enemies/hopper/pradera-Sheet.png", "x": 48, "y": 0, "w": 16, "h": 21}
+    {"h": 21, "image": "assets/images/enemies/hopper/pradera-Sheet.png", "w": 16, "x": 0, "y": 0},
+    {"h": 21, "image": "assets/images/enemies/hopper/pradera-Sheet.png", "w": 16, "x": 16, "y": 0},
+    {"h": 21, "image": "assets/images/enemies/hopper/pradera-Sheet.png", "w": 16, "x": 32, "y": 0},
+    {"h": 21, "image": "assets/images/enemies/hopper/pradera-Sheet.png", "w": 16, "x": 48, "y": 0},
+    {"image": "assets/images/enemies/hopper/costa-Sheet.png", "key": "costa-Sheet.png"},
+    {"image": "assets/images/enemies/hopper/cueva-Sheet.png", "key": "cueva-Sheet.png"},
+    {"image": "assets/images/enemies/hopper/fortaleza-Sheet.png", "key": "fortaleza-Sheet.png"},
+    {"image": "assets/images/enemies/hopper/nieve-Sheet.png", "key": "nieve-Sheet.png"},
+    {"image": "assets/images/enemies/hopper/volcan-Sheet.png", "key": "volcan-Sheet.png"}
   ],
   "anims": {
-    "air": {"frames": [3], "fps": 8, "loop": true},
-    "crouch": {"frames": [2], "fps": 8, "loop": true},
-    "dead": {"frames": [4], "fps": 8, "loop": false},
-    "idle": {"frames": [1], "fps": 8, "loop": true}
+    "air": {"fps": 8, "frames": [3], "loop": true},
+    "costa-Sheet": {"fps": 4, "frames": [5], "loop": true},
+    "crouch": {"fps": 8, "frames": [2], "loop": true},
+    "cueva-Sheet": {"fps": 4, "frames": [6], "loop": true},
+    "dead": {"fps": 8, "frames": [4], "loop": false},
+    "fortaleza-Sheet": {"fps": 4, "frames": [7], "loop": true},
+    "idle": {"fps": 8, "frames": [1], "loop": true},
+    "nieve-Sheet": {"fps": 4, "frames": [8], "loop": true},
+    "volcan-Sheet": {"fps": 4, "frames": [9], "loop": true}
   },
   "variants": {
     "costa": {"from": "assets/images/enemies/hopper/pradera-Sheet.png", "to": "assets/images/enemies/hopper/costa-Sheet.png"},

@@ -21,7 +21,7 @@ function Apple.loadAssets()
     if imgs then return end
     imgs = {}
     for id, f in pairs(FILES) do
-        imgs[id] = require('src/fx/Anim').image(f)
+        imgs[id] = require('src/fx/Anim').part(f)
         if imgs[id].setFilter then imgs[id]:setFilter('nearest', 'nearest') end
     end
 end
@@ -66,7 +66,7 @@ function Apple:render(camX, camY)
         a, s = 1 - k, 1 + k * 0.7
     end
     love.graphics.setColor(1, 1, 1, a)
-    love.graphics.draw(img, x, y, rot, SCALE * s, SCALE * s, img:getWidth() / 2, img:getHeight() / 2)
+    img:show(x, y, rot, SCALE * s, SCALE * s, img:getWidth() / 2, img:getHeight() / 2)
     love.graphics.setColor(1, 1, 1, 1)
 end
 

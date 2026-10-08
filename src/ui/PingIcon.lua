@@ -57,15 +57,17 @@ end
 -- de un píxel del arte (3 por defecto)
 function PingIcon:draw(x, y, px)
     px = px or 3
-    sheet = sheet or SpriteStrip.load('assets/images/ui/ping/ping-Sheet.png', PingIcon.W)
+    -- (animaciones del conjunto ui/ping: `no_connection` (la X) y `bars`, que se llena con el nivel 1..4)
+    local clip = require('src/fx/Anim').clip('ui/ping', (self.shown or 0) > 0 and 'bars' or 'no_connection')
+    local step = (self.shown or 0) > 0 and clip:atProgress((self.shown - 0.5) / 4) or clip:at(love.timer.getTime())
     x, y = math.floor(x), math.floor(y)
     local lv = self.shown
     local cx, cy = x + PingIcon.W * px / 2, y - PingIcon.H * px / 2
     -- (sombra negra, como el resto de la interfaz)
     love.graphics.setColor(0, 0, 0, 0.6)
-    sheet:draw(lv + 1, cx + 2, cy + 2, 0, px, px)
+    clip:draw(step, cx + 2, cy + 2, 0, px, px)
     love.graphics.setColor(1, 1, 1, 1)
-    sheet:draw(lv + 1, cx, cy, 0, px, px)
+    clip:draw(step, cx, cy, 0, px, px)
     -- Ping en ms al lado (pequeño)
     if FONT_SMALL and lv > 0 then
         local col = TEXT_COL[lv]

@@ -63,7 +63,7 @@ local ARRIVE     = 0.9 * T                -- "ha llegado" al sitio del ruido
 local STILL_SPD  = 30                     -- px/s: por debajo, el jugador está "quieto"
 local GLOW       = { 1, 0.77, 0.35 }      -- ámbar
 
-local icons
+local ICONS = { 'icon_alert', 'icon_doubt', 'icon_lost' }    -- (el icono que flota sobre él: self.icon 1..3)
 -- Sus animaciones (assets/anim/enemies/gloomy.json, `love . --anim`): el código pide la de su estado por nombre
 Gloomy.animId = 'enemies/gloomy'
 -- DURO: un pisotón normal solo rebota en él; hace falta un GROUND POUND para matarlo (regla
@@ -74,8 +74,7 @@ Crawler.mixin(Gloomy)                     -- trepador: cajas giradas, normal de 
 function Gloomy:hurtsFromAbove() return self.state == 'leap' end
 
 function Gloomy.loadAssets()
-    if icons then return end
-    icons = SpriteStrip.load('assets/images/enemies/gloomy/icons-Sheet.png', 7)
+    Gloomy.anims(Gloomy)
 end
 function Gloomy.sizePx() return FW * S, FH * S end
 
@@ -572,7 +571,7 @@ function Gloomy:renderGlow(camX, camY)
         local bob = math.floor(math.sin(love.timer.getTime() * 6) * 2)
         local col = (ic == 1) and { 1, 0.85, 0.3 } or ((ic == 2) and { 0.75, 0.9, 1 } or { 0.7, 0.72, 0.8 })
         love.graphics.setColor(col[1], col[2], col[3], 0.95)
-        love.graphics.draw(icons.image, icons.quads[ic], math.floor(self.x - camX), math.floor(self.y - camY - 46 + bob), 0, 3, 3, 3.5, 9)
+        self:anims():drawPx(ICONS[ic] or ICONS[1], love.timer.getTime(), math.floor(self.x - camX), math.floor(self.y - camY - 46 + bob), 0, 3, 3, 3.5, 9)
     end
     love.graphics.setColor(1, 1, 1, 1)
 end

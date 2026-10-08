@@ -175,6 +175,88 @@ function love.load()
             same('pez deshincha', pset, (pset:frameAt('deflate', t)), 'puffer_fish', (t < 0.4 * 0.6) and 3 or 1, 16)
             same('pez hinchado', pset, (pset:frameAt('puffed', t)), 'puffer_fish', 4, 16)
         end
+        -- Gran Bola de Nieve (y Verity): el cuadro del cuerpo de antes (1-12; +4 enfadada) y el de rodar (1-8 por giro)
+        local Snow = require('src/world/entities/types/bosses/snowboss').class
+        local SW, SG = { 0.4, 0.32, 0.24 }, { 0.18, 0.15, 0.11 }
+        local function oldSnow(me)
+            local st, t = me.state, me.deadTimer
+            local b = (me.phase >= 2) and 4 or 0
+            if st == 'roll' or st == 'slide' or (st == 'intro' and t < 2.2) then
+                return 'roll', math.floor(-(me.x / (7 * me.sc)) / (math.pi / 4)) % 8 + 1
+            end
+            if st == 'dizzy' or st == 'soaked' then return 'body', 11 + math.floor(t * 6) % 2 end
+            if st == 'dying_crack' then return 'body', 10 end
+            if me.inv > 0 and not me.ghost and st == 'recover' then return 'body', (me.phase >= 2) and 10 or 9 end
+            if st == 'land' or st == 'slam_land' or st == 'leap_land' then return 'body', b + ((t < 0.12) and 3 or 2) end
+            if st == 'windup' or st == 'leap_wind' then return 'body', b + 3 end
+            if st == 'leap' then return 'body', b + 4 end
+            if st == 'shoot' then
+                local u = t - SW[me.phase]
+                if u < 0 then return 'body', b + 2 end
+                return 'body', b + ((u % SG[me.phase]) < SG[me.phase] * 0.6 and 4 or 1)
+            end
+            if st == 'phase_up' then return 'body', 8 end
+            if st == 'slam_hold' then return 'body', b + 4 end
+            if st == 'rest' then return 'body', b + ((math.floor(t * 3) % 2 == 0) and 1 or 2) end
+            if st == 'intro' or st == 'ready' then
+                if t >= 2.2 and t < 2.45 then return 'body', 3 end
+                if t >= 2.6 and t < 3.2 then return 'body', (math.floor((t - 2.6) * 8) % 2 == 0) and 4 or 2 end
+                if t >= 3.2 and t < 3.45 then return 'body', (t < 3.3) and 2 or 3 end
+                if t >= 3.45 and t < 3.78 + 0.15 then return 'body', 4 end
+                return 'body', 1
+            end
+            return 'body', b + 1
+        end
+        for _, verity in ipairs({ false, true }) do
+            for _, st in ipairs({ 'roll', 'slide', 'intro', 'ready', 'dizzy', 'soaked', 'dying_crack', 'recover', 'land', 'slam_land', 'windup',
+                                  'leap_wind', 'leap', 'shoot', 'phase_up', 'slam_hold', 'rest', 'idle', 'chase' }) do
+                for ph = 1, 3 do
+                    for i = 0, 45 do
+                        local me = setmetatable({ state = st, deadTimer = i * 0.0937 + 0.003, phase = ph, x = i * 37.3, sc = 6, inv = (i % 2), ghost = false,
+                                                  verity = verity }, { __index = Snow })
+                        local kind, idx = oldSnow(me)
+                        local k2, clip, step = me:pose()
+                        local sheet = (kind == 'roll') and ((ph >= 2) and 'roll_angry' or 'roll_happy') or 'body-Sheet'
+                        n2 = n2 + 1
+                        local f = clip:rec(step)
+                        if k2 ~= kind or not f.path:find(sheet, 1, true) or f.x ~= (idx - 1) * 16 or (f.path:find('verity', 1, true) ~= nil) ~= verity or f.data.ck ~= idx then
+                            diffs[#diffs + 1] = ('bola %s fase %d t=%.2f: cuadro %d de %s, esperado el %d de %s'):format(st, ph, me.deadTimer, f.x / 16 + 1, f.path:match('[^/]+$'), idx, sheet)
+                        end
+                    end
+                end
+            end
+        end
+        -- Rey Gummy: andar = cuadros 2 y 3 a 6/s; el resto, un cuadro por estado
+        local gset = Anim.load('bosses/megagummy')
+        for i, n in ipairs({ 'idle', false, false, 'jump', 'dazed', 'hurt', 'laugh', 'shout' }) do
+            if n then same('rey ' .. n, gset, (gset:frameAt(n, 0.37)), 'megagummy/body-Sheet', i, 16) end
+        end
+        for i = 0, 40 do
+            local now = i * 0.0531 + 0.002
+            same('rey andar', gset, (gset:frameAt('walk', now)), 'megagummy/body-Sheet', (math.floor(now * 6) % 2 == 0) and 2 or 3, 16)
+            same('rey ola', gset, (gset:frameAt('wave', now)), 'wave-Sheet', math.floor(now * 10) % 2 + 1, 12)
+        end
+        -- Congelador: quieto 1; cargando 2 → 3 a mitad de la carga; disparando 4. Mega Crabby: patalear / escarbar
+        local cb, cc = Anim.clip('traps/cryo', 'charge'), Anim.clip('traps/cryo', 'cannon_charge')
+        for i = 0, 20 do
+            local k = i / 20
+            n2 = n2 + 2
+            if cb:rec(cb:atProgress(k)).x ~= (((k < 0.5) and 2 or 3) - 1) * 16 or cc:rec(cc:atProgress(k)).x ~= (((k < 0.5) and 2 or 3) - 1) * 16 then diffs[#diffs + 1] = 'congelador cargando' end
+        end
+        same('congelador quieto', Anim.load('traps/cryo'), (Anim.load('traps/cryo'):frameAt('idle', 1)), 'cryo_body', 1, 16)
+        same('congelador dispara', Anim.load('traps/cryo'), (Anim.load('traps/cryo'):frameAt('fire', 1)), 'cryo_body', 4, 16)
+        for _, sid in ipairs({ 'bosses/megacrabby', 'bosses/megacrabby_ice' }) do
+            for name, fps in pairs({ wiggle = 12, kick = 24, dig = 14, windup = 18 }) do
+                local c = Anim.clip(sid, name)
+                for i = 0, 30 do
+                    local t = i * 0.0213 + 0.001
+                    n2 = n2 + 1
+                    if not c:rec(c:at(t)).path:find('crab' .. (math.floor(t * fps) % 3 + 1) .. '.png', 1, true) then diffs[#diffs + 1] = sid .. ' ' .. name end
+                end
+            end
+            n2 = n2 + 1
+            if not Anim.clip(sid, 'idle'):rec(1).path:find('crab2.png', 1, true) or Anim.clip(sid, 'walk').count ~= 3 then diffs[#diffs + 1] = sid .. ' idle' end
+        end
         check('por_nombre', #diffs == 0, ('%d comparaciones con el dibujo de antes; distintas: %s'):format(n2, #diffs > 0 and (#diffs .. ' — ' .. diffs[1]) or 'ninguna'))
     end
 

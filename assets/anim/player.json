@@ -2,7 +2,7 @@
   "id": "player",
   "scale": 4,
   "origin": [0.5, 1],
-  "fallback": "dedais",
+  "fallback": "idle",
   "frames": [
     {"image": "assets/images/player/dedais.png", "key": "dedais.png"},
     {"image": "assets/images/player/icon.png", "key": "icon.png"},
@@ -13,8 +13,14 @@
     {"image": "assets/images/player/monstrito5.png", "key": "monstrito5.png"}
   ],
   "anims": {
-    "dedais": {"fps": 4, "frames": [1], "loop": true},
-    "icon": {"fps": 4, "frames": [2], "loop": true},
-    "monstrito": {"fps": 6, "frames": [3, 4, 5, 6, 7], "loop": true}
+    "crouch": {"fps": 8, "frames": [7], "loop": true},
+    "dead": {"fps": 8, "frames": [6], "loop": true},
+    "dead_eyes": {"fps": 8, "frames": [1], "loop": true},
+    "fall": {"fps": 6, "frames": [3, 5], "loop": true},
+    "flutter": {"fps": 14, "frames": [3, 4, 5], "loop": true},
+    "glide": {"fps": 8, "frames": [3], "loop": true},
+    "icon": {"fps": 8, "frames": [2], "loop": true},
+    "idle": {"fps": 8, "frames": [5], "loop": true},
+    "jump": {"fps": 8, "frames": [4], "loop": true}
   }
 }

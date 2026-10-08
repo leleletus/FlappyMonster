@@ -105,7 +105,11 @@ function Anim.fromData(data, variant)
     local v = variant and data.variants and data.variants[variant]
     for i, f in ipairs(data.frames or {}) do
         local path = f.image or ''
-        if v and v.from and v.to and path:sub(1, #v.from) == v.from then path = v.to .. path:sub(#v.from + 1) end
+        if v and v.from and v.to and path:sub(1, #v.from) == v.from then
+            -- (la variante cambia las imágenes que TIENE: una pieza que no redibuja — el casco — se queda con la original)
+            local alt = v.to .. path:sub(#v.from + 1)
+            if love.filesystem.getInfo(alt) or not love.filesystem.getInfo(path) then path = alt end
+        end
         local img = image(path)
         local iw, ih = 16, 16
         if img then iw, ih = img:getWidth(), img:getHeight() end
@@ -150,6 +154,7 @@ end
 
 -- Olvida lo cargado (el editor, tras guardar; `id` = solo ese conjunto)
 function Anim.reload(id)
+    parts = {}
     for k in pairs(cache) do
         if not id or k:sub(1, #id + 1) == id .. '#' then cache[k] = nil end
     end
@@ -305,6 +310,121 @@ end
 function Set:data(name, t, k)
     local f = self:frame(k and self:frameN(name, k) or (self:frameAt(name, t)))
     return f and f.data or {}
+end
+
+-- ── CLIP: UNA animación con nombre, lista para dibujar ───────────────────────
+-- local torch = Anim.clip('world/decorations/cave', 'torch')
+--   torch:play(t, x, y, r, sx, sy, ox, oy)   el cuadro que toca a los t s (ancla 0..1; por defecto el centro)
+--   torch:at(t)                              → el paso (1..count) que toca a los t s, según SU ritmo, bucle y duraciones
+--   torch:atProgress(p)                      → el paso que toca con un avance p de 0 a 1 (una carga, una barra)
+--   torch:draw(k, x, y, r, sx, sy)           el paso k, centrado (para quien lleva un contador; da la vuelta)
+--   torch:rec(k)                             el cuadro del paso k: { image, quad, x, y, w, h, iw, ih, data }
+--   torch.count, torch.w, torch.h            nº de pasos y tamaño del primer cuadro: NUNCA escritos en el código
+-- (quads / images / image quedan para el código que dibuja a mano con love.graphics.draw.)
+local Clip = {}
+Clip.__index = Clip
+function Anim.clip(id, name, variant)
+    local set = Anim.load(id, variant)
+    if not set or not set.anims[name] then return nil end
+    set.clips = set.clips or {}
+    local c = set.clips[name]
+    if not c then
+        local seq = set.anims[name]
+        c = setmetatable({ set = set, name = name, seq = seq, count = #seq.frames, quads = {}, images = {}, recs = {} }, Clip)
+        for i, fi in ipairs(seq.frames) do
+            local f = set.frames[fi]
+            c.quads[i], c.images[i], c.recs[i] = f.quad, f.image, f
+        end
+        local f1 = c.recs[1]
+        c.image, c.w, c.h = f1.image, f1.w, f1.h
+        local raw = set.data.anims[name]
+        c.nominal = tonumber(raw.codeFps)                                 -- (compatibilidad: SpriteStrip:frameAt)
+        c.custom = type(raw.durations) == 'table' and #raw.durations > 0
+        set.clips[name] = c
+    end
+    return c
+end
+function Clip:step(k) return (math.floor(k or 1) - 1) % self.count + 1 end
+function Clip:rec(k) return self.recs[self:step(k)] end
+function Clip:at(t)
+    local _, _, k = self.set:frameAt(self.name, t)
+    return k
+end
+-- … o según un AVANCE 0..1 (una carga, una barra): la animación entera repartida en ese tramo
+function Clip:atProgress(p)
+    return math.max(1, math.min(self.count, math.floor((p or 0) * self.count) + 1))
+end
+-- … o según una FRACCIÓN 0..1 de su duración (respeta lo que dura cada cuadro)
+function Clip:atFraction(p)
+    return self:at(math.max(0, math.min(0.999999, p or 0)) * self.seq.length)
+end
+function Clip:finished(t) return not self.seq.loop and (t or 0) >= self.seq.length end
+function Clip:length() return self.seq.length end
+function Clip:draw(k, x, y, r, sx, sy, ox, oy)
+    local f = self.recs[self:step(k)]
+    if not f.image then return end
+    love.graphics.draw(f.image, f.quad, x, y, r or 0, sx or 1, sy or sx or 1, (ox or 0.5) * f.w, (oy or 0.5) * f.h)
+end
+function Clip:play(t, x, y, r, sx, sy, ox, oy) self:draw(self:at(t), x, y, r, sx, sy, ox, oy) end
+-- (como love.graphics.draw: ancla en píxeles del cuadro)
+function Clip:drawPx(k, x, y, r, sx, sy, oxPx, oyPx)
+    local f = self.recs[self:step(k)]
+    if not f.image then return end
+    love.graphics.draw(f.image, f.quad, x, y, r or 0, sx or 1, sy or sx or 1, oxPx or 0, oyPx or 0)
+end
+function Clip:playPx(t, x, y, r, sx, sy, oxPx, oyPx) self:drawPx(self:at(t), x, y, r, sx, sy, oxPx, oyPx) end
+-- Un clip se deja usar donde antes había una IMAGEN suelta: mismo tamaño, y show(…) en vez de love.graphics.draw(img, …)
+function Clip:getWidth() return self.w end
+function Clip:getHeight() return self.h end
+function Clip:getDimensions() return self.w, self.h end
+function Clip:setFilter() end                               -- (los cuadros ya van con píxeles duros)
+function Clip:show(x, y, r, sx, sy, oxPx, oyPx) self:playPx(love.timer.getTime(), x, y, r, sx, sy, oxPx, oyPx) end
+function Clip:now() return self.recs[self:at(love.timer.getTime())] end
+
+-- PIEZA: la animación de una imagen suelta, a partir de su RUTA (para las tablas de aspectos que guardan archivos:
+-- la púa de cada Crabby, la pinza de cada especie…). Busca en el conjunto de su carpeta la animación de esa imagen
+-- (la que se llama como el archivo, o la primera que empieza por ella); se usa igual que cualquier clip.
+local parts = {}
+function Anim.part(path)
+    local c = parts[path]
+    if c then return c end
+    local dir, file = path:match('^assets/images/(.+)/([^/]+)$')
+    local data = dir and Anim.read(dir)
+    if data then
+        local idx
+        for i, f in ipairs(data.frames or {}) do
+            if f.image == path and not f.w then idx = i; break end
+        end
+        local base = file:gsub('%.png$', '')
+        local name = idx and data.anims and data.anims[base] and data.anims[base].frames[1] == idx and base
+        if idx and not name then
+            local names = {}
+            for n in pairs(data.anims or {}) do names[#names + 1] = n end
+            table.sort(names)
+            for _, n in ipairs(names) do if data.anims[n].frames[1] == idx then name = n; break end end
+        end
+        if name then c = Anim.clip(dir, name) end
+    end
+    if not c then
+        -- (una imagen que no está en ningún conjunto: un clip de un cuadro, para que nada se rompa)
+        local set = Anim.fromData({ id = path, origin = { 0.5, 0.5 }, frames = { { image = path } }, anims = { image = { frames = { 1 } } } })
+        cache['@' .. path] = set
+        c = Anim.clip('@' .. path, 'image')
+    end
+    parts[path] = c
+    return c
+end
+
+-- Compatibilidad con SpriteStrip (código sin migrar que aún pide «cuadro a los t s a N cuadros/s»): si la animación
+-- tiene otro ritmo que el que traía el código ("codeFps"), manda la animación.
+function Clip:frameAt(t, fps, loop)
+    fps = fps or 10
+    if self.nominal and self.nominal > 0 and (self.seq.fps ~= self.nominal or self.custom) then
+        return self:at((t or 0) * fps / self.nominal)
+    end
+    local k = math.floor((t or 0) * fps)
+    if loop == false then return math.min(self.count, k + 1) end
+    return k % self.count + 1
 end
 
 -- ── Reproductor (para lo que no es simulación: menús, editores, adornos) ─────

@@ -92,25 +92,20 @@ local CS = MS * CLAW_K
 
 -- ARTE por clase (Mega.art; el Mega Crabby helado, megacrabby_ice.lua, pone el suyo):
 -- cuerpo (3 cuadros), pinza (strip de 2), pincho, medidas del arte y dónde van las pinzas
-local anger
-function Mega.loadArt(dir, w, h, cw, ch, k, cx, cy, cin, spikeDy)
-    local function load(p)
-        local i = require('src/fx/Anim').image(p)
-        if i.setFilter then i:setFilter('nearest', 'nearest') end
-        return i
-    end
-    return { imgs = { load(dir .. 'crab1.png'), load(dir .. 'crab2.png'), load(dir .. 'crab3.png') },
-             claw = SpriteStrip.load(dir .. 'claw_left-Sheet.png', cw), spike = load(dir .. 'spike.png'),
+-- Las ANIMACIONES salen de su conjunto (assets/anim/bosses/megacrabby.json; el helado, el suyo), pedidas por nombre
+-- con art.clip(nombre): el cuerpo `walk` (andar), `idle` (plantado), `wiggle` (clavado, pataleando), `kick` (al morir),
+-- `dig` (escarba) y `windup` (toma carrerilla); las pinzas `claw_open` / `claw_closed`; la púa `spike`.
+local Anim
+local BossFx = require 'src/fx/BossFx'
+function Mega.loadArt(set, w, h, cw, ch, k, cx, cy, cin, spikeDy)
+    Anim = Anim or require 'src/fx/Anim'
+    return { set = set, clip = function(name) return Anim.clip(set, name) end,
              w = w, h = h, clawW = cw, clawH = ch, clawK = k, clawX = cx, clawY = cy, clawIn = cin,
              spikeDy = spikeDy or 0 }     -- (px de arte que la púa baja hacia el caparazón)
 end
 function Mega.loadAssets()
     if Mega.art then return end
-    Mega.art = Mega.loadArt('assets/images/bosses/megacrabby/', 16, 9, 10, 7, CLAW_K, CLAW_X, CLAW_Y, CLAW_IN)
-    -- Enfado (solo dibujo): vena 💢, vapor y garabato
-    anger = { vein = SpriteStrip.load('assets/images/bosses/common/anger_vein.png', 11),
-              steam = SpriteStrip.load('assets/images/bosses/common/anger_steam.png', 9),
-              scribble = SpriteStrip.load('assets/images/bosses/common/anger_scribble.png', 9) }
+    Mega.art = Mega.loadArt('bosses/megacrabby', 16, 9, 10, 7, CLAW_K, CLAW_X, CLAW_Y, CLAW_IN)
 end
 function Mega.sizePx() return 16 * MS, 9 * MS end
 Mega.MS = MS                        -- (por clase: el helado es algo más pequeño; el dibujo y el tamaño usan self.MS)
@@ -492,8 +487,9 @@ function Mega:animWalk(dt, fps, silent)
     self.animT = self.animT + dt
     if self.animT >= 1 / fps then
         self.animT = self.animT - 1 / fps
-        self.frame = self.frame % 3 + 1
-        if not silent and (self.frame == 1 or self.frame == 3) and (self.onGround or self.cattached) then
+        local steps = self.art.clip('walk').count          -- (los pasos del ciclo: los de su animación)
+        self.frame = self.frame % steps + 1
+        if not silent and (self.frame == 1 or self.frame == steps) and (self.onGround or self.cattached) then
             Sound.play('megaStep', 0.9 + math.random() * 0.2)
         end
     end
@@ -1074,6 +1070,7 @@ local function clawFrame(self, i, now, nervous)
     end
     return (c.closedUntil and now < c.closedUntil) and 2 or 1
 end
+local CLAW_ANIM = { 'claw_open', 'claw_closed' }
 
 -- Deformación del cuerpo (sx, sy desde los pies), temblor y balanceo de las
 -- pinzas (en píxeles de pinza) según lo que esté haciendo
@@ -1265,21 +1262,22 @@ function Mega:drawLocal(px, py, ang, s, img, withSpike, alpha, nervous, sx, sy, 
     love.graphics.rotate(ang)
     love.graphics.scale(sx or 1, sy or 1)
     local A = self.art
-    local ih = img:getHeight()
+    local ih = img.h                                   -- (img = el cuadro del cuerpo que toca: Clip:rec)
+    local spike = A.clip('spike'):rec(A.clip('spike'):at(now))
     local cs = s * A.clawK
     if withSpike then                             -- detrás del cuerpo, sobre la cabeza
         local k = spikeK or 1                     -- (los emotes lo hinchan)
-        love.graphics.draw(A.spike, 0, -(ih - A.spikeDy) * s, 0, s / 4 * (0.85 + 0.15 * k), s / 4 * k,
-                           A.spike:getWidth() / 2, A.spike:getHeight() - 1)
+        love.graphics.draw(spike.image, spike.quad, 0, -(ih - A.spikeDy) * s, 0, s / 4 * (0.85 + 0.15 * k), s / 4 * k,
+                           spike.w / 2, spike.h - 1)
     end
-    love.graphics.draw(img, 0, 0, 0, s * self.facing, s, img:getWidth() / 2, ih)
+    love.graphics.draw(img.image, img.quad, 0, 0, 0, s * self.facing, s, img.w / 2, ih)
     if self.drawBodyOverlay then self:drawBodyOverlay(s, now) end      -- (capas de otras variantes)
     -- Pinzas delante del cuerpo, saliendo del costado junto a las patas
     for i, side in ipairs(noClaws and {} or { -1, 1 }) do
         local off = claws and claws[i] or { 0, 0 }
         local cx = side * (A.clawX * s + A.clawW * cs / 2 - A.clawIn * cs) + math.floor(off[1] * cs + 0.5)
         local cy = A.clawY * s - A.clawH * cs / 2 + math.floor(off[2] * cs + 0.5)
-        A.claw:draw(clawFrame(self, i, now, nervous), cx, cy, 0, -side * cs, cs)
+        A.clip(CLAW_ANIM[clawFrame(self, i, now, nervous)]):play(now, cx, cy, 0, -side * cs, cs)
         if self.drawClawOverlay then self:drawClawOverlay(i, side, cx, cy, cs, now) end
     end
     love.graphics.pop()
@@ -1366,26 +1364,23 @@ function Mega:renderAnger(now, fx, fy, ang, camX, camY)
         else
             local ox, oy = p.ox * ca - p.oy * sa, p.ox * sa + p.oy * ca
             local x, y = hx + ox - camX, hy + oy - camY
-            local k, frame = ANGER_S, 1
+            local k, frame = ANGER_S, BossFx.angerStep(p.kind, age, life)
             local alpha = math.min(1, (life - age) / 0.15)
             if p.kind == 'vein' then
                 -- Aparece de golpe (con rebote) y late
                 k = ANGER_S * ((age < 0.1) and (0.5 + age / 0.1 * 0.75) or 1)
-                frame = (math.floor(age * 7) % 2 == 0) and 1 or 2
             elseif p.kind == 'steam' then
-                frame = math.min(3, math.floor(age / life * 3) + 1)
                 y = y - age * 60
                 x = x + math.sin(age * 12) * 3
             else
-                frame = math.floor(age * 12) % 2 + 1
                 x = x + math.floor(math.sin(age * 40) * 2)
             end
             k = math.floor(k + 0.5)
             x, y = math.floor(x + 0.5), math.floor(y + 0.5)
             love.graphics.setColor(0, 0, 0, 0.5 * alpha)
-            anger[p.kind]:draw(frame, x + 3, y + 3, 0, k, k)
+            BossFx.angerClip(p.kind):draw(frame, x + 3, y + 3, 0, k, k)
             love.graphics.setColor(1, 1, 1, alpha)
-            anger[p.kind]:draw(frame, x, y, 0, k, k)
+            BossFx.angerClip(p.kind):draw(frame, x, y, 0, k, k)
         end
     end
     love.graphics.setColor(1, 1, 1, 1)
@@ -1421,17 +1416,17 @@ function Mega:render(camX, camY)
     local moving = moved > 0.05
 
     -- Sprite: andar, o patalear clavado
-    local frame = self.frame or 1
+    local body, step = self.art.clip('walk'), self.frame or 1
     if st == 'stuck' or st == 'dying_kick' then
-        frame = math.floor(t * (st == 'dying_kick' and WIGGLE_FPS * 2 or WIGGLE_FPS)) % 3 + 1
+        body = self.art.clip(st == 'dying_kick' and 'kick' or 'wiggle'); step = body:at(t)
     elseif st == 'fall_in' or (emote == 2 and t < 1.15) or st == 'windup' then
-        frame = math.floor(now * (st == 'windup' and 18 or 14)) % 3 + 1   -- (patalea / escarba)
+        body = self.art.clip(st == 'windup' and 'windup' or 'dig'); step = body:at(now)   -- (patalea / escarba)
     elseif not moving and (st == 'dormant' or st == 'windup' or st == 'aim' or st == 'recover' or st == 'chase' or st == 'rest'
                            or st == 'intro' or st == 'summon' or st == 'wallaim' or st == 'land_in' or st == 'roar_in'
                            or st == 'ready') then
-        frame = 2
+        body = self.art.clip('idle'); step = body:at(now)
     end
-    local img = self.art.imgs[frame] or self.art.imgs[2]
+    local img = body:rec(step)
     local withSpike = true
 
     -- Temblor (aviso de embestida, a punto de caer, pataleo final)

@@ -17,16 +17,16 @@
     {"h": 24, "image": "assets/images/ui/touch/light-Sheet.png", "w": 24, "x": 24, "y": 0}
   ],
   "anims": {
-    "dpad_down": {"at": [4], "fps": 8, "frameW": 40, "frames": [4], "loop": true, "sheet": "dpad-Sheet.png"},
-    "dpad_down_left": {"at": [5], "fps": 8, "frameW": 40, "frames": [5], "loop": true, "sheet": "dpad-Sheet.png"},
-    "dpad_down_right": {"at": [6], "fps": 8, "frameW": 40, "frames": [6], "loop": true, "sheet": "dpad-Sheet.png"},
-    "dpad_left": {"at": [2], "fps": 8, "frameW": 40, "frames": [2], "loop": true, "sheet": "dpad-Sheet.png"},
-    "dpad_neutral": {"at": [1], "fps": 8, "frameW": 40, "frames": [1], "loop": true, "sheet": "dpad-Sheet.png"},
-    "dpad_right": {"at": [3], "fps": 8, "frameW": 40, "frames": [3], "loop": true, "sheet": "dpad-Sheet.png"},
-    "dpad_up": {"at": [7], "fps": 8, "frameW": 40, "frames": [7], "loop": true, "sheet": "dpad-Sheet.png"},
-    "jump_pressed": {"at": [2], "fps": 8, "frameW": 32, "frames": [9], "loop": true, "sheet": "jump-Sheet.png"},
-    "jump_up": {"at": [1], "fps": 8, "frameW": 32, "frames": [8], "loop": true, "sheet": "jump-Sheet.png"},
-    "light_pressed": {"at": [2], "fps": 8, "frameW": 24, "frames": [11], "loop": true, "sheet": "light-Sheet.png"},
-    "light_up": {"at": [1], "fps": 8, "frameW": 24, "frames": [10], "loop": true, "sheet": "light-Sheet.png"}
+    "dpad_down": {"fps": 8, "frames": [4], "loop": true},
+    "dpad_down_left": {"fps": 8, "frames": [5], "loop": true},
+    "dpad_down_right": {"fps": 8, "frames": [6], "loop": true},
+    "dpad_left": {"fps": 8, "frames": [2], "loop": true},
+    "dpad_neutral": {"fps": 8, "frames": [1], "loop": true},
+    "dpad_right": {"fps": 8, "frames": [3], "loop": true},
+    "dpad_up": {"fps": 8, "frames": [7], "loop": true},
+    "jump_pressed": {"fps": 8, "frames": [9], "loop": true},
+    "jump_up": {"fps": 8, "frames": [8], "loop": true},
+    "light_pressed": {"fps": 8, "frames": [11], "loop": true},
+    "light_up": {"fps": 8, "frames": [10], "loop": true}
   }
 }

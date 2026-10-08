@@ -132,23 +132,47 @@ Rules for entity code:
 - Variants of the same thing are name suffixes or prefixes decided by behaviour (`idle_ice`, `glow_walk`,
   `object_idle`), or set `variants` when only the images change.
 
-API (`src/fx/Anim.lua`): `Anim.load(id, variant)`, `set:draw(name, t, x, y, r, sx, sy, ox, oy)`, `set:drawN(name, k,
-…)`, `set:drawPx(…, oxPx, oyPx)` (pixel origin, to replace a `love.graphics.draw` of a loose image),
-`set:frameAt(name, t)`, `set:frameN(name, k)`, `set:count(name)`, `set:fps(name)`, `set:width(name)`,
-`set:has(name)`, `set:data(name, t, k)`; in the base, `Entity:anims()` and `Entity:walkCycle()`.
+API (`src/fx/Anim.lua`):
 
-### Migration status
+- **Set** — `Anim.load(id, variant)`, `set:draw(name, t, x, y, r, sx, sy, ox, oy)`, `set:drawN(name, k, …)`,
+  `set:drawPx(…, oxPx, oyPx)`, `set:frameAt(name, t)`, `set:frameN(name, k)`, `set:count / fps / width / has(name)`,
+  `set:data(name, t, k)`.
+- **Clip** — ONE named animation, the object most code holds: `Anim.clip(id, name)` →
+  `clip:play(t, x, y, r, sx, sy, ox, oy)`, `clip:at(t)` (the step at time t by ITS fps, loop and durations),
+  `clip:atProgress(p)` (the whole animation spread over a 0..1 progress: a charge, a level meter, one turn of a
+  rolling ball), `clip:atFraction(p)` (same but respecting each frame's duration), `clip:draw(k, …)` (a step
+  counter, wraps), `clip:rec(k)` / `clip:now()` (the frame record: image, quad, x, y, w, h, data — for code that
+  draws by hand: cropping a growing icicle, tiling a stream), `clip.count`, `clip.w`, `clip.h`.
+  A clip also answers `getWidth / getHeight / getDimensions` and `clip:show(x, y, r, sx, sy, oxPx, oyPx)`, so it
+  drops in where a loose image was drawn with `love.graphics.draw(img, …)`.
+- **Part** — `Anim.part(path)`: the clip of a loose image given its FILE path, for skin tables that store files (each
+  Crabby's spike, each apple). Every tracked image of a folder that has a set is in that set.
+- In the base: `Entity:anims()` and `Entity:walkCycle()`; decorations: `DecoFx.anim(set, name)`, `DecoFx.fx(name)`;
+  the monster: `src/player/PlayerSprite.lua` (the pose NUMBER that travels in the simulation → its animation).
 
-| Asks by name (editor decides frames, count, order, speed) | Still on the compatibility layer |
-|---|---|
-| Gummy (5 variants), Hopper (6 skins), the six Crabbies, every data enemy and data boss, **Gloomy**, **Mega Gloomy (body + glow)**, **bombs and bomb objects (body, fuse, explosion)**, **pufferfish**, **trampolines**, **spikes** (tile spikes and falling spikes) | Mega Gloomy's claws and icons, Gloomy's icons, Mega Gummy, Mega Crabby (+ ice), Snow Ball and Verity, Mirror and Mirror chase, Evil Ship, cryo, mortar, wings, decorations, tiles, items, the player, effects (lava, snow, ice drips, boss marks), touch buttons, ping, flashlight HUD, story map |
+### Migration status: complete (3.92)
 
-The compatibility layer keeps the rest working unchanged while it is ported: `SpriteStrip.load(path, frameW)`
-(frames by number, read from the animations marked `sheet` / `at`) and `Anim.image(path)` (loose images by file
-name). Porting one = give the type `animId`, replace its index logic with `animNow()` → name + time, move any
-hand-composed sequence into a named animation, and add its old formulas to the `por_nombre` case of `enemy_data`,
-which proves frame by frame that it looks the same as before. When an animation is asked by name its `sheet` /
-`at` marks are removed from the data (`tools/anim/split_states.py`, stage 2).
+Every sprite in the game asks for its animations by name: enemies, the seven bosses (bodies, claws, overlays,
+projectiles), traps and mechanisms, items, all decorations and their particles, effects (lava, snow, ice drips,
+boss marks), the player everywhere it is drawn (player, online players, Flappy, both Mirrors), touch buttons, ping
+and flashlight HUD. What used to be composed in code is data: Gloomy `taunt`, pufferfish `warn` / `deflate`, bomb
+`explosion` and `fuse_*`, the snow boss's `land` / `shoot` / `intro_*`, the clam and anemone cycles, the stretch
+plant's ping-pong, the Mirror's `laugh_body` / `laugh_head`.
+
+Not animations, and left as they were — **textures**: tile textures (stretched, tiled or cut in quarters;
+`texture = { anim = … }` already animates a tile), water surfaces, the sky layers and the story-map terrain. They
+still load through `Anim.image(path)` / `love.graphics.newImage`.
+
+What stays in code by design, because it is behaviour and not frame handling: which animation a state shows; poses
+computed with squash, rotation or shake; progress-driven animations (the code gives the progress, the animation
+gives the frames); random variant choice (one of `clip.count`); and walk cycles that are simulation state — their
+step counter travels over the network, but its rhythm and length come from the animation.
+
+Compatibility kept for old content: `SpriteStrip.load(path, frameW)` (no game code uses it any more; it returns the
+clip of the animation marked `sheet`, or cuts the image) and `Anim.image(path)`.
+
+Porting anything new = give it a set, ask by name, put composed sequences in data (`tools/anim/port_names.py` holds
+every data step of this migration, re-runnable), and add its old formulas to the `por_nombre` case of `enemy_data`.
 
 ## Using a set from code
 
@@ -182,7 +206,8 @@ hand-written bosses and the player, WHEN each frame shows is still decided by co
 before them.
 
 **Tests:** `enemy_data` (timing, events, variants, every set in `assets/anim` valid and its images present;
-`por_nombre`: 2,411 frame comparisons between the by-name runtime and the old index formulas, none different),
+`por_nombre`: 8,037 frame comparisons between the by-name runtime and the old index formulas — Gloomy, Mega Gloomy,
+bombs, pufferfish, Snow Ball and Verity, Mega Gummy, cryo, Mega Crabby — none different),
 `tool_editors` (every sheet is read from its set and the set's speed reaches the game; the real editor: open, create
 an animation, undo / redo, the browser, slice a sheet, save, re-read),
-plus the before / after screenshot comparison (`level_shots FIXED=1`).
+plus the before / after screenshot comparison of all 44 levels (`level_shots FIXED=1`), identical after the migration.

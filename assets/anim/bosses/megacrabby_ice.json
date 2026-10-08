@@ -19,13 +19,19 @@
     {"h": 15, "image": "assets/images/bosses/megacrabby_ice/rage_claw-Sheet.png", "w": 18, "x": 18, "y": 0}
   ],
   "anims": {
-    "claw_closed": {"at": [2], "fps": 8, "frameW": 10, "frames": [6], "loop": true, "sheet": "claw_left-Sheet.png"},
-    "claw_open": {"at": [1], "fps": 8, "frameW": 10, "frames": [5], "loop": true, "sheet": "claw_left-Sheet.png"},
-    "ice_field": {"fps": 8, "frameW": 8, "frames": [7, 8, 9], "loop": true, "sheet": "ice_field-Sheet.png"},
-    "rage_body": {"fps": 8, "frameW": 26, "frames": [10, 11], "loop": true, "sheet": "rage_body-Sheet.png"},
-    "rage_claw_closed": {"at": [2], "fps": 8, "frameW": 18, "frames": [13], "loop": true, "sheet": "rage_claw-Sheet.png"},
-    "rage_claw_open": {"at": [1], "fps": 8, "frameW": 18, "frames": [12], "loop": true, "sheet": "rage_claw-Sheet.png"},
+    "claw_closed": {"fps": 8, "frames": [6], "loop": true},
+    "claw_open": {"fps": 8, "frames": [5], "loop": true},
+    "dig": {"fps": 14, "frames": [1, 2, 3], "loop": true},
+    "field_glint": {"fps": 8, "frames": [9], "loop": true},
+    "field_spike": {"fps": 8, "frames": [8], "loop": true},
+    "field_warn": {"fps": 8, "frames": [7], "loop": true},
+    "idle": {"fps": 8, "frames": [2], "loop": true},
+    "kick": {"fps": 24, "frames": [1, 2, 3], "loop": true},
+    "rage_body": {"durations": [0.4, 1.6], "fps": 2.5, "frames": [11, 10], "loop": true},
+    "rage_claw": {"durations": [0.4, 1.6], "fps": 2.5, "frames": [13, 12], "loop": true},
     "spike": {"fps": 4, "frames": [4], "loop": true},
-    "walk": {"fps": 4, "frames": [1, 2, 3], "loop": true}
+    "walk": {"fps": 4, "frames": [1, 2, 3], "loop": true},
+    "wiggle": {"fps": 12, "frames": [1, 2, 3], "loop": true},
+    "windup": {"fps": 18, "frames": [1, 2, 3], "loop": true}
   }
 }

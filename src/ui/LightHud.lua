@@ -8,14 +8,14 @@ local icon
 local SEG, SCALE = 8, 4
 
 function LightHud.draw(pa, x, y)
-    icon = icon or SpriteStrip.load('assets/images/ui/flashlight-Sheet.png', 12)
+    -- (animaciones del conjunto ui: `flashlight_on`, `flashlight_off`, `flashlight_empty`)
     local bat, cd = pa.lightBat or 1, pa.lightCd or 0
-    local fr = (cd > 0) and 3 or (pa.lightOn and 1 or 2)
+    local icon = require('src/fx/Anim').clip('ui', (cd > 0) and 'flashlight_empty' or (pa.lightOn and 'flashlight_on' or 'flashlight_off'))
     local blink = cd > 0 and math.floor(love.timer.getTime() * 6) % 2 == 0
     love.graphics.setColor(0, 0, 0, 0.6)
-    love.graphics.draw(icon.image, icon.quads[fr], x + 3, y + 3, 0, SCALE, SCALE)
+    icon:show(x + 3, y + 3, 0, SCALE, SCALE)
     love.graphics.setColor(1, 1, 1, blink and 0.5 or 1)
-    love.graphics.draw(icon.image, icon.quads[fr], x, y, 0, SCALE, SCALE)
+    icon:show(x, y, 0, SCALE, SCALE)
     local bx, by = x + 12 * SCALE + 10, y + 4
     local on = math.ceil(bat * SEG - 0.001)
     for i = 1, SEG do

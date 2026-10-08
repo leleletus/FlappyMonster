@@ -7,12 +7,16 @@
     {"image": "assets/images/enemies/gummy/gummy.png"},
     {"image": "assets/images/enemies/gummy/gummy1.png"},
     {"image": "assets/images/enemies/gummy/gummy2.png"},
-    {"image": "assets/images/enemies/gummy/dead.png"}
+    {"image": "assets/images/enemies/gummy/dead.png"},
+    {"image": "assets/images/enemies/gummy/casco.png", "key": "casco.png"},
+    {"image": "assets/images/enemies/gummy/parachute.png", "key": "parachute.png"}
   ],
   "anims": {
-    "dead": {"frames": [4], "fps": 7, "loop": false},
-    "idle": {"frames": [1], "fps": 7, "loop": true},
-    "walk": {"frames": [2, 3], "fps": 7, "loop": true}
+    "casco": {"fps": 4, "frames": [5], "loop": true},
+    "dead": {"fps": 7, "frames": [4], "loop": false},
+    "idle": {"fps": 7, "frames": [1], "loop": true},
+    "parachute": {"fps": 4, "frames": [6], "loop": true},
+    "walk": {"fps": 7, "frames": [2, 3], "loop": true}
   },
   "variants": {
     "cave": {"from": "assets/images/enemies/gummy/", "to": "assets/images/enemies/gummy_cave/"},

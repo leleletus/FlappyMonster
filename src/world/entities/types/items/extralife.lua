@@ -6,7 +6,7 @@ local SCALE = 4
 local img
 function Life.loadAssets()
     if img then return end
-    img = require('src/fx/Anim').image('assets/images/player/icon.png')
+    img = require('src/fx/Anim').part('assets/images/player/icon.png')
     img:setFilter('nearest', 'nearest')
 end
 function Life.sizePx() return img:getWidth() * SCALE, img:getHeight() * SCALE end
@@ -36,7 +36,7 @@ function Life:render(camX, camY)
     local x    = math.floor(self.x - camX)
     local base = math.floor(self.y - camY + self.outerH / 2 - hop)
     love.graphics.setColor(1, 1, 1, a)
-    love.graphics.draw(img, x, base, 0, SCALE * sx, SCALE * sy, img:getWidth() / 2, img:getHeight())
+    img:show(x, base, 0, SCALE * sx, SCALE * sy, img:getWidth() / 2, img:getHeight())
     love.graphics.setColor(1, 1, 1, 1)
 end
 

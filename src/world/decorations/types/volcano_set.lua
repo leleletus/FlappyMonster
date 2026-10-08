@@ -7,10 +7,11 @@
 local DecoFx = require 'src/world/decorations/DecoFx'
 
 local DIR = 'assets/images/world/decorations/volcano/'
+-- (sus animaciones, por nombre: assets/anim/world/decorations/volcano.json)
+local function A(n) return DecoFx.anim('world/decorations/volcano', n) end
 local CAT = 'Volcán'
 local FIRE = { 1, 0.5, 0.18 }
 
-local function fx(name, fw) return DecoFx.strip(DecoFx.FX .. name, fw) end
 
 local function base(def)
     def.category = CAT
@@ -21,19 +22,19 @@ end
 local function static(name, label, placement, file, extra)
     local def = base { name = name, label = label, placement = placement,
         editor = { previewScale = placement == 'sub' and 1.5 or 0.8 },
-        draw = function(d, sx, sy) DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. file), 1) end }
+        draw = function(d, sx, sy) DecoFx.sheet(d, sx, sy, A(file)) end }
     for k, v in pairs(extra or {}) do def[k] = v end
     return def
 end
 
 local function ember(d, x, y, up)
     DecoFx.emit(d, { x = x + (math.random() - 0.5) * 10, y = y, vx = (math.random() - 0.5) * 20, vy = -(up or 50) - math.random() * 40,
-                     drag = 0.6, life = 0.8 + math.random() * 0.7, sheet = fx('ember-Sheet.png', 2), frame = math.random(2),
+                     drag = 0.6, life = 0.8 + math.random() * 0.7, sheet = DecoFx.fx('ember'), variant = true,
                      scale = 3, fade = 0.4, wob = 5, add = true })
 end
 local function puff(d, x, y, col, size)
     DecoFx.emit(d, { x = x + (math.random() - 0.5) * 6, y = y, vx = (math.random() - 0.5) * 10, vy = -26 - math.random() * 16,
-                     drag = 0.3, life = 1.8 + math.random() * 0.8, sheet = fx('smoke-Sheet.png', 6), frames = true, fps = 1.4,
+                     drag = 0.3, life = 1.8 + math.random() * 0.8, sheet = DecoFx.fx('smoke'),
                      scale = size or 4, fade = 1.0, fadeIn = 0.3, wob = 8, color = col, alpha = 0.55 })
 end
 
@@ -47,7 +48,7 @@ return {
         end,
         draw = function(d, sx, sy)
             DecoFx.seen(d)
-            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'charred_tree.png'), 1)
+            DecoFx.sheet(d, sx, sy, A('charred_tree'))
             DecoFx.draw(d, sx, sy)
         end,
     },
@@ -67,7 +68,7 @@ return {
         draw = function(d, sx, sy)
             DecoFx.seen(d)
             DecoFx.glow(sx, sy - 12, 22, FIRE, 0.18 + 0.06 * math.sin(d.animT * 3))
-            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'lava_vent.png'), 1)
+            DecoFx.sheet(d, sx, sy, A('lava_vent'))
             DecoFx.draw(d, sx, sy)
         end,
     },
@@ -77,7 +78,7 @@ return {
         editor = { previewScale = 1.5 },
         draw = function(d, sx, sy)
             DecoFx.glow(sx, sy - 12, 18, FIRE, 0.14 + 0.06 * math.sin(d.animT * 1.4 + d.phase * 6))
-            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'glow_rock.png'), 1)
+            DecoFx.sheet(d, sx, sy, A('glow_rock'))
         end,
     },
     base {
@@ -91,9 +92,9 @@ return {
         end,
         draw = function(d, sx, sy)
             DecoFx.seen(d)
-            local s = DecoFx.strip(DIR .. 'lava_fall-Sheet.png', 10)
+            local s = A('lava_fall')
             DecoFx.glow(sx, sy - TILE_PX / 2, 40, FIRE, 0.22)
-            DecoFx.sheet(d, sx, sy, s, s and s:frameAt(d.animT + d.phase, 8) or 1, { hang = true })
+            DecoFx.sheet(d, sx, sy, s, nil, { hang = true })
             DecoFx.draw(d, sx, sy)
         end,
     },
@@ -107,7 +108,7 @@ return {
         end,
         draw = function(d, sx, sy)
             DecoFx.seen(d)
-            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'steam_stones.png'), 1)
+            DecoFx.sheet(d, sx, sy, A('steam_stones'))
             DecoFx.draw(d, sx, sy)
         end,
     },

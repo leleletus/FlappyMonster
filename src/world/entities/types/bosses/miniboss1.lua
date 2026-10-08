@@ -65,7 +65,7 @@ local imgShip, imgIdle1, imgIdle2, imgHurt, imgDeadDown, imgDeadUp
 function Ship.loadAssets()
     if imgShip then return end
     local function load(p)
-        local i = require('src/fx/Anim').image(p)
+        local i = require('src/fx/Anim').part(p)
         if i.setFilter then i:setFilter('nearest', 'nearest') end
         return i
     end
@@ -430,13 +430,13 @@ local function drawSpikes(x, bottomY, len, nTiles)
     -- assets/images/bosses/miniboss1/spike.png: una púa de SPIKE_W x SPIKE_LEN
     -- hacia abajo (+1 px de margen para el contorno); al salir se estira
     if not spikeImg then
-        spikeImg = require('src/fx/Anim').image('assets/images/bosses/miniboss1/spike.png')
+        spikeImg = require('src/fx/Anim').part('assets/images/bosses/miniboss1/spike.png')
         spikeImg:setFilter('nearest', 'nearest')
     end
     love.graphics.setColor(1, 1, 1, 1)
     for i = 0, n - 1 do
         local sx = x - w / 2 + i * sw
-        love.graphics.draw(spikeImg, sx - 1, bottomY, 0, 1, len / SPIKE_LEN, 0, 1)
+        spikeImg:show(sx - 1, bottomY, 0, 1, len / SPIKE_LEN, 0, 1)
     end
 end
 
@@ -477,7 +477,7 @@ function Ship:render(camX, camY)
             elseif self.idle == 2 then img = imgIdle2
             elseif self.idle == 3 then img, fx = imgIdle2, -1 end
             love.graphics.setColor(1, 1, 1, 1)
-            love.graphics.draw(img, x, y, 0, S * fx, S, ox, oy)
+            img:show(x, y, 0, S * fx, S, ox, oy)
             -- La cara de dolor no tiene ojos: van en X (golpe y muerte)
             if hurt then DeadEyes.drawPair(x + EYES_LIVE_DX * S, y + EYES_LIVE_DY * S, EYES_SEP, S) end
         end
@@ -490,7 +490,7 @@ function Ship:render(camX, camY)
         else
             love.graphics.setColor(1, 1, 1, self:ghostAlpha())
         end
-        love.graphics.draw(imgShip, x, y, 0, S * flip, S, ox, oy)
+        imgShip:show(x, y, 0, S * flip, S, ox, oy)
     end
 
     -- Monstruo expulsado: animación de muerte con ojos en X
@@ -498,7 +498,7 @@ function Ship:render(camX, camY)
         local mx, my = math.floor(self.mx - camX), math.floor(self.my - camY)
         local img = (self.monFrame == 1) and imgDeadUp or imgDeadDown
         love.graphics.setColor(1, 1, 1, 1)
-        love.graphics.draw(img, mx, my, 0, S, S, img:getWidth() / 2, img:getHeight() / 2)
+        img:show(mx, my, 0, S, S, img:getWidth() / 2, img:getHeight() / 2)
         DeadEyes.drawPair(mx + EYES_DEAD_DX * S, my + EYES_DEAD_DY * S, EYES_SEP, S)
     end
     love.graphics.setColor(1, 1, 1, 1)

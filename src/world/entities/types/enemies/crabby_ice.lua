@@ -39,7 +39,7 @@ local imgSnow, imgSnowCracked, imgIcicle, imgTN, imgTE
 local function loadIce()
     if imgSnow then return end
     local function img(f)
-        local i = require('src/fx/Anim').image(D .. f)
+        local i = require('src/fx/Anim').part(D .. f)
         if i.setFilter then i:setFilter('nearest', 'nearest') end
         return i
     end
@@ -87,12 +87,12 @@ function Ice:drawTopper(cx, baseY, progress, dir)
     love.graphics.setColor(1, 1, 1, 1)
     if self.cover == 'icicle' then
         -- (dibujado con la punta abajo: base del carámbano en baseY, crece hacia fuera)
-        love.graphics.draw(imgIcicle, cx, baseY, 0, S, (dir < 0 and -S or S) * progress, 4, 0)
+        imgIcicle:show(cx, baseY, 0, S, (dir < 0 and -S or S) * progress, 4, 0)
     elseif self.cover == 'snow' then
         local img = (self.state == 'snow_crack') and imgSnowCracked or imgSnow
         local sh = 0
         if self.state == 'snow_crack' then sh = math.floor(math.sin(love.timer.getTime() * 60) * 2) end
-        love.graphics.draw(img, cx + sh, baseY, 0, S, (dir < 0 and S or -S) * progress, 9, 8)
+        img:show(cx + sh, baseY, 0, S, (dir < 0 and S or -S) * progress, 9, 8)
     else
         Crabby.drawTopper(self, cx, baseY, progress, dir)
     end
@@ -101,7 +101,7 @@ end
 function Ice:drawStuckTopper(cx, baseY)
     if self.cover == 'icicle' then
         love.graphics.setColor(1, 1, 1, 1)
-        love.graphics.draw(imgIcicle, cx, baseY, 0, S, S, 4, 0)
+        imgIcicle:show(cx, baseY, 0, S, S, 4, 0)
     else
         Crabby.drawStuckTopper(self, cx, baseY)
     end
@@ -303,11 +303,11 @@ local function editorIcon(cover)
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.draw(body, x, y + s - body:getHeight() * k, 0, k, k)
         if cover == 'snow' then
-            love.graphics.draw(imgSnow, x, y + s - 8 * k, 0, k, k)
+            imgSnow:show(x, y + s - 8 * k, 0, k, k)
         elseif cover == 'icicle' then
-            love.graphics.draw(imgIcicle, x + 9 * k, y + s - 13 * k, 0, k, -k, 4, 0)
+            imgIcicle:show(x + 9 * k, y + s - 13 * k, 0, k, -k, 4, 0)
         elseif cover == 'tramp' then
-            love.graphics.draw(imgTN, x + 1 * k, y - 2 * k, 0, k, k)
+            imgTN:show(x + 1 * k, y - 2 * k, 0, k, k)
         end
     end
 end

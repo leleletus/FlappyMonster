@@ -105,25 +105,15 @@ local PHASES = { { at = 1.0, every = 7.0, chain = 1, delay = 1.0 },
 local function rand(a, b) return a + math.random() * (b - a) end
 
 -- ── Sprites (los del jugador, dibujados con los colores invertidos) ──────────
-local sprites, spriteDead, spriteCrouch
-local bodyDown, bodyUp, headUp, headDown, joyEyes
+local PS = require 'src/player/PlayerSprite'       -- (el sprite del monstruo: animaciones por nombre)
+-- (lo suyo: la risa `laugh_body` + `laugh_head` y los ojos de alegría `joy_eyes`, del conjunto bosses/mirror)
+local function M(name, t)
+    local c = require('src/fx/Anim').clip('bosses/mirror', name)
+    return c:rec(c:at(t or love.timer.getTime()))
+end
 local invShader
 
-function Mirror.loadAssets()
-    if sprites then return end
-    sprites = {
-        require('src/fx/Anim').image('assets/images/player/monstrito1.png'),
-        require('src/fx/Anim').image('assets/images/player/monstrito2.png'),
-        require('src/fx/Anim').image('assets/images/player/monstrito3.png'),
-    }
-    spriteDead   = require('src/fx/Anim').image('assets/images/player/monstrito4.png')
-    spriteCrouch = require('src/fx/Anim').image('assets/images/player/monstrito5.png')
-    bodyDown = require('src/fx/Anim').image('assets/images/bosses/mirror/Body_ArmsDown.png')
-    bodyUp   = require('src/fx/Anim').image('assets/images/bosses/mirror/Body_ArmsUp.png')
-    headUp   = require('src/fx/Anim').image('assets/images/bosses/mirror/Head_Up.png')
-    headDown = require('src/fx/Anim').image('assets/images/bosses/mirror/Head_Down.png')
-    joyEyes  = require('src/fx/Anim').image('assets/images/bosses/mirror/JoyEyes.png')
-end
+function Mirror.loadAssets() PS.clip('idle') end
 
 function Mirror.sizePx() return 9 * PLAYER_SCALE, 16 * PLAYER_SCALE end
 
@@ -1017,33 +1007,34 @@ function Mirror:render(camX, camY)
     if laughT then
         -- Laugh.anim: cuadro A = cabeza arriba + brazos abajo, cuadro B =
         -- cabeza abajo (baja un poco, con los ojos) + brazos arriba
-        local k   = math.floor(laughT / LAUGH_FRAME) % 2
-        local bob = (k == 1) and math.floor(PLAYER_SCALE / 2) or 0
-        local body, head = (k == 1) and bodyUp or bodyDown, (k == 1) and headDown or headUp
-        local iw, ih = body:getWidth(), body:getHeight()
-        love.graphics.draw(body, x, y, 0, s * f, s, iw / 2, ih / 2)
-        love.graphics.draw(head, x, y + bob, 0, s * f, s, iw / 2, ih / 2)
+        -- (el cuadro de la cabeza que baja lleva el dato "bob": baja un poco, con los ojos)
+        local body, head = M('laugh_body', laughT), M('laugh_head', laughT)
+        local bob = head.data.bob and math.floor(PLAYER_SCALE / 2) or 0
+        local iw, ih = body.w, body.h
+        PS.draw(body, x, y, 0, s * f, s, iw / 2, ih / 2)
+        PS.draw(head, x, y + bob, 0, s * f, s, iw / 2, ih / 2)
         -- Ojos de alegría, donde van los ojos en X
         local cell = math.max(1, math.floor(s / 2 + 0.5))
-        local ew, eh = joyEyes:getDimensions()
+        local joy = M('joy_eyes')
+        local ew, eh = joy.w, joy.h
         for _, side in ipairs({ -1, 1 }) do
             local cx = math.floor(x + side * 1.2 * s * f + 0.5)
             local cy = math.floor(y + bob - 2.5 * s + 0.5)
-            love.graphics.draw(joyEyes, cx - math.floor(ew * cell / 2), cy - math.floor(eh * cell / 2), 0, cell, cell)
+            PS.draw(joy, cx - math.floor(ew * cell / 2), cy - math.floor(eh * cell / 2), 0, cell, cell)
         end
     else
         local img
         if st == 'dying_fall' then
-            img = spriteDead
+            img = PS.rec('dead')
         elseif st == 'dying_hold' then
             -- Animación de caída del jugador: brazos arriba / abajo
-            img = sprites[(math.floor((self.deadTimer or 0) * FALL_FPS) % 2 == 0) and 1 or 3]
+            img = PS.rec('fall', self.deadTimer or 0)
         elseif self.crouching or self.frame == 5 then
-            img = spriteCrouch
+            img = PS.rec('crouch')
         else
-            img = sprites[self.frame] or sprites[3]
+            img = PS.rec(self.frame)
         end
-        local iw, ih = img:getWidth(), img:getHeight()
+        local iw, ih = img.w, img.h
         local sx = s * f
         if st == 'warp_out' then
             -- Se rompe: se estrecha hasta desaparecer, blanco
@@ -1054,7 +1045,7 @@ function Mirror:render(camX, camY)
             local k = math.min(1, (self.deadTimer or 0) / PORTAL_IN_T)
             sx, s = sx * k, s * k
         end
-        love.graphics.draw(img, x, y, 0, sx, s, iw / 2, ih / 2)
+        PS.draw(img, x, y, 0, sx, s, iw / 2, ih / 2)
         if st == 'dying_fall' then DeadEyes.draw(x, y, s, f, r, g, bb, 1) end
     end
     love.graphics.setShader()

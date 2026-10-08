@@ -2,19 +2,17 @@
   "id": "bosses/mirror",
   "scale": 4,
   "origin": [0.5, 1],
-  "fallback": "Body_ArmsDown",
+  "fallback": "laugh_body",
   "frames": [
     {"image": "assets/images/bosses/mirror/Body_ArmsDown.png", "key": "Body_ArmsDown.png"},
     {"image": "assets/images/bosses/mirror/Body_ArmsUp.png", "key": "Body_ArmsUp.png"},
-    {"image": "assets/images/bosses/mirror/Head_Down.png", "key": "Head_Down.png"},
+    {"bob": true, "image": "assets/images/bosses/mirror/Head_Down.png", "key": "Head_Down.png"},
     {"image": "assets/images/bosses/mirror/Head_Up.png", "key": "Head_Up.png"},
     {"image": "assets/images/bosses/mirror/JoyEyes.png", "key": "JoyEyes.png"}
   ],
   "anims": {
-    "Body_ArmsDown": {"fps": 4, "frames": [1], "loop": true},
-    "Body_ArmsUp": {"fps": 4, "frames": [2], "loop": true},
-    "Head_Down": {"fps": 4, "frames": [3], "loop": true},
-    "Head_Up": {"fps": 4, "frames": [4], "loop": true},
-    "JoyEyes": {"fps": 4, "frames": [5], "loop": true}
+    "joy_eyes": {"fps": 8, "frames": [5], "loop": true},
+    "laugh_body": {"fps": 6, "frames": [1, 2], "loop": true},
+    "laugh_head": {"fps": 6, "frames": [4, 3], "loop": true}
   }
 }

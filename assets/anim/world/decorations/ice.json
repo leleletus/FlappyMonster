@@ -15,12 +15,13 @@
     {"h": 33, "image": "assets/images/world/decorations/ice/snowy_pine.png", "w": 18, "x": 0, "y": 0}
   ],
   "anims": {
-    "frozen_bush": {"fps": 8, "frameW": 18, "frames": [1], "loop": true, "sheet": "frozen_bush.png"},
-    "ice_crystal": {"fps": 8, "frameW": 10, "frames": [2], "loop": true, "sheet": "ice_crystal.png"},
-    "icicle": {"fps": 8, "frameW": 18, "frames": [3], "loop": true, "sheet": "icicle.png"},
-    "icicle_small": {"fps": 8, "frameW": 10, "frames": [4], "loop": true, "sheet": "icicle_small.png"},
-    "snow_pile": {"fps": 8, "frameW": 10, "frames": [5], "loop": true, "sheet": "snow_pile.png"},
-    "snowman": {"fps": 8, "frameW": 18, "frames": [6, 7, 8], "loop": true, "sheet": "snowman-Sheet.png"},
-    "snowy_pine": {"fps": 8, "frameW": 18, "frames": [9], "loop": true, "sheet": "snowy_pine.png"}
+    "frozen_bush": {"fps": 8, "frames": [1], "loop": true},
+    "ice_crystal": {"fps": 8, "frames": [2], "loop": true},
+    "icicle": {"fps": 8, "frames": [3], "loop": true},
+    "icicle_small": {"fps": 8, "frames": [4], "loop": true},
+    "snow_pile": {"fps": 8, "frames": [5], "loop": true},
+    "snowman": {"fps": 2, "frames": [6, 8], "loop": true},
+    "snowman_blink": {"fps": 8, "frames": [7], "loop": true},
+    "snowy_pine": {"fps": 8, "frames": [9], "loop": true}
   }
 }

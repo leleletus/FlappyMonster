@@ -301,7 +301,6 @@ end
 -- visibles del sprite del tipo (editor.sprite, medida una vez), con su lado y su
 -- vuelta; sin sprite, la hitbox exterior. Solo dibujo.
 local wingStrip
-local WING_FPS = 9
 local visCache = {}
 
 -- Caja visible del sprite del tipo, en píxeles de arte: {x0, x1, y0, y1, iw, ih} o false
@@ -333,7 +332,7 @@ end
 
 function EntityTypes.drawWings(e, camX, camY)
     if not (e.props and e.props.movement == 'fly') or e.state == 'dead' then return end
-    wingStrip = wingStrip or require('src/fx/SpriteStrip').load('assets/images/enemies/wings/wings-Sheet.png', 9)
+    wingStrip = wingStrip or require('src/fx/Anim').clip('enemies/wings', 'wings')
     -- Cuerpo visible (centro x, arriba y alto en px de mundo)
     local cxw, top, bw, bh
     local vb = e.sprW and e.sprH and visibleBox(e.def or (e.class and e.class.def))
@@ -357,11 +356,11 @@ function EntityTypes.drawWings(e, camX, camY)
     local cy = math.floor(top + bh * (e.flipped and 0.68 or 0.32) - camY)
     local cx = math.floor(cxw - camX)
     -- Aleteo (desfasado por entidad para que no vayan todas a la vez)
-    local f = wingStrip:frameAt(love.timer.getTime() + (e.home and e.home.x or 0) * 0.013, WING_FPS)
+    local wt = love.timer.getTime() + (e.home and e.home.x or 0) * 0.013      -- (animación `wings`, a su ritmo)
     local sy = e.flipped and -s or s
     love.graphics.setColor(1, 1, 1, 1)
-    wingStrip:draw(f, cx - rootX - half, cy, 0, s, sy)      -- izquierda
-    wingStrip:draw(f, cx + rootX + half, cy, 0, -s, sy)     -- derecha (espejada)
+    wingStrip:play(wt, cx - rootX - half, cy, 0, s, sy)      -- izquierda
+    wingStrip:play(wt, cx + rootX + half, cy, 0, -s, sy)     -- derecha (espejada)
 end
 
 function EntityTypes.get(name)

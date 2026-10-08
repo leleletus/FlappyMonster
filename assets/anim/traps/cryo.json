@@ -19,21 +19,24 @@
     {"h": 16, "image": "assets/images/traps/cryo/cryo_cannon-Sheet.png", "w": 16, "x": 32, "y": 0},
     {"h": 16, "image": "assets/images/traps/cryo/cryo_cannon-Sheet.png", "w": 16, "x": 48, "y": 0},
     {"h": 14, "image": "assets/images/traps/cryo/stream_head-Sheet.png", "w": 12, "x": 0, "y": 0},
-    {"h": 14, "image": "assets/images/traps/cryo/stream_head-Sheet.png", "w": 12, "x": 12, "y": 0}
+    {"h": 14, "image": "assets/images/traps/cryo/stream_head-Sheet.png", "w": 12, "x": 12, "y": 0},
+    {"h": 10, "image": "assets/images/traps/cryo/stream-Sheet.png", "w": 16, "x": 0, "y": 0},
+    {"h": 10, "image": "assets/images/traps/cryo/stream-Sheet.png", "w": 16, "x": 16, "y": 0},
+    {"h": 10, "image": "assets/images/traps/cryo/stream-Sheet.png", "w": 16, "x": 32, "y": 0}
   ],
   "anims": {
     "anchor": {"fps": 4, "frames": [1], "loop": true},
-    "cannon_charge": {"at": [2, 3], "fps": 8, "frameW": 16, "frames": [12, 13], "loop": true, "sheet": "cryo_cannon-Sheet.png"},
-    "cannon_fire": {"at": [4], "fps": 8, "frameW": 16, "frames": [14], "loop": true, "sheet": "cryo_cannon-Sheet.png"},
-    "cannon_idle": {"at": [1], "fps": 8, "frameW": 16, "frames": [11], "loop": true, "sheet": "cryo_cannon-Sheet.png"},
+    "cannon_charge": {"fps": 8, "frames": [12, 13], "loop": true},
+    "cannon_fire": {"fps": 8, "frames": [14], "loop": true},
+    "cannon_idle": {"fps": 8, "frames": [11], "loop": true},
     "chain": {"fps": 4, "frames": [2], "loop": true},
-    "charge": {"at": [2, 3], "fps": 8, "frameW": 16, "frames": [8, 9], "loop": true, "sheet": "cryo_body-Sheet.png"},
+    "charge": {"fps": 8, "frames": [8, 9], "loop": true},
     "clamp": {"fps": 4, "frames": [3], "loop": true},
     "cryo": {"fps": 4, "frames": [4], "loop": true},
     "cryo_feet": {"fps": 4, "frames": [5], "loop": true},
-    "fire": {"at": [4], "fps": 8, "frameW": 16, "frames": [10], "loop": true, "sheet": "cryo_body-Sheet.png"},
-    "idle": {"at": [1], "fps": 8, "frameW": 16, "frames": [7], "loop": true, "sheet": "cryo_body-Sheet.png"},
-    "stream": {"fps": 4, "frames": [6], "loop": true},
-    "stream_head": {"fps": 8, "frameW": 12, "frames": [15, 16], "loop": true, "sheet": "stream_head-Sheet.png"}
+    "fire": {"fps": 8, "frames": [10], "loop": true},
+    "idle": {"fps": 8, "frames": [7], "loop": true},
+    "stream": {"fps": 16, "frames": [17, 18, 19], "loop": true},
+    "stream_head": {"fps": 10, "frames": [15, 16], "loop": true}
   }
 }

@@ -20,14 +20,16 @@
     {"h": 13, "image": "assets/images/world/decorations/cave/torch-Sheet.png", "w": 10, "x": 30, "y": 0}
   ],
   "anims": {
-    "bones": {"fps": 8, "frameW": 10, "frames": [1], "loop": true, "sheet": "bones.png"},
-    "cobweb": {"fps": 8, "frameW": 16, "frames": [2], "loop": true, "sheet": "cobweb.png"},
-    "crystals": {"fps": 8, "frameW": 18, "frames": [3], "loop": true, "sheet": "crystals.png"},
-    "glow_mushroom": {"fps": 8, "frameW": 10, "frames": [4], "loop": true, "sheet": "glow_mushroom.png"},
-    "spider": {"fps": 8, "frameW": 7, "frames": [5, 6, 7], "loop": true, "sheet": "spider-Sheet.png"},
-    "stalactite": {"fps": 8, "frameW": 18, "frames": [8], "loop": true, "sheet": "stalactite.png"},
-    "stalagmite": {"fps": 8, "frameW": 18, "frames": [9], "loop": true, "sheet": "stalagmite.png"},
-    "stalagmite_small": {"fps": 8, "frameW": 10, "frames": [10], "loop": true, "sheet": "stalagmite_small.png"},
-    "torch": {"codeFps": 9, "fps": 9, "frameW": 10, "frames": [11, 12, 13, 14], "loop": true, "sheet": "torch-Sheet.png"}
+    "bones": {"fps": 8, "frames": [1], "loop": true},
+    "cobweb": {"fps": 8, "frames": [2], "loop": true},
+    "crystals": {"fps": 8, "frames": [3], "loop": true},
+    "glow_mushroom": {"fps": 8, "frames": [4], "loop": true},
+    "spider": {"fps": 8, "frames": [5], "loop": true},
+    "spider_thread": {"fps": 8, "frames": [7], "loop": true},
+    "spider_twitch": {"fps": 8, "frames": [6], "loop": true},
+    "stalactite": {"fps": 8, "frames": [8], "loop": true},
+    "stalagmite": {"fps": 8, "frames": [9], "loop": true},
+    "stalagmite_small": {"fps": 8, "frames": [10], "loop": true},
+    "torch": {"fps": 9, "frames": [11, 12, 13, 14], "loop": true}
   }
 }

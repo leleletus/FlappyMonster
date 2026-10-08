@@ -27,7 +27,6 @@ local Mortar = Entity.extend(Entity, {
 
 local SCALE      = GUMMY_SCALE     -- 16x16 → 64 px, una casilla
 local FIRE_SCALE = 3               -- bola de fuego (cuadros de 16x16)
-local FIRE_FPS   = 12
 local FIRE_HIT   = 9 * FIRE_SCALE  -- lado de la caja de daño de la bola (px)
 local FIRE_HALF  = 8 * FIRE_SCALE  -- media altura del dibujo: al arder se apoya en el suelo
 local SHOT_SPRITE_T = 0.5          -- ResetSpriteAfterDelay(0.5f)
@@ -36,14 +35,9 @@ local FIRE_LIFE  = 8               -- s máximos de una bola (por si acaso)
 
 local function rand(a, b) return a + math.random() * (b - a) end
 
-local imgNormal, imgShoot, fireStrip
-function Mortar.loadAssets()
-    if imgNormal then return end
-    imgNormal = require('src/fx/Anim').image('assets/images/enemies/mortar/normal.png')
-    imgShoot  = require('src/fx/Anim').image('assets/images/enemies/mortar/shooting.png')
-    fireStrip = SpriteStrip.load('assets/images/enemies/mortar/flame.png')
-    if imgNormal.setFilter then imgNormal:setFilter('nearest', 'nearest'); imgShoot:setFilter('nearest', 'nearest') end
-end
+-- Animaciones (assets/anim/enemies/mortar.json), por nombre: `idle`, `shoot` (mientras dispara) y `flame` (la bola)
+Mortar.animId = 'enemies/mortar'
+function Mortar.loadAssets() Mortar.anims(Mortar) end
 function Mortar.sizePx() return 16 * SCALE, 16 * SCALE end
 
 function Mortar:init()
@@ -231,7 +225,8 @@ end
 
 function Mortar:render(camX, camY)
     local p   = self.props
-    local img = (self.shotT > 0) and imgShoot or imgNormal
+    local set, now = self:anims(), love.timer.getTime()
+    local name = (self.shotT > 0) and 'shoot' or 'idle'
     local x   = math.floor(self.x - camX)
     local bot = math.floor(self.y - camY + self.sprH / 2)
     local k, alpha = 0, 1
@@ -244,24 +239,23 @@ function Mortar:render(camX, camY)
         bot = bot + math.floor((math.random() * 2 - 1) * sh + 0.5)
     end
     love.graphics.setColor(1, 1 - k, 1 - k, alpha)
-    love.graphics.draw(img, x, bot, 0, SCALE * (self.facing or 1), SCALE, img:getWidth() / 2, img:getHeight())
+    set:draw(name, now, x, bot, 0, SCALE * (self.facing or 1), SCALE, 0.5, 1)
     if k > 0 then
         -- El sprite es casi negro: el rojo se suma para que se note de verdad
         love.graphics.setBlendMode('add')
         love.graphics.setColor(k, k * 0.12, k * 0.05, 1)
-        love.graphics.draw(img, x, bot, 0, SCALE * (self.facing or 1), SCALE, img:getWidth() / 2, img:getHeight())
+        set:draw(name, now, x, bot, 0, SCALE * (self.facing or 1), SCALE, 0.5, 1)
         love.graphics.setBlendMode('alpha')
     end
 
     -- Bolas de fuego (y sus chispas)
-    local now = love.timer.getTime()
     Particles = Particles or require 'src/fx/Particles'
     for _, f in ipairs(self.proj) do
         local sc = FIRE_SCALE * (f.scale or 1)
         if sc > 0.05 then
             love.graphics.setColor(1, 1, 1, 1)
             local cy = f.y + (1 - (f.scale or 1)) * FIRE_HALF   -- se consume hacia el suelo
-            fireStrip:draw(fireStrip:frameAt(now + f.id * 0.13, FIRE_FPS), math.floor(f.x - camX), math.floor(cy - camY), 0, sc, sc)
+            set:draw('flame', now + f.id * 0.13, math.floor(f.x - camX), math.floor(cy - camY), 0, sc, sc, 0.5, 0.5)
             if (f.lastEmber or 0) + 0.06 < now then
                 f.lastEmber = now
                 Particles.emit('ember', f.x, f.y)

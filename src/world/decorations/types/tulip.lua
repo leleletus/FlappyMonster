@@ -1,3 +1,4 @@
+local DecoFx = require 'src/world/decorations/DecoFx'
 -- Tulipán: planta pequeña (subcelda) que "respira" suavemente.
 local SCALE         = 3
 local BREATHE_SPEED = 1.8
@@ -9,10 +10,7 @@ return {
     name = 'tulip', label = 'Tulipán', placement = 'sub', category = 'Plantas',
     editor = { icon = 'assets/images/world/decorations/foliage/tulip.png' },
     loadAssets = function()
-        if img == nil then
-            local ok, i = pcall(require('src/fx/Anim').image, 'assets/images/world/decorations/foliage/tulip.png')
-            img = ok and i or false
-        end
+        if img == nil then img = DecoFx.anim('world/decorations/foliage', 'tulip') end
     end,
     draw = function(d, sx, sy)
         if not img then return end
@@ -20,6 +18,6 @@ return {
         local scY = SCALE * (1.0 + breathe * BREATHE_AMP)
         local scX = SCALE * (1.0 - breathe * BREATHE_AMP * 0.3)
         love.graphics.setColor(1, 1, 1, 1)
-        love.graphics.draw(img, sx, sy, 0, scX * d.flip, scY, img:getWidth()/2, img:getHeight())
+        img:play(d.animT, sx, sy, 0, scX * d.flip, scY, 0.5, 1)
     end,
 }

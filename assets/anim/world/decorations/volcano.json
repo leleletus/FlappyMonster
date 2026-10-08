@@ -17,14 +17,14 @@
     {"h": 5, "image": "assets/images/world/decorations/volcano/steam_stones.png", "w": 12, "x": 0, "y": 0}
   ],
   "anims": {
-    "ash_pile": {"fps": 8, "frameW": 12, "frames": [1], "loop": true, "sheet": "ash_pile.png"},
-    "basalt_pebbles": {"fps": 8, "frameW": 10, "frames": [2], "loop": true, "sheet": "basalt_pebbles.png"},
-    "basalt_rock": {"fps": 8, "frameW": 18, "frames": [3], "loop": true, "sheet": "basalt_rock.png"},
-    "charred_tree": {"fps": 8, "frameW": 22, "frames": [4], "loop": true, "sheet": "charred_tree.png"},
-    "dead_bush": {"fps": 8, "frameW": 10, "frames": [5], "loop": true, "sheet": "dead_bush.png"},
-    "glow_rock": {"fps": 8, "frameW": 10, "frames": [6], "loop": true, "sheet": "glow_rock.png"},
-    "lava_fall": {"codeFps": 8, "fps": 8, "frameW": 10, "frames": [7, 8, 9], "loop": true, "sheet": "lava_fall-Sheet.png"},
-    "lava_vent": {"fps": 8, "frameW": 10, "frames": [10], "loop": true, "sheet": "lava_vent.png"},
-    "steam_stones": {"fps": 8, "frameW": 12, "frames": [11], "loop": true, "sheet": "steam_stones.png"}
+    "ash_pile": {"fps": 8, "frames": [1], "loop": true},
+    "basalt_pebbles": {"fps": 8, "frames": [2], "loop": true},
+    "basalt_rock": {"fps": 8, "frames": [3], "loop": true},
+    "charred_tree": {"fps": 8, "frames": [4], "loop": true},
+    "dead_bush": {"fps": 8, "frames": [5], "loop": true},
+    "glow_rock": {"fps": 8, "frames": [6], "loop": true},
+    "lava_fall": {"fps": 8, "frames": [7, 8, 9], "loop": true},
+    "lava_vent": {"fps": 8, "frames": [10], "loop": true},
+    "steam_stones": {"fps": 8, "frames": [11], "loop": true}
   }
 }

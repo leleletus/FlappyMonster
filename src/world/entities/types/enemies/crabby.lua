@@ -582,14 +582,13 @@ local function drawSpike(cx, baseY, sH, dir, file)
     file = file or 'assets/images/enemies/crabby/spike.png'
     local spikeImg = spikeImgs[file]
     if not spikeImg then
-        spikeImg = require('src/fx/Anim').image(file)
-        spikeImg:setFilter('nearest', 'nearest')
+        spikeImg = require('src/fx/Anim').part(file)
         spikeImgs[file] = spikeImg
     end
     local _, maxH = spikeDims()
     local iw, ih = spikeImg:getDimensions()
     love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.draw(spikeImg, cx, baseY, 0, 1, -dir * sH / maxH, iw / 2, ih - 1)
+    spikeImg:show(cx, baseY, 0, 1, -dir * sH / maxH, iw / 2, ih - 1)
 end
 
 -- Lo que saca del caparazón al esconderse (dir = -1 hacia arriba, 1 hacia
@@ -621,16 +620,17 @@ function Crabby:drawClaws(drawX, feetY, flipped)
     local st = self.state or 'walk'
     if img == self.sk.hid or img == self.sk.lookin or img == self.sk.dead or st:sub(1, 4) == 'dead'
        or st == 'hidden' or st == 'reserve' then return end
+    -- (las pinzas: animaciones `claw_open` y `claw_snap` del conjunto de su especie — la carpeta de cfg.file)
     local a = clawArt[cfg.file]
     if not a then
-        local im = require('src/fx/Anim').image(cfg.file)
-        im:setFilter('nearest', 'nearest')
-        a = { img = im, quad = love.graphics.newQuad(0, 0, 1, 1, im:getDimensions()) }
+        local set = cfg.file:match('^assets/images/(.+)/[^/]+$')
+        local A = require 'src/fx/Anim'
+        a = { clips = { A.clip(set, 'claw_open'), A.clip(set, 'claw_snap') }, quad = love.graphics.newQuad(0, 0, 1, 1, 1, 1) }
         clawArt[cfg.file] = a
     end
     local S = (self.artScale or GUMMY_SCALE)
     local now = love.timer.getTime()
-    local fw, fh = cfg.w, a.img:getHeight()
+    local fw, fh = a.clips[1].w, a.clips[1].h
     local inset = self.sk.inset and self.sk.inset[img]
     local sink = inset and (inset + 1) or 0               -- (hundiéndose: filas que ha bajado)
     if st ~= self._clawSt then self._clawSt, self._clawAt = st, now end
@@ -674,8 +674,9 @@ function Crabby:drawClaws(drawX, feetY, flipped)
         local rows = fh
         if sink > 0 then rows = math.min(fh, math.floor(-top / S)) end
         if rows > 0 then
-            a.quad:setViewport((fr - 1) * fw, 0, fw, rows)
-            love.graphics.draw(a.img, a.quad, cx, top, 0, -side * S, S, fw / 2, 0)
+            local r = (a.clips[fr] or a.clips[1]):now()
+            a.quad:setViewport(r.x, r.y, r.w, rows, r.iw, r.ih)
+            love.graphics.draw(r.image, a.quad, cx, top, 0, -side * S, S, fw / 2, 0)
         end
     end
     love.graphics.pop()

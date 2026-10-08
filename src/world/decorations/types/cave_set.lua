@@ -8,6 +8,8 @@
 local DecoFx = require 'src/world/decorations/DecoFx'
 
 local DIR = 'assets/images/world/decorations/cave/'
+-- (sus animaciones, por nombre: assets/anim/world/decorations/cave.json)
+local function A(n) return DecoFx.anim('world/decorations/cave', n) end
 local CAT = 'Cueva'
 local S = DecoFx.SCALE
 local WATER = { 0.7, 0.8, 0.95 }
@@ -15,7 +17,6 @@ local PURPLE = { 0.75, 0.5, 1 }
 local CYAN = { 0.35, 0.95, 1 }
 local FIRE = { 1, 0.62, 0.25 }
 
-local function fx(name, fw) return DecoFx.strip(DecoFx.FX .. name, fw) end
 
 local function base(def)
     def.category = CAT
@@ -26,7 +27,7 @@ end
 local function static(name, label, placement, file, fw, extra)
     local def = base { name = name, label = label, placement = placement,
         editor = { previewScale = placement == 'sub' and 1.5 or 0.8 },
-        draw = function(d, sx, sy) DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. file), 1) end }
+        draw = function(d, sx, sy) DecoFx.sheet(d, sx, sy, A(file)) end }
     for k, v in pairs(extra or {}) do def[k] = v end
     return def
 end
@@ -34,15 +35,15 @@ end
 -- Brasa que sube de una llama
 local function ember(d, x, y)
     DecoFx.emit(d, { x = x + (math.random() - 0.5) * 8, y = y, vx = (math.random() - 0.5) * 18, vy = -50 - math.random() * 40,
-                     drag = 0.6, life = 0.7 + math.random() * 0.6, sheet = fx('ember-Sheet.png', 2), frame = math.random(2),
+                     drag = 0.6, life = 0.7 + math.random() * 0.6, sheet = DecoFx.fx('ember'), variant = true,
                      scale = 3, fade = 0.4, wob = 4, add = true })
 end
 
 -- Llama con luz: tira de cuadros, halo que parpadea y brasas
-local function flameDraw(d, sx, sy, s, fps, lightY, lightR)
+local function flameDraw(d, sx, sy, s, lightY, lightR)
     local flick = 0.2 + 0.05 * math.sin(d.animT * 13) + 0.03 * math.sin(d.animT * 31 + d.phase * 9)
     DecoFx.glow(sx, sy + lightY, lightR, FIRE, flick)
-    DecoFx.sheet(d, sx, sy, s, s and s:frameAt(d.animT + d.phase, fps) or 1)
+    DecoFx.sheet(d, sx, sy, s)                    -- (la llama, a su ritmo)
 end
 
 return {
@@ -56,7 +57,7 @@ return {
         end,
         draw = function(d, sx, sy)
             DecoFx.seen(d)
-            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'stalactite.png'), 1, { hang = true })
+            DecoFx.sheet(d, sx, sy, A('stalactite'), nil, { hang = true })
             DecoFx.draw(d, sx, sy)
         end,
     },
@@ -69,7 +70,7 @@ return {
         update = function(d, dt)
             if DecoFx.every(d, 'spark', dt, 0.4, 1.2) then
                 DecoFx.emit(d, { x = (math.random() - 0.5) * 44, y = -10 - math.random() * 36, vy = -14, life = 0.9,
-                                 sheet = fx('sparkle-Sheet.png', 5), frames = true, fps = 4, scale = 2, fade = 0.3,
+                                 sheet = DecoFx.fx('sparkle_slow'), scale = 2, fade = 0.3,
                                  color = { 0.9, 0.8, 1 }, add = true })
             end
             DecoFx.update(d, dt)
@@ -77,7 +78,7 @@ return {
         draw = function(d, sx, sy)
             DecoFx.seen(d)
             DecoFx.glow(sx, sy - 24, 48, PURPLE, 0.16 + 0.06 * math.sin(d.animT * 1.6))
-            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'crystals.png'), 1)
+            DecoFx.sheet(d, sx, sy, A('crystals'))
             DecoFx.draw(d, sx, sy)
         end,
     },
@@ -88,7 +89,7 @@ return {
         update = function(d, dt)
             if DecoFx.every(d, 'spore', dt, 0.6, 1.6) then
                 DecoFx.emit(d, { x = (math.random() - 0.5) * 20, y = -22, vy = -18 - math.random() * 10, life = 2.2,
-                                 sheet = fx('spore-Sheet.png', 3), frame = math.random(2), scale = 3, fade = 0.8,
+                                 sheet = DecoFx.fx('spore'), variant = true, scale = 3, fade = 0.8,
                                  fadeIn = 0.3, wob = 6, add = true })
             end
             DecoFx.update(d, dt)
@@ -96,7 +97,7 @@ return {
         draw = function(d, sx, sy)
             DecoFx.seen(d)
             DecoFx.glow(sx, sy - 16, 28, CYAN, 0.18 + 0.07 * math.sin(d.animT * 1.9))
-            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'glow_mushroom.png'), 1)
+            DecoFx.sheet(d, sx, sy, A('glow_mushroom'))
             DecoFx.draw(d, sx, sy)
         end,
     },
@@ -111,7 +112,7 @@ return {
         draw = function(d, sx, sy)
             DecoFx.seen(d)
             -- (tira de 8x12: palo abajo, llama en las 6 filas de arriba)
-            flameDraw(d, sx, sy, DecoFx.strip(DIR .. 'torch-Sheet.png', 10), 9, -34, 46)
+            flameDraw(d, sx, sy, A('torch'), -34, 46)
             DecoFx.draw(d, sx, sy)
         end,
     },
@@ -121,17 +122,18 @@ return {
         editor = { previewScale = 0.8 },
         props = { { key = 'spider', kind = 'bool', label = 'Araña', group = 'Aspecto', default = true } },
         draw = function(d, sx, sy)
-            local sp = DecoFx.strip(DIR .. 'spider-Sheet.png', 7)
-            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'cobweb.png'), 1, { hang = true })
+            local sp, thread, twitch = A('spider'), A('spider_thread'), A('spider_twitch')
+            DecoFx.sheet(d, sx, sy, A('cobweb'), nil, { hang = true })
             if d.props.spider ~= false and sp then
                 -- Cuelga de un hilo que sale de la tela; sube y baja despacio
                 local x = math.floor(sx - 10 * d.flip)
                 local top = sy - TILE_PX + 16
                 local len = 14 + 20 * (0.5 + 0.5 * math.sin(d.animT * 0.8))
                 love.graphics.setColor(1, 1, 1, 0.8)
-                love.graphics.draw(sp.image, sp.quads[3], x, top, 0, 2, len / 5, 3.5, 0)   -- (hilo: 2 px)
+                if thread then thread:playPx(d.animT, x, top, 0, 2, len / thread.h, thread.w / 2, 0) end   -- (hilo: 2 px)
                 love.graphics.setColor(1, 1, 1, 1)
-                sp:draw((math.floor(d.animT * 3) % 7 == 0) and 2 or 1, x, math.floor(top + len + 6), 0, 3)
+                local now = ((math.floor(d.animT * 3) % 7 == 0) and twitch) or sp           -- (de vez en cuando, un respingo)
+                now:play(d.animT, x, math.floor(top + len + 6), 0, 3)
             end
         end,
     },

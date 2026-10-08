@@ -20,11 +20,13 @@
     {"h": 29, "image": "assets/images/world/decorations/tropical/tiki_torch-Sheet.png", "w": 10, "x": 30, "y": 0}
   ],
   "anims": {
-    "bush": {"fps": 8, "frameW": 18, "frames": [1], "loop": true, "sheet": "bush.png"},
-    "butterfly": {"fps": 8, "frameW": 5, "frames": [2, 3, 4, 5, 6, 7], "loop": true, "sheet": "butterfly-Sheet.png"},
-    "fern": {"fps": 8, "frameW": 18, "frames": [8], "loop": true, "sheet": "fern.png"},
-    "hibiscus": {"fps": 8, "frameW": 10, "frames": [9], "loop": true, "sheet": "hibiscus.png"},
-    "pineapple": {"fps": 8, "frameW": 10, "frames": [10], "loop": true, "sheet": "pineapple.png"},
-    "tiki_torch": {"codeFps": 9, "fps": 9, "frameW": 10, "frames": [11, 12, 13, 14], "loop": true, "sheet": "tiki_torch-Sheet.png"}
+    "bush": {"fps": 8, "frames": [1], "loop": true},
+    "butterfly_1": {"fps": 10, "frames": [2, 3], "loop": true},
+    "butterfly_2": {"fps": 10, "frames": [4, 5], "loop": true},
+    "butterfly_3": {"fps": 10, "frames": [6, 7], "loop": true},
+    "fern": {"fps": 8, "frames": [8], "loop": true},
+    "hibiscus": {"fps": 8, "frames": [9], "loop": true},
+    "pineapple": {"fps": 8, "frames": [10], "loop": true},
+    "tiki_torch": {"fps": 9, "frames": [11, 12, 13, 14], "loop": true}
   }
 }

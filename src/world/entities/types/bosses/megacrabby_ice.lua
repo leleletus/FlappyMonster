@@ -41,16 +41,16 @@ local ICI_HW, ICI_HH = 20, 44       -- su zona de daño: más estrecha y baja qu
 local RAGE_BW, RAGE_CW = 26, 18     -- ancho de cuadro de las capas de rabia (make_icecrab_sprites.py)
 local RAGE_GROW = 0.3               -- s del destello al salirle las esquirlas
 
-local rageBody, rageClaw, shock, fieldS, fieldQuad
+local Anim = require 'src/fx/Anim'
+local fieldQuad
+local function C(name) return IM.art.clip(name) end
 function IM.loadAssets()
     Mega.loadAssets()
     if rawget(IM, 'art') then return end
     -- (pinzas a la escala del cuerpo y más bajas, junto a las patas: ver la vista previa)
-    IM.art = Mega.loadArt('assets/images/bosses/megacrabby_ice/', 18, 13, 10, 7, 1.0, 5.4, -1.2, 1.5, 2)
-    rageBody = SpriteStrip.load('assets/images/bosses/megacrabby_ice/rage_body-Sheet.png', RAGE_BW)
-    rageClaw = SpriteStrip.load('assets/images/bosses/megacrabby_ice/rage_claw-Sheet.png', RAGE_CW)
-    shock = SpriteStrip.load('assets/images/bosses/snowboss/shock-Sheet.png', 16)
-    fieldS = SpriteStrip.load('assets/images/bosses/megacrabby_ice/ice_field-Sheet.png', 8)
+    -- (sus animaciones: assets/anim/bosses/megacrabby_ice.json — las del Mega más `rage_body`, `rage_claw` (las capas
+    -- de rabia, con su destello) y el campo de carámbanos `field_warn` / `field_spike` / `field_glint`)
+    IM.art = Mega.loadArt('bosses/megacrabby_ice', 18, 13, 10, 7, 1.0, 5.4, -1.2, 1.5, 2)
 end
 function IM.sizePx() return 18 * MS, 13 * MS end
 IM.MS = MS
@@ -368,14 +368,17 @@ function IM:renderFields(camX, camY, now)
             if up <= 0 and not ending then
                 local a = (math.floor(now * 14) % 2 == 0) and 1 or 0.55
                 love.graphics.setColor(1, 1, 1, a)
-                love.graphics.draw(fieldS.image, fieldS.quads[1], x, y, 0, ICI_SC, ICI_SC, 4, 16)
+                local wn = C('field_warn')
+                wn:playPx(now, x, y, 0, ICI_SC, ICI_SC, wn.w / 2, wn.h)
             elseif up > 0 then
-                local rows = math.max(1, math.floor(16 * up + 0.5))
-                local fr = ((math.floor(now * 3 + i * 0.37) % 7) == 0) and 3 or 2
-                fieldQuad = fieldQuad or love.graphics.newQuad(0, 0, 8, 16, fieldS.image:getDimensions())
-                fieldQuad:setViewport((fr - 1) * 8, 0, 8, rows)
+                -- (crece desde el suelo: se enseña solo su parte de arriba; de vez en cuando, un destello)
+                local ic = ((math.floor(now * 3 + i * 0.37) % 7) == 0) and C('field_glint') or C('field_spike')
+                local r = ic:rec(ic:at(now))
+                local rows = math.max(1, math.floor(r.h * up + 0.5))
+                fieldQuad = fieldQuad or love.graphics.newQuad(0, 0, 1, 1, 1, 1)
+                fieldQuad:setViewport(r.x, r.y, r.w, rows, r.iw, r.ih)
                 love.graphics.setColor(1, 1, 1, 1)
-                love.graphics.draw(fieldS.image, fieldQuad, x, y, 0, ICI_SC, ICI_SC, 4, rows)
+                love.graphics.draw(r.image, fieldQuad, x, y, 0, ICI_SC, ICI_SC, r.w / 2, rows)
                 if not EDITOR_VIEW and math.random() < 0.02 then emit('cryo_mist', sp.x, fp.y - 40) end
             end
         end
@@ -386,8 +389,7 @@ function IM:renderWaves(camX, camY, now)
     for _, w in ipairs(self.waves or {}) do
         local a = math.min(1, (WAVE_LIFE - (w.t or 0)) / 0.3)
         love.graphics.setColor(0.65, 0.88, 1, a)
-        local fr = math.floor(now * 10) % 2 + 1
-        shock:draw(fr, math.floor(w.x - camX), math.floor(w.y - camY - 16), 0, 4 * w.dir, 4)
+        Anim.clip('bosses/snowboss', 'shock'):play(now, math.floor(w.x - camX), math.floor(w.y - camY - 16), 0, 4 * w.dir, 4)
         if not EDITOR_VIEW and math.random() < 0.5 then emit('cryo_mist', w.x, w.y - 18) end
     end
 end
@@ -435,7 +437,6 @@ end
 
 -- Esquirlas de la rabia: capas encima del cuerpo y de cada pinza (misma transformación, así
 -- siguen el squash, el andar y los chasquidos); al salir, un destello blanco
-function IM:rageFrame(now) return (math.floor(now * 2.5) % 5 == 0) and 2 or 1 end
 function IM:rageFlash(now, draw)
     local t = now - (self._rageAt or now)
     if t >= RAGE_GROW then return end
@@ -448,15 +449,14 @@ function IM:rageFlash(now, draw)
 end
 function IM:drawBodyOverlay(s, now)
     if not self._rageOn then return end
-    local fr = self:rageFrame(now)
-    local function draw() rageBody:draw(fr, 0, -rageBody.h * s / 2, 0, s * self.facing, s) end
+    local rb = C('rage_body')
+    local function draw() rb:play(now, 0, -rb.h * s / 2, 0, s * self.facing, s) end
     draw()
     self:rageFlash(now, draw)
 end
 function IM:drawClawOverlay(i, side, cx, cy, cs, now)
     if not self._rageOn then return end
-    local fr = self:rageFrame(now + i * 0.7)
-    local function draw() rageClaw:draw(fr, cx, cy, 0, -side * cs, cs) end
+    local function draw() C('rage_claw'):play(now + i * 0.7, cx, cy, 0, -side * cs, cs) end
     draw()
     self:rageFlash(now, draw)
 end

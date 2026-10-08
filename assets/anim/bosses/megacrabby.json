@@ -12,9 +12,14 @@
     {"h": 7, "image": "assets/images/bosses/megacrabby/claw_left-Sheet.png", "w": 10, "x": 10, "y": 0}
   ],
   "anims": {
-    "claw_closed": {"at": [2], "fps": 8, "frameW": 10, "frames": [6], "loop": true, "sheet": "claw_left-Sheet.png"},
-    "claw_open": {"at": [1], "fps": 8, "frameW": 10, "frames": [5], "loop": true, "sheet": "claw_left-Sheet.png"},
+    "claw_closed": {"fps": 8, "frames": [6], "loop": true},
+    "claw_open": {"fps": 8, "frames": [5], "loop": true},
+    "dig": {"fps": 14, "frames": [1, 2, 3], "loop": true},
+    "idle": {"fps": 8, "frames": [2], "loop": true},
+    "kick": {"fps": 24, "frames": [1, 2, 3], "loop": true},
     "spike": {"fps": 4, "frames": [4], "loop": true},
-    "walk": {"fps": 4, "frames": [1, 2, 3], "loop": true}
+    "walk": {"fps": 4, "frames": [1, 2, 3], "loop": true},
+    "wiggle": {"fps": 12, "frames": [1, 2, 3], "loop": true},
+    "windup": {"fps": 18, "frames": [1, 2, 3], "loop": true}
   }
 }

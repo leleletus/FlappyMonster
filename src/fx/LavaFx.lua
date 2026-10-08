@@ -24,9 +24,9 @@ local function surface(level, c, r)
 end
 
 function LavaFx.render(level, camX, camY)
-    sheet = sheet or SpriteStrip.load('assets/images/fx/lava_fx.png', 5)
+    -- (animaciones del conjunto fx: `lava_bubble`, `lava_bubble_big`, `lava_pop`, `lava_drop`)
     if glow == nil then
-        local ok, s = pcall(SpriteStrip.load, 'assets/images/world/decorations/fx/glow.png', 32)
+        local ok, s = pcall(require('src/fx/Anim').clip, 'world/decorations/fx', 'glow')
         glow = ok and s or false
     end
     local dt = math.min(0.05, love.timer.getDelta())
@@ -57,12 +57,12 @@ function LavaFx.render(level, camX, camY)
     for i = #list, 1, -1 do
         local p = list[i]
         p.t = p.t + dt
-        local frame, alive = 1, true
+        local frame, alive = 'lava_bubble', true
         if p.kind == 'bubble' then
             if p.t < GROW_T then
-                frame = p.big and 2 or 1
+                frame = p.big and 'lava_bubble_big' or 'lava_bubble'
             elseif p.t < GROW_T + 0.1 then
-                frame = 3
+                frame = 'lava_pop'
                 if not p.popped then
                     p.popped = true
                     for _ = 1, p.big and 4 or 2 do
@@ -76,14 +76,14 @@ function LavaFx.render(level, camX, camY)
         else
             p.vy = p.vy + 900 * dt
             p.x, p.y = p.x + p.vx * dt, p.y + p.vy * dt
-            frame = 4
+            frame = 'lava_drop'
             if p.vy > 0 and p.y > p.y0 then alive = false end           -- (vuelve a la lava)
         end
         if not alive then
             table.remove(list, i)
         else
             love.graphics.setColor(1, 1, 1, 1)
-            sheet:draw(frame, math.floor(p.x - camX), math.floor(p.y - camY), 0, SCALE)
+            require('src/fx/Anim').clip('fx', frame):play(p.t, math.floor(p.x - camX), math.floor(p.y - camY), 0, SCALE)
         end
     end
     love.graphics.setColor(1, 1, 1, 1)

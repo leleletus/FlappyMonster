@@ -19,8 +19,8 @@
 -- Una hoja con varios ESTADOS (la del Gloomy: andar, quieto, agachado, salto, susto, muerto) va repartida en una
 -- animación por estado; cada una dice con "at" qué números de cuadro de la hoja son los suyos (los que pide el código).
 -- Sin animación para la tira, se corta la imagen tal cual.
--- FM_ANIM_CAPTURE=<archivo>: apunta ahí cada tira que se carga sin animación y, de todas, a qué velocidad las pide
--- el código (tools/anim/make_strip_sets.py las añade al conjunto de su carpeta).
+-- FM_ANIM_CAPTURE=<archivo>: apunta ahí cada tira que se carga sin animación (compatibilidad: el juego ya pide sus
+-- animaciones por nombre con Anim.clip; tools/anim/make_strip_sets.py las añade al conjunto de su carpeta).
 
 local SpriteStrip = {}
 SpriteStrip.__index = SpriteStrip
@@ -43,6 +43,8 @@ local function fromSet(path, frameW)
         if a.sheet == file and (not frameW or a.frameW == frameW) then parts[#parts + 1] = { name = n, raw = a } end
     end
     if #parts == 0 then return nil end
+    -- (lo normal: la hoja es UNA animación → es su clip, el mismo objeto que da Anim.clip(conjunto, nombre))
+    if #parts == 1 and not parts[1].raw.at then return Anim.clip(dir, parts[1].name) end
     local set = Anim.load(dir)
     local s = setmetatable({ quads = {}, images = {}, count = 0, set = set }, SpriteStrip)
     for _, p in ipairs(parts) do
@@ -58,11 +60,6 @@ local function fromSet(path, frameW)
         end
     end
     for i = 1, s.count do if not s.quads[i] then return nil end end           -- (un número sin cuadro: se corta la imagen)
-    if #parts == 1 and not parts[1].raw.at then
-        local raw = parts[1].raw
-        s.seq, s.anim, s.nominal = set.anims[parts[1].name], parts[1].name, tonumber(raw.codeFps)
-        s.custom = type(raw.durations) == 'table' and #raw.durations > 0
-    end
     return s
 end
 
@@ -70,7 +67,7 @@ function SpriteStrip.load(path, frameW)
     local key = path .. '#' .. tostring(frameW or '')
     if cache[key] then return cache[key] end
     local ok, viaSet = pcall(fromSet, path, frameW)
-    if ok and viaSet then viaSet.path = path; cache[key] = viaSet; return viaSet end
+    if ok and viaSet then cache[key] = viaSet; return viaSet end
     local img = love.graphics.newImage(path)
     if img.setFilter then img:setFilter('nearest', 'nearest') end
     local w, h = img:getWidth(), img:getHeight()
@@ -92,19 +89,7 @@ function SpriteStrip.forget() cache = {} end
 -- Cuadro (1..count) a los `t` segundos a `fps` cuadros/s (en bucle, o
 -- quedándose en el último si loop == false)
 function SpriteStrip:frameAt(t, fps, loop)
-    fps = fps or 10
-    if CAPTURE and not self.logged then
-        self.logged = true
-        local f = io.open(CAPTURE, 'a')
-        if f then f:write('@fps\t', self.path, '\t', tostring(fps), '\t', loop == false and '0' or '1', '\n'); f:close() end
-    end
-    local seq = self.seq
-    -- (el conjunto pide otra velocidad que la del código, o duraciones propias: el tiempo se escala y manda él)
-    if seq and self.nominal and self.nominal > 0 and (seq.fps ~= self.nominal or self.custom) then
-        local _, _, k = self.set:frameAt(self.anim, (t or 0) * fps / self.nominal)
-        return math.max(1, math.min(self.count, k or 1))
-    end
-    local k = math.floor((t or 0) * fps)
+    local k = math.floor((t or 0) * (fps or 10))
     if loop == false then return math.min(self.count, k + 1) end
     return k % self.count + 1
 end

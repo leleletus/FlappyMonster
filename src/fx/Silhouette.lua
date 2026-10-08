@@ -31,7 +31,9 @@ function Silhouette.draw(img, x, y, r, sx, sy, alpha, color)
     local sh = get()
     if not (sh and img) then return end
     r = r or 0
-    local iw, ih = img:getDimensions()
+    local quad = img.quad                          -- (un cuadro de animación —image + quad— o una imagen)
+    local iw, ih = img.w, img.h
+    if quad then img = img.image else iw, ih = img:getDimensions() end
     local px = math.max(1, math.floor(math.abs(sy) * Silhouette.WIDTH + 0.5))      -- grosor, en píxeles de pantalla
     local c = color or Silhouette.COLOR
     local pr, pg, pb, pa = love.graphics.getColor()
@@ -40,7 +42,8 @@ function Silhouette.draw(img, x, y, r, sx, sy, alpha, color)
     love.graphics.setColor(c[1], c[2], c[3], alpha or 1)
     x, y = math.floor(x), math.floor(y)
     for _, d in ipairs(DIRS) do
-        love.graphics.draw(img, x + d[1] * px, y + d[2] * px, r, sx, sy, iw / 2, ih / 2)
+        if quad then love.graphics.draw(img, quad, x + d[1] * px, y + d[2] * px, r, sx, sy, iw / 2, ih / 2)
+        else love.graphics.draw(img, x + d[1] * px, y + d[2] * px, r, sx, sy, iw / 2, ih / 2) end
     end
     love.graphics.setShader(prev)
     love.graphics.setColor(pr, pg, pb, pa)

@@ -7,6 +7,8 @@
 local DecoFx = require 'src/world/decorations/DecoFx'
 
 local DIR = 'assets/images/world/decorations/water/'
+-- (sus animaciones, por nombre: assets/anim/world/decorations/water.json)
+local function A(n) return DecoFx.anim('world/decorations/water', n) end
 local CAT = 'Acuático'
 
 local function base(def)
@@ -17,14 +19,14 @@ end
 
 -- Burbuja que sube bamboleándose y revienta (al final, o al salir del agua)
 local function bubble(d, x, y)
-    local s = DecoFx.strip(DecoFx.FX .. 'bubble-Sheet.png', 5)
-    DecoFx.emit(d, { x = x, y = y, vy = -40 - math.random() * 25, life = 1.4 + math.random() * 0.8, sheet = s, frame = 1,
+    local s = DecoFx.fx('bubble')
+    DecoFx.emit(d, { x = x, y = y, vy = -40 - math.random() * 25, life = 1.4 + math.random() * 0.8, sheet = s,
                      scale = 3, wob = 5, fadeIn = 0.15,
         onUpdate = function(p, dt, dd)
-            if p.frame == 1 then
+            if p.sheet == s then
                 local lv = dd.level
                 local out = lv and lv.liquidAt and not lv:liquidAt(dd.x + p.x, dd.y + p.y)
-                if out or p.t > p.life - 0.12 then p.frame, p.vy, p.life = 2, 0, p.t + 0.12 end
+                if out or p.t > p.life - 0.12 then p.sheet, p.vy, p.life = DecoFx.fx('bubble_pop') or s, 0, p.t + 0.12 end
             end
         end })
 end
@@ -34,7 +36,7 @@ local function waving(name, label, placement, file, fw, amp, speed, extra)
         editor = { previewScale = placement == 'sub' and 1.5 or ((extra and extra.tall) and 0.42 or 0.8) },
         draw = function(d, sx, sy)
             DecoFx.seen(d)
-            DecoFx.wave(d, sx, sy, DecoFx.strip(DIR .. file), 1, amp, speed)
+            DecoFx.wave(d, sx, sy, A(file), nil, amp, speed)
             DecoFx.draw(d, sx, sy)
         end }
     for k, v in pairs(extra or {}) do def[k] = v end
@@ -44,7 +46,7 @@ end
 
 local function static(name, label, file)
     return base { name = name, label = label, placement = 'sub', editor = { previewScale = 1.5 },
-        draw = function(d, sx, sy) DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. file), 1) end }
+        draw = function(d, sx, sy) DecoFx.sheet(d, sx, sy, A(file)) end }
 end
 
 return {
@@ -59,7 +61,7 @@ return {
         end,
         draw = function(d, sx, sy)
             DecoFx.seen(d)
-            DecoFx.wave(d, sx, sy, DecoFx.strip(DIR .. 'coral.png'), 1, 0.35, 1.2)
+            DecoFx.wave(d, sx, sy, A('coral'), nil, 0.35, 1.2)
             DecoFx.draw(d, sx, sy)
         end,
     },
@@ -68,9 +70,8 @@ return {
         name = 'anemone', label = 'Anémona', placement = 'sub',
         editor = { previewScale = 1.5 },
         draw = function(d, sx, sy)
-            -- (ida y vuelta 1→2→3→2)
-            local k = math.floor(d.animT * 3.5 + d.phase * 4) % 4
-            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'anemone-Sheet.png', 10), ({ 1, 2, 3, 2 })[k + 1])
+            local s = A('anemone')                    -- (ida y vuelta: lo dice su animación)
+            DecoFx.sheet(d, sx, sy, s, s and s:at(d.animT + d.phase * 4 / 3.5))
         end,
     },
     static('starfish', 'Estrella de mar', 'starfish.png'),
@@ -90,9 +91,8 @@ return {
         end,
         draw = function(d, sx, sy)
             DecoFx.seen(d)
-            local c = (d.animT + d.phase * 6) % 6
-            local f = (c < 4.2) and 1 or ((c < 4.4 or c >= 5.8) and 2 or 3)
-            DecoFx.sheet(d, sx, sy, DecoFx.strip(DIR .. 'clam-Sheet.png', 10), f)
+            local s = A('clam')                       -- (cerrada, entreabierta, abierta: su animación)
+            DecoFx.sheet(d, sx, sy, s, s and s:at(d.animT + d.phase * 6))
             DecoFx.draw(d, sx, sy)
         end,
     },

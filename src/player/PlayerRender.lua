@@ -10,30 +10,19 @@ local SPRITE_H, SQUASH_K = P.SPRITE_H, P.SQUASH_K
 -- ── Render ────────────────────────────────────────────────────────────────────
 local IceEncase            -- (solo dibujo: se carga al dibujar el hielo)
 local Silhouette
-local sprites    = nil
-local spriteDead = nil
-local spriteCrouch = nil
-local function loadSprites()
-    if sprites then return end
-    sprites = {
-        require('src/fx/Anim').image('assets/images/player/monstrito1.png'),
-        require('src/fx/Anim').image('assets/images/player/monstrito2.png'),
-        require('src/fx/Anim').image('assets/images/player/monstrito3.png'),
-    }
-    spriteDead  = require('src/fx/Anim').image('assets/images/player/monstrito4.png')
-    spriteCrouch = require('src/fx/Anim').image('assets/images/player/monstrito5.png')
-end
+local PS = require 'src/player/PlayerSprite'       -- (el sprite del monstruo: animaciones por nombre)
+local function loadSprites() end
 
 function PlayerAdventure:render(camX, camY)
     local img
     if self.dying then
-        img = spriteDead
+        img = PS.rec('dead')
     elseif self.frame == 5 then
-        img = spriteCrouch
+        img = PS.rec('crouch')
     else
-        img = sprites[self.frame] or sprites[3]
+        img = PS.rec(self.frame)
     end
-    local iw=img:getWidth(); local ih=img:getHeight()
+    local iw=img.w; local ih=img.h
     local s=PLAYER_SCALE*self.puff
     local r, g, b = PlayerAdventure.hurtTint(self.dying and 0 or self.hurtT)
     love.graphics.setColor(r, g, b, PlayerAdventure.invulnAlpha(not self.dying and self.invT or 0))
@@ -46,7 +35,7 @@ function PlayerAdventure:render(camX, camY)
     end
     if squashed then
         -- Aplastado: agachado y achatado de arriba abajo, con los pies en el suelo
-        love.graphics.draw(spriteCrouch, math.floor(self.x-camX), math.floor(self.y-camY+SPRITE_H/2),
+        PS.draw(PS.rec('crouch'), math.floor(self.x-camX), math.floor(self.y-camY+SPRITE_H/2),
             0, s*self.facing, s*SQUASH_K, iw/2, ih)
     else
         -- En lo oscuro (niveles a oscuras, de noche, cuevas, bajo la superficie) su filo blanco (src/fx/Silhouette.lua).
@@ -57,7 +46,7 @@ function PlayerAdventure:render(camX, camY)
             local _, _, _, al = love.graphics.getColor()
             Silhouette.draw(img, self.x-camX, self.y-camY, 0, s*self.facing, s, al)
         end
-        love.graphics.draw(img,
+        PS.draw(img,
             math.floor(self.x-camX), math.floor(self.y-camY),
             0, s*self.facing, s, iw/2, ih/2)
     end

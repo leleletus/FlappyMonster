@@ -16,16 +16,26 @@
     {"h": 6, "image": "assets/images/world/decorations/fx/smoke-Sheet.png", "w": 6, "x": 6, "y": 0},
     {"h": 6, "image": "assets/images/world/decorations/fx/smoke-Sheet.png", "w": 6, "x": 12, "y": 0},
     {"h": 3, "image": "assets/images/world/decorations/fx/spore-Sheet.png", "w": 3, "x": 0, "y": 0},
-    {"h": 3, "image": "assets/images/world/decorations/fx/spore-Sheet.png", "w": 3, "x": 3, "y": 0}
+    {"h": 3, "image": "assets/images/world/decorations/fx/spore-Sheet.png", "w": 3, "x": 3, "y": 0},
+    {"h": 2, "image": "assets/images/world/decorations/fx/leaf-Sheet.png", "w": 2, "x": 0, "y": 0},
+    {"h": 2, "image": "assets/images/world/decorations/fx/leaf-Sheet.png", "w": 2, "x": 2, "y": 0},
+    {"h": 5, "image": "assets/images/world/decorations/fx/sparkle-Sheet.png", "w": 5, "x": 0, "y": 0},
+    {"h": 5, "image": "assets/images/world/decorations/fx/sparkle-Sheet.png", "w": 5, "x": 5, "y": 0},
+    {"h": 5, "image": "assets/images/world/decorations/fx/sparkle-Sheet.png", "w": 5, "x": 10, "y": 0},
+    {"h": 3, "image": "assets/images/world/decorations/fx/clump-Sheet.png", "w": 3, "x": 0, "y": 0},
+    {"h": 3, "image": "assets/images/world/decorations/fx/clump-Sheet.png", "w": 3, "x": 3, "y": 0}
   ],
   "anims": {
-    "bubble": {"fps": 8, "frameW": 5, "frames": [4, 5], "loop": true, "sheet": "bubble-Sheet.png"},
-    "clump": {"fps": 4, "frames": [1], "loop": true},
-    "ember": {"fps": 8, "frameW": 2, "frames": [6, 7], "loop": true, "sheet": "ember-Sheet.png"},
-    "glow": {"fps": 8, "frameW": 32, "frames": [8], "loop": true, "sheet": "glow.png"},
-    "leaf": {"fps": 4, "frames": [2], "loop": true},
-    "smoke": {"fps": 8, "frameW": 6, "frames": [9, 10, 11], "loop": true, "sheet": "smoke-Sheet.png"},
-    "sparkle": {"fps": 4, "frames": [3], "loop": true},
-    "spore": {"fps": 8, "frameW": 3, "frames": [12, 13], "loop": true, "sheet": "spore-Sheet.png"}
+    "bubble": {"fps": 8, "frames": [4], "loop": true},
+    "bubble_pop": {"fps": 8, "frames": [5], "loop": true},
+    "clump": {"fps": 8, "frames": [19], "loop": true},
+    "clump_puff": {"fps": 8, "frames": [20], "loop": true},
+    "ember": {"fps": 8, "frames": [6, 7], "loop": true},
+    "glow": {"fps": 8, "frames": [8], "loop": true},
+    "leaf": {"fps": 3, "frames": [14, 15], "loop": true},
+    "smoke": {"fps": 1.4, "frames": [9, 10, 11], "loop": true},
+    "sparkle": {"fps": 7, "frames": [16, 17, 18], "loop": true},
+    "sparkle_slow": {"fps": 4, "frames": [16, 17, 18], "loop": true},
+    "spore": {"fps": 8, "frames": [12, 13], "loop": true}
   }
 }

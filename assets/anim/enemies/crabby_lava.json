@@ -20,14 +20,21 @@
     {"image": "assets/images/enemies/crabby_lava/sink3.png", "inset": 2},
     {"image": "assets/images/enemies/crabby_lava/sink4.png", "inset": 3},
     {"image": "assets/images/enemies/crabby_lava/sink5.png", "inset": 4},
-    {"image": "assets/images/enemies/crabby_lava/sink6.png", "inset": 5}
+    {"image": "assets/images/enemies/crabby_lava/sink6.png", "inset": 5},
+    {"image": "assets/images/enemies/crabby_lava/claw_left-Sheet.png", "key": "claw_left-Sheet.png"},
+    {"image": "assets/images/enemies/crabby_lava/spike.png", "key": "spike.png"},
+    {"h": 5, "image": "assets/images/enemies/crabby_lava/claw_left-Sheet.png", "w": 5, "x": 0, "y": 0},
+    {"h": 5, "image": "assets/images/enemies/crabby_lava/claw_left-Sheet.png", "w": 5, "x": 5, "y": 0}
   ],
   "anims": {
+    "claw_open": {"fps": 8, "frames": [16], "loop": true},
+    "claw_snap": {"fps": 8, "frames": [17], "loop": true},
     "dead": {"fps": 5, "frames": [4], "loop": false},
     "hidden": {"fps": 5, "frames": [5], "loop": true},
     "hide": {"fps": 9.333333333, "frames": [8, 9, 10, 11, 12, 13, 5], "loop": false},
     "meat": {"fps": 5, "frames": [7], "loop": true},
     "peek": {"fps": 5, "frames": [6], "loop": true},
+    "spike": {"fps": 4, "frames": [15], "loop": true},
     "unhide": {"fps": 9.333333333, "frames": [13, 12, 11, 10, 9, 8, 2], "loop": false},
     "walk": {"fps": 5, "frames": [1, 2, 3], "loop": true}
   }

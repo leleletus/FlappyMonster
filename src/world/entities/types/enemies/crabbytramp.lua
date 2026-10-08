@@ -30,9 +30,9 @@ local imgTNormal, imgTExt, imgShell
 function TC.loadAssets()
     Crabby.loadAssets()
     if imgTNormal then return end
-    imgTNormal = require('src/fx/Anim').image('assets/images/mechanisms/trampoline/normal.png')
-    imgTExt    = require('src/fx/Anim').image('assets/images/mechanisms/trampoline/extended.png')
-    imgShell   = require('src/fx/Anim').image('assets/images/enemies/crabby/hid.png')
+    imgTNormal = require('src/fx/Anim').part('assets/images/mechanisms/trampoline/normal.png')
+    imgTExt    = require('src/fx/Anim').part('assets/images/mechanisms/trampoline/extended.png')
+    imgShell   = require('src/fx/Anim').part('assets/images/enemies/crabby/hid.png')
     if imgTNormal.setFilter then imgTNormal:setFilter('nearest', 'nearest'); imgTExt:setFilter('nearest', 'nearest') end
 end
 
@@ -209,15 +209,15 @@ function TC:drawTopper(cx, baseY, progress, dir)
     local img = (self.bounceAge < COOLDOWN) and e or n
     love.graphics.setColor(1, 1, 1, 1)
     -- Anclado por su base (fila 16 del sprite) y creciendo hacia fuera
-    love.graphics.draw(img, cx, baseY, 0, S, (dir < 0) and S * progress or -S * progress, 8, 16)
+    img:show(cx, baseY, 0, S, (dir < 0) and S * progress or -S * progress, 8, 16)
 end
 
 local function editorIcon(x, y, s)
     TC.loadAssets()
     local k = s / 16
     love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.draw(imgTNormal, x, y - k * 2, 0, k, k)
-    love.graphics.draw(imgShell, x, y + s - k * 2, 0, k, k * 2)
+    imgTNormal:show(x, y - k * 2, 0, k, k)
+    imgShell:show(x, y + s - k * 2, 0, k, k * 2)
 end
 
 TC.editorIcon = editorIcon

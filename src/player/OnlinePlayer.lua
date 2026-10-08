@@ -9,20 +9,8 @@ local DeadEyes   = require 'src/player/DeadEyes'
 local L = require 'src/core/Lang'
 
 -- Sprites compartidos con PlayerAdventure (love2d cachea las imágenes)
-local sprites     = nil
-local spriteDead  = nil
-local spriteCrouch = nil
-
-local function loadSprites()
-    if sprites then return end
-    sprites = {
-        require('src/fx/Anim').image('assets/images/player/monstrito1.png'),
-        require('src/fx/Anim').image('assets/images/player/monstrito2.png'),
-        require('src/fx/Anim').image('assets/images/player/monstrito3.png'),
-    }
-    spriteDead   = require('src/fx/Anim').image('assets/images/player/monstrito4.png')
-    spriteCrouch = require('src/fx/Anim').image('assets/images/player/monstrito5.png')
-end
+local PS = require 'src/player/PlayerSprite'       -- (el sprite del monstruo: animaciones por nombre)
+local function loadSprites() end
 
 function OnlinePlayer:new(id, name, color)
     loadSprites()
@@ -102,15 +90,15 @@ function OnlinePlayer:render(camX, camY)
     -- Seleccionar sprite según frame / estado de muerte
     local img
     if self.dying then
-        img = spriteDead
+        img = PS.rec('dead')
     elseif self.frame == 5 then
-        img = spriteCrouch
+        img = PS.rec('crouch')
     else
-        img = sprites[self.frame] or sprites[3]
+        img = PS.rec(self.frame)
     end
 
-    local iw = img:getWidth()
-    local ih = img:getHeight()
+    local iw = img.w
+    local ih = img.h
     local sc = PLAYER_SCALE
 
     local r, g, b = self.color[1], self.color[2], self.color[3]
@@ -133,15 +121,15 @@ function OnlinePlayer:render(camX, camY)
     end
     if self.squashed and not self.dying then
         -- Aplastado: agachado y achatado, con los pies en el suelo
-        love.graphics.draw(spriteCrouch, sx, sy + 16 * PLAYER_SCALE / 2, 0, sc * self.facing, sc * PAm.SQUASH_K,
-                           iw/2, spriteCrouch:getHeight())
+        PS.draw(PS.rec('crouch'), sx, sy + 16 * PLAYER_SCALE / 2, 0, sc * self.facing, sc * PAm.SQUASH_K,
+                           iw/2, PS.rec('crouch').h)
     else
         -- (en lo oscuro: su filo blanco; lo decide SU posición, no la de quien mira)
         if PAm.lightLevel and require('src/fx/Silhouette').on(PAm.lightLevel, self.renderY) then
             local _, _, _, al = love.graphics.getColor()
             require('src/fx/Silhouette').draw(img, sx, sy, 0, sc * self.facing, sc, al)
         end
-        love.graphics.draw(img, sx, sy, 0, sc * self.facing, sc, iw/2, ih/2)
+        PS.draw(img, sx, sy, 0, sc * self.facing, sc, iw/2, ih/2)
     end
     if iced then love.graphics.setShader() end
     if self.dying then

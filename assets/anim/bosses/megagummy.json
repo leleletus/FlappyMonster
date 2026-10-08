@@ -18,15 +18,15 @@
     {"h": 8, "image": "assets/images/bosses/megagummy/wave-Sheet.png", "w": 12, "x": 12, "y": 0}
   ],
   "anims": {
-    "crown": {"fps": 8, "frameW": 16, "frames": [9], "loop": true, "sheet": "crown.png"},
-    "dazed": {"at": [5], "fps": 8, "frameW": 16, "frames": [5], "loop": true, "sheet": "body-Sheet.png"},
-    "hurt": {"at": [6], "fps": 8, "frameW": 16, "frames": [6], "loop": true, "sheet": "body-Sheet.png"},
-    "idle": {"at": [1], "fps": 8, "frameW": 16, "frames": [1], "loop": true, "sheet": "body-Sheet.png"},
-    "jump": {"at": [4], "fps": 8, "frameW": 16, "frames": [4], "loop": true, "sheet": "body-Sheet.png"},
-    "laugh": {"at": [7], "fps": 8, "frameW": 16, "frames": [7], "loop": true, "sheet": "body-Sheet.png"},
-    "shadow": {"fps": 8, "frameW": 16, "frames": [10], "loop": true, "sheet": "shadow.png"},
-    "shout": {"at": [8], "fps": 8, "frameW": 16, "frames": [8], "loop": true, "sheet": "body-Sheet.png"},
-    "walk": {"at": [2, 3], "fps": 7, "frameW": 16, "frames": [2, 3], "loop": true, "sheet": "body-Sheet.png"},
-    "wave": {"fps": 8, "frameW": 12, "frames": [11, 12], "loop": true, "sheet": "wave-Sheet.png"}
+    "crown": {"fps": 8, "frames": [9], "loop": true},
+    "dazed": {"fps": 8, "frames": [5], "loop": true},
+    "hurt": {"fps": 8, "frames": [6], "loop": true},
+    "idle": {"fps": 8, "frames": [1], "loop": true},
+    "jump": {"fps": 8, "frames": [4], "loop": true},
+    "laugh": {"fps": 8, "frames": [7], "loop": true},
+    "shadow": {"fps": 8, "frames": [10], "loop": true},
+    "shout": {"fps": 8, "frames": [8], "loop": true},
+    "walk": {"fps": 6, "frames": [2, 3], "loop": true},
+    "wave": {"fps": 10, "frames": [11, 12], "loop": true}
   }
 }

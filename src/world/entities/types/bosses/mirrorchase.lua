@@ -58,15 +58,9 @@ local STUCK_T = 0.9                  -- s sin avanzar → se teletransporta
 local POUNCE_UP = 3.6 * T
 local HIDDEN  = { warp_out = true, left = true }
 
-local frames, Mirror
-function Chase.loadAssets()
-    if frames then return end
-    frames = {}
-    for i = 1, 5 do
-        frames[i] = require('src/fx/Anim').image('assets/images/player/monstrito' .. i .. '.png')
-        if frames[i].setFilter then frames[i]:setFilter('nearest', 'nearest') end
-    end
-end
+local PS = require 'src/player/PlayerSprite'       -- (el sprite del monstruo: animaciones por nombre)
+local Mirror
+function Chase.loadAssets() PS.clip('idle') end
 function Chase.sizePx() return FW * S, FH * S end
 
 function Chase:init()
@@ -384,7 +378,7 @@ function Chase:render(camX, camY)
         end
     end
     local fr, sx, sy, dx, dy = 3, 1, 1, 0, 0
-    if st == 'stalk' then fr = (self.frame == 6 and (math.floor(now * 14) % 3) + 1) or (self.frame == 2 and 2) or (self.frame == 1 and ((math.floor(now * 6) % 2 == 0) and 1 or 3)) or 3
+    if st == 'stalk' then fr = (self.frame == 6 and 'flutter') or (self.frame == 2 and 2) or (self.frame == 1 and 'fall') or 3
     elseif st == 'pounce' then fr, sx, sy = 2, 0.9, 1.15
     elseif st == 'portal' then fr, sx, sy = 5, 0.9, 0.9
     elseif st == 'dive' then fr, sx, sy = 2, 0.85, 1.3
@@ -393,18 +387,18 @@ function Chase:render(camX, camY)
     elseif st == 'rush' then fr, sx, sy = 2, 1.4, 0.8
     elseif st == 'lurk' then dy = math.floor(math.abs(math.sin(now * 9)) * -6) end
     invert()
-    local img = frames[fr]
+    local img = PS.rec(fr, now)                  -- (pose del monstruo o una de sus animaciones)
     local f = self.facing or 1
     if st == 'rush' or st == 'dive' or st == 'stalk' then                -- estela
         for i = 3, 1, -1 do
             love.graphics.setColor(1, 1, 1, 0.14 * (4 - i))
             local ox = (st == 'rush') and -(self.dir or -1) * i * 38 or (st == 'stalk' and -f * i * 12 or 0)
             local oy = (st == 'dive') and -i * 40 or 0
-            love.graphics.draw(img, x + ox + dx, y + oy + dy, 0, S * sx * f, S * sy, FW / 2, FH / 2)
+            PS.draw(img, x + ox + dx, y + oy + dy, 0, S * sx * f, S * sy, FW / 2, FH / 2)
         end
     end
     love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.draw(img, x + dx, y + dy, 0, S * sx * f, S * sy, FW / 2, FH / 2)
+    PS.draw(img, x + dx, y + dy, 0, S * sx * f, S * sy, FW / 2, FH / 2)
     love.graphics.setShader()
 end
 

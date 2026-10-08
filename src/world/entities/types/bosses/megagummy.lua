@@ -77,19 +77,18 @@ local DEATH = { dying_pop = true }
 MG.HOP_GAP, MG.FLOP_EVERY, MG.DAZE_T, MG.WAVE_LIFE = HOP_GAP, FLOP_EVERY, DAZE_T, WAVE_LIFE
 
 -- Cuadros de body-Sheet.png
-local F_IDLE, F_WALK1, F_WALK2, F_JUMP, F_DAZED, F_HURT, F_LAUGH, F_SHOUT = 1, 2, 3, 4, 5, 6, 7, 8
+-- (las animaciones de su cuerpo, por nombre: assets/anim/bosses/megagummy.json)
+local F_IDLE, F_WALK, F_JUMP, F_DAZED, F_HURT, F_LAUGH, F_SHOUT = 'idle', 'walk', 'jump', 'dazed', 'hurt', 'laugh', 'shout'
 
 -- ── Arte ──────────────────────────────────────────────────────────────────────
-local body, crownImg, waveS, targetS, shadowImg
-function MG.loadAssets()
-    if body then return end
-    local D = 'assets/images/bosses/megagummy/'
-    body      = SpriteStrip.load(D .. 'body-Sheet.png', 16)
-    crownImg  = SpriteStrip.load(D .. 'crown.png', 16)
-    waveS     = SpriteStrip.load(D .. 'wave-Sheet.png', 12)
-    targetS   = SpriteStrip.load('assets/images/bosses/common/target-Sheet.png', 16)
-    shadowImg = SpriteStrip.load(D .. 'shadow.png', 16)
+MG.animId = 'bosses/megagummy'
+local BossFx = require 'src/fx/BossFx'
+local Anim
+local function C(name)
+    Anim = Anim or require 'src/fx/Anim'
+    return Anim.clip(MG.animId, name)
 end
+function MG.loadAssets() C('idle') end
 function MG.sizePx() return 16 * MS, 16 * MS end
 
 local function rand(a, b) return a + math.random() * (b - a) end
@@ -853,7 +852,7 @@ function MG:pose()
         if not self.onGround then return F_JUMP, 0.94, 1.08, false, 0, true end
         local u = math.min(1, (self.hopT or 0) / HOP_GAP[ph])
         local sq = (u > 0.7) and (u - 0.7) / 0.3 * 0.12 or 0           -- (se agacha antes del salto)
-        return (math.floor(now * 6) % 2 == 0) and F_WALK1 or F_WALK2, 1 + sq, 1 - sq, false, 0, true
+        return F_WALK, 1 + sq, 1 - sq, false, 0, true
     end
     if st == 'flop_wind' then
         local k = math.min(1, t / FLOP_WIND[ph])
@@ -886,8 +885,9 @@ end
 
 -- Cuerpo (y corona encima, en la misma rejilla) con los pies en (fx, fy)
 local function drawGummy(fr, fx, fy, sc, facing, sx, sy, crown)
-    love.graphics.draw(body.image, body.quads[fr], fx, fy, 0, sc * facing * sx, sc * sy, 7.5, 16)
-    if crown then love.graphics.draw(crownImg.image, crownImg.quads[1], fx, fy, 0, sc * facing * sx, sc * sy, 7.5, 16) end
+    local now = love.timer.getTime()
+    C(fr):playPx(now, fx, fy, 0, sc * facing * sx, sc * sy, 7.5, 16)
+    if crown then C('crown'):playPx(now, fx, fy, 0, sc * facing * sx, sc * sy, 7.5, 16) end
 end
 
 -- Corona suelta: volando (división), en el suelo (trozos) y su último bote (muerte)
@@ -917,29 +917,27 @@ function MG:render(camX, camY)
 
     -- Marca de dónde caerá el panzazo + sombra del cuerpo en el aire
     if st == 'flop_wind' or st == 'flop_air' then
-        local fr = (math.floor(now * 10) % 2) + 1
         local k = (st == 'flop_air') and 1 or math.min(1, t / FLOP_WIND[math.min(2, self.phase or 1)])
         local sc = 8
         love.graphics.setColor(1, 1, 1, 0.55 + 0.45 * k)
-        targetS:draw(fr, math.floor(self.landX - camX), math.floor(self.landY - camY - 2 * sc), 0, sc, sc)
+        BossFx.target(now, math.floor(self.landX - camX), math.floor(self.landY - camY - 2 * sc), sc, sc)
         if st == 'flop_air' then
             local gy = self:groundBelow(self.x, self:feetY())
             local d = math.max(0, gy - self:feetY())
             local w = math.max(4, math.floor(self.outerW / 16 * (1 - math.min(0.6, d / (8 * T)))))
             love.graphics.setColor(1, 1, 1, 0.25 + 0.3 * (1 - math.min(1, d / (8 * T))))
-            love.graphics.draw(shadowImg.image, shadowImg.quads[1], math.floor(self.x - camX), math.floor(gy - camY - 3 * 2),
+            C('shadow'):playPx(now, math.floor(self.x - camX), math.floor(gy - camY - 3 * 2),
                                0, w, 2, 8, 0)
         end
     end
 
     -- Marcas de por dónde entra la guardia (parpadean; la del paracaídas, hasta que se posa)
     for i, m in ipairs(self.marks or {}) do
-        local fr2 = (math.floor(now * 10 + i) % 2) + 1
         local sc = 4
         love.graphics.setColor(1, 0.95, 0.35, 0.65 + 0.35 * math.sin(now * 14 + i))
-        targetS:draw(fr2, math.floor(m.x - camX), math.floor(m.y - camY - 2 * sc), 0, sc, sc)
+        BossFx.target(now + i / 10, math.floor(m.x - camX), math.floor(m.y - camY - 2 * sc), sc, sc)
         if m.kind == 4 then                               -- (en el aire: otra encima, como un aro)
-            targetS:draw(fr2, math.floor(m.x - camX), math.floor(m.y - camY - 28), 0, sc, -sc)
+            BossFx.target(now + i / 10, math.floor(m.x - camX), math.floor(m.y - camY - 28), sc, -sc)
         end
         if not EDITOR_VIEW and math.random() < 0.06 then emit('king_sparkle', m.x, m.y - 10) end
     end
@@ -960,8 +958,8 @@ function MG:render(camX, camY)
             -- De barriga: girado 90° alrededor del centro del cuerpo (filas 2-15 → centro 9)
             local cy = math.floor(self.y - camY)
             local f = self.facing or 1
-            love.graphics.draw(body.image, body.quads[fr], fx, cy, f * math.pi / 2, MS * sx, MS * sy, 7.5, 9)
-            if crown then love.graphics.draw(crownImg.image, crownImg.quads[1], fx, cy, f * math.pi / 2, MS * sx, MS * sy, 7.5, 9) end
+            C(fr):playPx(love.timer.getTime(), fx, cy, f * math.pi / 2, MS * sx, MS * sy, 7.5, 9)
+            if crown then C('crown'):playPx(love.timer.getTime(), fx, cy, f * math.pi / 2, MS * sx, MS * sy, 7.5, 9) end
         else
             drawGummy(fr, fx, fy, MS, self.facing or 1, sx, sy, crown)
         end
@@ -981,7 +979,7 @@ function MG:render(camX, camY)
     if st == 'parts' then
         for _, p in ipairs(self.parts or {}) do
             if p.st ~= 0 then
-                local pfr = (p.st == 2) and F_JUMP or ((math.floor(now * 6) % 2 == 0) and F_WALK1 or F_WALK2)
+                local pfr = (p.st == 2) and F_JUMP or F_WALK
                 local blink = p.inv > 0 and math.floor(now * 12) % 2 == 0
                 if blink then love.graphics.setColor(1, 0.35, 0.35, 1) else love.graphics.setColor(1, 1, 1, 1) end
                 drawGummy(pfr, math.floor(p.x - camX), math.floor(p.y + p.outerH / 2 - camY), PS, p.facing or 1, 1, 1, false)
@@ -993,7 +991,7 @@ function MG:render(camX, camY)
     local cx, cy, rot, ca = self:crownPos()
     if cx then
         love.graphics.setColor(1, 1, 1, ca)
-        love.graphics.draw(crownImg.image, crownImg.quads[1], math.floor(cx - camX), math.floor(cy - camY), rot, MS, MS, 7.5, 1.5)
+        C('crown'):playPx(love.timer.getTime(), math.floor(cx - camX), math.floor(cy - camY), rot, MS, MS, 7.5, 1.5)
         if (self.lastShine or 0) + 0.5 < now and ca > 0.3 then
             self.lastShine = now
             emit('king_sparkle', cx, cy)
@@ -1004,7 +1002,7 @@ function MG:render(camX, camY)
     for _, w in ipairs(self.waves or {}) do
         local a = math.min(1, (WAVE_LIFE - w.t) / 0.3)
         love.graphics.setColor(1, 1, 1, a)
-        waveS:draw(math.floor(now * 10) % 2 + 1, math.floor(w.x - camX), math.floor(w.y - camY - 16), 0, 4 * w.dir, 4)
+        C('wave'):play(now, math.floor(w.x - camX), math.floor(w.y - camY - 16), 0, 4 * w.dir, 4)
         if (w.lastFx or 0) + 0.05 < now then
             w.lastFx = now
             emit('king_wave', w.x, w.y, { nx = w.dir })

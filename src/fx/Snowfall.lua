@@ -13,17 +13,17 @@ local SpriteStrip = require 'src/fx/SpriteStrip'
 local Snowfall = {}
 local sheet
 local COUNT = 90
--- profundidad: { escala, velocidad, alfa, cuadros posibles }
+-- profundidad: { escala, velocidad, alfa, su animación del conjunto fx: cada cuadro es una FORMA de copo posible }
 local LAYERS = {
-    { s = 1, vy = { 28, 45 },  a = 0.55, frames = { 4, 1 } },
-    { s = 2, vy = { 50, 80 },  a = 0.8,  frames = { 1, 2, 4 } },
-    { s = 3, vy = { 85, 130 }, a = 0.95, frames = { 2, 3 } },
+    { s = 1, vy = { 28, 45 },  a = 0.55, anim = 'flake_far' },
+    { s = 2, vy = { 50, 80 },  a = 0.8,  anim = 'flake_mid' },
+    { s = 3, vy = { 85, 130 }, a = 0.95, anim = 'flake_near' },
 }
 
 local function spawn(f, camX, camY, top)
     local L = LAYERS[math.random(#LAYERS)]
     f.layer = L
-    f.frame = L.frames[math.random(#L.frames)]
+    f.frame = math.random(require('src/fx/Anim').clip('fx', L.anim).count)        -- (una de sus formas, al azar)
     f.x = camX - 60 + math.random() * (WINDOW_W + 120)
     f.y = top and (camY - 20 - math.random() * 60) or (camY - 20 + math.random() * (WINDOW_H + 40))
     f.vy = L.vy[1] + math.random() * (L.vy[2] - L.vy[1])
@@ -32,7 +32,6 @@ end
 
 function Snowfall.render(level, camX, camY)
     if not level.snow then return end
-    sheet = sheet or SpriteStrip.load('assets/images/fx/snowflakes.png', 7)
     local dt = math.min(0.05, love.timer.getDelta())
     local list = level._snow
     if not list then
@@ -52,7 +51,7 @@ function Snowfall.render(level, camX, camY)
         elseif x > camX + WINDOW_W + 80 then f.x = f.x - WINDOW_W - 140
         elseif f.y < camY - 120 then spawn(f, camX, camY, false) end
         love.graphics.setColor(1, 1, 1, f.layer.a)
-        sheet:draw(f.frame, math.floor(x - camX), math.floor(f.y - camY), 0, f.layer.s, f.layer.s)
+        require('src/fx/Anim').clip('fx', f.layer.anim):draw(f.frame, math.floor(x - camX), math.floor(f.y - camY), 0, f.layer.s, f.layer.s)
     end
     love.graphics.setColor(1, 1, 1, 1)
 end

@@ -4,7 +4,7 @@
 -- propias partículas en d.fx (no toca el sistema global de Particles): viven
 -- pegadas a su punto de anclaje, así que se mueven con la cámara.
 --
---   DecoFx.strip(path, fw)          tira de cuadros (SpriteStrip, cacheada); sin fw = la
+--   DecoFx.anim(conjunto, nombre)   una animación (clip de src/fx/Anim.lua), por su nombre
 --                                   imagen entera es un cuadro (los sprites llevan 1 px de
 --                                   margen transparente: nunca se ven cortados)
 --   DecoFx.sheet(d, sx, sy, strip, frame, opts)   dibuja un cuadro anclado
@@ -23,18 +23,28 @@ DecoFx.SCALE = 4                 -- escala del arte de las decoraciones
 DecoFx.FX = 'assets/images/world/decorations/fx/'
 local MAX_FX = 24                -- partículas por decoración
 
-local strips = {}
-function DecoFx.strip(path, fw)
-    local k = path .. '#' .. tostring(fw)
-    if strips[k] == nil then
-        local ok, s = pcall(function()
-            if not fw then fw = require('src/fx/Anim').image(path):getWidth() end
-            return SpriteStrip.load(path, fw)
-        end)
-        strips[k] = ok and s or false
+-- ANIMACIÓN de una decoración, por su nombre (clip de src/fx/Anim.lua; false si no existe): lo que usan los tipos.
+--   local A = function(n) return DecoFx.anim('world/decorations/cave', n) end
+-- DecoFx.fx(nombre) = una de las partículas compartidas (conjunto world/decorations/fx).
+local Anim
+local clips = {}
+function DecoFx.anim(set, name)
+    name = name:gsub('%.png$', ''):gsub('%-Sheet$', '')
+    local k = set .. '#' .. name
+    if clips[k] == nil then
+        Anim = Anim or require 'src/fx/Anim'
+        local ok, c = pcall(Anim.clip, set, name)
+        clips[k] = ok and c or false
     end
-    return strips[k]
+    return clips[k]
 end
+function DecoFx.fx(name) return DecoFx.anim('world/decorations/fx', name) end
+-- Paso de la animación que toca: nil = el que diga SU reloj (su ritmo, sus cuadros); un número = ese paso
+local function stepOf(d, s, frame)
+    if frame == nil then return s:at((d.animT or love.timer.getTime()) + (d.phase or 0)) end
+    return math.max(1, math.min(s.count, frame))
+end
+DecoFx.stepOf = stepOf
 
 -- Esquina de arriba del dibujo: anclado abajo-centro, o colgando del techo de
 -- su celda (sy - TILE_PX) o subcelda (sy - TILE_PX/2)
@@ -51,12 +61,13 @@ function DecoFx.sheet(d, sx, sy, s, frame, opts)
     local S = DecoFx.SCALE
     local x, y, w, h = topLeft(d, sx, sy, s, opts.hang)
     love.graphics.setColor(1, 1, 1, opts.alpha or 1)
-    local q = s.quads[math.max(1, math.min(s.count, frame or 1))]
+    local f = stepOf(d, s, frame)
+    local q, img = s.quads[f], s.images and s.images[f] or s.image
     if opts.rot then
         -- (gira alrededor de la base)
-        love.graphics.draw(s.image, q, math.floor(sx), math.floor(y + h), opts.rot, S * d.flip, S, s.w / 2, s.h)
+        love.graphics.draw(img, q, math.floor(sx), math.floor(y + h), opts.rot, S * d.flip, S, s.w / 2, s.h)
     else
-        love.graphics.draw(s.image, q, math.floor(x + (d.flip < 0 and w or 0)), math.floor(y), 0, S * d.flip, S)
+        love.graphics.draw(img, q, math.floor(x + (d.flip < 0 and w or 0)), math.floor(y), 0, S * d.flip, S)
     end
 end
 
@@ -66,8 +77,12 @@ local function rowQuad(s, frame, row)
     local k = frame * 1024 + row
     local q = s.rows[k]
     if not q then
-        local iw, ih = s.image:getDimensions()
-        q = love.graphics.newQuad((frame - 1) * s.w, row, s.w, 1, iw, ih)
+        local r = s.recs and s.recs[frame]
+        if r then q = love.graphics.newQuad(r.x, r.y + row, r.w, 1, r.iw, r.ih)
+        else
+            local iw, ih = s.image:getDimensions()
+            q = love.graphics.newQuad((frame - 1) * s.w, row, s.w, 1, iw, ih)
+        end
         s.rows[k] = q
     end
     return q
@@ -79,18 +94,20 @@ function DecoFx.wave(d, sx, sy, s, frame, amp, speed, opts)
     local S = DecoFx.SCALE
     local x, y, w = topLeft(d, sx, sy, s, opts.hang)
     local t = d.animT * (speed or 1) + d.phase * 6.28
+    local f = stepOf(d, s, frame)
+    local img = s.images and s.images[f] or s.image
     love.graphics.setColor(1, 1, 1, opts.alpha or 1)
     for row = 0, s.h - 1 do
         -- k = 0 en la raíz (abajo, o arriba si cuelga) → 1 en la punta
         local k = opts.hang and (row / (s.h - 1)) or (1 - row / (s.h - 1))
         local off = math.floor(amp * S * k ^ 1.4 * math.sin(t - k * 1.3) + 0.5)
-        love.graphics.draw(s.image, rowQuad(s, frame or 1, row),
+        love.graphics.draw(img, rowQuad(s, f, row),
             math.floor(x + off + (d.flip < 0 and w or 0)), math.floor(y + row * S), 0, S * d.flip, S)
     end
 end
 
 function DecoFx.glow(sx, sy, radius, c, alpha)
-    local g = DecoFx.strip(DecoFx.FX .. 'glow.png', 32)
+    local g = DecoFx.fx('glow')
     if not g then return end
     local mode, am = love.graphics.getBlendMode()
     love.graphics.setBlendMode('add')
@@ -123,6 +140,7 @@ function DecoFx.emit(d, p)
     if #d.fx >= MAX_FX then return end
     p.t, p.vx, p.vy = 0, p.vx or 0, p.vy or 0
     p.wph = math.random() * 6.28
+    if p.variant and p.sheet then p.frame = math.random(p.sheet.count) end   -- (una variante al azar de las que haya)
     d.fx[#d.fx + 1] = p
     return p
 end
@@ -152,7 +170,7 @@ function DecoFx.draw(d, sx, sy)
             local a = p.alpha or 1
             if p.fade then a = a * math.min(1, (p.life - p.t) / p.fade) end
             if p.fadeIn then a = a * math.min(1, p.t / p.fadeIn) end
-            local f = p.frame or (p.frames and s:frameAt(p.t, p.fps or 8)) or 1
+            local f = p.frame or s:at(p.t)                 -- (un paso fijo — variante al azar —, o el que diga su reloj)
             local x = p.x + (p.wob and math.sin(p.t * 3 + p.wph) * p.wob or 0)
             if p.add then love.graphics.setBlendMode('add') end
             local c = p.color or { 1, 1, 1 }
@@ -174,9 +192,9 @@ end
 -- Gota que cae (estalactitas, carámbanos): se forma colgando, cae y salpica al
 -- tocar el suelo del nivel (d.level), o se va a la casilla y media sin nivel
 function DecoFx.drip(d, x, y, color)
-    local s = DecoFx.strip('assets/images/fx/ice_drop.png', 3)
+    local s, splash = DecoFx.anim('fx', 'ice_drop'), DecoFx.anim('fx', 'ice_splash')
     if not s then return end
-    DecoFx.emit(d, { x = x, y = y, life = 6, sheet = s, frame = 1, scale = 3, color = color, phase = 'form',
+    DecoFx.emit(d, { x = x, y = y, life = 6, sheet = s, scale = 3, color = color, phase = 'form',
         onUpdate = function(p, dt, dd)
             if p.phase == 'form' then
                 p.vy = 0
@@ -190,7 +208,7 @@ function DecoFx.drip(d, x, y, color)
                 if lv and lv.landingCross then
                     local hit, top = lv:landingCross(wx, wy - p.vy * dt + 6, wy + 6)
                     if hit then
-                        p.y, p.vy, p.g, p.phase, p.frame, p.life = top - dd.y - 4, 0, 0, 'splash', 2, p.t + 0.16
+                        p.y, p.vy, p.g, p.phase, p.sheet, p.life = top - dd.y - 4, 0, 0, 'splash', splash or s, p.t + 0.16
                         DecoFx.sound('dripSplash', wx, top)
                     end
                     if lv:liquidAt(wx, wy) or wy > (lv.heightPx or 1e9) then return false end

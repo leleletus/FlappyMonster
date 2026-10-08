@@ -11,6 +11,6 @@
     {"image": "assets/images/world/decorations/foliage/stretch/stretch5.png", "key": "stretch5.png"}
   ],
   "anims": {
-    "stretch": {"fps": 6, "frames": [1, 2, 3, 4, 5], "loop": true}
+    "stretch": {"durations": [0.16666666666666666, 0.3333333333333333, 0.3333333333333333, 0.3333333333333333, 0.3333333333333333, 0.3333333333333333, 0.3333333333333333, 0.3333333333333333, 0.16666666666666666], "fps": 3.0, "frames": [1, 2, 3, 4, 5, 4, 3, 2, 1], "loop": true}
   }
 }
