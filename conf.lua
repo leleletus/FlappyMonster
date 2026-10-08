@@ -25,9 +25,9 @@ function love.conf(t)
     t.modules.joystick  = true   -- NECESARIO para joycons
     t.modules.keyboard  = true   -- útil en debug PC
     t.modules.mouse     = false
-    -- El editor de niveles (love . --editor) necesita el ratón
+    -- Las herramientas de edición (love . --editor / --anim / --enemy) necesitan el ratón
     for _, a in ipairs(arg or {}) do
-        if a == '--editor' then t.modules.mouse = true end
+        if a == '--editor' or a == '--anim' or a == '--enemy' then t.modules.mouse = true end
     end
     t.modules.touch     = true    -- táctil Switch
     t.modules.video     = false

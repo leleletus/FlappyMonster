@@ -14,6 +14,17 @@ local TOOL = os.getenv('TOOL') or 'anim'
 arg = arg or {}
 arg[#arg + 1] = '--' .. TOOL
 if TOOL == 'anim' then arg[#arg + 1] = 'gummy' end
+-- El conf.lua DE VERDAD debe encender el ratón para esta herramienta (el de este arnés lo lleva siempre: sin esta
+-- comprobación el editor se abría bien aquí y fallaba al abrirlo el usuario)
+do
+    local real = love.conf
+    love.filesystem.load('game_conf.lua')()
+    local t = { window = {}, modules = {} }
+    love.conf(t)
+    love.conf = real
+    if not t.modules.mouse then print('conf         FALLA  conf.lua no enciende el ratón con --' .. TOOL); love.event.quit(1); return end
+    print('conf         OK     conf.lua enciende el ratón con --' .. TOOL)
+end
 love.filesystem.load('game_main.lua')()
 
 local json  = require 'libs/json'
