@@ -2,6 +2,12 @@
 -- escribir nada en el repo (lo que guardarían se captura y se comprueba que es JSON válido):
 --   TOOL=anim   (por defecto) abre el conjunto `gummy`, cambia de secuencia, crea una, cambia su velocidad, abre la
 --               ventana de cortar una hoja y añade sus cuadros; "guarda"; capturas tool_anim_1..3.png
+--   TOOL=anim FLOW=runtime   DEL EDITOR AL JUEGO: con el ratón de verdad (clics en los botones y rueda sobre los campos
+--               del editor) cambia animaciones de tres cosas — Gloomy `walk` (quita un cuadro, cambia el orden, baja la
+--               velocidad), bomba `walk` (de 4 cuadros a 2, más lenta) y trampolín `idle` (le añade un cuadro y
+--               velocidad) —, guarda con Ctrl+S y ARRANCA EL JUEGO con esas entidades: sin tocar su código, andan con
+--               los cuadros, el orden y el ritmo nuevos. (Lo guardado va a la carpeta de guardado del arnés, que el
+--               juego lee antes que el repo; se borra al acabar.) Captura tool_anim_runtime.png
 --   TOOL=enemy KIND=boss  lo mismo con un JEFE de datos (su sala de prueba lleva zona de jefe)
 --   TOOL=enemy  crea un enemigo nuevo sobre el conjunto del Gummy, recorre sus pestañas (General, Animaciones,
 --               Estados, Comportamientos, Avisos), le añade dos comportamientos, "guarda" y lo PRUEBA en el juego
@@ -14,7 +20,8 @@ love.filesystem.setSymlinksEnabled(true)
 local TOOL = os.getenv('TOOL') or 'anim'
 arg = arg or {}
 arg[#arg + 1] = '--' .. TOOL
-if TOOL == 'anim' then arg[#arg + 1] = 'enemies/gummy' end
+local FLOW = os.getenv('FLOW')
+if TOOL == 'anim' then arg[#arg + 1] = (FLOW == 'runtime') and 'enemies/gloomy' or 'enemies/gummy' end
 -- El conf.lua DE VERDAD debe encender el ratón para esta herramienta (el de este arnés lo lleva siempre: sin esta
 -- comprobación el editor se abría bien aquí y fallaba al abrirlo el usuario)
 do
@@ -38,8 +45,51 @@ local function check(case, ok, msg)
     if not ok then fails = fails + 1 end
 end
 -- (nada se escribe en el repo: se guarda aquí)
+local installed = {}
 Shell.writeRepo = function(path, text)
     writes[#writes + 1] = { path = path, text = text }
+    if FLOW == 'runtime' then
+        -- (a la carpeta de guardado: LÖVE la lee ANTES que el repo, así el juego ve lo que guardó el editor)
+        love.filesystem.createDirectory(path:match('^(.*)/[^/]+$'))
+        love.filesystem.write(path, text)
+        installed[#installed + 1] = path
+    end
+    return true
+end
+for _, pth in ipairs({ 'assets/anim/enemies/gloomy.json', 'assets/anim/enemies/bomb.json', 'assets/anim/mechanisms/trampoline.json' }) do
+    if love.filesystem.getRealDirectory(pth) == love.filesystem.getSaveDirectory() then love.filesystem.remove(pth) end   -- (restos de otra ejecución)
+end
+-- RATÓN DE VERDAD sobre el editor: dónde se dibujó cada botón / campo numérico en el último fotograma
+local rects = {}
+local rawButton, rawNumber, rawGetPos = ui.button, ui.number, love.mouse.getPosition
+local fakeMouse
+ui.button = function(label, x, y, w, h, opts)
+    if label then rects[#rects + 1] = { kind = 'b', label = label, tip = opts and opts.tooltip or '', x = x, y = y, w = w, h = h, off = opts and opts.disabled } end
+    return rawButton(label, x, y, w, h, opts)
+end
+ui.number = function(label, value, x, y, w, p2)
+    rects[#rects + 1] = { kind = 'n', label = label, tip = '', x = x + w - 124 + 26, y = y, w = 70, h = 24 }
+    return rawNumber(label, value, x, y, w, p2)
+end
+love.mouse.getPosition = function() if fakeMouse then return fakeMouse[1], fakeMouse[2] end return rawGetPos() end
+local function find(kind, label, tip)
+    for i = #rects, 1, -1 do
+        local r = rects[i]
+        if r.kind == kind and r.label == label and (not tip or r.tip:find(tip, 1, true)) then return r end
+    end
+end
+local function click(label, tip)
+    local r = find('b', label, tip)
+    if not r or r.off then return false end
+    fakeMouse = { math.floor(r.x + r.w / 2), math.floor(r.y + r.h / 2) }
+    love.mousepressed(fakeMouse[1], fakeMouse[2], 1)
+    return true
+end
+local function wheelOn(label, n)
+    local r = find('n', label)
+    if not r then return false end
+    fakeMouse = { math.floor(r.x + r.w / 2), math.floor(r.y + r.h / 2) }
+    love.wheelmoved(0, n)
     return true
 end
 local function shot(n) love.graphics.captureScreenshot(function(img) img:encode('png', 'tool_' .. TOOL .. '_' .. n .. '.png') end) end
@@ -58,13 +108,129 @@ local function validJson()
     return #bad == 0, table.concat(bad, ', ')
 end
 
+local runtimeFlow
 local frame = 0
 local frames0 = 0            -- cuadros del conjunto al abrirlo
+local realMouse, zoom0, scroll0, scroll1
+
+-- ── DEL EDITOR AL JUEGO (FLOW=runtime) ──
+local RT = { okClicks = true, t = 0, seen = {} }
+local function saved(path)
+    for i = #writes, 1, -1 do if writes[i].path == path then return json.decode(writes[i].text) end end
+end
+local function copy(t) local o = {}; for i, v in ipairs(t) do o[i] = v end; return o end
+local function act(ok) if not ok then RT.okClicks = false end end
+runtimeFlow = function(dt)
+    local A = require 'src/editor/AnimEditor'
+    local P = A.panel
+    -- 1. Gloomy · andar: quitar un cuadro, cambiar el orden, bajar la velocidad
+    if frame == 4 then P.anim, P.pos, P.playing = 'walk', 2, false; RT.g0 = copy(A.doc.anims.walk.frames); RT.gfps0 = A.doc.anims.walk.fps
+    elseif frame == 6 then act(click('Quitar', 'Quita este cuadro de la animación'))
+    elseif frame == 8 then P.pos = 1
+    elseif frame == 10 then act(click('>', 'Mover este cuadro después'))
+    elseif frame >= 12 and frame <= 21 then act(wheelOn('Velocidad (fps)', -1))
+    elseif frame == 23 then
+        fakeMouse = nil
+        local w = A.doc.anims.walk
+        local g0 = RT.g0
+        check('edita_gloomy', RT.okClicks and #w.frames == 3 and w.frames[1] == g0[3] and w.frames[2] == g0[1] and w.frames[3] == g0[4] and w.fps == RT.gfps0 - 5,
+              ('walk: cuadros %s → %s; velocidad %s → %s (con clics y rueda de verdad: %s)'):format(table.concat(g0, ' '), table.concat(w.frames, ' '), tostring(RT.gfps0), tostring(w.fps), tostring(RT.okClicks)))
+        key('s', true)
+    -- 2. Bomba · andar: de 4 cuadros a 2, más lenta
+    elseif frame == 25 then A.open('enemies/bomb')
+    elseif frame == 27 then P.anim, P.pos, P.playing = 'walk', 4, false; RT.b0 = copy(A.doc.anims.walk.frames); RT.bfps0 = A.doc.anims.walk.fps
+    elseif frame == 29 then act(click('Quitar', 'Quita este cuadro de la animación'))
+    elseif frame == 31 then P.pos = 3
+    elseif frame == 33 then act(click('Quitar', 'Quita este cuadro de la animación'))
+    elseif frame >= 35 and frame <= 44 then act(wheelOn('Velocidad (fps)', -1))
+    elseif frame == 46 then
+        fakeMouse = nil
+        local w = A.doc.anims.walk
+        check('edita_bomba', RT.okClicks and #RT.b0 == 4 and #w.frames == 2 and w.fps == RT.bfps0 - 5,
+              ('walk: %d cuadros → %d; velocidad %s → %s'):format(#RT.b0, #w.frames, tostring(RT.bfps0), tostring(w.fps)))
+        key('s', true)
+    -- 3. Trampolín · reposo: añadirle un cuadro del banco (el estirado) y darle velocidad
+    elseif frame == 48 then A.open('mechanisms/trampoline')
+    elseif frame == 50 then P.anim, P.playing = 'idle', false; P.frame = A.doc.anims.bounce.frames[1]; RT.t0 = copy(A.doc.anims.idle.frames)
+    elseif frame == 52 then act(click('+ Añadir el cuadro ' .. P.frame .. ' del banco'))
+    elseif frame >= 54 and frame <= 61 then act(wheelOn('Velocidad (fps)', 1))
+    elseif frame == 63 then
+        fakeMouse = nil
+        local w = A.doc.anims.idle
+        check('edita_tramp', RT.okClicks and #RT.t0 == 1 and #w.frames == 2 and w.frames[2] == A.doc.anims.bounce.frames[1] and w.fps == 8,
+              ('idle: %d cuadro → %d; velocidad %s'):format(#RT.t0, #w.frames, tostring(w.fps)))
+        key('s', true)
+    -- 4. EL JUEGO, con lo guardado
+    elseif frame == 66 then
+        local g, b, tr = saved('assets/anim/enemies/gloomy.json'), saved('assets/anim/enemies/bomb.json'), saved('assets/anim/mechanisms/trampoline.json')
+        RT.g, RT.b, RT.tr = g, b, tr
+        check('guarda', g and b and tr and #writes == 3 and validJson(), ('%d archivos guardados por el editor: %s'):format(#writes, table.concat(installed, ' · ')))
+        local W, H, tiles = 44, 12, {}
+        for r = 1, H do
+            local row = {}
+            for c = 1, W do row[c] = (r == H or c == 1 or c == W or r == 1) and 1 or 0 end
+            tiles[r] = row
+        end
+        Shell.play({ name = 'Del editor al juego', width = W, height = H, playerStart = { 3, 11 }, tiles = tiles, foliage = {}, vents = {}, background = 'meadow',
+                     entities = { { type = 'gloomy', col = 30, row = 11, props = { patrol = { left = 24, right = 40 }, senseRange = 0 } },
+                                  { type = 'bomb', col = 16, row = 11, props = { patrol = { left = 11, right = 21 }, trigger = 0 } },
+                                  { type = 'trampoline', col = 7, row = 11 } } })
+        RT.start = frame
+    elseif RT.start and frame > RT.start + 2 then
+        RT.t = RT.t + dt
+        local st = gStateMachine and gStateMachine:_top()
+        for _, e in ipairs(st and st.enemies or {}) do
+            local n = e.def and e.def.name
+            if n == 'gloomy' or n == 'bomb' then
+                local S = RT.seen[n] or { frames = {}, changes = 0, time = 0, shown = {} }
+                RT.seen[n] = S
+                local walking = (n == 'bomb' and e.state == 'walk') or (n == 'gloomy' and select(3, e:animNow()) ~= nil)
+                if walking then
+                    S.time = S.time + dt
+                    S.frames[e.frame] = true
+                    if S.last and S.last ~= e.frame then S.changes = S.changes + 1 end
+                    S.last = e.frame
+                    if n == 'gloomy' then S.shown[e.frame] = e:frameNow() end       -- (el cuadro del conjunto que DIBUJA en ese paso)
+                else S.last = nil end
+            end
+        end
+        if frame == RT.start + 30 then love.graphics.captureScreenshot(function(img) img:encode('png', 'tool_anim_runtime.png') end) end
+        if RT.t >= 4 then
+            local function count(tb) local c = 0; for _ in pairs(tb) do c = c + 1 end; return c end
+            local G, B = RT.seen.gloomy or { frames = {}, changes = 0, time = 0, shown = {} }, RT.seen.bomb or { frames = {}, changes = 0, time = 0 }
+            local gw, bw = RT.g.anims.walk, RT.b.anims.walk
+            local gRate, bRate = G.changes / math.max(0.01, G.time), B.changes / math.max(0.01, B.time)
+            local order = true
+            for k = 1, #gw.frames do if G.shown[k] ~= gw.frames[k] then order = false end end
+            check('juego_gloomy', Shell.mode == 'play' and count(G.frames) == 3 and not G.frames[4] and order and math.abs(gRate - gw.fps) < 1.2 and G.time > 1,
+                  ('en el juego anda con %d pasos (antes 4), dibuja los cuadros %s (guardado: %s), a %.1f pasos/s (guardado %s; antes %s)'):format(
+                      count(G.frames), table.concat({ tostring(G.shown[1]), tostring(G.shown[2]), tostring(G.shown[3]) }, ' '), table.concat(gw.frames, ' '), gRate, tostring(gw.fps), tostring(RT.gfps0)))
+            check('juego_bomba', count(B.frames) == 2 and not B.frames[3] and math.abs(bRate - bw.fps) < 1 and B.time > 1,
+                  ('en el juego anda con %d pasos (antes 4), a %.1f pasos/s (guardado %s; antes %s)'):format(count(B.frames), bRate, tostring(bw.fps), tostring(RT.bfps0)))
+            -- el trampolín en reposo: su animación ahora tiene 2 cuadros y pasa de uno a otro a 8/s (lo que dibuja Tramp:render)
+            local c = Anim.clip('mechanisms/trampoline', 'idle')
+            local stepsSeen, flips, last = {}, 0, nil
+            for i = 0, 79 do
+                local k = c:at(i / 80)
+                stepsSeen[k] = true
+                if last and last ~= k then flips = flips + 1 end
+                last = k
+            end
+            check('juego_tramp', c.count == 2 and stepsSeen[1] and stepsSeen[2] and math.abs(flips - 8) <= 1 and c:rec(2).path:find('extended', 1, true) ~= nil,
+                  ('el trampolín en reposo tiene %d cuadros en el juego y cambia %d veces por segundo (guardado: 8); el 2.º es %s'):format(c.count, flips, c:rec(2).path:match('[^/]+$')))
+            for _, pth in ipairs(installed) do love.filesystem.remove(pth) end
+            print(fails == 0 and 'TODO OK' or ('FALLOS: ' .. fails)); love.event.quit(fails == 0 and 0 or 1)
+        end
+    end
+end
 local toolUpdate = love.update
 function love.update(dt)
     frame = frame + 1
     toolUpdate(dt)
-    if TOOL == 'anim' then
+    if TOOL == 'anim' and FLOW == 'runtime' then
+        runtimeFlow(dt)
+        rects = {}
+    elseif TOOL == 'anim' then
         local A = require 'src/editor/AnimEditor'
         if frame == 3 then
             -- las TIRAS del juego salen de la animación con su "sheet" en el conjunto de su carpeta, y su velocidad manda
@@ -122,9 +288,24 @@ function love.update(dt)
             local r = A.hist:redo()
             check('deshacer', u and gone and r and A.doc.anims.attack ~= nil, ('deshacer quita la secuencia nueva (%s) y rehacer la devuelve (%s)'):format(tostring(gone), tostring(A.doc.anims.attack ~= nil)))
             A.browse = true
-        elseif frame == 24 then shot(4)
+        elseif frame == 24 then
+            shot(4)
+            -- RUEDA con el explorador abierto SOBRE un conjunto ya abierto (antes la rueda se la quedaba el editor de
+            -- detrás: hacía zoom en la vista y la lista del explorador no se movía)
+            realMouse = love.mouse.getPosition
+            local W, H = love.graphics.getDimensions()
+            love.mouse.getPosition = function() return math.floor(W * 0.6), math.floor(H * 0.5) end
+            zoom0, scroll0 = A.panel.zoom, ui.state.scroll.animbrowsegrid or 0
+            love.wheelmoved(0, -3)
         elseif frame == 25 then
             check('explorador', #A.list >= 40, #A.list .. ' conjuntos en el explorador')
+            scroll1 = ui.state.scroll.animbrowsegrid or 0
+            love.wheelmoved(0, -2)
+        elseif frame == 26 then
+            local scroll2 = ui.state.scroll.animbrowsegrid or 0
+            check('rueda', scroll1 > scroll0 and scroll2 > scroll1 and A.panel.zoom == zoom0,
+                  ('la lista del explorador baja %d → %d → %d px; el zoom del editor de detrás %s → %s'):format(scroll0, scroll1, scroll2, tostring(zoom0), tostring(A.panel.zoom)))
+            love.mouse.getPosition = realMouse
             A.browse = false
         elseif frame == 27 then
             -- (lo que hace el botón "Añadir 4 cuadros")

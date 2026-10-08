@@ -431,7 +431,7 @@ local function draw()
     local LW = 210
     local blocked = E.confirm ~= nil
     local sp = ui.state.pressed
-    if blocked then ui.state.pressed = false end
+    if blocked then ui.block() end
     -- la lista
     ui.rect(8, 54, LW, H - 54 - 34, th.panel, 6)
     local ly = ui.caption(('Tus enemigos (%d)'):format(#E.ids), 18, 64, LW - 20)
@@ -453,7 +453,7 @@ local function draw()
 
     if not E.spec then
         ui.hint('Escribe un nombre a la izquierda y pulsa "+ Nuevo enemigo", o elige uno de la lista.', LW + 28, 70, 560, th.accent)
-        if blocked then ui.state.pressed = sp end
+        if blocked then ui.unblock() end
         return
     end
     local warns = DataEnemy.validate(E.spec, E.panel:set(E.animDoc))
@@ -488,7 +488,7 @@ local function draw()
     elseif E.tab == 'states' then tabStates(x, y, w, h)
     elseif E.tab == 'beh' then tabBehaviors(x, y, w, h)
     else tabWarnings(x, y, w, h, warns) end
-    if blocked then ui.state.pressed = sp end
+    if blocked then ui.unblock() end
     -- confirmar el borrado
     if E.confirm == 'delete' then
         love.graphics.setColor(0, 0, 0, 0.6); love.graphics.rectangle('fill', 0, 0, W, H)

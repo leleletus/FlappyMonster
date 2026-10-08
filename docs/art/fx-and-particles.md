@@ -37,3 +37,8 @@ variant needs its own kind name). **From drawing** call `Particles.emit` directl
   level JSON `"snow": true` (editor Nivel → Clima → "Nieve cayendo"), 3 depth layers of
   `fx/snowflakes.png`, visual only. Decoration `icicle` (Carámbano, `decorations/ice/icicle.png`,
   hangs from the top of its cell). Test arena `tools/levelgen/arenas/hielo.json`.
+
+**Lava particles** (`fx/lava_fx.png`, animations `lava_bubble`, `lava_bubble_big`, `lava_pop`, `lava_drop` of the set
+`fx`): four 5x5 frames, drawn ×3 by `LavaFx`. Until 3.93 the sheet was saved ×4 (80x20) by mistake while the code cut
+5-px frames, so each particle was a 5x20 slice of the first cell; fixed on 2026-10-08 (the sheet is 20x5 again and
+`make_world_art.py` saves it at scale 1). How it looks in play has not been judged by the user.

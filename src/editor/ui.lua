@@ -52,6 +52,22 @@ function ui.endFrame()
     if not st.down then st.active = nil end
 end
 
+-- BLOQUEAR la entrada mientras se dibuja lo que queda DETRÁS de una ventana (un menú, un diálogo): lo de detrás se
+-- sigue viendo pero no recibe NADA — ni clics, ni rueda, ni arrastres, ni el ratón encima, ni teclas ni texto —, y
+-- al desbloquear la ventana se encuentra la entrada intacta. Siempre en pareja: ui.block() … ui.unblock().
+local blocks = {}
+function ui.block()
+    blocks[#blocks + 1] = { st.mx, st.my, st.down, st.pressed, st.released, st.rpressed, st.wheel, st.keys, st.text, st.tooltip }
+    st.mx, st.my = -1e6, -1e6
+    st.down, st.pressed, st.released, st.rpressed, st.wheel, st.keys, st.text = false, false, false, false, 0, {}, ''
+end
+function ui.unblock()
+    local b = table.remove(blocks)
+    if not b then return end
+    st.mx, st.my, st.down, st.pressed, st.released, st.rpressed, st.wheel, st.keys, st.text, st.tooltip =
+        b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8], b[9], b[10]
+end
+
 function ui.mousepressed(b)  if b == 1 then st.pressed = true elseif b == 2 then st.rpressed = true end end
 function ui.mousereleased(b) if b == 1 then st.released = true end end
 function ui.wheelmoved(y)    st.wheel = st.wheel + y end
@@ -309,15 +325,26 @@ function ui.beginScroll(id, x, y, w, h, contentH)
     if inside(x, y, w, h) and st.wheel ~= 0 then
         off = off - st.wheel * 40; st.wheel = 0
     end
+    -- barra: se arrastra con el ratón (o un clic en su carril lleva ahí)
+    local sid = 'scrollbar:' .. id
+    local BW = 12
+    if contentH > h then
+        local bh = math.max(24, h * h / contentH)
+        if st.pressed and not st.consumed and inside(x + w - BW, y, BW, h) then st.active = sid; st.consumed = true end
+        if st.active == sid and st.down then
+            off = (st.my - y - bh / 2) / math.max(1, h - bh) * (contentH - h)
+        end
+    end
     off = math.max(0, math.min(off, math.max(0, contentH - h)))
     st.scroll[id] = off
     st.clip = { x, y, w, h }
     love.graphics.setScissor(x, y, w, h)
-    -- barra
     if contentH > h then
         local bh = math.max(24, h * h / contentH)
         local by = y + (h - bh) * (off / (contentH - h))
-        ui.rect(x + w - 5, by, 4, bh, th.border, 2)
+        local hot = st.active == sid or inside(x + w - BW, y, BW, h)
+        ui.rect(x + w - BW + 2, y, BW - 4, h, { 0, 0, 0, 0.18 }, 3)
+        ui.rect(x + w - BW + 2, by, BW - 4, bh, hot and th.accent or th.border, 3)
     end
     return y - off
 end

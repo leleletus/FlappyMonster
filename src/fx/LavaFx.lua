@@ -3,7 +3,7 @@
 -- aire. SOLO dibujo (cada cliente las suyas; no afectan al juego) y solo en las
 -- casillas que se ven: una burbuja crece, revienta y suelta unas gotitas que
 -- saltan y vuelven a caer en la lava; encima de la superficie, un brillo suave.
--- Sprites: assets/images/fx/lava_fx.png (4 cuadros de 5x5: burbuja, burbuja
+-- Sprites: assets/images/fx/lava_fx.png (20x5: 4 cuadros de 5x5 — burbuja, burbuja
 -- grande, estallido, gota), de tools/art/world/make_world_art.py.
 --   LavaFx.render(level, camX, camY)   (justo después de dibujar el nivel)
 local SpriteStrip = require 'src/fx/SpriteStrip'

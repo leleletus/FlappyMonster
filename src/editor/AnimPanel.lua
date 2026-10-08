@@ -237,8 +237,7 @@ function AnimPanel:draw(doc, x, y, w, h)
     local changed = false
     local function touch() changed = true; self.dirty = true end
     local blocked = self.modal ~= nil                  -- (con una ventana abierta, lo de detrás no responde)
-    local savedPressed, savedWheel = ui.state.pressed, ui.state.wheel
-    if blocked then ui.state.pressed, ui.state.wheel = false, 0 end
+    if blocked then ui.block() end
 
     local all = names(doc)
     if not self.anim or not doc.anims[self.anim] then self.anim, self.pos, self.t = bestAnim(doc), 1, 0 end
@@ -607,7 +606,7 @@ function AnimPanel:draw(doc, x, y, w, h)
     end
     ui.endScroll()
 
-    if blocked then ui.state.pressed, ui.state.wheel = savedPressed, savedWheel end
+    if blocked then ui.unblock() end
     if self:drawModal(doc) then touch() end
     return changed
 end

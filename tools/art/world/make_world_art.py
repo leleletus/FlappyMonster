@@ -371,7 +371,7 @@ if __name__ == '__main__':
     save('world/tiles/platform.png', platform())
     save('world/tiles/sand_blend.png', strip([blend(rgb('5a3c22'), rgb('76502e')), blend(STONE['crack'], STONE['base']),
                                         blend(DEEP['crack'], DEEP['base']), blend(BORDER['crack'], BORDER['base'])]))
-    save('fx/lava_fx.png', lava_fx())
+    save('fx/lava_fx.png', lava_fx(), scale=1)      # (partículas de 5x5: el juego las escala; a x4 se cortaban mal)
     save('enemies/mortar/normal.png', mortar(False), 1)
     save('enemies/mortar/shooting.png', mortar(True), 1)
     save('items/checkpoint_off.png', checkpoint(False), 1)

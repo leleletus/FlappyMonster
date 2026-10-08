@@ -185,7 +185,7 @@ function Core.draw(self, pre, fx, fy, s, name, k, alpha, camX, camY, bx, by)
         love.graphics.setColor(1, 1, 1, alpha or 1)
         local fz = pre .. 'fuse_' .. name
         if k and set:has(fz .. '_' .. ((k - 1) % math.max(1, set:count(body)) + 1)) then fz = fz .. '_' .. ((k - 1) % set:count(body) + 1) end
-        set:draw(fz, now, cx, cy, 0, sx, sy, 0.5, 0.5)
+        if set:has(fz) then set:draw(fz, now, cx, cy, 0, sx, sy, 0.5, 0.5) end
         local tip = set:frame(fi).data.tip or { Core.FW / 2, 0 }
         local tx = cx + (tip[1] + 0.5 - Core.FW / 2) * sx
         local ty = cy + (tip[2] + 0.5 - Core.FH / 2) * sy

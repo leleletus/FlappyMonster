@@ -73,6 +73,10 @@ The editor itself reads left to right, the way you work:
    selected frame (change its image, crop it by hand, reorder, delete) and two folded sections: set settings (scale,
    anchor) and variants.
 
+Lists scroll with the wheel or by dragging their scroll bar; while a menu or dialog is open, what is behind it
+receives no input at all (`ui.block()` / `ui.unblock()` in `src/editor/ui.lua` — before 3.93 the editor behind the
+"open" menu kept the wheel, which is why that list stopped scrolling once a set was open).
+
 Ctrl+Z / Ctrl+Y undo and redo everything; Ctrl+S saves; Space plays / pauses; `,` `.` step frames. Images must
 already be files under `assets/images/` (copy a new one there and press "Releer" in the picker).
 
@@ -204,6 +208,12 @@ Everything else is in its folder's set as sheet animations and loose images (pre
 hand-written bosses and the player, WHEN each frame shows is still decided by code — their poses are computed
 (squash, claws, rotation), not frame lists. All migrations were verified pixel-identical against screenshots taken
 before them.
+
+**Editor → game, proven** (`tool_editors FLOW=runtime`): with real mouse input on the editor (clicks on its buttons,
+wheel on its fields) the test removes a frame from the Gloomy's `walk`, reorders it and slows it down; cuts the
+bomb's `walk` from 4 frames to 2; adds a frame and a speed to the trampoline's `idle`; saves with Ctrl+S; starts the
+game with those entities — and they walk with the new step count, the new frame order and the new rhythm, with no
+change to their code.
 
 **Tests:** `enemy_data` (timing, events, variants, every set in `assets/anim` valid and its images present;
 `por_nombre`: 8,037 frame comparisons between the by-name runtime and the old index formulas — Gloomy, Mega Gloomy,

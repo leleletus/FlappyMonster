@@ -172,9 +172,9 @@ local function draw()
     if A.doc then
         local blocked = A.browse
         local sp = ui.state.pressed
-        if blocked then ui.state.pressed = false end
+        if blocked then ui.block() end                    -- (con el explorador abierto, el editor de detrás no recibe nada)
         if A.panel:draw(A.doc, 8, 54, W - 16, H - 54 - 34) then A.unsaved = true; A.hist:record() end
-        if blocked then ui.state.pressed = sp end
+        if blocked then ui.unblock() end
     end
     if A.browse then drawBrowser(W, H) end
 end

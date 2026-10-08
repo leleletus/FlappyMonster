@@ -233,13 +233,15 @@ sprite's pixel grid.
 
 - **Bombs** (`types/enemies/bomb.lua` living bomb, Enemigos; `types/items/bombobject.lua` Bomba objeto,
   Objetos; shared `entities/base/BombCore.lua`; effects `src/world/systems/Explosions.lua`). Sprites
-  `assets/images/enemies/bomb/`: `bomb-Sheet.png` / `bombObject-Sheet.png` (user's, 4 frames 15x16:
-  idle, walk 1-2, about-to-explode), `*-fuse-Sheet.png` (lit fuse overlay, 8 frames = 2
-  flicker variants) and `explosion-Sheet.png` (7 frames 48x48) from
-  `tools/art/enemies/make_bomb_sprites.py` (never overwrites; --force). Sounds bomb_ignite/fizz/blast/kick
-  (`tools/sounds/bomb.py`; the blast is in the harness `LOUD` list, up to −4 dBFS, RANGE 4;
-  the kick is metallic). The user's sheets were retouched by `tools/art/enemies/retouch_bomb.py`
-  (1x2 eyes, metal cap, rope-coloured fuse; originals kept OUTSIDE the repo, see Golden rule 5). Living bomb
+  `assets/images/enemies/bomb/`, all written by `tools/art/enemies/make_bomb_redesign.py` (`--apply`; `--anims` also
+  rebuilds the set `enemies/bomb`): `bomb-Sheet.png` (9 frames 15x16: idle, blink, walk 1-4, about-to-explode 1-3),
+  `bombObject-Sheet.png` (5: the item, no boots), `*-fuse-Sheet.png` (the fuse spark, 4 frames, at the idle tip and
+  at the swollen tip) and `explosion-Sheet.png` (10 frames 48x48). **Redesigned 2026-10-08** at the user's request
+  ("they do not look enough like bombs"): dark round body with a highlight, metal collar, rope fuse, white eyes,
+  boots; it blinks when idle, walks in 4 steps, and swells, shakes and glows from inside before exploding. The
+  previous sheets (white body; the user's, retouched) are in `FlappyMonster_originals/…/bomb/*-orig.png` and their
+  scripts in `herramientas_retiradas/art/`. Not yet judged by the user. Sounds bomb_ignite/fizz/blast/kick
+  (`tools/sounds/bomb.py`; the blast is in the harness `LOUD` list, up to −4 dBFS, RANGE 4; the kick is metallic). Living bomb
   walks/flies like a Gummy (no helmet, breathes when idle), NO contact damage and NEVER lit by
   proximity: touching it KICKS it in the player's walking direction (`touchKick`, cooldown
   `KICK_CD`); stomping it = the player bounces (`'bounce'` + `e:onBounced(pa)` hook in

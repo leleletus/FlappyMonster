@@ -26,7 +26,7 @@
 --   (Nave Malvada / Espejo / Gran Bola de Nieve / Rey Gummy: orden dormant → intro → ready → su estado de pelea,
 --    sonidos de su entrada; lejos/emotes/invocar son solo del Mega)
 --
---   tools/tests/run.sh boss_intro        (LEVEL=..., SECS=90)
+--   tools/tests/run.sh boss_intro        (LEVEL=..., SECS=240: acaba antes si ya lo ha visto todo)
 --   LEVEL=assets/levels/fortaleza_malvada.json / ruta_del_espejo.json
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
@@ -114,7 +114,7 @@ function love.load()
         wrap(Crawler, 'move', function(e) return e end)
     end
     local nextGP = nil
-    while t < (tonumber(os.getenv('SECS')) or 90) do
+    while t < (tonumber(os.getenv('SECS')) or 240) do
         t = t + dt
         local intro = z.state == 'intro'
         -- Pulsan derecha y saltan sin parar hasta 0.5 s después de empezar la pelea

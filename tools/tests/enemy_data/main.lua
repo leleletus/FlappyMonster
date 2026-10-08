@@ -146,26 +146,20 @@ function love.load()
         end
         local w = mset.anims.walk
         if math.abs(1 / w.fps - 0.11) > 1e-9 or mset:fps('run') ~= 20 or #w.frames ~= 4 or gset:fps('walk') ~= 11 then diffs[#diffs + 1] = 'ritmo de andar' end
-        -- Bomba: quieta 1, andar 2-3, a punto de estallar 4; mecha = cuadro + 4 * (parpadeo a 14/s); explosión en 0,6 s
+        -- Bomba (rehecha el 2026-10-08: ya no se compara con el dibujo viejo): tiene sus animaciones, la chispa de cada
+        -- cuerpo, la punta de la mecha en cada cuadro del cuerpo, y la explosión dura los 0,6 s de la simulación
         local bset = Anim.load('enemies/bomb')
-        for _, pre in ipairs({ '', 'object_' }) do
-            local sheet = pre == '' and 'bomb-Sheet' or 'bombObject-Sheet'
-            local fsheet = pre == '' and 'bomb-fuse-Sheet' or 'bombObject-fuse-Sheet'
-            same(pre .. 'idle', bset, (bset:frameAt(pre .. 'idle', 0.3)), sheet, 1, 15)
-            same(pre .. 'lit', bset, (bset:frameAt(pre .. 'lit', 0.3)), sheet, 4, 15)
-            for k = 1, 2 do same(pre .. 'walk', bset, bset:frameN(pre .. 'walk', k), sheet, 1 + k, 15) end
-            for i = 0, 30 do
-                local now = i * 0.0173 + 0.001
-                local v = math.floor(now * 14) % 2
-                same(pre .. 'fuse_idle', bset, (bset:frameAt(pre .. 'fuse_idle', now)), fsheet, 1 + v * 4, 15)
-                same(pre .. 'fuse_lit', bset, (bset:frameAt(pre .. 'fuse_lit', now)), fsheet, 4 + v * 4, 15)
+        for _, n in ipairs({ 'idle', 'walk', 'lit', 'object_idle', 'object_lit', 'fuse_idle', 'fuse_lit', 'object_fuse_idle', 'object_fuse_lit', 'explosion' }) do
+            n2 = n2 + 1
+            if not bset:has(n) then diffs[#diffs + 1] = 'bomba: falta la animación ' .. n end
+        end
+        for _, n in ipairs({ 'idle', 'walk', 'lit', 'object_idle', 'object_lit' }) do
+            for k = 1, bset:count(n) do
+                n2 = n2 + 1
+                if type(bset:frame(bset:frameN(n, k)).data.tip) ~= 'table' then diffs[#diffs + 1] = 'bomba: ' .. n .. ' sin punta de mecha' end
             end
         end
-        for i = 0, 40 do
-            local t = i * 0.0157 + 0.002
-            same('explosion', bset, (bset:frameAt('explosion', t)), 'explosion-Sheet', math.min(7, math.floor(t / 0.6 * 7) + 1), 48)
-        end
-        if bset:fps('walk') ~= 7 or bset:count('walk') ~= 2 then diffs[#diffs + 1] = 'bomba: ritmo de andar' end
+        if math.abs(bset:length('explosion') - 0.6) > 0.01 or bset.anims.explosion.loop then diffs[#diffs + 1] = 'bomba: la explosión no dura 0,6 s' end
         -- Pez globo: nadar 1-2 a 2,5/s; aviso: tiembla 1 ↔ 3 cada 0,06 s y a los 0,3 s se queda en el 3; hinchado 4; deshinchar 3 → 1
         local pset = Anim.load('enemies/pufferfish')
         for i = 0, 60 do
