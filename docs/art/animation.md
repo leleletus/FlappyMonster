@@ -73,6 +73,14 @@ The editor itself reads left to right, the way you work:
    selected frame (change its image, crop it by hand, reorder, delete) and two folded sections: set settings (scale,
    anchor) and variants.
 
+**Scene preview** (`src/editor/ScenePreview.lua`, asked by the user on 2026-10-08: "it should be in a level, with
+floor and background, to see more or less how it will look in game"): the view draws a sky, real floor tiles at
+game size (one tile = 64 game px) and the monster standing beside for scale. The button "Escenario" cycles Pradera /
+Cueva (dark, for dark sprites) / none. In the animation editor the floor is at the set's ANCHOR (the cross) — exact
+for sprites drawn from their feet through the anchor, like the bombs; hand-written enemies place the sprite from
+their hit box, so there it is an approximation. In the enemy editor ("Cómo es") the floor is where the enemy really
+stands: the bottom of its orange (outer) box, so a box shorter than the drawing shows the feet sinking.
+
 Lists scroll with the wheel or by dragging their scroll bar; while a menu or dialog is open, what is behind it
 receives no input at all (`ui.block()` / `ui.unblock()` in `src/editor/ui.lua` — before 3.93 the editor behind the
 "open" menu kept the wheel, which is why that list stopped scrolling once a set was open).

@@ -21,6 +21,7 @@ local AnimEditor  = require 'src/editor/AnimEditor'
 local json        = require 'libs/json'
 local th = ui.theme
 
+local Scene = require 'src/editor/ScenePreview'
 local E = { ids = {}, id = nil, spec = nil, animDoc = nil, panel = AnimPanel.new(), tab = 'anim', unsaved = false,
             newId = '', previewState = 'idle', pt = 0 }
 E.ORDER = { 'id', 'label', 'category', 'description', 'boss', 'anim', 'variant', 'scale', 'facesLeft', 'breathe', 'crawl', 'hitbox', 'hp', 'hurtTime',
@@ -177,8 +178,19 @@ local function drawPreview(x, y, w, h)
     local zoom = math.max(1, math.floor(math.min(w * 0.5 / (set:size(1) * S), h * 0.55 / (select(2, set:size(1)) * S))))
     local k = S * zoom
     local cx, fy = math.floor(x + w / 2), math.floor(y + h * 0.72)
+    -- ESCENARIO: el suelo va donde lo pisa de verdad — la base de su caja de FUERA (naranja), no la del dibujo: si la
+    -- caja es más baja que el dibujo, los pies se hunden, y aquí se ve —, con el monstruo al lado a su tamaño
+    do
+        local _, fh0 = set:size(1)
+        local hb0 = E.spec.hitbox
+        local groundY = math.floor(fy - fh0 * k / 2 + fh0 * k * hb0.outerH / 2)
+        E.scene = E.scene or 'pradera'
+        if Scene.draw(E.scene, x, y, w, h, groundY, 64 * zoom, cx) then
+            love.graphics.setScissor(x, y, w, h)
+            Scene.player(cx - math.max(110 * zoom, set:size(1) * k * 0.5 + 70 * zoom), groundY, zoom)
+        end
+    end
     love.graphics.setScissor(x, y, w, h)
-    ui.setColor(th.border, 0.8); love.graphics.line(x + 12, fy + 0.5, x + w - 12, fy + 0.5)          -- el suelo
     love.graphics.setColor(1, 1, 1, 1)
     set:draw(name, E.pt, cx, fy, 0, k * (E.spec.facesLeft and -1 or 1), k, 0.5, 1)
     local fw, fh = set:size(1)
@@ -192,7 +204,10 @@ local function drawPreview(x, y, w, h)
     love.graphics.setLineWidth(1)
     love.graphics.setScissor()
     ui.text(('"%s" · %dx%d px en el juego (una casilla = 64)'):format(name, fw * S, fh * S), x + 10, y + 8, th.muted, ui.fontSm)
-    ui.text('naranja: donde se le toca / pisa · amarillo: donde hace daño', x + 10, y + h - 20, th.muted, ui.fontSm)
+    ui.text('naranja: donde se le toca / pisa · amarillo: donde hace daño', x + 10, y + h - 20, th.text, ui.fontSm)
+    if ui.button('Escenario: ' .. Scene.LABEL[E.scene or 'pradera'], x + w - 180, y + 6, 170, 22, { font = ui.fontSm, tooltip = 'Cómo se ve en el juego: el suelo está donde pisa su caja naranja' }) then
+        E.scene = Scene.next(E.scene or 'pradera')
+    end
 end
 
 -- ── Pestañas ──────────────────────────────────────────────────────────────────

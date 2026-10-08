@@ -28,7 +28,8 @@ The tabs are numbered in the order you work; a line under them says what the cur
    the animations its states still need, with a button to create them.
 2. **Cómo es** — *Enemigo normal* or **JEFE**; label, description, category; scale, "art faces left", breathing
    when idle, a light outline for dark sprites; the hit boxes drawn live over the sprite (orange = where it is
-   touched / stomped, yellow = where it hurts); health; **how it moves** (walks, flies, stands still, or CRAWLS on
+   touched / stomped, yellow = where it hurts) inside a scene with the real floor at the bottom of the orange box
+   (where it stands in game) and the monster for scale; health; **how it moves** (walks, flies, stands still, or CRAWLS on
    walls and ceilings); the default values of the common props, which each level can still override; traits.
 3. **Qué hace** — add, order and tune behaviours. With none, it just moves. When several could take over, the one
    higher in the list wins.

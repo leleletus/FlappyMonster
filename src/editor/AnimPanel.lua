@@ -17,6 +17,7 @@ local Anim  = require 'src/fx/Anim'
 local Shell = require 'src/editor/ToolShell'
 local th = ui.theme
 
+local Scene = require 'src/editor/ScenePreview'
 local AnimPanel = {}
 AnimPanel.__index = AnimPanel
 -- Nombres habituales, con cómo se enseñan (el nombre interno es el que usa el juego: no se traduce)
@@ -362,6 +363,19 @@ function AnimPanel:draw(doc, x, y, w, h)
     end
     local mx, my = math.floor(cx + cw / 2), math.floor(y + (vh - barH) * 0.66)
     if #doc.frames > 0 then
+        -- ESCENARIO: como se verá "más o menos" en el juego. El suelo va en el ANCLA (la cruz) cuando el ancla es la
+        -- de los pies; si el conjunto se ancla por el centro, bajo el cuadro. Una casilla = 64 px del juego.
+        self.scene = self.scene or 'pradera'
+        local gameScale = tonumber(doc.scale) or 4
+        local f0 = set.frames[shown]
+        local groundY = my
+        if f0 and (f0.oy or set.oy) < 0.75 then groundY = my + math.floor((1 - (f0.oy or set.oy)) * f0.h * self.zoom) end
+        local gamePx = self.zoom / gameScale                     -- (px de la vista por px del juego)
+        if Scene.draw(self.scene, cx, y, cw, vh - barH, groundY, 64 * gamePx, mx) then
+            love.graphics.setScissor(cx, y, cw, vh - barH)
+            Scene.player(mx - math.max(96 * gamePx, (f0 and f0.w or 16) * self.zoom * 0.5 + 60 * gamePx), groundY, gamePx)
+            love.graphics.setScissor()
+        end
         love.graphics.setScissor(cx, y, cw, vh - barH)
         love.graphics.setColor(1, 1, 1, 1)
         set:drawFrame(shown, mx, my, 0, self.zoom, self.zoom)
@@ -377,6 +391,9 @@ function AnimPanel:draw(doc, x, y, w, h)
         ui.text('Aquí se verá la animación', cx, y + vh / 2 - 20, th.muted, ui.fontLg, cw, 'center')
     end
     ui.text(('zoom ×%d (rueda del ratón)'):format(self.zoom), cx + cw - 200, y + 8, th.muted, ui.fontSm, 190, 'right')
+    if ui.button('Escenario: ' .. Scene.LABEL[self.scene or 'pradera'], cx + 78, y + 4, 170, 22, { font = ui.fontSm, tooltip = 'Dónde se ve el dibujo: con el suelo y el monstruo al tamaño del juego (para ajustar el ancla y la escala), en una cueva a oscuras, o sin nada' }) then
+        self.scene = Scene.next(self.scene or 'pradera')
+    end
     -- reproductor
     local by0 = y + vh - barH
     ui.rect(cx, by0, cw, barH, th.panel, 0)
