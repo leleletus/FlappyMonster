@@ -27,18 +27,20 @@
     {"h": 9, "image": "assets/images/enemies/gloomy/icons-Sheet.png", "w": 7, "x": 14, "y": 0}
   ],
   "anims": {
-    "crouch": {"at": [6], "fps": 8, "frameW": 26, "frames": [6], "loop": true, "sheet": "gloomy-Sheet.png"},
-    "dead": {"at": [9], "fps": 8, "frameW": 26, "frames": [9], "loop": true, "sheet": "gloomy-Sheet.png"},
-    "glow_crouch": {"at": [6], "fps": 8, "frameW": 26, "frames": [15], "loop": true, "sheet": "glow-Sheet.png"},
-    "glow_dead": {"at": [9], "fps": 8, "frameW": 26, "frames": [18], "loop": true, "sheet": "glow-Sheet.png"},
-    "glow_idle": {"at": [5], "fps": 8, "frameW": 26, "frames": [14], "loop": true, "sheet": "glow-Sheet.png"},
-    "glow_leap": {"at": [7], "fps": 8, "frameW": 26, "frames": [16], "loop": true, "sheet": "glow-Sheet.png"},
-    "glow_scared": {"at": [8], "fps": 8, "frameW": 26, "frames": [17], "loop": true, "sheet": "glow-Sheet.png"},
-    "glow_walk": {"at": [1, 2, 3, 4], "fps": 7, "frameW": 26, "frames": [10, 11, 12, 13], "loop": true, "sheet": "glow-Sheet.png"},
+    "crouch": {"fps": 8, "frames": [6], "loop": true},
+    "dead": {"fps": 8, "frames": [9], "loop": true},
+    "glow_crouch": {"fps": 8, "frames": [15], "loop": true},
+    "glow_dead": {"fps": 8, "frames": [18], "loop": true},
+    "glow_idle": {"fps": 8, "frames": [14], "loop": true},
+    "glow_leap": {"fps": 8, "frames": [16], "loop": true},
+    "glow_scared": {"fps": 8, "frames": [17], "loop": true},
+    "glow_taunt": {"fps": 9, "frames": [15, 14], "loop": true},
+    "glow_walk": {"fps": 11, "frames": [10, 11, 12, 13], "loop": true},
     "icons": {"fps": 8, "frameW": 7, "frames": [19, 20, 21], "loop": true, "sheet": "icons-Sheet.png"},
-    "idle": {"at": [5], "fps": 8, "frameW": 26, "frames": [5], "loop": true, "sheet": "gloomy-Sheet.png"},
-    "leap": {"at": [7], "fps": 8, "frameW": 26, "frames": [7], "loop": true, "sheet": "gloomy-Sheet.png"},
-    "scared": {"at": [8], "fps": 8, "frameW": 26, "frames": [8], "loop": true, "sheet": "gloomy-Sheet.png"},
-    "walk": {"at": [1, 2, 3, 4], "fps": 7, "frameW": 26, "frames": [1, 2, 3, 4], "loop": true, "sheet": "gloomy-Sheet.png"}
+    "idle": {"fps": 8, "frames": [5], "loop": true},
+    "leap": {"fps": 8, "frames": [7], "loop": true},
+    "scared": {"fps": 8, "frames": [8], "loop": true},
+    "taunt": {"fps": 9, "frames": [6, 5], "loop": true},
+    "walk": {"fps": 11, "frames": [1, 2, 3, 4], "loop": true}
   }
 }

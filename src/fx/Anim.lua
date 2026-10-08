@@ -279,6 +279,34 @@ function Set:draw(name, t, x, y, r, sx, sy, ox, oy)
     self:drawFrame((self:frameAt(name, t)), x, y, r, sx, sy, ox, oy)
 end
 
+-- ── Lo que usa el juego: PEDIR UNA ANIMACIÓN POR SU NOMBRE ───────────────────
+-- El código de una entidad decide su ESTADO y pide la animación de ese estado; cuántos cuadros tiene, en qué orden,
+-- a qué velocidad y si se repite lo dice la animación (el editor), nunca el código. Da igual que los cuadros vengan
+-- de una hoja o de imágenes sueltas.
+--   set:draw(nombre, t, x, y, r, sx, sy, ox, oy)      el cuadro que toca a los t segundos (ancla 0..1)
+--   set:drawN(nombre, k, …)                           para quien lleva un CONTADOR de pasos en la simulación (el ciclo
+--                                                      de andar que viaja por red): el paso k, dando la vuelta
+--   set:drawPx(nombre, t, x, y, r, sx, sy, oxPx, oyPx) igual que draw, con el ancla en píxeles del cuadro (como
+--                                                      love.graphics.draw: para sustituir una imagen suelta)
+--   set:count(nombre), set:fps(nombre), set:width(nombre), set:data(nombre, t | nil, k) (datos propios del cuadro)
+function Set:count(name) local s = self.anims[name]; return s and #s.frames or 0 end
+function Set:fps(name) local s = self.anims[name]; return s and s.fps or 0 end
+function Set:width(name) local s = self:seq(name); return self:size(s and s.frames[1] or 1) end
+function Set:drawN(name, k, x, y, r, sx, sy, ox, oy)
+    self:drawFrame(self:frameN(name, k), x, y, r, sx, sy, ox, oy)
+end
+function Set:drawPx(name, t, x, y, r, sx, sy, oxPx, oyPx)
+    local f = self:frame((self:frameAt(name, t)))
+    if not (f and f.image) then return end
+    if f.quad then love.graphics.draw(f.image, f.quad, x, y, r or 0, sx or 1, sy or sx or 1, oxPx or 0, oyPx or 0)
+    else love.graphics.draw(f.image, x, y, r or 0, sx or 1, sy or sx or 1, oxPx or 0, oyPx or 0) end
+end
+-- El cuadro (tal cual está en el JSON, con sus campos propios) que toca: por tiempo, o por contador si se da k
+function Set:data(name, t, k)
+    local f = self:frame(k and self:frameN(name, k) or (self:frameAt(name, t)))
+    return f and f.data or {}
+end
+
 -- ── Reproductor (para lo que no es simulación: menús, editores, adornos) ─────
 -- local p = Anim.player(set, 'idle');  p:update(dt);  p:draw(x, y, r, sx, sy);  p:play('walk')
 local Player = {}

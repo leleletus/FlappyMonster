@@ -27,17 +27,16 @@ local HALF_PX = nil
 -- Púa de tile: la imagen del aspecto de pinchos del nivel (SpikeSkins: spike.png / spike_ice.png;
 -- hacia arriba, del tamaño de media casilla); las otras direcciones son la misma imagen girada o volteada
 local function drawMiniSpike(dir, px, py, size, skin)
-    local spikeImg = SpikeSkins.image(skin)
-    local k = size / spikeImg:getWidth()
+        local k = size / SpikeSkins.width(skin)
     love.graphics.setColor(1, 1, 1, 1)
     if dir == DIR_UP then
-        love.graphics.draw(spikeImg, px, py, 0, k, k)
+        SpikeSkins.draw(skin, px, py, 0, k, k)
     elseif dir == DIR_DOWN then
-        love.graphics.draw(spikeImg, px, py + size, 0, k, -k)
+        SpikeSkins.draw(skin, px, py + size, 0, k, -k)
     elseif dir == DIR_LEFT then
-        love.graphics.draw(spikeImg, px, py + size, -math.pi / 2, k, k)
+        SpikeSkins.draw(skin, px, py + size, -math.pi / 2, k, k)
     elseif dir == DIR_RIGHT then
-        love.graphics.draw(spikeImg, px + size, py, math.pi / 2, k, k)
+        SpikeSkins.draw(skin, px + size, py, math.pi / 2, k, k)
     end
 end
 

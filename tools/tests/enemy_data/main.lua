@@ -4,6 +4,8 @@
 --   anim_avisos    los avisos (`events`) de una secuencia salen una vez por pasada
 --   anim_variante  una variante cambia las imágenes y no las secuencias
 --   anim_juego     todos los conjuntos de assets/anim cargan y sus secuencias apuntan a cuadros que existen
+--   por_nombre     Gloomy, Mega Gloomy, bombas y pez globo piden sus animaciones por nombre y se ve el MISMO cuadro
+--                  que con las fórmulas de antes (cuadro por número de la hoja), estado a estado
 --   registro       un enemigo de datos se registra como tipo (props comunes, miniatura) y se crea en un nivel
 --   anda           sin comportamientos anda y se gira como cualquiera; el ciclo de andar sale de su secuencia
 --   persigue       'chase': ve al jugador, corre hacia él (estado run) y lo deja cuando se va
@@ -90,6 +92,91 @@ function love.load()
         end
     end
     check('anim_juego', #bad == 0 and n >= 2, ('%d conjuntos; mal: %s'):format(n, #bad > 0 and table.concat(bad, ', ') or 'ninguno'))
+
+    -- ── por_nombre: lo que ya pide sus animaciones POR NOMBRE se ve IGUAL que cuando el código elegía el cuadro por
+    -- su número en la hoja (las fórmulas de antes, aquí escritas): mismo trozo de la misma imagen en cada estado
+    do
+        local diffs, n2 = {}, 0
+        local function same(what, set, fi, sheet, idx, fw)
+            n2 = n2 + 1
+            local f = set.frames[fi]
+            if not f or not f.path:find(sheet, 1, true) or f.x ~= (idx - 1) * fw then
+                diffs[#diffs + 1] = ('%s: cuadro %s de %s, esperado el %d'):format(what, f and (f.x / fw + 1) or '?', f and f.path:match('[^/]+$') or '?', idx)
+            end
+        end
+        -- Gloomy y Mega Gloomy (constantes de antes: andar 1-4, quieto 5, agachado 6, salto 7, susto 8, muerto 9)
+        local Gloomy = require('src/world/entities/types/enemies/gloomy').class
+        local gset = Anim.load('enemies/gloomy')
+        local function old(st, modeT, frame)
+            if st == 'dead' then return 9 end
+            if st == 'leap' then return 7 end
+            if st == 'crouch' then return 6 end
+            if st == 'idle' or st == 'rest' then return 5 end
+            if st == 'taunt' then return (math.floor(modeT * 9) % 2 == 0) and 6 or 5 end
+            if st == 'flee' and modeT < 0.12 then return 8 end
+            if st == 'stunned' or st == 'frozen' then return 8 end
+            return math.max(1, math.min(4, frame))
+        end
+        for _, st in ipairs({ 'dead', 'leap', 'crouch', 'idle', 'rest', 'taunt', 'flee', 'stunned', 'frozen', 'walk', 'hunt' }) do
+            for i = 0, 30 do
+                local me = setmetatable({ state = st, modeT = i * 0.031 + 0.004, frame = i % 4 + 1, deadTimer = i * 0.05 }, { __index = Gloomy })
+                same('gloomy ' .. st, gset, me:frameNow(), 'gloomy-Sheet', old(st, me.modeT, me.frame), 26)
+                same('gloomy brillo ' .. st, gset, me:frameNow('glow_'), 'glow-Sheet', old(st, me.modeT, me.frame), 26)
+            end
+        end
+        local MG = require('src/world/entities/types/bosses/megagloomy').class
+        local mset = Anim.load('bosses/megagloomy')
+        local function oldMG(st, t, frame)
+            if st == 'dying_out' or st == 'dead' then return 9 end
+            if st == 'dying_curl' then return 8 end
+            if st == 'pounce' or st == 'dive' then return 7 end
+            if st == 'taunt' then return (math.floor(t * 8) % 2 == 0) and 6 or 5 end
+            if st == 'aim' or st == 'dazzled' or st == 'recover' or st == 'tired' or st == 'flinch' then return 6 end
+            if st == 'roar' or st == 'shriek' then return 8 end
+            if st == 'intro' or st == 'ready' then return (t >= 1.5 and t < 2.9) and 8 or 5 end
+            if st == 'ping' or st == 'claw' or st == 'dormant' or st == 'ceil_ping' or st == 'ceil_wait' then return 5 end
+            return math.max(1, math.min(4, frame))
+        end
+        for _, st in ipairs({ 'dying_out', 'dead', 'dying_curl', 'pounce', 'dive', 'taunt', 'aim', 'dazzled', 'tired', 'roar', 'intro', 'ready', 'ping', 'dormant', 'stalk', 'charge' }) do
+            for i = 0, 40 do
+                local me = setmetatable({ state = st, deadTimer = i * 0.083 + 0.004, frame = i % 4 + 1 }, { __index = MG })
+                same('megagloomy ' .. st, mset, me:frameNow(), 'body-Sheet', oldMG(st, me.deadTimer, me.frame), 38)
+                same('megagloomy brillo ' .. st, mset, me:frameNow('glow_'), 'glow-Sheet', oldMG(st, me.deadTimer, me.frame), 38)
+            end
+        end
+        local w = mset.anims.walk
+        if math.abs(1 / w.fps - 0.11) > 1e-9 or mset:fps('run') ~= 20 or #w.frames ~= 4 or gset:fps('walk') ~= 11 then diffs[#diffs + 1] = 'ritmo de andar' end
+        -- Bomba: quieta 1, andar 2-3, a punto de estallar 4; mecha = cuadro + 4 * (parpadeo a 14/s); explosión en 0,6 s
+        local bset = Anim.load('enemies/bomb')
+        for _, pre in ipairs({ '', 'object_' }) do
+            local sheet = pre == '' and 'bomb-Sheet' or 'bombObject-Sheet'
+            local fsheet = pre == '' and 'bomb-fuse-Sheet' or 'bombObject-fuse-Sheet'
+            same(pre .. 'idle', bset, (bset:frameAt(pre .. 'idle', 0.3)), sheet, 1, 15)
+            same(pre .. 'lit', bset, (bset:frameAt(pre .. 'lit', 0.3)), sheet, 4, 15)
+            for k = 1, 2 do same(pre .. 'walk', bset, bset:frameN(pre .. 'walk', k), sheet, 1 + k, 15) end
+            for i = 0, 30 do
+                local now = i * 0.0173 + 0.001
+                local v = math.floor(now * 14) % 2
+                same(pre .. 'fuse_idle', bset, (bset:frameAt(pre .. 'fuse_idle', now)), fsheet, 1 + v * 4, 15)
+                same(pre .. 'fuse_lit', bset, (bset:frameAt(pre .. 'fuse_lit', now)), fsheet, 4 + v * 4, 15)
+            end
+        end
+        for i = 0, 40 do
+            local t = i * 0.0157 + 0.002
+            same('explosion', bset, (bset:frameAt('explosion', t)), 'explosion-Sheet', math.min(7, math.floor(t / 0.6 * 7) + 1), 48)
+        end
+        if bset:fps('walk') ~= 7 or bset:count('walk') ~= 2 then diffs[#diffs + 1] = 'bomba: ritmo de andar' end
+        -- Pez globo: nadar 1-2 a 2,5/s; aviso: tiembla 1 ↔ 3 cada 0,06 s y a los 0,3 s se queda en el 3; hinchado 4; deshinchar 3 → 1
+        local pset = Anim.load('enemies/pufferfish')
+        for i = 0, 60 do
+            local t = i * 0.0113 + 0.001
+            same('pez nadar', pset, (pset:frameAt('swim', t * 7)), 'puffer_fish', math.floor(t * 7 * 2.5) % 2 + 1, 16)
+            same('pez aviso', pset, (pset:frameAt('warn', t)), 'puffer_fish', (t < 0.3 and math.floor(t / 0.06) % 2 == 0) and 1 or 3, 16)
+            same('pez deshincha', pset, (pset:frameAt('deflate', t)), 'puffer_fish', (t < 0.4 * 0.6) and 3 or 1, 16)
+            same('pez hinchado', pset, (pset:frameAt('puffed', t)), 'puffer_fish', 4, 16)
+        end
+        check('por_nombre', #diffs == 0, ('%d comparaciones con el dibujo de antes; distintas: %s'):format(n2, #diffs > 0 and (#diffs .. ' — ' .. diffs[1]) or 'ninguna'))
+    end
 
     -- ── enemigos de datos ── (un enemigo de prueba sobre el conjunto del Gummy; no entra en el juego)
     local function spec(id, extra)

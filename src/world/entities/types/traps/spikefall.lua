@@ -110,10 +110,9 @@ function SpikeFall:isBodyDisabled() return true end
 local SpikeSkins = require 'src/world/level/SpikeSkins'
 SpikeFall.wantsLevel = true          -- (solo dibujo: el aspecto de los pinchos del nivel; BossZones.link / editor)
 local function drawDownSpike(px, py, sz, alpha, skin)
-    local spikeImg = SpikeSkins.image(skin)
-    local k = sz / spikeImg:getWidth()
+        local k = sz / SpikeSkins.width(skin)
     love.graphics.setColor(1, 1, 1, alpha)
-    love.graphics.draw(spikeImg, px, py + sz, 0, k, -k)
+    SpikeSkins.draw(skin, px, py + sz, 0, k, -k)
 end
 
 function SpikeFall:render(camX, camY)

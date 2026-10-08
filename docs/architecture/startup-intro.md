@@ -34,4 +34,7 @@ the planned time; skipping.
 short representative melody, then fade back to black"); cutting the logo by letters to animate with the music was
 the user's suggestion. History: the first version (3.89) drew the smooth original scaled down — the user: it does not fit the game's style,
 make it pixel art. The first pixel version (1/8, ×4) was "considerably higher resolution than it should be": halved
-to 1/16 (×8); 1/20 was tried and the strokes turn uneven. Not yet judged by the user: the melody.
+to 1/16 (×8); 1/20 was tried and the strokes turn uneven. Then: "the letters are not symmetric and look deformed,
+especially the two Ms and the last O" → each letter is now reduced on a grid centred on its own axis and averaged
+with its mirror image (the e and the o also top / bottom), so both halves are identical; the M sits one pixel
+left so it does not touch the V. Not yet judged by the user: the melody.

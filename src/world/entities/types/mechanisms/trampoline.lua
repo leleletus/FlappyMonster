@@ -31,19 +31,11 @@ local ROT  = { up = 0, right = math.pi / 2, down = math.pi, left = -math.pi / 2 
 -- ASPECTOS (solo dibujo; prop `skin`): 'normal' y 'ice' = el trampolín HELADO (la misma textura que el de los Crabbies
 -- helados). 'auto' (por defecto) = helado en los niveles nevados — los de pinchos de hielo o nieve cayendo
 -- (level.spikeSkin == 'ice' / level.snow) —, así ninguno se queda sin cambiar; un aspecto nuevo = dos PNG + una línea
-local SKINS = { normal = { 'normal.png', 'extended.png' }, ice = { 'ice_normal.png', 'ice_extended.png' } }
-local imgNormal, imgExtended
-local skinImg = {}
-function Tramp.loadAssets()
-    if imgNormal then return end
-    for id, f in pairs(SKINS) do
-        local a = require('src/fx/Anim').image('assets/images/mechanisms/trampoline/' .. f[1])
-        local b = require('src/fx/Anim').image('assets/images/mechanisms/trampoline/' .. f[2])
-        if a.setFilter then a:setFilter('nearest', 'nearest'); b:setFilter('nearest', 'nearest') end
-        skinImg[id] = { a, b }
-    end
-    imgNormal, imgExtended = skinImg.normal[1], skinImg.normal[2]
-end
+-- Animaciones (assets/anim/mechanisms/trampoline.json), por nombre: `idle` recogido y `bounce` estirado; las de
+-- otro aspecto llevan su nombre detrás (`idle_ice`, `bounce_ice`). Un aspecto nuevo = esas dos animaciones.
+Tramp.animId = 'mechanisms/trampoline'
+local SKINS = { normal = '', ice = '_ice' }
+function Tramp.loadAssets() Tramp.anims(Tramp) end
 Tramp.wantsLevel = true                      -- (BossZones.link / el editor le dan el nivel: levelRef)
 function Tramp.skinFor(props, level)
     local id = props and props.skin or 'auto'
@@ -134,31 +126,32 @@ function Tramp:netAtRest() return self.state == 'ready' end
 function Tramp:netRest() self.state, self.deadTimer = 'ready', 0 end
 
 -- ── Dibujo ────────────────────────────────────────────────────────────────────
-local function drawTramp(img, cx, cy, rot, sc, squash)
+local function drawTramp(name, t, cx, cy, rot, sc, squash)
     love.graphics.push()
     love.graphics.translate(cx, cy)
     love.graphics.rotate(rot)
     love.graphics.scale(1, squash or 1)
-    love.graphics.draw(img, 0, 0, 0, sc, sc, 8, 8)
+    Tramp.anims(Tramp):draw(name, t, 0, 0, 0, sc, sc, 0.5, 0.5)
     love.graphics.pop()
 end
 
 function Tramp:render(camX, camY)
-    local sk = skinImg[Tramp.skinFor(self.props, self.levelRef)]
-    local img = self:isExtended() and sk[2] or sk[1]
+    local ext = self:isExtended()
+    local name = (ext and 'bounce' or 'idle') .. (SKINS[Tramp.skinFor(self.props, self.levelRef)] or '')
+    local t = ext and (self.deadTimer or 0) or love.timer.getTime()
     -- "Boing": al lanzar se estira un poco y vuelve
     local sq = 1
     if self.state == 'bounce' then sq = 1.12 end
     if self.state == 'extended' and self.deadTimer < 0.12 then sq = 1 + 0.12 * (1 - self.deadTimer / 0.12) end
     love.graphics.setColor(1, 1, 1, 1)
-    drawTramp(img, math.floor(self.x - camX), math.floor(self.y - camY), ROT[self.dir] or 0, S, sq)
+    drawTramp(name, t, math.floor(self.x - camX), math.floor(self.y - camY), ROT[self.dir] or 0, S, sq)
 end
 
 local function editorIcon(dir)
     return function(x, y, s)
         Tramp.loadAssets()
         love.graphics.setColor(1, 1, 1, 1)
-        drawTramp(imgNormal, x + s / 2, y + s / 2, ROT[dir], s / 16)
+        drawTramp('idle', 0, x + s / 2, y + s / 2, ROT[dir], s / 16)
     end
 end
 

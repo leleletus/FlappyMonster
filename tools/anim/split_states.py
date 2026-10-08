@@ -82,4 +82,49 @@ for f in sorted(glob.glob(os.path.join(REPO, 'assets', 'anim', '**', '*.json'), 
         if doc.get('fallback') not in anims:
             doc['fallback'] = 'idle' if 'idle' in anims else sorted(anims)[0]
         write(doc, True)
-print('hojas repartidas por estados: %d · conjuntos con las imágenes sueltas repartidas: %d' % (n_sheet, n_loose))
+
+# ── 2. Animaciones que el juego ya pide POR NOMBRE (set:draw('walk', t)): dejan de ser "trozos de una hoja" ("at",
+# "sheet") y pasan a ser animaciones normales, con el ritmo que llevaba escrito el código y las que el código
+# componía a mano (la burla del Gloomy = agachado ↔ de pie; el aviso del pez globo…). Solo la primera vez.
+def load(sid): return json.load(open(os.path.join(REPO, 'assets', 'anim', sid + '.json'), encoding='utf-8'))
+def free(doc, names, **over):
+    for n in names:
+        a = doc['anims'][n]
+        for k in ('at', 'sheet', 'frameW', 'codeFps'): a.pop(k, None)
+        a.update(over)
+def fr(doc, name, i=0): return doc['anims'][name]['frames'][i]
+STATES = ['walk', 'idle', 'crouch', 'leap', 'scared', 'dead']
+n_free = 0
+for sid, walk_fps, taunt_fps, run_fps in (('enemies/gloomy', 11, 9, None), ('bosses/megagloomy', 100 / 11, 8, 20)):
+    doc = load(sid)
+    if 'at' not in doc['anims']['walk']: continue
+    for pre in ('', 'glow_'):
+        free(doc, [pre + n for n in STATES])
+        doc['anims'][pre + 'walk']['fps'] = walk_fps
+        doc['anims'][pre + 'taunt'] = {'frames': [fr(doc, pre + 'crouch'), fr(doc, pre + 'idle')], 'fps': taunt_fps, 'loop': True}
+        if run_fps: doc['anims'][pre + 'run'] = {'frames': list(doc['anims'][pre + 'walk']['frames']), 'fps': run_fps, 'loop': True}
+    write(doc, True); n_free += 1
+doc = load('enemies/bomb')
+if 'at' in doc['anims']['idle']:
+    A = doc['anims']
+    for pre, tips in (('', [[6, 0], [4, 0], [10, 0], [7, 0]]), ('object_', [[6, 1], [4, 1], [10, 1], [6, 0]])):
+        body = [fr(doc, pre + 'idle'), fr(doc, pre + 'walk', 0), fr(doc, pre + 'walk', 1), fr(doc, pre + 'lit')]
+        for i, tip in zip(body, tips): doc['frames'][i - 1]['tip'] = tip          # (punta de la mecha, px del cuadro)
+        f = {n: A.pop(pre + 'fuse_' + n)['frames'] for n in ('idle', 'walk', 'lit')}
+        fuse = lambda fs: {'frames': fs, 'fps': 14, 'loop': True}
+        A[pre + 'fuse_idle'], A[pre + 'fuse_lit'] = fuse(f['idle']), fuse(f['lit'])
+        A[pre + 'fuse_walk_1'], A[pre + 'fuse_walk_2'] = fuse([f['walk'][0], f['walk'][2]]), fuse([f['walk'][1], f['walk'][3]])
+        free(doc, [pre + 'idle', pre + 'walk', pre + 'lit'])
+        A[pre + 'walk']['fps'] = 7
+    free(doc, ['explosion'], loop=False, fps=len(A['explosion']['frames']) / 0.6)
+    write(doc, True); n_free += 1
+doc = load('enemies/pufferfish')
+if 'at' in doc['anims']['swim']:
+    A = doc['anims']
+    free(doc, ['swim', 'half', 'puffed'])
+    A['swim']['fps'] = 2.5
+    s1, half = fr(doc, 'swim'), fr(doc, 'half')
+    A['warn'] = {'frames': [s1, half, s1, half, s1, half], 'durations': [0.06] * 6, 'fps': 16, 'loop': False}
+    A['deflate'] = {'frames': [half, s1], 'durations': [0.24, 0.16], 'fps': 5, 'loop': False}
+    write(doc, True); n_free += 1
+print('hojas repartidas por estados: %d · conjuntos con las imágenes sueltas repartidas: %d · conjuntos pasados a animaciones por nombre: %d' % (n_sheet, n_loose, n_free))

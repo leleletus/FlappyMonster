@@ -108,12 +108,12 @@ local WARN       = { 1, 0.28, 0.2 }
 local CLAW_DY    = 2                        -- unión de las pinzas, en px de arte bajo el centro (bajas: salen de debajo del caparazón)
 local CRYS       = { 0.85, 0.66, 1 }        -- cristales de la rabia
 
-local body, glow, clawS, clawR, clawRG, icons
+local clawS, clawR, clawRG, icons
+-- Sus animaciones del cuerpo (assets/anim/bosses/megagloomy.json), pedidas por nombre
+MG.animId = 'bosses/megagloomy'
 function MG.loadAssets()
-    if body then return end
+    if clawS then return end
     local D = 'assets/images/bosses/megagloomy/'
-    body  = SpriteStrip.load(D .. 'body-Sheet.png', FW)
-    glow  = SpriteStrip.load(D .. 'glow-Sheet.png', FW)
     clawS = SpriteStrip.load(D .. 'claw_left-Sheet.png', CLAW_W)
     clawR = SpriteStrip.load(D .. 'claw_rage_left-Sheet.png', CLAW_W)        -- (rabia: con cristales en el dorso)
     clawRG = SpriteStrip.load(D .. 'claw_rage_glow-Sheet.png', CLAW_W)       -- (… y sus puntas, que brillan a oscuras)
@@ -384,10 +384,12 @@ end
 
 function MG:walkAnim(dt, fast)
     self.animT = self.animT + dt
-    local step = fast and 0.05 or 0.11
+    -- (ritmo y nº de pasos: los de su animación `walk`, o `run` cuando va deprisa)
+    local set = self:anims()
+    local step = 1 / set:fps(fast and 'run' or 'walk')
     if self.animT >= step then
         self.animT = self.animT - step
-        self.frame = self.frame % 4 + 1
+        self.frame = self.frame % set:count('walk') + 1
         -- (un roce de vez en cuando, no cada paso: el silencio es la tensión)
         self.stepN = (self.stepN or 0) + 1
         if self.stepN % (fast and 3 or 8) == 0 then Sound.play('mgloomyStep') end
@@ -686,17 +688,27 @@ function MG:netApplyExtra(a, b, f)
 end
 
 -- ── Dibujo ───────────────────────────────────────────────────────────────────
-function MG:frameNow()
+-- QUÉ ANIMACIÓN toca (nombre, segundos dentro de ella y, andando, el paso): cuadros y ritmo los pone su conjunto
+function MG:animNow()
     local st, t = self.state, self.deadTimer or 0
-    if st == 'dying_out' or st == 'dead' then return F_DEAD end
-    if st == 'dying_curl' then return F_SCARED end
-    if st == 'pounce' or st == 'dive' then return F_LEAP end
-    if st == 'taunt' then return (math.floor(t * 8) % 2 == 0) and F_CROUCH or F_IDLE end
-    if st == 'aim' or st == 'dazzled' or st == 'recover' or st == 'tired' or st == 'flinch' then return F_CROUCH end
-    if st == 'roar' or st == 'shriek' then return F_SCARED end              -- (patas abiertas, cuerpo en alto)
-    if st == 'intro' or st == 'ready' then return (t >= 1.5 and t < 2.9) and F_SCARED or F_IDLE end
-    if st == 'ping' or st == 'claw' or st == 'dormant' or st == 'ceil_ping' or st == 'ceil_wait' then return F_IDLE end
-    return math.max(1, math.min(4, self.frame or 1))
+    if st == 'dying_out' or st == 'dead' then return 'dead', t end
+    if st == 'dying_curl' then return 'scared', t end
+    if st == 'pounce' or st == 'dive' then return 'leap', t end
+    if st == 'taunt' then return 'taunt', t end
+    if st == 'aim' or st == 'dazzled' or st == 'recover' or st == 'tired' or st == 'flinch' then return 'crouch', t end
+    if st == 'roar' or st == 'shriek' then return 'scared', t end              -- (patas abiertas, cuerpo en alto)
+    if st == 'intro' or st == 'ready' then
+        if t >= 1.5 and t < 2.9 then return 'scared', t - 1.5 end
+        return 'idle', t
+    end
+    if st == 'ping' or st == 'claw' or st == 'dormant' or st == 'ceil_ping' or st == 'ceil_wait' then return 'idle', t end
+    return 'walk', nil, self.frame or 1
+end
+function MG:frameNow(pre)
+    local set = self:anims()
+    local name, t, k = self:animNow()
+    name = (pre or '') .. name
+    return k and set:frameN(name, k) or (set:frameAt(name, t))
 end
 
 -- ¿Ruge ahora? (pinzas en alto temblando: el rugido de la rabia, el grito y el de la entrada)
@@ -775,11 +787,11 @@ function MG:drawClaws(camX, camY, now, sheet)
     end
 end
 
-function MG:drawSheet(sheet, camX, camY, ox, oy)
+function MG:drawSheet(pre, camX, camY, ox, oy)
     local sx, sy = math.floor(self.x - camX + (ox or 0)), math.floor(self.y - camY + (oy or 0))
     local st = self.state
     if st == 'dazzled' or st == 'dying_curl' or self:roaring() then sx = sx + math.floor(math.sin(love.timer.getTime() * 50) * 2) end
-    love.graphics.draw(sheet.image, sheet.quads[self:frameNow()], sx, sy, 0, MS, MS, FW / 2, BODY_ROW)
+    self:anims():drawFrame(self:frameNow(pre), sx, sy, 0, MS, MS, 0.5, BODY_ROW / FH)
 end
 
 -- ¿Se le nota la RABIA? (como al Mega Crabby: temblor leve, pulso rojizo y símbolos de enfado)
@@ -811,7 +823,7 @@ function MG:render(camX, camY)
         camX = camX - math.floor(math.sin(now * 41) * 0.9 + 0.5)        -- (temblor leve: 1 px de vez en cuando)
     else love.graphics.setColor(1, 1, 1, a) end
     local turned = self:pushTurn(camX, camY)
-    self:drawSheet(body, camX, camY)
+    self:drawSheet('', camX, camY)
     self:drawClaws(camX, camY, now)
     if turned then love.graphics.pop() end
     love.graphics.setColor(1, 1, 1, 1)
@@ -864,10 +876,10 @@ function MG:renderGlow(camX, camY)
     if a > 0.01 then
         local turned = self:pushTurn(camX, camY)
         love.graphics.setColor(GLOW[1], GLOW[2], GLOW[3], a)
-        self:drawSheet(glow, camX, camY)
+        self:drawSheet('glow_', camX, camY)
         love.graphics.setBlendMode('add')
         love.graphics.setColor(GLOW[1], GLOW[2], GLOW[3], 0.22 * a)
-        for _, o in ipairs({ { MS, 0 }, { -MS, 0 }, { 0, MS }, { 0, -MS } }) do self:drawSheet(glow, camX, camY, o[1], o[2]) end
+        for _, o in ipairs({ { MS, 0 }, { -MS, 0 }, { 0, MS }, { 0, -MS } }) do self:drawSheet('glow_', camX, camY, o[1], o[2]) end
         love.graphics.setBlendMode('alpha')
         -- rabia: las puntas de los cristales de las pinzas brillan (a oscuras se ve por dónde andan)
         if self.rage then

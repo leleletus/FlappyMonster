@@ -28,6 +28,7 @@
 -- de aparición), 'drop_shake' / 'drop_fall' (caída desde el techo). Para ver a
 -- los jugadores, el juego pone la lista en level.players.
 
+local Anim            -- (src/fx/Anim, al primer uso: Entity:anims)
 local Entity = {}
 Entity.__index = Entity
 
@@ -844,13 +845,31 @@ function Entity:canWalk(level, dir)
     return true
 end
 
+-- CONJUNTO DE ANIMACIÓN del tipo (src/fx/Anim.lua): un tipo dice `Tipo.animId = 'enemies/gloomy'` y pide sus
+-- animaciones por nombre (self:anims():draw('walk', …)). nil = el tipo aún dibuja a su manera.
+function Entity:anims()
+    local id = self.animId
+    if not id then return nil end
+    Anim = Anim or require 'src/fx/Anim'
+    return Anim.load(id, self.animVariant)
+end
+
+-- Ritmo y nº de pasos del ciclo de andar: los de la animación `walk` de su conjunto (lo que diga el editor); sin
+-- conjunto, los del tuning
+function Entity:walkCycle()
+    local set = self:anims()
+    local seq = set and set.anims[self.animWalk or 'walk']
+    if seq then return seq.fps, #seq.frames end
+    return self.tuning.walkFps, self.tuning.walkFrames
+end
+
 -- Avanza la animación de andar (patitas)
 function Entity:animateWalk(dt)
-    local tn = self.tuning
+    local fps, n = self:walkCycle()
     self.animT = self.animT + dt
-    if self.animT >= 1 / tn.walkFps then
-        self.animT = self.animT - 1 / tn.walkFps
-        self.frame = (self.frame % tn.walkFrames) + 1
+    if self.animT >= 1 / fps then
+        self.animT = self.animT - 1 / fps
+        self.frame = (self.frame % n) + 1
     end
 end
 

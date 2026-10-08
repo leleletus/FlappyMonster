@@ -23,13 +23,8 @@ local Bomb = Entity.extend(Entity, {
 
 local KICK_CD = 0.35          -- s entre patadas (un empujón no cuenta como varias)
 
-local sheet, fuseSheet
-function Bomb.loadAssets()
-    if sheet then return end
-    sheet = SpriteStrip.load('assets/images/enemies/bomb/bomb-Sheet.png', Core.FW)
-    fuseSheet = SpriteStrip.load('assets/images/enemies/bomb/bomb-fuse-Sheet.png', Core.FW)
-    Core.loadExplosion()
-end
+Bomb.animId = Core.ANIM            -- (sus animaciones: por nombre; el ciclo de andar, el de `walk`)
+function Bomb.loadAssets() Core.set() end
 function Bomb.sizePx() return Core.FW * GUMMY_SCALE, Core.FH * GUMMY_SCALE end
 
 function Bomb:init() self.kicked, self.kickCd = false, 0 end
@@ -104,15 +99,15 @@ end
 
 -- ── Dibujo ────────────────────────────────────────────────────────────────────
 function Bomb:render(camX, camY)
-    local frame = 1
-    if self.state == 'walk' then frame = 1 + (self.frame or 1) end    -- andar: cuadros 2 y 3
+    local name, k = 'idle', nil
+    if self.state == 'walk' then name, k = 'walk', self.frame or 1 end
     local s = GUMMY_SCALE
     local fx = self.x - camX
     local fy = self.y - camY + self.sprH / 2                           -- pies
     if self.flipped then fy = self.y - camY + self.sprH / 2 end
     local bx, by = 1, 1
     if self.state == 'idle' or self.state == 'walk' then bx, by = self:breatheScale() end   -- (como el Gummy)
-    Core.draw(self, sheet, fuseSheet, Core.TIPS.bomb, fx, fy, s, frame, 1, camX, camY, bx, by)
+    Core.draw(self, '', fx, fy, s, name, k, 1, camX, camY, bx, by)
 end
 
 function Bomb.drawEditorOverlay(props, cx, cy, zoom)

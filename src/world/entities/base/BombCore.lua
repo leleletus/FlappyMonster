@@ -24,17 +24,17 @@ Core.KICK_VX, Core.KICK_VY = 380, -330
 Core.CHAIN_FUSE = 0.35        -- mecha al encenderla otra explosión
 Core.FIZZ_EVERY = 0.5         -- s entre chisporroteos (bomb_fizz dura 0,5 s)
 Core.FW, Core.FH = 15, 16     -- cuadro de las hojas
--- Punta de la mecha por cuadro (píxeles de la hoja; ver tools/art/enemies/make_bomb_sprites.py)
-Core.TIPS = {
-    bomb   = { { 6, 0 }, { 4, 0 }, { 10, 0 }, { 7, 0 } },
-    object = { { 6, 1 }, { 4, 1 }, { 10, 1 }, { 6, 0 } },
-}
-
-local explosionSheet
-function Core.loadExplosion()
-    explosionSheet = explosionSheet or SpriteStrip.load('assets/images/enemies/bomb/explosion-Sheet.png', 48)
-    return explosionSheet
+-- ANIMACIONES (assets/anim/enemies/bomb.json, `love . --anim`), pedidas por nombre: el cuerpo `idle` / `walk` /
+-- `lit` (con `object_` delante las de la bomba-objeto), la mecha encendida `fuse_<la del cuerpo>` (o
+-- `fuse_<…>_<paso>` si hay una por paso de andar) y `explosion`. La punta de la mecha de cada cuadro del cuerpo
+-- (de dónde salen las chispas) es el dato "tip" de ese cuadro en el conjunto.
+Core.ANIM = 'enemies/bomb'
+local Anim
+function Core.set()
+    Anim = Anim or require 'src/fx/Anim'
+    return Anim.load(Core.ANIM)
 end
+function Core.loadExplosion() return Core.set() end      -- (compatibilidad: quien la precargaba)
 
 function Core.radii(self)
     local p = self.props
@@ -144,31 +144,32 @@ end
 
 -- ── Dibujo ────────────────────────────────────────────────────────────────────
 -- Cuadro (1..4) mientras arde: 4 ↔ 1, cada vez más deprisa (3 → 21 veces/s)
-function Core.litFrame(t, fuse)
+-- ¿Toca el destello ("a punto de explotar") o el cuerpo normal? Parpadea cada vez más deprisa
+function Core.litFlash(t, fuse)
     fuse = math.max(0.05, fuse)
     local phase = 3 * t + 6 * t * t * t / (fuse * fuse)       -- (∫ 3 + 18 (t/F)²)
-    return (math.floor(phase * 2) % 2 == 0) and 4 or 1
+    return math.floor(phase * 2) % 2 == 0
 end
 function Core.redness(t, fuse) return math.min(1, math.max(0, t / math.max(0.05, fuse))) end
 
 -- Dibuja la bomba (hoja `sheet`, mecha `fuseSheet`, puntas `tips`) con los pies
--- en (fx, fy) de pantalla, escala s. frame = cuadro base cuando no arde.
+-- en (fx, fy) de pantalla, escala s. pre = '' (bomba) u 'object_' (bomba-objeto); name, k = la animación del
+-- cuerpo cuando no arde y, si anda, su paso.
 local Particles
-function Core.draw(self, sheet, fuseSheet, tips, fx, fy, s, frame, alpha, camX, camY, bx, by)
+function Core.draw(self, pre, fx, fy, s, name, k, alpha, camX, camY, bx, by)
     local st, t = self.state, self.deadTimer or 0
     local now = love.timer.getTime()
+    local set = Core.set()
     if st == 'exploding' then
-        local ex = Core.loadExplosion()
-        local k = math.min(ex.count, math.floor(t / Core.EXPLODE_T * ex.count) + 1)
         local T = TILE_PX
-        local es = math.max(2, math.floor((self.props.hurtRadius or 2.3) * T * 2 / 48 + 0.5))
+        local es = math.max(2, math.floor((self.props.hurtRadius or 2.3) * T * 2 / set:width('explosion') + 0.5))
         love.graphics.setColor(1, 1, 1, 1)
-        ex:draw(k, math.floor(self.x - (camX or 0)), math.floor(self.y - (camY or 0)), 0, es, es)
+        set:draw('explosion', t, math.floor(self.x - (camX or 0)), math.floor(self.y - (camY or 0)), 0, es, es, 0.5, 0.5)
         return
     end
     local lit = st == 'lit'
     local fuse = self.fuseT or self.props.fuseTime or 2.0
-    if lit then frame = Core.litFrame(t, fuse) end
+    if lit then name, k = Core.litFlash(t, fuse) and 'lit' or 'idle', nil end
     local red = lit and Core.redness(t, fuse) or 0
     -- (bx, by: "respiración" como el Gummy, anclada a los pies)
     bx, by = bx or 1, by or 1
@@ -176,13 +177,16 @@ function Core.draw(self, sheet, fuseSheet, tips, fx, fy, s, frame, alpha, camX, 
     love.graphics.setColor(1, 1 - 0.8 * red, 1 - 0.85 * red, alpha or 1)
     local cx = math.floor(fx)
     local cy = math.floor(fy - Core.FH * sy / 2)
-    sheet:draw(frame, cx, cy, 0, sx, sy)
+    local body = pre .. name
+    local fi = k and set:frameN(body, k) or (set:frameAt(body, t))
+    set:drawFrame(fi, cx, cy, 0, sx, sy, 0.5, 0.5)
     if lit then
-        -- Mecha encendida (2 variantes que parpadean) y chispas en la punta
+        -- Mecha encendida (parpadea a su ritmo) y chispas en la punta
         love.graphics.setColor(1, 1, 1, alpha or 1)
-        local v = math.floor(now * 14) % 2
-        fuseSheet:draw(frame + v * 4, cx, cy, 0, sx, sy)
-        local tip = tips[frame] or tips[1]
+        local fz = pre .. 'fuse_' .. name
+        if k and set:has(fz .. '_' .. ((k - 1) % math.max(1, set:count(body)) + 1)) then fz = fz .. '_' .. ((k - 1) % set:count(body) + 1) end
+        set:draw(fz, now, cx, cy, 0, sx, sy, 0.5, 0.5)
+        local tip = set:frame(fi).data.tip or { Core.FW / 2, 0 }
         local tx = cx + (tip[1] + 0.5 - Core.FW / 2) * sx
         local ty = cy + (tip[2] + 0.5 - Core.FH / 2) * sy
         self._sparkT = self._sparkT or 0

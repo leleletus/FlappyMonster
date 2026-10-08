@@ -111,6 +111,45 @@ battery and `level_shots` with `FM_ANIM_CAPTURE=<file>`), `make_folder_sets.py` 
 `make_family_sets.py` (the Crabbies). **After adding a new sheet or image folder to the game, run them** so it shows
 up in the editor.
 
+## The runtime contract: ask for an animation by name
+
+Decided by the user on 2026-10-08: **the editor defines the animation, the runtime plays it; entity code defines
+behaviour and state, never how frames are processed.** An animation is always *name → ordered frames → playback
+settings*, whether its frames were cut from a sheet or are loose images (a sheet is only a source format).
+
+Rules for entity code:
+
+- Ask by **name**: `self:anims():draw('walk', t, …)`. Never a frame index, never a frame count, never an fps.
+- `t` is the time inside that state, taken from what travels in snapshots (`deadTimer`, `modeT`…) or, for idle
+  loops that are only decoration, the wall clock.
+- A walk cycle that is simulation state (the `frame` counter sent over the network) uses `set:drawN('walk', k)`;
+  its rhythm and length come from the animation: `Entity:walkCycle()` reads the `walk` animation's fps and frame
+  count for every type that declares `Type.animId` (the tuning's `walkFps` / `walkFrames` are only the fallback).
+- A composed motion is its own animation, not code: the Gloomy's taunt is `taunt` (crouch ↔ idle at 9 fps), the
+  pufferfish's warning is `warn` (per-frame `durations`, not looping), the explosion is `explosion` (not looping).
+- Per-frame facts the code needs are frame data in the set (`inset` on Crabby frames, `tip` = the fuse tip on bomb
+  frames), read with `set:data(name, t)` or `set:frame(i).data`.
+- Variants of the same thing are name suffixes or prefixes decided by behaviour (`idle_ice`, `glow_walk`,
+  `object_idle`), or set `variants` when only the images change.
+
+API (`src/fx/Anim.lua`): `Anim.load(id, variant)`, `set:draw(name, t, x, y, r, sx, sy, ox, oy)`, `set:drawN(name, k,
+…)`, `set:drawPx(…, oxPx, oyPx)` (pixel origin, to replace a `love.graphics.draw` of a loose image),
+`set:frameAt(name, t)`, `set:frameN(name, k)`, `set:count(name)`, `set:fps(name)`, `set:width(name)`,
+`set:has(name)`, `set:data(name, t, k)`; in the base, `Entity:anims()` and `Entity:walkCycle()`.
+
+### Migration status
+
+| Asks by name (editor decides frames, count, order, speed) | Still on the compatibility layer |
+|---|---|
+| Gummy (5 variants), Hopper (6 skins), the six Crabbies, every data enemy and data boss, **Gloomy**, **Mega Gloomy (body + glow)**, **bombs and bomb objects (body, fuse, explosion)**, **pufferfish**, **trampolines**, **spikes** (tile spikes and falling spikes) | Mega Gloomy's claws and icons, Gloomy's icons, Mega Gummy, Mega Crabby (+ ice), Snow Ball and Verity, Mirror and Mirror chase, Evil Ship, cryo, mortar, wings, decorations, tiles, items, the player, effects (lava, snow, ice drips, boss marks), touch buttons, ping, flashlight HUD, story map |
+
+The compatibility layer keeps the rest working unchanged while it is ported: `SpriteStrip.load(path, frameW)`
+(frames by number, read from the animations marked `sheet` / `at`) and `Anim.image(path)` (loose images by file
+name). Porting one = give the type `animId`, replace its index logic with `animNow()` → name + time, move any
+hand-composed sequence into a named animation, and add its old formulas to the `por_nombre` case of `enemy_data`,
+which proves frame by frame that it looks the same as before. When an animation is asked by name its `sheet` /
+`at` marks are removed from the data (`tools/anim/split_states.py`, stage 2).
+
 ## Using a set from code
 
 ```lua
@@ -142,7 +181,8 @@ hand-written bosses and the player, WHEN each frame shows is still decided by co
 (squash, claws, rotation), not frame lists. All migrations were verified pixel-identical against screenshots taken
 before them.
 
-**Tests:** `enemy_data` (timing, events, variants, every set in `assets/anim` valid and its images present),
+**Tests:** `enemy_data` (timing, events, variants, every set in `assets/anim` valid and its images present;
+`por_nombre`: 2,411 frame comparisons between the by-name runtime and the old index formulas, none different),
 `tool_editors` (every sheet is read from its set and the set's speed reaches the game; the real editor: open, create
 an animation, undo / redo, the browser, slice a sheet, save, re-read),
 plus the before / after screenshot comparison (`level_shots FIXED=1`).

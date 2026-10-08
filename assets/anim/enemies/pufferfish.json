@@ -10,8 +10,10 @@
     {"h": 16, "image": "assets/images/enemies/pufferfish/puffer_fish-Sheet.png", "w": 16, "x": 48, "y": 0}
   ],
   "anims": {
-    "half": {"at": [3], "fps": 8, "frameW": 16, "frames": [3], "loop": true, "sheet": "puffer_fish-Sheet.png"},
-    "puffed": {"at": [4], "fps": 8, "frameW": 16, "frames": [4], "loop": true, "sheet": "puffer_fish-Sheet.png"},
-    "swim": {"at": [1, 2], "fps": 7, "frameW": 16, "frames": [1, 2], "loop": true, "sheet": "puffer_fish-Sheet.png"}
+    "deflate": {"durations": [0.24, 0.16], "fps": 5, "frames": [3, 1], "loop": false},
+    "half": {"fps": 8, "frames": [3], "loop": true},
+    "puffed": {"fps": 8, "frames": [4], "loop": true},
+    "swim": {"fps": 2.5, "frames": [1, 2], "loop": true},
+    "warn": {"durations": [0.06, 0.06, 0.06, 0.06, 0.06, 0.06], "fps": 16, "frames": [1, 3, 1, 3, 1, 3], "loop": false}
   }
 }

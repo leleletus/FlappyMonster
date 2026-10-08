@@ -44,7 +44,7 @@ local FW, FH = 26, 15                     -- cuadro (px de arte)
 local F_IDLE, F_CROUCH, F_LEAP, F_SCARED, F_DEAD = 5, 6, 7, 8, 9
 
 local Gloomy = Entity.extend(Entity, {
-    walkFps = 11, walkFrames = 4,
+    walkFps = 11, walkFrames = 4,          -- (de reserva: mandan los de la animación `walk` de su conjunto)
     idleEvery = { 3.0, 7.0 }, idleFor = { 0.8, 1.8 },
     debugColor = { 0.6, 0.8, 1 },
     -- (la caja de fuera, todo el alto: el trepador se apoya a outerH/2 de la superficie; de ancho,
@@ -63,7 +63,9 @@ local ARRIVE     = 0.9 * T                -- "ha llegado" al sitio del ruido
 local STILL_SPD  = 30                     -- px/s: por debajo, el jugador está "quieto"
 local GLOW       = { 1, 0.77, 0.35 }      -- ámbar
 
-local body, glow, icons
+local icons
+-- Sus animaciones (assets/anim/enemies/gloomy.json, `love . --anim`): el código pide la de su estado por nombre
+Gloomy.animId = 'enemies/gloomy'
 -- DURO: un pisotón normal solo rebota en él; hace falta un GROUND POUND para matarlo (regla
 -- genérica de Interactions.check: `needsPound`)
 Gloomy.needsPound = true
@@ -72,10 +74,8 @@ Crawler.mixin(Gloomy)                     -- trepador: cajas giradas, normal de 
 function Gloomy:hurtsFromAbove() return self.state == 'leap' end
 
 function Gloomy.loadAssets()
-    if body then return end
+    if icons then return end
     icons = SpriteStrip.load('assets/images/enemies/gloomy/icons-Sheet.png', 7)
-    body = SpriteStrip.load('assets/images/enemies/gloomy/gloomy-Sheet.png', FW)
-    glow = SpriteStrip.load('assets/images/enemies/gloomy/glow-Sheet.png', FW)
 end
 function Gloomy.sizePx() return FW * S, FH * S end
 
@@ -211,14 +211,6 @@ function Gloomy:crawl_(level, dt, speed, hold)
     return true
 end
 
-function Gloomy:animateWalk(dt)
-    local tn = self.tuning
-    self.animT = self.animT + dt
-    if self.animT >= 1 / tn.walkFps then
-        self.animT = self.animT - 1 / tn.walkFps
-        self.frame = (self.frame % tn.walkFrames) + 1
-    end
-end
 
 -- ── Camino buscado: trepar + saltar de superficie en superficie ───────────────
 -- Busca el camino al sitio del ruido. Sin camino (no hay por dónde, o ya está lo más cerca que se puede): el plan
@@ -508,17 +500,25 @@ function Gloomy:netApply(a, b, f)
 end
 
 -- ── Dibujo ───────────────────────────────────────────────────────────────────
-function Gloomy:frameNow()
-    local st = self.state
-    if st == 'dead' then return F_DEAD end
-    if st == 'leap' then return F_LEAP end
-    if st == 'crouch' then return F_CROUCH end
-    if st == 'idle' or st == 'rest' then return F_IDLE end
-    -- burla: flexiones (agachado ↔ de pie) a toda prisa
-    if st == 'taunt' then return (math.floor((self.modeT or 0) * 9) % 2 == 0) and F_CROUCH or F_IDLE end
-    if st == 'flee' and (self.modeT or 0) < 0.12 then return F_SCARED end
-    if st == 'stunned' or st == 'frozen' then return F_SCARED end
-    return math.max(1, math.min(4, self.frame or 1))
+-- QUÉ ANIMACIÓN toca: nombre, segundos dentro de ella y, si es el ciclo de andar, el paso (contador de la
+-- simulación). Cuántos cuadros tiene cada una y a qué ritmo van lo dice el conjunto.
+function Gloomy:animNow()
+    local st, t = self.state, self.modeT or 0
+    if st == 'dead' then return 'dead', self.deadTimer or 0 end
+    if st == 'leap' then return 'leap', t end
+    if st == 'crouch' then return 'crouch', t end
+    if st == 'idle' or st == 'rest' then return 'idle', t end
+    if st == 'taunt' then return 'taunt', t end                       -- burla: flexiones a toda prisa
+    if st == 'flee' and t < 0.12 then return 'scared', t end          -- (el respingo)
+    if st == 'stunned' or st == 'frozen' then return 'scared', t end
+    return 'walk', nil, self.frame or 1
+end
+-- (el cuadro del conjunto que se ve ahora; `pre` = 'glow_' para la hoja de los puntos)
+function Gloomy:frameNow(pre)
+    local set = self:anims()
+    local name, t, k = self:animNow()
+    name = (pre or '') .. name
+    return k and set:frameN(name, k) or (set:frameAt(name, t))
 end
 
 -- Pies (px de pantalla) y ángulo de dibujo
@@ -532,19 +532,19 @@ function Gloomy:pose(camX, camY)
     return math.floor(self.x - camX), math.floor(self.y - camY + self.sprH / 2), ang
 end
 
-function Gloomy:drawSheet(sheet, camX, camY)
+function Gloomy:drawSheet(pre, camX, camY)
     local px, py, ang = self:pose(camX, camY)
     local bx, by = self:breatheScale()
-    local fr = self:frameNow()
+    local fr = self:frameNow(pre)
     local face = self.facing or 1
     if self.crawl and self.cattached and self.cny == 1 then face = -face end
-    love.graphics.draw(sheet.image, sheet.quads[fr], px, py, ang, S * face * bx, S * by, FW / 2, FH)
+    self:anims():drawFrame(fr, px, py, ang, S * face * bx, S * by, 0.5, 1)
 end
 
 function Gloomy:render(camX, camY)
     if self.state == 'reserve' then return end
     love.graphics.setColor(1, 1, 1, 1)
-    self:drawSheet(body, camX, camY)
+    self:drawSheet('', camX, camY)
 end
 
 -- Los dos puntos: SIEMPRE visibles (los estados lo llaman encima de la oscuridad; a la luz, ya
@@ -558,12 +558,12 @@ function Gloomy:renderGlow(camX, camY)
     elseif st == 'flee' then a = 0.55
     elseif st == 'idle' or st == 'rest' then a = 0.6 + 0.3 * math.sin(love.timer.getTime() * 3 + self.x) end
     love.graphics.setColor(GLOW[1], GLOW[2], GLOW[3], a)
-    self:drawSheet(glow, camX, camY)
+    self:drawSheet('glow_', camX, camY)
     -- un halo pequeño: los mismos puntos, tenues, un píxel de arte hacia cada lado
     love.graphics.setBlendMode('add')
     love.graphics.setColor(GLOW[1], GLOW[2], GLOW[3], 0.22 * a)
     for _, o in ipairs({ { S, 0 }, { -S, 0 }, { 0, S }, { 0, -S } }) do
-        self:drawSheet(glow, camX - o[1], camY - o[2])
+        self:drawSheet('glow_', camX - o[1], camY - o[2])
     end
     love.graphics.setBlendMode('alpha')
     -- icono flotando sobre él (siempre derecho, esté en el suelo, la pared o el techo)

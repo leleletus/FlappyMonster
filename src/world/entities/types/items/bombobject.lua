@@ -18,13 +18,7 @@ local BombObject = Entity.extend(Entity, { debugColor = { 1, 0.5, 0.2 },
 
 local HIT_SPEED = 260          -- px/s: más rápido que esto (en el aire) golpea
 
-local sheet, fuseSheet
-function BombObject.loadAssets()
-    if sheet then return end
-    sheet = SpriteStrip.load('assets/images/enemies/bomb/bombObject-Sheet.png', Core.FW)
-    fuseSheet = SpriteStrip.load('assets/images/enemies/bomb/bombObject-fuse-Sheet.png', Core.FW)
-    Core.loadExplosion()
-end
+function BombObject.loadAssets() Core.set() end
 function BombObject.sizePx() return Core.FW * GUMMY_SCALE, Core.FH * GUMMY_SCALE end
 
 function BombObject:init()
@@ -105,7 +99,7 @@ end
 function BombObject:render(camX, camY)
     local fx = self.x - camX
     local fy = self.y - camY + self.sprH / 2
-    Core.draw(self, sheet, fuseSheet, Core.TIPS.object, fx, fy, GUMMY_SCALE, 1, 1, camX, camY)
+    Core.draw(self, 'object_', fx, fy, GUMMY_SCALE, 'idle', nil, 1, camX, camY)
 end
 
 function BombObject.drawEditorOverlay(props, cx, cy, zoom)

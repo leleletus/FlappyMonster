@@ -36,12 +36,8 @@ local Puffer = Entity.extend(Entity, {
 Puffer.renderFront = true
 Puffer.freezeFloats = true      -- (congelado: el bloque de hielo flota donde estaba)
 
-local strip
-
-function Puffer.loadAssets()
-    if strip then return end
-    strip = SpriteStrip.load(SHEET, 16)
-end
+Puffer.animId = 'enemies/pufferfish'
+function Puffer.loadAssets() Puffer.anims(Puffer) end
 
 function Puffer.sizePx() return 16 * S, 16 * S end
 
@@ -230,27 +226,22 @@ function Puffer:updateCustom(dt, level)
 end
 
 -- ── Dibujo ────────────────────────────────────────────────────────────────────
+-- Cada estado pide su animación por nombre (assets/anim/enemies/pufferfish.json): `swim` nadando, `warn` (tiembla
+-- y se queda a medio hinchar), `puffed` hinchado, `deflate` deshinchándose. Cuadros y ritmo: los del conjunto.
 function Puffer:render(camX, camY)
-    local n = strip.count
-    local half, full = math.max(1, n - 1), n
     local st, t = self.state, self.deadTimer or 0
-    local f, k = 1, 1
-    if st == 'warn' then
-        -- Aviso: primero tiembla entre deshinchado y medio, luego medio hinchado
-        f = (t < 0.3 and math.floor(t / 0.06) % 2 == 0) and 1 or half
+    local name, k = 'swim', 1
+    if st == 'warn' then name = 'warn'
     elseif st == 'inflated' then
-        f = full
+        name = 'puffed'
         if t < POP_T then k = 1 + 0.18 * math.sin(t / POP_T * math.pi) end
-    elseif st == 'deflate' then
-        f = (t < DEFLATE_T * 0.6) and half or 1
-    elseif n >= 4 then
-        f = math.floor((love.timer.getTime() + (self.home and self.home.x or 0) * 0.01) * SWIM_FPS) % 2 + 1
-    end
+    elseif st == 'deflate' then name = 'deflate'
+    else t = love.timer.getTime() + (self.home and self.home.x or 0) * 0.01 end
     local x, y = math.floor(self.x - camX), math.floor(self.y - camY)
     -- Temblor del aviso
     if st == 'warn' then x = x + math.floor(math.sin(t * 60) * 2 + 0.5) end
     love.graphics.setColor(1, 1, 1, 1)
-    strip:draw(f, x, y, 0, S * k * self.facing, S * k)
+    self:anims():draw(name, t, x, y, 0, S * k * self.facing, S * k, 0.5, 0.5)
 end
 
 -- Editor: área de nado (relleno) y alcance de detección (círculo) al seleccionarlo

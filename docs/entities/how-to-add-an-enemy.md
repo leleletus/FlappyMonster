@@ -15,6 +15,10 @@ another enemy.
 
 For a BOSS also follow [how-to-add-a-boss](../bosses/how-to-add-a-boss.md).
 
+**Animations:** give the type `Type.animId = '<set id>'` and ask for animations by name
+(`self:anims():draw('walk', t, …)`); never pick frames by index or assume a frame count — see the runtime contract in
+[art/animation](../art/animation.md).
+
 ## 1. The skeleton
 
 ```lua
