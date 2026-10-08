@@ -3,10 +3,6 @@
   "scale": 4,
   "origin": [0.5, 1],
   "fallback": "all",
-  "meta": {
-    "code": true,
-    "folder": true
-  },
   "frames": [
     {"image": "assets/images/player/dedais.png", "key": "dedais.png"},
     {"image": "assets/images/player/icon.png", "key": "icon.png"},

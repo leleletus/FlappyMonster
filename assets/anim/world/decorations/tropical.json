@@ -1,0 +1,30 @@
+{
+  "id": "world/decorations/tropical",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "bush",
+  "frames": [
+    {"h": 15, "image": "assets/images/world/decorations/tropical/bush.png", "w": 18, "x": 0, "y": 0},
+    {"h": 4, "image": "assets/images/world/decorations/tropical/butterfly-Sheet.png", "w": 5, "x": 0, "y": 0},
+    {"h": 4, "image": "assets/images/world/decorations/tropical/butterfly-Sheet.png", "w": 5, "x": 5, "y": 0},
+    {"h": 4, "image": "assets/images/world/decorations/tropical/butterfly-Sheet.png", "w": 5, "x": 10, "y": 0},
+    {"h": 4, "image": "assets/images/world/decorations/tropical/butterfly-Sheet.png", "w": 5, "x": 15, "y": 0},
+    {"h": 4, "image": "assets/images/world/decorations/tropical/butterfly-Sheet.png", "w": 5, "x": 20, "y": 0},
+    {"h": 4, "image": "assets/images/world/decorations/tropical/butterfly-Sheet.png", "w": 5, "x": 25, "y": 0},
+    {"h": 13, "image": "assets/images/world/decorations/tropical/fern.png", "w": 18, "x": 0, "y": 0},
+    {"h": 9, "image": "assets/images/world/decorations/tropical/hibiscus.png", "w": 10, "x": 0, "y": 0},
+    {"h": 9, "image": "assets/images/world/decorations/tropical/pineapple.png", "w": 10, "x": 0, "y": 0},
+    {"h": 29, "image": "assets/images/world/decorations/tropical/tiki_torch-Sheet.png", "w": 10, "x": 0, "y": 0},
+    {"h": 29, "image": "assets/images/world/decorations/tropical/tiki_torch-Sheet.png", "w": 10, "x": 10, "y": 0},
+    {"h": 29, "image": "assets/images/world/decorations/tropical/tiki_torch-Sheet.png", "w": 10, "x": 20, "y": 0},
+    {"h": 29, "image": "assets/images/world/decorations/tropical/tiki_torch-Sheet.png", "w": 10, "x": 30, "y": 0}
+  ],
+  "anims": {
+    "bush": {"fps": 8, "frameW": 18, "frames": [1], "loop": true, "sheet": "bush.png"},
+    "butterfly": {"fps": 8, "frameW": 5, "frames": [2, 3, 4, 5, 6, 7], "loop": true, "sheet": "butterfly-Sheet.png"},
+    "fern": {"fps": 8, "frameW": 18, "frames": [8], "loop": true, "sheet": "fern.png"},
+    "hibiscus": {"fps": 8, "frameW": 10, "frames": [9], "loop": true, "sheet": "hibiscus.png"},
+    "pineapple": {"fps": 8, "frameW": 10, "frames": [10], "loop": true, "sheet": "pineapple.png"},
+    "tiki_torch": {"codeFps": 9, "fps": 9, "frameW": 10, "frames": [11, 12, 13, 14], "loop": true, "sheet": "tiki_torch-Sheet.png"}
+  }
+}

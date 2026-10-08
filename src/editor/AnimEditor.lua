@@ -117,7 +117,7 @@ local function drawBrowser(W, H)
             gy = gy + 32
         end
     end
-    ui.hint('"Lo usa el juego": puedes cambiar sus dibujos y verlo moverse; el orden de los cuadros lo fija el código.\n"Completo": todo se decide aquí (orden, velocidad, animaciones).', gx, gy + 10, gw)
+    ui.hint('Un conjunto por cada cosa del juego, con todas sus animaciones. Lo que cambies y guardes es lo que se ve en el juego.', gx, gy + 10, gw)
     -- tarjetas
     local shown = {}
     local q = A.search:lower()
@@ -136,16 +136,16 @@ local function drawBrowser(W, H)
             ui.rect(tx, ty, CW, CH, (id == A.id) and th.accentDk or (hov and th.hover or th.panel2), 6)
             ui.rect(tx + 6, ty + 6, CW - 12, 86, th.canvas, 4)
             local set = thumbOf(id)
-            local code = false
+            local count = 0
             if set and #set.frames > 0 then
                 local fi = set:frameAt(set.fallback, love.timer.getTime())
                 AnimPanel.thumb(set, fi, tx + 10, ty + 10, CW - 20, 78)
-                code = set.data.meta and set.data.meta.code
+                count = #set.names
             end
             local name = id:match('([^/]+)$')
             ui.label(name, tx + 8, ty + 96, CW - 16, th.text)
             ui.label(id:match('^(.*)/[^/]+$') or '', tx + 8, ty + 114, CW - 16, th.muted)
-            if set then ui.text(code and 'lo usa el juego' or 'completo', tx + 8, ty + 131, code and th.warn or th.ok, ui.fontSm) end
+            if set then ui.text(count == 1 and '1 animación' or (count .. ' animaciones'), tx + 8, ty + 131, th.muted, ui.fontSm) end
             if hov and ui.state.pressed then ui.state.consumed = true; A.open(id); ui.endScroll(); return end
         end
     end

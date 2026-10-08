@@ -1,0 +1,30 @@
+{
+  "id": "world/decorations/water",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "anemone",
+  "frames": [
+    {"h": 9, "image": "assets/images/world/decorations/water/anemone-Sheet.png", "w": 10, "x": 0, "y": 0},
+    {"h": 9, "image": "assets/images/world/decorations/water/anemone-Sheet.png", "w": 10, "x": 10, "y": 0},
+    {"h": 9, "image": "assets/images/world/decorations/water/anemone-Sheet.png", "w": 10, "x": 20, "y": 0},
+    {"h": 9, "image": "assets/images/world/decorations/water/clam-Sheet.png", "w": 10, "x": 0, "y": 0},
+    {"h": 9, "image": "assets/images/world/decorations/water/clam-Sheet.png", "w": 10, "x": 10, "y": 0},
+    {"h": 9, "image": "assets/images/world/decorations/water/clam-Sheet.png", "w": 10, "x": 20, "y": 0},
+    {"h": 17, "image": "assets/images/world/decorations/water/coral.png", "w": 18, "x": 0, "y": 0},
+    {"h": 17, "image": "assets/images/world/decorations/water/coral_fan.png", "w": 18, "x": 0, "y": 0},
+    {"h": 33, "image": "assets/images/world/decorations/water/seaweed.png", "w": 18, "x": 0, "y": 0},
+    {"h": 9, "image": "assets/images/world/decorations/water/seaweed_small.png", "w": 10, "x": 0, "y": 0},
+    {"h": 9, "image": "assets/images/world/decorations/water/shell.png", "w": 10, "x": 0, "y": 0},
+    {"h": 9, "image": "assets/images/world/decorations/water/starfish.png", "w": 10, "x": 0, "y": 0}
+  ],
+  "anims": {
+    "anemone": {"fps": 8, "frameW": 10, "frames": [1, 2, 3], "loop": true, "sheet": "anemone-Sheet.png"},
+    "clam": {"fps": 8, "frameW": 10, "frames": [4, 5, 6], "loop": true, "sheet": "clam-Sheet.png"},
+    "coral": {"fps": 8, "frameW": 18, "frames": [7], "loop": true, "sheet": "coral.png"},
+    "coral_fan": {"fps": 8, "frameW": 18, "frames": [8], "loop": true, "sheet": "coral_fan.png"},
+    "seaweed": {"fps": 8, "frameW": 18, "frames": [9], "loop": true, "sheet": "seaweed.png"},
+    "seaweed_small": {"fps": 8, "frameW": 10, "frames": [10], "loop": true, "sheet": "seaweed_small.png"},
+    "shell": {"fps": 8, "frameW": 10, "frames": [11], "loop": true, "sheet": "shell.png"},
+    "starfish": {"fps": 8, "frameW": 10, "frames": [12], "loop": true, "sheet": "starfish.png"}
+  }
+}

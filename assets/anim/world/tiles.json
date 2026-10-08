@@ -3,10 +3,6 @@
   "scale": 4,
   "origin": [0.5, 1],
   "fallback": "all",
-  "meta": {
-    "code": true,
-    "folder": true
-  },
   "frames": [
     {"image": "assets/images/world/tiles/activated_off_block.png", "key": "activated_off_block.png"},
     {"image": "assets/images/world/tiles/activated_on_block.png", "key": "activated_on_block.png"},

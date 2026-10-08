@@ -3,15 +3,36 @@
   "scale": 4,
   "origin": [0.5, 1],
   "fallback": "all",
-  "meta": {
-    "code": true,
-    "folder": true
-  },
   "frames": [
     {"image": "assets/images/fx/ice_block.png", "key": "ice_block.png"},
-    {"image": "assets/images/fx/noise_mark.png", "key": "noise_mark.png"}
+    {"image": "assets/images/fx/noise_mark.png", "key": "noise_mark.png"},
+    {"h": 5, "image": "assets/images/fx/ice_drop.png", "w": 3, "x": 0, "y": 0},
+    {"h": 5, "image": "assets/images/fx/ice_drop.png", "w": 3, "x": 3, "y": 0},
+    {"h": 20, "image": "assets/images/fx/lava_fx.png", "w": 5, "x": 0, "y": 0},
+    {"h": 20, "image": "assets/images/fx/lava_fx.png", "w": 5, "x": 5, "y": 0},
+    {"h": 20, "image": "assets/images/fx/lava_fx.png", "w": 5, "x": 10, "y": 0},
+    {"h": 20, "image": "assets/images/fx/lava_fx.png", "w": 5, "x": 15, "y": 0},
+    {"h": 20, "image": "assets/images/fx/lava_fx.png", "w": 5, "x": 20, "y": 0},
+    {"h": 20, "image": "assets/images/fx/lava_fx.png", "w": 5, "x": 25, "y": 0},
+    {"h": 20, "image": "assets/images/fx/lava_fx.png", "w": 5, "x": 30, "y": 0},
+    {"h": 20, "image": "assets/images/fx/lava_fx.png", "w": 5, "x": 35, "y": 0},
+    {"h": 20, "image": "assets/images/fx/lava_fx.png", "w": 5, "x": 40, "y": 0},
+    {"h": 20, "image": "assets/images/fx/lava_fx.png", "w": 5, "x": 45, "y": 0},
+    {"h": 20, "image": "assets/images/fx/lava_fx.png", "w": 5, "x": 50, "y": 0},
+    {"h": 20, "image": "assets/images/fx/lava_fx.png", "w": 5, "x": 55, "y": 0},
+    {"h": 20, "image": "assets/images/fx/lava_fx.png", "w": 5, "x": 60, "y": 0},
+    {"h": 20, "image": "assets/images/fx/lava_fx.png", "w": 5, "x": 65, "y": 0},
+    {"h": 20, "image": "assets/images/fx/lava_fx.png", "w": 5, "x": 70, "y": 0},
+    {"h": 20, "image": "assets/images/fx/lava_fx.png", "w": 5, "x": 75, "y": 0},
+    {"h": 7, "image": "assets/images/fx/snowflakes.png", "w": 7, "x": 0, "y": 0},
+    {"h": 7, "image": "assets/images/fx/snowflakes.png", "w": 7, "x": 7, "y": 0},
+    {"h": 7, "image": "assets/images/fx/snowflakes.png", "w": 7, "x": 14, "y": 0},
+    {"h": 7, "image": "assets/images/fx/snowflakes.png", "w": 7, "x": 21, "y": 0}
   ],
   "anims": {
-    "all": {"fps": 3, "frames": [1, 2], "loop": true}
+    "all": {"fps": 3, "frames": [1, 2], "loop": true},
+    "ice_drop": {"fps": 8, "frameW": 3, "frames": [3, 4], "loop": true, "sheet": "ice_drop.png"},
+    "lava_fx": {"fps": 8, "frameW": 5, "frames": [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], "loop": true, "sheet": "lava_fx.png"},
+    "snowflakes": {"fps": 8, "frameW": 7, "frames": [21, 22, 23, 24], "loop": true, "sheet": "snowflakes.png"}
   }
 }

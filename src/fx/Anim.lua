@@ -173,7 +173,7 @@ function Anim.image(path, ...)
             if keys == nil then
                 keys = false
                 local data = Anim.read(dir)
-                if data and data.meta and data.meta.folder then
+                if data then
                     keys = {}
                     for _, f in ipairs(data.frames or {}) do if f.key then keys[f.key] = f end end
                 end

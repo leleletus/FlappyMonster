@@ -1,1 +1,3 @@
-{ "enemies": [] }
+{
+  "enemies": ["claudio"]
+}

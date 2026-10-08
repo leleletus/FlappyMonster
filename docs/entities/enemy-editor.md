@@ -80,6 +80,12 @@ network does not carry. Helpers on the enemy: `e:seesPlayer(level, tiles, height
 - **Player rules:** the defaults of `Interactions` (touch by `onTouch`, stomp, ground pound); behaviours add hazard
   boxes (`effect = 'hurt'`). With `hp` > 1 a stomp takes 1 and the enemy is untouchable while `hurt`.
 
+## Enemies shipped as data
+
+| Id | What |
+|---|---|
+| `claudio` | Claudio — the character the user drew for Claude (2026-10-08): a harmless friend that strolls, cannot be stomped and does not hurt; Claude added the blink in its idle. Set `claudio`, images `assets/images/enemies/claudio/` |
+
 ## Crawlers
 
 "TREPA" (`"crawl": true`, movement = walk) makes the enemy walk glued to floor, walls and ceiling, turning at

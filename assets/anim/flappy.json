@@ -3,10 +3,6 @@
   "scale": 4,
   "origin": [0.5, 1],
   "fallback": "all",
-  "meta": {
-    "code": true,
-    "folder": true
-  },
   "frames": [
     {"image": "assets/images/flappy/Background.png", "key": "Background.png"},
     {"image": "assets/images/flappy/pipe.png", "key": "pipe.png"}

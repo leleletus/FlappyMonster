@@ -3,10 +3,6 @@
   "scale": 4,
   "origin": [0.5, 1],
   "fallback": "all",
-  "meta": {
-    "code": true,
-    "folder": true
-  },
   "frames": [
     {"image": "assets/images/bosses/mirror/Body_ArmsDown.png", "key": "Body_ArmsDown.png"},
     {"image": "assets/images/bosses/mirror/Body_ArmsUp.png", "key": "Body_ArmsUp.png"},

@@ -1,0 +1,19 @@
+{
+  "id": "claudio",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "frames": [
+    {"image": "assets/images/enemies/claudio/claudio1.png"},
+    {"image": "assets/images/enemies/claudio/claudio2.png"},
+    {"image": "assets/images/enemies/claudio/claudio_idle.png"},
+    {"image": "assets/images/enemies/claudio/claudio_idle2.png"},
+    {"image": "assets/images/enemies/claudio/claudio_idle3.png"},
+    {"image": "assets/images/enemies/claudio/squish.png"},
+    {"image": "assets/images/enemies/claudio/claudio_blink.png"}
+  ],
+  "anims": {
+    "dead": {"fps": 8, "frames": [6], "loop": null},
+    "idle": {"durations": [0.67, 0.67, 0.67, 0.12], "fps": 1.5, "frames": [3, 4, 5, 7], "loop": true},
+    "walk": {"fps": 4, "frames": [1, 2], "loop": true}
+  }
+}

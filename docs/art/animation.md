@@ -56,8 +56,8 @@ single player, on the server and online. Never keep animation time in state that
 ## The editor
 
 `love . --anim` opens the **browser**: every animation set in the game, grouped (Enemies, Bosses, Player, Items,
-Traps, Decorations, Tiles, Effects, Interface…) with an animated thumbnail, a search box and a tag saying whether
-the set is "complete" (everything is decided here) or "used by the game" (see below). Ctrl+O reopens it.
+Traps, Decorations, Tiles, Effects, Interface…) with an animated thumbnail, a search box and how many animations
+each has. Ctrl+O reopens it.
 
 The editor itself reads left to right, the way you work:
 
@@ -76,22 +76,27 @@ The editor itself reads left to right, the way you work:
 Ctrl+Z / Ctrl+Y undo and redo everything; Ctrl+S saves; Space plays / pauses; `,` `.` step frames. Images must
 already be files under `assets/images/` (copy a new one there and press "Releer" in the picker).
 
-## Three kinds of set
+## One set per thing in the game
 
-| Kind | Tag in the browser | What editing it changes in the game |
+There is ONE set per image folder — `enemies/bomb`, `bosses/snowboss`, `world/decorations/cave`, `player`… — holding
+every animation of that thing, and every set is edited the same way (until 3.88 sheets had their own "used by the
+game" sets with a single "all frames" animation; the user found the split confusing and chose this, 2026-10-08).
+What is in a set:
+
+| In the set | How the game reads it | What editing changes in the game |
 |---|---|---|
-| **Complete** — `enemies/gummy`, `enemies/hopper`, `enemies/crabby*`, every enemy made in the enemy editor | completo | everything: frames, order, which animation has which frames, speed |
-| **Strip** (`"strip"` + `meta.code`) — one per sprite strip the game loads with `SpriteStrip` (decorations, bombs, Gloomy, pufferfish, boss sheets, effects, UI): id = the image path, e.g. `enemies/bomb/bomb-Sheet` | lo usa el juego | each frame's picture or crop. The code uses the frames BY NUMBER, so do not change their order or count. Speed stays in code unless you switch on "la velocidad la manda este conjunto" (`"timing": "set"`), which makes the strip play at the `all` animation's speed |
-| **Folder** (`meta.folder`) — one per folder of loose images (player, mortar, items, tiles, boss pieces…): one frame per file, with `"key"` = the file name | lo usa el juego | which picture each file name resolves to: the game loads those images through `Anim.image(path)`, so pointing a frame at another image swaps it in game. The animations in these sets are only for viewing the frames together |
+| **Named animations the code asks for by name** (`enemies/gummy`, `enemies/hopper`, `enemies/crabby*`, every enemy made in the enemy editor) | `Anim.load(id)` | everything: frames, order, speed |
+| **A sheet as an animation** — marked `"sheet": "<file>"` and `"frameW"`: e.g. `bomb-fuse-Sheet.png` is the animation `bomb-fuse` of `enemies/bomb` | `SpriteStrip.load(path, frameW)` finds the animation with that `sheet` in the folder's set; the strip's frames are that animation's frames, in its order | each frame's picture and crop, the order and number of frames. Speed too when the code plays it by the clock (`"codeFps"` is present: the editor says "the game plays it exactly as it is here"). When the code picks the frame from what is happening (how close a bomb is to exploding, a boss pose) the editor says so: the speed there is only for viewing, and removing frames makes the code clamp to the last one |
+| **Loose images** — frames with `"key": "<file name>"` | `Anim.image(path)` (every loose-image load in `src/world`, `src/player`, `src/flappy`) | which picture that file name resolves to. Their animations (`all`, …) are for viewing them together |
 
-How the game reads them: `Anim.load(id)` (complete sets), `SpriteStrip.load(path, frameW)` (looks for the set named
-after the image and uses its frames when the frame width matches; otherwise the plain strip) and
-`Anim.image(path)` (every loose-image load in `src/world`, `src/player`, `src/flappy`).
+A sheet animation can be renamed freely (the game finds it by `sheet`, not by name). If its animation is deleted
+the game falls back to cutting the image as before.
 
-Generators (they never overwrite an existing set; `--force` to rebuild): `tools/anim/make_strip_sets.py <capture>`
-(the capture is written by running the game or the battery with `FM_ANIM_CAPTURE=<file>`: every strip loaded
-without a set is logged), `tools/anim/make_folder_sets.py`, `tools/anim/make_family_sets.py` (the Crabbies).
-**After adding a new strip or image folder to the game, run them** so it shows up in the editor.
+Generators (`tools/anim/`; they add, never overwrite what exists): `make_strip_sets.py <capture>` adds each sheet
+the game loads to its folder's set and records the speed the code asks for (the capture is written by running the
+battery and `level_shots` with `FM_ANIM_CAPTURE=<file>`), `make_folder_sets.py` (loose images),
+`make_family_sets.py` (the Crabbies). **After adding a new sheet or image folder to the game, run them** so it shows
+up in the editor.
 
 ## Using a set from code
 
@@ -119,11 +124,12 @@ set:images('hide')                              -- the images of a sequence, for
 | Crabby, six skins (and their trampoline versions) | `enemies/crabby`, `crabby_ice`, `crabby_fortress`, `crabby_river`, `crabby_cave`, `crabby_lava` | `walk` (cycle + speed), `hide` / `unhide` (any number of frames; the length of `hide` is how long hiding takes), `hidden`, `peek`, `meat`, `dead`. A frame's `inset` = empty rows above the shell. Frames must be whole images |
 | enemies and bosses made in the enemy editor | their own | everything |
 
-Everything else is editable as a strip or folder set (previous section): the pictures can be swapped, re-cropped
-and previewed, while WHEN each frame shows is still decided by that sprite's code — the bosses' and the player's
-poses are computed (squash, claws, rotation), not frame lists. All migrations were verified pixel-identical against
-screenshots taken before them.
+Everything else is in its folder's set as sheet animations and loose images (previous section). For the
+hand-written bosses and the player, WHEN each frame shows is still decided by code — their poses are computed
+(squash, claws, rotation), not frame lists. All migrations were verified pixel-identical against screenshots taken
+before them.
 
 **Tests:** `enemy_data` (timing, events, variants, every set in `assets/anim` valid and its images present),
-`tool_editors` (the real editor: open, create an animation, undo / redo, the browser, slice a sheet, save, re-read),
+`tool_editors` (every sheet is read from its set and the set's speed reaches the game; the real editor: open, create
+an animation, undo / redo, the browser, slice a sheet, save, re-read),
 plus the before / after screenshot comparison (`level_shots FIXED=1`).

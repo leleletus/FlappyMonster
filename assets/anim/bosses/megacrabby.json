@@ -3,18 +3,17 @@
   "scale": 4,
   "origin": [0.5, 1],
   "fallback": "all",
-  "meta": {
-    "code": true,
-    "folder": true
-  },
   "frames": [
     {"image": "assets/images/bosses/megacrabby/crab1.png", "key": "crab1.png"},
     {"image": "assets/images/bosses/megacrabby/crab2.png", "key": "crab2.png"},
     {"image": "assets/images/bosses/megacrabby/crab3.png", "key": "crab3.png"},
-    {"image": "assets/images/bosses/megacrabby/spike.png", "key": "spike.png"}
+    {"image": "assets/images/bosses/megacrabby/spike.png", "key": "spike.png"},
+    {"h": 7, "image": "assets/images/bosses/megacrabby/claw_left-Sheet.png", "w": 10, "x": 0, "y": 0},
+    {"h": 7, "image": "assets/images/bosses/megacrabby/claw_left-Sheet.png", "w": 10, "x": 10, "y": 0}
   ],
   "anims": {
     "all": {"fps": 3, "frames": [1, 2, 3, 4], "loop": true},
+    "claw_left": {"fps": 8, "frameW": 10, "frames": [5, 6], "loop": true, "sheet": "claw_left-Sheet.png"},
     "crab": {"fps": 6, "frames": [1, 2, 3], "loop": true}
   }
 }

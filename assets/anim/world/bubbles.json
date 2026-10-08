@@ -3,10 +3,6 @@
   "scale": 4,
   "origin": [0.5, 1],
   "fallback": "all",
-  "meta": {
-    "code": true,
-    "folder": true
-  },
   "frames": [
     {"image": "assets/images/world/bubbles/bubble1.png", "key": "bubble1.png"},
     {"image": "assets/images/world/bubbles/bubble2.png", "key": "bubble2.png"},

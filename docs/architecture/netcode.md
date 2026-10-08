@@ -128,9 +128,9 @@ delivered in roster → `self.roster[idx].color`.
 
 ## Protocol version history
 
-Kept in the comment at the top of `src/network/Protocol.lua` (one line per version). Current: **56**. Milestones:
+Kept in the comment at the top of `src/network/Protocol.lua` (one line per version). Current: **57**. Milestones:
 v12 launches · v14 crouch jump · v16 King of the Hill · v18 Mega Crabby · v21 one invulnerability system · v22 ON/OFF
 and invisible blocks, helmet, pufferfish · v24 subtiles · v25 connected floods · v27 ON/OFF blocks · v28 generic boss
 intros · v32 bombs · v33 snow / ice · v36 freezer · v38 Snowball Boss, zone phases · v39-40 icy crabs · v41 Gummy
 King · v43 dark levels, flashlight, Gloomy · v46 Mega Gloomy · v48-52 Hopper and island variants · v53-54 Mirror
-chase · v55 apple / heal pickup · v56 moving point zone clock, difficulty chosen by the host.
+chase · v55 apple / heal pickup · v56 moving point zone clock, difficulty chosen by the host · v57 Claudio (first data-driven type shipped).

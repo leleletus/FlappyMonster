@@ -1,0 +1,15 @@
+{
+  "id": "enemies/pufferfish",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "puffer_fish",
+  "frames": [
+    {"h": 16, "image": "assets/images/enemies/pufferfish/puffer_fish-Sheet.png", "w": 16, "x": 0, "y": 0},
+    {"h": 16, "image": "assets/images/enemies/pufferfish/puffer_fish-Sheet.png", "w": 16, "x": 16, "y": 0},
+    {"h": 16, "image": "assets/images/enemies/pufferfish/puffer_fish-Sheet.png", "w": 16, "x": 32, "y": 0},
+    {"h": 16, "image": "assets/images/enemies/pufferfish/puffer_fish-Sheet.png", "w": 16, "x": 48, "y": 0}
+  ],
+  "anims": {
+    "puffer_fish": {"fps": 8, "frameW": 16, "frames": [1, 2, 3, 4], "loop": true, "sheet": "puffer_fish-Sheet.png"}
+  }
+}

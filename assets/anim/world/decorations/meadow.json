@@ -1,0 +1,28 @@
+{
+  "id": "world/decorations/meadow",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "fallen_log",
+  "frames": [
+    {"h": 8, "image": "assets/images/world/decorations/meadow/fallen_log.png", "w": 18, "x": 0, "y": 0},
+    {"h": 8, "image": "assets/images/world/decorations/meadow/flower_patch.png", "w": 10, "x": 0, "y": 0},
+    {"h": 8, "image": "assets/images/world/decorations/meadow/mossy_rock.png", "w": 12, "x": 0, "y": 0},
+    {"h": 35, "image": "assets/images/world/decorations/meadow/oak_tree.png", "w": 32, "x": 0, "y": 0},
+    {"h": 33, "image": "assets/images/world/decorations/meadow/pine_tree.png", "w": 20, "x": 0, "y": 0},
+    {"h": 9, "image": "assets/images/world/decorations/meadow/red_mushroom.png", "w": 10, "x": 0, "y": 0},
+    {"h": 11, "image": "assets/images/world/decorations/meadow/round_bush.png", "w": 18, "x": 0, "y": 0},
+    {"h": 17, "image": "assets/images/world/decorations/meadow/sunflower.png", "w": 10, "x": 0, "y": 0},
+    {"h": 11, "image": "assets/images/world/decorations/meadow/tall_grass.png", "w": 10, "x": 0, "y": 0}
+  ],
+  "anims": {
+    "fallen_log": {"fps": 8, "frameW": 18, "frames": [1], "loop": true, "sheet": "fallen_log.png"},
+    "flower_patch": {"fps": 8, "frameW": 10, "frames": [2], "loop": true, "sheet": "flower_patch.png"},
+    "mossy_rock": {"fps": 8, "frameW": 12, "frames": [3], "loop": true, "sheet": "mossy_rock.png"},
+    "oak_tree": {"fps": 8, "frameW": 32, "frames": [4], "loop": true, "sheet": "oak_tree.png"},
+    "pine_tree": {"fps": 8, "frameW": 20, "frames": [5], "loop": true, "sheet": "pine_tree.png"},
+    "red_mushroom": {"fps": 8, "frameW": 10, "frames": [6], "loop": true, "sheet": "red_mushroom.png"},
+    "round_bush": {"fps": 8, "frameW": 18, "frames": [7], "loop": true, "sheet": "round_bush.png"},
+    "sunflower": {"fps": 8, "frameW": 10, "frames": [8], "loop": true, "sheet": "sunflower.png"},
+    "tall_grass": {"fps": 8, "frameW": 10, "frames": [9], "loop": true, "sheet": "tall_grass.png"}
+  }
+}

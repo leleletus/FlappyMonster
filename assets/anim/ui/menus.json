@@ -3,10 +3,6 @@
   "scale": 4,
   "origin": [0.5, 1],
   "fallback": "all",
-  "meta": {
-    "code": true,
-    "folder": true
-  },
   "frames": [
     {"image": "assets/images/ui/menus/Menu.png", "key": "Menu.png"},
     {"image": "assets/images/ui/menus/MenuDif.png", "key": "MenuDif.png"},

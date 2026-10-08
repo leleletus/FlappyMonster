@@ -3,10 +3,6 @@
   "scale": 4,
   "origin": [0.5, 1],
   "fallback": "all",
-  "meta": {
-    "code": true,
-    "folder": true
-  },
   "frames": [
     {"image": "assets/images/world/decorations/foliage/stretch/stretch1.png", "key": "stretch1.png"},
     {"image": "assets/images/world/decorations/foliage/stretch/stretch2.png", "key": "stretch2.png"},

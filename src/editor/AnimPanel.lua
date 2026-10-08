@@ -23,7 +23,7 @@ AnimPanel.__index = AnimPanel
 AnimPanel.FRIENDLY = {
     idle = 'Quieto', walk = 'Andar', run = 'Correr', attack = 'Ataque', special = 'Acción especial', hurt = 'Daño', dead = 'Muerte',
     tired = 'Cansado', shot = 'Proyectil', hide = 'Esconderse', unhide = 'Salir del escondite', hidden = 'Escondido',
-    peek = 'Asomado', meat = 'A medio esconder', air = 'En el aire', crouch = 'Agachado', all = 'Todos los cuadros',
+    peek = 'Asomado', meat = 'A medio esconder', air = 'En el aire', crouch = 'Agachado', all = 'Imágenes sueltas',
 }
 AnimPanel.PRESETS = { 'idle', 'walk', 'run', 'attack', 'special', 'hurt', 'dead', 'tired', 'hide', 'shot' }
 local function nice(n) return AnimPanel.FRIENDLY[n] and (AnimPanel.FRIENDLY[n] .. '  (' .. n .. ')') or n end
@@ -244,15 +244,11 @@ function AnimPanel:draw(doc, x, y, w, h)
     if not self.anim or not doc.anims[self.anim] then self.anim, self.pos, self.t = bestAnim(doc), 1, 0 end
     local A = self.anim and doc.anims[self.anim]
     self.frame = math.max(1, math.min(math.max(1, #doc.frames), self.frame))
-    local code = doc.meta and doc.meta.code
+    local code = false        -- (ya no hay conjuntos "del juego" aparte: todos se editan igual)
 
-    -- aviso de arriba: qué se puede hacer con este conjunto
+    -- aviso de arriba: por dónde empezar
     local top = y
-    if code then
-        local txt = doc.strip
-            and 'El juego usa estos cuadros POR SU NÚMERO (el 1, el 2…). Puedes cambiar la imagen o el recorte de cada cuadro y verlos moverse; NO cambies su orden ni cuántos son. La velocidad la pone el juego, salvo que actives "la velocidad la manda este conjunto" en Ajustes.'
-            or 'Cada cuadro es una imagen suelta que el juego usa por su nombre de archivo. Puedes cambiarle la imagen a cualquier cuadro (el juego cargará la nueva); cuándo se usa cada uno lo decide el juego. Las animaciones de aquí son solo para verlos juntos.'
-        top = top + ui.hint(txt, x, top, w, th.warn) + 6
+    if false then
     elseif #doc.frames == 0 then
         top = top + ui.hint('Empieza por la derecha: añade CUADROS (los dibujos). Después crea una ANIMACIÓN a la izquierda y ve metiéndole cuadros.', x, top, w, th.accent) + 6
     elseif #all == 0 then
@@ -308,6 +304,12 @@ function AnimPanel:draw(doc, x, y, w, h)
         if c2 then A.fps = v; touch() end
         v, c2 = ui.toggle('Se repite sin parar', A.loop ~= false, px, py, pw); py = py + 28
         if c2 then A.loop = v; touch() end
+        if A.sheet then
+            -- (animación que el juego lee de una hoja: qué llega al juego de lo que se cambie aquí)
+            py = py + ui.hint(A.codeFps
+                and 'El juego la reproduce tal como está aquí: cuadros, orden y velocidad.'
+                or 'El juego usa sus cuadros en este orden; cuándo pasa de uno a otro depende de lo que ocurre en la partida (no del reloj), así que la velocidad de aquí solo vale para verla.', px, py, pw) + 6
+        end
         if A.loop == false then
             local opts = { { value = '', label = '(se queda en el último)' } }
             for _, n in ipairs(all) do if n ~= self.anim then opts[#opts + 1] = { value = n, label = n } end end
@@ -522,7 +524,7 @@ function AnimPanel:draw(doc, x, y, w, h)
             local lf = set.frames[self.frame]
             local iw, ih = lf and lf.iw or 4096, lf and lf.ih or 4096
             local whole = F.w == nil
-            local wholeOnly = doc.meta and (doc.meta.wholeImages or doc.meta.folder)
+            local wholeOnly = (doc.meta and doc.meta.wholeImages) or F.key ~= nil     -- (imagen suelta que el juego carga por su nombre: entera)
             if not wholeOnly then
                 local nv, ch = ui.toggle('Usa la imagen entera', whole, px, dy, pw); dy = dy + 26
                 if ch then
@@ -551,11 +553,6 @@ function AnimPanel:draw(doc, x, y, w, h)
     local open
     dy, open = ui.section('animsecset', 'Ajustes del conjunto', px, dy, pw, nil, false)
     if open then
-        if doc.strip then
-            local v, c2 = ui.toggle('La velocidad la manda este conjunto', doc.timing == 'set', px, dy, pw); dy = dy + 28
-            if c2 then doc.timing = v and 'set' or nil; touch() end
-            dy = dy + ui.hint('Activado: el juego reproduce esta tira con la velocidad de la animación «all» de aquí, no con la que lleva escrita en el código.', px, dy, pw) + 6
-        end
         local v, c2 = ui.number('Escala en el juego', doc.scale or 4, px, dy, pw, { min = 1, max = 16, step = 0.5 }); dy = dy + 28
         if c2 then doc.scale = v; touch() end
         doc.origin = doc.origin or { 0.5, 1 }

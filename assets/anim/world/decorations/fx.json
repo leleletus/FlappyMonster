@@ -3,16 +3,27 @@
   "scale": 4,
   "origin": [0.5, 1],
   "fallback": "all",
-  "meta": {
-    "code": true,
-    "folder": true
-  },
   "frames": [
     {"image": "assets/images/world/decorations/fx/clump-Sheet.png", "key": "clump-Sheet.png"},
     {"image": "assets/images/world/decorations/fx/leaf-Sheet.png", "key": "leaf-Sheet.png"},
-    {"image": "assets/images/world/decorations/fx/sparkle-Sheet.png", "key": "sparkle-Sheet.png"}
+    {"image": "assets/images/world/decorations/fx/sparkle-Sheet.png", "key": "sparkle-Sheet.png"},
+    {"h": 5, "image": "assets/images/world/decorations/fx/bubble-Sheet.png", "w": 5, "x": 0, "y": 0},
+    {"h": 5, "image": "assets/images/world/decorations/fx/bubble-Sheet.png", "w": 5, "x": 5, "y": 0},
+    {"h": 2, "image": "assets/images/world/decorations/fx/ember-Sheet.png", "w": 2, "x": 0, "y": 0},
+    {"h": 2, "image": "assets/images/world/decorations/fx/ember-Sheet.png", "w": 2, "x": 2, "y": 0},
+    {"h": 32, "image": "assets/images/world/decorations/fx/glow.png", "w": 32, "x": 0, "y": 0},
+    {"h": 6, "image": "assets/images/world/decorations/fx/smoke-Sheet.png", "w": 6, "x": 0, "y": 0},
+    {"h": 6, "image": "assets/images/world/decorations/fx/smoke-Sheet.png", "w": 6, "x": 6, "y": 0},
+    {"h": 6, "image": "assets/images/world/decorations/fx/smoke-Sheet.png", "w": 6, "x": 12, "y": 0},
+    {"h": 3, "image": "assets/images/world/decorations/fx/spore-Sheet.png", "w": 3, "x": 0, "y": 0},
+    {"h": 3, "image": "assets/images/world/decorations/fx/spore-Sheet.png", "w": 3, "x": 3, "y": 0}
   ],
   "anims": {
-    "all": {"fps": 3, "frames": [1, 2, 3], "loop": true}
+    "all": {"fps": 3, "frames": [1, 2, 3], "loop": true},
+    "bubble": {"fps": 8, "frameW": 5, "frames": [4, 5], "loop": true, "sheet": "bubble-Sheet.png"},
+    "ember": {"fps": 8, "frameW": 2, "frames": [6, 7], "loop": true, "sheet": "ember-Sheet.png"},
+    "glow": {"fps": 8, "frameW": 32, "frames": [8], "loop": true, "sheet": "glow.png"},
+    "smoke": {"fps": 8, "frameW": 6, "frames": [9, 10, 11], "loop": true, "sheet": "smoke-Sheet.png"},
+    "spore": {"fps": 8, "frameW": 3, "frames": [12, 13], "loop": true, "sheet": "spore-Sheet.png"}
   }
 }

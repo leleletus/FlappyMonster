@@ -10,7 +10,7 @@ Run everything from the repo root. Documentation: `docs/README.md`. Python tools
 | `sounds/` | sound-effect generators → `assets/sounds/` | `docs/audio/sound.md` |
 | `music/` | Famicom engine + track generators → `assets/music/` | `docs/audio/music-catalog.md`, `docs/audio/music-guide.md` |
 | `levelgen/` | level builders, retheme, test arenas | `docs/levels/generator-and-solver.md` (**read the DANGER note**) |
-| `anim/` | generators of animation sets (`assets/anim/`): one per sprite strip, per image folder, and the Crabby family | `docs/art/animation.md` |
+| `anim/` | generators of animation sets (`assets/anim/`, one per image folder): sheets as named animations, loose images, and the Crabby family | `docs/art/animation.md` |
 | `video/` | OST presentation videos | `docs/tools/ost-videos.md` |
 | `deploy_server.sh` | update the game server after a push (`--status` = look only) | `docs/architecture/updates-and-release.md` |
 
@@ -48,6 +48,8 @@ and their own folder to `sys.path`; scripts that import each other sit in the sa
 | `world/make_ice_spikes.py`, `make_cryo_sprites.py`, `make_cryo_parts.py`, `make_cryo_chain.py` | `traps/spikes/spike_ice.png`, `traps/cryo/` | spikes and chain yes (verified) |
 | `world/make_food_sprites.py` | `items/food_<island>.png` (never the user's apple) | yes (verified) |
 | `ui/make_sprites.py`, `make_story_icons.py` | `ui/touch/`, `ui/ping/`, `ui/icons/` | yes (verified) |
+| `ui/make_logo_parts.py` | `assets/startup/parts/`, `assets/startup/logo.json` (cuts the user's logo; never writes the logo itself) | yes |
+| `enemies/make_claudio_extras.py` | `enemies/claudio/claudio_blink.png` (from the user's `claudio_idle.png`) | yes |
 | `ui/make_player_redesign.py`, `make_flappy_redesign.py` | `player/`, the Mirror's pieces, `flappy/` | not re-run |
 | `story/make_overworld.py` | `assets/story/overworld.json` + `story/` map sprites | deterministic; not re-run |
 | `story/make_mirror_shards.py --apply`, `make_story_fx.py` | `story/mirror/`, `story/fx/` | yes (verified) |
@@ -59,7 +61,7 @@ diff of whatever it writes.
 ## sounds/
 
 One script per family, each writes WAVs into `assets/sounds/<group>/`: `ambience.py`, `bomb.py`, `cryo.py`,
-`gloomy.py`, `hopper.py`, `ice.py`, `items.py`, `mechanics.py`, `megacrabby.py`, `megagummy.py`, `mirror.py`,
+`gloomy.py`, `hopper.py`, `ice.py`, `items.py`, `startup.py` (the logo melody), `mechanics.py`, `megacrabby.py`, `megagummy.py`, `mirror.py`,
 `snowboss.py`, `story.py`. After generating: register the sound and its gain in `src/audio/Sound.lua`, then
 `tools/tests/run.sh sounds NAMES=…`.
 

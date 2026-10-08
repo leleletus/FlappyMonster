@@ -10,6 +10,7 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 | Id | Label | File | Flags | Own props |
 |---|---|---|---|---|
 | `bomb` | Bomba | `types/enemies/bomb.lua` |  | `fuseTime`: number = 2 · `killRadius`: number = 1.2 · `hurtRadius`: number = 2.3 · `pushRadius`: number = 3.6 |
+| `claudio` | Claudio | `?` | renderFront |  |
 | `crabby` | Crabby | `types/enemies/crabby.lua` |  | `canHide`: bool = true · `hideChance`: number = 0.75 · `wallWalk`: bool = false |
 | `crabby_cave` | Crabby de cueva (pincho) | `types/enemies/crabby_cave.lua` | variant of `crabby_cave` | `canHide`: bool = true · `hideChance`: number = 0.75 · `wallWalk`: bool = false |
 | `crabby_fortress` | Crabby de la fortaleza (pincho) | `types/enemies/crabby_fortress.lua` | variant of `crabby_fortress` | `canHide`: bool = true · `hideChance`: number = 0.75 · `wallWalk`: bool = false |

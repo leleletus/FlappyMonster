@@ -3,10 +3,6 @@
   "scale": 4,
   "origin": [0.5, 1],
   "fallback": "all",
-  "meta": {
-    "code": true,
-    "folder": true
-  },
   "frames": [
     {"image": "assets/images/traps/spikes/spike.png", "key": "spike.png"},
     {"image": "assets/images/traps/spikes/spike_ice.png", "key": "spike_ice.png"}

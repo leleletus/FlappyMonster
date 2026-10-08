@@ -3,10 +3,6 @@
   "scale": 4,
   "origin": [0.5, 1],
   "fallback": "all",
-  "meta": {
-    "code": true,
-    "folder": true
-  },
   "frames": [
     {"image": "assets/images/bosses/miniboss1/monster_dead/down.png", "key": "down.png"},
     {"image": "assets/images/bosses/miniboss1/monster_dead/up.png", "key": "up.png"}

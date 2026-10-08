@@ -26,7 +26,8 @@ snapshots (`x, y, state, deadTimer` + each entity's `netPack`). See [netcode](ne
    and `input.lua` (the global `Input`, built on `libs/baton.lua`), creates the fonts and the global `Sound`, registers
    every state in the state machine (`gStateMachine`), routes LÖVE callbacks (keyboard, mouse, touch in logical
    coordinates) to the current state, and installs the editor instead when run with `--editor`.
-3. The first state is `update` (`UpdateState`), which goes to the title at once when offline or up to date.
+3. The first state is `update` (`UpdateState`), which goes on at once when offline or up to date: to `startup`
+   (the mtvemo logo, [startup-intro](startup-intro.md)) and then the title.
 
 ## States (`src/states/`)
 
@@ -35,7 +36,7 @@ callbacks); `src/core/StateMachine.lua` keeps a stack (`change`, `push`, `pop`):
 
 | Folder | States (registry name) |
 |---|---|
-| `menu/` | `UpdateState` (update), `TitleState` (title), `MainMenuState` (main_menu), `SettingsState` (settings), `AdventureModeSelectState` (adv_mode_select: Story / Online / Free Play) |
+| `menu/` | `UpdateState` (update), `StartupState` (startup: the logo), `TitleState` (title), `MainMenuState` (main_menu), `SettingsState` (settings), `AdventureModeSelectState` (adv_mode_select: Story / Online / Free Play) |
 | `flappy/` | `DifficultySelectionState` (difficulty), `PlayState` (play) |
 | `adventure/` | `AdventureState` (adventure: every single-player level, story or not), `FreePlayState` (free_play), `PauseState` (pause) |
 | `online/` | `OnlineLoginState`, `OnlineHubState`, `OnlineRoomState`, `OnlineAdventureState`, `OnlineResultsState`, `OnlineErrorState` |

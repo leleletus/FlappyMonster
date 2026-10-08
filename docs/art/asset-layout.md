@@ -5,8 +5,9 @@ assets/
   fonts/            PressStart2P.ttf
   lang/             es.lua, en.lua
   levels/           one JSON per level (ids are used by saves and the story: never rename)
-  anim/             animation sets, one JSON each, in folders that mirror images/ (editor: love . --anim;
+  anim/             animation sets: one JSON per image folder, with all its animations (editor: love . --anim;
                     generators: tools/anim/)
+  startup/          the mtvemo logo (the user's), its letters cut out (parts/) and logo.json (startup-intro.md)
   enemies/          data-driven enemies: index.json + one JSON each (editor: love . --enemy)
   nav/              bot navigation graphs, one per arena (rebuilt by `run.sh bot_nav BUILD=1`)
   shaders/          water.glsl

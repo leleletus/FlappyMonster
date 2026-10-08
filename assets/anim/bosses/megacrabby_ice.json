@@ -3,18 +3,27 @@
   "scale": 4,
   "origin": [0.5, 1],
   "fallback": "all",
-  "meta": {
-    "code": true,
-    "folder": true
-  },
   "frames": [
     {"image": "assets/images/bosses/megacrabby_ice/crab1.png", "key": "crab1.png"},
     {"image": "assets/images/bosses/megacrabby_ice/crab2.png", "key": "crab2.png"},
     {"image": "assets/images/bosses/megacrabby_ice/crab3.png", "key": "crab3.png"},
-    {"image": "assets/images/bosses/megacrabby_ice/spike.png", "key": "spike.png"}
+    {"image": "assets/images/bosses/megacrabby_ice/spike.png", "key": "spike.png"},
+    {"h": 7, "image": "assets/images/bosses/megacrabby_ice/claw_left-Sheet.png", "w": 10, "x": 0, "y": 0},
+    {"h": 7, "image": "assets/images/bosses/megacrabby_ice/claw_left-Sheet.png", "w": 10, "x": 10, "y": 0},
+    {"h": 16, "image": "assets/images/bosses/megacrabby_ice/ice_field-Sheet.png", "w": 8, "x": 0, "y": 0},
+    {"h": 16, "image": "assets/images/bosses/megacrabby_ice/ice_field-Sheet.png", "w": 8, "x": 8, "y": 0},
+    {"h": 16, "image": "assets/images/bosses/megacrabby_ice/ice_field-Sheet.png", "w": 8, "x": 16, "y": 0},
+    {"h": 21, "image": "assets/images/bosses/megacrabby_ice/rage_body-Sheet.png", "w": 26, "x": 0, "y": 0},
+    {"h": 21, "image": "assets/images/bosses/megacrabby_ice/rage_body-Sheet.png", "w": 26, "x": 26, "y": 0},
+    {"h": 15, "image": "assets/images/bosses/megacrabby_ice/rage_claw-Sheet.png", "w": 18, "x": 0, "y": 0},
+    {"h": 15, "image": "assets/images/bosses/megacrabby_ice/rage_claw-Sheet.png", "w": 18, "x": 18, "y": 0}
   ],
   "anims": {
     "all": {"fps": 3, "frames": [1, 2, 3, 4], "loop": true},
-    "crab": {"fps": 6, "frames": [1, 2, 3], "loop": true}
+    "claw_left": {"fps": 8, "frameW": 10, "frames": [5, 6], "loop": true, "sheet": "claw_left-Sheet.png"},
+    "crab": {"fps": 6, "frames": [1, 2, 3], "loop": true},
+    "ice_field": {"fps": 8, "frameW": 8, "frames": [7, 8, 9], "loop": true, "sheet": "ice_field-Sheet.png"},
+    "rage_body": {"fps": 8, "frameW": 26, "frames": [10, 11], "loop": true, "sheet": "rage_body-Sheet.png"},
+    "rage_claw": {"fps": 8, "frameW": 18, "frames": [12, 13], "loop": true, "sheet": "rage_claw-Sheet.png"}
   }
 }

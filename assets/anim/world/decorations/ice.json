@@ -1,0 +1,26 @@
+{
+  "id": "world/decorations/ice",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "frozen_bush",
+  "frames": [
+    {"h": 13, "image": "assets/images/world/decorations/ice/frozen_bush.png", "w": 18, "x": 0, "y": 0},
+    {"h": 9, "image": "assets/images/world/decorations/ice/ice_crystal.png", "w": 10, "x": 0, "y": 0},
+    {"h": 17, "image": "assets/images/world/decorations/ice/icicle.png", "w": 18, "x": 0, "y": 0},
+    {"h": 9, "image": "assets/images/world/decorations/ice/icicle_small.png", "w": 10, "x": 0, "y": 0},
+    {"h": 9, "image": "assets/images/world/decorations/ice/snow_pile.png", "w": 10, "x": 0, "y": 0},
+    {"h": 17, "image": "assets/images/world/decorations/ice/snowman-Sheet.png", "w": 18, "x": 0, "y": 0},
+    {"h": 17, "image": "assets/images/world/decorations/ice/snowman-Sheet.png", "w": 18, "x": 18, "y": 0},
+    {"h": 17, "image": "assets/images/world/decorations/ice/snowman-Sheet.png", "w": 18, "x": 36, "y": 0},
+    {"h": 33, "image": "assets/images/world/decorations/ice/snowy_pine.png", "w": 18, "x": 0, "y": 0}
+  ],
+  "anims": {
+    "frozen_bush": {"fps": 8, "frameW": 18, "frames": [1], "loop": true, "sheet": "frozen_bush.png"},
+    "ice_crystal": {"fps": 8, "frameW": 10, "frames": [2], "loop": true, "sheet": "ice_crystal.png"},
+    "icicle": {"fps": 8, "frameW": 18, "frames": [3], "loop": true, "sheet": "icicle.png"},
+    "icicle_small": {"fps": 8, "frameW": 10, "frames": [4], "loop": true, "sheet": "icicle_small.png"},
+    "snow_pile": {"fps": 8, "frameW": 10, "frames": [5], "loop": true, "sheet": "snow_pile.png"},
+    "snowman": {"fps": 8, "frameW": 18, "frames": [6, 7, 8], "loop": true, "sheet": "snowman-Sheet.png"},
+    "snowy_pine": {"fps": 8, "frameW": 18, "frames": [9], "loop": true, "sheet": "snowy_pine.png"}
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "id": "bosses/megagloomy",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "body",
+  "frames": [
+    {"h": 21, "image": "assets/images/bosses/megagloomy/body-Sheet.png", "w": 38, "x": 0, "y": 0},
+    {"h": 21, "image": "assets/images/bosses/megagloomy/body-Sheet.png", "w": 38, "x": 38, "y": 0},
+    {"h": 21, "image": "assets/images/bosses/megagloomy/body-Sheet.png", "w": 38, "x": 76, "y": 0},
+    {"h": 21, "image": "assets/images/bosses/megagloomy/body-Sheet.png", "w": 38, "x": 114, "y": 0},
+    {"h": 21, "image": "assets/images/bosses/megagloomy/body-Sheet.png", "w": 38, "x": 152, "y": 0},
+    {"h": 21, "image": "assets/images/bosses/megagloomy/body-Sheet.png", "w": 38, "x": 190, "y": 0},
+    {"h": 21, "image": "assets/images/bosses/megagloomy/body-Sheet.png", "w": 38, "x": 228, "y": 0},
+    {"h": 21, "image": "assets/images/bosses/megagloomy/body-Sheet.png", "w": 38, "x": 266, "y": 0},
+    {"h": 21, "image": "assets/images/bosses/megagloomy/body-Sheet.png", "w": 38, "x": 304, "y": 0},
+    {"h": 7, "image": "assets/images/bosses/megagloomy/claw_left-Sheet.png", "w": 14, "x": 0, "y": 0},
+    {"h": 7, "image": "assets/images/bosses/megagloomy/claw_left-Sheet.png", "w": 14, "x": 14, "y": 0},
+    {"h": 12, "image": "assets/images/bosses/megagloomy/claw_rage_glow-Sheet.png", "w": 14, "x": 0, "y": 0},
+    {"h": 12, "image": "assets/images/bosses/megagloomy/claw_rage_glow-Sheet.png", "w": 14, "x": 14, "y": 0},
+    {"h": 12, "image": "assets/images/bosses/megagloomy/claw_rage_left-Sheet.png", "w": 14, "x": 0, "y": 0},
+    {"h": 12, "image": "assets/images/bosses/megagloomy/claw_rage_left-Sheet.png", "w": 14, "x": 14, "y": 0},
+    {"h": 21, "image": "assets/images/bosses/megagloomy/glow-Sheet.png", "w": 38, "x": 0, "y": 0},
+    {"h": 21, "image": "assets/images/bosses/megagloomy/glow-Sheet.png", "w": 38, "x": 38, "y": 0},
+    {"h": 21, "image": "assets/images/bosses/megagloomy/glow-Sheet.png", "w": 38, "x": 76, "y": 0},
+    {"h": 21, "image": "assets/images/bosses/megagloomy/glow-Sheet.png", "w": 38, "x": 114, "y": 0},
+    {"h": 21, "image": "assets/images/bosses/megagloomy/glow-Sheet.png", "w": 38, "x": 152, "y": 0},
+    {"h": 21, "image": "assets/images/bosses/megagloomy/glow-Sheet.png", "w": 38, "x": 190, "y": 0},
+    {"h": 21, "image": "assets/images/bosses/megagloomy/glow-Sheet.png", "w": 38, "x": 228, "y": 0},
+    {"h": 21, "image": "assets/images/bosses/megagloomy/glow-Sheet.png", "w": 38, "x": 266, "y": 0},
+    {"h": 21, "image": "assets/images/bosses/megagloomy/glow-Sheet.png", "w": 38, "x": 304, "y": 0}
+  ],
+  "anims": {
+    "body": {"fps": 8, "frameW": 38, "frames": [1, 2, 3, 4, 5, 6, 7, 8, 9], "loop": true, "sheet": "body-Sheet.png"},
+    "claw_left": {"fps": 8, "frameW": 14, "frames": [10, 11], "loop": true, "sheet": "claw_left-Sheet.png"},
+    "claw_rage_glow": {"fps": 8, "frameW": 14, "frames": [12, 13], "loop": true, "sheet": "claw_rage_glow-Sheet.png"},
+    "claw_rage_left": {"fps": 8, "frameW": 14, "frames": [14, 15], "loop": true, "sheet": "claw_rage_left-Sheet.png"},
+    "glow": {"fps": 8, "frameW": 38, "frames": [16, 17, 18, 19, 20, 21, 22, 23, 24], "loop": true, "sheet": "glow-Sheet.png"}
+  }
+}

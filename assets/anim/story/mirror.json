@@ -3,10 +3,6 @@
   "scale": 4,
   "origin": [0.5, 1],
   "fallback": "all",
-  "meta": {
-    "code": true,
-    "folder": true
-  },
   "frames": [
     {"image": "assets/images/story/mirror/frame.png", "key": "frame.png"},
     {"image": "assets/images/story/mirror/glass.png", "key": "glass.png"},

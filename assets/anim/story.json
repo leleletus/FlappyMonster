@@ -3,10 +3,6 @@
   "scale": 4,
   "origin": [0.5, 1],
   "fallback": "all",
-  "meta": {
-    "code": true,
-    "folder": true
-  },
   "frames": [
     {"image": "assets/images/story/bridge.png", "key": "bridge.png"},
     {"image": "assets/images/story/castle-Sheet.png", "key": "castle-Sheet.png"},

@@ -1,0 +1,16 @@
+{
+  "id": "ui/ping",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "ping",
+  "frames": [
+    {"h": 12, "image": "assets/images/ui/ping/ping-Sheet.png", "w": 20, "x": 0, "y": 0},
+    {"h": 12, "image": "assets/images/ui/ping/ping-Sheet.png", "w": 20, "x": 20, "y": 0},
+    {"h": 12, "image": "assets/images/ui/ping/ping-Sheet.png", "w": 20, "x": 40, "y": 0},
+    {"h": 12, "image": "assets/images/ui/ping/ping-Sheet.png", "w": 20, "x": 60, "y": 0},
+    {"h": 12, "image": "assets/images/ui/ping/ping-Sheet.png", "w": 20, "x": 80, "y": 0}
+  ],
+  "anims": {
+    "ping": {"fps": 8, "frameW": 20, "frames": [1, 2, 3, 4, 5], "loop": true, "sheet": "ping-Sheet.png"}
+  }
+}

@@ -41,3 +41,8 @@ def write(doc, force=False):
     os.makedirs(os.path.dirname(p), exist_ok=True)
     open(p, 'w', encoding='utf-8').write(dump(doc))
     return True
+
+
+def read(set_id):
+    p = path_of(set_id)
+    return json.load(open(p, encoding='utf-8')) if os.path.exists(p) else None

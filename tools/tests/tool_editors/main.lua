@@ -66,6 +66,32 @@ function love.update(dt)
     if TOOL == 'anim' then
         local A = require 'src/editor/AnimEditor'
         if frame == 3 then
+            -- las TIRAS del juego salen de la animación con su "sheet" en el conjunto de su carpeta, y su velocidad manda
+            do
+                local AnimM, SpriteStrip = require 'src/fx/Anim', require 'src/fx/SpriteStrip'
+                local n, via, timed = 0, 0, nil
+                for _, id in ipairs(AnimM.list()) do
+                    for _, a in pairs((AnimM.read(id) or {}).anims or {}) do
+                        if a.sheet then
+                            n = n + 1
+                            local st = SpriteStrip.load('assets/images/' .. id .. '/' .. a.sheet, a.frameW)
+                            if st.set and st.count == #a.frames then via = via + 1 end
+                            if a.codeFps and st.count > 2 then timed = timed or { st, a.codeFps } end
+                        end
+                    end
+                end
+                local same, scaled = false, false
+                if timed then
+                    local st, fps = timed[1], timed[2]
+                    same = true
+                    for i = 0, 40 do local t = i * 0.037; if st:frameAt(t, fps) ~= math.floor(t * fps) % st.count + 1 then same = false end end
+                    st.nominal = fps / 2                 -- (como si el conjunto pidiera el doble de velocidad que el código)
+                    scaled = true
+                    for i = 0, 40 do local t = i * 0.037; if st:frameAt(t, fps / 2) ~= math.floor(t * fps + 1e-9) % st.count + 1 then scaled = false end end
+                    st.nominal = fps
+                end
+                check('tiras', n >= 100 and via == n and same and scaled, ('%d tiras, %d leídas de su conjunto; al ritmo del código igual=%s; el conjunto cambia el ritmo=%s'):format(n, via, tostring(same), tostring(scaled)))
+            end
             check('abre', A.id == 'enemies/gummy' and A.doc and #A.doc.frames == 4, ('conjunto %s con %d cuadros'):format(tostring(A.id), A.doc and #A.doc.frames or 0))
             A.panel.anim = 'walk'
         elseif frame == 6 then shot(1)
@@ -91,7 +117,7 @@ function love.update(dt)
             A.browse = true
         elseif frame == 24 then shot(4)
         elseif frame == 25 then
-            check('explorador', #A.list >= 100, #A.list .. ' conjuntos en el explorador')
+            check('explorador', #A.list >= 40, #A.list .. ' conjuntos en el explorador')
             A.browse = false
         elseif frame == 27 then
             -- (lo que hace el botón "Añadir 4 cuadros")

@@ -3,10 +3,6 @@
   "scale": 4,
   "origin": [0.5, 1],
   "fallback": "all",
-  "meta": {
-    "code": true,
-    "folder": true
-  },
   "frames": [
     {"image": "assets/images/items/apple.png", "key": "apple.png"},
     {"image": "assets/images/items/checkpoint_off.png", "key": "checkpoint_off.png"},

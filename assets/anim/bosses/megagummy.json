@@ -1,0 +1,26 @@
+{
+  "id": "bosses/megagummy",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "body",
+  "frames": [
+    {"h": 16, "image": "assets/images/bosses/megagummy/body-Sheet.png", "w": 16, "x": 0, "y": 0},
+    {"h": 16, "image": "assets/images/bosses/megagummy/body-Sheet.png", "w": 16, "x": 16, "y": 0},
+    {"h": 16, "image": "assets/images/bosses/megagummy/body-Sheet.png", "w": 16, "x": 32, "y": 0},
+    {"h": 16, "image": "assets/images/bosses/megagummy/body-Sheet.png", "w": 16, "x": 48, "y": 0},
+    {"h": 16, "image": "assets/images/bosses/megagummy/body-Sheet.png", "w": 16, "x": 64, "y": 0},
+    {"h": 16, "image": "assets/images/bosses/megagummy/body-Sheet.png", "w": 16, "x": 80, "y": 0},
+    {"h": 16, "image": "assets/images/bosses/megagummy/body-Sheet.png", "w": 16, "x": 96, "y": 0},
+    {"h": 16, "image": "assets/images/bosses/megagummy/body-Sheet.png", "w": 16, "x": 112, "y": 0},
+    {"h": 16, "image": "assets/images/bosses/megagummy/crown.png", "w": 16, "x": 0, "y": 0},
+    {"h": 3, "image": "assets/images/bosses/megagummy/shadow.png", "w": 16, "x": 0, "y": 0},
+    {"h": 8, "image": "assets/images/bosses/megagummy/wave-Sheet.png", "w": 12, "x": 0, "y": 0},
+    {"h": 8, "image": "assets/images/bosses/megagummy/wave-Sheet.png", "w": 12, "x": 12, "y": 0}
+  ],
+  "anims": {
+    "body": {"fps": 8, "frameW": 16, "frames": [1, 2, 3, 4, 5, 6, 7, 8], "loop": true, "sheet": "body-Sheet.png"},
+    "crown": {"fps": 8, "frameW": 16, "frames": [9], "loop": true, "sheet": "crown.png"},
+    "shadow": {"fps": 8, "frameW": 16, "frames": [10], "loop": true, "sheet": "shadow.png"},
+    "wave": {"fps": 8, "frameW": 12, "frames": [11, 12], "loop": true, "sheet": "wave-Sheet.png"}
+  }
+}

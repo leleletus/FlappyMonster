@@ -1,0 +1,36 @@
+{
+  "id": "claudio",
+  "label": "Claudio",
+  "category": "Enemigos",
+  "description": "Un amigo: pasea a su aire, no hace daño y no se le puede pisar. De vez en cuando parpadea.",
+  "anim": "claudio",
+  "scale": 4,
+  "facesLeft": false,
+  "breathe": true,
+  "hitbox": {
+    "innerH": 0.48,
+    "innerW": 0.48,
+    "outerH": 0.64,
+    "outerW": 0.64
+  },
+  "hp": 1,
+  "hurtTime": 0.5,
+  "defaults": {
+    "movement": "walk",
+    "onTouch": "none",
+    "points": 15,
+    "speed": 50,
+    "stompable": false
+  },
+  "traits": {
+    "renderFront": true
+  },
+  "states": {
+    "dead": "dead",
+    "hurt": "dead",
+    "idle": "idle",
+    "walk": "walk"
+  },
+  "behaviors": [],
+  "sounds": []
+}

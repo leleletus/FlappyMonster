@@ -27,6 +27,7 @@ local OnlineErrorState            = require 'src/states/online/OnlineErrorState'
 local OnlineResultsState          = require 'src/states/online/OnlineResultsState'
 local SettingsState               = require 'src/states/menu/SettingsState'
 local UpdateState                 = require 'src/states/menu/UpdateState'
+local StartupState                = require 'src/states/menu/StartupState'
 local Settings                    = require 'src/core/Settings'
 
 DEBUG_HITBOX = DEBUG_HITBOX or false   -- F1 para activar/desactivar hitboxes (FM_HITBOX=1: ya encendidas — settings.lua —, para las pruebas)
@@ -51,6 +52,7 @@ function love.load()
 
     gStateMachine = StateMachine:new({
         update             = function() return UpdateState:new() end,   -- (actualización automática)
+        startup            = function() return StartupState:new() end,  -- (el logo de mtvemo)
         title              = function() return TitleState:new() end,
         main_menu          = function() return MainMenuState:new() end,
         difficulty         = function() return DifficultySelectionState:new() end,
@@ -72,7 +74,7 @@ function love.load()
         online_error       = function() return OnlineErrorState:new() end,
         online_results     = function() return OnlineResultsState:new() end,
     })
-    gStateMachine:change('update')      -- busca versión nueva y luego va al título
+    gStateMachine:change('update', { after = 'startup' })      -- busca versión nueva, luego el logo y el título
 end
 
 function love.update(dt)

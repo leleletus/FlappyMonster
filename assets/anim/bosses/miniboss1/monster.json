@@ -3,10 +3,6 @@
   "scale": 4,
   "origin": [0.5, 1],
   "fallback": "all",
-  "meta": {
-    "code": true,
-    "folder": true
-  },
   "frames": [
     {"image": "assets/images/bosses/miniboss1/monster/Idle1.png", "key": "Idle1.png"},
     {"image": "assets/images/bosses/miniboss1/monster/hurt.png", "key": "hurt.png"},
