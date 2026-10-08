@@ -10,7 +10,9 @@ are never edited by hand.
 | …do this | Read |
 |---|---|
 | understand how the whole thing fits | [architecture/overview](architecture/overview.md), [architecture/project-structure](architecture/project-structure.md) |
-| add or change an enemy | [entities/how-to-add-an-enemy](entities/how-to-add-an-enemy.md), [entities/overview](entities/overview.md), [entities/enemies](entities/enemies.md) |
+| make an enemy WITHOUT code (visual editor) | [entities/enemy-editor](entities/enemy-editor.md) |
+| create or edit animations (sprites, tiles, anything) | [art/animation](art/animation.md) |
+| add or change an enemy in code | [entities/how-to-add-an-enemy](entities/how-to-add-an-enemy.md), [entities/overview](entities/overview.md), [entities/enemies](entities/enemies.md) |
 | add or change a boss | [bosses/how-to-add-a-boss](bosses/how-to-add-a-boss.md), [bosses/system](bosses/system.md), the boss's own page |
 | add a tile, a block, a trap | [gameplay/tiles-and-blocks](gameplay/tiles-and-blocks.md), [entities/traps-and-mechanisms](entities/traps-and-mechanisms.md) |
 | change how the player moves or takes damage | [gameplay/player](gameplay/player.md) |
@@ -41,7 +43,8 @@ are never edited by hand.
   [difficulty](gameplay/difficulty.md) · [game-modes](gameplay/game-modes.md) · [autoscroll](gameplay/autoscroll.md) ·
   [pickups](gameplay/pickups.md) · [free-play](gameplay/free-play.md) · [flappy-mode](gameplay/flappy-mode.md)
 - **entities/** — [overview](entities/overview.md) · [enemies](entities/enemies.md) ·
-  [traps-and-mechanisms](entities/traps-and-mechanisms.md) · [how-to-add-an-enemy](entities/how-to-add-an-enemy.md)
+  [traps-and-mechanisms](entities/traps-and-mechanisms.md) · [enemy-editor](entities/enemy-editor.md) ·
+  [how-to-add-an-enemy](entities/how-to-add-an-enemy.md)
 - **bosses/** — [system](bosses/system.md) · [megagummy](bosses/megagummy.md) · [megacrabby](bosses/megacrabby.md) ·
   [miniboss1](bosses/miniboss1.md) · [snowboss](bosses/snowboss.md) · [megacrabby-ice](bosses/megacrabby-ice.md) ·
   [megagloomy](bosses/megagloomy.md) · [mirror](bosses/mirror.md) · [mirror-chase](bosses/mirror-chase.md) ·
@@ -50,7 +53,7 @@ are never edited by hand.
   [cinematics](story/cinematics.md) · [bonus-and-bot](story/bonus-and-bot.md)
 - **levels/** — [level-format](levels/level-format.md) · [editor](levels/editor.md) ·
   [generator-and-solver](levels/generator-and-solver.md) · [retheme](levels/retheme.md)
-- **art/** — [style-rules](art/style-rules.md) · [asset-layout](art/asset-layout.md) · [generators](art/generators.md) ·
+- **art/** — [animation](art/animation.md) · [style-rules](art/style-rules.md) · [asset-layout](art/asset-layout.md) · [generators](art/generators.md) ·
   [sky-and-biomes](art/sky-and-biomes.md) · [decorations](art/decorations.md) · [fx-and-particles](art/fx-and-particles.md)
 - **audio/** — [sound](audio/sound.md) · [music-catalog](audio/music-catalog.md) · [music-guide](audio/music-guide.md) ·
   [music-history](audio/music-history.md)

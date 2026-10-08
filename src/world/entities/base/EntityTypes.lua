@@ -368,6 +368,15 @@ function EntityTypes.get(name)
     return EntityTypes.byName[name]
 end
 
+-- Quita un tipo del registro (solo herramientas: el editor de enemigos vuelve a registrar el que está editando)
+function EntityTypes.unregister(name)
+    if not EntityTypes.byName[name] then return end
+    EntityTypes.byName[name] = nil
+    for i = #EntityTypes.list, 1, -1 do
+        if EntityTypes.list[i].name == name then table.remove(EntityTypes.list, i) end
+    end
+end
+
 -- Convierte una colocación del nivel (formato nuevo o antiguo) en
 -- { type, col, row, props = <valores resueltos> }. nil si el tipo no existe.
 function EntityTypes.normalize(data)

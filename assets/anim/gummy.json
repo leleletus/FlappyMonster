@@ -1,0 +1,23 @@
+{
+  "id": "gummy",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "idle",
+  "frames": [
+    {"image": "assets/images/enemies/gummy/gummy.png"},
+    {"image": "assets/images/enemies/gummy/gummy1.png"},
+    {"image": "assets/images/enemies/gummy/gummy2.png"},
+    {"image": "assets/images/enemies/gummy/dead.png"}
+  ],
+  "anims": {
+    "dead": {"frames": [4], "fps": 7, "loop": false},
+    "idle": {"frames": [1], "fps": 7, "loop": true},
+    "walk": {"frames": [2, 3], "fps": 7, "loop": true}
+  },
+  "variants": {
+    "cave": {"from": "assets/images/enemies/gummy/", "to": "assets/images/enemies/gummy_cave/"},
+    "fortress": {"from": "assets/images/enemies/gummy/", "to": "assets/images/enemies/gummy_fortress/"},
+    "ice": {"from": "assets/images/enemies/gummy/", "to": "assets/images/enemies/gummy_ice/"},
+    "magma": {"from": "assets/images/enemies/gummy/", "to": "assets/images/enemies/gummy_magma/"}
+  }
+}

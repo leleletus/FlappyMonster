@@ -42,6 +42,10 @@ for _, name in ipairs(TYPES) do
     else EntityTypes.register(d) end
 end
 
+-- Enemigos hechos con DATOS (assets/enemies/*.json, del editor de enemigos): se registran después, por el orden
+-- de su índice. Ver entities/base/DataEnemy.lua.
+require('src/world/entities/base/DataEnemy').registerAll(EntityTypes)
+
 local Entities = {
     types        = EntityTypes,
     interactions = Interactions,

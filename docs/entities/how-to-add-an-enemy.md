@@ -1,5 +1,9 @@
 # How to add an enemy (or any entity) without touching the engine
 
+> **First check the visual route:** an enemy that walks / flies, chases, attacks, leaps or shoots can be made
+> entirely in the [enemy editor](enemy-editor.md), with no Lua. Write a type by hand (this page) when it needs
+> something the behaviour catalog cannot express — or add that as a new behaviour.
+
 A new enemy is **one file** in `src/world/entities/types/<category>/<name>.lua` plus **its name** in the `TYPES`
 list of `src/world/entities/Entities.lua` (as `'<category>/<name>'`; categories: `enemies`, `bosses`, `traps`,
 `mechanisms`, `items`, `directors`). The editor, the server and the client pick it up by themselves.

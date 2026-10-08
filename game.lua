@@ -251,13 +251,21 @@ end
 
 function love.quit() end
 
--- ── Editor de niveles ─────────────────────────────────────────────────────────
--- love . --editor [assets/levels/x.json]   (reemplaza los callbacks del juego;
--- el juego se usa para "Probar" el nivel desde el editor)
+-- ── Herramientas de edición ──────────────────────────────────────────────────
+-- love . --editor [assets/levels/x.json]   editor de NIVELES
+-- love . --anim   [id]                     editor de ANIMACIONES (assets/anim/<id>.json)
+-- love . --enemy  [id]                     editor de ENEMIGOS    (assets/enemies/<id>.json)
+-- (reemplazan los callbacks del juego; el juego se usa para "Probar" desde ellas)
 for i, a in ipairs(arg or {}) do
     if a == '--editor' then
         local nxt = arg[i + 1]
         require('src/editor/Editor').install(nxt and nxt:match('%.json$') and nxt or nil)
+        break
+    elseif a == '--anim' then
+        require('src/editor/AnimEditor').install()
+        break
+    elseif a == '--enemy' then
+        require('src/editor/EnemyEditor').install()
         break
     end
 end

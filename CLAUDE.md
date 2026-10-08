@@ -11,6 +11,8 @@ it in the system's page.
 ```
 love .                                   the game
 love . --editor [assets/levels/x.json]   the level editor (Spanish UI)
+love . --anim [id]                       the animation editor (assets/anim/<id>.json)
+love . --enemy [id]                      the enemy editor (assets/enemies/<id>.json)
 love server [--headless]                 the server (port 22122); run it from the repo root
 tools/tests/run.sh all                   the test battery (must end "TODO OK")
 ```
@@ -37,7 +39,7 @@ when asked. The user writes in Spanish. This does not apply to code, comments, c
    render functions; everything a client draws must come from what travels in snapshots.
 2. **Base behaviours live in the BASE and a type only switches them on** (traits, tables, hooks). Never copy another
    entity's code; if a rule is missing, add it to the base, generic.
-3. **Catalogs are data**: a new tile / entity / decoration / mode / track / world / difficulty modifier / language is
+3. **Catalogs are data**: a new tile / entity / behaviour / decoration / mode / track / world / difficulty modifier / language is
    a file plus one name in a list. Ids are stored in levels, saves and network messages: **never rename an id or a
    level file**.
 4. **Every image and sound is a real asset file**, never only drawn or synthesised in code. Generators are fine when
@@ -99,12 +101,12 @@ src/network/          Protocol, NetworkClient, Predictor, SnapshotBuffer, Resolv
 src/world/level/      Level (+ Tiles, Water, Render parts), LevelCatalog, SubTiles, SpikeSkins, Lights
 src/world/systems/    AutoScroll, Floods, BossZones, PhaseBlocks, XtraBosses, PointAreas, Noise, Explosions
 src/world/tiles/      tile + material catalog
-src/world/entities/   Entities (registry) · base/ (Entity, Interactions, Crawler, Boss…) · types/<category>/
+src/world/entities/   Entities (registry) · base/ (Entity, Interactions, Crawler, Boss, DataEnemy…) · types/<category>/ · behaviors/
 src/world/decorations/ · src/world/modes/
 src/states/           menu/ flappy/ adventure/ online/ story/
 src/story/            Worlds, Save, Run, Score, Shards, BonusMatch, Film, Stage, films/
 src/ai/ src/fx/ src/ui/ src/editor/ src/update/
-assets/               images/ sounds/ music/ levels/ nav/ lang/ story/ fonts/ shaders/   (docs/art/asset-layout.md)
+assets/               images/ sounds/ music/ levels/ nav/ anim/ enemies/ lang/ story/ fonts/ shaders/   (docs/art/asset-layout.md)
 tools/                art/ sounds/ music/ levelgen/ tests/ video/ deploy_server.sh        (tools/README.md)
 docs/                 the documentation
 ```
@@ -137,6 +139,8 @@ Large files are split into parts that add methods to the same table (`Level`, `P
 | Pickups, food | `docs/gameplay/pickups.md` |
 | Free Play · Flappy mode | `docs/gameplay/free-play.md` · `flappy-mode.md` |
 | Entity base system · enemies · traps and mechanisms | `docs/entities/overview.md` · `enemies.md` · `traps-and-mechanisms.md` |
+| Animations as data + the animation editor | `docs/art/animation.md` |
+| Enemy editor, data-driven enemies, behaviours | `docs/entities/enemy-editor.md` |
 | **How to add an enemy / a boss** | `docs/entities/how-to-add-an-enemy.md` · `docs/bosses/how-to-add-a-boss.md` |
 | Boss system + one page per boss | `docs/bosses/system.md`, `docs/bosses/<boss>.md` |
 | Story (lore, films scene by scene) | `docs/story/story.md` |

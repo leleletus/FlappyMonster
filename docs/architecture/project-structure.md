@@ -33,7 +33,8 @@ src/
     systems/        level-wide systems: AutoScroll, Floods, BossZones, PhaseBlocks, XtraBosses, PointAreas, Noise, Explosions
     tiles/          Tiles (registry), TileCodec, TileTypes, Materials, types/, materials/
     entities/       Entities (registry)
-      base/         Entity, EntityTypes, Props, Interactions, Crawler, FreeFlight, Boss, BombCore, CrabVariant, GloomyNav
+      base/         Entity, EntityTypes, Props, Interactions, Crawler, FreeFlight, Boss, BombCore, CrabVariant, GloomyNav, DataEnemy
+      behaviors/    Behaviors (registry) + chase, melee, leap, shoot — pieces for data-driven enemies
       types/        enemies/ bosses/ traps/ mechanisms/ items/ directors/   — one file per type
     decorations/    Decorations (registry), DecorationTypes, DecoFx, types/
     modes/          Modes (registry), ModeTypes, hunt, race, koth
@@ -42,7 +43,8 @@ src/
   ai/               Bot, BotNav (the King-of-the-Hill bot)
   fx/               render-side effects: Particles, Sky, Darkness, Silhouette, SpriteStrip, …
   ui/               HUD and UI pieces: View, Clip, TouchControls, BossHud, PixelFont, PixelIcons, Celebration, …
-  editor/           the level editor: Editor (+ EditorCanvas, EditorPalette, EditorInspector, EditorDialogs), EditorModel, ui
+  editor/           the level editor: Editor (+ EditorCanvas, EditorPalette, EditorInspector, EditorDialogs), EditorModel, ui;
+                    the animation editor (AnimEditor, AnimPanel) and the enemy editor (EnemyEditor); ToolShell
   update/           Updater (downloads new versions)
 ```
 

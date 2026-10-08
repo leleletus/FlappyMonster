@@ -12,6 +12,7 @@
 -- 16x16), algo más grande (HELMET_K) alrededor de su borde de abajo.
 local Entity       = require 'src/world/entities/base/Entity'
 local Interactions = require 'src/world/entities/base/Interactions'
+local Anim         = require 'src/fx/Anim'
 
 local HELMET_K    = 1.10             -- escala del casco sobre la del Gummy
 local HELMET_AX, HELMET_AY = 8, 7    -- punto del casco que no se mueve al escalar (borde de abajo)
@@ -26,14 +27,16 @@ local Gummy = Entity.extend(Entity, {
 
 local imgHelmet, imgChute
 
--- Arte por carpeta (el Gummy normal y sus variantes: gummy_ice.lua pone `artDir`):
--- gummy.png (quieto), gummy1/2.png (andar), dead.png, todos en la misma rejilla 16x16
+-- Arte = el conjunto de animación `gummy` (assets/anim/gummy.json: quieto, andar, muerto; se edita con
+-- `love . --anim gummy`). Cada variante (gummy_ice.lua pone `artDir`) es una VARIANTE del conjunto: las mismas
+-- secuencias con las imágenes de su carpeta, todas en la misma rejilla 16x16.
 local ART_DIR = 'assets/images/enemies/gummy/'
 local arts = {}
 function Gummy.loadArt(dir)
     if arts[dir] then return arts[dir] end
-    local function img(f) return love.graphics.newImage(dir .. f) end
-    arts[dir] = { idle = img('gummy.png'), walk1 = img('gummy1.png'), walk2 = img('gummy2.png'), dead = img('dead.png') }
+    local set = Anim.load('gummy', dir ~= ART_DIR and dir:match('gummy_(%w+)/$') or nil)
+    local function img(name, k) return set:frame(set:frameN(name, k)).image end
+    arts[dir] = { set = set, idle = img('idle', 1), walk1 = img('walk', 1), walk2 = img('walk', 2), dead = img('dead', 1) }
     return arts[dir]
 end
 function Gummy:art() return arts[self.artDir or ART_DIR] or Gummy.loadArt(self.artDir or ART_DIR) end

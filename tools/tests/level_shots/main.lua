@@ -9,6 +9,7 @@
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
 require 'settings'
+love.graphics.setDefaultFilter('nearest', 'nearest')    -- (como game.lua: píxeles nítidos)
 Sound = setmetatable({ play = function() end }, { __index = function() return function() end end })
 local P = require 'src/network/Protocol'
 Input = P.newInputStub()

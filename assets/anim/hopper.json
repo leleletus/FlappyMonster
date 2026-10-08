@@ -1,0 +1,25 @@
+{
+  "id": "hopper",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "idle",
+  "frames": [
+    {"image": "assets/images/enemies/hopper/pradera-Sheet.png", "x": 0, "y": 0, "w": 16, "h": 21},
+    {"image": "assets/images/enemies/hopper/pradera-Sheet.png", "x": 16, "y": 0, "w": 16, "h": 21},
+    {"image": "assets/images/enemies/hopper/pradera-Sheet.png", "x": 32, "y": 0, "w": 16, "h": 21},
+    {"image": "assets/images/enemies/hopper/pradera-Sheet.png", "x": 48, "y": 0, "w": 16, "h": 21}
+  ],
+  "anims": {
+    "air": {"frames": [3], "fps": 8, "loop": true},
+    "crouch": {"frames": [2], "fps": 8, "loop": true},
+    "dead": {"frames": [4], "fps": 8, "loop": false},
+    "idle": {"frames": [1], "fps": 8, "loop": true}
+  },
+  "variants": {
+    "costa": {"from": "assets/images/enemies/hopper/pradera-Sheet.png", "to": "assets/images/enemies/hopper/costa-Sheet.png"},
+    "cueva": {"from": "assets/images/enemies/hopper/pradera-Sheet.png", "to": "assets/images/enemies/hopper/cueva-Sheet.png"},
+    "fortaleza": {"from": "assets/images/enemies/hopper/pradera-Sheet.png", "to": "assets/images/enemies/hopper/fortaleza-Sheet.png"},
+    "nieve": {"from": "assets/images/enemies/hopper/pradera-Sheet.png", "to": "assets/images/enemies/hopper/nieve-Sheet.png"},
+    "volcan": {"from": "assets/images/enemies/hopper/pradera-Sheet.png", "to": "assets/images/enemies/hopper/volcan-Sheet.png"}
+  }
+}

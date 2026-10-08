@@ -35,7 +35,8 @@
 --
 --   Aspecto (uno de los tres; se usa el primero que exista):
 --   draw        function(def, ctx) dibujo por código (ver ctx abajo)
---   texture     { image='assets/...png', frames=1, fps=0 } imagen (o tira
+--   texture     { anim='id', seq='idle' } = un conjunto de animación (assets/anim, `love . --anim`), o
+--               { image='assets/...png', frames=1, fps=0 } imagen (o tira
 --               horizontal de `frames` cuadros animada a `fps`) escalada al tile
 --   color       {r,g,b[,a]} relleno plano
 --   editorColor color de respaldo para la paleta si no hay otro aspecto
@@ -223,6 +224,7 @@ function TileTypes.debris(t)
 end
 
 local textureCache = {}
+local Anim
 local function getTexture(tex)
     local entry = textureCache[tex.image]
     if entry == nil then
@@ -251,6 +253,25 @@ local function texQuad(e, sx, sy, sw, sh, w, h)
 end
 
 function TileTypes.drawTexture(tex, ctx, alpha, capRow)
+    -- Textura ANIMADA con un conjunto de animación (assets/anim/<id>.json, editor: love . --anim):
+    --   texture = { anim = 'mi_tile', seq = 'idle' }   → el cuadro que toca, estirado a la casilla
+    -- (todas las casillas van a la vez: el cuadro sale del reloj; con ctx.quarter, su cuarto del cuadro)
+    if tex.anim then
+        Anim = Anim or require 'src/fx/Anim'
+        local set = Anim.load(tex.anim)
+        local f = set:frame((set:frameAt(tex.seq or set.fallback, love.timer.getTime())))
+        if not (f and f.image) then return end
+        love.graphics.setColor(1, 1, 1, alpha or 1)
+        local sx, sy, sw, sh = f.x, f.y, f.w, f.h
+        local q = ctx.quarter
+        if q then sw, sh = f.w / 2, f.h / 2; sx, sy = f.x + q[1] * sw, f.y + (capRow or q[2]) * sh end
+        tex._q = tex._q or {}
+        local key = sx .. ',' .. sy .. ',' .. sw .. ',' .. sh
+        local quad = tex._q[key]
+        if not quad then quad = love.graphics.newQuad(sx, sy, sw, sh, f.iw, f.ih); tex._q[key] = quad end
+        love.graphics.draw(f.image, quad, ctx.x, ctx.y, 0, ctx.size / sw, ctx.size / sh)
+        return
+    end
     local e = getTexture(tex)
     if not e then return end
     local w, h = e.img:getWidth(), e.img:getHeight()
@@ -278,6 +299,8 @@ end
 function TileTypes.drawTile(t, ctx)
     if t.draw then
         t.draw(t, ctx)
+    elseif t.texture and t.texture.anim then
+        TileTypes.drawTexture(t.texture, ctx)          -- (animada con un conjunto de animación)
     elseif t.texture then
         local tex, e = t.texture, getTexture(t.texture)
         if e then

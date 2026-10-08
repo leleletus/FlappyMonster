@@ -12,7 +12,7 @@
 -- agachado, en el aire, aplastado): assets/images/enemies/hopper/<isla>-Sheet.png, de tools/art/enemies/make_hopper_sprites.py.
 -- Sonidos hopWind / hopJump / hopLand (tools/sounds/hopper.py).
 local Entity      = require 'src/world/entities/base/Entity'
-local SpriteStrip = require 'src/fx/SpriteStrip'
+local Anim = require 'src/fx/Anim'
 
 local Hopper = Entity.extend(Entity, {
     debugColor = { 0.5, 0.9, 0.3 },
@@ -32,10 +32,12 @@ Hopper.SKINS  = { 'pradera', 'costa', 'fortaleza', 'nieve', 'cueva', 'volcan' }
 local BY_BG = { meadow = 'pradera', forest = 'pradera', coast = 'costa', fortress = 'fortaleza', snow = 'nieve',
                 mountain = 'nieve', cave = 'cueva', underwater = 'cueva', volcano = 'volcan' }
 
+-- Arte = el conjunto de animación `hopper` (assets/anim/hopper.json: idle, crouch, air, dead; se edita con
+-- `love . --anim hopper`); cada isla es una VARIANTE del conjunto (su hoja).
 local sheets = {}
 function Hopper.loadAssets()
     if sheets.pradera then return end
-    for _, id in ipairs(Hopper.SKINS) do sheets[id] = SpriteStrip.load('assets/images/enemies/hopper/' .. id .. '-Sheet.png', FW) end
+    for _, id in ipairs(Hopper.SKINS) do sheets[id] = Anim.load('hopper', id ~= 'pradera' and id or nil) end
 end
 function Hopper.sizePx() return FW * S, BODY_H * S end
 
@@ -178,15 +180,15 @@ function Hopper:render(camX, camY)
     if self.state == 'reserve' then return end
     local sh = sheets[Hopper.skinFor(self.props, self.levelRef)]
     local st, t = self.state, self.deadTimer or 0
-    local fr, sx, sy = 1, 1, 1
-    if st == 'dead' then fr = 4
+    local fr, sx, sy = sh:frameN('idle', 1), 1, 1
+    if st == 'dead' then fr = sh:frameN('dead', 1)
     elseif st == 'crouch' then
-        fr = 2
+        fr = sh:frameN('crouch', 1)
         local k = math.min(1, t / WINDUP)
         sx, sy = 1 + 0.10 * k, 1 - 0.10 * k                          -- se aprieta cada vez más
-    elseif st == 'hop' or st == 'launched' then fr = 3
+    elseif st == 'hop' or st == 'launched' then fr = sh:frameN('air', 1)
     elseif st == 'idle' and t < LAND_T then
-        fr = 2
+        fr = sh:frameN('crouch', 1)
         local k = 1 - t / LAND_T
         sx, sy = 1 + 0.16 * k, 1 - 0.16 * k                          -- el aplastón al caer
     else
@@ -198,7 +200,7 @@ function Hopper:render(camX, camY)
     love.graphics.setColor(1, 1, 1, 1)
     -- (el dibujo mira a la IZQUIERDA — la cara está un píxel hacia ese lado —: mirando a la derecha va espejado. Antes
     -- iba al revés y al ver a un jugador le daba la espalda)
-    love.graphics.draw(sh.image, sh.quads[fr], x, feet, 0, -S * self.facing * sx, S * sy, FW / 2, FH)
+    sh:drawFrame(fr, x, feet, 0, -S * self.facing * sx, S * sy, 0.5, 1)
 end
 
 local G = 'Saltarín'

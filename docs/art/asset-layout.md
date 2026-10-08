@@ -5,6 +5,8 @@ assets/
   fonts/            PressStart2P.ttf
   lang/             es.lua, en.lua
   levels/           one JSON per level (ids are used by saves and the story: never rename)
+  anim/             animation sets, one JSON each (editor: love . --anim)
+  enemies/          data-driven enemies: index.json + one JSON each (editor: love . --enemy)
   nav/              bot navigation graphs, one per arena (rebuilt by `run.sh bot_nav BUILD=1`)
   shaders/          water.glsl
   story/            overworld.json (world map), films.json (film timing), sets/ (film sets = real levels)
