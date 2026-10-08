@@ -118,7 +118,8 @@ def anims(plan):
     sys.path.insert(0, os.path.join(REPO, 'tools', 'anim'))
     from common import write, read
     old = read('enemies/bomb') or {}
-    doc = {'id': 'enemies/bomb', 'scale': 4, 'origin': [0.5, 1], 'fallback': 'idle', 'frames': [], 'anims': {}}
+    # (el ANCLA del conjunto se conserva: el usuario la ajusta en el editor para subir o bajar las bombas en el juego)
+    doc = {'id': 'enemies/bomb', 'scale': old.get('scale', 4), 'origin': old.get('origin', [0.5, 1]), 'fallback': 'idle', 'frames': [], 'anims': {}}
     A = doc['anims']
     def add(fr): doc['frames'].append(fr); return len(doc['frames'])
     oy = round((PY + BH / 2) / CH, 4)                       # (el centro del cuerpo dentro de la celda de la cuerda)

@@ -176,14 +176,19 @@ function Core.draw(self, pre, fx, fy, s, name, k, alpha, camX, camY, bx, by)
     bx, by = bx or 1, by or 1
     local sx, sy = s * (self.facing or 1) * bx, s * by
     love.graphics.setColor(1, 1 - 0.8 * red, 1 - 0.85 * red, alpha or 1)
-    local cx = math.floor(fx)
-    local cy = math.floor(fy - Core.FH * sy / 2)
+    -- (fx, fy = los pies. El cuerpo se dibuja con el ANCLA de su conjunto —por defecto abajo en el centro—: se ajusta
+    -- en el editor, «Ajustes del conjunto», para subir o bajar las bombas; cx, cy = el centro del cuerpo, donde se
+    -- apoyan la cuerda y las chispas)
+    local feetX, feetY = math.floor(fx), math.floor(fy)
     local body = pre .. name
     -- el paso del cuerpo que toca (el contador de andar, o el que diga su reloj)
     local bk
     if k then bk = (k - 1) % math.max(1, set:count(body)) + 1
     else bk = select(3, set:frameAt(body, t)) end
-    set:drawFrame(set:frameN(body, bk), cx, cy, 0, sx, sy, 0.5, 0.5)
+    local bf = set:frame(set:frameN(body, bk))
+    set:drawFrame(set:frameN(body, bk), feetX, feetY, 0, sx, sy)
+    local cx = feetX + math.floor((0.5 - (bf.ox or set.ox)) * bf.w * sx + 0.5)
+    local cy = feetY + math.floor((0.5 - (bf.oy or set.oy)) * bf.h * sy + 0.5)
     -- LA CUERDA va aparte del cuerpo, casada con cada uno de sus cuadros: apagada, `rope_<cuerpo>` (el mismo paso
     -- que el cuerpo); ardiendo, `fuse_<cuerpo>_<paso>` (más corta, con la chispa parpadeando a su ritmo)
     if lit then
