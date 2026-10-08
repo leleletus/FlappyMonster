@@ -1,0 +1,18 @@
+{
+  "id": "world/decorations/cave/crystals",
+  "strip": {
+    "frameW": 18
+  },
+  "scale": 4,
+  "origin": [0.5, 0.5],
+  "fallback": "all",
+  "meta": {
+    "code": true
+  },
+  "frames": [
+    {"h": 15, "image": "assets/images/world/decorations/cave/crystals.png", "w": 18, "x": 0, "y": 0}
+  ],
+  "anims": {
+    "all": {"fps": 8, "frames": [1], "loop": true}
+  }
+}

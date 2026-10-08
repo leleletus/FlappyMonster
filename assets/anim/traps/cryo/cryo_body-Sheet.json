@@ -1,0 +1,21 @@
+{
+  "id": "traps/cryo/cryo_body-Sheet",
+  "strip": {
+    "frameW": 16
+  },
+  "scale": 4,
+  "origin": [0.5, 0.5],
+  "fallback": "all",
+  "meta": {
+    "code": true
+  },
+  "frames": [
+    {"h": 16, "image": "assets/images/traps/cryo/cryo_body-Sheet.png", "w": 16, "x": 0, "y": 0},
+    {"h": 16, "image": "assets/images/traps/cryo/cryo_body-Sheet.png", "w": 16, "x": 16, "y": 0},
+    {"h": 16, "image": "assets/images/traps/cryo/cryo_body-Sheet.png", "w": 16, "x": 32, "y": 0},
+    {"h": 16, "image": "assets/images/traps/cryo/cryo_body-Sheet.png", "w": 16, "x": 48, "y": 0}
+  ],
+  "anims": {
+    "all": {"fps": 8, "frames": [1, 2, 3, 4], "loop": true}
+  }
+}

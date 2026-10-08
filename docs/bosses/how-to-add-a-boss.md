@@ -3,6 +3,11 @@
 A guide to add a boss without studying the whole code again. It is written from the bosses that already exist and
 from the mistakes already paid for. Follow the steps in order and tick the **checklist** at the end.
 
+**A simple boss needs no code:** the enemy editor (`love . --enemy`, switch "JEFE") builds one from data — walks at
+the player, attacks with behaviour pieces, is hit while tired, rages at low health
+([enemy-editor](../entities/enemy-editor.md#bosses), `src/world/entities/base/DataBoss.lua`). Write a Lua boss, as
+below, for anything beyond that (minions, arena mechanics, computed poses, more than two phases).
+
 Reference bosses (copy from the one closest to what you want):
 
 | Boss | File (`src/world/entities/types/bosses/`) | What to copy from it |

@@ -63,15 +63,28 @@ function Anim.path(id)
     return Anim.DIR .. id .. '.json'
 end
 
--- Los ids de todos los conjuntos que hay (ordenados)
+-- Los ids de todos los conjuntos que hay (ordenados). Un id puede llevar carpetas: 'enemies/bomb/bomb-Sheet'
+-- = assets/anim/enemies/bomb/bomb-Sheet.json (los de las TIRAS del juego siguen la ruta de su imagen).
 function Anim.list()
     local out = {}
-    for _, f in ipairs(love.filesystem.getDirectoryItems(Anim.DIR:gsub('/$', ''))) do
-        local id = f:match('^(.+)%.json$')
-        if id and not id:match('^_') then out[#out + 1] = id end
+    local function walk(dir, pre)
+        for _, f in ipairs(love.filesystem.getDirectoryItems(dir)) do
+            local info = love.filesystem.getInfo(dir .. '/' .. f)
+            if info and info.type == 'directory' then walk(dir .. '/' .. f, pre .. f .. '/')
+            else
+                local id = f:match('^(.+)%.json$')
+                if id and not id:match('^_') then out[#out + 1] = pre .. id end
+            end
+        end
     end
+    walk((Anim.DIR:gsub('/$', '')), '')
     table.sort(out)
     return out
+end
+
+-- Id del conjunto que describe una TIRA (o imagen) del juego: la ruta de la imagen sin 'assets/images/' ni '.png'
+function Anim.idOfImage(path)
+    return (path:gsub('^assets/images/', ''):gsub('%.png$', ''))
 end
 
 -- Datos crudos de un conjunto (tabla del JSON), o nil + error
@@ -97,7 +110,7 @@ function Anim.fromData(data, variant)
         local iw, ih = 16, 16
         if img then iw, ih = img:getWidth(), img:getHeight() end
         local fr = { path = path, image = img, x = f.x or 0, y = f.y or 0, w = f.w or iw, h = f.h or ih, iw = iw, ih = ih,
-                     ox = f.ox, oy = f.oy }
+                     ox = f.ox, oy = f.oy, data = f }        -- (data: el cuadro tal cual está en el JSON, con sus campos propios)
         if img and love.graphics.newQuad then fr.quad = love.graphics.newQuad(fr.x, fr.y, fr.w, fr.h, iw, ih) end
         set.frames[i] = fr
     end
@@ -141,9 +154,37 @@ function Anim.reload(id)
         if not id or k:sub(1, #id + 1) == id .. '#' then cache[k] = nil end
     end
     if not id then images = {} end
+    folders = {}
 end
 -- (el editor cambia una imagen en disco y quiere verla ya)
 function Anim.forgetImage(path) images[path] = nil end
+
+-- ── Imágenes sueltas del juego (una por archivo) ─────────────────────────────
+-- Anim.image(ruta) = love.graphics.newImage(ruta), pasando por el conjunto de SU CARPETA si lo hay
+-- (assets/anim/<carpeta>.json, de tools/anim/make_folder_sets.py: un cuadro por imagen, con "key" = nombre del
+-- archivo). Si en el editor se le cambia la imagen a ese cuadro, el juego carga la nueva. Lo usa todo el código
+-- que carga un sprite suelto (jugador, mortero, objetos, tiles, piezas de los jefes…).
+local folders = {}
+function Anim.image(path, ...)
+    if type(path) == 'string' then
+        local dir, file = path:match('^assets/images/(.+)/([^/]+)$')
+        if dir then
+            local keys = folders[dir]
+            if keys == nil then
+                keys = false
+                local data = Anim.read(dir)
+                if data and data.meta and data.meta.folder then
+                    keys = {}
+                    for _, f in ipairs(data.frames or {}) do if f.key then keys[f.key] = f end end
+                end
+                folders[dir] = keys
+            end
+            local f = keys and keys[file]
+            if f and f.image and f.image ~= path and not f.w then path = f.image end
+        end
+    end
+    return love.graphics.newImage(path, ...)
+end
 
 -- ── El conjunto ───────────────────────────────────────────────────────────────
 function Set:has(name) return self.anims[name] ~= nil end
@@ -151,6 +192,14 @@ function Set:has(name) return self.anims[name] ~= nil end
 -- La secuencia `name` (o la de reserva si no existe); nil si el conjunto no tiene ninguna
 function Set:seq(name)
     return self.anims[name] or self.anims[self.fallback or ''] or nil
+end
+
+-- Las imágenes de los cuadros de una secuencia, en orden (para código que trabaja con una imagen por cuadro)
+function Set:images(name)
+    local out = {}
+    local s = self.anims[name]
+    for k, i in ipairs(s and s.frames or {}) do out[k] = self.frames[i] and self.frames[i].image end
+    return out
 end
 
 -- Segundos que dura la secuencia (una pasada)

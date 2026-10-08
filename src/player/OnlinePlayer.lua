@@ -16,12 +16,12 @@ local spriteCrouch = nil
 local function loadSprites()
     if sprites then return end
     sprites = {
-        love.graphics.newImage('assets/images/player/monstrito1.png'),
-        love.graphics.newImage('assets/images/player/monstrito2.png'),
-        love.graphics.newImage('assets/images/player/monstrito3.png'),
+        require('src/fx/Anim').image('assets/images/player/monstrito1.png'),
+        require('src/fx/Anim').image('assets/images/player/monstrito2.png'),
+        require('src/fx/Anim').image('assets/images/player/monstrito3.png'),
     }
-    spriteDead   = love.graphics.newImage('assets/images/player/monstrito4.png')
-    spriteCrouch = love.graphics.newImage('assets/images/player/monstrito5.png')
+    spriteDead   = require('src/fx/Anim').image('assets/images/player/monstrito4.png')
+    spriteCrouch = require('src/fx/Anim').image('assets/images/player/monstrito5.png')
 end
 
 function OnlinePlayer:new(id, name, color)

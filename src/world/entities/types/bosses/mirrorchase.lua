@@ -63,7 +63,7 @@ function Chase.loadAssets()
     if frames then return end
     frames = {}
     for i = 1, 5 do
-        frames[i] = love.graphics.newImage('assets/images/player/monstrito' .. i .. '.png')
+        frames[i] = require('src/fx/Anim').image('assets/images/player/monstrito' .. i .. '.png')
         if frames[i].setFilter then frames[i]:setFilter('nearest', 'nearest') end
     end
 end

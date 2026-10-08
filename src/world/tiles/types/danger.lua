@@ -9,7 +9,7 @@ local imgs, quads = {}, {}
 
 local function frames(path)
     if imgs[path] == nil then
-        local ok, img = pcall(love.graphics.newImage, path)
+        local ok, img = pcall(require('src/fx/Anim').image, path)
         imgs[path] = ok and img or false
         if ok then
             img:setFilter('nearest', 'nearest')

@@ -42,7 +42,7 @@ Cryo.wantsLevel = true        -- (solo dibujo: mira los bloques de alrededor par
 
 local bodyStrip, cannonStrip, feetImg, streamImg, streamQuads, headStrip, chainImg, anchorImg, clampImg
 local function nearest(path)
-    local im = love.graphics.newImage(path)
+    local im = require('src/fx/Anim').image(path)
     if im.setFilter then im:setFilter('nearest', 'nearest') end
     return im
 end
@@ -56,7 +56,7 @@ function Cryo.loadAssets()
     -- soporte colgante (tools/art/world/make_cryo_chain.py)
     chainImg, anchorImg, clampImg = nearest('assets/images/traps/cryo/chain.png'), nearest('assets/images/traps/cryo/anchor.png'),
                                     nearest('assets/images/traps/cryo/clamp.png')
-    streamImg = love.graphics.newImage('assets/images/traps/cryo/stream-Sheet.png')
+    streamImg = require('src/fx/Anim').image('assets/images/traps/cryo/stream-Sheet.png')
     if streamImg.setFilter then streamImg:setFilter('nearest', 'nearest') end
     streamQuads = {}
     for i = 1, 3 do

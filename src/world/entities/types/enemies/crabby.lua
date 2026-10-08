@@ -3,6 +3,7 @@
 -- mientras está escondido no se le puede pisotear. De vez en cuando se asoma.
 local Entity  = require 'src/world/entities/base/Entity'
 local Crawler = require 'src/world/entities/base/Crawler'
+local Anim    = require 'src/fx/Anim'
 
 local Crabby = Entity.extend(Entity, {
     walkFps = 5, walkFrames = 3,
@@ -45,38 +46,33 @@ local imgIdle1, imgIdle2, imgHid
 local IMG_NAMES, IMG_BY_NAME = {}, {}
 Crabby.SKINS = {}
 
+-- Las imágenes de cada skin salen de su CONJUNTO DE ANIMACIÓN (assets/anim/enemies/<carpeta>.json; se edita con
+-- `love . --anim enemies/crabby`): secuencias walk (el ciclo de andar y su velocidad), hide / unhide (esconderse
+-- y salir: tantos cuadros como se quiera; la secuencia dura lo que diga el conjunto), hidden, peek, meat, dead. El
+-- campo `inset` de un cuadro = filas vacías ARRIBA (los de hundirse conservan el lienzo y van bajando: sin él la
+-- tapa flotaba sobre el caparazón; ver Crabby:headH). Cada cuadro debe ser una imagen entera (no un recorte).
 local function addSkin(id, dir, o)
     local sk = { id = id }
-    local function img(f) return love.graphics.newImage(dir .. f) end
-    sk.idle1, sk.idle2, sk.idle3 = img('crab1.png'), img('crab2.png'), img('crab3.png')
-    sk.dead   = img('dead.png')                           -- (aplastado: el suyo, no el del Gummy)
-    sk.hid    = img('hid.png')
-    sk.lookin = img(o.lookin or 'lookin.png')
-    sk.meat   = img(o.meat or 'meat.png')
-    -- inset[img] = filas vacías ARRIBA del cuadro (los de hundirse del helado conservan el lienzo
-    -- 18x8 y van bajando: sin esto la tapa flotaba sobre el caparazón; ver Crabby:headH)
+    local set = Anim.load('enemies/' .. dir:match('([^/]+)/$'))
+    sk.set = set
+    local function one(name, fallback) return set:images(name)[1] or fallback end
+    sk.walk = set:images('walk')
+    sk.idle1 = sk.walk[1]
+    sk.idle2, sk.idle3 = sk.walk[2] or sk.idle1, sk.walk[3] or sk.walk[2] or sk.idle1
+    sk.walkFps = set.anims.walk and set.anims.walk.fps or 5
+    sk.dead   = one('dead', sk.idle1)                     -- (aplastado: el suyo, no el del Gummy)
+    sk.hid    = one('hidden', sk.idle1)
+    sk.lookin = one('peek', sk.hid)
+    sk.meat   = one('meat', sk.lookin)
     sk.inset = {}
-    if o.sink then
-        sk.hideIn = {}
-        for i = 1, o.sink do
-            sk.hideIn[i] = img('sink' .. i .. '.png')
-            sk.inset[sk.hideIn[i]] = i - 1
-        end
-        sk.inset[sk.hid] = 1                              -- (escondido: la tapa apoya en la superficie)
-        sk.hideIn[#sk.hideIn + 1] = sk.hid
-        sk.hideOut = {}
-        for i = o.sink, 1, -1 do sk.hideOut[#sk.hideOut + 1] = sk.hideIn[i] end
-        sk.hideOut[#sk.hideOut + 1] = sk.idle2
-    else
-        sk.hideIn  = { sk.meat, sk.lookin, sk.hid }       -- crab2 → Meat → lookin → hid
-        -- (escondido: hid.png es UNA fila vacía; sin esto la tapa quedaba 1 px de arte por encima de la
-        -- superficie, con un hueco debajo — los de hundirse ya lo tenían)
-        sk.inset[sk.hid] = 1
-        sk.hideOut = { sk.lookin, sk.meat, sk.idle2 }     -- hid → lookin → Meat → crab2
+    for _, f in ipairs(set.frames) do
+        if f.image and f.data and f.data.inset then sk.inset[f.image] = f.data.inset end
     end
-    sk.walk = { sk.idle1, sk.idle2, sk.idle3 }
-    -- (la secuencia dura lo mismo con 3 o con 9 cuadros)
-    sk.frameDur = (0.25 * 3) / #sk.hideIn
+    sk.hideIn, sk.hideOut = set:images('hide'), set:images('unhide')
+    if #sk.hideIn == 0 then sk.hideIn = { sk.hid } end
+    if #sk.hideOut == 0 then sk.hideOut = { sk.idle2 } end
+    -- (la secuencia de esconderse dura lo que diga el conjunto: 0,75 s de fábrica, con 3 o con 9 cuadros)
+    sk.frameDur = set:length('hide') > 0 and set:length('hide') / #sk.hideIn or (0.25 * 3) / #sk.hideIn
     local pre = (id == 'normal') and '' or (id .. '_')
     for n, im in pairs({ idle1 = sk.idle1, idle2 = sk.idle2, idle3 = sk.idle3, hid = sk.hid,
                          lookin = sk.lookin, meat = sk.meat, dead = sk.dead }) do
@@ -110,6 +106,17 @@ function Crabby.loadAssets()
 end
 
 function Crabby.sizeImage() return imgIdle1 end
+-- El ciclo de andar (cuántos cuadros y a qué velocidad) lo dice su conjunto de animación
+function Crabby:animateWalk(dt)
+    local sk = self.sk or Crabby.SKINS.normal
+    local fps, n = sk.walkFps or self.tuning.walkFps, math.max(1, #sk.walk)
+    self.animT = self.animT + dt
+    if self.animT >= 1 / fps then
+        self.animT = self.animT - 1 / fps
+        self.frame = (self.frame % n) + 1
+    end
+end
+
 function Crabby:skin() return self.sk or Crabby.SKINS.normal end
 
 -- Propiedad propia de los Crabbies (también la usa el Crabby trampolín)
@@ -209,9 +216,10 @@ function Crabby:crawlWalk(dt, level)
     if self.cnx ~= 0 then self.facing = self.cdir
     else self.facing = ((-self.cny * self.cdir) >= 0) and 1 or -1 end
     self.animT = self.animT + dt
-    if self.animT >= 1 / tn.walkFps then
-        self.animT = self.animT - 1 / tn.walkFps
-        self.frame = (self.frame % tn.walkFrames) + 1
+    local fps, n = self.sk.walkFps or tn.walkFps, #self.sk.walk            -- (el ciclo de andar, de su conjunto de animación)
+    if self.animT >= 1 / fps then
+        self.animT = self.animT - 1 / fps
+        self.frame = (self.frame % n) + 1
     end
     return true
 end
@@ -574,7 +582,7 @@ local function drawSpike(cx, baseY, sH, dir, file)
     file = file or 'assets/images/enemies/crabby/spike.png'
     local spikeImg = spikeImgs[file]
     if not spikeImg then
-        spikeImg = love.graphics.newImage(file)
+        spikeImg = require('src/fx/Anim').image(file)
         spikeImg:setFilter('nearest', 'nearest')
         spikeImgs[file] = spikeImg
     end
@@ -615,7 +623,7 @@ function Crabby:drawClaws(drawX, feetY, flipped)
        or st == 'hidden' or st == 'reserve' then return end
     local a = clawArt[cfg.file]
     if not a then
-        local im = love.graphics.newImage(cfg.file)
+        local im = require('src/fx/Anim').image(cfg.file)
         im:setFilter('nearest', 'nearest')
         a = { img = im, quad = love.graphics.newQuad(0, 0, 1, 1, im:getDimensions()) }
         clawArt[cfg.file] = a

@@ -1,0 +1,19 @@
+{
+  "id": "ui/touch/jump-Sheet",
+  "strip": {
+    "frameW": 32
+  },
+  "scale": 4,
+  "origin": [0.5, 0.5],
+  "fallback": "all",
+  "meta": {
+    "code": true
+  },
+  "frames": [
+    {"h": 32, "image": "assets/images/ui/touch/jump-Sheet.png", "w": 32, "x": 0, "y": 0},
+    {"h": 32, "image": "assets/images/ui/touch/jump-Sheet.png", "w": 32, "x": 32, "y": 0}
+  ],
+  "anims": {
+    "all": {"fps": 8, "frames": [1, 2], "loop": true}
+  }
+}

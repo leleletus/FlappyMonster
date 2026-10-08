@@ -1,0 +1,20 @@
+{
+  "id": "enemies/gloomy/icons-Sheet",
+  "strip": {
+    "frameW": 7
+  },
+  "scale": 4,
+  "origin": [0.5, 0.5],
+  "fallback": "all",
+  "meta": {
+    "code": true
+  },
+  "frames": [
+    {"h": 9, "image": "assets/images/enemies/gloomy/icons-Sheet.png", "w": 7, "x": 0, "y": 0},
+    {"h": 9, "image": "assets/images/enemies/gloomy/icons-Sheet.png", "w": 7, "x": 7, "y": 0},
+    {"h": 9, "image": "assets/images/enemies/gloomy/icons-Sheet.png", "w": 7, "x": 14, "y": 0}
+  ],
+  "anims": {
+    "all": {"fps": 8, "frames": [1, 2, 3], "loop": true}
+  }
+}

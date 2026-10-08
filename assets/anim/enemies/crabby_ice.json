@@ -1,0 +1,36 @@
+{
+  "id": "enemies/crabby_ice",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "walk",
+  "meta": {
+    "usedBy": "src/world/entities/types/enemies/crabby.lua",
+    "wholeImages": true
+  },
+  "frames": [
+    {"image": "assets/images/enemies/crabby_ice/crab1.png"},
+    {"image": "assets/images/enemies/crabby_ice/crab2.png"},
+    {"image": "assets/images/enemies/crabby_ice/crab3.png"},
+    {"image": "assets/images/enemies/crabby_ice/dead.png"},
+    {"image": "assets/images/enemies/crabby_ice/hid.png", "inset": 1},
+    {"image": "assets/images/enemies/crabby_ice/lookin.png"},
+    {"image": "assets/images/enemies/crabby_ice/meat.png"},
+    {"image": "assets/images/enemies/crabby_ice/sink1.png", "inset": 0},
+    {"image": "assets/images/enemies/crabby_ice/sink2.png", "inset": 1},
+    {"image": "assets/images/enemies/crabby_ice/sink3.png", "inset": 2},
+    {"image": "assets/images/enemies/crabby_ice/sink4.png", "inset": 3},
+    {"image": "assets/images/enemies/crabby_ice/sink5.png", "inset": 4},
+    {"image": "assets/images/enemies/crabby_ice/sink6.png", "inset": 5},
+    {"image": "assets/images/enemies/crabby_ice/sink7.png", "inset": 6},
+    {"image": "assets/images/enemies/crabby_ice/sink8.png", "inset": 7}
+  ],
+  "anims": {
+    "dead": {"fps": 5, "frames": [4], "loop": false},
+    "hidden": {"fps": 5, "frames": [5], "loop": true},
+    "hide": {"fps": 12.0, "frames": [8, 9, 10, 11, 12, 13, 14, 15, 5], "loop": false},
+    "meat": {"fps": 5, "frames": [7], "loop": true},
+    "peek": {"fps": 5, "frames": [6], "loop": true},
+    "unhide": {"fps": 12.0, "frames": [15, 14, 13, 12, 11, 10, 9, 8, 2], "loop": false},
+    "walk": {"fps": 5, "frames": [1, 2, 3], "loop": true}
+  }
+}

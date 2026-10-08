@@ -1,0 +1,19 @@
+{
+  "id": "bosses/megagloomy/claw_rage_left-Sheet",
+  "strip": {
+    "frameW": 14
+  },
+  "scale": 4,
+  "origin": [0.5, 0.5],
+  "fallback": "all",
+  "meta": {
+    "code": true
+  },
+  "frames": [
+    {"h": 12, "image": "assets/images/bosses/megagloomy/claw_rage_left-Sheet.png", "w": 14, "x": 0, "y": 0},
+    {"h": 12, "image": "assets/images/bosses/megagloomy/claw_rage_left-Sheet.png", "w": 14, "x": 14, "y": 0}
+  ],
+  "anims": {
+    "all": {"fps": 8, "frames": [1, 2], "loop": true}
+  }
+}

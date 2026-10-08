@@ -1,0 +1,18 @@
+{
+  "id": "world/decorations/ice/ice_crystal",
+  "strip": {
+    "frameW": 10
+  },
+  "scale": 4,
+  "origin": [0.5, 0.5],
+  "fallback": "all",
+  "meta": {
+    "code": true
+  },
+  "frames": [
+    {"h": 9, "image": "assets/images/world/decorations/ice/ice_crystal.png", "w": 10, "x": 0, "y": 0}
+  ],
+  "anims": {
+    "all": {"fps": 8, "frames": [1], "loop": true}
+  }
+}

@@ -11,6 +11,8 @@
 --     "id": "claudio", "label": "Claudio", "category": "Enemigos", "description": "…",
 --     "anim": "claudio", "variant": null,        -- conjunto de animación (assets/anim/<anim>.json) y su variante
 --     "scale": 4, "facesLeft": false,            -- px por píxel de arte; ¿el dibujo mira a la izquierda?
+--     "crawl": false,                            -- TREPA: anda pegado a suelo, paredes y techo (base/Crawler.lua)
+--     "boss": { … },                             -- es un JEFE (ver base/DataBoss.lua)
 --     "hitbox": { "outerW": 0.72, "outerH": 0.8, "innerW": 0.44, "innerH": 0.5 },   -- × el tamaño del sprite
 --     "hp": 1, "hurtTime": 0.5,                  -- golpes que aguanta; s en el estado 'hurt' (intocable) tras cada uno
 --     "defaults": { "movement": "walk", "speed": 55, "points": 10, "onTouch": "hurt", … },   -- props comunes
@@ -29,10 +31,12 @@
 local Entity    = require 'src/world/entities/base/Entity'
 local Anim      = require 'src/fx/Anim'
 local Behaviors = require 'src/world/entities/behaviors/Behaviors'
+local Crawler   = require 'src/world/entities/base/Crawler'
 local json      = require 'libs/json'
 
 local T = TILE_PX
 local DataEnemy = Entity.extend(Entity, {})
+DataEnemy.Core = {}            -- lo que comparten los enemigos y los jefes de datos (base/DataBoss.lua)
 DataEnemy.DIR   = 'assets/enemies/'
 DataEnemy.INDEX = DataEnemy.DIR .. 'index.json'
 -- Los estados que el editor ofrece siempre (los demás salen de los comportamientos que lleve)
@@ -55,7 +59,8 @@ end
 function DataEnemy.statesOf(spec)
     local out, seen = {}, {}
     local function add(s) if not seen[s] then seen[s] = true; out[#out + 1] = s end end
-    for _, s in ipairs(DataEnemy.BASE_STATES) do add(s) end
+    if spec.boss then for _, s in ipairs({ 'idle', 'walk', 'tired', 'dead' }) do add(s) end      -- (jefe: sin 'hurt', con 'tired')
+    else for _, s in ipairs(DataEnemy.BASE_STATES) do add(s) end end
     for _, b in ipairs(spec.behaviors or {}) do
         local def = Behaviors.byName[b.type]
         for _, s in ipairs(def and def.states or {}) do add(s) end
@@ -95,10 +100,30 @@ function DataEnemy:init()
     self.animSet = Anim.load(spec.anim, spec.variant)
     self.hp = math.max(1, math.floor(spec.hp or 1))
     self.shots, self.shotId = {}, 0
+    DataEnemy.Core.buildBehaviors(self)
+    -- Trepador (Crawler): se agarra a la superficie al empezar
+    self.crawl = spec.crawl == true and self.moving and not self.flying
+    if self.crawl then
+        self.cnx, self.cny = 0, self.flipped and 1 or -1
+        self.cdir = self.flipped and -self.facing or self.facing
+        self.cattached = nil
+    end
+end
+
+function DataEnemy.Core.buildBehaviors(self)
     self.beh = {}
-    for _, b in ipairs(spec.behaviors or {}) do
+    for _, b in ipairs(self.spec.behaviors or {}) do
         local def = Behaviors.byName[b.type]
         if def then self.beh[#self.beh + 1] = { def = def, cfg = Behaviors.config(b) } end
+    end
+end
+-- El comportamiento dueño del estado de ahora (en el cliente no hay `owner`: el primero que tenga ese estado)
+function DataEnemy.Core.ownerNow(self)
+    if self.owner then
+        for _, st in ipairs(self.owner.def.states) do if st == self.state then return self.owner end end
+    end
+    for _, b in ipairs(self.beh or {}) do
+        for _, st in ipairs(b.def.states) do if st == self.state then return b end end
     end
 end
 
@@ -161,6 +186,8 @@ local function stepShots(self, dt, level)
     end
 end
 
+DataEnemy.Core.stepShots = stepShots
+
 function DataEnemy:updateCustom(dt, level)
     if self.state == 'reserve' then return true end
     stepShots(self, dt, level)
@@ -193,24 +220,56 @@ function DataEnemy:updateCustom(dt, level)
             for _, st in ipairs(b.def.states) do if self.state == st then self:backToWalk(); return true end end
         end
     end
-    -- en los estados de base: ¿alguno lo toma? (por orden: el primero de la lista manda)
+    -- en los estados de base: ¿alguno lo toma? (por orden: el primero de la lista manda). Un trepador solo deja
+    -- los que valen agarrado a una pared (`crawlOk` en el comportamiento: esconderse, disparar)
     if self.state == 'walk' or self.state == 'idle' then
         for _, b in ipairs(self.beh) do
-            if b.def.think and b.def.think(self, b.cfg, dt, level) then
+            if b.def.think and (not self.crawl or b.def.crawlOk) and b.def.think(self, b.cfg, dt, level) then
                 self.owner = b
                 return true
             end
         end
     end
+    if self.crawl and self.state == 'walk' then return self:crawlWalk(dt, level) end
+    if self.crawl and self.state == 'idle' and not self.cattached then Crawler.attach(self, level, self.cattached == nil and T or nil) end
     return false
+end
+
+-- Andar pegado a la superficie (como el Crabby trepador)
+function DataEnemy:crawlWalk(dt, level)
+    if not self.cattached then
+        if self.cattached == nil and Crawler.attach(self, level, T) then return true end
+        self.flipped = false
+        Entity.fall(self, level, dt)
+        if self.onGround then
+            self.cnx, self.cny = 0, -1
+            if not Crawler.attach(self, level) then Crawler.edgeRescue(self, level, dt) end
+            self.cdir = self.facing
+        end
+        return true
+    end
+    if self.props.pauses then
+        self.idleCountdown = self.idleCountdown - dt
+        if self.idleCountdown <= 0 then self:startIdle(); return true end
+    end
+    if Crawler.entityAhead(self, level) then self.cdir = -self.cdir end
+    if not Crawler.move(self, level, self.speed * dt) then return true end
+    self.flipped = (self.cny == 1)
+    if self.cnx ~= 0 then self.facing = self.cdir
+    else self.facing = ((-self.cny * self.cdir) >= 0) and 1 or -1 end
+    self:animateWalk(dt)
+    return true
+end
+function DataEnemy:knockback(dir)
+    if self.crawl then Crawler.detach(self); self.flipped = false end
+    Entity.knockback(self, dir)
 end
 
 function DataEnemy:getHazardBoxes()
     local out
-    for _, b in ipairs(self.beh) do
-        if b.def.hazards and self.owner == b then
-            for _, hb in ipairs(b.def.hazards(self, b.cfg) or {}) do out = out or {}; out[#out + 1] = hb end
-        end
+    local b = DataEnemy.Core.ownerNow(self)
+    if b and b.def.hazards then
+        for _, hb in ipairs(b.def.hazards(self, b.cfg) or {}) do out = out or {}; out[#out + 1] = hb end
     end
     for _, s in ipairs(self.shots or {}) do
         out = out or {}
@@ -230,8 +289,12 @@ function DataEnemy:onHurtPlayer(pa)
 end
 
 -- Con más de 1 de vida, un pisotón le quita 1 y lo deja un momento "dolido" (intocable, parpadea)
-function DataEnemy:isBodyDisabled() return self.state == 'hurt' end
-function DataEnemy:canBeStomped() return self.state ~= 'hurt' end
+function DataEnemy:isBodyDisabled()
+    if self.state == 'hurt' then return true end
+    local b = DataEnemy.Core.ownerNow(self)
+    return b ~= nil and b.def.disabled ~= nil and b.def.disabled(self, b.cfg) == true
+end
+function DataEnemy:canBeStomped() return not self:isBodyDisabled() end
 function DataEnemy:stomp()
     if self.state == 'dead' or self.state == 'hurt' then return end
     if self.state ~= 'frozen' and (self.hp or 1) > 1 then
@@ -251,7 +314,9 @@ end
 
 -- ── Red: vida + proyectiles (con id estable para interpolarlos) ──────────────
 function DataEnemy:netPack()
-    local out = { self.hp or 1 }
+    local surf, turn = 0, 0
+    if self.crawl then surf, turn = Crawler.netPack(self) end
+    local out = { self.hp or 1, surf, turn }
     for _, s in ipairs(self.shots) do
         out[#out + 1] = s.id; out[#out + 1] = math.floor(s.x + 0.5); out[#out + 1] = math.floor(s.y + 0.5); out[#out + 1] = math.floor(s.size)
     end
@@ -260,9 +325,10 @@ end
 function DataEnemy:netApply(a, b, f)
     a = a or b
     self.hp = b[1] or 1
+    if self.spec.crawl then Crawler.netApply(self, b[2], a[3], b[3], f) end
     local prev, list = {}, {}
-    for k = 2, #a - 2, 4 do prev[a[k]] = k end
-    for k = 2, #b - 2, 4 do
+    for k = 4, #a - 2, 4 do prev[a[k]] = k end
+    for k = 4, #b - 2, 4 do
         local id, x, y, size = b[k], b[k + 1], b[k + 2], b[k + 3]
         local ka = prev[id]
         if ka and type(a[ka + 1]) == 'number' then x, y = a[ka + 1] + (x - a[ka + 1]) * f, a[ka + 2] + (y - a[ka + 2]) * f end
@@ -284,6 +350,12 @@ function DataEnemy:animNow()
         return set:has(a) and a or (map.idle or 'idle'), 0
     end
     if st == 'dead' or st == 'dead_fling' then return map.dead or 'dead', self.deadTimer or 0 end
+    -- (un comportamiento puede elegir secuencia y tiempo dentro de su estado: esconderse = entrar, quieto, salir)
+    local b = DataEnemy.Core.ownerNow(self)
+    if b and b.def.anim then
+        local name, t = b.def.anim(self, b.cfg, set, map)
+        if name then return name, t or 0 end
+    end
     return map[st] or st, self.deadTimer or 0
 end
 
@@ -304,7 +376,19 @@ function DataEnemy:render(camX, camY)
     local a = 1
     if self.state == 'hurt' and math.floor((self.deadTimer or 0) * 16) % 2 == 0 then a = 0.45 end
     love.graphics.setColor(1, 1, 1, a)
-    set:drawFrame(fi, x, y, 0, sx, sy, 0.5, 1)
+    if self.crawl and self.cattached and (Crawler.turning(self) or Crawler.onWall(self)) then
+        -- En una pared (o girando en una esquina): dibujado "como en el suelo", girado sobre sus pies
+        local fx, fy, ang
+        if Crawler.turning(self) then fx, fy, ang = Crawler.pose(self)
+        else fx, fy, ang = self.x - self.cnx * self.sprH / 2, self.y, Crawler.angle(self) end
+        love.graphics.push()
+        love.graphics.translate(math.floor(fx - camX + 0.5), math.floor(fy - camY + 0.5))
+        love.graphics.rotate(ang)
+        set:drawFrame(fi, 0, 0, 0, S * self.facing * (spec.facesLeft and -1 or 1) * bx, S * by, 0.5, 1)
+        love.graphics.pop()
+    else
+        set:drawFrame(fi, x, y, 0, sx, sy, 0.5, 1)
+    end
     love.graphics.setColor(1, 1, 1, 1)
     -- proyectiles: la secuencia `shot` (si no la hay, el primer cuadro en pequeño)
     for _, s in ipairs(self.shots or {}) do
@@ -322,6 +406,7 @@ end
 -- ── De los datos al tipo ──────────────────────────────────────────────────────
 -- Definición de tipo (lo que registra EntityTypes) a partir de los datos de un enemigo
 function DataEnemy.typeDef(spec)
+    if spec.boss then return require('src/world/entities/base/DataBoss').typeDef(spec) end
     local set = Anim.load(spec.anim, spec.variant)
     local walk = set:seq((spec.states or {}).walk or 'walk')
     local hb = spec.hitbox or {}
@@ -331,6 +416,10 @@ function DataEnemy.typeDef(spec)
     })
     cls.spec = spec
     cls.darkEdge = spec.darkEdge
+    if spec.crawl then
+        Crawler.mixin(cls)
+        function cls:knockback(dir) return DataEnemy.knockback(self, dir) end
+    end
     function cls.loadAssets() Anim.load(spec.anim, spec.variant) end
     function cls.sizePx()
         local w, h = set:size(1)

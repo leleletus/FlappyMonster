@@ -10,6 +10,7 @@ Run everything from the repo root. Documentation: `docs/README.md`. Python tools
 | `sounds/` | sound-effect generators → `assets/sounds/` | `docs/audio/sound.md` |
 | `music/` | Famicom engine + track generators → `assets/music/` | `docs/audio/music-catalog.md`, `docs/audio/music-guide.md` |
 | `levelgen/` | level builders, retheme, test arenas | `docs/levels/generator-and-solver.md` (**read the DANGER note**) |
+| `anim/` | generators of animation sets (`assets/anim/`): one per sprite strip, per image folder, and the Crabby family | `docs/art/animation.md` |
 | `video/` | OST presentation videos | `docs/tools/ost-videos.md` |
 | `deploy_server.sh` | update the game server after a push (`--status` = look only) | `docs/architecture/updates-and-release.md` |
 

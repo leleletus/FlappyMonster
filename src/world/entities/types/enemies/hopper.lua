@@ -32,12 +32,12 @@ Hopper.SKINS  = { 'pradera', 'costa', 'fortaleza', 'nieve', 'cueva', 'volcan' }
 local BY_BG = { meadow = 'pradera', forest = 'pradera', coast = 'costa', fortress = 'fortaleza', snow = 'nieve',
                 mountain = 'nieve', cave = 'cueva', underwater = 'cueva', volcano = 'volcan' }
 
--- Arte = el conjunto de animación `hopper` (assets/anim/hopper.json: idle, crouch, air, dead; se edita con
--- `love . --anim hopper`); cada isla es una VARIANTE del conjunto (su hoja).
+-- Arte = el conjunto de animación `hopper` (assets/anim/enemies/hopper.json: idle, crouch, air, dead; se edita con
+-- `love . --anim enemies/hopper`); cada isla es una VARIANTE del conjunto (su hoja).
 local sheets = {}
 function Hopper.loadAssets()
     if sheets.pradera then return end
-    for _, id in ipairs(Hopper.SKINS) do sheets[id] = Anim.load('hopper', id ~= 'pradera' and id or nil) end
+    for _, id in ipairs(Hopper.SKINS) do sheets[id] = Anim.load('enemies/hopper', id ~= 'pradera' and id or nil) end
 end
 function Hopper.sizePx() return FW * S, BODY_H * S end
 

@@ -9,8 +9,8 @@ local SCALE = 6
 local imgOff, imgOn
 function Checkpoint.loadAssets()
     if imgOff then return end
-    imgOff = love.graphics.newImage('assets/images/items/checkpoint_off.png')
-    imgOn  = love.graphics.newImage('assets/images/items/checkpoint_on.png')
+    imgOff = require('src/fx/Anim').image('assets/images/items/checkpoint_off.png')
+    imgOn  = require('src/fx/Anim').image('assets/images/items/checkpoint_on.png')
     imgOff:setFilter('nearest', 'nearest'); imgOn:setFilter('nearest', 'nearest')
 end
 function Checkpoint.sizePx() return imgOff:getWidth() * SCALE, imgOff:getHeight() * SCALE end

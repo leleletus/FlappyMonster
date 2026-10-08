@@ -1,0 +1,18 @@
+{
+  "id": "world/decorations/fx",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "all",
+  "meta": {
+    "code": true,
+    "folder": true
+  },
+  "frames": [
+    {"image": "assets/images/world/decorations/fx/clump-Sheet.png", "key": "clump-Sheet.png"},
+    {"image": "assets/images/world/decorations/fx/leaf-Sheet.png", "key": "leaf-Sheet.png"},
+    {"image": "assets/images/world/decorations/fx/sparkle-Sheet.png", "key": "sparkle-Sheet.png"}
+  ],
+  "anims": {
+    "all": {"fps": 3, "frames": [1, 2, 3], "loop": true}
+  }
+}

@@ -88,6 +88,49 @@ function Shell.encodeJson(data, order)
     return table.concat(out, '\n') .. '\n'
 end
 
+-- ── Deshacer / rehacer ───────────────────────────────────────────────────────
+-- local hist = Shell.history(function() return datos end, function(d) datos = d end)
+-- hist:record() tras cada cambio (los cambios seguidos en menos de medio segundo cuentan como uno);
+-- hist:undo() / hist:redo() → true si hizo algo; hist:reset() al abrir otra cosa.
+function Shell.history(get, set)
+    local H = { stack = {}, future = {}, cur = json.encode(get()), last = 0 }
+    function H:reset() self.stack, self.future, self.cur, self.last = {}, {}, json.encode(get()), 0 end
+    function H:record()
+        local s = json.encode(get())
+        if s == self.cur then return end
+        local now = love.timer.getTime()
+        if now - self.last > 0.5 or #self.stack == 0 then
+            self.stack[#self.stack + 1] = self.cur
+            if #self.stack > 200 then table.remove(self.stack, 1) end
+        end
+        self.cur, self.last, self.future = s, now, {}
+    end
+    function H:undo()
+        if #self.stack == 0 then return false end
+        self.future[#self.future + 1] = self.cur
+        self.cur = table.remove(self.stack)
+        self.last = 0
+        set(json.decode(self.cur))
+        return true
+    end
+    function H:redo()
+        if #self.future == 0 then return false end
+        self.stack[#self.stack + 1] = self.cur
+        self.cur = table.remove(self.future)
+        self.last = 0
+        set(json.decode(self.cur))
+        return true
+    end
+    return H
+end
+
+-- Borra un archivo DEL REPO
+function Shell.removeRepo(relPath)
+    local src = love.filesystem.getSource()
+    if not src or src:match('%.love$') then return false end
+    return os.remove(src .. '/' .. relPath) ~= nil
+end
+
 -- ── Probar en el juego ────────────────────────────────────────────────────────
 local PLAYTEST = 'editor_playtest.json'
 function Shell.play(levelData)

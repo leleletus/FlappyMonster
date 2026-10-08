@@ -1,0 +1,20 @@
+{
+  "id": "world/decorations/ice/snowman-Sheet",
+  "strip": {
+    "frameW": 18
+  },
+  "scale": 4,
+  "origin": [0.5, 0.5],
+  "fallback": "all",
+  "meta": {
+    "code": true
+  },
+  "frames": [
+    {"h": 17, "image": "assets/images/world/decorations/ice/snowman-Sheet.png", "w": 18, "x": 0, "y": 0},
+    {"h": 17, "image": "assets/images/world/decorations/ice/snowman-Sheet.png", "w": 18, "x": 18, "y": 0},
+    {"h": 17, "image": "assets/images/world/decorations/ice/snowman-Sheet.png", "w": 18, "x": 36, "y": 0}
+  ],
+  "anims": {
+    "all": {"fps": 8, "frames": [1, 2, 3], "loop": true}
+  }
+}

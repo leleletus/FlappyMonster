@@ -112,17 +112,17 @@ local invShader
 function Mirror.loadAssets()
     if sprites then return end
     sprites = {
-        love.graphics.newImage('assets/images/player/monstrito1.png'),
-        love.graphics.newImage('assets/images/player/monstrito2.png'),
-        love.graphics.newImage('assets/images/player/monstrito3.png'),
+        require('src/fx/Anim').image('assets/images/player/monstrito1.png'),
+        require('src/fx/Anim').image('assets/images/player/monstrito2.png'),
+        require('src/fx/Anim').image('assets/images/player/monstrito3.png'),
     }
-    spriteDead   = love.graphics.newImage('assets/images/player/monstrito4.png')
-    spriteCrouch = love.graphics.newImage('assets/images/player/monstrito5.png')
-    bodyDown = love.graphics.newImage('assets/images/bosses/mirror/Body_ArmsDown.png')
-    bodyUp   = love.graphics.newImage('assets/images/bosses/mirror/Body_ArmsUp.png')
-    headUp   = love.graphics.newImage('assets/images/bosses/mirror/Head_Up.png')
-    headDown = love.graphics.newImage('assets/images/bosses/mirror/Head_Down.png')
-    joyEyes  = love.graphics.newImage('assets/images/bosses/mirror/JoyEyes.png')
+    spriteDead   = require('src/fx/Anim').image('assets/images/player/monstrito4.png')
+    spriteCrouch = require('src/fx/Anim').image('assets/images/player/monstrito5.png')
+    bodyDown = require('src/fx/Anim').image('assets/images/bosses/mirror/Body_ArmsDown.png')
+    bodyUp   = require('src/fx/Anim').image('assets/images/bosses/mirror/Body_ArmsUp.png')
+    headUp   = require('src/fx/Anim').image('assets/images/bosses/mirror/Head_Up.png')
+    headDown = require('src/fx/Anim').image('assets/images/bosses/mirror/Head_Down.png')
+    joyEyes  = require('src/fx/Anim').image('assets/images/bosses/mirror/JoyEyes.png')
 end
 
 function Mirror.sizePx() return 9 * PLAYER_SCALE, 16 * PLAYER_SCALE end

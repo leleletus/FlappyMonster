@@ -21,7 +21,7 @@ function Apple.loadAssets()
     if imgs then return end
     imgs = {}
     for id, f in pairs(FILES) do
-        imgs[id] = love.graphics.newImage(f)
+        imgs[id] = require('src/fx/Anim').image(f)
         if imgs[id].setFilter then imgs[id]:setFilter('nearest', 'nearest') end
     end
 end

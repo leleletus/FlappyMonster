@@ -1,0 +1,25 @@
+{
+  "id": "items",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "all",
+  "meta": {
+    "code": true,
+    "folder": true
+  },
+  "frames": [
+    {"image": "assets/images/items/apple.png", "key": "apple.png"},
+    {"image": "assets/images/items/checkpoint_off.png", "key": "checkpoint_off.png"},
+    {"image": "assets/images/items/checkpoint_on.png", "key": "checkpoint_on.png"},
+    {"image": "assets/images/items/food_costa.png", "key": "food_costa.png"},
+    {"image": "assets/images/items/food_cueva.png", "key": "food_cueva.png"},
+    {"image": "assets/images/items/food_fortaleza.png", "key": "food_fortaleza.png"},
+    {"image": "assets/images/items/food_nieve.png", "key": "food_nieve.png"},
+    {"image": "assets/images/items/food_volcan.png", "key": "food_volcan.png"},
+    {"image": "assets/images/items/spikefall.png", "key": "spikefall.png"},
+    {"image": "assets/images/items/star.png", "key": "star.png"}
+  ],
+  "anims": {
+    "all": {"fps": 3, "frames": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], "loop": true}
+  }
+}

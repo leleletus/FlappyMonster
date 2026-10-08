@@ -1,0 +1,23 @@
+{
+  "id": "story",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "all",
+  "meta": {
+    "code": true,
+    "folder": true
+  },
+  "frames": [
+    {"image": "assets/images/story/bridge.png", "key": "bridge.png"},
+    {"image": "assets/images/story/castle-Sheet.png", "key": "castle-Sheet.png"},
+    {"image": "assets/images/story/edge-Sheet.png", "key": "edge-Sheet.png"},
+    {"image": "assets/images/story/foam.png", "key": "foam.png"},
+    {"image": "assets/images/story/ground-Sheet.png", "key": "ground-Sheet.png"},
+    {"image": "assets/images/story/node-Sheet.png", "key": "node-Sheet.png"},
+    {"image": "assets/images/story/path.png", "key": "path.png"},
+    {"image": "assets/images/story/water-Sheet.png", "key": "water-Sheet.png"}
+  ],
+  "anims": {
+    "all": {"fps": 3, "frames": [1, 2, 3, 4, 5, 6, 7, 8], "loop": true}
+  }
+}

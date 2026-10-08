@@ -1,0 +1,19 @@
+{
+  "id": "world/decorations/fx/bubble-Sheet",
+  "strip": {
+    "frameW": 5
+  },
+  "scale": 4,
+  "origin": [0.5, 0.5],
+  "fallback": "all",
+  "meta": {
+    "code": true
+  },
+  "frames": [
+    {"h": 5, "image": "assets/images/world/decorations/fx/bubble-Sheet.png", "w": 5, "x": 0, "y": 0},
+    {"h": 5, "image": "assets/images/world/decorations/fx/bubble-Sheet.png", "w": 5, "x": 5, "y": 0}
+  ],
+  "anims": {
+    "all": {"fps": 8, "frames": [1, 2], "loop": true}
+  }
+}

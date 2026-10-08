@@ -37,8 +37,8 @@ local skinImg = {}
 function Tramp.loadAssets()
     if imgNormal then return end
     for id, f in pairs(SKINS) do
-        local a = love.graphics.newImage('assets/images/mechanisms/trampoline/' .. f[1])
-        local b = love.graphics.newImage('assets/images/mechanisms/trampoline/' .. f[2])
+        local a = require('src/fx/Anim').image('assets/images/mechanisms/trampoline/' .. f[1])
+        local b = require('src/fx/Anim').image('assets/images/mechanisms/trampoline/' .. f[2])
         if a.setFilter then a:setFilter('nearest', 'nearest'); b:setFilter('nearest', 'nearest') end
         skinImg[id] = { a, b }
     end

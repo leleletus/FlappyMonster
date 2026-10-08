@@ -1,0 +1,26 @@
+{
+  "id": "story/features",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "all",
+  "meta": {
+    "code": true,
+    "folder": true
+  },
+  "frames": [
+    {"image": "assets/images/story/features/cave_mouth.png", "key": "cave_mouth.png"},
+    {"image": "assets/images/story/features/dune.png", "key": "dune.png"},
+    {"image": "assets/images/story/features/hill.png", "key": "hill.png"},
+    {"image": "assets/images/story/features/peak.png", "key": "peak.png"},
+    {"image": "assets/images/story/features/rock_brown.png", "key": "rock_brown.png"},
+    {"image": "assets/images/story/features/rock_dark.png", "key": "rock_dark.png"},
+    {"image": "assets/images/story/features/rock_grey.png", "key": "rock_grey.png"},
+    {"image": "assets/images/story/features/rock_red.png", "key": "rock_red.png"},
+    {"image": "assets/images/story/features/spire.png", "key": "spire.png"},
+    {"image": "assets/images/story/features/spire_grey.png", "key": "spire_grey.png"},
+    {"image": "assets/images/story/features/spire_red.png", "key": "spire_red.png"}
+  ],
+  "anims": {
+    "all": {"fps": 3, "frames": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], "loop": true}
+  }
+}

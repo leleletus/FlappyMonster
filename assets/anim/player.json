@@ -1,0 +1,23 @@
+{
+  "id": "player",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "all",
+  "meta": {
+    "code": true,
+    "folder": true
+  },
+  "frames": [
+    {"image": "assets/images/player/dedais.png", "key": "dedais.png"},
+    {"image": "assets/images/player/icon.png", "key": "icon.png"},
+    {"image": "assets/images/player/monstrito1.png", "key": "monstrito1.png"},
+    {"image": "assets/images/player/monstrito2.png", "key": "monstrito2.png"},
+    {"image": "assets/images/player/monstrito3.png", "key": "monstrito3.png"},
+    {"image": "assets/images/player/monstrito4.png", "key": "monstrito4.png"},
+    {"image": "assets/images/player/monstrito5.png", "key": "monstrito5.png"}
+  ],
+  "anims": {
+    "all": {"fps": 3, "frames": [1, 2, 3, 4, 5, 6, 7], "loop": true},
+    "monstrito": {"fps": 6, "frames": [3, 4, 5, 6, 7], "loop": true}
+  }
+}

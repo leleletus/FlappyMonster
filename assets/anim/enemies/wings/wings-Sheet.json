@@ -1,0 +1,19 @@
+{
+  "id": "enemies/wings/wings-Sheet",
+  "strip": {
+    "frameW": 9
+  },
+  "scale": 4,
+  "origin": [0.5, 0.5],
+  "fallback": "all",
+  "meta": {
+    "code": true
+  },
+  "frames": [
+    {"h": 13, "image": "assets/images/enemies/wings/wings-Sheet.png", "w": 9, "x": 0, "y": 0},
+    {"h": 13, "image": "assets/images/enemies/wings/wings-Sheet.png", "w": 9, "x": 9, "y": 0}
+  ],
+  "anims": {
+    "all": {"fps": 8, "frames": [1, 2], "loop": true}
+  }
+}

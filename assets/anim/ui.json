@@ -1,0 +1,16 @@
+{
+  "id": "ui",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "all",
+  "meta": {
+    "code": true,
+    "folder": true
+  },
+  "frames": [
+    {"image": "assets/images/ui/flashlight-Sheet.png", "key": "flashlight-Sheet.png"}
+  ],
+  "anims": {
+    "all": {"fps": 3, "frames": [1], "loop": true}
+  }
+}

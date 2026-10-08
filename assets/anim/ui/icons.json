@@ -1,0 +1,21 @@
+{
+  "id": "ui/icons",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "all",
+  "meta": {
+    "code": true,
+    "folder": true
+  },
+  "frames": [
+    {"image": "assets/images/ui/icons/check.png", "key": "check.png"},
+    {"image": "assets/images/ui/icons/crown.png", "key": "crown.png"},
+    {"image": "assets/images/ui/icons/flag.png", "key": "flag.png"},
+    {"image": "assets/images/ui/icons/hill.png", "key": "hill.png"},
+    {"image": "assets/images/ui/icons/lock.png", "key": "lock.png"},
+    {"image": "assets/images/ui/icons/skull.png", "key": "skull.png"}
+  ],
+  "anims": {
+    "all": {"fps": 3, "frames": [1, 2, 3, 4, 5, 6], "loop": true}
+  }
+}

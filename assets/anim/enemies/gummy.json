@@ -1,5 +1,5 @@
 {
-  "id": "gummy",
+  "id": "enemies/gummy",
   "scale": 4,
   "origin": [0.5, 1],
   "fallback": "idle",

@@ -11,7 +11,7 @@ return {
         -- Ajedrez (assets/images/world/tiles/finish.png) que ondea: cada columna de
         -- cuadros sube/baja un poco. El marco dorado no ondea.
         if not img then
-            img = love.graphics.newImage('assets/images/world/tiles/finish.png')
+            img = require('src/fx/Anim').image('assets/images/world/tiles/finish.png')
             img:setFilter('nearest', 'nearest')
         end
         local x, y, s = ctx.x, ctx.y, ctx.size

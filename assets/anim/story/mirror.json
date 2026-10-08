@@ -1,0 +1,39 @@
+{
+  "id": "story/mirror",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "all",
+  "meta": {
+    "code": true,
+    "folder": true
+  },
+  "frames": [
+    {"image": "assets/images/story/mirror/frame.png", "key": "frame.png"},
+    {"image": "assets/images/story/mirror/glass.png", "key": "glass.png"},
+    {"image": "assets/images/story/mirror/shard_1.png", "key": "shard_1.png"},
+    {"image": "assets/images/story/mirror/shard_1a.png", "key": "shard_1a.png"},
+    {"image": "assets/images/story/mirror/shard_1b.png", "key": "shard_1b.png"},
+    {"image": "assets/images/story/mirror/shard_2.png", "key": "shard_2.png"},
+    {"image": "assets/images/story/mirror/shard_2a.png", "key": "shard_2a.png"},
+    {"image": "assets/images/story/mirror/shard_2b.png", "key": "shard_2b.png"},
+    {"image": "assets/images/story/mirror/shard_3.png", "key": "shard_3.png"},
+    {"image": "assets/images/story/mirror/shard_3a.png", "key": "shard_3a.png"},
+    {"image": "assets/images/story/mirror/shard_3b.png", "key": "shard_3b.png"},
+    {"image": "assets/images/story/mirror/shard_4.png", "key": "shard_4.png"},
+    {"image": "assets/images/story/mirror/shard_4a.png", "key": "shard_4a.png"},
+    {"image": "assets/images/story/mirror/shard_4b.png", "key": "shard_4b.png"},
+    {"image": "assets/images/story/mirror/shard_5.png", "key": "shard_5.png"},
+    {"image": "assets/images/story/mirror/shard_5a.png", "key": "shard_5a.png"},
+    {"image": "assets/images/story/mirror/shard_5b.png", "key": "shard_5b.png"},
+    {"image": "assets/images/story/mirror/shard_6.png", "key": "shard_6.png"},
+    {"image": "assets/images/story/mirror/shard_6a.png", "key": "shard_6a.png"},
+    {"image": "assets/images/story/mirror/shard_6b.png", "key": "shard_6b.png"},
+    {"image": "assets/images/story/mirror/shard_7.png", "key": "shard_7.png"},
+    {"image": "assets/images/story/mirror/shard_7a.png", "key": "shard_7a.png"},
+    {"image": "assets/images/story/mirror/shard_7b.png", "key": "shard_7b.png"}
+  ],
+  "anims": {
+    "all": {"fps": 3, "frames": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], "loop": true},
+    "shard": {"fps": 6, "frames": [3, 6, 9, 12, 15, 18, 21], "loop": true}
+  }
+}

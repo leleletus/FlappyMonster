@@ -16,7 +16,7 @@ local EYE_DX, EYE_DY = 1.2, -2.5
 -- tiene los ojos, p. ej. el Monstruo Malvado de la Nave Malvada).
 function DeadEyes.drawPair(mx, my, sep, s, r, g, b, a)
     if not img then
-        local ok, im = pcall(love.graphics.newImage, 'assets/images/player/dedais.png')
+        local ok, im = pcall(require('src/fx/Anim').image, 'assets/images/player/dedais.png')
         img = ok and im or false
         if img then img:setFilter('nearest', 'nearest') end
     end

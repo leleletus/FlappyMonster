@@ -39,7 +39,7 @@ local imgSnow, imgSnowCracked, imgIcicle, imgTN, imgTE
 local function loadIce()
     if imgSnow then return end
     local function img(f)
-        local i = love.graphics.newImage(D .. f)
+        local i = require('src/fx/Anim').image(D .. f)
         if i.setFilter then i:setFilter('nearest', 'nearest') end
         return i
     end

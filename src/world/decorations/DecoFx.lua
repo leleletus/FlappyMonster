@@ -28,7 +28,7 @@ function DecoFx.strip(path, fw)
     local k = path .. '#' .. tostring(fw)
     if strips[k] == nil then
         local ok, s = pcall(function()
-            if not fw then fw = love.graphics.newImage(path):getWidth() end
+            if not fw then fw = require('src/fx/Anim').image(path):getWidth() end
             return SpriteStrip.load(path, fw)
         end)
         strips[k] = ok and s or false

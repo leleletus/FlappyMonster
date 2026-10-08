@@ -6,7 +6,7 @@ local SCALE = 4
 local img
 function Life.loadAssets()
     if img then return end
-    img = love.graphics.newImage('assets/images/player/icon.png')
+    img = require('src/fx/Anim').image('assets/images/player/icon.png')
     img:setFilter('nearest', 'nearest')
 end
 function Life.sizePx() return img:getWidth() * SCALE, img:getHeight() * SCALE end

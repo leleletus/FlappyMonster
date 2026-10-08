@@ -6,7 +6,7 @@ local SCALE = 4
 local img
 function Star.loadAssets()
     if img then return end
-    img = love.graphics.newImage('assets/images/items/star.png')
+    img = require('src/fx/Anim').image('assets/images/items/star.png')
     img:setFilter('nearest', 'nearest')
 end
 function Star.sizePx() return img:getWidth() * SCALE, img:getHeight() * SCALE end

@@ -1,5 +1,5 @@
 {
-  "id": "hopper",
+  "id": "enemies/hopper",
   "scale": 4,
   "origin": [0.5, 1],
   "fallback": "idle",

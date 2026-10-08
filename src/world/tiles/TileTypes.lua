@@ -228,7 +228,7 @@ local Anim
 local function getTexture(tex)
     local entry = textureCache[tex.image]
     if entry == nil then
-        local ok, img = pcall(love.graphics.newImage, tex.image)
+        local ok, img = pcall(require('src/fx/Anim').image, tex.image)
         if ok then img:setFilter('nearest', 'nearest') end        -- (pixel art: sin suavizar)
         entry = ok and { img = img, quads = {} } or false
         textureCache[tex.image] = entry

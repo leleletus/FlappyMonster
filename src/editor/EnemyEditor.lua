@@ -2,12 +2,14 @@
 -- EDITOR DE ENEMIGOS:   love . --enemy [id]
 -- Monta un enemigo SIN escribir código: sus datos (assets/enemies/<id>.json, ver
 -- src/world/entities/base/DataEnemy.lua) y su conjunto de animación (assets/anim/<id>.json), con el editor de
--- animaciones dentro (la pieza src/editor/AnimPanel.lua). Pestañas:
---   General          nombre, categoría, tamaño, caja de golpe (se ve sobre el dibujo), vida, valores por defecto, rasgos
---   Animaciones      el editor de animaciones, con las secuencias que piden sus estados
---   Estados          qué secuencia se ve en cada estado (idle, walk, hurt, dead + los de sus comportamientos)
---   Comportamientos  piezas del catálogo (src/world/entities/behaviors/): perseguir, atacar, saltar, disparar…
+-- animaciones dentro (la pieza src/editor/AnimPanel.lua). Se hace en PASOS, de izquierda a derecha:
+--   1 Dibujos        el editor de animaciones: sus cuadros y sus animaciones (quieto, andar, ataque…)
+--   2 Cómo es        enemigo o JEFE, nombre, tamaño, caja de golpe (se ve sobre el dibujo), vida, cómo se mueve
+--                    (anda, vuela, quieto, TREPA por paredes y techos), valores por defecto, rasgos
+--   3 Qué hace       piezas del catálogo (src/world/entities/behaviors/): perseguir, atacar, saltar, disparar, esconderse…
+--   4 Estados        qué animación se ve en cada estado
 --   Avisos           lo que le falta
+-- Deshacer (Ctrl+Z) y rehacer (Ctrl+Y) en todo; "Borrar" quita el enemigo (si ningún nivel lo usa).
 -- "Probar" (F5) guarda y lo suelta en una sala de prueba dentro del juego (F10 vuelve).
 -- Un enemigo guardado sale en el editor de niveles como cualquier otro tipo. OJO: un enemigo NUEVO es un tipo de
 -- entidad nuevo → antes de publicarlo, subir Protocol.VERSION y version.txt (docs/entities/enemy-editor.md).
@@ -19,11 +21,11 @@ local AnimEditor  = require 'src/editor/AnimEditor'
 local json        = require 'libs/json'
 local th = ui.theme
 
-local E = { ids = {}, id = nil, spec = nil, animDoc = nil, panel = AnimPanel.new(), tab = 'general', unsaved = false,
+local E = { ids = {}, id = nil, spec = nil, animDoc = nil, panel = AnimPanel.new(), tab = 'anim', unsaved = false,
             newId = '', previewState = 'idle', pt = 0 }
-E.ORDER = { 'id', 'label', 'category', 'description', 'anim', 'variant', 'scale', 'facesLeft', 'breathe', 'hitbox', 'hp', 'hurtTime',
+E.ORDER = { 'id', 'label', 'category', 'description', 'boss', 'anim', 'variant', 'scale', 'facesLeft', 'breathe', 'crawl', 'hitbox', 'hp', 'hurtTime',
             'defaults', 'traits', 'darkEdge', 'states', 'behaviors', 'sounds' }
-local DataEnemy, Behaviors, EntityTypes       -- (se cargan en load: necesitan los globales del juego)
+local DataEnemy, DataBoss, Behaviors, EntityTypes       -- (se cargan en load: necesitan los globales del juego)
 
 local TRAITS = {
     { 'needsPound', 'Duro: solo lo mata un ground pound' },
@@ -34,7 +36,9 @@ local TRAITS = {
 local DEFAULT_KEYS = { movement = true, speed = true, onTouch = true, stompable = true, points = true, pauses = true,
                        turnAtEdges = true, respawn = true, bobAmp = true, flyMode = true }
 
-local function touch() E.unsaved = true end
+local function touch() E.unsaved = true; if E.hist then E.hist:record() end end
+E.hist = Shell.history(function() return { spec = E.spec or {}, anim = E.animDoc or {} } end,
+                       function(d) E.spec, E.animDoc = d.spec, d.anim; E.panel:touch(); E.unsaved = true end)
 
 -- Cuadros a partir de las imágenes de assets/images/enemies/<id>/ (si el usuario ya las dibujó): las secuencias
 -- salen del nombre de cada archivo (…idle… → idle, …dead… → dead, etc.; lo demás, andar).
@@ -67,6 +71,7 @@ function E.open(id)
     E.animDoc = Anim.read(spec.anim) or { id = spec.anim, scale = 4, origin = { 0.5, 1 }, frames = {}, anims = {} }
     E.animDoc.id = spec.anim
     E.panel = AnimPanel.new()
+    E.hist:reset()
 end
 
 function E.new(id)
@@ -81,6 +86,8 @@ function E.new(id)
     E.animDoc = found or imported or { id = id, scale = 4, origin = { 0.5, 1 }, frames = {}, anims = {} }
     E.animDoc.id = id
     E.panel = AnimPanel.new()
+    E.tab = 'anim'
+    E.hist:reset()
     if imported then Shell.message(('Cuadros tomados de assets/images/enemies/%s/ (%d): revisa las secuencias en "Animaciones"'):format(id, #imported.frames)) end
 end
 
@@ -119,6 +126,16 @@ function E.play()
     end
     for c = 24, 32 do tiles[8][c] = 1 end                       -- una repisa
     for c = 36, 39 do tiles[5][c] = 1 end
+    if E.spec.boss then
+        -- Jefe: una arena cerrada con su zona; la pelea empieza al entrar
+        for c = 24, 32 do tiles[8][c] = 0 end
+        for c = 36, 39 do tiles[5][c] = 0 end
+        for c = 16, 20 do tiles[8][c] = 1 end
+        for c = 30, 34 do tiles[8][c] = 1 end
+        return Shell.play({ name = 'Prueba: ' .. (E.spec.label or E.id), width = W, height = H, playerStart = { 4, 11 }, tiles = tiles,
+                            entities = { { type = E.id, col = 30, row = 11 }, { type = 'apple', col = 7, row = 11 } },
+                            bossZones = { { id = 1, col = 10, row = 2, w = 33, h = 10 } }, foliage = {}, vents = {}, background = 'meadow' })
+    end
     local fly = E.spec.defaults and E.spec.defaults.movement == 'fly'
     local ents = {
         { type = E.id, col = 14, row = fly and 8 or 11, props = { patrol = { left = 9, right = 21 } } },
@@ -184,14 +201,44 @@ local function tabGeneral(x, y, w, h)
     local fw = math.min(430, math.floor(w * 0.45))
     local px, pw = x + 10, fw - 24
     ui.rect(x, y, fw, h, th.panel, 6)
-    local py = ui.beginScroll('enemygeneral', x, y + 6, fw, h - 12, 1320) + 4
+    local py = ui.beginScroll('enemygeneral', x, y + 6, fw, h - 12, 1900) + 4
+    py = ui.caption('Qué es', px, py, pw)
+    local kind, kc = ui.enum('', S.boss and 'boss' or 'enemy', { { value = 'enemy', label = 'Enemigo normal' }, { value = 'boss', label = 'JEFE' } }, px, py - 20, pw)
+    py = py + 34
+    if kc then
+        if kind == 'boss' then
+            S.boss = {}
+            for k, v in pairs(DataBoss.DEFAULTS) do S.boss[k] = v end
+            S.boss.title = (S.label or E.id):upper(); S.boss.title_en = S.boss.title
+            S.crawl = nil
+        else S.boss = nil end
+        touch()
+    end
+    if S.boss then
+        py = py + ui.hint('Un JEFE vive en una ZONA DE JEFE del nivel (editor de niveles → capa Especial): tiene barra de vida, entrada, y solo se le puede golpear cuando lo dice "Se le puede golpear". Sus ataques son las piezas del paso 3.', px, py, pw, th.accent) + 6
+        local B = S.boss
+        py = field({ key = 'title', kind = 'text', label = 'Nombre en la barra (español, MAYÚSCULAS)', maxLen = 28 }, B, px, py, pw, 'eb')
+        py = field({ key = 'title_en', kind = 'text', label = 'Nombre en la barra (inglés)', maxLen = 28 }, B, px, py, pw, 'eb')
+        py = field({ key = 'hp', kind = 'int', label = 'Vida (1 jugador)', min = 1, max = 300, step = 1 }, B, px, py, pw)
+        py = field({ key = 'hpPerPlayer', kind = 'int', label = 'Vida extra por jugador (online)', min = 0, max = 100, step = 1 }, B, px, py, pw)
+        py = field({ key = 'vulnerable', kind = 'enum', label = 'Se le puede golpear', options = { { value = 'tired', label = 'Cansado, tras cada ataque' }, { value = 'always', label = 'Siempre' } } }, B, px, py, pw)
+        if (B.vulnerable or 'tired') == 'tired' then
+            py = field({ key = 'tiredTime', kind = 'number', label = 'Se queda cansado (s)', min = 0.3, max = 10, step = 0.1 }, B, px, py, pw)
+        end
+        py = field({ key = 'walkSpeed', kind = 'number', label = 'Velocidad persiguiendo (px/s; 0 = quieto)', min = 0, max = 600, step = 10 }, B, px, py, pw)
+        py = field({ key = 'attackEvery', kind = 'number', label = 'Espera entre ataques (s)', min = 0, max = 10, step = 0.1 }, B, px, py, pw)
+        py = field({ key = 'contact', kind = 'int', label = 'Vida que quita al tocarlo', min = 0, max = 3, step = 1 }, B, px, py, pw)
+        py = field({ key = 'rageAt', kind = 'number', label = 'Fase 2 con esta fracción de vida', min = 0, max = 1, step = 0.05 }, B, px, py, pw)
+        py = field({ key = 'ragePace', kind = 'number', label = 'En la fase 2 va (× de rápido)', min = 1, max = 3, step = 0.05 }, B, px, py, pw)
+        py = field({ key = 'intro', kind = 'number', label = 'Entrada: cae del cielo en (s; 0 = sin entrada)', min = 0, max = 8, step = 0.5 }, B, px, py, pw)
+    end
     py = ui.caption('Identidad', px, py, pw)
     ui.label('Id (en niveles y red): ' .. E.id, px, py, pw, th.muted); py = py + 24
     py = field({ key = 'label', kind = 'text', label = 'Nombre en el editor de niveles' }, S, px, py, pw, 'en')
     py = field({ key = 'description', kind = 'text', label = 'Descripción (paleta)', maxLen = 120 }, S, px, py, pw, 'en')
     local cats = {}
     for _, c in ipairs(DataEnemy.CATEGORIES) do cats[#cats + 1] = { value = c, label = c } end
-    py = field({ key = 'category', kind = 'enum', label = 'Categoría', options = cats }, S, px, py, pw)
+    if not S.boss then py = field({ key = 'category', kind = 'enum', label = 'Categoría (en la paleta del editor de niveles)', options = cats }, S, px, py, pw) end
     py = ui.caption('Dibujo', px, py, pw)
     py = field({ key = 'scale', kind = 'number', label = 'Escala (px por píxel de arte)', min = 1, max = 16, step = 0.5 }, S, px, py, pw)
     py = field({ key = 'facesLeft', kind = 'bool', label = 'El dibujo mira a la izquierda' }, S, px, py, pw)
@@ -203,11 +250,19 @@ local function tabGeneral(x, y, w, h)
     for _, f in ipairs({ { 'outerW', 'Fuera: ancho' }, { 'outerH', 'Fuera: alto' }, { 'innerW', 'Dentro: ancho' }, { 'innerH', 'Dentro: alto' } }) do
         py = field({ key = f[1], kind = 'number', label = f[2], min = 0.05, max = 1.5, step = 0.02 }, S.hitbox, px, py, pw)
     end
+    if not S.boss then
     py = ui.caption('Vida', px, py, pw)
     py = field({ key = 'hp', kind = 'int', label = 'Golpes que aguanta', min = 1, max = 20, step = 1 }, S, px, py, pw)
     if (S.hp or 1) > 1 then
         py = field({ key = 'hurtTime', kind = 'number', label = 'Dolido (s, intocable) tras cada golpe', min = 0.1, max = 3, step = 0.05 }, S, px, py, pw)
     end
+    py = ui.caption('Cómo se mueve', px, py, pw)
+    local mv = (S.defaults.movement or 'walk')
+    if mv == 'walk' then
+        local cv, cc = ui.toggle('TREPA: anda también por paredes y techos', S.crawl == true, px, py, pw); py = py + 28
+        if cc then S.crawl = cv or nil; touch() end
+        if S.crawl then py = py + ui.hint('Trepando solo valen los comportamientos "Esconderse" (los demás necesitan andar por el suelo).', px, py, pw) + 6 end
+    elseif S.crawl then S.crawl = nil end
     py = ui.caption('Valores por defecto (se pueden cambiar en cada nivel)', px, py, pw)
     for _, p in ipairs(EntityTypes.COMMON) do
         if DEFAULT_KEYS[p.key] and (not p.showIf or p.showIf(setmetatable({}, { __index = function(_, k2)
@@ -222,6 +277,7 @@ local function tabGeneral(x, y, w, h)
     for _, t in ipairs(TRAITS) do
         local v, c2 = ui.toggle(t[2], S.traits[t[1]] == true, px, py, pw); py = py + 28
         if c2 then S.traits[t[1]] = v or nil; touch() end
+    end
     end
     ui.endScroll()
     -- la vista
@@ -247,7 +303,7 @@ local function tabStates(x, y, w, h)
     local opts = { { value = '', label = '(la del mismo nombre)' } }
     for _, n in ipairs(set.names) do opts[#opts + 1] = { value = n, label = n } end
     local WHY = { idle = 'quieto (pausas)', walk = 'andando / volando', hurt = 'recién golpeado (más de 1 de vida) y aturdido', dead = 'pisoteado',
-                  run = 'persiguiendo', attack = 'atacando / disparando', special = 'acción especial (salto)' }
+                  run = 'persiguiendo', attack = 'atacando / disparando', special = 'acción especial (salto)', tired = 'cansado tras atacar (ahí se le golpea)', hide = 'escondiéndose / escondido / saliendo' }
     for _, st in ipairs(DataEnemy.statesOf(S)) do
         local cur = (S.states or {})[st] or ''
         local shown = cur ~= '' and cur or st
@@ -323,6 +379,7 @@ end
 local function load()
     require 'settings'
     DataEnemy   = require 'src/world/entities/base/DataEnemy'
+    DataBoss    = require 'src/world/entities/base/DataBoss'
     Behaviors   = require 'src/world/entities/behaviors/Behaviors'
     EntityTypes = require('src/world/entities/Entities').types
     refresh()
@@ -333,14 +390,51 @@ local function load()
     elseif E.ids[1] then E.open(E.ids[1]) end
 end
 
+-- ¿Algún nivel coloca este enemigo? → lista de niveles
+local function usedIn(id)
+    local out = {}
+    for _, p in ipairs(Shell.listFiles('assets/levels', '.json')) do
+        local text = love.filesystem.read(p) or ''
+        if text:find('"type"%s*:%s*"' .. id:gsub('%p', '%%%0') .. '"') then out[#out + 1] = p:match('([^/]+)%.json$') end
+    end
+    return out
+end
+
+function E.delete()
+    local id = E.id
+    local levels = usedIn(id)
+    if #levels > 0 then return Shell.message('No se puede borrar: lo usan los niveles ' .. table.concat(levels, ', '), 'error') end
+    local ids = {}
+    for _, i in ipairs(DataEnemy.ids()) do if i ~= id then ids[#ids + 1] = i end end
+    Shell.writeRepo(DataEnemy.INDEX, Shell.encodeJson({ enemies = ids }))
+    Shell.removeRepo(DataEnemy.DIR .. id .. '.json')
+    if E.animDoc and E.animDoc.id == id then Shell.removeRepo(Anim.path(id)); Anim.reload(id) end
+    EntityTypes.unregister(id)
+    E.id, E.spec, E.animDoc, E.unsaved, E.confirm = nil, nil, nil, false, nil
+    refresh()
+    Shell.message('Borrado el enemigo "' .. id .. '" (sus dibujos en assets/images no se tocan)')
+end
+
+-- Los pasos, y qué se hace en cada uno
+local STEPS = {
+    { id = 'anim',    label = '1 · Dibujos',   help = 'Sus CUADROS (los dibujos) y sus ANIMACIONES: quieto, andar… Empieza aquí.' },
+    { id = 'general', label = '2 · Cómo es',   help = 'Enemigo o jefe, tamaño, caja de golpe, vida y cómo se mueve.' },
+    { id = 'beh',     label = '3 · Qué hace',  help = 'Lo que hace además de moverse: perseguir, atacar, saltar, disparar, esconderse.' },
+    { id = 'states',  label = '4 · Estados',   help = 'Qué animación se ve en cada momento (normalmente no hay que tocar nada).' },
+    { id = 'warn',    label = 'Avisos',        help = 'Lo que le falta para estar completo.' },
+}
+
 local function draw()
     local W, H = love.graphics.getDimensions()
     ui.rect(0, 0, W, 46, th.panel, 0)
     ui.text('Enemigos', 14, 12, th.text, ui.fontLg)
     local LW = 210
+    local blocked = E.confirm ~= nil
+    local sp = ui.state.pressed
+    if blocked then ui.state.pressed = false end
     -- la lista
     ui.rect(8, 54, LW, H - 54 - 34, th.panel, 6)
-    local ly = ui.caption(('Hechos con datos (%d)'):format(#E.ids), 18, 64, LW - 20)
+    local ly = ui.caption(('Tus enemigos (%d)'):format(#E.ids), 18, 64, LW - 20)
     for _, id in ipairs(E.ids) do
         if ui.button(id, 18, ly, LW - 20, 26, { align = 'left', active = id == E.id }) then E.open(id) end
         ly = ly + 30
@@ -351,38 +445,72 @@ local function draw()
         if not listed then ui.button(E.id .. ' (nuevo)', 18, ly, LW - 20, 26, { align = 'left', active = true }); ly = ly + 30 end
     end
     ly = ly + 10
-    E.newId = ui.textField('enemynew', E.newId, 18, ly, LW - 20, 24, 'id del nuevo…'); ly = ly + 32
-    if ui.button('+ Nuevo enemigo', 18, ly, LW - 20, 28, { disabled = E.newId == '' }) then E.new(E.newId); E.newId = '' end
+    ly = ui.caption('Crear uno', 18, ly, LW - 20)
+    E.newId = ui.textField('enemynew', E.newId, 18, ly, LW - 20, 24, 'nombre (p. ej. claudio)'); ly = ly + 32
+    if ui.button('+ Nuevo enemigo', 18, ly, LW - 20, 28, { disabled = E.newId == '', color = th.accentDk }) then E.new(E.newId); E.newId = '' end
     ly = ly + 38
-    ui.hint('Con dibujos en assets/images/enemies/<id>/ el enemigo nuevo los toma solo como cuadros.', 18, ly, LW - 20)
+    ui.hint('El nombre va en minúsculas y sin espacios. Si ya hay dibujos en assets/images/enemies/<nombre>/, se cogen solos como cuadros.', 18, ly, LW - 20)
 
     if not E.spec then
-        ui.hint('Escribe un id (minúsculas, sin espacios) y pulsa "+ Nuevo enemigo".', LW + 28, 70, 520)
+        ui.hint('Escribe un nombre a la izquierda y pulsa "+ Nuevo enemigo", o elige uno de la lista.', LW + 28, 70, 560, th.accent)
+        if blocked then ui.state.pressed = sp end
         return
     end
     local warns = DataEnemy.validate(E.spec, E.panel:set(E.animDoc))
     local x, w = LW + 16, W - LW - 24
-    if ui.button('Guardar', W - 392, 9, 132, 28, { hint = 'Ctrl+S', color = E.unsaved and th.accentDk or nil }) then E.save() end
-    if ui.button('Probar', W - 252, 9, 110, 28, { hint = 'F5', tooltip = 'Guarda y lo suelta en una sala de prueba (F10 vuelve)' }) then E.play() end
-    if E.unsaved then ui.text('* sin guardar', W - 108, 15, th.warn) end
-    E.tab = ui.tabs({ { id = 'general', label = 'General' }, { id = 'anim', label = 'Animaciones' }, { id = 'states', label = 'Estados' },
-                      { id = 'beh', label = 'Comportamientos', badge = #E.spec.behaviors > 0 and #E.spec.behaviors or nil },
-                      { id = 'warn', label = 'Avisos', badge = #warns > 0 and #warns or nil, badgeColor = th.warn } }, E.tab, x, 8, math.min(720, w - 350), 34)
-    local y, h = 54, H - 54 - 34
+    -- arriba a la derecha: deshacer, guardar, probar, borrar
+    local bx = W - 12
+    bx = bx - 78;  if ui.button('Borrar', bx, 9, 78, 28, { textColor = th.danger, tooltip = 'Quita este enemigo del juego' }) then E.confirm = 'delete' end
+    bx = bx - 118; if ui.button('Probar', bx, 9, 110, 28, { hint = 'F5', color = th.accentDk, tooltip = 'Guarda y lo suelta en una sala de prueba dentro del juego (F10 vuelve)' }) then E.play() end
+    bx = bx - 140; if ui.button('Guardar', bx, 9, 132, 28, { hint = 'Ctrl+S', color = E.unsaved and th.accentDk or nil }) then E.save() end
+    bx = bx - 128; if ui.button('Deshacer', bx, 9, 120, 28, { hint = 'Ctrl+Z', disabled = #E.hist.stack == 0 }) then E.hist:undo() end
+    if E.unsaved then ui.text('*', bx - 14, 14, th.warn, ui.fontLg) end
+    local tabs = {}
+    for _, st in ipairs(STEPS) do
+        local t = { id = st.id, label = st.label }
+        if st.id == 'beh' and #E.spec.behaviors > 0 then t.badge = #E.spec.behaviors end
+        if st.id == 'warn' and #warns > 0 then t.badge, t.badgeColor = #warns, th.warn end
+        tabs[#tabs + 1] = t
+    end
+    E.tab = ui.tabs(tabs, E.tab, x, 8, math.min(640, bx - x - 30), 34)
+    local help = ''
+    for _, st in ipairs(STEPS) do if st.id == E.tab then help = st.help end end
+    ui.text((E.spec.boss and 'JEFE  ' or '') .. '«' .. (E.spec.label or E.id) .. '»  —  ' .. help, x + 4, 52, th.muted, ui.fontSm)
+    local y, h = 72, H - 72 - 34
     if E.tab == 'general' then tabGeneral(x, y, w, h)
     elseif E.tab == 'anim' then
         E.panel.wanted = {}
         for _, st in ipairs(DataEnemy.statesOf(E.spec)) do E.panel.wanted[#E.panel.wanted + 1] = (E.spec.states or {})[st] or st end
+        for _, b in ipairs(E.spec.behaviors) do
+            for _, a2 in ipairs(Behaviors.byName[b.type] and Behaviors.byName[b.type].anims or {}) do E.panel.wanted[#E.panel.wanted + 1] = a2 end
+        end
         if E.panel:draw(E.animDoc, x, y, w, h) then touch() end
     elseif E.tab == 'states' then tabStates(x, y, w, h)
     elseif E.tab == 'beh' then tabBehaviors(x, y, w, h)
     else tabWarnings(x, y, w, h, warns) end
+    if blocked then ui.state.pressed = sp end
+    -- confirmar el borrado
+    if E.confirm == 'delete' then
+        love.graphics.setColor(0, 0, 0, 0.6); love.graphics.rectangle('fill', 0, 0, W, H)
+        local mw, mh = 520, 190
+        local mx, my = math.floor((W - mw) / 2), math.floor((H - mh) / 2)
+        ui.rect(mx, my, mw, mh, th.panel, 8); ui.rect(mx, my, mw, mh, th.border, 8, 'line')
+        ui.text('¿Borrar el enemigo "' .. E.id .. '"?', mx + 18, my + 16, th.text, ui.fontLg)
+        ui.text('Se quita de la lista y se borran sus datos y su conjunto de animación. Sus dibujos (assets/images) se quedan. No se puede deshacer.', mx + 18, my + 52, th.muted, ui.font, mw - 36)
+        if ui.button('Borrar', mx + mw - 230, my + mh - 46, 100, 30, { textColor = th.danger }) then E.delete() end
+        if ui.button('Cancelar', mx + mw - 120, my + mh - 46, 100, 30) then E.confirm = nil end
+    end
 end
 
 local function keypressed(k)
     if ui.hasFocus() then return end
     local ctrl = love.keyboard.isDown('lctrl', 'rctrl', 'lgui', 'rgui')
+    local shift = love.keyboard.isDown('lshift', 'rshift')
+    if k == 'escape' then E.confirm = nil end
+    if not E.spec or E.confirm then return end
     if ctrl and k == 's' then return E.save() end
+    if ctrl and k == 'z' then if shift then E.hist:redo() else E.hist:undo() end; return end
+    if ctrl and k == 'y' then E.hist:redo(); return end
     if k == 'f5' then return E.play() end
     if E.tab == 'anim' then E.panel:keypressed(k) end
 end
@@ -390,7 +518,7 @@ end
 function E.install()
     Shell.install({ title = 'Editor de enemigos', load = load, draw = draw, keypressed = keypressed,
                     unsaved = function() return E.unsaved end,
-                    status = function() return 'Ctrl+S: guardar  ·  F5: probar en el juego (F10 vuelve)  ·  un enemigo guardado sale en el editor de niveles' end })
+                    status = function() return 'Ctrl+S: guardar  ·  Ctrl+Z / Ctrl+Y: deshacer / rehacer  ·  F5: probar en el juego (F10 vuelve)  ·  un enemigo guardado sale en el editor de niveles' end })
 end
 
 return E

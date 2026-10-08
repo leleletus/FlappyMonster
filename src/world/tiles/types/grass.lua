@@ -11,7 +11,7 @@ local blades, quads
 
 local function loadBlades()
     if blades == nil then
-        local ok, img = pcall(love.graphics.newImage, 'assets/images/world/tiles/grass_blades.png')
+        local ok, img = pcall(require('src/fx/Anim').image, 'assets/images/world/tiles/grass_blades.png')
         blades = ok and img or false
         if blades then
             blades:setFilter('nearest', 'nearest')

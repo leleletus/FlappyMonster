@@ -1,0 +1,17 @@
+{
+  "id": "enemies/mortar",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "all",
+  "meta": {
+    "code": true,
+    "folder": true
+  },
+  "frames": [
+    {"image": "assets/images/enemies/mortar/normal.png", "key": "normal.png"},
+    {"image": "assets/images/enemies/mortar/shooting.png", "key": "shooting.png"}
+  ],
+  "anims": {
+    "all": {"fps": 3, "frames": [1, 2], "loop": true}
+  }
+}

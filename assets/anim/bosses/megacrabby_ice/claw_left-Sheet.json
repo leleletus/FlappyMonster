@@ -1,0 +1,19 @@
+{
+  "id": "bosses/megacrabby_ice/claw_left-Sheet",
+  "strip": {
+    "frameW": 10
+  },
+  "scale": 4,
+  "origin": [0.5, 0.5],
+  "fallback": "all",
+  "meta": {
+    "code": true
+  },
+  "frames": [
+    {"h": 7, "image": "assets/images/bosses/megacrabby_ice/claw_left-Sheet.png", "w": 10, "x": 0, "y": 0},
+    {"h": 7, "image": "assets/images/bosses/megacrabby_ice/claw_left-Sheet.png", "w": 10, "x": 10, "y": 0}
+  ],
+  "anims": {
+    "all": {"fps": 8, "frames": [1, 2], "loop": true}
+  }
+}

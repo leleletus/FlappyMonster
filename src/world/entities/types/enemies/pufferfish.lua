@@ -282,7 +282,7 @@ end
 local iconImg, iconQuad
 local function drawIcon(x, y, s)
     if not iconImg then
-        iconImg = love.graphics.newImage(SHEET)
+        iconImg = require('src/fx/Anim').image(SHEET)
         iconImg:setFilter('nearest', 'nearest')
         iconQuad = love.graphics.newQuad(0, 0, 16, 16, iconImg:getWidth(), iconImg:getHeight())
     end

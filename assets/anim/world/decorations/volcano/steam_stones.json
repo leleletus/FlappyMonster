@@ -1,0 +1,18 @@
+{
+  "id": "world/decorations/volcano/steam_stones",
+  "strip": {
+    "frameW": 12
+  },
+  "scale": 4,
+  "origin": [0.5, 0.5],
+  "fallback": "all",
+  "meta": {
+    "code": true
+  },
+  "frames": [
+    {"h": 5, "image": "assets/images/world/decorations/volcano/steam_stones.png", "w": 12, "x": 0, "y": 0}
+  ],
+  "anims": {
+    "all": {"fps": 8, "frames": [1], "loop": true}
+  }
+}

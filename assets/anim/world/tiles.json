@@ -1,0 +1,45 @@
+{
+  "id": "world/tiles",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "all",
+  "meta": {
+    "code": true,
+    "folder": true
+  },
+  "frames": [
+    {"image": "assets/images/world/tiles/activated_off_block.png", "key": "activated_off_block.png"},
+    {"image": "assets/images/world/tiles/activated_on_block.png", "key": "activated_on_block.png"},
+    {"image": "assets/images/world/tiles/ash.png", "key": "ash.png"},
+    {"image": "assets/images/world/tiles/basalt.png", "key": "basalt.png"},
+    {"image": "assets/images/world/tiles/border.png", "key": "border.png"},
+    {"image": "assets/images/world/tiles/breakable.png", "key": "breakable.png"},
+    {"image": "assets/images/world/tiles/deactivated_off_block.png", "key": "deactivated_off_block.png"},
+    {"image": "assets/images/world/tiles/deactivated_on_block.png", "key": "deactivated_on_block.png"},
+    {"image": "assets/images/world/tiles/deep_stone.png", "key": "deep_stone.png"},
+    {"image": "assets/images/world/tiles/dirt.png", "key": "dirt.png"},
+    {"image": "assets/images/world/tiles/finish.png", "key": "finish.png"},
+    {"image": "assets/images/world/tiles/grass.png", "key": "grass.png"},
+    {"image": "assets/images/world/tiles/grass_blades.png", "key": "grass_blades.png"},
+    {"image": "assets/images/world/tiles/ice.png", "key": "ice.png"},
+    {"image": "assets/images/world/tiles/lava.png", "key": "lava.png"},
+    {"image": "assets/images/world/tiles/lava_top.png", "key": "lava_top.png"},
+    {"image": "assets/images/world/tiles/packed_snow.png", "key": "packed_snow.png"},
+    {"image": "assets/images/world/tiles/platform.png", "key": "platform.png"},
+    {"image": "assets/images/world/tiles/platform_drop.png", "key": "platform_drop.png"},
+    {"image": "assets/images/world/tiles/sand.png", "key": "sand.png"},
+    {"image": "assets/images/world/tiles/sand_blend.png", "key": "sand_blend.png"},
+    {"image": "assets/images/world/tiles/snow.png", "key": "snow.png"},
+    {"image": "assets/images/world/tiles/stone.png", "key": "stone.png"},
+    {"image": "assets/images/world/tiles/switch_off.png", "key": "switch_off.png"},
+    {"image": "assets/images/world/tiles/switch_on.png", "key": "switch_on.png"},
+    {"image": "assets/images/world/tiles/thin_ice_0.png", "key": "thin_ice_0.png"},
+    {"image": "assets/images/world/tiles/thin_ice_1.png", "key": "thin_ice_1.png"},
+    {"image": "assets/images/world/tiles/thin_ice_2.png", "key": "thin_ice_2.png"},
+    {"image": "assets/images/world/tiles/thin_ice_3.png", "key": "thin_ice_3.png"}
+  ],
+  "anims": {
+    "all": {"fps": 3, "frames": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29], "loop": true},
+    "thin_ice": {"fps": 6, "frames": [26, 27, 28, 29], "loop": true}
+  }
+}

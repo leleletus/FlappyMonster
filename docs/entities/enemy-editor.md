@@ -20,24 +20,29 @@ love . --enemy [id]       open (or create) an enemy
 | `assets/enemies/index.json` | the list of data enemies (palette order); `assets/enemies/<id>.json` = one enemy |
 | `assets/anim/<id>.json` | its animation set |
 
-## The editor, tab by tab
+## The editor, step by step
 
-- **General** — label, description, category; scale, "art faces left", breathing when idle, a light outline for dark
-  sprites; the hit boxes as fractions of the sprite, drawn live over it (orange = where it is touched / stomped,
-  yellow = where it hurts); health (`hp` > 1 adds the `hurt` state); the default values of the common props (movement
-  walk / fly / static, speed, what touching does, stompable, points, pauses, respawn…), which each level can still
-  override; traits (needs a ground pound, drawn in front, stays in place when frozen).
-- **Animaciones** — the full animation editor on the enemy's set, with a "create the missing ones" button for the
-  sequences its states ask for.
-- **Estados** — which sequence each STATE shows. Base states: `idle`, `walk`, `hurt`, `dead`; the rest come from its
-  behaviours (`run`, `attack`, `special`…). A missing sequence falls back to the set's fallback.
-- **Comportamientos** — add, order and tune behaviours. With none, the enemy just walks / flies / stands as its
-  movement says. When several could take over, the one higher in the list wins.
-- **Avisos** — what is missing.
-- **Probar (F5)** — saves and drops the enemy into a test room inside the real game; F10 returns.
+The tabs are numbered in the order you work; a line under them says what the current step is for.
+
+1. **Dibujos** — the full animation editor on the enemy's set: its frames and its animations. A yellow note lists
+   the animations its states still need, with a button to create them.
+2. **Cómo es** — *Enemigo normal* or **JEFE**; label, description, category; scale, "art faces left", breathing
+   when idle, a light outline for dark sprites; the hit boxes drawn live over the sprite (orange = where it is
+   touched / stomped, yellow = where it hurts); health; **how it moves** (walks, flies, stands still, or CRAWLS on
+   walls and ceilings); the default values of the common props, which each level can still override; traits.
+3. **Qué hace** — add, order and tune behaviours. With none, it just moves. When several could take over, the one
+   higher in the list wins.
+4. **Estados** — which animation each state shows (usually nothing to change: a state shows the animation with
+   its own name).
+5. **Avisos** — what is missing.
+
+Top right: **Deshacer** (Ctrl+Z; Ctrl+Y redoes — everything, including the animation editor), **Guardar** (Ctrl+S),
+**Probar** (F5: saves and drops the enemy into a test room inside the real game, F10 returns; a boss gets an arena
+with its boss zone) and **Borrar** (asks first; refuses while any level places the enemy; its drawings in
+`assets/images` are never deleted).
 
 **Starting from drawings:** if `assets/images/enemies/<id>/` already has PNGs when you create enemy `<id>`, they are
-taken as frames and sorted into sequences by file name (`…idle…` → idle, `…dead…` / `…muert…` → dead, `…hurt…`,
+taken as frames and sorted into animations by file name (`…idle…` → idle, `…dead…` / `…muert…` → dead, `…hurt…`,
 `…attack…` / `…ataque…`, `…run…`, `…special…`, `…shot…`; everything else → walk).
 
 ## Behaviours available
@@ -48,6 +53,7 @@ taken as frames and sorted into sequences by file name (`…idle…` → idle, `
 | `melee` | Ataque | `attack` | wind-up → a hit box in front that takes HP (optionally lunging) → rest → cooldown | range, wind-up, active, rest, reach, lunge, damage, cooldown |
 | `leap` | Salto (acción especial) | `special` | every so often crouches and jumps in an arc at the player | range, every, wind-up, height, max distance |
 | `shoot` | Disparo | `attack` | wind-up, then a straight projectile that takes HP and stops at walls; drawn with the set's `shot` sequence | range, wind-up, rest, speed, life, size, damage, cooldown |
+| `hide` | Esconderse | `hide` | every so often (or when a player is near) hides for a while and comes back out: hidden it cannot be stomped or touched, and can show a cover that hurts or kills from above (like the Crabby's spike). Animations `hide`, `hidden`, `unhide` (missing ones fall back to `hide`, reversed for coming out). Works for crawlers too | every, near, in / stay / out times, cover |
 
 Detection ranges are scaled by the difficulty's `sense`; the whole enemy is scaled by `enemyPace` like any other.
 
@@ -74,17 +80,46 @@ network does not carry. Helpers on the enemy: `e:seesPlayer(level, tiles, height
 - **Player rules:** the defaults of `Interactions` (touch by `onTouch`, stomp, ground pound); behaviours add hazard
   boxes (`effect = 'hurt'`). With `hp` > 1 a stomp takes 1 and the enemy is untouchable while `hurt`.
 
+## Crawlers
+
+"TREPA" (`"crawl": true`, movement = walk) makes the enemy walk glued to floor, walls and ceiling, turning at
+corners, with the same code as the wall-walking Crabby (`base/Crawler.lua`): rotated hit boxes, stomp from its open
+side, it lets go when shoved and re-attaches on landing. While crawling only behaviours marked `crawlOk` run
+(`hide`): the others need floor physics.
+
+## Bosses
+
+Switching "Qué es" to **JEFE** adds a `"boss"` block and the type is built by `src/world/entities/base/DataBoss.lua`
+on top of the boss base class: health bar and zone, cinematic intro (it drops from the top of the zone), death with
+explosions, turns with an ally on Xtra Extreme, network. Place it inside a boss zone in the level editor like any
+boss.
+
+- **Between attacks** it walks toward the nearest player at `walkSpeed` (animation `walk`).
+- **Attacks** are the same behaviour pieces (melee, leap, shoot, hide…), tried in order every `attackEvery` seconds.
+- **When it can be hit:** `vulnerable = "tired"` (default) — after each attack it is `tired` for `tiredTime`
+  seconds, with the usual stun stars: stomp 1, ground pound 2, one hit per opening; otherwise landing on it bounces
+  you off. `"always"` = any time.
+- **Phase 2** below `rageAt` of its health: everything runs `ragePace` times faster.
+- Touching it from the side takes `contact` HP and pushes.
+- States: `dormant`, `intro`, `ready`, `fight`, its behaviours' states, `tired`, `dying_*`. Animations used: `idle`,
+  `walk`, `tired` (or `hurt`), `dead` + those of its behaviours.
+
+What a data boss cannot do (write a Lua boss, [how-to-add-a-boss](../bosses/how-to-add-a-boss.md), or add a
+behaviour): minions, arena-specific mechanics, computed poses, more than two phases, its own death sequence. Its
+name in the bar comes from its `title` / `title_en` (no language-file entry needed).
+
 ## Rules and limits
 
 - **A NEW enemy is a new entity type.** Before it reaches players: add it (it is in `index.json` once saved), bump
   `Protocol.VERSION` and `version.txt`, run `tools/tests/run.sh docs_reference` and the battery. Ids are permanent
   once a level uses them.
 - The id must not collide with an existing type; the editor refuses.
-- Removing an enemy = delete its line from `index.json` (and its files) after making sure no level places it.
+- Removing an enemy: the **Borrar** button (it checks that no level places it).
 - What this system does NOT cover (write a Lua type instead, see
-  [how-to-add-an-enemy](how-to-add-an-enemy.md)): wall crawling, hiding, custom per-frame poses, boss logic. New
-  kinds of action are best added as a behaviour so every data enemy can use them.
+  [how-to-add-an-enemy](how-to-add-an-enemy.md)): dropping from ceilings on sight, covers that become trampolines,
+  custom per-frame poses. New kinds of action are best added as a behaviour so every data enemy can use them.
 
-**Tests:** `enemy_data` (registration, each behaviour, health, network, validation, the index), `tool_editors
-TOOL=enemy` (the real editor end to end, including the play-test). Not covered: a data enemy in an online match with
+**Tests:** `enemy_data` (registration, each behaviour, health, crawling, hiding, a whole boss fight, network,
+validation, the index), `tool_editors TOOL=enemy` and `TOOL=enemy KIND=boss` (the real editor end to end, undo,
+the play-test). Not covered: a data enemy in an online match with
 a real server (none ships yet) — run `online_smoke LEVEL=<a level that places it> WATCH=<id>` with the first one.

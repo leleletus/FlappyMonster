@@ -11,6 +11,10 @@
 --   salta          'leap': se agacha y salta hacia el jugador; cae y sigue andando
 --   dispara        'shoot': su proyectil viaja, quita vida y se para en un bloque
 --   vida           con 3 de vida aguanta 2 pisotones (estado hurt, intocable) y muere al tercero
+--   trepa          `crawl`: anda pegado al suelo, sube por la pared y sigue por el techo sin soltarse
+--   esconde        'hide': entra, se queda escondido (no se le puede pisar; su tapa quita vida) y sale
+--   jefe           un JEFE de datos: zona, entrada, persigue, ataca (el golpe quita vida), se cansa (ahí se le
+--                  golpea: un golpe por ocasión), fase 2 con poca vida, muere y la zona queda libre
 --   red            netPack → netApply en otra instancia: misma vida y proyectiles; el dibujo sale de estado + reloj
 --   avisos         validate: dice qué secuencias faltan
 --   indice         los enemigos de assets/enemies/index.json existen, son válidos y están registrados
@@ -90,7 +94,7 @@ function love.load()
     -- ── enemigos de datos ── (un enemigo de prueba sobre el conjunto del Gummy; no entra en el juego)
     local function spec(id, extra)
         local s = DataEnemy.blank(id)
-        s.anim, s.label = 'gummy', 'Prueba ' .. id
+        s.anim, s.label = 'enemies/gummy', 'Prueba ' .. id
         s.defaults = { movement = 'walk', speed = 60, points = 10, onTouch = 'hurt', stompable = true, pauses = false }
         for k, v in pairs(extra or {}) do s[k] = v end
         Entities.types.register(DataEnemy.typeDef(s))
@@ -201,6 +205,84 @@ function love.load()
     end
     check('vida', log[1] == 'hurt/2*' and log[2] == 'hurt/1*' and log[3]:match('^dead'), table.concat(log, ' → '))
 
+    -- trepa
+    spec('zz_crawl', { crawl = true })
+    level, es = room(12, { { type = 'zz_crawl', col = 6, row = 7, props = { patrol = false, speed = 120 } } })
+    e = es[1]
+    level.players = {}
+    local wall, ceil, fell = false, false, false
+    run(level, es, 16, nil, function()
+        if e.cattached and e.cnx ~= 0 then wall = true end
+        if e.cattached and e.cny == 1 then ceil = true end
+        if e.y > 8 * T then fell = true end
+    end)
+    check('trepa', e.crawl and wall and ceil and not fell, ('trepador %s; pared %s, techo %s, se cayó %s'):format(tostring(e.crawl), tostring(wall), tostring(ceil), tostring(fell)))
+
+    -- esconde
+    spec('zz_hide', { behaviors = { { type = 'hide', every = 0.3, inTime = 0.2, stay = 1.0, outTime = 0.2, cover = 'hurt' } } })
+    level, es = room(20, { { type = 'zz_hide', col = 10, row = 7, props = { movement = 'static', onTouch = 'none' } } })
+    e = es[1]
+    pa = playerAt(level, 10); pa.x = e.x; pa.invT = 0
+    local sawHide, disabledSeen, an = false, false, {}
+    run(level, es, 2.2, pa, function()
+        if e.state == 'hide' then sawHide = true; an[(e:animNow())] = true end
+        if e:isBodyDisabled() then disabledSeen = true end
+    end)
+    local hpAfter = pa.hp
+    e.state, e.deadTimer, e.owner = 'hide', 0.6, e.beh[1]; e.hp = 1
+    e:stomp()
+    check('esconde', sawHide and disabledSeen and hpAfter < 3 and e.state == 'hide' and an.hide,
+          ('se escondió %s; intocable escondido %s; la tapa quitó vida (%d de 3); pisarlo escondido no lo mata (%s)'):format(tostring(sawHide), tostring(disabledSeen), hpAfter, e.state))
+
+    -- jefe
+    local BossZones = require 'src/world/systems/BossZones'
+    local bs = spec('zz_boss', { behaviors = { { type = 'melee', range = 2.5, windup = 0.3, active = 0.3, rest = 0.2, reach = 2, cooldown = 0.5 } },
+                                 boss = { title = 'PRUEBA', hp = 4, hpPerPlayer = 0, walkSpeed = 120, contact = 0, tiredTime = 1.5, attackEvery = 0.5, intro = 1 } })
+    do
+        local W, H, tiles = 24, 10, {}
+        for r = 1, H do
+            local row = {}
+            for c = 1, W do row[c] = (r == H or c == 1 or c == W) and 1 or 0 end
+            tiles[r] = row
+        end
+        level = Level.fromData({ name = 'jefe', width = W, height = H, playerStart = { 4, H - 1 }, tiles = tiles,
+                                 entities = { { type = 'zz_boss', col = 16, row = H - 1 } },
+                                 bossZones = { { id = 1, col = 2, row = 2, w = W - 2, h = H - 2 } } })
+        es = {}
+        for _, pl in ipairs(level.entities) do es[#es + 1] = Entities.create(pl) end
+        level.liveEntities = es
+        BossZones.link(level, es)
+        local ctl = BossZones.newController(level, es)
+        local boss = es[1]
+        pa = PlayerAdventure:new(6.5 * T, (H - 1) * T - 60)
+        level.players = { pa }
+        local seen, hpMin, hits, tiredHit = {}, 3, 0, false
+        for i = 1, 60 * 40 do
+            level.solidBodies = Entities.solidBodies(es)
+            pa.invT = 0
+            pa:update(1 / 60, level)
+            if boss.alive then boss:update(1 / 60, level) end
+            ctl:update(1 / 60)
+            seen[boss.state] = true
+            hpMin = math.min(hpMin, pa.hp)
+            if pa.hp < 3 then pa.hp = 3 end
+            pa.dying, pa.alive = false, true
+            -- en cuanto se cansa: un pisotón (como haría el jugador)
+            if boss.state == 'tired' and boss.inv <= 0 then
+                local before = boss.hp
+                boss:stomp(); hits = hits + 1
+                if boss.hp < before then tiredHit = true end
+            end
+            if not boss.alive then break end
+        end
+        local z = level.bossZones[1]
+        local title = boss:title()
+        check('jefe', seen.intro and seen.fight and seen.attack and seen.tired and hpMin < 3 and tiredHit and not boss.alive and z.state == 'cleared' and title == 'PRUEBA'
+              and Entities.types.byName.zz_boss.category == 'Jefes',
+              ('estados: %s%s%s%s; el golpe quitó vida %s; golpes dados cansado %d; muerto %s; zona %s; nombre %s'):format(seen.intro and 'intro ' or '', seen.fight and 'fight ' or '',
+               seen.attack and 'attack ' or '', seen.tired and 'tired' or '', tostring(hpMin < 3), hits, tostring(not boss.alive), tostring(z.state), tostring(title)))
+    end
+
     -- red
     level, es = room(30, { { type = 'zz_shoot', col = 22, row = 7, props = { movement = 'static' } }, { type = 'zz_shoot', col = 5, row = 3, props = { movement = 'static' } } })
     local srv, cli = es[1], es[2]
@@ -213,9 +295,9 @@ function love.load()
           ('vida %d, proyectiles %d (x=%s), animación %s@%.2f = %s@%.2f'):format(cli.hp, #cli.shots, tostring(cli.shots[2] and cli.shots[2].x), n1, t1, n2, t2))
 
     -- avisos
-    local w = DataEnemy.validate({ id = 'zz_melee', anim = 'gummy', behaviors = { { type = 'melee' }, { type = 'shoot' }, { type = 'no' } }, states = {} })
+    local w = DataEnemy.validate({ id = 'zz_melee', anim = 'enemies/gummy', behaviors = { { type = 'melee' }, { type = 'shoot' }, { type = 'no' } }, states = {} })
     local txt = table.concat(w, ' | ')
-    check('avisos', txt:find('"attack"', 1, true) and txt:find('"hurt"', 1, true) and txt:find('shot', 1, true) and txt:find('no existe', 1, true) and #DataEnemy.validate({ id = 'Mal Id', anim = 'gummy' }) >= 1,
+    check('avisos', txt:find('"attack"', 1, true) and txt:find('"hurt"', 1, true) and txt:find('shot', 1, true) and txt:find('no existe', 1, true) and #DataEnemy.validate({ id = 'Mal Id', anim = 'enemies/gummy' }) >= 1,
           #w .. ' avisos: ' .. txt:sub(1, 150))
 
     -- indice

@@ -1,0 +1,23 @@
+{
+  "id": "world/decorations/tropical/butterfly-Sheet",
+  "strip": {
+    "frameW": 5
+  },
+  "scale": 4,
+  "origin": [0.5, 0.5],
+  "fallback": "all",
+  "meta": {
+    "code": true
+  },
+  "frames": [
+    {"h": 4, "image": "assets/images/world/decorations/tropical/butterfly-Sheet.png", "w": 5, "x": 0, "y": 0},
+    {"h": 4, "image": "assets/images/world/decorations/tropical/butterfly-Sheet.png", "w": 5, "x": 5, "y": 0},
+    {"h": 4, "image": "assets/images/world/decorations/tropical/butterfly-Sheet.png", "w": 5, "x": 10, "y": 0},
+    {"h": 4, "image": "assets/images/world/decorations/tropical/butterfly-Sheet.png", "w": 5, "x": 15, "y": 0},
+    {"h": 4, "image": "assets/images/world/decorations/tropical/butterfly-Sheet.png", "w": 5, "x": 20, "y": 0},
+    {"h": 4, "image": "assets/images/world/decorations/tropical/butterfly-Sheet.png", "w": 5, "x": 25, "y": 0}
+  ],
+  "anims": {
+    "all": {"fps": 8, "frames": [1, 2, 3, 4, 5, 6], "loop": true}
+  }
+}

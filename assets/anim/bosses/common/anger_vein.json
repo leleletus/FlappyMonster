@@ -1,0 +1,19 @@
+{
+  "id": "bosses/common/anger_vein",
+  "strip": {
+    "frameW": 11
+  },
+  "scale": 4,
+  "origin": [0.5, 0.5],
+  "fallback": "all",
+  "meta": {
+    "code": true
+  },
+  "frames": [
+    {"h": 11, "image": "assets/images/bosses/common/anger_vein.png", "w": 11, "x": 0, "y": 0},
+    {"h": 11, "image": "assets/images/bosses/common/anger_vein.png", "w": 11, "x": 11, "y": 0}
+  ],
+  "anims": {
+    "all": {"fps": 8, "frames": [1, 2], "loop": true}
+  }
+}

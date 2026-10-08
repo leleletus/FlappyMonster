@@ -1,0 +1,21 @@
+{
+  "id": "world/decorations/cave/torch-Sheet",
+  "strip": {
+    "frameW": 10
+  },
+  "scale": 4,
+  "origin": [0.5, 0.5],
+  "fallback": "all",
+  "meta": {
+    "code": true
+  },
+  "frames": [
+    {"h": 13, "image": "assets/images/world/decorations/cave/torch-Sheet.png", "w": 10, "x": 0, "y": 0},
+    {"h": 13, "image": "assets/images/world/decorations/cave/torch-Sheet.png", "w": 10, "x": 10, "y": 0},
+    {"h": 13, "image": "assets/images/world/decorations/cave/torch-Sheet.png", "w": 10, "x": 20, "y": 0},
+    {"h": 13, "image": "assets/images/world/decorations/cave/torch-Sheet.png", "w": 10, "x": 30, "y": 0}
+  ],
+  "anims": {
+    "all": {"fps": 8, "frames": [1, 2, 3, 4], "loop": true}
+  }
+}

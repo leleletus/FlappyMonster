@@ -13,7 +13,7 @@ return {
         if parts then return end
         parts = {}
         for _, p in ipairs({ { 'palmtree.png', 0.3 }, { 'coques.png', 0.8 }, { 'palmleaves.png', 1.0 } }) do
-            local ok, im = pcall(love.graphics.newImage, 'assets/images/world/decorations/foliage/palmtree/' .. p[1])
+            local ok, im = pcall(require('src/fx/Anim').image, 'assets/images/world/decorations/foliage/palmtree/' .. p[1])
             if ok then parts[#parts+1] = { img = im, swayMult = p[2] } end
         end
     end,

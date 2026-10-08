@@ -30,9 +30,9 @@ local imgTNormal, imgTExt, imgShell
 function TC.loadAssets()
     Crabby.loadAssets()
     if imgTNormal then return end
-    imgTNormal = love.graphics.newImage('assets/images/mechanisms/trampoline/normal.png')
-    imgTExt    = love.graphics.newImage('assets/images/mechanisms/trampoline/extended.png')
-    imgShell   = love.graphics.newImage('assets/images/enemies/crabby/hid.png')
+    imgTNormal = require('src/fx/Anim').image('assets/images/mechanisms/trampoline/normal.png')
+    imgTExt    = require('src/fx/Anim').image('assets/images/mechanisms/trampoline/extended.png')
+    imgShell   = require('src/fx/Anim').image('assets/images/enemies/crabby/hid.png')
     if imgTNormal.setFilter then imgTNormal:setFilter('nearest', 'nearest'); imgTExt:setFilter('nearest', 'nearest') end
 end
 

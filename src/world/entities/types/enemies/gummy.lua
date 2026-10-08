@@ -27,14 +27,14 @@ local Gummy = Entity.extend(Entity, {
 
 local imgHelmet, imgChute
 
--- Arte = el conjunto de animación `gummy` (assets/anim/gummy.json: quieto, andar, muerto; se edita con
--- `love . --anim gummy`). Cada variante (gummy_ice.lua pone `artDir`) es una VARIANTE del conjunto: las mismas
+-- Arte = el conjunto de animación `gummy` (assets/anim/enemies/gummy.json: quieto, andar, muerto; se edita con
+-- `love . --anim enemies/gummy`). Cada variante (gummy_ice.lua pone `artDir`) es una VARIANTE del conjunto: las mismas
 -- secuencias con las imágenes de su carpeta, todas en la misma rejilla 16x16.
 local ART_DIR = 'assets/images/enemies/gummy/'
 local arts = {}
 function Gummy.loadArt(dir)
     if arts[dir] then return arts[dir] end
-    local set = Anim.load('gummy', dir ~= ART_DIR and dir:match('gummy_(%w+)/$') or nil)
+    local set = Anim.load('enemies/gummy', dir ~= ART_DIR and dir:match('gummy_(%w+)/$') or nil)
     local function img(name, k) return set:frame(set:frameN(name, k)).image end
     arts[dir] = { set = set, idle = img('idle', 1), walk1 = img('walk', 1), walk2 = img('walk', 2), dead = img('dead', 1) }
     return arts[dir]
@@ -44,8 +44,8 @@ function Gummy:art() return arts[self.artDir or ART_DIR] or Gummy.loadArt(self.a
 function Gummy.loadAssets()
     if imgHelmet then return end
     Gummy.loadArt(ART_DIR)
-    imgHelmet = love.graphics.newImage('assets/images/enemies/gummy/casco.png')
-    imgChute = love.graphics.newImage('assets/images/enemies/gummy/parachute.png')
+    imgHelmet = require('src/fx/Anim').image('assets/images/enemies/gummy/casco.png')
+    imgChute = require('src/fx/Anim').image('assets/images/enemies/gummy/parachute.png')
     for _, i in ipairs({ imgHelmet, imgChute }) do if i.setFilter then i:setFilter('nearest', 'nearest') end end
 end
 

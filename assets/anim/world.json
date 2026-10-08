@@ -1,0 +1,16 @@
+{
+  "id": "world",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "all",
+  "meta": {
+    "code": true,
+    "folder": true
+  },
+  "frames": [
+    {"image": "assets/images/world/crack.png", "key": "crack.png"}
+  ],
+  "anims": {
+    "all": {"fps": 3, "frames": [1], "loop": true}
+  }
+}

@@ -39,8 +39,8 @@ local function rand(a, b) return a + math.random() * (b - a) end
 local imgNormal, imgShoot, fireStrip
 function Mortar.loadAssets()
     if imgNormal then return end
-    imgNormal = love.graphics.newImage('assets/images/enemies/mortar/normal.png')
-    imgShoot  = love.graphics.newImage('assets/images/enemies/mortar/shooting.png')
+    imgNormal = require('src/fx/Anim').image('assets/images/enemies/mortar/normal.png')
+    imgShoot  = require('src/fx/Anim').image('assets/images/enemies/mortar/shooting.png')
     fireStrip = SpriteStrip.load('assets/images/enemies/mortar/flame.png')
     if imgNormal.setFilter then imgNormal:setFilter('nearest', 'nearest'); imgShoot:setFilter('nearest', 'nearest') end
 end

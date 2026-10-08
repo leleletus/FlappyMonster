@@ -1,0 +1,19 @@
+{
+  "id": "bosses/megacrabby_ice/rage_body-Sheet",
+  "strip": {
+    "frameW": 26
+  },
+  "scale": 4,
+  "origin": [0.5, 0.5],
+  "fallback": "all",
+  "meta": {
+    "code": true
+  },
+  "frames": [
+    {"h": 21, "image": "assets/images/bosses/megacrabby_ice/rage_body-Sheet.png", "w": 26, "x": 0, "y": 0},
+    {"h": 21, "image": "assets/images/bosses/megacrabby_ice/rage_body-Sheet.png", "w": 26, "x": 26, "y": 0}
+  ],
+  "anims": {
+    "all": {"fps": 8, "frames": [1, 2], "loop": true}
+  }
+}

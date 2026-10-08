@@ -10,13 +10,16 @@
 --         params = { { key='range', kind='number', label='Alcance (casillas)', default=5, min=1, max=20, step=0.5 } },
 --         think  = function(e, cfg, dt, level) … return true end,   -- en 'walk' / 'idle': ¿toma el mando? (e:enter(estado))
 --         update = function(e, cfg, dt, level) … end,               -- cada paso mientras e.state es uno de sus estados
---         hazards = function(e, cfg) return { {x,y,w,h, effect='hurt', dmg=1} } end }   -- (opcional) cajas que dañan
+--         hazards = function(e, cfg) return { {x,y,w,h, effect='hurt', dmg=1} } end,    -- (opcional) cajas que dañan
+--         disabled = function(e, cfg) return true end,       -- (opcional) ¿ahora no se le puede tocar ni pisar?
+--         anim = function(e, cfg, set, map) return 'hide', t end,   -- (opcional) secuencia y tiempo dentro de su estado
+--         crawlOk = true }                                    -- (opcional) vale también para un enemigo que trepa
 --  2. Añade su nombre a TYPES abajo.
 --  Listo: sale en el editor de enemigos con sus parámetros, y funciona en un jugador y online (solo simulan un
 --  jugador y el servidor; el cliente dibuja el estado y su reloj `deadTimer`, que ya viajan por red).
 -- Reglas: nada de love.graphics ni de estado que el dibujo necesite y no viaje; el tiempo dentro de un estado es
 -- `e.deadTimer` (e:enter lo pone a 0); para ver a los jugadores, `e:nearestPlayer(level)`.
-local TYPES = { 'chase', 'melee', 'leap', 'shoot' }
+local TYPES = { 'chase', 'melee', 'leap', 'shoot', 'hide' }
 
 local Behaviors = { byName = {}, list = {} }
 for _, name in ipairs(TYPES) do

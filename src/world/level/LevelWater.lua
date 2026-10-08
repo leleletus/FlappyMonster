@@ -20,7 +20,7 @@ local function loadBubbleImgs()
     if bubbleImgs then return end
     bubbleImgs = {}
     for _, def in ipairs(BUBBLE_DEFS) do
-        local ok, img = pcall(love.graphics.newImage, def.path)
+        local ok, img = pcall(require('src/fx/Anim').image, def.path)
         if ok then
             table.insert(bubbleImgs, { img=img, w=def.w, h=def.h })
         end
@@ -42,7 +42,7 @@ local VENT_SCALE = 2     -- 6×2 = 12px visual
 
 local function loadVentImg()
     if ventImg then return end
-    local ok, img = pcall(love.graphics.newImage, 'assets/images/world/crack.png')
+    local ok, img = pcall(require('src/fx/Anim').image, 'assets/images/world/crack.png')
     if ok then ventImg = img end
 end
 

@@ -14,7 +14,7 @@ return {
         if imgs then return end
         imgs = {}
         for i = 1, FRAMES do
-            local ok, im = pcall(love.graphics.newImage, 'assets/images/world/decorations/foliage/stretch/stretch' .. i .. '.png')
+            local ok, im = pcall(require('src/fx/Anim').image, 'assets/images/world/decorations/foliage/stretch/stretch' .. i .. '.png')
             if ok then imgs[i] = im end
         end
     end,

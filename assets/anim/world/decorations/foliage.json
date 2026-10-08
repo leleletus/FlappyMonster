@@ -1,0 +1,16 @@
+{
+  "id": "world/decorations/foliage",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "all",
+  "meta": {
+    "code": true,
+    "folder": true
+  },
+  "frames": [
+    {"image": "assets/images/world/decorations/foliage/tulip.png", "key": "tulip.png"}
+  ],
+  "anims": {
+    "all": {"fps": 3, "frames": [1], "loop": true}
+  }
+}

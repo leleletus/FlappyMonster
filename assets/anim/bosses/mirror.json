@@ -1,0 +1,20 @@
+{
+  "id": "bosses/mirror",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "all",
+  "meta": {
+    "code": true,
+    "folder": true
+  },
+  "frames": [
+    {"image": "assets/images/bosses/mirror/Body_ArmsDown.png", "key": "Body_ArmsDown.png"},
+    {"image": "assets/images/bosses/mirror/Body_ArmsUp.png", "key": "Body_ArmsUp.png"},
+    {"image": "assets/images/bosses/mirror/Head_Down.png", "key": "Head_Down.png"},
+    {"image": "assets/images/bosses/mirror/Head_Up.png", "key": "Head_Up.png"},
+    {"image": "assets/images/bosses/mirror/JoyEyes.png", "key": "JoyEyes.png"}
+  ],
+  "anims": {
+    "all": {"fps": 3, "frames": [1, 2, 3, 4, 5], "loop": true}
+  }
+}

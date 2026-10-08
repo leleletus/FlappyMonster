@@ -1,0 +1,20 @@
+{
+  "id": "bosses/snowboss/splat-Sheet",
+  "strip": {
+    "frameW": 64
+  },
+  "scale": 4,
+  "origin": [0.5, 0.5],
+  "fallback": "all",
+  "meta": {
+    "code": true
+  },
+  "frames": [
+    {"h": 36, "image": "assets/images/bosses/snowboss/splat-Sheet.png", "w": 64, "x": 0, "y": 0},
+    {"h": 36, "image": "assets/images/bosses/snowboss/splat-Sheet.png", "w": 64, "x": 64, "y": 0},
+    {"h": 36, "image": "assets/images/bosses/snowboss/splat-Sheet.png", "w": 64, "x": 128, "y": 0}
+  ],
+  "anims": {
+    "all": {"fps": 8, "frames": [1, 2, 3], "loop": true}
+  }
+}

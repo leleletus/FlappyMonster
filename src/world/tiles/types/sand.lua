@@ -16,7 +16,7 @@ local blend, quads
 
 local function loadBlend()
     if blend == nil then
-        local ok, img = pcall(love.graphics.newImage, 'assets/images/world/tiles/sand_blend.png')
+        local ok, img = pcall(require('src/fx/Anim').image, 'assets/images/world/tiles/sand_blend.png')
         blend = ok and img or false
         if blend then
             blend:setFilter('nearest', 'nearest')

@@ -1,0 +1,21 @@
+{
+  "id": "world/decorations/foliage/stretch",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "all",
+  "meta": {
+    "code": true,
+    "folder": true
+  },
+  "frames": [
+    {"image": "assets/images/world/decorations/foliage/stretch/stretch1.png", "key": "stretch1.png"},
+    {"image": "assets/images/world/decorations/foliage/stretch/stretch2.png", "key": "stretch2.png"},
+    {"image": "assets/images/world/decorations/foliage/stretch/stretch3.png", "key": "stretch3.png"},
+    {"image": "assets/images/world/decorations/foliage/stretch/stretch4.png", "key": "stretch4.png"},
+    {"image": "assets/images/world/decorations/foliage/stretch/stretch5.png", "key": "stretch5.png"}
+  ],
+  "anims": {
+    "all": {"fps": 3, "frames": [1, 2, 3, 4, 5], "loop": true},
+    "stretch": {"fps": 6, "frames": [1, 2, 3, 4, 5], "loop": true}
+  }
+}

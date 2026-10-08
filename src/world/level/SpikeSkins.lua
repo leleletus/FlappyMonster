@@ -16,7 +16,7 @@ function SpikeSkins.image(id)
     local s = byId[id or 'normal'] or byId.normal
     local img = cache[s.id]
     if not img then
-        img = love.graphics.newImage(s.file)
+        img = require('src/fx/Anim').image(s.file)
         if img.setFilter then img:setFilter('nearest', 'nearest') end
         cache[s.id] = img
     end

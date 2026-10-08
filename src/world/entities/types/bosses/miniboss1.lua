@@ -65,7 +65,7 @@ local imgShip, imgIdle1, imgIdle2, imgHurt, imgDeadDown, imgDeadUp
 function Ship.loadAssets()
     if imgShip then return end
     local function load(p)
-        local i = love.graphics.newImage(p)
+        local i = require('src/fx/Anim').image(p)
         if i.setFilter then i:setFilter('nearest', 'nearest') end
         return i
     end
@@ -430,7 +430,7 @@ local function drawSpikes(x, bottomY, len, nTiles)
     -- assets/images/bosses/miniboss1/spike.png: una púa de SPIKE_W x SPIKE_LEN
     -- hacia abajo (+1 px de margen para el contorno); al salir se estira
     if not spikeImg then
-        spikeImg = love.graphics.newImage('assets/images/bosses/miniboss1/spike.png')
+        spikeImg = require('src/fx/Anim').image('assets/images/bosses/miniboss1/spike.png')
         spikeImg:setFilter('nearest', 'nearest')
     end
     love.graphics.setColor(1, 1, 1, 1)

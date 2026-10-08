@@ -1,0 +1,18 @@
+{
+  "id": "world/decorations/volcano/basalt_rock",
+  "strip": {
+    "frameW": 18
+  },
+  "scale": 4,
+  "origin": [0.5, 0.5],
+  "fallback": "all",
+  "meta": {
+    "code": true
+  },
+  "frames": [
+    {"h": 13, "image": "assets/images/world/decorations/volcano/basalt_rock.png", "w": 18, "x": 0, "y": 0}
+  ],
+  "anims": {
+    "all": {"fps": 8, "frames": [1], "loop": true}
+  }
+}

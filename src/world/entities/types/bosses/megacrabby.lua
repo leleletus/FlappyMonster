@@ -95,7 +95,7 @@ local CS = MS * CLAW_K
 local anger
 function Mega.loadArt(dir, w, h, cw, ch, k, cx, cy, cin, spikeDy)
     local function load(p)
-        local i = love.graphics.newImage(p)
+        local i = require('src/fx/Anim').image(p)
         if i.setFilter then i:setFilter('nearest', 'nearest') end
         return i
     end

@@ -1,0 +1,18 @@
+{
+  "id": "world/decorations/meadow/tall_grass",
+  "strip": {
+    "frameW": 10
+  },
+  "scale": 4,
+  "origin": [0.5, 0.5],
+  "fallback": "all",
+  "meta": {
+    "code": true
+  },
+  "frames": [
+    {"h": 11, "image": "assets/images/world/decorations/meadow/tall_grass.png", "w": 10, "x": 0, "y": 0}
+  ],
+  "anims": {
+    "all": {"fps": 8, "frames": [1], "loop": true}
+  }
+}

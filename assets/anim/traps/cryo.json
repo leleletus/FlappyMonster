@@ -1,0 +1,21 @@
+{
+  "id": "traps/cryo",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "all",
+  "meta": {
+    "code": true,
+    "folder": true
+  },
+  "frames": [
+    {"image": "assets/images/traps/cryo/anchor.png", "key": "anchor.png"},
+    {"image": "assets/images/traps/cryo/chain.png", "key": "chain.png"},
+    {"image": "assets/images/traps/cryo/clamp.png", "key": "clamp.png"},
+    {"image": "assets/images/traps/cryo/cryo-Sheet.png", "key": "cryo-Sheet.png"},
+    {"image": "assets/images/traps/cryo/cryo_feet.png", "key": "cryo_feet.png"},
+    {"image": "assets/images/traps/cryo/stream-Sheet.png", "key": "stream-Sheet.png"}
+  ],
+  "anims": {
+    "all": {"fps": 3, "frames": [1, 2, 3, 4, 5, 6], "loop": true}
+  }
+}
