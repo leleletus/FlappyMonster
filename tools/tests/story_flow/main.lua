@@ -154,27 +154,82 @@ function love.update(dt)
         Run.data.done = all
         local total = 0
         for w = 1, Worlds.count() do total = total + #Worlds.nodes(w) end
+        -- FLECHAS DEL MAPA, parada a parada (con todo abierto): desde cada una, a la anterior y a la siguiente por el
+        -- camino se llega SIEMPRE con alguna flecha; esa flecha apunta de verdad hacia el nodo vecino; y una flecha
+        -- que no apunta a ninguna vecina no hace NADA (ni anterior / siguiente, ni saltar de mundo)
+        local DIRV = { left = { -1, 0 }, right = { 1, 0 }, up = { 0, -1 }, down = { 0, 1 } }
+        local away, nothing, stops, worstDot = {}, {}, 0, 1
         for w = 1, Worlds.count() do
-            for k = 1, #Worlds.nodes(w) - 1 do
+            for k = 1, #Worlds.nodes(w) do
+                stops = stops + 1
+                local x0, y0 = st:_nodeXY(w, k)
+                local map = st:_dirs(w, k)
                 for _, d in ipairs({ 1, -1 }) do
-                    local from, to = (d > 0) and k or k + 1, (d > 0) and k + 1 or k
-                    st.world, st.node, st.queue = w, from, {}
-                    st.heroX, st.heroY = st:_nodeXY(w, from)
-                    local tx, ty = st:_nodeXY(w, to)
-                    local leg = st:_legTo(w, from, d)
-                    local vx, vy = leg[1], leg[2]
-                    local ax, ay = (math.abs(vx) >= math.abs(vy)) and (vx > 0 and 1 or -1) or 0, (math.abs(vx) < math.abs(vy)) and (vy > 0 and 1 or -1) or 0
-                    st:_dirMove(ax, ay)
-                    tested = tested + 1
-                    if not (st.world == w and st.node == to) then bad[#bad + 1] = ('%d:%d→%d'):format(w, from, to) end
+                    local to = k + d
+                    if to >= 1 and to <= #Worlds.nodes(w) then
+                        tested = tested + 1
+                        local tx, ty = st:_nodeXY(w, to)
+                        local len = math.max(1, math.sqrt((tx - x0) ^ 2 + (ty - y0) ^ 2))
+                        local reached, best = false, -2
+                        for name, v in pairs(DIRV) do
+                            st.world, st.node, st.queue = w, k, {}
+                            st.heroX, st.heroY = x0, y0
+                            if map[name] then
+                                st:_dirMove(v[1], v[2])
+                                if st.world == w and st.node == to then
+                                    reached = true
+                                    best = math.max(best, ((tx - x0) * v[1] + (ty - y0) * v[2]) / len)
+                                end
+                            end
+                        end
+                        if not reached then bad[#bad + 1] = ('%d:%d→%d'):format(w, k, to)
+                        else
+                            worstDot = math.min(worstDot, best)
+                            if best < 0.3 then away[#away + 1] = ('%d:%d→%d (%.2f)'):format(w, k, to, best) end
+                        end
+                    end
                 end
+                for name, v in pairs(DIRV) do
+                    if not map[name] then
+                        st.world, st.node, st.queue = w, k, {}
+                        st.heroX, st.heroY = x0, y0
+                        local moved = st:_dirMove(v[1], v[2])
+                        if moved or st.world ~= w or st.node ~= k or #st.queue > 0 then nothing[#nothing + 1] = ('%d:%d %s'):format(w, k, name) end
+                    end
+                end
+            end
+        end
+        if os.getenv('MAPDBG') then
+            for w = 1, Worlds.count() do
+                for k2 = 1, #Worlds.nodes(w) do
+                    local x0, y0 = st:_nodeXY(w, k2)
+                    local m = st:_dirs(w, k2)
+                    print(('MAP %d:%d (%.0f,%.0f)  izq=%s der=%s arriba=%s abajo=%s'):format(w, k2, x0, y0, tostring(m.left), tostring(m.right), tostring(m.up), tostring(m.down)))
+                end
+            end
+        end
+        -- encadenar: pulsar otra vez mientras anda sigue desde donde va a llegar
+        st.world, st.node, st.queue = 1, 1, {}
+        st.heroX, st.heroY = st:_nodeXY(1, 1)
+        local m1 = st:_dirs(1, 1)
+        local first
+        for name, v in pairs(DIRV) do if m1[name] and not first then first = v end end
+        st:_dirMove(first[1], first[2])
+        local w1, k1, q1 = st.world, st.node, #st.queue
+        local chained = false
+        for name, v in pairs(DIRV) do
+            local m2 = st:_dirs(w1, k1)
+            if not chained and m2[name] and not (v[1] == -first[1] and v[2] == -first[2]) then
+                st:_dirMove(v[1], v[2])
+                chained = #st.queue > q1 and not (st.world == w1 and st.node == k1)
             end
         end
         st.world, st.node, Run.data.done = keep[1], keep[2], keep[3]
         st.queue = {}
         st.heroX, st.heroY = st:_nodeXY(st.world, st.node)
-        check('direccion', #bad <= math.floor(tested * 0.1), ('%d tramos probados en los dos sentidos; por dirección NO llega a la vecina en %d: %s'):format(
-            tested, #bad, table.concat(bad, ' ')))
+        check('direccion', #bad == 0 and #away == 0 and #nothing == 0 and chained,
+            ('%d paradas, %d vecinas: sin flecha %d %s; con una flecha que no apunta a ella %d %s (la peor apunta %.2f); flechas sin vecina que hacen algo %d %s; se encadena andando=%s'):format(
+            stops, tested, #bad, table.concat(bad, ' '), #away, table.concat(away, ' '), worstDot, #nothing, table.concat(nothing, ' '), tostring(chained)))
         top():_move(1); go('in2a')
     elseif step == 'in2a' and t - T > 0.3 then
         pressNext('confirm'); go('in2')

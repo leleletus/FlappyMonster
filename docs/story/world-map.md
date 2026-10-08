@@ -9,8 +9,19 @@ path. Everything about its shape is DATA in `assets/story/overworld.json`, writt
 `tools/art/ui/make_story_icons.py`. **Music:** `map_<world>`; the arrangement switches with the island nearest the
 hero at the same position of the tune (`Sound.switchMusic`).
 
-**Controls:** arrows go to the neighbouring stop whose path leaves in the pressed direction; tap a node to walk
-there, tap your own to play; ENTER plays.
+**Controls:** each arrow goes to the neighbouring stop that lies that way on the map; tap a node to walk there, tap
+your own to play; ENTER plays. Rules (`dirMap` in `StoryMapState.lua`): neighbours of a stop = previous and next
+along the path, plus the bridge to the next island from a castle (and back from an island's first level). (1) What
+counts is where the neighbouring NODE is. (2) Every neighbour always has an arrow of its own: the clearest direction
+wins; between two equally clear (the level next door and, far away, the next island, both straight left) the NEAREST
+node wins and the other takes the arrow that points where its path leaves. (3) A free arrow goes to a neighbour only
+if it really points at it (a diagonal neighbour answers both of its arrows); otherwise it does NOTHING. (4) Presses
+while walking chain from where the hero is going.
+History: the first version (same week) looked at where the PATH left the node, left about 10 % of neighbours with
+no arrow, and when no path matched fell back to previous / next (left / right) or jumped a whole island (up /
+down) — the user: "it works quite badly, uncomfortable, and often does strange things". Rewritten 2026-10-08.
+`story_flow` checks every stop of the real map (`MAPDBG=1` prints where each arrow leads). Not yet judged by the
+user.
 
 **To change the map:** edit the tables in `make_overworld.py` (terrain, relief, paths, decorations, `CRITTERS`,
 `NODE_BOSS`) and re-run it; never hand-edit `overworld.json`. Adding a level to a world needs nothing here: nodes

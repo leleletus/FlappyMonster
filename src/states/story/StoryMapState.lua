@@ -424,35 +424,95 @@ function StoryMapState:_legTo(w, k, d)
     return { vx, vy }
 end
 
--- FLECHAS = DIRECCIÓN REAL en el mapa: va a la parada vecina cuyo camino sale hacia donde se pulsa (antes
--- derecha era siempre "siguiente" e izquierda "anterior", aunque el siguiente nivel quedara a la izquierda).
--- Vecinas: la anterior y la siguiente por el camino; desde un castillo, además, el mundo siguiente por el puente
--- (y desde el primer nivel de un mundo, el castillo anterior). Devuelve false si por ahí no hay camino.
-function StoryMapState:_dirMove(dx, dy)
-    if #self.queue > 0 then return true end              -- (andando: espera a llegar)
-    local cur = stopIndex(self.world, self.node)
-    local w, k = self.world, self.node
+-- FLECHAS = HACIA DÓNDE ESTÁ LA PARADA VECINA en el mapa. Vecinas de una parada: la anterior y la siguiente por el
+-- camino; desde un castillo, además, el mundo siguiente por el puente (y desde el primer nivel de un mundo, el
+-- castillo anterior). Reglas (rehecho el 2026-10-08: lo de antes miraba hacia dónde SALÍA el camino, dejaba vecinas
+-- sin flecha y, si no acertaba, hacía otra cosa — izquierda / derecha = anterior / siguiente, arriba / abajo = saltar
+-- de mundo —):
+--   1. cuenta dónde está el NODO vecino (con un poco de por dónde sale su camino, para desempatar);
+--   2. cada vecina tiene SIEMPRE una flecha propia: la que mejor apunta hacia ella y no sea ya de otra más clara;
+--   3. una flecha que queda libre lleva a la vecina hacia la que apunta razonablemente (una vecina en diagonal
+--      responde a sus dos flechas); si no apunta a ninguna, NO hace nada (nunca otra cosa);
+--   4. se puede pulsar mientras anda: el siguiente paso se encadena desde donde va a llegar.
+local DIRS = { left = { -1, 0 }, right = { 1, 0 }, up = { 0, -1 }, down = { 0, 1 } }
+local DIR_ORDER = { 'left', 'right', 'up', 'down' }
+local function neighbours(cur)
+    local w, k = stopAt(cur)
     local M = loadMap().worlds[w]
     local n = #Worlds.nodes(w)
     local cands = {}
-    if cur < totalStops() then cands[#cands + 1] = { cur + 1, legForward(cur) } end
-    if cur > 1 then cands[#cands + 1] = { cur - 1, reversed(legForward(cur - 1)) } end
-    if k == n and M.branch and M.bridge and cur + 2 <= totalStops() then cands[#cands + 1] = { cur + 2, M.bridge } end
+    if cur < totalStops() then cands[#cands + 1] = { stop = cur + 1, leg = legForward(cur) } end
+    if cur > 1 then cands[#cands + 1] = { stop = cur - 1, leg = reversed(legForward(cur - 1)) } end
+    if k == n and M.branch and M.bridge and cur + 2 <= totalStops() then cands[#cands + 1] = { stop = cur + 2, leg = M.bridge } end
     if k == 1 and w > 1 then
         local P = loadMap().worlds[w - 1]
-        if P.branch and P.bridge then cands[#cands + 1] = { cur - 2, reversed(P.bridge) } end
+        if P.branch and P.bridge then cands[#cands + 1] = { stop = cur - 2, leg = reversed(P.bridge) } end
     end
-    local best, bd
+    local x0, y0 = nodeXY(w, k)
     for _, c in ipairs(cands) do
-        local vx, vy = legDir(c[2])
-        local dot = vx * dx + vy * dy
-        -- (a igualdad — el bonus y el castillo salen por el mismo sitio — gana la parada más cercana por el camino)
-        if dot > 0.45 and (not bd or dot > bd + 0.05 or (math.abs(dot - bd) <= 0.05 and math.abs(c[1] - cur) < math.abs(best - cur))) then
-            best, bd = c[1], dot
+        local x1, y1 = nodeXY(stopAt(c.stop))
+        local dx, dy = x1 - x0, y1 - y0
+        c.dist = math.sqrt(dx * dx + dy * dy)
+        c.lx, c.ly = legDir(c.leg)                           -- (por dónde sale su camino)
+        if c.dist < 1 then c.nx, c.ny = c.lx, c.ly else c.nx, c.ny = dx / c.dist, dy / c.dist end   -- (dónde está el nodo)
+    end
+    table.sort(cands, function(a, b) if a.dist ~= b.dist then return a.dist < b.dist end; return a.stop < b.stop end)
+    return cands
+end
+local function bestDir(vx, vy, taken)
+    local best, bd
+    for _, name in ipairs(DIR_ORDER) do
+        if not taken[name] then
+            local dot = vx * DIRS[name][1] + vy * DIRS[name][2]
+            if not bd or dot > bd then best, bd = name, dot end
         end
     end
-    if not best then return false end
-    self:_walkTo(best)
+    return best, bd
+end
+-- → { left = parada | nil, right = …, up = …, down = … } para la parada `cur`
+local function dirMap(cur)
+    local cands = neighbours(cur)                          -- (de la más cercana a la más lejana)
+    local map = {}
+    -- (2) a cada vecina, su flecha. Elige primero la que queda más de frente a una flecha; entre dos igual de claras
+    -- (el nivel de al lado y, lejos, la isla siguiente, las dos justo a la izquierda), la más CERCANA. La que se
+    -- queda sin la suya toma la que apunta hacia donde SALE su camino, que es lo que se ve junto al monstruo
+    local order = {}
+    for i, c in ipairs(cands) do
+        local _, dot = bestDir(c.nx, c.ny, {})
+        order[i] = { c = c, key = math.floor(dot * 10 + 0.5) }
+    end
+    table.sort(order, function(a, b)
+        if a.key ~= b.key then return a.key > b.key end
+        if a.c.dist ~= b.c.dist then return a.c.dist < b.c.dist end
+        return a.c.stop < b.c.stop
+    end)
+    for _, o in ipairs(order) do
+        local c = o.c
+        local want = bestDir(c.nx, c.ny, {})
+        if not map[want] then map[want] = c.stop
+        else
+            local alt = bestDir(c.lx, c.ly, map)
+            if alt then map[alt] = c.stop end
+        end
+    end
+    -- (3) las flechas libres, a la vecina hacia la que apunten de verdad (la más cercana si hay dos)
+    for _, name in ipairs(DIR_ORDER) do
+        if not map[name] then
+            for _, c in ipairs(cands) do
+                if c.nx * DIRS[name][1] + c.ny * DIRS[name][2] >= 0.5 then map[name] = c.stop; break end
+            end
+        end
+    end
+    return map
+end
+-- (para las pruebas y para quien quiera enseñarlo: a dónde lleva cada flecha desde la parada w, k)
+function StoryMapState:_dirs(w, k) return dirMap(stopIndex(w or self.world, k or self.node)) end
+
+function StoryMapState:_dirMove(dx, dy)
+    local name = (dx < 0 and 'left') or (dx > 0 and 'right') or (dy < 0 and 'up') or 'down'
+    local target = dirMap(stopIndex(self.world, self.node))[name]
+    if not target then return false end
+    self:_walkTo(target)
     return true
 end
 
@@ -589,10 +649,11 @@ function StoryMapState:update(dt)
 
     -- (por DIRECCIÓN; si por ahí no sale ningún camino: izquierda / derecha = anterior / siguiente y arriba / abajo =
     -- mundo anterior / siguiente, como siempre)
-    if Input.pressed('nav_left') and not self:_dirMove(-1, 0) then self:_move(-1) end
-    if Input.pressed('nav_right') and not self:_dirMove(1, 0) then self:_move(1) end
-    if Input.pressed('nav_up') and not self:_dirMove(0, -1) then self:_world(-1) end
-    if Input.pressed('nav_down') and not self:_dirMove(0, 1) then self:_world(1) end
+    -- (las flechas llevan a la parada vecina que hay hacia ese lado; si no hay ninguna, no hacen nada)
+    if Input.pressed('nav_left') then self:_dirMove(-1, 0) end
+    if Input.pressed('nav_right') then self:_dirMove(1, 0) end
+    if Input.pressed('nav_up') then self:_dirMove(0, -1) end
+    if Input.pressed('nav_down') then self:_dirMove(0, 1) end
     if Input.pressed('confirm') or Input.pressed('flap') then self:_play(); return end
     if Input.pressed('back') then self:_back() end
 end
