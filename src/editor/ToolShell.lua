@@ -56,7 +56,12 @@ local function inline(v)
     for k in pairs(v) do keys[#keys + 1] = tostring(k) end
     table.sort(keys)
     local parts = {}
-    for _, k in ipairs(keys) do parts[#parts + 1] = json.encode(k) .. ': ' .. inline(v[k] ~= nil and v[k] or v[tonumber(k)]) end
+    for _, k in ipairs(keys) do
+        -- (OJO con `false`: «v[k] or …» lo perdía y "loop": false se guardaba como null → la animación volvía a repetirse)
+        local val = v[k]
+        if val == nil then val = v[tonumber(k)] end
+        parts[#parts + 1] = json.encode(k) .. ': ' .. inline(val)
+    end
     return '{' .. table.concat(parts, ', ') .. '}'
 end
 function Shell.encodeJson(data, order)

@@ -322,6 +322,9 @@ function love.update(dt)
                   ('%d archivo(s): %s%s'):format(#writes, w and w.path or '-', ok and '' or (' JSON mal: ' .. bad)))
             -- lo guardado se vuelve a leer igual
             local s2 = Anim.fromData(back)
+            -- (lo que NO se repite sigue sin repetirse tras guardar: el editor perdía los `false` y "loop" salía null)
+            check('no_bucle', A.doc.anims.dead.loop == false and back.anims.dead.loop == false and s2.anims.dead.loop == false,
+                  ('`dead` no se repite: en el editor %s, en el JSON guardado %s, al releerlo %s'):format(tostring(A.doc.anims.dead.loop), tostring(back.anims.dead.loop), tostring(s2.anims.dead.loop)))
             check('ida_vuelta', s2:has('walk') and s2:frameAt('walk', 0) == 2 and s2.frames[frames0 + 1].x == 0 and s2.frames[frames0 + 2].x == 16, 'el JSON guardado da el mismo conjunto')
             print(fails == 0 and 'TODO OK' or ('FALLOS: ' .. fails)); love.event.quit(fails == 0 and 0 or 1)
         end
