@@ -1,7 +1,7 @@
 {
   "_ayuda": [
     "Índice de la música del juego. Carpetas de assets/music/:",
-    "  menus/     menús              map/    el mapa del mundo (un arreglo por isla)",
+    "  menus/     menús              map/    el mapa del mundo (un arreglo por isla)     flappy/  el modo Flappy",
     "  worlds/<mundo>/  música de NIVEL de cada mundo o zona: 2-3 pistas temáticas por mundo (pradera, costa, fortaleza, nieve, cuevas, volcan)",
     "  bosses/    peleas de jefe        jingles/  sintonías cortas",
     "Para añadir una canción: copia el archivo en su carpeta y añade una entrada aquí. Sale sola en el editor.",
@@ -52,6 +52,7 @@
     { "id": "mirror_boss",      "name": "El Espejo (jefe final)",      "intro": "bosses/mirror_boss_intro.ogg", "loop": "bosses/mirror_boss_loop.ogg", "level": false, "boss": true, "volume": 0.71 },
 
     { "id": "menus",         "name": "Menús",                         "file": "menus/menus.ogg",       "level": false, "volume": 0.93 },
+    { "id": "flappy",        "name": "Aleteo (modo Flappy)",          "intro": "flappy/flappy_intro.ogg", "loop": "flappy/flappy_loop.ogg", "level": false, "volume": 0.69 },
     { "id": "map_pradera",   "name": "Rumbo a las islas (Pradera)",   "file": "map/map_pradera.ogg",   "level": false, "volume": 0.71 },
     { "id": "map_costa",     "name": "Rumbo a las islas (Costa)",     "file": "map/map_costa.ogg",     "level": false, "volume": 0.71 },
     { "id": "map_fortaleza", "name": "Rumbo a las islas (Fortaleza)", "file": "map/map_fortaleza.ogg", "level": false, "volume": 0.71 },

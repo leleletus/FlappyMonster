@@ -154,6 +154,17 @@ the old level tune in the final boss, Verity's hook).
   snowball has three chord notes stepping down (its tom roll halved). Level −15 / −14 dB vs the lead (≈1 % of the
   energy, was 6 %). Rule: an accent is never louder than a backing layer and never leaves the chord.
 
+- `flappy` "Aleteo" (3.97.0, `worlds_nes.py flappy`, theme `aleteo`, arrangement `cielo`, intro + loop; verified by
+  numbers only, waiting for the user's verdict): the Flappy mode's OWN track — until now it played `pradera_1`
+  (`Music.DEFAULT`). D major (no island uses it), 150 BPM, 36 bars (57.6 s; loop 51.2 s). The idea is the FLAP: the
+  monster climbs in little hops (a rest on beat 1 = the push, two offbeat 16ths and the note that lands: ta-ta-TA)
+  and glides down by step (gravity), in 2-bar phrases; bar 8 of A' is the 3+3+2. Thin 12.5 % pulse lead with a small
+  upward scoop on attack (`I_SKY`), bass root-octave-fifth-octave in 8ths (half notes in B), third + fifth "pushes" on
+  the 4th and 7th 16th of every half bar, kick 1 · 3 · 3-and-a (step 11), 16th hats. Dark turn: G MINOR (iv) in bar
+  6 of B. Accent (own, melodic, chord tones only): the HOP — root + its octave, fifth + its octave in 16ths. "La
+  llamada" in D closes B (A-D-F#-A). Measured: 55 % of melody notes off the beat, lead 17 % of the energy; phrase A's
+  attack positions overlap pradera_1 49 % / pradera_2 55 % (between existing themes it is 50-100 %).
+
 ## Crab Tantrum (the three Mega Crabby themes)
 
 - **CRAB TANTRUM REMADE (3.53.0, `tools/music/crab_tantrum.py`; verified by numbers only; WAITING for the user's

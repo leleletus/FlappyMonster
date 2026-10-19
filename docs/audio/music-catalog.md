@@ -5,14 +5,14 @@ Every track is in the catalog `assets/music/index.json` (id, name, `file` or `in
 list of tracks: [reference/music](../reference/music.md). The style and composition rules:
 [music-guide](music-guide.md). How each track got here: [music-history](music-history.md).
 
-**Layout:** `assets/music/menus/`, `map/` (one arrangement per island), `worlds/<world>/` (`_1`, `_2`, `_bonus`),
+**Layout:** `assets/music/menus/`, `flappy/` (the Flappy mode's own track), `map/` (one arrangement per island), `worlds/<world>/` (`_1`, `_2`, `_bonus`),
 `bosses/`, `jingles/` (victory), `story/` (the two films). **Who plays what:** a level's `"music"` id; a boss zone's
 `music` (or the boss's own `musicOverride()`: Verity); the map picks `map_<world>` by the nearest island; the results
-screens play `victory`.
+screens play `victory`; the Flappy mode plays `flappy`.
 
 | Generator | Writes |
 |---|---|
-| `worlds_nes.py <track>` | the island sets (`pradera_*`, `costa_*`, `fortaleza_*`, `nieve_*`, `cuevas_1/2/bonus`, `volcan_*`), `gummy_king_boss`, `evil_ship_boss`, `snowball_boss`, `victory`; `--capas` = stems |
+| `worlds_nes.py <track>` | the island sets (`pradera_*`, `costa_*`, `fortaleza_*`, `nieve_*`, `cuevas_1/2/bonus`, `volcan_*`), `gummy_king_boss`, `evil_ship_boss`, `snowball_boss`, `victory`, `flappy`; `--capas` = stems |
 | `worldmap_nes.py` | `map_<world>` ×6 |
 | `crab_tantrum.py [normal gloomy]` | `crab_tantrum_normal`, `crab_tantrum_gloomy` |
 | `crab_icy.py` | `crab_tantrum_icy` (v3: definitive, do not touch its winter references) |

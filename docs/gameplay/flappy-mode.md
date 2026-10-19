@@ -6,6 +6,9 @@ sound module and the story's intro film, which pilots the REAL Flappy `Player` a
 **Files:** `src/states/flappy/PlayState.lua` (the game + HUD), `src/states/flappy/DifficultySelectionState.lua`,
 `src/flappy/Player.lua`, `src/flappy/Pipe.lua`, constants and `DIFFICULTIES` in `settings.lua`, art in
 `assets/images/flappy/`, sounds in `assets/sounds/flappy/`, best scores in `<difficulty>_highscore.dat`.
+**Music:** its own track `flappy` ("Aleteo", `assets/music/flappy/`, made by `tools/music/worlds_nes.py flappy`;
+[music-history](../audio/music-history.md)); on death its pitch follows the slow-down (`timeScale`). Before 3.97.0 it
+played the meadow's `pradera_1`.
 **Harness:** `flappy_hud` (`BOT=1` proves every difficulty is beatable at top speed).
 
 ## HUD and pacing

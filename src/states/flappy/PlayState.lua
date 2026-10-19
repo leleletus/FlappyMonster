@@ -90,14 +90,13 @@ function PlayState:enter(args)
     self.nextColorIdx = 2
     self.colorT       = 0
 
-    Sound.setLevelMusic(nil); Sound.setBaseLevelMusic(nil)   -- Flappy: la de siempre
-    Sound.playMusic('level')
+    Sound.playMusic('flappy')                     -- su propia pista ("Aleteo"; antes, la de la pradera)
 end
 
 function PlayState:pause()  end
 -- Al volver de la pausa la música sigue donde estaba (no se reinicia)
 function PlayState:resume()
-    if not Sound.resumeAll() then Sound.playMusic('level') end
+    if not Sound.resumeAll() then Sound.playMusic('flappy') end
 end
 
 function PlayState:pauseGame()

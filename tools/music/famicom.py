@@ -318,7 +318,7 @@ PATHS = {
     'mirror_boss': 'bosses/mirror_boss',
     'pradera_1': 'worlds/pradera/pradera_1', 'pradera_2': 'worlds/pradera/pradera_2', 'pradera_bonus': 'worlds/pradera/pradera_bonus',
     'costa_1': 'worlds/costa/costa_1', 'costa_2': 'worlds/costa/costa_2', 'costa_bonus': 'worlds/costa/costa_bonus',
-    'menus_chip': 'menus/menus_chip', 'menus': 'menus/menus',
+    'menus_chip': 'menus/menus_chip', 'menus': 'menus/menus', 'flappy': 'flappy/flappy',
     'map_pradera': 'map/map_pradera', 'map_costa': 'map/map_costa', 'map_fortaleza': 'map/map_fortaleza',
     'map_nieve': 'map/map_nieve', 'map_cuevas': 'map/map_cuevas', 'map_final': 'map/map_final',
 }

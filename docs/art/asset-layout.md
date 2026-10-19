@@ -12,7 +12,7 @@ assets/
   nav/              bot navigation graphs, one per arena (rebuilt by `run.sh bot_nav BUILD=1`)
   shaders/          water.glsl
   story/            overworld.json (world map), films.json (film timing), sets/ (film sets = real levels)
-  music/            index.json (the catalog) + menus/ map/ worlds/<world>/ bosses/ jingles/ story/
+  music/            index.json (the catalog) + menus/ map/ worlds/<world>/ bosses/ jingles/ story/ flappy/
   sounds/           player/ enemies/<enemy>/ (shared: enemies/common/) bosses/<boss>/ items/ mechanics/ traps/
                     water/ ambience/ jingles/ ui/ flappy/ fireworks/ story/
   images/
