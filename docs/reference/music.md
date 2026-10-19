@@ -7,26 +7,26 @@ plays the intro once and then repeats the loop. `level` = offered as level music
 | Id | Name | Files | Volume | Use |
 |---|---|---|---|---|
 | `pradera_1` | Pradera 1 (tema) | `worlds/pradera/pradera_1_intro.ogg` + `worlds/pradera/pradera_1_loop.ogg` | 0.7 | level |
-| `pradera_2` | Pradera 2 (menor) | `worlds/pradera/pradera_2_intro.ogg` + `worlds/pradera/pradera_2_loop.ogg` | 0.69 | level |
-| `pradera_bonus` | Pradera (bonus) | `worlds/pradera/pradera_bonus_intro.ogg` + `worlds/pradera/pradera_bonus_loop.ogg` | 0.66 | level |
-| `costa_1` | Costa 1 (Calipso) | `worlds/costa/costa_1_intro.ogg` + `worlds/costa/costa_1_loop.ogg` | 0.69 | level |
+| `pradera_2` | Pradera 2 (menor) | `worlds/pradera/pradera_2_intro.ogg` + `worlds/pradera/pradera_2_loop.ogg` | 0.7 | level |
+| `pradera_bonus` | Pradera (bonus) | `worlds/pradera/pradera_bonus_intro.ogg` + `worlds/pradera/pradera_bonus_loop.ogg` | 0.67 | level |
+| `costa_1` | Costa 1 (Calipso) | `worlds/costa/costa_1_intro.ogg` + `worlds/costa/costa_1_loop.ogg` | 0.7 | level |
 | `costa_2` | Costa 2 (Arrecife) | `worlds/costa/costa_2_intro.ogg` + `worlds/costa/costa_2_loop.ogg` | 0.71 | level |
 | `costa_bonus` | Costa (bonus) | `worlds/costa/costa_bonus_intro.ogg` + `worlds/costa/costa_bonus_loop.ogg` | 0.67 | level |
-| `fortaleza_1` | Fortaleza 1 (Marcha de hierro) | `worlds/fortaleza/fortaleza_1_intro.ogg` + `worlds/fortaleza/fortaleza_1_loop.ogg` | 0.7 | level |
+| `fortaleza_1` | Fortaleza 1 (Marcha de hierro) | `worlds/fortaleza/fortaleza_1_intro.ogg` + `worlds/fortaleza/fortaleza_1_loop.ogg` | 0.71 | level |
 | `fortaleza_2` | Fortaleza 2 (Engranajes) | `worlds/fortaleza/fortaleza_2_intro.ogg` + `worlds/fortaleza/fortaleza_2_loop.ogg` | 0.7 | level |
 | `fortaleza_bonus` | Fortaleza (bonus) | `worlds/fortaleza/fortaleza_bonus_intro.ogg` + `worlds/fortaleza/fortaleza_bonus_loop.ogg` | 0.67 | level |
 | `nieve_1` | Cumbres 1 (Cumbres de cristal) | `worlds/nieve/nieve_1_intro.ogg` + `worlds/nieve/nieve_1_loop.ogg` | 0.71 | level |
-| `nieve_2` | Cumbres 2 (Ventisca) | `worlds/nieve/nieve_2_intro.ogg` + `worlds/nieve/nieve_2_loop.ogg` | 0.7 | level |
+| `nieve_2` | Cumbres 2 (Ventisca) | `worlds/nieve/nieve_2_intro.ogg` + `worlds/nieve/nieve_2_loop.ogg` | 0.71 | level |
 | `nieve_bonus` | Cumbres (bonus) | `worlds/nieve/nieve_bonus_intro.ogg` + `worlds/nieve/nieve_bonus_loop.ogg` | 0.67 | level |
-| `cuevas_1` | Cuevas 1 (Ecos de cristal) | `worlds/cuevas/cuevas_1_intro.ogg` + `worlds/cuevas/cuevas_1_loop.ogg` | 0.66 | level |
-| `cuevas_2` | Cuevas 2 (Laberinto sumergido) | `worlds/cuevas/cuevas_2_intro.ogg` + `worlds/cuevas/cuevas_2_loop.ogg` | 0.71 | level |
-| `cuevas_bonus` | Cuevas (bonus) | `worlds/cuevas/cuevas_bonus_intro.ogg` + `worlds/cuevas/cuevas_bonus_loop.ogg` | 0.66 | level |
+| `cuevas_1` | Cuevas 1 (Ecos de cristal) | `worlds/cuevas/cuevas_1_intro.ogg` + `worlds/cuevas/cuevas_1_loop.ogg` | 0.67 | level |
+| `cuevas_2` | Cuevas 2 (Laberinto sumergido) | `worlds/cuevas/cuevas_2_intro.ogg` + `worlds/cuevas/cuevas_2_loop.ogg` | 0.72 | level |
+| `cuevas_bonus` | Cuevas (bonus) | `worlds/cuevas/cuevas_bonus_intro.ogg` + `worlds/cuevas/cuevas_bonus_loop.ogg` | 0.67 | level |
 | `cuevas_oscuras` | Cuevas a oscuras | `worlds/cuevas/cuevas_oscuras.ogg` | 0.77 | level |
 | `volcan_1` | Volcán 1 (Sendero de ceniza) | `worlds/volcan/volcan_1_intro.ogg` + `worlds/volcan/volcan_1_loop.ogg` | 0.67 | level |
 | `volcan_2` | Volcán 2 (Lluvia de fuego) | `worlds/volcan/volcan_2_intro.ogg` + `worlds/volcan/volcan_2_loop.ogg` | 0.67 | level |
 | `volcan_bonus` | Volcán (bonus) | `worlds/volcan/volcan_bonus_intro.ogg` + `worlds/volcan/volcan_bonus_loop.ogg` | 0.63 | level |
-| `gummy_king_boss` | Su Majestad Gummy (Rey Gummy) | `bosses/gummy_king_boss_intro.ogg` + `bosses/gummy_king_boss_loop.ogg` | 0.74 | boss |
-| `evil_ship_boss` | Persecución (Nave Malvada) | `bosses/evil_ship_boss_intro.ogg` + `bosses/evil_ship_boss_loop.ogg` | 0.73 | boss |
+| `gummy_king_boss` | Su Majestad Gummy (Rey Gummy) | `bosses/gummy_king_boss_intro.ogg` + `bosses/gummy_king_boss_loop.ogg` | 0.75 | boss |
+| `evil_ship_boss` | Persecución (Nave Malvada) | `bosses/evil_ship_boss_intro.ogg` + `bosses/evil_ship_boss_loop.ogg` | 0.74 | boss |
 | `crab_tantrum_normal` | Crab Tantrum (Mega Crabby) | `bosses/crab_tantrum_normal_intro.ogg` + `bosses/crab_tantrum_normal_loop.ogg` | 0.7 | boss |
 | `crab_tantrum_icy` | Crab Tantrum (Mega Crabby helado) | `bosses/crab_tantrum_icy_intro.ogg` + `bosses/crab_tantrum_icy_loop.ogg` | 0.7 | boss |
 | `crab_tantrum_gloomy` | Crab Tantrum (Mega Crabby lúgubre) | `bosses/crab_tantrum_gloomy_intro.ogg` + `bosses/crab_tantrum_gloomy_loop.ogg` | 0.79 | boss |
@@ -35,7 +35,7 @@ plays the intro once and then repeats the loop. `level` = offered as level music
 | `snowball_verity` | ¿La Gran Bola? (Verity, huevo de Pascua) | `bosses/snowball_verity_intro.ogg` + `bosses/snowball_verity_loop.ogg` | 0.75 | boss |
 | `mirror_boss` | El Espejo (jefe final) | `bosses/mirror_boss_intro.ogg` + `bosses/mirror_boss_loop.ogg` | 0.71 | boss |
 | `menus` | Menús | `menus/menus.ogg` | 0.93 |  |
-| `flappy` | Aleteo (modo Flappy) | `flappy/flappy_intro.ogg` + `flappy/flappy_loop.ogg` | 0.69 |  |
+| `flappy` | Aleteo (modo Flappy) | `flappy/flappy_intro.ogg` + `flappy/flappy_loop.ogg` | 0.7 |  |
 | `map_pradera` | Rumbo a las islas (Pradera) | `map/map_pradera.ogg` | 0.71 |  |
 | `map_costa` | Rumbo a las islas (Costa) | `map/map_costa.ogg` | 0.71 |  |
 | `map_fortaleza` | Rumbo a las islas (Fortaleza) | `map/map_fortaleza.ogg` | 0.71 |  |

@@ -37,7 +37,10 @@ tempos: levels ~138, menus 140, bosses 148-186; only the map (120) and the caves
 progressions (i–VI–iv–V, I–V–vi–V, IV–IV–V–V before a chorus), with ONE dark turn per piece (the Neapolitan ♭II in
 the cave, the blue note ♭5 in the legs). Power chords only when the fifth is in the harmony.
 
-**Form.** Short intro (4 bars) → A (8) → A' → a contrasting B → return; seamless loop. Long pieces grow by
+**Form.** Short intro (4 bars) → A (8) → A' → a contrasting B → return; seamless loop. A LEVEL OR BOSS LOOP MUST NOT
+BE SHORT (user, 3.98.0: tracks under a minute "get repetitive and tiring"): aim at 1:30-2:30. The island form is
+intro · A · A' · B · D (development: A's motif in another key area) · E (breather: long notes, half drums, a roll back
+in) · A'' · B' (both + a counter-melody) · A''' (+ octave doubling) — 64 bars; see `DEV` in `worlds_nes.py`. Long pieces grow by
 **density** (more layers, cymbals, octaves), not by volume. A silence or an empty half bar before a strong entry. A
 long boss loop needs its own way back: never cut from the peak to the opening.
 
@@ -45,8 +48,10 @@ long boss loop needs its own way back: never cut from the peak to the opening.
 
 The map tune ("Rumbo a las islas") begins by climbing the chord: **G–C–E–G** (5th–1st–3rd–5th) and settles. It is the
 one original thing the player hears throughout the game (between levels), so it is the **leitmotif of the game**:
-every world's music quotes it once (opening the theme or closing phrase B), in its key and with its instrument. That
-way the map and the levels are the same music. The Mirror boss's motif is la llamada with its intervals INVERTED.
+it lives in the map, the films, the Mirror boss (whose motif is la llamada with its intervals INVERTED) and the
+victory fanfare. **It is NOT quoted in the level or island-boss tracks any more** (user, 3.98.0: forcing it into
+almost every song — always closing phrase B with the same rhythm — "is too much"); each tune closes B with its own
+cadence. Use it only where it means something, and ask first.
 
 ## 3. Identity per island
 
@@ -74,7 +79,7 @@ way the map and the levels are the same music. The Mirror boss's motif is la lla
 2. A singable melody: mostly stepwise plus the house cells; long notes are always chord tones; ornaments stay in the
    scale (both are asserted by a check in the generators).
 3. More than half of the notes off the beat; at least one bar with the 3+3+2 tresillo.
-4. Quote "la llamada" once, unforced: in a place with ITS chord (never graft a motif onto another harmony).
+4. Don't quote "la llamada" by default (see §2); never graft a motif onto another harmony.
 5. One dark turn per piece. Never transpose a known melody "to darken it". No bright major section inside an
    aggressive minor arrangement; no leading tone mixed with ♭VII.
 6. Grow by layers; a breath before each strong entry; seamless loop.

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # tools/music/worlds_nes.py
-# La música de NIVEL de cada isla (música de Famicom; motor: famicom.py), según docs/musica/GUIA_MUSICAL.md:
-# una idea por pieza, frases de 8 compases (intro 4 · A · A' · B · A''), más de la mitad de la melodía a
-# contratiempo, un compás con el tresillo 3+3+2, y la cita de "la llamada" (el motivo del juego: 5ª-1ª-3ª-5ª, el
-# arranque de la música del mapa) al cerrar la frase B, sobre SU acorde. Bucle sin costura.
+# La música de NIVEL de cada isla (música de Famicom; motor: famicom.py), según docs/audio/music-guide.md:
+# una idea por pieza, frases de 8 compases, más de la mitad de la melodía a contratiempo, un compás con el tresillo
+# 3+3+2. Forma larga (ver DEV): intro 4 · A · A' · B · D · E · A'' · B' · A'''. Bucle sin costura. (Hasta la 3.98.0
+# la frase B cerraba con "la llamada" — el arranque de la música del mapa —; ya no: ver DEV.)
 #
 #   PRADERA (Sol mayor, pulso cantarín, bajo saltarín 1-5-8-5, acordes a contratiempo, batería ligera, trino):
 #     pradera_1      el TEMA de la pradera (136 BPM). Tres variantes para elegir (--variante A|B|C):
@@ -66,7 +66,7 @@ PH_B = [
     (5, 0, E5, 3), (5, 3, G5, 3), (5, 6, E5, 2), (5, 8, C5, 3), (5, 11, E5, 3), (5, 14, G5, 2),
     (6, 0, D5, 3), (6, 3, G5, 3), (6, 6, D5, 2), (6, 8, B4, 3), (6, 11, D5, 3), (6, 14, G5, 2),
     (7, 0, A5, 2), (7, 2, G5, 2), (7, 4, E5, 2), (7, 6, C5, 2), (7, 8, D5, 2), (7, 10, Fs5, 2), (7, 12, A5, 4),
-    (8, 0, D5, 4), (8, 4, G5, 2), (8, 6, B5, 2), (8, 8, D6, 6),
+    (8, 0, A5, 2), (8, 2, B5, 2), (8, 4, D6, 4), (8, 8, G5, 8),               # (cierre propio; antes, la llamada)
 ]
 CH_A = [(G, MAJ), (G, MAJ), (E, MIN), (C, MAJ), (G, MAJ), (D, MAJ), (C, MAJ), (G, MAJ)]
 CH_A7 = (D, MAJ)                                  # (el compás 7 de A: Do | Re, medio compás cada uno)
@@ -146,7 +146,7 @@ P_B = [
     (5, 0, F5, 3), (5, 3, A5, 3), (5, 6, F5, 2), (5, 8, C5, 3), (5, 11, F5, 3), (5, 14, A5, 2),
     (6, 0, E5, 3), (6, 3, G5, 3), (6, 6, E5, 2), (6, 8, C5, 3), (6, 11, E5, 3), (6, 14, G5, 2),
     (7, 0, A5, 2), (7, 2, F5, 2), (7, 4, D5, 2), (7, 6, F5, 2), (7, 8, G5, 2), (7, 10, B5, 2), (7, 12, D5, 4),
-    (8, 0, G4, 4), (8, 4, C5, 2), (8, 6, E5, 2), (8, 8, G5, 6),              # la llamada, tal cual en el mapa: Sol-Do-Mi-Sol
+    (8, 0, E5, 3), (8, 3, G5, 1), (8, 4, E5, 3), (8, 7, D5, 1), (8, 8, C5, 8),  # (cierre al galope; antes, la llamada)
 ]
 Fr = 5
 PCH_A = [(C, MAJ), (C, MAJ), (Fr, MAJ), (G, MAJ), (C, MAJ), (A, MIN), ((Fr, MAJ), (G, MAJ)), (C, MAJ)]
@@ -183,7 +183,7 @@ K_B = [
     (5, 0, D5, 3), (5, 3, F5, 3), (5, 6, D5, 2), (5, 8, Bb4, 3), (5, 11, D5, 3), (5, 14, F5, 2),
     (6, 0, C5, 3), (6, 3, F5, 3), (6, 6, C5, 2), (6, 8, A4, 3), (6, 11, C5, 3), (6, 14, F5, 2),
     (7, 0, G5, 2), (7, 2, F5, 2), (7, 4, D5, 2), (7, 6, Bb4, 2), (7, 8, C5, 2), (7, 10, E5, 2), (7, 12, G5, 4),
-    (8, 0, C5, 4), (8, 4, F5, 2), (8, 6, A5, 2), (8, 8, C6, 6),              # la llamada en Fa: Do-Fa-La-Do
+    (8, 0, A5, 2), (8, 2, C6, 1), (8, 3, A5, 3), (8, 6, F5, 2), (8, 8, F5, 8),  # (cierre propio; antes, la llamada)
 ]
 Bbr = 10
 KCH_A = [(Fr, MAJ), (Fr, MAJ), (Bbr, MAJ), (C, MAJ), (Fr, MAJ), (D, MIN), ((Bbr, MAJ), (C, MAJ)), (Fr, MAJ)]
@@ -208,7 +208,7 @@ R_B = [
     (5, 0, Bb5, 6), (5, 6, G5, 2), (5, 8, Eb5, 6), (5, 14, G5, 2),
     (6, 0, F5, 6), (6, 6, D5, 2), (6, 8, Bb4, 6), (6, 14, D5, 2),
     (7, 0, Eb5, 4), (7, 4, C5, 4), (7, 8, F5, 4), (7, 12, A5, 4),
-    (8, 0, F4, 4), (8, 4, Bb4, 2), (8, 6, D5, 2), (8, 8, F5, 6),              # la llamada en Si♭: Fa-Si♭-Re-Fa
+    (8, 0, D5, 6), (8, 6, C5, 2), (8, 8, Bb4, 8),                               # (cierre propio; antes, la llamada)
 ]
 Ebr = 3
 RCH_A = [(Bbr, MAJ), (G, MIN), (Ebr, MAJ), (Fr, MAJ), (Bbr, MAJ), (G, MIN), ((Ebr, MAJ), (Fr, MAJ)), (Bbr, MAJ)]
@@ -244,7 +244,7 @@ H_B = [
     (5, 0, C5, 3), (5, 3, Eb5_, 3), (5, 6, C5, 2), (5, 8, Ab4, 3), (5, 11, C5, 3), (5, 14, Eb5_, 2),
     (6, 0, Bb4_, 3), (6, 3, Eb5_, 3), (6, 6, Bb4_, 2), (6, 8, G4_, 3), (6, 11, Bb4_, 3), (6, 14, Eb5_, 2),
     (7, 0, F5_, 2), (7, 2, Eb5_, 2), (7, 4, C5, 2), (7, 6, Ab4, 2), (7, 8, B4_, 2), (7, 10, D5, 2), (7, 12, G5, 4),
-    (8, 0, G4_, 4), (8, 4, C5, 2), (8, 6, Eb5_, 2), (8, 8, G5, 6),            # la llamada en Do menor: Sol-Do-Mi♭-Sol
+    (8, 0, C5, 4), (8, 4, G4_, 2), (8, 6, C5, 1), (8, 7, D5, 1), (8, 8, C5, 8),  # (la cabeza de la marcha; antes, la llamada)
 ]
 Abr, Ebr_, Fr_ = 8, 3, 5
 HCH_A = [(C, MIN), (C, MIN), (Abr, MAJ), (G, MAJ), (C, MIN), (Abr, MAJ), ((Fr_, MIN), (G, MAJ)), (C, MIN)]
@@ -270,7 +270,7 @@ N_B = [
     (5, 0, C5, 3), (5, 3, Eb5_, 3), (5, 6, C5, 2), (5, 8, G4_, 3), (5, 11, C5, 3), (5, 14, Eb5_, 2),
     (6, 0, Bb4_, 3), (6, 3, D5, 3), (6, 6, Bb4_, 2), (6, 8, G4_, 3), (6, 11, Bb4_, 3), (6, 14, D5, 2),
     (7, 0, Eb5_, 2), (7, 2, G5, 2), (7, 4, Bb5_, 4), (7, 8, A5n, 2), (7, 10, Fs5_, 2), (7, 12, D5, 4),
-    (8, 0, D5, 4), (8, 4, G5, 2), (8, 6, Bb5_, 2), (8, 8, D6_, 6),            # la llamada en Sol menor: Re-Sol-Si♭-Re
+    (8, 0, D5, 2), (8, 2, Bb4_, 2), (8, 4, A4n, 2), (8, 6, Bb4_, 2), (8, 8, G4_, 8),  # (cierre propio; antes, la llamada)
 ]
 NCH_A = [(G, MIN), (G, MIN), (Ebr_, MAJ), (D, MAJ), (G, MIN), (C, MIN), ((Ebr_, MAJ), (D, MAJ)), (G, MIN)]
 NCH_B = [(C, MIN), (G, MIN), (Ebr_, MAJ), (D, MAJ), (C, MIN), (G, MIN), ((Ebr_, MAJ), (D, MAJ)), (G, MIN)]
@@ -325,7 +325,7 @@ X_B = [
     (5, 0, F5_, 3), (5, 3, Ab5, 3), (5, 6, F5_, 2), (5, 8, C5, 3), (5, 11, F5_, 3), (5, 14, Ab5, 2),
     (6, 0, Eb5_, 3), (6, 3, G5, 3), (6, 6, Eb5_, 2), (6, 8, C5, 3), (6, 11, Eb5_, 3), (6, 14, G5, 2),
     (7, 0, Ab5, 2), (7, 2, Eb5_, 2), (7, 4, C5, 2), (7, 6, Eb5_, 2), (7, 8, D5, 2), (7, 10, B4_, 2), (7, 12, G5, 4),
-    (8, 0, G4_, 4), (8, 4, C5, 2), (8, 6, Eb5_, 2), (8, 8, G5, 6),            # la llamada en Do menor
+    (8, 0, C5, 2), (8, 2, C5, 2), (8, 4, Eb5_, 2), (8, 6, D5, 2), (8, 8, C5, 8),  # (la cabeza del tema; antes, la llamada)
 ]
 XCH_A = [(C, MIN), (Abr, MAJ), (Bbr_, MAJ), (G, MAJ), (C, MIN), (Abr, MAJ), ((Fr_, MIN), (G, MAJ)), (C, MIN)]
 XCH_B = [(Fr_, MIN), (C, MIN), (Abr, MAJ), (G, MAJ), (Fr_, MIN), (C, MIN), ((Abr, MAJ), (G, MAJ)), (C, MIN)]
@@ -379,7 +379,7 @@ S_END = P(8, "0:A5/4 4:F5/4 8:C5/8")
 S_END2 = P(8, "0:F5/4 4:A5/4 8:C6/8")
 S_B = PH(*W148, "0:F5/2 2:A5/2 4:D6/2 6:A5/4 10:F5/2 12:D5/2 14:F5/4", "2:D5/2 4:F5/2 6:Bb5/4 10:F5/2 12:D5/4", *W148_END)
 S_C = wmotif() + P(5, "0:A5/6 6:F5/2 8:D5/4 12:F5/4") + P(6, "0:F5/6 6:D5/2 8:Bb4/4 12:D5/4") \
-    + P(7, "0:G5/2 2:Bb5/2 4:G5/2 6:D5/2 8:E5/2 10:G5/2 12:C6/4") + P(8, "0:C5/4 4:F5/2 6:A5/2 8:C6/6")     # la llamada
+    + P(7, "0:G5/2 2:Bb5/2 4:G5/2 6:D5/2 8:E5/2 10:G5/2 12:C6/4") + P(8, "0:A5/6 6:G5/2 8:F5/8")             # (antes, la llamada)
 SCH_A = [(Fr_, MAJ), (C, MAJ), (D, MIN), (Bbr_, MAJ), (Fr_, MAJ), (C, MAJ), ((Bbr_, MAJ), (C, MAJ)), (Fr_, MAJ)]
 SCH_B = [(Fr_, MAJ), ((G, MIN), (Fr_, MAJ)), (Bbr_, MAJ), (C, MAJ), (D, MIN), (Bbr_, MAJ), (G, MIN), (C, MAJ)]
 SCH_C = [(Bbr_, MAJ), (Bbr_, MAJ), (C, MAJ), (C, MAJ), (D, MIN), (Bbr_, MAJ), ((G, MIN), (C, MAJ)), (Fr_, MAJ)]
@@ -391,7 +391,7 @@ V_A = PH("0:A5/2 2:G5/2 4:F5/2 6:D5/4 10:F5/2 12:A5/2 14:Bb5/4", "2:A5/2 4:F5/2 
 V_END = P(8, "0:A5/4 4:F5/4 8:D5/8")
 V_END2 = P(8, "0:D5/4 4:F5/4 8:A5/8")
 V_B = PH(W148[0], W148[1], "0:D6/2 2:C6/2 4:Bb5/2 6:F5/4 10:D5/2 12:F5/2 14:G5/4", "2:E5/2 4:G5/2 6:C6/4 12:G5/4",
-         "0:A5/8 8:F5/4 12:A5/4", "0:Bb5/8 8:F5/4 12:D5/4", "0:E5/3 4:E5/3 8:E5/3 12:G5/4", "0:A4/4 4:D5/2 6:F5/2 8:A5/6")
+         "0:A5/8 8:F5/4 12:A5/4", "0:Bb5/8 8:F5/4 12:D5/4", "0:E5/3 4:E5/3 8:E5/3 12:G5/4", "0:F5/2 2:E5/2 4:F5/4 8:D5/8")
 VCH_A = [(D, MIN), (Bbr_, MAJ), (C, MAJ), (D, MIN), (D, MIN), (G, MIN), ((Bbr_, MAJ), (C, MAJ)), (D, MIN)]
 VCH_B = [(D, MIN), ((G, MIN), (Fr_, MAJ)), (Bbr_, MAJ), (C, MAJ), (D, MIN), (Bbr_, MAJ), (C, MAJ), (D, MIN)]
 SCALE_Dm = {2, 4, 5, 7, 9, 10, 0}
@@ -408,7 +408,7 @@ O_END = P(8, "0:Ab5/4 4:F5/4 8:C5/8")
 O_END2 = P(8, "0:C6/4 4:Ab5/4 8:F5/8")
 O_B = PH(*W148, up=3) + P(5, "0:C6/8 8:Ab5/4 12:F5/4") + P(6, "0:Ab5/8 8:F5/4 12:Db5/4") + [(b + 6, st, n + 3, d) for b, st, n, d in PH(*W148_END)]
 O_C = wmotif(3) + P(5, "0:C6/6 6:Ab5/2 8:F5/4 12:Ab5/4") + P(6, "0:Ab5/6 6:F5/2 8:Db5/4 12:F5/4") \
-    + P(7, "0:Bb5/2 2:F5/2 4:Db5/2 6:F5/2 8:G5/2 10:Eb5/2 12:Bb5/4") + P(8, "0:C5/4 4:F5/2 6:Ab5/2 8:C6/6")   # la llamada
+    + P(7, "0:Bb5/2 2:F5/2 4:Db5/2 6:F5/2 8:G5/2 10:Eb5/2 12:Bb5/4") + P(8, "0:Ab5/6 6:G5/2 8:F5/8")           # (antes, la llamada)
 Dbr = 1
 OCH_A = [(Fr_, MIN), (Fr_, MIN), (Dbr, MAJ), (Ebr_, MAJ), (Fr_, MIN), (Fr_, MIN), ((Dbr, MAJ), (Ebr_, MAJ)), (Fr_, MIN)]
 OCH_B = [(Fr_, MIN), ((Bbr_, MIN), (Abr_, MAJ)), (Dbr, MAJ), (Ebr_, MAJ), (Fr_, MIN), (Dbr, MAJ), (Bbr_, MIN), (Ebr_, MAJ)]
@@ -431,7 +431,7 @@ C_A = PH("0:D5/6 6:F5/2 8:A5/8", "0:B5/6 6:A5/2 8:G5/4 12:D5/4", "0:F5/6 6:A5/2 
 C_END = P(8, "0:F5/4 4:A5/4 8:D5/8")
 C_END2 = P(8, "0:A5/4 4:F5/4 8:D6/8")
 C_B = PH("0:C6/4 4:A5/2 6:F5/2 8:A5/8", "0:G5/4 4:E5/2 6:C5/2 8:E5/8", "0:B5/4 4:G5/2 6:D5/2 8:G5/8", "0:A5/4 4:F5/2 6:D5/2 8:F5/8",
-         "0:F5/2 2:A5/2 4:C6/4 8:C6/8", "0:E5/2 2:G5/2 4:C6/4 8:E6/8", "0:E6/4 4:C6/4 8:A5/4 12:E5/4", "0:A4/4 4:D5/2 6:F5/2 8:A5/6")
+         "0:F5/2 2:A5/2 4:C6/4 8:C6/8", "0:E5/2 2:G5/2 4:C6/4 8:E6/8", "0:E6/4 4:C6/4 8:A5/4 12:E5/4", "0:F5/6 6:E5/2 8:D5/8")
 CCH_A = [(D, MIN), (G, MAJ), (D, MIN), (C, MAJ), (D, MIN), (G, MAJ), (A, MIN), (D, MIN)]
 CCH_B = [(Fr_, MAJ), (C, MAJ), (G, MAJ), (D, MIN), (Fr_, MAJ), (C, MAJ), (A, MIN), (D, MIN)]
 SCALE_Ddor = {2, 4, 5, 7, 9, 11, 0}
@@ -440,7 +440,7 @@ U_A = PH("0:E5/4 4:A5/2 6:B5/2 8:C6/6 14:B5/2", "0:A5/8 8:F5/4 12:A5/4", "0:D5/4
 U_END = P(8, "0:A5/4 4:E5/4 8:C5/8")
 U_END2 = P(8, "0:C6/4 4:E6/4 8:A5/8")
 U_B = PH("0:F5/2 2:A5/2 4:C6/4 8:A5/8", "0:G5/2 2:B5/2 4:D6/4 8:B5/8", "0:A5/2 2:C6/2 4:E6/4 8:C6/8", "0:E6/6 6:D6/2 8:C6/4 12:A5/4",
-         "0:F5/4 4:A5/4 8:D6/8", "0:C6/4 4:A5/4 8:F5/8", "0:G5/2 2:B5/2 4:D6/2 6:B5/2 8:G5/4 12:D5/4", "0:E5/4 4:A5/2 6:C6/2 8:E6/6")
+         "0:F5/4 4:A5/4 8:D6/8", "0:C6/4 4:A5/4 8:F5/8", "0:G5/2 2:B5/2 4:D6/2 6:B5/2 8:G5/4 12:D5/4", "0:E6/4 4:D6/2 6:C6/2 8:A5/8")
 UCH_A = [(A, MIN), (Fr_, MAJ), (G, MAJ), (A, MIN), (A, MIN), (Fr_, MAJ), ((G, MAJ), (E, MIN)), (A, MIN)]
 UCH_B = [(Fr_, MAJ), (G, MAJ), (A, MIN), (A, MIN), (D, MIN), (Fr_, MAJ), (G, MAJ), (A, MIN)]
 SCALE_Am = {9, 11, 0, 2, 4, 5, 7}
@@ -464,7 +464,7 @@ L_A = PH("0:E5/4 4:G5/1 5:A5/1 6:B5/8 14:G5/2", "0:E6/4 4:D6/1 5:C6/1 6:G5/10",
 L_END = P(8, "0:E5/4 4:G5/4 8:B5/8")
 L_END2 = P(8, "0:G5/4 4:F5/2 6:E5/2 8:E5/8")
 L_B = PH("0:G5/6 6:E5/2 8:C6/8", "0:B5/6 6:G5/2 8:D6/8", "0:C6/4 4:E6/4 8:A5/6 14:C6/2", "0:B5/6 6:G5/2 8:E5/8",
-         "0:A5/6 6:F5/2 8:C6/8", "0:G5/6 6:E5/2 8:E6/8", "0:F6/4 4:C6/4 8:A5/4 12:F5/4", "0:B4/4 4:E5/2 6:G5/2 8:B5/6")
+         "0:A5/6 6:F5/2 8:C6/8", "0:G5/6 6:E5/2 8:E6/8", "0:F6/4 4:C6/4 8:A5/4 12:F5/4", "0:E5/4 4:G5/1 5:F5/1 6:E5/10")
 LCH_A = [(E, MIN), (C, MAJ), (G, MAJ), (Fr_, MAJ), (E, MIN), (C, MAJ), ((A, MIN), (Fr_, MAJ)), (E, MIN)]
 LCH_B = [(C, MAJ), (G, MAJ), (A, MIN), (E, MIN), (Fr_, MAJ), (C, MAJ), (Fr_, MAJ), (E, MIN)]
 SCALE_Ephr = {4, 5, 7, 9, 11, 0, 2}
@@ -475,7 +475,7 @@ F_A = PH("0:A5/1 1:Bb5/1 2:C6/1 3:D6/1 4:E6/6 10:D6/2 12:C6/4", "0:E6/1 1:D6/1 2
 F_END = P(8, "0:C6/4 4:A5/4 8:E5/8")
 F_END2 = P(8, "0:A5/4 4:C6/4 8:E6/8")
 F_B = PH("0:C6/8 8:A5/4 12:F5/4", "0:D6/8 8:Bb5/4 12:G5/4", "0:E6/6 6:D6/2 8:C6/4 12:G5/4", "0:F6/6 6:D6/2 8:Bb5/8",
-         "0:E6/8 8:C6/4 12:A5/4", "0:C6/8 8:A5/4 12:C6/4", "0:D6/4 4:Bb5/4 8:F6/4 12:D6/4", "0:E5/4 4:A5/2 6:C6/2 8:E6/6")
+         "0:E6/8 8:C6/4 12:A5/4", "0:C6/8 8:A5/4 12:C6/4", "0:D6/4 4:Bb5/4 8:F6/4 12:D6/4", "0:Bb5/1 1:A5/1 2:G5/1 3:F5/1 4:E5/4 8:A5/8")
 FCH_A = [(A, MIN), (A, MIN), (Bbr_, MAJ), (A, MIN), (D, MIN), (C, MAJ), (Bbr_, MAJ), (A, MIN)]
 FCH_B = [(Fr_, MAJ), (G, MIN), (C, MAJ), (Bbr_, MAJ), (A, MIN), (Fr_, MAJ), ((G, MIN), (Bbr_, MAJ)), (A, MIN)]
 SCALE_Aphr = {9, 10, 0, 2, 4, 5, 7}
@@ -515,7 +515,7 @@ R2_END2 = P(8, "0:Bb5/3 3:Bb5/1 4:D6/4 8:Bb5/8")
 R2_B = PH("0:D6/2 2:C6/2 4:Bb5/2 6:A5/2 8:Bb5/4 12:G5/4", "0:A5/2 2:G5/2 4:F5/2 6:Eb5/2 8:F5/4 12:D5/4",
           "0:Bb5/2 2:A5/2 4:G5/2 6:F5/2 8:G5/4 12:Eb5/4", "0:C6/2 2:Bb5/2 4:A5/2 6:G5/2 8:A5/4 12:F5/4",
           "0:G5/4 4:Bb5/4 8:D6/6 14:Bb5/2", "0:F5/4 4:A5/4 8:D6/6 14:A5/2",
-          "0:G5/2 2:Bb5/2 4:Eb6/4 8:F5/2 10:A5/2 12:C6/4", "0:F4/4 4:Bb4/2 6:D5/2 8:F5/6")       # la llamada en Si♭
+          "0:G5/2 2:Bb5/2 4:Eb6/4 8:F5/2 10:A5/2 12:C6/4", "0:Bb5/3 3:Bb5/1 4:F5/4 8:Bb4/8")       # (antes, la llamada)
 R2CH_A = [(Bbr_, MAJ), (Bbr_, MAJ), (Ebr_, MAJ), (Fr_, MAJ), (Bbr_, MAJ), (G, MIN), ((Ebr_, MAJ), (Fr_, MAJ)), (Bbr_, MAJ)]
 R2CH_B = [(G, MIN), (D, MIN), (Ebr_, MAJ), (Fr_, MAJ), (G, MIN), (D, MIN), ((Ebr_, MAJ), (Fr_, MAJ)), (Bbr_, MAJ)]
 
@@ -536,10 +536,178 @@ FL_END2 = P(8, "0:F#5/3 3:A5/3 6:C#6/2 8:D6/8")                           # (el 
 FL_B = PH("0:B5/6 6:A5/2 8:G5/4 12:D5/4", "0:C#6/6 6:B5/2 8:A5/4 12:E5/4",
           "0:A5/2 2:C#6/2 4:F#6/6 10:E6/2 12:C#6/4", "0:D6/6 6:C#6/2 8:B5/8",
           "2:G5/1 3:B5/1 4:D6/2 6:G6/6 12:D6/4", "2:G5/1 3:Bb5/1 4:D6/2 6:G6/6 12:Bb5/4",
-          "0:G5/2 2:E5/2 4:B5/4 8:A5/2 10:C#6/2 12:E6/4", "0:A4/4 4:D5/2 6:F#5/2 8:A5/6")          # la llamada en Re
+          "0:G5/2 2:E5/2 4:B5/4 8:A5/2 10:C#6/2 12:E6/4", "0:F#5/2 2:A5/1 3:D6/1 4:A5/4 8:D5/8")    # (antes, la llamada)
 FLCH_A = [(D, MAJ), (B, MIN), (G, MAJ), (A, MAJ), (D, MAJ), (6, MIN), ((G, MAJ), (A, MAJ)), (D, MAJ)]
 FLCH_B = [(G, MAJ), (A, MAJ), (6, MIN), (B, MIN), (G, MAJ), (G, MIN), ((E, MIN), (A, MAJ)), (D, MAJ)]
 SCALE_D = {2, 4, 6, 7, 9, 11, 1, 10}             # (Re mayor + el Si♭ de Sol menor)
+
+
+# ══ PIEZAS MÁS LARGAS (3.98.0) ═════════════════════════════════════════════════════════════════════════════════
+# El usuario: los temas de nivel (y los jefes de la nave y de la bola) no pasaban del minuto y se hacían repetitivos.
+# Antes: intro · A · A' · B · A'' (32 compases). Ahora cada tema tiene dos secciones NUEVAS hechas con su propio motivo
+#   D  DESARROLLO: el ritmo y el contorno de la cabeza de A en otra zona armónica (el relativo, el IV), en secuencia;
+#      acaba en la dominante o en el acorde que abre E
+#   E  RESPIRO: notas largas, el arreglo de B, batería a medias (bombo en el 1, platos sueltos) y un redoble que
+#      crece al final; acaba en un acorde que devuelve a A
+# y A y B vuelven con capas nuevas (A'' y B' con un CONTRACANTO — notas del acorde, tenidas, por grados —; A''' además
+# con la melodía doblada a la octava):  intro · A · A' · B · [C] · D · E · A'' · B' · [solo] · A'''  (64 compases).
+# Las piezas con muestras prestadas (nieve_1, nieve_2, la bola) no repiten B ni C: cada muestra, una vez por vuelta.
+# LA LLAMADA ya no cierra B (el usuario: forzarla en casi todas las canciones era demasiado): cada tema cierra con lo
+# suyo. Queda en el mapa (de donde sale), las cinemáticas, el Espejo y la fanfarria de victoria.
+def CH(txt):
+    """'Em C Am|D' → acordes por compás ((raíz, calidad) o una pareja para medio compás cada uno)"""
+    def one(t):
+        m = t.endswith('m')
+        nm = t[:-1] if m else t
+        return ((_PC[nm[0]] + (-1 if nm[1:] == 'b' else 1 if nm[1:] == '#' else 0)) % 12, MIN if m else MAJ)
+    return [tuple(one(x) for x in tok.split('|')) if '|' in tok else one(tok) for tok in txt.split()]
+DEV = {
+    # pradera_1 (Sol mayor): la subida a saltitos 3+3+2, ahora en Mi menor
+    'hop': (PH("0:E5/3 3:F#5/3 6:G5/2 8:B5/4 12:G5/2 14:B5/2", "0:C6/3 3:B5/3 6:G5/2 8:B5/6",
+               "0:C5/3 3:D5/3 6:E5/2 8:G5/4 12:E5/2 14:G5/2", "0:A5/3 3:G5/3 6:F#5/2 8:A5/6 14:F#5/2",
+               "0:G5/3 3:A5/3 6:B5/2 8:E6/4 12:B5/2 14:E6/2", "0:E6/3 3:D6/3 6:C6/2 8:A5/6 14:C6/2",
+               "0:G5/2 2:E5/2 4:C5/2 6:E5/2 8:F#5/2 10:A5/2 12:D6/4", "0:F#5/4 4:A5/4 8:D5/8"),
+            CH("Em Em C D Em Am C|D D"),
+            PH("0:E5/6 6:G5/2 8:C6/8", "0:A5/6 6:F#5/2 8:D5/8", "0:F#5/6 6:B5/2 8:D6/8", "0:B5/4 4:G5/4 8:E5/8",
+               "0:G5/4 4:C6/4 8:E6/6 14:D6/2", "0:D6/4 4:A5/4 8:F#5/6 14:A5/2", "0:C6/4 4:A5/2 6:E5/2 8:A5/4 12:C6/4",
+               "0:D6/3 3:C6/3 6:A5/2 8:F#5/8"),
+            CH("C D Bm Em C D Am D")),
+    # pradera_2 "Galope" (Do mayor): el galope en La menor
+    'galope': (PH("0:A5/3 3:C6/1 4:A5/3 7:E5/1 8:C5/2 10:E5/2 12:A5/4", "0:B5/3 3:A5/1 4:G5/3 7:E5/1 8:E5/6 14:G5/2",
+                  "0:A5/3 3:C6/1 4:A5/3 7:F5/1 8:C5/2 10:F5/2 12:A5/4", "0:B5/3 3:D6/1 4:B5/3 7:G5/1 8:D5/6 14:G5/2",
+                  "0:C6/3 3:E6/1 4:C6/3 7:A5/1 8:E5/2 10:A5/2 12:C6/4", "0:D6/3 3:F6/1 4:D6/3 7:A5/1 8:F5/6 14:A5/2",
+                  "0:C6/2 2:A5/2 4:F5/4 8:D5/2 10:G5/2 12:B5/4", "0:D6/3 3:B5/1 4:G5/3 7:D5/1 8:G5/8"),
+               CH("Am Am F G Am Dm F|G G"),
+               PH("0:C6/6 6:A5/2 8:F5/8", "0:G5/6 6:E5/2 8:C5/8", "0:F5/4 4:A5/4 8:D6/8", "0:B5/6 6:A5/2 8:G5/8",
+                  "0:A5/4 4:C6/4 8:F6/6 14:E6/2", "0:E6/4 4:C6/4 8:G5/6 14:A5/2", "0:F5/4 4:A5/4 8:G5/4 12:B5/4",
+                  "0:D6/3 3:B5/1 4:G5/3 7:F5/1 8:D5/8"),
+               CH("F C Dm G F C Dm|Em G")),
+    # costa_1 "Calipso" (Fa mayor): el giro del calipso en Re menor
+    'calipso': (PH("0:D5/2 2:F5/1 3:A5/3 6:A5/2 8:G5/2 10:F5/2 12:D5/2 14:F5/2", "0:E5/3 3:F5/3 6:D5/2 8:A4/6",
+                   "0:D5/2 2:F5/1 3:Bb5/3 6:Bb5/2 8:A5/2 10:F5/2 12:D5/2 14:F5/2", "0:G5/3 3:E5/3 6:C5/2 8:E5/6",
+                   "0:F5/2 2:A5/1 3:D6/3 6:D6/2 8:C6/2 10:A5/2 12:F5/2 14:A5/2", "0:Bb5/3 3:A5/3 6:G5/2 8:D5/6",
+                   "0:F5/2 2:D5/2 4:Bb4/4 8:C5/2 10:E5/2 12:G5/4", "0:E5/2 2:G5/1 3:C6/3 6:Bb5/2 8:G5/8"),
+                CH("Dm Dm Bb C Dm Gm Bb|C C"),
+                PH("0:D6/6 6:Bb5/2 8:F5/8", "0:C6/6 6:A5/2 8:F5/8", "0:Bb5/4 4:D6/4 8:G5/8", "0:E5/4 4:G5/4 8:C6/8",
+                   "0:F5/2 2:Bb5/2 4:D6/4 8:F6/6 14:D6/2", "0:C6/4 4:A5/4 8:F5/6 14:A5/2", "0:G5/2 2:Bb5/2 4:D6/4 8:Bb5/4 12:G5/4",
+                   "0:E5/3 3:G5/3 6:Bb5/2 8:C6/8"),
+                CH("Bb F Gm C Bb F Gm C")),
+    # costa_2 "Arrecife" (Si♭ mayor): las ondas en Sol menor
+    'arrecife': (PH("0:G5/4 4:Bb5/2 6:G5/2 8:D5/4 12:G5/2 14:Bb5/2", "0:A5/2 2:Bb5/4 6:A5/2 8:G5/8",
+                    "0:G5/4 4:Bb5/2 6:G5/2 8:Eb5/4 12:G5/2 14:Bb5/2", "0:C6/6 6:Bb5/2 8:A5/8",
+                    "0:D6/4 4:Bb5/2 6:G5/2 8:D5/4 12:G5/2 14:Bb5/2", "0:Eb6/6 6:D6/2 8:C6/4 12:G5/4",
+                    "0:Bb5/2 2:G5/2 4:Eb5/4 8:F5/2 10:A5/2 12:C6/4", "0:A5/6 6:G5/2 8:F5/8"),
+                 CH("Gm Gm Eb F Gm Cm Eb|F F"),
+                 PH("0:G5/8 8:Bb5/8", "0:F5/8 8:D5/8", "0:Eb5/8 8:G5/8", "0:A5/12 12:C6/4",
+                    "0:Bb5/6 6:G5/2 8:Eb6/8", "0:D6/6 6:C6/2 8:Bb5/8", "0:C6/4 4:G5/4 8:Eb5/8", "0:F5/4 4:A5/4 8:C6/8"),
+                 CH("Eb Bb Cm F Eb Bb Cm F")),
+    # fortaleza_1 "Marcha de hierro" (Do menor): la marcha en La♭
+    'marcha': (PH("0:Ab4/4 4:C5/2 6:Eb5/1 7:F5/1 8:Eb5/4 12:C5/2 14:Eb5/2", "0:Ab5/6 6:G5/2 8:Eb5/8",
+                  "0:F5/4 4:C5/2 6:F5/1 7:G5/1 8:Ab5/4 12:G5/2 14:F5/2", "0:G5/6 6:F5/2 8:D5/8",
+                  "0:C6/4 4:Ab5/2 6:C6/1 7:Bb5/1 8:Ab5/4 12:Eb5/2 14:Ab5/2", "0:G5/6 6:F5/2 8:Eb5/4 12:Bb4/4",
+                  "0:Ab5/2 2:F5/2 4:C5/4 8:B4/2 10:D5/2 12:G5/4", "0:B4/4 4:D5/2 6:F5/1 7:Eb5/1 8:D5/8"),
+               CH("Ab Ab Fm G Ab Eb Fm|G G"),
+               PH("0:C5/8 8:Eb5/8", "0:Bb4/8 8:G4/8", "0:Ab4/8 8:C5/8", "0:B4/8 8:D5/8",
+                  "0:Eb5/6 6:F5/2 8:Ab5/8", "0:G5/6 6:F5/2 8:Eb5/8", "0:F5/4 4:Ab5/4 8:C6/8", "0:B5/4 4:G5/4 8:D5/8"),
+               CH("Ab Eb Fm G Ab Eb Fm G")),
+    # fortaleza_2 "Engranajes" (Sol menor): el engranaje en Mi♭
+    'engranajes': (PH("0:Eb5/2 2:G5/2 4:Bb5/2 6:G5/2 8:Eb6/4 12:Bb5/2 14:G5/2", "0:F5/2 2:G5/2 4:Bb5/2 6:C6/2 8:Bb5/6",
+                      "0:C5/2 2:Eb5/2 4:G5/2 6:Eb5/2 8:C6/4 12:G5/2 14:Eb5/2", "0:F#5/2 2:A5/2 4:D6/2 6:A5/2 8:F#5/6",
+                      "0:G5/2 2:Bb5/2 4:Eb6/2 6:Bb5/2 8:G5/4 12:Bb5/2 14:Eb6/2", "0:D6/2 2:C6/2 4:Bb5/2 6:F5/2 8:D5/6",
+                      "0:Eb5/2 2:G5/2 4:C6/4 8:D6/2 10:C6/2 12:A5/4", "0:F#5/2 2:A5/2 4:D6/2 6:A5/2 8:F#5/8"),
+                   CH("Eb Eb Cm D Eb Bb Cm|D D"),
+                   PH("0:G5/4 4:Eb5/4 8:C5/4 12:Eb5/4", "0:D5/4 4:Bb4/4 8:G4/4 12:Bb4/4", "0:Eb5/4 4:G5/4 8:Bb5/4 12:G5/4",
+                      "0:F#5/4 4:A5/4 8:D6/8", "0:C6/4 4:G5/4 8:Eb5/4 12:G5/4", "0:Bb5/4 4:G5/4 8:D5/4 12:G5/4",
+                      "0:Eb5/4 4:Bb5/4 8:G5/4 12:Eb6/4", "0:D6/6 6:C6/1 7:A5/1 8:F#5/8"),
+                   CH("Cm Gm Eb D Cm Gm Eb D")),
+    # nieve_1 "Cumbres de cristal" (Fa mayor): sus corcheas que suben, en Re menor
+    'cumbres': (PH("0:D5/2 2:F5/2 4:A5/2 6:D6/4 10:C6/2 12:A5/2 14:F5/4", "2:E5/2 4:G5/2 6:C6/4 10:G5/2 12:E5/4",
+                   "0:Bb4/2 2:D5/2 4:F5/2 6:Bb5/4 10:A5/2 12:F5/2 14:D5/4", "2:D5/2 4:G5/2 6:Bb5/4 10:A5/2 12:G5/4",
+                   "0:F5/2 2:A5/2 4:C6/2 6:D6/4 10:C6/2 12:A5/2 14:F5/4", "2:F5/2 4:Bb5/2 6:D6/4 10:Bb5/2 12:F5/4",
+                   "0:G5/2 2:Bb5/2 4:D6/4 8:C6/2 10:G5/2 12:E5/4", "0:G5/4 4:E5/4 8:C5/8"),
+                CH("Dm C Bb Gm Dm Bb Gm|C C"),
+                PH("0:D6/8 8:Bb5/8", "0:C6/8 8:A5/8", "0:Bb5/6 6:A5/2 8:G5/8", "0:G5/4 4:C6/4 8:E5/8",
+                   "0:F5/4 4:Bb5/4 8:D6/8", "0:C6/6 6:Bb5/2 8:A5/8", "0:G5/4 4:D5/4 8:Bb5/8", "0:C6/6 6:Bb5/2 8:E5/8"),
+                CH("Bb F Gm C Bb F Gm C")),
+    # nieve_2 "Ventisca" (Re menor): la ráfaga que baja, en Fa mayor
+    'ventisca': (PH("0:C6/2 2:Bb5/2 4:A5/2 6:F5/4 10:A5/2 12:C6/2 14:A5/4", "2:G5/2 4:A5/2 6:C6/4 10:A5/2 12:F5/4",
+                    "0:D6/2 2:C6/2 4:Bb5/2 6:F5/4 10:Bb5/2 12:D6/2 14:Bb5/4", "2:E5/2 4:G5/2 6:C6/4 12:G5/4",
+                    "0:A5/2 2:G5/2 4:F5/2 6:C5/4 10:F5/2 12:A5/2 14:C6/4", "2:F5/2 4:A5/2 6:D6/4 10:A5/2 12:F5/4",
+                    "0:Bb5/2 2:F5/2 4:D5/4 8:E5/2 10:G5/2 12:C6/4", "0:G5/4 4:E5/4 8:C5/8"),
+                 CH("F F Bb C F Dm Bb|C C"),
+                 PH("0:F5/8 8:D5/8", "0:E5/8 8:G5/8", "0:A5/8 8:F5/4 12:D5/4", "0:D5/12 12:F5/4",
+                    "0:Bb5/8 8:G5/4 12:D5/4", "0:G5/12 12:Bb5/4", "0:D6/6 6:C6/2 8:Bb5/8", "0:C6/4 4:G5/4 8:E5/8"),
+                 CH("Bb C Dm Dm Gm Gm Bb C")),
+    # cuevas_1 "Ecos de cristal" (Re dórico): las notas largas con hueco para el eco, en Fa y Do
+    'ecos': (PH("0:F5/6 6:A5/2 8:C6/8", "0:E6/6 6:D6/2 8:C6/4 12:G5/4", "0:D6/6 6:B5/2 8:G5/8", "0:A5/6 6:F5/2 8:D5/4 12:A5/4",
+                "0:C6/6 6:A5/2 8:F5/8", "0:G5/6 6:E5/2 8:C5/4 12:E5/4", "0:A5/4 4:C6/4 8:E6/6 14:D6/2", "0:C6/6 6:B5/2 8:A5/8"),
+             CH("F C G Dm F C Am Am"),
+             PH("0:D5/8 8:F5/8", "0:A5/12 12:F5/4", "0:G5/8 8:B5/8", "0:D6/12 12:B5/4",
+                "0:C6/8 8:A5/8", "0:F5/12 12:A5/4", "0:E5/8 8:A5/8", "0:C6/8 8:E6/8"),
+             CH("Dm Dm G G F F Am Am")),
+    # cuevas_2 "Laberinto sumergido" (La menor): la onda por grados, en Do mayor
+    'laberinto': (PH("0:G5/4 4:C6/2 6:D6/2 8:E6/6 14:D6/2", "0:D6/8 8:B5/4 12:D6/4", "0:F5/4 4:A5/2 6:B5/2 8:C6/6 14:A5/2",
+                     "0:G5/8 8:E5/4 12:G5/4", "0:A5/4 4:B5/2 6:C6/2 8:E6/6 14:C6/2", "0:C6/8 8:A5/4 12:F5/4",
+                     "0:F5/2 2:A5/2 4:D6/4 8:B5/2 10:G5/2 12:D5/4", "0:B5/4 4:D6/4 8:G5/8"),
+                  CH("C G F C Am F Dm|G G"),
+                  PH("0:A5/8 8:C6/8", "0:B5/8 8:G5/8", "0:F5/8 8:A5/8", "0:G5/8 8:E5/8",
+                     "0:C6/6 6:B5/2 8:A5/8", "0:B5/6 6:A5/2 8:D6/8", "0:C6/4 4:A5/4 8:E5/8", "0:E5/4 4:G5/4 8:B5/8"),
+                  CH("F Em Dm Em F G Am Em")),
+    # volcan_1 "Sendero de ceniza" (Mi frigio): taa ta-ta-TAAA, en La menor y Do
+    'ceniza': (PH("0:A5/4 4:C6/1 5:D6/1 6:E6/8 14:C6/2", "0:E6/4 4:D6/1 5:C6/1 6:A5/10",
+                  "0:F5/4 4:G5/1 5:A5/1 6:C6/8 14:A5/2", "0:D6/4 4:C6/1 5:B5/1 6:G5/10",
+                  "0:G5/4 4:A5/1 5:B5/1 6:C6/8 14:E6/2", "0:E6/4 4:D6/1 5:C6/1 6:A5/8 14:C6/2",
+                  "0:A5/2 2:C6/2 4:F6/4 8:D6/2 10:B5/2 12:G5/4", "0:B5/4 4:D6/2 6:B5/2 8:G5/8"),
+               CH("Am Am F G C Am F|G G"),
+               PH("0:A5/8 8:C6/8", "0:B5/8 8:G5/8", "0:F5/8 8:A5/8", "0:E5/12 12:G5/4",
+                  "0:C6/8 8:E6/8", "0:B5/8 8:E5/8", "0:D6/8 8:A5/8", "0:C6/4 4:A5/4 8:F5/8"),
+               CH("F Em F Em Am Em Dm F")),
+    # volcan_2 "Lluvia de fuego" (La frigio): los latigazos en Re menor y Si♭
+    'fuego': (PH("0:D6/1 1:E6/1 2:F6/1 3:E6/1 4:D6/6 10:A5/2 12:F5/4", "0:A5/1 1:Bb5/1 2:C6/1 3:Bb5/1 4:A5/6 10:F5/2 12:D5/4",
+                 "0:Bb5/1 1:C6/1 2:D6/1 3:C6/1 4:Bb5/6 10:F5/2 12:D5/4", "0:C6/1 1:D6/1 2:E6/1 3:D6/1 4:C6/6 10:G5/2 12:E5/4",
+                 "0:F5/1 1:G5/1 2:A5/1 3:Bb5/1 4:C6/6 10:A5/2 12:F5/4", "0:F6/1 1:E6/1 2:D6/1 3:C6/1 4:A5/6 10:D6/2 12:F6/4",
+                 "0:D6/2 2:Bb5/2 4:F5/4 8:E5/2 10:G5/2 12:C6/4", "0:Bb5/1 1:A5/1 2:G5/1 3:F5/1 4:D5/4 8:F5/8"),
+              CH("Dm Dm Bb C F Dm Bb|C Bb"),
+              PH("0:E6/8 8:C6/8", "0:D6/8 8:F6/8", "0:C6/8 8:A5/8", "0:Bb5/12 12:D6/4",
+                 "0:G5/8 8:Bb5/8", "0:A5/8 8:E6/8", "0:D6/8 8:Bb5/8", "0:F5/1 1:G5/1 2:A5/1 3:Bb5/1 4:D6/4 8:F6/8"),
+              CH("Am Bb Am Bb Gm Am Gm Bb")),
+    # snowball_boss "La Gran Bola" (Fa menor): el golpe de tres notas y salto, en Si♭ menor y Re♭
+    'bola': (PH("0:Bb5/3 4:Bb5/3 8:Bb5/3 12:F6/4", "0:Db6/2 2:C6/2 4:Bb5/2 6:Ab5/2 8:Bb5/4 12:F5/4",
+                "0:Ab5/3 4:Ab5/3 8:Ab5/3 12:Db6/4", "0:Eb6/2 2:Db6/2 4:C6/2 6:Bb5/2 8:G5/4 12:Eb5/4",
+                "0:F5/3 4:F5/3 8:F5/3 12:Bb5/4", "0:Db6/2 2:F6/2 4:Db6/2 6:Ab5/2 8:F5/4 12:Ab5/4",
+                "0:G5/4 4:Bb5/4 8:Eb6/4 12:Bb5/4", "0:Eb6/3 4:Db6/3 8:C6/3 12:Bb5/4"),
+             CH("Bbm Bbm Db Eb Bbm Db Eb Eb"),
+             PH("0:F5/8 8:Ab5/8", "0:G5/8 8:Bb5/8", "0:C6/8 8:Ab5/8", "0:F5/12 12:Ab5/4",
+                "0:Db6/8 8:Ab5/8", "0:Bb5/8 8:Eb6/8", "0:Db6/6 6:C6/2 8:Bb5/8", "0:G5/3 4:G5/3 8:G5/3 12:Bb5/4"),
+             CH("Db Eb Fm Fm Db Eb Bbm Eb")),
+    # evil_ship_boss "Persecución" (Do menor): las corcheas que empujan, en Fa menor y La♭
+    'persecucion': (PH("0:F5/2 2:F5/2 4:Ab5/2 6:F5/2 8:C6/4 12:Ab5/2 14:F5/2", "0:G5/2 2:F5/2 4:G5/2 6:Ab5/2 8:F5/6",
+                       "0:Eb5/2 2:Eb5/2 4:Ab5/2 6:Eb5/2 8:C6/4 12:Ab5/2 14:Eb5/2", "0:D5/2 2:F5/2 4:Bb5/2 6:F5/2 8:D6/6",
+                       "0:Ab5/2 2:Ab5/2 4:C6/2 6:Ab5/2 8:F5/4 12:Ab5/2 14:C6/2", "0:Eb6/2 2:C6/2 4:Ab5/2 6:C6/2 8:Eb5/6",
+                       "0:F5/2 2:Ab5/2 4:C6/4 8:B5/2 10:G5/2 12:D5/4", "0:G5/2 2:G5/2 4:B4/2 6:D5/2 8:G4/8"),
+                    CH("Fm Fm Ab Bb Fm Ab Fm|G G"),
+                    PH("0:C5/8 8:Eb5/8", "0:Ab5/12 12:Eb5/4", "0:F5/8 8:Ab5/8", "0:C6/12 12:Ab5/4",
+                       "0:Eb5/8 8:C5/8", "0:D5/8 8:F5/8", "0:G5/8 8:B5/8", "0:D6/4 4:B5/4 8:G5/8"),
+                    CH("Ab Ab Fm Fm Ab Bb G G")),
+    # gummy_king_boss "Su Majestad Gummy" (Si♭ mayor): la fanfarria en Mi♭; el respiro, la danza de corte
+    'majestad': (PH("0:Bb4/4 4:Eb5/6 10:Eb5/1 11:Eb5/1 12:G5/4", "0:F5/3 3:Eb5/1 4:D5/2 6:Eb5/2 8:Bb4/8",
+                    "0:C5/4 4:Eb5/6 10:Eb5/1 11:Eb5/1 12:G5/4", "0:Bb5/3 3:A5/1 4:G5/2 6:A5/2 8:F5/8",
+                    "0:G5/4 4:Bb5/6 10:Bb5/1 11:Bb5/1 12:Eb6/4", "0:D6/3 3:C6/1 4:Bb5/2 6:A5/2 8:G5/8",
+                    "0:C6/2 2:Bb5/2 4:G5/4 8:C6/2 10:A5/2 12:F5/4", "0:F5/3 3:F5/1 4:A5/4 8:C6/8"),
+                 CH("Eb Eb Cm F Eb Gm Cm|F F"),
+                 PH("0:D6/8 8:Bb5/8", "0:A5/8 8:F5/8", "0:G5/8 8:Bb5/8", "0:F5/12 12:D5/4",
+                    "0:Eb5/8 8:G5/8", "0:Bb5/8 8:D6/8", "0:Eb6/6 6:D6/2 8:Bb5/8", "0:A5/4 4:C6/4 8:F5/8"),
+                 CH("Gm Dm Eb Bb Cm Gm Eb F")),
+    # flappy "Aleteo" (Re mayor): el aleteo en Si menor; el respiro, planeando
+    'aleteo': (PH("2:F#4/1 3:B4/1 4:D5/2 6:F#5/4 10:D5/1 11:F#5/1 12:B5/4", "0:C#6/2 2:B5/2 4:A5/2 6:F#5/6 12:D5/2 14:F#5/2",
+                  "2:B4/1 3:D5/1 4:G5/2 6:B5/4 10:G5/1 11:B5/1 12:D6/4", "0:E6/2 2:D6/2 4:C#6/2 6:A5/6 12:E5/2 14:A5/2",
+                  "2:D5/1 3:F#5/1 4:B5/2 6:D6/4 10:B5/1 11:D6/1 12:F#6/4", "0:G6/2 2:F#6/2 4:E6/2 6:B5/6 12:G5/2 14:B5/2",
+                  "0:D6/2 2:B5/1 3:D6/1 4:G6/4 8:A5/2 10:C#6/1 11:E6/1 12:C#6/4", "0:A5/2 2:C#6/2 4:E6/2 6:C#6/10"),
+               CH("Bm Bm G A Bm Em G|A A"),
+               PH("0:B5/8 8:D6/8", "0:A5/8 8:F#5/8", "0:G5/8 8:B5/8", "0:F#5/12 12:D5/4",
+                  "0:D6/6 6:C#6/2 8:B5/8", "0:A5/6 6:B5/2 8:F#5/8", "0:E5/4 4:G5/4 8:B5/8", "0:C#6/4 4:E6/4 8:A5/8"),
+               CH("G D Em Bm G D Em A")),
+}
 
 
 def check(mel, ch):
@@ -585,13 +753,28 @@ def song(variant, minor=False, solo=False, theme=None):
         for c in chords:
             ch.append(c if isinstance(c[0], tuple) else (c, c))
             tag.append(kind)
-    section('intro', pi, ci or [tonic] * INTRO)
-    section('A', pa + e1, ca)
-    section('A', pa + e2, ca)
-    section('B', pb, cb)
-    if pc: section('C', pc, cc)
-    if solo: section('solo', [], [tonic] * 8)          # (solo de percusión: sin melodía ni acordes)
-    section('A', pa + e2, ca)
+    var = []                                           # la variación de cada compás: '' · 'cm' (contracanto) · 'cm+dbl' (y la octava)
+    def sec(kind, ph, chords, v=''):
+        section(kind, ph, chords)
+        var.extend([v] * (len(ch) - len(var)))
+    sec('intro', pi, ci or [tonic] * INTRO)
+    sec('A', pa + e1, ca)
+    sec('A', pa + e2, ca)
+    sec('B', pb, cb)
+    if pc: sec('C', pc, cc)
+    dev = DEV.get(theme or ('hop' if not minor else None))
+    if dev:                                            # la forma larga (ver DEV)
+        dm, dc, em, ec = dev
+        sec('D', dm, dc)
+        sec('E', em, ec)
+        sec('A', pa + e1, ca, 'cm')
+        if theme not in SAMPLE_BARS: sec('B', pb, cb, 'cm')
+        if solo: sec('solo', [], [tonic] * 8)
+        sec('A', pa + e2, ca, 'cm+dbl')
+    else:
+        if solo: sec('solo', [], [tonic] * 8)          # (solo de percusión: sin melodía ni acordes)
+        sec('A', pa + e2, ca)
+    song.var = var
     return mel, ch, tag, starts[1:]
 
 
@@ -638,6 +821,8 @@ I_TREM = {'vol': [7, 4, 2], 'sus': 0, 'duty': 0.25}
 VOLC = ('volcan', 'lava')
 I_HARP = {'vol': [8, 6, 5, 4, 3, 2, 1], 'sus': 0, 'duty': 0.5}
 CAVE = ('cueva', 'sumergida')
+OWN_DBL = ('fiesta', 'volcan', 'lava', 'rey', 'fortaleza', 'nave', 'cueva', 'nieve')    # (ya doblan, o canta la caja de música)
+I_CM = {'vol': [4, 6, 7, 7, 7, 6], 'sus': 6, 'vib': (18, 0.12, 5.0), 'duty': 1.0}       # contracanto: el colchón (N163)
 I_SKY = {'vol': [14, 15, 14, 13, 12, 12], 'sus': 11, 'vib': (14, 0.18, 6.0), 'duty': [0.125, 0.125, 0.125, 0.25], 'drop': [-2, -1, -0.5]}   # (Flappy: entra con un respingo)
 I_HOP = {'vol': [9, 7, 5, 3, 2, 1], 'sus': 0, 'duty': 0.5}                    # el salto (acento de Flappy)
 I_PUSH = {'vol': [10, 8, 6, 4, 2, 1], 'sus': 0, 'duty': 0.125}
@@ -701,7 +886,7 @@ def solo_bar(k, at, kick, sn, tom, NZ, hit):
 BACKING = 4.0                # dB que sube el acompañamiento respecto a la melodía (ver build)
 BACKING_KEYS = ('chords', 'bass', 'kick', 'snare', 'hat', 'crash', 'toms')
 STEMS_TO = None
-STEM_NAMES = [('lead', 'melodia'), ('echo', 'eco_de_la_melodia'), ('dbl', 'melodia_doblada'), ('bell', 'caja_de_musica'),
+STEM_NAMES = [('lead', 'melodia'), ('cm', 'contracanto'), ('echo', 'eco_de_la_melodia'), ('dbl', 'melodia_doblada'), ('bell', 'caja_de_musica'),
               ('chords', 'acordes_a_contratiempo'), ('trill', 'acento_del_sitio'), ('bass', 'bajo'), ('kick', 'bombo'),
               ('snare', 'caja'), ('hat', 'platos'), ('crash', 'platillo'), ('toms', 'timbales')]
 
@@ -711,9 +896,10 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
     S16 = 60.0 / bpm / 4
     BAR = 16 * S16
     mel, ch, tag, starts = song(variant, minor, solo, theme)
+    var = song.var
     NB = len(ch)
     NF = F.frames_for(NB * BAR + 3)
-    Cn = {k: Chan(NF) for k in ('lead', 'echo', 'c1', 'c2', 'bass', 'trill', 'dbl', 'bell')}
+    Cn = {k: Chan(NF) for k in ('lead', 'echo', 'c1', 'c2', 'bass', 'trill', 'dbl', 'bell', 'cm')}
     NZ = {k: Noise(NF) for k in ('hat', 'snare', 'crash', 'fx')}
     NS = int(NF * F.FRAME_S) + SR
     kick, sn, tom = np.zeros(NS), np.zeros(NS), np.zeros(NS)
@@ -761,15 +947,41 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
         elif isle == 'cielo': play(Cn['lead'], t0, t1, n, I_SKY if d >= 2 else dict(I_SKY, drop=None), release=2)
         elif flute: play(Cn['lead'], t0, t1, n, dict(I_FLUTE, duty=0.0), q=q_n163, release=3)
         else: play(Cn['lead'], t0, t1, n, I_LEAD, release=3)
+        # A''' (la última vuelta): la melodía doblada a la octava, floja (donde el arreglo no dobla ya)
+        if 'dbl' in var[b - 1] and isle not in OWN_DBL and n + 12 <= 96:
+            play(Cn['dbl'], t0, t1, n + 12, I_DBL, release=2)
         # eco: la misma nota 3 semicorcheas después, floja (más melodía de la que se toca)
         if d >= 3: play(Cn['echo'], t0 + 3 * S16, t0 + 3 * S16 + min(d, 3) * S16 * 0.8, n, I_ECHO, release=1)
         for k in range(d): busy.add((b, st + k))
     last_in_bar = {}
     for b, st, n, d in mel: last_in_bar[b] = max(last_in_bar.get(b, 0), st + d)
+    # CONTRACANTO (A'' · B' · A'''): una voz suave por debajo de la melodía, una nota del acorde por medio compás,
+    # la más cercana a la anterior (si repite tres veces, se mueve); los saltos de tercera se rellenan con la nota de
+    # paso de la escala en la última corchea
+    cm, prev, held = [], None, 0
+    for b in range(1, NB + 1):
+        if 'cm' not in var[b - 1]: prev, held = None, 0; continue
+        for half in (0, 1):
+            r, q = ch[b - 1][half]
+            cands = sorted((p_ for p_ in range(57, 70) if (p_ - r) % 12 in q), key=lambda p_: (abs(p_ - (prev or 64)), p_))
+            nn = cands[0]
+            if nn == prev and held >= 2 and len(cands) > 1: nn = cands[1]
+            held = held + 1 if nn == prev else 0
+            if prev is not None and 3 <= abs(nn - prev) <= 4 and cm and cm[-1][2] == prev:
+                pas = [x for x in range(min(nn, prev) + 1, max(nn, prev)) if x % 12 in SCALE]
+                if pas:
+                    pb_, ps_, pn_, pd_ = cm[-1]
+                    cm[-1] = (pb_, ps_, pn_, pd_ - 2)
+                    cm.append((pb_, ps_ + pd_ - 2, pas[len(pas) // 2], 2))
+            cm.append((b, half * 8, nn, 8))
+            prev = nn
+    for b, st, n, d in cm:
+        play(Cn['cm'], tv(b, st), tv(b, st) + d * S16 * 0.92, n, I_CM, q=q_n163, release=4)
 
     for b in range(1, NB + 1):
         intro = tag[b - 1] == 'intro'
-        in_b = tag[b - 1] == 'B'
+        in_b = tag[b - 1] in ('B', 'E')                # (E, el respiro, lleva el arreglo de B)
+        rest = tag[b - 1] == 'E'
         if tag[b - 1] == 'solo':
             solo_bar(b - tag.index('solo'), lambda st: tv(b, st), kick, sn, tom, NZ, hit)
             continue
@@ -799,6 +1011,7 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
                 if isle == 'maquina': pat = ((0, 0, 1.6), (2, 0, 0.8), (3, 12, 0.8), (4, 0, 1.6), (6, 0, 0.8), (7, 12, 0.8))   # locomotora
                 if isle == 'arrecife': pat = ((0, 0, 5.4), (6, 7, 1.8))                                    # bossa: largo y la quinta
                 if isle == 'cielo': pat = ((0, 0, 3.4), (4, 7, 3.4)) if in_b else ((0, 0, 1.6), (2, 12, 1.6), (4, 7, 1.6), (6, 12, 1.6))   # 1-8-5-8
+                if rest: pat = ((0, 0, 7.5),)                                                          # respiro: blancas
                 for st, iv, ln in pat:
                     play(Cn['bass'], tv(b, s0 + st), tv(b, s0 + st) + ln * S16, root + iv, I_TRI, q=q_tri, release=0)
             if isle == 'fiesta':                             # acordes tenidos, flojos
@@ -983,6 +1196,16 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
             if intro and b < 3:
                 if st % 4 == 2 and isle not in CAVE: NZ['hat'].hit(t, 0, HAT)
                 continue
+            if rest and isle not in CAVE and isle != 'arrecife':   # RESPIRO: bombo en el 1, platos sueltos; en sus 2 últimos compases vuelve y crece (cuevas y arrecife: ya son así)
+                k_ = b - tag.index('E')                       # (1..8)
+                if st == 0: hit(kick, TN.KICK, t, 0.7)
+                if st % 4 == 2: NZ['hat'].hit(t, 0, [3, 1])
+                if k_ == 7 and st in (4, 12): NZ['snare'].hit(t, 4, [8, 4, 1]); hit(sn, TN.SNARE_BODY, t, 0.4)
+                if k_ == 8:
+                    if st % 4 == 0: hit(kick, TN.KICK, t, 0.8)
+                    if st >= 4: NZ['snare'].hit(t, 4, [5 + st // 2, 4, 2]); hit(sn, TN.SNARE_BODY, t, 0.25 + st * 0.03)
+                if st == 0 and b in starts: NZ['crash'].hit(t, 3, CRASH[4:])
+                continue
             if drive == 2:                                   # competición: bombo a negras, caja en 2 y 4, platos en semicorcheas
                 if st % 4 == 0: hit(kick, TN.KICK, t, 0.95)
                 if st in (4, 12): NZ['snare'].hit(t, 4, SNARE_N); hit(sn, TN.SNARE_BODY, t, 0.8)
@@ -1072,6 +1295,7 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
     S = {
         'lead': cut(F.render_wave(Cn['lead'], WAVES) * 0.0075) if (flute and isle == 'pradera') or isle in ('costa', 'sumergida', 'volcan')
                 else cut(F.pulse_dac(F.render_saw(Cn['lead']))) if isle in ('fortaleza', 'nave') else pulse('lead'),
+        'cm': cut(F.render_wave(Cn['cm'], WAVES) * 0.0075),
         'dbl': pulse('dbl'), 'bell': cut(F.render_wave(Cn['bell'], WAVES) * 0.0075),
         'echo': pulse('echo'), 'chords': pulse('c1') + pulse('c2'),
         'bass': cut(F.tnd_dac(F.render_tri(Cn['bass']) / 8227.0)), 'trill': pulse('trill') + cut(F.tnd_dac(NZ['fx'].render() / 22638.0 * 12)),
@@ -1084,7 +1308,10 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
     if isle == 'cueva': S['bell'] = GN.delay(S['bell'], 3 * S16, 0.45, 3, 2600)[:len(S['bell'])]        # el eco de la cueva
     if isle == 'sumergida': S['lead'] = GN.delay(S['lead'], 3 * S16, 0.35, 3, 2200)[:len(S['lead'])]
     LV = ISLE_LV.get(isle) or {'lead': 0, 'echo': -11, 'chords': -6, 'bass': -2, 'trill': -11, 'kick': -2 + drive, 'snare': -5 + drive, 'hat': -12, 'crash': -11, 'toms': 2}
-    LV = dict(LV); LV['kick'] = LV['kick'] + (drive if isle != 'pradera' else 0); LV['snare'] = LV['snare'] + (drive if isle != 'pradera' else 0)
+    LV = dict(LV)
+    top_ = max(LV['lead'], LV.get('bell', -99))         # (la voz que canta: en la cueva y la nieve, la caja de música)
+    LV.setdefault('cm', top_ - 6); LV.setdefault('dbl', top_ - 11)
+    LV['kick'] = LV['kick'] + (drive if isle != 'pradera' else 0); LV['snare'] = LV['snare'] + (drive if isle != 'pradera' else 0)
     # EL ACOMPAÑAMIENTO, MÁS ARRIBA (el usuario, tras jugar: "en el juego las melodías suenan mucho más fuertes que
     # el resto, sobre todo el bajo; canciones equilibradas al oírlas sueltas quedan vacías"). En el juego la música
     # va más baja y entre efectos de sonido: lo primero que se pierde es lo grave y lo que acompaña, y queda la

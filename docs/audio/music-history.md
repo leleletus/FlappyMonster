@@ -165,6 +165,25 @@ the old level tune in the final boss, Verity's hook).
   llamada" in D closes B (A-D-F#-A). Measured: 55 % of melody notes off the beat, lead 17 % of the energy; phrase A's
   attack positions overlap pradera_1 49 % / pradera_2 55 % (between existing themes it is 50-100 %).
 
+- **LONGER TRACKS, NO LLAMADA (3.98.0, `worlds_nes.py`; verified by numbers only).** The user: most level themes
+  (and `evil_ship_boss`, `snowball_boss`) don't reach a minute and get repetitive and tiring; and the motif at 0:38-0:40
+  of `pradera_2_loop` — LA LLAMADA closing phrase B, in nearly every song with the same rhythm — "fits in some songs,
+  but forcing almost ALL melodies to contain it is too much". (1) La llamada was removed from every `worlds_nes.py`
+  track except `victory`; each B now closes with its own cadence (bar 8 of B; for nieve_1 / the snowball, bar 8 of the
+  chorus C). It stays in the map, the films, the Mirror boss and the victory fanfare; the crab themes still close
+  their coda with it (untouched: approved tracks). (2) Every track (the 18 island tracks, the three island bosses and
+  `flappy`; not `victory`) got the long form: intro · A · A' · B · [C] · **D** · **E** · A'' · B' · [solo] · A'''
+  (64 bars; 56-60 where B/C carry a borrowed sample, which still sounds once per loop). D = DEVELOPMENT, new 8 bars per
+  theme built from A's rhythm and contour in another key area (relative minor / major, IV), ending on the chord that
+  opens E; E = BREATHER, new 8 bars of long notes in B's arrangement, bass in half notes, kick on 1 + loose hats (caves
+  and the reef keep their own sparse drums), a snare that comes back in bar 7 and a roll in bar 8 → crash into A''.
+  A'' and B' add a COUNTER-MELODY (N163 pad wave, one chord tone per half bar between A3 and A4, nearest to the last,
+  moves if it repeated three times, thirds filled with a scale passing tone; stem `contracanto`), A''' also doubles the
+  melody an octave up where the arrangement doesn't already. All new long notes are chord tones and all notes are in
+  the scale (checked). Lengths now 92-177 s (were 45-84). Section loudness vs A: E −0.1 to −2.2 dB, A''/B' +0.4 to
+  +0.9, A''' +0.5 to +1.4. Melody off-beat share fell to ~40-45 % in the busy tracks (E is long notes on the beat).
+  Waiting for the user's verdict on each D and E.
+
 ## Crab Tantrum (the three Mega Crabby themes)
 
 - **CRAB TANTRUM REMADE (3.53.0, `tools/music/crab_tantrum.py`; verified by numbers only; WAITING for the user's
