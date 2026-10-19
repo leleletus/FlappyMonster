@@ -184,6 +184,39 @@ the old level tune in the final boss, Verity's hook).
   +0.9, A''' +0.5 to +1.4. Melody off-beat share fell to ~40-45 % in the busy tracks (E is long notes on the beat).
   Waiting for the user's verdict on each D and E.
 
+- **3.99.0 — the user's verdict on 3.98.0 and what changed (`worlds_nes.py`; verified by numbers only).** (1) "Bring la
+  llamada back where it was: I've heard it so long that it's odd without it" → restored exactly as in 3.97.0 (bar 8 of B;
+  nieve_1 / snowball: bar 8 of the chorus); the guide's rule is back. (2) "Make each extension original, not like the
+  others: they follow the same logic and flow" → no more shared D·E·A''·B'·A''' recipe: `FORMS` gives each theme its
+  own continuation after A·A'·B[·C], from new material (`DEV` D/E where they fit + `EXTRA`) and per-section devices
+  (`var`: `cm` counter-melody, `dbl` octave, `thin` breakdown, `stop` stop-time, `swap` melody to another instrument
+  while the voice sings the counter-melody, `dial` the accent answers every bar, a transposition):
+  pradera_1 new 3+3+2 CHORUS · DIALOGUE with the bird (thin) · chorus + cm · PIVOT bar · A a tone UP (A major) + octave
+  · TURN bar back to G; pradera_2 D (A minor) · A stop-time on the gallop · B + cm · A + octave; costa_1 a steel-drum
+  SOLO · A on MARIMBA (the steel sings the counter-melody) · B + cm · A + octave; costa_2 E breather (thin) · A + cm;
+  fortaleza_1 the DRILL (repeated march notes, stop-time) · D · B + cm · A + cm; fortaleza_2 the MACHINE alone (4,
+  thin) · D · A + cm · A + octave; nieve_1 D · A thin (music box and bells) · A + cm; nieve_2 the STORM (16th gusts)
+  · D · A stop-time · A + octave; cuevas_1 E · A thin · B + cm · A; cuevas_2 D · A on a fading BELL (swap) · A + cm;
+  volcan_1 D · E thin (ends on ♭II) · A + cm · A; volcan_2 the LAVA SOLO (boiling arpeggios) · D · B + cm · A + cm;
+  snowball D · A stop-time · A + cm; evil_ship the ALARM alone (4, thin) · D · A + cm · B + cm · A; gummy_king D · E
+  (court dance) · PIVOT · A a tone UP (C major) + cm · TURN; flappy D · GLIDE (4, thin) · A + cm · A + octave.
+  Loops now 84-138 s. (3) Transitions: entering every new section, a held note that reaches the end of the bar is cut
+  at the 15th 16th and two scale 16ths lead into the section's first note (`song.linked`; in the key of the bar
+  where they sound); key changes have a pivot bar (the new key's dominant) and a turn bar (home dominant) before the
+  loop; the accent is silent in linked, stop-time and swap bars. (4) BONUS: back to the old length (intro · A · A' · B ·
+  SOLO · A'', 40-bar loop, 59-80 s; "the bonus zones last a bit over a minute and the solo was the special part —
+  now it's never heard") and each is an ORIGINAL bonus tune of its world (`BONUS`), closing B with la llamada:
+  pradera "Carrera" (A major 152, two repeated 16ths and the note that leaps), costa "Regata" (C major 138 with a B♭
+  in B, a rowing ta · ta-ta · TAA), fortaleza "Asalto" (A minor 156, three repeated hits and the falling note; dotted
+  answer), nieve "Descenso" (G major 166, a ski run of two falling 16ths + long note, and the JUMP: three offbeat
+  notes), cuevas "Estampida" (E dorian 132, note + long anticipated note), volcan "Erupción" (D phrygian 178, octave
+  leap, dotted 8th and its upper neighbour). A DIFFERENT PERCUSSION SOLO per world (`solo_bar(style=)`; the old one,
+  the same everywhere, stays only in the meadow): costa congas + 3-2 clave + marimba + timbales and cowbell; fortaleza
+  military snare rudiments with flams, orchestral timpani, anvils, a closed buzz roll; nieve sleigh bells, timpani,
+  falling and rising bells; cuevas deep drums with echo, wood clacks, drips, a quickening heartbeat; volcan double
+  kick, falling tom rolls, blast beat, eruption hits. Pitched solo notes are tonic-chord tones (stem `solo_afinado`).
+  Phrase-A attack overlap with the world's siblings: 27-67 %.
+
 ## Crab Tantrum (the three Mega Crabby themes)
 
 - **CRAB TANTRUM REMADE (3.53.0, `tools/music/crab_tantrum.py`; verified by numbers only; WAITING for the user's

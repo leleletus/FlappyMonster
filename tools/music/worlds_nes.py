@@ -2,8 +2,8 @@
 # tools/music/worlds_nes.py
 # La música de NIVEL de cada isla (música de Famicom; motor: famicom.py), según docs/audio/music-guide.md:
 # una idea por pieza, frases de 8 compases, más de la mitad de la melodía a contratiempo, un compás con el tresillo
-# 3+3+2. Forma larga (ver DEV): intro 4 · A · A' · B · D · E · A'' · B' · A'''. Bucle sin costura. (Hasta la 3.98.0
-# la frase B cerraba con "la llamada" — el arranque de la música del mapa —; ya no: ver DEV.)
+# 3+3+2, y la cita de "la llamada" (el motivo del juego: 5ª-1ª-3ª-5ª, el arranque de la música del mapa) al cerrar
+# la frase B, sobre SU acorde. Forma larga, propia de cada tema: ver FORMS. Bucle sin costura.
 #
 #   PRADERA (Sol mayor, pulso cantarín, bajo saltarín 1-5-8-5, acordes a contratiempo, batería ligera, trino):
 #     pradera_1      el TEMA de la pradera (136 BPM). Tres variantes para elegir (--variante A|B|C):
@@ -66,7 +66,7 @@ PH_B = [
     (5, 0, E5, 3), (5, 3, G5, 3), (5, 6, E5, 2), (5, 8, C5, 3), (5, 11, E5, 3), (5, 14, G5, 2),
     (6, 0, D5, 3), (6, 3, G5, 3), (6, 6, D5, 2), (6, 8, B4, 3), (6, 11, D5, 3), (6, 14, G5, 2),
     (7, 0, A5, 2), (7, 2, G5, 2), (7, 4, E5, 2), (7, 6, C5, 2), (7, 8, D5, 2), (7, 10, Fs5, 2), (7, 12, A5, 4),
-    (8, 0, A5, 2), (8, 2, B5, 2), (8, 4, D6, 4), (8, 8, G5, 8),               # (cierre propio; antes, la llamada)
+    (8, 0, D5, 4), (8, 4, G5, 2), (8, 6, B5, 2), (8, 8, D6, 6),
 ]
 CH_A = [(G, MAJ), (G, MAJ), (E, MIN), (C, MAJ), (G, MAJ), (D, MAJ), (C, MAJ), (G, MAJ)]
 CH_A7 = (D, MAJ)                                  # (el compás 7 de A: Do | Re, medio compás cada uno)
@@ -146,7 +146,7 @@ P_B = [
     (5, 0, F5, 3), (5, 3, A5, 3), (5, 6, F5, 2), (5, 8, C5, 3), (5, 11, F5, 3), (5, 14, A5, 2),
     (6, 0, E5, 3), (6, 3, G5, 3), (6, 6, E5, 2), (6, 8, C5, 3), (6, 11, E5, 3), (6, 14, G5, 2),
     (7, 0, A5, 2), (7, 2, F5, 2), (7, 4, D5, 2), (7, 6, F5, 2), (7, 8, G5, 2), (7, 10, B5, 2), (7, 12, D5, 4),
-    (8, 0, E5, 3), (8, 3, G5, 1), (8, 4, E5, 3), (8, 7, D5, 1), (8, 8, C5, 8),  # (cierre al galope; antes, la llamada)
+    (8, 0, G4, 4), (8, 4, C5, 2), (8, 6, E5, 2), (8, 8, G5, 6),              # la llamada, tal cual en el mapa: Sol-Do-Mi-Sol
 ]
 Fr = 5
 PCH_A = [(C, MAJ), (C, MAJ), (Fr, MAJ), (G, MAJ), (C, MAJ), (A, MIN), ((Fr, MAJ), (G, MAJ)), (C, MAJ)]
@@ -183,7 +183,7 @@ K_B = [
     (5, 0, D5, 3), (5, 3, F5, 3), (5, 6, D5, 2), (5, 8, Bb4, 3), (5, 11, D5, 3), (5, 14, F5, 2),
     (6, 0, C5, 3), (6, 3, F5, 3), (6, 6, C5, 2), (6, 8, A4, 3), (6, 11, C5, 3), (6, 14, F5, 2),
     (7, 0, G5, 2), (7, 2, F5, 2), (7, 4, D5, 2), (7, 6, Bb4, 2), (7, 8, C5, 2), (7, 10, E5, 2), (7, 12, G5, 4),
-    (8, 0, A5, 2), (8, 2, C6, 1), (8, 3, A5, 3), (8, 6, F5, 2), (8, 8, F5, 8),  # (cierre propio; antes, la llamada)
+    (8, 0, C5, 4), (8, 4, F5, 2), (8, 6, A5, 2), (8, 8, C6, 6),              # la llamada en Fa: Do-Fa-La-Do
 ]
 Bbr = 10
 KCH_A = [(Fr, MAJ), (Fr, MAJ), (Bbr, MAJ), (C, MAJ), (Fr, MAJ), (D, MIN), ((Bbr, MAJ), (C, MAJ)), (Fr, MAJ)]
@@ -208,7 +208,7 @@ R_B = [
     (5, 0, Bb5, 6), (5, 6, G5, 2), (5, 8, Eb5, 6), (5, 14, G5, 2),
     (6, 0, F5, 6), (6, 6, D5, 2), (6, 8, Bb4, 6), (6, 14, D5, 2),
     (7, 0, Eb5, 4), (7, 4, C5, 4), (7, 8, F5, 4), (7, 12, A5, 4),
-    (8, 0, D5, 6), (8, 6, C5, 2), (8, 8, Bb4, 8),                               # (cierre propio; antes, la llamada)
+    (8, 0, F4, 4), (8, 4, Bb4, 2), (8, 6, D5, 2), (8, 8, F5, 6),              # la llamada en Si♭: Fa-Si♭-Re-Fa
 ]
 Ebr = 3
 RCH_A = [(Bbr, MAJ), (G, MIN), (Ebr, MAJ), (Fr, MAJ), (Bbr, MAJ), (G, MIN), ((Ebr, MAJ), (Fr, MAJ)), (Bbr, MAJ)]
@@ -244,7 +244,7 @@ H_B = [
     (5, 0, C5, 3), (5, 3, Eb5_, 3), (5, 6, C5, 2), (5, 8, Ab4, 3), (5, 11, C5, 3), (5, 14, Eb5_, 2),
     (6, 0, Bb4_, 3), (6, 3, Eb5_, 3), (6, 6, Bb4_, 2), (6, 8, G4_, 3), (6, 11, Bb4_, 3), (6, 14, Eb5_, 2),
     (7, 0, F5_, 2), (7, 2, Eb5_, 2), (7, 4, C5, 2), (7, 6, Ab4, 2), (7, 8, B4_, 2), (7, 10, D5, 2), (7, 12, G5, 4),
-    (8, 0, C5, 4), (8, 4, G4_, 2), (8, 6, C5, 1), (8, 7, D5, 1), (8, 8, C5, 8),  # (la cabeza de la marcha; antes, la llamada)
+    (8, 0, G4_, 4), (8, 4, C5, 2), (8, 6, Eb5_, 2), (8, 8, G5, 6),            # la llamada en Do menor: Sol-Do-Mi♭-Sol
 ]
 Abr, Ebr_, Fr_ = 8, 3, 5
 HCH_A = [(C, MIN), (C, MIN), (Abr, MAJ), (G, MAJ), (C, MIN), (Abr, MAJ), ((Fr_, MIN), (G, MAJ)), (C, MIN)]
@@ -270,7 +270,7 @@ N_B = [
     (5, 0, C5, 3), (5, 3, Eb5_, 3), (5, 6, C5, 2), (5, 8, G4_, 3), (5, 11, C5, 3), (5, 14, Eb5_, 2),
     (6, 0, Bb4_, 3), (6, 3, D5, 3), (6, 6, Bb4_, 2), (6, 8, G4_, 3), (6, 11, Bb4_, 3), (6, 14, D5, 2),
     (7, 0, Eb5_, 2), (7, 2, G5, 2), (7, 4, Bb5_, 4), (7, 8, A5n, 2), (7, 10, Fs5_, 2), (7, 12, D5, 4),
-    (8, 0, D5, 2), (8, 2, Bb4_, 2), (8, 4, A4n, 2), (8, 6, Bb4_, 2), (8, 8, G4_, 8),  # (cierre propio; antes, la llamada)
+    (8, 0, D5, 4), (8, 4, G5, 2), (8, 6, Bb5_, 2), (8, 8, D6_, 6),            # la llamada en Sol menor: Re-Sol-Si♭-Re
 ]
 NCH_A = [(G, MIN), (G, MIN), (Ebr_, MAJ), (D, MAJ), (G, MIN), (C, MIN), ((Ebr_, MAJ), (D, MAJ)), (G, MIN)]
 NCH_B = [(C, MIN), (G, MIN), (Ebr_, MAJ), (D, MAJ), (C, MIN), (G, MIN), ((Ebr_, MAJ), (D, MAJ)), (G, MIN)]
@@ -325,7 +325,7 @@ X_B = [
     (5, 0, F5_, 3), (5, 3, Ab5, 3), (5, 6, F5_, 2), (5, 8, C5, 3), (5, 11, F5_, 3), (5, 14, Ab5, 2),
     (6, 0, Eb5_, 3), (6, 3, G5, 3), (6, 6, Eb5_, 2), (6, 8, C5, 3), (6, 11, Eb5_, 3), (6, 14, G5, 2),
     (7, 0, Ab5, 2), (7, 2, Eb5_, 2), (7, 4, C5, 2), (7, 6, Eb5_, 2), (7, 8, D5, 2), (7, 10, B4_, 2), (7, 12, G5, 4),
-    (8, 0, C5, 2), (8, 2, C5, 2), (8, 4, Eb5_, 2), (8, 6, D5, 2), (8, 8, C5, 8),  # (la cabeza del tema; antes, la llamada)
+    (8, 0, G4_, 4), (8, 4, C5, 2), (8, 6, Eb5_, 2), (8, 8, G5, 6),            # la llamada en Do menor
 ]
 XCH_A = [(C, MIN), (Abr, MAJ), (Bbr_, MAJ), (G, MAJ), (C, MIN), (Abr, MAJ), ((Fr_, MIN), (G, MAJ)), (C, MIN)]
 XCH_B = [(Fr_, MIN), (C, MIN), (Abr, MAJ), (G, MAJ), (Fr_, MIN), (C, MIN), ((Abr, MAJ), (G, MAJ)), (C, MIN)]
@@ -379,7 +379,7 @@ S_END = P(8, "0:A5/4 4:F5/4 8:C5/8")
 S_END2 = P(8, "0:F5/4 4:A5/4 8:C6/8")
 S_B = PH(*W148, "0:F5/2 2:A5/2 4:D6/2 6:A5/4 10:F5/2 12:D5/2 14:F5/4", "2:D5/2 4:F5/2 6:Bb5/4 10:F5/2 12:D5/4", *W148_END)
 S_C = wmotif() + P(5, "0:A5/6 6:F5/2 8:D5/4 12:F5/4") + P(6, "0:F5/6 6:D5/2 8:Bb4/4 12:D5/4") \
-    + P(7, "0:G5/2 2:Bb5/2 4:G5/2 6:D5/2 8:E5/2 10:G5/2 12:C6/4") + P(8, "0:A5/6 6:G5/2 8:F5/8")             # (antes, la llamada)
+    + P(7, "0:G5/2 2:Bb5/2 4:G5/2 6:D5/2 8:E5/2 10:G5/2 12:C6/4") + P(8, "0:C5/4 4:F5/2 6:A5/2 8:C6/6")     # la llamada
 SCH_A = [(Fr_, MAJ), (C, MAJ), (D, MIN), (Bbr_, MAJ), (Fr_, MAJ), (C, MAJ), ((Bbr_, MAJ), (C, MAJ)), (Fr_, MAJ)]
 SCH_B = [(Fr_, MAJ), ((G, MIN), (Fr_, MAJ)), (Bbr_, MAJ), (C, MAJ), (D, MIN), (Bbr_, MAJ), (G, MIN), (C, MAJ)]
 SCH_C = [(Bbr_, MAJ), (Bbr_, MAJ), (C, MAJ), (C, MAJ), (D, MIN), (Bbr_, MAJ), ((G, MIN), (C, MAJ)), (Fr_, MAJ)]
@@ -391,7 +391,7 @@ V_A = PH("0:A5/2 2:G5/2 4:F5/2 6:D5/4 10:F5/2 12:A5/2 14:Bb5/4", "2:A5/2 4:F5/2 
 V_END = P(8, "0:A5/4 4:F5/4 8:D5/8")
 V_END2 = P(8, "0:D5/4 4:F5/4 8:A5/8")
 V_B = PH(W148[0], W148[1], "0:D6/2 2:C6/2 4:Bb5/2 6:F5/4 10:D5/2 12:F5/2 14:G5/4", "2:E5/2 4:G5/2 6:C6/4 12:G5/4",
-         "0:A5/8 8:F5/4 12:A5/4", "0:Bb5/8 8:F5/4 12:D5/4", "0:E5/3 4:E5/3 8:E5/3 12:G5/4", "0:F5/2 2:E5/2 4:F5/4 8:D5/8")
+         "0:A5/8 8:F5/4 12:A5/4", "0:Bb5/8 8:F5/4 12:D5/4", "0:E5/3 4:E5/3 8:E5/3 12:G5/4", "0:A4/4 4:D5/2 6:F5/2 8:A5/6")
 VCH_A = [(D, MIN), (Bbr_, MAJ), (C, MAJ), (D, MIN), (D, MIN), (G, MIN), ((Bbr_, MAJ), (C, MAJ)), (D, MIN)]
 VCH_B = [(D, MIN), ((G, MIN), (Fr_, MAJ)), (Bbr_, MAJ), (C, MAJ), (D, MIN), (Bbr_, MAJ), (C, MAJ), (D, MIN)]
 SCALE_Dm = {2, 4, 5, 7, 9, 10, 0}
@@ -408,7 +408,7 @@ O_END = P(8, "0:Ab5/4 4:F5/4 8:C5/8")
 O_END2 = P(8, "0:C6/4 4:Ab5/4 8:F5/8")
 O_B = PH(*W148, up=3) + P(5, "0:C6/8 8:Ab5/4 12:F5/4") + P(6, "0:Ab5/8 8:F5/4 12:Db5/4") + [(b + 6, st, n + 3, d) for b, st, n, d in PH(*W148_END)]
 O_C = wmotif(3) + P(5, "0:C6/6 6:Ab5/2 8:F5/4 12:Ab5/4") + P(6, "0:Ab5/6 6:F5/2 8:Db5/4 12:F5/4") \
-    + P(7, "0:Bb5/2 2:F5/2 4:Db5/2 6:F5/2 8:G5/2 10:Eb5/2 12:Bb5/4") + P(8, "0:Ab5/6 6:G5/2 8:F5/8")           # (antes, la llamada)
+    + P(7, "0:Bb5/2 2:F5/2 4:Db5/2 6:F5/2 8:G5/2 10:Eb5/2 12:Bb5/4") + P(8, "0:C5/4 4:F5/2 6:Ab5/2 8:C6/6")   # la llamada
 Dbr = 1
 OCH_A = [(Fr_, MIN), (Fr_, MIN), (Dbr, MAJ), (Ebr_, MAJ), (Fr_, MIN), (Fr_, MIN), ((Dbr, MAJ), (Ebr_, MAJ)), (Fr_, MIN)]
 OCH_B = [(Fr_, MIN), ((Bbr_, MIN), (Abr_, MAJ)), (Dbr, MAJ), (Ebr_, MAJ), (Fr_, MIN), (Dbr, MAJ), (Bbr_, MIN), (Ebr_, MAJ)]
@@ -431,7 +431,7 @@ C_A = PH("0:D5/6 6:F5/2 8:A5/8", "0:B5/6 6:A5/2 8:G5/4 12:D5/4", "0:F5/6 6:A5/2 
 C_END = P(8, "0:F5/4 4:A5/4 8:D5/8")
 C_END2 = P(8, "0:A5/4 4:F5/4 8:D6/8")
 C_B = PH("0:C6/4 4:A5/2 6:F5/2 8:A5/8", "0:G5/4 4:E5/2 6:C5/2 8:E5/8", "0:B5/4 4:G5/2 6:D5/2 8:G5/8", "0:A5/4 4:F5/2 6:D5/2 8:F5/8",
-         "0:F5/2 2:A5/2 4:C6/4 8:C6/8", "0:E5/2 2:G5/2 4:C6/4 8:E6/8", "0:E6/4 4:C6/4 8:A5/4 12:E5/4", "0:F5/6 6:E5/2 8:D5/8")
+         "0:F5/2 2:A5/2 4:C6/4 8:C6/8", "0:E5/2 2:G5/2 4:C6/4 8:E6/8", "0:E6/4 4:C6/4 8:A5/4 12:E5/4", "0:A4/4 4:D5/2 6:F5/2 8:A5/6")
 CCH_A = [(D, MIN), (G, MAJ), (D, MIN), (C, MAJ), (D, MIN), (G, MAJ), (A, MIN), (D, MIN)]
 CCH_B = [(Fr_, MAJ), (C, MAJ), (G, MAJ), (D, MIN), (Fr_, MAJ), (C, MAJ), (A, MIN), (D, MIN)]
 SCALE_Ddor = {2, 4, 5, 7, 9, 11, 0}
@@ -440,7 +440,7 @@ U_A = PH("0:E5/4 4:A5/2 6:B5/2 8:C6/6 14:B5/2", "0:A5/8 8:F5/4 12:A5/4", "0:D5/4
 U_END = P(8, "0:A5/4 4:E5/4 8:C5/8")
 U_END2 = P(8, "0:C6/4 4:E6/4 8:A5/8")
 U_B = PH("0:F5/2 2:A5/2 4:C6/4 8:A5/8", "0:G5/2 2:B5/2 4:D6/4 8:B5/8", "0:A5/2 2:C6/2 4:E6/4 8:C6/8", "0:E6/6 6:D6/2 8:C6/4 12:A5/4",
-         "0:F5/4 4:A5/4 8:D6/8", "0:C6/4 4:A5/4 8:F5/8", "0:G5/2 2:B5/2 4:D6/2 6:B5/2 8:G5/4 12:D5/4", "0:E6/4 4:D6/2 6:C6/2 8:A5/8")
+         "0:F5/4 4:A5/4 8:D6/8", "0:C6/4 4:A5/4 8:F5/8", "0:G5/2 2:B5/2 4:D6/2 6:B5/2 8:G5/4 12:D5/4", "0:E5/4 4:A5/2 6:C6/2 8:E6/6")
 UCH_A = [(A, MIN), (Fr_, MAJ), (G, MAJ), (A, MIN), (A, MIN), (Fr_, MAJ), ((G, MAJ), (E, MIN)), (A, MIN)]
 UCH_B = [(Fr_, MAJ), (G, MAJ), (A, MIN), (A, MIN), (D, MIN), (Fr_, MAJ), (G, MAJ), (A, MIN)]
 SCALE_Am = {9, 11, 0, 2, 4, 5, 7}
@@ -464,7 +464,7 @@ L_A = PH("0:E5/4 4:G5/1 5:A5/1 6:B5/8 14:G5/2", "0:E6/4 4:D6/1 5:C6/1 6:G5/10",
 L_END = P(8, "0:E5/4 4:G5/4 8:B5/8")
 L_END2 = P(8, "0:G5/4 4:F5/2 6:E5/2 8:E5/8")
 L_B = PH("0:G5/6 6:E5/2 8:C6/8", "0:B5/6 6:G5/2 8:D6/8", "0:C6/4 4:E6/4 8:A5/6 14:C6/2", "0:B5/6 6:G5/2 8:E5/8",
-         "0:A5/6 6:F5/2 8:C6/8", "0:G5/6 6:E5/2 8:E6/8", "0:F6/4 4:C6/4 8:A5/4 12:F5/4", "0:E5/4 4:G5/1 5:F5/1 6:E5/10")
+         "0:A5/6 6:F5/2 8:C6/8", "0:G5/6 6:E5/2 8:E6/8", "0:F6/4 4:C6/4 8:A5/4 12:F5/4", "0:B4/4 4:E5/2 6:G5/2 8:B5/6")
 LCH_A = [(E, MIN), (C, MAJ), (G, MAJ), (Fr_, MAJ), (E, MIN), (C, MAJ), ((A, MIN), (Fr_, MAJ)), (E, MIN)]
 LCH_B = [(C, MAJ), (G, MAJ), (A, MIN), (E, MIN), (Fr_, MAJ), (C, MAJ), (Fr_, MAJ), (E, MIN)]
 SCALE_Ephr = {4, 5, 7, 9, 11, 0, 2}
@@ -475,7 +475,7 @@ F_A = PH("0:A5/1 1:Bb5/1 2:C6/1 3:D6/1 4:E6/6 10:D6/2 12:C6/4", "0:E6/1 1:D6/1 2
 F_END = P(8, "0:C6/4 4:A5/4 8:E5/8")
 F_END2 = P(8, "0:A5/4 4:C6/4 8:E6/8")
 F_B = PH("0:C6/8 8:A5/4 12:F5/4", "0:D6/8 8:Bb5/4 12:G5/4", "0:E6/6 6:D6/2 8:C6/4 12:G5/4", "0:F6/6 6:D6/2 8:Bb5/8",
-         "0:E6/8 8:C6/4 12:A5/4", "0:C6/8 8:A5/4 12:C6/4", "0:D6/4 4:Bb5/4 8:F6/4 12:D6/4", "0:Bb5/1 1:A5/1 2:G5/1 3:F5/1 4:E5/4 8:A5/8")
+         "0:E6/8 8:C6/4 12:A5/4", "0:C6/8 8:A5/4 12:C6/4", "0:D6/4 4:Bb5/4 8:F6/4 12:D6/4", "0:E5/4 4:A5/2 6:C6/2 8:E6/6")
 FCH_A = [(A, MIN), (A, MIN), (Bbr_, MAJ), (A, MIN), (D, MIN), (C, MAJ), (Bbr_, MAJ), (A, MIN)]
 FCH_B = [(Fr_, MAJ), (G, MIN), (C, MAJ), (Bbr_, MAJ), (A, MIN), (Fr_, MAJ), ((G, MIN), (Bbr_, MAJ)), (A, MIN)]
 SCALE_Aphr = {9, 10, 0, 2, 4, 5, 7}
@@ -515,7 +515,7 @@ R2_END2 = P(8, "0:Bb5/3 3:Bb5/1 4:D6/4 8:Bb5/8")
 R2_B = PH("0:D6/2 2:C6/2 4:Bb5/2 6:A5/2 8:Bb5/4 12:G5/4", "0:A5/2 2:G5/2 4:F5/2 6:Eb5/2 8:F5/4 12:D5/4",
           "0:Bb5/2 2:A5/2 4:G5/2 6:F5/2 8:G5/4 12:Eb5/4", "0:C6/2 2:Bb5/2 4:A5/2 6:G5/2 8:A5/4 12:F5/4",
           "0:G5/4 4:Bb5/4 8:D6/6 14:Bb5/2", "0:F5/4 4:A5/4 8:D6/6 14:A5/2",
-          "0:G5/2 2:Bb5/2 4:Eb6/4 8:F5/2 10:A5/2 12:C6/4", "0:Bb5/3 3:Bb5/1 4:F5/4 8:Bb4/8")       # (antes, la llamada)
+          "0:G5/2 2:Bb5/2 4:Eb6/4 8:F5/2 10:A5/2 12:C6/4", "0:F4/4 4:Bb4/2 6:D5/2 8:F5/6")       # la llamada en Si♭
 R2CH_A = [(Bbr_, MAJ), (Bbr_, MAJ), (Ebr_, MAJ), (Fr_, MAJ), (Bbr_, MAJ), (G, MIN), ((Ebr_, MAJ), (Fr_, MAJ)), (Bbr_, MAJ)]
 R2CH_B = [(G, MIN), (D, MIN), (Ebr_, MAJ), (Fr_, MAJ), (G, MIN), (D, MIN), ((Ebr_, MAJ), (Fr_, MAJ)), (Bbr_, MAJ)]
 
@@ -536,24 +536,26 @@ FL_END2 = P(8, "0:F#5/3 3:A5/3 6:C#6/2 8:D6/8")                           # (el 
 FL_B = PH("0:B5/6 6:A5/2 8:G5/4 12:D5/4", "0:C#6/6 6:B5/2 8:A5/4 12:E5/4",
           "0:A5/2 2:C#6/2 4:F#6/6 10:E6/2 12:C#6/4", "0:D6/6 6:C#6/2 8:B5/8",
           "2:G5/1 3:B5/1 4:D6/2 6:G6/6 12:D6/4", "2:G5/1 3:Bb5/1 4:D6/2 6:G6/6 12:Bb5/4",
-          "0:G5/2 2:E5/2 4:B5/4 8:A5/2 10:C#6/2 12:E6/4", "0:F#5/2 2:A5/1 3:D6/1 4:A5/4 8:D5/8")    # (antes, la llamada)
+          "0:G5/2 2:E5/2 4:B5/4 8:A5/2 10:C#6/2 12:E6/4", "0:A4/4 4:D5/2 6:F#5/2 8:A5/6")          # la llamada en Re
 FLCH_A = [(D, MAJ), (B, MIN), (G, MAJ), (A, MAJ), (D, MAJ), (6, MIN), ((G, MAJ), (A, MAJ)), (D, MAJ)]
 FLCH_B = [(G, MAJ), (A, MAJ), (6, MIN), (B, MIN), (G, MAJ), (G, MIN), ((E, MIN), (A, MAJ)), (D, MAJ)]
 SCALE_D = {2, 4, 6, 7, 9, 11, 1, 10}             # (Re mayor + el Si♭ de Sol menor)
 
 
-# ══ PIEZAS MÁS LARGAS (3.98.0) ═════════════════════════════════════════════════════════════════════════════════
+# ══ PIEZAS MÁS LARGAS (3.98.0 → 3.99.0) ═════════════════════════════════════════════════════════════════════════
 # El usuario: los temas de nivel (y los jefes de la nave y de la bola) no pasaban del minuto y se hacían repetitivos.
-# Antes: intro · A · A' · B · A'' (32 compases). Ahora cada tema tiene dos secciones NUEVAS hechas con su propio motivo
-#   D  DESARROLLO: el ritmo y el contorno de la cabeza de A en otra zona armónica (el relativo, el IV), en secuencia;
-#      acaba en la dominante o en el acorde que abre E
-#   E  RESPIRO: notas largas, el arreglo de B, batería a medias (bombo en el 1, platos sueltos) y un redoble que
-#      crece al final; acaba en un acorde que devuelve a A
-# y A y B vuelven con capas nuevas (A'' y B' con un CONTRACANTO — notas del acorde, tenidas, por grados —; A''' además
-# con la melodía doblada a la octava):  intro · A · A' · B · [C] · D · E · A'' · B' · [solo] · A'''  (64 compases).
-# Las piezas con muestras prestadas (nieve_1, nieve_2, la bola) no repiten B ni C: cada muestra, una vez por vuelta.
-# LA LLAMADA ya no cierra B (el usuario: forzarla en casi todas las canciones era demasiado): cada tema cierra con lo
-# suyo. Queda en el mapa (de donde sale), las cinemáticas, el Espejo y la fanfarria de victoria.
+# 3.98.0 los alargó a todos con LA MISMA receta (D desarrollo, E respiro y A y B otra vez con contracanto y octava) y
+# el usuario la notó: "la extensión sigue la misma lógica y fluido en todas". Ahora cada tema tiene SU forma (FORMS):
+#   material nuevo — D (desarrollo: la cabeza de A en otra zona armónica), E (respiro cantable, notas largas) y las
+#                    secciones de EXTRA: un estribillo nuevo, un diálogo con el acento, un SOLO de la voz, un riff a
+#                    golpes, la máquina sola, una tormenta de semicorcheas, la alarma, el pivote de un cambio de tono…
+#   variaciones    — 'cm' contracanto · 'dbl' octava · 'thin' parón (sin batería, bajo largo; vuelve en sus 2 últimos
+#                    compases) · 'stop' a golpes (la banda solo en los golpes; la melodía sigue) · 'swap' la melodía a otro
+#                    instrumento y la voz canta el contracanto · 'dial' el acento contesta cada compás · transporte (tono)
+# TRANSICIONES: al entrar en cada sección nueva, la nota larga anterior se acorta y dos semicorcheas de la escala llevan
+# a la primera nota de la sección (`link` en song); los cambios de tono llevan su compás pivote (la dominante del tono
+# nuevo) y uno de vuelta (la dominante del de casa) antes de repetir.
+# LA LLAMADA: en 3.98.0 se quitó y el usuario la echó de menos ("se me hace raro que no esté"): vuelve a cerrar B.
 def CH(txt):
     """'Em C Am|D' → acordes por compás ((raíz, calidad) o una pareja para medio compás cada uno)"""
     def one(t):
@@ -708,24 +710,195 @@ DEV = {
                   "0:D6/6 6:C#6/2 8:B5/8", "0:A5/6 6:B5/2 8:F#5/8", "0:E5/4 4:G5/4 8:B5/8", "0:C#6/4 4:E6/4 8:A5/8"),
                CH("G D Em Bm G D Em A")),
 }
+# Lo NUEVO de cada forma que no es D ni E (melodía, acordes)
+EXTRA = {
+    'hop': {   # pradera_1: un ESTRIBILLO nuevo (el 3+3+2 cantado) y un DIÁLOGO con el pájaro (la voz media frase, el trino la otra)
+        'C': (PH("0:B5/3 3:A5/3 6:G5/2 8:D6/6 14:B5/2", "0:C6/3 3:B5/3 6:A5/2 8:G5/4 12:E5/4",
+                 "0:F#5/3 3:G5/3 6:A5/2 8:D6/6 14:C6/2", "0:B5/8 8:G5/4 12:D5/4",
+                 "0:B5/3 3:A5/3 6:G5/2 8:E6/6 14:D6/2", "0:E6/3 3:D6/3 6:C6/2 8:G5/4 12:E5/4",
+                 "0:A5/2 2:C6/2 4:E6/4 8:D6/2 10:C6/2 12:A5/4", "0:B5/3 3:A5/3 6:G5/2 8:G5/8"),
+              CH("G C D G Em C Am|D G")),
+        'K': (PH("0:G5/2 2:E5/1 3:G5/1 4:C6/4", "0:D6/2 2:B5/1 3:D6/1 4:G5/4", "0:E5/2 2:A5/1 3:C6/1 4:E6/4",
+                 "0:F#5/2 2:A5/1 3:D6/1 4:C6/2 6:A5/2 8:F#5/2 10:G5/2 12:A5/4"),
+              CH("C G Am D")),
+        # pivote a La mayor (escrito en Sol: Re mayor, que subido un tono es Mi mayor) y vuelta a Sol (Re mayor, sin subir)
+        'PIV': (PH("0:F#5/2 2:A5/2 4:D6/4 8:C6/2 10:A5/2 12:F#5/4"), CH("D")),
+        'TURN': (PH("0:A5/2 2:F#5/2 4:D6/2 6:C6/2 8:A5/2 10:F#5/2 12:D5/2 14:A4/2"), CH("D")),
+    },
+    'calipso': {   # costa_1: SOLO del steel drum (arpegios en semicorcheas sobre los acordes de A)
+        'S': (PH("0:F5/1 1:A5/1 2:C6/1 3:A5/1 4:F5/1 5:A5/1 6:C6/2 8:F6/4 12:C6/2 14:A5/2",
+                 "0:G5/1 1:A5/1 2:Bb5/1 3:C6/1 4:D6/2 6:C6/2 8:A5/6 14:F5/2",
+                 "0:D5/1 1:F5/1 2:Bb5/1 3:F5/1 4:D5/1 5:F5/1 6:Bb5/2 8:D6/4 12:Bb5/2 14:F5/2",
+                 "0:E5/1 1:G5/1 2:C6/1 3:G5/1 4:E5/2 6:G5/2 8:C6/6 14:Bb5/2",
+                 "0:A5/1 1:C6/1 2:F6/1 3:C6/1 4:A5/1 5:C6/1 6:F6/2 8:E6/1 9:F6/1 10:E6/1 11:D6/1 12:C6/4",
+                 "0:D6/1 1:C6/1 2:A5/1 3:F5/1 4:D5/2 6:F5/2 8:A5/6 14:F5/2",
+                 "0:F5/3 3:Bb5/3 6:D6/2 8:G5/3 11:C6/3 14:E6/2", "0:F6/2 2:C6/2 4:A5/2 6:F5/2 8:C6/8"),
+              CH("F F Bb C F Dm Bb|C F")),
+    },
+    'marcha': {   # fortaleza_1: la INSTRUCCIÓN — notas repetidas al ritmo de la marcha, a golpes ('stop')
+        'R': (PH("0:C5/4 4:C5/2 6:C5/1 7:C5/1 8:G5/4 12:Eb5/4", "0:C6/4 4:G5/2 6:G5/1 7:G5/1 8:Eb5/4 12:C5/4",
+                 "0:Ab4/4 4:Ab4/2 6:Ab4/1 7:Ab4/1 8:Eb5/4 12:C5/4", "0:B4/4 4:D5/2 6:D5/1 7:D5/1 8:G5/8",
+                 "0:Eb5/4 4:Eb5/2 6:Eb5/1 7:Eb5/1 8:C6/4 12:G5/4", "0:G5/4 4:Eb5/2 6:D5/1 7:Eb5/1 8:C5/8",
+                 "0:F5/4 4:Ab5/2 6:F5/1 7:Ab5/1 8:G5/4 12:B4/4", "0:D5/4 4:F5/2 6:Eb5/1 7:D5/1 8:B4/8"),
+              CH("Cm Cm Ab G Cm Cm Fm|G G")),
+    },
+    'engranajes': {   # fortaleza_2: la máquina se queda sola (4 compases de tic-tac y notas sueltas)
+        'M': (PH("0:D5/2 4:D5/2 8:G5/2 12:Bb5/4", "0:A5/2 4:G5/2 8:D5/8", "0:Eb5/2 4:G5/2 8:Bb5/2 12:Eb6/4",
+                 "0:D6/2 4:C6/2 8:A5/2 10:F#5/2 12:D5/4"),
+              CH("Gm Gm Eb D")),
+    },
+    'ventisca': {   # nieve_2: la TORMENTA — rachas de semicorcheas que suben y caen
+        'W': (PH("0:D5/1 1:E5/1 2:F5/1 3:G5/1 4:A5/4 8:D6/1 9:C6/1 10:Bb5/1 11:A5/1 12:F5/4",
+                 "0:F5/1 1:G5/1 2:A5/1 3:Bb5/1 4:D6/4 8:F6/1 9:E6/1 10:D6/1 11:C6/1 12:Bb5/4",
+                 "0:E5/1 1:F5/1 2:G5/1 3:A5/1 4:C6/4 8:E6/1 9:D6/1 10:C6/1 11:Bb5/1 12:G5/4",
+                 "0:A5/1 1:G5/1 2:F5/1 3:E5/1 4:D5/4 8:F5/2 10:A5/2 12:D6/4",
+                 "0:G5/1 1:A5/1 2:Bb5/1 3:C6/1 4:D6/4 8:Bb5/1 9:A5/1 10:G5/1 11:F5/1 12:D5/4",
+                 "0:Bb4/1 1:C5/1 2:D5/1 3:E5/1 4:F5/4 8:Bb5/1 9:A5/1 10:G5/1 11:F5/1 12:D5/4",
+                 "0:C5/1 1:D5/1 2:E5/1 3:F5/1 4:G5/4 8:C6/4 12:E5/4", "0:G5/2 2:E5/2 4:C5/4 8:E5/2 10:G5/2 12:C6/4"),
+              CH("Dm Bb C Dm Gm Bb C C")),
+    },
+    'fuego': {   # volcan_2: SOLO de la lava — arpegios que hierven, el 3+3+2 y una caída que acaba arriba
+        'L': (PH("0:A5/1 1:C6/1 2:E6/1 3:C6/1 4:A5/1 5:C6/1 6:E6/1 7:C6/1 8:E6/4 12:C6/4",
+                 "0:Bb5/1 1:D6/1 2:F6/1 3:D6/1 4:Bb5/1 5:D6/1 6:F6/1 7:D6/1 8:F6/4 12:D6/4",
+                 "0:E6/1 1:C6/1 2:A5/1 3:C6/1 4:E6/1 5:C6/1 6:A5/1 7:C6/1 8:A5/4 12:E5/4",
+                 "0:D6/1 1:Bb5/1 2:G5/1 3:Bb5/1 4:D6/1 5:Bb5/1 6:G5/1 7:Bb5/1 8:G5/8",
+                 "0:F5/3 3:A5/3 6:C6/2 8:F6/3 11:C6/3 14:A5/2", "0:G5/3 3:Bb5/3 6:D6/2 8:G5/3 11:D6/3 14:Bb5/2",
+                 "0:F6/1 1:E6/1 2:D6/1 3:C6/1 4:Bb5/4 8:F5/4 12:D5/4", "0:D5/1 1:F5/1 2:Bb5/1 3:D6/1 4:F6/12"),
+              CH("Am Bb Am Gm F Gm Bb Bb")),
+    },
+    'persecucion': {   # evil_ship_boss: la ALARMA sola (la banda se para: dos notas que se alternan)
+        'AL': (PH("0:G5/2 4:Eb5/2 8:G5/2 12:Eb5/4", "0:Ab5/2 4:Eb5/2 8:Ab5/2 12:C6/4", "0:F5/2 4:C5/2 8:F5/2 12:Ab5/4",
+                  "0:G5/2 4:Eb5/2 8:C5/2 10:Eb5/2 12:G5/4"),
+               CH("Cm Ab Fm Cm")),
+    },
+    'majestad': {   # gummy_king_boss: la fanfarria sube un tono (pivote: la dominante de Do; vuelta: la de Si♭)
+        'PIV': (PH("0:F5/2 2:A5/2 4:C6/4 8:Eb6/2 10:C6/2 12:A5/4"), CH("F")),
+        'TURN': (PH("0:C6/2 2:A5/2 4:F5/2 6:A5/2 8:C6/2 10:Eb6/2 12:C6/2 14:A5/2"), CH("F")),
+    },
+    'aleteo': {   # flappy: el monstruo PLANEA (4 compases sin batería)
+        'G': (PH("0:D6/8 8:B5/4 12:G5/4", "0:A5/8 8:F#5/4 12:D5/4", "0:G5/4 4:B5/4 8:E6/8", "0:C#6/4 4:E6/4 8:A5/4 12:C#6/2 14:E6/2"),
+              CH("G D Em A")),
+    },
+}
+# La FORMA de cada tema tras A · A' · B [· C]: (sección, variación[, transporte]). A1 = A con su 1er final, A2 = con el 2º.
+FORMS = {
+    'hop':         [('C', ''), ('K', 'thin dial'), ('C', 'cm'), ('PIV', '', 2), ('A2', 'dbl', 2), ('TURN', '')],
+    'galope':      [('D', ''), ('A1', 'stop'), ('B', 'cm'), ('A2', 'dbl')],
+    'calipso':     [('S', ''), ('A1', 'swap'), ('B', 'cm'), ('A2', 'dbl')],
+    'arrecife':    [('E', 'thin'), ('A2', 'cm')],
+    'marcha':      [('R', 'stop'), ('D', ''), ('B', 'cm'), ('A2', 'cm')],
+    'engranajes':  [('M', 'thin'), ('D', ''), ('A1', 'cm'), ('A2', 'dbl')],
+    'cumbres':     [('D', ''), ('A1', 'thin'), ('A2', 'cm')],
+    'ventisca':    [('W', ''), ('D', ''), ('A1', 'stop'), ('A2', 'dbl')],
+    'ecos':        [('E', ''), ('A1', 'thin'), ('B', 'cm'), ('A2', '')],
+    'laberinto':   [('D', ''), ('A1', 'swap'), ('A2', 'cm')],
+    'ceniza':      [('D', ''), ('E', 'thin'), ('A1', 'cm'), ('A2', '')],
+    'fuego':       [('L', ''), ('D', ''), ('B', 'cm'), ('A2', 'cm')],
+    'bola':        [('D', ''), ('A1', 'stop'), ('A2', 'cm')],
+    'persecucion': [('AL', 'thin'), ('D', ''), ('A1', 'cm'), ('B', 'cm'), ('A2', '')],
+    'majestad':    [('D', ''), ('E', ''), ('PIV', '', 2), ('A2', 'cm', 2), ('TURN', '')],
+    'aleteo':      [('D', ''), ('G', 'thin'), ('A1', 'cm'), ('A2', 'dbl')],
+}
 
 
-def check(mel, ch):
-    """Las reglas del usuario: notas largas (≥ 4) del acorde que suena cuando empiezan; todo dentro de la escala"""
+# ══ BONUS: un tema PROPIO por mundo (3.99.0) ═════════════════════════════════════════════════════════════════════
+# Antes cada bonus era el _1 de su mundo más rápido + el mismo solo de percusión en todos. El usuario: las zonas bonus
+# duran poco más de un minuto, así que la duración de antes (intro · A · A' · B · SOLO · A'') era la buena — si no, el
+# solo no se oye nunca —; y que cada bonus sea un tema original de su mundo, con un solo DISTINTO en cada uno
+# (`solo_bar(style=)`). Cierran B con la llamada, como los demás.
+#   pradera_bonus   "Carrera"    La mayor, 152: dos semicorcheas repetidas y la nota que salta (ta-ta-TAA)
+#   costa_bonus     "Regata"     Do mayor (un Si♭ en B), 138: ta · ta-ta · TAA, como un remo
+#   fortaleza_bonus "Asalto"     La menor (Sol# en la dominante), 156: tres golpes repetidos y la nota que cae; contesta con puntillo
+#   nieve_bonus     "Descenso"   Sol mayor, 166: el esquí — dos semicorcheas que bajan y la nota larga; y el SALTO (tres a contratiempo)
+#   cuevas_bonus    "Estampida"  Mi dórico, 132: nota, nota larga adelantada (ta-TAA ta ta-TAAA)
+#   volcan_bonus    "Erupción"   Re frigio (Mi♭), 178: salto de octava, la corchea con puntillo y su vecina de arriba
+# (A, final 1, final 2, B, acordes de A, acordes de B, tónica, escala)
+BONUS = {
+    'carrera': (PH("0:A4/1 1:A4/1 2:E5/4 6:A5/2 8:G#5/2 10:F#5/1 11:G#5/1 12:A5/4", "2:G#5/2 4:E5/2 6:B4/4 10:D5/2 12:E5/4",
+                   "0:A4/1 1:A4/1 2:F#5/4 6:A5/2 8:G#5/2 10:F#5/1 11:E5/1 12:C#5/4", "2:D5/2 4:F#5/2 6:A5/4 10:B5/2 12:A5/4",
+                   "0:A4/1 1:A4/1 2:E5/4 6:A5/2 8:G#5/2 10:F#5/1 11:G#5/1 12:A5/4", "2:B5/2 4:G#5/2 6:E5/4 10:G#5/2 12:B5/4",
+                   "0:F#5/3 3:A5/3 6:D6/2 8:B5/3 11:G#5/3 14:E5/2"),
+                P(8, "0:C#5/2 2:E5/2 4:A5/8 12:E5/4"), P(8, "0:A5/1 1:A5/1 2:C#6/4 6:B5/2 8:A5/8"),
+                PH("0:F#5/4 4:A5/4 8:D6/6 14:A5/2", "0:G#5/4 4:B5/4 8:E6/6 14:B5/2", "0:E6/2 2:C#6/2 4:G#5/4 8:E5/2 10:G#5/2 12:C#6/4",
+                   "0:A5/6 6:G#5/2 8:F#5/8", "0:A5/1 1:A5/1 2:D6/4 6:A5/2 8:F#5/4 12:A5/4", "0:B5/1 1:B5/1 2:E6/4 6:B5/2 8:G#5/4 12:B5/4",
+                   "0:D6/2 2:B5/2 4:F#5/4 8:E5/2 10:G#5/2 12:B5/4", "0:E5/4 4:A5/2 6:C#6/2 8:E6/6"),           # la llamada en La
+                CH("A E F#m D A E D|E A"), CH("D E C#m F#m D E Bm|E A"), (A, MAJ), {9, 11, 1, 2, 4, 6, 8}),
+    'regata': (PH("0:G5/2 2:E5/1 3:G5/1 4:C6/6 10:B5/1 11:C6/1 12:G5/4", "1:A5/1 2:C6/1 3:E6/3 6:C6/2 8:A5/6 14:C6/2",
+                  "0:A5/2 2:F5/1 3:A5/1 4:C6/6 10:Bb5/1 11:C6/1 12:A5/4", "1:G5/1 2:B5/1 3:D6/3 6:B5/2 8:G5/6 14:B5/2",
+                  "0:G5/2 2:E5/1 3:G5/1 4:C6/6 10:B5/1 11:C6/1 12:G5/4", "1:E5/1 2:A5/1 3:C6/3 6:A5/2 8:E5/6 14:A5/2",
+                  "0:F5/3 3:A5/3 6:D6/2 8:B5/3 11:G5/3 14:D5/2"),
+               P(8, "0:E5/2 2:G5/1 3:C6/1 4:G5/8 12:E5/4"), P(8, "0:G5/2 2:E5/1 3:G5/1 4:C6/12"),
+               PH("0:A5/4 4:C6/2 6:A5/2 8:F5/6 14:A5/2", "0:B5/4 4:D6/2 6:B5/2 8:G5/6 14:B5/2", "0:G5/2 2:B5/1 3:E6/3 6:B5/2 8:G5/4 12:E5/4",
+                  "0:C6/6 6:B5/2 8:A5/8", "0:F5/2 2:A5/1 3:C6/3 6:A5/2 8:F5/4 12:A5/4", "0:G5/2 2:B5/1 3:D6/3 6:B5/2 8:G5/4 12:B5/4",
+                  "0:D6/2 2:Bb5/2 4:F5/4 8:D5/2 10:G5/2 12:B5/4", "0:G4/4 4:C5/2 6:E5/2 8:G5/6"),           # la llamada en Do
+               CH("C Am F G C Am Dm|G C"), CH("F G Em Am F G Bb|G C"), (C, MAJ), {0, 2, 4, 5, 7, 9, 11, 10}),
+    'asalto': (PH("0:A4/1 1:A4/1 2:A4/2 4:E5/4 8:C5/1 9:C5/1 10:C5/2 12:A5/4", "0:G5/3 3:E5/1 4:C5/4 8:A4/8",
+                  "0:A4/1 1:A4/1 2:A4/2 4:F5/4 8:C5/1 9:C5/1 10:C5/2 12:A5/4", "0:G#5/3 3:E5/1 4:B4/4 8:E5/8",
+                  "0:E5/1 1:E5/1 2:E5/2 4:A5/4 8:E5/1 9:E5/1 10:E5/2 12:C6/4", "0:D6/3 3:A5/1 4:F5/4 8:D5/8",
+                  "0:C6/3 3:A5/3 6:F5/2 8:E5/3 11:G#5/3 14:B5/2"),
+               P(8, "0:A5/2 2:E5/2 4:C5/4 8:A4/8"), P(8, "0:E5/1 1:E5/1 2:E5/2 4:A5/12"),
+               PH("0:C6/4 4:A5/2 6:F5/2 8:C5/6 14:F5/2", "0:D6/4 4:B5/2 6:G5/2 8:D5/6 14:G5/2",
+                  "0:E6/1 1:E6/1 2:E6/2 4:C6/4 8:G5/1 9:G5/1 10:G5/2 12:E5/4", "0:B5/6 6:A5/2 8:G#5/8",
+                  "0:A5/1 1:A5/1 2:A5/2 4:C6/4 8:F5/1 9:F5/1 10:F5/2 12:A5/4", "0:B5/1 1:B5/1 2:B5/2 4:D6/4 8:G5/1 9:G5/1 10:G5/2 12:B5/4",
+                  "0:F5/2 2:A5/2 4:D6/4 8:E6/2 10:D6/2 12:B5/4", "0:E5/4 4:A5/2 6:C6/2 8:E6/6"),            # la llamada en La menor
+               CH("Am Am F E Am Dm F|E Am"), CH("F G C E F G Dm|E Am"), (A, MIN), {9, 11, 0, 2, 4, 5, 7, 8}),
+    'descenso': (PH("0:D6/1 1:C6/1 2:B5/2 4:G5/4 8:B5/1 9:A5/1 10:G5/2 12:D5/4", "1:F#5/1 2:A5/1 3:D6/9 12:A5/4",
+                    "0:B5/1 1:A5/1 2:G5/2 4:E5/4 8:G5/1 9:F#5/1 10:E5/2 12:B4/4", "1:E5/1 2:G5/1 3:C6/9 12:G5/4",
+                    "0:G5/1 1:A5/1 2:B5/2 4:D6/4 8:B5/1 9:C6/1 10:D6/2 12:G5/4", "1:A5/1 2:F#5/1 3:D5/9 12:F#5/4",
+                    "0:E5/3 3:G5/3 6:C6/2 8:A5/3 11:F#5/3 14:D5/2"),
+                 P(8, "0:B5/1 1:A5/1 2:G5/2 4:D5/8 12:G5/4"), P(8, "0:D6/1 1:C6/1 2:B5/2 4:G5/12"),
+                 PH("0:E5/4 4:G5/4 8:C6/6 14:G5/2", "0:F#5/4 4:A5/4 8:D6/6 14:A5/2",
+                    "0:D6/1 1:C6/1 2:B5/2 4:F#5/4 8:B5/1 9:A5/1 10:F#5/2 12:D5/4", "0:G5/6 6:F#5/2 8:E5/8",
+                    "0:C6/1 1:B5/1 2:A5/2 4:G5/4 8:E5/4 12:G5/4", "0:D6/1 1:C6/1 2:B5/2 4:A5/4 8:F#5/4 12:A5/4",
+                    "0:C6/2 2:A5/2 4:E5/4 8:F#5/2 10:A5/2 12:D6/4", "0:D5/4 4:G5/2 6:B5/2 8:D6/6"),           # la llamada en Sol
+                 CH("G D Em C G D C|D G"), CH("C D Bm Em C D Am|D G"), (G, MAJ), {7, 9, 11, 0, 2, 4, 6}),
+    'estampida': (PH("0:E5/2 2:G5/4 6:B5/2 8:A5/2 10:G5/6", "0:E5/2 2:A5/4 6:C#6/2 8:B5/2 10:A5/6",
+                     "0:G5/2 2:B5/4 6:E6/2 8:D6/2 10:B5/6", "0:F#5/2 2:A5/4 6:D6/2 8:C#6/2 10:A5/6",
+                     "0:B5/2 2:E6/4 6:D6/2 8:B5/2 10:G5/6", "0:C#6/2 2:E6/4 6:C#6/2 8:A5/2 10:E5/6",
+                     "0:B5/3 3:G5/3 6:D5/2 8:F#5/3 11:A5/3 14:D6/2"),
+                  P(8, "0:E6/2 2:B5/4 6:G5/2 8:E5/8"), P(8, "0:B5/2 2:E6/4 6:B5/2 8:E6/8"),
+                  PH("0:D6/6 6:B5/2 8:G5/8", "0:A5/6 6:F#5/2 8:D5/8", "0:C#6/6 6:B5/2 8:A5/4 12:E5/4", "0:G5/6 6:F#5/2 8:E5/8",
+                     "0:B5/2 2:D6/4 6:B5/2 8:G5/2 10:B5/6", "0:A5/2 2:D6/4 6:A5/2 8:F#5/2 10:A5/6",
+                     "0:E5/2 2:A5/2 4:C#6/4 8:D6/2 10:B5/2 12:F#5/4", "0:B4/4 4:E5/2 6:G5/2 8:B5/6"),         # la llamada en Mi menor
+                  CH("Em A Em D Em A G|D Em"), CH("G D A Em G D A|Bm Em"), (E, MIN), {4, 6, 7, 9, 11, 1, 2}),
+    'erupcion': (PH("0:D5/2 2:A5/2 4:D6/3 7:Eb6/1 8:D6/2 10:A5/2 12:F5/4", "2:G5/2 4:Bb5/3 7:C6/1 8:Bb5/2 10:G5/2 12:Eb5/4",
+                    "0:F5/2 2:A5/2 4:D6/3 7:Eb6/1 8:F6/2 10:D6/2 12:A5/4", "2:G5/2 4:C6/3 7:D6/1 8:Eb6/2 10:C6/2 12:G5/4",
+                    "0:D5/2 2:A5/2 4:D6/3 7:Eb6/1 8:D6/2 10:A5/2 12:F5/4", "2:Bb5/2 4:D6/3 7:Eb6/1 8:D6/2 10:Bb5/2 12:G5/4",
+                    "0:Bb5/3 3:G5/3 6:Eb5/2 8:C6/3 11:G5/3 14:Eb5/2"),
+                 P(8, "0:F5/2 2:Eb5/2 4:D5/8 12:A5/4"), P(8, "0:A5/2 2:Bb5/2 4:A5/4 8:D6/8"),
+                 PH("0:D6/4 4:F6/4 8:Bb5/6 14:D6/2", "0:C6/4 4:A5/4 8:F5/6 14:A5/2", "0:D6/2 2:Bb5/2 4:G5/4 8:Bb5/2 10:D6/2 12:G5/4",
+                    "0:G5/6 6:F5/2 8:Eb5/8", "0:F5/2 2:Bb5/2 4:D6/3 7:Eb6/1 8:D6/2 10:Bb5/2 12:F5/4",
+                    "0:F5/2 2:A5/2 4:C6/3 7:D6/1 8:C6/2 10:A5/2 12:F5/4", "0:G5/2 2:Bb5/2 4:D6/4 8:Eb6/2 10:C6/2 12:G5/4",
+                    "0:A4/4 4:D5/2 6:F5/2 8:A5/6"),                                                        # la llamada en Re
+                 CH("Dm Eb Dm Cm Dm Gm Eb|Cm Dm"), CH("Bb F Gm Eb Bb F Gm|Eb Dm"), (D, MIN), {2, 3, 5, 7, 9, 10, 0}),
+}
+
+
+def check(mel, ch, shift=None):
+    """Las reglas del usuario: notas largas (≥ 4) del acorde que suena cuando empiezan; todo dentro de la escala
+    (la de cada compás: `shift` = semitonos que se ha transportado)"""
     def at(b, st): return ch[b - 1][0 if st < 8 else 1]
+    sh = lambda b: shift[b - 1] if shift else 0
     bad = [(b, st) for b, st, n, d in mel if d >= 4 and (n - at(b, st)[0]) % 12 not in at(b, st)[1]]
-    out = [(b, st) for b, st, n, d in mel if n % 12 not in SCALE]
+    out = [(b, st) for b, st, n, d in mel if (n - sh(b)) % 12 not in SCALE]
     return bad, out
+
+
+def scale_at(sh):
+    return {(p + sh) % 12 for p in SCALE}
 
 
 def song(variant, minor=False, solo=False, theme=None):
     """→ melodía [(compás, semicorchea, nota, dur)], acordes [(1ª mitad, 2ª mitad)] por compás, etiqueta de cada
-    compás ('intro' | 'A' | 'B' | 'solo') y los compases donde EMPIEZA una frase"""
+    compás ('intro' | 'A' | 'B' | 'C' | 'D' | 'E' | 'X' | 'solo') y los compases donde EMPIEZA una frase.
+    Además: song.var (la variación de cada compás), song.shift (su transporte), song.linked (compases con enlace)"""
     global SCALE
-    SCALE = {'galope': SCALE_C, 'calipso': SCALE_F, 'arrecife': SCALE_Bb, 'marcha': SCALE_Cm, 'engranajes': SCALE_Gm, 'persecucion': SCALE_Cm,
+    bonus = BONUS.get(theme)
+    SCALE = bonus[7] if bonus else {'galope': SCALE_C, 'calipso': SCALE_F, 'arrecife': SCALE_Bb, 'marcha': SCALE_Cm, 'engranajes': SCALE_Gm, 'persecucion': SCALE_Cm,
              'cumbres': SCALE_F, 'ventisca': SCALE_Dm, 'bola': SCALE_Fm, 'majestad': SCALE_Bb, 'ecos': SCALE_Ddor, 'laberinto': SCALE_Am, 'ceniza': SCALE_Ephr, 'fuego': SCALE_Aphr, 'victoria': SCALE_C, 'aleteo': SCALE_D}.get(theme, SCALE_G)
     pi, ci = [], None                                  # (la intro puede llevar melodía y acordes propios: la fanfarria)
-    if theme == 'victoria': pa, e1, e2, pb, ca, cb, tonic, pi, ci = W_A, W_END, W_END2, W_B, WCH_A, WCH_B, (C, MAJ), W_IN, WCH_IN
+    if bonus: pa, e1, e2, pb, ca, cb, tonic = bonus[:7]
+    elif theme == 'victoria': pa, e1, e2, pb, ca, cb, tonic, pi, ci = W_A, W_END, W_END2, W_B, WCH_A, WCH_B, (C, MAJ), W_IN, WCH_IN
     elif theme == 'aleteo': pa, e1, e2, pb, ca, cb, tonic = FL_A, FL_END, FL_END2, FL_B, FLCH_A, FLCH_B, (D, MAJ)
     elif theme == 'ceniza': pa, e1, e2, pb, ca, cb, tonic = L_A, L_END, L_END2, L_B, LCH_A, LCH_B, (E, MIN)
     elif theme == 'fuego': pa, e1, e2, pb, ca, cb, tonic = F_A, F_END, F_END2, F_B, FCH_A, FCH_B, (A, MIN)
@@ -745,36 +918,56 @@ def song(variant, minor=False, solo=False, theme=None):
     elif variant == 'B': pa, e1, e2, pb, ca, cb, tonic = A_SONG, A_SONG_END, A_SONG_END2, PH_B, GCH_A, GCH_B, (G, MAJ)
     else: pa, e1, e2, pb, ca, cb, tonic = A_HOP, A_HOP_END, A_HOP_END2, PH_B, GCH_A, GCH_B, (G, MAJ)
     pc, cc = {'cumbres': (S_C, SCH_C), 'bola': (O_C, OCH_C)}.get(theme, (None, None))     # el estribillo (tras el puente B)
-    mel, ch, tag, starts = [], [], [], []
-    def section(kind, ph, chords):
+    mel, ch, tag, starts, var, shift = [], [], [], [], [], []
+    def sec(kind, ph, chords, v='', sh=0):
         base = len(ch)
         starts.append(base + 1)
-        for b, st, n, d in ph: mel.append((base + b, st, n, d))
+        for b, st, n, d in ph: mel.append((base + b, st, n + sh, d))
         for c in chords:
-            ch.append(c if isinstance(c[0], tuple) else (c, c))
-            tag.append(kind)
-    var = []                                           # la variación de cada compás: '' · 'cm' (contracanto) · 'cm+dbl' (y la octava)
-    def sec(kind, ph, chords, v=''):
-        section(kind, ph, chords)
-        var.extend([v] * (len(ch) - len(var)))
+            c = c if isinstance(c[0], tuple) else (c, c)
+            ch.append(tuple(((r + sh) % 12, q) for r, q in c))
+            tag.append(kind); var.append(v); shift.append(sh)
     sec('intro', pi, ci or [tonic] * INTRO)
     sec('A', pa + e1, ca)
     sec('A', pa + e2, ca)
     sec('B', pb, cb)
     if pc: sec('C', pc, cc)
-    dev = DEV.get(theme or ('hop' if not minor else None))
-    if dev:                                            # la forma larga (ver DEV)
-        dm, dc, em, ec = dev
-        sec('D', dm, dc)
-        sec('E', em, ec)
-        sec('A', pa + e1, ca, 'cm')
-        if theme not in SAMPLE_BARS: sec('B', pb, cb, 'cm')
-        if solo: sec('solo', [], [tonic] * 8)
-        sec('A', pa + e2, ca, 'cm+dbl')
+    key = theme or ('hop' if not minor else None)
+    form = None if (bonus or variant != 'A') else FORMS.get(key)
+    links = []
+    if form:                                           # la forma larga, la de cada tema (ver FORMS)
+        dm, dc, em, ec = DEV.get(key, (None,) * 4)
+        for item in form:
+            nm, v = item[0], item[1]
+            sh = item[2] if len(item) > 2 else 0
+            links.append(len(ch) + 1)
+            if nm == 'A1': sec('A', pa + e1, ca, v, sh)
+            elif nm == 'A2': sec('A', pa + e2, ca, v, sh)
+            elif nm == 'B': sec('B', pb, cb, v, sh)
+            elif nm == 'D': sec('D', dm, dc, v, sh)
+            elif nm == 'E': sec('E', em, ec, v, sh)
+            else: sec('X', *EXTRA[key][nm], v, sh)
     else:
         if solo: sec('solo', [], [tonic] * 8)          # (solo de percusión: sin melodía ni acordes)
         sec('A', pa + e2, ca)
-    song.var = var
+    # ENLACES: al entrar en una sección nueva de la forma larga, la nota que se tiene al final del compás anterior se
+    # acorta y dos semicorcheas de la escala (de la sección que llega) suben o bajan hasta su primera nota
+    linked = set()
+    for s0 in links:
+        first = [m for m in mel if m[0] == s0 and m[1] == 0]
+        prev = sorted((m for m in mel if m[0] == s0 - 1), key=lambda m: m[1])
+        if not first or not prev: continue
+        hb, hst, hn, hd = prev[-1]
+        if hst > 10 or hst + hd < 14 or hd < 4: continue           # (solo sobre una nota larga que llega al final)
+        tgt = first[0][2]
+        sc = sorted(set(p for p in range(tgt - 12, tgt + 13) if p % 12 in scale_at(shift[s0 - 2])) | {tgt})   # (la escala del compás donde suenan)
+        k = sc.index(tgt)
+        p1, p2 = (sc[k - 2], sc[k - 1]) if hn < tgt else (sc[k + 2], sc[k + 1])
+        mel.remove(prev[-1])
+        mel += [(hb, hst, hn, 14 - hst), (hb, 14, p1, 1), (hb, 15, p2, 1)]
+        linked.add(s0 - 1)
+    mel.sort()
+    song.var, song.shift, song.linked = var, shift, linked
     return mel, ch, tag, starts[1:]
 
 
@@ -821,6 +1014,9 @@ I_TREM = {'vol': [7, 4, 2], 'sus': 0, 'duty': 0.25}
 VOLC = ('volcan', 'lava')
 I_HARP = {'vol': [8, 6, 5, 4, 3, 2, 1], 'sus': 0, 'duty': 0.5}
 CAVE = ('cueva', 'sumergida')
+SWAP_INST = {'costa': (I_MARIMBA, 0), 'sumergida': (I_DING, 0)}     # 'swap': quién se queda la melodía
+STOP_HITS = {None: (0, 6, 10), 'pradera': (0, 3, 8, 11), 'fortaleza': (0, 6, 7, 8), 'ventisca': (0, 3, 6, 12), 'bola': (0, 6, 12, 14)}   # 'stop'
+SOLO_STYLE = {'pradera': 'pradera', 'costa': 'costa', 'fortaleza': 'fortaleza', 'nieve': 'nieve', 'cueva': 'cueva', 'volcan': 'volcan'}
 OWN_DBL = ('fiesta', 'volcan', 'lava', 'rey', 'fortaleza', 'nave', 'cueva', 'nieve')    # (ya doblan, o canta la caja de música)
 I_CM = {'vol': [4, 6, 7, 7, 7, 6], 'sus': 6, 'vib': (18, 0.12, 5.0), 'duty': 1.0}       # contracanto: el colchón (N163)
 I_SKY = {'vol': [14, 15, 14, 13, 12, 12], 'sus': 11, 'vib': (14, 0.18, 6.0), 'duty': [0.125, 0.125, 0.125, 0.25], 'drop': [-2, -1, -0.5]}   # (Flappy: entra con un respingo)
@@ -853,10 +1049,19 @@ def _tom(f0):
 TOMS = [_tom(260), _tom(190), _tom(130)]
 
 
-def solo_bar(k, at, kick, sn, tom, NZ, hit):
-    """SOLO DE PERCUSIÓN (8 compases, k = 1..8), intenso y cada vez más lleno: llamada y respuesta entre caja y
-    timbales (2 compases cada idea), bombo que pasa de negras a corcheas, redoble final en semicorcheas que sube
-    de volumen y platillo."""
+TOM_LOW = _tom(92)                                   # (un tambor hondo: el solo de la cueva)
+I_COWBELL = {'vol': [12, 8, 5, 3, 1], 'sus': 0, 'duty': 0.5}
+
+
+def solo_bar(k, at, kick, sn, tom, NZ, hit, style='pradera', chord=None, ping=None):
+    """SOLO DE PERCUSIÓN de los bonus (8 compases, k = 1..8). Uno DISTINTO por mundo (el usuario: antes era el mismo en
+    todos): `style` = 'pradera' (caja y timbales que se contestan — el de siempre) · 'costa' (congas, clave, marimba y
+    timbales) · 'fortaleza' (caja militar con sus rudimentos, timbales de orquesta, yunques) · 'nieve' (cascabeles,
+    timbales y campanas que caen) · 'cueva' (tambores hondos con eco, chasquidos de madera, gotas) · 'volcan' (doble
+    bombo, redobles de toms que bajan, blast beat, golpes de erupción). `ping(t, nota, instrumento, duración)` toca
+    las notas afinadas (marimba, cencerro, yunque, campanas, gotas): siempre del acorde de la tónica (`chord`)."""
+    if style != 'pradera':
+        return SOLOS[style](k, at, kick, sn, tom, NZ, hit, chord, ping)
     for st in range(16):
         t = at(st)
         # bombo: negras; desde el 5º compás, corcheas
@@ -883,10 +1088,177 @@ def solo_bar(k, at, kick, sn, tom, NZ, hit):
         if st == 0 and k in (1, 5): NZ['crash'].hit(t, 3, CRASH)
 
 
+def _tones(chord, base):
+    """las notas del acorde de la tónica desde `base` hacia arriba: [1ª, 3ª, 5ª, 8ª, 10ª, 12ª, 15ª]"""
+    r, q = chord
+    r0 = base + (r - base) % 12
+    return [r0 + o + iv for o in (0, 12, 24) for iv in q][:7]
+
+
+def _solo_costa(k, at, kick, sn, tom, NZ, hit, chord, ping):
+    """CONGAS (tumbao), CLAVE 3-2 en el aro y maraca siempre; la MARIMBA contesta (3-4), los TIMBALES con cencerro
+    (5-6), todo junto en 3+3+2 (7) y un redoble de timbales que baja (8)"""
+    m = _tones(chord, 72)
+    clave = (0, 6, 12) if k % 2 else (4, 8)
+    for st in range(16):
+        t = at(st)
+        NZ['hat'].hit(t, 1, [4, 2, 1] if st % 2 == 0 else [3, 1])
+        if k <= 6 and st in clave: NZ['snare'].hit(t, 7, [10, 5, 2], short=1)
+        if k in (1, 2):
+            if st in (0, 8): hit(tom, TOMS[2], t, 0.9)
+            if st in (3, 11): hit(tom, TOMS[0], t, 1.0)
+            if st in (6, 7, 14, 15): hit(tom, TOMS[1], t, 0.8 if st % 2 else 1.0)
+            if k == 2 and st in (12, 13): hit(tom, TOMS[0], t, 0.7)
+        elif k in (3, 4):
+            if st in (0, 8): hit(kick, TN.KICK, t, 0.6)
+            seq = (0, 1, 2, 3, 4, 3, 2, 1) if k == 3 else (6, 4, 5, 3, 4, 2, 3, 1)
+            if st % 2 == 0: ping(t, m[seq[st // 2]], I_MARIMBA, 1.6 * (at(1) - at(0)))
+            if k == 4 and st in (3, 11): hit(tom, TOMS[0], t, 0.6)
+        elif k in (5, 6):
+            if st in (0, 8): hit(kick, TN.KICK, t, 0.8)
+            if st % 4 == 0: ping(t, m[3] + 7, I_COWBELL, 0.05)
+            if st % 4 == 2: ping(t, m[3] + 2 if k == 5 else m[3] + 4, I_COWBELL, 0.05)
+            run = (0, 1, 0, 1, 1, 0, 1, 1) if k == 5 else (0, 0, 1, 1, 0, 1, 2, 2)
+            if st % 2 == 1 or k == 6: hit(tom, TOMS[run[st // 2]], t, 0.75 + 0.2 * (st % 4 == 3))
+        elif k == 7:
+            if st in (0, 3, 6, 8, 11, 14):
+                hit(kick, TN.KICK, t, 0.9); hit(tom, TOMS[st % 3], t, 0.9); ping(t, m[(0, 1, 2, 3, 2, 4)[(0, 3, 6, 8, 11, 14).index(st)]], I_MARIMBA, 0.12)
+        else:
+            hit(tom, TOMS[min(2, st // 5)], t, 0.6 + st * 0.025)
+            if st >= 8: NZ['snare'].hit(t, 4, [5 + st // 3, 3, 1])
+        if st == 0 and k in (1, 5): NZ['crash'].hit(t, 3, CRASH)
+
+
+def _solo_fortaleza(k, at, kick, sn, tom, NZ, hit, chord, ping):
+    """CAJA MILITAR (rudimentos: paradiddles acentuados y FLAMS, 1-2), TIMBALES de orquesta tónica-quinta con
+    redobles (3-4), YUNQUES a contratiempo sobre la marcha (5-6), golpes al unísono 3+3+2 (7), redoble cerrado que
+    crece (8)"""
+    h = (at(1) - at(0)) / 2
+    m = _tones(chord, 72)
+    for st in range(16):
+        t = at(st)
+        if k in (1, 2):
+            acc = st in (0, 4, 8, 12) or (k == 2 and st in (6, 14))
+            NZ['snare'].hit(t, 4, [12, 7, 3, 1] if acc else [6, 3, 1]); hit(sn, TN.SNARE_BODY, t, 0.8 if acc else 0.3)
+            if st in (0, 8): hit(kick, TN.KICK, t, 0.85); NZ['snare'].hit(t - 0.012, 4, [6, 2])        # flam
+        elif k in (3, 4):
+            if st % 2 == 0: hit(tom, TOMS[2] if (st // 2) % 2 == 0 else TOMS[1], t, 1.0 if st % 8 == 0 else 0.75)
+            if st >= 12: NZ['snare'].hit(t, 4, [8, 4, 2]); NZ['snare'].hit(t + h, 4, [6, 3, 1])
+            if st == 0: hit(kick, TN.KICK, t, 0.9)
+        elif k in (5, 6):
+            if st in (0, 8): hit(kick, TN.KICK, t, 0.9)
+            if st in (4, 12): NZ['snare'].hit(t, 4, SNARE_N); hit(sn, TN.SNARE_BODY, t, 0.8)
+            if st in (2, 6, 10, 14): ping(t, m[3] + (7 if st in (6, 14) else 0), I_ANVIL, 0.09)
+            if k == 6 and st in (7, 15): ping(t, m[4] + 12 if len(m) > 4 else m[3], I_ANVIL, 0.06)
+            NZ['hat'].hit(t, 3, [4, 1], short=1) if st % 2 else None
+        elif k == 7:
+            if st in (0, 3, 6, 8, 11, 14):
+                hit(kick, TN.KICK, t, 1.0); NZ['snare'].hit(t, 4, SNARE_N); hit(sn, TN.SNARE_BODY, t, 0.9); hit(tom, TOMS[2], t, 0.8)
+        else:
+            v = 4 + int(st * 0.6)
+            for x in (t, t + h):
+                NZ['snare'].hit(x, 4, [v, max(1, v - 3), 1]); hit(sn, TN.SNARE_BODY, x, 0.2 + st * 0.03)
+        if st == 0 and k in (1, 5, 7): NZ['crash'].hit(t, 3, CRASH)
+
+
+def _solo_nieve(k, at, kick, sn, tom, NZ, hit, chord, ping):
+    """CASCABELES siempre; TIMBALES en 3+3+2 (1-2), CAMPANAS que caen por el acorde (3-4), bolas de nieve: toms que
+    corren y campanas a contratiempo (5-6), campanas que SUBEN (7), redoble de timbal que crece (8)"""
+    m = _tones(chord, 72)
+    for st in range(16):
+        t = at(st)
+        if k != 8: NZ['hat'].hit(t, 0, [5, 3, 1] if st % 2 == 0 else [3, 1])
+        if k in (1, 2):
+            if st in (0, 3, 6, 8, 11, 14): hit(tom, TOMS[2] if st in (0, 8) else TOMS[1], t, 1.0 if st in (0, 8) else 0.8)
+            if st in (0, 8): hit(kick, TN.KICK, t, 0.6)
+            if k == 2 and st in (12, 13, 14, 15): hit(tom, TOMS[2], t, 0.5 + (st - 12) * 0.1)
+        elif k in (3, 4):
+            if st % 2 == 0: ping(t, m[6 - (st // 2) % 7] if k == 3 else m[(6, 4, 5, 3, 4, 2, 3, 0)[st // 2]], I_DING, 0.3)
+            if st in (4, 12): NZ['snare'].hit(t, 6, [7, 3, 1])
+            if st in (0, 8): hit(kick, TN.KICK, t, 0.5)
+        elif k in (5, 6):
+            if st in (0, 6, 8): hit(kick, TN.KICK, t, 0.8)
+            if st % 8 >= 4: hit(tom, TOMS[min(2, (st % 8 - 4))], t, 0.8)
+            if st % 4 == 2: ping(t, m[(3, 4, 5, 4)[(st // 4)]], I_DING, 0.2)
+        elif k == 7:
+            ping(t, m[min(6, st // 2)], I_DING, 0.15)
+            if st in (0, 8): hit(tom, TOMS[2], t, 1.0); hit(kick, TN.KICK, t, 0.7)
+        else:
+            hit(tom, TOMS[2], t, 0.35 + st * 0.04)
+            NZ['hat'].hit(t, 0, [4 + st // 3, 3, 1])
+            if st == 15: ping(t, m[6], I_DING, 0.3)
+        if st == 0 and k in (1, 5): NZ['crash'].hit(t, 3, CRASH)
+
+
+def _solo_cueva(k, at, kick, sn, tom, NZ, hit, chord, ping):
+    """TAMBORES HONDOS con su ECO (cada golpe vuelve 3 semicorcheas después, más flojo) y CHASQUIDOS de madera (1-2),
+    GOTAS sobre el latido (3-4), ritual: toms grave-medio en 3+3+2 en las dos mitades (5-6), toms que corren (7), el
+    latido que se acelera y crece (8)"""
+    e = at(3) - at(0)
+    m = _tones(chord, 72)
+    def deep(t, g, smp=None):
+        hit(tom, smp if smp is not None else TOM_LOW, t, g); hit(tom, smp if smp is not None else TOM_LOW, t + e, g * 0.35)
+    for st in range(16):
+        t = at(st)
+        if k in (1, 2):
+            if st in (0, 3): hit(kick, TN.KICK_DEEP, t, 0.9 if st == 0 else 0.6)
+            if st in (8, 11): deep(t, 0.9 if st == 8 else 0.7)
+            if st in (6, 14) or (k == 2 and st == 15): NZ['snare'].hit(t, 3, [8, 4, 1], short=1)
+        elif k in (3, 4):
+            if st in (0, 8): hit(kick, TN.KICK_DEEP, t, 0.9)
+            if st in (4, 12): deep(t, 0.7)
+            if st in ((2, 7, 9, 13) if k == 3 else (1, 5, 10, 14)): ping(t, m[(st * 3) % 5 + 2], GN.I_DRIP, 0.07)
+            if st in (6, 14): NZ['snare'].hit(t, 3, [6, 3, 1], short=1)
+        elif k in (5, 6):
+            if st % 8 in (0, 3, 6): deep(t, 0.9, TOM_LOW if st % 8 == 0 else TOMS[2])
+            if st in (0, 8): hit(kick, TN.KICK_DEEP, t, 0.8)
+            if st in (4, 12): NZ['snare'].hit(t, 3, [9, 4, 1], short=1)
+            if k == 6 and st in (13, 15): hit(tom, TOMS[1], t, 0.7)
+        elif k == 7:
+            hit(tom, (TOMS[1], TOMS[2], TOM_LOW, TOMS[2])[st % 4], t, 0.7 + 0.2 * (st in (0, 3, 6, 8, 11, 14)))
+            if st in (0, 3, 6, 8, 11, 14): NZ['snare'].hit(t, 3, [8, 4, 1], short=1)
+        else:
+            if st % (4 if st < 8 else 2) == 0: hit(kick, TN.KICK_DEEP, t, 0.6 + st * 0.025)
+            hit(tom, TOM_LOW, t, 0.3 + st * 0.04)
+        if st == 0 and k == 5: NZ['crash'].hit(t, 3, CRASH[4:])
+
+
+def _solo_volcan(k, at, kick, sn, tom, NZ, hit, chord, ping):
+    """DOBLE BOMBO en semicorcheas con caja en 2 y 4 (1-2), REDOBLES DE TOMS que bajan (3-4), BLAST BEAT (bombo y
+    caja alternos, platillo en cada tiempo, 5-6), golpes de ERUPCIÓN en 3+3+2 con silencio entre medias (7), bombo
+    que no para y redoble que crece (8)"""
+    for st in range(16):
+        t = at(st)
+        if k in (1, 2):
+            hit(kick, TN.KICK, t, 0.75 if st % 4 else 0.95)
+            if st in (4, 12): NZ['snare'].hit(t, 4, SNARE_N); hit(sn, TN.SNARE_BODY, t, 0.9)
+            if st % 2 == 0: NZ['hat'].hit(t, 2, [5, 2], short=1)
+            if k == 2 and st >= 12: hit(tom, TOMS[st - 13] if st > 12 else TOMS[0], t, 0.8)
+        elif k in (3, 4):
+            hit(tom, TOMS[(st % 8) // 3 if (st % 8) < 8 else 2], t, 0.7 + 0.2 * (st % 4 == 0))
+            if st in (0, 8): hit(kick, TN.KICK, t, 0.95)
+            if k == 4 and st == 12: NZ['snare'].hit(t - 0.012, 4, [6, 2]); NZ['snare'].hit(t, 4, SNARE_N); hit(sn, TN.SNARE_BODY, t, 0.9)
+        elif k in (5, 6):
+            if st % 2 == 0: hit(kick, TN.KICK, t, 0.85)
+            else: NZ['snare'].hit(t, 4, [9, 5, 2]); hit(sn, TN.SNARE_BODY, t, 0.5)
+            if st % 4 == 0: NZ['crash'].hit(t, 2, CRASH[5:], short=1)
+        elif k == 7:
+            if st in (0, 3, 6, 8, 11, 14):
+                hit(kick, TN.KICK, t, 1.0); NZ['snare'].hit(t, 4, SNARE_N); hit(sn, TN.SNARE_BODY, t, 1.0); hit(tom, TOMS[2], t, 1.0)
+                NZ['crash'].hit(t, 3, CRASH[2:])
+        else:
+            hit(kick, TN.KICK, t, 0.7)
+            NZ['snare'].hit(t, 4, [5 + st // 2, 4, 2]); hit(sn, TN.SNARE_BODY, t, 0.3 + st * 0.03)
+            if st >= 12: hit(tom, TOMS[min(2, st - 12)], t, 0.9)
+        if st == 0 and k in (1, 3): NZ['crash'].hit(t, 3, CRASH)
+
+
+SOLOS = {'costa': _solo_costa, 'fortaleza': _solo_fortaleza, 'nieve': _solo_nieve, 'cueva': _solo_cueva, 'volcan': _solo_volcan}
+
 BACKING = 4.0                # dB que sube el acompañamiento respecto a la melodía (ver build)
 BACKING_KEYS = ('chords', 'bass', 'kick', 'snare', 'hat', 'crash', 'toms')
 STEMS_TO = None
-STEM_NAMES = [('lead', 'melodia'), ('cm', 'contracanto'), ('echo', 'eco_de_la_melodia'), ('dbl', 'melodia_doblada'), ('bell', 'caja_de_musica'),
+STEM_NAMES = [('lead', 'melodia'), ('cm', 'contracanto'), ('swap', 'melodia_en_otro_instrumento'), ('perc', 'solo_afinado'), ('echo', 'eco_de_la_melodia'), ('dbl', 'melodia_doblada'), ('bell', 'caja_de_musica'),
               ('chords', 'acordes_a_contratiempo'), ('trill', 'acento_del_sitio'), ('bass', 'bajo'), ('kick', 'bombo'),
               ('snare', 'caja'), ('hat', 'platos'), ('crash', 'platillo'), ('toms', 'timbales')]
 
@@ -896,10 +1268,13 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
     S16 = 60.0 / bpm / 4
     BAR = 16 * S16
     mel, ch, tag, starts = song(variant, minor, solo, theme)
-    var = song.var
+    var, shift, linked = song.var, song.shift, song.linked
     NB = len(ch)
+    sec0 = lambda b: max([x for x in starts if x <= b] or [1])                              # el compás donde empieza su sección
+    sec1 = lambda b: min([x for x in starts if x > b] or [NB + 1]) - 1                      # y el último
+    stop_ = lambda b: 'stop' in var[b - 1] and b != sec1(b)        # (a golpes; su último compás ya vuelve con todo)
     NF = F.frames_for(NB * BAR + 3)
-    Cn = {k: Chan(NF) for k in ('lead', 'echo', 'c1', 'c2', 'bass', 'trill', 'dbl', 'bell', 'cm')}
+    Cn = {k: Chan(NF) for k in ('lead', 'echo', 'c1', 'c2', 'bass', 'trill', 'dbl', 'bell', 'cm', 'swap', 'perc')}
     NZ = {k: Noise(NF) for k in ('hat', 'snare', 'crash', 'fx')}
     NS = int(NF * F.FRAME_S) + SR
     kick, sn, tom = np.zeros(NS), np.zeros(NS), np.zeros(NS)
@@ -912,42 +1287,73 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
         m = max(0, min(len(smp), NS - i))
         buf[i:i + m] += smp[:m] * g
 
+    # CONTRACANTO ('cm', y en 'swap' lo canta la voz): una línea por debajo de la melodía, una nota del acorde por medio
+    # compás, la más cercana a la anterior (si repite tres veces, se mueve); los saltos de tercera se rellenan con la
+    # nota de paso de la escala en la última corchea
+    cm, prev, held = [], None, 0
+    for b in range(1, NB + 1):
+        if 'cm' not in var[b - 1] and 'swap' not in var[b - 1]: prev, held = None, 0; continue
+        lo_ = 57 if 'cm' in var[b - 1] else 64                     # (en 'swap' la voz lo canta más arriba)
+        for half in (0, 1):
+            r, q = ch[b - 1][half]
+            cands = sorted((p_ for p_ in range(lo_, lo_ + 13) if (p_ - r) % 12 in q), key=lambda p_: (abs(p_ - (prev or lo_ + 7)), p_))
+            nn = cands[0]
+            if nn == prev and held >= 2 and len(cands) > 1: nn = cands[1]
+            held = held + 1 if nn == prev else 0
+            if prev is not None and 3 <= abs(nn - prev) <= 4 and cm and cm[-1][2] == prev:
+                pas = [x for x in range(min(nn, prev) + 1, max(nn, prev)) if x % 12 in scale_at(shift[b - 1])]
+                if pas:
+                    pb_, ps_, pn_, pd_ = cm[-1]
+                    cm[-1] = (pb_, ps_, pn_, pd_ - 2)
+                    cm.append((pb_, ps_ + pd_ - 2, pas[len(pas) // 2], 2))
+            cm.append((b, half * 8, nn, 8))
+            prev = nn
+
+    def voice(b, st, n, d):
+            t0, t1 = tv(b, st), tv(b, st) + d * S16 * 0.94
+            if isle == 'fiesta':                                 # trompeta + su octava
+                play(Cn['lead'], t0, t1, n, I_BRASS, release=3)
+                play(Cn['dbl'], t0, t1, n + 12, I_DBL, release=2)
+            elif isle == 'volcan':                               # voz áspera (N163) + trompas una octava abajo
+                play(Cn['lead'], t0, t1, n, I_HOT, q=q_n163, release=3)
+                play(Cn['dbl'], t0, t1, n - 12, I_HORN, release=2)
+            elif isle == 'lava':                                 # pulso una octava abajo (el latigazo es agudo) + su octava
+                play(Cn['lead'], t0, t1, n - 12, I_LEAD, release=2)
+                play(Cn['dbl'], t0, t1, n, I_DBL, release=1)
+            elif isle == 'cueva':                                # la caja de música (el eco de cueva va en la mezcla) + un pulso muy suave abajo
+                play(Cn['bell'], t0, t0 + max(d, 4) * S16, n, I_BOX, q=q_n163, release=6)
+                play(Cn['lead'], t0, t1, n - 12, I_SOFT, release=3)
+            elif isle == 'sumergida':                            # flauta hueca
+                play(Cn['lead'], t0, t1, n, dict(I_FLUTE, duty=0.0), q=q_n163, release=4)
+            elif isle == 'nieve':                                # la CAJA DE MÚSICA una octava arriba + un pulso suave a su altura
+                play(Cn['bell'], t0, t0 + max(d, 4) * S16, n + 12, I_BOX, q=q_n163, release=6)
+                play(Cn['lead'], t0, t1, n, I_SOFT, release=3)
+            elif isle in ('ventisca', 'bola'):                   # pulso; la campana dobla (ventisca: solo las notas largas)
+                play(Cn['lead'], t0, t1, n, I_LEAD, release=3)
+                if isle == 'bola' or d >= 6: play(Cn['bell'], t0, t0 + max(d, 4) * S16, n + 12, I_BOX, q=q_n163, release=6)
+            elif isle == 'rey':                                  # pulso + su octava (pomposo)
+                play(Cn['lead'], t0, t1, n, I_BRASS, release=3)          # trompeta, y las trompas una octava abajo
+                play(Cn['dbl'], t0, t1, n - 12, I_HORN, release=3)
+            elif isle in ('fortaleza', 'nave'):                  # sierra (una octava abajo: cuerpo) + pulso a su altura
+                play(Cn['lead'], t0, t1, n - 12, I_SAWL, q=q_saw, release=3)
+                play(Cn['dbl'], t0, t1, n, I_DBL, release=2)
+            elif isle == 'maquina': play(Cn['lead'], t0, tv(b, st) + (d * 0.94 if d >= 4 else d * 0.6) * S16, n, I_CLOCK, release=2)
+            elif isle == 'costa': play(Cn['lead'], t0, tv(b, st) + max(d, 3) * S16, n, dict(I_STEEL, duty=2.0), q=q_n163, release=4)
+            elif isle == 'arrecife': play(Cn['lead'], t0, t1, n, I_OCA, release=4)
+            elif isle == 'cielo': play(Cn['lead'], t0, t1, n, I_SKY if d >= 2 else dict(I_SKY, drop=None), release=2)
+            elif flute: play(Cn['lead'], t0, t1, n, dict(I_FLUTE, duty=0.0), q=q_n163, release=3)
+            else: play(Cn['lead'], t0, t1, n, I_LEAD, release=3)
+
     busy = set()
     for b, st, n, d in mel:
         t0, t1 = tv(b, st), tv(b, st) + d * S16 * 0.94
-        if isle == 'fiesta':                                 # trompeta + su octava
-            play(Cn['lead'], t0, t1, n, I_BRASS, release=3)
-            play(Cn['dbl'], t0, t1, n + 12, I_DBL, release=2)
-        elif isle == 'volcan':                               # voz áspera (N163) + trompas una octava abajo
-            play(Cn['lead'], t0, t1, n, I_HOT, q=q_n163, release=3)
-            play(Cn['dbl'], t0, t1, n - 12, I_HORN, release=2)
-        elif isle == 'lava':                                 # pulso una octava abajo (el latigazo es agudo) + su octava
-            play(Cn['lead'], t0, t1, n - 12, I_LEAD, release=2)
-            play(Cn['dbl'], t0, t1, n, I_DBL, release=1)
-        elif isle == 'cueva':                                # la caja de música (el eco de cueva va en la mezcla) + un pulso muy suave abajo
-            play(Cn['bell'], t0, t0 + max(d, 4) * S16, n, I_BOX, q=q_n163, release=6)
-            play(Cn['lead'], t0, t1, n - 12, I_SOFT, release=3)
-        elif isle == 'sumergida':                            # flauta hueca
-            play(Cn['lead'], t0, t1, n, dict(I_FLUTE, duty=0.0), q=q_n163, release=4)
-        elif isle == 'nieve':                                # la CAJA DE MÚSICA una octava arriba + un pulso suave a su altura
-            play(Cn['bell'], t0, t0 + max(d, 4) * S16, n + 12, I_BOX, q=q_n163, release=6)
-            play(Cn['lead'], t0, t1, n, I_SOFT, release=3)
-        elif isle in ('ventisca', 'bola'):                   # pulso; la campana dobla (ventisca: solo las notas largas)
-            play(Cn['lead'], t0, t1, n, I_LEAD, release=3)
-            if isle == 'bola' or d >= 6: play(Cn['bell'], t0, t0 + max(d, 4) * S16, n + 12, I_BOX, q=q_n163, release=6)
-        elif isle == 'rey':                                  # pulso + su octava (pomposo)
-            play(Cn['lead'], t0, t1, n, I_BRASS, release=3)          # trompeta, y las trompas una octava abajo
-            play(Cn['dbl'], t0, t1, n - 12, I_HORN, release=3)
-        elif isle in ('fortaleza', 'nave'):                  # sierra (una octava abajo: cuerpo) + pulso a su altura
-            play(Cn['lead'], t0, t1, n - 12, I_SAWL, q=q_saw, release=3)
-            play(Cn['dbl'], t0, t1, n, I_DBL, release=2)
-        elif isle == 'maquina': play(Cn['lead'], t0, tv(b, st) + (d * 0.94 if d >= 4 else d * 0.6) * S16, n, I_CLOCK, release=2)
-        elif isle == 'costa': play(Cn['lead'], t0, tv(b, st) + max(d, 3) * S16, n, dict(I_STEEL, duty=2.0), q=q_n163, release=4)
-        elif isle == 'arrecife': play(Cn['lead'], t0, t1, n, I_OCA, release=4)
-        elif isle == 'cielo': play(Cn['lead'], t0, t1, n, I_SKY if d >= 2 else dict(I_SKY, drop=None), release=2)
-        elif flute: play(Cn['lead'], t0, t1, n, dict(I_FLUTE, duty=0.0), q=q_n163, release=3)
-        else: play(Cn['lead'], t0, t1, n, I_LEAD, release=3)
-        # A''' (la última vuelta): la melodía doblada a la octava, floja (donde el arreglo no dobla ya)
+        if 'swap' in var[b - 1]:                         # LA MELODÍA, A OTRO INSTRUMENTO (marimba en la costa: redoble en las largas)
+            inst_, oct_ = SWAP_INST[isle]
+            if inst_ is I_MARIMBA and d >= 4:
+                for k_ in range(0, d, 2): play(Cn['swap'], tv(b, st + k_), tv(b, st + k_) + 1.6 * S16, n + oct_, inst_, vs=1.0 if k_ == 0 else 0.7, release=1)
+            else: play(Cn['swap'], t0, t1, n + oct_, inst_, release=4)
+        else: voice(b, st, n, d)
+        # la melodía doblada a la octava, floja (donde el arreglo no dobla ya)
         if 'dbl' in var[b - 1] and isle not in OWN_DBL and n + 12 <= 96:
             play(Cn['dbl'], t0, t1, n + 12, I_DBL, release=2)
         # eco: la misma nota 3 semicorcheas después, floja (más melodía de la que se toca)
@@ -955,35 +1361,18 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
         for k in range(d): busy.add((b, st + k))
     last_in_bar = {}
     for b, st, n, d in mel: last_in_bar[b] = max(last_in_bar.get(b, 0), st + d)
-    # CONTRACANTO (A'' · B' · A'''): una voz suave por debajo de la melodía, una nota del acorde por medio compás,
-    # la más cercana a la anterior (si repite tres veces, se mueve); los saltos de tercera se rellenan con la nota de
-    # paso de la escala en la última corchea
-    cm, prev, held = [], None, 0
-    for b in range(1, NB + 1):
-        if 'cm' not in var[b - 1]: prev, held = None, 0; continue
-        for half in (0, 1):
-            r, q = ch[b - 1][half]
-            cands = sorted((p_ for p_ in range(57, 70) if (p_ - r) % 12 in q), key=lambda p_: (abs(p_ - (prev or 64)), p_))
-            nn = cands[0]
-            if nn == prev and held >= 2 and len(cands) > 1: nn = cands[1]
-            held = held + 1 if nn == prev else 0
-            if prev is not None and 3 <= abs(nn - prev) <= 4 and cm and cm[-1][2] == prev:
-                pas = [x for x in range(min(nn, prev) + 1, max(nn, prev)) if x % 12 in SCALE]
-                if pas:
-                    pb_, ps_, pn_, pd_ = cm[-1]
-                    cm[-1] = (pb_, ps_, pn_, pd_ - 2)
-                    cm.append((pb_, ps_ + pd_ - 2, pas[len(pas) // 2], 2))
-            cm.append((b, half * 8, nn, 8))
-            prev = nn
     for b, st, n, d in cm:
-        play(Cn['cm'], tv(b, st), tv(b, st) + d * S16 * 0.92, n, I_CM, q=q_n163, release=4)
+        if 'swap' in var[b - 1]: voice(b, st, n, d)          # (la voz canta el contracanto)
+        else: play(Cn['cm'], tv(b, st), tv(b, st) + d * S16 * 0.92, n, I_CM, q=q_n163, release=4)
 
     for b in range(1, NB + 1):
         intro = tag[b - 1] == 'intro'
         in_b = tag[b - 1] in ('B', 'E')                # (E, el respiro, lleva el arreglo de B)
-        rest = tag[b - 1] == 'E'
+        thin = 'thin' in var[b - 1]
+        stop = stop_(b)
         if tag[b - 1] == 'solo':
-            solo_bar(b - tag.index('solo'), lambda st: tv(b, st), kick, sn, tom, NZ, hit)
+            ping = lambda t, nn, inst_, ln: play(Cn['perc'], t, t + ln, nn, inst_, release=2)
+            solo_bar(b - tag.index('solo'), lambda st: tv(b, st), kick, sn, tom, NZ, hit, SOLO_STYLE.get(isle, 'pradera'), ch[b - 1][0], ping)
             continue
         for half in (0, 1):
             r, q = ch[b - 1][half]
@@ -1011,9 +1400,16 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
                 if isle == 'maquina': pat = ((0, 0, 1.6), (2, 0, 0.8), (3, 12, 0.8), (4, 0, 1.6), (6, 0, 0.8), (7, 12, 0.8))   # locomotora
                 if isle == 'arrecife': pat = ((0, 0, 5.4), (6, 7, 1.8))                                    # bossa: largo y la quinta
                 if isle == 'cielo': pat = ((0, 0, 3.4), (4, 7, 3.4)) if in_b else ((0, 0, 1.6), (2, 12, 1.6), (4, 7, 1.6), (6, 12, 1.6))   # 1-8-5-8
-                if rest: pat = ((0, 0, 7.5),)                                                          # respiro: blancas
+                if thin: pat = ((0, 0, 7.5),)                                                          # parón: blancas
+                if stop: pat = tuple((h_ - s0, 0, 1.4) for h_ in STOP_HITS.get(isle, STOP_HITS[None]) if s0 <= h_ < s0 + 8)   # a golpes
                 for st, iv, ln in pat:
                     play(Cn['bass'], tv(b, s0 + st), tv(b, s0 + st) + ln * S16, root + iv, I_TRI, q=q_tri, release=0)
+            if stop:                                         # A GOLPES: el acorde solo en los golpes
+                for h_ in STOP_HITS.get(isle, STOP_HITS[None]):
+                    if s0 <= h_ < s0 + 8:
+                        play(Cn['c1'], tv(b, h_), tv(b, h_) + 1.4 * S16, notes[1] + (12 if notes[1] < 64 else 0), I_STAB, release=1)
+                        play(Cn['c2'], tv(b, h_), tv(b, h_) + 1.4 * S16, notes[2] + (12 if notes[2] < 64 else 0), I_STAB, release=1)
+                continue
             if isle == 'fiesta':                             # acordes tenidos, flojos
                 play(Cn['c1'], tv(b, s0), tv(b, s0) + 7.4 * S16, notes[1], I_ORG, release=3)
                 play(Cn['c2'], tv(b, s0), tv(b, s0) + 7.4 * S16, notes[2], I_ORG, release=3)
@@ -1097,10 +1493,11 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
         snow_tail = isle in SNOW and b % 2 == 0 and not intro and any(bb == b and st == 12 and d == 4 for bb, st, n, d in mel)   # (sus frases cierran en negra)
         if isle in CAVE and b % 2 == 1 and not intro: long_tail = False        # (cuevas: un acento cada dos compases, no más)
         if isle == 'fiesta' and intro: long_tail = False
-        if (intro and b % 2 == 0 and isle != 'fiesta') or (long_tail and not in_b) or snow_tail or (isle in CAVE and long_tail):
+        if b in linked or stop or 'swap' in var[b - 1]: long_tail = snow_tail = False      # (ahí suena el enlace / los golpes / otra voz)
+        if (intro and b % 2 == 0 and isle != 'fiesta') or (long_tail and not in_b) or snow_tail or (isle in CAVE and long_tail) or 'dial' in var[b - 1]:
             r, q = ch[b - 1][1]
             top = 84 + (r - 84) % 12 + q[2] - 12
-            up = 2 if (top + 2) % 12 in SCALE else 1          # (la nota de al lado, DE LA ESCALA: +2 sobre Si daba Do#)
+            up = 2 if (top + 2) % 12 in scale_at(shift[b - 1]) else 1          # (la nota de al lado, DE LA ESCALA: +2 sobre Si daba Do#)
             # EL ACENTO DE CADA SITIO. Antes casi todos eran "unas notitas agudas de pulso en semicorcheas en el mismo
             # hueco" — el trino de la pradera adaptado —, y como la pradera es lo primero que se oye, todo sonaba a
             # remezcla de la pradera (el usuario lo localizó con las capas: `trino_adorno`). Ahora cada uno es de
@@ -1196,13 +1593,19 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
             if intro and b < 3:
                 if st % 4 == 2 and isle not in CAVE: NZ['hat'].hit(t, 0, HAT)
                 continue
-            if rest and isle not in CAVE and isle != 'arrecife':   # RESPIRO: bombo en el 1, platos sueltos; en sus 2 últimos compases vuelve y crece (cuevas y arrecife: ya son así)
-                k_ = b - tag.index('E')                       # (1..8)
-                if st == 0: hit(kick, TN.KICK, t, 0.7)
-                if st % 4 == 2: NZ['hat'].hit(t, 0, [3, 1])
+            if stop:                                         # A GOLPES: bombo + caja (y platillo en el 1) en los golpes; nada más
+                if st in STOP_HITS.get(isle, STOP_HITS[None]):
+                    hit(kick, TN.KICK, t, 0.95); NZ['snare'].hit(t, 4, SNARE_N); hit(sn, TN.SNARE_BODY, t, 0.8)
+                    if st == 0: NZ['crash'].hit(t, 3, CRASH[3:])
+                continue
+            if thin:                                         # PARÓN: bombo en el 1, platos sueltos; en sus 2 últimos compases vuelve y crece
+                k_, n_ = b - sec0(b) + 1, sec1(b) - sec0(b) + 1
+                k_ = k_ + (8 - n_)                            # (cuente como si tuviera 8: los 2 últimos son el 7 y el 8)
+                if st == 0: hit(kick, TN.KICK_DEEP if isle in CAVE else TN.KICK, t, 0.6)
+                if st % 4 == 2 and isle not in CAVE and isle != 'arrecife': NZ['hat'].hit(t, 0, [3, 1])
                 if k_ == 7 and st in (4, 12): NZ['snare'].hit(t, 4, [8, 4, 1]); hit(sn, TN.SNARE_BODY, t, 0.4)
                 if k_ == 8:
-                    if st % 4 == 0: hit(kick, TN.KICK, t, 0.8)
+                    if st % 4 == 0: hit(kick, TN.KICK_DEEP if isle in CAVE or isle == 'arrecife' else TN.KICK, t, 0.6 if isle in CAVE or isle == 'arrecife' else 0.8)
                     if st >= 4: NZ['snare'].hit(t, 4, [5 + st // 2, 4, 2]); hit(sn, TN.SNARE_BODY, t, 0.25 + st * 0.03)
                 if st == 0 and b in starts: NZ['crash'].hit(t, 3, CRASH[4:])
                 continue
@@ -1295,7 +1698,7 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
     S = {
         'lead': cut(F.render_wave(Cn['lead'], WAVES) * 0.0075) if (flute and isle == 'pradera') or isle in ('costa', 'sumergida', 'volcan')
                 else cut(F.pulse_dac(F.render_saw(Cn['lead']))) if isle in ('fortaleza', 'nave') else pulse('lead'),
-        'cm': cut(F.render_wave(Cn['cm'], WAVES) * 0.0075),
+        'cm': cut(F.render_wave(Cn['cm'], WAVES) * 0.0075), 'swap': pulse('swap'), 'perc': pulse('perc'),
         'dbl': pulse('dbl'), 'bell': cut(F.render_wave(Cn['bell'], WAVES) * 0.0075),
         'echo': pulse('echo'), 'chords': pulse('c1') + pulse('c2'),
         'bass': cut(F.tnd_dac(F.render_tri(Cn['bass']) / 8227.0)), 'trill': pulse('trill') + cut(F.tnd_dac(NZ['fx'].render() / 22638.0 * 12)),
@@ -1310,7 +1713,7 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
     LV = ISLE_LV.get(isle) or {'lead': 0, 'echo': -11, 'chords': -6, 'bass': -2, 'trill': -11, 'kick': -2 + drive, 'snare': -5 + drive, 'hat': -12, 'crash': -11, 'toms': 2}
     LV = dict(LV)
     top_ = max(LV['lead'], LV.get('bell', -99))         # (la voz que canta: en la cueva y la nieve, la caja de música)
-    LV.setdefault('cm', top_ - 6); LV.setdefault('dbl', top_ - 11)
+    LV.setdefault('cm', top_ - 6); LV.setdefault('dbl', top_ - 11); LV.setdefault('swap', top_ - 5); LV.setdefault('perc', top_ - 3)
     LV['kick'] = LV['kick'] + (drive if isle != 'pradera' else 0); LV['snare'] = LV['snare'] + (drive if isle != 'pradera' else 0)
     # EL ACOMPAÑAMIENTO, MÁS ARRIBA (el usuario, tras jugar: "en el juego las melodías suenan mucho más fuertes que
     # el resto, sobre todo el bajo; canciones equilibradas al oírlas sueltas quedan vacías"). En el juego la música
@@ -1370,26 +1773,26 @@ def write_mid(path, mel, bpm):
 TRACKS = {
     'pradera_1':     dict(variant='A', bpm=136),
     'pradera_2':     dict(theme='galope', bpm=144, flute=True),
-    'pradera_bonus': dict(variant='A', bpm=152, drive=2, lufs=-11.0, solo=True),
+    'pradera_bonus': dict(theme='carrera', bpm=152, drive=2, lufs=-11.0, solo=True),
     'costa_1':       dict(theme='calipso', isle='costa', bpm=122),
     'costa_2':       dict(theme='arrecife', isle='arrecife', bpm=108, lufs=-12.5),
     'fortaleza_1':     dict(theme='marcha', isle='fortaleza', bpm=140),
     'fortaleza_2':     dict(theme='engranajes', isle='maquina', bpm=126),
-    'fortaleza_bonus': dict(theme='marcha', isle='fortaleza', bpm=156, drive=2, lufs=-11.0, solo=True),
+    'fortaleza_bonus': dict(theme='asalto', isle='fortaleza', bpm=156, drive=2, lufs=-11.0, solo=True),
     'victory':       dict(theme='victoria', isle='fiesta', bpm=132, lufs=-12.0),
     'volcan_1':      dict(theme='ceniza', isle='volcan', bpm=164, lufs=-11.0),
     'volcan_2':      dict(theme='fuego', isle='lava', bpm=172, lufs=-11.0),
-    'volcan_bonus':  dict(theme='ceniza', isle='volcan', bpm=178, drive=2, lufs=-10.5, solo=True),
+    'volcan_bonus':  dict(theme='erupcion', isle='volcan', bpm=178, drive=2, lufs=-10.5, solo=True),
     'cuevas_1':      dict(theme='ecos', isle='cueva', bpm=104, lufs=-12.0),
     'cuevas_2':      dict(theme='laberinto', isle='sumergida', bpm=92, lufs=-12.5),
-    'cuevas_bonus':  dict(theme='ecos', isle='cueva', bpm=132, drive=2, lufs=-11.0, solo=True),
+    'cuevas_bonus':  dict(theme='estampida', isle='cueva', bpm=132, drive=2, lufs=-11.0, solo=True),
     'nieve_1':       dict(theme='cumbres', isle='nieve', bpm=148),
     'nieve_2':       dict(theme='ventisca', isle='ventisca', bpm=156),
-    'nieve_bonus':   dict(theme='cumbres', isle='nieve', bpm=166, drive=2, lufs=-11.0, solo=True),
+    'nieve_bonus':   dict(theme='descenso', isle='nieve', bpm=166, drive=2, lufs=-11.0, solo=True),
     'snowball_boss': dict(theme='bola', isle='bola', bpm=168, boss=True, lufs=-10.5),
     'gummy_king_boss': dict(theme='majestad', isle='rey', bpm=148, boss=True, lufs=-10.5),
     'evil_ship_boss':  dict(theme='persecucion', isle='nave', bpm=160, boss=True, lufs=-10.5),
-    'costa_bonus':   dict(theme='calipso', isle='costa', bpm=138, drive=2, lufs=-11.0, solo=True),
+    'costa_bonus':   dict(theme='regata', isle='costa', bpm=138, drive=2, lufs=-11.0, solo=True),
     'flappy':        dict(theme='aleteo', isle='cielo', bpm=150),
 }
 VARIANTS = {'A': dict(variant='A', bpm=136), 'B': dict(variant='B', bpm=132), 'C': dict(variant='C', bpm=140)}

@@ -38,9 +38,13 @@ progressions (i–VI–iv–V, I–V–vi–V, IV–IV–V–V before a chorus),
 the cave, the blue note ♭5 in the legs). Power chords only when the fifth is in the harmony.
 
 **Form.** Short intro (4 bars) → A (8) → A' → a contrasting B → return; seamless loop. A LEVEL OR BOSS LOOP MUST NOT
-BE SHORT (user, 3.98.0: tracks under a minute "get repetitive and tiring"): aim at 1:30-2:30. The island form is
-intro · A · A' · B · D (development: A's motif in another key area) · E (breather: long notes, half drums, a roll back
-in) · A'' · B' (both + a counter-melody) · A''' (+ octave doubling) — 64 bars; see `DEV` in `worlds_nes.py`. Long pieces grow by
+BE SHORT (user, 3.98.0: tracks under a minute "get repetitive and tiring"): aim at 1:30-2:30 — but EACH TRACK EXTENDS IN ITS OWN WAY (user, 3.99.0: the same recipe everywhere was noticed):
+pick the devices that fit the piece (a new chorus, a development in another key area, a solo for the lead, a
+stop-time section, a breakdown, the melody handed to another instrument, a dialogue with the accent, a key change with
+its pivot and return bar) and give each its own place; see `FORMS` in `worlds_nes.py`. Enter every new section
+smoothly (a pickup into its first note, a chord that leads there). BONUS tracks stay SHORT (about a minute: the bonus
+zones last that long, and the percussion solo must be heard) and each world has its own bonus tune and its own solo.
+Long pieces grow by
 **density** (more layers, cymbals, octaves), not by volume. A silence or an empty half bar before a strong entry. A
 long boss loop needs its own way back: never cut from the peak to the opening.
 
@@ -48,10 +52,8 @@ long boss loop needs its own way back: never cut from the peak to the opening.
 
 The map tune ("Rumbo a las islas") begins by climbing the chord: **G–C–E–G** (5th–1st–3rd–5th) and settles. It is the
 one original thing the player hears throughout the game (between levels), so it is the **leitmotif of the game**:
-it lives in the map, the films, the Mirror boss (whose motif is la llamada with its intervals INVERTED) and the
-victory fanfare. **It is NOT quoted in the level or island-boss tracks any more** (user, 3.98.0: forcing it into
-almost every song — always closing phrase B with the same rhythm — "is too much"); each tune closes B with its own
-cadence. Use it only where it means something, and ask first.
+every world's music quotes it once (opening the theme or closing phrase B), in its key and with its instrument. That
+way the map and the levels are the same music. The Mirror boss's motif is la llamada with its intervals INVERTED.
 
 ## 3. Identity per island
 
@@ -68,7 +70,8 @@ cadence. Use it only where it means something, and ask first.
 - `<world>_1` = the world's THEME: the most melodic, for its first levels (story order: odd levels).
 - `<world>_2` = its second face (even levels): it changes KEY, RHYTHM and TIMBRE and has its OWN melody — never just
   the mode or a transposition of `_1`.
-- `<world>_bonus` = `_1` faster (~+12 %) with "competition" drums and an 8-bar percussion solo — it plays in every
+- `<world>_bonus` = its OWN short tune (since 3.99.0; it used to be `_1` faster), with "competition" drums and an
+  8-bar percussion solo that is DIFFERENT in every world (`solo_bar(style=)`) — it plays in every
   King of the Hill arena of that island.
 - Bosses: one theme each. `victory`: a fanfare with the whole llamada + a light loop for the results screen.
 - Dark levels: `cuevas_oscuras`.
@@ -79,7 +82,7 @@ cadence. Use it only where it means something, and ask first.
 2. A singable melody: mostly stepwise plus the house cells; long notes are always chord tones; ornaments stay in the
    scale (both are asserted by a check in the generators).
 3. More than half of the notes off the beat; at least one bar with the 3+3+2 tresillo.
-4. Don't quote "la llamada" by default (see §2); never graft a motif onto another harmony.
+4. Quote "la llamada" once, unforced: in a place with ITS chord (never graft a motif onto another harmony).
 5. One dark turn per piece. Never transpose a known melody "to darken it". No bright major section inside an
    aggressive minor arrangement; no leading tone mixed with ♭VII.
 6. Grow by layers; a breath before each strong entry; seamless loop.
