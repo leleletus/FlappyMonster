@@ -166,7 +166,9 @@ function love.focus(f)
             local state = gStateMachine:_top()
             if state and state.pauseGame then state:pauseGame() end
         end
-        love.audio.setVolume(0)
+        -- (en PC el sonido SIGUE sin el foco —el sound test se escucha con otra ventana delante—; en el móvil, la
+        -- app en segundo plano calla)
+        if Input.isMobile then love.audio.setVolume(0) end
     else
         love.audio.setVolume(1)
     end
