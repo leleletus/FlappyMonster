@@ -7,6 +7,8 @@
 --   pkill -f "^love server"
 --
 -- (MODE: race | hunt | koth; SECS = duración, 16 por defecto)
+-- STALL=4.5: el bot sufre un CORTE de red de esos segundos a los 3 s de partida (sigue contando sus inputs pero no
+-- llega ninguno); al volver, el servidor tiene que procesarlos otra vez (antes, tras > 3 s, no se movía nunca más)
 -- WATCH=bomb: además apunta los estados que ve el cliente de las entidades de
 -- ese tipo, los tiles que cambian y la vida del jugador local; con WANT=lit,exploding
 -- falla si alguno de esos estados no llegó (p. ej. la arena de bombas:
@@ -63,6 +65,7 @@ function love.load()
     bot.c = sock.newClient('localhost', 22122, P.CHANNELS)
     bot.c:setSerialization(bitser.dumps, bitser.loads)
     bot.c:on('game_init', function() bot.inGame = true end)
+    bot.c:on('s', function(d) if d.a then bot.ack = d.a end end)
     bot.c:on('login_success', function(d) bot.logged = true; bot.id = d.id end)
     bot.c:connect()
     -- un segundo cliente con un nombre NO permitido (disfrazado con números y guiones): el servidor lo rechaza
@@ -91,7 +94,12 @@ function love.update(dt)
         bot.acc = bot.acc + dt
         while bot.acc >= P.TICK_DT do bot.acc = bot.acc - P.TICK_DT; bot.seq = bot.seq + 1
             table.insert(bot.bits, P.encodeInput(false, bot.seq % 120 < 60, false, false, bot.seq % 40 == 0, false)) end
-        if #bot.bits > 0 then bot.c:send('in', { s = bot.seq - #bot.bits + 1, b = bot.bits }); bot.bits = {} end
+        bot.t0 = bot.t0 or t
+        local stall = tonumber(os.getenv('STALL'))
+        local cut = stall and t > bot.t0 + 3 and t < bot.t0 + 3 + stall          -- (corte: los paquetes se pierden)
+        if cut then bot.stalled = true end
+        if #bot.bits > 0 and not cut then bot.c:send('in', { s = bot.seq - #bot.bits + 1, b = bot.bits }) end
+        bot.bits = {}
     end
     Input = setmetatable({ pressed = stub.pressed, down = stub.down }, { __index = package.loaded['input'] })
     if gStateMachine:_top() then gStateMachine:update(dt) end
@@ -162,6 +170,12 @@ function love.update(dt)
             for w in (os.getenv('WANT') or ''):gmatch('[^,]+') do
                 if not watch.states[w] then print('Error: el cliente no vio el estado ' .. w) end
             end
+        end
+        if os.getenv('STALL') then
+            local lag = bot.seq - (bot.ack or 0)
+            print(('corte de red del bot de %s s: tras volver, el servidor va por su input %s de %d (atraso %d)'):format(
+                os.getenv('STALL'), tostring(bot.ack), bot.seq, lag))
+            if not bot.stalled or lag > 60 then print('Error: tras el corte de red el servidor no volvió a procesar los inputs del bot') end
         end
         if not GIVE2 then print('Error: ceder el admin (cliente → bot → cliente): ida=' .. tostring(GIVE1) .. ' vuelta=' .. tostring(GIVE2)) end
         if BADNAME ~= 'srv.name_blocked' then print('Error: el servidor no rechazó el nombre vetado (' .. tostring(BADNAME) .. ')') end

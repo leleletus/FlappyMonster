@@ -78,9 +78,12 @@ Xtra Extreme. **Harness:** `story_flow` (the real game end to end; many named ca
 
 - **Stage 3 ✔ — lives and Game Over.** Lives belong to the ADVENTURE (save field `lives`), not to the level: start =
   `livesStart` (3 on Easy/Normal/Hard, 4 on Extreme, 6 on Xtra Extreme — the user's numbers; `Difficulty.of(id, name,
-  default)` reads a modifier without a level). `AdventureState` args `lives`, `onLeave(lives)` (called from `exit()`
-  however the level is left — finished, pause → exit — so lost lives always count; never on 0 lives), `onGameOver()`
-  + `gameOverNote`: with them the Game Over overlay has no "retry", only CONTINUE. `Run.gameOver(world)`: lives back to
+  default)` reads a modifier without a level). `AdventureState` args `lives`, `onLeave(lives)` (called on every death and from `exit()`
+  when the level is left unfinished — so lost lives always count, even if the app is killed; never on 0 lives; NOT
+  when finished: `Run.complete` already stored the lives plus the rewards, and calling it there overwrote them
+  until 0.5.8), `onGameOver()`
+  + `gameOverNote`: with them the Game Over overlay has no "retry", only CONTINUE. `Run.gameOver(world)` (called with the
+  FRONTIER world, `Run.frontier()`, not the replayed level's world — since 0.5.8): lives back to
   the start value and the WORLD restarts (its nodes are no longer done; `best` records stay); with the modifier
   `restartGame` (Xtra Extreme) the whole game restarts. The map shows the lives and a notice after a Game Over.
 

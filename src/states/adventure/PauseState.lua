@@ -34,7 +34,12 @@ function PauseState:update(dt)
         Sound.play('select')
     end
 
-    if Input.pressed('confirm') or Input.pressed('resume') or Input.pressed('pause') then
+    -- (cancelar —Esc, Start, el botón de volver— SIEMPRE reanuda; antes ejecutaba lo elegido y con MENÚ salía del nivel)
+    if Input.pressed('pause') or Input.pressed('back') then
+        gStateMachine:pop()
+        return
+    end
+    if Input.pressed('confirm') then
         if self.selected == 1 then
             gStateMachine:pop()
         else

@@ -25,7 +25,7 @@ local function ser(v, ind)
     return '{\n' .. table.concat(out, ',\n') .. (#out > 0 and '\n' or '') .. ind .. '}'
 end
 
-local function read(name)
+local function parse(name)
     if not love.filesystem.getInfo(name) then return nil end
     local ok, src = pcall(love.filesystem.read, name)
     local chunk = ok and src and loadstring(src, '@' .. name)
@@ -35,8 +35,24 @@ local function read(name)
     return (ok2 and type(data) == 'table') and data or nil
 end
 
+-- Cada archivo tiene su COPIA (`.bak`), escrita ANTES que él con lo mismo: si el juego se cierra a mitad de una
+-- escritura, uno de los dos queda entero. Al leer, si el principal está roto, vale la copia. Si los dos lo están,
+-- el principal se aparta a `.damaged` (no se pierde al empezar una partida nueva en ese hueco).
+local function read(name)
+    local d = parse(name) or parse(name .. '.bak')
+    if not d and love.filesystem.getInfo(name) and not love.filesystem.getInfo(name .. '.damaged') then
+        local ok, src = pcall(love.filesystem.read, name)
+        if ok and src then pcall(love.filesystem.write, name .. '.damaged', src) end
+    end
+    return d
+end
+
+-- true si se escribió (love.filesystem.write devuelve false, no lanza error)
 local function write(name, data)
-    return pcall(love.filesystem.write, name, 'return ' .. ser(data, '') .. '\n')
+    local src = 'return ' .. ser(data, '') .. '\n'
+    pcall(love.filesystem.write, name .. '.bak', src)
+    local ok, res = pcall(love.filesystem.write, name, src)
+    return ok and res == true
 end
 
 -- Una partida nueva (sin guardar todavía)
@@ -67,7 +83,10 @@ function Save.load(i)
 end
 
 function Save.write(i, data) return write(file(i), data) end
-function Save.delete(i) pcall(love.filesystem.remove, file(i)) end
+function Save.delete(i)
+    pcall(love.filesystem.remove, file(i))
+    pcall(love.filesystem.remove, file(i) .. '.bak')
+end
 
 -- Lo global (desbloqueos): { unlocked = { extreme = true, ... } }
 function Save.global()

@@ -11,6 +11,7 @@ the save directory is searched before the game's own files.
 | `<difficulty>_highscore.dat` (`SCORE_FILE`) | `src/states/flappy/PlayState.lua` | Flappy best score, one file per Flappy difficulty |
 | `story1.sav` … `story3.sav` | `src/story/Save.lua` | one story slot each: difficulty, lives, per-level best (rating, grade, points), done nodes, shards, bonus results, world rewards, points, pre-level films already seen (`films`) |
 | `story.sav` | `src/story/Save.lua` | global: unlocked difficulties, cleared difficulties |
+| `*.sav.bak`, `*.sav.damaged` | `src/story/Save.lua` | copy written before each save; a file found unreadable (with its copy) is kept here |
 | `update/state.lua`, `update/slots/<version>/`, `update/boot.log` | `main.lua`, `src/update/Updater.lua` | downloaded versions (see [updates-and-release](updates-and-release.md)) |
 | `recordings/*.csv` | `src/core/PlayRecorder.lua` | only with `FM_RECORD=1` (development) |
 | `assets/nav/<level>.json` (in the save dir) | `src/ai/BotNav.lua` | bot navigation graphs rebuilt on the device when the shipped one is stale |
@@ -30,3 +31,7 @@ every read and write through two functions each.
 - `src/story/Save.lua`: 3 slots `story1..3.sav` + global `story.sav` (unlocks) in the save dir — Lua tables loaded
   without an environment; never a `.lua` name. `src/story/Run.lua`: the open slot; `state(w, k)` = done / open /
   locked (levels open in order, the next world when the boss is beaten), `complete(id, result)` saves, `frontier()`.
+- Crash safety (0.5.8): every write goes first to `<file>.bak`, then to `<file>`, so one of the two is always whole;
+  reading falls back to the `.bak`. With both unreadable the slot shows empty but the broken file is copied to
+  `<file>.damaged` first (a new game there no longer destroys it). `Save.write` returns false when the write failed.
+  Harness `story_flow` (`roto`). Lost lives are saved on every death, not only when leaving the level.

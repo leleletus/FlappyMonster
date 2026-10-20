@@ -62,6 +62,13 @@ almost every section reassigns, so it could not be split mechanically like the o
   `level.players = active`, `level:update`, `e:update` for each entity,
   collisions again, sound events merged, mode tick / end-of-round.
 
+- Robustness (0.5.8): each room's step + snapshot runs under `xpcall` (`guarded` in `server/main.lua`): a Lua error
+  logs `ERROR en la sala …` with its traceback and ends only that match (before, it took the whole server down).
+  `tools/deploy_server.sh` runs the server in a restart loop inside its screen. Inputs more than `MAX_SEQ_AHEAD` (180)
+  ahead of the last processed one mean the client kept counting through a network stall: the server jumps to them
+  (queue cleared) instead of dropping them — before, a 3–6 s stall froze that player for the rest of the match
+  (harness `online_smoke STALL=4.5`).
+
 - Sounds: `Sound.play(name)` on server → `{type='sound', sound, playerId}` event.
   `playerId` = the player whose step caused it (client skips its own, since the
   prediction already played it). Entity sounds get `playerId=nil` → everybody.

@@ -591,7 +591,9 @@ function StoryMapState:_start(world, node)
         outro = Worlds.outro(n.id),
         gameOverNote = L(Difficulty.of(Run.data.difficulty, 'restartGame', false) and 'story.go_game' or 'story.go_world'),
         onGameOver = function()
-            local w = Run.gameOver(world)                 -- al principio del mundo (o del juego)
+            -- al principio del mundo (o del juego) en el que VA, no el del nivel: repitiendo un nivel de un mundo ya
+            -- superado, reiniciar ese mundo cerraba todos los siguientes
+            local w = Run.gameOver((Run.frontier()))
             gStateMachine:change('story_map', { world = w, node = 1, notice = 'story.go_notice' })
         end,
         onFinish = function(result)

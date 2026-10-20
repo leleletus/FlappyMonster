@@ -62,7 +62,7 @@ local TARGET_QUEUE    = 4     -- cola sana; por encima se recorta si persiste
 local TRIM_AFTER      = 30    -- ticks con cola alta antes de recortar
 local MAX_QUEUE       = 20    -- recorte inmediato
 local STARVE_TICKS    = 8     -- ticks sin input antes de extrapolar el último
-local MAX_SEQ_AHEAD   = 180   -- un seq más adelantado que esto es falso
+local MAX_SEQ_AHEAD   = 180   -- un seq más adelantado que esto: hubo un corte, se salta hasta él
 local MAX_FRAME_TICKS = 8     -- ticks máximos simulados por frame del servidor
 
 local PLAYER_COLORS = {
@@ -1364,11 +1364,17 @@ on("in", function(data, client, player)
     if view ~= nil and not isInt(view, 0, 2^31) then return end
     local n = #list
     if n < 1 or n > Protocol.INPUT_REDUNDANCY * 2 then return end
-    if first + n - 1 > ps.lastProcSeq + MAX_SEQ_AHEAD then return end   -- seq falso
 
     for i = 1, n do
         local bits = list[i]
         if not isInt(bits, 0, Protocol.IN_MAX) then return end
+    end
+    -- Muy por delante de lo procesado: el cliente siguió contando durante un corte de red (sus paquetes se
+    -- perdieron) → se salta hasta él, lo perdido ya no vuelve. (Antes se tiraba el paquete y, tras un corte de 3-6 s,
+    -- TODOS los siguientes: el jugador no volvía a moverse. Un seq inventado solo se perjudica a sí mismo.)
+    if first + n - 1 > ps.lastProcSeq + MAX_SEQ_AHEAD then
+        for i = #ps.queue, 1, -1 do ps.queue[i] = nil end
+        ps.lastProcSeq, ps.lastRecvSeq, ps.highQueue = first - 1, first - 1, 0
     end
     for i = 1, n do
         local seq = first + i - 1
@@ -1679,6 +1685,38 @@ local function perfAlloc(k0)
     if d > 0 then PERF.alloc = PERF.alloc + d end
 end
 
+-- Un paso de una sala (simular, y cada SNAPSHOT_EVERY mandar la foto y los eventos)
+local function stepAndSend(room)
+    if GPROF then collectgarbage('stop') end
+    local t0, k0 = PERF and love.timer.getTime(), PERF and collectgarbage('count')
+    stepRoom(room)
+    if PERF then
+        PERF.steps, PERF.stepT = PERF.steps + 1, PERF.stepT + love.timer.getTime() - t0
+        perfAlloc(k0)
+    end
+    local sim = room.sim
+    if sim.ended or sim.tick % SNAPSHOT_EVERY == 0 then
+        local t1, k1 = PERF and love.timer.getTime(), PERF and collectgarbage('count')
+        broadcastSnapshot(room)
+        flushEvents(room)
+        if PERF then
+            PERF.snaps, PERF.snapT = PERF.snaps + 1, PERF.snapT + love.timer.getTime() - t1
+            perfAlloc(k1)
+        end
+    end
+    if sim.ended then endGame(room, "ronda terminada (" .. sim.ended .. ")") end
+end
+
+-- Un error de Lua en UNA sala (un enemigo, un jefe, un modo...) no tira el servidor entero: se apunta con su traza,
+-- esa partida se termina y las demás salas siguen
+local function guarded(room, what, fn, ...)
+    local ok, err = xpcall(fn, debug.traceback, ...)
+    _currentSim = nil                    -- (los efectos de fuera de un paso no van a la última sala simulada)
+    if ok then return end
+    log("ERROR en la sala '" .. tostring(room.name) .. "' (" .. what .. "): " .. tostring(err))
+    if room.sim then pcall(endGame, room, "error del servidor") end
+end
+
 function love.update(dt)
     server:update()
     checkHelloTimeouts()
@@ -1692,26 +1730,7 @@ function love.update(dt)
         simAccum = simAccum - TICK_DT
         ticks = ticks + 1
         for _, room in pairs(rooms) do
-            if room.state == "IN_GAME" and room.sim then
-                if GPROF then collectgarbage('stop') end
-                local t0, k0 = PERF and love.timer.getTime(), PERF and collectgarbage('count')
-                stepRoom(room)
-                if PERF then
-                    PERF.steps, PERF.stepT = PERF.steps + 1, PERF.stepT + love.timer.getTime() - t0
-                    perfAlloc(k0)
-                end
-                local sim = room.sim
-                if sim.ended or sim.tick % SNAPSHOT_EVERY == 0 then
-                    local t1, k1 = PERF and love.timer.getTime(), PERF and collectgarbage('count')
-                    broadcastSnapshot(room)
-                    flushEvents(room)
-                    if PERF then
-                        PERF.snaps, PERF.snapT = PERF.snaps + 1, PERF.snapT + love.timer.getTime() - t1
-                        perfAlloc(k1)
-                    end
-                end
-                if sim.ended then endGame(room, "ronda terminada (" .. sim.ended .. ")") end
-            end
+            if room.state == "IN_GAME" and room.sim then guarded(room, 'paso', stepAndSend, room) end
         end
     end
     -- El servidor se atrasó demasiado (freeze): descartar en vez de acelerar.
@@ -1740,7 +1759,7 @@ function love.update(dt)
     if pingTimer >= PING_TICK then
         pingTimer = 0
         for _, room in pairs(rooms) do
-            if #room.playerIds > 0 then broadcastRoomUpdate(room) end
+            if #room.playerIds > 0 then guarded(room, 'estado de la sala', broadcastRoomUpdate, room) end
         end
     end
 end

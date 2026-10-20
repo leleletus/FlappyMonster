@@ -54,14 +54,20 @@ function AdventureState:exit()
     -- NADA de lo conseguido en el nivel se guarda si no se TERMINA (vidas extra, puntos, fragmentos...): si no, se
     -- entraba, se cogía la vida, se salía y otra vez, sin fin. Saliendo a medias cuentan solo las vidas PERDIDAS:
     -- las de entrada menos las muertes (nunca menos de 1: quedarse sin ninguna es el Game Over, que va aparte).
-    if self.onLeave and not self.bonus and self.player and self.player.lives > 0 then
-        local lives = self.player.lives
-        if not self.finished and self.startLives then
-            lives = math.max(1, math.min(lives, self.startLives - (self.stats and self.stats.deaths or 0)))
-        end
-        self.onLeave(lives)
-    end
+    -- TERMINADO no se llama: las vidas ya las guardó `onFinish` con los premios (llamarlo aquí las pisaba).
+    if not self.finished then self:_saveLostLives() end
     if self.rec then self.rec:finish(self); self.rec = nil end
+end
+
+-- Guarda las vidas PERDIDAS (las de entrada menos las muertes; las ganadas no, hasta terminar): al salir y en cada
+-- muerte (si el juego se cierra de golpe, las perdidas ya están guardadas)
+function AdventureState:_saveLostLives()
+    if not (self.onLeave and not self.bonus and self.player and self.player.lives > 0) then return end
+    local lives = self.player.lives
+    if self.startLives then
+        lives = math.max(1, math.min(lives, self.startLives - (self.stats and self.stats.deaths or 0)))
+    end
+    self.onLeave(lives)
 end
 
 function AdventureState:enter(args)
@@ -201,7 +207,7 @@ function AdventureState:resume()
 end
 
 function AdventureState:pauseGame()
-    if not self.dead then gStateMachine:push('pause') end
+    if not self.dead and not self.won and not self.endingT then gStateMachine:push('pause') end
 end
 
 -- ── Cámara ────────────────────────────────────────────────────────────────────
@@ -470,7 +476,8 @@ function AdventureState:update(dt)
     -- ── Controles táctiles (móvil): cruceta + salto, ver src/ui/TouchControls ──
     if not self.demo then TouchControls.update(not self.dead, self.level.dark) end
 
-    if not self.demo and Input.pressed('pause') and not (self.runOut and self.runOut.active) then      -- (en la escena final no hay pausa)
+    -- (en la escena final no hay pausa, ni ya ganado: salir en la celebración perdía el nivel)
+    if not self.demo and Input.pressed('pause') and not (self.runOut and self.runOut.active) and not self.won and not self.endingT then
         gStateMachine:push('pause')
         return
     end
@@ -614,6 +621,7 @@ function AdventureState:update(dt)
             self.respawning   = true
             self.respawnTimer = 0
             self.camFrozen    = true
+            if not self.demo then self:_saveLostLives() end
         end
     elseif self.player.dying then
         self.camFrozen = true

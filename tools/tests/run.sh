@@ -83,6 +83,7 @@ if [ "${1:-}" = all ]; then
              "online_helmet LEVEL=tools/tests/online_helmet/level.json" \
              "online_smoke LEVEL=assets/levels/jardin_gummies.json MODE=race SECS=16" \
              "online_smoke LEVEL=assets/levels/isla_flotante.json MODE=koth SECS=16" \
+             "online_smoke LEVEL=assets/levels/templo_del_eco.json MODE=hunt SECS=14 STALL=4.5" \
              "online_smoke LEVEL=tools/levelgen/arenas/bombas.json MODE=race SECS=12 WATCH=bomb WANT=lit,exploding" \
              "online_smoke LEVEL=tools/levelgen/arenas/hielo.json MODE=race SECS=10 WANTTILES=thin_ice_1,thin_ice_2,thin_ice_3,empty" \
              "online_boss LEVEL=tools/levelgen/arenas/jefe_cangrejo.json NOSHOTS=1" \

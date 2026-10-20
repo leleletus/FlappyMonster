@@ -35,6 +35,7 @@ are never edited by hand.
 | release and update the server | [architecture/updates-and-release](architecture/updates-and-release.md) |
 | port, publish, change screens or controls | [architecture/platforms](architecture/platforms.md), [architecture/known-debt](architecture/known-debt.md) (Google Play readiness) |
 | know what is saved | [architecture/save-data](architecture/save-data.md) |
+| see what is pending (review of 2026-10-20) | [pendientes](pendientes.md) |
 
 ## All pages
 

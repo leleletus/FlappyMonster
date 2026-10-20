@@ -85,7 +85,8 @@ git pull --ff-only --quiet origin "$BRANCH"
 # 3. de nuevo en su screen (desde la raíz del repo: el servidor necesita git para publicar las actualizaciones)
 echo "-- arrancando: $CMD"
 case "$LOG" in /*) L="$LOG" ;; *) L="$HOME/$LOG" ;; esac
-screen -dmS "$SCREEN" bash -lc "cd '$(pwd)' && $CMD 2>&1 | tee -a '$L'"
+# (en bucle: si el servidor se cae, vuelve a arrancar a los 3 s; cerrar la screen lo para del todo)
+screen -dmS "$SCREEN" bash -lc "cd '$(pwd)' && while true; do $CMD 2>&1 | tee -a '$L'; echo \"== servidor caído \$(date '+%F %T'): reinicio en 3 s\" | tee -a '$L'; sleep 3; done"
 for _ in $(seq 1 20); do
     ss -lunH 2>/dev/null | grep -q ":$PORT " && break
     sleep 0.5

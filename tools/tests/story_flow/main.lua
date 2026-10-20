@@ -1,4 +1,5 @@
 -- tools/tests/story_flow — el MODO HISTORIA con el juego real (etapa 1: cimientos):
+--  0. guardado roto: el principal cortado se lee de la copia .bak; los dos rotos → hueco vacío y .damaged;
 --  1. partidas: tres huecos vacíos; ENTER en el 1 pregunta la DIFICULTAD (Extremo y Xtra cerradas),
 --     se elige Fácil, crea la partida y abre el mapa; el nivel se juega en esa dificultad (4 de vida);
 --  2. mapa: el mundo 1 con su camino; el nodo 2 está CERRADO (ENTER no entra) y el mundo 2 también;
@@ -40,7 +41,23 @@ function love.load(a)
     realInput = Input
     Save, Run, Worlds = require 'src/story/Save', require 'src/story/Run', require 'src/story/Worlds'
     for i = 1, Save.SLOTS do Save.delete(i) end
-    pcall(love.filesystem.remove, 'story.sav')          -- (desbloqueos globales de una pasada anterior)
+    pcall(love.filesystem.remove, 'story.sav'); pcall(love.filesystem.remove, 'story.sav.bak')          -- (desbloqueos globales de una pasada anterior)
+    -- 0. guardado ROTO (el juego se cerró a mitad de escribir): vale la copia .bak; con los dos rotos, el hueco sale
+    --    vacío pero el archivo se aparta a .damaged
+    do
+        local d = Save.new('hard'); d.lives = 7
+        local wrote = Save.write(2, d)
+        love.filesystem.write('story2.sav', 'return { done = {')                   -- (cortado a medias)
+        local fromBak = Save.load(2)
+        love.filesystem.write('story2.sav.bak', 'basura')
+        pcall(love.filesystem.remove, 'story2.sav.damaged')
+        local none = Save.load(2)
+        local kept = love.filesystem.getInfo('story2.sav.damaged') ~= nil
+        check('roto', wrote and fromBak and fromBak.lives == 7 and fromBak.difficulty == 'hard' and none == nil and kept,
+            ('escribe=%s; principal cortado → copia: vidas %s; los dos rotos → %s, apartado a .damaged=%s'):format(
+             tostring(wrote), tostring(fromBak and fromBak.lives), tostring(none), tostring(kept)))
+        Save.delete(2); pcall(love.filesystem.remove, 'story2.sav.damaged')
+    end
     gStateMachine:change('story_slots')
 end
 
@@ -125,6 +142,10 @@ function love.update(dt)
               and st.player.hpMax == 4
         LIVES0 = st.player.lives
         st.player.lives = st.player.lives - 1               -- (pierde una vida en el nivel)
+        -- (premio de vida con CUALQUIER nota, solo en este nivel: al salir del nivel terminado no se puede perder)
+        local Score = require 'src/story/Score'
+        REW_KEEP = Score.LEVEL_REWARD
+        Score.LEVEL_REWARD = setmetatable({}, { __index = function() return { lives = 1 } end })
         toFinish(st); go('won1')
     elseif step == 'won1' and t - T > 0.5 then
         WON1 = st.won == true
@@ -133,6 +154,11 @@ function love.update(dt)
         -- antes del mapa, los RESULTADOS del nivel: estadísticas, nota y premio
         local sm = st.sum
         local d = Run.data.best[W1[1].id]
+        require('src/story/Score').LEVEL_REWARD = REW_KEEP
+        check('premio_vida', sm and sm.reward and sm.reward.lives == 1 and Run.data.lives == LIVES0,
+            ('nivel terminado con premio +1: vidas %s → %s (esperado %s, el premio no se pisa al salir)'):format(
+             tostring(LIVES0 - 1), tostring(Run.data.lives), tostring(LIVES0)))
+        Run.data.lives = LIVES0 - 1; Run.save()              -- (lo de después cuenta sin el premio)
         check('resultados', sm ~= nil and st.rows ~= nil and #st.rows == 5 and sm.grade ~= nil and d and d.grade == sm.grade
             and sm.rating <= 100 and sm.rating >= 0 and Run.data.points == sm.points,
             ('pantalla de resultados=%s: nota %s (%s/100), puntos %s; guardada en la partida=%s'):format(tostring(st.rows ~= nil),
@@ -361,7 +387,7 @@ function love.update(dt)
         local u4 = finish('extreme').unlocked
         local g = Save.global()
         Save.delete(3)
-        pcall(love.filesystem.remove, 'story.sav')
+        pcall(love.filesystem.remove, 'story.sav'); pcall(love.filesystem.remove, 'story.sav.bak')
         Run.slot, Run.data = keepSlot, keepData
         check('desbloqueo', not before and u1 == nil and u2 == 'extreme' and u3 == nil and u4 == 'xtra' and g.unlocked.extreme and g.unlocked.xtra,
             ('acabar el juego en Normal desbloquea=%s; en Difícil=%s (otra vez=%s); en Extremo=%s; guardado global: extremo=%s xtra=%s'):format(
