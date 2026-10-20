@@ -208,15 +208,22 @@ function Chase:pickAttack(level, a, pa)
 end
 
 -- EL FINAL DE LA PERSECUCIÓN en la historia (src/story/RunOut.lua): sigue al jugador corriendo, sin atacar
--- `minX`: si está más atrás (o roto a medio teletransporte), aparece ahí, de pie, justo fuera del borde izquierdo
+-- `minX`: si está más atrás, roto a medio teletransporte o DELANTE del jugador, aparece ahí (detrás de él), de pie,
+-- justo fuera del borde izquierdo
 function Chase:startOutro(level, minX)
     local hidden = HIDDEN[self.state]
     self:enter('outro')
     self.vy, self.onGround, self.copyT = 0, false, nil
-    if minX and (hidden or self.x < minX) then
-        local pa = nearest(level, self.x, self.y)
-        self.x = minX
-        self.y = self:floorBelow(level, minX, (pa and pa.y or self.y) - T) - self.outerH / 2 - 2
+    local pa = nearest(level, self.x, self.y)
+    -- (DELANTE del jugador — o pegado a él — no puede ser: el perseguido es el monstruo; se rompe y reaparece detrás)
+    local ahead = pa and self.x > pa.x - T
+    if ahead and not hidden then
+        Entity.emitFx('mirror_shards', self.x, self.y)
+        Sound.play('mirrorWarp')
+    end
+    if minX and (hidden or ahead or self.x < minX) then
+        self.x = math.min(minX, pa and pa.x - 3 * T or minX)
+        self.y = self:floorBelow(level, self.x, (pa and pa.y or self.y) - T) - self.outerH / 2 - 2
     end
 end
 
@@ -225,7 +232,7 @@ function Chase:runOut(dt, level)
     local g = ADV_GRAVITY
     local tx = (pa and pa.x or self.x) - 2.6 * T                        -- detrás de él
     local dx = tx - self.x
-    local vx = (dx > 0) and math.min(RUN, ADV_MOVE_SPD + dx * 2.5) or ADV_MOVE_SPD * 0.85
+    local vx = (dx > 0) and math.min(RUN, ADV_MOVE_SPD + dx * 2.5) or ADV_MOVE_SPD * 0.6     -- (nunca le adelanta)
     self.facing = 1
     self.vy = self.vy + g * dt
     self:moveAndCollide(level, vx * dt, self.vy * dt)

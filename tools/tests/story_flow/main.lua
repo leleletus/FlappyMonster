@@ -586,6 +586,8 @@ function love.update(dt)
         RUN = { finish = finish, film1 = FILMS[1] }
         a.state, a.x = 'run', (Worlds.outro('huida_del_espejo').col - 1) * TILE_PX - 40
         st.player.x, st.player.y, st.player.vx, st.player.vy = a.x + 500, st.player.y, 0, 0
+        -- (el peor caso: el Espejo DELANTE del jugador cuando empieza la escena — tiene que acabar detrás)
+        for _, e in ipairs(st.enemies or {}) do if e.def.name == 'mirrorchase' then e.x = a.x + 900 end end
         go('run2')
     elseif step == 'run2' and t - T > 1.2 then
         local chase
@@ -594,6 +596,7 @@ function love.update(dt)
         RUN.cinema = st.level.cinema == true
         RUN.chase = chase and chase.state
         RUN.seen = chase and chase.x > st.camX - 40 and chase.x < st.camX + WINDOW_W
+        RUN.behind = chase and chase.x < st.player.x
         RUN.moved = st.player.x - (st.level.autoScroll.x + 500)
         RUN.cam0 = st.camX
         shot('outro')
@@ -605,12 +608,12 @@ function love.update(dt)
     elseif step == 'run3' and (FILMS[2] or t - T > 15) then
         go('run4')
     elseif step == 'run4' and (st.level or t - T > 3) then
-        check('enlace', RUN.film1 == 'chase' and RUN.finish == 0 and RUN.active and RUN.cinema and RUN.chase == 'outro' and RUN.seen and RUN.moved > 150
+        check('enlace', RUN.film1 == 'chase' and RUN.finish == 0 and RUN.active and RUN.cinema and RUN.chase == 'outro' and RUN.seen and RUN.behind and RUN.moved > 150
             and RUN.camEnd == RUN.cam0 and (RUN.vx or 0) > 100 and (RUN.px or 1e9) < RUN.wall - 2 * TILE_PX
             and FILMS[2] == 'lair' and st.levelPath == Worlds.path('ruta_del_espejo') and Run.isDone('huida_del_espejo')
             and Run.data.node == 5,
-            ('película antes=%s; sin meta=%s; escena final=%s, franjas=%s, el Espejo=%s (en cuadro=%s), corre solo %.0f px; la cámara quieta=%s; al fundirse a negro sigue corriendo (%.0f px/s) a %.0f px de la pared del final; después la película %s y el nivel %s; huida superada=%s; la partida en el nodo %s'):format(
-             tostring(RUN.film1), tostring(RUN.finish == 0), tostring(RUN.active), tostring(RUN.cinema), tostring(RUN.chase), tostring(RUN.seen), RUN.moved or 0, tostring(RUN.camEnd == RUN.cam0), RUN.vx or 0, (RUN.wall or 0) - (RUN.px or 0),
+            ('película antes=%s; sin meta=%s; escena final=%s, franjas=%s, el Espejo=%s (en cuadro=%s, detrás del monstruo aunque empezó delante=%s), corre solo %.0f px; la cámara quieta=%s; al fundirse a negro sigue corriendo (%.0f px/s) a %.0f px de la pared del final; después la película %s y el nivel %s; huida superada=%s; la partida en el nodo %s'):format(
+             tostring(RUN.film1), tostring(RUN.finish == 0), tostring(RUN.active), tostring(RUN.cinema), tostring(RUN.chase), tostring(RUN.seen), tostring(RUN.behind), RUN.moved or 0, tostring(RUN.camEnd == RUN.cam0), RUN.vx or 0, (RUN.wall or 0) - (RUN.px or 0),
              tostring(FILMS[2]), tostring(st.levelPath), tostring(Run.isDone('huida_del_espejo')), tostring(Run.data.node)))
         gStateMachine:change('story_map', { world = 1, node = 1 }); go('del')
     elseif step == 'del' and t - T > 0.3 then

@@ -103,3 +103,8 @@ conflicts with the sections above, the sections above describe the current behav
 - 3.100.2 — the user: "all good"; only, in `chase`, the monster and the Reflection dipped a little into the lava ditch
   when jumping it → they jumped too early (a single jump landed with the back of the body over the lava); they now take
   off right at the edge. Harness `story_film` `lava`: no actor sinks below the floor (the old timing sank 23.5 px).
+- 3.101.1 — the user: when the chase starts both must PUT AWAY their shards (they kept running with them out) → in
+  `chase` `run` they fly back into their bodies (`K.carry` `out` going to 0; the centre shard too); in `lair` nobody
+  has them out until night, when only the monster takes its six out, once the Reflection is gone, to guide it. And in
+  the in-level outro the Reflection could end up IN FRONT of the monster → `Chase:startOutro` makes it shatter and
+  reappear behind if it was ahead, and in `outro` it never overtakes (harness `story_flow` `enlace` starts it ahead).

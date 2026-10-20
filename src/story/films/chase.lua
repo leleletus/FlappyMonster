@@ -8,7 +8,8 @@
 --            (notan el séptimo cerca)
 --   ambush   una risa; un espejo flotante; el REFLEJO cae en picado detrás de él, con el fragmento del centro. Se
 --            ríe... y mira los seis: se agacha para saltar
---   run      ¡a correr! (al ritmo de "¡Corre!", la música del nivel): salta del susto, huye, salta la zanja de lava;
+--   run      ¡a correr! (al ritmo de "¡Corre!", la música del nivel): salta del susto, los dos guardan sus
+--            fragmentos, huye, salta la zanja de lava;
 --            el Reflejo se lanza en plancha y el doble salto lo salva por poco. Sale corriendo de cuadro; la música
 --            se queda en la dominante y enlaza con la del nivel
 local Stage = require 'src/story/Stage'
@@ -43,10 +44,15 @@ local function reflection(c)
 end
 
 -- El fragmento del centro, en manos del Reflejo: flota sobre su cabeza, con su brillo
-local function centre(x, y, t, glow)
-    local sx, sy = math.floor(x), math.floor(y - 108 + math.sin(t * 3) * 4)
-    K.shardGlow('7', sx, sy, 2, 0, glow or 0.8, t)
-    Stage.shard('7', sx, sy, { s = 2 })
+-- `out` 0..1: 1 = fuera, sobre la cabeza; hacia 0 vuelve a su cuerpo y se guarda
+local function centre(x, y, t, glow, out)
+    out = out == nil and 1 or out
+    if out <= 0 then return end
+    local e = K.easeOut(out)
+    local sx, sy = math.floor(x), math.floor(K.lerp(y - 8, y - 108 + math.sin(t * 3) * 4, e))
+    local s = (out < 0.5) and 1 or 2
+    K.shardGlow('7', sx, sy, s, 0, (glow or 0.8) * out, t)
+    Stage.shard('7', sx, sy, { s = s })
 end
 
 -- ── 1. La ladera ────────────────────────────────────────────────────────────
@@ -203,8 +209,10 @@ F.run = {
             m:draw()
         end, nil, function()
             if diving then K.mark(c.v.landX, FL + 48, t) end
-            K.carry(m.body.x, m.body.y, t, ids(c), { glow = 0.35 })
-            if not diving then centre(r.body.x, r.body.y, t, 0.8) end
+            -- (al echar a correr, los dos GUARDAN sus fragmentos: vuelven a su cuerpo)
+            local keep = 1 - c.k(c.at('jump'), c.at('go') + c.b(0.5))
+            K.carry(m.body.x, m.body.y, t, ids(c), { out = keep, glow = 0.35 * keep })
+            if not diving then centre(r.body.x, r.body.y, t, 0.8, keep) end
         end)
     end,
 }

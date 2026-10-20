@@ -2,7 +2,7 @@
 -- LA GUARIDA: la película de antes de "Ruta del Espejo" (el jefe final; la primera vez que se entra). Sin texto.
 -- Tiempos y momentos (cues): assets/story/films.json. Guion: docs/story/story.md.
 -- El monstruo y el Reflejo son ACTORES (src/story/Actor.lua): física de verdad del juego.
---   escape   el final de la huida: el monstruo cruza el lago de lava con un salto y el DOBLE salto; el Reflejo se para
+--   escape   el final de la huida (los fragmentos, guardados): el monstruo cruza el lago de lava con un salto y el DOBLE salto; el Reflejo se para
 --            en la orilla, se ríe, salta a un espejo flotante... y el espejo se va volando, lejos, hasta perderse en
 --            el horizonte (allí está su guarida). El monstruo lo ve irse
 --   night    cae la noche. Sin aliento, saca sus seis fragmentos: tiemblan y se ponen en fila SEÑALANDO hacia allí;
@@ -106,14 +106,9 @@ F.escape = {
                 else r:draw() end
             end
             m:draw()
-        end, nil, function()
-            K.carry(m.body.x, m.body.y, t, ids(c), { glow = 0.3 })
-            if not r.hidden then
-                local sx, sy = math.floor(r.body.x), math.floor(r.body.y - 108 + math.sin(t * 3) * 4)
-                K.shardGlow('7', sx, sy, 2, 0, 0.8, t)
-                Stage.shard('7', sx, sy, { s = 2 })
-            end
         end)
+        -- (aquí los fragmentos van GUARDADOS, los de los dos: el monstruo solo saca los suyos de noche, cuando el
+        -- Espejo ya se ha ido, para que lo guíen)
         peak(t, (t >= gone) and (1 - c.k(gone + c.b(0.5), c.dur)) or 0)
     end,
 }
