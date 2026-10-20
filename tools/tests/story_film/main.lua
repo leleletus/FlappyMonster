@@ -9,8 +9,12 @@
 --  6. ENLACE: una película con `next` (la de antes de un nivel) deja sonando al acabar la música de ese nivel, y el
 --     nivel, al pedir la suya, la SIGUE (no vuelve a empezar).
 --  7. LOS CRÉDITOS (credits): la música dura lo que la película; cada bloque de texto entra por abajo al empezar su
---     canción y cabe en ella; el último ha salido por arriba antes de la subida del Espejo.
---   tools/tests/run.sh story_film [FILM=intro|ending|chase|lair|credits] [XTRA=1] [NOSHOTS=1]
+--     canción y cabe en ella; el último ha salido por arriba antes de la subida del Espejo; los 8 ESCENARIOS VIVOS
+--     se juegan y en ellos pasan cosas (≥ 8 enemigos muertos, ≥ 2 explosiones, el monstruo muere alguna vez).
+--  8. STAGES=1: solo los ESCENARIOS VIVOS de los créditos (src/story/LiveStage.lua): cada uno 25 s a pasos fijos,
+--     sin errores, con lo que pasa (enemigos que mueren, explosiones, muertes del monstruo) y 4 capturas
+--     (<save>/stage_<nombre>_<k>.png) sobre el fondo de ladrillos; STAGE=credits_pradera para uno solo
+--   tools/tests/run.sh story_film [FILM=intro|ending|chase|lair|credits] [XTRA=1] [NOSHOTS=1] [STAGES=1 [STAGE=x]]
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
 love.filesystem.load('game_main.lua')()
@@ -26,6 +30,14 @@ local XTRA, NOSHOTS = os.getenv('XTRA') == '1', os.getenv('NOSHOTS') == '1'
 local fi, state, done, shots, seen, pending, phase = 0, nil, false, {}, {}, nil, 'film'
 local realInput, holdT, clockT, worst
 local NEXT1, P0, sink
+
+-- (los escenarios vivos que crea la película de los créditos: para contar lo que pasa en ellos)
+LIVE = {}
+do
+    local LS = require 'src/story/LiveStage'
+    local new = LS.new
+    LS.new = function(...) local s = new(...); LIVE[#LIVE + 1] = s; return s end
+end
 
 local function start()
     fi = fi + 1
@@ -45,6 +57,11 @@ end
 
 function love.load(a)
     gameLoad(a)
+    if os.getenv('STAGES') then
+        for _, cb in ipairs({ 'mousemoved', 'mousepressed', 'mousereleased', 'wheelmoved', 'touchpressed', 'touchmoved', 'touchreleased', 'focus' }) do love[cb] = function() end end
+        love.audio.setVolume(0)
+        return
+    end
     for _, cb in ipairs({ 'mousemoved', 'mousepressed', 'mousereleased', 'wheelmoved', 'touchpressed', 'touchmoved', 'touchreleased', 'focus' }) do love[cb] = function() end end
     love.audio.setVolume(0)
     realInput = Input
@@ -54,7 +71,42 @@ function love.load(a)
     start()
 end
 
+-- ── STAGES=1: los escenarios vivos de los créditos ──────────────────────────
+local STG
+local function stagesUpdate()
+    if not STG then
+        local list = os.getenv('STAGE') and { os.getenv('STAGE') } or
+            { 'credits_pradera', 'credits_costa', 'credits_fortaleza', 'credits_nieve', 'credits_cuevas', 'credits_volcan', 'credits_crab', 'credits_bola' }
+        STG = { list = list, i = 0, f = 0 }
+    end
+    if not STG.cur then
+        STG.i = STG.i + 1
+        local nm = STG.list[STG.i]
+        if not nm then
+            print(fails == 0 and 'TODO OK' or ('FALLAN %d'):format(fails))
+            love.event.quit(fails == 0 and 0 or 1)
+            STG.done = true
+            return
+        end
+        STG.cur, STG.f, STG.name = require('src/story/LiveStage').new(nm, 11), 0, nm
+    end
+    STG.cur:update(1 / 60)
+    STG.f = STG.f + 1
+    if os.getenv('STAGEDBG') and STG.f % 60 == 0 then
+        for _, e in ipairs(STG.cur.st.enemies) do
+            if e.def.boss then print(('  t=%d %s estado=%s x=%d en pelea=%s'):format(STG.f / 60, e.def.name, tostring(e.state), e.x, tostring(e.inFight and e:inFight()))) end
+        end
+    end
+    if STG.f % 375 == 0 then STG.shot = ('stage_%s_%d'):format(STG.name, STG.f / 375) end
+    if STG.f >= 1500 then
+        local s = STG.cur.stats
+        check('escenario', true, ('%s: %d enemigos muertos, %d explosiones, %d muertes del monstruo'):format(STG.name, s.kills, s.booms, s.deaths))
+        STG.cur = nil
+    end
+end
+
 function love.update(dt)
+    if os.getenv('STAGES') then if not (STG and STG.done) then stagesUpdate() end; return end
     if pending then return end
     if phase == 'film' then
         local film = state.film
@@ -96,6 +148,11 @@ function love.update(dt)
                 local out = last.y + last.h - C._scrollAt(film.ctx, rise.t0) < 0
                 check('bloques', #bad == 0 and out, ('%d bloques a %.0f px/s; entran al empezar su canción y caben: %s; el último fuera antes del Espejo=%s'):format(
                     #lay.blocks, lay.v, #bad == 0 and 'sí' or table.concat(bad, ' '), tostring(out)))
+                -- los ESCENARIOS VIVOS: se jugaron todos y pasaron cosas (enemigos muertos, explosiones, el monstruo muere)
+                local n, k, bo, d = 0, 0, 0, 0
+                for _, st in ipairs(LIVE) do n = n + 1; k = k + st.stats.kills; bo = bo + st.stats.booms; d = d + st.stats.deaths end
+                check('escenarios', n == 8 and k >= 8 and bo >= 2 and d >= 1,
+                      ('%d escenarios vivos jugados: %d enemigos muertos, %d explosiones, %d muertes del monstruo'):format(n, k, bo, d))
             end
             if film.shared.m then check('lava', sink < 2, ('%s: lo más que se hunde un actor bajo el suelo: %.1f px'):format(film.name, sink)) end
             start()
@@ -155,6 +212,14 @@ function love.update(dt)
 end
 
 function love.draw()
+    if os.getenv('STAGES') then
+        lovesize.begin()
+        require('src/story/Stage').flappyBg(STG and STG.f or 0, { 0.35, 0.55, 0.85 })
+        if STG and STG.cur then STG.cur:draw(300) end
+        lovesize.finish()
+        if STG and STG.shot then love.graphics.captureScreenshot(STG.shot .. '.png'); STG.shot = nil end
+        return
+    end
     gameDraw()
     if pending then
         love.graphics.captureScreenshot(pending .. '.png')

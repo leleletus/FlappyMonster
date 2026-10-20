@@ -53,6 +53,7 @@ and their own folder to `sys.path`; scripts that import each other sit in the sa
 | `ui/make_sprites.py`, `make_story_icons.py` | `ui/touch/`, `ui/ping/`, `ui/icons/` | yes (verified) |
 | `ui/make_menu_ui.py` | `ui/menus/title_logo.png` + `.json` (from `logo.png`, never written), `ui/menus/button.png` + `.json`, `ui/menus/panel.png`, `ui/menus/box.png`, `ui/menus/cursor.png`, `ui/menus/cartridge.png` + `.json`, `ui/menus/cart_labels.png` | yes |
 | `fx/make_lights.py` | `fx/light_disc.png`, `fx/light_rings.png`, `fx/light_halo.png` (the lights of the darkness canvas, `src/fx/Darkness.lua`) | yes |
+| `fx/make_fades.py` | `fx/fade_edge.png` (the stepped fade mask of the credits' live stages, `src/story/LiveStage.lua`) | yes |
 | `ui/make_logo_parts.py` | `assets/startup/parts/`, `assets/startup/logo.json` (cuts the user's logo; never writes the logo itself) | yes |
 | `enemies/make_claudio_extras.py [parpadeo] [baile]` | `enemies/claudio/claudio_blink.png`, `claudio_dance-Sheet.png` (from the user's `claudio_idle.png`; only the eyes / the arms change) | yes |
 | `ui/make_player_redesign.py`, `make_flappy_redesign.py` | `player/`, the Mirror's pieces, `flappy/` | not re-run |
@@ -78,4 +79,4 @@ See the generator table in `docs/audio/music-catalog.md`. `famicom.py` (engine),
 ## levelgen/
 
 `lib.py`, `levels_*.py` (builders), `build.py --only <level>`, `retheme.py <levels>`, `add_apples.py <levels>`,
-`make_sets.py` (film sets), `arenas/` (test arenas and their `make_*.py`).
+`make_sets.py` (film sets), `make_credits_sets.py` (the live stages of the credits: `assets/story/sets/credits_*.json`), `arenas/` (test arenas and their `make_*.py`).

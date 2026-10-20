@@ -67,7 +67,8 @@ end
 function AdventureState:enter(args)
     args = args or {}
     -- DEMO (el fondo de los menús, src/ui/menu/MenuScene.lua): el nivel de verdad, jugado por un bot
-    -- (args.demo.step(dt, level) mueve al jugador en vez del mando), sin HUD, sin pausa, sin música, vidas sin fin y
+    -- (args.demo.step(dt, level) mueve al jugador en vez del mando; demo.camera(st) → camX, camY: cámara propia;
+    -- demo.noSky: sin cielo, transparente; demo.noBossCtl: sin el control de las zonas de jefe — entradas, música —), sin HUD, sin pausa, sin música, vidas sin fin y
     -- con la vista adaptable del menú (no se fija a 16:9). camX / camY = dónde va el jugador en la pantalla.
     self.demo = args.demo
     if not self.demo then require('src/ui/View').lockGameplay() end      -- (todos ven la misma zona del nivel)
@@ -286,6 +287,8 @@ function AdventureState:renderPopups()
 end
 
 function AdventureState:updateCamera(dt)
+    -- (demo con cámara propia: los escenarios de los créditos, src/story/LiveStage.lua)
+    if self.demo and self.demo.camera then self.camX, self.camY = self.demo.camera(self); return end
     -- (la escena final de una carrera en la historia — src/story/RunOut.lua —: la cámara se queda donde la dejó la
     -- cámara automática y ellos salen de cuadro; si siguiera al jugador, acabarían contra la pared del final del nivel)
     if self.runOut and self.runOut.active then return end
@@ -575,7 +578,7 @@ function AdventureState:update(dt)
 
     -- Colisiones jugador ↔ entidades
     self:checkEnemyCollisions()
-    self:updateBoss(dt)
+    if not (self.demo and self.demo.noBossCtl) then self:updateBoss(dt) end      -- (los créditos: jefes sin pelea de verdad)
     for _, ev in ipairs(AutoScroll.update(self.level, dt)) do
         if ev.type == 'scroll_start' then self.bossBanner = { text = L('hud.go'), t = 0, col = { 0.4, 1, 0.5 } } end
     end
@@ -718,12 +721,16 @@ function AdventureState:_renderScene()
     love.graphics.setScissor()
 
     -- ── Paso 1: renderizar toda la escena al canvas ───────────────────────────
+    local outCanvas = love.graphics.getCanvas()          -- (a dónde va luego: la pantalla, o el lienzo de quien la dibuja)
     love.graphics.setCanvas(self.sceneCanvas)
-    love.graphics.clear(0, 0, 0, 1)
-
-    Sky.punch = Darkness.active(self.level) and not self.level.dark      -- (lo incandescente del fondo: ver Sky.lua)
-    Sky.render(self.level, self.camX, self.camY)          -- (cielo y fondo con paralaje)
-    Sky.punch = false
+    if self.demo and self.demo.noSky then
+        love.graphics.clear(0, 0, 0, 0)                    -- (sin cielo: se ve lo que haya detrás; los créditos)
+    else
+        love.graphics.clear(0, 0, 0, 1)
+        Sky.punch = Darkness.active(self.level) and not self.level.dark      -- (lo incandescente del fondo: ver Sky.lua)
+        Sky.render(self.level, self.camX, self.camY)          -- (cielo y fondo con paralaje)
+        Sky.punch = false
+    end
 
     self.level:render(self.camX, self.camY)
     IceDrips.render(self.level, self.camX, self.camY)      -- (gotas del hielo: solo dibujo)
@@ -757,7 +764,7 @@ function AdventureState:_renderScene()
     self.level:renderBubbles(self.camX, self.camY)
     Snowfall.render(self.level, self.camX, self.camY)      -- (nieve cayendo: solo dibujo)
 
-    love.graphics.setCanvas()
+    love.graphics.setCanvas(outCanvas)
     if scX then love.graphics.setScissor(scX, scY, scW, scH) end
     love.graphics.pop()
 

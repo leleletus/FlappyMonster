@@ -1,0 +1,213 @@
+{
+ "name": "Fortaleza (créditos)",
+ "name_en": "Fortaleza (credits)",
+ "width": 20,
+ "height": 6,
+ "playerStart": [
+  2,
+  4
+ ],
+ "background": "fortress",
+ "time": "dusk",
+ "light": "day",
+ "echo": false,
+ "modes": [],
+ "tiles": [
+  [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   12,
+   12,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  [
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1
+  ],
+  [
+   4,
+   4,
+   4,
+   4,
+   4,
+   4,
+   4,
+   4,
+   4,
+   4,
+   4,
+   4,
+   4,
+   4,
+   4,
+   4,
+   4,
+   4,
+   4,
+   4
+  ]
+ ],
+ "entities": [
+  {
+   "type": "gummy_fortress",
+   "col": 5,
+   "row": 4
+  },
+  {
+   "type": "mortar",
+   "col": 17,
+   "row": 4
+  },
+  {
+   "type": "crabby_fortress",
+   "col": 13,
+   "row": 4
+  },
+  {
+   "type": "bombobject",
+   "col": 12,
+   "row": 4,
+   "props": {
+    "fuseTime": 1.6
+   }
+  }
+ ],
+ "foliage": [
+  {
+   "col": 3,
+   "row": 4,
+   "type": "torch",
+   "sub": 4,
+   "props": {
+    "layer": "back"
+   }
+  },
+  {
+   "col": 8,
+   "row": 4,
+   "type": "bones",
+   "sub": 3,
+   "props": {
+    "layer": "back"
+   }
+  },
+  {
+   "col": 15,
+   "row": 4,
+   "type": "torch",
+   "sub": 4,
+   "props": {
+    "layer": "back"
+   }
+  },
+  {
+   "col": 19,
+   "row": 4,
+   "type": "bones",
+   "sub": 4,
+   "props": {
+    "layer": "back"
+   }
+  }
+ ],
+ "vents": []
+}

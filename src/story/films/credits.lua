@@ -2,24 +2,29 @@
 -- LOS CRÉDITOS (docs/story/credits.md): después del final de la historia y desde Configuración. Tiempos y música:
 -- assets/story/films.json, "credits" (cada escena = un trozo de una canción del juego: tools/music/credits_music.py).
 -- El texto: assets/story/credits.lua (un bloque por escena).
---   logo       en negro: el logo cae, y a los 16 pulsos todo empieza a subir
---   pradera … bola   cada bloque de texto ENTRA por abajo justo cuando empieza su canción, con sus bichos
---              cruzando la pantalla debajo; todo sube a la misma velocidad (la que hace que cada bloque quepa en su
+--   logo       el logo cae, y a los 16 pulsos todo empieza a subir
+-- Todo sobre el FONDO DE LADRILLOS del modo Flappy, que se mueve en las dos direcciones y cambia de color despacio.
+--   pradera … bola   cada bloque de texto ENTRA por abajo justo cuando empieza su canción, con su ESCENARIO VIVO
+--              debajo: un trocito de su isla que se JUEGA de verdad (src/story/LiveStage.lua: sus enemigos, bombas y
+--              sonidos son los del juego); todo sube a la misma velocidad (la que hace que cada bloque quepa en su
 --              canción y que el último haya salido por arriba cuando empieza la subida del Espejo)
---   mirror     sale lo último y el monstruo cruza volando
+--   mirror     sale lo último
 --   rise       el espejo vacío; los siete fragmentos vuelan a él uno cada 2 pulsos (Xtra: las 14 mitades)
 --   climax     el espejo entero brilla (rayos) y "¡GRACIAS POR JUGAR!"
---   bye        Claudio entra andando y baila al compás (pasos, brazos arriba, saltitos, una vuelta) y se despide
---              con la mano: "¡ADIÓS!"
+--   bye        Claudio entra andando y baila al compás (pasos, brazos arriba, saltitos, una vuelta) mientras el
+--              monstruo vuela a su alrededor, y se despide con la mano: "¡ADIÓS!"
 local Stage = require 'src/story/Stage'
 local K = require 'src/story/films/common'
 local PixelFont = require 'src/ui/PixelFont'
 local TitleLogo = require 'src/ui/menu/TitleLogo'
 local Anim = require 'src/fx/Anim'
+local LiveStage = require 'src/story/LiveStage'
 local L = require 'src/core/Lang'
 
 local lerp, smooth, easeOut = K.lerp, K.smooth, K.easeOut
 local F = {}
+local stages                              -- los escenarios vivos de la película en curso (c.shared.stages)
+local tickStages
 
 local DATA = require 'assets/story/credits'
 local ENTER_Y = 0.92                      -- (a esta altura de la pantalla entra cada bloque al empezar su canción)
@@ -44,15 +49,12 @@ local function blockH(list)
     for _, it in ipairs(list) do h = h + lineH(it) end
     return h
 end
--- lo que ocupan los bichos de debajo (el más alto)
+-- lo que ocupa el escenario vivo de debajo (su nivel: 6 filas)
+-- (las dos filas de arriba son aire — para los saltos —: se montan sobre el final del texto, son transparentes)
+local STAGE_ROWS, STAGE_OVER = 6, 2 * 64
+local FADE_TO, FADE_LEN = 0.5, 0.2         -- (se apaga del todo cuando su borde de abajo llega a media pantalla)
 local function paradeH(list)
-    local h = 0
-    for _, p in ipairs(list.parade or {}) do
-        local set = Anim.load(p.anim, p.variant)
-        local _, fh = set:size()
-        h = math.max(h, (fh or 16) * p.scale + math.max(0, -(p.y or 0)))
-    end
-    return h > 0 and (h + MARGIN) or 0
+    return list.stage and (STAGE_ROWS * TILE_PX - STAGE_OVER + MARGIN) or 0
 end
 
 -- La disposición entera (se calcula una vez por película y por idioma): dónde empieza cada bloque en "papel"
@@ -131,22 +133,59 @@ local function drawBlock(b, y, gt)
         end
         yy = yy + h
     end
-    -- los bichos de su isla, cruzando de izquierda a derecha debajo del texto mientras suena su canción
-    for i, p in ipairs(b.list.parade or {}) do
-        local set = Anim.load(p.anim, p.variant)
-        local _, fh = set:size()
-        local floor = math.floor(yy + MARGIN + (fh or 16) * p.scale)       -- (los pies: el bicho entero bajo el texto)
-        local lt = gt - b.sc.t0 - (p.lag or 0)
-        if set and lt > 0 then
-            local span = WINDOW_W + 200
-            local x = -100 + (lt / b.sc.dur) * span * 1.15
-            local bob = (p.anim == 'player') and math.sin(lt * 6) * 14 or 0
-            if x < WINDOW_W + 100 then
-                love.graphics.setColor(1, 1, 1, 1)
-                set:draw(set:has(p.seq) and p.seq or 'idle', lt, math.floor(x), math.floor(floor + (p.y or 0) + bob), 0, -p.scale, p.scale)
+    -- su escenario vivo, debajo del texto
+    local live = b.list.stage and stages and stages[b.list.stage]
+    if live then
+        -- (se apaga al subir: cuando entra el escenario de la sección siguiente, el de esta ya no se ve)
+        local top = math.floor(yy + MARGIN - STAGE_OVER)
+        local bottom = top + live.h
+        local a = math.max(0, math.min(1, (bottom - WINDOW_H * FADE_TO) / (WINDOW_H * FADE_LEN)))
+        live:draw(top, a)
+    end
+end
+
+-- ── Los escenarios vivos ────────────────────────────────────────────────────
+-- Cada uno empieza un poco antes de que su bloque entre por abajo, se juega mientras se ve y se suelta al salir por
+-- arriba. Van en c.shared (de toda la película): un bloque sigue a la vista en las escenas siguientes.
+local START_BELOW = 160                   -- px bajo la pantalla a los que empieza a jugarse
+tickStages = function(c)
+    local lay = getLayout(c)
+    local gt = c.film.t
+    c.shared.stages = c.shared.stages or {}
+    stages = c.shared.stages
+    local dt = math.max(0, math.min(0.1, gt - (c.shared.stageT or gt)))
+    c.shared.stageT = gt
+    local s = scrollAt(lay, gt)
+    for i, b in ipairs(lay.blocks) do
+        local id = b.list.stage
+        if id then
+            local top = b.y - s + blockH(b.list) + MARGIN - STAGE_OVER     -- (el borde de arriba de la franja en pantalla)
+            local h = STAGE_ROWS * TILE_PX
+            if top < WINDOW_H + START_BELOW and top + h > -20 then
+                if not stages[id] then stages[id] = LiveStage.new(id, 100 + i) end
+                stages[id]:update(dt)
+            elseif stages[id] and top + h <= -20 then
+                stages[id] = false                                  -- (ya salió: no vuelve)
             end
         end
     end
+end
+
+-- ── El fondo: los ladrillos del modo Flappy ────────────────────────────────
+-- Se repiten en las dos direcciones; van de lado despacio y suben con los créditos (a menos velocidad: paralaje), y su
+-- color pasa poco a poco por los del modo Flappy (oscurecidos: el texto blanco se tiene que leer encima).
+local BG_COLORS = { { 0.50, 0.80, 1.00 }, { 0.55, 1.00, 0.55 }, { 0.60, 0.90, 1.00 }, { 1.00, 0.60, 0.40 },
+                    { 0.70, 1.00, 0.40 }, { 0.40, 0.65, 1.00 }, { 1.00, 0.45, 0.55 }, { 0.45, 1.00, 0.75 } }
+local BG_DARK, BG_SECS = 0.5, 6           -- oscurecido; segundos por color
+local function background(c)
+    local gt = c.film.t
+    local k = gt / BG_SECS
+    local i = math.floor(k) % #BG_COLORS + 1
+    local a, b = BG_COLORS[i], BG_COLORS[i % #BG_COLORS + 1]
+    local u = smooth(k - math.floor(k))
+    local col = { (a[1] + (b[1] - a[1]) * u) * BG_DARK, (a[2] + (b[2] - a[2]) * u) * BG_DARK, (a[3] + (b[3] - a[3]) * u) * BG_DARK }
+    local lay = getLayout(c)
+    Stage.flappyBg(gt * 18, col, 1, scrollAt(lay, gt) * 0.35)
 end
 
 -- Todo lo que sube (logo incluido) a los `gt` s
@@ -168,23 +207,11 @@ local function drawScroll(c, gt)
 end
 
 -- ── Escenas que suben ───────────────────────────────────────────────────────
-local SCROLL = { 'logo', 'pradera', 'costa', 'fortaleza', 'nieve', 'cuevas', 'volcan', 'crab', 'bola' }
+local SCROLL = { 'logo', 'pradera', 'costa', 'fortaleza', 'nieve', 'cuevas', 'volcan', 'crab', 'bola', 'mirror' }
 for _, id in ipairs(SCROLL) do
-    F[id] = { draw = function(c) drawScroll(c, c.film.t) end }
+    F[id] = { update = function(c) tickStages(c) end,
+              draw = function(c) background(c); drawScroll(c, c.film.t) end }
 end
--- (el tema del Espejo: lo último sale por arriba y el monstruo cruza volando — aleteando por arte de magia — hacia
--- donde va a estar el espejo)
-F.mirror = {
-    draw = function(c, t)
-        drawScroll(c, c.film.t)
-        local set = Anim.load('player')
-        local u = c.k(0, c.dur)
-        local x = lerp(-80, WINDOW_W + 80, u)
-        local y = WINDOW_H * 0.62 + math.sin(t * 5) * 30 - math.sin(u * math.pi) * 120
-        love.graphics.setColor(1, 1, 1, 1)
-        set:draw('flutter', t, math.floor(x), math.floor(y), 0, PLAYER_SCALE, PLAYER_SCALE)
-    end,
-}
 
 -- ── El espejo se recompone ──────────────────────────────────────────────────
 local MX = function() return math.floor(WINDOW_W / 2) end
@@ -206,6 +233,7 @@ F.rise = {
         end
     end,
     draw = function(c, t)
+        background(c)
         local ids = c.shared.ids
         local each = c.b(2) * 7 / #ids
         local placed = {}
@@ -237,6 +265,7 @@ F.climax = {
         end },
     },
     draw = function(c, t)
+        background(c)
         local gx, gy = Stage.glassCenter(MX(), MF())
         Stage.rays(gx, gy, t * 1.6, 12, WINDOW_W, 0.12 + 0.06 * math.sin(t * 4))
         Stage.mirror(MX(), MF(), { whole = true })
@@ -253,9 +282,10 @@ F.climax = {
 }
 
 -- ── Claudio baila y se despide ──────────────────────────────────────────────
--- Al compás (un pulso = una figura): entra andando (pulsos 0-4); PASOS con saltito en cada pulso (4-16); en el
--- 16 una VUELTA (se gira cada medio pulso) con salto; brazos ARRIBA alternando con quieto y saltando (20-28); desde
--- `wave`, el saludo; desde `end`, quieto saludando mientras se funde a negro.
+-- Al compás (un pulso = una figura): entra andando (pulsos 0-4); PASOS con saltito en cada pulso (hasta `spin`); en
+-- `spin` una VUELTA (se gira cada medio pulso) con salto; brazos ARRIBA alternando con quieto y saltando (hasta
+-- `wave`); desde `wave`, el saludo; desde `end`, quieto saludando mientras se funde a negro.
+-- Mientras, el monstruo VUELA a su alrededor (un ocho, aleteando por arte de magia) y al final saluda a su lado.
 local CS = 8                                    -- escala de Claudio (16 px → 128)
 local function claudio(c, t)
     local set = Anim.load('claudio')
@@ -263,16 +293,17 @@ local function claudio(c, t)
     local b = t / beat                          -- pulsos (con decimales)
     local cx, floor = WINDOW_W / 2, WINDOW_H * 0.82
     local x, y, seq, st, fl = cx, floor, 'idle', t, 1
+    local spin = c.at('spin') / beat               -- (la vuelta: 4 pulsos desde `spin`)
     if b < 4 then
         x, seq = lerp(-80, cx, smooth(b / 4)), 'walk'
-    elseif b < 16 then
+    elseif b < spin then
         local k = b - math.floor(b)
         y = floor - math.sin(math.min(1, k * 2) * math.pi) * 18 * (k < 0.5 and 1 or 0)
         seq, st = 'walk', math.floor(b) / 4      -- (un paso por pulso)
         if math.floor(b) % 4 == 3 then seq = 'cheer' end
-    elseif b < 20 then
+    elseif b < spin + 4 then
         fl = (math.floor(b * 2) % 2 == 0) and 1 or -1
-        y = floor - math.sin(((b - 16) / 4) * math.pi) * 60
+        y = floor - math.sin(((b - spin) / 4) * math.pi) * 60
         seq = 'cheer'
     elseif b < c.at('wave') / beat then
         local k = b - math.floor(b)
@@ -297,13 +328,15 @@ F.bye = {
         if b ~= c.v.lastBeat then
             c.v.lastBeat = b
             local cx, fy = WINDOW_W / 2, WINDOW_H * 0.82
+            local spin = c.at('spin') / c.beat
             if b >= 4 and b < c.at('end') / c.beat then
-                local n = (b >= 16 and b < 20) and 10 or 3
+                local n = (b >= spin and b < spin + 4) and 10 or 3
                 Stage.spark(cx + math.random(-260, 260), fy - math.random(60, 300), n, 20, 140, { life = 0.6, s = 3 })
             end
         end
     end,
     draw = function(c, t)
+        background(c)
         -- "gracias" sigue arriba, y se va con el final
         local msg = L('credits.thanks')
         local s = 7
@@ -313,6 +346,21 @@ F.bye = {
         -- el espejo se va apagando arriba
         local a = 1 - smooth(c.k(0, c.b(4)))
         if a > 0 then Stage.mirror(MX(), MF(), { whole = true, alpha = a }) end
+        -- el monstruo vuela alrededor de Claudio (un ocho) y, al despedirse, se queda flotando a su lado
+        do
+            local set = Anim.load('player')
+            local cx, fy = WINDOW_W / 2, WINDOW_H * 0.82
+            local w = c.at('wave')
+            local ox, oy = cx + math.cos(t * 1.3) * 380, fy - 250 + math.sin(t * 2.6) * 70
+            local vx = -math.sin(t * 1.3)
+            if t >= w then
+                local u = smooth(c.k(w, w + c.b(2)))
+                ox, oy = lerp(ox, cx + 210, u), lerp(oy, fy - 150 + math.sin(t * 5) * 8, u)
+                vx = (u < 1) and vx or -1
+            end
+            love.graphics.setColor(1, 1, 1, 1)
+            set:draw('flutter', t, math.floor(ox), math.floor(oy), 0, PLAYER_SCALE * (vx >= 0 and 1 or -1), PLAYER_SCALE)
+        end
         local x, y = claudio(c, t)
         if t >= c.at('wave') then
             local u = c.k(c.at('wave'), c.at('wave') + c.b(1))

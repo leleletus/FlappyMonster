@@ -274,7 +274,8 @@ end
 
 -- ── Fondos ──────────────────────────────────────────────────────────────────
 local FLAPPY_BG_SCALE = 15
-function Stage.flappyBg(scroll, col, alpha)
+-- (scrollY: también en vertical — los créditos —; el patrón se repite en las dos direcciones)
+function Stage.flappyBg(scroll, col, alpha, scrollY)
     local im = img('assets/images/flappy/Background.png')
     alpha = alpha or 1
     love.graphics.setColor(col[1], col[2], col[3], alpha)
@@ -282,8 +283,9 @@ function Stage.flappyBg(scroll, col, alpha)
     if not im then return end
     local bw, bh = im:getWidth() * FLAPPY_BG_SCALE, im:getHeight() * FLAPPY_BG_SCALE
     local x = -(floor(scroll) % bw)
+    local y0 = -(floor(scrollY or 0) % bh)
     while x < WINDOW_W do
-        local y = 0
+        local y = y0
         while y < WINDOW_H do
             love.graphics.draw(im, x, y, 0, FLAPPY_BG_SCALE, FLAPPY_BG_SCALE)
             y = y + bh
