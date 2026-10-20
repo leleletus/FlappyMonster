@@ -1,6 +1,6 @@
 -- src/ui/menu/MenuList.lua
 -- Una LISTA DE BOTONES de menú (docs/architecture/menus.md): botones de colores en columna (src/ui/menu/MenuButton), el
--- seleccionado más claro, botando y con el monstruito al lado; entran y salen con la animación de la pantalla
+-- seleccionado más claro, botando y con el cursor al lado; entran y salen con la animación de la pantalla
 -- (src/ui/menu/MenuAnim). Una sola geometría para dibujo, ratón y táctil. Y lo común de las pantallas de menú:
 -- el RÓTULO de arriba, la DESCRIPCIÓN del botón elegido y la línea de AYUDA de abajo.
 --   local list = MenuList.new{ items = { { text = 'menu.adventure', color = 'green', desc = 'menu.desc_adventure',
@@ -88,7 +88,7 @@ function MenuList:draw()
         if self.chosen == i and self.t < 0.12 then bob = 4 end
         local color = it.disabled and 'grey' or it.color
         MenuButton.draw(self:text(i), r.x + ox, r.y + oy + bob, r.w, r.h, color, sel, { alpha = a * (it.disabled and 0.7 or 1) })
-        if sel then require('src/ui/menu/MenuKit').marker(r.x + ox, r.y + oy, r.h, self.t, a) end   -- (el monstruito)
+        if sel then require('src/ui/menu/MenuKit').marker(r.x + ox, r.y + oy + bob, r.w, r.h, self.t, a) end   -- (el cursor)
     end
     love.graphics.setColor(1, 1, 1, 1)
 end

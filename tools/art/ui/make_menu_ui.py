@@ -13,6 +13,8 @@
 #   assets/images/ui/menus/box.png                  las CAJAS (9-slice, celdas de 8x8 en fila): 1 hueco hundido (campos de
 #        texto, listas), 2 tarjeta (filas, tarjetas de la partida, ventanas), 3 tarjeta elegida (borde blanco), 4 tarjeta
 #        oscura (ventanas por encima de todo). Las dibuja src/ui/menu/MenuKit.lua.
+#   assets/images/ui/menus/cursor.png               el CURSOR de los menús: una punta de flecha dorada con muesca atrás,
+#        contorno azul noche, luz arriba y sombra abajo, apuntando a la DERECHA (MenuKit la gira hacia el botón).
 # Desde la raíz del repo:  python3 tools/art/ui/make_menu_ui.py
 import json, os
 from PIL import Image
@@ -202,6 +204,44 @@ def boxes():
     print('box.png: %d cajas' % len(BOXES))
 
 
+# ── Cursor (punta de flecha) ─────────────────────────────────────────────────
+# 8 x 11 a 1x. Fila r: el cuerpo va de la muesca de atrás (2 px en el centro) a la punta (medio ancho = distancia al
+# borde de arriba o de abajo). Contorno azul noche, relleno dorado, luz en la mitad de arriba y sombra en la de abajo,
+# un brillo blanco cerca de la punta.
+CUR_W, CUR_H = 8, 11
+CUR = {'out': (24, 28, 52, 255), 'hi': (255, 240, 170, 255), 'fill': (246, 200, 72, 255), 'sh': (196, 132, 40, 255),
+       'glint': (255, 255, 255, 255)}
+
+
+def cursor():
+    im = Image.new('RGBA', (CUR_W, CUR_H), (0, 0, 0, 0))
+    mid = CUR_H // 2
+    span = {}
+    for r in range(CUR_H):
+        d = min(r, CUR_H - 1 - r)                      # 0 arriba / abajo, mid en el centro
+        a = max(0, 2 - abs(r - mid))                   # la muesca de atrás
+        b = min(CUR_W - 1, d + 2)                      # la punta
+        span[r] = (a, b)
+    for r, (a, b) in span.items():
+        for x in range(a, b + 1):
+            up, dn = span.get(r - 1), span.get(r + 1)
+            edge = x in (a, b) or up is None or dn is None or not (up[0] <= x <= up[1]) or not (dn[0] <= x <= dn[1])
+            if edge: c = CUR['out']
+            elif r < mid: c = CUR['hi'] if r == span_top(span, x) + 1 else CUR['fill']
+            elif r > mid: c = CUR['sh']
+            else: c = CUR['fill']
+            im.putpixel((x, r), c)
+    im.putpixel((span[mid][1] - 2, mid - 1), CUR['glint'])
+    im.save(os.path.join(DIR, 'cursor.png'))
+    print('cursor.png')
+
+
+def span_top(span, x):
+    for r in sorted(span):
+        if span[r][0] <= x <= span[r][1]: return r
+    return 0
+
+
 # ── Cartuchos de las PARTIDAS (src/states/story/StorySlotState.lua) ───────────
 # cartridge.png: una columna por color de carcasa (rojo, azul, verde, gris = vacía), fila 1 normal y fila 2
 # elegido (más claro). 60 x 72 a 1x: estrías de agarre arriba, la ETIQUETA (crema, con la ventanita de la isla
@@ -341,4 +381,5 @@ if __name__ == '__main__':
     buttons()
     panel()
     boxes()
+    cursor()
     cartridges()

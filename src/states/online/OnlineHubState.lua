@@ -371,7 +371,7 @@ function OnlineHubState:_layout()
     for i = L.scroll + 1, math.min(#self.roomList, L.scroll + L.maxVisible) do
         L.rows[i] = { x = L.list.x + 16, y = y0 + (i - 1 - L.scroll) * (ROW_H + ROW_GAP), w = L.list.w - 32, h = ROW_H }
     end
-    -- botones de abajo (crear / refrescar / volver); el primero deja sitio al monstruito
+    -- botones de abajo (crear / refrescar / volver); el primero deja sitio al cursor
     local n, gap = #LIST_BTNS, 24
     local bx0 = L.list.x + 56
     local bw = math.floor((L.list.x + L.list.w - bx0 - (n - 1) * gap) / n)
@@ -386,7 +386,7 @@ function OnlineHubState:_layout()
     L.field = { x = W.x + 40, y = W.y + 170, w = W.w - 80, h = 64 }
     local cw = math.floor((W.w - 80 - 24) / 2)
     L.choices = { { x = W.x + 40, y = W.y + 158, w = cw, h = 96 }, { x = W.x + 40 + cw + 24, y = W.y + 158, w = cw, h = 96 } }
-    local nw = math.floor((W.w - 80 - 72) / 2)           -- (entre los dos, sitio para el monstruito)
+    local nw = math.floor((W.w - 80 - 72) / 2)           -- (entre los dos, sitio para el cursor)
     -- máximo de jugadores: [<] número [>]
     local nbw, abw = 200, 72
     local nx = W.x + math.floor((W.w - nbw) / 2)
@@ -416,12 +416,12 @@ end
 
 local function bobOf(t, sel) return sel and ((math.floor(t * 3) % 2 == 0) and -4 or 0) or 0 end
 
--- Botón de menú con su rebote y el monstruito si está elegido
+-- Botón de menú con su rebote y el cursor si está elegido
 function OnlineHubState:_button(text, r, color, sel, a, ox, oy)
     ox, oy = ox or 0, oy or 0
     MenuButton.draw(text, r.x + ox, r.y + oy + bobOf(self.t, sel), r.w, r.h, color, sel,
                     { alpha = a, scale = MenuButton.textScale(text, r.w - 48, 4) })
-    if sel then MenuKit.marker(r.x + ox, r.y + oy, r.h, self.t, a) end
+    if sel then MenuKit.marker(r.x + ox, r.y + oy + bobOf(self.t, sel), r.w, r.h, self.t, a) end
 end
 
 -- Una ventana con su título en la fuente pixel (entra desde abajo)
@@ -537,7 +537,8 @@ function OnlineHubState:_renderCreate()
             local r = Ly.choices[i]
             local sel = self.privacySel == i
             MenuButton.draw(L(o[1]), r.x, r.y + oy + bobOf(self.t, sel), r.w, r.h, sel and o[3] or 'grey', sel,
-                            { alpha = a, scale = MenuButton.textScale(L(o[1]), r.w - 48, 5) })   -- (el color marca la elegida)
+                            { alpha = a, scale = MenuButton.textScale(L(o[1]), r.w - 48, 5) })
+            if sel then MenuKit.marker(r.x, r.y + oy + bobOf(self.t, sel), r.w, r.h, self.t, a) end
             MenuKit.text(FONT_SMALL, L(o[2]), r.x, r.y + r.h + 16 + oy, r.w, 'center', sel and { 1, 1, 1 } or { 0.6, 0.66, 0.85 }, a)
         end
     elseif self.createStep == STEP_PASS then

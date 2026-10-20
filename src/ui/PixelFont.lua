@@ -147,6 +147,8 @@ function PixelFont.draw(text, x, y, s, alpha, color)
     local f = build()
     text = PixelFont.upper(text)
     alpha = alpha or 1
+    -- (lo que ocupa, para que el cursor de los menús no se ponga encima: src/ui/menu/MenuKit)
+    if alpha > 0.05 then require('src/ui/menu/MenuKit').occupy(math.floor(x), math.floor(y), (f:getWidth(text) - 1) * s, H * s) end
     local prev = love.graphics.getFont()
     love.graphics.setFont(f)
     local c = color or { 1, 1, 1 }

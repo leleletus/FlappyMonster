@@ -64,7 +64,7 @@ function OnlineErrorState:render()
     local bob = (math.floor(self.t * 3) % 2 == 0) and -4 or 0
     MenuButton.draw(L('err.back_menu'), b.x + bx, b.y + by + bob, b.w, b.h, 'grey', true,
                     { alpha = ba, scale = MenuButton.textScale(L('err.back_menu'), b.w - 48, 4) })
-    MenuKit.marker(b.x + bx, b.y + by, b.h, self.t, ba)
+    MenuKit.marker(b.x + bx, b.y + by + bob, b.w, b.h, self.t, ba)
     love.graphics.setColor(COLOR_WHITE)
 end
 

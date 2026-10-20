@@ -198,7 +198,7 @@ function OnlineLoginState:render()
         local txt = Lang(b.label)
         MenuButton.draw(txt, b.x + bx, b.y + by + bob, b.w, b.h, dis and 'grey' or b.color, sel and not dis,
                         { alpha = ba * (dis and 0.7 or 1), scale = MenuButton.textScale(txt, b.w - 48, b.id == 'connect' and 5 or 4) })
-        if sel then MenuKit.marker(b.x + bx, b.y + by, b.h, self.t, ba) end
+        if sel then MenuKit.marker(b.x + bx, b.y + by + bob, b.w, b.h, self.t, ba) end
     end
     MenuKit.hint(Lang('login.hint'), A, 5)
     love.graphics.setColor(COLOR_WHITE)

@@ -68,6 +68,7 @@ function MenuButton.draw(text, x, y, w, h, color, selected, o)
     o = o or {}
     x, y, w, h = math.floor(x), math.floor(y), math.floor(w), math.floor(h)
     local a = o.alpha or 1
+    if a > 0.05 then require('src/ui/menu/MenuKit').occupy(x, y, w, h) end   -- (para colocar el cursor sin pisarlo)
     local i = meta.index[color] or 1
     local cell = meta.cell
     local q = pieces(sheet, (i - 1) * cell, selected and cell or 0, cell, meta.cut)
@@ -96,6 +97,7 @@ end
 
 function MenuButton.panel(x, y, w, h, alpha)
     load()
+    if (alpha or 1) > 0.05 then require('src/ui/menu/MenuKit').occupy(math.floor(x), math.floor(y), math.floor(w), math.floor(h)) end
     local q = pieces(panelImg, 0, 0, meta.cell, { l = 2, r = 2, t = 2, b = 2 })
     love.graphics.setColor(1, 1, 1, alpha or 1)
     slice(panelImg, q, math.floor(x), math.floor(y), math.floor(w), math.floor(h), meta.cell, { l = 2, r = 2, t = 2, b = 2 }, MenuButton.S)

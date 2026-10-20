@@ -666,7 +666,7 @@ function OnlineRoomState:render()
                 MenuButton.draw(act.label, rr.x, rr.y + bobOf(self.t, sel), rr.w, rr.h, color, sel and not act.disabled,
                                 { alpha = ba * (act.disabled and 0.75 or 1), scale = MenuButton.textScale(act.label, rr.w - 48, 4) })
             end
-            if sel then MenuKit.marker(rr.x, rr.y, rr.h, self.t, ba) end
+            if sel then MenuKit.marker(rr.x, rr.y + bobOf(self.t, sel), rr.w, rr.h, self.t, ba) end
         end
     end
 
@@ -696,7 +696,7 @@ function OnlineRoomState:render()
             local r = L.pmenuBtns[i]
             local sel = i == self.pmenuSel
             MenuButton.draw(Lang(lbl), r.x, r.y + poy + bobOf(self.t, sel), r.w, r.h, PMENU_COLORS[i], sel, { alpha = pa, scale = MenuButton.textScale(Lang(lbl), r.w - 48, 4) })
-            if sel then MenuKit.marker(r.x, r.y + poy, r.h, self.t, pa) end
+            if sel then MenuKit.marker(r.x, r.y + poy + bobOf(self.t, sel), r.w, r.h, self.t, pa) end
         end
         MenuKit.hint(Lang('menu.hint', { move = Input.label('nav_up') .. Input.label('nav_down'),
                                         ok = Input.label('confirm'), back = Input.label('back') }))

@@ -7,7 +7,7 @@ finish**; when it does, a pixel **iris** closes on it, the next level loads in t
 monster again. The **title and the main menu are one screen**: the logo's white box (the original logo, remastered)
 drops in with a bounce, its letters pop in one by one and then sway in a wave; pressing a button makes the logo rise
 and the buttons come in from below one after another. Buttons are pixel-art 9-slices in muted colours with the
-monster's head bouncing next to the selected one and a description of it at the bottom. Screens **enter and leave
+cursor (a gold arrowhead, placed where it fits) next to the selected one and a description of it at the bottom. Screens **enter and leave
 with animations** (staggered slide-in with a small bounce, quick slide-out; the logo and the top banners leave
 upwards), and leaving the menus (to a level, the story map, the slot screen, Free Play, online) uses the same
 **iris** (closing on the centre or on what was chosen, a moment of black, the state changes, it opens). The story
@@ -93,12 +93,13 @@ at 1280 / 960 / 1600 (`<save>/menu_*.png`). `story_flow` waits while a cartridge
 **What:** the whole online area (login, room list, create-room wizard, password, room, game-mode menu, pause and
 spectator windows in a match, results board, network error) is built from the same pieces as the other menus: the
 living background with its panel, a coloured title banner (purple for online, red for the error), muted 9-slice
-buttons with the monster marking the selected one, and the boxes below. Names typed by players (rooms, players) are
+buttons with the cursor marking the selected one, and the boxes below. Names typed by players (rooms, players) are
 drawn in the normal font (the pixel font lacks most symbols); labels, buttons and headings in the pixel font.
 
 | File | Role |
 |---|---|
-| `src/ui/menu/MenuKit.lua` | the shared pieces: `box(kind)` — `well` (sunken: text fields, lists), `card`, `card_sel` (white edge), `window` (on top of everything) —, `field` (text field with block cursor; `mask` for passwords), `section` (pixel-font label + rule), `stepper` (◀ value ▶ button; `stepperSide` = which arrow was tapped), `arrow`, `marker` (the monster, also used by `MenuList`), `title` (`MenuList.header`, or the normal font on the same banner when the pixel font lacks a letter: `PixelFont.has`), `hint`, `dim`, `text` |
+| `src/ui/menu/MenuKit.lua` | the shared pieces: `box(kind)` — `well` (sunken: text fields, lists), `card`, `card_sel` (white edge), `window` (on top of everything) —, `field` (text field with block cursor; `mask` for passwords), `section` (pixel-font label + rule), `stepper` (◀ value ▶ button; `stepperSide` = which arrow was tapped), `arrow`, `marker` (the cursor, also used by `MenuList`; see `cursor.png`), `title` (`MenuList.header`, or the normal font on the same banner when the pixel font lacks a letter: `PixelFont.has`), `hint`, `dim`, `text` |
+| `assets/images/ui/menus/cursor.png` | the menu CURSOR (a gold arrowhead with a notch, 8×11, pointing right; `make_menu_ui.py`). **Smart placement** (`MenuKit.marker` / `place` / `flush`): every button, box, panel and text drawn in the frame records its rect (`MenuKit.occupy`, called by `MenuButton.draw` / `panel`, `MenuKit.box` / `text`, `PixelFont.draw`); screens only *ask* for the cursor and `game.lua` draws it after the screen. It tries LEFT, RIGHT, ABOVE, BELOW the selected button and takes the first spot that is inside the smallest box containing the button (the screen if none) and touches nothing else; it is rotated to point at the button and nudges toward it. No free spot → no cursor. `MenuKit.dim` clears the list (what is under a window does not count) |
 | `assets/images/ui/menus/box.png` | the four boxes (8×8 cells, cut 2), written by `tools/art/ui/make_menu_ui.py` |
 | `src/states/online/OnlineLoginState.lua`, `OnlineHubState.lua`, `OnlineRoomState.lua`, `OnlineErrorState.lua` | each has ONE layout function used by drawing, mouse and touch; enter / leave with `MenuAnim` (windows slide in with their own) |
 | `src/ui/ModeSelectMenu.lua` | the game-mode menu (online room and Free Play): tabs are buttons in the mode's `button` colour (`src/world/modes/<mode>.lua`), level cards are boxes |
@@ -150,6 +151,10 @@ difficulty and back, the match starting with it). `online_smoke`, `online_boss`,
   number (new style: the number in a sunken box, blue arrow buttons, grey at the limits); and sizes were balanced so
   the important thing stands out: button text at pixel scale 4 (5 for the main action of a screen and the privacy
   choices) instead of 6, buttons 56 px high, the error screen led by its message with the error code small below.
+- 0.5.1, the user: the menus used the monster's life icon as the cursor; it is now a cursor of its own (an arrowhead,
+  "not just a >"), and SMART so it never overlaps: left, else right, above or below, else hidden. Applies to every
+  menu (`MenuList` too). Texts count as obstacles (first try put it on the privacy description); a dimmed screen
+  under a window does not (it hid the cursor of every window).
 - Not yet judged by the user: the look on a real screen, the animation timings, the menu sounds (existing `select`
   sound at different pitches, not listened to), performance on Switch / Android (the menu now simulates and draws a
   full level with its enemies every frame).

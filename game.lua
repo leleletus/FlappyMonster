@@ -11,6 +11,7 @@ StateMachine = require 'src/core/StateMachine'
 NC = require 'src/network/NetworkClient'
 Notify = require 'src/ui/Notify'   -- avisos globales (toasts y ventanas)
 local Transition = require 'src/ui/menu/Transition'   -- transición de pantalla de los menús
+local MenuKit    = require 'src/ui/menu/MenuKit'      -- el cursor de los menús (se dibuja al final del fotograma)
 
 local TitleState                  = require 'src/states/menu/TitleState'
 local DifficultySelectionState    = require 'src/states/flappy/DifficultySelectionState'
@@ -92,6 +93,7 @@ end
 function love.draw()
     lovesize.begin()
         gStateMachine:render()
+        MenuKit.flush()                     -- (el cursor de los menús, donde haya sitio: src/ui/menu/MenuKit)
         Transition.render()
         Notify.render()
     lovesize.finish()

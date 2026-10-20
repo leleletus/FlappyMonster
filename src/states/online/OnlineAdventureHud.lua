@@ -210,7 +210,7 @@ function OnlineAdventureState:_renderPauseOverlay()
         local text = L(opt):upper()
         MenuButton.draw(text, r.x, r.y + oy + bob, r.w, r.h, colors[opt] or 'grey', sel,
                         { alpha = a, scale = MenuButton.textScale(text, r.w - 48, 4) })
-        if sel then MenuKit.marker(r.x, r.y + oy, r.h, love.timer.getTime(), a) end
+        if sel then MenuKit.marker(r.x, r.y + oy + bob, r.w, r.h, love.timer.getTime(), a) end
     end
 end
 
@@ -258,7 +258,7 @@ function OnlineAdventureState:_renderSpectatorOverlay()
         local text = L(opt)
         MenuButton.draw(text, r.x, r.y + bob, r.w, r.h, i == 1 and 'blue' or 'grey', sel,
                         { scale = MenuButton.textScale(text, r.w - 48, 4) })
-        if sel then MenuKit.marker(r.x, r.y, r.h, love.timer.getTime(), 1) end
+        if sel then MenuKit.marker(r.x, r.y + bob, r.w, r.h, love.timer.getTime(), 1) end
     end
 end
 
