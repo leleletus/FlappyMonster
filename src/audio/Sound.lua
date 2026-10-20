@@ -61,7 +61,9 @@ local function scaled(sd, g)
     return sd
 end
 
+local voices = {}                     -- las voces de cada sonido (ver playClone): [name] = { n = siguiente a pisar, [i] }
 local function load(name, path, stype)
+    voices[name] = nil                -- (sus voces eran copias del sonido anterior)
     local g = GAIN[name]
     if g and g ~= 1 and stype == 'static' then
         -- Ganancia horneada en las muestras
@@ -331,14 +333,36 @@ function Sound.setEcho(k)
 end
 function Sound.getEcho() return echoK end
 
+-- VOCES: cada sonido tiene un grupo fijo de copias (como mucho VOICES) que se REUTILIZAN: se usa una que ya calló
+-- y, si suenan todas, la que lleva más rato. Antes cada Sound.play hacía un clon nuevo que solo se liberaba al pasar
+-- el recolector: en ráfagas (pasos, golpes, explosiones) se acumulaban fuentes de OpenAL, que en Switch / Android
+-- son pocas (cuando se acaban, los sonidos dejan de oírse).
+local VOICES = 6
 local function playClone(name, pitch, vol)
     local src = sources[name]
     if not src then return end
-    local clone = src:clone()
-    clone:setPitch(pitch)
-    clone:setVolume(vol)
-    clone:play()
+    local pool = voices[name]
+    if not pool then pool = { n = 1 }; voices[name] = pool end
+    local v
+    for i = 1, #pool do
+        if not pool[i]:isPlaying() then v = pool[i]; break end
+    end
+    if not v then
+        if #pool < VOICES then
+            v = src:clone()
+            pool[#pool + 1] = v
+        else
+            v = pool[pool.n]
+            pool.n = pool.n % VOICES + 1
+            v:stop()
+        end
+    end
+    v:setPitch(pitch)
+    v:setVolume(vol)
+    v:play()
 end
+-- (para los arneses: cuántas fuentes tiene cada sonido)
+function Sound.voiceCount(name) return voices[name] and #voices[name] or 0 end
 
 function Sound.play(name, pitch, volume)
     local src = sources[name]

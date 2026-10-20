@@ -143,15 +143,18 @@ function PlayerAdventure.outerBoxAt(x, y)
     return { x = x - OUTER_W / 2, y = y + OUTER_YOFF - OUTER_H / 2, w = OUTER_W, h = OUTER_H }
 end
 
-function PlayerAdventure:getOuterBounds()
+-- `into` (opcional): rellena esa tabla en vez de crear una (lo usan los bucles de cada fotograma: Interactions)
+function PlayerAdventure:getOuterBounds(into)
+    local b = into or {}
     if self.crouching then
         -- Agachado (o aplastado): hitbox más baja, alineada al suelo
         local h = ((self.squashT or 0) > 0) and SQUASH_OUTER_H or CROUCH_OUTER_H
         local normalBot = self.y + OUTER_YOFF + OUTER_H/2
-        local crouchTop = normalBot - h
-        return {x=self.x-self.w/2, y=crouchTop, w=self.w, h=h}
+        b.x, b.y, b.w, b.h = self.x-self.w/2, normalBot - h, self.w, h
+        return b
     end
-    return {x=self.x-self.w/2, y=self.y+OUTER_YOFF-self.h/2, w=self.w, h=self.h}
+    b.x, b.y, b.w, b.h = self.x-self.w/2, self.y+OUTER_YOFF-self.h/2, self.w, self.h
+    return b
 end
 function PlayerAdventure:getInnerBounds()
     if self.crouching then

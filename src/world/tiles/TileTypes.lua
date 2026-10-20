@@ -153,18 +153,18 @@ local SIDE = {
     left   = { -1, 0, { 2, 4 } }, right  = { 1, 0, { 1, 3 } },
 }
 -- Exposición de la arista `side` de la celda (c, r): true / false / {a, b}
+local function subJoined(cells, k, group)
+    local s = cells[k]
+    local def = s and TileTypes.byName[s.kind]
+    return def ~= nil and def.joinGroup == group
+end
 function TileTypes.sideExposure(level, c, r, side, group)
     local d = SIDE[side]
     local nc, nr = c + d[1], r + d[2]
     if TileTypes.joinsCell(level, nc, nr, group) then return false end
     local cells = group and level.subCells and level.subCells[nr * 65536 + nc]
     if not cells then return true end
-    local function joined(i)
-        local s = cells[d[3][i]]
-        local def = s and TileTypes.byName[s.kind]
-        return def ~= nil and def.joinGroup == group
-    end
-    local a, b = not joined(1), not joined(2)
+    local a, b = not subJoined(cells, d[3][1], group), not subJoined(cells, d[3][2], group)
     if a == b then return a end
     return { a, b }
 end
@@ -175,30 +175,34 @@ function TileTypes.half(v, i)
     return v and true or false
 end
 
+-- Las aristas expuestas de la casilla que se dibuja. Se llama por cada casilla visible en cada fotograma: devuelve
+-- una tabla REUTILIZADA (válida hasta la siguiente llamada; para guardarla, copiarla).
+local ALL_EDGES = { top = true, bottom = true, left = true, right = true }
+local EDGES = {}
 function TileTypes.edges(t, ctx)
     if ctx.edges then return ctx.edges end
     local level = ctx.level
-    if not level or not t.joinGroup then
-        return { top = true, bottom = true, left = true, right = true }
-    end
+    if not level or not t.joinGroup then return ALL_EDGES end
     local col, row, g = ctx.col, ctx.row, t.joinGroup
-    return {
-        top    = TileTypes.sideExposure(level, col, row, 'top', g),
-        bottom = TileTypes.sideExposure(level, col, row, 'bottom', g),
-        left   = TileTypes.sideExposure(level, col, row, 'left', g),
-        right  = TileTypes.sideExposure(level, col, row, 'right', g),
-    }
+    EDGES.top    = TileTypes.sideExposure(level, col, row, 'top', g)
+    EDGES.bottom = TileTypes.sideExposure(level, col, row, 'bottom', g)
+    EDGES.left   = TileTypes.sideExposure(level, col, row, 'left', g)
+    EDGES.right  = TileTypes.sideExposure(level, col, row, 'right', g)
+    return EDGES
 end
 
 -- Dibuja un borde de `thick` px en las aristas (o medias aristas) expuestas.
-function TileTypes.drawEdges(ctx, edges, thick)
+-- (noTop: sin la arista de arriba, para los que la pintan a su manera: hierba, ceniza)
+function TileTypes.drawEdges(ctx, edges, thick, noTop)
     local x, y, s = ctx.x, ctx.y, ctx.size
     thick = thick or 2
     local h1 = math.floor(s / 2)
     local h2 = s - h1
     local half, rect = TileTypes.half, love.graphics.rectangle
-    if half(edges.top, 1)    then rect('fill', x,      y,         h1, thick) end
-    if half(edges.top, 2)    then rect('fill', x + h1, y,         h2, thick) end
+    if not noTop then
+        if half(edges.top, 1)    then rect('fill', x,      y,         h1, thick) end
+        if half(edges.top, 2)    then rect('fill', x + h1, y,         h2, thick) end
+    end
     if half(edges.bottom, 1) then rect('fill', x,      y+s-thick, h1, thick) end
     if half(edges.bottom, 2) then rect('fill', x + h1, y+s-thick, h2, thick) end
     if half(edges.left, 1)   then rect('fill', x,         y,      thick, h1) end

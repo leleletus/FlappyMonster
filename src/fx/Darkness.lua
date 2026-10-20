@@ -32,6 +32,22 @@ local BANDS = { { 1.0, 0.26 }, { 0.74, 0.3 }, { 0.46, 0.44 } }
 
 local canvas
 
+-- Las luces son IMÁGENES (tools/art/fx/make_lights.py): un disco, o los RINGS anillos ya sumados; cada luz es un
+-- dibujo y las seguidas van en un solo lote (antes, varios círculos por luz, cada uno de cientos de vértices)
+local LIGHT_R = 32                       -- radio de las imágenes
+local lightImg = {}
+local function sprite(kind, x, y, r)
+    local im = lightImg[kind]
+    if not im then
+        im = love.graphics.newImage('assets/images/fx/light_' .. kind .. '.png')
+        im:setFilter('nearest', 'nearest')
+        lightImg[kind] = im
+    end
+    local k = r / LIGHT_R
+    love.graphics.draw(im, x - r, y - r, 0, k, k)
+end
+local function disc(x, y, r) sprite('disc', x, y, r) end
+
 -- amb = luz ambiente (multiplica la pantalla); halo = radio y fuerza alrededor de cada jugador;
 -- lights = × la fuerza de las luces de decoraciones y tiles
 Darkness.MOODS = {
@@ -40,7 +56,7 @@ Darkness.MOODS = {
     cave  = { amb = { 0.5, 0.5, 0.6 }, lights = 2.0 },
 }
 local DEEP = Darkness.MOODS.cave
-local RINGS = 5                        -- escalones de las luces suaves (noche, cueva)
+-- (las luces suaves son 5 escalones: van dentro de las imágenes, tools/art/fx/make_lights.py)
 local BAND = 2                         -- casillas de transición entre la superficie y la penumbra de abajo
 
 local function moodOf(level)
@@ -153,18 +169,15 @@ function Darkness.render(level, camX, camY, sources, entities, scene)
         if dark then
             local r = s.on and HALO_ON or HALO
             love.graphics.setColor(0.24, 0.24, 0.27, 1)
-            love.graphics.circle('fill', hx, hy, r)
+            disc(hx, hy, r)
             love.graphics.setColor(0.3, 0.3, 0.33, 1)
-            love.graphics.circle('fill', hx, hy, r * 0.6)
+            disc(hx, hy, r * 0.6)
         else
             -- (penumbra / noche: un halo amplio y suave, para jugar normal)
             local H = (deepY and hy > deepY) and DEEP or M
             if H and H.halo then
-                for i = 0, RINGS - 1 do
-                    local q = H.haloA / RINGS
-                    love.graphics.setColor(q, q, q * 0.92, 1)
-                    love.graphics.circle('fill', hx, hy, H.halo * (1 - i / RINGS * 0.8))
-                end
+                love.graphics.setColor(H.haloA, H.haloA, H.haloA * 0.92, 1)       -- (RINGS anillos: light_halo.png)
+                sprite('halo', hx, hy, H.halo)
             end
         end
         if dark and s.on then
@@ -188,16 +201,13 @@ function Darkness.render(level, camX, camY, sources, entities, scene)
         local a = (L.a or 0.14) * mult * (1 + 0.12 * math.sin(now * (L.pulse or 1.7) + lx * 0.05))
         if dark then
             love.graphics.setColor(c[1] * a * 0.5, c[2] * a * 0.5, c[3] * a * 0.5, 1)
-            love.graphics.circle('fill', lx, ly, L.r)
+            disc(lx, ly, L.r)
             love.graphics.setColor(c[1] * a, c[2] * a, c[3] * a, 1)
-            love.graphics.circle('fill', lx, ly, L.r * 0.55)
+            disc(lx, ly, L.r * 0.55)
         else
             -- (degradado en RINGS escalones: la luz se va apagando hacia fuera, sin borde de disco)
-            for i = 0, RINGS - 1 do
-                local q = a / RINGS
-                love.graphics.setColor(c[1] * q, c[2] * q, c[3] * q, 1)
-                love.graphics.circle('fill', lx, ly, L.r * (1 - i / RINGS * 0.85))
-            end
+            love.graphics.setColor(c[1] * a, c[2] * a, c[3] * a, 1)                 -- (RINGS anillos: light_rings.png)
+            sprite('rings', lx, ly, L.r)
         end
     end
     local function lightsMult(y)
@@ -244,7 +254,8 @@ function Darkness.render(level, camX, camY, sources, entities, scene)
     love.graphics.draw(canvas, 0, 0, 0, DS, DS)
     love.graphics.setBlendMode('alpha')
     -- lo incandescente del fondo (volcanes, coladas, magma) sigue brillando
-    if not dark and scene then restoreGlow(scene) end
+    -- (solo si el fondo marcó algo este fotograma: si no, sería una pasada de pantalla entera para nada)
+    if not dark and scene and require('src/fx/Sky').punched then restoreGlow(scene) end
 end
 
 -- Puntos luminosos y demás cosas que se ven en la oscuridad (encima de ella)

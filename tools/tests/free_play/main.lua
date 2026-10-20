@@ -9,7 +9,7 @@
 --     <save>/free_play_{1280,960,1600}.png
 --  6. vista fija en los niveles (src/ui/View.lua): con la ventana a 1600x720,
 --     el menú usa 1600 de ancho lógico; al entrar en un nivel pasa a 1280
---     (bandas negras) y al salir vuelve a 1600. Captura free_play_level1600.png
+--     (bandas negras) y al salir vuelve a 1600. Captura free_play_level1600.png; la pausa, free_play_pause.png
 --
 --   tools/tests/run.sh free_play
 io.stdout:setvbuf('no')
@@ -105,6 +105,11 @@ function love.update(dt)
         check('jugar', st.levelPath == path and st.returnTo == 'free_play',
             ('ENTER abre %s (returnTo=%s)'):format(tostring(st.levelPath), tostring(st.returnTo)))
         gStateMachine:push('pause')
+        step, T = 'pshot', t
+    elseif step == 'pshot' and t - T > 0.5 then
+        shot('pause')                                   -- (la pausa: la ventana de opciones de los menús)
+        step, T = 'pback', t
+    elseif step == 'pback' and t - T > 0.2 then
         top().selected = 2
         pressNext('confirm'); step, T = 'back', t
     elseif step == 'back' and t - T > 0.4 then

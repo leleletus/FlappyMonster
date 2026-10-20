@@ -8,7 +8,7 @@ being simulated (`level.difficulty`; `nil` = neutral, the game as it was), bound
 whoever steps the simulation — so single player, the server (several rooms) and the client always agree.
 
 **Where it is chosen:** a story save picks it when created (`StorySlotState`; Extreme and Xtra Extreme must be
-unlocked); Free Play has a chip (key F or tap); online, the room's host has a ◀ ▶ selector with every difficulty (`set_difficulty`; `docs/architecture/menus.md`,
+unlocked); Free Play has a ◀ ▶ selector (key F or tap either half); online, the room's host has a ◀ ▶ selector with every difficulty (`set_difficulty`; `docs/architecture/menus.md`,
 "Online screens") and it reaches clients in `game_init`. The Flappy mode's `DIFFICULTIES` in `settings.lua` are an unrelated, older table.
 
 **Modifiers today**

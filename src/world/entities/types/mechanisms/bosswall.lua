@@ -44,7 +44,7 @@ function BW:init()
     self.state = 'hidden'
 end
 
-function BW:getOuterBounds() return { x = self.x0, y = self.y0, w = self.x1 - self.x0, h = self.y1 - self.y0 } end
+function BW:getOuterBounds(into) return Entity.box(into, self.x0, self.y0, self.x1 - self.x0, self.y1 - self.y0) end
 function BW:getInnerBounds() return self:getOuterBounds() end
 
 function BW:isSolidBody() return self.alive and self.state == 'solid' end

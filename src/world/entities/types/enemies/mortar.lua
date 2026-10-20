@@ -161,9 +161,9 @@ function Mortar:canFreeze() return false end
 Mortar.solidFull = true
 function Mortar:isSolidBody() return self.alive and self.state ~= 'dead' end
 -- Caja del cañón (sprite 16x16: cuerpo desde la fila 2, patas hasta abajo)
-function Mortar:getOuterBounds()
+function Mortar:getOuterBounds(into)
     local w = 12 * SCALE
-    return { x = self.x - w / 2, y = self.y - self.sprH / 2 + 2 * SCALE, w = w, h = self.sprH - 2 * SCALE }
+    return Entity.box(into, self.x - w / 2, self.y - self.sprH / 2 + 2 * SCALE, w, self.sprH - 2 * SCALE)
 end
 Mortar.getInnerBounds = Mortar.getOuterBounds
 

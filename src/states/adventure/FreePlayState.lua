@@ -19,12 +19,16 @@ local LevelCatalog  = require 'src/world/level/LevelCatalog'
 local Modes         = require 'src/world/modes/Modes'
 local fitText       = require('src/ui/TextUtil').fit
 local L = require 'src/core/Lang'
+local MenuButton    = require 'src/ui/menu/MenuButton'
+local MenuKit       = require 'src/ui/menu/MenuKit'
+local MenuAnim      = require 'src/ui/menu/MenuAnim'
+local PixelFont     = require 'src/ui/PixelFont'
 
 local FreePlayState = BaseState:new()
 
 -- Geometría (alto lógico 720; el ancho cambia según la pantalla: columnas y
 -- márgenes se calculan al dibujar, nunca al cargar el archivo)
-local TOP, BOTTOM_PAD = 104, 40
+local TOP_WIDE, TOP_NARROW, BOTTOM_PAD = 152, 204, 56   -- (estrecha: el selector de dificultad va bajo el rótulo)
 local CARD_W, CARD_H, GAP = 372, 318, 24
 local PREV_H = 150
 local LOAD_BUDGET = 0.008          -- s por fotograma cargando fichas
@@ -33,7 +37,10 @@ local LOAD_BUDGET = 0.008          -- s por fotograma cargando fichas
 local cache = {}                   -- [archivo] = ficha | { broken = error }
 local last = { sel = 1, scroll = 0 }
 
+local TOP = TOP_WIDE
+local function wide() return WINDOW_W >= 1200 end
 local function layout()
+    TOP = wide() and TOP_WIDE or TOP_NARROW
     local cols = math.max(1, math.floor((WINDOW_W - 48 + GAP) / (CARD_W + GAP)))
     local gridW = cols * CARD_W + (cols - 1) * GAP
     local x0 = math.floor((WINDOW_W - gridW) / 2)
@@ -46,7 +53,8 @@ function FreePlayState:enter()
     self.files = LevelCatalog.files()
     self.sel = math.max(1, math.min(#self.files, last.sel))
     self.scroll, self.scrollTarget = last.scroll, last.scroll
-    self.t = 0
+    self.t, self.diffT = 0, 1
+    self.anim = MenuAnim.new()
     self.selAnim = {}
     self.touch = nil
     self:_keepVisible(true)
@@ -110,20 +118,25 @@ end
 -- DIFICULTAD con la que se prueban los niveles (src/core/Difficulty.lua): ORIGINAL (ninguna: el juego de siempre) →
 -- fácil → normal → difícil → extremo → xtra extremo. Se recuerda entre visitas. Tecla de la linterna (F) o tocar
 -- la etiqueta de arriba a la derecha.
-local DIFFS = { false, 'easy', 'normal', 'hard', 'extreme', 'xtra' }
-function FreePlayState:_cycleDifficulty()
+local Difficulty = require 'src/core/Difficulty'
+local DIFFS = { false }
+for _, d in ipairs(Difficulty.ORDER) do DIFFS[#DIFFS + 1] = d end
+function FreePlayState:_cycleDifficulty(d)
+    d = d or 1
     local cur = last.diff or false
     for i, id in ipairs(DIFFS) do
-        if id == cur then last.diff = DIFFS[i % #DIFFS + 1] or nil; break end
+        if id == cur then last.diff = DIFFS[(i - 1 + d) % #DIFFS + 1]; break end
     end
     if last.diff == false then last.diff = nil end
-    Sound.play('select')
+    self.diffT = 0
+    Sound.play('select', d > 0 and 1.08 or 0.94)
 end
+-- El selector ◀ DIFICULTAD X ▶: arriba a la derecha (o bajo el rótulo, en pantallas estrechas)
 function FreePlayState:_diffRect()
-    love.graphics.setFont(FONT_SMALL)
-    local label = L('free.difficulty', { name = L('difficulty.' .. (last.diff or 'none')) })
-    local w = FONT_SMALL:getWidth(label) + 24
-    return WINDOW_W - w - 20, 22, w, 30, label
+    local cols, x0 = layout()
+    local w, h = wide() and 340 or 300, 56
+    if wide() then return WINDOW_W - 48 - w, 56, w, h end
+    return x0 + cols * CARD_W + (cols - 1) * GAP - w, 140, w, h
 end
 
 function FreePlayState:_back()
@@ -148,7 +161,8 @@ end
 -- ── Update ────────────────────────────────────────────────────────────────────
 function FreePlayState:update(dt)
     MenuScene.update(dt)
-    self.t = self.t + dt
+    self.anim:update(dt)
+    self.t, self.diffT = self.t + dt, self.diffT + dt
     -- Cargar fichas pendientes (primero la elegida y las visibles)
     local t0 = love.timer.getTime()
     local cols, _, viewH = layout()
@@ -194,7 +208,9 @@ function FreePlayState:touchpressed(id, x, y)
     if CornerButtons.hitBack(x, y) then self:_back(); return end
     do                                            -- la etiqueta de la dificultad: tocarla pasa a la siguiente
         local dx, dy, dw, dh = self:_diffRect()
-        if x >= dx and x <= dx + dw and y >= dy and y <= dy + dh then self:_cycleDifficulty(); return end
+        if x >= dx and x <= dx + dw and y >= dy and y <= dy + dh then
+            self:_cycleDifficulty(MenuKit.stepperSide({ x = dx, w = dw }, x)); return
+        end
     end
     if id == 'mouse' then                         -- ratón: clic = jugar (pasar por encima ya elige)
         local i = self:_cardAt(x, y)
@@ -228,15 +244,24 @@ function FreePlayState:touchreleased(id, x, y)
 end
 
 -- ── Dibujo ────────────────────────────────────────────────────────────────────
-local function shadowText(font, s, x, y, col)
-    love.graphics.setFont(font)
-    love.graphics.setColor(0, 0, 0, 0.8)
-    love.graphics.print(s, x + 2, y + 2)
-    love.graphics.setColor(col)
-    love.graphics.print(s, x, y)
-end
-
 local function plural(key, n) return L(n == 1 and (key .. '_one') or key, { n = n }) end
+
+-- Pastilla de un modo online: su icono y su nombre sobre su color (como la dificultad en la sala)
+local function modePill(m, x, y, a)
+    local iw, ih = PixelIcons.size(m.icon or '')
+    local label = m.label
+    local w = (iw > 0 and iw * 2 + 8 or 0) + FONT_SMALL:getWidth(label) + 16
+    local c = m.color
+    love.graphics.setColor(0, 0, 0, 0.45 * a)
+    love.graphics.rectangle('fill', x + 2, y + 2, w, 24)
+    love.graphics.setColor(c[1] * 0.35, c[2] * 0.35, c[3] * 0.35, a)
+    love.graphics.rectangle('fill', x, y, w, 24)
+    love.graphics.setColor(c[1], c[2], c[3], a)
+    love.graphics.rectangle('fill', x, y, w, 2)
+    if iw > 0 then PixelIcons.draw(m.icon, x + 8, y + 12 - ih, 2, a) end
+    MenuKit.text(FONT_SMALL, label, x + 8 + (iw > 0 and iw * 2 + 8 or 0), y + 7, 400, 'left', { 1, 1, 1 }, a)
+    return w
+end
 
 function FreePlayState:drawCard(i, x, y)
     local info = self:info(i)
@@ -244,27 +269,23 @@ function FreePlayState:drawCard(i, x, y)
     local a = self.selAnim[i] or 0
     a = a + ((sel and 1 or 0) - a) * math.min(1, love.timer.getDelta() * 12)
     self.selAnim[i] = a
-    y = y - math.floor(6 * a)
+    y = y - math.floor(8 * a / 4) * 4
 
-    love.graphics.setColor(0, 0, 0, 0.55)
-    love.graphics.rectangle('fill', x + 6, y + 8, CARD_W, CARD_H)
-    love.graphics.setColor(0.08, 0.09, 0.13, 0.97)
-    love.graphics.rectangle('fill', x, y, CARD_W, CARD_H)
+    love.graphics.setColor(0, 0, 0, 0.45)
+    love.graphics.rectangle('fill', x + 8, y + 8, CARD_W, CARD_H)
+    MenuKit.box(sel and 'card_sel' or 'card', x, y, CARD_W, CARD_H)
 
-    local tx, w = x + 12, CARD_W - 24
+    local tx, w = x + 18, CARD_W - 36
     if not info then
-        love.graphics.setFont(FONT_SMALL)
-        love.graphics.setColor(1, 1, 1, 0.5)
-        love.graphics.printf(L('free.loading'), x, y + CARD_H / 2 - 5, CARD_W, 'center')
+        MenuKit.text(FONT_SMALL, L('free.loading'), x, y + CARD_H / 2 - 5, CARD_W, 'center', { 0.6, 0.66, 0.85 })
     elseif info.broken then
-        shadowText(FONT_MED, fitText(FONT_MED, info.file, w), tx, y + 20, { 1, 0.5, 0.5, 1 })
-        love.graphics.setFont(FONT_SMALL)
-        love.graphics.setColor(1, 0.6, 0.6, 0.8)
-        love.graphics.printf(L('free.broken'), tx, y + 60, w)
+        MenuKit.text(FONT_MED, fitText(FONT_MED, info.file, w), tx, y + 20, w, 'left', { 1, 0.5, 0.45 })
+        MenuKit.text(FONT_SMALL, L('free.broken'), tx, y + 60, w, 'left', { 1, 0.65, 0.6 })
     else
-        ModeSelectMenu.drawPreview(info, x + 10, y + 10, CARD_W - 20, PREV_H, self.t + i * 1.7, sel and 1 or 0.65)
-        local ty = y + PREV_H + 22
-        shadowText(FONT_MED, fitText(FONT_MED, L.localName(info), w), tx, ty, sel and { 1, 0.95, 0.3, 1 } or { 0.9, 0.9, 0.9, 1 })
+        MenuKit.box('well', x + 12, y + 12, CARD_W - 24, PREV_H + 8)
+        ModeSelectMenu.drawPreview(info, x + 16, y + 16, CARD_W - 32, PREV_H, self.t + i * 1.7, sel and 1 or 0.65)
+        local ty = y + PREV_H + 34
+        MenuKit.text(FONT_MED, fitText(FONT_MED, L.localName(info), w), tx, ty, w, 'left', sel and { 1, 0.86, 0.36 } or { 0.9, 0.92, 1 })
         -- Datos (letra pequeña)
         local lines = {}
         local l1 = { info.w .. 'x' .. info.h, L(info.monsters == 1 and 'msm.monster' or 'msm.monsters', { n = info.monsters }) }
@@ -285,82 +306,57 @@ function FreePlayState:drawCard(i, x, y)
         if info.checkpoints > 0 then l3[#l3 + 1] = plural('free.checkpoints', info.checkpoints) end
         if #l3 > 0 then lines[#lines + 1] = table.concat(l3, ' · ') end
         if info.music then lines[#lines + 1] = L('free.music', { name = info.music }) end
-        love.graphics.setFont(FONT_SMALL)
         for k, s in ipairs(lines) do
-            love.graphics.setColor(1, 1, 1, sel and 0.8 or 0.55)
-            love.graphics.print(fitText(FONT_SMALL, s, w), tx, ty + 30 + (k - 1) * 17)
+            MenuKit.text(FONT_SMALL, fitText(FONT_SMALL, s, w), tx, ty + 30 + (k - 1) * 17, w, 'left',
+                         sel and { 0.86, 0.9, 1 } or { 0.62, 0.68, 0.86 })
         end
-        -- Modos online que lo admiten (icono + nombre, en su color)
-        local my = y + CARD_H - 30
-        local mx = tx
+        -- Modos online que lo admiten
+        local my, mx = y + CARD_H - 38, tx
         if #info.modeList == 0 then
-            love.graphics.setColor(1, 1, 1, 0.35)
-            love.graphics.print(L('free.no_modes'), mx, my + 6)
+            MenuKit.text(FONT_SMALL, L('free.no_modes'), mx, my + 7, w, 'left', { 0.5, 0.56, 0.75 })
         end
         for _, id in ipairs(info.modeList) do
             local m = Modes.get(id)
-            local iw, ih = PixelIcons.size(m.icon or '')
-            local label = m.label
-            local bw = iw * 2 + 10 + FONT_SMALL:getWidth(label) + 12
-            if mx + bw > x + CARD_W - 10 then break end
-            local c = m.color
-            love.graphics.setColor(c[1] * 0.22, c[2] * 0.22, c[3] * 0.22, 1)
-            love.graphics.rectangle('fill', mx, my, bw, 24)
-            love.graphics.setColor(c[1], c[2], c[3], sel and 1 or 0.6)
-            love.graphics.rectangle('line', mx, my, bw, 24)
-            if iw > 0 then PixelIcons.draw(m.icon, mx + 6, my + 12 - ih, 2, sel and 1 or 0.6) end
-            love.graphics.print(label, mx + 6 + iw * 2 + 6, my + 7)
-            mx = mx + bw + 8
+            local iw = PixelIcons.size(m.icon or '')
+            if mx + (iw * 2 + 8) + FONT_SMALL:getWidth(m.label) + 16 > x + CARD_W - 14 then break end
+            mx = mx + modePill(m, mx, my, sel and 1 or 0.7) + 8
         end
-    end
-
-    -- Borde
-    if sel then
-        love.graphics.setColor(1, 0.85, 0, 1)
-        love.graphics.setLineWidth(3)
-        love.graphics.rectangle('line', x, y, CARD_W, CARD_H)
-        love.graphics.setLineWidth(1)
-        local p = 0.5 + 0.5 * math.sin(self.t * 6)
-        love.graphics.setColor(1, 1, 1, 0.25 + 0.45 * p)
-        love.graphics.rectangle('line', x - 5, y - 5, CARD_W + 10, CARD_H + 10)
-    else
-        love.graphics.setColor(1, 1, 1, 0.22)
-        love.graphics.rectangle('line', x, y, CARD_W, CARD_H)
     end
 end
 
 function FreePlayState:render()
     MenuScene.backdrop()                 -- (el fondo vivo de los menús: src/ui/menu/MenuScene)
-    love.graphics.setColor(0, 0, 0, 0.55)
-    love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
-
-    -- Título
-    love.graphics.setFont(FONT_BIG)
-    love.graphics.setColor(0, 0, 0, 0.7)
-    love.graphics.printf(L('free.title'), 3, 25, WINDOW_W, 'center')
-    love.graphics.setColor(1, 0.95, 0.15, 1)
-    love.graphics.printf(L('free.title'), 0, 22, WINDOW_W, 'center')
-    love.graphics.setFont(FONT_SMALL)
-    love.graphics.setColor(1, 1, 1, 0.7)
-    love.graphics.printf(L('free.subtitle', { n = #self.files }), 0, 68, WINDOW_W, 'center')
-    do                                            -- dificultad con la que se probará el nivel
-        local dx, dy, dw, dh, label = self:_diffRect()
-        love.graphics.setColor(0, 0, 0, 0.6)
-        love.graphics.rectangle('fill', dx + 3, dy + 3, dw, dh)
-        love.graphics.setColor(0.1, 0.16, 0.26, 1)
-        love.graphics.rectangle('fill', dx, dy, dw, dh)
-        love.graphics.setColor(0.6, 0.85, 1, 1)
-        love.graphics.rectangle('line', dx, dy, dw, dh)
-        love.graphics.print(label, dx + 12, dy + math.floor((dh - FONT_SMALL:getHeight()) / 2))
-    end
+    MenuKit.dim(0.3)
+    local A = self.anim
 
     local cols, x0, viewH = layout()
+    -- Rótulo (a la izquierda en pantallas anchas: a la derecha va la dificultad) y el número de niveles
+    local hy = MenuKit.title(L('free.title'), 'teal', A, 1, 5)
+    local _, soy, sa = A:slide(1, 0, -200, 0, -200)
+    local sub = L('free.subtitle', { n = #self.files })
+    if wide() then
+        MenuKit.text(FONT_SMALL, sub, 0, hy + 14 + soy, WINDOW_W, 'center', { 0.8, 0.85, 1 }, sa)
+    else                                          -- (estrecha: a la izquierda, con el selector a la derecha)
+        MenuKit.text(FONT_SMALL, sub, x0, 162 + soy, WINDOW_W, 'left', { 0.8, 0.85, 1 }, sa)
+    end
+
+    -- Dificultad con la que se probará el nivel: ◀ DIFICULTAD X ▶ (tocar una mitad = esa flecha; [F] = la siguiente)
+    do
+        local dx, dy, dw, dh = self:_diffRect()
+        local _, doy, da = A:slide(2, 0, -200, 0, -200)
+        local d = last.diff or 'none'
+        local push = (self.diffT < 0.12) and 4 or 0
+        local lbl = L('room.difficulty_label')
+        PixelFont.shadow(lbl, math.floor(dx + (dw - PixelFont.width(lbl, 2)) / 2), dy - 18 + doy, 2, da, { 1, 0.86, 0.36 })
+        MenuKit.stepper(nil, L('difficulty.' .. d), { x = dx, y = dy + doy + push, w = dw, h = dh },
+                        Difficulty.COLORS[d] or 'teal', false, { alpha = da, scale = 4 })
+    end
+
     if #self.files == 0 then
-        love.graphics.setFont(FONT_MED)
-        love.graphics.setColor(1, 1, 1, 0.6)
-        love.graphics.printf(L('free.empty'), 0, WINDOW_H / 2, WINDOW_W, 'center')
+        MenuKit.text(FONT_MED, L('free.empty'), 0, WINDOW_H / 2, WINDOW_W, 'center', { 0.75, 0.8, 0.95 })
     end
     -- Tarjetas visibles (recortadas a la zona de la lista)
+    local _, goy = A:slide(3, 0, 220)
     Clip.push(0, TOP - 12, WINDOW_W, viewH + 16)
     local rowH = CARD_H + GAP
     local r0 = math.max(0, math.floor((self.scroll - 16) / rowH))
@@ -369,29 +365,25 @@ function FreePlayState:render()
         for col = 0, cols - 1 do
             local i = row * cols + col + 1
             if i <= #self.files then
-                self:drawCard(i, x0 + col * (CARD_W + GAP), math.floor(TOP + row * rowH - self.scroll))
+                self:drawCard(i, x0 + col * (CARD_W + GAP), math.floor(TOP + row * rowH - self.scroll) + goy)
             end
         end
     end
     Clip.pop()
 
-    -- Barra de scroll
+    -- Barra de scroll: un hueco y su tirador
     local maxS = self:_maxScroll()
     if maxS > 0 then
-        local bx = WINDOW_W - 14
-        love.graphics.setColor(1, 1, 1, 0.12)
-        love.graphics.rectangle('fill', bx, TOP, 6, viewH)
-        local bh = math.max(30, viewH * viewH / (viewH + maxS))
-        local by = TOP + (viewH - bh) * (self.scroll / maxS)
-        love.graphics.setColor(1, 0.85, 0, 0.8)
-        love.graphics.rectangle('fill', bx, math.floor(by), 6, math.floor(bh))
+        local bx = WINDOW_W - 30
+        MenuKit.box('well', bx, TOP, 16, viewH)
+        local bh = math.max(40, (viewH - 8) * viewH / (viewH + maxS))
+        local by = TOP + 4 + (viewH - 8 - bh) * (self.scroll / maxS)
+        love.graphics.setColor(1, 0.86, 0.36, 0.95)
+        love.graphics.rectangle('fill', bx + 4, math.floor(by / 4) * 4, 8, math.floor(bh))
+        love.graphics.setColor(1, 1, 1, 1)
     end
 
-    -- Ayuda
-    love.graphics.setFont(FONT_SMALL)
-    love.graphics.setColor(1, 1, 1, 0.45)
-    love.graphics.printf(L('free.hint'), 0, WINDOW_H - 26, WINDOW_W, 'center')
-    love.graphics.setColor(1, 1, 1, 1)
+    MenuKit.hint(L('free.hint'), A, 4)
     CornerButtons.drawBack(self.backHover)
 end
 

@@ -434,14 +434,20 @@ function Entity:makeReserve(key)
 end
 
 -- ── Hitboxes ──────────────────────────────────────────────────────────────────
-function Entity:getOuterBounds()
-    return { x = self.x - self.outerW / 2, y = self.y - self.outerH / 2,
-             w = self.outerW, h = self.outerH }
+-- Una caja {x, y, w, h}: en `into` si se da (los bucles de cada paso reutilizan una: sin basura), si no, nueva
+function Entity.box(into, x, y, w, h)
+    local b = into or {}
+    b.x, b.y, b.w, b.h = x, y, w, h
+    return b
 end
 
-function Entity:getInnerBounds()
-    return { x = self.x - self.innerW / 2, y = self.y - self.innerH / 2,
-             w = self.innerW, h = self.innerH }
+-- (las cajas aceptan `into`: ver Entity.box; los tipos que las cambian lo aceptan también)
+function Entity:getOuterBounds(into)
+    return Entity.box(into, self.x - self.outerW / 2, self.y - self.outerH / 2, self.outerW, self.outerH)
+end
+
+function Entity:getInnerBounds(into)
+    return Entity.box(into, self.x - self.innerW / 2, self.y - self.innerH / 2, self.innerW, self.innerH)
 end
 
 -- ── Movimiento ────────────────────────────────────────────────────────────────

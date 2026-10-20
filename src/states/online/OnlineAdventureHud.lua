@@ -196,22 +196,10 @@ end
 -- ── Overlay de pausa ──────────────────────────────────────────────────────────
 
 function OnlineAdventureState:_renderPauseOverlay()
-    local a = self.pauseAlpha
-    local rects, P = self:_pauseRects()
-    MenuKit.dim(0.55 * a)
-    local oy = math.floor((1 - a) * 40 / 4) * 4          -- (entra subiendo, a saltos de píxel)
-    MenuKit.box('window', P.x, P.y + oy, P.w, P.h, a)
-    local title = L('pause.title')
-    PixelFont.shadow(title, math.floor(P.x + (P.w - PixelFont.width(title, 5)) / 2), P.y + 30 + oy, 5, a, { 1, 0.86, 0.36 })
     local colors = { ['common.resume'] = 'green', ['oadv.leave_hub'] = 'blue', ['room.stop'] = 'red' }
-    for i, opt in ipairs(self:_getPauseOpts()) do
-        local r, sel = rects[i], i == self.pauseSel
-        local bob = sel and ((math.floor(love.timer.getTime() * 3) % 2 == 0) and -4 or 0) or 0
-        local text = L(opt):upper()
-        MenuButton.draw(text, r.x, r.y + oy + bob, r.w, r.h, colors[opt] or 'grey', sel,
-                        { alpha = a, scale = MenuButton.textScale(text, r.w - 48, 4) })
-        if sel then MenuKit.marker(r.x, r.y + oy + bob, r.w, r.h, love.timer.getTime(), a) end
-    end
+    local labels, cols = {}, {}
+    for i, opt in ipairs(self:_getPauseOpts()) do labels[i], cols[i] = L(opt):upper(), colors[opt] or 'grey' end
+    MenuKit.optionsWindow(L('pause.title'), labels, cols, self.pauseSel, self.pauseAlpha)
 end
 
 -- ── Overlay espectador ────────────────────────────────────────────────────────
@@ -242,24 +230,10 @@ function OnlineAdventureState:_renderSpectatorOverlay()
         return
     end
 
-    local rects, P = self:_specRects()
-    MenuKit.dim(0.55)
-    MenuKit.box('window', P.x, P.y, P.w, P.h)
-    local title = finished and L('oadv.finished') or L('oadv.eliminated')
-    local col = finished and { 1, 0.86, 0.36 } or { 0.72, 0.76, 1 }
-    if PixelFont.has(title) then
-        PixelFont.shadow(title, math.floor(P.x + (P.w - PixelFont.width(title, 5)) / 2), P.y + 30, 5, 1, col)
-    else
-        MenuKit.text(FONT_BIG, title, P.x, P.y + 26, P.w, 'center', col)
-    end
-    for i, opt in ipairs(SPEC_OPTS) do
-        local r, sel = rects[i], i == self.specSel
-        local bob = sel and ((math.floor(love.timer.getTime() * 3) % 2 == 0) and -4 or 0) or 0
-        local text = L(opt)
-        MenuButton.draw(text, r.x, r.y + bob, r.w, r.h, i == 1 and 'blue' or 'grey', sel,
-                        { scale = MenuButton.textScale(text, r.w - 48, 4) })
-        if sel then MenuKit.marker(r.x, r.y + bob, r.w, r.h, love.timer.getTime(), 1) end
-    end
+    local labels = {}
+    for i, opt in ipairs(SPEC_OPTS) do labels[i] = L(opt) end
+    MenuKit.optionsWindow(finished and L('oadv.finished') or L('oadv.eliminated'), labels, { 'blue', 'grey' }, self.specSel, 1,
+                          { titleColor = finished and { 1, 0.86, 0.36 } or { 0.72, 0.76, 1 } })
 end
 
 P.loadAssets = loadAssets

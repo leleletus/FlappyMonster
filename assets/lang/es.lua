@@ -33,7 +33,6 @@ return {
         music = "Música: {name}",
         no_modes = "sin modo online",
         hint = "[FLECHAS] elegir    [ENTER] jugar    [F] dificultad    [ESC] volver",
-        difficulty = "DIFICULTAD: {name}",
     },
     adv = {
         title = "AVENTURA",
@@ -249,7 +248,6 @@ return {
         not_ready = "NO LISTO",
         ready = "LISTO",
         game_mode = "MODO DE JUEGO",
-        difficulty = "DIFICULTAD: {name}",
         start = "INICIAR PARTIDA",
         stop = "DETENER PARTIDA",
         leave = "SALIR DE LA SALA",

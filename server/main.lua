@@ -355,8 +355,10 @@ local REWIND_MAX = 20       -- ticks (~333 ms)
 local HIST_SIZE  = 32
 
 -- Copia los campos simples (números, booleanos, textos, imágenes) de una entidad
-local function scalarState(e)
-    local st = {}
+-- Copia los campos simples (no tablas ni funciones) de e en `into` (vaciándola antes) o en una tabla nueva
+local function scalarState(e, into)
+    local st = into or {}
+    if into then for k in pairs(st) do st[k] = nil end end
     for k, v in pairs(e) do
         local tv = type(v)
         if tv ~= 'table' and tv ~= 'function' then st[k] = v end
@@ -367,10 +369,17 @@ local function applyState(e, st)
     for k, v in pairs(st) do e[k] = v end
 end
 
+-- (el anillo de la historia REUTILIZA sus tablas: antes, cada tick, una tabla nueva por entidad con todos sus campos
+-- = la mayor parte de la basura del servidor)
 local function recordEnemyHistory(sim)
-    local states = {}
-    for i, e in ipairs(sim.enemies) do states[i] = scalarState(e) end
-    sim.enemyHist[sim.tick % HIST_SIZE] = { tick = sim.tick, states = states }
+    local idx = sim.tick % HIST_SIZE
+    local slot = sim.enemyHist[idx]
+    if not slot then slot = { states = {} }; sim.enemyHist[idx] = slot end
+    slot.tick = sim.tick
+    local states = slot.states
+    local n = #sim.enemies
+    for i = 1, n do states[i] = scalarState(sim.enemies[i], states[i] or {}) end
+    for i = #states, n + 1, -1 do states[i] = nil end
 end
 
 -- Estado histórico de los enemigos que vio el jugador (o nil = el actual)
@@ -382,18 +391,27 @@ local function viewedHistory(sim, ps)
     if h and h.tick == vt then return h end
 end
 
+-- Compensación del retardo: a más de REWIND_FAR px del jugador (ahora y en lo que veía) no se rebobina
+local REWIND_FAR = 640
+local REWIND_NOW = {}         -- (el estado actual de la entidad mientras se rebobina: una tabla para todas)
 local function checkPlayerEnemyCollisions(sim, pid, ps, seq)
     local pa = ps.pa
     if ps.isSpectator or pa.dying or not pa.alive then return end
 
     -- Evaluar contra el estado de cada enemigo que el jugador veía
     local hist = viewedHistory(sim, ps)
-    local rewind = hist and function(i, g, fn)
+    local rewind = hist and function(i, g, check)
         local old = hist.states[i]
-        if not (old and g.alive and g.state ~= 'dead') then return fn() end
-        local now = scalarState(g)
+        if not (old and g.alive and g.state ~= 'dead') then return check(pa, g) end
+        -- (lejos del jugador ahora y en lo que veía: nada que compensar; se comprueba tal cual, sin copiar nada)
+        local ox, oy = old.x or g.x, old.y or g.y
+        if math.abs(g.x - pa.x) > REWIND_FAR and math.abs(ox - pa.x) > REWIND_FAR
+           or math.abs(g.y - pa.y) > REWIND_FAR and math.abs(oy - pa.y) > REWIND_FAR then
+            return check(pa, g)
+        end
+        local now = scalarState(g, REWIND_NOW)
         applyState(g, old)
-        local r, a, b = fn()
+        local r, a, b = check(pa, g)
         applyState(g, now)
         -- (lo que ahora es nil, p. ej. turnT al acabar un giro, vuelve a nil)
         for k in pairs(old) do if now[k] == nil then g[k] = nil end end
@@ -1650,6 +1668,17 @@ local function checkHelloTimeouts()
     end
 end
 
+-- FM_PERF=1: cada 10 s, lo que cuesta simular y mandar (docs/testing/performance.md): ms por paso de sala y por
+-- foto, KB de Lua creados por paso (subidas del contador: aproximado) y memoria
+-- FM_PERF=2: además, la BASURA POR FUNCIÓN (tools/tests/lib/garbage_profile.lua; con el recolector parado mientras
+-- se simula y se manda: las cifras son exactas, el rendimiento no)
+local PERF = os.getenv('FM_PERF') and { t = 0, steps = 0, stepT = 0, snaps = 0, snapT = 0, alloc = 0 } or nil
+local GPROF
+local function perfAlloc(k0)
+    local d = collectgarbage('count') - k0
+    if d > 0 then PERF.alloc = PERF.alloc + d end
+end
+
 function love.update(dt)
     server:update()
     checkHelloTimeouts()
@@ -1664,11 +1693,22 @@ function love.update(dt)
         ticks = ticks + 1
         for _, room in pairs(rooms) do
             if room.state == "IN_GAME" and room.sim then
+                if GPROF then collectgarbage('stop') end
+                local t0, k0 = PERF and love.timer.getTime(), PERF and collectgarbage('count')
                 stepRoom(room)
+                if PERF then
+                    PERF.steps, PERF.stepT = PERF.steps + 1, PERF.stepT + love.timer.getTime() - t0
+                    perfAlloc(k0)
+                end
                 local sim = room.sim
                 if sim.ended or sim.tick % SNAPSHOT_EVERY == 0 then
+                    local t1, k1 = PERF and love.timer.getTime(), PERF and collectgarbage('count')
                     broadcastSnapshot(room)
                     flushEvents(room)
+                    if PERF then
+                        PERF.snaps, PERF.snapT = PERF.snaps + 1, PERF.snapT + love.timer.getTime() - t1
+                        perfAlloc(k1)
+                    end
                 end
                 if sim.ended then endGame(room, "ronda terminada (" .. sim.ended .. ")") end
             end
@@ -1676,6 +1716,25 @@ function love.update(dt)
     end
     -- El servidor se atrasó demasiado (freeze): descartar en vez de acelerar.
     if ticks >= MAX_FRAME_TICKS then simAccum = 0 end
+    if PERF and os.getenv('FM_PERF') == '2' and not GPROF then
+        GPROF = require('tools/tests/lib/garbage_profile')
+        GPROF.wrap()
+    end
+    if GPROF then collectgarbage('restart'); collectgarbage('step', 200) end
+    if PERF then
+        PERF.t = PERF.t + dt
+        if PERF.t >= 10 then
+            log(string.format("perf: %d pasos de sala %.3f ms · %d fotos %.3f ms · %.1f KB creados por paso · Lua %.0f KB",
+                PERF.steps, PERF.steps > 0 and PERF.stepT / PERF.steps * 1000 or 0, PERF.snaps,
+                PERF.snaps > 0 and PERF.snapT / PERF.snaps * 1000 or 0, PERF.steps > 0 and PERF.alloc / PERF.steps or 0,
+                collectgarbage('count')))
+            if GPROF and PERF.steps > 0 then
+                for _, e in ipairs(GPROF.top(15, PERF.steps)) do log(string.format("perf:   %7.2f KB/paso  %s", e[2], e[1])) end
+                GPROF.reset()
+            end
+            PERF.t, PERF.steps, PERF.stepT, PERF.snaps, PERF.snapT, PERF.alloc = 0, 0, 0, 0, 0, 0
+        end
+    end
 
     pingTimer = pingTimer + dt
     if pingTimer >= PING_TICK then

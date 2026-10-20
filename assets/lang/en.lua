@@ -33,7 +33,6 @@ return {
         music = "Music: {name}",
         no_modes = "no online mode",
         hint = "[ARROWS] choose    [ENTER] play    [F] difficulty    [ESC] back",
-        difficulty = "DIFFICULTY: {name}",
     },
     adv = {
         title = "ADVENTURE",
@@ -249,7 +248,6 @@ return {
         not_ready = "NOT READY",
         ready = "READY",
         game_mode = "GAME MODE",
-        difficulty = "DIFFICULTY: {name}",
         start = "START MATCH",
         stop = "STOP MATCH",
         leave = "LEAVE ROOM",

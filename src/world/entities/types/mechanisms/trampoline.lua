@@ -62,16 +62,17 @@ function Tramp:isExtended() return self.state == 'bounce' or self.state == 'exte
 function Tramp:canLaunchEntity() return self.state == 'ready' or self.state == 'bounce' end
 
 -- Caja sólida = lo que se ve del sprite (sube un poco al extenderse)
-function Tramp:getOuterBounds()
+function Tramp:getOuterBounds(into)
     local T  = TILE_PX
     local top = (self:isExtended() and PAD_TOP.extended or PAD_TOP.normal) * S
     local ox, oy = self.x - T / 2, self.y - T / 2
     local side = S                            -- columnas 1..14 del sprite
     local d = self.dir
-    if d == 'down'  then return { x = ox + side, y = oy,       w = T - 2 * side, h = T - top } end
-    if d == 'left'  then return { x = ox + top,  y = oy + side, w = T - top,     h = T - 2 * side } end
-    if d == 'right' then return { x = ox,        y = oy + side, w = T - top,     h = T - 2 * side } end
-    return { x = ox + side, y = oy + top, w = T - 2 * side, h = T - top }
+    local box = Entity.box
+    if d == 'down'  then return box(into, ox + side, oy,        T - 2 * side, T - top) end
+    if d == 'left'  then return box(into, ox + top,  oy + side, T - top,      T - 2 * side) end
+    if d == 'right' then return box(into, ox,        oy + side, T - top,      T - 2 * side) end
+    return box(into, ox + side, oy + top, T - 2 * side, T - top)
 end
 Tramp.getInnerBounds = Tramp.getOuterBounds
 

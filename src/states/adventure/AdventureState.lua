@@ -9,6 +9,7 @@ local Difficulty    = require 'src/core/Difficulty'
 local Noise         = require 'src/world/systems/Noise'
 local CornerButtons = require 'src/ui/CornerButtons'
 local L = require 'src/core/Lang'
+local MenuKit = require 'src/ui/menu/MenuKit'
 -- src/states/adventure/AdventureState.lua
 local BaseState       = require 'src/core/BaseState'
 local Level           = require 'src/world/level/Level'
@@ -36,23 +37,6 @@ local function loadHudAssets()
 end
 
 local ICON_SCALE = 4
-
--- ── Helper: botón cuadrado pixel art ─────────────────────────────────────────
-local function drawPixelButton(label, cx, y, w, h, selected, alpha)
-    if selected then
-        love.graphics.setColor(0.18, 0.18, 0.18, alpha)
-        love.graphics.rectangle('fill', cx - w/2 + 4, y + 4, w, h)
-        love.graphics.setColor(1, 1, 1, alpha)
-        love.graphics.rectangle('fill', cx - w/2, y, w, h)
-        love.graphics.setColor(0, 0, 0, alpha)
-        love.graphics.printf(label, cx - w/2, y + h/2 - FONT_MED:getHeight()/2, w, 'center')
-    else
-        love.graphics.setColor(1, 1, 1, alpha * 0.45)
-        love.graphics.rectangle('line', cx - w/2, y, w, h)
-        love.graphics.setColor(1, 1, 1, alpha * 0.5)
-        love.graphics.printf(label, cx - w/2, y + h/2 - FONT_MED:getHeight()/2, w, 'center')
-    end
-end
 
 -- (fondo: cielo y capas con paralaje del bioma del nivel, src/fx/Sky.lua;
 -- Background.png es solo del modo Flappy)
@@ -167,7 +151,7 @@ function AdventureState:enter(args)
     self.camY = 0
     self.camFrozen = false
 
-    self.sceneCanvas = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
+    self.sceneCanvas = require('src/fx/SceneCanvas').get()      -- (compartido: src/fx/SceneCanvas.lua)
 
     self.dead         = false
     self.deadTimer    = 0
@@ -478,9 +462,7 @@ function AdventureState:update(dt)
     end
 
     -- ── Forzar recálculo del Canvas si la pantalla rota / cambia proporción ──
-    if self.sceneCanvas:getWidth() ~= WINDOW_W or self.sceneCanvas:getHeight() ~= WINDOW_H then
-        self.sceneCanvas = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
-    end
+    self.sceneCanvas = require('src/fx/SceneCanvas').get()   -- (el mismo; otro si la pantalla cambió)
 
     -- ── Controles táctiles (móvil): cruceta + salto, ver src/ui/TouchControls ──
     if not self.demo then TouchControls.update(not self.dead, self.level.dark) end
@@ -886,38 +868,12 @@ function AdventureState:_renderScene()
     self:renderPopups()
     end)
 
-    -- ── Game over overlay ─────────────────────────────────────────────────────
+    -- ── Game over overlay (la ventana de opciones de los menús: src/ui/menu/MenuKit) ──
     if self.dead and self.deadTimer > 0.4 then
         local oa = math.min(1, (self.deadTimer - 0.4) / 0.4)
-
-        love.graphics.setColor(0, 0, 0, 0.60 * oa)
-        love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
-
-        love.graphics.setFont(FONT_BIG)
-        love.graphics.setColor(COLOR_RED[1], COLOR_RED[2], COLOR_RED[3], oa)
-        love.graphics.printf(L('hud.game_over'), 0, WINDOW_H/2 - 110, WINDOW_W, 'center')
-
-        if self.deadTimer > 0.8 then
-            local ba = math.min(1, (self.deadTimer - 0.8) / 0.3)
-            love.graphics.setFont(FONT_MED)
-            local btnW   = 260
-            local btnH   = 48
-            local gap    = 18
-            local totalH = #GAMEOVER_OPTIONS * btnH + (#GAMEOVER_OPTIONS - 1) * gap
-            local startY = WINDOW_H/2 - totalH/2 + 30
-            local cx     = WINDOW_W / 2
-            if self.onGameOver then
-                -- Modo historia: no hay "reintentar"; se explica adónde se vuelve y se sigue
-                love.graphics.setColor(1, 1, 1, ba)
-                love.graphics.printf(self.gameOverNote or '', 0, startY - 6, WINDOW_W, 'center')
-                drawPixelButton(L('story.go_continue'), cx, startY + 44, btnW, btnH, true, ba)
-            else
-            for i, opt in ipairs(GAMEOVER_OPTIONS) do
-                local by = startY + (i - 1) * (btnH + gap)
-                drawPixelButton(L(opt), cx, by, btnW, btnH, i == self.selectedOpt, ba)
-            end
-            end
-        end
+        local labels, colors, o = self:_gameOverOptions()
+        o.titleColor = { 1, 0.42, 0.38 }
+        MenuKit.optionsWindow(L('hud.game_over'), labels, colors, self.onGameOver and 1 or self.selectedOpt, oa, o)
     end
 
     if not self.dead then BossHud.fadeHud(function() CornerButtons.drawPause(self.pauseHover) end) end
@@ -926,24 +882,20 @@ function AdventureState:_renderScene()
     love.graphics.setColor(COLOR_WHITE)
 end
 
+-- Las opciones del fin de partida: textos, colores y opciones de la ventana (historia: solo seguir, con su nota)
+function AdventureState:_gameOverOptions()
+    if self.onGameOver then return { L('story.go_continue') }, { 'green' }, { note = self.gameOverNote or '' } end
+    local l = {}
+    for i, k in ipairs(GAMEOVER_OPTIONS) do l[i] = L(k):upper() end
+    return l, { 'green', 'red' }, {}
+end
+
 -- Hover del mouse: mueve la selección real (solo en game over)
 function AdventureState:mousemoved(tx, ty)
     self.pauseHover = not self.dead and CornerButtons.hitPause(tx, ty)
-    if not self.dead or self.deadTimer <= 0.8 then return end
-    local btnW   = 260
-    local btnH   = 48
-    local gap    = 18
-    local totalH = #GAMEOVER_OPTIONS * btnH + (#GAMEOVER_OPTIONS - 1) * gap
-    local startY = WINDOW_H/2 - totalH/2 + 30
-    local cx     = WINDOW_W / 2
-    for i = 1, #GAMEOVER_OPTIONS do
-        local by = startY + (i-1) * (btnH + gap)
-        local bx = cx - btnW/2
-        if tx >= bx-10 and tx <= bx+btnW+10 and ty >= by-5 and ty <= by+btnH+5 then
-            if self.selectedOpt ~= i then self.selectedOpt = i; Sound.play('select') end
-            return
-        end
-    end
+    if not self.dead or self.deadTimer <= 0.8 or self.onGameOver then return end
+    local i = MenuKit.optionAt(#GAMEOVER_OPTIONS, tx, ty)
+    if i and self.selectedOpt ~= i then self.selectedOpt = i; Sound.play('select') end
 end
 
 -- En píxeles de pantalla, tras lovesize (game.lua): controles táctiles
@@ -956,25 +908,15 @@ function AdventureState:touchpressed(id, tx, ty, dx, dy, pressure)
     if self.dead then
         if self.deadTimer <= 0.8 then return end
         if self.onGameOver then Sound.play('select'); self.onGameOver(); return end      -- (historia: cualquier toque sigue)
-        local btnW   = 260
-        local btnH   = 48
-        local gap    = 18
-        local totalH = #GAMEOVER_OPTIONS * btnH + (#GAMEOVER_OPTIONS-1) * gap
-        local startY = WINDOW_H/2 - totalH/2 + 30
-        local cx     = WINDOW_W / 2
-        for i, _ in ipairs(GAMEOVER_OPTIONS) do
-            local by = startY + (i-1) * (btnH + gap)
-            local bx = cx - btnW/2
-            if tx >= bx-10 and tx <= bx+btnW+10 and ty >= by-5 and ty <= by+btnH+5 then
-                Sound.play('select')
-                if self.onGameOver then self.onGameOver(); return end
-                if i == 1 then
-                    gStateMachine:change('adventure', self:retryArgs())
-                else
-                    gStateMachine:change(self.returnTo)
-                end
-                return
+        local i = MenuKit.optionAt(#GAMEOVER_OPTIONS, tx, ty)
+        if i then
+            Sound.play('select')
+            if i == 1 then
+                gStateMachine:change('adventure', self:retryArgs())
+            else
+                gStateMachine:change(self.returnTo)
             end
+            return
         end
         return
     end

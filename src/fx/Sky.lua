@@ -164,6 +164,9 @@ end
 -- Sky.punch = true (lo ponen los estados de nivel antes de Sky.render cuando hay luz ambiente): marca lo
 -- incandescente en el alfa del lienzo de la escena (ver más abajo). Sin ello el fondo se dibuja normal.
 Sky.punch = false
+-- Sky.punched = si en el último Sky.render se marcó algo de verdad (Darkness solo repone los píxeles marcados
+-- si lo hay: es una pasada de pantalla entera)
+Sky.punched = false
 
 
 local function drawLayers(biome, tint, camX, ground, top, now)
@@ -186,6 +189,7 @@ local function drawLayers(biome, tint, camX, ground, top, now)
             while x < W do
                 love.graphics.draw(e.img, x, y, 0, S, S)
                 if e.glow and Sky.punch then
+                    Sky.punched = true
                     -- Lo incandescente no se oscurece de noche. Antes se VOLVÍA A DIBUJAR encima de la luz ambiente:
                     -- tapaba bloques, muros de jefe y personajes que estaban delante, y se salía de la zona de
                     -- juego (a las bandas negras). Ahora se marca en el propio lienzo de la escena: se pinta sin
@@ -234,6 +238,7 @@ local function gradBottom(frame)
 end
 
 function Sky.render(level, camX, camY)
+    Sky.punched = false
     local biome, time = Sky.biomeOf(level), Sky.timeOf(level)
     local tint = time.tint
     local W, H = WINDOW_W, WINDOW_H

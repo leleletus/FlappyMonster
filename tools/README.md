@@ -52,6 +52,7 @@ and their own folder to `sys.path`; scripts that import each other sit in the sa
 | `world/make_food_sprites.py` | `items/food_<island>.png` (never the user's apple) | yes (verified) |
 | `ui/make_sprites.py`, `make_story_icons.py` | `ui/touch/`, `ui/ping/`, `ui/icons/` | yes (verified) |
 | `ui/make_menu_ui.py` | `ui/menus/title_logo.png` + `.json` (from `logo.png`, never written), `ui/menus/button.png` + `.json`, `ui/menus/panel.png`, `ui/menus/box.png`, `ui/menus/cursor.png`, `ui/menus/cartridge.png` + `.json`, `ui/menus/cart_labels.png` | yes |
+| `fx/make_lights.py` | `fx/light_disc.png`, `fx/light_rings.png`, `fx/light_halo.png` (the lights of the darkness canvas, `src/fx/Darkness.lua`) | yes |
 | `ui/make_logo_parts.py` | `assets/startup/parts/`, `assets/startup/logo.json` (cuts the user's logo; never writes the logo itself) | yes |
 | `enemies/make_claudio_extras.py [parpadeo] [baile]` | `enemies/claudio/claudio_blink.png`, `claudio_dance-Sheet.png` (from the user's `claudio_idle.png`; only the eyes / the arms change) | yes |
 | `ui/make_player_redesign.py`, `make_flappy_redesign.py` | `player/`, the Mirror's pieces, `flappy/` | not re-run |

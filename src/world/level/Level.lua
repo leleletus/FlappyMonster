@@ -430,11 +430,16 @@ end
 
 -- Objeto sólido "como un bloque" (solidFull: trampolines, morteros...) que
 -- contiene el punto, o nil. level.solidBodies lo rellena el juego cada paso.
+local BODY_B = {}          -- (la caja de cada cuerpo, rellenada al probarlo: se llama muchas veces por paso)
 function Level:bodyAt(wx, wy, except)
-    for _, o in ipairs(self.solidBodies or {}) do
+    local bodies = self.solidBodies
+    if not bodies then return nil end
+    for _, o in ipairs(bodies) do
         if o.solidFull and o ~= except and o.alive ~= false then
-            local b = o:getOuterBounds()
-            if wx >= b.x and wx < b.x + b.w and wy >= b.y and wy < b.y + b.h then return o, b end
+            local b = o:getOuterBounds(BODY_B)
+            if wx >= b.x and wx < b.x + b.w and wy >= b.y and wy < b.y + b.h then
+                return o, { x = b.x, y = b.y, w = b.w, h = b.h }        -- (una copia: quien llama puede guardarla)
+            end
         end
     end
     return nil

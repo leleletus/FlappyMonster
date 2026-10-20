@@ -48,11 +48,19 @@ function TileCodec.hasSpikes(raw)
 end
 
 -- Decodifica todo: id, waterlogged, { {present, dir} x4 }
+-- Los pinchos de cada valor se calculan UNA vez y se reutilizan (se llama por cada casilla visible en cada
+-- fotograma y en la física): la tabla devuelta es de SOLO LECTURA (para cambiarla, copiarla).
+local spikeCache = {}
 function TileCodec.decode(raw)
-    local spikes = {}
-    for i = 1, 4 do
-        local present, dir = TileCodec.spike(raw, i)
-        spikes[i] = { present = present, dir = dir }
+    raw = floor(raw or 0)
+    local spikes = spikeCache[raw]
+    if not spikes then
+        spikes = {}
+        for i = 1, 4 do
+            local present, dir = TileCodec.spike(raw, i)
+            spikes[i] = { present = present, dir = dir }
+        end
+        spikeCache[raw] = spikes
     end
     return TileCodec.id(raw), TileCodec.isWaterlogged(raw), spikes
 end

@@ -40,27 +40,8 @@ local function drawMiniSpike(dir, px, py, size, skin)
     end
 end
 
--- Helper para aplicar recorte usando las transformaciones actuales (cámara/zoom)
--- Recorte a una celda (varias seguidas) y, con nil, vuelta al recorte que
--- había antes (las bandas de lovesize), no a "sin recorte"
-local prevScissor
-local function setTransformedScissor(x, y, w, h)
-    if x and y and w and h then
-        if not prevScissor then prevScissor = { love.graphics.getScissor() } end
-        local p = prevScissor
-        if p[1] then love.graphics.setScissor(p[1], p[2], p[3], p[4]) else love.graphics.setScissor() end
-        local sx, sy = love.graphics.transformPoint(x, y)
-        local ex, ey = love.graphics.transformPoint(x + w, y + h)
-        local x0, y0 = math.floor(math.min(sx, ex)), math.floor(math.min(sy, ey))
-        local x1, y1 = math.ceil(math.max(sx, ex)), math.ceil(math.max(sy, ey))
-        love.graphics.intersectScissor(x0, y0, math.max(0, x1 - x0), math.max(0, y1 - y0))
-    else
-        local p = prevScissor
-        prevScissor = nil
-        if p and p[1] then love.graphics.setScissor(p[1], p[2], p[3], p[4]) else love.graphics.setScissor() end
-    end
-end
-
+local SUB_OFF = { { 0, 0 }, { TILE_PX / 2, 0 }, { 0, TILE_PX / 2 }, { TILE_PX / 2, TILE_PX / 2 } }
+local RENDER_CTX = {}
 function Level:render(camX, camY)
     local t = love.timer.getTime()
     HALF_PX = TILE_PX / 2
@@ -70,8 +51,9 @@ function Level:render(camX, camY)
     local sr2 = math.max(1,          math.floor(camY/TILE_PX)+1)
     local er2 = math.min(self.tileH, math.ceil((camY+WINDOW_H)/TILE_PX)+1)
 
-    local subOff = {{0,0},{HALF_PX,0},{0,HALF_PX},{HALF_PX,HALF_PX}}
-    local ctx = { size = TILE_PX, level = self, time = t }
+    local subOff = SUB_OFF
+    local ctx = RENDER_CTX                 -- (una tabla para todo el fotograma y todos los fotogramas: sin basura)
+    ctx.size, ctx.level, ctx.time = TILE_PX, self, t
 
     for row = sr2, er2 do
         for col = sc2, ec2 do
@@ -179,6 +161,28 @@ function Level:isWaterSurfaceCell(col, row)
     return not (up.collision == 'solid' and up.fullHitbox)
 end
 
+-- La malla de la distorsión: se rellena en cada fotograma (setVertex: sin crear tablas) y solo se vuelve a crear si
+-- hacen falta más vértices que nunca (la pantalla creció)
+local distortMesh, distortCap, distortN = nil, 0, 0
+local dW, dH = 1, 1
+local function beginDistort(rects, cw, ch)
+    local need = rects * 6
+    if need > distortCap then
+        distortCap = need
+        distortMesh = love.graphics.newMesh(distortCap, 'triangles', 'stream')
+    end
+    distortN, dW, dH = 0, cw, ch
+end
+local function vert(x, y)
+    distortN = distortN + 1
+    distortMesh:setVertex(distortN, x, y, x / dW, y / dH, 1, 1, 1, 1)
+end
+local function addDistortRect(x, y, w, h)
+    if w <= 0 or h <= 0 or distortN + 6 > distortCap then return end
+    vert(x, y); vert(x + w, y); vert(x + w, y + h)
+    vert(x, y); vert(x + w, y + h); vert(x, y + h)
+end
+
 -- Efecto de los líquidos: distorsión (shader) y tinte según su material.
 function Level:renderWaterEffect(camX, camY, sceneCanvas)
     local t = love.timer.getTime()
@@ -191,14 +195,11 @@ function Level:renderWaterEffect(camX, camY, sceneCanvas)
     local sr2 = math.max(1,          math.floor(camY/TILE_PX)+1)
     local er2 = math.min(self.tileH, math.ceil((camY+WINDOW_H)/TILE_PX)+1)
 
-    -- Distorsión: la escena se vuelve a dibujar con shader, recortada a cada
-    -- celda líquida (tile completo, también el hueco bajo una plataforma).
-    if shaderOk and waterShader then
-        waterShader:send('time',     t)
-        waterShader:send('strength', 0.001)
-        waterShader:send('speed',    1.2)
-        love.graphics.setShader(waterShader)
-    end
+    -- Distorsión: la escena se vuelve a dibujar con shader, SOLO en las celdas líquidas (tile completo, también el
+    -- hueco bajo una plataforma). Todas las celdas van en UNA malla (un rectángulo por celda, con las coordenadas de
+    -- la escena como textura) y se dibujan de una vez: antes era un dibujo de pantalla entera por celda, recortado.
+    local cw, ch = sceneCanvas:getDimensions()
+    beginDistort(((ec2 - sc2 + 1) * (er2 - sr2 + 1)) * 2 + 64, cw, ch)
     for row = sr2, er2 do
         for col = sc2, ec2 do
             local m = liquidOfRaw(self:getRaw(col, row))
@@ -207,15 +208,24 @@ function Level:renderWaterEffect(camX, camY, sceneCanvas)
                 local py = math.floor((row-1)*TILE_PX - camY)
                 -- (en la superficie, sin distorsión justo bajo la ola)
                 local cut = self:isWaterSurfaceCell(col, row) and WaterSurface.MARGIN or 0
-                setTransformedScissor(px, py + cut, TILE_PX, TILE_PX - cut)
-                love.graphics.setColor(1, 1, 1, 1)
-                love.graphics.draw(sceneCanvas, 0, 0)
+                addDistortRect(px, py + cut, TILE_PX, TILE_PX - cut)
             end
         end
     end
-    Floods.renderDistort(self, camX, camY, sceneCanvas, setTransformedScissor, Level.liquidOfCell)
-    setTransformedScissor()
-    if shaderOk and waterShader then love.graphics.setShader() end
+    Floods.renderDistort(self, camX, camY, addDistortRect, Level.liquidOfCell)
+    if distortN > 0 then
+        if shaderOk and waterShader then
+            waterShader:send('time',     t)
+            waterShader:send('strength', 0.001)
+            waterShader:send('speed',    1.2)
+            love.graphics.setShader(waterShader)
+        end
+        distortMesh:setTexture(sceneCanvas)
+        distortMesh:setDrawRange(1, distortN)
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.draw(distortMesh, 0, 0)
+        if shaderOk and waterShader then love.graphics.setShader() end
+    end
 
     -- Tinte: una sola pasada, color uniforme por material (sin acumulación)
     for row = sr2, er2 do

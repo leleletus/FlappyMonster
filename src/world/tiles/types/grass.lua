@@ -35,7 +35,7 @@ return {
         local e = TileTypes.edges(t, ctx)
         TileTypes.drawTexture(e.top and TOP or DIRT, ctx, 1, e.top and 0 or nil)
         love.graphics.setColor(0.62, 0.45, 0.28, 1)
-        TileTypes.drawEdges(ctx, { left = e.left, right = e.right, bottom = e.bottom }, 2)
+        TileTypes.drawEdges(ctx, e, 2, true)
         if e.top then
             -- Junto a la capa de hierba el borde de los lados es verde, no de tierra
             -- (la capa ocupa 6 de las 16 filas; en un mini bloque, 6 de sus 8)

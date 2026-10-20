@@ -338,14 +338,10 @@ local function eachWetCell(level, f, camX, camY, liquidOfCell, fn, topMargin)
 end
 
 -- Distorsión: la escena otra vez con el shader, recortada a lo sumergido
-function Floods.renderDistort(level, camX, camY, sceneCanvas, setScissor, liquidOfCell)
+-- addRect(x, y, w, h): añade a la malla de la distorsión (Level:renderWaterEffect) cada trozo mojado
+function Floods.renderDistort(level, camX, camY, addRect, liquidOfCell)
     for _, f in ipairs(level.floods or {}) do
-        if f.level > 0 then
-            eachWetCell(level, f, camX, camY, liquidOfCell, function(x, y, w, h)
-                setScissor(x, y, w, h)
-                love.graphics.draw(sceneCanvas, 0, 0)
-            end, WaterSurface.MARGIN)
-        end
+        if f.level > 0 then eachWetCell(level, f, camX, camY, liquidOfCell, addRect, WaterSurface.MARGIN) end
     end
 end
 

@@ -211,7 +211,11 @@ function ModeSelectMenu:setCatalog(data)
 end
 
 -- El servidor mandó un catálogo nuevo: las miniaturas cacheadas pueden estar viejas
-function ModeSelectMenu.clearPreviews() previewCache = {} end
+function ModeSelectMenu.clearPreviews()
+    -- (liberadas YA: si no, siguen en la memoria de vídeo hasta que pase el recolector de Lua)
+    for _, c in pairs(previewCache) do if c then c:release() end end
+    previewCache = {}
+end
 
 -- Miniatura reutilizable (la sala la usa en su tarjeta de partida)
 ModeSelectMenu.drawPreview = drawPreview

@@ -119,7 +119,7 @@ function OnlineAdventureState:enter(args)
     self.camY     = 0
 
     -- Canvas
-    self.sceneCanvas = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
+    self.sceneCanvas = require('src/fx/SceneCanvas').get()      -- (compartido: src/fx/SceneCanvas.lua)
 
     -- Tiempo y popups
     self.levelTime = 0
@@ -492,9 +492,7 @@ function OnlineAdventureState:update(dt)
     end  -- end if showPause / else
 
     -- ── Canvas ────────────────────────────────────────────────────────────────
-    if self.sceneCanvas:getWidth() ~= WINDOW_W or self.sceneCanvas:getHeight() ~= WINDOW_H then
-        self.sceneCanvas = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
-    end
+    self.sceneCanvas = require('src/fx/SceneCanvas').get()   -- (el mismo; otro si la pantalla cambió)
 
     -- ── Tiempo: avanza localmente entre snapshots, el servidor lo corrige ─────
     self.levelTime = math.min(self.levelTime + dt, 600)
@@ -686,30 +684,15 @@ end
 -- ── Ratón / táctil ────────────────────────────────────────────────────────────
 -- Misma geometría que _renderPauseOverlay / _renderSpectatorOverlay.
 
+-- (la ventana de opciones de los menús: src/ui/menu/MenuKit.optionsLayout)
 function OnlineAdventureState:_pauseRects()
-    local n      = #self:_getPauseOpts()
-    local btnW, btnH, gap = 340, 56, 12
-    local panelW, panelH = math.min(540, WINDOW_W - 80), 116 + n * (btnH + gap) + 24
-    local panelX = math.floor((WINDOW_W - panelW) / 2)
-    local panelY = math.floor((WINDOW_H - panelH) / 2)
-    local rects  = {}
-    for i = 1, n do
-        rects[i] = { x = math.floor(WINDOW_W / 2 - btnW / 2) + 20, y = panelY + 108 + (i - 1) * (btnH + gap), w = btnW, h = btnH }
-    end
-    return rects, { x = panelX, y = panelY, w = panelW, h = panelH }
+    local P, rects = require('src/ui/menu/MenuKit').optionsLayout(#self:_getPauseOpts())
+    return rects, P
 end
 
 function OnlineAdventureState:_specRects()
-    local n = #SPEC_OPTS
-    local btnW, btnH, gap = 340, 56, 12
-    local panelW, panelH = math.min(540, WINDOW_W - 80), 116 + n * (btnH + gap) + 24
-    local panelX = math.floor((WINDOW_W - panelW) / 2)
-    local panelY = math.floor((WINDOW_H - panelH) / 2)
-    local rects = {}
-    for i = 1, n do
-        rects[i] = { x = math.floor(WINDOW_W / 2 - btnW / 2) + 20, y = panelY + 108 + (i - 1) * (btnH + gap), w = btnW, h = btnH }
-    end
-    return rects, { x = panelX, y = panelY, w = panelW, h = panelH }
+    local P, rects = require('src/ui/menu/MenuKit').optionsLayout(#SPEC_OPTS)
+    return rects, P
 end
 
 local function inRect(r, x, y, pad)

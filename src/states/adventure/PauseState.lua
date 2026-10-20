@@ -1,25 +1,11 @@
 -- src/states/adventure/PauseState.lua
 local BaseState  = require 'src/core/BaseState'
 local L = require 'src/core/Lang'
+local MenuKit = require 'src/ui/menu/MenuKit'
 local PauseState = BaseState:new()
 
 local PAUSE_OPTIONS = { 'common.resume', 'common.menu' }   -- claves de idioma
-
-local function drawPixelButton(label, cx, y, w, h, selected)
-    if selected then
-        love.graphics.setColor(0.18, 0.18, 0.18, 1)
-        love.graphics.rectangle('fill', cx - w/2 + 4, y + 4, w, h)   -- sombra
-        love.graphics.setColor(1, 1, 1, 1)
-        love.graphics.rectangle('fill', cx - w/2, y, w, h)
-        love.graphics.setColor(0, 0, 0, 1)
-        love.graphics.printf(label, cx - w/2, y + h/2 - FONT_MED:getHeight()/2, w, 'center')
-    else
-        love.graphics.setColor(1, 1, 1, 0.45)
-        love.graphics.rectangle('line', cx - w/2, y, w, h)
-        love.graphics.setColor(1, 1, 1, 0.5)
-        love.graphics.printf(label, cx - w/2, y + h/2 - FONT_MED:getHeight()/2, w, 'center')
-    end
-end
+local PAUSE_COLORS  = { 'green', 'red' }
 
 -- Salir: al estado del que vino el juego pausado (p. ej. un nivel del Juego
 -- libre vuelve al Juego libre); si no dice nada, al menú principal
@@ -31,10 +17,12 @@ end
 
 function PauseState:enter(args)
     self.selected = 1
+    self.a = 0
     Sound.pauseAll()
 end
 
 function PauseState:update(dt)
+    self.a = math.min(1, self.a + dt * 6)
     if Input.pressed('nav_up') then
         self.selected = self.selected - 1
         if self.selected < 1 then self.selected = #PAUSE_OPTIONS end
@@ -57,72 +45,33 @@ function PauseState:update(dt)
     end
 end
 
+local function labels()
+    local l = {}
+    for i, k in ipairs(PAUSE_OPTIONS) do l[i] = L(k):upper() end
+    return l
+end
+
 function PauseState:render()
-    -- Overlay oscuro
-    love.graphics.setColor(0, 0, 0, 0.65)
-    love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
-
-    -- Título PAUSA
-    love.graphics.setFont(FONT_BIG)
-    love.graphics.setColor(COLOR_WHITE)
-    love.graphics.printf(L('pause.title'), 0, WINDOW_H/2 - 130, WINDOW_W, 'center')
-
-    -- Botones
-    love.graphics.setFont(FONT_MED)
-    local btnW   = 260
-    local btnH   = 48
-    local gap    = 18
-    local totalH = #PAUSE_OPTIONS * btnH + (#PAUSE_OPTIONS - 1) * gap
-    local startY = WINDOW_H/2 - totalH/2
-    local cx     = WINDOW_W / 2
-
-    for i, opt in ipairs(PAUSE_OPTIONS) do
-        local by = startY + (i - 1) * (btnH + gap)
-        drawPixelButton(L(opt), cx, by, btnW, btnH, i == self.selected)
-    end
-
+    MenuKit.optionsWindow(L('pause.title'), labels(), PAUSE_COLORS, self.selected, self.a)
     love.graphics.setColor(COLOR_WHITE)
 end
 
 -- Hover del mouse: mueve la selección real al botón bajo el cursor
 function PauseState:mousemoved(tx, ty)
-    local btnW   = 260
-    local btnH   = 48
-    local gap    = 18
-    local totalH = #PAUSE_OPTIONS * btnH + (#PAUSE_OPTIONS - 1) * gap
-    local startY = WINDOW_H/2 - totalH/2
-    local cx     = WINDOW_W / 2
-    for i = 1, #PAUSE_OPTIONS do
-        local by = startY + (i-1) * (btnH + gap)
-        local bx = cx - btnW/2
-        if tx >= bx-10 and tx <= bx+btnW+10 and ty >= by-5 and ty <= by+btnH+5 then
-            if self.selected ~= i then self.selected = i; Sound.play('select') end
-            return
-        end
-    end
+    local i = MenuKit.optionAt(#PAUSE_OPTIONS, tx, ty)
+    if i and self.selected ~= i then self.selected = i; Sound.play('select') end
 end
 
 -- Táctil Switch: tap en el botón
 function PauseState:touchpressed(id, tx, ty, dx, dy, pressure)
-    local btnW   = 260
-    local btnH   = 48
-    local gap    = 18
-    local totalH = #PAUSE_OPTIONS * btnH + (#PAUSE_OPTIONS - 1) * gap
-    local startY = WINDOW_H/2 - totalH/2
-    local cx     = WINDOW_W / 2
-    for i, opt in ipairs(PAUSE_OPTIONS) do
-        local by = startY + (i-1) * (btnH + gap)
-        local bx = cx - btnW/2
-        if tx >= bx-10 and tx <= bx+btnW+10 and ty >= by-5 and ty <= by+btnH+5 then
-            if i == 1 then
-                gStateMachine:pop()
-            else
-                Sound.play('select')
-                Sound.resumeAll(); Sound.stopMusic(); Sound.stopTracked('drowning')
-                gStateMachine:change(exitTarget())
-            end
-            return
-        end
+    local i = MenuKit.optionAt(#PAUSE_OPTIONS, tx, ty)
+    if not i then return end
+    if i == 1 then
+        gStateMachine:pop()
+    else
+        Sound.play('select')
+        Sound.resumeAll(); Sound.stopMusic(); Sound.stopTracked('drowning')
+        gStateMachine:change(exitTarget())
     end
 end
 

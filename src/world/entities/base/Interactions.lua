@@ -85,15 +85,19 @@ end
 
 -- Reglas normales (enemigos, coleccionables...). Las entidades con interact()
 -- propio pueden usarlas para los casos que no tratan ellas.
+local EMPTY = {}          -- (en vez de crear una tabla vacía en cada comprobación; solo lectura)
+local EOB, GIB, MAG = {}, {}, {}   -- (las de la entidad: igual)
+local function fill(t, x, y, w, h) t.x, t.y, t.w, t.h = x, y, w, h; return t end
+local POB = {}            -- (la caja del jugador, rellenada en cada comprobación: se hace una por entidad y fotograma)
 function Interactions.defaultCheck(pa, e)
-    local pob = pa:getOuterBounds()
+    local pob = pa:getOuterBounds(POB)
 
     -- Coleccionables y checkpoints: basta con tocarlos
-    local def = e.def or {}
+    local def = e.def or EMPTY
     if def.pickup or def.checkpoint then
         -- Margen de "imán": que no se escape por un píxel al pasar por debajo
-        local b, m = e:getOuterBounds(), 12
-        if overlap(pob, { x = b.x - m, y = b.y - m, w = b.w + 2 * m, h = b.h + 2 * m }) then
+        local b, m = e:getOuterBounds(EOB), 12
+        if overlap(pob, fill(MAG, b.x - m, b.y - m, b.w + 2 * m, b.h + 2 * m)) then
             return def.pickup and 'pickup' or 'checkpoint'
         end
         return nil
@@ -101,18 +105,18 @@ function Interactions.defaultCheck(pa, e)
 
     -- Zonas de peligro propias (el pincho del Crabby, el fuego del mortero...):
     -- matan, salvo que la caja diga otra cosa (hb.effect = 'hurt': 1 de vida)
-    for _, hb in ipairs(e:getHazardBoxes() or {}) do
+    for _, hb in ipairs(e:getHazardBoxes() or EMPTY) do
         if overlap(pob, hb) then return hb.effect or 'kill', hb.time or hb.dmg end
     end
 
     if e:isBodyDisabled() then return nil end
 
-    local gib = e:getInnerBounds()
+    local gib = e:getInnerBounds(GIB)
     if not overlap(pob, gib) then return nil end
 
     local p = e.props
     if p.stompable then
-        local gob = e:getOuterBounds()
+        local gob = e:getOuterBounds(EOB)
         -- Ground pound: cae en picado; cualquier contacto desde arriba aplasta
         -- Superficie del trepador (girando en una esquina: a la que más mira)
         local snx, sny = e.cnx, e.cny
@@ -188,7 +192,7 @@ function Interactions.run(pa, entities, cb, rewind)
         local result, a, b, c
         Noise.src(e.x, e.y)                           -- (los sonidos-ruido de lo que pase con ella salen de ella)
         if rewind then
-            result, a, b, c = rewind(i, e, function() return Interactions.check(pa, e) end)
+            result, a, b, c = rewind(i, e, Interactions.check)      -- (rewind(i, e, check) → check(pa, e) rebobinada)
         else
             result, a, b, c = Interactions.check(pa, e)
         end

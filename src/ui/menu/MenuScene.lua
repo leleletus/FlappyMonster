@@ -156,9 +156,7 @@ end
 MenuScene.STEP = 1 / 60
 local function updateScene(sc, dt)
     local st = sc.st
-    if st.sceneCanvas:getWidth() ~= WINDOW_W or st.sceneCanvas:getHeight() ~= WINDOW_H then
-        st.sceneCanvas = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
-    end
+    st.sceneCanvas = require('src/fx/SceneCanvas').get()     -- (el lienzo compartido; otro si la pantalla cambió)
     sc.acc = math.min(sc.acc + dt, MenuScene.STEP * 4)
     while sc.acc >= MenuScene.STEP - 1e-9 do
         sc.acc = sc.acc - MenuScene.STEP

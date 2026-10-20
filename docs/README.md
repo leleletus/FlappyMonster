@@ -29,6 +29,7 @@ are never edited by hand.
 | compose or change music | [audio/music-guide](audio/music-guide.md), [audio/music-catalog](audio/music-catalog.md), [audio/music-history](audio/music-history.md) |
 | add a text or a language | [architecture/i18n](architecture/i18n.md) |
 | test something | [testing/harnesses](testing/harnesses.md), `tools/tests/README.md` |
+| measure speed, garbage, memory leaks (client and server) | [testing/performance](testing/performance.md) |
 | change the logo intro shown at boot | [architecture/startup-intro](architecture/startup-intro.md) |
 | change the title, the menus (online screens included), their background or transitions | [architecture/menus](architecture/menus.md) |
 | release and update the server | [architecture/updates-and-release](architecture/updates-and-release.md) |
@@ -60,7 +61,7 @@ are never edited by hand.
   [sky-and-biomes](art/sky-and-biomes.md) · [decorations](art/decorations.md) · [fx-and-particles](art/fx-and-particles.md)
 - **audio/** — [sound](audio/sound.md) · [music-catalog](audio/music-catalog.md) · [music-guide](audio/music-guide.md) ·
   [music-history](audio/music-history.md)
-- **testing/** — [harnesses](testing/harnesses.md)
+- **testing/** — [harnesses](testing/harnesses.md) · [performance](testing/performance.md)
 - **tools/** — [ost-videos](tools/ost-videos.md)
 - **reference/** (generated) — [entities](reference/entities.md) · [tiles](reference/tiles.md) ·
   [decorations-and-modes](reference/decorations-and-modes.md) · [levels](reference/levels.md) · [music](reference/music.md)

@@ -12,10 +12,12 @@
 --   MenuKit.marker(x, y, w, h, t, a)              el CURSOR del botón elegido (se coloca solo donde haya sitio; ver abajo)
 --   MenuKit.occupy(x, y, w, h)                    apunta algo dibujado (los botones y las cajas lo hacen solos)
 --   MenuKit.flush()                               dibuja los cursores del fotograma (game.lua, tras la pantalla)
---   MenuKit.title(text, color, A, i)              el rótulo de arriba (MenuList.header; texto libre si la fuente pixel
+--   MenuKit.title(text, color, A, i, maxS)            el rótulo de arriba (MenuList.header; texto libre si la fuente pixel
 --                                                 no tiene sus letras: nombres de sala)
 --   MenuKit.hint(text, A, i)                      la línea de ayuda de abajo
 --   MenuKit.dim(a)                                oscurece la pantalla (bajo una ventana)
+--   MenuKit.optionsWindow(title, labels, colors, sel, a, o) / optionsLayout(n, o) / optionAt(n, x, y, o)
+--                                                 la ventana de opciones de las pausas y los fines de partida
 --   MenuKit.text(font, text, x, y, w, align, color, a)   texto con sombra de 2 px
 local PixelFont  = require 'src/ui/PixelFont'
 local MenuButton = require 'src/ui/menu/MenuButton'
@@ -235,10 +237,10 @@ end
 
 -- El rótulo de arriba. Con letras que la fuente pixel no tiene (nombres de sala), el texto va en la fuente normal
 -- sobre el mismo botón
-function MenuKit.title(text, color, A, i)
+function MenuKit.title(text, color, A, i, maxS)
     if PixelFont.has(text) then
         local MenuList = require 'src/ui/menu/MenuList'
-        return MenuList.header(text, color, A, i)
+        return MenuList.header(text, color, A, i, maxS)
     end
     local f = FONT_BIG
     local w = math.min(WINDOW_W - 200, f:getWidth(text) + 26 * S)
@@ -254,6 +256,57 @@ end
 
 function MenuKit.hint(text, A, i)
     require('src/ui/menu/MenuList').footer(nil, A, i, text)
+end
+
+-- ── Ventana de opciones (pausas, fin de partida): una sola geometría para dibujo, ratón y táctil ────────
+-- n = número de botones; o.note = texto bajo el título (deja sitio). → panel {x, y, w, h}, rects[i]
+local OPT_W, OPT_H, OPT_GAP = 340, 56, 12
+function MenuKit.optionsLayout(n, o)
+    o = o or {}
+    local noteH = o.note and 44 or 0
+    local w = math.min(540, WINDOW_W - 80)
+    local h = 116 + noteH + n * (OPT_H + OPT_GAP) + 24
+    local P = { x = math.floor((WINDOW_W - w) / 2), y = math.floor((WINDOW_H - h) / 2), w = w, h = h }
+    local rects = {}
+    for i = 1, n do
+        rects[i] = { x = math.floor(WINDOW_W / 2 - OPT_W / 2) + 20, y = P.y + 108 + noteH + (i - 1) * (OPT_H + OPT_GAP),
+                     w = OPT_W, h = OPT_H }
+    end
+    return P, rects
+end
+-- ¿Qué botón hay en (x, y)? (o nil)
+function MenuKit.optionAt(n, x, y, o)
+    local _, rects = MenuKit.optionsLayout(n, o)
+    for i, r in ipairs(rects) do
+        if x >= r.x - 10 and x <= r.x + r.w + 10 and y >= r.y - 5 and y <= r.y + r.h + 5 then return i end
+    end
+end
+-- Dibuja la ventana: title (texto), labels[i] (textos ya traducidos), colors[i] (colores de botón), sel, a (0..1)
+-- o.titleColor, o.note, o.dim (oscurecer debajo: 0.55 por defecto)
+function MenuKit.optionsWindow(title, labels, colors, sel, a, o)
+    o = o or {}
+    a = a or 1
+    local P, rects = MenuKit.optionsLayout(#labels, o)
+    MenuKit.dim((o.dim or 0.55) * a)
+    local oy = math.floor((1 - a) * 40 / 4) * 4          -- (entra subiendo, a saltos de píxel)
+    MenuKit.box('window', P.x, P.y + oy, P.w, P.h, a)
+    local s = 5
+    while s > 3 and PixelFont.width(title, s) > P.w - 60 do s = s - 1 end
+    if PixelFont.has(title) then
+        PixelFont.shadow(title, math.floor(P.x + (P.w - PixelFont.width(title, s)) / 2), P.y + 30 + oy, s, a, o.titleColor or { 1, 0.86, 0.36 })
+    else
+        MenuKit.text(FONT_BIG, title, P.x, P.y + 26 + oy, P.w, 'center', o.titleColor or { 1, 0.86, 0.36 }, a)
+    end
+    if o.note then MenuKit.text(FONT_SMALL, o.note, P.x + 24, P.y + 98 + oy, P.w - 48, 'center', { 0.82, 0.86, 1 }, a) end
+    local t = love.timer.getTime()
+    for i, label in ipairs(labels) do
+        local r, on = rects[i], i == sel
+        local bob = on and ((math.floor(t * 3) % 2 == 0) and -4 or 0) or 0
+        MenuButton.draw(label, r.x, r.y + oy + bob, r.w, r.h, colors[i] or 'grey', on,
+                        { alpha = a, scale = MenuButton.textScale(label, r.w - 48, 4) })
+        if on then MenuKit.marker(r.x, r.y + oy + bob, r.w, r.h, t, a) end
+    end
+    love.graphics.setColor(1, 1, 1, 1)
 end
 
 function MenuKit.dim(a)

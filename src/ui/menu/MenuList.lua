@@ -120,8 +120,9 @@ end
 -- ── Lo común de las pantallas de menú ──────────────────────────────────────
 
 -- El RÓTULO de arriba: un botón grande (sin seleccionar) con el título; entra desde arriba
-function MenuList.header(text, color, A, i)
-    local s = 7
+-- (maxS: escala máxima del texto; 7 si no se dice)
+function MenuList.header(text, color, A, i, maxS)
+    local s = maxS or 7
     while s > 3 and PixelFont.width(text, s) > WINDOW_W - 260 do s = s - 1 end
     local w = PixelFont.width(text, s) + 26 * MenuButton.S
     local h = PixelFont.height(s) + 14 * MenuButton.S

@@ -16,7 +16,7 @@ return {
         local e = TileTypes.edges(t, ctx)
         TileTypes.drawTexture(e.top and TOP or BODY, ctx, 1, e.top and 0 or nil)
         love.graphics.setColor(0.5, 0.26, 0.22, 1)          -- (filo de la roca, de su tono claro: antes gris)
-        TileTypes.drawEdges(ctx, { left = e.left, right = e.right, bottom = e.bottom }, 2)
+        TileTypes.drawEdges(ctx, e, 2, true)
         if e.top then
             -- (junto a la capa de ceniza, el borde es del tono claro de la ceniza)
             local cap = math.floor(s * (ctx.quarter and 5 / 8 or 5 / 16))
