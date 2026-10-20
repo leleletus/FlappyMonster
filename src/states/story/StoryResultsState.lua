@@ -357,7 +357,7 @@ function StoryResultsState:render()
     if t >= self.tEnd then
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1, 1, 1, 0.55 + 0.25 * math.sin(t * 4))
-        love.graphics.printf(L('story.results.hint'), 0, WINDOW_H - 28, WINDOW_W, 'center')
+        love.graphics.printf(L(Input.lastDevice == 'touch' and 'story.results.tap' or 'story.results.hint'), 0, WINDOW_H - 28, WINDOW_W, 'center')
     end
     love.graphics.setFont(FONT_MED)
     love.graphics.setColor(1, 1, 1, 1)

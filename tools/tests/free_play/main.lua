@@ -87,6 +87,16 @@ function love.update(dt)
             local dev = realInput.lastDevice
             realInput.lastDevice = 'keyboard'; local hk = L('free.hint')
             realInput.lastDevice = 'gamepad'; local hp = L('free.hint')
+            -- el ACELERÓMETRO de Android es un "joystick" que no es un mando: moverlo no pasa a modo mando (los controles
+            -- táctiles parpadeaban y las ayudas pedían botones); un mando de verdad, sí
+            local acc = { isConnected = function() return true end, isGamepad = function() return false end }
+            local pad = { isConnected = function() return true end, isGamepad = function() return true end }
+            realInput.lastDevice = 'touch'; love.joystickaxis(acc, 1, 0.95); love.joystickpressed(acc, 1)
+            local afterAcc = realInput.lastDevice
+            love.joystickaxis(pad, 1, 0.95)
+            local afterPad = realInput.lastDevice
+            check('acelerometro', afterAcc == 'touch' and afterPad == 'gamepad',
+                ('con el dedo, mover el acelerómetro → %s; mover un mando → %s'):format(afterAcc, afterPad))
             realInput.lastDevice = dev
             check('ayudas', hk:find('[ENTER]', 1, true) and hk:find('[F]', 1, true) and hp:find('[A]', 1, true)
                 and hp:find('[Y]', 1, true) and not hk:find('{', 1, true) and not hp:find('{', 1, true),

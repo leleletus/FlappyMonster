@@ -148,6 +148,7 @@ function MenuList.footer(desc, A, i, hint)
     end
     hint = hint or L('menu.hint', { move = Input.label('nav_up') .. Input.label('nav_down'),
                                     ok = Input.label('confirm'), back = Input.label('back') })
+    if Input.lastDevice == 'touch' then hint = '' end          -- (con el dedo no hay teclas que explicar)
     if hint ~= '' then
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(0, 0, 0, 0.6 * a)

@@ -59,3 +59,8 @@ Actions (`input.lua`): `move_left`, `move_right`, `jump`, `crouch`, `light` (lev
   system keyboard; X / Y (twice) deletes a story slot. Touch: the update screen skips on a tap, the hub's
   "connecting" window cancels on a tap, the room list selects on a tap / joins on a second tap / scrolls by dragging.
   Harnesses `free_play` (`ayudas`), `online_menus` (`lista_dedo`, `sala_volver`, `crear_mando`).
+- 0.5.13, the user (Android): the touch buttons flickered and the hints asked for pad buttons. Cause: Android exposes
+  the ACCELEROMETER as a joystick; since 0.5.10 any joystick axis switched `lastDevice` to gamepad. Now only real pads
+  count (`Input.isPad` = connected and `isGamepad()`; the pad used is `Input.firstPad()`), and `conf.lua` sets
+  `t.accelerometerjoystick = false` (reaches devices with a new install). Key hints are not drawn at all while using
+  touch (`MenuList.footer`; results say "Toca para continuar"). Harness `free_play` (`acelerometro`).

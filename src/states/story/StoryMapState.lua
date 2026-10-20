@@ -1288,7 +1288,7 @@ function StoryMapState:_drawHud()
     love.graphics.printf(line, 100, by + 52, nameW, 'center')
     love.graphics.setFont(FONT_SMALL)
     love.graphics.setColor(1, 1, 1, 0.6)
-    love.graphics.printf(L('story.map_hint'), 100, by + 80, nameW, 'center')
+    if Input.lastDevice ~= 'touch' then love.graphics.printf(L('story.map_hint'), 100, by + 80, nameW, 'center') end
     -- flechas: nivel anterior / siguiente
     local cur = stopIndex(self.world, self.node)
     for _, side in ipairs({ -1, 1 }) do

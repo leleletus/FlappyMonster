@@ -110,9 +110,11 @@ end
 function love.joystickremoved(joystick)
     Input.joystickremoved(joystick)
 end
--- (mover el stick también es usar el mando: las ayudas pasan a sus botones)
+-- (mover el stick también es usar el mando: las ayudas pasan a sus botones). Solo MANDOS de verdad: en Android el
+-- acelerómetro es un "joystick" que se mueve siempre — pasaba a mando a cada momento: los controles táctiles
+-- parpadeaban y las ayudas pedían botones de mando
 function love.joystickaxis(joystick, axis, value)
-    if math.abs(value) > 0.6 then Input.lastDevice = 'gamepad' end
+    if math.abs(value) > 0.6 and Input.isPad(joystick) then Input.lastDevice = 'gamepad' end
 end
 
 -- Actualizar lovesize cuando Android rota o cambia el tamaño real de la ventana
@@ -185,7 +187,7 @@ function love.textinput(t)
 end
 
 function love.joystickpressed(joystick, button)
-    Input.lastDevice = 'gamepad'
+    if Input.isPad(joystick) then Input.lastDevice = 'gamepad' end
 end
 
 -- Registrar cuando se toca la pantalla

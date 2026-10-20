@@ -134,6 +134,15 @@ local function run()
         ('jugadores %d → ▶▶ %d → ◀ %d; abajo → botón %s, ◀ → botón %s; confirmar → %s'):format(m0, m1, m2,
          tostring(navNext), tostring(navCancel), tostring(st.sub)))
 
+    -- ── 3c. una sala PRIVADA sin contraseña no se crea: se queda en el paso de la contraseña ──
+    st:_resetCreate(); st.sub = 'CREATE'
+    st.createData.name, st.privacySel, st.createStep, st.inputBuffer = 'Privada', 2, 3, ''
+    st:_createNext()
+    local stays = st.createStep == 3 and st.sub == 'CREATE'
+    st.inputBuffer = 'abc'; st:_createNext()
+    check('privada', stays and st.createStep == 4, ('privada sin contraseña: sigue en el paso %s; con contraseña pasa al %d'):format(
+        stays and '3' or 'otro', st.createStep))
+
     -- ── 3. crear sala ────────────────────────────────────────────────────
     st:_resetCreate(); st.sub = 'CREATE'
     wait(0.3)

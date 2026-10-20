@@ -23,6 +23,7 @@ function love.conf(t)
 
     -- Módulos que no usamos (ahorra memoria en Switch)
     t.modules.joystick  = true   -- NECESARIO para joycons
+    t.accelerometerjoystick = false   -- (Android: el acelerómetro NO es un mando — se movía y el juego creía usar uno)
     t.modules.keyboard  = true   -- útil en debug PC
     t.modules.mouse     = false
     -- Las herramientas de edición (love . --editor / --anim / --enemy) necesitan el ratón

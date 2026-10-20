@@ -99,12 +99,12 @@ not repeated here.
 
 ## 7. Decisions for the user
 
-- "Private" rooms: today PRIVATE + empty password is listed and open (the wizard says "Vacía = sin contraseña").
-  Options: require a password for private rooms, or hide private rooms from the list and join them by a code.
-- Story points grow on every replay (`d.points`): fine while nothing ranks them; if a leaderboard comes, use the sum
-  of per-level bests.
-- Signed updates (a public key in `main.lua`, the server signs the manifest): needs a key kept outside the repo and
-  only protects devices that install a new build.
+- [x] (0.5.13) "Private" rooms: the user chose — a private room REQUIRES a password (client wizard and server).
+- [ ] Replay farming (the user, 2026-10-20: it also happens with LIVES — replaying a level gives its extra lives again,
+  infinite lives): what is gained in a level should count only once; replaying for a better score should stay. Design
+  being agreed.
+- [ ] Signed updates (a public key in `main.lua`, the server signs the manifest): needs a key kept outside the repo and
+  only protects devices that install a new build. The user: not needed yet, keep it here.
 
 ## 8. Features to add (decide with the user)
 

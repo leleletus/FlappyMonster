@@ -360,6 +360,11 @@ function OnlineHubState:_createNext()
             self.createStep          = STEP_MAX
         end
     elseif step == STEP_PASS then
+        -- (una sala PRIVADA tiene que tener contraseña: sin ella estaba en la lista y abierta a cualquiera)
+        if #self.inputBuffer == 0 then
+            love.keyboard.setTextInput(true); self._keyboardOn = true
+            self:_showError(L('hub.password_required')); return
+        end
         self.createData.password = self.inputBuffer
         self.inputBuffer         = ""
         self.createStep          = STEP_MAX

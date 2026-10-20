@@ -1166,6 +1166,8 @@ on("create_room", function(data, client, player)
     name = name or ("Sala de " .. player.name)
     local isPublic   = (data.isPublic ~= false)
     local password   = cleanText(data.password, PASSWORD_MAX)
+    -- PRIVADA = con contraseña (sin ella estaba en la lista y abierta a cualquiera)
+    if not isPublic and password == "" then client:send("room_error", Lang.message('srv.password_required')); return end
     local maxPlayers = tonumber(data.maxPlayers) or 4
     if not isInt(maxPlayers, 1, 8) then client:send("room_error",Lang.message('srv.max_players')); return end
     local roomId = newRoomId()

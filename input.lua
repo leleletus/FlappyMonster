@@ -97,17 +97,12 @@ local suppress, releasedAt, clock = {}, {}, 0
 function Input.load()
     player = baton.new({
         controls = controls,
-        joystick = love.joystick.getJoysticks()[1]
+        joystick = Input.firstPad()
     })
 end
 
 function Input.update(dt)
-    if not player.joystick or not player.joystick:isConnected() then
-        player.joystick = nil
-        for _, js in ipairs(love.joystick.getJoysticks()) do
-            if js:isConnected() then player.joystick = js; break end
-        end
-    end
+    if not player.joystick or not player.joystick:isConnected() then player.joystick = Input.firstPad() end
     player:update()
     clock = clock + (dt or 0)
     local js = player.joystick
@@ -149,16 +144,20 @@ end
 
 -- Mandos que se conectan / desconectan: el nuevo se usa si no hay ninguno (o el de antes ya no está); el que se
 -- desconecta se suelta (antes el objeto viejo se quedaba y un mando vuelto a enchufar no hacía nada)
+-- ¿Es un MANDO? (en Android el acelerómetro aparece como joystick: ese no)
+function Input.isPad(js)
+    return js ~= nil and js:isConnected() and js:isGamepad()
+end
+function Input.firstPad(except)
+    for _, js in ipairs(love.joystick.getJoysticks()) do
+        if js ~= except and Input.isPad(js) then return js end
+    end
+end
 function Input.joystickadded(joystick)
-    if not player.joystick or not player.joystick:isConnected() then player.joystick = joystick end
+    if Input.isPad(joystick) and not Input.isPad(player.joystick) then player.joystick = joystick end
 end
 function Input.joystickremoved(joystick)
-    if player.joystick == joystick then
-        player.joystick = nil
-        for _, js in ipairs(love.joystick.getJoysticks()) do
-            if js ~= joystick and js:isConnected() then player.joystick = js; break end
-        end
-    end
+    if player.joystick == joystick then player.joystick = Input.firstPad(joystick) end
 end
 
 function Input.pressed(action)
