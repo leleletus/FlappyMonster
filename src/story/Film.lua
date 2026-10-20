@@ -26,7 +26,7 @@ end
 function Film.timeline(name)
     local def = Film.data()[name]
     if not def then return nil end
-    local tl = { name = name, music = def.music, next = def.next, scenes = {}, total = 0 }
+    local tl = { name = name, music = def.music, next = def.next, bars = def.bars ~= false, scenes = {}, total = 0 }
     for i, s in ipairs(def.scenes) do
         local beat = 60 / s.bpm
         local sc = { id = s.id, index = i, t0 = tl.total, dur = s.beats * beat, beat = beat, beats = s.beats, cues = {}, enter = s['in'] or 'cut' }
@@ -117,7 +117,7 @@ function Film:draw()
         love.graphics.setColor(0, 0, 0, 1 - math.max(0, left) / 0.6)
         love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
     end
-    c.stage.bars()
+    if self.tl.bars then c.stage.bars() end          -- (franjas de cine; los créditos no las llevan: `bars` false)
     love.graphics.setColor(1, 1, 1, 1)
 end
 

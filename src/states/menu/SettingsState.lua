@@ -1,8 +1,9 @@
 -- src/states/menu/SettingsState.lua
 -- Configuración (desde el menú principal). Por ahora solo el idioma
 -- (src/core/Lang.lua + assets/lang/); se guarda con src/core/Settings.lua.
--- Mandos/teclado: izquierda/derecha (o confirmar) cambian, atrás vuelve.
--- Ratón/táctil: flechas o el nombre del idioma.
+-- Mandos/teclado: izquierda/derecha (o confirmar) cambian, atrás vuelve; abajo: el botón de los CRÉDITOS (la película
+-- de los créditos, docs/story/credits.md; siempre se pueden ver desde aquí).
+-- Ratón/táctil: flechas o el nombre del idioma; el botón de los créditos.
 -- Como todas las pantallas de menú (docs/architecture/menus.md): fondo vivo, rótulo, botones de colores que entran y salen.
 
 local CornerButtons = require 'src/ui/CornerButtons'
@@ -27,12 +28,13 @@ end
 local function layout()
     local w = math.min(MenuList.W, WINDOW_W - 2 * ARROW_W - 120)
     local h = MenuList.H
-    local y = math.floor(WINDOW_H * 0.46)
+    local y = math.floor(WINDOW_H * 0.40)
     local x = math.floor((WINDOW_W - w) / 2)
     return {
         value = { x = x, y = y, w = w, h = h },
         left  = { x = x - ARROW_W - 16, y = y, w = ARROW_W, h = h },
         right = { x = x + w + 16, y = y, w = ARROW_W, h = h },
+        credits = { x = x, y = y + h + 48, w = w, h = h },
     }
 end
 
@@ -42,8 +44,8 @@ local function inside(r, x, y, pad)
 end
 
 function SettingsState:enter()
-    self.anim = MenuAnim.new({ n = 5 })
-    self.t, self.flash = 0, nil
+    self.anim = MenuAnim.new({ n = 6 })
+    self.t, self.flash, self.row = 0, nil, 1
     Sound.playMusic('menus')
 end
 
@@ -53,6 +55,13 @@ function SettingsState:_step(d)
     Settings.setLanguage(L.LANGUAGES[i].id)
     self.flash = { d = d, t = 0 }
     Sound.play('select', d > 0 and 1.08 or 0.94)
+end
+
+-- Los créditos (y de vuelta aquí)
+function SettingsState:_credits()
+    Sound.play('select', 1.25)
+    self.anim:leave(function() end, 5)
+    require('src/ui/menu/Transition').go('story_film', { film = 'credits', onDone = function() gStateMachine:change('settings') end })
 end
 
 function SettingsState:_back()
@@ -67,8 +76,13 @@ function SettingsState:update(dt)
     MenuScene.update(dt)
     self.anim:update(dt)
     if self.anim:busy() then return end
-    if Input.pressed('nav_left') then self:_step(-1) end
-    if Input.pressed('nav_right') or Input.pressed('confirm') then self:_step(1) end
+    if Input.pressed('nav_up') or Input.pressed('nav_down') then self.row = 3 - self.row; Sound.play('select') end
+    if self.row == 1 then
+        if Input.pressed('nav_left') then self:_step(-1) end
+        if Input.pressed('nav_right') or Input.pressed('confirm') then self:_step(1) end
+    elseif Input.pressed('confirm') or Input.pressed('flap') then
+        return self:_credits()
+    end
     if Input.pressed('back') then self:_back() end
 end
 
@@ -88,7 +102,8 @@ function SettingsState:render()
     local kick = 0
     if self.flash and self.flash.t < 0.14 then kick = self.flash.d * 8 end
     local bob = (math.floor(self.t * 3) % 2 == 0) and -4 or 0
-    MenuButton.draw(L.LANGUAGES[langIndex()].name, Lt.value.x + ox2 + kick, Lt.value.y + oy2 + bob, Lt.value.w, Lt.value.h, 'teal', true, { alpha = a2 })
+    if self.row ~= 1 then bob = 0 end
+    MenuButton.draw(L.LANGUAGES[langIndex()].name, Lt.value.x + ox2 + kick, Lt.value.y + oy2 + bob, Lt.value.w, Lt.value.h, 'teal', self.row == 1, { alpha = a2 })
     -- Flechas
     local ox3, oy3, a3 = A:slide(4, 0, 220)
     local pl = self.flash and self.flash.d < 0 and self.flash.t < 0.12
@@ -96,7 +111,12 @@ function SettingsState:render()
     MenuButton.draw('<', Lt.left.x + ox3, Lt.left.y + oy3 + (pl and 4 or 0), Lt.left.w, Lt.left.h, 'yellow', self.hover == 'left', { alpha = a3 })
     MenuButton.draw('>', Lt.right.x + ox3, Lt.right.y + oy3 + (pr and 4 or 0), Lt.right.w, Lt.right.h, 'yellow', self.hover == 'right', { alpha = a3 })
 
-    MenuList.footer(L('menu.desc_settings'), A, 5,
+    -- Créditos
+    local ox4, oy4, a4 = A:slide(5, 0, 220)
+    local cb = (self.row == 2 and math.floor(self.t * 3) % 2 == 0) and -4 or 0
+    MenuButton.draw(L('credits.button'), Lt.credits.x + ox4, Lt.credits.y + oy4 + cb, Lt.credits.w, Lt.credits.h, 'purple', self.row == 2, { alpha = a4 })
+
+    MenuList.footer(L('menu.desc_settings'), A, 6,
         L('settings.hint', { change = Input.label('nav_left') .. Input.label('nav_right'), back = Input.label('back') }))
     love.graphics.setColor(COLOR_WHITE)
     CornerButtons.drawBack(self.backHover)
@@ -106,6 +126,7 @@ function SettingsState:mousemoved(tx, ty)
     self.backHover = CornerButtons.hitBack(tx, ty)
     local Lt = layout()
     self.hover = (inside(Lt.left, tx, ty) and 'left') or (inside(Lt.right, tx, ty) and 'right') or nil
+    if inside(Lt.credits, tx, ty) then self.row = 2 elseif inside(Lt.value, tx, ty) or self.hover then self.row = 1 end
 end
 
 function SettingsState:touchpressed(id, tx, ty)
@@ -113,7 +134,8 @@ function SettingsState:touchpressed(id, tx, ty)
     if CornerButtons.hitBack(tx, ty) then return self:_back() end
     local Lt = layout()
     if inside(Lt.left, tx, ty) then self:_step(-1)
-    elseif inside(Lt.right, tx, ty) or inside(Lt.value, tx, ty) then self:_step(1) end
+    elseif inside(Lt.right, tx, ty) or inside(Lt.value, tx, ty) then self:_step(1)
+    elseif inside(Lt.credits, tx, ty) then self.row = 2; self:_credits() end
 end
 
 return SettingsState

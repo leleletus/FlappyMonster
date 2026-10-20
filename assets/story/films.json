@@ -1,5 +1,5 @@
 {
-  "_": "TIEMPOS de las cinemáticas de la historia (intro, final y las de antes de la persecución y del jefe Espejo): la ÚNICA fuente para la imagen (src/story/Film.lua + src/story/films/) y para la música (tools/music/story_music.py). Cada escena dura `beats` pulsos a `bpm`; `cues` = momentos, en pulsos desde el principio de la escena. `in` = cómo entra (cut, fade, white). `next` = la pista del NIVEL que sigue: la película acaba en su tempo y su tono y, al terminar, esa pista entra sin hueco (el nivel la sigue).",
+  "_": "TIEMPOS de las cinemáticas de la historia (intro, final y las de antes de la persecución y del jefe Espejo): la ÚNICA fuente para la imagen (src/story/Film.lua + src/story/films/) y para la música (tools/music/story_music.py). Cada escena dura `beats` pulsos a `bpm`; `cues` = momentos, en pulsos desde el principio de la escena. `in` = cómo entra (cut, fade, white). `next` = la pista del NIVEL que sigue: la película acaba en su tempo y su tono y, al terminar, esa pista entra sin hueco (el nivel la sigue). Los CRÉDITOS (credits): `src` = de qué pista del juego, parte (intro / loop / file), compás y cuántos compases sale la música de cada escena (tools/music/credits_music.py la monta con ellos: cada escena dura justo esos compases a su tempo); `bars` false = sin franjas de cine.",
   "intro": {
     "music": "story_intro",
     "scenes": [
@@ -43,6 +43,25 @@
       { "id": "escape",  "bpm": 174, "beats": 20, "in": "fade",  "cues": { "leap": 4, "stop": 7.5, "portal": 12, "fly": 14, "gone": 17 } },
       { "id": "night",   "bpm": 84,  "beats": 10, "in": "cut",   "cues": { "out": 2, "point": 4.5, "glint": 6.5 } },
       { "id": "follow",  "bpm": 172, "beats": 16, "in": "cut",   "cues": { "walk": 2, "hush": 12 } }
+    ]
+  },
+  "credits": {
+    "music": "story_credits",
+    "bars": false,
+    "scenes": [
+      { "id": "logo",      "bpm": 120, "beats": 32, "in": "fade", "cues": { "logo": 0, "roll": 16 }, "src": { "track": "map_pradera", "part": "file", "bar": 0, "bars": 8 } },
+      { "id": "pradera",   "bpm": 136, "beats": 32, "in": "cut",  "cues": {}, "src": { "track": "pradera_1", "part": "loop", "bar": 0, "bars": 8 } },
+      { "id": "costa",     "bpm": 122, "beats": 32, "in": "cut",  "cues": {}, "src": { "track": "costa_1", "part": "loop", "bar": 0, "bars": 8 } },
+      { "id": "fortaleza", "bpm": 140, "beats": 32, "in": "cut",  "cues": {}, "src": { "track": "fortaleza_1", "part": "loop", "bar": 0, "bars": 8 } },
+      { "id": "nieve",     "bpm": 148, "beats": 32, "in": "cut",  "cues": {}, "src": { "track": "nieve_1", "part": "loop", "bar": 0, "bars": 8 } },
+      { "id": "cuevas",    "bpm": 104, "beats": 32, "in": "cut",  "cues": {}, "src": { "track": "cuevas_1", "part": "loop", "bar": 0, "bars": 8 } },
+      { "id": "volcan",    "bpm": 164, "beats": 32, "in": "cut",  "cues": {}, "src": { "track": "volcan_1", "part": "loop", "bar": 0, "bars": 8 } },
+      { "id": "crab",      "bpm": 186, "beats": 32, "in": "cut",  "cues": {}, "src": { "track": "crab_tantrum_normal", "part": "loop", "bar": 0, "bars": 8 } },
+      { "id": "bola",      "bpm": 168, "beats": 32, "in": "cut",  "cues": {}, "src": { "track": "snowball_boss", "part": "loop", "bar": 0, "bars": 8 } },
+      { "id": "mirror",    "bpm": 158, "beats": 32, "in": "cut",  "cues": {}, "src": { "track": "mirror_boss", "part": "loop", "bar": 0, "bars": 8 } },
+      { "id": "rise",      "bpm": 158, "beats": 16, "in": "cut",  "cues": { "shards": 0, "each": 2 }, "src": { "track": "mirror_boss", "part": "loop", "bar": 32, "bars": 4 } },
+      { "id": "climax",    "bpm": 158, "beats": 32, "in": "cut",  "cues": { "whole": 0, "thanks": 16 }, "src": { "track": "mirror_boss", "part": "loop", "bar": 68, "bars": 8 } },
+      { "id": "bye",       "bpm": 132, "beats": 40, "in": "cut",  "cues": { "dance": 0, "spin": 16, "wave": 28, "end": 32 }, "src": { "track": "victory", "part": "loop", "bar": 0, "bars": 8 } }
     ]
   }
 }

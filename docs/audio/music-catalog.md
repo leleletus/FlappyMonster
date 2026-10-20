@@ -19,6 +19,7 @@ screens play `victory`; the Flappy mode plays `flappy`.
 | `mirror_boss.py`, `mirror_chase.py`, `verity_boss.py` | those three |
 | `gloomy_nes.py cueva` | `cuevas_oscuras` (also a library: the spider "legs") |
 | `story_music.py [intro ending chase lair]` | the film scores, composed ON `assets/story/films.json` |
+| `credits_music.py` | `story_credits`: the credits medley, cut bar-exact from the game's own tracks as `films.json` `credits` says ([credits](../story/credits.md)) |
 | `levels.py` | measures every track (LUFS) and writes its catalog `volume` — **run it after adding or regenerating any track** |
 | `famicom.py`, `tentacle_nes.py` | libraries only (engine; MIDI / harmony helpers the others import) |
 | `study.py` | analysis of a .mid |

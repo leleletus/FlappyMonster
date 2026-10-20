@@ -12,6 +12,7 @@ Run everything from the repo root. Documentation: `docs/README.md`. Python tools
 | `levelgen/` | level builders, retheme, test arenas | `docs/levels/generator-and-solver.md` (**read the DANGER note**) |
 | `anim/` | generators of animation sets (`assets/anim/`, one per image folder): sheets as named animations, loose images, the Crabby family, `split_states.py` (one animation per state) and `port_names.py` (the data steps of the move to by-name animations) | `docs/art/animation.md` |
 | `video/` | OST presentation videos | `docs/tools/ost-videos.md` |
+| `legal/` | `make_licenses.py` → `assets/legal/THIRD_PARTY_LICENSES.txt` (the full third-party license texts; `OFL-1.1.txt` = the font's) | `docs/story/credits.md` |
 | `story/` | `test_saves.py`: story save slots already advanced to a level (to test something late in the story) | `docs/story/cinematics.md` |
 | `deploy_server.sh` | update the game server after a push (`--status` = look only) | `docs/architecture/updates-and-release.md` |
 
@@ -52,7 +53,7 @@ and their own folder to `sys.path`; scripts that import each other sit in the sa
 | `ui/make_sprites.py`, `make_story_icons.py` | `ui/touch/`, `ui/ping/`, `ui/icons/` | yes (verified) |
 | `ui/make_menu_ui.py` | `ui/menus/title_logo.png` + `.json` (from `logo.png`, never written), `ui/menus/button.png` + `.json`, `ui/menus/panel.png`, `ui/menus/cartridge.png` + `.json`, `ui/menus/cart_labels.png` | yes |
 | `ui/make_logo_parts.py` | `assets/startup/parts/`, `assets/startup/logo.json` (cuts the user's logo; never writes the logo itself) | yes |
-| `enemies/make_claudio_extras.py` | `enemies/claudio/claudio_blink.png` (from the user's `claudio_idle.png`) | yes |
+| `enemies/make_claudio_extras.py [parpadeo] [baile]` | `enemies/claudio/claudio_blink.png`, `claudio_dance-Sheet.png` (from the user's `claudio_idle.png`; only the eyes / the arms change) | yes |
 | `ui/make_player_redesign.py`, `make_flappy_redesign.py` | `player/`, the Mirror's pieces, `flappy/` | not re-run |
 | `story/make_overworld.py` | `assets/story/overworld.json` + `story/` map sprites | deterministic; not re-run |
 | `story/make_mirror_shards.py --apply`, `make_story_fx.py` | `story/mirror/`, `story/fx/` | yes (verified) |

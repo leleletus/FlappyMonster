@@ -63,6 +63,7 @@
     { "id": "story_ending",  "name": "Historia: final (cinemática)",  "file": "story/story_ending.ogg", "loop": false, "level": false, "volume": 0.90 },
     { "id": "story_chase",   "name": "Historia: la emboscada (cinemática)", "file": "story/story_chase.ogg", "loop": false, "level": false, "volume": 0.90 },
     { "id": "story_lair",    "name": "Historia: la guarida (cinemática)",   "file": "story/story_lair.ogg",  "loop": false, "level": false, "volume": 0.90 },
+    { "id": "story_credits", "name": "Créditos (popurrí de la banda sonora)", "file": "story/story_credits.ogg", "loop": false, "level": false, "volume": 0.88 },
     { "id": "victory",       "name": "Victoria (resultados)",         "intro": "jingles/victory_intro.ogg", "loop": "jingles/victory_loop.ogg", "level": false, "volume": 0.80 }
   ],
   "aliases": {

@@ -629,7 +629,11 @@ function StoryMapState:_start(world, node)
             end
             -- (con el último fragmento: antes de los resultados, el FINAL de la historia)
             if result.ending then
-                gStateMachine:change('story_film', { film = 'ending', xtra = Shards.isXtra(Run.data.difficulty), onDone = results })
+                -- (y después del final, los CRÉDITOS: docs/story/credits.md)
+                local xtra = Shards.isXtra(Run.data.difficulty)
+                gStateMachine:change('story_film', { film = 'ending', xtra = xtra, onDone = function()
+                    gStateMachine:change('story_film', { film = 'credits', xtra = xtra, onDone = results })
+                end })
             else results() end
         end,
     })

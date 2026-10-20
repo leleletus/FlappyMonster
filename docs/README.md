@@ -22,6 +22,7 @@ are never edited by hand.
 | change the story order, saves, results | [story/story-mode](story/story-mode.md) |
 | change the world map | [story/world-map](story/world-map.md) |
 | change a cinematic | [story/cinematics](story/cinematics.md), [story/story](story/story.md) |
+| change the credits, add a credit or a license | [story/credits](story/credits.md) |
 | touch the bonus matches or the bot | [story/bonus-and-bot](story/bonus-and-bot.md), [gameplay/game-modes](gameplay/game-modes.md) |
 | draw or regenerate art | [art/style-rules](art/style-rules.md), [art/generators](art/generators.md) (**hand-edited list**), [art/asset-layout](art/asset-layout.md) |
 | add a sound | [audio/sound](audio/sound.md) |
@@ -52,7 +53,7 @@ are never edited by hand.
   [megagloomy](bosses/megagloomy.md) · [mirror](bosses/mirror.md) · [mirror-chase](bosses/mirror-chase.md) ·
   [how-to-add-a-boss](bosses/how-to-add-a-boss.md)
 - **story/** — [story](story/story.md) · [story-mode](story/story-mode.md) · [world-map](story/world-map.md) ·
-  [cinematics](story/cinematics.md) · [bonus-and-bot](story/bonus-and-bot.md)
+  [cinematics](story/cinematics.md) · [credits](story/credits.md) · [bonus-and-bot](story/bonus-and-bot.md)
 - **levels/** — [level-format](levels/level-format.md) · [editor](levels/editor.md) ·
   [generator-and-solver](levels/generator-and-solver.md) · [retheme](levels/retheme.md)
 - **art/** — [animation](art/animation.md) · [style-rules](art/style-rules.md) · [asset-layout](art/asset-layout.md) · [generators](art/generators.md) ·

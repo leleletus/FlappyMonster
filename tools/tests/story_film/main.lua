@@ -8,7 +8,9 @@
 --  5b. LAVA: en las películas con actores (persecución, guarida) ninguno se hunde en la lava al saltarla.
 --  6. ENLACE: una película con `next` (la de antes de un nivel) deja sonando al acabar la música de ese nivel, y el
 --     nivel, al pedir la suya, la SIGUE (no vuelve a empezar).
---   tools/tests/run.sh story_film [FILM=intro|ending|chase|lair] [XTRA=1] [NOSHOTS=1]
+--  7. LOS CRÉDITOS (credits): la música dura lo que la película; cada bloque de texto entra por abajo al empezar su
+--     canción y cabe en ella; el último ha salido por arriba antes de la subida del Espejo.
+--   tools/tests/run.sh story_film [FILM=intro|ending|chase|lair|credits] [XTRA=1] [NOSHOTS=1]
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
 love.filesystem.load('game_main.lua')()
@@ -19,7 +21,7 @@ local function check(name, ok, msg)
     print(('%-10s %s  %s'):format(name, ok and 'OK   ' or 'FALLA', msg))
     if not ok then fails = fails + 1 end
 end
-local FILMS = os.getenv('FILM') and { os.getenv('FILM') } or { 'intro', 'ending', 'chase', 'lair' }
+local FILMS = os.getenv('FILM') and { os.getenv('FILM') } or { 'intro', 'ending', 'chase', 'lair', 'credits' }
 local XTRA, NOSHOTS = os.getenv('XTRA') == '1', os.getenv('NOSHOTS') == '1'
 local fi, state, done, shots, seen, pending, phase = 0, nil, false, {}, {}, nil, 'film'
 local realInput, holdT, clockT, worst
@@ -75,6 +77,26 @@ function love.update(dt)
             local tl = film.tl
             check(film.name, n == #tl.scenes and math.abs(film.t - tl.total) < 0.1,
                   ('%d/%d escenas, %.2f s de %.2f'):format(n, #tl.scenes, film.t, tl.total))
+            if film.name == 'credits' then
+                -- LOS CRÉDITOS: la música dura lo que la película; cada bloque de texto entra por abajo al empezar su
+                -- canción y cabe en ella; el último ha salido por arriba cuando empieza la subida del Espejo
+                local C = require 'src/story/films/credits'
+                local lay = C._layout(film.ctx)
+                local src = love.audio.newSource('assets/music/story/story_credits.ogg', 'stream')
+                local dur = src:getDuration()
+                check('creditos', math.abs(dur - tl.total) < 0.05, ('música %.2f s, película %.2f s'):format(dur, tl.total))
+                local bad, rise = {}, nil
+                for _, sc in ipairs(tl.scenes) do if sc.id == 'rise' then rise = sc end end
+                for _, b in ipairs(lay.blocks) do
+                    local yIn = b.y - C._scrollAt(film.ctx, b.sc.t0)
+                    local fits = b.h <= lay.v * b.sc.dur
+                    if math.abs(yIn - WINDOW_H * 0.92) > 2 or not fits then bad[#bad + 1] = b.sc.id end
+                end
+                local last = lay.blocks[#lay.blocks]
+                local out = last.y + last.h - C._scrollAt(film.ctx, rise.t0) < 0
+                check('bloques', #bad == 0 and out, ('%d bloques a %.0f px/s; entran al empezar su canción y caben: %s; el último fuera antes del Espejo=%s'):format(
+                    #lay.blocks, lay.v, #bad == 0 and 'sí' or table.concat(bad, ' '), tostring(out)))
+            end
             if film.shared.m then check('lava', sink < 2, ('%s: lo más que se hunde un actor bajo el suelo: %.1f px'):format(film.name, sink)) end
             start()
         end

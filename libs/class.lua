@@ -1,5 +1,6 @@
 -- libs/class.lua
--- OOP minimalista para Lua. Basado en rxi/classic.
+-- OOP minimalista para Lua. Basado en rxi/classic (https://github.com/rxi/classic):
+--   classic — MIT License — Copyright (c) 2014, rxi (texto completo: assets/legal/THIRD_PARTY_LICENSES.txt)
 -- Uso:
 --   local MiClase = Class:new()
 --   function MiClase:new(args)  ...  end

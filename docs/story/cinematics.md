@@ -11,7 +11,7 @@ ONE source for picture and music), `assets/story/sets/crater.json`, `ladera.json
 by `tools/levelgen/make_sets.py`), music from `tools/music/story_music.py`, sounds from `tools/sounds/story.py`.
 
 **To change a time:** edit `films.json`, regenerate the music (`story_music.py`, then `levels.py`).
-**Harness:** `story_film` (`FILM=intro|ending|chase|lair`, `XTRA=1`, `NOSHOTS=1`).
+**Harness:** `story_film` (`FILM=intro|ending|chase|lair|credits`, `XTRA=1`, `NOSHOTS=1`). The credits are a film too: [credits](credits.md).
 
 **Pre-level films:** a world can name a film to play the FIRST time a level is entered (`Worlds.LIST` `films =
 { [level] = film }`, `Worlds.film(id)`). `StoryMapState:_play` plays it through `story_film` and its `onDone` enters
