@@ -32,7 +32,7 @@ return {
         checkpoints = "{n} checkpoints", checkpoints_one = "{n} checkpoint",
         music = "Música: {name}",
         no_modes = "sin modo online",
-        hint = "[FLECHAS] elegir    [ENTER] jugar    [F] dificultad    [ESC] volver",
+        hint = "[FLECHAS] elegir    [ENTER] jugar    [ARRIBA] / [F] dificultad    [ESC] volver",
     },
     adv = {
         title = "AVENTURA",

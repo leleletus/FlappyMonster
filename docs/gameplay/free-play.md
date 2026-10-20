@@ -1,8 +1,8 @@
 # Free Play (single-player level hub)
 
 Aventura → JUEGO LIBRE opens every level as a scrolling grid of cards. Nothing is saved or unlocked: it is the test
-hub (for beta testers and for development). It also offers a difficulty selector (◀ X ▶ at the top right — under the title on narrow screens —: key F or tapping either
-half; ORIGINAL → every id of `Difficulty.ORDER`, remembered) and starts King-of-the-Hill arenas as a
+hub (for beta testers and for development). It also offers a difficulty selector (◀ X ▶ at the top right — under the title on narrow screens —: key F, tapping either
+half, or keyboard / pad: UP from the first row focuses it, ◀ ▶ change it, DOWN / confirm go back to the cards; ORIGINAL → every id of `Difficulty.ORDER`, remembered) and starts King-of-the-Hill arenas as a
 match against the bot.
 
 **Files:** `src/states/adventure/FreePlayState.lua`, `src/world/level/LevelCatalog.lua` (the ONE level-info builder,
@@ -28,3 +28,6 @@ Harness `free_play`.
   title banner, the difficulty as a selector in its colour (`Difficulty.COLORS`), cards as boxes (preview in a sunken
   well, online modes as coloured pills), a sunken scroll bar. The user also asked how to change the difficulty here:
   the F key (the flashlight key) or tapping the selector.
+- 0.5.7, the user: the difficulty could not be reached with keyboard or pad (F / X / Y worked but nobody found it).
+  Now it is a focusable item: UP from the top row gives it the focus (cursor + selected look), ◀ ▶ change it. The
+  hint says `[UP] / [F]`. Harness `free_play` checks it (`dificultad`).

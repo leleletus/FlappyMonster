@@ -57,6 +57,7 @@ function FreePlayState:enter()
     self.anim = MenuAnim.new()
     self.selAnim = {}
     self.touch = nil
+    self.diffFocus = false             -- el selector de dificultad tiene el foco (teclado / mando)
     self:_keepVisible(true)
     Sound.playMusic('menus')
 end
@@ -116,8 +117,8 @@ function FreePlayState:_play(i)
 end
 
 -- DIFICULTAD con la que se prueban los niveles (src/core/Difficulty.lua): ORIGINAL (ninguna: el juego de siempre) →
--- fácil → normal → difícil → extremo → xtra extremo. Se recuerda entre visitas. Tecla de la linterna (F) o tocar
--- la etiqueta de arriba a la derecha.
+-- fácil → normal → difícil → extremo → xtra extremo. Se recuerda entre visitas. Tecla de la linterna (F), tocar
+-- la etiqueta de arriba a la derecha, o subir desde la primera fila (foco en el selector: ◀ ▶ la cambian).
 local Difficulty = require 'src/core/Difficulty'
 local DIFFS = { false }
 for _, d in ipairs(Difficulty.ORDER) do DIFFS[#DIFFS + 1] = d end
@@ -180,11 +181,21 @@ function FreePlayState:update(dt)
     end
 
     local cols2 = layout()
-    if Input.pressed('nav_left')  then self:_move(-1) end
-    if Input.pressed('nav_right') then self:_move(1) end
-    if Input.pressed('nav_up')    then self:_move(-cols2) end
-    if Input.pressed('nav_down')  then self:_move(cols2) end
-    if Input.pressed('confirm') or Input.pressed('flap') then self:_play(self.sel) end
+    if self.diffFocus then                        -- foco en el selector: ◀ ▶ la cambian; abajo / confirmar vuelve a la lista
+        if Input.pressed('nav_left')  then self:_cycleDifficulty(-1) end
+        if Input.pressed('nav_right') then self:_cycleDifficulty(1) end
+        if Input.pressed('nav_down') or Input.pressed('confirm') or Input.pressed('flap') then
+            self.diffFocus = false; Sound.play('select')
+        end
+    else
+        if Input.pressed('nav_left')  then self:_move(-1) end
+        if Input.pressed('nav_right') then self:_move(1) end
+        if Input.pressed('nav_up') then
+            if self.sel <= cols2 then self.diffFocus = true; Sound.play('select') else self:_move(-cols2) end
+        end
+        if Input.pressed('nav_down')  then self:_move(cols2) end
+        if Input.pressed('confirm') or Input.pressed('flap') then self:_play(self.sel) end
+    end
     if Input.pressed('light') then self:_cycleDifficulty() end
     if Input.pressed('back') then self:_back() end
 
@@ -200,7 +211,10 @@ end
 
 function FreePlayState:mousemoved(x, y)
     self.backHover = CornerButtons.hitBack(x, y)
+    local dx, dy, dw, dh = self:_diffRect()
+    if x >= dx and x <= dx + dw and y >= dy and y <= dy + dh then self.diffFocus = true; return end
     local i = self:_cardAt(x, y)
+    if i then self.diffFocus = false end
     if i and i ~= self.sel then self.sel = i; Sound.play('select') end
 end
 
@@ -265,7 +279,7 @@ end
 
 function FreePlayState:drawCard(i, x, y)
     local info = self:info(i)
-    local sel = (i == self.sel)
+    local sel = (i == self.sel) and not self.diffFocus
     local a = self.selAnim[i] or 0
     a = a + ((sel and 1 or 0) - a) * math.min(1, love.timer.getDelta() * 12)
     self.selAnim[i] = a
@@ -349,7 +363,9 @@ function FreePlayState:render()
         local lbl = L('room.difficulty_label')
         PixelFont.shadow(lbl, math.floor(dx + (dw - PixelFont.width(lbl, 2)) / 2), dy - 18 + doy, 2, da, { 1, 0.86, 0.36 })
         MenuKit.stepper(nil, L('difficulty.' .. d), { x = dx, y = dy + doy + push, w = dw, h = dh },
-                        Difficulty.COLORS[d] or 'teal', false, { alpha = da, scale = 4 })
+                        Difficulty.COLORS[d] or 'teal', self.diffFocus, { alpha = da, scale = 4 })
+        MenuKit.occupy(dx, dy + doy + push, dw, dh)
+        if self.diffFocus then MenuKit.marker(dx, dy + doy + push, dw, dh, self.t, da) end
     end
 
     if #self.files == 0 then

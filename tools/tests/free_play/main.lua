@@ -1,6 +1,8 @@
 -- tools/tests/free_play — el Juego libre (Aventura → SOLO) con el juego real:
 --  1. carga las fichas de TODOS los niveles (tiempo total, ninguno roto) y
 --     las lista (nombre, monstruos, modos);
+--  1b. la dificultad con teclado / mando: arriba desde la primera fila da el foco
+--     al selector, ▶ / ◀ la cambian, abajo vuelve a la lista (captura free_play_diff.png);
 --  2. navega con las flechas: la selección baja de fila en fila y el scroll
 --     la sigue (siempre visible);
 --  3. ENTER abre ese nivel en AdventureState (returnTo = free_play);
@@ -79,8 +81,26 @@ function love.update(dt)
             check('fichas', loaded == n and #broken == 0 and n >= 20,
                 ('%d/%d niveles en %.2f s, rotos: %s'):format(loaded, n, love.timer.getTime() - t0,
                     #broken > 0 and table.concat(broken, ' ') or 'ninguno'))
-            shot('1280'); step = 'nav'; T = t
+            shot('1280'); step = 'dif'; T = t
         end
+    elseif step == 'dif' and t - T > 0.3 then
+        fp.sel = 1; pressNext('nav_up'); step, T = 'dif2', t
+    elseif step == 'dif2' and t - T > 0.1 then
+        DIF = { focus = fp.diffFocus }
+        pressNext('nav_right'); step, T = 'dif3', t
+    elseif step == 'dif3' and t - T > 0.1 then
+        DIF.right = fp.diffT < 0.2 and fp.sel == 1            -- (cambió la dificultad, no la tarjeta)
+        shot('diff'); step, T = 'dif4', t
+    elseif step == 'dif4' and t - T > 0.2 then
+        pressNext('nav_left'); step, T = 'dif5', t
+    elseif step == 'dif5' and t - T > 0.1 then
+        DIF.left = fp.diffT < 0.2 and fp.sel == 1
+        pressNext('nav_down'); step, T = 'dif6', t
+    elseif step == 'dif6' and t - T > 0.1 then
+        check('dificultad', DIF.focus and DIF.right and DIF.left and not fp.diffFocus and fp.sel == 1,
+            ('arriba → foco %s, ▶ cambia %s, ◀ cambia %s, abajo → lista %s'):format(tostring(DIF.focus),
+                tostring(DIF.right), tostring(DIF.left), tostring(not fp.diffFocus)))
+        step, T = 'nav', t
     elseif step == 'nav' and t - T > 0.3 then
         local cols = math.max(1, math.floor((WINDOW_W - 48 + 24) / (372 + 24)))
         step, T, NAV = 'nav2', t, { sel0 = fp.sel, n = 0, cols = cols }
