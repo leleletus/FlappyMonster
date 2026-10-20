@@ -1,7 +1,8 @@
 -- src/states/menu/TitleState.lua
 -- EL TÍTULO Y EL MENÚ PRINCIPAL, en una sola pantalla (docs/architecture/menus.md), sobre el fondo vivo de los menús
 -- (src/ui/menu/MenuScene: un nivel de verdad de cada isla con el monstruo corriendo).
---   · TÍTULO: las letras del logo en color (title_logo.png) caen una a una botando y luego se mecen en ola;
+--   · TÍTULO: el recuadro del logo (title_logo.png, el de siempre remasterizado) cae botando, sus letras salen
+--     una a una y luego se mecen en ola;
 --     "Presiona ENTER" parpadea debajo.
 --   · Al pulsar, el logo SUBE y entran los botones desde abajo, uno detrás de otro: CONTINUAR (solo si hay una
 --     partida de la historia: la última que se jugó), AVENTURA, CLÁSICO y CONFIGURACIÓN. Atrás = vuelta al título.
@@ -20,9 +21,10 @@ local Transition = require 'src/ui/menu/Transition'
 local Save       = require 'src/story/Save'
 local TitleState = BaseState:new()
 
-local LOGO_S = math.floor(LOGO_SCALE / 2)      -- el logo en color está a 2x: a media escala ocupa lo de siempre
-local DROP = 0.07                               -- s entre letra y letra al caer
-local DROP_T = 0.45                             -- s que tarda cada letra en caer
+local LOGO_S = math.floor(LOGO_SCALE / 2)      -- el logo remasterizado está a 2x: a media escala ocupa lo de siempre
+local BOX_T = 0.45                              -- s que tarda el recuadro en caer
+local DROP = 0.06                               -- s entre letra y letra al salir
+local POP_T = 0.16                              -- s que tarda cada letra en asentarse
 local RISE_T = 0.38                             -- s que tarda el logo en subir al abrir el menú
 
 local logo
@@ -30,7 +32,8 @@ local function loadLogo()
     if logo then return logo end
     local im = love.graphics.newImage('assets/images/ui/menus/title_logo.png')
     local data = json.decode(love.filesystem.read('assets/images/ui/menus/title_logo.json'))
-    logo = { img = im, w = data.w, h = data.h, letters = {} }
+    local b = data.box
+    logo = { img = im, w = data.w, h = data.h, letters = {}, box = love.graphics.newQuad(b.sx, b.sy, b.w, b.h, im:getDimensions()) }
     for i, l in ipairs(data.letters) do
         logo.letters[i] = { q = love.graphics.newQuad(l.sx, l.sy, l.w, l.h, im:getDimensions()), x = l.x, y = l.y,
                             w = l.w, h = l.h, line = l.line }
@@ -144,23 +147,32 @@ function TitleState:_drawLogo()
     local y0 = math.floor((yTitle + (yMenu - yTitle) * k) / 4 + 0.5) * 4
     -- al elegir una opción el logo también se va (hacia arriba); al llegar directamente al menú, baja desde arriba
     if self.leavingTo or self.logoSlide then y0 = y0 + select(2, self.anim:slide(1, 0, -260)) end
+    -- el recuadro cae desde arriba con rebote; luego las letras salen una a una dentro (un saltito y se asientan)
+    local by = 0
+    if not self.dropped then by = math.floor((1 - back(self.t / BOX_T)) * -(y0 + lg.h * LOGO_S + 40) / LOGO_S) * LOGO_S end
+    love.graphics.setColor(0, 0, 0, 0.4)
+    love.graphics.draw(lg.img, lg.box, x0 + 4, y0 + by + 4, 0, LOGO_S, LOGO_S)
+    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.draw(lg.img, lg.box, x0, y0 + by, 0, LOGO_S, LOGO_S)
     for i, l in ipairs(lg.letters) do
-        local dy = 0
-        local tl = self.t - (i - 1) * DROP
+        local dy, a = 0, 1
         if not self.dropped then
-            -- cae desde arriba con rebote
-            dy = math.floor((1 - back(tl / DROP_T)) * -(y0 + 200) / LOGO_S) * LOGO_S
-            if tl < 0 then dy = -10000 end
+            local k = (self.t - BOX_T - (i - 1) * DROP) / POP_T
+            if k <= 0 then a = 0
+            else
+                k = math.min(1, k)
+                dy = -math.floor((1 - back(k)) * 2 + 0.5) * LOGO_S              -- (sube 2 px del logo y baja)
+                a = k < 0.34 and 0.4 or (k < 0.67 and 0.75 or 1)
+            end
         end
-        -- la ola: cada letra sube y baja un píxel del logo, desfasada
-        local wave = (math.sin(self.t * 3 - i * 0.55) > 0.35) and -LOGO_S or 0
-        local x, y = x0 + l.x * LOGO_S, y0 + l.y * LOGO_S + dy + wave
-        love.graphics.setColor(0, 0, 0, 0.35)
-        love.graphics.draw(lg.img, l.q, x + 4, y + 4, 0, LOGO_S, LOGO_S)
-        love.graphics.setColor(1, 1, 1, 1)
-        love.graphics.draw(lg.img, l.q, x, y, 0, LOGO_S, LOGO_S)
+        -- la ola: cada letra sube un píxel del logo y baja, desfasada
+        local wave = (math.sin(self.t * 3 - i * 0.55) > 0.6) and -LOGO_S or 0
+        if a > 0 then
+            love.graphics.setColor(1, 1, 1, a)
+            love.graphics.draw(lg.img, l.q, x0 + l.x * LOGO_S, y0 + by + l.y * LOGO_S + dy + wave, 0, LOGO_S, LOGO_S)
+        end
     end
-    if not self.dropped and self.t > (#lg.letters - 1) * DROP + DROP_T then self.dropped = true end
+    if not self.dropped and self.t > BOX_T + (#lg.letters - 1) * DROP + POP_T then self.dropped = true end
     love.graphics.setColor(1, 1, 1, 1)
     return y0 + lg.h * LOGO_S
 end
@@ -170,7 +182,7 @@ function TitleState:render()
     local bottom = self:_drawLogo()
     if not self.menu then
         -- "Presiona ENTER": aparece cuando han caído las letras; parpadea y bota
-        local ready = (#logo.letters - 1) * DROP + DROP_T
+        local ready = BOX_T + (#logo.letters - 1) * DROP + POP_T
         local k = ease((self.t - ready) / 0.3)
         if self.anim:leaving() then k = 0 end
         if k > 0 then

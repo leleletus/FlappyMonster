@@ -3,8 +3,9 @@
 **What:** every menu screen sits on the same **living background**: a slice of a real level from one of the islands
 (parallax sky, blocks, water, decorations, light) with the monster running and jumping through it with its real
 physics. The scene changes every 16 s with a pixel dissolve. The **title and the main menu are one screen**: the
-coloured logo's letters drop in one by one and then sway in a wave; pressing a button makes the logo rise and the
-buttons come in from below one after another. Buttons are coloured pixel-art 9-slices with the monster's head
+logo's white box (the original logo, remastered) drops in with a bounce, its letters pop in one by one and then sway
+in a wave; pressing a button makes the logo rise and the
+buttons come in from below one after another. Buttons are pixel-art 9-slices in muted colours with the monster's head
 bouncing next to the selected one and a description of it at the bottom. Screens **enter and leave with
 animations** (staggered slide-in with a small bounce, quick slide-out), and leaving the menus (to a level, the story
 map, the slot list, Free Play, online) uses a **block transition** (a diagonal wave of squares covers the screen,
@@ -21,9 +22,9 @@ the state changes, the squares shrink away).
 | `src/ui/menu/MenuList.lua` | a vertical list of buttons (one geometry for drawing, mouse and touch), plus `header` (title banner) and `footer` (description panel + controls hint) |
 | `src/ui/menu/MenuButton.lua` | draws a button / the panel from the 9-slice sheets |
 | `src/ui/menu/Transition.lua` | the block transition; `Transition.go(state, args)` instead of `gStateMachine:change` (hooked in `game.lua`: update, render, and input blocked while covering) |
-| `assets/images/ui/menus/title_logo.png` + `.json` | the coloured logo, letter by letter (sheet + where each letter goes) |
-| `assets/images/ui/menus/button.png` + `.json`, `panel.png` | buttons (one column per colour; row 1 normal, row 2 selected) and the panel |
-| `tools/art/ui/make_menu_ui.py` | writes the three images above. The logo comes from `logo.png` (kept as is; the story ending still uses it): every pixel of each letter is kept, scaled 2×, with the house style added (own colour per letter, light top-left, shade bottom-right, 2-px relief below, dark outline of its own colour); drawn at `LOGO_SCALE / 2`, so it takes the old logo's size |
+| `assets/images/ui/menus/title_logo.png` + `.json` | the remastered logo: the box and each letter separately (sheet + where each letter goes) |
+| `assets/images/ui/menus/button.png` + `.json`, `panel.png` | buttons (one column per colour; row 1 normal, row 2 selected; the palette is muted by `MUTE` toward grey) and the panel |
+| `tools/art/ui/make_menu_ui.py` | writes the three images above. The logo comes from `logo.png` (kept as is; the story ending still uses it): every pixel of the box and the letters is kept, scaled 2×, with the house style added (box: navy outline, light top-left, shade bottom-right, an inner line echoing the original frame, a 2-px relief lip; letters: almost-black navy with a light top edge and a soft embossed shadow on the white); drawn at `LOGO_SCALE / 2`, so it takes the old logo's size |
 
 `Menu.png` / `MenuDif.png` (the old black-and-white frames) are no longer used by any screen.
 
@@ -65,6 +66,9 @@ underneath is frozen while covering), Continue only with a save and it reaches t
   Continue) and 3 (animated logo) were accepted, plus enter / leave / transition animations and changing
   backgrounds, buttons and layouts so everything feels livelier, more fun and less cold and monochrome. The
   bouncing monstritos were dropped (the running monster replaces them; their constant jump sounds were noise).
+- 3.103.1, the user: the logo and the buttons were too colourful (everything else liked). The rainbow logo (one
+  colour per letter, no box) was replaced by the original white box and dark letters, remastered; the button
+  palette is muted 38 % toward grey.
 - First pick of scenes had three levels where the monster got stuck at trampoline walls (playa_rebotes,
   bosque_interruptores, fabrica_morteros); replaced by levels where it runs the full 16 s.
 - Not yet judged by the user: the look on a real screen, the animation timings, the sound of the menu clicks
