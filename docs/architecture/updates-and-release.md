@@ -13,6 +13,13 @@ verify, slots), `src/states/menu/UpdateState.lua` (the screen), `server/updates.
 Files may move freely INSIDE those roots (a moved file is simply downloaded again); the roots and the four root file
 names must not change. `make lovefile` packages exactly that set plus `main.lua` and `conf.lua`.
 
+**Version numbers** (`version.txt`): `0.MINOR.PATCH` while the game is in beta — MINOR for a feature release
+(a new system, mode, film, menu...), PATCH for fixes and tweaks; `1.0.0` at the first public release, then normal
+`MAJOR.MINOR.PATCH`. The updater compares versions only by EQUALITY (any different string published by the server is
+an update), so a number may go "down": that is how 3.105.0 became 0.4.0 (2026-10-20, the user: "we should be at v4
+already, but it is a beta: v0.4.x, and v1.x.x at the first release"). Older entries in the docs keep their old
+numbers (3.x.y = beta before the renumbering). `Protocol.VERSION` is a separate integer and is not affected.
+
 **Release checklist**
 
 1. `tools/tests/run.sh all` green.
