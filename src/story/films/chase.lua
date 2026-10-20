@@ -169,8 +169,8 @@ F.run = {
         m.face = (t < go) and -1 or nil
         m.mx = (t >= go) and 1 or 0
         m.crouch = false
-        -- la zanja: salta en el borde
-        if not c.v.ditch and m.body.onGround and m.body.x > K.DITCH[1] - 70 then c.v.ditch = true; m:jump() end
+        -- la zanja: salta JUSTO en el borde (antes, con un salto caía con los pies de atrás en la lava)
+        if not c.v.ditch and m.body.onGround and m.body.x > K.DITCH[1] - 8 then c.v.ditch = true; m:jump() end
         -- la plancha: salta... y en lo alto, el doble salto
         if not c.v.dodge and t >= pounce + c.b(0.6) and m.body.onGround then c.v.dodge = true; m:jump() end
         if c.v.dodge and not c.v.dodge2 and not m.body.onGround and m.body.vy > -60 then c.v.dodge2 = true; m:jump() end
@@ -181,7 +181,7 @@ F.run = {
         r.face = (r.mx == 0) and 1 or nil
         r.trail = (r.mx ~= 0) and 3 or 0
         -- (la zanja también la salta: en el juego la lava no le hace nada, pero aquí se vería metido en ella)
-        if r.body.onGround and r.mx ~= 0 and r.body.x > K.DITCH[1] - 70 and r.body.x < K.DITCH[1] then r:jump() end
+        if r.body.onGround and r.mx ~= 0 and r.body.x > K.DITCH[1] - 8 and r.body.x < K.DITCH[1] + 16 then r:jump() end
         if not r.hidden then r:update(dt, set().level) end
     end,
     draw = function(c, t)

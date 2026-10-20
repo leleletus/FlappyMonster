@@ -97,3 +97,6 @@ conflicts with the sections above, the sections above describe the current behav
   without `sub` (it went to sub-cell 1, half a tile up) → `make_sets.py` now gives it one; (5) the movement felt
   simulated → the actors (above). Also rejected on the way: a tight ring of shards over the head still grouped them
   in threes that read as wings → an evenly spaced arc above the head, like a floating crown.
+- 3.100.2 — the user: "all good"; only, in `chase`, the monster and the Reflection dipped a little into the lava ditch
+  when jumping it → they jumped too early (a single jump landed with the back of the body over the lava); they now take
+  off right at the edge. Harness `story_film` `lava`: no actor sinks below the floor (the old timing sank 23.5 px).

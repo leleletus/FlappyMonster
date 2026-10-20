@@ -5,6 +5,7 @@
 --  3. tres capturas por escena (al 20 %, 55 % y 88 %): <save>/film_<película>_<nn>_<escena>_<k>.png
 --  4. RELOJ: con su música sonando, la película sigue el reloj de la música (desfase < 0,08 s);
 --  5. SALTAR: manteniendo pulsado 1 s se sale; un toque corto no.
+--  5b. LAVA: en las películas con actores (persecución, guarida) ninguno se hunde en la lava al saltarla.
 --  6. ENLACE: una película con `next` (la de antes de un nivel) deja sonando al acabar la música de ese nivel, y el
 --     nivel, al pedir la suya, la SIGUE (no vuelve a empezar).
 --   tools/tests/run.sh story_film [FILM=intro|ending|chase|lair] [XTRA=1] [NOSHOTS=1]
@@ -22,13 +23,13 @@ local FILMS = os.getenv('FILM') and { os.getenv('FILM') } or { 'intro', 'ending'
 local XTRA, NOSHOTS = os.getenv('XTRA') == '1', os.getenv('NOSHOTS') == '1'
 local fi, state, done, shots, seen, pending, phase = 0, nil, false, {}, {}, nil, 'film'
 local realInput, holdT, clockT, worst
-local NEXT1, P0
+local NEXT1, P0, sink
 
 local function start()
     fi = fi + 1
     local name = FILMS[fi]
     if not name then phase = 'clock'; return end
-    done, seen = false, {}
+    done, seen, sink = false, {}, 0
     gStateMachine:change('story_film', { film = name, xtra = XTRA, onDone = function() done = true end })
     state = gStateMachine:_top()
     state.film.mute = true
@@ -59,6 +60,9 @@ function love.update(dt)
         for _ = 1, 240 do
             if done then break end
             state:update(1 / 60)
+            for _, a in ipairs({ film.shared.m or false, film.shared.r or false }) do
+                if a and not a.hidden then sink = math.max(sink, a.body.y - require('src/story/films/common').LFLOOR) end
+            end
             local sc = film:scene()
             if sc and not seen[sc.index] then seen[sc.index] = true end
             if nextShot and film.t >= nextShot.t then
@@ -71,6 +75,7 @@ function love.update(dt)
             local tl = film.tl
             check(film.name, n == #tl.scenes and math.abs(film.t - tl.total) < 0.1,
                   ('%d/%d escenas, %.2f s de %.2f'):format(n, #tl.scenes, film.t, tl.total))
+            if film.shared.m then check('lava', sink < 2, ('%s: lo más que se hunde un actor bajo el suelo: %.1f px'):format(film.name, sink)) end
             start()
         end
     elseif phase == 'clock' then
