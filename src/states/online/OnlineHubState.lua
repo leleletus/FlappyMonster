@@ -285,6 +285,7 @@ function OnlineHubState:update(dt)
         if Input.pressed('back') then
             self:_createCancel(); return
         end
+        if Input.usingPad() and Input.pressed('light') then self:keypressed('backspace') end   -- (X / Y: borrar)
         -- Teclado / mando: arriba, lo del paso (◀ ▶ eligen o cambian; confirmar avanza); ABAJO baja a los botones
         -- CANCELAR / SIGUIENTE (◀ ▶ entre ellos, confirmar pulsa el elegido, ARRIBA vuelve). Antes el mando no llegaba
         -- a CANCELAR y en el número de jugadores arriba restaba y abajo sumaba.
@@ -313,6 +314,7 @@ function OnlineHubState:update(dt)
 
     -- ── SUB_PASSWORD ──────────────────────────────────────────────────────────
     elseif self.sub == SUB_PASSWORD then
+        if Input.usingPad() and Input.pressed('light') then self:keypressed('backspace') end
         if Input.pressed('confirm') then self:_sendPassword() end
         if Input.pressed('back') then
             self:_setSub(SUB_LIST); self.inputBuffer = ""; self.joinRoom = nil
@@ -342,6 +344,7 @@ function OnlineHubState:_createNext()
     self.hoveredCreateNav = nil                   -- (cada paso empieza con el foco en lo suyo)
     if step == STEP_NAME then
         if #self.inputBuffer == 0 then
+            love.keyboard.setTextInput(true); self._keyboardOn = true     -- (vuelve a abrir el teclado)
             self:_showError(L('hub.name_empty')); return
         end
         self.createData.name = self.inputBuffer
@@ -459,7 +462,7 @@ function OnlineHubState:render()
     if self.sub == SUB_WAITING then
         local dots = string.rep(".", math.floor(love.timer.getTime() * 2) % 4)
         local Ly, oy, a = self:_window(L('hub.connecting') .. dots)
-        MenuKit.text(FONT_SMALL, L('hub.cancel_hint'), Ly.win.x, Ly.win.y + Ly.win.h - 52 + oy, Ly.win.w, 'center', { 0.7, 0.76, 0.92 }, a)
+        MenuKit.text(FONT_SMALL, L(Input.lastDevice == 'touch' and 'hub.tap_cancel' or 'hub.cancel_hint'), Ly.win.x, Ly.win.y + Ly.win.h - 52 + oy, Ly.win.w, 'center', { 0.7, 0.76, 0.92 }, a)
     elseif self.sub == SUB_CREATE then
         self:_renderCreate()
     elseif self.sub == SUB_PASSWORD then
@@ -639,6 +642,31 @@ function OnlineHubState:mousemoved(tx, ty)
     end
 end
 
+function OnlineHubState:touchmoved(id, tx, ty)
+    local lt = self.listTouch
+    if not lt or lt.id ~= id or self.sub ~= SUB_LIST then return end
+    local dy = ty - lt.y
+    if math.abs(dy) > 12 then lt.moved = true end
+    if lt.moved then
+        local n = math.max(1, #self.roomList)
+        local idx = math.max(1, math.min(n, lt.idx - math.floor(dy / (ROW_H + ROW_GAP) + 0.5)))
+        if idx ~= self.selectedIdx then self.selectedIdx, self.listFocus = idx, 'rooms'; Sound.play('select') end
+    end
+end
+
+function OnlineHubState:touchreleased(id, tx, ty)
+    local lt = self.listTouch
+    if not lt or lt.id ~= id then return end
+    self.listTouch = nil
+    if lt.moved or self.sub ~= SUB_LIST or not self.roomList[lt.row] then return end
+    Sound.play('select')
+    if self.selectedIdx == lt.row and self.listFocus == 'rooms' then
+        self:_joinRoom(self.roomList[lt.row]); self:_syncKeyboard()
+    else
+        self.selectedIdx, self.listFocus = lt.row, 'rooms'
+    end
+end
+
 -- Rueda del ratón: desplaza la lista de salas
 function OnlineHubState:wheelmoved(dx, dy)
     if self.sub ~= SUB_LIST or #self.roomList == 0 then return end
@@ -666,7 +694,7 @@ function OnlineHubState:_listButton(i)
 end
 
 function OnlineHubState:touchpressed(id, tx, ty)
-    if self.sub == SUB_WAITING then return end
+    if self.sub == SUB_WAITING then self:_setSub(SUB_LIST); return end      -- (tocar = cancelar, como VOLVER)
     local Ly = self:_layout()
 
     if self.sub == SUB_LIST then
@@ -675,6 +703,12 @@ function OnlineHubState:touchpressed(id, tx, ty)
         end
         for i, r in pairs(Ly.rows) do
             if inRect(r, tx, ty) then
+                if id ~= 'mouse' then
+                    -- (dedo: se decide al soltar — tocar = elegir / entrar; arrastrar = desplazar: antes solo cabían
+                    -- 5 y las demás salas no se podían alcanzar en Android)
+                    self.listTouch = { id = id, y = ty, idx = self.selectedIdx, row = i, moved = false }
+                    return
+                end
                 Sound.play('select')
                 self.selectedIdx, self.listFocus = i, 'rooms'
                 self:_joinRoom(self.roomList[i])

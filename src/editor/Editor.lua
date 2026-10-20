@@ -573,9 +573,12 @@ function Editor.install(levelArg)
             love.graphics.print('PROBANDO — F10: volver al editor', 16, 14)
         end
     end
+    -- (también probando el nivel con F5; el "cierra otra vez" vale 5 s: antes, tras un aviso, el siguiente cierre
+    -- perdía los cambios aunque fuera una hora después)
     love.quit = function()
-        if E.mode == 'edit' and E.unsaved and not E.quitConfirmed then
-            E.quitConfirmed = true
+        local now = love.timer.getTime()
+        if E.unsaved and not (E.quitConfirmedAt and now - E.quitConfirmedAt < 5) then
+            E.quitConfirmedAt = now
             msg('Hay cambios sin guardar. Cierra otra vez para salir sin guardar.', 'warn')
             return true
         end

@@ -1,6 +1,7 @@
 -- tools/tests/free_play — el Juego libre (Aventura → SOLO) con el juego real:
 --  1. carga las fichas de TODOS los niveles (tiempo total, ninguno roto) y
 --     las lista (nombre, monstruos, modos);
+--  1a. la ayuda de abajo con las teclas del aparato (teclado / mando);
 --  1b. la dificultad con teclado / mando: arriba desde la primera fila da el foco
 --     al selector, ▶ / ◀ la cambian, abajo vuelve a la lista (captura free_play_diff.png);
 --  2. navega con las flechas: la selección baja de fila en fila y el scroll
@@ -81,6 +82,15 @@ function love.update(dt)
             check('fichas', loaded == n and #broken == 0 and n >= 20,
                 ('%d/%d niveles en %.2f s, rotos: %s'):format(loaded, n, love.timer.getTime() - t0,
                     #broken > 0 and table.concat(broken, ' ') or 'ninguno'))
+            -- las AYUDAS con las teclas del aparato que se usa: teclado → [ENTER] / [F]; mando → [A] / [Y]
+            local L = require 'src/core/Lang'
+            local dev = realInput.lastDevice
+            realInput.lastDevice = 'keyboard'; local hk = L('free.hint')
+            realInput.lastDevice = 'gamepad'; local hp = L('free.hint')
+            realInput.lastDevice = dev
+            check('ayudas', hk:find('[ENTER]', 1, true) and hk:find('[F]', 1, true) and hp:find('[A]', 1, true)
+                and hp:find('[Y]', 1, true) and not hk:find('{', 1, true) and not hp:find('{', 1, true),
+                ('teclado: "%s" · mando: "%s"'):format(hk, hp))
             shot('1280'); step = 'dif'; T = t
         end
     elseif step == 'dif' and t - T > 0.3 then

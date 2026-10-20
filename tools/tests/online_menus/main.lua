@@ -83,7 +83,7 @@ local function run()
     while #(st.fields[1] or '') > 0 do key('backspace', 0) end
     type_('Prueba')
     shots('login')
-    key('return', 0)
+    press('confirm', 0)                       -- (Enter = la acción confirm, como en el juego)
     waitFor(function() return name(top()) == 'OnlineHubState' end, 6)
     check('login', name(top()) == 'OnlineHubState', 'el nombre conecta y abre la lista de salas → ' .. name(top()))
 
@@ -93,6 +93,17 @@ local function run()
     wait(0.6)
     check('lista', #st.roomList >= 2, ('salas en la lista: %d'):format(#st.roomList))
     shots('hub')
+    -- con el DEDO: tocar una sala que no es la elegida solo la elige (no entra); arrastrar desplaza la elección
+    do
+        local Ly = st:_layout()
+        local r2 = Ly.rows[2]
+        st.selectedIdx, st.listFocus = 1, 'rooms'
+        st:touchpressed('f1', r2.x + 20, r2.y + 10); st:touchreleased('f1', r2.x + 20, r2.y + 10)
+        local tapSel, tapSub = st.selectedIdx, st.sub
+        st:touchpressed('f2', r2.x + 20, r2.y + 10); st:touchmoved('f2', r2.x + 20, r2.y + 90); st:touchreleased('f2', r2.x + 20, r2.y + 90)
+        check('lista_dedo', tapSel == 2 and tapSub == 'LIST' and st.selectedIdx == 1 and st.sub == 'LIST',
+            ('tocar la 2ª: elegida %d, sigue en %s; arrastrar hacia abajo (la lista baja): elegida %d, %s'):format(tapSel, tapSub, st.selectedIdx, st.sub))
+    end
 
     -- ── 7. contraseña (la sala del bot 2) ────────────────────────────────
     for i, r in ipairs(st.roomList) do if r.hasPassword then st.selectedIdx = i end end
@@ -150,6 +161,16 @@ local function run()
     waitFor(function() return #(st.currentRoom.players or {}) >= 2 end, 4)
     wait(0.8)
     check('entra', #(st.currentRoom.players or {}) >= 2, 'el bot entra en la sala')
+    -- VOLVER en la sala lleva el foco a SALIR (no sale todavía)
+    do
+        local f0, a0 = st.focus, st.actionSel
+        press('back', 0.15)
+        local acts = st:_buildActions()
+        local onLeave = acts[st.actionSel] and acts[st.actionSel].id == 'leave'
+        check('sala_volver', onLeave and name(top()) == 'OnlineRoomState', ('VOLVER → foco en %s, sigue en %s'):format(
+            tostring(acts[st.actionSel] and acts[st.actionSel].id), name(top())))
+        st.focus, st.actionSel = f0, a0
+    end
     shots('room')
     -- la DIFICULTAD: todas, con el selector, y el servidor la guarda
     local function diffId() return st.currentRoom.difficulty or 'none' end

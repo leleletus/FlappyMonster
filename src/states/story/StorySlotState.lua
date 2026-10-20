@@ -187,6 +187,8 @@ function StorySlotState:update(dt)
     if Input.pressed('back') then
         if self.confirm then self.confirm = nil; Sound.play('select', 0.85) else self:_back() end
     end
+    -- con MANDO se borra con el botón de la linterna (Y; dos veces, como Supr): antes no había forma
+    if Input.pressed('light') and Input.usingPad() then self:_delete(self.sel) end
 end
 
 function StorySlotState:keypressed(key)

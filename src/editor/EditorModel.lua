@@ -224,9 +224,8 @@ function Model:save(relPath)
     if not src or not info or src:match('%.love$') then
         return false, 'Solo se puede guardar ejecutando el juego desde su carpeta'
     end
-    local f, err = io.open(src .. '/' .. relPath, 'w')
-    if not f then return false, tostring(err) end
-    f:write(self:encode()); f:close()
+    local ok, err = require('src/editor/ToolShell').writeSafe(src .. '/' .. relPath, self:encode())
+    if not ok then return false, err end
     self.path = relPath
     return true
 end

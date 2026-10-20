@@ -2,7 +2,8 @@
 -- nivel" (Ctrl+O): captura la lista arriba y tras bajar con las flechas
 -- (<save>/editor_open_1.png, _2.png), cierra el diálogo y captura la capa
 -- Mini bloques (tecla 7, _3.png) y la pestaña Nivel con "Fondo y clima" abierto
--- (_4.png); comprueba que no hay errores.
+-- (_4.png); "Guardar como" con el nombre de un nivel existente avisa y solo guarda al segundo Guardar
+-- (_saveas.png; la escritura se intercepta); comprueba que no hay errores.
 -- LINKS=1: abre links.json (un bloque ON/OFF conectado a una inundación),
 -- elige Bloques → Conectar (K), hace clic en el bloque y captura el
 -- inspector y la línea de la conexión (_links.png).
@@ -130,8 +131,29 @@ function love.update(dt)
         for _, k in ipairs({ 'lvl:weather' }) do ui.state.sections[k] = true end
     end
     if frame == 74 then shot(4) end
-    if frame == 80 then
-        print('capturas en ' .. love.filesystem.getSaveDirectory() .. '/editor_open_{1,2,3,4}.png')
+    -- "Guardar como" con el nombre de un nivel que YA existe (de la historia): el primer Guardar solo avisa; el
+    -- segundo lo guarda (la escritura se intercepta: nunca toca el repo)
+    if frame == 76 then
+        local E = require('src/editor/Editor').state()
+        E.rightTab = nil
+        E.model.save = function(_, p) SAVEAS_PATH = p; return true end
+        E.modal = { kind = 'saveas', name = 'valle_soleado' }
+    end
+    if frame == 79 then key('return') end
+    if frame == 82 then
+        local E = require('src/editor/Editor').state()
+        SAVEAS_1 = { saved = SAVEAS_PATH, confirm = E.modal and E.modal.confirm }
+        shot('saveas')
+        key('return')
+    end
+    if frame == 86 then
+        local ok = SAVEAS_1.saved == nil and SAVEAS_1.confirm == 'valle_soleado' and SAVEAS_PATH == 'assets/levels/valle_soleado.json'
+        print(('%-10s %s  1er Guardar: guarda=%s, avisa=%s; 2º: guarda en %s'):format('guardar', ok and 'OK   ' or 'FALLA',
+            tostring(SAVEAS_1.saved), tostring(SAVEAS_1.confirm), tostring(SAVEAS_PATH)))
+        if not ok then print('Error: "Guardar como" pisa un nivel existente sin preguntar') end
+    end
+    if frame == 90 then
+        print('capturas en ' .. love.filesystem.getSaveDirectory() .. '/editor_open_{1,2,3,4,saveas}.png')
         print('TODO OK'); love.event.quit(0)
     end
 end

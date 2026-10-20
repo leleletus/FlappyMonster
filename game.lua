@@ -48,7 +48,8 @@ function love.load()
 
     Settings.load()                 -- idioma guardado (src/core/Lang.lua)
     Input.load()
-    Input.lastDevice = Input.isMobile and 'touch' or 'keyboard'
+    Input.lastDevice = Input.isMobile and 'touch' or (Input.isSwitch and 'gamepad' or 'keyboard')
+    require('src/core/Lang').autoArgs = Input.hints       -- (teclas de las ayudas según el aparato)
     Sound.load()
 
     gStateMachine = StateMachine:new({
@@ -106,6 +107,13 @@ end
 function love.joystickadded(joystick)
     Input.joystickadded(joystick)
 end
+function love.joystickremoved(joystick)
+    Input.joystickremoved(joystick)
+end
+-- (mover el stick también es usar el mando: las ayudas pasan a sus botones)
+function love.joystickaxis(joystick, axis, value)
+    if math.abs(value) > 0.6 then Input.lastDevice = 'gamepad' end
+end
 
 -- Actualizar lovesize cuando Android rota o cambia el tamaño real de la ventana
 function love.resize(w, h)
@@ -162,7 +170,8 @@ end
 
 function love.keypressed(k)
     if k == 'f1' then DEBUG_HITBOX = not DEBUG_HITBOX end
-    Input.lastDevice = 'keyboard'
+    -- (el botón / gesto ATRÁS de Android llega como escape: no es usar un teclado — escondía los controles táctiles)
+    if not (Input.isMobile and k == 'escape') then Input.lastDevice = 'keyboard' end
     -- Reenviar al estado actual (para campos de texto en menús online)
     local state = gStateMachine:_top()
     if state and state.keypressed then state:keypressed(k) end

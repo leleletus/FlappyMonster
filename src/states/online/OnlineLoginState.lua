@@ -92,10 +92,8 @@ function OnlineLoginState:keypressed(k)
         if #cur > 0 then
             self.fields[self.activeField] = cur:sub(1, -2)
         end
-    elseif k == "return" or k == "kpenter" then
+    elseif k == "kpenter" then                -- (Enter y Esc normales ya son `confirm` / `back`, en update)
         self:_tryConnect()
-    elseif k == "escape" then
-        self:_back()
     end
 end
 
@@ -113,6 +111,8 @@ function OnlineLoginState:update(dt)
         Sound.play('select', 1.04)
     end
 
+    -- (solo con MANDO: X / Y borra una letra — no había forma sin teclado)
+    if Input.usingPad() and Input.pressed('light') then self:keypressed('backspace') end
     if Input.pressed('confirm') then
         if self.btnIndex == 1 then self:_tryConnect() else self:_back() end
     end
@@ -127,6 +127,7 @@ function OnlineLoginState:_tryConnect()
 
     if #nick == 0 then
         self:_showError(Lang('login.enter_name'))
+        love.keyboard.setTextInput(true)          -- (vuelve a abrir el teclado: en la Switch, si se cerró, no había otra)
         return
     end
     -- antes de enviarlo: largo, caracteres y palabras no permitidas (el servidor lo vuelve a comprobar)

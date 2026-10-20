@@ -10,7 +10,7 @@
 -- Y FUGAS (fugas): entra en el mismo nivel varias veces seguidas (RELOADS=6): la memoria de Lua y de texturas tiene que estabilizarse.
 --
 --   tools/tests/run.sh perf                          todas las escenas
---   SCENES=menu,level:assets/levels/x.json,boss,map,flappy,fugas   las que se digan
+--   SCENES=menu,level:assets/levels/x.json,boss,flappy,fugas   las que se digan
 --   N=600 WARM=120 TOP=25                           fotogramas medidos, de calentamiento, funciones del perfil
 --   PROFILE=0                                       sin perfil
 --   SHOTS=1                                         captura al final de cada escena: <save>/perf_<escena>.png

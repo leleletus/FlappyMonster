@@ -106,9 +106,16 @@ function UpdateState:render()
     if not self.restartT and s ~= 'installing' then
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1, 1, 1, 0.35)
-        love.graphics.printf(L('upd.skip', { key = Input.label('back') }), 0, WINDOW_H - 40, WINDOW_W, 'center')
+        local txt = Input.lastDevice == 'touch' and L('upd.tap_skip') or L('upd.skip', { key = Input.label('back') })
+        love.graphics.printf(txt, 0, WINDOW_H - 40, WINDOW_W, 'center')
     end
     love.graphics.setColor(1, 1, 1, 1)
+end
+
+-- Con el dedo: tocar la pantalla salta la búsqueda (antes solo el botón atrás de Android)
+function UpdateState:touchpressed(id, x, y)
+    local s = self.upd and self.upd.status
+    if s and s ~= 'installing' and s ~= 'done' and not self.restartT then self:_leave() end
 end
 
 return UpdateState

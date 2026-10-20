@@ -51,9 +51,16 @@ numbers (3.x.y = beta before the renumbering). `Protocol.VERSION` is a separate 
   unconfirmed installs of one version (`tryVer/tries`, cleared on confirm). main.lua
   changes only reach a device by reinstalling. Harness `update_boot` (FM_UPDATE=1).
 
-- Save dir: `update/state.lua` {active, previous, pending, boots, bad, trash},
+- Save dir: `update/state.lua` {active, previous, pending, boots, bad, trash, base},
   `update/slots/<version>/` = only the files that differ from the installed
   game + `.manifest.lua` (hashes, so the next update doesn't rehash).
+- `base` (0.5.10) = the INSTALLED version the active slot was built against (`UPDATE_INSTALLED`, set by `main.lua`).
+  If another build was installed since (new APK / .love), the slot would mix two versions and a boot error there had
+  no rollback: `main.lua` drops it (trash) and uses the installed game; without `base` (older states) it is dropped
+  when the installed version is the same or newer. The Updater refuses a manifest with an entry lacking a 64-hex
+  sha256, an absolute path or `..` (before, a missing hash counted as "already have it"), and fails if
+  `.manifest.lua` cannot be written. Harness `update_boot` (`otra_base`, `updater`). `main.lua` changes only reach a
+  device with a new install.
 
 - `src/update/Updater.lua` + `src/states/menu/UpdateState.lua` (first state; goes
   to the title at once when offline/up to date; also entered from the online

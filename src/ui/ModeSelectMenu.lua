@@ -279,6 +279,12 @@ end
 -- Devuelve 'close' cuando el menú debe cerrarse.
 function ModeSelectMenu:update(dt)
     fit()
+    -- (la ventana cambió y caben otras tarjetas: que la elegida siga a la vista — antes podía quedar fuera)
+    if self.sel and self.first then
+        if self.sel < self.first then self.first = self.sel end
+        if self.sel > self.first + VISIBLE - 1 then self.first = self.sel - VISIBLE + 1 end
+        self.first = math.max(1, math.min(self.first, #self:levels() - VISIBLE + 1))
+    end
     self.t = self.t + dt
     self.tabAnim = self.tabAnim + (self.tab - self.tabAnim) * math.min(1, dt * 14)
 

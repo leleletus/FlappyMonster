@@ -9,7 +9,7 @@ the save directory is searched before the game's own files.
 |---|---|---|
 | `options.cfg` | `src/core/Settings.lua` | language, last accepted online name (`onlineName`) |
 | `<difficulty>_highscore.dat` (`SCORE_FILE`) | `src/states/flappy/PlayState.lua` | Flappy best score, one file per Flappy difficulty |
-| `story1.sav` … `story3.sav` | `src/story/Save.lua` | one story slot each: difficulty, lives, per-level best (rating, grade, points), done nodes, shards, bonus results, world rewards, points, pre-level films already seen (`films`) |
+| `story1.sav` … `story3.sav` | `src/story/Save.lua` | one story slot each: difficulty, lives, per-level best (rating, grade, points, time), done nodes, shards, bonus results, world rewards, points, play time (`playTime`), Game Overs (`gameOvers`), pre-level films already seen (`films`) |
 | `story.sav` | `src/story/Save.lua` | global: unlocked difficulties, cleared difficulties |
 | `*.sav.bak`, `*.sav.damaged` | `src/story/Save.lua` | copy written before each save; a file found unreadable (with its copy) is kept here |
 | `update/state.lua`, `update/slots/<version>/`, `update/boot.log` | `main.lua`, `src/update/Updater.lua` | downloaded versions (see [updates-and-release](updates-and-release.md)) |

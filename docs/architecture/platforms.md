@@ -46,3 +46,16 @@ Actions (`input.lua`): `move_left`, `move_right`, `jump`, `crouch`, `light` (lev
 - Testing other screens: run the REAL main.lua from a scratch app with a
   custom window size and `love.system.getOS = function() return 'Android' end`
   (Input.isMobile), plus a local server/bot for the online menus.
+
+- Input devices (0.5.10, review): `Input.lastDevice` (keyboard / mouse / gamepad / touch; a stick move > 0.6 counts as
+  gamepad; the Switch starts on gamepad; Android's Back arrives as escape and no longer switches to keyboard, which
+  hid the touch controls). `Input.usingPad()` decides the labels: `Input.label(action)` and `Input.hints()` (the keys
+  of every menu hint: `{ok} {back} {arrows} {lr} {ud} {up} {down} {diff} {del}`, keyboard words from the `keys.*`
+  language keys, pad = Nintendo layout `[A]` confirm / `[B]` back / `[Y]` light) — before, labels went by platform
+  only, so a PC pad showed `[Enter]` and the Switch / Android showed PC keys written into the texts. Hints are hidden
+  while using touch. Pads: `love.joystickremoved` releases the pad and the next connected one is used (a re-plugged
+  or swapped pad used to stay dead). Menu arrows REPEAT when held (`nav_*`: after 0.38 s, every 0.09 s; in
+  `Input.pressed`). With a pad: X / Y deletes a letter in text fields and confirming an empty name reopens the
+  system keyboard; X / Y (twice) deletes a story slot. Touch: the update screen skips on a tap, the hub's
+  "connecting" window cancels on a tap, the room list selects on a tap / joins on a second tap / scrolls by dragging.
+  Harnesses `free_play` (`ayudas`), `online_menus` (`lista_dedo`, `sala_volver`, `crear_mando`).

@@ -11,6 +11,7 @@
 --   pending   true = recién instalada, aún sin confirmar
 --   boots     arranques sin confirmar;  bad = versión que falló (no reinstalar)
 --   trash     carpeta a borrar al arrancar
+--   base      versión INSTALADA cuando se descargó la activa (la carpeta solo tiene lo que cambiaba respecto a ella)
 -- Una versión nueva se confirma tras CONFIRM_T s de juego sin errores. Si da
 -- un error antes (o no llega a confirmarse en MAX_BOOTS arranques), se vuelve
 -- a la anterior y no se vuelve a instalar esa versión.
@@ -162,6 +163,25 @@ if UPDATE_ENABLED then
     if st.nomount and (st.nomount ~= installed or st.boot ~= BOOT) then st.nomount = nil end    -- (reinstalado, o arranque nuevo)
     if st.boot ~= BOOT then st.boot = BOOT; writeState(st) end
     if st.trash then rmrf(slotDir(st.trash)); st.trash = nil; writeState(st) end
+    UPDATE_INSTALLED = installed                                -- (el Updater la apunta como `base`)
+    -- Se instaló OTRO juego por encima (APK / .love nuevo) desde que se descargó la activa: su carpeta solo tiene lo
+    -- que cambiaba respecto al de antes y montada mezclaría dos versiones (y un error al arrancar no tenía vuelta
+    -- atrás). Fuera: se usa la instalada y el Updater pide al servidor lo que haga falta. Sin `base` (estados de
+    -- antes de 0.5.10): fuera si la instalada ya es igual o más nueva que la activa.
+    local function newerOrSame(a, b)                            -- ¿versión a ≥ b? ("0.5.10" > "0.5.9")
+        local pa, pb = {}, {}
+        for n in tostring(a):gmatch('%d+') do pa[#pa + 1] = tonumber(n) end
+        for n in tostring(b):gmatch('%d+') do pb[#pb + 1] = tonumber(n) end
+        for i = 1, math.max(#pa, #pb) do
+            if (pa[i] or 0) ~= (pb[i] or 0) then return (pa[i] or 0) > (pb[i] or 0) end
+        end
+        return true
+    end
+    if st.active and ((st.base and st.base ~= installed) or (not st.base and newerOrSame(installed, st.active))) then
+        blog('otro juego instalado (' .. installed .. ', la activa se hizo sobre ' .. tostring(st.base) .. '): fuera ' .. st.active)
+        st.trash, st.active, st.previous, st.pending, st.boots, st.base = st.active, nil, nil, nil, nil, nil
+        writeState(st)
+    end
     if st.pending then
         st.boots = (st.boots or 0) + 1
         if st.boots > MAX_BOOTS then

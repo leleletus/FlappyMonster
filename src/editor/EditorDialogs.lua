@@ -67,7 +67,22 @@ local function drawModal()
         md.name = ui.textField('saveas', md.name or '', x + 120, y + 60, w - 200, 40)
         md.name = md.name:gsub('[^%w%-_]', '')
         ui.text('.json', x + w - 72, y + 66, th.muted)
+        -- Ya existe: avisa y hay que pulsar Guardar otra vez con el mismo nombre (antes lo pisaba sin preguntar,
+        -- también los niveles de la historia)
+        local target = LEVELS_DIR .. '/' .. md.name .. '.json'
+        local exists = #md.name > 0 and target ~= E.model.path and love.filesystem.getInfo(target) ~= nil
+        if exists then
+            local story = false
+            for _, wd in ipairs(require('src/story/Worlds').LIST) do
+                for _, id in ipairs(wd.levels) do if id == md.name then story = true end end
+                if wd.boss == md.name or wd.bonus == md.name then story = true end
+            end
+            ui.text((story and 'Es un nivel de la HISTORIA. ' or '') .. 'Ya existe: ' .. (md.confirm == md.name
+                and 'pulsa Guardar para SOBRESCRIBIRLO.' or 'pulsa Guardar dos veces para sobrescribirlo.'),
+                x + 20, y + 112, th.warn)
+        end
         local go = ui.button('Guardar', x + w - 230, y + h - 50, 100, 32) or ui.state.keys['return']
+        if go and exists and md.confirm ~= md.name then md.confirm = md.name; go = false end
         if go and #md.name > 0 then
             E.modal = nil; ui.state.focus = nil
             if E.model.name == nil or E.model.name == '' or E.model.name == 'nuevo' then E.model.name = md.name end

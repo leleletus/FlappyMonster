@@ -22,9 +22,21 @@ function Shell.writeRepo(relPath, text)
     if not src or src:match('%.love$') or not love.filesystem.getInfo('main.lua') then
         return false, 'Solo se puede guardar ejecutando el juego desde su carpeta'
     end
-    local f, err = io.open(src .. '/' .. relPath, 'wb')
+    return Shell.writeSafe(src .. '/' .. relPath, text)
+end
+
+-- Escribe a un temporal y lo pone en su sitio: un disco lleno o un error a medias ya no deja el archivo cortado
+-- (antes se abría con 'w' — lo vacía — y no se miraba si la escritura fue bien: decía "Guardado" igual)
+function Shell.writeSafe(full, text)
+    local tmp = full .. '.tmp'
+    local f, err = io.open(tmp, 'wb')
     if not f then return false, tostring(err) end
-    f:write(text); f:close()
+    local ok, werr = f:write(text)
+    local cok = f:close()
+    if not ok or not cok then os.remove(tmp); return false, 'no se pudo escribir: ' .. tostring(werr) end
+    os.remove(full)                                     -- (en Windows rename no pisa)
+    local rok, rerr = os.rename(tmp, full)
+    if not rok then return false, 'no se pudo renombrar: ' .. tostring(rerr) end
     return true
 end
 
@@ -220,9 +232,11 @@ function Shell.install(a)
             love.graphics.print('PROBANDO — F10: volver al editor', 16, 14)
         end
     end
+    -- (también probando; el "cierra otra vez" vale 5 s)
     love.quit = function()
-        if Shell.mode == 'edit' and app.unsaved and app.unsaved() and not Shell.quitConfirmed then
-            Shell.quitConfirmed = true
+        local now = love.timer.getTime()
+        if app.unsaved and app.unsaved() and not (Shell.quitConfirmedAt and now - Shell.quitConfirmedAt < 5) then
+            Shell.quitConfirmedAt = now
             Shell.message('Hay cambios sin guardar. Cierra otra vez para salir sin guardar.', 'warn')
             return true
         end

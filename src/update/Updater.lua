@@ -130,9 +130,13 @@ function Updater:_onManifest(m)
     end
     self.files = {}
     for _, f in ipairs(m.files) do
-        if type(f) == 'table' and type(f[1]) == 'string' and not f[1]:find('%.%.') then
-            self.files[#self.files + 1] = { path = f[1], size = tonumber(f[2]) or 0, hash = f[3] }
+        -- (una entrada sin su sha256 contaba como "ya la tengo" si faltaba el archivo — nil == nil — y la versión
+        -- quedaba sin él: un manifiesto así no se instala)
+        if type(f) ~= 'table' or type(f[1]) ~= 'string' or f[1]:find('%.%.') or f[1]:sub(1, 1) == '/'
+           or type(f[3]) ~= 'string' or not f[3]:match('^%x+$') or #f[3] ~= 64 then
+            return self:_fail('manifiesto con una entrada mal formada')
         end
+        self.files[#self.files + 1] = { path = f[1], size = tonumber(f[2]) or 0, hash = f[3]:lower() }
     end
     self.active = st.active
     self.known = knownHashes(st.active) or {}
@@ -266,9 +270,12 @@ function Updater:_install()
         end
     end
     manifest[#manifest + 1] = '}\n'
-    writeFile(self.slot .. '.manifest.lua', table.concat(manifest, '\n'))
+    if not writeFile(self.slot .. '.manifest.lua', table.concat(manifest, '\n')) then
+        return self:_fail('no se pudo escribir el manifiesto')
+    end
     local st = state()
     st.previous = st.active                 -- (nil = el juego instalado)
+    st.base = rawget(_G, 'UPDATE_INSTALLED') or st.base      -- (el juego instalado sobre el que se hizo: ver main.lua)
     st.active, st.pending, st.boots = self.version, true, 0
     st.tries = (st.tryVer == self.version) and (st.tries or 0) + 1 or 1
     st.tryVer = self.version

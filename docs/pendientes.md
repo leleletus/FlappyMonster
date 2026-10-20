@@ -26,27 +26,27 @@ not repeated here.
 - [x] (0.5.8) **Game Over while replaying an old world locks the later worlds** (`Run.gameOver(world)` with the replayed
   world).
 - [x] (0.5.8) **Pause → exit during the win celebration** (`won` / `endingT`) counts the level as not finished.
-- [ ] **Updater: old slot mounted over a newer installed build** (no `base` check); a boot error there loops.
+- [x] (0.5.10) **Updater: old slot mounted over a newer installed build** (no `base` check); a boot error there loops.
 
 ## 2. Controls and menus
 
 - [x] (0.5.9) **Create room, max players step (pad)**: cannot be cancelled; check the up / down / left / right behaviour
   (user report).
-- [ ] Hints with PC keys written in the text (`free.hint`, `story.*_hint`, `hub.*_hint`, `login.hint`, `msm.*`…) →
+- [x] (0.5.10) Hints with PC keys written in the text (`free.hint`, `story.*_hint`, `hub.*_hint`, `login.hint`, `msm.*`…) →
   `{key}` placeholders filled by `Input.label`.
-- [ ] `Input.label` by platform only → by last device used (keyboard / pad / touch).
-- [ ] Pad unplugged and plugged back / swapped stops working (no `joystickremoved`, new pad ignored).
-- [ ] No repeat when holding a direction in menus; no stick hysteresis (diagonals jump in grids).
-- [ ] Save slot cannot be deleted with a pad (BORRAR never gets focus).
-- [ ] Online room list cannot be scrolled by touch (rooms after the 5th unreachable on Android).
-- [ ] Online room screen: `back` does nothing although the hint shows it.
-- [ ] Login: Enter handled twice (`keypressed` + `confirm`).
-- [ ] `story.map_hint` describes the old map controls.
-- [ ] Touch ignored on `UpdateState` and the hub "waiting for room" overlay.
-- [ ] Text fields unusable with a pad only (no delete action, keyboard cannot be reopened).
-- [ ] Raw ENet / Lua error strings shown to the player (`NC:_fail(tostring(err))`).
-- [ ] `ModeSelectMenu`: selected card can be off-screen after a resize (`first` not re-clamped).
-- [ ] Android Back during a level hides the touch controls (`lastDevice = 'keyboard'`).
+- [x] (0.5.10) `Input.label` by platform only → by last device used (keyboard / pad / touch).
+- [x] (0.5.10) Pad unplugged and plugged back / swapped stops working (no `joystickremoved`, new pad ignored).
+- [ ] ~~No repeat when holding a direction in menus~~ (0.5.10); no stick hysteresis (diagonals jump in grids).
+- [x] (0.5.10) Save slot cannot be deleted with a pad (BORRAR never gets focus).
+- [x] (0.5.10) Online room list cannot be scrolled by touch (rooms after the 5th unreachable on Android).
+- [x] (0.5.10) Online room screen: `back` does nothing although the hint shows it.
+- [x] (0.5.10) Login: Enter handled twice (`keypressed` + `confirm`).
+- [x] (0.5.10) `story.map_hint` describes the old map controls.
+- [x] (0.5.10) Touch ignored on `UpdateState` and the hub "waiting for room" overlay.
+- [x] (0.5.10) Text fields unusable with a pad only (no delete action, keyboard cannot be reopened).
+- [x] (0.5.10) Raw ENet / Lua error strings shown to the player (`NC:_fail(tostring(err))`).
+- [x] (0.5.10) `ModeSelectMenu`: selected card can be off-screen after a resize (`first` not re-clamped).
+- [x] (0.5.10) Android Back during a level hides the touch controls (`lastDevice = 'keyboard'`).
 
 ## 3. Gameplay
 
@@ -71,18 +71,18 @@ not repeated here.
 - [ ] Room password lockout resets on reconnect (per-connection instead of per-IP).
 - [ ] "Private" room listed and joinable with an empty password; sequential room ids.
 - [ ] Remote players' health bar `hpMax = 3` hard-coded (4 on Easy).
-- [ ] Client handler error shown as "connection lost" (one `pcall` around all of `client:update`).
+- [x] (0.5.10) Client handler error shown as "connection lost" (one `pcall` around all of `client:update`).
 - [x] (0.5.8) `_currentSim` never cleared after `stepRoom`.
 
 ## 5. Story, saves, editor, updater
 
-- [ ] Level editor "Save as" overwrites an existing level (story levels included) without asking.
-- [ ] Editors: quit guard skipped during F5 playtest; `quitConfirmed` never reset; `f:write` result ignored.
+- [x] (0.5.10) Level editor "Save as" overwrites an existing level (story levels included) without asking.
+- [x] (0.5.10) Editors: quit guard skipped during F5 playtest; `quitConfirmed` never reset; `f:write` result ignored.
 - [x] (0.5.8) Lost lives only saved on `exit` (kill the app = keep the lives).
 - [ ] Shards and level completion saved in separate writes.
 - [ ] Story points farmable by replaying (`d.points` grows on every replay).
 - [ ] `Save.VERSION` / `options.cfg` version never checked.
-- [ ] Updater manifest: entries without hash count as present; `.manifest.lua` write unchecked; validate hashes.
+- [x] (0.5.10) Updater manifest: entries without hash count as present; `.manifest.lua` write unchecked; validate hashes.
 
 ## 6. Tests, performance, docs
 
@@ -91,11 +91,11 @@ not repeated here.
 - [ ] ~~Hunt mode never run in the battery~~ (0.5.8); Evil Ship (`miniboss1`) has no rules harness; spike rain untested.
 - [ ] `mechanics` `persecucion` depends on the random sequence (a case added before it made it fail: `sides` 3 < 5).
 - [ ] No test for a corrupt / truncated save or `options.cfg` round-trip.
-- [ ] `perf`: no online-client, story-map or credits scene; header advertises a missing `map` scene; boss scene at
+- [ ] `perf`: no online-client, story-map or credits scene; ~~header advertises a missing `map` scene~~ (0.5.10); boss scene at
   54 / 64 KB per frame.
 - [ ] Particles: no pool, `table.remove(list, 1)` at the cap (O(n²) bursts).
 - [ ] Predictor allocates tables every tick / snapshot.
-- [ ] `docs/testing/harnesses.md` stale (contradicting intros, 16 harnesses missing); `free_play` README row
+- [x] (0.5.10) `docs/testing/harnesses.md` stale (contradicting intros, 16 harnesses missing); `free_play` README row
   malformed; stale line counts in known-debt; `save-data.md` misses `playTime` / `gameOvers`.
 
 ## 7. Features to add (decide with the user)

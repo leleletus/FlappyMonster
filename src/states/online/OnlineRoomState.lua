@@ -268,6 +268,17 @@ function OnlineRoomState:update(dt)
     end
 
     -- ── Navegación normal ─────────────────────────────────────────────────────
+    if Input.pressed('back') then
+        local leave
+        for i, a in ipairs(actions) do if a.id == 'leave' then leave = i end end
+        if leave and self.focus == FOCUS_ACTIONS and self.actionSel == leave then
+            Sound.play('select'); self:_executeAction('leave')
+        elseif leave then
+            self.focus, self.actionSel, self.t = FOCUS_ACTIONS, leave, 0
+            Sound.play('select', 0.9)
+        end
+        return
+    end
 
     -- El selector de dificultad (elegido) usa izquierda / derecha para cambiarla
     local cur = self.focus == FOCUS_ACTIONS and actions[self.actionSel]

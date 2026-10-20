@@ -56,10 +56,15 @@ local function load(id)
     return tables[id]
 end
 
+-- `Lang.autoArgs()` (lo pone game.lua: Input.hints) rellena los marcadores que no vienen en `args`: las teclas de
+-- las ayudas ({ok}, {back}, {arrows}...) salen así según el aparato sin tocar cada pantalla
 local function format(s, args)
-    if not args then return s end
+    if not s:find('{', 1, true) then return s end
+    local auto = Lang.autoArgs and Lang.autoArgs()
+    if not args and not auto then return s end
     return (s:gsub('{(%w+)}', function(k)
-        local v = args[k]
+        local v = args and args[k]
+        if v == nil and auto then v = auto[k] end
         if v == nil then return '{' .. k .. '}' end
         return tostring(v)
     end))

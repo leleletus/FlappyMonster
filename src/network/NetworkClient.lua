@@ -198,11 +198,12 @@ function NC:update(dt)
         self._resolving = nil
         if not ip then return self:_fail(Lang('err.not_found')) end
         local ok, err = pcall(function() self:_open(ip, r.port, r.name) end)
-        if not ok then return self:_fail(tostring(err)) end
+        if not ok then print('[red] ' .. tostring(err)); return self:_fail(Lang('err.unreachable')) end
     end
 
+    -- (el error de ENet / Lua va a la consola; al jugador, un texto suyo — antes le salía el error crudo)
     local ok, err = pcall(function() self.client:update() end)
-    if not ok then self:_fail(tostring(err)) end
+    if not ok then print('[red] ' .. tostring(err)); self:_fail(Lang('err.lost')) end
 end
 
 function NC:isConnected()
@@ -211,10 +212,13 @@ end
 
 -- ── Dispatch interno ─────────────────────────────────────────────────────────
 
+-- Cada manejador, protegido: un error en uno (un fallo del juego, no de la red) se apunta y la conexión sigue;
+-- antes cortaba la conexión ("conexión perdida") y se perdía el resto de mensajes de ese lote
 function NC:_fire(event, data)
-    if self._handlers[event] then
-        self._handlers[event](data)
-    end
+    local h = self._handlers[event]
+    if not h then return end
+    local ok, err = xpcall(h, debug.traceback, data)
+    if not ok then print('Error: [red] al atender "' .. tostring(event) .. '": ' .. tostring(err)) end
 end
 
 return NC

@@ -43,3 +43,8 @@ via `AdventureState` with `editor_playtest.json` (SP keeps reserve entities in
 Ctrl+O "Abrir nivel" = scrollable list (wheel / arrows + Enter) with file + level
 name; hides `_*` files and `editor_playtest.json`. Test arenas live in
 `tools/levelgen/arenas/` (not listed).
+Saving (0.5.10, review): "Guardar como" with the name of an EXISTING level warns (and says when it is a story level,
+`Worlds.LIST`) and only overwrites on the second press — it used to overwrite silently. Every editor writes through
+`ToolShell.writeSafe` (temp file + rename, write result checked: a full disk no longer leaves a truncated JSON while
+saying "Guardado"). Closing the window with unsaved changes warns in edit AND playtest mode, and the "close again"
+only counts for 5 s. Harness `editor_open` (`guardar`).

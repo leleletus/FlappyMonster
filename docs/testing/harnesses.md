@@ -4,7 +4,7 @@
 (symlinks to `src`, `assets`, `libs`, `settings.lua`, `input.lua`) and runs through ONE command from the repo root:
 
 ```
-tools/tests/run.sh all                              # the battery (~6 min), exit 0 / 1, ends with "TODO OK"
+tools/tests/run.sh all                              # the battery (~8 min), exit 0 / 1, ends with "TODO OK"
 tools/tests/run.sh <harness> [VAR=val ...] [-- args]
 ```
 
@@ -24,23 +24,14 @@ Syntax check of everything:
 **What no harness can judge:** how something feels to play, how music sounds, whether art looks right. Say so at
 every hand-off.
 
-## The runner
+## The runner — details
 
-**ALWAYS start here — don't rebuild test setups by hand.** Every harness lives
-in `tools/tests/` and runs through ONE command from the repo root:
-`tools/tests/run.sh all` (quick battery, ~2 min, exit 0/1) or
-`tools/tests/run.sh <harness> [VAR=val ...] [-- args]`. `run.sh` starts/stops a
-FRESH local server for `online_*` (a reused one keeps stale peers → bots never
-join), copies `tools/levelgen/arenas/*.json` to a temp `assets/levels/zz_tmp_*`
-(the server ignores `_*` names), cleans `server/published`, applies a timeout
-(a LÖVE error screen never exits) and flags Lua errors in harness or server.
-`tools/tests/README.md` = table of every harness (what it checks, how to run
-it, its env vars) + rules for new ones. When a test needs something new, fix
-or extend the HARNESS (and its README row) instead of working around it in a
-scratch copy: the time spent fighting test setups was the user's complaint.
-Harnesses: flyers, crawler_drop, mechanics, sounds, boss_sim, sp_boss, boss_frames, megagummy_rules, gloomy_rules, megagloomy_rules,
-editor_open, free_play, update_boot, online_smoke, online_boss, online_helmet,
-level_check, level_solve, level_shots, story_flow, difficulty_rules, bot_nav. `tools/` is not shipped (.love / updates).
+`run.sh` starts / stops a FRESH local server for `online_*` (a reused one keeps stale peers → bots never join), copies
+`tools/levelgen/arenas/*.json` to a temporary `assets/levels/zz_tmp_*` (the server ignores `_*` names), cleans
+`server/published`, applies a timeout (a LÖVE error screen never exits) and flags Lua errors (`Error:` lines,
+tracebacks) in the harness or the server log. The list of harnesses is `tools/tests/README.md` (not repeated here).
+While working through a long list of fixes, run the targeted harnesses per change and the full battery once per large
+group, right before releasing it (the user's preference, 2026-10-20). `tools/` is not shipped (.love / updates).
 
 ## Writing a new harness: low-level notes
 

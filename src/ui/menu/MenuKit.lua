@@ -255,6 +255,7 @@ function MenuKit.title(text, color, A, i, maxS)
 end
 
 function MenuKit.hint(text, A, i)
+    if Input.lastDevice == 'touch' then return end        -- (con el dedo no hay teclas que explicar)
     require('src/ui/menu/MenuList').footer(nil, A, i, text)
 end
 

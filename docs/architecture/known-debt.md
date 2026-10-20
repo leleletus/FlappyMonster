@@ -5,7 +5,7 @@ would help future work.
 
 ## Architecture
 
-1. **`server/main.lua` (1687 lines) could not be split.** Its sections share 15 file-level locals that are
+1. **`server/main.lua` (~1800 lines) could not be split.** Its sections share 15 file-level locals that are
    reassigned from several places (`players`, the lazily loaded modules `Level / Entities / BossZones / …` set in
    `love.load`, the sound-stub state `_soundEvents / _currentSoundPlayerId / _emitX / _emitY`, `_currentSim`,
    `MSG_BURST`), and its banners do not match real seams (the "level catalog" section also holds `initRoomSim` and
@@ -21,8 +21,8 @@ would help future work.
    forward: one shared `Sim.step(sim, dt, hooks)` module under src/world used by both, the hooks being what differs
    (emit event vs play locally, lives bookkeeping).
 3. **Large single-system files** that are long because the system is big, not tangled — left as they are:
-   `snowboss.lua` (1841), `megacrabby.lua` (1613), `StoryMapState.lua` (1198), `mirror.lua` (1095), `megagummy.lua`
-   (1078), `OnlineHubState.lua` (1033), `Particles.lua` (993, one long `elseif` chain per particle kind — a table of
+   `snowboss.lua` (1841), `megacrabby.lua` (1613), `StoryMapState.lua` (~1300), `mirror.lua` (1095), `megagummy.lua`
+   (1078), `OnlineHubState.lua` (~750), `Particles.lua` (993, one long `elseif` chain per particle kind — a table of
    kinds would let a kind be added without touching the function).
 4. **`Sound.load()` is one long list** of `load(...)` lines and a `GAIN` table: adding a sound means editing two
    places far apart. A data file (a sounds index next to the music one: name → file, gain, range) would make sounds a catalog

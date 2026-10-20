@@ -15,7 +15,9 @@
 --   viejo      un aparato que el arranque anterior dejó bloqueado (`nomount`
 --              = la instalada) vuelve a buscar actualizaciones
 --   reinstala  con otra versión instalada se vuelve a intentar
---   updater    el Updater no reinstala la versión activa y, tras 2
+--   otra_base  la activa se descargó sobre OTRO juego instalado (`base`): no se monta (mezclaría dos versiones),
+--              se usa la instalada; con `base` = la instalada sí se monta
+--   updater    un manifiesto con una entrada sin sha256 válido no se instala; el Updater no reinstala la versión activa y, tras 2
 --              instalaciones sin confirmar de la misma versión, para
 --
 --   tools/tests/run.sh update_boot
@@ -139,6 +141,18 @@ function love.load()
     st = boot('ok')
     check('reinstala', st.nomount == nil and not UPDATE_BLOCKED, ('nomount=%s bloqueado=%s'):format(tostring(st.nomount), tostring(UPDATE_BLOCKED)))
 
+    -- la activa se hizo sobre otro juego instalado: fuera (y a la papelera); sobre el mismo: se monta
+    prepare({ active = V, base = '0.0.1' })
+    st = boot('ok')
+    local gone = version() == installed and st.active == nil and st.trash == V
+    restore()
+    prepare({ active = V, base = installed })
+    st = boot('ok')
+    check('otra_base', gone and version() == V and st.active == V,
+        ('base 0.0.1 → usa %s (activa %s, a la papelera %s); base = la instalada → usa %s'):format(gone and installed or '?',
+         tostring(gone and 'nil' or 'sigue'), gone and V or '-', version()))
+    restore()
+
     -- Updater (sin red: solo la decisión al recibir el manifiesto)
     local Updater = require 'src/update/Updater'
     local function decide(state, mver)
@@ -150,8 +164,21 @@ function love.load()
     local a = decide({ active = V }, V)
     local b = decide({ tryVer = '9.9.10', tries = 2 }, '9.9.10')
     local c = decide({ tryVer = '9.9.10', tries = 1 }, '9.9.10')
-    check('updater', a == 'uptodate' and b == 'failed' and c == 'hashing',
-        ('servidor = activa → %s; 2 intentos sin confirmar → %s; 1 intento → %s'):format(a, b, c))
+    local function bad(files)
+        prepare({})
+        local u = setmetatable({ status = 'connecting', t = 0, bytesDone = 0, bytesTotal = 0, filesDone = 0, filesTotal = 0 }, Updater)
+        u:_onManifest({ version = '9.9.11', files = files })
+        return u.status
+    end
+    local H = string.rep('ab', 32)
+    local d1 = bad({ { 'main.lua', 10 } })                         -- (sin hash)
+    local d2 = bad({ { 'main.lua', 10, 'xyz' } })                  -- (hash que no es sha256)
+    local d3 = bad({ { '../fuera.lua', 10, H } })                  -- (fuera de la carpeta)
+    local d4 = bad({ { 'main.lua', 10, H } })                      -- (bien)
+    check('updater', a == 'uptodate' and b == 'failed' and c == 'hashing' and d1 == 'failed' and d2 == 'failed'
+        and d3 == 'failed' and d4 == 'hashing',
+        ('servidor = activa → %s; 2 intentos sin confirmar → %s; 1 intento → %s; manifiesto sin hash → %s, hash raro → %s, ruta con .. → %s, bien → %s'):format(
+         a, b, c, d1, d2, d3, d4))
 
     restore()
     pcall(realUnmount, SLOT)
