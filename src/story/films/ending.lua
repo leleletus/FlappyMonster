@@ -378,16 +378,13 @@ F.home = {
         if k > 0 then Stage.flappyBg(rig.scroll, K.SKY_BLUE, k) end
         K.flappyDraw(rig)
         if t >= c.at('logo') then
-            local logo = Stage.img('assets/images/ui/menus/logo.png')
-            if logo then
-                local u = c.k(c.at('logo'), c.at('logo') + c.b(1.5))
-                local s = 12
-                local y = lerp(-200, 96, K.elastic(u))
-                love.graphics.setColor(0, 0, 0, 0.5)
-                love.graphics.draw(logo, math.floor(WINDOW_W / 2 - logo:getWidth() * s / 2) + 6, math.floor(y) + 6, 0, s, s)
-                love.graphics.setColor(1, 1, 1, 1)
-                love.graphics.draw(logo, math.floor(WINDOW_W / 2 - logo:getWidth() * s / 2), math.floor(y), 0, s, s)
-            end
+            -- (el logo remasterizado del título: src/ui/menu/TitleLogo.lua; a 2x, así que a media escala)
+            local TitleLogo = require 'src/ui/menu/TitleLogo'
+            local u = c.k(c.at('logo'), c.at('logo') + c.b(1.5))
+            local s = 6
+            local y = lerp(-200, 96, K.elastic(u))
+            local w = TitleLogo.size(s)
+            TitleLogo.draw(math.floor(WINDOW_W / 2 - w / 2), math.floor(y), s, { shadow = 6, t = t, wave = u >= 1 })
         end
     end,
 }

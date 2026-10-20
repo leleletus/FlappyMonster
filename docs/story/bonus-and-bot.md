@@ -14,6 +14,13 @@ if you are in its zone or scoring within its chase radius; it presses ON/OFF Act
 takes yours; it never ground-pounds breakable floor; it waits out floods. It is immortal. Hostility scales with the
 difficulty (`botRest`, `botChase`, `botCount`: two bots on Xtra Extreme).
 
+**Reused by the menus' background race** ([menus](../architecture/menus.md)) with three options that the bonus does
+not use: `opts.goal(bot, level)` → goal nodes, kind, approach x (an own goal instead of the point zones: the finish;
+no attacks, no Activators; near the goal it walks to the approach x until it touches the finish); `opts.mortal` (it
+can be hurt and die like the player); `opts.dodge` (CAUTION: with an enemy within `GUARD_R` tiles it simulates what
+it is about to do on a ghost copy of the player with the real physics — `Bot:_safe` — and, if it would get hurt,
+plays the first safe of: jump forward, double jump, hop, wait, jump in place, back off).
+
 **Data rule for every level with point zones** (checked by `bot_nav`): enemies respawn and give 40 % of their
 points; no extra-life items; the level's music is its island's `_bonus` track.
 

@@ -7,7 +7,7 @@
 --   A:update(dt)                  (en el update de la pantalla)
 --   A:leave(fn)                   empieza la salida; fn() al acabar (una sola vez)
 --   A:busy()                      true mientras sale (la pantalla no atiende al mando)
---   A:slide(i, dx, dy)            → ox, oy, alpha del elemento i (entra desde dx, dy; sale hacia -dx, -dy)
+--   A:slide(i, dx, dy[, ex, ey])  → ox, oy, alpha del elemento i (entra desde dx, dy; sale hacia ex, ey o -dx, -dy)
 --   A:pop(i)                      → escala 0..~1.1..1 (aparece "botando")
 local MenuAnim = {}
 MenuAnim.__index = MenuAnim
@@ -58,11 +58,14 @@ function MenuAnim:k(i)
     return kin, kout
 end
 
-function MenuAnim:slide(i, dx, dy)
+-- (ex, ey: hacia dónde SALE; por defecto, al lado contrario del que entra. El logo y los rótulos de arriba entran
+-- desde arriba y salen también por arriba: hacia abajo cruzaban la pantalla)
+function MenuAnim:slide(i, dx, dy, ex, ey)
     local kin, kout = self:k(i)
-    local f = (1 - kin) - kout
+    dx, dy = dx or 0, dy or 0
+    ex, ey = ex or -dx, ey or -dy
     local a = clamp(math.min(kin * 3, 1 - kout))
-    return quant((dx or 0) * f), quant((dy or 0) * f), a
+    return quant(dx * (1 - kin) + ex * kout), quant(dy * (1 - kin) + ey * kout), a
 end
 
 function MenuAnim:pop(i)

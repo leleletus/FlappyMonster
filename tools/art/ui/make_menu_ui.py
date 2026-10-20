@@ -7,6 +7,7 @@
 #   assets/images/ui/menus/button.png + .json       los BOTONES (9-slice): una columna por color, fila 1 normal y
 #        fila 2 seleccionado (más claro y con borde blanco), en tonos
 #        apagados (MUTE). El .json: tamaño de celda, cortes y nombres de color.
+#   assets/images/ui/menus/cartridge.png + .json, cart_labels.png   los CARTUCHOS de las partidas (ver abajo).
 #   assets/images/ui/menus/panel.png                el PANEL (9-slice) de las pantallas con contenido (partidas,
 #        juego libre, online): azul noche translúcido con borde claro.
 # Desde la raíz del repo:  python3 tools/art/ui/make_menu_ui.py
@@ -172,7 +173,142 @@ def panel():
     print('panel.png')
 
 
+# ── Cartuchos de las PARTIDAS (src/states/story/StorySlotState.lua) ───────────
+# cartridge.png: una columna por color de carcasa (rojo, azul, verde, gris = vacía), fila 1 normal y fila 2
+# elegido (más claro). 60 x 72 a 1x: estrías de agarre arriba, la ETIQUETA (crema, con la ventanita de la isla
+# arriba: ahí van los cart_labels) y los contactos dorados abajo.
+# cart_labels.png: las ventanitas, 46 x 26 a 1x, una por mundo (en el orden de src/story/Worlds.lua) + la de la
+# partida nueva. El .json dice las medidas y dónde va cada cosa (en px del cartucho a 1x).
+CW, CH = 60, 72
+LABEL = (5, 13, 50, 50)       # x, y, w, h de la etiqueta
+WIN = (7, 15, 46, 26)          # la ventanita de la isla
+SHELLS = {'red': (176, 58, 58), 'blue': (58, 92, 176), 'green': (58, 140, 82), 'grey': (96, 98, 110)}
+SHELL_ORDER = ['red', 'blue', 'green', 'grey']
+
+
+def shade(c, k):
+    return tuple(max(0, min(255, int(round(v * k)))) for v in c)
+
+
+def cartridge_cell(base, sel):
+    base = muted(base)
+    if sel: base = lighter(base, 0.12)
+    out, dark, mid, hi = shade(base, 0.35), shade(base, 0.7), base, lighter(base, 0.35)
+    im = Image.new('RGBA', (CW, CH), (0, 0, 0, 0))
+    px = im.putpixel
+    for y in range(CH):
+        for x in range(CW):
+            # (las esquinas de arriba, cortadas en diagonal: la forma del cartucho)
+            if (x + y < 3) or ((CW - 1 - x) + y < 3): continue
+            edge = x in (0, CW - 1) or y in (0, CH - 1) or x + y == 3 or (CW - 1 - x) + y == 3
+            if edge: c = out
+            elif y == 1 or x == 1: c = hi
+            elif x == CW - 2 or y == CH - 2: c = dark
+            else: c = mid
+            px((x, y), c + (255,))
+    # estrías de agarre (arriba)
+    for y in (4, 6, 8, 10):
+        for x in range(8, CW - 8):
+            px((x, y), dark + (255,))
+            px((x, y + 1 if y + 1 < 12 else y), hi + (255,)) if False else None
+    # la etiqueta: crema con borde oscuro y sombra
+    lx, ly, lw, lh = LABEL
+    cream, cream_sh, ink = (240, 234, 216), (214, 206, 186), (40, 36, 48)
+    for y in range(ly, ly + lh):
+        for x in range(lx, lx + lw):
+            if x in (lx, lx + lw - 1) or y in (ly, ly + lh - 1): c = shade(base, 0.45)
+            elif x == lx + lw - 2 or y == ly + lh - 2: c = cream_sh
+            else: c = cream
+            px((x, y), c + (255,))
+    # el hueco de la ventanita (se tapa con la isla)
+    wx, wy, ww, wh = WIN
+    for y in range(wy - 1, wy + wh + 1):
+        for x in range(wx - 1, wx + ww + 1):
+            if x in (wx - 1, wx + ww) or y in (wy - 1, wy + wh): px((x, y), ink + (255,))
+    # los contactos dorados (abajo)
+    for i in range(7):
+        x0 = 9 + i * 6
+        for y in range(CH - 6, CH - 2):
+            for x in range(x0, x0 + 3):
+                px((x, y), ((236, 190, 70) if y < CH - 4 else (176, 132, 40)) + (255,))
+    return im
+
+
+def mini_scene(kind):
+    w, h = WIN[2], WIN[3]
+    im = Image.new('RGBA', (w, h), (0, 0, 0, 255))
+    P = im.putpixel
+    def sky(top, bot):
+        for y in range(h):
+            k = y / (h - 1)
+            c = tuple(int(top[i] + (bot[i] - top[i]) * k) for i in range(3))
+            # (a franjas de 3 px, como los cielos del juego)
+            c = tuple(int(top[i] + (bot[i] - top[i]) * (3 * (y // 3)) / (h - 1)) for i in range(3))
+            for x in range(w): P((x, y), c + (255,))
+    def ground(fn, col, col2=None):
+        for x in range(w):
+            top = fn(x)
+            for y in range(max(0, top), h):
+                P((x, y), ((col2 if (col2 and y == top) else col)) + (255,))
+    def disc(cx, cy, r, col):
+        for y in range(h):
+            for x in range(w):
+                if (x - cx) ** 2 + (y - cy) ** 2 <= r * r: P((x, y), col + (255,))
+    import math
+    if kind == 'pradera':
+        sky((92, 164, 236), (176, 222, 255)); disc(37, 6, 3, (255, 236, 120))
+        ground(lambda x: 15 + int(3 * math.sin(x / 6)), (72, 150, 70), (120, 200, 90))
+        ground(lambda x: 20 + int(2 * math.sin(x / 4 + 1)), (52, 120, 56), (88, 170, 72))
+    elif kind == 'costa':
+        sky((96, 176, 240), (190, 230, 255)); disc(9, 6, 3, (255, 240, 140))
+        ground(lambda x: 16, (44, 112, 184), (150, 210, 250))
+        ground(lambda x: 21 - (1 if 14 < x < 32 else 0), (226, 200, 130), (246, 226, 160))
+        for y in range(9, 17): P((30, y), (110, 72, 40, 255))
+        for x in range(26, 35): P((x, 9 - abs(x - 30) // 3), (60, 150, 70, 255))
+    elif kind == 'fortaleza':
+        sky((70, 50, 96), (238, 140, 96)); disc(36, 14, 4, (255, 190, 110))
+        ground(lambda x: 18 if (x // 5) % 2 else 16, (70, 66, 82), (110, 104, 122))
+        for y in range(6, 18):
+            for x in range(17, 27): P((x, y), ((90, 84, 104) if x not in (17, 26) else (60, 56, 72)) + (255,))
+        for x in range(17, 27, 3): P((x, 5), (90, 84, 104, 255))
+    elif kind == 'nieve':
+        sky((120, 170, 230), (210, 230, 250))
+        ground(lambda x: 4 + abs(x - 14) // 1 if x < 28 else 6 + abs(x - 36), (150, 160, 190), (255, 255, 255))
+        ground(lambda x: 21, (230, 238, 250), (255, 255, 255))
+    elif kind == 'cuevas':
+        sky((20, 22, 40), (40, 40, 70))
+        ground(lambda x: 20 + (x % 7 == 0), (60, 56, 80), (90, 84, 116))
+        for x in range(w):
+            for y in range(0, 3 + (x * 7 % 5)): P((x, y), (50, 46, 70, 255))
+        for (cx, cy) in ((10, 16), (24, 15), (36, 17)):
+            for d in range(4): P((cx, cy - d), (140, 220, 255, 255)); P((cx + 1, cy - d + 1), (90, 160, 230, 255))
+    elif kind == 'final':
+        sky((60, 20, 30), (200, 70, 40))
+        ground(lambda x: 7 + abs(x - 23) if abs(x - 23) < 14 else 21, (70, 40, 40), (110, 60, 50))
+        for y in range(4, 9): P((23, y), (255, 140, 40, 255)); P((22, y + 1), (255, 200, 80, 255))
+        ground(lambda x: 23, (240, 110, 40), (255, 200, 90))
+    else:   # nueva partida: oscuro, con un + que se dibuja en el juego
+        sky((34, 38, 60), (56, 62, 92))
+    return im
+
+
+def cartridges():
+    sheet = Image.new('RGBA', (CW * len(SHELL_ORDER), CH * 2), (0, 0, 0, 0))
+    for i, n in enumerate(SHELL_ORDER):
+        sheet.paste(cartridge_cell(SHELLS[n], False), (i * CW, 0))
+        sheet.paste(cartridge_cell(SHELLS[n], True), (i * CW, CH))
+    sheet.save(os.path.join(DIR, 'cartridge.png'))
+    kinds = ['pradera', 'costa', 'fortaleza', 'nieve', 'cuevas', 'final', 'new']
+    labels = Image.new('RGBA', (WIN[2] * len(kinds), WIN[3]), (0, 0, 0, 0))
+    for i, k in enumerate(kinds): labels.paste(mini_scene(k), (i * WIN[2], 0))
+    labels.save(os.path.join(DIR, 'cart_labels.png'))
+    with open(os.path.join(DIR, 'cartridge.json'), 'w') as f:
+        json.dump({'w': CW, 'h': CH, 'shells': SHELL_ORDER, 'label': LABEL, 'window': WIN, 'scenes': kinds}, f, indent=1)
+    print('cartridge.png: %d carcasas; cart_labels.png: %d ventanitas' % (len(SHELL_ORDER), len(kinds)))
+
+
 if __name__ == '__main__':
     logo()
     buttons()
     panel()
+    cartridges()

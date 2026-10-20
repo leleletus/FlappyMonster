@@ -16,7 +16,7 @@ the seven mirror shards. The lore is in [story](story.md).
 | `BonusMatch.lua` | the King-of-the-Hill match against the bot ([bonus-and-bot](bonus-and-bot.md)) |
 | `Film.lua`, `Stage.lua`, `films/` | the cinematics ([cinematics](cinematics.md)) |
 
-States: `src/states/story/StorySlotState.lua`, `StoryMapState.lua` ([world-map](world-map.md)),
+States: `src/states/story/StorySlotState.lua` (the slots as cartridges: [menus](../architecture/menus.md)), `StoryMapState.lua` ([world-map](world-map.md)),
 `StoryResultsState.lua`, `StoryFilmState.lua`.
 
 **Flow:** slot → (new save: difficulty + intro film) → map → (the level's own film the first time, if its world

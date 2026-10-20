@@ -1,38 +1,83 @@
 -- src/states/story/StorySlotState.lua
 -- MODO HISTORIA: elegir PARTIDA. Tres huecos (src/story/Save.lua); uno vacío empieza una
 -- aventura nueva, uno usado continúa donde iba (mundo, progreso, vidas). BORRAR pide confirmar.
+-- Cada partida es un CARTUCHO (assets/images/ui/menus/cartridge.png, tools/art/ui/make_menu_ui.py; docs/architecture/
+-- menus.md): en fila, con su etiqueta — la isla donde va (cart_labels.png), el mundo, el progreso, la dificultad, las
+-- vidas y el tiempo — y el número arriba; el elegido sube y bota. Al jugar, el cartucho "se mete" (baja) y se pasa
+-- con el iris. BORRAR es un botón DEBAJO del cartucho elegido (nunca encima de su información).
 -- Flechas / ratón / toque; ENTER entra; SUPR (o el botón) borra; ESC vuelve.
 local BaseState     = require 'src/core/BaseState'
-local MenuScene = require 'src/ui/menu/MenuScene'
+local MenuScene     = require 'src/ui/menu/MenuScene'
+local MenuAnim      = require 'src/ui/menu/MenuAnim'
+local MenuList      = require 'src/ui/menu/MenuList'
+local MenuButton    = require 'src/ui/menu/MenuButton'
+local Transition    = require 'src/ui/menu/Transition'
 local CornerButtons = require 'src/ui/CornerButtons'
 local PixelFont     = require 'src/ui/PixelFont'
 local Save          = require 'src/story/Save'
 local Run           = require 'src/story/Run'
 local Worlds        = require 'src/story/Worlds'
+local Shards        = require 'src/story/Shards'
 local Difficulty    = require 'src/core/Difficulty'
+local json          = require 'libs/json'
 local L = require 'src/core/Lang'
 
 local StorySlotState = BaseState:new()
 
-local CARD_W, CARD_H, GAP = 760, 124, 22
-local DEL_W = 150
+local CART_S = 4                         -- escala del cartucho (60 x 72 → 240 x 288)
+local GAP = 36                           -- px entre cartuchos
+local LIFT = 20                          -- px que sube el elegido
+local INSERT_T = 0.28                    -- s que tarda en "meterse" al jugar
+local DIFF_COLORS = { easy = 'green', normal = 'yellow', hard = 'orange', extreme = 'red', xtra = 'purple' }
 
-local function cardRect(i)
-    local w = math.min(CARD_W, WINDOW_W - 48)
-    local total = Save.SLOTS * CARD_H + (Save.SLOTS - 1) * GAP
-    local y0 = math.floor(WINDOW_H / 2 - total / 2 + 50)
-    return math.floor((WINDOW_W - w) / 2), y0 + (i - 1) * (CARD_H + GAP), w, CARD_H
+local art
+local function loadArt()
+    if art then return art end
+    local im = love.graphics.newImage('assets/images/ui/menus/cartridge.png')
+    local lb = love.graphics.newImage('assets/images/ui/menus/cart_labels.png')
+    local m = json.decode(love.filesystem.read('assets/images/ui/menus/cartridge.json'))
+    art = { img = im, labels = lb, m = m, shells = {}, scenes = {} }
+    for i, n in ipairs(m.shells) do
+        art.shells[n] = { love.graphics.newQuad((i - 1) * m.w, 0, m.w, m.h, im:getDimensions()),
+                          love.graphics.newQuad((i - 1) * m.w, m.h, m.w, m.h, im:getDimensions()) }
+    end
+    for i, k in ipairs(m.scenes) do
+        art.scenes[k] = love.graphics.newQuad((i - 1) * m.window[3], 0, m.window[3], m.window[4], lb:getDimensions())
+    end
+    return art
+end
+local SHELL = { 'red', 'blue', 'green' }
+
+-- Geometría (dibujo, ratón y táctil): el cartucho i y su botón BORRAR debajo
+local function cartRect(i)
+    local a = loadArt()
+    local w, h = a.m.w * CART_S, a.m.h * CART_S
+    local s = CART_S
+    -- (en pantallas estrechas, una escala menos)
+    if Save.SLOTS * w + (Save.SLOTS - 1) * GAP > WINDOW_W - 40 then s = CART_S - 1; w, h = a.m.w * s, a.m.h * s end
+    local total = Save.SLOTS * w + (Save.SLOTS - 1) * GAP
+    local x0 = math.floor((WINDOW_W - total) / 2)
+    return x0 + (i - 1) * (w + GAP), math.floor(WINDOW_H * 0.24), w, h, s
 end
 local function delRect(i)
-    local x, y, w, h = cardRect(i)
-    return x + w - DEL_W - 14, y + h - 44, DEL_W, 32
+    local x, y, w, h = cartRect(i)
+    local bw, bh = math.min(w, 200), 52
+    return math.floor(x + (w - bw) / 2), y + h + 22, bw, bh
 end
 local function inside(px, py, x, y, w, h) return px >= x and px <= x + w and py >= y and py <= y + h end
+
+local function pickRect(k)
+    local w, h, gap = math.min(560, WINDOW_W - 160), 60, 12
+    local total = #Difficulty.ORDER * h + (#Difficulty.ORDER - 1) * gap
+    return math.floor((WINDOW_W - w) / 2), math.floor(WINDOW_H * 0.27) + (k - 1) * (h + gap), w, h
+end
 
 function StorySlotState:enter()
     Run.close()
     self.sel = self.sel or 1
     self.confirm = nil                       -- hueco que se está a punto de borrar
+    self.t = 0
+    self.anim = MenuAnim.new({ n = 6 })
     self:reload()
     Sound.playMusic('menus')
 end
@@ -47,7 +92,8 @@ function StorySlotState:reload()
             local done, total = Run.progress()
             local w = Run.frontier()
             Run.slot, Run.data = saved, run
-            self.slots[i] = { data = d, done = done, total = total, world = w }
+            local sh, shT = Shards.count(d)
+            self.slots[i] = { data = d, done = done, total = total, world = w, shards = sh, shardsTotal = shT }
         else
             self.slots[i] = false
         end
@@ -57,21 +103,33 @@ end
 -- Un hueco usado continúa; uno vacío pregunta antes la DIFICULTAD (src/core/Difficulty.lua): Fácil,
 -- Normal y Difícil desde el principio; Extremo y Xtra extremo, cerradas hasta desbloquearlas
 function StorySlotState:_open(i)
-    Sound.play('select')
+    if self.inserting then return end
+    Sound.play('select', 1.2)
     if not self.slots[i] and not self.pick then
         self.unlocked = Save.global().unlocked
-        self.pick = { slot = i, sel = 2 }
+        self.pick = { slot = i, sel = 2, t = 0 }
         return
     end
     local new = not self.slots[i]
     Run.open(i, self.pick and Difficulty.ORDER[self.pick.sel] or nil)
     self.pick = nil
-    -- una partida NUEVA empieza con la intro de la historia (se puede saltar manteniendo pulsado)
-    if new then
-        gStateMachine:change('story_film', { film = 'intro', onDone = function() gStateMachine:change('story_map') end })
+    -- el cartucho se mete (baja) y se pasa con el iris; una partida NUEVA empieza con la intro de la historia
+    -- (se puede saltar manteniendo pulsado)
+    self.inserting = { slot = i, t = 0, new = new }
+end
+
+function StorySlotState:_go()
+    local cx, cy = self:_cartCenter(self.inserting.slot)
+    if self.inserting.new then
+        Transition.go('story_film', { film = 'intro', onDone = function() gStateMachine:change('story_map') end }, cx, cy)
     else
-        gStateMachine:change('story_map')
+        Transition.go('story_map', nil, cx, cy)
     end
+end
+
+function StorySlotState:_cartCenter(i)
+    local x, y, w, h = cartRect(i)
+    return x + w / 2, y + h / 2
 end
 
 function StorySlotState:_diffOpen(k)
@@ -79,11 +137,6 @@ function StorySlotState:_diffOpen(k)
     return Difficulty.START[id] == true or (self.unlocked and self.unlocked[id] == true)
 end
 
-local function pickRect(k)
-    local w, h, gap = math.min(620, WINDOW_W - 60), 58, 12
-    local total = #Difficulty.ORDER * h + (#Difficulty.ORDER - 1) * gap
-    return math.floor((WINDOW_W - w) / 2), math.floor(WINDOW_H / 2 - total / 2 + 40) + (k - 1) * (h + gap), w, h
-end
 
 function StorySlotState:_pickConfirm()
     if not self:_diffOpen(self.pick.sel) then Sound.play('headBump'); return end
@@ -99,44 +152,62 @@ function StorySlotState:_delete(i)
     self:reload()
 end
 
+function StorySlotState:_back()
+    if self.anim:busy() then return end
+    Sound.play('select', 0.85)
+    self.anim:leave(function() gStateMachine:change('adv_mode_select', { selected = 1 }) end)
+end
+
 function StorySlotState:update(dt)
+    self.t = self.t + dt
     MenuScene.update(dt)
-    if self.pick then
-        local n = #Difficulty.ORDER
-        if Input.pressed('nav_up') then self.pick.sel = (self.pick.sel - 2) % n + 1; Sound.play('select') end
-        if Input.pressed('nav_down') then self.pick.sel = self.pick.sel % n + 1; Sound.play('select') end
-        if Input.pressed('confirm') or Input.pressed('flap') then self:_pickConfirm(); return end
-        if Input.pressed('back') then self.pick = nil; Sound.play('select') end
+    self.anim:update(dt)
+    if self.inserting then
+        self.inserting.t = self.inserting.t + dt
+        if self.inserting.t >= INSERT_T and not self.inserting.sent then self.inserting.sent = true; self:_go() end
         return
     end
-    if Input.pressed('nav_up') then self.sel = (self.sel - 2) % Save.SLOTS + 1; self.confirm = nil; Sound.play('select') end
-    if Input.pressed('nav_down') then self.sel = self.sel % Save.SLOTS + 1; self.confirm = nil; Sound.play('select') end
+    if self.anim:busy() then return end
+    if self.pick then
+        self.pick.t = self.pick.t + dt
+        local n = #Difficulty.ORDER
+        if Input.pressed('nav_up') then self.pick.sel = (self.pick.sel - 2) % n + 1; Sound.play('select', 0.94) end
+        if Input.pressed('nav_down') then self.pick.sel = self.pick.sel % n + 1; Sound.play('select', 1.08) end
+        if Input.pressed('confirm') or Input.pressed('flap') then self:_pickConfirm(); return end
+        if Input.pressed('back') then self.pick = nil; Sound.play('select', 0.85) end
+        return
+    end
+    local function move(d) self.sel = (self.sel - 1 + d) % Save.SLOTS + 1; self.confirm = nil; self.selT = 0; Sound.play('select', d > 0 and 1.08 or 0.94) end
+    if Input.pressed('nav_left') or Input.pressed('nav_up') then move(-1) end
+    if Input.pressed('nav_right') or Input.pressed('nav_down') then move(1) end
     if Input.pressed('confirm') or Input.pressed('flap') then
         if self.confirm == self.sel then self:_delete(self.sel) else self:_open(self.sel) end
         return
     end
     if Input.pressed('back') then
-        Sound.play('select')
-        if self.confirm then self.confirm = nil else gStateMachine:change('adv_mode_select') end
+        if self.confirm then self.confirm = nil; Sound.play('select', 0.85) else self:_back() end
     end
 end
 
 function StorySlotState:keypressed(key)
+    if self.pick or self.inserting then return end
     if key == 'delete' or key == 'backspace' then self:_delete(self.sel) end
 end
 
 function StorySlotState:mousemoved(x, y)
     self.backHover = CornerButtons.hitBack(x, y)
+    if self.inserting then return end
     if self.pick then
         for k = 1, #Difficulty.ORDER do if inside(x, y, pickRect(k)) then self.pick.sel = k end end
         return
     end
     for i = 1, Save.SLOTS do
-        if inside(x, y, cardRect(i)) and self.sel ~= i then self.sel = i; self.confirm = nil end
+        if inside(x, y, cartRect(i)) and self.sel ~= i then self.sel = i; self.confirm = nil; self.selT = 0; Sound.play('select') end
     end
 end
 
 function StorySlotState:touchpressed(id, x, y)
+    if self.inserting or self.anim:busy() then return end
     if self.pick then
         if CornerButtons.hitBack(x, y) then self.pick = nil; Sound.play('select'); return end
         for k = 1, #Difficulty.ORDER do
@@ -144,10 +215,10 @@ function StorySlotState:touchpressed(id, x, y)
         end
         return
     end
-    if CornerButtons.hitBack(x, y) then Sound.play('select'); gStateMachine:change('adv_mode_select'); return end
+    if CornerButtons.hitBack(x, y) then return self:_back() end
     for i = 1, Save.SLOTS do
-        if self.slots[i] and inside(x, y, delRect(i)) then self.sel = i; self:_delete(i); return end
-        if inside(x, y, cardRect(i)) then
+        if self.slots[i] and i == self.sel and inside(x, y, delRect(i)) then self:_delete(i); return end
+        if inside(x, y, cartRect(i)) then
             self.sel = i
             if self.confirm == i then self.confirm = nil else self:_open(i) end
             return
@@ -155,81 +226,125 @@ function StorySlotState:touchpressed(id, x, y)
     end
 end
 
+-- ── Dibujo ──────────────────────────────────────────────────────────────────
+local function fmtTime(sec)
+    sec = math.floor(sec or 0)
+    local h, m = math.floor(sec / 3600), math.floor(sec / 60) % 60
+    return h > 0 and string.format('%d:%02d:%02d', h, m, sec % 60) or string.format('%d:%02d', m, sec % 60)
+end
+
+-- Un cartucho en (x, y) a escala s
+function StorySlotState:_drawCart(i, x, y, s, sel, a)
+    local A = loadArt()
+    local m = A.m
+    local slot = self.slots[i]
+    local shell = slot and SHELL[(i - 1) % #SHELL + 1] or 'grey'
+    -- sombra negra y la carcasa
+    love.graphics.setColor(0, 0, 0, 0.45 * a)
+    love.graphics.draw(A.img, A.shells[shell][1], x + 6, y + 6, 0, s, s)
+    love.graphics.setColor(1, 1, 1, a * ((sel or not slot) and 1 or 0.85))
+    love.graphics.draw(A.img, A.shells[shell][sel and 2 or 1], x, y, 0, s, s)
+    -- el número, en las estrías de arriba
+    local num = tostring(i)
+    PixelFont.shadow(num, x + 3 * s, y + 3 * s, math.max(2, s - 1), a, { 1, 1, 1 })
+    -- la ventanita: la isla donde va (o la de la partida nueva)
+    local win = m.window
+    local scene = 'new'
+    if slot then local W = Worlds.get(slot.world); scene = W and W.id or 'pradera' end
+    love.graphics.setColor(1, 1, 1, a)
+    love.graphics.draw(A.labels, A.scenes[scene] or A.scenes.new, x + win[1] * s, y + win[2] * s, 0, s, s)
+    -- el texto de la etiqueta (debajo de la ventanita)
+    local lb = m.label
+    local tx, tw = x + (lb[1] + 2) * s, (lb[3] - 4) * s
+    local ty = y + (win[2] + win[4] + 2) * s
+    local ink = { 0.16, 0.14, 0.2 }
+    love.graphics.setFont(FONT_SMALL)
+    if not slot then
+        local plus = '+'
+        PixelFont.shadow(plus, math.floor(x + (win[1] + win[3] / 2) * s - PixelFont.width(plus, s * 2) / 2), y + (win[2] + 6) * s, s * 2, a, { 1, 1, 1 })
+        local t = L('story.slot_new')
+        local ts = MenuButton.textScale(t, tw, 3)
+        PixelFont.draw(t, math.floor(tx + (tw - PixelFont.width(t, ts)) / 2), ty + 2 * s, ts, a, ink)
+        love.graphics.setColor(ink[1], ink[2], ink[3], 0.75 * a)
+        love.graphics.printf(L('story.slot_new_hint'), tx, ty + 2 * s + PixelFont.height(ts) + 10, tw, 'center')
+        return
+    end
+    local d = slot.data
+    local W = Worlds.get(slot.world)
+    local name = W and L('story.world.' .. W.id) or ''
+    local ns = MenuButton.textScale(name, tw, 3)
+    PixelFont.draw(name, math.floor(tx + (tw - PixelFont.width(name, ns)) / 2), ty, ns, a, ink)
+    local ly = ty + PixelFont.height(ns) + 8
+    -- la barra del progreso (a bloques)
+    local bw, bh = tw, 3 * s
+    local k = slot.total > 0 and slot.done / slot.total or 0
+    love.graphics.setColor(ink[1], ink[2], ink[3], a)
+    love.graphics.rectangle('fill', tx, ly, bw, bh)
+    local fillW = math.floor((bw - 4) * k / s) * s
+    love.graphics.setColor(0.36, 0.72, 0.36, a)
+    if fillW > 0 then love.graphics.rectangle('fill', tx + 2, ly + 2, fillW, bh - 4) end
+    ly = ly + bh + 6
+    love.graphics.setColor(ink[1], ink[2], ink[3], a)
+    love.graphics.printf(L('story.slot_levels', { done = slot.done, total = slot.total }), tx, ly, tw, 'left')
+    love.graphics.printf(fmtTime(d.playTime), tx, ly, tw, 'right')
+    ly = ly + FONT_SMALL:getHeight() + 6
+    -- (la dificultad, en la fuente pixel: tiene las tildes en mayúscula que a la otra le faltan)
+    PixelFont.draw(L('difficulty.' .. d.difficulty), tx, ly + 1, 2, a, ink)
+    love.graphics.setColor(ink[1], ink[2], ink[3], a)
+    love.graphics.printf(L('story.slot_lives', { n = d.lives }), tx, ly, tw, 'right')
+end
+
 function StorySlotState:render()
-    MenuScene.backdrop()                 -- (el fondo vivo de los menús: src/ui/menu/MenuScene)
-    love.graphics.setColor(0, 0, 0, 0.45)
-    love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
-
-    local title = L('story.title')
-    local ts = 6
-    PixelFont.shadow(title, math.floor((WINDOW_W - PixelFont.width(title, ts)) / 2), 52, ts, 1, { 1, 0.95, 0.15 })
-    local sub = L('story.pick_slot')
-    love.graphics.setFont(FONT_MED)
-    love.graphics.setColor(1, 1, 1, 0.8)
-    love.graphics.printf(sub, 0, 118, WINDOW_W, 'center')
-
+    MenuScene.draw()
+    local A = self.anim
+    if not self.pick then MenuList.header(L('story.title'), 'yellow', A, 1) end
     for i = 1, Save.SLOTS do
-        local x, y, w, h = cardRect(i)
-        local sel = i == self.sel
-        love.graphics.setColor(0, 0, 0, 0.55); love.graphics.rectangle('fill', x + 4, y + 4, w, h)
-        if sel then love.graphics.setColor(1, 1, 1, 1) else love.graphics.setColor(0.1, 0.1, 0.14, 0.92) end
-        love.graphics.rectangle('fill', x, y, w, h)
-        love.graphics.setColor(sel and 1 or 0.6, sel and 0.85 or 0.6, sel and 0 or 0.65, 1)
-        love.graphics.setLineWidth(sel and 4 or 2)
-        love.graphics.rectangle('line', x, y, w, h)
-        love.graphics.setLineWidth(1)
-        local ink = sel and { 0, 0, 0 } or { 1, 1, 1 }
-        PixelFont.shadow(L('story.slot', { n = i }), x + 18, y + 16, 4, 1, sel and { 1, 0.95, 0.15 } or nil)   -- (PixelFont: letras sobre negro)
-        love.graphics.setFont(FONT_MED)
-        local s = self.slots[i]
-        if s then
-            local W = Worlds.get(s.world)
-            love.graphics.setColor(ink[1], ink[2], ink[3], 0.9)
-            love.graphics.print(L('story.slot_world', { n = s.world, name = L('story.world.' .. W.id) }), x + 18, y + 58)
-            love.graphics.print(L('story.slot_progress', { done = s.done, total = s.total, lives = s.data.lives })
-                .. '   ·   ' .. L('difficulty.' .. s.data.difficulty), x + 18, y + 86)
-            -- BORRAR (segunda pulsación = confirmar)
+        local x, y, w, h, s = cartRect(i)
+        local sel = i == self.sel and not self.pick
+        local ox, oy, a = A:slide(i + 1, 0, 300)
+        local lift = 0
+        if sel then
+            lift = -LIFT + ((math.floor(self.t * 2.5) % 2 == 0) and -4 or 0)
+        end
+        if self.inserting and self.inserting.slot == i then
+            -- se mete: sube un poco y baja de golpe
+            local k = self.inserting.t / INSERT_T
+            lift = -LIFT - 12 + math.floor(k * k * (h * 0.6) / 4) * 4
+        end
+        self:_drawCart(i, x + ox, y + oy + lift, s, sel, a * ((self.pick and 0.5) or 1))
+        -- BORRAR, debajo del elegido (segunda pulsación = confirmar)
+        if sel and self.slots[i] and not self.inserting then
             local dx, dy, dw, dh = delRect(i)
             local ask = self.confirm == i
-            love.graphics.setColor(ask and 0.85 or 0.25, ask and 0.15 or 0.25, ask and 0.15 or 0.3, 1)
-            love.graphics.rectangle('fill', dx, dy, dw, dh)
-            love.graphics.setFont(FONT_SMALL)
-            love.graphics.setColor(1, 1, 1, 1)
-            love.graphics.printf(L(ask and 'story.delete_sure' or 'story.delete'), dx, dy + dh / 2 - FONT_SMALL:getHeight() / 2, dw, 'center')
-        else
-            love.graphics.setColor(ink[1], ink[2], ink[3], 0.6)
-            love.graphics.print(L('story.slot_empty'), x + 18, y + 66)
+            MenuButton.draw(L(ask and 'story.delete_sure' or 'story.delete'), dx + ox, dy + oy, dw, dh, ask and 'red' or 'grey', ask,
+                            { alpha = a, scale = 3 })
         end
     end
     -- Elegir dificultad (partida nueva)
     if self.pick then
-        love.graphics.setColor(0, 0, 0, 0.78)
-        love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
-        local t2 = L('difficulty.title')
-        PixelFont.shadow(t2, math.floor((WINDOW_W - PixelFont.width(t2, 5)) / 2), 70, 5, 1, { 1, 0.95, 0.15 })
+        MenuScene.dim(0.55)
+        MenuList.header(L('difficulty.title'), 'orange')
         for k, id in ipairs(Difficulty.ORDER) do
             local x, y, w, h = pickRect(k)
             local sel, open = k == self.pick.sel, self:_diffOpen(k)
-            love.graphics.setColor(0, 0, 0, 0.6); love.graphics.rectangle('fill', x + 4, y + 4, w, h)
-            if sel then love.graphics.setColor(1, 1, 1, 1) else love.graphics.setColor(0.1, 0.1, 0.14, 1) end
-            love.graphics.rectangle('fill', x, y, w, h)
-            love.graphics.setColor(sel and 1 or 0.6, sel and 0.85 or 0.6, sel and 0 or 0.65, 1)
-            love.graphics.setLineWidth(sel and 4 or 2); love.graphics.rectangle('line', x, y, w, h); love.graphics.setLineWidth(1)
-            local c = sel and 0 or 1
-            PixelFont.draw(L('difficulty.' .. id), x + 16, y + 10, 3, open and 1 or 0.45, { c, c, c })   -- (fuente pixel: con tildes)
-            love.graphics.setFont(FONT_SMALL)
-            love.graphics.setColor(c, c, c, open and 0.8 or 0.45)
-            love.graphics.print(open and L('difficulty.desc.' .. id) or L('difficulty.locked.' .. id), x + 16, y + 36)
+            local kin = math.min(1, math.max(0, (self.pick.t - (k - 1) * 0.05) / 0.25))
+            local oy = math.floor((1 - kin) * 60 / 4) * 4
+            local bob = (sel and math.floor(self.t * 3) % 2 == 0) and -4 or 0
+            MenuButton.draw(L('difficulty.' .. id), x, y + oy + bob, w, h, open and (DIFF_COLORS[id] or 'blue') or 'grey', sel,
+                            { alpha = kin, scale = 4 })
             if not open then
                 local PixelIcons = require 'src/ui/PixelIcons'
-                PixelIcons.draw('lock', x + w - 42, y + h / 2 - 15, 3)
+                PixelIcons.draw('lock', x + w - 48, y + oy + h / 2 - 18, 3)
             end
         end
+        local id = Difficulty.ORDER[self.pick.sel]
+        MenuList.footer(self:_diffOpen(self.pick.sel) and L('difficulty.desc.' .. id) or L('difficulty.locked.' .. id), nil, nil,
+                        L('difficulty.hint'))
+    else
+        local s = self.slots[self.sel]
+        MenuList.footer(s and L('story.slot_desc', { world = s.world, shards = s.shards, total = s.shardsTotal }) or L('story.slot_empty'),
+                        A, Save.SLOTS + 2, L('story.slot_hint'))
     end
-    love.graphics.setFont(FONT_SMALL)
-    love.graphics.setColor(1, 1, 1, 0.7)
-    love.graphics.printf(L(self.pick and 'difficulty.hint' or 'story.slot_hint'), 0, WINDOW_H - 34, WINDOW_W, 'center')
-    love.graphics.setFont(FONT_MED)
     love.graphics.setColor(1, 1, 1, 1)
     CornerButtons.drawBack(self.backHover)
 end

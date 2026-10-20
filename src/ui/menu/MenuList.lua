@@ -144,7 +144,7 @@ function MenuList.header(text, color, A, i)
     local h = PixelFont.height(s) + 14 * MenuButton.S
     local x, y = math.floor((WINDOW_W - w) / 2), 36
     local ox, oy, a = 0, 0, 1
-    if A then ox, oy, a = A:slide(i or 1, 0, -200) end
+    if A then ox, oy, a = A:slide(i or 1, 0, -200, 0, -200) end
     MenuButton.draw(text, x + ox, y + oy, w, h, color, false, { alpha = a, scale = s })
     return y + h
 end
@@ -152,7 +152,7 @@ end
 -- La DESCRIPCIÓN del elegido (en un panel abajo) y la AYUDA de los botones
 function MenuList.footer(desc, A, i, hint)
     local ox, oy, a = 0, 0, 1
-    if A then ox, oy, a = A:slide(i or 1, 0, 160) end
+    if A then ox, oy, a = A:slide(i or 1, 0, 160, 0, 160) end
     if desc then
         love.graphics.setFont(FONT_MED)
         local w = math.min(WINDOW_W - 80, FONT_MED:getWidth(desc) + 64)

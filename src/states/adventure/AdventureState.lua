@@ -81,9 +81,13 @@ function AdventureState:exit()
 end
 
 function AdventureState:enter(args)
-    require('src/ui/View').lockGameplay()      -- (todos ven la misma zona del nivel)
-    loadHudAssets()
     args = args or {}
+    -- DEMO (el fondo de los menús, src/ui/menu/MenuScene.lua): el nivel de verdad, jugado por un bot
+    -- (args.demo.step(dt, level) mueve al jugador en vez del mando), sin HUD, sin pausa, sin música, vidas sin fin y
+    -- con la vista adaptable del menú (no se fija a 16:9). camX / camY = dónde va el jugador en la pantalla.
+    self.demo = args.demo
+    if not self.demo then require('src/ui/View').lockGameplay() end      -- (todos ven la misma zona del nivel)
+    loadHudAssets()
     self.levelPath = args.level or 'assets/levels/nivel01.json'
     self.returnTo  = args.returnTo or 'main_menu'   -- a dónde se sale (Juego libre → free_play)
     -- Al llegar a la META el nivel termina: `onFinish(result)` decide qué pasa (el modo historia
@@ -113,7 +117,7 @@ function AdventureState:enter(args)
     if self.startLives then self.player.lives = self.startLives end
     self.level.players = { self.player }       -- para trampas/entidades que "ven" al jugador
     -- Grabación de la partida para analizarla (FM_RECORD=1; ver src/core/PlayRecorder.lua)
-    if PlayRecorder.enabled() then self.rec = PlayRecorder.new(self.levelPath, self.level.name) end
+    if PlayRecorder.enabled() and not self.demo then self.rec = PlayRecorder.new(self.levelPath, self.level.name) end
 
     -- Efectos del jugador (ground pound, bloques rotos...)
     Particles.clear()
@@ -133,6 +137,7 @@ function AdventureState:enter(args)
         Particles.emit(kind, x, y)
         if kind == 'block_break' then Sound.play('blockBreak') end
     end
+    self._pfx, self._efx = PlayerAdventure.fx, Entity.fx
 
     -- Instanciar entidades (enemigos, NPCs) desde el catálogo
     self.enemies = {}
@@ -171,10 +176,14 @@ function AdventureState:enter(args)
     self.respawning   = false
     self.respawnTimer = 0
 
-    Sound.setLevelMusic(nil)
-    Sound.setBaseLevelMusic(self.level.music)          -- la música elegida en el editor
-    Sound.setEcho(self.level.echo and 1 or 0)          -- (cuevas: eco)
-    Sound.playMusic('level')
+    if self.demo then
+        self.player.lives = 99
+    else
+        Sound.setLevelMusic(nil)
+        Sound.setBaseLevelMusic(self.level.music)          -- la música elegida en el editor
+        Sound.setEcho(self.level.echo and 1 or 0)          -- (cuevas: eco)
+        Sound.playMusic('level')
+    end
 
     self.score      = 0
     -- Estadísticas del nivel (para la nota del modo historia: src/story/Score.lua)
@@ -189,6 +198,15 @@ function AdventureState:enter(args)
     self.prevHp = self.player.hp
     self.levelTime  = 0   -- segundos transcurridos
     self.popups     = {}  -- lista de textos flotantes de puntos
+end
+
+-- Vuelve a apuntar a ESTE nivel lo que es global (dificultad, partículas, ruidos, efectos): lo usa la demo del
+-- fondo de los menús, que sigue viva mientras otros niveles entran y salen
+function AdventureState:rebindGlobals()
+    Difficulty.bind(self.level)
+    Particles.setLevel(self.level)
+    require('src/world/systems/Noise').bind(self.level)
+    PlayerAdventure.fx, Entity.fx = self._pfx, self._efx
 end
 
 function AdventureState:pause()  end
@@ -291,8 +309,8 @@ function AdventureState:updateCamera(dt)
     local scrolling = self.level.autoScroll and self.level.autoScroll.state ~= 'stop'
     if self.camFrozen and not scrolling then return end
 
-    local targetX = self.player.x - WINDOW_W / 2
-    local targetY = self.player.y - WINDOW_H / 2
+    local targetX = self.player.x - WINDOW_W * (self.demo and self.demo.camX or 0.5)
+    local targetY = self.player.y - WINDOW_H * (self.demo and self.demo.camY or 0.5)
 
     targetX = math.max(0, math.min(self.level.widthPx  - WINDOW_W, targetX))
     targetY = math.max(0, math.min(self.level.heightPx - WINDOW_H, targetY))
@@ -465,9 +483,9 @@ function AdventureState:update(dt)
     end
 
     -- ── Controles táctiles (móvil): cruceta + salto, ver src/ui/TouchControls ──
-    TouchControls.update(not self.dead, self.level.dark)
+    if not self.demo then TouchControls.update(not self.dead, self.level.dark) end
 
-    if Input.pressed('pause') and not (self.runOut and self.runOut.active) then      -- (en la escena final no hay pausa)
+    if not self.demo and Input.pressed('pause') and not (self.runOut and self.runOut.active) then      -- (en la escena final no hay pausa)
         gStateMachine:push('pause')
         return
     end
@@ -540,7 +558,9 @@ function AdventureState:update(dt)
         return
     end
     local scripted = self.runOut and self.runOut:input()
-    if scripted then                                                  -- (sin control: corre y salta solo)
+    if self.demo then
+        self.demo.step(dt, self.level)                                -- (el bot del fondo de los menús)
+    elseif scripted then                                                  -- (sin control: corre y salta solo)
         local real = Input
         Input = scripted
         local ok, err = pcall(self.player.update, self.player, dt, self.level)
@@ -597,7 +617,7 @@ function AdventureState:update(dt)
 
     -- ── Detectar muerte del jugador ───────────────────────────────────────────
     if self.player.dying and not self.player.alive then
-        self.player.lives = self.player.lives - 1
+        self.player.lives = self.demo and 99 or (self.player.lives - 1)      -- (la demo: vidas sin fin)
         self.stats.deaths = self.stats.deaths + 1
 
         if self.player.lives <= 0 then
@@ -796,6 +816,7 @@ function AdventureState:_renderScene()
         love.graphics.print("DEBUG HITBOX [F1]", 20, WINDOW_H - 30)
     end
 
+    if self.demo then return end          -- (la demo del fondo de los menús: sin HUD)
     BossHud.drawCinema(self.level)        -- (entrada de un jefe: franjas de cine, bajo el HUD)
 
     -- (todo el HUD se desvanece durante la entrada de un jefe: BossHud.fadeHud)

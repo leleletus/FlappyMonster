@@ -50,7 +50,7 @@ and their own folder to `sys.path`; scripts that import each other sit in the sa
 | `world/make_ice_spikes.py`, `make_cryo_sprites.py`, `make_cryo_parts.py`, `make_cryo_chain.py` | `traps/spikes/spike_ice.png`, `traps/cryo/` | spikes and chain yes (verified) |
 | `world/make_food_sprites.py` | `items/food_<island>.png` (never the user's apple) | yes (verified) |
 | `ui/make_sprites.py`, `make_story_icons.py` | `ui/touch/`, `ui/ping/`, `ui/icons/` | yes (verified) |
-| `ui/make_menu_ui.py` | `ui/menus/title_logo.png` + `.json` (from `logo.png`, never written), `ui/menus/button.png` + `.json`, `ui/menus/panel.png` | yes |
+| `ui/make_menu_ui.py` | `ui/menus/title_logo.png` + `.json` (from `logo.png`, never written), `ui/menus/button.png` + `.json`, `ui/menus/panel.png`, `ui/menus/cartridge.png` + `.json`, `ui/menus/cart_labels.png` | yes |
 | `ui/make_logo_parts.py` | `assets/startup/parts/`, `assets/startup/logo.json` (cuts the user's logo; never writes the logo itself) | yes |
 | `enemies/make_claudio_extras.py` | `enemies/claudio/claudio_blink.png` (from the user's `claudio_idle.png`) | yes |
 | `ui/make_player_redesign.py`, `make_flappy_redesign.py` | `player/`, the Mirror's pieces, `flappy/` | not re-run |

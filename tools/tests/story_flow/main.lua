@@ -72,6 +72,8 @@ function love.update(dt)
     Input = realInput
     local st = top()
     local W1 = Worlds.nodes(1)
+    -- (mientras el cartucho elegido se mete o la transición de pantalla tapa: el guion espera; docs/architecture/menus.md)
+    if st.inserting or require('src/ui/menu/Transition').active() then return end
     -- (una partida nueva empieza con la INTRO de la historia, y algunos niveles con la suya: aquí se pasan de largo; la
     -- prueba de las películas es tools/tests/story_film)
     if st.film and st._finish then

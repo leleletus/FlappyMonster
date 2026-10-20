@@ -44,6 +44,8 @@ Bot.SWITCH_CD = 6            -- s entre dos pulsaciones suyas de un Activador
 Bot.WATER_TRY = 2.2          -- s nadando sin acercarse a lo seco antes de quedarse a esperar
 Bot.WATER_WAIT = 15          -- s como mucho esperando a que baje el agua antes de volver a probar
 Bot.WATER_DROP = 24          -- px que tiene que bajar el agua para volver a intentarlo
+Bot.GUARD_R = 4              -- casillas: con un enemigo a menos de esto mira si lo que va a hacer es seguro (opts.dodge)
+Bot.GUARD_DT = 0.1           -- s entre una comprobación y la siguiente
 
 -- ¿Agua de una inundación SUBIDA ahí ahora? El grafo se grabó con cada inundación en su nivel MÍNIMO (así
 -- empieza el nivel): mientras el agua está ahí, vale. Cuando ha subido, todo lo que cubre — también lo que ya
@@ -72,15 +74,19 @@ end
 
 local L, R, J, JP, C, CP = P.IN_LEFT, P.IN_RIGHT, P.IN_JUMP, P.IN_JUMP_P, P.IN_CROUCH, P.IN_CROUCH_P
 
+-- opts.goal(bot, level) → set de casillas, tipo: OTRO OBJETIVO en vez de las zonas de puntos (el corredor del fondo
+-- de los menús va a la META: src/ui/menu/MenuScene.lua); con él no ataca ni pulsa Activadores. opts.mortal: no es
+-- inmortal (le hacen daño, muere y reaparece como el jugador; lo lleva quien lo usa). opts.dodge: con PRECAUCIÓN —
+-- el grafo no sabe de enemigos: con uno cerca simula lo que va a hacer y, si le haría daño, lo salta, lo pisa o espera.
 function Bot.new(pa, nav, opts)
     opts = opts or {}
-    pa.immortal = true
+    pa.immortal = not opts.mortal
     return setmetatable({
         pa = pa, nav = nav, stub = P.newInputStub(),
         cd = opts.firstDelay or 1.5, attackCd = opts.attackCd or Bot.ATTACK_CD,
         path = nil, edgeF = 0, planT = 0, stuckT = 0, lastX = pa.x, mode = 'route',
         prevBits = 0, score = 0, name = opts.name, color = opts.color,
-        fails = {}, banned = {}, clock = 0, chaseR = opts.chase or Bot.CHASE_R,
+        fails = {}, banned = {}, clock = 0, chaseR = opts.chase or Bot.CHASE_R, goalFn = opts.goal, dodge = opts.dodge,
     }, Bot)
 end
 
@@ -398,9 +404,38 @@ function Bot:think(dt, level, target)
             return self:_emit(BotNav.bitsAt(self.edge, self.edgeF))
         end
     end
-    local goals, kind = self:_goal(level, target)
+    -- ── PRECAUCIÓN (opts.dodge): con un enemigo cerca, antes de seguir el camino simula lo que va a hacer (con la
+    -- física de verdad, en un FANTASMA: Bot:_safe) y, si le haría daño, busca otra cosa que sí sea segura (saltarlo,
+    -- pisarlo, esperar, echarse atrás) y la ejecuta entera ──
+    if self.macro then
+        self.macroF = self.macroF + 1
+        local b = self.macro[self.macroF]
+        if not pa.onGround then self.macroAir = true end
+        if b == nil or (pa.onGround and self.macroAir and self.macroF > 4) then self.macro, self.path = nil, nil
+        else return self:_emit(b) end
+    end
+    if self.dodge and pa.onGround then
+        self.guardT = (self.guardT or 0) - dt
+        if self.guardT <= 0 and self:_enemyNear(level, pa.x, pa.y, Bot.GUARD_R) then
+            self.guardT = Bot.GUARD_DT
+            local intent, dir = self:_intent()
+            if not self:_safe(level, intent) then
+                for _, cand in ipairs(self:_evasions(dir)) do
+                    if self:_safe(level, cand) then
+                        self.macro, self.macroF, self.macroAir = cand, 1, false
+                        self.edge, self.edgeF = nil, 0
+                        return self:_emit(cand[1])
+                    end
+                end
+                return self:_emit(0)                    -- (nada es seguro: quieto un momento y vuelve a mirar)
+            end
+        end
+    end
+    local goals, kind
+    local approach
+    if self.goalFn then goals, kind, approach = self.goalFn(self, level) else goals, kind = self:_goal(level, target) end
     -- ACTIVADOR ON/OFF: si pulsarlo le conviene (y no está persiguiéndote), va a por él
-    local press = (kind ~= 'hunt') and self:_switchPlan(level, target) or nil
+    local press = (kind ~= 'hunt' and not self.goalFn) and self:_switchPlan(level, target) or nil
     if press then
         local here = pa.onGround and BotNav.nodeAt(self.nav, pa.x, pa.y, self:_h())
         if here and press[here] then
@@ -494,6 +529,13 @@ function Bot:think(dt, level, target)
     local e = self.path and self.path[1]
     if e then self.noPathT = 0
     elseif kind ~= 'roam' and kind ~= 'hunt' then self.noPathT = (self.noPathT or 0) + dt end      -- (también en el aire: a lo bruto se pasa el rato saltando)
+    -- (con objetivo propio y ya en él — o sin camino — pero sin haberlo TOCADO — la meta —: anda hasta el punto
+    -- `approach` que devuelve opts.goal, saltando si algo lo frena)
+    if not e and approach and pa.onGround and math.abs(approach - pa.x) > 6 then
+        local dir = (approach < pa.x) and L or R
+        if self.stuckT > 0.4 then self.stuckT = 0; return self:_emit(dir + J + JP) end
+        return self:_emit(dir)
+    end
     if not e then
         if not pa.onGround then return self:_emit(self.escBits or 0) end
         -- (paseando por su zona y sin camino a esa casilla: se queda donde está; a lo bruto se salía de la zona)
@@ -555,6 +597,104 @@ function Bot:think(dt, level, target)
     return self:_emit(BotNav.bitsAt(e, 1))
 end
 
+-- ¿Un enemigo (de los que hacen daño) a menos de r casillas del punto?
+function Bot:_enemyNear(level, x, y, r)
+    for _, e in ipairs(level.liveEntities or {}) do
+        local def = e.def or {}
+        if e.alive and def.category == 'Enemigos' and not (e.props and e.props.onTouch == 'none')
+           and math.abs(e.x - x) < r * TILE_PX and math.abs(e.y - y) < r * TILE_PX then return e end
+    end
+    return nil
+end
+
+-- Lo que el bot va a hacer ahora según su camino (para simularlo): los bits de la arista grabada que toca o, andando,
+-- ir hacia la siguiente casilla. → lista de bits por fotograma, dirección (L / R / 0)
+function Bot:_intent()
+    local pa = self.pa
+    local e = self.path and self.path[1]
+    local to = e and self.nav.nodes[e.to]
+    local dir = to and ((to.x < pa.x) and L or R) or (((pa.facing or 1) < 0) and L or R)
+    local bits = {}
+    if e and e.seq and to then
+        local from = self.pathFrom and self.nav.nodes[self.pathFrom]
+        if from and math.abs(from.x - pa.x) < 8 then
+            for f = 1, 90 do bits[f] = BotNav.bitsAt(e, f) end
+            return bits, dir
+        end
+    end
+    for f = 1, 40 do bits[f] = dir end
+    return bits, dir
+end
+
+-- Otras cosas que probar si lo que iba a hacer no es seguro (en este orden)
+local function seq(n, fn) local b = {}; for f = 1, n do b[f] = fn(f) end; return b end
+function Bot:_evasions(dir)
+    local back = (dir == L) and R or L
+    return {
+        seq(80, function(f) return dir + ((f <= 14) and (J + (f == 1 and JP or 0)) or 0) end),                     -- saltar adelante
+        seq(90, function(f) return dir + ((f <= 14 or (f >= 24 and f <= 38)) and (J + ((f == 1 or f == 24) and JP or 0)) or 0) end),  -- doble
+        seq(70, function(f) return dir + ((f <= 5) and (J + (f == 1 and JP or 0)) or 0) end),                      -- saltito
+        seq(24, function() return 0 end),                                                                          -- esperar
+        seq(70, function(f) return (f <= 14) and (J + (f == 1 and JP or 0)) or 0 end),                             -- saltar en el sitio
+        seq(30, function(f) return (f <= 18) and back or 0 end),                                                   -- echarse atrás
+    }
+end
+
+local function overlap(a, b) return a.x < b.x + b.w and b.x < a.x + a.w and a.y < b.y + b.h and b.y < a.y + a.h end
+local function noop() end
+
+-- ¿Es SEGURO hacer `bits`? Lo simula en un fantasma (una copia del jugador con su mismo estado: P.packOwnState) con la
+-- física de verdad: falla si muere o pierde vida (pinchos, lava, caerse) o si toca a un enemigo (que se supone que
+-- sigue andando como va) sin ser pisándolo desde arriba. Sin tocar el nivel (nada se rompe ni se pulsa).
+function Bot:_safe(level, bits)
+    local PlayerAdventure = require 'src/player/PlayerAdventure'
+    local pa = self.pa
+    local g = self.ghost
+    if not g then g = PlayerAdventure:new(pa.x, pa.y); self.ghost = g end
+    P.applyOwnState(P.packOwnState(pa), g)
+    g.immortal = false
+    local list = {}
+    for _, e in ipairs(level.liveEntities or {}) do
+        local def = e.def or {}
+        if e.alive and def.category == 'Enemigos' and not (e.props and e.props.onTouch == 'none')
+           and math.abs(e.x - pa.x) < 7 * TILE_PX and math.abs(e.y - pa.y) < 5 * TILE_PX then
+            local vx = tonumber(e.vx) or 0
+            local hidden = e.isBodyDisabled and e:isBodyDisabled()
+            local ok, b = pcall(e.getOuterBounds, e)
+            if ok and b then list[#list + 1] = { b = { x = b.x, y = b.y, w = b.w, h = b.h }, vx = vx, stomp = e.props and e.props.stompable and not hidden } end
+            -- (sus zonas de peligro propias — el pincho del Crabby, también escondido; el fuego del mortero —: nunca se pisan)
+            local okH, hz = pcall(e.getHazardBoxes, e)
+            for _, h in ipairs(okH and hz or {}) do list[#list + 1] = { b = { x = h.x, y = h.y, w = h.w, h = h.h }, vx = vx } end
+        end
+    end
+    local stub = self.simStub or P.newInputStub()
+    self.simStub = stub
+    local rI, rFx, canBreak, hit, brk = Input, PlayerAdventure.fx, level.canBreak, level.hitTile, level.breakTile
+    Input, PlayerAdventure.fx, level.canBreak, level.hitTile, level.breakTile = stub, nil, false, noop, noop
+    local hp0, safe = g.hp, true
+    local n = #bits + 30                                     -- (y un rato más, sin tocar nada: que caiga donde caiga)
+    local ok, err = pcall(function()
+        for f = 1, n do
+            P.decodeInput(bits[f] or 0, stub.state)
+            g:update(Bot.DT, level)
+            if g.dying or g.hp < hp0 or g.y > level.tileH * TILE_PX then safe = false; return end
+            local gb = g:getOuterBounds()
+            for _, en in ipairs(list) do
+                local b = en.b
+                local box = { x = b.x + en.vx * f * Bot.DT, y = b.y, w = b.w, h = b.h }
+                if overlap(gb, box) then
+                    if en.stomp and g.vy > 0 and gb.y + gb.h < box.y + box.h * 0.45 then return end   -- (lo pisa: bien)
+                    safe = false; return
+                end
+            end
+            if f > #bits and g.onGround then return end
+        end
+    end)
+    Input, PlayerAdventure.fx, level.canBreak, level.hitTile, level.breakTile = rI, rFx, canBreak, hit, brk
+    if not ok then return true end                           -- (si la simulación falla, que siga como iba)
+    return safe
+end
+
 -- Descanso entre ataques: no siempre igual (× 0,8-1,6), para que no sea un metrónomo
 function Bot:_rest() return self.attackCd * (0.7 + math.random() * 0.8) end
 
@@ -598,8 +738,8 @@ function Bot:_step(dt, level, target)
     local ok, err = pcall(self.pa.update, self.pa, dt, level)
     Input = real
     if not ok then error(err, 0) end
-    -- se cayó del nivel (inmortal: vuelve a su salida)
-    if self.pa.y > (level.tileH + 2) * TILE_PX then
+    -- se cayó del nivel (inmortal: vuelve a su salida; si no, muere como el jugador)
+    if self.pa.immortal and self.pa.y > (level.tileH + 2) * TILE_PX then
         self.pa.x, self.pa.y, self.pa.vx, self.pa.vy = self.pa.spawnX, self.pa.spawnY, 0, 0
         self.path, self.mode = nil, 'route'
     end
