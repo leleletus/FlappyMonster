@@ -394,7 +394,8 @@ end
 
 -- Bucle mientras `on` (lo llama cada fotograma quien lo dibuja: solo dibujo, p. ej. la
 -- Gran Bola de Nieve rodando); el volumen sigue a la distancia de (x, y) al oyente
-function Sound.loop(name, on, x, y)
+-- (gain: × el volumen; los escenarios de los créditos lo bajan)
+function Sound.loop(name, on, x, y, gain)
     local src = sources[name]
     if not src then return end
     if not on then
@@ -402,7 +403,7 @@ function Sound.loop(name, on, x, y)
         return
     end
     local k = (x and Sound.falloff) and Sound.falloff(x, y, Sound.RANGE[name]) or 1
-    src:setVolume(k)
+    src:setVolume(k * (gain or 1))
     if not src:isPlaying() then src:setLooping(true); src:play() end
     tracked[name] = src
 end

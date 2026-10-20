@@ -19,6 +19,7 @@ local PixelFont = require 'src/ui/PixelFont'
 local TitleLogo = require 'src/ui/menu/TitleLogo'
 local Anim = require 'src/fx/Anim'
 local LiveStage = require 'src/story/LiveStage'
+local Celebration = require 'src/ui/Celebration'
 local L = require 'src/core/Lang'
 
 local lerp, smooth, easeOut = K.lerp, K.smooth, K.easeOut
@@ -52,7 +53,7 @@ end
 -- lo que ocupa el escenario vivo de debajo (su nivel: 6 filas)
 -- (las dos filas de arriba son aire — para los saltos —: se montan sobre el final del texto, son transparentes)
 local STAGE_ROWS, STAGE_OVER = 6, 2 * 64
-local FADE_TO, FADE_LEN = 0.5, 0.2         -- (se apaga del todo cuando su borde de abajo llega a media pantalla)
+local FADE_TO, FADE_LEN = 0.4, 0.2         -- (se apaga del todo cuando su borde de abajo llega al 40 % de la pantalla)
 local function paradeH(list)
     return list.stage and (STAGE_ROWS * TILE_PX - STAGE_OVER + MARGIN) or 0
 end
@@ -147,7 +148,8 @@ end
 -- ── Los escenarios vivos ────────────────────────────────────────────────────
 -- Cada uno empieza un poco antes de que su bloque entre por abajo, se juega mientras se ve y se suelta al salir por
 -- arriba. Van en c.shared (de toda la película): un bloque sigue a la vista en las escenas siguientes.
-local START_BELOW = 160                   -- px bajo la pantalla a los que empieza a jugarse
+local START_BELOW = 160                   -- px bajo la pantalla a los que se crea (quieto)
+local PLAY_FROM = 5 * 64 + 8              -- empieza a JUGARSE cuando esto de la franja (hasta el suelo) está en pantalla
 tickStages = function(c)
     local lay = getLayout(c)
     local gt = c.film.t
@@ -163,12 +165,35 @@ tickStages = function(c)
             local h = STAGE_ROWS * TILE_PX
             if top < WINDOW_H + START_BELOW and top + h > -20 then
                 if not stages[id] then stages[id] = LiveStage.new(id, 100 + i) end
-                stages[id]:update(dt)
+                -- (quieto hasta que su suelo se ve entero: si no, las cosas explotaban y morían antes de verse)
+                if top + PLAY_FROM <= WINDOW_H then stages[id]:update(dt) end
             elseif stages[id] and top + h <= -20 then
                 stages[id] = false                                  -- (ya salió: no vuelve)
             end
         end
     end
+end
+
+-- ── Fuegos artificiales ─────────────────────────────────────────────────────
+-- A ratos durante toda la película (los de las pantallas de resultados: src/ui/Celebration.lua, con su sonido): uno
+-- cada FW_MIN..FW_MAX s; en el clímax y la despedida, el doble. Detrás del texto.
+local FW_MIN, FW_MAX = 2.5, 6
+local function fireworks(c, often)
+    local gt = c.film.t
+    c.shared.fx = c.shared.fx or Celebration.new()
+    local fx = c.shared.fx
+    local dt = math.max(0, math.min(0.1, gt - (c.shared.fxT or gt)))
+    c.shared.fxT = gt
+    c.shared.fwNext = c.shared.fwNext or (gt + 3)
+    if gt >= c.shared.fwNext then
+        fx:rocket()
+        local k = often and 0.5 or 1
+        c.shared.fwNext = gt + (FW_MIN + math.random() * (FW_MAX - FW_MIN)) * k
+    end
+    fx:update(dt)
+end
+local function drawFireworks(c)
+    if c.shared.fx then c.shared.fx:drawBack() end
 end
 
 -- ── El fondo: los ladrillos del modo Flappy ────────────────────────────────
@@ -209,8 +234,8 @@ end
 -- ── Escenas que suben ───────────────────────────────────────────────────────
 local SCROLL = { 'logo', 'pradera', 'costa', 'fortaleza', 'nieve', 'cuevas', 'volcan', 'crab', 'bola', 'mirror' }
 for _, id in ipairs(SCROLL) do
-    F[id] = { update = function(c) tickStages(c) end,
-              draw = function(c) background(c); drawScroll(c, c.film.t) end }
+    F[id] = { update = function(c) tickStages(c); fireworks(c) end,
+              draw = function(c) background(c); drawFireworks(c); drawScroll(c, c.film.t) end }
 end
 
 -- ── El espejo se recompone ──────────────────────────────────────────────────
@@ -220,6 +245,7 @@ local MF = function() return math.floor(WINDOW_H * 0.66) end
 F.rise = {
     enter = function(c) c.shared.ids = c.shared.ids or Stage.shardIds(c.xtra) end,
     update = function(c, t)
+        fireworks(c)
         local ids = c.shared.ids
         local each = c.b(2) * 7 / #ids
         c.v.got = c.v.got or 0
@@ -234,6 +260,7 @@ F.rise = {
     end,
     draw = function(c, t)
         background(c)
+        drawFireworks(c)
         local ids = c.shared.ids
         local each = c.b(2) * 7 / #ids
         local placed = {}
@@ -257,6 +284,7 @@ F.rise = {
 
 -- ── El espejo entero y GRACIAS ──────────────────────────────────────────────
 F.climax = {
+    update = function(c) fireworks(c, true) end,
     events = {
         { cue = 'whole', fn = function(c)
             c.sfx('storyRestore')
@@ -266,6 +294,7 @@ F.climax = {
     },
     draw = function(c, t)
         background(c)
+        drawFireworks(c)
         local gx, gy = Stage.glassCenter(MX(), MF())
         Stage.rays(gx, gy, t * 1.6, 12, WINDOW_W, 0.12 + 0.06 * math.sin(t * 4))
         Stage.mirror(MX(), MF(), { whole = true })
@@ -287,47 +316,113 @@ F.climax = {
 -- `wave`); desde `wave`, el saludo; desde `end`, quieto saludando mientras se funde a negro.
 -- Mientras, el monstruo VUELA a su alrededor (un ocho, aleteando por arte de magia) y al final saluda a su lado.
 local CS = 8                                    -- escala de Claudio (16 px → 128)
+local function cx_() return math.floor(WINDOW_W / 2) end
+local function floor_() return math.floor(WINDOW_H * 0.82) end
+local MON_X = 230                               -- dónde se posa el monstruo: a la derecha de Claudio
+
+-- Un saltito de un pulso: altura (0..1..0) y el aplastado al despegar y al caer (escala vertical entera: pixel art)
+local function hop(k, hgt)
+    local y = math.sin(math.min(1, k / 0.8) * math.pi) * hgt
+    local sy = (k < 0.08 or k > 0.85) and -1 or ((k > 0.2 and k < 0.6) and 1 or 0)
+    return y, sy
+end
+
 local function claudio(c, t)
     local set = Anim.load('claudio')
     local beat = c.beat
     local b = t / beat                          -- pulsos (con decimales)
-    local cx, floor = WINDOW_W / 2, WINDOW_H * 0.82
-    local x, y, seq, st, fl = cx, floor, 'idle', t, 1
-    local spin = c.at('spin') / beat               -- (la vuelta: 4 pulsos desde `spin`)
+    local k = b - math.floor(b)                 -- dentro del pulso
+    local cx, floor = cx_(), floor_()
+    local x, y, seq, st, fl, sy = cx, floor, 'idle', t, 1, 0
+    local spin, wave = c.at('spin') / beat, c.at('wave') / beat
     if b < 4 then
+        -- entra andando, con un saltito cada dos pasos
         x, seq = lerp(-80, cx, smooth(b / 4)), 'walk'
+        local h; h, sy = hop((b / 2) % 1, 14); y = floor - h
     elseif b < spin then
-        local k = b - math.floor(b)
-        y = floor - math.sin(math.min(1, k * 2) * math.pi) * 18 * (k < 0.5 and 1 or 0)
-        seq, st = 'walk', math.floor(b) / 4      -- (un paso por pulso)
+        -- PASOS DE LADO: va y viene (dos pulsos a cada lado) saltando en cada pulso, mirando hacia donde va; en el
+        -- último pulso de cada cuatro, los brazos arriba
+        local side = (math.floor((b - 4) / 2) % 2 == 0) and 1 or -1
+        local u = ((b - 4) % 2) / 2
+        x = cx + side * (smooth(u) * 2 - 1) * -70
+        fl = side < 0 and 1 or -1
+        local h; h, sy = hop(k, 30); y = floor - h
+        seq, st = 'walk', math.floor(b) / 4
         if math.floor(b) % 4 == 3 then seq = 'cheer' end
     elseif b < spin + 4 then
-        fl = (math.floor(b * 2) % 2 == 0) and 1 or -1
-        y = floor - math.sin(((b - spin) / 4) * math.pi) * 60
+        -- LA VUELTA: un gran salto girando (se da la vuelta cada cuarto de pulso)
+        fl = (math.floor(b * 4) % 2 == 0) and 1 or -1
+        local u = (b - spin) / 4
+        y = floor - math.sin(u * math.pi) * 110
+        sy = (u < 0.05 or u > 0.95) and -1 or 1
         seq = 'cheer'
-    elseif b < c.at('wave') / beat then
-        local k = b - math.floor(b)
-        seq = (math.floor(b) % 2 == 0) and 'cheer' or 'idle'
-        if math.floor(b) % 2 == 0 then y = floor - math.sin(k * math.pi) * 34 end
+    elseif b < wave then
+        -- BRAZOS a doble tiempo: arriba / abajo cada medio pulso, con un saltito en cada uno
+        local half = math.floor(b * 2) % 2
+        seq = half == 0 and 'cheer' or 'idle'
+        local h; h, sy = hop((b * 2) % 1, 22); y = floor - h
+        fl = (math.floor(b) % 2 == 0) and 1 or -1
     else
+        -- el saludo, con un botecito en cada pulso
         seq = 'wave'
+        local h; h, sy = hop(k, 10); y = floor - h
     end
-    -- sombrita
+    -- sombrita (más pequeña cuanto más alto)
     love.graphics.setColor(0, 0, 0, 0.35)
-    local sw = math.floor(10 * CS * (1 - (floor - y) / 200))
-    love.graphics.rectangle('fill', math.floor(cx + (x - cx) - sw / 2), math.floor(floor + 2), sw, CS)
+    local sw = math.floor(10 * CS * (1 - (floor - y) / 220))
+    love.graphics.rectangle('fill', math.floor(x - sw / 2), floor + 2, sw, CS)
     love.graphics.setColor(1, 1, 1, 1)
-    set:draw(seq, st, math.floor(x), math.floor(y), 0, CS * fl, CS)
+    set:draw(seq, st, math.floor(x), math.floor(y), 0, CS * fl, CS + sy)
     return x, y
 end
 
+-- El monstruo: entra VOLANDO por la derecha, da vueltas alrededor de Claudio mientras baila (un ocho) y, antes de la
+-- despedida, baja y SE POSA a su lado; ya en el suelo, salta de alegría en cada pulso mientras Claudio saluda
+local function monster(c, t)
+    local set = Anim.load('player')
+    local cx, floor = cx_(), floor_()
+    local beat = c.beat
+    local land = c.at('wave') - c.b(2)          -- empieza a bajar dos pulsos antes del saludo
+    local seq, x, y, dir = 'flutter', 0, 0, -1
+    if t < c.b(4) then
+        -- llega desde fuera, por la derecha, bajando en curva
+        local u = smooth(t / c.b(4))
+        x, y = lerp(WINDOW_W + 100, cx + 380, u), lerp(floor - 420, floor - 250, u)
+    elseif t < land then
+        local tt = t - c.b(4)
+        x = cx + math.cos(tt * 1.4) * 380
+        y = floor - 250 + math.sin(tt * 2.8) * 70
+        dir = -math.sin(tt * 1.4) >= 0 and 1 or -1
+    else
+        -- baja hasta el suelo, a su lado, aleteando
+        local tt = land - c.b(4)
+        local x0, y0 = cx + math.cos(tt * 1.4) * 380, floor - 250 + math.sin(tt * 2.8) * 70
+        local u = smooth(math.min(1, (t - land) / c.b(2)))
+        x, y = lerp(x0, cx + MON_X, u), lerp(y0, floor, u)
+        dir = -1                                -- (mirando a Claudio)
+        if u >= 1 then
+            -- en el suelo: saltitos de alegría, uno por pulso
+            local k = (t - land - c.b(2)) / beat % 1
+            local h = math.sin(math.min(1, k / 0.7) * math.pi) * 40
+            y = floor - h
+            seq = h > 2 and 'jump' or 'idle'
+        end
+    end
+    love.graphics.setColor(0, 0, 0, 0.3)
+    local sw = math.floor(40 * (1 - math.min(1, (floor - y) / 300)))
+    if sw > 4 then love.graphics.rectangle('fill', math.floor(x - sw / 2), floor + 2, sw, 6) end
+    love.graphics.setColor(1, 1, 1, 1)
+    set:draw(seq, t, math.floor(x), math.floor(y), 0, PLAYER_SCALE * dir, PLAYER_SCALE)
+end
+
 F.bye = {
-    -- (chispas al compás: en cada pulso del baile, y una lluvia en la vuelta)
+    -- (chispas al compás: en cada pulso del baile, y una lluvia en la vuelta; y fuegos artificiales a menudo)
     update = function(c, t)
+        fireworks(c, true)
         local b = math.floor(t / c.beat)
         if b ~= c.v.lastBeat then
             c.v.lastBeat = b
-            local cx, fy = WINDOW_W / 2, WINDOW_H * 0.82
+            local cx, fy = cx_(), floor_()
             local spin = c.at('spin') / c.beat
             if b >= 4 and b < c.at('end') / c.beat then
                 local n = (b >= spin and b < spin + 4) and 10 or 3
@@ -337,6 +432,7 @@ F.bye = {
     end,
     draw = function(c, t)
         background(c)
+        drawFireworks(c)
         -- "gracias" sigue arriba, y se va con el final
         local msg = L('credits.thanks')
         local s = 7
@@ -346,29 +442,15 @@ F.bye = {
         -- el espejo se va apagando arriba
         local a = 1 - smooth(c.k(0, c.b(4)))
         if a > 0 then Stage.mirror(MX(), MF(), { whole = true, alpha = a }) end
-        -- el monstruo vuela alrededor de Claudio (un ocho) y, al despedirse, se queda flotando a su lado
-        do
-            local set = Anim.load('player')
-            local cx, fy = WINDOW_W / 2, WINDOW_H * 0.82
-            local w = c.at('wave')
-            local ox, oy = cx + math.cos(t * 1.3) * 380, fy - 250 + math.sin(t * 2.6) * 70
-            local vx = -math.sin(t * 1.3)
-            if t >= w then
-                local u = smooth(c.k(w, w + c.b(2)))
-                ox, oy = lerp(ox, cx + 210, u), lerp(oy, fy - 150 + math.sin(t * 5) * 8, u)
-                vx = (u < 1) and vx or -1
-            end
-            love.graphics.setColor(1, 1, 1, 1)
-            set:draw('flutter', t, math.floor(ox), math.floor(oy), 0, PLAYER_SCALE * (vx >= 0 and 1 or -1), PLAYER_SCALE)
-        end
+        monster(c, t)
         local x, y = claudio(c, t)
         if t >= c.at('wave') then
             local u = c.k(c.at('wave'), c.at('wave') + c.b(1))
             local msg = L('credits.bye')
             local s = 5
             local w = PixelFont.width(msg, s)
-            local by = math.floor(y - 16 * CS - 40 - (1 - easeOut(u)) * 20)
-            PixelFont.shadow(msg, math.floor(x - w / 2), by, s, u, { 1, 1, 1 })
+            local by = math.floor(floor_() - 16 * CS - 40 - (1 - easeOut(u)) * 20)
+            PixelFont.shadow(msg, math.floor(cx_() + MON_X / 2 - w / 2), by, s, u, { 1, 1, 1 })
         end
     end,
 }

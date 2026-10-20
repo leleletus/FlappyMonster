@@ -56,7 +56,7 @@ function LiveStage:_think()
     if p.dying or not p.alive then self.wasCrouch = false; return end
     self.cool = math.max(0, self.cool - STEP)
     -- de un lado a otro de la franja
-    if p.x > level.widthPx - 90 then self.dir = -1 elseif p.x < 90 then self.dir = 1 end
+    if p.x > level.widthPx - 160 then self.dir = -1 elseif p.x < 160 then self.dir = 1 end
     local d = self.dir
     -- (a veces se para un momento: así los enemigos llegan hasta él)
     self.wait = math.max(0, self.wait - STEP)
@@ -100,7 +100,7 @@ end
 function LiveStage.new(name, seed)
     local AdventureState = require 'src/states/adventure/AdventureState'
     local self = setmetatable({ name = name, rng = love.math.newRandomGenerator(seed or 7), dir = 1, cool = 0, wait = 0,
-                                hold = 0, acc = 0, inp = {}, stats = { kills = 0, deaths = 0, booms = 0 } }, LiveStage)
+                                hold = 0, acc = 0, inp = {}, gain = LiveStage.GAIN, stats = { kills = 0, deaths = 0, booms = 0 } }, LiveStage)
     local st = AdventureState:new()
     local me = self
     local stub = {
@@ -150,17 +150,40 @@ function LiveStage.new(name, seed)
     return self
 end
 
--- Ejecuta fn con el azar del escenario (las decoraciones y partículas, con el normal) y sin el mando de verdad
-function LiveStage:_wrap(fn)
-    local rI, rR = Input, math.random
+-- EL SONIDO de un escenario: sus efectos, a GAIN del volumen normal y apagándose con la franja (self.gain, que pone
+-- draw); la música no la toca nadie de dentro (al reaparecer, el monstruo pedía la del nivel: cortaba los créditos)
+LiveStage.GAIN = 0.5
+local function noop() end
+local MUSIC = { playMusic = true, stopMusic = true, setLevelMusic = true, setBaseLevelMusic = true, leaveMatch = true,
+                pauseAll = true, resumeAll = true, setEcho = true, stopAllTracked = true }
+local function soundProxy(stage, real)
+    local p = {
+        play = function(name, pitch, vol) return real.play(name, pitch, (vol or 1) * stage.gain) end,
+        playAt = function(name, x, y, pitch, vol) return real.playAt(name, x, y, pitch, (vol or 1) * stage.gain) end,
+        playTracked = function(name, pitch, vol) return real.playTracked(name, pitch, (vol or 1) * stage.gain) end,
+        loop = function(name, on, x, y, g) return real.loop(name, on, x, y, (g or 1) * stage.gain) end,
+        resumeAll = function() return true end,
+    }
+    return setmetatable(p, { __index = function(_, k) if MUSIC[k] then return noop end return real[k] end })
+end
+
+-- Ejecuta fn con el azar del escenario (las decoraciones y partículas, con el normal), sin el mando de verdad y con
+-- su sonido (soundProxy)
+function LiveStage:_wrap(fn, drawing)
+    local rI, rR, rS = Input, math.random, Sound
+    self.sound = self.sound or soundProxy(self, rS)
+    Sound = self.sound
     local rng = self.rng
     outerRandom = rR
     Input = IDLE
-    math.random = function(a, b) if b then return rng:random(a, b) elseif a then return rng:random(a) end return rng:random() end
+    -- (al DIBUJAR, el azar normal: lo que se dibuja no puede cambiar lo que pasa)
+    if not drawing then
+        math.random = function(a, b) if b then return rng:random(a, b) elseif a then return rng:random(a) end return rng:random() end
+    end
     Particles.emit, Particles.update = wEmit, wUpdate
     DecoFx.emit, DecoFx.every = wdEmit, wdEvery
     local ok, err = pcall(fn)
-    Input, math.random = rI, rR
+    Input, math.random, Sound = rI, rR, rS
     Particles.emit, Particles.update = pEmit, pUpdate
     DecoFx.emit, DecoFx.every = dEmit, dEvery
     if not ok then error(err, 0) end
@@ -221,6 +244,7 @@ end
 -- La franja con el borde de arriba del nivel en la y de pantalla `y` (centrada a lo ancho)
 function LiveStage:draw(y, alpha)
     alpha = alpha or 1
+    self.gain = LiveStage.GAIN * alpha
     if alpha <= 0 then return end
     local st = self.st
     ensure()
@@ -235,8 +259,11 @@ function LiveStage:draw(y, alpha)
     love.graphics.setCanvas(canvas)
     love.graphics.clear(0, 0, 0, 0)
     love.graphics.setScissor(0, math.max(0, y), WINDOW_W, math.max(0, math.min(WINDOW_H, y + self.h) - math.max(0, y)))
-    st:rebindGlobals()
-    st:render()
+    self.gain = LiveStage.GAIN * alpha                   -- (lo que suena se apaga con la franja)
+    self:_wrap(function()
+        st:rebindGlobals()
+        st:render()
+    end, true)
     love.graphics.setScissor()
     -- los bordes: izquierda, derecha y abajo (alfa × la máscara)
     love.graphics.setBlendMode('multiply', 'premultiplied')

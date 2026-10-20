@@ -48,7 +48,7 @@ BossZones.DEFAULT_MUSIC = Music.byId.evil_ship_boss and 'evil_ship_boss' or (Bos
 local function int(v, d) v = tonumber(v); return v and math.floor(v) or d end
 
 -- ── Datos ─────────────────────────────────────────────────────────────────────
-function BossZones.normalize(z, i)
+function BossZones.normalize(z, i, openTop)
     if type(z) ~= 'table' then return nil end
     local music = BossZones.DEFAULT_MUSIC
     local want = Music.id(z.music)                   -- (ids antiguos: "aliases" del índice)
@@ -56,7 +56,7 @@ function BossZones.normalize(z, i)
     return {
         id    = math.max(1, int(z.id, i or 1)),
         col   = math.max(1, int(z.col, 1)),
-        row   = math.max(1, int(z.row, 1)),
+        row   = math.max(openTop and -20 or 1, int(z.row, 1)),   -- (con `openTop`, puede subir por encima del nivel)
         w     = math.max(4, int(z.w, BossZones.DEFAULT_W)),
         h     = math.max(3, int(z.h, BossZones.DEFAULT_H)),
         music = music,
@@ -79,10 +79,10 @@ function BossZones.containsCell(z, c, r)
 end
 
 -- Zonas de juego (Level.fromData): datos + rectángulo + estado
-function BossZones.build(list)
+function BossZones.build(list, openTop)
     local out = {}
     for i, raw in ipairs(list or {}) do
-        local z = BossZones.normalize(raw, i)
+        local z = BossZones.normalize(raw, i, openTop)
         if z then
             z.x0, z.y0, z.x1, z.y1 = BossZones.rect(z)
             z.state, z.arrived, z.needed, z.phase = 'idle', 0, 0, 1

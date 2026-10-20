@@ -192,7 +192,7 @@ function Level.fromData(lvl, difficulty)
     end
     self.foliage = self.decorations   -- alias de compatibilidad
     -- Zonas de jefe (src/world/systems/BossZones.lua)
-    self.bossZones = BossZones.build(lvl.bossZones)
+    self.bossZones = BossZones.build(lvl.bossZones, lvl.openTop == true)
     -- Cámara automática (src/world/systems/AutoScroll.lua), o nil
     self.autoScroll = AutoScroll.build(lvl.autoScroll, self)
     -- Inundaciones (src/world/systems/Floods.lua): salen de las entidades 'flood'
@@ -234,6 +234,7 @@ function Level.fromData(lvl, difficulty)
     -- LUZ AMBIENTE (solo visual, src/fx/Darkness.lua): "light": day | dusk | night | cave | none; sin ella, de su
     -- hora ("time") y, con fondo de cueva, cueva. La profundidad (debajo de la superficie) va en penumbra.
     self.light     = Level.lightMood(lvl)
+    self.openTop   = lvl.openTop == true      -- (nada sólido encima del nivel: los escenarios de los créditos)
     -- (ECO en los sonidos, Sound.setEcho: por defecto, el de las cuevas — a oscuras o en penumbra —; "echo": true/false lo fuerza)
     self.echo      = lvl.echo == true or (lvl.echo == nil and (lvl.dark == true or self.light == 'cave'))
     self.spikeSkin = lvl.spikeSkin                     -- (aspecto de los pinchos: src/world/level/SpikeSkins.lua, solo visual)
@@ -314,6 +315,8 @@ end
 local OUTSIDE_RAW = TILE_SOLID
 
 function Level:getRaw(col, row)
+    -- (fuera del nivel es sólido: paredes, suelo y techo; con `openTop`, encima no hay techo)
+    if row < 1 and self.openTop then return 0 end
     if row<1 or row>self.tileH or col<1 or col>self.tileW then return OUTSIDE_RAW end
     return self.tiles[row][col] or 0
 end

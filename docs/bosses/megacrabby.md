@@ -72,3 +72,7 @@ are the USER's drawing: never overwrite). **Sounds:** `assets/sounds/bosses/mega
   Harness `boss_intro` case `gp_subditos`. `Boss.hurtSound` per boss.
   Minions behave exactly like normal wall-walking ceiling Crabbies (harness
   `crawler_drop SUMMON=1`). Test arena: `tools/levelgen/arenas/jefe_cangrejo.json`.
+- 0.5.4, the user saw it "trembling, the sprite shaking fast" while walking (in the credits). The render decides
+  walk vs idle from how far it moved since the previous DRAW; drawn more often than it moves (the credits' fixed
+  1/60 s physics on a faster screen, a repeated online snapshot) every other frame saw no movement and it switched
+  walk / idle frame each frame. "Moving" now lasts 0.1 s after the last advance (`_movedAt`).

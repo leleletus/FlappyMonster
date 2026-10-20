@@ -3,9 +3,9 @@
   {
    "id": 1,
    "col": 1,
-   "row": 1,
+   "row": -3,
    "w": 20,
-   "h": 6
+   "h": 10
   }
  ],
  "name": "Mega Crabby helado (créditos)",
@@ -16,6 +16,7 @@
   2,
   4
  ],
+ "openTop": true,
  "background": "snow",
  "time": "day",
  "light": "day",

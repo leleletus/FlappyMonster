@@ -1413,7 +1413,11 @@ function Mega:render(camX, camY)
     self._lx, self._ly = self.x, self.y
     self._dist = (self._dist or 0) + moved
     local walkPhase = self._dist / (STEP_DIST * 2)
-    local moving = moved > 0.05
+    -- (sigue "andando" un momento tras el último avance: si se dibuja más a menudo de lo que se mueve —la física
+    --  a pasos fijos de los créditos en una pantalla de 120 Hz, un snapshot que se repite—, entre paso y paso no
+    --  avanza y alternaba andar / quieto en cada cuadro: el cangrejo parecía temblar)
+    if moved > 0.05 then self._movedAt = now end
+    local moving = self._movedAt ~= nil and now - self._movedAt < 0.1
 
     -- Sprite: andar, o patalear clavado
     local body, step = self.art.clip('walk'), self.frame or 1

@@ -55,9 +55,11 @@ class Strip:
         self.fol.append(d)
 
     def level(self, name, background, time='day', music=None, boss=False):
-        extra = {'bossZones': [{'id': 1, 'col': 1, 'row': 1, 'w': W, 'h': H}]} if boss else {}
+        # (la zona mide lo de su arena de verdad, 10 filas: sube por encima de la franja —`openTop`— y su techo, al que
+        #  trepan el jefe y sus Crabbies, queda fuera de la vista; a la altura de la franja colgaban a un palmo del suelo)
+        extra = {'bossZones': [{'id': 1, 'col': 1, 'row': H - 9, 'w': W, 'h': 10}]} if boss else {}
         return {**extra, 'name': name + ' (créditos)', 'name_en': name + ' (credits)', 'width': W, 'height': H,
-                'playerStart': [2, 4], 'background': background, 'time': time, 'light': 'day', 'echo': False,
+                'playerStart': [2, 4], 'openTop': True, 'background': background, 'time': time, 'light': 'day', 'echo': False,
                 'modes': [], 'tiles': self.g, 'entities': self.ents, 'foliage': self.fol, 'vents': []}
 
 
@@ -139,7 +141,7 @@ def volcan():
 
 def crab():
     s = Strip(SAND, SAND)
-    s.ent('megacrabby', 14)                     # el Mega Crabby de verdad (pinzas y púa), sin pelea: pasea
+    s.ent('megacrabby', 14)                     # el Mega Crabby de verdad (pinzas y púa), con todos sus ataques
     s.ent('crabby', 7); s.ent('crabbytramp', 10)
     for c, t in ((3, 'palmtree'), (18, 'palmtree'), (8, 'shell')):
         s.deco(t, c)

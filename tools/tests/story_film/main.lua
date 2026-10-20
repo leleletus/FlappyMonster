@@ -13,7 +13,8 @@
 --     se juegan y en ellos pasan cosas (≥ 8 enemigos muertos, ≥ 2 explosiones, el monstruo muere alguna vez).
 --  8. STAGES=1: solo los ESCENARIOS VIVOS de los créditos (src/story/LiveStage.lua): cada uno 25 s a pasos fijos,
 --     sin errores, con lo que pasa (enemigos que mueren, explosiones, muertes del monstruo) y 4 capturas
---     (<save>/stage_<nombre>_<k>.png) sobre el fondo de ladrillos; STAGE=credits_pradera para uno solo
+--     (<save>/stage_<nombre>_<k>.png) sobre el fondo de ladrillos; STAGE=credits_pradera para uno solo; CRAWLDBG=1
+--     escribe dónde van los trepadores (normal 0,1 = boca abajo, en un techo)
 --   tools/tests/run.sh story_film [FILM=intro|ending|chase|lair|credits] [XTRA=1] [NOSHOTS=1] [STAGES=1 [STAGE=x]]
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
@@ -33,6 +34,7 @@ local NEXT1, P0, sink
 
 -- (los escenarios vivos que crea la película de los créditos: para contar lo que pasa en ellos)
 LIVE = {}
+MUSICS = {}
 do
     local LS = require 'src/story/LiveStage'
     local new = LS.new
@@ -92,6 +94,11 @@ local function stagesUpdate()
     end
     STG.cur:update(1 / 60)
     STG.f = STG.f + 1
+    if os.getenv('CRAWLDBG') and STG.f % 30 == 0 then      -- (los que trepan: dónde van y hacia dónde miran sus patas)
+        for _, e in ipairs(STG.cur.st.enemies) do
+            if e.crawl then print(('  C %d %s x=%d y=%d normal=%s,%s st=%s'):format(STG.f, e.def.name, e.x, e.y, tostring(e.cnx), tostring(e.cny), tostring(e.state))) end
+        end
+    end
     if os.getenv('STAGEDBG') and STG.f % 60 == 0 then
         for _, e in ipairs(STG.cur.st.enemies) do
             if e.def.boss then print(('  t=%d %s estado=%s x=%d en pelea=%s'):format(STG.f / 60, e.def.name, tostring(e.state), e.x, tostring(e.inFight and e:inFight()))) end
@@ -114,6 +121,12 @@ function love.update(dt)
         for _ = 1, 240 do
             if done then break end
             state:update(1 / 60)
+            -- (en los créditos nadie más toca la música: la película va muda aquí, así que cualquier pista que suene la
+            -- ha pedido otro — un escenario vivo al reaparecer el monstruo cortaba la de los créditos —)
+            if film.name == 'credits' then
+                local mn = Sound.musicPosition()
+                if mn then MUSICS[mn] = true end
+            end
             for _, a in ipairs({ film.shared.m or false, film.shared.r or false }) do
                 if a and not a.hidden then sink = math.max(sink, a.body.y - require('src/story/films/common').LFLOOR) end
             end
@@ -151,6 +164,9 @@ function love.update(dt)
                 -- los ESCENARIOS VIVOS: se jugaron todos y pasaron cosas (enemigos muertos, explosiones, el monstruo muere)
                 local n, k, bo, d = 0, 0, 0, 0
                 for _, st in ipairs(LIVE) do n = n + 1; k = k + st.stats.kills; bo = bo + st.stats.booms; d = d + st.stats.deaths end
+                local other = {}
+                for mn in pairs(MUSICS) do if mn ~= 'story_credits' then other[#other + 1] = mn end end
+                check('musica', #other == 0, 'nadie pide otra música durante los créditos: ' .. (#other == 0 and 'sí' or table.concat(other, ', ')))
                 check('escenarios', n == 8 and k >= 8 and bo >= 2 and d >= 1,
                       ('%d escenarios vivos jugados: %d enemigos muertos, %d explosiones, %d muertes del monstruo'):format(n, k, bo, d))
             end
