@@ -100,8 +100,34 @@ function TitleState:_continue()
     Transition.go('story_map')
 end
 
+-- SOUND TEST secreto (src/states/menu/SoundTestState.lua): ↑ ↑ ↓ ↓ ← → ← → (flechas o cruceta), o 7 toques seguidos
+-- en la versión (abajo a la derecha)
+local SECRET = { 'nav_up', 'nav_up', 'nav_down', 'nav_down', 'nav_left', 'nav_right', 'nav_left', 'nav_right' }
+function TitleState:_secret()
+    for _, a in ipairs({ 'nav_up', 'nav_down', 'nav_left', 'nav_right' }) do
+        if Input.pressed(a) then
+            local seq = self.secretSeq or {}
+            self.secretSeq = seq
+            seq[#seq + 1] = a
+            if #seq > #SECRET then table.remove(seq, 1) end
+            if #seq == #SECRET then
+                local ok = true
+                for i = 1, #SECRET do if seq[i] ~= SECRET[i] then ok = false; break end end
+                if ok then self:_openSoundTest(); return true end
+            end
+        end
+    end
+end
+function TitleState:_openSoundTest()
+    self.secretSeq, self.versionTaps = nil, nil
+    Sound.play('oneUp')
+    gStateMachine:change('sound_test')
+end
+function TitleState:_versionRect() return WINDOW_W - 180, WINDOW_H - 50, 180, 50 end
+
 function TitleState:update(dt)
     self.t = self.t + dt
+    if self:_secret() then return end
     MenuScene.update(dt)
     self.anim:update(dt)
     local target = self.menu and 1 or 0
@@ -184,6 +210,16 @@ function TitleState:mousemoved(x, y)
 end
 
 function TitleState:touchpressed(id, x, y)
+    local vx, vy, vw, vh = self:_versionRect()
+    if x >= vx and x <= vx + vw and y >= vy and y <= vy + vh then
+        local now = love.timer.getTime()
+        local vt = self.versionTaps
+        if not vt or now - vt.t > 0.8 then vt = { n = 0 } end
+        vt.n, vt.t = vt.n + 1, now
+        self.versionTaps = vt
+        if vt.n >= 7 then self:_openSoundTest() end
+        return
+    end
     if self.anim:busy() then return end
     if not self.menu then return self:_open() end
     if CornerButtons.hitBack(x, y) then return self:_close() end

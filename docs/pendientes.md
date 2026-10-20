@@ -100,9 +100,8 @@ not repeated here.
 ## 7. Decisions for the user
 
 - [x] (0.5.13) "Private" rooms: the user chose — a private room REQUIRES a password (client wizard and server).
-- [ ] Replay farming (the user, 2026-10-20: it also happens with LIVES — replaying a level gives its extra lives again,
-  infinite lives): what is gained in a level should count only once; replaying for a better score should stay. Design
-  being agreed.
+- [x] (0.5.14) Replay farming (the user: it also happened with LIVES): extra lives once per level (see-through and
+  points afterwards), story points only by beating the level's record. See docs/story/story-mode.md.
 - [ ] Signed updates (a public key in `main.lua`, the server signs the manifest): needs a key kept outside the repo and
   only protects devices that install a new build. The user: not needed yet, keep it here.
 

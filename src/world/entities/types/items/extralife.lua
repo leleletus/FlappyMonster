@@ -35,6 +35,7 @@ function Life:render(camX, camY)
     end
     local x    = math.floor(self.x - camX)
     local base = math.floor(self.y - camY + self.outerH / 2 - hop)
+    if self.taken then a = a * 0.35 end           -- (ya cogida en otra partida: solo da puntos)
     love.graphics.setColor(1, 1, 1, a)
     img:show(x, base, 0, SCALE * sx, SCALE * sy, img:getWidth() / 2, img:getHeight())
     love.graphics.setColor(1, 1, 1, 1)

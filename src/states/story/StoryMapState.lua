@@ -585,6 +585,7 @@ function StoryMapState:_start(world, node)
         -- las VIDAS son de la aventura: entran con las que lleva; las PERDIDAS se guardan salga como salga, las
         -- ganadas (como todo lo demás del nivel: puntos, fragmentos) solo si lo TERMINA (AdventureState:exit)
         lives = Run.data.lives,
+        taken = Run.data.taken and Run.data.taken[n.id] or nil,      -- (vidas extra ya cogidas aquí: solo dan puntos)
         onLeave = function(lives) Run.setLives(lives) end,
         -- los FRAGMENTOS DEL ESPEJO que guarda el jefe de este nivel (los que aún no tiene); con el último, el final
         -- en los niveles con JEFE (`auto`) el nivel termina solo al vencerlo y recoger su fragmento (sin ir a la meta)

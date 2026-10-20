@@ -83,6 +83,10 @@ function StoryResultsState:enter(args)
     self.extra = {}
     local function add(text, col) self.extra[#self.extra + 1] = { text, col } end
     if s.record then add(L('story.results.record'), { 1, 0.95, 0.3 }) end
+    -- (repitiendo: a la partida solo va lo que supera el récord de puntos del nivel)
+    if s.gain and s.points and s.gain < s.points then
+        add(s.gain > 0 and L('story.results.gain', { n = s.gain }) or L('story.results.no_gain'), { 0.75, 0.85, 1 })
+    end
     local function reward(rw)
         if rw then add(rw.lives and L('story.results.reward_lives', { n = rw.lives }) or L('story.results.reward_points', { n = rw.points }), { 0.5, 1, 0.5 }) end
     end

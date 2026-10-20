@@ -11,7 +11,9 @@
 --     puntos), con su grafo al día, y con su semilla el bot LLEGA A LA META (AdventureState en modo demo: enemigos y
 --     daño de verdad); la misma carrera con el dt real variable (pasos fijos por dentro); morir: reaparece y las
 --     vidas no se acaban; el iris entre escenas se cierra, pasa a la siguiente y se abre;
---  6. capturas a 1280, 960 y 1600 de ancho.
+--  6. capturas a 1280, 960 y 1600 de ancho;
+--  1b. el SOUND TEST secreto (↑↑↓↓←→←→ en el título, o 7 toques en la versión): suena música y un efecto, el tono
+--     cambia lo que suena, ATRÁS vuelve al título (captura menu_soundtest.png).
 -- Capturas: <save>/menu_*.png                tools/tests/run.sh menu_flow
 --   SCENES=0             sin el paso 5
 --   LEVELS=a,b,c         el paso 5 con esos niveles (sin semilla: una al azar; SEED=n: esa) en vez de SCENES
@@ -67,6 +69,37 @@ local function run()
     shot('main')
     press('back', 0.8)
     check('cierra', not st.menu and st.logoUp == 0, 'atrás vuelve al título (logo en el centro)')
+
+    -- ── 1b. SOUND TEST secreto: ↑ ↑ ↓ ↓ ← → ← → en el título; suena una pista y un efecto, las opciones cambian
+    --        lo que suena; ATRÁS vuelve; 7 toques en la versión también entran ──
+    for _, a in ipairs({ 'nav_up', 'nav_up', 'nav_down', 'nav_down', 'nav_left', 'nav_right', 'nav_left', 'nav_right' }) do press(a, 0.05) end
+    wait(0.2)
+    local stt = top()
+    local inST = name(stt) == 'SoundTestState'
+    local musicOk, pitchOk, sfxOk, back, taps = false, false, false, false, false
+    if inST then
+        press('confirm', 0.3)
+        local s0 = stt:_current()
+        musicOk = s0 ~= nil and stt.playing ~= nil and stt.playing.music ~= nil
+        press('nav_right', 0.05); press('nav_down', 0.05); press('nav_down', 0.05)      -- (opciones → Tono)
+        press('nav_right', 0.1)
+        pitchOk = stt.pitch == 1.05 and s0 ~= nil and math.abs(s0:getPitch() - 1.05) < 0.001
+        press('back', 0.05); press('light', 0.05)                                        -- (a la lista; efectos)
+        press('nav_down', 0.05); press('confirm', 0.2)
+        sfxOk = stt.tab == 2 and stt.playing ~= nil and stt.playing.music == nil
+        shot('soundtest')
+        press('back', 0.6)
+        back = name(top()) == 'TitleState'
+        local t = top()
+        for _ = 1, 7 do t:touchpressed('dedo', WINDOW_W - 40, WINDOW_H - 20); wait(0.05) end
+        wait(0.2)
+        taps = name(top()) == 'SoundTestState'
+        press('back', 0.6)
+    end
+    check('soundtest', inST and musicOk and pitchOk and sfxOk and back and taps,
+        ('código → %s; música suena=%s; tono 1,05 en lo que suena=%s; efectos suena=%s; atrás → título=%s; 7 toques en la versión → entra=%s'):format(
+         name(stt), tostring(musicOk), tostring(pitchOk), tostring(sfxOk), tostring(back), tostring(taps)))
+    gStateMachine:change('title'); st = top(); wait(1.8)
     press('confirm', 0.8)
 
     -- ── 2. cada botón y vuelta ───────────────────────────────────────────

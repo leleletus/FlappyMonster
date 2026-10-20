@@ -27,6 +27,7 @@ local OnlineAdventureState        = require 'src/states/online/OnlineAdventureSt
 local OnlineErrorState            = require 'src/states/online/OnlineErrorState'
 local OnlineResultsState          = require 'src/states/online/OnlineResultsState'
 local SettingsState               = require 'src/states/menu/SettingsState'
+local SoundTestState              = require 'src/states/menu/SoundTestState'
 local UpdateState                 = require 'src/states/menu/UpdateState'
 local StartupState                = require 'src/states/menu/StartupState'
 local Settings                    = require 'src/core/Settings'
@@ -59,6 +60,7 @@ function love.load()
         main_menu          = function() local s = TitleState:new(); s.startInMenu = true; return s end,   -- (la misma pantalla, con los botones)
         difficulty         = function() return DifficultySelectionState:new() end,
         settings           = function() return SettingsState:new() end,
+        sound_test         = function() return SoundTestState:new() end,   -- (secreto: ver TitleState)
         play               = function() return PlayState:new() end,
         pause              = function() return PauseState:new() end,
         adventure          = function() return AdventureState:new() end,

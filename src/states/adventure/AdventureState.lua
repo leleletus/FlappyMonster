@@ -132,10 +132,17 @@ function AdventureState:enter(args)
     self._pfx, self._efx = PlayerAdventure.fx, Entity.fx
 
     -- Instanciar entidades (enemigos, NPCs) desde el catálogo
-    self.enemies = {}
-    for _, placement in ipairs(self.level.entities) do
+    -- (`args.taken` = { [nº de la colocación] = true }: vidas extra ya cogidas en este nivel en partidas TERMINADAS:
+    -- salen transparentes y solo dan puntos. Las que se cogen ahora se apuntan en `self.takenNow` y la historia las
+    -- guarda al terminar el nivel — Run.complete —, como todo lo demás)
+    self.enemies, self.takenNow, self.takenArg = {}, {}, args.taken
+    for i, placement in ipairs(self.level.entities) do
         local e = Entities.create(placement)
-        if e then table.insert(self.enemies, e) end
+        if e then
+            e.placeIdx = i
+            if args.taken and args.taken[i] then e.taken = true end
+            table.insert(self.enemies, e)
+        end
     end
 
     -- BONUS del modo historia: Rey de la Colina contra el bot (src/story/BonusMatch.lua)
@@ -341,7 +348,8 @@ function AdventureState:checkEnemyCollisions()
             self:spawnPopup('+' .. (pts or 0) .. '!', g.x, popY)
         end,
         pickup = function(e, pk)
-            pk = Entities.interactions.pickupEffect(player, pk)
+            if pk.lives and not e.taken and e.placeIdx then self.takenNow[e.placeIdx] = true end
+            pk = Entities.interactions.pickupEffect(player, pk, e)
             self.stats.items = self.stats.items + 1
             if pk.heal then
                 player.hp = player.hp + pk.heal
@@ -376,13 +384,15 @@ end
 -- Reintentar (tras perder todas las vidas): el mismo nivel con lo mismo que traía
 function AdventureState:retryArgs()
     return { level = self.levelPath, returnTo = self.returnTo, onFinish = self.onFinish, difficulty = self.level.difficulty,
-             shards = self.shardArgs, outro = self.outroArgs }
+             shards = self.shardArgs, outro = self.outroArgs, taken = self.takenArg }
 end
 
 -- Lo que se lleva del nivel (para la nota del modo historia: src/story/Score.lua)
 function AdventureState:result()
     local st = self.stats
-    return { score = self.score, time = self.levelTime, lives = self.player.lives, width = self.level.tileW, par = self.level.parTime,
+    local taken = {}
+    for i in pairs(self.takenNow or {}) do taken[#taken + 1] = i end
+    return { score = self.score, time = self.levelTime, lives = self.player.lives, width = self.level.tileW, par = self.level.parTime, taken = taken,
              kills = st.kills, killable = st.killable, stars = st.stars, starsTotal = st.starsTotal,
              deaths = st.deaths, hits = st.hits }
 end

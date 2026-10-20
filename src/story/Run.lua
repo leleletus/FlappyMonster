@@ -89,12 +89,22 @@ function Run.complete(id, result)
     local had = b.grade
     local order = { S = 4, A = 3, B = 2, C = 1, D = 0 }
     if (order[sc.grade] or 0) > (order[had or ''] or -1) then out.reward = Score.LEVEL_REWARD[sc.grade] end
+    -- PUNTOS de la partida: solo lo que MEJORA el récord del nivel (repetir un nivel para subir la nota sigue valiendo,
+    -- pero ya no suma puntos sin fin); `gain` = lo que se suma ahora
+    out.gain = math.max(0, points - (b.score or 0))
     if points > (b.score or -1) then b.score = points end
     if result.time and (not b.time or result.time < b.time) then b.time = math.floor(result.time * 100) / 100 end
     if sc.rating > (b.rating or -1) then b.rating, b.grade = sc.rating, sc.grade end
     d.best[id] = b
-    d.points = (d.points or 0) + points
+    d.points = (d.points or 0) + out.gain
     d.playTime = d.playTime + (result.time or 0)
+    -- vidas extra cogidas: ya no vuelven a dar vidas en este nivel (AdventureState `taken`)
+    if result.taken and #result.taken > 0 then
+        d.taken = d.taken or {}
+        local t = d.taken[id] or {}
+        for _, i in ipairs(result.taken) do t[i] = true end
+        d.taken[id] = t
+    end
     -- ¿con este se completa su mundo? → nota del mundo y su premio (una vez)
     for w = 1, Worlds.count() do
         local nodes = Worlds.nodes(w)
@@ -144,7 +154,9 @@ function Run.bonusResult(id, result)
                   points = 0, record = sc.rating > (b.rating or -1) }
     if result.won then
         out.points = math.floor((result.score or 0) * Difficulty.of(d.difficulty, 'scoreMult', 1) + 0.5)
-        d.points = (d.points or 0) + out.points
+        out.gain = math.max(0, out.points - (b.bestPts or 0))             -- (solo lo que mejora el récord)
+        b.bestPts = math.max(b.bestPts or 0, out.points)
+        d.points = (d.points or 0) + out.gain
         if not b.won then b.won = true; out.rewards[#out.rewards + 1] = Score.BONUS_WIN end
         local order = { S = 4, A = 3, B = 2, C = 1, D = 0 }
         if (order[sc.grade] or 0) > (order[b.wonGrade or ''] or -1) then

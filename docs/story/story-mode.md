@@ -137,3 +137,12 @@ again. No dialogue or text: animation + music.
 
 - Harness `story_flow` (real game: slots, locked nodes, clearing levels, save reloaded from disk, world 2 unlock,
   delete; screenshots at 1280 / 960 / 1600, plus a tour with every world open: `story_world_<n>.png`).
+
+- 0.5.14, the user (replay farming: replaying a level gave its extra lives and its points again, "vidas infinitas"):
+  - Extra lives are taken ONCE per level and save: AdventureState gets `taken` (the placement indices already taken
+    in finished runs, `d.taken[levelId]`), those lives are drawn see-through and give `Interactions.TAKEN_SCORE`
+    points instead; the ones taken now travel in `result.taken` and `Run.complete` stores them (only when the level is
+    finished, rule 7).
+  - Story points: a level (and a bonus win) only adds what beats its own record (`summary.gain`); the results screen
+    says so when replaying. Grade / world rewards were already once per grade. Replaying for a better grade and score
+    still works. Harness `story_flow` (`repetir`).

@@ -39,3 +39,13 @@ nothing special as long as they're played from those update loops.
   `Protocol.SHARED_SOUNDS` (helmetBreak, pufferPrick): the server sends them with no
   owner, so everybody hears them. New sounds: `tools/sounds/mechanics.py` (switch,
   helmet, puffer), levelled with `Sound.GAIN` to ≈ -12 dBFS (harness `sounds`).
+
+## Sound test (secret, for developers) — 0.5.14
+
+`src/states/menu/SoundTestState.lua` (state `sound_test`). From the TITLE screen: ↑ ↑ ↓ ↓ ← → ← → with the arrows or
+the d-pad, or 7 quick taps on the version number (bottom right) on a phone. Two lists: every track of
+`assets/music/index.json` (with its intro + loop, as in the game; pending tracks are skipped) and every sound loaded by
+`Sound.load` (copies of the game's sources, so their `GAIN` is applied). Options (◀ ▶): list, loop, pitch (0.25–3),
+volume, echo and room (OpenAL effects `love.audio.setEffect`; "not available" where the platform has none), and
+position (seek ±5 s). It plays on its OWN sources and leaves the game's music and voices alone. Touch: tap a row to
+play / stop, drag to scroll, tap either half of an option. Harness `menu_flow` (`soundtest`).

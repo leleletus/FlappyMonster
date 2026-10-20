@@ -62,7 +62,8 @@ function Save.new(difficulty)
              lives = require('src/core/Difficulty').of(difficulty, 'livesStart', 3),     -- (3; Extremo 4; Xtra extremo 6)
              done = {}, best = {}, playTime = 0, gameOvers = 0, points = 0, worldReward = {}, bonus = {},
              shards = {},                                      -- (fragmentos del espejo: src/story/Shards.lua)
-             films = {} }                                      -- (cinemáticas de antes de un nivel ya vistas: Worlds films)
+             films = {},                                       -- (cinemáticas de antes de un nivel ya vistas: Worlds films)
+             taken = {} }                                      -- (vidas extra ya cogidas, por nivel: no se repiten)
 end
 
 function Save.load(i)
@@ -78,6 +79,7 @@ function Save.load(i)
     d.worldReward = type(d.worldReward) == 'table' and d.worldReward or {}
     d.bonus = type(d.bonus) == 'table' and d.bonus or {}
     d.films = type(d.films) == 'table' and d.films or {}
+    d.taken = type(d.taken) == 'table' and d.taken or {}         -- (vidas extra cogidas por nivel: [id] = { [colocación] = true })
     require('src/story/Shards').migrate(d)                    -- (partidas de antes de los fragmentos)
     return d
 end

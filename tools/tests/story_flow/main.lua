@@ -12,7 +12,8 @@
 --     guarda; sin vidas = GAME OVER: de vuelta al principio del mundo (sus niveles, sin superar), vidas de
 --     nuevo; en Xtra extremo, todo el juego; vidas de partida 3 / 3 / 3 / 4 / 6;
 --  6c. RESULTADOS tras cada nivel (estadísticas, nota S-D, puntos) y de ahí al mapa; notas con casos fijos;
---     premios (vida por la primera S, premio del mundo una sola vez);
+--     premios (vida por la primera S, premio del mundo una sola vez); REPETIR: solo suman los puntos que superan el
+--     récord del nivel y una vida extra ya cogida solo da puntos;
 --  7. borrar la partida (dos pulsaciones) la deja vacía;
 --  8. capturas del mapa y de las partidas a 1280, 960 y 1600 de ancho: <save>/story_*.png
 --   tools/tests/run.sh story_flow
@@ -370,6 +371,34 @@ function love.update(dt)
             ('primera S: +%s vida (vidas %d), puntos ×1,2 en Difícil = %d; repetirla: premio=%s; mundo completo: nota %s, +%s vidas'):format(
              tostring(r1.reward and r1.reward.lives), l1, r1.points, tostring(r2.reward), tostring(rb.world and rb.world.grade),
              tostring(rb.world and rb.world.reward and rb.world.reward.lives)))
+        -- REPETIR un nivel (granjas): a la partida solo suman los puntos que superan el récord del nivel; las vidas
+        -- extra que ya se cogieron se apuntan y la próxima vez solo dan puntos
+        do
+            Run.slot, Run.data = 3, Save.new('normal')
+            local id = W1[1].id
+            local base = { time = 30, width = 100, lives = 3, deaths = 0, hits = 0, kills = 0, killable = 0, stars = 0, starsTotal = 0 }
+            local function play(score, taken)
+                local r = {}
+                for k, v in pairs(base) do r[k] = v end
+                r.score, r.taken = score, taken
+                local p0 = Run.data.points
+                local sm = Run.complete(id, r)
+                return Run.data.points - p0, sm
+            end
+            local g1 = play(100, { 4 })
+            local g2 = play(60, {})
+            local g3, s3 = play(150, {})
+            local tk = Run.data.taken[id] and Run.data.taken[id][4]
+            local Interactions = require 'src/world/entities/base/Interactions'
+            local pkNew = Interactions.pickupEffect({}, { lives = 1 }, { taken = false })
+            local pkOld = Interactions.pickupEffect({}, { lives = 1 }, { taken = true })
+            Save.delete(3)
+            Run.slot, Run.data = keepSlot, keepData
+            check('repetir', g1 == 100 and g2 == 0 and g3 == 50 and s3.gain == 50 and tk == true and pkNew.lives == 1
+                and pkOld.lives == nil and (pkOld.score or 0) > 0,
+                ('puntos sumados: 1ª vez 100 → +%d; peor (60) → +%d; mejor (150) → +%d; vida extra cogida apuntada=%s; ya cogida da vida=%s, puntos=%s'):format(
+                 g1, g2, g3, tostring(tk), tostring(pkOld.lives), tostring(pkOld.score)))
+        end
         -- DESBLOQUEOS: acabar el juego (jefe del último mundo) en Difícil abre Extremo; en Extremo, Xtra; una vez
         local keepSlot, keepData = Run.slot, Run.data
         local lastW = Worlds.nodes(Worlds.count())

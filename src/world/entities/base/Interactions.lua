@@ -176,7 +176,11 @@ end
 -- Qué hace DE VERDAD un coleccionable a ese jugador (uno para todos: un jugador y servidor). Uno que CURA
 -- (`pickup = { heal = n, score = p }`, la manzana) devuelve vida si le falta; con la vida llena da sus puntos.
 --   → { heal = n } | { score = p, lives = n }
-function Interactions.pickupEffect(pa, pk)
+-- (`e.taken`: una vida extra que ya se cogió en una partida anterior de este nivel — modo historia —: ahora solo da
+-- puntos; repetir un nivel no puede dar vidas sin fin)
+Interactions.TAKEN_SCORE = 100
+function Interactions.pickupEffect(pa, pk, e)
+    if e and e.taken and pk.lives then return { score = Interactions.TAKEN_SCORE } end
     if pk.heal then
         if (pa.hp or 0) < (pa.hpMax or 0) then return { heal = math.min(pk.heal, pa.hpMax - pa.hp) } end
         return { score = pk.score }
