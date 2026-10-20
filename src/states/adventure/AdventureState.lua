@@ -146,8 +146,12 @@ function AdventureState:enter(args)
 
     -- FRAGMENTOS DEL ESPEJO (modo historia, src/story/Shards.lua): los jefes de este nivel sueltan los suyos
     -- al caer. `shards.final` = es el último (el del jefe Espejo): al recogerlo el nivel acaba SIN tocar la meta.
-    self.shards = (args.shards and #(args.shards.ids or {}) > 0) and require('src/story/Shards').drops(self, args.shards) or nil
+    -- (también sin fragmentos por ganar si el nivel termina solo al vencer al jefe: `auto`, repetir un jefe ya vencido)
+    self.shards = (args.shards and (#(args.shards.ids or {}) > 0 or args.shards.auto)) and require('src/story/Shards').drops(self, args.shards) or nil
     self.endingT, self.shardArgs = nil, args.shards
+    -- Modo historia: el final de una carrera como escena dentro del nivel, que enlaza con el siguiente (src/story/RunOut.lua)
+    self.outroArgs = args.outro
+    self.runOut = args.outro and require('src/story/RunOut').new(self, args.outro) or nil
 
     -- Zonas de jefe: la pelea empieza al entrar (un solo jugador)
     self.bossCtl    = BossZones.newController(self.level, self.enemies)
@@ -280,6 +284,9 @@ function AdventureState:renderPopups()
 end
 
 function AdventureState:updateCamera(dt)
+    -- (la escena final de una carrera en la historia — src/story/RunOut.lua —: la cámara se queda donde la dejó la
+    -- cámara automática y ellos salen de cuadro; si siguiera al jugador, acabarían contra la pared del final del nivel)
+    if self.runOut and self.runOut.active then return end
     -- Con cámara automática la cámara ES el nivel: sigue moviéndose aunque se muera
     local scrolling = self.level.autoScroll and self.level.autoScroll.state ~= 'stop'
     if self.camFrozen and not scrolling then return end
@@ -350,7 +357,7 @@ end
 -- Reintentar (tras perder todas las vidas): el mismo nivel con lo mismo que traía
 function AdventureState:retryArgs()
     return { level = self.levelPath, returnTo = self.returnTo, onFinish = self.onFinish, difficulty = self.level.difficulty,
-             shards = self.shardArgs }
+             shards = self.shardArgs, outro = self.outroArgs }
 end
 
 -- Lo que se lleva del nivel (para la nota del modo historia: src/story/Score.lua)
@@ -362,8 +369,11 @@ function AdventureState:result()
 end
 
 -- Fragmentos del espejo: cada jefe vencido suelta el suyo; al recogerlo se apunta en la partida (onGet). Con el
--- último del juego (shards.final), el jugador se queda quieto y a salvo y la pantalla se funde a blanco
+-- último del juego (shards.final), el jugador se queda quieto y a salvo y la pantalla se funde a blanco.
+-- `shards.auto` (la historia, en los niveles con jefe): vencido el jefe y recogido su fragmento, el nivel TERMINA solo
+-- (sin ir a la meta; en el juego libre y online sigue habiendo que llegar a ella)
 AdventureState.ENDING_TIME = 2.2
+AdventureState.AUTO_WIN_T = 0.8          -- s tras recoger el fragmento (que se vea el cartel) hasta "nivel superado"
 function AdventureState:updateShards(dt)
     local sh = self.shards
     if not sh then return end
@@ -377,6 +387,10 @@ function AdventureState:updateShards(dt)
             self.player:grantInvulnerability(AdventureState.ENDING_TIME + 2)
             Sound.stopMusic()
         end
+    end
+    if sh.auto and not sh.final and not self.won and not self.endingT and not self.player.dying and sh:cleared() then
+        self.autoWinT = (self.autoWinT or 0) + dt
+        if self.autoWinT >= AdventureState.AUTO_WIN_T then self:win() end
     end
 end
 
@@ -453,7 +467,7 @@ function AdventureState:update(dt)
     -- ── Controles táctiles (móvil): cruceta + salto, ver src/ui/TouchControls ──
     TouchControls.update(not self.dead, self.level.dark)
 
-    if Input.pressed('pause') then
+    if Input.pressed('pause') and not (self.runOut and self.runOut.active) then      -- (en la escena final no hay pausa)
         gStateMachine:push('pause')
         return
     end
@@ -517,7 +531,24 @@ function AdventureState:update(dt)
         Sound.play('pointGain'); Particles.emit('points', pa.x, pa.y)
     end)
     self.level.solidBodies = Entities.solidBodies(self.enemies)   -- jefes sólidos
-    self.player:update(dt, self.level)
+    -- (la escena final de una carrera en la historia: al acabar, el nivel termina sin meta y enlaza con el siguiente)
+    if self.runOut and self.runOut:update(dt) then
+        local r = self:result()
+        r.outro = true
+        self.finished = true
+        if self.onFinish then self.onFinish(r) else gStateMachine:change(self.returnTo) end
+        return
+    end
+    local scripted = self.runOut and self.runOut:input()
+    if scripted then                                                  -- (sin control: corre y salta solo)
+        local real = Input
+        Input = scripted
+        local ok, err = pcall(self.player.update, self.player, dt, self.level)
+        Input = real
+        if not ok then error(err, 0) end
+    else
+        self.player:update(dt, self.level)
+    end
     if self.bonus then
         self.level.players = { self.player }                          -- (los enemigos ven a todos)
         for _, b in ipairs(self.bonus.bots) do self.level.players[#self.level.players + 1] = b.pa end
@@ -664,6 +695,7 @@ function AdventureState:render()
     self.camX, self.camY = math.floor(self.camX + shx + 0.5), math.floor(self.camY + shy + 0.5)
     self:_renderScene()
     self.camX, self.camY = realCamX, realCamY
+    if self.runOut then self.runOut:render() end                  -- (el fundido a negro de la escena final)
     -- (el último fragmento: a blanco, y de ahí al final de la historia)
     if self.endingT then
         love.graphics.setColor(1, 1, 1, math.max(0, math.min(1, (self.endingT - 0.9) / (AdventureState.ENDING_TIME - 1.0))))

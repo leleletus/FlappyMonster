@@ -29,7 +29,7 @@ local function check(name, ok, msg)
 end
 local step, t, T, shotQ = 'start', 0, 0, {}
 local introSeen
-local SHIDS, DROPPED, ENDING, FILMS
+local SHIDS, DROPPED, ENDING, FILMS, WALK1, RUN
 local Save, Run, Worlds
 
 function love.load(a)
@@ -232,7 +232,7 @@ function love.update(dt)
             ('%d paradas, %d vecinas: sin flecha %d %s; con una flecha que no apunta a ella %d %s (la peor apunta %.2f); flechas sin vecina que hacen algo %d %s; se encadena andando=%s'):format(
             stops, tested, #bad, table.concat(bad, ' '), #away, table.concat(away, ' '), worstDot, #nothing, table.concat(nothing, ' '), tostring(chained)))
         top():_move(1); go('in2a')
-    elseif step == 'in2a' and t - T > 0.3 then
+    elseif step == 'in2a' and t - T > 0.3 and #(st.queue or {}) == 0 then          -- (que llegue al nodo)
         pressNext('confirm'); go('in2')
     elseif step == 'in2' and t - T > 0.6 then
         check('vidas', LIVES0 == 3 and Run.data.lives == 2 and st.player.lives == 2,
@@ -274,7 +274,7 @@ function love.update(dt)
         local W2 = Worlds.nodes(2)
         Run.data.done[W2[1].id] = true; Run.save()
         top():_move(1); go('go1')
-    elseif step == 'go1' and t - T > 0.3 then
+    elseif step == 'go1' and t - T > 0.3 and #(st.queue or {}) == 0 then           -- (que llegue al nodo)
         pressNext('confirm'); go('go2')
     elseif step == 'go2' and t - T > 0.6 then
         -- pierde una vida y coge DOS vidas extra: saliendo a medias cuenta la perdida y no las ganadas
@@ -524,6 +524,12 @@ function love.update(dt)
         check('fragmento', SHIDS == '1' and DROPPED and held and Run.data.shards['1'] == nil and disk.shards['1'] == nil and have == 0 and total == 7 and not st.endingT,
             ('el jefe del mundo 1 guarda el %s; lo suelta=%s; sin terminar el nivel: en la partida=%s, en disco=%s; cuenta %d/%d'):format(
              SHIDS, tostring(DROPPED), tostring(Run.data.shards['1']), tostring(disk.shards['1']), have, total))
+        go('sh6')
+    elseif step == 'sh6' and ((st.args and st.args.summary ~= nil) or t - T > 10) then
+        -- (en la historia el nivel de jefe TERMINA SOLO al vencer al jefe y recoger su fragmento: sin tocar la meta)
+        check('jefe_solo', st.args ~= nil and st.args.summary ~= nil and Run.isDone(W1[#W1].id) and Run.data.shards['1'] == true,
+            ('vencido el jefe y recogido el fragmento, sin ir a la meta: resultados=%s, nivel superado=%s, fragmento guardado=%s'):format(
+             tostring(st.args ~= nil and st.args.summary ~= nil), tostring(Run.isDone(W1[#W1].id)), tostring(Run.data.shards['1'])))
         -- ahora, el último: todo superado menos el jefe Espejo, con los seis primeros
         local d = Run.data
         for w = 1, Worlds.count() do for _, n in ipairs(Worlds.nodes(w)) do d.done[n.id] = true end end
@@ -553,6 +559,59 @@ function love.update(dt)
         local n = 0
         for _ in pairs(old.shards) do n = n + 1 end
         check('migrar', n == 4 and old.shards['1a'] and old.shards['4b'], ('partida antigua en Xtra con 2 jefes vencidos: %d mitades'):format(n))
+        gStateMachine:change('story_map', { world = 1, node = 1 }); go('walk0')
+    -- ── MAPA: pulsar ENTRAR mientras el monstruo aún anda hacia el nodo: entra al LLEGAR, no antes ──
+    elseif step == 'walk0' and t - T > 0.4 then
+        st:_move(1); pressNext('confirm'); go('walk1')
+    elseif step == 'walk1' and t - T > 0.12 then
+        WALK1 = { map = st.queue ~= nil, walking = st.queue and #st.queue > 0, pending = st.playOnArrive == true }
+        go('walk2')
+    elseif step == 'walk2' and (st.level or t - T > 6) then
+        check('andando', WALK1.map and WALK1.walking and WALK1.pending and st.level ~= nil and st.levelPath == Worlds.path(Worlds.nodes(1)[2].id),
+            ('ENTRAR a medio camino: sigue en el mapa=%s (andando=%s, entrará al llegar=%s); luego entra en %s'):format(
+             tostring(WALK1.map), tostring(WALK1.walking), tostring(WALK1.pending), tostring(st.levelPath)))
+        -- ── LA HUIDA DEL ESPEJO enlaza con el jefe: escena dentro del nivel, la película de la guarida y el nivel ──
+        local d = Run.data
+        d.done.huida_del_espejo, d.done.ruta_del_espejo, d.films = nil, nil, {}
+        Run.save()
+        FILMS = {}
+        gStateMachine:change('story_map', { world = Worlds.count(), node = 4 }); go('run0')
+    elseif step == 'run0' and t - T > 0.4 then
+        pressNext('confirm'); go('run1')
+    elseif step == 'run1' and st.level and t - T > 0.6 then
+        -- (adelanta la carrera: la cámara justo antes de la escena final, el jugador dentro de ella)
+        local a = st.level.autoScroll
+        local finish = 0
+        for r = 1, st.level.tileH do for c = 1, st.level.tileW do if st.level:getDef(c, r).trigger == 'finish' then finish = finish + 1 end end end
+        RUN = { finish = finish, film1 = FILMS[1] }
+        a.state, a.x = 'run', (Worlds.outro('huida_del_espejo').col - 1) * TILE_PX - 40
+        st.player.x, st.player.y, st.player.vx, st.player.vy = a.x + 500, st.player.y, 0, 0
+        go('run2')
+    elseif step == 'run2' and t - T > 1.2 then
+        local chase
+        for _, e in ipairs(st.enemies or {}) do if e.def.name == 'mirrorchase' then chase = e end end
+        RUN.active = st.runOut and st.runOut.active
+        RUN.cinema = st.level.cinema == true
+        RUN.chase = chase and chase.state
+        RUN.seen = chase and chase.x > st.camX - 40 and chase.x < st.camX + WINDOW_W
+        RUN.moved = st.player.x - (st.level.autoScroll.x + 500)
+        RUN.cam0 = st.camX
+        shot('outro')
+        go('run3')
+    elseif step == 'run3' and st.runOut and st.runOut.fadeT and not RUN.camEnd then
+        -- (al empezar el fundido: la cámara no se ha movido y el monstruo sigue corriendo, lejos de la pared del final)
+        RUN.camEnd, RUN.vx, RUN.px = st.camX, st.player.vx, st.player.x
+        RUN.wall = (st.level.tileW - 1) * TILE_PX
+    elseif step == 'run3' and (FILMS[2] or t - T > 15) then
+        go('run4')
+    elseif step == 'run4' and (st.level or t - T > 3) then
+        check('enlace', RUN.film1 == 'chase' and RUN.finish == 0 and RUN.active and RUN.cinema and RUN.chase == 'outro' and RUN.seen and RUN.moved > 150
+            and RUN.camEnd == RUN.cam0 and (RUN.vx or 0) > 100 and (RUN.px or 1e9) < RUN.wall - 2 * TILE_PX
+            and FILMS[2] == 'lair' and st.levelPath == Worlds.path('ruta_del_espejo') and Run.isDone('huida_del_espejo')
+            and Run.data.node == 5,
+            ('película antes=%s; sin meta=%s; escena final=%s, franjas=%s, el Espejo=%s (en cuadro=%s), corre solo %.0f px; la cámara quieta=%s; al fundirse a negro sigue corriendo (%.0f px/s) a %.0f px de la pared del final; después la película %s y el nivel %s; huida superada=%s; la partida en el nodo %s'):format(
+             tostring(RUN.film1), tostring(RUN.finish == 0), tostring(RUN.active), tostring(RUN.cinema), tostring(RUN.chase), tostring(RUN.seen), RUN.moved or 0, tostring(RUN.camEnd == RUN.cam0), RUN.vx or 0, (RUN.wall or 0) - (RUN.px or 0),
+             tostring(FILMS[2]), tostring(st.levelPath), tostring(Run.isDone('huida_del_espejo')), tostring(Run.data.node)))
         gStateMachine:change('story_map', { world = 1, node = 1 }); go('del')
     elseif step == 'del' and t - T > 0.3 then
         resize(1280, 720)

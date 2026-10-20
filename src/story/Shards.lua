@@ -75,12 +75,19 @@ local HOME_SPD = 300
 local TOUCH = 46            -- px (medio lado de su caja)
 
 function Shards.drops(state, def)
-    return setmetatable({ state = state, ids = def.ids or {}, onGet = def.onGet, final = def.final,
+    return setmetatable({ state = state, ids = def.ids or {}, onGet = def.onGet, final = def.final, auto = def.auto,
                           next = 1, list = {}, seen = {}, got = 0 }, Drops)
 end
 
 function Drops:remaining() return #self.ids - self.got end
 function Drops:allGot() return #self.ids > 0 and self.got >= #self.ids end
+-- ¿Jefes vencidos y fragmentos recogidos? (todos los jefes del nivel han caído — o soltado su zona — y no queda
+-- ningún fragmento suyo por recoger; si la partida ya los tenía, basta con vencerlos)
+function Drops:cleared()
+    if not self.bosses or #self.bosses == 0 then return false end
+    for _, e in ipairs(self.bosses) do if self.seen[e] ~= 'dropped' then return false end end
+    return #self.list == 0 and self.got >= #self.ids
+end
 
 -- Un fragmento sale de (x, y): sube en arco y se queda flotando
 function Drops:spawn(x, y)

@@ -21,6 +21,9 @@
 -- marca, hacia dónde va y qué ataque es). Sin cámara automática en el nivel se queda quieto.
 -- Estados: 'lurk' (antes de empezar) → 'stalk' → 'warp_out' → ('portal' → 'dive' → 'recover') | ('aim' → 'rush')
 -- → 'stalk' … → 'left' (la carrera acabó: se rompe y desaparece).
+-- 'outro' (solo en la historia, un jugador: src/story/RunOut.lua lo pide con startOutro): la carrera NO acaba — sigue
+-- corriendo detrás del jugador, sin atacar ni pegar, sin quedarse dentro de la pantalla, y salta cuando él salta
+-- (es su reflejo), hasta que los dos salen de cuadro.
 local Entity = require 'src/world/entities/base/Entity'
 local Boss   = require 'src/world/entities/base/Boss'
 local Difficulty = require 'src/core/Difficulty'
@@ -204,6 +207,43 @@ function Chase:pickAttack(level, a, pa)
     Sound.play('mirrorWarp')
 end
 
+-- EL FINAL DE LA PERSECUCIÓN en la historia (src/story/RunOut.lua): sigue al jugador corriendo, sin atacar
+-- `minX`: si está más atrás (o roto a medio teletransporte), aparece ahí, de pie, justo fuera del borde izquierdo
+function Chase:startOutro(level, minX)
+    local hidden = HIDDEN[self.state]
+    self:enter('outro')
+    self.vy, self.onGround, self.copyT = 0, false, nil
+    if minX and (hidden or self.x < minX) then
+        local pa = nearest(level, self.x, self.y)
+        self.x = minX
+        self.y = self:floorBelow(level, minX, (pa and pa.y or self.y) - T) - self.outerH / 2 - 2
+    end
+end
+
+function Chase:runOut(dt, level)
+    local pa = nearest(level, self.x, self.y)
+    local g = ADV_GRAVITY
+    local tx = (pa and pa.x or self.x) - 2.6 * T                        -- detrás de él
+    local dx = tx - self.x
+    local vx = (dx > 0) and math.min(RUN, ADV_MOVE_SPD + dx * 2.5) or ADV_MOVE_SPD * 0.85
+    self.facing = 1
+    self.vy = self.vy + g * dt
+    self:moveAndCollide(level, vx * dt, self.vy * dt)
+    self.vx = vx
+    -- salta cuando él salta (un instante después: es su reflejo)
+    if pa and not pa.onGround and pa.vy < -300 and not self.copyT and self.onGround then self.copyT = 0.12 end
+    if self.copyT then
+        self.copyT = self.copyT - dt
+        if self.copyT <= 0 and self.onGround then
+            self.copyT = nil
+            self.vy, self.onGround = -math.sqrt(2 * g * JUMP_H[1] * T), false
+            if not self._quiet then Sound.play('jump', 0.7, 0.6) end
+        elseif self.copyT <= 0 then self.copyT = nil end
+    end
+    if self:onDeadlyGround(level) then self.vy, self.onGround = -math.sqrt(2 * g * JUMP_H[1] * T), false end
+    self.frame = self.onGround and 6 or (self.vy < 0 and 2 or 1)
+end
+
 function Chase:updateCustom(dt, level)
     local a = level.autoScroll
     -- (la cámara NO se frena con él: lo que viaja con ella usa el tiempo real, `self.camK` × su dt)
@@ -218,6 +258,7 @@ function Chase:updateCustom(dt, level)
         if self.deadTimer > 0.5 then self.alive = false end
         return true
     end
+    if st == 'outro' then self:runOut(dt * self.camK, level); return true end   -- (a su paso de verdad: el del jugador)
     if not a then return true end
     if a.state == 'stop' then                                       -- la carrera acabó: se rompe y se va
         self:enter('left')
@@ -378,7 +419,7 @@ function Chase:render(camX, camY)
         end
     end
     local fr, sx, sy, dx, dy = 3, 1, 1, 0, 0
-    if st == 'stalk' then fr = (self.frame == 6 and 'flutter') or (self.frame == 2 and 2) or (self.frame == 1 and 'fall') or 3
+    if st == 'stalk' or st == 'outro' then fr = (self.frame == 6 and 'flutter') or (self.frame == 2 and 2) or (self.frame == 1 and 'fall') or 3
     elseif st == 'pounce' then fr, sx, sy = 2, 0.9, 1.15
     elseif st == 'portal' then fr, sx, sy = 5, 0.9, 0.9
     elseif st == 'dive' then fr, sx, sy = 2, 0.85, 1.3
@@ -389,10 +430,10 @@ function Chase:render(camX, camY)
     invert()
     local img = PS.rec(fr, now)                  -- (pose del monstruo o una de sus animaciones)
     local f = self.facing or 1
-    if st == 'rush' or st == 'dive' or st == 'stalk' then                -- estela
+    if st == 'rush' or st == 'dive' or st == 'stalk' or st == 'outro' then                -- estela
         for i = 3, 1, -1 do
             love.graphics.setColor(1, 1, 1, 0.14 * (4 - i))
-            local ox = (st == 'rush') and -(self.dir or -1) * i * 38 or (st == 'stalk' and -f * i * 12 or 0)
+            local ox = (st == 'rush') and -(self.dir or -1) * i * 38 or ((st == 'stalk' or st == 'outro') and -f * i * 12 or 0)
             local oy = (st == 'dive') and -i * 40 or 0
             PS.draw(img, x + ox + dx, y + oy + dy, 0, S * sx * f, S * sy, FW / 2, FH / 2)
         end

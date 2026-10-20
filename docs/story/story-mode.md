@@ -54,6 +54,26 @@ Xtra Extreme. **Harness:** `story_flow` (the real game end to end; many named ca
   saved only by `Run.complete`. Any NEW thing a level gives must follow the same rule. Harness `story_flow`
   (`game_over`: −1 life +2 pickups then quit → only the loss is saved; `fragmento`: picked up, not saved).
 
+- **3.101.0 — BOSS LEVELS END BY THEMSELVES IN THE STORY** (the user: having to walk to the finish after the boss
+  was wrong in the adventure; it stays so in Free Play and online). The story passes `shards.auto` for every level
+  with a boss (`Shards.LEVEL`): `Drops:cleared()` = every boss of the level fell (or released its zone) and no shard of
+  theirs is left to pick up (none, if the save already had them) → `AUTO_WIN_T` 0.8 s later `AdventureState:win()`
+  (fanfare, "level clear", results). The Drops object now also exists with no shard to win when `auto` is set. The
+  Mirror's shard keeps its own path (the ending). Harness `story_flow` `jefe_solo`.
+
+- **3.101.0 — A LEVEL CAN RUN STRAIGHT INTO THE NEXT** (`Worlds.LIST` `outros = { [level] = col }`, `Worlds.outro(id)`;
+  today only `huida_del_espejo`, col 182). In the story that level has NO finish: `src/story/RunOut.lua` (single
+  player only, not shared simulation) removes the finish tiles and, when the auto-scroll camera reaches the column,
+  starts a scene inside the level with its own music: the camera stops and STAYS there (`AdventureState:updateCamera`
+  returns while it runs — the user saw it follow the player into the wall at the end of the level: with auto-scroll
+  stopped the normal camera took over), `level.cinema` brings the boss-intro cinema
+  bars and fades the HUD (`BossHud.drawCinema` / `fadeHud`), the player loses control and runs on by itself (scripted
+  input: a jump with a double jump, another later; no pause), the chaser switches to its `outro` state and keeps
+  chasing (see [mirror-chase](../bosses/mirror-chase.md)); when both are out of frame, a fade to black and
+  `onFinish(result.outro = true)`. `StoryMapState` then completes the level WITHOUT the results screen or the map,
+  puts the save on the next node, plays that node's film (`lair`, always in this link) and starts it. Harness
+  `story_flow` `enlace`.
+
 ## Lives and Game Over
 
 - **Stage 3 ✔ — lives and Game Over.** Lives belong to the ADVENTURE (save field `lives`), not to the level: start =

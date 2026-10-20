@@ -367,6 +367,7 @@ end
 
 -- Anda de parada en parada hasta la `target` (si alguna está cerrada, se para delante y "choca")
 function StoryMapState:_walkTo(target)
+    self.playOnArrive = false                       -- (otro destino: lo de entrar al llegar se olvida)
     local cur = stopIndex(self.world, self.node)
     target = math.max(1, math.min(totalStops(), target))
     if target == cur then return false end
@@ -525,6 +526,9 @@ function StoryMapState:_world(d)
 end
 
 function StoryMapState:_play()
+    -- (aún andando hacia el nodo: entra al LLEGAR, no antes — antes entraba con el monstruo a medio camino)
+    if #self.queue > 0 then self.playOnArrive = true; return end
+    self.playOnArrive = false
     local st = stateOf(self.world, self.node)
     if st == 'locked' then self.shake = 0.3; Sound.play('headBump'); return end
     local nodes = Worlds.nodes(self.world)
@@ -580,8 +584,11 @@ function StoryMapState:_start(world, node)
         lives = Run.data.lives,
         onLeave = function(lives) Run.setLives(lives) end,
         -- los FRAGMENTOS DEL ESPEJO que guarda el jefe de este nivel (los que aún no tiene); con el último, el final
-        shards = { ids = Shards.pending(n.id, Run.data), final = Shards.LEVEL[n.id] == Shards.FINAL,
+        -- en los niveles con JEFE (`auto`) el nivel termina solo al vencerlo y recoger su fragmento (sin ir a la meta)
+        shards = { ids = Shards.pending(n.id, Run.data), final = Shards.LEVEL[n.id] == Shards.FINAL, auto = Shards.LEVEL[n.id] ~= nil,
                    onGet = function(id) gotShards[#gotShards + 1] = id end },      -- (se apuntan al TERMINAR el nivel)
+        -- la escena final de una carrera, que enlaza con el nodo siguiente (Worlds: outros; src/story/RunOut.lua)
+        outro = Worlds.outro(n.id),
         gameOverNote = L(Difficulty.of(Run.data.difficulty, 'restartGame', false) and 'story.go_game' or 'story.go_world'),
         onGameOver = function()
             local w = Run.gameOver(world)                 -- al principio del mundo (o del juego)
@@ -605,6 +612,20 @@ function StoryMapState:_start(world, node)
             local function results()
                 gStateMachine:change('story_results', { level = n.id, result = result, summary = summary, color = THEME[Worlds.get(world).id],
                                                         map = { world = nw, node = nk, cleared = n.id, opened = opened } })
+            end
+            -- (la carrera que ENLAZA con el nodo siguiente: sin resultados ni mapa, su película y el nivel; la partida ya
+            -- se colocó en él)
+            if result.outro and mapNodes(world)[node + 1] then
+                local nextId = mapNodes(world)[node + 1].id
+                Run.data.world, Run.data.node = world, node + 1
+                local film = Worlds.film(nextId)
+                if film then Run.data.films[film] = true end
+                Run.save()
+                local go = function() self:_start(world, node + 1) end
+                if film then
+                    gStateMachine:change('story_film', { film = film, xtra = Shards.isXtra(Run.data.difficulty), onDone = go })
+                else go() end
+                return
             end
             -- (con el último fragmento: antes de los resultados, el FINAL de la historia)
             if result.ending then
@@ -656,6 +677,7 @@ function StoryMapState:update(dt)
             end
         end
     end
+    if self.playOnArrive and #self.queue == 0 then self:_play(); return end
     self:_music()
     local tx, ty = self:_camTarget()
     if not self.camX then self.camX, self.camY = tx, ty end

@@ -213,11 +213,13 @@ function BossHud.drawCinema(level)
     local dt = math.min(0.05, love.timer.getDelta())
     local zone
     for _, z in ipairs(level.bossZones or {}) do if z.state == 'intro' then zone = z end end
-    if zone then
+    -- (`level.cinema`: cualquier otro momento de cine dentro del nivel — el final de la persecución en la historia,
+    -- src/story/RunOut.lua — pide las mismas franjas y el mismo HUD desvanecido, sin nombre)
+    if zone or level.cinema then
         if cine.k == 0 then cine.t = 0 end
         cine.k = math.min(1, cine.k + dt / CINE_IN)
         cine.t = cine.t + dt
-        cine.title = duoName(zone.bosses or {})              -- (dos iguales: "NOMBRE ×2")
+        cine.title = zone and duoName(zone.bosses or {}) or nil   -- (dos iguales: "NOMBRE ×2")
     else
         cine.k = math.max(0, cine.k - dt / CINE_OUT)
     end

@@ -75,6 +75,10 @@ are spread along the path from `Worlds.lua`. **Harness:** `story_flow` (captures
 
 - (6) WORLD MAP ARROWS BY DIRECTION: `StoryMapState:_dirMove(dx, dy)` goes to the neighbouring stop whose path leaves toward the pressed direction (previous / next; from a castle also the next world over the bridge); no path that way → the old meaning (left / right = previous / next, up / down = previous / next world). `_walkTo` crosses castle ↔ next world by the bridge without detouring to the bonus node.
 
+- (8) ENTER WAITS FOR THE HERO (3.101.0; the user: pressing enter while the monster was still walking entered the
+  level at once): `_play` with the walk queue not empty only notes `playOnArrive`; the level opens when the hero
+  ARRIVES; asking for another destination cancels it (`_walkTo`). Harness `story_flow` `andando`.
+
 - (7) AFTER A LEVEL the hero stays on the node JUST CLEARED and the newly opened stops unlock on screen (`args.opened` → `self.opening`: locked for `OPEN_AT` 0.7 s, then a hop + rings + sound).
 
 ## History and decisions (dated notes)

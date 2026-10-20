@@ -6,6 +6,9 @@
 --   boss    el nivel del jefe: el último nodo del mundo; al superarlo se abre el mundo siguiente
 --   bonus   nivel OPCIONAL del mundo: una arena de Rey de la Colina contra el bot (src/story/BonusMatch.lua); se
 --           abre al vencer al jefe; no cuenta para el progreso ni para abrir el mundo siguiente
+--   outros  CARRERAS QUE ENLAZAN (solo en la historia): { [nivel] = columna }: ese nivel no acaba en la meta sino en una
+--           escena dentro de él a partir de esa columna de la cámara (src/story/RunOut.lua) y pasa directamente al nodo
+--           siguiente (su película, si tiene, y él), sin resultados ni mapa por medio
 --   films   CINEMÁTICAS de antes de un nivel: { [nivel] = película (assets/story/films.json) }; se ven la
 --           primera vez que se entra en él (la partida apunta las vistas: `films`)
 -- Todo nivel de la historia necesita META (los de solo Cazamonstruos no la tienen).
@@ -27,7 +30,8 @@ Worlds.LIST = {
     { id = 'cuevas',    levels = { 'cavernas_cristal', 'nivel01', 'laberinto_submarino', 'templo_del_eco' },             boss = 'gruta_lugubre', bonus = 'cripta_del_silencio' },
     -- 6 El Final (el volcán): lava; la lluvia de pinchos (cámara automática) es la erupción, antes del Espejo
     { id = 'final',     levels = { 'carrera01', 'caldera_roja', 'lluvia_pinchos', 'huida_del_espejo' },                                       boss = 'ruta_del_espejo', bonus = 'cantera_real',
-      films = { huida_del_espejo = 'chase', ruta_del_espejo = 'lair' } },     -- (la emboscada; la guarida)
+      films = { huida_del_espejo = 'chase', ruta_del_espejo = 'lair' },      -- (la emboscada; la guarida)
+      outros = { huida_del_espejo = 182 } },                                  -- (la huida sigue en la guarida)
 }
 
 function Worlds.count() return #Worlds.LIST end
@@ -57,6 +61,14 @@ end
 function Worlds.film(id)
     for _, W in ipairs(Worlds.LIST) do
         if W.films and W.films[id] then return W.films[id] end
+    end
+    return nil
+end
+
+-- La escena final de un nivel que enlaza con el siguiente: { col } (o nil)
+function Worlds.outro(id)
+    for _, W in ipairs(Worlds.LIST) do
+        if W.outros and W.outros[id] then return { col = W.outros[id] } end
     end
     return nil
 end

@@ -17,6 +17,9 @@ by `tools/levelgen/make_sets.py`), music from `tools/music/story_music.py`, soun
 { [level] = film }`, `Worlds.film(id)`). `StoryMapState:_play` plays it through `story_film` and its `onDone` enters
 the level (`StoryMapState:_start`); the save notes it as seen (`films`, see [save-data](../architecture/save-data.md))
 and a level already cleared never plays it. Today: `chase` before `huida_del_espejo`, `lair` before `ruta_del_espejo`.
+- **The chase links into the lair:** in the story `huida_del_espejo` ends in a scene inside the level (no finish;
+  [story-mode](story-mode.md), `src/story/RunOut.lua`) that fades to black straight into `lair` and then the boss
+  level, with no results screen or map in between; `lair` opens with the end of that same run.
 - **Into the level's music:** `films.json` `next` = the level's track. The film's LAST scene is written in that
   track's tempo and key and ends on what the track's intro starts with, at its level (`chase` → `mirror_chase`: 174,
   a C# pedal; `lair` → `volcan_2`: 172, an A pedal with its B♭). The score has no tail, and `StoryFilmState:_finish`

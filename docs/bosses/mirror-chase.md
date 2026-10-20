@@ -44,6 +44,13 @@ while it walks only pushes. Everything it does runs at `SLOW` 0.9 × the difficu
 
 - Harness `mechanics persecucion`; `online_smoke LEVEL=assets/levels/huida_del_espejo.json WATCH=mirrorchase`.
 
+- **In the story** (3.101.0) the run does not end at the finish (there is none): near the end the level becomes a
+  short scene (`src/story/RunOut.lua`, [story-mode](../story/story-mode.md)) and the chaser gets the state `outro`
+  (`Chase:startOutro(level, minX)`: if it was behind or mid-teleport it comes in standing at the left edge;
+  `Chase:runOut`: runs behind the player at its real pace, no attacks, no screen clamp, jumps an instant after the
+  player jumps — it is its reflection) until both leave the frame. Free Play and online keep the old end ('left' when
+  the camera stops). Only single player ever sets it.
+
 ## History and decisions (dated notes)
 
 Kept because they record WHY things are the way they are and what was tried and rejected. Where a note
