@@ -3,6 +3,7 @@
 -- aventura nueva, uno usado continúa donde iba (mundo, progreso, vidas). BORRAR pide confirmar.
 -- Flechas / ratón / toque; ENTER entra; SUPR (o el botón) borra; ESC vuelve.
 local BaseState     = require 'src/core/BaseState'
+local MenuScene = require 'src/ui/menu/MenuScene'
 local CornerButtons = require 'src/ui/CornerButtons'
 local PixelFont     = require 'src/ui/PixelFont'
 local Save          = require 'src/story/Save'
@@ -15,12 +16,6 @@ local StorySlotState = BaseState:new()
 
 local CARD_W, CARD_H, GAP = 760, 124, 22
 local DEL_W = 150
-
-local imgBg
-local function loadAssets()
-    if imgBg then return end
-    imgBg = love.graphics.newImage('assets/images/ui/menus/MenuDif.png')
-end
 
 local function cardRect(i)
     local w = math.min(CARD_W, WINDOW_W - 48)
@@ -35,7 +30,6 @@ end
 local function inside(px, py, x, y, w, h) return px >= x and px <= x + w and py >= y and py <= y + h end
 
 function StorySlotState:enter()
-    loadAssets()
     Run.close()
     self.sel = self.sel or 1
     self.confirm = nil                       -- hueco que se está a punto de borrar
@@ -106,6 +100,7 @@ function StorySlotState:_delete(i)
 end
 
 function StorySlotState:update(dt)
+    MenuScene.update(dt)
     if self.pick then
         local n = #Difficulty.ORDER
         if Input.pressed('nav_up') then self.pick.sel = (self.pick.sel - 2) % n + 1; Sound.play('select') end
@@ -161,8 +156,7 @@ function StorySlotState:touchpressed(id, x, y)
 end
 
 function StorySlotState:render()
-    love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.draw(imgBg, 0, 0, 0, WINDOW_W / imgBg:getWidth(), WINDOW_H / imgBg:getHeight())
+    MenuScene.backdrop()                 -- (el fondo vivo de los menús: src/ui/menu/MenuScene)
     love.graphics.setColor(0, 0, 0, 0.45)
     love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
 

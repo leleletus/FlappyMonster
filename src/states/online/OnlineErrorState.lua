@@ -3,18 +3,12 @@
 -- por cualquier motivo.  Única opción: volver al menú de selección de modo.
 
 local BaseState        = require 'src/core/BaseState'
+local MenuScene = require 'src/ui/menu/MenuScene'
 local NC               = require 'src/network/NetworkClient'
 local L = require 'src/core/Lang'
 local OnlineErrorState = BaseState:new()
 
-local imgBg = nil
-local function loadAssets()
-    if imgBg then return end
-    imgBg = love.graphics.newImage('assets/images/ui/menus/MenuDif.png')
-end
-
 function OnlineErrorState:enter(args)
-    loadAssets()
     args         = args or {}
     self.code    = args.code or "ERR_NETWORK"
     self.msg     = args.msg  or L('err.lost')
@@ -25,6 +19,7 @@ function OnlineErrorState:enter(args)
 end
 
 function OnlineErrorState:update(dt)
+    MenuScene.update(dt)
     self.alpha = math.min(1, self.alpha + dt * 4)
     if Input.pressed('confirm') or Input.pressed('back') then
         gStateMachine:change('adv_mode_select')
@@ -32,10 +27,7 @@ function OnlineErrorState:update(dt)
 end
 
 function OnlineErrorState:render()
-    local bx = WINDOW_W / imgBg:getWidth()
-    local by = WINDOW_H / imgBg:getHeight()
-    love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.draw(imgBg, 0, 0, 0, bx, by)
+    MenuScene.backdrop()                 -- (el fondo vivo de los menús: src/ui/menu/MenuScene)
 
     local a = self.alpha
 

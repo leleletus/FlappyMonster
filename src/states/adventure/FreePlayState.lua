@@ -10,6 +10,7 @@
 -- poco a poco (un presupuesto de tiempo por fotograma) y se guardan para la
 -- próxima vez; solo se dibujan las tarjetas visibles.
 local BaseState     = require 'src/core/BaseState'
+local MenuScene = require 'src/ui/menu/MenuScene'
 local CornerButtons = require 'src/ui/CornerButtons'
 local Clip          = require 'src/ui/Clip'
 local PixelIcons    = require 'src/ui/PixelIcons'
@@ -32,12 +33,6 @@ local LOAD_BUDGET = 0.008          -- s por fotograma cargando fichas
 local cache = {}                   -- [archivo] = ficha | { broken = error }
 local last = { sel = 1, scroll = 0 }
 
-local imgBg
-local function loadAssets()
-    if imgBg then return end
-    imgBg = love.graphics.newImage('assets/images/ui/menus/MenuDif.png')
-end
-
 local function layout()
     local cols = math.max(1, math.floor((WINDOW_W - 48 + GAP) / (CARD_W + GAP)))
     local gridW = cols * CARD_W + (cols - 1) * GAP
@@ -48,7 +43,6 @@ end
 
 -- ── Ciclo de vida ─────────────────────────────────────────────────────────────
 function FreePlayState:enter()
-    loadAssets()
     self.files = LevelCatalog.files()
     self.sel = math.max(1, math.min(#self.files, last.sel))
     self.scroll, self.scrollTarget = last.scroll, last.scroll
@@ -153,6 +147,7 @@ end
 
 -- ── Update ────────────────────────────────────────────────────────────────────
 function FreePlayState:update(dt)
+    MenuScene.update(dt)
     self.t = self.t + dt
     -- Cargar fichas pendientes (primero la elegida y las visibles)
     local t0 = love.timer.getTime()
@@ -335,8 +330,7 @@ function FreePlayState:drawCard(i, x, y)
 end
 
 function FreePlayState:render()
-    love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.draw(imgBg, 0, 0, 0, WINDOW_W / imgBg:getWidth(), WINDOW_H / imgBg:getHeight())
+    MenuScene.backdrop()                 -- (el fondo vivo de los menús: src/ui/menu/MenuScene)
     love.graphics.setColor(0, 0, 0, 0.55)
     love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
 

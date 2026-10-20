@@ -4,18 +4,13 @@
 -- TODOS los controles son botones seleccionables — sin atajos de teclado directos.
 
 local BaseState       = require 'src/core/BaseState'
+local MenuScene = require 'src/ui/menu/MenuScene'
 local NC              = require 'src/network/NetworkClient'
 local Modes           = require 'src/world/modes/Modes'
 local PixelIcons      = require 'src/ui/PixelIcons'
 local ModeSelectMenu  = require 'src/ui/ModeSelectMenu'
 local Lang            = require 'src/core/Lang'
 local OnlineRoomState = BaseState:new()
-
-local imgBg = nil
-local function loadAssets()
-    if imgBg then return end
-    imgBg = love.graphics.newImage('assets/images/ui/menus/MenuDif.png')
-end
 
 -- Sub-estados
 local SUB_MAIN   = 'main'
@@ -37,7 +32,6 @@ local PMENU_COLORS = { {1,0.85,0.25}, {1,0.65,0.1}, {1,0.25,0.25}, {0.55,0.55,0.
 -- ── Enter ─────────────────────────────────────────────────────────────────────
 
 function OnlineRoomState:enter(args)
-    loadAssets()
     args = args or {}
 
     self.currentRoom   = args.room or {}
@@ -195,6 +189,7 @@ end
 -- ── Update ────────────────────────────────────────────────────────────────────
 
 function OnlineRoomState:update(dt)
+    MenuScene.update(dt)
     self.t = self.t + dt
 
     local room    = self.currentRoom
@@ -602,8 +597,7 @@ end
 
 function OnlineRoomState:render()
     -- Fondo
-    love.graphics.setColor(COLOR_WHITE)
-    love.graphics.draw(imgBg, 0, 0, 0, WINDOW_W / imgBg:getWidth(), WINDOW_H / imgBg:getHeight())
+    MenuScene.backdrop()                 -- (el fondo vivo de los menús: src/ui/menu/MenuScene)
 
     local room    = self.currentRoom or {}
     local players = room.players or {}

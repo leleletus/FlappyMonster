@@ -1,0 +1,130 @@
+{
+ "cell": 8,
+ "cut": {
+  "l": 2,
+  "r": 2,
+  "t": 2,
+  "b": 3
+ },
+ "colors": [
+  "green",
+  "orange",
+  "blue",
+  "pink",
+  "purple",
+  "yellow",
+  "red",
+  "teal",
+  "grey"
+ ],
+ "text": {
+  "green": {
+   "shadow": [
+    24,
+    70,
+    38
+   ],
+   "shadow_sel": [
+    36,
+    104,
+    52
+   ]
+  },
+  "orange": {
+   "shadow": [
+    96,
+    40,
+    20
+   ],
+   "shadow_sel": [
+    150,
+    62,
+    26
+   ]
+  },
+  "blue": {
+   "shadow": [
+    24,
+    40,
+    96
+   ],
+   "shadow_sel": [
+    34,
+    64,
+    142
+   ]
+  },
+  "pink": {
+   "shadow": [
+    96,
+    24,
+    66
+   ],
+   "shadow_sel": [
+    146,
+    40,
+    98
+   ]
+  },
+  "purple": {
+   "shadow": [
+    52,
+    26,
+    96
+   ],
+   "shadow_sel": [
+    82,
+    40,
+    142
+   ]
+  },
+  "yellow": {
+   "shadow": [
+    100,
+    70,
+    10
+   ],
+   "shadow_sel": [
+    156,
+    110,
+    20
+   ]
+  },
+  "red": {
+   "shadow": [
+    96,
+    22,
+    22
+   ],
+   "shadow_sel": [
+    146,
+    34,
+    34
+   ]
+  },
+  "teal": {
+   "shadow": [
+    16,
+    70,
+    72
+   ],
+   "shadow_sel": [
+    24,
+    106,
+    106
+   ]
+  },
+  "grey": {
+   "shadow": [
+    40,
+    42,
+    52
+   ],
+   "shadow_sel": [
+    64,
+    66,
+    80
+   ]
+  }
+ }
+}

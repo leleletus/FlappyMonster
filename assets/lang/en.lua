@@ -40,6 +40,9 @@ return {
         story = "STORY",
         online = "ONLINE",
         free = "FREE PLAY (TESTING)",
+        desc_story = "Single player: 6 islands and 7 bosses",
+        desc_online = "Races, King of the Hill and more with other players",
+        desc_free = "Any level, for practice",
     },
     difficulty = {
         title = "CHOOSE THE DIFFICULTY",
@@ -133,6 +136,12 @@ return {
         adventure = "ADVENTURE",
         classic = "REGULAR",
         settings = "SETTINGS",
+        continue = "CONTINUE",
+        desc_continue = "Pick up your last adventure (slot {n})",
+        desc_adventure = "Platformer: the story, free play and online",
+        desc_classic = "The original Flappy: get through the pipes",
+        desc_settings = "Language and options",
+        hint = "{move} choose      {ok} select      {back} back",
     },
     settings = {
         language = "LANGUAGE",

@@ -2,17 +2,12 @@
 -- Pantalla de login: ingresa nickname, host y puerto antes de conectar.
 
 local BaseState        = require 'src/core/BaseState'
+local MenuScene = require 'src/ui/menu/MenuScene'
 local NameFilter = require 'src/network/NameFilter'
 local NC               = require 'src/network/NetworkClient'
 local Protocol         = require 'src/network/Protocol'
 local Lang = require 'src/core/Lang'
 local OnlineLoginState = BaseState:new()
-
-local imgBg = nil
-local function loadAssets()
-    if imgBg then return end
-    imgBg = love.graphics.newImage('assets/images/ui/menus/MenuDif.png')
-end
 
 -- Campos del formulario (HOST y PORT fijos, solo se muestra NOMBRE)
 local FIELD_NICK   = 1
@@ -24,7 +19,6 @@ local FIXED_PORT = SERVER_PORT
 -- ── Enter ─────────────────────────────────────────────────────────────────────
 
 function OnlineLoginState:enter(args)
-    loadAssets()
 
     self.fields = {
         -- (el último nombre con el que se entró, guardado en las opciones: ya no hay que escribirlo cada vez)
@@ -103,6 +97,7 @@ end
 -- ── Update ────────────────────────────────────────────────────────────────────
 
 function OnlineLoginState:update(dt)
+    MenuScene.update(dt)
     if not self.btnIndex then self.btnIndex = 1 end
 
     if Input.pressed('nav_left') or Input.pressed('nav_right') then
@@ -172,10 +167,7 @@ end
 -- ── Render ────────────────────────────────────────────────────────────────────
 
 function OnlineLoginState:render()
-    local bx = WINDOW_W / imgBg:getWidth()
-    local by = WINDOW_H / imgBg:getHeight()
-    love.graphics.setColor(COLOR_WHITE)
-    love.graphics.draw(imgBg, 0, 0, 0, bx, by)
+    MenuScene.backdrop()                 -- (el fondo vivo de los menús: src/ui/menu/MenuScene)
 
     -- Título
     love.graphics.setFont(FONT_BIG)

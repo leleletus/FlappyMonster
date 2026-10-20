@@ -40,6 +40,9 @@ return {
         story = "HISTORIA",
         online = "ONLINE",
         free = "JUEGO LIBRE (PRUEBAS)",
+        desc_story = "Un jugador: 6 islas y 7 jefes",
+        desc_online = "Carreras, Rey de la Colina y más con otros jugadores",
+        desc_free = "Cualquier nivel, para practicar",
     },
     difficulty = {
         title = "ELIGE LA DIFICULTAD",
@@ -133,6 +136,12 @@ return {
         adventure = "AVENTURA",
         classic = "CLÁSICO",
         settings = "CONFIGURACIÓN",
+        continue = "CONTINUAR",
+        desc_continue = "Sigue tu última aventura (partida {n})",
+        desc_adventure = "Plataformas: la historia, el juego libre y online",
+        desc_classic = "El Flappy de siempre: pasa entre las tuberías",
+        desc_settings = "Idioma y opciones",
+        hint = "{move} elegir      {ok} aceptar      {back} volver",
     },
     settings = {
         language = "IDIOMA",

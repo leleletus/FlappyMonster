@@ -1,159 +1,66 @@
 -- src/states/menu/AdventureModeSelectState.lua
 -- Menú intermedio: HISTORIA (un jugador), ONLINE (multijugador) o JUEGO LIBRE (pruebas: todos los niveles).
--- Se muestra al elegir Adventure en el menú principal.
+-- Se muestra al elegir Aventura en el menú principal. Como todas las pantallas de menú (docs/architecture/menus.md): sobre
+-- el fondo vivo (MenuScene), rótulo arriba, botones de colores que entran y salen escalonados (MenuList, MenuAnim)
+-- y la descripción del elegido abajo. A otra pantalla de menú se pasa con la salida de los botones; a las que no
+-- comparten el fondo, con la transición de bloques (Transition).
 
 local CornerButtons = require 'src/ui/CornerButtons'
-local BaseState               = require 'src/core/BaseState'
+local BaseState     = require 'src/core/BaseState'
+local MenuScene     = require 'src/ui/menu/MenuScene'
+local MenuAnim      = require 'src/ui/menu/MenuAnim'
+local MenuList      = require 'src/ui/menu/MenuList'
+local Transition    = require 'src/ui/menu/Transition'
 local L = require 'src/core/Lang'
 local AdventureModeSelectState = BaseState:new()
 
-local imgBg = nil
-local function loadAssets()
-    if imgBg then return end
-    imgBg = love.graphics.newImage('assets/images/ui/menus/MenuDif.png')
-end
-
-local OPTIONS = { 'adv.story', 'adv.online', 'adv.free' }   -- claves de idioma
-local BTN_W   = 420
-local BTN_H   = 58
-local BTN_GAP = 30
-
--- ── Helpers de dibujo ─────────────────────────────────────────────────────────
-
-local function drawBtn(label, cx, y, w, h, selected)
-    if selected then
-        -- Sombra
-        love.graphics.setColor(0.18, 0.18, 0.18, 1)
-        love.graphics.rectangle('fill', cx - w/2 + 4, y + 4, w, h)
-        -- Fondo blanco
-        love.graphics.setColor(1, 1, 1, 1)
-        love.graphics.rectangle('fill', cx - w/2, y, w, h)
-        -- Borde amarillo brillante
-        love.graphics.setColor(1, 0.85, 0, 1)
-        love.graphics.rectangle('line', cx - w/2, y, w, h)
-        -- Texto negro
-        love.graphics.setFont(FONT_MED)
-        love.graphics.setColor(0, 0, 0, 1)
-        love.graphics.printf(label, cx - w/2, y + h/2 - FONT_MED:getHeight()/2, w, 'center')
-    else
-        love.graphics.setColor(1, 1, 1, 0.38)
-        love.graphics.rectangle('line', cx - w/2, y, w, h)
-        love.graphics.setFont(FONT_MED)
-        love.graphics.setColor(1, 1, 1, 0.48)
-        love.graphics.printf(label, cx - w/2, y + h/2 - FONT_MED:getHeight()/2, w, 'center')
-    end
-end
-
-local function btnY(i)
-    local totalH = #OPTIONS * BTN_H + (#OPTIONS - 1) * BTN_GAP
-    local startY = math.floor(WINDOW_H / 2 - totalH / 2 + 30)
-    return startY + (i - 1) * (BTN_H + BTN_GAP)
-end
-
--- ── Enter ─────────────────────────────────────────────────────────────────────
-
 function AdventureModeSelectState:enter(args)
-    loadAssets()
-    self.selected = 1
+    self.anim = MenuAnim.new({ n = 5 })
+    local go = function(state) return function() self:_leave(state) end end
+    self.list = MenuList.new({ anim = self.anim, first = 2, top = 0.34, selected = (args and args.selected) or 1, items = {
+        { text = 'adv.story',  color = 'yellow', desc = 'adv.desc_story',  go = go('story_slots') },
+        { text = 'adv.online', color = 'purple', desc = 'adv.desc_online', go = go('online_login') },
+        { text = 'adv.free',   color = 'teal',   desc = 'adv.desc_free',   go = go('free_play') },
+    } })
     Sound.playMusic('menus')
 end
 
--- ── Update ────────────────────────────────────────────────────────────────────
+function AdventureModeSelectState:_leave(state)
+    self.anim:leave(function() end, 5)
+    Transition.go(state)
+end
+
+function AdventureModeSelectState:_back()
+    if self.anim:busy() then return end
+    Sound.play('select', 0.85)
+    self.anim:leave(function() gStateMachine:change('main_menu', { selected = 1 }) end, 5)
+end
 
 function AdventureModeSelectState:update(dt)
-    if Input.pressed('nav_up') then
-        self.selected = self.selected - 1
-        if self.selected < 1 then self.selected = #OPTIONS end
-        Sound.play('select')
-    end
-    if Input.pressed('nav_down') then
-        self.selected = self.selected + 1
-        if self.selected > #OPTIONS then self.selected = 1 end
-        Sound.play('select')
-    end
-
-    if Input.pressed('confirm') or Input.pressed('flap') then
-        Sound.play('select')
-        self:_select(self.selected)
-    end
-
-    if Input.pressed('back') then
-        Sound.play('select')
-        gStateMachine:change('main_menu')
-    end
+    MenuScene.update(dt)
+    self.anim:update(dt)
+    if self.anim:busy() then return end
+    if Input.pressed('back') then return self:_back() end
+    self.list:update(dt)
 end
-
-function AdventureModeSelectState:_select(i)
-    if i == 1 then
-        gStateMachine:change('story_slots')         -- Modo historia: elegir partida
-    elseif i == 2 then
-        gStateMachine:change('online_login')
-    else
-        gStateMachine:change('free_play')           -- Juego libre: cualquier nivel, para probar
-    end
-end
-
--- ── Render ────────────────────────────────────────────────────────────────────
 
 function AdventureModeSelectState:render()
-    -- Fondo
-    local bx = WINDOW_W / imgBg:getWidth()
-    local by = WINDOW_H / imgBg:getHeight()
-    love.graphics.setColor(COLOR_WHITE)
-    love.graphics.draw(imgBg, 0, 0, 0, bx, by)
-
-    -- Título
-    love.graphics.setFont(FONT_BIG)
-    love.graphics.setColor(0, 0, 0, 0.6)
-    love.graphics.printf(L('adv.title'), 2, WINDOW_H/2 - 148, WINDOW_W, 'center')
-    love.graphics.setColor(1, 0.95, 0.15, 1)
-    love.graphics.printf(L('adv.title'), 0, WINDOW_H/2 - 150, WINDOW_W, 'center')
-
-    -- Botones
-    local cx = WINDOW_W / 2
-    for i, opt in ipairs(OPTIONS) do
-        drawBtn(L(opt), cx, btnY(i), BTN_W, BTN_H, i == self.selected)
-    end
-
-    love.graphics.setColor(COLOR_WHITE)
+    MenuScene.draw()
+    MenuList.header(L('adv.title'), 'green', self.anim, 1)
+    self.list:draw()
+    MenuList.footer(self.list:desc(), self.anim, 5)
     CornerButtons.drawBack(self.backHover)
 end
 
--- ── Hover del mouse: mueve la selección real al botón bajo el cursor ──────────
-
-function AdventureModeSelectState:mousemoved(tx, ty)
-    self.backHover = CornerButtons.hitBack(tx, ty)
-    if self.backHover then return end
-    local cx = WINDOW_W / 2
-    for i = 1, #OPTIONS do
-        local y  = btnY(i)
-        local bx = cx - BTN_W / 2
-        if tx >= bx-10 and tx <= bx+BTN_W+10 and ty >= y-5 and ty <= y+BTN_H+5 then
-            if self.selected ~= i then self.selected = i; Sound.play('select') end
-            return
-        end
-    end
+function AdventureModeSelectState:mousemoved(x, y)
+    self.backHover = CornerButtons.hitBack(x, y)
+    if not self.backHover then self.list:mousemoved(x, y) end
 end
 
--- ── Touch ─────────────────────────────────────────────────────────────────────
-
-function AdventureModeSelectState:touchpressed(id, tx, ty)
-    if CornerButtons.hitBack(tx, ty) then
-        Sound.play('select')
-        gStateMachine:change('main_menu')
-        return
-    end
-    local cx = WINDOW_W / 2
-    for i = 1, #OPTIONS do
-        local y  = btnY(i)
-        local bx = cx - BTN_W / 2
-        if tx >= bx - 10 and tx <= bx + BTN_W + 10 and
-           ty >= y - 5   and ty <= y + BTN_H + 5 then
-            Sound.play('select')
-            self:_select(i)
-            return
-        end
-    end
+function AdventureModeSelectState:touchpressed(id, x, y)
+    if self.anim:busy() then return end
+    if CornerButtons.hitBack(x, y) then return self:_back() end
+    self.list:touchpressed(x, y)
 end
 
 return AdventureModeSelectState

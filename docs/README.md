@@ -29,6 +29,7 @@ are never edited by hand.
 | add a text or a language | [architecture/i18n](architecture/i18n.md) |
 | test something | [testing/harnesses](testing/harnesses.md), `tools/tests/README.md` |
 | change the logo intro shown at boot | [architecture/startup-intro](architecture/startup-intro.md) |
+| change the title, the menus, their background or transitions | [architecture/menus](architecture/menus.md) |
 | release and update the server | [architecture/updates-and-release](architecture/updates-and-release.md) |
 | port, publish, change screens or controls | [architecture/platforms](architecture/platforms.md), [architecture/known-debt](architecture/known-debt.md) (Google Play readiness) |
 | know what is saved | [architecture/save-data](architecture/save-data.md) |
@@ -36,7 +37,7 @@ are never edited by hand.
 ## All pages
 
 - **architecture/** — [overview](architecture/overview.md) · [project-structure](architecture/project-structure.md) ·
-  [netcode](architecture/netcode.md) · [updates-and-release](architecture/updates-and-release.md) · [startup-intro](architecture/startup-intro.md) ·
+  [netcode](architecture/netcode.md) · [updates-and-release](architecture/updates-and-release.md) · [startup-intro](architecture/startup-intro.md) · [menus](architecture/menus.md) ·
   [platforms](architecture/platforms.md) · [i18n](architecture/i18n.md) · [save-data](architecture/save-data.md) ·
   [known-debt](architecture/known-debt.md)
 - **gameplay/** — [player](gameplay/player.md) · [tiles-and-blocks](gameplay/tiles-and-blocks.md) ·

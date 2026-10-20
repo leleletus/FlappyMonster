@@ -1,117 +1,66 @@
 -- src/states/flappy/DifficultySelectionState.lua
 -- Elegir la dificultad del modo clásico (Flappy). Los nombres son TEXTO en
 -- la fuente pixel de los menús (src/ui/PixelFont), traducidos (diff.*).
+-- Como todas las pantallas de menú (docs/architecture/menus.md): fondo vivo, rótulo, un botón de color por dificultad
+-- (verde, amarillo, rojo) que entran y salen escalonados; a la partida se pasa con la transición de bloques.
 local CornerButtons = require 'src/ui/CornerButtons'
-local BaseState = require 'src/core/BaseState'
-local PixelFont = require 'src/ui/PixelFont'
-local L         = require 'src/core/Lang'
+local BaseState  = require 'src/core/BaseState'
+local MenuScene  = require 'src/ui/menu/MenuScene'
+local MenuAnim   = require 'src/ui/menu/MenuAnim'
+local MenuList   = require 'src/ui/menu/MenuList'
+local Transition = require 'src/ui/menu/Transition'
+local L          = require 'src/core/Lang'
 local DifficultySelectionState = BaseState:new()
 
-local imgBg = nil
-local GAP   = 60
-
-local function loadAssets()
-    if imgBg then return end
-    imgBg = love.graphics.newImage('assets/images/ui/menus/MenuDif.png')
-end
-
--- Rectángulos de las dificultades (dibujo, ratón y táctil)
-local function layout()
-    local list, totalW = {}, 0
-    for i, key in ipairs(DIFFICULTY_ORDER) do
-        local text = L('diff.' .. key)
-        list[i] = { key = key, text = text, w = PixelFont.width(text, DIFF_IMG_SCALE), h = PixelFont.height(DIFF_IMG_SCALE) }
-        totalW = totalW + list[i].w
-    end
-    totalW = totalW + GAP * (#list - 1)
-    -- Si no caben (pantallas estrechas / textos largos), se reduce la escala
-    local s = DIFF_IMG_SCALE
-    if totalW > WINDOW_W - 80 then
-        s = math.max(4, math.floor(DIFF_IMG_SCALE * (WINDOW_W - 80) / totalW))
-        totalW = GAP * (#list - 1)
-        for _, r in ipairs(list) do r.w, r.h = PixelFont.width(r.text, s), PixelFont.height(s); totalW = totalW + r.w end
-    end
-    local x = math.floor((WINDOW_W - totalW) / 2)
-    local y = math.floor(WINDOW_H * 0.52)
-    for _, r in ipairs(list) do r.x, r.y, r.s = x, y, s; x = x + r.w + GAP end
-    return list
-end
+-- Color del botón de cada dificultad (las que no estén aquí, naranja)
+local COLORS = { easy = 'green', normal = 'yellow', hard = 'red' }
 
 function DifficultySelectionState:enter(args)
-    loadAssets()
-    self.selectedIdx = 2
+    self.anim = MenuAnim.new({ n = 2 + #DIFFICULTY_ORDER })
+    local items = {}
+    for i, key in ipairs(DIFFICULTY_ORDER) do
+        items[i] = { text = 'diff.' .. key, color = COLORS[key] or 'orange', go = function() self:_start(key) end }
+    end
+    self.list = MenuList.new({ anim = self.anim, first = 2, top = 0.36, selected = 2, items = items })
     Sound.playMusic('menus')
 end
 
+function DifficultySelectionState:_start(key)
+    self.anim:leave(function() end)
+    Transition.go('play', { difficulty = key })
+end
+
+function DifficultySelectionState:_back()
+    if self.anim:busy() then return end
+    Sound.play('select', 0.85)
+    self.anim:leave(function() gStateMachine:change('main_menu', { selected = 2 }) end)
+end
+
 function DifficultySelectionState:update(dt)
-    if Input.pressed('nav_left') then
-        self.selectedIdx = math.max(1, self.selectedIdx - 1)
-        Sound.play('select')
-    end
-    if Input.pressed('nav_right') then
-        self.selectedIdx = math.min(#DIFFICULTY_ORDER, self.selectedIdx + 1)
-        Sound.play('select')
-    end
-    if Input.pressed('confirm') or Input.pressed('flap') then
-        Sound.play('select')
-        local key = DIFFICULTY_ORDER[self.selectedIdx]
-        gStateMachine:change('play', { difficulty = key })
-    end
-    if Input.pressed('back') then
-        Sound.play('select')
-        gStateMachine:change('main_menu', { selected = 2 })
-    end
+    MenuScene.update(dt)
+    self.anim:update(dt)
+    if self.anim:busy() then return end
+    if Input.pressed('back') then return self:_back() end
+    self.list:update(dt)
 end
 
 function DifficultySelectionState:render()
-    local bx = WINDOW_W / imgBg:getWidth()
-    local by = WINDOW_H / imgBg:getHeight()
-    love.graphics.setColor(COLOR_WHITE)
-    love.graphics.draw(imgBg, 0, 0, 0, bx, by)
-
-    for i, r in ipairs(layout()) do
-        if i == self.selectedIdx then
-            local s = r.s * 1.15
-            local w = PixelFont.width(r.text, s)
-            PixelFont.draw(r.text, math.floor(r.x + (r.w - w) / 2), math.floor(r.y + (r.h - PixelFont.height(s)) / 2), s, 1)
-        else
-            PixelFont.draw(r.text, r.x, r.y, r.s, 0.45)
-        end
-    end
-    love.graphics.setColor(COLOR_WHITE)
+    MenuScene.draw()
+    MenuList.header(L('difficulty.title'), 'orange', self.anim, 1)
+    self.list:draw()
+    MenuList.footer(L('menu.desc_classic'), self.anim, 2 + #DIFFICULTY_ORDER)
     CornerButtons.drawBack(self.backHover)
 end
 
--- Hover del mouse: mueve la selección real al botón bajo el cursor
-function DifficultySelectionState:mousemoved(tx, ty)
-    self.backHover = CornerButtons.hitBack(tx, ty)
-    if self.backHover then return end
-    for i, r in ipairs(layout()) do
-        if tx >= r.x - 10 and tx <= r.x + r.w + 10 and ty >= r.y - 10 and ty <= r.y + r.h + 10 then
-            if self.selectedIdx ~= i then self.selectedIdx = i; Sound.play('select') end
-            return
-        end
-    end
+function DifficultySelectionState:mousemoved(x, y)
+    self.backHover = CornerButtons.hitBack(x, y)
+    if not self.backHover then self.list:mousemoved(x, y) end
 end
 
--- Táctil: primer toque selecciona, segundo toque (en la misma) confirma
-function DifficultySelectionState:touchpressed(id, tx, ty, dx, dy, pressure)
-    if CornerButtons.hitBack(tx, ty) then
-        Sound.play('select')
-        gStateMachine:change('main_menu', { selected = 2 })
-        return
-    end
-    for i, r in ipairs(layout()) do
-        if tx >= r.x - 10 and tx <= r.x + r.w + 10 and ty >= r.y - 10 and ty <= r.y + r.h + 10 then
-            Sound.play('select')
-            if i == self.selectedIdx then
-                gStateMachine:change('play', { difficulty = r.key })
-            else
-                self.selectedIdx = i
-            end
-            return
-        end
-    end
+function DifficultySelectionState:touchpressed(id, x, y)
+    if self.anim:busy() then return end
+    if CornerButtons.hitBack(x, y) then return self:_back() end
+    self.list:touchpressed(x, y)
 end
 
 return DifficultySelectionState

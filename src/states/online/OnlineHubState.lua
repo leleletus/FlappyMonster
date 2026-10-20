@@ -3,15 +3,10 @@
 -- Toda la navegación con flechas/gamepad — sin atajos de teclado directos.
 
 local BaseState      = require 'src/core/BaseState'
+local MenuScene = require 'src/ui/menu/MenuScene'
 local NC             = require 'src/network/NetworkClient'
 local L = require 'src/core/Lang'
 local OnlineHubState = BaseState:new()
-
-local imgBg = nil
-local function loadAssets()
-    if imgBg then return end
-    imgBg = love.graphics.newImage('assets/images/ui/menus/MenuDif.png')
-end
 
 -- Sub-estados
 local SUB_LIST     = "LIST"
@@ -36,7 +31,6 @@ local LIST_BTNS   = { 'hub.create', 'hub.refresh', 'common.back' }   -- claves d
 -- ── Enter ─────────────────────────────────────────────────────────────────────
 
 function OnlineHubState:enter(args)
-    loadAssets()
     Sound.playMusic('menus')      -- (si ya sonaba, sigue sin cortarse)
     self.sub          = SUB_LIST
     self.roomList     = {}
@@ -165,6 +159,7 @@ end
 -- ── Update ────────────────────────────────────────────────────────────────────
 
 function OnlineHubState:update(dt)
+    MenuScene.update(dt)
 
     -- Auto-refresh cada 5s en lista
     if self.sub == SUB_LIST then
@@ -403,10 +398,7 @@ end
 -- ── Render ────────────────────────────────────────────────────────────────────
 
 function OnlineHubState:render()
-    local bx = WINDOW_W / imgBg:getWidth()
-    local by = WINDOW_H / imgBg:getHeight()
-    love.graphics.setColor(COLOR_WHITE)
-    love.graphics.draw(imgBg, 0, 0, 0, bx, by)
+    MenuScene.backdrop()                 -- (el fondo vivo de los menús: src/ui/menu/MenuScene)
 
     if self.sub == SUB_WAITING then
         self:_renderList()   -- fondo de lista debajo

@@ -10,9 +10,9 @@ StateMachine = require 'src/core/StateMachine'
 -- NetworkClient: singleton global para el modo online
 NC = require 'src/network/NetworkClient'
 Notify = require 'src/ui/Notify'   -- avisos globales (toasts y ventanas)
+local Transition = require 'src/ui/menu/Transition'   -- transición de pantalla de los menús
 
 local TitleState                  = require 'src/states/menu/TitleState'
-local MainMenuState               = require 'src/states/menu/MainMenuState'
 local DifficultySelectionState    = require 'src/states/flappy/DifficultySelectionState'
 local PlayState                   = require 'src/states/flappy/PlayState'
 local PauseState                  = require 'src/states/adventure/PauseState'
@@ -54,7 +54,7 @@ function love.load()
         update             = function() return UpdateState:new() end,   -- (actualización automática)
         startup            = function() return StartupState:new() end,  -- (el logo de mtvemo)
         title              = function() return TitleState:new() end,
-        main_menu          = function() return MainMenuState:new() end,
+        main_menu          = function() local s = TitleState:new(); s.startInMenu = true; return s end,   -- (la misma pantalla, con los botones)
         difficulty         = function() return DifficultySelectionState:new() end,
         settings           = function() return SettingsState:new() end,
         play               = function() return PlayState:new() end,
@@ -85,12 +85,14 @@ function love.update(dt)
     NC:update(dt)
     local blocked = Notify.blocking()    -- una ventana de aviso abierta se come la entrada
     Notify.update(dt)
-    if not blocked then gStateMachine:update(dt) end
+    Transition.update(dt)
+    if not blocked and not Transition.blocking() then gStateMachine:update(dt) end
 end
 
 function love.draw()
     lovesize.begin()
         gStateMachine:render()
+        Transition.render()
         Notify.render()
     lovesize.finish()
     -- En píxeles de PANTALLA (fuera del área del juego, p. ej. en las bandas
@@ -124,6 +126,7 @@ function love.touchpressed(id, x, y, dx, dy, pressure)
     local ly = (y - offY) / scale
 
     if Notify.touch(lx, ly) then return end
+    if Transition.blocking() then return end       -- (tapando la pantalla: no se pulsa nada)
     local state = gStateMachine:_top()
     if state and state.touchpressed then
         state:touchpressed(id, lx, ly, dx, dy, pressure)
@@ -214,6 +217,7 @@ function love.mousepressed(x, y, button, istouch, presses)
     local ly      = (y - offY) / scale
 
     if Notify.touch(lx, ly) then return end
+    if Transition.blocking() then return end       -- (tapando la pantalla: no se pulsa nada)
     local state = gStateMachine:_top()
     if state and state.touchpressed then
         state:touchpressed('mouse', lx, ly, 0, 0, 1)
