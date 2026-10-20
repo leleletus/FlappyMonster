@@ -9,8 +9,8 @@
 #               mismo par de notas que el ahogo
 #   air_gasp    la BOCANADA al salir o al coger una burbuja: aire que entra (soplo con filtro que sube) y un "pop"
 #   glugluglu   AHOGADO: burbujas que suben y se apagan (cada burbuja, un tono que sube muy rápido), un golpe sordo
-#   drowning    la MÚSICA de urgencia del ahogo (12,1 s): ver drowning() — el motivo de dos notas a un semitono
-#               (mi5 – fa5) en bucle, de 132 a 264 BPM, 4 canales de chip y un golpe final resuelto en mi pero tenso
+#   drowning    la MÚSICA de urgencia del ahogo (12,1 s): ver drowning() — trino de semitono sobre un arpegio menor,
+#               todo sube un semitono por compás y acelera (140 → 236 BPM); acaba en el acorde de la tónica, temblando
 #   one_up      la VIDA EXTRA: arpegio rápido de sol mayor que sube y un trino brillante (ver one_up())
 #
 # Desde la raíz del repo:  python3 tools/sounds/water.py      (necesita numpy y ffmpeg para los .ogg)
@@ -164,9 +164,7 @@ def glugluglu():
 
 
 # ── AHOGO (música de urgencia) ────────────────────────────────────────────────
-BPM0, BPM1 = 132, 264
-E2, F2 = 82.41, 87.31
-E5, F5, G5, BB5 = 659.26, 698.46, 783.99, 932.33
+BPM0, BPM1 = 140, 236
 
 
 def _note(y, t, dur, fn, gain, n):
@@ -176,73 +174,70 @@ def _note(y, t, dur, fn, gain, n):
     y[a:a + m] += gain * fn(t_(m))
 
 
-def _kick(tt): return np.sin(2 * np.pi * np.cumsum(150 * np.exp(-tt / 0.03) + 45) / SR) * np.exp(-tt / 0.07)
-def _snare(tt): return (rng.standard_normal(len(tt)) * 0.8 + 0.4 * square(190 * tt)) * np.exp(-tt / 0.05)
-def _hat(tt): return rng.standard_normal(len(tt)) * np.exp(-tt / 0.012)
+def blpulse(f, tt, duty):
+    """Pulso SIN aliasing (suma de armónicos hasta ~16 kHz): los agudos de un pulso ingenuo raspaban y sonaban raros"""
+    out = np.zeros(len(tt))
+    for k in range(1, max(1, int(16000 / f)) + 1):
+        out += (2 / (k * np.pi)) * np.sin(np.pi * k * duty) * np.cos(2 * np.pi * k * f * tt - np.pi * k * duty)
+    return out * 1.6
+
+
+def gate(tt, d, rel=0.006):
+    """Nota de chip: ataque instantáneo, sostenida, cortada al `d` con una caída cortísima"""
+    return np.clip((d - tt) / rel, 0, 1) * np.minimum(1, tt / 0.002)
+
+
+def hz(semis):                                         # semitonos desde la4 (440 Hz)
+    return 440.0 * 2 ** (semis / 12)
 
 
 def drowning():
-    """La música de urgencia (receta del usuario, 2ª versión: "más instrumentación de urgencia, si no suena vacía";
-    y como la de Sonic 1, que TERMINE resuelta pero en tensión, para dar paso al glu-glu).
-    Cuatro canales de chip, como una consola de 8 bits (nunca más de 4 a la vez):
-      1. pulso 25 %: el motivo mi5 – fa5 en corcheas (en semicorcheas en la última parte)
-      2. pulso 12,5 %: el mismo motivo una tercera menor arriba (sol5 – la♭5), desde la parte B
-      3. triángulo: el bajo, mi2 – fa2 en octavas que saltan (corcheas → semicorcheas)
-      4. ruido: charles en cada corchea desde el principio; bombo y caja desde la parte B; redobles al final
-    Partes (el tempo sube SIEMPRE de 132 a 264 BPM): A 0–3 s · B 3–6,5 s · C 6,5–9,5 s · D 9,5 s – golpe.
-    Final: a 0,55 s del fin, un GOLPE seco de todos en MI (la nota de reposo: resuelve el vaivén mi–fa) con el sol y
-    el si♭ encima (acorde disminuido: tensión) y un platillo corto; luego silencio para el glu-glu."""
+    """3ª versión, HECHA DE NUEVO (la 2ª, con batería y un golpe disminuido, sonaba rara; el usuario: que la urgencia
+    venga de lo extraño que resulta, más en la línea de la original). Inspirada en la FORMA de la de Sonic 1 —una
+    figura corta de chip que no para, SUBE de tono cada compás y ACELERA, y acaba en una nota sostenida— sin copiar su
+    melodía:
+      · voces (pulsos sin aliasing y un triángulo, sin batería ni reverb):
+          1. pulso 12,5 %: TRINO en semicorcheas entre la QUINTA y la SEXTA MENOR (mi – fa sobre la menor: el par de
+             semitono de la receta) — la parte inquietante
+          2. pulso 25 %: arpegio del acorde menor en corcheas (1 – 3 – 5 – 3), una octava abajo
+          3. triángulo: el bajo, la tónica en corcheas saltando de octava
+      · cada COMPÁS todo sube UN SEMITONO (9 compases: de la menor a fa# menor) y el tempo pasa de 140 a 236 BPM
+      · final: la figura se corta y queda el ACORDE de la tónica (resuelto) en lo más agudo, con un temblor rápido de
+        volumen (tensión), que se apaga a tiempo para el glu-glu"""
     n = TARGET['water/drowning'][0]
     total = n / SR
-    hit = total - 0.55
+    END = total - 0.95                                  # (el acorde final: los últimos 0,95 s)
     y = np.zeros(n)
-    t, i = 0.0, 0
-    while t < hit:
-        bpm = BPM0 + (BPM1 - BPM0) * (t / total)
-        eighth = 60.0 / bpm / 2
-        part = 'A' if t < 3 else 'B' if t < 6.5 else 'C' if t < 9.5 else 'D'
-        k = t / total
-        up = i % 2 == 1
-        sub = 2 if part == 'D' else 1                    # (la última parte, en semicorcheas)
-        for s_ in range(sub):
-            ts = t + s_ * eighth / sub
-            if ts >= hit: break
-            upS = (i * sub + s_) % 2 == 1
-            f = F5 if upS else E5
-            d = eighth / sub * 0.72
-            _note(y, ts, d, lambda tt, f=f: square(f * tt, 0.25) * np.exp(-tt / 0.6), 0.42, n)          # 1
-            if part != 'A':
-                h = G5 * 2 ** (1 / 12) if upS else G5                                                  # 2 sol5 – la♭5
-                _note(y, ts, d, lambda tt, h=h: square(h * tt, 0.125) * np.exp(-tt / 0.4), 0.26, n)
-        # 3. bajo: corcheas en A/B (mi2/fa2 con salto de octava), semicorcheas en C/D
-        bsub = 1 if part in ('A', 'B') else 2
-        for s_ in range(bsub):
-            ts = t + s_ * eighth / bsub
-            if ts >= hit: break
-            base = F2 if up else E2
-            fb = base * (2 if s_ % 2 == 1 else 1)
-            _note(y, ts, eighth / bsub * 0.8, lambda tt, fb=fb: tri(fb * tt), 0.5 if part != 'A' else 0.35, n)
-        # 4. ruido
-        _note(y, t, 0.03, _hat, 0.16 + 0.1 * k, n)
-        if part != 'A':
-            beat = i % 4
-            if beat == 0: _note(y, t, 0.12, _kick, 0.75, n)
-            if beat == 2: _note(y, t, 0.1, _snare, 0.42, n)
-            if part == 'D' and beat == 3:                 # redoble: dos golpes más de caja
-                _note(y, t, 0.05, _snare, 0.3, n)
-                _note(y, t + eighth / 2, 0.05, _snare, 0.34, n)
-        t += eighth
-        i += 1
-    # GOLPE final: mi (resuelve) con sol y si♭ (disminuido: tensión), platillo y bombo; corto y seco
-    m = int(SR * 0.5)
+    t, step, bar = 0.0, 0, 0
+    while t < END:
+        bpm = BPM0 + (BPM1 - BPM0) * (t / END)
+        six = 60.0 / bpm / 4                            # semicorchea
+        root = step // 16                               # compás → semitonos que ha subido
+        R = root                                        # (la menor = 0)
+        pos = step % 16
+        # 1. trino quinta / sexta menor, octava 5 (mi5 = la4 + 7 + 12)
+        sem = 12 + 7 + (pos % 2)
+        _note(y, t, six, lambda tt, f=hz(R + sem), d=six * 0.8: blpulse(f, tt, 0.125) * gate(tt, d), 0.30, n)
+        # 2. arpegio del acorde menor en corcheas, octava 4
+        if pos % 2 == 0:
+            arp = (0, 3, 7, 3)[(pos // 2) % 4]
+            _note(y, t, 2 * six, lambda tt, f=hz(R + arp), d=2 * six * 0.7: blpulse(f, tt, 0.25) * gate(tt, d), 0.24, n)
+        # 3. bajo: tónica en corcheas, saltando de octava
+        if pos % 2 == 0:
+            fb = hz(R - 24 + (12 if (pos // 2) % 2 else 0))
+            _note(y, t, 2 * six, lambda tt, f=fb, d=2 * six * 0.85: tri(f * tt) * gate(tt, d, 0.01), 0.55, n)
+        t += six
+        step += 1
+    # FINAL: el acorde de la tónica (menor) sostenido, arriba, temblando — resuelto pero tenso
+    R = step // 16
+    a = int(SR * END)
+    m = n - a
     tt = t_(m)
-    a = int(SR * hit)
-    m = min(m, n - a)
-    tt = tt[:m]
-    stab = (0.45 * square(E5 * tt, 0.25) + 0.3 * square(G5 * tt, 0.125) + 0.3 * square(BB5 * tt, 0.25)
-            + 0.55 * tri(E2 * tt) + 0.35 * tri(2 * E2 * tt)) * np.exp(-tt / 0.16)
-    crash = rng.standard_normal(m) * np.exp(-tt / 0.18) * 0.45
-    y[a:a + m] += stab + crash + 0.8 * _kick(tt) * (tt < 0.12)
+    trem = 0.75 + 0.25 * np.sign(np.sin(2 * np.pi * 18 * tt))          # temblor de volumen (de chip)
+    fade = np.exp(-tt / 0.45)
+    chord = (0.32 * blpulse(hz(R + 12), tt, 0.125) + 0.26 * blpulse(hz(R + 15), tt, 0.25)
+             + 0.26 * blpulse(hz(R + 19), tt, 0.25) + 0.5 * tri(hz(R - 24) * tt))
+    y[a:a + m] += chord * trem * fade
     return y
 
 
@@ -273,4 +268,4 @@ if __name__ == '__main__':
     save('water/glugluglu', glugluglu())
     save('water/drowning', drowning())
     save('items/one_up', one_up())
-    print('BPM del ahogo: %d → %d' % (BPM0, BPM1))
+    print('ahogo: %d → %d BPM, sube un semitono por compás' % (BPM0, BPM1))
