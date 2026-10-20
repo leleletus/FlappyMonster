@@ -13,6 +13,8 @@ local Modes        = require 'src/world/modes/Modes'
 local PixelIcons   = require 'src/ui/PixelIcons'
 local Clip         = require 'src/ui/Clip'
 local L            = require 'src/core/Lang'
+local MenuKit      = require 'src/ui/menu/MenuKit'
+local PixelFont    = require 'src/ui/PixelFont'
 local Celebration  = require 'src/ui/Celebration'     -- (confeti y fuegos: compartidos con los resultados de la historia)
 
 local OnlineResultsState = BaseState:new()
@@ -388,20 +390,18 @@ function OnlineResultsState:_renderBoard()
     local showDetail = false
     for _, e in ipairs(self.entries) do if e.finished or e.out then showDetail = true end end
 
+    -- Cabecera de las columnas (fuente pixel, como los rótulos de los menús)
     local ha = clamp01((t - T_ROWS + 0.3) / 0.3)
-    love.graphics.setFont(FONT_SMALL)
-    love.graphics.setColor(1, 0.85, 0.2, 0.8 * ha)
-    love.graphics.print('#', x + 14, y0 - 22)
+    local hc, hy = { 1, 0.86, 0.36 }, y0 - 24
+    MenuKit.text(FONT_SMALL, '#', x + 18, hy - 1, 40, 'left', hc, ha)
     -- (JUGADOR se omite si chocaría con RESULTADO en pantallas estrechas)
-    local playerEnd = x + 56 + FONT_SMALL:getWidth(L('results.player'))
-    local resultX = x + w - DETAIL_R - FONT_SMALL:getWidth(L('results.result'))
-    if not showDetail or playerEnd + 12 <= resultX then
-        love.graphics.print(L('results.player'), x + 56, y0 - 22)
-    end
-    love.graphics.printf(L('results.points'), x, y0 - 22, w - 14, 'right')
-    if showDetail then love.graphics.printf(L('results.result'), x, y0 - 22, w - DETAIL_R, 'right') end
-    love.graphics.setColor(1, 0.85, 0.2, 0.3 * ha)
-    love.graphics.rectangle('fill', x, y0 - 6, w, 2)
+    local playerEnd = x + 56 + PixelFont.width(L('results.player'), 2)
+    local resultX = x + w - DETAIL_R - PixelFont.width(L('results.result'), 2)
+    if not showDetail or playerEnd + 12 <= resultX then PixelFont.shadow(L('results.player'), x + 56, hy, 2, ha, hc) end
+    PixelFont.shadow(L('results.points'), x + w - 14 - PixelFont.width(L('results.points'), 2), hy, 2, ha, hc)
+    if showDetail then PixelFont.shadow(L('results.result'), resultX, hy, 2, ha, hc) end
+    love.graphics.setColor(1, 0.86, 0.36, 0.45 * ha)
+    love.graphics.rectangle('fill', x, y0 - 8, w, 2)
 
     local maxRows = math.floor((FLOOR_Y + 60 - y0) / rowH)
     for i, e in ipairs(self.entries) do
@@ -414,29 +414,21 @@ function OnlineResultsState:_renderBoard()
             local c  = e.color
             local mine = e.id == NC.myId
 
-            -- Fondo de la fila
+            -- Fondo de la fila: tarjeta de los menús (la propia, con el borde blanco); el ganador brilla en dorado
+            rx = math.floor(rx / 4) * 4
+            MenuKit.box(mine and 'card_sel' or 'card', rx, ry, w, rowH - 6, k)
             if e.winner then
-                local pulse = 0.18 + 0.08 * math.sin(t * 4 + i)
+                local pulse = 0.16 + 0.08 * math.sin(t * 4 + i)
                 love.graphics.setColor(1, 0.8, 0.2, pulse * k)
-            else
-                love.graphics.setColor(1, 1, 1, 0.06 * k)
-            end
-            love.graphics.rectangle('fill', rx, ry, w, rowH - 6)
-            if e.winner then
-                love.graphics.setColor(1, 0.85, 0.2, 0.9 * k)
-                love.graphics.rectangle('line', rx, ry, w, rowH - 6)
-            end
-            if mine then
-                love.graphics.setColor(1, 1, 1, 0.85 * k)
-                love.graphics.rectangle('line', rx - 3, ry - 3, w + 6, rowH)
+                love.graphics.rectangle('fill', rx + 8, ry + 8, w - 16, rowH - 22)
             end
             -- Barra de color del jugador
             love.graphics.setColor(c[1], c[2], c[3], k)
-            love.graphics.rectangle('fill', rx, ry, 6, rowH - 6)
+            love.graphics.rectangle('fill', rx + 8, ry + 8, 6, rowH - 22)
 
             local ty = ry + (rowH - 6) / 2 - FONT_MED:getHeight() / 2
             love.graphics.setFont(FONT_MED)
-            shadowText(tostring(i), rx + 14, ty, 40, 'left', 1, 1, 1, k)
+            shadowText(tostring(i), rx + 22, ty, 40, 'left', 1, 1, 1, k)
             local nx = rx + 56
             if e.winner then
                 PixelIcons.crown(nx, ry + (rowH - 6) / 2 - PixelIcons.CROWN_H, 2, k)
@@ -452,7 +444,7 @@ function OnlineResultsState:_renderBoard()
             -- Puntos con conteo
             local cf    = easeOutCubic((t - rt - 0.3) / COUNT_DUR)
             local shown = math.floor(e.score * cf + 0.5)
-            shadowText(string.format('%d', shown), rx, ty, w - 14, 'right', 1, 1, 1, k)
+            shadowText(string.format('%d', shown), rx, ty, w - 18, 'right', 1, 1, 1, k)
 
             if showDetail then
                 local d, dc = detailText(e)

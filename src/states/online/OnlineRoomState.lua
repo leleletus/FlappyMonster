@@ -10,6 +10,11 @@ local Modes           = require 'src/world/modes/Modes'
 local PixelIcons      = require 'src/ui/PixelIcons'
 local ModeSelectMenu  = require 'src/ui/ModeSelectMenu'
 local Lang            = require 'src/core/Lang'
+local Difficulty      = require 'src/core/Difficulty'
+local MenuAnim        = require 'src/ui/menu/MenuAnim'
+local MenuButton      = require 'src/ui/menu/MenuButton'
+local MenuKit         = require 'src/ui/menu/MenuKit'
+local PixelFont       = require 'src/ui/PixelFont'
 local OnlineRoomState = BaseState:new()
 
 -- Sub-estados
@@ -27,7 +32,7 @@ local PMENU_KICK   = 2
 local PMENU_BAN    = 3
 local PMENU_CANCEL = 4
 local PMENU_LABELS = { 'room.give_admin', 'room.kick', 'room.ban', 'hub.cancel' }   -- claves de idioma
-local PMENU_COLORS = { {1,0.85,0.25}, {1,0.65,0.1}, {1,0.25,0.25}, {0.55,0.55,0.55} }
+local PMENU_COLORS = { 'yellow', 'orange', 'red', 'grey' }                           -- (colores de botón)
 
 -- ── Enter ─────────────────────────────────────────────────────────────────────
 
@@ -45,6 +50,7 @@ function OnlineRoomState:enter(args)
     self.pmenuSel      = PMENU_CANCEL
 
     self.t             = 0
+    self.anim, self.winAnim = MenuAnim.new(), MenuAnim.new()
     self.catalog       = nil     -- niveles con miniatura (para la tarjeta de partida)
 
     self:_setupHandlers()
@@ -55,6 +61,7 @@ end
 function OnlineRoomState:_setupHandlers()
     NC:on("room_update", function(data)
         self.currentRoom = data
+        self.pendingDiff = nil            -- (la dificultad que pidió el host ya la dice el servidor)
         if data.level and self.catalog then
             local known = false
             for _, l in ipairs(self.catalog) do if l.path == data.level then known = true end end
@@ -101,28 +108,60 @@ end
 
 local fitText = require('src/ui/TextUtil').fit
 
--- Construye la lista dinámica de botones de acción según el estado actual.
+-- La dificultad que se ve en la sala ('none' = sin dificultad): la del servidor o la que acaba de pedir el host
+function OnlineRoomState:_difficulty()
+    return self.pendingDiff or (self.currentRoom and self.currentRoom.difficulty) or 'none'
+end
+
+-- Las opciones del selector del host: sin dificultad y TODAS las de src/core/Difficulty.lua, en su orden
+local function diffOrder()
+    local o = { 'none' }
+    for _, d in ipairs(Difficulty.ORDER) do o[#o + 1] = d end
+    return o
+end
+
+-- El host mueve el selector de dificultad (d = -1 / 1; da la vuelta en los extremos)
+function OnlineRoomState:_stepDifficulty(d)
+    local order, cur = diffOrder(), self:_difficulty()
+    local i = 1
+    for k, id in ipairs(order) do if id == cur then i = k end end
+    local nxt = order[(i - 1 + d) % #order + 1]
+    self.pendingDiff, self.t = nxt, 0
+    Sound.play('select', d > 0 and 1.08 or 0.94)
+    NC:send("set_difficulty", { difficulty = nxt })
+end
+
+-- (para los arneses) elige el selector de dificultad; false si no está (no eres host o hay partida)
+function OnlineRoomState:focusDifficulty()
+    for i, a in ipairs(self:_buildActions()) do
+        if a.stepper then self.focus, self.actionSel, self.sub = FOCUS_ACTIONS, i, SUB_MAIN; return true end
+    end
+    return false
+end
+
+-- Construye la lista dinámica de botones de acción según el estado actual (color = de src/ui/menu/MenuButton).
 function OnlineRoomState:_buildActions()
     local room    = self.currentRoom
     local isAdmin = room and (room.adminId == NC.myId)
     local list    = {}
     table.insert(list, { id='ready',   label = self.isReady and Lang('room.not_ready') or Lang('room.ready'),
-                         color = self.isReady and {0.3,1,0.3} or {1,0.95,0.15} })
+                         color = self.isReady and 'green' or 'yellow' })
     if isAdmin then
         if room.state == "WAITING" then
             -- El host elige el objetivo de la ronda y el nivel en su menú
-            table.insert(list, { id='gamemode', label=Lang('room.game_mode') })
-            -- … y la DIFICULTAD (cada pulsación pasa a la siguiente; todos la ven en la tarjeta de la partida)
-            table.insert(list, { id='difficulty', label=Lang('room.difficulty', { name = Lang('difficulty.' .. (room.difficulty or 'none')) }),
-                                 color = {0.6, 0.85, 1} })
+            table.insert(list, { id='gamemode', label=Lang('room.game_mode'), color = 'blue' })
+            -- … y la DIFICULTAD: un selector ◀ ▶ con todas (todos la ven en la tarjeta de la partida)
+            local d = self:_difficulty()
+            table.insert(list, { id='difficulty', stepper = true, diff = d, value = Lang('difficulty.' .. d),
+                                 color = Difficulty.COLORS[d] or 'teal' })
             local why = self:_startBlocker()
-            table.insert(list, { id='start', label=Lang('room.start'), color={0.3,1,0.3},
+            table.insert(list, { id='start', label=Lang('room.start'), color='green',
                                  disabled = why ~= nil, why = why })
         else
-            table.insert(list, { id='stop',  label=Lang('room.stop'), color={1,0.55,0.2} })
+            table.insert(list, { id='stop',  label=Lang('room.stop'), color='orange' })
         end
     end
-    table.insert(list, { id='leave', label=Lang('room.leave'), color={0.8,0.25,0.25} })
+    table.insert(list, { id='leave', label=Lang('room.leave'), color='red' })
     return list
 end
 
@@ -170,12 +209,7 @@ function OnlineRoomState:_executeAction(id)
         self.sub      = SUB_MODES
         self.modeMenu = ModeSelectMenu.new(self.currentRoom, self.catalog)
     elseif id == 'difficulty' then
-        -- sin dificultad → fácil → normal → difícil → extremo → xtra extremo → sin dificultad
-        local order = { 'none', 'easy', 'normal', 'hard', 'extreme', 'xtra' }
-        local cur = (self.currentRoom and self.currentRoom.difficulty) or 'none'
-        local nxt = order[1]
-        for i, id2 in ipairs(order) do if id2 == cur then nxt = order[i % #order + 1] end end
-        NC:send("set_difficulty", { difficulty = nxt })
+        self:_stepDifficulty(1)
     elseif id == 'start' then
         local why = self:_startBlocker()
         if why then Notify.toast(why, 'warn') else NC:send("start_game", {}) end
@@ -190,6 +224,7 @@ end
 
 function OnlineRoomState:update(dt)
     MenuScene.update(dt)
+    self.anim:update(dt); self.winAnim:update(dt)
     self.t = self.t + dt
 
     local room    = self.currentRoom
@@ -234,6 +269,13 @@ function OnlineRoomState:update(dt)
 
     -- ── Navegación normal ─────────────────────────────────────────────────────
 
+    -- El selector de dificultad (elegido) usa izquierda / derecha para cambiarla
+    local cur = self.focus == FOCUS_ACTIONS and actions[self.actionSel]
+    if cur and cur.stepper and (Input.pressed('nav_left') or Input.pressed('nav_right')) then
+        self:_stepDifficulty(Input.pressed('nav_left') and -1 or 1)
+        return
+    end
+
     -- Cambiar columna de foco
     if Input.pressed('nav_left') then
         if self.focus == FOCUS_ACTIONS then
@@ -263,6 +305,7 @@ function OnlineRoomState:update(dt)
             local sel = players[self.playerSel]
             if isAdmin and sel and sel.id ~= NC.myId then
                 self.sub      = SUB_PMENU
+                self.winAnim  = MenuAnim.new()
                 self.pmenuSel = PMENU_CANCEL
                 Sound.play('select')
             end
@@ -303,55 +346,51 @@ end
 
 -- ── Layout (ÚNICA fuente de geometría: render, ratón y táctil) ───────────────
 
-local PANEL_X, PANEL_Y = 76, 40      -- márgenes; el tamaño se calcula en _layout()
-local HDR_H   = 84
-local ROW_H   = 54
-local CARD_H  = 196
-local BTN_H, BTN_GAP = 50, 12
-local PM_W, PM_BW, PM_BH, PM_GAP = 340, 240, 48, 10
+local TOP     = 168         -- debajo del rótulo y la línea de estado
+local ROW_H, ROW_GAP = 52, 6
+local CARD_H  = 172
+local BTN_H, BTN_GAP = 52, 8
+local PM_W, PM_BH, PM_GAP = 440, 56, 10
 
 function OnlineRoomState:_layout()
     -- (con el ancho lógico ACTUAL: en móviles más alargados que 16:9, main.lua
     -- lo cambia al arrancar o al girar; calcularlo al cargar el archivo dejaba
     -- el panel con el tamaño de 1280 y pegado a la izquierda)
-    local PANEL_W, PANEL_H = WINDOW_W - 2 * PANEL_X, WINDOW_H - 2 * PANEL_Y
     local L = {}
-    L.panel = { x = PANEL_X, y = PANEL_Y, w = PANEL_W, h = PANEL_H }
-    local bodyY  = PANEL_Y + HDR_H + 14
-    local leftX  = PANEL_X + 24
-    local leftW  = math.floor(PANEL_W * 0.50) - 36
-    local rightX = leftX + leftW + 40
-    local rightW = PANEL_X + PANEL_W - 24 - rightX
-    L.bodyY, L.bottom = bodyY, PANEL_Y + PANEL_H - 34
-    L.left  = { x = leftX,  y = bodyY, w = leftW }
-    L.right = { x = rightX, y = bodyY, w = rightW }
-
-    -- Jugadores
+    local mx = math.max(40, math.floor(WINDOW_W * 0.06))
+    local gap = 40
+    local leftW  = math.floor((WINDOW_W - 2 * mx - gap) * 0.48)
+    local rightX = mx + leftW + gap
+    local rightW = WINDOW_W - mx - rightX
+    L.bottom = WINDOW_H - 56
+    L.left  = { x = mx, y = TOP, w = leftW }
+    L.right = { x = rightX, y = TOP, w = rightW }
+    -- Jugadores: un hueco con una fila por jugador
+    L.well = { x = mx, y = TOP + 30, w = leftW, h = L.bottom - TOP - 30 }
     L.rows = {}
     local players = (self.currentRoom and self.currentRoom.players) or {}
     for i = 1, #players do
-        local y = bodyY + 26 + (i - 1) * (ROW_H + 6)
-        if y + ROW_H > L.bottom then break end
-        L.rows[i] = { x = leftX, y = y, w = leftW, h = ROW_H }
+        local y = L.well.y + 12 + (i - 1) * (ROW_H + ROW_GAP)
+        if y + ROW_H > L.well.y + L.well.h - 8 then break end
+        L.rows[i] = { x = mx + 12, y = y, w = leftW - 24, h = ROW_H }
     end
-
-    -- Tarjeta de la partida (modo + mapa) arriba a la derecha
-    L.card = { x = rightX, y = bodyY + 26, w = rightW, h = CARD_H }
-
-    -- Botones debajo
+    -- La tarjeta de la partida (modo, mapa, dificultad) y los botones debajo
+    L.card = { x = rightX, y = TOP + 30, w = rightW, h = CARD_H }
     L.buttons = {}
-    local by = L.card.y + CARD_H + 18
-    for i = 1, #self:_buildActions() do
-        L.buttons[i] = { x = rightX, y = by + (i - 1) * (BTN_H + BTN_GAP), w = rightW, h = BTN_H }
+    local acts = self:_buildActions()
+    local by = L.card.y + CARD_H + 14
+    local bh = BTN_H
+    while #acts * (bh + BTN_GAP) - BTN_GAP > L.bottom - by and bh > 40 do bh = bh - 4 end
+    for i = 1, #acts do
+        L.buttons[i] = { x = rightX + 52, y = by + (i - 1) * (bh + BTN_GAP), w = rightW - 52, h = bh }
     end
-
-    -- Menú de acción sobre un jugador
-    local mh = #PMENU_LABELS * (PM_BH + PM_GAP) + 72
-    L.pmenu = { x = math.floor((WINDOW_W - PM_W) / 2), y = math.floor((WINDOW_H - mh) / 2), w = PM_W, h = mh }
+    -- Menú de acción sobre un jugador (ventana)
+    local mh = #PMENU_LABELS * (PM_BH + PM_GAP) + 120
+    local pw = math.min(PM_W, WINDOW_W - 120)
+    L.pmenu = { x = math.floor((WINDOW_W - pw) / 2), y = math.floor((WINDOW_H - mh) / 2), w = pw, h = mh }
     L.pmenuBtns = {}
     for i = 1, #PMENU_LABELS do
-        L.pmenuBtns[i] = { x = L.pmenu.x + (PM_W - PM_BW) / 2, y = L.pmenu.y + 52 + (i - 1) * (PM_BH + PM_GAP),
-                           w = PM_BW, h = PM_BH }
+        L.pmenuBtns[i] = { x = L.pmenu.x + 72, y = L.pmenu.y + 96 + (i - 1) * (PM_BH + PM_GAP), w = pw - 112, h = PM_BH }
     end
     return L
 end
@@ -372,7 +411,7 @@ function OnlineRoomState:mousemoved(tx, ty)
     if self.sub == SUB_PMENU then
         for i, r in ipairs(L.pmenuBtns) do
             if hit(r, tx, ty, 4) then
-                if self.pmenuSel ~= i then self.pmenuSel = i; Sound.play('select') end
+                if self.pmenuSel ~= i then self.pmenuSel, self.t = i, 0; Sound.play('select') end
                 return
             end
         end
@@ -381,7 +420,7 @@ function OnlineRoomState:mousemoved(tx, ty)
     for i, r in ipairs(L.buttons) do
         if hit(r, tx, ty, 4) then
             if self.focus ~= FOCUS_ACTIONS or self.actionSel ~= i then
-                self.focus = FOCUS_ACTIONS; self.actionSel = i; Sound.play('select')
+                self.focus = FOCUS_ACTIONS; self.actionSel = i; self.t = 0; Sound.play('select')
             end
             return
         end
@@ -428,7 +467,7 @@ function OnlineRoomState:touchpressed(id, tx, ty)
             Sound.play('select')
             local sel = players[i]
             if isAdmin and sel and sel.id ~= NC.myId then
-                self.sub, self.pmenuSel = SUB_PMENU, PMENU_CANCEL
+                self.sub, self.pmenuSel, self.winAnim = SUB_PMENU, PMENU_CANCEL, MenuAnim.new()
             end
             return
         end
@@ -436,9 +475,11 @@ function OnlineRoomState:touchpressed(id, tx, ty)
     local actions = self:_buildActions()
     for i, r in ipairs(L.buttons) do
         if hit(r, tx, ty, 4) and actions[i] then
-            self.focus, self.actionSel = FOCUS_ACTIONS, i
+            self.focus, self.actionSel, self.t = FOCUS_ACTIONS, i, 0
             Sound.play('select')
-            self:_executeAction(actions[i].id)
+            -- (el selector de dificultad: cada mitad, una flecha)
+            if actions[i].stepper then self:_stepDifficulty(MenuKit.stepperSide(r, tx))
+            else self:_executeAction(actions[i].id) end
             return
         end
     end
@@ -461,271 +502,204 @@ function OnlineRoomState:keypressed(k)
     end
 end
 
--- ── Helpers de dibujo ─────────────────────────────────────────────────────────
+-- ── Dibujo ────────────────────────────────────────────────────────────────────
 
-local function drawSharpPanel(x, y, w, h, fillR, fillG, fillB, fillA)
-    love.graphics.setColor(fillR, fillG, fillB, fillA)
+local function bobOf(t, sel) return sel and ((math.floor(t * 3) % 2 == 0) and -4 or 0) or 0 end
+
+-- Una "pastilla" de texto pixel con fondo de color (LISTO / ESPERA, la dificultad...)
+local function pill(text, x, y, s, fg, bg, a, alignRight)
+    local w = PixelFont.width(text, s) + 6 * s
+    local h = PixelFont.height(s) + 4 * s
+    if alignRight then x = x - w end
+    x, y = math.floor(x), math.floor(y)
+    love.graphics.setColor(0, 0, 0, 0.45 * a)
+    love.graphics.rectangle('fill', x + s, y + s, w, h)
+    love.graphics.setColor(bg[1], bg[2], bg[3], a)
     love.graphics.rectangle('fill', x, y, w, h)
-    love.graphics.setColor(1, 1, 1, 0.55)
-    love.graphics.rectangle('line', x,   y,   w,   h)
-    love.graphics.setColor(0, 0, 0, 0.55)
-    love.graphics.rectangle('line', x+2, y+2, w-4, h-4)
+    PixelFont.draw(text, x + 3 * s, y + 2 * s, s, a, fg)
+    love.graphics.setColor(1, 1, 1, 1)
+    return w, h
 end
 
-local function drawActionBtn(label, r, selected, accent, disabled)
-    local x, y, w, h = r.x, r.y, r.w, r.h
-    accent = accent or {1, 1, 1}
-    love.graphics.setFont(FONT_MED)
-    if disabled then
-        -- Desactivado: gris, sin acento; si está seleccionado, borde discontinuo
-        love.graphics.setColor(0.12, 0.12, 0.12, 0.9)
-        love.graphics.rectangle('fill', x, y, w, h)
-        love.graphics.setColor(1, 1, 1, selected and 0.55 or 0.18)
-        love.graphics.rectangle('line', x, y, w, h)
-        love.graphics.setColor(1, 1, 1, selected and 0.55 or 0.3)
-        love.graphics.printf(label, x, y + h/2 - FONT_MED:getHeight()/2, w, 'center')
-        return
-    end
-    if selected then
-        love.graphics.setColor(0, 0, 0, 0.5)
-        love.graphics.rectangle('fill', x + 4, y + 4, w, h)
-        love.graphics.setColor(1, 1, 1, 1)
-        love.graphics.rectangle('fill', x, y, w, h)
-        love.graphics.setColor(accent[1] * 0.8, accent[2] * 0.8, accent[3] * 0.8, 1)
-        love.graphics.rectangle('fill', x, y, 6, h)
-        love.graphics.setColor(0, 0, 0, 1)
-    else
-        love.graphics.setColor(0, 0, 0, 0.75)
-        love.graphics.rectangle('fill', x, y, w, h)
-        love.graphics.setColor(1, 1, 1, 0.35)
-        love.graphics.rectangle('line', x, y, w, h)
-        love.graphics.setColor(accent[1], accent[2], accent[3], 0.9)
-        love.graphics.rectangle('fill', x, y, 3, h)
-        love.graphics.setColor(1, 1, 1, 0.9)
-    end
-    love.graphics.printf(label, x, y + h/2 - FONT_MED:getHeight()/2, w, 'center')
-end
+-- Colores de fondo de las pastillas de dificultad (los mismos tonos que sus botones)
+local DIFF_BG = { teal = { 0.18, 0.5, 0.5 }, green = { 0.25, 0.52, 0.3 }, yellow = { 0.62, 0.5, 0.18 },
+                  orange = { 0.66, 0.38, 0.18 }, red = { 0.62, 0.24, 0.22 }, purple = { 0.4, 0.27, 0.62 } }
 
-local function sectionLabel(text, x, y, w, active)
-    love.graphics.setFont(FONT_SMALL)
-    love.graphics.setColor(1, 0.85, 0, active and 0.95 or 0.5)
-    love.graphics.print(text, x, y)
-    love.graphics.setColor(1, 0.85, 0, active and 0.45 or 0.15)
-    love.graphics.rectangle('fill', x, y + 15, w, 1)
-end
-
--- Tarjeta "PARTIDA": modo elegido, su objetivo y el mapa con miniatura.
-function OnlineRoomState:_renderGameCard(r, isAdmin)
+-- Tarjeta "PARTIDA": modo elegido, su objetivo, el mapa con miniatura y la dificultad.
+function OnlineRoomState:_renderGameCard(r, isAdmin, a, oy)
     local room = self.currentRoom or {}
     local mode = Modes.get(room.mode)
     if not mode then return end
     local col  = mode.color
-    local x, y, w, h = r.x, r.y, r.w, r.h
-    local pad  = 14
-
-    love.graphics.setColor(col[1] * 0.14, col[2] * 0.14, col[3] * 0.14, 0.92)
-    love.graphics.rectangle('fill', x, y, w, h)
-    love.graphics.setColor(col[1], col[2], col[3], 0.85)
-    love.graphics.rectangle('line', x, y, w, h)
-    love.graphics.rectangle('fill', x, y, w, 4)
+    local x, y, w, h = r.x, r.y + oy, r.w, r.h
+    local pad  = 18
+    MenuKit.box('card', x, y, w, h, a)
+    love.graphics.setColor(col[1], col[2], col[3], 0.9 * a)
+    love.graphics.rectangle('fill', x + 8, y + 8, w - 16, 4)
 
     -- Modo: icono + nombre
-    local iw, ih = PixelIcons.size(mode.icon or '')
+    local iw = PixelIcons.size(mode.icon or '')
     local tx = x + pad
     if iw > 0 then
-        PixelIcons.draw(mode.icon, tx, y + 16, 3)
+        PixelIcons.draw(mode.icon, tx, y + 24, 3, a)
         tx = tx + iw * 3 + 14
     end
-    love.graphics.setFont(FONT_SMALL)
-    love.graphics.setColor(1, 1, 1, 0.45)
-    love.graphics.print(Lang('room.mode'), tx, y + 14)
-    love.graphics.setFont(FONT_MED)
-    love.graphics.setColor(col[1], col[2], col[3], 1)
-    love.graphics.print(fitText(FONT_MED, mode.label, x + w - pad - tx), tx, y + 30)
-    -- La DIFICULTAD de la sala (la elige el host), arriba a la derecha
-    do
-        local dl = Lang('room.difficulty', { name = Lang('difficulty.' .. (room.difficulty or 'none')) })
-        love.graphics.setFont(FONT_SMALL)
-        love.graphics.setColor(0.6, 0.85, 1, 0.95)
-        love.graphics.print(dl, x + w - pad - FONT_SMALL:getWidth(dl), y + 14)
-    end
+    PixelFont.draw(Lang('room.mode'), tx, y + 22, 2, 0.6 * a)
+    -- la DIFICULTAD de la sala (la elige el host), arriba a la derecha
+    local d = self:_difficulty()
+    local dc = DIFF_BG[Difficulty.COLORS[d] or 'teal'] or DIFF_BG.teal
+    local dw = pill(Lang('difficulty.' .. d), x + w - pad, y + 20, 2, { 1, 1, 1 }, dc, a, true)
+    MenuKit.text(FONT_MED, fitText(FONT_MED, mode.label, x + w - pad - dw - 12 - tx), tx, y + 38, w, 'left', { col[1] * 0.6 + 0.4, col[2] * 0.6 + 0.4, col[3] * 0.6 + 0.4 }, a)
 
     -- Objetivo
     love.graphics.setFont(FONT_SMALL)
-    love.graphics.setColor(1, 1, 1, 0.75)
     local _, lines = FONT_SMALL:getWrap(mode.tagline, w - 2 * pad)
-    local ty = y + 62
+    local ty = y + 70
     for i = 1, math.min(2, #lines) do
-        love.graphics.print(lines[i], x + pad, ty)
+        MenuKit.text(FONT_SMALL, lines[i], x + pad, ty, w, 'left', { 0.82, 0.86, 1 }, a)
         ty = ty + FONT_SMALL:getHeight() + 6
     end
 
     -- Mapa: miniatura + nombre
-    local my = y + h - 84
-    love.graphics.setColor(col[1], col[2], col[3], 0.3)
-    love.graphics.rectangle('fill', x + pad, my - 8, w - 2 * pad, 1)
-    local pw, ph = 150, 64
+    local pw, ph = 132, 56
+    local my = y + h - ph - 14
     local lvl
     for _, l in ipairs(self.catalog or {}) do if l.path == room.level then lvl = l end end
     if lvl then
-        ModeSelectMenu.drawPreview(lvl, x + pad, my + 2, pw, ph, self.t or 0, 1, Modes.get(room.mode))
+        ModeSelectMenu.drawPreview(lvl, x + pad, my, pw, ph, self.t or 0, a, Modes.get(room.mode))
     else
-        love.graphics.setColor(0.2, 0.3, 0.5, 1)
-        love.graphics.rectangle('fill', x + pad, my + 2, pw, ph)
+        love.graphics.setColor(0.12, 0.16, 0.32, a)
+        love.graphics.rectangle('fill', x + pad, my, pw, ph)
     end
-    love.graphics.setColor(1, 1, 1, 0.3)
-    love.graphics.rectangle('line', x + pad, my + 2, pw, ph)
+    love.graphics.setColor(0.05, 0.07, 0.16, a)
+    love.graphics.rectangle('line', x + pad - 0.5, my - 0.5, pw + 1, ph + 1)
     local nx = x + pad + pw + 16
-    love.graphics.setFont(FONT_SMALL)
-    love.graphics.setColor(1, 1, 1, 0.45)
-    love.graphics.print(Lang('room.map'), nx, my + 8)
+    PixelFont.draw(Lang('room.map'), nx, my + 2, 2, 0.6 * a)
     if room.levelName then
         local levelName = Lang.localName({ name = room.levelName, name_en = room.levelName_en })
-        love.graphics.setFont(FONT_MED)
-        love.graphics.setColor(1, 0.85, 0.2, 1)
-        love.graphics.print(fitText(FONT_MED, levelName, x + w - pad - nx), nx, my + 24)
+        MenuKit.text(FONT_MED, fitText(FONT_MED, levelName, x + w - pad - nx), nx, my + 18, w, 'left', { 1, 0.86, 0.36 }, a)
     else
-        love.graphics.setColor(1, 0.35, 0.35, 0.95)
-        love.graphics.print(fitText(FONT_MED, Lang('room.no_map_short'), x + w - pad - nx), nx, my + 26)
+        MenuKit.text(FONT_MED, fitText(FONT_MED, Lang('room.no_map_short'), x + w - pad - nx), nx, my + 18, w, 'left', { 1, 0.45, 0.4 }, a)
     end
-    love.graphics.setFont(FONT_SMALL)
-    love.graphics.setColor(1, 1, 1, 0.35)
-    love.graphics.print(fitText(FONT_SMALL, isAdmin and Lang('room.change_in_mode') or Lang('room.host_picks'), x + w - pad - nx), nx, my + 50)
+    MenuKit.text(FONT_SMALL, fitText(FONT_SMALL, isAdmin and Lang('room.change_in_mode') or Lang('room.host_picks'), x + w - pad - nx),
+                 nx, my + 42, w, 'left', { 0.6, 0.66, 0.85 }, a)
 end
 
 -- ── Render ────────────────────────────────────────────────────────────────────
 
 function OnlineRoomState:render()
-    -- Fondo
     MenuScene.backdrop()                 -- (el fondo vivo de los menús: src/ui/menu/MenuScene)
 
+    local A       = self.anim
     local room    = self.currentRoom or {}
     local players = room.players or {}
     local np      = #players
     local isAdmin = room.adminId == NC.myId
     local actions = self:_buildActions()
     local L       = self:_layout()
-    local P       = L.panel
 
-    drawSharpPanel(P.x, P.y, P.w, P.h, 0.02, 0.02, 0.04, 0.93)
-
-    -- ── Cabecera ──────────────────────────────────────────────────────────────
-    love.graphics.setFont(FONT_BIG)
-    love.graphics.setColor(0, 0, 0, 0.8)
-    love.graphics.printf(room.name or Lang('room.default_name'), P.x + 3, P.y + 17, P.w, 'center')
-    love.graphics.setColor(1, 0.95, 0.15, 1)
-    love.graphics.printf(room.name or Lang('room.default_name'), P.x, P.y + 14, P.w, 'center')
-    love.graphics.setFont(FONT_SMALL)
+    -- ── Cabecera: el nombre de la sala y su estado ───────────────────────────
+    local hy = MenuKit.title(room.name or Lang('room.default_name'), 'purple', A, 1)
     local stateStr = (room.state == "IN_GAME") and Lang('hub.in_game') or Lang('hub.waiting')
     local privStr  = (room.isPublic == false) and Lang('hub.private') or Lang('hub.public')
     local countStr = Lang('room.players_count', { n = np, max = room.maxPlayers or '?' })
-    love.graphics.setColor(1, 1, 1, 0.5)
-    love.graphics.printf(stateStr .. "   ·   " .. privStr .. "   ·   " .. countStr, P.x, P.y + 56, P.w, 'center')
-    love.graphics.setColor(1, 0.85, 0, 0.25)
-    love.graphics.rectangle('fill', P.x + 20, P.y + HDR_H, P.w - 40, 1)
-
-    -- Separador vertical
-    love.graphics.setColor(1, 0.85, 0, 0.12)
-    love.graphics.rectangle('fill', L.right.x - 20, L.bodyY, 1, L.bottom - L.bodyY)
+    local _, ioy, ia = A:slide(1, 0, -200, 0, -200)
+    local info = stateStr .. "  -  " .. privStr .. "  -  " .. countStr
+    PixelFont.shadow(info, math.floor((WINDOW_W - PixelFont.width(info, 2)) / 2), hy + 14 + ioy, 2, ia, { 0.8, 0.85, 1 })
 
     -- ── Jugadores ─────────────────────────────────────────────────────────────
     local focusP = self.focus == FOCUS_PLAYERS and self.sub == SUB_MAIN
-    sectionLabel(Lang('room.players'), L.left.x, L.bodyY, L.left.w, focusP)
+    local ox, oy, a = A:slide(2, -260, 0)
+    MenuKit.section(Lang('room.players'), L.left.x + 4 + ox, L.left.y + oy, L.left.w - 8, focusP, a)
+    MenuKit.box('well', L.well.x + ox, L.well.y + oy, L.well.w, L.well.h, a)
     for i, p in ipairs(players) do
         local r = L.rows[i]
         if not r then break end
         local col    = p.color or {0.7, 0.7, 0.7}
         local isSelf = (p.id == NC.myId)
         local isSel  = (i == self.playerSel) and focusP
-
-        love.graphics.setColor(1, 1, 1, isSel and 0.10 or 0.04)
-        love.graphics.rectangle('fill', r.x, r.y, r.w, r.h)
-        if isSel then
-            love.graphics.setColor(1, 0.85, 0, 0.7)
-            love.graphics.rectangle('line', r.x, r.y, r.w, r.h)
-        end
-        love.graphics.setColor(col[1], col[2], col[3], 1)
-        love.graphics.rectangle('fill', r.x, r.y, 6, r.h)
+        local x, y = r.x + ox, r.y + oy
+        MenuKit.box(isSel and 'card_sel' or 'card', x, y, r.w, r.h, a)
+        love.graphics.setColor(col[1], col[2], col[3], a)
+        love.graphics.rectangle('fill', x + 8, y + 8, 8, r.h - 16)
 
         -- Nombre (+ corona del host centrada con el texto, como en el HUD)
-        love.graphics.setFont(FONT_MED)
-        local nameY = r.y + r.h / 2 - FONT_MED:getHeight() / 2
-        local nx = r.x + 20
+        local nameY = y + math.floor((r.h - FONT_MED:getHeight()) / 2)
+        local nx = x + 28
         if p.id == room.adminId then
             local px = 2
-            PixelIcons.crown(nx, nameY + FONT_MED:getHeight() / 2 - 6.5 * px, px)
+            PixelIcons.crown(nx, nameY + FONT_MED:getHeight() / 2 - 6.5 * px, px, a)
             nx = nx + PixelIcons.CROWN_W * px + 10
         end
-        local nameMax = r.w - (nx - r.x) - 110
-        local name = fitText(FONT_MED, p.name or '?', nameMax - (isSelf and 60 or 0))
-        love.graphics.setColor(col[1] * 0.7 + 0.3, col[2] * 0.7 + 0.3, col[3] * 0.7 + 0.3, 1)
-        love.graphics.print(name, nx, nameY)
+        -- a la derecha: listo / espera y el ping
+        local ping = string.format("%dMS", p.ping or 0)
+        local pgw = PixelFont.width(ping, 2)
+        PixelFont.draw(ping, x + r.w - 16 - pgw, y + r.h - 16, 2, 0.55 * a)
+        local rdy = p.isReady and Lang('room.ready') or Lang('room.wait')
+        local pw = pill(rdy, x + r.w - 16, y + 8, 2, p.isReady and { 0.08, 0.2, 0.1 } or { 0.8, 0.84, 0.95 },
+                        p.isReady and { 0.45, 0.9, 0.5 } or { 0.2, 0.25, 0.42 }, a, true)
+        local nameMax = (x + r.w - 28 - math.max(pw, pgw)) - nx
+        local you = isSelf and (' ' .. Lang('room.you')) or ''
+        local name = fitText(FONT_MED, p.name or '?', nameMax - (isSelf and FONT_SMALL:getWidth(you) + 6 or 0))
+        MenuKit.text(FONT_MED, name, nx, nameY, nameMax, 'left', { col[1] * 0.6 + 0.4, col[2] * 0.6 + 0.4, col[3] * 0.6 + 0.4 }, a)
         if isSelf then
-            love.graphics.setFont(FONT_SMALL)
-            love.graphics.setColor(0.6, 0.85, 1, 0.8)
-            love.graphics.print(Lang('room.you'), nx + FONT_MED:getWidth(name) + 10, nameY + 4)
-        end
-
-        -- Listo (pastilla) y ping
-        love.graphics.setFont(FONT_SMALL)
-        local bw, bh = 76, 20
-        local bx, byy = r.x + r.w - bw - 12, r.y + 8
-        if p.isReady then
-            love.graphics.setColor(0.3, 1, 0.45, 0.9)
-            love.graphics.rectangle('fill', bx, byy, bw, bh)
-            love.graphics.setColor(0, 0, 0, 1)
-        else
-            love.graphics.setColor(1, 1, 1, 0.25)
-            love.graphics.rectangle('line', bx, byy, bw, bh)
-            love.graphics.setColor(1, 1, 1, 0.45)
-        end
-        love.graphics.printf(p.isReady and Lang('room.ready') or Lang('room.wait'), bx, byy + 5, bw, 'center')
-        love.graphics.setColor(1, 1, 1, 0.35)
-        love.graphics.printf(string.format("%d ms", p.ping or 0), bx - 20, r.y + r.h - 16, bw + 20, 'right')
-    end
-    if focusP and isAdmin then
-        local sel = players[self.playerSel]
-        if sel and sel.id ~= NC.myId then
-            love.graphics.setFont(FONT_SMALL)
-            love.graphics.setColor(1, 0.85, 0, 0.6)
-            love.graphics.print(Lang('room.actions_on', { name = sel.name or '?' }), L.left.x, L.bottom + 6)
+            MenuKit.text(FONT_SMALL, you, nx + FONT_MED:getWidth(name) + 4, nameY + 4, 200, 'left', { 0.6, 0.85, 1 }, a)
         end
     end
 
     -- ── Partida + acciones ────────────────────────────────────────────────────
-    sectionLabel(Lang('room.match'), L.right.x, L.bodyY, L.right.w, false)
-    self:_renderGameCard(L.card, isAdmin)
+    local cx, cy, ca = A:slide(3, 260, 0)
+    MenuKit.section(Lang('room.match'), L.right.x + 4 + cx, L.right.y + cy, L.right.w - 8, not focusP, ca)
+    self:_renderGameCard({ x = L.card.x + cx, y = L.card.y, w = L.card.w, h = L.card.h }, isAdmin, ca, cy)
 
     local focusA = self.focus == FOCUS_ACTIONS and self.sub == SUB_MAIN
     for i, act in ipairs(actions) do
         local r = L.buttons[i]
-        if r and r.y + r.h <= L.bottom + 10 then
+        if r then
+            local bx, by, ba = A:slide(3 + i, 0, 220)
             local sel = focusA and i == self.actionSel
-            drawActionBtn(act.label, r, sel, act.color, act.disabled)
+            local rr = { x = r.x + bx, y = r.y + by, w = r.w, h = r.h }
+            local color = act.disabled and 'grey' or act.color
+            if act.stepper then
+                MenuKit.stepper(Lang('room.difficulty_label'), act.value, rr, color, sel, { alpha = ba, bob = bobOf(self.t, sel), scale = 4 })
+            else
+                MenuButton.draw(act.label, rr.x, rr.y + bobOf(self.t, sel), rr.w, rr.h, color, sel and not act.disabled,
+                                { alpha = ba * (act.disabled and 0.75 or 1), scale = MenuButton.textScale(act.label, rr.w - 48, 4) })
+            end
+            if sel then MenuKit.marker(rr.x, rr.y, rr.h, self.t, ba) end
         end
     end
 
-    -- Ayuda de navegación
-    love.graphics.setFont(FONT_SMALL)
-    love.graphics.setColor(1, 1, 1, 0.3)
+    -- Ayuda de abajo: la descripción de la dificultad elegida, las acciones sobre un jugador o la navegación
     local hint = self.focus == FOCUS_ACTIONS and Lang('room.see_players') or Lang('room.go_actions')
-    love.graphics.printf(hint, L.right.x, L.bottom + 6, L.right.w, 'right')
+    local act = focusA and actions[self.actionSel]
+    if act and act.stepper then
+        hint = Lang('room.difficulty_hint', { desc = Lang('difficulty.desc.' .. act.diff) })
+    elseif act and act.disabled and act.why then
+        hint = act.why
+    elseif focusP and isAdmin then
+        local sel = players[self.playerSel]
+        if sel and sel.id ~= NC.myId then hint = Lang('room.actions_on', { name = sel.name or '?' }) end
+    end
+    if self.sub == SUB_MAIN then MenuKit.hint(hint, A, 9) end
 
     -- ── Menú de acción sobre un jugador ──────────────────────────────────────
     if self.sub == SUB_PMENU then
         local target = players[self.playerSel]
-        love.graphics.setColor(0, 0, 0, 0.6)
-        love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
+        MenuKit.dim(0.6)
         local M = L.pmenu
-        drawSharpPanel(M.x, M.y, M.w, M.h, 0.04, 0.04, 0.06, 0.96)
-        love.graphics.setFont(FONT_SMALL)
-        love.graphics.setColor(1, 1, 1, 0.65)
-        love.graphics.printf(Lang('room.action_on', { name = target and target.name or '?' }), M.x, M.y + 16, M.w, 'center')
-        love.graphics.setColor(1, 0.85, 0, 0.3)
-        love.graphics.rectangle('fill', M.x + 20, M.y + 38, M.w - 40, 1)
+        local _, poy, pa = self.winAnim:slide(1, 0, 160)
+        MenuKit.box('window', M.x, M.y + poy, M.w, M.h, pa)
+        local title = Lang('room.action_on', { name = target and target.name or '?' })
+        MenuKit.text(FONT_MED, fitText(FONT_MED, title, M.w - 40), M.x, M.y + 36 + poy, M.w, 'center', { 1, 0.86, 0.36 }, pa)
         for i, lbl in ipairs(PMENU_LABELS) do
-            drawActionBtn(Lang(lbl), L.pmenuBtns[i], i == self.pmenuSel, PMENU_COLORS[i])
+            local r = L.pmenuBtns[i]
+            local sel = i == self.pmenuSel
+            MenuButton.draw(Lang(lbl), r.x, r.y + poy + bobOf(self.t, sel), r.w, r.h, PMENU_COLORS[i], sel, { alpha = pa, scale = MenuButton.textScale(Lang(lbl), r.w - 48, 4) })
+            if sel then MenuKit.marker(r.x, r.y + poy, r.h, self.t, pa) end
         end
+        MenuKit.hint(Lang('menu.hint', { move = Input.label('nav_up') .. Input.label('nav_down'),
+                                        ok = Input.label('confirm'), back = Input.label('back') }))
     end
 
     -- ── Menú "MODO DE JUEGO" ──────────────────────────────────────────────────

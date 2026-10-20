@@ -6,6 +6,7 @@
 -- Definición de un modo:
 --   id                         identificador
 --   color                      color de acento en menús/HUD
+--   button                     color de su botón en los menús (src/ui/menu/MenuButton: green, orange, blue...)
 --   icon                       icono pixel art (PixelIcons) para menús
 --   Textos (en assets/lang, claves mode.<id>.<campo>; se leen como m.label etc.
 --   y salen en el idioma actual):
@@ -59,6 +60,7 @@ function ModeTypes.register(def)
     local m = {}
     for k, v in pairs(def) do m[k] = v end
     m.color      = m.color or { 1, 0.85, 0.2 }
+    m.button     = m.button or 'blue'
     m.triggers   = m.triggers or {}
     m.requires   = m.requires or function() return true end
     m.start      = m.start or noop

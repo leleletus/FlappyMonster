@@ -88,6 +88,34 @@ save and it reaches the story map, every scene is a race level with an up-to-dat
 finish, the same race with a variable real dt, death + respawn with endless lives, the iris between scenes; captures
 at 1280 / 960 / 1600 (`<save>/menu_*.png`). `story_flow` waits while a cartridge goes in or the iris covers.
 
+## Online screens
+
+**What:** the whole online area (login, room list, create-room wizard, password, room, game-mode menu, pause and
+spectator windows in a match, results board, network error) is built from the same pieces as the other menus: the
+living background with its panel, a coloured title banner (purple for online, red for the error), muted 9-slice
+buttons with the monster marking the selected one, and the boxes below. Names typed by players (rooms, players) are
+drawn in the normal font (the pixel font lacks most symbols); labels, buttons and headings in the pixel font.
+
+| File | Role |
+|---|---|
+| `src/ui/menu/MenuKit.lua` | the shared pieces: `box(kind)` — `well` (sunken: text fields, lists), `card`, `card_sel` (white edge), `window` (on top of everything) —, `field` (text field with block cursor; `mask` for passwords), `section` (pixel-font label + rule), `stepper` (◀ value ▶ button; `stepperSide` = which arrow was tapped), `arrow`, `marker` (the monster, also used by `MenuList`), `title` (`MenuList.header`, or the normal font on the same banner when the pixel font lacks a letter: `PixelFont.has`), `hint`, `dim`, `text` |
+| `assets/images/ui/menus/box.png` | the four boxes (8×8 cells, cut 2), written by `tools/art/ui/make_menu_ui.py` |
+| `src/states/online/OnlineLoginState.lua`, `OnlineHubState.lua`, `OnlineRoomState.lua`, `OnlineErrorState.lua` | each has ONE layout function used by drawing, mouse and touch; enter / leave with `MenuAnim` (windows slide in with their own) |
+| `src/ui/ModeSelectMenu.lua` | the game-mode menu (online room and Free Play): tabs are buttons in the mode's `button` colour (`src/world/modes/<mode>.lua`), level cards are boxes |
+| `src/states/online/OnlineAdventureHud.lua` | pause and spectator windows (geometry in `OnlineAdventureState:_pauseRects / _specRects`) |
+| `src/states/online/OnlineResultsState.lua` | results: podium and celebration as before; the board rows are cards, the column heads pixel-font labels |
+
+**Room difficulty (host):** in a WAITING room the host has a selector **◀ DIFFICULTY: X ▶** among the action buttons:
+left / right (or tapping either half) goes through "none" (the game as it is) and EVERY id of `Difficulty.ORDER`, wrapping
+round; online nothing is locked (unlocks are a story thing). Its button takes `Difficulty.COLORS[id]` (also used by
+the story's difficulty picker); the bottom line shows `difficulty.desc.<id>`. It sends the existing
+`set_difficulty { difficulty }` (admin only, WAITING; no protocol change); until the server's `room_update` comes
+back the screen shows the requested one (`pendingDiff`). Everyone sees it as a pill on the game card, and it reaches
+the match in `game_init` as before (`docs/gameplay/difficulty.md`).
+
+**Tests:** `online_menus` (every screen at 1280 and 960 against the local server, the selector through every
+difficulty and back, the match starting with it). `online_smoke`, `online_boss`, `free_play` cover the rest.
+
 **Decisions / history**
 
 - 2026-10-20 (3.103.0): requested by the user ("the menu is just the usual background with a lot of monsters
@@ -112,6 +140,16 @@ at 1280 / 960 / 1600 (`<save>/menu_*.png`). `story_flow` waits while a cartridge
     replaced by the iris;
   - the slot cards had their text covered by DELETE at some resolutions: redesigned as cartridges, DELETE below;
   - the story ending film now shows the remastered logo too.
+- 0.5.0 (2026-10-20), the user: a facelift and style normalisation of the whole online area, and the host able to
+  change the round's difficulty among all the existing ones. The online screens were still the pre-remaster style
+  (black boxes, white outlines, white-filled selected buttons); they now use the menu pieces above. The host already
+  had a "DIFICULTAD: X" button that only cycled forward with a hard-coded list; it is now the ◀ ▶ selector over
+  `Difficulty.ORDER`. Single-player pause / game-over windows still use the old look (not part of this request).
+  Then, the user: in the create-room wizard the NEXT button of step 2 was useless — choosing PUBLIC / PRIVATE now
+  advances by itself (only CANCEL remains); the max-players step went back to separate ◀ / ▶ buttons beside the
+  number (new style: the number in a sunken box, blue arrow buttons, grey at the limits); and sizes were balanced so
+  the important thing stands out: button text at pixel scale 4 (5 for the main action of a screen and the privacy
+  choices) instead of 6, buttons 56 px high, the error screen led by its message with the error code small below.
 - Not yet judged by the user: the look on a real screen, the animation timings, the menu sounds (existing `select`
   sound at different pitches, not listened to), performance on Switch / Android (the menu now simulates and draws a
   full level with its enemies every frame).

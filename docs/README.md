@@ -30,7 +30,7 @@ are never edited by hand.
 | add a text or a language | [architecture/i18n](architecture/i18n.md) |
 | test something | [testing/harnesses](testing/harnesses.md), `tools/tests/README.md` |
 | change the logo intro shown at boot | [architecture/startup-intro](architecture/startup-intro.md) |
-| change the title, the menus, their background or transitions | [architecture/menus](architecture/menus.md) |
+| change the title, the menus (online screens included), their background or transitions | [architecture/menus](architecture/menus.md) |
 | release and update the server | [architecture/updates-and-release](architecture/updates-and-release.md) |
 | port, publish, change screens or controls | [architecture/platforms](architecture/platforms.md), [architecture/known-debt](architecture/known-debt.md) (Google Play readiness) |
 | know what is saved | [architecture/save-data](architecture/save-data.md) |

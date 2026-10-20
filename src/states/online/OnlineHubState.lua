@@ -6,6 +6,12 @@ local BaseState      = require 'src/core/BaseState'
 local MenuScene = require 'src/ui/menu/MenuScene'
 local NC             = require 'src/network/NetworkClient'
 local L = require 'src/core/Lang'
+local MenuAnim       = require 'src/ui/menu/MenuAnim'
+local MenuButton     = require 'src/ui/menu/MenuButton'
+local MenuKit        = require 'src/ui/menu/MenuKit'
+local PixelFont      = require 'src/ui/PixelFont'
+local PixelIcons     = require 'src/ui/PixelIcons'
+local fitText        = require('src/ui/TextUtil').fit
 local OnlineHubState = BaseState:new()
 
 -- Sub-estados
@@ -33,6 +39,7 @@ local LIST_BTNS   = { 'hub.create', 'hub.refresh', 'common.back' }   -- claves d
 function OnlineHubState:enter(args)
     Sound.playMusic('menus')      -- (si ya sonaba, sigue sin cortarse)
     self.sub          = SUB_LIST
+    self.anim, self.winAnim, self.t = MenuAnim.new(), MenuAnim.new(), 0
     self.roomList     = {}
     self.selectedIdx  = 1
     self.refreshTimer = 0
@@ -78,7 +85,7 @@ function OnlineHubState:_setupHandlers()
             Notify.toast(L.fromServer(data, 'hub.error'), 'error')
         end
         if self.sub == SUB_PASSWORD or self.sub == SUB_WAITING then
-            self.sub = SUB_LIST; self.inputBuffer = ""
+            self:_setSub(SUB_LIST); self.inputBuffer = ""
         end
     end)
     NC:on("connection_lost", function(data)
@@ -87,6 +94,28 @@ function OnlineHubState:_setupHandlers()
             msg  = data.msg or L('err.lost'),
         })
     end)
+end
+
+-- Cambia de sub-pantalla (las ventanas entran con su animación)
+function OnlineHubState:_setSub(sub)
+    if sub ~= self.sub and sub ~= SUB_LIST then self.winAnim = MenuAnim.new() end
+    self.sub, self.t = sub, 0
+end
+
+-- Vuelve al login (desconecta)
+function OnlineHubState:_leave()
+    if self.anim:busy() then return end
+    NC:disconnect()
+    self.anim:leave(function() gStateMachine:change('online_login') end)
+end
+
+function OnlineHubState:_sendPassword()
+    if not self.joinRoom then return end
+    NC:send("join_room", { id = self.joinRoom.id, password = self.inputBuffer })
+    self.inputBuffer = ""; self.joinRoom = nil
+    self:_setSub(SUB_WAITING); self.waitTimer = 0
+    Sound.play('select')
+    self:_syncKeyboard()
 end
 
 function OnlineHubState:_showError(msg)
@@ -117,10 +146,10 @@ function OnlineHubState:_joinRoom(room)
     if room.hasPassword then
         self.joinRoom    = room
         self.inputBuffer = ""
-        self.sub         = SUB_PASSWORD
+        self:_setSub(SUB_PASSWORD)
     else
         NC:send("join_room", { id=room.id, password="" })
-        self.sub = SUB_WAITING; self.waitTimer = 0
+        self:_setSub(SUB_WAITING); self.waitTimer = 0
     end
 end
 
@@ -160,6 +189,9 @@ end
 
 function OnlineHubState:update(dt)
     MenuScene.update(dt)
+    self.anim:update(dt); self.winAnim:update(dt)
+    self.t = self.t + dt
+    if self.anim:busy() then return end
 
     -- Auto-refresh cada 5s en lista
     if self.sub == SUB_LIST then
@@ -182,7 +214,7 @@ function OnlineHubState:update(dt)
             return
         end
         if Input.pressed('back') then
-            self.sub = SUB_LIST
+            self:_setSub(SUB_LIST)
         end
         return
     end
@@ -218,19 +250,19 @@ function OnlineHubState:update(dt)
                 end
             end
             if Input.pressed('back') then
-                NC:disconnect(); gStateMachine:change('online_login')
+                self:_leave()
             end
 
         elseif self.listFocus == 'btns' then
             if Input.pressed('nav_left') then
                 self.btnSel = self.btnSel - 1
                 if self.btnSel < 1 then self.btnSel = #LIST_BTNS end
-                Sound.play('select')
+                self.t = 0; Sound.play('select')
             end
             if Input.pressed('nav_right') then
                 self.btnSel = self.btnSel + 1
                 if self.btnSel > #LIST_BTNS then self.btnSel = 1 end
-                Sound.play('select')
+                self.t = 0; Sound.play('select')
             end
             if Input.pressed('nav_up') then
                 -- volver a lista de salas
@@ -240,16 +272,10 @@ function OnlineHubState:update(dt)
             end
             if Input.pressed('confirm') then
                 Sound.play('select')
-                if self.btnSel == BTN_CREATE then
-                    self:_resetCreate(); self.sub = SUB_CREATE
-                elseif self.btnSel == BTN_REFRESH then
-                    NC:send("get_rooms", {})
-                elseif self.btnSel == BTN_BACK then
-                    NC:disconnect(); gStateMachine:change('online_login')
-                end
+                self:_listButton(self.btnSel)
             end
             if Input.pressed('back') then
-                NC:disconnect(); gStateMachine:change('online_login')
+                self:_leave()
             end
         end
 
@@ -266,27 +292,16 @@ function OnlineHubState:update(dt)
                 self.privacySel = 2; Sound.play('select')
             end
         elseif self.createStep == STEP_MAX then
-            if Input.pressed('nav_left') or Input.pressed('nav_up') then
-                self.maxValue = math.max(2, self.maxValue - 1); Sound.play('select')
-            end
-            if Input.pressed('nav_right') or Input.pressed('nav_down') then
-                self.maxValue = math.min(8, self.maxValue + 1); Sound.play('select')
-            end
+            if Input.pressed('nav_left') or Input.pressed('nav_up') then self:_stepMax(-1) end
+            if Input.pressed('nav_right') or Input.pressed('nav_down') then self:_stepMax(1) end
         end
         if Input.pressed('confirm') then self:_createNext() end
 
     -- ── SUB_PASSWORD ──────────────────────────────────────────────────────────
     elseif self.sub == SUB_PASSWORD then
-        if Input.pressed('confirm') then
-            if self.joinRoom then
-                NC:send("join_room", { id=self.joinRoom.id, password=self.inputBuffer })
-                self.inputBuffer = ""; self.joinRoom = nil
-                self.sub = SUB_WAITING; self.waitTimer = 0
-                Sound.play('select')
-            end
-        end
+        if Input.pressed('confirm') then self:_sendPassword() end
         if Input.pressed('back') then
-            self.sub = SUB_LIST; self.inputBuffer = ""; self.joinRoom = nil
+            self:_setSub(SUB_LIST); self.inputBuffer = ""; self.joinRoom = nil
         end
     end
 
@@ -296,8 +311,15 @@ end
 
 -- ── Crear sala: avanzar / cancelar (teclado, ratón y táctil) ────────────────
 
+-- Máximo de jugadores: -1 / +1 (de 2 a 8); el botón pulsado se hunde un momento
+function OnlineHubState:_stepMax(d)
+    local v = math.max(2, math.min(8, self.maxValue + d))
+    if v ~= self.maxValue then self.maxValue = v; Sound.play('select', d > 0 and 1.08 or 0.94) end
+    self.stepPush, self.t = d, 0
+end
+
 function OnlineHubState:_createCancel()
-    self.sub = SUB_LIST; self:_resetCreate()
+    self:_setSub(SUB_LIST); self:_resetCreate()
     self:_syncKeyboard()
 end
 
@@ -327,493 +349,278 @@ function OnlineHubState:_createNext()
         self.createData.maxPlayers = self.maxValue
         NC:send("create_room", self.createData)
         self:_resetCreate()
-        self.sub = SUB_WAITING; self.waitTimer = 0
+        self:_setSub(SUB_WAITING); self.waitTimer = 0
     end
     Sound.play('select')
     self:_syncKeyboard()
 end
 
--- Botones CANCELAR / SIGUIENTE del asistente (misma geometría en todo el archivo)
-local function createNavRects()
-    local panelW = math.min(700, WINDOW_W - 120)
-    local panelX = math.floor((WINDOW_W - panelW) / 2)
-    local panelH = 350
-    local panelY = math.floor((WINDOW_H - panelH) / 2)
-    local bw, bh = 220, 44
-    local by = panelY + panelH - 80
-    return {
-        { x = panelX + 40,               y = by, w = bw, h = bh },   -- CANCELAR
-        { x = panelX + panelW - 40 - bw, y = by, w = bw, h = bh },   -- SIGUIENTE / CREAR
-    }
+-- ── Layout (ÚNICA fuente de geometría: render, ratón y táctil) ───────────────
+
+local ROW_H, ROW_GAP = 60, 8
+local BTN_H = 56
+
+function OnlineHubState:_layout()
+    local L = {}
+    local mx = math.max(40, math.floor(WINDOW_W * 0.07))
+    L.list = { x = mx, y = 168, w = WINDOW_W - 2 * mx, h = WINDOW_H - 168 - BTN_H - 92 }
+    L.rows = {}
+    local y0 = L.list.y + 16
+    L.maxVisible = math.max(1, math.floor((L.list.h - 32 + ROW_GAP) / (ROW_H + ROW_GAP)))
+    L.scroll = math.max(0, math.min(self.selectedIdx - L.maxVisible, #self.roomList - L.maxVisible))
+    for i = L.scroll + 1, math.min(#self.roomList, L.scroll + L.maxVisible) do
+        L.rows[i] = { x = L.list.x + 16, y = y0 + (i - 1 - L.scroll) * (ROW_H + ROW_GAP), w = L.list.w - 32, h = ROW_H }
+    end
+    -- botones de abajo (crear / refrescar / volver); el primero deja sitio al monstruito
+    local n, gap = #LIST_BTNS, 24
+    local bx0 = L.list.x + 56
+    local bw = math.floor((L.list.x + L.list.w - bx0 - (n - 1) * gap) / n)
+    L.btns = {}
+    for i = 1, n do L.btns[i] = { x = bx0 + (i - 1) * (bw + gap), y = L.list.y + L.list.h + 20, w = bw, h = BTN_H } end
+
+    -- ventana del asistente / de la contraseña / de espera
+    local ww = math.min(760, WINDOW_W - 120)
+    local wh = self.sub == SUB_PASSWORD and 360 or (self.sub == SUB_WAITING and 200 or 420)
+    L.win = { x = math.floor((WINDOW_W - ww) / 2), y = math.floor((WINDOW_H - wh) / 2) + 16, w = ww, h = wh }
+    local W = L.win
+    L.field = { x = W.x + 40, y = W.y + 170, w = W.w - 80, h = 64 }
+    local cw = math.floor((W.w - 80 - 24) / 2)
+    L.choices = { { x = W.x + 40, y = W.y + 158, w = cw, h = 96 }, { x = W.x + 40 + cw + 24, y = W.y + 158, w = cw, h = 96 } }
+    local nw = math.floor((W.w - 80 - 72) / 2)           -- (entre los dos, sitio para el monstruito)
+    -- máximo de jugadores: [<] número [>]
+    local nbw, abw = 200, 72
+    local nx = W.x + math.floor((W.w - nbw) / 2)
+    L.num   = { x = nx, y = W.y + 150, w = nbw, h = 108 }
+    L.minus = { x = nx - 24 - abw, y = W.y + 168, w = abw, h = abw }
+    L.plus  = { x = nx + nbw + 24, y = W.y + 168, w = abw, h = abw }
+    L.nav = { { x = W.x + 40, y = W.y + W.h - 96, w = nw, h = BTN_H },               -- CANCELAR
+              { x = W.x + 40 + nw + 72, y = W.y + W.h - 96, w = nw, h = BTN_H } }    -- SIGUIENTE / CREAR / UNIRSE
+    if self.sub == SUB_CREATE and self.createStep == STEP_PRIVACY then
+        -- (elegir una opción ya avanza: solo CANCELAR, en el centro)
+        L.nav = { { x = W.x + math.floor((W.w - nw) / 2), y = W.y + W.h - 96, w = nw, h = BTN_H } }
+    end
+    if self.sub == SUB_PASSWORD then
+        L.field.y = W.y + 140
+        L.nav[1], L.nav[2] = L.nav[2], L.nav[1]            -- (UNIRSE a la izquierda, CANCELAR a la derecha)
+        L.nav.join, L.nav.cancel = L.nav[2], L.nav[1]
+    end
+    return L
 end
 
 local function inRect(r, x, y, pad)
     pad = pad or 0
-    return x >= r.x - pad and x <= r.x + r.w + pad and y >= r.y - pad and y <= r.y + r.h + pad
+    return r and x >= r.x - pad and x <= r.x + r.w + pad and y >= r.y - pad and y <= r.y + r.h + pad
 end
 
--- ── Helpers de dibujo ─────────────────────────────────────────────────────────
+-- ── Dibujo ────────────────────────────────────────────────────────────────────
 
-local function drawPanel(x, y, w, h)
-    love.graphics.setColor(0, 0, 0, 0.65)
-    love.graphics.rectangle('fill', x, y, w, h)
-    love.graphics.setColor(1, 1, 1, 0.55)
-    love.graphics.rectangle('line', x,   y,   w,   h)
-    love.graphics.setColor(0, 0, 0, 0.55)
-    love.graphics.rectangle('line', x+2, y+2, w-4, h-4)
+local function bobOf(t, sel) return sel and ((math.floor(t * 3) % 2 == 0) and -4 or 0) or 0 end
+
+-- Botón de menú con su rebote y el monstruito si está elegido
+function OnlineHubState:_button(text, r, color, sel, a, ox, oy)
+    ox, oy = ox or 0, oy or 0
+    MenuButton.draw(text, r.x + ox, r.y + oy + bobOf(self.t, sel), r.w, r.h, color, sel,
+                    { alpha = a, scale = MenuButton.textScale(text, r.w - 48, 4) })
+    if sel then MenuKit.marker(r.x + ox, r.y + oy, r.h, self.t, a) end
 end
 
-local function drawBtn(label, x, y, w, h, selected)
-    if selected then
-        love.graphics.setColor(1, 1, 1, 1)
-        love.graphics.rectangle('fill', x, y, w, h)
-        love.graphics.setColor(0, 0, 0, 1)
-        love.graphics.rectangle('line', x, y, w, h)
-        love.graphics.setFont(FONT_MED)
-        love.graphics.setColor(0, 0, 0, 1)
-        love.graphics.printf(label, x, y + h/2 - FONT_MED:getHeight()/2, w, 'center')
-    else
-        love.graphics.setColor(0, 0, 0, 1)
-        love.graphics.rectangle('fill', x, y, w, h)
-        love.graphics.setColor(1, 1, 1, 1)
-        love.graphics.rectangle('line', x, y, w, h)
-        love.graphics.setFont(FONT_MED)
-        love.graphics.setColor(1, 1, 1, 1)
-        love.graphics.printf(label, x, y + h/2 - FONT_MED:getHeight()/2, w, 'center')
-    end
+-- Una ventana con su título en la fuente pixel (entra desde abajo)
+function OnlineHubState:_window(title, sub)
+    local Ly = self:_layout()
+    local W = Ly.win
+    MenuKit.dim(0.55)
+    local _, oy, a = self.winAnim:slide(1, 0, 160)
+    MenuKit.box('window', W.x, W.y + oy, W.w, W.h, a)
+    local s = 5
+    while s > 3 and PixelFont.width(title, s) > W.w - 80 do s = s - 1 end
+    PixelFont.shadow(title, math.floor(W.x + (W.w - PixelFont.width(title, s)) / 2), W.y + 30 + oy, s, a, { 1, 0.86, 0.36 })
+    if sub then MenuKit.text(FONT_SMALL, sub, W.x + 20, W.y + 30 + PixelFont.height(s) + 18 + oy, W.w - 40, 'center', { 0.75, 0.8, 0.95 }, a) end
+    return Ly, oy, a
 end
-
-local function drawTextBox(x, y, w, h, text, active)
-    love.graphics.setColor(1, 1, 1, active and 0.15 or 0.08)
-    love.graphics.rectangle('fill', x, y, w, h)
-    love.graphics.setColor(1, 1, 1, active and 0.9 or 0.4)
-    love.graphics.rectangle('line', x,   y,   w,   h)
-    love.graphics.setColor(0, 0, 0, active and 0.6 or 0.3)
-    love.graphics.rectangle('line', x+2, y+2, w-4, h-4)
-    love.graphics.setFont(FONT_MED)
-    love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.printf(text .. (active and "_" or ""), x + 12, y + h/2 - FONT_MED:getHeight()/2, w - 24, 'left')
-end
-
--- ── Render ────────────────────────────────────────────────────────────────────
 
 function OnlineHubState:render()
     MenuScene.backdrop()                 -- (el fondo vivo de los menús: src/ui/menu/MenuScene)
-
+    self:_renderList()
     if self.sub == SUB_WAITING then
-        self:_renderList()   -- fondo de lista debajo
-        love.graphics.setColor(0, 0, 0, 0.6)
-        love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
         local dots = string.rep(".", math.floor(love.timer.getTime() * 2) % 4)
-        love.graphics.setFont(FONT_MED)
-        love.graphics.setColor(1, 1, 1, 1)
-        love.graphics.printf(L('hub.connecting') .. dots, 0, WINDOW_H / 2 - FONT_MED:getHeight(), WINDOW_W, 'center')
-        love.graphics.setFont(FONT_SMALL)
-        love.graphics.setColor(1, 1, 1, 0.4)
-        love.graphics.printf(L('hub.cancel_hint'), 0, WINDOW_H / 2 + 20, WINDOW_W, 'center')
-    elseif self.sub == SUB_LIST then
-        self:_renderList()
+        local Ly, oy, a = self:_window(L('hub.connecting') .. dots)
+        MenuKit.text(FONT_SMALL, L('hub.cancel_hint'), Ly.win.x, Ly.win.y + Ly.win.h - 52 + oy, Ly.win.w, 'center', { 0.7, 0.76, 0.92 }, a)
     elseif self.sub == SUB_CREATE then
         self:_renderCreate()
     elseif self.sub == SUB_PASSWORD then
         self:_renderPassword()
     end
-
     love.graphics.setColor(COLOR_WHITE)
 end
 
 function OnlineHubState:_renderList()
-    local panelX = math.floor(WINDOW_W * 0.06)
-    local panelY = 44
-    local panelW = WINDOW_W - 2 * panelX
-    local panelH = WINDOW_H - 88
+    local A = self.anim
+    local Ly = self:_layout()
+    MenuKit.title(L('hub.title'), 'purple', A, 1)
+    local focusRooms = self.sub == SUB_LIST and self.listFocus == 'rooms'
 
-    drawPanel(panelX, panelY, panelW, panelH)
-
-    -- Título
-    love.graphics.setFont(FONT_BIG)
-    love.graphics.setColor(1, 0.95, 0.15, 1)
-    love.graphics.printf(L('hub.title'), 0, panelY + 12, WINDOW_W, 'center')
-
-    -- Usuario
-    love.graphics.setFont(FONT_SMALL)
-    love.graphics.setColor(1, 1, 1, 0.45)
-    love.graphics.printf(L('hub.playing_as', { name = NC.myName or '?' }), panelX + 20, panelY + 56, panelW - 40, 'left')
-
-    love.graphics.setColor(1, 0.85, 0, 0.25)
-    love.graphics.line(panelX + 20, panelY + 74, panelX + panelW - 20, panelY + 74)
-
-    -- Botones de acción inferiores (altura fija)
-    local btnH    = 48
-    local btnGap  = 14
-    local nBtns   = #LIST_BTNS
-    local btnZoneH = btnH + 20   -- zona reservada abajo
-    local btnsY   = panelY + panelH - btnZoneH
-
-    love.graphics.setColor(1, 0.85, 0, 0.18)
-    love.graphics.line(panelX + 20, btnsY, panelX + panelW - 20, btnsY)
-
-    local btnTotalW = nBtns * math.floor((panelW - 80) / nBtns)
-    local btnW      = math.floor((panelW - 80 - (nBtns-1) * btnGap) / nBtns)
-    local bx0       = panelX + 40
-    local by0       = btnsY + 10
-    local btnColors = { {0.3,1,0.3}, {0.3,0.7,1}, {0.8,0.3,0.3} }
-
-    for i, lbl in ipairs(LIST_BTNS) do
-        local bx  = bx0 + (i-1) * (btnW + btnGap)
-        local sel = (self.listFocus == 'btns' and i == self.btnSel)
-        drawBtn(L(lbl), bx, by0, btnW, btnH, sel)
+    -- La lista de salas
+    local ox, oy, a = A:slide(2, 0, 220)
+    local R = Ly.list
+    MenuKit.section(L('hub.rooms', { n = #self.roomList }), R.x + 4 + ox, R.y - 36 + oy, R.w / 2, focusRooms, a)
+    MenuKit.text(FONT_SMALL, L('hub.playing_as', { name = NC.myName or '?' }), R.x + ox, R.y - 30 + oy, R.w - 4, 'right', { 0.75, 0.8, 0.95 }, a)
+    MenuKit.box('well', R.x + ox, R.y + oy, R.w, R.h, a)
+    if #self.roomList == 0 then
+        MenuKit.text(FONT_MED, L('hub.no_rooms'), R.x + ox, R.y + R.h / 2 - 8 + oy, R.w, 'center', { 0.6, 0.66, 0.85 }, a)
     end
-
-    -- Lista de salas
-    local listStartY = panelY + 84
-    local listEndY   = btnsY - 6
-    local listH      = listEndY - listStartY
-    local nr         = #self.roomList
-    local rowH       = 46
-
-    if nr == 0 then
-        love.graphics.setFont(FONT_SMALL)
-        love.graphics.setColor(1, 1, 1, 0.35)
-        love.graphics.printf(L('hub.no_rooms'),
-            panelX + 20, listStartY + listH/2 - 8, panelW - 40, 'center')
-    else
-        local maxVisible = math.floor(listH / rowH)
-        -- Scroll si hay muchas salas
-        local scrollOff  = math.max(0, self.selectedIdx - maxVisible)
-        for i = scrollOff + 1, math.min(nr, scrollOff + maxVisible) do
-            local ry       = listStartY + (i - 1 - scrollOff) * rowH
-            local room     = self.roomList[i]
-            local selected = (i == self.selectedIdx) and self.listFocus == 'rooms'
-            local inGame   = (room.state == "IN_GAME")
-
-            if selected then
-                love.graphics.setColor(1, 0.85, 0, 0.16)
-                love.graphics.rectangle('fill', panelX + 14, ry, panelW - 28, rowH - 3)
-                love.graphics.setColor(1, 0.85, 0, 0.65)
-                love.graphics.rectangle('line', panelX + 14, ry, panelW - 28, rowH - 3)
-                love.graphics.setFont(FONT_SMALL)
-                love.graphics.setColor(1, 0.85, 0, 1)
-                love.graphics.print(">", panelX + 20, ry + rowH/2 - FONT_SMALL:getHeight()/2)
-            elseif (i == self.selectedIdx) then
-                love.graphics.setColor(1, 1, 1, 0.05)
-                love.graphics.rectangle('fill', panelX + 14, ry, panelW - 28, rowH - 3)
-            end
-
-            love.graphics.setFont(FONT_SMALL)
-            local nameColor = inGame and {1,0.65,0.1} or {1,1,1}
-            love.graphics.setColor(nameColor[1], nameColor[2], nameColor[3], 1)
-            local lockStr = room.hasPassword and "[P] " or (room.isPublic == false and "[V] " or "    ")
-            love.graphics.print(lockStr .. room.name, panelX + 36, ry + rowH/2 - FONT_SMALL:getHeight()/2)
-
-            love.graphics.setColor(0.7, 0.7, 0.7, 0.85)
-            local statusStr = inGame and L('hub.in_game') or L('hub.waiting')
-            love.graphics.printf(
-                string.format("%d/%d  %s", room.currentPlayers, room.maxPlayers, statusStr),
-                panelX, ry + rowH/2 - FONT_SMALL:getHeight()/2, panelW - 26, 'right')
+    for i, r in pairs(Ly.rows) do
+        local room = self.roomList[i]
+        local sel = i == self.selectedIdx and focusRooms
+        local x, y = r.x + ox, r.y + oy
+        MenuKit.box(sel and 'card_sel' or 'card', x, y, r.w, r.h, a)
+        local cy = y + math.floor((r.h - FONT_MED:getHeight()) / 2)
+        -- candado (contraseña) o hueco
+        local nx = x + 20
+        if room.hasPassword then
+            local iw, ih = PixelIcons.size('lock')
+            PixelIcons.draw('lock', nx, y + math.floor((r.h - ih * 3) / 2), 3, a)
+            nx = nx + iw * 3 + 14
         end
+        local inGame = room.state == "IN_GAME"
+        -- a la derecha: jugadores y estado
+        local status = inGame and L('hub.in_game') or L('hub.waiting')
+        local sw = PixelFont.width(status, 2)
+        local sx = x + r.w - 20 - sw
+        PixelFont.shadow(status, sx, y + math.floor((r.h - PixelFont.height(2)) / 2), 2, a, inGame and { 1, 0.62, 0.3 } or { 0.5, 0.95, 0.55 })
+        local count = string.format("%d/%d", room.currentPlayers or 0, room.maxPlayers or 0)
+        local cw = PixelFont.width(count, 3)
+        PixelFont.shadow(count, sx - 28 - cw, y + math.floor((r.h - PixelFont.height(3)) / 2), 3, a)
+        local name = fitText(FONT_MED, room.name or '?', sx - 56 - cw - nx)
+        MenuKit.text(FONT_MED, name, nx, cy, sx - nx, 'left', sel and { 1, 1, 1 } or { 0.88, 0.9, 1 }, a)
     end
+    -- flechas de que hay más salas arriba / abajo
+    if Ly.scroll > 0 then MenuKit.text(FONT_SMALL, '^', R.x + ox, R.y + 2 + oy, R.w, 'center', { 1, 0.86, 0.36 }, a) end
+    if Ly.scroll + Ly.maxVisible < #self.roomList then MenuKit.text(FONT_SMALL, 'v', R.x + ox, R.y + R.h - 14 + oy, R.w, 'center', { 1, 0.86, 0.36 }, a) end
+
+    -- Botones de abajo
+    local colors = { 'green', 'blue', 'grey' }
+    for i, lbl in ipairs(LIST_BTNS) do
+        local bx, by, ba = A:slide(2 + i, 0, 220)
+        local sel = self.sub == SUB_LIST and self.listFocus == 'btns' and i == self.btnSel
+        self:_button(L(lbl), Ly.btns[i], colors[i], sel, ba, bx, by)
+    end
+    if self.sub == SUB_LIST then MenuKit.hint(L('hub.list_hint'), A, 6) end
 end
 
 function OnlineHubState:_renderCreate()
-    local panelW = math.min(700, WINDOW_W - 120)
-    local panelX = math.floor((WINDOW_W - panelW) / 2)
-    local panelH = 350
-    local panelY = math.floor((WINDOW_H - panelH) / 2)
-
-    drawPanel(panelX, panelY, panelW, panelH)
-
-    -- Título y paso
-    love.graphics.setFont(FONT_BIG)
-    love.graphics.setColor(1, 0.95, 0.15, 1)
-    love.graphics.printf(L('hub.create'), 0, panelY + 14, WINDOW_W, 'center')
-
-    local stepLabels = {
-        L('hub.step_name'),
-        L('hub.step_visibility'),
-        L('hub.step_password'),
-        L('hub.step_max'),
-    }
-    love.graphics.setFont(FONT_SMALL)
-    love.graphics.setColor(1, 1, 1, 0.5)
-    love.graphics.printf(L('hub.step', { n = self.createStep, label = stepLabels[self.createStep] }),
-        panelX + 20, panelY + 62, panelW - 40, 'center')
-
-    love.graphics.setColor(1, 0.85, 0, 0.25)
-    love.graphics.line(panelX + 30, panelY + 82, panelX + panelW - 30, panelY + 82)
-
-    -- Barra de progreso de pasos
-    local maxStep = self.createData.isPublic and 3 or 4
-    local barW    = panelW - 80
-    local barX    = panelX + 40
-    local barY    = panelY + 92
-    love.graphics.setColor(1, 0.85, 0, 0.15)
-    love.graphics.rectangle('fill', barX, barY, barW, 6)
-    love.graphics.setColor(1, 0.85, 0, 0.8)
-    love.graphics.rectangle('fill', barX, barY, math.floor(barW * (self.createStep-1) / 3), 6)
-
-    local contentY = panelY + 116
-
-    -- Paso 1: Nombre
-    if self.createStep == STEP_NAME then
-        love.graphics.setFont(FONT_SMALL)
-        love.graphics.setColor(1, 1, 1, 0.6)
-        love.graphics.printf(L('hub.name_prompt'),
-            panelX + 20, contentY, panelW - 40, 'center')
-        drawTextBox(panelX + 40, contentY + 32, panelW - 80, 56, self.inputBuffer, true)
-        love.graphics.setFont(FONT_SMALL)
-        love.graphics.setColor(1, 1, 1, 0.3)
-        love.graphics.printf(L('hub.name_max'), panelX + 40, contentY + 96, panelW - 80, 'right')
-        love.graphics.setFont(FONT_SMALL)
-        love.graphics.setColor(1,1,1,0.3)
-        love.graphics.printf(L('hub.confirm_hint'), panelX, panelY + panelH - 24, panelW, 'center')
-
-    -- Paso 2: Privacidad (botones navegables)
-    elseif self.createStep == STEP_PRIVACY then
-        love.graphics.setFont(FONT_SMALL)
-        love.graphics.setColor(1, 1, 1, 0.6)
-        love.graphics.printf(L('hub.visibility_prompt'),
-            panelX + 20, contentY, panelW - 40, 'center')
-
-        local bW  = math.floor((panelW - 100) / 2)
-        local bH  = 80
-        local bY  = contentY + 36
-        local bX1 = panelX + 40
-        local bX2 = panelX + 60 + bW
-
-        -- Botón PUBLICA
-        local pubSel = (self.privacySel == 1)
-        drawBtn(L('hub.public'), bX1, bY, bW, bH, pubSel)
-        love.graphics.setFont(FONT_SMALL)
-        love.graphics.setColor(pubSel and {1,1,1,0.75} or {0,0,0,0.65})
-        love.graphics.printf(L('hub.public_desc'), bX1 + 4, bY + bH - 20, bW - 8, 'center')
-
-        -- Botón PRIVADA
-        local privSel = (self.privacySel == 2)
-        drawBtn(L('hub.private'), bX2, bY, bW, bH, privSel)
-        love.graphics.setFont(FONT_SMALL)
-        love.graphics.setColor(privSel and {1,1,1,0.75} or {0,0,0,0.65})
-        love.graphics.printf(L('hub.private_desc'), bX2 + 4, bY + bH - 20, bW - 8, 'center')
-
-        -- Instrucción
-        love.graphics.setFont(FONT_SMALL)
-        love.graphics.setColor(1,1,1,0.4)
-        love.graphics.printf(L('hub.select_hint'),
-            panelX, panelY + panelH - 24, panelW, 'center')
-
-    -- Paso 3: Contraseña (solo si privada)
-    elseif self.createStep == STEP_PASS then
-        love.graphics.setFont(FONT_SMALL)
-        love.graphics.setColor(1, 1, 1, 0.6)
-        love.graphics.printf(L('hub.password_prompt'),
-            panelX + 20, contentY, panelW - 40, 'center')
-        drawTextBox(panelX + 40, contentY + 32, panelW - 80, 56, self.inputBuffer, true)
-        love.graphics.setFont(FONT_SMALL)
-        love.graphics.setColor(1,1,1,0.3)
-        love.graphics.printf(L('hub.password_empty'), panelX + 40, contentY + 96, panelW - 80, 'left')
-        love.graphics.setFont(FONT_SMALL)
-        love.graphics.setColor(1,1,1,0.3)
-        love.graphics.printf(L('hub.confirm_hint'), panelX, panelY + panelH - 24, panelW, 'center')
-
-    -- Paso 4: Máximo de jugadores (selector)
-    elseif self.createStep == STEP_MAX then
-        love.graphics.setFont(FONT_SMALL)
-        love.graphics.setColor(1, 1, 1, 0.6)
-        love.graphics.printf(L('hub.max_prompt'),
-            panelX + 20, contentY, panelW - 40, 'center')
-
-        -- Selector de número
-        local selW  = 80
-        local selH  = 80
-        local selX  = math.floor((WINDOW_W - selW) / 2)
-        local selY  = contentY + 36
-
-        local arrowW = 60
-        local arrowH = selH
-        local arrowY = selY
-
-        -- Flecha izquierda  [−]
-        local lx    = selX - arrowW - 20
-        local lhov  = self.hoveredCreateBtn == 1 and Input.lastDevice == 'mouse'
-        drawBtn('-', lx, arrowY, arrowW, arrowH, lhov)
-
-        -- Número central
-        love.graphics.setColor(0, 0, 0, 0.7)
-        love.graphics.rectangle('fill', selX + 3, selY + 3, selW, selH)
-        love.graphics.setColor(1, 0.95, 0.15, 1)
-        love.graphics.rectangle('fill', selX, selY, selW, selH)
-        love.graphics.setFont(FONT_BIG)
-        love.graphics.setColor(0, 0, 0, 1)
-        love.graphics.printf(tostring(self.maxValue), selX, selY + selH/2 - FONT_BIG:getHeight()/2, selW, 'center')
-
-        -- Flecha derecha  [+]
-        local rx   = selX + selW + 20
-        local rhov = self.hoveredCreateBtn == 2 and Input.lastDevice == 'mouse'
-        drawBtn('+', rx, arrowY, arrowW, arrowH, rhov)
-
-        -- Instrucción
-        love.graphics.setFont(FONT_SMALL)
-        love.graphics.setColor(1,1,1,0.4)
-        love.graphics.printf(L('hub.change_hint'), panelX, selY + selH + 12, panelW, 'center')
-
-        love.graphics.setFont(FONT_SMALL)
-        love.graphics.setColor(1,1,1,0.3)
-        love.graphics.printf(L('hub.create_hint'), panelX, panelY + panelH - 24, panelW, 'center')
+    local stepLabels = { L('hub.step_name'), L('hub.step_visibility'), L('hub.step_password'), L('hub.step_max') }
+    local Ly, oy, a = self:_window(L('hub.create'), stepLabels[self.createStep])
+    local W = Ly.win
+    -- los pasos: un cuadradito por paso (el de contraseña solo si es privada)
+    local steps = self.privacySel == 2 and { 1, 2, 3, 4 } or { 1, 2, 4 }
+    local n = #steps
+    local sz, gap = 16, 12
+    local sx = math.floor(W.x + (W.w - (n * sz + (n - 1) * gap)) / 2)
+    for i, st in ipairs(steps) do
+        local done, cur = st < self.createStep, st == self.createStep
+        love.graphics.setColor(0, 0, 0, 0.5 * a)
+        love.graphics.rectangle('fill', sx + (i - 1) * (sz + gap) + 4, W.y + 126 + oy + 4, sz, sz)
+        if cur then love.graphics.setColor(1, 0.86, 0.36, a)
+        elseif done then love.graphics.setColor(0.5, 0.95, 0.55, a)
+        else love.graphics.setColor(0.3, 0.36, 0.55, a) end
+        love.graphics.rectangle('fill', sx + (i - 1) * (sz + gap), W.y + 126 + oy, sz, sz)
     end
+    love.graphics.setColor(1, 1, 1, 1)
 
-    -- Botones del asistente (ratón / táctil)
-    local nav = createNavRects()
-    drawBtn(L('hub.cancel'), nav[1].x, nav[1].y, nav[1].w, nav[1].h, self.hoveredCreateNav == 1)
-    drawBtn(self.createStep == STEP_MAX and L('hub.create') or L('hub.next'), nav[2].x, nav[2].y, nav[2].w, nav[2].h,
-            self.hoveredCreateNav == 2 or self.hoveredCreateNav == nil)
+    local F = Ly.field
+    if self.createStep == STEP_NAME then
+        MenuKit.field(F.x, F.y + oy, F.w, F.h, self.inputBuffer, true, { alpha = a, placeholder = L('hub.name_prompt') })
+        MenuKit.text(FONT_SMALL, L('hub.name_max'), F.x, F.y + F.h + 12 + oy, F.w, 'right', { 0.6, 0.66, 0.85 }, a)
+    elseif self.createStep == STEP_PRIVACY then
+        local opts = { { 'hub.public', 'hub.public_desc', 'blue' }, { 'hub.private', 'hub.private_desc', 'pink' } }
+        for i, o in ipairs(opts) do
+            local r = Ly.choices[i]
+            local sel = self.privacySel == i
+            MenuButton.draw(L(o[1]), r.x, r.y + oy + bobOf(self.t, sel), r.w, r.h, sel and o[3] or 'grey', sel,
+                            { alpha = a, scale = MenuButton.textScale(L(o[1]), r.w - 48, 5) })   -- (el color marca la elegida)
+            MenuKit.text(FONT_SMALL, L(o[2]), r.x, r.y + r.h + 16 + oy, r.w, 'center', sel and { 1, 1, 1 } or { 0.6, 0.66, 0.85 }, a)
+        end
+    elseif self.createStep == STEP_PASS then
+        MenuKit.field(F.x, F.y + oy, F.w, F.h, self.inputBuffer, true, { alpha = a, placeholder = L('hub.password_empty') })
+    elseif self.createStep == STEP_MAX then
+        -- el número en su hueco y un botón a cada lado (se hunde un momento al pulsarlo)
+        local N = Ly.num
+        MenuKit.box('well', N.x, N.y + oy, N.w, N.h, a)
+        local num = tostring(self.maxValue)
+        PixelFont.shadow(num, math.floor(N.x + (N.w - PixelFont.width(num, 8)) / 2), N.y + 16 + oy, 8, a, { 1, 0.86, 0.36 })
+        local lbl = L('hub.players_word')
+        PixelFont.draw(lbl, math.floor(N.x + (N.w - PixelFont.width(lbl, 2)) / 2), N.y + N.h - 24 + oy, 2, 0.8 * a)
+        for i, r in ipairs({ Ly.minus, Ly.plus }) do
+            local d = i == 1 and -1 or 1
+            local can = (d < 0 and self.maxValue > 2) or (d > 0 and self.maxValue < 8)
+            local hov = self.hoveredCreateBtn == i
+            local push = (self.stepPush == d and self.t < 0.12) and 4 or 0
+            MenuButton.draw(nil, r.x, r.y + oy + push, r.w, r.h, can and 'blue' or 'grey', hov and can, { alpha = a * (can and 1 or 0.6) })
+            MenuKit.arrow(math.floor(r.x + r.w / 2) + (d < 0 and 8 or -8), math.floor(r.y + (r.h - 4) / 2) + oy + push, 28, d,
+                          a * (can and 1 or 0.6), { 1, 1, 1 })
+        end
+    end
+    -- CANCELAR / SIGUIENTE (o CREAR); en la privacidad, solo CANCELAR (elegir ya avanza)
+    if #Ly.nav == 1 then
+        self:_button(L('hub.cancel'), Ly.nav[1], 'grey', false, a, 0, oy)
+    else
+        local nextSel = self.hoveredCreateNav ~= 1
+        self:_button(L('hub.cancel'), Ly.nav[1], 'grey', not nextSel, a, 0, oy)
+        self:_button(self.createStep == STEP_MAX and L('hub.create') or L('hub.next'), Ly.nav[2], 'green', nextSel, a, 0, oy)
+    end
+    local hints = { L('hub.confirm_hint'), L('hub.select_hint'), L('hub.confirm_hint'), L('hub.change_hint') .. '   ' .. L('hub.create_hint') }
+    MenuKit.hint(hints[self.createStep])
 end
 
 function OnlineHubState:_renderPassword()
-    local panelW = math.min(560, WINDOW_W - 120)
-    local panelH = 320
-    local panelX = math.floor((WINDOW_W - panelW) / 2)
-    local panelY = math.floor((WINDOW_H - panelH) / 2)
-
-    drawPanel(panelX, panelY, panelW, panelH)
-
-    love.graphics.setFont(FONT_BIG)
-    love.graphics.setColor(1, 0.95, 0.15, 1)
-    love.graphics.printf(L('hub.password_title'), 0, panelY + 14, WINDOW_W, 'center')
-
-    if self.joinRoom then
-        love.graphics.setFont(FONT_SMALL)
-        love.graphics.setColor(1, 1, 1, 0.55)
-        love.graphics.printf(L('hub.room_label', { name = self.joinRoom.name }), panelX + 20, panelY + 66, panelW - 40, 'center')
-    end
-
-    love.graphics.setColor(1, 0.85, 0, 0.2)
-    love.graphics.line(panelX + 20, panelY + 88, panelX + panelW - 20, panelY + 88)
-
-    local boxY = panelY + 104
-    drawTextBox(panelX + 40, boxY, panelW - 80, 56, self.inputBuffer, true)
-
-    -- Botones UNIRSE y CANCELAR
-    local bW  = math.floor((panelW - 100) / 2)
-    local bY2 = boxY + 74
-    local mouse = Input.lastDevice == 'mouse'
-    drawBtn(L('hub.join'),   panelX + 40,      bY2, bW, 48, true)
-    drawBtn(L('hub.cancel'), panelX + 60 + bW, bY2, bW, 48, self.hoveredPassBtn == 2 and mouse)
-
-    love.graphics.setFont(FONT_SMALL)
-    love.graphics.setColor(1,1,1,0.3)
-    love.graphics.printf(L('hub.join_hint'), panelX, panelY + panelH - 24, panelW, 'center')
+    local Ly, oy, a = self:_window(L('hub.password_title'), self.joinRoom and L('hub.room_label', { name = self.joinRoom.name }) or nil)
+    local F = Ly.field
+    MenuKit.field(F.x, F.y + oy, F.w, F.h, self.inputBuffer, true, { alpha = a, mask = true })
+    local cancelSel = self.hoveredPassBtn == 2
+    self:_button(L('hub.join'), Ly.nav.join, 'green', not cancelSel, a, 0, oy)
+    self:_button(L('hub.cancel'), Ly.nav.cancel, 'grey', cancelSel, a, 0, oy)
+    MenuKit.hint(L('hub.join_hint'))
 end
 
--- ── Hover del mouse: actualiza las variables de selección reales ──────────────
+-- ── Ratón: mueve la selección real al elemento bajo el cursor ────────────────
 
 function OnlineHubState:mousemoved(tx, ty)
-    -- Recordar el hover anterior ANTES de limpiarlo: el sonido solo debe
-    -- sonar al entrar en un botón, no en cada píxel de movimiento
-    local prevCreate, prevPass = self.hoveredCreateBtn, self.hoveredPassBtn
-    self.hoveredCreateBtn = nil
-    self.hoveredPassBtn   = nil
-
+    local Ly = self:_layout()
     if self.sub == SUB_LIST then
-        local panelX     = math.floor(WINDOW_W * 0.06)
-        local panelY     = 44
-        local panelW     = WINDOW_W - 2 * panelX
-        local panelH     = WINDOW_H - 88
-        local rowH       = 46
-        local listStartY = panelY + 84
-        local btnH       = 48
-        local btnGap     = 14
-        local nBtns      = #LIST_BTNS
-        local btnZoneH   = btnH + 20
-        local btnsY      = panelY + panelH - btnZoneH
-        local listEndY   = btnsY - 6
-        local listH      = listEndY - listStartY
-        local btnW       = math.floor((panelW - 80 - (nBtns-1) * btnGap) / nBtns)
-        local bx0        = panelX + 40
-        local by0        = btnsY + 10
-
-        -- Botones inferiores (CREAR SALA / REFRESCAR / VOLVER)
-        for i = 1, nBtns do
-            local bx = bx0 + (i-1) * (btnW + btnGap)
-            if tx >= bx-8 and tx <= bx+btnW+8 and ty >= by0-8 and ty <= by0+btnH+8 then
+        for i, r in ipairs(Ly.btns) do
+            if inRect(r, tx, ty, 8) then
                 if self.listFocus ~= 'btns' or self.btnSel ~= i then
-                    self.listFocus = 'btns'; self.btnSel = i; Sound.play('select')
+                    self.listFocus, self.btnSel, self.t = 'btns', i, 0; Sound.play('select')
                 end
                 return
             end
         end
-
-        -- Filas de salas
-        local nr = #self.roomList
-        if nr > 0 then
-            local maxVisible = math.floor(listH / rowH)
-            local scrollOff  = math.max(0, self.selectedIdx - maxVisible)
-            for i = scrollOff + 1, math.min(nr, scrollOff + maxVisible) do
-                local ry = listStartY + (i - 1 - scrollOff) * rowH
-                if tx >= panelX+14 and tx <= panelX+panelW-14 and ty >= ry and ty <= ry+rowH-3 then
-                    if self.listFocus ~= 'rooms' or self.selectedIdx ~= i then
-                        self.listFocus = 'rooms'; self.selectedIdx = i; Sound.play('select')
-                    end
-                    return
+        for i, r in pairs(Ly.rows) do
+            if inRect(r, tx, ty) then
+                if self.listFocus ~= 'rooms' or self.selectedIdx ~= i then
+                    self.listFocus, self.selectedIdx = 'rooms', i; Sound.play('select')
                 end
+                return
             end
         end
-
     elseif self.sub == SUB_CREATE then
-        local prevNav = self.hoveredCreateNav
+        local prev = self.hoveredCreateNav
         self.hoveredCreateNav = nil
-        for i, r in ipairs(createNavRects()) do
-            if inRect(r, tx, ty, 4) then self.hoveredCreateNav = i end
-        end
-        if self.hoveredCreateNav and self.hoveredCreateNav ~= prevNav then Sound.play('select') end
-        local panelW   = math.min(700, WINDOW_W - 120)
-        local panelX   = math.floor((WINDOW_W - panelW) / 2)
-        local panelH   = 350
-        local panelY   = math.floor((WINDOW_H - panelH) / 2)
-        local contentY = panelY + 116
-
+        for i, r in ipairs(Ly.nav) do if inRect(r, tx, ty, 4) then self.hoveredCreateNav = i end end
+        if self.hoveredCreateNav and self.hoveredCreateNav ~= prev then self.t = 0; Sound.play('select') end
         if self.createStep == STEP_PRIVACY then
-            -- Actualiza privacySel (variable de selección real)
-            local bW  = math.floor((panelW - 100) / 2)
-            local bH  = 80
-            local bY  = contentY + 36
-            local bX1 = panelX + 40
-            local bX2 = panelX + 60 + bW
-            if tx >= bX1-8 and tx <= bX1+bW+8 and ty >= bY-8 and ty <= bY+bH+8 then
-                if self.privacySel ~= 1 then self.privacySel = 1; Sound.play('select') end
-            elseif tx >= bX2-8 and tx <= bX2+bW+8 and ty >= bY-8 and ty <= bY+bH+8 then
-                if self.privacySel ~= 2 then self.privacySel = 2; Sound.play('select') end
+            for i, r in ipairs(Ly.choices) do
+                if inRect(r, tx, ty, 8) and self.privacySel ~= i then self.privacySel, self.t = i, 0; Sound.play('select') end
             end
         elseif self.createStep == STEP_MAX then
-            -- Botones +/- sin variable de selección: solo hover visual
-            local selW   = 80; local selH = 80
-            local selX   = math.floor((WINDOW_W - selW) / 2)
-            local selY   = contentY + 36
-            local arrowW = 60
-            local lArX   = selX - arrowW - 20
-            local rArX   = selX + selW + 20
-            local prev   = prevCreate
-            if tx >= lArX-8 and tx <= lArX+arrowW+8 and ty >= selY-8 and ty <= selY+selH+8 then
-                self.hoveredCreateBtn = 1
-            elseif tx >= rArX-8 and tx <= rArX+arrowW+8 and ty >= selY-8 and ty <= selY+selH+8 then
-                self.hoveredCreateBtn = 2
-            end
-            if self.hoveredCreateBtn and self.hoveredCreateBtn ~= prev then Sound.play('select') end
+            local prevB = self.hoveredCreateBtn
+            self.hoveredCreateBtn = inRect(Ly.minus, tx, ty, 6) and 1 or (inRect(Ly.plus, tx, ty, 6) and 2 or nil)
+            if self.hoveredCreateBtn and self.hoveredCreateBtn ~= prevB then Sound.play('select') end
         end
-
     elseif self.sub == SUB_PASSWORD then
-        -- CANCELAR no tiene variable de selección (UNIRSE siempre está "selected")
-        local panelW = math.min(560, WINDOW_W - 120)
-        local panelH = 320
-        local panelX = math.floor((WINDOW_W - panelW) / 2)
-        local panelY = math.floor((WINDOW_H - panelH) / 2)
-        local boxY   = panelY + 104
-        local bW     = math.floor((panelW - 100) / 2)
-        local bY2    = boxY + 74
-        local prev   = prevPass
-        if tx >= panelX+60+bW-8 and tx <= panelX+60+2*bW+8 and ty >= bY2-8 and ty <= bY2+48+8 then
-            self.hoveredPassBtn = 2
-        end
-        if self.hoveredPassBtn and self.hoveredPassBtn ~= prev then Sound.play('select') end
+        local prev = self.hoveredPassBtn
+        self.hoveredPassBtn = inRect(Ly.nav.cancel, tx, ty, 4) and 2 or nil
+        if self.hoveredPassBtn and self.hoveredPassBtn ~= prev then self.t = 0; Sound.play('select') end
     end
 end
 
@@ -833,191 +640,58 @@ end
 
 -- ── Touch ─────────────────────────────────────────────────────────────────────
 
+function OnlineHubState:_listButton(i)
+    if i == BTN_CREATE then
+        self:_resetCreate(); self:_setSub(SUB_CREATE)
+    elseif i == BTN_REFRESH then
+        NC:send("get_rooms", {})
+    elseif i == BTN_BACK then
+        self:_leave()
+    end
+end
+
 function OnlineHubState:touchpressed(id, tx, ty)
     if self.sub == SUB_WAITING then return end
+    local Ly = self:_layout()
 
-    -- ── SUB_LIST ─────────────────────────────────────────────────────────────
     if self.sub == SUB_LIST then
-        local panelX   = math.floor(WINDOW_W * 0.06)
-        local panelY   = 44
-        local panelW   = WINDOW_W - 2 * panelX
-        local panelH   = WINDOW_H - 88
-        local rowH     = 46
-        local listStartY = panelY + 84
-        local btnH     = 48
-        local btnGap   = 14
-        local nBtns    = #LIST_BTNS
-        local btnZoneH = btnH + 20
-        local btnsY    = panelY + panelH - btnZoneH
-        local listEndY = btnsY - 6
-        local listH    = listEndY - listStartY
-        local btnW     = math.floor((panelW - 80 - (nBtns-1) * btnGap) / nBtns)
-        local bx0      = panelX + 40
-        local by0      = btnsY + 10
-
-        -- Botones de acción inferiores (CREAR SALA / REFRESCAR / VOLVER)
-        for i = 1, nBtns do
-            local bx = bx0 + (i-1) * (btnW + btnGap)
-            if tx >= bx - 8 and tx <= bx + btnW + 8 and
-               ty >= by0 - 8 and ty <= by0 + btnH + 8 then
-                Sound.play('select')
-                if i == BTN_CREATE then
-                    self:_resetCreate(); self.sub = SUB_CREATE
-                    self:_syncKeyboard()
-                elseif i == BTN_REFRESH then
-                    NC:send("get_rooms", {})
-                elseif i == BTN_BACK then
-                    NC:disconnect(); gStateMachine:change('online_login')
-                end
-                return
-            end
+        for i, r in ipairs(Ly.btns) do
+            if inRect(r, tx, ty, 8) then Sound.play('select'); self:_listButton(i); self:_syncKeyboard(); return end
         end
-
-        -- Lista de salas (con scroll igual que en render)
-        local nr = #self.roomList
-        if nr > 0 then
-            local maxVisible = math.floor(listH / rowH)
-            local scrollOff  = math.max(0, self.selectedIdx - maxVisible)
-            for i = scrollOff + 1, math.min(nr, scrollOff + maxVisible) do
-                local ry = listStartY + (i - 1 - scrollOff) * rowH
-                if tx >= panelX + 14 and tx <= panelX + panelW - 14 and
-                   ty >= ry          and ty <= ry + rowH - 3 then
-                    Sound.play('select')
-                    self:_joinRoom(self.roomList[i])
-                    self:_syncKeyboard()
-                    return
-                end
+        for i, r in pairs(Ly.rows) do
+            if inRect(r, tx, ty) then
+                Sound.play('select')
+                self.selectedIdx, self.listFocus = i, 'rooms'
+                self:_joinRoom(self.roomList[i])
+                self:_syncKeyboard()
+                return
             end
         end
         return
     end
 
-    -- ── SUB_CREATE ────────────────────────────────────────────────────────────
     if self.sub == SUB_CREATE then
-        local nav = createNavRects()
-        if inRect(nav[1], tx, ty, 6) then Sound.play('select'); self:_createCancel(); return end
-        if inRect(nav[2], tx, ty, 6) then self:_createNext(); return end
-
-        local panelW   = math.min(700, WINDOW_W - 120)
-        local panelX   = math.floor((WINDOW_W - panelW) / 2)
-        local panelH   = 350
-        local panelY   = math.floor((WINDOW_H - panelH) / 2)
-        local contentY = panelY + 116
-
-        -- Paso 1: Nombre
-        if self.createStep == STEP_NAME then
-            local tbX = panelX + 40;  local tbY = contentY + 32
-            local tbW = panelW - 80;  local tbH = 56
-            -- Toque en el cuadro de texto → abrir teclado
-            if tx >= tbX and tx <= tbX + tbW and ty >= tbY and ty <= tbY + tbH then
-                love.keyboard.setTextInput(true); self._keyboardOn = true
-                return
-            end
-
-        -- Paso 2: Privacidad (seleccionar + confirmar con un solo toque)
+        if inRect(Ly.nav[1], tx, ty, 6) then Sound.play('select'); self:_createCancel(); return end
+        if inRect(Ly.nav[2], tx, ty, 6) then self:_createNext(); return end
+        if (self.createStep == STEP_NAME or self.createStep == STEP_PASS) and inRect(Ly.field, tx, ty) then
+            love.keyboard.setTextInput(true); self._keyboardOn = true
         elseif self.createStep == STEP_PRIVACY then
-            local bW  = math.floor((panelW - 100) / 2)
-            local bH  = 80
-            local bY  = contentY + 36
-            local bX1 = panelX + 40
-            local bX2 = panelX + 60 + bW
-
-            if tx >= bX1 - 8 and tx <= bX1 + bW + 8 and
-               ty >= bY  - 8 and ty <= bY  + bH + 8 then
-                -- PUBLICA seleccionada y confirmada
-                self.privacySel          = 1
-                self.createData.isPublic = true
-                self.createData.password = ""
-                self.createStep          = STEP_MAX
-                Sound.play('select')
-                self:_syncKeyboard()
-                return
+            -- (un toque elige y avanza)
+            for i, r in ipairs(Ly.choices) do
+                if inRect(r, tx, ty, 8) then self.privacySel = i; self:_createNext(); return end
             end
-            if tx >= bX2 - 8 and tx <= bX2 + bW + 8 and
-               ty >= bY  - 8 and ty <= bY  + bH + 8 then
-                -- PRIVADA seleccionada y confirmada
-                self.privacySel          = 2
-                self.createData.isPublic = false
-                self.inputBuffer         = ""
-                self.createStep          = STEP_PASS
-                Sound.play('select')
-                self:_syncKeyboard()
-                return
-            end
-
-        -- Paso 3: Contraseña
-        elseif self.createStep == STEP_PASS then
-            local tbX = panelX + 40;  local tbY = contentY + 32
-            local tbW = panelW - 80;  local tbH = 56
-            if tx >= tbX and tx <= tbX + tbW and ty >= tbY and ty <= tbY + tbH then
-                love.keyboard.setTextInput(true); self._keyboardOn = true
-                return
-            end
-
-        -- Paso 4: Máximo de jugadores
         elseif self.createStep == STEP_MAX then
-            local selW   = 80
-            local selH   = 80
-            local selX   = math.floor((WINDOW_W - selW) / 2)
-            local selY   = contentY + 36
-            local arrowW = 60
-            local lArX   = selX - arrowW - 20   -- botón [−]
-            local rArX   = selX + selW + 20     -- botón [+]
-
-            -- Botón [−]
-            if tx >= lArX - 8 and tx <= lArX + arrowW + 8 and
-               ty >= selY - 8 and ty <= selY + selH   + 8 then
-                self.maxValue = math.max(2, self.maxValue - 1)
-                Sound.play('select')
-                return
-            end
-            -- Botón [+]
-            if tx >= rArX - 8 and tx <= rArX + arrowW + 8 and
-               ty >= selY - 8 and ty <= selY + selH   + 8 then
-                self.maxValue = math.min(8, self.maxValue + 1)
-                Sound.play('select')
-                return
-            end
+            if inRect(Ly.minus, tx, ty, 8) then self:_stepMax(-1) elseif inRect(Ly.plus, tx, ty, 8) then self:_stepMax(1) end
         end
         return
     end
 
-    -- ── SUB_PASSWORD ──────────────────────────────────────────────────────────
     if self.sub == SUB_PASSWORD then
-        local panelW = math.min(560, WINDOW_W - 120)
-        local panelH = 320
-        local panelX = math.floor((WINDOW_W - panelW) / 2)
-        local panelY = math.floor((WINDOW_H - panelH) / 2)
-        local boxY   = panelY + 104
-        local bW     = math.floor((panelW - 100) / 2)
-        local bY2    = boxY + 74
-
-        -- Campo de texto → abrir teclado
-        if tx >= panelX + 40 and tx <= panelX + panelW - 40 and
-           ty >= boxY         and ty <= boxY + 56 then
-            love.keyboard.setTextInput(true); self._keyboardOn = true
-            return
-        end
-
-        -- Botón UNIRSE
-        if tx >= panelX + 40 - 8          and tx <= panelX + 40 + bW + 8 and
-           ty >= bY2  - 8                 and ty <= bY2 + 48 + 8 then
-            if self.joinRoom then
-                NC:send("join_room", { id=self.joinRoom.id, password=self.inputBuffer })
-                self.inputBuffer = ""; self.joinRoom = nil
-                self.sub = SUB_WAITING; self.waitTimer = 0
-                Sound.play('select')
-                self:_syncKeyboard()
-            end
-            return
-        end
-
-        -- Botón CANCELAR
-        if tx >= panelX + 60 + bW - 8     and tx <= panelX + 60 + 2*bW + 8 and
-           ty >= bY2  - 8                 and ty <= bY2 + 48 + 8 then
-            self.sub = SUB_LIST; self.inputBuffer = ""; self.joinRoom = nil
+        if inRect(Ly.field, tx, ty) then love.keyboard.setTextInput(true); self._keyboardOn = true; return end
+        if inRect(Ly.nav.join, tx, ty, 6) then self:_sendPassword(); return end
+        if inRect(Ly.nav.cancel, tx, ty, 6) then
+            self:_setSub(SUB_LIST); self.inputBuffer = ""; self.joinRoom = nil
             self:_syncKeyboard()
-            return
         end
     end
 end

@@ -138,6 +138,8 @@ function PixelFont.width(text, s)
     return (build():getWidth(PixelFont.upper(text)) - 1) * s
 end
 function PixelFont.height(s) return H * s end
+-- ¿Tiene la fuente todas las letras de este texto? (los nombres que escriben los jugadores pueden no tenerlas)
+function PixelFont.has(text) return build():hasGlyphs(PixelFont.upper(text)) end
 
 -- Dibuja el texto (solo las letras), con la esquina superior izquierda del cuerpo de las letras
 -- en (x, y). `alpha` afecta a todo. color (opcional) = el de las letras ({r, g, b}); blanco si no.

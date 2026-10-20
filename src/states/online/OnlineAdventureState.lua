@@ -62,23 +62,6 @@ local SPEC_OPTS  = { 'oadv.wait', 'oadv.leave_hub' }   -- claves de idioma
 
 local function lerp(a, b, f) return a + (b - a) * f end
 
--- ── Helpers ───────────────────────────────────────────────────────────────────
-local function drawPixelButton(label, cx, y, w, h, selected, alpha)
-    if selected then
-        love.graphics.setColor(0.18, 0.18, 0.18, alpha)
-        love.graphics.rectangle('fill', cx-w/2+4, y+4, w, h)
-        love.graphics.setColor(1, 1, 1, alpha)
-        love.graphics.rectangle('fill', cx-w/2, y, w, h)
-        love.graphics.setColor(0, 0, 0, alpha)
-        love.graphics.printf(label, cx-w/2, y+h/2-FONT_MED:getHeight()/2, w, 'center')
-    else
-        love.graphics.setColor(1, 1, 1, alpha*0.45)
-        love.graphics.rectangle('line', cx-w/2, y, w, h)
-        love.graphics.setColor(1, 1, 1, alpha*0.5)
-        love.graphics.printf(label, cx-w/2, y+h/2-FONT_MED:getHeight()/2, w, 'center')
-    end
-end
-
 -- ── Enter ─────────────────────────────────────────────────────────────────────
 
 function OnlineAdventureState:enter(args)
@@ -705,29 +688,26 @@ end
 
 function OnlineAdventureState:_pauseRects()
     local n      = #self:_getPauseOpts()
-    local btnW, btnH, gap = 300, 48, 14
-    local totalBH = n * btnH + (n - 1) * gap
-    local panelW, panelH = 440, 72 + totalBH + 32
+    local btnW, btnH, gap = 340, 56, 12
+    local panelW, panelH = math.min(540, WINDOW_W - 80), 116 + n * (btnH + gap) + 24
     local panelX = math.floor((WINDOW_W - panelW) / 2)
     local panelY = math.floor((WINDOW_H - panelH) / 2)
     local rects  = {}
     for i = 1, n do
-        rects[i] = { x = WINDOW_W / 2 - btnW / 2, y = panelY + 68 + (i - 1) * (btnH + gap), w = btnW, h = btnH }
+        rects[i] = { x = math.floor(WINDOW_W / 2 - btnW / 2) + 20, y = panelY + 108 + (i - 1) * (btnH + gap), w = btnW, h = btnH }
     end
     return rects, { x = panelX, y = panelY, w = panelW, h = panelH }
 end
 
 function OnlineAdventureState:_specRects()
     local n = #SPEC_OPTS
-    local btnW, btnH, gap = 260, 44, 12
-    local panelW, panelH = 380, 180
+    local btnW, btnH, gap = 340, 56, 12
+    local panelW, panelH = math.min(540, WINDOW_W - 80), 116 + n * (btnH + gap) + 24
     local panelX = math.floor((WINDOW_W - panelW) / 2)
     local panelY = math.floor((WINDOW_H - panelH) / 2)
-    local totalBH = n * btnH + (n - 1) * gap
-    local startBY = panelY + panelH / 2 - totalBH / 2 + 16
     local rects = {}
     for i = 1, n do
-        rects[i] = { x = WINDOW_W / 2 - btnW / 2, y = startBY + (i - 1) * (btnH + gap), w = btnW, h = btnH }
+        rects[i] = { x = math.floor(WINDOW_W / 2 - btnW / 2) + 20, y = panelY + 108 + (i - 1) * (btnH + gap), w = btnW, h = btnH }
     end
     return rects, { x = panelX, y = panelY, w = panelW, h = panelH }
 end
@@ -783,7 +763,7 @@ end
 
 -- ── Partes (el resto de OnlineAdventureState.lua, por sistemas) ────────────────────
 P.TICK_DT = TICK_DT; P.TELEPORT_DIST = TELEPORT_DIST; P.EVENT_MAX_WAIT = EVENT_MAX_WAIT; P.POPUP_LIFE = POPUP_LIFE; P.POPUP_RISE = POPUP_RISE
-P.POPUP_BOUNCE_T = POPUP_BOUNCE_T; P.SPEC_WAIT = SPEC_WAIT; P.SPEC_OPTS = SPEC_OPTS; P.lerp = lerp; P.drawPixelButton = drawPixelButton
+P.POPUP_BOUNCE_T = POPUP_BOUNCE_T; P.SPEC_WAIT = SPEC_WAIT; P.SPEC_OPTS = SPEC_OPTS; P.lerp = lerp
 P.INTRO_DUR = INTRO_DUR; P.BANNER_DUR = BANNER_DUR
 require('src/states/online/OnlineAdventureNet')(OnlineAdventureState, P)
 require('src/states/online/OnlineAdventureRender')(OnlineAdventureState, P)

@@ -49,6 +49,7 @@ return {
         hint = "[FLECHAS] elegir    [ENTER] empezar    [ESC] volver",
         easy = "FÁCIL", normal = "NORMAL", hard = "DIFÍCIL", extreme = "EXTREMO", xtra = "XTRA EXTREMO", none = "ORIGINAL",
         desc = {
+            none = "El juego tal cual, sin modificadores",
             easy = "Todo más lento, 4 de vida; pinchos y lava no matan de golpe",
             normal = "Los niveles tal cual; jefes algo más tranquilos",
             hard = "Enemigos más rápidos; los jefes, sin rebajas",
@@ -197,6 +198,9 @@ return {
         not_found = "No se encontró el servidor. Revisa tu conexión a internet.",
     },
     hub = {
+        players_word = "JUGADORES",
+        rooms = "SALAS ({n})",
+        list_hint = "[FLECHAS] elegir    [ENTER] entrar    [ESC] salir",
         title = "HUB DE SALAS",
         create = "CREAR SALA",
         refresh = "REFRESCAR",
@@ -237,6 +241,8 @@ return {
         join_hint = "[ENTER] Unirse   [ESC] Cancelar",
     },
     room = {
+        difficulty_label = "DIFICULTAD",
+        difficulty_hint = "{desc}    [<][>] cambiar",
         give_admin = "DAR ADMIN",
         kick = "EXPULSAR",
         ban = "BANEAR",

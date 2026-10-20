@@ -8,7 +8,7 @@ local GRACE = 15
 return {
     -- Textos (nombre, tagline, objetivo, emptyHint): assets/lang, claves mode.race.*
     id = 'race', icon = 'flag',
-    color = { 0.35, 0.85, 1.0 },
+    color = { 0.35, 0.85, 1.0 }, button = 'teal',
     hudLine = function(md)
         if md.cd then
             local secs = md.cd / 100

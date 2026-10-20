@@ -6,93 +6,72 @@ local BaseState        = require 'src/core/BaseState'
 local MenuScene = require 'src/ui/menu/MenuScene'
 local NC               = require 'src/network/NetworkClient'
 local L = require 'src/core/Lang'
+local MenuAnim   = require 'src/ui/menu/MenuAnim'
+local MenuButton = require 'src/ui/menu/MenuButton'
+local MenuKit    = require 'src/ui/menu/MenuKit'
 local OnlineErrorState = BaseState:new()
 
 function OnlineErrorState:enter(args)
     args         = args or {}
     self.code    = args.code or "ERR_NETWORK"
     self.msg     = args.msg  or L('err.lost')
-    self.alpha   = 0
-    self.hovered = false
+    self.anim, self.t = MenuAnim.new(), 0
     NC:disconnect()
     Sound.playMusic('menus')
 end
 
+function OnlineErrorState:_back()
+    if self.anim:busy() then return end
+    Sound.play('select', 1.25)
+    self.anim:leave(function() gStateMachine:change('adv_mode_select') end)
+end
+
 function OnlineErrorState:update(dt)
     MenuScene.update(dt)
-    self.alpha = math.min(1, self.alpha + dt * 4)
-    if Input.pressed('confirm') or Input.pressed('back') then
-        gStateMachine:change('adv_mode_select')
-    end
+    self.anim:update(dt)
+    self.t = self.t + dt
+    if Input.pressed('confirm') or Input.pressed('back') then self:_back() end
+end
+
+-- Geometría (dibujo, ratón y táctil)
+local function layout(msg)
+    local w = math.min(680, WINDOW_W - 120)
+    local x = math.floor((WINDOW_W - w) / 2)
+    love.graphics.setFont(FONT_MED)
+    local _, lines = FONT_MED:getWrap(msg or '', w - 64)
+    local card = { x = x, y = math.floor(WINDOW_H * 0.30), w = w, h = 112 + math.min(4, #lines) * (FONT_MED:getHeight() + 12) }
+    local bw = math.min(360, w - 80)
+    return card, { x = math.floor((WINDOW_W - bw) / 2) + 26, y = card.y + card.h + 32, w = bw, h = 56 }
 end
 
 function OnlineErrorState:render()
     MenuScene.backdrop()                 -- (el fondo vivo de los menús: src/ui/menu/MenuScene)
-
-    local a = self.alpha
-
-    love.graphics.setColor(0, 0, 0, 0.72 * a)
-    love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
-
-    local panelW = math.min(620, WINDOW_W - 80)
-    local panelH = 310
-    local panelX = math.floor((WINDOW_W - panelW) / 2)
-    local panelY = math.floor((WINDOW_H - panelH) / 2)
-
-    love.graphics.setColor(0.06, 0.02, 0.02, 0.97 * a)
-    love.graphics.rectangle('fill', panelX, panelY, panelW, panelH)
-    love.graphics.setColor(1, 1, 1, 0.8 * a)
-    love.graphics.rectangle('line', panelX, panelY, panelW, panelH)
-    love.graphics.setColor(0, 0, 0, 0.6 * a)
-    love.graphics.rectangle('line', panelX+2, panelY+2, panelW-4, panelH-4)
-
-    love.graphics.setFont(FONT_BIG)
-    love.graphics.setColor(1, 0.22, 0.22, a)
-    love.graphics.printf(L('err.title'), 0, panelY + 20, WINDOW_W, 'center')
-
-    love.graphics.setColor(1, 0.22, 0.22, 0.3 * a)
-    love.graphics.line(panelX + 24, panelY + 66, panelX + panelW - 24, panelY + 66)
-
-    love.graphics.setFont(FONT_SMALL)
-    love.graphics.setColor(1, 0.5, 0.5, 0.85 * a)
-    love.graphics.printf(self.code, panelX + 20, panelY + 80, panelW - 40, 'center')
-
-    love.graphics.setFont(FONT_SMALL)
-    love.graphics.setColor(1, 1, 1, 0.7 * a)
-    love.graphics.printf(self.msg, panelX + 28, panelY + 112, panelW - 56, 'center')
-
-    local btnW = 320
-    local btnH = 52
-    local btnX = math.floor(WINDOW_W / 2 - btnW / 2)
-    local btnY = panelY + panelH - 74
-
-    local isHov = self.hovered and Input.lastDevice == 'mouse'
-    love.graphics.setColor(isHov and {1,1,1,a} or {0,0,0,a})
-    love.graphics.rectangle('fill', btnX, btnY, btnW, btnH)
-    love.graphics.setColor(isHov and {0,0,0,a} or {1,1,1,a})
-    love.graphics.rectangle('line', btnX, btnY, btnW, btnH)
+    local A = self.anim
+    MenuKit.title(L('err.title'), 'red', A, 1)
+    local c, b = layout(self.msg)
+    local ox, oy, a = A:slide(2, 0, 220)
+    MenuKit.box('card', c.x + ox, c.y + oy, c.w, c.h, a)
+    -- lo importante es el mensaje; el código, pequeño y apagado debajo (para avisar de un fallo)
     love.graphics.setFont(FONT_MED)
-    love.graphics.setColor(isHov and {0,0,0,a} or {1,1,1,a})
-    love.graphics.printf(L('err.back_menu'), btnX, btnY + btnH/2 - FONT_MED:getHeight()/2, btnW, 'center')
-
+    local _, lines = FONT_MED:getWrap(self.msg, c.w - 64)
+    local ty = c.y + 40 + oy
+    for i = 1, math.min(4, #lines) do
+        MenuKit.text(FONT_MED, lines[i], c.x + ox, ty, c.w, 'center', nil, a)
+        ty = ty + FONT_MED:getHeight() + 12
+    end
+    MenuKit.text(FONT_SMALL, self.code, c.x + ox, c.y + c.h - 40 + oy, c.w, 'center', { 0.85, 0.5, 0.5 }, 0.8 * a)
+    local bx, by, ba = A:slide(3, 0, 220)
+    local bob = (math.floor(self.t * 3) % 2 == 0) and -4 or 0
+    MenuButton.draw(L('err.back_menu'), b.x + bx, b.y + by + bob, b.w, b.h, 'grey', true,
+                    { alpha = ba, scale = MenuButton.textScale(L('err.back_menu'), b.w - 48, 4) })
+    MenuKit.marker(b.x + bx, b.y + by, b.h, self.t, ba)
     love.graphics.setColor(COLOR_WHITE)
 end
 
--- Hover del mouse
-function OnlineErrorState:mousemoved(tx, ty)
-    local panelH = 310
-    local panelY = math.floor((WINDOW_H - panelH) / 2)
-    local btnW   = 320
-    local btnH   = 52
-    local btnX   = math.floor(WINDOW_W / 2 - btnW / 2)
-    local bY     = panelY + panelH - 74
-    local prev   = self.hovered
-    self.hovered = tx >= btnX-8 and tx <= btnX+btnW+8 and ty >= bY-5 and ty <= bY+btnH+5
-    if self.hovered and not prev then Sound.play('select') end
-end
+function OnlineErrorState:mousemoved(tx, ty) end
 
 function OnlineErrorState:touchpressed(id, tx, ty)
-    gStateMachine:change('adv_mode_select')
+    self:_back()
 end
 
 return OnlineErrorState

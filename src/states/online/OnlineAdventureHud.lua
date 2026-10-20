@@ -9,9 +9,12 @@ local CornerButtons        = require 'src/ui/CornerButtons'
 local BossHud              = require 'src/ui/BossHud'
 local TouchControls        = require 'src/ui/TouchControls'
 local LightHud             = require 'src/ui/LightHud'
+local MenuButton           = require 'src/ui/menu/MenuButton'
+local MenuKit              = require 'src/ui/menu/MenuKit'
+local PixelFont            = require 'src/ui/PixelFont'
 
 return function(OnlineAdventureState, P)
-local TICK_DT, POPUP_LIFE, POPUP_RISE, POPUP_BOUNCE_T, SPEC_OPTS, drawPixelButton = P.TICK_DT, P.POPUP_LIFE, P.POPUP_RISE, P.POPUP_BOUNCE_T, P.SPEC_OPTS, P.drawPixelButton
+local TICK_DT, POPUP_LIFE, POPUP_RISE, POPUP_BOUNCE_T, SPEC_OPTS = P.TICK_DT, P.POPUP_LIFE, P.POPUP_RISE, P.POPUP_BOUNCE_T, P.SPEC_OPTS
 
 -- ── Popups de puntos ─────────────────────────────────────────────────────────
 
@@ -193,52 +196,21 @@ end
 -- ── Overlay de pausa ──────────────────────────────────────────────────────────
 
 function OnlineAdventureState:_renderPauseOverlay()
-    local a        = self.pauseAlpha
-    local opts     = self:_getPauseOpts()
-    local btnW     = 300
-    local btnH     = 48
-    local btnGap   = 14
-    local totalBH  = #opts * btnH + (#opts - 1) * btnGap
-    local panelW   = 440
-    local panelH   = 72 + totalBH + 32
-    local panelX   = math.floor((WINDOW_W - panelW) / 2)
-    local panelY   = math.floor((WINDOW_H - panelH) / 2)
-
-    love.graphics.setColor(0, 0, 0, 0.55 * a)
-    love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
-
-    love.graphics.setColor(0.08, 0.08, 0.12, 0.90 * a)
-    love.graphics.rectangle('fill', panelX, panelY, panelW, panelH)
-    love.graphics.setColor(1, 0.85, 0, 0.6 * a)
-    love.graphics.rectangle('line', panelX,   panelY,   panelW,   panelH)
-    love.graphics.rectangle('line', panelX+2, panelY+2, panelW-4, panelH-4)
-
-    love.graphics.setFont(FONT_BIG)
-    love.graphics.setColor(1, 0.95, 0.15, a)
-    love.graphics.printf(L('pause.title'), 0, panelY + 16, WINDOW_W, 'center')
-
-    love.graphics.setFont(FONT_MED)
-    local startBY = panelY + 68
-    for i, opt in ipairs(opts) do
-        local by = startBY + (i - 1) * (btnH + btnGap)
-        local col = (opt == 'room.stop') and {1,0.4,0.4} or nil
-        if col and i == self.pauseSel then
-            love.graphics.setColor(0.12, 0.12, 0.12, a)
-            love.graphics.rectangle('fill', WINDOW_W/2 - btnW/2 + 4, by + 4, btnW, btnH)
-            love.graphics.setColor(col[1], col[2], col[3], a)
-            love.graphics.rectangle('fill', WINDOW_W/2 - btnW/2, by, btnW, btnH)
-            love.graphics.setColor(0, 0, 0, a)
-            love.graphics.printf(L(opt):upper(), WINDOW_W/2 - btnW/2, by + btnH/2 - FONT_MED:getHeight()/2, btnW, 'center')
-        elseif col then
-            love.graphics.setColor(col[1], col[2], col[3], 0.2 * a)
-            love.graphics.rectangle('fill', WINDOW_W/2 - btnW/2, by, btnW, btnH)
-            love.graphics.setColor(col[1], col[2], col[3], 0.55 * a)
-            love.graphics.rectangle('line', WINDOW_W/2 - btnW/2, by, btnW, btnH)
-            love.graphics.setColor(col[1], col[2], col[3], 0.8 * a)
-            love.graphics.printf(L(opt):upper(), WINDOW_W/2 - btnW/2, by + btnH/2 - FONT_MED:getHeight()/2, btnW, 'center')
-        else
-            drawPixelButton(L(opt):upper(), WINDOW_W/2, by, btnW, btnH, i == self.pauseSel, a)
-        end
+    local a = self.pauseAlpha
+    local rects, P = self:_pauseRects()
+    MenuKit.dim(0.55 * a)
+    local oy = math.floor((1 - a) * 40 / 4) * 4          -- (entra subiendo, a saltos de píxel)
+    MenuKit.box('window', P.x, P.y + oy, P.w, P.h, a)
+    local title = L('pause.title')
+    PixelFont.shadow(title, math.floor(P.x + (P.w - PixelFont.width(title, 5)) / 2), P.y + 30 + oy, 5, a, { 1, 0.86, 0.36 })
+    local colors = { ['common.resume'] = 'green', ['oadv.leave_hub'] = 'blue', ['room.stop'] = 'red' }
+    for i, opt in ipairs(self:_getPauseOpts()) do
+        local r, sel = rects[i], i == self.pauseSel
+        local bob = sel and ((math.floor(love.timer.getTime() * 3) % 2 == 0) and -4 or 0) or 0
+        local text = L(opt):upper()
+        MenuButton.draw(text, r.x, r.y + oy + bob, r.w, r.h, colors[opt] or 'grey', sel,
+                        { alpha = a, scale = MenuButton.textScale(text, r.w - 48, 4) })
+        if sel then MenuKit.marker(r.x, r.y + oy, r.h, love.timer.getTime(), a) end
     end
 end
 
@@ -270,35 +242,23 @@ function OnlineAdventureState:_renderSpectatorOverlay()
         return
     end
 
-    love.graphics.setColor(0, 0, 0, 0.55)
-    love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
-
-    local panelW, panelH = 380, 180
-    local panelX = math.floor((WINDOW_W - panelW) / 2)
-    local panelY = math.floor((WINDOW_H - panelH) / 2)
-    love.graphics.setColor(0.08, 0.08, 0.12, 0.90)
-    love.graphics.rectangle('fill', panelX, panelY, panelW, panelH)
-    love.graphics.setColor(0.7, 0.7, 1, 0.55)
-    love.graphics.rectangle('line', panelX, panelY, panelW, panelH)
-    love.graphics.rectangle('line', panelX+2, panelY+2, panelW-4, panelH-4)
-
-    love.graphics.setFont(FONT_BIG)
-    if finished then
-        love.graphics.setColor(1, 0.85, 0.2, 1)
-        love.graphics.printf(L('oadv.finished'), 0, panelY + 16, WINDOW_W, 'center')
+    local rects, P = self:_specRects()
+    MenuKit.dim(0.55)
+    MenuKit.box('window', P.x, P.y, P.w, P.h)
+    local title = finished and L('oadv.finished') or L('oadv.eliminated')
+    local col = finished and { 1, 0.86, 0.36 } or { 0.72, 0.76, 1 }
+    if PixelFont.has(title) then
+        PixelFont.shadow(title, math.floor(P.x + (P.w - PixelFont.width(title, 5)) / 2), P.y + 30, 5, 1, col)
     else
-        love.graphics.setColor(0.7, 0.7, 1, 1)
-        love.graphics.printf(L('oadv.eliminated'), 0, panelY + 16, WINDOW_W, 'center')
+        MenuKit.text(FONT_BIG, title, P.x, P.y + 26, P.w, 'center', col)
     end
-
-    local btnW, btnH = 260, 44
-    local btnGap = 12
-    local totalBH = #SPEC_OPTS * btnH + (#SPEC_OPTS-1) * btnGap
-    local startBY = panelY + panelH/2 - totalBH/2 + 16
-    love.graphics.setFont(FONT_MED)
     for i, opt in ipairs(SPEC_OPTS) do
-        local by = startBY + (i-1) * (btnH + btnGap)
-        drawPixelButton(L(opt), WINDOW_W/2, by, btnW, btnH, i==self.specSel, 1)
+        local r, sel = rects[i], i == self.specSel
+        local bob = sel and ((math.floor(love.timer.getTime() * 3) % 2 == 0) and -4 or 0) or 0
+        local text = L(opt)
+        MenuButton.draw(text, r.x, r.y + bob, r.w, r.h, i == 1 and 'blue' or 'grey', sel,
+                        { scale = MenuButton.textScale(text, r.w - 48, 4) })
+        if sel then MenuKit.marker(r.x, r.y, r.h, love.timer.getTime(), 1) end
     end
 end
 

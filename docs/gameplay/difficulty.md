@@ -8,8 +8,8 @@ being simulated (`level.difficulty`; `nil` = neutral, the game as it was), bound
 whoever steps the simulation — so single player, the server (several rooms) and the client always agree.
 
 **Where it is chosen:** a story save picks it when created (`StorySlotState`; Extreme and Xtra Extreme must be
-unlocked); Free Play has a chip (key F or tap); online, the room's host has a button (`set_difficulty`) and it
-reaches clients in `game_init`. The Flappy mode's `DIFFICULTIES` in `settings.lua` are an unrelated, older table.
+unlocked); Free Play has a chip (key F or tap); online, the room's host has a ◀ ▶ selector with every difficulty (`set_difficulty`; `docs/architecture/menus.md`,
+"Online screens") and it reaches clients in `game_init`. The Flappy mode's `DIFFICULTIES` in `settings.lua` are an unrelated, older table.
 
 **Modifiers today**
 
@@ -74,4 +74,4 @@ reaches clients in `game_init`. The Flappy mode's `DIFFICULTIES` in `settings.lu
 
 - (3) VENTS: `Difficulty` `ventDelay` × the delay between oxygen bubbles (easy 0.8, hard 1.15, extreme / xtra 1.35).
 
-- (4) DIFFICULTY PICKERS: Free Play — chip top-right, key F (action `light`) or tap; ORIGINAL (none) → easy → … → xtra; remembered. Online — the HOST's room button "DIFICULTAD: X" (`set_difficulty { difficulty }`, admin only, WAITING), `room_update.difficulty`, shown to everyone on the game card; it reaches the match in `game_init` as before. Verity is the same Snowball class, so the difficulty applies to it too.
+- (4) DIFFICULTY PICKERS: Free Play — chip top-right, key F (action `light`) or tap; ORIGINAL (none) → easy → … → xtra; remembered. Online — the HOST's room selector "◀ DIFICULTAD X ▶" (0.5.0; before, a button that only cycled forward), over none + every id of `Difficulty.ORDER`, colours `Difficulty.COLORS` (`set_difficulty { difficulty }`, admin only, WAITING), `room_update.difficulty`, shown to everyone on the game card; it reaches the match in `game_init` as before. Verity is the same Snowball class, so the difficulty applies to it too.

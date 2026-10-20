@@ -15,13 +15,6 @@ local MenuList = {}
 MenuList.__index = MenuList
 
 MenuList.W, MenuList.H, MenuList.GAP = 520, 68, 14      -- px de cada botón y entre botones
-local ICON_S = 4                                         -- escala del monstruito que marca el elegido
-
-local icon
-local function iconImg()
-    if not icon then icon = love.graphics.newImage('assets/images/player/icon.png') end
-    return icon
-end
 
 -- o.items: { text (clave de idioma o texto con raw = true), color, desc (clave), descArgs, go(i), disabled }
 -- o.anim: la MenuAnim de la pantalla; o.first: número de orden del primer botón en ella (los anteriores son el
@@ -95,17 +88,7 @@ function MenuList:draw()
         if self.chosen == i and self.t < 0.12 then bob = 4 end
         local color = it.disabled and 'grey' or it.color
         MenuButton.draw(self:text(i), r.x + ox, r.y + oy + bob, r.w, r.h, color, sel, { alpha = a * (it.disabled and 0.7 or 1) })
-        if sel then
-            -- el monstruito, a la izquierda, saltando
-            local im = iconImg()
-            local hop = math.floor(math.abs(math.sin(self.t * 6)) * 3) * 4
-            local ix = r.x + ox - im:getWidth() * ICON_S - 20
-            local iy = r.y + oy + math.floor((r.h - im:getHeight() * ICON_S) / 2) - hop - 4
-            love.graphics.setColor(0, 0, 0, 0.4 * a)
-            love.graphics.draw(im, ix + 4, iy + 4 + hop, 0, ICON_S, ICON_S)
-            love.graphics.setColor(1, 1, 1, a)
-            love.graphics.draw(im, ix, iy, 0, ICON_S, ICON_S)
-        end
+        if sel then require('src/ui/menu/MenuKit').marker(r.x + ox, r.y + oy, r.h, self.t, a) end   -- (el monstruito)
     end
     love.graphics.setColor(1, 1, 1, 1)
 end

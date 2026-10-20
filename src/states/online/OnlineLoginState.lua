@@ -7,6 +7,9 @@ local NameFilter = require 'src/network/NameFilter'
 local NC               = require 'src/network/NetworkClient'
 local Protocol         = require 'src/network/Protocol'
 local Lang = require 'src/core/Lang'
+local MenuAnim   = require 'src/ui/menu/MenuAnim'
+local MenuButton = require 'src/ui/menu/MenuButton'
+local MenuKit    = require 'src/ui/menu/MenuKit'
 local OnlineLoginState = BaseState:new()
 
 -- Campos del formulario (HOST y PORT fijos, solo se muestra NOMBRE)
@@ -26,6 +29,8 @@ function OnlineLoginState:enter(args)
     }
     self.activeField = FIELD_NICK
     self.connecting  = false
+    self.anim, self.t = MenuAnim.new(), 0
+    self.btnIndex = 1
 
     -- Si ya estamos conectados, ir directo al hub
     if NC:isConnected() then
@@ -98,11 +103,14 @@ end
 
 function OnlineLoginState:update(dt)
     MenuScene.update(dt)
-    if not self.btnIndex then self.btnIndex = 1 end
+    self.anim:update(dt)
+    self.t = self.t + dt
+    if self.anim:busy() then return end
 
     if Input.pressed('nav_left') or Input.pressed('nav_right') then
         self.btnIndex = self.btnIndex == 1 and 2 or 1
-        Sound.play('select')
+        self.t = 0
+        Sound.play('select', 1.04)
     end
 
     if Input.pressed('confirm') then
@@ -135,22 +143,17 @@ end
 -- ── Geometría (compartida por render, ratón y táctil) ────────────────────────
 
 local function layout()
-    local panelW, panelH = 600, 160
-    local panelX = math.floor((WINDOW_W - panelW) / 2)
-    local panelY = math.floor(WINDOW_H / 2 - panelH / 2 + 20)
-    local labelW, fieldH = 120, 52
-    local L = {
-        panel = { x = panelX, y = panelY, w = panelW, h = panelH },
-        field = { x = panelX + labelW + 30, y = panelY + 30, w = panelW - labelW - 60, h = fieldH },
-    }
-    local bw, bh, gap = 240, 48, 24
-    local bx = math.floor(WINDOW_W / 2 - bw - gap / 2)
-    local by = panelY + panelH + 18
+    local w = math.min(640, WINDOW_W - 160)
+    local x = math.floor((WINDOW_W - w) / 2)
+    local y = math.floor(WINDOW_H * 0.30)
+    local L = { card = { x = x, y = y, w = w, h = 196 } }
+    L.field = { x = x + 32, y = y + 72, w = w - 64, h = 64 }
+    local bw, bh, gap = math.floor((w - 72) / 2), 60, 72
+    local by = y + L.card.h + 28
     L.buttons = {
-        { id = 'connect', label = Lang('login.connect'), x = bx,            y = by, w = bw, h = bh },
-        { id = 'back',    label = Lang('common.back'),   x = bx + bw + gap, y = by, w = bw, h = bh },
+        { id = 'connect', label = 'login.connect', color = 'green', x = x,            y = by, w = bw, h = bh },
+        { id = 'back',    label = 'common.back',   color = 'grey',  x = x + bw + gap, y = by, w = bw, h = bh },
     }
-    L.errorY = by + bh + 16
     return L
 end
 
@@ -161,89 +164,43 @@ end
 
 function OnlineLoginState:_back()
     NC:disconnect()
-    gStateMachine:change('adv_mode_select')
+    if self.anim:busy() then return end
+    self.anim:leave(function() gStateMachine:change('adv_mode_select') end)
 end
 
 -- ── Render ────────────────────────────────────────────────────────────────────
 
 function OnlineLoginState:render()
     MenuScene.backdrop()                 -- (el fondo vivo de los menús: src/ui/menu/MenuScene)
+    local A = self.anim
+    MenuKit.title(Lang('login.title'), 'purple', A, 1)
 
-    -- Título
-    love.graphics.setFont(FONT_BIG)
-    love.graphics.setColor(0, 0, 0, 0.6)
-    love.graphics.printf(Lang('login.title'), 2, 162, WINDOW_W, 'center')
-    love.graphics.setColor(1, 0.95, 0.15, 1)
-    love.graphics.printf(Lang('login.title'), 0, 160, WINDOW_W, 'center')
-
-    -- Panel central
-    local panelW = 600
-    local panelH = 160
-    local panelX = math.floor((WINDOW_W - panelW) / 2)
-    local panelY = math.floor(WINDOW_H / 2 - panelH / 2 + 20)
-
-    love.graphics.setColor(0, 0, 0, 0.55)
-    love.graphics.rectangle('fill', panelX, panelY, panelW, panelH)
-    love.graphics.setColor(1, 0.85, 0, 0.55)
-    love.graphics.rectangle('line', panelX, panelY, panelW, panelH)
-    love.graphics.rectangle('line', panelX+2, panelY+2, panelW-4, panelH-4)
-
-    -- Campo NOMBRE (único)
-    local fieldH  = 52
-    local labelW  = 120
-    local inputX  = panelX + labelW + 30
-    local inputW  = panelW - labelW - 60
-    local fy      = panelY + 30
-    local val     = self.fields[FIELD_NICK] or ""
-    local display = val .. "_"
-
-    love.graphics.setFont(FONT_SMALL)
-    love.graphics.setColor(1, 0.85, 0, 0.9)
-    love.graphics.print(Lang(FIELD_LABELS[FIELD_NICK]), panelX + 20, fy + fieldH/2 - FONT_SMALL:getHeight()/2)
-
-    love.graphics.setColor(1, 1, 1, 0.15)
-    love.graphics.rectangle('fill', inputX, fy, inputW, fieldH)
-    love.graphics.setColor(1, 0.85, 0, 0.9)
-    love.graphics.rectangle('line', inputX, fy, inputW, fieldH)
-
-    love.graphics.setFont(FONT_MED)
-    love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.printf(display, inputX + 10, fy + fieldH/2 - FONT_MED:getHeight()/2, inputW - 20, 'left')
-
-    -- Hint / estado de conexión
-    local hintY = panelY + panelH - 44
-    love.graphics.setFont(FONT_SMALL)
-    if self.connecting then
-        love.graphics.setColor(1, 1, 1, 0.6)
-        love.graphics.printf(Lang('login.connecting'), 0, hintY, WINDOW_W, 'center')
-    else
-        love.graphics.setColor(1, 1, 1, 0.35)
-        love.graphics.printf(Lang('login.hint'),
-            0, hintY, WINDOW_W, 'center')
-    end
-
-    -- Botones (ratón / táctil / también reflejan ENTER y ESC)
     local L = layout()
-    love.graphics.setFont(FONT_MED)
-    for i, b in ipairs(L.buttons) do
-        local hov = (self.hoverBtn == i)
-        local primary = (b.id == 'connect')
-        if hov or (self.btnIndex == i and not self.hoverBtn) then
-            love.graphics.setColor(0, 0, 0, 0.5)
-            love.graphics.rectangle('fill', b.x + 4, b.y + 4, b.w, b.h)
-            love.graphics.setColor(1, 1, 1, self.connecting and primary and 0.5 or 1)
-            love.graphics.rectangle('fill', b.x, b.y, b.w, b.h)
-            love.graphics.setColor(0, 0, 0, 1)
-        else
-            love.graphics.setColor(0, 0, 0, 0.6)
-            love.graphics.rectangle('fill', b.x, b.y, b.w, b.h)
-            love.graphics.setColor(1, 1, 1, 0.5)
-            love.graphics.rectangle('line', b.x, b.y, b.w, b.h)
-            love.graphics.setColor(1, 1, 1, 0.8)
-        end
-        love.graphics.printf(b.label, b.x, b.y + b.h / 2 - FONT_MED:getHeight() / 2, b.w, 'center')
-    end
+    local c = L.card
+    local ox, oy, a = A:slide(2, 0, 220)
+    MenuKit.box('card', c.x + ox, c.y + oy, c.w, c.h, a)
+    MenuKit.section(Lang(FIELD_LABELS[FIELD_NICK]), c.x + 32 + ox, c.y + 26 + oy, c.w - 64, true, a)
+    local f = L.field
+    MenuKit.field(f.x + ox, f.y + oy, f.w, f.h, self.fields[FIELD_NICK] or "", not self.connecting, { alpha = a })
+    -- estado de la conexión (o las reglas del nombre)
+    local dots = string.rep('.', math.floor(love.timer.getTime() * 3) % 4)
+    local msg = self.connecting and (Lang('login.connecting'):gsub('%.+$', '') .. dots) or Lang('login.name_chars')
+    MenuKit.text(FONT_SMALL, msg, c.x + ox, f.y + f.h + 22 + oy, c.w, 'center',
+                 self.connecting and { 1, 0.86, 0.36 } or { 0.7, 0.76, 0.92 }, a)
 
+    -- Botones (mando, ratón y táctil)
+    for i, b in ipairs(L.buttons) do
+        local bx, by, ba = A:slide(2 + i, 0, 220)
+        local sel = self.btnIndex == i
+        local bob = sel and ((math.floor(self.t * 3) % 2 == 0) and -4 or 0) or 0
+        local dis = self.connecting and b.id == 'connect'
+        -- (la acción principal, un punto más grande que VOLVER)
+        local txt = Lang(b.label)
+        MenuButton.draw(txt, b.x + bx, b.y + by + bob, b.w, b.h, dis and 'grey' or b.color, sel and not dis,
+                        { alpha = ba * (dis and 0.7 or 1), scale = MenuButton.textScale(txt, b.w - 48, b.id == 'connect' and 5 or 4) })
+        if sel then MenuKit.marker(b.x + bx, b.y + by, b.h, self.t, ba) end
+    end
+    MenuKit.hint(Lang('login.hint'), A, 5)
     love.graphics.setColor(COLOR_WHITE)
 end
 
@@ -256,12 +213,9 @@ end
 -- ── Touch ─────────────────────────────────────────────────────────────────────
 
 function OnlineLoginState:mousemoved(tx, ty)
-    local prev = self.hoverBtn
-    self.hoverBtn = nil
     for i, b in ipairs(layout().buttons) do
-        if inRect(b, tx, ty, 4) then self.hoverBtn = i end
+        if inRect(b, tx, ty, 4) and self.btnIndex ~= i then self.btnIndex, self.t = i, 0; Sound.play('select') end
     end
-    if self.hoverBtn and self.hoverBtn ~= prev then Sound.play('select') end
 end
 
 function OnlineLoginState:touchpressed(id, tx, ty)

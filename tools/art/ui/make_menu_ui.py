@@ -10,6 +10,9 @@
 #   assets/images/ui/menus/cartridge.png + .json, cart_labels.png   los CARTUCHOS de las partidas (ver abajo).
 #   assets/images/ui/menus/panel.png                el PANEL (9-slice) de las pantallas con contenido (partidas,
 #        juego libre, online): azul noche translúcido con borde claro.
+#   assets/images/ui/menus/box.png                  las CAJAS (9-slice, celdas de 8x8 en fila): 1 hueco hundido (campos de
+#        texto, listas), 2 tarjeta (filas, tarjetas de la partida, ventanas), 3 tarjeta elegida (borde blanco), 4 tarjeta
+#        oscura (ventanas por encima de todo). Las dibuja src/ui/menu/MenuKit.lua.
 # Desde la raíz del repo:  python3 tools/art/ui/make_menu_ui.py
 import json, os
 from PIL import Image
@@ -173,6 +176,32 @@ def panel():
     print('panel.png')
 
 
+# ── Cajas (9-slice): hueco, tarjeta, tarjeta elegida, ventana ──────────────
+# Todas con cortes de 2 px a cada lado. El HUECO va hundido (sombra arriba / izquierda, luz abajo / derecha); las
+# TARJETAS van en relieve como el panel, más opacas; la elegida con el borde blanco de los botones elegidos.
+BOXES = [
+    # contorno, luz arriba/izq., sombra abajo/der., relleno
+    ((14, 18, 40, 255), (6, 8, 22, 255), (70, 92, 150, 255), (10, 14, 34, 235)),     # hueco
+    ((14, 18, 40, 255), (70, 96, 160, 255), (30, 40, 82, 255), (30, 40, 84, 240)),    # tarjeta
+    ((255, 255, 255, 255), (130, 170, 240, 255), (44, 58, 112, 255), (44, 60, 120, 245)),  # tarjeta elegida
+    ((14, 18, 40, 255), (120, 170, 255, 255), (52, 72, 140, 255), (18, 24, 54, 250)),  # ventana
+]
+
+
+def boxes():
+    sheet = Image.new('RGBA', (CELL * len(BOXES), CELL), (0, 0, 0, 0))
+    for i, (edge, hi, sh, fill) in enumerate(BOXES):
+        for y in range(CELL):
+            for x in range(CELL):
+                if x in (0, CELL - 1) or y in (0, CELL - 1): c = edge
+                elif y == 1 or x == 1: c = hi
+                elif y == CELL - 2 or x == CELL - 2: c = sh
+                else: c = fill
+                sheet.putpixel((i * CELL + x, y), c)
+    sheet.save(os.path.join(DIR, 'box.png'))
+    print('box.png: %d cajas' % len(BOXES))
+
+
 # ── Cartuchos de las PARTIDAS (src/states/story/StorySlotState.lua) ───────────
 # cartridge.png: una columna por color de carcasa (rojo, azul, verde, gris = vacía), fila 1 normal y fila 2
 # elegido (más claro). 60 x 72 a 1x: estrías de agarre arriba, la ETIQUETA (crema, con la ventanita de la isla
@@ -311,4 +340,5 @@ if __name__ == '__main__':
     logo()
     buttons()
     panel()
+    boxes()
     cartridges()

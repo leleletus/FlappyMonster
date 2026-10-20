@@ -13,6 +13,9 @@ local Clip        = require 'src/ui/Clip'
 local PixelIcons = require 'src/ui/PixelIcons'
 local fitText    = require('src/ui/TextUtil').fit
 local L = require 'src/core/Lang'
+local MenuButton = require 'src/ui/menu/MenuButton'
+local MenuKit    = require 'src/ui/menu/MenuKit'
+local PixelFont  = require 'src/ui/PixelFont'
 
 local ModeSelectMenu = {}
 ModeSelectMenu.__index = ModeSelectMenu
@@ -339,17 +342,10 @@ end
 
 -- ── Render ────────────────────────────────────────────────────────────────────
 
-local function arrow(x, y, w, h, dir, enabled, col)
-    love.graphics.setColor(0, 0, 0, 0.5)
-    love.graphics.rectangle('fill', x, y, w, h)
-    love.graphics.setColor(col[1], col[2], col[3], enabled and 0.9 or 0.2)
-    love.graphics.rectangle('line', x, y, w, h)
-    local cx, cy, s = x + w / 2, y + h / 2, 10
-    if dir < 0 then
-        love.graphics.polygon('fill', cx + s / 2, cy - s, cx - s / 2, cy, cx + s / 2, cy + s)
-    else
-        love.graphics.polygon('fill', cx - s / 2, cy - s, cx + s / 2, cy, cx - s / 2, cy + s)
-    end
+-- Flecha de "hay más niveles" a un lado: un botón gris estrecho con su flecha pixel
+local function arrow(x, y, w, h, dir, enabled)
+    MenuButton.draw(nil, x, y, w, h, enabled and 'blue' or 'grey', false, { alpha = enabled and 1 or 0.5 })
+    MenuKit.arrow(math.floor(x + w / 2) + (dir < 0 and 8 or -8), math.floor(y + (h - 4) / 2), 28, dir, enabled and 1 or 0.5, { 1, 1, 1 })
 end
 
 function ModeSelectMenu:render()
@@ -358,95 +354,50 @@ function ModeSelectMenu:render()
     local mode = self:mode()
     local col  = mode.color
     local appear = clamp01(t / 0.2)
+    local oy = math.floor((1 - appear) * 40 / 4) * 4           -- (entra subiendo, a saltos de píxel)
 
-    love.graphics.setColor(0, 0, 0, 0.7 * appear)
-    love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
-    love.graphics.setColor(0.04, 0.04, 0.07, 0.96)
-    love.graphics.rectangle('fill', panelX(), PY, PW, PH)
-    love.graphics.setColor(1, 1, 1, 0.5)
-    love.graphics.rectangle('line', panelX(), PY, PW, PH)
-    love.graphics.setColor(col[1], col[2], col[3], 0.35)
-    love.graphics.rectangle('line', panelX() + 3, PY + 3, PW - 6, PH - 6)
+    MenuKit.dim(0.7 * appear)
+    MenuKit.box('window', panelX(), PY + oy, PW, PH, appear)
 
     -- Título
-    love.graphics.setFont(FONT_BIG)
-    love.graphics.setColor(0, 0, 0, 0.8)
-    love.graphics.printf(L('msm.title'), 3, PY + 18 + 3, WINDOW_W, 'center')
-    love.graphics.setColor(1, 0.95, 0.15, 1)
-    love.graphics.printf(L('msm.title'), 0, PY + 18, WINDOW_W, 'center')
+    local title = L('msm.title')
+    PixelFont.shadow(title, math.floor((WINDOW_W - PixelFont.width(title, 6)) / 2), PY + 22 + oy, 6, appear, { 1, 0.86, 0.36 })
 
-    -- Pestañas
-    local tabs = tabRects()
-    local lineY = TAB_Y + TAB_H
-    love.graphics.setColor(col[1], col[2], col[3], 0.6)
-    love.graphics.rectangle('fill', panelX() + 20, lineY, PW - 40, 2)
-    for i, r in ipairs(tabs) do
+    -- Pestañas: un botón por modo, del color del modo el elegido
+    for i, r in ipairs(tabRects()) do
         local m   = Modes.list[i]
-        local mc  = m.color
         local on  = (i == self.tab)
         local foc = on and self.focus == 'tabs'
-        if on then
-            love.graphics.setColor(mc[1] * 0.25, mc[2] * 0.25, mc[3] * 0.25, 1)
-            love.graphics.rectangle('fill', r.x, r.y, r.w, r.h + 2)
-            love.graphics.setColor(mc[1], mc[2], mc[3], 1)
-            love.graphics.rectangle('line', r.x, r.y, r.w, r.h)
-            love.graphics.rectangle('fill', r.x, r.y, r.w, 4)
-            if foc then
-                local p = 0.5 + 0.5 * math.sin(t * 6)
-                love.graphics.setColor(1, 1, 1, 0.35 + 0.4 * p)
-                love.graphics.rectangle('line', r.x - 4, r.y - 4, r.w + 8, r.h + 8)
-            end
-        else
-            love.graphics.setColor(0, 0, 0, 0.6)
-            love.graphics.rectangle('fill', r.x, r.y + 6, r.w, r.h - 6)
-            love.graphics.setColor(1, 1, 1, 0.3)
-            love.graphics.rectangle('line', r.x, r.y + 6, r.w, r.h - 6)
-        end
         local iw, ih = PixelIcons.size(m.icon or '')
-        -- (si el nombre no cabe con la letra normal, con la pequeña)
-        local room = r.w - 40 - iw * 2
-        local font = (FONT_MED:getWidth(m.label) <= room) and FONT_MED or FONT_SMALL
-        love.graphics.setFont(font)
-        local label = fitText(font, m.label, room)
-        local tw = font:getWidth(label) + (iw > 0 and iw * 2 + 12 or 0)
-        local tx = r.x + r.w / 2 - tw / 2
-        local ty = r.y + (on and 0 or 3) + r.h / 2
-        if iw > 0 then
-            PixelIcons.draw(m.icon, tx, ty - ih, 2, on and 1 or 0.5)
-            tx = tx + iw * 2 + 12
-        end
-        love.graphics.setColor(mc[1], mc[2], mc[3], on and 1 or 0.45)
-        love.graphics.print(label, tx, ty - font:getHeight() / 2)
+        local label = m.label
+        local s = MenuButton.textScale(label, r.w - 40 - iw * 3, 4)
+        local bob = foc and ((math.floor(t * 3) % 2 == 0) and -4 or 0) or 0
+        MenuButton.draw(label, r.x, r.y + oy + bob + (on and 0 or 4), r.w, r.h - (on and 0 or 4), on and m.button or 'grey', foc,
+                        { alpha = appear * (on and 1 or 0.8), scale = s, iconW = iw > 0 and iw * 3 + 10 or 0,
+                          icon = iw > 0 and function(x, y, sc) PixelIcons.draw(m.icon, x, y + math.floor((PixelFont.height(sc) - ih * 3) / 2), 3, appear) end or nil })
     end
 
     -- Objetivo del modo
-    local ix = WINDOW_W / 2 - INFO_W / 2
-    love.graphics.setColor(col[1] * 0.12, col[2] * 0.12, col[3] * 0.12, 1)
-    love.graphics.rectangle('fill', ix, INFO_Y, INFO_W, INFO_H)
-    love.graphics.setColor(col[1], col[2], col[3], 0.7)
-    love.graphics.rectangle('line', ix, INFO_Y, INFO_W, INFO_H)
-    love.graphics.rectangle('fill', ix, INFO_Y, 4, INFO_H)
-    love.graphics.setFont(FONT_MED)
-    love.graphics.setColor(col[1], col[2], col[3], 1)
-    love.graphics.print(fitText(FONT_MED, L('msm.mode', { name = mode.label }), INFO_W - 40), ix + 20, INFO_Y + 14)
+    local ix = math.floor(WINDOW_W / 2 - INFO_W / 2)
+    MenuKit.box('card', ix, INFO_Y + oy, INFO_W, INFO_H, appear)
+    love.graphics.setColor(col[1], col[2], col[3], 0.9 * appear)
+    love.graphics.rectangle('fill', ix + 8, INFO_Y + 8 + oy, 4, INFO_H - 16)
+    MenuKit.text(FONT_MED, fitText(FONT_MED, L('msm.mode', { name = mode.label }), INFO_W - 48), ix + 26, INFO_Y + 14 + oy, INFO_W, 'left',
+                 { col[1] * 0.6 + 0.4, col[2] * 0.6 + 0.4, col[3] * 0.6 + 0.4 }, appear)
     love.graphics.setFont(FONT_SMALL)
-    love.graphics.setColor(1, 1, 1, 0.75)
-    local _, lines = FONT_SMALL:getWrap(mode.tagline, INFO_W - 40)
+    local _, lines = FONT_SMALL:getWrap(mode.tagline, INFO_W - 48)
     for li, line in ipairs(lines) do
-        love.graphics.print(line, ix + 20, INFO_Y + 38 + (li - 1) * (FONT_SMALL:getHeight() + 6))
+        MenuKit.text(FONT_SMALL, line, ix + 26, INFO_Y + 40 + (li - 1) * (FONT_SMALL:getHeight() + 6) + oy, INFO_W, 'left', { 0.82, 0.86, 1 }, appear)
     end
 
     -- Tarjetas de nivel
     local list = self:levels()
     local cx0  = cardsX()
     if #list == 0 then
-        love.graphics.setFont(FONT_MED)
-        love.graphics.setColor(1, 1, 1, 0.5)
         local msg = self.catalog and L('msm.no_levels') or L('msm.loading')
-        love.graphics.printf(msg, 0, CARD_Y + CARD_H / 2 - 10, WINDOW_W, 'center')
+        MenuKit.text(FONT_MED, msg, 0, CARD_Y + CARD_H / 2 - 10 + oy, WINDOW_W, 'center', { 0.75, 0.8, 0.95 }, appear)
         if self.catalog and mode.emptyHint then
-            love.graphics.setFont(FONT_SMALL)
-            love.graphics.printf(mode.emptyHint, 0, CARD_Y + CARD_H / 2 + 20, WINDOW_W, 'center')
+            MenuKit.text(FONT_SMALL, mode.emptyHint, 0, CARD_Y + CARD_H / 2 + 20 + oy, WINDOW_W, 'center', { 0.6, 0.66, 0.85 }, appear)
         end
     end
     for k = 0, VISIBLE - 1 do
@@ -458,70 +409,56 @@ function ModeSelectMenu:render()
             a = a + ((sel and 1 or 0) - a) * math.min(1, love.timer.getDelta() * 12)
             self.selAnim[i] = a
             local x = cx0 + k * (CARD_W + CARD_GAP)
-            local y = CARD_Y - 8 * a
+            local y = CARD_Y - math.floor(8 * a / 4) * 4 + oy
             local focused = sel and self.focus == 'levels'
+            local bob = focused and ((math.floor(t * 3) % 2 == 0) and -4 or 0) or 0
+            y = y + bob
 
-            -- Sombra y fondo
-            love.graphics.setColor(0, 0, 0, 0.5)
-            love.graphics.rectangle('fill', x + 6, y + 8, CARD_W, CARD_H)
-            love.graphics.setColor(0.09, 0.09, 0.13, 1)
-            love.graphics.rectangle('fill', x, y, CARD_W, CARD_H)
-
-            drawPreview(lvl, x + 10, y + 10, CARD_W - 20, PREV_H, t + i * 1.7, sel and 1 or 0.6, mode)
+            love.graphics.setColor(0, 0, 0, 0.45 * appear)
+            love.graphics.rectangle('fill', x + 8, y + 8, CARD_W, CARD_H)
+            MenuKit.box(focused and 'card_sel' or 'card', x, y, CARD_W, CARD_H, appear)
+            if sel and not focused then
+                love.graphics.setColor(col[1], col[2], col[3], appear)
+                love.graphics.rectangle('fill', x + 8, y + 8, CARD_W - 16, 4)
+            end
+            MenuKit.box('well', x + 12, y + 16, CARD_W - 24, PREV_H + 8, appear)
+            drawPreview(lvl, x + 16, y + 20, CARD_W - 32, PREV_H, t + i * 1.7, (sel and 1 or 0.6) * appear, mode)
 
             -- Nombre y datos
-            love.graphics.setFont(FONT_MED)
-            love.graphics.setColor(sel and 1 or 0.7, sel and 1 or 0.7, sel and 1 or 0.7, 1)
-            love.graphics.print(fitText(FONT_MED, L.localName(lvl) or '?', CARD_W - 24), x + 12, y + PREV_H + 26)
-            love.graphics.setFont(FONT_SMALL)
-            love.graphics.setColor(1, 1, 1, 0.5)
+            MenuKit.text(FONT_MED, fitText(FONT_MED, L.localName(lvl) or '?', CARD_W - 32), x + 16, y + PREV_H + 40, CARD_W, 'left',
+                         sel and { 1, 1, 1 } or { 0.72, 0.76, 0.9 }, appear)
             local info = {}
             if lvl.w and lvl.h then info[#info + 1] = lvl.w .. 'x' .. lvl.h end
             if lvl.enemies then info[#info + 1] = L(lvl.enemies == 1 and 'msm.monster' or 'msm.monsters', { n = lvl.enemies }) end
             if (lvl.finish or 0) > 0 and Modes.usesTrigger(mode, 'finish') then info[#info + 1] = L('msm.finish') end
-            love.graphics.print(fitText(FONT_SMALL, table.concat(info, ' · '), CARD_W - 24), x + 12, y + PREV_H + 58)
+            MenuKit.text(FONT_SMALL, fitText(FONT_SMALL, table.concat(info, ' · '), CARD_W - 32), x + 16, y + PREV_H + 70, CARD_W, 'left',
+                         { 0.6, 0.66, 0.85 }, appear)
 
             -- Nivel en uso
             if lvl.path == self.room.level and mode.id == self.room.mode then
-                local bw = FONT_SMALL:getWidth(L('msm.in_use')) + 16
-                love.graphics.setColor(0.3, 1, 0.45, 0.95)
-                love.graphics.rectangle('fill', x + CARD_W - bw - 14, y + 16, bw, 20)
-                love.graphics.setColor(0, 0, 0, 1)
-                love.graphics.print(L('msm.in_use'), x + CARD_W - bw - 6, y + 21)
-            end
-
-            -- Borde
-            if sel then
-                love.graphics.setColor(col[1], col[2], col[3], 1)
-                love.graphics.setLineWidth(3)
-                love.graphics.rectangle('line', x, y, CARD_W, CARD_H)
-                love.graphics.setLineWidth(1)
-                if focused then
-                    local p = 0.5 + 0.5 * math.sin(t * 6)
-                    love.graphics.setColor(1, 1, 1, 0.3 + 0.5 * p)
-                    love.graphics.rectangle('line', x - 5, y - 5, CARD_W + 10, CARD_H + 10)
+                local txt = L('msm.in_use')
+                if PixelFont.has(txt) then
+                    local pw = PixelFont.width(txt, 2) + 12
+                    local px, py = x + CARD_W - pw - 20, y + 24
+                    love.graphics.setColor(0, 0, 0, 0.45 * appear)
+                    love.graphics.rectangle('fill', px + 2, py + 2, pw, PixelFont.height(2) + 8)
+                    love.graphics.setColor(0.45, 0.9, 0.5, appear)
+                    love.graphics.rectangle('fill', px, py, pw, PixelFont.height(2) + 8)
+                    PixelFont.draw(txt, px + 6, py + 4, 2, appear, { 0.08, 0.2, 0.1 })
                 end
-            else
-                love.graphics.setColor(1, 1, 1, 0.25)
-                love.graphics.rectangle('line', x, y, CARD_W, CARD_H)
             end
         end
     end
 
     -- Flechas
-    local ay = CARD_Y + CARD_H / 2 - ARROW_H / 2
+    local ay = CARD_Y + CARD_H / 2 - ARROW_H / 2 + oy
     if #list > VISIBLE then
-        arrow(panelX() + 12, ay, ARROW_W, ARROW_H, -1, self.first > 1, col)
-        arrow(panelX() + PW - 12 - ARROW_W, ay, ARROW_W, ARROW_H, 1, self.first + VISIBLE - 1 < #list, col)
+        arrow(panelX() + 12, ay, ARROW_W, ARROW_H, -1, self.first > 1)
+        arrow(panelX() + PW - 12 - ARROW_W, ay, ARROW_W, ARROW_H, 1, self.first + VISIBLE - 1 < #list)
     end
 
     -- Ayuda
-    love.graphics.setFont(FONT_SMALL)
-    love.graphics.setColor(1, 1, 1, 0.4)
-    local hint = self.focus == 'tabs'
-        and L('msm.hint_tabs')
-        or  L('msm.hint_levels')
-    love.graphics.printf(hint, 0, PY + PH - 26, WINDOW_W, 'center')
+    MenuKit.hint(self.focus == 'tabs' and L('msm.hint_tabs') or L('msm.hint_levels'))
     love.graphics.setColor(1, 1, 1, 1)
 end
 

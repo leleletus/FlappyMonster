@@ -49,6 +49,7 @@ return {
         hint = "[ARROWS] choose    [ENTER] start    [ESC] back",
         easy = "EASY", normal = "NORMAL", hard = "HARD", extreme = "EXTREME", xtra = "XTRA EXTREME", none = "ORIGINAL",
         desc = {
+            none = "The game as it is, no modifiers",
             easy = "Everything slower, 4 HP; spikes and lava don't kill outright",
             normal = "Levels as designed; bosses a bit calmer",
             hard = "Faster enemies; bosses at full strength",
@@ -197,6 +198,9 @@ return {
         not_found = "Couldn't find the server. Check your internet connection.",
     },
     hub = {
+        players_word = "PLAYERS",
+        rooms = "ROOMS ({n})",
+        list_hint = "[ARROWS] choose    [ENTER] join    [ESC] leave",
         title = "ROOM HUB",
         create = "CREATE ROOM",
         refresh = "REFRESH",
@@ -237,6 +241,8 @@ return {
         join_hint = "[ENTER] Join   [ESC] Cancel",
     },
     room = {
+        difficulty_label = "DIFFICULTY",
+        difficulty_hint = "{desc}    [<][>] change",
         give_admin = "GIVE ADMIN",
         kick = "KICK",
         ban = "BAN",

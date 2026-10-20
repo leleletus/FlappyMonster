@@ -28,7 +28,7 @@ local CART_S = 4                         -- escala del cartucho (60 x 72 → 240
 local GAP = 36                           -- px entre cartuchos
 local LIFT = 20                          -- px que sube el elegido
 local INSERT_T = 0.28                    -- s que tarda en "meterse" al jugar
-local DIFF_COLORS = { easy = 'green', normal = 'yellow', hard = 'orange', extreme = 'red', xtra = 'purple' }
+local DIFF_COLORS = require('src/core/Difficulty').COLORS
 
 local art
 local function loadArt()
