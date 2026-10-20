@@ -107,10 +107,13 @@ local function img(path)
     return imgs[path]
 end
 local quads = {}
+-- (clave numérica por imagen: la de texto creaba basura en cada llamada, muchas por fotograma)
 local function quad(im, x, y, w, h)
-    local key = tostring(im) .. x .. ',' .. y .. ',' .. w .. ',' .. h
-    if not quads[key] then quads[key] = love.graphics.newQuad(x, y, w, h, im:getDimensions()) end
-    return quads[key]
+    local q = quads[im]
+    if not q then q = {}; quads[im] = q end
+    local key = ((x * 4096 + y) * 4096 + w) * 4096 + h
+    if not q[key] then q[key] = love.graphics.newQuad(x, y, w, h, im:getDimensions()) end
+    return q[key]
 end
 -- cuadro i (1..) de una tira de ancho fw
 local function frameQ(im, fw, i) return quad(im, (i - 1) * fw, 0, fw, im:getHeight()) end
@@ -597,7 +600,7 @@ function StoryMapState:_start(world, node)
             gStateMachine:change('story_map', { world = w, node = 1, notice = 'story.go_notice' })
         end,
         onFinish = function(result)
-            for _, id in ipairs(gotShards) do Run.addShard(id) end
+            for _, id in ipairs(gotShards) do Run.addShard(id, true) end       -- (se guardan con Run.complete)
             local was = {}
             for i = 1, totalStops() do was[i] = stateOf(stopAt(i)) end
             local summary = Run.complete(n.id, result)
@@ -746,6 +749,13 @@ end
 local LIT = { [0] = 0.4, 0.78, 0.9, 1 }
 local CLIFF_BODY = { g = 'dirt', s = 'sand', w = 'stone', c = 'border', f = 'stone', l = 'deep_stone' }
 
+local tilePaths = {}
+local function tilePath(name)
+    local p = tilePaths[name]
+    if not p then p = 'assets/images/world/tiles/' .. name .. '.png'; tilePaths[name] = p end
+    return p
+end
+
 function StoryMapState:_drawTerrain(cx, cy)
     local M = loadMap()
     local C, rows, hrows = M.C, M.d.rows, M.d.heights
@@ -793,6 +803,8 @@ function StoryMapState:_drawTerrain(cx, cy)
     -- bordes de lo alto (contorno oscuro + brillo) arriba y a los lados, donde el vecino está más bajo
     love.graphics.setColor(1, 1, 1, 1)
     local edge = img('assets/images/story/edge-Sheet.png')
+    -- (una sola función, no una por casilla: eso era casi toda la basura del mapa, ~70 KB por fotograma)
+    local function lower(cc, rr, h) return at(cc, rr) == '~' or (at(cc, rr) ~= 'L' and ht(cc, rr) < h) end
     for r = r0, r1 do
         for c = c0, c1 do
             local ch = at(c, r)
@@ -800,10 +812,9 @@ function StoryMapState:_drawTerrain(cx, cy)
                 local h = ht(c, r)
                 local q = frameQ(edge, 16, GROUND[ch] or 1)
                 local x, y = c * C - cx, r * C - cy
-                local function lower(cc, rr) return at(cc, rr) == '~' or (at(cc, rr) ~= 'L' and ht(cc, rr) < h) end
-                if lower(c, r - 1) then love.graphics.draw(edge, q, x, y, 0, C / 16, 2) end
-                if lower(c - 1, r) then love.graphics.draw(edge, q, x, y + C, -math.pi / 2, C / 16, 2) end
-                if lower(c + 1, r) then love.graphics.draw(edge, q, x + C, y, math.pi / 2, C / 16, 2) end
+                if lower(c, r - 1, h) then love.graphics.draw(edge, q, x, y, 0, C / 16, 2) end
+                if lower(c - 1, r, h) then love.graphics.draw(edge, q, x, y + C, -math.pi / 2, C / 16, 2) end
+                if lower(c + 1, r, h) then love.graphics.draw(edge, q, x + C, y, math.pi / 2, C / 16, 2) end
             end
         end
     end
@@ -821,11 +832,11 @@ function StoryMapState:_drawTerrain(cx, cy)
                 local x, y = c * C - cx, (r + 1) * C - cy
                 -- labio (la parte de arriba de su bloque: césped, nieve…) y debajo el cuerpo de roca / tierra
                 local LIP = math.floor(C * 0.34)
-                local tex = img('assets/images/world/tiles/' .. (CLIFF[key] or 'dirt') .. '.png')
+                local tex = img(tilePath(CLIFF[key] or 'dirt'))
                 local span = tex:getWidth() / 64
                 love.graphics.setColor(1, 1, 1, 1)
                 love.graphics.draw(tex, quad(tex, (c % span) * 64, 0, 64, LIP * 64 / C), x, y, 0, C / 64, C / 64)
-                local body = img('assets/images/world/tiles/' .. (CLIFF_BODY[key] or 'dirt') .. '.png')
+                local body = img(tilePath(CLIFF_BODY[key] or 'dirt'))
                 body:setWrap('repeat', 'repeat')
                 local bspan = body:getWidth() / 64
                 local bh = FACE * diff - LIP

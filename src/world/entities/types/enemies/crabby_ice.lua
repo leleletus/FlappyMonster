@@ -263,7 +263,7 @@ function Ice:updateDrop(dt, level)
             return true
         end
     end
-    if self.y > level.heightPx + TILE_PX * 4 then self.alive = false end
+    if self:fellOut(level) then self.alive = false end
     return true
 end
 

@@ -18,7 +18,7 @@ unlocked); Free Play has a ◀ ▶ selector (key F or tap either half); online, 
 | `enemyPace`, `trapPace`, `bossPace` | the whole update of entities of that category (speed, telegraphs, cooldowns, projectiles) | `Difficulty.dt` in the entity loops; a type opts out with `pace = false` |
 | `bossHp`, `pairHp` | boss health; health of each boss of an Xtra pair | `Boss:startFight` |
 | `playerHp`, `invuln`, `airTime` | player HP, invulnerability time, air under water | `PlayerAdventure` |
-| `hazardHurt` | spikes and lava take 1 HP + a hop instead of killing | `pa:hazardHit()` |
+| `hazardHurt` | spikes and lava take 1 HP + a hop instead of killing — also the hazard boxes of entities (hanging / falling spikes, spike rain, the Crabby's spike, mortar fire; `Interactions` marks them `'hazard'`, since 0.5.11) | `pa:hazardHit()` |
 | `sense` | every enemy detection range (sight below, hearing, Gloomy sense, mortar, pufferfish, Hopper) | the entity types, `Noise.heard` |
 | `ventDelay` | delay between oxygen bubbles | `Level` vents |
 | `bossExtra` | TWO bosses per arena | `src/world/systems/XtraBosses.lua` |

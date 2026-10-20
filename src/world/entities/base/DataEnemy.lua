@@ -188,19 +188,18 @@ end
 
 DataEnemy.Core.stepShots = stepShots
 
+-- (los disparos vuelan en cualquier estado: Entity:update llama a stepAlways antes que a nada)
+function DataEnemy:stepAlways(dt, level) stepShots(self, dt, level) end
+
 function DataEnemy:updateCustom(dt, level)
     if self.state == 'reserve' then return true end
-    stepShots(self, dt, level)
     for _, b in ipairs(self.beh) do                      -- esperas de cada comportamiento (cd_<nombre>)
         local key = 'cd_' .. b.def.name
         if (self[key] or 0) > 0 then self[key] = self[key] - dt end
     end
     if self.state == 'hurt' then
         self.deadTimer = self.deadTimer + dt
-        if not self.flying then
-            self.vy = self.vy + ADV_GRAVITY * dt
-            self:moveAndCollide(level, 0, self.vy * dt)
-        end
+        self:fall(level, dt)
         if self.deadTimer >= (self.spec.hurtTime or 0.5) then self:backToWalk() end
         return true
     end
@@ -260,11 +259,6 @@ function DataEnemy:crawlWalk(dt, level)
     self:animateWalk(dt)
     return true
 end
-function DataEnemy:knockback(dir)
-    if self.crawl then Crawler.detach(self); self.flipped = false end
-    Entity.knockback(self, dir)
-end
-
 function DataEnemy:getHazardBoxes()
     local out
     local b = DataEnemy.Core.ownerNow(self)
@@ -417,8 +411,7 @@ function DataEnemy.typeDef(spec)
     cls.spec = spec
     cls.darkEdge = spec.darkEdge
     if spec.crawl then
-        Crawler.mixin(cls)
-        function cls:knockback(dir) return DataEnemy.knockback(self, dir) end
+        Crawler.mixin(cls)                       -- (empujado: se suelta en Entity:knockback)
     end
     function cls.loadAssets() Anim.load(spec.anim, spec.variant) end
     function cls.sizePx()

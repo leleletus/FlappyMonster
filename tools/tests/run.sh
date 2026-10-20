@@ -78,12 +78,16 @@ run_one() {
 if [ "${1:-}" = all ]; then
     # Batería (~8 min): física de entidades, jefe (solo y online), partida online
     fail=0
-    for t in "project_check" "docs_reference CHECK=1" "enemy_data" "tool_editors" "tool_editors TOOL=enemy" "tool_editors TOOL=enemy KIND=boss" "tool_editors FLOW=runtime" "boss_intro" "startup_intro" "menu_flow" "flyers" "flyers SEED=3" "crawler_drop" "crawler_drop SUMMON=1" "mechanics" "snowboss_rules" "megagummy_rules" "icecrabby_rules" "gloomy_rules" "megagloomy_rules" "lang_names" "sounds" "boss_sim" "boss_sim LEVEL=assets/levels/ruta_del_espejo.json" "boss_intro SECS=200" "sp_boss SECS=40 RETRY=level" "sp_boss SECS=40 DIFF=xtra" "boss_intro LEVEL=assets/levels/ruta_del_espejo.json SECS=40" "subtiles" "touch_layout" "flood_control" "editor_open" "editor_open LINKS=1" "free_play" "story_flow" "story_film NOSHOTS=1" "difficulty_rules" "bot_nav" "update_boot FM_UPDATE=1" "perf N=240 PROFILE=0" \
+    for t in "project_check" "docs_reference CHECK=1" "enemy_data" "tool_editors" "tool_editors TOOL=enemy" "tool_editors TOOL=enemy KIND=boss" "tool_editors FLOW=runtime" "boss_intro" "startup_intro" "menu_flow" "flyers" "flyers SEED=3" "crawler_drop" "crawler_drop SUMMON=1" "mechanics" "snowboss_rules" "megagummy_rules" "icecrabby_rules" "gloomy_rules" "megagloomy_rules" "lang_names" "sounds" "boss_sim" "boss_sim LEVEL=assets/levels/ruta_del_espejo.json" "boss_intro SECS=200" "sp_boss SECS=40 RETRY=level" "sp_boss SECS=40 DIFF=xtra" "sp_boss LEVEL=assets/levels/fortaleza_malvada.json SECS=40" "boss_intro LEVEL=assets/levels/ruta_del_espejo.json SECS=40" "subtiles" "touch_layout" "flood_control" "editor_open" "editor_open LINKS=1" "free_play" "story_flow" "story_film NOSHOTS=1" "difficulty_rules" "bot_nav" "update_boot FM_UPDATE=1" "perf N=240 PROFILE=0" \
              "online_menus" \
+             "online_update" \
              "online_helmet LEVEL=tools/tests/online_helmet/level.json" \
              "online_smoke LEVEL=assets/levels/jardin_gummies.json MODE=race SECS=16" \
              "online_smoke LEVEL=assets/levels/isla_flotante.json MODE=koth SECS=16" \
+             "online_smoke LEVEL=assets/levels/jardin_gummies.json MODE=race SECS=14 LAG=120 LOSS=10" \
              "online_smoke LEVEL=assets/levels/templo_del_eco.json MODE=hunt SECS=14 STALL=4.5" \
+             "online_smoke LEVEL=assets/levels/laberinto_submarino.json MODE=race SECS=12 WANTOXY=1" \
+             "online_smoke LEVEL=assets/levels/lluvia_pinchos.json MODE=race SECS=12 WATCH=rainspike WANT=armed,falling,stuck" \
              "online_smoke LEVEL=tools/levelgen/arenas/bombas.json MODE=race SECS=12 WATCH=bomb WANT=lit,exploding" \
              "online_smoke LEVEL=tools/levelgen/arenas/hielo.json MODE=race SECS=10 WANTTILES=thin_ice_1,thin_ice_2,thin_ice_3,empty" \
              "online_boss LEVEL=tools/levelgen/arenas/jefe_cangrejo.json NOSHOTS=1" \

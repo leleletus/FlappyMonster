@@ -44,6 +44,7 @@ local ICON_SCALE = 4
 -- ── Enter ─────────────────────────────────────────────────────────────────────
 -- Al salir del nivel: cerrar la grabación (si la hay)
 function AdventureState:exit()
+    if Entity.onKill and Entity.onKill == self.onKill then Entity.onKill = nil end
     require('src/fx/Silhouette').level = nil
     require('src/ui/View').unlock()
     -- Música y sonidos de partida a cero (también la pista de jefe): al volver
@@ -182,6 +183,13 @@ function AdventureState:enter(args)
     for _, e in ipairs(self.level.entities) do if e.type == 'star' then stars = stars + 1 end end
     self.stats = { kills = 0, killable = require('src/world/modes/Modes').entityInfo(self.level.entities).killable or 0,
                    stars = 0, starsTotal = stars, deaths = 0, hits = 0, items = 0, itemsTotal = 0, zoneT = 0 }
+    -- (los vencidos SIN pisotón —bomba, bloque roto, pinchos, lava— también cuentan: antes usar bombas bajaba la nota)
+    if not self.demo then
+        self.onKill = function(e)
+            if e.props and e.props.stompable and not (e.def and e.def.boss) then self.stats.kills = self.stats.kills + 1 end
+        end
+        Entity.onKill = self.onKill
+    end
     for _, e in ipairs(self.level.entities) do
         local def = require('src/world/entities/base/EntityTypes').get(e.type)
         if def and def.pickup then self.stats.itemsTotal = self.stats.itemsTotal + 1 end

@@ -95,7 +95,6 @@ end
 
 -- (Súbdito de reserva: Entity:makeReserve. Cajas giradas, normal y soltarse: Crawler.mixin, abajo)
 function Gloomy:knockback(dir)
-    self:releaseCrawl()
     self.goalX = nil
     Entity.knockback(self, dir)
 end
@@ -338,7 +337,7 @@ function Gloomy:updateCustom(dt, level)
                 self:setMode(self.gloat and 'taunt' or 'rest')
                 self.gloat = nil
             end
-        elseif self.y > (level.heightPx or 1e9) + T * 4 then
+        elseif self:fellOut(level) then
             self.alive = false
         end
         if st ~= 'leap' and self.cattached then self:setMode('rest') end

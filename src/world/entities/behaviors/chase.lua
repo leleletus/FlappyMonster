@@ -31,8 +31,7 @@ return {
         local dir = e.facing
         local vx = (e.speed > 0 and e.speed or 60) * cfg.speedK * dir
         if e.onGround and (not e:canGo(level, dir) or (cfg.careful and not e:groundAhead(level, dir))) then vx = 0 end
-        e.vy = e.vy + ADV_GRAVITY * dt
-        e:moveAndCollide(level, vx * dt, e.vy * dt)
+        e:fall(level, dt, vx)
         e.facing = dir                                   -- (chocar no le da la vuelta mientras persigue)
     end,
 }

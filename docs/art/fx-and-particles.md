@@ -42,3 +42,7 @@ variant needs its own kind name). **From drawing** call `Particles.emit` directl
 `fx`): four 5x5 frames, drawn ×3 by `LavaFx`. Until 3.93 the sheet was saved ×4 (80x20) by mistake while the code cut
 5-px frames, so each particle was a 5x20 slice of the first cell; fixed on 2026-10-08 (the sheet is 20x5 again and
 `make_world_art.py` saves it at scale 1). How it looks in play has not been judged by the user.
+
+- `src/fx/Particles.lua` limits (0.5.11): at 600 live particles the oldest one is marked to go on the next update
+  (hard cap 1200) and finished particles are removed by compacting the list in one pass (same draw order). Before,
+  `table.remove(list, 1)` shifted the whole list for every new particle once full: bursts cost n².

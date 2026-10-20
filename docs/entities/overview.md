@@ -192,3 +192,15 @@ landing mark; sprites in `assets/images/bosses/common/`). Asset layout: enemies 
   area must implement `debugBoxes()`. (3) Lines are 2 px (1 px at ~0.5 alpha was nearly invisible). `FM_HITBOX=1`
   (read in settings.lua) starts with them ON: `FM_HITBOX=1 tools/tests/run.sh all|sp_boss|online_boss …` checks that
   drawing them never errors.
+
+- Base hooks added by the 0.5.11 review: `Entity:stepAlways(dt, level)` (optional) runs at the very start of
+  `Entity:update`, in ANY state (the data enemies' shots fly on while the shooter is stunned, launched, frozen or
+  dead — they used to hang mid-air and still hurt). `Entity.onKill(e)` (set by `AdventureState`, nil elsewhere) is
+  called by `dieFling` / `dieBurst`: kills that are not stomps (bomb, broken block, spikes after a trampoline, lava)
+  count in the level's `stats.kills`. Hazard boxes report a third value `'hazard'` from `Interactions.check`, so
+  `Interactions.run` sends them through `pa:hazardHit()` (Easy: 1 HP instead of death).
+- Rule 2 clean-up (0.5.11): `Entity:fellOut(level)` (below the level by 4 tiles) replaces the 11 copies in the
+  types; `Entity:fall(level, dt, vx)` (gravity — upside down when flipped, none when flying — plus an optional sideways
+  move) is what the data behaviours `chase`, `melee`, `hide`, `leap`, `shoot` and DataEnemy's `hurt` use instead of
+  their own copies; `Entity:knockback` releases a clinging crawler itself (`releaseCrawl`), so Crabby / Gloomy /
+  DataEnemy no longer each override it for that.

@@ -177,11 +177,6 @@ function Crabby:releaseCrawl()
     self.flipped = false
 end
 
-function Crabby:knockback(dir)
-    self:releaseCrawl()
-    Entity.knockback(self, dir)
-end
-
 -- Andar trepando (sustituye al andar normal)
 function Crabby:crawlWalk(dt, level)
     local tn = self.tuning
@@ -378,7 +373,7 @@ function Crabby:updateDrop(dt, level)
             self.flipped = false
             Sound.play('spikeHit')
             Entity.emitFx('spike_land', self.x, top)
-        elseif self.y > level.heightPx + TILE_PX * 4 then
+        elseif self:fellOut(level) then
             self.alive = false
         end
     elseif st == 'drop_stuck' then

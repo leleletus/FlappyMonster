@@ -34,6 +34,9 @@ function PlayerAdventure:updateGroundPound(dt, level)
                 if (t.breakable or t.toggle or t.thinIce) and not done[c] then
                     done[c] = true
                     local how = level:hitTile(c, r, 'pound')
+                    -- (cliente online: el bloque lo rompe el servidor y su evento llega enseguida; predecir un
+                    -- aterrizaje daba un impacto falso —sonido y polvo— y luego un tirón hacia abajo)
+                    if t.breakable and level.canBreak == false then broke = true end
                     if how == 'break' then
                         broke = true
                         if not t.thinIce then fx(self, 'block_break', (c-1)*T, (r-1)*T) end   -- (hielo: crackIce)

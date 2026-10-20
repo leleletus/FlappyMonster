@@ -35,9 +35,8 @@ return {
     end,
     update = function(e, cfg, dt, level)
         if not e.flying and not (e.crawl and e.cattached) then
-            e.vy = e.vy + ADV_GRAVITY * dt
             local dir = e.facing
-            e:moveAndCollide(level, 0, e.vy * dt)
+            e:fall(level, dt)
             e.facing = dir
         end
         if e.deadTimer >= cfg.inTime + cfg.stay + cfg.outTime then

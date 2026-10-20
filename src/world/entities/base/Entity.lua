@@ -229,7 +229,7 @@ function Entity:updateCommonStates(dt, level)
             self.vy = 0
             self.vx = self.moving and self.speed * self.facing or 0
             self:startWalk()
-        elseif self.y > level.heightPx + TILE_PX * 4 then
+        elseif self:fellOut(level) then
             self.alive = false
         end
         return true
@@ -240,7 +240,7 @@ function Entity:updateCommonStates(dt, level)
         if not self.freezeFloats then
             self.vy = self.vy + ADV_GRAVITY * dt
             self:moveAndCollide(level, 0, self.vy * dt)
-            if self.y > level.heightPx + TILE_PX * 4 then self.alive = false; return true end
+            if self:fellOut(level) then self.alive = false; return true end
         end
         if self.deadTimer <= 0 then self:thaw() end
         return true
@@ -280,7 +280,7 @@ function Entity:updateCommonStates(dt, level)
             self.vy, self.state = 0, self.skyRest or 'idle'
             self.y = self.y - (self.skyLift or 0)
             self.baseY = self.y
-        elseif self.y > level.heightPx + TILE_PX * 4 then
+        elseif self:fellOut(level) then
             self.alive = false
         end
         return true
@@ -342,6 +342,7 @@ function Entity:canBeKnocked()
 end
 
 function Entity:knockback(dirX)
+    if self.releaseCrawl then self:releaseCrawl() end      -- (trepador agarrado: se suelta primero, como al morir)
     if self.state ~= 'stunned' then self.stunPrev = self.state end
     self.state, self.deadTimer = 'stunned', 0
     self.vx = dirX * KNOCK_VX
@@ -364,8 +365,13 @@ end
 
 -- Muere porque le rompen el bloque sobre el que está: sale despedida hacia
 -- arriba y hacia fuera, girando (no la muerte de "aplastada")
+-- Avisa de una muerte especial (lo pone AdventureState para la nota; nil en el servidor y el editor)
+Entity.onKill = nil
+local function killed(e) if Entity.onKill then Entity.onKill(e) end end
+
 function Entity:dieFling(dirX)
     if Entity.SPECIAL_DEATH[self.state] or self.state == 'dead' then return end
+    killed(self)
     if self.releaseCrawl then self:releaseCrawl() end
     dirX = (dirX and dirX ~= 0) and dirX or self.facing or 1
     self.state, self.deadTimer = 'dead_fling', 0
@@ -379,6 +385,7 @@ end
 -- Revienta en pedazos (cae en pinchos o algo mortal tras un trampolín)
 function Entity:dieBurst()
     if Entity.SPECIAL_DEATH[self.state] or self.state == 'dead' then return end
+    killed(self)
     if self.releaseCrawl then self:releaseCrawl() end
     self.state, self.deadTimer, self.vx, self.vy = 'dead_burst', 0, 0, 0
     Sound.play('enemyExplode', 1.1)
@@ -401,6 +408,9 @@ function Entity:inLava(level)
     return t ~= nil and t.lava == true
 end
 function Entity:onLava(level) self:dieBurst() end
+
+-- ¿Se cayó por debajo del nivel? (la regla de todos: antes copiada en cada tipo)
+function Entity:fellOut(level) return level ~= nil and self.y > (level.heightPx or 1e9) + TILE_PX * 4 end
 
 -- ¿Algo mortal donde está? (pinchos de verdad o material 'deadly')
 function Entity:onDeadlyGround(level)
@@ -712,11 +722,16 @@ end
 
 -- Gravedad (hacia el techo si está boca abajo) sin desplazamiento horizontal.
 -- Los voladores no caen.
-function Entity:fall(level, dt)
-    if self.flying then return end
+-- Gravedad + mover (vx px/s de lado, opcional): la de TODOS (los comportamientos la usan; boca abajo, al revés;
+-- los voladores no caen)
+function Entity:fall(level, dt, vx)
+    if self.flying then
+        if vx and vx ~= 0 then self:moveAndCollide(level, vx * dt, 0) end
+        return
+    end
     local gravDir = self.flipped and -1 or 1
     self.vy = self.vy + ADV_GRAVITY * dt * gravDir
-    self:moveAndCollide(level, 0, self.vy * dt)
+    self:moveAndCollide(level, (vx or 0) * dt, self.vy * dt)
 end
 
 function Entity:startIdle()
@@ -747,6 +762,7 @@ end
 
 function Entity:update(dt, level)
     local tn = self.tuning
+    if self.stepAlways then self:stepAlways(dt, level) end
 
     if self.state == 'dead' then
         self:onDead(dt)

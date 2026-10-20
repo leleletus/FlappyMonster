@@ -64,3 +64,7 @@ per-frame system: run `perf GARB=1` before committing it.
   measured causes were, in order: per-tile tables in the tile renderer, a full-screen redraw per water cell, the
   server's rewind history copying every entity every tick, a new scene canvas per level, per-call bounding boxes.
 - The remaining ~30 KB of Lua per reload are not reachable tables (census empty): most likely interned strings.
+
+- 0.5.11 (review): new scene `map` (the story map, the monster walking stop to stop; lazy loading only reported).
+  It found ~77 KB of garbage per frame on the map: `_drawTerrain` created a closure per visible cell (the cliff-edge
+  test) and string keys per quad. Now 5.5 KB. `FM_PERF=1` on the server also logs snapshot sizes (see netcode).

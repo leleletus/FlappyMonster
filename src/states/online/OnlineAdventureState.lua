@@ -653,7 +653,8 @@ function OnlineAdventureState:_renderBossHUD()
                 else
                     local rp = self.remotePlayers[idx]
                     if rp and rp.visible and not rp.finished then
-                        e = { name = r.name, color = r.color, hp = rp.hp, hpMax = 3, key = r,
+                        -- (la vida máxima es la de la dificultad de la sala, la misma para todos: 4 en Fácil)
+                        e = { name = r.name, color = r.color, hp = rp.hp, hpMax = self.localPa and self.localPa.hpMax or 3, key = r,
                               dead = rp.isSpectator or rp.dying }
                     end
                 end

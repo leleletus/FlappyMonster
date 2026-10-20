@@ -112,8 +112,9 @@ function Interactions.defaultCheck(pa, e)
 
     -- Zonas de peligro propias (el pincho del Crabby, el fuego del mortero...):
     -- matan, salvo que la caja diga otra cosa (hb.effect = 'hurt': 1 de vida)
+    -- (3er valor 'hazard': un peligro, no el cuerpo — en Fácil quita 1 como los pinchos del suelo: hazardHit)
     for _, hb in ipairs(e:getHazardBoxes() or EMPTY) do
-        if overlap(pob, hb) then return hb.effect or 'kill', hb.time or hb.dmg end
+        if overlap(pob, hb) then return hb.effect or 'kill', hb.time or hb.dmg, 'hazard' end
     end
 
     if e:isBodyDisabled() then return nil end
@@ -204,7 +205,9 @@ function Interactions.run(pa, entities, cb, rewind)
             result, a, b, c = Interactions.check(pa, e)
         end
         if result == 'kill' then
-            if pa:die() ~= false then Noise.src(nil); return end      -- (invulnerable al reaparecer: sigue)
+            local died
+            if b == 'hazard' then died = pa:hazardHit() else died = pa:die() ~= false end
+            if died then Noise.src(nil); return end                   -- (invulnerable al reaparecer: sigue)
         elseif result == 'hurt' then
             -- (e:onHurtPlayer: solo si de verdad le quitó vida; p. ej. el pinchazo del pez globo)
             local hp0 = pa.hp

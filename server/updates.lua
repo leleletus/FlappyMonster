@@ -19,6 +19,13 @@ local Updates = {}
 
 local CHUNK       = 48 * 1024
 local CHECK_EVERY = 30
+-- Ancho de banda de las descargas (no hace falta login para pedir trozos: sin tope, un cliente que pidiera sin parar
+-- se llevaba ~6 MB/s cada uno). Lo que no cabe espera en cola y sale en Updates.update; el cliente no nota más
+-- que una descarga algo más lenta (4 peticiones a la vez y vuelve a pedir a los 4 s).
+local CLIENT_RATE = 2 * 1024 * 1024   -- bytes/s por cliente
+local GLOBAL_RATE = 8 * 1024 * 1024   -- bytes/s entre todos
+local MAX_QUEUED  = 8                 -- peticiones en espera por cliente (más se ignoran)
+local globalTokens, waiting = GLOBAL_RATE, {}
 
 -- Qué se distribuye: el juego (NO main.lua ni conf.lua, que son el arranque,
 -- ni el servidor, las herramientas o los recursos de compilación)
@@ -104,6 +111,8 @@ end
 
 -- Llamar cada frame del servidor
 function Updates.update(dt)
+    globalTokens = math.min(GLOBAL_RATE, globalTokens + GLOBAL_RATE * dt)
+    if waiting[1] then Updates.pump() end
     if thread then
         local r = channel:pop()
         local terr = thread:getError()
@@ -153,14 +162,44 @@ function Updates.register(on)
         for i, e in ipairs(manifest.files) do files[i] = { e.path, e.size, e.hash } end
         client:send('upd_manifest', { version = manifest.version, files = files })
     end, true)
-    on('upd_get', function(data, client)
+    on('upd_get', function(data, client, p)
         if type(data) ~= 'table' then return end
         local path, offset = data.path, tonumber(data.offset) or -1
         local e = type(path) == 'string' and byPath[path]
-        local d = e and offset >= 0 and offset < math.max(1, e.size) and fileData(path)
-        if not d then client:send('upd_chunk', { path = path, offset = offset }); return end
-        client:send('upd_chunk', { path = path, offset = offset, data = d:sub(offset + 1, offset + CHUNK) })
+        if not (e and offset >= 0 and offset < math.max(1, e.size)) then
+            client:send('upd_chunk', { path = path, offset = offset }); return
+        end
+        p = p or {}
+        if (p.updQueued or 0) >= MAX_QUEUED then return end
+        p.updQueued = (p.updQueued or 0) + 1
+        waiting[#waiting + 1] = { client = client, p = p, path = path, offset = offset }
+        Updates.pump()
     end, true)
+end
+
+-- Manda los trozos en espera que quepan en el ancho de banda (por cliente y total)
+function Updates.pump()
+    local now = love.timer.getTime()
+    local i = 1
+    while i <= #waiting do
+        local w = waiting[i]
+        local p = w.p
+        p.updTok = math.min(CLIENT_RATE, (p.updTok or CLIENT_RATE) + (now - (p.updTokT or now)) * CLIENT_RATE)
+        p.updTokT = now
+        local e = byPath[w.path]
+        local n = e and math.min(CHUNK, e.size - w.offset) or 0
+        if p.kicked or (w.client.getState and w.client:getState() ~= 'connected') then
+            table.remove(waiting, i); p.updQueued = math.max(0, (p.updQueued or 1) - 1)
+        elseif p.updTok >= n and globalTokens >= n then
+            table.remove(waiting, i); p.updQueued = math.max(0, (p.updQueued or 1) - 1)
+            p.updTok, globalTokens = p.updTok - n, globalTokens - n
+            local d = e and fileData(w.path)
+            if d then w.client:send('upd_chunk', { path = w.path, offset = w.offset, data = d:sub(w.offset + 1, w.offset + CHUNK) })
+            else w.client:send('upd_chunk', { path = w.path, offset = w.offset }) end
+        else
+            i = i + 1
+        end
+    end
 end
 
 Updates.CHUNK = CHUNK

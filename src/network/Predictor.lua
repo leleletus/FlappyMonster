@@ -61,8 +61,12 @@ function Predictor:tick(bits)
     self.seq = self.seq + 1
     self.prevX, self.prevY = self.pa.x, self.pa.y
     self:_step(bits, false)
-    self.history[self.seq] = { bits = bits }
+    -- (la entrada que sale de la historia se reutiliza para la nueva: sin crear una tabla por tick)
+    local h = self.history[self.seq - HISTORY_MAX]
     self.history[self.seq - HISTORY_MAX] = nil
+    if h then for k in pairs(h) do h[k] = nil end else h = {} end
+    h.bits = bits
+    self.history[self.seq] = h
     return self.seq
 end
 
@@ -83,7 +87,10 @@ end
 -- Inputs aún no confirmados (máx. `maxN`, los más recientes) para reenviar.
 function Predictor:unacked(maxN)
     local first = math.max(self.ackSeq + 1, self.seq - maxN + 1)
-    local list = {}
+    -- (la misma lista cada vez: se serializa al enviarla, nadie la guarda)
+    local list = self._unackedList or {}
+    self._unackedList = list
+    for i = #list, 1, -1 do list[i] = nil end
     for s = first, self.seq do
         local h = self.history[s]
         list[#list + 1] = h and h.bits or 0
@@ -119,7 +126,8 @@ function Predictor:reconcile(ack, own, bounceSeq)
     -- El estado VISUAL (animación, "puff", barra de aire) no debe avanzar en
     -- la re-simulación: son ticks que ya se mostraron. Sin esto la animación
     -- corría 1,5-4 veces más rápido según el ping.
-    local vis = {}
+    local vis = self._vis or {}
+    self._vis = vis
     for i, k in ipairs(VISUAL_FIELDS) do vis[i] = pa[k] end
 
     Protocol.applyOwnState(own, pa)
@@ -159,7 +167,10 @@ function Predictor:reconcile(ack, own, bounceSeq)
 
     -- Daño que no predijimos (p. ej. un jefe nos cayó encima)
     local hpDrop = not pa.dying and pa.hp < oldHp
-    return { wasDying = wasDying, missedBounce = missedBounce, hpDrop = hpDrop }
+    local res = self._res or {}
+    self._res = res
+    res.wasDying, res.missedBounce, res.hpDrop = wasDying, missedBounce, hpDrop
+    return res
 end
 
 -- Absorbe el error visual con decaimiento exponencial (independiente de FPS).

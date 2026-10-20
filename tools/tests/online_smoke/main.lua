@@ -7,6 +7,11 @@
 --   pkill -f "^love server"
 --
 -- (MODE: race | hunt | koth; SECS = duración, 16 por defecto)
+-- LAG=ms LOSS=%: red MALA simulada en el cliente real — lo que manda y lo que recibe llega LAG ms tarde, y se pierde
+-- el LOSS % de las fotos ('s') y de los paquetes de inputs ('in'); falla si la predicción se queda atrás (el servidor
+-- tiene que ir confirmando inputs) o si hay errores
+-- WANTOXY=1: falla si el cliente no llegó a ver ninguna burbuja de OXÍGENO de los respiraderos (las crea el
+-- servidor; el servidor sin ventana no cargaba sus imágenes y no salía ninguna)
 -- STALL=4.5: el bot sufre un CORTE de red de esos segundos a los 3 s de partida (sigue contando sus inputs pero no
 -- llega ninguno); al volver, el servidor tiene que procesarlos otra vez (antes, tras > 3 s, no se movía nunca más)
 -- WATCH=bomb: además apunta los estados que ve el cliente de las entidades de
@@ -62,6 +67,24 @@ function love.load()
             bot.roomId = d.id end        -- (el bot entra cuando haya iniciado sesión)
     end)
     NC:connect('localhost', 22122, 'Prueba')     -- (nunca el servidor real)
+    if os.getenv('LAG') or os.getenv('LOSS') then
+        local lag, loss = (tonumber(os.getenv('LAG')) or 0) / 1000, (tonumber(os.getenv('LOSS')) or 0) / 100
+        local rng = love.math.newRandomGenerator(5)
+        netQ = {}
+        local fire, sendState = NC._fire, NC.sendState
+        NC._fire = function(self, ev, data)                -- (recibir: tarde, y las fotos a veces no llegan)
+            if ev == 's' and rng:random() < loss then return end
+            netQ[#netQ + 1] = { at = love.timer.getTime() + lag, fn = function() fire(self, ev, data) end }
+        end
+        NC.sendState = function(self, ev, data)            -- (mandar: tarde, y los inputs a veces no llegan)
+            if rng:random() < loss then return end
+            local copy = {}
+            for k, v in pairs(data) do
+                if type(v) == 'table' then local t = {}; for i, x in pairs(v) do t[i] = x end; copy[k] = t else copy[k] = v end
+            end
+            netQ[#netQ + 1] = { at = love.timer.getTime() + lag, fn = function() sendState(self, ev, copy) end }
+        end
+    end
     bot.c = sock.newClient('localhost', 22122, P.CHANNELS)
     bot.c:setSerialization(bitser.dumps, bitser.loads)
     bot.c:on('game_init', function() bot.inGame = true end)
@@ -78,6 +101,12 @@ end
 function love.update(dt)
     t = t + dt
     Timer.update(dt); Sound.update(dt); NC:update(dt); bot.c:update(); bad:update()
+    if netQ then
+        local now, i = love.timer.getTime(), 1
+        while i <= #netQ do
+            if netQ[i].at <= now then local q = table.remove(netQ, i); q.fn() else i = i + 1 end
+        end
+    end
     if not bad.hello and bad:isConnected() then bad.hello = true; bad:send('hello', { v = P.VERSION, name = 'xX_PuT4_Xx' }) end
     if not bot.hello and bot.c:isConnected() then bot.hello = true; bot.c:send('hello', { v = P.VERSION, name = 'Bot' }) end
     if bot.logged and bot.roomId and not bot.joined then
@@ -105,6 +134,9 @@ function love.update(dt)
     if gStateMachine:_top() then gStateMachine:update(dt) end
     Input = package.loaded['input']
     if st and st.localPaInit then frames = frames + 1 end
+    if os.getenv('WANTOXY') and st and st.level then
+        for _, v in ipairs(st.level.vents or {}) do oxySeen = math.max(oxySeen or 0, #v.oxyBubbles) end
+    end
     if (os.getenv('WATCH') or os.getenv('WANTTILES')) and st and st.enemyRenderers then
         watch = watch or { states = {}, tiles = 0, minHp = 99, deaths = 0, tileNames = {} }
         for _, er in pairs(st.enemyRenderers) do
@@ -170,6 +202,18 @@ function love.update(dt)
             for w in (os.getenv('WANT') or ''):gmatch('[^,]+') do
                 if not watch.states[w] then print('Error: el cliente no vio el estado ' .. w) end
             end
+        end
+        if netQ and st and st.predictor then
+            local pr = st.predictor
+            local behind = pr.seq - pr.ackSeq
+            local maxBehind = math.floor((tonumber(os.getenv('LAG')) or 0) / 1000 * 2 * 60) + 30
+            print(('red mala (%s ms, %s %% perdido): inputs sin confirmar al final %d (máximo %d)'):format(
+                os.getenv('LAG') or 0, os.getenv('LOSS') or 0, behind, maxBehind))
+            if behind > maxBehind then print('Error: con la red mala la predicción se queda atrás') end
+        end
+        if os.getenv('WANTOXY') then
+            print(('burbujas de oxígeno vistas en el cliente (máximo a la vez): %d'):format(oxySeen or 0))
+            if (oxySeen or 0) == 0 then print('Error: el cliente no vio ninguna burbuja de oxígeno del servidor') end
         end
         if os.getenv('STALL') then
             local lag = bot.seq - (bot.ack or 0)

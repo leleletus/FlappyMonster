@@ -78,7 +78,7 @@ function Gummy:updateCustom(dt, level)
             self:startWalk()
             Sound.play('gpImpact', 1.5, 0.5)
             Entity.emitFx('spawn', self.x, self.y - self.sprH / 2 - 20)
-        elseif level and self.y > (level.heightPx or 1e9) + TILE_PX * 4 then
+        elseif self:fellOut(level) then
             self.alive = false
         end
         return true

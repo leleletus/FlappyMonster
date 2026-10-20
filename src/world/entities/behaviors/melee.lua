@@ -30,8 +30,7 @@ return {
         if t >= cfg.windup and t < cfg.windup + cfg.active then vx = cfg.lunge * e.facing end
         local dir = e.facing
         if vx ~= 0 and e.onGround and not e:groundAhead(level, dir) then vx = 0 end
-        e.vy = e.vy + ADV_GRAVITY * dt
-        e:moveAndCollide(level, vx * dt, e.vy * dt)
+        e:fall(level, dt, vx)
         e.facing = dir
         if t >= cfg.windup + cfg.active + cfg.rest then
             e.cd_melee = cfg.cooldown

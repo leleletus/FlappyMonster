@@ -62,6 +62,7 @@ local TARGET_QUEUE    = 4     -- cola sana; por encima se recorta si persiste
 local TRIM_AFTER      = 30    -- ticks con cola alta antes de recortar
 local MAX_QUEUE       = 20    -- recorte inmediato
 local STARVE_TICKS    = 8     -- ticks sin input antes de extrapolar el último
+local NEAR_X, NEAR_Y  = 1400, 1000   -- px: entidades que se le mandan a cada jugador (la vista es 1280x720 a lo sumo)
 local MAX_SEQ_AHEAD   = 180   -- un seq más adelantado que esto: hubo un corte, se salta hasta él
 local MAX_FRAME_TICKS = 8     -- ticks máximos simulados por frame del servidor
 
@@ -137,7 +138,7 @@ server:setSerialization(bitser.dumps, bitser.loads)
 
 -- players[clientObj] = { id, name, verified, roomId, isReady, color, ip,
 --                        tokens, lastT, dropped, dropWindow, invalid, kicked,
---                        connectedAt, joinFails, joinLockUntil }
+--                        connectedAt }
 local players    = {}
 -- rooms[roomId]    = { id, name, isPublic, password, maxPlayers,
 --                      playerIds, adminId, state, bannedNames, bannedIPs,
@@ -237,6 +238,10 @@ end
 
 -- Ficha de cada nivel (modos, monstruos, miniatura...): src/world/level/LevelCatalog.lua
 -- (la misma que usa el Juego libre del cliente)
+-- (cada ficha se guarda con la fecha de su archivo: al re-escanear solo se cargan los niveles nuevos o cambiados —
+-- antes, cada 10 s, Level.new + miniatura de TODOS, en el hilo de las partidas: tirones en todas las salas)
+local infoByFile = {}
+local levelCatalogMsg                 -- (la lista para `level_catalog`, hecha una vez por escaneo)
 local function scanLevels(force)
     local now = love.timer.getTime()
     if levelCache and not force and now - levelCacheT < 10 then return levelCache end
@@ -246,11 +251,20 @@ local function scanLevels(force)
     for _, f in ipairs(listLevelFiles()) do
         if LevelCatalog.isListed(f) then
             local path = LEVELS_DIR .. '/' .. f
-            local info, err = LevelCatalog.load(path, f)
-            if info then list[#list+1] = info
-            else log('Nivel invalido ' .. path .. ': ' .. tostring(err)) end
+            local fi = love.filesystem.getInfo(path)
+            local mod = fi and fi.modtime or 0
+            local c = infoByFile[f]
+            if not (c and c.mod == mod) then
+                local info, err = LevelCatalog.load(path, f)
+                if not info then log('Nivel invalido ' .. path .. ': ' .. tostring(err)) end
+                c = { mod = mod, info = info }
+                infoByFile[f] = c
+                levelCatalogMsg = nil
+            end
+            if c.info then list[#list+1] = c.info end
         end
     end
+    if levelCache and #list ~= #levelCache then levelCatalogMsg = nil end
     levelCache, levelCacheT = list, now
     return list
 end
@@ -477,6 +491,13 @@ local function stepPlayer(sim, pid, ps, bits, seq)
     _emitX, _emitY = pa.x, pa.y
     pa:update(TICK_DT, sim.level)
     _currentSoundPlayerId = nil
+    -- Bloques que rompió ESTE jugador: con su id, para que su cliente los aplique ya (los de los demás esperan al
+    -- tick que se dibuja); su predicción ya no choca con un bloque que en el servidor no existe
+    local bq = sim.level.brokenQueue
+    if bq and #bq > 0 then
+        for _, b in ipairs(bq) do pushEvent(sim, { type='tile', c=b[1], r=b[2], v=b[3], k=b[4], from=b[5], playerId=pid }) end
+        sim.level.brokenQueue = {}
+    end
 
     -- Fin de animación de muerte → restar vida y respawn/espectador
     if pa.dying and not pa.alive then
@@ -901,7 +922,7 @@ local function broadcastSnapshot(room)
         end
     end
 
-    local elist = {}
+    local elist, ebig = {}, {}
     for i, e in ipairs(sim.enemies) do
       -- En reposo (p. ej. pinchos colgando): no se envía, el cliente lo sabe
       if not e:netAtRest() then
@@ -914,6 +935,7 @@ local function broadcastSnapshot(room)
         local extra = e:netPack()
         if extra then for k, v in ipairs(extra) do entry[9 + k] = v end end
         elist[i] = entry
+        if e.def and e.def.boss then ebig[i] = true end
       end
     end
 
@@ -940,11 +962,32 @@ local function broadcastSnapshot(room)
         local c  = findClientById(pid)
         local ps = sim.playerSims[pid]
         if c then
-            local snap = { t=sim.tick, lt=lt, p=plist, e=elist, vb=vb, md=md, bz=bz, sc=sc, fc=fc, zc=zc }
+            -- Entidades: a cada jugador solo las que tiene CERCA (los jefes, siempre). Un nivel con más de 100 en
+            -- movimiento (laberinto_submarino) daba fotos de 2,2 KB: pasada la MTU, ENet las manda en trozos FIABLES
+            -- y una pérdida frena todo el canal. Las que no vienen, el cliente las deja quietas (netRest), fuera de
+            -- la vista. Los espectadores ven a otros: todas.
+            local el = elist
+            if ps and not ps.isSpectator and ps.pa then
+                el = ps.elist or {}
+                ps.elist = el
+                for k in pairs(el) do el[k] = nil end
+                local px, py = ps.pa.x, ps.pa.y
+                for i, entry in pairs(elist) do
+                    if ebig[i] or (math.abs(entry[1] - px) < NEAR_X and math.abs(entry[2] - py) < NEAR_Y) then el[i] = entry end
+                end
+            end
+            local snap = { t=sim.tick, lt=lt, p=plist, e=el, vb=vb, md=md, bz=bz, sc=sc, fc=fc, zc=zc }
             if ps and not ps.isSpectator then
                 snap.a  = ps.lastProcSeq
                 snap.o  = Protocol.packOwnState(ps.pa)
                 snap.bs = ps.bounceSeq
+            end
+            -- (FM_PERF: el tamaño de la foto; pasada la MTU (~1200 B) ENet la manda en trozos FIABLES)
+            if PERF_SNAP then
+                local n = #bitser.dumps({ "s", snap })
+                if n > PERF_SNAP.max then PERF_SNAP.max = n end
+                PERF_SNAP.sum, PERF_SNAP.n = PERF_SNAP.sum + n, PERF_SNAP.n + 1
+                if n > 1200 then PERF_SNAP.big = PERF_SNAP.big + 1 end
             end
             sendState(c, "s", snap)
         end
@@ -1067,7 +1110,7 @@ server:on("connect", function(data, client)
     players[client] = {
         id=nil, name=nil, verified=false, roomId=nil, isReady=false, color=nil,
         ip=ip, tokens=MSG_BURST, lastT=now, dropped=0, dropWindow=now, invalid=0,
-        kicked=false, connectedAt=now, joinFails=0, joinLockUntil=0,
+        kicked=false, connectedAt=now,
     }
     -- Detectar desconexiones en 3-10 s en vez de ~30 s
     pcall(function() client.connection:timeout(32, 3000, 10000) end)
@@ -1137,11 +1180,15 @@ on("create_room", function(data, client, player)
     broadcastRoomUpdate(rooms[roomId])
 end)
 
+-- Contraseñas falladas, por IP (por conexión, volver a conectar las ponía a cero): [ip] = { fails, lockUntil, t }
+local joinLocks = {}
 on("join_room", function(data, client, player)
     if type(data) ~= "table" then return end
     if player.roomId then client:send("room_error",Lang.message('srv.already_in_room')); return end
     local now = love.timer.getTime()
-    if now < player.joinLockUntil then
+    for ip, j in pairs(joinLocks) do if now - j.t > 600 and now >= j.lockUntil then joinLocks[ip] = nil end end
+    local jl = joinLocks[player.ip]
+    if jl and now < jl.lockUntil then
         client:send("room_error",Lang.message('srv.too_many_tries')); return
     end
     local room = rooms[tostring(data.id or ""):sub(1, 12)]
@@ -1153,15 +1200,17 @@ on("join_room", function(data, client, player)
                                    { kind = "banned", room = room.name })); return
     end
     if room.password ~= "" and room.password ~= cleanText(data.password, PASSWORD_MAX) then
-        player.joinFails = player.joinFails + 1
-        if player.joinFails >= JOIN_FAIL_MAX then
-            player.joinFails = 0
-            player.joinLockUntil = now + JOIN_FAIL_LOCK
+        jl = jl or { fails = 0, lockUntil = 0 }
+        joinLocks[player.ip] = jl
+        jl.fails, jl.t = jl.fails + 1, now
+        if jl.fails >= JOIN_FAIL_MAX then
+            jl.fails = 0
+            jl.lockUntil = now + JOIN_FAIL_LOCK
             log(player.name .. " bloqueado " .. JOIN_FAIL_LOCK .. "s por contrasenas erroneas")
         end
         client:send("room_error",Lang.message('srv.wrong_password')); return
     end
-    player.joinFails = 0
+    if jl then jl.fails = 0 end
     table.insert(room.playerIds, player.id)
     player.roomId  = room.id
     player.isReady = false
@@ -1273,18 +1322,27 @@ on("set_difficulty", function(data, client, player)
 end)
 
 -- Catálogo de niveles con miniaturas (lo pide el menú de modos del lobby)
+-- (la lista con miniaturas pesa ~100 KB: como mucho una cada 2 s por cliente — repetida a 120/s eran ~13 MB/s)
+local GET_LEVELS_EVERY = 2
 on("get_levels", function(data, client, player)
     local room = player.roomId and rooms[player.roomId]
     if not room then return end
-    local list = {}
-    for _, info in ipairs(scanLevels()) do
-        local modes = {}
-        for id in pairs(info.modes) do modes[#modes+1] = id end
-        list[#list+1] = { path = info.path, name = info.name, name_en = info.name_en, w = info.w, h = info.h,
-                          enemies = info.enemies, finish = info.finish, modes = modes,
-                          preview = info.preview }
+    local now = love.timer.getTime()
+    if player.getLevelsT and now - player.getLevelsT < GET_LEVELS_EVERY then return end
+    player.getLevelsT = now
+    local levels = scanLevels()
+    if not levelCatalogMsg then
+        local list = {}
+        for _, info in ipairs(levels) do
+            local modes = {}
+            for id in pairs(info.modes) do modes[#modes+1] = id end
+            list[#list+1] = { path = info.path, name = info.name, name_en = info.name_en, w = info.w, h = info.h,
+                              enemies = info.enemies, finish = info.finish, modes = modes,
+                              preview = info.preview }
+        end
+        levelCatalogMsg = { levels = list }
     end
-    client:send("level_catalog", { levels = list })
+    client:send("level_catalog", levelCatalogMsg)
 end)
 
 on("set_level", function(data, client, player)
@@ -1679,6 +1737,7 @@ end
 -- FM_PERF=2: además, la BASURA POR FUNCIÓN (tools/tests/lib/garbage_profile.lua; con el recolector parado mientras
 -- se simula y se manda: las cifras son exactas, el rendimiento no)
 local PERF = os.getenv('FM_PERF') and { t = 0, steps = 0, stepT = 0, snaps = 0, snapT = 0, alloc = 0 } or nil
+PERF_SNAP = PERF and { max = 0, sum = 0, n = 0, big = 0 } or nil
 local GPROF
 local function perfAlloc(k0)
     local d = collectgarbage('count') - k0
@@ -1751,6 +1810,11 @@ function love.update(dt)
                 for _, e in ipairs(GPROF.top(15, PERF.steps)) do log(string.format("perf:   %7.2f KB/paso  %s", e[2], e[1])) end
                 GPROF.reset()
             end
+            if PERF_SNAP.n > 0 then
+                log(string.format("perf: fotos por jugador: media %d B, máxima %d B, %d de más de 1200 B (van en trozos fiables)",
+                    math.floor(PERF_SNAP.sum / PERF_SNAP.n), PERF_SNAP.max, PERF_SNAP.big))
+            end
+            PERF_SNAP.max, PERF_SNAP.sum, PERF_SNAP.n, PERF_SNAP.big = 0, 0, 0, 0
             PERF.t, PERF.steps, PERF.stepT, PERF.snaps, PERF.snapT, PERF.alloc = 0, 0, 0, 0, 0, 0
         end
     end

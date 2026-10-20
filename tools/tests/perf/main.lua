@@ -10,7 +10,7 @@
 -- Y FUGAS (fugas): entra en el mismo nivel varias veces seguidas (RELOADS=6): la memoria de Lua y de texturas tiene que estabilizarse.
 --
 --   tools/tests/run.sh perf                          todas las escenas
---   SCENES=menu,level:assets/levels/x.json,boss,flappy,fugas   las que se digan
+--   SCENES=menu,level:assets/levels/x.json,boss,map,flappy,fugas   las que se digan
 --   N=600 WARM=120 TOP=25                           fotogramas medidos, de calentamiento, funciones del perfil
 --   PROFILE=0                                       sin perfil
 --   SHOTS=1                                         captura al final de cada escena: <save>/perf_<escena>.png
@@ -210,6 +210,22 @@ function SC.boss()
     end)
 end
 
+-- El MAPA del modo historia (una partida de prueba en memoria; el monstruo anda de parada en parada)
+function SC.map()
+    local Run, Save = require 'src/story/Run', require 'src/story/Save'
+    Run.slot, Run.data = nil, Save.new('normal')                 -- (sin hueco: no se escribe nada)
+    gStateMachine:change('story_map', { world = 1, node = 1 })
+    local f = 0
+    frameHook = function()
+        f = f + 1
+        if f % 70 == 0 then held.right = 'press' elseif f % 70 == 2 then held.right = nil end
+    end
+    measure('mapa de la historia', true)                     -- (anda: entra en zonas nuevas y llena sus cachés)
+    frameHook = nil; held = {}
+    gStateMachine:change('title')                                -- (antes de soltar la partida: el mapa la dibuja)
+    Run.slot, Run.data = nil, nil
+end
+
 function SC.flappy()
     gStateMachine:change('play', { difficulty = 'normal' })
     local f = 0
@@ -292,7 +308,7 @@ function SC.fugas()
 end
 
 local function run()
-    local list = os.getenv('SCENES') or 'menu,level,level:assets/levels/caldera_roja.json,boss,flappy,fugas'
+    local list = os.getenv('SCENES') or 'menu,level,level:assets/levels/caldera_roja.json,boss,map,flappy,fugas'
     for item in list:gmatch('[^,]+') do
         local nm, arg = item:match('^([^:]+):?(.*)$')
         if SC[nm] then SC[nm](arg ~= '' and arg or nil) else print('escena desconocida: ' .. nm); fails = fails + 1 end

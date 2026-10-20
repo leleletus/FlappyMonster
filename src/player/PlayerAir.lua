@@ -11,7 +11,7 @@ local DROWN_TOTAL, DROWN_CHIME_INT, DROWN_CHIMES, DROWN_AUDIO_DUR, AIR_BAR_W, AI
 -- La "cabeza" es la franja superior del 25% de la outerBounds.
 -- Mientras esté sumergida avanza el temporizador; al salir → reset total.
 function PlayerAdventure:updateDrowning(dt, level)
-    if self.dying or self.immortal then return end
+    if self.dying or self.immortal or self.frozen then return end
 
     local headX, headY = self:getHeadPoint()
     local liq = level:liquidAt(headX, headY)
@@ -68,6 +68,7 @@ function PlayerAdventure:updateDrowning(dt, level)
         self.drownAudT = self.drownAudT + dt
         -- Matar cuando termina el audio (~12 s)
         if self.drownAudT >= DROWN_AUDIO_DUR then
+            if (self.invT or 0) > 0 then return end           -- (ya ganado / recién reaparecido: espera)
             Sound.stopTracked('drowning')
             Sound.play('glugluglu')
             self:die(true)   -- true = muerte por ahogamiento, sin dies2

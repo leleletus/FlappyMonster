@@ -191,12 +191,13 @@ end
 
 -- FRAGMENTOS DEL ESPEJO (src/story/Shards.lua): quedan en la partida al TERMINAR el nivel en que se recogieron
 -- (StoryMapState: salir a medias no guarda nada de lo conseguido)
-function Run.addShard(id)
+-- (noSave: el nivel terminado lo guarda todo junto en Run.complete — fragmento y nivel en UNA escritura)
+function Run.addShard(id, noSave)
     local d = Run.data
     if not d then return end
     d.shards = d.shards or {}
     d.shards[id] = true
-    Run.save()
+    if not noSave then Run.save() end
 end
 function Run.shards() return require('src/story/Shards').count(Run.data or { shards = {} }) end
 

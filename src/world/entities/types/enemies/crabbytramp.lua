@@ -165,7 +165,7 @@ function TC:updateDrop(dt, level)
                 return true
             end
         end
-        if self.y > level.heightPx + TILE_PX * 4 then self.alive = false end
+        if self:fellOut(level) then self.alive = false end
     elseif st == 'drop_bounce' then
         -- Se da la vuelta en el aire y cae de pie; luego recoge el trampolín
         self.vy = self.vy + ADV_GRAVITY * dt

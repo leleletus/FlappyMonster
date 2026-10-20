@@ -26,6 +26,7 @@
 --   tramp_avanza   Crabby trepador que pisa un trampolín: sale lanzado hacia
 --                  delante y sigue andando (antes rebotaba en el sitio sin fin)
 --   tramp_pinchos  lanzado por un trampolín y cae en pinchos: revienta (dead_burst)
+--   ahogo_ganado   ahogarse con el nivel ya ganado (invulnerable) o congelado no mata
 --   pocos_fps      a 30 y 20 FPS: pisotón rápido = pisotón; caída y ground pound no atraviesan un suelo de 1 casilla
 --   lava           Gummy / Crabby / Saltarín caen en lava: revientan; la bomba explota; un volador encima, nada
 --   bomba_activa   bomba viva: tener un jugador al lado NO la enciende; tocarla
@@ -565,6 +566,9 @@ end
 -- la bomba explota; un volador por encima, nada
 function cases.lava()
     local parts, ok = {}, true
+    local Entity = require 'src/world/entities/base/Entity'
+    local kills = 0
+    Entity.onKill = function() kills = kills + 1 end              -- (vencidos sin pisotón: cuentan para la nota)
     for _, kind in ipairs({ 'gummy', 'crabby', 'hopper', 'bomb' }) do
         local put = {}
         for c = 5, 9 do for r = 5, 7 do put[#put + 1] = { c, r, 'danger' } end end
@@ -589,7 +593,30 @@ function cases.lava()
     local flyOk = es[1].alive and es[1].state ~= 'dead_burst'
     ok = ok and flyOk
     parts[#parts + 1] = ('gummy con alas sobre la lava: vivo=%s'):format(tostring(flyOk))
+    Entity.onKill = nil
+    ok = ok and kills == 3
+    parts[#parts + 1] = ('cuentan como vencidos: %d (gummy, crabby, saltarín; la bomba no)'):format(kills)
     check('lava', ok, table.concat(parts, ' · '))
+end
+
+-- Ahogarse con el nivel ya GANADO (invulnerable) o congelado: no mata; sin eso, sí
+function cases.ahogo_ganado()
+    local res = {}
+    for _, mode in ipairs({ 'normal', 'ganado', 'congelado' }) do
+        local level = pond()
+        local pa = PlayerAdventure:new(4.5 * T, 6.5 * T)
+        level.players = { pa }
+        clear()
+        pa:update(1 / 60, level)
+        pa.drownPhase, pa.drownAudT = 'drowning', 12 - 0.2              -- (DROWN_AUDIO_DUR = 12 s)
+        if mode == 'ganado' then pa:grantInvulnerability(5) end
+        if mode == 'congelado' then pa.forceFrozen = true end
+        for _ = 1, 60 do pa:update(1 / 60, level); pa.y = 6.5 * T; pa.vy = 0 end
+        res[mode] = pa.dying == true
+    end
+    check('ahogo_ganado', res.normal and not res.ganado and not res.congelado,
+        ('a punto de ahogarse: normal muere=%s; ya ganado (invulnerable) muere=%s; congelado muere=%s'):format(
+         tostring(res.normal), tostring(res.ganado), tostring(res.congelado)))
 end
 
 -- ── Bombas ────────────────────────────────────────────────────────────────────
@@ -1115,6 +1142,8 @@ function cases.persecucion_cuerpo()
 end
 
 function cases.persecucion()
+    -- (su propia semilla: con la que dejaban los casos de antes, añadir uno cambiaba el resultado)
+    math.randomseed(tonumber(os.getenv('PSEED')) or 1)   -- (con 4, 5, 7, 8 el Espejo no llega a tocar sin dañar: el toque es de azar)
     local AutoScroll = require 'src/world/systems/AutoScroll'
     local Boss = require 'src/world/entities/base/Boss'
     local tiles = {}
@@ -1479,7 +1508,7 @@ function love.load()
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
                          'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
-                         'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps' }) do cases[n]() end
+                         'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado' }) do cases[n]() end
     if os.getenv('SHOT_BOMB') then bombShot() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
     if not os.getenv('SHOT') then love.event.quit(fails == 0 and 0 or 1); return end

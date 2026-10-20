@@ -7,6 +7,7 @@
 --   jugador    vida 4 en Fácil; invulnerable más (Fácil) o menos (Extremo) tiempo tras un golpe;
 --              aire bajo el agua × airTime
 --   peligros   los pinchos matan… salvo en Fácil: 1 de vida y un bote hacia arriba
+--   peligros_ent  igual con los pinchos que son entidades (el que cuelga y cae, la lluvia)
 --   salas      varias a la vez (servidor): Difficulty.bind cambia de una a otra sin mezclarlas
 --   sentidos   los enemigos te ven desde el techo y oyen ruidos de más lejos en Extremo (× sense) y de más
 --              cerca en Fácil
@@ -177,6 +178,23 @@ function cases.peligros()
         ('caer en pinchos: sin dificultad muere=%s; en Fácil muere=%s, vida 4 → %d y sale de un bote=%s'):format(tostring(dN), tostring(dE), hE, tostring(upE)))
 end
 
+-- Los pinchos que son ENTIDADES (los que cuelgan y caen, la lluvia de pinchos...) igual que los del suelo: matan…
+-- salvo en Fácil (antes en Fácil también mataban)
+function cases.peligros_ent()
+    local function touch(diff)
+        local level, es, sp = room(20, 8, { { type = 'spikefall', col = 8, row = 2, sub = 1, props = {} } }, diff)
+        local pa = player(level, 5, 8)
+        local hb = sp:getHazardBoxes()[1]
+        pa.x, pa.y, pa.vy = hb.x + hb.w / 2, hb.y + hb.h / 2 + 20, 0
+        Interactions.run(pa, es, {})
+        return pa.dying, pa.hp
+    end
+    local dN = touch(nil)
+    local dE, hE = touch('easy')
+    check('peligros_ent', dN == true and dE ~= true and hE == 3,
+        ('tocar un pincho colgante: sin dificultad muere=%s; en Fácil muere=%s, vida 4 → %s'):format(tostring(dN), tostring(dE), tostring(hE)))
+end
+
 function cases.salas()
     local a = room(10, 6, {}, 'easy')
     local b = room(10, 6, {}, 'extreme')
@@ -322,7 +340,7 @@ end
 
 function love.load()
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'neutro', 'enemigos', 'categorias', 'jefe', 'jugador', 'peligros', 'salas', 'sentidos', 'doble', 'ayuda' }) do
+    for _, n in ipairs({ 'neutro', 'enemigos', 'categorias', 'jefe', 'jugador', 'peligros', 'peligros_ent', 'salas', 'sentidos', 'doble', 'ayuda' }) do
         if not only or only == n then
             local ok, err = pcall(cases[n])
             if not ok then check(n, false, 'ERROR ' .. tostring(err)) end

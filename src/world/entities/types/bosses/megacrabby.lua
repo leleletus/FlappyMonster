@@ -900,7 +900,7 @@ function Mega:updateBoss(dt, level)
             Entity.emitFx('mega_slam', self.x, top)
             Entity.emitFx('spike_land', self.x, top)
             Entity.emitFx('shake_big', self.x, top)
-        elseif self.y > level.heightPx + T * 4 then
+        elseif self:fellOut(level) then
             -- (se salió del nivel: vuelve a su sitio)
             self.x, self.y, self.flipped, self.vy = self.home.x, self.home.y, false, 0
             self.state, self.deadTimer = 'chase', 0

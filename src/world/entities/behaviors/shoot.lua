@@ -30,8 +30,7 @@ return {
     update = function(e, cfg, dt, level)
         local dir = e.facing
         if not e.flying then
-            e.vy = e.vy + ADV_GRAVITY * dt
-            e:moveAndCollide(level, 0, e.vy * dt)
+            e:fall(level, dt)
         end
         e.facing = dir
         if not e.fired and e.deadTimer >= cfg.windup then

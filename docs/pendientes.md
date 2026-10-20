@@ -36,7 +36,7 @@ not repeated here.
   `{key}` placeholders filled by `Input.label`.
 - [x] (0.5.10) `Input.label` by platform only → by last device used (keyboard / pad / touch).
 - [x] (0.5.10) Pad unplugged and plugged back / swapped stops working (no `joystickremoved`, new pad ignored).
-- [ ] ~~No repeat when holding a direction in menus~~ (0.5.10); no stick hysteresis (diagonals jump in grids).
+- [x] (0.5.10 / 0.5.11) No repeat when holding a direction in menus; no stick hysteresis (diagonals jump in grids).
 - [x] (0.5.10) Save slot cannot be deleted with a pad (BORRAR never gets focus).
 - [x] (0.5.10) Online room list cannot be scrolled by touch (rooms after the 5th unreachable on Android).
 - [x] (0.5.10) Online room screen: `back` does nothing although the hint shows it.
@@ -50,27 +50,27 @@ not repeated here.
 
 ## 3. Gameplay
 
-- [ ] Easy (`hazardHurt`) does not cover entity spikes / spike rain / mortar (they still kill).
-- [ ] Drowning still kills after winning / while frozen / in a boss intro.
-- [ ] Data-enemy shots freeze mid-air (but hurt) while the shooter is stunned / launched.
-- [ ] Non-stomp kills (bombs, broken block, trampoline into spikes) not counted in `stats.kills` (grade).
-- [ ] Oxygen bubbles depend on sprites loading and on wall-clock time (rule 1).
-- [ ] Respawn overwrites the checkpoint with the auto-scroll / arena point for good.
-- [ ] Rule 2: "fell out of the level" check copied ~8 times; gravity integration copied in behaviours; knockback
+- [x] (0.5.11) Easy (`hazardHurt`) does not cover entity spikes / spike rain / mortar (they still kill).
+- [x] (0.5.11) Drowning still kills after winning / while frozen / in a boss intro.
+- [x] (0.5.11) Data-enemy shots freeze mid-air (but hurt) while the shooter is stunned / launched.
+- [x] (0.5.11) Non-stomp kills (bombs, broken block, trampoline into spikes) not counted in `stats.kills` (grade).
+- [x] (0.5.11) Oxygen bubbles depend on sprites loading and on wall-clock time (rule 1).
+- [x] Respawn overwrites the checkpoint with the auto-scroll / arena point for good. — kept (0.5.11): the arena / auto-scroll point is always further along than the last checkpoint, so respawning there is the better place
+- [x] (0.5.11) Rule 2: "fell out of the level" check copied ~8 times; gravity integration copied in behaviours; knockback
   wall release copied in 3 types.
 
 ## 4. Online / server
 
-- [ ] `get_levels` spam → ~13 MB/s out per connection (cooldown / cached payload).
-- [ ] Update channel without login: `upd_get` spam, 64 slots filled without logging in (in-flight / budget caps).
-- [ ] Updates unsigned (manifest signature with a public key in `main.lua`).
-- [ ] Level catalog rescanned (`io.popen ls` + `Level.new` × 44) on the main thread during matches.
-- [ ] Ground pound through breakable blocks mispredicted (`canBreak=false` on the client; `tile` events without
+- [x] (0.5.11) `get_levels` spam → ~13 MB/s out per connection (cooldown / cached payload).
+- [x] (0.5.11) Update channel without login: `upd_get` spam, 64 slots filled without logging in (in-flight / budget caps).
+- [x] Updates unsigned (manifest signature with a public key in `main.lua`). — moved to section 7 (decision)
+- [x] (0.5.11) Level catalog rescanned (`io.popen ls` + `Level.new` × 44) on the main thread during matches.
+- [x] (0.5.11) Ground pound through breakable blocks mispredicted (`canBreak=false` on the client; `tile` events without
   `playerId`).
-- [ ] Large unreliable snapshots silently sent as reliable fragments (measure size in `FM_PERF` / `online_boss`).
-- [ ] Room password lockout resets on reconnect (per-connection instead of per-IP).
-- [ ] "Private" room listed and joinable with an empty password; sequential room ids.
-- [ ] Remote players' health bar `hpMax = 3` hard-coded (4 on Easy).
+- [x] (0.5.11) Large unreliable snapshots silently sent as reliable fragments (measure size in `FM_PERF` / `online_boss`).
+- [x] (0.5.11) Room password lockout resets on reconnect (per-connection instead of per-IP).
+- [x] "Private" room listed and joinable with an empty password; sequential room ids. — moved to section 7 (decision)
+- [x] (0.5.11) Remote players' health bar `hpMax = 3` hard-coded (4 on Easy).
 - [x] (0.5.10) Client handler error shown as "connection lost" (one `pcall` around all of `client:update`).
 - [x] (0.5.8) `_currentSim` never cleared after `stepRoom`.
 
@@ -79,26 +79,34 @@ not repeated here.
 - [x] (0.5.10) Level editor "Save as" overwrites an existing level (story levels included) without asking.
 - [x] (0.5.10) Editors: quit guard skipped during F5 playtest; `quitConfirmed` never reset; `f:write` result ignored.
 - [x] (0.5.8) Lost lives only saved on `exit` (kill the app = keep the lives).
-- [ ] Shards and level completion saved in separate writes.
-- [ ] Story points farmable by replaying (`d.points` grows on every replay).
-- [ ] `Save.VERSION` / `options.cfg` version never checked.
+- [x] (0.5.11) Shards and level completion saved in separate writes.
+- [x] Story points farmable by replaying (`d.points` grows on every replay). — moved to section 7 (decision)
+- [x] `Save.VERSION` / `options.cfg` version never checked. — no change needed (0.5.11): `Save.write` writes back every field it read, so an older game keeps a newer save's fields
 - [x] (0.5.10) Updater manifest: entries without hash count as present; `.manifest.lua` write unchecked; validate hashes.
 
 ## 6. Tests, performance, docs
 
-- [ ] No harness for the full update download (publish → chunks → sha256 → install → restart).
-- [ ] No online harness with latency / jitter / packet loss.
-- [ ] ~~Hunt mode never run in the battery~~ (0.5.8); Evil Ship (`miniboss1`) has no rules harness; spike rain untested.
-- [ ] `mechanics` `persecucion` depends on the random sequence (a case added before it made it fail: `sides` 3 < 5).
-- [ ] No test for a corrupt / truncated save or `options.cfg` round-trip.
-- [ ] `perf`: no online-client, story-map or credits scene; ~~header advertises a missing `map` scene~~ (0.5.10); boss scene at
-  54 / 64 KB per frame.
-- [ ] Particles: no pool, `table.remove(list, 1)` at the cap (O(n²) bursts).
-- [ ] Predictor allocates tables every tick / snapshot.
+- [x] (0.5.11) No harness for the full update download (publish → chunks → sha256 → install → restart).
+- [x] (0.5.11) No online harness with latency / jitter / packet loss.
+- [x] Hunt mode in the battery (0.5.8); the Evil Ship fight (`sp_boss LEVEL=fortaleza_malvada`) and the spike rain online (`online_smoke lluvia_pinchos WATCH=rainspike`) in the battery (0.5.11). A full rules harness for the Evil Ship (like the other bosses') is still missing.
+- [x] (0.5.11) `mechanics` `persecucion` depends on the random sequence — it now seeds its own RNG (`PSEED`, default 1). Still: with seeds 4 / 5 / 7 / 8 the Mirror never makes a push-only touch (it is left to chance); a forced probe would make it robust.
+- [x] No test for a corrupt / truncated save or `options.cfg` round-trip. — `story_flow` `roto` (0.5.8); `menu_flow` `opciones` (0.5.11)
+- [ ] `perf`: no online-client or credits scene (the story-map scene was added in 0.5.11 and found 77 KB/frame of garbage, fixed; the missing `map` header entry is real now; the boss scene is at 35 KB, not 54).
+- [x] (0.5.11) Particles: no pool, `table.remove(list, 1)` at the cap (O(n²) bursts).
+- [x] (0.5.11) Predictor allocates tables every tick / snapshot.
 - [x] (0.5.10) `docs/testing/harnesses.md` stale (contradicting intros, 16 harnesses missing); `free_play` README row
   malformed; stale line counts in known-debt; `save-data.md` misses `playTime` / `gameOvers`.
 
-## 7. Features to add (decide with the user)
+## 7. Decisions for the user
+
+- "Private" rooms: today PRIVATE + empty password is listed and open (the wizard says "Vacía = sin contraseña").
+  Options: require a password for private rooms, or hide private rooms from the list and join them by a code.
+- Story points grow on every replay (`d.points`): fine while nothing ranks them; if a leaderboard comes, use the sum
+  of per-level bests.
+- Signed updates (a public key in `main.lua`, the server signs the manifest): needs a key kept outside the repo and
+  only protects devices that install a new build.
+
+## 8. Features to add (decide with the user)
 
 - Options: music / SFX volume, mute, vibration, A/B swap (Xbox pads); `love.focus` must respect the volume.
 - Device-aware button glyphs (keyboard / Nintendo / Xbox / touch).

@@ -136,7 +136,7 @@ function Hopper:updateCustom(dt, level)
         self.deadTimer = self.deadTimer + dt
         self.vx = 0
         self:fall(level, dt)
-        if self.y > level.heightPx + TILE_PX * 4 then self.alive = false; return true end
+        if self:fellOut(level) then self.alive = false; return true end
         local pa = self:target(level)
         if pa and math.abs(pa.x - self.x) > 8 then self.facing = (pa.x > self.x) and 1 or -1 end
         if self.onGround and self.deadTimer >= self.wait then
@@ -167,7 +167,7 @@ function Hopper:updateCustom(dt, level)
             local every = self.props.jumpEvery or 1.4
             self.wait = every * (0.85 + 0.3 * math.random())
             Sound.play('hopLand', 1, self.roaming and 0.35 or 0.8)
-        elseif self.y > level.heightPx + TILE_PX * 4 then
+        elseif self:fellOut(level) then
             self.alive = false
         end
         return true

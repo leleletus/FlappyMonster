@@ -329,6 +329,26 @@ function love.load(a)
     MenuScene = require 'src/ui/menu/MenuScene'
     Transition = require 'src/ui/menu/Transition'
     L = require 'src/core/Lang'
+    -- options.cfg: guardar y volver a leer da lo mismo (con comillas y acentos en el nombre); un archivo roto no rompe
+    -- el arranque (se queda lo que había)
+    do
+        local Settings = require 'src/core/Settings'
+        local keepL, keepN = Settings.language, Settings.onlineName
+        local had = love.filesystem.getInfo('options.cfg') and love.filesystem.read('options.cfg')
+        Settings.language, Settings.onlineName = 'en', 'Ñandú "x"'
+        Settings.save()
+        Settings.language, Settings.onlineName = 'es', ''
+        Settings.load()
+        local rt = Settings.language == 'en' and Settings.onlineName == 'Ñandú "x"'
+        love.filesystem.write('options.cfg', 'return { language = ')
+        local okLoad = pcall(Settings.load)
+        local kept = Settings.language == 'en'
+        if had then love.filesystem.write('options.cfg', had) else love.filesystem.remove('options.cfg') end
+        Settings.language, Settings.onlineName = keepL, keepN
+        L.set(keepL)
+        check('opciones', rt and okLoad and kept, ('guardar → leer: idioma y nombre iguales=%s; archivo roto: arranca=%s, conserva=%s'):format(
+            tostring(rt), tostring(okLoad), tostring(kept)))
+    end
     -- LEVELS=a,b,c: probar otros niveles como escenas (para elegirlas)
     if os.getenv('LEVELS') then
         MenuScene.SCENES = {}

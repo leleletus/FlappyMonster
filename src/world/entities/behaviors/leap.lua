@@ -24,8 +24,7 @@ return {
     update = function(e, cfg, dt, level)
         local dir = e.facing
         if not e.leaped then
-            e.vy = e.vy + ADV_GRAVITY * dt
-            e:moveAndCollide(level, 0, e.vy * dt)
+            e:fall(level, dt)
             if e.deadTimer >= cfg.windup then
                 -- salto balístico: sube `height` casillas y cae a la distancia del jugador (como mucho `dist`)
                 local vy = -math.sqrt(2 * ADV_GRAVITY * cfg.height * T)
@@ -34,9 +33,8 @@ return {
                 e.vx, e.vy, e.onGround, e.leaped = dx / air, vy, false, true
             end
         else
-            e.vy = e.vy + ADV_GRAVITY * dt
             local vx = e.vx
-            e:moveAndCollide(level, vx * dt, e.vy * dt)
+            e:fall(level, dt, vx)
             if e.onGround then
                 e.cd_leap = cfg.every
                 e:backToWalk()

@@ -145,11 +145,9 @@ end
 
 -- ── Helpers de vent ──────────────────────────────────────────────────────────
 local function spawnVentParticle(vent, isOxy)
-    if not bubbleImgs or #bubbleImgs == 0 then return end
     if isOxy then
-        -- bubble1 = índice 1
-        local def = bubbleImgs[1]
-        if not def then return end
+        -- bubble1 = índice 1 (la imagen solo para dibujar: sin ella la burbuja existe igual y da aire)
+        local def = (bubbleImgs and bubbleImgs[1]) or { w = BUBBLE_DEFS[1].w, h = BUBBLE_DEFS[1].h }
         table.insert(vent.oxyBubbles, {
             x        = vent.x + (math.random()-0.5)*4,
             y        = vent.y,
@@ -162,6 +160,7 @@ local function spawnVentParticle(vent, isOxy)
             alive    = true,
         })
     else
+        if not bubbleImgs or #bubbleImgs == 0 then return end
         -- bubble2 o bubble3 aleatorio (índices 2 y 3)
         local idx = math.random(2,3)
         local def = bubbleImgs[idx]
@@ -239,8 +238,9 @@ function Level:update(dt)
     end
     end  -- hasBubbles
 
-    -- Actualizar y limpiar burbujas
-    local t = love.timer.getTime()
+    -- Actualizar y limpiar burbujas (zigzag con el tiempo del NIVEL, no el real: la pausa no las mueve)
+    self.waterT = (self.waterT or 0) + dt
+    local t = self.waterT
     for i = #self.bubbles, 1, -1 do
         local b = self.bubbles[i]
         b.y = b.y - b.speed * dt
@@ -264,7 +264,7 @@ function Level:update(dt)
         -- Spawn de burbuja oxy — solo si no está controlado por el servidor
         if not self.disableOxySpawn then
             vent.oxyTimer = vent.oxyTimer + dt
-            if vent.oxyTimer >= vent.oxyDelay and hasBubbles then
+            if vent.oxyTimer >= vent.oxyDelay then
                 vent.oxyTimer = 0
                 vent.oxyDelay = (VENT_OXY_DELAY_MIN + math.random()*(VENT_OXY_DELAY_MAX-VENT_OXY_DELAY_MIN)) * require('src/core/Difficulty').of(self.difficulty, 'ventDelay', 1)
                 spawnVentParticle(vent, true)
@@ -348,7 +348,7 @@ function Level:renderVents(camX, camY)
                 -- Brillo pulsante para destacar
                 local op = 0.75 + math.sin(t * 5 + b.x) * 0.25
                 love.graphics.setColor(0.7, 1, 1, op)
-                love.graphics.draw(b.img, bsx, bsy, 0, VENT_OXY_SCALE, VENT_OXY_SCALE)
+                if b.img then love.graphics.draw(b.img, bsx, bsy, 0, VENT_OXY_SCALE, VENT_OXY_SCALE) end
             end
         end
     end

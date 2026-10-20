@@ -63,3 +63,9 @@ Editor: Bloques layer → tool **Conectar** (K): click an ON/OFF block → pick 
 the Selección tab (+ "Empieza encendido"); links drawn as yellow dotted lines; flood ids
 kept unique (`Model:fixFloodIds`); warnings for dangling links. Harness `flood_control`
 (+ `online_boss` with `tools/tests/online_boss/fortaleza_flood.json`). Protocol v25.
+
+- 0.5.11 (review): oxygen bubbles (gameplay: they give air) no longer depend on the bubble images having loaded, and
+  every bubble's zigzag uses the level's own clock (`level.waterT`), not the wall clock (rule 1: the pause no longer
+  moves them). The headless server already spawned them (it gets placeholder images). Harness `online_smoke
+  WANTOXY=1` (in the battery). Drowning does not run while the player is frozen (boss intro, end of a bonus) and
+  does not kill while invulnerable (level already won): harness `mechanics` (`ahogo_ganado`).

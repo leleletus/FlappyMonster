@@ -323,9 +323,9 @@ function Crawler.mixin(Cls)
         Crawler.detach(self)
         self.flipped = false
     end
-    function Cls:fall(level, dt)
+    function Cls:fall(level, dt, vx)
         if self.cattached then return end
-        Entity.fall(self, level, dt)
+        Entity.fall(self, level, dt, vx)
     end
 end
 

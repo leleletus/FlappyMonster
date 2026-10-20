@@ -86,6 +86,23 @@ almost every section reassigns, so it could not be split mechanically like the o
 
 - `game_init` sends roster (idx,id,name,color) + the level JSON text.
 
+Server load (0.5.11): the level catalog keeps each level's info with its file's modtime (a rescan only loads new or
+changed levels — before, every 10 s it rebuilt all 44 with previews on the match thread) and builds the
+`level_catalog` message once per scan; a client gets at most one every 2 s (`GET_LEVELS_EVERY`). Update chunks go
+through a bandwidth budget in `server/updates.lua` (2 MB/s per client, 8 MB/s in total, 8 queued requests per client;
+what does not fit waits and leaves in `Updates.update`) — the download protocol is unchanged (harness
+`online_update`). Wrong room passwords are counted per IP (`joinLocks`), not per connection. Remote players' health
+bars use the room's max HP (4 on Easy).
+
+Snapshot size (0.5.11): each player gets only the entities within `NEAR_X` × `NEAR_Y` (1400 × 1000 px) of them;
+bosses always; spectators everything. The client already treats a missing entry as "at rest" (`netRest`). Before,
+`laberinto_submarino` (107 moving entities) sent 2.2 KB snapshots: over the MTU (~1200 B) lua-enet cannot send
+unreliable fragments, so ENet sent them as RELIABLE fragments (head-of-line blocking on `CH_STATE`, the inputs'
+channel). Now ~0.4 KB. `FM_PERF=1` logs the mean / max snapshot size and how many go over 1200 B.
+Blocks broken by a player are sent as `tile` events WITH that `playerId` right after their step, so that client
+applies them at once; and a client predicting a ground pound onto a breakable block keeps falling (no false
+impact) until the event arrives.
+
 Network scaling: entities whose `netAtRest()` is true (e.g. hanging spikes)
 are NOT sent in snapshots; the client calls `netRest()` for missing entries
 (the level with 293 entities sends ~540-byte snapshots).

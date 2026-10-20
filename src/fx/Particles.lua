@@ -27,10 +27,15 @@ local list = {}
 local shakeT, shakeDur, shakePow = 0, 0.35, 0     -- temblor de pantalla
 local MAX  = 600
 
+-- Lleno: la más vieja que quede se marca para irse en el próximo update (antes `table.remove(list, 1)` corría toda la
+-- lista en cada partícula nueva: una explosión con la lista llena costaba n²). Tope duro: el doble.
+local cull = 0
 local function add(p)
-    if #list >= MAX then table.remove(list, 1) end
+    local n = #list
+    if n >= MAX * 2 then return end
+    if n >= MAX then cull = cull % n + 1; list[cull].life = 0 end
     p.t = 0
-    list[#list + 1] = p
+    list[n + 1] = p
 end
 
 local function rnd(a, b) return a + math.random() * (b - a) end
@@ -875,12 +880,18 @@ end
 
 function Particles.update(dt)
     if shakeT > 0 then shakeT = math.max(0, shakeT - dt) end
-    for i = #list, 1, -1 do
+    -- (las que acaban se quitan compactando la lista en una pasada, en el mismo orden de dibujo)
+    local n, j = #list, 0
+    for i = 1, n do
         local p = list[i]
         p.t = p.t + dt
-        if p.t >= p.life then
-            table.remove(list, i)
-        elseif p.implode then
+        if p.t < p.life then j = j + 1; list[j] = p end
+    end
+    for i = n, j + 1, -1 do list[i] = nil end
+    cull = 0
+    for i = 1, j do
+        local p = list[i]
+        if p.implode then
             local k = p.t / p.life
             p.x = p.sx + (p.tx - p.sx) * k
             p.y = p.sy + (p.ty - p.sy) * k
