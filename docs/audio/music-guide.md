@@ -42,7 +42,11 @@ BE SHORT (user, 3.98.0: tracks under a minute "get repetitive and tiring"): aim 
 pick the devices that fit the piece (a new chorus, a development in another key area, a solo for the lead, a
 stop-time section, a breakdown, the melody handed to another instrument, a dialogue with the accent, a key change with
 its pivot and return bar) and give each its own place; see `FORMS` in `worlds_nes.py`. Enter every new section
-smoothly (a pickup into its first note, a chord that leads there). BONUS tracks stay SHORT (about a minute: the bonus
+smoothly, composed in context (never a mechanical pickup added everywhere). LESSONS of 3.99.1 (user's verdicts): a
+"development" that just replays the theme's head in another key (IV, the relative…) sounds like a bad REMIX — don't;
+no key change in a short loop (the return to the home key at the seam sounded broken); the counter-melody's passing
+notes must not form m2 / M7 / tritone with their chord (`cmx`), and when another instrument takes the melody the
+counter-melody goes UNDER it; each loop must return to its start the way the original did. BONUS tracks stay SHORT (about a minute: the bonus
 zones last that long, and the percussion solo must be heard) and each world has its own bonus tune and its own solo.
 Long pieces grow by
 **density** (more layers, cymbals, octaves), not by volume. A silence or an empty half bar before a strong entry. A
@@ -115,9 +119,19 @@ intro ends differently from the loop's end, give both the same last bar and skip
   as text phrases, chords per bar, one arrangement per island, mix by groups). `--capas` writes any track as stems.
 - `tools/music/study.py`: key, range, intervals, syncopation and cells of any .mid.
 - `tools/music/levels.py`: measures every track and writes its catalog `volume` (run it after any change).
+- `tools/music/revisar.py <track>`: audits what a `worlds_nes.py` track REALLY plays (every note sent to every
+  channel, one note per channel at a time): melody / counter-melody notes off the chord and unresolved, m2 / M7 /
+  tritone clashes between voices that last an 8th or more, every section change and the LOOP SEAM (chords, melody
+  and bass across the boundary), and the exported loop (exact bar count, silences, intro → loop). It flags; it does
+  not judge — many flags are the approved themes' own passing notes.
+- `tools/music/previas_ab.py <track> --compases 29:desc,... --contra <commit> ...`: A/B previews with the game's
+  renderer, one folder per track in `FlappyMonster_pruebas/musica/...` with a `LEEME.txt`: intro + loop ×3, the
+  loop seam twice, intro → loop, and 4 bars either side of each section change; older versions come from git.
+  Never touches `assets/`.
 - `~/.venvs/fm-music` (librosa, pyloudnorm, mido, demucs, basic-pitch) to measure audio.
 - Limit: there is no ear. A new piece should come with 2-3 short variants for the author to choose from, and the
-  hand-off must always say it was verified by numbers only.
+  hand-off must always say it was verified by numbers only. WORKFLOW that worked (3.99.1): audit → change one or
+  two tracks → A/B previews with clear names → the user's verdict → install only what was approved.
 
 ## 7. The spider effect ("legs" of the Gloomy themes)
 

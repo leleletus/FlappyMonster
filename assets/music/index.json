@@ -35,7 +35,7 @@
     { "id": "nieve_bonus", "name": "Cumbres (bonus)", "intro": "worlds/nieve/nieve_bonus_intro.ogg", "loop": "worlds/nieve/nieve_bonus_loop.ogg", "volume": 0.67 },
     { "id": "cuevas_1",   "name": "Cuevas 1 (Ecos de cristal)", "intro": "worlds/cuevas/cuevas_1_intro.ogg", "loop": "worlds/cuevas/cuevas_1_loop.ogg", "volume": 0.67 },
     { "id": "cuevas_2",   "name": "Cuevas 2 (Laberinto sumergido)", "intro": "worlds/cuevas/cuevas_2_intro.ogg", "loop": "worlds/cuevas/cuevas_2_loop.ogg", "volume": 0.72 },
-    { "id": "cuevas_bonus", "name": "Cuevas (bonus)", "intro": "worlds/cuevas/cuevas_bonus_intro.ogg", "loop": "worlds/cuevas/cuevas_bonus_loop.ogg", "volume": 0.66 },
+    { "id": "cuevas_bonus", "name": "Cuevas (bonus)", "intro": "worlds/cuevas/cuevas_bonus_intro.ogg", "loop": "worlds/cuevas/cuevas_bonus_loop.ogg", "volume": 0.67 },
     { "id": "cuevas_oscuras", "name": "Cuevas a oscuras",   "file": "worlds/cuevas/cuevas_oscuras.ogg", "volume": 0.77 },
     { "id": "volcan_1",   "name": "Volcán 1 (Sendero de ceniza)", "intro": "worlds/volcan/volcan_1_intro.ogg", "loop": "worlds/volcan/volcan_1_loop.ogg", "volume": 0.67 },
     { "id": "volcan_2",   "name": "Volcán 2 (Lluvia de fuego)", "intro": "worlds/volcan/volcan_2_intro.ogg", "loop": "worlds/volcan/volcan_2_loop.ogg", "volume": 0.68 },
@@ -52,7 +52,7 @@
     { "id": "mirror_boss",      "name": "El Espejo (jefe final)",      "intro": "bosses/mirror_boss_intro.ogg", "loop": "bosses/mirror_boss_loop.ogg", "level": false, "boss": true, "volume": 0.71 },
 
     { "id": "menus",         "name": "Menús",                         "file": "menus/menus.ogg",       "level": false, "volume": 0.93 },
-    { "id": "flappy",        "name": "Aleteo (modo Flappy)",          "intro": "flappy/flappy_intro.ogg", "loop": "flappy/flappy_loop.ogg", "level": false, "volume": 0.71 },
+    { "id": "flappy",        "name": "Aleteo (modo Flappy)",          "intro": "flappy/flappy_intro.ogg", "loop": "flappy/flappy_loop.ogg", "level": false, "volume": 0.70 },
     { "id": "map_pradera",   "name": "Rumbo a las islas (Pradera)",   "file": "map/map_pradera.ogg",   "level": false, "volume": 0.71 },
     { "id": "map_costa",     "name": "Rumbo a las islas (Costa)",     "file": "map/map_costa.ogg",     "level": false, "volume": 0.71 },
     { "id": "map_fortaleza", "name": "Rumbo a las islas (Fortaleza)", "file": "map/map_fortaleza.ogg", "level": false, "volume": 0.71 },

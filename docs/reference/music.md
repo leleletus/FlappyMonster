@@ -20,7 +20,7 @@ plays the intro once and then repeats the loop. `level` = offered as level music
 | `nieve_bonus` | Cumbres (bonus) | `worlds/nieve/nieve_bonus_intro.ogg` + `worlds/nieve/nieve_bonus_loop.ogg` | 0.67 | level |
 | `cuevas_1` | Cuevas 1 (Ecos de cristal) | `worlds/cuevas/cuevas_1_intro.ogg` + `worlds/cuevas/cuevas_1_loop.ogg` | 0.67 | level |
 | `cuevas_2` | Cuevas 2 (Laberinto sumergido) | `worlds/cuevas/cuevas_2_intro.ogg` + `worlds/cuevas/cuevas_2_loop.ogg` | 0.72 | level |
-| `cuevas_bonus` | Cuevas (bonus) | `worlds/cuevas/cuevas_bonus_intro.ogg` + `worlds/cuevas/cuevas_bonus_loop.ogg` | 0.66 | level |
+| `cuevas_bonus` | Cuevas (bonus) | `worlds/cuevas/cuevas_bonus_intro.ogg` + `worlds/cuevas/cuevas_bonus_loop.ogg` | 0.67 | level |
 | `cuevas_oscuras` | Cuevas a oscuras | `worlds/cuevas/cuevas_oscuras.ogg` | 0.77 | level |
 | `volcan_1` | Volcán 1 (Sendero de ceniza) | `worlds/volcan/volcan_1_intro.ogg` + `worlds/volcan/volcan_1_loop.ogg` | 0.67 | level |
 | `volcan_2` | Volcán 2 (Lluvia de fuego) | `worlds/volcan/volcan_2_intro.ogg` + `worlds/volcan/volcan_2_loop.ogg` | 0.68 | level |
@@ -35,7 +35,7 @@ plays the intro once and then repeats the loop. `level` = offered as level music
 | `snowball_verity` | ¿La Gran Bola? (Verity, huevo de Pascua) | `bosses/snowball_verity_intro.ogg` + `bosses/snowball_verity_loop.ogg` | 0.75 | boss |
 | `mirror_boss` | El Espejo (jefe final) | `bosses/mirror_boss_intro.ogg` + `bosses/mirror_boss_loop.ogg` | 0.71 | boss |
 | `menus` | Menús | `menus/menus.ogg` | 0.93 |  |
-| `flappy` | Aleteo (modo Flappy) | `flappy/flappy_intro.ogg` + `flappy/flappy_loop.ogg` | 0.71 |  |
+| `flappy` | Aleteo (modo Flappy) | `flappy/flappy_intro.ogg` + `flappy/flappy_loop.ogg` | 0.7 |  |
 | `map_pradera` | Rumbo a las islas (Pradera) | `map/map_pradera.ogg` | 0.71 |  |
 | `map_costa` | Rumbo a las islas (Costa) | `map/map_costa.ogg` | 0.71 |  |
 | `map_fortaleza` | Rumbo a las islas (Fortaleza) | `map/map_fortaleza.ogg` | 0.71 |  |

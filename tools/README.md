@@ -69,7 +69,7 @@ One script per family, each writes WAVs into `assets/sounds/<group>/`: `ambience
 ## music/
 
 See the generator table in `docs/audio/music-catalog.md`. `famicom.py` (engine), `tentacle_nes.py` and
-`gloomy_nes.py` are imported by the others. After ANY track change: `python tools/music/levels.py`.
+`gloomy_nes.py` are imported by the others. After ANY track change: `python tools/music/levels.py`. Audit / A/B previews of a `worlds_nes.py` track: `revisar.py`, `previas_ab.py`.
 
 ## levelgen/
 

@@ -217,6 +217,27 @@ the old level tune in the final boss, Verity's hook).
   kick, falling tom rolls, blast beat, eruption hits. Pitched solo notes are tonic-chord tones (stem `solo_afinado`).
   Phrase-A attack overlap with the world's siblings: 27-67 %.
 
+- **3.99.1 — repair of 3.98/3.99, track by track with the user's ears (`worlds_nes.py`; audits `revisar.py`, A/B
+  previews `previas_ab.py`).** The user: some extensions sounded forced, harmonically wrong or dissonant; some loop
+  endings broke. Root causes found: (code) the automatic two-16th PICKUP before every new section (a formula, and it
+  silenced the accent in that bar) — removed; 1-bar pivot / turn bars counted as section starts (a crash on the
+  dominant bar, no fill into the loop); the counter-melody chose chord tones ignoring the melody, its passing notes
+  made m2 / tritones with the chord, and in 'swap' the voice sang it in the melody's register (costa_1 A4 vs B♭4).
+  (composition) the D "developments" were the theme's head replayed in another key — the user heard gummy_king's as
+  "a remix that sounds bad"; the key changes of pradera_1 (G → E major pivot → A) and gummy_king (→ C) made the seam
+  sound broken; a few new melody notes were unprepared 7ths (pradera_1 chorus bar 2: B5 over C). Repairs: no key
+  changes; D removed in every track that had one (pradera_2 also because the meadow in minor was already rejected);
+  `cmx` = counter-melody whose passing notes don't clash, under the melody in 'swap'; pradera_1 chorus bar 2 → C6 G5 E5 ·
+  G5 A5; flappy's glide, cuevas_1's and costa_2's breathers end descending into A; bonus notes fixed (pradera G#→E on
+  beat 3 over A, cuevas C#→B over D). Forms now (after A · A' · B [· C]): pradera_1 chorus · dialogue with the bird ·
+  chorus + cm · A + octave; pradera_2 A stop-time · B + cm · A + octave; costa_1 steel solo · A on marimba · B + cm · A +
+  octave; costa_2 breather · A + cm; fortaleza_1 drill · B + cm · A + cm; fortaleza_2 machine alone · A + cm · A + octave;
+  nieve_1 A without drums · A + cm; nieve_2 storm · A stop-time · A + octave; cuevas_1 breather · A without drums · B +
+  cm · A; volcan_1 breather · A + cm · A; snowball A stop-time · A + cm; evil_ship alarm alone · A' + cm · B + cm · A';
+  gummy_king A + cm · court dance · A; flappy glide · A + cm · A + octave. APPROVED by the user after listening (A/B
+  previews): all of these and the pradera / cuevas / volcan bonus. STILL BEING ADJUSTED: fortaleza / nieve / costa bonus
+  tunes (and the nieve solo), volcan_2's lava solo, cuevas_2's sonar accent (too loud for its calm).
+
 ## Crab Tantrum (the three Mega Crabby themes)
 
 - **CRAB TANTRUM REMADE (3.53.0, `tools/music/crab_tantrum.py`; verified by numbers only; WAITING for the user's
