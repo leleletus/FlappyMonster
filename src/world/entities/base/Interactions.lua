@@ -36,6 +36,13 @@ end
 local BOUNCE = 0.40   -- fracción de la velocidad de salto al rebotar
 local STEP_DT = 1 / 60  -- paso fijo de la simulación (Protocol.TICK_RATE)
 Interactions.BOUNCE = BOUNCE
+-- Cuánto bajó el jugador en este paso: lo que se movió de verdad (a pocos FPS el paso es más largo que 1/60 s y con
+-- `vy × 1/60` un pisotón rápido se saltaba la franja y contaba como choque; y si en ese mismo paso llegaba al suelo, ya
+-- con vy = 0, tampoco contaba como caída); sin dato, el paso fijo
+local function prevDy(pa)
+    if pa.prevY then return math.max(0, pa.y - pa.prevY) end
+    return pa.vy * STEP_DT
+end
 
 function Interactions.check(pa, e)
     if not e.alive or e.state == 'dead' or (e.isGhost and e:isGhost()) then return nil end
@@ -75,7 +82,7 @@ function Interactions.frozenCheck(pa, e)
     local pob, gob = pa:getOuterBounds(), e:getOuterBounds()
     if not overlap(pob, gob) then return nil end
     local line, foot = gob.y + gob.h * 0.5, pob.y + pob.h
-    if pa.gpPhase == 'fall' or (pa.vy > 0 and (foot < line or foot - pa.vy * STEP_DT <= line)) then
+    if pa.gpPhase == 'fall' or ((pa.vy > 0 or prevDy(pa) > 0) and (foot < line or foot - prevDy(pa) <= line)) then
         local vy = -math.abs(ADV_JUMP_VEL) * BOUNCE
         if e.props.stompable then return 'stomp', vy, e.props.points end
         return 'shatter', vy
@@ -153,7 +160,7 @@ function Interactions.defaultCheck(pa, e)
             -- encima de la línea en el paso ANTERIOR: cayendo rápido (≥ 20 px por
             -- paso) se podía saltar la franja de pisotón y morir al tocarlo
             local line, foot = gob.y + gob.h * 0.35 + 10, pob.y + pob.h
-            if pa.vy > 0 and (foot < line or foot - pa.vy * STEP_DT <= line) then
+            if (pa.vy > 0 or prevDy(pa) > 0) and (foot < line or foot - prevDy(pa) <= line) then
                 return 'stomp', -math.abs(ADV_JUMP_VEL) * BOUNCE, p.points
             end
         end

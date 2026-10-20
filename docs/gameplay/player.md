@@ -8,7 +8,7 @@ everything that needs "a body that moves like a player": the KOTH bot, the Mirro
 | File | Contents |
 |---|---|
 | `PlayerAdventure.lua` | tuning constants, hitboxes, actions (`hurt`, `bounce`, `knockback`, `launch`, `squash`, `freeze`, `die`, `respawn`, invulnerability), the flashlight, `update(dt, level)` |
-| `PlayerCollision.lua` | `moveAndCollide`: tiles, one-way platforms, solid bodies, arena walls, spikes |
+| `PlayerCollision.lua` | `moveAndCollide`: tiles, one-way platforms, solid bodies, arena walls, spikes; `moveSteps` cuts a long move into ≤ 30 px pieces (at low FPS a 75 px ground-pound step went through a 1-tile floor; 0.5.9, harness `mechanics` `pocos_fps`) |
 | `PlayerAir.lua` | drowning, the countdown, splashes, the air bar |
 | `PlayerGroundPound.lua` | the ground pound and being frozen in ice |
 | `PlayerRender.lua` | sprites and drawing |

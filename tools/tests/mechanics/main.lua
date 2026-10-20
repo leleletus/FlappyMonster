@@ -26,6 +26,8 @@
 --   tramp_avanza   Crabby trepador que pisa un trampolín: sale lanzado hacia
 --                  delante y sigue andando (antes rebotaba en el sitio sin fin)
 --   tramp_pinchos  lanzado por un trampolín y cae en pinchos: revienta (dead_burst)
+--   pocos_fps      a 30 y 20 FPS: pisotón rápido = pisotón; caída y ground pound no atraviesan un suelo de 1 casilla
+--   lava           Gummy / Crabby / Saltarín caen en lava: revientan; la bomba explota; un volador encima, nada
 --   bomba_activa   bomba viva: tener un jugador al lado NO la enciende; tocarla
 --                  andando la patea hacia donde iba y la enciende, sin daño
 --   bomba_pisada   pisar la bomba viva (con ruta): rebota, la bomba sale pateada
@@ -226,16 +228,17 @@ end
 -- Suelta al jugador encima del Gummy (dx px de lado, velocidad vy, ground
 -- pound si gp) y simula como el juego (jugador, entidad, Interactions.run)
 -- hasta `secs`. Devuelve lo que pasó.
-local function dropOn(g, level, dx, vy, gp, secs)
+local function dropOn(g, level, dx, vy, gp, secs, dt)
+    dt = dt or 1 / 60
     local pa = PlayerAdventure:new(g.x + dx, g.y - 170)
     level.players = { pa }
     pa.vy, pa.onGround = vy, false
     if gp then pa.gpPhase, pa.gpT = 'fall', 0 end
     local out = { bounces = 0, hp0 = pa.hp, results = {} }
     clear()
-    for _ = 1, math.floor((secs or 1) * 60) do
-        pa:update(1 / 60, level)
-        if g.alive then g:update(1 / 60, level) end
+    for _ = 1, math.floor((secs or 1) / dt) do
+        pa:update(dt, level)
+        if g.alive then g:update(dt, level) end
         local r = Interactions.check(pa, g)
         if r then out.results[r] = (out.results[r] or 0) + 1 end
         Interactions.run(pa, { g }, {})
@@ -320,6 +323,48 @@ function cases.stomp_fast()
         end
     end
     check('stomp_fast', #bad == 0, (#bad == 0 and 'todas las caídas lo pisotean' or (#bad .. ' mal: ' .. bad[1])))
+end
+
+-- A POCOS FPS (paso de 1/30 y 1/20 s, el tope del juego): el pisotón sigue siendo pisotón (antes la comprobación
+-- suponía pasos de 1/60 y una caída rápida contaba como choque) y ni una caída ni un ground pound atraviesan un suelo
+-- de una casilla (antes, a ≤ 23 FPS, el ground pound lo cruzaba)
+function cases.pocos_fps()
+    local bad = {}
+    for _, dt in ipairs({ 1 / 30, 1 / 20 }) do
+        for _, vy in ipairs({ 900, 1500, 2000 }) do
+            for dx = -30, 30, 15 do
+                local level, es = gummyRoom(false)
+                local g = es[1]
+                local o = dropOn(g, level, dx, vy, false, 0.6, dt)
+                if g.state ~= 'dead' or o.pa.dying then
+                    bad[#bad + 1] = ('pisotón %d FPS vy=%d dx=%d: gummy=%s jugador %s'):format(math.floor(1 / dt + 0.5), vy, dx,
+                        g.state, o.pa.dying and 'MUERTO' or 'vivo')
+                end
+            end
+        end
+    end
+    -- suelo de una casilla (fila 5) con vacío debajo; el jugador cae desde arriba
+    local floors = 0
+    for _, gp in ipairs({ false, true }) do
+        for _, dt in ipairs({ 1 / 60, 1 / 20 }) do
+            local put = {}
+            for c = 2, 11 do put[#put + 1] = { c, 5, 'solid' } end
+            local level = room(12, 12, put)
+            local pa = PlayerAdventure:new(6.5 * T, 1.5 * T)
+            level.players = { pa }
+            pa.vy = gp and 0 or 1400
+            if gp then pa.gpPhase, pa.gpT = 'fall', 0 end
+            clear()
+            for _ = 1, math.floor(1.2 / dt) do pa:update(dt, level) end
+            local top = 4 * T
+            if pa.y > top then
+                bad[#bad + 1] = ('%s a %d FPS atraviesa el suelo (y=%d, la cara a %d)'):format(gp and 'ground pound' or 'caída',
+                    math.floor(1 / dt + 0.5), pa.y, top)
+            else floors = floors + 1 end
+        end
+    end
+    check('pocos_fps', #bad == 0, (#bad == 0 and ('pisotones a 30 y 20 FPS bien; %d caídas sobre un suelo de una casilla, ninguna lo cruza'):format(floors)
+        or (#bad .. ' mal: ' .. bad[1])))
 end
 
 -- ── Pez globo ────────────────────────────────────────────────────────────────
@@ -514,6 +559,37 @@ function cases.tramp_pinchos()
     end)
     check('tramp_pinchos', burst and ghost and not c.alive,
         ('revienta=%s fantasma=%s desaparece=%s'):format(tostring(burst), tostring(ghost), tostring(not c.alive)))
+end
+
+-- Enemigos que caen en LAVA (pozo de 3 casillas de hondo): revientan (antes se hundían hasta el fondo como si nada);
+-- la bomba explota; un volador por encima, nada
+function cases.lava()
+    local parts, ok = {}, true
+    for _, kind in ipairs({ 'gummy', 'crabby', 'hopper', 'bomb' }) do
+        local put = {}
+        for c = 5, 9 do for r = 5, 7 do put[#put + 1] = { c, r, 'danger' } end end
+        local level, es = room(14, 8, put, { { type = kind, col = 7, row = 2, props = { pauses = false } } })
+        level.players = {}
+        local e, died, st = es[1], nil, nil
+        for i = 1, 60 * 4 do
+            if e.alive then e:update(1 / 60, level) end
+            if not died and (e.state == 'dead_burst' or e.state == 'lit' or e.state == 'exploding' or not e.alive) then
+                died, st = i / 60, e.state
+            end
+        end
+        local good = died ~= nil and (kind == 'bomb' and true or st == 'dead_burst')
+        ok = ok and good
+        parts[#parts + 1] = ('%s: %s a los %s s'):format(kind, tostring(st), died and ('%.2f'):format(died) or 'nunca')
+    end
+    local put = {}
+    for c = 2, 13 do put[#put + 1] = { c, 7, 'danger' } end
+    local level, es = room(14, 8, put, { { type = 'gummy', col = 7, row = 4, props = { pauses = false, movement = 'fly' } } })
+    level.players = {}
+    for _ = 1, 60 * 3 do es[1]:update(1 / 60, level) end
+    local flyOk = es[1].alive and es[1].state ~= 'dead_burst'
+    ok = ok and flyOk
+    parts[#parts + 1] = ('gummy con alas sobre la lava: vivo=%s'):format(tostring(flyOk))
+    check('lava', ok, table.concat(parts, ' · '))
 end
 
 -- ── Bombas ────────────────────────────────────────────────────────────────────
@@ -1403,7 +1479,7 @@ function love.load()
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
                          'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
-                         'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte' }) do cases[n]() end
+                         'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps' }) do cases[n]() end
     if os.getenv('SHOT_BOMB') then bombShot() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
     if not os.getenv('SHOT') then love.event.quit(fails == 0 and 0 or 1); return end

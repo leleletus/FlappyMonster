@@ -387,6 +387,21 @@ function Entity:dieBurst()
     Entity.emitFx('shake_small', self.x, self.y)
 end
 
+-- LAVA: un ENEMIGO que cae en ella (andando, empujado, aturdido, lanzado...) revienta. Antes solo lo miraba el vuelo del
+-- trampolín y los demás se hundían hasta el fondo como si nada. Los voladores no tocan nada; un tipo que viva en la
+-- lava pone `lavaProof = true` en su clase. Lo que hace al caer lo decide `onLava` (por defecto: reventar).
+Entity.lavaProof = false
+function Entity:inLava(level)
+    if self.lavaProof or self.flying or not self.alive then return false end
+    local st = self.state
+    if st == 'dead' or st == 'gone' or st == 'spawning' or st == 'reserve' or Entity.SPECIAL_DEATH[st] then return false end
+    if (self.def and self.def.category) ~= 'Enemigos' then return false end
+    local b = self:getOuterBounds()
+    local t = level:getDefAt(self.x, b.y + b.h - 6)              -- (los pies ya dentro)
+    return t ~= nil and t.lava == true
+end
+function Entity:onLava(level) self:dieBurst() end
+
 -- ¿Algo mortal donde está? (pinchos de verdad o material 'deadly')
 function Entity:onDeadlyGround(level)
     local b = self:getOuterBounds()
@@ -752,6 +767,7 @@ function Entity:update(dt, level)
         return
     end
 
+    if self:inLava(level) then self:onLava(level); if Entity.SPECIAL_DEATH[self.state] then return end end
     if self:updateCommonStates(dt, level) then return end
     if self:updateCustom(dt, level) then return end
 

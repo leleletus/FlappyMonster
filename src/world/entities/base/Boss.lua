@@ -274,7 +274,10 @@ function Boss:interact(pa)
         if immune then return 'bounce', bvy, side end
         return 'pound', bvy, pts
     end
-    if pa.vy > 0 and pob.y + pob.h < gob.y + gob.h * 0.35 + 10 then
+    -- (cayendo: los pies por encima de la línea, o lo estaban al empezar el paso — rápido / a pocos FPS se la saltaba)
+    local line, foot = gob.y + gob.h * 0.35 + 10, pob.y + pob.h
+    local down = pa.prevY and math.max(0, pa.y - pa.prevY) or 0
+    if (pa.vy > 0 or down > 0) and (foot < line or foot - down < line) then
         if immune then return 'bounce', bvy, side end
         return 'stomp', bvy, pts
     end

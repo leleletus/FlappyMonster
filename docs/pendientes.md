@@ -18,10 +18,10 @@ not repeated here.
   in `tools/deploy_server.sh`.
 - [x] (0.5.8) **Online: player frozen forever after a 3–6 s stall**: inputs further than `lastProcSeq + 180` are dropped and
   `lastProcSeq` never catches up.
-- [ ] **Enemies don't die in lava**: they sink to the bottom of it as if nothing happened (user report).
-- [ ] **Low frame rate tunnelling**: the player's floor check has no sub-steps and no max fall speed (ground pound
+- [x] (0.5.9) **Enemies don't die in lava**: they sink to the bottom of it as if nothing happened (user report).
+- [x] (0.5.9) **Low frame rate tunnelling**: the player's floor check has no sub-steps and no max fall speed (ground pound
   75 px/step at 20 fps goes through a 1-tile floor).
-- [ ] **Low frame rate stomps**: `Interactions` uses a fixed `STEP_DT` for "foot was above last step"; at 30 fps a
+- [x] (0.5.9) **Low frame rate stomps**: `Interactions` uses a fixed `STEP_DT` for "foot was above last step"; at 30 fps a
   stomp becomes a hit. Boss stomp has no fast-fall fallback.
 - [x] (0.5.8) **Game Over while replaying an old world locks the later worlds** (`Run.gameOver(world)` with the replayed
   world).
@@ -30,7 +30,7 @@ not repeated here.
 
 ## 2. Controls and menus
 
-- [ ] **Create room, max players step (pad)**: cannot be cancelled; check the up / down / left / right behaviour
+- [x] (0.5.9) **Create room, max players step (pad)**: cannot be cancelled; check the up / down / left / right behaviour
   (user report).
 - [ ] Hints with PC keys written in the text (`free.hint`, `story.*_hint`, `hub.*_hint`, `login.hint`, `msm.*`…) →
   `{key}` placeholders filled by `Input.label`.
@@ -89,6 +89,7 @@ not repeated here.
 - [ ] No harness for the full update download (publish → chunks → sha256 → install → restart).
 - [ ] No online harness with latency / jitter / packet loss.
 - [ ] ~~Hunt mode never run in the battery~~ (0.5.8); Evil Ship (`miniboss1`) has no rules harness; spike rain untested.
+- [ ] `mechanics` `persecucion` depends on the random sequence (a case added before it made it fail: `sides` 3 < 5).
 - [ ] No test for a corrupt / truncated save or `options.cfg` round-trip.
 - [ ] `perf`: no online-client, story-map or credits scene; header advertises a missing `map` scene; boss scene at
   54 / 64 KB per frame.

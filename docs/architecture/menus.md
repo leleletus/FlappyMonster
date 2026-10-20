@@ -162,3 +162,10 @@ difficulty and back, the match starting with it). `online_smoke`, `online_boss`,
 - Not yet judged by the user: the look on a real screen, the animation timings, the menu sounds (existing `select`
   sound at different pitches, not listened to), performance on Switch / Android (the menu now simulates and draws a
   full level with its enemies every frame).
+
+- 0.5.9, the user: with a pad the create-room wizard could not be cancelled, and in the max-players step up / down
+  changed the number the "wrong" way. Now every step has two rows: the step's content (◀ ▶ choose PUBLIC / PRIVATE or
+  change the number, the smart cursor marks it) and, with DOWN, the CANCEL / NEXT (CREATE) buttons (◀ ▶ between them,
+  confirm presses the chosen one, UP goes back). Harness `online_menus` (`crear_mando`).
+- 0.5.8, the review: Esc / Start / the pad's cancel in the single-player pause always resume (before they ran the
+  highlighted option, so with MENU highlighted they quit the level).

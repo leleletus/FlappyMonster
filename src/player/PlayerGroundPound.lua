@@ -20,7 +20,7 @@ function PlayerAdventure:updateGroundPound(dt, level)
         if self.gpT >= GP_WINDUP then self.gpPhase, self.gpT = 'fall', 0 end
     else
         self.vy = GP_SPEED * (self.inWater and GP_WATER or 1)
-        self:moveAndCollide(level, 0, self.vy * dt)
+        self:moveSteps(level, 0, self.vy * dt)
         if self.dying then return end
         if self.onGround then
             -- Bloques rompibles bajo los pies: se rompen y sigue cayendo. Los

@@ -46,6 +46,24 @@ local function spikeHitsPlayer(spike, pb)
     return true
 end
 
+-- Mover en TROZOS de como mucho MOVE_STEP px: a pocos FPS (dt hasta 0.05) un paso de 75 px (ground pound) metía los
+-- pies en la celda de DEBAJO de un suelo de una casilla y se atravesaba. Tras chocar en un eje, ese eje ya no sigue
+-- (no rompe dos bloques de cabeza ni empuja la pared otra vez). A 60 FPS (y en el servidor) es un solo trozo.
+local MOVE_STEP = 30
+function PlayerAdventure:moveSteps(level, dx, dy)
+    local n = math.ceil(math.max(math.abs(dx), math.abs(dy)) / MOVE_STEP)
+    if n <= 1 then return self:moveAndCollide(level, dx, dy) end
+    local sx, sy = dx / n, dy / n
+    for _ = 1, n do
+        local vx0, vy0 = self.vx, self.vy
+        self:moveAndCollide(level, sx, sy)
+        if self.dying then return end
+        if sx ~= 0 and self.vx == 0 and vx0 ~= 0 then sx = 0 end
+        if sy ~= 0 and (self.vy == 0 or (vy0 > 0) ~= (self.vy > 0)) then sy = 0 end
+        if sx == 0 and sy == 0 then return end
+    end
+end
+
 function PlayerAdventure:moveAndCollide(level, dx, dy)
     local T      = TILE_PX
     -- Caja con la que choca: la de pie o, agachado, la baja (mismos pies)

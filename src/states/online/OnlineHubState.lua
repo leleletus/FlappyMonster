@@ -140,6 +140,7 @@ function OnlineHubState:_resetCreate()
     self.inputBuffer = ""
     self.privacySel  = 1
     self.maxValue    = 4
+    self.hoveredCreateNav = nil   -- botón de abajo con el foco (1 CANCELAR, 2 SIGUIENTE/CREAR) o nil: lo del paso
 end
 
 function OnlineHubState:_joinRoom(room)
@@ -284,18 +285,31 @@ function OnlineHubState:update(dt)
         if Input.pressed('back') then
             self:_createCancel(); return
         end
-        if self.createStep == STEP_PRIVACY then
-            if Input.pressed('nav_up') or Input.pressed('nav_left') then
-                self.privacySel = 1; Sound.play('select')
+        -- Teclado / mando: arriba, lo del paso (◀ ▶ eligen o cambian; confirmar avanza); ABAJO baja a los botones
+        -- CANCELAR / SIGUIENTE (◀ ▶ entre ellos, confirmar pulsa el elegido, ARRIBA vuelve). Antes el mando no llegaba
+        -- a CANCELAR y en el número de jugadores arriba restaba y abajo sumaba.
+        local nNav = (self.createStep == STEP_PRIVACY) and 1 or 2
+        local nav = self.hoveredCreateNav
+        if nav then
+            local to = nav
+            if Input.pressed('nav_left') then to = math.max(1, nav - 1) end
+            if Input.pressed('nav_right') then to = math.min(nNav, nav + 1) end
+            if Input.pressed('nav_up') then to = nil end
+            if to ~= nav then self.hoveredCreateNav, self.t = to, 0; Sound.play('select')
+            elseif Input.pressed('confirm') then
+                if nav == 1 then Sound.play('select'); self:_createCancel() else self:_createNext() end
             end
-            if Input.pressed('nav_down') or Input.pressed('nav_right') then
-                self.privacySel = 2; Sound.play('select')
+        else
+            if self.createStep == STEP_PRIVACY then
+                if Input.pressed('nav_left') and self.privacySel ~= 1 then self.privacySel, self.t = 1, 0; Sound.play('select') end
+                if Input.pressed('nav_right') and self.privacySel ~= 2 then self.privacySel, self.t = 2, 0; Sound.play('select') end
+            elseif self.createStep == STEP_MAX then
+                if Input.pressed('nav_left') then self:_stepMax(-1) end
+                if Input.pressed('nav_right') then self:_stepMax(1) end
             end
-        elseif self.createStep == STEP_MAX then
-            if Input.pressed('nav_left') or Input.pressed('nav_up') then self:_stepMax(-1) end
-            if Input.pressed('nav_right') or Input.pressed('nav_down') then self:_stepMax(1) end
+            if Input.pressed('nav_down') then self.hoveredCreateNav, self.t = nNav, 0; Sound.play('select')
+            elseif Input.pressed('confirm') then self:_createNext() end
         end
-        if Input.pressed('confirm') then self:_createNext() end
 
     -- ── SUB_PASSWORD ──────────────────────────────────────────────────────────
     elseif self.sub == SUB_PASSWORD then
@@ -325,6 +339,7 @@ end
 
 function OnlineHubState:_createNext()
     local step = self.createStep
+    self.hoveredCreateNav = nil                   -- (cada paso empieza con el foco en lo suyo)
     if step == STEP_NAME then
         if #self.inputBuffer == 0 then
             self:_showError(L('hub.name_empty')); return
@@ -538,7 +553,7 @@ function OnlineHubState:_renderCreate()
             local sel = self.privacySel == i
             MenuButton.draw(L(o[1]), r.x, r.y + oy + bobOf(self.t, sel), r.w, r.h, sel and o[3] or 'grey', sel,
                             { alpha = a, scale = MenuButton.textScale(L(o[1]), r.w - 48, 5) })
-            if sel then MenuKit.marker(r.x, r.y + oy + bobOf(self.t, sel), r.w, r.h, self.t, a) end
+            if sel and not self.hoveredCreateNav then MenuKit.marker(r.x, r.y + oy + bobOf(self.t, sel), r.w, r.h, self.t, a) end
             MenuKit.text(FONT_SMALL, L(o[2]), r.x, r.y + r.h + 16 + oy, r.w, 'center', sel and { 1, 1, 1 } or { 0.6, 0.66, 0.85 }, a)
         end
     elseif self.createStep == STEP_PASS then
@@ -547,6 +562,7 @@ function OnlineHubState:_renderCreate()
         -- el número en su hueco y un botón a cada lado (se hunde un momento al pulsarlo)
         local N = Ly.num
         MenuKit.box('well', N.x, N.y + oy, N.w, N.h, a)
+        if not self.hoveredCreateNav then MenuKit.marker(Ly.minus.x, N.y + oy, Ly.plus.x + Ly.plus.w - Ly.minus.x, N.h, self.t, a) end
         local num = tostring(self.maxValue)
         PixelFont.shadow(num, math.floor(N.x + (N.w - PixelFont.width(num, 8)) / 2), N.y + 16 + oy, 8, a, { 1, 0.86, 0.36 })
         local lbl = L('hub.players_word')
@@ -562,12 +578,10 @@ function OnlineHubState:_renderCreate()
         end
     end
     -- CANCELAR / SIGUIENTE (o CREAR); en la privacidad, solo CANCELAR (elegir ya avanza)
-    if #Ly.nav == 1 then
-        self:_button(L('hub.cancel'), Ly.nav[1], 'grey', false, a, 0, oy)
-    else
-        local nextSel = self.hoveredCreateNav ~= 1
-        self:_button(L('hub.cancel'), Ly.nav[1], 'grey', not nextSel, a, 0, oy)
-        self:_button(self.createStep == STEP_MAX and L('hub.create') or L('hub.next'), Ly.nav[2], 'green', nextSel, a, 0, oy)
+    local nav = self.hoveredCreateNav
+    self:_button(L('hub.cancel'), Ly.nav[1], 'grey', nav == 1, a, 0, oy)
+    if #Ly.nav > 1 then
+        self:_button(self.createStep == STEP_MAX and L('hub.create') or L('hub.next'), Ly.nav[2], 'green', nav == 2, a, 0, oy)
     end
     local hints = { L('hub.confirm_hint'), L('hub.select_hint'), L('hub.confirm_hint'), L('hub.change_hint') .. '   ' .. L('hub.create_hint') }
     MenuKit.hint(hints[self.createStep])

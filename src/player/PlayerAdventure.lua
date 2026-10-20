@@ -310,6 +310,7 @@ end
 -- la gravedad y lo demás siguen). Igual en un jugador, servidor y predicción.
 local FROZEN_INPUT = { pressed = function() return false end, down = function() return false end }
 function PlayerAdventure:update(dt, level)
+    self.prevY = self.y              -- (dónde estaba al empezar el paso: el pisotón mira si los pies venían de arriba)
     self.peaceful = level ~= nil and level.peaceful == true          -- (nivel de enemigos inofensivos)
     self.frozen = level ~= nil and level.frozenAt ~= nil and not self.dying and level:frozenAt(self.x, self.y)
     -- (`forceFrozen`: lo pone quien lleva la partida cuando ya ha terminado — el bonus contra el bot —: sin control
@@ -512,7 +513,7 @@ function PlayerAdventure:_update(dt, level)
     self.vy = self.vy + ADV_GRAVITY*gravM*dt
     if liq then self.vy=self.vy+(-self.vy*liq.drag*dt) end
 
-    self:moveAndCollide(level, (self.vx + convey)*dt, self.vy*dt)
+    self:moveSteps(level, (self.vx + convey)*dt, self.vy*dt)
 
     self:updateSplash(dt, level)
     self.prevInWater = self.inWater

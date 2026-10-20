@@ -2,7 +2,8 @@
 -- servidor LOCAL (run.sh lo arranca; FM_SERVER=localhost) y dos bots (sockets) que crean salas y entran en la nuestra:
 --  1. login: el nombre se escribe, ENTER conecta y llega a la lista de salas;
 --  2. lista de salas: se ven las salas de los bots (pública y con contraseña);
---  3. crear sala: los 4 pasos del asistente (nombre, privada, contraseña, máximo) y llega a la sala;
+--  3. crear sala: los 4 pasos del asistente (nombre, privada, contraseña, máximo) y llega a la sala; con mando,
+--     el número de jugadores (◀ ▶) y los botones de abajo (ABAJO, ◀ a CANCELAR, confirmar cancela);
 --  4. sala: el bot entra; el host CAMBIA LA DIFICULTAD con el selector (a la derecha y a la izquierda, todas las de
 --     src/core/Difficulty.lua y "sin dificultad") y la sala del servidor la recibe; el menú de modo de juego;
 --     el menú de un jugador (admin);
@@ -101,6 +102,26 @@ local function run()
     type_('abc')
     shots('password')
     press('back', 0.3)
+
+    -- ── 3b. crear sala con MANDO: en el número de jugadores ▶ suma y ◀ resta, ABAJO baja a los botones, ◀ va a
+    --        CANCELAR y confirmar cancela (antes el mando no llegaba a CANCELAR y arriba restaba)
+    st:_resetCreate(); st.sub = 'CREATE'
+    wait(0.2)
+    type_('Mando')
+    press('confirm', 0.2); press('confirm', 0.2)                 -- (nombre → pública → número)
+    local m0 = st.maxValue
+    press('nav_right', 0.1); press('nav_right', 0.1)
+    local m1 = st.maxValue
+    press('nav_left', 0.1)
+    local m2 = st.maxValue
+    press('nav_down', 0.1)
+    local navNext = st.hoveredCreateNav
+    press('nav_left', 0.1)
+    local navCancel = st.hoveredCreateNav
+    press('confirm', 0.3)
+    check('crear_mando', st.createStep == 1 and st.sub == 'LIST' and m1 == m0 + 2 and m2 == m0 + 1 and navNext == 2 and navCancel == 1,
+        ('jugadores %d → ▶▶ %d → ◀ %d; abajo → botón %s, ◀ → botón %s; confirmar → %s'):format(m0, m1, m2,
+         tostring(navNext), tostring(navCancel), tostring(st.sub)))
 
     -- ── 3. crear sala ────────────────────────────────────────────────────
     st:_resetCreate(); st.sub = 'CREATE'

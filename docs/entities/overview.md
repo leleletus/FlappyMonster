@@ -79,6 +79,10 @@ landing mark; sprites in `assets/images/bosses/common/`). Asset layout: enemies 
 - Stomp window fix (all floor enemies, `Interactions.defaultCheck`): a stomp also
   counts when the feet were above the stomp line one step before (`STEP_DT`); fast
   falls (≥ 20 px/step) used to skip the ~20 px window and die on contact.
+  Since 0.5.9 "one step before" is where the player REALLY was (`pa.prevY`, set at the start of
+  `PlayerAdventure:update`), not `vy × 1/60`, and moving down this step counts as falling even if it already
+  landed (vy = 0): at 30 / 20 FPS stomps became deaths. Same rule in `Boss:interact` (bosses). Harness `mechanics`
+  (`pocos_fps`).
 
 ## Solid entities and collisions between entities and the world
 
@@ -164,7 +168,11 @@ landing mark; sprites in `assets/images/bosses/common/`). Asset layout: enemies 
   + x,y (same online). `dead_fling` = the block under it broke (`Level:breakTile` →
   `Level:forStanders`: 'Enemigos' category standing on the cell), spins up and out.
   `dead_burst` = a LAUNCHED entity lands on spikes / `contact='kill'` material
-  (`Entity:onDeadlyGround`): fx `enemy_burst` (flash, shell chunks, smoke) + shake. Hitting
+  (`Entity:onDeadlyGround`): fx `enemy_burst` (flash, shell chunks, smoke) + shake. LAVA (0.5.9, user report: they
+  sank to the bottom as if nothing): every 'Enemigos' entity whose feet are in a `lava` tile, in any state, gets
+  `Entity:onLava` (default `dieBurst`; the bomb's `dieBurst` lights it with a short fuse) — checked in `Entity:update`
+  before everything else; flyers and classes with `lavaProof = true` are exempt (none today; the volcano's lava Crabby
+  and magma Gummy die too). Harness `mechanics` (`lava`). Hitting
   an ON/OFF Activator (`hitTile` toggle) makes enemies on it hop (vy −380), never kills.
   Trampolines: an UP launch gives walkers their walking speed forward (min
   `LAUNCH_MIN_VX`) and starts them exactly on top of the face (a climbing Crabby was half
