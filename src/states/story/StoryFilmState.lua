@@ -32,7 +32,9 @@ end
 function StoryFilmState:_finish()
     if self.left then return end
     self.left = true
-    Sound.stopMusic()
+    -- (`next`: la música del NIVEL que sigue entra ya, sin hueco — la película acaba en su tempo y su tono —; el
+    -- nivel, al pedir la suya, la encuentra sonando y la sigue)
+    if self.film.tl.next and not self.film.mute then Sound.playMusic(self.film.tl.next) else Sound.stopMusic() end
     if self.onDone then self.onDone() else gStateMachine:change('story_map') end
 end
 

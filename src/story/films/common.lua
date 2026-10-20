@@ -88,28 +88,70 @@ end
 -- ── La ladera del volcán (assets/story/sets/ladera.json y ladera_noche.json; make_sets.py) ──────
 C.LCAMY = 48                        -- la cámara, en y (12 filas: se ven 11,25)
 C.LFLOOR = 528                      -- y del centro del monstruo de pie (suelo en y = 576)
-C.DITCH = { 960, 1088 }             -- la zanja de lava (columnas 16-17), en x del mundo
-C.LAKE = { 2688, 3072 }             -- el lago de lava (columnas 43-47)
+C.DITCH = { 1728, 1856 }            -- la zanja de lava (columnas 28-29), en x del mundo
+C.LAKE = { 2688, 2880 }             -- el lago de lava (columnas 43-45: con un salto no llega; con el doble, sí)
 
--- Los fragmentos que LLEVA el monstruo (los seis de los jefes; Xtra: las doce mitades): un CORRO pequeño que gira
--- SOBRE su cabeza (a los lados, a la altura de los hombros, parecían alas — el monstruo NO tiene alas).
--- glow 0..1 = brillan (notan el séptimo cerca); shake = tiemblan
+-- Los fragmentos que LLEVA el monstruo (los seis de los jefes; Xtra: las doce mitades)
 function C.carryIds(xtra)
     local out = {}
     for _, id in ipairs(Stage.shardIds(xtra)) do if id:sub(1, 1) ~= '7' then out[#out + 1] = id end end
     return out
 end
-function C.carry(x, y, t, ids, glow, shake)
-    local n = #ids
-    for i, id in ipairs(ids) do
-        local a = t * 1.6 + (i - 1) / n * math.pi * 2
-        local jx = (shake and shake > 0) and (math.random() * 2 - 1) * shake or 0
-        local sx, sy = x + math.cos(a) * 44 + jx, y - 92 + math.sin(a) * 9 + math.sin(t * 3) * 3
-        if glow and glow > 0 then
-            love.graphics.setColor(0.8, 0.95, 1, 0.3 * glow)
-            love.graphics.rectangle('fill', math.floor(sx) - 8, math.floor(sy) - 8, 16, 16)
+
+-- El BRILLO de un fragmento: su propia forma, más clara y sumada (un filo de luz de un píxel del dibujo alrededor y
+-- otro más tenue a dos), y alguna chispa suelta. Pixel art: nada de cuadrados ni degradados
+function C.shardGlow(id, x, y, s, rot, k, t)
+    if not k or k <= 0 then return end
+    love.graphics.setBlendMode('add')
+    for ring = 2, 1, -1 do
+        local d, a = s * ring, k * (ring == 1 and 0.55 or 0.22)
+        for _, o in ipairs({ { d, 0 }, { -d, 0 }, { 0, d }, { 0, -d } }) do
+            Stage.shard(id, x + o[1], y + o[2], { s = s, rot = rot, alpha = a, color = { 0.55, 0.85, 1 } })
         end
-        Stage.shard(id, sx, sy, { s = 1, rot = math.sin(t * 2 + i) * 0.3, alpha = (math.sin(a) < 0) and 0.75 or 1 })
+    end
+    Stage.shard(id, x, y, { s = s, rot = rot, alpha = 0.35 * k * (0.7 + 0.3 * math.sin(t * 9)) })
+    love.graphics.setBlendMode('alpha')
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
+-- Dónde va cada fragmento que lleva: en ARCO por encima de la cabeza (como una corona que flota), separados y
+-- balanceándose cada uno a su aire. (Probado y descartado: un corro a la altura de los hombros y un corro estrecho
+-- sobre la cabeza — de tres en tres se juntaban y parecían ALAS, y el monstruo NO tiene alas.) Con `lead`, en fila
+-- por DELANTE de él, señalando hacia (dx, dy) (hacia el séptimo)
+local function slot(i, n, x, y, t, lead, dx, dy)
+    local a = math.pi * (1.1 + 0.8 * (i - 0.5) / n)          -- de 198° a 342°: el arco de arriba
+    local rx = x + math.cos(a) * 82 + math.sin(t * 1.3 + i * 1.7) * 3
+    local ry = y - 62 + math.sin(a) * 40 + math.sin(t * 2.6 + i * 2.1) * 4
+    if not lead or lead <= 0 then return rx, ry, 1 end
+    local d = 90 + (i - 1) * 38
+    local lx = x + dx * d + math.sin(t * 4 + i) * 4
+    local ly = y - 60 + dy * d + math.cos(t * 3 + i) * 5
+    return C.lerp(rx, lx, C.smooth(lead)), C.lerp(ry, ly, C.smooth(lead)), 1
+end
+
+-- Los fragmentos que lleva. o: out 0..1 (cuánto los ha SACADO: cada uno sale de su cuerpo por turno; 0 = guardados,
+-- no se ven), glow 0..1, shake (px), lead 0..1 + dx, dy (dirección, normalizada) = en fila por delante señalando
+function C.carry(x, y, t, ids, o)
+    o = o or {}
+    local n = #ids
+    local out = o.out == nil and 1 or o.out
+    if out <= 0 then return end
+    for i, id in ipairs(ids) do
+        local k = C.clamp((out * n - (i - 1) * 0.6) / 1.6)  -- (cada uno sale un poco después del anterior)
+        if k > 0 then
+            local sx, sy, depth = slot(i, n, x, y, t, o.lead, o.dx or 1, o.dy or 0)
+            local e = C.easeOut(k)
+            sx, sy = C.lerp(x, sx, e), C.lerp(y - 8, sy, e)
+            if o.shake and o.shake > 0 then sx = sx + (math.random() * 2 - 1) * o.shake end
+            sx, sy = math.floor(sx), math.floor(sy)
+            local rot = math.sin(t * 1.5 + i * 2.3) * 0.15
+            local s = (k < 0.5) and 1 or 2                     -- (sale pequeño de su cuerpo)
+            C.shardGlow(id, sx, sy, s, rot, (o.glow or 0) * (0.75 + 0.25 * math.sin(t * 6 + i)), t)
+            Stage.shard(id, sx, sy, { s = s, rot = rot, alpha = (depth < -0.3 and not (o.lead and o.lead > 0.5)) and 0.8 or 1 })
+            if (o.glow or 0) > 0.3 and math.random() < 0.02 * o.glow then
+                Stage.spark(sx, sy, 1, 10, 30, { life = 0.5, s = 2 })
+            end
+        end
     end
 end
 

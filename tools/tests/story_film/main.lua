@@ -5,6 +5,8 @@
 --  3. tres capturas por escena (al 20 %, 55 % y 88 %): <save>/film_<película>_<nn>_<escena>_<k>.png
 --  4. RELOJ: con su música sonando, la película sigue el reloj de la música (desfase < 0,08 s);
 --  5. SALTAR: manteniendo pulsado 1 s se sale; un toque corto no.
+--  6. ENLACE: una película con `next` (la de antes de un nivel) deja sonando al acabar la música de ese nivel, y el
+--     nivel, al pedir la suya, la SIGUE (no vuelve a empezar).
 --   tools/tests/run.sh story_film [FILM=intro|ending|chase|lair] [XTRA=1] [NOSHOTS=1]
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
@@ -20,6 +22,7 @@ local FILMS = os.getenv('FILM') and { os.getenv('FILM') } or { 'intro', 'ending'
 local XTRA, NOSHOTS = os.getenv('XTRA') == '1', os.getenv('NOSHOTS') == '1'
 local fi, state, done, shots, seen, pending, phase = 0, nil, false, {}, {}, nil, 'film'
 local realInput, holdT, clockT, worst
+local NEXT1, P0
 
 local function start()
     fi = fi + 1
@@ -99,8 +102,28 @@ function love.update(dt)
         down = true; for _ = 1, 70 do if not done then state:update(1 / 60) end end
         Input = realInput
         check('saltar', not short and done, ('toque corto la salta=%s, mantener 1 s la salta=%s'):format(tostring(short), tostring(done)))
-        print(fails == 0 and 'TODO OK' or ('FALLOS: ' .. fails))
-        love.event.quit(fails == 0 and 0 or 1)
+        phase, clockT = 'handoff', nil
+    elseif phase == 'handoff' then
+        -- (con sonido de verdad, a volumen 0) la película acaba → suena ya la pista del nivel; el nivel la sigue
+        if not clockT then
+            gStateMachine:change('story_film', { film = 'chase', onDone = function() end })
+            state = gStateMachine:_top(); clockT = 0
+            state:_finish()
+            NEXT1 = select(1, Sound.musicPosition())
+            Sound.setLevelMusic(nil); Sound.setBaseLevelMusic('mirror_chase')
+        else
+            clockT = clockT + dt
+            if clockT > 0.6 and not P0 then P0 = select(2, Sound.musicPosition()); Sound.playMusic('level') end
+            if clockT > 1.0 then
+                local name, pos = Sound.musicPosition()
+                check('enlace', NEXT1 == 'mirror_chase' and name == 'mirror_chase' and P0 ~= nil and pos ~= nil and pos > P0,
+                      ('al acabar la película suena %s; el nivel pide la suya y sigue sonando %s en %.2f s (antes %.2f: no vuelve a empezar)'):format(
+                       tostring(NEXT1), tostring(name), pos or -1, P0 or -1))
+                Sound.stopMusic()
+                print(fails == 0 and 'TODO OK' or ('FALLOS: ' .. fails))
+                love.event.quit(fails == 0 and 0 or 1)
+            end
+        end
     end
 end
 

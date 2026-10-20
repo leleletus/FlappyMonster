@@ -22,11 +22,11 @@ function Film.data()
     return DATA
 end
 
--- La línea de tiempo de una película: { music, total, scenes = { { id, t0, dur, beat, beats, cues = { nombre = s }, enter = 'cut'... } } }
+-- La línea de tiempo de una película: { music, next (la pista del nivel que sigue), total, scenes = { { id, t0, dur, beat, beats, cues = { nombre = s }, enter = 'cut'... } } }
 function Film.timeline(name)
     local def = Film.data()[name]
     if not def then return nil end
-    local tl = { name = name, music = def.music, scenes = {}, total = 0 }
+    local tl = { name = name, music = def.music, next = def.next, scenes = {}, total = 0 }
     for i, s in ipairs(def.scenes) do
         local beat = 60 / s.bpm
         local sc = { id = s.id, index = i, t0 = tl.total, dur = s.beats * beat, beat = beat, beats = s.beats, cues = {}, enter = s['in'] or 'cut' }

@@ -64,8 +64,10 @@ def ladera(time):
 
     rect(1, 11, W, H, BASALT)                      # basalto
     rect(1, 10, W, 10, ASH)                        # ceniza arriba
-    rect(16, 10, 17, 10, LAVA)                     # una zanja de lava (la salta al huir)
-    rect(43, 10, 47, 10, LAVA)                     # el LAGO de lava: lo cruza con el doble salto; el Reflejo se queda
+    rect(28, 10, 29, 10, LAVA)                     # una zanja de lava (la salta al huir)
+    # (las decoraciones de subcelda — 'sub' en DecorationTypes — necesitan su `sub`: sin él van a la subcelda 1, la de
+    # arriba, y flotan medio bloque sobre el suelo)
+    rect(43, 10, 45, 10, LAVA)                     # el LAGO de lava (3 casillas: con un salto no llega; con el doble, sí)
     fol = [
         {'col': 3, 'row': 9, 'sub': 3, 'type': 'basalt_pebbles', 'props': {'layer': 'back'}},
         {'col': 6, 'row': 9, 'type': 'charred_tree', 'props': {'layer': 'back'}},
@@ -73,7 +75,7 @@ def ladera(time):
         {'col': 14, 'row': 9, 'sub': 3, 'type': 'glow_rock', 'props': {'layer': 'back'}},
         {'col': 20, 'row': 9, 'type': 'basalt_rock', 'props': {'layer': 'back'}},
         {'col': 24, 'row': 9, 'sub': 4, 'type': 'ash_pile', 'props': {'layer': 'back'}},
-        {'col': 27, 'row': 9, 'type': 'lava_vent', 'props': {'layer': 'back'}},
+        {'col': 33, 'row': 9, 'sub': 4, 'type': 'lava_vent', 'props': {'layer': 'back'}},
         {'col': 34, 'row': 9, 'type': 'charred_tree', 'props': {'layer': 'back', 'flip': True}},
         {'col': 38, 'row': 9, 'sub': 3, 'type': 'dead_bush', 'props': {'layer': 'back'}},
         {'col': 41, 'row': 9, 'sub': 3, 'type': 'glow_rock', 'props': {'layer': 'back', 'flip': True}},
@@ -81,7 +83,7 @@ def ladera(time):
         {'col': 53, 'row': 9, 'type': 'basalt_rock', 'props': {'layer': 'back'}},
         {'col': 57, 'row': 9, 'type': 'charred_tree', 'props': {'layer': 'back'}},
         {'col': 60, 'row': 9, 'sub': 3, 'type': 'ash_pile', 'props': {'layer': 'back'}},
-        {'col': 62, 'row': 9, 'type': 'lava_vent', 'props': {'layer': 'back'}},
+        {'col': 62, 'row': 9, 'sub': 3, 'type': 'lava_vent', 'props': {'layer': 'back'}},
         {'col': 66, 'row': 9, 'sub': 3, 'type': 'glow_rock', 'props': {'layer': 'back'}},
         {'col': 69, 'row': 9, 'type': 'basalt_rock', 'props': {'layer': 'back', 'flip': True}},
         {'col': 73, 'row': 9, 'type': 'charred_tree', 'props': {'layer': 'back'}},

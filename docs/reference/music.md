@@ -45,7 +45,7 @@ plays the intro once and then repeats the loop. `level` = offered as level music
 | `story_intro` | Historia: intro (cinemática) | `story/story_intro.ogg` | 0.91 | plays once |
 | `story_ending` | Historia: final (cinemática) | `story/story_ending.ogg` | 0.9 | plays once |
 | `story_chase` | Historia: la emboscada (cinemática) | `story/story_chase.ogg` | 0.9 | plays once |
-| `story_lair` | Historia: la guarida (cinemática) | `story/story_lair.ogg` | 0.91 | plays once |
+| `story_lair` | Historia: la guarida (cinemática) | `story/story_lair.ogg` | 0.9 | plays once |
 | `victory` | Victoria (resultados) | `jingles/victory_intro.ogg` + `jingles/victory_loop.ogg` | 0.8 |  |
 
 ## Aliases (old ids that still resolve)

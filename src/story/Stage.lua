@@ -169,13 +169,14 @@ function Stage.shardSlot(id, x, feetY, s)
     return x - Stage.MIRROR_W * s / 2 + b.cx * s, feetY - Stage.MIRROR_H * s + b.cy * s
 end
 
--- Un fragmento suelto, centrado en x, y. o: s (escala), rot, alpha
+-- Un fragmento suelto, centrado en x, y. o: s (escala), rot, alpha, color
 function Stage.shard(id, x, y, o)
     o = o or {}
     local b = shardInfo(id)
     if not b then return end
     local s = o.s or Stage.MIRROR_S
-    love.graphics.setColor(1, 1, 1, o.alpha or 1)
+    local c = o.color or { 1, 1, 1 }
+    love.graphics.setColor(c[1], c[2], c[3], o.alpha or 1)
     love.graphics.draw(b.im, b.quad, floor(x), floor(y), o.rot or 0, s, s, b.w / 2, b.h / 2)
     love.graphics.setColor(1, 1, 1, 1)
 end

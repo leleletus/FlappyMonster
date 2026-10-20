@@ -82,17 +82,17 @@ from `assets/story/films.json` (the single source for picture and music).
 
 | Scene | Time | What is seen | Music and sound |
 |---|---|---|---|
-| `arrive` The slope | 0.0–7.5 s | After the eruption the monster climbs the volcano slope at dusk, its six shards circling over its head. It stops: they glint and tremble — the seventh is near. | La llamada, calm, with footsteps; the volcano rumbles; the mirror motif on bells. |
+| `arrive` The slope | 0.0–7.5 s | After the eruption the monster climbs the volcano slope at dusk. It stops, crouches and TAKES OUT its six shards (an arc over its head); they glow and tremble — the seventh is near. | La llamada, calm, with footsteps; the volcano rumbles; six rising bells (the shards come out); the mirror motif. |
 | `ambush` The ambush | 7.5–15.0 s | A distant laugh; it looks around. A floating mirror opens behind it and the REFLECTION dives down with the centre shard. It laughs, eyes the six shards and crouches to pounce; the monster backs away. | Heartbeats and a tremolo; the hit and the head of the Mirror theme; the laugh hammered on the mirror motif; a roll. |
-| `run` Run! | 15.0–20.5 s | The monster turns and RUNS; it jumps the lava ditch; the Reflection pounces and misses by a hair, and gives chase. → the level. | Two-step drums, the chopped hook of the Mirror theme, the hit of the miss; it ends on the dominant. |
+| `run` Run! | 15.0–20.5 s | A startled jump; it RUNS; the Reflection pounces and a double jump saves it by a hair; it jumps the lava ditch and runs out of frame, the Reflection after it. → the level. | At 174, the tempo of "¡Corre!": two-step drums, the chopped hook, the hit of the miss; then a C# pedal at half voice — what the level's intro starts with (it comes in with no gap). |
 
-### The lair (before "Ruta del Espejo", the first time) — 18.8 s
+### The lair (before "Ruta del Espejo", the first time) — 19.6 s
 
 | Scene | Time | What is seen | Music and sound |
 |---|---|---|---|
-| `escape` End of the run | 0.0–5.5 s | Still running: a jump and a double jump across the lava lake. The Reflection stops at the shore, laughs… and shatters away. The monster turns, out of breath. | The chase drums; two notes up with each jump; everything cuts at the shore; the laugh; breaking glass. |
-| `night` Night falls | 5.5–12.6 s | Night. Alone. Far off the centre shard glints; the laugh echoes; one by one floating mirrors light up: a path to the Reflection's lair. | La llamada alone, sad; two bells (the glint); the mirror motif deep down; one rising bell per mirror. |
-| `follow` Into the lair | 12.6–18.8 s | It breathes deep; its shards glow toward there; it walks into the dark. → the level. | The pad swells; la llamada, determined, with the Reflection's theme lurking below. |
+| `escape` End of the run | 0.0–6.9 s | Still running: a jump and a double jump across the lava lake. The Reflection stops at the shore, laughs, jumps into a floating mirror — and the mirror flies away into the distance (its lair). The monster watches it go, out of breath. | The chase drums; two notes up with each jump; everything cuts at the shore; the laugh; rising runs as it flies off; two bells far away. |
+| `night` Night falls | 6.9–14.0 s | Night. Alone, it takes out its six shards: they tremble and line up POINTING the way it went. Far off, the seventh answers with a glint; the laugh echoes. | La llamada alone, sad; six rising bells; the mirror motif; two high bells (the answer) and the motif deep down; a Phrygian cadence toward A. |
+| `follow` Into the lair | 14.0–19.6 s | It nods and walks after its shards, toward the glint, into the dark. → the level. | At 172 in A, the tempo and key of "Lluvia de fuego" (the level's music): the galloping bass, la llamada in A minor, determined; then an A pedal with its B♭ at half voice, and the level's intro comes in. |
 
 ## Open ideas (optional, from the user)
 

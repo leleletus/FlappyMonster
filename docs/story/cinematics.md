@@ -5,7 +5,7 @@ sprites, real backgrounds, a real level as the set, the real world map, the real
 scene: [story](story.md).
 
 **Files:** `src/story/Film.lua` (the player: scenes, cue events, fades, letterbox bars), `src/story/Stage.lua` (the
-pieces: monster, laugh, mirror, shards, orb, sets), `src/story/films/intro.lua`, `ending.lua`, `chase.lua`, `lair.lua`, `common.lua`,
+pieces: monster, laugh, mirror, shards, orb, sets), `src/story/films/intro.lua`, `ending.lua`, `chase.lua`, `lair.lua`, `common.lua`, `src/story/Actor.lua` (real bodies for the pre-level films),
 `src/states/story/StoryFilmState.lua` (hold any button 1 s to skip), **`assets/story/films.json`** (the timing: the
 ONE source for picture and music), `assets/story/sets/crater.json`, `ladera.json`, `ladera_noche.json` (the sets, real levels made
 by `tools/levelgen/make_sets.py`), music from `tools/music/story_music.py`, sounds from `tools/sounds/story.py`.
@@ -17,6 +17,16 @@ by `tools/levelgen/make_sets.py`), music from `tools/music/story_music.py`, soun
 { [level] = film }`, `Worlds.film(id)`). `StoryMapState:_play` plays it through `story_film` and its `onDone` enters
 the level (`StoryMapState:_start`); the save notes it as seen (`films`, see [save-data](../architecture/save-data.md))
 and a level already cleared never plays it. Today: `chase` before `huida_del_espejo`, `lair` before `ruta_del_espejo`.
+- **Into the level's music:** `films.json` `next` = the level's track. The film's LAST scene is written in that
+  track's tempo and key and ends on what the track's intro starts with, at its level (`chase` → `mirror_chase`: 174,
+  a C# pedal; `lair` → `volcan_2`: 172, an A pedal with its B♭). The score has no tail, and `StoryFilmState:_finish`
+  starts the `next` track instead of stopping the music; the level asks for its own track, finds it already playing
+  and keeps it (harness `story_film` `enlace`).
+- **Real physics:** in these two films the monster and the Reflection are ACTORS (`src/story/Actor.lua`): a real
+  `PlayerAdventure` inside the set, driven by scripted inputs (`mx`, `crouch`, `jump()`) through a stub `Input`, the
+  way the Mirror boss drives its body. So walking, braking, jumps and the double jump (and their sounds and
+  animations) are exactly the game's. The white rim only shows where the game shows it (`Silhouette.on`). Only what
+  is magic in the game too is scripted: the floating mirror, the dive and the pounce.
 Test saves to watch them: `python3 tools/story/test_saves.py 2=lluvia_pinchos 3=huida_del_espejo` (overwrites those
 slots; the films stay unseen, so re-run it to watch them again).
 
@@ -35,7 +45,7 @@ slots; the films stay unseen, so re-run it to watch them again).
   button / finger / mouse for 1 s, hint `story.skip_hint`). Intro plays when a NEW save is created
   (`StorySlotState:_open`); ending after the final shard; `chase` / `lair` before their levels (above).
 
-- **TIMING = `assets/story/films.json`** (per scene: bpm, beats, `cues` in beats, `in` = cut|fade|white): the ONE
+- **TIMING = `assets/story/films.json`** (per scene: bpm, beats, `cues` in beats, `in` = cut|fade|white; per film `next` = the level track it hands over to): the ONE
   source for picture and music. `tools/music/story_music.py [intro ending]` reads it and composes ON it → catalog
   `story_intro` / `story_ending` / `story_chase` / `story_lair` (`assets/music/story/`, no loop; verified by numbers only: track = film length,
   hits land on the cues). Change a time in films.json → regenerate the music (+ `levels.py`). Material: the map tune
@@ -76,3 +86,14 @@ conflicts with the sections above, the sections above describe the current behav
   centre shard glints far off, the laugh echoes, a trail of floating mirrors lights up toward its lair; the monster
   breathes deep and walks into the dark). Rejected on the way: the six shards circling at shoulder height read as
   WINGS (the monster has none) → they are a small ring ABOVE its head. Not yet watched by the user.
+- 3.100.1 — the user watched them: (1) the film music did not lead properly into the level's music → each film's
+  last scene now plays in the level track's tempo and key and hands over to it with no gap (above); (2) in `chase` the
+  shards must NOT be there from the start: the monster takes them out, then they glow — and "fix the glow" (it was a
+  square behind each shard) → the glow is now the shard's own shape, added in light around it, plus a few sparkles;
+  (3) `lair` was confusing ("why are there mirrors in the sky?") → rewritten: at the lava lake the Reflection stops,
+  laughs and jumps into a floating mirror that flies away into the distance (its lair); at night the six shards come
+  out and line up pointing that way, the seventh answers with a glint far off, and the monster follows them; the
+  trail of floating mirrors is gone; (4) a decoration was floating: `lava_vent` is a sub-cell decoration placed
+  without `sub` (it went to sub-cell 1, half a tile up) → `make_sets.py` now gives it one; (5) the movement felt
+  simulated → the actors (above). Also rejected on the way: a tight ring of shards over the head still grouped them
+  in threes that read as wings → an evenly spaced arc above the head, like a floating crown.
