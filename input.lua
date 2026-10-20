@@ -87,6 +87,12 @@ local player
 local REPEAT_DELAY, REPEAT_EVERY = 0.38, 0.09
 local NAV = { 'nav_up', 'nav_down', 'nav_left', 'nav_right' }
 local heldT, nextT, repeatNow = {}, {}, {}
+-- STICK en los menús: en diagonal solo cuenta el eje que más se inclina (en una rejilla saltaba en los dos) y un stick
+-- que tiembla junto al umbral no da pulsaciones seguidas (se ignora volver a pulsar < STICK_DEBOUNCE s tras soltar
+-- mientras el stick sigue inclinado hacia ese lado)
+local STICK_DEBOUNCE = 0.15
+local AXIS_OF = { nav_left = { 'leftx', -1 }, nav_right = { 'leftx', 1 }, nav_up = { 'lefty', -1 }, nav_down = { 'lefty', 1 } }
+local suppress, releasedAt, clock = {}, {}, 0
 
 function Input.load()
     player = baton.new({
@@ -103,6 +109,21 @@ function Input.update(dt)
         end
     end
     player:update()
+    clock = clock + (dt or 0)
+    local js = player.joystick
+    local ax, ay = 0, 0
+    if js and js:isConnected() and js:isGamepad() then ax, ay = js:getGamepadAxis('leftx'), js:getGamepadAxis('lefty') end
+    for _, a in ipairs(NAV) do
+        suppress[a] = false
+        local axis, sign = AXIS_OF[a][1], AXIS_OF[a][2]
+        local v = (axis == 'leftx' and ax or ay) * sign
+        local other = axis == 'leftx' and math.abs(ay) or math.abs(ax)
+        if player:pressed(a) and v > 0.3 then
+            if other > math.abs(v) then suppress[a] = true end                                  -- (diagonal: el otro eje)
+            if releasedAt[a] and clock - releasedAt[a] < STICK_DEBOUNCE then suppress[a] = true end   -- (temblor)
+        end
+        if player:released(a) then releasedAt[a] = clock end
+    end
     for _, a in ipairs(NAV) do
         repeatNow[a] = false
         if player:down(a) then
@@ -145,6 +166,7 @@ function Input.pressed(action)
         Input.VirtualPad.pressed[action] = false -- consumir
         return true
     end
+    if suppress[action] then return false end
     return player:pressed(action) or repeatNow[action] == true
 end
 
