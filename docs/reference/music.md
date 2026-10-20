@@ -19,11 +19,11 @@ plays the intro once and then repeats the loop. `level` = offered as level music
 | `nieve_2` | Cumbres 2 (Ventisca) | `worlds/nieve/nieve_2_intro.ogg` + `worlds/nieve/nieve_2_loop.ogg` | 0.71 | level |
 | `nieve_bonus` | Cumbres (bonus) | `worlds/nieve/nieve_bonus_intro.ogg` + `worlds/nieve/nieve_bonus_loop.ogg` | 0.67 | level |
 | `cuevas_1` | Cuevas 1 (Ecos de cristal) | `worlds/cuevas/cuevas_1_intro.ogg` + `worlds/cuevas/cuevas_1_loop.ogg` | 0.67 | level |
-| `cuevas_2` | Cuevas 2 (Laberinto sumergido) | `worlds/cuevas/cuevas_2_intro.ogg` + `worlds/cuevas/cuevas_2_loop.ogg` | 0.72 | level |
+| `cuevas_2` | Cuevas 2 (Laberinto sumergido) | `worlds/cuevas/cuevas_2_intro.ogg` + `worlds/cuevas/cuevas_2_loop.ogg` | 0.71 | level |
 | `cuevas_bonus` | Cuevas (bonus) | `worlds/cuevas/cuevas_bonus_intro.ogg` + `worlds/cuevas/cuevas_bonus_loop.ogg` | 0.67 | level |
 | `cuevas_oscuras` | Cuevas a oscuras | `worlds/cuevas/cuevas_oscuras.ogg` | 0.77 | level |
 | `volcan_1` | Volcán 1 (Sendero de ceniza) | `worlds/volcan/volcan_1_intro.ogg` + `worlds/volcan/volcan_1_loop.ogg` | 0.67 | level |
-| `volcan_2` | Volcán 2 (Lluvia de fuego) | `worlds/volcan/volcan_2_intro.ogg` + `worlds/volcan/volcan_2_loop.ogg` | 0.68 | level |
+| `volcan_2` | Volcán 2 (Lluvia de fuego) | `worlds/volcan/volcan_2_intro.ogg` + `worlds/volcan/volcan_2_loop.ogg` | 0.67 | level |
 | `volcan_bonus` | Volcán (bonus) | `worlds/volcan/volcan_bonus_intro.ogg` + `worlds/volcan/volcan_bonus_loop.ogg` | 0.63 | level |
 | `gummy_king_boss` | Su Majestad Gummy (Rey Gummy) | `bosses/gummy_king_boss_intro.ogg` + `bosses/gummy_king_boss_loop.ogg` | 0.74 | boss |
 | `evil_ship_boss` | Persecución (Nave Malvada) | `bosses/evil_ship_boss_intro.ogg` + `bosses/evil_ship_boss_loop.ogg` | 0.74 | boss |

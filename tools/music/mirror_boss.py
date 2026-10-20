@@ -21,8 +21,8 @@
 # · C 8 (PUENTE tranquilo: caja de música y voz suave en el relativo mayor, arpegios, sin caja) · D 4 (SUBIDA sobre
 # la dominante: redoble que crece, el motivo trepando) · A'' 8 (tema + su espejo + doble bombo) · F 8 ("el tema del
 # héroe": la muestra de la antigua música de nivel, ver T_F) · G 16 (FURIA: riff en picado, y otra vez una cuarta arriba) · E 8
-# (CLÍMAX: la llamada martilleada) · H 4 (CAÍDA: la intro otra vez, para que el bucle vuelva al tema como la primera
-# vez) = bucle de 80 compases.
+# (CLÍMAX: la llamada martilleada) · H 4 (CIERRE con el tema, que entra en A; hasta 3.99.1 era la intro otra vez)
+# = bucle de 80 compases.
 #
 #   python tools/music/mirror_boss.py   → assets/music/bosses/mirror_boss_{intro,loop}.ogg + .mid
 #   REPORT=1 → solo números. Se comprueba con números (NO se ha escuchado).
@@ -115,8 +115,11 @@ def _up(bars, semis):
     return out
 T_G2 = _up(T_G[:4], 5) + T_G[4:]
 CH_G2 = ['Bm', 'Bm', 'C', 'Bm', 'F#m', 'G', 'C#', 'C#']
-T_H = ["0:C#6/6 6:G#5/6", "0:F5/6 6:C#5/6", "0:C#5/3 3:G#4/3 6:F4/3 9:C#4/3", "0:C#5/12"]
-CH_H = ['C#'] * 4
+# (3.99.2 — el usuario: el bucle acababa con la intro otra vez — "la canción debe terminar como un bucle". La caída H
+# ya no es la intro: un CIERRE de 4 compases con el tema, Fa#m · Re · Mi · Do#, notas largas que bajan y Mi#→Fa# que
+# entra en el tema A. Lo demás, como estaba.)
+T_H = ["0:C#6/6 6:A5/3 9:F#5/3", "0:A5/6 6:F#5/3 9:D5/3", "0:B5/6 6:G#5/3 9:E5/3", "0:C#6/6 6:G#5/3 9:F5/3"]
+CH_H = ['F#m', 'D', 'E', 'C#']
 T_E = ["0:C#5/1 1:C#5/1 2:C#5/1 3:F#5/1 4:F#5/1 5:F#5/1 6:A5/1 7:A5/1 8:A5/1 9:C#6/3",          # LA LLAMADA, martilleada
        "0:D6/2 2:D6/1 3:A5/2 5:A5/1 6:F#5/2 8:F#5/1 9:A5/3", "0:E6/2 2:E6/1 3:B5/2 5:B5/1 6:G#5/2 8:G#5/1 9:B5/3",
        "0:F#6/3 3:C#6/1 4:C#6/1 5:C#6/1 6:F#6/6",
@@ -232,7 +235,7 @@ def build(lufs=-9.5):
     # LA FURIA, INTEGRADA (el usuario: buena, pero contrasta demasiado con el resto): mismo bajo al galope que el tema
     # (el unísono en corcheas solo en su remate), bombo al galope hasta ese remate, el mismo arpegio brillante y el
     # coro con tercera que llevan las demás secciones, notas un poco menos secas, y entra al volumen en que acabó F
-    ALIAS = {'G2': 'G', 'H': 'IN'}                             # (la 2ª mitad de la furia y la caída se arreglan como G y la intro)
+    ALIAS = {'G2': 'G', 'H': 'A2'}                             # (la 2ª mitad de la furia, como G; el cierre, como el tema con capas)
     for b, st, n, d in mel:
         kind = ALIAS.get(tag[b - 1], tag[b - 1])
         t0, t1 = tv(b, st), tv(b, st) + d * S8 * 0.93
@@ -367,7 +370,7 @@ def build(lufs=-9.5):
     side = S['arp'] * g['arp'] * 0.6 + S['choir'] * g['choir'] * 0.4 - S['mirror'] * g['mirror'] * 0.5 + S['bell'] * g['bell'] * 0.3 + S['hat'] * g['hat'] * 0.3
     # DINÁMICA por secciones (dB): la mezcla por capas deja todo igual de fuerte — el puente salía MÁS alto que el
     # tema —; aquí se dibuja la escalada: intro contenida, respiro en el puente, la subida crece y el clímax es el techo
-    DYN = {'IN': (-3.5, -2.0), 'A': (0, 0), 'A2': (0.5, 0.5), 'B': (0.5, 1.0), 'C': (-6.0, -5.0), 'D': (-6.0, -0.5), 'A3': (1.0, 1.5), 'F': (1.5, 2.0), 'G': (2.0, 2.8), 'G2': (2.8, 3.5), 'E': (4.0, 4.0), 'H': (1.5, -2.5)}
+    DYN = {'IN': (-3.5, -2.0), 'A': (0, 0), 'A2': (0.5, 0.5), 'B': (0.5, 1.0), 'C': (-6.0, -5.0), 'D': (-6.0, -0.5), 'A3': (1.0, 1.5), 'F': (1.5, 2.0), 'G': (2.0, 2.8), 'G2': (2.8, 3.5), 'E': (4.0, 4.0), 'H': (2.5, 0.5)}
     env = np.ones(len(x))
     for b in range(1, NB + 1):
         a_, e_ = DYN[tag[b - 1]]
@@ -382,7 +385,7 @@ def build(lufs=-9.5):
     # cuánto suena cada sección (la escalada y los respiros, en dB respecto al tema A)
     mono = y.mean(1)
     def rms(i0, i1): return 20 * np.log10(np.sqrt(np.mean(mono[int((i0 - 1) * BAR * SR):int((i1 - 1) * BAR * SR)] ** 2)) + 1e-9)
-    names = ['intro', 'A', "A'", 'B', 'C puente', 'D subida', "A''", 'F héroe', 'G furia', 'G furia 2', 'E clímax', 'H caída']
+    names = ['intro', 'A', "A'", 'B', 'C puente', 'D subida', "A''", 'F héroe', 'G furia', 'G furia 2', 'E clímax', 'H cierre']
     ends = starts[1:] + [NB + 1]
     ref = rms(starts[1], ends[1])
     print('  secciones (dB respecto a A): ' + ' · '.join('%s %+.1f' % (nm, rms(a, e) - ref) for nm, a, e in zip(names, starts, ends)))

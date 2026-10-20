@@ -32,10 +32,8 @@
 #   · VOZ tipo "supersaw": dos sierras desafinadas + la octava, con eco que rebota de lado a lado.
 #   · MASTER más apretado (−8,5 LUFS).
 # Forma: INTRO 4 + SUBIDA 4 | A 8 · A' 8 · B 8 · B' 8 (DROP 1: el tema y el héroe) · K 8 (breakdown) · SUBIDA 4 ·
-# G 8 · A'' 8 · B'' 8 · A''' 8 (DROP 2: la furia, el tema, el héroe arriba, el tema con todo) · SUBIDA 4 = bucle de
-# 80 compases (110,3 s). La SUBIDA es el MISMO compás al final de la intro y al final del bucle
-# (regla de las pistas con intro: mismo último compás y sin doblar colas), y acaba en un silencio de un tiempo antes
-# del drop.
+# G 8 · A'' 8 · B'' 8 · A''' 8 (DROP 2: la furia, el tema, el héroe arriba, el tema con todo) = bucle de 76 compases.
+# La SUBIDA de la intro acaba en un silencio de un tiempo antes del drop; el bucle (3.99.2) ya no la repite al final.
 #
 #   ~/.venvs/fm-music/bin/python tools/music/mirror_chase.py → assets/music/bosses/mirror_chase_{intro,loop}.ogg
 #   REPORT=1 → solo números. Se comprueba con números (NO se ha escuchado). Después: tools/music/levels.py
@@ -102,12 +100,15 @@ CH_K = ['F#m', 'D', 'A', 'E', 'F#m', 'D', 'A', 'C#']
 T_G = [run("F#5 F#5 A5 F#5 F#5 C#6 F#5 F#5 A5 G#5 F#5 E5 F#5 A5 C#6 A5"),                                # la furia, corrida
        run("F#5 F#5 A5 F#5 F#5 C#6 F#5 F#5") + " 8:B5/2 10:A5/2 12:G#5/2 14:F#5/2",
        run("G5 G5 B5 G5 G5 D6 G5 G5 B5 A5 G5 F#5 G5 B5 D6 B5"),
-       run("C#6 C#6 C#6 G#5 G#5 G#5 F5 F5 F5 C#5 C#5 C#5 F5 G#5 C#6 G#5"),                               # el espejo, martilleado
-       run("C#6 C#6 E6 C#6 C#6 F#6 C#6 C#6 E6 D6 C#6 B5 C#6 E6 F#6 E6"),
-       run("B5 B5 D6 B5 B5 F#6 B5 B5") + " 8:D6/2 10:C#6/2 12:B5/2 14:A5/2",
-       run("D6 D6 B5 B5 G5 G5 D6 D6 C#6 C#6 G#5 G#5 F5 F5 C#6 C#6"),
-       "0:C#5/1 1:F5/1 2:G#5/1 3:C#6/1 4:G#5/1 5:F5/1 6:C#6/2 8:C#6/2 10:C#6/2 12:F6/4"]
-CH_G = ['F#m', 'F#m', 'G', 'C#', 'F#m', 'Bm', ['G', 'C#'], 'C#']
+       MIRROR,                                                                                           # el espejo
+       run("F#5 F#5 A5 F#5 F#5 C#6 F#5 F#5 A5 G#5 F#5 E5 F#5 A5 C#6 A5"),
+       run("F#5 F#5 A5 F#5 F#5 D6 F#5 F#5 A5 G#5 F#5 E5 D5 F#5 A5 F#5"),                                  # el riff sobre Re…
+       run("G#5 G#5 B5 G#5 G#5 E6 G#5 G#5 B5 A5 G#5 F#5 E5 G#5 B5 G#5"),                                  # …y sobre Mi
+       "0:C#6/4 4:G#5/4 8:F5/4 12:C#5/4"]                                                                # el espejo, despacio, hacia el drop
+CH_G = ['F#m', 'F#m', 'G', 'C#', 'F#m', 'D', 'E', 'C#']
+# (3.99.2 — el usuario: la persecución NO debe llevar la "parte 2" de la furia del jefe [la segunda mitad de su riff:
+# Do#-Mi, Si-Re, el espejo martilleado, el remate]; ahora la 2ª mitad de G es el mismo riff sobre i–VI–VII–V. Y el
+# bucle ya no acaba con la SUBIDA de la intro: del último A vuelve directo al primero, con la cola doblada.)
 T_IN = [MIRROR, "0:C#6/2 3:G#5/2 6:F5/2 8:C#5/6", MIRROR, "0:C#5/2 3:F5/2 6:G#5/2 8:C#6/6"]
 CH_IN = ['C#'] * 4
 # LA SUBIDA (igual al final de la intro y del bucle): el espejo trepando, redoble, y un tiempo de SILENCIO antes del drop
@@ -115,7 +116,7 @@ T_U = ["0:C#5/3 3:F5/3 6:G#5/2 8:C#6/8", "0:F5/3 3:G#5/3 6:C#6/2 8:F6/8",
        "0:C#6/2 2:C#6/2 4:C#6/2 6:C#6/2 " + ' '.join('%d:C#6/1' % i for i in range(8, 16)),
        ' '.join('%d:F6/1' % i for i in range(0, 12))]
 CH_U = ['C#'] * 4
-ORDER = ['IN', 'U1', 'A', 'A2', 'B', 'B2', 'K', 'UM', 'G', 'A3', 'B3', 'A4', 'U2']
+ORDER = ['IN', 'U1', 'A', 'A2', 'B', 'B2', 'K', 'UM', 'G', 'A3', 'B3', 'A4']
 INTRO = 8
 BUILD = ('U1', 'UM', 'U2')
 THEME = ('A', 'A2', 'A3', 'A4')
@@ -146,7 +147,6 @@ def song():
     section('A3', T_A + A_END, CH_A)
     section('B3', T_B, CH_B, 12)
     section('A4', T_A + A_END2, CH_A)
-    section('U2', T_U, CH_U)
     return mel, chords, tag, starts
 
 
@@ -333,8 +333,8 @@ def build(lufs=-9.0):
         'hat': cut(F.tnd_dac(NZ['hat'].render() / 22638.0 * 12)),
         'crash': cut(F.tnd_dac(NZ['crash'].render() / 22638.0 * 12)) + cut(F.tnd_dac(NZ['fx'].render() / 22638.0 * 12)),
     }
-    # (SIN doblar la cola: la subida es el mismo compás al final de la intro y del bucle, y acaba en silencio)
-    S = {k_: v[:n].copy() for k_, v in S.items()}
+    # (la cola del final se dobla sobre el principio del bucle: el último A vuelve al primero)
+    S = {k_: GN.fold(v, n, n_i) for k_, v in S.items()}
     S['bell'] = GN.delay(S['bell'], 3 * S16, 0.3, 2, 3000)[:len(S['bell'])]
     # niveles respecto a la voz: aquí mandan la batería y el bajo (DnB)
     # SIDECHAIN: lo que no es batería se agacha con cada bombo (y algo con la caja) y vuelve en ~0,13 s

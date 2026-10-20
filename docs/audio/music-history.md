@@ -235,8 +235,25 @@ the old level tune in the final boss, Verity's hook).
   nieve_1 A without drums · A + cm; nieve_2 storm · A stop-time · A + octave; cuevas_1 breather · A without drums · B +
   cm · A; volcan_1 breather · A + cm · A; snowball A stop-time · A + cm; evil_ship alarm alone · A' + cm · B + cm · A';
   gummy_king A + cm · court dance · A; flappy glide · A + cm · A + octave. APPROVED by the user after listening (A/B
-  previews): all of these and the pradera / cuevas / volcan bonus. STILL BEING ADJUSTED: fortaleza / nieve / costa bonus
-  tunes (and the nieve solo), volcan_2's lava solo, cuevas_2's sonar accent (too loud for its calm).
+  previews): all of these and the pradera / cuevas / volcan bonus. Adjusted afterwards: fortaleza / nieve / costa bonus tunes, the nieve solo, volcan_2's lava solo, cuevas_2's
+  sonar accent (see 3.99.2).
+
+- **3.99.2 (user's requests after listening; all approved from A/B previews).** fortaleza_bonus "Asalto": the repeated
+  notes an octave higher (the saw, an octave down, played them as a muddy A3) and with more contour (E-E-E → A · C-C-C
+  → A); B no longer goes through C major (F · G · Am · E). nieve_bonus "Descenso": no C over B minor in B; its SOLO's
+  bells were "small melodic fragments, very loud, combining oddly" → ONE phrase (falling in quarters in bars 3-4,
+  rising softly in bar 7, one bell at the end), two octaves lower, 5 dB quieter (`I_BELL_SOLO`, `perc` −8 in the snow
+  mix). costa_bonus "Regata": no B♭ (B bar 7 went B♭ → G, two different B's in a row: now Dm → G); A bar 3 returns to C
+  by step. volcan_2: the lava solo ("good idea, odd progression and development") is now two phrases — the boiling
+  arpeggio over Am · B♭ · Am · Gm, then the same boiling RISING F · Gm · B♭ to C, which leads into B (was Am B♭ Am Gm F
+  Gm B♭ B♭). cuevas_2 (old, not part of the extensions): the SONAR accent "too loud, breaks the calm" — was the fifth in
+  octaves 6-7 on a thin pulse; now a soft round note in the middle register that fades slowly, with its echo, 5 dB
+  lower (`I_SONAR`). mirror_chase: no longer carries the boss fury's "part 2" (the second half of its riff: C#-E, B-D,
+  the hammered mirror, the ending) — its second half is the riff over F#m · D · E and the mirror motif slowly; and the
+  loop no longer ends with the intro's BUILD (U2): from the last A straight back to the first, tail folded. mirror_boss:
+  the user tried a rewritten fury part 2 and preferred the ORIGINAL; only the ending changed: the 4-bar FALL was the
+  intro again ("the song must end as a loop") → a 4-bar CLOSE with the theme (F#m · D · E · C#, long falling notes,
+  E# → F# into A), arranged like A'.
 
 ## Crab Tantrum (the three Mega Crabby themes)
 

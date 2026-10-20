@@ -128,4 +128,5 @@ conflicts with the sections above, the sections above describe the current behav
   C, then its hammered ending) and after the climax a 4-bar FALL = the intro again (mirror motif slowly over the
   dominant, timpani, the music empties and the roll rises), so A re-enters exactly as the first time. Loop 80 bars
   (121.5 s); vs A: fury +4.1 / +4.7, climax +5.4, fall −2.9 dB. Lesson: a long boss loop needs its own way back —
-  never cut from the peak to the opening.
+  never cut from the peak to the opening. (3.99.2: the user rejected the fall being the intro again — "the song must end as a loop"; it is
+  now a 4-bar close with the theme, F#m · D · E · C#, into A: `docs/audio/music-history.md`.)

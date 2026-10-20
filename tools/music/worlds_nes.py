@@ -762,9 +762,11 @@ EXTRA = {
                  "0:Bb5/1 1:D6/1 2:F6/1 3:D6/1 4:Bb5/1 5:D6/1 6:F6/1 7:D6/1 8:F6/4 12:D6/4",
                  "0:E6/1 1:C6/1 2:A5/1 3:C6/1 4:E6/1 5:C6/1 6:A5/1 7:C6/1 8:A5/4 12:E5/4",
                  "0:D6/1 1:Bb5/1 2:G5/1 3:Bb5/1 4:D6/1 5:Bb5/1 6:G5/1 7:Bb5/1 8:G5/8",
-                 "0:F5/3 3:A5/3 6:C6/2 8:F6/3 11:C6/3 14:A5/2", "0:G5/3 3:Bb5/3 6:D6/2 8:G5/3 11:D6/3 14:Bb5/2",
-                 "0:F6/1 1:E6/1 2:D6/1 3:C6/1 4:Bb5/4 8:F5/4 12:D5/4", "0:D5/1 1:F5/1 2:Bb5/1 3:D6/1 4:F6/12"),
-              CH("Am Bb Am Gm F Gm Bb Bb")),
+                 "0:F5/1 1:A5/1 2:C6/1 3:A5/1 4:F5/1 5:A5/1 6:C6/1 7:A5/1 8:C6/4 12:A5/4",
+                 "0:G5/1 1:Bb5/1 2:D6/1 3:Bb5/1 4:G5/1 5:Bb5/1 6:D6/1 7:Bb5/1 8:D6/4 12:Bb5/4",
+                 "0:Bb5/1 1:D6/1 2:F6/1 3:D6/1 4:Bb5/1 5:D6/1 6:F6/1 7:D6/1 8:F6/2 10:D6/2 12:Bb5/2 14:D6/2",
+                 "0:E6/4 4:C6/2 6:G5/2 8:E5/2 10:G5/2 12:C6/4"),
+              CH("Am Bb Am Gm F Gm Bb C")),     # (3.99.2: frase 1 = el hervor; frase 2 = el mismo hervor subiendo F-Gm-B♭ hasta Do, que lleva a B)
     },
     'persecucion': {   # evil_ship_boss: la ALARMA sola (la banda se para: dos notas que se alternan)
         'AL': (PH("0:G5/2 4:Eb5/2 8:G5/2 12:Eb5/4", "0:Ab5/2 4:Eb5/2 8:Ab5/2 12:C6/4", "0:F5/2 4:C5/2 8:F5/2 12:Ab5/4",
@@ -824,31 +826,31 @@ BONUS = {
                    "0:D6/2 2:B5/2 4:F#5/4 8:E5/2 10:G#5/2 12:B5/4", "0:E5/4 4:A5/2 6:C#6/2 8:E6/6"),           # la llamada en La
                 CH("A E F#m D A E D|E A"), CH("D E C#m F#m D E Bm|E A"), (A, MAJ), {9, 11, 1, 2, 4, 6, 8}),
     'regata': (PH("0:G5/2 2:E5/1 3:G5/1 4:C6/6 10:B5/1 11:C6/1 12:G5/4", "1:A5/1 2:C6/1 3:E6/3 6:C6/2 8:A5/6 14:C6/2",
-                  "0:A5/2 2:F5/1 3:A5/1 4:C6/6 10:Bb5/1 11:C6/1 12:A5/4", "1:G5/1 2:B5/1 3:D6/3 6:B5/2 8:G5/6 14:B5/2",
+                  "0:A5/2 2:F5/1 3:A5/1 4:C6/6 10:G5/1 11:A5/1 12:C6/4", "1:G5/1 2:B5/1 3:D6/3 6:B5/2 8:G5/6 14:B5/2",
                   "0:G5/2 2:E5/1 3:G5/1 4:C6/6 10:B5/1 11:C6/1 12:G5/4", "1:E5/1 2:A5/1 3:C6/3 6:A5/2 8:E5/6 14:A5/2",
                   "0:F5/3 3:A5/3 6:D6/2 8:B5/3 11:G5/3 14:D5/2"),
                P(8, "0:E5/2 2:G5/1 3:C6/1 4:G5/8 12:E5/4"), P(8, "0:G5/2 2:E5/1 3:G5/1 4:C6/12"),
                PH("0:A5/4 4:C6/2 6:A5/2 8:F5/6 14:A5/2", "0:B5/4 4:D6/2 6:B5/2 8:G5/6 14:B5/2", "0:G5/2 2:B5/1 3:E6/3 6:B5/2 8:G5/4 12:E5/4",
                   "0:C6/6 6:B5/2 8:A5/8", "0:F5/2 2:A5/1 3:C6/3 6:A5/2 8:F5/4 12:A5/4", "0:G5/2 2:B5/1 3:D6/3 6:B5/2 8:G5/4 12:B5/4",
-                  "0:D6/2 2:Bb5/2 4:F5/4 8:D5/2 10:G5/2 12:B5/4", "0:G4/4 4:C5/2 6:E5/2 8:G5/6"),           # la llamada en Do
-               CH("C Am F G C Am Dm|G C"), CH("F G Em Am F G Bb|G C"), (C, MAJ), {0, 2, 4, 5, 7, 9, 11, 10}),
-    'asalto': (PH("0:A4/1 1:A4/1 2:A4/2 4:E5/4 8:C5/1 9:C5/1 10:C5/2 12:A5/4", "0:E5/3 3:G5/1 4:E5/4 8:A4/8",
-                  "0:A4/1 1:A4/1 2:A4/2 4:F5/4 8:C5/1 9:C5/1 10:C5/2 12:A5/4", "0:G#5/3 3:E5/1 4:B4/4 8:E5/8",
-                  "0:E5/1 1:E5/1 2:E5/2 4:A5/4 8:E5/1 9:E5/1 10:E5/2 12:C6/4", "0:D6/3 3:A5/1 4:F5/4 8:D5/8",
+                  "0:F5/2 2:A5/2 4:D6/4 8:D5/2 10:G5/2 12:B5/4", "0:G4/4 4:C5/2 6:E5/2 8:G5/6"),           # la llamada en Do
+               CH("C Am F G C Am Dm|G C"), CH("F G Em Am F G Dm|G C"), (C, MAJ), {0, 2, 4, 5, 7, 9, 11}),
+    'asalto': (PH("0:E5/1 1:E5/1 2:E5/2 4:A5/4 8:C6/1 9:C6/1 10:C6/2 12:A5/4", "0:B5/3 3:A5/1 4:E5/4 8:A5/8",
+                  "0:F5/1 1:F5/1 2:F5/2 4:A5/4 8:C6/1 9:C6/1 10:C6/2 12:F6/4", "0:E6/3 3:D6/1 4:B5/4 8:G#5/8",
+                  "0:A5/1 1:A5/1 2:A5/2 4:C6/4 8:E6/1 9:E6/1 10:E6/2 12:C6/4", "0:D6/3 3:A5/1 4:F5/4 8:D5/8",
                   "0:C6/3 3:A5/3 6:F5/2 8:E5/3 11:G#5/3 14:B5/2"),
                P(8, "0:A5/2 2:E5/2 4:C5/4 8:A4/8"), P(8, "0:E5/1 1:E5/1 2:E5/2 4:A5/12"),
                PH("0:C6/4 4:A5/2 6:F5/2 8:C5/6 14:F5/2", "0:D6/4 4:B5/2 6:G5/2 8:D5/6 14:G5/2",
-                  "0:E6/1 1:E6/1 2:E6/2 4:C6/4 8:G5/1 9:G5/1 10:G5/2 12:E5/4", "0:B5/6 6:A5/2 8:G#5/8",
+                  "0:E6/1 1:E6/1 2:E6/2 4:C6/4 8:A5/1 9:A5/1 10:A5/2 12:E5/4", "0:B5/6 6:A5/2 8:G#5/8",
                   "0:A5/1 1:A5/1 2:A5/2 4:C6/4 8:F5/1 9:F5/1 10:F5/2 12:A5/4", "0:B5/1 1:B5/1 2:B5/2 4:D6/4 8:G5/1 9:G5/1 10:G5/2 12:B5/4",
                   "0:F5/2 2:A5/2 4:D6/4 8:E6/2 10:D6/2 12:B5/4", "0:E5/4 4:A5/2 6:C6/2 8:E6/6"),            # la llamada en La menor
-               CH("Am Am F E Am Dm F|E Am"), CH("F G C E F G Dm|E Am"), (A, MIN), {9, 11, 0, 2, 4, 5, 7, 8}),
+               CH("Am Am F E Am Dm F|E Am"), CH("F G Am E F G Dm|E Am"), (A, MIN), {9, 11, 0, 2, 4, 5, 7, 8}),
     'descenso': (PH("0:D6/1 1:C6/1 2:B5/2 4:G5/4 8:B5/1 9:A5/1 10:G5/2 12:D5/4", "1:F#5/1 2:A5/1 3:D6/9 12:A5/4",
                     "0:B5/1 1:A5/1 2:G5/2 4:E5/4 8:G5/1 9:F#5/1 10:E5/2 12:B4/4", "1:E5/1 2:G5/1 3:C6/9 12:G5/4",
                     "0:G5/1 1:A5/1 2:B5/2 4:D6/4 8:B5/1 9:C6/1 10:D6/2 12:G5/4", "1:A5/1 2:F#5/1 3:D5/9 12:F#5/4",
                     "0:E5/3 3:G5/3 6:C6/2 8:A5/3 11:F#5/3 14:D5/2"),
                  P(8, "0:B5/1 1:A5/1 2:G5/2 4:D5/8 12:G5/4"), P(8, "0:D6/1 1:C6/1 2:B5/2 4:G5/12"),
                  PH("0:E5/4 4:G5/4 8:C6/6 14:G5/2", "0:F#5/4 4:A5/4 8:D6/6 14:A5/2",
-                    "0:D6/1 1:C6/1 2:B5/2 4:F#5/4 8:B5/1 9:A5/1 10:F#5/2 12:D5/4", "0:G5/6 6:F#5/2 8:E5/8",
+                    "0:D6/1 1:B5/1 2:F#5/2 4:B5/4 8:A5/1 9:F#5/1 10:D5/2 12:F#5/4", "0:G5/6 6:F#5/2 8:E5/8",
                     "0:C6/1 1:B5/1 2:A5/2 4:G5/4 8:E5/4 12:G5/4", "0:D6/1 1:C6/1 2:B5/2 4:A5/4 8:F#5/4 12:A5/4",
                     "0:C6/2 2:A5/2 4:E5/4 8:F#5/2 10:A5/2 12:D6/4", "0:D5/4 4:G5/2 6:B5/2 8:D6/6"),           # la llamada en Sol
                  CH("G D Em C G D C|D G"), CH("C D Bm Em C D Am|D G"), (G, MAJ), {7, 9, 11, 0, 2, 4, 6}),
@@ -1006,6 +1008,8 @@ SOLO_STYLE = {'pradera': 'pradera', 'costa': 'costa', 'fortaleza': 'fortaleza', 
 OWN_DBL = ('fiesta', 'volcan', 'lava', 'rey', 'fortaleza', 'nave', 'cueva', 'nieve')    # (ya doblan, o canta la caja de música)
 I_CM = {'vol': [4, 6, 7, 7, 7, 6], 'sus': 6, 'vib': (18, 0.12, 5.0), 'duty': 1.0}       # contracanto: el colchón (N163)
 I_SKY = {'vol': [14, 15, 14, 13, 12, 12], 'sus': 11, 'vib': (14, 0.18, 6.0), 'duty': [0.125, 0.125, 0.125, 0.25], 'drop': [-2, -1, -0.5]}   # (Flappy: entra con un respingo)
+I_SONAR = {'vol': [3, 5, 6, 6, 6, 5, 5, 5, 4, 4, 4, 3, 3, 3, 2, 2, 2, 1], 'sus': 1, 'duty': 0.5}    # (cuevas_2: entra suave, se apaga despacio)
+I_BELL_SOLO = {'vol': [8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1], 'sus': 1, 'duty': 0.5}               # (las campanas del solo de la nieve)
 I_HOP = {'vol': [9, 7, 5, 3, 2, 1], 'sus': 0, 'duty': 0.5}                    # el salto (acento de Flappy)
 I_PUSH = {'vol': [10, 8, 6, 4, 2, 1], 'sus': 0, 'duty': 0.125}
 ISLE_LV = {
@@ -1014,8 +1018,8 @@ ISLE_LV = {
     'volcan': {'lead': 0, 'dbl': -8, 'echo': -13, 'chords': -10, 'bass': -1, 'trill': -6, 'kick': 0, 'snare': -3, 'hat': -12, 'crash': -10, 'toms': 0},
     'lava':   {'lead': 0, 'dbl': -9, 'echo': -13, 'chords': -9, 'bass': -1, 'trill': -7, 'kick': 0, 'snare': -3, 'hat': -12, 'crash': -10, 'toms': 0},
     'cueva':     {'lead': -9, 'bell': 0, 'echo': -10, 'chords': -9, 'bass': -2, 'trill': -2, 'kick': -3, 'snare': -10, 'hat': -14, 'crash': -14, 'toms': 0},
-    'sumergida': {'lead': 0, 'echo': -8, 'chords': -10, 'bass': -3, 'trill': -9, 'kick': -6, 'snare': -15, 'hat': -15, 'crash': -14, 'toms': 0},
-    'nieve':    {'lead': -5, 'bell': 0, 'echo': -12, 'chords': -11, 'bass': -3, 'trill': -5, 'kick': -5, 'snare': -10, 'hat': -11, 'crash': -13, 'toms': 0},
+    'sumergida': {'lead': 0, 'echo': -8, 'chords': -10, 'bass': -3, 'trill': -14, 'kick': -6, 'snare': -15, 'hat': -15, 'crash': -14, 'toms': 0},
+    'nieve':    {'lead': -5, 'bell': 0, 'perc': -8, 'echo': -12, 'chords': -11, 'bass': -3, 'trill': -5, 'kick': -5, 'snare': -10, 'hat': -11, 'crash': -13, 'toms': 0},
     'ventisca': {'lead': 0, 'bell': -6, 'echo': -11, 'chords': -11, 'bass': -1, 'trill': -7, 'kick': -2, 'snare': -5, 'hat': -12, 'crash': -11, 'toms': 0},
     'bola':     {'lead': 0, 'bell': -4, 'echo': -12, 'chords': -7, 'bass': -1, 'trill': -14, 'kick': 0, 'snare': -3, 'hat': -10, 'crash': -9, 'toms': -1},
     'rey':  {'lead': 0, 'dbl': -7, 'echo': -13, 'chords': -9, 'bass': -1.5, 'trill': -6, 'kick': 0, 'snare': -3, 'hat': -14, 'crash': -9, 'toms': -1},
@@ -1150,7 +1154,9 @@ def _solo_fortaleza(k, at, kick, sn, tom, NZ, hit, chord, ping):
 def _solo_nieve(k, at, kick, sn, tom, NZ, hit, chord, ping):
     """CASCABELES siempre; TIMBALES en 3+3+2 (1-2), CAMPANAS que caen por el acorde (3-4), bolas de nieve: toms que
     corren y campanas a contratiempo (5-6), campanas que SUBEN (7), redoble de timbal que crece (8)"""
-    m = _tones(chord, 72)
+    # (3.99.2: las campanas sonaban fuertes y sueltas — notas de dos octavas más arriba, en cada compás. Ahora son UNA
+    # frase: bajan por el acorde en negras (3-4), suben flojas en corcheas (7) y una sola al final; no suenan en 5-6)
+    m = _tones(chord, 60)
     for st in range(16):
         t = at(st)
         if k != 8: NZ['hat'].hit(t, 0, [5, 3, 1] if st % 2 == 0 else [3, 1])
@@ -1159,20 +1165,20 @@ def _solo_nieve(k, at, kick, sn, tom, NZ, hit, chord, ping):
             if st in (0, 8): hit(kick, TN.KICK, t, 0.6)
             if k == 2 and st in (12, 13, 14, 15): hit(tom, TOMS[2], t, 0.5 + (st - 12) * 0.1)
         elif k in (3, 4):
-            if st % 2 == 0: ping(t, m[6 - (st // 2) % 7] if k == 3 else m[(6, 4, 5, 3, 4, 2, 3, 0)[st // 2]], I_DING, 0.3)
+            if k == 3 and st % 4 == 0: ping(t, m[(5, 4, 3, 2)[st // 4]], I_BELL_SOLO, 0.35)
+            if k == 4 and st in (0, 8): ping(t, m[(4, 3)[st // 8]], I_BELL_SOLO, 0.6)
             if st in (4, 12): NZ['snare'].hit(t, 6, [7, 3, 1])
             if st in (0, 8): hit(kick, TN.KICK, t, 0.5)
         elif k in (5, 6):
             if st in (0, 6, 8): hit(kick, TN.KICK, t, 0.8)
             if st % 8 >= 4: hit(tom, TOMS[min(2, (st % 8 - 4))], t, 0.8)
-            if st % 4 == 2: ping(t, m[(3, 4, 5, 4)[(st // 4)]], I_DING, 0.2)
         elif k == 7:
-            ping(t, m[min(6, st // 2)], I_DING, 0.15)
+            if st >= 8 and st % 2 == 0: ping(t, m[(2, 3, 4, 5)[(st - 8) // 2]], I_BELL_SOLO, 0.12)
             if st in (0, 8): hit(tom, TOMS[2], t, 1.0); hit(kick, TN.KICK, t, 0.7)
         else:
             hit(tom, TOMS[2], t, 0.35 + st * 0.04)
             NZ['hat'].hit(t, 0, [4 + st // 3, 3, 1])
-            if st == 15: ping(t, m[6], I_DING, 0.3)
+            if st == 15: ping(t, m[3], I_BELL_SOLO, 0.3)
         if st == 0 and k in (1, 5): NZ['crash'].hit(t, 3, CRASH)
 
 
@@ -1520,8 +1526,11 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
                 for st, iv in ((11, 12 + q[2]), (14, 12)):
                     play(Cn['trill'], t8(st), t8(st) + 0.07, 72 + (r - 72) % 12 + iv, GN.I_DRIP, release=0)
             elif isle == 'sumergida':                         # SONAR: una nota y su repetición, más lejos
-                play(Cn['trill'], t8(9), t8(9) + S16 * 3, 84 + (r - 84) % 12 + q[2], I_DING, release=6)
-                play(Cn['trill'], t8(13), t8(13) + S16 * 3, 84 + (r - 84) % 12 + q[2], I_DING, vs=0.45, release=6)
+                # (3.99.2: antes la quinta en la 6ª-7ª octava, pulso fino: el usuario la oía muy fuerte, rompía la calma.
+                # Ahora una nota suave y redonda en el registro medio, que se apaga despacio, y su eco más flojo)
+                nn = 72 + (r - 72) % 12 + q[2] - (12 if (r - 72) % 12 + q[2] > 7 else 0)
+                play(Cn['trill'], t8(9), t8(9) + S16 * 4, nn, I_SONAR, release=8)
+                play(Cn['trill'], t8(13), t8(13) + S16 * 3, nn, I_SONAR, vs=0.4, release=8)
             elif isle == 'nieve':                             # un cascabeleo y UNA campana que se queda sonando
                 for st in (10, 11, 12): NZ['fx'].hit(t8(st), 0, [7, 3, 1])
                 play(Cn['trill'], t8(12), t8(12) + S16 * 6, 84 + (r - 84) % 12 + q[2], I_DING, release=8)
