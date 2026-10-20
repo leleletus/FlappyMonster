@@ -9,6 +9,8 @@
 #   restore  el espejo, entero                bell     la luz llega a una isla
 #   shrink   un jefe vuelve a ser pequeño     wave     la onda de luz
 #   shard_drop / shard_get   un jefe suelta su fragmento / el jugador lo recoge
+#   rumble   el volcán ruge, lejos            laugh_far  la risa del Reflejo, lejos y con eco (sale de la risa
+#   pant     el monstruo, sin aliento                    del jefe: assets/sounds/bosses/mirror/laugh.wav)
 #   python3 tools/sounds/story.py [nombres...]
 import os, sys, wave
 import numpy as np
@@ -157,8 +159,44 @@ def shard_get():
     return mix(*parts)
 
 
+def rumble():
+    d = 2.2
+    tt = t_(d)
+    body = lowpass(lowpass(noise(d), 120), 120) * 6
+    shape = np.clip(tt / 0.4, 0, 1) * np.clip((d - tt) / 1.0, 0, 1) * (0.7 + 0.3 * np.sin(2 * np.pi * 3.1 * tt))
+    tb = t_(0.6)
+    thud = np.sin(2 * np.pi * np.cumsum(np.linspace(60, 32, len(tb))) / SR) * np.exp(-tb / 0.25)
+    return mix(body * shape, at(thud * 0.7, 0.3), at(lowpass(noise(0.8), 600) * np.exp(-t_(0.8) / 0.3) * 0.3, 0.35))
+
+
+def laugh_far():
+    with wave.open('assets/sounds/bosses/mirror/laugh.wav', 'rb') as w:
+        ch, sw, sr = w.getnchannels(), w.getsampwidth(), w.getframerate()
+        raw = np.frombuffer(w.readframes(w.getnframes()), dtype='<i2').astype(float) / 32768
+    if ch > 1: raw = raw.reshape(-1, ch).mean(1)
+    ha = np.interp(np.arange(int(len(raw) * SR / sr)) / SR, np.arange(len(raw)) / sr, raw) if sr != SR else raw
+    # (laugh.wav es UNA carcajada; el jefe la repite cinco veces cada 2/6 s: aquí igual, cada una algo más grave)
+    hs = [at(np.interp(np.arange(0, len(ha), p_), np.arange(len(ha)), ha) * (1 - 0.08 * k), (1 / 6) + k * (2 / 6))
+          for k, p_ in enumerate((1.0, 0.97, 0.95, 0.92, 0.88))]
+    dry = lowpass(mix(*hs), 1800)                                  # lejos: sin agudos
+    parts = [np.zeros(len(dry) + int(SR * 1.6))]
+    for k, (delay, g) in enumerate(((0.0, 0.55), (0.23, 0.45), (0.47, 0.34), (0.74, 0.24), (1.05, 0.15))):
+        parts.append(at(lowpass(dry, 1800 - k * 280) * g, delay))   # el eco de las paredes del volcán
+    return mix(*parts)
+
+
+def pant():
+    parts = [np.zeros(int(SR * 0.95))]
+    for i, (t0, d, g) in enumerate(((0.0, 0.16, 1.0), (0.3, 0.14, 0.8), (0.6, 0.2, 0.9))):
+        tt = t_(d)
+        breath = lowpass(highpass(noise(d), 500), 2600 if i % 2 == 0 else 1900) * np.sin(np.pi * tt / d) ** 1.5
+        parts.append(at(breath * g, t0))
+    return mix(*parts)
+
+
 ALL = {'glint': glint, 'crash': crash, 'orb': orb, 'blast': blast, 'shard': shard, 'grow': grow, 'clink': clink,
-       'restore': restore, 'bell': bell, 'shrink': shrink, 'wave': wave_, 'shard_drop': shard_drop, 'shard_get': shard_get}
+       'restore': restore, 'bell': bell, 'shrink': shrink, 'wave': wave_, 'shard_drop': shard_drop, 'shard_get': shard_get,
+       'rumble': rumble, 'laugh_far': laugh_far, 'pant': pant}
 
 if __name__ == '__main__':
     for name in (sys.argv[1:] or list(ALL)):

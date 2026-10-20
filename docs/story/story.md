@@ -1,7 +1,7 @@
 # The story of Flappy Monster: "El Espejo Roto" (The Broken Mirror)
 
 Approved by the user on 2026-10-03. This document is the reference for the story. How it is implemented:
-[story-mode](story-mode.md) (worlds, saves, shards), [cinematics](cinematics.md) (the two films).
+[story-mode](story-mode.md) (worlds, saves, shards), [cinematics](cinematics.md) (the films).
 
 **Hard rule: the monster has NO WINGS.** It flaps by a magic of its own. Never draw or mention wings.
 
@@ -77,6 +77,22 @@ from `assets/story/films.json` (the single source for picture and music).
 | `shrink` Small again | 29.2–36.2 s | One by one, close up: the bosses shrink (the Gummy, now without its crown). | The theme goes on, playful; a "pop" per boss. |
 | `flap` The flap | 36.2–43.4 s | The orb returns to the monster. It tries: one flap… two… and rises without stopping out of the chimney; its reflection, now only a reflection, imitates it. | Silence; with each flap, one more note of la llamada; and it rises. |
 | `home` Flying home | 43.4–52.5 s | It flies over the volcano; the sky becomes the Flappy mode's again, the pipes return; the logo. | The whole theme; with the logo, the final chord and la llamada on bells. |
+
+### The chase (before "La Huida del Espejo", the first time) — 20.5 s
+
+| Scene | Time | What is seen | Music and sound |
+|---|---|---|---|
+| `arrive` The slope | 0.0–7.5 s | After the eruption the monster climbs the volcano slope at dusk, its six shards circling over its head. It stops: they glint and tremble — the seventh is near. | La llamada, calm, with footsteps; the volcano rumbles; the mirror motif on bells. |
+| `ambush` The ambush | 7.5–15.0 s | A distant laugh; it looks around. A floating mirror opens behind it and the REFLECTION dives down with the centre shard. It laughs, eyes the six shards and crouches to pounce; the monster backs away. | Heartbeats and a tremolo; the hit and the head of the Mirror theme; the laugh hammered on the mirror motif; a roll. |
+| `run` Run! | 15.0–20.5 s | The monster turns and RUNS; it jumps the lava ditch; the Reflection pounces and misses by a hair, and gives chase. → the level. | Two-step drums, the chopped hook of the Mirror theme, the hit of the miss; it ends on the dominant. |
+
+### The lair (before "Ruta del Espejo", the first time) — 18.8 s
+
+| Scene | Time | What is seen | Music and sound |
+|---|---|---|---|
+| `escape` End of the run | 0.0–5.5 s | Still running: a jump and a double jump across the lava lake. The Reflection stops at the shore, laughs… and shatters away. The monster turns, out of breath. | The chase drums; two notes up with each jump; everything cuts at the shore; the laugh; breaking glass. |
+| `night` Night falls | 5.5–12.6 s | Night. Alone. Far off the centre shard glints; the laugh echoes; one by one floating mirrors light up: a path to the Reflection's lair. | La llamada alone, sad; two bells (the glint); the mirror motif deep down; one rising bell per mirror. |
+| `follow` Into the lair | 12.6–18.8 s | It breathes deep; its shards glow toward there; it walks into the dark. → the level. | The pad swells; la llamada, determined, with the Reflection's theme lurking below. |
 
 ## Open ideas (optional, from the user)
 

@@ -6,7 +6,7 @@ list of tracks: [reference/music](../reference/music.md). The style and composit
 [music-guide](music-guide.md). How each track got here: [music-history](music-history.md).
 
 **Layout:** `assets/music/menus/`, `flappy/` (the Flappy mode's own track), `map/` (one arrangement per island), `worlds/<world>/` (`_1`, `_2`, `_bonus`),
-`bosses/`, `jingles/` (victory), `story/` (the two films). **Who plays what:** a level's `"music"` id; a boss zone's
+`bosses/`, `jingles/` (victory), `story/` (the films). **Who plays what:** a level's `"music"` id; a boss zone's
 `music` (or the boss's own `musicOverride()`: Verity); the map picks `map_<world>` by the nearest island; the results
 screens play `victory`; the Flappy mode plays `flappy`.
 
@@ -18,7 +18,7 @@ screens play `victory`; the Flappy mode plays `flappy`.
 | `crab_icy.py` | `crab_tantrum_icy` (v3: definitive, do not touch its winter references) |
 | `mirror_boss.py`, `mirror_chase.py`, `verity_boss.py` | those three |
 | `gloomy_nes.py cueva` | `cuevas_oscuras` (also a library: the spider "legs") |
-| `story_music.py [intro ending]` | the film scores, composed ON `assets/story/films.json` |
+| `story_music.py [intro ending chase lair]` | the film scores, composed ON `assets/story/films.json` |
 | `levels.py` | measures every track (LUFS) and writes its catalog `volume` — **run it after adding or regenerating any track** |
 | `famicom.py`, `tentacle_nes.py` | libraries only (engine; MIDI / harmony helpers the others import) |
 | `study.py` | analysis of a .mid |

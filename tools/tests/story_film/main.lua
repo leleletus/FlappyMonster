@@ -1,11 +1,11 @@
 -- tools/tests/story_film — las CINEMÁTICAS de la historia con el juego real (src/story/Film.lua):
---  1. la intro y el final se reproducen ENTEROS por el estado de verdad (story_film), a pasos fijos de 1/60 s,
+--  1. las películas (intro, final, persecución y guarida) se reproducen ENTERAS por el estado de verdad (story_film), a pasos fijos de 1/60 s,
 --     sin errores, pasando por todas las escenas en orden y llamando a onDone al acabar;
 --  2. cada escena dura lo que dice assets/story/films.json;
 --  3. tres capturas por escena (al 20 %, 55 % y 88 %): <save>/film_<película>_<nn>_<escena>_<k>.png
 --  4. RELOJ: con su música sonando, la película sigue el reloj de la música (desfase < 0,08 s);
 --  5. SALTAR: manteniendo pulsado 1 s se sale; un toque corto no.
---   tools/tests/run.sh story_film [FILM=intro|ending] [XTRA=1] [NOSHOTS=1]
+--   tools/tests/run.sh story_film [FILM=intro|ending|chase|lair] [XTRA=1] [NOSHOTS=1]
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
 love.filesystem.load('game_main.lua')()
@@ -16,7 +16,7 @@ local function check(name, ok, msg)
     print(('%-10s %s  %s'):format(name, ok and 'OK   ' or 'FALLA', msg))
     if not ok then fails = fails + 1 end
 end
-local FILMS = os.getenv('FILM') and { os.getenv('FILM') } or { 'intro', 'ending' }
+local FILMS = os.getenv('FILM') and { os.getenv('FILM') } or { 'intro', 'ending', 'chase', 'lair' }
 local XTRA, NOSHOTS = os.getenv('XTRA') == '1', os.getenv('NOSHOTS') == '1'
 local fi, state, done, shots, seen, pending, phase = 0, nil, false, {}, {}, nil, 'film'
 local realInput, holdT, clockT, worst

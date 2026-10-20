@@ -19,7 +19,8 @@ the seven mirror shards. The lore is in [story](story.md).
 States: `src/states/story/StorySlotState.lua`, `StoryMapState.lua` ([world-map](world-map.md)),
 `StoryResultsState.lua`, `StoryFilmState.lua`.
 
-**Flow:** slot → (new save: difficulty + intro film) → map → level (`AdventureState` with `lives`, `difficulty`,
+**Flow:** slot → (new save: difficulty + intro film) → map → (the level's own film the first time, if its world
+names one: `Worlds` `films`, [cinematics](cinematics.md)) → level (`AdventureState` with `lives`, `difficulty`,
 `onFinish`, `onLeave`, `onGameOver`, `shards`) → results → map, standing on the cleared node while the next opens.
 
 **Rules:** every story level needs a finish; nothing gained in a level is saved until it is finished; a Game Over

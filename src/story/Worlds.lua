@@ -6,6 +6,8 @@
 --   boss    el nivel del jefe: el último nodo del mundo; al superarlo se abre el mundo siguiente
 --   bonus   nivel OPCIONAL del mundo: una arena de Rey de la Colina contra el bot (src/story/BonusMatch.lua); se
 --           abre al vencer al jefe; no cuenta para el progreso ni para abrir el mundo siguiente
+--   films   CINEMÁTICAS de antes de un nivel: { [nivel] = película (assets/story/films.json) }; se ven la
+--           primera vez que se entra en él (la partida apunta las vistas: `films`)
 -- Todo nivel de la historia necesita META (los de solo Cazamonstruos no la tienen).
 -- Orden (etapa 7): cada mundo agrupa los niveles de SU ambiente (las islas del mapa) y dentro van del más fácil al
 -- más difícil, según los datos (enemigos y pinchos por casilla de ancho, mecánicas nuevas primero; cámara
@@ -24,7 +26,8 @@ Worlds.LIST = {
     -- 5 Las Cuevas: cristal, los dos laberintos de agua y el templo a oscuras justo antes del jefe a oscuras
     { id = 'cuevas',    levels = { 'cavernas_cristal', 'nivel01', 'laberinto_submarino', 'templo_del_eco' },             boss = 'gruta_lugubre', bonus = 'cripta_del_silencio' },
     -- 6 El Final (el volcán): lava; la lluvia de pinchos (cámara automática) es la erupción, antes del Espejo
-    { id = 'final',     levels = { 'carrera01', 'caldera_roja', 'lluvia_pinchos', 'huida_del_espejo' },                                       boss = 'ruta_del_espejo', bonus = 'cantera_real' },
+    { id = 'final',     levels = { 'carrera01', 'caldera_roja', 'lluvia_pinchos', 'huida_del_espejo' },                                       boss = 'ruta_del_espejo', bonus = 'cantera_real',
+      films = { huida_del_espejo = 'chase', ruta_del_espejo = 'lair' } },     -- (la emboscada; la guarida)
 }
 
 function Worlds.count() return #Worlds.LIST end
@@ -48,6 +51,14 @@ function Worlds.bonus(w)
     if not (W and W.bonus) then return nil end
     W._bonus = W._bonus or { id = W.bonus, bonus = true }
     return W._bonus
+end
+
+-- La película de antes del nivel `id` (o nil)
+function Worlds.film(id)
+    for _, W in ipairs(Worlds.LIST) do
+        if W.films and W.films[id] then return W.films[id] end
+    end
+    return nil
 end
 
 function Worlds.path(id) return 'assets/levels/' .. id .. '.json' end

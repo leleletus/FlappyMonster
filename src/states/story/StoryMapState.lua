@@ -557,6 +557,21 @@ function StoryMapState:_play()
         })
         return
     end
+    -- la CINEMÁTICA de antes de este nivel (Worlds.LIST: films), la primera vez que se entra; luego, el nivel
+    local film = Worlds.film(n.id)
+    if film and not Run.isDone(n.id) and not Run.data.films[film] then
+        Run.data.films[film] = true
+        Run.save()
+        gStateMachine:change('story_film', { film = film, xtra = Shards.isXtra(Run.data.difficulty),
+                                             onDone = function() self:_start(world, node) end })
+        return
+    end
+    self:_start(world, node)
+end
+
+-- Entra en el nivel del nodo (con sus vidas, fragmentos, Game Over y, al terminarlo, los resultados)
+function StoryMapState:_start(world, node)
+    local n = mapNodes(world)[node]
     local gotShards = {}
     gStateMachine:change('adventure', {
         level = Worlds.path(n.id), returnTo = 'story_map', difficulty = Run.data.difficulty,

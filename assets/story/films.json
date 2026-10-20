@@ -1,5 +1,5 @@
 {
-  "_": "TIEMPOS de las cinemáticas de la historia: la ÚNICA fuente para la imagen (src/story/Film.lua + src/story/films/) y para la música (tools/music/story_music.py). Cada escena dura `beats` pulsos a `bpm`; `cues` = momentos, en pulsos desde el principio de la escena. `in` = cómo entra (cut, fade, white).",
+  "_": "TIEMPOS de las cinemáticas de la historia (intro, final y las de antes de la persecución y del jefe Espejo): la ÚNICA fuente para la imagen (src/story/Film.lua + src/story/films/) y para la música (tools/music/story_music.py). Cada escena dura `beats` pulsos a `bpm`; `cues` = momentos, en pulsos desde el principio de la escena. `in` = cómo entra (cut, fade, white).",
   "intro": {
     "music": "story_intro",
     "scenes": [
@@ -25,6 +25,22 @@
       { "id": "shrink",  "bpm": 120, "beats": 14, "in": "cut",   "cues": { "first": 0, "each": 2 } },
       { "id": "flap",    "bpm": 100, "beats": 12, "in": "fade",  "cues": { "orb": 1, "try1": 4, "try2": 6, "rise": 8 } },
       { "id": "home",    "bpm": 132, "beats": 20, "in": "fade",  "cues": { "cross": 6, "pipes": 8, "logo": 12 } }
+    ]
+  },
+  "chase": {
+    "music": "story_chase",
+    "scenes": [
+      { "id": "arrive",  "bpm": 96,  "beats": 12, "in": "fade",  "cues": { "stop": 6, "look": 8 } },
+      { "id": "ambush",  "bpm": 96,  "beats": 12, "in": "cut",   "cues": { "laugh": 1, "portal": 4, "drop": 6, "land": 7, "grin": 8 } },
+      { "id": "run",     "bpm": 132, "beats": 12, "in": "cut",   "cues": { "jump": 1, "go": 2, "pounce": 6, "miss": 7 } }
+    ]
+  },
+  "lair": {
+    "music": "story_lair",
+    "scenes": [
+      { "id": "escape",  "bpm": 132, "beats": 12, "in": "fade",  "cues": { "leap": 3, "stop": 5, "shatter": 9 } },
+      { "id": "night",   "bpm": 84,  "beats": 10, "in": "fade",  "cues": { "glint": 3, "laugh": 5, "trail": 6 } },
+      { "id": "follow",  "bpm": 96,  "beats": 10, "in": "cut",   "cues": { "breath": 2, "walk": 5 } }
     ]
   }
 }

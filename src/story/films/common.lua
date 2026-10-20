@@ -1,7 +1,8 @@
 -- src/story/films/common.lua
--- Lo que comparten las dos películas de la historia (intro y final): medidas del decorado del cráter, el
--- "equipo" del modo Flappy (el jugador y las tuberías DE VERDAD, pilotados), los seis sitios del mapa donde
--- caen los fragmentos y unas cuantas curvas.
+-- Lo que comparten las películas de la historia (intro, final, persecución y guarida): medidas de los decorados
+-- (el cráter, la ladera), el "equipo" del modo Flappy (el jugador y las tuberías DE VERDAD, pilotados), los seis
+-- sitios del mapa donde caen los fragmentos, el Reflejo corriendo, los fragmentos que lleva el monstruo y unas
+-- cuantas curvas.
 local Stage = require 'src/story/Stage'
 
 local C = {}
@@ -82,6 +83,66 @@ function C.hover(id, t)
     local out = (n == 7) and 190 or 120
     local bob = math.sin((t or 0) * 2 + n * 1.3) * 8
     return sx + dx / d * out, sy + dy / d * out + bob
+end
+
+-- ── La ladera del volcán (assets/story/sets/ladera.json y ladera_noche.json; make_sets.py) ──────
+C.LCAMY = 48                        -- la cámara, en y (12 filas: se ven 11,25)
+C.LFLOOR = 528                      -- y del centro del monstruo de pie (suelo en y = 576)
+C.DITCH = { 960, 1088 }             -- la zanja de lava (columnas 16-17), en x del mundo
+C.LAKE = { 2688, 3072 }             -- el lago de lava (columnas 43-47)
+
+-- Los fragmentos que LLEVA el monstruo (los seis de los jefes; Xtra: las doce mitades): un CORRO pequeño que gira
+-- SOBRE su cabeza (a los lados, a la altura de los hombros, parecían alas — el monstruo NO tiene alas).
+-- glow 0..1 = brillan (notan el séptimo cerca); shake = tiemblan
+function C.carryIds(xtra)
+    local out = {}
+    for _, id in ipairs(Stage.shardIds(xtra)) do if id:sub(1, 1) ~= '7' then out[#out + 1] = id end end
+    return out
+end
+function C.carry(x, y, t, ids, glow, shake)
+    local n = #ids
+    for i, id in ipairs(ids) do
+        local a = t * 1.6 + (i - 1) / n * math.pi * 2
+        local jx = (shake and shake > 0) and (math.random() * 2 - 1) * shake or 0
+        local sx, sy = x + math.cos(a) * 44 + jx, y - 92 + math.sin(a) * 9 + math.sin(t * 3) * 3
+        if glow and glow > 0 then
+            love.graphics.setColor(0.8, 0.95, 1, 0.3 * glow)
+            love.graphics.rectangle('fill', math.floor(sx) - 8, math.floor(sy) - 8, 16, 16)
+        end
+        Stage.shard(id, sx, sy, { s = 1, rot = math.sin(t * 2 + i) * 0.3, alpha = (math.sin(a) < 0) and 0.75 or 1 })
+    end
+end
+
+-- EL REFLEJO a la carrera (como el Espejo perseguidor del nivel: colores invertidos y estela). o = lo de
+-- Stage.monster; trail = cuántas copias detrás (0 = sin estela); (tx, ty) = hacia dónde queda la estela por
+-- cada copia (por defecto, detrás de él: -14 px en su sentido)
+function C.reflex(x, y, o, trail, tx, ty)
+    o = o or {}
+    local f = o.facing or 1
+    tx, ty = tx or -f * 14, ty or 0
+    for i = (trail or 0), 1, -1 do
+        local q = {}
+        for k, v in pairs(o) do q[k] = v end
+        q.invert, q.alpha = true, 0.14 * (4 - i)
+        Stage.monster(x + tx * i, y + ty * i, q)
+    end
+    local q = {}
+    for k, v in pairs(o) do q[k] = v end
+    q.invert = true
+    Stage.monster(x, y, q)
+end
+
+-- El espejo flotante del jefe (types/bosses/mirror.lua: drawPortal), k 0..1 = cuánto se ha abierto
+function C.portal(x, y, k, t)
+    if k <= 0 then return end
+    require('src/world/entities/types/bosses/mirror').class.drawPortal(math.floor(x), math.floor(y), k, t)
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
+-- La marca en el suelo de donde caerá el Reflejo (la del jefe: drawMark)
+function C.mark(x, y, t)
+    require('src/world/entities/types/bosses/mirror').class.drawMark(math.floor(x), math.floor(y), t)
+    love.graphics.setColor(1, 1, 1, 1)
 end
 
 -- ── El modo Flappy, de verdad: su jugador y sus tuberías, pilotados ──────────

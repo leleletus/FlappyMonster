@@ -295,6 +295,7 @@ REF_DIR = _os.path.join(_os.environ.get('FM_ORIGINALS', '/home/mtvemo/FlappyMons
 PATHS = {
     # (las cinemáticas de la historia: tools/music/story_music.py)
     'story_intro': 'story/story_intro', 'story_ending': 'story/story_ending',
+    'story_chase': 'story/story_chase', 'story_lair': 'story/story_lair',
     # (level_nes = arreglo de una canción ajena: retirado del juego; si se regenera, va FUERA del repo)
     'level_nes': '../../../FlappyMonster_originals/music/placeholders/fortaleza_1_level_nes',
     'fortaleza_1': 'worlds/fortaleza/fortaleza_1', 'fortaleza_2': 'worlds/fortaleza/fortaleza_2', 'fortaleza_bonus': 'worlds/fortaleza/fortaleza_bonus',

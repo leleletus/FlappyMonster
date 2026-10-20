@@ -5,6 +5,9 @@
 # dibuja con el motor del juego (src/story/Stage.lua). No se juegan ni salen en ninguna lista.
 #   crater.json   el interior del volcán, donde está el ESPEJO: suelo de ceniza sobre basalto, dos charcas de
 #                 lava, un pedestal para el espejo y una chimenea arriba a la izquierda (por donde entra y sale)
+#   ladera.json        la LADERA del volcán al atardecer (como "La Huida del Espejo"): la película de antes de la
+#                      persecución y el principio de la de antes del jefe (la huida acaba en el lago de lava)
+#   ladera_noche.json  la misma ladera, DE NOCHE (como "Ruta del Espejo"): el Reflejo se ha ido; hay que seguirlo
 #   python3 tools/levelgen/make_sets.py
 import json, os
 
@@ -49,6 +52,48 @@ def crater():
             'light': 'cave', 'echo': False, 'modes': [], 'tiles': g, 'entities': [], 'foliage': fol, 'vents': []}
 
 
+def ladera(time):
+    # 80 x 12 casillas: suelo arriba en la fila 10 (y = 576 px; la cámara, en y = 48, ve 11,25 filas)
+    W, H = 80, 12
+    g = [[EMPTY] * W for _ in range(H)]
+
+    def rect(c0, r0, c1, r1, v):
+        for r in range(r0, r1 + 1):
+            for c in range(c0, c1 + 1):
+                g[r - 1][c - 1] = v
+
+    rect(1, 11, W, H, BASALT)                      # basalto
+    rect(1, 10, W, 10, ASH)                        # ceniza arriba
+    rect(16, 10, 17, 10, LAVA)                     # una zanja de lava (la salta al huir)
+    rect(43, 10, 47, 10, LAVA)                     # el LAGO de lava: lo cruza con el doble salto; el Reflejo se queda
+    fol = [
+        {'col': 3, 'row': 9, 'sub': 3, 'type': 'basalt_pebbles', 'props': {'layer': 'back'}},
+        {'col': 6, 'row': 9, 'type': 'charred_tree', 'props': {'layer': 'back'}},
+        {'col': 11, 'row': 9, 'sub': 4, 'type': 'dead_bush', 'props': {'layer': 'back'}},
+        {'col': 14, 'row': 9, 'sub': 3, 'type': 'glow_rock', 'props': {'layer': 'back'}},
+        {'col': 20, 'row': 9, 'type': 'basalt_rock', 'props': {'layer': 'back'}},
+        {'col': 24, 'row': 9, 'sub': 4, 'type': 'ash_pile', 'props': {'layer': 'back'}},
+        {'col': 27, 'row': 9, 'type': 'lava_vent', 'props': {'layer': 'back'}},
+        {'col': 34, 'row': 9, 'type': 'charred_tree', 'props': {'layer': 'back', 'flip': True}},
+        {'col': 38, 'row': 9, 'sub': 3, 'type': 'dead_bush', 'props': {'layer': 'back'}},
+        {'col': 41, 'row': 9, 'sub': 3, 'type': 'glow_rock', 'props': {'layer': 'back', 'flip': True}},
+        {'col': 50, 'row': 9, 'sub': 4, 'type': 'basalt_pebbles', 'props': {'layer': 'back'}},
+        {'col': 53, 'row': 9, 'type': 'basalt_rock', 'props': {'layer': 'back'}},
+        {'col': 57, 'row': 9, 'type': 'charred_tree', 'props': {'layer': 'back'}},
+        {'col': 60, 'row': 9, 'sub': 3, 'type': 'ash_pile', 'props': {'layer': 'back'}},
+        {'col': 62, 'row': 9, 'type': 'lava_vent', 'props': {'layer': 'back'}},
+        {'col': 66, 'row': 9, 'sub': 3, 'type': 'glow_rock', 'props': {'layer': 'back'}},
+        {'col': 69, 'row': 9, 'type': 'basalt_rock', 'props': {'layer': 'back', 'flip': True}},
+        {'col': 73, 'row': 9, 'type': 'charred_tree', 'props': {'layer': 'back'}},
+        {'col': 77, 'row': 9, 'sub': 4, 'type': 'dead_bush', 'props': {'layer': 'back'}},
+    ]
+    night = time == 'night'
+    return {'name': 'Ladera del volcán (decorado%s)' % (', noche' if night else ''),
+            'name_en': 'Volcano slope (set%s)' % (', night' if night else ''), 'width': W, 'height': H,
+            'playerStart': [8, 9], 'background': 'volcano', 'time': time, 'modes': [], 'tiles': g, 'entities': [],
+            'foliage': fol, 'vents': []}
+
+
 def write(name, d):
     os.makedirs(OUT, exist_ok=True)
     rows = ',\n'.join('    ' + json.dumps(r) for r in d['tiles'])
@@ -61,3 +106,5 @@ def write(name, d):
 
 if __name__ == '__main__':
     write('crater.json', crater())
+    write('ladera.json', ladera('dusk'))
+    write('ladera_noche.json', ladera('night'))

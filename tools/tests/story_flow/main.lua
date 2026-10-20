@@ -72,7 +72,8 @@ function love.update(dt)
     Input = realInput
     local st = top()
     local W1 = Worlds.nodes(1)
-    -- (una partida nueva empieza con la INTRO de la historia: aquí se pasa de largo; la prueba tools/tests/story_film)
+    -- (una partida nueva empieza con la INTRO de la historia, y algunos niveles con la suya: aquí se pasan de largo; la
+    -- prueba de las películas es tools/tests/story_film)
     if st.film and st._finish then
         introSeen = (introSeen or 0) + 1
         if FILMS then FILMS[#FILMS + 1] = st.film.name end
@@ -540,9 +541,12 @@ function love.update(dt)
     elseif step == 'fin6' and ((st.args and st.args.summary ~= nil) or t - T > 12) then
         local have, total = Run.shards()
         local last = Worlds.nodes(Worlds.count())
-        check('final', SHIDS == '7' and DROPPED and ENDING and FILMS[1] == 'ending' and st.args and st.args.summary ~= nil and Run.isDone(last[#last].id) and have == 7,
-            ('el Espejo guarda el %s; lo suelta=%s; al recogerlo se queda quieto y a blanco=%s; película=%s; luego resultados=%s; nivel superado=%s sin tocar la meta; %d/%d'):format(
-             SHIDS, tostring(DROPPED), tostring(ENDING), tostring(FILMS[1]), tostring(st.args ~= nil and st.args.summary ~= nil), tostring(Run.isDone(last[#last].id)), have, total))
+        -- (antes del nivel, la primera vez, su película — Worlds films: 'lair' —, apuntada como vista; y con el último
+        -- fragmento, el final)
+        check('final', SHIDS == '7' and DROPPED and ENDING and FILMS[1] == 'lair' and FILMS[2] == 'ending' and Run.data.films.lair == true
+            and st.args and st.args.summary ~= nil and Run.isDone(last[#last].id) and have == 7,
+            ('el Espejo guarda el %s; lo suelta=%s; al recogerlo se queda quieto y a blanco=%s; películas=%s (vista=%s); luego resultados=%s; nivel superado=%s sin tocar la meta; %d/%d'):format(
+             SHIDS, tostring(DROPPED), tostring(ENDING), table.concat(FILMS, ','), tostring(Run.data.films.lair), tostring(st.args ~= nil and st.args.summary ~= nil), tostring(Run.isDone(last[#last].id)), have, total))
         -- partida antigua (sin fragmentos): los de los jefes ya vencidos se dan por recogidos
         local old = { difficulty = 'xtra', done = { reino_gummy = true, lago_helado = true } }
         require('src/story/Shards').migrate(old)

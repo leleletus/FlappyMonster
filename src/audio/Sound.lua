@@ -209,6 +209,9 @@ function Sound.load()
     end
     load('shardDrop', 'assets/sounds/story/shard_drop.wav', 'static')      -- un jefe suelta su fragmento
     load('shardGet',  'assets/sounds/story/shard_get.wav',  'static')      -- el jugador lo recoge
+    load('storyRumble',   'assets/sounds/story/rumble.wav',    'static')   -- el volcán ruge, lejos
+    load('storyLaughFar', 'assets/sounds/story/laugh_far.wav', 'static')   -- la risa del Reflejo, con eco
+    load('storyPant',     'assets/sounds/story/pant.wav',      'static')   -- el monstruo, sin aliento
     -- Música: todas las pistas del índice (assets/music/index.json)
     for _, tr in ipairs(Music.list) do Sound.loadTrack(tr) end
 end

@@ -12,6 +12,7 @@ Run everything from the repo root. Documentation: `docs/README.md`. Python tools
 | `levelgen/` | level builders, retheme, test arenas | `docs/levels/generator-and-solver.md` (**read the DANGER note**) |
 | `anim/` | generators of animation sets (`assets/anim/`, one per image folder): sheets as named animations, loose images, the Crabby family, `split_states.py` (one animation per state) and `port_names.py` (the data steps of the move to by-name animations) | `docs/art/animation.md` |
 | `video/` | OST presentation videos | `docs/tools/ost-videos.md` |
+| `story/` | `test_saves.py`: story save slots already advanced to a level (to test something late in the story) | `docs/story/cinematics.md` |
 | `deploy_server.sh` | update the game server after a push (`--status` = look only) | `docs/architecture/updates-and-release.md` |
 
 ## Three traps

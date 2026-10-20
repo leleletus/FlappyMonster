@@ -19,7 +19,14 @@
 #     por fragmento (las mismas que canta el efecto de sonido al encajar); el acorde entero; el tema del Reflejo se
 #     deshace hacia abajo; el tema del mapa a pleno mientras la luz recorre las islas; seis respuestas juguetonas
 #     (los jefes encogen); la llamada, nota a nota, con cada aleteo; y el tema entero volando a casa.
-#   ~/.venvs/fm-music/bin/python tools/music/story_music.py [intro ending]     REPORT=1 → números, sin exportar
+#   PERSECUCIÓN (chase, Fa# menor, el tono de "¡Corre!" y del jefe): la llamada, andando ladera arriba; el motivo del
+#     espejo en las campanas (notan el séptimo); latidos y un trémolo con su napolitana; el golpe al caer el Reflejo y
+#     la cabeza de su tema; la risa martilleada; y a correr: batería a dos pasos, el gancho troceado, el golpe del fallo.
+#   GUARIDA (lair, Fa# menor): la carrera sigue; dos notas que suben con cada salto; se corta todo en la orilla; la risa;
+#     el cristal que se rompe; de noche, la llamada sola y triste, dos campanas (el brillo), el motivo del espejo en lo
+#     grave (la risa con eco) y una campana más alta con cada espejo que se enciende; respira y echa a andar: la
+#     llamada, decidida, con la cabeza del tema del Reflejo debajo.
+#   ~/.venvs/fm-music/bin/python tools/music/story_music.py [intro ending chase lair]     REPORT=1 → números, sin exportar
 # Se comprueba con números (NO se ha escuchado): duración = la de la película, sonoridad, energía por escena.
 import json, os, sys
 import numpy as np
@@ -440,9 +447,146 @@ def ending():
     return S.render(DYN)
 
 
+# ═════════════════════════════════════════════════════════════════════════════
+# LA PERSECUCIÓN (Fa# menor: el tono de "¡Corre!" y del jefe Espejo)
+# ═════════════════════════════════════════════════════════════════════════════
+HEAD = ((0, 1, 'F#4'), (1, 0.667, 'C#4'), (1.667, 0.333, 'F#4'), (2, 1, 'A4'), (3, 0.667, 'G#4'), (3.667, 0.333, 'F#4'))
+CALL = ('C#5', 'F#5', 'A5', 'C#6')                                     # la llamada (5-1-3-5) en Fa# menor
+MOTIF = ('C#6', 'G#5', 'F5', 'C#5')                                    # el motivo del espejo: la llamada del revés
+
+
+def two_step(S, b0, b1, g=1.0, bass='F#1'):
+    """batería a dos pasos (bombo en 1 y en el "y" del 3, caja en 2 y 4) y el bajo a corcheas"""
+    b = b0
+    while b < b1 - 1e-6:
+        k = int(round((b - b0) * 2)) % 8                             # corcheas dentro de un compás de 4 pulsos
+        if k in (0, 5): S.k(b, 1.0 * g)
+        if k in (2, 6): S.s(b, 0.9 * g)
+        if k in (3, 7): S.s(b + 0.25, 0.25 * g, [5, 2, 1])            # (caja fantasma)
+        S.h(b, [6, 2, 1] if k % 2 == 0 else [4, 1]); S.h(b + 0.25, [3, 1])
+        S.bass(b, 0.45, bass if k % 4 != 3 else nn(bass) + 12)
+        b += 0.5
+
+
+def chase():
+    S = Song('chase')
+
+    # 1. arrive — andando ladera arriba: la llamada, tranquila, con pasos; se para; las campanas: el motivo del espejo
+    S.scene('arrive')
+    st, lk = S.cue('stop'), S.cue('look')
+    S.pad(0, st, ['F#3', 'A3', 'C#4'], 0.6); S.bass(0, st - 0.1, 'F#2', leg=1.0)
+    for i in range(int(st)):
+        S.h(i, [4, 1]); S.k(i, 0.45) if i % 2 == 0 else S.tm(i, 0, 0.35)
+    for i, note in enumerate(CALL): S.n('soft', 1 + i, 1.0 if i < 3 else 2.0, note, I_SOFT, q=q_n163, vs=0.9)
+    S.pad(st, 12 - st, ['D3', 'F#3', 'A3'], 0.55); S.bass(st, 12 - st - 0.1, 'D2', leg=1.0)
+    S.bell(lk, 2, 'C#7', 0.9); S.bell(lk + 0.25, 2, 'G#6', 0.7, ch='bell2')
+    for i, note in enumerate(MOTIF): S.bell(lk + 1.5 + i * 0.5, 1.5, note, 0.8, ch='bell' if i % 2 == 0 else 'bell2')
+    S.n('thin', 11, 1, 'G4', I_THIN, vs=0.7)                         # (la napolitana: algo no va bien)
+
+    # 2. ambush — latidos; trémolo con la napolitana; el espejo flotante (sube el ruido); el golpe; su tema; la risa
+    S.scene('ambush')
+    la, po, dr, ld, gr = (S.cue(k_) for k_ in ('laugh', 'portal', 'drop', 'land', 'grin'))
+    for i in range(int(ld)): S.k(i, 0.55 + 0.05 * i, True)           # latidos
+    for i in range(int((ld - la) * 4)):                                # trémolo: Fa# con su napolitana (Sol)
+        S.n('p1', la + i / 4, 0.25, 'F#4' if i % 2 == 0 else 'G4', I_CHOIR, q=q_n163, vs=0.5 + 0.5 * i / ((ld - la) * 4), rel=1)
+    S.bass(0, ld, 'F#1', leg=1.0)
+    S.riser(po, dr); S.bell(po, 2, 'C#7', 0.8); S.bell(po + 0.33, 2, 'G7', 0.6, ch='bell2')
+    for i in range(8): S.n('arp', dr + i * 0.125, 0.12, nn('C#7') - i * 3, I_ARP, vs=1.1, rel=0)        # cae en picado
+    S.k(ld, 1.2, True); S.tm(ld, 2, 1.2); S.cr(ld); S.stab(ld, 1, 'F#2', 1.3)
+    for st_, d, note in HEAD: S.saw(ld + 0.0 + st_ * 0.25, d * 0.25, note)                          # su cabeza, deprisa
+    S.pad(ld, 12 - ld, ['F#3', 'A3', 'C#4'], 0.9)
+    for i in range(int(12 - ld)):
+        S.bass(ld + i, 0.6, 'F#1'); S.bass(ld + i + 0.667, 0.3, 'F#1'); S.h(ld + i + 0.667, [3, 1])
+    for i, note in enumerate(('C#6', 'C#6', 'C#6', 'G#5', 'G#5', 'G#5', 'F5', 'F5', 'F5')):   # la risa: el motivo, martilleado
+        S.saw(gr + i / 3, 0.25, note, leg=0.6); S.s(gr + i / 3, 0.35, [6, 3, 1])
+    S.saw(gr + 3, 0.9, 'C#5')
+    S.pad(11, 1, ['C#3', 'F3', 'G#3'], 1.1)
+    S.roll(10.5, 12, 0.125, 0.2, 1.1); S.riser(10, 12)
+
+    # 3. run — ¡a correr!: dos pasos, el gancho troceado (la cabeza del tema), el golpe del fallo
+    S.scene('run')
+    jp, go, pc, ms = (S.cue(k_) for k_ in ('jump', 'go', 'pounce', 'miss'))
+    S.stab(0, 0.5, 'C#3', 1.2); S.k(0, 1.1, True); S.cr(0)
+    S.n('lead', jp, 0.5, 'C#6', I_STAB, vs=1.0)
+    S.k(go, 1.2, True); S.cr(go); S.tm(go, 2, 1.0)
+    two_step(S, go, 12, 1.0)
+    hook = ('F#5', 'F#5', 'C#5', 'F#5', 'A5', 'G#5', 'F#5', 'F5')
+    for r in range(2):
+        for i, note in enumerate(hook):
+            b_ = go + r * 4 + (0, 0.5, 0.75, 1.5, 2, 2.5, 3, 3.5)[i]
+            if b_ < 12: S.saw(b_, 0.4, note, leg=0.7)
+    S.pad(go, 12 - go, ['F#3', 'A3', 'C#4'], 0.8)
+    S.riser(pc - 1, ms)
+    S.k(ms, 1.2, True); S.tm(ms, 2, 1.1); S.cr(ms); S.stab(ms, 1, 'D2', 1.2)
+    for i, note in enumerate(MOTIF): S.n('arp', ms + i * 0.25, 0.25, note, I_ARP, vs=1.2, rel=0)
+    S.roll(10, 12, 0.125, 0.3, 1.0)
+    S.lead(10, 2, 'C#5', 0.9)                                            # (en la dominante: sigue en el nivel)
+
+    DYN = {'arrive': (-3, -2), 'ambush': (-2, 1), 'run': (1, 1)}
+    return S.render(DYN)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# LA GUARIDA (Fa# menor)
+# ═════════════════════════════════════════════════════════════════════════════
+def lair():
+    S = Song('lair')
+
+    # 1. escape — la carrera sigue; dos notas que suben (salto y doble salto); se corta en la orilla; la risa; el cristal
+    S.scene('escape')
+    lp, sp, sh = S.cue('leap'), S.cue('stop'), S.cue('shatter')
+    two_step(S, 0, sp, 1.0)
+    for r in range(1):
+        for i, note in enumerate(('F#5', 'F#5', 'C#5', 'F#5', 'A5', 'G#5')):
+            S.saw(r * 4 + (0, 0.5, 0.75, 1.5, 2, 2.5)[i], 0.4, note, leg=0.7)
+    S.pad(0, sp, ['F#3', 'A3', 'C#4'], 0.8)
+    S.lead(lp, 0.5, 'C#6'); S.lead(lp + 0.75, 1.0, 'F#6')                                          # salto... y doble salto
+    S.n('arp', lp + 0.75, 0.12, 'A6', I_ARP, vs=1.0, rel=0)
+    S.k(sp, 1.0, True); S.bass(sp, sh - sp, 'F#1', leg=1.0)                                        # se corta todo
+    la = sp + 1
+    for i, note in enumerate(('C#6', 'C#6', 'C#6', 'G#5', 'G#5', 'G#5', 'F5', 'F5', 'F5')):
+        S.saw(la + i / 3, 0.25, note, leg=0.6); S.s(la + i / 3, 0.3, [5, 2, 1])
+    S.pad(la, sh - la, ['C#3', 'F3', 'G#3'], 0.9)
+    S.k(sh, 1.1, True); S.cr(sh); S.tm(sh, 2, 0.9)
+    for i, note in enumerate(('C#7', 'D7', 'G#6', 'A6', 'F6')):          # el cristal: un racimo que se apaga
+        S.bell(sh + i * 0.07, 2, note, 0.9 - i * 0.1, ch='bell' if i % 2 == 0 else 'bell2')
+    S.pad(sh + 0.5, 12 - sh - 0.5, ['F#3', 'A3', 'C#4'], 0.5)
+
+    # 2. night — la llamada sola, triste; el brillo (dos campanas); la risa con eco: el motivo en lo grave; los espejos
+    S.scene('night')
+    gl, la, tr = S.cue('glint'), S.cue('laugh'), S.cue('trail')
+    S.pad(0, 10, ['F#3', 'A3', 'C#4'], 0.5); S.bass(0, 4.9, 'F#2', leg=1.0); S.bass(5, 4.9, 'D2', leg=1.0)
+    for i, note in enumerate(CALL[:3]): S.n('lead', 0.5 + i * 0.6, 0.6, note, I_SAD, vs=0.8 - 0.1 * i, rel=1)
+    S.bell(gl, 2, 'C#7'); S.bell(gl + 0.25, 2, 'F#7', 0.8, ch='bell2')
+    for i, note in enumerate(MOTIF): S.saw(la + i * 0.33, 0.3, nn(note) - 24, 0.7, leg=0.7)
+    for i, note in enumerate(('C#6', 'F6', 'G#6', 'C#7')):               # un espejo, una campana: suben
+        S.bell(tr + i * 0.5, 1.5, note, 0.8, ch='bell' if i % 2 == 0 else 'bell2')
+    S.pad(tr, 10 - tr, ['D3', 'F#3', 'A3'], 0.7)
+
+    # 3. follow — respira (el colchón se hincha); echa a andar: la llamada, decidida; debajo, la cabeza del Reflejo
+    S.scene('follow')
+    br, wk = S.cue('breath'), S.cue('walk')
+    S.pad(0, br, ['D3', 'F#3', 'A3'], 0.6)
+    S.pad(br, wk - br, ['C#3', 'F3', 'G#3'], 1.1); S.bass(br, wk - br, 'C#2', leg=1.0)
+    S.riser(br + 1, wk)
+    for i, note in enumerate(CALL):
+        S.lead(wk + i * 0.5, 0.5 if i < 3 else 2.5, note); S.bell(wk + i * 0.5, 1, nn(note) + 12, 0.6)
+    S.pad(wk, 10 - wk, ['F#3', 'A3', 'C#4'], 1.0)
+    for i in range(int(10 - wk)):
+        S.k(wk + i, 0.8) if i % 2 == 0 else S.s(wk + i, 0.6)
+        S.h(wk + i + 0.5, [3, 1])
+    for st_, d, note in HEAD: S.saw(wk + 1 + st_ * 0.75, d * 0.75, nn(note) - 12, 0.7)          # el Reflejo, esperando
+    S.bass(wk, 10 - wk - 0.1, 'F#1', leg=1.0)
+
+    DYN = {'escape': (1, -1), 'night': (-3, -2), 'follow': (-2, 0)}
+    return S.render(DYN)
+
+
+FILMS_FN = {'intro': lambda: intro(), 'ending': lambda: ending(), 'chase': lambda: chase(), 'lair': lambda: lair()}
+
 if __name__ == '__main__':
-    which = [a for a in sys.argv[1:] if a in ('intro', 'ending')] or ['intro', 'ending']
+    which = [a for a in sys.argv[1:] if a in FILMS_FN] or list(FILMS_FN)
     for film in which:
-        y = intro() if film == 'intro' else ending()
+        y = FILMS_FN[film]()
         if not os.environ.get('REPORT'):
             GN.export('story_' + film, y)
