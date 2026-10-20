@@ -91,7 +91,7 @@ not repeated here.
 - [x] Hunt mode in the battery (0.5.8); the Evil Ship fight (`sp_boss LEVEL=fortaleza_malvada`) and the spike rain online (`online_smoke lluvia_pinchos WATCH=rainspike`) in the battery (0.5.11). A full rules harness for the Evil Ship (like the other bosses') is still missing.
 - [x] (0.5.11) `mechanics` `persecucion` depends on the random sequence — it now seeds its own RNG (`PSEED`, default 1). Still: with seeds 4 / 5 / 7 / 8 the Mirror never makes a push-only touch (it is left to chance); a forced probe would make it robust.
 - [x] No test for a corrupt / truncated save or `options.cfg` round-trip. — `story_flow` `roto` (0.5.8); `menu_flow` `opciones` (0.5.11)
-- [ ] `perf`: no online-client or credits scene (the story-map scene was added in 0.5.11 and found 77 KB/frame of garbage, fixed; the missing `map` header entry is real now; the boss scene is at 35 KB, not 54).
+- [ ] `perf`: no online-client or credits scene. The credits film's clock follows its music, which does not play in the perf harness (it stays on the title card): a scene would have to drive the film like `story_film` does. The online client needs the local server (perf is not an `online_*` harness). (The story-map scene was added in 0.5.11 and found 77 KB/frame of garbage, fixed; the boss scene is at 35 KB, not 54.)
 - [x] (0.5.11) Particles: no pool, `table.remove(list, 1)` at the cap (O(n²) bursts).
 - [x] (0.5.11) Predictor allocates tables every tick / snapshot.
 - [x] (0.5.10) `docs/testing/harnesses.md` stale (contradicting intros, 16 harnesses missing); `free_play` README row
