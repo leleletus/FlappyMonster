@@ -159,6 +159,9 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
                 if t.collision == 'oneway' then
                     -- Bajando a través de ESTA plataforma traspasable: no colisionar
                     local passing = self.dropping and t.dropThrough and top==self.dropTop
+                    -- `passAbove` (y del mundo): las plataformas cuya cara está por ENCIMA se atraviesan cayendo (un
+                    -- jefe que salta a por alguien que está debajo: types/bosses/mirror.lua). Los bloques, no
+                    if self.passAbove and top < self.passAbove - 8 then passing = true end
                     ok = not passing and prevFoot<=top+2
                 end
                 if ok and (not best or top < best) then best, bestT = top, t end

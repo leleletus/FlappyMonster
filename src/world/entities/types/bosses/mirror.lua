@@ -198,6 +198,7 @@ function Mirror:delay() return (self.props.delay or 1) * self:phase().delay end
 -- Un paso del cuerpo con el input dado
 function Mirror:runBody(dt, level, mx, jumpP, crouch, crouchP)
     local b = self.body
+    if self.state ~= 'leap' and self.state ~= 'dive' then b.passAbove = nil end   -- (solo su salto atraviesa plataformas)
     stub.left, stub.right = mx < 0, mx > 0
     stub.crouch, stub.jumpP, stub.crouchP = crouch or false, jumpP or false, crouchP or false
     local rI, rS = Input, Sound
@@ -558,6 +559,18 @@ function Mirror:feetOff()
 end
 
 -- Primer suelo (o plataforma) debajo de x desde y
+-- Dónde cae su SALTO (perch → leap → dive): el suelo que pisa el objetivo, aunque haya plataformas por encima (las
+-- atraviesa: devuelve también esa altura, `passAbove` del cuerpo). Con el cristal roto apunta a una plataforma
+-- (para no caer en él): ahí, como siempre, la primera superficie
+function Mirror:leapMark(level, tx)
+    local t, T = self.target, TILE_PX
+    if not t or self:glassDanger(level) then return self:groundBelow(level, tx, self.y - 3 * T), nil end
+    local ob = t.getOuterBounds and t:getOuterBounds()
+    local feet = ob and (ob.y + ob.h) or t.y
+    local y = self:groundBelow(level, tx, feet - 6)
+    return y, y
+end
+
 function Mirror:groundBelow(level, x, y)
     local z = self.zone
     local hit, top = level:landingCross(x, y, z.y1 + TILE_PX)
@@ -694,7 +707,7 @@ function Mirror:updateAttack(dt, level)
         self:chooseTarget(level, dt)
         local tx = self:glassDanger(level) and self:platformTargetX(level) or self:targetX(level)
         b.facing = (tx < self.x) and -1 or 1
-        self.markX, self.markY = tx, self:groundBelow(level, tx, self.y - 3 * T)
+        self.markX, self.markY = tx, self:leapMark(level, tx)
         -- (agachado solo de dibujo: agacharse de verdad en una plataforma
         -- traspasable la atraviesa)
         self:runBody(dt, level, 0)
@@ -711,6 +724,10 @@ function Mirror:updateAttack(dt, level)
             local apexT = -vy / ADV_GRAVITY
             self.leapTX = tx
             self.leapVX = (tx - self.x) / apexT
+            -- (cae sobre el suelo del objetivo: las plataformas que haya por encima las ATRAVIESA, como la Bola de Nieve;
+            -- antes bastaba con bajarse al suelo, debajo de una, para que se quedara en ella)
+            local my, pass = self:leapMark(level, tx)
+            self.leapY, b.passAbove = my, pass
             b.vy, b.onGround, b.crouching = vy, false, false
             b.puff = 1.15
             realSound = Sound; BodySound.play('jump')
@@ -725,7 +742,7 @@ function Mirror:updateAttack(dt, level)
         b.facing = self.leapVX < 0 and -1 or 1
         b.frame = 2
         self:syncFromBody()
-        self.markX, self.markY = self.leapTX, self:groundBelow(level, self.leapTX, self.y)
+        self.markX, self.markY = self.leapTX, self.leapY or self:groundBelow(level, self.leapTX, self.y)
         if b.vy >= 0 or b.onGround or self.deadTimer > 1.5 then
             b.gpPhase, b.gpT, b.vx, b.vy = 'windup', 0, 0, 0
             b.puff = 1.15
@@ -741,6 +758,7 @@ function Mirror:updateAttack(dt, level)
         if b.gpLanded or (not b.gpPhase and b.onGround) or self.deadTimer > 3 then
             Entity.emitFx('shake_small', self.x, self.y)
             self.markX, self.markY = nil, nil
+            b.passAbove, self.leapY = nil, nil
             self.state, self.deadTimer = 'recover', 0
         end
         return true

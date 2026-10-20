@@ -80,6 +80,7 @@ function love.load()
         end
     end
     local seen, gpDmg, chain, maxChain, leapOff = {}, {}, 0, 0, {}
+    local under                     -- (Espejo: el salto a por un jugador que está debajo de una plataforma)
     local laughWait, laughs, laughLate = {}, 0, 0
     lastAliveT = nil
     lastHitT = nil
@@ -129,6 +130,29 @@ function love.load()
                 gl.inLaunch = true; gl.launches = gl.launches + 1
                 gl.maxDmg = math.max(gl.maxDmg, lastHp - pa.hp)
             elseif pa.vy >= 0 then gl.inLaunch = false end
+        end
+        -- (Espejo) DEBAJO DE UNA PLATAFORMA: la primera vez que se posa para saltar, el jugador se pone en el suelo,
+        -- justo debajo de una plataforma traspasable: el salto tiene que atravesarla y caer en el suelo, no en ella
+        if mirror and boss.state == 'perch' and not under and not (glass and glass:isDanger()) then
+            local T = TILE_PX
+            for c = math.floor(z.x0 / T) + 2, math.floor(z.x1 / T) - 1 do
+                for r = math.floor(z.y0 / T) + 1, math.floor(z.y1 / T) do
+                    local d = level:getDef(c, r)
+                    if d and d.collision == 'oneway' and not under and math.abs((c - 0.5) * T - boss.x) > 2 * T then
+                        local x = (c - 0.5) * T
+                        local _, floor = level:landingCross(x, r * T + 4, z.y1 + T)
+                        if floor and floor - r * T >= 2 * T then
+                            under = { x = x, top = (r - 1) * T, floor = floor }
+                            pa.x, pa.y, pa.vx, pa.vy = x, floor - 8 * PLAYER_SCALE, 0, 0
+                            pa.spawnX, pa.spawnY = pa.x, pa.y
+                        end
+                    end
+                end
+            end
+        end
+        if under and not under.done and boss.state == 'recover' and lastState == 'dive' then
+            local ob = boss.body:getOuterBounds()
+            under.done, under.feet = true, ob.y + ob.h
         end
         -- daño al jugador
         if pa.hp < lastHp then
@@ -384,6 +408,10 @@ function love.load()
         local worst = 0
         for _, d in ipairs(leapOff) do worst = math.max(worst, d) end
         check('salto', #leapOff > 0 and worst <= 24, ('%d saltos; el que más lejos de su marca: %.0f px'):format(#leapOff, worst))
+        check('debajo', under ~= nil and under.feet ~= nil and math.abs(under.feet - under.floor) < 4,
+            under and ('jugador en el suelo bajo una plataforma (cara y=%d, suelo y=%d): el salto cae en y=%s (atraviesa la plataforma=%s)'):format(
+                under.top, under.floor, tostring(under.feet and math.floor(under.feet)), tostring(under.feet and math.abs(under.feet - under.floor) < 4))
+                or 'no se encontró ninguna plataforma con suelo debajo en la zona')
         if glass then
             check('cristal', gl.events >= 1 and gl.launches >= 1 and gl.maxDmg <= 1,
                 ('eventos %d; lanzamientos del jugador %d (daño máx. por toque %d)'):format(gl.events, gl.launches, gl.maxDmg))

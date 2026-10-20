@@ -55,7 +55,7 @@ local HIT_TOUCH = { 0, 560, -320, 0.25, 0 }      -- (tocarlo NO quita vida: solo
 local SLOW    = 0.9
 local KINDS   = { 'pounce', 'dash', 'dive', 'shove', 'pounce', 'dash', 'dive' }
 local RUN     = 430                  -- px/s andando suelto (el jugador: 240; la cámara: ~160)
-local JUMP_H  = { 2.2, 4.3 }         -- casillas: salto normal / salto alto (para subir adonde esté el jugador)
+local JUMP_H  = { 2.2 }              -- casillas: su salto (el ALTO, para subir adonde esté el jugador: doble salto)
 local SIDE_D  = { 3, 6 }             -- a cuántas casillas del jugador va (a un lado y luego al otro)
 local STUCK_T = 0.9                  -- s sin avanzar → se teletransporta
 local POUNCE_UP = 3.6 * T
@@ -128,10 +128,50 @@ function Chase:hitPlayers(level, hit, dir)
     return any
 end
 
--- ANDAR SUELTO: corre hacia un punto a un lado del jugador (y luego al otro), salta lo que haga falta
-function Chase:roam(dt, level, a, pa)
+-- EL CUERPO, como el de un jugador (3.102.0; el usuario: "andaba raro, saltaba raro, no parecía físico"): la misma
+-- gravedad y en tiempo REAL (la dificultad frena su VELOCIDAD, no el tiempo: antes los saltos iban a cámara lenta),
+-- acelera y frena como el jugador, el salto alto es un DOBLE SALTO de verdad (el segundo en lo alto del primero) y se
+-- dibuja con las poses del jugador (andar 3↔2, subir 2, caer 1↔3). `tv` = velocidad horizontal que quiere.
+local WALK_FPS, FALL_FPS = 8, 6
+local JUMP_SND_GAP = 0.25            -- s mínimos entre dos sonidos de salto (saliendo de la lava sonaba cada fotograma)
+function Chase:jump(level)
+    self.vy = -math.sqrt(2 * ADV_GRAVITY * JUMP_H[1] * T)
+    self.onGround = false
+    self.jumps = self.jumps + 1
+    if not self._quiet and (self.jumpSndT or 0) <= 0 then Sound.play('jump', 0.7, 0.6); self.jumpSndT = JUMP_SND_GAP end
+end
+
+function Chase:body(dt, level, tv)
     local g = ADV_GRAVITY
-    self.sideT = self.sideT - dt
+    self.jumpSndT = math.max(0, (self.jumpSndT or 0) - dt)
+    self.vx = self.vx + (tv - self.vx) * math.min(1, (self.onGround and ADV_FRICTION or ADV_AIR_FRIC) * dt)
+    self.vy = self.vy + g * dt
+    local x0 = self.x
+    self:moveAndCollide(level, self.vx * dt, self.vy * dt)
+    -- el salto alto: en lo alto del primero, el doble salto
+    if self.wantHigh and not self.onGround and self.jumps == 1 and self.vy > -60 then self.wantHigh = false; self:jump(level) end
+    if self.onGround then self.jumps, self.wantHigh = 0, false end
+    -- la lava / los pinchos no le hacen nada: sale de UN salto (no uno por fotograma mientras sigue dentro)
+    if self:onDeadlyGround(level) and self.vy >= 0 then self.jumps = 0; self:jump(level); self.wantHigh = true end
+    -- poses del jugador
+    if self.vx > 20 then self.facing = 1 elseif self.vx < -20 then self.facing = -1 end
+    self.animT = (self.animT or 0) + dt
+    if not self.onGround then
+        if self.vy < 0 then self.frame, self.animT = 2, 0
+        elseif self.animT >= 1 / FALL_FPS then self.animT = 0; self.frame = (self.frame == 1) and 3 or 1 end
+    elseif math.abs(self.vx) > 20 then
+        local fps = WALK_FPS * math.max(1, math.abs(self.vx) / ADV_MOVE_SPD)      -- (más deprisa, pasos más rápidos)
+        if self.animT >= 1 / fps then self.animT = 0; self.frame = (self.frame == 3) and 2 or 3 end
+    else
+        self.frame, self.animT = 3, 0
+    end
+    return math.abs(self.x - x0)
+end
+
+-- ANDAR SUELTO: corre hacia un punto a un lado del jugador (y luego al otro), salta lo que haga falta.
+-- `dt` = tiempo real; `pace` = el ritmo de la dificultad (su velocidad)
+function Chase:roam(dt, level, a, pa, pace)
+    self.sideT = self.sideT - dt * pace
     if self.sideT <= 0 then                                             -- cambia de lado
         self.side = -self.side
         self.sideT = 1.1 + math.random() * 1.3
@@ -142,34 +182,20 @@ function Chase:roam(dt, level, a, pa)
     local dx = tx - self.x
     local dir = (dx > 12) and 1 or (dx < -12) and -1 or 0
     -- (parado en su punto, corre con la cámara para no quedarse atrás)
-    local vx = (dir ~= 0) and dir * RUN or a.speed * (self.camK or 1)
-    if dir ~= 0 then self.facing = dir end
-    self.vy = self.vy + g * dt
-    local x0, wasGround = self.x, self.onGround
-    self:moveAndCollide(level, vx * dt, self.vy * dt)
-    self.vx = vx
-    local moved = math.abs(self.x - x0)
-    local jump
-    if self.onGround then
-        self.jumps = 0
+    local tv = (dir ~= 0) and dir * RUN * pace or a.speed
+    local wasGround = self.onGround
+    local moved = self:body(dt, level, tv)
+    local blocked = dir ~= 0 and moved < math.abs(self.vx * dt) * 0.4 and math.abs(self.vx) > 40
+    if self.onGround and wasGround then
         local hw, feet = self.outerW / 2, self.y + self.outerH / 2
         local ahead = self.x + (dir ~= 0 and dir or 1) * (hw + 20)
-        local blocked = dir ~= 0 and moved < math.abs(vx * dt) * 0.4
         local gap = dir ~= 0 and not level:isEnemySolidAt(ahead, feet + 8) and not level:isEnemySolidAt(ahead, feet + 8 + T)
         local up = pa and (feet - (pa.y + 40)) > 1.2 * T and math.abs(pa.x - self.x) < 5 * T
-        if blocked or up then jump = JUMP_H[2] elseif gap then jump = JUMP_H[1] end
-    elseif self.jumps < 2 and self.vy > 0 and dir ~= 0 and moved < math.abs(vx * dt) * 0.4 then
-        jump = JUMP_H[2]                                                -- (doble salto contra una pared)
+        if blocked or up then self:jump(level); self.wantHigh = true          -- (alto: con doble salto)
+        elseif gap then self:jump(level) end
+    elseif not self.onGround and self.jumps == 1 and self.vy > 0 and blocked then
+        self:jump(level)                                                -- (doble salto contra una pared)
     end
-    -- la lava / los pinchos no le hacen nada: sale de un salto
-    if self:onDeadlyGround(level) then jump = JUMP_H[2]; self.jumps = 0 end
-    if jump then
-        self.vy = -math.sqrt(2 * g * jump * T)
-        self.onGround = false
-        self.jumps = self.jumps + 1
-        if not self._quiet then Sound.play('jump', 0.7, 0.6) end
-    end
-    self.frame = self.onGround and (dir ~= 0 and 6 or 3) or (self.vy < 0 and 2 or 1)
     self:hitPlayers(level, HIT_TOUCH, dir ~= 0 and dir or 0)
     -- atascado, atrás o fuera: se rompe y reaparece junto al jugador
     if dir ~= 0 and moved < 1 then self.stuckT = self.stuckT + dt else self.stuckT = 0 end
@@ -229,26 +255,20 @@ end
 
 function Chase:runOut(dt, level)
     local pa = nearest(level, self.x, self.y)
-    local g = ADV_GRAVITY
     local tx = (pa and pa.x or self.x) - 2.6 * T                        -- detrás de él
     local dx = tx - self.x
-    local vx = (dx > 0) and math.min(RUN, ADV_MOVE_SPD + dx * 2.5) or ADV_MOVE_SPD * 0.6     -- (nunca le adelanta)
+    local tv = (dx > 0) and math.min(RUN, ADV_MOVE_SPD + dx * 2.5) or ADV_MOVE_SPD * 0.6     -- (nunca le adelanta)
+    self:body(dt, level, tv)
     self.facing = 1
-    self.vy = self.vy + g * dt
-    self:moveAndCollide(level, vx * dt, self.vy * dt)
-    self.vx = vx
     -- salta cuando él salta (un instante después: es su reflejo)
     if pa and not pa.onGround and pa.vy < -300 and not self.copyT and self.onGround then self.copyT = 0.12 end
     if self.copyT then
         self.copyT = self.copyT - dt
-        if self.copyT <= 0 and self.onGround then
+        if self.copyT <= 0 then
             self.copyT = nil
-            self.vy, self.onGround = -math.sqrt(2 * g * JUMP_H[1] * T), false
-            if not self._quiet then Sound.play('jump', 0.7, 0.6) end
-        elseif self.copyT <= 0 then self.copyT = nil end
+            if self.onGround then self:jump(level) end
+        end
     end
-    if self:onDeadlyGround(level) then self.vy, self.onGround = -math.sqrt(2 * g * JUMP_H[1] * T), false end
-    self.frame = self.onGround and 6 or (self.vy < 0 and 2 or 1)
 end
 
 function Chase:updateCustom(dt, level)
@@ -292,7 +312,7 @@ function Chase:updateCustom(dt, level)
         self.vy, self.onGround = 0, false
         Sound.play('mirrorAppear')
     elseif st == 'stalk' then
-        self:roam(dt, level, a, pa)
+        self:roam(dt * self.camK, level, a, pa, 1 / self.camK)          -- (física en tiempo real; su ritmo, en la velocidad)
         if self.state ~= 'stalk' then return true end                    -- (se teletransportó)
         self.restT = self.restT - dt
         if self.restT <= 0 and pa and (self.onGround or self.kindI % #KINDS + 1 ~= 1) then self:pickAttack(level, a, pa) end
@@ -426,7 +446,7 @@ function Chase:render(camX, camY)
         end
     end
     local fr, sx, sy, dx, dy = 3, 1, 1, 0, 0
-    if st == 'stalk' or st == 'outro' then fr = (self.frame == 6 and 'flutter') or (self.frame == 2 and 2) or (self.frame == 1 and 'fall') or 3
+    if st == 'stalk' or st == 'outro' then fr = (self.frame == 1 or self.frame == 2) and self.frame or 3      -- (las poses del jugador)
     elseif st == 'pounce' then fr, sx, sy = 2, 0.9, 1.15
     elseif st == 'portal' then fr, sx, sy = 5, 0.9, 0.9
     elseif st == 'dive' then fr, sx, sy = 2, 0.85, 1.3
@@ -437,10 +457,10 @@ function Chase:render(camX, camY)
     invert()
     local img = PS.rec(fr, now)                  -- (pose del monstruo o una de sus animaciones)
     local f = self.facing or 1
-    if st == 'rush' or st == 'dive' or st == 'stalk' or st == 'outro' then                -- estela
+    if st == 'rush' or st == 'dive' then                -- estela (solo en sus ataques: andando es un cuerpo, no un fantasma)
         for i = 3, 1, -1 do
             love.graphics.setColor(1, 1, 1, 0.14 * (4 - i))
-            local ox = (st == 'rush') and -(self.dir or -1) * i * 38 or ((st == 'stalk' or st == 'outro') and -f * i * 12 or 0)
+            local ox = (st == 'rush') and -(self.dir or -1) * i * 38 or 0
             local oy = (st == 'dive') and -i * 40 or 0
             PS.draw(img, x + ox + dx, y + oy + dy, 0, S * sx * f, S * sy, FW / 2, FH / 2)
         end

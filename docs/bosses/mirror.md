@@ -10,6 +10,13 @@ copies you; on top of that it has arena attacks (floating mirror portal, platfor
 
 ## Behaviour
 
+- **3.102.0 — the LEAP goes through platforms** (the user: standing on the floor under a platform was enough to dodge
+  it). Its mark is now the floor the TARGET stands on (`Mirror:leapMark`), and during 'leap' and 'dive' its body has
+  `passAbove` = that height: one-way platforms (`platform`, `platform_drop`) above it are passed while falling, like
+  the Snowball's jumps; solid blocks still stop it. With the broken glass it still aims at a platform (first surface).
+  `runBody` clears `passAbove` in any other state. The PORTAL dive is unchanged (platforms still shelter from it).
+  Harness `boss_sim` `debajo`.
+
 - **MirrorEnemy**: owns a real `PlayerAdventure` body (`self.body`) and feeds it
   the delayed inputs of its target through a stub `Input` (and a `Sound` proxy
   that lowers pitch). Players record their raw inputs every step

@@ -995,6 +995,49 @@ end
 -- EL ESPEJO PERSIGUIENDO (mirrorchase), suelto por el nivel: ANDA (cambia de lado, salta muretes, no vive pegado al
 -- borde) y encadena sus ataques (salto-ataque, picado desde el espejo, embestida de lado a lado, empujón de frente), golpea y EMPUJA al jugador (hacia atrás), no se le puede hacer nada
 -- (las reglas normales no van con él) y al acabar la carrera se va
+-- EL CUERPO del Espejo perseguidor (3.102.0): anda con las poses del jugador (3↔2, nunca el aleteo), salta alto con un
+-- DOBLE salto, y metido en la lava sale de UN salto (su sonido sonaba cada fotograma)
+function cases.persecucion_cuerpo()
+    local AutoScroll = require 'src/world/systems/AutoScroll'
+    local tiles = {}
+    for r = 1, 11 do
+        local row = {}
+        for c = 1, 60 do row[c] = (r == 11 or r == 1 or c == 1 or c == 60) and 1 or 0 end
+        tiles[r] = row
+    end
+    for c = 20, 24 do tiles[10][c] = TILE_DANGER end                     -- (la lava: tile `danger`)
+    tiles[9][40], tiles[10][40], tiles[8][40] = 1, 1, 1                  -- un muro de 3: hay que saltar alto
+    local level = Level.fromData({ name = 'lava', width = 60, height = 11, playerStart = { 10, 10 }, tiles = tiles,
+        entities = { { type = 'mirrorchase', col = 22, row = 8, props = { rest = 99 } } },
+        autoScroll = { startCol = 12, endCol = 60, speed = 1, width = 20, margin = 0.6, countdown = 0 } })
+    local ch = Entities.create(level.entities[1])
+    level.liveEntities = { ch }
+    local pa = playerAt(level, 30, 10)
+    local a = level.autoScroll
+    a.state, a.x = 'run', 12 * T
+    ch.state, ch.restT, ch.x, ch.y, ch.vy = 'stalk', 99, 22 * T - T / 2, 9.4 * T, 0
+    local jumps, play = {}, Sound.play
+    local t = 0
+    Sound.play = function(name, ...) if name == 'jump' then jumps[#jumps + 1] = t end end
+    local frames, maxUp, doubles = {}, 0, 0
+    for i = 1, 60 * 6 do
+        t = i / 60
+        pa.hp, pa.dying, pa.alive = 3, false, true
+        pa.x, pa.vx = (t < 3) and 30 * T or 44 * T, 0                    -- (luego, al otro lado del muro)
+        a.state, a.x = 'run', math.max(12 * T, math.min(pa.x - 10 * T, 40 * T))
+        local j0 = ch.jumps
+        ch:update(1 / 60, level)
+        if ch.jumps == 2 and j0 == 1 then doubles = doubles + 1 end
+        if ch.state == 'stalk' and ch.onGround and math.abs(ch.vx) > 20 then frames[ch.frame] = true end
+    end
+    Sound.play = play
+    local early = 0
+    for _, jt in ipairs(jumps) do if jt <= 1 then early = early + 1 end end
+    check('persecucion_cuerpo', early <= 2 and frames[2] and frames[3] and not frames[6] and doubles >= 1,
+        ('en la lava: %d sonidos de salto el primer segundo · andando: poses 3=%s 2=%s aleteo=%s · dobles saltos %d'):format(
+         early, tostring(frames[3]), tostring(frames[2]), tostring(frames[6]), doubles))
+end
+
 function cases.persecucion()
     local AutoScroll = require 'src/world/systems/AutoScroll'
     local Boss = require 'src/world/entities/base/Boss'
@@ -1359,7 +1402,7 @@ function love.load()
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
-                         'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'persecucion', 'inofensivos', 'tapa_base', 'manzana',
+                         'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte' }) do cases[n]() end
     if os.getenv('SHOT_BOMB') then bombShot() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))

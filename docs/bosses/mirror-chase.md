@@ -10,6 +10,15 @@ while it walks only pushes. Everything it does runs at `SLOW` 0.9 × the difficu
 `BossHud.drawRun`. **Music:** `mirror_chase`. **Harnesses:** `mechanics persecucion`,
 `online_smoke LEVEL=assets/levels/huida_del_espejo.json WATCH=mirrorchase`.
 
+- **3.102.0 — a real body** (the user: it walked, jumped and looked "intangible"). `Chase:body`: the player's
+  gravity in REAL time (the difficulty pace now scales its speed, not its time: jumps were in slow motion on Easy), it
+  accelerates and brakes like the player (`ADV_FRICTION` / `ADV_AIR_FRIC`), the high jump is a real DOUBLE jump at the
+  apex of the first (`wantHigh`; there is a single `JUMP_H` now), and it is drawn with the player's poses (walk 3↔2
+  faster when faster, rise 2, fall 1↔3; it used to run with the flap animation) and no trail while walking (only in its
+  dash and dive). Out of lava it leaves with ONE jump (it re-jumped every frame while still inside: the jump sound
+  played dozens of times per second) and jump sounds are at least 0.25 s apart. Harness `mechanics`
+  `persecucion_cuerpo`.
+
 ## The level
 
 - Level **huida_del_espejo** "La Huida del Espejo" / "Mirror Escape" (`tools/levelgen/levels_chase.py`,
