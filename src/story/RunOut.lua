@@ -8,7 +8,7 @@
 --     entran las franjas de cine (level.cinema → BossHud.drawCinema / fadeHud); el jugador PIERDE el control: sigue
 --     corriendo solo y salta (un salto con doble salto, otro después); el Espejo perseguidor deja de
 --     atacar y lo sigue persiguiendo (mirrorchase: startOutro) hasta que los dos salen de la pantalla por la derecha.
---   · Entonces, fundido a negro y `done` → AdventureState llama a onFinish(result) con result.outro = true.
+--   · Entonces, fundido a negro (y la música, a la vez, a cero) y `done` → AdventureState llama a onFinish(result) con result.outro = true.
 --   local ro = RunOut.new(state, { col = 182 });  ro:update(dt) (antes del jugador); ro:input() (el mando de mentira
 --   mientras actúa, o nil); ro:render() (el fundido, encima de todo)
 local RunOut = {}
@@ -87,9 +87,11 @@ function RunOut:update(dt)
         local right = st.camX + WINDOW_W + OUT
         local gone = p.x > right
         for _, e in ipairs(chasers(st)) do if e.x < right then gone = false end end
-        if gone or self.t > MAX_T then self.fadeT = 0 end
+        if gone or self.t > MAX_T then self.fadeT, self.vol0 = 0, Sound.musicVolume() end
     else
         self.fadeT = self.fadeT + dt
+        -- (la música del nivel se apaga a la vez que la imagen se va a negro)
+        Sound.setMusicVolume(self.vol0 * math.max(0, 1 - self.fadeT / FADE))
         if self.fadeT >= FADE then self.done = true; return true end
     end
     return false

@@ -114,14 +114,18 @@ F.escape = {
 }
 
 -- ── 2. Cae la noche ─────────────────────────────────────────────────────────
-local NIGHT_CAM = 2600
+-- Sin corte: la MISMA toma (la cámara donde la dejó la escena anterior, el monstruo donde se paró) y el atardecer se
+-- funde poco a poco con la noche (el decorado de noche dibujado encima, cada vez más opaco). (Antes entraba de
+-- negro con otra cámara y el monstruo recolocado: el usuario lo vio "brutal, como a tropiezos".)
+local NIGHT_CAM = CAM
+local DUSK_OUT = 2.0                     -- pulsos que tarda en hacerse de noche
+local dissolve
 
 F.night = {
     enter = function(c)
         local m = c.shared.m or Actor.new(night().level, REST_X, FL, { mute = c.film.mute })
         c.shared.m = m
-        m:place(REST_X, FL)
-        m.mx, m.crouch, m.face, m.level = 0, true, 1, night().level
+        m.mx, m.crouch, m.face, m.level = 0, true, 1, night().level        -- (sigue donde estaba)
     end,
     events = {
         { beat = 0.3, fn = function(c) c.sfx('storyPant', 0.95, 0.8) end },
@@ -142,13 +146,33 @@ F.night = {
         -- hacia dónde señalan: la guarida (de pantalla a mundo)
         local dx, dy = PEAK_SX + NIGHT_CAM - m.body.x, PEAK_SY + K.LCAMY - (m.body.y - 60)
         local d = math.sqrt(dx * dx + dy * dy)
-        Stage.drawSet(night(), NIGHT_CAM, K.LCAMY, function()
-            m:draw()
-        end, nil, function()
-            K.carry(m.body.x, m.body.y, t, ids(c), { out = c.k(out, out + c.b(1.5)), glow = 0.3 + 0.7 * c.k(point, point + c.b(1)),
-                                                     shake = (t >= point and t < glint) and 2 or 0,
-                                                     lead = c.k(point, point + c.b(1.5)), dx = dx / d, dy = dy / d })
-        end)
+        local function scene(set)
+            Stage.drawSet(set, NIGHT_CAM, K.LCAMY, function()
+                m:draw()
+            end, nil, function()
+                K.carry(m.body.x, m.body.y, t, ids(c), { out = c.k(out, out + c.b(1.5)), glow = 0.3 + 0.7 * c.k(point, point + c.b(1)),
+                                                         shake = (t >= point and t < glint) and 2 or 0,
+                                                         lead = c.k(point, point + c.b(1.5)), dx = dx / d, dy = dy / d })
+            end)
+        end
+        local k = K.smooth(c.k(0, c.b(DUSK_OUT)))
+        if k < 1 then
+            -- el atardecer debajo y la noche encima, fundiéndose
+            scene(dusk())
+            if not dissolve or dissolve:getWidth() ~= WINDOW_W or dissolve:getHeight() ~= WINDOW_H then
+                dissolve = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
+            end
+            local prev = love.graphics.getCanvas()
+            love.graphics.setCanvas(dissolve)
+            love.graphics.clear(0, 0, 0, 1)
+            scene(night())
+            love.graphics.setCanvas(prev)
+            love.graphics.setColor(1, 1, 1, k)
+            love.graphics.draw(dissolve, 0, 0)
+            love.graphics.setColor(1, 1, 1, 1)
+        else
+            scene(night())
+        end
         peak(t, (t >= glint) and (1 - 0.5 * c.k(glint + c.b(1), c.dur)) or 0)
         if t >= glint then Stage.flash(0.25 * (1 - (t - glint) / 0.3), 0.8, 0.95, 1) end
     end,
@@ -156,7 +180,7 @@ F.night = {
 
 -- ── 3. Hacia la guarida ─────────────────────────────────────────────────────
 F.follow = {
-    enter = function(c) c.v.cam = NIGHT_CAM end,
+    enter = function(c) c.v.cam = NIGHT_CAM end,          -- (la misma toma: la cámara empieza donde estaba)
     events = {
         { beat = 0.5, fn = function(c) c.shared.m.crouch = true end },          -- (asiente: se agacha y se levanta)
         { beat = 1.0, fn = function(c) c.shared.m.crouch = false end },
@@ -166,11 +190,14 @@ F.follow = {
         m.mx = (t >= c.at('walk')) and 1 or 0
         m.face = 1
         m:update(dt, night().level)
+        -- la cámara lo sigue, suave (sin saltos), y al final se queda: él se va hacia la oscuridad
+        if t < c.at('hush') then
+            local want = math.max(c.v.cam, m.body.x - 640)
+            c.v.cam = c.v.cam + (want - c.v.cam) * math.min(1, dt * 2.5)
+        end
     end,
     draw = function(c, t)
         local m = c.shared.m
-        -- la cámara lo sigue un poco y se queda: se va hacia la oscuridad
-        if t < c.at('hush') then c.v.cam = math.max(c.v.cam, m.body.x - 520) end
         local dx, dy = PEAK_SX + c.v.cam - m.body.x, PEAK_SY + K.LCAMY - (m.body.y - 60)
         local d = math.sqrt(dx * dx + dy * dy)
         Stage.drawSet(night(), c.v.cam, K.LCAMY, function()

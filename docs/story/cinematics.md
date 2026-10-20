@@ -108,3 +108,8 @@ conflicts with the sections above, the sections above describe the current behav
   has them out until night, when only the monster takes its six out, once the Reflection is gone, to guide it. And in
   the in-level outro the Reflection could end up IN FRONT of the monster → `Chase:startOutro` makes it shatter and
   reappear behind if it was ahead, and in `outro` it never overtakes (harness `story_flow` `enlace` starts it ahead).
+- 3.101.2 — the user: in `lair` the change from dusk to night was "brutal, like a cut, a stumble" (it came in from
+  black with another camera and the monster put back in place) → `night` enters with a `cut` but it is the SAME shot
+  (camera and monster where `escape` left them) and the dusk set dissolves into the night set over `DUSK_OUT` beats;
+  `follow` starts from that camera and pans smoothly. And the level music must fade WITH the fade to black at the end
+  of the chase outro → `RunOut` lowers it to zero in the same 0.7 s (`Sound.musicVolume`).

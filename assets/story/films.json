@@ -41,7 +41,7 @@
     "next": "volcan_2",
     "scenes": [
       { "id": "escape",  "bpm": 174, "beats": 20, "in": "fade",  "cues": { "leap": 4, "stop": 7.5, "portal": 12, "fly": 14, "gone": 17 } },
-      { "id": "night",   "bpm": 84,  "beats": 10, "in": "fade",  "cues": { "out": 2, "point": 4.5, "glint": 6.5 } },
+      { "id": "night",   "bpm": 84,  "beats": 10, "in": "cut",   "cues": { "out": 2, "point": 4.5, "glint": 6.5 } },
       { "id": "follow",  "bpm": 172, "beats": 16, "in": "cut",   "cues": { "walk": 2, "hush": 12 } }
     ]
   }

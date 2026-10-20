@@ -477,6 +477,7 @@ end
 function Sound.setMusicVolume(v)
     if music then music:setVolume(v) end
 end
+function Sound.musicVolume() return music and music:getVolume() or 0 end
 
 -- ¿Está sonando la pista `name` (o cualquier música si name es nil)?
 function Sound.isMusicPlaying(name)

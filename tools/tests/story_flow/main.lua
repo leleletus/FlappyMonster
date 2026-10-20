@@ -604,16 +604,19 @@ function love.update(dt)
     elseif step == 'run3' and st.runOut and st.runOut.fadeT and not RUN.camEnd then
         -- (al empezar el fundido: la cámara no se ha movido y el monstruo sigue corriendo, lejos de la pared del final)
         RUN.camEnd, RUN.vx, RUN.px = st.camX, st.player.vx, st.player.x
+        RUN.vol0 = Sound.musicVolume()
         RUN.wall = (st.level.tileW - 1) * TILE_PX
+    elseif step == 'run3' and RUN.camEnd and not RUN.vol1 and st.runOut and st.runOut.fadeT and st.runOut.fadeT > 0.5 then
+        RUN.vol1 = Sound.musicVolume()                        -- (la música se apaga con el fundido)
     elseif step == 'run3' and (FILMS[2] or t - T > 15) then
         go('run4')
     elseif step == 'run4' and (st.level or t - T > 3) then
         check('enlace', RUN.film1 == 'chase' and RUN.finish == 0 and RUN.active and RUN.cinema and RUN.chase == 'outro' and RUN.seen and RUN.behind and RUN.moved > 150
-            and RUN.camEnd == RUN.cam0 and (RUN.vx or 0) > 100 and (RUN.px or 1e9) < RUN.wall - 2 * TILE_PX
+            and RUN.camEnd == RUN.cam0 and (RUN.vol1 or 1) < (RUN.vol0 or 0) * 0.4 and (RUN.vx or 0) > 100 and (RUN.px or 1e9) < RUN.wall - 2 * TILE_PX
             and FILMS[2] == 'lair' and st.levelPath == Worlds.path('ruta_del_espejo') and Run.isDone('huida_del_espejo')
             and Run.data.node == 5,
-            ('película antes=%s; sin meta=%s; escena final=%s, franjas=%s, el Espejo=%s (en cuadro=%s, detrás del monstruo aunque empezó delante=%s), corre solo %.0f px; la cámara quieta=%s; al fundirse a negro sigue corriendo (%.0f px/s) a %.0f px de la pared del final; después la película %s y el nivel %s; huida superada=%s; la partida en el nodo %s'):format(
-             tostring(RUN.film1), tostring(RUN.finish == 0), tostring(RUN.active), tostring(RUN.cinema), tostring(RUN.chase), tostring(RUN.seen), tostring(RUN.behind), RUN.moved or 0, tostring(RUN.camEnd == RUN.cam0), RUN.vx or 0, (RUN.wall or 0) - (RUN.px or 0),
+            ('película antes=%s; sin meta=%s; escena final=%s, franjas=%s, el Espejo=%s (en cuadro=%s, detrás del monstruo aunque empezó delante=%s), corre solo %.0f px; la cámara quieta=%s; la música con el fundido %.2f → %.2f; al fundirse a negro sigue corriendo (%.0f px/s) a %.0f px de la pared del final; después la película %s y el nivel %s; huida superada=%s; la partida en el nodo %s'):format(
+             tostring(RUN.film1), tostring(RUN.finish == 0), tostring(RUN.active), tostring(RUN.cinema), tostring(RUN.chase), tostring(RUN.seen), tostring(RUN.behind), RUN.moved or 0, tostring(RUN.camEnd == RUN.cam0), RUN.vol0 or -1, RUN.vol1 or -1, RUN.vx or 0, (RUN.wall or 0) - (RUN.px or 0),
              tostring(FILMS[2]), tostring(st.levelPath), tostring(Run.isDone('huida_del_espejo')), tostring(Run.data.node)))
         gStateMachine:change('story_map', { world = 1, node = 1 }); go('del')
     elseif step == 'del' and t - T > 0.3 then
