@@ -107,7 +107,8 @@ local function stagesUpdate()
     if STG.f % 375 == 0 then STG.shot = ('stage_%s_%d'):format(STG.name, STG.f / 375) end
     if STG.f >= 1500 then
         local s = STG.cur.stats
-        check('escenario', true, ('%s: %d enemigos muertos, %d explosiones, %d muertes del monstruo'):format(STG.name, s.kills, s.booms, s.deaths))
+        -- (el bot del menú, de paseo: varios objetivos en 25 s, no solo de lado a lado)
+        check('escenario', s.goals >= 4, ('%s: %d enemigos muertos, %d explosiones, %d muertes del monstruo, %d objetivos, %d saltos'):format(STG.name, s.kills, s.booms, s.deaths, s.goals, s.jumps))
         STG.cur = nil
     end
 end

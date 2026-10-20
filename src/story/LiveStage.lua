@@ -2,14 +2,13 @@
 -- Un ESCENARIO VIVO de los créditos (docs/story/credits.md): un nivel pequeño (assets/story/sets/credits_*.json,
 -- tools/levelgen/make_credits_sets.py) que se JUEGA de verdad con el motor del juego — un AdventureState en modo
 -- demo, como el fondo de los menús (src/ui/menu/MenuScene.lua) —: sus enemigos, bombas, trampolines, hielo fino,
--- lava y sonidos son los del juego; nada está animado a mano. Al monstruo lo lleva un bot sencillo (abajo): anda de
--- lado a lado, salta lo que tiene delante, intenta pisar a los enemigos y hace ground pound cuando tiene algo
--- debajo; si muere, reaparece (vidas sin fin).
+-- lava y sonidos son los del juego; nada está animado a mano. Al monstruo lo lleva el bot del fondo de los menús
+-- (abajo) paseando de objetivo en objetivo; si muere, reaparece (vidas sin fin).
 -- A pasos fijos de 1/60 s con su propio generador de azar: lo mismo cada vez que se ven los créditos. Las
 -- partículas y las decoraciones usan el azar normal (se crean al dibujar: ver MenuScene).
 --   local s = LiveStage.new('credits_pradera', seed)
 --   s:update(dt)              s:draw(y)   (la franja, con lo de arriba del nivel en la y de pantalla `y`)
---   s.h                       alto de la franja en píxeles;   s.stats = { kills, deaths, booms } (para las pruebas)
+--   s.h                       alto de la franja en píxeles;   s.stats = { kills, deaths, booms, goals, jumps } (para las pruebas)
 local LiveStage = {}
 LiveStage.__index = LiveStage
 
@@ -36,100 +35,91 @@ local IDLE = setmetatable({ pressed = function() return false end, down = functi
                           { __index = function() return function() return false end end })
 
 -- ── El bot de los créditos ────────────────────────────────────────────────
-local function solidAt(level, x, y)
-    local def = level:getDefAt(x, y)
-    return def and def.collision == 'solid'
-end
-local function badFloor(level, x, y)
-    if y >= level.heightPx then return true end
-    local def = level:getDefAt(x, y)
-    if not def then return true end
-    if level:liquidAt(x, y) then return true end
-    return def.collision == 'none' or (def.mat and def.mat.contact)
+-- El MISMO bot que el fondo de los menús (src/ai/Bot.lua, con PRECAUCIÓN: salta, pisa o espera a los enemigos que
+-- tiene cerca) por el grafo de navegación de la franja (assets/nav/credits_*.json: `run.sh bot_nav BUILD=1 --
+-- assets/story/sets/credits_x.json`). En vez de ir a una meta, hace un PASEO de objetivos variados (`_pick`): ir a
+-- por un enemigo (a pisarlo), a por una estrella, a una casilla cualquiera (arriba de una repisa, al otro lado de
+-- un charco) o al otro extremo; llegado, se para un momento y elige otro. (Antes, uno a mano que solo andaba de lado
+-- a lado y saltaba: el usuario, "muy repetitivo y rancio")
+local Bot    = require 'src/ai/Bot'
+local BotNav = require 'src/ai/BotNav'
+
+-- Las casillas del grafo en las columnas col-1..col+1 (o nil)
+local function nodesNear(nav, col)
+    local set, any = {}, false
+    for id, n in pairs(nav.nodes) do
+        if math.abs(n.c - col) <= 1 then set[id], any = true, true end
+    end
+    return any and set or nil
 end
 
-function LiveStage:_think()
-    local st, level = self.st, self.st.level
+function LiveStage:_pick(level)
+    local st, nav = self.st, self.bot.nav
     local p = st.player
-    local inp = self.inp
-    inp.left, inp.right, inp.crouch, inp.jumpPress, inp.jumpHold = false, false, false, false, false
-    if p.dying or not p.alive then self.wasCrouch = false; return end
-    self.cool = math.max(0, self.cool - STEP)
-    -- de un lado a otro de la franja
-    if p.x > level.widthPx - 160 then self.dir = -1 elseif p.x < 160 then self.dir = 1 end
-    local d = self.dir
-    -- (a veces se para un momento: así los enemigos llegan hasta él)
-    self.wait = math.max(0, self.wait - STEP)
-    if self.wait <= 0 and self.rng:random() < 0.004 then self.wait = 0.6 + self.rng:random() * 0.8 end
-    if self.wait <= 0 then if d > 0 then inp.right = true else inp.left = true end end
-    local feet = p.y + (p.h or 60) / 2 + 6
-    local wantJump = false
-    if p.onGround then
-        if solidAt(level, p.x + d * 44, p.y) then wantJump = true end                 -- una pared o un bloque
-        if badFloor(level, p.x + d * 52, feet) then wantJump = true end               -- un hueco, agua o lava
-        for _, e in ipairs(st.enemies) do                                            -- alguien delante: a pisarle
-            local dx = (e.x - p.x) * d
-            if e.alive and e.state ~= 'dead' and dx > 20 and dx < 150 and math.abs(e.y - p.y) < 90 and not e.def.pickup then
-                wantJump = true
-            end
+    local cands = {}
+    local function add(w, x) for _ = 1, w do cands[#cands + 1] = x end end
+    for _, e in ipairs(st.enemies) do
+        if e.alive and e.state ~= 'dead' and e.state ~= 'reserve' and not e.def.boss and e.def.category ~= 'Directores' then
+            local far = math.abs(e.x - p.x) > TILE_PX
+            if e.def.pickup then add(2, e.x)
+            elseif e.def.name == 'bomb' or e.def.name == 'bombobject' then if far then add(6, e.x) end    -- (¡a encenderla!)
+            elseif e.def.category == 'Enemigos' and far then add(3, e.x) end
         end
-    else
-        -- en el aire, con algo justo debajo: ground pound (aplasta, rompe bloques)
-        for _, e in ipairs(st.enemies) do
-            if e.alive and e.state ~= 'dead' and math.abs(e.x - p.x) < 26 and e.y > p.y + 30 and e.y < p.y + 260 and not e.def.pickup then
-                inp.crouch = true
-            end
+    end
+    if not nav.ids then
+        nav.ids = {}
+        for id in pairs(nav.nodes) do nav.ids[#nav.ids + 1] = id end
+        table.sort(nav.ids)
+    end
+    for _ = 1, 2 do
+        local n = nav.nodes[nav.ids[math.random(#nav.ids)]]
+        add(1, (n.c - 0.5) * TILE_PX)
+    end
+    add(1, (p.x < level.widthPx / 2) and (level.widthPx - 2.5 * TILE_PX) or 2.5 * TILE_PX)    -- (al otro extremo)
+    for _ = 1, 6 do
+        local x = cands[math.random(#cands)]
+        local set = nodesNear(nav, math.floor(x / TILE_PX) + 1)
+        if set and math.abs(x - p.x) > TILE_PX * 1.5 then
+            return { set = set, x = x, giveUp = self.clock + 3.5 + math.random() * 2 }
         end
-        local below = level:getDefAt(p.x, feet + 40)
-        if below and below.breakable then inp.crouch = true end
     end
-    -- en el agua: brazadas (saltar nada hacia arriba); atascado medio segundo contra algo: saltar
-    if level:liquidAt(p.x, p.y) and self.cool <= 0.3 then wantJump, self.cool = true, 0 end
-    if self.wait <= 0 and math.abs(p.x - (self.lastX or p.x)) < 0.5 then self.stuck = (self.stuck or 0) + STEP else self.stuck = 0 end
-    self.lastX = p.x
-    if self.stuck > 0.5 then wantJump, self.cool, self.stuck = true, 0, 0 end
-    if wantJump and self.cool <= 0 then
-        inp.jumpPress, self.hold, self.cool = true, 0.28, 0.5
+    local id = nav.ids[math.random(#nav.ids)]
+    local n = nav.nodes[id]
+    return { set = { [id] = true }, x = (n.c - 0.5) * TILE_PX, giveUp = self.clock + 5 }
+end
+
+function LiveStage:_tour(level)
+    local p = self.st.player
+    local g = self.goal
+    if g and p.onGround and (math.abs(p.x - g.x) < 28 or self.clock > g.giveUp) then
+        -- llegado (o no hay manera): un respiro y otro objetivo
+        g.rest = g.rest or (self.clock + 0.15 + math.random() * 0.9)
+        if self.clock >= g.rest then g = nil end
     end
-    self.hold = math.max(0, self.hold - STEP)
-    inp.jumpHold = self.hold > 0
-    inp.crouchPress = inp.crouch and not self.wasCrouch
-    self.wasCrouch = inp.crouch
+    if not g then g = self:_pick(level); self.goal = g; self.stats.goals = self.stats.goals + 1 end
+    return g.set, 'finish', g.x
 end
 
 function LiveStage.new(name, seed)
     local AdventureState = require 'src/states/adventure/AdventureState'
-    local self = setmetatable({ name = name, rng = love.math.newRandomGenerator(seed or 7), dir = 1, cool = 0, wait = 0,
-                                hold = 0, acc = 0, inp = {}, gain = LiveStage.GAIN, stats = { kills = 0, deaths = 0, booms = 0 } }, LiveStage)
+    local self = setmetatable({ name = name, rng = love.math.newRandomGenerator(seed or 7), acc = 0, clock = 0,
+                                gain = LiveStage.GAIN, stats = { kills = 0, deaths = 0, booms = 0, goals = 0, jumps = 0 } }, LiveStage)
     local st = AdventureState:new()
     local me = self
-    local stub = {
-        pressed = function(k)
-            if k == 'jump' then return me.inp.jumpPress end
-            if k == 'crouch' then return me.inp.crouchPress end      -- (agacharse en el aire = ground pound)
-            return false
-        end,
-        down = function(k)
-            if k == 'move_left' then return me.inp.left end
-            if k == 'move_right' then return me.inp.right end
-            if k == 'crouch' then return me.inp.crouch end
-            if k == 'jump' then return me.inp.jumpHold or me.inp.jumpPress end
-            return false
-        end,
-    }
-    self.stub = setmetatable(stub, { __index = IDLE })
     self:_wrap(function()
         st:enter({ level = 'assets/story/sets/' .. name .. '.json', returnTo = 'main_menu',
                    demo = { noSky = true, noBossCtl = true,
                             camera = function() return me.cx or 0, me.cy or 0 end,
                             step = function(dt, level)
-                                me:_think()
-                                local real = Input
-                                Input = me.stub
-                                local ok, err = pcall(st.player.update, st.player, dt, level)
-                                Input = real
-                                if not ok then error(err, 0) end
+                                me.clock = me.clock + dt
+                                local ground = st.player.onGround
+                                me.bot:step(dt, level, nil)
+                                if ground and not st.player.onGround and st.player.vy < 0 then me.stats.jumps = me.stats.jumps + 1 end
                             end } })
+        local nav = BotNav.load(name, st.level)
+        assert(nav and not nav.stale, 'escenario ' .. name .. ' sin grafo al día: run.sh bot_nav BUILD=1 -- assets/story/sets/' .. name .. '.json')
+        me.bot = Bot.new(st.player, nav, { mortal = true, dodge = true, firstDelay = 0,
+                                           goal = function(_, level) return me:_tour(level) end })
     end)
     self.st = st
     -- (los jefes, sin zona ni pelea de verdad — sin intro, sin música, sin barra —: despiertos desde el principio, con

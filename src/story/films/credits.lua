@@ -322,10 +322,12 @@ F.climax = {
 -- `spin` una VUELTA (se gira cada medio pulso) con salto; brazos ARRIBA alternando con quieto y saltando (hasta
 -- `wave`); desde `wave`, el saludo; desde `end`, quieto saludando mientras se funde a negro.
 -- Mientras, el monstruo VUELA a su alrededor (un ocho, aleteando por arte de magia) y al final saluda a su lado.
-local CS = 8                                    -- escala de Claudio (16 px → 128)
+-- (Claudio, a la escala de su set de animación — la del juego —: a 8 salía el doble de grande que el monstruo, y en
+--  el juego es al revés)
+local function CS_() return Anim.load('claudio').scale or 4 end
 local function cx_() return math.floor(WINDOW_W / 2) end
 local function floor_() return math.floor(WINDOW_H * 0.82) end
-local MON_X = 230                               -- dónde se posa el monstruo: a la derecha de Claudio
+local MON_X = 160                               -- dónde se posa el monstruo: a la derecha de Claudio
 
 -- Un saltito de un pulso: altura (0..1..0) y el aplastado al despegar y al caer (escala vertical entera: pixel art)
 local function hop(k, hgt)
@@ -336,6 +338,7 @@ end
 
 local function claudio(c, t)
     local set = Anim.load('claudio')
+    local CS = CS_()
     local beat = c.beat
     local b = t / beat                          -- pulsos (con decimales)
     local k = b - math.floor(b)                 -- dentro del pulso
@@ -456,7 +459,7 @@ F.bye = {
             local msg = L('credits.bye')
             local s = 5
             local w = PixelFont.width(msg, s)
-            local by = math.floor(floor_() - 16 * CS - 40 - (1 - easeOut(u)) * 20)
+            local by = math.floor(floor_() - 16 * PLAYER_SCALE - 40 - (1 - easeOut(u)) * 20)
             PixelFont.shadow(msg, math.floor(cx_() + MON_X / 2 - w / 2), by, s, u, { 1, 1, 1 })
         end
     end,

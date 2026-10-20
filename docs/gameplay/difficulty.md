@@ -22,7 +22,7 @@ unlocked); Free Play has a ◀ ▶ selector (key F or tap either half); online, 
 | `sense` | every enemy detection range (sight below, hearing, Gloomy sense, mortar, pufferfish, Hopper) | the entity types, `Noise.heard` |
 | `ventDelay` | delay between oxygen bubbles | `Level` vents |
 | `bossExtra` | TWO bosses per arena | `src/world/systems/XtraBosses.lua` |
-| `bossFood`, `bossLives` | seconds (average, ×0.7–1.3 at random; the first at 0.4–0.8) between FOOD / EXTRA LIVES falling from the sky inside a boss zone while it fights (Extreme food 11; Xtra Extreme food 9 + lives 30) | `src/world/entities/types/directors/bossdrops.lua` |
+| `bossFood`, `bossLives` | seconds (average, ×0.7–1.3 at random; the first at 0.4–0.8) between FOOD / EXTRA LIVES falling from the sky inside a boss zone while it fights (Extreme food 11.11; Xtra Extreme food 9.09 + lives 30.3: 0.5.6, the user asked for 1 % fewer drops than 11 / 9 / 30) | `src/world/entities/types/directors/bossdrops.lua` |
 | `livesStart`, `restartGame`, `scoreMult` | story lives, what a Game Over restarts, points multiplier | `src/story/Run.lua`, `Score.lua` |
 | `botRest`, `botChase`, `botCount` | the KOTH bot's hostility | `src/ai/Bot.lua`, `src/story/BonusMatch.lua` |
 
