@@ -193,6 +193,15 @@ function Level.fromData(lvl, difficulty)
     self.foliage = self.decorations   -- alias de compatibilidad
     -- Zonas de jefe (src/world/systems/BossZones.lua)
     self.bossZones = BossZones.build(lvl.bossZones, lvl.openTop == true)
+    -- Ayuda en las peleas de jefe (Extremo / Xtra extremo: modificadores bossFood / bossLives): un director y su
+    -- reserva de comidas y vidas, AL FINAL de la lista (mismos índices en servidor y clientes)
+    for _, raw in ipairs(require('src/world/entities/types/directors/bossdrops').class.placements(self)) do
+        local m = EntityTypes.normalize(raw)
+        if m then
+            if raw.reserve then m.reserve, m.summonKey = true, raw.summonKey end
+            table.insert(self.entities, m)
+        end
+    end
     -- Cámara automática (src/world/systems/AutoScroll.lua), o nil
     self.autoScroll = AutoScroll.build(lvl.autoScroll, self)
     -- Inundaciones (src/world/systems/Floods.lua): salen de las entidades 'flood'

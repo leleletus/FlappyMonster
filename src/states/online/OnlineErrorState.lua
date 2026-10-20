@@ -41,7 +41,7 @@ local function layout(msg)
     local _, lines = FONT_MED:getWrap(msg or '', w - 64)
     local card = { x = x, y = math.floor(WINDOW_H * 0.30), w = w, h = 112 + math.min(4, #lines) * (FONT_MED:getHeight() + 12) }
     local bw = math.min(360, w - 80)
-    return card, { x = math.floor((WINDOW_W - bw) / 2) + 26, y = card.y + card.h + 32, w = bw, h = 56 }
+    return card, { x = math.floor((WINDOW_W - bw) / 2), y = card.y + card.h + 32, w = bw, h = 56 }
 end
 
 function OnlineErrorState:render()

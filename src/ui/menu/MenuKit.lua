@@ -269,7 +269,7 @@ function MenuKit.optionsLayout(n, o)
     local P = { x = math.floor((WINDOW_W - w) / 2), y = math.floor((WINDOW_H - h) / 2), w = w, h = h }
     local rects = {}
     for i = 1, n do
-        rects[i] = { x = math.floor(WINDOW_W / 2 - OPT_W / 2) + 20, y = P.y + 108 + noteH + (i - 1) * (OPT_H + OPT_GAP),
+        rects[i] = { x = math.floor((WINDOW_W - OPT_W) / 2), y = P.y + 108 + noteH + (i - 1) * (OPT_H + OPT_GAP),
                      w = OPT_W, h = OPT_H }
     end
     return P, rects

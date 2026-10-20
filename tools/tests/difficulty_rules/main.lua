@@ -220,7 +220,7 @@ function cases.doble()
         for _, n in ipairs(level.entities) do
             local def = EntityTypes.byName[n.type]
             if def and def.category == 'Jefes' then b[#b + 1] = n end
-            if n.reserve then res = res + 1 end
+            if n.reserve and n.summonKey ~= 'bossdrops' then res = res + 1 end   -- (la ayuda del jefe: caso 'ayuda')
         end
         return b, res
     end
@@ -264,9 +264,65 @@ function cases.doble()
         ('%d niveles de jefe en la historia, todos con dos jefes en Xtra extremo%s'):format(#list, #bad > 0 and (': MAL ' .. table.concat(bad, '; ')) or ''))
 end
 
+-- AYUDA EN LAS PELEAS DE JEFE: en Extremo caen comidas y en Xtra extremo además vidas, dentro de la zona y hasta
+-- posarse en su suelo (no en el agua ni en la lava); en las demás, nada
+function cases.ayuda()
+    local W, H = 24, 12
+    local function build(diff)
+        local tiles = {}
+        for r = 1, H do
+            local row = {}
+            for c = 1, W do row[c] = (r == 1 or r == H or c == 1 or c == W) and 1 or 0 end
+            tiles[r] = row
+        end
+        for c = 8, 10 do tiles[H - 1][c] = 3 end            -- un charco de lava: ahí no cae nada
+        local level = Level.fromData({ name = 't', width = W, height = H, playerStart = { 3, H - 1 }, tiles = tiles, entities = {},
+                                       bossZones = { { id = 1, col = 4, row = 2, w = 16, h = H - 2 } } }, diff)
+        level.difficulty = diff
+        Difficulty.bind(level)
+        local es = {}
+        for _, pl in ipairs(level.entities) do es[#es + 1] = Entities.create(pl) end
+        level.liveEntities, level.players = es, {}
+        return level, es
+    end
+    local function count(level)
+        local n = { bossdrops = 0, apple = 0, extralife = 0 }
+        for _, pl in ipairs(level.entities) do
+            if pl.type == 'bossdrops' then n.bossdrops = n.bossdrops + 1
+            elseif pl.summonKey == 'bossdrops' then n[pl.type] = n[pl.type] + 1 end
+        end
+        return n
+    end
+    local nh, ne, nx = count((build('hard'))), count((build('extreme'))), count((build('xtra')))
+    local level, es = build('xtra')
+    step(level, es, 5)                                       -- (sin pelea: nada)
+    local before = 0
+    for _, e in ipairs(es) do if e.summonOf == 'bossdrops' and e.alive then before = before + 1 end end
+    level.bossZones[1].state = 'fight'
+    step(level, es, 45)
+    local z = level.bossZones[1]
+    local floor = (H - 1) * T
+    local landed, food, life, bad = 0, 0, 0, {}
+    for _, e in ipairs(es) do
+        if e.summonOf == 'bossdrops' and e.alive then
+            local feet = e.y + e.outerH / 2 + (e.skyLift or 0)
+            local ok = e.state ~= 'skyfall' and math.abs(feet - floor) < 2 and e.x > z.x0 and e.x < z.x1
+                       and not (e.x > 7 * T and e.x < 10 * T)
+            if ok then landed = landed + 1 else bad[#bad + 1] = ('%s x=%d pies=%d %s'):format(e.def.name, e.x, feet, e.state) end
+            if e.def.name == 'apple' then food = food + 1 else life = life + 1 end
+        end
+    end
+    Difficulty.bind(nil)
+    check('ayuda', nh.bossdrops == 0 and ne.bossdrops == 1 and ne.apple == 2 and ne.extralife == 0
+                   and nx.apple == 2 and nx.extralife == 1 and before == 0 and food == 2 and life == 1 and #bad == 0,
+        ('reserva difícil %d/%d/%d, extremo %d/%d/%d, xtra %d/%d/%d (director/comidas/vidas); en 45 s de pelea (Xtra) cayeron %d comidas y %d vidas, %d posadas en el suelo de la zona (fuera de la lava)%s; sin pelea %d')
+        :format(nh.bossdrops, nh.apple, nh.extralife, ne.bossdrops, ne.apple, ne.extralife, nx.bossdrops, nx.apple, nx.extralife,
+                food, life, landed, #bad > 0 and (': MAL ' .. table.concat(bad, '; ')) or '', before))
+end
+
 function love.load()
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'neutro', 'enemigos', 'categorias', 'jefe', 'jugador', 'peligros', 'salas', 'sentidos', 'doble' }) do
+    for _, n in ipairs({ 'neutro', 'enemigos', 'categorias', 'jefe', 'jugador', 'peligros', 'salas', 'sentidos', 'doble', 'ayuda' }) do
         if not only or only == n then
             local ok, err = pcall(cases[n])
             if not ok then check(n, false, 'ERROR ' .. tostring(err)) end

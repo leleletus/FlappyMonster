@@ -22,6 +22,7 @@ unlocked); Free Play has a ◀ ▶ selector (key F or tap either half); online, 
 | `sense` | every enemy detection range (sight below, hearing, Gloomy sense, mortar, pufferfish, Hopper) | the entity types, `Noise.heard` |
 | `ventDelay` | delay between oxygen bubbles | `Level` vents |
 | `bossExtra` | TWO bosses per arena | `src/world/systems/XtraBosses.lua` |
+| `bossFood`, `bossLives` | seconds (average, ×0.7–1.3 at random; the first at 0.4–0.8) between FOOD / EXTRA LIVES falling from the sky inside a boss zone while it fights (Extreme food 11; Xtra Extreme food 9 + lives 30) | `src/world/entities/types/directors/bossdrops.lua` |
 | `livesStart`, `restartGame`, `scoreMult` | story lives, what a Game Over restarts, points multiplier | `src/story/Run.lua`, `Score.lua` |
 | `botRest`, `botChase`, `botCount` | the KOTH bot's hostility | `src/ai/Bot.lua`, `src/story/BonusMatch.lua` |
 
@@ -75,3 +76,15 @@ unlocked); Free Play has a ◀ ▶ selector (key F or tap either half); online, 
 - (3) VENTS: `Difficulty` `ventDelay` × the delay between oxygen bubbles (easy 0.8, hard 1.15, extreme / xtra 1.35).
 
 - (4) DIFFICULTY PICKERS: Free Play — chip top-right, key F (action `light`) or tap; ORIGINAL (none) → easy → … → xtra; remembered. Online — the HOST's room selector "◀ DIFICULTAD X ▶" (0.5.0; before, a button that only cycled forward), over none + every id of `Difficulty.ORDER`, colours `Difficulty.COLORS` (`set_difficulty { difficulty }`, admin only, WAITING), `room_update.difficulty`, shown to everyone on the game card; it reaches the match in `game_init` as before. Verity is the same Snowball class, so the difficulty applies to it too.
+
+- (5) BOSS-FIGHT HELP (0.5.5, the user: "on Xtra Extreme, food and extra lives should randomly fall from the sky inside
+  the boss zone during boss fights; on Extreme only food — otherwise it's practically impossible"). Modifiers
+  `bossFood` / `bossLives`. When the level's difficulty has either, `Level.fromData` APPENDS (after everything else:
+  same indices on server and clients) an invisible director `bossdrops` (category Directores, `editorHide`: never
+  placed by hand) and its reserve pickups (2 food `apple`, island skin auto; 1 `extralife`; `summonKey 'bossdrops'`).
+  While a zone is in 'fight' the director picks a column of the zone with real ground below — no water, lava or spikes
+  on the way, nothing solid above — and the pickup falls from the zone top (`Entity:dropFromSky`, state 'skyfall',
+  0.3 × gravity, max 420 px/s: it is seen coming); a pickup is reused once taken, so at most 2 food + 1 life lie
+  around at once. Server-simulated online (they are ordinary entities in the snapshots; the director is never sent).
+  What a life gives is saved at the end of the level, like every pickup. Harness `difficulty_rules` case `ayuda`.
+  Not judged yet: the rates (how much easier it gets).

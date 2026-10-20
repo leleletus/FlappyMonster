@@ -84,5 +84,6 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 
 | Id | Label | File | Flags | Own props |
 |---|---|---|---|---|
+| `bossdrops` | Ayuda del jefe | `types/directors/bossdrops.lua` |  |  |
 | `spikerain` | Lluvia de pinchos | `types/directors/spikerain.lua` |  | `group`: int = 1 · `zone`: patrol = false · `onlyWhileScrolling`: bool = true · `startDelay`: number = 2 · `range`: int = 7 · `reach`: int = 12 · `aimChance`: number = 0.55 · `aimSpread`: number = 1 · `lead`: number = 0.35 · `spacing`: number = 2 · `spikeCooldown`: number = 1.5 · `perPlayer`: number = 0.5 · `diffMin`: number = 0 · `diffMax`: number = 1 · `firstPeak`: number = 0.55 · `peakGrowth`: number = 0.15 · `holdMin`: number = 5 · `rampUp`: number = 10 · `holdMax`: number = 5 · `rampDown`: number = 8 · `activeEasy`: int = 1 · `activeHard`: int = 4 · `gapEasyMin`: number = 1.2 · `gapEasyMax`: number = 2.6 · `gapHardMin`: number = 0.3 · `gapHardMax`: number = 0.8 · `warnEasy`: number = 0.7 · `warnHard`: number = 0.4 |
 

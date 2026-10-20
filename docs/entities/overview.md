@@ -40,7 +40,7 @@ copy another entity's code. Guide: `docs/entities/how-to-add-an-enemy.md` (every
 Switches on the type def: `traits = { needsPound, diesWithBlock, solidFull, renderFront, wantsLevel, freezeFloats }`
 (copied onto each instance by `Entity.create`), `noises = { sound = tiles }` / `noise` (see Noise), `summons`,
 `activatable`. In the base: RESERVE minions for ANY entity (`Entity:makeReserve` + default `netAtRest/netRest`; hook
-`onMakeReserve`), stock crawler (`Crawler.mixin(Class)`: rotated boxes, surface normal, release, no fall while
+`onMakeReserve`), FALL FROM THE SKY for any entity (`Entity:dropFromSky(x, y, lift)`: back in play in the common state 'skyfall', slow gravity, rests on the ground, then its usual state; used by the boss-fight help, `docs/gameplay/difficulty.md`), stock crawler (`Crawler.mixin(Class)`: rotated boxes, surface normal, release, no fall while
 attached; `Crawler.entityAhead`), block-break deaths (`Level:forStanders`, crawlers included), and for bosses
 `Boss:enter(st)`, `Boss:zoneBounds()`, `Boss:minions(level)`, `Boss:nearestPlayer(level)`, `Boss.strike(pa, hit, dir)`
 (the Snowball Boss's, now shared) and `src/fx/BossFx.lua` (`stars` = stun stars, `anger` = anger symbols, `target` =

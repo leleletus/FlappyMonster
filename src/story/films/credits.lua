@@ -54,6 +54,13 @@ end
 -- (las dos filas de arriba son aire — para los saltos —: se montan sobre el final del texto, son transparentes)
 local STAGE_ROWS, STAGE_OVER = 6, 2 * 64
 local FADE_TO, FADE_LEN = 0.4, 0.2         -- (se apaga del todo cuando su borde de abajo llega al 40 % de la pantalla)
+-- Y APARECE igual, desde la nada, apagándose al revés al entrar por abajo: 0 con 3 filas a la vista, 1 con el suelo
+-- entero (PLAY_FROM). Se juega desde que empieza a verse: antes, quieto y entero, cobraba vida de golpe al acercarse
+local PLAY_FROM = 5 * 64 + 8              -- (lo de la franja, hasta el suelo, que tiene que verse para estar entera)
+local IN_FROM = 3 * 64
+local function stageIn(top)
+    return math.max(0, math.min(1, (WINDOW_H - IN_FROM - top) / (PLAY_FROM - IN_FROM)))
+end
 local function paradeH(list)
     return list.stage and (STAGE_ROWS * TILE_PX - STAGE_OVER + MARGIN) or 0
 end
@@ -141,15 +148,15 @@ local function drawBlock(b, y, gt)
         local top = math.floor(yy + MARGIN - STAGE_OVER)
         local bottom = top + live.h
         local a = math.max(0, math.min(1, (bottom - WINDOW_H * FADE_TO) / (WINDOW_H * FADE_LEN)))
-        live:draw(top, a)
+        a = math.min(a, stageIn(top))
+        if a > 0 then live:draw(top, a) end
     end
 end
 
 -- ── Los escenarios vivos ────────────────────────────────────────────────────
 -- Cada uno empieza un poco antes de que su bloque entre por abajo, se juega mientras se ve y se suelta al salir por
 -- arriba. Van en c.shared (de toda la película): un bloque sigue a la vista en las escenas siguientes.
-local START_BELOW = 160                   -- px bajo la pantalla a los que se crea (quieto)
-local PLAY_FROM = 5 * 64 + 8              -- empieza a JUGARSE cuando esto de la franja (hasta el suelo) está en pantalla
+local START_BELOW = 160                   -- px bajo la pantalla a los que se crea (quieto, sin verse)
 tickStages = function(c)
     local lay = getLayout(c)
     local gt = c.film.t
@@ -165,8 +172,8 @@ tickStages = function(c)
             local h = STAGE_ROWS * TILE_PX
             if top < WINDOW_H + START_BELOW and top + h > -20 then
                 if not stages[id] then stages[id] = LiveStage.new(id, 100 + i) end
-                -- (quieto hasta que su suelo se ve entero: si no, las cosas explotaban y morían antes de verse)
-                if top + PLAY_FROM <= WINDOW_H then stages[id]:update(dt) end
+                -- (quieto e invisible hasta que empieza a aparecer: si no, las cosas explotaban y morían antes de verse)
+                if stageIn(top) > 0 then stages[id]:update(dt) end
             elseif stages[id] and top + h <= -20 then
                 stages[id] = false                                  -- (ya salió: no vuelve)
             end

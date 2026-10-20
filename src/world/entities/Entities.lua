@@ -33,7 +33,8 @@ local TYPES = { 'enemies/gummy', 'enemies/crabby', 'traps/spikefall', 'items/sta
                 'mechanisms/flood', 'mechanisms/pointarea', 'mechanisms/bosswall', 'bosses/mirror', 'bosses/miniboss1', 'bosses/megacrabby', 'enemies/pufferfish', 'mechanisms/bossglass', 'enemies/bomb', 'items/bombobject',
                 'traps/cryo', 'bosses/snowboss', 'mechanisms/phaseblock', 'enemies/crabby_ice', 'bosses/megacrabby_ice', 'enemies/gummy_ice', 'bosses/megagummy', 'enemies/gloomy', 'bosses/megagloomy', 'enemies/hopper',
                 'enemies/gummy_magma', 'enemies/crabby_fortress', 'enemies/gummy_cave', 'enemies/gummy_fortress',
-                'enemies/crabby_river', 'enemies/crabby_lava', 'enemies/crabby_cave', 'bosses/mirrorchase', 'items/apple' }
+                'enemies/crabby_river', 'enemies/crabby_lava', 'enemies/crabby_cave', 'bosses/mirrorchase', 'items/apple',
+                'directors/bossdrops' }
 
 -- Un archivo puede definir varios tipos (p. ej. el trampolín en sus 4 direcciones)
 for _, name in ipairs(TYPES) do

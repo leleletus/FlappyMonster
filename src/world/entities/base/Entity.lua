@@ -151,6 +151,7 @@ local KNOCK_VX   = 520    -- empujón de un ground pound cercano
 local KNOCK_HOP  = 360
 local KNOCK_STUN = 1.2    -- s aturdida
 local DROP_SHAKE = 0.5    -- s temblando antes de caer del techo
+local SKYFALL_G, SKYFALL_MAX = 0.3, 420   -- caída del cielo: × la gravedad y velocidad máxima (px/s): se ve llegar
 Entity.SPAWN_ANIM = SPAWN_ANIM
 
 -- ¿Hay un jugador justo debajo (dentro de `rangeTiles` casillas) y a la vista
@@ -270,6 +271,19 @@ function Entity:updateCommonStates(dt, level)
             if prev == 'walk' or prev == 'idle' or not prev then self:startWalk() else self.state = prev end
         end
         return true
+    elseif st == 'skyfall' then
+        -- Cae del cielo (Entity:dropFromSky; las comidas y vidas de los jefes en Extremo): despacio, sin que lo
+        -- empuje nada, hasta posarse; luego sigue en su estado de siempre (un volador se queda ahí flotando)
+        self.vy = math.min(self.vy + ADV_GRAVITY * SKYFALL_G * dt, SKYFALL_MAX)
+        self:moveAndCollide(level, 0, self.vy * dt)
+        if self.onGround then
+            self.vy, self.state = 0, self.skyRest or 'idle'
+            self.y = self.y - (self.skyLift or 0)
+            self.baseY = self.y
+        elseif self.y > level.heightPx + TILE_PX * 4 then
+            self.alive = false
+        end
+        return true
     elseif self.customDrop and st:sub(1, 5) == 'drop_' then
         return false        -- el tipo tiene su propia caída (ver Crabby)
     elseif st == 'drop_shake' then
@@ -300,6 +314,19 @@ function Entity:updateCommonStates(dt, level)
         return true
     end
     return false
+end
+
+-- CAER DEL CIELO desde (x, y) — cualquier entidad: vuelve a jugar (como un súbdito de reserva que se activa) y cae
+-- con el estado 'skyfall' hasta posarse; `lift` = px a los que se queda por encima del suelo (lo que se mece)
+function Entity:dropFromSky(x, y, lift)
+    local h = self.home
+    h.x, h.y = x, y
+    local rest = h.state
+    h.state = 'skyfall'
+    self:resetToHome()
+    h.state = rest
+    self.skyRest, self.skyLift = rest, lift
+    self.vx, self.vy, self.deadTimer = 0, 0, 0
 end
 
 -- ¿Puede empezar ya la caída desde el techo? (el Crabby también escondido)
