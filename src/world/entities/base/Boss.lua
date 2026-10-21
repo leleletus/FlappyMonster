@@ -512,6 +512,10 @@ function Boss:renderLive(camX, camY)
     end
 end
 
+-- ¿Suelta YA su fragmento del Espejo? (historia: src/story/Shards.lua). Lo normal, al caer o al soltar su zona;
+-- los que huyen tras perder lo sueltan por el camino (el tipo lo dice)
+function Boss:shardDrop() return not self.alive or (self.releasesZone ~= nil and self:releasesZone()) end
+
 -- ── Hooks por defecto ─────────────────────────────────────────────────────────
 Boss.stunnable = false                        -- ¿el ground pound lo deja KO? (Mirror: sí)
 Boss.hurtSound = 'bossHurt'                   -- sonido al recibir un golpe (cada jefe el suyo)

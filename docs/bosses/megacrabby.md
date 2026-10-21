@@ -48,9 +48,12 @@ are the USER's drawing: never overwrite). **Sounds:** `assets/sounds/bosses/mega
   uneven kinks, tapering width, optional side crack; bone/sand colours with a dark brown
   edge — the user rejected "electric" yellow/blue) + `shake_roar` (soft, long). Windup = legs scuttling +
   accelerating claw snaps; claw closes on the sound's snaps (`WINDUP_SNAPS`, same in the
-  .py). Summon spots: `pickSummonSpots` (never overlapping, outside its body; netPack 9). Death (own states): dying_kick → dying_shrink (deflates to normal size) →
-  dying_flee (small crab without claws runs straight to the nearest side through
-  everything, silent steps, fades) → dead. `releasesZone()` (Boss hook, used by
+  .py). Summon spots: `pickSummonSpots` (never overlapping, outside its body; netPack 9). Death (own states, 0.5.27): upside down (it fell on its head)
+  dying_kick → dying_getup (flips back with a hop) → dying_daze (stars) → dying_flee; beaten STANDING (`not flipped`,
+  `Mega:defeat` records `defeatFrom`) dying_stand — or dying_iced if its claws were frozen (the Ice Mega: the ice
+  cracks off, `onStandFree`) — → dying_daze → dying_flee, never turning over. dying_flee: GIANT, crawling (Crawler:
+  climbs walls, follows the ground; zone walls ignored, `fleeing`), fades at `FLEE_T`; the shard goes at `THROW_T`
+  (`Mega:shardDrop`) → dead. `releasesZone()` (Boss hook, used by
   BossZones) lets the zone clear when the flee starts, so boss walls open first.
   Intro: hidden + not solid while `dormant`; `fall_in` (0.7 s silence, 'megaFall',
   falls from above the zone through anything outside it, lands on the zone floor at
@@ -79,3 +82,4 @@ are the USER's drawing: never overwrite). **Sounds:** `assets/sounds/bosses/mega
 - 0.5.23, Xtra Extreme: the pair hemmed the player in (the waiting one kept chasing). `OPENINGS = { stuck }` and,
   while its ally attacks or is stuck, the chase becomes `Boss:waitMove` (step aside, sway, face the player):
   `docs/gameplay/difficulty.md` (6). The ice variant inherits it.
+- 0.5.27, the user: in the story the bosses stay GIANT until the ending film shrinks them, so a defeat must not shrink them; they lose the crystal and leave, still giant, respecting the terrain, and DROP the shard while fleeing (not at once). Before: it shrank to a normal Crabby and ran straight through everything. Upright death bug (Ice Mega beaten with frozen claws turned upside down to kick): fixed by `dying_stand` / `dying_iced`. Harnesses: `icecrabby_rules` `mega_de_pie`, `sp_boss KILL=1` (captures `defeat_NN.png`).

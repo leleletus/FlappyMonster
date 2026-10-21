@@ -10,7 +10,7 @@
 --   caja          la caja es el caparazón que se ve
 --   rabia         con poca vida ruge (pinzas en alto, otro cuadro), le salen cristales; luego grita: las
 --                 linternas alcanzan la mitad un rato y llama a Crabbies lúgubres
---   muerte        de cangrejo: se encoge y se apaga, sin explosiones; libera la zona
+--   muerte        de cangrejo: se encoge y huye a la oscuridad, sin explosiones; libera la zona
 --   red           netPackExtra → netApplyExtra
 --   LOOK=1        <save>/megagloomy_look.png: la arena a oscuras en 4 momentos
 --
@@ -343,7 +343,7 @@ function cases.rabia()
          tostring(seen.roar), tostring(roarClaws), tostring(rage), tostring(seen.shriek), Lights.RANGE / T, range / T, minions, tostring(back)))
 end
 
--- Muerte de cangrejo: sin explosiones; se encoge y se apaga; libera la zona
+-- Muerte de cangrejo: sin explosiones; se encoge y huye; libera la zona
 function cases.muerte()
     local level, es, boss = arena()
     stepAll(level, es, {}, 0.5)
@@ -362,10 +362,10 @@ function cases.muerte()
     end)
     local n1 = 0
     for _, e in ipairs(boss:minions(level)) do if e.alive and e.state ~= 'dead' then n1 = n1 + 1 end end
-    check('muerte', not boss.alive and seen.dying_curl and seen.dying_out and not seen.dying_hold and released
+    check('muerte', not boss.alive and seen.dying_curl and seen.dying_flee and not seen.dying_hold and released
         and (played.bossExplode or 0) == 0 and level.lightScale == nil and n0 > 0 and n1 == 0,
-        ('vivo=%s; se encoge=%s y se apaga=%s (explosiones %d); libera la zona=%s; luz normal=%s; súbditos %d → %d'):format(
-         tostring(boss.alive), tostring(seen.dying_curl), tostring(seen.dying_out), played.bossExplode or 0, tostring(released),
+        ('vivo=%s; se encoge=%s y huye=%s (explosiones %d); libera la zona=%s; luz normal=%s; súbditos %d → %d'):format(
+         tostring(boss.alive), tostring(seen.dying_curl), tostring(seen.dying_flee), played.bossExplode or 0, tostring(released),
          tostring(level.lightScale == nil), n0, n1))
 end
 

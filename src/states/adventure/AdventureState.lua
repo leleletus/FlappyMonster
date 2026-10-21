@@ -94,6 +94,15 @@ function AdventureState:enter(args)
     self.finished = false
 
     self.level  = Level.new(self.levelPath, args.difficulty)
+    -- (modo historia, nivel de jefe: sin META — acaba al vencer al jefe y recoger su fragmento, src/story/Shards —;
+    --  sus casillas de meta se quitan)
+    if args.shards and #(self.level.bossZones or {}) > 0 then
+        for r = 1, self.level.tileH do
+            for c = 1, self.level.tileW do
+                if self.level:getDef(c, r).trigger == 'finish' then self.level.tiles[r][c] = 0 end
+            end
+        end
+    end
     -- Dificultad (src/core/Difficulty.lua): la del modo historia; sin ella, el juego de siempre
     self.level.difficulty = Difficulty.valid(args.difficulty) and args.difficulty or nil
     Difficulty.bind(self.level)

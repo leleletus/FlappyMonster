@@ -101,13 +101,15 @@ function Drops:cleared()
     return #self.list == 0 and self.got >= #self.ids
 end
 
--- Un fragmento sale de (x, y): sube en arco y se queda flotando
-function Drops:spawn(x, y)
+-- Un fragmento sale de (x, y): sube en arco (hacia `dir`, lanzado) y se queda flotando
+function Drops:spawn(x, y, dir)
     local id = self.ids[self.next]
     if not id then return end
     self.next = self.next + 1
-    local side = (#self.list % 2 == 0) and -1 or 1
-    self.list[#self.list + 1] = { id = id, x0 = x, y0 = y, x = x, y = y, tx = x + side * 60, ty = y - 110, t = 0 }
+    -- (lanzado: `dir` = hacia dónde, más lejos y más alto; si no, sube a un lado)
+    local side = (dir and dir ~= 0) and dir or ((#self.list % 2 == 0) and -1 or 1)
+    local far = (dir and dir ~= 0) and 200 or 60
+    self.list[#self.list + 1] = { id = id, x0 = x, y0 = y, x = x, y = y, tx = x + side * far, ty = y - 110, t = 0 }
     Sound.playAt('shardDrop', x, y)
 end
 
@@ -123,12 +125,17 @@ function Drops:update(dt)
     end
     for _, e in ipairs(self.bosses) do
         do
+            -- (cuándo lo suelta lo dice el jefe — Boss:shardDrop —: los que huyen, por el camino; sale LANZADO hacia
+            --  el centro de su zona, de donde se va)
             local gone = (not e.alive) or (e.releasesZone and e:releasesZone())
+            local drop = (e.shardDrop and e:shardDrop()) or (not e.shardDrop and gone)
             if not self.seen[e] then
                 if not gone then self.seen[e] = 'alive' end
-            elseif self.seen[e] == 'alive' and gone then
+            elseif self.seen[e] == 'alive' and drop then
                 self.seen[e] = 'dropped'
-                self:spawn(e.x, e.y)
+                local z = e.zone
+                local dir = z and (((z.x0 + z.x1) / 2 < e.x) and -1 or 1) or 0
+                self:spawn(e.x, e.y - (e.outerH or 0) * 0.3, dir)
             end
         end
     end

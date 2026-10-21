@@ -103,8 +103,13 @@ local HIT_WAVE   = { 1, 1000, -560, 0.30, 0.35 }   -- ola de nieve del gran golp
 local HIT_SLAM   = { 1, 1350, -700, 0.38, 0.55 }   -- onda del aterrizaje del gran golpe: MUY fuerte
 local HIT_SPLASH = { 1, 760, -900, 0.32, 0.4 }     -- cae al agua: la ola echa de la charca a quien esté dentro
 local SLAM_R     = 3.5                  -- casillas (además del medio cuerpo) que alcanza la onda
-local DEATH = { dying_crack = true, dying_burst = true, dying_flee = true }
-local CRACK_T, BURST_T, FLEE_T = 2.0, 0.6, 3.2
+-- DERROTA (0.5.27, el usuario: los jefes siguen GIGANTES hasta el final de la historia): se agrieta, se queda
+-- MAREADA y huye rodando gigante por el terreno — salta lo que le corta el paso —, soltando su fragmento por el
+-- camino (Boss:shardDrop); se desvanece al final
+local DEATH = { dying_crack = true, dying_dizzy = true, dying_flee = true }
+local CRACK_T, DEATH_DIZZY_T, FLEE_T = 2.0, 1.4, 3.6
+local FLEE_ROLL, FLEE_HOP = 460, 3.2     -- px/s rodando; casillas que salta lo que se le cruza
+local THROW_T = 0.6                      -- s de huida en que suelta el fragmento
 
 -- Ciclo de ataques por fase (de 2 en 2, con descanso entre tandas)
 local CYCLE = {
@@ -183,7 +188,7 @@ end
 -- ── Utilidades ────────────────────────────────────────────────────────────────
 function Snow:zoneBounds()
     local z = self.zone
-    if z then return z.x0, z.x1, z.y0, z.y1 end
+    if z and not self.fleeing then return z.x0, z.x1, z.y0, z.y1 end      -- (huyendo: ya no)
     return 0, 1e9, 0, 1e9
 end
 
@@ -945,6 +950,8 @@ function Snow:isVulnerable()
     return VULN[self.state] == true
 end
 function Snow:releasesZone() return self.state == 'dying_flee' or self.state == 'dead' end
+-- (el fragmento lo suelta ya huyendo: Shards)
+function Snow:shardDrop() return not self.alive or (self.state == 'dying_flee' and self.deadTimer >= THROW_T) end
 
 function Snow:stomp()
     local frozen = self.state == 'frozen'
@@ -1261,24 +1268,32 @@ function Snow:updateBoss(dt, level)
         end
         self:physics(level, dt); self:friction(level, dt)
         if t >= CRACK_T then
-            self:enter('dying_burst')
-            Sound.play('snowBurst')
-            Entity.emitFx('snow_burst', self.x, self.y)
-            Entity.emitFx('shake_big', self.x, self.y)
+            self:enter('dying_dizzy')
+            Sound.play('snowCrack', 0.8)
+            Entity.emitFx('snow_puff', self.x, self.y)
+            Entity.emitFx('shake_small', self.x, self.y)
             self:regrowLake(level, 0, true)               -- (el lago se hiela: se puede cruzar)
         end
 
-    elseif st == 'dying_burst' then
-        if t >= BURST_T then
+    elseif st == 'dying_dizzy' then
+        self:physics(level, dt); self:friction(level, dt)
+        if t >= DEATH_DIZZY_T then
             local zx0, zx1 = self:zoneBounds()
             self.fleeDir = (self.x - zx0 < zx1 - self.x) and -1 or 1
-            self.fleeY = self:feetY()
+            self.dir, self.facing, self.fleeing = self.fleeDir, self.fleeDir, true
             self:enter('dying_flee')
             Sound.play('snowFlee')
         end
 
     elseif st == 'dying_flee' then
-        self.x = self.x + (self.fleeDir or 1) * 300 * dt
+        -- rueda gigante; lo que le corta el paso, lo salta (pared, escalón)
+        self.vx = self.fleeDir * FLEE_ROLL
+        local hit = self:physics(level, dt)
+        if hit == 'wall' and self.onGround then
+            self.vy = -math.sqrt(2 * GRAV * FLEE_HOP * T)
+            self.onGround = false
+            Sound.play('jump', 0.6)
+        end
         if t >= FLEE_T then self.state, self.alive = 'dead', false end
     end
 end
@@ -1543,18 +1558,18 @@ function Snow:pose()
     local st, t = self.state, self.deadTimer or 0
     local angry = (self.phase or 1) >= 2
     local C = self:art()
-    if st == 'roll' or st == 'slide' or (st == 'intro' and t < ROLL_IN) then
-        -- (rodando: la vuelta entera de la animación repartida en un giro de la bola)
+    if st == 'roll' or st == 'slide' or st == 'dying_flee' or (st == 'intro' and t < ROLL_IN) then
+        -- (rodando: la vuelta entera de la animación repartida en un giro de la bola; huyendo, ya sin enfado)
         local r = 7 * self.sc
         local ang = -(self.x / r)
-        local c = C(angry and 'roll_angry' or 'roll_happy')
+        local c = C((angry and st ~= 'dying_flee') and 'roll_angry' or 'roll_happy')
         return 'roll', c, c:atProgress((ang / (2 * math.pi)) % 1)
     end
     local function B(name, time, plain)
         local c = (not plain and angry and C('angry_' .. name)) or C(name)
         return 'body', c, c:at(time or t)
     end
-    if st == 'dizzy' or st == 'soaked' then return B('dizzy', t, true) end
+    if st == 'dizzy' or st == 'soaked' or st == 'dying_dizzy' then return B('dizzy', t, true) end
     if st == 'dying_crack' then return B('dying', t, true) end
     if self.inv > 0 and not self.ghost and self.state == 'recover' then return B('hurt') end
     if st == 'land' or st == 'slam_land' or st == 'leap_land' then return B('land') end
@@ -1688,14 +1703,8 @@ function Snow:render(camX, camY)
         love.graphics.rectangle('fill', x0 + w - 6, y0 - 14, 6, 14)
     end
 
-    if st == 'dying_burst' then
-        -- (solo quedan los trozos de nieve)
-    elseif st == 'dying_flee' then
-        local k = math.max(0, 1 - math.max(0, t - FLEE_T + 1))
-        love.graphics.setColor(1, 1, 1, k)
-        self:art()('flee'):play(t, math.floor(self.x - camX), math.floor((self.fleeY or self:feetY()) - camY - 6 * 5),
-                  0, 5 * (self.fleeDir or 1), 5)
-    else
+    if st == 'dying_flee' then alpha = (alpha or 1) * math.max(0, math.min(1, FLEE_T - t)) end   -- (se desvanece al final)
+    do
         local _, _, sc = self:drawBody(camX, camY, alpha)
         if st == 'frozen' then
             IceEncase = IceEncase or require 'src/fx/IceEncase'
@@ -1703,7 +1712,7 @@ function Snow:render(camX, camY)
             IceEncase.draw(b.x - camX, b.y - camY - sc, b.w, b.h + sc, now, (self.frozenFor or FROZEN_T) - t)
         end
         -- Polvo de nieve rodando / deslizando
-        if (st == 'roll' or st == 'slide') and (self.lastTrail or 0) + 0.04 < now then
+        if (st == 'roll' or st == 'slide' or st == 'dying_flee') and (self.lastTrail or 0) + 0.04 < now then
             self.lastTrail = now
             emit('snow_trail', self.x - (self.dir or 1) * self.outerW * 0.3, self:feetY() - 4)
         end

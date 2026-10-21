@@ -464,7 +464,7 @@ function love.load()
         if #(boss.lake or {}) > 0 then        -- (solo si la arena tiene hielo fino)
             check('lago', sn.refrozen > 0, ('celdas de hielo fino rehechas: %d'):format(sn.refrozen))
         end
-        check('muerte', not boss.alive and table.concat(sn.deathOrder, ',') == 'dying_crack,dying_burst,dying_flee' and z.state == 'cleared',
+        check('muerte', not boss.alive and table.concat(sn.deathOrder, ',') == 'dying_crack,dying_dizzy,dying_flee' and z.state == 'cleared',
             ('vivo=%s orden %s, zona %s'):format(tostring(boss.alive), table.concat(sn.deathOrder, ','), z.state))
     end
     if king then
@@ -473,7 +473,7 @@ function love.load()
             if not ok then fails = fails + 1 end
         end
         local need = { 'chase', 'flop_wind', 'flop_air', 'dazed', 'recover', 'phase_up', 'flop_land', 'split', 'parts',
-                       'dying_pop' }
+                       'dying_rejoin', 'dying_daze', 'dying_fetch', 'dying_crown', 'dying_flee' }
         local miss = {}
         for _, n in ipairs(need) do if not seen[n] then miss[#miss + 1] = n end end
         check('estados', #miss == 0, #miss == 0 and 'todos vistos' or ('faltan: ' .. table.concat(miss, ',')))

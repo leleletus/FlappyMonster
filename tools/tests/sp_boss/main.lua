@@ -24,7 +24,10 @@ function love.load(a)
     if os.getenv('MOBILE') then package.loaded['input'].isMobile = true; package.loaded['input'].lastDevice = 'touch' end
     -- (PAIR=1: dos jefes aliados por arena — `bossExtra`, hoy en ninguna dificultad: se guarda para más adelante —)
     if os.getenv('PAIR') and os.getenv('DIFF') then require('src/core/Difficulty').MODS[os.getenv('DIFF')].bossExtra = true end
-    gStateMachine:change('adventure', { level = os.getenv('LEVEL') or 'assets/levels/guarida_cangrejo_rey.json', difficulty = os.getenv('DIFF') })
+    -- (KILL=1: con el fragmento de la historia — se ve cuándo lo suelta —)
+    local lv = os.getenv('LEVEL') or 'assets/levels/guarida_cangrejo_rey.json'
+    local shards = os.getenv('KILL') and { ids = { tostring(require('src/story/Shards').LEVEL[lv:match('([^/]+)%.json$')] or 1) } } or nil
+    gStateMachine:change('adventure', { level = lv, difficulty = os.getenv('DIFF'), shards = shards })
     st = gStateMachine:_top()
 end
 function love.update(dt)
@@ -95,6 +98,35 @@ function love.update(dt)
             local n = last.introN
             love.graphics.captureScreenshot(function(img) img:encode('png', 'intro_' .. n .. '.png') end)
             print(('  captura entrada %d (jefe=%s)'):format(n, boss.state))
+        end
+    end
+    -- (KILL=1: la DERROTA — a los KILL_AT s de pelea (3) se vence a los jefes; capturas cada 0,4 s durante 9 s
+    --  → defeat_NN.png, los estados por los que pasa, cuándo suelta el fragmento y dónde acaba —)
+    if last.kboss then boss = last.kboss end          -- (vencido sale de la lista al acabar: se sigue mirando)
+    if os.getenv('KILL') and boss and boss.zone and (boss.zone.state == 'fight' or last.killT) then
+        last.fightT = last.fightT or t
+        if not last.killT and t - last.fightT >= (tonumber(os.getenv('KILL_AT')) or 3) then
+            last.killT, last.kseq, last.kn, last.kx, last.kboss = t, {}, 0, boss.x, boss
+            for _, e in ipairs(st.enemies) do if e.def.boss and e.alive and e.defeat then e:defeat() end end
+        end
+        if last.killT then
+            if boss.state ~= last.kst then last.kseq[#last.kseq + 1] = boss.state; last.kst = boss.state end
+            if os.getenv('KDBG') and math.floor((t - last.killT) * 4) ~= last.kd then
+                last.kd = math.floor((t - last.killT) * 4)
+                print(('  %.2f %s x=%d y=%d vy=%d suelo=%s'):format(t - last.killT, boss.state, boss.x, boss.y, boss.vy or 0, tostring(boss.onGround)))
+            end
+            if st.shards and #st.shards.list > 0 and not last.thrownT then last.thrownT = t - last.killT end
+            if t - last.killT >= last.kn * 0.4 and last.kn < 23 then
+                local n = last.kn
+                last.kn = n + 1
+                love.graphics.captureScreenshot(function(img) img:encode('png', ('defeat_%02d.png'):format(n)) end)
+            end
+            if t - last.killT > 9.5 then
+                print(('Derrota: %s · fragmento soltado a los %s s · de x=%d a x=%d · vivo=%s'):format(table.concat(last.kseq, '>'),
+                    last.thrownT and ('%.1f'):format(last.thrownT) or 'nunca', last.kx, boss.x, tostring(boss.alive)))
+                love.event.quit(0)
+                return
+            end
         end
     end
     -- (FIGHT_SHOT=1: una captura 1.5 s después de empezar la pelea → fight.png:

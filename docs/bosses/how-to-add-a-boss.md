@@ -143,6 +143,8 @@ Rules that can NOT be broken:
   `OPENINGS = {...}` (they count as its turn). Where it chases the player, ask `self:allyBusy(level)` and, while
   true, move with `self:waitMove(level, target)` (→ dir, facing): the waiting ally steps aside instead of hemming the
   player in (used by both Mega Crabbies; the other bosses do not use it yet).
+- Defeat: bosses stay GIANT and leave by the terrain (the ending film shrinks them); if it leaves, define
+  `shardDrop()` (true a moment into the flight) and make `releasesZone()` true while it flees.
 - Xtra Extreme's generic anger (`bossFury`): if the boss has its own angry / harder phase, define `angryPhase()`
   (true once there: the generic anger stops); otherwise it keeps it the whole fight. `FURY_PACE` in the tuning
   overrides the pace; `FURY_LOOK_ALWAYS = true` keeps the LOOK after the pace stops (Snowball Boss). Nothing else: the look is drawn by `Boss:renderLive` around its `render`.

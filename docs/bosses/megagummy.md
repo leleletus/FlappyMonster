@@ -35,10 +35,15 @@ or flying), and at the end SPLITS into medium Gummies.
   It does NOT laugh when a player dies (only in its intro; that is the Mirror's thing). (3) SPLIT: hp = body + `splitCount` ×
   `partHp`; the hit that reaches that budget is CLAMPED (`MG:damage`) and starts 'split' (crown flies to `crownX/Y`)
   → 'parts': medium Gummies (scale 6, `Part` objects with the Snow physics) that hop at players; contact 1 HP; stomp 1 /
-  GP 2 per part (`interact` notes `_hitPart`, side-effect-free otherwise); hp bar = sum of parts. Last part →
-  'dying_pop' (big confetti, the crown hops and fades; `releasesZone`) → dead. netPackExtra: phase, landX/Y, splitX/Y,
+  GP 2 per part (`interact` notes `_hitPart`, side-effect-free otherwise); hp bar = sum of parts. A beaten part does not
+  burst: it lies STUNNED (part st 3, stars). Last part → defeat (0.5.27): 'dying_rejoin' (the parts hop together to
+  `joinX`) → 'dying_daze' (the King again, no crown) → 'dying_fetch' (jumps to his crown on the ground — now BROKEN,
+  `crown_broken.png` by `tools/art/enemies/make_crown_broken.py`) → 'dying_crown' (puts it on, crooked) →
+  'dying_flee' (sad hops to the nearest side, higher after hitting a wall; zone ignored; fades; shard at `KTHROW`,
+  `releasesZone`) → dead. netPackExtra: phase, landX/Y, splitX/Y,
   crownX/Y, waves {id,x,y,dir,t}, parts {x,y,hp,inv,st,facing}, marks {x,y,kind}. Arena `tools/levelgen/arenas/jefe_gummy.json` (from
   `make_jefe_gummy.py`: flat throne hall, side platforms row 10 + middle row 7, music `boss_nes`); real level
   **reino_gummy** "Reino Gummy" / "Gummy Kingdom" (`levels_boss.py`, meadow theme; every Gummy kind on the way).
   Harnesses: `megagummy_rules` (every rule), `boss_sim` / `boss_intro` / `online_boss` / `boss_frames` with
   `LEVEL=tools/levelgen/arenas/jefe_gummy.json`. Protocol v41 (v42: guard entries + marks).
+- 0.5.27, the user: in the story the bosses stay GIANT until the ending film shrinks them, so a defeat must not shrink them; they lose the crystal and leave, still giant, respecting the terrain, and DROP the shard while fleeing (not at once). The user, for the King: his pieces should not explode (how would they put themselves back together?) — they end stunned on the ground, come back together, pick up the now-broken crown and put it back on. Before: 'dying_pop', big confetti and only the crown hopping.

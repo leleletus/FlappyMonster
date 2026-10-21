@@ -52,8 +52,10 @@ user's). **Sounds:** `tools/sounds/snowboss.py`. **Level:** `lago_helado`; arena
   2 HP, snow wave 1 HP + push, `slamWave` 1 HP + VERY strong push + stun within `SLAM_R`; rolling/landing
   contact 1 HP + knockback/squash. Rolling into an ON/OFF Activator toggles it. Roll end is deterministic
   (time budget `ROLL_MAX_T` per phase, then 'slide'; `MAX_CRASHES`). Intro (generic `introLength` 4.4: a small
-  ball bounces in, grows, lands, laughs, spits at the camera → screen splat). Death: dying_crack → dying_burst
-  → dying_flee (releasesZone). netPackExtra: phase, scale, shock wave, dir, frozenFor, frostT, dizzyFor,
+  ball bounces in, grows, lands, laughs, spits at the camera → screen splat). Death (0.5.27): dying_crack → dying_dizzy (the
+  `dizzy` face) → dying_flee: rolls away GIANT (the roll strip, no anger) at `FLEE_ROLL`, hopping `FLEE_HOP` cells
+  over whatever blocks it (`physics` → 'wall'; zone bounds ignored, `fleeing`), fades; shard at `THROW_T`
+  (`Snow:shardDrop`) (releasesZone). netPackExtra: phase, scale, shock wave, dir, frozenFor, frostT, dizzyFor,
   landX/Y, balls {id,x,y}, icicles {state,y,t} by INDEX (same list on both sides: `icicleList`). Protocol v38.
   ARENA "Pista de hielo" (jefe_nieve.json from `tools/levelgen/arenas/make_jefe_nieve.py`; `--lago` writes it
   into lago_helado from column 72, widening the level to 113): zone 24×10, ice floor, two thin-ice POCKETS over
@@ -109,3 +111,4 @@ user's). **Sounds:** `tools/sounds/snowboss.py`. **Level:** `lago_helado`; arena
   3.71.3: the user pinned the sample down — the e-piano's FIRST 14 SECONDS = the hook TWICE (bars 1-8: first time with
   the pickup that relaunches it, second time left open on the 2nd degree + a silent bar), over i–i–♭VI–V twice. That is
   the chorus now (`T_C = HOOK + HOOK[:3] + [""]`); the bars 10-13 phrase tried in 3.71.2 was NOT it and is gone.
+- 0.5.27, the user: in the story the bosses stay GIANT until the ending film shrinks them, so a defeat must not shrink them; they lose the crystal and leave, still giant, respecting the terrain, and DROP the shard while fleeing (not at once). Before: it burst into snow and a small ball ran off through everything.

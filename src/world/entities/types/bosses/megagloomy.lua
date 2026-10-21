@@ -96,6 +96,10 @@ local DAZZLE_T   = 2.6
 local FLINCH_T   = 0.6
 local TAUNT_T    = 0.9
 local CURL_T, OUT_T = 1.5, 1.8             -- muerte
+-- (0.5.27, el usuario: los jefes siguen GIGANTES hasta el final de la historia — la película los encoge —: tras
+--  encogerse, se levanta y HUYE a la oscuridad por el lado más cercano, por el terreno — trepa lo que le corta el
+--  paso —, soltando su fragmento por el camino; se desvanece al final)
+local FLEE_T, FLEE_SPD, FLEE_THROW = 3.4, 300, 0.6
 local HEAR_K     = 4                       -- oído: × el radio de cada ruido (oye toda la arena)
 local RING_SPD   = 560                     -- px/s a los que crece el aro
 local RING_MAX   = 9 * T
@@ -317,9 +321,11 @@ function MG:pathAt(u)
 end
 
 -- ── Reglas con el jugador (sin efectos: el cliente predice el rebote) ────────
-local DEATH = { dying_curl = true, dying_out = true }
+local DEATH = { dying_curl = true, dying_out = true, dying_flee = true }
 function MG:isDying() return DEATH[self.state] == true or Boss.isDying(self) end
-function MG:releasesZone() return self.state == 'dying_out' or self.state == 'dead' end
+function MG:releasesZone() return self.state == 'dying_out' or self.state == 'dying_flee' or self.state == 'dead' end
+-- (el fragmento lo suelta ya huyendo: Shards)
+function MG:shardDrop() return not self.alive or (self.state == 'dying_flee' and self.deadTimer >= FLEE_THROW) end
 function MG:isVulnerable() return self.state == 'dazzled' and not self.hitOnce end
 local SOLID = { prowl = true, ping = true, tired = true, dazzled = true, aim = true, flinch = true, taunt = true, recover = true }
 function MG:isSolidBody() return Boss.isSolidBody(self) and SOLID[self.state] == true and self.kind ~= KIND.dive end
@@ -358,6 +364,30 @@ function MG:defeat()
 end
 
 -- ── Entrada: cae de la oscuridad del techo, aterriza y RUGE ──────────────────
+-- Un paso de la huida por el TERRENO (sin la zona): anda; si tiene una pared delante, trepa por ella; si el suelo
+-- sube o baja, lo sigue (cae con gravedad)
+function MG:fleeStep(level, dt)
+    local d = self.fleeDir or 1
+    local feet = self.y + REST
+    local function solid(x, y) local c = level:collisionAt(x, y); return c and c.collision == 'solid' end
+    local front = self.x + d * BW * 0.45
+    if solid(front, feet - 10) or solid(front, feet - T) then
+        self.y = self.y - FLEE_SPD * dt                         -- (pared: trepa)
+        self.vy = 0
+        return
+    end
+    self.x = self.x + d * FLEE_SPD * dt
+    local _, top = level:landingCross(self.x, feet - T, feet + 8 * T)
+    if top and top <= feet + 2 then
+        self.y, self.vy = top - REST, 0                         -- (sube el escalón que acaba de trepar)
+    else
+        self.vy = (self.vy or 0) + ADV_GRAVITY * dt             -- (cae)
+        local ny = self.y + self.vy * dt
+        if top and ny + REST >= top then ny, self.vy = top - REST, 0 end
+        self.y = ny
+    end
+end
+
 function MG:onFightStart()
     self.pingT, self.cdT, self.ceilT = 1.2, 1.0, (self.props.ceilingEvery or 14) * 0.5     -- (el primero del techo, antes)
 end
@@ -448,7 +478,18 @@ function MG:updateBoss(dt, level)
             end
             Entity.emitFx('shake_small', self.x, self.y)
         end
-        if t >= CURL_T then self:enter('dying_out') end
+        if t >= CURL_T then
+            local zx0, zx1 = self:zoneBounds()
+            local d = (self.x - zx0 < zx1 - self.x) and -1 or 1
+            self.fleeDir, self.face, self.facing, self.vy = d, d, d, 0
+            self:enter('dying_flee')
+            Sound.play('mgloomyStep')
+        end
+        return
+    elseif st == 'dying_flee' then
+        self:fleeStep(level, dt)
+        self:walkAnim(dt, true)
+        if t >= FLEE_T then self.state = 'dead'; self.alive = false end
         return
     elseif st == 'dying_out' then
         if t >= OUT_T then self.state = 'dead'; self.alive = false end
@@ -697,6 +738,7 @@ function MG:animNow()
     local st, t = self.state, self.deadTimer or 0
     if st == 'dying_out' or st == 'dead' then return 'dead', t end
     if st == 'dying_curl' then return 'scared', t end
+    if st == 'dying_flee' then return 'walk', nil, self.frame or 1 end
     if st == 'pounce' or st == 'dive' then return 'leap', t end
     if st == 'taunt' then return 'taunt', t end
     if st == 'aim' or st == 'dazzled' or st == 'recover' or st == 'tired' or st == 'flinch' then return 'crouch', t end
@@ -820,6 +862,7 @@ function MG:render(camX, camY)
     if not self:visible() then return end
     local a = self:ghostAlpha()
     if self.state == 'dying_out' then a = math.max(0, 1 - math.max(0, (self.deadTimer or 0) - (OUT_T - 0.7)) / 0.7) end
+    if self.state == 'dying_flee' then a = a * math.max(0, math.min(1, (FLEE_T - (self.deadTimer or 0)) / 0.9)) end
     local now = love.timer.getTime()
     if self:flashRed() then love.graphics.setColor(1, 0.4, 0.4, a)
     elseif self:angry() then
@@ -877,6 +920,7 @@ function MG:renderGlow(camX, camY)
     elseif st == 'dazzled' then a = 0.35 + 0.2 * math.sin(now * 30)
     elseif st == 'dying_curl' then a = 0.5 + 0.4 * math.sin(now * 40)
     elseif st == 'dying_out' then a = math.max(0, 0.7 * (1 - t / (OUT_T * 0.7)))
+    elseif st == 'dying_flee' then a = 0.25 * math.max(0, math.min(1, (FLEE_T - t) / 0.9))      -- (ojos apagados)
     elseif st == 'intro' then a = math.min(1, t / 0.6) end
     if a > 0.01 then
         local turned = self:pushTurn(camX, camY)

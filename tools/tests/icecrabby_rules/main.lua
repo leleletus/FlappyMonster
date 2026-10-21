@@ -23,6 +23,8 @@
 --                 daño, ground pound en una pinza = -2 y se suelta (un golpe por palmada)
 --   clavado       clavado boca abajo tras caer del techo (helado y normal): la caja de pisotón, en el cuerpo
 --                 que se ve (no en el pincho); caerle encima lo mata; aplastado, boca abajo y en el suelo
+--   mega_de_pie   vencido de pie (GP en una pinza congelada): forcejea de pie, aturdido y huye trepando, sin
+--                 darse la vuelta
 --   mega_carambanos  al caer del salto desde la pared: grietas (aviso, sin daño) y luego carámbanos a los dos
 --                 lados que quitan 1 y empujan; caducan (patchTime; enfadado, más), se van al morir y
 --                 no se reaparece dentro
@@ -448,6 +450,27 @@ function cases.mega_pinzas()
         ('daño: lomo %d, pisotón en pinza %d, GP en pinza %d; luego %s'):format(d1, d2, d3, st))
 end
 
+-- Vencido DE PIE (GP en una pinza congelada con la última vida): forcejea de pie, se le rompe el hielo, aturdido y
+-- huye gigante trepando — sin darse nunca la vuelta (antes se ponía boca arriba para patalear)
+function cases.mega_de_pie()
+    local level, es, e = mega()
+    e.state, e.deadTimer, e.hitDrop, e.inv, e.hp = 'clap_stuck', 0, false, 0, 1
+    e.props.clapStuck = 30
+    local cl = e:clawBoxes()[1]
+    local pa = player(level, cl.x + 30, e.y - e.outerH / 2 - 80)
+    pa.vy, pa.gpPhase = 600, 'fall'
+    local seq, last, flipped, x0 = {}, nil, false, e.x
+    step(level, es, 9, function()
+        if e.state ~= last then seq[#seq + 1] = e.state; last = e.state end
+        if e.flipped then flipped = true end
+        return not e.alive
+    end)
+    local s = table.concat(seq, '>')
+    check('mega_de_pie', s:match('dying_iced>dying_daze>dying_flee') ~= nil and not s:find('dying_kick') and not s:find('dying_getup')
+          and not flipped and not e.alive and math.abs(e.x - x0) > 3 * T,
+        ('estados %s; boca arriba alguna vez=%s; huyó %d px'):format(s, tostring(flipped), math.floor(math.abs(e.x - x0))))
+end
+
 function cases.mega_carambanos()
     local level, es, e = mega()
     e.state, e.deadTimer = 'pounce', 0
@@ -748,7 +771,7 @@ function love.load()
     local only = os.getenv('CASE')
     for _, n in ipairs({ 'tapa_pegada', 'pinzas', 'hundirse', 'escombros', 'pua', 'carambano', 'nieve_toque', 'nieve_encima', 'nieve_gp',
                          'nieve_techo', 'carambano_techo', 'clavado', 'trampolin', 'pared',
-                         'mega_palmada', 'mega_pinzas', 'mega_carambanos', 'mega_red', 'gummy_helado', 'pinchos_skin' }) do
+                         'mega_palmada', 'mega_pinzas', 'mega_de_pie', 'mega_carambanos', 'mega_red', 'gummy_helado', 'pinchos_skin' }) do
         if not only or only == n then
             local ok, err = pcall(cases[n])
             if not ok then check(n, false, 'error: ' .. tostring(err)) end

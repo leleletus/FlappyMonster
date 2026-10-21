@@ -12,8 +12,11 @@
 --   3. SE DIVIDE (fase 3): cuando le quedan `splitCount` × `partHp` de vida, la corona sale volando
 --      y revienta en `splitCount` Gummies medianos (escala 6) que persiguen a saltos. Cada trozo:
 --      contacto 1 de vida; pisotón 1 / ground pound 2 (`partHp` de vida). La barra de vida sigue
---      bajando con ellos (hp = suma de los trozos). Muerto el último: revienta en confeti y la
---      corona da un último bote (muerte propia 'dying_pop'; libera la zona).
+--      bajando con ellos (hp = suma de los trozos). Cada trozo vencido se queda ATURDIDO en el suelo
+--      (estrellitas); con el último, la DERROTA (0.5.27, el usuario: los jefes siguen gigantes hasta el
+--      final de la historia): los trozos se juntan ('dying_rejoin'), aturdido ('dying_daze'), va a por su
+--      corona — ahora ROTA (crown_broken.png) — ('dying_fetch'), se la pone torcida ('dying_crown') y se va a
+--      saltos por el terreno ('dying_flee'; libera la zona y suelta el fragmento por el camino).
 -- Entrada (genérica de Boss): cae del cielo de panza, se levanta, fanfarria y risa.
 -- Todo lo que se dibuja sale de state + deadTimer + x, y (+ netPackExtra): igual online.
 -- Sprites: assets/images/bosses/megagummy/; sonidos: assets/sounds/bosses/megagummy/
@@ -66,7 +69,8 @@ local FANFARE_AT = 0.3
 local PHASE_T    = 1.6
 local SPLIT_T    = 1.0                -- tiembla; a los SPLIT_T s revienta en trozos
 local CROWN_AT, CROWN_T = 0.25, 0.9   -- la corona sale volando (y tarda en caer)
-local POP_T      = 2.4                -- muerte: confeti y la corona bota
+local REJOIN_T, KDAZE_T, PUT_T = 1.6, 1.2, 1.0    -- derrota: se juntan los trozos, aturdido, se pone la corona
+local FETCH_MAX, KFLEE_T, KTHROW = 4.0, 3.8, 0.6   -- ...va a por ella (como mucho), huye, suelta el fragmento
 local GRACE      = 0.8                -- s sin daño por contacto tras un golpe de contacto
 local WAVE_SPD   = 470
 local WAVE_LIFE  = 1.7
@@ -76,7 +80,7 @@ local PART_INV   = 0.8
 -- Golpes a un jugador: { vida, vx, vy, bloqueo, aturdido } (Snow.strike)
 local HIT_TOUCH  = { 1, 520, -420, 0.2, 0 }
 local HIT_WAVE   = { 1, 620, -520, 0.25, 0.3 }
-local DEATH = { dying_pop = true }
+local DEATH = { dying_rejoin = true, dying_daze = true, dying_fetch = true, dying_crown = true, dying_flee = true }
 MG.HOP_GAP, MG.FLOP_EVERY, MG.DAZE_T, MG.WAVE_LIFE = HOP_GAP, FLOP_EVERY, DAZE_T, WAVE_LIFE
 
 -- Cuadros de body-Sheet.png
@@ -455,9 +459,10 @@ function MG:burst(level)
     Entity.emitFx('shake_big', self.x, self.y)
 end
 
+-- (estado de un trozo: 0 ya no está, 1 en el suelo, 2 en el aire, 3 vencido: ATURDIDO en el suelo)
 function MG:aliveParts()
     local n = 0
-    for _, p in ipairs(self.parts or {}) do if p.st ~= 0 then n = n + 1 end end
+    for _, p in ipairs(self.parts or {}) do if p.st == 1 or p.st == 2 then n = n + 1 end end
     return n
 end
 
@@ -465,7 +470,9 @@ function MG:updateParts(level, dt)
     local wait = PART_WAIT[(#self.parts <= 2) and 1 or 2]
     local sx, sy, n = 0, 0, 0
     for _, p in ipairs(self.parts) do
-        if p.st ~= 0 then
+        if p.st == 3 then
+            p:physics(level, dt); p:friction(level, dt)               -- (aturdido: ni salta ni hace daño)
+        elseif p.st ~= 0 then
             if p.inv > 0 then p.inv = math.max(0, p.inv - dt) end
             local was = p.onGround
             p:physics(level, dt)
@@ -506,13 +513,9 @@ function MG:hitPart(i, n)
     Sound.play('kingHurt', 1.4)
     Entity.emitFx('boss_hit', p.x, p.y)
     if p.hp <= 0 then
-        p.st = 0
-        Sound.play('kingPop')
-        Entity.emitFx('king_confetti', p.x, p.y)
-        if self:aliveParts() == 0 then
-            self.x, self.y = p.x, p.y
-            self:defeat()
-        end
+        p.st, p.vx = 3, 0                       -- (no revienta: se queda aturdido en el suelo)
+        Sound.play('stunned')
+        if self:aliveParts() == 0 then self:defeat() end
     else
         p.inv = PART_INV
     end
@@ -524,19 +527,21 @@ local SPLIT = { split = true, parts = true }
 function MG:isActive() return Boss.isActive(self) and not DEATH[self.state] end
 function MG:isDying() return DEATH[self.state] == true or Boss.isDying(self) end
 function MG:isVulnerable() return self:isActive() and self.state == 'dazed' end
-function MG:releasesZone() return self.state == 'dying_pop' or self.state == 'dead' end
+function MG:releasesZone() return self.state == 'dying_flee' or self.state == 'dead' end
+-- (el fragmento lo suelta ya huyendo: Shards)
+function MG:shardDrop() return not self.alive or (self.state == 'dying_flee' and self.deadTimer >= KTHROW) end
 function MG:isSolidBody() return Boss.isSolidBody(self) and not SPLIT[self.state] and not DEATH[self.state] end
 function MG:canBeKnocked() return false end
 
 -- Sin efectos (el cliente lo usa para predecir): con trozos, el trozo que toca (apunta cuál en
 -- _hitPart para el stomp/pound que viene justo después)
 function MG:interact(pa)
-    if self.state == 'split' then return nil end
+    if self.state == 'split' or DEATH[self.state] then return nil end
     if self.state ~= 'parts' then return Boss.interact(self, pa) end
     local pob = pa:getOuterBounds()
     local bvy = -math.abs(ADV_JUMP_VEL) * self.BOUNCE
     for i, p in ipairs(self.parts) do
-        if p.st ~= 0 then
+        if p.st == 1 or p.st == 2 then
             local ob = p:box()
             if overlap(pob, p:innerBox()) then
                 local side = (pa.x >= p.x) and 1 or -1
@@ -585,17 +590,26 @@ function MG:onDamaged(n, kind)
     end
 end
 
--- Derrotado: revienta en confeti y la corona da un último bote (los guardias se van con él)
+-- Derrotado (el último trozo, aturdido): los trozos se juntan donde están (los guardias se van con él)
 function MG:defeat()
+    local level = self.levelRef
     self.hp, self.inv, self.ghost = 0, 0, false
     self.waves = {}
     self.vx, self.vy = 0, 0
-    self:enter('dying_pop')
-    Sound.play('kingPop', 0.8)
-    Sound.play('kingCrown', 0.9)
-    Entity.emitFx('king_confetti_big', self.x, self.y)
-    Entity.emitFx('shake_big', self.x, self.y)
-    local level = self.levelRef
+    local n, sx = 0, 0
+    for _, p in ipairs(self.parts or {}) do
+        if p.st ~= 0 then n, sx = n + 1, sx + p.x; p.x0 = p.x end
+    end
+    local zx0, zx1 = self:zoneBounds()
+    self.joinX = math.max(zx0 + self.outerW / 2, math.min(zx1 - self.outerW / 2, (n > 0) and sx / n or self.x))
+    -- (la corona cayó al dividirse; si no se dividió — vencido de otra forma —, se le cae aquí al lado)
+    if not self.crownOff then
+        local cx = math.max(zx0 + T, math.min(zx1 - T, self.joinX + 2 * T))
+        local _, top = level and level:landingCross(cx, self.y, select(4, self:zoneBounds()) + T)
+        self.crownX, self.crownY = math.floor(cx), math.floor(top or self:feetY())
+    end
+    self:enter('dying_rejoin')
+    Sound.play('kingHurt', 0.7)
     for _, e in ipairs(level and self:minions(level) or {}) do
         if e.alive and e.state ~= 'dead' then
             e.state, e.deadTimer, e.vx, e.vy = 'dead', 0, 0, 0
@@ -714,12 +728,71 @@ function MG:updateBoss(dt, level)
     elseif st == 'parts' then
         self:updateParts(level, dt)
 
-    elseif st == 'dying_pop' then
-        if t >= 0.3 and not self.crownHop then
-            self.crownHop = true
-            Sound.play('kingCrown', 1.2)
+    elseif st == 'dying_rejoin' then
+        -- los trozos van a saltitos hasta el sitio donde se juntan
+        local u = math.min(1, t / REJOIN_T)
+        for _, p in ipairs(self.parts) do
+            if p.st ~= 0 and p.x0 then
+                p.x = p.x0 + (self.joinX - p.x0) * (u * u * (3 - 2 * u))
+                p.facing = (self.joinX >= p.x0) and 1 or -1
+            end
         end
-        if t >= POP_T then self.state, self.alive = 'dead', false end
+        if t >= REJOIN_T then
+            -- juntos otra vez: el Rey (sin corona), aturdido
+            local fy = self.parts[1] and self.parts[1]:feetY() or self:feetY()
+            self.parts = {}
+            self.x, self.y, self.vx, self.vy = self.joinX, fy - self.outerH / 2, 0, 0
+            self.onGround = false
+            self:enter('dying_daze')
+            Sound.play('kingSplit', 0.8)
+            Entity.emitFx('king_splat', self.x, fy)
+        end
+    elseif st == 'dying_daze' then
+        self:physics(level, dt); self:friction(level, dt)
+        if t >= KDAZE_T then self:enter('dying_fetch'); self.fetchHop = false end
+    elseif st == 'dying_fetch' then
+        -- a por la corona (rota), de un salto hasta ella si no la tiene al lado
+        local was = self.onGround
+        self:physics(level, dt)
+        if self.onGround then
+            if not was then self.vx = 0; Entity.emitFx('gp_land', self.x, self:feetY()) end
+            self:friction(level, dt)
+            if math.abs(self.crownX - self.x) <= 20 or t >= FETCH_MAX then
+                self.x = (math.abs(self.crownX - self.x) <= 20) and self.crownX or self.x
+                self:enter('dying_crown')
+                Sound.play('kingCrown', 0.8)
+            elseif not self.fetchHop or t > 1.5 then
+                self.fetchHop = true
+                self:jumpTo(self.crownX, self.crownY, 1.5)
+                Sound.play('kingHop', 0.85)
+            end
+        end
+    elseif st == 'dying_crown' then
+        self:physics(level, dt); self:friction(level, dt)
+        if t >= PUT_T then
+            -- se va (saltitos tristes) por el lado más cercano de la zona, por el terreno
+            local zx0, zx1 = self:zoneBounds()
+            self.fleeDir = (self.x - zx0 < zx1 - self.x) and -1 or 1
+            self.facing, self.fleeing, self.hopT = self.fleeDir, true, 0
+            self:enter('dying_flee')
+        end
+    elseif st == 'dying_flee' then
+        local was = self.onGround
+        local hit = self:physics(level, dt)
+        if self.onGround then
+            if not was then self.vx = 0 end
+            self.hopT = (self.hopT or 0) + dt
+            if self.hopT >= 0.35 then
+                -- (algo le corta el paso: un salto más alto)
+                self.hopT = 0
+                self.vx, self.vy = self.fleeDir * 300, (self.blocked and -1250 or -820)
+                self.onGround, self.blocked = false, false
+                Sound.play('kingHop', 0.8)
+            end
+        elseif hit == 'wall' then
+            self.blocked = true
+        end
+        if t >= KFLEE_T then self.state, self.alive = 'dead', false end
     end
 end
 
@@ -878,6 +951,15 @@ function MG:pose()
         if t >= FANFARE_AT and t < SUMMON_AT + 0.4 then return F_SHOUT, 0.97, 1.07, false, (st == 'phase_up') and 2 or 0, true end
         return F_IDLE, 1, 1, false, 0, true
     end
+    if st == 'dying_daze' then
+        local w = math.sin(now * 6) * 0.05
+        return F_DAZED, 1 + w, 1 - w, false, 0, true
+    end
+    if st == 'dying_fetch' or st == 'dying_flee' then
+        if not self.onGround then return F_JUMP, 0.94, 1.08, false, 0, true end
+        return (st == 'dying_flee') and F_DAZED or F_WALK, 1, 1, false, 0, true     -- (se va mareado, sin su sonrisa)
+    end
+    if st == 'dying_crown' then return F_IDLE, 1, 1, false, 0, true end
     if st == 'split' then
         local k = math.min(1, t / SPLIT_T)
         local w = math.sin(now * 40) * 0.16 * k
@@ -890,7 +972,7 @@ end
 local function drawGummy(fr, fx, fy, sc, facing, sx, sy, crown)
     local now = love.timer.getTime()
     C(fr):playPx(now, fx, fy, 0, sc * facing * sx, sc * sy, 7.5, 16)
-    if crown then C('crown'):playPx(now, fx, fy, 0, sc * facing * sx, sc * sy, 7.5, 16) end
+    if crown then C(crown == true and 'crown' or crown):playPx(now, fx, fy, 0, sc * facing * sx, sc * sy, 7.5, 16) end
 end
 
 -- Corona suelta: volando (división), en el suelo (trozos) y su último bote (muerte)
@@ -905,10 +987,14 @@ function MG:crownPos()
         return x, y, u * 9, 1
     elseif st == 'parts' then
         return self.crownX, self.crownY, 0.5, 1
-    elseif st == 'dying_pop' then
-        local u = math.max(0, t - 0.3)
-        local hop = math.max(0, u * 900 - 0.5 * 2200 * u * u)
-        return self.crownX, self.crownY - hop, 0.5 + u * 6, math.max(0, 1 - math.max(0, t - 1.6) / (POP_T - 1.6))
+    elseif st == 'dying_rejoin' or st == 'dying_daze' or st == 'dying_fetch' then
+        return self.crownX, self.crownY, 0.5, 1, 'crown_broken'              -- (rota, en el suelo)
+    elseif st == 'dying_crown' and t < PUT_T * 0.6 then
+        -- la recoge: sube del suelo a la cabeza
+        local u = t / (PUT_T * 0.6)
+        local hx, hy = self.x, self:feetY() - 14 * MS
+        return self.crownX + (hx - self.crownX) * u, self.crownY + (hy - self.crownY) * u - math.sin(u * math.pi) * T,
+               0.5 * (1 - u), 1, 'crown_broken'
     end
     return nil
 end
@@ -956,18 +1042,22 @@ function MG:render(camX, camY)
         local r, g, b = 1, 1, 1
         if self:flashRed() then r, g, b = 1, 0.35, 0.35 end
         love.graphics.setColor(r, g, b, alpha)
-        local crown = not (st == 'split' and t >= CROWN_AT)
+        -- (la corona: sale volando al dividirse; tras la derrota está en el suelo, ROTA, hasta que se la pone)
+        local crown = not (st == 'split' and t >= CROWN_AT) and 'crown' or nil
+        if st == 'dying_daze' or st == 'dying_fetch' or (st == 'dying_crown' and t < PUT_T * 0.6) then crown = nil end
+        if (st == 'dying_crown' and t >= PUT_T * 0.6) or st == 'dying_flee' then crown = 'crown_broken' end
+        if st == 'dying_flee' then alpha = alpha * math.max(0, math.min(1, (KFLEE_T - t) / 0.9)) end      -- (se desvanece)
         if lying then
             -- De barriga: girado 90° alrededor del centro del cuerpo (filas 2-15 → centro 9)
             local cy = math.floor(self.y - camY)
             local f = self.facing or 1
             C(fr):playPx(love.timer.getTime(), fx, cy, f * math.pi / 2, MS * sx, MS * sy, 7.5, 9)
-            if crown then C('crown'):playPx(love.timer.getTime(), fx, cy, f * math.pi / 2, MS * sx, MS * sy, 7.5, 9) end
+            if crown then C(crown):playPx(love.timer.getTime(), fx, cy, f * math.pi / 2, MS * sx, MS * sy, 7.5, 9) end
         else
             drawGummy(fr, fx, fy, MS, self.facing or 1, sx, sy, crown)
         end
         -- Mareado: estrellitas girando sobre la cabeza
-        if st == 'dazed' then
+        if st == 'dazed' or st == 'dying_daze' then
             require('src/fx/BossFx').stars(fx, fy - 15 * MS, 6 * MS, 1.5 * MS, 4, alpha)
         end
         -- Goterones de gelatina al aterrizar / al temblar antes de dividirse
@@ -979,22 +1069,30 @@ function MG:render(camX, camY)
     end
 
     -- Trozos (Gummies medianos)
-    if st == 'parts' then
+    if st == 'parts' or st == 'dying_rejoin' then
+        local rejoin = st == 'dying_rejoin'
         for _, p in ipairs(self.parts or {}) do
             if p.st ~= 0 then
-                local pfr = (p.st == 2) and F_JUMP or F_WALK
+                local pfr = (p.st == 2) and F_JUMP or ((p.st == 3) and F_DAZED or F_WALK)
+                local hop = 0
+                if rejoin then                                     -- (a saltitos hasta juntarse)
+                    hop = math.floor(math.abs(math.sin(math.min(1, t / REJOIN_T) * math.pi * 3)) * 40)
+                    pfr = (hop > 4) and F_JUMP or F_DAZED
+                end
                 local blink = p.inv > 0 and math.floor(now * 12) % 2 == 0
                 if blink then love.graphics.setColor(1, 0.35, 0.35, 1) else love.graphics.setColor(1, 1, 1, 1) end
-                drawGummy(pfr, math.floor(p.x - camX), math.floor(p.y + p.outerH / 2 - camY), PS, p.facing or 1, 1, 1, false)
+                local px, py = math.floor(p.x - camX), math.floor(p.y + p.outerH / 2 - camY) - hop
+                drawGummy(pfr, px, py, PS, p.facing or 1, 1, 1, false)
+                if p.st == 3 and not rejoin then BossFx.stars(px, py - 15 * PS, 5 * PS, 1.2 * PS, 3) end   -- (aturdido)
             end
         end
     end
 
     -- Corona suelta
-    local cx, cy, rot, ca = self:crownPos()
+    local cx, cy, rot, ca, cname = self:crownPos()
     if cx then
         love.graphics.setColor(1, 1, 1, ca)
-        C('crown'):playPx(love.timer.getTime(), math.floor(cx - camX), math.floor(cy - camY), rot, MS, MS, 7.5, 1.5)
+        C(cname or 'crown'):playPx(love.timer.getTime(), math.floor(cx - camX), math.floor(cy - camY), rot, MS, MS, 7.5, 1.5)
         if (self.lastShine or 0) + 0.5 < now and ca > 0.3 then
             self.lastShine = now
             emit('king_sparkle', cx, cy)

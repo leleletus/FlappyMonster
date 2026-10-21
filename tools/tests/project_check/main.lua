@@ -4,6 +4,7 @@
 --   rutas       toda ruta 'assets/...' escrita en el código (src/, server/, game.lua) existe
 --   cargas      nada de lo que se carga de verdad (imágenes, sonidos, música del catálogo) falta en disco
 --   idiomas     es.lua y en.lua tienen las mismas claves
+--   jefes       en los niveles con zona de jefe no hay nada más allá de la última zona (salvo sus bloques de jefe)
 --   docs        toda ruta del repo escrita entre `comillas` en docs/, CLAUDE.md, README.md y tools/README.md existe,
 --               y todo enlace entre páginas de docs/ lleva a una página que existe
 --
@@ -118,6 +119,34 @@ function love.load()
     for k in pairs(es) do n = n + 1; if not en[k] then diff[#diff + 1] = 'en:' .. k end end
     for k in pairs(en) do if not es[k] then diff[#diff + 1] = 'es:' .. k end end
     check('idiomas', #diff == 0, ('%d claves; faltan: %s'):format(n, #diff > 0 and list(diff, 10) or 'ninguna'))
+
+    -- jefes: en un nivel con zona de jefe no hay nada (objetos, enemigos, mecanismos) más allá de la última zona —
+    -- el nivel acaba al vencer al jefe —, salvo sus propios bloques de jefe (el usuario, 0.5.27)
+    local json = require 'libs/json'
+    local beyond, nB = {}, 0
+    local files = {}
+    local function levels(dir)
+        for _, f in ipairs(love.filesystem.getDirectoryItems(dir)) do
+            local p = dir .. '/' .. f
+            if love.filesystem.getInfo(p, 'directory') then levels(p) elseif f:match('%.json$') then files[#files + 1] = p end
+        end
+    end
+    levels('assets/levels')
+    for _, p in ipairs(files) do
+        local ok, d = pcall(json.decode, love.filesystem.read(p))
+        if ok and type(d) == 'table' and type(d.bossZones) == 'table' and #d.bossZones > 0 then
+            nB = nB + 1
+            local last = 0
+            for _, z in ipairs(d.bossZones) do last = math.max(last, (z.col or 1) + (z.w or 1) - 1) end
+            for _, e in ipairs(d.entities or {}) do
+                if (e.col or 0) > last and e.type ~= 'bosswall' then
+                    beyond[#beyond + 1] = ('%s %s (col %d)'):format(p:match('([^/]+)%.json$'), e.type, e.col)
+                end
+            end
+        end
+    end
+    check('jefes', #beyond == 0 and nB >= 7, ('%d niveles con zona de jefe; con algo más allá de la zona: %s'):format(
+        nB, #beyond > 0 and list(beyond, 8) or 'ninguno'))
 
     -- docs: rutas y enlaces
     local ROOT = love.filesystem.getSource() .. '/../../../'

@@ -23,7 +23,7 @@ States: `src/states/story/StorySlotState.lua` (the slots as cartridges: [menus](
 names one: `Worlds` `films`, [cinematics](cinematics.md)) → level (`AdventureState` with `lives`, `difficulty`,
 `onFinish`, `onLeave`, `onGameOver`, `shards`) → results → map, standing on the cleared node while the next opens.
 
-**Rules:** every story level needs a finish; nothing gained in a level is saved until it is finished; a Game Over
+**Rules:** every story level needs a finish (boss levels show none in the story: they end when the boss is beaten and its shard picked up — `AdventureState` removes the finish cells when `args.shards` and the level has a boss zone, 0.5.27); nothing gained in a level is saved until it is finished; a Game Over
 restarts the world (the whole game on Xtra Extreme); beating the last boss on Hard unlocks Extreme, on Extreme unlocks
 Xtra Extreme. **Harness:** `story_flow` (the real game end to end; many named cases).
 

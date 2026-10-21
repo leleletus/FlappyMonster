@@ -37,7 +37,9 @@ Background: [dark-levels](../gameplay/dark-levels.md).
   they show in the dark); 'shriek' every `shriekEvery` s (`level.lightScale` for `dimTime` s + reserve Gloomies);
   CRYSTALS grow ON THE CLAWS — never on the shell: crystals on the head look like spikes and the head is what you
   stomp. 'taunt' after an attack that hit somebody. DEATH is a crab's, not a robot's (`MG:defeat` override, no
-  explosions): 'dying_curl' → 'dying_out' (`releasesZone`). x,y = centre of its SHELL (`BODY_ROW` 11, box 11x6 art
+  explosions): 'dying_curl' → 'dying_flee' (0.5.27: walks off into the dark, GIANT, by the terrain —
+  `MG:fleeStep`: climbs a wall in front, follows the ground, falls —, eyes dimmed, fades; shard at `FLEE_THROW`;
+  `releasesZone`). ('dying_out', the old fade on the spot, is no longer entered.) x,y = centre of its SHELL (`BODY_ROW` 11, box 11x6 art
   px; legs don't count); art = the SAME pixel grid as the small one at scale 10 (`MEGA_B`, 9 frames 38x21 + glow).
   Intro: falls from the dark AT ITS EDITOR x (`onIntroStart` → `stand(level, self.x)`; it used to land at the zone
   centre wherever it was placed, while the camera looked at the editor spot). Music: zone `tentacle_gloomy`.
@@ -57,3 +59,4 @@ Background: [dark-levels](../gameplay/dark-levels.md).
   `retheme.py` has NO --help: any unknown flag runs it over EVERY level — pass level names. Harnesses
   `megagloomy_rules` (+ `LOOK=1`: claws, ring, rage, each telegraph in the dark), `boss_sim` / `boss_intro` / `online_boss`
   with `LEVEL=` that arena.
+- 0.5.27, the user: in the story the bosses stay GIANT until the ending film shrinks them, so a defeat must not shrink them; they lose the crystal and leave, still giant, respecting the terrain, and DROP the shard while fleeing (not at once).

@@ -7,7 +7,7 @@
 --    FX=1: partículas del juego y reloj de dibujo = tiempo simulado (rugidos,
 --    rayos, humo...); RAGE=1: el jefe empieza con poca vida = enfadado)
 --   Rey Gummy: LEVEL=tools/levelgen/arenas/jefe_gummy.json FX=1 ZONE=1
---     STATES=intro,chase,flop_wind,flop_air,flop_land,dazed,phase_up,split,parts,dying_pop
+--     STATES=intro,chase,flop_wind,flop_air,flop_land,dazed,phase_up,split,parts,dying_daze
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
 require 'settings'
@@ -43,7 +43,7 @@ function love.load()
     local pa = PlayerAdventure:new(z.x0 + 3 * TILE_PX, z.y1 - 60)
     level.players = { pa }
     local want = {}
-    for s in (os.getenv('STATES') or 'intro,chase,windup,charge,climb,ceiling,aim,drop,stuck,getup,dying_kick,dying_shrink,dying_flee'):gmatch('[^,]+') do want[s] = true end
+    for s in (os.getenv('STATES') or 'intro,chase,windup,charge,climb,ceiling,aim,drop,stuck,getup,dying_kick,dying_getup,dying_daze,dying_flee'):gmatch('[^,]+') do want[s] = true end
     local every = tonumber(os.getenv('EVERY') or 0.35)
     local canvas = love.graphics.newCanvas(COLS * CW, ROWS * CH)
     love.graphics.setCanvas(canvas); love.graphics.clear(0.1, 0.1, 0.12, 1); love.graphics.setCanvas()

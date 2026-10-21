@@ -90,7 +90,11 @@ Files: `src/world/systems/BossZones.lua` (zones + fight controller),
 - **Boss base**: HP = props.hp + props.hpPerPlayer*(n-1); stomp = 1 dmg,
   ground pound on top = 2 dmg (`'pound'` result → `e:pound(pa)`); i-frames
   `INV_TIME` (red flash, stomps only `'bounce'`); body is solid sideways. Death: `dying_hold` (blasts, alternating
-  'bossExplode'/'bossHurt') → `dying_fall` → `dead` (alive=false → zone cleared).
+  'bossExplode'/'bossHurt') → `dying_fall` → `dead` (alive=false → zone cleared). Story SHARD: `Boss:shardDrop()`
+  says when it drops (default: no longer alive or releasing the zone); the bosses that flee after a defeat (Mega
+  Crabbies, Snowball, Gloomy, King Gummy) drop it a moment into the flight, thrown towards the zone centre
+  (`Shards` Drops:spawn dir). Defeat rule (0.5.27): bosses stay GIANT — they lose the crystal and leave by the
+  terrain; only the ending film shrinks them. The Mirror and the Evil Ship keep their own deaths.
   `e:interact(pa)` must be side-effect free (client uses it to predict bounces).
 
 - **Stun rule** (anti ground-pound spam): a ground pound on top of a stunnable

@@ -54,7 +54,6 @@ function IM.loadAssets()
 end
 function IM.sizePx() return 18 * MS, 13 * MS end
 IM.MS = MS
-IM.smallPx = 3.5                     -- (la escala del Crabby helado: Crabby.SKINS.ice / Ice.artScale)
 
 function IM:initBoss()
     Mega.initBoss(self)
@@ -117,6 +116,13 @@ function IM:onDamaged(n, kind)
         return
     end
     return Mega.onDamaged(self, n, kind)
+end
+
+-- Vencido DE PIE con las pinzas congeladas: al acabar de forcejear se le rompe el hielo (Mega:onDefeat → 'dying_iced')
+function IM:onStandFree()
+    if self.state ~= 'dying_iced' then return end
+    Sound.play('cryoFree')
+    for _, cb in ipairs(self:clawBoxes()) do Entity.emitFx('ice_shatter', cb.x + cb.w / 2, cb.y + cb.h / 2) end
 end
 
 -- ── Palmada helada ────────────────────────────────────────────────────────────
@@ -397,7 +403,7 @@ end
 -- Pinzas pegadas al suelo por el hielo: un bloque de hielo en cada una
 function IM:renderClawIce(camX, camY, now)
     IceEncase = IceEncase or require 'src/fx/IceEncase'
-    local left = (self.props.clapStuck or 1.2) - (self.deadTimer or 0)
+    local left = ((self.state == 'dying_iced') and Mega.STAND_T or (self.props.clapStuck or 1.2)) - (self.deadTimer or 0)
     for _, cb in ipairs(self:clawBoxes()) do
         IceEncase.draw(math.floor(cb.x - camX), math.floor(cb.y - camY), cb.w, cb.h, now, left)
     end
@@ -407,14 +413,15 @@ end
 function IM:pose2d(now, moving, walkPhase)
     local sx, sy, shx, claws, spikeK = Mega.pose2d(self, now, moving, walkPhase)
     local st, t = self.state, self.deadTimer or 0
-    if st == 'clap' or st == 'clap_stuck' then
+    if st == 'clap' or st == 'clap_stuck' or st == 'dying_iced' then
         local q = (st == 'clap') and math.min(1, t / CLAP_AT) or 1
         for i, side in ipairs({ -1, 1 }) do
             if st == 'clap' and t < CLAP_AT then
                 claws[i][1] = side * CLAW_OUT * q * 0.5
                 claws[i][2] = -3.2 * math.sin(q * math.pi * 0.5)
             else
-                local jit = (st == 'clap_stuck') and math.sin(now * 40 + i * 2) * 0.15 or 0
+                local jit = (st == 'clap_stuck') and math.sin(now * 40 + i * 2) * 0.15
+                         or (st == 'dying_iced') and math.sin(now * 55 + i * 2) * 0.3 or 0      -- (vencido: forcejea más)
                 claws[i][1] = side * CLAW_OUT + jit
                 claws[i][2] = CLAW_DOWN
             end
@@ -475,7 +482,7 @@ function IM:render(camX, camY)
     local now = love.timer.getTime()
     self:renderFields(camX, camY, now)
     Mega.render(self, camX, camY)
-    if self.state == 'clap_stuck' then self:renderClawIce(camX, camY, now) end
+    if self.state == 'clap_stuck' or self.state == 'dying_iced' then self:renderClawIce(camX, camY, now) end
     self:renderWaves(camX, camY, now)
     love.graphics.setColor(1, 1, 1, 1)
 end

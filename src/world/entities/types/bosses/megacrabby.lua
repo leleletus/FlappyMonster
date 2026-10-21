@@ -59,8 +59,13 @@ local GETUP_T  = 0.45               -- s del giro al levantarse
 local WIGGLE_FPS = 12
 local CONTACT_PAD = 0               -- px alrededor del cuerpo que ya cuentan como tocarlo
 -- Muerte
-local KICK_T, SHRINK_T, FLEE_T = 1.3, 1.0, 2.6
-local FLEE_SPEED = 620              -- huye en línea recta atravesándolo todo
+-- DERROTA (0.5.27, el usuario: en la historia los jefes siguen GIGANTES hasta el final — la película los encoge —):
+-- patalea boca arriba (o, si muere DE PIE — el helado con las pinzas congeladas —, forcejea de pie), se levanta,
+-- se queda ATURDIDO un momento (estrellitas) y HUYE gigante trepando por lo que encuentre (Crawler), soltando su
+-- fragmento por el camino (Boss:shardDrop); se desvanece al final
+local KICK_T, STAND_T, DAZE_T, FLEE_T = 1.3, 1.3, 1.2, 3.4
+local FLEE_SPEED = 380              -- (huye gigante, trepando: Crawler)
+local THROW_T = 0.6                 -- s de huida en que suelta el fragmento
 local FLEE_FADE  = 0.8              -- s del final en que se desvanece
 local SMALL = GUMMY_SCALE / MS      -- al desinflarse queda del tamaño de un Crabby normal
 -- Al aterrizar tras levantarse: empuja y aturde a los de alrededor
@@ -111,26 +116,13 @@ function Mega.loadAssets()
 end
 function Mega.sizePx() return 16 * MS, 9 * MS end
 Mega.MS = MS                        -- (por clase: el helado es algo más pequeño; el dibujo y el tamaño usan self.MS)
--- Al desinflarse queda del tamaño de SU cangrejo pequeño (`smallPx` = la escala de ese; el normal, GUMMY_SCALE)
-function Mega:smallK() return (self.smallPx or GUMMY_SCALE) / self.MS end
 
 -- Estados en los que va pegado a una superficie (trepando)
-local CRAWL = { climb = true, ceiling = true, aim = true, wallclimb = true, wallaim = true }
+local CRAWL = { climb = true, ceiling = true, aim = true, wallclimb = true, wallaim = true, dying_flee = true }
 -- Estados en los que tocarlo quita vida
 local CONTACT = { chase = true, windup = true, charge = true, recover = true, summon = true,
                   climb = true, ceiling = true, aim = true, wallclimb = true, wallaim = true }
 -- (saltando desde la pared solo cuenta el aplastamiento: ver 'pounce')
-
--- ── Tamaño (el pequeño de la huida mide la mitad) ────────────────────────────
-function Mega:setSmall(small)
-    if self.small == small then return end
-    self.small = small
-    local k = small and self:smallK() or 1
-    local tn = self.tuning.hitbox
-    self.sprW, self.sprH = self.art.w * self.MS * k, self.art.h * self.MS * k
-    self.outerW, self.outerH = self.sprW * tn.outerW, self.sprH * tn.outerH
-    self.innerW, self.innerH = self.sprW * tn.innerW, self.sprH * tn.innerH
-end
 
 -- Giro de esquina a su tamaño (ver Crawler.turnDuration): más largo que el de
 -- un Crabby, y frenando al doblar (TURN_SLOW) para que el dibujo no corra
@@ -146,7 +138,6 @@ function Mega:initBoss()
     self.landY, self.floorY, self.markerX = 0, 0, 0
     self.summonKey = 'mc' .. self.col .. ',' .. self.row
     self.hitDrop = false
-    self.small = false
 end
 
 function Mega:onFightStart(n)
@@ -297,6 +288,8 @@ function Mega:isVulnerable() return self.state == 'stuck' and not self.hitDrop e
 -- Al huir (ya pequeño) la zona queda superada: se abren las paredes de jefe
 -- y el cangrejo sale corriendo por ellas
 function Mega:releasesZone() return self.state == 'dying_flee' end
+-- (el fragmento lo suelta ya huyendo, no al caer: Shards)
+function Mega:shardDrop() return not self.alive or (self.state == 'dying_flee' and self.deadTimer >= THROW_T) end
 function Mega:canBeKnocked() return false end
 
 -- Enfadado (poca vida): multiplicadores
@@ -312,12 +305,12 @@ function Mega:angryPhase() return self:rage() end
 function Mega:crawlSolidAt(level, x, y)
     if level:entitySolidAt(x, y) then return true end
     local z = self.zone
-    return z ~= nil and (x < z.x0 or x > z.x1 or y < z.y0 or y > z.y1)
+    return z ~= nil and not self.fleeing and (x < z.x0 or x > z.x1 or y < z.y0 or y > z.y1)    -- (huyendo: ya no)
 end
 
 function Mega:clampToZone()
     local z = self.zone
-    if not z then return end
+    if not z or self.fleeing then return end
     local hw = self.outerW / 2
     self.x = math.max(z.x0 + hw, math.min(z.x1 - hw, self.x))
 end
@@ -955,9 +948,17 @@ function Mega:onDamaged(n, kind)
     self:startGetup()
 end
 
--- ── Muerte: patalea, se desinfla y huye ──────────────────────────────────────
+-- ── Muerte: patalea (o forcejea de pie), se levanta, aturdido, y huye gigante ──
+function Mega:defeat()
+    self.defeatFrom = self.state             -- (de dónde: boca abajo, de pie, con las pinzas congeladas)
+    return Boss.defeat(self)
+end
 function Mega:onDefeat()
-    self.state, self.deadTimer = 'dying_kick', 0
+    -- boca abajo (cayó de cabeza) → patalea y se da la vuelta; de pie → forcejea de pie, sin darse la vuelta
+    -- ('dying_iced' si tenía las pinzas congeladas: el helado; se le rompe el hielo al soltarse)
+    local st = self.flipped and 'dying_kick' or 'dying_stand'
+    if not self.flipped and self.defeatFrom == 'clap_stuck' then st = 'dying_iced' end
+    self.state, self.deadTimer = st, 0
     self.nextSqueak = 0
     self.defeatedMinions = false
 end
@@ -970,50 +971,81 @@ end
 function Mega:updateDeath(dt, level)
     self.deadTimer = self.deadTimer + dt
     local st, t = self.state, self.deadTimer
-    if st == 'dying_kick' then
-        -- Sus súbditos desaparecen con él
-        if not self.defeatedMinions then
-            self.defeatedMinions = true
-            for _, e in ipairs(self:minions(level)) do
-                if e.alive and e.state ~= 'dead' then
-                    e.state, e.deadTimer, e.vx, e.vy = 'dead', 0, 0, 0
-                    if e.onStomp then e:onStomp() end
-                    Entity.emitFx('smoke', e.x, e.y)
-                    Entity.emitFx('spawn', e.x, e.y)
-                end
+    -- Sus súbditos desaparecen con él
+    if not self.defeatedMinions then
+        self.defeatedMinions = true
+        for _, e in ipairs(self:minions(level)) do
+            if e.alive and e.state ~= 'dead' then
+                e.state, e.deadTimer, e.vx, e.vy = 'dead', 0, 0, 0
+                if e.onStomp then e:onStomp() end
+                Entity.emitFx('smoke', e.x, e.y)
+                Entity.emitFx('spawn', e.x, e.y)
             end
         end
+    end
+    if st == 'dying_kick' or st == 'dying_stand' or st == 'dying_iced' then
         if t >= self.nextSqueak then
             self.nextSqueak = t + 0.28
             Sound.play('megaClack', 0.9 + math.random() * 0.4)
         end
-        if t >= KICK_T then
-            self.state, self.deadTimer = 'dying_shrink', 0
-            Sound.play('megaShrink')
+        if st == 'dying_kick' and t >= KICK_T then
+            -- se da la vuelta de un salto (como al levantarse en la pelea), aún gigante
+            self.state, self.deadTimer = 'dying_getup', 0
+            self.vy, self.onGround, self.flipped = -480, false, false
+            Sound.play('crabPop', 0.7)
             Entity.emitFx('spike_pop', self.x, self.floorY - 8)
-            Entity.emitFx('mega_poof', self.x, self.y)
+        elseif st ~= 'dying_kick' and t >= STAND_T then
+            self:onStandFree()
+            self.state, self.deadTimer = 'dying_daze', 0
+            Sound.play('megaShrink', 0.8)
         end
-    elseif st == 'dying_shrink' then
-        if t >= SHRINK_T then
-            -- Ya es un Crabby normal (sin pinzas): huye por el lado más cercano
-            -- de la zona (sus paredes ya desaparecen), atravesándolo todo
-            self:setSmall(true)
-            self.flipped, self.vy, self.crawl = false, 0, false
-            self.y = self.floorY - self.outerH / 2
+    elseif st == 'dying_getup' then
+        self.vy = self.vy + ADV_GRAVITY * dt
+        self:moveAndCollide(level, 0, self.vy * dt)
+        self:clampToZone()
+        if (self.onGround and t >= GETUP_T * 0.6) or t >= GETUP_MAX then
+            self.state, self.deadTimer = 'dying_daze', 0
+            self.floorY = self.y + self.outerH / 2
+            Sound.play('megaShrink', 0.8)
+            Entity.emitFx('mega_land', self.x, self.floorY)
+        end
+    elseif st == 'dying_daze' then
+        self:walk(level, dt, 0)
+        if t >= DAZE_T then
+            -- huye por el lado más cercano de la zona (sus paredes ya se van), trepando por lo que haya
             local z = self.zone
             self.facing = (z and (self.x - z.x0 < z.x1 - self.x)) and -1 or 1
+            self.fleeing = true
+            self.crawl, self.cnx, self.cny, self.cattached = true, 0, -1, false
+            Crawler.attach(self, level)
+            self.cdir = self.facing
             self.state, self.deadTimer, self.nextSqueak = 'dying_flee', 0, 0
         end
     elseif st == 'dying_flee' then
-        self.x = self.x + self.facing * FLEE_SPEED * dt
-        self:animWalk(dt, 16, true)                    -- (ya no pisa fuerte)
+        Crawler.advanceTurn(self, dt)
+        if self.crawl and self.cattached then
+            if not Crawler.move(self, level, FLEE_SPEED * dt) then self.crawl = false end
+            if self.crawl then self:crawlFacing() end
+        else
+            -- (se soltó de un borde: cae y se vuelve a agarrar al llegar)
+            self.crawl = false
+            self:walk(level, dt, self.facing * FLEE_SPEED)
+            if self.onGround then
+                self.crawl, self.cnx, self.cny, self.cattached = true, 0, -1, false
+                if Crawler.attach(self, level) then self.cdir = self.facing else self.crawl = false end
+            end
+        end
+        self:animWalk(dt, 14, true)
         if t >= self.nextSqueak then
             self.nextSqueak = t + 0.45
-            Sound.play('megaFlee', 0.9 + math.random() * 0.25)
+            Sound.play('megaFlee', 0.8 + math.random() * 0.2)
         end
         if t >= FLEE_T then self.state, self.alive = 'dead', false end
     end
 end
+-- (el helado: se le rompe el hielo de las pinzas al soltarse)
+function Mega:onStandFree() end
+Mega.STAND_T = STAND_T
 
 -- ── Red ───────────────────────────────────────────────────────────────────────
 function Mega:netPackExtra()
@@ -1032,7 +1064,6 @@ end
 
 function Mega:netApplyExtra(a, b, f)
     a = a or b
-    self:setSmall(self.state == 'dying_flee')
     Crawler.netApply(self, b[1], a[2], b[2], f, not CRAWL[self.state])
     if not CRAWL[self.state] then self.crawl = false end
     self.landY = tonumber(b[3]) or 0
@@ -1416,7 +1447,7 @@ function Mega:render(camX, camY)
     end
     local s, alpha = self.MS, 1
     local emote = st == 'rest' and t < 1.2 and (self.restKind or 0) or 0
-    local nervous = st == 'windup' or st == 'aim' or st == 'stuck' or st == 'dying_kick' or st == 'intro'
+    local nervous = st == 'windup' or st == 'aim' or st == 'stuck' or st == 'dying_kick' or st == 'dying_stand' or st == 'dying_iced' or st == 'intro'
                     or st == 'charge' or st == 'summon' or st == 'wallaim' or st == 'pounce'
                     or st == 'roar_in' or st == 'fall_in' or emote == 1 or emote == 2
     if self._rstate ~= st then self._prevState, self._rstate = self._rstate, st end
@@ -1452,7 +1483,7 @@ function Mega:render(camX, camY)
     local k = self:speedMult()
     local locked = (st == 'aim' and t >= (self.props.aimTime or 1.8) / k - AIM_LOCK_CEIL)
                 or (st == 'wallaim' and t >= (self.props.pounceAim or 1.4) / k - AIM_LOCK_WALL)
-    if st == 'windup' or locked or st == 'dying_kick' then
+    if st == 'windup' or locked or st == 'dying_kick' or st == 'dying_stand' or st == 'dying_iced' then
         jx = math.floor(math.sin(now * 70) * 3)
         jy = math.floor(math.cos(now * 55) * 2)
     end
@@ -1491,34 +1522,16 @@ function Mega:render(camX, camY)
         if st == 'drop' or st == 'stuck' or st == 'dying_kick' then ang = math.pi
         elseif st == 'getup' then ang = math.pi * (1 - math.min(1, t / GETUP_T))
         elseif st == 'pounce' then ang = self.facing * math.pi / 2 * (1 - math.min(1, t / 0.3))
-        elseif st == 'dying_shrink' then
-            -- Se desinfla: del tamaño colosal al de un Crabby con un temblor
-            -- elástico, dándose la vuelta y posándose en el suelo
-            local q = math.min(1, t / SHRINK_T)
-            s = self.MS * (1 - (1 - self:smallK()) * q) * (1 + 0.12 * math.sin(q * math.pi * 7) * (1 - q))
-            ang = math.pi * (1 - q)
-            withSpike = q < 0.15
-            H = self.art.h * s
-            local cy = (1 - q) * self.y + q * (self.floorY - H / 2)
-            fx, fy = self.x - math.sin(ang) * H / 2, cy + math.cos(ang) * H / 2
-            sx, sy = 1 + 0.15 * math.sin(q * math.pi * 9) * (1 - q), 1 - 0.15 * math.sin(q * math.pi * 9) * (1 - q)
+        elseif st == 'dying_getup' then ang = math.pi * (1 - math.min(1, t / GETUP_T))
         end
         if not fx then fx, fy = self.x - math.sin(ang) * H / 2, self.y + math.cos(ang) * H / 2 end
     end
-    local noClaws = false
-    if st == 'dying_flee' then
-        s, withSpike, noClaws = self.MS * self:smallK(), false, true
-        alpha = math.max(0, math.min(1, (FLEE_T - t) / FLEE_FADE))
-    elseif st == 'dying_shrink' and t > SHRINK_T * 0.4 then
-        noClaws = true                            -- (las pierde al desinflarse)
+    if st == 'dying_daze' and not EDITOR_VIEW then
+        -- aturdido: estrellitas sobre la cabeza (gigante aún: el fragmento lo suelta al huir)
+        BossFx.stars(math.floor(fx - camX), math.floor(fy - self.sprH * 0.72 - camY), self.sprW * 0.38, 16, 6)   -- (alrededor de la base del pincho)
     end
-    if noClaws and not self._clawsGone and not EDITOR_VIEW then
-        self._clawsGone = true
-        Particles = Particles or require 'src/fx/Particles'
-        for _, side in ipairs({ -1, 1 }) do
-            Particles.emit('smoke', self.x + side * self.sprW * 0.4, self.y)
-            Particles.emit('spawn', self.x + side * self.sprW * 0.4, self.y)
-        end
+    if st == 'dying_flee' then
+        alpha = math.max(0, math.min(1, (FLEE_T - t) / FLEE_FADE))
     end
     if EDITOR_VIEW then nervous = false end
     self._clawForce = nil
@@ -1528,7 +1541,7 @@ function Mega:render(camX, camY)
     end
     self:renderFx(now, fx, fy, moved)
     self:drawLocal(math.floor(fx - camX + 0.5) + jx + shx, math.floor(fy - camY + 0.5) + jy, ang, s, img,
-                   withSpike, alpha * self:ghostAlpha(), nervous, sx, sy, claws, noClaws, spikeK)
+                   withSpike, alpha * self:ghostAlpha(), nervous, sx, sy, claws, false, spikeK)
     self:renderAnger(now, fx + jx + shx, fy + jy, ang, camX, camY)
     love.graphics.setColor(1, 1, 1, 1)
 end

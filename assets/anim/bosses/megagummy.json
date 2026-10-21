@@ -15,10 +15,12 @@
     {"h": 16, "image": "assets/images/bosses/megagummy/crown.png", "w": 16, "x": 0, "y": 0},
     {"h": 3, "image": "assets/images/bosses/megagummy/shadow.png", "w": 16, "x": 0, "y": 0},
     {"h": 8, "image": "assets/images/bosses/megagummy/wave-Sheet.png", "w": 12, "x": 0, "y": 0},
-    {"h": 8, "image": "assets/images/bosses/megagummy/wave-Sheet.png", "w": 12, "x": 12, "y": 0}
+    {"h": 8, "image": "assets/images/bosses/megagummy/wave-Sheet.png", "w": 12, "x": 12, "y": 0},
+    {"h": 16, "image": "assets/images/bosses/megagummy/crown_broken.png", "w": 16, "x": 0, "y": 0}
   ],
   "anims": {
     "crown": {"fps": 8, "frames": [9], "loop": true},
+    "crown_broken": {"fps": 8, "frames": [13], "loop": true},
     "dazed": {"fps": 8, "frames": [5], "loop": true},
     "hurt": {"fps": 8, "frames": [6], "loop": true},
     "idle": {"fps": 8, "frames": [1], "loop": true},

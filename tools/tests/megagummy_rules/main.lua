@@ -15,8 +15,9 @@
 --                 reserva); nunca más de `guardMax` a la vez
 --   division      el golpe que lo deja en la vida de los trozos lo DIVIDE (no se pierde vida de
 --                 más): la corona sale volando, 3 trozos de 2 de vida; pisotón -1 a un trozo,
---                 GP -2; la barra de vida = suma de los trozos; muerto el último, revienta
---                 ('dying_pop'), libera la zona, los guardias desaparecen y acaba 'dead'
+--                 GP -2; la barra de vida = suma de los trozos; cada trozo vencido se queda ATURDIDO; con el
+--                 último, la derrota: se juntan ('dying_rejoin'), aturdido, va a por la corona rota (≤ 24 px),
+--                 se la pone y se va a saltos (libera la zona); los guardias desaparecen y acaba 'dead'
 --   trozos_dañan  un trozo te toca de lado: -1
 --   red           netPackExtra → otro Rey Gummy (cliente): fase, marca, olas y trozos iguales
 --
@@ -312,7 +313,7 @@ function cases.division()
     local after1, hpBar1 = p1.hp, boss.hp
     p1.inv = 0
     for i, p in ipairs(boss.parts) do
-        if p.st ~= 0 then
+        if p.st == 1 or p.st == 2 then
             p.inv = 0
             local rr = boss:interact(dropOn(level, p.x, p:box().y, true))
             if rr == 'pound' then boss:pound() end
@@ -320,16 +321,29 @@ function cases.division()
     end
     local dying = boss.state
     local releases = boss:releasesZone()
+    local stunned = 0
+    for _, p in ipairs(boss.parts) do if p.st == 3 then stunned = stunned + 1 end end
     local guardsLeft = 0
     for _, e in ipairs(boss:minions(level)) do if e.alive and e.state ~= 'dead' then guardsLeft = guardsLeft + 1 end end
-    stepAll(level, es, { pa }, 3, function() pa.invT = 5 end)
+    -- la derrota: se juntan, aturdido, va a por la corona (rota), se la pone y se va a saltos; suelta la zona al irse
+    local seq, last, atCrown = {}, nil, nil
+    stepAll(level, es, { pa }, 16, function()
+        pa.invT = 5
+        if boss.state ~= last then
+            seq[#seq + 1] = boss.state; last = boss.state
+            if boss.state == 'dying_crown' then atCrown = math.abs(boss.x - boss.crownX) end
+            if boss.state == 'dying_flee' then releases = boss:releasesZone() end
+        end
+    end)
+    local order = table.concat(seq, '>')
     check('division', hpAfter == split and st == 'split' and crownFlew and nParts == 3 and partHp == 2 and hpSum == 6
-                      and r == 'stomp' and after1 == 1 and hpBar1 == 5 and dying == 'dying_pop' and releases
+                      and r == 'stomp' and after1 == 1 and hpBar1 == 5 and dying == 'dying_rejoin' and stunned == 3
+                      and order:match('dying_daze>dying_fetch>dying_crown>dying_flee>dead') ~= nil and atCrown and atCrown <= 24 and releases
                       and guards > 0 and guardsLeft == 0 and boss.state == 'dead' and not boss.alive,
         ('GP con %d de vida → %d (%s), corona vuela=%s; trozos %d de %s (barra %d); pisotón %s → trozo %d, barra %d; '
-         .. 'todos muertos: %s libera=%s; guardias %d→%d; al final %s'):format(
+         .. 'todos vencidos: %s (aturdidos %d), luego %s, junto a su corona a %s px, libera=%s; guardias %d→%d; al final %s'):format(
             split + 1, hpAfter, st, tostring(crownFlew), nParts, tostring(partHp), hpSum, tostring(r), after1, hpBar1,
-            dying, tostring(releases), guards, guardsLeft, boss.state))
+            dying, stunned, order, tostring(atCrown and math.floor(atCrown)), tostring(releases), guards, guardsLeft, boss.state))
 end
 
 function cases.trozos_dañan()

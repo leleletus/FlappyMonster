@@ -40,6 +40,7 @@ and their own folder to `sys.path`; scripts that import each other sit in the sa
 | `enemies/make_hopper_sprites.py --apply` | `enemies/hopper/<island>-Sheet.png` | yes (verified identical) |
 | `enemies/make_icecrabby_sprites.py`, `make_icecrabby_claws.py` | `enemies/crabby_ice/` | **NO: bodies hand-edited** |
 | `enemies/make_gummy_variants.py` | `enemies/gummy_ice/` (`--apply-helado`), `bosses/megagummy/` (`--apply-mega`) | not re-run |
+| `enemies/make_crown_broken.py` | `bosses/megagummy/crown_broken.png` (the King's broken crown after his defeat, from `crown.png`'s colours) | safe to re-run |
 | `enemies/make_gloomy_sprites.py` | `enemies/gloomy/`, `bosses/megagloomy/` | **NO: Mega Gloomy sheets hand-edited** |
 | `enemies/make_enemy_extras.py` | crushed Crabby frames, the guard's parachute, the icicle field | not re-run (never the Mega's claws) |
 | `bosses/make_icecrab_sprites.py` | `bosses/megacrabby_ice/` | **NO: bodies hand-edited** |
