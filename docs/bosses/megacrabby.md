@@ -76,3 +76,6 @@ are the USER's drawing: never overwrite). **Sounds:** `assets/sounds/bosses/mega
   walk vs idle from how far it moved since the previous DRAW; drawn more often than it moves (the credits' fixed
   1/60 s physics on a faster screen, a repeated online snapshot) every other frame saw no movement and it switched
   walk / idle frame each frame. "Moving" now lasts 0.1 s after the last advance (`_movedAt`).
+- 0.5.23, Xtra Extreme: the pair hemmed the player in (the waiting one kept chasing). `OPENINGS = { stuck }` and,
+  while its ally attacks or is stuck, the chase becomes `Boss:waitMove` (step aside, sway, face the player):
+  `docs/gameplay/difficulty.md` (6). The ice variant inherits it.

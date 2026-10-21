@@ -152,14 +152,33 @@ function love.update(dt)
             if ov > 8 and ovy > 8 then last.overT = (last.overT or 0) + dt end
             if list[1]:isAttacking() and list[2]:isAttacking() then last.bothT = (last.bothT or 0) + dt end
             if list[1]:isAttacking() or list[2]:isAttacking() then last.anyT = (last.anyT or 0) + dt end
+            -- el que ESPERA (su aliado ataca o está abierto a golpes) no estorba: cuánto rato se ACERCA al jugador
+            -- teniéndolo a menos de 3 casillas y a su altura (Boss:allyBusy / waitMove; arrinconado contra la pared
+            -- por un jugador quieto, como el de esta prueba, se queda: eso no cuenta)
+            local pl = st.player
+            last.wx = last.wx or {}
+            for i = 1, 2 do
+                local a, o = list[i], list[3 - i]
+                local px = last.wx[a] or a.x
+                last.wx[a] = a.x
+                if pl and not pl.dying and (o:isAttacking() or (o.isOpening and o:isOpening())) and a.state == 'chase' then
+                    last.waitT = (last.waitT or 0) + dt
+                    local toward = (a.x - px) * (pl.x - a.x) > 0
+                    if toward and math.abs(a.x - pl.x) < 3 * TILE_PX and math.abs(a.y - pl.y) < 1.5 * TILE_PX then
+                        last.pressT = (last.pressT or 0) + dt
+                    end
+                end
+            end
         end
     end
     if t > SECS then
         if last.duoT then
             -- los aliados se turnan: nunca atacan los dos a la vez (Boss:mayAttack); se atraviesan, no chocan
+            local press = (last.pressT or 0) / math.max(1, last.waitT or 0)
             local ok = (last.bothT or 0) <= 0.5      -- (un instante: la bola sale del agua de un salto sin esperar)
-            print(('Aliados %s %.1f s juntos · atacando alguno %.1f s, los dos a la vez %.1f s (se atraviesan: solapados %.1f s)'):format(
-                ok and 'OK   ' or 'FALLA', last.duoT, last.anyT or 0, last.bothT or 0, last.overT or 0))
+                       and press <= 0.05             -- (el que espera no le encierra: casi nunca va hacia el jugador)
+            print(('Aliados %s %.1f s juntos · atacando alguno %.1f s, los dos a la vez %.1f s (se atraviesan: solapados %.1f s) · esperando %.1f s, acercándose al jugador %.1f s (%d %%)'):format(
+                ok and 'OK   ' or 'FALLA', last.duoT, last.anyT or 0, last.bothT or 0, last.overT or 0, last.waitT or 0, last.pressT or 0, math.floor(press * 100)))
             if not ok then love.event.quit(1); return end
         end
         print(('Menor tiempo entre dos golpes: %.2f s'):format(last.minGap or -1))

@@ -139,7 +139,10 @@ Rules that can NOT be broken:
 - Phases: `bossPhase()` returns the phase → the zone uses it (`PhaseBlocks`, `phase` props of objects).
 - `self.levelRef` may be missing on the first step: set it in `updateBoss` (`self.levelRef = self.levelRef or level`).
 - List the attack states in the tuning table `ATTACKS = {...}` and ask `self:mayAttack(level)` where it decides to
-  attack (so two bosses on Xtra Extreme take turns).
+  attack (so two bosses on Xtra Extreme take turns). States where it is OPEN to hits after an attack go in
+  `OPENINGS = {...}` (they count as its turn). Where it chases the player, ask `self:allyBusy(level)` and, while
+  true, move with `self:waitMove(level, target)` (→ dir, facing): the waiting ally steps aside instead of hemming the
+  player in (used by both Mega Crabbies; the other bosses do not use it yet).
 - Anything that hits or can be hit and is not the outer / inner / hazard boxes: `debugBoxes()`.
 
 Reusable physics (Snowball Boss): `self:physics(level, dt)` (gravity 2200, collisions with blocks and bodies,

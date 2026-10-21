@@ -348,6 +348,13 @@ end
 --   * SE TURNAN: un jefe solo EMPIEZA un ataque si su aliado no está atacando ni acaba de hacerlo (`ALLY_GAP`
 --     s: un respiro para el jugador) — Boss:mayAttack, que cada tipo pregunta donde decide atacar (sus relojes
 --     siguen corriendo: en cuanto le toca, ataca). La copia no ataca hasta `ALLY_START` s.
+--   * EL QUE ESPERA NO ESTORBA (0.5.23, el usuario con los dos Mega Crabbies: mientras uno atacaba el otro le
+--     perseguía sin parar, le encerraba entre los dos y, cuando el primero quedaba clavado y vulnerable, se le
+--     ponía en medio): mientras el aliado ataca, acaba de atacar o está ABIERTO a golpes (`OPENINGS = { estado =
+--     true }` en el tuning: p. ej. clavado de cabeza) — Boss:allyBusy —, el otro se aparta al lado de la zona más
+--     lejos del jugador y pasea despacio por allí mirándole, sin cruzarse con él y retrocediendo si se le acerca
+--     (Boss:waitMove: el tipo lo usa en su estado de perseguir). Lo abierto cuenta como ataque para los turnos:
+--     el otro tampoco ataca mientras puedes golpear al primero.
 --   * Nada más, A PROPÓSITO: se mueven a su ritmo y se atraviesan. Se probó que chocaran / se apartaran
 --     (empujones, cargas cortadas) y frenar al que espera (quedaban flotando a cámara lenta): más problemas que
 --     ventajas (el usuario).
@@ -372,10 +379,15 @@ function Boss:isAttacking()
     local a = self.tuning and self.tuning.ATTACKS
     return a ~= nil and a[self.state] == true
 end
+-- ¿Abierto a golpes tras un ataque? (la tabla `OPENINGS` del tuning del tipo)
+function Boss:isOpening()
+    local o = self.tuning and self.tuning.OPENINGS
+    return o ~= nil and o[self.state] == true
+end
 
 -- Cuándo empezó / acabó su último ataque (para los turnos con un aliado)
 function Boss:trackAttack()
-    local now = self:isAttacking()
+    local now = self:isAttacking() or self:isOpening()          -- (abierto a golpes: aún es su turno)
     if now and not self._wasAttacking then self.attackSince = self.fightT or 0 end
     if not now and self._wasAttacking then self.attackEnd = self.fightT or 0 end
     self._wasAttacking = now
@@ -389,11 +401,54 @@ function Boss:mayAttack(level)
     local t = self.fightT or 0
     if self.props.xtraCopy and t < Boss.ALLY_START then return false end
     for _, a in ipairs(self:allies(level)) do
-        if a:isActive() and ((a.isAttacking and a:isAttacking()) or (a.attackEnd and t - a.attackEnd < Boss.ALLY_GAP)) then
+        if a:isActive() and ((a.isAttacking and a:isAttacking()) or (a.isOpening and a:isOpening())
+                             or (a.attackEnd and t - a.attackEnd < Boss.ALLY_GAP)) then
             return false
         end
     end
     return true
+end
+
+-- ¿Le toca ESPERAR sin estorbar? (con un aliado: lo mismo que no poder atacar, salvo la espera inicial de la copia)
+function Boss:allyBusy(level)
+    if not (self.props and self.props.xtraPair) or not self:inFight() then return false end
+    local t = self.fightT or 0
+    for _, a in ipairs(self:allies(level)) do
+        if a:isActive() and ((a.isAttacking and a:isAttacking()) or (a.isOpening and a:isOpening())
+                             or (a.attackEnd and t - a.attackEnd < Boss.ALLY_GAP)) then
+            return true
+        end
+    end
+    return false
+end
+
+-- CÓMO ESPERA (el tipo lo usa en vez de perseguir mientras Boss:allyBusy): devuelve la dirección en que andar
+-- (-1, 0, 1) y hacia dónde mirar (al jugador). Va al lado de la zona más lejos del jugador (`WAIT_EDGE` casillas
+-- de la pared) y pasea despacio por allí; nunca anda hacia el jugador si le tiene en medio, y si el jugador se le
+-- acerca a menos de `WAIT_DIST` casillas, retrocede (si la pared le deja). `target` = el jugador al que mira.
+Boss.WAIT_DIST, Boss.WAIT_EDGE, Boss.WAIT_SWAY = 4, 2.5, 1
+function Boss:waitMove(level, target)
+    local z = self.zone
+    if not (z and target) then return 0, self.facing end
+    local T, hw = TILE_PX, (self.outerW or TILE_PX) / 2
+    local toP = target.x - self.x
+    local face = (toP > 0) and 1 or ((toP < 0) and -1 or self.facing)
+    local near = math.abs(toP) < Boss.WAIT_DIST * T
+    if near then
+        -- se le acerca: atrás (sin salirse de la zona)
+        local back = -face
+        local room = (back > 0) and (z.x1 - hw - self.x) or (self.x - z.x0 - hw)
+        return (room > 8) and back or 0, face
+    end
+    local mid = (z.x0 + z.x1) / 2
+    local spot = (target.x < mid) and (z.x1 - Boss.WAIT_EDGE * T) or (z.x0 + Boss.WAIT_EDGE * T)
+    spot = spot + math.sin((self.fightT or 0) * 0.9) * Boss.WAIT_SWAY * T         -- (paseando, no clavado)
+    local dx = spot - self.x
+    if math.abs(dx) < 12 then return 0, face end
+    local dir = (dx > 0) and 1 or -1
+    -- (el jugador en medio del camino, o casi: se queda donde está)
+    if dir == face and math.abs(toP) < math.abs(dx) + Boss.WAIT_DIST * T then return 0, face end
+    return dir, face
 end
 
 

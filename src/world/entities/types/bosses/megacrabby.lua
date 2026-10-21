@@ -33,10 +33,12 @@ local Crawler     = require 'src/world/entities/base/Crawler'
 local SpriteStrip = require 'src/fx/SpriteStrip'
 
 -- (aliados en Xtra extremo, Boss:mayAttack: qué estados son atacar)
+local WAIT_SPEED = 0.7               -- × su velocidad al esperar a que acabe el aliado (Boss:waitMove)
 local ATTACKS = { windup = true, charge = true, wallclimb = true, wallaim = true, pounce = true, climb = true,
                   ceiling = true, aim = true, drop = true, summon = true, clap = true }
 local Mega = Entity.extend(Boss, {
     ATTACKS = ATTACKS,
+    OPENINGS = { stuck = true },          -- (clavado de cabeza: el aliado espera sin estorbar, Boss:allyBusy)
     walkFps = 6, walkFrames = 3,
     debugColor = { 1, 0.45, 0.2 },
     -- (alto completo: apoya las patas justo en el suelo y en las paredes)
@@ -676,10 +678,19 @@ function Mega:updateBoss(dt, level)
     elseif st == 'chase' then
         local tgt = self:pickTarget(level)
         local dx = tgt and (tgt.x - self.x) or 0
-        local dir = (math.abs(dx) > 20) and sign(dx) or 0
-        if dir ~= 0 then self.facing = dir end
-        self:walk(level, dt, dir * (p.chaseSpeed or 150) * k)
-        if dir ~= 0 then self:animWalk(dt, self.tuning.walkFps * k) end
+        if self:allyBusy(level) then
+            -- su aliado ataca (o está abierto a golpes): se aparta a su lado de la zona y espera paseando, mirando
+            -- al jugador, sin encerrarle ni ponerse en medio (Boss:waitMove)
+            local wdir, face = self:waitMove(level, tgt)
+            self.facing = face
+            self:walk(level, dt, wdir * (p.chaseSpeed or 150) * WAIT_SPEED * k)
+            if wdir ~= 0 then self:animWalk(dt, self.tuning.walkFps * WAIT_SPEED * k) end
+        else
+            local dir = (math.abs(dx) > 20) and sign(dx) or 0
+            if dir ~= 0 then self.facing = dir end
+            self:walk(level, dt, dir * (p.chaseSpeed or 150) * k)
+            if dir ~= 0 then self:animWalk(dt, self.tuning.walkFps * k) end
+        end
         self.chargeCd = self.chargeCd - dt
         self.ceilT = self.ceilT + dt
         self.pounceT = self.pounceT + dt

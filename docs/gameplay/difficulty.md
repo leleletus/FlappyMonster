@@ -88,3 +88,15 @@ unlocked); Free Play has a ◀ ▶ selector (key F or tap either half); online, 
   around at once. Server-simulated online (they are ordinary entities in the snapshots; the director is never sent).
   What a life gives is saved at the end of the level, like every pickup. Harness `difficulty_rules` case `ayuda`.
   Not judged yet: the rates (how much easier it gets).
+
+- (6) THE WAITING ALLY STEPS ASIDE (0.5.23, the user: on Xtra Extreme the two Mega Crabbies were "incredibly hard,
+  tedious and horrible" — while one attacked, the other kept chasing the player, trapping them between the two
+  (jumping over it made it turn so you landed on its spike), and when the attacker ended stuck and vulnerable the
+  chaser stood in the way, so it could not be hit). Boss base: `OPENINGS` (states open to hits after an attack;
+  Mega: `stuck`) count as the boss's turn, so the ally does not attack then either; `Boss:allyBusy(level)` = the ally
+  attacks, has just attacked (`ALLY_GAP`) or is open; `Boss:waitMove(level, target)`: while busy, go to the zone side
+  farther from the player (`WAIT_EDGE` 2.5 cells from the wall), sway slowly there (±`WAIT_SWAY` 1 cell) facing the
+  player, never walk toward the player when they are in the way, step back if they come within `WAIT_DIST` 4 cells
+  (if the wall allows). The Mega uses it in its chase at 0.7 × speed. Harness `sp_boss DIFF=xtra`: the waiting one
+  walks toward the player (within 3 cells) ≤ 5 % of its waiting time (0 % after, 7 % before against the harness's
+  standing player). Not judged yet: how the fight feels.
