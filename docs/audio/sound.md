@@ -62,8 +62,12 @@ duration (the drowning kills when its audio ends, `DROWN_AUDIO_DUR`) and the sam
   melody: band-limited pulses and a triangle, no drums, no reverb — a 12.5 % pulse TRILL in 16ths between the fifth and
   the minor sixth (E – F over A minor, the semitone pair of the recipe), a 25 % pulse arpeggio of the minor chord in
   8ths, a triangle bass on the root jumping octaves. EVERYTHING rises one semitone per bar (A minor → F minor in ~9
-  bars) while the tempo goes 140 → 236 BPM. Ending: the figure stops and the tonic minor chord is held high with a
-  fast chip tremolo (resolved, but tense), fading in the last 0.95 s for the glug.
+  bars) while the tempo goes 140 → 236 BPM. Ending (0.5.18; the user: the held chord sounded forced, like stopping
+  on purpose, and the hand-over to the glug should be organic): in the last 1.6 s the player SINKS — the figure keeps
+  going but slows down (−45 %), each note falls a little more (down to −5 semitones) and a low-pass filter closes
+  (16 kHz → 300 Hz, as if heard under water); the trill keeps rubbing to the end and it all lands on the low, muffled
+  TONIC (resolved) that fades exactly where the glug's dull thump comes in.
+  (0.5.17 ending, discarded: the figure stopped and the tonic minor chord was held high with a tremolo.)
   (2nd version, 0.5.16, discarded: four channels with drums, the E–F motif with a minor third on top, octave bass and
   a dry diminished hit on E at the end — "suena rara".)
 - `oneUp`, 2nd version (0.5.16; the 1st "boing" sounded odd): a fast arpeggio up a G major chord (G5 – B5 – D6 – G6)

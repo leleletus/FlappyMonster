@@ -10,7 +10,8 @@
 #   air_gasp    la BOCANADA al salir o al coger una burbuja: aire que entra (soplo con filtro que sube) y un "pop"
 #   glugluglu   AHOGADO: burbujas que suben y se apagan (cada burbuja, un tono que sube muy rápido), un golpe sordo
 #   drowning    la MÚSICA de urgencia del ahogo (12,1 s): ver drowning() — trino de semitono sobre un arpegio menor,
-#               todo sube un semitono por compás y acelera (140 → 236 BPM); acaba en el acorde de la tónica, temblando
+#               todo sube un semitono por compás y acelera (140 → 236 BPM); al final se HUNDE (frena, cae y se apaga
+#               tras un filtro) hasta la tónica grave, donde entra el glu-glu
 #   one_up      la VIDA EXTRA: arpegio rápido de sol mayor que sube y un trino brillante (ver one_up())
 #
 # Desde la raíz del repo:  python3 tools/sounds/water.py      (necesita numpy y ffmpeg para los .ogg)
@@ -192,52 +193,65 @@ def hz(semis):                                         # semitonos desde la4 (44
 
 
 def drowning():
-    """3ª versión, HECHA DE NUEVO (la 2ª, con batería y un golpe disminuido, sonaba rara; el usuario: que la urgencia
-    venga de lo extraño que resulta, más en la línea de la original). Inspirada en la FORMA de la de Sonic 1 —una
-    figura corta de chip que no para, SUBE de tono cada compás y ACELERA, y acaba en una nota sostenida— sin copiar su
+    """3ª versión (0.5.17), con el FINAL cambiado (0.5.18: el acorde sostenido sonaba forzado, como parar de golpe).
+    La forma de la de Sonic 1 —una figura corta de chip que no para, SUBE de tono cada compás y ACELERA— sin su
     melodía:
       · voces (pulsos sin aliasing y un triángulo, sin batería ni reverb):
           1. pulso 12,5 %: TRINO en semicorcheas entre la QUINTA y la SEXTA MENOR (mi – fa sobre la menor: el par de
              semitono de la receta) — la parte inquietante
           2. pulso 25 %: arpegio del acorde menor en corcheas (1 – 3 – 5 – 3), una octava abajo
           3. triángulo: el bajo, la tónica en corcheas saltando de octava
-      · cada COMPÁS todo sube UN SEMITONO (9 compases: de la menor a fa# menor) y el tempo pasa de 140 a 236 BPM
-      · final: la figura se corta y queda el ACORDE de la tónica (resuelto) en lo más agudo, con un temblor rápido de
-        volumen (tensión), que se apaga a tiempo para el glu-glu"""
+      · cada COMPÁS todo sube UN SEMITONO y el tempo pasa de 140 a 236 BPM
+      · FINAL (los últimos SINK s): el jugador se HUNDE — la figura sigue, pero frena, cada nota cae un poco más (hasta
+        5 semitonos) y el sonido se apaga tras un filtro que se cierra (como oírlo bajo el agua); el trino sigue
+        rozando hasta el final y todo acaba en la TÓNICA grave y sorda (resuelto) que se pierde, justo donde entra el
+        golpe sordo del glu-glu"""
     n = TARGET['water/drowning'][0]
     total = n / SR
-    END = total - 0.95                                  # (el acorde final: los últimos 0,95 s)
+    SINK = 1.6
+    T1 = total - SINK                                   # (empieza a hundirse)
+    LAST = total - 0.42                                 # (la última nota: la tónica grave)
     y = np.zeros(n)
-    t, step, bar = 0.0, 0, 0
-    while t < END:
-        bpm = BPM0 + (BPM1 - BPM0) * (t / END)
-        six = 60.0 / bpm / 4                            # semicorchea
-        root = step // 16                               # compás → semitonos que ha subido
-        R = root                                        # (la menor = 0)
+    t, step = 0.0, 0
+    bpm1 = BPM1
+    while t < LAST:
+        if t < T1:
+            bpm = BPM0 + (BPM1 - BPM0) * (t / T1)
+            drop = 0.0
+        else:
+            k = (t - T1) / SINK
+            bpm = BPM1 * (1 - 0.45 * k)                 # frena
+            drop = -5.0 * k ** 1.4                      # y cae
+        six = 60.0 / bpm / 4
+        R = step // 16 + drop
         pos = step % 16
-        # 1. trino quinta / sexta menor, octava 5 (mi5 = la4 + 7 + 12)
         sem = 12 + 7 + (pos % 2)
         _note(y, t, six, lambda tt, f=hz(R + sem), d=six * 0.8: blpulse(f, tt, 0.125) * gate(tt, d), 0.30, n)
-        # 2. arpegio del acorde menor en corcheas, octava 4
         if pos % 2 == 0:
             arp = (0, 3, 7, 3)[(pos // 2) % 4]
             _note(y, t, 2 * six, lambda tt, f=hz(R + arp), d=2 * six * 0.7: blpulse(f, tt, 0.25) * gate(tt, d), 0.24, n)
-        # 3. bajo: tónica en corcheas, saltando de octava
-        if pos % 2 == 0:
             fb = hz(R - 24 + (12 if (pos // 2) % 2 else 0))
             _note(y, t, 2 * six, lambda tt, f=fb, d=2 * six * 0.85: tri(f * tt) * gate(tt, d, 0.01), 0.55, n)
         t += six
         step += 1
-    # FINAL: el acorde de la tónica (menor) sostenido, arriba, temblando — resuelto pero tenso
-    R = step // 16
-    a = int(SR * END)
+    # la última: la TÓNICA grave (ya caída), sostenida y perdiéndose
+    R = step // 16 - 5.0
+    a = int(SR * t)
     m = n - a
     tt = t_(m)
-    trem = 0.75 + 0.25 * np.sign(np.sin(2 * np.pi * 18 * tt))          # temblor de volumen (de chip)
-    fade = np.exp(-tt / 0.45)
-    chord = (0.32 * blpulse(hz(R + 12), tt, 0.125) + 0.26 * blpulse(hz(R + 15), tt, 0.25)
-             + 0.26 * blpulse(hz(R + 19), tt, 0.25) + 0.5 * tri(hz(R - 24) * tt))
-    y[a:a + m] += chord * trem * fade
+    y[a:a + m] += (0.7 * tri(hz(R - 24) * tt) + 0.25 * blpulse(hz(R - 12), tt, 0.25)) * np.exp(-tt / 0.18)
+    # el hundimiento: un filtro paso bajo que se cierra (16 kHz → 300 Hz) y un poco de volumen menos
+    a = int(SR * T1)
+    seg = y[a:].copy()
+    k = np.linspace(0, 1, len(seg))
+    fc = 16000 * (300 / 16000) ** (k ** 1.2)
+    alpha = 1 - np.exp(-2 * np.pi * fc / SR)
+    out = np.empty_like(seg)
+    lo = 0.0
+    for i in range(len(seg)):
+        lo += alpha[i] * (seg[i] - lo)
+        out[i] = lo
+    y[a:] = out * (1 - 0.35 * k)
     return y
 
 
