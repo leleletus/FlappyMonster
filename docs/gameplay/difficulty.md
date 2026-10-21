@@ -23,7 +23,7 @@ unlocked); Free Play has a ◀ ▶ selector (key F or tap either half); online, 
 | `ventDelay` | delay between oxygen bubbles | `Level` vents |
 | `bossExtra` | TWO allied bosses per arena — kept for the future: NO difficulty sets it since 0.5.24 (harness: `sp_boss DIFF=xtra PAIR=1`, `difficulty_rules` `doble` switch it on) | `src/world/systems/XtraBosses.lua` |
 | `bossFury`, `bossFuryPace` | bosses START ANGRY until their own angry phase: reddish pulse, light shake, anger symbols, × pace (Xtra Extreme, 1.2; a type may set `FURY_PACE`) | `Boss:furyActive` / `renderLive`, `Difficulty.dt`, `BossFx.fury` |
-| `bossFood`, `bossLives` | seconds (average, ×0.7–1.3 at random; the first at 0.4–0.8) between FOOD / EXTRA LIVES falling from the sky inside a boss zone while it fights (Extreme food 11.34; Xtra Extreme food 9.09 + lives 31.9 — the user: 0.5.6 1 % fewer than 11 / 9 / 30; 0.5.24 Extreme food 2 % fewer, Xtra lives 5 % fewer) | `src/world/entities/types/directors/bossdrops.lua` |
+| `bossFood`, `bossLives` | seconds (average, ×0.7–1.3 at random; the first at 0.4–0.8) between FOOD / EXTRA LIVES falling from the sky inside a boss zone while it fights (Extreme food 11.34; Xtra Extreme food 9.09 + lives 70 — the user: 0.5.6 1 % fewer than 11 / 9 / 30; 0.5.24 Extreme food 2 % fewer, Xtra lives 5 % fewer; 0.5.25 Xtra lives 54 % fewer, 31.9 → 70 s: "incredibly easy, up to 8 extra lives in one boss") | `src/world/entities/types/directors/bossdrops.lua` |
 | `livesStart`, `restartGame`, `scoreMult` | story lives, what a Game Over restarts, points multiplier | `src/story/Run.lua`, `Score.lua` |
 | `botRest`, `botChase`, `botCount` | the KOTH bot's hostility | `src/ai/Bot.lua`, `src/story/BonusMatch.lua` |
 

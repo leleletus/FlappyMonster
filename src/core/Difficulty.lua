@@ -58,7 +58,7 @@ Difficulty.MODS = {
     xtra    = { scoreMult = 2, enemyPace = 1.25, trapPace = 1.3, bossPace = 1.2, bossHp = 1.15, invuln = 0.75, airTime = 0.8, livesStart = 6,
                 sense = 1.3, botRest = 0.7, botChase = 10, ventDelay = 1.35, botCount = 2, pairHp = 0.65, restartGame = true,
                 bossFury = true, bossFuryPace = 1.2,
-                bossFood = 9.09, bossLives = 31.9 },   -- (vidas 0.5.24: un 5 % menos que 30,3)
+                bossFood = 9.09, bossLives = 70 },   -- (vidas 0.5.25: un 54 % menos que 31,9 — salían hasta 8 por jefe, el usuario)
 }
 -- DESBLOQUEOS (historia, globales): acabar el juego (el jefe del último mundo) en esta dificultad abre esta otra
 Difficulty.UNLOCKS = { hard = 'extreme', extreme = 'xtra' }

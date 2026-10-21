@@ -388,7 +388,7 @@ function cases.ayuda()
     local before = 0
     for _, e in ipairs(es) do if e.summonOf == 'bossdrops' and e.alive then before = before + 1 end end
     level.bossZones[1].state = 'fight'
-    step(level, es, 45)
+    step(level, es, 60)                                      -- (la primera vida, a 0,4-0,8 de `bossLives`)
     local z = level.bossZones[1]
     local floor = (H - 1) * T
     local landed, food, life, bad = 0, 0, 0, {}
@@ -404,7 +404,7 @@ function cases.ayuda()
     Difficulty.bind(nil)
     check('ayuda', nh.bossdrops == 0 and ne.bossdrops == 1 and ne.apple == 2 and ne.extralife == 0
                    and nx.apple == 2 and nx.extralife == 1 and before == 0 and food == 2 and life == 1 and #bad == 0,
-        ('reserva difícil %d/%d/%d, extremo %d/%d/%d, xtra %d/%d/%d (director/comidas/vidas); en 45 s de pelea (Xtra) cayeron %d comidas y %d vidas, %d posadas en el suelo de la zona (fuera de la lava)%s; sin pelea %d')
+        ('reserva difícil %d/%d/%d, extremo %d/%d/%d, xtra %d/%d/%d (director/comidas/vidas); en 60 s de pelea (Xtra) cayeron %d comidas y %d vidas, %d posadas en el suelo de la zona (fuera de la lava)%s; sin pelea %d')
         :format(nh.bossdrops, nh.apple, nh.extralife, ne.bossdrops, ne.apple, ne.extralife, nx.bossdrops, nx.apple, nx.extralife,
                 food, life, landed, #bad > 0 and (': MAL ' .. table.concat(bad, '; ')) or '', before))
 end
