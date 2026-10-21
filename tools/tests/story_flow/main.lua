@@ -615,7 +615,14 @@ function love.update(dt)
         require('src/story/Shards').migrate(old)
         local n = 0
         for _ in pairs(old.shards) do n = n + 1 end
-        check('migrar', n == 4 and old.shards['1a'] and old.shards['4b'], ('partida antigua en Xtra con 2 jefes vencidos: %d mitades'):format(n))
+        -- (y una de Xtra con las MITADES de cuando había dos jefes por arena — hasta 0.5.23 —: cada mitad, el entero)
+        local halves = { difficulty = 'xtra', shards = { ['1a'] = true, ['1b'] = true, ['3a'] = true } }
+        require('src/story/Shards').migrate(halves)
+        local h = 0
+        for _ in pairs(halves.shards) do h = h + 1 end
+        check('migrar', n == 2 and old.shards['1'] and old.shards['4'] and h == 2 and halves.shards['1'] and halves.shards['3'],
+            ('partida antigua en Xtra con 2 jefes vencidos: %d fragmentos; con mitades 1a, 1b, 3a: %d fragmentos (1=%s, 3=%s)'):format(
+             n, h, tostring(halves.shards['1']), tostring(halves.shards['3'])))
         gStateMachine:change('story_map', { world = 1, node = 1 }); go('walk0')
     -- ── MAPA: pulsar ENTRAR mientras el monstruo aún anda hacia el nodo: entra al LLEGAR, no antes ──
     elseif step == 'walk0' and t - T > 0.4 then

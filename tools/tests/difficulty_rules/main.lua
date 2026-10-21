@@ -224,6 +224,10 @@ function cases.sentidos()
 end
 
 function cases.doble()
+    -- (dos jefes aliados — `bossExtra` —: hoy ninguna dificultad lo pone, se guarda para más adelante; se prueba
+    --  encendiéndolo en Xtra extremo solo durante este caso)
+    Difficulty.MODS.xtra.bossExtra = true
+    local ok, err = pcall(function()
     local Worlds = require 'src/story/Worlds'
     local EntityTypes = require 'src/world/entities/base/EntityTypes'
     local list = {}
@@ -279,7 +283,74 @@ function cases.doble()
             id, #one, #two, r1, r2, tostring(same), tostring(inside), tostring(sep), tostring(pair), e.hpMax) end
     end
     check('doble', #list >= 6 and #bad == 0,
-        ('%d niveles de jefe en la historia, todos con dos jefes en Xtra extremo%s'):format(#list, #bad > 0 and (': MAL ' .. table.concat(bad, '; ')) or ''))
+        ('%d niveles de jefe en la historia, todos con dos jefes con bossExtra%s'):format(#list, #bad > 0 and (': MAL ' .. table.concat(bad, '; ')) or ''))
+    end)
+    Difficulty.MODS.xtra.bossExtra = nil
+    if not ok then error(err, 0) end
+end
+
+-- ENFADO GENÉRICO de Xtra extremo (`bossFury`): UN jefe por arena; empieza enfadado (× ritmo) y se le quita al
+-- llegar a su fase enfadada (Mega Crabby: poca vida; Bola de Nieve: fase 2); el Rey Gummy lo lleva toda la pelea;
+-- en Extremo, nada
+function cases.enfado()
+    local Worlds = require 'src/story/Worlds'
+    local EntityTypes = require 'src/world/entities/base/EntityTypes'
+    local function bossesIn(level)
+        local n = 0
+        for _, pl in ipairs(level.entities) do
+            local def = EntityTypes.byName[pl.type]
+            if def and def.category == 'Jefes' then n = n + 1 end
+        end
+        return n
+    end
+    local single = true
+    for w = 1, Worlds.count() do
+        for _, nd in ipairs(Worlds.nodes(w)) do
+            local path = Worlds.path(nd.id)
+            if bossesIn(Level.new(path, 'xtra')) ~= bossesIn(Level.new(path)) then single = false end
+        end
+    end
+    local function fight(path, diff, typeName)
+        local level = Level.new(path, diff)
+        level.difficulty = diff
+        Difficulty.bind(level)
+        for _, pl in ipairs(level.entities) do
+            if pl.type == typeName then
+                local e = Entities.create(pl)
+                e.zone = level.bossZones[1]
+                if e.zone then e.zone.state = 'fight' end
+                e.introPlayed = true
+                e:startFight(1)
+                return e, level
+            end
+        end
+    end
+    local out = {}
+    -- Mega Crabby: enfadado al empezar, sin enfado genérico con poca vida (su enfado de siempre)
+    local m = fight('assets/levels/guarida_cangrejo_rey.json', 'xtra', 'megacrabby')
+    local k0 = Difficulty.dt(m, 1)
+    local f0 = m:furyActive()
+    m.hp = 1
+    local f1, k1 = m:furyActive(), Difficulty.dt(m, 1)
+    out[#out + 1] = ('Mega Crabby: al empezar %s (×%.2f), con poca vida %s (×%.2f)'):format(tostring(f0), k0, tostring(f1), k1)
+    -- Bola de Nieve: hasta su fase 2
+    local s = fight('assets/levels/lago_helado.json', 'xtra', 'snowboss')
+    local s1 = s:furyActive()
+    s.phase = 2
+    local s2 = s:furyActive()
+    out[#out + 1] = ('Bola de Nieve: fase 1 %s, fase 2 %s'):format(tostring(s1), tostring(s2))
+    -- Rey Gummy: toda la pelea
+    local g = fight('assets/levels/reino_gummy.json', 'xtra', 'megagummy')
+    local g1 = g:furyActive()
+    g.phase = 3
+    local g3 = g:furyActive()
+    out[#out + 1] = ('Rey Gummy: fase 1 %s, fase 3 %s (×%.2f)'):format(tostring(g1), tostring(g3), Difficulty.dt(g, 1))
+    -- Extremo: nada
+    local x = fight('assets/levels/guarida_cangrejo_rey.json', 'extreme', 'megacrabby')
+    local xf = x:furyActive()
+    Difficulty.bind(nil)
+    check('enfado', single and f0 and not f1 and k0 > k1 * 1.15 and s1 and not s2 and g1 and g3 and not xf,
+        ('un jefe por arena en Xtra extremo=%s · %s · en Extremo enfadado=%s'):format(tostring(single), table.concat(out, ' · '), tostring(xf)))
 end
 
 -- AYUDA EN LAS PELEAS DE JEFE: en Extremo caen comidas y en Xtra extremo además vidas, dentro de la zona y hasta
@@ -340,7 +411,7 @@ end
 
 function love.load()
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'neutro', 'enemigos', 'categorias', 'jefe', 'jugador', 'peligros', 'peligros_ent', 'salas', 'sentidos', 'doble', 'ayuda' }) do
+    for _, n in ipairs({ 'neutro', 'enemigos', 'categorias', 'jefe', 'jugador', 'peligros', 'peligros_ent', 'salas', 'sentidos', 'doble', 'ayuda', 'enfado' }) do
         if not only or only == n then
             local ok, err = pcall(cases[n])
             if not ok then check(n, false, 'ERROR ' .. tostring(err)) end

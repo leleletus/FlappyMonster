@@ -485,6 +485,26 @@ function Boss:netApply(a, b, f)
     self:netApplyExtra(xa, xb, f)
 end
 
+-- ── ENFADO GENÉRICO (Xtra extremo: modificador `bossFury`) ──────────────────────────────────────────────────
+-- El jefe EMPIEZA la pelea enfadado: rojizo que late, un temblor leve, símbolos de enfado (src/fx/BossFx) y todo
+-- más rápido (× `bossFuryPace`, o el `FURY_PACE` de su tuning: Difficulty.dt). Cuando llega a SU fase enfadada
+-- (Boss:angryPhase: el Mega Crabby con poca vida, la Bola de Nieve en su fase 2...) se le quita y sigue con lo
+-- suyo de siempre; quien no tiene una (Rey Gummy, Espejo, Nave Malvada) lo lleva toda la pelea. Igual en un
+-- jugador, en el servidor y en el cliente (sale de la dificultad y de lo que llega en las instantáneas).
+function Boss:angryPhase() return false end   -- (el tipo: ¿ya está en su fase enfadada?)
+function Boss:furyActive()
+    local D = require 'src/core/Difficulty'
+    return D.flag('bossFury') and self:isActive() and not self:angryPhase()
+end
+-- Dibujarlo: con el enfado genérico encima si toca (los bucles de dibujo llaman a esto en vez de a render)
+function Boss:renderLive(camX, camY)
+    if self:furyActive() and not EDITOR_VIEW then
+        require('src/fx/BossFx').fury(self, camX, camY, self.render)
+    else
+        self:render(camX, camY)
+    end
+end
+
 -- ── Hooks por defecto ─────────────────────────────────────────────────────────
 Boss.stunnable = false                        -- ¿el ground pound lo deja KO? (Mirror: sí)
 Boss.hurtSound = 'bossHurt'                   -- sonido al recibir un golpe (cada jefe el suyo)

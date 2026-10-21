@@ -28,6 +28,9 @@ local Snow        = require('src/world/entities/types/bosses/snowboss').class
 local MG = Entity.extend(Boss, {
     -- (aliados en Xtra extremo: qué estados son atacar)
     ATTACKS = { flop_wind = true, flop_air = true, flop_land = true, summon = true },
+    -- (Xtra extremo: lleva el enfado genérico TODA la pelea — no tiene fase enfadada — y sus fases ya la endurecen:
+    --  más suave que los demás, × 1,1 en vez de `bossFuryPace`, para que siga siendo posible; el usuario)
+    FURY_PACE = 1.1,
     debugColor = { 1, 0.95, 0.6 },
     hitbox = { outerW = 12 / 16, outerH = 13 / 16, innerW = 11 / 16, innerH = 12 / 16 },
 })

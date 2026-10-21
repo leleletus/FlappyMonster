@@ -696,6 +696,8 @@ function Snow:onFightStart(n)
 end
 
 function Snow:bossPhase() return self.phase or 1 end
+-- (Xtra extremo: el enfado genérico — Boss:furyActive — le dura hasta su fase 2, la de la cara enfadada)
+function Snow:angryPhase() return (self.phase or 1) >= 2 end
 
 function Snow:phaseFor()
     local p = self.props

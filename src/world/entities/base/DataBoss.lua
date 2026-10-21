@@ -62,6 +62,8 @@ function M:title()
 end
 
 function M:bossPhase() return (self.hp or 1) <= (self.hpMax or 1) * opt(self, 'rageAt') and 2 or 1 end
+-- (Xtra extremo: el enfado genérico — Boss:furyActive — le dura hasta su fase enfadada)
+function M:angryPhase() return self:bossPhase() == 2 end
 function M:isVulnerable()
     if not self:isActive() then return false end
     return opt(self, 'vulnerable') == 'always' or self.state == 'tired'

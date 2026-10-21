@@ -1,7 +1,8 @@
 -- src/story/Shards.lua
 -- LOS FRAGMENTOS DEL ESPEJO (historia "El Espejo Roto", docs/historia/HISTORIA.md). Cada jefe guarda uno:
 -- al vencerlo lo SUELTA, el jugador lo recoge y queda en su partida (Run.addShard). Con los siete, el final.
--- En Xtra extremo hay dos jefes por arena: cada uno suelta MEDIO fragmento ('3a' el original, '3b' la copia).
+-- Con dos jefes por arena (`bossExtra`: Xtra extremo hasta 0.5.23; hoy ninguna dificultad) cada uno suelta MEDIO
+-- fragmento ('3a' el original, '3b' la copia).
 --   Shards.LEVEL[nivel] = nº de fragmento       Shards.ids(n, xtra) → { '3' } | { '3a', '3b' }
 --   Shards.count(data) → tengo, total           Shards.pending(nivel, data) → los que faltan de ese nivel
 --   Shards.drops(state, def) → el gestor dentro de un nivel (AdventureState: args.shards = def)
@@ -55,7 +56,18 @@ end
 
 -- Partidas de antes de que existieran los fragmentos: los de los jefes ya vencidos se dan por recogidos
 function Shards.migrate(data)
-    if type(data.shards) == 'table' then return end
+    if type(data.shards) == 'table' then
+        -- (las MITADES de cuando Xtra extremo tenía dos jefes por arena — hasta 0.5.23 —: si su dificultad ya no
+        --  los pone, cada mitad recogida cuenta como el fragmento entero: para acabar el nivel había que vencer a los dos)
+        if not Shards.isXtra(data.difficulty) then
+            for n = 1, Shards.TOTAL do
+                local a, b = n .. 'a', n .. 'b'
+                if data.shards[a] or data.shards[b] then data.shards[tostring(n)] = true end
+                data.shards[a], data.shards[b] = nil, nil
+            end
+        end
+        return
+    end
     data.shards = {}
     local xtra = Shards.isXtra(data.difficulty)
     for level, n in pairs(Shards.LEVEL) do

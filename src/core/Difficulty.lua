@@ -18,7 +18,8 @@
 --
 -- Qué significa cada una (el usuario): NORMAL = los niveles como están hoy; DIFÍCIL = los jefes como
 -- están hoy; FÁCIL, todo más lento y con más margen; EXTREMO, más rápido y con menos margen;
--- XTRA EXTREMO = extremo + cambios en los jefes (dos a la vez...: `bossExtra`, etapa 6).
+-- XTRA EXTREMO = extremo + cambios en los jefes: desde 0.5.24 UNO que empieza ENFADADO (`bossFury`); antes, dos a
+-- la vez (`bossExtra`, etapa 6: se guarda para más adelante, ninguna dificultad lo pone).
 -- Modificadores:
 --   enemyPace, trapPace, bossPace   ritmo (× tiempo) de enemigos / trampas / jefes
 --   ventDelay                       × lo que tardan los respiraderos en soltar una burbuja de aire
@@ -27,7 +28,9 @@
 --   invuln                          × tiempo invulnerable tras un golpe o al reaparecer
 --   airTime                         × aire bajo el agua
 --   hazardHurt                      pinchos y lava quitan 1 de vida (y te sacan de un bote) en vez de matar
---   bossExtra                       un SEGUNDO jefe en cada arena (src/world/systems/XtraBosses.lua; Xtra extremo)
+--   bossExtra                       un SEGUNDO jefe en cada arena (src/world/systems/XtraBosses.lua; hoy ninguna)
+--   bossFury, bossFuryPace          los jefes empiezan ENFADADOS (rojizos, temblor, símbolos y × ritmo) hasta su
+--                                   propia fase enfadada (Boss:furyActive; Xtra extremo)
 --   pairHp                          × vida de cada jefe cuando van DOS a la vez (bossExtra)
 --   sense                           × alcance con que los enemigos te notan: ver desde el techo, oír ruidos,
 --                                   sentirte cerca, alcance de morteros y peces globo (Fácil 0,8; Extremo 1,3)
@@ -51,10 +54,11 @@ Difficulty.MODS = {
     normal  = { bossPace = 0.85, bossHp = 0.9, botRest = 2, botChase = 5 },
     hard    = { scoreMult = 1.2, enemyPace = 1.1, trapPace = 1.1, airTime = 0.9, ventDelay = 1.15 },
     extreme = { scoreMult = 1.5, enemyPace = 1.25, trapPace = 1.3, bossPace = 1.2, bossHp = 1.15, invuln = 0.75, airTime = 0.8, livesStart = 4,
-                sense = 1.3, botRest = 0.7, botChase = 10, ventDelay = 1.35, bossFood = 11.11 },
+                sense = 1.3, botRest = 0.7, botChase = 10, ventDelay = 1.35, bossFood = 11.34 },   -- (0.5.24: un 2 % menos que 11,11)
     xtra    = { scoreMult = 2, enemyPace = 1.25, trapPace = 1.3, bossPace = 1.2, bossHp = 1.15, invuln = 0.75, airTime = 0.8, livesStart = 6,
-                sense = 1.3, botRest = 0.7, botChase = 10, ventDelay = 1.35, botCount = 2, bossExtra = true, pairHp = 0.65, restartGame = true,
-                bossFood = 9.09, bossLives = 30.3 },   -- (0.5.6: un 1 % menos que 11 / 9 / 30)
+                sense = 1.3, botRest = 0.7, botChase = 10, ventDelay = 1.35, botCount = 2, pairHp = 0.65, restartGame = true,
+                bossFury = true, bossFuryPace = 1.2,
+                bossFood = 9.09, bossLives = 31.9 },   -- (vidas 0.5.24: un 5 % menos que 30,3)
 }
 -- DESBLOQUEOS (historia, globales): acabar el juego (el jefe del último mundo) en esta dificultad abre esta otra
 Difficulty.UNLOCKS = { hard = 'extreme', extreme = 'xtra' }
@@ -93,6 +97,10 @@ function Difficulty.dt(e, dt)
     if pace == false then return dt end
     local key = pace or (def and Difficulty.PACE_OF[def.category])
     local k = key and bound[key]
+    -- (jefe ENFADADO de Xtra extremo — Boss:furyActive —: más rápido en todo; el tipo puede pedir otro `FURY_PACE`)
+    if bound.bossFury and e.furyActive and e:furyActive() then
+        k = (k or 1) * ((e.tuning and e.tuning.FURY_PACE) or bound.bossFuryPace or 1)
+    end
     return k and dt * k or dt
 end
 

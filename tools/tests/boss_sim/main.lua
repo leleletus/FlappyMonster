@@ -46,7 +46,11 @@ local PlayerAdventure = require 'src/player/PlayerAdventure'
 function love.load()
     math.randomseed(tonumber(os.getenv('SEED')) or 3)
     local data = json.decode(love.filesystem.read(os.getenv('LEVEL') or 'assets/levels/guarida_cangrejo_rey.json'))
-    local level = Level.fromData(data)
+    -- (DIFF=xtra...: con la dificultad — su ritmo, su vida y el enfado genérico de Xtra extremo —)
+    local D = require 'src/core/Difficulty'
+    local level = Level.fromData(data, os.getenv('DIFF'))
+    level.difficulty = os.getenv('DIFF')
+    D.bind(level)
     local ents = {}
     for _, pl in ipairs(level.entities) do ents[#ents + 1] = Entities.create(pl) end
     level.liveEntities = ents
@@ -99,7 +103,7 @@ function love.load()
         pa:update(dt, level)
         level.solidBodies = Entities.solidBodies(ents)
         ctrl:update(dt)
-        for _, e in ipairs(ents) do if e.alive then e:update(dt, level) end end
+        for _, e in ipairs(ents) do if e.alive then e:update(D.dt(e, dt), level) end end
         Entities.interactions.run(pa, ents, {})
         -- Cristal roto
         if glass then

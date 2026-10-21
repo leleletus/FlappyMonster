@@ -140,6 +140,8 @@ end
 
 function MG:bossPhase() return self.phase or 1 end
 -- Ritmo: la fila de las tablas (1, 2) y el multiplicador de la rabia
+-- (Xtra extremo: el enfado genérico — Boss:furyActive — le dura hasta su fase 2)
+function MG:angryPhase() return (self.phase or 1) >= 2 end
 function MG:pace() return math.min(2, self.phase or 1), self.rage and (self.props.rageSpeed or 1.45) or 1 end
 -- (enter, zoneBounds, minions, strike: los de Boss)
 function MG:floorY(level, x)

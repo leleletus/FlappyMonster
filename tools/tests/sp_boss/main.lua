@@ -22,6 +22,8 @@ function love.load(a)
     gameLoad(a); love.audio.setVolume(0)
     -- (MOBILE=1: como en un móvil, con los controles táctiles a la vista)
     if os.getenv('MOBILE') then package.loaded['input'].isMobile = true; package.loaded['input'].lastDevice = 'touch' end
+    -- (PAIR=1: dos jefes aliados por arena — `bossExtra`, hoy en ninguna dificultad: se guarda para más adelante —)
+    if os.getenv('PAIR') and os.getenv('DIFF') then require('src/core/Difficulty').MODS[os.getenv('DIFF')].bossExtra = true end
     gStateMachine:change('adventure', { level = os.getenv('LEVEL') or 'assets/levels/guarida_cangrejo_rey.json', difficulty = os.getenv('DIFF') })
     st = gStateMachine:_top()
 end

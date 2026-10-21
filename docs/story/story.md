@@ -41,7 +41,7 @@ drawn at the same point, they fit together and the mirror fills up. Logic: `src/
   (after 5 s it goes to the player by itself; touching the finish first collects it). It is only SAVED when the level
   is finished (rule: nothing gained in a level is saved until the level ends). A boss already beaten whose shard is
   owned does not drop it again.
-- **Xtra Extreme** (two bosses per arena): each drops HALF a shard (`3a` the original, `3b` the copy): 14 halves.
+- **Two bosses per arena** (`bossExtra`; Xtra Extreme until 0.5.24, today no difficulty — kept for a future idea, the user): each drops HALF a shard (`3a` the original, `3b` the copy): 14 halves. Today every difficulty uses the whole shard and the same films.
 - The map shows the mirror with the shards owned and the count ("Fragmentos del espejo 4 / 7"; Xtra: n / 14).
 - The Mirror boss's shard is the last: on pickup the player freezes, the screen fades to white and the ENDING starts,
   without touching the finish; then the usual results screen.

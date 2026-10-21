@@ -21,8 +21,9 @@ unlocked); Free Play has a ◀ ▶ selector (key F or tap either half); online, 
 | `hazardHurt` | spikes and lava take 1 HP + a hop instead of killing — also the hazard boxes of entities (hanging / falling spikes, spike rain, the Crabby's spike, mortar fire; `Interactions` marks them `'hazard'`, since 0.5.11) | `pa:hazardHit()` |
 | `sense` | every enemy detection range (sight below, hearing, Gloomy sense, mortar, pufferfish, Hopper) | the entity types, `Noise.heard` |
 | `ventDelay` | delay between oxygen bubbles | `Level` vents |
-| `bossExtra` | TWO bosses per arena | `src/world/systems/XtraBosses.lua` |
-| `bossFood`, `bossLives` | seconds (average, ×0.7–1.3 at random; the first at 0.4–0.8) between FOOD / EXTRA LIVES falling from the sky inside a boss zone while it fights (Extreme food 11.11; Xtra Extreme food 9.09 + lives 30.3: 0.5.6, the user asked for 1 % fewer drops than 11 / 9 / 30) | `src/world/entities/types/directors/bossdrops.lua` |
+| `bossExtra` | TWO allied bosses per arena — kept for the future: NO difficulty sets it since 0.5.24 (harness: `sp_boss DIFF=xtra PAIR=1`, `difficulty_rules` `doble` switch it on) | `src/world/systems/XtraBosses.lua` |
+| `bossFury`, `bossFuryPace` | bosses START ANGRY until their own angry phase: reddish pulse, light shake, anger symbols, × pace (Xtra Extreme, 1.2; a type may set `FURY_PACE`) | `Boss:furyActive` / `renderLive`, `Difficulty.dt`, `BossFx.fury` |
+| `bossFood`, `bossLives` | seconds (average, ×0.7–1.3 at random; the first at 0.4–0.8) between FOOD / EXTRA LIVES falling from the sky inside a boss zone while it fights (Extreme food 11.34; Xtra Extreme food 9.09 + lives 31.9 — the user: 0.5.6 1 % fewer than 11 / 9 / 30; 0.5.24 Extreme food 2 % fewer, Xtra lives 5 % fewer) | `src/world/entities/types/directors/bossdrops.lua` |
 | `livesStart`, `restartGame`, `scoreMult` | story lives, what a Game Over restarts, points multiplier | `src/story/Run.lua`, `Score.lua` |
 | `botRest`, `botChase`, `botCount` | the KOTH bot's hostility | `src/ai/Bot.lua`, `src/story/BonusMatch.lua` |
 
@@ -97,6 +98,23 @@ unlocked); Free Play has a ◀ ▶ selector (key F or tap either half); online, 
   attacks, has just attacked (`ALLY_GAP`) or is open; `Boss:waitMove(level, target)`: while busy, go to the zone side
   farther from the player (`WAIT_EDGE` 2.5 cells from the wall), sway slowly there (±`WAIT_SWAY` 1 cell) facing the
   player, never walk toward the player when they are in the way, step back if they come within `WAIT_DIST` 4 cells
-  (if the wall allows). The Mega uses it in its chase at 0.7 × speed. Harness `sp_boss DIFF=xtra`: the waiting one
+  (if the wall allows). The Mega uses it in its chase (0.7 × speed at first; its normal speed since 0.5.24, the user). Harness `sp_boss DIFF=xtra`: the waiting one
   walks toward the player (within 3 cells) ≤ 5 % of its waiting time (0 % after, 7 % before against the harness's
   standing player). Not judged yet: how the fight feels.
+
+- (7) XTRA EXTREME = ONE ANGRY BOSS (0.5.24, the user: "instead of 2 bosses, only one, BUT it must start angry" —
+  not from its phase 2: a GENERIC anger that only adds the red tint, shake, anger symbols and more speed and
+  cadence; on entering its second phase the normal multipliers apply and the generic anger goes; bosses without
+  a harder / angry second phase keep it, but the King Gummy fight must stay possible). `bossExtra` is off for
+  every difficulty (the ally system — turns, `allyBusy`, `waitMove` — is KEPT for future uses, the user), so
+  Shards.isXtra is false: every difficulty uses the whole shard and the normal films (the 14-halves code and the
+  Xtra film variant are KEPT for the future; `Shards.migrate` turns halves already collected into the whole
+  shard). Modifier `bossFury` (+ `bossFuryPace` 1.2): `Boss:furyActive()` = flag and active and not
+  `Boss:angryPhase()`; types: Mega Crabby / Ice = `rage()`, Mega Gloomy = phase ≥ 2, Snowball Boss = phase ≥ 2,
+  data bosses = `bossPhase() == 2`; King Gummy, the Mirror and the Evil Ship never (whole fight; the King with
+  `FURY_PACE` 1.1: its phases already harden it — `boss_sim DIFF=xtra` on its arena: the scripted player still
+  clears it, 1 death, as on Extreme). Pace through `Difficulty.dt` (server / SP); the look through
+  `Boss:renderLive` → `BossFx.fury` (a tint shader multiplying everything the boss draws, 1 px shake now and then,
+  `BossFx.anger` symbols over its box), called by the SP and online draw loops — the client derives it from the
+  difficulty and the hp / phase in the snapshots. Mega Crabby's ally waiting walks at its normal speed (the user).
+  Harness `difficulty_rules` `enfado`. Not judged yet: how hard / fair each fight feels.

@@ -61,7 +61,7 @@ function OnlineAdventureState:_renderScene()
     require('src/fx/Silhouette').level = self.level      -- (filo de los enemigos oscuros en lo oscuro: `darkEdge`)
     for i, er in pairs(self.enemyRenderers) do
         if er.alive and not er.renderFront then
-            er:render(self.camX, self.camY)
+            (er.renderLive or er.render)(er, self.camX, self.camY)
         end
     end
 
@@ -118,7 +118,7 @@ function OnlineAdventureState:_renderScene()
 
     -- Entidades en un plano por delante de los jugadores (renderFront: pez globo)
     for _, er in pairs(self.enemyRenderers) do
-        if er.alive and er.renderFront then er:render(self.camX, self.camY) end
+        if er.alive and er.renderFront then (er.renderLive or er.render)(er, self.camX, self.camY) end
     end
 
     -- Foliaje y burbujas

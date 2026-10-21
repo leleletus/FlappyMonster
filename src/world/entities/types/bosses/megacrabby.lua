@@ -33,7 +33,7 @@ local Crawler     = require 'src/world/entities/base/Crawler'
 local SpriteStrip = require 'src/fx/SpriteStrip'
 
 -- (aliados en Xtra extremo, Boss:mayAttack: qué estados son atacar)
-local WAIT_SPEED = 0.7               -- × su velocidad al esperar a que acabe el aliado (Boss:waitMove)
+local WAIT_SPEED = 1                 -- × su velocidad al esperar a que acabe el aliado (Boss:waitMove; 0.5.24: a su velocidad normal, el usuario)
 local ATTACKS = { windup = true, charge = true, wallclimb = true, wallaim = true, pounce = true, climb = true,
                   ceiling = true, aim = true, drop = true, summon = true, clap = true }
 local Mega = Entity.extend(Boss, {
@@ -305,6 +305,8 @@ function Mega:rage()
     return (self.hpMax or 1) > 0 and self.hp / self.hpMax <= (p.rageAt or 0.6)
 end
 function Mega:speedMult() return self:rage() and (self.props.rageSpeed or 1.3) or 1 end
+-- (Xtra extremo: el enfado genérico — Boss:furyActive — le dura hasta que se enfada de verdad)
+function Mega:angryPhase() return self:rage() end
 
 -- Trepa también por los bordes de su zona (paredes y techo invisibles)
 function Mega:crawlSolidAt(level, x, y)
