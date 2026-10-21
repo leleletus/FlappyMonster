@@ -462,7 +462,7 @@ function OnlineHubState:_window(title, sub)
 end
 
 function OnlineHubState:render()
-    MenuScene.backdrop()                 -- (el fondo vivo de los menús: src/ui/menu/MenuScene)
+    MenuScene.backdrop('online')                 -- (ladrillos del Flappy: src/ui/menu/MenuScene)
     self:_renderList()
     if self.sub == SUB_WAITING then
         local dots = string.rep(".", math.floor(love.timer.getTime() * 2) % 4)

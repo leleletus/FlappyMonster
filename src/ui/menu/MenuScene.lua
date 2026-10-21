@@ -231,9 +231,29 @@ function MenuScene.draw()
     love.graphics.setColor(1, 1, 1, 1)
 end
 
-MenuScene.MARGIN = 24        -- px de fondo vivo que deja ver el panel de MenuScene.backdrop
-function MenuScene.backdrop()
-    MenuScene.draw()
+-- ── Fondo de LADRILLOS (el del modo Flappy) para las pantallas que ocupan casi toda la pantalla ─────────────────
+-- (0.5.20, el usuario: en las partidas, el juego libre, todo el online... el fondo vivo distraía). Se repite en las
+-- dos direcciones y va de lado despacio; un color por pantalla (MenuScene.BRICKS), oscurecido para que lo de encima
+-- se lea. El fondo vivo sigue en el título y en los menús de botones (modo, configuración, dificultad del Flappy).
+MenuScene.BRICKS = {
+    story    = { 1.00, 0.80, 0.30 },     -- partidas: dorado
+    free     = { 0.40, 0.90, 0.80 },     -- juego libre: verde azulado
+    online   = { 0.45, 0.65, 1.00 },     -- online (entrar, salas, sala): azul
+    error    = { 1.00, 0.45, 0.45 },     -- error de red: rojo
+    sound    = { 0.75, 0.55, 1.00 },     -- sound test: morado
+}
+local BRICK_DARK = 0.38
+local bricksT = 0
+function MenuScene.bricks(which)
+    local c = MenuScene.BRICKS[which] or MenuScene.BRICKS.online
+    bricksT = love.timer.getTime()
+    require('src/story/Stage').flappyBg(bricksT * 14, { c[1] * BRICK_DARK, c[2] * BRICK_DARK, c[3] * BRICK_DARK }, 1, bricksT * 5)
+end
+
+MenuScene.MARGIN = 24        -- px de fondo que deja ver el panel de MenuScene.backdrop
+-- (which = color de los ladrillos; sin él, el fondo vivo)
+function MenuScene.backdrop(which)
+    if which then MenuScene.bricks(which) else MenuScene.draw() end
     local m = MenuScene.MARGIN
     require('src/ui/menu/MenuButton').panel(m, m, WINDOW_W - 2 * m, WINDOW_H - 2 * m)
 end

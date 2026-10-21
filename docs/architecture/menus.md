@@ -174,3 +174,9 @@ difficulty and back, the match starting with it). `online_smoke`, `online_boss`,
   light line on top only — simpler, not flat. The logo letters now wave only now and then: one wave runs left to
   right every `TitleLogo.WAVE_EVERY` (6 s) at `WAVE_SPEED` letters/s, instead of a continuous sine. The previous
   button sheet is kept in `FlappyMonster_originals/images/ui/menus/button_0.5.18.png`.
+- 0.5.20, the user: on the screens that fill most of the screen (save slots, Free Play, all of online, the sound
+  test) the live scene behind distracted. They now draw the Flappy-mode BRICK background (`Stage.flappyBg`) through
+  `MenuScene.bricks(which)` / `MenuScene.backdrop(which)`, slowly scrolling, in one darkened colour per screen
+  (`MenuScene.BRICKS`: story gold, free teal, online blue, error red, sound purple). The live scene stays on the
+  title, the mode / settings / Flappy-difficulty menus and the pause / results overlays. `MenuScene.backdrop()` with
+  no argument still draws the live scene.

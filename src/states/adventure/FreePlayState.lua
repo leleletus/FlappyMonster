@@ -339,7 +339,7 @@ function FreePlayState:drawCard(i, x, y)
 end
 
 function FreePlayState:render()
-    MenuScene.backdrop()                 -- (el fondo vivo de los menús: src/ui/menu/MenuScene)
+    MenuScene.backdrop('free')                 -- (ladrillos del Flappy: src/ui/menu/MenuScene)
     MenuKit.dim(0.3)
     local A = self.anim
 

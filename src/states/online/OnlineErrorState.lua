@@ -45,7 +45,7 @@ local function layout(msg)
 end
 
 function OnlineErrorState:render()
-    MenuScene.backdrop()                 -- (el fondo vivo de los menús: src/ui/menu/MenuScene)
+    MenuScene.backdrop('error')                 -- (ladrillos del Flappy: src/ui/menu/MenuScene)
     local A = self.anim
     MenuKit.title(L('err.title'), 'red', A, 1)
     local c, b = layout(self.msg)

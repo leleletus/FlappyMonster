@@ -172,7 +172,7 @@ end
 -- ── Render ────────────────────────────────────────────────────────────────────
 
 function OnlineLoginState:render()
-    MenuScene.backdrop()                 -- (el fondo vivo de los menús: src/ui/menu/MenuScene)
+    MenuScene.backdrop('online')                 -- (ladrillos del Flappy: src/ui/menu/MenuScene)
     local A = self.anim
     MenuKit.title(Lang('login.title'), 'purple', A, 1)
 

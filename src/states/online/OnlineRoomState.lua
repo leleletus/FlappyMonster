@@ -599,7 +599,7 @@ end
 -- ── Render ────────────────────────────────────────────────────────────────────
 
 function OnlineRoomState:render()
-    MenuScene.backdrop()                 -- (el fondo vivo de los menús: src/ui/menu/MenuScene)
+    MenuScene.backdrop('online')                 -- (ladrillos del Flappy: src/ui/menu/MenuScene)
 
     local A       = self.anim
     local room    = self.currentRoom or {}

@@ -306,7 +306,7 @@ end
 
 -- ── Dibujo ───────────────────────────────────────────────────────────────────
 function SoundTestState:render()
-    MenuScene.backdrop()
+    MenuScene.backdrop('sound')
     MenuKit.dim(0.45)
     local A = self.anim
     MenuKit.title('SOUND TEST', 'teal', A, 1, 5)

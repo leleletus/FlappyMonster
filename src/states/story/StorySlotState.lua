@@ -297,7 +297,7 @@ function StorySlotState:_drawCart(i, x, y, s, sel, a)
 end
 
 function StorySlotState:render()
-    MenuScene.draw()
+    MenuScene.bricks('story')                    -- (ladrillos del Flappy, no el fondo vivo: src/ui/menu/MenuScene)
     local A = self.anim
     if not self.pick then MenuList.header(L('story.title'), 'yellow', A, 1) end
     for i = 1, Save.SLOTS do
