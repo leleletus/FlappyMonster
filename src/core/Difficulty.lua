@@ -39,7 +39,8 @@
 --   botCount                        (bonus) cuántos bots (1; Xtra extremo 2)
 --   scoreMult                       (historia) × los puntos del nivel al apuntarlos (Fácil 0,8 … Xtra extremo 2)
 --   livesStart                      (historia) vidas con las que empieza la aventura: 3; Extremo 4; Xtra extremo 6
---   restartGame                     (historia) un Game Over reinicia el JUEGO entero, no solo el mundo (Xtra extremo)
+--   restartGame                     (historia) un Game Over reinicia el JUEGO entero, no solo el mundo (hoy ninguna;
+--                                   Xtra extremo hasta 0.5.25)
 --   bossFood, bossLives             s (de media) entre COMIDAS / VIDAS que caen del cielo en una pelea de jefe
 --                                   (src/world/entities/types/directors/bossdrops.lua); Extremo solo comida, Xtra las dos
 local Difficulty = {}
@@ -54,11 +55,11 @@ Difficulty.MODS = {
     normal  = { bossPace = 0.85, bossHp = 0.9, botRest = 2, botChase = 5 },
     hard    = { scoreMult = 1.2, enemyPace = 1.1, trapPace = 1.1, airTime = 0.9, ventDelay = 1.15 },
     extreme = { scoreMult = 1.5, enemyPace = 1.25, trapPace = 1.3, bossPace = 1.2, bossHp = 1.15, invuln = 0.75, airTime = 0.8, livesStart = 4,
-                sense = 1.3, botRest = 0.7, botChase = 10, ventDelay = 1.35, bossFood = 11.34 },   -- (0.5.24: un 2 % menos que 11,11)
+                sense = 1.3, botRest = 0.7, botChase = 10, ventDelay = 1.35, bossFood = 15.12 },   -- (0.5.26: un 25 % menos que 11,34)
     xtra    = { scoreMult = 2, enemyPace = 1.25, trapPace = 1.3, bossPace = 1.2, bossHp = 1.15, invuln = 0.75, airTime = 0.8, livesStart = 6,
-                sense = 1.3, botRest = 0.7, botChase = 10, ventDelay = 1.35, botCount = 2, pairHp = 0.65, restartGame = true,
+                sense = 1.3, botRest = 0.7, botChase = 10, ventDelay = 1.35, botCount = 2, pairHp = 0.65,     -- (restartGame: hasta 0.5.25; ya no, el usuario)
                 bossFury = true, bossFuryPace = 1.2,
-                bossFood = 9.09, bossLives = 70 },   -- (vidas 0.5.25: un 54 % menos que 31,9 — salían hasta 8 por jefe, el usuario)
+                bossFood = 13.98, bossLives = 70 },   -- (comida 0.5.26: un 35 % menos que 9,09; vidas 0.5.25: un 54 % menos que 31,9 — salían hasta 8 por jefe, el usuario)
 }
 -- DESBLOQUEOS (historia, globales): acabar el juego (el jefe del último mundo) en esta dificultad abre esta otra
 Difficulty.UNLOCKS = { hard = 'extreme', extreme = 'xtra' }

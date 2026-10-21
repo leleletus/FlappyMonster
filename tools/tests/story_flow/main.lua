@@ -335,11 +335,12 @@ function love.update(dt)
         Run.slot, Run.data = 3, Save.new('xtra')
         Run.data.done[W1[1].id], Run.data.done[W2[1].id], Run.data.lives = true, true, 1
         local back = Run.gameOver(2)
-        local wiped = back == 1 and next(Run.data.done) == nil and Run.data.lives == 6
+        -- (Xtra extremo: desde 0.5.26 vuelve al principio del MUNDO, como las demás — antes, todo el juego —)
+        local wiped = back == 2 and Run.data.done[W1[1].id] == true and not Run.data.done[W2[1].id] and Run.data.lives == 6
         Save.delete(3)
         Run.slot, Run.data = keepSlot, keepData
         check('extremos', Save.new('easy').lives == 3 and Save.new('hard').lives == 3 and s4 == 4 and s6 == 6 and wiped,
-            ('vidas al empezar: fácil %d, difícil %d, extremo %d, xtra %d; Game Over en Xtra: todo el juego de nuevo=%s'):format(
+            ('vidas al empezar: fácil %d, difícil %d, extremo %d, xtra %d; Game Over en Xtra: al principio del mundo (el 1 sigue hecho)=%s'):format(
              Save.new('easy').lives, Save.new('hard').lives, s4, s6, tostring(wiped)))
         -- NOTAS (src/story/Score.lua): casos fijos
         local Score = require 'src/story/Score'

@@ -36,6 +36,7 @@ local Snow = Entity.extend(Boss, {
     -- (aliados en Xtra extremo: qué estados son atacar)
     ATTACKS = { windup = true, roll = true, slide = true, shoot = true, hop = true, leap_wind = true, leap = true,
                 slam_up = true, slam_hold = true, slam_fall = true, slam_land = true },
+    FURY_LOOK_ALWAYS = true,               -- (Xtra extremo: enfadado a la vista toda la pelea; el × ritmo, solo fases 1-2)
     debugColor = { 0.7, 0.85, 1 },
     hitbox = { outerW = 13 / 16, outerH = 13 / 16, innerW = 12 / 16, innerH = 12 / 16 },
 })
@@ -696,8 +697,9 @@ function Snow:onFightStart(n)
 end
 
 function Snow:bossPhase() return self.phase or 1 end
--- (Xtra extremo: el enfado genérico — Boss:furyActive — le dura hasta su fase 2, la de la cara enfadada)
-function Snow:angryPhase() return (self.phase or 1) >= 2 end
+-- (Xtra extremo: el × ritmo del enfado genérico — Boss:furyActive — le dura las fases 1 y 2; en la 3, la última,
+--  ya no, pero se le sigue VIENDO enfadado: FURY_LOOK_ALWAYS. El usuario, 0.5.26)
+function Snow:angryPhase() return (self.phase or 1) >= 3 end
 
 function Snow:phaseFor()
     local p = self.props

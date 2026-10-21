@@ -491,14 +491,21 @@ end
 -- (Boss:angryPhase: el Mega Crabby con poca vida, la Bola de Nieve en su fase 2...) se le quita y sigue con lo
 -- suyo de siempre; quien no tiene una (Rey Gummy, Espejo, Nave Malvada) lo lleva toda la pelea. Igual en un
 -- jugador, en el servidor y en el cliente (sale de la dificultad y de lo que llega en las instantáneas).
-function Boss:angryPhase() return false end   -- (el tipo: ¿ya está en su fase enfadada?)
+function Boss:angryPhase() return false end   -- (el tipo: ¿ya está en su fase enfadada? → sin el × ritmo)
 function Boss:furyActive()
     local D = require 'src/core/Difficulty'
     return D.flag('bossFury') and self:isActive() and not self:angryPhase()
 end
+-- ¿Se le VE enfadado? (rojizo, temblor, símbolos). Lo normal, lo mismo que furyActive; un tipo puede dejar el
+-- aspecto aunque ya no lleve el × ritmo (`FURY_LOOK_ALWAYS` en su tuning: la Bola de Nieve en su fase 3)
+function Boss:furyLook()
+    if self:furyActive() then return true end
+    local D = require 'src/core/Difficulty'
+    return self.tuning ~= nil and self.tuning.FURY_LOOK_ALWAYS == true and D.flag('bossFury') and self:isActive()
+end
 -- Dibujarlo: con el enfado genérico encima si toca (los bucles de dibujo llaman a esto en vez de a render)
 function Boss:renderLive(camX, camY)
-    if self:furyActive() and not EDITOR_VIEW then
+    if self:furyLook() and not EDITOR_VIEW then
         require('src/fx/BossFx').fury(self, camX, camY, self.render)
     else
         self:render(camX, camY)

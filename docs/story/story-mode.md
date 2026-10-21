@@ -85,7 +85,7 @@ Xtra Extreme. **Harness:** `story_flow` (the real game end to end; many named ca
   + `gameOverNote`: with them the Game Over overlay has no "retry", only CONTINUE. `Run.gameOver(world)` (called with the
   FRONTIER world, `Run.frontier()`, not the replayed level's world — since 0.5.8): lives back to
   the start value and the WORLD restarts (its nodes are no longer done; `best` records stay); with the modifier
-  `restartGame` (Xtra Extreme) the whole game restarts. The map shows the lives and a notice after a Game Over.
+  `restartGame` (no difficulty today; Xtra Extreme until 0.5.25) the whole game restarts. The map shows the lives and a notice after a Game Over.
 
 ## Results, grades, rewards
 

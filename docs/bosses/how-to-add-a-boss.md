@@ -145,7 +145,7 @@ Rules that can NOT be broken:
   player in (used by both Mega Crabbies; the other bosses do not use it yet).
 - Xtra Extreme's generic anger (`bossFury`): if the boss has its own angry / harder phase, define `angryPhase()`
   (true once there: the generic anger stops); otherwise it keeps it the whole fight. `FURY_PACE` in the tuning
-  overrides the pace. Nothing else: the look is drawn by `Boss:renderLive` around its `render`.
+  overrides the pace; `FURY_LOOK_ALWAYS = true` keeps the LOOK after the pace stops (Snowball Boss). Nothing else: the look is drawn by `Boss:renderLive` around its `render`.
 - Anything that hits or can be hit and is not the outer / inner / hazard boxes: `debugBoxes()`.
 
 Reusable physics (Snowball Boss): `self:physics(level, dt)` (gravity 2200, collisions with blocks and bodies,

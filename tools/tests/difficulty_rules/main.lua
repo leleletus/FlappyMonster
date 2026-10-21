@@ -290,7 +290,8 @@ function cases.doble()
 end
 
 -- ENFADO GENÉRICO de Xtra extremo (`bossFury`): UN jefe por arena; empieza enfadado (× ritmo) y se le quita al
--- llegar a su fase enfadada (Mega Crabby: poca vida; Bola de Nieve: fase 2); el Rey Gummy lo lleva toda la pelea;
+-- llegar a su fase enfadada (Mega Crabby: poca vida; Bola de Nieve: fase 3, aunque se le sigue viendo); el Rey Gummy
+-- lo lleva toda la pelea;
 -- en Extremo, nada
 function cases.enfado()
     local Worlds = require 'src/story/Worlds'
@@ -338,7 +339,9 @@ function cases.enfado()
     local s1 = s:furyActive()
     s.phase = 2
     local s2 = s:furyActive()
-    out[#out + 1] = ('Bola de Nieve: fase 1 %s, fase 2 %s'):format(tostring(s1), tostring(s2))
+    s.phase = 3
+    local s3, l3 = s:furyActive(), s:furyLook()
+    out[#out + 1] = ('Bola de Nieve: × ritmo en fase 1 %s, 2 %s, 3 %s; se le ve enfadada en la 3 %s'):format(tostring(s1), tostring(s2), tostring(s3), tostring(l3))
     -- Rey Gummy: toda la pelea
     local g = fight('assets/levels/reino_gummy.json', 'xtra', 'megagummy')
     local g1 = g:furyActive()
@@ -349,7 +352,7 @@ function cases.enfado()
     local x = fight('assets/levels/guarida_cangrejo_rey.json', 'extreme', 'megacrabby')
     local xf = x:furyActive()
     Difficulty.bind(nil)
-    check('enfado', single and f0 and not f1 and k0 > k1 * 1.15 and s1 and not s2 and g1 and g3 and not xf,
+    check('enfado', single and f0 and not f1 and k0 > k1 * 1.15 and s1 and s2 and not s3 and l3 and not m:furyLook() and g1 and g3 and not xf,
         ('un jefe por arena en Xtra extremo=%s · %s · en Extremo enfadado=%s'):format(tostring(single), table.concat(out, ' · '), tostring(xf)))
 end
 
