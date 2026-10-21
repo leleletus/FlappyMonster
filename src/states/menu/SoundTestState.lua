@@ -9,6 +9,7 @@
 local BaseState    = require 'src/core/BaseState'
 local MenuScene    = require 'src/ui/menu/MenuScene'
 local MenuKit      = require 'src/ui/menu/MenuKit'
+local MenuButton   = require 'src/ui/menu/MenuButton'
 local MenuAnim     = require 'src/ui/menu/MenuAnim'
 local CornerButtons = require 'src/ui/CornerButtons'
 local Clip         = require 'src/ui/Clip'
@@ -198,7 +199,13 @@ function SoundTestState:_layout()
     local optW = WINDOW_W - ox - m
     local opts = {}
     for i = 1, #OPTS do opts[i] = { x = ox, y = TOP + 96 + (i - 1) * 58, w = optW, h = 48 } end
-    return { list = list, opts = opts, info = { x = ox, y = TOP, w = optW, h = 84 } }
+    local info = { x = ox, y = TOP, w = optW, h = 84 }
+    local tw = math.floor((listW - 8) / 2)
+    return { list = list, opts = opts, info = info,
+             -- (ratón / dedo: las dos pestañas de la lista, el botón ▶ / ■ y la barra de posición: se tocan)
+             tabs = { { x = m, y = TOP - 34, w = tw, h = 30 }, { x = m + tw + 8, y = TOP - 34, w = tw, h = 30 } },
+             play = { x = info.x + info.w - 64, y = info.y + 10, w = 52, h = 44 },
+             bar = { x = info.x + 16, y = info.y + 60, w = info.w - 96, h = 16 } }
 end
 
 function SoundTestState:_keepVisible()
@@ -264,7 +271,29 @@ function SoundTestState:wheelmoved(dx, dy)
     self.scrollTarget[self.tab] = math.max(0, math.min(math.max(0, n * ROW_H - Ly.list.h + 16), self.scrollTarget[self.tab] - dy * 80))
 end
 
-function SoundTestState:mousemoved(x, y) self.backHover = CornerButtons.hitBack(x, y) end
+function SoundTestState:mousemoved(x, y)
+    self.backHover = CornerButtons.hitBack(x, y)
+    -- (pasar por encima elige: filas y opciones; así el clic hace lo mismo que confirmar)
+    local Ly = self:_layout()
+    self.hoverPlay, self.hoverTab = inside(Ly.play, x, y), nil
+    for i, r in ipairs(Ly.tabs) do if inside(r, x, y) then self.hoverTab = i end end
+    for i, r in ipairs(Ly.opts) do
+        if inside(r, x, y) then
+            if self.focus ~= 'opts' or self.opt ~= i then self.focus, self.opt = 'opts', i; Sound.play('select') end
+            return
+        end
+    end
+    local row = self:_rowAt(x, y)
+    if row and (self.focus ~= 'list' or self.sel[self.tab] ~= row) then self.focus, self.sel[self.tab] = 'list', row; Sound.play('select') end
+end
+
+-- Lleva la reproducción al punto `k` (0..1) de lo que suena
+function SoundTestState:_seek(k)
+    local s = self:_current()
+    if not s then return end
+    local dur = s:getDuration() or 0
+    pcall(s.seek, s, math.max(0, math.min(math.max(0, dur - 0.05), dur * k)))
+end
 
 function SoundTestState:touchpressed(id, x, y)
     if CornerButtons.hitBack(x, y) then gStateMachine:change('title', { menu = true }); return end
@@ -276,11 +305,23 @@ function SoundTestState:touchpressed(id, x, y)
             return
         end
     end
+    for i, r in ipairs(Ly.tabs) do                      -- pestañas MÚSICA / EFECTOS
+        if inside(r, x, y) then
+            if self.tab ~= i then self.tab = i; self.focus = 'list'; Sound.play('select') end
+            return
+        end
+    end
+    if inside(Ly.play, x, y) then self:_toggle(); return end                 -- ▶ / ■
+    if inside(Ly.bar, x, y) and self:_current() then                         -- la barra: ir a ese punto
+        self.seekTouch = id
+        self:_seek((x - Ly.bar.x) / Ly.bar.w); return
+    end
     if inside(Ly.info, x, y) then self:_toggle(); return end
     if self:_rowAt(x, y) then self.touch = { id = id, y = y, lastY = y, row = self:_rowAt(x, y), moved = false } end
 end
 
 function SoundTestState:touchmoved(id, x, y)
+    if self.seekTouch == id then local b = self:_layout().bar; self:_seek((x - b.x) / b.w); return end   -- (arrastrar la barra)
     local tc = self.touch
     if not tc or tc.id ~= id then return end
     if math.abs(y - tc.y) > 10 then tc.moved = true end
@@ -295,6 +336,7 @@ function SoundTestState:touchmoved(id, x, y)
 end
 
 function SoundTestState:touchreleased(id, x, y)
+    if self.seekTouch == id then self.seekTouch = nil; return end
     local tc = self.touch
     if not tc or tc.id ~= id then return end
     self.touch = nil
@@ -314,8 +356,12 @@ function SoundTestState:render()
 
     -- Lista (con su pestaña arriba)
     local Lr = Ly.list
-    MenuKit.text(FONT_SMALL, L(self.tab == 1 and 'st.tab_music' or 'st.tab_sfx') .. '  (' .. #self:_items() .. ')',
-                 Lr.x, Lr.y - 22, Lr.w, 'left', { 1, 0.86, 0.36 })
+    for i, r in ipairs(Ly.tabs) do                      -- pestañas (se tocan)
+        local on = self.tab == i
+        local lbl = L(i == 1 and 'st.tab_music' or 'st.tab_sfx') .. '  (' .. #self.lists[i] .. ')'
+        MenuButton.draw(nil, r.x, r.y, r.w, r.h, on and 'teal' or 'grey', on or self.hoverTab == i, { alpha = on and 1 or 0.75 })
+        MenuKit.text(FONT_SMALL, lbl, r.x, r.y + 9, r.w, 'center', on and { 1, 1, 1 } or { 0.72, 0.78, 0.95 })
+    end
     MenuKit.box('well', Lr.x, Lr.y, Lr.w, Lr.h)
     Clip.push(Lr.x + 4, Lr.y + 4, Lr.w - 8, Lr.h - 8)
     local items, sel, scroll = self:_items(), self.sel[self.tab], self.scroll[self.tab]
@@ -341,19 +387,27 @@ function SoundTestState:render()
     local it = self.playing or self:_item()
     if it then
         local s = self:_current()
-        MenuKit.text(FONT_MED, fitText(FONT_MED, it.name, I.w - 32), I.x + 16, I.y + 14, I.w - 32, 'left',
+        local tw = I.w - 96                           -- (deja sitio al botón ▶ / ■)
+        MenuKit.text(FONT_MED, fitText(FONT_MED, it.name, tw), I.x + 16, I.y + 14, tw, 'left',
                      s and { 0.5, 1, 0.6 } or { 1, 1, 1 })
-        MenuKit.text(FONT_SMALL, fitText(FONT_SMALL, (s and L('st.playing') or L('st.stopped')) .. '  ·  ' .. (it.path or ''), I.w - 32),
-                     I.x + 16, I.y + 42, I.w - 32, 'left', { 0.7, 0.76, 0.92 })
-        if s then
-            local dur = s:getDuration() or 0
-            local k = dur > 0 and math.min(1, s:tell() / dur) or 0
-            love.graphics.setColor(0, 0, 0, 0.5)
-            love.graphics.rectangle('fill', I.x + 16, I.y + 64, I.w - 32, 8)
-            love.graphics.setColor(1, 0.86, 0.36, 1)
-            love.graphics.rectangle('fill', I.x + 16, I.y + 64, math.floor((I.w - 32) * k), 8)
-            love.graphics.setColor(1, 1, 1, 1)
-        end
+        MenuKit.text(FONT_SMALL, fitText(FONT_SMALL, (s and L('st.playing') or L('st.stopped')) .. '  ·  ' .. (it.path or ''), tw),
+                     I.x + 16, I.y + 40, tw, 'left', { 0.7, 0.76, 0.92 })
+        -- ▶ / ■ (se toca) y la barra de posición (se toca y se arrastra)
+        local P = Ly.play
+        MenuButton.draw(nil, P.x, P.y, P.w, P.h, s and 'red' or 'green', self.hoverPlay, {})
+        love.graphics.setColor(1, 1, 1, 1)
+        local cx, cy = P.x + P.w / 2, P.y + (P.h - 4) / 2
+        if s then love.graphics.rectangle('fill', cx - 8, cy - 8, 16, 16)
+        else love.graphics.polygon('fill', cx - 7, cy - 10, cx - 7, cy + 10, cx + 10, cy) end
+        local B = Ly.bar
+        local dur = s and s:getDuration() or 0
+        local k = (s and dur > 0) and math.min(1, s:tell() / dur) or 0
+        love.graphics.setColor(0, 0, 0, 0.5)
+        love.graphics.rectangle('fill', B.x, B.y + 4, B.w, 8)
+        love.graphics.setColor(1, 0.86, 0.36, s and 1 or 0.35)
+        love.graphics.rectangle('fill', B.x, B.y + 4, math.floor(B.w * k), 8)
+        if s then love.graphics.rectangle('fill', B.x + math.floor(B.w * k) - 3, B.y, 6, 16) end
+        love.graphics.setColor(1, 1, 1, 1)
     end
 
     -- Opciones (◀ valor ▶)

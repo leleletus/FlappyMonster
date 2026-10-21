@@ -87,6 +87,24 @@ local function run()
         press('back', 0.05); press('light', 0.05)                                        -- (a la lista; efectos)
         press('nav_down', 0.05); press('confirm', 0.2)
         sfxOk = stt.tab == 2 and stt.playing ~= nil and stt.playing.music == nil
+        -- con el DEDO / el ratón: la pestaña MÚSICA, el botón ▶ (suena), la barra (va a la mitad), ■ (para)
+        local Ly = stt:_layout()
+        stt:touchpressed('d', Ly.tabs[1].x + 10, Ly.tabs[1].y + 10); stt:touchreleased('d', Ly.tabs[1].x + 10, Ly.tabs[1].y + 10)
+        local tabOk = stt.tab == 1
+        stt:_stop()
+        stt:touchpressed('d', Ly.play.x + 10, Ly.play.y + 10); stt:touchreleased('d', Ly.play.x + 10, Ly.play.y + 10)
+        wait(0.2)
+        local sPlay = stt:_current()
+        local playOk = sPlay ~= nil and stt.playing and stt.playing.music ~= nil
+        stt:touchpressed('d', Ly.bar.x + Ly.bar.w / 2, Ly.bar.y + 4); stt:touchreleased('d', Ly.bar.x + Ly.bar.w / 2, Ly.bar.y + 4)
+        wait(0.1)
+        local s2 = stt:_current()
+        local seekOk = s2 ~= nil and s2:getDuration() > 0 and math.abs(s2:tell() / s2:getDuration() - 0.5) < 0.1
+        stt:touchpressed('d', Ly.play.x + 10, Ly.play.y + 10); stt:touchreleased('d', Ly.play.x + 10, Ly.play.y + 10)
+        wait(0.1)
+        local stopOk = stt:_current() == nil
+        TOUCH_ST = tabOk and playOk and seekOk and stopOk
+        TOUCH_MSG = ('pestaña=%s ▶=%s barra a la mitad=%s ■=%s'):format(tostring(tabOk), tostring(playOk), tostring(seekOk), tostring(stopOk))
         shot('soundtest')
         press('back', 0.6)
         back = name(top()) == 'TitleState'
@@ -96,9 +114,9 @@ local function run()
         taps = name(top()) == 'SoundTestState'
         press('back', 0.6)
     end
-    check('soundtest', inST and musicOk and pitchOk and sfxOk and back and taps,
-        ('código → %s; música suena=%s; tono 1,05 en lo que suena=%s; efectos suena=%s; atrás → título=%s; 7 toques en la versión → entra=%s'):format(
-         name(stt), tostring(musicOk), tostring(pitchOk), tostring(sfxOk), tostring(back), tostring(taps)))
+    check('soundtest', inST and musicOk and pitchOk and sfxOk and back and taps and TOUCH_ST,
+        ('código → %s; música suena=%s; tono 1,05 en lo que suena=%s; efectos suena=%s; atrás → título=%s; 7 toques en la versión → entra=%s; con el dedo: %s'):format(
+         name(stt), tostring(musicOk), tostring(pitchOk), tostring(sfxOk), tostring(back), tostring(taps), tostring(TOUCH_MSG)))
     gStateMachine:change('title'); st = top(); wait(1.8)
     press('confirm', 0.8)
 

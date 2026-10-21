@@ -47,8 +47,11 @@ the d-pad, or 7 quick taps on the version number (bottom right) on a phone. Two 
 `assets/music/index.json` (with its intro + loop, as in the game; pending tracks are skipped) and every sound loaded by
 `Sound.load` (copies of the game's sources, so their `GAIN` is applied). Options (◀ ▶): list, loop, pitch (0.25–3),
 volume, echo and room (OpenAL effects `love.audio.setEffect`; "not available" where the platform has none), and
-position (seek ±5 s). It plays on its OWN sources and leaves the game's music and voices alone. Touch: tap a row to
-play / stop, drag to scroll, tap either half of an option. Harness `menu_flow` (`soundtest`).
+position (seek ±5 s). It plays on its OWN sources and leaves the game's music and voices alone. Mouse / touch
+(0.5.21, the user: everything must work without keyboard or pad): two tabs MÚSICA / EFECTOS above the list, a ▶ / ■
+button on the card, a position bar that seeks on tap and drag, rows (tap = choose, tap again = play / stop; drag =
+scroll; wheel too), either half of an option (◀ / ▶); the mouse hover selects rows and options. Harness `menu_flow`
+(`soundtest`, keyboard and touch).
 
 ## Water sounds and the extra life are original (0.5.15)
 
