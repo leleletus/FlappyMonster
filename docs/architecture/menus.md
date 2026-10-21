@@ -29,7 +29,7 @@ save slots are **cartridges** (Sonic 3 style save select).
 | `src/ui/menu/TitleLogo.lua` | the remastered logo (box + letters, intro animation, wave); used by the title and by the story ending film |
 | `src/ui/menu/Transition.lua` | the iris; `Transition.go(state, args[, x, y])` instead of `gStateMachine:change` (hooked in `game.lua`: update, render, and input blocked while it closes); `Transition.drawIris(k, x, y)` (also used between background scenes) |
 | `assets/images/ui/menus/title_logo.png` + `.json` | the remastered logo: the box and each letter separately (sheet + where each letter goes) |
-| `assets/images/ui/menus/button.png` + `.json`, `panel.png` | buttons (one column per colour; row 1 normal, row 2 selected; the palette is muted by `MUTE` toward grey) and the panel |
+| `assets/images/ui/menus/button.png` + `.json`, `panel.png` | buttons (one column per colour; row 1 normal, row 2 selected; the palette is muted by `MUTE` toward grey; since 0.5.19 three tones — outline, body, 2-px lip — plus a top light line only) and the panel |
 | `assets/images/ui/menus/cartridge.png` + `.json`, `cart_labels.png` | cartridge shells (red, blue, green, grey = empty; normal / selected) and the island windows (one per world + "new") |
 | `assets/nav/<level>.json` | the bot's navigation graph of each background level (`tools/tests/run.sh bot_nav BUILD=1 -- assets/levels/<level>.json`) |
 | `tools/art/ui/make_menu_ui.py` | writes every image above. The logo comes from `logo.png` (kept as is): every pixel of the box and the letters is kept, scaled 2×, with the house style added (box: navy outline, light top-left, shade bottom-right, an inner line echoing the original frame, a 2-px relief lip; letters: almost-black navy with a light top edge and a soft embossed shadow on the white); drawn at `LOGO_SCALE / 2`, so it takes the old logo's size |
@@ -169,3 +169,8 @@ difficulty and back, the match starting with it). `online_smoke`, `online_boss`,
   confirm presses the chosen one, UP goes back). Harness `online_menus` (`crear_mando`).
 - 0.5.8, the review: Esc / Start / the pad's cancel in the single-player pause always resume (before they ran the
   highlighted option, so with MENU highlighted they quit the level).
+- 0.5.19, the user: the buttons were again "quite more colourful than they should be": `MUTE` 0.38 → 0.52 and the
+  cell simplified from 5 tones (outline, lip, side shadow, body, side light) to 3 (outline, body, 2-px lip) plus a
+  light line on top only — simpler, not flat. The logo letters now wave only now and then: one wave runs left to
+  right every `TitleLogo.WAVE_EVERY` (6 s) at `WAVE_SPEED` letters/s, instead of a continuous sine. The previous
+  button sheet is kept in `FlappyMonster_originals/images/ui/menus/button_0.5.18.png`.

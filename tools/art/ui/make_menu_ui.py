@@ -33,8 +33,9 @@ PAL = {
     'teal':   [(16, 70, 72), (24, 106, 106), (34, 146, 140), (60, 196, 180), (150, 240, 224)],
     'grey':   [(40, 42, 52), (64, 66, 80), (92, 96, 110), (128, 132, 146), (186, 190, 202)],
 }
-# (los BOTONES usan la paleta APAGADA: cada tono se acerca MUTE a su gris; el usuario, 3.103: demasiado coloridos)
-MUTE = 0.38
+# (los BOTONES usan la paleta APAGADA: cada tono se acerca MUTE a su gris; el usuario, 3.103: demasiado coloridos;
+# 0.5.19, otra vez "bastante más coloridos de lo que deberían": más apagados aún y con MENOS tonos — ver button_cell)
+MUTE = 0.52
 
 
 def muted(c):
@@ -137,15 +138,16 @@ CELL, CUT = 8, {'l': 2, 'r': 2, 't': 2, 'b': 3}
 
 
 def button_cell(p, sel):
+    """Botón SIMPLE (0.5.19, el usuario: menos paleta y menos textura, sin llegar a plano): 3 tonos — contorno,
+    cuerpo y labio de abajo — más una línea de luz solo arriba. Sin sombra lateral ni luz a la izquierda."""
     t = [lighter(c, 0.12) for c in p] if sel else p
     outline = (255, 255, 255) if sel else t[0]
     im = Image.new('RGBA', (CELL, CELL), (0, 0, 0, 0))
     for y in range(CELL):
         for x in range(CELL):
             if x in (0, CELL - 1) or y in (0, CELL - 1): c = outline
-            elif y == CELL - 2: c = t[1]                    # labio
-            elif y == CELL - 3 or x == CELL - 2: c = t[2]   # sombra abajo / derecha
-            elif y == 1 or x == 1: c = t[4]                 # luz arriba / izquierda
+            elif y >= CELL - 3: c = t[1]                    # labio (2 px: el relieve de abajo)
+            elif y == 1: c = lighter(t[3], 0.22)            # luz de arriba
             else: c = t[3]
             im.putpixel((x, y), c + (255,))
     return im

@@ -6,7 +6,7 @@
 --   TitleLogo.draw(x, y, s, o)              esquina de arriba a la izquierda; o:
 --       t       s desde que empezó a salir (con intro = true: el recuadro cae botando y las letras salen una a una)
 --       intro   animar la entrada
---       wave    las letras se mecen en ola (t)
+--       wave    las letras se mecen en ola DE VEZ EN CUANDO (una ola cada WAVE_EVERY s, no siempre: 0.5.19, el usuario)
 --       alpha, shadow (px de la sombra negra; 4 por defecto, false = sin)
 --   TitleLogo.introTime()                   s que dura la entrada
 local json = require 'libs/json'
@@ -16,6 +16,8 @@ local TitleLogo = {}
 TitleLogo.BOX_T = 0.45        -- s que tarda el recuadro en caer
 TitleLogo.DROP = 0.06         -- s entre letra y letra al salir
 TitleLogo.POP_T = 0.16        -- s que tarda cada letra en asentarse
+TitleLogo.WAVE_EVERY = 6.0    -- s entre una ola y la siguiente
+TitleLogo.WAVE_SPEED = 7.0    -- letras por segundo que recorre la ola
 
 local logo
 local function load()
@@ -65,7 +67,13 @@ function TitleLogo.draw(x, y, s, o)
             end
         end
         -- la ola: cada letra sube un píxel del logo y baja, desfasada
-        local wave = (o.wave and math.sin(t * 3 - i * 0.55) > 0.6) and -s or 0
+        -- la ola: de vez en cuando (cada WAVE_EVERY s, tras la entrada) recorre las letras de izquierda a derecha
+        local wave = 0
+        if o.wave then
+            local tw = (t - TitleLogo.introTime()) % TitleLogo.WAVE_EVERY
+            local head = tw * TitleLogo.WAVE_SPEED                     -- (letra por la que va la ola)
+            if tw >= 0 and head > i - 1 and head < i + 1 then wave = -s end
+        end
         if a > 0 then
             love.graphics.setColor(1, 1, 1, a * alpha)
             love.graphics.draw(lg.img, l.q, x + l.x * s, y + by + l.y * s + dy + wave, 0, s, s)
