@@ -48,8 +48,8 @@ the d-pad, or 7 quick taps on the version number (bottom right) on a phone. Two 
 `Sound.load` (copies of the game's sources, so their `GAIN` is applied). Options (◀ ▶): list, loop, pitch (0.25–3),
 volume, echo and room (OpenAL effects `love.audio.setEffect`; "not available" where the platform has none), and
 position (seek ±5 s). It plays on its OWN sources and leaves the game's music and voices alone. Mouse / touch
-(0.5.21, the user: everything must work without keyboard or pad): two tabs MÚSICA / EFECTOS above the list, a ▶ / ■
-button on the card, a position bar that seeks on tap and drag, rows (tap = choose, tap again = play / stop; drag =
+(0.5.21, the user: everything must work without keyboard or pad): a ▶ / ■ button on the card (the list is switched
+with the LISTA option — tabs above the list were tried and removed in 0.5.22, "se salen un poco de lugar"), a position bar that seeks on tap and drag, rows (tap = choose, tap again = play / stop; drag =
 scroll; wheel too), either half of an option (◀ / ▶); the mouse hover selects rows and options. Harness `menu_flow`
 (`soundtest`, keyboard and touch).
 

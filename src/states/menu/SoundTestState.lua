@@ -200,10 +200,8 @@ function SoundTestState:_layout()
     local opts = {}
     for i = 1, #OPTS do opts[i] = { x = ox, y = TOP + 96 + (i - 1) * 58, w = optW, h = 48 } end
     local info = { x = ox, y = TOP, w = optW, h = 84 }
-    local tw = math.floor((listW - 8) / 2)
     return { list = list, opts = opts, info = info,
-             -- (ratón / dedo: las dos pestañas de la lista, el botón ▶ / ■ y la barra de posición: se tocan)
-             tabs = { { x = m, y = TOP - 34, w = tw, h = 30 }, { x = m + tw + 8, y = TOP - 34, w = tw, h = 30 } },
+             -- (ratón / dedo: el botón ▶ / ■ y la barra de posición se tocan; la lista se cambia con la opción LISTA)
              play = { x = info.x + info.w - 64, y = info.y + 10, w = 52, h = 44 },
              bar = { x = info.x + 16, y = info.y + 60, w = info.w - 96, h = 16 } }
 end
@@ -275,8 +273,7 @@ function SoundTestState:mousemoved(x, y)
     self.backHover = CornerButtons.hitBack(x, y)
     -- (pasar por encima elige: filas y opciones; así el clic hace lo mismo que confirmar)
     local Ly = self:_layout()
-    self.hoverPlay, self.hoverTab = inside(Ly.play, x, y), nil
-    for i, r in ipairs(Ly.tabs) do if inside(r, x, y) then self.hoverTab = i end end
+    self.hoverPlay = inside(Ly.play, x, y)
     for i, r in ipairs(Ly.opts) do
         if inside(r, x, y) then
             if self.focus ~= 'opts' or self.opt ~= i then self.focus, self.opt = 'opts', i; Sound.play('select') end
@@ -302,12 +299,6 @@ function SoundTestState:touchpressed(id, x, y)
         if inside(r, x, y) then
             self.focus, self.opt = 'opts', i
             self:_change(i, MenuKit.stepperSide(r, x))
-            return
-        end
-    end
-    for i, r in ipairs(Ly.tabs) do                      -- pestañas MÚSICA / EFECTOS
-        if inside(r, x, y) then
-            if self.tab ~= i then self.tab = i; self.focus = 'list'; Sound.play('select') end
             return
         end
     end
@@ -356,12 +347,8 @@ function SoundTestState:render()
 
     -- Lista (con su pestaña arriba)
     local Lr = Ly.list
-    for i, r in ipairs(Ly.tabs) do                      -- pestañas (se tocan)
-        local on = self.tab == i
-        local lbl = L(i == 1 and 'st.tab_music' or 'st.tab_sfx') .. '  (' .. #self.lists[i] .. ')'
-        MenuButton.draw(nil, r.x, r.y, r.w, r.h, on and 'teal' or 'grey', on or self.hoverTab == i, { alpha = on and 1 or 0.75 })
-        MenuKit.text(FONT_SMALL, lbl, r.x, r.y + 9, r.w, 'center', on and { 1, 1, 1 } or { 0.72, 0.78, 0.95 })
-    end
+    MenuKit.text(FONT_SMALL, L(self.tab == 1 and 'st.tab_music' or 'st.tab_sfx') .. '  (' .. #self:_items() .. ')',
+                 Lr.x, Lr.y - 22, Lr.w, 'left', { 1, 0.86, 0.36 })
     MenuKit.box('well', Lr.x, Lr.y, Lr.w, Lr.h)
     Clip.push(Lr.x + 4, Lr.y + 4, Lr.w - 8, Lr.h - 8)
     local items, sel, scroll = self:_items(), self.sel[self.tab], self.scroll[self.tab]

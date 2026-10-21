@@ -87,9 +87,10 @@ local function run()
         press('back', 0.05); press('light', 0.05)                                        -- (a la lista; efectos)
         press('nav_down', 0.05); press('confirm', 0.2)
         sfxOk = stt.tab == 2 and stt.playing ~= nil and stt.playing.music == nil
-        -- con el DEDO / el ratón: la pestaña MÚSICA, el botón ▶ (suena), la barra (va a la mitad), ■ (para)
+        -- con el DEDO / el ratón: la opción LISTA (→ música), el botón ▶ (suena), la barra (va a la mitad), ■ (para)
         local Ly = stt:_layout()
-        stt:touchpressed('d', Ly.tabs[1].x + 10, Ly.tabs[1].y + 10); stt:touchreleased('d', Ly.tabs[1].x + 10, Ly.tabs[1].y + 10)
+        local o1 = Ly.opts[1]                                                   -- (la opción LISTA, tocada: música)
+        stt:touchpressed('d', o1.x + 10, o1.y + 10); stt:touchreleased('d', o1.x + 10, o1.y + 10)
         local tabOk = stt.tab == 1
         stt:_stop()
         stt:touchpressed('d', Ly.play.x + 10, Ly.play.y + 10); stt:touchreleased('d', Ly.play.x + 10, Ly.play.y + 10)
@@ -104,8 +105,9 @@ local function run()
         wait(0.1)
         local stopOk = stt:_current() == nil
         TOUCH_ST = tabOk and playOk and seekOk and stopOk
-        TOUCH_MSG = ('pestaña=%s ▶=%s barra a la mitad=%s ■=%s'):format(tostring(tabOk), tostring(playOk), tostring(seekOk), tostring(stopOk))
+        TOUCH_MSG = ('LISTA=%s ▶=%s barra a la mitad=%s ■=%s'):format(tostring(tabOk), tostring(playOk), tostring(seekOk), tostring(stopOk))
         shot('soundtest')
+        if stt.focus == 'opts' then press('back', 0.1) end                    -- (tocar una opción deja el foco en ellas)
         press('back', 0.6)
         back = name(top()) == 'TitleState'
         local t = top()
