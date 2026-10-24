@@ -146,3 +146,7 @@ again. No dialogue or text: animation + music.
   - Story points: a level (and a bonus win) only adds what beats its own record (`summary.gain`); the results screen
     says so when replaying. Grade / world rewards were already once per grade. Replaying for a better grade and score
     still works. Harness `story_flow` (`repetir`).
+  - Records belong to the SLOT (`best` in `story<i>.sav`), never to the game: "new best grade" (`summary.record`) is
+    shown only when the level already had a grade in THIS slot. The user (after 0.5.27): a new Extreme game, level
+    cleared for the first time, said "new best grade" as if it came from the old Hard game — it compared against
+    "-1" (no record). Now the first clear shows neither the record nor the gain line (`repetir` checks it).

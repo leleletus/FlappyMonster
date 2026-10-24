@@ -386,7 +386,7 @@ function love.update(dt)
                 local sm = Run.complete(id, r)
                 return Run.data.points - p0, sm
             end
-            local g1 = play(100, { 4 })
+            local g1, s1 = play(100, { 4 })
             local g2 = play(60, {})
             local g3, s3 = play(150, {})
             local tk = Run.data.taken[id] and Run.data.taken[id][4]
@@ -395,10 +395,13 @@ function love.update(dt)
             local pkOld = Interactions.pickupEffect({}, { lives = 1 }, { taken = true })
             Save.delete(3)
             Run.slot, Run.data = keepSlot, keepData
+            -- la PRIMERA vez no hay récord que batir: ni "nueva mejor nota" ni "lo que supera tu récord" (antes salía
+            -- "nueva mejor nota" en el primer nivel de una partida nueva, como si viniera de otra)
+            local firstClean = s1.record == false and s1.gain == s1.points
             check('repetir', g1 == 100 and g2 == 0 and g3 == 50 and s3.gain == 50 and tk == true and pkNew.lives == 1
-                and pkOld.lives == nil and (pkOld.score or 0) > 0,
-                ('puntos sumados: 1ª vez 100 → +%d; peor (60) → +%d; mejor (150) → +%d; vida extra cogida apuntada=%s; ya cogida da vida=%s, puntos=%s'):format(
-                 g1, g2, g3, tostring(tk), tostring(pkOld.lives), tostring(pkOld.score)))
+                and pkOld.lives == nil and (pkOld.score or 0) > 0 and firstClean,
+                ('puntos sumados: 1ª vez 100 → +%d (sin récord previo=%s); peor (60) → +%d; mejor (150) → +%d; vida extra cogida apuntada=%s; ya cogida da vida=%s, puntos=%s'):format(
+                 g1, tostring(firstClean), g2, g3, tostring(tk), tostring(pkOld.lives), tostring(pkOld.score)))
         end
         -- DESBLOQUEOS: acabar el juego (jefe del último mundo) en Difícil abre Extremo; en Extremo, Xtra; una vez
         local keepSlot, keepData = Run.slot, Run.data

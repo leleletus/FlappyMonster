@@ -68,7 +68,7 @@ end
 
 -- Nivel superado: se apunta, se guardan las vidas, se calcula su NOTA (src/story/Score.lua) y se dan
 -- los premios. Devuelve el resumen para la pantalla de resultados:
---   { rating, grade, parts, points (del nivel, ya con el × de la dificultad), record (mejor nota que antes),
+--   { rating, grade, parts, points (del nivel, ya con el × de la dificultad), record (mejor nota que la que ya tenía),
 --     reward = { lives | points } | nil, world = { rating, grade, reward } | nil (si con él se completa el mundo) }
 function Run.complete(id, result)
     local d = Run.data
@@ -83,7 +83,8 @@ function Run.complete(id, result)
                              kills = result.kills, killable = result.killable, stars = result.stars, starsTotal = result.starsTotal })
     local points = math.floor((result.score or 0) * Difficulty.of(d.difficulty, 'scoreMult', 1) + 0.5)
     local b = d.best[id] or {}
-    local out = { rating = sc.rating, grade = sc.grade, parts = sc.parts, points = points, record = sc.rating > (b.rating or -1),
+    -- (`record`: solo si MEJORA una nota que ya tenía en ESTA partida; la primera vez no hay récord que batir)
+    local out = { rating = sc.rating, grade = sc.grade, parts = sc.parts, points = points, record = b.rating ~= nil and sc.rating > b.rating,
                   par = result.par or Score.par(result.width) }
     -- premio del nivel: solo la primera vez que se llega a esa letra
     local had = b.grade
@@ -151,7 +152,7 @@ function Run.bonusResult(id, result)
     local b = d.bonus[id] or {}
     local sc = Score.bonus(result)
     local out = { rating = sc.rating, grade = sc.grade, parts = sc.parts, won = result.won == true, rewards = {},
-                  points = 0, record = sc.rating > (b.rating or -1) }
+                  points = 0, record = b.rating ~= nil and sc.rating > b.rating }
     if result.won then
         out.points = math.floor((result.score or 0) * Difficulty.of(d.difficulty, 'scoreMult', 1) + 0.5)
         out.gain = math.max(0, out.points - (b.bestPts or 0))             -- (solo lo que mejora el récord)
