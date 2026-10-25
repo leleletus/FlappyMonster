@@ -3,6 +3,8 @@
 A boss is an entity derived from `src/world/entities/base/Boss.lua` placed inside a **boss zone**. The zone walls
 players in, runs the intro, starts and ends the fight, moves the camera and the respawn point, and owns the music.
 Recipe for a new boss: [how-to-add-a-boss](how-to-add-a-boss.md).
+In progress: two new bosses replace Mega Crabby and Mega Gloomy, which become secret bosses —
+[new-bosses-plan](new-bosses-plan.md).
 
 | Boss | Type id | Doc | Story level | Shard |
 |---|---|---|---|---|
@@ -45,7 +47,10 @@ Files: `src/world/systems/BossZones.lua` (zones + fight controller),
   when ALL `level.players` are inside; bosses get `startFight(nPlayers)`;
   respawn points move into the zone. Camera: `BossZones.cameraTarget` via
   `cameraZone` — during a fight it also stays fixed for players BELOW the zone
-  (fell through a broken floor: walls no longer hold them, camera must not follow).
+  (fell through a broken floor: walls no longer hold them, camera must not follow). A CLEARED zone that had a
+  fight (`z.fought`, also set by `netApply`) keeps the camera while the player is inside it (so the boss is seen
+  fleeing); leaving and re-entering is free. `BossZones.cameraEase` softens the switch between zone view and
+  following the player (CAM_LERP × 0.2 → 1 over `CAM_EASE` 1.2 s; both states use it).
   **Boss intro**: if a boss has `hasIntro()`, the zone goes `waiting → intro → fight`
   (state code 5, appended: codes are network ids). During 'intro' players inside are
   FROZEN (`Level:frozenAt` → `PlayerAdventure:update` feeds an all-false Input and
@@ -95,6 +100,18 @@ Files: `src/world/systems/BossZones.lua` (zones + fight controller),
   Crabbies, Snowball, Gloomy, King Gummy) drop it a moment into the flight, thrown towards the zone centre
   (`Shards` Drops:spawn dir). Defeat rule (0.5.27): bosses stay GIANT — they lose the crystal and leave by the
   terrain; only the ending film shrinks them. The Mirror and the Evil Ship keep their own deaths.
+  **Flight (0.5.28, generic in `Boss.lua`)**: `Boss:fleeSide(level)` = the nearest zone side unless the level has less
+  than a screen of room that way (it would end against the level edge, in view); `Boss:fleeOver(level, dt, t, minT)`
+  ends the flight only once NO player has seen it for `FLEE_HIDDEN` s (`Boss:seenBy` → `BossZones.viewOf` = each
+  player's settled camera, + 1 tile margin); only a boss stuck in view fades out (`fleeAlpha`) and goes at
+  `FLEE_MAX` (16 s). `Boss:jumpAhead(level, dir, speed, g, maxCells, halfW, feet)` = the vy of an EARLY jump, timed
+  with its speed so it passes over the highest step it will cross (stairs included) near the top of the jump,
+  instead of hopping from against the wall (Mega Crabbies, Snowball). Dizzy stars: `BossFx.stars` = a ring of 5 stars that sways and bobs, drawn in TWO passes (`part` = 'back' BEFORE
+  the body, 'front' AFTER it: the ring goes round the head in 3D — one pass on top looked like a flat halo, the user
+  0.5.28); the same rule for every knockout ring (`src/fx/StunRing.lua`: the player, remote players, the Mirror's KO,
+  stunned entities);
+  each boss gives the head's centre and a ring as wide as the head. Generic anger with a split boss:
+  `Boss:furyAnchors()` (one anchor per piece: King Gummy's parts).
   `e:interact(pa)` must be side-effect free (client uses it to predict bounces).
 
 - **Stun rule** (anti ground-pound spam): a ground pound on top of a stunnable

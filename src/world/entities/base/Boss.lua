@@ -516,6 +516,83 @@ end
 -- los que huyen tras perder lo sueltan por el camino (el tipo lo dice)
 function Boss:shardDrop() return not self.alive or (self.releasesZone ~= nil and self:releasesZone()) end
 
+-- ── HUIDA tras la derrota (los que se van por el terreno: Mega Crabbies, Bola de Nieve, Lúgubre, Rey Gummy) ─────
+-- El usuario (0.5.28): que no desaparezcan a la vista. Siguen huyendo hasta que NINGÚN jugador los ve (su caja fuera
+-- de lo que enseña la cámara de cada uno: BossZones.viewOf) durante FLEE_HIDDEN s; solo si tardan demasiado
+-- (FLEE_MAX: atascados a la vista) se desvanecen en los últimos FLEE_FADE s. Igual en un jugador y en el servidor;
+-- el cliente lo dibuja con su deadTimer (fleeAlpha).
+Boss.FLEE_MAX, Boss.FLEE_FADE, Boss.FLEE_HIDDEN = 16, 1.0, 0.3
+-- Lado por el que huye: el más cercano de la zona, salvo que por ahí quede poco nivel (acabaría contra el borde del
+-- nivel, a la vista)
+function Boss:fleeSide(level)
+    local z = self.zone
+    if not z then return (self.facing or 1) >= 0 and 1 or -1 end
+    local d = (self.x - z.x0 < z.x1 - self.x) and -1 or 1
+    local left, right = z.x0, (level.widthPx or z.x1) - z.x1
+    local room, other = (d < 0) and left or right, (d < 0) and right or left
+    if room < WINDOW_W + self.outerW * 2 and other > room then d = -d end
+    return d
+end
+-- ¿Lo ve algún jugador? (con una casilla de margen: la cámara va un poco detrás)
+function Boss:seenBy(level)
+    local BZ = require 'src/world/systems/BossZones'
+    local b, m = self:getOuterBounds(), TILE_PX
+    for _, pa in ipairs(level.players or {}) do
+        if pa.alive ~= false then
+            local vx, vy = BZ.viewOf(level, pa.x, pa.y)
+            if b.x + b.w > vx - m and b.x < vx + WINDOW_W + m and b.y + b.h > vy - m and b.y < vy + WINDOW_H + m then
+                return true
+            end
+        end
+    end
+    return false
+end
+-- ¿Se acaba ya la huida? (t = s huyendo; minT = lo mínimo que huye: p. ej. hasta soltar el fragmento)
+function Boss:fleeOver(level, dt, t, minT)
+    if t >= self.FLEE_MAX then return true end
+    if self:seenBy(level) then self.fleeHidT = 0 else self.fleeHidT = (self.fleeHidT or 0) + dt end
+    return t >= (minT or 0) and self.fleeHidT >= self.FLEE_HIDDEN
+end
+-- Salto CON ANTELACIÓN huyendo (el usuario, 0.5.28: saltaba pegado a la pared y se veía raro): mira por delante
+-- (dir) la primera pared de menos de `maxCells` casillas; cuando, a `speed`, saltando ya pasa su borde cerca de lo
+-- más alto del salto, devuelve la vy (negativa) que lo deja justo por encima. nil = aún no (o nada que saltar).
+-- g = su gravedad; halfW = media anchura; feet = y de los pies
+Boss.JUMP_CLEAR = 40                          -- px por encima de la pared
+function Boss:jumpAhead(level, dir, speed, g, maxCells, halfW, feet)
+    local T, clear = TILE_PX, self.JUMP_CLEAR
+    local x0 = self.x + dir * halfW
+    local look = speed * math.sqrt(2 * (maxCells * T + clear) / g) + T
+    for d = 2, look, T / 4 do
+        local x = x0 + dir * d
+        if level:entitySolidAt(x, feet - 8) then
+            -- (escalera: lo más alto de lo que cruzará en lo que dura la subida, no solo el primer escalón)
+            local function height(xx)
+                local h = 0
+                while h < maxCells and level:entitySolidAt(xx, feet - 8 - h * T) do h = h + 1 end
+                return h
+            end
+            local h = height(x)
+            local vy = math.sqrt(2 * g * (h * T + clear))
+            for e = d + T / 2, d + speed * (vy / g) * 1.2, T / 2 do
+                local hh = height(x0 + dir * e)
+                if hh > h then h, vy = hh, math.sqrt(2 * g * (hh * T + clear)) end
+            end
+            if h >= maxCells then return nil end
+            if d <= speed * (vy / g) * 0.8 then return -vy end      -- (cruza el borde al 80 % de la subida)
+            return nil
+        end
+    end
+    return nil
+end
+-- Opacidad huyendo (t = deadTimer): entero hasta que se acerca FLEE_MAX
+function Boss:fleeAlpha(t) return math.max(0, math.min(1, (self.FLEE_MAX - (t or 0)) / self.FLEE_FADE)) end
+-- Dónde salen los símbolos del enfado genérico: { {x, y, w}, ... } (centro de arriba y ancho). Lo normal, encima de
+-- su caja; quien se parte en trozos (Rey Gummy) da uno por trozo
+function Boss:furyAnchors()
+    local b = self:getOuterBounds()
+    return { { b.x + b.w / 2, b.y, b.w } }
+end
+
 -- ── Hooks por defecto ─────────────────────────────────────────────────────────
 Boss.stunnable = false                        -- ¿el ground pound lo deja KO? (Mirror: sí)
 Boss.hurtSound = 'bossHurt'                   -- sonido al recibir un golpe (cada jefe el suyo)

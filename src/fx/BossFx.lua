@@ -1,7 +1,8 @@
 -- src/fx/BossFx.lua
 -- Efectos de dibujo que COMPARTEN los jefes (sprites en assets/images/bosses/common/): antes cada
 -- jefe cargaba los de otro y repetía el código.
---   BossFx.stars(cx, cy, rx, ry, scale[, alpha])   estrellitas de ATURDIDO girando (= "ahora es vulnerable")
+--   BossFx.stars(cx, cy, rx, ry, scale[, alpha])   estrellitas de ATURDIDO / MAREADO girando en corro sobre la
+--                                                  cabeza (= "ahora es vulnerable", o vencido antes de huir)
 --   BossFx.anger(holder, on, x, y[, opts])         símbolos de ENFADO que saltan alrededor de (x, y): vena,
 --                                                  vapor, garabato. `holder` guarda los que hay (el jefe);
 --                                                  `on` = si salen nuevos. opts: r (radio), kinds, scale
@@ -25,14 +26,35 @@ function BossFx.angerStep(kind, age, life)
     return c:at(age)
 end
 
-function BossFx.stars(cx, cy, rx, ry, scale, alpha)
+-- (cx, cy) = centro del corro, ENCIMA de la cabeza; rx, ry = radios. 5 estrellas repartidas que giran en un corro
+-- que se ladea y se bambolea (mareo); las del fondo, un poco más pequeñas y apagadas. (El usuario, 0.5.28: antes 3
+-- muy juntas, por detrás y mal puestas.)
+-- `part` = 'back' | 'front': el corro da la vuelta a la cabeza en 3D, así que se dibuja en DOS pasadas — 'back' (las
+-- que pasan por detrás) ANTES del cuerpo y 'front' DESPUÉS (todo en una pasada encima parecía un halo plano). Sin
+-- `part`, las cinco de una vez. La regla y el reloj son los del corro común (src/fx/StunRing.lua): las dos llamadas
+-- de un cuadro usan el mismo instante, así que una estrella que cruza el borde nunca sale dos veces ni se pierde.
+local StunRing = require 'src/fx/StunRing'
+function BossFx.stars(cx, cy, rx, ry, scale, alpha, part)
     load()
-    local now = love.timer.getTime()
-    love.graphics.setColor(1, 1, 1, alpha or 1)
-    for i = 0, 2 do
-        local a = now * 5 + i * (math.pi * 2 / 3)
-        clip('stars'):play(now + i / 8, math.floor(cx + math.cos(a) * rx), math.floor(cy + math.sin(a) * ry), 0, scale, scale)
+    local now = StunRing.now()
+    local n = 5
+    local tilt = math.sin(now * 2.6) * 0.18                  -- (el corro se ladea a un lado y a otro)
+    local bob = math.sin(now * 5.3) * ry * 0.3
+    local list = {}
+    for i = 0, n - 1 do
+        local a = now * 3.6 + i * (math.pi * 2 / n)
+        local x, y = math.cos(a) * rx, math.sin(a) * ry
+        list[#list + 1] = { x = x, y = y + x * tilt + bob, front = math.sin(a), i = i }
     end
+    table.sort(list, function(p, q) return p.front < q.front end)      -- (las de atrás primero)
+    for _, p in ipairs(list) do
+        if StunRing.wants(part, StunRing.isBack(p.front)) then
+            local k = (p.front < -0.3 and scale > 2) and scale - 1 or scale
+            love.graphics.setColor(1, 1, 1, (alpha or 1) * (p.front < -0.3 and 0.75 or 1))
+            clip('stars'):play(now + p.i / 7, math.floor(cx + p.x + 0.5), math.floor(cy + p.y + 0.5), 0, k, k)
+        end
+    end
+    love.graphics.setColor(1, 1, 1, 1)
 end
 
 function BossFx.target(t, x, y, sx, sy)
@@ -111,12 +133,16 @@ function BossFx.fury(boss, camX, camY, render)
     render(boss, camX, camY)
     love.graphics.pop()
     love.graphics.setShader(prev)
-    -- los símbolos, sobre la cabeza (lo de arriba de su caja)
-    local b = boss:getOuterBounds()
-    local holder = boss._furyFx or {}
-    boss._furyFx = holder
-    BossFx.anger(holder, true, math.floor(b.x + b.w / 2 - camX), math.floor(b.y - camY + 10),
-                 { r = math.max(60, b.w * 0.55) })
+    -- los símbolos, sobre la cabeza (lo de arriba de su caja; partido en trozos, sobre cada trozo: Boss:furyAnchors)
+    local holders = boss._furyFx or {}
+    boss._furyFx = holders
+    local anchors = boss:furyAnchors()
+    for i, a in ipairs(anchors) do
+        holders[i] = holders[i] or {}
+        BossFx.anger(holders[i], true, math.floor(a[1] - camX), math.floor(a[2] - camY + 10),
+                     { r = math.max(a[3] < 160 and 40 or 60, a[3] * 0.55), scale = a[3] < 160 and 2 or 3 })
+    end
+    for i = #anchors + 1, #holders do holders[i] = nil end      -- (los de trozos que ya no están)
 end
 
 return BossFx

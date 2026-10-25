@@ -39,7 +39,8 @@ or flying), and at the end SPLITS into medium Gummies.
   burst: it lies STUNNED (part st 3, stars). Last part → defeat (0.5.27): 'dying_rejoin' (the parts hop together to
   `joinX`) → 'dying_daze' (the King again, no crown) → 'dying_fetch' (jumps to his crown on the ground — now BROKEN,
   `crown_broken.png` by `tools/art/enemies/make_crown_broken.py`) → 'dying_crown' (puts it on, crooked) →
-  'dying_flee' (sad hops to the nearest side, higher after hitting a wall; zone ignored; fades; shard at `KTHROW`,
+  'dying_flee' (sad hops to `Boss:fleeSide`, higher after hitting a wall; zone ignored; goes when nobody sees it
+  — `Boss:fleeOver` —; shard at `KTHROW`,
   `releasesZone`) → dead. netPackExtra: phase, landX/Y, splitX/Y,
   crownX/Y, waves {id,x,y,dir,t}, parts {x,y,hp,inv,st,facing}, marks {x,y,kind}. Arena `tools/levelgen/arenas/jefe_gummy.json` (from
   `make_jefe_gummy.py`: flat throne hall, side platforms row 10 + middle row 7, music `boss_nes`); real level
@@ -47,3 +48,4 @@ or flying), and at the end SPLITS into medium Gummies.
   Harnesses: `megagummy_rules` (every rule), `boss_sim` / `boss_intro` / `online_boss` / `boss_frames` with
   `LEVEL=tools/levelgen/arenas/jefe_gummy.json`. Protocol v41 (v42: guard entries + marks).
 - 0.5.27, the user: in the story the bosses stay GIANT until the ending film shrinks them, so a defeat must not shrink them; they lose the crystal and leave, still giant, respecting the terrain, and DROP the shard while fleeing (not at once). The user, for the King: his pieces should not explode (how would they put themselves back together?) — they end stunned on the ground, come back together, pick up the now-broken crown and put it back on. Before: 'dying_pop', big confetti and only the crown hopping.
+- 0.5.28, the user: on Xtra Extreme (generic anger) the anger symbols kept popping where the King's body would be after the split → `MG:furyAnchors` (one per standing part). Stars: the shared ring, wider; dying_daze shakes more and lasts 2.4 s (was 1.2). The user: "King Gummy perfect".

@@ -28,6 +28,12 @@ function PlayerAdventure:render(camX, camY)
     love.graphics.setColor(r, g, b, PlayerAdventure.invulnAlpha(not self.dying and self.invT or 0))
     local squashed = not self.dying and (self.squashT or 0) > 0
     local iced = not self.dying and (self.iceT or 0) > 0
+    local stunned = not self.dying and (self.stunT or 0) > 0
+    if stunned then                                  -- (aturdido: las estrellitas de DETRÁS de la cabeza, antes del cuerpo)
+        local cr, cg, cb, ca = love.graphics.getColor()
+        PlayerAdventure.drawStunStars(self.x - camX, self.y - camY, squashed, 'back')
+        love.graphics.setColor(cr, cg, cb, ca)
+    end
     if iced then                                     -- (congelado: el cuerpo teñido de hielo)
         IceEncase = IceEncase or require 'src/fx/IceEncase'
         local sh = IceEncase.tint()
@@ -53,8 +59,8 @@ function PlayerAdventure:render(camX, camY)
     if iced then love.graphics.setShader() end
     if self.dying then
         DeadEyes.draw(math.floor(self.x-camX), math.floor(self.y-camY), s, self.facing)
-    elseif (self.stunT or 0) > 0 then
-        PlayerAdventure.drawStunStars(self.x - camX, self.y - camY, squashed)
+    elseif stunned then
+        PlayerAdventure.drawStunStars(self.x - camX, self.y - camY, squashed, 'front')
     end
     if not self.dying and (self.iceT or 0) > 0 then
         PlayerAdventure.drawIce(math.floor(self.x-camX), math.floor(self.y-camY), love.timer.getTime(), self.iceT,
@@ -87,19 +93,21 @@ function PlayerAdventure.invulnAlpha(invT, a)
     return a or 1
 end
 
--- Estrellitas girando sobre la cabeza (aturdido). También para jugadores remotos.
--- squashed = aplastado: la cabeza está mucho más abajo (sprite agachado,
--- 9 filas visibles, achatado a SQUASH_K)
-function PlayerAdventure.drawStunStars(sx, sy, squashed)
-    local t = love.timer.getTime()
+-- Estrellitas girando en corro alrededor de la cabeza (aturdido). También para jugadores remotos y el Espejo.
+-- squashed = aplastado: la cabeza está mucho más abajo (sprite agachado, 9 filas visibles, achatado a SQUASH_K).
+-- part = 'back' | 'front' (o nada = todas): el corro da la vuelta a la cabeza, así que las que pasan por DETRÁS se
+-- dibujan antes del cuerpo y las de DELANTE después (en una sola pasada encima parecía un halo plano). Las de
+-- detrás, un poco más pequeñas y apagadas. (`StunRing.split`: la misma regla que el corro de los jefes.)
+function PlayerAdventure.drawStunStars(sx, sy, squashed, part)
+    local StunRing = require 'src/fx/StunRing'
     local headY = squashed and (sy + SPRITE_H / 2 - 9 * PLAYER_SCALE * SQUASH_K) or (sy - SPRITE_H / 2)
-    for i = 0, 2 do
-        local a  = t * 6 + i * (math.pi * 2 / 3)
-        local x  = math.floor(sx + math.cos(a) * 22)
-        local y  = math.floor(headY - 10 + math.sin(a) * 6)
-        love.graphics.setColor(1, 0.9, 0.3, 1)
-        love.graphics.rectangle('fill', x - 4, y - 1, 8, 2)
-        love.graphics.rectangle('fill', x - 1, y - 4, 2, 8)
+    for _, p in ipairs(StunRing.points(3, 6, part)) do
+        local x = math.floor(sx + p.x * 22)
+        local y = math.floor(headY - 10 + p.y * 6)
+        local k = p.back and 3 or 4                                -- (las de detrás, más pequeñas…)
+        love.graphics.setColor(1, 0.9, 0.3, p.back and 0.7 or 1)  -- (…y apagadas)
+        love.graphics.rectangle('fill', x - k, y - 1, 2 * k, 2)
+        love.graphics.rectangle('fill', x - 1, y - k, 2, 2 * k)
     end
     love.graphics.setColor(1, 1, 1, 1)
 end

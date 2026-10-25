@@ -269,8 +269,9 @@ function OnlineAdventureState:_updateCamera(dt)
     if zx then targetX, targetY = zx, zy end
     if scrolling then targetX = AutoScroll.cameraX(self.level) end
 
-    self.camX = self.camX + (targetX - self.camX) * CAM_LERP * dt
-    self.camY = self.camY + (targetY - self.camY) * CAM_LERP * dt
+    local k = CAM_LERP * BossZones.cameraEase(self, zx ~= nil, dt)      -- (sin tirón al entrar / salir de una zona)
+    self.camX = self.camX + (targetX - self.camX) * k * dt
+    self.camY = self.camY + (targetY - self.camY) * k * dt
     if scrolling then self.camX = targetX end      -- la ventana manda, sin suavizado
 end
 

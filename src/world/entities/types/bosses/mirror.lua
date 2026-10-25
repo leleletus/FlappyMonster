@@ -1012,6 +1012,7 @@ function Mirror:render(camX, camY)
     local f    = self.facing or 1
     local r, g, bb = 1, 1, 1
     if self:flashRed() then r, g, bb = 1, 0.2, 0.2 end
+    if st == 'ko' then PlayerAdventure.drawStunStars(self.x - camX, self.y - camY, nil, 'back') end   -- (detrás)
     useInvert()
     local ga = self:ghostAlpha()
     love.graphics.setColor(r, g, bb, ga)
@@ -1068,7 +1069,7 @@ function Mirror:render(camX, camY)
     end
     love.graphics.setShader()
     love.graphics.setColor(1, 1, 1, 1)
-    if st == 'ko' then PlayerAdventure.drawStunStars(self.x - camX, self.y - camY) end
+    if st == 'ko' then PlayerAdventure.drawStunStars(self.x - camX, self.y - camY, nil, 'front') end  -- (delante)
 end
 
 return {

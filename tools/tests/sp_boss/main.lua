@@ -51,8 +51,17 @@ function love.update(dt)
             if math.abs(d) < 4 * TILE_PX then s.right, s.left = d > 0, d <= 0 end
         end
     end
+    -- (KILL=1: ya ido el jefe, sale andando de la zona por la izquierda: la cámara debe soltarse sin tirón)
+    if last.goneT then
+        s.left, s.right = true, false
+        s.jump = math.floor((t - last.goneT) * 2) % 2 == 0           -- (saltando: la salida puede tener escalones)
+        s.jump_pressed = s.jump and not last.jumpWas
+        last.jumpWas = s.jump
+    end
     Input = setmetatable({ pressed = stub.pressed, down = stub.down }, { __index = package.loaded['input'] })
+    local camX0 = st.camX
     gameUpdate(dt)
+    if last.killT and camX0 then last.camJump = math.max(last.camJump or 0, math.abs(st.camX - camX0)) end
     Input = package.loaded['input']
     -- (CAMFRAC=0.6: cámara con decimales, como al deslizarse; para ver rendijas
     -- de medio píxel entre bloques en las capturas)
@@ -116,15 +125,29 @@ function love.update(dt)
                 print(('  %.2f %s x=%d y=%d vy=%d suelo=%s'):format(t - last.killT, boss.state, boss.x, boss.y, boss.vy or 0, tostring(boss.onGround)))
             end
             if st.shards and #st.shards.list > 0 and not last.thrownT then last.thrownT = t - last.killT end
-            if t - last.killT >= last.kn * 0.4 and last.kn < 23 then
+            -- se va: ¿lo veía alguien en ese momento? (Boss.fleeOver: solo se va cuando nadie lo ve)
+            if not boss.alive and not last.goneT then
+                last.goneT, last.goneSeen = t, boss:seenBy(st.level)
+                last.goneFlee = boss.deadTimer
+            end
+            if t - last.killT >= last.kn * (tonumber(os.getenv('KEVERY')) or 0.4) and last.kn < (tonumber(os.getenv('KSHOTS')) or 23) then
                 local n = last.kn
                 last.kn = n + 1
                 love.graphics.captureScreenshot(function(img) img:encode('png', ('defeat_%02d.png'):format(n)) end)
             end
-            if t - last.killT > 9.5 then
+            if (last.goneT and t - last.goneT > 3) or t - last.killT > 25 then
+                local z = boss.zone
+                local out = z and st.player.x < z.x0
                 print(('Derrota: %s · fragmento soltado a los %s s · de x=%d a x=%d · vivo=%s'):format(table.concat(last.kseq, '>'),
                     last.thrownT and ('%.1f'):format(last.thrownT) or 'nunca', last.kx, boss.x, tostring(boss.alive)))
-                love.event.quit(0)
+                -- reglas (0.5.28): no desaparece a la vista (salvo atascado: FLEE_MAX); la cámara no da tirones
+                -- (ni al vencerlo ni, si llega a salir — saltando hacia la izquierda: no todas las arenas se dejan —, al salir
+                -- de la zona superada)
+                local ok = last.goneT ~= nil and not last.goneSeen and (last.camJump or 0) <= 20
+                print(('huida %s  se va a la vista=%s (huyendo %.1f s) · mayor salto de cámara=%.1f px/cuadro · salió de la zona=%s (x=%d, zona desde %d)'):format(
+                    ok and 'OK   ' or 'FALLA', tostring(last.goneSeen), last.goneFlee or -1, last.camJump or 0, tostring(out),
+                    st.player.x, z and z.x0 or -1))
+                love.event.quit(ok and 0 or 1)
                 return
             end
         end

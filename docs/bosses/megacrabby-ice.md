@@ -37,4 +37,5 @@ HAND-EDITED by the user). **Level:** `glaciar_cangrejo`; arena `tools/levelgen/a
   droppers, a wall-walking climber, an icy trampoline Crabby, then that arena grafted (zone from column 89).
   Harnesses: `icecrabby_rules` (mega_* cases, `LOOK=1` → icemega_look.png), `boss_sim`/`boss_intro`/`online_boss`
   with `LEVEL=` that arena. Protocol v40 (v42: icicle field).
+- 0.5.28: flees walking and jumping, not crawling (`Mega:fleeStep`: docs/bosses/megacrabby.md).
 - 0.5.27: beaten with its claws frozen it dies STANDING (`dying_iced`: struggles, the ice breaks off, dazed, flees crawling) — it used to turn upside down: `docs/bosses/megacrabby.md`.

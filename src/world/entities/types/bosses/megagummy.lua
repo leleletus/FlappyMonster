@@ -69,8 +69,9 @@ local FANFARE_AT = 0.3
 local PHASE_T    = 1.6
 local SPLIT_T    = 1.0                -- tiembla; a los SPLIT_T s revienta en trozos
 local CROWN_AT, CROWN_T = 0.25, 0.9   -- la corona sale volando (y tarda en caer)
-local REJOIN_T, KDAZE_T, PUT_T = 1.6, 1.2, 1.0    -- derrota: se juntan los trozos, aturdido, se pone la corona
-local FETCH_MAX, KFLEE_T, KTHROW = 4.0, 3.8, 0.6   -- ...va a por ella (como mucho), huye, suelta el fragmento
+local REJOIN_T, KDAZE_T, PUT_T = 1.6, 2.4, 1.0    -- derrota: se juntan los trozos, aturdido, se pone la corona
+local FETCH_MAX, KFLEE_T, KTHROW = 4.0, 0.9, 0.6   -- ...va a por ella (como mucho), huye (lo mínimo: luego, hasta que
+                                                   -- nadie lo ve, Boss.fleeOver), suelta el fragmento
 local GRACE      = 0.8                -- s sin daño por contacto tras un golpe de contacto
 local WAVE_SPD   = 470
 local WAVE_LIFE  = 1.7
@@ -532,6 +533,16 @@ function MG:releasesZone() return self.state == 'dying_flee' or self.state == 'd
 function MG:shardDrop() return not self.alive or (self.state == 'dying_flee' and self.deadTimer >= KTHROW) end
 function MG:isSolidBody() return Boss.isSolidBody(self) and not SPLIT[self.state] and not DEATH[self.state] end
 function MG:canBeKnocked() return false end
+-- Enfado genérico partido en trozos: los símbolos salen sobre cada trozo que sigue en pie (no sobre el cuerpo, que
+-- no se ve)
+function MG:furyAnchors()
+    if self.state ~= 'parts' then return Boss.furyAnchors(self) end
+    local out = {}
+    for _, p in ipairs(self.parts or {}) do
+        if p.st == 1 or p.st == 2 then out[#out + 1] = { p.x, p.y - p.outerH / 2, p.outerW } end
+    end
+    return out
+end
 
 -- Sin efectos (el cliente lo usa para predecir): con trozos, el trozo que toca (apunta cuál en
 -- _hitPart para el stomp/pound que viene justo después)
@@ -771,8 +782,7 @@ function MG:updateBoss(dt, level)
         self:physics(level, dt); self:friction(level, dt)
         if t >= PUT_T then
             -- se va (saltitos tristes) por el lado más cercano de la zona, por el terreno
-            local zx0, zx1 = self:zoneBounds()
-            self.fleeDir = (self.x - zx0 < zx1 - self.x) and -1 or 1
+            self.fleeDir = self:fleeSide(level)
             self.facing, self.fleeing, self.hopT = self.fleeDir, true, 0
             self:enter('dying_flee')
         end
@@ -792,7 +802,7 @@ function MG:updateBoss(dt, level)
         elseif hit == 'wall' then
             self.blocked = true
         end
-        if t >= KFLEE_T then self.state, self.alive = 'dead', false end
+        if self:fleeOver(level, dt, t, KFLEE_T) then self.state, self.alive = 'dead', false end
     end
 end
 
@@ -952,8 +962,8 @@ function MG:pose()
         return F_IDLE, 1, 1, false, 0, true
     end
     if st == 'dying_daze' then
-        local w = math.sin(now * 6) * 0.05
-        return F_DAZED, 1 + w, 1 - w, false, 0, true
+        local w = math.sin(now * 9) * 0.08                                   -- (vencido: se bambolea y tiembla, mareado)
+        return F_DAZED, 1 + w, 1 - w, false, 2, true
     end
     if st == 'dying_fetch' or st == 'dying_flee' then
         if not self.onGround then return F_JUMP, 0.94, 1.08, false, 0, true end
@@ -1046,7 +1056,12 @@ function MG:render(camX, camY)
         local crown = not (st == 'split' and t >= CROWN_AT) and 'crown' or nil
         if st == 'dying_daze' or st == 'dying_fetch' or (st == 'dying_crown' and t < PUT_T * 0.6) then crown = nil end
         if (st == 'dying_crown' and t >= PUT_T * 0.6) or st == 'dying_flee' then crown = 'crown_broken' end
-        if st == 'dying_flee' then alpha = alpha * math.max(0, math.min(1, (KFLEE_T - t) / 0.9)) end      -- (se desvanece)
+        if st == 'dying_flee' then alpha = alpha * self:fleeAlpha(t) end      -- (solo si se atasca a la vista: Boss.fleeOver)
+        local dazed = st == 'dazed' or st == 'dying_daze'
+        if dazed then                                                 -- (las estrellitas de detrás, antes del cuerpo)
+            BossFx.stars(fx, fy - 13 * MS, 7 * MS, 2 * MS, 5, alpha, 'back')
+            love.graphics.setColor(r, g, b, alpha)
+        end
         if lying then
             -- De barriga: girado 90° alrededor del centro del cuerpo (filas 2-15 → centro 9)
             local cy = math.floor(self.y - camY)
@@ -1056,9 +1071,9 @@ function MG:render(camX, camY)
         else
             drawGummy(fr, fx, fy, MS, self.facing or 1, sx, sy, crown)
         end
-        -- Mareado: estrellitas girando sobre la cabeza
-        if st == 'dazed' or st == 'dying_daze' then
-            require('src/fx/BossFx').stars(fx, fy - 15 * MS, 6 * MS, 1.5 * MS, 4, alpha)
+        -- Mareado: estrellitas girando en corro alrededor de la cabeza (aquí, las que pasan por delante)
+        if dazed then
+            BossFx.stars(fx, fy - 13 * MS, 7 * MS, 2 * MS, 5, alpha, 'front')
         end
         -- Goterones de gelatina al aterrizar / al temblar antes de dividirse
         if st == 'split' and (self.lastDrip or 0) + 0.06 < now then
@@ -1082,8 +1097,13 @@ function MG:render(camX, camY)
                 local blink = p.inv > 0 and math.floor(now * 12) % 2 == 0
                 if blink then love.graphics.setColor(1, 0.35, 0.35, 1) else love.graphics.setColor(1, 1, 1, 1) end
                 local px, py = math.floor(p.x - camX), math.floor(p.y + p.outerH / 2 - camY) - hop
+                local pdazed = p.st == 3 and not rejoin                  -- (aturdido: detrás / cuerpo / delante)
+                if pdazed then
+                    BossFx.stars(px, py - 13 * PS, 7 * PS, 2 * PS, 3, nil, 'back')
+                    if blink then love.graphics.setColor(1, 0.35, 0.35, 1) else love.graphics.setColor(1, 1, 1, 1) end
+                end
                 drawGummy(pfr, px, py, PS, p.facing or 1, 1, 1, false)
-                if p.st == 3 and not rejoin then BossFx.stars(px, py - 15 * PS, 5 * PS, 1.2 * PS, 3) end   -- (aturdido)
+                if pdazed then BossFx.stars(px, py - 13 * PS, 7 * PS, 2 * PS, 3, nil, 'front') end
             end
         end
     end

@@ -226,13 +226,15 @@ function M:render(camX, camY)
     local S = spec.scale or set.scale or 4
     local x, y = math.floor(self.x - camX), math.floor(self.y - camY + self.sprH / 2)
     local a = self:ghostAlpha()
+    local tired = self.state == 'tired'                             -- "ahora se le puede golpear": estrellitas
+    if tired then                                                   -- (las de detrás, antes del cuerpo)
+        BossFx = BossFx or require 'src/fx/BossFx'
+        BossFx.stars(x, y - self.sprH - 10, self.sprW * 0.32, 8, 3, 1, 'back')
+    end
     if self:flashRed() then love.graphics.setColor(1, 0.35, 0.35, a) else love.graphics.setColor(1, 1, 1, a) end
     set:drawFrame(fi, x, y, 0, S * self.facing * (spec.facesLeft and -1 or 1), S, 0.5, 1)
     love.graphics.setColor(1, 1, 1, 1)
-    if self.state == 'tired' then                                   -- "ahora se le puede golpear"
-        BossFx = BossFx or require 'src/fx/BossFx'
-        BossFx.stars(x, y - self.sprH - 10, self.sprW * 0.32, 8, 3, 1)
-    end
+    if tired then BossFx.stars(x, y - self.sprH - 10, self.sprW * 0.32, 8, 3, 1, 'front') end
     for _, s in ipairs(self.shots or {}) do
         local px, py = math.floor(s.x - camX), math.floor(s.y - camY)
         if set:has('shot') then

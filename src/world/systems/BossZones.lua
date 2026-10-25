@@ -224,7 +224,7 @@ function Controller:update(dt)
 end
 
 function Controller:beginFight(z, players, events)
-    z.state = 'fight'
+    z.state, z.fought = 'fight', true
     for _, b in ipairs(z.bosses) do b:startFight(#players) end
     -- Durante la pelea se reaparece dentro de la zona
     for _, pa in ipairs(players) do
@@ -356,6 +356,7 @@ function BossZones.netApply(level, list)
             z.arrived = tonumber(d[2]) or 0
             z.needed  = tonumber(d[3]) or 0
             z.phase   = tonumber(d[4]) or 1
+            if z.state == 'fight' then z.fought = true end
         end
     end
 end
@@ -365,12 +366,15 @@ end
 -- la pantalla, sigue al jugador sin salirse de ella. nil = cámara normal.
 -- Zona cuya cámara manda para alguien en (x, y): la que lo contiene o, en
 -- plena pelea, aquella por DEBAJO de la cual está (se cayó por un agujero
--- del suelo: las paredes ya no lo retienen, pero la cámara sigue fija)
+-- del suelo: las paredes ya no lo retienen, pero la cámara sigue fija).
+-- SUPERADA tras una pelea (`fought`), mientras siga dentro la cámara sigue fija en
+-- ella (se ve al jefe huir); sale y vuelve a entrar cuando quiera (el usuario, 0.5.28)
 function BossZones.cameraZone(level, x, y)
     local z = BossZones.arenaAt(level, x, y)
     if z then return z end
     for _, zz in ipairs(level.bossZones or {}) do
         if zz.state == 'fight' and x >= zz.x0 and x <= zz.x1 and y > zz.y1 then return zz end
+        if zz.state == 'cleared' and zz.fought and contains(zz, x, y) then return zz end
     end
     return nil
 end
@@ -395,6 +399,29 @@ function BossZones.cameraTarget(level, x, y)
         return math.max(0, math.min(maxWorld - view, t))
     end
     return axis(z.x0, z.x1, x, WINDOW_W, level.widthPx), axis(z.y0, z.y1, y, WINDOW_H, level.heightPx), z
+end
+
+-- Esquina de arriba a la izquierda de lo que ve quien está en (x, y) (su cámara, ya asentada: la de su zona o
+-- centrada en él dentro del nivel). La usan los jefes que huyen para no desaparecer a la vista (Boss:seenBy)
+function BossZones.viewOf(level, x, y)
+    local zx, zy = BossZones.cameraTarget(level, x, y)
+    if zx then return zx, zy end
+    return math.max(0, math.min(level.widthPx - WINDOW_W, x - WINDOW_W / 2)),
+           math.max(0, math.min(level.heightPx - WINDOW_H, y - WINDOW_H / 2))
+end
+
+-- Suavidad de la cámara (CAM_LERP × esto): al pasar de la vista fija de una zona a seguir al jugador, o al revés,
+-- arranca despacio y va cogiendo ritmo en CAM_EASE s (antes daba un tirón). `holder` = el estado (guarda el cambio)
+BossZones.CAM_EASE = 1.2
+function BossZones.cameraEase(holder, zoned, dt)
+    if holder._camZoned == nil then holder._camEase = BossZones.CAM_EASE end
+    if holder._camZoned ~= zoned then
+        if holder._camZoned ~= nil then holder._camEase = 0 end
+        holder._camZoned = zoned
+    end
+    holder._camEase = math.min(BossZones.CAM_EASE, (holder._camEase or 0) + dt)
+    local k = holder._camEase / BossZones.CAM_EASE
+    return 0.2 + 0.8 * k * k
 end
 
 -- Zona en plena pelea (para música y HUD), o nil

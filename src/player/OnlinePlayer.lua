@@ -115,6 +115,12 @@ function OnlinePlayer:render(camX, camY)
     end
     local PAm = require('src/player/PlayerAdventure')
     local iced = self.iced and not self.dying
+    local stunned = self.stunned and not self.dying
+    if stunned then                                  -- (aturdido: las estrellitas de detrás, antes del cuerpo)
+        local cr, cg, cb, ca = love.graphics.getColor()
+        PAm.drawStunStars(sx, sy, self.squashed, 'back')
+        love.graphics.setColor(cr, cg, cb, ca)
+    end
     if iced then                                     -- (congelado: el cuerpo teñido de hielo)
         local sh = require('src/fx/IceEncase').tint()
         if sh then love.graphics.setShader(sh) end
@@ -135,8 +141,8 @@ function OnlinePlayer:render(camX, camY)
     if self.dying then
         DeadEyes.draw(sx, sy, sc, self.facing, 1, 1, 1, alpha)
     end
-    if self.stunned and not self.dying then
-        require('src/player/PlayerAdventure').drawStunStars(sx, sy, self.squashed)
+    if stunned then
+        PAm.drawStunStars(sx, sy, self.squashed, 'front')
     end
     if self.iced and not self.dying then           -- (congelado: bloque de hielo)
         PAm.drawIce(sx, sy, love.timer.getTime() - (self.icedAt or 0), nil, self.squashed)

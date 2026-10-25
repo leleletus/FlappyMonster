@@ -95,11 +95,11 @@ local ROAR_T     = 1.4
 local DAZZLE_T   = 2.6
 local FLINCH_T   = 0.6
 local TAUNT_T    = 0.9
-local CURL_T, OUT_T = 1.5, 1.8             -- muerte
+local CURL_T, OUT_T = 2.4, 1.8             -- muerte (el usuario, 0.5.28: el temblor mareado duraba muy poco)
 -- (0.5.27, el usuario: los jefes siguen GIGANTES hasta el final de la historia — la película los encoge —: tras
 --  encogerse, se levanta y HUYE a la oscuridad por el lado más cercano, por el terreno — trepa lo que le corta el
---  paso —, soltando su fragmento por el camino; se desvanece al final)
-local FLEE_T, FLEE_SPD, FLEE_THROW = 3.4, 300, 0.6
+--  paso —, soltando su fragmento por el camino, hasta que nadie lo ve: Boss.fleeOver; FLEE_T = lo mínimo que huye)
+local FLEE_T, FLEE_SPD, FLEE_THROW = 0.9, 300, 0.6
 local HEAR_K     = 4                       -- oído: × el radio de cada ruido (oye toda la arena)
 local RING_SPD   = 560                     -- px/s a los que crece el aro
 local RING_MAX   = 9 * T
@@ -479,8 +479,7 @@ function MG:updateBoss(dt, level)
             Entity.emitFx('shake_small', self.x, self.y)
         end
         if t >= CURL_T then
-            local zx0, zx1 = self:zoneBounds()
-            local d = (self.x - zx0 < zx1 - self.x) and -1 or 1
+            local d = self:fleeSide(level)
             self.fleeDir, self.face, self.facing, self.vy = d, d, d, 0
             self:enter('dying_flee')
             Sound.play('mgloomyStep')
@@ -489,7 +488,7 @@ function MG:updateBoss(dt, level)
     elseif st == 'dying_flee' then
         self:fleeStep(level, dt)
         self:walkAnim(dt, true)
-        if t >= FLEE_T then self.state = 'dead'; self.alive = false end
+        if self:fleeOver(level, dt, t, FLEE_T) then self.state = 'dead'; self.alive = false end
         return
     elseif st == 'dying_out' then
         if t >= OUT_T then self.state = 'dead'; self.alive = false end
@@ -792,8 +791,16 @@ function MG:clawPose(side, now)
         dy = 2 + math.sin(now * 5) * 0.4
     elseif st == 'dazzled' or st == 'flinch' then
         out, dy, fr = -4, -1.5, 2                                       -- se tapa
-    elseif st == 'dying_curl' or st == 'dying_out' then
+    elseif st == 'dying_curl' then
+        -- vencido: tiembla mareado y las pinzas dan tirones (no fijas)
+        out = math.sin(now * 27 + side * 1.7) * 0.9
+        dy, fr = 2.5 + math.sin(now * 31 + side * 2) * 0.9, (math.floor(now * 7 + side) % 2 == 0) and 2 or 1
+    elseif st == 'dying_out' then
         dy, fr = 3, 2
+    elseif st == 'dying_flee' then
+        -- huyendo: se mecen a contrapaso con lo que anda (y más sueltas si cae o trepa)
+        local w = (self.x or 0) / 45 + (side < 0 and 0 or math.pi)
+        out, dy = math.cos(w) * 0.7, math.sin(w) * 1.1 + math.sin(now * 9 + side) * 0.3
     else
         dy = math.sin(now * 4 + side * 1.3) * 0.4
         if math.floor(now * 0.6 + side * 0.37) % 4 == 0 and (now * 0.6 + side * 0.37) % 1 < 0.15 then fr = 2 end
@@ -862,7 +869,7 @@ function MG:render(camX, camY)
     if not self:visible() then return end
     local a = self:ghostAlpha()
     if self.state == 'dying_out' then a = math.max(0, 1 - math.max(0, (self.deadTimer or 0) - (OUT_T - 0.7)) / 0.7) end
-    if self.state == 'dying_flee' then a = a * math.max(0, math.min(1, (FLEE_T - (self.deadTimer or 0)) / 0.9)) end
+    if self.state == 'dying_flee' then a = a * self:fleeAlpha(self.deadTimer) end
     local now = love.timer.getTime()
     if self:flashRed() then love.graphics.setColor(1, 0.4, 0.4, a)
     elseif self:angry() then
@@ -870,6 +877,13 @@ function MG:render(camX, camY)
         love.graphics.setColor(1, q, q, a)
         camX = camX - math.floor(math.sin(now * 41) * 0.9 + 0.5)        -- (temblor leve: 1 px de vez en cuando)
     else love.graphics.setColor(1, 1, 1, a) end
+    -- (deslumbrado: las estrellitas que pasan por DETRÁS de la cabeza, antes del cuerpo; las de delante van en
+    -- renderGlow, que se ve a oscuras)
+    if self.state == 'dazzled' or self.state == 'dying_curl' then
+        local r_, g_, b_, a_ = love.graphics.getColor()
+        BossFx.stars(self.x - camX, self.y - camY - 7 * MS, 8 * MS, 1.5 * MS, 7, nil, 'back')
+        love.graphics.setColor(r_, g_, b_, a_)
+    end
     local turned = self:pushTurn(camX, camY)
     self:drawSheet('', camX, camY)
     self:drawClaws(camX, camY, now)
@@ -920,7 +934,7 @@ function MG:renderGlow(camX, camY)
     elseif st == 'dazzled' then a = 0.35 + 0.2 * math.sin(now * 30)
     elseif st == 'dying_curl' then a = 0.5 + 0.4 * math.sin(now * 40)
     elseif st == 'dying_out' then a = math.max(0, 0.7 * (1 - t / (OUT_T * 0.7)))
-    elseif st == 'dying_flee' then a = 0.25 * math.max(0, math.min(1, (FLEE_T - t) / 0.9))      -- (ojos apagados)
+    elseif st == 'dying_flee' then a = 0.25 * self:fleeAlpha(t)      -- (ojos apagados)
     elseif st == 'intro' then a = math.min(1, t / 0.6) end
     if a > 0.01 then
         local turned = self:pushTurn(camX, camY)
@@ -943,7 +957,7 @@ function MG:renderGlow(camX, camY)
         if turned then love.graphics.pop() end
     end
     -- DESLUMBRADO: estrellitas girando sobre él (ahora es vulnerable)
-    if st == 'dazzled' then BossFx.stars(self.x - camX, self.y - camY - 7 * MS, 8 * MS, 1.5 * MS, 7) end
+    if st == 'dazzled' or st == 'dying_curl' then BossFx.stars(self.x - camX, self.y - camY - 7 * MS, 8 * MS, 1.5 * MS, 7, nil, 'front') end
     -- RABIA: símbolos de enfado alrededor de su cabeza (los de todos los jefes: BossFx)
     BossFx.anger(self, self:angry(), self.x - camX, self.y - camY - 40)
     if (self.icon or 0) > 0 then                          -- ("…": la luz lo ha asustado)

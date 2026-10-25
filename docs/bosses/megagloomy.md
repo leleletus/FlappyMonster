@@ -38,7 +38,8 @@ Background: [dark-levels](../gameplay/dark-levels.md).
   CRYSTALS grow ON THE CLAWS — never on the shell: crystals on the head look like spikes and the head is what you
   stomp. 'taunt' after an attack that hit somebody. DEATH is a crab's, not a robot's (`MG:defeat` override, no
   explosions): 'dying_curl' → 'dying_flee' (0.5.27: walks off into the dark, GIANT, by the terrain —
-  `MG:fleeStep`: climbs a wall in front, follows the ground, falls —, eyes dimmed, fades; shard at `FLEE_THROW`;
+  `MG:fleeStep`: climbs a wall in front, follows the ground, falls —, claws swinging with the walk; dying_curl (`CURL_T` 2.4 s, 0.5.28) shakes with twitching claws and the shared
+  dizzy stars; eyes dimmed, goes when nobody sees it (`Boss:fleeOver`; fades only if stuck in view); shard at `FLEE_THROW`;
   `releasesZone`). ('dying_out', the old fade on the spot, is no longer entered.) x,y = centre of its SHELL (`BODY_ROW` 11, box 11x6 art
   px; legs don't count); art = the SAME pixel grid as the small one at scale 10 (`MEGA_B`, 9 frames 38x21 + glow).
   Intro: falls from the dark AT ITS EDITOR x (`onIntroStart` → `stand(level, self.x)`; it used to land at the zone

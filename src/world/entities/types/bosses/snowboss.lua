@@ -30,7 +30,7 @@ local Boss        = require 'src/world/entities/base/Boss'
 local SpriteStrip = require 'src/fx/SpriteStrip'
 local TileTypes   = require 'src/world/tiles/TileTypes'
 local TileCodec   = require 'src/world/tiles/TileCodec'
-local IceEncase                         -- (solo dibujo)
+local IceEncase, BossFx                 -- (solo dibujo)
 
 local Snow = Entity.extend(Boss, {
     -- (aliados en Xtra extremo: qué estados son atacar)
@@ -107,8 +107,9 @@ local SLAM_R     = 3.5                  -- casillas (además del medio cuerpo) q
 -- MAREADA y huye rodando gigante por el terreno — salta lo que le corta el paso —, soltando su fragmento por el
 -- camino (Boss:shardDrop); se desvanece al final
 local DEATH = { dying_crack = true, dying_dizzy = true, dying_flee = true }
-local CRACK_T, DEATH_DIZZY_T, FLEE_T = 2.0, 1.4, 3.6
-local FLEE_ROLL, FLEE_HOP = 460, 3.2     -- px/s rodando; casillas que salta lo que se le cruza
+local CRACK_T, DEATH_DIZZY_T, FLEE_T = 2.0, 2.6, 0.9     -- (FLEE_T: lo mínimo que huye; luego, hasta que nadie la ve)
+local FLEE_ROLL, FLEE_HOP = 460, 3.2     -- px/s rodando; casillas que salta si ya choca (o sale del agua)
+local FLEE_JUMP_MAX = 7                  -- casillas: la pared más alta que salta con antelación (Boss.jumpAhead)
 local THROW_T = 0.6                      -- s de huida en que suelta el fragmento
 
 -- Ciclo de ataques por fase (de 2 en 2, con descanso entre tandas)
@@ -355,6 +356,20 @@ function Snow:crackUnder(level, n)
     if broke then
         for _, cr in ipairs(cells) do
             if level:getDef(cr[1], cr[2]).thinIce then level:crackIce(cr[1], cr[2], 4, 'pound') end
+        end
+    end
+end
+
+-- Rompe el hielo fino que tiene ENCIMA (está en el agua de una charca helada: sale atravesándolo, no se queda
+-- atrapada debajo). Sus columnas, desde los pies hasta 2 casillas por encima de la cabeza
+function Snow:smashIceAbove(level)
+    local c0 = math.floor((self.x - self.outerW / 2 + 4) / T) + 1
+    local c1 = math.floor((self.x + self.outerW / 2 - 4) / T) + 1
+    local r0 = math.floor((self.y - self.outerH / 2) / T) + 1 - 2
+    local r1 = math.floor((self:feetY() - 8) / T) + 1
+    for r = r0, r1 do
+        for c = c0, c1 do
+            if level:getDef(c, r).thinIce then level:crackIce(c, r, 4, 'pound') end
         end
     end
 end
@@ -622,6 +637,8 @@ function Snow:regrowLake(level, dt, now)
                 local under = math.abs((cr[1] - 0.5) * T - self.x) < hw and not (self.onGround and not self.escaping)
                 if under then blocked = true else ready = true end
             end
+            -- (al morir se hiela todo YA, menos lo que tiene encima si está en el agua: que no quede atrapada)
+            if now and inW and math.abs((cr[1] - 0.5) * T - self.x) < hw then ready = false end
             if ready and not self:cellTaken(level, cr[1], cr[2]) then
                 cr[3] = 0
                 placeTile(level, cr[1], cr[2], thin.id)
@@ -819,6 +836,7 @@ function Snow:nextAttack(level)
     if self:inWater(level) then
         self.escaping = true
         if not self:startLeap(level, pa, true) then
+            self:smashIceAbove(level)                          -- (sin sitio al que saltar: rompe el hielo de encima y sale)
             self.vy, self.onGround = -HOP_VY, false
             self:enter('hop')
         end
@@ -1278,23 +1296,32 @@ function Snow:updateBoss(dt, level)
     elseif st == 'dying_dizzy' then
         self:physics(level, dt); self:friction(level, dt)
         if t >= DEATH_DIZZY_T then
-            local zx0, zx1 = self:zoneBounds()
-            self.fleeDir = (self.x - zx0 < zx1 - self.x) and -1 or 1
+            self.fleeDir = self:fleeSide(level)
             self.dir, self.facing, self.fleeing = self.fleeDir, self.fleeDir, true
             self:enter('dying_flee')
             Sound.play('snowFlee')
         end
 
     elseif st == 'dying_flee' then
-        -- rueda gigante; lo que le corta el paso, lo salta (pared, escalón)
+        -- rueda gigante; lo que le corta el paso, lo salta (pared, escalón). En el agua (cayó a una charca bajo el hielo
+        -- fino) rompe el hielo de encima y sale de un salto (antes se quedaba atrapada debajo)
         self.vx = self.fleeDir * FLEE_ROLL
+        local wet = self:inWater(level)
+        if wet then self:smashIceAbove(level) end
+        local was = self.onGround
         local hit = self:physics(level, dt)
-        if hit == 'wall' and self.onGround then
+        -- (lo normal: salta con antelación, calculado con su velocidad, para pasar por encima sin rozar la pared)
+        local vy = was and self.onGround and not wet
+                   and self:jumpAhead(level, self.fleeDir, FLEE_ROLL, GRAV, FLEE_JUMP_MAX, self.outerW / 2, self:feetY())
+        if vy then
+            self.vy, self.onGround = vy, false
+            Sound.play('jump', 0.6)
+        elseif (hit == 'wall' or wet) and self.onGround then
             self.vy = -math.sqrt(2 * GRAV * FLEE_HOP * T)
             self.onGround = false
-            Sound.play('jump', 0.6)
+            Sound.play(wet and 'waterSplash' or 'jump', 0.6)
         end
-        if t >= FLEE_T then self.state, self.alive = 'dead', false end
+        if self:fleeOver(level, dt, t, FLEE_T) then self.state, self.alive = 'dead', false end
     end
 end
 
@@ -1611,6 +1638,10 @@ function Snow:drawBody(camX, camY, alpha)
     if st == 'windup' then sh = 2 + math.floor(t / WINDUP_T[self.phase or 1] * 3) end
     if st == 'leap_wind' then sh = 1 + math.floor(math.min(1, t / self:leapWind()) * 2) end
     if st == 'phase_up' or st == 'dying_crack' then sh = 3 end
+    if st == 'dying_dizzy' then                               -- vencida: se bambolea mareada y tiembla
+        sh = 2
+        fx = fx + math.floor(math.sin(now * 7) * sc * 0.6 + 0.5)
+    end
     if (self.phase or 1) == 3 and st == 'idle' then sh = 1 end
     if st == 'intro' and t >= SPIT_WIND and t < SPIT_AT then                    -- coge aire: tiembla cada vez más
         sh = 1 + math.floor((t - SPIT_WIND) / (SPIT_AT - SPIT_WIND) * 2.99)
@@ -1634,6 +1665,12 @@ function Snow:drawBody(camX, camY, alpha)
         end
     end
     if self:flashRed() then r, g, bl = 1, 0.35, 0.35 end
+    local dizzy = st == 'dizzy' or st == 'dying_dizzy'
+    local starsAt = function(part)
+        BossFx = BossFx or require 'src/fx/BossFx'
+        BossFx.stars(fx, fy - (13 - topRow(fr)) * sc, 8 * sc, 2 * sc, math.max(3, math.floor(sc * 0.6)), alpha, part)
+    end
+    if dizzy then starsAt('back') end                                  -- (las estrellitas de detrás, antes del cuerpo)
     love.graphics.setColor(r, g, bl, alpha)
     love.graphics.draw(fr.image, fr.quad, fx, fy, 0, sc, sc, 8, 15)
     -- Grietas (fase 3; muriendo cada vez más)
@@ -1652,13 +1689,15 @@ function Snow:drawBody(camX, camY, alpha)
         love.graphics.setColor(1, 1, 1, alpha * (1 - k))
         S('sweat'):play(now, fx + 6 * sc, fy - (15 - topRow(fr)) * sc + k * 3 * sc, 0, sc * 0.5, sc * 0.5)
     end
-    -- Mareada / empapada: estrellas (gotas azules empapada) girando
-    if st == 'dizzy' or st == 'soaked' then
+    -- Mareada (también vencida, antes de huir): el corro de estrellitas de todos los jefes; aquí, las de delante
+    if dizzy then starsAt('front') end
+    -- Empapada: gotas azules girando
+    if st == 'soaked' then
         for i = 0, 2 do
             local a = now * 5 + i * (math.pi * 2 / 3)
             local x = math.floor(fx + math.cos(a) * 7 * sc)
             local y = math.floor(fy - 15 * sc + math.sin(a) * 2 * sc)
-            if st == 'soaked' then love.graphics.setColor(0.55, 0.8, 1, alpha) else love.graphics.setColor(1, 0.9, 0.3, alpha) end
+            love.graphics.setColor(0.55, 0.8, 1, alpha)
             love.graphics.rectangle('fill', x - 6, y - 2, 12, 4)
             love.graphics.rectangle('fill', x - 2, y - 6, 4, 12)
         end
@@ -1703,7 +1742,7 @@ function Snow:render(camX, camY)
         love.graphics.rectangle('fill', x0 + w - 6, y0 - 14, 6, 14)
     end
 
-    if st == 'dying_flee' then alpha = (alpha or 1) * math.max(0, math.min(1, FLEE_T - t)) end   -- (se desvanece al final)
+    if st == 'dying_flee' then alpha = (alpha or 1) * self:fleeAlpha(t) end   -- (solo si se atasca a la vista: Boss.fleeOver)
     do
         local _, _, sc = self:drawBody(camX, camY, alpha)
         if st == 'frozen' then

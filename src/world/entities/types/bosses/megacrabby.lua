@@ -61,12 +61,15 @@ local CONTACT_PAD = 0               -- px alrededor del cuerpo que ya cuentan co
 -- Muerte
 -- DERROTA (0.5.27, el usuario: en la historia los jefes siguen GIGANTES hasta el final — la película los encoge —):
 -- patalea boca arriba (o, si muere DE PIE — el helado con las pinzas congeladas —, forcejea de pie), se levanta,
--- se queda ATURDIDO un momento (estrellitas) y HUYE gigante trepando por lo que encuentre (Crawler), soltando su
--- fragmento por el camino (Boss:shardDrop); se desvanece al final
-local KICK_T, STAND_T, DAZE_T, FLEE_T = 1.3, 1.3, 1.2, 3.4
-local FLEE_SPEED = 380              -- (huye gigante, trepando: Crawler)
+-- se queda ATURDIDO un momento (estrellitas) y HUYE gigante por el terreno, soltando su fragmento por el camino
+-- (Boss:shardDrop), hasta que nadie lo ve (Boss.fleeOver). Huyendo ya NO trepa (0.5.28, el usuario: en las
+-- escaleras de entrada y salida de su arena el cuerpo gigante temblaba dando la vuelta a cada esquina): los
+-- escalones y paredes bajas que suben los SALTA y los que bajan los baja de un salto (fleeStep)
+local KICK_T, STAND_T, DAZE_T, FLEE_T = 1.3, 1.3, 2.4, 0.9   -- (FLEE_T: lo mínimo que huye)
+local FLEE_SPEED = 380
+local FLEE_JUMP_MAX = 7             -- casillas: la pared más alta que salta huyendo
+local FLEE_HOP_VY = -560            -- salto para bajar escalones (cae por delante, de varios en varios)
 local THROW_T = 0.6                 -- s de huida en que suelta el fragmento
-local FLEE_FADE  = 0.8              -- s del final en que se desvanece
 local SMALL = GUMMY_SCALE / MS      -- al desinflarse queda del tamaño de un Crabby normal
 -- Al aterrizar tras levantarse: empuja y aturde a los de alrededor
 local SHOCK_RX, SHOCK_RY = 4.5, 1.8 -- casillas
@@ -116,6 +119,7 @@ function Mega.loadAssets()
 end
 function Mega.sizePx() return 16 * MS, 9 * MS end
 Mega.MS = MS                        -- (por clase: el helado es algo más pequeño; el dibujo y el tamaño usan self.MS)
+Mega.STARS_Y = 1.28                 -- altura del corro de estrellitas de aturdido (× alto del sprite, desde los pies)
 
 -- Estados en los que va pegado a una superficie (trepando)
 local CRAWL = { climb = true, ceiling = true, aim = true, wallclimb = true, wallaim = true, dying_flee = true }
@@ -1013,34 +1017,49 @@ function Mega:updateDeath(dt, level)
         self:walk(level, dt, 0)
         if t >= DAZE_T then
             -- huye por el lado más cercano de la zona (sus paredes ya se van), trepando por lo que haya
-            local z = self.zone
-            self.facing = (z and (self.x - z.x0 < z.x1 - self.x)) and -1 or 1
-            self.fleeing = true
-            self.crawl, self.cnx, self.cny, self.cattached = true, 0, -1, false
-            Crawler.attach(self, level)
-            self.cdir = self.facing
+            self.fleeDir = self:fleeSide(level)
+            self.facing, self.fleeing, self.crawl = self.fleeDir, true, false
+            self.leftBoundPx, self.rightBoundPx = -1e9, 1e9          -- (fuera de la zona: sin límites de ruta)
             self.state, self.deadTimer, self.nextSqueak = 'dying_flee', 0, 0
         end
     elseif st == 'dying_flee' then
-        Crawler.advanceTurn(self, dt)
-        if self.crawl and self.cattached then
-            if not Crawler.move(self, level, FLEE_SPEED * dt) then self.crawl = false end
-            if self.crawl then self:crawlFacing() end
-        else
-            -- (se soltó de un borde: cae y se vuelve a agarrar al llegar)
-            self.crawl = false
-            self:walk(level, dt, self.facing * FLEE_SPEED)
-            if self.onGround then
-                self.crawl, self.cnx, self.cny, self.cattached = true, 0, -1, false
-                if Crawler.attach(self, level) then self.cdir = self.facing else self.crawl = false end
-            end
-        end
+        self:fleeStep(level, dt)
         self:animWalk(dt, 14, true)
         if t >= self.nextSqueak then
             self.nextSqueak = t + 0.45
             Sound.play('megaFlee', 0.8 + math.random() * 0.2)
         end
-        if t >= FLEE_T then self.state, self.alive = 'dead', false end
+        if self:fleeOver(level, dt, t, FLEE_T) then self.state, self.alive = 'dead', false end
+    end
+end
+
+-- Un paso de la huida: anda hacia fleeDir con gravedad; una pared delante (de hasta FLEE_JUMP_MAX casillas) la
+-- salta justo por encima; si el suelo se acaba delante (escalones que bajan, un borde) salta hacia delante y baja
+-- de una vez. En el aire sigue avanzando.
+function Mega:fleeStep(level, dt)
+    local d, T = self.fleeDir or self.facing or 1, TILE_PX
+    local was = self.onGround
+    local moved = self:walk(level, dt, d * FLEE_SPEED)
+    self.facing = d                                           -- (moveAndCollide lo da la vuelta al chocar)
+    if not (was and self.onGround) then return end
+    local feet = self.y + self.outerH / 2
+    local front = self.x + d * (self.outerW / 2 + 6)
+    -- (lo normal: salta con antelación, calculado con su velocidad, y pasa por encima sin rozar la pared)
+    local vy = self:jumpAhead(level, d, FLEE_SPEED, ADV_GRAVITY, FLEE_JUMP_MAX, self.outerW / 2, feet)
+    if vy then
+        self.vy, self.onGround = vy, false
+        Sound.play('crabPop', 0.6)
+    elseif math.abs(moved) < FLEE_SPEED * dt * 0.5 then
+        -- pared: ¿cuánto sube? (casillas sólidas seguidas desde los pies)
+        local h = 0
+        while h < FLEE_JUMP_MAX and level:entitySolidAt(front, feet - 8 - h * T) do h = h + 1 end
+        if h > 0 and h < FLEE_JUMP_MAX then
+            self.vy = -math.sqrt(2 * ADV_GRAVITY * (h * T + 40))
+            self.onGround = false
+            Sound.play('crabPop', 0.6)
+        end
+    elseif not level:entitySolidAt(front, feet + 8) and not level:entitySolidAt(self.x + d * self.outerW * 0.25, feet + 8) then
+        self.vy, self.onGround = FLEE_HOP_VY, false            -- (baja de un salto)
     end
 end
 -- (el helado: se le rompe el hielo de las pinzas al soltarse)
@@ -1203,7 +1222,7 @@ function Mega:pose2d(now, moving, walkPhase)
             claws[i][2] = -2.4 + math.sin(now * 26 + i * 2) * 0.8
         end
     end
-    if (st == 'chase' or st == 'climb' or st == 'ceiling' or st == 'wallclimb' or st == 'charge') and moving then
+    if (st == 'chase' or st == 'climb' or st == 'ceiling' or st == 'wallclimb' or st == 'charge' or st == 'dying_flee') and moving then
         -- Andando: rebota con cada paso y las pinzas se mecen a contrapaso
         local b = math.sin(walkPhase * TAU)
         sy, sx = 1 + 0.045 * b, 1 - 0.03 * b
@@ -1281,6 +1300,28 @@ function Mega:pose2d(now, moving, walkPhase)
         for i = 1, 2 do
             claws[i][1] = math.cos(now * 17 * fury + i * 2.3) * 1.0
             claws[i][2] = math.sin(now * 22 * fury + i * 3.1) * 2.0
+        end
+    elseif st == 'dying_stand' or st == 'dying_iced' then
+        -- Vencido de pie: forcejea, las pinzas dando tirones (el helado, con ellas congeladas: las mueve su capa)
+        for i = 1, 2 do
+            claws[i][1] = math.cos(now * 15 + i * 2.3) * 0.8
+            claws[i][2] = math.sin(now * 19 + i * 3.1) * 1.6
+        end
+    elseif st == 'dying_daze' then
+        -- Aturdido: se bambolea y las pinzas cuelgan sueltas, meciéndose a destiempo con el vaivén
+        local w = math.sin(now * 7)
+        sy, sx = 1 + 0.05 * math.abs(w), 1 - 0.03 * math.abs(w)
+        for i, side in ipairs({ -1, 1 }) do
+            claws[i][1] = side * 0.3 + w * 0.9 + math.sin(now * 23 + i * 2) * 0.2
+            claws[i][2] = 0.6 + math.sin(now * 7 + (i == 1 and 0.9 or -0.9)) * 1.6 + math.sin(now * 31 + i) * 0.3
+        end
+    elseif st == 'dying_flee' and math.abs(self._rdy or 0) > 0.3 then
+        -- Huyendo, en un salto: estirado subiendo, aplastado al bajar; pinzas arriba agitándose
+        local up = (self._rdy or 0) < 0
+        sx, sy = up and 0.92 or 1.05, up and 1.1 or 0.96
+        for i, side in ipairs({ -1, 1 }) do
+            claws[i][1] = side * 0.7
+            claws[i][2] = (up and -2.2 or -1.2) + math.sin(now * 26 + i * 2) * 0.8
         end
     elseif st == 'getup' then
         local k = math.min(1, t / GETUP_T)
@@ -1454,6 +1495,7 @@ function Mega:render(camX, camY)
 
     -- ¿Se mueve? (para el paso y el balanceo): lo que avanzó desde el dibujo anterior
     local moved = self._lx and math.sqrt((self.x - self._lx) ^ 2 + (self.y - self._ly) ^ 2) or 0
+    if self._ly and moved > 0.05 then self._rdy = self.y - self._ly end      -- (subiendo / bajando: los saltos al huir)
     self._lx, self._ly = self.x, self.y
     self._dist = (self._dist or 0) + moved
     local walkPhase = self._dist / (STEP_DIST * 2)
@@ -1527,12 +1569,11 @@ function Mega:render(camX, camY)
         if not fx then fx, fy = self.x - math.sin(ang) * H / 2, self.y + math.cos(ang) * H / 2 end
     end
     if st == 'dying_daze' and not EDITOR_VIEW then
-        -- aturdido: estrellitas sobre la cabeza (gigante aún: el fragmento lo suelta al huir)
-        BossFx.stars(math.floor(fx - camX), math.floor(fy - self.sprH * 0.72 - camY), self.sprW * 0.38, 16, 6)   -- (alrededor de la base del pincho)
+        -- aturdido: se bambolea y tiembla (las estrellitas: las de detrás antes del cuerpo, las de delante después)
+        jx = math.floor(math.sin(now * 7) * 6 + math.sin(now * 61) * 2 + 0.5)
+        jy = math.floor(math.abs(math.cos(now * 7)) * -3 + 0.5)
     end
-    if st == 'dying_flee' then
-        alpha = math.max(0, math.min(1, (FLEE_T - t) / FLEE_FADE))
-    end
+    if st == 'dying_flee' then alpha = self:fleeAlpha(t) end
     if EDITOR_VIEW then nervous = false end
     self._clawForce = nil
     if st == 'windup' and not EDITOR_VIEW then
@@ -1540,9 +1581,16 @@ function Mega:render(camX, camY)
         self._clawForce = { (snap and which ~= 2) and 2 or 1, (snap and which ~= 1) and 2 or 1 }
     end
     self:renderFx(now, fx, fy, moved)
+    local daze = st == 'dying_daze' and not EDITOR_VIEW
+    local starsAt = function(part)          -- corro de estrellitas sobre la cabeza, a los lados del pincho
+        BossFx.stars(math.floor(fx - camX + jx), math.floor(fy - self.sprH * self.STARS_Y - camY + jy),
+                     self.sprW * 0.46, self.sprW * 0.09, 6, nil, part)
+    end
+    if daze then starsAt('back') end                                   -- (las de detrás, antes del cuerpo)
     self:drawLocal(math.floor(fx - camX + 0.5) + jx + shx, math.floor(fy - camY + 0.5) + jy, ang, s, img,
                    withSpike, alpha * self:ghostAlpha(), nervous, sx, sy, claws, false, spikeK)
     self:renderAnger(now, fx + jx + shx, fy + jy, ang, camX, camY)
+    if daze then starsAt('front') end                                  -- (y las de delante, después)
     love.graphics.setColor(1, 1, 1, 1)
 end
 

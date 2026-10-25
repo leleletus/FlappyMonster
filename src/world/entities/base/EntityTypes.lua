@@ -35,6 +35,7 @@
 
 local Props = require 'src/world/entities/base/Props'
 local IceEncase           -- (solo dibujo: el bloque de hielo de lo congelado)
+local StunRing            -- (solo dibujo: el corro de estrellitas de aturdido, por detrás y por delante)
 
 local Silhouette
 local EntityTypes = { byName = {}, list = {}, variants = {} }
@@ -250,22 +251,29 @@ function EntityTypes.register(def)
                 local k  = math.max(0, 1 - (self.deadTimer or 0) / 1.2)
                 local sx = self.x - camX
                 local sy = self.y - camY
+                -- (el corro da la vuelta a la cabeza: las de DETRÁS antes del cuerpo, las de DELANTE después)
+                StunRing = StunRing or require 'src/fx/StunRing'
+                local hy = self.flipped and (sy + (self.sprH or 40) / 2 + 10) or (sy - (self.sprH or 40) / 2 - 8)
+                local function stars(part)
+                    for _, p in ipairs(StunRing.points(3, 6, part)) do
+                        local x = math.floor(sx + p.x * 18)
+                        local y = math.floor(hy + p.y * 5)
+                        local s = p.back and 2 or 3
+                        love.graphics.setColor(1, 0.9, 0.3, p.back and 0.7 or 1)
+                        love.graphics.rectangle('fill', x - s, y - 1, 2 * s, 2)
+                        love.graphics.rectangle('fill', x - 1, y - s, 2, 2 * s)
+                    end
+                end
+                local cr, cg, cb, ca = love.graphics.getColor()
+                stars('back')
+                love.graphics.setColor(cr, cg, cb, ca)
                 love.graphics.push()
                 love.graphics.translate(sx, sy)
                 love.graphics.rotate(math.sin((self.deadTimer or 0) * 18) * 0.18 * k)
                 love.graphics.translate(-sx, -sy)
                 draw(self, camX, camY)
                 love.graphics.pop()
-                local t  = love.timer.getTime()
-                local hy = self.flipped and (sy + (self.sprH or 40) / 2 + 10) or (sy - (self.sprH or 40) / 2 - 8)
-                for i = 0, 2 do
-                    local a = t * 6 + i * (math.pi * 2 / 3)
-                    local x = math.floor(sx + math.cos(a) * 18)
-                    local y = math.floor(hy + math.sin(a) * 5)
-                    love.graphics.setColor(1, 0.9, 0.3, 1)
-                    love.graphics.rectangle('fill', x - 3, y - 1, 6, 2)
-                    love.graphics.rectangle('fill', x - 1, y - 3, 2, 6)
-                end
+                stars('front')
                 love.graphics.setColor(1, 1, 1, 1)
                 return
             end
