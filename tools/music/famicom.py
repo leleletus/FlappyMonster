@@ -317,6 +317,7 @@ PATHS = {
     # (tentacle_chip = las pistas "chip" antiguas del Espejo: retiradas; si se regeneran, van FUERA del repo)
     'tentacle_chip': '../../../FlappyMonster_originals/music/placeholders/mirror_boss_tentacle_chip', 'tentacle_chip_instrumental': '../../../FlappyMonster_originals/music/placeholders/mirror_boss_inst_tentacle_chip',
     'mirror_boss': 'bosses/mirror_boss',
+    'final_fall': 'bosses/final_fall',          # (final_fall.py: tema de jefe con muestras de "Final Fall"; un solo archivo, el bucle incluye la intro)
     'pradera_1': 'worlds/pradera/pradera_1', 'pradera_2': 'worlds/pradera/pradera_2', 'pradera_bonus': 'worlds/pradera/pradera_bonus',
     'costa_1': 'worlds/costa/costa_1', 'costa_2': 'worlds/costa/costa_2', 'costa_bonus': 'worlds/costa/costa_bonus',
     'menus_chip': 'menus/menus_chip', 'menus': 'menus/menus', 'flappy': 'flappy/flappy',

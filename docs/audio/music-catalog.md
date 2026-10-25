@@ -17,6 +17,7 @@ screens play `victory`; the Flappy mode plays `flappy`.
 | `crab_tantrum.py [normal gloomy]` | `crab_tantrum_normal`, `crab_tantrum_gloomy` |
 | `crab_icy.py` | `crab_tantrum_icy` (v3: definitive, do not touch its winter references) |
 | `mirror_boss.py`, `mirror_chase.py`, `verity_boss.py` | those three |
+| `final_fall.py` | `final_fall` (boss theme with samples of Fall Guys' "Final Fall"; the BASS is a real GM slap bass rendered with fluidsynth, not chip; one file, the loop includes the intro) |
 | `gloomy_nes.py cueva` | `cuevas_oscuras` (also a library: the spider "legs") |
 | `story_music.py [intro ending chase lair]` | the film scores, composed ON `assets/story/films.json` |
 | `credits_music.py` | `story_credits`: the credits medley, cut bar-exact from the game's own tracks as `films.json` `credits` says ([credits](../story/credits.md)) |
