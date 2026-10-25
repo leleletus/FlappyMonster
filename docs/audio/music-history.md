@@ -534,3 +534,17 @@ the old level tune in the final boss, Verity's hook).
   Checks: 0 literal bar repeats in 108 melody bars, no long note off its chord, nothing off scale/chord, no octave
   leaps. Mix: the lead changes timbre by section (3 stems), so the backing is +5 dB (`BACKING_UP`): melody 20 %, bass
   22 %, drums 43 %, vocals 2.2 %. Phrase changes MFCC 24-93 (run → breather 169 → 93 after thinning its last 2 bars).
+- v2 (v1 archived: `FlappyMonster_originals/music/versiones/caida_libre_v1/`). User on v1: "the main melody and the new
+  things don't work, it doesn't sound harmonious or boss-like"; they also allowed varying the bass ("keep it sounding
+  like it does, but not always the same if needed"). Causes found: (1) v1 put D / E / Bm above a bass that never left
+  F# (harmony against the bass); (2) the melody wandered, with no idea that came back. Rule now: THE HARMONY IS THE
+  BASS'S — when chords move, the bass moves (measured: 0 of 828 bass notes off the root/5th of the sounding chord).
+  Bass: Final Fall's riff as is in the A sections; in B and the climax the RIFF'S RHYTHM on the progression's roots
+  (F#m · D · E · F#m | F#m · D · A · E), pushing in 8ths every 4th bar; whole notes in the breather; the riff with extra
+  octave pops in the final A. Melody: ONE boss hook, F# F# A · G# F# C#~ (a 3+3+2 shout and a fall), repeated with
+  varied phrase ends; in B it goes down the chords in SEQUENCE (i–VI–VII–i), then repeated-note war chant; breather =
+  the hook in long notes on the music box. Arrangement like Crab Tantrum: VRC6 saw an octave down + pulse (+ pulse an
+  octave up in the strong sections), fifth stabs on the 3+3+2, toms, crash every 2 bars in the climax. Form: intro 8 ·
+  A 16 · B 16 · A' 16 · breather 8 · build 8 · climax 16 · final A 16 · coda 8 · out 8 = 120 bars, 159.1 s. Melody
+  intervals: mean 2.74 st, steps 51 %, 45 % off the beat. Energy: melody 17 %, bass 29 %, drums 42 %, vocals 2.1 %.
+  Section changes MFCC 16-71, A' → breather 105 (after thinning A's last 2 bars; was 147).
