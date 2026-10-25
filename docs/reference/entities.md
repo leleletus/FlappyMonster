@@ -33,7 +33,7 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 | `gummy_magma` | Gummy de magma | `types/enemies/gummy_magma.lua` |  | `helmet`: bool = false |
 | `hopper` | Saltarín | `types/enemies/hopper.lua` | wantsLevel | `skin`: enum = auto · `jumpEvery`: number = 1.4 · `range`: int = 7 · `jumpH`: number = 3 · `jumpDist`: number = 4.5 · `careful`: bool = true |
 | `mortar` | Mortero | `types/enemies/mortar.lua` |  | `range`: int = 12 · `delayMin`: number = 2.5 · `delayMax`: number = 6 · `warnTime`: number = 0.5 · `redIntensity`: number = 0.7 · `shake`: int = 4 · `sides`: enum = both · `launchSpeed`: number = 950 · `upRatio`: number = 3 · `fireDamage`: enum = hurt · `burnTime`: number = 1.2 |
-| `pufferfish` | Pez globo | `types/enemies/pufferfish.lua` |  | `area`: points = … · `range`: number = 2.5 · `warnTime`: number = 0.6 · `inflateTime`: number = 2.5 · `cooldown`: number = 1.5 · `swimBob`: number = 6 |
+| `pufferfish` | Pez globo | `types/enemies/pufferfish.lua` |  | `area`: points = … · `range`: number = 2.5 · `warnTime`: number = 0.6 · `inflateTime`: number = 2.5 · `cooldown`: number = 1.5 · `swimBob`: number = 6 · `dryTime`: number = 5 |
 
 ## Jefes
 

@@ -33,7 +33,7 @@
     {"col":64,"props":{"patrol":{"left":62,"right":68}},"row":12,"type":"crabby"},
     {"col":72,"row":12,"type":"checkpoint"},
     {"col":95,"row":12,"type":"giantpuffer"},
-    {"col":84,"props":{"control":"boss","corner":{"col":105,"row":12},"fallSpeed":1.0,"holdTime":9,"id":1,"lowTime":9,"maxLevel":6,"riseSpeed":1.2,"startDelay":7,"startLevel":0.25,"undertow":130},"row":4,"type":"flood"},
+    {"col":84,"props":{"control":"boss","corner":{"col":105,"row":12},"fallSpeed":1.0,"holdTime":9,"id":1,"lowTime":9,"maxLevel":6,"riseSpeed":1.2,"startDelay":7,"startLevel":0,"undertow":130},"row":4,"type":"flood"},
     {"col":81,"props":{"corner":{"col":83,"row":12},"zone":1},"row":3,"type":"bosswall"},
     {"col":106,"props":{"corner":{"col":108,"row":12},"zone":1},"row":3,"type":"bosswall"},
     {"col":81,"props":{"corner":{"col":108,"row":2},"zone":1},"row":2,"type":"bosswall"},

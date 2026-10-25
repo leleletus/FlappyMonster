@@ -9,6 +9,11 @@
 --   warn (medio hinchado, aviso) → inflated (hinchado: pincha, 1 de vida y
 --   empujón) → deflate → sigue nadando (`cooldown` s sin volver a hincharse).
 -- Deshinchado no hace nada. No se le puede matar (no cuenta para Cacería).
+-- SIN AGUA (0.5.31, como el Pez Globo Gigante): sigue el nivel del agua — si la superficie baja de su lomo, nada hacia
+-- abajo, y no elige destinos secos —; si se queda en seco (una inundación que baja más rápido que él, o un área que
+-- sale del agua) CAE ('dry_fall', con choques) y en el suelo da botes y coletazos salvajes ('dry_flop'). Si vuelve a
+-- caer al agua, sigue nadando; si pasa `dryTime` s fuera, se MUERE ('dry_die': panza arriba y se desvanece).
+-- Dentro de un bloque cuenta como mojado (su área puede atravesarlos).
 --
 -- Sprites: assets/images/enemies/pufferfish/puffer_fish-Sheet.png, cuadros de 16x16
 -- mirando a la DERECHA (a la izquierda se espeja): nadar (1 o 2 cuadros, se
@@ -28,6 +33,10 @@ local DEFLATE_T = 0.4          -- s de la animación de deshincharse
 local ARRIVE    = 14           -- px: ha llegado a su destino
 local POP_T     = 0.12         -- s del "pop" al hincharse del todo (solo dibujo)
 local SWIM_FPS  = 2.5          -- cambios de cuadro por segundo al nadar (no cambia su velocidad)
+local DRY_G     = 1500         -- gravedad en seco (px/s²)
+local SINK_SPD  = 140          -- px/s hacia abajo cuando el agua le baja del lomo
+local DIE_T     = 1.0          -- s de la muerte en seco (panza arriba, se desvanece)
+local DRY = { dry_fall = true, dry_flop = true, dry_die = true }
 
 local Puffer = Entity.extend(Entity, {
     debugColor = { 1, 0.8, 0.2 },
@@ -64,6 +73,9 @@ local function segInside(poly, x0, y0, x1, y1)
     return true
 end
 
+-- ¿Agua (o un bloque: lo atraviesa) en el punto?
+local function wetAt(level, x, y) return level:liquidAt(x, y) ~= nil or level:collisionAt(x, y) ~= nil end
+
 function Puffer:buildArea()
     local T, pts = TILE_PX, self.props.area
     local poly = {}
@@ -91,7 +103,8 @@ function Puffer:pickTarget()
     for try = 1, 60 do
         local x = self.bx0 + math.random() * (self.bx1 - self.bx0)
         local y = self.by0 + math.random() * (self.by1 - self.by0)
-        if inside(poly, x, y) and (not here or segInside(poly, self.px, self.py, x, y)) then
+        if inside(poly, x, y) and (not here or segInside(poly, self.px, self.py, x, y))
+           and (not self.levelRef or wetAt(self.levelRef, x, y - self.outerH * 0.5)) then      -- (nunca a un sitio seco)
             cands[#cands + 1] = { x, y }
             if #cands >= 8 then break end
         end
@@ -115,8 +128,11 @@ function Puffer:pickTarget()
     self.goT = d / math.max(10, self.speed) * 2 + 2          -- (tiempo máximo para llegar)
 end
 
+function Puffer:topY() return self.py - self.outerH * 0.5 end          -- (el lomo)
+
 function Puffer:init()
     self.flying = true              -- (sin gravedad; su movimiento es propio)
+    self.dryT   = 0                 -- s seguidos fuera del agua
     self.state  = 'walk'
     self.cool   = 0
     self.swimT  = 0
@@ -135,7 +151,7 @@ function Puffer:canDropNow() return false end
 
 -- Caja que pincha (solo hinchado)
 function Puffer:getHazardBoxes()
-    if self.state ~= 'inflated' then return nil end
+    if self.state ~= 'inflated' or not self.alive then return nil end
     local w = (BODY_X1 - BODY_X0) * S * HURT_K
     local h = (BODY_Y1 - BODY_Y0) * S * HURT_K
     local cx = ((BODY_X0 + BODY_X1) / 2 - 8) * S * self.facing
@@ -163,13 +179,64 @@ function Puffer:onHurtPlayer(pa)
     pa:recoil(pa.x >= self.x and 1 or -1)
 end
 
+-- En seco: cae con choques, bota y coletea en el suelo; si vuelve al agua, nada; si tarda, se muere
+function Puffer:updateDry(dt, level)
+    local p, st = self.props, self.state
+    if st == 'dry_die' then
+        if self.deadTimer >= DIE_T then self.alive, self.state = false, 'dead' end
+        return
+    end
+    self.dryT = self.dryT + dt
+    if self.dryT >= (p.dryTime or 5) then
+        self.state, self.deadTimer, self.vx = 'dry_die', 0, 0
+        Sound.play('pufferDeflate', 1.3)
+        return
+    end
+    self.vy = math.min(self.vy + DRY_G * dt, 900)
+    self.x, self.y = self.px, self.py
+    self.leftBoundPx, self.rightBoundPx = -1e9, 1e9            -- (sin ruta: choca solo con lo sólido)
+    local was = self.onGround
+    self:moveAndCollide(level, self.vx * dt, self.vy * dt)
+    self.px, self.py = self.x, self.y
+    if wetAt(level, self.px, self.py) and not level:collisionAt(self.px, self.py) then    -- ¡de vuelta al agua!
+        self.state, self.deadTimer, self.dryT = 'walk', 0, 0
+        self.vy = math.min(self.vy, 120)
+        Sound.play('waterSplash', 1.5, 0.5)
+        self:pickTarget()
+        return
+    end
+    if self.onGround then
+        if not was then self.vx = self.vx * 0.3 end
+        if st ~= 'dry_flop' then self.state, self.deadTimer = 'dry_flop', 0 end
+        -- coletazos salvajes: botes cortos al azar, cada vez más cansados
+        self.hopT = (self.hopT or 0) - dt
+        if self.hopT <= 0 then
+            local tired = 1 - 0.5 * math.min(1, self.dryT / (p.dryTime or 5))
+            self.vy = -(260 + math.random() * 320) * tired
+            self.vx = (math.random() * 2 - 1) * 170 * tired
+            self.facing = (math.random() < 0.5) and -1 or 1
+            self.onGround = false
+            self.hopT = 0.18 + math.random() * 0.3
+            Sound.play('kingHop', 2.4, 0.35)
+        end
+    end
+end
+
 function Puffer:updateCustom(dt, level)
     local p = self.props
     local st = self.state
     self.deadTimer = self.deadTimer + dt
     self.cool = math.max(0, self.cool - dt)
-    local swimming = st == 'walk' or st == 'idle'
+    self.levelRef = level
     if not self.poly then self:buildArea(); self:pickTarget() end
+    -- ¿En seco? (el centro fuera del agua y fuera de un bloque): deja lo que hacía y cae
+    if not DRY[st] and not wetAt(level, self.px, self.py) then
+        self.state, self.deadTimer, self.onGround, self.hopT = 'dry_fall', 0, false, 0
+        self.vx = self.vx * 0.5
+        st = self.state
+    end
+    if DRY[st] then self:updateDry(dt, level); self.x, self.y = self.px, self.py; return true end
+    local swimming = st == 'walk' or st == 'idle'
     -- Movimiento: hacia su destino dentro del área, atravesándolo todo; frena
     -- al hincharse y, al llegar, a veces descansa un momento
     local wx, wy = 0, 0
@@ -188,7 +255,12 @@ function Puffer:updateCustom(dt, level)
             wx, wy = dx / d * sp, dy / d * sp
         end
     end
-    local k = math.min(1, dt * (swimming and 3 or 6))
+    -- Sigue el nivel del agua: si la superficie le baja del lomo, nada hacia abajo (sea cual sea su destino)
+    -- (solo hacia más agua: nunca se hunde en un bloque; si debajo no hay agua, se queda y al bajar más el agua, cae)
+    local sinking = not wetAt(level, self.px, self:topY())
+    if sinking and level:liquidAt(self.px, self.py + self.outerH * 0.5) then wy = math.max(wy, SINK_SPD)
+    elseif sinking then wy = math.min(wy, 0) end
+    local k = math.min(1, dt * ((swimming and not sinking) and 3 or 6))
     self.vx = self.vx + (wx - self.vx) * k
     self.vy = self.vy + (wy - self.vy) * k
     self.px, self.py = self.px + self.vx * dt, self.py + self.vy * dt
@@ -230,6 +302,7 @@ end
 -- y se queda a medio hinchar), `puffed` hinchado, `deflate` deshinchándose. Cuadros y ritmo: los del conjunto.
 function Puffer:render(camX, camY)
     local st, t = self.state, self.deadTimer or 0
+    if DRY[st] then return self:renderDry(camX, camY) end
     local name, k = 'swim', 1
     if st == 'warn' then name = 'warn'
     elseif st == 'inflated' then
@@ -242,6 +315,20 @@ function Puffer:render(camX, camY)
     if st == 'warn' then x = x + math.floor(math.sin(t * 60) * 2 + 0.5) end
     love.graphics.setColor(1, 1, 1, 1)
     self:anims():draw(name, t, x, y, 0, S * k * self.facing, S * k, 0.5, 0.5)
+end
+
+-- En seco: coletea (los dos cuadros de nadar, rápido) dando vueltas; muriendo, panza arriba y se desvanece
+function Puffer:renderDry(camX, camY)
+    local st, t = self.state, self.deadTimer or 0
+    local x, y = math.floor(self.x - camX), math.floor(self.y - camY)
+    local f, rot, sy, a = self.facing or 1, 0, 1, 1
+    local at = t * 4
+    if st == 'dry_flop' then rot = math.sin(t * 23) * 0.5
+    elseif st == 'dry_fall' then rot = math.sin(t * 11) * 0.3
+    else at, sy, a = 0, -1, 1 - math.max(0, (t - DIE_T * 0.4) / (DIE_T * 0.6)) end
+    love.graphics.setColor(1, 1, 1, a)
+    self:anims():draw('swim', at, x, y, rot, S * f, S * sy, 0.5, 0.5)
+    love.graphics.setColor(1, 1, 1, 1)
 end
 
 -- Editor: área de nado (relleno) y alcance de detección (círculo) al seleccionarlo
@@ -278,7 +365,8 @@ end
 return {
     name = 'pufferfish', label = 'Pez globo', category = 'Enemigos',
     description = 'Solo para el agua: explora su área de nado por delante de todo (atraviesa bloques). Si un jugador que está '
-               .. 'en el agua se acerca, avisa, se hincha y pincha (1 de vida y empujón). No se le puede matar.',
+               .. 'en el agua se acerca, avisa, se hincha y pincha (1 de vida y empujón). No se le puede matar. '
+               .. 'Sigue el nivel del agua; en seco bota y coletea y, si tarda en volver al agua, se muere.',
     class = Puffer,
     inBlockOk = true,          -- (atraviesa los bloques: dentro de uno no es un aviso)
     hide = { 'movement', 'attach', 'patrol', 'turnAtEdges', 'bobAmp', 'pauses', 'onTouch', 'stompable', 'points',
@@ -302,6 +390,8 @@ return {
           min=0, max=10, step=0.5, help='Tras deshincharse, cuánto nada antes de poder hincharse otra vez' },
         { key='swimBob', kind='number', label='Oscilación al nadar (px)', group='Pez globo', default=6,
           min=0, max=80, step=2 },
+        { key='dryTime', kind='number', label='Aguanta en seco (s)', group='Pez globo', default=5,
+          min=1, max=30, step=0.5, help='Fuera del agua bota y coletea; pasado este tiempo, se muere' },
     },
     editor = { draw = drawIcon },
 }

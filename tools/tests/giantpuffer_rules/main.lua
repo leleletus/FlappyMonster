@@ -3,15 +3,17 @@
 --   varado      con la marea baja (empieza así) da coletazos hacia el jugador, cae en su marca (≤ 32 px) y queda
 --               BOQUEANDO; solo boqueando se le hace daño (pisotón -1, ground pound -2, y se hincha y aparta: un
 --               golpe por ocasión); en cualquier otro momento, caerle encima solo rebota
---   coletazo    en el aire, con las púas fuera, pincha: -1 y empujón
---   marea       cuando sube el agua, nada hacia el jugador; tocarlo = -1 (y no vuelve a dañar enseguida)
+--   coletazo    deshinchado no hace daño (0.5.31): en el aire a su lado, nada; si CAE encima de alguien, aplasta: -1
+--   marea       cuando sube el agua, nada hacia el jugador; tocarlo NO hace nada (deshinchado)
 --   hincha      con el jugador cerca, en el agua: avisa (tiembla) y se hincha; hinchado pincha -1
---   puas        con el jugador lejos: tres ráfagas en corro (8 púas cada una); una púa le da -1; se paran en la pared
+--   puas        con el jugador lejos: dos ráfagas en corro (6 púas cada una); una púa le da -1; se paran en la pared
 --   resaca      mientras el agua BAJA arrastra al jugador quieto hacia la derecha (≈ la velocidad de la resaca);
 --               con el agua quieta arriba, no
---   enfado      a mitad de vida se enfada: 12 púas por ráfaga
+--   enfado      a mitad de vida se enfada: tres ráfagas de 8 púas
 --   derrota     el último golpe: se deshincha, aturdido, huye (libera la zona), se va del todo
 --   red         netPackExtra → otro Pez (cliente): enfado, marca, ráfaga y púas iguales; interact igual
+--   pez_chico   el pez globo PEQUEÑO en la marea: sigue el agua al bajar (casi siempre mojado), en seco bota y
+--               coletea en el suelo (sin pinchar) y, pasado `dryTime`, se muere
 --
 --   tools/tests/run.sh giantpuffer_rules   (CASE=nombre)
 io.stdout:setvbuf('no')
@@ -118,7 +120,7 @@ function cases.varado()
         if boss.state == 'flop' and not mark then mark = boss.markX end
         if mark and boss.state == 'gasp' then landX, gasp = boss.x, true; return true end
     end)
-    local dry = flood(level).level < 1
+    local dry = flood(level).level <= 0                -- (marea baja = sin nada de agua)
     -- inmune fuera de la boqueada; boqueando, pisotón -1
     boss:enter('flop_wind')
     local gob = boss:getOuterBounds()
@@ -144,15 +146,22 @@ function cases.coletazo()
     local level, es, boss = arena()
     putBoss(boss, 20)
     local pa = playerAt(level, 22)
-    boss:enter('flop'); boss.vx, boss.vy, boss.onGround = 300, -600, false
+    boss:enter('flop'); boss.vx, boss.vy, boss.onGround = 0, -600, false
     boss.graceT = 0
-    pa.x, pa.y = boss.x + 40, boss.y
-    pa.invT = 0
-    local hp0 = pa.hp
+    boss.y = boss.y - 2 * T
     level.players = { pa }
-    local hit = boss:prick(level, { 1, 560, -480, 0.25, 0 })
-    check('coletazo', hit and pa.hp == hp0 - 1 and pa.vx > 300,
-        ('en el aire pincha: %s, vida %d→%d, empujón vx %d'):format(tostring(hit), hp0, pa.hp, pa.vx))
+    -- subiendo, con el jugador a su lado: nada
+    pa.x, pa.y, pa.invT = boss.x + boss.outerW / 2 + 10, boss.y, 0
+    local hp0 = pa.hp
+    boss:update(DT, level)
+    local side = pa.hp == hp0
+    -- cayendo, con el jugador debajo: aplasta
+    boss.vy, boss.graceT = 500, 0
+    pa.x, pa.y, pa.invT = boss.x, boss.y + boss.outerH / 2, 0
+    local hp1 = pa.hp
+    boss:update(DT, level)
+    check('coletazo', side and pa.hp == hp1 - 1,
+        ('a su lado en el aire: sin daño=%s; cayéndole encima: vida %d→%d'):format(tostring(side), hp1, pa.hp))
 end
 
 function cases.marea()
@@ -170,15 +179,15 @@ function cases.marea()
         if boss.state == 'swim' then swam = true end
     end)
     local moved = x0 - boss.x
-    -- contacto de lado
-    pa.invT = 0
-    pa.x, pa.y = boss.x - boss.outerW / 2 - pa.w / 2 + 6, boss.y
-    boss.graceT = 0
+    -- contacto de lado, nadando (deshinchado): nada
     local hp0 = pa.hp
-    level.players = { pa }
-    local hit = boss:touch(level, { 1, 480, -380, 0.2, 0 })
-    check('marea', ok and swam and moved > 1.5 * T and hit and pa.hp == hp0 - 1,
-        ('agua arriba=%s; nada=%s y se acerca %.1f casillas; contacto: vida %d→%d'):format(
+    boss.atkT = -99
+    stepAll(level, es, { pa }, 0.5, function()
+        pa.invT = 0
+        pa.x, pa.y, pa.vx, pa.vy = boss.x - boss.outerW / 2 + 10, boss.y, 0, 0
+    end)
+    check('marea', ok and swam and moved > 1.5 * T and pa.hp == hp0,
+        ('agua arriba=%s; nada=%s y se acerca %.1f casillas; tocarlo nadando: vida %d→%d'):format(
             tostring(ok), tostring(swam), moved / T, hp0, pa.hp))
 end
 
@@ -229,7 +238,7 @@ function cases.puas()
     local zx0 = boss:zoneBounds()
     boss.spines = { { id = 2, x = zx0 + 4, y = boss.y, a = math.pi, t = 0, hit = {} } }
     boss:updateSpines(level, 0.05)
-    check('puas', bursts == 3 and maxN >= 16 and hitP and #boss.spines == 0,
+    check('puas', bursts == 2 and maxN >= 10 and hitP and #boss.spines == 0,
         ('ráfagas %d, púas a la vez hasta %d, una púa: vida %d→%d, en la pared se para=%s'):format(
             bursts, maxN, hpA, pa.hp, tostring(#boss.spines == 0)))
 end
@@ -273,8 +282,12 @@ function cases.enfado()
     while boss.hp > boss.hpMax * 0.5 do boss:enter('gasp'); boss.inv = 0; boss:stomp() end
     boss:enter('spines'); boss.burst = 0; boss.spines = {}
     boss:fireBurst(level, 0)
-    check('enfado', boss.rage and #boss.spines == 12,
-        ('vida %d/%d: enfadado=%s, púas por ráfaga %d'):format(boss.hp, boss.hpMax, tostring(boss.rage), #boss.spines))
+    local per = #boss.spines
+    boss.spines = {}
+    boss:enter('spines'); boss.burst = 0
+    for _ = 1, 50 do boss:update(DT, level) end
+    check('enfado', boss.rage and per == 8 and boss.burst == 3,
+        ('vida %d/%d: enfadado=%s, púas por ráfaga %d, ráfagas %d'):format(boss.hp, boss.hpMax, tostring(boss.rage), per, boss.burst))
 end
 
 function cases.derrota()
@@ -320,9 +333,39 @@ function cases.red()
         ('datos iguales=%s; pisotón servidor %s / cliente %s'):format(tostring(ok), tostring(rs), tostring(rc)))
 end
 
+function cases.pez_chico()
+    local level, es, boss = arena()
+    boss.alive = true
+    tideTo(level, 'hold', 5.9)
+    local f = flood(level)
+    local fish = Entities.create({ type = 'pufferfish', col = 22, row = 8, props = { dryTime = 4, range = 0.1,
+        area = { { col = 14, row = 6 }, { col = 31, row = 6 }, { col = 31, row = 12 }, { col = 14, row = 12 } } } })
+    local all = { boss, fish }
+    boss.state = 'dormant'                                         -- (el jefe quieto: solo se mira el pez)
+    local wetN, n, seen, hops, lastVy, pricks = 0, 0, {}, 0, 0, false
+    local diedT, t = nil, 0
+    stepAll(level, all, {}, 40, function()
+        t = t + DT
+        seen[fish.state] = true
+        if f.phase == 'fall' and f.level > 1.2 then
+            n = n + 1
+            if level:liquidAt(fish.x, fish.y) then wetN = wetN + 1 end
+        end
+        if fish.state == 'dry_flop' and fish.vy < -100 and lastVy >= 0 then hops = hops + 1 end
+        lastVy = fish.vy or 0
+        if fish:getHazardBoxes() then pricks = true end
+        if os.getenv("TRACE") and math.floor(t * 2) ~= math.floor((t - DT) * 2) then print(("%5.1f %-9s y=%4d surf=%4d ph=%s lv=%.2f wet=%s"):format(t, fish.state, fish.y, f.surf, f.phase, f.level, tostring(level:liquidAt(fish.x, fish.y) ~= nil))) end
+        if not fish.alive then diedT = t; return true end
+    end)
+    local follow = n > 0 and wetN / n
+    check('pez_chico', follow and follow > 0.9 and seen.dry_flop and hops >= 3 and seen.dry_die and diedT and not pricks,
+        ('al bajar el agua, mojado el %d %%; en seco: coletea=%s (%d botes), se muere=%s, pincha en seco=%s'):format(
+            math.floor((follow or 0) * 100), tostring(seen.dry_flop), hops, tostring(diedT ~= nil), tostring(pricks)))
+end
+
 function love.load(arg)
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'varado', 'coletazo', 'marea', 'hincha', 'puas', 'resaca', 'enfado', 'derrota', 'red' }) do
+    for _, n in ipairs({ 'varado', 'coletazo', 'marea', 'hincha', 'puas', 'resaca', 'enfado', 'derrota', 'red', 'pez_chico' }) do
         if not only or only == n then
             local ok, err = xpcall(cases[n], debug.traceback)
             if not ok then check(n, false, 'error: ' .. tostring(err)) end

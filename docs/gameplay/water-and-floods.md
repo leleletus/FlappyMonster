@@ -45,7 +45,8 @@ distortion starts `WaterSurface.MARGIN` px below the surface. `Floods.updateFx`
 **Undertow** (flood prop `undertow`, px/s signed, 0 = none; 0.5.30): while the flood is FALLING, the water drags
 anything in it sideways — `Floods.currentAt(level, x, y)`, added to the player's horizontal move
 (`PlayerAdventure`); foam particles `undertow_foam` run that way. Used by the Giant Pufferfish's cove
-([giantpuffer](../bosses/giantpuffer.md)).
+([giantpuffer](../bosses/giantpuffer.md)). Pufferfish follow a falling flood and flop / die on dry ground
+([enemies](../entities/enemies.md#pufferfish)).
 **Connected floods** (flood prop `control`): 'cycle' (default, the pure time cycle),
 'boss' (zone prop `zone`, 0 = the overlapping/nearest one: runs its cycle from the fight
 start while the zone is in 'fight' and a boss is alive and not dying; then falls to its

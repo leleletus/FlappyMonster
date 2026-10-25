@@ -6,14 +6,16 @@
 -- que sube y baja sola durante la pelea (un ciclo puro del tiempo: igual online). Al bajar, el agua ARRASTRA hacia un
 -- lado (la RESACA: prop `undertow` de la inundación, Floods.currentAt) y se ve espuma corriendo hacia allí.
 -- El pez hace lo que le deja el agua EN SU SITIO:
---   · MAREA ALTA (con agua): NADA hacia el jugador (contacto = 1 de vida y empujón) y ataca, siempre avisando:
+-- REGLA DE DAÑO (0.5.31, el usuario: "casi imposible"; como los peces globo pequeños): DESHINCHADO NO HACE DAÑO.
+-- Solo pinchan las púas (hinchado y sus ráfagas) y aplasta si cae del coletazo JUSTO encima de ti (lo marca antes).
+--   · MAREA ALTA (con agua): NADA hacia el jugador (tocarlo no hace nada) y ataca, siempre avisando:
 --       (cerca se hincha, lejos dispara; nunca se hincha dos veces seguidas)
 --       1. SE HINCHA cerca de ti ('puff_warn' tiembla a medio hinchar → 'puffed' con las púas fuera: tocarlo = 1 de
 --          vida y empujón fuerte → 'deflate').
---       2. RÁFAGA DE PÚAS ('spines_warn' parpadea a medio hinchar → 'spines'): tres ráfagas en corro, a golpe de
---          3+3+2 (como "Resaca", su música); cada púa 1 de vida y un empujón; se paran en la pared.
---   · MAREA BAJA (sin agua): VARADO. Va hacia el jugador a COLETAZOS ('flop_wind' → 'flop': un salto hacia ti, en el
---     aire con las púas fuera = 1 de vida) y al caer se queda BOQUEANDO ('gasp', estrellitas): es lo ÚNICO vulnerable
+--       2. RÁFAGA DE PÚAS ('spines_warn' parpadea a medio hinchar → 'spines'): dos ráfagas en corro (tres enfadado,
+--          a golpe de 3+3+2 como "Resaca", su música); cada púa 1 de vida y un empujón; se paran en la pared.
+--   · MAREA BAJA (sin agua: la marea baja del todo): VARADO. Va hacia el jugador a COLETAZOS ('flop_wind' marca dónde
+--     caerá → 'flop': un salto deshinchado hacia ti; solo hace daño si te cae encima) y al caer se queda BOQUEANDO ('gasp', estrellitas): es lo ÚNICO vulnerable
 --     → pisotón 1 / ground pound 2, un golpe por ocasión (después se hincha de golpe y se aparta: 'hurt_puff').
 --     Encima de él, si no está boqueando, solo se rebota.
 --   · ENFADADO (por debajo de `rageAt`): ráfagas de más púas, se hincha más rato, coletazos más seguidos, nada más
@@ -34,7 +36,7 @@ local GP = Entity.extend(Boss, {
     ATTACKS  = { puff_warn = true, puffed = true, spines_warn = true, spines = true, flop_wind = true, flop = true },
     OPENINGS = { gasp = true },
     debugColor = { 1, 0.85, 0.35 },
-    hitbox = { outerW = 11 / 16, outerH = 8 / 16, innerW = 10 / 16, innerH = 7 / 16 },
+    hitbox = { outerW = 11 / 16, outerH = 10 / 16, innerW = 10 / 16, innerH = 9 / 16 },    -- (el pez gordito: 0.5.31)
 })
 GP.hurtSound   = 'pufferDeflate'
 GP.introLength = 3.4
@@ -54,16 +56,17 @@ GP.MS = MS
 -- Ritmo: { normal, enfadado }
 local SWIM_SPD   = { 150, 200 }                -- px/s nadando hacia el jugador
 local SWIM_ACC   = 2.2                          -- (cuánto tarda en coger su velocidad)
-local ATK_EVERY  = { 3.0, 2.2 }                 -- s nadando entre ataques
+local ATK_EVERY  = { 3.6, 2.6 }                 -- s nadando entre ataques
 local PUFF_NEAR  = 4.5 * T                        -- más cerca que esto: se hincha; más lejos: púas
 local WARN_T     = { 0.75, 0.6 }                -- aviso (tiembla a medio hinchar)
 local PUFF_T     = { 1.4, 2.0 }                 -- hinchado
 local DEFLATE_T  = 0.45
 local SPINE_WARN = { 0.7, 0.55 }
 local BURSTS     = { 0, 0.249, 0.497 }          -- ráfagas a golpe de 3+3+2 semicorcheas a 181 BPM
-local SPINES_N   = { 8, 12 }                    -- púas por ráfaga
+local BURSTS_N   = { 2, 3 }                     -- cuántas de ellas (enfadado, las tres)
+local SPINES_N   = { 6, 8 }                     -- púas por ráfaga
 local SPINES_T   = 0.95                         -- lo que dura el estado (la última ráfaga + un respiro)
-local SPINE_SPD  = 470
+local SPINE_SPD  = 400
 local SPINE_LIFE = 1.7
 local GASP_T     = { 1.7, 1.25 }                -- boqueando (vulnerable)
 local FLOP_WIND  = { 0.45, 0.35 }
@@ -71,11 +74,10 @@ local FLOP_LOCK  = 0.15                         -- últimos s del aviso: la marc
 local FLOP_REACH = 3.5 * T                      -- lo más lejos que llega de un coletazo
 local FLOP_UP    = 2                            -- casillas que sube por encima de lo más alto
 local HURT_T     = 0.8
-local GRACE      = 0.8                          -- s sin daño por contacto tras un golpe de contacto
-local PUFF_R     = 7.2 * MS                     -- radio que pincha hinchado (cuerpo + púas, px)
+local GRACE      = 0.8                          -- s sin volver a aplastar tras un aplastón
+local PUFF_R     = 6.4 * MS                     -- radio que pincha hinchado (el cuerpo y media púa: no pincha "por el aire")
 
 -- Golpes a los jugadores: { vida, vx, vy, s sin control, s aturdido }
-local HIT_TOUCH = { 1, 480, -380, 0.2, 0 }
 local HIT_PUFF  = { 1, 640, -520, 0.3, 0 }
 local HIT_SPINE = { 1, 380, -300, 0.15, 0 }
 local HIT_FLOP  = { 1, 560, -480, 0.25, 0 }
@@ -118,18 +120,13 @@ function GP:angryPhase() return self.rage end
 function GP:wet(level) return level:liquidAt(self.x, self.y) ~= nil end
 
 -- ── Golpes a los jugadores ────────────────────────────────────────────────────
-local function onTop(pa, box)
-    local pob = pa:getOuterBounds()
-    return pob.y + pob.h < box.y + box.h * 0.35 + 10
-end
-
--- Contacto con el cuerpo (de lado; encima decide interact): `hit`; true si dio a alguien
-function GP:touch(level, hit)
+-- Aplastón: cayendo del coletazo, a quien esté DEBAJO de su cuerpo (de lado o encima no: deshinchado no hace daño)
+function GP:crush(level, hit)
     local box = self:getOuterBounds()
     local any = false
     for _, pa in ipairs(level.players or {}) do
         if not pa.dying and pa.alive ~= false and not pa:isInvulnerable() and overlap(pa:getOuterBounds(), box)
-           and not onTop(pa, box) then
+           and pa.y > self.y and math.abs(pa.x - self.x) < box.w * 0.4 then
             if strike(pa, hit, (pa.x >= self.x) and 1 or -1) then any = true end
         end
     end
@@ -156,7 +153,7 @@ function GP:prick(level, hit)
 end
 
 -- ── Púas ──────────────────────────────────────────────────────────────────────
-function GP:spineBox(s) return { x = s.x - 12, y = s.y - 12, w = 24, h = 24 } end
+function GP:spineBox(s) return { x = s.x - 9, y = s.y - 9, w = 18, h = 18 } end
 
 function GP:fireBurst(level, k)
     local n = SPINES_N[self:ph()]
@@ -202,16 +199,20 @@ function GP:aimFlop(level)
     local tx = pa and pa.x or self.x
     tx = math.max(self.x - FLOP_REACH, math.min(self.x + FLOP_REACH, tx))
     tx = math.max(zx0 + hw, math.min(zx1 - hw, tx))
+    -- (desde su altura; si el jugador está más abajo, desde la de él: atraviesa las plataformas para bajar a por él
+    -- en vez de quedarse coleteando en una plataforma)
+    local y0 = self.y - self.outerH
+    if pa and pa.y > self:feetY() + T / 2 then y0 = math.max(y0, pa.y - T) end
     local top
     for _, px in ipairs({ tx - hw + 6, tx, tx + hw - 6 }) do
-        local _, t = level:landingCross(px, self.y - self.outerH, zy1 + T)
+        local _, t = level:landingCross(px, y0, zy1 + T)
         if t and (not top or t < top) then top = t end
     end
     return math.floor(tx), math.floor(top or zy1)
 end
 
 -- ── Estados que sabe hacer el cuerpo ─────────────────────────────────────────
-local SPIKY = { puffed = true, spines = true, flop = true, hurt_puff = true }   -- (con las púas fuera)
+local SPIKY = { puffed = true, spines = true, hurt_puff = true }   -- (con las púas fuera)
 function GP:isActive() return Boss.isActive(self) and not DEATH[self.state] end
 function GP:isDying() return DEATH[self.state] == true or Boss.isDying(self) end
 function GP:isVulnerable() return self:isActive() and self.state == 'gasp' end
@@ -280,7 +281,6 @@ function GP:updateBoss(dt, level)
         self:physics(level, dt, false)
         if math.abs(self.vx) > 20 then self.facing = (self.vx > 0) and 1 or -1 end
         self.atkT = self.atkT + dt
-        if self.graceT <= 0 and self:touch(level, HIT_TOUCH) then self.graceT = GRACE end
         if self.atkT >= ATK_EVERY[ph] and self:mayAttack(level) then
             self.atkT = 0
             -- (cerca: se hincha; lejos: púas — y nunca dos hinchazones seguidas: si te pegas a él, también púas)
@@ -315,7 +315,7 @@ function GP:updateBoss(dt, level)
 
     elseif st == 'spines' then
         self:physics(level, dt, not self:wet(level))
-        while self.burst < #BURSTS and t >= BURSTS[self.burst + 1] do
+        while self.burst < BURSTS_N[ph] and t >= BURSTS[self.burst + 1] do
             self:fireBurst(level, self.burst)
             self.burst = self.burst + 1
         end
@@ -364,7 +364,7 @@ function GP:updateBoss(dt, level)
 
     elseif st == 'flop' then
         self:physics(level, dt)
-        if self.graceT <= 0 and self:prick(level, HIT_FLOP) then self.graceT = GRACE end
+        if self.vy > 0 and self.graceT <= 0 and self:crush(level, HIT_FLOP) then self.graceT = GRACE end
         if self:wet(level) then self.passY = nil; self:enter('swim'); self.atkT = 0
         elseif self.onGround and self.vy >= 0 and t > 0.1 then
             self.passY, self.vx = nil, 0
@@ -513,7 +513,11 @@ function GP:pose()
         rot = math.sin(now * 9) * 0.12
         sy = 0.92 + 0.06 * math.sin(now * 4.5)
     elseif st == 'flop_wind' then
-        name, at, shake = 'half', t, 2
+        name, at, shake = 'swim', now * 3, 2
+    elseif st == 'flop' then
+        -- deshinchado, coleteando en el aire: la cabeza arriba al subir y abajo al caer
+        name, at = 'swim', now * 4
+        rot = math.max(-0.45, math.min(0.45, (self.vy or 0) / 1600)) * (self.facing or 1)
     elseif st == 'fall' then
         name, at = 'half', t
     elseif st == 'dying_flee' then

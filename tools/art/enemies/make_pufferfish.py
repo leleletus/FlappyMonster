@@ -46,10 +46,12 @@ SPOTS = {'spots': [(-0.5, -0.3), (-0.1, -0.65), (0.15, -0.2), (-0.75, 0.0), (0.4
          'dots': [(-0.55, -0.45), (-0.2, -0.1), (0.05, -0.6), (-0.8, 0.05), (0.3, -0.3)]}
 
 # Cuadros: radios del cuerpo (x, y), centro, cola (desplazamiento vertical de la punta), largo de las púas
-FRAMES = [dict(rx=5.2, ry=3.6, cx=8.6, cy=8.0, tail=-1, spikes=0),     # nadar 1 (cola arriba)
-          dict(rx=5.2, ry=3.6, cx=8.6, cy=8.0, tail=1, spikes=0),      # nadar 2 (cola abajo)
-          dict(rx=5.2, ry=4.4, cx=8.6, cy=8.0, tail=0, spikes=1),      # medio inflado
-          dict(rx=4.9, ry=4.9, cx=8.6, cy=8.0, tail=0, spikes=2)]      # inflado (más pequeño: sitio para las púas)
+# (0.5.31: más GORDITO — el usuario — y la aleta pectoral se mueve con la cola: `fin` -1 arriba, 1 abajo, 0 quieta)
+FRAMES = [dict(rx=5.3, ry=4.5, cx=8.6, cy=8.0, tail=-1, spikes=0, fin=-1),     # nadar 1 (cola y aleta arriba)
+          dict(rx=5.3, ry=4.5, cx=8.6, cy=8.0, tail=1, spikes=0, fin=1),       # nadar 2 (cola y aleta abajo)
+          dict(rx=5.4, ry=5.0, cx=8.6, cy=8.0, tail=0, spikes=1, fin=0),       # medio inflado
+          dict(rx=5.0, ry=5.0, cx=8.6, cy=8.0, tail=0, spikes=2, fin=0)]       # inflado (más pequeño: sitio para las púas)
+EYE = '#140c06'                                                                # el ojo: un solo color, negro
 
 
 def frame(D, F):
@@ -92,16 +94,19 @@ def frame(D, F):
         if p == 'stripes' and int(round(x - cx)) in (-3, 0) and ny < 0.15 and ny > -0.95: px[y][x] = C['spot']
     for (x, y) in tail:
         if (x, y) not in body: px[y][x] = C['fin'] if y <= cy else C['finS']
-    # aleta lateral (pectoral), en el centro, un poco hacia atrás
-    fx, fy = int(round(cx - 1.5)), int(round(cy + 0.5))
-    for (x, y) in ((fx, fy), (fx - 1, fy), (fx - 1, fy + 1)):
-        if (x, y) in body: px[y][x] = C['finS']
-    # ojo (blanco 2x2 con pupila delante) y boca
+    # aleta lateral (pectoral), en el centro, un poco hacia atrás: la base pegada al cuerpo y la punta, que sube o
+    # baja al nadar (con la cola)
+    fx, fy = int(round(cx - 1.0)), int(round(cy + 0.6))
+    fn = F['fin']
+    pts = [((fx, fy), 'fin'), ((fx - 1, fy), 'fin')]
+    pts += [((fx - 2, fy), 'fin'), ((fx - 3, fy), 'finS')] if fn == 0 else \
+           [((fx - 2, fy + fn), 'fin'), ((fx - 3, fy + fn), 'finS'), ((fx - 3, fy + 2 * fn), 'finS')]
+    for (x, y), c in pts:
+        if (x, y) in body: px[y][x] = C[c]
+    # ojo: 2x2 de un solo color (negro, sin blanco) y boca
     ex, ey = int(round(cx + rx * 0.45)), int(round(cy - ry * 0.35))
     for (x, y) in ((ex, ey), (ex + 1, ey), (ex, ey + 1), (ex + 1, ey + 1)):
-        if (x, y) in body: px[y][x] = (255, 255, 255, 255)
-    if (ex + 1, ey + 1) in body: px[ey + 1][ex + 1] = C['outline']
-    if (ex + 1, ey) in body: px[ey][ex + 1] = C['outline']
+        if (x, y) in body: px[y][x] = hx(EYE)
     mx, my = max(x for x, y in body if y == int(round(cy + 0.5))), int(round(cy + 0.5))
     px[my][mx] = C['outline']
     # contorno: todo lo vacío que toca el cuerpo o la cola (sin diagonales)

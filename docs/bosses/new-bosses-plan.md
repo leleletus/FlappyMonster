@@ -42,7 +42,9 @@ giant by touching a mirror shard ("La Furia del Espejo").
       (an own `tools/sounds/` set is still open, after the user plays it).
 - [x] (0.5.30) Arena + harnesses (`giantpuffer_rules`, `boss_sim`, `boss_intro`, `online_boss`); story level
       `cala_resaca` replaces `guarida_cangrejo_rey` in `Worlds.lua` (coast boss slot).
-- [ ] The user's verdict after fighting it in game.
+- [x] (0.5.31) First verdict: "almost impossible" → rebalanced (deflated = no damage, fewer spines, low tide fully
+      dry), chubbier pufferfish with a moving fin and a black eye, small pufferfish out of water.
+- [ ] The user's verdict on the rebalanced fight.
 
 ### 2. Giant Hopper (caves)
 - [ ] Cave Hopper mechanics rework (noise / light) → user's verdict.

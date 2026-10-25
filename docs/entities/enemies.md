@@ -233,6 +233,14 @@ sprite's pixel grid.
   belly, forked orange tail that flaps between the swim frames, spines that are PART of the sprite (short half
   inflated, long inflated; not a separate ring); B "Arrecife" and C "Coral" stay in the script. Same 4 frames 16x16,
   no code change. The old restyle script is retired (`FlappyMonster_originals/herramientas_retiradas/`).
+  (0.5.31, the user) CHUBBIER (swim ry 4.5), the pectoral fin swings up / down with the tail between the swim
+  frames, and the eye is one colour (black 2x2, no white).
+  **Out of water** (0.5.31, the same physics as the Giant Pufferfish): it follows the water level — if the surface
+  drops below its back it swims down (`SINK_SPD`, only towards more water, never into a block), and never picks a dry
+  target; if it ends up dry (a flood falling faster than it, or an area leaving the water) it FALLS with collisions
+  ('dry_fall'), flops wildly on the ground in random hops that tire ('dry_flop'; no hazard), swims again if it lands in
+  water, and after `dryTime` s (prop, default 5) DIES ('dry_die': belly up, fades, `alive=false`). Inside a block counts
+  as wet (its area may cross blocks). Drawn from state + deadTimer: the same online.
 
 ## Bombs (living bomb and bomb object) and explosions
 

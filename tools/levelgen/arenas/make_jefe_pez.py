@@ -8,7 +8,7 @@
 #   ║          ======              ║     ==  = plataformas traspasables: las de los lados (fila 9) quedan bajo el
 #   ║                              ║           agua con la marea alta; la del centro (fila 6), siempre seca: aire
 #   ║====~~~~~~~~~~~~~~~~~~~~~~====║     ~~  = la marea: una inundación de la pelea (control 'boss') que empieza
-#   ║   ~~~~~~~~~~~~~~~~~~~~~~~~   ║           BAJA (el pez varado: se aprende primero cuándo se le golpea),
+#   ║   ~~~~~~~~~~~~~~~~~~~~~~~~   ║           SIN AGUA (el pez varado: se aprende primero cuándo se le golpea),
 #   ║ o                        o   ║           sube 6 casillas y vuelve a bajar; al bajar, la RESACA arrastra
 #   ║■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■║           hacia la derecha (prop `undertow`). o = respiraderos (aire).
 #
@@ -24,7 +24,8 @@ EMPTY, SOLID, BORDER, DROP, FINISH = 0, 1, 4, 10, 11
 W, H = 46, 15
 Z0, Z1 = 12, 33                     # columnas de la zona
 FLOOR = 13
-TIDE = dict(startLevel=0.25, maxLevel=6, startDelay=7, riseSpeed=1.2, fallSpeed=1.0, holdTime=9, lowTime=9,
+TIDE = dict(startLevel=0,      # (marea baja = SIN agua: no estorba los saltos — el usuario, 0.5.31)
+            maxLevel=6, startDelay=7, riseSpeed=1.2, fallSpeed=1.0, holdTime=9, lowTime=9,
             undertow=130)
 
 

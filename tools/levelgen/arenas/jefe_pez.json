@@ -23,7 +23,7 @@
   ],
   "entities": [
     {"col":23,"row":12,"type":"giantpuffer"},
-    {"col":12,"props":{"control":"boss","corner":{"col":33,"row":12},"fallSpeed":1.0,"holdTime":9,"id":1,"lowTime":9,"maxLevel":6,"riseSpeed":1.2,"startDelay":7,"startLevel":0.25,"undertow":130},"row":4,"type":"flood"},
+    {"col":12,"props":{"control":"boss","corner":{"col":33,"row":12},"fallSpeed":1.0,"holdTime":9,"id":1,"lowTime":9,"maxLevel":6,"riseSpeed":1.2,"startDelay":7,"startLevel":0,"undertow":130},"row":4,"type":"flood"},
     {"col":9,"props":{"corner":{"col":11,"row":12},"zone":1},"row":3,"type":"bosswall"},
     {"col":34,"props":{"corner":{"col":36,"row":12},"zone":1},"row":3,"type":"bosswall"},
     {"col":9,"props":{"corner":{"col":36,"row":2},"zone":1},"row":2,"type":"bosswall"}
