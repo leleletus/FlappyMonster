@@ -517,3 +517,20 @@ the old level tune in the final boss, Verity's hook).
   (ostinato, risers and held chords with A, not A#) and it presents the motif on the music box (bars 5-8, fitted to the
   intro's F#m–E / D–E). Lead: mean interval 2.99 → 2.57 st, steps 57 → 61 %, leaps ≥ 5 st 18 → 12 %, octave leaps 4 → 0 %.
   Base, bass, form, mix, transitions and the kept motifs (la llamada coda) unchanged; 0 of 79 bars copied from Final Fall.
+
+## Caída libre (`tools/music/caida_libre.py`; previews only, WAITING for the user's verdict — not installed)
+
+- The user, after `final_fall` v4 ("keep that one"): another track, COMPLETELY ORIGINAL; from Final Fall only the bass
+  (the riff they love, with its sound, chords and notes) and the crunch vocals, used more often; everything else a
+  2:40 melody composed from zero, "without joining parts, so it sounds continuous and natural". Previews:
+  `FlappyMonster_pruebas/musica/caida_libre/` (the track + the loop seam). Kept: `final_fall.RIFF` note for note under
+  the whole piece (except the breather, where the bass holds F#1), rendered with `final_fall.render_bass` (GM Slap
+  Bass); the vocals: the full 16-bar block split across the loop seam (2nd half closing, 1st half opening: they run on
+  continuously), filtered in the breather, one-bar chops at pushing phrase ends and half-bar answers in the second
+  climax. New: ONE through-composed line of 15 eight-bar phrases (opening · theme · answer · development · theme +
+  counter-melody · run · breather · cantabile · cantabile+ · climax · climax in dialogue with the vocals · half time ·
+  build · final · outro) = 120 bars, 159.1 s, 181 BPM, F# minor; harmony moves ABOVE the untouched bass (F#m, D, E, Bm
+  over its F#; the riff's own turnaround chords in bars 4 and 8). Timbre grows: pulse + echo → warm N163 → VRC6 saw.
+  Checks: 0 literal bar repeats in 108 melody bars, no long note off its chord, nothing off scale/chord, no octave
+  leaps. Mix: the lead changes timbre by section (3 stems), so the backing is +5 dB (`BACKING_UP`): melody 20 %, bass
+  22 %, drums 43 %, vocals 2.2 %. Phrase changes MFCC 24-93 (run → breather 169 → 93 after thinning its last 2 bars).
