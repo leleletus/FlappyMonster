@@ -20,9 +20,13 @@
 --     Encima de él, si no está boqueando, solo se rebota.
 --   · ENFADADO (por debajo de `rageAt`): ráfagas de más púas, se hincha más rato, coletazos más seguidos, nada más
 --     rápido; símbolos de enfado sobre la cabeza.
--- Entrada: cae del cielo en la cala (la marea empieza baja), se hincha y se deshincha. Derrota: se deshincha del todo
--- ('dying_deflate'), queda aturdido ('dying_daze') y se va a coletazos por el terreno ('dying_flee'), soltando el
--- fragmento 2. La inundación baja sola al morir (Floods: control 'boss').
+--   · SEGUNDA FASE (enfadado): suelta PECES GLOBO pequeños (súbditos de reserva, def.summons) mientras nada — más
+--     cuanto más difícil (PUFFERS) —; no se les puede matar, solo esquivar, y mueren en seco con la marea baja.
+-- Entrada: cae del cielo en la cala (la marea empieza baja), se hincha y se deshincha. Derrota (0.5.32, el usuario):
+-- se deshincha y se queda APLASTADO ('dying_deflate'), aturdido así ('dying_daze'; antes volvía de golpe a su forma), y
+-- se va de un SALTO hacia delante que lo atraviesa todo ('dying_flee': como la entrada del Espejo al revés — sube,
+-- cae y se hunde a través del suelo hasta salir de la vista), soltando el fragmento 2. Sus peces globo se mueren.
+-- La inundación baja sola al morir (Floods: control 'boss').
 -- Todo lo que se dibuja sale de state + deadTimer + x, y (+ netPackExtra): igual online.
 -- Física (choques, saltos a una marca, zona): la de la Gran Bola de Nieve (types/snowboss.lua), reutilizada; nadando,
 -- la misma sin gravedad.
@@ -88,6 +92,14 @@ local DEFLATE_D = 1.1
 local DAZE_D    = 2.2
 local THROW_T   = 0.8                           -- s huyendo: suelta el fragmento
 local FLEE_MIN  = 1.6
+local FLAT      = 0.55                          -- aplastado (deshinchado del todo), de la derrota hasta el salto
+local FLEE_WIND = 0.35                          -- s agachado antes del salto de la huida
+local FLEE_VX, FLEE_VY, FLEE_G = 380, -1500, 2800   -- el salto de la huida (sin choques: lo atraviesa todo)
+
+-- Peces globo de la segunda fase: cuántos a la vez según la dificultad (sin dificultad, como Normal)
+local PUFFERS     = { easy = 1, normal = 2, hard = 3, extreme = 4, xtra = 5 }
+local PUFFER_POOL = 5                           -- los que el nivel prepara (el máximo de PUFFERS)
+local SPAWN_EVERY = 3.0                         -- s nadando entre un pez y el siguiente
 local DEATH = { dying_deflate = true, dying_daze = true, dying_flee = true }
 
 local SPINE_IMG = 'assets/images/bosses/giantpuffer/spine.png'
@@ -111,6 +123,8 @@ function GP:initBoss()
     self.spines, self.nextId = {}, 0
     self.atkT, self.graceT, self.burst = 0, 0, 0
     self.markX, self.markY = math.floor(self.x), math.floor(self:feetY())
+    self.summonKey = 'gp' .. self.col .. ',' .. self.row
+    self.spawnT = 0
 end
 
 function GP:onFightStart(n) self:enter('fight') end
@@ -190,6 +204,35 @@ function GP:updateSpines(level, dt)
     end
 end
 
+-- ── Peces globo de la segunda fase (súbditos de reserva) ─────────────────────
+function GP:pufferMax(level)
+    return math.min(PUFFER_POOL, PUFFERS[level.difficulty or ''] or PUFFERS.normal)
+end
+
+function GP:spawnPuffers(level, dt)
+    self.spawnT = self.spawnT + dt
+    if self.spawnT < SPAWN_EVERY then return end
+    local free, active = nil, 0
+    for _, e in ipairs(self:minions(level)) do
+        if e.alive then active = active + 1 elseif not free then free = e end
+    end
+    if not free or active >= self:pufferMax(level) then return end
+    self.spawnT = 0
+    -- sale de su boca, hacia delante, y nada por el agua de la zona (área = la zona; nunca elige un sitio seco)
+    local zx0, zx1, zy0, zy1 = self:zoneBounds()
+    local f = self.facing or 1
+    local h = free.home
+    h.x = math.max(zx0 + T, math.min(zx1 - T, self.x + f * 4 * MS))
+    h.y, h.facing, h.flipped, h.state, h.vx = self.y, f, false, 'walk', f * 160
+    free:resetToHome()
+    local c0, c1 = math.floor(zx0 / T) + 1, math.floor((zx1 - 1) / T) + 1
+    local r0, r1 = math.floor(zy0 / T) + 1, math.floor((zy1 - 1) / T) + 1
+    free.props.area = { { col = c0, row = r0 }, { col = c1, row = r0 }, { col = c1, row = r1 }, { col = c0, row = r1 } }
+    free.poly, free.cool = nil, 1.0
+    Sound.play('pufferInflate', 1.3)
+    Entity.emitFx('puffer_pop', h.x, h.y)
+end
+
 -- ── Coletazo (varado) ─────────────────────────────────────────────────────────
 -- Dónde cae: hacia el jugador, como mucho FLOP_REACH, sobre la primera superficie
 function GP:aimFlop(level)
@@ -242,6 +285,9 @@ end
 function GP:defeat()
     self.hp, self.inv, self.ghost = 0, 0, false
     self.spines = {}
+    for _, e in ipairs(self.levelRef and self:minions(self.levelRef) or {}) do
+        if e.alive and e.state ~= 'dry_die' then e.state, e.deadTimer, e.vx, e.vy = 'dry_die', 0, 0, 0 end
+    end
     self.vx = 0
     self:enter('dying_deflate')
     Sound.play('pufferDeflate', 0.45)
@@ -281,6 +327,7 @@ function GP:updateBoss(dt, level)
         self:physics(level, dt, false)
         if math.abs(self.vx) > 20 then self.facing = (self.vx > 0) and 1 or -1 end
         self.atkT = self.atkT + dt
+        if self.rage then self:spawnPuffers(level, dt) end
         if self.atkT >= ATK_EVERY[ph] and self:mayAttack(level) then
             self.atkT = 0
             -- (cerca: se hincha; lejos: púas — y nunca dos hinchazones seguidas: si te pegas a él, también púas)
@@ -387,25 +434,28 @@ function GP:updateBoss(dt, level)
         self:physics(level, dt); self:friction(level, dt)
         if t >= DAZE_D then
             self.fleeDir = self:fleeSide(level)
-            self.facing, self.fleeing, self.hopT = self.fleeDir, true, 0
+            self.facing, self.fleeing = self.fleeDir, true
+            self.fleeX0, self.fleeY0, self.fleeFloor, self.popped = self.x, self.y, self:feetY(), false
             self:enter('dying_flee')
         end
 
     elseif st == 'dying_flee' then
-        -- a coletazos por el terreno, hacia el lado más cercano de la zona (como el Rey Gummy)
-        local was = self.onGround
-        local hit = self:physics(level, dt)
-        if self.onGround then
-            if not was then self.vx = 0 end
-            self.hopT = (self.hopT or 0) + dt
-            if self.hopT >= 0.4 then
-                self.hopT = 0
-                self.vx, self.vy = self.fleeDir * 320, (self.blocked and -1250 or -760)
-                self.onGround, self.blocked = false, false
-                Sound.play('kingHop', 1.4)
+        -- agachado y un SALTO hacia delante sin choques (pura función del tiempo): sube, cae y se hunde a través del
+        -- suelo hasta salir de la vista (la entrada del Espejo al revés)
+        local tj = t - FLEE_WIND
+        if tj >= 0 then
+            if tj - dt < 0 then Sound.play('kingJump', 1.3) end
+            self.x = self.fleeX0 + self.fleeDir * FLEE_VX * tj
+            self.y = self.fleeY0 + FLEE_VY * tj + 0.5 * FLEE_G * tj * tj
+            self.vx, self.vy = self.fleeDir * FLEE_VX, FLEE_VY + FLEE_G * tj
+            if not self.popped and self.vy > 0 and self:feetY() >= self.fleeFloor then     -- atraviesa el suelo
+                self.popped = true
+                Sound.play('gpImpact', 0.6)
+                Sound.play('waterSplash', 0.6)
+                Entity.emitFx('block_break', self.x - T / 2, self.fleeFloor)
+                Entity.emitFx('gp_land', self.x, self.fleeFloor)
+                Entity.emitFx('shake_small', self.x, self.fleeFloor)
             end
-        elseif hit == 'wall' then
-            self.blocked = true
         end
         if self:fleeOver(level, dt, t, FLEE_MIN) then self.state, self.alive = 'dead', false end
     end
@@ -506,12 +556,16 @@ function GP:pose()
         if t < 0.15 then k = 1 + 0.15 * math.sin(t / 0.15 * math.pi) end
     elseif st == 'deflate' or st == 'dying_deflate' then
         name, at = 'deflate', t
-        if st == 'dying_deflate' then sy = math.max(0.55, 1 - 0.45 * math.min(1, t / DEFLATE_D)) end
-    elseif st == 'gasp' or st == 'dying_daze' then
+        if st == 'dying_deflate' then sy = math.max(FLAT, 1 - (1 - FLAT) * math.min(1, t / DEFLATE_D)) end
+    elseif st == 'gasp' then
         -- varado de lado: boquea (se infla un poco y se desinfla) y da coletazos en el sitio
         name, at = 'swim', 0
         rot = math.sin(now * 9) * 0.12
         sy = 0.92 + 0.06 * math.sin(now * 4.5)
+    elseif st == 'dying_daze' then
+        -- vencido: sigue APLASTADO (no vuelve de golpe a su forma), temblando un poco
+        name, at, sy = 'deflate', 9, FLAT + 0.03 * math.sin(now * 5)
+        rot = math.sin(now * 3) * 0.05
     elseif st == 'flop_wind' then
         name, at, shake = 'swim', now * 3, 2
     elseif st == 'flop' then
@@ -521,7 +575,15 @@ function GP:pose()
     elseif st == 'fall' then
         name, at = 'half', t
     elseif st == 'dying_flee' then
-        name, at = self.onGround and 'swim' or 'half', now
+        -- agachado (aún aplastado) → se estira de golpe al saltar → en el aire, morro arriba y luego en picado
+        local tj = t - FLEE_WIND
+        name, at = 'swim', now * 5
+        if tj < 0 then
+            name, at, sy = 'deflate', 9, FLAT - 0.08 * math.sin(math.min(1, t / FLEE_WIND) * math.pi)
+        else
+            sy = 1 + 0.15 * math.exp(-tj * 6) * math.cos(tj * 18)
+            rot = (self.facing or 1) * math.atan2(FLEE_VY + FLEE_G * tj, FLEE_VX) * 0.8
+        end
     end
     return name, at, k, rot, sy, shake
 end
@@ -545,7 +607,7 @@ function GP:render(camX, camY)
     end
     -- Estrellitas (boqueando / vencido): las de detrás, antes del cuerpo
     local dizzy = (st == 'gasp' or st == 'dying_daze') and not EDITOR_VIEW
-    local hx, hy = x + f * 3 * MS, y - math.floor(4.8 * MS)
+    local hx, hy = x + f * 3 * MS, y + math.floor((1 - sy) * 4 * MS) - math.floor(4.8 * MS * sy)
     if dizzy then BossFx.stars(hx, hy, 6 * MS, 1.4 * MS, 5, alpha, 'back') end
     -- Cuerpo
     if self:flashRed() then love.graphics.setColor(1, 0.35, 0.35, alpha)
@@ -596,4 +658,14 @@ return {
           min = 0.1, max = 0.9, step = 0.05 },
     }),
     editor = { sprite = 'assets/images/enemies/pufferfish/puffer_fish-Sheet.png', frameW = 16 },
+    -- Peces globo de la segunda fase: de reserva, los crea el nivel al cargar (Level.fromData), detrás de las
+    -- entidades del JSON (mismos índices en servidor y clientes). El jefe los suelta (GP:spawnPuffers).
+    summons = function(pl)
+        local out = {}
+        for _ = 1, PUFFER_POOL do
+            out[#out + 1] = { type = 'pufferfish', col = pl.col, row = pl.row, summonKey = 'gp' .. pl.col .. ',' .. pl.row,
+                              props = { range = 2, dryTime = 2.5, speed = 70, warnTime = 0.6, inflateTime = 1.5, cooldown = 2 } }
+        end
+        return out
+    end,
 }

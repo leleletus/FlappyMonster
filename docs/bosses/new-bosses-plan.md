@@ -44,6 +44,8 @@ giant by touching a mirror shard ("La Furia del Espejo").
       `cala_resaca` replaces `guarida_cangrejo_rey` in `Worlds.lua` (coast boss slot).
 - [x] (0.5.31) First verdict: "almost impossible" → rebalanced (deflated = no damage, fewer spines, low tide fully
       dry), chubbier pufferfish with a moving fin and a black eye, small pufferfish out of water.
+- [x] (0.5.32) Second round: defeat stays squashed and leaves with one leap through the floor; second phase
+      releases small pufferfish (more on harder difficulties).
 - [ ] The user's verdict on the rebalanced fight.
 
 ### 2. Giant Hopper (caves)

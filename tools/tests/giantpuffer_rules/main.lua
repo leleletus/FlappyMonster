@@ -10,7 +10,10 @@
 --   resaca      mientras el agua BAJA arrastra al jugador quieto hacia la derecha (≈ la velocidad de la resaca);
 --               con el agua quieta arriba, no
 --   enfado      a mitad de vida se enfada: tres ráfagas de 8 púas
---   derrota     el último golpe: se deshincha, aturdido, huye (libera la zona), se va del todo
+--   derrota     el último golpe: se deshincha y queda APLASTADO también aturdido (no vuelve de golpe a su forma),
+--               huye de un salto que atraviesa el suelo (libera la zona) y se va del todo
+--   peces       enfadado y nadando suelta peces globo, tantos a la vez como diga la dificultad (Difícil 3, Fácil 1),
+--               ninguno antes de enfadarse; con la marea baja se mueren en seco; al vencerlo, se mueren todos
 --   red         netPackExtra → otro Pez (cliente): enfado, marca, ráfaga y púas iguales; interact igual
 --   pez_chico   el pez globo PEQUEÑO en la marea: sigue el agua al bajar (casi siempre mojado), en seco bota y
 --               coletea en el suelo (sin pinchar) y, pasado `dryTime`, se muere
@@ -300,14 +303,22 @@ function cases.derrota()
     boss:enter('gasp'); boss.inv = 0
     boss:stomp()
     local seen, released = {}, false
+    local floorY = boss:feetY()
+    local dazeSy, below, maxUp = 0, false, 0
     stepAll(level, es, {}, 24, function()
         seen[boss.state] = true
         if boss:releasesZone() then released = true end
+        if boss.state == 'dying_daze' then dazeSy = math.max(dazeSy, select(5, boss:pose())) end
+        if boss.state == 'dying_flee' then
+            maxUp = math.max(maxUp, floorY - boss:feetY())
+            if boss.y - boss.outerH / 2 > floorY + T then below = true end
+        end
         return boss.state == 'dead'
     end)
-    check('derrota', seen.dying_deflate and seen.dying_daze and seen.dying_flee and released and boss.state == 'dead',
-        ('deshincha=%s, aturdido=%s, huye=%s, libera la zona=%s, final=%s'):format(tostring(seen.dying_deflate),
-            tostring(seen.dying_daze), tostring(seen.dying_flee), tostring(released), boss.state))
+    check('derrota', seen.dying_deflate and seen.dying_daze and dazeSy <= 0.62 and seen.dying_flee and maxUp > 3 * T
+        and below and released and boss.state == 'dead',
+        ('deshincha=%s, aturdido aplastado (alto %.2f), salta %.1f casillas y atraviesa el suelo=%s, libera la zona=%s, final=%s'):format(
+            tostring(seen.dying_deflate), dazeSy, maxUp / T, tostring(below), tostring(released), boss.state))
 end
 
 function cases.red()
@@ -363,9 +374,57 @@ function cases.pez_chico()
             math.floor((follow or 0) * 100), tostring(seen.dry_flop), hops, tostring(diedT ~= nil), tostring(pricks)))
 end
 
+function cases.peces()
+    local function count(level, boss)
+        local n = 0
+        for _, e in ipairs(boss:minions(level)) do if e.alive then n = n + 1 end end
+        return n
+    end
+    local out = {}
+    for _, diff in ipairs({ 'hard', 'easy' }) do
+        local level, es, boss = arena()
+        level.difficulty = diff
+        local pa = playerAt(level, 14, 4)
+        tideTo(level, 'hold', 5.9)
+        putBoss(boss, 24); boss.y = boss.y - 2 * T
+        boss:enter('swim'); boss.atkT = -999
+        local before, maxN, outZone = 0, 0, false
+        local zx0, zx1 = boss:zoneBounds()
+        stepAll(level, es, { pa }, 4, function() pa.invT = 9; boss.atkT = -999; before = math.max(before, count(level, boss)) end)
+        boss.rage = true
+        stepAll(level, es, { pa }, 14, function()
+            pa.invT = 9; boss.atkT = -999
+            if boss.state ~= 'swim' and boss:wet(level) then boss:enter('swim') end
+            maxN = math.max(maxN, count(level, boss))
+            for _, e in ipairs(boss:minions(level)) do if e.alive and (e.x < zx0 or e.x > zx1) then outZone = true end end
+            return flood(level).phase == 'low'
+        end)
+        stepAll(level, es, { pa }, 4, function() pa.invT = 9 end)
+        local afterLow = count(level, boss)
+        out[diff] = { before = before, max = maxN, low = afterLow, out = outZone }
+        if diff == 'hard' then
+            -- al vencerlo se mueren
+            tideTo(level, 'hold', 5.9)
+            boss.y = (FLOOR - 3) * T
+            boss.spawnT = 99; boss:spawnPuffers(level, 0)
+            boss.spawnT = 99; boss:spawnPuffers(level, 0)
+            local n0 = count(level, boss)
+            boss.levelRef = level
+            boss:defeat()
+            stepAll(level, es, { pa }, 1.5, function() pa.invT = 9 end)
+            out.defeat = { n0, count(level, boss) }
+        end
+    end
+    local h, e = out.hard, out.easy
+    check('peces', h.before == 0 and h.max == 3 and e.max == 1 and h.low == 0 and e.low == 0 and not h.out
+        and out.defeat[1] >= 1 and out.defeat[2] == 0,
+        ('antes de enfadarse %d; a la vez: Difícil %d, Fácil %d; dentro de la zona=%s; tras la marea baja quedan %d/%d; '
+         .. 'al vencerlo %d → %d'):format(h.before, h.max, e.max, tostring(not h.out), h.low, e.low, out.defeat[1], out.defeat[2]))
+end
+
 function love.load(arg)
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'varado', 'coletazo', 'marea', 'hincha', 'puas', 'resaca', 'enfado', 'derrota', 'red', 'pez_chico' }) do
+    for _, n in ipairs({ 'varado', 'coletazo', 'marea', 'hincha', 'puas', 'resaca', 'enfado', 'derrota', 'red', 'pez_chico', 'peces' }) do
         if not only or only == n then
             local ok, err = xpcall(cases[n], debug.traceback)
             if not ok then check(n, false, 'error: ' .. tostring(err)) end
