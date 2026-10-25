@@ -487,3 +487,20 @@ the old level tune in the final boss, Verity's hook).
   81 and build→climax 70 (the intended drop). Hi-hats very soft on purpose (in the 1:1 work the user found loud 16th hats
   "awful": in the original they are faint pulses). Energy: lead 14 %, bass 17 %, drums 41 %; −10 LUFS master, catalog
   volume 0.71 (−13 in game, like the other bosses).
+- v3 = a NEW COMPOSITION on the Final Fall base (user: "use the Crab Tantrum (icy) strategy: a good, original melody
+  that is barely recognisable, from a good base"; and the intro's fast pulse ostinato was too loud). v2 archived:
+  `FlappyMonster_originals/music/versiones/final_fall_v2/`. KEPT as the base (like icy kept Tentacle's cell + 3+3+2):
+  the bass riff and its groove (in new sections the bass plays THE RIFF'S RHYTHM on each chord), Final Fall's harmony
+  (F#m pedal + turnarounds, the F#–E–D verse bass), the 8-bar intro with the crunch vocals. From its MELODIES only
+  IDEAS, measured: 0 of 79 melody bars share rhythm + intervals with a Final Fall bar (`copied()`): (a) the motif's
+  CONTOUR (5th · down to the root · octave leap · step down) sung in the RIFF'S rhythm = theme A; the chorus = that
+  contour from the 5th in 3+3+2, in sequence (F#m · D · A · E | F#m · D · E · F#m = i–VI–III–VII); (b) the CALL
+  (short note, rest, two notes falling into a long one, long neighbour) INVERTED in B and in long values in the
+  breather K; (c) the bass turnaround's rising 3+3+2 (A–B–C#) as the theme's cadence; (d) the riff's tail rhythm on
+  repeated notes + a leap closing B and K. They MEET in A'': a music-box counterpoint in long notes above the theme.
+  Coda = la llamada (C#–F#–A–C#), ends on C# (V) into the intro. Form: Intro 8 · Riff 8 · A · A' · B · C · K · A''
+  (+counterpoint) · B' · C' · Build · C'' · Coda 4 = 100 bars, 132.6 s. Ostinato: 50 % duty, softer envelope,
+  −13 dB (4 % → 0.6 % of the energy). Transitions: the real bass already enters in the intro (F#1 pedal, halves, half
+  riff, pickup; velocities 55 → 95); chorus exits fade the stabs, pulses and hats over 2 bars with a soft descending
+  tom fill (MFCC jump chorus→breather 122 → 95, chorus→build 119 → 81); intro→riff stays ~113 (the intro's own roll
+  into the groove). Energy: lead 12 %, voice of the breather 8 %, bass 19 %, drums 46 %.
