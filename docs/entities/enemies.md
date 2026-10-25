@@ -227,7 +227,12 @@ sprite's pixel grid.
   an obstacle, can't be knocked/launched). Prick: `Interactions.run` calls
   `e:onHurtPlayer(pa)` only if the hurt really took HP → pufferPrick + `pa:recoil`.
   Placed in `mina_inundada` (3, one crossing walls). Sheet restyled by
-  `tools/art/enemies/make_puffer_redesign.py --apply` (a separate spike ring was tried and dropped).
+  `tools/art/enemies/make_puffer_redesign.py --apply` (a separate spike ring was tried and dropped). REDESIGNED
+  (0.5.29) for the Giant Pufferfish (the coast's new boss, [new-bosses-plan](../bosses/new-bosses-plan.md)): the user
+  picked design A "Arena" of `tools/art/enemies/make_pufferfish.py --apply A` — sand yellow, brown spots, cream
+  belly, forked orange tail that flaps between the swim frames, spines that are PART of the sprite (short half
+  inflated, long inflated; not a separate ring); B "Arrecife" and C "Coral" stay in the script. Same 4 frames 16x16,
+  no code change. The old restyle script is retired (`FlappyMonster_originals/herramientas_retiradas/`).
 
 ## Bombs (living bomb and bomb object) and explosions
 

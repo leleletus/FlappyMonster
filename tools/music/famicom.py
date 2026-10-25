@@ -317,9 +317,10 @@ PATHS = {
     # (tentacle_chip = las pistas "chip" antiguas del Espejo: retiradas; si se regeneran, van FUERA del repo)
     'tentacle_chip': '../../../FlappyMonster_originals/music/placeholders/mirror_boss_tentacle_chip', 'tentacle_chip_instrumental': '../../../FlappyMonster_originals/music/placeholders/mirror_boss_inst_tentacle_chip',
     'mirror_boss': 'bosses/mirror_boss',
-    # (final_fall = el tema con muestras de "Final Fall": ARCHIVADO, fuera del juego — el usuario se quedó con caida_libre;
+    # (final_fall = el tema con muestras de "Final Fall": ARCHIVADO, fuera del juego — el usuario se quedó con resaca;
     # si se regenera, va FUERA del repo)
     'final_fall': '../../../FlappyMonster_originals/music/versiones/final_fall_v4/final_fall',
+    'resaca': 'bosses/resaca',                  # (resaca.py: el jefe de la costa, sobre el bajo de "Final Fall"; un solo archivo)
     'pradera_1': 'worlds/pradera/pradera_1', 'pradera_2': 'worlds/pradera/pradera_2', 'pradera_bonus': 'worlds/pradera/pradera_bonus',
     'costa_1': 'worlds/costa/costa_1', 'costa_2': 'worlds/costa/costa_2', 'costa_bonus': 'worlds/costa/costa_bonus',
     'menus_chip': 'menus/menus_chip', 'menus': 'menus/menus', 'flappy': 'flappy/flappy',

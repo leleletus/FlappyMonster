@@ -9,7 +9,11 @@
 # mueve entre los dos cuadros de nadar.
 #
 #   python tools/art/enemies/make_pufferfish.py            → FlappyMonster_pruebas/enemigos/pez_globo/vista_previa.png
-#   python tools/art/enemies/make_pufferfish.py --apply B  → escribe la hoja con el diseño B (guarda el original fuera)
+#   python tools/art/enemies/make_pufferfish.py --apply A  → escribe la hoja con el diseño A (guarda el original fuera)
+#
+# El usuario eligió el diseño A "Arena" (2026-10-25); B y C se guardan (en el generador y como hojas sueltas junto a
+# la vista previa) por si sirven luego. Sustituye a make_puffer_redesign.py (el reestilo píxel a píxel del sprite
+# original: retirado a FlappyMonster_originals/herramientas_retiradas/).
 import os, sys, math
 from PIL import Image, ImageDraw
 
@@ -170,13 +174,15 @@ def preview():
 
 def apply(key):
     sys.path.insert(0, os.path.join(HERE, '..', 'lib'))
-    try:
-        import originals
-        originals.backup(SHEET)
-    except Exception as e:
-        print('(sin copia del original:', e, ')')
+    import originals
+    o, new = originals.keep(SHEET)                             # (el original, fuera del repo, una sola vez)
+    print('original:', o, '(guardado ahora)' if new else '(ya estaba)')
     sheet(key).save(SHEET)
     print('escrito', SHEET, 'con el diseño', key)
+    os.makedirs(PREVIEW, exist_ok=True)                        # (los demás diseños, listos por si sirven luego)
+    for k in DESIGNS:
+        if k != key:
+            sheet(k).save(os.path.join(PREVIEW, f'puffer_fish-Sheet_{k}_{DESIGNS[k]["name"]}.png'))
 
 
 if __name__ == '__main__':

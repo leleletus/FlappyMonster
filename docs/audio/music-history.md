@@ -518,7 +518,7 @@ the old level tune in the final boss, Verity's hook).
   intro's F#m–E / D–E). Lead: mean interval 2.99 → 2.57 st, steps 57 → 61 %, leaps ≥ 5 st 18 → 12 %, octave leaps 4 → 0 %.
   Base, bass, form, mix, transitions and the kept motifs (la llamada coda) unchanged; 0 of 79 bars copied from Final Fall.
 
-## Caída libre (`tools/music/caida_libre.py`; previews only, WAITING for the user's verdict — not installed)
+## Resaca (was "Caída libre"; `tools/music/resaca.py`, boss track `resaca`)
 
 - The user, after `final_fall` v4 ("keep that one"): another track, COMPLETELY ORIGINAL; from Final Fall only the bass
   (the riff they love, with its sound, chords and notes) and the crunch vocals, used more often; everything else a
@@ -559,6 +559,9 @@ the old level tune in the final boss, Verity's hook).
   (starting on A or C#) in A' and B' — literal hook 15 → 11 bars. Same form, bass, mix rules; section changes MFCC
   16-75, A' → breather 106. `final_fall` (v4) still takes the turnaround as major (its pulses): not touched.
 
-- ARCHIVED (0.5.28): the user keeps `final_fall` only as an archive and uses `caida_libre` (to be renamed) for the coast's
+- ARCHIVED (0.5.28): the user keeps `final_fall` only as an archive and uses `caida_libre` (now `resaca`) for the coast's
   new boss. `final_fall` left the catalog; audio, .mid and generator of v4 in
   `FlappyMonster_originals/music/versiones/final_fall_v4/` (`famicom.PATHS` now writes there).
+- INSTALLED (0.5.29) as `resaca` "Resaca (Pez Globo Gigante)" — the user's name for v3; the coast's new boss (the Giant
+  Pufferfish). Generator renamed `caida_libre.py` → `resaca.py` (versions v1/v2 stay archived under their old name in
+  `FlappyMonster_originals/music/versiones/caida_libre_v*/`); −10.1 LUFS, catalog volume 0.71 (−13 in game).

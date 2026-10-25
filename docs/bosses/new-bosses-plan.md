@@ -13,9 +13,8 @@ giant by touching a mirror shard ("La Furia del Espejo").
   systems: noise, the flashlight).
 - **Mega Crabby and Mega Gloomy Crabby become SECRET bosses**: each is reached through a **secret exit** in a level;
   beating them gives a **secret collectible** (not a mirror shard: the 7 shards stay with the main bosses).
-- **Music**: the coast boss uses the track made from Final Fall's bass, today `caida_libre` (v3,
-  `tools/music/caida_libre.py`; previews only) — it still needs a **new name** (proposed: "Marea Brava", "Mar de
-  Fondo", "Resaca"). `final_fall` is ARCHIVED: out of the game's catalog. The cave boss needs a new theme. The crabs
+- **Music**: the coast boss uses **"Resaca"** (`resaca`, `tools/music/resaca.py`; the user's name, 2026-10-25), the
+  track made from Final Fall's bass (it was "Caída libre" while composing). `final_fall` is ARCHIVED: out of the game's catalog. The cave boss needs a new theme. The crabs
   keep `crab_tantrum_normal` and `crab_tantrum_gloomy`.
 
 ## Proposals still open (the user picks)
@@ -32,10 +31,11 @@ giant by touching a mirror shard ("La Furia del Espejo").
 - [x] (0.5.28) Knockout stars drawn in two passes (behind / in front of the head) everywhere (`src/fx/StunRing.lua`) — the
       last open item of the boss rework (0.5.28).
 - [x] (0.5.28) Take `final_fall` out of the catalog (archived in `FlappyMonster_originals/music/versiones/final_fall_v4/`).
-- [ ] Rename `caida_libre` and install it as a boss track.
+- [x] (0.5.29) Rename `caida_libre` → `resaca` ("Resaca") and install it as a boss track.
 
 ### 1. Giant Pufferfish (coast)
-- [ ] Sprite rework of the normal pufferfish: 2-3 proposals → the user picks → install (`docs/art/generators.md`).
+- [x] (0.5.29) Sprite rework of the normal pufferfish: design A "Arena" (sand yellow, brown spots, spines that grow as
+      it inflates); B "Arrecife" and C "Coral" kept in `tools/art/enemies/make_pufferfish.py`.
 - [ ] Giant Pufferfish design (sheets, states) from the chosen pufferfish: proposals → pick.
 - [ ] Fight design (attacks, vulnerable window, phases, rage) written in its page `docs/bosses/<boss>.md`.
 - [ ] Entity (`types/bosses/`), sounds (`tools/sounds/`), intro, defeat / flight, shard 2; protocol + version.

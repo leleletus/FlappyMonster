@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-# CAÍDA LIBRE — tema de jefe ORIGINAL sobre el bajo de "Final Fall". SEGUNDA versión.
+# RESACA (antes "Caída libre") — tema de jefe ORIGINAL sobre el bajo de "Final Fall": el del Pez Globo Gigante, el
+# nuevo jefe de la costa (docs/bosses/new-bosses-plan.md). Nombre del usuario (2026-10-25). SEGUNDA versión (+ la v3).
 #
 # v1 (archivada: FlappyMonster_originals/music/versiones/caida_libre_v1/) — el usuario: "la melodía principal y las
 # cosas nuevas no terminan de funcionar, no suena armonioso ni a jefe". Las dos causas: (1) la armonía de arriba
@@ -18,8 +19,8 @@
 # Forma (181 BPM, Fa# menor natural): INTRO 8 · A 16 · B 16 · A' 16 · RESPIRO 8 · SUBIDA 8 · CLÍMAX 16 · A FINAL 16 ·
 # CODA 8 · SALIDA 8 = 120 compases (159,1 s), un solo archivo en bucle (la salida vuelve a la intro).
 #
-#   python tools/music/caida_libre.py     → previas en FlappyMonster_pruebas/musica/caida_libre/
-#   INSTALL=1 …                           → assets/music/bosses/caida_libre.ogg + tools/music/mid/caida_libre.mid
+#   python tools/music/resaca.py          → previas en FlappyMonster_pruebas/musica/resaca/
+#   INSTALL=1 …                           → assets/music/bosses/resaca.ogg + tools/music/mid/resaca.mid
 #   REPORT=1 → solo números. Se comprueba con números (NO se ha escuchado).
 import os, sys
 import numpy as np
@@ -35,8 +36,8 @@ import final_fall as FF
 BPM = FF.BPM
 S16 = 60.0 / BPM / 4
 BAR = 16 * S16
-NAME = 'caida_libre'
-PREVIEW = '/home/mtvemo/FlappyMonster_pruebas/musica/caida_libre'
+NAME = 'resaca'
+PREVIEW = '/home/mtvemo/FlappyMonster_pruebas/musica/resaca'
 SCALE = FF.SCALE
 ch = FF.ch
 T1, T2 = ['A', 'Bm', 'C#m'], ['D', 'Bm', 'C#m']                   # los giros del riff (8 + 4 + 4 semicorcheas). v3: Sim y
