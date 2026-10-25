@@ -39,7 +39,8 @@ NAME = 'caida_libre'
 PREVIEW = '/home/mtvemo/FlappyMonster_pruebas/musica/caida_libre'
 SCALE = FF.SCALE
 ch = FF.ch
-T1, T2 = ['A', 'B', 'C#'], ['D', 'B', 'C#']                       # los giros del riff (8 + 4 + 4 semicorcheas)
+T1, T2 = ['A', 'Bm', 'C#m'], ['D', 'Bm', 'C#m']                   # los giros del riff (8 + 4 + 4 semicorcheas). v3: Sim y
+# Do#m, como suena en Final Fall (medido: Re > Re#, Mi > Mi#); v2 los tomaba mayores y los pulsos tocaban Re# y Mi#
 RIFF_H = ['F#m', 'F#m', 'F#m', T1, 'F#m', 'F#m', 'F#m', T2]        # la armonía del riff = lo que toca el bajo
 ROOT = {'F#': 30, 'D': 26, 'E': 28, 'A': 33, 'B': 35, 'C#': 37}  # raíces en el registro del riff
 
@@ -109,6 +110,45 @@ M_B2 = [HOOK,
         "0:F#6/6 6:E6/2 8:D6/4 12:A5/4",
         "0:E6/2 3:E6/2 6:E6/2 8:C#6/2 11:A5/2 14:C#6/2",
         "0:B5/4 4:G#5/4 8:E5/4 12:B4/4"]
+# v3 — el gancho en OTRAS alturas (empieza en La o en Do#) para que no sea siempre idéntico
+HOOK_A = "0:A5/3 3:A5/3 6:C#6/2 8:B5/2 10:A5/2 12:F#5/4"
+HOOK_C = "0:C#6/3 3:C#6/3 6:F#6/2 8:E6/2 10:C#6/2 12:A5/4"
+M_A_2 = M_A[:4] + [HOOK_A] + M_A[5:]                                  # (A')
+M_A2_2 = M_A2[:2] + [HOOK_A] + M_A2[3:]
+M_B2_2 = [HOOK_C] + M_B2[1:]                                          # (2ª mitad de la B)
+# CLÍMAX (v3: su propia melodía; en v2 era la B nota por nota): el gancho por la progresión desde otras alturas, el
+# grito arriba, una cima nueva; la 2ª mitad repite la secuencia de la B ARMONIZADA en terceras y sube a otra cima
+M_CL = [HOOK_C,
+        "0:A5/3 3:A5/3 6:D6/2 8:C#6/2 10:A5/2 12:F#5/4",
+        "0:B5/3 3:B5/3 6:E6/2 8:D6/2 10:B5/2 12:G#5/4",
+        "0:C#6/3 3:E6/3 6:F#6/2 8:E6/2 10:C#6/2 12:F#6/4",
+        "0:A6/2 3:A6/2 6:A6/2 8:F#6/2 11:F#6/2 14:E6/2",
+        "0:F#6/6 6:E6/2 8:D6/4 12:A5/4",
+        "0:E6/2 3:E6/2 6:E6/2 8:C#6/2 11:E6/2 14:A6/2",
+        "0:G#6/6 6:F#6/2 8:E6/4 12:B5/4"]
+M_CL2 = M_B[:4] + ["0:C#6/3 3:F#6/3 6:A6/2 8:G#6/2 10:F#6/2 12:C#6/4",
+                   "0:D6/3 3:F#6/3 6:A6/2 8:F#6/4 12:D6/4",
+                   "0:C#6/3 3:E6/3 6:A6/2 8:G#6/2 10:E6/2 12:C#6/4",
+                   "0:B5/4 4:E6/4 8:G#6/4 12:E6/4"]
+# A FINAL (v3: variado, no una copia de A): el gancho en terceras, finales de frase nuevos, un tramo una octava arriba
+M_F = [HOOK,
+       "0:A5/3 3:A5/3 6:C#6/2 8:F#6/4 12:E6/2 14:C#6/2",
+       HOOK_A,
+       "0:C#6/3 3:E6/3 6:C#6/2 8:B5/4 12:G#5/4",
+       HOOK,
+       "0:F#5/3 3:A5/3 6:C#6/2 8:F#6/4 12:E6/2 14:C#6/2",
+       "0:D6/3 3:C#6/3 6:B5/2 8:A5/4 12:C#6/4",
+       "0:F#6/3 3:D6/3 6:A5/2 8:B5/4 12:C#6/4",
+       HOOK,
+       "0:E6/3 3:C#6/3 6:B5/2 8:A5/4 12:F#5/4",
+       HOOK_A,
+       "0:E6/3 3:C#6/3 6:A5/2 8:B5/4 12:C#6/4",
+       "0:A6/3 3:A6/3 6:F#6/2 8:E6/2 10:C#6/2 12:A5/4",
+       "0:F#6/3 3:E6/3 6:C#6/2 8:A5/4 12:C#6/4",
+       "0:B5/3 3:C#6/3 6:E6/2 8:F#6/4 12:C#6/4",
+       "0:F#6/4 4:D6/4 8:B5/4 12:C#6/4"]
+HARM3 = {('C', k) for k in range(9, 13)} | {('F', k) for k in (1, 3, 5, 9, 11)}   # (sección, compás) con terceras
+
 # RESPIRO: el gancho en valores largos (caja de música); el bajo en redondas
 H_R = ['F#m', 'D', 'E', 'F#m', 'D', 'D', 'E', 'E']
 M_R = ["0:C#6/8 8:A5/8", "0:F#5/8 8:D6/8", "0:E6/8 8:B5/8", "0:A5/8 8:F#5/8",
@@ -125,12 +165,12 @@ M_C = [HOOK, "0:F#5/3 3:F#5/3 6:A5/2 8:C#6/8", "0:B5/3 3:A5/3 6:G#5/2 8:F#5/8",
 SECTIONS = [
     ('I', [''] * 8, RIFF_H, 'riff', 'intro'),
     ('A', M_A + M_A2, RIFF_H * 2, 'riff', 'A'),
-    ('B', M_B + M_B2, H_B * 2, 'prog', 'B'),
-    ('A2', M_A + M_A2, RIFF_H * 2, 'riff', 'A2'),
+    ('B', M_B + M_B2_2, H_B * 2, 'prog', 'B'),
+    ('A2', M_A_2 + M_A2_2, RIFF_H * 2, 'riff', 'A2'),
     ('R', M_R, H_R, 'long', 'breath'),
     ('S', M_S, RIFF_H, 'riff', 'build'),
-    ('C', M_B + M_B2, H_B * 2, 'prog', 'climax'),
-    ('F', M_A + M_A2, RIFF_H * 2, 'pops', 'final'),
+    ('C', M_CL + M_CL2, H_B * 2, 'prog', 'climax'),
+    ('F', M_F, RIFF_H * 2, 'pops', 'final'),
     ('CO', M_C, RIFF_H, 'riff', 'coda'),
     ('O', [''] * 8, RIFF_H, 'riff', 'out'),
 ]
@@ -153,6 +193,15 @@ def song():
         elif bk == 'prog': bass.extend(bass_prog(base, harm))
         elif bk == 'long': bass.extend(bass_long(base, harm))
     return sorted(mel), chords, role, sec, bass, starts
+
+
+SCALE_UP = sorted(SCALE)
+
+
+def third_up(n):
+    """La tercera diatónica de arriba (en Fa# menor natural)"""
+    pcs = [p for p in range(n + 1, n + 6) if p % 12 in SCALE]
+    return pcs[1]
 
 
 def chord_at(chords, b, st):
@@ -184,6 +233,7 @@ WAVES = [wavetable([1.0, 0.3, 0.1]), GN.CWAVES[0]]            # 0 colchón · 1 
 I_SAWL = {'vol': [15, 14, 14, 13, 13, 12], 'sus': 12, 'vib': (14, 0.2, 6)}
 I_PUL = {'vol': [11, 10, 9, 8, 8, 7], 'sus': 7, 'duty': [0.125, 0.25]}
 I_UP = {'vol': [8, 7, 7, 6, 6, 5], 'sus': 5, 'duty': 0.25}
+I_HARM = {'vol': [10, 9, 8, 8, 7, 7], 'sus': 7, 'duty': 0.25}
 I_BOX = dict(GN.I_BELL, duty=1.0)
 I_ECHO = {'vol': [5, 5, 4, 3], 'sus': 2, 'duty': 0.5}
 I_PAD = {'vol': [2, 3, 4, 5, 5, 5], 'sus': 5, 'vib': (24, 0.12, 4.5), 'duty': 0.0}
@@ -194,7 +244,7 @@ I_SHIM = {'vol': [6, 4, 2, 1], 'sus': 0, 'duty': 0.25}
 SNARE_N, CRASH = [14, 10, 6, 3, 1], [14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
 CRASH_SOFT = [9, 8, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1]
 TRES = (0, 6, 12)
-LV = {'lead': 0, 'dbl': -6, 'up': -8, 'echo': -13, 'box': -2, 'pad': -12, 'cm': -10, 'pulses': -13, 'stabs': -7,
+LV = {'lead': 0, 'dbl': -6, 'up': -8, 'harm': -5, 'echo': -13, 'box': -2, 'pad': -12, 'cm': -10, 'pulses': -13, 'stabs': -7,
       'shim': -14, 'bass': 2, 'kick': -0.5, 'snare': -2.5, 'hat': -15, 'phat': -12, 'crash': -7, 'toms': -2,
       'nrise': -12, 'vox': -1, 'voxf': -6, 'chop': -2}
 BACKING_UP = 3.0                  # (el acompañamiento, +3 dB respecto a la melodía: regla BACKING de la casa)
@@ -207,7 +257,7 @@ def build():
     mel, chords, role, sec, bass, starts = song()
     NB = len(chords)
     NF = F.frames_for(NB * BAR + 3)
-    keys = ('lead', 'dbl', 'up', 'echo', 'box', 'pad1', 'pad2', 'cm', 'pulses', 'c1', 'c2', 'shim')
+    keys = ('lead', 'dbl', 'up', 'harm', 'echo', 'box', 'pad1', 'pad2', 'cm', 'pulses', 'c1', 'c2', 'shim')
     Cn = {k: Chan(NF) for k in keys}
     NZ = {k: Noise(NF) for k in ('hat', 'phat', 'snare', 'crash', 'nrise')}
     NS = int(NF * F.FRAME_S) + SR
@@ -235,6 +285,11 @@ def build():
         play(Cn['dbl'], t0, t0 + d * S16 * 0.93, n, I_PUL, release=2)
         if r_ in UP or (r_ == 'A' and pos(b) > 8): play(Cn['up'], t0, t0 + d * S16 * 0.9, n + 12, I_UP, release=2)
         if d >= 3: play(Cn['echo'], t0 + 3 * S16, t0 + 3 * S16 + min(d, 3) * S16 * 0.8, n, I_ECHO, release=1)
+        if (sec[b - 1], pos(b)) in HARM3:                                  # v3: el gancho armonizado en terceras
+            h = third_up(n)
+            r, q = chord_at(chords, b, st)
+            if d < 4 or (h - r) % 12 in q:                                 # (una tercera larga que no sea del acorde, no)
+                play(Cn['harm'], t0, t0 + d * S16 * 0.9, h, I_HARM, release=2)
 
     # ── ACOMPAÑAMIENTO (todo sobre la armonía del bajo) ──
     for b in range(1, NB + 1):
@@ -327,7 +382,8 @@ def build():
     base = F.tnd_dac(np.full(NS, 64 / 22638.0))
     noise = lambda k: cut(F.tnd_dac(NZ[k].render() / 22638.0 * 12))
     S = {
-        'lead': cut(F.pulse_dac(F.render_saw(Cn['lead']))), 'dbl': pulse('dbl'), 'up': pulse('up'), 'echo': pulse('echo'),
+        'lead': cut(F.pulse_dac(F.render_saw(Cn['lead']))), 'dbl': pulse('dbl'), 'up': pulse('up'), 'harm': pulse('harm'),
+        'echo': pulse('echo'),
         'box': wave('box'), 'pad': wave('pad1') + wave('pad2'), 'cm': wave('cm'), 'pulses': pulse('pulses'),
         'stabs': pulse('c1') + pulse('c2'), 'shim': pulse('shim'),
         'kick': cut(F.tnd_dac((kick + 64) / 22638.0) - base), 'toms': cut(F.tnd_dac((tom + 64) / 22638.0) - base),
@@ -361,17 +417,20 @@ def build():
         if r_ == 'climax' and k in (5, 7, 13, 15):                         # el grito del clímax, con respuesta
             place(S['chop'], chops[ci % 8][:half // 2], tv(b, 12), fade=0.01); ci += 1
     S = {k: GN.fold(x, n, 0) for k, x in S.items() if np.abs(x).max() > 0}
-    LEADS = ('lead', 'dbl', 'up', 'echo', 'box')
+    LEADS = ('lead', 'dbl', 'up', 'harm', 'echo', 'box')
     g = GN.level(S, {k: LV.get(k, -10) + (BACKING_UP if k not in LEADS else 0) for k in S}, 'lead')
     x = sum(S[k] * g[k] for k in S)
     x = sosfilt(butter(1, 30, btype='high', fs=SR, output='sos'), x)
     sd = lambda k, w: S[k] * g[k] * w if k in S else 0.0
     side = sd('pulses', 0.4) - sd('echo', 0.6) + sd('stabs', 0.25) + sd('shim', 0.4) - sd('pad', 0.25) + sd('hat', 0.3) \
-        - sd('phat', 0.2) + sd('box', 0.2) - sd('cm', 0.25) + sd('up', 0.3)
+        - sd('phat', 0.2) + sd('box', 0.2) - sd('cm', 0.25) + sd('up', 0.3) - sd('harm', 0.3)
     y = F.master(np.stack([x + side, x - side], 1), lufs=LUFS)
     GN.report(NAME, y, S, g, n)
     bad, out = check(mel, chords)
     bh, nbh = bass_vs_harmony(bass, chords)
+    same = [(a[0], b_[0]) for i, a in enumerate(SECTIONS) for b_ in SECTIONS[i + 1:] if a[1] == b_[1] and any(a[1])]
+    hooks = sum(t == HOOK for _, bars, *_ in SECTIONS for t in bars)
+    print(f'  secciones con la MISMA melodía: {same or "ninguna"} · gancho literal en {hooks} compases')
     iv = np.abs(np.diff([m[2] for m in mel]))
     tot = sum(np.mean((S[k][:n] * g[k]) ** 2) for k in S)
     grp = lambda ks: 100 * sum(np.mean((S[k][:n] * g[k]) ** 2) for k in ks if k in S) / tot
@@ -392,9 +451,9 @@ def preview(y):
         wav = os.path.join(PREVIEW, name + '.wav'); ogg = wav[:-4] + '.ogg'
         F.write_wav(wav, x)
         os.system(f'ffmpeg -v quiet -y -i "{wav}" -c:a libvorbis -q:a 6 "{ogg}"'); os.remove(wav)
-    enc(y, NAME + '_v2')
+    enc(y, NAME + '_v3')
     k = int(8 * BAR * SR)
-    enc(np.concatenate([y[-k:], y[:k]]), NAME + '_v2_costura')
+    enc(np.concatenate([y[-k:], y[:k]]), NAME + '_v3_costura')
     print(f'  previas en {PREVIEW}')
 
 

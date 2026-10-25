@@ -548,3 +548,13 @@ the old level tune in the final boss, Verity's hook).
   A 16 · B 16 · A' 16 · breather 8 · build 8 · climax 16 · final A 16 · coda 8 · out 8 = 120 bars, 159.1 s. Melody
   intervals: mean 2.74 st, steps 51 %, 45 % off the beat. Energy: melody 17 %, bass 29 %, drums 42 %, vocals 2.1 %.
   Section changes MFCC 16-71, A' → breather 105 (after thinning A's last 2 bars; was 147).
+- v3 (v2 archived: `FlappyMonster_originals/music/versiones/caida_libre_v2/`). User on v2: "quite good, but something
+  feels off". Diagnosis (from the score; not listened): (1) the riff's turnaround was taken as B and C# MAJOR, so the
+  backing pulses played D# and E#; Final Fall has D and E there (measured on the recording: D > D#, E > E#) → now Bm
+  and C#m (measured on the render the D#/E# share barely moved — they only lived in the quiet pulses — so this was a
+  correctness fix more than an audible one); (2) structural copy-paste: A, A' and the final A had the SAME melody and
+  the climax was B note for note → now no two sections share a melody: the climax has its own line (the hook moved to
+  C#, A and B over the progression, a high chant, new peaks; its second half = B's sequence harmonised in diatonic
+  3rds), the final A is varied (hook in 3rds, new phrase ends, a passage an octave up); (3) the hook on other pitches
+  (starting on A or C#) in A' and B' — literal hook 15 → 11 bars. Same form, bass, mix rules; section changes MFCC
+  16-75, A' → breather 106. `final_fall` (v4) still takes the turnaround as major (its pulses): not touched.
