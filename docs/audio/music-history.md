@@ -462,7 +462,7 @@ the old level tune in the final boss, Verity's hook).
 
 ## Final Fall (boss theme `final_fall`, 3.x / 0.5.x; verified by numbers only)
 
-- `tools/music/final_fall.py` → `assets/music/bosses/final_fall.ogg` (ONE file: like the original, the loop runs back
+- `tools/music/final_fall.py` → the boss track `final_fall` (removed from the game in 0.5.28; ONE file: like the original, the loop runs back
   into its own intro) + `tools/music/mid/final_fall.mid`; previews (whole track, the seam, every section change) in
   `FlappyMonster_pruebas/musica/final_fall/`. Catalog `final_fall` ("Final Fall (jefe)"), `boss: true`, not assigned to
   a boss yet. Same method as the Crab Tantrums / snow set: SAMPLES of Fall Guys' "Final Fall" (the user's own corrected
@@ -558,3 +558,7 @@ the old level tune in the final boss, Verity's hook).
   3rds), the final A is varied (hook in 3rds, new phrase ends, a passage an octave up); (3) the hook on other pitches
   (starting on A or C#) in A' and B' — literal hook 15 → 11 bars. Same form, bass, mix rules; section changes MFCC
   16-75, A' → breather 106. `final_fall` (v4) still takes the turnaround as major (its pulses): not touched.
+
+- ARCHIVED (0.5.28): the user keeps `final_fall` only as an archive and uses `caida_libre` (to be renamed) for the coast's
+  new boss. `final_fall` left the catalog; audio, .mid and generator of v4 in
+  `FlappyMonster_originals/music/versiones/final_fall_v4/` (`famicom.PATHS` now writes there).
