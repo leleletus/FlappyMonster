@@ -36,11 +36,13 @@ giant by touching a mirror shard ("La Furia del Espejo").
 ### 1. Giant Pufferfish (coast)
 - [x] (0.5.29) Sprite rework of the normal pufferfish: design A "Arena" (sand yellow, brown spots, spines that grow as
       it inflates); B "Arrecife" and C "Coral" kept in `tools/art/enemies/make_pufferfish.py`.
-- [ ] Giant Pufferfish design (sheets, states) from the chosen pufferfish: proposals → pick.
-- [ ] Fight design (attacks, vulnerable window, phases, rage) written in its page `docs/bosses/<boss>.md`.
-- [ ] Entity (`types/bosses/`), sounds (`tools/sounds/`), intro, defeat / flight, shard 2; protocol + version.
-- [ ] Arena + harness (`<boss>_rules`, `boss_sim`, `boss_intro`, `online_boss`); the story level replacing
-      `guarida_cangrejo_rey` in `Worlds.lua` (coast boss slot).
+- [x] (0.5.30) Giant Pufferfish design: the design-A sheet at scale 13 + its own spine sprite.
+- [x] (0.5.30) Fight design written in [giantpuffer](giantpuffer.md) (tide, undertow, puff / spines / flop, gasp).
+- [x] (0.5.30) Entity, intro, defeat / flight, shard 2; protocol 61. Sounds: reused pitched-down puffer / king sounds
+      (an own `tools/sounds/` set is still open, after the user plays it).
+- [x] (0.5.30) Arena + harnesses (`giantpuffer_rules`, `boss_sim`, `boss_intro`, `online_boss`); story level
+      `cala_resaca` replaces `guarida_cangrejo_rey` in `Worlds.lua` (coast boss slot).
+- [ ] The user's verdict after fighting it in game.
 
 ### 2. Giant Hopper (caves)
 - [ ] Cave Hopper mechanics rework (noise / light) → user's verdict.

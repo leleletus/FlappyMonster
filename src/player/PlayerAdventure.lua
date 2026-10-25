@@ -3,6 +3,7 @@ local Difficulty = require 'src/core/Difficulty'
 local Class = require 'libs/class'
 local DeadEyes = require 'src/player/DeadEyes'
 local Tiles = require 'src/world/tiles/Tiles'
+local Floods = require 'src/world/systems/Floods'
 local PlayerAdventure = Class:new()
 local P = {}        -- locales de archivo que comparten las partes (ver abajo "Partes")
 local dropPlatformTop, ICE_FREE_INV, ICE_MASH, loadSprites      -- (de las partes: se rellenan al cargarlas)
@@ -513,7 +514,9 @@ function PlayerAdventure:_update(dt, level)
     self.vy = self.vy + ADV_GRAVITY*gravM*dt
     if liq then self.vy=self.vy+(-self.vy*liq.drag*dt) end
 
-    self:moveSteps(level, (self.vx + convey)*dt, self.vy*dt)
+    -- (resaca: el agua que baja arrastra hacia un lado — Floods.currentAt; igual en la predicción online)
+    local current = (liq and level.floods and level.floods[1]) and Floods.currentAt(level, self.x, self.y) or 0
+    self:moveSteps(level, (self.vx + convey + current)*dt, self.vy*dt)
 
     self:updateSplash(dt, level)
     self.prevInWater = self.inWater

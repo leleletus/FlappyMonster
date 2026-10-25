@@ -28,6 +28,9 @@
 --            con alguno en ON sube hasta el máximo y se queda; con todos en
 --            OFF baja hasta el mínimo y se queda (por escalones y pausas si
 --            los tiene).
+-- RESACA (prop `undertow`, px/s con signo: + hacia la derecha): mientras el agua BAJA (fase 'fall'), arrastra a
+-- quien está dentro hacia ese lado (Floods.currentAt; el jugador la suma a su avance como una cinta). La fase es
+-- función pura del tiempo, así que el cliente online la predice igual. Se ve: espuma que corre hacia ese lado.
 -- Una controlada guarda solo {active, t0, L0}: si está activa, desde cuándo
 -- y a qué nivel estaba entonces. El nivel en el instante t sigue siendo una
 -- función pura de t y de eso (Floods.levelAt), así que el cliente online
@@ -37,6 +40,7 @@
 
 local Floods = {}
 local WaterSurface = require 'src/fx/WaterSurface'
+local Particles                                    -- (solo clientes: la espuma de la resaca)
 
 local function num(v, d) v = tonumber(v); return v or d end
 
@@ -82,6 +86,7 @@ function Floods.fromPlacement(pl, Materials)
     f.id      = math.floor(num(p.id, pl.floodIndex or 0))
     f.control = (p.control == 'boss' or p.control == 'switch') and p.control or 'cycle'
     f.zoneId  = math.floor(num(p.zone, 0))
+    f.undertow = num(p.undertow, 0)              -- (resaca: px/s mientras baja; 0 = ninguna)
     local lo = math.max(0, math.min(f.hTiles, num(p.startLevel, 1)))
     local hi = math.max(lo, math.min(f.hTiles, num(p.maxLevel, f.hTiles)))
     f.lo, f.hi = lo, hi
@@ -254,6 +259,16 @@ function Floods.netApply(level, list, tickDt)
 end
 
 -- ── Física ────────────────────────────────────────────────────────────────────
+-- Resaca en el punto (px/s con signo, 0 = ninguna): la de la inundación cuya agua lo cubre, solo mientras BAJA
+function Floods.currentAt(level, x, y)
+    for _, f in ipairs(level.floods or {}) do
+        if f.undertow ~= 0 and f.phase == 'fall' and x >= f.x0 and x < f.x1 and y >= f.surf and y < f.y1 then
+            return f.undertow
+        end
+    end
+    return 0
+end
+
 -- Material líquido de una inundación en el punto, o nil
 function Floods.liquidAt(floods, x, y)
     for i = 1, #floods do
@@ -282,6 +297,17 @@ function Floods.updateFx(level, dt)
             Sound.playAt(rising and 'floodRise' or 'floodFall', sx, sy)
         end
         f.moving, f.prevLevel = moving, f.level
+        -- Resaca: espuma que corre por la superficie hacia donde arrastra (el aviso de la corriente)
+        if f.undertow ~= 0 and f.phase == 'fall' and f.level > 0.3 then
+            f.foamT = (f.foamT or 0) + dt * (f.x1 - f.x0) / (TILE_PX * 10)
+            Particles = Particles or require 'src/fx/Particles'
+            while f.foamT >= 0.12 do
+                f.foamT = f.foamT - 0.12
+                local x = f.x0 + math.random() * (f.x1 - f.x0)
+                local y = f.surf + 6 + math.random() * math.min(f.y1 - f.surf - 12, TILE_PX * 2.5)
+                if not level:collisionAt(x, y) then Particles.emit('undertow_foam', x, y, { dir = f.undertow }) end
+            end
+        end
         -- Burbujas que suben hasta la superficie
         if f.level > 0.4 then
             f.bubT = (f.bubT or 0) + dt * (f.x1 - f.x0) / (TILE_PX * 10) * (moving and 2.5 or 1)

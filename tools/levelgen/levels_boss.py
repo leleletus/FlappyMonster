@@ -57,6 +57,11 @@ def graft(L, src, c0, x0):
             nd = dict(d)
             nd['col'] += dx
             L.foliage.append(nd)
+    for v in src.get('vents', []):            # (respiraderos: el aire de las arenas con agua)
+        if v['col'] >= c0:
+            nv = dict(v)
+            nv['col'] += dx
+            L.vents.append(nv)
     return dx
 
 
@@ -365,4 +370,40 @@ def gruta_lugubre():
     return L
 
 
-BUILDERS = [ruta_del_espejo, fortaleza_malvada, guarida_cangrejo_rey, lago_helado, glaciar_cangrejo, reino_gummy, gruta_lugubre]
+def cala_resaca():
+    """Cala de la Resaca: la orilla de la costa con Crabbies, una poza con un pez globo (para ver el pez antes que su
+    versión gigante) y el PEZ GLOBO GIGANTE al final (arena jefe_pez: la cala con la marea de la pelea y su resaca).
+    Sustituye a guarida_cangrejo_rey como jefe de la costa (el Mega Crabby pasa a jefe secreto:
+    docs/bosses/new-bosses-plan.md)."""
+    src = load_src('jefe_pez.json')
+    L = Level('Cala de la Resaca', 119, 15, (4, 12), music='costa_1')
+    L.extra.update({'name_en': 'Undertow Cove'})
+    G = 13
+    L.rect(2, G, 77, 14, SOLID)
+    # orilla: un Crabby para empezar y otro que trepa una roca
+    L.walker('crabby', 11, G - 1, 8, 15)
+    L.rect(19, G - 2, 21, G - 1, SOLID)
+    L.ent('crabby', 22, G - 1, wallWalk=True, patrol=False, speed=60)
+    L.ent('star', 20, G - 5)
+    L.ent('checkpoint', 26, G - 1)
+    # la poza: agua entre dos rocas bajas, con un pez globo dentro (se pasa por encima o se bucea)
+    L.rect(30, G - 3, 30, G - 1, SOLID)
+    L.rect(42, G - 3, 42, G - 1, SOLID)
+    L.rect(31, G - 3, 41, G - 1, WATER)
+    L.ent('pufferfish', 36, G - 2, area=[{'col': 31, 'row': G - 3}, {'col': 41, 'row': G - 3},
+                                         {'col': 41, 'row': G - 1}, {'col': 31, 'row': G - 1}])
+    L.plat(34, 38, G - 6, DROP)
+    L.ent('star', 36, G - 7)
+    # más orilla: Gummy y un Crabby trampolín para llegar arriba
+    L.walker('gummy', 48, G - 1, 45, 52)
+    L.ent('crabbytramp', 56, G - 1)
+    L.plat(55, 60, G - 6, DROP)
+    L.ent('extralife', 58, G - 7)
+    L.walker('crabby', 64, G - 1, 62, 68)
+    L.ent('checkpoint', 72, G - 1)
+    # arena del Pez Globo Gigante (la zona empieza en la columna 84)
+    graft(L, src, 6, 78)
+    return L
+
+
+BUILDERS = [ruta_del_espejo, fortaleza_malvada, cala_resaca, guarida_cangrejo_rey, lago_helado, glaciar_cangrejo, reino_gummy, gruta_lugubre]

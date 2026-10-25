@@ -21,7 +21,7 @@ Worlds.LIST = {
     -- 1 La Pradera: lo básico; luego bombas e interruptores
     { id = 'pradera',   levels = { 'valle_soleado', 'pradera_explosiva', 'bosque_interruptores' },                           boss = 'reino_gummy', bonus = 'isla_flotante' },
     -- 2 La Costa: trampolines y agua; del más suelto al más denso, y el arrecife (bucear) al final
-    { id = 'costa',     levels = { 'playa_rebotes', 'jungla_colgante', 'canon_trampolines', 'arrecife_globo' },              boss = 'guarida_cangrejo_rey', bonus = 'cala_de_los_muelles' },
+    { id = 'costa',     levels = { 'playa_rebotes', 'jungla_colgante', 'canon_trampolines', 'arrecife_globo' },              boss = 'cala_resaca', bonus = 'cala_de_los_muelles' },   -- (Pez Globo Gigante; el Mega Crabby de guarida_cangrejo_rey pasa a jefe secreto)
     -- 3 La Fortaleza: morteros y bombas primero; luego el taller denso y el tren (cámara automática)
     { id = 'fortaleza', levels = { 'fabrica_morteros', 'cantera_dinamita', 'taller_trampas', 'tren_fugaz' },               boss = 'fortaleza_malvada', bonus = 'ciudadela_alterna' },
     -- 4 Las Cumbres: nieve y congeladores; la Bola de Nieve a media isla; la torre (subir) antes del jefe

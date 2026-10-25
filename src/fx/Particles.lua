@@ -604,6 +604,14 @@ function Particles.emit(kind, x, y, opts)
             add({ x = x + rnd(-50, 50), y = y + rnd(-40, 40), vx = rnd(-80, 80), vy = -rnd(20, 120), g = 200, drag = 2,
                   life = rnd(0.4, 0.8), size = math.random(2, 4) * 2, dust = true, col = {1, 1, 1} })
         end
+    elseif kind == 'undertow_foam' then
+        -- Resaca: una raya de espuma que corre hacia donde arrastra el agua al bajar (opts.dir = px/s con signo)
+        local d = (opts.dir or 1) >= 0 and 1 or -1
+        local v = math.abs(opts.dir or 120) * 1.6 + rnd(40, 120)
+        for i = 0, 2 do
+            add({ x = x - d * i * 9, y = y + rnd(-1, 1), vx = d * v, vy = rnd(-6, 6), life = rnd(0.45, 0.8),
+                  size = 3, col = (i == 0) and { 1, 1, 1 } or { 0.82, 0.93, 1 }, fadeLast = 0.3 })
+        end
     elseif kind == 'king_splat' then
         -- Rey Gummy: panzazo / aterrizaje — goterones de gelatina hacia los lados + polvo del suelo
         local pal = paletteAt(x, y, opts)

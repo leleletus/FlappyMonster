@@ -120,7 +120,7 @@ like the rest). Each boss drops its shard; all 7 restore the mirror, the bosses 
 again. No dialogue or text: animation + music.
 
 - **Shards** (3.68.0): images `assets/images/story/mirror/` from `tools/art/story/make_mirror_shards.py --apply` (`frame.png`,
-  `glass.png` whole, `shard_1..7.png` in story order — Gummy King, Mega Crabby, Evil Ship, Snowball, Icy Mega, Mega
+  `glass.png` whole, `shard_1..7.png` in story order — Gummy King, Giant Pufferfish (was Mega Crabby), Evil Ship, Snowball, Icy Mega, Mega
   Gloomy, Mirror = the CENTRE piece — and `shard_<n>a/b.png` for Xtra Extreme; all on one 48x64 canvas so they
   assemble). Logic `src/story/Shards.lua`: `Shards.LEVEL[level] = n`, `pending(level, data)`, `owned/count(data)`
   (7, or 14 halves when the difficulty has `bossExtra`), `migrate` (old saves: shards of beaten bosses granted; halves of a save whose difficulty no longer has `bossExtra` become the whole shard).

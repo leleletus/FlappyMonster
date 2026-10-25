@@ -16,7 +16,7 @@ local Shards = {}
 Shards.TOTAL = 7
 -- (el orden de la historia: assets/images/story/mirror/shard_<n>.png)
 Shards.LEVEL = {
-    reino_gummy = 1, guarida_cangrejo_rey = 2, fortaleza_malvada = 3, lago_helado = 4,
+    reino_gummy = 1, cala_resaca = 2, fortaleza_malvada = 3, lago_helado = 4,     -- (2: el Pez Globo Gigante; antes el Mega Crabby)
     glaciar_cangrejo = 5, gruta_lugubre = 6, ruta_del_espejo = 7,
 }
 Shards.FINAL = 7

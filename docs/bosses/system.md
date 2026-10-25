@@ -9,7 +9,8 @@ In progress: two new bosses replace Mega Crabby and Mega Gloomy, which become se
 | Boss | Type id | Doc | Story level | Shard |
 |---|---|---|---|---|
 | Gummy King (Rey Gummy) | `megagummy` | [megagummy](megagummy.md) | `reino_gummy` | 1 |
-| Mega Crabby | `megacrabby` | [megacrabby](megacrabby.md) | `guarida_cangrejo_rey` | 2 |
+| Giant Pufferfish (Pez Globo Gigante) | `giantpuffer` | [giantpuffer](giantpuffer.md) | `cala_resaca` | 2 |
+| Mega Crabby (future secret boss) | `megacrabby` | [megacrabby](megacrabby.md) | `guarida_cangrejo_rey` (out of the story) | — |
 | Evil Ship (Nave Malvada) | `miniboss1` | [miniboss1](miniboss1.md) | `fortaleza_malvada` | 3 |
 | Snowball Boss (Gran Bola de Nieve) + Verity | `snowboss` | [snowboss](snowboss.md) | `lago_helado` (mid-island) | 4 |
 | Icy Mega Crabby | `megacrabby_ice` | [megacrabby-ice](megacrabby-ice.md) | `glaciar_cangrejo` | 5 |

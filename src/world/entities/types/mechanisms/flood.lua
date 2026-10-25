@@ -131,6 +131,8 @@ return {
             .. 'Bloques ON/OFF: con uno conectado en ON sube al máximo y se queda; con todos en OFF baja al mínimo' },
         { key='zone', kind='int', label='Zona de jefe (id)', group=G0, default=0, min=0, max=99, step=1,
           showIf=function(p) return p.control == 'boss' end, help='0 = la zona con la que se solapa (o la más cercana)' },
+        { key='undertow', kind='number', label='Resaca al bajar (px/s)', group=G0, default=0, min=-600, max=600, step=10,
+          help='Mientras el agua baja arrastra a quien está dentro: positivo hacia la derecha, negativo hacia la izquierda. 0 = ninguna' },
         { key='corner', kind='point', label='Esquina inferior derecha', group=G1,
           default=function(d) return { col = (d.col or 1) + 7, row = (d.row or 1) + 4 } end,
           help='Arrastra la cajita en el mapa. La casilla de la entidad es la esquina superior izquierda' },

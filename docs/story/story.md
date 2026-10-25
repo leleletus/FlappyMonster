@@ -30,7 +30,7 @@ drawn at the same point, they fit together and the mirror fills up. Logic: `src/
 | No. | Boss | Level | Position in the mirror |
 |---|---|---|---|
 | 1 | Gummy King | `reino_gummy` | top-left |
-| 2 | Mega Crabby | `guarida_cangrejo_rey` | top-right |
+| 2 | Giant Pufferfish (was Mega Crabby, now a secret boss) | `cala_resaca` | top-right |
 | 3 | Evil Ship | `fortaleza_malvada` | right |
 | 4 | Snowball Boss | `lago_helado` | bottom-right |
 | 5 | Icy Mega Crabby | `glaciar_cangrejo` | bottom-left |

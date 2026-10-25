@@ -40,6 +40,7 @@ Input = stub
 local json = require 'libs/json'
 local Level = require 'src/world/level/Level'
 local Entities = require 'src/world/entities/Entities'
+local Floods = require 'src/world/systems/Floods'
 local BossZones = require 'src/world/systems/BossZones'
 local PlayerAdventure = require 'src/player/PlayerAdventure'
 
@@ -72,6 +73,7 @@ function love.load()
     if snow then VULN = { dizzy = true, frozen = true, soaked = true } end      -- (fase 3: solo congelada; lo decide isVulnerable)
     local king = boss.def.name == 'megagummy'
     if king then VULN = { dazed = true } end
+    if boss.def.name == 'giantpuffer' then VULN = { gasp = true } end      -- (Pez Globo Gigante: solo boqueando)
     local kg = { phases = {}, maxGuards = 0, flopOff = {}, waveHits = 0, partHits = 0, lastPartT = -9 }
     local sn = { phases = {}, scales = {}, frozenHits = {}, crashDizzy = 0, bonks = 0, toggles = 0, refrozen = 0,
                  deathOrder = {}, early = {}, shown = {} }
@@ -103,6 +105,7 @@ function love.load()
         pa:update(dt, level)
         level.solidBodies = Entities.solidBodies(ents)
         ctrl:update(dt)
+        Floods.advance(level, dt)                -- (las inundaciones de la pelea: la marea del Pez Globo Gigante)
         for _, e in ipairs(ents) do if e.alive then e:update(D.dt(e, dt), level) end end
         Entities.interactions.run(pa, ents, {})
         -- Cristal roto

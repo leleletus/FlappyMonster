@@ -51,7 +51,7 @@ are never edited by hand.
 - **entities/** — [overview](entities/overview.md) · [enemies](entities/enemies.md) ·
   [traps-and-mechanisms](entities/traps-and-mechanisms.md) · [enemy-editor](entities/enemy-editor.md) ·
   [how-to-add-an-enemy](entities/how-to-add-an-enemy.md)
-- **bosses/** — [system](bosses/system.md) · [megagummy](bosses/megagummy.md) · [megacrabby](bosses/megacrabby.md) ·
+- **bosses/** — [system](bosses/system.md) · [megagummy](bosses/megagummy.md) · [giantpuffer](bosses/giantpuffer.md) · [megacrabby](bosses/megacrabby.md) ·
   [miniboss1](bosses/miniboss1.md) · [snowboss](bosses/snowboss.md) · [megacrabby-ice](bosses/megacrabby-ice.md) ·
   [megagloomy](bosses/megagloomy.md) · [mirror](bosses/mirror.md) · [mirror-chase](bosses/mirror-chase.md) ·
   [how-to-add-a-boss](bosses/how-to-add-a-boss.md)

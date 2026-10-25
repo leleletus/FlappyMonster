@@ -21,6 +21,7 @@ local BossZones = require 'src/world/systems/BossZones'
 local PlayerAdventure = require 'src/player/PlayerAdventure'
 local Particles = require 'src/fx/Particles'
 local Entity = require 'src/world/entities/base/Entity'
+local Floods = require 'src/world/systems/Floods'
 
 local COLS, ROWS, CW, CH = 5, 6, 360, 240
 local FX = os.getenv('FX') ~= nil
@@ -57,6 +58,7 @@ function love.load()
         pa:update(dt, level)
         level.solidBodies = Entities.solidBodies(ents)
         ctrl:update(dt)
+        Floods.advance(level, dt)                -- (las inundaciones: la marea del Pez Globo Gigante)
         for _, e in ipairs(ents) do if e.alive then e:update(dt, level) end end
         Entities.interactions.run(pa, ents, {})
         if pa.dying or not pa.alive then pa:respawn(); pa.hp = pa.hpMax end
@@ -77,6 +79,10 @@ function love.load()
                 end
             end
         end
+        -- Pez Globo Gigante: un pisotón cada vez que boquea (para verlo hasta el final)
+        if boss.def.name == 'giantpuffer' and boss.state == 'gasp' and boss.deadTimer > 0.8 and boss.inv <= 0 then
+            boss:damage(1, 'stomp')
+        end
         if want[boss.state] and t - lastShot >= every and (boss.alive or boss.def.name == 'megagummy') then
             lastShot = t
             local col, row = n % COLS, math.floor(n / COLS)
@@ -93,6 +99,11 @@ function love.load()
             love.graphics.scale(1 / zoom, 1 / zoom)
             love.graphics.clear(0.55, 0.7, 0.85, 1)
             level:render(camX, camY)
+            for _, f in ipairs(level.floods or {}) do          -- (el agua de las inundaciones, sin el efecto del juego)
+                love.graphics.setColor(0.2, 0.45, 0.85, 0.35)
+                love.graphics.rectangle('fill', f.x0 - camX, f.surf - camY, f.x1 - f.x0, f.y1 - f.surf)
+            end
+            love.graphics.setColor(1, 1, 1, 1)
             pa:render(camX, camY)
             for _, e in ipairs(ents) do if e.alive then e:render(camX, camY) end end
             if FX then Particles.render(camX, camY) end

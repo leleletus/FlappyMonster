@@ -399,6 +399,7 @@ return {
         megacrabby = "MEGA CRABBY",
         megacrabby_ice = "ICY MEGA CRABBY",
         megagummy = "GUMMY KING",
+        giantpuffer = "GIANT PUFFERFISH",
         megagloomy = "MEGA GLOOMY CRABBY",
         snowboss = "BIG SNOWBALL",
     },
