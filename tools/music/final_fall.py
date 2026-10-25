@@ -90,60 +90,65 @@ def riff_on(chords, base, nb):
 
 
 # ══ LAS MELODÍAS NUEVAS ══════════════════════════════════════════════════════════════════════════════════════════
-# TEMA A — el contorno del motivo (5ª · tónica abajo · octava · baja) con el ritmo del riff; cadencia = el giro en 3+3+2
-T_A = ["0:C#5/2 2:F#4/4 8:F#5/2 10:E5/1 11:C#5/2 13:E5/3",
-       "0:F#5/6 6:G#5/2 8:A5/4 12:G#5/2 14:E5/2",
-       "0:C#5/2 2:F#4/4 8:A5/2 10:G#5/1 11:E5/2 13:F#5/3",
-       "0:E5/3 3:A5/3 6:A5/2 8:B5/4 12:C#6/4",                            # (el giro La–Si–Do#, en la melodía)
-       "0:C#6/2 2:F#5/4 8:F#5/2 10:E5/1 11:C#5/2 13:A4/3",
-       "0:B4/2 2:C#5/2 4:D5/2 6:E5/2 8:F#5/4 12:A5/4",
-       "0:G#5/3 3:F#5/3 6:E5/2 8:C#5/4 12:E5/2 14:F#5/2"]
-A_END = ["0:D5/3 3:F#5/3 6:A5/2 8:B5/4 12:G#5/4"]
-A_END2 = ["0:D5/3 3:A5/3 6:D6/2 8:B5/4 12:C#6/4"]
-# B — la llamada INVERTIDA (corta, silencio, dos notas que SUBEN a una larga, la vecina larga), sobre el bajo del verso;
-# la cierra la cola del riff en notas repetidas
-T_B = ["0:A4/2 8:B4/2 10:C#5/2 12:D5/4",
-       "0:D5/4 6:C#5/2 8:B4/6 14:C#5/2",
-       "0:C#5/2 8:D5/2 10:E5/2 12:F#5/4",
-       "0:F#5/4 6:E5/2 8:G#5/6 14:B5/2",
-       "0:A5/2 4:F#5/2 8:G#5/2 10:B5/2 12:A5/4",
-       "0:F#5/4 6:E5/2 8:E5/6 14:D5/2",
-       "0:C#5/2 2:C#5/2 8:C#5/2 10:C#5/1 11:C#5/2 13:F#5/3",
-       "0:D5/2 2:D5/2 8:E5/2 10:E5/1 11:E5/2 13:G#5/3"]
-# C (estribillo) — el contorno del motivo desde la 5ª, salto de octava y bajada, en 3+3+2 y en secuencia
-T_C = ["0:C#5/3 3:C#6/3 6:B5/2 8:A5/3 11:G#5/3 14:F#5/2",
-       "0:F#5/3 3:A5/3 6:C#6/2 8:D6/4 12:A5/4",
-       "0:E5/3 3:E6/3 6:D6/2 8:C#6/3 11:B5/3 14:A5/2",
-       "0:G#5/3 3:B5/3 6:E6/2 8:E6/4 12:B5/4",
-       "0:A5/3 3:F#6/3 6:E6/2 8:C#6/3 11:B5/3 14:A5/2",
-       "0:A5/3 3:D6/3 6:C#6/2 8:A5/4 12:F#5/4",
-       "0:G#5/2 2:B5/2 4:E6/4 8:D6/2 10:B5/2 12:G#5/4",
-       "0:A5/4 4:G#5/2 6:F#5/10"]
+# EL MOTIVO (v4, nuevo; el usuario: la melodía de v3 sonaba "rara e incoherente" — saltos de quinta y de octava en
+# casi cada compás —; "no importa si se aleja de Final Fall"): UNA idea de dos compases, cantable, casi por grados, en
+# el 3+3+2 de la casa: sube Fa#–Sol#–La hasta un Do# largo y baja, y se posa en la tónica. Todo lo demás sale de él:
+# el tema A lo pregunta y lo contesta en secuencia, la B lo INVIERTE (baja Do#–Si–La en 3+3+2), el estribillo lo
+# ABRE (sube por el acorde hasta una cima) y el respiro lo canta en valores largos. Notas largas = notas del acorde.
+T_A = ["0:F#5/3 3:G#5/3 6:A5/2 8:C#6/4 12:B5/2 14:A5/2",              # el motivo (pregunta)…
+       "2:A5/2 4:G#5/2 6:F#5/4 10:E5/2 12:F#5/4",
+       "0:C#6/3 3:B5/3 6:A5/2 8:F#5/4 12:A5/4",                           # …la respuesta, que baja
+       "0:E5/3 3:A5/3 6:C#6/2 8:B5/4 12:G#5/4",                           # (el giro del bajo, La–Si–Do#, en la melodía)
+       "0:F#5/3 3:G#5/3 6:A5/2 8:C#6/4 12:D6/2 14:C#6/2",                 # el motivo otra vez, con bordadura arriba
+       "2:B5/2 4:A5/2 6:G#5/2 8:A5/4 12:F#5/4",
+       "0:E5/2 2:F#5/2 4:A5/4 8:C#6/4 12:A5/4"]
+A_END = ["0:F#5/3 3:A5/3 6:D6/2 8:B5/4 12:C#6/4"]                       # (Re–Si–Do#: vuelve a empezar)
+A_END2 = ["0:D6/4 4:A5/4 8:B5/4 12:C#6/4"]
+# B — el motivo INVERTIDO (baja en 3+3+2 y se posa), sobre el bajo del verso (Fa#m · Mi · Re | Re · Mi)
+T_B = ["0:C#6/3 3:B5/3 6:A5/2 8:G#5/4 12:F#5/4",
+       "2:F#5/2 4:E5/2 6:D5/2 8:E5/8",
+       "0:A5/3 3:G#5/3 6:F#5/2 8:E5/4 12:F#5/4",
+       "2:A5/2 4:B5/2 6:C#6/2 8:B5/8",
+       "0:C#6/3 3:B5/3 6:A5/2 8:B5/4 12:A5/4",
+       "2:F#5/2 4:G#5/2 6:A5/2 8:G#5/8",
+       "0:F#5/3 3:E5/3 6:F#5/2 8:G#5/4 12:A5/4",
+       "0:F#5/4 4:E5/2 6:D5/2 8:E5/4 12:G#5/4"]
+# C (estribillo) — el motivo ABIERTO: sube por el acorde hasta una cima y baja por grados (Fa#m · Re · La · Mi …)
+T_C = ["0:A5/3 3:C#6/3 6:E6/2 8:C#6/4 12:A5/4",
+       "0:A5/3 3:B5/3 6:C#6/2 8:D6/4 12:A5/4",
+       "0:C#6/3 3:B5/3 6:A5/2 8:E6/4 12:C#6/4",
+       "0:B5/3 3:G#5/3 6:E5/2 8:G#5/8",
+       "0:A5/3 3:C#6/3 6:E6/2 8:F#6/4 12:C#6/4",
+       "0:D6/3 3:C#6/3 6:B5/2 8:A5/4 12:F#5/4",
+       "0:G#5/3 3:A5/3 6:B5/2 8:E6/4 12:B5/4",
+       "0:C#6/4 4:A5/4 8:F#5/8"]
 CH_C = ['F#m', 'D', 'A', 'E', 'F#m', 'D', 'E', 'F#m']
-# K (respiro) — la llamada en valores largos y sigue por su cuenta; la cierra la cola del riff
-T_K = ["0:A5/8 8:F#5/8", "0:G#5/8 8:B5/8", "0:C#6/8 8:A5/8", "0:A5/4 4:C#6/4 8:F#5/8",
-       "0:F#5/8 8:D5/8", "0:F#5/4 4:A5/4 8:D6/8", "0:E6/8 8:B5/8", "0:B5/2 2:B5/2 8:B5/2 10:B5/1 11:B5/2 13:E6/3"]
+# K (respiro) — el motivo en valores largos, que va por su cuenta
+T_K = ["0:F#5/6 6:E5/2 8:D5/8", "0:E5/6 6:F#5/2 8:G#5/8", "0:A5/6 6:G#5/2 8:F#5/8", "0:C#6/8 8:A5/8",
+       "0:B5/6 6:A5/2 8:F#5/8", "0:A5/6 6:B5/2 8:D6/8", "0:E6/6 6:D6/2 8:B5/8", "0:G#5/4 4:B5/4 8:E6/4 12:D6/2 14:C#6/2"]
 CH_K = ['D', 'E', 'F#m', 'F#m', 'Bm', 'D', 'E', 'E']
 BASS_K = [(1, 0, 26, 14), (2, 0, 28, 14)] + [(3 + k, st, n, d) for k in range(2) for st, n, d in
                                               [(0, 30, 2), (2, 42, 2), (8, 30, 2), (10, 30, 1), (11, 30, 2), (13, 30, 2), (15, 30, 1)]] + \
          [(5, 0, 35, 14), (6, 0, 26, 14), (7, 0, 28, 6), (7, 8, 28, 2), (7, 10, 40, 2), (7, 12, 28, 4),
           (8, 0, 28, 2), (8, 2, 40, 2), (8, 8, 28, 2), (8, 10, 28, 1), (8, 11, 28, 2), (8, 13, 28, 2), (8, 15, 28, 1)]
-# El CONTRAPUNTO de la tercera vuelta del tema: una voz nueva en notas largas, por encima
-T_DESC = ["0:A5/8 8:C#6/8", "0:F#6/8 8:C#6/8", "0:C#6/8 8:A5/8", "0:A5/8 8:B5/4 12:C#6/4",
-          "0:F#6/8 8:C#6/8", "0:C#6/8 8:A5/8", "0:A5/8 8:F#5/8", "0:A5/8 8:B5/4 12:G#5/4"]
+# El CONTRACANTO de la tercera vuelta del tema: notas largas del acorde, POR DEBAJO de la melodía (regla de la casa)
+T_DESC = ["0:C#5/8 8:A4/8", "0:F#4/8 8:A4/8", "0:C#5/8 8:F#4/8", "0:E4/8 8:F#4/4 12:G#4/4",
+          "0:A4/8 8:C#5/8", "0:F#4/8 8:A4/8", "0:C#5/8 8:A4/8", "0:A4/8 8:F#4/4 12:G#4/4"]
 # CODA — "la llamada" del juego (Do#–Fa#–La–Do#) y Do#: la dominante de la intro
-T_CODA = ["0:A5/4 4:F#5/4 8:D5/8", "0:G#5/4 4:B5/4 8:E6/8", "0:C#5/2 2:F#5/2 4:A5/2 6:C#6/10", "0:C#6/4 4:G#5/4 8:C#6/8"]
+T_CODA = ["0:F#5/4 4:A5/4 8:D6/8", "0:E6/4 4:B5/4 8:G#5/8", "0:C#5/2 2:F#5/2 4:A5/2 6:C#6/10", "0:C#6/4 4:G#5/4 8:C#6/8"]
 CH_CODA = ['D', 'E', 'F#m', 'C#']
-# PREPARACIÓN — la cabeza del tema A en el eco, y la subida
-T_P = ["0:C#5/2 2:F#4/4 8:F#5/2 10:E5/1 11:C#5/2 13:E5/3", "0:F#5/6 6:G#5/2 8:A5/4", "",
-       "0:E5/3 3:A5/3 6:A5/2 8:B5/4 12:C#6/4"]
+# PREPARACIÓN — la pregunta del motivo en el eco, y la subida
+T_P = [T_A[0], T_A[1], "", T_A[3]]
 
 # ── LA INTRO de Final Fall, en 8 compases ──
-PL_A = ['A#', 'A#', 'A#', 'F#', 'A#', 'A#', 'F#', 'A#', 'A#', 'F#', 'A#', 'A#', 'G#', 'G#', 'E', 'G#']   # compases impares
+PL_A = ['A', 'A', 'A', 'F#', 'A', 'A', 'F#', 'A', 'A', 'F#', 'A', 'A', 'G#', 'G#', 'E', 'G#']           # compases impares (v4: en MENOR, La y no La#: el original estaba en Fa# mayor y chocaba con el resto)
 PL_B = ['F#', 'F#', 'F#', 'D', 'F#', 'F#', 'D', 'F#', 'F#', 'D', 'F#', 'F#', 'G#', 'G#', 'E', 'G#']     # compases pares
-RISERS = {2: 0, 4: 12, 6: 12, 8: 12}                              # compás → octava de la subida Fa#-Sol#-La#-Do#
-HOLDS = {3: ['C#4', 'F#4'], 5: ['C#5', 'F#5'], 7: ['A#4', 'C#5', 'F#5']}
-CH_I = [['F#', 'F#', 'E'], ['D', 'D', 'E']] * 4
+RISERS = {2: 0, 4: 12, 6: 12, 8: 12}                              # compás → octava de la subida Fa#-Sol#-La-Do#
+HOLDS = {3: ['C#4', 'F#4'], 5: ['A4', 'C#5'], 7: ['F#4', 'A4', 'C#5']}
+CH_I = [['F#m', 'F#m', 'E'], ['D', 'D', 'E']] * 4
+# la intro presenta el motivo en la caja de música (adaptado a SUS acordes: Fa#m–Mi / Re–Mi)
+T_IN = ['', '', '', '', "0:F#5/3 3:G#5/3 6:A5/2 8:C#6/4 12:B5/4", "0:A5/4 4:F#5/2 6:A5/2 8:D6/4 12:B5/4",
+        "0:C#6/3 3:B5/3 6:A5/2 8:F#5/4 12:G#5/4", "0:F#5/3 3:A5/3 6:D6/2 8:A5/4 12:B5/2 14:C#6/2"]
 
 SECTIONS = [('I', 8), ('R', 8), ('A', 8), ('A2', 8), ('B', 8), ('C', 8), ('K', 8), ('A3', 8), ('B2', 8), ('C2', 8),
             ('P', 8), ('C3', 8), ('CODA', 4)]
@@ -181,7 +186,7 @@ def song():
         tag += [kind] * nb
         role = ROLE[kind]
         if role == 'I':
-            chs(CH_I)
+            chs(CH_I); add(base, T_IN, 'box')
             # el bajo ENTRA ya en la intro (para que el riff no llegue de golpe): el pedal Fa#1 en redondas, blancas,
             # el ritmo del riff a medias y la anacrusa en Do#, cada vez más fuerte
             bass.extend([(base + 5, 0, 30, 15, 55), (base + 6, 0, 30, 15, 62), (base + 7, 0, 30, 7, 70), (base + 7, 8, 30, 7, 74),
@@ -247,7 +252,7 @@ I_CM = {'vol': [4, 6, 7, 7, 7, 6], 'sus': 6, 'vib': (18, 0.12, 5.0), 'duty': 1.0
 SNARE_N, CRASH = [14, 10, 6, 3, 1], [14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
 CRASH_SOFT = [9, 8, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1]
 TRES = (0, 6, 12)
-LV = {'lead': 0, 'dbl': -6, 'echo': -13, 'call': -2, 'desc': -5, 'pluck': -13, 'rise': -6, 'hold': -9,
+LV = {'lead': 0, 'dbl': -6, 'echo': -13, 'call': -2, 'desc': -7, 'box': -3, 'pluck': -13, 'rise': -6, 'hold': -9,
       'drone': -12, 'pulses': -13, 'stabs': -7, 'cm': -10, 'bass': 3, 'kick': 3, 'snare': 1, 'hat': -14,
       'phat': -12, 'crash': -7, 'toms': -1, 'nrise': -12, 'vox': -2, 'chop': -4}
 LUFS = -10.0
@@ -280,7 +285,7 @@ def build():
     mel, chords, tag, starts, bass = song()
     NB = len(chords)
     NF = F.frames_for(NB * BAR + 3)
-    keys = ('lead', 'dbl', 'echo', 'call', 'desc', 'pluck', 'rise', 'h1', 'h2', 'h3', 'drone', 'pulses', 'c1', 'c2', 'cm')
+    keys = ('lead', 'dbl', 'echo', 'call', 'desc', 'box', 'pluck', 'rise', 'h1', 'h2', 'h3', 'drone', 'pulses', 'c1', 'c2', 'cm')
     Cn = {k: Chan(NF) for k in keys}
     NZ = {k: Noise(NF) for k in ('hat', 'phat', 'snare', 'crash', 'nrise')}
     NS = int(NF * F.FRAME_S) + SR
@@ -306,8 +311,11 @@ def build():
             vs = 0.7 if kind == 'P' else 1.0
             play(Cn['call'], t0, t0 + d * S16, n, I_CALL, q=q_n163, vs=vs, release=6)
             play(Cn['echo'], t0 + 3 * S16, t0 + 3 * S16 + min(d, 4) * S16, n, I_ECHO, vs=vs, release=2); continue
-        if voice == 'desc':                                                 # el contrapunto: la caja de música
-            play(Cn['desc'], t0, t0 + d * S16, n, I_BOX, q=q_n163, release=6); continue
+        if voice == 'desc':                                                 # el contracanto (por debajo): el colchón
+            play(Cn['desc'], t0, t0 + d * S16, n, I_CM, q=q_n163, release=6); continue
+        if voice == 'box':                                                  # (intro) el motivo en la caja de música, con eco
+            play(Cn['box'], t0, t0 + max(d, 3) * S16, n, I_BOX, q=q_n163, release=6)
+            play(Cn['echo'], t0 + 3 * S16, t0 + 3 * S16 + 2 * S16, n, I_ECHO, vs=0.6, release=1); continue
         up = kind in ('A2', 'A3', 'B2', 'C2', 'C3', 'CODA')                 # las vueltas siguientes doblan a la octava
         play(Cn['lead'], t0, t0 + d * S16 * 0.93, n - 12, I_SAWBIG if d >= 6 else I_SAWL, q=q_saw, release=3)
         play(Cn['dbl'], t0, t0 + d * S16 * 0.93, n + (12 if up else 0), I_PUL, release=2)
@@ -336,7 +344,7 @@ def build():
             play(Cn['drone'], tv(b, 0), tv(b, 16) - 0.01, 42, I_DRONE, q=q_n163, vs=fade, release=0)
         if sec(b) != 'I': continue
         if k in RISERS:
-            for i, iv in enumerate((0, 2, 4, 7)):
+            for i, iv in enumerate((0, 2, 3, 7)):
                 play(Cn['rise'], tv(b, 12 + i), tv(b, 13 + i), 54 + RISERS[k] + iv, I_RISE, q=q_saw, release=1)
         if k in HOLDS:
             for j, x in enumerate(HOLDS[k]):
@@ -440,7 +448,7 @@ def build():
     noise = lambda k: cut(F.tnd_dac(NZ[k].render() / 22638.0 * 12))
     S = {
         'lead': cut(F.pulse_dac(F.render_saw(Cn['lead']))), 'dbl': pulse('dbl'), 'echo': pulse('echo'),
-        'call': wave('call'), 'desc': wave('desc'), 'pluck': pulse('pluck'),
+        'call': wave('call'), 'desc': wave('desc'), 'box': wave('box'), 'pluck': pulse('pluck'),
         'rise': cut(F.pulse_dac(F.render_saw(Cn['rise']))), 'hold': pulse('h1') + pulse('h2') + pulse('h3'),
         'drone': wave('drone'), 'pulses': pulse('pulses'), 'stabs': pulse('c1') + pulse('c2'), 'cm': wave('cm'),
         'kick': cut(F.tnd_dac((kick + 64) / 22638.0) - base), 'toms': cut(F.tnd_dac((tom + 64) / 22638.0) - base),
@@ -490,17 +498,17 @@ def preview(y, starts):
     """Previas: la pista entera, la costura (coda → intro) y cada cambio de sección (4 compases antes y después)"""
     os.makedirs(PREVIEW, exist_ok=True)
     for f in os.listdir(PREVIEW):
-        if f.startswith('final_fall_v3'): os.remove(os.path.join(PREVIEW, f))
+        if f.startswith('final_fall_v4'): os.remove(os.path.join(PREVIEW, f))
     def enc(x, name):
         wav = os.path.join(PREVIEW, name + '.wav'); ogg = wav[:-4] + '.ogg'
         F.write_wav(wav, x)
         os.system(f'ffmpeg -v quiet -y -i "{wav}" -c:a libvorbis -q:a 6 "{ogg}"'); os.remove(wav)
-    enc(y, 'final_fall_v3')
+    enc(y, 'final_fall_v4')
     k = int(8 * BAR * SR)
-    enc(np.concatenate([y[-k:], y[:k]]), 'final_fall_v3_costura')
+    enc(np.concatenate([y[-k:], y[:k]]), 'final_fall_v4_costura')
     for i, (kind, _) in enumerate(SECTIONS[1:], 1):
         c = int((starts[kind] - 1) * BAR * SR); w = int(4 * BAR * SR)
-        enc(y[c - w:c + w], f'final_fall_v3_paso_{i:02d}_{SECTIONS[i - 1][0]}-{kind}')
+        enc(y[c - w:c + w], f'final_fall_v4_paso_{i:02d}_{SECTIONS[i - 1][0]}-{kind}')
     print(f'  previas en {PREVIEW}')
 
 

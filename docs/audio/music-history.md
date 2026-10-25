@@ -504,3 +504,16 @@ the old level tune in the final boss, Verity's hook).
   riff, pickup; velocities 55 → 95); chorus exits fade the stabs, pulses and hats over 2 bars with a soft descending
   tom fill (MFCC jump chorus→breather 122 → 95, chorus→build 119 → 81); intro→riff stays ~113 (the intro's own roll
   into the groove). Energy: lead 12 %, voice of the breather 8 %, bass 19 %, drums 46 %.
+- v4 (user on v3: a partial success — "I meant the icy STRATEGIES (inversion, transitions…), not to put its motifs in;
+  they're fine, keep them" — but the main melody "sounds weird and incoherent": rewrite it completely, intro
+  included, even if it moves away from Final Fall). v3 archived: `FlappyMonster_originals/music/versiones/final_fall_v3/`.
+  (No Crab Tantrum notes were ever used; what sounded "icy" is the shared house vocabulary: 3+3+2, the i–VI–III–VII
+  chorus, the breather, la llamada.) The cause, measured: v3's lead leapt a 5th + an octave in almost every phrase
+  (leaps ≥ 5 st 18 %, octave leaps 4 %) and the intro was in F# MAJOR (Final Fall's own A#) before an F# MINOR song.
+  Now ONE singable 2-bar motif, mostly stepwise, in 3+3+2 (F#–G#–A up to a long C#, down to F#) generates everything:
+  theme A = motif + its sequence down as the answer (cadence A–B–C# over the turnaround); B = the motif INVERTED (falls
+  C#–B–A in 3+3+2, the icy strategy); chorus = the motif OPENED (up the chord to a peak, down by steps); breather = in
+  long values; the counter-melody of A'' now goes UNDER the lead (house rule) on the soft N163 pad. INTRO in F# minor
+  (ostinato, risers and held chords with A, not A#) and it presents the motif on the music box (bars 5-8, fitted to the
+  intro's F#m–E / D–E). Lead: mean interval 2.99 → 2.57 st, steps 57 → 61 %, leaps ≥ 5 st 18 → 12 %, octave leaps 4 → 0 %.
+  Base, bass, form, mix, transitions and the kept motifs (la llamada coda) unchanged; 0 of 79 bars copied from Final Fall.
