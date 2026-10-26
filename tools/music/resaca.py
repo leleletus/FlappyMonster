@@ -77,99 +77,77 @@ def bass_long(base, harm):
 
 # ══ LA MELODÍA ═══════════════════════════════════════════════════════════════════════════════════════════════════
 HOOK = "0:F#5/3 3:F#5/3 6:A5/2 8:G#5/2 10:F#5/2 12:C#5/4"          # el gancho: grito en 3+3+2 y caída
-HOOK_A = "0:A5/3 3:A5/3 6:C#6/2 8:B5/2 10:A5/2 12:F#5/4"            # (el gancho desde La y desde Do#)
-HOOK_C = "0:C#6/3 3:C#6/3 6:F#6/2 8:E6/2 10:D6/2 12:C#6/4"
-# v5 (0.5.43, el usuario: "la progresión / el desarrollo de las melodías es algo extraño"). Medido en la v4: 84 de
-# 100 compases acababan en nota larga, 61 usaban los mismos dos ritmos y en el 42 % el compás siguiente empezaba a
-# 5 semitonos o más del anterior — la melodía iba compás a compás, volviendo a empezar; y la B era el gancho copiado
-# sobre cada raíz (Fa#→Re→Mi). Ahora FRASES de 8: el gancho abre, la respuesta cambia de ritmo y enlaza por grado, una
-# cima hacia el compás 6-7, el 4 se queda abierto (en Sol#/Do#, el giro) y el 8 lleva a la frase siguiente.
 M_A = [HOOK,
-       "0:D5/2 2:E5/2 4:F#5/2 6:A5/6 12:G#5/2 14:F#5/2",                 # (sube por grados y enlaza)
-       "0:F#5/3 3:F#5/3 6:A5/2 8:B5/2 10:C#6/6",                        # (la pregunta: sube a Do#)
-       "0:B5/2 2:A5/2 4:E5/4 8:F#5/2 10:B5/2 12:G#5/4",                  # (el giro: abierta en Sol#)
+       "0:F#5/3 3:F#5/3 6:A5/2 8:C#6/4 12:B5/2 14:A5/2",
+       "0:F#5/3 3:F#5/3 6:A5/2 8:G#5/2 10:F#5/2 12:E5/2 14:F#5/2",
+       "0:E5/3 3:A5/3 6:C#6/2 8:B5/4 12:G#5/4",                       # (giro La–Si–Do#: notas de cada acorde)
        HOOK,
-       "0:D5/2 2:E5/2 4:F#5/4 8:A5/2 10:B5/2 12:C#6/4",
-       "0:F#6/3 3:C#6/3 6:A5/2 8:B5/2 10:C#6/2 12:A5/4",                 # (la cima)
-       "0:A5/2 2:F#5/2 4:D5/4 8:F#5/2 10:B5/2 12:C#6/4"]
-M_A2 = [HOOK_A,                                                         # la 2ª mitad: el gancho más arriba
-        "0:G#5/2 2:A5/2 4:C#6/6 10:B5/2 12:A5/2 14:B5/2",
-        HOOK_C,
-        "0:E6/2 2:C#6/2 4:A5/4 8:B5/2 10:D6/2 12:C#6/4",
-        "0:C#6/3 3:C#6/3 6:D6/2 8:E6/2 10:F#6/2 12:A6/4",                # (carrera a la cima)
-        "0:A6/4 4:G#6/2 6:F#6/6 12:E6/2 14:D6/2",
-        "0:C#6/3 3:A5/3 6:B5/2 8:C#6/4 12:A5/2 14:G#5/2",
-        "0:F#5/4 4:A5/4 8:F#5/2 10:D5/2 12:C#5/2 14:E5/2"]
-# A': la misma idea con otras respuestas
-M_A_2 = [HOOK,
-         "0:D5/2 2:E5/2 4:F#5/2 6:C#6/6 12:B5/2 14:A5/2",
-         "0:F#5/3 3:F#5/3 6:A5/2 8:B5/2 10:C#6/6",
-         "0:B5/2 2:A5/2 4:E5/4 8:F#5/2 10:B5/2 12:G#5/4",
-         HOOK,
-         "0:D5/2 2:E5/2 4:F#5/4 8:A5/2 10:B5/2 12:C#6/4",
-         "0:C#6/2 2:D6/2 4:E6/2 6:F#6/6 12:E6/2 14:D6/2",
-         "0:D6/2 2:A5/2 4:F#5/4 8:B5/2 10:F#5/2 12:G#5/4"]
-M_A2_2 = [HOOK_A,
-          "0:G#5/2 2:A5/2 4:C#6/6 10:B5/2 12:A5/2 14:B5/2",
-          HOOK_C,
-          "0:E6/2 2:C#6/2 4:A5/4 8:B5/2 10:D6/2 12:C#6/4",
-          "0:C#6/3 3:C#6/3 6:D6/2 8:E6/2 10:F#6/2 12:A6/4",
-          "0:A6/3 3:A6/3 6:G#6/2 8:F#6/4 12:E6/2 14:D6/2",
-          "0:C#6/4 4:B5/2 6:A5/2 8:F#5/4 12:A5/2 14:G#5/2",
-          "0:F#5/4 4:A5/4 8:B5/2 10:D6/2 12:C#6/4"]
-# B: un grito en notas repetidas (el tresillo) que contesta con una línea que cruza los acordes por notas comunes
-# (v4: el gancho copiado sobre cada raíz)
+       "0:F#5/3 3:F#5/3 6:A5/2 8:C#6/4 12:D6/2 14:C#6/2",
+       "0:A5/3 3:C#6/3 6:B5/2 8:A5/4 12:F#5/4",
+       "0:F#5/3 3:A5/3 6:D6/2 8:B5/4 12:C#6/4"]                       # (giro Re–Si–Do#)
+M_A2 = ["0:F#5/3 3:F#5/3 6:A5/2 8:G#5/2 10:F#5/2 12:C#6/4",           # la 2ª mitad del tema: el gancho sube
+        "0:C#6/3 3:A5/3 6:B5/2 8:A5/4 12:F#5/4",
+        HOOK,
+        "0:C#6/3 3:E6/3 6:C#6/2 8:B5/4 12:C#6/4",
+        "0:F#6/3 3:F#6/3 6:E6/2 8:F#6/4 12:C#6/4",
+        "0:A5/3 3:F#5/3 6:A5/2 8:C#6/4 12:B5/2 14:A5/2",
+        "0:A5/3 3:F#5/3 6:E5/2 8:F#5/4 12:A5/4",
+        "0:A5/3 3:F#5/3 6:D5/2 8:F#5/4 12:G#5/4"]
+# B: el gancho en SECUENCIA por la progresión (i–VI–VII–i), luego el grito en notas repetidas
 H_B = ['F#m', 'D', 'E', 'F#m', 'F#m', 'D', 'A', 'E']
-M_B = ["0:C#6/2 3:C#6/2 6:C#6/2 8:A5/2 10:B5/2 12:C#6/4",
-       "0:D6/4 4:E6/2 6:D6/2 8:A5/4 12:F#5/4",
-       "0:B5/2 3:B5/2 6:B5/2 8:G#5/2 10:A5/2 12:B5/4",
-       "0:C#6/3 3:A5/3 6:F#5/2 8:G#5/2 10:A5/2 12:C#6/4",
-       "0:F#6/2 3:F#6/2 6:F#6/2 8:E6/2 10:D6/2 12:C#6/4",
-       "0:D6/4 4:E6/2 6:F#6/2 8:D6/4 12:A5/4",
-       "0:C#6/2 3:C#6/2 6:C#6/2 8:E6/2 10:A6/2 12:E6/4",
-       "0:E6/4 4:B5/4 8:G#5/4 12:B5/4"]
-M_B2_2 = ["0:A5/2 3:A5/2 6:A5/2 8:C#6/2 10:B5/2 12:A5/4",
-          "0:D6/4 4:C#6/2 6:D6/2 8:F#6/4 12:D6/4",
-          "0:B5/2 3:B5/2 6:B5/2 8:E6/2 10:F#6/2 12:G#6/4",
-          "0:A6/4 4:G#6/2 6:F#6/2 8:C#6/4 12:A5/4",
-          "0:F#5/2 3:F#5/2 6:A5/2 8:C#6/2 11:C#6/2 14:B5/2",
-          "0:A5/3 3:F#5/3 6:A5/2 8:D6/4 12:F#6/4",
-          "0:E6/3 3:C#6/3 6:E6/2 8:A6/4 12:G#6/2 14:F#6/2",
-          "0:E6/4 4:B5/4 8:G#5/4 12:E5/4"]
-# CLÍMAX: su propia línea, arriba, con la cima en el compás 4 y en el 12; 2ª mitad armonizada en terceras
+M_B = [HOOK,
+       "0:D5/3 3:D5/3 6:F#5/2 8:E5/2 10:D5/2 12:A4/4",
+       "0:E5/3 3:E5/3 6:G#5/2 8:F#5/2 10:E5/2 12:B4/4",
+       "0:F#5/3 3:A5/3 6:C#6/2 8:B5/2 10:A5/2 12:F#5/4",
+       "0:C#6/2 3:C#6/2 6:C#6/2 8:A5/2 11:A5/2 14:C#6/2",
+       "0:D6/6 6:C#6/2 8:D6/4 12:A5/4",
+       "0:C#6/2 3:C#6/2 6:C#6/2 8:E6/2 11:E6/2 14:C#6/2",
+       "0:B5/6 6:G#5/2 8:E5/4 12:G#5/4"]
+M_B2 = [HOOK,
+        "0:D5/3 3:D5/3 6:F#5/2 8:E5/2 10:D5/2 12:A4/4",
+        "0:E5/3 3:E5/3 6:G#5/2 8:F#5/2 10:E5/2 12:B4/4",
+        "0:F#5/3 3:A5/3 6:C#6/2 8:B5/2 10:A5/2 12:F#5/4",
+        "0:A5/2 3:A5/2 6:A5/2 8:C#6/2 11:C#6/2 14:F#6/2",
+        "0:F#6/6 6:E6/2 8:D6/4 12:A5/4",
+        "0:E6/2 3:E6/2 6:E6/2 8:C#6/2 11:A5/2 14:C#6/2",
+        "0:B5/4 4:G#5/4 8:E5/4 12:B4/4"]
+# v3 — el gancho en OTRAS alturas (empieza en La o en Do#) para que no sea siempre idéntico
+HOOK_A = "0:A5/3 3:A5/3 6:C#6/2 8:B5/2 10:A5/2 12:F#5/4"
+HOOK_C = "0:C#6/3 3:C#6/3 6:F#6/2 8:E6/2 10:D6/2 12:C#6/4"
+M_A_2 = M_A[:4] + [HOOK_A] + M_A[5:]                                  # (A')
+M_A2_2 = M_A2[:2] + [HOOK_A] + M_A2[3:]
+M_B2_2 = [HOOK_C] + M_B2[1:]                                          # (2ª mitad de la B)
+# CLÍMAX (v3: su propia melodía; en v2 era la B nota por nota): el gancho por la progresión desde otras alturas, el
+# grito arriba, una cima nueva; la 2ª mitad repite la secuencia de la B ARMONIZADA en terceras y sube a otra cima
 M_CL = [HOOK_C,
-        "0:D6/2 2:E6/2 4:F#6/4 8:A6/4 12:F#6/4",
-        "0:E6/3 3:B5/3 6:E6/2 8:G#6/4 12:F#6/2 14:E6/2",
-        "0:F#6/4 4:G#6/2 6:A6/2 8:F#6/4 12:C#6/4",
-        "0:A6/2 3:A6/2 6:A6/2 8:G#6/2 10:F#6/2 12:C#6/4",
-        "0:D6/3 3:F#6/3 6:A6/2 8:F#6/4 12:D6/4",
-        "0:E6/3 3:C#6/3 6:E6/2 8:A6/4 12:G#6/2 14:F#6/2",
-        "0:E6/4 4:B5/4 8:G#5/4 12:B5/4"]
-M_CL2 = [HOOK_C,
-         "0:D6/2 2:E6/2 4:F#6/4 8:D6/2 10:F#6/2 12:A6/4",
-         "0:G#6/4 4:F#6/2 6:E6/2 8:B5/4 12:E6/4",
-         "0:F#6/2 2:G#6/2 4:A6/4 8:G#6/2 10:F#6/2 12:C#6/4",
-         "0:A6/2 3:A6/2 6:A6/2 8:F#6/2 11:F#6/2 14:E6/2",
-         "0:D6/4 4:F#6/4 8:A6/4 12:F#6/2 14:E6/2",
-         "0:E6/3 3:C#6/3 6:E6/2 8:A6/4 12:E6/4",
-         "0:G#6/4 4:E6/4 8:B5/4 12:G#5/4"]
-# A FINAL: variado; el gancho una OCTAVA arriba en el compás 13 (la cima de la canción)
+        "0:A5/3 3:A5/3 6:D6/2 8:E6/2 10:D6/2 12:A5/4",
+        "0:B5/3 3:B5/3 6:E6/2 8:F#6/2 10:E6/2 12:B5/4",
+        "0:C#6/3 3:C#6/3 6:F#6/2 8:E6/2 10:F#6/2 12:A6/4",
+        "0:A6/2 3:A6/2 6:A6/2 8:F#6/2 11:F#6/2 14:E6/2",
+        "0:F#6/6 6:E6/2 8:D6/4 12:A5/4",
+        "0:E6/2 3:E6/2 6:E6/2 8:C#6/2 11:E6/2 14:A6/2",
+        "0:G#6/6 6:F#6/2 8:E6/4 12:B5/4"]
+M_CL2 = M_B[:4] + ["0:C#6/3 3:F#6/3 6:A6/2 8:G#6/2 10:F#6/2 12:C#6/4",
+                   "0:D6/3 3:F#6/3 6:A6/2 8:F#6/4 12:D6/4",
+                   "0:C#6/3 3:E6/3 6:A6/2 8:G#6/2 10:A6/2 12:E6/4",
+                   "0:B5/4 4:E6/4 8:G#6/4 12:E6/4"]
+# A FINAL (v3: variado, no una copia de A): el gancho en terceras, finales de frase nuevos, un tramo una octava arriba
 M_F = [HOOK,
-       "0:C#5/2 2:F#5/2 4:A5/6 10:G#5/2 12:A5/2 14:B5/2",
+       "0:A5/3 3:A5/3 6:C#6/2 8:F#6/4 12:C#6/4",
        HOOK_A,
-       "0:E5/2 2:A5/2 4:C#6/4 8:D6/2 10:B5/2 12:C#6/4",
+       "0:C#6/3 3:E6/3 6:C#6/2 8:B5/4 12:G#5/4",
        HOOK,
-       "0:D5/2 2:E5/2 4:F#5/4 8:A5/2 10:B5/2 12:C#6/4",
-       "0:F#6/3 3:A6/3 6:G#6/2 8:F#6/4 12:C#6/4",
-       "0:D6/2 2:A5/2 4:F#5/4 8:B5/2 10:D6/2 12:C#6/4",
+       "0:F#5/3 3:A5/3 6:C#6/2 8:F#6/4 12:E6/2 14:D6/2",
+       "0:C#6/3 3:A5/3 6:B5/2 8:A5/4 12:C#6/4",
+       "0:F#6/3 3:D6/3 6:A5/2 8:B5/4 12:C#6/4",
+       HOOK,
+       "0:F#5/3 3:A5/3 6:B5/2 8:C#6/4 12:A5/4",
        HOOK_A,
-       "0:G#5/2 2:A5/2 4:C#6/6 10:B5/2 12:A5/2 14:B5/2",
-       HOOK_C,
-       "0:E6/2 2:C#6/2 4:A5/4 8:B5/2 10:D6/2 12:C#6/4",
-       "0:F#6/3 3:F#6/3 6:A6/2 8:G#6/2 10:F#6/2 12:C#6/4",
-       "0:D6/2 2:E6/2 4:F#6/4 8:A6/2 10:G#6/2 12:F#6/4",
-       "0:C#6/3 3:A5/3 6:B5/2 8:C#6/4 12:A5/2 14:G#5/2",
-       "0:F#5/4 4:A5/4 8:B5/2 10:F#5/2 12:G#5/4"]
+       "0:E6/3 3:C#6/3 6:A5/2 8:B5/4 12:C#6/4",
+       "0:A6/3 3:A6/3 6:F#6/2 8:E6/2 10:D6/2 12:C#6/4",
+       "0:A5/3 3:C#6/3 6:A5/2 8:F#5/4 12:A5/4",
+       "0:C#6/3 3:A5/3 6:C#6/2 8:F#6/4 12:C#6/4",
+       "0:F#6/4 4:D6/4 8:B5/4 12:C#6/4"]
 HARM3 = {('C', k) for k in range(9, 13)} | {('F', k) for k in (1, 3, 5, 9, 11)}   # (sección, compás) con terceras
 
 # RESPIRO: el gancho en valores largos (caja de música); el bajo en redondas
@@ -488,9 +466,9 @@ def preview(y):
         wav = os.path.join(PREVIEW, name + '.wav'); ogg = wav[:-4] + '.ogg'
         F.write_wav(wav, x)
         os.system(f'ffmpeg -v quiet -y -i "{wav}" -c:a libvorbis -q:a 6 "{ogg}"'); os.remove(wav)
-    enc(y, NAME + '_v5')
+    enc(y, NAME + '_v4')
     k = int(8 * BAR * SR)
-    enc(np.concatenate([y[-k:], y[:k]]), NAME + '_v5_costura')
+    enc(np.concatenate([y[-k:], y[:k]]), NAME + '_v4_costura')
     print(f'  previas en {PREVIEW}')
 
 

@@ -37,6 +37,7 @@ import famicom as F
 from famicom import SR, Chan, Noise, play, wavetable, q_tri, q_n163
 import tentacle_nes as TN
 import gloomy_nes as GN
+import slap as SL
 import worlds_nes as W
 
 NAME = 'snowball_verity'
@@ -219,10 +220,11 @@ def build(lufs=-10.5):
     for b, st, n, d in desc:                                   # el contrapunto: la caja de música por encima del tema
         play(Cn['bell'], tv(b, st), tv(b, st) + d * S16 * 1.05, n + 12, I_BELL, q=q_n163, release=8)
 
+    slap = SL.Rec()                                            # (0.5.44: el bajo slap de Resaca, no el triángulo + pulso)
+
     def bass(b, st, ln, note, define=True):
         t = tv(b, st)
-        play(Cn['bass'], t, t + ln * S16, note, I_TRI, q=q_tri, release=0)
-        if define: play(Cn['bdef'], t, t + min(ln, 2.5) * S16, note + 12, I_BDEF, release=1)
+        slap.add(t, t + ln * S16, note)
 
     for b in range(1, NB + 1):
         kind = tag[b - 1]
@@ -317,7 +319,7 @@ def build(lufs=-10.5):
     S = {
         'lead': wave('lead'), 'bell': wave('bell'), 'dbl': pulse('dbl'), 'echo': pulse('echo'), 'choir': wave('p1') + wave('p2'),
         'stabs': pulse('c1') + pulse('c2'), 'ice': pulse('ice'), 'shim': pulse('shim'),
-        'bass': cut(F.tnd_dac(F.render_tri(Cn['bass']) / 8227.0)), 'bdef': pulse('bdef'),
+        'bass': slap.render(n + tail),
         'kick': cut(F.tnd_dac((kick + 64) / 22638.0) - base), 'toms': cut(F.tnd_dac((tom + 64) / 22638.0) - base),
         'snare': cut(F.tnd_dac((sn + 64) / 22638.0) - base) + cut(F.tnd_dac(NZ['snare'].render() / 22638.0 * 12)),
         'hat': cut(F.tnd_dac(NZ['hat'].render() / 22638.0 * 12)),

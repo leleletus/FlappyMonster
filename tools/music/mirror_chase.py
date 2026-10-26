@@ -45,6 +45,7 @@ import famicom as F
 from famicom import SR, Chan, Noise, play, wavetable, q_tri, q_saw, q_n163
 import tentacle_nes as TN
 import gloomy_nes as GN
+import slap as SL
 import worlds_nes as W
 
 NAME = 'mirror_chase'
@@ -216,6 +217,7 @@ def build(lufs=-9.0):
             play(Cn['dbl'], t0, t0 + d * S16 * gate, n + (12 if kind not in ('B2', 'B3') else -12), I_PUL, release=1)
         if kind in ('IN',): play(Cn['bell'], t0, t0 + 3 * S16, n, I_BELL, q=q_n163, release=4)
 
+    slap_sub, slap_re = {}, {}                                 # (0.5.44: el bajo slap de Resaca en lugar del sub + reese)
     for b in range(1, NB + 1):
         kind = tag[b - 1]
         k = b - starts[ORDER.index(kind)] + 1                  # compás dentro de la sección
@@ -227,14 +229,12 @@ def build(lufs=-9.0):
         def sub(st, ln, r, up=0):                              # el SUB: casi puro, abajo del todo, sostenido
             if gap and st >= 12: return
             t = tv(b, st)
-            play(Cn['bass'], t, t + ln * S16, lo(r) + up, I_TRI, q=q_tri, release=0)
+            slap_sub.setdefault(b, []).append((t, t + ln * S16, lo(r) + up))
 
         def reese(st, ln, r, up=0, growl=False):               # el REESE: dos sierras desafinadas (+ un pulso que gruñe)
             if gap and st >= 12: return
             t = tv(b, st)
-            play(Cn['reese'], t, t + ln * S16 * 0.9, lo(r) + 24 + up, I_REESE, q=q_saw, release=1)
-            play(Cn['reese2'], t, t + ln * S16 * 0.9, lo(r) + 24 + up + 0.17, I_REESE, q=q_saw, release=1)
-            if growl: play(Cn['growl'], t, t + ln * S16 * 0.85, lo(r) + 36 + up, I_GROWL, release=1)
+            slap_re.setdefault(b, []).append((t, t + ln * S16 * 0.9, lo(r) + up, 112 if growl else 100))
         # ── BAJO ──
         if kind == 'K':
             sub(0, 15.5, r1)
@@ -321,12 +321,14 @@ def build(lufs=-9.0):
     pulse = lambda k_: cut(F.pulse_dac(F.render_pulse(Cn[k_])))
     wave = lambda k_: cut(F.render_wave(Cn[k_], WAVES) * 0.0075)
     base = F.tnd_dac(np.full(NS, 64 / 22638.0))
+    slap = SL.Rec()                                            # (el ritmo del reese donde lo hay; si no, las notas del sub)
+    for b in sorted(set(slap_sub) | set(slap_re)):
+        for e in slap_re.get(b) or [(t0, t1, nn) for t0, t1, nn in slap_sub[b]]: slap.add(*e)
     S = {
         'lead': cut(F.pulse_dac(F.render_saw(Cn['lead']))) + cut(F.pulse_dac(F.render_saw(Cn['lead2']))), 'dbl': pulse('dbl'),
         'echo': pulse('echo'), 'echo2': pulse('echo2'), 'bell': wave('bell'), 'choir': wave('p1') + wave('p2'),
         'stabs': pulse('c1') + pulse('c2'), 'arp': pulse('arp'),
-        'bass': cut(F.tnd_dac(F.render_tri(Cn['bass']) / 8227.0)),
-        'reese': cut(F.pulse_dac(F.render_saw(Cn['reese']))) + cut(F.pulse_dac(F.render_saw(Cn['reese2']))) + 0.6 * pulse('growl'),
+        'bass': slap.render(n + tail),
         'kick': cut(F.tnd_dac((kick + 64) / 22638.0) - base), 'toms': cut(F.tnd_dac((tom + 64) / 22638.0) - base),
         'snare': cut(F.tnd_dac((sn + 64) / 22638.0) - base) + cut(F.tnd_dac(NZ['snare'].render() / 22638.0 * 12))
                  + 0.7 * cut(F.tnd_dac(NZ['crack'].render() / 22638.0 * 12)),
@@ -347,9 +349,9 @@ def build(lufs=-9.0):
             if i0 >= n: continue
             m = min(len(shape), n - i0)
             duck[i0:i0 + m] = np.minimum(duck[i0:i0 + m], 1 - shape[:m])
-    for k_, amt in (('bass', 0.45), ('reese', 0.7), ('choir', 0.7), ('arp', 0.6), ('stabs', 0.4), ('lead', 0.3), ('dbl', 0.3), ('bell', 0.3)):
+    for k_, amt in (('bass', 0.6), ('choir', 0.7), ('arp', 0.6), ('stabs', 0.4), ('lead', 0.3), ('dbl', 0.3), ('bell', 0.3)):
         S[k_] = S[k_] * (1 - amt * (1 - duck))
-    LV = {'lead': 0, 'dbl': -8, 'echo': -12, 'echo2': -15, 'bell': -3, 'choir': -6, 'stabs': -7, 'arp': -9, 'bass': 7, 'reese': 1,
+    LV = {'lead': 0, 'dbl': -8, 'echo': -12, 'echo2': -15, 'bell': -3, 'choir': -6, 'stabs': -7, 'arp': -9, 'bass': 7,
           'kick': 5, 'toms': 0, 'snare': 3, 'hat': -6, 'crash': -7}
     g = GN.level(S, LV, 'lead')
     from scipy.signal import butter, sosfilt
@@ -384,7 +386,7 @@ def build(lufs=-9.0):
     crest = 20 * np.log10(np.abs(mono).max() / np.sqrt(np.mean(mono[n_i:] ** 2)))
     print('  drop 1: %.0f %% de la energía por debajo de 120 Hz (%.0f %% en 20-60 Hz); cresta %.1f dB' % (
         100 * sp[(fq >= 20) & (fq < 120)].sum() / tot, 100 * sp[(fq >= 20) & (fq < 60)].sum() / tot, crest))
-    low = sum(np.mean((S[k_] * g[k_]) ** 2) for k_ in ('bass', 'reese')) / sum(np.mean((S[k_] * g[k_]) ** 2) for k_ in S)
+    low = sum(np.mean((S[k_] * g[k_]) ** 2) for k_ in ('bass',)) / sum(np.mean((S[k_] * g[k_]) ** 2) for k_ in S)
     nb = int(BAR * SR)
     a_, c_ = mono[n_i - nb:n_i], mono[n - nb:n]
     lvl = 10 * np.log10(np.mean(a_ ** 2) / np.mean(c_ ** 2))

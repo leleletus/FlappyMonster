@@ -1361,6 +1361,8 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
         if 'swap' in var[b - 1]: voice(b, st, n, d)          # (la voz canta el contracanto)
         else: play(Cn['cm'], tv(b, st), tv(b, st) + d * S16 * 0.92, n, I_CM, q=q_n163, release=4)
 
+    import slap as SL                                         # (aquí dentro: slap importa final_fall, que importa este)
+    slap = SL.Rec()
     for b in range(1, NB + 1):
         intro = tag[b - 1] == 'intro'
         in_b = tag[b - 1] in ('B', 'E')                # (E, el respiro, lleva el arreglo de B)
@@ -1399,7 +1401,8 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
                 if thin: pat = ((0, 0, 7.5),)                                                          # parón: blancas
                 if stop: pat = tuple((h_ - s0, 0, 1.4) for h_ in STOP_HITS.get(isle, STOP_HITS[None]) if s0 <= h_ < s0 + 8)   # a golpes
                 for st, iv, ln in pat:
-                    play(Cn['bass'], tv(b, s0 + st), tv(b, s0 + st) + ln * S16, root + iv, I_TRI, q=q_tri, release=0)
+                    if boss: slap.add(tv(b, s0 + st), tv(b, s0 + st) + ln * S16, root + iv)    # (jefes: el slap de Resaca)
+                    else: play(Cn['bass'], tv(b, s0 + st), tv(b, s0 + st) + ln * S16, root + iv, I_TRI, q=q_tri, release=0)
             if stop:                                         # A GOLPES: el acorde solo en los golpes
                 for h_ in STOP_HITS.get(isle, STOP_HITS[None]):
                     if s0 <= h_ < s0 + 8:
@@ -1700,7 +1703,7 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
         'cm': cut(F.render_wave(Cn['cm'], WAVES) * 0.0075), 'swap': pulse('swap'), 'perc': pulse('perc'),
         'dbl': pulse('dbl'), 'bell': cut(F.render_wave(Cn['bell'], WAVES) * 0.0075),
         'echo': pulse('echo'), 'chords': pulse('c1') + pulse('c2'),
-        'bass': cut(F.tnd_dac(F.render_tri(Cn['bass']) / 8227.0)), 'trill': pulse('trill') + cut(F.tnd_dac(NZ['fx'].render() / 22638.0 * 12)),
+        'bass': slap.render(n + tail) if boss else cut(F.tnd_dac(F.render_tri(Cn['bass']) / 8227.0)), 'trill': pulse('trill') + cut(F.tnd_dac(NZ['fx'].render() / 22638.0 * 12)),
         'kick': cut(F.tnd_dac((kick + 64) / 22638.0) - base), 'toms': cut(F.tnd_dac((tom + 64) / 22638.0) - base),
         'snare': cut(F.tnd_dac((sn + 64) / 22638.0) - base) + cut(F.tnd_dac(NZ['snare'].render() / 22638.0 * 12)),
         'hat': cut(F.tnd_dac(NZ['hat'].render() / 22638.0 * 12)), 'crash': cut(F.tnd_dac(NZ['crash'].render() / 22638.0 * 12)),

@@ -16,7 +16,8 @@ delay, drums are 1-bit DPCM and noise.
 **The cast of roles, the same in every track:**
 - MELODY: an N163 wavetable or a pulse with a duty sweep (12.5 → 50 %) and vibrato on long notes; for strength it is
   doubled by the VRC6 saw or a pulse an octave up (never by another melody).
-- BASS: triangle; in lively tracks, 8ths with octaves; in calm ones, half notes or a drone.
+- BASS: triangle; in lively tracks, 8ths with octaves; in calm ones, half notes or a drone. BOSS themes (0.5.44, the
+  user's favourite): the GM SLAP BASS of Resaca instead (`tools/music/slap.py`), same notes.
 - ACCOMPANIMENT: short offbeat chords ("skank"), 16th arpeggios, or an N163 pad.
 - DRUMS: DPCM kick, snare = short noise + DPCM body, noise cymbals; noise in short mode = "metal".
 - COLOUR per place: music box (N163 with bell partials), sleigh bells (short noise), drips (pulse with a pitch drop),
@@ -32,13 +33,11 @@ tempos: levels ~138, menus 140, bosses 148-186; only the map (120) and the caves
 - **bouncing leaps** of a 6th-7th up and down (+9 −9 +9, +10 −10 +10) in level / boss tracks;
 - the **neighbour note** and the **chromatic descent** of the menus' blues turn.
 8-bar phrases; question and answer; the answer is usually the question in sequence (a step or a third higher or lower).
-PHRASES, NOT BARS (user, 0.5.43: "the progression / development of the melodies is strange"): a melody written bar
-by bar — every bar its own arpeggio of its chord, ending on a long note, the next bar restarting with the same rhythm
-from a new register — is what made Resaca and La Polilla sound wrong. Write 8-bar arcs: the hook opens, the answer
-changes rhythm and LINKS by step (or a short pickup) into the next bar, one peak around bar 5-7, bar 4 open (5th /
-leading tone), bar 8 leading on. Measured targets that came out of it: jump between the end of a bar and the start of
-the next ≥ 5 semitones in under ~15 % of bars; steps ≥ 45 %; many rhythms (not one cell in every bar); never a
-motif copied onto each chord root (a "real" sequence over i–VI–VII sounds mechanical).
+REJECTED ATTEMPT (0.5.43, keep it in mind before "fixing" a melody's development): after the user said "the
+progression / development of the melodies is strange", Resaca and La Polilla were recomposed as 8-bar arcs (fewer
+bar-to-bar leaps, more steps, more rhythms). The user preferred the previous versions and kept them; the rewrites are
+archived (`resaca_v5`, `polilla_v3`). Measuring phrase shape is not enough: ask WHICH section sounds strange
+(a timestamp) and offer A/B previews before installing.
 
 **Harmony.** Minor for danger, major for a safe place (C major map and menus, F major snow). Short diatonic
 progressions (i–VI–iv–V, I–V–vi–V, IV–IV–V–V before a chorus), with ONE dark turn per piece (the Neapolitan ♭II in

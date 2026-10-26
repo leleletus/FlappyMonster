@@ -25,7 +25,7 @@ plays the intro once and then repeats the loop. `level` = offered as level music
 | `volcan_1` | Volcán 1 (Sendero de ceniza) | `worlds/volcan/volcan_1_intro.ogg` + `worlds/volcan/volcan_1_loop.ogg` | 0.67 | level |
 | `volcan_2` | Volcán 2 (Lluvia de fuego) | `worlds/volcan/volcan_2_intro.ogg` + `worlds/volcan/volcan_2_loop.ogg` | 0.67 | level |
 | `volcan_bonus` | Volcán (bonus) | `worlds/volcan/volcan_bonus_intro.ogg` + `worlds/volcan/volcan_bonus_loop.ogg` | 0.63 | level |
-| `gummy_king_boss` | Su Majestad Gummy (Rey Gummy) | `bosses/gummy_king_boss_intro.ogg` + `bosses/gummy_king_boss_loop.ogg` | 0.74 | boss |
+| `gummy_king_boss` | Su Majestad Gummy (Rey Gummy) | `bosses/gummy_king_boss_intro.ogg` + `bosses/gummy_king_boss_loop.ogg` | 0.75 | boss |
 | `evil_ship_boss` | Persecución (Nave Malvada) | `bosses/evil_ship_boss_intro.ogg` + `bosses/evil_ship_boss_loop.ogg` | 0.74 | boss |
 | `crab_tantrum_normal` | Crab Tantrum (Mega Crabby) | `bosses/crab_tantrum_normal_intro.ogg` + `bosses/crab_tantrum_normal_loop.ogg` | 0.7 | boss |
 | `crab_tantrum_icy` | Crab Tantrum (Mega Crabby helado) | `bosses/crab_tantrum_icy_intro.ogg` + `bosses/crab_tantrum_icy_loop.ogg` | 0.7 | boss |

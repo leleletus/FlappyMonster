@@ -28,6 +28,7 @@ import famicom as F
 from famicom import SR, Chan, Noise, play, wavetable, q_tri, q_saw, q_n163, q_vrc6
 import tentacle_nes as TN
 import gloomy_nes as GN
+import slap as SL
 import worlds_nes as W
 
 BPM = 180
@@ -268,11 +269,12 @@ def build(style='normal'):
     sung = {(b, st + k) for b, st, n, d in mel for k in range(d)}
     pause = lambda b, st: dark and st >= 12 and ((b + 1) in starts or b == NB)       # la PAUSA de la araña
 
+    slap = SL.Rec()                                            # (0.5.44: el bajo slap de Resaca, no el triángulo + pulso)
+
     def bass(b, st, ln, note):
         if pause(b, st): return
         t = tv(b, st)
-        play(Cn['bass'], t, t + ln * S16, note, I_TRI, q=q_tri, release=0)
-        if not dark: play(Cn['bdef'], t, t + min(ln, 2.5) * S16, note + 12, I_BDEF, release=1)
+        slap.add(t, t + ln * S16, note)
 
     i6 = 0
     for b in range(1, NB + 1):
@@ -385,7 +387,7 @@ def build(style='normal'):
         'dbl': pulse('dbl'), 'echo': pulse('echo'), 'bell': cut(F.render_wave(Cn['bell'], WAVES) * 0.0075), 'shim': pulse('shim'),
         'legs': pulse('legs'), 'legs2': cut(F.render_pulse(Cn['legs2']) * 0.0075),
         'stabs': pulse('c1') + pulse('c2'), 'mar': pulse('mar'),
-        'bass': cut(F.tnd_dac(F.render_tri(Cn['bass']) / 8227.0)), 'bdef': pulse('bdef'),
+        'bass': slap.render(n + tail),
         'kick': cut(F.tnd_dac((kick + 64) / 22638.0) - base), 'toms': cut(F.tnd_dac((tom + 64) / 22638.0) - base),
         'snare': cut(F.tnd_dac((sn + 64) / 22638.0) - base) + cut(F.tnd_dac(NZ['snare'].render() / 22638.0 * 12)),
         'hat': cut(F.tnd_dac(NZ['hat'].render() / 22638.0 * 12)), 'crash': cut(F.tnd_dac(NZ['crash'].render() / 22638.0 * 12)),

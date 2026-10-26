@@ -34,6 +34,7 @@ import famicom as F
 from famicom import SR, Chan, Noise, play, wavetable, q_tri, q_saw, q_n163
 import tentacle_nes as TN
 import gloomy_nes as GN
+import slap as SL
 import worlds_nes as W
 
 BPM = 158                               # (negras con puntillo por minuto; 150 en la primera versión)
@@ -260,10 +261,11 @@ def build(lufs=-9.5):
             if kind == 'A3':                                   # el ESPEJO: la inversión, a la vez, una octava abajo
                 play(Cn['ctr'], t0, t1, invert(int(n), chords[b - 1][0 if st < 6 else 1]) - 12, I_CTR, release=2)
 
+    slap = SL.Rec()                                            # (0.5.44: el bajo slap de Resaca, no el triángulo + pulso)
+
     def bass(b, st, ln, note, define=True):
         t = tv(b, st)
-        play(Cn['bass'], t, t + ln * S8, note, I_TRI, q=q_tri, release=0)
-        if define: play(Cn['bdef'], t, t + min(ln, 1.6) * S8, note + 12, I_BDEF, release=1)
+        slap.add(t, t + ln * S8, note)
 
     for b in range(1, NB + 1):
         kind = tag[b - 1]
@@ -351,7 +353,7 @@ def build(lufs=-9.5):
     S = {
         'lead': cut(F.pulse_dac(F.render_saw(Cn['lead']))), 'dbl': pulse('dbl'), 'mirror': pulse('ctr'), 'soft': wave('soft'),
         'bell': wave('bell'), 'choir': wave('p1') + wave('p2'), 'stabs': pulse('c1') + pulse('c2'), 'arp': pulse('arp'),
-        'bass': cut(F.tnd_dac(F.render_tri(Cn['bass']) / 8227.0)), 'bdef': pulse('bdef'),
+        'bass': slap.render(n + tail),
         'kick': cut(F.tnd_dac((kick + 64) / 22638.0) - base), 'toms': cut(F.tnd_dac((tom + 64) / 22638.0) - base),
         'snare': cut(F.tnd_dac((sn + 64) / 22638.0) - base) + cut(F.tnd_dac(NZ['snare'].render() / 22638.0 * 12)),
         'hat': cut(F.tnd_dac(NZ['hat'].render() / 22638.0 * 12)),

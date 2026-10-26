@@ -584,6 +584,8 @@ the old level tune in the final boss, Verity's hook).
   repeated-note shout answered by a line through common tones, the climax with its own peaks, the final A with the
   hook an octave up in bar 13. Hooks, harmony, bass, form, mix unchanged. Bar-to-bar leaps 42 → 16 %, steps 48 → 57 %,
   rhythms 15 → 25, literal hook 11 → 8 bars. Previews `resaca_v4_anterior` vs `resaca_v5`. Not listened to.
+  REJECTED (0.5.44): the user preferred the previous version, which is back in the game; this one is kept in
+  `FlappyMonster_originals/music/versiones/resaca_v5/`.
 
 ## La Polilla (`tools/music/polilla.py`, boss track `polilla`)
 
@@ -613,3 +615,19 @@ the old level tune in the final boss, Verity's hook).
   goes up, the peak on B♭6 over the Neapolitan; B: long notes on the beat through common tones; climax: the hook an
   octave up with its own line). Bar-to-bar leaps 27 → 14 %, bars ending long 62 → 40 of 69, rhythms 17 → 32, steps
   32 → 45 %. Previews `polilla_v2_anterior` vs `polilla_intro_y_dos_vueltas`. Not listened to.
+  REJECTED (0.5.44): the user preferred the previous version, which is back in the game; this one is kept in
+  `FlappyMonster_originals/music/versiones/polilla_v3/`.
+
+## The slap bass in every boss theme (0.5.44)
+
+- The user: "re-render every boss theme (except Resaca and La Polilla) with this bass I love so much instead of their
+  rotten basses". `tools/music/slap.py` renders Resaca's GM Slap Bass (`final_fall.render_bass`'s sound: TimGM6mb,
+  program 36, fluidsynth) from notes in SECONDS, so any generator can use it. Each boss generator's `bass()` now feeds
+  it the SAME notes the triangle played (and drops the pulse that "drew" the bass an octave up, `bdef`), at the same
+  mix level: `crab_tantrum.py` (normal, gloomy), `crab_icy.py`, `verity_boss.py`, `mirror_boss.py`,
+  `worlds_nes.py` (`boss=True` tracks: snowball_boss, gummy_king_boss, evil_ship_boss; the island tracks keep the
+  triangle) and `mirror_chase.py`, where the slap replaces BOTH DnB layers (the sub and the reese): it plays the
+  reese's 3+3+2 hits where there are any, the sub's long notes elsewhere, in the sub's register (F#1…), so the drop
+  keeps 43 % of its energy under 120 Hz (was 55 %). Bass share of the energy is unchanged (21-24 %; mirror_chase 37 %
+  vs 45 % sub + reese). Previous files archived in `FlappyMonster_originals/music/versiones/jefes_bajo_triangulo/`.
+  Not listened to.
