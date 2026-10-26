@@ -17,7 +17,7 @@
 --     y alza la pinza: pisotón 1, ground pound 2, un golpe por pose (luego 'hurt': saca el trampolín de golpe y aparta
 --     sin daño). En el SOLO, entre pose y pose da un saltito que cae justo en el golpe siguiente.
 --   · El resto del tiempo, su TRAMPOLÍN te lanza muy alto si le caes encima (también con ground pound): así se llega
---     arriba a tiempo para la pose. Tocarle de lado = 1 de vida y empujón (posando, no).
+--     arriba a tiempo para la pose. Tocar su cuerpo = 1 de vida y empujón (posando, no); las PINZAS no hacen daño.
 --   · ENFADADO (por debajo de `rageAt`; en Xtra extremo desde el principio): salta en todos los compases que puede y
 --     dispara más notas. Vida 10 (+4 por jugador).
 -- Entrada: cae del cielo en su sitio, chasquea dos veces las pinzas y rebota en su trampolín. Derrota: aturdido
@@ -34,8 +34,9 @@ local GC = Entity.extend(Boss, {
     ATTACKS  = { crouch = true, hop = true, snap = true },
     OPENINGS = { pose = true },
     debugColor = { 0.3, 0.9, 0.85 },
-    -- (la caja: el caparazón y las patas, 16 de los 18 px de ancho; de alto, todo el cuerpo)
-    hitbox = { outerW = 0.8, outerH = 1.0, innerW = 0.66, innerH = 0.7 },
+    -- (la caja: SOLO el caparazón y las patas — 14 de los 18 px de ancho, sin las pinzas, que no hacen daño —; de
+    -- alto, todo el cuerpo)
+    hitbox = { outerW = 0.78, outerH = 1.0, innerW = 0.66, innerH = 0.7 },
 })
 GC.hurtSound   = 'megaHurt'
 GC.introLength = 3.6
@@ -189,15 +190,16 @@ local function afterPose(b)
 end
 
 -- ── Golpes a los jugadores ───────────────────────────────────────────────────
+-- Tocar su CUERPO (caparazón y patas) quita 1 y empuja; las PINZAS no hacen daño (el usuario: "es injusto, ningún Mega
+-- funciona así"): la caja es solo el cuerpo (hitbox outerW) y no se agranda. Encima, no (es pisarlo o el trampolín)
 function GC:touch(level)
     if self.graceT > 0 then return end
     local b = self:getOuterBounds()
-    local box = { x = b.x - 6, y = b.y, w = b.w + 12, h = b.h + 4 }
     for _, pa in ipairs(level.players or {}) do
         if not pa.dying and pa.alive ~= false and not pa:isInvulnerable() then
             local pb = pa:getOuterBounds()
             local onTop = pb.y + pb.h <= b.y + 14 and (pa.vy or 0) >= -50
-            if not onTop and overlap(pb, box) and strike(pa, HIT_TOUCH, (pa.x >= self.x) and 1 or -1) then
+            if not onTop and overlap(pb, b) and strike(pa, HIT_TOUCH, (pa.x >= self.x) and 1 or -1) then
                 self.graceT = GRACE
             end
         end
@@ -555,6 +557,30 @@ function GC:pose()
     elseif st == 'dying_flee' then
         p.sy, p.sx, p.tk, p.leg, p.bdy, p.sdy = 1.12, 0.9, 1.3, 2, -4, -3
     end
+    -- EL VAIVÉN de las pinzas (como los Mega Crabbies, nunca tiesas): desvío en px de arte que se suma a la postura
+    -- (sin girarlas: el pixel art no se rota). Andando se mecen a contrapié; agachado, recogidas y temblando; en el
+    -- aire, agitándose; posando, la grande saluda; con un golpe, sacudidas
+    local sw = function(amp, speed, ph) return math.sin(now * speed + (ph or 0)) * amp end
+    local it = (st == 'ready') and (self:introTime() + t) or t
+    if st == 'groove' and self._walking then
+        p.bdy, p.bdx, p.sdy = p.bdy + sw(1.5, 12), p.bdx + sw(1, 12, 1.5), p.sdy + sw(1.5, 12, math.pi)
+    elseif st == 'groove' then
+        p.bdy, p.sdy = p.bdy + sw(0.5, 4), p.sdy + sw(0.5, 4, 2)
+    elseif st == 'snap' then
+        p.bdx = p.bdx + ((p.bf == 2) and -1.2 or 0)
+        p.sdy = p.sdy + sw(1, 10)
+    elseif st == 'crouch' then
+        p.bdx, p.bdy, p.sdy = p.bdx + 1.5 + sw(0.4, 40), p.bdy + 1, p.sdy + 1 + sw(0.4, 40, 1)
+    elseif st == 'hop' or ((st == 'intro' or st == 'ready') and it < LAND_AT) then
+        p.bdy, p.sdy, p.bdx = -3 + sw(1.5, 20), -2 + sw(1, 20, 1.3), p.bdx + sw(0.8, 20, 0.7)
+    elseif st == 'pose' then
+        p.bdy = p.bdy + sw(0.6, 8)
+    elseif st == 'hurt' then
+        local k = math.max(0, 1 - t / HURT_T)
+        p.bdx, p.bdy, p.sdy = p.bdx + math.cos(now * 17) * 1.2 * k, p.bdy + math.sin(now * 22) * 2 * k, p.sdy + math.sin(now * 19 + 1) * 1.5 * k
+    elseif st == 'dying_flee' then
+        p.bdy, p.sdy = -4 + sw(1.5, 16), -3 + sw(1, 16, 1)
+    end
     if self.boingAt and now - self.boingAt < 0.5 and st ~= 'pose' then
         p.tk = p.tk + 0.3 * math.sin((now - self.boingAt) * 30) * (1 - (now - self.boingAt) / 0.5)
     end
@@ -606,7 +632,8 @@ function GC:render(camX, camY)
     local th = math.max(0.05, p.tk)
     love.graphics.draw(A.tramp.image, A.tramp.quads[1], 0, -(FH - 1) * MS, 0, MS, MS * th, 8, 9)    -- (el muelle, metido un píxel en el caparazón)
     love.graphics.draw(A.body.images and A.body.images[p.leg] or A.body.image, A.body.quads[p.leg], 0, 0, 0, -MS * f, MS, FW / 2, FH)
-    local bx = f * (13 - p.bdx) * MS                           -- (bdx: hacia el cuerpo)
+    local bx = f * (13 - math.floor(p.bdx + 0.5)) * MS        -- (bdx: hacia el cuerpo; en px de arte enteros)
+    p.bdy, p.sdy = math.floor(p.bdy + 0.5), math.floor(p.sdy + 0.5)
     love.graphics.draw(A.big.images and A.big.images[p.bf] or A.big.image, A.big.quads[p.bf], bx, (-4.5 + p.bdy) * MS, 0,
                        -MS * f, MS, 6, 4.5)
     local sxp = -f * 11.5 * MS

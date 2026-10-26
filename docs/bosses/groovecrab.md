@@ -47,14 +47,17 @@ snapshot; the client's music starts when it sees the fight, with the same delay 
   hides, the big claw goes up: stomp 1 / ground pound 2, one hit per pose → 'hurt' (the trampoline springs out,
   nearby players shoved without damage). In the solo, the even bars are a small hop that lands on the next hit.
 - **Trampoline**: outside a pose, landing on it LAUNCHES you (`'launch'`, vy = jump × 1.85, also with a ground pound;
-  ~8.4 tiles up): the way to be above it when it poses. Touching its side = 1 HP and a push (not while posing).
+  ~8.4 tiles up): the way to be above it when it poses. Touching its BODY (shell and legs) = 1 HP and a push (not
+  while posing); the CLAWS do no damage — the hitbox is only the body (`outerW` 0.78: 14 of 18 px).
 - **Rage** under `rageAt` (0.5): hops on every possible bar, more notes. HP 10 (+4 per extra player).
 
 **Intro** (3.6 s): falls from the sky, lands (shake), snaps its claws twice, boings on its trampoline.
 **Defeat:** 'dying_daze' (stars, 2.2 s) → 'dying_flee': one huge bounce on its trampoline up into the sky (pure
 function of time), out of view. No shard (`shardDrop` = false).
 
-**Look** (all from state + deadTimer + songT): bobs on every beat, claws click; two stage SPOTLIGHTS from the top
+**Look** (all from state + deadTimer + songT): bobs on every beat, claws click and SWING in every state (walking
+out of step, tucked in and shaking when crouched, flailing in the air, waving in the pose, jolted when hit; offsets
+in whole art pixels, never rotated: pixel art); two stage SPOTLIGHTS from the top
 corners of the zone onto it, changing colour on every beat (additive cones).
 
 **Network:** netPackExtra `{songT·100, rage, markX, waves (BossWaves.pack), nNotes, {id, x, y, vx, vy, colour}…}`.
@@ -69,3 +72,10 @@ Protocol 68.
 - The first art attempt was the Mega Crabby with sunglasses: the user asked for its own design inspired by all the
   game's crabs, and notes in several colours → the fiddler crab; approved from an animated GIF mockup ("me gusta").
   Not played by the user yet.
+- 0.5.46, the user's first round (6 points): (1) the music louder — here it matters → `groove` mastered at −9.5 LUFS
+  and its own target in `levels.py` (3.5 dB over the other bosses); (2) the claws must not hurt ("unfair, no Mega
+  works like that") — body contact stays, the hitbox is now only shell + legs; (4) the claws were stiff → they swing
+  in every state like the other Megas (a first try rotated them: rejected by the pixel-art rule, offsets only).
+  Pending, with GIF drafts to choose from (`FlappyMonster_pruebas/jefes/groove/borradores/`): (3) more attacks on
+  the beat, (5) a clearer, longer way to damage it (the pose was "unpredictable, short and hard to understand"),
+  (6) more epicness: a crowd of crabs dancing to the music, more energy and visuals.

@@ -644,3 +644,5 @@ the old level tune in the final boss, Verity's hook).
   build 8 · climax 16 · return 4. Energy: bass 35 %, drums 50 %. The user: "Holy cow, the best track in the game by
   far, a real work of art" → installed as `groove` (0.5.45) and a boss was designed for it, [The Groove](../bosses/groovecrab.md),
   whose attacks follow this score. Not listened to by me.
+- 0.5.46: the user: "the music during its fight should be heard more (here it IS important)" → mastered at −9.5 LUFS
+  (was −10.5) and `levels.py` gives `groove` its own target, −9.5 in game (bosses −13).

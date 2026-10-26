@@ -122,7 +122,7 @@ I_SPARK = {'vol': [8, 5, 3, 1], 'sus': 0, 'duty': 0.125}
 SNARE_N, CRASH = [14, 10, 6, 3, 1], [14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
 LV = {'bass': 0, 'kick': -2, 'snare': -3, 'hat': -14, 'ohat': -15, 'crash': -9, 'toms': -4, 'stabs': -9, 'scr': -16,
       'pad': -13, 'hits': -7, 'spark': -15, 'nrise': -13}
-LUFS = -10.5
+LUFS = -9.5                                         # (más fuerte: en su pelea la música manda)
 
 
 def build():

@@ -9,7 +9,7 @@
 --              del siguiente; pisotón -1 (→ 'hurt'), otra vez en la misma pose no; ground pound -2
 --   trampolin  fuera de la pose, caerle encima te LANZA (vy ≈ salto × 1,85), también con ground pound, sin daño;
 --              posando, el pisotón le da
---   tocar      tocarlo de lado quita 1; posando, no
+--   tocar      tocar su cuerpo de lado quita 1; su pinza, no; posando, no
 --   enfado     a media vida se enfada; enfadado salta también en los compases pares de la A (tranquilo, no)
 --   solo       en el solo posa los compases impares enteros; en los pares da un saltito que cae en el golpe
 --              siguiente, sin ondas
@@ -240,6 +240,15 @@ function cases.tocar()
     level.players = { pa }
     boss:touch(level)
     local side = hp0 - pa.hp
+    -- contra la PINZA grande (fuera del cuerpo): nada
+    local pc = playerAt(level, 14)
+    local f = boss.facing or 1
+    pc.x, pc.y, pc.invT = boss.x + f * 15 * boss.MS, boss.floorY - pc:getOuterBounds().h / 2 - 2, 0
+    boss.graceT = 0
+    level.players = { pc }
+    local hpc = pc.hp
+    boss:touch(level)
+    local claw = hpc - pc.hp
     songAt(boss, barOf('A', 4), 12.5)
     stepAll(level, es, {}, 0.05)
     local pb = playerAt(level, 14)
@@ -248,7 +257,7 @@ function cases.tocar()
     level.players = { pb }
     boss.graceT = 0
     stepAll(level, es, { pb }, 0.05, function() pb.x, pb.vx = b.x - 10, 0 end)
-    check('tocar', side == 1 and pb.hp == hp1, ('de lado: -%d · posando: -%d'):format(side, hp1 - pb.hp))
+    check('tocar', side == 1 and claw == 0 and pb.hp == hp1, ('el cuerpo de lado: -%d · la pinza: -%d · posando: -%d'):format(side, claw, hp1 - pb.hp))
 end
 
 function cases.enfado()
