@@ -55,7 +55,7 @@ and their own folder to `sys.path`; scripts that import each other sit in the sa
 | `ui/make_menu_ui.py` | `ui/menus/title_logo.png` + `.json` (from `logo.png`, never written), `ui/menus/button.png` + `.json`, `ui/menus/panel.png`, `ui/menus/box.png`, `ui/menus/cursor.png`, `ui/menus/cartridge.png` + `.json`, `ui/menus/cart_labels.png` | yes |
 | `fx/make_lights.py` | `fx/light_disc.png`, `fx/light_rings.png`, `fx/light_halo.png` (the lights of the darkness canvas, `src/fx/Darkness.lua`) | yes |
 | `fx/make_fades.py` | `fx/fade_edge.png` (the stepped fade mask of the credits' live stages, `src/story/LiveStage.lua`) | yes |
-| `ui/make_logo_parts.py` | `assets/startup/parts/`, `assets/startup/logo.json` (cuts the user's logo; never writes the logo itself) | yes |
+| `ui/make_mtvemo_logo.py [--apply]` | without flags: the logo proposals A-D as GIFs in `FlappyMonster_pruebas/logo_mtvemo/`; `--apply`: `assets/startup/logo_anim.png` + `.json`, `sky.png`, `stars.png` (design D, the boot intro) | yes |
 | `enemies/make_claudio_extras.py [parpadeo] [baile]` | `enemies/claudio/claudio_blink.png`, `claudio_dance-Sheet.png` (from the user's `claudio_idle.png`; only the eyes / the arms change) | yes |
 | `ui/make_player_redesign.py`, `make_flappy_redesign.py` | `player/`, the Mirror's pieces, `flappy/` | not re-run |
 | `story/make_overworld.py` | `assets/story/overworld.json` + `story/` map sprites | deterministic; not re-run |

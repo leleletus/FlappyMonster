@@ -1,37 +1,45 @@
 -- src/states/menu/StartupState.lua
--- PANTALLA DE INICIO: el logo de mtvemo antes del título. Negro → funde a blanco → las seis letras del logo salen
--- una a una, cada una con su nota de la melodía (assets/sounds/jingles/startup.wav, tools/sounds/startup.py) → con
--- el acorde final el logo entero da un saltito → funde a negro → título. Todo en PIXEL ART (escala entera).
--- El logo (assets/startup/mtvemo_logo.png) lo dibujó el usuario; su versión en píxeles, letra a letra, sale de
--- tools/art/ui/make_logo_parts.py (assets/startup/parts/, assets/startup/logo.json).
+-- PANTALLA DE INICIO: el logo de mtvemo antes del título. Negro → funde al cielo de noche → la MONEDA M·T·V entra
+-- girando y aterriza → a su lado caen las seis letras, cada una con su nota de la melodía (assets/sounds/jingles/
+-- startup.wav, tools/sounds/startup.py) → con el acorde final todo da un saltito, un brillo lo cruza y salen
+-- destellos → funde a negro → título. Todo en PIXEL ART (escala entera).
+-- La animación son cuadros ya dibujados (assets/startup/logo_anim.png + .json, el cielo y las estrellas): los
+-- escribe tools/art/ui/make_mtvemo_logo.py --apply (el diseño D, "moneda arcade", que eligió el usuario).
 -- Se salta con cualquier botón o tocando la pantalla (funde a negro enseguida). Solo sale al arrancar el juego.
 
 local BaseState = require 'src/core/BaseState'
 local json      = require 'libs/json'
 local StartupState = BaseState:new()
 
--- (los dos primeros, igual que STEP y CHORD_AT de tools/sounds/startup.py)
-local NOTE_STEP, CHORD_AT = 0.15, 0.90
-StartupState.T_WHITE = 0.6        -- s de negro a blanco
-StartupState.T_FIRST = 0.85       -- s a los que sale la primera letra (y empieza la melodía)
-StartupState.T_HOLD  = 1.6        -- s con el logo entero (desde el acorde)
+local DIR = 'assets/startup/'
+-- (noteAt / chordAt: la primera nota y el acorde, en s de la animación; chordAt - noteAt = CHORD_AT de
+-- tools/sounds/startup.py, y las letras caen cada STEP)
+local DATA = json.decode(love.filesystem.read(DIR .. 'logo_anim.json'))
+StartupState.T_IN    = 0.6        -- s de negro al cielo (luego empieza la animación)
+StartupState.T_FIRST = StartupState.T_IN + DATA.noteAt   -- s a los que aterriza la primera letra (y empieza la melodía)
+StartupState.T_HOLD  = 0.5        -- s con el logo quieto al acabar la animación
 StartupState.T_OUT   = 0.6        -- s de fundido a negro
 StartupState.T_SKIP  = 0.25       -- … si se salta
-local POP = 0.16                  -- s que tarda una letra en asentarse
-local LOGO_W = 0.56               -- ancho del logo (su tinta) respecto al ancho de la pantalla (se redondea a escala entera)
-local RISE = 3                    -- píxeles DEL LOGO que sube cada letra al salir
+local ANIM_DUR = #DATA.frames / DATA.fps
 
 local art
 local function loadArt()
     if art then return art end
-    local data = json.decode(love.filesystem.read('assets/startup/logo.json'))
-    art = { parts = {}, x0 = math.huge, y0 = math.huge, x1 = -math.huge, y1 = -math.huge }
-    for i, p in ipairs(data.parts) do
-        local img = love.graphics.newImage('assets/startup/parts/' .. p.file)
-        img:setFilter('nearest', 'nearest')                   -- (pixel art: píxeles duros, escala entera)
-        art.parts[i] = { img = img, x = p.x, y = p.y, w = p.w, h = p.h }
-        art.x0, art.y0 = math.min(art.x0, p.x), math.min(art.y0, p.y)
-        art.x1, art.y1 = math.max(art.x1, p.x + p.w), math.max(art.y1, p.y + p.h)
+    art = {}
+    for _, k in ipairs({ 'logo_anim', 'sky', 'stars' }) do
+        art[k] = love.graphics.newImage(DIR .. k .. '.png')
+        art[k]:setFilter('nearest', 'nearest')                -- (pixel art: píxeles duros, escala entera)
+    end
+    art.stars:setWrap('repeat', 'repeat')
+    local sw, sh = art.stars:getDimensions()
+    art.starQuad = love.graphics.newQuad(0, 0, sw, sh, sw, sh)
+    art.quads = {}
+    local iw, ih = art.logo_anim:getDimensions()
+    local n = 0
+    for _, f in ipairs(DATA.frames) do n = math.max(n, f + 1) end
+    for i = 0, n - 1 do
+        art.quads[i] = love.graphics.newQuad((i % DATA.cols) * DATA.w, math.floor(i / DATA.cols) * DATA.h,
+                                             DATA.w, DATA.h, iw, ih)
     end
     return art
 end
@@ -42,7 +50,13 @@ function StartupState:enter(args)
     loadArt()
 end
 
-function StartupState:total() return StartupState.T_FIRST + CHORD_AT + StartupState.T_HOLD end
+-- (la hoja de cuadros solo hace falta aquí: se suelta al salir)
+function StartupState:exit()
+    if art then for _, k in ipairs({ 'logo_anim', 'sky', 'stars' }) do art[k]:release() end end
+    art = nil
+end
+
+function StartupState:total() return StartupState.T_IN + ANIM_DUR + StartupState.T_HOLD end
 
 function StartupState:skip()
     if self.outAt then return end
@@ -67,34 +81,29 @@ end
 
 function StartupState:touchpressed() self:skip() end
 
--- 0..1 con un pequeño rebote al final (la letra se pasa un poco y vuelve)
-local function back(k)
-    k = k - 1
-    return 1 + k * k * (2.7 * k + 1.7)
-end
-
 function StartupState:render()
     local a, t = loadArt(), self.t
-    local white = math.max(0, math.min(1, t / StartupState.T_WHITE))
-    love.graphics.setColor(white, white, white, 1)
-    love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
-    -- el logo, centrado, a escala ENTERA y moviéndose de píxel en píxel del logo; con el acorde, un saltito
-    local sc = math.max(1, math.floor(WINDOW_W * LOGO_W / (a.x1 - a.x0) + 0.5))
-    local tc = t - (StartupState.T_FIRST + CHORD_AT)
-    local hop = (tc > 0 and tc < 0.09) and -sc or 0
-    local ox = math.floor(WINDOW_W / 2 - (a.x0 + a.x1) / 2 * sc)
-    local oy = math.floor(WINDOW_H / 2 - (a.y0 + a.y1) / 2 * sc) + hop
-    for i, p in ipairs(a.parts) do
-        local k = (t - (StartupState.T_FIRST + (i - 1) * NOTE_STEP)) / POP
-        if k > 0 then
-            k = math.min(1, k)
-            local rise = math.floor((1 - back(k)) * RISE + 0.5) * sc
-            love.graphics.setColor(1, 1, 1, k < 0.34 and 0.4 or (k < 0.67 and 0.75 or 1))
-            love.graphics.draw(p.img, ox + p.x * sc, oy + p.y * sc + rise, 0, sc, sc)
-        end
+    local SW, SH = DATA.screen[1], DATA.screen[2]
+    -- el cielo (franjas estiradas a toda la pantalla) y las estrellas, a escala ENTERA y repetidas a lo ancho
+    local sc = math.max(1, math.floor(math.min(WINDOW_W / SW, WINDOW_H / SH)))
+    local ox, oy = math.floor((WINDOW_W - SW * sc) / 2), math.floor((WINDOW_H - SH * sc) / 2)
+    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.draw(a.sky, 0, 0, 0, WINDOW_W, WINDOW_H / SH)
+    local tx = ox - math.ceil(ox / (SW * sc)) * SW * sc
+    local ty = oy - math.ceil(oy / (SH * sc)) * SH * sc
+    a.starQuad:setViewport(0, 0, math.ceil((WINDOW_W - tx) / sc), math.ceil((WINDOW_H - ty) / sc))
+    love.graphics.draw(a.stars, a.starQuad, tx, ty, 0, sc, sc)
+    -- el cuadro de la animación de ahora (antes de empezar, nada; al acabar, el último)
+    local u = t - StartupState.T_IN
+    if u >= 0 then
+        local f = DATA.frames[math.min(#DATA.frames, math.floor(u * DATA.fps) + 1)]
+        love.graphics.draw(a.logo_anim, a.quads[f], ox + DATA.x * sc, oy + DATA.y * sc, 0, sc, sc)
     end
-    if self.outAt then
-        love.graphics.setColor(0, 0, 0, math.max(0, math.min(1, (t - self.outAt) / self.outDur)))
+    -- fundidos: desde negro al empezar, a negro al acabar
+    local black = math.max(0, 1 - t / StartupState.T_IN)
+    if self.outAt then black = math.max(black, math.min(1, (t - self.outAt) / self.outDur)) end
+    if black > 0 then
+        love.graphics.setColor(0, 0, 0, black)
         love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
     end
     love.graphics.setColor(1, 1, 1, 1)

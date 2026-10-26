@@ -21,7 +21,6 @@ the generator first, or edit the PNG directly.
 | `assets/images/bosses/snowboss/verity/` roll_happy, roll_angry, flee, ball | (the user's; `make_verity_body.py` only derives `body-Sheet.png` from them) |
 | `assets/images/enemies/bomb/bomb-Sheet.png`, `bombObject-Sheet.png` (redrawn by the user on 2026-10-08) | none writes them: `make_bomb_redesign.py` now only writes the explosion; `make_bomb_fuses.py` only READS them to build the rope sheets and the animations |
 | `assets/images/enemies/claudio/` claudio1, claudio2, claudio_idle, claudio_idle2, claudio_idle3, squish (Claudio: the user's character for Claude, 2026-10-08; the user allows Claude to change them) | (the user's; `tools/art/enemies/make_claudio_extras.py` only derives `claudio_blink.png` and the credits' `claudio_dance-Sheet.png` from `claudio_idle.png`) |
-| `assets/startup/mtvemo_logo.png` | (the user's logo; `tools/art/ui/make_logo_parts.py` only cuts it into `assets/startup/parts/`) |
 
 Safe to re-run (verified on 2026-10-07 to reproduce the committed pixels exactly): `make_hopper_sprites`,
 `make_food_sprites`, `make_sky`, `make_story_fx`, `make_story_icons`, `make_terrain`, `make_mirror_shards`,

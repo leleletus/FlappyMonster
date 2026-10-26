@@ -1,9 +1,10 @@
 -- tools/tests/startup_intro — la PANTALLA DE INICIO (src/states/menu/StartupState.lua) con el juego real:
 --  1. el juego arranca en `update` y de ahí va a `startup` (no al título directamente);
---  2. a pasos fijos de 1/60 s: empieza en NEGRO, llega a BLANCO sin letras antes de la primera nota, la melodía
---     suena UNA vez y justo con la primera letra, con el acorde están las seis letras, acaba en NEGRO y pasa al
---     título en lo que dice StartupState:total() + T_OUT;
---  3. las seis piezas de assets/startup/logo.json existen y la melodía dura al menos hasta el final del logo;
+--  2. a pasos fijos de 1/60 s: empieza en NEGRO, llega al CIELO (oscuro) sin logo antes de empezar la animación,
+--     la melodía suena UNA vez y justo cuando aterriza la primera letra, al final hay más logo que a media melodía,
+--     acaba en NEGRO y pasa al título en lo que dice StartupState:total() + T_OUT;
+--  3. la animación (assets/startup/logo_anim.png + .json, cielo, estrellas) existe, cada cuadro está en la hoja, y
+--     la melodía dura al menos hasta el acorde y un segundo más;
 --  4. SALTAR: un botón a media animación funde a negro y llega al título en T_SKIP; la melodía se corta.
 -- Capturas: <save>/startup_<n>.png          tools/tests/run.sh startup_intro
 io.stdout:setvbuf('no')
@@ -29,11 +30,17 @@ function love.load(a)
     local first = gStateMachine:_top()
     check('arranque', first.after == 'startup', 'el estado de actualización pasa después a: ' .. tostring(first.after))
     local json = require 'libs/json'
-    local data = json.decode(love.filesystem.read('assets/startup/logo.json'))
+    local data = json.decode(love.filesystem.read('assets/startup/logo_anim.json'))
+    local sheet = love.image.newImageData('assets/startup/logo_anim.png')
+    local inSheet = true
+    for _, f in ipairs(data.frames) do
+        if (f % data.cols + 1) * data.w > sheet:getWidth() or (math.floor(f / data.cols) + 1) * data.h > sheet:getHeight() then inSheet = false end
+    end
     local n = 0
-    for _, p in ipairs(data.parts) do if love.filesystem.getInfo('assets/startup/parts/' .. p.file) then n = n + 1 end end
+    for _, k in ipairs({ 'sky', 'stars' }) do if love.filesystem.getInfo('assets/startup/' .. k .. '.png') then n = n + 1 end end
     local src = love.audio.newSource('assets/sounds/jingles/startup.wav', 'static')
-    check('archivos', n == 6 and #data.parts == 6 and src:getDuration() >= 0.90 + 1.0, ('%d/6 letras; melodía de %.2f s'):format(n, src:getDuration()))
+    check('archivos', inSheet and n == 2 and src:getDuration() >= data.chordAt - data.noteAt + 1.0,
+          ('%d cuadros (en la hoja: %s), cielo y estrellas %d/2; melodía de %.2f s'):format(#data.frames, tostring(inSheet), n, src:getDuration()))
     local pt, st = Sound.playTracked, Sound.stopTracked
     Sound.playTracked = function(name, ...) if name == 'startup' then plays = plays + 1; got.playAt = state and state.t end; return pt(name, ...) end
     Sound.stopTracked = function(name, ...) if name == 'startup' then stops = stops + 1 end; return st(name, ...) end
@@ -41,23 +48,24 @@ function love.load(a)
     state = gStateMachine:_top()
     local total = state:total()
     -- (momento, nombre): se mira la pantalla en cada uno
-    POINTS = { { 0.02, 'negro' }, { S.T_FIRST - 0.03, 'blanco' }, { S.T_FIRST + 0.4, 'medio' }, { total - 0.2, 'entero' },
+    POINTS = { { 0.02, 'negro' }, { S.T_IN - 0.02, 'cielo' }, { S.T_FIRST + 0.4, 'medio' }, { total - 0.2, 'entero' },
                { total + S.T_OUT - 0.02, 'fin' } }
 end
 
--- cuánto negro hay en la franja central y de qué color es la esquina
+-- cuánto LOGO hay en la franja central (píxeles claros: el cielo y las estrellas son oscuros) y cómo de claro es
+-- arriba en el centro (el cielo)
 local function look(img)
     local w, h = img:getDimensions()
-    local dark, n = 0, 0
-    for y = math.floor(h * 0.3), math.floor(h * 0.7), 3 do
-        for x = math.floor(w * 0.15), math.floor(w * 0.85), 3 do
+    local ink, n = 0, 0
+    for y = math.floor(h * 0.2), math.floor(h * 0.8), 3 do
+        for x = math.floor(w * 0.05), math.floor(w * 0.95), 3 do
             local r, g, b = img:getPixel(x, y)
             n = n + 1
-            if r + g + b < 0.6 then dark = dark + 1 end
+            if r + g + b > 1.4 then ink = ink + 1 end
         end
     end
-    local r, g, b = img:getPixel(math.floor(w / 2), math.floor(h * 0.08))
-    return dark / n, (r + g + b) / 3
+    local r, g, b = img:getPixel(math.floor(w / 2), math.floor(h * 0.03))
+    return ink / n, (r + g + b) / 3
 end
 
 function love.update(dt)
@@ -70,8 +78,8 @@ function love.update(dt)
         end
         local total = state:total() + S.T_OUT
         check('negro', got.negro and got.negro.bg < 0.08, ('fondo al empezar: %.2f'):format(got.negro and got.negro.bg or -1))
-        check('blanco', got.blanco and got.blanco.bg > 0.97 and got.blanco.ink < 0.001, ('antes de la primera nota: fondo %.2f, tinta %.4f'):format(got.blanco.bg, got.blanco.ink))
-        check('letras', got.medio.ink > 0.01 and got.entero.ink > got.medio.ink * 1.3, ('tinta a media melodía %.3f, con el logo entero %.3f'):format(got.medio.ink, got.entero.ink))
+        check('cielo', got.cielo and got.cielo.bg > 0.05 and got.cielo.bg < 0.2 and got.cielo.ink < 0.001, ('antes de la animación: cielo %.2f, logo %.4f'):format(got.cielo.bg, got.cielo.ink))
+        check('letras', got.medio.ink > 0.01 and got.entero.ink > got.medio.ink * 1.15, ('logo a media melodía %.3f, con el logo entero %.3f'):format(got.medio.ink, got.entero.ink))
         check('melodia', plays == 1 and math.abs((got.playAt or -1) - S.T_FIRST) < 0.03, ('suena %d vez, a los %.2f s (primera letra a %.2f)'):format(plays, got.playAt or -1, S.T_FIRST))
         check('final', got.fin.bg < 0.08 and gStateMachine:_top() ~= state and math.abs(steps / 60 - total) < 0.05,
               ('último fotograma: fondo %.2f; pasa al título a los %.2f s (previsto %.2f)'):format(got.fin.bg, steps / 60, total))
@@ -82,7 +90,7 @@ function love.update(dt)
         plays, stops = 0, 0
         local press = false
         Input = setmetatable({ pressed = function(a) return press and a == 'confirm' end }, { __index = realInput })
-        for _ = 1, 70 do state:update(1 / 60) end           -- (ya suena)
+        while state.t < S.T_FIRST + 0.2 do state:update(1 / 60) end   -- (ya suena)
         press = true; state:update(1 / 60); press = false
         local n = 0
         while gStateMachine:_top() == state and n < 300 do state:update(1 / 60); n = n + 1 end
