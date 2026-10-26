@@ -1095,6 +1095,69 @@ function cases.saltarin()
             .. (' · pasea: con ruta 16-24 va de %.1f a %.1f, sin ruta de %.1f a %.1f, mira adonde salta=%s'):format(r0, r1, w0, w1, tostring(f1 and f2))))
 end
 
+-- SALTARÍN DE CUEVA A OSCURAS = la POLILLA: solo ve la luz (tu linterna encendida, o tú dentro de su farol), va a
+-- donde te vio por última vez, y un ruido fuerte le asusta (apaga el farol, quieto); uno flojo no. Con luz, el de siempre
+function cases.saltarin_cueva()
+    local Noise = require 'src/world/systems/Noise'
+    local function mk(dark, pcol, light)
+        local lv, e = room(30, 10, {}, { { type = 'hopper', col = 6, row = 9, props = { skin = 'cueva', jumpEvery = 0.5, range = 12, patrol = { left = 2, right = 28 } } } })
+        lv.dark, lv.background = dark, 'cave'
+        local pa = playerAt(lv, pcol, 9)
+        pa.immortal, pa.lightOn = true, light
+        return lv, e[1], pa
+    end
+    local function chase(lv, h, pa, secs)
+        local near = 99
+        stepEnts(lv, { h }, secs, function()
+            pa.hp, pa.dying, pa.alive = 3, false, true
+            near = math.min(near, math.abs(h.x - pa.x) / T)
+        end)
+        return near
+    end
+    -- (1) a oscuras sin linterna, lejos: no te ve · con la linterna: va a por ti · sin oscuridad: el de siempre
+    local lv1, h1, p1 = mk(true, 15, false)
+    local darkNear = chase(lv1, h1, p1, 5)
+    local lv2, h2, p2 = mk(true, 15, true)
+    local litNear = chase(lv2, h2, p2, 5)
+    local lv3, h3, p3 = mk(false, 15, false)
+    local dayNear = chase(lv3, h3, p3, 5)
+    -- (2) dentro de su farol te ve aunque vayas sin linterna
+    local lv4, h4, p4 = mk(true, 8, false)
+    stepEnts(lv4, { h4 }, 0.05)
+    local seesClose = h4:target(lv4) ~= nil
+    local lamp = h4:lights() ~= nil
+    -- (3) apagas la linterna: va a donde te vio
+    local lv5, h5, p5 = mk(true, 13, true)
+    stepEnts(lv5, { h5 }, 0.2)
+    local sx = h5.seenX
+    p5.lightOn = false
+    p5.x = 25.5 * T                                         -- (te vas a oscuras: no te ve)
+    local gx = h5:goal(lv5)
+    local memory = sx ~= nil and gx ~= nil and math.abs(gx - sx) < 1 and h5:target(lv5) == nil
+    -- (4) ruido fuerte: se asusta (farol apagado, quieto) y luego vuelve; ruido flojo: nada
+    local lv6, h6, p6 = mk(true, 25, false)
+    Noise.bind(lv6)
+    stepEnts(lv6, { h6 }, 0.6)
+    h6.state, h6.deadTimer, h6.wait = 'idle', 0, 99
+    Noise.emit(h6.x + 2 * T, h6.y, Noise.R.pickup)
+    stepEnts(lv6, { h6 }, 0.1)
+    local quiet = h6.state ~= 'scared'
+    Noise.emit(h6.x + 3 * T, h6.y, Noise.R.pound)
+    stepEnts(lv6, { h6 }, 0.1)
+    local scared, dark0, x0 = h6.state == 'scared', h6:lights() == nil, h6.x
+    stepEnts(lv6, { h6 }, 1.5)
+    local still = h6.state == 'scared' and h6.x == x0
+    stepEnts(lv6, { h6 }, 1.0)
+    local back = h6.state ~= 'scared' and h6:lights() ~= nil
+    Noise.bind(nil)
+    check('saltarin_cueva', darkNear > 5 and litNear < 1.6 and dayNear < 1.6 and seesClose and lamp and memory
+        and quiet and scared and dark0 and still and back,
+        ('a oscuras sin linterna llega a %.1f · con linterna a %.1f · con luz a %.1f · en su farol te ve=%s, alumbra=%s · '
+         .. 'va a donde te vio=%s · ruido flojo nada=%s · ruido fuerte: asustado=%s apagado=%s quieto=%s, luego vuelve=%s'):format(
+            darkNear, litNear, dayNear, tostring(seesClose), tostring(lamp), tostring(memory),
+            tostring(quiet), tostring(scared), tostring(dark0), tostring(still), tostring(back)))
+end
+
 -- EL ESPEJO PERSIGUIENDO (mirrorchase), suelto por el nivel: ANDA (cambia de lado, salta muretes, no vive pegado al
 -- borde) y encadena sus ataques (salto-ataque, picado desde el espejo, embestida de lado a lado, empujón de frente), golpea y EMPUJA al jugador (hacia atrás), no se le puede hacer nada
 -- (las reglas normales no van con él) y al acabar la carrera se va
@@ -1518,7 +1581,7 @@ function love.load()
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
-                         'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
+                         'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado' }) do cases[n]() end
     if os.getenv('SHOT_BOMB') then bombShot() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))

@@ -22,7 +22,7 @@ Separately, every level has a render-only **light mood** (day, dusk, night, cave
 a pickup); nothing else. **To make something glow:** `renderGlow()` / `lights()` on an entity, `light = {…}` on a
 decoration or tile def.
 
-The enemies of the dark: the Gloomy Crabby ([enemies](../entities/enemies.md)) and the Mega Gloomy
+The enemies of the dark: the Gloomy Crabby (hunts by sound), the cave Hopper as "the moth" (hunts by LIGHT, loud noise scares it: [enemies](../entities/enemies.md)) and the Mega Gloomy
 ([megagloomy](../bosses/megagloomy.md)). **Harnesses:** `gloomy_rules`, `megagloomy_rules`,
 `level_shots` (draws the mood; `LIGHT=0` without).
 

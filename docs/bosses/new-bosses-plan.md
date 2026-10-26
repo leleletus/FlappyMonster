@@ -49,7 +49,9 @@ giant by touching a mirror shard ("La Furia del Espejo").
 - [ ] The user's verdict on the rebalanced fight.
 
 ### 2. Giant Hopper (caves)
-- [ ] Cave Hopper mechanics rework (noise / light) → user's verdict.
+- [x] (0.5.38) Cave Hopper mechanics rework: the user picked "the moth" (hunts by light, loud noise scares it, lantern
+      off = stomp window; only in dark levels) — [enemies](../entities/enemies.md#hopper-saltarín).
+- [ ] The user's verdict on the moth (arena `tools/levelgen/arenas/saltarines_oscuras.json`).
 - [ ] Giant Hopper design + fight (sound and light) → page, entity, sounds, arena, harnesses.
 - [ ] The story level replacing `gruta_lugubre` (caves boss slot); its theme (music).
 

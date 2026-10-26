@@ -174,7 +174,21 @@ sprite's pixel grid.
   ISLES, HEAD: same shape, own palette, spots and head feature per island). Sounds `enemies/hopper/` from
   `tools/sounds/hopper.py`. Test arena `tools/levelgen/arenas/saltarines.json` (one per skin); harness `mechanics
   saltarin`, `online_smoke LEVEL=<that arena> WATCH=hopper`. NOT placed in any real level yet (waiting for the user).
-  Not done: glow of the cave lure / volcano eyes in dark levels (`renderGlow`).
+  Not done: glow of the volcano eyes in dark levels.
+
+- **THE MOTH: cave Hopper in a DARK level (0.5.38, protocol 65; the user's pick "Polilla" of three, 2026-10-26)** —
+  the opposite of the Gloomy (blind, hunts by sound): it hunts by LIGHT. Only when `level.dark` and its skin resolves
+  to `cueva` (`Hopper:isMoth`; `Hopper.skinId` = the skin without looking at loaded sheets, the server has none);
+  in lit levels and with any other skin it is the normal Hopper (the user's call). It SEES a player only if lit and
+  in a clear line: flashlight on (`lightOn`) within `range` × `sense`, or anyone inside its own lantern (`LANTERN_R`
+  2.5 tiles). Lost from sight → hops to where it last saw them for `MEMORY` 3 s (`seenX/Y`, `memT`; `Hopper:goal`).
+  A LOUD noise (radius ≥ `LOUD` 6 tiles: switch, hit, broken block, hurt, kill, ground pound, trampoline, bomb...;
+  not a pickup or its own landing, 4) heard on the ground → state `scared`: lantern off (`lightOff` / `lightOn`
+  sounds), crouched and shaking, still for `SCARE_T` 2.2 s (a new loud noise restarts it) = the window to stomp it
+  in the dark. Flashlight = bait, noise = weapon. Its lantern gives light (`Hopper:lights()`, warm, flickers in the
+  crouch telegraph, off when scared). Arena `tools/levelgen/arenas/saltarines_oscuras.json`; harness `mechanics`
+  case `saltarin_cueva`. Waiting for the user's verdict after playing; it is the base of the Giant Hopper
+  ([new-bosses-plan](../bosses/new-bosses-plan.md)).
 
 - HOPPER: (a) with nobody near it ROAMS — random hops (lower, shorter, quieter) inside its route; no route (`patrol = false`) = anywhere (`careful` still keeps it out of pits); default `movement = 'walk'` ONLY so the editor shows the route (it never walks). (b) its art faces LEFT (the face sits 1 px to that side), so it is drawn mirrored when facing right — it used to turn its back on the player.
 
