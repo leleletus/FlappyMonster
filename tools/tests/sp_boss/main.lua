@@ -162,6 +162,21 @@ function love.update(dt)
             print('  captura de la pelea: fight.png')
         end
     end
+    -- (UNDERTOW_SHOT=1: el aviso de la resaca — Floods, BossHud.drawUndertow —: undertow_1.png al saltar y
+    -- undertow_2.png 1.5 s después)
+    if os.getenv('UNDERTOW_SHOT') and st and (last.uwShots or 0) < 2 then
+        local f
+        for _, g in ipairs(st.level.floods or {}) do if g.alertAt then f = g end end
+        if f then
+            last.uwAt = last.uwAt or t
+            if t - last.uwAt >= (last.uwShots or 0) * 1.5 then
+                last.uwShots = (last.uwShots or 0) + 1
+                local name = 'undertow_' .. last.uwShots .. '.png'
+                love.graphics.captureScreenshot(function(img) img:encode('png', name) end)
+                print('  captura de la resaca: ' .. name)
+            end
+        end
+    end
     if os.getenv('RETRY') and st then
         local z = boss and boss.zone
         local outside = os.getenv('RETRY') == 'level'

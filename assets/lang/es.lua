@@ -147,6 +147,7 @@ return {
     },
     hud = {
         run = "¡CORRE!",
+        undertow = "¡RESACA!",
         game_over = "GAME OVER",
         level_clear = "¡NIVEL SUPERADO!",
         score = "PUNTOS",

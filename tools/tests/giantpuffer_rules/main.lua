@@ -8,7 +8,8 @@
 --   hincha      con el jugador cerca, en el agua: avisa (tiembla) y se hincha; hinchado pincha -1
 --   puas        con el jugador lejos: dos ráfagas en corro (6 púas cada una); una púa le da -1; se paran en la pared
 --   resaca      mientras el agua BAJA arrastra al jugador quieto hacia la derecha (≈ la velocidad de la resaca);
---               con el agua quieta arriba, no
+--               con el agua quieta arriba, no; al empezar a arrastrar suena el aviso y salta el cartel "¡RESACA!"
+--               (f.alertAt) si el jugador está cerca, lejos no, y se quita al dejar de bajar
 --   enfado      a mitad de vida se enfada: tres ráfagas de 8 púas
 --   derrota     el último golpe: se deshincha y queda APLASTADO también aturdido (no vuelve de golpe a su forma),
 --               huye de un salto que atraviesa el suelo (libera la zona) y se va del todo
@@ -273,6 +274,22 @@ function cases.resaca()
     local fall = drift(1.0)
     check('resaca', math.abs(still) < 15 and fall > 0.7 * f.undertow,
         ('agua quieta: %.0f px/s; bajando: %.0f px/s hacia la derecha (resaca %d)'):format(still, fall, f.undertow))
+    -- el aviso (Floods.updateFx, lo de los clientes): suena y sale el cartel solo cerca, y se quita al dejar de bajar
+    local played, lx, ly = {}, 18 * T, 11 * T
+    local S0 = Sound
+    Sound = setmetatable({ play = function(n) played[n] = (played[n] or 0) + 1 end,
+                           getListener = function() return lx, ly end }, getmetatable(S0))
+    local function fx() f.alertAt = nil; f.prevLevel = f.level; Floods.updateFx(level, DT); return f.alertAt ~= nil end
+    local near = fx()
+    local n1 = played.undertowAlert or 0
+    lx = 200 * T
+    local far = fx()
+    tideTo(level, 'hold', 1)
+    lx = 18 * T
+    local held = fx()
+    Sound = S0
+    check('resaca', near and n1 == 1 and not far and not held and played.undertowAlert == 1,
+        ('aviso: cerca %s (sonó %d), lejos %s, agua quieta %s'):format(tostring(near), n1, tostring(far), tostring(held)))
 end
 
 function cases.enfado()

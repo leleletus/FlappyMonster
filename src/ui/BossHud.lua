@@ -180,6 +180,39 @@ function BossHud.drawRun(level, entities)
     love.graphics.setColor(1, 1, 1, 1)
 end
 
+-- RESACA (Floods: el agua que baja arrastra hacia un lado): mientras arrastra, "¡RESACA!" entre dos flechas que
+-- apuntan hacia donde tira, arriba en el centro (bajo las barras de la pelea). Al empezar entra grande y tiembla;
+-- luego late y las flechas corren hacia ese lado. Solo si el aviso saltó cerca de quien juega (`f.alertAt`).
+local UNDERTOW_COL = { 0.55, 0.95, 1 }
+function BossHud.drawUndertow(level)
+    local f
+    for _, g in ipairs(level and level.floods or {}) do if g.alertAt then f = g; break end end
+    if not f then return end
+    local PixelFont = require 'src/ui/PixelFont'
+    local PixelIcons = require 'src/ui/PixelIcons'
+    local now = love.timer.getTime()
+    local t, dir = now - f.alertAt, f.undertow > 0 and 1 or -1
+    local s = (t < 0.4) and math.floor(9 - 10 * t + 0.5) or 5            -- entra grande y se encoge
+    local px = s - 1
+    local beat = 0.5 + 0.5 * math.sin(now * 8)
+    local text = L('hud.undertow')
+    local tw, th = PixelFont.width(text, s), PixelFont.height(s)
+    local iw, ih = PixelIcons.size('current')
+    iw, ih = iw * px, ih * px
+    local gap = 3 * px
+    local shake = (t < 0.4) and math.floor(math.sin(now * 80) * 4) or 0
+    local x = math.floor((WINDOW_W - tw) / 2) + shake
+    local y = 150
+    local slide = math.floor((now * 3 % 1) * 3) * px * dir              -- (las flechas avanzan a saltos hacia allí)
+    local iy = y + math.floor((th - ih) / 2)
+    for k = -1, 1, 2 do
+        local ix = (k < 0) and (x - gap - iw) or (x + tw + gap)
+        PixelIcons.draw('current', ix + slide, iy, px, 1, dir < 0, UNDERTOW_COL)
+    end
+    PixelFont.shadow(text, x, y, s, 1, { 0.55 + 0.45 * beat, 0.95, 1 })
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
 function BossHud.drawScrollCountdown(a)
     if not a then return end
     if a.state == 'wait' and (a.needed or 0) > 1 then

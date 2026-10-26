@@ -40,7 +40,7 @@ local GAIN = {
     mirrorAppear = 0.62, mirrorPortal = 0.37, glassWarn = 0.85, glassRise = 0.72, glassHit = 0.72,
     -- tools/sounds/mechanics.py (medidos: → ≈ -12 dBFS)
     switchOn     = 0.77, switchOff  = 0.76, helmetBounce = 1.15, helmetBreak = 0.72,
-    pufferWarn   = 1.0,  pufferInflate = 0.81, pufferDeflate = 0.77, pufferPrick = 0.67,
+    pufferWarn   = 1.0,  pufferInflate = 0.81, pufferDeflate = 0.77, pufferPrick = 0.67, undertowAlert = 0.62,
     -- Linterna y Crabby lúgubre (tools/sounds/gloomy.py ya los deja a -12 dBFS; el tic, más flojo)
     lightOn = 1.0, lightOff = 1.0, lightOut = 1.0, lightDead = 1.0,
     mgloomyPing = 1.0, mgloomyListen = 1.0, mgloomyDrop = 1.0, mgloomySlam = 1.25, mgloomyDazzled = 1.0,
@@ -149,6 +149,7 @@ function Sound.load()
     load('pointGain',     'assets/sounds/mechanics/point_gain.wav',    'static')   -- zona de puntos
     load('floodRise',     'assets/sounds/water/flood_rise.wav',    'static')   -- inundación: sube
     load('floodFall',     'assets/sounds/water/flood_fall.wav',    'static')   -- inundación: baja
+    load('undertowAlert', 'assets/sounds/water/undertow.wav',      'static')   -- aviso: empieza la resaca
     if sources['drowning'] then sources['drowning']:setLooping(false) end
     load('fwLaunch',      'assets/sounds/fireworks/launch.ogg',      'static')
     load('fwBlast1',      'assets/sounds/fireworks/blast1.ogg',       'static')

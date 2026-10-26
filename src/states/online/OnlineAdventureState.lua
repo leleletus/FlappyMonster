@@ -681,6 +681,7 @@ function OnlineAdventureState:_renderBossHUD()
     end
     if not self.showGameOver then BossHud.drawScrollCountdown(self.level.autoScroll) end
     if not self.showGameOver then BossHud.drawRun(self.level, self.enemyRenderers) end
+    if not self.showGameOver then BossHud.drawUndertow(self.level) end
 end
 
 -- ── Ratón / táctil ────────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # tools/sounds/mechanics.py
-# Genera los sonidos de los bloques ON/OFF, del casco de los Gummies y del pez globo.
+# Genera los sonidos de los bloques ON/OFF, del casco de los Gummies, del pez globo y el aviso de la resaca.
 # Síntesis sencilla (ondas cuadradas/senos con envolventes, estilo 8 bits).
 # Ejecutar desde la raíz del repo:
 #     python3 tools/sounds/mechanics.py
@@ -151,6 +151,20 @@ def puffer_prick():
     return mix(stab * 1.2, ping * 0.6, at(hit, 0.01))
 
 
+# ── Resaca ────────────────────────────────────────────────────────────────────
+# Aviso de que el agua empieza a bajar y ARRASTRA (src/world/systems/Floods.lua): un golpe de agua que corre (ruido
+# filtrado que barre) bajo dos "bips" de alarma que bajan, para que se oiga por encima de la música
+def undertow_alert():
+    n = int(SR * 0.7)
+    w = noise(0.7)
+    rush = np.concatenate([lowpass(w[i:i + 1024], 500 + 2500 * (1 - i / n)) for i in range(0, n, 1024)])[:n]
+    rush = rush * np.clip(t_(0.7) / 0.08, 0, 1) * np.exp(-t_(0.7) / 0.3)
+    b1 = square(880, 0.11, 0.25) * env(int(SR * 0.11), 0.002, 0.06)
+    b2 = square(660, 0.16, 0.25) * env(int(SR * 0.16), 0.002, 0.09)
+    swoop = sweep(500, 160, 0.45) * env(int(SR * 0.45), 0.01, 0.2)
+    return mix(rush * 1.6, b1 * 0.45, at(b2, 0.13) * 0.45, at(swoop, 0.05) * 0.5)
+
+
 if __name__ == '__main__':
     print('Sonidos de mecanismos:')
     save('assets/sounds/mechanics/switch_on.wav', switch_on())
@@ -161,3 +175,4 @@ if __name__ == '__main__':
     save('assets/sounds/enemies/pufferfish/inflate.wav', puffer_inflate())
     save('assets/sounds/enemies/pufferfish/deflate.wav', puffer_deflate())
     save('assets/sounds/enemies/pufferfish/prick.wav', puffer_prick(), drive=3.0)
+    save('assets/sounds/water/undertow.wav', undertow_alert(), drive=1.5)

@@ -44,7 +44,12 @@ distortion starts `WaterSurface.MARGIN` px below the surface. `Floods.updateFx`
 (the flood rect may start inside blocks: water rising from under the ground). Level `marea_alta.json`.
 **Undertow** (flood prop `undertow`, px/s signed, 0 = none; 0.5.30): while the flood is FALLING, the water drags
 anything in it sideways — `Floods.currentAt(level, x, y)`, added to the player's horizontal move
-(`PlayerAdventure`); foam particles `undertow_foam` run that way. Used by the Giant Pufferfish's cove
+(`PlayerAdventure`); foam particles `undertow_foam` run that way. **Warning** (0.5.34, the user: "apart from the
+current lines there is not much telling the player"): when it starts dragging and the listener is in the flood or
+within 4 tiles, `Floods.updateFx` (clients only) sets `f.alertAt` and plays `undertowAlert`
+(`assets/sounds/water/undertow.wav`, `tools/sounds/mechanics.py`: water rush + two falling beeps); while it drags,
+`BossHud.drawUndertow` shows "¡RESACA!" (`hud.undertow`) between two arrows (`ui/icons/current.png`, flipped when
+it drags left) at the top centre — big and shaking on entry, then pulsing with the arrows stepping that way. Used by the Giant Pufferfish's cove
 ([giantpuffer](../bosses/giantpuffer.md)). Pufferfish follow a falling flood and flop / die on dry ground
 ([enemies](../entities/enemies.md#pufferfish)).
 **Connected floods** (flood prop `control`): 'cycle' (default, the pure time cycle),

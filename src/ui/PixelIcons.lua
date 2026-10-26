@@ -42,15 +42,18 @@ PixelIcons.CROWN_W, PixelIcons.CROWN_H = PixelIcons.size('crown')
 
 -- Dibuja el icono `name` con su esquina superior izquierda en (x, y); px =
 -- tamaño de cada píxel del icono. Lleva sombra para leerse sobre cualquier fondo.
-function PixelIcons.draw(name, x, y, px, alpha)
+-- flip: dado la vuelta en horizontal (misma caja); color: tinte del blanco del icono.
+function PixelIcons.draw(name, x, y, px, alpha, flip, color)
     local img = imageOf(name)
     if not img then return end
     px, alpha = px or 2, alpha or 1
     x, y = math.floor(x), math.floor(y)
+    local sx, ox = flip and -px or px, flip and img:getWidth() or 0
     love.graphics.setColor(0, 0, 0, 0.45 * alpha)                  -- sombra: 1 píxel abajo-derecha
-    love.graphics.draw(img, x + px, y + px, 0, px, px)
-    love.graphics.setColor(1, 1, 1, alpha)
-    love.graphics.draw(img, x, y, 0, px, px)
+    love.graphics.draw(img, x + px, y + px, 0, sx, px, ox, 0)
+    local c = color or { 1, 1, 1 }
+    love.graphics.setColor(c[1], c[2], c[3], alpha)
+    love.graphics.draw(img, x, y, 0, sx, px, ox, 0)
     love.graphics.setColor(1, 1, 1, 1)
 end
 

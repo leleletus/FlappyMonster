@@ -2,6 +2,7 @@
 # tools/art/ui/make_story_icons.py
 # Iconos del MAPA del modo historia (assets/images/ui/icons/, se dibujan con src/ui/PixelIcons.lua):
 #   lock.png   candado (nivel cerrado)      check.png  marca (nivel superado)
+# y la flecha de la RESACA (current.png, mirando a la derecha: BossHud.drawUndertow la gira si arrastra a la izquierda).
 # Mismo estilo que los demás iconos: blanco con contorno oscuro; el color lo pone quien dibuja.
 #   python3 tools/art/ui/make_story_icons.py
 import os
@@ -28,6 +29,15 @@ ICONS = {
               'owwwwo...',
               '.owwo....',
               '..oo.....'],
+    'current': ['.......oo....',
+                '.......owo...',
+                'oooooooowwo..',
+                'owwwwwwwwwwo.',
+                'owwwwwwwwwwwo',
+                'owwwwwwwwwwo.',
+                'oooooooowwo..',
+                '.......owo...',
+                '.......oo....'],
 }
 for name, rows in ICONS.items():
     im = Image.new('RGBA', (len(rows[0]), len(rows)))

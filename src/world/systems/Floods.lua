@@ -30,7 +30,9 @@
 --            los tiene).
 -- RESACA (prop `undertow`, px/s con signo: + hacia la derecha): mientras el agua BAJA (fase 'fall'), arrastra a
 -- quien está dentro hacia ese lado (Floods.currentAt; el jugador la suma a su avance como una cinta). La fase es
--- función pura del tiempo, así que el cliente online la predice igual. Se ve: espuma que corre hacia ese lado.
+-- función pura del tiempo, así que el cliente online la predice igual. Se ve: espuma que corre hacia ese lado, y al
+-- empezar a arrastrar, si quien juega está cerca, suena un aviso y el HUD enseña "¡RESACA!" con flechas hacia ese
+-- lado mientras dure (`f.alertAt`, solo clientes: BossHud.drawUndertow).
 -- Una controlada guarda solo {active, t0, L0}: si está activa, desde cuándo
 -- y a qué nivel estaba entonces. El nivel en el instante t sigue siendo una
 -- función pura de t y de eso (Floods.levelAt), así que el cliente online
@@ -297,6 +299,18 @@ function Floods.updateFx(level, dt)
             Sound.playAt(rising and 'floodRise' or 'floodFall', sx, sy)
         end
         f.moving, f.prevLevel = moving, f.level
+        -- Aviso de la resaca: al empezar a arrastrar, si quien escucha está en el agua o cerca (4 casillas)
+        local drag = f.undertow ~= 0 and f.phase == 'fall' and f.level > 0.3
+        if drag and not f.alertAt then
+            local lx, ly, m = Sound.getListener()
+            m = TILE_PX * 4
+            if lx and lx >= f.x0 - m and lx < f.x1 + m and ly >= f.y0 - m and ly < f.y1 + m then
+                f.alertAt = love.timer.getTime()
+                Sound.play('undertowAlert')
+            end
+        elseif not drag then
+            f.alertAt = nil
+        end
         -- Resaca: espuma que corre por la superficie hacia donde arrastra (el aviso de la corriente)
         if f.undertow ~= 0 and f.phase == 'fall' and f.level > 0.3 then
             f.foamT = (f.foamT or 0) + dt * (f.x1 - f.x0) / (TILE_PX * 10)

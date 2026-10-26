@@ -696,6 +696,7 @@ function AdventureState:renderBossHud()
     end
     BossHud.drawScrollCountdown(self.level.autoScroll)
     BossHud.drawRun(self.level, self.enemies)                     -- (la persecución del Espejo: ¡CORRE!)
+    BossHud.drawUndertow(self.level)                              -- (la resaca: ¡RESACA! y hacia dónde)
 end
 
 -- ── HUD: vidas ────────────────────────────────────────────────────────────────

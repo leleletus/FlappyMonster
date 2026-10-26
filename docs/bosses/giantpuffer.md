@@ -18,7 +18,7 @@ it never gets in the way of jumps — the user, 0.5.31), waits 7 s, rises to 6 t
 holds 9 s, falls and stays low 9 s, repeating while the fight lasts; when the boss dies it falls and stays. It is a pure
 function of time (same online). While it FALLS the water drags sideways: the flood prop `undertow` (px/s, signed;
 130 → right) is read by `Floods.currentAt(level, x, y)` and added to the player's horizontal move; foam particles
-(`undertow_foam`) show the direction ([water-and-floods](../gameplay/water-and-floods.md)). Side platforms (row 9)
+(`undertow_foam`) and a HUD warning with a sound ("¡RESACA!" + arrows, 0.5.34) show the direction ([water-and-floods](../gameplay/water-and-floods.md)). Side platforms (row 9)
 drown at high tide; the centre one (row 6) is always dry; two air vents on the floor.
 
 ## Behaviour
