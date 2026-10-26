@@ -71,6 +71,18 @@ are spread along the path from `Worlds.lua`. **Harness:** `story_flow` (captures
   and `hopper_<isla>` (`hop = true`: stands, crouches, jumps in an arc, ~1 hop per second; `left` = art faces left).
   Hoppers are only in huida_del_espejo and the dark caves (and the EnemyTest gallery).
 
+## The secret node
+
+The last world has a `secret` level in `Worlds.lua` (`isla_del_groove`: [The Groove](../bosses/groovecrab.md)). On the
+map it is the LAST STOP: a branch from the Final's bonus node (`worlds[6].secret` in `overworld.json`, `SECRET` in
+`make_overworld.py`) to a sand islet NE of the volcano. The islet is always there (a mystery); while the secret is
+locked (`Run.secretState`: open once the last world's boss is beaten) it DOES NOT EXIST on the map: no node, no path
+dots, not a stop (`totalStops` leaves it out), no arrow leads to it, it cannot be tapped. When the Mirror falls it
+opens with the usual rings (the "what just opened" check counts every stop, `allStops`). Its node carries one of The
+Groove's notes dancing above it; its card says "a secret stage". It does not count for progress. The islet is added
+at the END of the generator (after decorations and critters), so nothing else on the map moved. Harness: `story_flow`
+case `secreto`.
+
 ## Moving on the map
 
 - (6) WORLD MAP ARROWS BY DIRECTION: `StoryMapState:_dirMove(dx, dy)` goes to the neighbouring stop whose path leaves toward the pressed direction (previous / next; from a castle also the next world over the bridge); no path that way → the old meaning (left / right = previous / next, up / down = previous / next world). `_walkTo` crosses castle ↔ next world by the bridge without detouring to the bonus node.

@@ -445,5 +445,30 @@ def gruta_del_farol():
     return L
 
 
+def isla_del_groove():
+    """Isla del Groove: el nivel SECRETO de después del juego (se abre al vencer al Espejo: un islote junto al volcán en
+    el mapa). Una playa al atardecer camino del escenario — Crabbies trampolín para practicar lo que pide el jefe (caerle
+    al trampolín te lanza muy alto) — y EL GROOVE al final (arena jefe_groove: el escenario, a cielo abierto, con su
+    tema `groove`). Corto: lo que importa es la pelea."""
+    src = load_src('jefe_groove.json')
+    L = Level('Isla del Groove', 85, 15, (4, 12), music='costa_1')
+    L.extra.update({'name_en': 'Groove Island'})
+    G = 13
+    L.rect(2, G, 42, 14, SOLID)
+    # el trampolín de un Crabby te lanza: así se llega arriba (la estrella)
+    L.ent('crabbytramp', 12, G - 1)
+    L.ent('star', 12, G - 9)
+    L.walker('crabby', 19, G - 1, 16, 22)
+    # dos trampolines seguidos y una vida extra en lo alto
+    L.ent('crabbytramp', 27, G - 1)
+    L.plat(29, 33, G - 7, DROP)
+    L.ent('extralife', 31, G - 8)
+    L.ent('crabbytramp', 35, G - 1)
+    L.ent('checkpoint', 39, G - 1)
+    # el escenario de El Groove (la zona empieza en la columna 49)
+    graft(L, src, 6, 43)
+    return L
+
+
 BUILDERS = [ruta_del_espejo, fortaleza_malvada, cala_resaca, guarida_cangrejo_rey, lago_helado, glaciar_cangrejo, reino_gummy, gruta_lugubre,
-            gruta_del_farol]
+            gruta_del_farol, isla_del_groove]

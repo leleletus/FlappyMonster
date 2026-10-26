@@ -79,6 +79,11 @@ function love.load()
     local gh = boss.def.name == 'gianthopper'
     local ghs = { scares = 0, lastT = -9, rage = false }
     if gh then VULN = { scared = true }; require('src/world/systems/Noise').bind(level) end
+    -- El Groove: solo posando (al ritmo de su canción). El jugador se aparta de la diana de sus saltos y le cae encima
+    -- en cada pose (lo genérico: dos intentos; el segundo, 1,2 s después, ya fuera de la pose, debe rebotar)
+    local gc = boss.def.name == 'groovecrab'
+    local gcs = { rage = false, dodges = 0, launches = 0 }
+    if gc then VULN = { pose = true } end
     local kg = { phases = {}, maxGuards = 0, flopOff = {}, waveHits = 0, partHits = 0, lastPartT = -9 }
     local sn = { phases = {}, scales = {}, frozenHits = {}, crashDizzy = 0, bonks = 0, toggles = 0, refrozen = 0,
                  deathOrder = {}, early = {}, shown = {} }
@@ -387,6 +392,16 @@ function love.load()
                 ghs.lastT, ghs.scares = t, ghs.scares + 1
             end
         end
+        if gc and z.state == 'fight' then
+            if boss.rage then gcs.rage = true end
+            if boss.state == 'crouch' and not pa.dying and math.abs(pa.x - boss.markX) < 3 * TILE_PX then
+                local dir = (boss.markX - z.x0 > z.x1 - boss.markX) and -1 or 1
+                pa.x, pa.vx = boss.markX + dir * 6 * TILE_PX, 0
+                gcs.dodges = gcs.dodges + 1
+            end
+            if pa.vy < -900 and not gcs.inLaunch then gcs.inLaunch, gcs.launches = true, gcs.launches + 1
+            elseif pa.vy >= 0 then gcs.inLaunch = false end
+        end
         -- esquivar la caída: al ver la marca (estado 'aim') se aparta 5 casillas
         if boss.state == 'aim' and not pa.dying and math.abs(pa.x - boss.x) < 3 * TILE_PX then
             local dir = (boss.x - z.x0 > z.x1 - boss.x) and -1 or 1
@@ -506,6 +521,19 @@ function love.load()
         check('olas', kg.waveHits == 0, ('golpes de ola al jugador (saltándolas): %d'):format(kg.waveHits))
         check('muerte', not boss.alive and kg.partHits >= 3 and z.state == 'cleared',
             ('vivo=%s, golpes a trozos %d, zona %s'):format(tostring(boss.alive), kg.partHits, z.state))
+    end
+    if gc then
+        local function check(name, ok, msg)
+            print(('%-10s %s  %s'):format(name, ok and 'OK   ' or 'FALLA', msg))
+            if not ok then fails = fails + 1 end
+        end
+        local need = { 'groove', 'crouch', 'hop', 'snap', 'pose', 'hurt', 'dying_daze', 'dying_flee' }
+        local miss = {}
+        for _, n in ipairs(need) do if not seen[n] then miss[#miss + 1] = n end end
+        check('estados', #miss == 0, #miss == 0 and 'todos vistos' or ('faltan: ' .. table.concat(miss, ',')))
+        check('muerte', not boss.alive and gcs.rage and z.state == 'cleared' and gcs.launches > 0,
+            ('vivo=%s, enfadado=%s, esquivas %d, lanzado por el trampolín %d veces, zona %s'):format(tostring(boss.alive),
+                tostring(gcs.rage), gcs.dodges, gcs.launches, z.state))
     end
     if gh then
         local function check(name, ok, msg)

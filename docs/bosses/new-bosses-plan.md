@@ -64,3 +64,8 @@ giant by touching a mirror shard ("La Furia del Espejo").
 - [ ] `guarida_cangrejo_rey` and `gruta_lugubre` as secret levels; their bosses drop the secret collectible.
 - [ ] The secret collectible: what it is, where it is saved and shown (save data, results, map).
 - [ ] Films / story text that mention the crabs as shard holders (`docs/story/`).
+
+### 4. The Groove (secret, after the game) — not in the original plan
+- [x] (0.5.45) A third new boss born from its music (`groove`): [groovecrab](groovecrab.md), level `isla_del_groove`,
+      a secret map node that appears after beating the Mirror. No shard; the secret collectible (section 3) is still open.
+- [ ] The user's verdict on the fight.

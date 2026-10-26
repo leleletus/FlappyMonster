@@ -18,6 +18,7 @@ In progress: two new bosses replace Mega Crabby and Mega Gloomy, which become se
 | Mega Gloomy Crabby (future secret boss) | `megagloomy` | [megagloomy](megagloomy.md) | `gruta_lugubre` (out of the story) | — |
 | The Mirror | `mirror` | [mirror](mirror.md) | `ruta_del_espejo` | 7 |
 | Mirror chase (not a fight) | `mirrorchase` | [mirror-chase](mirror-chase.md) | `huida_del_espejo` | — |
+| The Groove (El Groove, SECRET, after the game; fights to its music) | `groovecrab` | [groovecrab](groovecrab.md) | `isla_del_groove` (secret map node) | — |
 
 **Files:** `src/world/systems/BossZones.lua` (zones + the fight controller), `src/world/entities/base/Boss.lua`
 (health, hits, i-frames, stun rule, generic intro and death, ally turns, `strike`), `src/ui/BossHud.lua` (bars,

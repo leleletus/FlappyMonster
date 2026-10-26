@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-# TEMA DEL BAJO (provisional, sin jefe todavía) — un tema de jefe cuyo instrumento PRINCIPAL es el slap bass de
-# Resaca (tools/music/slap.py), con acompañamiento de Famicom. Pedido del usuario (2026-10-26): "quiero oír el tema
-# para inspirarme" — una maqueta: NO está en el catálogo ni en el juego.
+# EL GROOVE — un tema de jefe cuyo instrumento PRINCIPAL es el slap bass de Resaca (tools/music/slap.py), con
+# acompañamiento de Famicom. Nació como maqueta ("quiero oír el tema para inspirarme", 2026-10-26); el usuario: "el mejor
+# tema del juego por mucho" → es el tema de EL GROOVE, el Crabby trampolín gigante, jefe secreto (catálogo `groove`).
+# OJO: el jefe (types/bosses/groovecrab.lua) SIGUE ESTA PARTITURA por compases (sus SECCIONES, los POPS del bajo y los
+# golpes de banda): si cambia la forma, el tempo o dónde caen los golpes, hay que cambiar también su tabla SONG.
 #
 # Mi menor (el Mi grave es la cuerda al aire del bajo), 150 BPM, funk de jefe:
 #   · EL BAJO canta: pulgar (slap) en los graves, POPS a la octava (la nota fuerte), notas fantasma (x) que llenan
@@ -15,6 +17,7 @@
 # VUELTA 4 = 8 + 68 compases.
 #
 #   python tools/music/slap_boss.py   → FlappyMonster_pruebas/musica/slap_boss/ (intro + dos vueltas, y la costura)
+#   INSTALL=1 …                       → assets/music/bosses/groove_intro.ogg + groove_loop.ogg
 #   REPORT=1 → solo números. Se comprueba con números (NO se ha escuchado).
 import os, sys
 import numpy as np
@@ -268,3 +271,5 @@ if __name__ == '__main__':
     y, at = build()
     if not os.environ.get('REPORT'):
         preview(y, at)
+        if os.environ.get('INSTALL'):                 # (el tema de EL GROOVE, el jefe secreto: catálogo `groove`)
+            GN.export('groove', y, at)

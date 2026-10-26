@@ -31,7 +31,7 @@ local function check(name, ok, msg)
 end
 local step, t, T, shotQ = 'start', 0, 0, {}
 local introSeen
-local SHIDS, DROPPED, ENDING, FILMS, WALK1, RUN
+local SHIDS, DROPPED, ENDING, FILMS, WALK1, RUN, SEC
 local Save, Run, Worlds
 
 function love.load(a)
@@ -715,6 +715,36 @@ function love.update(dt)
             ('película antes=%s; sin meta=%s; escena final=%s, franjas=%s, el Espejo=%s (en cuadro=%s, detrás del monstruo aunque empezó delante=%s), corre solo %.0f px; la cámara quieta=%s; la música con el fundido %.2f → %.2f; al fundirse a negro sigue corriendo (%.0f px/s) a %.0f px de la pared del final; después la película %s y el nivel %s; huida superada=%s; la partida en el nodo %s'):format(
              tostring(RUN.film1), tostring(RUN.finish == 0), tostring(RUN.active), tostring(RUN.cinema), tostring(RUN.chase), tostring(RUN.seen), tostring(RUN.behind), RUN.moved or 0, tostring(RUN.camEnd == RUN.cam0), RUN.vol0 or -1, RUN.vol1 or -1, RUN.vx or 0, (RUN.wall or 0) - (RUN.px or 0),
              tostring(FILMS[2]), tostring(st.levelPath), tostring(Run.isDone('huida_del_espejo')), tostring(Run.data.node)))
+        gStateMachine:change('story_map', { world = 1, node = 1 }); go('sec1')
+    -- EL NIVEL SECRETO (Worlds `secret`, el Groove): sin el jefe del último mundo, ni se ve ni es una parada; vencido,
+    -- aparece como la última parada (un ramal desde el bonus del Final) y se juega su nivel
+    elseif step == 'sec1' and t - T > 0.3 then
+        local w = Worlds.count()
+        Run.data.done[Worlds.get(w).boss] = nil
+        gStateMachine:change('story_map', { world = w, node = #Worlds.nodes(w) + 1 }); go('sec2')
+    elseif step == 'sec2' and t - T > 0.3 then
+        local w = Worlds.count()
+        local total, all = st:_stops()
+        local sec = st:_stopOf(w, #Worlds.nodes(w) + 2)
+        local arrows = false
+        for _, i in pairs(st:_dirs(w, #Worlds.nodes(w) + 1)) do if i == sec then arrows = true end end
+        SEC = { hidden = Run.secretState(w) == 'locked' and total == all - 1 and not arrows and sec == all }
+        Run.data.done[Worlds.get(w).boss] = true
+        gStateMachine:change('story_map', { world = w, node = #Worlds.nodes(w) + 1 }); go('sec3')
+    elseif step == 'sec3' and t - T > 0.3 then
+        local w = Worlds.count()
+        local total, all = st:_stops()
+        SEC.open = Run.secretState(w) == 'open' and total == all
+        shot('map_secret')
+        st:_walkTo(all); go('sec4')
+    elseif step == 'sec4' and #st.queue == 0 and t - T > 0.3 then
+        SEC.there = st.node == #Worlds.nodes(Worlds.count()) + 2
+        st:_play(); go('sec5')
+    elseif step == 'sec5' and (st.level or t - T > 6) then
+        if st.startCd then CD_DONE = true end
+        check('secreto', SEC.hidden and SEC.open and SEC.there and st.levelPath == Worlds.path('isla_del_groove'),
+            ('sin vencer al Espejo, escondido (ni parada ni flecha)=%s; vencido, abierto=%s; anda hasta él=%s; entra en %s'):format(
+             tostring(SEC.hidden), tostring(SEC.open), tostring(SEC.there), tostring(st.levelPath)))
         gStateMachine:change('story_map', { world = 1, node = 1 }); go('del')
     elseif step == 'del' and t - T > 0.3 then
         resize(1280, 720)

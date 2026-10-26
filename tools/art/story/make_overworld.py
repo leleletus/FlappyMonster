@@ -330,11 +330,21 @@ NODE_BOSS = {
     'nieve': {'lago_helado': {'img': 'assets/images/bosses/snowboss/body-Sheet.png', 'fw': 16}},
 }
 
+# ── La ISLA DEL GROOVE (el nivel secreto de después del juego: Worlds `secret`): un islote de arena al noreste del
+# volcán, siempre a la vista (un misterio); su camino desde el bonus del Final y su nodo solo aparecen al vencer al
+# Espejo (StoryMapState). Se añade AL FINAL, después de decoraciones y bichos, para no mover nada de lo demás (rng).
+# El camino cruza el agua: se dibuja como puente.
+SECRET = {'final': [(47.5, 14), (48.3, 11.4), (48.6, 8.9)]}
+SSECRET = {k: catmull(v) for k, v in SECRET.items()}
+blob(48.8, 8.1, 3.0, 2.4, 's', 0.1)
+decos.append({'t': 'palm', 'x': 49, 'y': 6})
+
 data = {
     'cell': 32, 'w': W, 'h': H,
     'rows': [''.join(r) for r in grid],
     'heights': [''.join(str(v) for v in r) for r in hgt],
-    'worlds': [{'id': k, 'path': [list(p) for p in SPATHS[k]], 'boss': BOSS_ART[k], 'nodeBoss': NODE_BOSS.get(k, {}), 'bonus': [list(p) for p in SBONUS[k]]} for k in ORDER],
+    'worlds': [{'id': k, 'path': [list(p) for p in SPATHS[k]], 'boss': BOSS_ART[k], 'nodeBoss': NODE_BOSS.get(k, {}), 'bonus': [list(p) for p in SBONUS[k]],
+                **({'secret': [list(p) for p in SSECRET[k]]} if k in SSECRET else {})} for k in ORDER],
     'connect': [[list(p) for p in c] for c in SCONNECT],
     'decos': decos, 'critters': critters,
 }

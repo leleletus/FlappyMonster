@@ -31,7 +31,7 @@ local Props        = require 'src/world/entities/base/Props'
 local TYPES = { 'enemies/gummy', 'enemies/crabby', 'traps/spikefall', 'items/star', 'items/extralife', 'items/checkpoint',
                 'enemies/mortar', 'traps/rainspike', 'directors/spikerain', 'mechanisms/trampoline', 'enemies/crabbytramp',
                 'mechanisms/flood', 'mechanisms/pointarea', 'mechanisms/bosswall', 'bosses/mirror', 'bosses/miniboss1', 'bosses/megacrabby', 'enemies/pufferfish', 'mechanisms/bossglass', 'enemies/bomb', 'items/bombobject',
-                'traps/cryo', 'bosses/snowboss', 'mechanisms/phaseblock', 'enemies/crabby_ice', 'bosses/megacrabby_ice', 'enemies/gummy_ice', 'bosses/megagummy', 'bosses/giantpuffer', 'bosses/gianthopper', 'enemies/gloomy', 'bosses/megagloomy', 'enemies/hopper',
+                'traps/cryo', 'bosses/snowboss', 'mechanisms/phaseblock', 'enemies/crabby_ice', 'bosses/megacrabby_ice', 'enemies/gummy_ice', 'bosses/megagummy', 'bosses/giantpuffer', 'bosses/gianthopper', 'bosses/groovecrab', 'enemies/gloomy', 'bosses/megagloomy', 'enemies/hopper',
                 'enemies/gummy_magma', 'enemies/crabby_fortress', 'enemies/gummy_cave', 'enemies/gummy_fortress',
                 'enemies/crabby_river', 'enemies/crabby_lava', 'enemies/crabby_cave', 'bosses/mirrorchase', 'items/apple',
                 'directors/bossdrops' }

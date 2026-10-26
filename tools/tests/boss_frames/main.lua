@@ -92,6 +92,10 @@ function love.load()
             end
             if boss.state == 'scared' and boss.deadTimer > 1.2 and boss.inv <= 0 then boss:damage(1, 'stomp') end
         end
+        -- El Groove: un pisotón en cada pose (para verlo hasta el final)
+        if boss.def.name == 'groovecrab' and boss.state == 'pose' and boss.deadTimer > (tonumber(os.getenv('HIT_AT')) or 0.3) and boss.inv <= 0 then
+            boss:damage(1, 'stomp')
+        end
         if want[boss.state] and t - lastShot >= every and (boss.alive or boss.def.name == 'megagummy') then
             lastShot = t
             local col, row = n % COLS, math.floor(n / COLS)

@@ -141,6 +141,16 @@ function Run.bonusState(w)
     return Run.isDone(W.boss) and 'open' or 'locked'
 end
 
+-- NIVEL SECRETO (Worlds `secret`): 'done' superado · 'open' con el JUEGO ACABADO (el jefe del último mundo) · 'locked'
+-- (y, cerrado, ni se ve en el mapa)
+function Run.secretState(w)
+    local s = Worlds.secret(w)
+    if not (s and Run.data) then return 'locked' end
+    if Run.isDone(s.id) then return 'done' end
+    local last = Worlds.get(Worlds.count())
+    return Run.isDone(last.boss) and 'open' or 'locked'
+end
+
 -- Fin de una partida bonus: su NOTA (Score.bonus), sus puntos (solo si se gana, × la dificultad) y sus premios — la
 -- PRIMERA victoria, y la primera vez que se gana con cada letra —. Devuelve el resumen para la pantalla de resultados:
 --   { rating, grade, parts, points, record, won, rewards = { {lives|points}, ... } }

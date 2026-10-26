@@ -31,6 +31,7 @@ local Snow   = require('src/world/entities/types/bosses/snowboss').class
 local BossFx = require 'src/fx/BossFx'
 local Lights = require 'src/world/level/Lights'
 local SpriteStrip = require 'src/fx/SpriteStrip'
+local BossWaves = require 'src/world/entities/base/BossWaves'
 
 local GH = Entity.extend(Boss, {
     ATTACKS  = { crouch = true, hop = true, flare_wind = true, flare = true },
@@ -78,13 +79,13 @@ local LOUD       = 6 * T                        -- radio mínimo de un ruido que
 local SCARE_NEAR = 7 * T                        -- ... y tiene que sonar así de cerca
 GH.LAMP_R, GH.FLARE_R, GH.SCARE_NEAR = LAMP_R, FLARE_R, SCARE_NEAR
 
--- Ondas de roca (al caer de un salto de caza)
-local WAVE_SPD, WAVE_LIFE = 430, 2.2
-local WAVE_W, WAVE_H = 40, 36
+-- Ondas de roca (al caer de un salto de caza: base/BossWaves.lua)
+local WAVES = { spd = 430, life = 2.2, w = 40, h = 36 }
 
 -- Golpes a los jugadores: { vida, vx, vy, s sin control, s aturdido }
 local HIT_TOUCH = { 1, 480, -420, 0.2, 0 }
 local HIT_WAVE  = { 1, 300, -440, 0.15, 0 }
+WAVES.hit = HIT_WAVE
 local HIT_SHOVE = { 0, 520, -420, 0.2, 0 }      -- (el respingo tras un golpe: solo aparta)
 
 -- Muerte
@@ -195,37 +196,9 @@ function GH:touch(level)
 end
 
 -- ── Ondas de roca ─────────────────────────────────────────────────────────────
-function GH:spawnWaves()
-    local fy = math.floor(self:feetY())
-    for _, d in ipairs({ -1, 1 }) do
-        self.nextId = self.nextId % 999 + 1
-        self.waves[#self.waves + 1] = { id = self.nextId, x = math.floor(self.x + d * (self.outerW / 2 + 4)), y = fy,
-                                        dir = d, t = 0, hit = {} }
-    end
-end
-function GH:waveBox(w) return { x = w.x - WAVE_W / 2, y = w.y - WAVE_H, w = WAVE_W, h = WAVE_H } end
-function GH:updateWaves(level, dt)
-    local zx0, zx1 = self:zoneBounds()
-    for i = #self.waves, 1, -1 do
-        local w = self.waves[i]
-        w.t = w.t + dt
-        w.x = w.x + w.dir * WAVE_SPD * dt
-        local ahead = w.x + w.dir * WAVE_W / 2
-        local gone = w.t >= WAVE_LIFE or ahead < zx0 or ahead > zx1
-            or level:entitySolidAt(ahead, w.y - 12)                       -- (pared o escalón)
-            or not level:collisionAt(w.x, w.y + 6, true)                  -- (se acaba el suelo)
-        if gone then
-            table.remove(self.waves, i)
-        else
-            local box = self:waveBox(w)
-            for _, pa in ipairs(level.players or {}) do
-                if not w.hit[pa] and overlap(pa:getOuterBounds(), box) and strike(pa, HIT_WAVE, w.dir) then
-                    w.hit[pa] = true
-                end
-            end
-        end
-    end
-end
+function GH:spawnWaves() BossWaves.spawn(self, self:feetY(), self.outerW / 2) end
+function GH:waveBox(w) return BossWaves.box(w, WAVES) end
+function GH:updateWaves(level, dt) BossWaves.update(self, level, dt, WAVES) end
 
 -- ── Saltarines de la segunda fase (súbditos de reserva) ─────────────────────
 function GH:mothMax(level)
@@ -511,39 +484,13 @@ end
 -- { enfadado 0/1, de caza 0/1, diana x, y, nOndas, {id, x, y, dir, t·100}… }
 local NB = 4
 function GH:netPackExtra()
-    local out = { self.rage and 1 or 0, self.hunting and 1 or 0, self.markX or 0, self.markY or 0, #self.waves }
-    for _, w in ipairs(self.waves) do
-        out[#out + 1] = w.id; out[#out + 1] = math.floor(w.x); out[#out + 1] = w.y
-        out[#out + 1] = w.dir; out[#out + 1] = math.floor(w.t * 100)
-    end
-    return out
-end
-
-local function readList(b, k, stride)
-    local n = b[k] or 0
-    local list = {}
-    for i = 0, n - 1 do
-        local e = {}
-        for j = 1, stride do e[j] = b[k + 1 + i * stride + j - 1] end
-        list[#list + 1] = e
-    end
-    return list
+    return BossWaves.pack(self.waves, { self.rage and 1 or 0, self.hunting and 1 or 0, self.markX or 0, self.markY or 0 })
 end
 
 function GH:netApplyExtra(a, b, f)
     if type(b[1]) ~= 'number' then return end
     self.rage, self.hunting, self.markX, self.markY = b[1] == 1, b[2] == 1, b[3], b[4]
-    local prev = {}
-    if type(a[NB + 1]) == 'number' then
-        for _, e in ipairs(readList(a, NB + 1, 5)) do if e[1] then prev[e[1]] = e end end
-    end
-    self.waves = {}
-    for _, e in ipairs(readList(b, NB + 1, 5)) do
-        local x = e[2]
-        local o = prev[e[1]]
-        if o and type(o[2]) == 'number' then x = o[2] + (x - o[2]) * f end
-        self.waves[#self.waves + 1] = { id = e[1], x = x, y = e[3], dir = e[4], t = e[5] / 100, hit = {} }
-    end
+    self.waves = BossWaves.unpack(a, b, NB + 1, f)
 end
 
 -- ── Luz (src/fx/Darkness.lua): su farol, en redondo y cortado por las rocas ──

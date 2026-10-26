@@ -116,6 +116,7 @@ return {
         locked_hint = "Supera el nivel anterior",
         play_line = "[ENTER] jugar",
         boss_line = "¡JEFE!  [ENTER] jugar",
+        secret_line = "¡Un escenario secreto!  [ENTER] jugar",
         done_line = "Nota {grade}  ·  {score} puntos  ·  {time}",
         world_grade = "Nota del mundo: {grade}",
         bonus = {
@@ -402,6 +403,7 @@ return {
         megagummy = "REY GUMMY",
         giantpuffer = "PEZ GLOBO GIGANTE",
         gianthopper = "SALTARÍN GIGANTE",
+        groovecrab = "EL GROOVE",
         megagloomy = "MEGA CRABBY LÚGUBRE",
         snowboss = "GRAN BOLA DE NIEVE",
     },

@@ -9,6 +9,8 @@
 --   outros  CARRERAS QUE ENLAZAN (solo en la historia): { [nivel] = columna }: ese nivel no acaba en la meta sino en una
 --           escena dentro de él a partir de esa columna de la cámara (src/story/RunOut.lua) y pasa directamente al nodo
 --           siguiente (su película, si tiene, y él), sin resultados ni mapa por medio
+--   secret  nivel SECRETO de después del juego (solo en el ÚLTIMO mundo: en el mapa es la última parada): no se ve —ni
+--           su nodo ni su camino— hasta vencer al jefe del último mundo; no cuenta para el progreso (el Groove)
 --   films   CINEMÁTICAS de antes de un nivel: { [nivel] = película (assets/story/films.json) }; se ven la
 --           primera vez que se entra en él (la partida apunta las vistas: `films`)
 -- Todo nivel de la historia necesita META (los de solo Cazamonstruos no la tienen).
@@ -30,6 +32,7 @@ Worlds.LIST = {
     { id = 'cuevas',    levels = { 'cavernas_cristal', 'nivel01', 'laberinto_submarino', 'templo_del_eco' },             boss = 'gruta_del_farol', bonus = 'cripta_del_silencio' },   -- (Saltarín Gigante; el Mega Crabby lúgubre de gruta_lugubre pasa a jefe secreto)
     -- 6 El Final (el volcán): lava; la lluvia de pinchos (cámara automática) es la erupción, antes del Espejo
     { id = 'final',     levels = { 'carrera01', 'caldera_roja', 'lluvia_pinchos', 'huida_del_espejo' },                                       boss = 'ruta_del_espejo', bonus = 'cantera_real',
+      secret = 'isla_del_groove',                                             -- (El Groove, el jefe secreto)
       films = { huida_del_espejo = 'chase', ruta_del_espejo = 'lair' },      -- (la emboscada; la guarida)
       outros = { huida_del_espejo = 182 } },                                  -- (la huida sigue en la guarida)
 }
@@ -55,6 +58,14 @@ function Worlds.bonus(w)
     if not (W and W.bonus) then return nil end
     W._bonus = W._bonus or { id = W.bonus, bonus = true }
     return W._bonus
+end
+
+-- El nodo SECRETO de un mundo ({ id, secret = true }) o nil
+function Worlds.secret(w)
+    local W = Worlds.LIST[w]
+    if not (W and W.secret) then return nil end
+    W._secret = W._secret or { id = W.secret, secret = true }
+    return W._secret
 end
 
 -- La película de antes del nivel `id` (o nil)

@@ -631,3 +631,16 @@ the old level tune in the final boss, Verity's hook).
   keeps 43 % of its energy under 120 Hz (was 55 %). Bass share of the energy is unchanged (21-24 %; mirror_chase 37 %
   vs 45 % sub + reese). Previous files archived in `FlappyMonster_originals/music/versiones/jefes_bajo_triangulo/`.
   Not listened to.
+
+## El Groove (`tools/music/slap_boss.py`, boss track `groove`)
+
+- 2026-10-26: the user asked for "a new theme whose main instrument is the slap bass, with accompaniment, a boss
+  track; I have almost nothing thought about what it will be, I want to hear it to get inspired". Written as a
+  mockup: E minor (the bass's open low string), 150 BPM funk; the slap plays the melody (thumb on the lows, POPS an
+  octave up at velocity 122, ghost notes at 48), chip drums with a funk groove, offbeat VRC6 stabs, a 16th "scratch"
+  on a 12.5 % pulse, an N163 pad, band hits closing phrases, a sparkle doubling the pops two octaves up in the climax.
+  Form: intro 8 (bass alone 4, then the band) · A 16 (4-bar riff i–i–VI–VII climbing chromatically to E) · B 16 (the
+  bass sings higher over iv–i–VI–V) · SOLO 8 (stop-time: a band hit and silence, bass licks with the blue note) ·
+  build 8 · climax 16 · return 4. Energy: bass 35 %, drums 50 %. The user: "Holy cow, the best track in the game by
+  far, a real work of art" → installed as `groove` (0.5.45) and a boss was designed for it, [The Groove](../bosses/groovecrab.md),
+  whose attacks follow this score. Not listened to by me.

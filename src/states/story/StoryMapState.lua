@@ -132,6 +132,8 @@ end
 
 -- Los nodos de un mundo EN EL MAPA: sus niveles, el jefe y, detrás, su BONUS (arena contra el bot; un ramal
 -- desde el castillo). El bonus no es un nodo de Worlds.nodes (no cuenta para el progreso): su estado es aparte.
+-- Y, en el último mundo, su nodo SECRETO (Worlds `secret`: un ramal desde el bonus), que cerrado NO EXISTE en el
+-- mapa: ni se dibuja él ni su camino, y no es una parada (totalStops lo deja fuera)
 local mapCache = {}
 local function mapNodes(w)
     if not mapCache[w] then
@@ -139,6 +141,8 @@ local function mapNodes(w)
         for _, n in ipairs(Worlds.nodes(w)) do list[#list + 1] = n end
         local b = Worlds.bonus(w)
         if b then list[#list + 1] = b end
+        local sc = Worlds.secret(w)
+        if sc then list[#list + 1] = sc end
         mapCache[w] = list
     end
     return mapCache[w]
@@ -146,7 +150,12 @@ end
 local function stateOf(w, k)
     local n = mapNodes(w)[k]
     if n and n.bonus then return Run.bonusState(w) end
+    if n and n.secret then return Run.secretState(w) end
     return Run.state(w, k)
+end
+local function hiddenNode(w, k)
+    local n = mapNodes(w)[k]
+    return n ~= nil and n.secret == true and Run.secretState(w) == 'locked'
 end
 
 -- ── El mapa (datos) y su geometría en píxeles ───────────────────────────────
@@ -237,6 +246,10 @@ local function loadMap()
             M.branch = px(def.bonus)
             M.node[n + 1] = M.branch[#M.branch]
         end
+        if def.secret and Worlds.secret(w) and M.branch then           -- (del bonus a su nodo secreto)
+            M.secret = px(def.secret)
+            M.node[n + 2] = M.secret[#M.secret]
+        end
         -- el jefe, al lado del castillo que tenga TIERRA (derecha, izquierda o debajo); nunca en el agua
         local bx, by = M.node[n][1], M.node[n][2]
         local function land(x, y)
@@ -276,6 +289,7 @@ local function loadMap()
         for k, seg in ipairs(M.seg) do dots(seg, { w, k + 1 }) end
         if M.bridge then dots(M.bridge, { w + 1, 1 }) end
         if M.branch then dots(M.branch, { w, #Worlds.nodes(w) + 1 }) end
+        if M.secret then dots(M.secret, { w, #Worlds.nodes(w) + 2 }) end
     end
     return MAP
 end
@@ -294,7 +308,12 @@ local function stopAt(i)
         i = i - n
     end
 end
-local function totalStops() return stopIndex(Worlds.count(), #mapNodes(Worlds.count())) end
+-- (todas, también la secreta escondida: para ver qué se acaba de abrir)
+local function allStops() return stopIndex(Worlds.count(), #mapNodes(Worlds.count())) end
+local function totalStops()
+    local last = Worlds.count()
+    return allStops() - (hiddenNode(last, #mapNodes(last)) and 1 or 0)
+end
 -- puntos del camino de la parada i a la i+1
 local function legForward(i)
     local w, k = stopAt(i)
@@ -302,6 +321,7 @@ local function legForward(i)
     local n = #Worlds.nodes(w)
     if k < n then return M.seg[k] end
     if k == n and M.branch then return M.branch end                       -- del castillo a su bonus
+    if k == n + 1 and M.secret then return M.secret end                   -- del bonus a su nodo secreto
     local out = {}
     if k == n + 1 then for _, p in ipairs(reversed(M.branch)) do out[#out + 1] = p end end   -- del bonus, de vuelta al castillo…
     for _, p in ipairs(M.bridge or { M.node[n], (loadMap().worlds[w + 1] or M).node[1] }) do out[#out + 1] = p end   -- … y el puente
@@ -349,7 +369,7 @@ function StoryMapState:_music()
         for k = 1, #mapNodes(w) do
             local x, y = nodeXY(w, k)
             local d = (x - self.heroX) ^ 2 + (y - self.heroY) ^ 2
-            if not bd or d < bd then best, bd = w, d end
+            if not hiddenNode(w, k) and (not bd or d < bd) then best, bd = w, d end
         end
     end
     local id = best and Worlds.get(best).id
@@ -421,6 +441,9 @@ local function legDir(leg)
     return 0, 0
 end
 
+-- (para las pruebas: las paradas — las que se ven y todas — y el número de parada de un nodo)
+function StoryMapState:_stops() return totalStops(), allStops() end
+function StoryMapState:_stopOf(w, k) return stopIndex(w, k) end
 -- (para las pruebas: dónde está un nodo y hacia dónde sale el tramo al vecino `d` = ±1)
 function StoryMapState:_nodeXY(w, k) return nodeXY(w, k) end
 function StoryMapState:_legTo(w, k, d)
@@ -616,13 +639,13 @@ function StoryMapState:_start(world, node)
         onFinish = function(result)
             for _, id in ipairs(gotShards) do Run.addShard(id, true) end       -- (se guardan con Run.complete)
             local was = {}
-            for i = 1, totalStops() do was[i] = stateOf(stopAt(i)) end
+            for i = 1, allStops() do was[i] = stateOf(stopAt(i)) end
             local summary = Run.complete(n.id, result)
             -- a los RESULTADOS y, de ahí, al mapa, ya en el siguiente (tras el jefe: al mundo que se abre)
             -- de vuelta al mapa se queda en el nodo que ACABA de superar y ve abrirse lo siguiente (antes aparecía ya
             -- colocado en el nivel nuevo): las paradas que estaban cerradas y ahora no
             local opened = {}
-            for i = 1, totalStops() do
+            for i = 1, allStops() do
                 if was[i] == 'locked' and stateOf(stopAt(i)) ~= 'locked' then opened[#opened + 1] = i end
             end
             local nw, nk = world, node
@@ -731,7 +754,7 @@ function StoryMapState:_nodeAt(x, y)
         for k, node in ipairs(mapNodes(w)) do
             local nx, ny = nodeXY(w, k)
             local r = node.boss and 40 or 26
-            if math.abs(x + cx - nx) <= r and math.abs(y + cy - (ny - (node.boss and 16 or 0))) <= r then return w, k end
+            if not hiddenNode(w, k) and math.abs(x + cx - nx) <= r and math.abs(y + cy - (ny - (node.boss and 16 or 0))) <= r then return w, k end
         end
     end
 end
@@ -887,7 +910,7 @@ function StoryMapState:_drawPaths(cx, cy)
     local bridge = img('assets/images/story/bridge.png')
     for _, d in ipairs(M.dots) do
         local x, y = d.x - cx, d.y - cy
-        if x > -20 and x < WINDOW_W + 20 and y > -20 and y < WINDOW_H + 20 then
+        if not hiddenNode(d.key[1], d.key[2]) and x > -20 and x < WINDOW_W + 20 and y > -20 and y < WINDOW_H + 20 then
             local open = stateOf(d.key[1], d.key[2]) ~= 'locked'
             if d.water then
                 -- (siempre opaco: cerrado = más oscuro, nunca transparente)
@@ -1090,7 +1113,7 @@ function StoryMapState:_drawNodes(cx, cy)
         for k, node in ipairs(mapNodes(w)) do
             local nx, ny = nodeXY(w, k)
             local x, y = math.floor(nx - cx), math.floor(ny - cy)
-            if x > -120 and x < WINDOW_W + 120 and y > -120 and y < WINDOW_H + 80 then
+            if not hiddenNode(w, k) and x > -120 and x < WINDOW_W + 120 and y > -120 and y < WINDOW_H + 80 then
                 local st = stateOf(w, k)
                 -- (recién abierta: aún cerrada OPEN_AT s, luego salta y suelta unos aros)
                 local opening = self.opening and self.opening[stopIndex(w, k)]
@@ -1132,6 +1155,12 @@ function StoryMapState:_drawNodes(cx, cy)
                     love.graphics.setLineWidth(3)
                     love.graphics.rectangle('line', x - r - p, y + oy - r - p, 2 * (r + p), 2 * (r + p))
                     love.graphics.setLineWidth(1)
+                end
+                if node.secret and st ~= 'locked' then          -- (el secreto: una nota de El Groove que baila encima)
+                    local note = img('assets/images/bosses/groovecrab/note-Sheet.png')
+                    local fr = (math.floor(self.t * 2.5) % 4) * 2 + (math.floor(self.t * 6) % 2) + 1
+                    love.graphics.setColor(1, 1, 1, 1)
+                    love.graphics.draw(note, frameQ(note, 9, fr), x - 13, y - 64 + math.floor(math.sin(self.t * 5) * 3), 0, 3, 3)
                 end
                 if node.bonus and st ~= 'locked' then
                     PixelFont.shadow('B', x - math.floor(PixelFont.width('B', 3) / 2), y - 40, 3, 1, { 0.6, 0.85, 1 })
@@ -1293,6 +1322,7 @@ function StoryMapState:_drawHud()
         local b = Run.data.bonus[node.id]
         line = (st == 'locked') and L('story.bonus.locked_hint')
                or (st == 'done') and L('story.bonus.done_line', { score = b and b.best or 0 }) or L('story.bonus.line')
+    elseif node.secret and st == 'open' then line = L('story.secret_line')
     elseif st == 'locked' then line = L('story.locked_hint')
     elseif st == 'done' then
         local b = Run.data.best[node.id] or {}

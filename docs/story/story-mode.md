@@ -8,7 +8,7 @@ the seven mirror shards. The lore is in [story](story.md).
 
 | File | Role |
 |---|---|
-| `Worlds.lua` | the story as data: ordered worlds `{ id, levels, boss, bonus }`. Reordering the game = editing this table |
+| `Worlds.lua` | the story as data: ordered worlds `{ id, levels, boss, bonus, secret }` (`secret`: the after-the-game level, only on the last world: [world-map](world-map.md#the-secret-node)). Reordering the game = editing this table |
 | `Save.lua` | 3 slots + global unlocks (see [save-data](../architecture/save-data.md)) |
 | `Run.lua` | the open slot: node states, `complete(id, result)`, lives, Game Over, rewards, unlocks, bonus results, shards |
 | `Score.lua` | scoring as data: weights, par time, grades, rewards |
