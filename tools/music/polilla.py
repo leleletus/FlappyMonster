@@ -58,36 +58,36 @@ H_S = ['Dm', 'Bb', 'Gm', 'A', 'Dm', 'Bb', 'Eb', 'A']
 
 # ══ LA MELODÍA ═══════════════════════════════════════════════════════════════════════════════════════════════════
 M_A = ["0:D5/3 3:F5/3 6:A5/2 8:G5/2 10:F5/2 12:A5/4",                    # el gancho: hacia la luz y se posa
-       "0:D6/2 2:C#6/2 4:A5/4 8:F5/2 10:E5/2 12:D5/4",                    # … y baja
-       "0:D5/3 3:F5/3 6:Bb5/2 8:A5/2 10:G5/2 12:Bb5/4",                   # (en secuencia: Si♭)
-       "0:F6/2 2:D6/2 4:Bb5/4 8:G5/2 10:F5/2 12:D5/4",
+       "0:D6/2 2:C#6/2 4:D6/4 8:A5/2 10:G5/2 12:F5/4",                    # … y baja
+       "0:D5/3 3:F5/3 6:Bb5/2 8:A5/2 10:Bb5/2 12:D6/4",                   # (en secuencia: Si♭)
+       "0:F6/2 2:D6/2 4:Bb5/4 8:A5/2 10:G5/2 12:F5/4",
        "0:D5/3 3:G5/3 6:Bb5/2 8:A5/2 10:G5/2 12:D6/4",                    # (Solm)
        "0:Bb5/2 2:A5/2 4:G5/4 8:F5/2 10:E5/2 12:D5/4",
        "0:C#5/3 3:E5/3 6:A5/2 8:G5/2 10:E5/2 12:C#6/4",                   # (La: la dominante)
        "0:E6/4 4:C#6/4 8:A5/8"]                                           # (nota tenida: parpadea el farol)
 M_A2 = ["0:D5/3 3:F5/3 6:A5/2 8:G5/2 10:F5/2 12:A5/4",
         "0:D6/2 2:E6/2 4:F6/4 8:E6/2 10:D6/2 12:A5/4",                    # (la respuesta sube)
-        "0:F5/3 3:Bb5/3 6:D6/2 8:Bb5/2 10:A5/2 12:F5/4",
-        "0:G5/2 2:F5/2 4:D5/4 8:F5/2 10:G5/2 12:Bb5/4",
+        "0:F5/3 3:Bb5/3 6:D6/2 8:Bb5/2 10:A5/2 12:Bb5/4",
+        "0:Bb5/4 4:F5/4 8:D5/2 10:F5/2 12:Bb5/4",
         "0:Eb5/3 3:G5/3 6:Bb5/2 8:G5/2 10:F5/2 12:Eb5/4",                 # (la napolitana)
-        "0:Bb5/2 2:G5/2 4:Eb6/4 8:D6/2 10:Bb5/2 12:G5/4",
+        "0:Bb5/2 2:G5/2 4:Eb6/4 8:Bb5/4 12:G5/4",
         "0:E5/3 3:A5/3 6:C#6/2 8:E6/2 10:D6/2 12:C#6/4",
         "0:A5/4 4:E5/4 8:C#5/8"]                                          # (se queda en la sensible)
 # B: la VOZ. El gancho al revés (baja en 3+3+2 y vuelve a subir), un registro más arriba en la 2ª mitad
 M_B = ["0:D6/3 3:Bb5/3 6:G5/2 8:A5/2 10:Bb5/2 12:D6/4",
-       "0:G6/4 4:F6/2 6:D6/2 8:Bb5/4 12:G5/4",
+       "0:G6/4 4:F6/2 6:G6/2 8:D6/4 12:Bb5/4",
        "0:A5/3 3:F5/3 6:D5/2 8:E5/2 10:F5/2 12:A5/4",
-       "0:D6/4 4:C#6/2 6:A5/2 8:F5/4 12:D5/4",
+       "0:D6/4 4:C#6/2 6:D6/2 8:A5/4 12:F5/4",
        "0:G5/3 3:Eb5/3 6:Bb4/2 8:Eb5/2 10:G5/2 12:Bb5/4",
-       "0:Eb6/4 4:D6/2 6:Bb5/2 8:G5/4 12:Eb5/4",
+       "0:Eb6/4 4:D6/2 6:Eb6/2 8:Bb5/4 12:G5/4",
        "0:E5/3 3:C#5/3 6:A4/2 8:C#5/2 10:E5/2 12:A5/4",
        "0:C#6/4 4:D6/2 6:E6/2 8:E6/8"]
-M_B2 = ["0:G5/3 3:Bb5/3 6:D6/2 8:F6/2 10:D6/2 12:G6/4",
+M_B2 = ["0:D6/3 3:Bb5/3 6:D6/2 8:G6/2 10:F6/2 12:G6/4",
         "0:Bb6/4 4:A6/2 6:G6/2 8:D6/4 12:Bb5/4",
         "0:A5/3 3:D6/3 6:F6/2 8:E6/2 10:D6/2 12:A6/4",
         "0:F6/4 4:E6/2 6:D6/2 8:A5/8",
         "0:Bb5/3 3:D6/3 6:F6/2 8:D6/2 10:Bb5/2 12:F5/4",
-        "0:G5/3 3:Bb5/3 6:Eb6/2 8:D6/2 10:Bb5/2 12:G5/4",
+        "0:G5/3 3:Bb5/3 6:Eb6/2 8:Bb5/2 10:G5/2 12:Bb5/4",
         "0:A5/2 2:C#6/2 4:E6/2 6:A6/2 8:G6/2 10:E6/2 12:C#6/4",
         "0:E6/4 4:C#6/4 8:A5/4 12:E5/4"]
 # SUSTO: golpes y silencio; entre golpes, la caja de música sube por el acorde (la LLAMADA en el primero)
@@ -183,6 +183,18 @@ def check(mel, chords):
     out = [(b, st) for b, st, n, d in mel if n % 12 not in SCALE and n % 12 not in tones(b)]
     return bad, out
 
+
+def loose(mel, tones_at):
+    """Notas fuera del acorde que NO van por grado (entran o salen saltando) o duran ≥ 3 semicorcheas: lo que suena
+    "raro" (el usuario, 0.5.42). Las de paso y las bordaduras, que entran y salen por grado, sí valen"""
+    T = lambda m: (m[0] - 1) * 16 + m[1]
+    bad = []
+    for i, (b, st, n, d) in enumerate(mel):
+        if n % 12 in tones_at(b, st): continue
+        p = mel[i - 1] if i and T(mel[i - 1]) + mel[i - 1][3] >= T(mel[i]) - 2 else None
+        x = mel[i + 1] if i + 1 < len(mel) and T(mel[i]) + d >= T(mel[i + 1]) - 2 else None
+        if d >= 3 or not p or abs(n - p[2]) > 2 or not x or abs(x[2] - n) > 2: bad.append((b, st))
+    return bad
 
 def bass_vs_harmony(bass, chords):
     return sum((x[2] - chords[x[0] - 1][0]) % 12 not in (0, 7) for x in bass), len(bass)
@@ -393,6 +405,8 @@ def build():
           f'melodía {grp(LEADS):.0f} %')
     print('  secciones: ' + ' · '.join(f'{nm} {(starts[nm] - 1) * BAR // 60:.0f}:{(starts[nm] - 1) * BAR % 60:04.1f}' for nm, *_ in SECTIONS))
     print(f'  notas largas fuera del acorde: {bad or "ninguna"} · fuera de escala y acorde: {out or "ninguna"}')
+    sk = loose(mel, lambda b, st: {(chords[b - 1][0] + i) % 12 for i in chords[b - 1][1] + ((10,) if chords[b - 1] == ch('A') else ())})
+    print(f'  notas fuera del acorde que saltan o se alargan: {sk or "ninguna"}')
     print(f'  bajo contra la armonía (ni raíz ni 5ª): {bh} de {nbh} · intervalo medio {iv.mean():.2f} st, '
           f'grados {np.mean(iv <= 2) * 100:.0f} %, saltos de octava {np.mean(iv >= 12) * 100:.0f} %, '
           f'a contratiempo {np.mean([m[1] % 4 != 0 for m in mel]) * 100:.0f} %')

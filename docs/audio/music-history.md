@@ -566,6 +566,15 @@ the old level tune in the final boss, Verity's hook).
   Pufferfish). Generator renamed `caida_libre.py` → `resaca.py` (versions v1/v2 stay archived under their old name in
   `FlappyMonster_originals/music/versiones/caida_libre_v*/`); −10.1 LUFS, catalog volume 0.71 (−13 in game).
 
+- v4 (0.5.42; v3 archived: `FlappyMonster_originals/music/versiones/resaca_v3/`). User: "some sections' melody sounds
+  strange, composed in a very unconventional and not very harmonious way". Measured: 34 of 517 melody notes were OFF
+  the chord and either leapt in/out (escape tones like the E6 between two C#6 over F#m, C# over D leaping to A) or were
+  held on a beat (B5 / G#5 / D6 / E6 as dotted 8ths on the downbeat over the F#m pedal) — mostly in the second half of
+  A / A' (the same bars), the climax and the final A; the hooks themselves were fine (their G# passes by step). Those
+  bars rewritten keeping rhythm and contour (non-chord tones now only as passing / neighbour notes); 3 neighbour notes
+  left (they resolve by step). HOOK_C now falls E–D–C#. Steps 51 → 48 %, everything else unchanged. Previews:
+  `FlappyMonster_pruebas/musica/resaca/` (`resaca_v3_antes` vs `resaca_v4`). Not listened to.
+
 ## La Polilla (`tools/music/polilla.py`, boss track `polilla`)
 
 - 0.5.41: the user asked for the Giant Hopper's own theme (it used `crab_tantrum_gloomy` provisionally): "completely
@@ -583,3 +592,8 @@ the old level tune in the final boss, Verity's hook).
   off scale/chord, 2 of 69 melody bars repeated literally (the hook head), mean interval 3.34 st, steps 31 %, 42 % off
   the beat; energy melody 17 %, bass 29 %, drums 39 %; −10.8 LUFS, catalog volume 0.78. Previews:
   `FlappyMonster_pruebas/musica/polilla/`. NOT listened to; waiting for the user's verdict.
+- v2 (0.5.42; v1 archived: `FlappyMonster_originals/music/versiones/polilla_v1/`). User on v1: "quite a good theme",
+  but some sections' melody sounds strange / not harmonious (same as Resaca). Measured the same way: 18 non-chord notes
+  leaping in or out (C#6 over Dm jumping to A, D6 over E♭ — a major 7th — leaping down, F6 over Gm alone between two
+  leaps…), in A' and B. Rewritten as passing / neighbour notes; what is left are neighbours resolving by step and G as
+  the 7th of A7. Previews: `FlappyMonster_pruebas/musica/polilla/` (`polilla_v1_antes` vs the new ones). Not listened to.
