@@ -172,6 +172,30 @@ function PlayerAdventure:getHeadPoint()
     return ob.x + ob.w * 0.5, ob.y + ob.h * 0.05
 end
 
+-- Apoya al jugador en el suelo que tiene justo debajo (al empezar el nivel). El inicio (Level:getSpawnPx) es el
+-- CENTRO de una casilla y la caja del monstruo baja más de media casilla: aparecía metido en el suelo hasta el
+-- primer paso de física, que lo saca; con la cuenta atrás (todo congelado, StartCountdown) se veía así 3 s. Mira las
+-- dos casillas de debajo como el aterrizaje de moveAndCollide (la cara de arriba de su hitbox); sin suelo, no toca nada.
+function PlayerAdventure:settle(level)
+    local T = TILE_PX
+    local row = math.floor(self.y / T)                     -- (fila de la casilla de inicio, desde 0)
+    local best
+    for _, px in ipairs({ self.x - self.w/2 + 4, self.x, self.x + self.w/2 - 4 }) do
+        for k = 1, 2 do
+            local py = (row + k) * T + T - 1                   -- (el fondo de la casilla: también pilla losas bajas)
+            local t = level:collisionAt(px, py, true)
+            if t then
+                local top = (row + k) * T + t.hitbox.y * T
+                if not best or top < best then best = top end
+                break
+            end
+        end
+    end
+    if not best then return end
+    self.y = best - OUTER_H / 2 - OUTER_YOFF
+    self.spawnY = self.y
+end
+
 -- ¿Cabe de pie? (la hitbox de pie, con los mismos pies, no toca nada sólido).
 -- Agachado en un hueco de 1 casilla de alto no hay sitio: sigue agachado.
 function PlayerAdventure:canStand(level)

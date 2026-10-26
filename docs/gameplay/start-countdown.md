@@ -46,3 +46,9 @@ level for fixed seconds skip it (`perf`: `st.startCd = nil`) or count after it (
 - 0.5.36 (2026-10-26): added at the user's request ("un sistema genérico de cuenta atrás para que el jugador tenga
   tiempo de reacción… todo congelado… también para el modo online"). Before, only auto-scroll levels had a countdown,
   and players could move during it. Not judged by a person yet (feel, timing, sound).
+- 0.5.37: the monster showed half sunk into the ground during the countdown and popped up when it ended (the user).
+  Cause: `Level:getSpawnPx` is the CENTRE of the start cell and the monster's box reaches more than half a cell
+  below it; the first physics step pushed it out, and the countdown now held that first frame for 3 s.
+  `PlayerAdventure:settle(level)` puts the feet on the ground below (same top face as the landing in
+  `moveAndCollide`); called when the player is created in `AdventureState` and in the server's `initRoomSim` (the
+  client gets it in `game_init`). `story_flow` `apoyado`: the first step after the countdown moves it 0 px.

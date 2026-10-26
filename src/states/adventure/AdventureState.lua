@@ -115,6 +115,7 @@ function AdventureState:enter(args)
     end
     local sx, sy = self.level:getSpawnPx()
     self.player = PlayerAdventure:new(sx, sy)
+    self.player:settle(self.level)             -- (de pie sobre el suelo desde el primer fotograma: la cuenta atrás)
     self.player:applyDifficulty()
     if self.startLives then self.player.lives = self.startLives end
     self.level.players = { self.player }       -- para trampas/entidades que "ven" al jugador

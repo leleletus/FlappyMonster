@@ -156,6 +156,11 @@ function love.update(dt)
             and p.x == CD1.x and p.y == CD1.y and st.levelTime == 0,
             ('transición al entrar=%s; cuenta atrás %.2f → %s s; el jugador quieto=%s; reloj del nivel %.2f'):format(tostring(IRIS1),
              CD1.cd or -1, tostring(st.startCd and ('%.2f'):format(st.startCd)), tostring(p.x == CD1.x and p.y == CD1.y), st.levelTime))
+        -- (y de pie SOBRE el suelo: el primer paso de física no lo mueve — antes salía metido y lo sacaba al empezar)
+        local y0 = p.y
+        p:update(1 / 60, st.level)
+        check('apoyado', p.onGround and math.abs(p.y - y0) < 1,
+            ('al acabar la cuenta atrás el primer paso lo mueve %.1f px (en el suelo=%s)'):format(p.y - y0, tostring(p.onGround)))
         CD_DONE = true
         st.startCd = nil
         IN1 = st.levelPath == Worlds.path(W1[1].id) and st.returnTo == 'story_map' and st.level.difficulty == 'easy'

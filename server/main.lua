@@ -317,6 +317,7 @@ local function initRoomSim(room)
         if c then
             local spawnX = sx + (i - 1 - (N - 1) / 2) * SPAWN_STAGGER
             local pa = PlayerAdventure:new(spawnX, sy)
+            pa:settle(level)        -- (de pie sobre el suelo ya en la cuenta atrás; el cliente lo recibe en game_init)
             pa:applyDifficulty()
             pa.lives = PLAYER_LIVES
             pa.netId = pid          -- a quién atribuir sus sonidos (golpes de jefe)
