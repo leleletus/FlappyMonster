@@ -159,8 +159,14 @@ function love.update(dt)
             if (pa.iceT or 0) > 0 then watch.iced = (watch.iced or 0) + 1 end
         end
     end
-    -- Reloj del HUD en los modos con tiempo: tiene que ir hacia atrás
-    if st and st.roundEndAt then
+    -- Cuenta atrás del principio (StartCountdown): mientras dura, el jugador propio no se mueve (aunque se pulse)
+    local cdRem = st and st._startRemaining and st:_startRemaining()
+    if cdRem and cdRem > 0.2 and st.localPaInit then
+        startCd = startCd or { x = st.renderX, y = st.renderY, max = cdRem, moved = 0 }
+        startCd.moved = math.max(startCd.moved, math.abs(st.renderX - startCd.x) + math.abs(st.renderY - startCd.y))
+    end
+    -- Reloj del HUD en los modos con tiempo: tiene que ir hacia atrás (tras la cuenta atrás: durante ella está quieto)
+    if st and st.roundEndAt and not (cdRem and cdRem > 0) then
         local left = st.roundEndAt - st.levelTime
         clk = clk or { first = left, t = t }
         clk.last, clk.lastT = left, t
@@ -176,6 +182,9 @@ function love.update(dt)
             print(('jefes en el cliente: %d'):format(nb))
             if os.getenv('DIFF') == 'xtra' and #(st.level.bossZones or {}) > 0 and nb < 2 then print('Error: el cliente no tiene los dos jefes de Xtra extremo') end
         end
+        print(('cuenta atrás: %s (desde %.1f s), el jugador se movió %.1f px'):format(tostring(startCd ~= nil),
+              startCd and startCd.max or -1, startCd and startCd.moved or -1))
+        if not startCd or startCd.moved > 1 then print('Error: sin cuenta atrás al empezar o el jugador se mueve durante ella') end
         if clk then
             local fell = clk.first - clk.last
             print(('reloj: %.1f s → %.1f s (baja %.1f s en %.1f s)'):format(clk.first, clk.last, fell, clk.lastT - clk.t))

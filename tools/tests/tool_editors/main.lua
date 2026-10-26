@@ -176,7 +176,8 @@ runtimeFlow = function(dt)
                                   { type = 'bomb', col = 16, row = 11, props = { patrol = { left = 11, right = 21 }, trigger = 0 } },
                                   { type = 'trampoline', col = 7, row = 11 } } })
         RT.start = frame
-    elseif RT.start and frame > RT.start + 2 then
+    elseif RT.start and frame > RT.start + 2 and not (gStateMachine and (gStateMachine:_top() or {}).startCd) then
+        -- (se cuenta tras la cuenta atrás del principio del nivel, StartCountdown: durante ella todo está quieto)
         RT.t = RT.t + dt
         local st = gStateMachine and gStateMachine:_top()
         for _, e in ipairs(st and st.enemies or {}) do
@@ -194,7 +195,7 @@ runtimeFlow = function(dt)
                 else S.last = nil end
             end
         end
-        if frame == RT.start + 30 then love.graphics.captureScreenshot(function(img) img:encode('png', 'tool_anim_runtime.png') end) end
+        if not RT.shot and RT.t >= 0.5 then RT.shot = true; love.graphics.captureScreenshot(function(img) img:encode('png', 'tool_anim_runtime.png') end) end
         if RT.t >= 4 then
             local function count(tb) local c = 0; for _ in pairs(tb) do c = c + 1 end; return c end
             local G, B = RT.seen.gloomy or { frames = {}, changes = 0, time = 0, shown = {} }, RT.seen.bomb or { frames = {}, changes = 0, time = 0 }

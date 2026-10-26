@@ -23,6 +23,7 @@ local BossHud         = require 'src/ui/BossHud'
 local AutoScroll      = require 'src/world/systems/AutoScroll'
 local Floods          = require 'src/world/systems/Floods'
 local PointAreas      = require 'src/world/systems/PointAreas'
+local StartCountdown  = require 'src/world/systems/StartCountdown'
 
 local AdventureState = BaseState:new()
 
@@ -174,6 +175,11 @@ function AdventureState:enter(args)
     self.camX = 0
     self.camY = 0
     self.camFrozen = false
+    self.camSnap = true             -- (el primer encuadre, sin barrido desde la esquina: se ve quieto en la cuenta atrás)
+    -- CUENTA ATRÁS del principio (src/world/systems/StartCountdown.lua): todo congelado mientras dura (la demo, no)
+    self.startCd   = (not self.demo) and StartCountdown.TIME or nil
+    self.startPrev = nil            -- (lo que faltaba el frame anterior: para el sonido de cada número)
+    self.startGoT  = nil            -- (s desde el ¡YA!: el cartel)
 
     self.sceneCanvas = require('src/fx/SceneCanvas').get()      -- (compartido: src/fx/SceneCanvas.lua)
 
@@ -338,6 +344,7 @@ function AdventureState:updateCamera(dt)
         targetX = AutoScroll.cameraX(self.level)
     end
 
+    if self.camSnap then self.camX, self.camY, self.camSnap = targetX, targetY, false; return end
     local k = CAM_LERP * BossZones.cameraEase(self, zx ~= nil, dt)      -- (sin tirón al entrar / salir de una zona)
     self.camX = self.camX + (targetX - self.camX) * k * dt
     self.camY = self.camY + (targetY - self.camY) * k * dt
@@ -510,6 +517,19 @@ function AdventureState:update(dt)
         return
     end
 
+    -- ── Cuenta atrás del principio: el mundo congelado y sin control ──────────
+    if self.startCd then
+        StartCountdown.beeps(self.startPrev, self.startCd - dt)
+        self.startPrev = self.startCd - dt
+        self.startCd = self.startCd - dt
+        if self.startCd > 0 then self:updateCamera(dt); return end
+        self.startCd, self.startGoT = nil, 0
+    end
+    if self.startGoT then
+        self.startGoT = self.startGoT + dt
+        if self.startGoT >= StartCountdown.GO_TIME then self.startGoT = nil end
+    end
+
     -- ── Nivel superado: un momento de celebración y se sale ───────────────────
     if self.won then
         self.wonT = self.wonT + dt
@@ -615,7 +635,7 @@ function AdventureState:update(dt)
     self:checkEnemyCollisions()
     if not (self.demo and self.demo.noBossCtl) then self:updateBoss(dt) end      -- (los créditos: jefes sin pelea de verdad)
     for _, ev in ipairs(AutoScroll.update(self.level, dt)) do
-        if ev.type == 'scroll_start' then self.bossBanner = { text = L('hud.go'), t = 0, col = { 0.4, 1, 0.5 } } end
+        if ev.type == 'scroll_start' and not ev.quiet then self.bossBanner = { text = L('hud.go'), t = 0, col = { 0.4, 1, 0.5 } } end
     end
     Particles.update(dt)
     self:checkVentOxyCollisions()
@@ -695,6 +715,7 @@ function AdventureState:renderBossHud()
         BossHud.drawBanner(self.bossBanner.text, self.bossBanner.t, 2.2, self.bossBanner.col)
     end
     BossHud.drawScrollCountdown(self.level.autoScroll)
+    if self.startCd or self.startGoT then BossHud.drawStartCountdown(self.startCd or -self.startGoT) end
     BossHud.drawRun(self.level, self.enemies)                     -- (la persecución del Espejo: ¡CORRE!)
     BossHud.drawUndertow(self.level)                              -- (la resaca: ¡RESACA! y hacia dónde)
 end

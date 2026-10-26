@@ -69,7 +69,7 @@ conflicts with the sections above, the sections above describe the current behav
   frozen or pushed, and touching it KILLS (not while invulnerable after respawning). Its x comes from the level's
   auto-scroll camera (`a.x + LEAD` 1.1 tiles inside the left edge + the lunge), it flies through everything at the
   nearest player's height, and every `lungeEvery` s it LUNGES: 'wind' (0.6 s: shrinks and shakes) → 'dash'
-  (`lungeDist` tiles out and back) → 'chase'. 'lurk' before the camera runs (laughs at the countdown); 'left' when the
+  (`lungeDist` tiles out and back) → 'chase'. 'lurk' before the camera runs (laughs when the run starts — 0.5.36: no auto-scroll countdown at level start any more, see [start-countdown](../gameplay/start-countdown.md)); 'left' when the
   run ends (shatters, gone). SP/server compute it; clients draw x, y, state, deadTimer from snapshots. Drawn like the
   Mirror (the player's sprites through an invert shader) with a trail and hard dark bands behind it. Not a `boss` for
   the systems (no zone, no bar, no shard).

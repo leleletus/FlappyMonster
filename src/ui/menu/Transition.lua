@@ -4,7 +4,9 @@
 -- de estado, y se vuelve a abrir. El borde va a escalones de IRIS_PX px (pixel art, sin bordes suaves). Mientras
 -- tapa, el estado de debajo no se actualiza (no se puede pulsar nada dos veces); mientras abre, el nuevo ya va (sus
 -- animaciones de entrada se ven debajo). (El fondo vivo usa el mismo iris al pasar de un nivel a otro: drawIris.)
---   Transition.go(estado, args[, x, y])   en vez de gStateMachine:change(estado, args); x, y = dónde se cierra
+--   Transition.go(estado, args[, x, y[, opts]])   en vez de gStateMachine:change(estado, args); x, y = dónde se cierra
+--     opts.style = 'level' (entrar a un nivel desde el mapa del mundo): el iris se cierra más despacio sobre el
+--     monstruo, la pantalla se funde a NEGRO y el nivel aparece con un fundido desde negro (sin iris que se abre)
 --   Transition.update(dt) / Transition.render() / Transition.blocking()   (game.lua)
 --   Transition.drawIris(k, x, y)          k = 0 cerrado del todo … 1 abierto del todo (nada que dibujar)
 local Transition = {}
@@ -14,15 +16,20 @@ Transition.HOLD = 0.08          -- s a oscuras
 Transition.REVEAL = 0.46        -- s en abrirse
 Transition.IRIS_PX = 8          -- px (lógicos) de cada escalón del borde
 Transition.COLOR = { 0.05, 0.06, 0.13 }
+Transition.LEVEL = { COVER = 0.6, HOLD = 0.4, REVEAL = 0.5 }     -- s de cada fase con el estilo 'level'
 
 local phase, t, target = nil, 0, nil
-local cx, cy
+local cx, cy, style
 
-function Transition.go(name, args, x, y)
+function Transition.go(name, args, x, y, opts)
     if phase == 'cover' or phase == 'hold' then return end
     phase, t, target = 'cover', 0, { name, args }
     cx, cy = x, y
+    style = opts and opts.style or nil
 end
+
+-- Duración de una fase ('COVER' / 'HOLD' / 'REVEAL') con el estilo actual
+local function dur(k) return (style == 'level' and Transition.LEVEL or Transition)[k] end
 
 function Transition.active() return phase ~= nil end
 function Transition.blocking() return phase == 'cover' or phase == 'hold' end
@@ -30,15 +37,15 @@ function Transition.blocking() return phase == 'cover' or phase == 'hold' end
 function Transition.update(dt)
     if not phase then return end
     t = t + dt
-    if phase == 'cover' and t >= Transition.COVER then
+    if phase == 'cover' and t >= dur('COVER') then
         phase, t = 'hold', 0
-    elseif phase == 'hold' and t >= Transition.HOLD then
+    elseif phase == 'hold' and t >= dur('HOLD') then
         local tg = target
         phase, t, target = 'reveal', 0, nil
         cx, cy = nil, nil                          -- (se abre desde el centro de la pantalla nueva)
         gStateMachine:change(tg[1], tg[2])
-    elseif phase == 'reveal' and t >= Transition.REVEAL then
-        phase = nil
+    elseif phase == 'reveal' and t >= dur('REVEAL') then
+        phase, style = nil, nil
     end
 end
 
@@ -98,6 +105,20 @@ end
 
 function Transition.render()
     if not phase then return end
+    if style == 'level' then
+        local col = Transition.COLOR
+        if phase == 'cover' then Transition.drawIris(1 - t / dur('COVER'), cx, cy)
+        elseif phase == 'hold' then                                   -- (del color del iris a negro)
+            local k = 1 - math.min(1, t / (dur('HOLD') * 0.7))
+            love.graphics.setColor(col[1] * k, col[2] * k, col[3] * k, 1)
+            love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
+        else                                                          -- (el nivel sale del negro)
+            love.graphics.setColor(0, 0, 0, 1 - math.min(1, t / dur('REVEAL')))
+            love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
+        end
+        love.graphics.setColor(1, 1, 1, 1)
+        return
+    end
     if phase == 'cover' then Transition.drawIris(1 - t / Transition.COVER, cx, cy)
     elseif phase == 'hold' then Transition.drawIris(0, cx, cy)
     else Transition.drawIris(t / Transition.REVEAL, cx, cy) end

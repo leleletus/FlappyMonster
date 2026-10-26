@@ -91,7 +91,14 @@ function love.update(dt)
     local st = top()
     local W1 = Worlds.nodes(1)
     -- (mientras el cartucho elegido se mete o la transición de pantalla tapa: el guion espera; docs/architecture/menus.md)
+    if require('src/ui/menu/Transition').active() and step == 'in1' then
+        IRIS1, IRISF = true, (IRISF or 0) + 1
+        if IRISF == 22 then shot('level_iris') end                 -- (a media transición: el iris sobre el monstruo)
+    end
     if st.inserting or require('src/ui/menu/Transition').active() then return end
+    -- (la cuenta atrás del principio de cada nivel, StartCountdown: se prueba en el primero — pasos in1 / in1b —; en
+    -- los demás se pasa de largo, como las películas)
+    if st.startCd and CD_DONE then st.startCd = nil end
     -- (una partida nueva empieza con la INTRO de la historia, y algunos niveles con la suya: aquí se pasan de largo; la
     -- prueba de las películas es tools/tests/story_film)
     if st.film and st._finish then
@@ -139,6 +146,18 @@ function love.update(dt)
     elseif step == 'play1' and t - T > 0.3 then
         pressNext('confirm'); go('in1')
     elseif step == 'in1' and t - T > 0.6 then
+        -- ENTRAR desde el mapa: iris + fundido (Transition, estilo 'level') y la cuenta atrás con todo congelado
+        CD1 = { x = st.player.x, y = st.player.y, cd = st.startCd }
+        shot('level_countdown')
+        go('in1b')
+    elseif step == 'in1b' and t - T > 1.0 then
+        local p = st.player
+        check('entrar', IRIS1 == true and CD1.cd ~= nil and CD1.cd > 0 and st.startCd ~= nil and st.startCd < CD1.cd
+            and p.x == CD1.x and p.y == CD1.y and st.levelTime == 0,
+            ('transición al entrar=%s; cuenta atrás %.2f → %s s; el jugador quieto=%s; reloj del nivel %.2f'):format(tostring(IRIS1),
+             CD1.cd or -1, tostring(st.startCd and ('%.2f'):format(st.startCd)), tostring(p.x == CD1.x and p.y == CD1.y), st.levelTime))
+        CD_DONE = true
+        st.startCd = nil
         IN1 = st.levelPath == Worlds.path(W1[1].id) and st.returnTo == 'story_map' and st.level.difficulty == 'easy'
               and st.player.hpMax == 4
         LIVES0 = st.player.lives

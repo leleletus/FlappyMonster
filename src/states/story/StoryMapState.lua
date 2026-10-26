@@ -21,6 +21,7 @@ local Shards = require 'src/story/Shards'
 local Difficulty    = require 'src/core/Difficulty'
 local json          = require 'libs/json'
 local L = require 'src/core/Lang'
+local Transition    = require 'src/ui/menu/Transition'
 
 local StoryMapState = BaseState:new()
 
@@ -540,10 +541,12 @@ function StoryMapState:_play()
     self.queue = {}
     self.heroX, self.heroY = nodeXY(world, node)
     self:_remember()
-    Sound.play('select')
+    -- ENTRAR: su sonido y el iris que se cierra sobre el monstruo, a negro, y el nivel (o su cinemática) — ver _go
+    Sound.play('levelEnter')
+    self.entering = true
     if n.bonus then
         -- BONUS: Rey de la Colina contra el bot (src/story/BonusMatch.lua); las vidas de la aventura no se tocan
-        gStateMachine:change('adventure', {
+        self:_go('adventure', {
             level = Worlds.path(n.id), returnTo = 'story_map', difficulty = Run.data.difficulty,
             bonus = { onEnd = function(result)
                 -- a la pantalla de RESULTADOS (la misma de los niveles, con las líneas del bonus) y de ahí al mapa
@@ -569,18 +572,28 @@ function StoryMapState:_play()
     if film and not Run.isDone(n.id) and not Run.data.films[film] then
         Run.data.films[film] = true
         Run.save()
-        gStateMachine:change('story_film', { film = film, xtra = Shards.isXtra(Run.data.difficulty),
-                                             onDone = function() self:_start(world, node) end })
+        self:_go('story_film', { film = film, xtra = Shards.isXtra(Run.data.difficulty),
+                                 onDone = function() self:_start(world, node) end })
         return
     end
     self:_start(world, node)
+end
+
+-- Cambia de estado: saliendo del mapa (_play), con la transición de entrar a un nivel — el iris se cierra sobre el
+-- monstruo, fundido a negro y el nivel sale del negro (Transition, estilo 'level') —; desde otro sitio (una
+-- cinemática, la carrera que enlaza con la siguiente), directo
+function StoryMapState:_go(state, args)
+    if not self.entering then gStateMachine:change(state, args); return end
+    self.entering = false
+    local cx, cy = math.floor(self.camX or 0), math.floor(self.camY or 0)
+    Transition.go(state, args, math.floor(self.heroX - cx), math.floor(self.heroY - cy) - 16, { style = 'level' })
 end
 
 -- Entra en el nivel del nodo (con sus vidas, fragmentos, Game Over y, al terminarlo, los resultados)
 function StoryMapState:_start(world, node)
     local n = mapNodes(world)[node]
     local gotShards = {}
-    gStateMachine:change('adventure', {
+    self:_go('adventure', {
         level = Worlds.path(n.id), returnTo = 'story_map', difficulty = Run.data.difficulty,
         -- las VIDAS son de la aventura: entran con las que lleva; las PERDIDAS se guardan salga como salga, las
         -- ganadas (como todo lo demás del nivel: puntos, fragmentos) solo si lo TERMINA (AdventureState:exit)

@@ -27,7 +27,7 @@ save slots are **cartridges** (Sonic 3 style save select).
 | `src/ui/menu/MenuList.lua` | a vertical list of buttons (one geometry for drawing, mouse and touch), plus `header` (title banner) and `footer` (description panel + controls hint) |
 | `src/ui/menu/MenuButton.lua` | draws a button / the panel from the 9-slice sheets |
 | `src/ui/menu/TitleLogo.lua` | the remastered logo (box + letters, intro animation, wave); used by the title and by the story ending film |
-| `src/ui/menu/Transition.lua` | the iris; `Transition.go(state, args[, x, y])` instead of `gStateMachine:change` (hooked in `game.lua`: update, render, and input blocked while it closes); `Transition.drawIris(k, x, y)` (also used between background scenes) |
+| `src/ui/menu/Transition.lua` | the iris; `Transition.go(state, args[, x, y[, opts]])` (`opts.style = 'level'`: entering a level from the world map — slower iris, fade to black, fade in from black) instead of `gStateMachine:change` (hooked in `game.lua`: update, render, and input blocked while it closes); `Transition.drawIris(k, x, y)` (also used between background scenes) |
 | `assets/images/ui/menus/title_logo.png` + `.json` | the remastered logo: the box and each letter separately (sheet + where each letter goes) |
 | `assets/images/ui/menus/button.png` + `.json`, `panel.png` | buttons (one column per colour; row 1 normal, row 2 selected; the palette is muted by `MUTE` toward grey; since 0.5.19 three tones — outline, body, 2-px lip — plus a top light line only) and the panel |
 | `assets/images/ui/menus/cartridge.png` + `.json`, `cart_labels.png` | cartridge shells (red, blue, green, grey = empty; normal / selected) and the island windows (one per world + "new") |

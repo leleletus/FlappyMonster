@@ -84,7 +84,10 @@ almost every section reassigns, so it could not be split mechanically like the o
 - Events `"ev"` (reliable, tick-stamped): sound, score, tile, fx, pickup,
   checkpoint, finish, spectate, air_collected, round_end (+ custom).
 
-- `game_init` sends roster (idx,id,name,color) + the level JSON text.
+- `game_init` sends roster (idx,id,name,color) + the level JSON text + `cd` (start countdown ticks).
+
+- Start countdown (v64): the first `startTicks` ticks of a round simulate nothing (inputs drained and acked); the
+  client predicts those inputs without moving. See [start-countdown](../gameplay/start-countdown.md).
 
 Server load (0.5.11): the level catalog keeps each level's info with its file's modtime (a rescan only loads new or
 changed levels — before, every 10 s it rebuilt all 44 with previews on the match thread) and builds the
@@ -157,4 +160,4 @@ v12 launches · v14 crouch jump · v16 King of the Hill · v18 Mega Crabby · v2
 and invisible blocks, helmet, pufferfish · v24 subtiles · v25 connected floods · v27 ON/OFF blocks · v28 generic boss
 intros · v32 bombs · v33 snow / ice · v36 freezer · v38 Snowball Boss, zone phases · v39-40 icy crabs · v41 Gummy
 King · v43 dark levels, flashlight, Gloomy · v46 Mega Gloomy · v48-52 Hopper and island variants · v53-54 Mirror
-chase · v55 apple / heal pickup · v56 moving point zone clock, difficulty chosen by the host · v57 Claudio (first data-driven type shipped) · v58 boss-fight help on Extreme / Xtra Extreme (`bossdrops` director + its reserve appended to the entity list) · v59 Xtra Extreme: one angry boss (`bossFury`) instead of two · v60 new boss defeats (they flee giant: new dying_* states).
+chase · v55 apple / heal pickup · v56 moving point zone clock, difficulty chosen by the host · v57 Claudio (first data-driven type shipped) · v58 boss-fight help on Extreme / Xtra Extreme (`bossdrops` director + its reserve appended to the entity list) · v59 Xtra Extreme: one angry boss (`bossFury`) instead of two · v60 new boss defeats (they flee giant: new dying_* states) · v64 start countdown (world frozen, `cd` in `game_init`).

@@ -79,6 +79,12 @@ are spread along the path from `Worlds.lua`. **Harness:** `story_flow` (captures
   level at once): `_play` with the walk queue not empty only notes `playOnArrive`; the level opens when the hero
   ARRIVES; asking for another destination cancels it (`_walkTo`). Harness `story_flow` `andando`.
 
+- (9) ENTERING A LEVEL (0.5.36; the user: "de golpe apareces en el nivel"): `_play` plays `levelEnter`
+  (`tools/sounds/ui.py`) and goes through `_go`: `Transition.go(..., { style = 'level' })` — the iris closes on the
+  monster (0.6 s), the screen fades to black (0.4 s) and the level (or its first-time film / the bonus) fades in from
+  black (0.5 s), then the level's start countdown ([start-countdown](../gameplay/start-countdown.md)). Changes that
+  don't start on the map (after a film, a race chaining into the next node) stay direct. Not judged by a person yet.
+
 - (7) AFTER A LEVEL the hero stays on the node JUST CLEARED and the newly opened stops unlock on screen (`args.opened` → `self.opening`: locked for `OPEN_AT` 0.7 s, then a hop + rings + sound).
 
 ## History and decisions (dated notes)

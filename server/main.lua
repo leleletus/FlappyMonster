@@ -118,7 +118,7 @@ local _inp = Input.state
 
 -- Clases de entidades (cargadas en love.load).
 local Difficulty
-local Level, PlayerAdventure, Entities, BossZones, AutoScroll, Floods, PointAreas
+local Level, PlayerAdventure, Entities, BossZones, AutoScroll, Floods, PointAreas, StartCountdown
 local buildResults   -- definida más abajo
 
 -- Constantes que deben coincidir con PlayerAdventure.lua
@@ -301,7 +301,9 @@ local function initRoomSim(room)
                   nextBubbleId=0,
                   levelRaw = love.filesystem.read(room.level),   -- se envía a los clientes
                   mode = Modes.get(room.mode),
-                  startPlayers = #room.playerIds }
+                  startPlayers = #room.playerIds,
+                  -- cuenta atrás del principio (src/world/systems/StartCountdown.lua): estos ticks, todo congelado
+                  startTicks = StartCountdown.ticks(TICK_DT) }
 
     -- Crear instancias de las entidades del nivel (enemigos, NPCs)
     for _, placement in ipairs(level.entities) do
@@ -623,6 +625,19 @@ buildResults = function(room, reason)
              note = note and Lang(note), noteKey = note, tie = tie or false, entries = entries }
 end
 
+-- Cuenta atrás del principio: los inputs se consumen y se confirman (el cliente los predice quietos, ver
+-- Predictor:tick) pero nadie se mueve
+local function drainFrozenInputs(ps)
+    local q = ps.queue
+    while #q > 0 do
+        local cmd = table.remove(q, 1)
+        ps.lastProcSeq = cmd.seq
+        ps.lastBits    = cmd.bits
+        if cmd.v then ps.viewTick = cmd.v end
+    end
+    ps.budget, ps.starve, ps.highQueue = 0, 0, 0
+end
+
 -- Avanzar la simulación de una sala un tick fijo
 local _currentSim = nil     -- sala que se está simulando (para los efectos visuales)
 
@@ -637,12 +652,24 @@ local function stepRoom(room)
     _soundEvents = {}
     _emitX, _emitY = nil, nil
 
+    -- ── Cuenta atrás del principio (StartCountdown): el mundo entero congelado ─
+    if sim.tick <= sim.startTicks then
+        for _, pid in ipairs(room.playerIds) do
+            local ps = sim.playerSims[pid]
+            if ps then drainFrozenInputs(ps) end
+        end
+        recordEnemyHistory(sim)               -- (la compensación de latencia mira ticks pasados)
+        return
+    end
+
     -- ── Reloj de nivel (autoritativo) ────────────────────────────────────────
     sim.levelTime = math.min(sim.levelTime + TICK_DT, LEVEL_TIME_MAX)
     -- Inundaciones: el nivel del agua es función del tick (el cliente lo estima
-    -- igual); las controladas (jefe / ON-OFF) cambian aquí y van en el snapshot
-    Floods.control(sim.level, sim.tick * TICK_DT)
-    Floods.setTime(sim.level, sim.tick * TICK_DT)
+    -- igual; empieza al acabar la cuenta atrás); las controladas (jefe / ON-OFF)
+    -- cambian aquí y van en el snapshot
+    local floodT = (sim.tick - sim.startTicks) * TICK_DT
+    Floods.control(sim.level, floodT)
+    Floods.setTime(sim.level, floodT)
 
     -- Límite de 10 minutos: matar a todos los jugadores activos (igual que modo solo)
     if sim.levelTime >= LEVEL_TIME_MAX and not sim.timeLimitKilled then
@@ -873,6 +900,7 @@ local function sendGameInit(room)
                 mode     = room.mode,
                 difficulty = room.difficulty,   -- (nil = sin dificultad)
                 level    = sim.levelRaw,        -- el nivel viaja al cliente
+                cd       = sim.startTicks,      -- cuenta atrás del principio (ticks), StartCountdown
             })
         end
     end
@@ -1625,6 +1653,7 @@ function love.load()
     Entities        = require 'src/world/entities/Entities'
     BossZones       = require 'src/world/systems/BossZones'
     AutoScroll      = require 'src/world/systems/AutoScroll'
+    StartCountdown  = require 'src/world/systems/StartCountdown'
     Floods          = require 'src/world/systems/Floods'
     PointAreas      = require 'src/world/systems/PointAreas'
     Difficulty      = require 'src/core/Difficulty'

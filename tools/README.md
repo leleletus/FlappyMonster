@@ -69,7 +69,7 @@ diff of whatever it writes.
 
 One script per family, each writes WAVs into `assets/sounds/<group>/`: `ambience.py`, `bomb.py`, `cryo.py`,
 `gloomy.py`, `hopper.py`, `ice.py`, `items.py`, `water.py` (drowning music, alarm, gasp, glug, extra life), `startup.py` (the logo melody), `mechanics.py`, `megacrabby.py`, `megagummy.py`, `mirror.py`,
-`snowboss.py`, `story.py`. After generating: register the sound and its gain in `src/audio/Sound.lua`, then
+`snowboss.py`, `story.py`, `ui.py` (entering a level, the start countdown). After generating: register the sound and its gain in `src/audio/Sound.lua`, then
 `tools/tests/run.sh sounds NAMES=…`.
 
 ## music/

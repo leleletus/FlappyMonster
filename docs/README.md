@@ -19,6 +19,7 @@ are never edited by hand.
 | change anything that goes over the network | [architecture/netcode](architecture/netcode.md) |
 | add a difficulty modifier | [gameplay/difficulty](gameplay/difficulty.md) |
 | make or edit a level | [levels/editor](levels/editor.md), [levels/level-format](levels/level-format.md), [levels/generator-and-solver](levels/generator-and-solver.md), [levels/retheme](levels/retheme.md) |
+| change the countdown at the start of every level (single player and online) | [gameplay/start-countdown](gameplay/start-countdown.md) |
 | change the story order, saves, results | [story/story-mode](story/story-mode.md) |
 | change the world map | [story/world-map](story/world-map.md) |
 | change a cinematic | [story/cinematics](story/cinematics.md), [story/story](story/story.md) |
@@ -46,7 +47,7 @@ are never edited by hand.
   [known-debt](architecture/known-debt.md)
 - **gameplay/** — [player](gameplay/player.md) · [tiles-and-blocks](gameplay/tiles-and-blocks.md) ·
   [water-and-floods](gameplay/water-and-floods.md) · [dark-levels](gameplay/dark-levels.md) ·
-  [difficulty](gameplay/difficulty.md) · [game-modes](gameplay/game-modes.md) · [autoscroll](gameplay/autoscroll.md) ·
+  [difficulty](gameplay/difficulty.md) · [game-modes](gameplay/game-modes.md) · [autoscroll](gameplay/autoscroll.md) · [start-countdown](gameplay/start-countdown.md) ·
   [pickups](gameplay/pickups.md) · [free-play](gameplay/free-play.md) · [flappy-mode](gameplay/flappy-mode.md)
 - **entities/** — [overview](entities/overview.md) · [enemies](entities/enemies.md) ·
   [traps-and-mechanisms](entities/traps-and-mechanisms.md) · [enemy-editor](entities/enemy-editor.md) ·

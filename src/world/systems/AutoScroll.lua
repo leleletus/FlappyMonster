@@ -6,6 +6,9 @@
 --  * La "ventana" mide `width` casillas y empieza en la columna `startCol`.
 --  * 'wait': hasta que TODOS los jugadores activos estén dentro de la ventana
 --    (no se puede salir de ella). Luego 'countdown' (cuenta atrás) y 'run'.
+--    Al empezar el nivel ya hubo la cuenta atrás genérica (StartCountdown.lua):
+--    si en el primer paso tras ella están todos dentro, se corre ya (`cdSkip`);
+--    la propia solo se hace si faltaba alguien por entrar (online).
 --  * 'run': avanza `speed` px/s. No se puede adelantar a la cámara (pared a la
 --    derecha); quien se queda atrás más de `margin` casillas por la izquierda
 --    MUERE y reaparece en el centro de la ventana (respawnPoint).
@@ -62,6 +65,7 @@ function AutoScroll.build(d, level)
     c.x      = c.startX
     c.state  = 'wait'
     c.cd     = 0
+    c.cdSkip = true          -- (el primer paso: sin cuenta atrás propia, ya la hubo al empezar el nivel)
     return c
 end
 
@@ -117,9 +121,15 @@ function AutoScroll.update(level, dt, killFn)
         end
         a.arrived, a.needed = inside, #players
         if #players > 0 and inside == #players then
-            a.state, a.cd = 'countdown', a.countdown
-            events[#events+1] = { type = 'scroll_countdown' }
+            if a.cdSkip then
+                a.state, a.cd = 'run', 0
+                events[#events+1] = { type = 'scroll_start', quiet = true }   -- (sin cartel: ya salió el ¡YA!)
+            else
+                a.state, a.cd = 'countdown', a.countdown
+                events[#events+1] = { type = 'scroll_countdown' }
+            end
         end
+        a.cdSkip = nil
     end
     if a.state == 'countdown' then
         a.cd = a.cd - dt

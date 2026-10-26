@@ -213,6 +213,29 @@ function BossHud.drawUndertow(level)
     love.graphics.setColor(1, 1, 1, 1)
 end
 
+-- Cuenta atrás del principio del nivel (src/world/systems/StartCountdown.lua): `rem` = segundos que faltan. Cada
+-- número entra grande y se encoge; al llegar a 0, "¡YA!" en verde un momento (hasta rem = -GO_TIME). `fy` = altura de su
+-- centro (fracción de la pantalla; 0.4 por defecto — online va más abajo, bajo el cartel del modo —).
+function BossHud.drawStartCountdown(rem, fy)
+    local SC = require 'src/world/systems/StartCountdown'
+    if not rem or rem <= -SC.GO_TIME then return end
+    local PixelFont = require 'src/ui/PixelFont'
+    local go = rem <= 0
+    local text = go and L('hud.go') or tostring(math.ceil(rem))
+    local f = go and (-rem / SC.GO_TIME) or (math.ceil(rem) - rem)        -- 0..1 dentro de cada número
+    local s = math.max(22, math.floor(36 - 14 * math.min(1, f / 0.15) + 0.5))
+    local alpha = go and math.min(1, (1 - f) / 0.35) or 1
+    local col = go and { 0.4, 1, 0.5 } or { 1, 0.95, 0.3 }
+    if not PixelFont.has(text) then text = go and 'GO!' or text end
+    local w, h = PixelFont.width(text, s), PixelFont.height(s)
+    local x, y = math.floor((WINDOW_W - w) / 2), math.floor(WINDOW_H * (fy or 0.4) - h / 2)
+    for _, o in ipairs({ { -4, 0 }, { 4, 0 }, { 0, -4 }, { 0, 4 }, { -4, -4 }, { 4, -4 }, { -4, 4 }, { 4, 4 }, { 6, 8 } }) do
+        PixelFont.draw(text, x + o[1], y + o[2], s, alpha, { 0.05, 0.06, 0.13 })      -- (borde oscuro: se lee en cualquier fondo)
+    end
+    PixelFont.draw(text, x, y, s, alpha, col)
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
 function BossHud.drawScrollCountdown(a)
     if not a then return end
     if a.state == 'wait' and (a.needed or 0) > 1 then

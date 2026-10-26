@@ -33,6 +33,7 @@ local BossHud              = require 'src/ui/BossHud'
 local AutoScroll           = require 'src/world/systems/AutoScroll'
 local Floods               = require 'src/world/systems/Floods'
 local PointAreas           = require 'src/world/systems/PointAreas'
+local StartCountdown       = require 'src/world/systems/StartCountdown'
 local json                 = require 'libs/json'
 local PingIcon             = require 'src/ui/PingIcon'
 local TouchControls        = require 'src/ui/TouchControls'
@@ -148,6 +149,21 @@ function OnlineAdventureState:enter(args)
     Sound.setLevelMusic(nil)
     Sound.playMusic('level')
     self.musicSyncT = 0
+end
+
+-- ── Cuenta atrás del principio (src/world/systems/StartCountdown.lua) ───────────
+-- Segundos que faltan según el reloj del servidor (nil = sin cuenta atrás; negativo = ya acabó hace tanto)
+function OnlineAdventureState:_startRemaining()
+    if (self.startTicks or 0) <= 0 or not self.localPaInit then return nil end
+    if not (self.snapBuf and self.snapBuf.clock) then return StartCountdown.TIME end
+    return (self.startTicks - self.snapBuf.clock) * TICK_DT
+end
+
+-- ¿El servidor procesará aún congelados los inputs que predecimos ahora? (su tick ≈ reloj + ping, como el agua)
+function OnlineAdventureState:_startFrozenAhead()
+    if (self.startTicks or 0) <= 0 then return false end
+    if not (self.snapBuf and self.snapBuf.clock) then return true end
+    return self.snapBuf.clock + NC:getPing() / 1000 / TICK_DT < self.startTicks
 end
 
 -- (Re)construye el nivel, los renderers de entidades y el jugador local.
@@ -495,12 +511,22 @@ function OnlineAdventureState:update(dt)
     -- ── Canvas ────────────────────────────────────────────────────────────────
     self.sceneCanvas = require('src/fx/SceneCanvas').get()   -- (el mismo; otro si la pantalla cambió)
 
+    -- ── Cuenta atrás del principio: mientras dura, todo quieto (src/world/systems/StartCountdown.lua) ──
+    local startRem = self:_startRemaining()
+    local frozen = startRem ~= nil and startRem > 0
+    if startRem and startRem > -StartCountdown.GO_TIME and self.snapBuf and self.snapBuf.clock and not self.showGameOver then
+        StartCountdown.beeps(self.startPrev, startRem)
+        self.startPrev = startRem
+    end
+
     -- ── Tiempo: avanza localmente entre snapshots, el servidor lo corrige ─────
-    self.levelTime = math.min(self.levelTime + dt, 600)
+    if not frozen then self.levelTime = math.min(self.levelTime + dt, 600) end
 
     -- ── Animaciones visuales del nivel (foliaje, burbujas) ────────────────────
-    self.level:update(dt)
-    self.level:updateFoliage(dt)
+    if not frozen then
+        self.level:update(dt)
+        self.level:updateFoliage(dt)
+    end
 
     -- ── Mundo remoto: interpolación entre snapshots + eventos sincronizados ──
     if self.snapBuf then
@@ -538,8 +564,9 @@ function OnlineAdventureState:update(dt)
     -- ── Inundaciones: el agua depende solo del tiempo. Se usa el tick del
     -- servidor en el que se procesarán los inputs que predecimos ahora
     -- (reloj de snapshots + ping), así la predicción nada en la misma agua
-    if self.snapBuf and self.snapBuf.clock and #(self.level.floods or {}) > 0 then
-        local est = (self.snapBuf.clock + NC:getPing() / 1000 / TICK_DT) * TICK_DT
+    -- (el tiempo del agua empieza al acabar la cuenta atrás del principio, como en el servidor)
+    if self.snapBuf and self.snapBuf.clock and #(self.level.floods or {}) > 0 and not frozen then
+        local est = math.max(0, self.snapBuf.clock + NC:getPing() / 1000 / TICK_DT - (self.startTicks or 0)) * TICK_DT
         local cur = (self.level.floodTime or 0) + dt
         if math.abs(est - cur) > 0.5 then cur = est
         else cur = cur + (est - cur) * math.min(1, dt * 2) end
@@ -572,8 +599,9 @@ function OnlineAdventureState:update(dt)
             local bits = Protocol.encodeInput(s.left, s.right, s.jump, s.crouch,
                                               self.pendingJump, self.pendingCrouch, self.pendingLight)
             self.pendingJump, self.pendingCrouch, self.pendingLight = false, false, false
-            self.predictor:tick(bits)
-            if not self.localPa.dying then self:_checkLocalBounce() end
+            local held = self:_startFrozenAhead()                -- (cuenta atrás: el servidor aún no lo mueve)
+            self.predictor:tick(bits, held)
+            if not self.localPa.dying and not held then self:_checkLocalBounce() end
         end
         -- Tras un tirón largo no intentar recuperar todo de golpe
         if ticks >= MAX_TICKS_FRAME then self.simAccum = 0 end
@@ -679,7 +707,10 @@ function OnlineAdventureState:_renderBossHUD()
     if self.bossBanner then
         BossHud.drawBanner(self.bossBanner.text, self.bossBanner.t, 2.2, self.bossBanner.col)
     end
-    if not self.showGameOver then BossHud.drawScrollCountdown(self.level.autoScroll) end
+    if not self.showGameOver then
+        BossHud.drawScrollCountdown(self.level.autoScroll)
+        BossHud.drawStartCountdown(self:_startRemaining(), 0.6)      -- (bajo el cartel del modo)
+    end
     if not self.showGameOver then BossHud.drawRun(self.level, self.enemyRenderers) end
     if not self.showGameOver then BossHud.drawUndertow(self.level) end
 end

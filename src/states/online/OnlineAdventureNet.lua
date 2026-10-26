@@ -39,6 +39,9 @@ function OnlineAdventureState:_onGameInit(data)
     self.localPa:applyDifficulty()
     self.level.hiddenTriggers = Modes.hiddenTriggers(self.mode)   -- (la meta, fuera de Carrera)
     self.introT = 0
+    -- Cuenta atrás del principio (src/world/systems/StartCountdown.lua): los primeros `cd` ticks del servidor, todo
+    -- congelado (un servidor antiguo no la manda: sin cuenta atrás)
+    self.startTicks = tonumber(data.cd) or 0
 
     self.myIdx = data.idx
     for _, r in ipairs(data.roster or {}) do
@@ -285,6 +288,7 @@ function OnlineAdventureState:_processEvent(ev)
         self.bossBanner = { text = L('hud.boss'), t = 0, col = { 1, 0.3, 0.3 } }
         self.bossFightT = 0
     elseif ev.type == 'scroll_start' then
+        if ev.quiet then return end                     -- (la que sigue a la cuenta atrás del principio: sin cartel)
         self.bossBanner = { text = L('hud.go'), t = 0, col = { 0.4, 1, 0.5 } }
     elseif ev.type == 'boss_clear' then
         self.bossBanner = { text = L('hud.boss_defeated'), t = 0, col = { 1, 0.9, 0.25 } }

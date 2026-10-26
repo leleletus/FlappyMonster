@@ -19,6 +19,12 @@ what (`SHARED_SOUNDS`, `PRIVATE_SOUNDS`). Sounds can also be NOISE that enemies 
 
 - `src/audio/Music.lua` — MUSIC CATALOG from assets/music/index.json (id, name, file | intro+loop, volume, loop, level, boss). Sound loads every track from it (`Sound.loadTrack`); `level=false` tracks (boss, menus, youWin) are not offered as level music. Adding a song = file + one index entry. Level JSON `"music": id` (editor: Nivel tab → Música, ▶ preview). Music ALWAYS starts from 0 when (re)started: `stopMusic`/`playMusic` stop and rewind even a PAUSED source (it used to resume where it was after leaving a level from the pause menu); `AdventureState:exit` calls `Sound.leaveMatch()` so retrying (game over) or re-entering starts like the first time (harness `sp_boss RETRY=level`). `Sound.playMusic('level')` resolves: `setLevelMusic` override (boss) → `setBaseLevelMusic(level.music)` → 'classic'. Online the client re-seeks the level track every 1 s to the server clock (`Sound.syncMusic('level', t)`; tick 0 = round start), so all players hear the same point of the song (tested: ≤0.1 s).
 
+## UI sounds (0.5.36)
+
+`tools/sounds/ui.py` → `assets/sounds/ui/`: `levelEnter` (entering a level from the world map: falling sweep +
+bells as the iris closes), `countTick` / `countGo` (the start countdown). At ≈ −12 dBFS, no GAIN entry. Not listened
+to by anyone yet.
+
 ## Distance attenuation
 
 `Sound.setListener(x, y)` (the local player; camera centre when spectating)

@@ -13,7 +13,9 @@ visible. Apples are placed along them by `tools/levelgen/add_apples.py`.
 Level JSON `autoScroll = {startCol, endCol(0=end), speed, width(tiles), margin,
 countdown}`; editor: right panel → Nivel → "Camara automatica". States
 `wait → countdown → run → stop` (all players inside the start window to begin;
-first finish or endCol stops it). Walls through `Level:arenaAt` (combined with
+first finish or endCol stops it). The level-start countdown
+([start-countdown](start-countdown.md)) replaces this one at the start: if everyone is inside the window on the
+first update after it, the camera runs at once (`cdSkip`); `countdown` only applies when someone was outside. Walls through `Level:arenaAt` (combined with
 boss zones): wait = both sides, run = right side only; behind `x - margin`
 → forced death (`die(nil,true)`, attributed via `PlayerAdventure.asOwner`).
 Respawn: `AutoScroll.respawnPoint(level)` (lowest safe ground near the window

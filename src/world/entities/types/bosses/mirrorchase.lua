@@ -298,6 +298,8 @@ function Chase:updateCustom(dt, level)
         self.x = a.x + LEAD
         return true
     end
+    -- (sin cuenta atrás propia — ya la hubo al empezar el nivel, StartCountdown —: se ríe al echar a correr)
+    if not self.laughed then self.laughed = true; Sound.play('mirrorLaugh') end
     -- alguien acaba de morir: se ríe (una vez por muerte)
     self.deadSeen = self.deadSeen or setmetatable({}, { __mode = 'k' })
     for _, pa in ipairs(level.players or {}) do

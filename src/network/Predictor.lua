@@ -57,15 +57,17 @@ function Predictor:_step(bits, silent)
 end
 
 -- Simula un tick nuevo con el input local. Devuelve su número de secuencia.
-function Predictor:tick(bits)
+-- `frozen` = el servidor lo procesará en la cuenta atrás del principio (StartCountdown): se numera y se envía,
+-- pero el jugador no se mueve (tampoco al re-simular)
+function Predictor:tick(bits, frozen)
     self.seq = self.seq + 1
     self.prevX, self.prevY = self.pa.x, self.pa.y
-    self:_step(bits, false)
+    if not frozen then self:_step(bits, false) end
     -- (la entrada que sale de la historia se reutiliza para la nueva: sin crear una tabla por tick)
     local h = self.history[self.seq - HISTORY_MAX]
     self.history[self.seq - HISTORY_MAX] = nil
     if h then for k in pairs(h) do h[k] = nil end else h = {} end
-    h.bits = bits
+    h.bits, h.frozen = bits, frozen or nil
     self.history[self.seq] = h
     return self.seq
 end
@@ -133,7 +135,7 @@ function Predictor:reconcile(ack, own, bounceSeq)
     Protocol.applyOwnState(own, pa)
     for s = ack + 1, self.seq do
         local h = self.history[s]
-        if h then
+        if h and not h.frozen then
             self:_step(h.bits, true)
             -- Re-aplicar rebotes predichos que el servidor aún no ha simulado
             if h.bounceVy and not pa.dying

@@ -185,6 +185,7 @@ end
 local function playLevel(path, name, place)
     gStateMachine:change('adventure', { level = path })
     local st = top()
+    st.startCd = nil                  -- (sin la cuenta atrás del principio, StartCountdown: se mide jugando)
     if place then place(st) end
     -- el jugador corre a la derecha y salta de vez en cuando
     local f = 0

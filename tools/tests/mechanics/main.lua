@@ -1162,6 +1162,7 @@ function cases.persecucion()
     local ch = es[1]
     local pa = playerAt(level, 10, 10)
     local a = level.autoScroll
+    a.cdSkip = nil              -- (sin la cuenta atrás del principio, StartCountdown: la propia de la cámara, como antes)
     local seen, kinds, hits, back, strike0 = {}, {}, 0, 0, Boss.strike
     local sides, lastSide, jumped, atEdge, frames = 0, 0, false, 0, 0
     local touches, touchHurt = 0, false
