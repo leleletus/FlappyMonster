@@ -32,6 +32,13 @@ tempos: levels ~138, menus 140, bosses 148-186; only the map (120) and the caves
 - **bouncing leaps** of a 6th-7th up and down (+9 −9 +9, +10 −10 +10) in level / boss tracks;
 - the **neighbour note** and the **chromatic descent** of the menus' blues turn.
 8-bar phrases; question and answer; the answer is usually the question in sequence (a step or a third higher or lower).
+PHRASES, NOT BARS (user, 0.5.43: "the progression / development of the melodies is strange"): a melody written bar
+by bar — every bar its own arpeggio of its chord, ending on a long note, the next bar restarting with the same rhythm
+from a new register — is what made Resaca and La Polilla sound wrong. Write 8-bar arcs: the hook opens, the answer
+changes rhythm and LINKS by step (or a short pickup) into the next bar, one peak around bar 5-7, bar 4 open (5th /
+leading tone), bar 8 leading on. Measured targets that came out of it: jump between the end of a bar and the start of
+the next ≥ 5 semitones in under ~15 % of bars; steps ≥ 45 %; many rhythms (not one cell in every bar); never a
+motif copied onto each chord root (a "real" sequence over i–VI–VII sounds mechanical).
 
 **Harmony.** Minor for danger, major for a safe place (C major map and menus, F major snow). Short diatonic
 progressions (i–VI–iv–V, I–V–vi–V, IV–IV–V–V before a chorus), with ONE dark turn per piece (the Neapolitan ♭II in

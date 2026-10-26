@@ -57,38 +57,42 @@ H_B2 = ['Gm', 'Gm', 'Dm', 'Dm', 'Bb', 'Eb', 'A', 'A']
 H_S = ['Dm', 'Bb', 'Gm', 'A', 'Dm', 'Bb', 'Eb', 'A']
 
 # ══ LA MELODÍA ═══════════════════════════════════════════════════════════════════════════════════════════════════
+# v3 (0.5.43, el usuario: "la progresión / el desarrollo de las melodías es algo extraño"): la v1-v2 iba COMPÁS A
+# COMPÁS — cada compás subía su acorde desde abajo (Re-Fa-La, Re-Fa-Si♭, Re-Sol-Si♭…), acababa en nota larga y el
+# siguiente volvía a empezar con el mismo ritmo. Ahora son FRASES de 8: el gancho abre, la respuesta (otro ritmo)
+# enlaza por grado con el compás siguiente, una cima hacia el compás 5-6, el 4 queda abierto y el 8 cierra.
 M_A = ["0:D5/3 3:F5/3 6:A5/2 8:G5/2 10:F5/2 12:A5/4",                    # el gancho: hacia la luz y se posa
-       "0:D6/2 2:C#6/2 4:D6/4 8:A5/2 10:G5/2 12:F5/4",                    # … y baja
-       "0:D5/3 3:F5/3 6:Bb5/2 8:A5/2 10:Bb5/2 12:D6/4",                   # (en secuencia: Si♭)
-       "0:F6/2 2:D6/2 4:Bb5/4 8:A5/2 10:G5/2 12:F5/4",
-       "0:D5/3 3:G5/3 6:Bb5/2 8:A5/2 10:G5/2 12:D6/4",                    # (Solm)
-       "0:Bb5/2 2:A5/2 4:G5/4 8:F5/2 10:E5/2 12:D5/4",
-       "0:C#5/3 3:E5/3 6:A5/2 8:G5/2 10:E5/2 12:C#6/4",                   # (La: la dominante)
-       "0:E6/4 4:C#6/4 8:A5/8"]                                           # (nota tenida: parpadea el farol)
+       "0:Bb5/2 2:A5/2 4:F5/2 6:E5/2 8:D5/6 14:E5/2",                     # … baja por grados y enlaza
+       "0:F5/3 3:F5/3 6:Bb5/2 8:A5/2 10:Bb5/2 12:D6/4",                   # (Si♭: sube un poco más)
+       "0:F6/4 4:D6/2 6:Bb5/2 8:A5/2 10:G5/2 12:F5/4",
+       "0:Bb5/3 3:D6/3 6:G6/6 12:F6/2 14:E6/2",                           # (Solm: la cima)
+       "0:D6/2 2:Bb5/2 4:G5/4 8:A5/2 10:Bb5/2 12:G5/2 14:A5/2",
+       "0:A5/3 3:C#6/3 6:E6/2 8:D6/2 10:C#6/2 12:E6/4",                   # (La: la dominante, abierta)
+       "0:E6/2 2:G6/2 4:E6/2 6:C#6/2 8:A5/4 12:E5/2 14:C#5/2"]
 M_A2 = ["0:D5/3 3:F5/3 6:A5/2 8:G5/2 10:F5/2 12:A5/4",
-        "0:D6/2 2:E6/2 4:F6/4 8:E6/2 10:D6/2 12:A5/4",                    # (la respuesta sube)
-        "0:F5/3 3:Bb5/3 6:D6/2 8:Bb5/2 10:A5/2 12:Bb5/4",
-        "0:Bb5/4 4:F5/4 8:D5/2 10:F5/2 12:Bb5/4",
-        "0:Eb5/3 3:G5/3 6:Bb5/2 8:G5/2 10:F5/2 12:Eb5/4",                 # (la napolitana)
-        "0:Bb5/2 2:G5/2 4:Eb6/4 8:Bb5/4 12:G5/4",
-        "0:E5/3 3:A5/3 6:C#6/2 8:E6/2 10:D6/2 12:C#6/4",
-        "0:A5/4 4:E5/4 8:C#5/8"]                                          # (se queda en la sensible)
-# B: la VOZ. El gancho al revés (baja en 3+3+2 y vuelve a subir), un registro más arriba en la 2ª mitad
-M_B = ["0:D6/3 3:Bb5/3 6:G5/2 8:A5/2 10:Bb5/2 12:D6/4",
-       "0:G6/4 4:F6/2 6:G6/2 8:D6/4 12:Bb5/4",
-       "0:A5/3 3:F5/3 6:D5/2 8:E5/2 10:F5/2 12:A5/4",
-       "0:D6/4 4:C#6/2 6:D6/2 8:A5/4 12:F5/4",
-       "0:G5/3 3:Eb5/3 6:Bb4/2 8:Eb5/2 10:G5/2 12:Bb5/4",
-       "0:Eb6/4 4:D6/2 6:Eb6/2 8:Bb5/4 12:G5/4",
-       "0:E5/3 3:C#5/3 6:A4/2 8:C#5/2 10:E5/2 12:A5/4",
-       "0:C#6/4 4:D6/2 6:E6/2 8:E6/8"]
-M_B2 = ["0:D6/3 3:Bb5/3 6:D6/2 8:G6/2 10:F6/2 12:G6/4",
-        "0:Bb6/4 4:A6/2 6:G6/2 8:D6/4 12:Bb5/4",
-        "0:A5/3 3:D6/3 6:F6/2 8:E6/2 10:D6/2 12:A6/4",
-        "0:F6/4 4:E6/2 6:D6/2 8:A5/8",
-        "0:Bb5/3 3:D6/3 6:F6/2 8:D6/2 10:Bb5/2 12:F5/4",
-        "0:G5/3 3:Bb5/3 6:Eb6/2 8:Bb5/2 10:G5/2 12:Bb5/4",
-        "0:A5/2 2:C#6/2 4:E6/2 6:A6/2 8:G6/2 10:E6/2 12:C#6/4",
+        "0:Bb5/2 2:A5/2 4:D6/4 8:F6/4 12:E6/2 14:D6/2",                  # (la respuesta, ahora hacia arriba)
+        "0:D6/3 3:D6/3 6:F6/2 8:G6/2 10:F6/2 12:D6/4",
+        "0:Bb5/4 4:A5/2 6:Bb5/2 8:D6/4 12:F6/2 14:G6/2",
+        "0:G6/3 3:G6/3 6:Bb6/2 8:G6/2 10:F6/2 12:Eb6/4",                 # (la napolitana: la cima más alta)
+        "0:Bb5/4 4:G5/2 6:F5/2 8:Eb5/4 12:F5/2 14:G5/2",
+        "0:A5/3 3:C#6/3 6:E6/2 8:G6/2 10:F6/2 12:E6/4",
+        "0:E6/4 4:C#6/4 8:A5/4 12:C#6/4"]
+# B: la VOZ, en notas largas en el tiempo fuerte y frases que cruzan los acordes por notas comunes
+M_B = ["0:D6/6 6:Bb5/2 8:A5/2 10:Bb5/2 12:G5/4",
+       "0:A5/2 2:Bb5/2 4:D6/4 8:G6/4 12:F6/2 14:E6/2",
+       "0:F6/6 6:E6/2 8:D6/4 12:A5/4",
+       "0:Bb5/2 2:A5/2 4:F5/2 6:E5/2 8:D5/4 12:F5/2 14:G5/2",
+       "0:G5/6 6:Bb5/2 8:Eb6/6 14:D6/2",
+       "0:Eb6/4 4:Bb5/4 8:G5/4 12:G5/4",
+       "0:A5/2 2:C#6/2 4:E6/6 10:D6/2 12:C#6/4",
+       "0:E6/4 4:C#6/4 8:E6/8"]
+M_B2 = ["0:D6/3 3:D6/3 6:G6/2 8:F6/2 10:G6/2 12:Bb6/4",                  # (2ª mitad: un registro más arriba)
+        "0:A6/2 2:G6/2 4:D6/6 10:Bb5/2 12:D6/4",
+        "0:F6/3 3:F6/3 6:A6/2 8:G6/2 10:F6/2 12:D6/4",
+        "0:E6/2 2:F6/2 4:A6/6 10:G6/2 12:F6/2 14:E6/2",
+        "0:D6/6 6:F6/2 8:Bb6/4 12:A6/2 14:G6/2",
+        "0:G6/4 4:Eb6/4 8:Bb5/4 12:G5/2 14:Bb5/2",
+        "0:A5/3 3:C#6/3 6:E6/2 8:A6/4 12:G6/2 14:F6/2",
         "0:E6/4 4:C#6/4 8:A5/4 12:E5/4"]
 # SUSTO: golpes y silencio; entre golpes, la caja de música sube por el acorde (la LLAMADA en el primero)
 M_R = ["4:A4/2 6:D5/2 8:F5/2 10:A5/6", "8:F5/2 10:E5/2 12:D5/4",
@@ -105,21 +109,21 @@ M_S = ["0:D5/2 3:D5/2 6:D5/2 8:F5/2 11:F5/2 14:A5/2",
        "0:Eb6/3 3:Bb5/3 6:G5/2 8:Bb5/2 10:Eb6/2 12:G6/4",
        "0:E6/2 2:C#6/2 4:A5/2 6:C#6/2 8:E6/2 10:G6/2 12:A6/4"]
 # CLÍMAX: el gancho una octava arriba por toda la progresión, con su propia línea (no es la A)
-M_C = ["0:A5/3 3:D6/3 6:F6/2 8:E6/2 10:D6/2 12:F6/4",
-       "0:A6/2 2:G6/2 4:F6/4 8:D6/2 10:C#6/2 12:D6/4",
-       "0:Bb5/3 3:D6/3 6:F6/2 8:G6/2 10:F6/2 12:D6/4",
-       "0:F6/2 2:G6/2 4:F6/4 8:D6/2 10:Bb5/2 12:F6/4",
-       "0:G6/3 3:D6/3 6:Bb5/2 8:A5/2 10:Bb5/2 12:D6/4",
-       "0:G6/2 2:A6/2 4:Bb6/4 8:A6/2 10:G6/2 12:D6/4",
-       "0:C#6/3 3:E6/3 6:A6/2 8:G6/2 10:E6/2 12:C#6/4",
-       "0:E6/4 4:A6/4 8:E6/8",
-       "0:D6/3 3:F6/3 6:A6/2 8:G6/2 10:F6/2 12:A6/4",
-       "0:A6/2 2:F6/2 4:D6/4 8:E6/2 10:F6/2 12:A6/4",
-       "0:Bb6/3 3:F6/3 6:D6/2 8:F6/2 10:Bb6/2 12:F6/4",
-       "0:D6/4 4:F6/4 8:Bb6/4 12:F6/4",
-       "0:G6/3 3:Eb6/3 6:Bb5/2 8:Eb6/2 10:G6/2 12:Bb6/4",
-       "0:G6/4 4:Eb6/4 8:Bb5/4 12:G5/4",
-       "0:A5/3 3:C#6/3 6:E6/2 8:A6/2 10:G6/2 12:E6/4",
+M_C = ["0:D6/3 3:F6/3 6:A6/2 8:G6/2 10:F6/2 12:A6/4",                    # (el gancho, una octava arriba)
+       "0:Bb6/2 2:A6/2 4:F6/2 6:E6/2 8:D6/6 14:E6/2",
+       "0:F6/3 3:F6/3 6:Bb6/2 8:A6/2 10:Bb6/2 12:F6/4",
+       "0:D6/4 4:F6/2 6:G6/2 8:F6/4 12:D6/4",
+       "0:D6/3 3:G6/3 6:Bb6/6 12:A6/2 14:G6/2",
+       "0:G6/4 4:D6/4 8:Bb5/2 10:D6/2 12:G6/2 14:A6/2",
+       "0:A6/3 3:E6/3 6:C#6/2 8:E6/2 10:G6/2 12:A6/4",
+       "0:G6/2 2:F6/2 4:E6/4 8:C#6/4 12:E6/4",
+       "0:D6/2 2:E6/2 4:F6/4 8:A6/4 12:G6/2 14:F6/2",
+       "0:E6/2 2:D6/2 4:A5/4 8:D6/2 10:F6/2 12:A6/4",
+       "0:Bb6/4 4:A6/2 6:G6/2 8:F6/4 12:D6/4",
+       "0:F6/3 3:F6/3 6:D6/2 8:Bb5/4 12:D6/2 14:F6/2",
+       "0:G6/4 4:Bb6/4 8:G6/2 10:F6/2 12:Eb6/4",
+       "0:Bb5/2 2:Eb6/2 4:G6/6 10:F6/2 12:Eb6/2 14:F6/2",
+       "0:E6/3 3:C#6/3 6:E6/2 8:A6/4 12:G6/2 14:E6/2",
        "0:C#6/4 4:A5/4 8:E5/4 12:C#5/4"]
 # VUELTA: la caja de música adelanta la cabeza del gancho; el bajo sigue (la costura vuelve a la A)
 M_O = ["0:D5/3 3:F5/3 6:A5/2", "", "0:D5/3 3:F5/3 6:Bb5/2", "",

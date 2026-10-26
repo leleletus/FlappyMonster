@@ -575,6 +575,16 @@ the old level tune in the final boss, Verity's hook).
   left (they resolve by step). HOOK_C now falls E–D–C#. Steps 51 → 48 %, everything else unchanged. Previews:
   `FlappyMonster_pruebas/musica/resaca/` (`resaca_v3_antes` vs `resaca_v4`). Not listened to.
 
+- v5 (0.5.43; v4 archived: `FlappyMonster_originals/music/versiones/resaca_v4/`). User on v4: "I notice the
+  improvement", but "something is still missing… many sections use a strange progression / development of the
+  melodies". Measured: the melody went BAR BY BAR — 84 of 100 bars ended on a long note, 61 used the same two
+  rhythms, 42 % of bars started 5+ semitones away from where the last one ended — and B was the hook copied onto each
+  chord root (F#→D→E). A, A', B, climax and final A recomposed as 8-bar phrases (hook · answer in another rhythm that
+  links by step · question up to C# · open turnaround on G# · peak in bar 6-7), A' with its own answers, B as a
+  repeated-note shout answered by a line through common tones, the climax with its own peaks, the final A with the
+  hook an octave up in bar 13. Hooks, harmony, bass, form, mix unchanged. Bar-to-bar leaps 42 → 16 %, steps 48 → 57 %,
+  rhythms 15 → 25, literal hook 11 → 8 bars. Previews `resaca_v4_anterior` vs `resaca_v5`. Not listened to.
+
 ## La Polilla (`tools/music/polilla.py`, boss track `polilla`)
 
 - 0.5.41: the user asked for the Giant Hopper's own theme (it used `crab_tantrum_gloomy` provisionally): "completely
@@ -597,3 +607,9 @@ the old level tune in the final boss, Verity's hook).
   leaping in or out (C#6 over Dm jumping to A, D6 over E♭ — a major 7th — leaping down, F6 over Gm alone between two
   leaps…), in A' and B. Rewritten as passing / neighbour notes; what is left are neighbours resolving by step and G as
   the 7th of A7. Previews: `FlappyMonster_pruebas/musica/polilla/` (`polilla_v1_antes` vs the new ones). Not listened to.
+- v3 (0.5.43; v2 archived: `FlappyMonster_originals/music/versiones/polilla_v2/`). Same verdict as Resaca v5, same
+  cause: every bar climbed its own chord from the bottom (D–F–A, D–F–B♭, D–G–B♭…) and ended long. A, B and the climax
+  recomposed as 8-bar phrases (A: hook → stepwise answer → peak on G6 over Gm → open on the dominant; A': the answer
+  goes up, the peak on B♭6 over the Neapolitan; B: long notes on the beat through common tones; climax: the hook an
+  octave up with its own line). Bar-to-bar leaps 27 → 14 %, bars ending long 62 → 40 of 69, rhythms 17 → 32, steps
+  32 → 45 %. Previews `polilla_v2_anterior` vs `polilla_intro_y_dos_vueltas`. Not listened to.
