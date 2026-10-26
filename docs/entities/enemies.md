@@ -235,6 +235,12 @@ sprite's pixel grid.
   no code change. The old restyle script is retired (`FlappyMonster_originals/herramientas_retiradas/`).
   (0.5.31, the user) CHUBBIER (swim ry 4.5), the pectoral fin swings up / down with the tail between the swim
   frames, and the eye is one colour (black 2x2, no white).
+  (0.5.33, the user: deflated it "looked very puffed", and the spines "looked dirty") DEFLATED IT IS A NORMAL FISH:
+  swim frames long and low (rx 5.6, ry 3.1, lowered to cy 9.4 so the belly stays where it was: the stranded boss
+  still lies on the floor) and narrowing towards the tail (`taper`); only frames 3-4 are round.
+  Spines redone: straight in the 8 directions (no 30° rays with jagged steps), none at the back (tail), each one
+  outline-coloured with a light tip (1 px half inflated, 2 px inflated; shortened to fit the frame), diagonal ones
+  joined to the body by one outline pixel. Not reviewed by the user yet in game.
   **Out of water** (0.5.31, the same physics as the Giant Pufferfish): it follows the water level — if the surface
   drops below its back it swims down (`SINK_SPD`, only towards more water, never into a block), and never picks a dry
   target; if it ends up dry (a flood falling faster than it, or an area leaving the water) it FALLS with collisions

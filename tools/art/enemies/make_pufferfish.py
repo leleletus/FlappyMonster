@@ -47,10 +47,12 @@ SPOTS = {'spots': [(-0.5, -0.3), (-0.1, -0.65), (0.15, -0.2), (-0.75, 0.0), (0.4
 
 # Cuadros: radios del cuerpo (x, y), centro, cola (desplazamiento vertical de la punta), largo de las púas
 # (0.5.31: más GORDITO — el usuario — y la aleta pectoral se mueve con la cola: `fin` -1 arriba, 1 abajo, 0 quieta)
-FRAMES = [dict(rx=5.3, ry=4.5, cx=8.6, cy=8.0, tail=-1, spikes=0, fin=-1),     # nadar 1 (cola y aleta arriba)
-          dict(rx=5.3, ry=4.5, cx=8.6, cy=8.0, tail=1, spikes=0, fin=1),       # nadar 2 (cola y aleta abajo)
-          dict(rx=5.4, ry=5.0, cx=8.6, cy=8.0, tail=0, spikes=1, fin=0),       # medio inflado
-          dict(rx=5.0, ry=5.0, cx=8.6, cy=8.0, tail=0, spikes=2, fin=0)]       # inflado (más pequeño: sitio para las púas)
+# (0.5.33: desinflado es un pez NORMAL — el usuario —: cuerpo alargado y bajo que se estrecha hacia la cola (`taper`);
+# solo al inflarse se pone redondo. Más abajo (cy 9.4): la barriga, donde estaba — el jefe varado sigue en el suelo)
+FRAMES = [dict(rx=5.6, ry=3.1, cx=8.6, cy=9.4, tail=-1, spikes=0, fin=-1, taper=0.3),   # nadar 1 (cola y aleta arriba)
+          dict(rx=5.6, ry=3.1, cx=8.6, cy=9.4, tail=1, spikes=0, fin=1, taper=0.3),     # nadar 2 (cola y aleta abajo)
+          dict(rx=5.2, ry=4.6, cx=8.6, cy=8.0, tail=0, spikes=1, fin=0),                # medio inflado
+          dict(rx=4.7, ry=4.7, cx=8.6, cy=8.0, tail=0, spikes=2, fin=0)]                # inflado (sitio para las púas)
 EYE = '#140c06'                                                                # el ojo: un solo color, negro
 
 
@@ -59,10 +61,12 @@ def frame(D, F):
     px = [[None] * W for _ in range(W)]
     C = {k: hx(D[k]) for k in ('light', 'mid', 'shade', 'outline', 'belly', 'bellyS', 'spot', 'fin', 'finS', 'spike')}
     cx, cy, rx, ry = F['cx'], F['cy'], F['rx'], F['ry']
+    tp = F.get('taper', 0.0)
     body = set()
     for y in range(W):
         for x in range(W):
-            nx, ny = (x + 0.5 - cx) / rx, (y + 0.5 - cy) / ry
+            nx = (x + 0.5 - cx) / rx
+            ny = (y + 0.5 - cy) / (ry * (1 - tp * max(0.0, -nx)))       # (más estrecho hacia la cola)
             if nx * nx + ny * ny <= 1.0: body.add((x, y))
     # cola: un abanico ahorquillado a la izquierda del cuerpo, que sube o baja al nadar
     left = min(x for x, y in body)
@@ -119,25 +123,23 @@ def frame(D, F):
     for y in range(W):
         for x in range(W):
             if px[y][x] == 'O': px[y][x] = C['outline']
-    # púas: rayos desde el contorno hacia fuera (las de atrás no: la cola)
+    # púas (0.5.33: rehechas, las de antes se veían sucias): rectas en las 8 direcciones (horizontal, vertical y
+    # diagonal a 45°, sin escalones raros), menos las de atrás (la cola). Salen del contorno: la base del color de la
+    # púa en sombra y la punta clara; medio inflado, solo la punta (1 px), inflado, 2 px
     L = F['spikes']
     if L:
-        for k in range(12):
-            a = -math.pi / 2 + k * (2 * math.pi / 12)
-            if math.cos(a) < -0.6: continue                    # (por la cola no)
-            # una línea continua desde el contorno hacia fuera (a medios píxeles: sin huecos en diagonal); la punta,
-            # del color de la púa
-            pts = []
-            d = 0.0
-            while d <= L + 0.6:
-                x = int(math.floor(cx + math.cos(a) * (rx + 0.5 + d)))
-                y = int(math.floor(cy + math.sin(a) * (ry + 0.5 + d)))
-                if (x, y) not in pts: pts.append((x, y))
-                d += 0.5
-            pts = [q for q in pts if q not in body]
-            for j, (x, y) in enumerate(pts):
-                if 1 <= x < W - 1 and 1 <= y < W - 1 and (px[y][x] is None or px[y][x] == C['outline']):
-                    px[y][x] = C['spike'] if j == len(pts) - 1 else C['outline']
+        for dx, dy in ((0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, -1), (-1, 1)):
+            # el último píxel del contorno en esa dirección, desde el centro del cuerpo
+            x, y = int(math.floor(cx)), int(math.floor(cy))
+            while 0 <= x + dx < W and 0 <= y + dy < W and px[y + dy][x + dx] is not None:
+                x, y = x + dx, y + dy
+            if dx and dy and px[y + dy][x] is None and px[y][x + dx] is None:
+                px[y + dy][x] = C['outline']                   # (en diagonal, que no quede suelta: un píxel de unión)
+            n = L                                              # (si no cabe entera en el cuadro, más corta: con punta)
+            while n and not (1 <= x + dx * n < W - 1 and 1 <= y + dy * n < W - 1): n -= 1
+            for k in range(1, n + 1):
+                qx, qy = x + dx * k, y + dy * k
+                if px[qy][qx] is None: px[qy][qx] = C['spike'] if k == n else C['outline']
     im = Image.new('RGBA', (W, W), (0, 0, 0, 0))
     for y in range(W):
         for x in range(W):
