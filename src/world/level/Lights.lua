@@ -7,6 +7,7 @@
 --   Lights.ray(level, x, y, ang)  hasta dónde llega un rayo (los bloques sólidos lo cortan)
 --   Lights.lit(level, x, y)       ¿le da la linterna de algún jugador de level.players?
 --                                 → true, origenX, origenY (lo usa el Crabby lúgubre para huir)
+--   Lights.clear(level, x0, y0, x1, y1)  ¿nada sólido entre los dos puntos? (a quién alumbra un farol)
 local Lights = {}
 
 local T = TILE_PX
@@ -53,6 +54,15 @@ function Lights.inCone(level, ox, oy, dir, px, py)
     local n = math.floor(d / STEP)
     for i = 1, n - 1 do
         if blocks(level, ox + dx * i / n, oy + dy * i / n) then return false end
+    end
+    return true
+end
+
+-- ¿Línea despejada (sin bloque sólido) entre dos puntos? (la luz de un farol de entidad: el Saltarín Gigante)
+function Lights.clear(level, x0, y0, x1, y1)
+    local n = math.floor(math.sqrt((x1 - x0) ^ 2 + (y1 - y0) ^ 2) / STEP)
+    for i = 1, n - 1 do
+        if blocks(level, x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n) then return false end
     end
     return true
 end

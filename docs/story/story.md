@@ -34,7 +34,7 @@ drawn at the same point, they fit together and the mirror fills up. Logic: `src/
 | 3 | Evil Ship | `fortaleza_malvada` | right |
 | 4 | Snowball Boss | `lago_helado` | bottom-right |
 | 5 | Icy Mega Crabby | `glaciar_cangrejo` | bottom-left |
-| 6 | Mega Gloomy Crabby | `gruta_lugubre` | left |
+| 6 | Giant Hopper (was Mega Gloomy Crabby, now a secret boss) | `gruta_del_farol` | left |
 | 7 | The Mirror | `ruta_del_espejo` | centre (where it crashed) |
 
 - In the level: when the boss falls, its shard comes out of it and hovers; the player picks it up by touching it

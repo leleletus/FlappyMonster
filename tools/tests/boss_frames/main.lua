@@ -83,6 +83,15 @@ function love.load()
         if boss.def.name == 'giantpuffer' and boss.state == 'gasp' and boss.deadTimer > 0.8 and boss.inv <= 0 then
             boss:damage(1, 'stomp')
         end
+        -- Saltarín Gigante: un ruido fuerte cerca cuando descansa y un pisotón asustado (para verlo hasta el final)
+        if boss.def.name == 'gianthopper' then
+            local Noise = require 'src/world/systems/Noise'
+            Noise.bind(level)
+            if boss.state == 'rest' and boss.scareCd <= 0 and boss.deadTimer > 0.5 and boss.onGround then
+                Noise.emit(boss.x + 3 * TILE_PX, boss.y, Noise.R.pound)
+            end
+            if boss.state == 'scared' and boss.deadTimer > 1.2 and boss.inv <= 0 then boss:damage(1, 'stomp') end
+        end
         if want[boss.state] and t - lastShot >= every and (boss.alive or boss.def.name == 'megagummy') then
             lastShot = t
             local col, row = n % COLS, math.floor(n / COLS)

@@ -74,6 +74,11 @@ function love.load()
     local king = boss.def.name == 'megagummy'
     if king then VULN = { dazed = true } end
     if boss.def.name == 'giantpuffer' then VULN = { gasp = true } end      -- (Pez Globo Gigante: solo boqueando)
+    -- Saltarín Gigante: solo asustado. El jugador juega como se espera: linterna apagada, se pone a 5,5 casillas
+    -- (fuera de la luz de su farol) y hace un ruido fuerte (ground pound) cuando el jefe descansa
+    local gh = boss.def.name == 'gianthopper'
+    local ghs = { scares = 0, lastT = -9, rage = false }
+    if gh then VULN = { scared = true }; require('src/world/systems/Noise').bind(level) end
     local kg = { phases = {}, maxGuards = 0, flopOff = {}, waveHits = 0, partHits = 0, lastPartT = -9 }
     local sn = { phases = {}, scales = {}, frozenHits = {}, crashDizzy = 0, bonks = 0, toggles = 0, refrozen = 0,
                  deathOrder = {}, early = {}, shown = {} }
@@ -371,6 +376,17 @@ function love.load()
             if boss.state ~= sn.prevD and boss.state:match('^dying_') then sn.deathOrder[#sn.deathOrder + 1] = boss.state end
             sn.prevD = boss.state
         end
+        if gh and z.state == 'fight' then
+            if boss.rage then ghs.rage = true end
+            pa.lightOn = false
+            if boss.state == 'rest' and boss.onGround and boss.scareCd <= 0 and not pa.dying and t - ghs.lastT > 3 then
+                local T = TILE_PX
+                local dir = (boss.x - z.x0 > z.x1 - boss.x) and -1 or 1
+                pa.x, pa.y, pa.vx, pa.vy = boss.x + dir * 5.5 * T, z.y1 - 50, 0, 0
+                require('src/world/systems/Noise').emit(pa.x, pa.y, require('src/world/systems/Noise').R.pound)
+                ghs.lastT, ghs.scares = t, ghs.scares + 1
+            end
+        end
         -- esquivar la caída: al ver la marca (estado 'aim') se aparta 5 casillas
         if boss.state == 'aim' and not pa.dying and math.abs(pa.x - boss.x) < 3 * TILE_PX then
             local dir = (boss.x - z.x0 > z.x1 - boss.x) and -1 or 1
@@ -490,6 +506,18 @@ function love.load()
         check('olas', kg.waveHits == 0, ('golpes de ola al jugador (saltándolas): %d'):format(kg.waveHits))
         check('muerte', not boss.alive and kg.partHits >= 3 and z.state == 'cleared',
             ('vivo=%s, golpes a trozos %d, zona %s'):format(tostring(boss.alive), kg.partHits, z.state))
+    end
+    if gh then
+        local function check(name, ok, msg)
+            print(('%-10s %s  %s'):format(name, ok and 'OK   ' or 'FALLA', msg))
+            if not ok then fails = fails + 1 end
+        end
+        local need = { 'rest', 'crouch', 'hop', 'scared', 'hurt', 'dying_out', 'dying_flee' }
+        local miss = {}
+        for _, n in ipairs(need) do if not seen[n] then miss[#miss + 1] = n end end
+        check('estados', #miss == 0, #miss == 0 and 'todos vistos' or ('faltan: ' .. table.concat(miss, ',')))
+        check('muerte', not boss.alive and ghs.rage and z.state == 'cleared',
+            ('vivo=%s, enfadado=%s, ruidos para asustarlo %d, zona %s'):format(tostring(boss.alive), tostring(ghs.rage), ghs.scares, z.state))
     end
     local ks = {}
     for k, v in pairs(sounds) do ks[#ks + 1] = k .. '=' .. v end

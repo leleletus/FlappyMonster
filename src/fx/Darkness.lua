@@ -91,6 +91,23 @@ local function lightTiles(level)
 end
 function Darkness.invalidate(level) if level then level._lightTiles = nil end end
 
+-- Luz EN REDONDO cortada por los bloques (la de una entidad con `cast`: el farol del Saltarín Gigante): los mismos
+-- rayos que la simulación (Lights.ray), en dos escalones
+local CAST_RAYS = 40
+local castPts = {}
+local function castLight(level, x, y, r, c, a)
+    for i = 0, CAST_RAYS - 1 do castPts[i] = Lights.ray(level, x, y, i * 2 * math.pi / CAST_RAYS, r) end
+    for _, b in ipairs({ { 1.0, 0.5 }, { 0.55, 1.0 } }) do
+        love.graphics.setColor(c[1] * a * b[2], c[2] * a * b[2], c[3] * a * b[2], 1)
+        for i = 0, CAST_RAYS - 1 do
+            local j = (i + 1) % CAST_RAYS
+            local a0, a1 = i * 2 * math.pi / CAST_RAYS, j * 2 * math.pi / CAST_RAYS
+            local d0, d1 = math.min(castPts[i], r * b[1]), math.min(castPts[j], r * b[1])
+            love.graphics.polygon('fill', x, y, x + math.cos(a0) * d0, y + math.sin(a0) * d0, x + math.cos(a1) * d1, y + math.sin(a1) * d1)
+        end
+    end
+end
+
 local function fan(ox, oy, dir, k, level, cache)
     local pts = cache
     for i = 0, RAYS do
@@ -104,7 +121,8 @@ local function fan(ox, oy, dir, k, level, cache)
 end
 
 -- entities = las entidades (las que tengan `e:lights()` → { {x, y, r, color, a}, ... } dan luz: el fuego de los
--- morteros...); sin ellas, level.liveEntities
+-- morteros...); sin ellas, level.liveEntities. Con `cast = true`, a oscuras, la luz va EN REDONDO y los bloques la
+-- cortan (castLight: la misma que "ve" la simulación con Lights.clear)
 -- Repone, sin oscurecer, los píxeles de la escena marcados con alfa 0 (lo incandescente del fondo que NO quedó tapado
 -- por nada: src/fx/Sky.lua). Se dibuja con la transformación y el recorte de ahora: nunca sale de la zona de juego.
 local glowShader
@@ -239,7 +257,10 @@ function Darkness.render(level, camX, camY, sources, entities, scene)
             for _, L in ipairs(e:lights() or {}) do
                 if L.x > camX - L.r and L.x < camX + WINDOW_W + L.r and L.y > camY - L.r and L.y < camY + WINDOW_H + L.r then
                     local k = lightsMult(L.y)
-                    if k > 0 then glow(L.x, L.y, L, k) end
+                    if k > 0 then
+                        if L.cast and dark then castLight(level, L.x, L.y, L.r, L.color or { 1, 1, 1 }, L.a or 0.5)
+                        else glow(L.x, L.y, L, k) end
+                    end
                 end
             end
         end

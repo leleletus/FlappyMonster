@@ -37,12 +37,15 @@ The enemies of the dark: the Gloomy Crabby (hunts by sound), the cave Hopper as 
   others see `PF_LIGHT` 256. Protocol v43. Sounds lightOn/Off/Out/Dead.
 
 - `src/world/level/Lights.lua` (pure geometry, shared by sim and drawing): cone towards `facing`, `RANGE` 5.2 tiles, `HALF`
-  27°, cut by solid blocks (`Lights.ray`); `Lights.lit(level, x, y)` → true + the light's origin.
+  27°, cut by solid blocks (`Lights.ray`); `Lights.lit(level, x, y)` → true + the light's origin; `Lights.clear(level,
+  x0, y0, x1, y1)` = nothing solid between two points (what an entity's lamp reaches: the Giant Hopper).
 
 - `src/fx/Darkness.lua` (render): after the scene + water effect and BEFORE the HUD, a quarter-res canvas starts at
   `AMBIENT` and each player adds, in steps, a halo (always: you see yourself) and, lit, the cone traced with rays;
   then it is MULTIPLIED over the screen (no shaders/stencils). It restores the previous canvas (harness captures).
-  What must always show is drawn after it: entities with `renderGlow(camX, camY)` (`Darkness.renderGlow`). HUD:
+  What must always show is drawn after it: entities with `renderGlow(camX, camY)` (`Darkness.renderGlow`). An entity
+  light (`e:lights()`) with `cast = true` is drawn, in dark levels, ALL ROUND and cut by blocks (`castLight`, the same
+  rays as `Lights.ray`): what you see lit is what the entity sees (the Giant Hopper's lantern and flare). HUD:
   `src/ui/LightHud.lua` (icon `ui/flashlight-Sheet.png` + 8 segments, under the lives).
 
 ## Noise
@@ -50,7 +53,7 @@ The enemies of the dark: the Gloomy Crabby (hunts by sound), the cave Hopper as 
 - **Noise** (`src/world/systems/Noise.lua`) = what enemies can HEAR, and what the player can use as a DISTRACTION (Gloomies go
   look where it sounded). GENERIC: everything that makes noise and how STRONG it is (radius in tiles) lives in two
   tables there — `Noise.R` (things that are not an entity's sound, emitted with `Noise.emit(x, y, Noise.R.x)`: pickup 4,
-  life 5, thin-ice crack 4, ON/OFF switch 7, hitting a boss 8, ice break 8, breaking a block 9, a hurt player 10, a
+  life 5, thin-ice crack 4, ON/OFF switch 7, hitting a boss 8, ice break 8, breaking a block 9, a hurt player 10 (tagged `from = 'hurt'`: the Giant Hopper ignores it), a
   killed enemy 12, ground pound 15) and `Noise.SOUNDS` (SOUND names that are also noise: trampoline 8, helmetBounce 6,
   helmetBreak 8, mortarShoot 10, spikeHit 8, cryoBlast 9, pufferInflate 7, bombIgnite 4, bombKick 6, bombBlast 26).
   `Noise.bind(level)` wraps the current global `Sound.play` once: any listed sound played while simulating emits its

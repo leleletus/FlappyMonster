@@ -14,7 +14,8 @@ In progress: two new bosses replace Mega Crabby and Mega Gloomy, which become se
 | Evil Ship (Nave Malvada) | `miniboss1` | [miniboss1](miniboss1.md) | `fortaleza_malvada` | 3 |
 | Snowball Boss (Gran Bola de Nieve) + Verity | `snowboss` | [snowboss](snowboss.md) | `lago_helado` (mid-island) | 4 |
 | Icy Mega Crabby | `megacrabby_ice` | [megacrabby-ice](megacrabby-ice.md) | `glaciar_cangrejo` | 5 |
-| Mega Gloomy Crabby | `megagloomy` | [megagloomy](megagloomy.md) | `gruta_lugubre` | 6 |
+| Giant Hopper (Saltarín Gigante) | `gianthopper` | [gianthopper](gianthopper.md) | `gruta_del_farol` | 6 |
+| Mega Gloomy Crabby (future secret boss) | `megagloomy` | [megagloomy](megagloomy.md) | `gruta_lugubre` (out of the story) | — |
 | The Mirror | `mirror` | [mirror](mirror.md) | `ruta_del_espejo` | 7 |
 | Mirror chase (not a fight) | `mirrorchase` | [mirror-chase](mirror-chase.md) | `huida_del_espejo` | — |
 

@@ -14,7 +14,7 @@ giant by touching a mirror shard ("La Furia del Espejo").
 - **Mega Crabby and Mega Gloomy Crabby become SECRET bosses**: each is reached through a **secret exit** in a level;
   beating them gives a **secret collectible** (not a mirror shard: the 7 shards stay with the main bosses).
 - **Music**: the coast boss uses **"Resaca"** (`resaca`, `tools/music/resaca.py`; the user's name, 2026-10-25), the
-  track made from Final Fall's bass (it was "Caída libre" while composing). `final_fall` is ARCHIVED: out of the game's catalog. The cave boss needs a new theme. The crabs
+  track made from Final Fall's bass (it was "Caída libre" while composing). `final_fall` is ARCHIVED: out of the game's catalog. The cave boss needs a new theme (provisionally `crab_tantrum_gloomy`). The crabs
   keep `crab_tantrum_normal` and `crab_tantrum_gloomy`.
 
 ## Proposals still open (the user picks)
@@ -22,7 +22,6 @@ giant by touching a mirror shard ("La Furia del Espejo").
 - Giant Pufferfish fight (proposed, from the coast's systems): a tidal cove with a `flood` that rises and falls — at
   high tide it swims after the player (water, air), at low tide it is stranded and flops: the window to hit it; it
   inflates spiky when hit and deflates to attack; spine volleys on the 3+3+2; sucks / blows water currents.
-- Giant Hopper fight (proposed): the cave Hopper's rework decides it — what it hears (noise), what light does to it.
 - Which levels get the secret exits, what the secret collectible is and where it is shown.
 
 ## Steps
@@ -52,8 +51,13 @@ giant by touching a mirror shard ("La Furia del Espejo").
 - [x] (0.5.38) Cave Hopper mechanics rework: the user picked "the moth" (hunts by light, loud noise scares it, lantern
       off = stomp window; only in dark levels) — [enemies](../entities/enemies.md#hopper-saltarín).
 - [ ] The user's verdict on the moth (arena `tools/levelgen/arenas/saltarines_oscuras.json`).
-- [ ] Giant Hopper design + fight (sound and light) → page, entity, sounds, arena, harnesses.
-- [ ] The story level replacing `gruta_lugubre` (caves boss slot); its theme (music).
+- [x] (0.5.40) Giant Hopper design + fight: the moth giant (sees only light, flare, rock waves; a loud noise near it
+      scares it = the only opening; rage releases moths) → [gianthopper](gianthopper.md), entity, arena, harnesses
+      (`gianthopper_rules`, `boss_sim`, `boss_intro`, `online_boss`, `boss_frames`). Sounds reused (own set open).
+- [x] (0.5.40) Its OWN story level `gruta_del_farol` (the user: like the Giant Pufferfish, `gruta_lugubre` stays in the
+      game) in the caves boss slot of `Worlds.lua`, shard 6.
+- [ ] Its theme (music): the arena uses `crab_tantrum_gloomy` provisionally.
+- [ ] The user's verdict on the fight.
 
 ### 3. Secret bosses
 - [ ] Secret exits (which levels; how a level has two exits; the map shows the lairs once found).

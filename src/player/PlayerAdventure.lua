@@ -250,7 +250,7 @@ function PlayerAdventure:takeDamage()
     if self.immortal then return false end
     self.hp=self.hp-1
     if self.hp<=0 then self.hp=self.hpMax; self:die(); return true end
-    Sound.play('dies'); Noise.emit(self.x, self.y, Noise.R.hurt); return false
+    Sound.play('dies'); Noise.emit(self.x, self.y, Noise.R.hurt, nil, 'hurt'); return false     -- (from 'hurt': el Saltarín Gigante no se asusta de esto)
 end
 
 -- Golpe de `n` de vida (1 por defecto): tiles 'hurt', entidades onTouch='hurt',

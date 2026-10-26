@@ -406,4 +406,44 @@ def cala_resaca():
     return L
 
 
-BUILDERS = [ruta_del_espejo, fortaleza_malvada, cala_resaca, guarida_cangrejo_rey, lago_helado, glaciar_cangrejo, reino_gummy, gruta_lugubre]
+def gruta_del_farol():
+    """Gruta del Farol: una cueva A OSCURAS con Saltarines de cueva — las POLILLAS: solo ven la luz (tu linterna o su
+    farol) y un ruido fuerte los asusta — y el SALTARÍN GIGANTE al final (arena jefe_saltarin: la sima del farol, con
+    rocas para esconderse de su fogonazo). Enseña por orden lo que pide el jefe: la linterna atrae, el farol te ve de
+    cerca, el ruido (un ground pound, matar a un Gummy) asusta. Sustituye a gruta_lugubre como jefe de las cuevas en el
+    mapa (el Mega Crabby lúgubre pasa a jefe secreto: docs/bosses/new-bosses-plan.md). Sin pinchos ni fosos."""
+    src = load_src('jefe_saltarin.json')
+    L = Level('Gruta del Farol', 125, 15, (4, 12), music='cuevas_oscuras')
+    L.extra.update({'name_en': 'Lantern Grotto', 'dark': True, 'background': 'cave', 'time': 'night'})
+    G = 13
+    L.rect(2, G, 83, 14, SOLID)
+    L.rect(2, 2, 83, 2, SOLID)                       # techo de roca
+    # entrada tranquila: aquí se prueba la linterna
+    L.ent('star', 9, G - 2)
+    # el primero, solo, al fondo de una sala ancha: con la linterna encendida viene; apagada, no te ve
+    L.walker('hopper', 20, G - 1, 15, 24)
+    L.ent('star', 18, G - 4)
+    # una roca baja para esconderse y otro detrás, con su farol: de cerca te ve aunque vayas a oscuras
+    L.rect(27, G - 2, 27, G - 1, SOLID)
+    L.walker('hopper', 32, G - 1, 29, 35)
+    L.ent('checkpoint', 38, G - 1)
+    # un Gummy de cueva entre dos saltarines: matarlo (o un ground pound) hace ruido y los asusta
+    L.plat(42, 46, G - 4, DROP)
+    L.ent('star', 44, G - 5)
+    L.walker('hopper', 43, G - 1, 41, 47)
+    L.walker('gummy_cave', 50, G - 1, 48, 53)
+    L.walker('hopper', 56, G - 1, 54, 60)
+    # techo bajo con un Crabby lúgubre colgado (va a los ruidos: el ruido que asusta a los saltarines lo atrae)
+    L.rect(62, 3, 68, 6, SOLID)
+    L.ent('gloomy', 65, 7)
+    L.ent('extralife', 66, G - 2)
+    L.rect(71, G - 2, 72, G - 1, SOLID)
+    L.walker('hopper', 76, G - 1, 74, 79)
+    L.ent('checkpoint', 81, G - 1)
+    # arena del Saltarín Gigante (la zona empieza en la columna 89)
+    graft(L, src, 6, 83)
+    return L
+
+
+BUILDERS = [ruta_del_espejo, fortaleza_malvada, cala_resaca, guarida_cangrejo_rey, lago_helado, glaciar_cangrejo, reino_gummy, gruta_lugubre,
+            gruta_del_farol]
