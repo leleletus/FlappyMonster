@@ -238,6 +238,82 @@ def panel(col):
 
 BEAT_COLS = ['#ff4fa3', '#3fd8ff', '#ffd23f', '#5cf07a']
 
+# ── NOQUEADO (0.5.48, el usuario: "no da el impacto de quedar muy atontado") ──
+# Le vuelan las GAFAS (sprite aparte: caen al suelo y vuelven al recomponerse): debajo, ojos en X que GIRAN (2 cuadros:
+# X y +), la boca abierta con la lengua fuera y las patas abiertas, despatarrado
+KO_EYES = [["..otowoTTTTowoto..",
+            ".oTTwowTTTTwowTto.",
+            ".oTTowoTTTTowoTto."],
+           ["..otwowTTTTwowto..",
+            ".oTToooTTTToooTto.",
+            ".oTTwowTTTTwowTto."]]
+KO_MOUTH = ["..otTTowmmwoTTto..",
+            "...ooooomnooooo..."]
+KO_LEGS = ["..oo.o......o.oo..",
+           ".o...o......o...o.",
+           "o....o......o....o"]
+GLASSES = [".oooooooooooo.",
+           "okgkkkkkkkgkko",
+           "okkkkkookkkkko",
+           ".ooooo..ooooo."]
+
+
+def ko_body(f):
+    rows = SHELL[:2] + KO_EYES[f] + KO_MOUTH + KO_LEGS
+    assert all(len(r) == 18 for r in rows), [len(r) for r in rows]
+    return grid(rows, PAL)
+
+
+# ── Los PLATOS DE DJ de la 2ª fase (uno en cada plataforma): písalos los dos a la vez y los bafles le dan ──
+def deck(f, lit):
+    """Plato 24x10: caja oscura con borde, el vinilo visto en perspectiva (elipse) con su etiqueta, que gira (3
+    cuadros), y el brazo. lit: encendido (la etiqueta y el borde de la caja en color)"""
+    import math
+    w, h = 24, 10
+    im = Image.new('RGBA', (w, h), CLEAR)
+    px = im.load()
+    for y in range(4, h):
+        for x in range(w):
+            edge = x in (0, w - 1) or y in (4, h - 1)
+            px[x, y] = hx('#0c0b16') if edge else hx('#24223a')
+    for x in range(2, w - 2):                                       # (la tira de delante: ahí van los LED)
+        px[x, 7] = hx('#14121f')
+    if lit:
+        for x in range(1, w - 1): px[x, 5] = hx('#3fd8ff')
+    cx, cy, rx, ry = 10.5, 3.5, 8.5, 2.6
+    for y in range(0, 6):
+        for x in range(w):
+            d = ((x + 0.5 - cx) / rx) ** 2 + ((y + 0.5 - cy) / ry) ** 2
+            if d <= 1:
+                px[x, y] = hx('#0c0b16') if d > 0.7 else (hx('#3a3956') if (x + y) % 3 == 0 else hx('#14142a'))
+    a = f * 2 * math.pi / 3
+    lx, ly = int(cx + 4.5 * math.cos(a)), int(cy + 1.4 * math.sin(a))
+    col = hx('#ff4fa3') if lit else hx('#7a3a5a')
+    for dx in (0, 1): px[lx + dx, ly] = col
+    px[int(cx), int(cy)] = hx('#b0aed0')                            # (el eje)
+    for x, y in ((21, 0), (21, 1), (20, 2), (19, 3), (18, 3)):      # (el brazo)
+        px[x, y] = hx('#b0aed0')
+    return im
+
+
+def led(on, warn=False):
+    """LED 3x2 de la cuenta atrás del plato (apagado, verde, rojo cuando se acaba)"""
+    c = hx('#ff3a3a') if warn else (hx('#5cf07a') if on else hx('#3a2a30'))
+    im = Image.new('RGBA', (3, 2), CLEAR)
+    for y in range(2):
+        for x in range(3): im.putpixel((x, y), c)
+    if on or warn: im.putpixel((0, 0), hx('#ffffff'))
+    return im
+
+
+ARROW = ["..ooo..",
+         "..oPo..",
+         "ooPPPoo",
+         "oPPPPPo",
+         ".oPPPo.",
+         "..oPo..",
+         "...o..."]
+
 
 def main():
     os.makedirs(OUT, exist_ok=True)
@@ -257,6 +333,11 @@ def main():
         'discoball-Sheet.png': strip([discoball(f) for f in range(4)]),
         'glowstick-Sheet.png': strip([glowstick(c) for c in BEAT_COLS]),
         'panel-Sheet.png': strip([panel(None)] + [panel(c) for c in BEAT_COLS]),
+        'ko-Sheet.png': strip([ko_body(0), ko_body(1)]),
+        'glasses.png': grid(GLASSES, PAL),
+        'deck-Sheet.png': strip([deck(0, False)] + [deck(f, True) for f in range(3)]),
+        'led-Sheet.png': strip([led(False), led(True), led(True, True)]),
+        'arrow.png': grid(ARROW, {'o': PAL['o'], 'P': hx('#ffd23f')}),
     }
     for name, im in out.items():
         im.save(os.path.join(OUT, name))

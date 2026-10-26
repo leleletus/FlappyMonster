@@ -1,12 +1,12 @@
 -- tools/tests/groovecrab_rules — reglas de EL GROOVE (types/groovecrab.lua) caso a caso, en su arena real
 -- (tools/levelgen/arenas/jefe_groove.json). El reloj del jefe es su canción: cada caso lo pone en el compás que prueba.
 --   reloj      la canción → sección, compás y semicorchea (intro 8 + bucle A16 B16 SOLO8 SUBIDA8 CLÍMAX16 VUELTA4,
---              y vuelve a la A); dónde va la nota dorada (último compás de cada 4, en la 12; en el solo, compases 1
---              y 5 en la 0) y dónde la pista de baile (la subida y la 2ª mitad del clímax)
+--              y vuelve a la A); dónde va la nota dorada (último compás de cada 8, en la 12; en el solo, el compás 5
+--              en la 0) y dónde la pista de baile (la subida y la 2ª mitad del clímax)
 --   salto      en la A: agachado con la diana sobre ti, salta en la semicorchea 8 y CAE en la 0 del compás siguiente
 --              (± un paso) en la diana (≤ 4 px): dos ondas de arena; una onda le quita 1 a quien está en el suelo
 --   notas      en la B dispara en los pops (2 en un compás: semicorcheas 4 y 8) hacia el jugador; una nota quita 1
---   dorada     en la 12 del compás 4 dispara la DORADA, alta: a un jugador quieto en el suelo le pasa por encima sin
+--   dorada     en la 12 del compás 8 dispara la DORADA, alta: a un jugador quieto en el suelo le pasa por encima sin
 --              tocarle; saltar contra ella la devuelve, le da y le REVIENTA el trampolín → aturdido (vulnerable)
 --   aturdido   aturdido: pisotón -1, otro -1 y con el 2º le crece el trampolín ('regrow'), un 3º no le da; sin golpes, a
 --              los 2 compases también; con el trampolín de nuevo fuera vuelve a lo suyo
@@ -15,13 +15,17 @@
 --   tocar      tocar su cuerpo de lado quita 1; su pinza, no; aturdido, no
 --   pista      en la subida: unas baldosas avisan (tiempo 1) y en el 2 lanzan la columna: encima quita 1, en una
 --              apagada no, en la plataforma de encima tampoco
---   conga      en el solo entra una fila de 4 cangrejos que avanza una casilla por tiempo; tocarlos de lado quita 1;
---              pisarlos los quita (y rebotas)
---   enfado     a media vida se enfada; enfadado salta también en los compases pares de la A (tranquilo, no)
---   solo       en el compás 1 del solo, dorada en la 0; en el 2, un saltito que cae en el 3 justo en el golpe, sin ondas
+--   platos     2ª FASE: los platos de DJ están en las dos plataformas; en la 1ª fase pisarlos no hace nada; en la 2ª ya
+--              no hay dorada, pisar uno lo pone a girar (y rebotas) DECK_T s y luego se apaga; los dos a la vez → el
+--              BAJÓN: noqueado y vulnerable, platos apagados
+--   trepar     caerle al trampolín y mantener hacia un lado te deja en la plataforma de ese lado (a 5 casillas: con
+--              el doble salto no se llega)
+--   enfado     a media vida se enfada (2ª fase); enfadado salta también en los compases pares de la A (tranquilo, no)
+--   solo       en el compás 5 del solo, dorada en la 0 (en el 1 ya no); en el 2, un saltito que cae en el 3 justo en el
+--              golpe, sin ondas
 --   derrota    el último golpe: aturdido, se va de un bote hacia arriba (libera la zona) hasta irse; sin fragmento
---   red        netPackExtra → otro Groove (cliente): canción, enfado, diana, ondas, notas (con la dorada) y conga
---              iguales; interact igual
+--   red        netPackExtra → otro Groove (cliente): canción, enfado, fase, diana, ondas, notas (con la dorada),
+--              platos y bajón iguales; interact igual
 --
 --   tools/tests/run.sh groovecrab_rules   (CASE=nombre)
 io.stdout:setvbuf('no')
@@ -92,7 +96,7 @@ end
 local function songAt(boss, bar, step)
     local t = bar * boss.BAR + (step or 0) * boss.S16
     boss.songT, boss.prevT = t, t - 1e-4
-    boss.hop, boss.waves, boss.notes, boss.congas = nil, {}, {}, {}
+    boss.hop, boss.waves, boss.notes = nil, {}, {}
     boss.x = 24 * T - T / 2
     boss.y = boss.floorY - boss.outerH / 2
     boss:enter('groove')
@@ -116,7 +120,7 @@ local cases = {}
 
 -- aturde al jefe como en el juego: dispara la dorada y un jugador salta contra ella
 local function stunIt(level, es, boss, pa)
-    songAt(boss, barOf('A', 4), 11.5)
+    songAt(boss, barOf('A', 8), 11.5)
     local stunned
     stepAll(level, es, { pa }, 3, function()
         pa.vx, pa.invT = 0, 9
@@ -134,8 +138,8 @@ function cases.reloj()
     local ok = is(0, 'I', 1) and is(8 * B + 0.01, 'A', 1) and is(24 * B + 0.01, 'B', 1) and is(40 * B + 0.01, 'K', 1)
         and is(48 * B + 0.01, 'S', 1) and is(56 * B + 0.01, 'C', 1) and is(72 * B + 0.01, 'O', 1)
         and is((8 + 68) * B + 0.01, 'A', 1) and is((8 + 68 + 35) * B + 0.01, 'K', 4)
-    local gold = boss.goldAt('A', 4) == 12 and boss.goldAt('A', 3) == nil and boss.goldAt('K', 1) == 0
-        and boss.goldAt('K', 3) == nil and boss.goldAt('K', 5) == 0 and boss.goldAt('I', 4) == nil and boss.goldAt('O', 4) == nil
+    local gold = boss.goldAt('A', 8) == 12 and boss.goldAt('A', 4) == nil and boss.goldAt('B', 16) == 12 and boss.goldAt('K', 1) == nil
+        and boss.goldAt('K', 3) == nil and boss.goldAt('K', 5) == 0 and boss.goldAt('I', 8) == nil and boss.goldAt('O', 4) == nil
     local floor = boss.floorOn('S', 1) and boss.floorOn('C', 9) and not boss.floorOn('C', 8) and not boss.floorOn('A', 1)
     check('reloj', ok and gold and floor and boss.LOOP == 68,
         ('secciones=%s · dorada=%s · pista=%s · bucle %d compases (%.1f s)'):format(tostring(ok), tostring(gold), tostring(floor),
@@ -193,7 +197,7 @@ function cases.dorada()
     -- quieto en el suelo: le pasa por encima
     -- (la dorada no hace daño nunca: no tiene golpe; aquí solo se mira que no la toque. invT: que el salto del
     -- compás siguiente no le cuente)
-    songAt(boss, barOf('A', 4), 11.5)
+    songAt(boss, barOf('A', 8), 11.5)
     local fired, returned = false, false
     stepAll(level, es, { pa }, 3, function()
         pa.x, pa.vx, pa.invT = 16 * T - T / 2, 0, 9
@@ -316,35 +320,93 @@ function cases.pista()
             tostring(warn), tostring(boomSeen), h1, p1.hp, h2, p2.hp, tostring(onPlat), hl, pl.hp))
 end
 
-function cases.conga()
+-- pasa a la 2ª fase como en el juego (aturdido, el golpe que lo deja a media vida) y espera a que vuelva a lo suyo
+-- cae sobre un plato: los pies 6 px por debajo de su cara de arriba
+local function onDeck(level, boss, d)
+    local box = boss:deckBox(d)
+    local pa = dropOn(level, d.x, box.y, false)
+    local pb = pa:getOuterBounds()
+    pa.y = pa.y + (box.y + 6) - (pb.y + pb.h)
+    pa.prevY = pa.y - 6
+    return pa
+end
+local function phase2(level, es, boss, pa)
+    boss.hp = math.floor(boss.hpMax * 0.5) + 1
+    stunIt(level, es, boss, pa)
+    boss:stomp()
+    boss.inv = 0
+    boss:enter('groove')
+end
+
+function cases.platos()
     local level, es, boss = arena()
-    songAt(boss, barOf('K', 1) - 1, 15.9)                                    -- (justo antes del solo: entra al pasar de compás)
-    local pa = playerAt(level, 2)
-    stepAll(level, es, { pa }, 0.05, function() pa.vx = 0 end)
-    local line = boss.congas[1]
-    local x0 = line and boss:congaPos(line, 0)
-    stepAll(level, es, { pa }, 3 * 0.4, function() pa.vx = 0 end)
-    local x3 = line and boss:congaPos(line, 0)
-    local moved = x0 and x3 and math.floor(math.abs(x3 - x0) / T + 0.5)
-    -- tocarlo de lado quita 1
-    local x, feet = boss:congaPos(line, 0)
-    local pb = playerAt(level, 2)
-    pb.x, pb.y, pb.invT = x + line.dir * 20, feet - pb:getOuterBounds().h / 2 - 1, 0
-    local hp0 = pb.hp
-    level.players = { pb }
-    boss:updateConga(level, -1, 'B', 2, 0, function() return false end)
-    local side = hp0 - pb.hp
-    -- pisarlo lo quita
-    local x1, feet1 = boss:congaPos(line, 1)
-    local pc = playerAt(level, 2)
-    local ob = pc:getOuterBounds()
-    pc.x, pc.y, pc.vy, pc.onGround = x1, feet1 - 34 - ob.h / 2 + 6, 400, false
-    level.players = { pc }
-    boss:updateConga(level, -1, 'B', 2, 0, function() return false end)
-    local stomped = boss.bit(line.dead, 1) and pc.vy < 0
-    check('conga', line ~= nil and moved == 3 and side == 1 and stomped,
-        ('fila al empezar el solo: %s (desde %s) · en 3 tiempos avanza %s casillas · de lado: -%d · pisado: fuera=%s'):format(
-            tostring(line ~= nil), line and (line.dir > 0 and 'la izquierda' or 'la derecha') or '?', tostring(moved), side, tostring(stomped)))
+    local pa = playerAt(level, 24)
+    stepAll(level, es, { pa }, 0.05, function() pa.vx, pa.invT = 0, 9 end)
+    local decks = boss.decks
+    local found = decks and #decks == 2 and decks[1].x == 14 * T and decks[2].x == 32 * T and decks[1].y == 7 * T
+    -- 1ª fase: pisarlo no hace nada
+    local p1 = onDeck(level, boss, decks[1])
+    stepAll(level, es, { p1 }, 2 / 60)
+    local p1off = decks[1].on == 0
+    -- 2ª fase
+    phase2(level, es, boss, pa)
+    local p2 = boss.phase == 2 and boss.rage
+    songAt(boss, barOf('A', 8), 11.5)
+    local gold = false
+    stepAll(level, es, { pa }, 1.0, function()
+        pa.vx, pa.invT = 0, 9
+        for _, n in ipairs(boss.notes) do if n.c >= 4 then gold = true end end
+    end)
+    boss:enter('groove')
+    local pl = onDeck(level, boss, decks[1])
+    stepAll(level, es, { pl }, 2 / 60, function() pl.invT = 9 end)
+    local spun, bounced = decks[1].on > boss.DECK_T - 0.1, pl.vy < 0
+    stepAll(level, es, {}, boss.DECK_T + 0.1)
+    local stopped = decks[1].on == 0
+    -- los dos: el bajón
+    local hp0 = boss.hp
+    local a1 = onDeck(level, boss, decks[1])
+    stepAll(level, es, { a1 }, 2 / 60, function() a1.invT = 9 end)
+    local a2 = onDeck(level, boss, decks[2])
+    stepAll(level, es, { a2 }, 2 / 60, function() a2.invT = 9 end)
+    local ko = boss.state == 'stunned' and boss:isVulnerable() and not boss:trampOut() and boss.dropT ~= nil
+        and decks[1].on == 0 and decks[2].on == 0
+    check('platos', found and p1off and p2 and not gold and spun and bounced and stopped and ko and boss.hp == hp0,
+        ('platos en las plataformas: %s (x %s, %s; y %s) · 1ª fase, pisarlo: nada=%s · 2ª fase=%s, dorada=%s · pisado: gira=%s, rebota=%s, a los %.1f s se apaga=%s · los dos: noqueado=%s'):format(
+            tostring(found), decks and math.floor(decks[1].x) or '?', decks and math.floor(decks[2].x) or '?',
+            decks and math.floor(decks[1].y) or '?', tostring(p1off), tostring(p2), tostring(gold), tostring(spun),
+            tostring(bounced), boss.DECK_T, tostring(stopped), tostring(ko)))
+end
+
+-- Lo que pide la 2ª fase se puede hacer: del trampolín a cada plataforma, manteniendo hacia ese lado
+function cases.trepar()
+    local results = {}
+    for _, side in ipairs({ -1, 1 }) do
+        local level, es, boss = arena()
+        songAt(boss, barOf('B', 1), 0)                                     -- (la B: no salta)
+        boss.x = 23 * T + side * 3 * T
+        local tb = boss:trampBox()
+        local pa = playerAt(level, 2)
+        local ob = pa:getOuterBounds()
+        pa.x, pa.y, pa.vy, pa.onGround = boss.x, tb.y - ob.h / 2 - 4, 300, false
+        local landedY
+        for _ = 1, 3 * 60 do
+            level.players = { pa }
+            level.solidBodies = Entities.solidBodies(es)
+            for k in pairs(stub.state) do stub.state[k] = false end
+            stub.state[side < 0 and 'left' or 'right'] = true
+            pa.invT = 9
+            pa:update(DT, level)
+            local r, a, b, c = boss:interact(pa)
+            if r == 'launch' then pa:launch(a, b, c) end
+            boss.songT, boss.prevT = barOf('B', 1) * boss.BAR, barOf('B', 1) * boss.BAR - 1e-4  -- (quieto: sin notas)
+            if pa.onGround and pa.vy >= 0 and pa.y < boss.floorY - 3 * T then landedY = pa.y; break end
+        end
+        results[#results + 1] = landedY ~= nil
+    end
+    for k in pairs(stub.state) do stub.state[k] = false end
+    check('trepar', results[1] and results[2], ('del trampolín a la plataforma izquierda: %s · derecha: %s'):format(
+        tostring(results[1]), tostring(results[2])))
 end
 
 function cases.enfado()
@@ -354,7 +416,7 @@ function cases.enfado()
     boss.hp = math.floor(boss.hpMax / 2) + 1
     stunIt(level, es, boss, pa)
     boss:stomp()
-    local angry = boss.rage
+    local angry = boss.rage and boss.phase == 2
     local hopped
     songAt(boss, barOf('A', 2), 0)
     stepAll(level, es, { pa }, 1.0, function()
@@ -368,9 +430,12 @@ end
 function cases.solo()
     local level, es, boss = arena()
     local pa = playerAt(level, 18)
-    songAt(boss, barOf('K', 1) - 1, 15.9)
+    songAt(boss, barOf('K', 5) - 1, 15.9)
     local gold
     stepAll(level, es, { pa }, 0.15, function() pa.vx, pa.invT = 0, 9; for _, n in ipairs(boss.notes) do if n.c == 4 then gold = true end end end)
+    songAt(boss, barOf('K', 1) - 1, 15.9)
+    local gold1
+    stepAll(level, es, { pa }, 0.15, function() pa.vx, pa.invT = 0, 9; for _, n in ipairs(boss.notes) do if n.c == 4 then gold1 = true end end end)
     songAt(boss, barOf('K', 2), 0)
     local landT, waves
     stepAll(level, es, { pa }, boss.BAR + 0.1, function()
@@ -379,8 +444,9 @@ function cases.solo()
         if landT == false and boss.state ~= 'hop' then landT, waves = boss.songT, #boss.waves end
     end)
     local onHit = landT and math.abs(landT - barOf('K', 3) * boss.BAR) <= 1.5 / 60
-    check('solo', gold and onHit and waves == 0,
-        ('K1: dorada en la 0=%s · el saltito de K2 cae en el golpe de K3: %s · ondas %s'):format(tostring(gold), tostring(onHit), tostring(waves)))
+    check('solo', gold and not gold1 and onHit and waves == 0,
+        ('K5: dorada en la 0=%s · K1: %s · el saltito de K2 cae en el golpe de K3: %s · ondas %s'):format(tostring(gold),
+            tostring(gold1 == true), tostring(onHit), tostring(waves)))
 end
 
 function cases.derrota()
@@ -407,12 +473,12 @@ end
 function cases.red()
     local level, es, boss = arena()
     local pa = playerAt(level, 16)
-    songAt(boss, barOf('B', 4), 0)
+    songAt(boss, barOf('B', 8), 0)
     stepAll(level, es, { pa }, 1.35, function() pa.vx, pa.invT = 0, 9 end)
-    boss.rage = true
+    boss.rage, boss.phase, boss.p2T, boss.dropT = true, 2, 3.5, 7.25
+    boss.decks = boss.decks or boss:findDecks(level)
     require('src/world/entities/base/BossWaves').spawn(boss, boss.floorY, boss.outerW / 2)
-    boss:startConga(barOf('K', 1), -1)
-    boss.congas[1].dead = 2
+    boss.decks[2].on = 4.25
     local data = boss:netPackExtra()
     local other = Entities.create({ type = 'groovecrab', col = boss.col, row = boss.row, props = {} })
     other.zone, other.levelRef = boss.zone, level
@@ -425,23 +491,26 @@ function cases.red()
         if not o or math.abs(o.x - n.x) > 1 or math.abs(o.y - n.y) > 1 or o.c ~= n.c then notesSame = false end
     end
     local nNotes = #boss.notes
-    local cg = other.congas[1]
-    local same = math.abs(other.songT - boss.songT) < 0.011 and other.rage and other.markX == boss.markX
-        and #other.waves == #boss.waves and notesSame and nNotes >= 1 and cg and cg.b0 == barOf('K', 1) and cg.dir == -1 and cg.dead == 2
+    local od = other.decks
+    local decksSame = od and #od == 2 and od[1].x == boss.decks[1].x and od[2].y == boss.decks[2].y and od[1].on == 0
+        and math.abs(od[2].on - 4.25) < 0.11
+    local same = math.abs(other.songT - boss.songT) < 0.011 and other.rage and other.phase == 2 and other.markX == boss.markX
+        and #other.waves == #boss.waves and notesSame and nNotes >= 1 and decksSame and other.p2T == 3.5 and other.dropT == 7.25
     local pd = playerAt(level, 14)
+    boss.phase = 1                                                          -- (la dorada: solo en la 1ª fase)
     stunIt(level, es, boss, pd)
-    other.state, other.deadTimer, other.stunHits = boss.state, boss.deadTimer, boss.stunHits
+    other.state, other.deadTimer, other.stunHits, other.x, other.y = boss.state, boss.deadTimer, boss.stunHits, boss.x, boss.y
     local gob = boss:getOuterBounds()
     local p1 = dropOn(level, boss.x, gob.y, false)
     local i1, i2 = boss:interact(p1), other:interact(p1)
     check('red', same and hasGold and i1 == i2 and i1 == 'stomp',
-        ('datos iguales=%s (%d campos, %d notas, dorada=%s, conga=%s) · interact %s / %s'):format(tostring(same), #data, nNotes,
-            tostring(hasGold), tostring(cg ~= nil), tostring(i1), tostring(i2)))
+        ('datos iguales=%s (%d campos, %d notas, dorada=%s, platos=%s) · interact %s / %s'):format(tostring(same), #data, nNotes,
+            tostring(hasGold), tostring(decksSame), tostring(i1), tostring(i2)))
 end
 
 function love.load(arg)
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'reloj', 'salto', 'notas', 'dorada', 'aturdido', 'trampolin', 'tocar', 'pista', 'conga', 'enfado',
+    for _, n in ipairs({ 'reloj', 'salto', 'notas', 'dorada', 'aturdido', 'trampolin', 'tocar', 'pista', 'platos', 'trepar', 'enfado',
                          'solo', 'derrota', 'red' }) do
         if not only or only == n then
             local ok, err = xpcall(cases[n], debug.traceback)

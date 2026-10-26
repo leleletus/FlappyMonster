@@ -1,6 +1,7 @@
 -- src/world/entities/types/bosses/groovecrab_stage.lua
--- PARTE de types/bosses/groovecrab.lua (EL GROOVE): el DIBUJO — él (postura y vaivén de las pinzas), sus notas y la
--- dorada, las ondas, la pista de baile, la conga y el ESCENARIO de detrás (renderBack: el público de cangrejos y
+-- PARTE de types/bosses/groovecrab.lua (EL GROOVE): el DIBUJO — él (postura y vaivén de las pinzas; noqueado, sin
+-- gafas y con ojos en X), sus notas y la dorada, las ondas, la pista de baile, los platos de DJ y el bajón de los
+-- bafles, y el ESCENARIO de detrás (renderBack: el público de cangrejos y
 -- Gummies en silueta con barras de luz, los bafles que bombean, el ecualizador, la bola de discoteca y sus láseres;
 -- delante, los focos de colores y el destello al empezar cada frase). Pedido del usuario (0.5.47): "una mezcla de
 -- rave nocturna y concierto en la playa, de atardecer" — que se vea que es un jefe MUSICAL.
@@ -13,12 +14,13 @@ local SpriteStrip = require 'src/fx/SpriteStrip'
 return function(GC, P)
 local T, MS, FW, FH, S16, BAR, BEAT = P.T, P.MS, P.FW, P.FH, P.S16, P.BAR, P.BEAT
 local REGROW_T, BOOM_LEN = P.REGROW_T, P.BOOM_LEN
+local DECK_T, DECK_W, DECK_H, DECK_IN, DROP_FX = P.DECK_T, P.DECK_W, P.DECK_H, P.DECK_IN, P.DROP_FX
 
 -- ── Arte ──
 local DIR = 'assets/images/bosses/groovecrab/'
 local art
 local imgs = {}
-local function img(path)                                -- (sprites sueltos del juego: el público y la conga)
+local function img(path)                                -- (sprites sueltos del juego: el público)
     if not imgs[path] then
         local ok, im = pcall(love.graphics.newImage, path)
         if ok and im.setFilter then im:setFilter('nearest', 'nearest') end
@@ -29,15 +31,6 @@ end
 local SPECIES = { 'crabby', 'crabby_river', 'crabby_cave', 'crabby_fortress', 'crabby_ice', 'crabby_lava' }
 local function crabImg(sp, f) return img('assets/images/enemies/' .. SPECIES[sp] .. '/crab' .. f .. '.png') end
 local function gummyImg(f) return img('assets/images/enemies/gummy/gummy' .. f .. '.png') end
--- (el filo en lo oscuro de cada especie: el rasgo `darkEdge` de su tipo — el Crabby de lava —; nil = no le hace falta)
-local edges = {}
-local function edgeOf(sp)
-    if edges[sp] == nil then
-        local def = require('src/world/entities/base/EntityTypes').get(SPECIES[sp])
-        edges[sp] = def and def.class and def.class.darkEdge or false
-    end
-    return edges[sp] or nil
-end
 
 function GC.loadAssets()
     if art or not (love and love.graphics) then return end
@@ -46,7 +39,9 @@ function GC.loadAssets()
             note = SpriteStrip.load(DIR .. 'note-Sheet.png', 9), gold = SpriteStrip.load(DIR .. 'gold-Sheet.png', 9),
             wave = SpriteStrip.load(DIR .. 'wave-Sheet.png', 12), speaker = SpriteStrip.load(DIR .. 'speaker-Sheet.png', 18),
             ball = SpriteStrip.load(DIR .. 'discoball-Sheet.png', 12), stick = SpriteStrip.load(DIR .. 'glowstick-Sheet.png', 3),
-            panel = SpriteStrip.load(DIR .. 'panel-Sheet.png', 32) }
+            panel = SpriteStrip.load(DIR .. 'panel-Sheet.png', 32), ko = SpriteStrip.load(DIR .. 'ko-Sheet.png', FW),
+            glasses = SpriteStrip.load(DIR .. 'glasses.png', 14), deck = SpriteStrip.load(DIR .. 'deck-Sheet.png', 24),
+            led = SpriteStrip.load(DIR .. 'led-Sheet.png', 3), arrow = SpriteStrip.load(DIR .. 'arrow.png', 7) }
 end
 local function quad(s, i) return s.images and s.images[i] or s.image, s.quads[i] end
 
@@ -104,24 +99,27 @@ function GC:pose()
         p.jx = (math.floor(now * 30) % 2 == 0) and 1 or 0
     elseif st == 'hop' then
         p.sy, p.sx, p.tk, p.leg, p.bdy, p.sdy = 1.1, 0.92, 1.2, 2, 2, 2
-    elseif st == 'stunned' then
-        -- sin trampolín (le reventó), mareado: se bambolea, las pinzas cuelgan
-        local w = math.sin(now * 7)
-        p.tk, p.sy, p.sx = 0, 1 + 0.05 * math.abs(w), 1 - 0.03 * math.abs(w)
-        p.bdy, p.sdy, p.bdx = 1 + w * 0.7, 1, w
-        p.jx = (t < 0.3) and ((math.floor(now * 40) % 2 == 0) and 2 or -2) or 0
+    elseif st == 'stunned' or st == 'dying_daze' then
+        -- NOQUEADO (el usuario, 0.5.48: que se note MUY atontado): sin trampolín (le reventó), le vuelan las gafas
+        -- (drawGlasses), ojos en X que giran, la lengua fuera, despatarrado; el golpe lo APLASTA y se recupera
+        -- muelleando, y luego se tambalea de lado a lado (desplazado, nunca girado: pixel art), las pinzas por el suelo
+        local w = math.sin(now * 4.5)
+        local hit = math.max(0, 1 - t / 0.45)
+        local bump = hit * hit * math.cos(t * 22)
+        p.ko, p.tk = true, (st == 'dying_daze') and 0.6 or 0
+        p.sy, p.sx = 1 - 0.28 * bump + 0.04 * math.abs(w), 1 + 0.22 * bump - 0.03 * math.abs(w)
+        p.bdy, p.sdy, p.bdx = 0, 1, -1.5 + w * 0.6                       -- (las pinzas en el suelo, sin meterse)
+        p.jx = math.floor(w * 7 + 0.5) + ((t < 0.3) and ((math.floor(now * 40) % 2 == 0) and 3 or -3) or 0)
     elseif st == 'regrow' then
         -- le CRECE otro trampolín de la cabeza: sale encogido y se estira con un muelleo
         local u = math.min(1, t / REGROW_T)
         p.tk = u * (1 + 0.35 * math.sin(u * 14) * (1 - u))
+        p.ko = t < 0.35                                                 -- (hasta que le vuelven las gafas: drawGlasses)
         p.sy, p.sx = 1 + 0.05 * math.sin(u * 20) * (1 - u), 1
         p.bdy, p.sdy = -3 * math.sin(u * math.pi), -2 * math.sin(u * math.pi)
-    elseif st == 'dying_daze' then
-        local w = math.sin(now * 7)
-        p.sy, p.sx, p.tk = 1 + 0.05 * math.abs(w), 1 - 0.03 * math.abs(w), 0.6
-        p.bdy, p.sdy, p.bdx = 0.5 + w * 0.5, 0.5, w                     -- (las pinzas cuelgan, sin meterse en el suelo)
     elseif st == 'dying_flee' then
         p.sy, p.sx, p.tk, p.leg, p.bdy, p.sdy = 1.12, 0.9, 1.3, 2, -4, -3
+        p.ko = true                                                     -- (se va noqueado; las gafas se quedan en el suelo)
     end
     -- EL VAIVÉN de las pinzas (como los Mega Crabbies, nunca tiesas): desvío en px de arte que se suma a la postura
     -- (sin girarlas: el pixel art no se rota). Andando se mecen a contrapié; agachado, recogidas y temblando; en el
@@ -139,8 +137,8 @@ function GC:pose()
         p.bdx, p.bdy, p.sdy = p.bdx + 1.5 + sw(0.4, 40), p.bdy + 1, p.sdy + 1 + sw(0.4, 40, 1)
     elseif st == 'hop' or ((st == 'intro' or st == 'ready') and it < P.LAND_AT) then
         p.bdy, p.sdy, p.bdx = -3 + sw(1.5, 20), -2 + sw(1, 20, 1.3), p.bdx + sw(0.8, 20, 0.7)
-    elseif st == 'stunned' then
-        p.bdy, p.sdy = p.bdy + sw(0.8, 6), p.sdy + sw(0.8, 6, 2)
+    elseif st == 'stunned' or st == 'dying_daze' then
+        p.bdx, p.sdy = p.bdx + sw(0.5, 6), p.sdy + sw(0.3, 6, 2)
     elseif st == 'dying_flee' then
         p.bdy, p.sdy = -4 + sw(1.5, 16), -3 + sw(1, 16, 1)
     end
@@ -296,28 +294,109 @@ function GC:drawFloor(camX, camY)
     love.graphics.setColor(1, 1, 1, 1)
 end
 
--- La CONGA: cangrejos del público (de colores, como de verdad) cruzando a saltos
-function GC:drawConga(camX, camY)
-    for _, line in ipairs(self.congas or {}) do
-        for i = 0, GC.CONGA_N - 1 do
-            if not GC.bit(line.dead or 0, i) then
-                local x, feet, hop = self:congaPos(line, i)
-                if x then
-                    local sp = (line.id + i) % #SPECIES + 1
-                    local im = crabImg(sp, (hop or 0) % 3 + 1)
-                    if im then
-                        local dx0, dy0 = math.floor(x - camX), math.floor(feet - camY)
-                        local function body(dx, dy) love.graphics.draw(im, dx0 + dx, dy0 + dy, 0, 4, 4, im:getWidth() / 2, im:getHeight()) end
-                        local edge = edgeOf(sp)
-                        local Sil = require 'src/fx/Silhouette'
-                        if edge and Sil.level and Sil.dim(Sil.level, feet) then Sil.around(body, edge) end
-                        love.graphics.setColor(1, 1, 1, 1)
-                        body(0, 0)
-                    end
-                end
+-- Los PLATOS DE DJ (2ª fase), sobre sus plataformas: salen al empezar la fase (suben desde la plataforma); apagados,
+-- una flecha que bota encima dice "písame"; girando, la etiqueta da vueltas y los LED cuentan lo que le queda
+local N_LED = 5
+function GC:drawDecks(camX, camY)
+    if not (self.decks and self.phase == 2) then return end
+    local now = love.timer.getTime()
+    local kIn = self.p2T and math.max(0, math.min(1, ((self.songT or 0) - self.p2T) / DECK_IN)) or 1
+    if self:isDying() then kIn = 1 end
+    local live = self:decksLive()
+    for i, d in ipairs(self.decks) do
+        local on = (d.on or 0) > 0
+        local fr = on and (math.floor(now * 12) % 3 + 2) or 1
+        local x, y = math.floor(d.x - DECK_W / 2 - camX), math.floor(d.y - camY) - math.floor(DECK_H * kIn)
+        local h = math.floor(DECK_H * kIn)
+        if h > 0 then
+            -- (sale de la plataforma: se recorta lo que aún está "dentro")
+            local Clip = require 'src/ui/Clip'
+            Clip.push(x, y, DECK_W, h)
+            if on then                                                  -- (el halo de encendido)
+                love.graphics.setBlendMode('add')
+                love.graphics.setColor(0.25, 0.85, 1, 0.25 + 0.1 * math.sin(now * 10))
+                love.graphics.rectangle('fill', x - 6, y - 6, DECK_W + 12, DECK_H + 6)
+                love.graphics.setBlendMode('alpha')
             end
+            love.graphics.setColor(1, 1, 1, 1)
+            local di, dq = quad(art.deck, fr)
+            love.graphics.draw(di, dq, x, y, 0, 4, 4)
+            -- la cuenta atrás: N_LED en la tira de delante (rojos y parpadeando al final)
+            local lit = on and math.ceil(d.on / DECK_T * N_LED) or 0
+            for k = 0, N_LED - 1 do
+                local lf = 1
+                if k < lit then lf = (lit <= 2) and ((math.floor(now * 8) % 2 == 0) and 3 or 1) or 2 end
+                local li, lq = quad(art.led, lf)
+                love.graphics.draw(li, lq, x + 8 + k * 16, y + 7 * 4, 0, 4, 4)
+            end
+            Clip.pop()
+        end
+        if live and not on and kIn >= 1 then                            -- (¡písame!)
+            local bob = math.floor(math.abs(math.sin(now * 5)) * 14)
+            local ai, aq = quad(art.arrow, 1)
+            love.graphics.setColor(1, 1, 1, 1)
+            love.graphics.draw(ai, aq, math.floor(d.x - camX) - 14, y - 40 - bob, 0, 4, 4)
         end
     end
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
+-- El BAJÓN: los dos bafles disparan aros y un chorro de luz contra él (DROP_FX s desde dropT)
+function GC:drawDrop(camX, camY)
+    if not self.dropT then return end
+    local u = ((self.songT or 0) - self.dropT) / DROP_FX
+    if u < 0 or u >= 1 then return end
+    local zx0, zx1 = self:zoneBounds()
+    local sy = math.floor(self.floorY - 8.5 * 6 - camY)
+    local tx = math.floor(self.x - camX)
+    love.graphics.setBlendMode('add')
+    for i, sx0 in ipairs({ zx0 + 0.9 * T, zx1 - 0.9 * T }) do
+        local sx = math.floor(sx0 - camX)
+        local c = BEAT_COLS[(i - 1) * 2 + 1]
+        love.graphics.setColor(c[1], c[2], c[3], 0.3 * (1 - u))
+        local x0, x1 = math.min(sx, tx), math.max(sx, tx)
+        local hh = math.floor(40 * (1 - u)) + 8
+        love.graphics.rectangle('fill', x0, sy - hh, x1 - x0, 2 * hh)
+        love.graphics.setLineWidth(6)
+        for k = 0, 2 do
+            local r = (u * 3 - k * 0.3) * 260
+            if r > 0 then love.graphics.circle('line', sx, sy, r, 32) end
+        end
+        love.graphics.setLineWidth(1)
+    end
+    love.graphics.setBlendMode('alpha')
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
+-- Las GAFAS que le volaron al quedar noqueado: salen de la cara hacia atrás en arco, botan en el suelo y se quedan;
+-- al recomponerse ('regrow') vuelven de un salto a su cara. Pura función de state + deadTimer (el sitio donde caen se
+-- recuerda al dibujar, para que se queden ahí mientras se va de un bote)
+local GL_FLY, GL_BACK = 0.55, 0.35
+function GC:drawGlasses(camX, camY, alpha)
+    local st, t = self.state, self.deadTimer or 0
+    local f = self.facing or 1
+    local hx, hy = self.x + f * 0.5 * MS, self:feetY() - 6 * MS            -- (la cara)
+    local rx, ry = self.x - f * 2.6 * T, self.floorY                      -- (en el suelo, detrás de él)
+    local x, y
+    if st == 'stunned' or st == 'dying_daze' then
+        self._glass = { rx, ry }
+        if t < GL_FLY then
+            local u = t / GL_FLY
+            x, y = hx + (rx - hx) * u, hy + (ry - hy) * u - 2.2 * T * 4 * u * (1 - u)
+        else
+            local b = math.max(0, 1 - (t - GL_FLY) / 0.3)
+            x, y = rx, ry - math.abs(math.sin((t - GL_FLY) * 14)) * 18 * b
+        end
+    elseif st == 'regrow' and t < GL_BACK then
+        local u = t / GL_BACK
+        x, y = rx + (hx - rx) * u, ry + (hy - ry) * u - 1.5 * T * 4 * u * (1 - u)
+    elseif st == 'dying_flee' and self._glass then
+        x, y = self._glass[1], self._glass[2]
+    else return end
+    local gi, gq = quad(art.glasses, 1)
+    love.graphics.setColor(1, 1, 1, alpha)
+    love.graphics.draw(gi, gq, math.floor(x - camX), math.floor(y - camY), 0, MS * f * -1, MS, 7, 4)
+    love.graphics.setColor(1, 1, 1, 1)
 end
 
 function GC:render(camX, camY)
@@ -326,10 +405,8 @@ function GC:render(camX, camY)
     local st = self.state
     local now = love.timer.getTime()
     if stageT(self) then self:drawFloor(camX, camY) end
-    if live(self) then
-        self:drawSpotlights(camX, camY)
-        self:drawConga(camX, camY)
-    end
+    if live(self) or self:isDying() then self:drawDecks(camX, camY) end
+    if live(self) then self:drawSpotlights(camX, camY) end
     -- (¿anda? lo que avanzó desde el dibujo anterior)
     self._walking = self._lx ~= nil and math.abs(self.x - self._lx) > 0.05 and st == 'groove'
     self._lx = self.x
@@ -339,7 +416,7 @@ function GC:render(camX, camY)
     local f = self.facing or 1
     local fx, fy = math.floor(self.x - camX + 0.5) + p.jx, math.floor(self:feetY() - camY + 0.5)
     local dizzy = (st == 'dying_daze' or st == 'stunned') and not EDITOR_VIEW
-    if dizzy then BossFx.stars(fx, fy - 12 * MS, 7 * MS, 1.4 * MS, 5, alpha, 'back') end
+    if dizzy then BossFx.stars(fx, fy - 9 * MS, 9 * MS, 1.8 * MS, 7, alpha, 'back') end
     if self:flashRed() then love.graphics.setColor(1, 0.35, 0.35, alpha)
     elseif self.rage and self:isActive() then
         local q = 0.86 + 0.08 * math.sin(now * 8)
@@ -354,7 +431,9 @@ function GC:render(camX, camY)
         local ti, tq = quad(A.tramp, 1)
         love.graphics.draw(ti, tq, 0, -(FH - 1) * MS, 0, MS, MS * p.tk, 8, 9)       -- (el muelle, metido un píxel en el caparazón)
     end
-    local bi, bq = quad(A.body, p.leg)
+    local bi, bq
+    if p.ko then bi, bq = quad(A.ko, math.floor(now * 7) % 2 + 1)        -- (los ojos en X giran)
+    else bi, bq = quad(A.body, p.leg) end
     love.graphics.draw(bi, bq, 0, 0, 0, -MS * f, MS, FW / 2, FH)
     local bx = f * (13 - math.floor(p.bdx + 0.5)) * MS        -- (bdx: hacia el cuerpo; en px de arte enteros)
     local bdy, sdy = math.floor(p.bdy + 0.5), math.floor(p.sdy + 0.5)
@@ -363,8 +442,10 @@ function GC:render(camX, camY)
     local si, sq = quad(A.small, p.sf)
     love.graphics.draw(si, sq, -f * 11.5 * MS, (-4 + sdy) * MS, 0, MS * f, MS, 3.5, 3)
     love.graphics.pop()
-    if dizzy then BossFx.stars(fx, fy - 12 * MS, 7 * MS, 1.4 * MS, 5, alpha, 'front') end
+    if dizzy then BossFx.stars(fx, fy - 9 * MS, 9 * MS, 1.8 * MS, 7, alpha, 'front') end
+    if not EDITOR_VIEW then self:drawGlasses(camX, camY, alpha) end
     self:drawOver(camX, camY)
+    if live(self) then self:drawDrop(camX, camY) end
     -- el destello al empezar cada frase (el primer tiempo de cada 4 compases)
     if live(self) then
         local b, sec, k, step = GC.where(self.songT or 0)
@@ -417,18 +498,15 @@ function GC:drawOver(camX, camY)
     love.graphics.setColor(1, 1, 1, 1)
 end
 
--- Cajas de depuración (F1): ondas, notas, columnas de la pista, conga y el cojín del trampolín
+-- Cajas de depuración (F1): ondas, notas, columnas de la pista, los platos y el cojín del trampolín
 function GC:debugBoxes()
     local out = {}
     for _, w in ipairs(self.waves or {}) do local b = BossWaves.box(w, P.WAVES); b.kind = 'hazard'; out[#out + 1] = b end
     for _, n in ipairs(self.notes or {}) do local b = self:noteBox(n); b.kind = (n.c >= 4) and 'area' or 'hazard'; out[#out + 1] = b end
     local f = self.zone and self:floorNow()
     if f and f.boom then for i, on in pairs(f.lit) do if on then local b = self:boomBox(i); b.kind = 'hazard'; out[#out + 1] = b end end end
-    for _, line in ipairs(self.congas or {}) do
-        for i = 0, GC.CONGA_N - 1 do
-            local x, feet = self:congaPos(line, i)
-            if x and not GC.bit(line.dead or 0, i) then local b = self:congaBox(x, feet); b.kind = 'hazard'; out[#out + 1] = b end
-        end
+    if self.decks and self.phase == 2 then
+        for _, d in ipairs(self.decks) do local b = self:deckBox(d); b.kind = 'area'; out[#out + 1] = b end
     end
     if self:trampOut() then local b = self:trampBox(); b.kind = 'area'; out[#out + 1] = b end
     return out

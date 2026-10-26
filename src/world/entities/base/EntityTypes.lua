@@ -246,8 +246,9 @@ function EntityTypes.register(def)
                 love.graphics.setColor(1, 1, 1, 1)
                 return
             end
-            if st == 'stunned' then
-                -- Aturdida: se tambalea con estrellitas girando sobre la cabeza
+            if st == 'stunned' and not self.ownStunLook then
+                -- Aturdida: se tambalea con estrellitas girando sobre la cabeza (rasgo `ownStunLook`: el tipo dibuja
+                -- su propio aturdimiento — p. ej. El Groove, cuyo render pinta también cosas lejos de él)
                 local k  = math.max(0, 1 - (self.deadTimer or 0) / 1.2)
                 local sx = self.x - camX
                 local sy = self.y - camY

@@ -2,7 +2,7 @@
 -- pinza pequeña) con gafas de sol y el trampolín del juego en la espalda — que PELEA AL RITMO DE SU TEMA (`groove`,
 -- tools/music/slap_boss.py: el slap bass de protagonista), en un ESCENARIO de playa al atardecer con público. Se abre
 -- en el mapa tras vencer al Espejo (docs/bosses/groovecrab.md). Arte propio: tools/art/bosses/make_groove_crab.py.
--- Este archivo: el reglamento, la pelea y la red. El dibujo (él, el escenario, el público, la pista, la conga):
+-- Este archivo: el reglamento, la pelea y la red. El dibujo (él, el escenario, el público, la pista, los platos):
 -- groovecrab_stage.lua (una PARTE: añade métodos a la misma tabla; docs/architecture/project-structure.md).
 --
 -- EL RELOJ ES LA CANCIÓN: `songT` = el tiempo desde que empezó la pelea (la música de la zona empieza en ese mismo
@@ -17,21 +17,22 @@
 --   · PISTA DE BAILE (la subida y la 2ª mitad del clímax): el suelo está hecho de baldosas (2 casillas): unas se
 --     ENCIENDEN un tiempo (aviso) y en el siguiente LANZAN una columna de luz que quita 1. Dos dibujos por compás. En
 --     las plataformas de los lados no llega.
---   · CONGA (el solo; enfadado, también la 2ª mitad del clímax): 4 cangrejos del público cruzan el suelo de lado a
---     lado dando un salto en cada tiempo. Tocarlos quita 1; pisarlos los quita de en medio.
---   · LA NOTA DORADA (la ÚNICA forma de dañarlo): en el golpe de banda que cierra cada frase (y en dos golpes del solo)
---     dispara una nota DORADA alta (pasa por encima de un jugador en el suelo: hay que SALTAR contra ella). Tocarla
---     la DEVUELVE: vuelve hacia él y al darle le REVIENTA EL TRAMPOLÍN → ATURDIDO 2 compases ('stunned'): pisotón 1,
---     ground pound 2, hasta 2 golpes. Luego le CRECE otro trampolín de la cabeza ('regrow') y sigue. La dorada no hace
---     daño.
+--   · 1ª FASE — LA NOTA DORADA: en el golpe de banda que cierra cada 8 compases (y en el 5º del solo) dispara una
+--     nota DORADA alta (pasa por encima de un jugador en el suelo: hay que SALTAR contra ella). Tocarla la DEVUELVE:
+--     vuelve hacia él y al darle le REVIENTA EL TRAMPOLÍN → NOQUEADO 2 compases ('stunned': le vuelan las gafas, ojos
+--     en X): pisotón 1, ground pound 2, hasta 2 golpes. Luego le CRECE otro trampolín de la cabeza ('regrow') y sigue.
+--     La dorada no hace daño.
+--   · 2ª FASE (por debajo de `rageAt`) — LOS PLATOS DE DJ: ya no hay doradas; en cada plataforma de los lados sale un
+--     plato. Se sube con SU trampolín; pisar un plato (o ground pound) lo hace girar DECK_T s (cuenta atrás en sus
+--     LED). Con los DOS girando a la vez, los bafles sueltan el BAJÓN contra él → noqueado igual que con la dorada.
 --   · Su TRAMPOLÍN te lanza muy alto si le caes encima (también con ground pound). Tocar su CUERPO = 1 de vida y
 --     empujón; las PINZAS no hacen daño (la caja es solo caparazón y patas).
---   · ENFADADO (por debajo de `rageAt`; en Xtra extremo desde el principio): salta en todos los compases que puede,
---     más notas, y conga también en el clímax. Vida 10 (+4 por jugador).
+--   · ENFADADO (en la 2ª fase; en Xtra extremo desde el principio, aunque siga en la 1ª): salta en todos los compases
+--     que puede y dispara más notas. Vida 13 (+4 por jugador; la dificultad la escala).
 -- Entrada: cae del cielo en su sitio, chasquea dos veces las pinzas y rebota en su trampolín. Derrota: aturdido
 -- (estrellitas) y se va de un BOTE enorme en su trampolín hacia el cielo (pura función del tiempo). Sin fragmento.
--- Todo lo que se dibuja sale de state + deadTimer + x, y + netPackExtra (songT, diana, ondas, notas, congas): igual
--- online. La pista de baile y la conga son función de songT (y de qué cangrejos de la conga están pisados).
+-- Todo lo que se dibuja sale de state + deadTimer + x, y + netPackExtra (songT, fase, diana, ondas, notas, platos):
+-- igual online. La pista de baile es función de songT.
 
 local Entity = require 'src/world/entities/base/Entity'
 local Boss   = require 'src/world/entities/base/Boss'
@@ -46,6 +47,9 @@ local GC = Entity.extend(Boss, {
     hitbox = { outerW = 0.78, outerH = 1.0, innerW = 0.66, innerH = 0.7 },
 })
 GC.hurtSound   = 'megaHurt'
+-- (su 'stunned' lo dibuja él: el bamboleo genérico GIRA todo su render alrededor de su centro, y su render también
+-- pinta la pista de baile: las baldosas se mecían con él — el usuario, 0.5.48)
+GC.ownStunLook = true
 GC.introLength = 3.6
 GC.wantsLevel  = true
 local strike, overlap = Boss.strike, Boss.overlap
@@ -95,20 +99,22 @@ local REGROW_T = 0.9                            -- s que tarda en crecerle el tr
 local PANEL = 2 * T
 local BOOM_H = 3.5 * T                          -- alto de la columna de luz (las plataformas de los lados, a 5, se salvan)
 local BOOM_LEN = 2                              -- semicorcheas que dura la columna
--- La conga
-local CONGA_N, CONGA_GAP = 4, 1.5               -- cangrejos y tiempos de separación entre uno y otro
-local CONGA_HOP = 0.8 * T                       -- altura de cada salto (uno por tiempo, una casilla)
-local CONGA_W, CONGA_H = 52, 34
-GC.PANEL, GC.BOOM_H, GC.CONGA_N = PANEL, BOOM_H, CONGA_N
+-- Los platos de DJ (2ª fase)
+local DECK_T = 5 * BAR                          -- s que gira un plato tras pisarlo (8 s: da para bajar, volver a su
+                                                -- trampolín y subir a la otra plataforma)
+local DECK_W, DECK_H = 24 * 4, 10 * 4           -- (el arte: 24x10 a ×4)
+local DECK_IN = 1.0                             -- s que tardan en salir al empezar la 2ª fase
+local DROP_FX = 0.8                             -- s que se ve el BAJÓN de los bafles
+GC.PANEL, GC.BOOM_H, GC.DECK_T = PANEL, BOOM_H, DECK_T
 P.T, P.MS, P.FW, P.FH, P.S16, P.BAR, P.BEAT = T, MS, FW, FH, S16, BAR, BEAT
-P.REGROW_T, P.STUN_T, P.CONGA_GAP, P.CONGA_HOP, P.BOOM_LEN = REGROW_T, STUN_T, CONGA_GAP, CONGA_HOP, BOOM_LEN
+P.REGROW_T, P.STUN_T, P.BOOM_LEN = REGROW_T, STUN_T, BOOM_LEN
 P.NOTE_R, P.GOLD_R = NOTE_R, GOLD_R
+P.DECK_T, P.DECK_W, P.DECK_H, P.DECK_IN, P.DROP_FX = DECK_T, DECK_W, DECK_H, DECK_IN, DROP_FX
 
 -- Golpes a los jugadores: { vida, vx, vy, s sin control, s aturdido }
 local HIT_TOUCH = { 1, 480, -420, 0.2, 0 }
 local HIT_NOTE  = { 1, 300, -340, 0.15, 0 }
 local HIT_BOOM  = { 1, 0, -620, 0.2, 0 }
-local HIT_CONGA = { 1, 420, -380, 0.2, 0 }
 local WAVES = { spd = 470, life = 2.0, w = 44, h = 34, hit = { 1, 300, -440, 0.15, 0 } }
 P.WAVES = WAVES
 
@@ -121,7 +127,7 @@ P.DAZE_T = DAZE_T
 
 function GC.sizePx() return FW * MS, FH * MS end
 function GC:feetY() return self.y + self.outerH / 2 end
-function GC:bossPhase() return self.rage and 2 or 1 end
+function GC:bossPhase() return self.phase or 1 end
 -- (su "fase enfadada" es la del ritmo: el enfado genérico de Xtra extremo, que acelera, rompería el compás)
 function GC:angryPhase() return true end
 
@@ -130,11 +136,12 @@ function GC:initBoss()
     self.y = self.floorY - self.outerH / 2
     self.vx, self.vy, self.onGround = 0, 0, true
     self.facing = -1
-    self.rage = false
+    self.rage, self.phase = false, 1
     self.songT, self.prevT = 0, 0
     self.waves, self.nextId = {}, 0
     self.notes, self.noteId = {}, 0
-    self.congas, self.congaId = {}, 0
+    self.decks = nil                                   -- (nil: sin buscar aún; false: la arena no tiene plataformas)
+    self.dropT, self.p2T = nil, nil                    -- (songT del último bajón y del paso a la 2ª fase: el dibujo)
     self.graceT, self.stunHits = 0, 0
     self.markX = math.floor(self.x)
 end
@@ -142,6 +149,7 @@ end
 function GC:onFightStart(n)
     self.songT, self.prevT = 0, -1e-6
     self.rage = require('src/core/Difficulty').flag('bossFury') == true
+    self.phase = 1
     self:enter('groove')
 end
 
@@ -160,22 +168,24 @@ end
 -- (la vuelta del bucle en que está el compás b: 0 en la intro y la primera)
 function GC.loopOf(b) return b < INTRO_BARS and 0 or math.floor((b - INTRO_BARS) / LOOP) end
 
--- ¿Dispara la nota dorada en el compás (sec, k)? → su semicorchea, o nil. Cierra cada frase (el golpe de banda); en el
--- SOLO, en el golpe del 1º y del 5º compás
+-- ¿Dispara la nota dorada en el compás (sec, k)? → su semicorchea, o nil. En el golpe de banda que cierra cada 8
+-- compases (el usuario, 0.5.48: antes cada 4 eran demasiadas); en el SOLO, en el golpe del 5º compás. Solo en la 1ª
+-- fase (ver GC:goldOn)
 local PHRASE = { A = true, B = true, S = true, C = true }
 function GC.goldAt(sec, k)
-    if PHRASE[sec] and k % 4 == 0 then return GOLD_AT end
-    if sec == 'K' and (k == 1 or k == 5) then return 0 end
+    if PHRASE[sec] and k % 8 == 0 then return GOLD_AT end
+    if sec == 'K' and k == 5 then return 0 end
     return nil
 end
 
 -- ¿Pista de baile en el compás (sec, k)? (la subida entera y la 2ª mitad del clímax)
 function GC.floorOn(sec, k) return sec == 'S' or (sec == 'C' and k >= 9) end
 
--- Lo que hace él en un compás: { hop = true | lick = true, notes = { semicorcheas } }
-function GC.plan(sec, k, rage)
+-- Lo que hace él en un compás: { hop = true | lick = true, notes = { semicorcheas } }. noGold: ya no suelta doradas
+-- (2ª fase): sus compases son como los demás
+function GC.plan(sec, k, rage, noGold)
     local p = { notes = {} }
-    local gold = GC.goldAt(sec, k) ~= nil
+    local gold = not noGold and GC.goldAt(sec, k) ~= nil
     if sec == 'I' then
         p.hop = k == 5 or k == 7
     elseif sec == 'A' then
@@ -251,65 +261,87 @@ function GC:updateFloor(level)
     end
 end
 
--- ── La conga ──────────────────────────────────────────────────────────────────
--- Una fila: { id, b0 (compás en que empieza), dir (±1), dead (bits: cangrejos pisados) }. Cada cangrejo i salta una
--- casilla en cada tiempo, CONGA_GAP tiempos detrás del anterior, entrando desde fuera de la zona
-function GC:congaPos(line, i)
-    local zx0, zx1 = self:zoneBounds()
-    local beats = (self.songT - line.b0 * BAR) / BEAT - i * CONGA_GAP
-    if beats < 0 then return nil end
-    local hop, u = math.floor(beats), beats % 1
-    local q = u < 0.5 and 0 or math.min(1, (u - 0.5) * 2)              -- (medio tiempo quieto, medio saltando)
-    q = q * q * (3 - 2 * q)
-    local start = (line.dir > 0) and (zx0 - T) or (zx1 + T)
-    local x = start + line.dir * (hop + q) * T
-    if (line.dir > 0 and x > zx1 + T) or (line.dir < 0 and x < zx0 - T) then return nil, true end
-    local up = (u < 0.5) and 0 or CONGA_HOP * 4 * q * (1 - q)
-    return x, self.floorY - up, hop
-end
-function GC:congaBox(x, feet) return { x = x - CONGA_W / 2, y = feet - CONGA_H, w = CONGA_W, h = CONGA_H } end
-local function bit(n, i) return math.floor(n / 2 ^ i) % 2 == 1 end
-GC.bit = bit
-function GC:startConga(b, dir)
-    self.congaId = self.congaId % 999 + 1
-    self.congas[#self.congas + 1] = { id = self.congaId, b0 = b, dir = dir, dead = 0 }
-    Sound.play('crabPop', 0.8, 1.2)
-end
-function GC:updateConga(level, b, sec, k, step, crossed)
-    -- (empieza: en el SOLO, y enfadado también en la 2ª mitad del clímax; de un lado y del otro, por vueltas)
-    if crossed(0) and ((sec == 'K' and k == 1) or (sec == 'C' and k == 9 and self.rage)) then
-        local dir = ((GC.loopOf(b) + (sec == 'C' and 1 or 0)) % 2 == 0) and 1 or -1
-        self:startConga(b, dir)
+-- ── Los PLATOS DE DJ (2ª fase) ─────────────────────────────────────────────
+-- Uno en cada plataforma de los lados (las más a la izquierda y a la derecha de la zona, por encima del suelo: se
+-- buscan en los tiles, igual en un jugador y en el servidor). Un plato: { x, y (la cara de arriba de su plataforma),
+-- on (s que le quedan girando) }. El usuario (0.5.48): "usando al propio Groove (trampolín) el jugador se trepa a las
+-- plataformas y tiene que hacer algo en ambas con cierto tiempo"
+function GC:findDecks(level)
+    if not (level and level.getDef) then return false end
+    local zx0, zx1, zy0 = self:zoneBounds()
+    local c0, c1 = math.floor(zx0 / T) + 1, math.ceil(zx1 / T)
+    local r0, r1 = math.max(1, math.floor(zy0 / T) + 1), math.floor(self.floorY / T) - 2     -- (2 casillas sobre el suelo)
+    local mid = (zx0 + zx1) / 2
+    local left, right
+    local function stands(c, r)
+        local d = level:getDef(c, r)
+        return d and (d.collision == 'oneway' or d.collision == 'solid')
     end
-    for li = #self.congas, 1, -1 do
-        local line = self.congas[li]
-        local gone = 0
-        for i = 0, CONGA_N - 1 do
-            local x, feet, hop = self:congaPos(line, i)
-            if bit(line.dead, i) or (x == nil and feet) then gone = gone + 1
-            elseif x then
-                local box = self:congaBox(x, feet)
-                for _, pa in ipairs(level.players or {}) do
-                    if not pa.dying and pa.alive ~= false then
-                        local pb = pa:getOuterBounds()
-                        if overlap(pb, box) then
-                            local down = pa.prevY and math.max(0, pa.y - pa.prevY) or 0
-                            if ((pa.vy or 0) > 0 or down > 0) and pb.y + pb.h <= box.y + 18 then
-                                line.dead = line.dead + 2 ^ i                -- (pisado: fuera de la fila)
-                                pa:bounce(-math.abs(ADV_JUMP_VEL) * Boss.BOUNCE)
-                                Entity.emitFx('enemy_burst', x, feet - CONGA_H / 2)
-                                Sound.play('crabPop', 0.9)
-                                break
-                            elseif not pa:isInvulnerable() then
-                                strike(pa, HIT_CONGA, (pa.x >= x) and 1 or -1)
-                            end
+    for r = r0, r1 do
+        local c = c0
+        while c <= c1 do
+            if stands(c, r) and not stands(c, r - 1) then
+                local ca = c
+                while c + 1 <= c1 and stands(c + 1, r) and not stands(c + 1, r - 1) do c = c + 1 end
+                local d = level:getDef(ca, r)
+                local run = { x = ((ca - 1) + c) * T / 2, y = (r - 1) * T + math.floor((d.hitbox and d.hitbox.y or 0) * T), on = 0 }
+                if (c - ca + 1) * T >= DECK_W then
+                    if run.x < mid and (not left or run.x < left.x) then left = run end
+                    if run.x > mid and (not right or run.x > right.x) then right = run end
+                end
+            end
+            c = c + 1
+        end
+    end
+    if not (left and right) then return false end
+    return { left, right }
+end
+function GC:deckBox(d) return { x = d.x - DECK_W / 2, y = d.y - DECK_H, w = DECK_W, h = DECK_H } end
+-- ¿Ya no suelta doradas? (2ª fase, si la arena tiene sus platos; si no, sigue con la dorada: si no, no habría forma
+-- de dañarlo)
+function GC:goldOff() return self.phase == 2 and self.decks ~= nil and self.decks ~= false end
+-- ¿Se pueden poner a girar? (no con él noqueado o recomponiéndose: el bajón ya le dio)
+function GC:decksLive()
+    return self:goldOff() and self:isActive() and self.state ~= 'stunned' and self.state ~= 'regrow'
+end
+function GC:updateDecks(level, dt)
+    if not self:goldOff() then return end
+    local live = self:decksLive()
+    for _, d in ipairs(self.decks) do
+        if d.on > 0 then
+            d.on = math.max(0, d.on - dt)
+            if d.on == 0 then Sound.play('switchOff', 0.9) end                -- (se acabó el tiempo: hay que volver)
+        end
+        if live then
+            local box = self:deckBox(d)
+            for _, pa in ipairs(level.players or {}) do
+                if not pa.dying and pa.alive ~= false then
+                    local pb = pa:getOuterBounds()
+                    local down = pa.prevY and math.max(0, pa.y - pa.prevY) or 0
+                    if overlap(pb, box) and ((pa.vy or 0) > 0 or down > 0) and pb.y + pb.h <= box.y + 18 then
+                        if d.on == 0 then
+                            Sound.play('switchOn', 1)
+                            Sound.play('megaClack', 0.7, 0.7)
+                            Entity.emitFx('king_sparkle', d.x, box.y)
                         end
+                        d.on = DECK_T                                          -- (pisarlo otra vez: vuelve a empezar)
+                        pa:bounce(-math.abs(ADV_JUMP_VEL) * Boss.BOUNCE)
+                        break
                     end
                 end
             end
         end
-        if gone >= CONGA_N then table.remove(self.congas, li) end
     end
+    if live and self.decks[1].on > 0 and self.decks[2].on > 0 then self:bassDrop() end
+end
+-- Los DOS platos girando: los bafles sueltan el BAJÓN contra él
+function GC:bassDrop()
+    for _, d in ipairs(self.decks) do d.on = 0 end
+    self.dropT = self.songT
+    local zx0, zx1 = self:zoneBounds()
+    for _, sx in ipairs({ zx0 + 0.9 * T, zx1 - 0.9 * T }) do Entity.emitFx('king_confetti_big', sx, self.floorY - 3 * T) end
+    Sound.play('megaSlam', 1, 0.6)
+    self:knockOut()
 end
 
 -- ── Golpes a los jugadores ───────────────────────────────────────────────────
@@ -428,8 +460,10 @@ function GC:updateNotes(level, dt)
     end
 end
 
--- La dorada le da: le REVIENTA el trampolín y queda aturdido
-function GC:goldHit()
+-- La dorada le da: le REVIENTA el trampolín y queda NOQUEADO
+function GC:goldHit() self:knockOut() end
+-- NOQUEADO (la dorada o el bajón): sin trampolín, le vuelan las gafas; 2 compases vulnerable
+function GC:knockOut()
     if not self:isActive() or self.state == 'stunned' or self.state == 'regrow' then return end
     if self.hop then                                                    -- (en el aire: cae donde está)
         self.hop = nil
@@ -455,11 +489,13 @@ function GC:isSolidBody() return Boss.isSolidBody(self) and not DEATH[self.state
 function GC:canBeKnocked() return false end
 
 -- Un golpe aturdido (hasta STUN_HITS por aturdimiento; con el último, se recompone y le crece el trampolín)
+-- A media vida (`rageAt`), la 2ª FASE: enfadado, sin doradas (las que queden, fuera) y salen los platos
 function GC:onDamaged(n, kind)
     if self:isDying() then return end
     self.stunHits = (self.stunHits or 0) + 1
-    if not self.rage and self.hp <= self.hpMax * (self.props.rageAt or 0.5) then
-        self.rage = true
+    if self.phase ~= 2 and self.hp <= self.hpMax * (self.props.rageAt or 0.5) then
+        self.phase, self.rage, self.p2T = 2, true, self.songT
+        for i = #self.notes, 1, -1 do if self.notes[i].c >= 4 then table.remove(self.notes, i) end end
         Entity.emitFx('shake_roar', self.x, self.y)
         Sound.play('megaRoar', 0.6)
     end
@@ -468,7 +504,8 @@ end
 
 function GC:defeat()
     self.hp, self.inv, self.ghost = 0, 0, false
-    self.waves, self.notes, self.hop, self.congas = {}, {}, nil, {}
+    self.waves, self.notes, self.hop = {}, {}, nil
+    if self.decks then for _, d in ipairs(self.decks) do d.on = 0 end end
     self.y = self.floorY - self.outerH / 2
     self:enter('dying_daze')
     Sound.play('megaHurt', 0.9)
@@ -507,6 +544,7 @@ end
 function GC:updateBoss(dt, level)
     if self.state == 'dormant' then return end
     self.levelRef = self.levelRef or level
+    if self.decks == nil then self.decks = self:findDecks(level) end
     self.deadTimer = self.deadTimer + dt
     if self.graceT > 0 then self.graceT = math.max(0, self.graceT - dt) end
     BossWaves.update(self, level, dt, WAVES)
@@ -535,11 +573,11 @@ function GC:updateBoss(dt, level)
     local pb, _, _, pstep = GC.where(math.max(0, self.prevT))
     -- (¿acaba de pasar la semicorchea s? la 0 es el cambio de compás)
     local crossed = function(s) if s == 0 then return pb ~= b end; return pb == b and pstep < s and step >= s end
-    local plan = GC.plan(sec, k, self.rage)
+    local plan = GC.plan(sec, k, self.rage, self:goldOff())
 
-    -- El escenario va a lo suyo (también con él aturdido): la pista de baile y la conga
+    -- El escenario va a lo suyo (también con él aturdido): la pista de baile y los platos
     self:updateFloor(level)
-    self:updateConga(level, b, sec, k, step, crossed)
+    self:updateDecks(level, dt)
 
     -- En el aire: el salto sigue hasta caer en su compás
     if self.hop then
@@ -564,8 +602,8 @@ function GC:updateBoss(dt, level)
         self:set('groove')
     end
 
-    -- La NOTA DORADA, en el golpe de banda que cierra la frase (una a la vez)
-    local g = GC.goldAt(sec, k)
+    -- La NOTA DORADA, en el golpe de banda que cierra la frase (una a la vez; solo en la 1ª fase)
+    local g = not self:goldOff() and GC.goldAt(sec, k) or nil
     if g and crossed(g) and not self:goldAlive() then self:shoot(level, true) end
 
     -- El SALTO: agachado (la diana te sigue hasta la semicorchea 6), salta en la 8
@@ -641,9 +679,10 @@ function GC:updateIntro(dt, level, t)
 end
 
 -- ── Red ───────────────────────────────────────────────────────────────────────
--- { songT·100, enfadado 0/1, diana x, golpes aturdido, nOndas, {ondas…}, nNotas, {id, x, y, vx, vy, color}…,
---   nCongas, {id, b0, dir, pisados}… }
-local NOTE_STRIDE, CONGA_STRIDE = 6, 4
+-- { songT·100, enfadado 0/1, diana x, golpes aturdido, fase, bajón songT·100 (-1), 2ª fase songT·100 (-1), nOndas,
+--   {ondas…}, nNotas, {id, x, y, vx, vy, color}…, nPlatos, {x, y, girando s·10}… }
+local NOTE_STRIDE, DECK_STRIDE = 6, 3
+local HEAD = 8                                  -- (donde empiezan las ondas)
 local function readList(b, k, stride)
     local n = type(b[k]) == 'number' and b[k] or 0
     local list = {}
@@ -656,16 +695,18 @@ local function readList(b, k, stride)
 end
 
 function GC:netPackExtra()
-    local out = { math.floor(self.songT * 100), self.rage and 1 or 0, self.markX or 0, self.stunHits or 0 }
+    local out = { math.floor(self.songT * 100), self.rage and 1 or 0, self.markX or 0, self.stunHits or 0, self.phase or 1,
+                  self.dropT and math.floor(self.dropT * 100) or -1, self.p2T and math.floor(self.p2T * 100) or -1 }
     BossWaves.pack(self.waves, out)
     out[#out + 1] = #self.notes
     for _, n in ipairs(self.notes) do
         out[#out + 1] = n.id; out[#out + 1] = math.floor(n.x); out[#out + 1] = math.floor(n.y)
         out[#out + 1] = math.floor(n.vx); out[#out + 1] = math.floor(n.vy); out[#out + 1] = n.c
     end
-    out[#out + 1] = #self.congas
-    for _, c in ipairs(self.congas) do
-        out[#out + 1] = c.id; out[#out + 1] = c.b0; out[#out + 1] = c.dir; out[#out + 1] = c.dead
+    local decks = self.decks or {}
+    out[#out + 1] = #decks
+    for _, d in ipairs(decks) do
+        out[#out + 1] = math.floor(d.x); out[#out + 1] = math.floor(d.y); out[#out + 1] = math.ceil(d.on * 10)
     end
     return out
 end
@@ -674,12 +715,14 @@ function GC:netApplyExtra(a, b, f)
     if type(b[1]) ~= 'number' then return end
     local s0 = type(a[1]) == 'number' and a[1] or b[1]
     self.songT = (s0 + (b[1] - s0) * f) / 100
-    self.rage, self.markX, self.stunHits = b[2] == 1, b[3], b[4] or 0
-    local waves, k = BossWaves.unpack(a, b, 5, f)
+    self.rage, self.markX, self.stunHits, self.phase = b[2] == 1, b[3], b[4] or 0, b[5] or 1
+    self.dropT = (type(b[6]) == 'number' and b[6] >= 0) and b[6] / 100 or nil
+    self.p2T = (type(b[7]) == 'number' and b[7] >= 0) and b[7] / 100 or nil
+    local waves, k = BossWaves.unpack(a, b, HEAD, f)
     self.waves = waves
     local prev = {}
     if type(a[1]) == 'number' then
-        local _, ka = BossWaves.unpack(a, a, 5, 1)
+        local _, ka = BossWaves.unpack(a, a, HEAD, 1)
         for _, e in ipairs((readList(a, ka, NOTE_STRIDE))) do if e[1] then prev[e[1]] = e end end
     end
     local notes, kc = readList(b, k, NOTE_STRIDE)
@@ -690,9 +733,10 @@ function GC:netApplyExtra(a, b, f)
         if o and type(o[2]) == 'number' and type(x) == 'number' then x, y = o[2] + (x - o[2]) * f, o[3] + (y - o[3]) * f end
         self.notes[#self.notes + 1] = { id = e[1], x = x, y = y, vx = e[4], vy = e[5], c = e[6] or 0, t = 0 }
     end
-    self.congas = {}
-    for _, e in ipairs((readList(b, kc, CONGA_STRIDE))) do
-        self.congas[#self.congas + 1] = { id = e[1], b0 = e[2], dir = e[3], dead = e[4] or 0 }
+    local decks = readList(b, kc, DECK_STRIDE)
+    if #decks > 0 then
+        self.decks = {}
+        for _, e in ipairs(decks) do self.decks[#self.decks + 1] = { x = e[1], y = e[2], on = (e[3] or 0) / 10 } end
     end
 end
 
@@ -703,15 +747,16 @@ local G = 'El Groove'
 return {
     name = 'groovecrab', label = 'El Groove', category = 'Jefes',
     description = 'Jefe SECRETO: un Crabby trampolín gigante que pelea al ritmo de su tema (salta y cae en el bombo, '
-               .. 'notas en los pops del bajo, pista de baile, conga). Solo se le daña devolviéndole la NOTA DORADA: '
-               .. 'le revienta el trampolín y queda aturdido; si no, su trampolín te lanza.',
+               .. 'notas en los pops del bajo, pista de baile). 1ª fase: devuélvele la NOTA DORADA; 2ª fase: sube con '
+               .. 'su trampolín a las plataformas y pon a girar los DOS platos de DJ a la vez. Las dos cosas le '
+               .. 'revientan el trampolín y lo dejan noqueado.',
     class = GC,
     pace = false,                                -- (va al compás de su música: la dificultad no le cambia el ritmo)
     boss = { title = 'EL GROOVE' },
     hide = Boss.HIDE,
     defaults = { points = 40 },
-    props = Boss.props({ hp = 10, hpPerPlayer = 4 }, {
-        { key = 'rageAt', kind = 'number', label = 'Se enfada con (fracción de vida)', group = G, default = 0.5,
+    props = Boss.props({ hp = 13, hpPerPlayer = 4 }, {
+        { key = 'rageAt', kind = 'number', label = '2ª fase con (fracción de vida)', group = G, default = 0.5,
           min = 0.1, max = 0.9, step = 0.05 },
     }),
     editor = { sprite = 'assets/images/bosses/groovecrab/body-Sheet.png', frameW = FW },

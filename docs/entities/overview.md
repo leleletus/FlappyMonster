@@ -12,7 +12,7 @@ type only switches them on** — never copy another entity's code. The recipe is
 |---|---|
 | `Entities.lua` | the registry: `TYPES` list, `Entities.create(placement)`, `solidBodies` |
 | `base/Entity.lua` | the base class: movement (walk / fly / static), common states, stomp, knockback, launch, freeze, special deaths, reserve minions, network hooks, debug boxes |
-| `base/EntityTypes.lua` | type registration, the COMMON props, categories, the render wrapper (wings, ice block, dark edge) |
+| `base/EntityTypes.lua` | type registration, the COMMON props, categories, the render wrapper (wings, ice block, dark edge, the generic `stunned` wobble — off with `ownStunLook`) |
 | `base/Props.lua` | editable property kinds (int, number, bool, enum, text, patrol, point, points) |
 | `base/Interactions.lua` | the player ↔ entity rules: kill / hurt / stomp / bounce / pickup / checkpoint / ground pound |
 | `base/Crawler.lua` | surface-following movement (floor ↔ walls ↔ ceiling) |

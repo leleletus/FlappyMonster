@@ -92,12 +92,15 @@ function love.load()
             end
             if boss.state == 'scared' and boss.deadTimer > 1.2 and boss.inv <= 0 then boss:damage(1, 'stomp') end
         end
-        -- El Groove: cada nota dorada se le devuelve y, aturdido, un pisotón (para verlo hasta el final)
+        -- El Groove: cada nota dorada se le devuelve (en la 2ª fase, los dos platos a girar) y, aturdido, un pisotón
+        -- (para verlo hasta el final)
         if boss.def.name == 'groovecrab' then
             for _, nn in ipairs(boss.notes or {}) do if nn.c == 4 and nn.t > 0.8 then nn.c, nn.t = 5, 0 end end
             if boss.state == 'stunned' and boss.deadTimer > (tonumber(os.getenv('HIT_AT')) or 0.8) and boss.inv <= 0 then
                 boss:damage(1, 'stomp')
             end
+            -- (2ª fase: sin doradas; los dos platos a girar a la vez → el bajón)
+            if boss:decksLive() and boss.deadTimer > 1.5 then for _, d in ipairs(boss.decks) do d.on = boss.DECK_T end end
         end
         if want[boss.state] and t - lastShot >= every and (boss.alive or boss.def.name == 'megagummy') then
             lastShot = t

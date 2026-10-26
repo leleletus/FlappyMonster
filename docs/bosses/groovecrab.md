@@ -10,7 +10,7 @@ world's boss) is beaten: [world-map](../story/world-map.md#the-secret-node).
 **Level:** `isla_del_groove` "Isla del Groove" / "Groove Island" (`tools/levelgen/levels_boss.py`; beach at dusk);
 arena `tools/levelgen/arenas/jefe_groove.json` (`make_jefe_groove.py`). **Music:** `groove`. **Shard:** none.
 **Harnesses:** `groovecrab_rules`, `boss_sim` / `boss_intro` / `online_boss` / `boss_frames` with `LEVEL=` that arena
-(`boss_frames HIT_AT=` = when the hook stomps it in a pose), `sp_boss LEVEL=assets/levels/isla_del_groove.json`,
+(`boss_frames HIT_AT=` = when the hook stomps it knocked out; in phase 2 the hook spins both decks), `sp_boss LEVEL=assets/levels/isla_del_groove.json`,
 `story_flow` (case `secreto`).
 
 ## The design (art)
@@ -29,7 +29,7 @@ respawns, so the boss knows the section, bar and sixteenth (`GC.where`; table `S
 B 16 · SOLO 8 · BUILD 8 · CLIMAX 16 · RETURN 4 = 68 bars, 150 BPM). The difficulty's pace does not touch it
 (`def.pace = false`) and the Xtra Extreme generic anger, which speeds bosses up, is off (`angryPhase()` = true; on Xtra
 it starts enraged instead). **If the score changes (form, tempo, where the pops or band hits fall), change `SONG`,
-`B_NOTES`, `C_NOTES` and `POSE_AT` too** (`slap_boss.py` says so in its header). Online: `songT` travels in the
+`B_NOTES`, `C_NOTES` and `GOLD_AT` / `goldAt` too** (`slap_boss.py` says so in its header). Online: `songT` travels in the
 snapshot; the client's music starts when it sees the fight, with the same delay as the snapshots it draws.
 
 ## Behaviour (per bar: `GC.plan`)
@@ -42,26 +42,43 @@ snapshot; the client's music starts when it sees the fight, with the same delay 
 - **Notes** (B and the even bars of the climax): raises the big claw and, on the bass POPS (`B_NOTES`: sixteenths 4
   and 8 mostly), snaps and fires a NOTE at the nearest player (straight, 330 / 390 px/s enraged; 1 HP). Between notes
   it walks towards you.
-- **Pose** (the ONLY opening): on the band hits that close every phrase (bar 4 of every 4, from sixteenth 12 to
-  sixteenth 4 of the next bar) and in the SOLO (odd bars, the whole bar: a band hit and silence). The trampoline
-  hides, the big claw goes up: stomp 1 / ground pound 2, one hit per pose → 'hurt' (the trampoline springs out,
-  nearby players shoved without damage). In the solo, the even bars are a small hop that lands on the next hit.
-- **Trampoline**: outside a pose, landing on it LAUNCHES you (`'launch'`, vy = jump × 1.85, also with a ground pound;
-  ~8.4 tiles up): the way to be above it when it poses. Touching its BODY (shell and legs) = 1 HP and a push (not
-  while posing); the CLAWS do no damage — the hitbox is only the body (`outerW` 0.78: 14 of 18 px).
-- **Rage** under `rageAt` (0.5): hops on every possible bar, more notes. HP 10 (+4 per extra player).
+- **Phase 1 — GOLDEN NOTE** (the only opening while HP > `rageAt`): on the band hit closing every 8 bars of A, B, the
+  build and the climax (sixteenth 12, `GOLD_AT`) and on bar 5 of the solo (sixteenth 0) it fires a golden note aimed
+  ABOVE you (jump into it). Touching it sends it back; it bursts his trampoline → KNOCKED OUT (below). One at a time;
+  it never hurts.
+- **Phase 2 — DJ DECKS** (HP ≤ `rageAt`, 0.5): no more golden notes (live ones vanish). A DJ deck rises on each side
+  platform (`GC:findDecks`: the left-most and right-most standable runs of the zone, ≥ 2 tiles above the floor and
+  wide enough for a deck; same on SP and server; positions travel in the snapshot). The platforms are 5 tiles up and a
+  double jump reaches ~3.1, so the ONLY way up is HIS trampoline. Stomp / ground-pound a deck → it spins for `DECK_T`
+  = 5 bars (8 s; stomping again restarts it; the player bounces), with a 5-LED countdown that turns red and blinks at
+  the end, then stops (`switchOff`). An arrow bobs over every stopped deck. BOTH spinning at once → the BASS DROP: the
+  two speakers fire rings and a beam at him (`dropT`, drawn `DROP_FX` 0.8 s) → knocked out. Decks can't be started
+  while he is knocked out or regrowing. If an arena has no such platforms (`decks = false`), phase 2 keeps the golden
+  note so he can still be hurt.
+- **Knocked out** ('stunned', `STUN_T` 2 bars; also the look of 'dying_daze' / 'dying_flee'): stomp 1 / ground pound 2,
+  up to 2 hits, then 'regrow' (a new trampoline grows from his head). Look (`ko-Sheet.png`, `glasses.png`): his
+  SUNGLASSES fly off in an arc and bounce on the floor behind him (back on his face in the first 0.35 s of 'regrow';
+  left on the floor when he flees), X eyes that spin (X / + frames), tongue out, legs splayed, claws on the floor; the
+  hit SQUASHES him and he springs back, then he sways side to side (offset, never rotated) under a bigger star ring.
+  The generic `stunned` wobble of the render wrapper is off (`GC.ownStunLook`): it rotated his whole render — dance
+  floor included — around him.
+- **Trampoline**: unless knocked out, landing on it LAUNCHES you (`'launch'`, vy = jump × 1.85, also with a ground
+  pound; ~8.4 tiles up): the way onto the side platforms. Touching its BODY (shell and legs) = 1 HP and a push (not
+  knocked out); the CLAWS do no damage — the hitbox is only the body (`outerW` 0.78: 14 of 18 px).
+- **Rage** (phase 2; on Xtra Extreme from the start, still in phase 1): hops on every possible bar, more notes.
+  HP 13 (+4 per extra player; × the difficulty's `bossHp`).
 
 **Intro** (3.6 s): falls from the sky, lands (shake), snaps its claws twice, boings on its trampoline.
-**Defeat:** 'dying_daze' (stars, 2.2 s) → 'dying_flee': one huge bounce on its trampoline up into the sky (pure
+**Defeat:** 'dying_daze' (knocked-out look, 2.2 s) → 'dying_flee': one huge bounce on its trampoline up into the sky (pure
 function of time), out of view. No shard (`shardDrop` = false).
 
 **Look** (all from state + deadTimer + songT): bobs on every beat, claws click and SWING in every state (walking
-out of step, tucked in and shaking when crouched, flailing in the air, waving in the pose, jolted when hit; offsets
+out of step, tucked in and shaking when crouched, flailing in the air, swaying knocked out, jolted when hit; offsets
 in whole art pixels, never rotated: pixel art); two stage SPOTLIGHTS from the top
 corners of the zone onto it, changing colour on every beat (additive cones).
 
-**Network:** netPackExtra `{songT·100, rage, markX, waves (BossWaves.pack), nNotes, {id, x, y, vx, vy, colour}…}`.
-Protocol 68.
+**Network:** netPackExtra `{songT·100, rage, markX, stunHits, phase, dropT·100 (-1), p2T·100 (-1), waves
+(BossWaves.pack), nNotes, {id, x, y, vx, vy, colour}…, nDecks, {x, y, on·10}…}`. Protocol 70.
 
 ## History and decisions
 
@@ -89,3 +106,11 @@ Protocol 68.
   drawn by the new generic hook `Entities.renderBack` (behind the tiles); it APPEARS during the intro. Floor panels
   only light for the attack. Conga crabs get their species' `darkEdge` at night; the monster its white outline.
   Drawing moved to the part `groovecrab_stage.lua`. Protocol 69. `sp_boss` gained `FIGHT_SHOTS=` and `GOD=1`.
+- 0.5.48, the user's second round (6 points): (1) the CONGA is gone (code, net, test); (2) fewer golden notes — every
+  8 bars instead of 4, and only bar 5 of the solo (half as many per loop); (3) HP 10 → 13; (4) the knockout did not
+  read as "very dazed" → own KO sprite (glasses fly off, X eyes, tongue, splayed legs), squash on the hit, sway, bigger
+  stars; (5) "the coloured floor lights shake with him when he is stunned": the user's theory was right — the
+  `EntityTypes` render wrapper rotates the whole render of a 'stunned' entity, and his render draws the dance floor →
+  new trait `ownStunLook`; (6) a new way to hurt him in phase 2 using the two platforms and his trampoline: proposed
+  DJ decks (picked) / a falling lighting truss (two levers) / overloaded speakers stomped on the beat. Not played by
+  the user yet: the 8 s deck window and the deck size are guesses to tune by feel.
