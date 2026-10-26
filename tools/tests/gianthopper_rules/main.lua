@@ -2,6 +2,7 @@
 -- (tools/levelgen/arenas/jefe_saltarin.json, A OSCURAS):
 --   linterna   lejos y con la linterna APAGADA no te ve (nunca va de caza); ENCENDIDA te ve: se agacha con la diana
 --              sobre ti y cae en ella (≤ 40 px)
+--   plataforma subido a una plataforma (la del centro o la de un lado, lejos) salta hasta ella y cae encima
 --   farol      sin linterna, dentro de la luz de su farol, te ve; justo fuera, no
 --   roca       el FOGONAZO alumbra a quien está a la vista (lo ve) y no a quien está detrás de una roca; la linterna
 --              encendida detrás de una roca tampoco
@@ -125,6 +126,32 @@ function cases.linterna()
     check('linterna', not hunted and mark and landX and math.abs(mark - pa.x) < T and math.abs(landX - mark) <= 40,
         ('apagada a 11 casillas: de caza=%s · encendida: diana a %s px de él, cae a %s px de la diana'):format(
             tostring(hunted), mark and math.floor(math.abs(mark - pa.x)) or '?', landX and mark and math.floor(math.abs(landX - mark)) or '?'))
+end
+
+-- Te subes a una plataforma (la del centro, fila 6; o la de un lado, fila 8, a 8 casillas): salta hasta ella y cae
+-- encima (los pies en su cara de arriba)
+function cases.plataforma()
+    local out, ok = {}, true
+    for _, c in ipairs({ { name = 'centro', col = 24, row = 6, from = 30 }, { name = 'lado', col = 13, row = 8, from = 22 } }) do
+        local level, es, boss = arena()
+        putBoss(boss, c.from); boss:rest(0.2)
+        boss.flareT = -99
+        local pa = playerAt(level, c.col, c.row - 1)
+        local px, py = pa.x, pa.y
+        local landY, landX
+        stepAll(level, es, { pa }, 5, function()
+            pa.x, pa.y, pa.vx, pa.vy, pa.invT, pa.lightOn, pa.lightBat = px, py, 0, 0, 9, true, 1
+            boss.flareT = -99
+            if boss.state == 'hop' and boss.hunting then landY = 'air' end
+            if landY == 'air' and boss.state == 'rest' then landY, landX = boss:feetY(), boss.x; return true end
+        end)
+        local top = (c.row - 1) * T
+        local good = type(landY) == 'number' and math.abs(landY - top) <= 4 and math.abs(landX - px) <= 1.5 * T
+        ok = ok and good
+        out[#out + 1] = ('%s: pies %s (cara %d), a %s px de él'):format(c.name, tostring(landY and math.floor(tonumber(landY) or -1)),
+            top, landX and math.floor(math.abs(landX - px)) or '?')
+    end
+    check('plataforma', ok, table.concat(out, ' · '))
 end
 
 function cases.farol()
@@ -363,7 +390,7 @@ end
 
 function love.load(arg)
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'linterna', 'farol', 'roca', 'ondas', 'susto', 'golpe', 'tocar', 'enfado', 'derrota', 'red' }) do
+    for _, n in ipairs({ 'linterna', 'plataforma', 'farol', 'roca', 'ondas', 'susto', 'golpe', 'tocar', 'enfado', 'derrota', 'red' }) do
         if not only or only == n then
             local ok, err = xpcall(cases[n], debug.traceback)
             if not ok then check(n, false, 'error: ' .. tostring(err)) end

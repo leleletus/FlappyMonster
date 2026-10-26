@@ -73,7 +73,7 @@
   ],
   "vents": [],
   "bossZones": [
-    {"col":89,"h":10,"id":1,"music":"crab_tantrum_gloomy","row":3,"w":24}
+    {"col":89,"h":10,"id":1,"music":"polilla","row":3,"w":24}
   ],
   "music": "cuevas_oscuras",
   "background": "cave",

@@ -565,3 +565,21 @@ the old level tune in the final boss, Verity's hook).
 - INSTALLED (0.5.29) as `resaca` "Resaca (Pez Globo Gigante)" — the user's name for v3; the coast's new boss (the Giant
   Pufferfish). Generator renamed `caida_libre.py` → `resaca.py` (versions v1/v2 stay archived under their old name in
   `FlappyMonster_originals/music/versiones/caida_libre_v*/`); −10.1 LUFS, catalog volume 0.71 (−13 in game).
+
+## La Polilla (`tools/music/polilla.py`, boss track `polilla`)
+
+- 0.5.41: the user asked for the Giant Hopper's own theme (it used `crab_tantrum_gloomy` provisionally): "completely
+  original but in the style of the existing dark-cave music" (`cuevas_oscuras`), "up to a boss", allowed to use
+  Resaca's bass ("I like that bass a lot"). Taken as its SOUND (`final_fall.render_bass`, GM Slap Bass, rendered at
+  this track's tempo) with an OWN riff on root / 5th / octave (0 of 676 bass notes off the chord). From the dark caves:
+  D minor (harmonic: C# only in A major), the Neapolitan E♭ as the dark turn, the music box with cave echo, drips, the
+  swelling N163 pad, the two-hit "heartbeat" deep kick, no cymbals (a deep tom marks the drops). Boss: 144 BPM (twice
+  the cave's 72; half-time snare on 3 in A, on 2 and 4 in the climax), the hollow N163 voice of the Gloomy themes in B,
+  doubled by the VRC6 saw an octave down in the climax. Motifs: the HOOK (D–F–A in 3+3+2 towards the light, a flutter,
+  settles on A; sequenced over i–VI–iv–V), the FLICKER (its accent: 16ths alternating the chord's 5th and octave, strong
+  / weak, on a 12.5 % pulse, wherever the melody holds), the SCARE section (stop-time band hits and silence; between
+  them the music box climbs the chord: la llamada A–D–F–A over Dm). Form: intro 8 (once) · A 16 · B 16 · scare 8 ·
+  build 8 · climax 16 · return 8 = 8 + 72 bars (13.3 s + a 120 s loop). Numbers: no long note off its chord, nothing
+  off scale/chord, 2 of 69 melody bars repeated literally (the hook head), mean interval 3.34 st, steps 31 %, 42 % off
+  the beat; energy melody 17 %, bass 29 %, drums 39 %; −10.8 LUFS, catalog volume 0.78. Previews:
+  `FlappyMonster_pruebas/musica/polilla/`. NOT listened to; waiting for the user's verdict.

@@ -8,8 +8,8 @@ Fought in the DARK. It is the opposite of the Gloomy (blind, hunts by sound): **
 `assets/images/bosses/gianthopper/wave-Sheet.png` (`tools/art/bosses/make_giant_hopper.py`). **Sounds:** reused,
 pitched down (`hopWind/hopJump/hopLand`, `lightOn/lightOff`, `gpImpact`, `stunned`); its own set is still open.
 **Level:** `gruta_del_farol` "Gruta del Farol" / "Lantern Grotto" (`tools/levelgen/levels_boss.py`); arena
-`tools/levelgen/arenas/jefe_saltarin.json` (`make_jefe_saltarin.py`). **Music:** PROVISIONAL `crab_tantrum_gloomy`
-(its own theme is still to be made). **Shard:** 6.
+`tools/levelgen/arenas/jefe_saltarin.json` (`make_jefe_saltarin.py`). **Music:** its own theme `polilla` "La Polilla"
+(`tools/music/polilla.py`; [music-history](../audio/music-history.md)). **Shard:** 6.
 **Harnesses:** `gianthopper_rules`, `boss_sim` / `boss_intro` / `online_boss` / `boss_frames` with `LEVEL=` that arena,
 `sp_boss LEVEL=assets/levels/gruta_del_farol.json`.
 
@@ -25,8 +25,9 @@ pitched down (`hopWind/hopJump/hopLand`, `lightOn/lightOff`, `gpImpact`, `stunne
   cut the flashlight): a player with the flashlight ON within `SEE_R` 16 tiles, or anyone inside its LANTERN (`LAMP_R`
   4.5 tiles) while it is lit. Lost from sight → it goes where it last saw them for `MEMORY` 4 s.
 - **Hop** ('crouch' → 'hop'): seeing someone it crouches (`WIND_T` 0.8 / 0.6 s; the lantern flickers, a target mark
-  follows the player, locked the last `LOCK` 0.2 s) and jumps onto the mark (≤ `HOP_REACH` 7 tiles, through
-  platforms if the target is lower). Landing: two ROCK WAVES along the floor, one each way (`WAVE_SPD` 430 px/s, stop
+  follows the player, locked the last `LOCK` 0.2 s) and jumps onto the mark (≤ `HOP_REACH` 11 tiles: across the whole pit). The mark is the first surface at the
+  target's height (`GH:aim`): on the floor, or ON the platform the player climbed (centre or side; only where its body
+  fits under the zone ceiling), dropping through platforms if the target is lower. Landing: two ROCK WAVES along the floor, one each way (`WAVE_SPD` 430 px/s, stop
   at walls and edges; jump them: 1 HP + push). Touching it = 1 HP + push (`touch`, not from above).
 - **Prowl**: seeing nobody it hops around in small hops (no mark, no waves) and, after `FLARE_EVERY` 7 / 5 s without
   seeing anyone, a **FLARE** ('flare_wind' 1 / 0.8 s: the lantern swells, flickers faster and hums → 'flare' 0.45 s:
@@ -60,3 +61,7 @@ its hoppers burst.
 - 2026-10-26: the user asked for it to be built "like the Giant Pufferfish": its OWN level (`gruta_del_farol`), with
   `gruta_lugubre` kept in the game; the world map uses the new one for the caves. The design follows the moth the
   user picked for the small cave Hopper ("Polilla": hunts by light, noise scares it). Not played by the user yet.
+- 0.5.41: the user: "it should jump farther (if the player climbs a platform, it should be able to jump there too)" —
+  `HOP_REACH` 7 → 11 tiles and `GH:aim` scans from the target's height (before, it only looked from its own head down,
+  so it never landed on a platform); harness case `plataforma`. And its own music, `polilla`, replaces the provisional
+  `crab_tantrum_gloomy`.

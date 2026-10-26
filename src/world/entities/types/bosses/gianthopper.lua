@@ -58,7 +58,7 @@ GH.MS = MS
 local REST_T      = { 1.3, 0.85 }               -- s quieto entre saltos
 local WIND_T      = { 0.8, 0.6 }                -- s agachado (el aviso: la diana)
 local LOCK        = 0.2                         -- últimos s del aviso: la diana ya no te sigue
-local HOP_REACH   = 7 * T                       -- lo más lejos que llega de un salto
+local HOP_REACH   = 11 * T                      -- lo más lejos que llega de un salto (de punta a punta de la sima)
 local HOP_UP      = 2.5                         -- casillas por encima de lo más alto
 local PROWL_REACH = 3.5 * T                     -- paseando (sin verte): saltitos
 local PROWL_UP    = 1.2
@@ -252,15 +252,16 @@ function GH:spawnMoths(level, dt)
 end
 
 -- ── Saltos ────────────────────────────────────────────────────────────────────
--- Dónde cae: hacia `tx`, como mucho `reach`, sobre la primera superficie (si el objetivo está más abajo, atraviesa
--- las plataformas para bajar a por él)
+-- Dónde cae: hacia `tx`, como mucho `reach`, sobre la primera superficie que haya a la altura del objetivo (si está
+-- más abajo, atraviesa las plataformas para bajar a por él; si se subió a una, salta a ella). Solo donde le cabe el
+-- cuerpo bajo el techo de la zona
 function GH:aim(level, tx, ty, reach)
-    local zx0, zx1, _, zy1 = self:zoneBounds()
+    local zx0, zx1, zy0, zy1 = self:zoneBounds()
     local hw = self.outerW / 2
     tx = math.max(self.x - reach, math.min(self.x + reach, tx))
     tx = math.max(zx0 + hw, math.min(zx1 - hw, tx))
     local y0 = self.y - self.outerH
-    if ty and ty > self:feetY() + T / 2 then y0 = math.max(y0, ty - T) end
+    if ty then y0 = math.max(zy0 + self.outerH, ty - T) end
     local top
     for _, px in ipairs({ tx - hw + 6, tx, tx + hw - 6 }) do
         local _, t = level:landingCross(px, y0, zy1 + T)

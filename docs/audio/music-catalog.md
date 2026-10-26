@@ -19,6 +19,7 @@ screens play `victory`; the Flappy mode plays `flappy`.
 | `mirror_boss.py`, `mirror_chase.py`, `verity_boss.py` | those three |
 | `final_fall.py` | ARCHIVED (not in the game): `final_fall`, the boss theme with samples of Fall Guys' "Final Fall" — writes outside the repo (`FlappyMonster_originals/music/versiones/final_fall_v4/`); the user kept `caida_libre` instead |
 | `resaca.py` | `resaca` "Resaca" (was "Caída libre"): the coast's new boss theme (the Giant Pufferfish) on Final Fall's bass — the bass is a real GM slap bass rendered with fluidsynth, not chip; one file, the loop includes the intro |
+| `polilla.py` | `polilla` "La Polilla": the Giant Hopper's boss theme (caves) — original, in the dark-cave style, on Resaca's GM slap bass (own riff); intro + loop |
 | `gloomy_nes.py cueva` | `cuevas_oscuras` (also a library: the spider "legs") |
 | `story_music.py [intro ending chase lair]` | the film scores, composed ON `assets/story/films.json` |
 | `credits_music.py` | `story_credits`: the credits medley, cut bar-exact from the game's own tracks as `films.json` `credits` says ([credits](../story/credits.md)) |

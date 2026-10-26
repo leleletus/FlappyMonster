@@ -51,8 +51,7 @@ def build():
         'name': 'Jefe: Saltarín Gigante', 'name_en': 'Boss: Giant Hopper',
         'width': W, 'height': H, 'playerStart': [4, 12],
         'tiles': t, 'entities': ents, 'foliage': [], 'vents': [],
-        # (música provisional: el tema propio del Saltarín Gigante está por hacer)
-        'bossZones': [{'id': 1, 'col': Z0, 'row': 3, 'w': Z1 - Z0 + 1, 'h': 10, 'music': 'crab_tantrum_gloomy'}],
+        'bossZones': [{'id': 1, 'col': Z0, 'row': 3, 'w': Z1 - Z0 + 1, 'h': 10, 'music': 'polilla'}],
         'background': 'cave', 'time': 'night', 'dark': True,
     }
 
