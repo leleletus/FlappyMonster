@@ -791,6 +791,7 @@ function AdventureState:_renderScene()
         Sky.punch = false
     end
 
+    Entities.renderBack(self.enemies, self.camX, self.camY)  -- (lo que las entidades dibujan detrás de los bloques)
     self.level:render(self.camX, self.camY)
     IceDrips.render(self.level, self.camX, self.camY)      -- (gotas del hielo: solo dibujo)
     require('src/fx/CaveAmbience').tick(self.level)        -- (cuevas: gotas lejanas, rumor... solo sonido)

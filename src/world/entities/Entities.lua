@@ -55,6 +55,14 @@ local Entities = {
 
 -- Entidades con cuerpo sólido para los jugadores (p. ej. jefes): el juego lo
 -- pone en level.solidBodies antes de mover a los jugadores.
+-- PLANO DE FONDO: lo que una entidad dibuja DETRÁS de los bloques del nivel (después del cielo), con
+-- `renderBack(camX, camY)` — p. ej. el escenario y el público de El Groove. Solo dibujo (un jugador y cliente online)
+function Entities.renderBack(list, camX, camY)
+    for _, e in pairs(list or {}) do
+        if e.alive and e.renderBack then e:renderBack(camX, camY) end
+    end
+end
+
 function Entities.solidBodies(list)
     local out = {}
     for _, e in pairs(list) do

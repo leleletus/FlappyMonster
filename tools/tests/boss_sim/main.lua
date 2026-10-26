@@ -79,11 +79,12 @@ function love.load()
     local gh = boss.def.name == 'gianthopper'
     local ghs = { scares = 0, lastT = -9, rage = false }
     if gh then VULN = { scared = true }; require('src/world/systems/Noise').bind(level) end
-    -- El Groove: solo posando (al ritmo de su canción). El jugador se aparta de la diana de sus saltos y le cae encima
-    -- en cada pose (lo genérico: dos intentos; el segundo, 1,2 s después, ya fuera de la pose, debe rebotar)
+    -- El Groove: solo aturdido (le devolvieron la nota dorada y le reventó el trampolín). El jugador se aparta de la
+    -- diana de sus saltos, salta contra cada nota dorada (se pone en ella) y le cae encima aturdido (lo genérico: dos
+    -- intentos, 0,3 s y 1,2 s después)
     local gc = boss.def.name == 'groovecrab'
-    local gcs = { rage = false, dodges = 0, launches = 0 }
-    if gc then VULN = { pose = true } end
+    local gcs = { rage = false, dodges = 0, launches = 0, golds = 0, regrow = 0 }
+    if gc then VULN = { stunned = true } end
     local kg = { phases = {}, maxGuards = 0, flopOff = {}, waveHits = 0, partHits = 0, lastPartT = -9 }
     local sn = { phases = {}, scales = {}, frozenHits = {}, crashDizzy = 0, bonks = 0, toggles = 0, refrozen = 0,
                  deathOrder = {}, early = {}, shown = {} }
@@ -401,6 +402,11 @@ function love.load()
             end
             if pa.vy < -900 and not gcs.inLaunch then gcs.inLaunch, gcs.launches = true, gcs.launches + 1
             elseif pa.vy >= 0 then gcs.inLaunch = false end
+            for _, n in ipairs(boss.notes or {}) do
+                if n.c == 4 and n.t > 0.6 and not pa.dying then pa.x, pa.y, pa.vx, pa.vy = n.x, n.y, 0, 0; gcs.golds = gcs.golds + 1 end
+            end
+            if boss.state == 'regrow' and gcs.lastSt ~= 'regrow' then gcs.regrow = gcs.regrow + 1 end
+            gcs.lastSt = boss.state
         end
         -- esquivar la caída: al ver la marca (estado 'aim') se aparta 5 casillas
         if boss.state == 'aim' and not pa.dying and math.abs(pa.x - boss.x) < 3 * TILE_PX then
@@ -527,13 +533,13 @@ function love.load()
             print(('%-10s %s  %s'):format(name, ok and 'OK   ' or 'FALLA', msg))
             if not ok then fails = fails + 1 end
         end
-        local need = { 'groove', 'crouch', 'hop', 'snap', 'pose', 'hurt', 'dying_daze', 'dying_flee' }
+        local need = { 'groove', 'crouch', 'hop', 'snap', 'stunned', 'regrow', 'dying_daze', 'dying_flee' }
         local miss = {}
         for _, n in ipairs(need) do if not seen[n] then miss[#miss + 1] = n end end
         check('estados', #miss == 0, #miss == 0 and 'todos vistos' or ('faltan: ' .. table.concat(miss, ',')))
-        check('muerte', not boss.alive and gcs.rage and z.state == 'cleared' and gcs.launches > 0,
-            ('vivo=%s, enfadado=%s, esquivas %d, lanzado por el trampolín %d veces, zona %s'):format(tostring(boss.alive),
-                tostring(gcs.rage), gcs.dodges, gcs.launches, z.state))
+        check('muerte', not boss.alive and gcs.rage and z.state == 'cleared' and gcs.regrow > 0,
+            ('vivo=%s, enfadado=%s, esquivas %d, notas doradas devueltas (pasos en ellas) %d, trampolines que le crecen %d, lanzado %d veces, zona %s'):format(
+                tostring(boss.alive), tostring(gcs.rage), gcs.dodges, gcs.golds, gcs.regrow, gcs.launches, z.state))
     end
     if gh then
         local function check(name, ok, msg)

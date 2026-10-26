@@ -162,6 +162,22 @@ function love.update(dt)
             print('  captura de la pelea: fight.png')
         end
     end
+    -- (FIGHT_SHOTS=t1,t2,…: capturas a esos segundos de pelea → fight_<t>.png; GOD=1: el jugador no recibe daño, para
+    -- llegar a las partes de la pelea que se quieren ver — El Groove: la pista, el solo con la conga…)
+    if os.getenv('GOD') and st and st.player then st.player.invT = 9 end
+    if os.getenv('FIGHT_SHOTS') and boss and boss.zone and boss.zone.state == 'fight' then
+        last.fightAt = last.fightAt or t
+        last.fsDone = last.fsDone or {}
+        for ts in os.getenv('FIGHT_SHOTS'):gmatch('[^,]+') do
+            local at = tonumber(ts)
+            if at and not last.fsDone[ts] and t - last.fightAt >= at then
+                last.fsDone[ts] = true
+                local name = 'fight_' .. ts .. '.png'
+                love.graphics.captureScreenshot(function(img) img:encode('png', name) end)
+                print('  captura de la pelea a los ' .. ts .. ' s: ' .. name)
+            end
+        end
+    end
     -- (UNDERTOW_SHOT=1: el aviso de la resaca — Floods, BossHud.drawUndertow —: undertow_1.png al saltar y
     -- undertow_2.png 1.5 s después)
     if os.getenv('UNDERTOW_SHOT') and st and (last.uwShots or 0) < 2 then

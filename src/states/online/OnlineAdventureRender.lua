@@ -49,7 +49,8 @@ function OnlineAdventureState:_renderScene()
     Sky.render(self.level, self.camX, self.camY)
     Sky.punch = false
 
-    -- Nivel
+    -- Nivel (y, antes, lo que las entidades dibujan detrás de sus bloques)
+    require('src/world/entities/Entities').renderBack(self.enemyRenderers, self.camX, self.camY)
     self.level:render(self.camX, self.camY)
     IceDrips.render(self.level, self.camX, self.camY)      -- (gotas del hielo: solo dibujo)
     require('src/fx/CaveAmbience').tick(self.level)        -- (cuevas: gotas lejanas, rumor... solo sonido)

@@ -663,6 +663,22 @@ function Particles.emit(kind, x, y, opts)
                   life = rnd(0.5, 0.9), size = math.random(2, 3) * 3, col = {0.95, 0.95, 0.97}, phys = true,
                   fadeLast = 0.3 })
         end
+    elseif kind == 'groove_tramp' then
+        -- EL TRAMPOLÍN DE EL GROOVE REVIENTA (le devolvieron la nota dorada): trozos del cojín amarillo y del muelle
+        -- gris que salen por los aires y rebotan en el suelo, y chispas
+        local cols = { {1, 0.82, 0.25}, {0.95, 0.65, 0.15}, {0.62, 0.62, 0.68}, {0.4, 0.4, 0.46} }
+        for i = 1, 26 do
+            local a = rnd(-math.pi * 0.95, -math.pi * 0.05)
+            local s = rnd(260, 720)
+            add({ x = x + rnd(-40, 40), y = y + rnd(-10, 10), vx = math.cos(a) * s, vy = math.sin(a) * s, g = 1500,
+                  life = rnd(0.9, 1.6), size = math.random(2, 4) * 4, col = cols[math.random(#cols)], chunk = true,
+                  spin = rnd(-16, 16), phys = true, bounce = 0.4, fadeLast = 0.4 })
+        end
+        for i = 1, 12 do
+            local a = rnd(0, math.pi * 2)
+            add({ x = x, y = y, vx = math.cos(a) * rnd(100, 300), vy = math.sin(a) * rnd(100, 300), drag = 3,
+                  life = rnd(0.3, 0.6), size = 6, star = true, col = {1, 0.96, 0.6} })
+        end
     elseif kind == 'frost_breath' then
         -- Aliento helado (cambio de fase): nube fría alrededor
         for i = 1, 24 do

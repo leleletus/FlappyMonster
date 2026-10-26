@@ -452,7 +452,7 @@ def isla_del_groove():
     tema `groove`). Corto: lo que importa es la pelea."""
     src = load_src('jefe_groove.json')
     L = Level('Isla del Groove', 85, 15, (4, 12), music='costa_1')
-    L.extra.update({'name_en': 'Groove Island'})
+    L.extra.update({'name_en': 'Groove Island', 'background': 'coast', 'time': 'night'})   # (el concierto, de noche: el usuario)
     G = 13
     L.rect(2, G, 42, 14, SOLID)
     # el trampolín de un Crabby te lanza: así se llega arriba (la estrella)

@@ -12,6 +12,10 @@
 #   · claw-Sheet.png     2 cuadros 7x6: la pinza pequeña (abierta, cerrada)
 #   · tramp.png          el trampolín de la espalda (cojín y muelle de assets/images/mechanisms/trampoline/normal.png)
 #   · note-Sheet.png     la NOTA (corchea) que dispara: 4 colores × 2 cuadros 9x10 (la banderita se mueve)
+#   · gold-Sheet.png     la NOTA DORADA (2 cuadros 9x10, con destellos): devuélvesela y le explota el trampolín
+#   · speaker-Sheet.png  bafle 18x26 (normal, membrana fuera en el bombo) · discoball-Sheet.png 4 cuadros 12x12
+#   · glowstick-Sheet.png barras de luz 3x8 del público (4 colores) · panel-Sheet.png baldosas 32x3 de la pista de
+#                        baile (apagada + 4 colores)
 #   · wave-Sheet.png     la ONDA DE ARENA del suelo: 3 cuadros 12x9 (la forma de la onda del Saltarín Gigante,
 #                        make_giant_hopper.py, con los colores de la playa)
 #
@@ -155,6 +159,86 @@ def tramp():
     return src.crop((0, 4, 16, 13))                               # (el cojín y el muelle: sin la base)
 
 
+# ── El ESCENARIO (0.5.47, el usuario: más epicidad; rave + concierto en la playa al atardecer) ──
+GOLD = [["....oo...",
+         "....oPoo.",
+         "....oPPPo",
+         "....oPooo",
+         "....oPo..",
+         "....oPo..",
+         ".oooPPo..",
+         "ohPPPPo..",
+         "oPPPPo...",
+         ".oooo...."],
+        ["....oo..w",
+         "....oPo..",
+         "....oPPo.",
+         "....oPPPo",
+         "....oPoPo",
+         "w...oPo..",
+         ".oooPPo..",
+         "ohPPPPo..",
+         "oPPPPo...",
+         ".oooo...."]]
+P_GOLD = {'o': hx('#6a4a08'), 'P': hx('#ffd23f'), 'h': hx('#fff8c0'), 'w': hx('#ffffff')}
+
+
+def speaker(pump):
+    """Bafle 18x26: caja oscura, tweeter arriba y altavoz grande abajo (en el bombo, la membrana sale un píxel)"""
+    w, h = 18, 26
+    im = Image.new('RGBA', (w, h), CLEAR)
+    px = im.load()
+    for y in range(h):
+        for x in range(w):
+            edge = x in (0, w - 1) or y in (0, h - 1)
+            px[x, y] = hx('#0c0b16') if edge else hx('#24223a')
+    def disc(cx, cy, r, col):
+        for y in range(h):
+            for x in range(w):
+                if (x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2 <= r * r: px[x, y] = col
+    disc(9, 5, 3.0, hx('#6a6890')); disc(9, 5, 2.0, hx('#3a3956')); disc(9, 5, 0.8, hx('#b0aed0'))
+    big = 6.5 + (0.6 if pump else 0)
+    disc(9, 17.5, big + 1, hx('#6a6890')); disc(9, 17.5, big, hx('#3a3956')); disc(9, 17.5, 2.2 + (0.5 if pump else 0), hx('#8a88b0'))
+    return im
+
+
+def discoball(f):
+    """Bola de discoteca 12x12, 4 cuadros (los espejitos giran)"""
+    im = Image.new('RGBA', (12, 12), CLEAR)
+    px = im.load()
+    for y in range(12):
+        for x in range(12):
+            d = (x + 0.5 - 6) ** 2 + (y + 0.5 - 6) ** 2
+            if d <= 30:
+                edge = d > 22
+                lit = ((x + f) // 2 + y // 2) % 2 == 0
+                px[x, y] = hx('#3a3a50') if edge else (hx('#e8ecff') if lit else hx('#8890b8'))
+    px[3 + f % 3, 3] = hx('#ffffff')
+    return im
+
+
+def glowstick(col):
+    """Barra de luz 3x8 (núcleo claro)"""
+    c = hx(col)
+    im = Image.new('RGBA', (3, 8), CLEAR)
+    for y in range(8):
+        im.putpixel((0, y), c); im.putpixel((2, y), c); im.putpixel((1, y), hx('#ffffff') if y < 6 else c)
+    return im
+
+
+def panel(col):
+    """Baldosa de la pista de baile: 32x3 (2 casillas a ×4) encima del suelo; apagada o de un color"""
+    im = Image.new('RGBA', (32, 3), CLEAR)
+    for y in range(3):
+        for x in range(32):
+            edge = x in (0, 31) or y == 2
+            im.putpixel((x, y), hx('#2a1a10') if edge else (hx(col) if col else hx('#5a4026')))
+    return im
+
+
+BEAT_COLS = ['#ff4fa3', '#3fd8ff', '#ffd23f', '#5cf07a']
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     notes = []
@@ -168,6 +252,11 @@ def main():
         'tramp.png': tramp(),
         'note-Sheet.png': strip(notes),
         'wave-Sheet.png': strip([grid(f, WAVE_COL) for f in WAVE_SHAPES]),
+        'gold-Sheet.png': strip([grid(f, P_GOLD) for f in GOLD]),
+        'speaker-Sheet.png': strip([speaker(False), speaker(True)]),
+        'discoball-Sheet.png': strip([discoball(f) for f in range(4)]),
+        'glowstick-Sheet.png': strip([glowstick(c) for c in BEAT_COLS]),
+        'panel-Sheet.png': strip([panel(None)] + [panel(c) for c in BEAT_COLS]),
     }
     for name, im in out.items():
         im.save(os.path.join(OUT, name))

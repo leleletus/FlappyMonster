@@ -79,3 +79,13 @@ Protocol 68.
   Pending, with GIF drafts to choose from (`FlappyMonster_pruebas/jefes/groove/borradores/`): (3) more attacks on
   the beat, (5) a clearer, longer way to damage it (the pose was "unpredictable, short and hard to understand"),
   (6) more epicness: a crowd of crabs dancing to the music, more energy and visuals.
+- 0.5.47, the user's picks from the drafts: (5) GOLDEN NOTE — on the band hit closing each phrase (and the solo's bars
+  1 and 5) it fires a golden note aimed above you; touching it sends it back, it bursts the trampoline (`groove_tramp`
+  particles, confetti) → 'stunned' 2 bars (stomp 1 / GP 2, up to 2 hits) → 'regrow' (a new trampoline grows from its
+  head). The old pose is gone. (3) DANCE FLOOR (build + climax 9-16: panels warn on a beat, light column on the next,
+  1 HP; side platforms safe) and CONGA (solo; enraged also climax 9-16: 4 crowd crabs hop one tile per beat, touch 1 HP,
+  stomp removes them). (6) Stage = night rave + beach concert (level `time` night): crowd of crabs and Gummies in
+  silhouette with glow sticks (no outline: background), speakers, equalizer, disco ball + lasers, phrase flash —
+  drawn by the new generic hook `Entities.renderBack` (behind the tiles); it APPEARS during the intro. Floor panels
+  only light for the attack. Conga crabs get their species' `darkEdge` at night; the monster its white outline.
+  Drawing moved to the part `groovecrab_stage.lua`. Protocol 69. `sp_boss` gained `FIGHT_SHOTS=` and `GOD=1`.
