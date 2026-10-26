@@ -69,7 +69,7 @@ are spread along the path from `Worlds.lua`. **Harness:** `story_flow` (captures
   summits icy, caves Cave Gummy + Cave Crabby + Gloomies, volcano Magma Gummy + Lava Crabby (the volcano had none) —
   and a HOPPER of its skin on every island. `StoryMapState` `CRITTER`: the new types (river / lava claws like in game)
   and `hopper_<isla>` (`hop = true`: stands, crouches, jumps in an arc, ~1 hop per second; `left` = art faces left).
-  Hoppers are still in NO story level except huida_del_espejo (and the EnemyTest gallery).
+  Hoppers are only in huida_del_espejo and the dark caves (and the EnemyTest gallery).
 
 ## Moving on the map
 

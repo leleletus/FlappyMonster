@@ -185,9 +185,9 @@ sprite's pixel grid.
   A LOUD noise (radius ≥ `LOUD` 6 tiles: switch, hit, broken block, hurt, kill, ground pound, trampoline, bomb...;
   not a pickup or its own landing, 4) heard on the ground → state `scared`: lantern off (`lightOff` / `lightOn`
   sounds), crouched and shaking, still for `SCARE_T` 2.2 s (a new loud noise restarts it) = the window to stomp it
-  in the dark. Flashlight = bait, noise = weapon. Its lantern gives light (`Hopper:lights()`, warm, flickers in the
+  in the dark. Flashlight = bait, noise = weapon. NO Hopper sound is a noise (0.5.39; `hopLand` was 4): the Gloomies went to every landing and piled up around it (the user). Its lantern gives light (`Hopper:lights()`, warm, flickers in the
   crouch telegraph, off when scared). Arena `tools/levelgen/arenas/saltarines_oscuras.json`; harness `mechanics`
-  case `saltarin_cueva`. Waiting for the user's verdict after playing; it is the base of the Giant Hopper
+  case `saltarin_cueva`. Placed (0.5.39, replacing floor Gloomies: they were too many): cripta_del_silencio 2, gruta_lugubre 2, templo_del_eco 8. Waiting for the user's verdict after playing; it is the base of the Giant Hopper
   ([new-bosses-plan](../bosses/new-bosses-plan.md)).
 
 - HOPPER: (a) with nobody near it ROAMS — random hops (lower, shorter, quieter) inside its route; no route (`patrol = false`) = anywhere (`careful` still keeps it out of pits); default `movement = 'walk'` ONLY so the editor shows the route (it never walks). (b) its art faces LEFT (the face sits 1 px to that side), so it is drawn mirrored when facing right — it used to turn its back on the player.

@@ -23,7 +23,7 @@
   ],
   "entities": [
     {"col":9,"row":11,"type":"star"},
-    {"col":19,"row":12,"type":"gloomy"},
+    {"col":19,"row":12,"type":"hopper"},
     {"col":26,"row":9,"type":"star"},
     {"col":30,"row":12,"type":"checkpoint"},
     {"col":41,"row":7,"type":"gloomy"},
@@ -40,7 +40,7 @@
     {"col":63,"row":3,"type":"gloomy"},
     {"col":31,"row":3,"type":"gloomy"},
     {"col":59,"row":5,"type":"gloomy"},
-    {"col":67,"row":10,"type":"gloomy"},
+    {"col":67,"row":10,"type":"hopper"},
     {"col":79,"row":3,"type":"gloomy"},
     {"col":48,"row":3,"type":"gloomy"},
     {"col":23,"row":3,"type":"gloomy"},

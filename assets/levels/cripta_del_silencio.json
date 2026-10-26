@@ -36,7 +36,7 @@
   "entities": [
     {"col":40,"props":{"corner":{"col":52,"row":19},"points":4},"row":15,"type":"pointarea"},
     {"col":18,"props":{"points":6,"respawn":10},"row":21,"type":"gloomy"},
-    {"col":30,"props":{"points":6,"respawn":10},"row":21,"type":"gloomy"},
+    {"col":30,"props":{"points":6,"respawn":10},"row":21,"type":"hopper"},
     {"col":62,"props":{"points":6,"respawn":10},"row":21,"type":"gloomy"},
     {"col":74,"props":{"points":6,"respawn":10},"row":21,"type":"gloomy"},
     {"col":46,"props":{"points":6,"respawn":10},"row":4,"type":"gloomy"},
@@ -46,7 +46,7 @@
     {"col":24,"row":12,"type":"star"},
     {"col":68,"row":12,"type":"star"},
     {"col":46,"row":11,"type":"star"},
-    {"col":46,"props":{"points":6,"respawn":10},"row":24,"type":"gloomy"},
+    {"col":46,"props":{"points":6,"respawn":10},"row":24,"type":"hopper"},
     {"col":30,"row":23,"type":"star"},
     {"col":60,"row":23,"type":"star"},
     {"col":40,"row":23,"type":"apple"}

@@ -10,7 +10,8 @@
 -- ASPECTOS por isla (prop `skin`; 'auto' = según el fondo del nivel): pradera, costa, fortaleza, nieve, cueva,
 -- volcán — la misma forma con otra paleta, otras motas y otra cosa en la cabeza. Hojas de 4 cuadros 16x21 (quieto,
 -- agachado, en el aire, aplastado): assets/images/enemies/hopper/<isla>-Sheet.png, de tools/art/enemies/make_hopper_sprites.py.
--- Sonidos hopWind / hopJump / hopLand (tools/sounds/hopper.py).
+-- Sonidos hopWind / hopJump / hopLand (tools/sounds/hopper.py). Ninguno es RUIDO (Noise): los Crabbies lúgubres no van
+-- a por sus saltos (se amontonaban alrededor de él).
 --
 -- POLILLA: el de CUEVA en un nivel A OSCURAS caza al revés que el Crabby lúgubre (que es ciego y caza de oído): solo
 -- ve lo que tiene LUZ — un jugador con la linterna encendida (dentro de `range`) o cualquiera dentro de la luz de su
@@ -327,6 +328,5 @@ return {
         { key='careful', kind='bool', label='No se tira al vacío', group=G, default=true,
           help='Acorta el salto hasta donde haya suelo. Sin esto persigue aunque se caiga' },
     },
-    noises = { hopLand = 4 },
     editor = { sprite = 'assets/images/enemies/hopper/pradera-Sheet.png', frameW = FW },
 }

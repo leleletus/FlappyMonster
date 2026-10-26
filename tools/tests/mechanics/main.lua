@@ -1149,13 +1149,18 @@ function cases.saltarin_cueva()
     local still = h6.state == 'scared' and h6.x == x0
     stepEnts(lv6, { h6 }, 1.0)
     local back = h6.state ~= 'scared' and h6:lights() ~= nil
+    -- (5) sus saltos NO son ruido: los lúgubres no van a por él
+    local seq0, lands = (lv6.noises and lv6.noises.seq) or 0, 0
+    h6.wait = 0.2
+    stepEnts(lv6, { h6 }, 3, function() if h6.state == 'idle' and h6.deadTimer == 0 then lands = lands + 1 end end)
+    local silent = lands > 0 and ((lv6.noises and lv6.noises.seq) or 0) == seq0
     Noise.bind(nil)
     check('saltarin_cueva', darkNear > 5 and litNear < 1.6 and dayNear < 1.6 and seesClose and lamp and memory
-        and quiet and scared and dark0 and still and back,
+        and quiet and scared and dark0 and still and back and silent,
         ('a oscuras sin linterna llega a %.1f · con linterna a %.1f · con luz a %.1f · en su farol te ve=%s, alumbra=%s · '
-         .. 'va a donde te vio=%s · ruido flojo nada=%s · ruido fuerte: asustado=%s apagado=%s quieto=%s, luego vuelve=%s'):format(
+         .. 'va a donde te vio=%s · ruido flojo nada=%s · ruido fuerte: asustado=%s apagado=%s quieto=%s, luego vuelve=%s · %d caídas sin ruido=%s'):format(
             darkNear, litNear, dayNear, tostring(seesClose), tostring(lamp), tostring(memory),
-            tostring(quiet), tostring(scared), tostring(dark0), tostring(still), tostring(back)))
+            tostring(quiet), tostring(scared), tostring(dark0), tostring(still), tostring(back), lands, tostring(silent)))
 end
 
 -- EL ESPEJO PERSIGUIENDO (mirrorchase), suelto por el nivel: ANDA (cambia de lado, salta muretes, no vive pegado al
