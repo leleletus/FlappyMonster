@@ -23,6 +23,7 @@ screens play `victory`; the Flappy mode plays `flappy`.
 | `gloomy_nes.py cueva` | `cuevas_oscuras` (also a library: the spider "legs") |
 | `story_music.py [intro ending chase lair]` | the film scores, composed ON `assets/story/films.json` |
 | `credits_music.py` | `story_credits`: the credits medley, cut bar-exact from the game's own tracks as `films.json` `credits` says ([credits](../story/credits.md)) |
+| `slap_boss.py` | MOCKUP, not in the catalog nor the game: a boss theme whose LEAD is the slap bass (E minor, 150 BPM, funk), for the user to get ideas from (2026-10-26); writes only previews to `FlappyMonster_pruebas/musica/slap_boss/` |
 | `slap.py` | library: Resaca's GM slap bass from notes in seconds — the bass of EVERY boss theme since 0.5.44 |
 | `levels.py` | measures every track (LUFS) and writes its catalog `volume` — **run it after adding or regenerating any track** |
 | `famicom.py`, `tentacle_nes.py` | libraries only (engine; MIDI / harmony helpers the others import) |
