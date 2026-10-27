@@ -148,7 +148,8 @@ NOTE = [["....oo...",
          "ohPPPPo..",
          "oPPPPo...",
          ".oooo...."]]
-NOTE_COLORS = [('#ff4fa3', '#ffc2e0'), ('#3fd8ff', '#c8f4ff'), ('#ffd23f', '#fff3b8'), ('#5cf07a', '#d0ffd8')]
+# (sin AMARILLO: es el de la nota dorada, la que se devuelve; el usuario, 0.5.52 — la tercera, morada)
+NOTE_COLORS = [('#ff4fa3', '#ffc2e0'), ('#3fd8ff', '#c8f4ff'), ('#b46cff', '#e6d0ff'), ('#5cf07a', '#d0ffd8')]
 
 # ── La onda de arena ──
 WAVE_COL = {'o': hx('#5a3e1c'), 'd': hx('#b07c3a'), 'r': hx('#e2b45c'), 'l': hx('#f6dc98'), 'p': hx('#ffffff')}

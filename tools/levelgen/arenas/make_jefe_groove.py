@@ -7,8 +7,8 @@
 #   ║                        ║     sin techo: su trampolín te lanza ~8 casillas (cabe en la zona)
 #   ║                        ║
 #   ║                        ║
-#   ║====                ====║     ==  plataformas traspasables a los lados: de las ONDAS se sube aquí, pero ahí
-#   ║                        ║         te alcanzan sus NOTAS
+#   ║====                ====║     ==  plataformas traspasables a los lados, SOLO en la 2ª fase (bloques de fase): las
+#   ║                        ║         de los platos de DJ; se sube con su trampolín
 #   ║                        ║
 #   ║■■■■■■■■■■■■■■■■■■■■■■■■║     suelo LLANO: él no tiene física, sus saltos son pura función del tiempo
 #
@@ -41,6 +41,10 @@ def build():
         {'type': 'groovecrab', 'col': 24, 'row': 12},
         {'type': 'bosswall', 'col': Z0 - 3, 'row': 3, 'props': {'corner': {'col': Z0 - 1, 'row': 12}, 'zone': 1}},
         {'type': 'bosswall', 'col': Z1 + 1, 'row': 3, 'props': {'corner': {'col': Z1 + 3, 'row': 12}, 'zone': 1}},
+        # (las plataformas de los platos de DJ solo están en la 2ª fase: bloques de fase, como los Activadores de la
+        #  Gran Bola de Nieve — el usuario, 0.5.52)
+        {'type': 'phaseblock', 'col': Z0 + 1, 'row': 8, 'props': {'corner': {'col': Z0 + 4, 'row': 8}, 'phase': 2, 'zone': 1}},
+        {'type': 'phaseblock', 'col': Z1 - 4, 'row': 8, 'props': {'corner': {'col': Z1 - 1, 'row': 8}, 'phase': 2, 'zone': 1}},
     ]
     return {
         'name': 'Jefe: El Groove', 'name_en': 'Boss: The Groove',

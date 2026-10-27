@@ -24,7 +24,9 @@
   "entities": [
     {"col":24,"row":12,"type":"groovecrab"},
     {"col":9,"props":{"corner":{"col":11,"row":12},"zone":1},"row":3,"type":"bosswall"},
-    {"col":36,"props":{"corner":{"col":38,"row":12},"zone":1},"row":3,"type":"bosswall"}
+    {"col":36,"props":{"corner":{"col":38,"row":12},"zone":1},"row":3,"type":"bosswall"},
+    {"col":13,"props":{"corner":{"col":16,"row":8},"phase":2,"zone":1},"row":8,"type":"phaseblock"},
+    {"col":31,"props":{"corner":{"col":34,"row":8},"phase":2,"zone":1},"row":8,"type":"phaseblock"}
   ],
   "foliage": [],
   "vents": [],

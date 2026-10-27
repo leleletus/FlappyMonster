@@ -30,7 +30,9 @@
     {"col":39,"row":12,"type":"checkpoint"},
     {"col":61,"row":12,"type":"groovecrab"},
     {"col":46,"props":{"corner":{"col":48,"row":12},"zone":1},"row":3,"type":"bosswall"},
-    {"col":73,"props":{"corner":{"col":75,"row":12},"zone":1},"row":3,"type":"bosswall"}
+    {"col":73,"props":{"corner":{"col":75,"row":12},"zone":1},"row":3,"type":"bosswall"},
+    {"col":50,"props":{"corner":{"col":53,"row":8},"phase":2,"zone":1},"row":8,"type":"phaseblock"},
+    {"col":68,"props":{"corner":{"col":71,"row":8},"phase":2,"zone":1},"row":8,"type":"phaseblock"}
   ],
   "foliage": [
     {"col":16,"props":{"layer":"back"},"row":12,"sub":4,"type":"pineapple"},

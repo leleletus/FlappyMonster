@@ -46,6 +46,8 @@ end
 local function quad(s, i) return s.images and s.images[i] or s.image, s.quads[i] end
 
 local BEAT_COLS = { { 1, 0.31, 0.64 }, { 0.25, 0.85, 1 }, { 1, 0.82, 0.25 }, { 0.36, 0.94, 0.48 } }
+-- (los colores de las NOTAS normales —note-Sheet.png—: sin amarillo, que es el de la dorada; el usuario, 0.5.52)
+local NOTE_COLS = { { 1, 0.31, 0.64 }, { 0.25, 0.85, 1 }, { 0.71, 0.42, 1 }, { 0.36, 0.94, 0.48 } }
 local function beatOf(self) local s = self.songT or 0; return math.floor(s / BEAT), (s / BEAT) % 1 end
 local function live(self) return self:isActive() and not EDITOR_VIEW and self.zone ~= nil and self.zone.state == 'fight' end
 -- EL ESCENARIO APARECE EN LA ENTRADA (el usuario: que no salga de la nada al empezar la pelea): s de entrada (nil =
@@ -289,22 +291,24 @@ function GC:drawFloor(camX, camY)
         -- no confundirlas con la diana del salto)
         local lit = f and f.lit[i]
         local fr = 1
-        -- (el aviso parpadea cada vez más deprisa según se acerca la columna; todas del MISMO color: rojo-rosa
-        -- de peligro, que no se confunda con las luces del escenario)
-        if lit and f.warn then fr = ((math.floor(f.u * f.u * 14) % 2 == 0) and 2 or 1)
-        elseif lit and f.boom then fr = 2 end
+        -- (cada baldosa, SU color —el usuario, 0.5.52: en rosa todas ya no se veían de colores—; el aviso parpadea
+        -- cada vez más deprisa según se acerca la columna)
+        local col = i % 4 + 1
+        if lit and f.warn then fr = ((math.floor(f.u * f.u * 14) % 2 == 0) and col + 1 or 1)
+        elseif lit and f.boom then fr = col + 1 end
         local pi, pq = quad(art.panel, fr)
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.draw(pi, pq, math.floor(x0 + i * P.T * 2 - camX), math.floor(self.floorY - camY) - 6, 0, 4, 4)
         local box = self:boomBox(i)
         local bx, by = math.floor(box.x - camX), math.floor(box.y - camY)
         if lit and f.warn then
-            -- el FANTASMA de la columna que va a salir: dónde exactamente, cada vez más fuerte
+            -- el FANTASMA de la columna que va a salir, de su color: dónde exactamente, cada vez más fuerte
+            local c = BEAT_COLS[col]
             love.graphics.setBlendMode('add')
-            love.graphics.setColor(1, 0.3, 0.45, 0.06 + 0.16 * f.u)
+            love.graphics.setColor(c[1], c[2], c[3], 0.06 + 0.14 * f.u)
             love.graphics.rectangle('fill', bx, by, box.w, box.h)
             love.graphics.setBlendMode('alpha')
-            love.graphics.setColor(1, 0.35, 0.5, 0.35 + 0.5 * f.u)
+            love.graphics.setColor(c[1], c[2], c[3], 0.4 + 0.5 * f.u)
             love.graphics.setLineWidth(4)
             love.graphics.rectangle('line', bx + 2, by + 2, box.w - 4, box.h - 4)
             love.graphics.setLineWidth(1)
@@ -313,12 +317,10 @@ function GC:drawFloor(camX, camY)
             love.graphics.setColor(1, 0.85, 0.3, 0.5 + 0.5 * f.u)
             love.graphics.polygon('fill', bx + box.w / 2 - 14, ay, bx + box.w / 2 + 14, ay, bx + box.w / 2, ay - 18)
         elseif lit and f.boom then
-            local c = BEAT_COLS[(i + nb) % 4 + 1]
+            local c = BEAT_COLS[col]
             love.graphics.setBlendMode('add')
-            love.graphics.setColor(1, 0.35, 0.5, 0.7)
+            love.graphics.setColor(c[1], c[2], c[3], 0.75)
             love.graphics.rectangle('fill', bx, by, box.w, box.h)
-            love.graphics.setColor(c[1], c[2], c[3], 0.5)
-            love.graphics.rectangle('fill', bx + 10, by, box.w - 20, box.h)
             love.graphics.setColor(1, 1, 1, 0.85)
             love.graphics.rectangle('fill', math.floor(bx + box.w / 2 - 10), by, 20, box.h)
             love.graphics.setBlendMode('alpha')
@@ -508,12 +510,24 @@ function GC:drawOver(camX, camY)
     end
     for _, n in ipairs(self.notes or {}) do
         if (n.c or 0) >= 4 then
-            -- la DORADA: más grande, con un halo que late (devuelta, deja estela)
+            -- la DORADA: mucho más grande, con RAYOS que giran, un aro blanco que late y un halo dorado (devuelta,
+            -- deja estela). Que no se confunda con ninguna nota normal (ya ninguna es amarilla: el usuario, 0.5.52)
             local x, y = math.floor(n.x - camX), math.floor(n.y - camY)
             love.graphics.setBlendMode('add')
-            love.graphics.setColor(1, 0.85, 0.3, 0.35 + 0.15 * math.sin(now * 12))
-            love.graphics.circle('fill', x, y, 34 + 4 * math.sin(now * 12), 16)
+            love.graphics.setColor(1, 0.85, 0.3, 0.4 + 0.15 * math.sin(now * 12))
+            love.graphics.circle('fill', x, y, 46 + 5 * math.sin(now * 12), 20)
+            love.graphics.setColor(1, 0.92, 0.5, 0.35)
+            for r = 0, 5 do
+                local a = now * 2.2 + r * math.pi / 3
+                local ca, sa = math.cos(a), math.sin(a)
+                love.graphics.polygon('fill', x + ca * 20 - sa * 7, y + sa * 20 + ca * 7, x + ca * 20 + sa * 7, y + sa * 20 - ca * 7,
+                                      x + ca * 78, y + sa * 78)
+            end
             love.graphics.setBlendMode('alpha')
+            love.graphics.setColor(1, 1, 1, 0.6 + 0.4 * math.sin(now * 10))
+            love.graphics.setLineWidth(4)
+            love.graphics.circle('line', x, y, 40, 20)
+            love.graphics.setLineWidth(1)
             if n.c == 5 then
                 for k = 1, 3 do
                     love.graphics.setColor(1, 0.9, 0.4, 0.3 / k)
@@ -521,11 +535,11 @@ function GC:drawOver(camX, camY)
                 end
             end
             love.graphics.setColor(1, 1, 1, 1)
-            art.gold:draw(math.floor(now * 6) % 2 + 1, x, y, 0, 6, 6)
+            art.gold:draw(math.floor(now * 6) % 2 + 1, x, y, 0, 7, 7)
         else
             -- (más visibles: más grandes, con un halo de su color y una estela detrás)
             local fr = (n.c or 0) * 2 + (math.floor(now * 6 + (n.id or 0)) % 2) + 1
-            local c = BEAT_COLS[(n.c or 0) % 4 + 1]
+            local c = NOTE_COLS[(n.c or 0) % 4 + 1]
             local x, y = math.floor(n.x - camX), math.floor(n.y - camY)
             local sp = math.max(1, math.sqrt((n.vx or 0) ^ 2 + (n.vy or 0) ^ 2))
             love.graphics.setBlendMode('add')

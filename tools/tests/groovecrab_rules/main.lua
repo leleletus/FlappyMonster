@@ -15,16 +15,16 @@
 --   tocar      tocar su cuerpo de lado quita 1; su pinza, no; aturdido, no
 --   pista      en la subida: un dibujo por compás; las baldosas avisan 3 tiempos (1,2 s) y en el 4º lanzan la
 --              columna: encima quita 1, en una apagada no, en la plataforma de encima tampoco
---   dibujos    las notas, por parejas de compases de la B: recta (2), abanico (3 por pop), ondulando (se aparta de su
---              recta y vuelve), en arco (cae a menos de 1,5 casillas de los pies del jugador); enfadado, sin abanico
+--   dibujos    las notas, por parejas de compases de la B: recta, abanico (3 por pop), en arco (cae a menos de 1,5
+--              casillas de los pies del jugador), y otra vez; enfadado, sin abanico
 --   baile      entre ataques cruza el escenario a pasitos (en la A, compás par: se mueve ≥ media casilla) y no se
 --              acerca andando a un jugador que tiene cerca
 --   temblor    cada golpe que recibe hace temblar la pantalla
 --   platos     2ª FASE: los platos de DJ están en las dos plataformas; en la 1ª fase pisarlos no hace nada; en la 2ª ya
 --              no hay dorada, pisar uno lo pone a girar (y rebotas) DECK_T s y luego se apaga; los dos a la vez → el
 --              BAJÓN: noqueado y vulnerable, platos apagados
---   trepar     caerle al trampolín y mantener hacia un lado te deja en la plataforma de ese lado (a 5 casillas: con
---              el doble salto no se llega)
+--   trepar     (2ª fase: las plataformas son bloques de fase) caerle al trampolín y mantener hacia un lado te deja
+--              en la plataforma de ese lado (a 5 casillas: con el doble salto no se llega)
 --   enfado     a media vida se enfada (2ª fase); enfadado salta también en los compases pares de la A (tranquilo, no)
 --   solo       en el compás 5 del solo, dorada en la 0 (en el 1 ya no); en el 2, un saltito que cae en el 3 justo en el
 --              golpe, sin ondas
@@ -76,6 +76,12 @@ local function arena(diff)
     z.state, z.bosses = 'fight', { boss }
     boss.levelRef = level
     return level, es, boss
+end
+
+-- (las plataformas de los platos: bloques de fase, solo en la 2ª fase; esto las pone como al llegar a ella)
+local function platformsOn(level)
+    level.bossZones[1].phase = 2
+    require('src/world/systems/PhaseBlocks').update(level)
 end
 
 local function playerAt(level, col, row)
@@ -311,7 +317,10 @@ function cases.pista()
         return pa
     end
     local p1, p2 = standOn(litI), standOn(darkI)
-    local pl = standOn(0, 7)                                                 -- (la plataforma de la izquierda, fila 8)
+    -- (en la plataforma de la izquierda, fila 8 —solo está en la 2ª fase—, la columna no llega; en la 1ª, tampoco está)
+    local gone = level:getDef(14, 8).collision == 'none'
+    platformsOn(level)
+    local pl = standOn(0, 7)
     songAt(boss, barOf('S', 1), 11.9)
     local h1, h2, hl = p1.hp, p2.hp, pl.hp
     local boomSeen
@@ -320,9 +329,9 @@ function cases.pista()
         local f = boss:floorNow(); if f and f.boom then boomSeen = true end
     end)
     local onPlat = boss:floorNow().lit[0]
-    check('pista', warn and boomSeen and p1.hp < h1 and p2.hp == h2 and pl.hp == hl,
-        ('tiempo 1: aviso=%s · tiempo 2: columna=%s · encima de una encendida: %d→%d · en una apagada: %d→%d · en la plataforma (baldosa 0 encendida=%s): %d→%d'):format(
-            tostring(warn), tostring(boomSeen), h1, p1.hp, h2, p2.hp, tostring(onPlat), hl, pl.hp))
+    check('pista', warn and boomSeen and p1.hp < h1 and p2.hp == h2 and pl.hp == hl and gone,
+        ('tiempo 1: aviso=%s · tiempo 4: columna=%s · encima de una encendida: %d→%d · en una apagada: %d→%d · en la plataforma (baldosa 0 encendida=%s): %d→%d · plataforma en la 1ª fase: %s'):format(
+            tostring(warn), tostring(boomSeen), h1, p1.hp, h2, p2.hp, tostring(onPlat), hl, pl.hp, gone and 'no está' or 'ESTÁ'))
 end
 
 -- pasa a la 2ª fase como en el juego (aturdido, el golpe que lo deja a media vida) y espera a que vuelva a lo suyo
@@ -357,11 +366,8 @@ function cases.dibujos()
     end
     local aim = #bar(1)
     local fan = #bar(3)
-    -- ondulando: se aparta de su recta
-    local w = bar(5, 0.4)[1]
-    local off = w and w.bx and math.abs((w.x - w.bx) * w.px + (w.y - w.by) * w.py) or 0
     -- en arco: cae cerca de los pies
-    local lob = bar(7, 0.1)[1]
+    local lob = bar(5, 0.1)[1]
     local landX
     if lob then
         stepAll(level, es, { pa }, 1.5, function()
@@ -373,9 +379,10 @@ function cases.dibujos()
     end
     local near = landX and math.abs(landX - pa.x) < 1.5 * T
     local rageFan = boss.noteKind('B', 3, true)
-    check('dibujos', aim == 1 and fan == 3 and off > 20 and near and rageFan ~= 'fan',
-        ('B1 recta: %d nota · B3 abanico: %d · B5 ondula: %.0f px de su recta · B7 en arco: cae a %s px de los pies · enfadado, B3: %s'):format(
-            aim, fan, off, landX and math.floor(math.abs(landX - pa.x)) or '?', rageFan))
+    local kinds = boss.noteKind('B', 1) .. ',' .. boss.noteKind('B', 3) .. ',' .. boss.noteKind('B', 5) .. ',' .. boss.noteKind('B', 7)
+    check('dibujos', aim == 1 and fan == 3 and near and rageFan ~= 'fan' and kinds == 'aim,fan,lob,aim',
+        ('B1 recta: %d nota · B3 abanico: %d · B5 en arco: cae a %s px de los pies · enfadado, B3: %s · B1/3/5/7: %s'):format(
+            aim, fan, landX and math.floor(math.abs(landX - pa.x)) or '?', rageFan, kinds))
 end
 
 function cases.baile()
@@ -455,6 +462,7 @@ function cases.trepar()
     local results = {}
     for _, side in ipairs({ -1, 1 }) do
         local level, es, boss = arena()
+        platformsOn(level)
         songAt(boss, barOf('B', 1), 0)                                     -- (la B: no salta)
         boss.x = 23 * T + side * 3 * T
         local tb = boss:trampBox()

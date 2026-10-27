@@ -85,11 +85,10 @@ local NOTE_SPD = { 330, 390 }                   -- { normal, enfadado }
 local NOTE_R = 16                               -- media caja de una nota
 local NOTE_LIFE = 4.0
 -- Los DIBUJOS de las notas (0.5.51, el usuario: "en diferentes patrones y más visibles"): cambian cada 2 compases
---   aim  recta hacia ti · fan  tres en abanico (la del centro, hacia ti) · wave  recta, ondulando · lob  en arco,
---   cae donde estás. Enfadado (más notas por compás) no hay abanico: sería una lluvia
-local NOTE_KINDS = { 'aim', 'fan', 'wave', 'lob' }
+--   aim  recta hacia ti · fan  tres en abanico (la del centro, hacia ti) · lob  en arco, cae donde estás. Enfadado
+--   (más notas por compás) no hay abanico: sería una lluvia. (Hubo una que ondulaba: "confunde bastante", 0.5.52)
+local NOTE_KINDS = { 'aim', 'fan', 'lob' }
 local FAN_A = 0.32                              -- rad entre las notas del abanico
-local WAVE_A, WAVE_W = 46, 2 * math.pi * 2.2    -- px y rad/s de la onda
 local LOB_G, LOB_T = 1100, 1.05                 -- gravedad y s de vuelo de la nota en arco
 -- El BAILE (0.5.51: "que sea más móvil"): entre ataques cruza el escenario a pasitos en cada tiempo, mirándote,
 -- y nunca hacia ti si estás cerca
@@ -229,7 +228,7 @@ end
 -- El dibujo de las notas del compás (sec, k): cambia cada 2 compases; enfadado, sin abanico
 function GC.noteKind(sec, k, rage)
     local kind = NOTE_KINDS[math.floor((k - 1) / 2) % #NOTE_KINDS + 1]
-    if rage and kind == 'fan' then kind = 'wave' end
+    if rage and kind == 'fan' then kind = 'aim' end
     return kind
 end
 
@@ -293,8 +292,15 @@ function GC:findDecks(level)
     local r0, r1 = math.max(1, math.floor(zy0 / T) + 1), math.floor(self.floorY / T) - 2     -- (2 casillas sobre el suelo)
     local mid = (zx0 + zx1) / 2
     local left, right
+    -- (las plataformas de los platos son BLOQUES DE FASE: escondidas hasta la 2ª fase; cuentan con su casilla de verdad)
+    local hidden = {}
+    for _, pb in ipairs(level.phaseBlocks or {}) do
+        for _, cell in ipairs(pb.cells) do hidden[cell.r * 65536 + cell.c] = cell.raw end
+    end
+    local TileTypes, TileCodec = require 'src/world/tiles/TileTypes', require 'src/world/tiles/TileCodec'
     local function stands(c, r)
-        local d = level:getDef(c, r)
+        local raw = hidden[r * 65536 + c]
+        local d = raw and TileTypes.get(TileCodec.id(raw)) or level:getDef(c, r)
         return d and (d.collision == 'oneway' or d.collision == 'solid')
     end
     for r = r0, r1 do
@@ -303,7 +309,8 @@ function GC:findDecks(level)
             if stands(c, r) and not stands(c, r - 1) then
                 local ca = c
                 while c + 1 <= c1 and stands(c + 1, r) and not stands(c + 1, r - 1) do c = c + 1 end
-                local d = level:getDef(ca, r)
+                local raw0 = hidden[r * 65536 + ca]
+            local d = raw0 and TileTypes.get(TileCodec.id(raw0)) or level:getDef(ca, r)
                 local run = { x = ((ca - 1) + c) * T / 2, y = (r - 1) * T + math.floor((d.hitbox and d.hitbox.y or 0) * T), on = 0 }
                 if (c - ca + 1) * T >= DECK_W then
                     if run.x < mid and (not left or run.x < left.x) then left = run end
@@ -434,9 +441,6 @@ function GC:shoot(level, gold, kind)
     if kind == 'fan' then
         local a = math.atan2(dy, dx)
         for _, da in ipairs({ -FAN_A, 0, FAN_A }) do add(math.cos(a + da) * spd, math.sin(a + da) * spd) end
-    elseif kind == 'wave' then
-        -- (recta hacia ti, ondulando de lado: la base va recta y la nota se aparta de ella)
-        add(dx / d * spd, dy / d * spd, { bx = x, by = y, px = -dy / d, py = dx / d })
     elseif kind == 'lob' then
         -- (en arco: sube y cae donde estás —a tus pies— en LOB_T s)
         local fy = pa.y + 20
@@ -468,14 +472,8 @@ function GC:updateNotes(level, dt)
             local d = math.max(1, math.sqrt(dx * dx + dy * dy))
             n.vx, n.vy = dx / d * GOLD_BACK, dy / d * GOLD_BACK
         end
-        if n.bx then                                                    -- (ondulando sobre su recta)
-            n.bx, n.by = n.bx + n.vx * dt, n.by + n.vy * dt
-            local o = math.sin(n.t * WAVE_W) * WAVE_A
-            n.x, n.y = n.bx + n.px * o, n.by + n.py * o
-        else
-            if n.g then n.vy = n.vy + n.g * dt end                       -- (en arco)
-            n.x, n.y = n.x + n.vx * dt, n.y + n.vy * dt
-        end
+        if n.g then n.vy = n.vy + n.g * dt end                           -- (en arco)
+        n.x, n.y = n.x + n.vx * dt, n.y + n.vy * dt
         local gone = n.t >= ((n.c >= 4) and GOLD_LIFE or NOTE_LIFE) or n.x < zx0 - T or n.x > zx1 + T
                      or n.y < zy0 - 3 * T or n.y > zy1 + T
         if n.g and n.y >= self.floorY - NOTE_R and n.vy > 0 then          -- (la del arco, al caer al suelo: revienta)

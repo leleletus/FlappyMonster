@@ -126,3 +126,12 @@ corners of the zone onto it, changing colour on every beat (additive cones).
   moving away —, never towards a player closer than 2.6 tiles), and his idle dance changes every 2 bars (bob · claws
   up in turns · half-turn on every beat, flipping, never rotated · deep squat with a shimmy); all drawing from the song
   clock (same online). Harness cases `dibujos`, `baile`, `temblor`; `boss_frames FROM=s`. Not played by the user yet.
+- 0.5.52, the user: (1) the WEAVING notes confused ("they sway up and down") — removed; the patterns are now aim, fan,
+  lob (every 2 bars; enraged, aim instead of fan); (2) the dance floor had become all pink (the danger tint) and lost
+  its colours: each tile keeps ITS colour in the blink, the ghost outline and the column (the rising arrow stays);
+  (3) the golden note looked like a yellow normal note: no normal note is yellow any more (the third colour of
+  `note-Sheet.png` is purple) and the golden one is drawn at ×7 with turning rays, a pulsing white ring and a bigger
+  halo; (4) the two side platforms only exist in PHASE 2: phase blocks (`phaseblock`, phase 2, like the Snowball's
+  switches) in the arena (`make_jefe_groove.py`) and in `isla_del_groove.json` (added by hand: `build.py --only
+  isla_del_groove` regenerated the level WITHOUT its later retheme and decorations — not used). `findDecks` counts
+  the hidden cells, so the decks are known from the start and rise with their platforms.
