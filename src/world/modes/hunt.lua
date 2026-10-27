@@ -14,7 +14,7 @@ end
 return {
     -- Textos (nombre, tagline, objetivo): assets/lang, claves mode.hunt.*
     id = 'hunt', icon = 'skull',
-    color = { 1.0, 0.45, 0.30 }, button = 'orange',
+    color = { 1.0, 0.45, 0.30 }, button = 'mono',
     -- Línea de estado del panel de objetivo (cliente; md = hud del servidor)
     hudLine = function(md)
         if not md.left then return nil end

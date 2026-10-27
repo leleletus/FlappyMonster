@@ -479,7 +479,7 @@ end
 function OnlineHubState:_renderList()
     local A = self.anim
     local Ly = self:_layout()
-    MenuKit.title(L('hub.title'), 'purple', A, 1)
+    MenuKit.title(L('hub.title'), 'mono', A, 1)
     local focusRooms = self.sub == SUB_LIST and self.listFocus == 'rooms'
 
     -- La lista de salas
@@ -521,7 +521,7 @@ function OnlineHubState:_renderList()
     if Ly.scroll + Ly.maxVisible < #self.roomList then MenuKit.text(FONT_SMALL, 'v', R.x + ox, R.y + R.h - 14 + oy, R.w, 'center', { 1, 0.86, 0.36 }, a) end
 
     -- Botones de abajo
-    local colors = { 'green', 'blue', 'grey' }
+    local colors = { 'green', 'mono', 'mono' }
     for i, lbl in ipairs(LIST_BTNS) do
         local bx, by, ba = A:slide(2 + i, 0, 220)
         local sel = self.sub == SUB_LIST and self.listFocus == 'btns' and i == self.btnSel
@@ -555,11 +555,11 @@ function OnlineHubState:_renderCreate()
         MenuKit.field(F.x, F.y + oy, F.w, F.h, self.inputBuffer, true, { alpha = a, placeholder = L('hub.name_prompt') })
         MenuKit.text(FONT_SMALL, L('hub.name_max'), F.x, F.y + F.h + 12 + oy, F.w, 'right', { 0.6, 0.66, 0.85 }, a)
     elseif self.createStep == STEP_PRIVACY then
-        local opts = { { 'hub.public', 'hub.public_desc', 'blue' }, { 'hub.private', 'hub.private_desc', 'pink' } }
+        local opts = { { 'hub.public', 'hub.public_desc', 'mono' }, { 'hub.private', 'hub.private_desc', 'mono' } }
         for i, o in ipairs(opts) do
             local r = Ly.choices[i]
             local sel = self.privacySel == i
-            MenuButton.draw(L(o[1]), r.x, r.y + oy + bobOf(self.t, sel), r.w, r.h, sel and o[3] or 'grey', sel,
+            MenuButton.draw(L(o[1]), r.x, r.y + oy + bobOf(self.t, sel), r.w, r.h, o[3], sel,
                             { alpha = a, scale = MenuButton.textScale(L(o[1]), r.w - 48, 5) })
             if sel and not self.hoveredCreateNav then MenuKit.marker(r.x, r.y + oy + bobOf(self.t, sel), r.w, r.h, self.t, a) end
             MenuKit.text(FONT_SMALL, L(o[2]), r.x, r.y + r.h + 16 + oy, r.w, 'center', sel and { 1, 1, 1 } or { 0.6, 0.66, 0.85 }, a)
@@ -580,14 +580,14 @@ function OnlineHubState:_renderCreate()
             local can = (d < 0 and self.maxValue > 2) or (d > 0 and self.maxValue < 8)
             local hov = self.hoveredCreateBtn == i
             local push = (self.stepPush == d and self.t < 0.12) and 4 or 0
-            MenuButton.draw(nil, r.x, r.y + oy + push, r.w, r.h, can and 'blue' or 'grey', hov and can, { alpha = a * (can and 1 or 0.6) })
+            MenuButton.draw(nil, r.x, r.y + oy + push, r.w, r.h, 'mono', hov and can, { alpha = a * (can and 1 or 0.6) })
             MenuKit.arrow(math.floor(r.x + r.w / 2) + (d < 0 and 8 or -8), math.floor(r.y + (r.h - 4) / 2) + oy + push, 28, d,
-                          a * (can and 1 or 0.6), { 1, 1, 1 })
+                          a * (can and 1 or 0.6), MenuButton.ink('mono'))
         end
     end
     -- CANCELAR / SIGUIENTE (o CREAR); en la privacidad, solo CANCELAR (elegir ya avanza)
     local nav = self.hoveredCreateNav
-    self:_button(L('hub.cancel'), Ly.nav[1], 'grey', nav == 1, a, 0, oy)
+    self:_button(L('hub.cancel'), Ly.nav[1], 'red', nav == 1, a, 0, oy)
     if #Ly.nav > 1 then
         self:_button(self.createStep == STEP_MAX and L('hub.create') or L('hub.next'), Ly.nav[2], 'green', nav == 2, a, 0, oy)
     end
@@ -601,7 +601,7 @@ function OnlineHubState:_renderPassword()
     MenuKit.field(F.x, F.y + oy, F.w, F.h, self.inputBuffer, true, { alpha = a, mask = true })
     local cancelSel = self.hoveredPassBtn == 2
     self:_button(L('hub.join'), Ly.nav.join, 'green', not cancelSel, a, 0, oy)
-    self:_button(L('hub.cancel'), Ly.nav.cancel, 'grey', cancelSel, a, 0, oy)
+    self:_button(L('hub.cancel'), Ly.nav.cancel, 'red', cancelSel, a, 0, oy)
     MenuKit.hint(L('hub.join_hint'))
 end
 

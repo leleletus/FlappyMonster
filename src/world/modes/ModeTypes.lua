@@ -60,7 +60,7 @@ function ModeTypes.register(def)
     local m = {}
     for k, v in pairs(def) do m[k] = v end
     m.color      = m.color or { 1, 0.85, 0.2 }
-    m.button     = m.button or 'blue'
+    m.button     = m.button or 'mono'
     m.triggers   = m.triggers or {}
     m.requires   = m.requires or function() return true end
     m.start      = m.start or noop

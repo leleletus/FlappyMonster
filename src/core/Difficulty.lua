@@ -64,7 +64,7 @@ Difficulty.MODS = {
 -- DESBLOQUEOS (historia, globales): acabar el juego (el jefe del último mundo) en esta dificultad abre esta otra
 Difficulty.UNLOCKS = { hard = 'extreme', extreme = 'xtra' }
 -- El color de botón de cada una en los menús (src/ui/menu/MenuButton; 'none' = sin dificultad, el juego de siempre)
-Difficulty.COLORS = { none = 'teal', easy = 'green', normal = 'yellow', hard = 'orange', extreme = 'red', xtra = 'purple' }
+Difficulty.COLORS = { none = 'mono', easy = 'green', normal = 'blue', hard = 'yellow', extreme = 'red', xtra = 'purple' }   -- (botones: src/ui/menu/MenuButton.lua)
 -- Qué ritmo lleva cada categoría de entidad
 Difficulty.PACE_OF = { Enemigos = 'enemyPace', Trampas = 'trapPace', Jefes = 'bossPace' }
 

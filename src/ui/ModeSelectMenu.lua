@@ -354,8 +354,8 @@ end
 
 -- Flecha de "hay más niveles" a un lado: un botón gris estrecho con su flecha pixel
 local function arrow(x, y, w, h, dir, enabled)
-    MenuButton.draw(nil, x, y, w, h, enabled and 'blue' or 'grey', false, { alpha = enabled and 1 or 0.5 })
-    MenuKit.arrow(math.floor(x + w / 2) + (dir < 0 and 8 or -8), math.floor(y + (h - 4) / 2), 28, dir, enabled and 1 or 0.5, { 1, 1, 1 })
+    MenuButton.draw(nil, x, y, w, h, 'mono', false, { alpha = enabled and 1 or 0.5 })
+    MenuKit.arrow(math.floor(x + w / 2) + (dir < 0 and 8 or -8), math.floor(y + (h - 4) / 2), 28, dir, enabled and 1 or 0.5, MenuButton.ink('mono'))
 end
 
 function ModeSelectMenu:render()
@@ -382,7 +382,7 @@ function ModeSelectMenu:render()
         local label = m.label
         local s = MenuButton.textScale(label, r.w - 40 - iw * 3, 4)
         local bob = foc and ((math.floor(t * 3) % 2 == 0) and -4 or 0) or 0
-        MenuButton.draw(label, r.x, r.y + oy + bob + (on and 0 or 4), r.w, r.h - (on and 0 or 4), on and m.button or 'grey', foc,
+        MenuButton.draw(label, r.x, r.y + oy + bob + (on and 0 or 4), r.w, r.h - (on and 0 or 4), 'mono', foc,
                         { alpha = appear * (on and 1 or 0.8), scale = s, iconW = iw > 0 and iw * 3 + 10 or 0,
                           icon = iw > 0 and function(x, y, sc) PixelIcons.draw(m.icon, x, y + math.floor((PixelFont.height(sc) - ih * 3) / 2), 3, appear) end or nil })
     end

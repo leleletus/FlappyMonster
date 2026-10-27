@@ -62,7 +62,7 @@ function OnlineErrorState:render()
     MenuKit.text(FONT_SMALL, self.code, c.x + ox, c.y + c.h - 40 + oy, c.w, 'center', { 0.85, 0.5, 0.5 }, 0.8 * a)
     local bx, by, ba = A:slide(3, 0, 220)
     local bob = (math.floor(self.t * 3) % 2 == 0) and -4 or 0
-    MenuButton.draw(L('err.back_menu'), b.x + bx, b.y + by + bob, b.w, b.h, 'grey', true,
+    MenuButton.draw(L('err.back_menu'), b.x + bx, b.y + by + bob, b.w, b.h, 'mono', true,
                     { alpha = ba, scale = MenuButton.textScale(L('err.back_menu'), b.w - 48, 4) })
     MenuKit.marker(b.x + bx, b.y + by + bob, b.w, b.h, self.t, ba)
     love.graphics.setColor(COLOR_WHITE)

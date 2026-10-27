@@ -345,7 +345,7 @@ function FreePlayState:render()
 
     local cols, x0, viewH = layout()
     -- Rótulo (a la izquierda en pantallas anchas: a la derecha va la dificultad) y el número de niveles
-    local hy = MenuKit.title(L('free.title'), 'teal', A, 1, 5)
+    local hy = MenuKit.title(L('free.title'), 'mono', A, 1, 5)
     local _, soy, sa = A:slide(1, 0, -200, 0, -200)
     local sub = L('free.subtitle', { n = #self.files })
     if wide() then
@@ -363,7 +363,7 @@ function FreePlayState:render()
         local lbl = L('room.difficulty_label')
         PixelFont.shadow(lbl, math.floor(dx + (dw - PixelFont.width(lbl, 2)) / 2), dy - 18 + doy, 2, da, { 1, 0.86, 0.36 })
         MenuKit.stepper(nil, L('difficulty.' .. d), { x = dx, y = dy + doy + push, w = dw, h = dh },
-                        Difficulty.COLORS[d] or 'teal', self.diffFocus, { alpha = da, scale = 4 })
+                        Difficulty.COLORS[d] or 'mono', self.diffFocus, { alpha = da, scale = 4 })
         MenuKit.occupy(dx, dy + doy + push, dw, dh)
         if self.diffFocus then MenuKit.marker(dx, dy + doy + push, dw, dh, self.t, da) end
     end

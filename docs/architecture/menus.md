@@ -45,8 +45,13 @@ save slots are **cartridges** (Sonic 3 style save select).
   the level, the bot or the physics change (`menu_flow` fails if a scene stops reaching the finish). A scene also
   ends after `SCENE_MAX` s, or after `STALLS` times `STALL` s without getting closer (it gives up: dies and retries
   from the checkpoint, then moves on).
-- Button colours: `green orange blue pink purple yellow red teal grey` (the order of `button.json`). Adding one =
-  a palette entry in the generator.
+- Button colours (0.5.50, the user: only six): `mono` — the GENERIC one, black and white (black outline, white body, BLACK letters — `ink` in `button.json`,
+  `MenuButton.ink(color)` for arrows and icons drawn on a button —; selected: pure white), for almost every button, title banner and game-mode tab — and five special ones:
+  `green` accept / start / continue / connect / create / join / resume, `red` cancel / leave / stop / kick / ban /
+  delete / errors, `blue` settings (its button, banner and controls), and the DIFFICULTIES (`Difficulty.COLORS`:
+  none mono, easy green, normal blue, hard yellow, extreme red, Xtra purple; Classic's three: green, yellow, red),
+  `yellow` also "not ready" and "give admin". Unknown names fall back to `MenuButton.GENERIC`. The order of
+  `button.json`: `mono green yellow red blue purple`. Don't add colours: use `mono` unless the button is special.
 - Continue: shown only when a story slot exists; it opens the most recently written slot file
   (`story<n>.sav` modtime) and goes to the story map. No new saved data.
 
@@ -92,7 +97,7 @@ at 1280 / 960 / 1600 (`<save>/menu_*.png`). `story_flow` waits while a cartridge
 
 **What:** the whole online area (login, room list, create-room wizard, password, room, game-mode menu, pause and
 spectator windows in a match, results board, network error) is built from the same pieces as the other menus: the
-living background with its panel, a coloured title banner (purple for online, red for the error), muted 9-slice
+living background with its panel, a title banner (generic; red for the error), muted 9-slice
 buttons with the cursor marking the selected one, and the boxes below. Names typed by players (rooms, players) are
 drawn in the normal font (the pixel font lacks most symbols); labels, buttons and headings in the pixel font.
 
@@ -103,8 +108,8 @@ drawn in the normal font (the pixel font lacks most symbols); labels, buttons an
 | `assets/images/ui/menus/box.png` | the four boxes (8×8 cells, cut 2), written by `tools/art/ui/make_menu_ui.py` |
 | `src/states/online/OnlineLoginState.lua`, `OnlineHubState.lua`, `OnlineRoomState.lua`, `OnlineErrorState.lua` | each has ONE layout function used by drawing, mouse and touch; enter / leave with `MenuAnim` (windows slide in with their own) |
 | `MenuKit.optionsWindow` / `optionsLayout` / `optionAt` | the OPTIONS WINDOW of every pause and end of match: single-player pause (`src/states/adventure/PauseState.lua`), the level's game over (`AdventureState`, with the story's note), the online pause and spectator windows; one geometry for drawing, mouse and touch; the buttons are centred on THEIR OWN width (the smart cursor finds its own room: 0.5.5, the user saw them shifted to one side) |
-| `src/states/adventure/FreePlayState.lua` | Free Play with the same pieces (teal banner, ◀ difficulty ▶ selector, cards as boxes) |
-| `src/ui/ModeSelectMenu.lua` | the game-mode menu (online room and Free Play): tabs are buttons in the mode's `button` colour (`src/world/modes/<mode>.lua`), level cards are boxes |
+| `src/states/adventure/FreePlayState.lua` | Free Play with the same pieces (generic banner, ◀ difficulty ▶ selector, cards as boxes) |
+| `src/ui/ModeSelectMenu.lua` | the game-mode menu (online room and Free Play): tabs are generic buttons, level cards are boxes |
 | `src/states/online/OnlineAdventureHud.lua` | pause and spectator windows (geometry in `OnlineAdventureState:_pauseRects / _specRects`) |
 | `src/states/online/OnlineResultsState.lua` | results: podium and celebration as before; the board rows are cards, the column heads pixel-font labels |
 
@@ -180,3 +185,9 @@ difficulty and back, the match starting with it). `online_smoke`, `online_boss`,
   (`MenuScene.BRICKS`: story gold, free teal, online blue, error red, sound purple). The live scene stays on the
   title, the mode / settings / Flappy-difficulty menus and the pause / results overlays. `MenuScene.backdrop()` with
   no argument still draws the live scene.
+- 0.5.50, the user: "only white-and-black (generic), green, yellow, red, blue and purple buttons; make ALL buttons
+  generic and use the colours only for special situations — difficulties, accept / cancel, settings…". The palette went
+  from 9 colours to 6 (orange, pink, teal and grey removed; `mono` added) and every use was remapped (see Button colours
+  above): the title's ADVENTURE / CLASSIC, the adventure modes, every banner but the error's, game-mode tabs, steppers
+  and arrows became generic; CONTINUE green; cancel buttons red; settings blue. First try: the generic was a dark
+  button with white letters — "backwards": it is black outline, white fill, black letters.

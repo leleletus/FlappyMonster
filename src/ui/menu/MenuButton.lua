@@ -1,15 +1,20 @@
 -- src/ui/menu/MenuButton.lua
--- Los BOTONES de colores de los menús (docs/architecture/menus.md): un 9-slice de assets/images/ui/menus/button.png (una
--- columna por color, fila 1 normal y fila 2 seleccionado; tools/art/ui/make_menu_ui.py) con el texto en la fuente
+-- Los BOTONES de los menús (docs/architecture/menus.md): un 9-slice de assets/images/ui/menus/button.png (una
+-- columna por color, fila 1 normal y fila 2 seleccionado; tools/art/ui/make_menu_ui.py). SEIS colores (0.5.50, el
+-- usuario): 'mono' — el GENÉRICO, blanco y negro (contorno negro, relleno blanco, letras negras): casi todos — y los especiales 'green' (aceptar,
+-- empezar, seguir), 'red' (cancelar, salir, borrar, errores), 'blue' (configuración), 'yellow' y 'purple'
+-- (dificultades, estados especiales); MenuButton.GENERIC. con el texto en la fuente
 -- pixel de los menús (src/ui/PixelFont) y su sombra del color del botón. Y el PANEL (panel.png) de las pantallas
 -- con contenido.
 --   MenuButton.draw(text, x, y, w, h, color, selected, o)   o: alpha, scale (texto), icon (función(x, y, s))
 --   MenuButton.panel(x, y, w, h, alpha)
+--   MenuButton.ink(color)                → {r, g, b} de lo que va encima (letras, flechas): blanco; el genérico, negro
 --   MenuButton.textScale(text, w, max)   escala entera para que el texto quepa en w
 local json      = require 'libs/json'
 local PixelFont = require 'src/ui/PixelFont'
 
 local MenuButton = {}
+MenuButton.GENERIC = 'mono'
 
 MenuButton.S = 4            -- escala del arte (1 px del botón = 4 px de pantalla)
 MenuButton.TEXT = 6         -- escala del texto por defecto
@@ -63,13 +68,21 @@ function MenuButton.textScale(text, w, max)
     return s
 end
 
+-- El color de lo que va ENCIMA de un botón de ese color (letras, flechas, iconos): blanco; en el genérico, negro
+function MenuButton.ink(color)
+    load()
+    local tc = meta.text[color] or meta.text[MenuButton.GENERIC] or {}
+    local ink = tc.ink
+    return ink and { ink[1] / 255, ink[2] / 255, ink[3] / 255 } or { 1, 1, 1 }
+end
+
 function MenuButton.draw(text, x, y, w, h, color, selected, o)
     load()
     o = o or {}
     x, y, w, h = math.floor(x), math.floor(y), math.floor(w), math.floor(h)
     local a = o.alpha or 1
     if a > 0.05 then require('src/ui/menu/MenuKit').occupy(x, y, w, h) end   -- (para colocar el cursor sin pisarlo)
-    local i = meta.index[color] or 1
+    local i = meta.index[color] or meta.index[MenuButton.GENERIC]      -- (un color que no existe: el genérico)
     local cell = meta.cell
     local q = pieces(sheet, (i - 1) * cell, selected and cell or 0, cell, meta.cut)
     -- sombra negra (el mismo botón, en negro, desplazado)
@@ -86,10 +99,12 @@ function MenuButton.draw(text, x, y, w, h, color, selected, o)
         local face = h - (meta.cut.b - meta.cut.t) * MenuButton.S
         local tx = math.floor(x + (w - tw + iconW) / 2)
         local ty = math.floor(y + (face - PixelFont.height(s)) / 2)
-        local sc = meta.text[color] and meta.text[color][selected and 'shadow_sel' or 'shadow'] or { 0, 0, 0 }
+        local tc = meta.text[color] or meta.text[MenuButton.GENERIC] or {}
+        local sc = tc[selected and 'shadow_sel' or 'shadow'] or { 0, 0, 0 }
         PixelFont.draw(text, tx + math.max(2, math.floor(s / 2)), ty + math.max(2, math.floor(s / 2)), s, a,
                        { sc[1] / 255, sc[2] / 255, sc[3] / 255 })
-        PixelFont.draw(text, tx, ty, s, a)
+        -- (letras blancas; el genérico, NEGRAS sobre blanco: `ink` en button.json)
+        PixelFont.draw(text, tx, ty, s, a, MenuButton.ink(color))
         if o.icon then o.icon(tx - iconW, ty, s) end
     end
     love.graphics.setColor(1, 1, 1, 1)
