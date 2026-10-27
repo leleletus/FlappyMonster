@@ -9,13 +9,16 @@ return {
     -- Textos (nombre, tagline, objetivo, emptyHint): assets/lang, claves mode.race.*
     id = 'race', icon = 'flag',
     color = { 0.35, 0.85, 1.0 }, button = 'mono',
-    hudLine = function(md)
+    -- En un nivel con JEFE se juega en cooperativo (el jefe es uno para todos): se llama "Cooperativo" (textos
+    -- mode.race.boss.*); el id `race` y las reglas son las mismas
+    variant = function(info) return (info.bosses or 0) > 0 and 'boss' or nil end,
+    hudLine = function(md, v)
         if md.cd then
             local secs = md.cd / 100
             local big = string.format('%d.%d', math.floor(secs), math.floor(secs * 10) % 10)
             return L('mode.race.hurry'), secs <= 5, big
         end
-        return L('mode.race.beat_others'), false
+        return L(v == 'boss' and 'mode.race.boss.together' or 'mode.race.beat_others'), false
     end,
     triggers = { 'finish' },
 

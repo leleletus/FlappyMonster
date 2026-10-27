@@ -82,6 +82,7 @@ function OnlineResultsState:enter(args)
     self.room    = args.room or {}
     local res    = type(args.results) == 'table' and args.results or {}
     self.mode    = Modes.get(res.mode or args.mode) or Modes.get(Modes.DEFAULT)
+    self.mode    = Modes.forLevel(self.mode, args.levelInfo)          -- (Carrera con jefe = Cooperativo)
     -- Motivo y desempate en el idioma de este jugador (el servidor manda los
     -- códigos; reasonText/note en español quedan para servidores antiguos)
     self.reason  = res.reason and Modes.reasonText(self.mode, res.reason) or ''

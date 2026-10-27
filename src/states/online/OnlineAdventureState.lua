@@ -446,6 +446,7 @@ function OnlineAdventureState:update(dt)
             Sound.stopMusic()
             gStateMachine:change('online_results', {
                 results = self.roundEnd, room = self.currentRoom, mode = self.mode and self.mode.id,
+                levelInfo = { bosses = #(self.level and self.level.bossZones or {}) },
             })
         end
         return

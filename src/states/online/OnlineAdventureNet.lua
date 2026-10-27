@@ -32,6 +32,7 @@ function OnlineAdventureState:_onGameInit(data)
         if ok and type(lv) == 'table' then self:_buildWorld(lv, data.difficulty) end   -- (la dificultad cambia qué hay)
     end
     self.mode   = Modes.get(data.mode) or self.mode
+    self.mode   = Modes.forLevel(self.mode, { bosses = #(self.level.bossZones or {}) })   -- (Carrera con jefe = Cooperativo)
     -- Dificultad de la sala (src/core/Difficulty.lua): la misma que simula el servidor
     local Difficulty = require 'src/core/Difficulty'
     self.level.difficulty = Difficulty.valid(data.difficulty) and data.difficulty or nil

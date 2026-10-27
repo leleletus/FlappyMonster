@@ -541,6 +541,7 @@ function OnlineRoomState:_renderGameCard(r, isAdmin, a, oy)
     local room = self.currentRoom or {}
     local mode = Modes.get(room.mode)
     if not mode then return end
+    for _, l in ipairs(self.catalog or {}) do if l.path == room.level then mode = Modes.forLevel(mode, l) end end
     local col  = mode.color
     local x, y, w, h = r.x, r.y + oy, r.w, r.h
     local pad  = 18

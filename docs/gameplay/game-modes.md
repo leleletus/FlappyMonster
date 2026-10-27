@@ -41,6 +41,11 @@ list in `triggers` are hidden: `Modes.hiddenTriggers(mode)` →
   editor Nivel tab, level_check).
 
 - Levels with bosses are Race-only (`hunt.requires` rejects `info.bosses > 0`).
+- A Race on a level with a boss is CO-OP (one boss for everyone, the server's) and is SHOWN as **Cooperativo / Co-op**:
+  a mode may have `variant(info)` → its texts come from `mode.<id>.<variant>.<field>` first (`ModeTypes.forLevel(m,
+  info)`; race: variant `boss`, keys `mode.race.boss.*`). The id stays `race` and the rules do not change. Used by the
+  room card, the match HUD and the results screen (0.5.60, the user: "the mode is called race but it is played co-op,
+  it is confusing").
 
 ## King of the Hill and point zones
 

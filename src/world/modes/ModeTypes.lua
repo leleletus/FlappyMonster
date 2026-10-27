@@ -14,7 +14,10 @@
 --     tagline (.tagline)               objetivo en una línea (menús)
 --     objective (.objective)           objetivo en una frase: panel fijo arriba en la partida
 --     emptyHint (.empty_hint)          ayuda si no hay niveles para el modo (opcional)
---   hudLine(md) -> texto, urgente, grande
+--   variant(info) -> id|nil       (opcional) VARIANTE de textos según el nivel: claves mode.<id>.<variante>.<campo>
+--                              primero (p. ej. Carrera en un nivel con jefe = "Cooperativo"); el id y las reglas no
+--                              cambian. Se pide con ModeTypes.forLevel(m, info)
+--   hudLine(md, variante) -> texto, urgente, grande
 --                              línea de estado de ese panel a partir del hud del servidor
 --                              (urgente = en rojo; grande = número gigante debajo)
 --   requires(info) -> ok, why  ¿el nivel sirve? info = { enemies, killable, finish, bosses,
@@ -79,6 +82,22 @@ function ModeTypes.register(def)
 end
 
 function ModeTypes.get(id) return ModeTypes.byId[id] end
+
+-- El modo VISTO para un nivel: si el modo tiene `variant(info)` y da una variante, una vista cuyos textos salen de
+-- mode.<id>.<variante>.<campo> (si existe la clave) y cuyo hudLine recibe la variante; lo demás es el modo. `info`
+-- = ficha del nivel (al menos `bosses`). Sin variante, el modo tal cual.
+function ModeTypes.forLevel(m, info)
+    local v = m and m.variant and info and m.variant(info)
+    if not v then return m end
+    return setmetatable({ variantId = v, hudLine = function(md) return m.hudLine(md, v) end }, { __index = function(_, k)
+        local suffix = TEXT_FIELDS[k]
+        if suffix then
+            local key = 'mode.' .. m.id .. '.' .. v .. '.' .. suffix
+            if Lang.has(key) then return Lang(key) end
+        end
+        return m[k]
+    end })
+end
 
 -- Recuento de las entidades de un nivel para `requires(info)` (lo usan el
 -- servidor, el editor y las pruebas: un solo cálculo). `list` = colocaciones

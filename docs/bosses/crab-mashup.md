@@ -129,55 +129,58 @@ Replaces today's random director (`types/directors/bossdrops.lua`: food every ~1
 An EXCLUSIVE COLLECTIBLE. The collectibles system does not exist yet: this event must give one when it does. (Note,
 nothing to build now.)
 
-## Base work (golden rule 2: generic, in the base)
+## Decided after the first script (2026-10-27)
 
-1. **Adaptive music player + cue map** (`src/audio/`), used by the event and available to any level / boss.
-2. **Song clock from the player** (the Groove Crab's `songT` / `GC.where` move to it; no behaviour change).
-3. **Multi-arena boss event**: one level with the 5 arenas (the 4 reused + the final stage) and a controller that
-   runs the turns, the shared bar, the transitions (screen change, players moved, frozen re-intro), checkpoints per
-   crab, spectate-until-seam.
-4. **Boss hooks**: `damageCap` per turn, `noRage`, `dazedUntilCut`, `enterStage` / `leaveStage`, `koPlace`, a
-   "background hazard" mode per crab, Groove decks without rage.
-5. **Darkness that fades** (`level.darkness` 0..1; today `level.dark` is fixed at load) for Gloomy's final turn.
-6. **Smart director** replacing `bossdrops`.
-7. **Free Play special event card** (top of the grid, its own look) + ES/EN keys for the name.
+- Only the GROOVE's attacks follow the beat (it dances and attacks to the music, as in its own fight); the other
+  three fight with their usual timing.
+- The smart director outside the event: ONLY Extreme and Xtra Extreme, as today.
+- The final stage: several speakers like the Groove's, and the Groove's audience but much bigger and more varied.
+- Online, Race on a level with a boss is shown as **Cooperativo / Co-op** (0.5.60: `ModeTypes.forLevel`).
 
-## Network
+## Action plan (how it is built)
 
-New entity types (event controller, final stage pieces) and new packed fields on the crabs → `Protocol.VERSION` + 1
-and `version.txt`. The music position travels as the cue bar the server announces.
+**Architecture** (generic pieces first, golden rule 2):
 
-## Tests
+- **ONE level** `mashup_cangrejos` (`"event": true`), stitched by `make_mashup_cangrejos.py` (in
+  `tools/levelgen/arenas/`) from the boss zones of the four STORY levels (`guarida_cangrejo_rey`, `glaciar_cangrejo`,
+  `gruta_lugubre`, `isla_del_groove`: tiles, decorations, phase blocks, walls) side by side, separated by rock, plus a
+  new FINAL STAGE. Each arena keeps its own boss zone and crab; the final stage has its own zone and four more crabs.
+- **Scenes** (new, generic): level JSON `scenes: [{col, w, background, time, light, dark, snow, echo, spikeSkin,
+  surfaceRow}]`; `Level:applyScene(i)` swaps those level fields (sky, light mood, darkness, snow, echo, spikes). Plus
+  `level.darkness` 0..1 (fades in / out; `dark` stays the switch).
+- **The event controller** (new entity `crabmashup`, `types/directors/`): runs on single player and on the server and
+  travels in snapshots. It owns the MUSIC CLOCK (piece + position, advanced with the game time), the phase (intro,
+  crab k, seam, final, end, outro), which arena / scene, the final's turn order, per-player stats, the background
+  hazards, the checkpoint. Its zones are `event` zones: BossZones does not start them on its own.
+- **Adaptive music** (`Sound.followAdaptive`): the pieces of a cue map (piece files, BPM, bars, cut points, what
+  follows) play gaplessly FOLLOWING the controller's clock: the controller says piece, position and the next switch;
+  the player starts the next piece half a frame early (like intro → loop today) and re-seeks if it drifts. Same code
+  on single player and online clients (the server has no audio: it only runs the clock).
+- **Boss hooks for events** (Boss base): `rageMode` ('never' | 'always'); at 0 HP an event boss does not die: it is
+  DAZED (`event_daze`, no contact damage) until the controller moves it; `offstage` ('wait' | 'ko'): no AI, not solid,
+  not hittable, drawn small in the background (`BossFx.drawScaled`); `holdIntro` (its intro ends but the fight waits
+  for the downbeat). Per type: `STAGE_LOOK` (which of its states to draw for wait / ko / daze) and its rage switch.
+- **Shared boss bar**: BossHud asks the controller (`hudBar()`) instead of the bosses.
+- **Smart food director**: `bossdrops` rewritten (needs-based); outside the event only on Extreme / Xtra as today.
+- **Free Play**: levels with `"event": true` get a highlighted EVENT card at the top of the grid.
 
-- New harness `mashup_rules` (row in `tools/tests/README.md`): the cap (stomp + GP = 2), dazed until the cut, the cut
-  only on 4-bar points, seam → next arena and crab, no rage in the main part, the final's random order and KO place,
-  background hazards stop when beaten, checkpoints, online scaling.
-- Music: the generator checks every cut → seam join; `tools/music/levels.py`.
-- `boss_sim` / `boss_intro` / `online_boss` / `sp_boss` on the new level; `groovecrab_rules` after the song-clock move;
-  `difficulty_rules` for the smart director; `run.sh all`; `docs_reference`.
-- Needs a person: the music joins (not listened to by me), readability of each crab, the final's chaos, HP / food tuning.
+**Steps** (each committed, tested and pushed; music first because the user must listen to the joins):
 
-## Milestones
-
-- [ ] 1. Music in pieces + cue map + every cut → seam join checked (the user listens to the joins first).
-- [ ] 2. Adaptive music player + song clock (Groove Crab moved to it, unchanged).
-- [ ] 3. Event level + controller + TANTRUM → seam → ICY (a playable slice for the user).
-- [ ] 4. GLOOMY and GROOVE (decks without rage).
-- [ ] 5. Final stage + tag team + hazards + KO place + darkness fade.
-- [ ] 6. Chain explosion, outro stage, exit, Free Play event card, intro silhouettes.
-- [ ] 7. Smart food director (all boss fights).
-- [ ] 8. Online co-op: server-driven cuts, scaling, spectate, ranking.
-
-## Still open (not asked yet; proposal in brackets)
-
-1. While a crab of the main part fights "as in its level": should its attacks also snap to the beat of the music?
-   [yes, generic: an attack starts on the next beat of the song clock; no other change].
-2. The event intro: four silhouettes in the fight order (decided); does the title say "MEGA MASHUP" or the full name?
-3. Single player: does the stage screen show results (time, damage taken, deaths) as online does? [yes].
-4. The smart director outside the event: only Extreme / Xtra as today, or also Easy / Normal? (The user picked "every
-   boss fight"; the amounts per difficulty are to tune.)
-5. The final stage's look and size; where the KO place is (a balcony at the back?).
-6. Does the event card show a best time / best rank? [yes, local].
+- [ ] 1. MUSIC IN PIECES: `crab_mashup.py` renders the pieces (intro 8 · Tantrum loop 24 · seam · Icy loop 24 · seam
+  · Gloomy loop 16 · seam · Groove loop · seam · 4 final variants 16 at 170 · end 8 · outro 8) with ONE master gain,
+  a cut point every 4 bars, the cue map and a preview of every cut → seam join. Catalog entry.
+- [ ] 2. ADAPTIVE PLAYER + scenes + darkness fade (engine pieces, no gameplay yet).
+- [ ] 3. The level and the controller's main part: intro silhouettes, Tantrum → Icy → Gloomy → Groove with seams,
+  transitions, re-intros, shared bar, 2-damage turns, dazed until the cut, no rage, Groove decks without rage,
+  checkpoints per crab.
+- [ ] 4. The final: tag team (random, enraged), background waiting / KO crabs, the four hazards, Gloomy's blackout,
+  Groove's golden note, the stage (speakers, a big varied crowd), variants switching at cuts.
+- [ ] 5. The end: chain explosion on the coda, the outro on the empty stage, results / ranking on the stage screen,
+  the exit to Free Play; the Free Play event card.
+- [ ] 6. Smart food director.
+- [ ] 7. Online co-op: everything through the controller's snapshot, +1 per extra player, spectate until the next
+  seam, server-side checkpoints; Protocol + 1.
+- [ ] 8. Tests (`mashup_rules` + the usual battery), docs, release.
 
 ## History and decisions
 
