@@ -50,7 +50,7 @@
   "bossZones": [
     {"col":49,"h":10,"id":1,"music":"groove","row":3,"w":24}
   ],
-  "music": "costa_1",
+  "music": "costa_groove",
   "background": "coast",
   "name_en": "Groove Island",
   "time": "night"

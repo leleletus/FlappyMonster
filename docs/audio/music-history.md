@@ -646,3 +646,9 @@ the old level tune in the final boss, Verity's hook).
   whose attacks follow this score. Not listened to by me.
 - 0.5.46: the user: "the music during its fight should be heard more (here it IS important)" → mastered at −9.5 LUFS
   (was −10.5) and `levels.py` gives `groove` its own target, −9.5 in game (bosses −13).
+- 0.5.54, the user: Groove Island used the coast level track; "a remix of that theme, much livelier, with different
+  instruments and above all the beautiful, rich slap bass of the Groove theme" → `groove_island.py` (`costa_groove`):
+  Calipso's melody and chords, F major, 132 BPM (Calipso 122), funk drums + shaker, offbeat stabs, brass hits, pad in
+  the bridge, an 8-bar slap-bass solo with stop hits, the melody doubled in the last return. Numbers: 109 s (intro
+  7.3 + loop 101.8), −11.5 LUFS, energy bass 34 % · lead 15 % · drums ~47 %, 0 bass notes of an 8th or longer at a
+  minor 2nd / tritone from their chord. Not listened to by me.

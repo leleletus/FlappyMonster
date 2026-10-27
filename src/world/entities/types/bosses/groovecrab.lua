@@ -1,4 +1,4 @@
--- Jefe secreto EL GROOVE (types/groovecrab.lua): un Crabby trampolín gigante — un CANGREJO VIOLINISTA (pinza grande y
+-- Jefe secreto CANGREJO GROOVE (types/groovecrab.lua; "El Groove" hasta la 0.5.54): un Crabby trampolín gigante — un CANGREJO VIOLINISTA (pinza grande y
 -- pinza pequeña) con gafas de sol y el trampolín del juego en la espalda — que PELEA AL RITMO DE SU TEMA (`groove`,
 -- tools/music/slap_boss.py: el slap bass de protagonista), en un ESCENARIO de playa al atardecer con público. Se abre
 -- en el mapa tras vencer al Espejo (docs/bosses/groovecrab.md). Arte propio: tools/art/bosses/make_groove_crab.py.
@@ -822,16 +822,16 @@ end
 -- El dibujo: groovecrab_stage.lua
 require('src/world/entities/types/bosses/groovecrab_stage')(GC, P)
 
-local G = 'El Groove'
+local G = 'Cangrejo Groove'
 return {
-    name = 'groovecrab', label = 'El Groove', category = 'Jefes',
+    name = 'groovecrab', label = 'Cangrejo Groove', category = 'Jefes',
     description = 'Jefe SECRETO: un Crabby trampolín gigante que pelea al ritmo de su tema (salta y cae en el bombo, '
                .. 'notas en los pops del bajo, pista de baile). 1ª fase: devuélvele la NOTA DORADA; 2ª fase: sube con '
                .. 'su trampolín a las plataformas y pon a girar los DOS platos de DJ a la vez. Las dos cosas le '
                .. 'revientan el trampolín y lo dejan noqueado.',
     class = GC,
     pace = false,                                -- (va al compás de su música: la dificultad no le cambia el ritmo)
-    boss = { title = 'EL GROOVE' },
+    boss = { title = 'CANGREJO GROOVE' },
     hide = Boss.HIDE,
     defaults = { points = 40 },
     props = Boss.props({ hp = 13, hpPerPlayer = 4 }, {

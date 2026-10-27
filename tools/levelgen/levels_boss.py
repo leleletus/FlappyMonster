@@ -451,7 +451,7 @@ def isla_del_groove():
     al trampolín te lanza muy alto) — y EL GROOVE al final (arena jefe_groove: el escenario, a cielo abierto, con su
     tema `groove`). Corto: lo que importa es la pelea."""
     src = load_src('jefe_groove.json')
-    L = Level('Isla del Groove', 85, 15, (4, 12), music='costa_1')
+    L = Level('Isla del Groove', 85, 15, (4, 12), music='costa_groove')   # (Calipso con slap: tools/music/groove_island.py)
     L.extra.update({'name_en': 'Groove Island', 'background': 'coast', 'time': 'night'})   # (el concierto, de noche: el usuario)
     G = 13
     L.rect(2, G, 42, 14, SOLID)

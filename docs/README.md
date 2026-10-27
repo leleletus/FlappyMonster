@@ -83,7 +83,7 @@ Ids are data (level files, saves, network), so confusing ones are explained here
 | `snowboss`, "Gran Bola de Nieve"; music id `snowball_boss` | the Snowball Boss; Verity = its Easter-egg look |
 | `megagloomy`, "Mega Crabby lúgubre" | the Mega Gloomy Crabby |
 | `gianthopper`, "Saltarín Gigante" | the Giant Hopper (the caves boss) |
-| `groovecrab`, "El Groove"; music id `groove` | the secret boss after the game (a fiddler trampoline crab that fights to its music) |
+| `groovecrab`, "Groove Crab" (Cangrejo Groove; "El Groove" until 0.5.54); music id `groove` | the secret boss after the game (a fiddler trampoline crab that fights to its music) |
 | `mirror` / `mirrorchase`, "el Reflejo" | the Mirror boss (the Reflection) / its chase before the fight |
 | `cryo`, "Congelador" | the Freezer trap |
 | tile `solid` | stone ("Piedra"); `border` = very hard rock; `danger` = LAVA; `hidden_block` = invisible block |

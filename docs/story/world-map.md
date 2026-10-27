@@ -73,7 +73,7 @@ are spread along the path from `Worlds.lua`. **Harness:** `story_flow` (captures
 
 ## The secret node
 
-The last world has a `secret` level in `Worlds.lua` (`isla_del_groove`: [The Groove](../bosses/groovecrab.md)). On the
+The last world has a `secret` level in `Worlds.lua` (`isla_del_groove`: [Groove Crab](../bosses/groovecrab.md)). On the
 map it is the LAST STOP: a branch from the Final's bonus node (`worlds[6].secret` in `overworld.json`, `SECRET` in
 `make_overworld.py`) to a sand islet NE of the volcano. The islet is always there (a mystery); while the secret is
 locked (`Run.secretState`: open once the last world's boss is beaten) it DOES NOT EXIST on the map: no node, no path

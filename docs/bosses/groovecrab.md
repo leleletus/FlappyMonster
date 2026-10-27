@@ -1,4 +1,4 @@
-# The Groove (El Groove) — `groovecrab`
+# Groove Crab (Cangrejo Groove; "El Groove" until 0.5.54) — `groovecrab`
 
 The SECRET boss, after the game: a giant Trampoline Crabby — a FIDDLER CRAB (one big claw, one small) with visor
 sunglasses and the game's trampoline on its back — that FIGHTS TO THE BEAT OF ITS OWN THEME (`groove`, the track
@@ -7,7 +7,7 @@ world's boss) is beaten: [world-map](../story/world-map.md#the-secret-node).
 **File:** `src/world/entities/types/bosses/groovecrab.lua`. **Art (its own design):** `assets/images/bosses/groovecrab/`
 (`tools/art/bosses/make_groove_crab.py`; `--gif` writes an animated mockup to `FlappyMonster_pruebas/jefes/groove/`).
 **Sounds:** reused (`megaSlam`, `megaClack`, `megaWindup`, `megaHurt`, `megaRoar`, `trampoline`, `crabPop`, `gpImpact`).
-**Level:** `isla_del_groove` "Isla del Groove" / "Groove Island" (`tools/levelgen/levels_boss.py`; beach at dusk);
+**Level:** `isla_del_groove` "Isla del Groove" / "Groove Island" (`tools/levelgen/levels_boss.py`; beach at night; level music `costa_groove`, the slap remix of Calipso: `tools/music/groove_island.py`);
 arena `tools/levelgen/arenas/jefe_groove.json` (`make_jefe_groove.py`). **Music:** `groove`. **Shard:** none.
 **Harnesses:** `groovecrab_rules`, `boss_sim` / `boss_intro` / `online_boss` / `boss_frames` with `LEVEL=` that arena
 (`boss_frames HIT_AT=` = when the hook stomps it knocked out; in phase 2 the hook spins both decks), `sp_boss LEVEL=assets/levels/isla_del_groove.json`,
@@ -142,3 +142,6 @@ corners of the zone onto it, changing colour on every beat (additive cones).
   only the arrows told what to do: `deck-Sheet.png` is now a LIGHT box with a dark outline, a silver-rimmed black
   record and a dark LED strip, and a stopped deck pulses a warm glow (`drawDecks`; the halos are no longer clipped to
   the deck's box).
+- 0.5.54, the user: the name is now **Groove Crab** / **Cangrejo Groove** (keys `boss.groovecrab` in es/en and the
+  title in the type; the id stays `groovecrab`), and the level got its own track: `costa_groove`, a funk remix of
+  `costa_1` with the slap bass leading (`tools/music/groove_island.py`; docs/audio/music-catalog.md). Not listened to.

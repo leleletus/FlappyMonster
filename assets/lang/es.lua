@@ -402,7 +402,7 @@ return {
         megagummy = "REY GUMMY",
         giantpuffer = "PEZ GLOBO GIGANTE",
         gianthopper = "SALTARÍN GIGANTE",
-        groovecrab = "EL GROOVE",
+        groovecrab = "CANGREJO GROOVE",
         megagloomy = "MEGA CRABBY LÚGUBRE",
         snowboss = "GRAN BOLA DE NIEVE",
     },

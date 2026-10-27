@@ -33,7 +33,7 @@ Every file in `assets/levels/` (47). **Story** = world number, world id and posi
 | `gruta_lugubre` | Gruta Lúgubre / Gloomy Grotto | 124x15 |  |  | `cuevas_oscuras` | `megagloomy` | cave night · dark |
 | `guarida_cangrejo_rey` | Guarida del Cangrejo Rey / King Crab's Lair | 122x15 |  |  | `costa_1` | `megacrabby` | coast |
 | `huida_del_espejo` | La Huida del Espejo / Mirror Escape | 214x11 | 6 final · 4 | race | `mirror_chase` |  | volcano dusk · auto-scroll |
-| `isla_del_groove` | Isla del Groove / Groove Island | 85x15 |  |  | `costa_1` | `groovecrab` | coast night |
+| `isla_del_groove` | Isla del Groove / Groove Island | 85x15 |  |  | `costa_groove` | `groovecrab` | coast night |
 | `isla_flotante` | Isla Flotante / Floating Island | 60x22 | 1 pradera · bonus | koth | `pradera_bonus` |  | meadow · 1 point zone, match 100 s |
 | `jardin_gummies` | Jardín de Gummies / Gummy Garden | 120x16 |  | hunt | `pradera_1` |  | forest |
 | `jungla_colgante` | Jungla Colgante / Hanging Jungle | 155x28 | 2 costa · 2 | race, hunt, hide | `costa_2` |  | coast |

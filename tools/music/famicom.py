@@ -323,6 +323,7 @@ PATHS = {
     'resaca': 'bosses/resaca',                  # (resaca.py: el jefe de la costa, sobre el bajo de "Final Fall"; un solo archivo)
     'polilla': 'bosses/polilla',                # (polilla.py: el Saltarín Gigante, jefe de las cuevas; intro + bucle)
     'groove': 'bosses/groove',                  # (slap_boss.py: El Groove, el jefe secreto; intro + bucle)
+    'costa_groove': 'worlds/costa/costa_groove',   # (groove_island.py: el nivel del islote del Cangrejo Groove; intro + bucle)
     'pradera_1': 'worlds/pradera/pradera_1', 'pradera_2': 'worlds/pradera/pradera_2', 'pradera_bonus': 'worlds/pradera/pradera_bonus',
     'costa_1': 'worlds/costa/costa_1', 'costa_2': 'worlds/costa/costa_2', 'costa_bonus': 'worlds/costa/costa_bonus',
     'menus_chip': 'menus/menus_chip', 'menus': 'menus/menus', 'flappy': 'flappy/flappy',

@@ -25,6 +25,7 @@
     { "id": "pradera_2",  "name": "Pradera 2 (menor)",      "intro": "worlds/pradera/pradera_2_intro.ogg", "loop": "worlds/pradera/pradera_2_loop.ogg", "volume": 0.70 },
     { "id": "pradera_bonus", "name": "Pradera (bonus)",     "intro": "worlds/pradera/pradera_bonus_intro.ogg", "loop": "worlds/pradera/pradera_bonus_loop.ogg", "volume": 0.66 },
     { "id": "costa_1",    "name": "Costa 1 (Calipso)",      "intro": "worlds/costa/costa_1_intro.ogg", "loop": "worlds/costa/costa_1_loop.ogg", "volume": 0.70 },
+    { "id": "costa_groove", "name": "Costa Groove (Calipso con slap: Isla del Groove)", "intro": "worlds/costa/costa_groove_intro.ogg", "loop": "worlds/costa/costa_groove_loop.ogg", "volume": 0.70 },
     { "id": "costa_2",    "name": "Costa 2 (Arrecife)",     "intro": "worlds/costa/costa_2_intro.ogg", "loop": "worlds/costa/costa_2_loop.ogg", "volume": 0.71 },
     { "id": "costa_bonus", "name": "Costa (bonus)",         "intro": "worlds/costa/costa_bonus_intro.ogg", "loop": "worlds/costa/costa_bonus_loop.ogg", "volume": 0.66 },
     { "id": "fortaleza_1", "name": "Fortaleza 1 (Marcha de hierro)", "intro": "worlds/fortaleza/fortaleza_1_intro.ogg", "loop": "worlds/fortaleza/fortaleza_1_loop.ogg", "volume": 0.70 },
