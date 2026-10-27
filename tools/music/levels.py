@@ -16,7 +16,7 @@ CALM = {'costa_2', 'cuevas_1', 'cuevas_2', 'cuevas_oscuras', 'map_cuevas'}
 def target(t):
     i = t['id']
     if i == 'mirror_boss': return -12.5
-    if i == 'groove': return -9.5            # (El Groove pelea AL RITMO de su tema: aquí la música manda — el usuario)
+    if i in ('groove', 'crab_mashup'): return -9.5   # (El Groove y el mashup de los cangrejos pelean AL RITMO de su tema: aquí la música manda — el usuario)
     if t.get('boss'): return -13.0
     if i == 'menus': return -15.5
     if i.startswith('story_'): return -14.0   # (cinemáticas: con sus efectos de sonido encima)

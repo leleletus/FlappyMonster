@@ -652,3 +652,20 @@ the old level tune in the final boss, Verity's hook).
   the bridge, an 8-bar slap-bass solo with stop hits, the melody doubled in the last return. Numbers: 109 s (intro
   7.3 + loop 101.8), −11.5 LUFS, energy bass 34 % · lead 15 % · drums ~47 %, 0 bass notes of an 8th or longer at a
   minor 2nd / tritone from their chord. Not listened to by me.
+
+## Mega Mashup de los Cangrejos (`tools/music/crab_mashup.py`, track `crab_mashup`)
+
+- 2026-10-27, the user: "a mashup of the 4 giant-crab boss songs, remixed, more epic, faster, boss-like", for a
+  special EVENT: a battle synced to the music (each crab's part = fight that crab); music first, battle later.
+  Built from the generators' own notes (no new melody except the music box's long-note line in the finale and one
+  bass bar back to D minor): D minor, because Groove's riff (i–i–♭VI–♭VII in E) IS the harmony of Tantrum's war chant a
+  tone up. Form: intro 4 (tribal) · TANTRUM A + war chant (a breath on the last beat) · GLOOMY legs bridge + A (hollow
+  voice, half time, the pause) · ICY B + chorus · GROOVE in E minor (the key lift: 4 stop-time bars, slap alone between
+  band hits, then the band) + its B · FINALE 16 (all four: war chant over the slap riff, legs underneath, music box on
+  top the second time) · Tantrum CODA back to D minor (D major → B♭) with la llamada → loop. Each section is measured
+  and set to its target level (`DYN`): −9.9 LUFS Tantrum → −7.8 finale; Gloomy and Icy B breathe (−11/−12).
+- v1 at 190 and 180 BPM (everything at one tempo). The user chose 180 but found the GLOOMY legs "too fast and strange"
+  and the GROOVE slap "very very fast" → v2: each crab at ITS OWN tempo (`SEC_BPM`: Gloomy 144 = its approved theme,
+  Groove 150 = its original; Groove accelerates 160-170 in its last two bars into the 180 finale), and the finale's
+  riff without ghost notes. Approved and installed (0.5.57); loop 2:07. Not listened to by me.
+
