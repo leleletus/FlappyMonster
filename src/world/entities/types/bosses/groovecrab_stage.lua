@@ -221,32 +221,11 @@ function GC:renderBack(camX, camY)
     love.graphics.rectangle('fill', math.floor(bx - camX) - 2, math.floor(by - camY) - 4 * T - bdrop, 4, 4 * T - 30)
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.draw(bi, bq, math.floor(bx - camX), math.floor(by - camY) - bdrop, 0, 6, 6, 6, 6)
-    -- el PÚBLICO: cangrejos de todas las especies y Gummies, en silueta, saltando a contratiempo, con barras de luz
-    local n = 22
-    for i = 0, n - 1 do
-        local seed = math.sin(i * 91.7 + 3.1) * 43758.5453
-        local r = seed - math.floor(seed)
-        local x = zx0 - 3 * T + (i + 0.5) * ((zx1 - zx0) + 6 * T) / n + (r - 0.5) * T * 0.6
-        local off = i % 2
-        local up = ((nb + off) % 2 == 0 and beat < 0.3) and 10 or 0
-        local kIn = appear(et, 0.7 + i * 0.07, 1.0 + i * 0.07)          -- (se asoma de debajo de la arena)
-        up = up - math.floor((1 - kIn) * 3 * T) + math.floor(math.sin(kIn * math.pi) * 14)
-        local im
-        if r < 0.2 then im = gummyImg((nb + off) % 2 + 1)
-        else im = crabImg(math.floor(r * 97) % #SPECIES + 1, (nb + off) % 3 + 1) end
-        if im then
-            local w, h = im:getWidth() * 4, im:getHeight() * 4
-            local sx, sy = math.floor(x - w / 2 - camX), math.floor(fy - 0.15 * T - h - up - camY)
-            -- (sin filo aunque sea de noche: el público es fondo y no debe confundirse con lo que hace daño — el usuario)
-            love.graphics.setColor(CROWD_DARK[1], CROWD_DARK[2], CROWD_DARK[3], 0.92)
-            love.graphics.draw(im, sx, sy, 0, 4, 4)
-            -- la barra de luz, AGARRADA al cuerpo (su base en el borde de arriba, a un lado), inclinándose al ritmo
-            local si, sq = quad(art.stick, (i + nb) % 4 + 1)
-            local lean = ((nb + i) % 2 == 0) and -1 or 1
-            love.graphics.setColor(1, 1, 1, 0.95)
-            love.graphics.draw(si, sq, sx + w / 2 + lean * (w / 2 - 10), sy + 8, lean * 0.3, 4, 4, 1.5, 8)
-        end
-    end
+    -- el PÚBLICO: cangrejos de todas las especies y Gummies, en silueta, saltando a contratiempo, con barras de luz.
+    -- DOS filas (0.5.55, el usuario: "más audiencia, detrás y entre los que ya están"): la de atrás más pequeña, más
+    -- oscura y más alta; la de delante, más apretada
+    self:drawCrowd(camX, camY, et, nb, beat, { n = 34, scale = 3, dark = 0.62, lift = 0.55 * T, seed = 17.3, gap = 0.9 })
+    self:drawCrowd(camX, camY, et, nb, beat, { n = 30, scale = 4, dark = 1, lift = 0, seed = 3.1, gap = 0.6 })
     -- los BAFLES a los lados de la zona: la membrana sale en cada bombo (tiempos 1 y 3)
     local kick = dance and beat < 0.2 and nb % 2 == 0
     local rise = math.floor((1 - kSpk) * 26 * 6)                       -- (salen del suelo: los tapan los bloques)
@@ -264,6 +243,73 @@ function GC:renderBack(camX, camY)
         end
     end
     love.graphics.setColor(1, 1, 1, 1)
+end
+
+-- Una fila del público. Los cangrejos que tienen PINZAS en el juego (el de río —la pradera—, el helado y el de lava:
+-- `claw` de su piel en types/enemies/crabby.lua) las llevan también aquí, en silueta, y agarran la barra de luz con
+-- una, alzándola al compás (el usuario, 0.5.55); los que no tienen, la llevan pegada al cuerpo como antes
+local clawCfg = {}
+local function clawOf(sp)
+    if clawCfg[sp] == nil then
+        local skin = SPECIES[sp]:match('^crabby_(%a+)$')
+        local Crabby = require('src/world/entities/base/EntityTypes').get('crabby')
+        local cfg = skin and Crabby and Crabby.class and Crabby.class.SKINS and Crabby.class.SKINS[skin] and Crabby.class.SKINS[skin].claw
+        clawCfg[sp] = cfg and { cfg = cfg, strip = SpriteStrip.load(cfg.file, cfg.w) } or false
+    end
+    return clawCfg[sp] or nil
+end
+function GC:drawCrowd(camX, camY, et, nb, beat, row)
+    local zx0, zx1 = self:zoneBounds()
+    local fy = self.floorY
+    local S, n = row.scale, row.n
+    local dk = { CROWD_DARK[1] * row.dark, CROWD_DARK[2] * row.dark, CROWD_DARK[3] * row.dark }
+    for i = 0, n - 1 do
+        local seed = math.sin(i * 91.7 + row.seed) * 43758.5453
+        local r = seed - math.floor(seed)
+        local x = zx0 - 3 * T + (i + 0.5) * ((zx1 - zx0) + 6 * T) / n + (r - 0.5) * T * row.gap
+        local off = (i + (row.scale == 3 and 1 or 0)) % 2
+        local up = ((nb + off) % 2 == 0 and beat < 0.3) and math.floor(10 * S / 4) or 0
+        local kIn = appear(et, 0.7 + i * 0.05, 1.0 + i * 0.05)          -- (se asoma de debajo de la arena)
+        up = up - math.floor((1 - kIn) * 3 * T) + math.floor(math.sin(kIn * math.pi) * 14) + math.floor(row.lift)
+        local im, sp
+        if r < 0.2 then im = gummyImg((nb + off) % 2 + 1)
+        else sp = math.floor(r * 97) % #SPECIES + 1; im = crabImg(sp, (nb + off) % 3 + 1) end
+        if im then
+            local w, h = im:getWidth() * S, im:getHeight() * S
+            local cxs = math.floor(x - camX)
+            local feet = math.floor(fy - 0.15 * T - up - camY)
+            local sx, sy = cxs - math.floor(w / 2), feet - h
+            local lean = ((nb + i) % 2 == 0) and -1 or 1
+            local si, sq = quad(art.stick, (i + nb) % 4 + 1)
+            local cl = sp and clawOf(sp)
+            -- (sin filo aunque sea de noche: el público es fondo y no debe confundirse con lo que hace daño — el usuario)
+            love.graphics.setColor(dk[1], dk[2], dk[3], 0.92)
+            love.graphics.draw(im, sx, sy, 0, S, S)
+            if cl then
+                -- sus PINZAS: la del lado `lean`, ALZADA con la barra de luz (sube un poco más en el pulso); la otra, abajo
+                local c, st = cl.cfg, cl.strip
+                local fw, fh = c.w, st.h or st.image:getHeight()
+                for _, side in ipairs({ -1, 1 }) do
+                    local raised = side == lean
+                    -- (alzada BIEN por encima del caparazón y un poco hacia fuera, y de un tono algo más claro que el
+                    -- cuerpo: en silueta, si no, la pinza se fundía con él y no se veía)
+                    local dy = raised and (-6 - ((beat < 0.3) and 1 or 0)) or 0
+                    local px = cxs + side * math.floor(c.x * S + fw * S / 2 - c.inset * S + (raised and S or 0))
+                    local top = feet + math.floor(c.y * S - fh * S + dy * S)
+                    love.graphics.setColor(dk[1] * 1.6 + 0.04, dk[2] * 1.6 + 0.04, dk[3] * 1.6 + 0.06, 0.95)
+                    st:draw(raised and 2 or 1, px, top + math.floor(fh * S / 2), 0, -side * S, S)
+                    if raised then
+                        love.graphics.setColor(1, 1, 1, 0.95)
+                        love.graphics.draw(si, sq, px, top + 2, lean * 0.25, S, S, 1.5, 8)
+                    end
+                end
+            else
+                -- la barra de luz, AGARRADA al cuerpo (su base en el borde de arriba, a un lado), inclinándose al ritmo
+                love.graphics.setColor(1, 1, 1, 0.95)
+                love.graphics.draw(si, sq, sx + w / 2 + lean * (w / 2 - 10 * S / 4), sy + 2 * S, lean * 0.3, S, S, 1.5, 8)
+            end
+        end
+    end
 end
 
 -- Los focos del escenario: dos conos desde arriba hacia él, que cambian de color en cada tiempo

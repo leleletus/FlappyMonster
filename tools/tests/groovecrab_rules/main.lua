@@ -25,7 +25,7 @@
 --              BAJÓN: noqueado y vulnerable, platos apagados
 --   trepar     (2ª fase: las plataformas son bloques de fase) caerle al trampolín y mantener hacia un lado te deja
 --              en la plataforma de ese lado (a 5 casillas: con el doble salto no se llega)
---   enfado     a media vida se enfada (2ª fase); enfadado salta también en los compases pares de la A (tranquilo, no)
+--   enfado     a media vida se enfada (2ª fase); enfadado salta también en el 4º compás de cada 4 de la A (tranquilo, no)
 --   solo       en el compás 5 del solo, dorada en la 0 (en el 1 ya no); en el 2, un saltito que cae en el 3 justo en el
 --              golpe, sin ondas
 --   derrota    el último golpe: aturdido, se va de un bote hacia arriba (libera la zona) hasta irse; sin fragmento
@@ -175,7 +175,7 @@ function cases.salto()
     local pb = playerAt(level, 30)
     pb.invT = 0
     local hp0 = pb.hp
-    stepAll(level, es, { pb }, 1.4, function() pb.vx = 0 end)
+    stepAll(level, es, { pb }, 2.0, function() pb.vx = 0 end)              -- (la onda, a 420 px/s: 12 casillas)
     check('salto', crouched and jumpOk and onBeat and mark and landX and math.abs(landX - mark) <= 4 and waves == 2 and pb.hp < hp0,
         ('agachado=%s · salta en la 8: %s · cae en el compás: %s · en la diana: %s px · ondas %s · la onda le quita: %d→%d'):format(
             tostring(crouched), tostring(jumpOk), tostring(onBeat), landX and mark and math.floor(math.abs(landX - mark)) or '?',
@@ -496,18 +496,18 @@ end
 function cases.enfado()
     local level, es, boss = arena()
     local pa = playerAt(level, 18)
-    local calm = boss.plan('A', 2, false).hop
+    local calm = boss.plan('A', 4, false).hop
     boss.hp = math.floor(boss.hpMax / 2) + 1
     stunIt(level, es, boss, pa)
     boss:stomp()
     local angry = boss.rage and boss.phase == 2
     local hopped
-    songAt(boss, barOf('A', 2), 0)
+    songAt(boss, barOf('A', 4), 0)
     stepAll(level, es, { pa }, 1.0, function()
         pa.vx, pa.invT = 0, 9
         if boss.state == 'hop' then hopped = true end
     end)
-    check('enfado', angry and not calm and hopped, ('enfadado a media vida: %s · A2 tranquilo salta: %s · enfadado: %s'):format(
+    check('enfado', angry and not calm and hopped, ('enfadado a media vida: %s · A4 tranquilo salta: %s · enfadado: %s'):format(
         tostring(angry), tostring(calm), tostring(hopped)))
 end
 

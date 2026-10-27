@@ -66,7 +66,7 @@ snapshot; the client's music starts when it sees the fight, with the same delay 
   pound; ~8.4 tiles up): the way onto the side platforms. Touching its BODY (shell and legs) = 1 HP and a push (not
   knocked out); the CLAWS do no damage — the hitbox is only the body (`outerW` 0.78: 14 of 18 px).
 - **Rage** (phase 2; on Xtra Extreme from the start, still in phase 1): hops on every possible bar, more notes.
-  HP 13 (+4 per extra player; × the difficulty's `bossHp`).
+  HP 11 (+4 per extra player; × the difficulty's `bossHp`).
 
 **Intro** (3.6 s): falls from the sky, lands (shake), snaps its claws twice, boings on its trampoline.
 **Defeat:** 'dying_daze' (knocked-out look, 2.2 s) → 'dying_flee': one huge bounce on its trampoline up into the sky (pure
@@ -145,3 +145,10 @@ corners of the zone onto it, changing colour on every beat (additive cones).
 - 0.5.54, the user: the name is now **Groove Crab** / **Cangrejo Groove** (keys `boss.groovecrab` in es/en and the
   title in the type; the id stays `groovecrab`), and the level got its own track: `costa_groove`, a funk remix of
   `costa_1` with the slap bass leading (`tools/music/groove_island.py`; docs/audio/music-catalog.md). Not listened to.
+- 0.5.55, the user: (1) the crowd's crabs that HAVE claws in the game (river — the meadow one —, icy, lava: the `claw`
+  of their skin in `types/enemies/crabby.lua`) had none: they now wear them in silhouette, a shade lighter than the
+  body, and hold their glow stick in one RAISED claw that bobs on the beat (the others keep it against the body);
+  (2) a fuller crowd: two rows (`GC:drawCrowd`) — a back row of 34, smaller (×3), darker and higher, and a front row
+  of 30 (was 22); (3) "the hardest boss in the game, but it goes a bit too far": HP 13 → 11, notes 330 / 390 →
+  300 / 345 px/s, sand waves 470 → 420 px/s, enraged he adds ONE hop every 4 bars of A (was every bar) and the
+  third note every 4 bars of B (was every other bar). Not played by the user yet.

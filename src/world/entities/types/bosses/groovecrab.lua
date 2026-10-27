@@ -28,7 +28,7 @@
 --   · Su TRAMPOLÍN te lanza muy alto si le caes encima (también con ground pound). Tocar su CUERPO = 1 de vida y
 --     empujón; las PINZAS no hacen daño (la caja es solo caparazón y patas).
 --   · ENFADADO (en la 2ª fase; en Xtra extremo desde el principio, aunque siga en la 1ª): salta en todos los compases
---     que puede y dispara más notas. Vida 13 (+4 por jugador; la dificultad la escala).
+--     que puede y dispara más notas. Vida 11 (+4 por jugador; la dificultad la escala).
 -- Entrada: cae del cielo en su sitio, chasquea dos veces las pinzas y rebota en su trampolín. Derrota: aturdido
 -- (estrellitas) y se va de un BOTE enorme en su trampolín hacia el cielo (pura función del tiempo). Sin fragmento.
 -- Todo lo que se dibuja sale de state + deadTimer + x, y + netPackExtra (songT, fase, diana, ondas, notas, platos):
@@ -81,7 +81,7 @@ local MIN_WARN = 0.3                            -- s mínimos agachado (con la d
 local HOP_H, LICK_H = 3.2 * T, 1.4 * T          -- altura de un salto y de un saltito del solo
 local HOP_DUR = 8 * S16                         -- de la semicorchea 8 a la 0 del compás siguiente
 local WALK_SPD = 70                             -- px/s acercándose entre notas
-local NOTE_SPD = { 330, 390 }                   -- { normal, enfadado }
+local NOTE_SPD = { 300, 345 }                   -- { normal, enfadado } (0.5.55: 330 / 390, "se pasa un poco" — el usuario)
 local NOTE_R = 16                               -- media caja de una nota
 local NOTE_LIFE = 4.0
 -- Los DIBUJOS de las notas (0.5.51, el usuario: "en diferentes patrones y más visibles"): cambian cada 2 compases
@@ -127,7 +127,7 @@ P.DECK_T, P.DECK_W, P.DECK_H, P.DECK_IN, P.DROP_FX = DECK_T, DECK_W, DECK_H, DEC
 local HIT_TOUCH = { 1, 480, -420, 0.2, 0 }
 local HIT_NOTE  = { 1, 300, -340, 0.15, 0 }
 local HIT_BOOM  = { 1, 0, -620, 0.2, 0 }
-local WAVES = { spd = 470, life = 2.0, w = 44, h = 34, hit = { 1, 300, -440, 0.15, 0 } }
+local WAVES = { spd = 420, life = 2.0, w = 44, h = 34, hit = { 1, 300, -440, 0.15, 0 } }
 P.WAVES = WAVES
 
 -- Muerte
@@ -201,10 +201,10 @@ function GC.plan(sec, k, rage, noGold)
     if sec == 'I' then
         p.hop = k == 5 or k == 7
     elseif sec == 'A' then
-        p.hop = not gold and (rage or k % 2 == 1)
+        p.hop = not gold and (k % 2 == 1 or (rage and k % 4 == 0))     -- (enfadado, uno más cada 4; antes en todos)
     elseif sec == 'B' then
         p.notes = B_NOTES[k] or {}
-        if rage and not gold and k % 2 == 1 then p.notes = { 4, 8, 12 } end
+        if rage and not gold and k % 4 == 1 then p.notes = { 4, 8, 12 } end   -- (enfadado: la tercera, cada 4 compases)
     elseif sec == 'C' then
         if k <= 8 then
             if k % 2 == 1 then p.hop = true
@@ -834,7 +834,7 @@ return {
     boss = { title = 'CANGREJO GROOVE' },
     hide = Boss.HIDE,
     defaults = { points = 40 },
-    props = Boss.props({ hp = 13, hpPerPlayer = 4 }, {
+    props = Boss.props({ hp = 11, hpPerPlayer = 4 }, {
         { key = 'rageAt', kind = 'number', label = '2ª fase con (fracción de vida)', group = G, default = 0.5,
           min = 0.1, max = 0.9, step = 0.05 },
     }),
