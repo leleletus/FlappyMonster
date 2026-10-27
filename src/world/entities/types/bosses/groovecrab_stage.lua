@@ -67,7 +67,12 @@ end
 local STAGE_IN = 3.3                                    -- (lo que tarda en salir todo: los láseres, a 3.2)
 local function stageT(self)
     if EDITOR_VIEW then return nil end
-    if bigUp(self) then return 99 end
+    if bigUp(self) then
+        -- (el escenario grande SALE durante la intro del evento — bafles, bola, público, luces —, no de golpe)
+        local ev = self.eventRef
+        if ev and ev.phase == 'intro' then return ev.pos or 0 end
+        return 99
+    end
     local st = self.state
     if st == 'intro' then return self.deadTimer or 0 end
     if st == 'ready' then return self:introTime() + (self.deadTimer or 0) end
@@ -91,6 +96,12 @@ function GC:pose()
     local nb, beat = beatOf(self)
     local on = beat < 0.25
     local p = { leg = 1, sx = 1, sy = 1, tk = 1, bf = 1, bdx = 0, bdy = 0, sf = 1, sdy = 0, jx = 0, flip = 1 }
+    -- (en un EVENTO, ya en el suelo y tras sus chasquidos, BAILA al compás de la música de su entrada: el usuario,
+    -- 0.5.63, "solo mueve su trampolín y queda raro"; y al fondo del final, esperando, también)
+    local introAt = (st == 'ready') and (self:introTime() + t) or t
+    local evDance = self.eventRef ~= nil and (((st == 'intro' or st == 'ready') and introAt >= P.BOING + 0.6) or self.offstage == 'wait')
+    local songT = self.eventRef and self:songNow(0) or (self.songT or 0)
+    if evDance then st = 'groove' end
     if st == 'intro' or st == 'ready' then
         local it = (st == 'ready') and (self:introTime() + t) or t
         if it < P.LAND_AT then p.sy, p.sx, p.tk = 1.1, 0.92, 1.2
@@ -108,7 +119,7 @@ function GC:pose()
         -- PASOS DE BAILE (0.5.51, el usuario: más variedad visual), cada 2 compases uno: el meneo de siempre; las
         -- pinzas arriba por turnos; MEDIA VUELTA en cada tiempo (se voltea: sin girar, pixel art); y sentadilla con
         -- vaivén. Solo dibujo, del reloj de la canción: igual online
-        local move = math.floor((self.songT or 0) / (2 * BAR)) % 4
+        local move = math.floor(songT / (2 * BAR)) % 4
         if move == 1 then
             p.bdy, p.sdy = (nb % 2 == 0) and -6 or 1, (nb % 2 == 1) and -5 or 1
             p.bf, p.sf = (nb % 2 == 0) and 1 or 2, (nb % 2 == 1) and 1 or 2
@@ -116,7 +127,7 @@ function GC:pose()
             p.flip = (nb % 2 == 0) and 1 or -1
         elseif move == 3 then
             p.sy, p.sx = on and 0.8 or 0.95, on and 1.12 or 1.02
-            p.jx = ((math.floor((self.songT or 0) / (BEAT / 2)) % 2 == 0) and -1 or 1) * MS
+            p.jx = ((math.floor(songT / (BEAT / 2)) % 2 == 0) and -1 or 1) * MS
             p.bdy, p.sdy = on and 1 or -3, on and 1 or -3
         end
     elseif st == 'snap' then

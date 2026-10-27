@@ -699,4 +699,7 @@ the old level tune in the final boss, Verity's hook).
   Numbers: Tantrum −9.7 · Icy −10.2 · Gloomy −11.7 · Groove −9.2 · seams −8.4…−11.2 · finals −7.8/−7.9 · end −7.8 ·
   outro −12.8 LUFS. The linear `crab_mashup` is unchanged. Not listened to by me: every join has a preview
   (`piezas/union_<crab>_compasNN.ogg`, `final_variantes_fin_y_salida.ogg`).
+- 0.5.63, the user: "the last part of the Icy section, the bass is out of tune" → in its breath (K: B♭ C Dm Dm Gm B♭ C C)
+  the bass played the Tantrum riff cell (root, 4th, minor 3rd) — a D minor shape — over major chords; it now plays
+  root, root, 5th, the chord's own 3rd, root. Not listened to by me.
 

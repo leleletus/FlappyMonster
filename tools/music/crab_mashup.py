@@ -307,7 +307,12 @@ def build(secs=SECTIONS, intro=INTRO, variant=None, kind='linear', ref=None, nam
         lb = last(b)
         if s == 'intro' or llam(b) or s == 'icy_breath':                       # (la llamada: el slap trae la célula, como en la intro)
             if k >= 3 or s == 'icy_breath':
-                for st, ln, iv in ((0, 5.5, 0), (6, 1.8, 0), (8, 1.8, 5), (10, 3.6, 3), (14, 1.8, 0)): bass(b, st, ln, lo(r1) + iv)
+                # (la célula es de Re menor: tónica, cuarta, tercera MENOR. En el respiro de la Icy los acordes son
+                # Si♭, Do, Sol m…: la célula sobre un acorde MAYOR desafinaba — el usuario, 0.5.63 —; ahí va con las
+                # notas de SU acorde: tónica, quinta, su tercera)
+                cell = ((0, 5.5, 0), (6, 1.8, 0), (8, 1.8, 5), (10, 3.6, 3), (14, 1.8, 0)) if s != 'icy_breath' else \
+                       ((0, 5.5, 0), (6, 1.8, 0), (8, 1.8, 7), (10, 3.6, q1[1]), (14, 1.8, 0))
+                for st, ln, iv in cell: bass(b, st, ln, lo(r1) + iv)
         elif s in ('gloomy_br', 'bridge'):                                     # el riff, en el bajo
             for st, ln, iv in ((0, 5.5, 0), (6, 1.8, 0), (8, 1.8, 5), (10, 3.6, 3), (14, 1.8, -2 if b % 2 == 0 else 0)): bass(b, st, ln, lo(r1) + iv)
         elif s == 'icy_calm' or (seam(b) in ('icy', 'gloomy') and k >= 2):

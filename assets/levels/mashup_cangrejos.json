@@ -3,7 +3,7 @@
   "name_en": "Crab Mega Mashup",
   "width": 166,
   "height": 15,
-  "playerStart": [130,12],
+  "playerStart": [139,12],
   "tiles": [
     [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4],
     [4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,4,4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4],
@@ -22,7 +22,7 @@
     [4,4,1,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,4,4,4,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,131072,4,4,4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4,4,4,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,4,4,4,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,262147,4]
   ],
   "entities": [
-    {"col":15,"props":{"aimTime":2,"ceilingEvery":5,"event":true,"fixedHp":true,"hp":2,"hpPerPlayer":1,"mashupRole":"tantrum","pounceHeight":5,"rageAt":0.4,"rageMode":"never","rageSpeed":1.45,"rageStuck":0.6,"restEvery":6,"restTime":1.5,"stuckTime":2,"summonCount":3,"summonEvery":10,"summonMax":6,"summonPool":6},"row":10,"type":"megacrabby"},
+    {"col":15,"props":{"aimTime":2,"ceilingEvery":5,"event":true,"fixedHp":true,"hp":4,"hpPerPlayer":2,"mashupRole":"tantrum","pounceHeight":5,"rageAt":0.4,"rageMode":"never","rageSpeed":1.45,"rageStuck":0.6,"restEvery":6,"restTime":1.5,"stuckTime":2,"summonCount":3,"summonEvery":10,"summonMax":6,"summonPool":6},"row":10,"type":"megacrabby"},
     {"col":3,"props":{"corner":{"col":5,"row":10},"material":"sand","zone":1},"row":3,"type":"bosswall"},
     {"col":24,"props":{"corner":{"col":26,"row":10},"material":"sand","zone":1},"row":3,"type":"bosswall"},
     {"col":3,"props":{"corner":{"col":26,"row":2},"material":"sand"},"row":2,"type":"bosswall"},
@@ -30,24 +30,24 @@
     {"col":16,"props":{"area":[{"col":5,"row":12},{"col":23,"row":12},{"col":23,"row":13},{"col":5,"row":13}]},"row":13,"type":"pufferfish"},
     {"col":22,"props":{"area":[{"col":5,"row":12},{"col":23,"row":12},{"col":23,"row":13},{"col":5,"row":13}]},"row":12,"type":"pufferfish"},
     {"col":9,"row":3,"type":"crabmashup"},
-    {"col":42,"props":{"aimTime":2,"ceilingEvery":5,"event":true,"fixedHp":true,"hp":2,"hpPerPlayer":1,"mashupRole":"icy","pounceHeight":5,"rageAt":0.4,"rageMode":"never","rageSpeed":1.45,"rageStuck":0.6,"restEvery":6,"restTime":1.5,"stuckTime":2,"summonCount":3,"summonEvery":10,"summonMax":6,"summonPool":6},"row":10,"type":"megacrabby_ice"},
+    {"col":42,"props":{"aimTime":2,"ceilingEvery":5,"event":true,"fixedHp":true,"hp":4,"hpPerPlayer":2,"mashupRole":"icy","pounceHeight":5,"rageAt":0.4,"rageMode":"never","rageSpeed":1.45,"rageStuck":0.6,"restEvery":6,"restTime":1.5,"stuckTime":2,"summonCount":3,"summonEvery":10,"summonMax":6,"summonPool":6},"row":10,"type":"megacrabby_ice"},
     {"col":30,"props":{"corner":{"col":32,"row":12},"material":"snow","zone":2},"row":3,"type":"bosswall"},
     {"col":51,"props":{"corner":{"col":53,"row":12},"material":"snow","zone":2},"row":3,"type":"bosswall"},
     {"col":30,"props":{"corner":{"col":53,"row":2},"material":"snow"},"row":2,"type":"bosswall"},
-    {"col":72,"props":{"ceilingEvery":8,"event":true,"fixedHp":true,"hp":2,"hpPerPlayer":1,"mashupRole":"gloomy","phase2":0.7,"pingEvery":3,"rageAt":0.55,"rageMode":"never","rageSpeed":1.6,"shriekEvery":5,"summonMax":6},"row":11,"type":"megagloomy"},
+    {"col":72,"props":{"ceilingEvery":8,"event":true,"fixedHp":true,"hp":4,"hpPerPlayer":2,"mashupRole":"gloomy","phase2":0.7,"pingEvery":3,"rageAt":0.55,"rageMode":"never","rageSpeed":1.6,"shriekEvery":5,"summonMax":6},"row":11,"type":"megagloomy"},
     {"col":57,"props":{"corner":{"col":59,"row":12},"zone":3},"row":3,"type":"bosswall"},
     {"col":86,"props":{"corner":{"col":88,"row":12},"zone":3},"row":3,"type":"bosswall"},
-    {"col":107,"props":{"decksFromStart":true,"event":true,"fixedHp":true,"hp":2,"hpPerPlayer":1,"mashupRole":"groove","rageMode":"never"},"row":12,"type":"groovecrab"},
+    {"col":107,"props":{"decksFromStart":true,"event":true,"fixedHp":true,"hp":4,"hpPerPlayer":2,"mashupRole":"groove","rageMode":"never"},"row":12,"type":"groovecrab"},
     {"col":92,"props":{"corner":{"col":94,"row":12},"zone":4},"row":3,"type":"bosswall"},
     {"col":119,"props":{"corner":{"col":121,"row":12},"zone":4},"row":3,"type":"bosswall"},
     {"col":96,"props":{"corner":{"col":99,"row":8},"phase":2,"zone":4},"row":8,"type":"phaseblock"},
     {"col":114,"props":{"corner":{"col":117,"row":8},"phase":2,"zone":4},"row":8,"type":"phaseblock"},
     {"col":125,"props":{"corner":{"col":127,"row":12},"zone":5},"row":3,"type":"bosswall"},
     {"col":156,"props":{"corner":{"col":158,"row":12},"zone":5},"row":3,"type":"bosswall"},
-    {"col":134,"props":{"event":true,"fixedHp":true,"hp":2,"hpPerPlayer":1,"mashupRole":"tantrum","rageMode":"always","summonCount":2,"summonMax":4,"summonPool":4},"row":12,"type":"megacrabby"},
-    {"col":139,"props":{"event":true,"fixedHp":true,"hp":2,"hpPerPlayer":1,"mashupRole":"icy","rageMode":"always"},"row":12,"type":"megacrabby_ice"},
-    {"col":144,"props":{"event":true,"fixedHp":true,"hp":2,"hpPerPlayer":1,"mashupRole":"gloomy","rageMode":"always"},"row":12,"type":"megagloomy"},
-    {"col":149,"props":{"bigStage":true,"event":true,"fixedHp":true,"hp":2,"hpPerPlayer":1,"mashupRole":"groove","rageMode":"always"},"row":12,"type":"groovecrab"}
+    {"col":134,"props":{"event":true,"fixedHp":true,"hp":4,"hpPerPlayer":2,"mashupRole":"tantrum","rageMode":"always","summonCount":2,"summonMax":4,"summonPool":4},"row":12,"type":"megacrabby"},
+    {"col":139,"props":{"event":true,"fixedHp":true,"hp":4,"hpPerPlayer":2,"mashupRole":"icy","rageMode":"always"},"row":12,"type":"megacrabby_ice"},
+    {"col":144,"props":{"event":true,"fixedHp":true,"hp":4,"hpPerPlayer":2,"mashupRole":"gloomy","rageMode":"always"},"row":12,"type":"megagloomy"},
+    {"col":149,"props":{"bigStage":true,"event":true,"fixedHp":true,"hp":4,"hpPerPlayer":2,"mashupRole":"groove","rageMode":"always"},"row":12,"type":"groovecrab"}
   ],
   "foliage": [
     {"col":20,"props":{"layer":"back"},"row":13,"sub":3,"type":"anemone"},
@@ -83,5 +83,5 @@
   "modes": ["race"],
   "music": "costa_groove",
   "background": "coast",
-  "surfaceRow": 11
+  "time": "night"
 }

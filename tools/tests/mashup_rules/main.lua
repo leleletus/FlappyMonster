@@ -83,18 +83,22 @@ local function step(level, es, ctl, pa, secs, until_)
 end
 
 -- Le baja su vida del turno al que pelea (lo hace vulnerable para no depender de su ataque)
+-- (4 por turno: pisotón 1 → 3, ground pound 2 → 1, otro ground pound → 0 — el tope: solo le quita 1 —, y ya nada)
 local function beat(b, pa)
     local real = b.isVulnerable
     b.isVulnerable = function() return true end
     b.inv = 0; b.lastHitter = pa
     local a = b:damage(1, 'stomp')
-    b.inv = 0
     local hp1 = b.hp
+    b.inv = 0
     local c = b:damage(2, 'pound')
+    local hp2 = b.hp
+    b.inv = 0
+    local e = b:damage(2, 'pound')
     b.inv = 0
     local d = b:damage(1, 'stomp')
     b.isVulnerable = real
-    return a, hp1, c, d
+    return a and hp1 == 3 and hp2 == 1 and c and e, hp1, hp2, d
 end
 
 local cases = {}
@@ -116,31 +120,46 @@ function cases.flujo()
             tostring(BossZones.contains(level.bossZones[1], pa.x, pa.y)), tostring(level.sceneIdx), tan.state, level.bossZones[5].state))
     step(level, es, ctl, pa, 6, function() return cm.piece == 'tantrum' end)
     step(level, es, ctl, pa, 0.1)
-    check('inicio', cm.phase == 'crab' and level.bossZones[1].state == 'fight' and tan.hpMax == 2,
+    check('inicio', cm.phase == 'crab' and level.bossZones[1].state == 'fight' and tan.hpMax == 4,
         ('pieza %s, fase %s, zona %s, vida %s/%s'):format(cm.piece, cm.phase, level.bossZones[1].state, tan.hp, tan.hpMax))
-    check('barra', cm.hpMax == 8 and cm.hp == 8 and cm:title() == tan:title(), ('barra %s/%s "%s"'):format(cm.hp, cm.hpMax, cm:title()))
+    check('barra', cm.hpMax == 16 and cm.hp == 16 and cm:title() == tan:title(), ('barra %s/%s "%s"'):format(cm.hp, cm.hpMax, cm:title()))
 
     local order = { 'tantrum', 'icy', 'gloomy', 'groove' }
     for i, role in ipairs(order) do
         local b = cm.main[role]
         local z = level.bossZones[i]
         if i > 1 then
-            check('orden', cm.ci == i and z.state == 'fight' and b.hpMax == 2,
+            check('orden', cm.ci == i and z.state == 'fight' and b.hpMax == 4,
                 ('%s: ci %d, zona %d %s, vida %s/%s'):format(role, cm.ci, i, z.state, b.hp, b.hpMax))
         end
         step(level, es, ctl, pa, 1)
         local rageOk = true
         if role == 'groove' then
+            -- sus saltos caen en la zona (antes, en el evento, salía disparado lejísimos y volvía bajo tierra) y las
+            -- plataformas de los platos están (bloques de fase: la zona en su 2ª fase)
+            local out, hops, maxOff = 0, 0, 0
+            step(level, es, ctl, pa, 10, function()
+                if b.hop then hops = hops + 1 end
+                local off = math.max(z.x0 - b.x, b.x - z.x1, 0)
+                if b.y > b.floorY or off > 0 then out = out + 1 end
+                maxOff = math.max(maxOff, off, b.y - b.floorY)
+            end)
+            local shown = 0
+            for _, pb in ipairs(level.phaseBlocks or {}) do if pb.shown then shown = shown + 1 end end
+            check('orden', hops > 0 and out == 0 and z.phase == 2 and shown >= 2,
+                ('Groove: saltos %d, fuera de la zona / bajo el suelo %d pasos (máx %.0f px); zona en fase %s; plataformas %d'):format(
+                    hops, out, maxOff, tostring(z.phase), shown))
             local _, sec = b:whereAt(b.songT or 0)
             check('orden', b.phase == 2 and not b.rage and (sec == 'K' or sec == 'A'),
-                ('Groove: fase %s, enfadado %s, sección %s (su bucle empieza en el solo)'):format(b.phase, tostring(b.rage), tostring(sec)))
+                ('Groove: fase %s, enfadado %s, sección %s (su bucle: solo y riff)'):format(b.phase, tostring(b.rage), tostring(sec)))
         end
         local pos0 = cm.pos
-        local a, hp1, c, d = beat(b, pa)
+        local a, hp1, hp2, d = beat(b, pa)
         if b.rage and b:rage() then rageOk = false end
         if role == 'gloomy' and b.rage then rageOk = false end
-        check('tope', a and hp1 == 1 and c and b.hp == 0 and b.eventFrozen and d == false,
-            ('%s: pisotón → %s, ground pound → %s (tope), otro → %s; congelado %s'):format(role, hp1, b.hp, tostring(d), tostring(b.eventFrozen)))
+        check('tope', a and b.hp == 0 and b.eventFrozen and d == false,
+            ('%s: pisotón → %s, ground pound → %s, otro → %s (tope: solo 1), otro → %s; congelado %s'):format(role, tostring(hp1),
+                tostring(hp2), b.hp, tostring(d), tostring(b.eventFrozen)))
         check('sinenfado', rageOk, role .. ': sin enfado con la vida a 1/0')
         local pc = require('src/world/entities/types/directors/crabmashup').cues and nil
         local bar = 60 / (role == 'gloomy' and 144 or (role == 'groove' and 150 or 180)) * 4
@@ -165,7 +184,7 @@ function cases.flujo()
     local act = cm.active
     local nBack = 0
     for _, r in ipairs(order) do if r ~= act and cm.fin[r].offstage == 'wait' then nBack = nBack + 1 end end
-    check('final', fz.state == 'fight' and act ~= nil and nBack == 3 and cm.piece == 'final_' .. act and cm.hpMax == 8,
+    check('final', fz.state == 'fight' and act ~= nil and nBack == 3 and cm.piece == 'final_' .. act and cm.hpMax == 16,
         ('zona %s, pelea %s, al fondo esperando %d, pieza %s, barra %s/%s'):format(fz.state, tostring(act), nBack, tostring(cm.piece), cm.hp, cm.hpMax))
     local seen = { notes = 0, ice = 0, crab = 0, dark = false }
     local reserves = {}
@@ -211,7 +230,7 @@ function cases.flujo()
     check('fin', cm.phase == 'outro' and dead == 4 and fz.state == 'cleared' and (cm.boomN or 0) == 4,
         ('fase %s, reventados %d, zona final %s'):format(cm.phase, dead, fz.state))
     local st = cm.stats[1] or {}
-    check('barra', (st.dmg or 0) >= 16, 'daño apuntado al jugador: ' .. tostring(st.dmg))
+    check('barra', (st.dmg or 0) >= 32, 'daño apuntado al jugador: ' .. tostring(st.dmg))
 
     -- red
     local other = Entities.create({ type = 'crabmashup', col = 2, row = 3, props = {} })
@@ -229,7 +248,7 @@ function cases.control()
     check('control', cm.piece == 'seam_gloomy' and BossZones.contains(z3, pa.x, pa.y) and cm.main.tantrum.eventFrozen and cm.main.icy.eventFrozen,
         ('pieza %s, jugador en la arena 3: %s; Tantrum e Icy ya hechos'):format(tostring(cm.piece), tostring(BossZones.contains(z3, pa.x, pa.y))))
     step(level, es, ctl, pa, 8, function() return cm.phase == 'crab' end)
-    check('control', cm.ci == 3 and cm.hp == 4 and cm.hpMax == 8, ('ci %d, barra %s/%s (quedan la Gloomy y el Groove)'):format(cm.ci, cm.hp, cm.hpMax))
+    check('control', cm.ci == 3 and cm.hp == 8 and cm.hpMax == 16, ('ci %d, barra %s/%s (quedan la Gloomy y el Groove)'):format(cm.ci, cm.hp, cm.hpMax))
 end
 
 function love.load()

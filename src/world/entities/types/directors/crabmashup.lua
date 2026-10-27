@@ -133,6 +133,10 @@ function CM:setup(level)
         end
     end
     self.finalZone = zones[5]
+    -- (en sus entradas — la intro y la del final — la cámara mira al centro del escenario: BossZones.cameraTarget)
+    if self.finalZone then self.finalZone.focus = { (self.finalZone.x0 + self.finalZone.x1) / 2, self.finalZone.y1 - WINDOW_H * 0.45 } end
+    -- (se empieza en el escenario: su escena desde el primer fotograma, sin esperar a la intro)
+    if self.phase == 'wait' and self.finalZone then level:applyScene(self:sceneOf(self.finalZone)) end
 end
 
 function CM:sceneOf(z) return require('src/world/level/Scenes').at(self.level, z.col) end
@@ -218,7 +222,7 @@ function CM:barTotals()
 end
 function CM:need(b)
     local p = b.props or {}
-    return math.max(1, (p.hp or 2) + (p.hpPerPlayer or 1) * math.max(0, #(self.level and self.level.players or {}) - 1))
+    return math.max(1, (p.hp or 4) + (p.hpPerPlayer or 2) * math.max(0, #(self.level and self.level.players or {}) - 1))
 end
 function CM:title()
     local b
@@ -447,10 +451,12 @@ function CM:moveTo(i, players)
 end
 
 -- Al FONDO: su sitio arriba del escenario, quieto en uno de sus estados (LOOK)
+-- (alrededor del CENTRO del escenario, a 4 casillas uno de otro: el escenario es más ancho que la pantalla y el
+-- cuarto, en su esquina, no salía en la intro — el usuario, 0.5.63 —)
 function CM:slot(role)
     local z = self.finalZone
     local i = RIDX[role]
-    return z.x0 + (i - 0.5) * (z.x1 - z.x0) / 4, z.y0 + 1.6 * T
+    return (z.x0 + z.x1) / 2 + (i - 2.5) * 4 * T, z.y0 + 4.2 * T          -- (centrados en alto, no flotando arriba: el usuario)
 end
 function CM:toBack(b, role, kind)
     b.offstage, b.eventFrozen = kind, false

@@ -30,7 +30,7 @@ H = 15
 SEP = 3                                         # columnas de roca entre arenas
 
 # (rol, nivel de la historia, props del cangrejo en el evento)
-EVENT = {'hp': 2, 'hpPerPlayer': 1, 'fixedHp': True, 'event': True}
+EVENT = {'hp': 4, 'hpPerPlayer': 2, 'fixedHp': True, 'event': True}   # (0.5.63, el usuario: con 2 era muy fácil)
 SOURCES = [
     ('tantrum', 'guarida_cangrejo_rey', {'rageMode': 'never'}),
     ('icy', 'glaciar_cangrejo', {'rageMode': 'never'}),
@@ -121,7 +121,7 @@ def build():
         p = dict(EVENT, mashupRole=role, rageMode='always', **extra)
         ents.append({'type': BOSS_TYPE[role], 'col': c, 'row': r, 'props': p})
     scenes.append({'col': base, 'w': len(stage), 'background': 'coast', 'time': 'night'})
-    start = [zc + 2, floor - 1]                 # (se empieza en el ESCENARIO: la intro es allí — el usuario, 0.5.62)
+    start = [zc + zw // 2 - 3, floor - 1]      # (se empieza en el ESCENARIO, a la vista: la intro es allí — el usuario, 0.5.62)
 
     W = len(cols)
     tiles = [[cols[c][r] for c in range(W)] for r in range(H)]
@@ -131,13 +131,14 @@ def build():
         'tiles': tiles, 'entities': ents, 'foliage': fol, 'vents': [], 'subtiles': subs,
         'bossZones': zones, 'scenes': scenes,
         'event': True, 'modes': ['race'], 'music': 'costa_groove',
-        'background': scenes[0].get('background', 'coast'), 'surfaceRow': scenes[0].get('surfaceRow'),
+        # (se empieza en el ESCENARIO: el cielo del nivel es el suyo — antes era el de la costa de día y se hacía de
+        #  noche de golpe al empezar la intro; el usuario, 0.5.63)
+        'background': 'coast', 'time': 'night',
     }
 
 
 if __name__ == '__main__':
     out = os.path.join(LEVELS, 'mashup_cangrejos.json')
     d = build()
-    if d['surfaceRow'] is None: del d['surfaceRow']
     write(d, out)
     print('escrito', out, d['width'], 'columnas', len(d['entities']), 'entidades')

@@ -174,6 +174,16 @@ function GC:onFightStart(n)
     self:enter('groove')
 end
 
+-- Su reloj AHORA: el suyo (+dt) o, en un evento, el de la música del evento (compás × BAR + semicorchea × S16)
+function GC:songNow(dt)
+    local ev = self.eventRef
+    if ev and ev.grooveWhere then
+        local b, _, _, step = ev:grooveWhere(0)
+        return b * BAR + step * S16
+    end
+    return (self.songT or 0) + (dt or 0)
+end
+
 -- Dónde va la canción a los `t` s de SU reloj (songT). Con un director de evento (el Mega Mashup) manda la música
 -- del evento: su pieza, compás y semicorchea, traducidos a las secciones de este tema
 function GC:whereAt(t)
@@ -735,7 +745,10 @@ function GC:updateBoss(dt, level)
         if t >= STAGE_OUT then self.state, self.alive = 'dead', false end
         return
     end
-    self.prevT, self.songT = self.songT, self.songT + dt
+    -- (en el EVENTO su reloj sale de la música del evento, en las mismas unidades que GC.where — compás × BAR —: si
+    -- no, el salto, que se calcula desde el compás, empezaba con su reloj a otra hora: salía disparado lejísimos y
+    -- volvía mucho después desde debajo del suelo; el usuario, 0.5.63)
+    self.prevT, self.songT = self.songT, self:songNow(dt)
     local b, sec, k, step = self:whereAt(self.songT)
     local pb, _, _, pstep = self:whereAt(math.max(0, self.prevT))
     -- (¿acaba de pasar la semicorchea s? la 0 es el cambio de compás)

@@ -4,6 +4,9 @@ local gameLoad, gameUpdate, gameDraw = love.load, love.update, love.draw
 local SPEED = tonumber(os.getenv('SPEED')) or 4          -- (pasos de juego por fotograma: va más deprisa)
 local st, t, beatenAt, seen, bad, shots = nil, 0, {}, {}, 0, {}
 local LIMIT = tonumber(os.getenv('SECS')) or 260
+-- (SHOT_AT=s,s,…: capturas en esos segundos de juego, mashup_t<s>.png)
+local shotAt = {}
+for v in (os.getenv('SHOT_AT') or ''):gmatch('[%d%.]+') do shotAt[#shotAt + 1] = tonumber(v) end
 
 local function cm() return st and st.level and st.level.musicDirector end
 
@@ -26,7 +29,7 @@ local function beatActive(d)
     if t - beatenAt[key] < 1 then return end
     local real = b.isVulnerable
     b.isVulnerable = function() return true end
-    for _ = 1, 3 do b.inv = 0; b.lastHitter = st.player; b:damage(1, 'stomp') end
+    for _ = 1, 5 do b.inv = 0; b.lastHitter = st.player; b:damage(1, 'stomp') end
     b.isVulnerable = real
 end
 
@@ -35,6 +38,7 @@ function love.update(dt)
         t = t + 1 / 60
         gameUpdate(1 / 60)
         local d = cm()
+        if shotAt[1] and t >= shotAt[1] then shots[#shots + 1] = 't' .. table.remove(shotAt, 1) end
         if d then
             beatActive(d)
             if not seen[d.phase] then

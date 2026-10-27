@@ -167,6 +167,13 @@ function Controller:update(dt)
             local inside = 0
             for _, pa in ipairs(players) do if contains(z, pa.x, pa.y) and not pa.dying then inside = inside + 1 end end
             z.arrived, z.needed = inside, #players
+            -- (su fase, como en las demás: los bloques de fase — las plataformas de los platos del Groove —)
+            if z.state == 'fight' then
+                for _, b in ipairs(z.bosses) do
+                    local ph = b.bossPhase and not b.offstage and b:bossPhase() or 1
+                    if ph > (z.phase or 1) then z.phase = ph end
+                end
+            end
         elseif z.state ~= 'cleared' then
             local inside = 0
             for _, pa in ipairs(players) do
@@ -391,7 +398,8 @@ function BossZones.cameraTarget(level, x, y)
     if not z then return nil end
     -- Entrada del jefe: la cámara no sigue a nadie, se centra en el jefe (su
     -- sitio del editor, o b:introFocus(): igual en todos los clientes)
-    if z.state == 'intro' and z.bosses and z.bosses[1] then
+    if z.state == 'intro' and z.focus then x, y = z.focus[1], z.focus[2]          -- (la zona dice a dónde mirar: el evento)
+    elseif z.state == 'intro' and z.bosses and z.bosses[1] then
         local b = z.bosses[1]
         if b.introFocus then x, y = b:introFocus()
         elseif b.home then x, y = b.home.x, b.home.y end

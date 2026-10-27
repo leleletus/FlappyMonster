@@ -20,9 +20,9 @@ event intro (8 bars, once, ON THE FINAL STAGE: the four in the background, one s
 
 ## Rules
 
-- **Damage per turn**: a crab moves on after taking **2 damage** in its turn, any way (two stomps, or one ground
-  pound). It is also the CAP: a crab can never take more than 2 in one turn (a stomp then a ground pound deals 1 + 1,
-  not 1 + 2). Online the number is **2 + 1 per extra player** (1 player 2 · 2 players 3 · 3 → 4 · 4 → 5), cap included.
+- **Damage per turn**: a crab moves on after taking **4 damage** in its turn (0.5.63, the user: "2 is too easy"; it
+  was 2), any way. It is also the CAP: never more than that in one turn (the last hit only takes what is left). Online
+  **+2 per extra player** (1 player 4 · 2 → 6 · 3 → 8 · 4 → 10), cap included.
 - **One shared boss bar** for the whole event, with the ACTIVE crab's name on it (it changes with each crab). Main part:
   4 crabs × 2 segments; the final: another 4 × 2 (both scaled online as above).
 - **Each crab fights as in its level, NEVER enraged** in the main part (rage is suppressed whatever its HP). They are
@@ -191,7 +191,7 @@ nothing to build now.)
   `isla_del_groove` copied with their tiles, decorations, boss walls and phase blocks, 3 columns of rock between them,
   and a new final stage (28-column zone on sand, open sky, boss walls, the finish to the right). Zones 1-5 are `event`
   zones; 5 scenes (`Scenes.lua`). The player starts on the stage. Crab props (generic Boss props, group "Evento"):
-  `event`, `mashupRole`, `fixedHp`, `rageMode` ('never' in their turns, 'always' in the final), hp 2 / +1 per player;
+  `event`, `mashupRole`, `fixedHp`, `rageMode` ('never' in their turns, 'always' in the final), hp 4 / +2 per player (0.5.63);
   the arena Groove `decksFromStart`, the final Groove `bigStage` (it draws the big stage: three crowd rows with the
   islands' Gummies, six speakers — also while it waits in the background).
 - **Director** (`crabmashup`): music clock (piece, point, lap, pending switch) read from `cues.json`; phases wait →
@@ -229,3 +229,18 @@ nothing to build now.)
 - Same session, the user saw boss walls blink for a frame in the online tests → the server's "entities near you" was
   measured from a dying player's body (it falls below the level); now from where they look, and the client keeps far
   entities as they were (docs/architecture/netcode.md).
+- 0.5.63, the user's first look ("macabre bugs"): (0) the level started on a sunny coast and turned to night at once,
+  with the whole stage popping in → the level's own sky is the stage's (night coast), its scene is on from the first
+  frame, and the big stage SETS UP during the intro (speakers rise, the ball comes down, the crowd peeks in: the
+  Groove's entrance timeline driven by the intro's music point); (1) the Groove crab was missing from the intro → the
+  stage is wider than the screen and its slot was off-camera: the four slots now sit around the stage's centre, 4
+  cells apart, vertically centred ("not floating up high"), and the camera looks at the stage's centre in its intros
+  (`z.focus`); the player starts there too, in view; (2) 2 HP per turn was too easy → 4, +2 per extra player; (3) the
+  Icy loop's last part (the breath) had an out-of-tune bass: the riff cell (root, 4th, MINOR 3rd) was played over
+  major chords (B♭, C) → there it plays its chord's notes (root, 5th, its own 3rd); (4) the Groove crab only moved its
+  trampoline during its entrance → in the event, once landed, it dances to the transition's beat (and while waiting
+  in the final's background); (5a) its DJ decks came out without their platforms → event zones now take their phase
+  from their bosses like the others (`BossZones`: the phase blocks); (5b) every hop sent it far away and it came back
+  much later from under the ground → its hop is timed in its own song clock from the bar number, and in the event
+  that clock started at 0 while the bar came from the event's music: the Groove's clock now comes from the event's
+  music (`GC:songNow`). `mashup_rules` checks hops inside the zone and the platforms.
