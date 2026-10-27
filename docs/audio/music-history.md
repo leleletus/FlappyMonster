@@ -668,4 +668,19 @@ the old level tune in the final boss, Verity's hook).
   and the GROOVE slap "very very fast" → v2: each crab at ITS OWN tempo (`SEC_BPM`: Gloomy 144 = its approved theme,
   Groove 150 = its original; Groove accelerates 160-170 in its last two bars into the 180 finale), and the finale's
   riff without ghost notes. Approved and installed (0.5.57); loop 2:07. Not listened to by me.
+- 0.5.58, the user: (1) the GROOVE section "does not bring out the best part of its theme and is a bit odd" (it was
+  4 stop-time bars with the slap alone + 4 band bars of its A, then its first B) → it is now the Groove theme's own
+  CLIMAX, verbatim in form (`slap_boss.py` section C: R1 R2 R7 R8 R1V R2 R7 R8 + B9 B2 B11 B4 B5 B6 B7 B16, Em Em C B
+  ×2 / Am Am Em Em C C B B): stabs on every offbeat, scratch, pad, the sparkle doubling the pops, the climax's extra
+  kick — the part the user called a work of art. (2) the move from the FINALE into the CODA was "abrupt, and the
+  ending is bland and does not fit" (the whole band changed at once to the Tantrum's tresillo, marimba and plain slap,
+  and the harmony jumped D major → B♭) → the finale's last chord D major now becomes D MINOR (the slap climbs C#→D)
+  and the coda keeps ALL FOUR playing: the Groove riff a tone down (Dm Dm B♭ C · B♭ C · Dm with the blue note), the
+  war chant in D, the legs, the music box (first half of its line), the finale's drums; then the Tantrum coda's
+  ♭VI–♭VII–i climb with everyone (marimba back from bar 5) and a last STOP bar: band hit, tribal drums like the
+  intro, the slap's riff cell and la llamada → back into Tantrum A. Section loudness: Groove −9.5 / −8.9, finale
+  −7.9, coda −7.8 (was −8.4 with the drop). Mix: the stem gains are now FROZEN at the approved v2's values (`G_V2`):
+  `GN.level` measures each stem relative to its own peak over the whole track, so changing the Groove and the coda
+  had moved the Tantrum / Gloomy / Icy mix (Tantrum bass 28 → 19 %); with the freeze those three sections are
+  identical to v2. Preview of the Groove block alone: `crab_mashup_180bpm_groove.ogg`. Not listened to by me.
 

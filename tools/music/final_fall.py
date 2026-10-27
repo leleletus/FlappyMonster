@@ -45,7 +45,7 @@ S16 = 60.0 / BPM / 4
 BAR = 16 * S16
 NAME = 'final_fall'
 PREVIEW = '/home/mtvemo/FlappyMonster_pruebas/musica/final_fall'
-SF_GM = '/home/mtvemo/.venvs/fm-music/lib/python3.11/site-packages/pretty_midi/TimGM6mb.sf2'
+SF_GM = os.environ.get('FM_SF_GM', '/home/mtvemo/.venvs/fm-music/lib/python3.11/site-packages/pretty_midi/TimGM6mb.sf2')   # (FM_SF_GM: en otra máquina)
 VOX = F.ref('final_fall_vocals_crunch.wav')
 
 N = {'C': 0, 'C#': 1, 'D': 2, 'D#': 3, 'E': 4, 'F': 5, 'F#': 6, 'G': 7, 'G#': 8, 'A': 9, 'A#': 10, 'B': 11}

@@ -38,6 +38,7 @@ are never edited by hand.
 | know what is saved | [architecture/save-data](architecture/save-data.md) |
 | see what is pending (review of 2026-10-20) | [pendientes](pendientes.md) |
 | the plan for the two new bosses (Giant Pufferfish, Giant Hopper) and the secret crab bosses | [bosses/new-bosses-plan](bosses/new-bosses-plan.md) |
+| the script of the four-crab battle synced to `crab_mashup` (Free Play event, not built yet) | [bosses/crab-mashup](bosses/crab-mashup.md) |
 
 ## All pages
 
@@ -52,7 +53,7 @@ are never edited by hand.
 - **entities/** — [overview](entities/overview.md) · [enemies](entities/enemies.md) ·
   [traps-and-mechanisms](entities/traps-and-mechanisms.md) · [enemy-editor](entities/enemy-editor.md) ·
   [how-to-add-an-enemy](entities/how-to-add-an-enemy.md)
-- **bosses/** — [system](bosses/system.md) · [megagummy](bosses/megagummy.md) · [giantpuffer](bosses/giantpuffer.md) · [gianthopper](bosses/gianthopper.md) · [groovecrab](bosses/groovecrab.md) · [megacrabby](bosses/megacrabby.md) ·
+- **bosses/** — [system](bosses/system.md) · [megagummy](bosses/megagummy.md) · [giantpuffer](bosses/giantpuffer.md) · [gianthopper](bosses/gianthopper.md) · [groovecrab](bosses/groovecrab.md) · [crab-mashup](bosses/crab-mashup.md) · [megacrabby](bosses/megacrabby.md) ·
   [miniboss1](bosses/miniboss1.md) · [snowboss](bosses/snowboss.md) · [megacrabby-ice](bosses/megacrabby-ice.md) ·
   [megagloomy](bosses/megagloomy.md) · [mirror](bosses/mirror.md) · [mirror-chase](bosses/mirror-chase.md) ·
   [how-to-add-a-boss](bosses/how-to-add-a-boss.md)

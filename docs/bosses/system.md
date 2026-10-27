@@ -4,7 +4,8 @@ A boss is an entity derived from `src/world/entities/base/Boss.lua` placed insid
 players in, runs the intro, starts and ends the fight, moves the camera and the respawn point, and owns the music.
 Recipe for a new boss: [how-to-add-a-boss](how-to-add-a-boss.md).
 In progress: two new bosses replace Mega Crabby and Mega Gloomy, which become secret bosses —
-[new-bosses-plan](new-bosses-plan.md).
+[new-bosses-plan](new-bosses-plan.md). Planned: the four crabs in one fight synced to the `crab_mashup` track —
+[crab-mashup](crab-mashup.md).
 
 | Boss | Type id | Doc | Story level | Shard |
 |---|---|---|---|---|
