@@ -30,6 +30,7 @@ local EntityTypes = require 'src/world/entities/base/EntityTypes'
 local SECS = tonumber(os.getenv('SECS')) or 60                 -- (una partida bonus entera: la zona cambia de parada)
 
 local function play(level, nav, withTarget, lure)
+    if os.getenv('SEED') then math.randomseed(tonumber(os.getenv('SEED'))); JIT = 0 end      -- (SEED=n: el mismo azar —y los mismos tirones— en cada partida: probar varias suertes)
     local sx, sy = level:getSpawnPx()
     local bpa = PlayerAdventure:new(sx + TILE_PX, sy)
     bpa.spawnX, bpa.spawnY = bpa.x, bpa.y
@@ -106,6 +107,13 @@ local function play(level, nav, withTarget, lure)
             bot:step(d, level, tgt)
             if tgt and bot:push(tgt) then pushes = pushes + 1 end
             due = due - d
+        end
+        if os.getenv('TRACE') and math.floor(t * 60 + 0.5) % ((tonumber(os.getenv('TRACE')) or 1) > 1 and tonumber(os.getenv('TRACE')) or 30) == 0 then   -- (TRACE=n: el bot cada n cuadros; 1 = 30)
+            local cur = bpa.onGround and BotNav.nodeAt(nav, bpa.x, bpa.y, bot:_h())
+            local e = bot.path and bot.path[1]
+            print(('  t=%5.1f %s x=%d y=%d suelo=%s agua=%s nodo=%s→%s modo=%s tipo=%s zona=%s dentro=%s'):format(t, lure and 'cebo' or (withTarget and 'caza' or 'sola'),
+                bpa.x, bpa.y, tostring(bpa.onGround), tostring(bpa.inWater), tostring(cur), e and tostring(e.to) or '-', tostring(bot.mode),
+                tostring(bot.kind), tostring(active and math.floor(active.x0 / TILE_PX)), tostring(active and PointAreas.inside(active, bpa.x, bpa.y))))
         end
         -- (dentro del agua de una inundación: cuántas veces pulsa el salto)
         if bpa.inWater and Bot.flooded(level, bpa.x, bpa.y) then

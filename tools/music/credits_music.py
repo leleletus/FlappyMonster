@@ -81,7 +81,7 @@ def main():
         seg[:XF] *= np.linspace(0, 1, XF)[:, None]
         seg[-XF:] *= np.linspace(1, 0, XF)[:, None]
         if i > 0:
-            c = crash(min(len(seg), int(1.2 * SR)), 1.3 if s['id'] in ('mirror', 'climax', 'bye') else 1.0)
+            c = crash(min(len(seg), int(1.2 * SR)), 1.3 if s['id'] in ('mirror', 'fight2', 'finale') else 1.0)
             seg[:len(c)] += c
         pieces.append(seg)
         report.append((s['id'], src['track'], t, dur, 20 * np.log10(max(rms, 1e-9))))

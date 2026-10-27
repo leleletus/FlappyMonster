@@ -62,6 +62,9 @@ function love.update(dt)
     end
     if s == 'downloading' and not dlStart then dlStart = t end
     if (s == 'installing' or s == 'done') and dlStart and not dlEnd then dlEnd = t end
+    -- (sin versión publicada todavía —el servidor aún hashea el repo, ~100 MB—: se reintenta arriba en el siguiente
+    -- cuadro; antes este fallo cortaba la prueba en el mismo cuadro y el reintento no llegaba a hacerse nunca)
+    if s == 'failed' and not u.files and u.err and (u.err:find('publicada') or u.err:find('respuesta')) then return end
     if s == 'failed' then check('descarga', false, 'falló: ' .. tostring(u.err)); return finish() end
     if s == 'done' then
         dlEnd = dlEnd or t

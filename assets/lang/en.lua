@@ -81,7 +81,6 @@ return {
         inspiration = "(inspiration for an effect)",
         tools = "TOOLS",
         thanks = "THANKS FOR PLAYING!",
-        bye = "BYE!",
     },
     story = {
         shards = "Mirror Shards",

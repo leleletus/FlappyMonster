@@ -7,17 +7,16 @@
 --   pradera … bola   cada bloque de texto ENTRA por abajo justo cuando empieza su canción, con su ESCENARIO VIVO
 --              debajo: un trocito de su isla que se JUEGA de verdad (src/story/LiveStage.lua: sus enemigos, bombas y
 --              sonidos son los del juego); todo sube a la misma velocidad (la que hace que cada bloque quepa en su
---              canción y que el último haya salido por arriba cuando empieza la subida del Espejo)
---   mirror     sale lo último
---   rise       el espejo vacío; los siete fragmentos vuelan a él uno cada 2 pulsos (Xtra: las 14 mitades)
---   climax     el espejo entero brilla (rayos) y "¡GRACIAS POR JUGAR!"
---   bye        Claudio entra andando y baila al compás (pasos, brazos arriba, saltitos, una vuelta) mientras el
---              monstruo vuela a su alrededor, y se despide con la mano: "¡ADIÓS!"
+--              canción y que el último haya salido por arriba cuando empieza la pelea)
+--   mirror     sale lo último (en su último pulso se prepara la arena de la pelea)
+--   fight, fight2   LA PELEA: el monstruo contra el Espejo en su arena, a pantalla completa, jugada de verdad (física del
+--              juego, src/story/CreditsFight.lua lleva al monstruo); la misma cada vez: lo vence al final de la música
+--   finale     el Espejo explota, sale volando hacia la cámara, se ESTRELLA contra la pantalla (cristal roto), resbala
+--              y cae; "¡GRACIAS POR JUGAR!" y ahí termina
 local Stage = require 'src/story/Stage'
 local K = require 'src/story/films/common'
 local PixelFont = require 'src/ui/PixelFont'
 local TitleLogo = require 'src/ui/menu/TitleLogo'
-local Anim = require 'src/fx/Anim'
 local LiveStage = require 'src/story/LiveStage'
 local Celebration = require 'src/ui/Celebration'
 local L = require 'src/core/Lang'
@@ -26,6 +25,7 @@ local lerp, smooth, easeOut = K.lerp, K.smooth, K.easeOut
 local F = {}
 local stages                              -- los escenarios vivos de la película en curso (c.shared.stages)
 local tickStages
+local newFight, fightY, fightStage
 
 local DATA = require 'assets/story/credits'
 local ENTER_Y = 0.92                      -- (a esta altura de la pantalla entra cada bloque al empezar su canción)
@@ -33,7 +33,7 @@ local HEAD_S, NAME_S = 4, 6               -- escalas de la fuente pixel
 local MARGIN = 40                         -- px entre el texto y los bichos que van debajo
 local LINE = 1.6                          -- alto de línea del texto (× el de la fuente)
 local SCROLL_FROM = 'logo'                -- escena y momento en que empieza a subir
-local LAST_SCROLL = 'bola'                -- el último bloque: tiene que haber salido cuando empieza la subida del Espejo
+local LAST_SCROLL = 'bola'                -- el último bloque: tiene que haber salido cuando empieza la pelea final
 
 -- ── Medidas ─────────────────────────────────────────────────────────────────
 local function lineH(it)
@@ -83,11 +83,11 @@ local function getLayout(c)
         if list then
             local h = blockH(list) + paradeH(list) + 40
             v = math.max(v, h / sc.dur)
-            -- (desde que entra el último bloque hasta que empieza la subida del Espejo le da tiempo a salir por arriba)
+            -- (desde que entra el último bloque hasta que empieza la pelea final le da tiempo a salir por arriba)
             if sc.id == LAST_SCROLL then
-                local rise
-                for _, s2 in ipairs(tl.scenes) do if s2.id == 'rise' then rise = s2 end end
-                v = math.max(v, (WINDOW_H * ENTER_Y + blockH(list) + paradeH(list) + 20) / (rise.t0 - sc.t0))
+                local fight
+                for _, s2 in ipairs(tl.scenes) do if s2.id == 'fight' then fight = s2 end end
+                v = math.max(v, (WINDOW_H * ENTER_Y + blockH(list) + paradeH(list) + 20) / (fight.t0 - sc.t0))
             end
         end
     end
@@ -244,228 +244,194 @@ for _, id in ipairs(SCROLL) do
     F[id] = { update = function(c) tickStages(c); fireworks(c) end,
               draw = function(c) background(c); drawFireworks(c); drawScroll(c, c.film.t) end }
 end
+-- (en el último pulso de la escena del Espejo se prepara la arena de la pelea: F.fight)
+local mirrorUpdate = F.mirror.update
+F.mirror.update = function(c, t)
+    mirrorUpdate(c, t)
+    if t >= c.dur - c.beat then fightStage(c) end
+end
 
--- ── El espejo se recompone ──────────────────────────────────────────────────
-local MX = function() return math.floor(WINDOW_W / 2) end
-local MF = function() return math.floor(WINDOW_H * 0.66) end
+-- ── LA PELEA: el monstruo contra el Espejo ──────────────────────────────────
+-- (0.5.49, el usuario: en vez del espejo que se recompone y del baile de Claudio, "una pelea pregrabada —física real
+-- del juego— donde el monstruo vence al Espejo y este explota, sale volando y se choca contra la pantalla; al caer,
+-- aparece el gracias por jugar y termina ahí"). Un escenario vivo a pantalla completa (assets/story/sets/
+-- credits_espejo.json) con el mando de src/story/CreditsFight.lua: la misma pelea cada vez. FIGHT_WINDOWS = cuándo
+-- se abre cada ataque (s desde que empieza la pelea): el último golpe cae al final de la música de la pelea
+local CreditsFight = require 'src/story/CreditsFight'
+local FIGHT_SEED = 31
+local FIGHT_WINDOWS = { 3.0, 12.5 }
+-- (la arena, a pantalla completa: su suelo cerca del borde de abajo)
+fightY = function(st) return WINDOW_H - st.h + 16 end
+newFight = function()
+    return LiveStage.new('credits_espejo', FIGHT_SEED, { immortal = true, pilot = function(st)
+        local boss
+        for _, e in ipairs(st.enemies) do if e.def.name == 'mirror' then boss = e end end
+        boss.DEATH_HOLD = math.huge          -- (vencido, explota sin parar hasta que la película se lo lleva: F.finale)
+        return CreditsFight.new(st.player, boss, { windows = FIGHT_WINDOWS })
+    end })
+end
 
-F.rise = {
-    enter = function(c) c.shared.ids = c.shared.ids or Stage.shardIds(c.xtra) end,
-    update = function(c, t)
-        fireworks(c)
-        local ids = c.shared.ids
-        local each = c.b(2) * 7 / #ids
-        c.v.got = c.v.got or 0
-        for i = c.v.got + 1, #ids do
-            if t >= c.at('shards') + (i - 1) * each + each * 0.8 then
-                c.v.got = i
-                if not c.xtra or i % 2 == 0 then c.sfx('storyClink', 1 + i / #ids * 0.5, 0.7) end
-                local sx, sy = Stage.shardSlot(ids[i], MX(), MF())
-                Stage.spark(sx, sy, 6, 16, 120, { life = 0.5, s = 3 })
-            end
-        end
-    end,
-    draw = function(c, t)
-        background(c)
-        drawFireworks(c)
-        local ids = c.shared.ids
-        local each = c.b(2) * 7 / #ids
-        local placed = {}
-        for i = 1, c.v.got or 0 do placed[#placed + 1] = ids[i] end
-        local a = smooth(c.k(0, c.b(1)))
-        Stage.mirror(MX(), MF(), { shards = placed, alpha = a })
-        -- los que vuelan: desde fuera de la pantalla, en arco, girando
-        for i, id in ipairs(ids) do
-            local u = (t - (c.at('shards') + (i - 1) * each)) / (each * 0.8)
-            if u > 0 and u < 1 then
-                local sx, sy = Stage.shardSlot(id, MX(), MF())
-                local ang = i / #ids * math.pi * 2
-                local ox, oy = MX() + math.cos(ang) * WINDOW_W * 0.6, MF() - 200 + math.sin(ang) * WINDOW_H * 0.7
-                local k = easeOut(u)
-                Stage.shard(id, lerp(ox, sx, k), lerp(oy, sy, k) - math.sin(k * math.pi) * 80, { rot = (1 - k) * 3 })
-            end
-        end
-        Stage.drawSparks()
-    end,
+-- La pelea en pantalla: la arena aparece en el primer pulso y se juega a la hora de la película (pasos fijos: la misma
+-- cada vez). c.shared.fight = el escenario; .boss = el Espejo
+-- (se crea en el último pulso de la escena de antes —cargar el nivel no da un tirón en el corte— y se juega desde el
+-- primer instante de la pelea)
+fightStage = function(c)
+    if not c.shared.fight then
+        local st = newFight()
+        c.shared.fight = st
+        for _, e in ipairs(st.st.enemies) do if e.def.name == 'mirror' then c.shared.boss = e end end
+        st:draw(fightY(st), 0)                                    -- (su cámara, ya: ver LiveStage:draw)
+    end
+    return c.shared.fight
+end
+local function tickFight(c)
+    local st = fightStage(c)
+    local gt = c.film.t
+    c.shared.fightT0 = c.shared.fightT0 or gt
+    local dt = math.max(0, math.min(0.1, gt - (c.shared.fightLast or gt)))
+    c.shared.fightLast = gt
+    st:update(dt)
+end
+local function drawFight(c, alpha)
+    local st = c.shared.fight
+    if not st then return end
+    local a = smooth((c.film.t - (c.shared.fightT0 or 0)) / 0.6) * (alpha or 1)
+    st:draw(fightY(st), a)
+end
+
+F.fight = {
+    enter = function(c) fightStage(c); c.shared.fightT0, c.shared.fightLast = c.film.t, c.film.t end,
+    update = function(c) tickFight(c) end,
+    draw = function(c) background(c); drawFight(c) end,
 }
+F.fight2 = { update = F.fight.update, draw = F.fight.draw }
 
--- ── El espejo entero y GRACIAS ──────────────────────────────────────────────
-F.climax = {
-    update = function(c) fireworks(c, true) end,
+-- ── EL FINAL: el Espejo vencido explota, sale volando hacia la cámara y se ESTRELLA contra la pantalla ──────
+-- Al empezar (con la música de la victoria): si por lo que sea no estaba vencido, se le da el último golpe (la pelea
+-- es la misma cada vez, pero que el final no dependa de ello). Sigue explotando en la arena (sus explosiones de
+-- verdad: 'dying_hold') hasta `fly`: entonces la película se lo lleva — sale de la arena hacia el centro de la
+-- pantalla haciéndose enorme y dando vueltas (volteándose, sin girar: pixel art) —; en `crash` se estrella: cristal
+-- roto (assets/images/fx/screen_crack.png), golpe, temblor; se queda pegado y en `slide` empieza a resbalar por el
+-- cristal; en `fall` se despega y cae fuera; en `thanks`, ¡GRACIAS POR JUGAR! Y termina ahí.
+local CRACK_S = 5                                  -- escala del cristal roto
+local BIG = 4                                      -- lo grande que llega a la pantalla (× su tamaño en la arena)
+local crackImg
+local function crack()
+    if crackImg == nil then
+        local ok, im = pcall(love.graphics.newImage, 'assets/images/fx/screen_crack.png')
+        if ok then im:setFilter('nearest', 'nearest') end
+        crackImg = ok and im or false
+    end
+    return crackImg or nil
+end
+-- El Espejo dibujado a escala k con su centro en (x, y) de la pantalla (su dibujo de siempre, con los ojos en X)
+local function drawMirror(m, x, y, k, flip)
+    love.graphics.push()
+    love.graphics.translate(math.floor(x), math.floor(y))
+    love.graphics.scale(k * flip, k)
+    m:render(m.x, m.y)
+    love.graphics.pop()
+end
+-- Dónde está el Espejo en cada momento del final: → x, y, escala, volteado (±1); nil = ya no se ve
+local function flight(c, t)
+    local m = c.shared.boss
+    local f0 = c.shared.flyFrom
+    if not (m and f0) then return nil end
+    local tf, tc, ts, tl = c.at('fly'), c.at('crash'), c.at('slide'), c.at('fall')
+    local hx, hy = math.floor(WINDOW_W / 2), math.floor(WINDOW_H * 0.42)
+    if t < tc then
+        local u = (t - tf) / (tc - tf)
+        local k = K.easeIn(u)                                          -- (acelerando hacia la cámara)
+        local x = lerp(f0.x, hx, k)
+        local y = lerp(f0.y, hy, k) - math.sin(u * math.pi) * 160      -- (en arco, saltando hacia arriba)
+        local flip = (math.floor(u * 10) % 2 == 0) and 1 or -1          -- (da vueltas: se voltea)
+        return x, y, 1 + (BIG - 1) * k, flip
+    end
+    -- pegado al cristal: aplastado contra él; luego resbala (cada vez más rápido) y se despega y cae
+    local squash = 1 + 0.12 * math.exp(-(t - tc) * 10)
+    if t < ts then return hx, hy, BIG * squash, 1 end
+    if t < tl then
+        local u = (t - ts) / (tl - ts)
+        return hx, hy + K.easeIn(u) * 90, BIG, 1
+    end
+    local u = (t - tl) / c.b(2)
+    if u > 1.2 then return nil end
+    return hx, hy + 90 + u * u * (WINDOW_H + 200), BIG * (1 - 0.35 * K.clamp(u)), 1
+end
+
+F.finale = {
+    enter = function(c)
+        fightStage(c)
+        local m = c.shared.boss
+        -- (seguro: si no está vencido, el último golpe ahora)
+        if m and not m:isDying() then
+            c.shared.fight:_wrap(function()
+                m.hp, m.inv, m.ghost = 1, 0, false
+                m:damage(1, 'stomp')
+            end)
+        end
+    end,
+    update = function(c, t) tickFight(c) end,
     events = {
-        { cue = 'whole', fn = function(c)
-            c.sfx('storyRestore')
-            local gx, gy = Stage.glassCenter(MX(), MF())
-            Stage.spark(gx, gy, 30, 40, 340, { life = 1.1, s = 4 })
+        { cue = 'fly', fn = function(c)
+            -- se lo lleva la película: desde donde está en la arena (en la pantalla)
+            local st, m = c.shared.fight, c.shared.boss
+            if not (st and m) then return end
+            c.shared.flyFrom = { x = m.x - (st.cx or 0), y = m.y - (st.cy or 0) }
+            m.state, m.deadTimer, m.alive = 'dying_fall', 0, false         -- (la arena ya no lo dibuja: ahora es de la película)
+            c.sfx('bossExplode', 0.8)
+            c.sfx('mirrorWarp', 0.7)
+            Stage.spark(c.shared.flyFrom.x, c.shared.flyFrom.y, 24, 30, 320, { life = 0.7, s = 4 })
         end },
+        { cue = 'crash', fn = function(c)
+            c.sfx('iceBreak', 0.8)
+            c.sfx('bossExplode', 0.6)
+            c.sfx('gpImpact', 0.7)
+            Stage.spark(math.floor(WINDOW_W / 2), math.floor(WINDOW_H * 0.42), 30, 60, 420, { life = 0.9, s = 4 })
+        end },
+        { cue = 'fall', fn = function(c) c.sfx('mirrorWarp', 0.6) end },
+        { cue = 'thanks', fn = function(c) c.sfx('storyRestore') end },
     },
     draw = function(c, t)
+        -- (el golpe contra la pantalla: tiembla todo un momento)
+        local sh = 0
+        if t >= c.at('crash') then sh = 14 * math.exp(-(t - c.at('crash')) * 6) end
+        love.graphics.push()
+        if sh > 0.5 then love.graphics.translate(math.floor((math.random() * 2 - 1) * sh), math.floor((math.random() * 2 - 1) * sh)) end
         background(c)
-        drawFireworks(c)
-        local gx, gy = Stage.glassCenter(MX(), MF())
-        Stage.rays(gx, gy, t * 1.6, 12, WINDOW_W, 0.12 + 0.06 * math.sin(t * 4))
-        Stage.mirror(MX(), MF(), { whole = true })
+        -- la arena se apaga un poco cuando llega el gracias
+        drawFight(c, 1 - 0.55 * smooth(c.k(c.at('thanks'), c.at('thanks') + c.b(2))))
+        love.graphics.pop()
+        local m = c.shared.boss
+        local x, y, k, flip = flight(c, t)
+        if m and x then drawMirror(m, x, y, k, flip) end
+        -- el cristal roto, desde el golpe hasta el final (está EN la pantalla: no tiembla)
+        if t >= c.at('crash') then
+            local im = crack()
+            if im then
+                local a = math.min(1, (t - c.at('crash')) / 0.06)
+                love.graphics.setColor(1, 1, 1, a)
+                love.graphics.draw(im, math.floor(WINDOW_W / 2), math.floor(WINDOW_H * 0.42), 0, CRACK_S, CRACK_S,
+                                   im:getWidth() / 2, im:getHeight() / 2)
+                love.graphics.setColor(1, 1, 1, 1)
+            end
+            Stage.flash(0.7 * (1 - c.k(c.at('crash'), c.at('crash') + 0.25)))
+        end
         Stage.drawSparks()
         if t >= c.at('thanks') then
             local u = c.k(c.at('thanks'), c.at('thanks') + c.b(2))
             local msg = L('credits.thanks')
-            local s = 7
+            local s = 8
             while s > 3 and PixelFont.width(msg, s) > WINDOW_W - 80 do s = s - 1 end
-            local y = math.floor(lerp(-80, 60, K.elastic(u)))
+            local y = math.floor(lerp(-100, WINDOW_H * 0.64 - PixelFont.height(s) / 2, K.elastic(u)))      -- (bajo el golpe: que se lea)
             PixelFont.shadow(msg, math.floor((WINDOW_W - PixelFont.width(msg, s)) / 2), y, s, 1, { 1, 0.9, 0.35 })
         end
     end,
 }
 
--- ── Claudio baila y se despide ──────────────────────────────────────────────
--- Al compás (un pulso = una figura): entra andando (pulsos 0-4); PASOS con saltito en cada pulso (hasta `spin`); en
--- `spin` una VUELTA (se gira cada medio pulso) con salto; brazos ARRIBA alternando con quieto y saltando (hasta
--- `wave`); desde `wave`, el saludo; desde `end`, quieto saludando mientras se funde a negro.
--- Mientras, el monstruo VUELA a su alrededor (un ocho, aleteando por arte de magia) y al final saluda a su lado.
--- (Claudio, a la escala de su set de animación — la del juego —: a 8 salía el doble de grande que el monstruo, y en
---  el juego es al revés)
-local function CS_() return Anim.load('claudio').scale or 4 end
-local function cx_() return math.floor(WINDOW_W / 2) end
-local function floor_() return math.floor(WINDOW_H * 0.82) end
-local MON_X = 160                               -- dónde se posa el monstruo: a la derecha de Claudio
-
--- Un saltito de un pulso: altura (0..1..0) y el aplastado al despegar y al caer (escala vertical entera: pixel art)
-local function hop(k, hgt)
-    local y = math.sin(math.min(1, k / 0.8) * math.pi) * hgt
-    local sy = (k < 0.08 or k > 0.85) and -1 or ((k > 0.2 and k < 0.6) and 1 or 0)
-    return y, sy
-end
-
-local function claudio(c, t)
-    local set = Anim.load('claudio')
-    local CS = CS_()
-    local beat = c.beat
-    local b = t / beat                          -- pulsos (con decimales)
-    local k = b - math.floor(b)                 -- dentro del pulso
-    local cx, floor = cx_(), floor_()
-    local x, y, seq, st, fl, sy = cx, floor, 'idle', t, 1, 0
-    local spin, wave = c.at('spin') / beat, c.at('wave') / beat
-    if b < 4 then
-        -- entra andando, con un saltito cada dos pasos
-        x, seq = lerp(-80, cx, smooth(b / 4)), 'walk'
-        local h; h, sy = hop((b / 2) % 1, 14); y = floor - h
-    elseif b < spin then
-        -- PASOS DE LADO: va y viene (dos pulsos a cada lado) saltando en cada pulso, mirando hacia donde va; en el
-        -- último pulso de cada cuatro, los brazos arriba
-        local side = (math.floor((b - 4) / 2) % 2 == 0) and 1 or -1
-        local u = ((b - 4) % 2) / 2
-        x = cx + side * (smooth(u) * 2 - 1) * -70
-        fl = side < 0 and 1 or -1
-        local h; h, sy = hop(k, 30); y = floor - h
-        seq, st = 'walk', math.floor(b) / 4
-        if math.floor(b) % 4 == 3 then seq = 'cheer' end
-    elseif b < spin + 4 then
-        -- LA VUELTA: un gran salto girando (se da la vuelta cada cuarto de pulso)
-        fl = (math.floor(b * 4) % 2 == 0) and 1 or -1
-        local u = (b - spin) / 4
-        y = floor - math.sin(u * math.pi) * 110
-        sy = (u < 0.05 or u > 0.95) and -1 or 1
-        seq = 'cheer'
-    elseif b < wave then
-        -- BRAZOS a doble tiempo: arriba / abajo cada medio pulso, con un saltito en cada uno
-        local half = math.floor(b * 2) % 2
-        seq = half == 0 and 'cheer' or 'idle'
-        local h; h, sy = hop((b * 2) % 1, 22); y = floor - h
-        fl = (math.floor(b) % 2 == 0) and 1 or -1
-    else
-        -- el saludo, con un botecito en cada pulso
-        seq = 'wave'
-        local h; h, sy = hop(k, 10); y = floor - h
-    end
-    -- sombrita (más pequeña cuanto más alto)
-    love.graphics.setColor(0, 0, 0, 0.35)
-    local sw = math.floor(10 * CS * (1 - (floor - y) / 220))
-    love.graphics.rectangle('fill', math.floor(x - sw / 2), floor + 2, sw, CS)
-    love.graphics.setColor(1, 1, 1, 1)
-    set:draw(seq, st, math.floor(x), math.floor(y), 0, CS * fl, CS + sy)
-    return x, y
-end
-
--- El monstruo: entra VOLANDO por la derecha, da vueltas alrededor de Claudio mientras baila (un ocho) y, antes de la
--- despedida, baja y SE POSA a su lado; ya en el suelo, salta de alegría en cada pulso mientras Claudio saluda
-local function monster(c, t)
-    local set = Anim.load('player')
-    local cx, floor = cx_(), floor_()
-    local beat = c.beat
-    local land = c.at('wave') - c.b(2)          -- empieza a bajar dos pulsos antes del saludo
-    local seq, x, y, dir = 'flutter', 0, 0, -1
-    if t < c.b(4) then
-        -- llega desde fuera, por la derecha, bajando en curva
-        local u = smooth(t / c.b(4))
-        x, y = lerp(WINDOW_W + 100, cx + 380, u), lerp(floor - 420, floor - 250, u)
-    elseif t < land then
-        local tt = t - c.b(4)
-        x = cx + math.cos(tt * 1.4) * 380
-        y = floor - 250 + math.sin(tt * 2.8) * 70
-        dir = -math.sin(tt * 1.4) >= 0 and 1 or -1
-    else
-        -- baja hasta el suelo, a su lado, aleteando
-        local tt = land - c.b(4)
-        local x0, y0 = cx + math.cos(tt * 1.4) * 380, floor - 250 + math.sin(tt * 2.8) * 70
-        local u = smooth(math.min(1, (t - land) / c.b(2)))
-        x, y = lerp(x0, cx + MON_X, u), lerp(y0, floor, u)
-        dir = -1                                -- (mirando a Claudio)
-        if u >= 1 then
-            -- en el suelo: saltitos de alegría, uno por pulso
-            local k = (t - land - c.b(2)) / beat % 1
-            local h = math.sin(math.min(1, k / 0.7) * math.pi) * 40
-            y = floor - h
-            seq = h > 2 and 'jump' or 'idle'
-        end
-    end
-    love.graphics.setColor(0, 0, 0, 0.3)
-    local sw = math.floor(40 * (1 - math.min(1, (floor - y) / 300)))
-    if sw > 4 then love.graphics.rectangle('fill', math.floor(x - sw / 2), floor + 2, sw, 6) end
-    love.graphics.setColor(1, 1, 1, 1)
-    set:draw(seq, t, math.floor(x), math.floor(y), 0, PLAYER_SCALE * dir, PLAYER_SCALE)
-end
-
-F.bye = {
-    -- (chispas al compás: en cada pulso del baile, y una lluvia en la vuelta; y fuegos artificiales a menudo)
-    update = function(c, t)
-        fireworks(c, true)
-        local b = math.floor(t / c.beat)
-        if b ~= c.v.lastBeat then
-            c.v.lastBeat = b
-            local cx, fy = cx_(), floor_()
-            local spin = c.at('spin') / c.beat
-            if b >= 4 and b < c.at('end') / c.beat then
-                local n = (b >= spin and b < spin + 4) and 10 or 3
-                Stage.spark(cx + math.random(-260, 260), fy - math.random(60, 300), n, 20, 140, { life = 0.6, s = 3 })
-            end
-        end
-    end,
-    draw = function(c, t)
-        background(c)
-        drawFireworks(c)
-        -- "gracias" sigue arriba, y se va con el final
-        local msg = L('credits.thanks')
-        local s = 7
-        while s > 3 and PixelFont.width(msg, s) > WINDOW_W - 80 do s = s - 1 end
-        PixelFont.shadow(msg, math.floor((WINDOW_W - PixelFont.width(msg, s)) / 2), 60, s, 1, { 1, 0.9, 0.35 })
-        Stage.drawSparks()
-        -- el espejo se va apagando arriba
-        local a = 1 - smooth(c.k(0, c.b(4)))
-        if a > 0 then Stage.mirror(MX(), MF(), { whole = true, alpha = a }) end
-        monster(c, t)
-        local x, y = claudio(c, t)
-        if t >= c.at('wave') then
-            local u = c.k(c.at('wave'), c.at('wave') + c.b(1))
-            local msg = L('credits.bye')
-            local s = 5
-            local w = PixelFont.width(msg, s)
-            local by = math.floor(floor_() - 16 * PLAYER_SCALE - 40 - (1 - easeOut(u)) * 20)
-            PixelFont.shadow(msg, math.floor(cx_() + MON_X / 2 - w / 2), by, s, u, { 1, 1, 1 })
-        end
-    end,
-}
-
 -- (para las pruebas: la disposición de los bloques — dónde está cada uno y a qué velocidad sube —)
+function F._newFight() return newFight() end
+function F._fightY(st) return fightY(st) end
 function F._layout(c) return getLayout(c) end
 function F._scrollAt(c, gt) return scrollAt(getLayout(c), gt) end
 F._DATA = DATA

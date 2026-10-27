@@ -125,3 +125,17 @@ conflicts with the sections above, the sections above describe the current behav
   walks toward that side until it can attach (Crabby `crawlWalk`, Gloomy). Harness `mechanics trepador_canto`.
   (3) BOT bouncing on a Crabby trampolín: airborne it gave no input and kept bouncing until the crab left; after 0.9 s
   without touching ground (`airT`) it steers toward its goal (or sideways if right under it) to get off.
+- 0.5.49 (the user: "fix all the bot failures"; and the credits bot "jumps many times without moving, only the sound,
+  trembles"; the fixes also reach the menu background, the same `src/ai/Bot.lua`): `bot_nav` failed on
+  `lago_de_cristal`, `cascada_dorada` and `cripta_del_silencio`. Cripta's graph was stale since 0.5.39 (rebuilt). The
+  other two depended on LUCK (`SEED=n` now fixes it per game: they passed or failed by seed) and had real causes:
+  (1) `zoneNodes` preferred "firm" ground (not thin ice) and in lago_de_cristal the zone reaches the lake BED under the
+  thin ice — unreachable until the ice breaks: the bot wandered half the stop; underwater cells are never "firm" now;
+  (2) in cascada_dorada the flood covers the zone: the bot swam off to dry land elsewhere, the falling water left it at
+  the bottom of the level and it took half the match to climb back — inside the active zone (you also score swimming)
+  it now stays, and if knocked out of it while the zone is flooded it swims back. Generic fixes: the dodge GHOST is
+  silent (its simulated jumps played real sounds); at an `approach` point it stands still (it trembled between that
+  point and the tile centre); the brute-force jump does the second jump when needed (stuck at a pond bottom); being
+  pushed back against its input (a solid body) counts as stuck at once (it trembled against the Mega Crabby), and a
+  blocked walk tries one hop and then waits. Over 6 extra seeds 1 arena fails once (a crab knocks it off the flooded
+  zone and it waits underwater): accepted as play, not a bug.

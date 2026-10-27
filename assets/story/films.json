@@ -59,9 +59,9 @@
       { "id": "crab",      "bpm": 186, "beats": 32, "in": "cut",  "cues": {}, "src": { "track": "crab_tantrum_normal", "part": "loop", "bar": 0, "bars": 8 } },
       { "id": "bola",      "bpm": 168, "beats": 32, "in": "cut",  "cues": {}, "src": { "track": "snowball_boss", "part": "loop", "bar": 0, "bars": 8 } },
       { "id": "mirror",    "bpm": 158, "beats": 24, "in": "cut",  "cues": {}, "src": { "track": "mirror_boss", "part": "loop", "bar": 0, "bars": 6 } },
-      { "id": "rise",      "bpm": 158, "beats": 16, "in": "cut",  "cues": { "shards": 0, "each": 2 }, "src": { "track": "mirror_boss", "part": "loop", "bar": 32, "bars": 4 } },
-      { "id": "climax",    "bpm": 158, "beats": 32, "in": "cut",  "cues": { "whole": 0, "thanks": 16 }, "src": { "track": "mirror_boss", "part": "loop", "bar": 68, "bars": 8 } },
-      { "id": "bye",       "bpm": 132, "beats": 28, "in": "cut",  "cues": { "dance": 0, "spin": 12, "wave": 20, "end": 24 }, "src": { "track": "victory", "part": "loop", "bar": 0, "bars": 6 } }
+      { "id": "fight",     "bpm": 158, "beats": 16, "in": "cut",  "cues": {}, "src": { "track": "mirror_boss", "part": "loop", "bar": 32, "bars": 4 } },
+      { "id": "fight2",    "bpm": 158, "beats": 32, "in": "cut",  "cues": {}, "src": { "track": "mirror_boss", "part": "loop", "bar": 68, "bars": 8 } },
+      { "id": "finale",    "bpm": 132, "beats": 28, "in": "cut",  "cues": { "fly": 1, "crash": 3, "slide": 7, "fall": 10, "thanks": 12 }, "src": { "track": "victory", "part": "loop", "bar": 0, "bars": 6 } }
     ]
   }
 }

@@ -6,9 +6,12 @@
 -- (abajo) paseando de objetivo en objetivo; si muere, reaparece (vidas sin fin).
 -- A pasos fijos de 1/60 s con su propio generador de azar: lo mismo cada vez que se ven los créditos. Las
 -- partículas y las decoraciones usan el azar normal (se crean al dibujar: ver MenuScene).
---   local s = LiveStage.new('credits_pradera', seed)
+--   local s = LiveStage.new('credits_pradera', seed[, opts])   opts.pilot(st) → quien lleva al monstruo en vez del bot
+--                             (algo con :step(dt, level), p. ej. src/story/CreditsFight.lua), opts.immortal
 --   s:update(dt)              s:draw(y)   (la franja, con lo de arriba del nivel en la y de pantalla `y`)
---   s.h                       alto de la franja en píxeles;   s.stats = { kills, deaths, booms, goals, jumps } (para las pruebas)
+--   s.h                       alto de la franja en píxeles;   s.stats = { kills, deaths, booms, goals, jumps, inPlace } (para
+--                             las pruebas; inPlace = lo más que SONÓ un salto en el mismo sitio —32 px— en 3 s; flips = lo
+--                             más que cambió de sentido EN EL SUELO en 1 s: temblaba de un lado a otro)
 local LiveStage = {}
 LiveStage.__index = LiveStage
 
@@ -30,6 +33,12 @@ local function realRandom(fn)
     end
 end
 local wEmit, wUpdate, wdEmit, wdEvery = realRandom(pEmit), realRandom(pUpdate), realRandom(dEmit), realRandom(dEvery)
+-- (y la animación de las decoraciones ENTERA: las del volcán echan chispas con math.random a pelo, y solo si se vieron
+-- en el último dibujo; con el azar del escenario, lo que pasaba dependía de cuándo se dibujaba —la pelea del final de
+-- los créditos salía distinta según los cuadros por segundo—)
+local Level = require 'src/world/level/Level'
+local lFoliage = Level.updateFoliage
+local wlFoliage = realRandom(lFoliage)
 
 local IDLE = setmetatable({ pressed = function() return false end, down = function() return false end },
                           { __index = function() return function() return false end end })
@@ -100,10 +109,12 @@ function LiveStage:_tour(level)
     return g.set, 'finish', g.x
 end
 
-function LiveStage.new(name, seed)
+function LiveStage.new(name, seed, opts)
+    opts = opts or {}
     local AdventureState = require 'src/states/adventure/AdventureState'
     local self = setmetatable({ name = name, rng = love.math.newRandomGenerator(seed or 7), acc = 0, clock = 0,
-                                gain = LiveStage.GAIN, stats = { kills = 0, deaths = 0, booms = 0, goals = 0, jumps = 0 } }, LiveStage)
+                                gain = LiveStage.GAIN, stats = { kills = 0, deaths = 0, booms = 0, goals = 0, jumps = 0, inPlace = 0, flips = 0 },
+                                jumpLog = {}, flipLog = {} }, LiveStage)
     local st = AdventureState:new()
     local me = self
     self:_wrap(function()
@@ -116,6 +127,8 @@ function LiveStage.new(name, seed)
                                 me.bot:step(dt, level, nil)
                                 if ground and not st.player.onGround and st.player.vy < 0 then me.stats.jumps = me.stats.jumps + 1 end
                             end } })
+        if opts.immortal then st.player.immortal = true end
+        if opts.pilot then return end                          -- (lo pone abajo, con los jefes ya despiertos)
         local nav = BotNav.load(name, st.level)
         assert(nav and not nav.stale, 'escenario ' .. name .. ' sin grafo al día: run.sh bot_nav BUILD=1 -- assets/story/sets/' .. name .. '.json')
         me.bot = Bot.new(st.player, nav, { mortal = true, dodge = true, firstDelay = 0,
@@ -134,6 +147,7 @@ function LiveStage.new(name, seed)
                 e:startFight(1)
             end
         end
+        if opts.pilot then me.bot = opts.pilot(st) end
     end)
     self.h = st.level.heightPx
     self.w = st.level.widthPx
@@ -148,13 +162,41 @@ local MUSIC = { playMusic = true, stopMusic = true, setLevelMusic = true, setBas
                 pauseAll = true, resumeAll = true, setEcho = true, stopAllTracked = true }
 local function soundProxy(stage, real)
     local p = {
-        play = function(name, pitch, vol) return real.play(name, pitch, (vol or 1) * stage.gain) end,
+        play = function(name, pitch, vol)
+            if name == 'jump' then stage:_jumpHeard() end
+            return real.play(name, pitch, (vol or 1) * stage.gain)
+        end,
         playAt = function(name, x, y, pitch, vol) return real.playAt(name, x, y, pitch, (vol or 1) * stage.gain) end,
         playTracked = function(name, pitch, vol) return real.playTracked(name, pitch, (vol or 1) * stage.gain) end,
         loop = function(name, on, x, y, g) return real.loop(name, on, x, y, (g or 1) * stage.gain) end,
         resumeAll = function() return true end,
     }
     return setmetatable(p, { __index = function(_, k) if MUSIC[k] then return noop end return real[k] end })
+end
+
+-- (el usuario: el monstruo "salta muchísimas veces sin moverse, solo suena": cuántos saltos suenan en el mismo sitio)
+function LiveStage:_jumpHeard()
+    local p = self.st and self.st.player
+    if not p then return end
+    local log, n = self.jumpLog, 1
+    log[#log + 1] = { t = self.clock, x = p.x }
+    while log[1] and log[1].t < self.clock - 3 do table.remove(log, 1) end
+    for i = 1, #log - 1 do if math.abs(log[i].x - p.x) < 32 then n = n + 1 end end
+    if n > self.stats.inPlace then self.stats.inPlace = n end
+end
+
+function LiveStage:_flipCount()
+    local p = self.st.player
+    local d = (p.x > (self.lx or p.x) + 0.5) and 1 or ((p.x < (self.lx or p.x) - 0.5) and -1 or 0)
+    self.lx = p.x
+    if d == 0 then return end
+    if self.ld and d ~= self.ld and p.onGround then                -- (en el suelo: en el aire es dirigir el salto)
+        local log = self.flipLog
+        log[#log + 1] = self.clock
+        while log[1] and log[1] < self.clock - 1 do table.remove(log, 1) end
+        if #log > self.stats.flips then self.stats.flips = #log end
+    end
+    self.ld = d
 end
 
 -- Ejecuta fn con el azar del escenario (las decoraciones y partículas, con el normal), sin el mando de verdad y con
@@ -172,10 +214,12 @@ function LiveStage:_wrap(fn, drawing)
     end
     Particles.emit, Particles.update = wEmit, wUpdate
     DecoFx.emit, DecoFx.every = wdEmit, wdEvery
+    Level.updateFoliage = wlFoliage
     local ok, err = pcall(fn)
     Input, math.random, Sound = rI, rR, rS
     Particles.emit, Particles.update = pEmit, pUpdate
     DecoFx.emit, DecoFx.every = dEmit, dEvery
+    Level.updateFoliage = lFoliage
     if not ok then error(err, 0) end
 end
 
@@ -212,6 +256,7 @@ function LiveStage:update(dt)
             end
         end
         if st.player.dying and not wasDying then self.stats.deaths = self.stats.deaths + 1 end
+        self:_flipCount()
     end
 end
 
@@ -235,12 +280,14 @@ end
 function LiveStage:draw(y, alpha)
     alpha = alpha or 1
     self.gain = LiveStage.GAIN * alpha
-    if alpha <= 0 then return end
-    local st = self.st
-    ensure()
+    -- (la cámara, aunque aún no se vea: lo que pasa depende de ella —lo que está a la vista— y tiene que ser lo mismo
+    -- desde el primer paso: la pelea del final de los créditos sale siempre igual)
     y = math.floor(y)
     self.cx = math.floor((self.w - WINDOW_W) / 2)
     self.cy = -y
+    if alpha <= 0 then return end
+    local st = self.st
+    ensure()
     st.camX, st.camY = self.cx, self.cy
     -- (en el lienzo, a tamaño lógico: sin la escala ni el recorte de lovesize)
     love.graphics.push('all')

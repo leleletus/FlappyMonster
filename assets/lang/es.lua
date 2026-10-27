@@ -81,7 +81,6 @@ return {
         inspiration = "(inspiración de un efecto)",
         tools = "HERRAMIENTAS",
         thanks = "¡GRACIAS POR JUGAR!",
-        bye = "¡ADIÓS!",
     },
     story = {
         shards = "Fragmentos del espejo",

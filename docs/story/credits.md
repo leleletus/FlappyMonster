@@ -7,14 +7,19 @@ everything scrolls up while a medley of the game's own soundtrack plays — one 
 the Mirror boss (theme, rise, climax) — each credit block entering from the bottom exactly when its song starts. Under
 each block a **live stage**: a little strip of that island that is really PLAYED by the game (its enemies, bombs,
 mortars, trampolines, thin ice, lava, the real Mega Crabby and Mega Ice Crabby, with their sounds) while the monster,
-driven by a small bot, runs, stomps, ground-pounds, dies and respawns. Then the empty mirror appears and the shards
-fly into it, the whole mirror shines with "¡GRACIAS POR JUGAR!", and **Claudio** walks in and dances on the beat
-while the monster flies around him, and they wave goodbye. Skippable like every film (hold a button 1 s). About 2:45.
+driven by a small bot, runs, stomps, ground-pounds, dies and respawns. Then **the final fight**: the monster against
+the Mirror in its arena, full screen, PLAYED with the game's real physics (not animated) and identical every time;
+the monster wins at the end of the Mirror's music, the Mirror explodes, flies at the camera, **crashes into the
+screen** (broken glass), slides down and falls away, and "¡GRACIAS POR JUGAR!" appears. It ends there. Skippable like
+every film (hold a button 1 s). About 2:45.
 
 **Files**
 
 | File | Role |
 |---|---|
+| `src/story/CreditsFight.lua` | the final fight's PILOT: the monster's buttons each 1/60 s step, from where the Mirror is and what it does (below) |
+| `assets/story/sets/credits_espejo.json` | the fight's arena (20×11, full screen; `espejo()` in `tools/levelgen/make_credits_sets.py`): ash over basalt, two side platforms and a high one, the Mirror with its props for the credits |
+| `assets/images/fx/screen_crack.png` | the broken screen glass of the finale (`tools/art/fx/make_screen_crack.py`, drawn at ×5) |
 | `assets/story/films.json` → `credits` | the timeline: 13 scenes, each with `bpm`, `beats`, `cues` and `src` (track of the catalog, part, start bar, bars: where its music comes from); `bars: false` (no cinema bars) |
 | `assets/story/credits.lua` | the TEXT, one block per scene (headings are language keys `credits.*`; proper names are not translated) and each block's `stage` (its live stage) |
 | `src/story/films/credits.lua` | the film: background, layout and scroll, the live stages' life (built 160 px before entering, invisible and frozen until it APPEARS: it fades in as it enters — 0 with 3 rows in view, 1 with its ground in view (`PLAY_FROM`) —, played from the moment it starts to show, dropped when gone), random fireworks (`src/ui/Celebration.lua`, more often at the climax and the goodbye), the mirror, Claudio's dance and the flying monster |
@@ -31,13 +36,15 @@ while the monster flies around him, and they wave goodbye. Skippable like every 
 (the script asserts that each source loop is a whole number of bars at that tempo), so every song change falls on
 its picture; the film follows the music clock while it plays (`Film`). The scroll speed is ONE constant: the
 smallest that lets every block (text + its stage; the stage's two top air rows overlap the end of the text) fit in its song and lets the last block (`bola`) leave the top
-before the Mirror's rise; each block's position is computed so that its top enters the screen (92 % of the height)
+before the final fight; each block's position is computed so that its top enters the screen (92 % of the height)
 at the start of its scene. Changing the text re-computes the layout by itself; changing a scene's song or length
 means editing `films.json` and re-running `credits_music.py`.
 
 **The medley:** map theme ("Rumbo a las islas", the logo), pradera_1, costa_1, fortaleza_1, nieve_1, cuevas_1,
-volcan_1, crab_tantrum_normal, snowball_boss, mirror_boss (A, the rise D and the climax E: one shared gain, so the
-rise stays soft and the climax loud), victory (Claudio, then its first beat held as the final chord). Every cut is on
+volcan_1, crab_tantrum_normal, snowball_boss, mirror_boss (A; the fight on its rise D and climax E: one shared gain, so
+the fight starts soft and gets loud), victory (the finale, then its first beat held as the final chord). The 0.5.49
+ending reused the same music sections (scenes renamed rise/climax/bye → fight/fight2/finale): `story_credits.ogg` did
+not change. Every cut is on
 a bar line; each piece is RMS-matched to −15 dBFS; a 12 ms crossfade and a noise-channel crash hide the change of key.
 **Verified by numbers only: not listened to.**
 
@@ -49,17 +56,42 @@ hump.timer, lovesize; TOOLS; INSIDE LÖVE (its bundled libraries) + where the fu
 Fallympics" (Jukio Kallio · Daniel Hagström), "It's Me, It's Verity" (Horror Skunk), "Spider Dance" (Toby Fox, the
 inspiration for an effect). Claude appears only as Claudio (the user's choice: no credit line).
 
+**The final fight** (scenes `fight` + `fight2`, 48 beats at 158 = 18.2 s; `finale`, 28 beats at 132):
+- A live stage (`LiveStage.new('credits_espejo', 31, { pilot, immortal })`) drawn full screen; it is built (and its camera
+  set) in the last beat of `mirror` and played from the first frame of `fight`. The monster is driven by
+  `CreditsFight` instead of the menu bot (immortal: the Mirror's hits only knock it). The Mirror (props in the set: HP 3,
+  copy delay 1.4 s, no dodge, no random steps, an arena attack every 3 s, 1.3 s pause after its dive) fights for real:
+  it copies the monster's inputs with a delay, dives from its floating mirror and leaps from the platforms.
+- The PILOT: runs away from the Mirror's attack mark to an open spot (never under a platform: its dive lands on the
+  platform and stays there); between hits it moves around the arena (and the Mirror copies it); in an attack window
+  (`FIGHT_WINDOWS` = {3, 12.5} s, then always) it goes for it — right after its dive (`recover`), or by standing still
+  next to it until the Mirror, replaying that stillness, also stands still, and then jumping (second jump at the top)
+  and GROUND-POUNDING it within the copy delay. Pound = 2 HP and KO; a hit while KO = the last one. When it wins it hops.
+- Same every time: fixed 1/60 steps, the stage's own seeded random, and the camera set before the first step. Result:
+  pound at 6.50 s, final hit at 15.63 s (the music of the fight lasts 18.23 s) at any frame rate (`FIGHT=1 FPS=30/47/144`).
+  Its `DEATH_HOLD` is infinite: it keeps exploding (its real 'dying_hold' blasts) until the finale takes it. If, on some
+  other machine, it were not defeated when the finale starts, the finale gives it the last hit (safety net).
+- `finale` cues: `fly` 1 (the film takes the Mirror out of the arena: it flies in an arc to the screen centre, growing to
+  ×4 and flipping — never rotated —, drawn with its own render in the 'dying_fall' look: X eyes), `crash` 3 (screen
+  crack ×5, white flash, shake, ice-break + explosion + ground-pound sounds), `slide` 7 (slips down the glass), `fall`
+  10 (drops off the bottom), `thanks` 12 ("¡GRACIAS POR JUGAR!" drops in, under the impact; the arena dims). Ends there.
+
 **How to extend:** a new credit = a line in `assets/story/credits.lua` (+ its keys in `es.lua` and `en.lua`); a new
 third-party component = an entry in `tools/legal/make_licenses.py` (and re-run it) and a line in the credits; a new
 song in the medley = a scene in `films.json` with its `src`, a `draw` in `src/story/films/credits.lua` (scroll scenes
 are listed in `SCROLL`) and `credits_music.py`. A new or changed stage = its function in
 `tools/levelgen/make_credits_sets.py` (re-run it) and `stage = 'credits_<id>'` in its block; watch it with
-`run.sh story_film STAGES=1 [STAGE=credits_x]`.
+`run.sh story_film STAGES=1 [STAGE=credits_x]`. The fight: `run.sh story_film FIGHT=1` (`FIGHTDBG=n`: positions every
+n frames; `FPS=n`; captures `fight_NN.png`); after changing the arena, the Mirror's props or `CreditsFight`, check that
+the final hit still lands in the last 3.2 s of the fight music.
 
 **Tests:** `story_film` (all films, `FILM=credits` alone): the 13 scenes in order with their lengths, the music lasts
-exactly the film, every block enters at the start of its song and fits in it, the last one is out before the Mirror,
+exactly the film, every block enters at the start of its song and fits in it, the last one is out before the fight,
 the 8 live stages are played and things happen in them (≥ 8 enemies killed, ≥ 2 explosions, the monster dies at
-least once); captures `film_credits_*.png`. `STAGES=1`: each stage alone for 25 s with what happened and 4 captures. `story_flow` goes through ending → credits → results.
+least once), `final`: the fight was played, the Mirror fell IN the fight and the finale flew it away; captures
+`film_credits_*.png` (7 of the finale). `STAGES=1`: each stage alone for 25 s with what happened and 4 captures, and the
+bot neither jumps in place (≤ 3 jump sounds within 32 px in 3 s) nor trembles (≤ 5 direction changes on the ground in 1 s);
+`JUMPDBG=1` / `BOTDBG=n` trace it. `FIGHT=1`: the fight alone (above). `story_flow` goes through ending → credits → results.
 
 **Decisions / history**
 - 2026-10-20 (3.105.0): requested by the user (after the ending; logo on black, scroll, a medley of the best themes —
@@ -100,3 +132,19 @@ least once); captures `film_credits_*.png`. `STAGES=1`: each stage alone for 25 
   as in the game, and the monster lands closer); the monster only walked and jumped, walked and jumped — "very
   repetitive and stale", use something like the main menu's bot: the hand-made side-to-side bot was replaced by the
   menu's navigation bot touring varied goals.
+- 0.5.49, the user: (1) the credits bot "jumps many times without really moving (only the sound), trembles and acts
+  weird", in pradera after dying while jumping a Gummy: three bugs of the shared bot (`src/ai/Bot.lua`, so the menu
+  background got the fixes too): the enemy-dodge check simulates a GHOST player and the ghost's jumps played real
+  sounds (up to 4 in one frame) — the ghost is now silent and makes no noise; at its goal point it fell through to the
+  "brute force towards the tile centre", a few px away on the other side, and flipped left/right every frame and
+  jumped in place — it now stands still; in a pond (off the graph) it jumped from the bottom without the second jump
+  and never got out — the brute-force jump now does the second jump when needed (water, or the first did not rise a
+  tile); walking into a solid body (the Mega Crabby) it was pushed back a few px each frame and that never counted as
+  stuck — "pushed back against the input" now counts, and a blocked walk tries one hop and then waits. (2) The beach
+  strip had meadow crabs (`crabby_river`): now the coast `crabby`. (3) The ending (the rising mirror, the shards and
+  Claudio's dance) replaced by the final fight above — the user's own words: "a pre-recorded fight (REAL GAME PHYSICS)
+  where the monster defeats the Mirror and it explodes, flies off and crashes into the screen; when it falls, thank you
+  for playing appears and it ends there". Claudio's dance frames (`claudio_dance-Sheet.png`, the `claudio` animation
+  set) are no longer used by the credits; key `credits.bye` removed. Building it found that drawing a live stage
+  changed what happened in it (the volcano decorations spawn embers with the stage's random only when they were
+  drawn): the decorations' update now runs with the normal random. Not watched by the user yet.

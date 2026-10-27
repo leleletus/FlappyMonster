@@ -28,10 +28,11 @@ SUB = {'tall_grass', 'flower_patch', 'tulip', 'shell', 'starfish', 'clam', 'torc
 
 
 class Strip:
-    def __init__(self, top, under):
-        self.g = [[EMPTY] * W for _ in range(H)]
-        self.rect(1, 5, W, 5, top)
-        self.rect(1, 6, W, 6, under)
+    def __init__(self, top, under, h=H):
+        self.h = h
+        self.g = [[EMPTY] * W for _ in range(h)]
+        self.rect(1, h - 1, W, h - 1, top)
+        self.rect(1, h, W, h, under)
         self.ents, self.fol = [], []
 
     def rect(self, c0, r0, c1, r1, tid):
@@ -57,9 +58,9 @@ class Strip:
     def level(self, name, background, time='day', music=None, boss=False):
         # (la zona mide lo de su arena de verdad, 10 filas: sube por encima de la franja —`openTop`— y su techo, al que
         #  trepan el jefe y sus Crabbies, queda fuera de la vista; a la altura de la franja colgaban a un palmo del suelo)
-        extra = {'bossZones': [{'id': 1, 'col': 1, 'row': H - 9, 'w': W, 'h': 10}]} if boss else {}
-        return {**extra, 'name': name + ' (créditos)', 'name_en': name + ' (credits)', 'width': W, 'height': H,
-                'playerStart': [2, 4], 'openTop': True, 'background': background, 'time': time, 'light': 'day', 'echo': False,
+        extra = {'bossZones': [{'id': 1, 'col': 1, 'row': self.h - 9, 'w': W, 'h': 10}]} if boss else {}
+        return {**extra, 'name': name + ' (créditos)', 'name_en': name + ' (credits)', 'width': W, 'height': self.h,
+                'playerStart': [2, self.h - 2], 'openTop': True, 'background': background, 'time': time, 'light': 'day', 'echo': False,
                 'modes': [], 'tiles': self.g, 'entities': self.ents, 'foliage': self.fol, 'vents': []}
 
 
@@ -81,9 +82,9 @@ def costa():
     s = Strip(SAND, SAND)
     s.rect(9, 5, 13, 6, WATER)                  # una charca con un pez globo (la salta; si cae, nada)
     s.ent('pufferfish', 11, 6, area=[{'col': 9, 'row': 5}, {'col': 13, 'row': 5}, {'col': 13, 'row': 6}, {'col': 9, 'row': 6}])
-    s.ent('crabby_river', 6)
+    s.ent('crabby', 6)
     s.ent('trampoline', 15)                     # un trampolín que lo lanza alto
-    s.ent('crabby_river', 18)
+    s.ent('crabby', 18)                         # (los de la PLAYA: el de río es el de la pradera — el usuario)
     s.ent('star', 15, 1)
     for c, t in ((3, 'palmtree'), (7, 'shell'), (14, 'starfish'), (17, 'tiki_torch'), (19, 'clam')):
         s.deco(t, c)
@@ -157,8 +158,24 @@ def bola():
     return s.level('Mega Crabby helado', 'snow', boss=True)
 
 
+def espejo():
+    """EL FINAL de los créditos (0.5.49, el usuario: en vez del espejo que se recompone y del baile de Claudio, una
+    pelea de verdad en la que el monstruo vence al Espejo, que explota, sale volando y se estrella contra la pantalla).
+    A pantalla completa: 20 x 11 (el suelo en la fila 10). Dos plataformas a los lados (las del ataque desde una
+    plataforma del Espejo, y donde ponerse a salvo de su picado desde el espejo flotante) y una en lo alto del centro.
+    El Espejo, con poca vida y sin esquivar ni dar pasos al azar: la pelea la lleva src/story/CreditsFight.lua"""
+    s = Strip(ASH, BASALT, h=11)
+    s.rect(3, 7, 5, 7, PLATFORM); s.rect(16, 7, 18, 7, PLATFORM)
+    s.rect(9, 4, 12, 4, PLATFORM)
+    s.ent('mirror', 15, 9, hp=3, hpPerPlayer=0, delay=1.4, evade=False, randomMove=False, attackEvery=3.0,
+          portalAim=0.8, recoverTime=1.3)
+    for c, t in ((2, 'dead_bush'), (7, 'basalt_pebbles'), (13, 'glow_rock'), (19, 'charred_tree')):
+        s.deco(t, c, 9)
+    return s.level('Espejo', 'volcano', 'night', boss=True)
+
+
 SETS = {'pradera': pradera, 'costa': costa, 'fortaleza': fortaleza, 'nieve': nieve, 'cuevas': cuevas,
-        'volcan': volcan, 'crab': crab, 'bola': bola}
+        'volcan': volcan, 'crab': crab, 'bola': bola, 'espejo': espejo}
 
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)

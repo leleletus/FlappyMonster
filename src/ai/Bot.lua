@@ -102,7 +102,9 @@ local function zoneNodes(nav, area, level)
             rect[id], anyR = true, true
             if level:isStandable(n.c, n.r) then
                 all[id], anyA = true, true
-                if not level:getDef(n.c, n.r + 1).thinIce then firm[id], anyF = true, true end
+                -- (ni FIRME lo que está bajo el agua: en lago_de_cristal la zona llega al fondo del lago, bajo el hielo
+                -- fino; prefería el fondo, al que no se llega hasta que se rompe el hielo, y se pasaba la parada vagando)
+                if not level:getDef(n.c, n.r + 1).thinIce and not level:liquidOfCell(n.c, n.r) then firm[id], anyF = true, true end
             end
         end
     end
@@ -296,6 +298,25 @@ function Bot:_water(dt, level, goals)
     local w = self.wt
     if not w then w = { t = 0, best = math.huge, scan = 0, hold = 0 }; self.wt = w end
     self.path, self.edge, self.edgeF = nil, nil, 0
+    -- DENTRO DE LA ZONA (aunque el agua la cubra se sigue puntuando): se queda en ella, en su suelo, sin salir
+    -- nadando. En cascada_dorada salía a lo seco, el agua al bajar lo dejaba en el fondo del nivel y tardaba media
+    -- partida en volver a subir
+    -- (y si algo lo saca —un enemigo que nada lo empuja— estando la zona también bajo el agua, vuelve a ella nadando
+    -- en vez de irse a lo seco de otra parte)
+    local zone = not self.goalFn and PointAreas.target(level)
+    if zone then
+        local T = TILE_PX
+        local zx = (zone.x0 + zone.x1) / 2
+        local near = math.abs(pa.x - zx) < (zone.x1 - zone.x0) / 2 + 4 * T and pa.y > zone.y0 - 2 * T and pa.y < zone.y1 + 3 * T
+        if inArea(zone, pa.x, pa.y) or (near and flooded(level, zx, zone.y1 - T / 2)) then
+            self.kind = 'water'
+            local bits = 0
+            if pa.x < zone.x0 + T then bits = R elseif pa.x > zone.x1 - T then bits = L end
+            -- (por debajo de la zona: arriba, con el salto que le quede)
+            if not pa.onGround and pa.y > zone.y1 - T / 2 and pa.vy > -40 and (pa.jumpsLeft or 0) > 0 then bits = bits + J + JP end
+            return self:_emit(bits)
+        end
+    end
     local surf = surfaceAt(level, pa.x, pa.y)
     if w.wait then
         self.kind = 'wait'
@@ -509,7 +530,22 @@ function Bot:think(dt, level, target)
     -- ── RUTA por el grafo ──
     self.planT = self.planT - dt
     local cur = pa.onGround and BotNav.nodeAt(self.nav, pa.x, pa.y, self:_h()) or nil
-    if math.abs(pa.x - self.lastX) > 2 then self.stuckT, self.lastX = 0, pa.x else self.stuckT = self.stuckT + dt end
+    -- (atascado = no se ALEJA de donde estaba: empujando contra un cuerpo sólido —el Mega Crabby— iba y venía unos
+    -- px en cada cuadro y, con 2 px de margen, nunca contaba como atascado: temblaba contra él sin fin)
+    if math.abs(pa.x - self.lastX) > 8 then self.stuckT, self.lastX = 0, pa.x else self.stuckT = self.stuckT + dt end
+    -- (y si pulsó hacia un lado y fue hacia el otro, algo sólido lo DEVUELVE: unas pocas veces —aunque entre medias
+    -- avance un paso: va y viene— = atascado ya)
+    local moved = pa.x - (self.prevX or pa.x)
+    self.prevX = pa.x
+    local pb = self.prevBits or 0
+    -- (sin su propia velocidad hacia allí: dar la vuelta con inercia —al aterrizar— NO es que lo devuelvan)
+    local vx = pa.vx or 0
+    -- (ni en el agua: allí se deriva contra lo que pulsa sin que nada lo devuelva)
+    local back = pa.onGround and not pa.inWater
+                 and ((pb % 2 == 1 and moved > 0.5 and vx <= 0) or (math.floor(pb / 2) % 2 == 1 and moved < -0.5 and vx >= 0))
+    self.backN = back and ((self.backN or 0) + 1) or math.max(0, (self.backN or 0) - 0.1)
+    if self.backN >= 1.2 then self.pushedAt = self.clock; self.stuckT = math.max(self.stuckT, 0.41) end
+    self.pushedBack = self.pushedAt ~= nil and self.clock - self.pushedAt < 1.0          -- (un rato: si no, se olvidaba al cuadro)
     if not cur and pa.onGround then self.path = nil end
     if cur and (not self.path or self.planT <= 0 or self.pathFrom ~= cur or self.stuckT > Bot.STUCK) then
         if self.stuckT > Bot.STUCK and self.path and self.path[1] then self:_fail(cur, self.path[1]) end
@@ -531,13 +567,39 @@ function Bot:think(dt, level, target)
     elseif kind ~= 'roam' and kind ~= 'hunt' then self.noPathT = (self.noPathT or 0) + dt end      -- (también en el aire: a lo bruto se pasa el rato saltando)
     -- (con objetivo propio y ya en él — o sin camino — pero sin haberlo TOCADO — la meta —: anda hasta el punto
     -- `approach` que devuelve opts.goal, saltando si algo lo frena)
+    -- (y YA en él, quieto: si no, caía abajo, al "a lo bruto" hacia el CENTRO de la casilla —a unos px del punto, al
+    -- otro lado—, y se pasaba el rato temblando de un lado a otro y saltando en el sitio: los créditos, el menú)
+    if not e and approach and pa.onGround and math.abs(approach - pa.x) <= 6 then
+        self.escBits, self.escDir = 0, nil
+        return self:_emit(0)
+    end
     if not e and approach and pa.onGround and math.abs(approach - pa.x) > 6 then
         local dir = (approach < pa.x) and L or R
-        if self.stuckT > 0.4 then self.stuckT = 0; return self:_emit(dir + J + JP) end
+        self.escDbl = false
+        if self.stuckT > 0.4 then
+            self.stuckT, self.escDir, self.escY = 0, dir, pa.y      -- (en lo alto, el segundo si hace falta: ver abajo)
+            -- (en el agua sigue pulsando hacia allí en el aire —salía de la charca—; fuera, como siempre: en arrecife_globo
+            -- del menú, mantenerlo lo tiraba a los pinchos)
+            if pa.inWater then self.escBits = dir + J end
+            return self:_emit(dir + J + JP)
+        end
+        self.escDir = nil
         return self:_emit(dir)
     end
     if not e then
-        if not pa.onGround then return self:_emit(self.escBits or 0) end
+        if not pa.onGround then
+            -- (saltando a lo bruto: el SEGUNDO salto en lo alto. Sin él, en el fondo de una charca —fuera del grafo—
+            -- saltaba, no llegaba al borde, volvía a caer y otra vez: en los créditos, sin parar y sin salir)
+            -- (solo si hace falta: en el agua o si el primero no subió ni una casilla; si no, se pasaba del objetivo de
+            -- un salto largo y volvía de otro, de un lado a otro)
+            local low = pa.inWater or (self.escY and pa.y > self.escY - TILE_PX)
+            if self.escDir and not self.escDbl and low and pa.vy > -40 and (pa.jumpsLeft or 0) > 0 then
+                self.escDbl = true
+                return self:_emit(self.escDir + J + JP)
+            end
+            return self:_emit(self.escBits or 0)
+        end
+        self.escDbl = false
         -- (paseando por su zona y sin camino a esa casilla: se queda donde está; a lo bruto se salía de la zona)
         if kind == 'roam' then self.roamTo = nil; return self:_emit(0) end
         -- (no hay cómo llegar hasta ti — un hoyo, un bloque roto —: deja de perseguirte un rato y vuelve a su zona)
@@ -572,10 +634,10 @@ function Bot:think(dt, level, target)
         self.escT = (self.escT or 0) + dt
         if self.stuckT > 0.3 or self.escT > 1.2 then
             self.escT, self.stuckT = 0, 0
-            self.escBits = dir + J
+            self.escBits, self.escDir, self.escY = dir + J, dir, pa.y
             return self:_emit(dir + J + JP)
         end
-        self.escBits = dir
+        self.escBits, self.escDir = dir, nil
         return self:_emit(dir)
     end
     if not cur then return self:_emit(0) end            -- (en el aire: deja que caiga)
@@ -584,6 +646,12 @@ function Bot:think(dt, level, target)
     if e.walk then
         local dx = to.x - pa.x
         if math.abs(dx) < 6 then table.remove(self.path, 1); self.pathFrom = e.to; return self:_emit(0) end
+        -- (un cuerpo sólido lo DEVUELVE —el Mega Crabby—: un salto para pasar y, si no, QUIETO hasta replanear
+        -- —STUCK—; empujando contra él temblaba de un lado a otro. Otra cosa que lo frene: como siempre)
+        if self.stuckT > 0.4 and self.pushedBack then
+            if not self.walkHop then self.walkHop = true; return self:_emit(((dx < 0) and L or R) + J + JP) end
+            if pa.onGround then return self:_emit(0) end
+        elseif self.stuckT <= 0.4 then self.walkHop = nil end
         return self:_emit((dx < 0) and L or R)
     end
     -- movimiento grabado: primero quieto en el centro de su casilla
@@ -642,6 +710,7 @@ end
 
 local function overlap(a, b) return a.x < b.x + b.w and b.x < a.x + a.w and a.y < b.y + b.h and b.y < a.y + a.h end
 local function noop() end
+local SILENT = setmetatable({}, { __index = function() return noop end })
 
 -- ¿Es SEGURO hacer `bits`? Lo simula en un fantasma (una copia del jugador con su mismo estado: P.packOwnState) con la
 -- física de verdad: falla si muere o pierde vida (pinchos, lava, caerse) o si toca a un enemigo (que se supone que
@@ -669,8 +738,13 @@ function Bot:_safe(level, bits)
     end
     local stub = self.simStub or P.newInputStub()
     self.simStub = stub
+    -- (el fantasma no se oye ni hace ruido: sus saltos sonaban de verdad — en los créditos, el monstruo "saltaba" sin
+    -- moverse, solo el sonido, hasta 4 veces en un fotograma — y en lo oscuro avisaría a los enemigos)
+    local Noise = require 'src/world/systems/Noise'
     local rI, rFx, canBreak, hit, brk = Input, PlayerAdventure.fx, level.canBreak, level.hitTile, level.breakTile
+    local rS, rN = Sound, Noise.level
     Input, PlayerAdventure.fx, level.canBreak, level.hitTile, level.breakTile = stub, nil, false, noop, noop
+    Sound, Noise.level = SILENT, nil
     local hp0, safe = g.hp, true
     local n = #bits + 30                                     -- (y un rato más, sin tocar nada: que caiga donde caiga)
     local ok, err = pcall(function()
@@ -691,6 +765,7 @@ function Bot:_safe(level, bits)
         end
     end)
     Input, PlayerAdventure.fx, level.canBreak, level.hitTile, level.breakTile = rI, rFx, canBreak, hit, brk
+    Sound, Noise.level = rS, rN
     if not ok then return true end                           -- (si la simulación falla, que siga como iba)
     return safe
 end
