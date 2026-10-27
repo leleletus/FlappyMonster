@@ -12,8 +12,13 @@ the user asked for one WITHOUT the player — "only the crab dancing, standing s
 (`nearestPlayer` → nil: no notes, no golden note, no chasing, its hops land on the spot) and its landings make no sand
 waves; what is left is his dance on the beat (the four dance moves, the claw snaps on the bass pops, walking across the
 stage — the tool turns him to face where he walks —) and the stage: crowd, speakers, lasers, spotlights, the dance
-floor lighting up (`Entities.renderBack` is now drawn by the tool). His clock IS the video's music clock (`songT` =
-the track time every step, `pace` 1), so everything falls on the beat as in the game. Not yet seen by the user.
+floor (`Entities.renderBack` is now drawn by the tool). His clock IS the video's music clock (`songT` =
+the track time every step, `pace` 1), so everything falls on the beat as in the game.
+Second version (the user: "ONLY dance and jump, no dance-floor attack, no notes thrown with his claws; and not on one
+side of the arena all the time"): `danceOnly(boss)` strips the notes from his plan (no raised claw, no cue) and the
+golden note, switches the dance floor off (`floorNow` → nil: dark panels), hides the hop's target mark and its waves,
+and makes him WANDER: on the beat he walks toward a random spot of the stage (a new one every 2-5 bars, at least 4
+tiles away) and his hops also travel toward it (up to 5 tiles).
 
 **v2 (2026-10-03, with the FINAL soundtrack; the description further down is v1, kept for the bulb details):**
 `tools/video/make_ost.sh [megagummy megacrabby miniboss1 snowboss megacrabby_ice megagloomy mirror]` → one video per

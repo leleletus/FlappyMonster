@@ -76,12 +76,60 @@ local vt = 0                                              -- reloj virtual (s de
 love.timer.getTime = function() return vt end
 love.timer.getDelta = function() return 1 / FPS end
 
-local show, level, es, boss, zone, lure, ctl, canvas, scene, pipe, logo
+local show, level, es, boss, lure, ctl, canvas, scene, pipe, logo
 local total, frameN, lamp, spectrum = 0, 0, nil, {}
 local SAFE = {}
 local muxCmd
 
 local function sh(cmd) local f = io.popen(cmd); local s = f:read('*a'); f:close(); return s end
+
+-- SOLO BAILA (el Cangrejo Groove; el usuario, 0.5.55: "que SOLO BAILE y salte, nada de la pista de baile ni de lanzar
+-- notas con sus tenazas; que no se quede en un solo lado, que camine por cualquier sitio"): sin la pista de baile, sin
+-- notas ni dorada (ni la pinza en alto de disparar, ni el aviso), sin persecución, sin diana ni ondas al saltar; y
+-- PASEA por todo el escenario: va a pasitos (en el compás) hacia un sitio al azar, otro cada pocos compases, y sus
+-- saltos también van hacia allí
+local zone
+function danceOnly(b)
+    local cls = getmetatable(b)
+    local plan, goldAt = cls.plan, cls.goldAt
+    cls.plan = function(...) local p = plan(...); p.notes = {}; return p end       -- (sin notas: nunca la pinza en alto)
+    cls.goldAt = function() return nil end
+    b.floorNow = function() return nil end                                         -- (la pista, apagada)
+    b.nearestPlayer = function() return nil end
+    local land = b.land
+    b.land = function(self) return land(self, true) end                            -- (sin ondas)
+    local drawOver = b.drawOver
+    b.drawOver = function(self, cx, cy)                                            -- (sin la diana del salto)
+        local st = self.state
+        if st == 'crouch' then self.state = 'groove' end
+        drawOver(self, cx, cy)
+        self.state = st
+    end
+    local T, BEAT = TILE_PX, b.BAR / 4
+    local go = { x = nil, t = 0 }
+    local function target(self)
+        local x0, x1 = zone.x0 + 3 * T, zone.x1 - 3 * T
+        if not go.x or vt >= go.t or math.abs(self.x - go.x) < 8 then
+            local nx
+            for _ = 1, 20 do
+                nx = x0 + love.math.random() * (x1 - x0)
+                if math.abs(nx - self.x) > 4 * T then break end
+            end
+            go.x, go.t = nx, vt + (2 + love.math.random() * 3) * b.BAR
+        end
+        return go.x
+    end
+    b.danceWalk = function(self, bar, dt, pa, x0, x1)
+        local tx = target(self)
+        if ((self.songT or 0) % BEAT) / BEAT < 0.5 or math.abs(tx - self.x) < 8 then return end
+        local d = (tx > self.x) and 1 or -1
+        self.x = math.max(x0, math.min(x1, self.x + d * math.min(math.abs(tx - self.x), 0.6 * T / (BEAT / 2) * dt)))
+    end
+    b.aimMark = function(self)
+        local tx = target(self)
+        self.markX = math.floor(self.x + math.max(-5 * T, math.min(5 * T, tx - self.x)))
+    end
+end
 
 function love.load(arg)
     show = assert(SHOWS[arg[1] or ''], 'jefe: megagummy | megacrabby | miniboss1 | snowboss | megacrabby_ice | megagloomy | mirror | groovecrab')
@@ -130,12 +178,7 @@ function love.load(arg)
     Particles.setLevel(level); Particles.clear()
     Entity.fx = function(kind, x, y, opts) Particles.emit(kind, x, y, opts) end
     for _, e in ipairs(es) do if e.def.boss and not e.summonOf then boss = boss or e end end
-    if show.dance then
-        -- (solo baila: no ve a nadie —ni notas ni doradas, no persigue, salta en el sitio— y sus saltos no echan ondas)
-        boss.nearestPlayer = function() return nil end
-        local land = boss.land
-        boss.land = function(self) return land(self, true) end
-    end
+    if show.dance then danceOnly(boss) end
     zone = boss.zone or level.bossZones[1]
     for _, z in ipairs(level.bossZones) do
         if boss.x >= z.x0 and boss.x <= z.x1 and boss.y >= z.y0 and boss.y <= z.y1 then zone = z end
