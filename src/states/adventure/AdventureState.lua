@@ -107,6 +107,7 @@ function AdventureState:enter(args)
     -- Dificultad (src/core/Difficulty.lua): la del modo historia; sin ella, el juego de siempre
     self.level.difficulty = Difficulty.valid(args.difficulty) and args.difficulty or nil
     Difficulty.bind(self.level)
+    self.level.eventCheckpoint = args.eventCheckpoint              -- (Mega Mashup: el punto de control del evento)
     -- Hielo fino que se agrieta / rompe (lo decide el nivel): partículas y sonido
     self.level.tileFx = function(kind, c, r)
         local x, y = (c - 0.5) * TILE_PX, (r - 1) * TILE_PX + TILE_PX / 4
@@ -345,6 +346,8 @@ function AdventureState:updateCamera(dt)
         targetX = AutoScroll.cameraX(self.level)
     end
 
+    -- (un director movió a los jugadores a otra parte del nivel — el Mega Mashup —: la cámara salta, no se desliza)
+    if (self.level.cameraCut or 0) ~= (self._camCut or 0) then self._camCut, self.camSnap = self.level.cameraCut, true end
     if self.camSnap then self.camX, self.camY, self.camSnap = targetX, targetY, false; return end
     local k = CAM_LERP * BossZones.cameraEase(self, zx ~= nil, dt)      -- (sin tirón al entrar / salir de una zona)
     self.camX = self.camX + (targetX - self.camX) * k * dt
@@ -402,7 +405,8 @@ end
 -- Reintentar (tras perder todas las vidas): el mismo nivel con lo mismo que traía
 function AdventureState:retryArgs()
     return { level = self.levelPath, returnTo = self.returnTo, onFinish = self.onFinish, difficulty = self.level.difficulty,
-             shards = self.shardArgs, outro = self.outroArgs, taken = self.takenArg }
+             shards = self.shardArgs, outro = self.outroArgs, taken = self.takenArg,
+             eventCheckpoint = self.level.eventCheckpointNow }      -- (Mega Mashup: se reintenta en el cangrejo en que estabas)
 end
 
 -- Lo que se lleva del nivel (para la nota del modo historia: src/story/Score.lua)
@@ -690,6 +694,15 @@ function AdventureState:updateBoss(dt)
     end
     if self.bossBanner then self.bossBanner.t = self.bossBanner.t + dt end
     self.bossFightT = self.bossFightT + dt
+    -- (escena nueva con otro eco: src/world/level/Scenes.lua)
+    if self.level.echo ~= self._echo then self._echo = self.level.echo; Sound.setEcho(self.level.echo and 1 or 0) end
+    -- Música ADAPTATIVA (un director: el Mega Mashup): manda él
+    local path, pid, pos, nxt = BossZones.adaptive(self.level)
+    if path then
+        Sound.setLevelMusic(Sound.ADAPTIVE)
+        if self.player.drownPhase ~= 'drowning' then Sound.followAdaptive(path, pid, pos, nxt) end
+        return
+    end
     -- Música de la pelea (intro + bucle); al terminar vuelve la del nivel
     local want = BossZones.music(self.level)
     if want ~= Sound.getLevelMusic() then
@@ -866,6 +879,9 @@ function AdventureState:_renderScene()
     end
 
     if self.demo then return end          -- (la demo del fondo de los menús: sin HUD)
+    -- (un director de evento: siluetas de su intro y el fundido a negro de sus costuras — el Mega Mashup —)
+    local md = self.level.musicDirector
+    if md and md.drawOverlay then md:drawOverlay() end
     BossHud.drawCinema(self.level)        -- (entrada de un jefe: franjas de cine, bajo el HUD)
 
     -- (todo el HUD se desvanece durante la entrada de un jefe: BossHud.fadeHud)

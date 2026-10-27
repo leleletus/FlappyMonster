@@ -150,6 +150,9 @@ function OnlineAdventureState:_renderScene()
         Darkness.renderGlow(self.level, self.enemyRenderers, self.camX, self.camY)
     end
 
+    -- (un director de evento: siluetas de su intro y el fundido de sus costuras — el Mega Mashup —)
+    local md = self.level.musicDirector
+    if md and md.drawOverlay then md:drawOverlay() end
     -- HUD (antes, las franjas de cine de la entrada de un jefe: el HUD va encima)
     BossHud.drawCinema(self.level)
     -- (todo el HUD se desvanece durante la entrada de un jefe: BossHud.fadeHud)

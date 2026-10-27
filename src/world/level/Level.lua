@@ -193,6 +193,7 @@ function Level.fromData(lvl, difficulty)
     self.foliage = self.decorations   -- alias de compatibilidad
     -- Zonas de jefe (src/world/systems/BossZones.lua)
     self.bossZones = BossZones.build(lvl.bossZones, lvl.openTop == true)
+    self.event     = lvl.event == true                 -- (nivel de EVENTO: el Mega Mashup; Juego Libre lo destaca; la ayuda)
     -- Ayuda en las peleas de jefe (Extremo / Xtra extremo: modificadores bossFood / bossLives): un director y su
     -- reserva de comidas y vidas, AL FINAL de la lista (mismos índices en servidor y clientes)
     for _, raw in ipairs(require('src/world/entities/types/directors/bossdrops').class.placements(self)) do
@@ -249,8 +250,15 @@ function Level.fromData(lvl, difficulty)
     self.spikeSkin = lvl.spikeSkin                     -- (aspecto de los pinchos: src/world/level/SpikeSkins.lua, solo visual)
     self.background, self.timeOfDay, self.clouds = lvl.background, lvl.time, lvl.clouds   -- (fondo y hora: src/fx/Sky.lua)
     self.depth, self.surfaceRow = lvl.depth, tonumber(lvl.surfaceRow)                    -- (fondo de profundidad y su línea)
+    -- (OSCURIDAD que se funde: 0..1 sobre `dark` — la pone quien encienda / apague las luces, p. ej. un evento)
+    self.darkness  = self.dark and 1 or 0
+    -- ESCENAS: partes del nivel con su propio cielo y luz (src/world/level/Scenes.lua)
+    require('src/world/level/Scenes').build(self, lvl)
     return self
 end
+
+-- Escena activa (src/world/level/Scenes.lua): i = índice de `scenes`, nil = la del nivel
+function Level:applyScene(i) require('src/world/level/Scenes').apply(self, i) end
 
 -- ── Suelo seguro para reaparecer ─────────────────────────────────────────────
 -- ¿Cabe un jugador de pie en la celda (c, r)? (ella y la de encima libres,

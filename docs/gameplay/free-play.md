@@ -31,3 +31,6 @@ Harness `free_play`.
 - 0.5.7, the user: the difficulty could not be reached with keyboard or pad (F / X / Y worked but nobody found it).
   Now it is a focusable item: UP from the top row gives it the focus (cursor + selected look), ◀ ▶ change it. The
   hint says `[UP] / [F]`. Harness `free_play` checks it (`dificultad`).
+- 0.5.62: EVENT levels (`LevelCatalog.EVENTS`, JSON `"event": true`) come first, with a pulsing golden frame, an
+  "EVENTO / EVENT" ribbon and a one-line description instead of the data lines (`mashup.card_hint`). The first one:
+  the [Crab Mega Mashup](../bosses/crab-mashup.md).

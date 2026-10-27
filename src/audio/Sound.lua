@@ -473,7 +473,7 @@ function Sound.playMusic(name, volume)
     src:stop()
     if lp and lp ~= src then lp:stop() end
     src:play()
-    music, musicName = src, name
+    music, musicName, adaptCur = src, name, nil
 end
 
 -- Cambio intro → bucle de las pistas con intro (llamar cada frame).
@@ -568,6 +568,77 @@ function Sound.musicPosition()
     return musicName, music:tell(), (loops[musicName] == music and sources[musicName] ~= music) and 'bucle' or 'inicio'
 end
 
+-- ── MÚSICA ADAPTATIVA (piezas que siguen un reloj: el Mega Mashup, docs/bosses/crab-mashup.md) ────────────────
+-- Un MAPA (json: `pieces` = { id = { file, loop, length, music_end, bars, cuts, next } }, `volume`) y un reloj que
+-- lleva OTRO (el director del evento: un jugador o el servidor, que no tiene audio): cada frame dice qué pieza suena,
+-- en qué punto y el próximo cambio { piece, at = s de la pieza actual, pos = s de la siguiente }. Aquí solo se SIGUE:
+-- la pieza que toca, recolocada si se desvía más de `ADAPT_TOL`, y el cambio a la siguiente medio frame ANTES (como
+-- la intro → el bucle) para que no haya hueco. Las fuentes son de la música normal (`music`): pausa, tono y parar
+-- funcionan igual.
+local adaptMaps, adaptSrc = {}, {}
+local adaptCur = nil                      -- id de la pieza que suena (con su mapa)
+local ADAPT_TOL = 0.12
+Sound.ADAPTIVE = '_adaptativa'            -- (lo que vale getLevelMusic mientras manda una música adaptativa)
+
+function Sound.adaptiveMap(path)
+    if adaptMaps[path] == nil then
+        local json = require 'libs/json'
+        local ok, m = pcall(json.decode, love.filesystem.read(path) or '')
+        adaptMaps[path] = (ok and type(m) == 'table' and type(m.pieces) == 'table') and m or false
+        if not adaptMaps[path] then print('[Sound] mapa de música adaptativa ilegible: ' .. tostring(path)) end
+    end
+    return adaptMaps[path] or nil
+end
+
+local function adaptSource(map, path, pid)
+    local key = path .. '#' .. pid
+    if adaptSrc[key] == nil then
+        local pc = map.pieces[pid]
+        local ok, src = pcall(love.audio.newSource, Music.DIR .. (pc and pc.file or '?'), 'stream')
+        adaptSrc[key] = ok and src or false
+        if ok then src:setLooping(pc.loop == true) else print('[Sound] no se encontró la pieza ' .. pid) end
+    end
+    return adaptSrc[key] or nil
+end
+
+-- Sigue el reloj de `path` (mapa): pieza `pid` en `pos` s; `nxt` = { piece, at, pos } o nil. pid nil = callada.
+function Sound.followAdaptive(path, pid, pos, nxt)
+    if paused then return end
+    local map = Sound.adaptiveMap(path)
+    if not map or not pid or not map.pieces[pid] then
+        if adaptCur then Sound.stopMusic() end
+        return
+    end
+    local vol = tonumber(map.volume) or 1
+    local function start(id, at)
+        local src = adaptSource(map, path, id)
+        if not src then return end
+        if music and music ~= src then music:stop() end
+        src:setPitch(1.0); src:setVolume(vol)
+        src:seek(math.max(0, at)); src:play()
+        music, musicName, adaptCur = src, Sound.ADAPTIVE, id
+    end
+    -- ¿Ya se adelantó al cambio (medio frame antes) y el reloj aún no ha llegado? sigue
+    if nxt and adaptCur == nxt.piece and adaptCur ~= pid and music and music:isPlaying() then return end
+    if adaptCur ~= pid or not music or musicName ~= Sound.ADAPTIVE or not music:isPlaying() then
+        start(pid, pos); return
+    end
+    local t = music:tell()
+    local len = map.pieces[pid].music_end or music:getDuration()
+    -- el cambio, a menos de medio frame
+    if nxt and map.pieces[nxt.piece] then
+        local left = nxt.at - t
+        if map.pieces[pid].loop and left < -len / 2 then left = left + len end       -- (el corte es al dar la vuelta)
+        if left <= INTRO_LEAD + 0.008 and left > -0.25 then start(nxt.piece, (nxt.pos or 0) - left); return end
+    end
+    local d = t - pos
+    if map.pieces[pid].loop and len > 0 then d = (d + len / 2) % len - len / 2 end
+    if math.abs(d) > ADAPT_TOL and music:getPitch() == 1 then music:seek(math.max(0, pos)) end
+end
+
+-- ¿Está sonando una música adaptativa?
+function Sound.adaptivePlaying() return musicName == Sound.ADAPTIVE and music ~= nil and music:isPlaying() end
+
 -- Lerp del pitch de la música (usado para el slowdown al morir)
 function Sound.setMusicPitch(pitch)
     if music and music:isPlaying() then
@@ -623,7 +694,7 @@ function Sound.stopMusic()
         for _, src in ipairs(paused) do src:stop() end
         paused = nil
     end
-    music, musicName = nil, nil
+    music, musicName, adaptCur = nil, nil, nil
 end
 
 function Sound.decimalPitch(score)

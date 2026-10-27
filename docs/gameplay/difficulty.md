@@ -23,7 +23,7 @@ unlocked); Free Play has a ◀ ▶ selector (key F or tap either half); online, 
 | `ventDelay` | delay between oxygen bubbles | `Level` vents |
 | `bossExtra` | TWO allied bosses per arena — kept for the future: NO difficulty sets it since 0.5.24 (harness: `sp_boss DIFF=xtra PAIR=1`, `difficulty_rules` `doble` switch it on) | `src/world/systems/XtraBosses.lua` |
 | `bossFury`, `bossFuryPace` | bosses START ANGRY until their own angry phase: reddish pulse, light shake, anger symbols, × pace (Xtra Extreme, 1.2; a type may set `FURY_PACE`) | `Boss:furyActive` / `renderLive`, `Difficulty.dt`, `BossFx.fury` |
-| `bossFood`, `bossLives` | seconds (average, ×0.7–1.3 at random; the first at 0.4–0.8) between FOOD / EXTRA LIVES falling from the sky inside a boss zone while it fights (Extreme food 15.12; Xtra Extreme food 13.98 + lives 70 — the user: 0.5.6 1 % fewer than 11 / 9 / 30; 0.5.24 Extreme food 2 % fewer, Xtra lives 5 % fewer; 0.5.25 Xtra lives 54 % fewer, 31.9 → 70 s: "incredibly easy, up to 8 extra lives in one boss"; 0.5.26 food 25 % fewer on Extreme, 35 % fewer on Xtra) | `src/world/entities/types/directors/bossdrops.lua` |
+| `bossFood`, `bossLives` | (since 0.5.62: the MINIMUM seconds between two) FOOD / EXTRA LIVES falling from the sky inside a boss zone while it fights, only when NEEDED (the smart director, item 8); before: seconds on average at random (Extreme food 15.12; Xtra Extreme food 13.98 + lives 70 — the user: 0.5.6 1 % fewer than 11 / 9 / 30; 0.5.24 Extreme food 2 % fewer, Xtra lives 5 % fewer; 0.5.25 Xtra lives 54 % fewer, 31.9 → 70 s: "incredibly easy, up to 8 extra lives in one boss"; 0.5.26 food 25 % fewer on Extreme, 35 % fewer on Xtra) | `src/world/entities/types/directors/bossdrops.lua` |
 | `livesStart`, `restartGame`, `scoreMult` | story lives, what a Game Over restarts, points multiplier | `src/story/Run.lua`, `Score.lua` |
 | `botRest`, `botChase`, `botCount` | the KOTH bot's hostility | `src/ai/Bot.lua`, `src/story/BonusMatch.lua` |
 
@@ -125,3 +125,12 @@ unlocked); Free Play has a ◀ ▶ selector (key F or tap either half); online, 
   Extreme (11.34 → 15.12 s) and 35 % fewer on Xtra (9.09 → 13.98 s); to compensate, a Game Over on Xtra Extreme
   no longer restarts the whole game but the WORLD, like every difficulty (`restartGame` removed from Xtra; the
   modifier stays, no difficulty sets it). Harnesses: `difficulty_rules` `enfado`, `story_flow` `extremos`.
+- (8) THE SMART HELP DIRECTOR (0.5.62, the user: drop food "when it is necessary, not randomly"; on Extreme / Xtra as
+  before, and in EVENT levels on every difficulty, scaled — `Drops.EVENT_FOOD` / `EVENT_LIVES`: easy 8 / 40 s, normal
+  11 / 55, hard 14 / 75 between drops). Food when a player in the zone is hurt AND low (≤ a third of max HP), or
+  struggling (≥ 2 hits in 12 s, a death in the last 20 s, or 25 s hurt without the boss losing HP), or right before a
+  hard part (`level.helpHint`: the event's seams and final swaps); an extra life at the last life while struggling.
+  Never while one is already lying there. Spot: the best floor cell of the zone — away from the bosses and from where
+  their attack will land (`markerX` / `markX`), 2-6 cells from the player who needs it, never on them, never on lava
+  or water. `bossdrops.lua`; harness `difficulty_rules` (`ayuda`). The server's Sound stub gained `playAt` (the
+  director's drop sound crashed the online room).

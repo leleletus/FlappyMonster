@@ -49,6 +49,13 @@
 -- En 'intro'/'ready' no se le puede tocar ni es sólido. Todo lo que dibuje
 -- debe salir de su estado + deadTimer (+ x, y): llega igual por red.
 -- (El Mega Crabby tiene su propia entrada, con estados propios.)
+-- EVENTO (el Mega Mashup, types/directors/crabmashup.lua): un DIRECTOR lleva a varios jefes por turnos. Pone en
+-- cada uno `eventRef` (él mismo) y, según toque:
+--   * eventFrozen: CONGELADO en lo que estuviera haciendo (le bajaron su vida del turno: aturdido con estrellas hasta
+--     el corte de la música) — sin pensar, sin hacer ni recibir daño.
+--   * offstage ('wait' | 'ko'): FUERA DE ESCENA, al fondo (lo dibuja el director, pequeño): ni sólido, ni se le toca.
+-- Y el jefe le avisa: onCrabHit (daño de quién) y crabDown (a 0: en vez de morir, el director decide).
+-- `props.fixedHp`: su vida no la escala la dificultad (el evento: 2 por turno en todas).
 -- Hooks: initBoss, updateBoss, isStunned, endStun, onFightStart(n), onDamaged(n, kind),
 -- onDefeat, onDeathFall, onPounded(pa), onKnocked(dir), onPlayerDeath(pa),
 -- isVulnerable, isSolidBody.
@@ -87,6 +94,16 @@ function Boss.props(defaults, extra)
           help='Vacío = el nombre de siempre del jefe (traducido). En MAYÚSCULAS, como las barras' },
         { key='title_en', kind='text', label='Nombre en inglés', group='Nombre', default='', maxLen=28,
           help='Vacío = el nombre en español de arriba (o el de siempre si tampoco hay)' },
+        -- EVENTOS (el Mega Mashup: types/directors/crabmashup.lua; los pone su generador de nivel)
+        { key='event', kind='bool', label='De un evento (lo lleva su director)', group='Evento', default=false },
+        { key='mashupRole', kind='enum', label='Papel en el Mega Mashup', group='Evento', default='none',
+          options = { { value='none', label='—' }, { value='tantrum', label='Tantrum' }, { value='icy', label='Icy' },
+                      { value='gloomy', label='Gloomy' }, { value='groove', label='Groove' } } },
+        { key='fixedHp', kind='bool', label='Vida fija (no la escala la dificultad)', group='Evento', default=false },
+        { key='rageMode', kind='enum', label='Enfado', group='Evento', default='auto',
+          options = { { value='auto', label='El de siempre (por vida)' }, { value='never', label='Nunca' },
+                      { value='always', label='Desde el principio' } },
+          help='Nunca / desde el principio: su fase enfadada no depende de la vida (rageAt, phase2)' },
     }
     for _, p in ipairs(extra or {}) do list[#list+1] = p end
     return list
@@ -106,6 +123,11 @@ end
 
 -- ── Ciclo de vida ─────────────────────────────────────────────────────────────
 function Boss:init()
+    -- (rageMode: el enfado no depende de la vida — los umbrales de cada tipo, a un valor que nunca / siempre se cumple)
+    local rm = self.props and self.props.rageMode
+    if rm == 'never' then self.props.rageAt, self.props.phase2 = -1, -1
+    elseif rm == 'always' then self.props.rageAt, self.props.phase2 = 2, 2 end
+    if self.props and self.props.mashupRole == 'none' then self.props.mashupRole = nil end
     self.moving, self.flying, self.vx, self.vy = false, false, 0, 0
     self.state     = 'dormant'
     self.hpMax     = self.props.hp or 1
@@ -123,6 +145,7 @@ function Boss:startFight(nPlayers)
     -- (la dificultad: más o menos vida — src/core/Difficulty.lua; su ritmo va con Difficulty.dt)
     local D = require 'src/core/Difficulty'
     local k = D.k('bossHp') * (p.xtraPair and D.k('pairHp') or 1)      -- (dos a la vez: cada uno con menos vida)
+    if p.fixedHp then k = 1 end                                        -- (el evento: la misma en todas las dificultades)
     self.hpMax = math.max(1, math.floor(self.hpMax * k + 0.5))
     self.hp    = self.hpMax
     self.inv   = 0
@@ -159,19 +182,26 @@ function Boss:introDone() return self.state == 'ready' end
 function Boss:inIntro() return INTRO[self.state] == true end
 
 -- ¿Se le puede tocar / dañar ahora?
-function Boss:isActive() return self.state ~= 'dormant' and not INTRO[self.state] and not self:isDying() end
+function Boss:isActive() return self.state ~= 'dormant' and not INTRO[self.state] and not self:isDying() and not self.offstage end
 function Boss:isVulnerable() return self:isActive() end
 function Boss:isInvulnerable() return self.inv > 0 end
 
 -- Daño. Devuelve true si le hizo daño (no estaba invulnerable).
 function Boss:damage(n, kind)
+    if self.eventFrozen or self.offstage then return false end
     if not self:isVulnerable() or self.inv > 0 then return false end
     local wasStunned = self:isStunned()
+    local hp0 = self.hp
     self.hp = math.max(0, self.hp - (n or 1))
     Sound.play(self.hurtSound or 'bossHurt')
     Entity.emitFx('boss_hit', self.x, self.y)
     require('src/world/systems/Noise').emit(self.x, self.y, require('src/world/systems/Noise').R.hit)   -- (dar un golpe se oye: niveles a oscuras)
-    if self.hp <= 0 then self:defeat(); return true end
+    local ev = self.eventRef
+    if ev then ev:onCrabHit(self, hp0 - self.hp, self.lastHitter) end
+    if self.hp <= 0 then
+        if ev then ev:crabDown(self); return true end                  -- (evento: no muere, lo decide el director)
+        self:defeat(); return true
+    end
     if wasStunned then
         -- El único golpe que admite aturdido: se despierta, invulnerable un rato
         self.inv, self.ghost = self.STUN_INV, true
@@ -260,6 +290,12 @@ function Boss:collect() return false end
 -- Reglas jugador ↔ jefe (sin efectos: ver Interactions.check)
 function Boss:interact(pa)
     if not self:isActive() then return nil end
+    if self.eventFrozen then                                           -- (aturdido del evento: solo se rebota)
+        local pob = pa:getOuterBounds()
+        if not overlap(pob, self:getInnerBounds()) then return nil end
+        if pa.vy > 0 then return 'bounce', -math.abs(ADV_JUMP_VEL) * self.BOUNCE, (pa.x >= self.x) and 1 or -1 end
+        return nil
+    end
     if self.ghost and self.inv > 0 then return nil end     -- invulnerable largo: se atraviesan
     local pob, gob = pa:getOuterBounds(), self:getOuterBounds()
     if not overlap(pob, self:getInnerBounds()) then return nil end
@@ -289,12 +325,17 @@ end
 -- invulnerable, jefe y jugadores se atraviesan)
 function Boss:isSolidBody()
     return self.alive and not self:isDying() and self.inv <= 0 and self.state ~= 'dormant' and not INTRO[self.state]
+        and not self.offstage
 end
 
 -- ── Update ────────────────────────────────────────────────────────────────────
 function Boss:update(dt, level)
     if self.inv > 0 then self.inv = math.max(0, self.inv - dt) end
     if self.inv <= 0 then self.ghost = false end
+    if self.eventFrozen or self.offstage then                          -- (evento: quieto; sus animaciones siguen)
+        self.deadTimer = (self.deadTimer or 0) + dt
+        return
+    end
     local st = self.state
     if st == 'dead' then self.alive = false; return end
     if st == 'intro' then
@@ -505,6 +546,7 @@ function Boss:furyLook()
 end
 -- Dibujarlo: con el enfado genérico encima si toca (los bucles de dibujo llaman a esto en vez de a render)
 function Boss:renderLive(camX, camY)
+    if self.offstage then return end                                   -- (al fondo: lo dibuja el director del evento)
     if self:furyLook() and not EDITOR_VIEW then
         require('src/fx/BossFx').fury(self, camX, camY, self.render)
     else

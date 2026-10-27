@@ -62,7 +62,7 @@ local TARGET_QUEUE    = 4     -- cola sana; por encima se recorta si persiste
 local TRIM_AFTER      = 30    -- ticks con cola alta antes de recortar
 local MAX_QUEUE       = 20    -- recorte inmediato
 local STARVE_TICKS    = 8     -- ticks sin input antes de extrapolar el último
-local NEAR_X, NEAR_Y  = 1400, 1000   -- px: entidades que se le mandan a cada jugador (la vista es 1280x720 a lo sumo)
+local NEAR_X, NEAR_Y  = Protocol.NEAR_X, Protocol.NEAR_Y   -- px: entidades que se le mandan a cada jugador (la vista es 1280x720 a lo sumo)
 local MAX_SEQ_AHEAD   = 180   -- un seq más adelantado que esto: hubo un corte, se salta hasta él
 local MAX_FRAME_TICKS = 8     -- ticks máximos simulados por frame del servidor
 
@@ -103,6 +103,13 @@ Sound = {
         local ok, err = pcall(fn, ...)
         _emitX, _emitY = ox, oy
         if not ok then error(err, 0) end
+    end,
+    -- (un sonido en un punto del mundo: como play con ese emisor — la ayuda del jefe, src/…/directors/bossdrops.lua)
+    playAt       = function(name, x, y, pitch)
+        local ox, oy = _emitX, _emitY
+        _emitX, _emitY = x, y
+        Sound.play(name, pitch)
+        _emitX, _emitY = ox, oy
     end,
     setListener  = function() end,
     isPlaying    = function() return false end,
@@ -704,7 +711,7 @@ local function stepRoom(room)
     local active = {}
     for _, pid in ipairs(room.playerIds) do
         local ps = sim.playerSims[pid]
-        if ps and not ps.isSpectator then active[#active+1] = ps.pa end
+        if ps and not ps.isSpectator then active[#active+1] = ps.pa; ps.pa.ownerIdx = ps.idx end   -- (ownerIdx: el ranking del Mega Mashup)
     end
     sim.level.players = active
     sim.level:update(TICK_DT)
@@ -1000,7 +1007,11 @@ local function broadcastSnapshot(room)
                 el = ps.elist or {}
                 ps.elist = el
                 for k in pairs(el) do el[k] = nil end
-                local px, py = ps.pa.x, ps.pa.y
+                -- (desde donde MIRA: muriendo, el cuerpo salta y cae fuera de la pantalla —hasta 500 px por debajo del
+                -- nivel— mientras su cámara se queda quieta; medido desde el cuerpo, lo de arriba —los bloques de jefe—
+                -- dejaba de venir, el cliente lo daba por "en reposo" y los muros PARPADEABAN: el usuario, 0.5.62)
+                if not ps.pa.dying then ps.viewX, ps.viewY = ps.pa.x, ps.pa.y end
+                local px, py = ps.viewX or ps.pa.x, ps.viewY or ps.pa.y
                 for i, entry in pairs(elist) do
                     if ebig[i] or (math.abs(entry[1] - px) < NEAR_X and math.abs(entry[2] - py) < NEAR_Y) then el[i] = entry end
                 end

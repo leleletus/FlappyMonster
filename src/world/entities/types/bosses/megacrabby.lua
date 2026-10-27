@@ -365,6 +365,7 @@ function Mega:getHazardBoxes()
 end
 
 function Mega:interact(pa)
+    if self.eventFrozen or self.offstage then return Boss.interact(self, pa) end      -- (evento: aturdido / al fondo)
     for _, hb in ipairs(self:getHazardBoxes() or {}) do
         if Boss.overlap(pa:getOuterBounds(), hb) then return 'kill' end
     end

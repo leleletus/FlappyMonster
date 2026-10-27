@@ -285,6 +285,14 @@ function OnlineAdventureState:_updateCamera(dt)
     if zx then targetX, targetY = zx, zy end
     if scrolling then targetX = AutoScroll.cameraX(self.level) end
 
+    -- (otra ESCENA — el Mega Mashup lleva a todos a otra arena —: la cámara salta un momento, no se desliza; la
+    -- posición corregida del servidor puede llegar unos fotogramas después)
+    if self.level.sceneIdx ~= self._camScene then self._camScene, self._camSnapT = self.level.sceneIdx, 0.35 end
+    if (self._camSnapT or 0) > 0 then
+        self._camSnapT = self._camSnapT - dt
+        self.camX, self.camY = targetX, targetY
+        return
+    end
     local k = CAM_LERP * BossZones.cameraEase(self, zx ~= nil, dt)      -- (sin tirón al entrar / salir de una zona)
     self.camX = self.camX + (targetX - self.camX) * k * dt
     self.camY = self.camY + (targetY - self.camY) * k * dt
@@ -653,6 +661,13 @@ end
 function OnlineAdventureState:_updateBoss(dt)
     if self.bossBanner then self.bossBanner.t = self.bossBanner.t + dt end
     self.bossFightT = self.bossFightT + dt
+    if self.level.echo ~= self._echo then self._echo = self.level.echo; Sound.setEcho(self.level.echo and 1 or 0) end
+    local path, pid, pos, nxt = BossZones.adaptive(self.level)            -- (música ADAPTATIVA: manda el director)
+    if path then
+        Sound.setLevelMusic(Sound.ADAPTIVE)
+        if not self.audioDrowning then Sound.followAdaptive(path, pid, pos, nxt) end
+        return
+    end
     local want = BossZones.music(self.level)
     if want ~= Sound.getLevelMusic() then
         Sound.setLevelMusic(want)

@@ -219,10 +219,12 @@ function Interactions.run(pa, entities, cb, rewind)
             if pa.hp < hp0 and e.onHurtPlayer then e:onHurtPlayer(pa) end
             if killed then Noise.src(nil); return end
         elseif result == 'stomp' then
+            e.lastHitter = pa                               -- (quién le dio: el ranking del Mega Mashup)
             e:stomp()
             pa:bounce(a, c, true)
             if cb.stomp then cb.stomp(e, b, i) end
         elseif result == 'pound' then
+            e.lastHitter = pa
             if e.pound then e:pound(pa) else e:stomp() end
             pa:bounce(a)
             if cb.stomp then cb.stomp(e, b, i) end

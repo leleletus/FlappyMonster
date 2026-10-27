@@ -395,6 +395,14 @@ return {
         hint_tabs = "{lr} change mode    {down} pick level    {back} close",
         hint_levels = "{lr} pick level    {up} change mode    {ok} confirm    {back} back",
     },
+    mashup = {
+        title = "CRAB MEGA MASHUP",
+        victory = "ALL FOUR CRABS BEATEN!",
+        result_row = "{n}. {name}   damage {dmg} · hits {hits} · falls {deaths}",
+        exit = "The exit is open →",
+        event = "EVENT",
+        card_hint = "The four giant crabs, one after another, to the beat of their music",
+    },
     boss = {
         default = "BOSS",
         duo = "{name} ×2",

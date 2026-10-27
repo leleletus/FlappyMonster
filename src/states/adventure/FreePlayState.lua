@@ -288,6 +288,15 @@ function FreePlayState:drawCard(i, x, y)
     love.graphics.setColor(0, 0, 0, 0.45)
     love.graphics.rectangle('fill', x + 8, y + 8, CARD_W, CARD_H)
     MenuKit.box(sel and 'card_sel' or 'card', x, y, CARD_W, CARD_H)
+    -- (tarjeta de EVENTO: marco dorado que late y su cinta; ver LevelCatalog.EVENTS)
+    local event = LevelCatalog.EVENTS[self.files[i]] ~= nil or (info and info.event)
+    if event then
+        local k = 0.6 + 0.4 * math.sin(self.t * 4)
+        love.graphics.setColor(1, 0.78, 0.25, 0.65 + 0.35 * k)
+        love.graphics.setLineWidth(4)
+        love.graphics.rectangle('line', x - 4, y - 4, CARD_W + 8, CARD_H + 8)
+        love.graphics.setLineWidth(1)
+    end
 
     local tx, w = x + 18, CARD_W - 36
     if not info then
@@ -300,6 +309,19 @@ function FreePlayState:drawCard(i, x, y)
         ModeSelectMenu.drawPreview(info, x + 16, y + 16, CARD_W - 32, PREV_H, self.t + i * 1.7, sel and 1 or 0.65)
         local ty = y + PREV_H + 34
         MenuKit.text(FONT_MED, fitText(FONT_MED, L.localName(info), w), tx, ty, w, 'left', sel and { 1, 0.86, 0.36 } or { 0.9, 0.92, 1 })
+        if event then
+            -- la cinta de EVENTO sobre la miniatura y, en vez de los datos, lo que es
+            local ribbon = L('mashup.event')
+            local rw = FONT_MED:getWidth(ribbon) + 24
+            love.graphics.setColor(0.86, 0.2, 0.45, 1)
+            love.graphics.rectangle('fill', x + CARD_W - rw - 18, y + 18, rw, 30)
+            MenuKit.text(FONT_MED, ribbon, x + CARD_W - rw - 18, y + 20, rw, 'center', { 1, 0.95, 0.7 })
+            local _, wl = FONT_SMALL:getWrap(L('mashup.card_hint'), w)
+            for k, s in ipairs(wl) do
+                MenuKit.text(FONT_SMALL, s, tx, ty + 30 + (k - 1) * 17, w, 'left', sel and { 1, 0.9, 0.75 } or { 0.85, 0.75, 0.62 })
+            end
+            return
+        end
         -- Datos (letra pequeña)
         local lines = {}
         local l1 = { info.w .. 'x' .. info.h, L(info.monsters == 1 and 'msm.monster' or 'msm.monsters', { n = info.monsters }) }

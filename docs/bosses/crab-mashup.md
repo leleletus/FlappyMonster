@@ -1,7 +1,8 @@
 # Mega Mashup de los Cangrejos (Crab Mega Mashup) — the script
 
-**Status: PLAN, nothing built yet.** The design below is the user's (answers of 2026-10-27); the points still open
-are at the end. Tick a milestone (`[x]`) in the same commit that does it and say in which version.
+**Status: BUILT (0.5.62), not played by the user yet.** The design is the user's (answers of 2026-10-27). Level
+`mashup_cangrejos` (Free Play, first card); director `src/world/entities/types/directors/crabmashup.lua`; harness
+`mashup_rules` (+ `GAME=1`: the real game).
 
 An EVENT boss rush: the four giant crabs — Mega Crabby (Tantrum), Icy Mega Crabby, Mega Gloomy Crabby and the Groove
 Crab — one after another, **each in its own arena and with its own music**, then a FINAL where they tag-team on a new
@@ -12,7 +13,7 @@ event card); single player and online co-op.
 ## The flow
 
 ```
-event intro (4 bars, once) → TANTRUM ⟲ → seam → ICY ⟲ → seam → GLOOMY ⟲ → seam → GROOVE ⟲ → seam
+event intro (8 bars, once, ON THE FINAL STAGE: the four in the background, one spotlight per bar; bar 5 → Tantrum's arena) → TANTRUM ⟲ → seam → ICY ⟲ → seam → GLOOMY ⟲ → seam → GROOVE ⟲ → seam
   → FINAL ⟲ (tag team, random order, 4 music variants) → END (chain explosion) → OUTRO ⟲ (empty stage, exit)
 ⟲ = loops until the crab has taken its damage; it then waits for the next CUT POINT (every 4 bars) to leave
 ```
@@ -169,18 +170,46 @@ nothing to build now.)
 - [x] 1. (0.5.61) MUSIC IN PIECES: `crab_mashup.py` renders the pieces (intro 8 · Tantrum loop 24 · seam · Icy loop 24 · seam
   · Gloomy loop 16 · seam · Groove loop · seam · 4 final variants 16 at 170 · end 8 · outro 8) with ONE master gain,
   a cut point every 4 bars, the cue map and a preview of every cut → seam join. Catalog entry.
-- [ ] 2. ADAPTIVE PLAYER + scenes + darkness fade (engine pieces, no gameplay yet).
-- [ ] 3. The level and the controller's main part: intro silhouettes, Tantrum → Icy → Gloomy → Groove with seams,
+- [x] 2. (0.5.62) ADAPTIVE PLAYER + scenes + darkness fade (engine pieces, no gameplay yet).
+- [x] 3. (0.5.62) The level and the controller's main part: intro silhouettes, Tantrum → Icy → Gloomy → Groove with seams,
   transitions, re-intros, shared bar, 2-damage turns, dazed until the cut, no rage, Groove decks without rage,
   checkpoints per crab.
-- [ ] 4. The final: tag team (random, enraged), background waiting / KO crabs, the four hazards, Gloomy's blackout,
+- [x] 4. (0.5.62) The final: tag team (random, enraged), background waiting / KO crabs, the four hazards, Gloomy's blackout,
   Groove's golden note, the stage (speakers, a big varied crowd), variants switching at cuts.
-- [ ] 5. The end: chain explosion on the coda, the outro on the empty stage, results / ranking on the stage screen,
+- [x] 5. (0.5.62) The end: chain explosion on the coda, the outro on the empty stage, results / ranking on the stage screen,
   the exit to Free Play; the Free Play event card.
-- [ ] 6. Smart food director.
-- [ ] 7. Online co-op: everything through the controller's snapshot, +1 per extra player, spectate until the next
+- [x] 6. (0.5.62) Smart food director.
+- [~] 7. (0.5.62, PARTLY: everything through the director's snapshot, +1 per extra player, ranking with names; NOT yet the
+  return of a spectator at the next seam — it lives in the server's player list) Online co-op: everything through the controller's snapshot, +1 per extra player, spectate until the next
   seam, server-side checkpoints; Protocol + 1.
-- [ ] 8. Tests (`mashup_rules` + the usual battery), docs, release.
+- [x] 8. (0.5.62) Tests (`mashup_rules` + the usual battery), docs, release.
+
+## How it is built (0.5.62)
+
+- **Level** `assets/levels/mashup_cangrejos.json`, from `tools/levelgen/arenas/make_mashup_cangrejos.py` (regenerating
+  it loses editor changes): the boss zones of `guarida_cangrejo_rey`, `glaciar_cangrejo`, `gruta_lugubre` and
+  `isla_del_groove` copied with their tiles, decorations, boss walls and phase blocks, 3 columns of rock between them,
+  and a new final stage (28-column zone on sand, open sky, boss walls, the finish to the right). Zones 1-5 are `event`
+  zones; 5 scenes (`Scenes.lua`). The player starts on the stage. Crab props (generic Boss props, group "Evento"):
+  `event`, `mashupRole`, `fixedHp`, `rageMode` ('never' in their turns, 'always' in the final), hp 2 / +1 per player;
+  the arena Groove `decksFromStart`, the final Groove `bigStage` (it draws the big stage: three crowd rows with the
+  islands' Gummies, six speakers — also while it waits in the background).
+- **Director** (`crabmashup`): music clock (piece, point, lap, pending switch) read from `cues.json`; phases wait →
+  intro → crab / seam … → final → end → outro. A crab at 0 calls `crabDown` (Boss:damage) → `eventFrozen` (no AI,
+  stars, only bounces) and the next cut is requested. Seams fade to black (0.45 s), move the players (`moveTo`:
+  scene, camera cut, spawn), put the next zone in 'intro' (players frozen, cinema bars with its name) and start its
+  intro; the fight starts with its loop. Final: the active crab comes down with its own intro (`swap`); the others are
+  `offstage` ('wait' / 'ko', drawn at half size in the background with one of their own states: `LOOK`); hazards on
+  the music's events (`cues.json` pops / music-box notes): Groove notes every even bar, Icy icicles (0.55 s crack
+  warning), Gloomy blackout every 8 bars (`level.darkness` fade), Tantrum's reserve Crabbies from the ceiling every 8
+  bars. End: one crab bursts on bars 5-8. Outro: zone cleared (walls down, finish open), results on the stage screen
+  (time is not kept; damage, hits, falls per player — online with names: `level.playerNames`).
+- **Checkpoints**: AdventureState passes `eventCheckpoint` (the crab you were on, 5 = the final) to the retry.
+- **Music**: `Sound.followAdaptive` follows the director (`BossZones.adaptive`); online the director's netPack carries
+  piece + point (interpolated) and the client's music follows it.
+- **Known limits** (to judge playing): the crabs' own timers are not tuned for 2-HP turns; the Groove's hop length in
+  the final is its 150 BPM one (the final runs at 170); the waiting crabs' hazards and their rate are first guesses;
+  the results screen is plain text on a panel.
 
 ## History and decisions
 
@@ -194,3 +223,9 @@ nothing to build now.)
   soft Groove outro and an exit; food from a smart director in every boss fight; online co-op scaled +1 per extra
   player with a ranking; the reward a future exclusive collectible. "All four at once would be hell" (the user) →
   the tag team.
+- 0.5.62, while it was being built: the user moved the EVENT INTRO onto the final stage ("the bosses must be on the
+  final stage during the intro, and when the normal Mega Crabby's part starts the scene changes to its arena: I think
+  it looks better"). Built so: bars 1-4 a spotlight per crab on the stage, bar 5 a fade to Tantrum's arena.
+- Same session, the user saw boss walls blink for a frame in the online tests → the server's "entities near you" was
+  measured from a dying player's body (it falls below the level); now from where they look, and the client keeps far
+  entities as they were (docs/architecture/netcode.md).

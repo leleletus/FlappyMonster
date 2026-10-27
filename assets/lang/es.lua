@@ -395,6 +395,14 @@ return {
         hint_tabs = "{lr} cambiar modo    {down} elegir nivel    {back} cerrar",
         hint_levels = "{lr} elegir nivel    {up} cambiar modo    {ok} confirmar    {back} volver",
     },
+    mashup = {
+        title = "MEGA MASHUP DE LOS CANGREJOS",
+        victory = "¡LOS CUATRO CANGREJOS, VENCIDOS!",
+        result_row = "{n}. {name}   daño {dmg} · golpes {hits} · caídas {deaths}",
+        exit = "La salida está abierta →",
+        event = "EVENTO",
+        card_hint = "Los cuatro cangrejos gigantes, uno tras otro, al ritmo de su música",
+    },
     boss = {
         default = "JEFE",
         duo = "{name} ×2",

@@ -133,3 +133,6 @@ conflicts with the sections above, the sections above describe the current behav
   (121.5 s); vs A: fury +4.1 / +4.7, climax +5.4, fall −2.9 dB. Lesson: a long boss loop needs its own way back —
   never cut from the peak to the opening. (3.99.2: the user rejected the fall being the intro again — "the song must end as a loop"; it is
   now a 4-bar close with the theme, F#m · D · E · C#, into A: `docs/audio/music-history.md`.)
+- 0.5.62: `level.darkness` (0..1) fades the darkness in and out over a `dark` level (`Darkness.render` mixes its canvas
+  toward white) — the Mega Mashup's blackout and Gloomy turn in the final; `dark` itself can now change at runtime
+  (scenes: `src/world/level/Scenes.lua`).

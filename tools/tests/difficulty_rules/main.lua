@@ -356,11 +356,13 @@ function cases.enfado()
         ('un jefe por arena en Xtra extremo=%s · %s · en Extremo enfadado=%s'):format(tostring(single), table.concat(out, ' · '), tostring(xf)))
 end
 
--- AYUDA EN LAS PELEAS DE JEFE: en Extremo caen comidas y en Xtra extremo además vidas, dentro de la zona y hasta
--- posarse en su suelo (no en el agua ni en la lava); en las demás, nada
+-- AYUDA EN LAS PELEAS DE JEFE (el director INTELIGENTE, 0.5.62): en Extremo (comida) y Xtra extremo (comida y vidas),
+-- y en un nivel de EVENTO en cualquier dificultad; SOLO cuando hace falta: con toda la vida no cae nada; con la vida
+-- baja cae comida a 2-6 casillas del jugador (nunca encima), posada en el suelo de la zona y fuera de la lava; en la
+-- última vida y con golpes seguidos, una vida; antes de una parte difícil (level.helpHint) herido, comida
 function cases.ayuda()
     local W, H = 24, 12
-    local function build(diff)
+    local function build(diff, event)
         local tiles = {}
         for r = 1, H do
             local row = {}
@@ -369,13 +371,14 @@ function cases.ayuda()
         end
         for c = 8, 10 do tiles[H - 1][c] = 3 end            -- un charco de lava: ahí no cae nada
         local level = Level.fromData({ name = 't', width = W, height = H, playerStart = { 3, H - 1 }, tiles = tiles, entities = {},
-                                       bossZones = { { id = 1, col = 4, row = 2, w = 16, h = H - 2 } } }, diff)
+                                       event = event, bossZones = { { id = 1, col = 4, row = 2, w = 16, h = H - 2 } } }, diff)
         level.difficulty = diff
         Difficulty.bind(level)
         local es = {}
         for _, pl in ipairs(level.entities) do es[#es + 1] = Entities.create(pl) end
-        level.liveEntities, level.players = es, {}
-        return level, es
+        local pa = { x = 16 * T, y = (H - 1) * T - 48, hp = 3, hpMax = 3, lives = 3, alive = true }
+        level.liveEntities, level.players = es, { pa }
+        return level, es, pa
     end
     local function count(level)
         local n = { bossdrops = 0, apple = 0, extralife = 0 }
@@ -385,31 +388,51 @@ function cases.ayuda()
         end
         return n
     end
+    local function out(es, kind)
+        local list = {}
+        for _, e in ipairs(es) do if e.summonOf == 'bossdrops' and e.alive and e.def.name == kind then list[#list + 1] = e end end
+        return list
+    end
     local nh, ne, nx = count((build('hard'))), count((build('extreme'))), count((build('xtra')))
-    local level, es = build('xtra')
-    step(level, es, 5)                                       -- (sin pelea: nada)
-    local before = 0
-    for _, e in ipairs(es) do if e.summonOf == 'bossdrops' and e.alive then before = before + 1 end end
+    local nev = count((build('normal', true)))
+    local level, es, pa = build('xtra')
     level.bossZones[1].state = 'fight'
-    step(level, es, 60)                                      -- (la primera vida, a 0,4-0,8 de `bossLives`)
+    step(level, es, 20)                                      -- (con toda la vida: nada)
+    local full = #out(es, 'apple') + #out(es, 'extralife')
+    pa.hp = 1                                                -- (vida baja: comida)
+    step(level, es, 4)
+    local foods = out(es, 'apple')
     local z = level.bossZones[1]
     local floor = (H - 1) * T
-    local landed, food, life, bad = 0, 0, 0, {}
-    for _, e in ipairs(es) do
-        if e.summonOf == 'bossdrops' and e.alive then
-            local feet = e.y + e.outerH / 2 + (e.skyLift or 0)
-            local ok = e.state ~= 'skyfall' and math.abs(feet - floor) < 2 and e.x > z.x0 and e.x < z.x1
-                       and not (e.x > 7 * T and e.x < 10 * T)
-            if ok then landed = landed + 1 else bad[#bad + 1] = ('%s x=%d pies=%d %s'):format(e.def.name, e.x, feet, e.state) end
-            if e.def.name == 'apple' then food = food + 1 else life = life + 1 end
+    local bad = {}
+    for _, e in ipairs(foods) do
+        local feet = e.y + e.outerH / 2 + (e.skyLift or 0)
+        local d = math.abs(e.x - pa.x) / T
+        if e.state == 'skyfall' or math.abs(feet - floor) >= 2 or e.x < z.x0 or e.x > z.x1 or (e.x > 7 * T and e.x < 10 * T)
+           or d < 1.5 or d > 6.5 then
+            bad[#bad + 1] = ('x=%d pies=%d %s a %.1f casillas'):format(e.x, feet, e.state, d)
         end
     end
+    pa.lives = 1                                              -- (última vida y le cuesta: una vida)
+    pa.hp = 3; step(level, es, 0.1); pa.hp = 2; step(level, es, 0.1); pa.hp = 1
+    step(level, es, 3)
+    local lives = #out(es, 'extralife')
+    -- evento en Normal: antes de lo difícil (aviso), herido → comida
+    local lv2, es2, pa2 = build('normal', true)
+    lv2.bossZones[1].state = 'fight'
+    pa2.hp = 2
+    step(lv2, es2, 2)
+    local beforeHint = #out(es2, 'apple')
+    lv2.helpHint = true
+    step(lv2, es2, 2)
+    local afterHint = #out(es2, 'apple')
     Difficulty.bind(nil)
     check('ayuda', nh.bossdrops == 0 and ne.bossdrops == 1 and ne.apple == 2 and ne.extralife == 0
-                   and nx.apple == 2 and nx.extralife == 1 and before == 0 and food == 2 and life == 1 and #bad == 0,
-        ('reserva difícil %d/%d/%d, extremo %d/%d/%d, xtra %d/%d/%d (director/comidas/vidas); en 60 s de pelea (Xtra) cayeron %d comidas y %d vidas, %d posadas en el suelo de la zona (fuera de la lava)%s; sin pelea %d')
-        :format(nh.bossdrops, nh.apple, nh.extralife, ne.bossdrops, ne.apple, ne.extralife, nx.bossdrops, nx.apple, nx.extralife,
-                food, life, landed, #bad > 0 and (': MAL ' .. table.concat(bad, '; ')) or '', before))
+                   and nx.apple == 2 and nx.extralife == 1 and nev.bossdrops == 1 and full == 0 and #foods >= 1 and #bad == 0
+                   and lives == 1 and beforeHint == 0 and afterHint >= 1,
+        ('reserva difícil %d, extremo %d/%d/%d, xtra %d/%d/%d, evento en normal %d; con toda la vida cae %d; vida baja → %d comidas%s; última vida → %d vidas; evento: sin aviso %d, con aviso %d')
+        :format(nh.bossdrops, ne.bossdrops, ne.apple, ne.extralife, nx.bossdrops, nx.apple, nx.extralife, nev.bossdrops, full,
+                #foods, #bad > 0 and (' MAL: ' .. table.concat(bad, '; ')) or ' bien puestas', lives, beforeHint, afterHint))
 end
 
 function love.load()

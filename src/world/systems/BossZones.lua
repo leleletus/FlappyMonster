@@ -60,12 +60,14 @@ function BossZones.normalize(z, i, openTop)
         w     = math.max(4, int(z.w, BossZones.DEFAULT_W)),
         h     = math.max(3, int(z.h, BossZones.DEFAULT_H)),
         music = music,
+        -- (zona de EVENTO: la lleva un director — el Mega Mashup, types/directors/crabmashup.lua —, no empieza sola)
+        event = z.event == true or nil,
     }
 end
 
 function BossZones.serialize(z)
     return { id = z.id, col = z.col, row = z.row, w = z.w, h = z.h,
-             music = (z.music ~= BossZones.DEFAULT_MUSIC) and z.music or nil }
+             music = (z.music ~= BossZones.DEFAULT_MUSIC) and z.music or nil, event = z.event }
 end
 
 -- Rectángulo en px de mundo
@@ -160,7 +162,12 @@ function Controller:update(dt)
         if pa.alive ~= false then players[#players+1] = pa end
     end
     for _, z in ipairs(self.level.bossZones or {}) do
-        if z.state ~= 'cleared' then
+        if z.event then
+            -- (de evento: cuántos hay dentro, para el director; los estados los pone él)
+            local inside = 0
+            for _, pa in ipairs(players) do if contains(z, pa.x, pa.y) and not pa.dying then inside = inside + 1 end end
+            z.arrived, z.needed = inside, #players
+        elseif z.state ~= 'cleared' then
             local inside = 0
             for _, pa in ipairs(players) do
                 local inZ = contains(z, pa.x, pa.y)
@@ -429,6 +436,14 @@ function BossZones.fighting(level)
     for _, z in ipairs(level.bossZones or {}) do
         if z.state == 'fight' then return z end
     end
+    return nil
+end
+
+-- MÚSICA ADAPTATIVA: un director en el nivel (level.musicDirector, p. ej. el del Mega Mashup) con musicState() →
+-- mapa, pieza, posición, próximo cambio (Sound.followAdaptive). nil = no manda ninguno ahora
+function BossZones.adaptive(level)
+    local d = level and level.musicDirector
+    if d and d.alive ~= false and d.musicState then return d:musicState() end
     return nil
 end
 

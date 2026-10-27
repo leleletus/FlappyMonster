@@ -591,7 +591,10 @@ def build(secs=SECTIONS, intro=INTRO, variant=None, kind='linear', ref=None, nam
     k_ = int(0.03 * SR); env = np.convolve(np.pad(env, k_, mode='edge'), np.ones(2 * k_ + 1) / (2 * k_ + 1), mode='valid')[:len(x)]
     x, side = x * env, side * env
     if kind != 'linear':                                           # (pieza: sin masterizar, la mide pieces())
-        return dict(st=np.stack([x + side, x - side], 1), T0=T0, n=n, mel=mel, ref=ref, NB=NB, lu=lu,
+        # (los MOMENTOS de la música que el evento usa para sus peligros: los pops del slap y las notas de la caja)
+        evs = dict(pops=sorted({round(float(tv(b, st)), 3) for b, st, nn, d, v in riffs if v >= 120}),
+                   box=sorted({round(float(tv(b, st)), 3) for b, st, nn, d in desc}))
+        return dict(st=np.stack([x + side, x - side], 1), T0=T0, n=n, mel=mel, ref=ref, NB=NB, lu=lu, ev=evs,
                     bars=[(float(T0[b - 1]), bpm_of[b - 1]) for b in range(1, NB + 1)])
     y = F.master(np.stack([x + side, x - side], 1), lufs=LUFS)
 
@@ -671,7 +674,8 @@ def pieces():
         bars = r['bars']; length = r['n'] / SR
         cuts = [round(bars[i][0], 4) for i in range(4, len(bars), 4)] + [round(length, 4)] if loop else []
         cues[pid] = dict(file=f'{CUE_DIR}/{pid}.ogg', loop=loop, length=round(len(y) / SR if not loop else length, 4),
-                         music_end=round(length, 4), bars=[[round(t, 4), bp] for t, bp in bars], cuts=cuts, next=nxt)
+                         music_end=round(length, 4), bars=[[round(t, 4), bp] for t, bp in bars], cuts=cuts, next=nxt,
+                         events=r['ev'] if pid.startswith('final_') else {})
         print(f'    {pid:14s} {r["NB"]:3d} compases  {length:6.2f} s  {F.loudness(y):6.1f} LUFS  pico {np.abs(y).max():.2f}'
               + (f'  cortes {len(cuts)}' if loop else ''))
     return out, cues

@@ -4,8 +4,7 @@ A boss is an entity derived from `src/world/entities/base/Boss.lua` placed insid
 players in, runs the intro, starts and ends the fight, moves the camera and the respawn point, and owns the music.
 Recipe for a new boss: [how-to-add-a-boss](how-to-add-a-boss.md).
 In progress: two new bosses replace Mega Crabby and Mega Gloomy, which become secret bosses —
-[new-bosses-plan](new-bosses-plan.md). Planned: the four crabs as an event boss rush with adaptive music —
-[crab-mashup](crab-mashup.md).
+[new-bosses-plan](new-bosses-plan.md). The four crabs as an event boss rush with adaptive music: [crab-mashup](crab-mashup.md).
 
 | Boss | Type id | Doc | Story level | Shard |
 |---|---|---|---|---|
@@ -20,6 +19,7 @@ In progress: two new bosses replace Mega Crabby and Mega Gloomy, which become se
 | The Mirror | `mirror` | [mirror](mirror.md) | `ruta_del_espejo` | 7 |
 | Mirror chase (not a fight) | `mirrorchase` | [mirror-chase](mirror-chase.md) | `huida_del_espejo` | — |
 | The Groove (El Groove, SECRET, after the game; fights to its music) | `groovecrab` | [groovecrab](groovecrab.md) | `isla_del_groove` (secret map node) | — |
+| Crab Mega Mashup (EVENT: the four crabs in turns, adaptive music; Free Play) | `crabmashup` (director) | [crab-mashup](crab-mashup.md) | `mashup_cangrejos` | — |
 
 **Files:** `src/world/systems/BossZones.lua` (zones + the fight controller), `src/world/entities/base/Boss.lua`
 (health, hits, i-frames, stun rule, generic intro and death, ally turns, `strike`), `src/ui/BossHud.lua` (bars,

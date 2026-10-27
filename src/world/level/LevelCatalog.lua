@@ -25,12 +25,19 @@ end
 
 -- Archivos de nivel que ve el juego (carpeta montada: instalación +
 -- actualización), ordenados
+-- Niveles de EVENTO (su JSON lleva "event": true): Juego Libre los pone los primeros, con su tarjeta destacada
+LevelCatalog.EVENTS = { ['mashup_cangrejos.json'] = 1 }
+
 function LevelCatalog.files()
     local out = {}
     for _, f in ipairs(love.filesystem.getDirectoryItems(LevelCatalog.DIR)) do
         if LevelCatalog.isListed(f) then out[#out + 1] = f end
     end
-    table.sort(out, function(a, b) return a:lower() < b:lower() end)
+    local E = LevelCatalog.EVENTS
+    table.sort(out, function(a, b)
+        if (E[a] or 99) ~= (E[b] or 99) then return (E[a] or 99) < (E[b] or 99) end
+        return a:lower() < b:lower()
+    end)
     return out
 end
 
@@ -98,6 +105,7 @@ function LevelCatalog.info(lv, path, file)
     info.path, info.file = path, file
     info.name = (lv.name and lv.name ~= '?') and lv.name or file:gsub('%.json$', '')
     info.name_en = lv.name_en                       -- (Lang.localName elige según el idioma)
+    info.event = lv.event                           -- (nivel de EVENTO: tarjeta destacada en Juego Libre)
     info.finish = lv:countTrigger('finish')
     info.autoScroll = lv.autoScroll ~= nil
     info.pointAreas = #(lv.pointAreas or {})

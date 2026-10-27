@@ -122,6 +122,15 @@ delivered in roster → `self.roster[idx].color`.
   `Protocol.packOwnState/applyOwnState/isValidOwnState` (and VERSION bumped),
   otherwise reconciliation desyncs.
 
+## Entities near each player (and the flickering boss walls)
+
+The server sends each player only the entities within `Protocol.NEAR_X / NEAR_Y` (1400 × 1000 px) of where that
+player LOOKS (bosses always): the player's position, frozen while dying (the death animation jumps and falls up to
+500 px below the level while the camera stays). The client treats an entity that did not come as "at rest"
+(`Entity:netRest`) only if it is within that range of its own camera (minus 300 px); farther away it keeps its last
+state. 0.5.62, the user: "boss walls sometimes blink for a frame" — the distance was measured from the falling body,
+so the walls above stopped coming, were put to rest (= hidden) and came back on respawn.
+
 ## Sounds over the network
 
 - Sounds decided only by the server (the causing client doesn't predict them) go in
@@ -160,4 +169,4 @@ v12 launches · v14 crouch jump · v16 King of the Hill · v18 Mega Crabby · v2
 and invisible blocks, helmet, pufferfish · v24 subtiles · v25 connected floods · v27 ON/OFF blocks · v28 generic boss
 intros · v32 bombs · v33 snow / ice · v36 freezer · v38 Snowball Boss, zone phases · v39-40 icy crabs · v41 Gummy
 King · v43 dark levels, flashlight, Gloomy · v46 Mega Gloomy · v48-52 Hopper and island variants · v53-54 Mirror
-chase · v55 apple / heal pickup · v56 moving point zone clock, difficulty chosen by the host · v57 Claudio (first data-driven type shipped) · v58 boss-fight help on Extreme / Xtra Extreme (`bossdrops` director + its reserve appended to the entity list) · v59 Xtra Extreme: one angry boss (`bossFury`) instead of two · v60 new boss defeats (they flee giant: new dying_* states) · v64 start countdown (world frozen, `cd` in `game_init`) · v65 cave Hopper in the dark = the moth (new `scared` state) · v66 Hoppers replace some Gloomies in the dark caves · v67 Giant Hopper (caves boss) · v68-69 The Groove (secret boss) · v70 The Groove phase 2 (DJ decks, bass drop; no conga) · v71 Groove Crab: crowd mood in its netPack, bursts on death (`dying_burst`).
+chase · v55 apple / heal pickup · v56 moving point zone clock, difficulty chosen by the host · v57 Claudio (first data-driven type shipped) · v58 boss-fight help on Extreme / Xtra Extreme (`bossdrops` director + its reserve appended to the entity list) · v59 Xtra Extreme: one angry boss (`bossFury`) instead of two · v60 new boss defeats (they flee giant: new dying_* states) · v64 start countdown (world frozen, `cd` in `game_init`) · v65 cave Hopper in the dark = the moth (new `scared` state) · v66 Hoppers replace some Gloomies in the dark caves · v67 Giant Hopper (caves boss) · v68-69 The Groove (secret boss) · v70 The Groove phase 2 (DJ decks, bass drop; no conga) · v71 Groove Crab: crowd mood in its netPack, bursts on death (`dying_burst`) · v72 Crab Mega Mashup: the `crabmashup` director (new type, own netPack: phase, music piece and point, turns, offstage crabs, hazards, stats, scene), event props on bosses, `bossdrops` also on event levels.

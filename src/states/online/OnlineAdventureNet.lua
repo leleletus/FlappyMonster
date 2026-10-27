@@ -15,6 +15,7 @@ local AutoScroll           = require 'src/world/systems/AutoScroll'
 local Floods               = require 'src/world/systems/Floods'
 local PointAreas           = require 'src/world/systems/PointAreas'
 local json                 = require 'libs/json'
+local Protocol             = require 'src/network/Protocol'
 
 return function(OnlineAdventureState, P)
 local TICK_DT, TELEPORT_DIST, EVENT_MAX_WAIT, SPEC_WAIT, lerp = P.TICK_DT, P.TELEPORT_DIST, P.EVENT_MAX_WAIT, P.SPEC_WAIT, P.lerp
@@ -45,8 +46,10 @@ function OnlineAdventureState:_onGameInit(data)
     self.startTicks = tonumber(data.cd) or 0
 
     self.myIdx = data.idx
+    self.level.playerNames = {}                         -- (idx → nombre: el ranking del Mega Mashup)
     for _, r in ipairs(data.roster or {}) do
         self.roster[r.idx] = r
+        self.level.playerNames[r.idx] = r.name
         if r.id then self.rosterById[r.id] = r end
         if r.idx ~= self.myIdx then
             self.remotePlayers[r.idx] = OnlinePlayer:new(r.id, r.name, r.color)
@@ -201,7 +204,10 @@ function OnlineAdventureState:_applyInterpolation()
         local db = eb[i]
         local da = ea[i] or db
         if not db then
-            er:netRest()              -- no vino: está en reposo (ver Entity:netAtRest)
+            -- no vino: está en reposo (ver Entity:netAtRest)… salvo que esté LEJOS de lo que miramos (el servidor solo
+            -- manda lo cercano): entonces sigue como estaba (si no, un muro de jefe parpadeaba al cambiar de sitio)
+            local cx, cy = (self.camX or 0) + WINDOW_W / 2, (self.camY or 0) + WINDOW_H / 2
+            if math.abs(er.x - cx) < Protocol.NEAR_X - 300 and math.abs(er.y - cy) < Protocol.NEAR_Y - 300 then er:netRest() end
         else
             local x, y = db[1], db[2]
             if math.abs(db[1]-da[1]) < TELEPORT_DIST and math.abs(db[2]-da[2]) < TELEPORT_DIST then

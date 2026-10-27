@@ -31,6 +31,9 @@ end
 local SPECIES = { 'crabby', 'crabby_river', 'crabby_cave', 'crabby_fortress', 'crabby_ice', 'crabby_lava' }
 local function crabImg(sp, f) return img('assets/images/enemies/' .. SPECIES[sp] .. '/crab' .. f .. '.png') end
 local function gummyImg(f) return img('assets/images/enemies/gummy/gummy' .. f .. '.png') end
+-- (el público VARIADO del escenario grande: los Gummies de cada isla)
+local MIX = { 'gummy', 'gummy_cave', 'gummy_fortress', 'gummy_ice', 'gummy_magma' }
+local function mixImg(i, f) return img('assets/images/enemies/' .. MIX[i] .. '/' .. 'gummy' .. f .. '.png') end
 
 function GC.loadAssets()
     if art or not (love and love.graphics) then return end
@@ -48,14 +51,23 @@ local function quad(s, i) return s.images and s.images[i] or s.image, s.quads[i]
 local BEAT_COLS = { { 1, 0.31, 0.64 }, { 0.25, 0.85, 1 }, { 1, 0.82, 0.25 }, { 0.36, 0.94, 0.48 } }
 -- (los colores de las NOTAS normales —note-Sheet.png—: sin amarillo, que es el de la dorada; el usuario, 0.5.52)
 local NOTE_COLS = { { 1, 0.31, 0.64 }, { 0.25, 0.85, 1 }, { 0.71, 0.42, 1 }, { 0.36, 0.94, 0.48 } }
-local function beatOf(self) local s = self.songT or 0; return math.floor(s / BEAT), (s / BEAT) % 1 end
-local function live(self) return self:isActive() and not EDITOR_VIEW and self.zone ~= nil and self.zone.state == 'fight' end
+local function beatOf(self)
+    if self.eventRef and self.eventRef.beatPos then return self.eventRef:beatPos() end   -- (el evento: su música)
+    local s = self.songT or 0; return math.floor(s / BEAT), (s / BEAT) % 1
+end
+-- (`props.bigStage`: el ESCENARIO GRANDE del final del Mega Mashup — lo pone este Groove, esté peleando o al fondo —)
+local function bigUp(self) return self.props.bigStage and self.zone ~= nil and (self.zone.state == 'fight' or self.zone.state == 'intro') end
+local function live(self)
+    if bigUp(self) then return not EDITOR_VIEW end
+    return self:isActive() and not EDITOR_VIEW and self.zone ~= nil and self.zone.state == 'fight'
+end
 -- EL ESCENARIO APARECE EN LA ENTRADA (el usuario: que no salga de la nada al empezar la pelea): s de entrada (nil =
 -- no se ve: antes de la entrada; 99 = ya está todo, en la pelea y mientras cae vencido). Y AL REVENTAR SE RECOGE igual
 -- que salió, al revés (el usuario, 0.5.56: "desaparecía de golpe"): la entrada hacia atrás en P.STAGE_OUT s
 local STAGE_IN = 3.3                                    -- (lo que tarda en salir todo: los láseres, a 3.2)
 local function stageT(self)
     if EDITOR_VIEW then return nil end
+    if bigUp(self) then return 99 end
     local st = self.state
     if st == 'intro' then return self.deadTimer or 0 end
     if st == 'ready' then return self:introTime() + (self.deadTimer or 0) end
@@ -174,6 +186,7 @@ end
 local CROWD_DARK = { 0.16, 0.10, 0.24 }
 function GC:renderBack(camX, camY)
     if not art or self.state == 'dead' then return end
+    if self.offstage and not self.props.bigStage then return end      -- (al fondo del evento: sin su escenario)
     local et = stageT(self)
     if not et then return end
     local zx0, zx1, zy0 = self:zoneBounds()
@@ -228,12 +241,24 @@ function GC:renderBack(camX, camY)
     -- el PÚBLICO: cangrejos de todas las especies y Gummies, en silueta, saltando a contratiempo, con barras de luz.
     -- DOS filas (0.5.55, el usuario: "más audiencia, detrás y entre los que ya están"): la de atrás más pequeña, más
     -- oscura y más alta; la de delante, más apretada
-    self:drawCrowd(camX, camY, et, nb, beat, { n = 34, scale = 3, dark = 0.62, lift = 0.55 * T, seed = 17.3, gap = 0.9 })
-    self:drawCrowd(camX, camY, et, nb, beat, { n = 30, scale = 4, dark = 1, lift = 0, seed = 3.1, gap = 0.6 })
+    if self.props.bigStage then
+        -- (el ESCENARIO GRANDE del final del evento: el usuario, "la audiencia del Groove pero mucho más amplia y
+        -- variada" → tres filas, más gente y también Gummies de todas las islas y saltarines)
+        self:drawCrowd(camX, camY, et, nb, beat, { n = 52, scale = 2, dark = 0.45, lift = 1.15 * T, seed = 41.9, gap = 1.0, mix = true })
+        self:drawCrowd(camX, camY, et, nb, beat, { n = 44, scale = 3, dark = 0.66, lift = 0.6 * T, seed = 17.3, gap = 0.9, mix = true })
+        self:drawCrowd(camX, camY, et, nb, beat, { n = 38, scale = 4, dark = 1, lift = 0, seed = 3.1, gap = 0.6, mix = true })
+    else
+        self:drawCrowd(camX, camY, et, nb, beat, { n = 34, scale = 3, dark = 0.62, lift = 0.55 * T, seed = 17.3, gap = 0.9 })
+        self:drawCrowd(camX, camY, et, nb, beat, { n = 30, scale = 4, dark = 1, lift = 0, seed = 3.1, gap = 0.6 })
+    end
     -- los BAFLES a los lados de la zona: la membrana sale en cada bombo (tiempos 1 y 3)
     local kick = dance and beat < 0.2 and nb % 2 == 0
     local rise = math.floor((1 - kSpk) * 26 * 6)                       -- (salen del suelo: los tapan los bloques)
-    for _, sx0 in ipairs({ zx0 + 0.9 * T, zx1 - 0.9 * T }) do
+    local spk = { zx0 + 0.9 * T, zx1 - 0.9 * T }
+    if self.props.bigStage then                                         -- (escenario grande: más bafles, en torres)
+        spk = { zx0 + 0.9 * T, zx0 + 3.2 * T, zx0 + (zx1 - zx0) * 0.33, zx0 + (zx1 - zx0) * 0.67, zx1 - 3.2 * T, zx1 - 0.9 * T }
+    end
+    for _, sx0 in ipairs(spk) do
         local si, sq = quad(art.speaker, kick and 2 or 1)
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.draw(si, sq, math.floor(sx0 - camX), math.floor(fy - camY) + rise, 0, 6, 6, 9, 26)
@@ -283,7 +308,8 @@ function GC:drawCrowd(camX, camY, et, nb, beat, row)
         local kIn = appear(et, 0.7 + i * 0.05, 1.0 + i * 0.05)          -- (se asoma de debajo de la arena)
         up = up - math.floor((1 - kIn) * 3 * T) + math.floor(math.sin(kIn * math.pi) * 14) + math.floor(row.lift)
         local im, sp
-        if r < 0.2 then im = gummyImg((nb + off) % 2 + 1)
+        if row.mix and r < 0.38 then im = mixImg(math.floor(r * 113) % #MIX + 1, (nb + off) % 2 + 1)
+        elseif r < 0.2 then im = gummyImg((nb + off) % 2 + 1)
         else sp = math.floor(r * 97) % #SPECIES + 1; im = crabImg(sp, (nb + off) % 3 + 1) end
         if im then
             local w, h = im:getWidth() * S, im:getHeight() * S
@@ -515,9 +541,11 @@ function GC:render(camX, camY)
     if self.state == 'dead' or not art then return end
     local st = self.state
     local now = love.timer.getTime()
-    if stageT(self) then self:drawFloor(camX, camY) end
-    if live(self) or self:isDying() then self:drawDecks(camX, camY) end
-    if live(self) then self:drawSpotlights(camX, camY) end
+    -- (`_bodyOnly`: solo él — el director del Mega Mashup lo dibuja pequeño al fondo —, sin pista, platos ni focos)
+    local extras = not self._bodyOnly
+    if extras and stageT(self) then self:drawFloor(camX, camY) end
+    if extras and (live(self) or self:isDying()) then self:drawDecks(camX, camY) end
+    if extras and live(self) then self:drawSpotlights(camX, camY) end
     -- (¿anda? lo que avanzó desde el dibujo anterior)
     self._walking = self._lx ~= nil and math.abs(self.x - self._lx) > 0.05 and st == 'groove'
     self._lx = self.x
@@ -559,11 +587,12 @@ function GC:render(camX, camY)
     love.graphics.pop()
     if dizzy then BossFx.stars(fx, fy - 9 * MS, 9 * MS, 1.8 * MS, 7, alpha, 'front') end
     if not EDITOR_VIEW then self:drawGlasses(camX, camY, alpha) end
+    if not extras then love.graphics.setColor(1, 1, 1, 1); return end
     self:drawOver(camX, camY)
     if live(self) then self:drawDrop(camX, camY) end
     -- el destello al empezar cada frase (el primer tiempo de cada 4 compases)
     if live(self) then
-        local b, sec, k, step = GC.where(self.songT or 0)
+        local b, sec, k, step = self:whereAt(self.songT or 0)
         if sec ~= 'I' and k % 4 == 1 and step < 1.2 then
             local zx0, zx1, zy0, zy1 = self:zoneBounds()
             love.graphics.setBlendMode('add')
@@ -643,7 +672,7 @@ end
 -- igual online) — se ve venir el disparo
 function GC:drawCue(camX, camY, now)
     if not (self:isActive() and self.state == 'snap') or EDITOR_VIEW then return end
-    local _, sec, k, step = GC.where(self.songT or 0)
+    local _, sec, k, step = self:whereAt(self.songT or 0)
     local plan = GC.plan(sec, k, self.rage, self:goldOff())
     local nextS
     for _, s in ipairs(plan.notes) do if s > step and (not nextS or s < nextS) then nextS = s end end

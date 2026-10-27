@@ -98,6 +98,8 @@ end
 BossHud.duoName = duoName
 
 function BossHud.drawZone(z, y, appear)
+    -- (una BARRA COMPARTIDA que pone otro: el director de un evento — z.barOf = { hp, hpMax, title() } —)
+    if z.barOf then BossHud.drawBoss(z.barOf, y, appear); return y + 72 end
     local pair = {}
     for _, b in ipairs(z.bosses or {}) do if b.props and b.props.xtraPair then pair[#pair + 1] = b end end
     if #pair >= 2 then
@@ -275,7 +277,7 @@ function BossHud.drawCinema(level)
         if cine.k == 0 then cine.t = 0 end
         cine.k = math.min(1, cine.k + dt / CINE_IN)
         cine.t = cine.t + dt
-        cine.title = zone and duoName(zone.bosses or {}) or nil   -- (dos iguales: "NOMBRE ×2")
+        cine.title = zone and (zone.cineKey and L(zone.cineKey) or duoName(zone.bosses or {})) or nil   -- (dos iguales: "NOMBRE ×2")
     else
         cine.k = math.max(0, cine.k - dt / CINE_OUT)
     end

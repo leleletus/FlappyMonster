@@ -265,6 +265,14 @@ function Darkness.render(level, camX, camY, sources, entities, scene)
             end
         end
     end
+    -- (a oscuras pero FUNDIÉNDOSE: level.darkness < 1 — se apagan / encienden las luces — la oscuridad va hacia blanco)
+    local fade = dark and level.darkness
+    if fade and fade < 1 then
+        love.graphics.origin()
+        love.graphics.setBlendMode('alpha')
+        love.graphics.setColor(1, 1, 1, 1 - math.max(0, fade))
+        love.graphics.rectangle('fill', 0, 0, canvas:getWidth(), canvas:getHeight())
+    end
     love.graphics.setCanvas(prevCanvas)
     love.graphics.setBlendMode('alpha')
     if scX then love.graphics.setScissor(scX, scY, scW, scH) end

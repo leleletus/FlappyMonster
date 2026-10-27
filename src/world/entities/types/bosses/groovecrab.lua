@@ -167,7 +167,19 @@ function GC:onFightStart(n)
     self.songT, self.prevT = 0, -1e-6
     self.rage = require('src/core/Difficulty').flag('bossFury') == true
     self.phase = 1
+    -- (el EVENTO del Mega Mashup lo dice en sus props: `decksFromStart` = con los platos desde el principio y SIN
+    -- enfado — su turno en la parte principal —; rageAt ≥ 1 = enfadado desde el principio — el final —)
+    if self.props.decksFromStart then self.phase, self.p2T = 2, 0 end
+    if (self.props.rageAt or 0.5) >= 1 then self.phase, self.rage, self.p2T = 2, true, 0 end
     self:enter('groove')
+end
+
+-- Dónde va la canción a los `t` s de SU reloj (songT). Con un director de evento (el Mega Mashup) manda la música
+-- del evento: su pieza, compás y semicorchea, traducidos a las secciones de este tema
+function GC:whereAt(t)
+    local ev = self.eventRef
+    if ev and ev.grooveWhere then return ev:grooveWhere(t - (self.songT or 0)) end
+    return GC.where(t)
 end
 
 -- ── Dónde va la canción ───────────────────────────────────────────────────────
@@ -262,7 +274,7 @@ end
 -- UN dibujo por compás (0.5.51, el usuario: "más visibles y evitables"; antes dos, con 0,4 s de aviso): AVISO los 3
 -- primeros tiempos (FLOOR_WARN), la COLUMNA en el 4º (BOOM_LEN semicorcheas)
 function GC:floorNow()
-    local b, sec, k, step = GC.where(self.songT or 0)
+    local b, sec, k, step = self:whereAt(self.songT or 0)
     if not GC.floorOn(sec, k) then return nil end
     local n = self:panels()
     local which = (k - 1) % 4 + 1
@@ -344,7 +356,7 @@ end
 -- acabar (el usuario, 0.5.56). Del reloj de la canción: igual online (las casillas, como cambios de tile)
 function GC:decksAway()
     if not self:goldOff() then return false end
-    local _, sec, k = GC.where(self.songT or 0)
+    local _, sec, k = self:whereAt(self.songT or 0)
     return GC.floorOn(sec, k)
 end
 -- Pone o quita las casillas de las plataformas (las de los bloques de fase de su zona); una ocupada espera
@@ -456,6 +468,7 @@ end
 -- (sin efectos: el cliente online lo usa para predecir)
 function GC:interact(pa)
     if not self:isActive() then return nil end
+    if self.eventFrozen then return Boss.interact(self, pa) end        -- (evento: aturdido hasta el corte)
     if self:trampOut() and (pa.vy or 0) > 0 then
         local tb, pob = self:trampBox(), pa:getOuterBounds()
         if overlap(pob, tb) and pob.y + pob.h <= tb.y + tb.h then
@@ -723,8 +736,8 @@ function GC:updateBoss(dt, level)
         return
     end
     self.prevT, self.songT = self.songT, self.songT + dt
-    local b, sec, k, step = GC.where(self.songT)
-    local pb, _, _, pstep = GC.where(math.max(0, self.prevT))
+    local b, sec, k, step = self:whereAt(self.songT)
+    local pb, _, _, pstep = self:whereAt(math.max(0, self.prevT))
     -- (¿acaba de pasar la semicorchea s? la 0 es el cambio de compás)
     local crossed = function(s) if s == 0 then return pb ~= b end; return pb == b and pstep < s and step >= s end
     local plan = GC.plan(sec, k, self.rage, self:goldOff())
@@ -919,6 +932,9 @@ return {
     props = Boss.props({ hp = 11, hpPerPlayer = 4 }, {
         { key = 'rageAt', kind = 'number', label = '2ª fase con (fracción de vida)', group = G, default = 0.5,
           min = 0.1, max = 0.9, step = 0.05 },
+        -- (el Mega Mashup: en su turno, con los platos desde el principio y sin enfado; en el final, el escenario grande)
+        { key = 'decksFromStart', kind = 'bool', label = 'Platos desde el principio (sin enfado)', group = 'Evento', default = false },
+        { key = 'bigStage', kind = 'bool', label = 'Escenario grande (el final del Mega Mashup)', group = 'Evento', default = false },
     }),
     editor = { sprite = 'assets/images/bosses/groovecrab/body-Sheet.png', frameW = FW },
 }
