@@ -50,7 +50,7 @@ snapshot; the client's music starts when it sees the fight, with the same delay 
   platform (`GC:findDecks`: the left-most and right-most standable runs of the zone, ≥ 2 tiles above the floor and
   wide enough for a deck; same on SP and server; positions travel in the snapshot). The platforms are 5 tiles up and a
   double jump reaches ~3.1, so the ONLY way up is HIS trampoline. Stomp / ground-pound a deck → it spins for `DECK_T`
-  = 5 bars (8 s; stomping again restarts it; the player bounces), with a 5-LED countdown that turns red and blinks at
+  = 8 bars (12.8 s; stomping again restarts it; the player bounces; meanwhile he walks under the other one), with a 5-LED countdown that turns red and blinks at
   the end, then stops (`switchOff`). An arrow bobs over every stopped deck. BOTH spinning at once → the BASS DROP: the
   two speakers fire rings and a beam at him (`dropT`, drawn `DROP_FX` 0.8 s) → knocked out. Decks can't be started
   while he is knocked out or regrowing. If an arena has no such platforms (`decks = false`), phase 2 keeps the golden
@@ -135,3 +135,10 @@ corners of the zone onto it, changing colour on every beat (additive cones).
   switches) in the arena (`make_jefe_groove.py`) and in `isla_del_groove.json` (added by hand: `build.py --only
   isla_del_groove` regenerated the level WITHOUT its later retheme and decorations — not used). `findDecks` counts
   the hidden cells, so the decks are known from the start and rise with their platforms.
+- 0.5.53, the user: (1) the decks were too far apart and, if he stood still in an attack away from the second one,
+  activating both was impossible: a deck now spins `DECK_T` 8 bars (12.8 s, was 8 s) and, with exactly ONE deck
+  spinning, he goes to stand under the OTHER (`GC:deckGoal`: walking at 1.8 × `WALK_SPD`, also while snapping notes,
+  and his hops aim there), so his trampoline is where you need it; (2) the decks were black on the night stage and
+  only the arrows told what to do: `deck-Sheet.png` is now a LIGHT box with a dark outline, a silver-rimmed black
+  record and a dark LED strip, and a stopped deck pulses a warm glow (`drawDecks`; the halos are no longer clipped to
+  the deck's box).

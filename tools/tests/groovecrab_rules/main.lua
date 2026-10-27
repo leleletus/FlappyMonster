@@ -440,7 +440,11 @@ function cases.platos()
     local pl = onDeck(level, boss, decks[1])
     stepAll(level, es, { pl }, 2 / 60, function() pl.invT = 9 end)
     local spun, bounced = decks[1].on > boss.DECK_T - 0.1, pl.vy < 0
-    stepAll(level, es, {}, boss.DECK_T + 0.1)
+    -- (con uno girando va a ponerse bajo el otro)
+    local g0 = math.abs(boss.x - decks[2].x)
+    stepAll(level, es, {}, 3.0)
+    local g1 = math.abs(boss.x - decks[2].x)
+    stepAll(level, es, {}, boss.DECK_T - 3.0 + 0.1)
     local stopped = decks[1].on == 0
     -- los dos: el bajón
     local hp0 = boss.hp
@@ -450,11 +454,11 @@ function cases.platos()
     stepAll(level, es, { a2 }, 2 / 60, function() a2.invT = 9 end)
     local ko = boss.state == 'stunned' and boss:isVulnerable() and not boss:trampOut() and boss.dropT ~= nil
         and decks[1].on == 0 and decks[2].on == 0
-    check('platos', found and p1off and p2 and not gold and spun and bounced and stopped and ko and boss.hp == hp0,
-        ('platos en las plataformas: %s (x %s, %s; y %s) · 1ª fase, pisarlo: nada=%s · 2ª fase=%s, dorada=%s · pisado: gira=%s, rebota=%s, a los %.1f s se apaga=%s · los dos: noqueado=%s'):format(
+    check('platos', found and p1off and p2 and not gold and spun and bounced and stopped and ko and boss.hp == hp0 and g1 < g0 - T,
+        ('platos en las plataformas: %s (x %s, %s; y %s) · 1ª fase, pisarlo: nada=%s · 2ª fase=%s, dorada=%s · pisado: gira=%s, rebota=%s, a los %.1f s se apaga=%s · los dos: noqueado=%s · hacia el otro: %.0f → %.0f px'):format(
             tostring(found), decks and math.floor(decks[1].x) or '?', decks and math.floor(decks[2].x) or '?',
             decks and math.floor(decks[1].y) or '?', tostring(p1off), tostring(p2), tostring(gold), tostring(spun),
-            tostring(bounced), boss.DECK_T, tostring(stopped), tostring(ko)))
+            tostring(bounced), boss.DECK_T, tostring(stopped), tostring(ko), g0, g1))
 end
 
 -- Lo que pide la 2ª fase se puede hacer: del trampolín a cada plataforma, manteniendo hacia ese lado

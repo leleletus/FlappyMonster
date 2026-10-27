@@ -111,7 +111,8 @@ local BOOM_H = 3.5 * T                          -- alto de la columna de luz (la
 local BOOM_LEN = 3                              -- semicorcheas que dura la columna
 local FLOOR_WARN = 12                           -- semicorcheas de AVISO antes de la columna (3 tiempos: 1,2 s; antes 0,4)
 -- Los platos de DJ (2ª fase)
-local DECK_T = 5 * BAR                          -- s que gira un plato tras pisarlo (8 s: da para bajar, volver a su
+local DECK_T = 8 * BAR                          -- s que gira un plato tras pisarlo (12,8 s; 8 s se quedaba corto: el usuario,
+                                                -- 0.5.53) — da para bajar, volver a su
                                                 -- trampolín y subir a la otra plataforma)
 local DECK_W, DECK_H = 24 * 4, 10 * 4           -- (el arte: 24x10 a ×4)
 local DECK_IN = 1.0                             -- s que tardan en salir al empezar la 2ª fase
@@ -331,6 +332,16 @@ function GC:goldOff() return self.phase == 2 and self.decks ~= nil and self.deck
 function GC:decksLive()
     return self:goldOff() and self:isActive() and self.state ~= 'stunned' and self.state ~= 'regrow'
 end
+-- Con UN plato girando, el otro: su x (va a ponerse debajo —andando y con sus saltos— para que su trampolín te suba
+-- a esa plataforma; el usuario, 0.5.53: muy separados, y si se quedaba quieto en un ataque, imposible). nil si no
+function GC:deckGoal()
+    if not self:decksLive() then return nil end
+    local a, b = self.decks[1], self.decks[2]
+    if (a.on > 0) == (b.on > 0) then return nil end
+    return (a.on > 0) and b.x or a.x
+end
+GC.DECK_WALK = 1.8                                  -- × WALK_SPD yendo hacia él
+
 function GC:updateDecks(level, dt)
     if not self:goldOff() then return end
     local live = self:decksLive()
@@ -579,7 +590,7 @@ function GC:aimMark(level)
     local zx0, zx1 = self:zoneBounds()
     local hw = self.outerW / 2 + 8
     local pa = self:nearestPlayer(level)
-    local x = pa and pa.x or self.x
+    local x = self:deckGoal() or (pa and pa.x) or self.x                -- (con un plato girando, bajo el otro)
     self.markX = math.floor(math.max(zx0 + hw, math.min(zx1 - hw, x)))
 end
 
@@ -689,8 +700,16 @@ function GC:updateBoss(dt, level)
     for _, s in ipairs(plan.notes) do if crossed(s) then self:shoot(level, false, GC.noteKind(sec, k, self.rage)) end end
     local pa = self:nearestPlayer(level)
     if pa then self:faceTo(pa.x) end
+    -- (con un plato girando va a ponerse bajo el otro, también disparando)
+    local goal = self:deckGoal()
+    if goal and math.abs(goal - self.x) > 8 then
+        local d = (goal > self.x) and 1 or -1
+        self.x = self.x + d * math.min(math.abs(goal - self.x), WALK_SPD * GC.DECK_WALK * dt)
+    end
     if (last and step < last + 2) or (g and step >= g and step < g + 2) then
         self:set('snap')
+    elseif goal then
+        self:set('groove')
     else
         self:set('groove')
         local zx0, zx1 = self:zoneBounds()
