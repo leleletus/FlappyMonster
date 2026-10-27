@@ -5,7 +5,7 @@
 -- y marca por dónde va la canción.
 --
 --   love tools/video/ost <jefe> [segundos]   jefe: megagummy | megacrabby | miniboss1 | snowboss | megacrabby_ice |
---                                                  megagloomy | mirror
+--                                                  megagloomy | mirror | groovecrab
 --   → $FM_PREVIEWS/videos/<pista>.mp4 (por defecto /home/mtvemo/FlappyMonster_pruebas/videos/)
 --   tools/video/make_ost.sh                  todos
 --
@@ -20,6 +20,11 @@
 --   · VISUALIZADOR: tools/video/spectrum.py saca el espectro de la pista por fotograma; las barras ya "sonadas" van
 --     encendidas y las demás apagadas (la propia fila de barras es la barra de progreso), más el tiempo en cifras.
 --   · Mega Crabby lúgubre (arena a oscuras): la BOMBILLA que cuelga del techo y se balancea al compás, con sus apagones.
+--   · Cangrejo Groove (`dance`, el usuario 0.5.55: "aquí no estará el jugador, solo se verá al cangrejo bailar"): NO
+--     ataca — no ve a nadie (sin notas ni doradas, no persigue) y sus saltos caen en el sitio sin ondas —; solo baila
+--     en su escenario (público, bafles, luces, la pista de baile encendiéndose): sus pasos de baile, sus chasquidos en
+--     los pops del bajo, cruza el escenario andando (mirando hacia donde va). Su reloj ES el de la música del vídeo
+--     (`songT` = el tiempo de la pista), como en el juego, así que todo cae en el compás.
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
 require 'settings'
@@ -61,6 +66,8 @@ local SHOWS = {
                        sub = 'MEGA GLOOMY CRABBY', color = { 0.7, 0.6, 1 }, bulb = true, rage = 0.7 },
     mirror         = { level = 'assets/levels/ruta_del_espejo.json', track = 'mirror_boss', bpm = 158, title = 'THE MIRROR',
                        sub = 'MIRROR  ·  FINAL BOSS', color = { 1, 0.35, 0.4 }, hp = { { 0.34, 0.6 }, { 0.67, 0.3 } }, laugh = 22, lively = true },
+    groovecrab     = { level = 'assets/levels/isla_del_groove.json', track = 'groove', bpm = 150, title = 'GROOVE',
+                       sub = 'GROOVE CRAB  ·  SECRET BOSS', color = { 1, 0.31, 0.64 }, dance = true, pace = 1 },
 }
 local FPS, W, H, T = 30, 1280, 720, TILE_PX
 local PACE = 0.85                                         -- el jefe, un poco más despacio que en el juego
@@ -77,7 +84,7 @@ local muxCmd
 local function sh(cmd) local f = io.popen(cmd); local s = f:read('*a'); f:close(); return s end
 
 function love.load(arg)
-    show = assert(SHOWS[arg[1] or ''], 'jefe: megagummy | megacrabby | miniboss1 | snowboss | megacrabby_ice | megagloomy | mirror')
+    show = assert(SHOWS[arg[1] or ''], 'jefe: megagummy | megacrabby | miniboss1 | snowboss | megacrabby_ice | megagloomy | mirror | groovecrab')
     show.id = arg[1]
     local base = love.filesystem.getSource() .. '/'
     local out = (os.getenv('FM_PREVIEWS') or '/home/mtvemo/FlappyMonster_pruebas') .. '/videos'
@@ -123,6 +130,12 @@ function love.load(arg)
     Particles.setLevel(level); Particles.clear()
     Entity.fx = function(kind, x, y, opts) Particles.emit(kind, x, y, opts) end
     for _, e in ipairs(es) do if e.def.boss and not e.summonOf then boss = boss or e end end
+    if show.dance then
+        -- (solo baila: no ve a nadie —ni notas ni doradas, no persigue, salta en el sitio— y sus saltos no echan ondas)
+        boss.nearestPlayer = function() return nil end
+        local land = boss.land
+        boss.land = function(self) return land(self, true) end
+    end
     zone = boss.zone or level.bossZones[1]
     for _, z in ipairs(level.bossZones) do
         if boss.x >= z.x0 and boss.x <= z.x1 and boss.y >= z.y0 and boss.y <= z.y1 then zone = z end
@@ -189,7 +202,7 @@ end
 -- ── El señuelo: pasea por el centro de la arena, se para, salta de vez en cuando ─────────────────────────────
 local function lureBits(dt)
     local b = lure.brain
-    if zone.state ~= 'fight' then return 0 end                -- (quieto hasta que acaba la entrada del jefe)
+    if zone.state ~= 'fight' or show.dance then return 0 end   -- (quieto hasta que acaba la entrada del jefe; si solo baila, siempre)
     -- ¿atascado o fuera de sitio? (dentro de un bloque, en el agua, lejos de su suelo, sin poder avanzar): a una casilla segura
     local home = SAFE[1]
     local off = math.abs(lure.y - home.y) > 2.2 * T and lure.onGround
@@ -268,11 +281,15 @@ local function step(dt)
     for k in pairs(Input.state) do Input.state[k] = false end
     Floods.advance(level, dt)
     level:update(dt); level:updateFoliage(dt)
+    -- (el que baila: su reloj es el de la música, que suena desde el principio del vídeo)
+    local bx0 = boss.x
+    if show.dance and zone.state == 'fight' and boss.songT then boss.songT = vt - dt end
     for _, e in ipairs(es) do
         if e.alive or e.summonOf then
-            e:update((e.def.category == 'Jefes') and dt * PACE or dt, level)
+            e:update((e.def.category == 'Jefes') and dt * (show.pace or PACE) or dt, level)
         end
     end
+    if show.dance and math.abs(boss.x - bx0) > 0.2 then boss.facing = (boss.x > bx0) and 1 or -1 end   -- (mira adonde va)
     ctl:update(dt)
     if zone.state == 'fight' then progress(vt / total) end
     Particles.update(dt)
@@ -422,6 +439,7 @@ local function render()
     Sky.punch = Darkness.active(level) and not level.dark
     Sky.render(level, camX, camY)
     Sky.punch = false
+    Entities.renderBack(es, camX, camY)                       -- (lo que va detrás de los bloques: el escenario del Groove)
     level:render(camX, camY)
     IceDrips.render(level, camX, camY)
     LavaFx.render(level, camX, camY)

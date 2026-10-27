@@ -6,6 +6,15 @@ recording) into `FlappyMonster_pruebas/videos/`. Needs `ffmpeg` and `~/.venvs/fm
 
 ## Details
 
+**Groove Crab (0.5.55, `tools/video/make_ost.sh groovecrab` → `videos/groove.mp4`, the boss theme `groove`, 2:01):**
+the user asked for one WITHOUT the player — "only the crab dancing, standing still, walking, whatever". Show
+`groovecrab` has `dance = true`: the invisible lure only starts the fight and never moves, the boss is BLIND
+(`nearestPlayer` → nil: no notes, no golden note, no chasing, its hops land on the spot) and its landings make no sand
+waves; what is left is his dance on the beat (the four dance moves, the claw snaps on the bass pops, walking across the
+stage — the tool turns him to face where he walks —) and the stage: crowd, speakers, lasers, spotlights, the dance
+floor lighting up (`Entities.renderBack` is now drawn by the tool). His clock IS the video's music clock (`songT` =
+the track time every step, `pace` 1), so everything falls on the beat as in the game. Not yet seen by the user.
+
 **v2 (2026-10-03, with the FINAL soundtrack; the description further down is v1, kept for the bulb details):**
 `tools/video/make_ost.sh [megagummy megacrabby miniboss1 snowboss megacrabby_ice megagloomy mirror]` → one video per
 BOSS theme, `FlappyMonster_pruebas/videos/<track id>.mp4`. Audio = the track's intro + loop once, NO fade-out (ends
