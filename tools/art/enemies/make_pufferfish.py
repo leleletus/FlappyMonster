@@ -10,6 +10,7 @@
 #
 #   python tools/art/enemies/make_pufferfish.py            → FlappyMonster_pruebas/enemigos/pez_globo/vista_previa.png
 #   python tools/art/enemies/make_pufferfish.py --apply A  → escribe la hoja con el diseño A (guarda el original fuera)
+#   OJO: el usuario RETOCÓ A MANO la hoja (2026-10-26, docs/art/generators.md): --apply pisaría sus cambios.
 #
 # El usuario eligió el diseño A "Arena" (2026-10-25); B y C se guardan (en el generador y como hojas sueltas junto a
 # la vista previa) por si sirven luego. Sustituye a make_puffer_redesign.py (el reestilo píxel a píxel del sprite

@@ -315,6 +315,10 @@ ARROW = ["..ooo..",
          "...o..."]
 
 
+# Retocados A MANO por el usuario (docs/art/generators.md): este script no los vuelve a escribir
+KEEP = {'arrow.png', 'ko-Sheet.png'}
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     notes = []
@@ -340,6 +344,9 @@ def main():
         'arrow.png': grid(ARROW, {'o': PAL['o'], 'P': hx('#ffd23f')}),
     }
     for name, im in out.items():
+        if name in KEEP and os.path.exists(os.path.join(OUT, name)):
+            print('  (retocado a mano por el usuario: no se toca)', name)
+            continue
         im.save(os.path.join(OUT, name))
         print('  escrito', os.path.join(OUT, name), im.size)
     for old in ('shades.png',):                                    # (la primera prueba: gafas encima del Mega Crabby)

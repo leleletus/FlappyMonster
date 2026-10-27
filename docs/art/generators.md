@@ -18,6 +18,8 @@ the generator first, or edit the PNG directly.
 | `assets/images/bosses/megacrabby/claw_left-Sheet.png` (the user's drawing) | `tools/art/enemies/make_enemy_extras.py`, `make_crab_redesign.py` |
 | `assets/images/bosses/megagloomy/` body-Sheet, glow-Sheet, claw_left-Sheet, claw_rage_left-Sheet | `tools/art/enemies/make_gloomy_sprites.py` |
 | `assets/images/items/apple.png`, `checkpoint_on.png`, `checkpoint_off.png` | `tools/art/world/make_world_art.py` (checkpoints) |
+| `assets/images/bosses/groovecrab/` arrow.png, ko-Sheet.png (retouched by the user, 2026-10-26) | `tools/art/bosses/make_groove_crab.py` (skips them: `KEEP`) |
+| `assets/images/enemies/pufferfish/puffer_fish-Sheet.png` (retouched by the user, 2026-10-26) | `tools/art/enemies/make_pufferfish.py` |
 | `assets/images/bosses/snowboss/verity/` roll_happy, roll_angry, flee, ball | (the user's; `make_verity_body.py` only derives `body-Sheet.png` from them) |
 | `assets/images/enemies/bomb/bomb-Sheet.png`, `bombObject-Sheet.png` (redrawn by the user on 2026-10-08) | none writes them: `make_bomb_redesign.py` now only writes the explosion; `make_bomb_fuses.py` only READS them to build the rope sheets and the animations |
 | `assets/images/enemies/claudio/` claudio1, claudio2, claudio_idle, claudio_idle2, claudio_idle3, squish (Claudio: the user's character for Claude, 2026-10-08; the user allows Claude to change them) | (the user's; `tools/art/enemies/make_claudio_extras.py` only derives `claudio_blink.png` and the credits' `claudio_dance-Sheet.png` from `claudio_idle.png`) |
