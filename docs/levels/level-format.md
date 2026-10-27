@@ -18,7 +18,7 @@ that exists: [reference/levels](../reference/levels.md).
 | `bossZones` | `{id, col, row, w, h, music}` |
 | `links`, `blockLinks` | ON/OFF Activator → activatable entity (`to` = id) / → ON/OFF Blocks |
 | `autoScroll` | `{startCol, endCol, speed, width, margin, countdown}` |
-| `xtraBosses` | optional explicit placements of the second boss on Xtra Extreme (default: mirrored) |
+| `xtraBosses` | optional explicit placements of the second boss when `bossExtra` is on (no difficulty sets it since 0.5.24; default: mirrored) |
 | `background`, `time`, `clouds`, `depth`, `surfaceRow` | sky: surface biome, day / dusk / night, depth biome and the surface line |
 | `light`, `dark`, `echo`, `snow`, `spikeSkin` | light mood, dark level, echo, snowfall, spike look |
 | `music` | catalog id of the level track |

@@ -16,7 +16,7 @@ unlocked); Free Play has a ◀ ▶ selector (key F or tap either half); online, 
 | Modifier | Scales | Read in |
 |---|---|---|
 | `enemyPace`, `trapPace`, `bossPace` | the whole update of entities of that category (speed, telegraphs, cooldowns, projectiles) | `Difficulty.dt` in the entity loops; a type opts out with `pace = false` |
-| `bossHp`, `pairHp` | boss health; health of each boss of an Xtra pair | `Boss:startFight` |
+| `bossHp`, `pairHp` | boss health; health of each boss of a pair (`bossExtra`, which no difficulty sets) | `Boss:startFight` |
 | `playerHp`, `invuln`, `airTime` | player HP, invulnerability time, air under water | `PlayerAdventure` |
 | `hazardHurt` | spikes and lava take 1 HP + a hop instead of killing — also the hazard boxes of entities (hanging / falling spikes, spike rain, the Crabby's spike, mortar fire; `Interactions` marks them `'hazard'`, since 0.5.11) | `pa:hazardHit()` |
 | `sense` | every enemy detection range (sight below, hearing, Gloomy sense, mortar, pufferfish, Hopper) | the entity types, `Noise.heard` |
@@ -55,7 +55,7 @@ unlocked); Free Play has a ◀ ▶ selector (key F or tap either half); online, 
   `story.sav` {unlocked, cleared}; the results screen says "NEW DIFFICULTY: X" (`summary.unlocked`). Extreme =
   faster + `sense` 1.3 (Easy 0.8): × every enemy detection range — `Entity:seesPlayerBelow` (ceiling droppers,
   falling spikes), `Noise.heard` (hearing), Gloomy `senseRange`, mortar and pufferfish `range`. XTRA EXTREME = Extreme
-  + `bossExtra`: TWO bosses per arena (`src/world/systems/XtraBosses.lua`, applied by `Level.fromData(lvl, difficulty)` — the
+  + `bossExtra` (UNTIL 0.5.24 — since then Xtra is ONE enraged boss, item (7); the mechanism is kept, off): TWO bosses per arena (`src/world/systems/XtraBosses.lua`, applied by `Level.fromData(lvl, difficulty)` — the
   difficulty is now known WHILE building, `Level.new(path, difficulty)`; AdventureState, server `initRoomSim` and the
   client `_buildWorld(lv, data.difficulty)` all pass it, so indices match): the level's JSON `"xtraBosses": [...]` or,
   by default, each boss in a zone mirrored across the zone centre (≥ `MIN_SEP` 5 cells apart, `point`/`points`/

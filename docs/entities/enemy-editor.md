@@ -98,7 +98,7 @@ side, it lets go when shoved and re-attaches on landing. While crawling only beh
 
 Switching "Qué es" to **JEFE** adds a `"boss"` block and the type is built by `src/world/entities/base/DataBoss.lua`
 on top of the boss base class: health bar and zone, cinematic intro (it drops from the top of the zone), death with
-explosions, turns with an ally on Xtra Extreme, network. Place it inside a boss zone in the level editor like any
+explosions, turns with an ally (`bossExtra`, off on every difficulty), network. Place it inside a boss zone in the level editor like any
 boss.
 
 - **Between attacks** it walks toward the nearest player at `walkSpeed` (animation `walk`).

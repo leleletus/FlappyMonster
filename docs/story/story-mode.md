@@ -125,7 +125,7 @@ again. No dialogue or text: animation + music.
   assemble). Logic `src/story/Shards.lua`: `Shards.LEVEL[level] = n`, `pending(level, data)`, `owned/count(data)`
   (7, or 14 halves when the difficulty has `bossExtra`), `migrate` (old saves: shards of beaten bosses granted; halves of a save whose difficulty no longer has `bossExtra` become the whole shard).
   In a level (STORY + single player only, not part of the shared sim): `AdventureState` `args.shards = { ids, onGet,
-  final }` → `Shards.drops`: every boss that dies (or `releasesZone()`) drops the next id (Xtra: original 'a', copy
+  final }` → `Shards.drops`: every boss that dies (or `releasesZone()`) drops the next id (with `bossExtra` — no difficulty today —: original 'a', copy
   'b'); it rises and hovers, is picked up by touch (after 5 s it homes to the player; touching the finish collects
   it), saved at once (`Run.addShard`; save field `shards`), popup `hud.shard`. `final` (the Mirror's): on pickup the
   player is frozen + invulnerable, the screen fades to white (`ENDING_TIME`) and `onFinish(result)` gets

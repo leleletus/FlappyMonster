@@ -4,7 +4,7 @@ A boss is an entity derived from `src/world/entities/base/Boss.lua` placed insid
 players in, runs the intro, starts and ends the fight, moves the camera and the respawn point, and owns the music.
 Recipe for a new boss: [how-to-add-a-boss](how-to-add-a-boss.md).
 In progress: two new bosses replace Mega Crabby and Mega Gloomy, which become secret bosses —
-[new-bosses-plan](new-bosses-plan.md). Planned: the four crabs in one fight synced to the `crab_mashup` track —
+[new-bosses-plan](new-bosses-plan.md). Planned: the four crabs as an event boss rush with adaptive music —
 [crab-mashup](crab-mashup.md).
 
 | Boss | Type id | Doc | Story level | Shard |
@@ -24,7 +24,7 @@ In progress: two new bosses replace Mega Crabby and Mega Gloomy, which become se
 **Files:** `src/world/systems/BossZones.lua` (zones + the fight controller), `src/world/entities/base/Boss.lua`
 (health, hits, i-frames, stun rule, generic intro and death, ally turns, `strike`), `src/ui/BossHud.lua` (bars,
 intro cinema bars, "RUN!"), `src/fx/BossFx.lua` (stars, anger symbols, target mark),
-`src/world/systems/PhaseBlocks.lua`, `src/world/systems/XtraBosses.lua` (two bosses on Xtra Extreme),
+`src/world/systems/PhaseBlocks.lua`, `src/world/systems/XtraBosses.lua` (two allied bosses per arena: `bossExtra`, which no difficulty sets since 0.5.24),
 `types/mechanisms/bosswall.lua`, `bossglass.lua`, `phaseblock.lua`.
 
 **Level data:** `bossZones: [{id, col, row, w, h, music}]`; the boss, its walls and its glass are entities with a

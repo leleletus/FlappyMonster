@@ -273,7 +273,7 @@ function love.update(dt)
             if not ok then love.event.quit(1); return end
         end
         print(('Menor tiempo entre dos golpes: %.2f s'):format(last.minGap or -1))
-        -- (DIFF=xtra: dos jefes en la arena; los dos pelean)
+        -- (con PAIR=1, dos jefes en la arena; los dos pelean)
         local list, sts = {}, {}
         for _, e in ipairs(st.enemies or {}) do if e.def.boss then list[#list + 1] = e; sts[#sts + 1] = e.state .. ' ' .. tostring(e.hp) .. '/' .. tostring(e.hpMax) end end
         print(('Jefes: %d (%s) · zona %s · dificultad %s'):format(#list, table.concat(sts, ', '),

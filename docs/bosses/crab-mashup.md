@@ -1,220 +1,193 @@
-# Crab Mashup battle (Mega Mashup de los Cangrejos) — the script
+# Mega Mashup de los Cangrejos (Crab Mega Mashup) — the script
 
-**Status: PLAN, nothing built yet.** The music exists (`crab_mashup`, `tools/music/crab_mashup.py`); this page is the
-script the battle will be built from. Tick a milestone (`[x]`) in the same commit that does it and say in which
-version. The user picks the open points at the end before work starts.
+**Status: PLAN, nothing built yet.** The design below is the user's (answers of 2026-10-27); the points still open
+are at the end. Tick a milestone (`[x]`) in the same commit that does it and say in which version.
 
-An EVENT fight: the four giant crabs — Mega Crabby (Tantrum), Mega Gloomy Crabby, Icy Mega Crabby and the Groove Crab
-— take turns on one stage, **each one while its own theme plays**, and then all four at once in the finale. Like the
-[Groove Crab](groovecrab.md), the clock is the song: every attack falls on a bar of the music. Only reachable from
-**Free Play** for now (a level file that is not in any world of the story).
+An EVENT boss rush: the four giant crabs — Mega Crabby (Tantrum), Icy Mega Crabby, Mega Gloomy Crabby and the Groove
+Crab — one after another, **each in its own arena and with its own music**, then a FINAL where they tag-team on a new
+stage, and a chain-explosion defeat. The music is ADAPTIVE: each crab's part loops for as long as the player needs and
+only moves on, at a clean cut point, once the crab has taken its damage. Reached from **Free Play only** (a special
+event card); single player and online co-op.
 
-## The music map (the clock)
+## The flow
 
-From `secciones_180bpm.json` (written by `crab_mashup.py`). Each crab plays at ITS tempo, so a bar is not always the
-same length: the battle must read the map, never assume 180 BPM.
+```
+event intro (4 bars, once) → TANTRUM ⟲ → seam → ICY ⟲ → seam → GLOOMY ⟲ → seam → GROOVE ⟲ → seam
+  → FINAL ⟲ (tag team, random order, 4 music variants) → END (chain explosion) → OUTRO ⟲ (empty stage, exit)
+⟲ = loops until the crab has taken its damage; it then waits for the next CUT POINT (every 4 bars) to leave
+```
 
-| Section | Crab | Bars | BPM | Seconds | What the music does |
-|---|---|---|---|---|---|
-| `intro` | — | 1-4 | 180 | 0.0-5.3 | tribal drums, the slap brings the riff cell (plays ONCE) |
-| `tantrum_A` | Tantrum | 5-12 | 180 | 5.3-16.0 | theme A on the 3+3+2 tresillo |
-| `tantrum_B` | Tantrum | 13-20 | 180 | 16.0-26.7 | the WAR CHANT (short repeated notes 3+3+2); a silent last beat |
-| `gloomy_puente` | Gloomy | 21-28 | 144 | 26.7-40.0 | the LEGS alone (16ths), the riff in the bass, the voice answers at bar 5 |
-| `gloomy_A` | Gloomy | 29-36 | 144 | 40.0-53.3 | hollow voice, half time, the PAUSE closing each phrase |
-| `icy_B` | Icy | 37-44 | 180 | 53.3-64.0 | calm: soft voice, choir, music box |
-| `icy_C` | Icy | 45-52 | 180 | 64.0-74.7 | the chorus: bells on the tresillo; a noise riser in the last bar |
-| `groove_A` | Groove | 53-60 | 150 | 74.7-87.5 | its CLIMAX, first half: the slap riff, pops sparkle |
-| `groove_B` | Groove | 61-68 | 150 (bars 7-8: 160, 170) | 87.5-100.0 | its climax B: the slap sings high; accelerates into the finale |
-| `final` | ALL | 69-84 | 180 | 100.0-121.3 | E minor: war chant over the slap riff, legs underneath, music box on top (bars 9-16) |
-| `coda` | ALL | 85-92 | 180 | 121.3-132.0 | D minor: chant again, the ♭VI–♭VII–i climb, last bar = STOP + la llamada |
+## Rules
 
-The loop goes back to `tantrum_A` (the intro does not repeat). Loop = 126.6 s.
+- **Damage per turn**: a crab moves on after taking **2 damage** in its turn, any way (two stomps, or one ground
+  pound). It is also the CAP: a crab can never take more than 2 in one turn (a stomp then a ground pound deals 1 + 1,
+  not 1 + 2). Online the number is **2 + 1 per extra player** (1 player 2 · 2 players 3 · 3 → 4 · 4 → 5), cap included.
+- **One shared boss bar** for the whole event, with the ACTIVE crab's name on it (it changes with each crab). Main part:
+  4 crabs × 2 segments; the final: another 4 × 2 (both scaled online as above).
+- **Each crab fights as in its level, NEVER enraged** in the main part (rage is suppressed whatever its HP). They are
+  enraged only in the final. Their openings are their own:
+  Tantrum — stuck after the ceiling drop · Icy — ground pound on a frozen claw after the frost clap · Gloomy — tired
+  and lit by the flashlight (its arena is dark) · Groove — the DJ DECKS (its phase-2 opening, here without rage and
+  from the start; no golden notes): both decks spinning → bass drop → knocked out → stomp / GP.
+- **After the winning hit** the crab is DAZED (stars, no contact damage, no attacks) until the music reaches the next
+  cut point (≤ 4 bars), then the seam starts.
+- **Difficulty**: the selector applies as usual (pace, player HP, …); the 2-damage rule does not change with it.
+  (Xtra Extreme has one boss per arena since 0.5.24; nothing to switch off.)
+- **Help**: food and extra lives come from the SMART DIRECTOR (below), on every difficulty in this event, scaled by it.
+- **Checkpoints**: game over in the main part → restart at the crab you were fighting (the ones beaten stay beaten).
+  Game over in the final → the final from scratch (all four, full final bar).
 
-## The rules of the event
+## The music, rebuilt for this (`tools/music/crab_mashup.py`)
 
-- **Four HP bars** (BossHud already draws several bosses: the Xtra pairs). A crab can only be hurt while it is ON
-  STAGE, and it keeps its HP when it leaves.
-- **Each crab keeps its own fight** — the same telegraphs and the same opening the player learned in its level
-  (Tantrum: stuck after the ceiling drop; Gloomy: tired + flashlight; Icy: ground pound on a frozen claw; Groove: the
-  golden note). Nothing new to learn per crab; what is new is that the music decides WHEN.
-- **On / off stage**: a crab enters on the first beat of its section and leaves on the last one, whatever its HP. Off
-  stage it waits in the BACKGROUND, on the Groove's stage behind the tiles (drawn with `Entities.renderBack`, like the
-  crowd): it watches, bobs to the beat, cheers when a player is hurt.
-- **A crab beaten in its section** is out (its own death, without leaving the arena: it sits in the background dazed).
-  Its next sections become a BREATHER: 2-3 of its small kin (Crabbies / Gloomies / Icy Crabbies / Trampoline
-  Crabbies, reserve placements like the Mega's `summons`) and the crowd.
-- **Win**: all four bars at 0. If not, the song loops and the cycle starts again from Tantrum (with only the crabs
-  still standing). The finale is where most fights should end.
-- Pace: `def.pace = false` while conducted (the music is the pace, as the Groove). Xtra Extreme: NO second copy of
-  each crab (`xtraStrip` / XtraBosses off for this level), they start enraged instead.
-- Respawn inside the zone; the music never restarts on a respawn (the Groove's rule). Game over → the whole event
-  restarts from the intro.
+The current linear track (0.5.58) is reworked into PIECES. Each crab keeps its own tempo; every loop has a **cut point
+every 4 bars** where it can go into its seam without a jump.
 
-## The script, section by section
+| Piece | Content (the user's picks) | Tempo | Length |
+|---|---|---|---|
+| event intro | tribal drums, the slap brings the cell (as now) | 180 | 4 bars, once |
+| TANTRUM loop | theme A → war chant → tribal bridge | 180 | 24 bars |
+| seam T → Icy | 4 bars: scene change + Icy's re-intro and pose | 180 | 4 |
+| ICY loop | thaw B → chorus C → breath K | 180 | 24 |
+| seam Icy → Gloomy | 4 bars, slows to 144 | 180→144 | 4 |
+| GLOOMY loop | legs bridge → war chant in the cave | 144 | 16 |
+| seam Gloomy → Groove | 4 bars, key lift D → E minor | 144→150 | 4 |
+| GROOVE loop | stop-time solo → slap riff A → climax | 150 | solo 8 + A + climax 16 |
+| seam Groove → final | 4 bars, accelerates | 150→170 | 4 |
+| FINAL × 4 variants | the current "todos" finale (war chant over the slap riff, legs, music box) with the ACTIVE crab's instrument leading and the others quieter; all four variants in E minor, cut into each other at any 4-bar point | 170 | 16 each |
+| END | the current coda (all four in D minor, the ♭VI–♭VII–i climb) ending on a HELD final chord instead of la llamada (it does not loop) | 170 | 8 |
+| OUTRO loop | a relaxed Groove riff (slap + soft drums) with the crowd | 150 | 8 |
 
-Bars below are counted inside each section (1-8). "Downbeat" = sixteenth 0.
+How a cut works: every 4-bar phrase of a loop ends so that the seam's first bar follows it naturally (same harmony
+rule at every cut point); the generator writes each piece as its own file plus a **cue map** (bars, BPM, cut points),
+and checks every cut → seam join by numbers (no clicks, level steps, harmony). The intro and seams also leave room
+for the scene change.
 
-### Intro (4 bars, players frozen: the boss intro cinema)
+Engine side (new, generic, `src/audio/`): an **adaptive music player** that plays pieces gaplessly (LÖVE queueable
+source), knows the song position from the cue map (the song CLOCK the fights use), and on request "leave at the next
+cut point" schedules the seam on the exact sample. Online the SERVER decides the cut (by bar number) and the clients
+schedule the same bar.
 
-The stage lights come up; on each bar's downbeat ONE spotlight shows a crab silhouette in the background: Tantrum,
-Gloomy, Icy, Groove (the same order they will fight). The name banner: "¡MEGA MASHUP DE LOS CANGREJOS!". On the last
-beat Tantrum jumps from the background onto the stage.
+## The main part, crab by crab
 
-### TANTRUM (16 bars, 180) — Mega Crabby
+| Crab | Arena (its own, reused) | Re-intro (during its seam) | Opening |
+|---|---|---|---|
+| Tantrum (Mega Crabby) | `jefe_cangrejo` | its fall + roar, shortened, + a pose on the seam's last bar | stuck after the drop |
+| Icy Mega Crabby | `jefe_cangrejo_helado` | its own, shortened + pose | frozen claw (GP) |
+| Mega Gloomy Crabby | `jefe_lugubre` (dark, flashlight) | falls from the dark, shortened + pose | dazzled by the flashlight |
+| Groove Crab | `jefe_groove` (stage, crowd, deck platforms) | drops from the sky with its stage, shortened + pose | DJ decks → bass drop → KO |
 
-| Bars | Move (its own states) | Music cue |
-|---|---|---|
-| A 1-2 | chase | theme A enters |
-| A 3-4 | windup on A3 beat 3, CHARGE on A4's downbeat | the cell rises |
-| A 5-6 | wallclimb → wallaim → POUNCE lands on A6 beat 3 | the riff on B♭ |
-| A 7-8 | ceiling climb → aim (follows the player) → DROP on B1's downbeat → **stuck = OPENING** | the tail ♭VI–♭VII |
-| B 1, 3, 5, 7 | the WAR CHANT: on the chant's three hits (16ths 0, 3, 6) it SLAMS the floor — a sand wave each way (`BossWaves`) on each hit; jump them | D D D · F F G |
-| B 2, 4, 6 | the fall of the chant: chase / claw snaps | A G F D |
-| B 5 | summon 2 Crabbies (the chant goes "higher") | |
-| B 8 | ceiling drop on beat 1 → stuck → on the silent last beat (the "breath") it jumps to the background | the breath |
+The **seam** (4 bars) = the transition: the screen changes to the next arena (fade / wipe), the next crab's re-intro
+and pose play with the players frozen (as in a boss intro), the bar's name changes, and the fight starts on the first
+downbeat of that crab's loop.
 
-Openings: 2 drops per section (stomp 1 / GP 2).
+## The final — TAG TEAM (new big stage)
 
-### GLOOMY (16 bars, 144) — Mega Gloomy Crabby
+- A **new arena**: a big concert stage mixing the four settings (beach, ice, cave, the Groove's stage), with a place at
+  the back where beaten crabs lie KO'd out of the way.
+- **One crab fights on the floor at a time, ENRAGED**, chosen at RANDOM each time. The music switches to its variant
+  at the next cut point.
+- The crabs **waiting** for their turn stay in the background and each throws ONE hazard on the beat:
+  Tantrum — drops Crabbies from the ceiling · Icy — icicles falling on the music-box notes · Gloomy — a short
+  blackout (flashlight only) · Groove — colour notes on the bass pops.
+- The crabs **beaten** in the final go to the KO place and stay there knocked out: no contact damage, no hazards,
+  until the defeat scene. So the final gets calmer as it goes; the last crab is a duel.
+- Each crab again needs 2 damage (online: scaled) with the same cap; after the hit, dazed until the cut point (as in
+  the main part), then it is moved to the KO place and the next one jumps in with a short pose.
+- **Gloomy's turn**: the stage lights fade OUT (darkness fading in, flashlight on) and come back when it is beaten.
+- **Groove's turn**: the GOLDEN NOTE is its opening here (no decks on the final stage).
 
-The lights go DOWN over the first two bars of the bridge (a darkness that fades in, `level.darkness` 0→1: new, see
-the base work) and come back up during the last bar of `gloomy_A`. The flashlight works as in a dark level while the
-darkness is above 0. Its one rule stays: **it only attacks where there is a red "!"**.
+## The defeat — CHAIN EXPLOSION
 
-| Bars | Move | Music cue |
-|---|---|---|
-| bridge 1-4 | it is NOT seen: only its glow and the legs' sound crossing the ceiling (`climb` path) | the legs alone |
-| bridge 5, 7 | ECHO PING on the downbeat (the ring) → "!" on whoever it touches → POUNCE on beat 3 | the voice answers with the cell |
-| bridge 8, A 8 | the PAUSE (last beat, silence): it freezes mid-move, eyes blink — no attack | the spider's pause |
-| A 1-6 | its normal fight on half time: player noises → CHARGE, close "!" → CLAW; ping every 2 bars | hollow voice |
-| A 7 | ceiling ping → aim → DIVE on A8's downbeat | |
-| after every charge / pounce / dive | tired: **lit by a flashlight = dazzled = OPENING** | |
+The END music: on each hit of the coda's climb one crab BURSTS (like the Groove Crab's death: blasts, pieces, confetti,
+big shake), the last one on the held final chord; the crowd goes wild. No mirror shard (event).
 
-### ICY (16 bars, 180) — Icy Mega Crabby
+Then the player **stays on the empty stage**: the OUTRO loop plays with the crowd cheering, the stage screen shows the
+results / online ranking, and an EXIT (door / flag) goes back to Free Play.
 
-| Bars | Move | Music cue |
-|---|---|---|
-| B 1, 3, 5, 7 | CHARGE across on the downbeat | the soft voice's phrase |
-| B 2, 4, 6, 8 | FROST CLAP on the downbeat → two floor waves (freeze) → clap_stuck: **frozen claw = OPENING** (GP 2) | the music box / choir |
-| C 1-2, 5-6 | wall POUNCE → ICICLE FIELD where it lands (fields sprout on the bells' tresillo 0-3-6) | the chorus bells |
-| C 3-4, 7 | clap + waves (two per bar on 7: the doubled chorus) | |
-| C 8 | it slides out on the ice under the noise riser | riser |
+## Online (co-op)
 
-### GROOVE (16 bars, 150 → 170) — Groove Crab
+- Online boss levels are played in the **Race** mode, which is co-op: everyone in the same fight against the same
+  crabs (the server's). Anyone's hits count; the per-turn number scales with the players (above).
+- The server decides cut points, seams and scene changes; everyone changes scene together.
+- A player out of lives SPECTATES and comes back at the next seam. If everyone is out → checkpoint (as above).
+- **Ranking** at the end: total damage dealt and fewest deaths, per player, on the stage screen.
 
-The section IS the Groove's own climax, so its fight plays as written in `GC.plan` for section `C`, bars 1-16:
+## The smart food director (all boss fights)
 
-| Bars | Move | Music cue |
-|---|---|---|
-| A 1, 3, 5, 7 | HOP: crouch with the mark, jump on 16th 8, land on the next downbeat → sand waves | the slap riff |
-| A 2, 4, 6, 8 | NOTES on the bass pops (aim / fan / lob patterns) | pops + sparkle |
-| A 8, B 8 | GOLDEN NOTE on the band hit (16th 12) → **send it back = knocked out = OPENING** (2 bars) | band hits |
-| B 1-8 | DANCE FLOOR (light columns, 3-beat warning) + notes | the slap sings high |
-| B 7-8 | the accelerando (160, 170): the floor patterns speed up with it | the ramp |
+Replaces today's random director (`types/directors/bossdrops.lua`: food every ~14-15 s on Extreme / Xtra, lives every
+~70 s on Xtra) in EVERY boss fight; in this event it works on every difficulty, scaled and balanced per difficulty.
 
-No DJ decks in the event (open point 3): the golden note is the opening in both phases.
+- Food when it is NEEDED: the player at LOW HP (threshold by max HP and difficulty), BEFORE A HARD PART (a crab change,
+  the final) if hurt, or STRUGGLING (many hits / deaths lately, a long time without dealing damage). Never when not
+  needed.
+- Where: a SAFE and REACHABLE spot on the floor, away from the boss and from where its next attack will land, not on
+  the player.
+- Extra lives: also smart (e.g. at the last life), amount by difficulty.
 
-### FINALE (16 bars, 180, ALL FOUR) — one job each
+## The reward
 
-All crabs still standing come back on stage. To stay readable, each one does only ITS SIGNATURE move, tied to the
-instrument that plays it:
+An EXCLUSIVE COLLECTIBLE. The collectibles system does not exist yet: this event must give one when it does. (Note,
+nothing to build now.)
 
-| Crab | Instrument (always audible) | Its job in the finale |
-|---|---|---|
-| Groove | the slap riff, every bar | HOPS on odd bars, landing on the downbeat: sand waves |
-| Tantrum | the war chant (bars 1, 3, 5, 7, 9…) | on the chant's three hits: ONE slam per bar (the last hit) — a wave; ceiling DROP on bars 8 and 16 → stuck = opening |
-| Gloomy | the legs (16ths, underneath) | on the ceiling the whole time; a PING every 4 bars → "!" → claw from above; tired = opening (lights stay ON: the flashlight still dazzles it, for reachability) |
-| Icy | the music box (bars 9-16, long notes) | each music-box note drops ONE icicle on the player's x, warned by the note (16 icicles); bar 12: one frost clap |
+## Base work (golden rule 2: generic, in the base)
 
-Waves of the Groove and of the Tantrum never land on the same sixteenth (the chant hits are 0-3-6, the Groove lands on
-0: the Tantrum slams on 6 only). Fewer crabs alive = each remaining one adds back one move of its own section.
-
-### CODA (8 bars, 180, ALL) — the last chance of the loop
-
-| Bars | Move | Music cue |
-|---|---|---|
-| 1-4 | the conga: the crabs still standing cross the stage in a line, hopping one tile per beat (touch = 1 HP); jump over them or ride the Groove's trampoline | the war chant in D |
-| 5, 6, 7 | ALL JUMP together on each downbeat → a triple wave on 7 (the big one) | the ♭VI–♭VII–i climb |
-| 8 | THE STOP: band hit + la llamada over tribal drums → every crab still standing is DAZED for the bar (1.3 s) = **the shared OPENING**: one hit on any of them (GP 2) | la llamada |
-
-Then the loop returns to Tantrum.
-
-### Defeat
-
-When the last bar reaches 0: the music cuts on the next downbeat (hard stop, the crowd boos the crabs), each crab
-plays its own death in turn (Groove bursts, the Megas flee), the stage retracts like the Groove's, victory jingle.
-No mirror shard (event).
-
-## Arena and level
-
-- New level **`mashup_cangrejos`** (to create, in `assets/levels/`): ONLY the arena (a short walk-in and the
-  zone). Not in `Worlds`, so it is only reachable from Free Play. Zone music `crab_mashup`.
-- Shape: the Groove's beach stage at night (flat floor for the hops and the dance floor), WALLS and a CEILING the Megas
-  can climb (Tantrum and Gloomy need them), about the Groove arena's width. Arena generator
-  `make_mashup_cangrejos.py` in `tools/levelgen/arenas/` (then `build.py --only mashup_cangrejos`; never without `--only`).
-- The background: the Groove's stage and crowd (`groovecrab_stage.lua` pieces, moved to a shared stage drawer so both
-  the Groove and the event use it), plus the waiting crabs.
-
-## Base work first (golden rule 2: generic, in the base)
-
-1. **`SongClock`** (new, in `src/world/systems/`): `where(t)` → section, bar, sixteenth from a map with a tempo
-   per section and per-bar ramps. The Groove Crab moves to it (its `SONG` table becomes data; no behaviour change:
-   `groovecrab_rules` must pass unchanged). The map is DATA written by the generator: `crab_mashup.py INSTALL=1`
-   also writes a `crab_mashup.map.json` next to the track in `assets/music/bosses/` (sections, bars, BPM, ramps, start times) so the music and
-   the battle can never disagree.
-2. **Conducted bosses**: a Boss trait `conducted` — the AI timers stop and a conductor calls the crab's own
-   attack entry points (`startCharge`, `startPounce`, `startCeiling`, `startPing`, `startClap`, `hop`…) at given
-   song times. Each crab type exposes its entry points (most already exist as state transitions; the Mega's are
-   timer-driven today and need small `begin*` functions). Plus `enterStage(spot)` / `leaveStage()` (jump to / from
-   the background) and an "off stage" state that is drawn behind, not solid, not hittable.
-3. **The conductor** (`types/bosses/crabmashup.lua`, invisible Boss that owns the zone fight): `songT`, which crab is
-   on stage, the per-section SCRIPTS (tables like the ones above: bar → move — data, not code), the four HP bars,
-   the breather spawns, the loop and the win.
-4. **Darkness that fades**: `level.darkness` 0..1 (today `level.dark` is fixed at load) read by `Lights` and by the
-   noise / flashlight rules; driven by the song clock (so it needs nothing new in snapshots).
-5. **Falling icicle on a note** for the Icy's finale job: reuse the ceiling icicle dropper as a spawned hazard.
+1. **Adaptive music player + cue map** (`src/audio/`), used by the event and available to any level / boss.
+2. **Song clock from the player** (the Groove Crab's `songT` / `GC.where` move to it; no behaviour change).
+3. **Multi-arena boss event**: one level with the 5 arenas (the 4 reused + the final stage) and a controller that
+   runs the turns, the shared bar, the transitions (screen change, players moved, frozen re-intro), checkpoints per
+   crab, spectate-until-seam.
+4. **Boss hooks**: `damageCap` per turn, `noRage`, `dazedUntilCut`, `enterStage` / `leaveStage`, `koPlace`, a
+   "background hazard" mode per crab, Groove decks without rage.
+5. **Darkness that fades** (`level.darkness` 0..1; today `level.dark` is fixed at load) for Gloomy's final turn.
+6. **Smart director** replacing `bossdrops`.
+7. **Free Play special event card** (top of the grid, its own look) + ES/EN keys for the name.
 
 ## Network
 
-New entity type (the conductor) and new packed fields on the four crabs (on/off stage, conducted state) →
-`Protocol.VERSION` + 1 and `version.txt`. The conductor sends `songT` like the Groove; everything else derives from
-it. Levels with bosses are Race-only online.
+New entity types (event controller, final stage pieces) and new packed fields on the crabs → `Protocol.VERSION` + 1
+and `version.txt`. The music position travels as the cue bar the server announces.
 
 ## Tests
 
-- New harness **`mashup_rules`** (row in `tools/tests/README.md`): the clock against the map (bar starts at every
-  tempo change and in the ramp), who is on stage per section, each scripted move on its bar, HP kept between
-  sections, the loop back to Tantrum, a crab beaten → breather, the coda's shared stun, the win.
-- `boss_sim` / `boss_intro` / `online_boss` / `sp_boss` with `LEVEL=` the new level;
-  `groovecrab_rules` after the `SongClock` move; `run.sh all`; `docs_reference` (new type + level).
-- What needs a person: whether each section is readable at its tempo, the finale's chaos level, HP tuning.
+- New harness `mashup_rules` (row in `tools/tests/README.md`): the cap (stomp + GP = 2), dazed until the cut, the cut
+  only on 4-bar points, seam → next arena and crab, no rage in the main part, the final's random order and KO place,
+  background hazards stop when beaten, checkpoints, online scaling.
+- Music: the generator checks every cut → seam join; `tools/music/levels.py`.
+- `boss_sim` / `boss_intro` / `online_boss` / `sp_boss` on the new level; `groovecrab_rules` after the song-clock move;
+  `difficulty_rules` for the smart director; `run.sh all`; `docs_reference`.
+- Needs a person: the music joins (not listened to by me), readability of each crab, the final's chaos, HP / food tuning.
 
 ## Milestones
 
-- [ ] 1. `SongClock` + the map JSON from the generator + the Groove Crab moved to it (no behaviour change).
-- [ ] 2. Level + arena + conductor + the TANTRUM section only, looping (a playable slice for the user to judge).
-- [ ] 3. GLOOMY section + the fading darkness.
-- [ ] 4. ICY section.
-- [ ] 5. GROOVE section (its climax plan) + the shared stage.
-- [ ] 6. FINALE + CODA + defeat.
-- [ ] 7. Online, intro cinema, breathers, crowd reactions, HP tuning per difficulty.
+- [ ] 1. Music in pieces + cue map + every cut → seam join checked (the user listens to the joins first).
+- [ ] 2. Adaptive music player + song clock (Groove Crab moved to it, unchanged).
+- [ ] 3. Event level + controller + TANTRUM → seam → ICY (a playable slice for the user).
+- [ ] 4. GLOOMY and GROOVE (decks without rage).
+- [ ] 5. Final stage + tag team + hazards + KO place + darkness fade.
+- [ ] 6. Chain explosion, outro stage, exit, Free Play event card, intro silhouettes.
+- [ ] 7. Smart food director (all boss fights).
+- [ ] 8. Online co-op: server-driven cuts, scaling, spectate, ranking.
 
-## Open points (the user picks)
+## Still open (not asked yet; proposal in brackets)
 
-1. **Win condition**: (a) four HP bars, loop until all are down (proposed above); (b) survive one full loop and get a
-   score / rank.
-2. **Off stage**: (a) wait in the background watching (proposed); (b) leave the screen completely.
-3. **The Groove's DJ decks** in the event: (a) no, the golden note in both phases (proposed); (b) yes, decks on
-   platforms that appear only during its section.
-4. **The finale**: (a) each crab keeps its own opening + the shared stun in the coda's last bar (proposed); (b) only
-   the shared stun (simpler, more of a "survive the finale").
-5. **Reward**: none for now / a best time in Free Play / something for the story later.
-6. **Name** shown in Free Play and the banner: "Mega Mashup de los Cangrejos" / "Crab Mega Mashup"?
+1. While a crab of the main part fights "as in its level": should its attacks also snap to the beat of the music?
+   [yes, generic: an attack starts on the next beat of the song clock; no other change].
+2. The event intro: four silhouettes in the fight order (decided); does the title say "MEGA MASHUP" or the full name?
+3. Single player: does the stage screen show results (time, damage taken, deaths) as online does? [yes].
+4. The smart director outside the event: only Extreme / Xtra as today, or also Easy / Normal? (The user picked "every
+   boss fight"; the amounts per difficulty are to tune.)
+5. The final stage's look and size; where the KO place is (a balcony at the back?).
+6. Does the event card show a best time / best rank? [yes, local].
 
 ## History and decisions
 
-- 2026-10-27: the music came first (0.5.57). Then the user disliked two parts — the Groove section ("it does not bring
-  out the best part of its theme, a bit odd") and the move from the "all four" finale into the coda ("abrupt; the
-  ending is bland and does not fit") — and asked for this script, Free Play only for now. The music was redone in
-  0.5.58 (docs/audio/music-history.md): the Groove section is now its theme's CLIMAX, and the coda keeps all four
-  playing in D minor and ends on a stop with la llamada. This script follows that version.
+- 2026-10-27: the music came first (0.5.57, a linear track), then 0.5.58 (Groove section = its climax; a coda with all
+  four). The first script (synced to the linear track, all four together in the finale) was replaced the same day by
+  the user's design: each crab in its own arena with a shared bar and a re-intro; move on after 2 damage (capped per
+  turn); the music split into loops with cut points every 4 bars and 4-bar seams so a crab lasts as long as the player
+  needs; no rage in the main part; order Tantrum → Icy → Gloomy → Groove; Groove by its decks; the final as a tag team
+  (random, enraged, waiting crabs throw hazards, beaten ones lie KO'd out of the way) on a new stage at 170 BPM with a
+  music variant per active crab; chain-explosion defeat on the coda ending on a held chord; stay on the stage with a
+  soft Groove outro and an exit; food from a smart director in every boss fight; online co-op scaled +1 per extra
+  player with a ranking; the reward a future exclusive collectible. "All four at once would be hell" (the user) →
+  the tag team.

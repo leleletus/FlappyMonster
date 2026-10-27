@@ -38,7 +38,7 @@ are never edited by hand.
 | know what is saved | [architecture/save-data](architecture/save-data.md) |
 | see what is pending (review of 2026-10-20) | [pendientes](pendientes.md) |
 | the plan for the two new bosses (Giant Pufferfish, Giant Hopper) and the secret crab bosses | [bosses/new-bosses-plan](bosses/new-bosses-plan.md) |
-| the script of the four-crab battle synced to `crab_mashup` (Free Play event, not built yet) | [bosses/crab-mashup](bosses/crab-mashup.md) |
+| the script of the four-crab event boss rush with adaptive music (Free Play, not built yet) | [bosses/crab-mashup](bosses/crab-mashup.md) |
 
 ## All pages
 
@@ -96,6 +96,6 @@ Ids are data (level files, saves, network), so confusing ones are explained here
 | worlds `pradera`, `costa`, `fortaleza`, `nieve`, `cuevas`, `final` | Meadow, Coast, Fortress, Summits, Caves, Volcano |
 | "la llamada" | the game's musical leitmotif (the opening of the map tune) |
 | "fragmento" / shard | one of the 7 mirror shards |
-| Xtra Extreme (`xtra`) | the top difficulty: two bosses per arena |
+| Xtra Extreme (`xtra`) | the top difficulty: one boss per arena, enraged from the start (two bosses per arena until 0.5.24) |
 | arnés | a test harness in `tools/tests/` |
 | `FlappyMonster_originals/`, `FlappyMonster_pruebas/` | folders OUTSIDE the repo: the user's original art / audio and archived tools; previews for the user |

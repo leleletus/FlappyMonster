@@ -20,7 +20,7 @@ Reference bosses (copy from the one closest to what you want):
 
 > **First of all:** what bosses have in common is ALREADY in the base — do not copy it from another boss.
 > `Boss:enter(st)`, `Boss:zoneBounds()`, `Boss:minions(level)`, `Boss:nearestPlayer(level)`,
-> `Boss.strike(pa, {hp, vx, vy, ctrlLock, stun}, dir)`, `Boss:mayAttack(level)` (ally turns on Xtra Extreme);
+> `Boss.strike(pa, {hp, vx, vy, ctrlLock, stun}, dir)`, `Boss:mayAttack(level)` (ally turns when two bosses share an arena: `bossExtra`, which no difficulty sets today);
 > shared effects in `src/fx/BossFx.lua` (`stars`, `anger`, `target`; sprites in `assets/images/bosses/common/`);
 > reserve minions: any entity (`Entity:makeReserve`). Each boss's art goes in `assets/images/bosses/<boss>/`.
 > Traits and the rest: [how-to-add-an-enemy](../entities/how-to-add-an-enemy.md). How zones, intros, phases and
@@ -139,7 +139,7 @@ Rules that can NOT be broken:
 - Phases: `bossPhase()` returns the phase → the zone uses it (`PhaseBlocks`, `phase` props of objects).
 - `self.levelRef` may be missing on the first step: set it in `updateBoss` (`self.levelRef = self.levelRef or level`).
 - List the attack states in the tuning table `ATTACKS = {...}` and ask `self:mayAttack(level)` where it decides to
-  attack (so two bosses on Xtra Extreme take turns). States where it is OPEN to hits after an attack go in
+  attack (so two allied bosses take turns: `bossExtra`, off on every difficulty since 0.5.24, kept for later). States where it is OPEN to hits after an attack go in
   `OPENINGS = {...}` (they count as its turn). Where it chases the player, ask `self:allyBusy(level)` and, while
   true, move with `self:waitMove(level, target)` (→ dir, facing): the waiting ally steps aside instead of hemming the
   player in (used by both Mega Crabbies; the other bosses do not use it yet).
@@ -224,7 +224,7 @@ table with those same methods (see `Part` in `megagummy.lua`).
 4. **`boss_frames`** `LEVEL=<arena> FX=1 ZONE=1 STATES=...`: a grid of captures to review the look (if the boss needs
    hits to advance, add a hook like the Gummy King's). LOOK at the image.
 5. **`sp_boss`** `LEVEL=assets/levels/my_level.json SECS=60 FIGHT_SHOT=1` (the real game in single player); also
-   `DIFF=xtra` (two bosses) and `FM_HITBOX=1`.
+   `DIFF=xtra` (one boss, enraged from the start), `DIFF=xtra PAIR=1` (two allied bosses) and `FM_HITBOX=1`.
 6. **`online_boss`** `LEVEL=<arena> NOSHOTS=1` (server + client: states and minions over the network).
 7. `sounds NAMES=...`, `lang_names`, `docs_reference`, and the `all` battery before pushing.
 
