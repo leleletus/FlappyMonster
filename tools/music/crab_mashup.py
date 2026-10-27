@@ -31,6 +31,9 @@
 #
 #   python tools/music/crab_mashup.py   → FlappyMonster_pruebas/musica/crab_mashup/ (previas + mapa de secciones)
 #   INSTALL=1 …                         → assets/music/bosses/crab_mashup_intro.ogg + crab_mashup_loop.ogg
+#   PIECES=1 [INSTALL=1]                → las PIEZAS del evento (música adaptativa: PIECES; docs/bosses/crab-mashup.md):
+#                                          previas + uniones en …/crab_mashup/piezas/, y con INSTALL en
+#                                          assets/music/bosses/crab_mashup/ (+ cues.json, el mapa que lee el juego)
 #   REPORT=1 → solo números. Se comprueba con números (NO se ha escuchado).
 import os, sys, json
 import numpy as np
@@ -70,7 +73,7 @@ FINAL_R = [R.R1, R.R2, R.R3, R.R4, R.R1V, R.R2, R.R3, R.R4, R.R1, R.R2, R.R3, R.
 # la coda: el riff un tono abajo (RIFF_TR) — Rem Rem Si♭ Do · Si♭ Do (sube en cromático al Re) · Rem con la blue note —
 # y el último compás sin riff (la parada de la llamada)
 CODA_R = [R.R1, R.R2, R.R3, R.R4, R.R3, R.R4, R.R1V, None]
-RIFF_TR = {'coda': -2}
+RIFF_TR = {'coda': -2, 'end': -2}
 # su melodía: el grito de guerra en Re (4 compases) y la subida de la coda del Tantrum con la llamada (4)
 CODA = [e for e in CT.PH_B if e[0] <= 4] + [e for e in CT.PH_CODA if e[0] >= 5]
 
@@ -99,10 +102,69 @@ DYN = {'intro': (-5, -2), 'tantrum_A': (0, 0), 'tantrum_B': (0.3, 0.8), 'gloomy_
        'icy_B': (-1.5, -1), 'icy_C': (0.5, 1.2), 'groove_A': (0.3, 0.9), 'groove_B': (1, 1.5), 'final': (2, 2.8),
        'coda': (2.8, 2.2)}
 
+# ══ LAS PIEZAS DEL EVENTO (música ADAPTATIVA: docs/bosses/crab-mashup.md) ══════════════════════════════════════════
+# El usuario (0.5.60): cada cangrejo dura lo que tarde el jugador en hacerle su daño → la canción se parte en PIEZAS:
+# un BUCLE por cangrejo (las partes de su tema que eligió, en su orden y a su tempo), que se puede CORTAR cada 4
+# compases hacia su COSTURA (4 compases: cambio de escena + la reentrada del siguiente), el FINAL en 4 variantes (el
+# mismo "todos" a 170 con el instrumento del cangrejo que pelea delante: se cambia de una a otra en cualquier corte sin
+# perder el compás), el FIN (la coda con un acorde largo en vez de la llamada) y una SALIDA tranquila (el riff del
+# Groove suave) para el escenario vacío. Todas con UNA ganancia de master común (las mide juntas).
+# Cada frase de 4 compases de un bucle acaba de forma que la costura entra sin salto: la costura empieza con un GOLPE
+# de banda en el acorde que suene (tapa lo que se corta) y trae lo del siguiente cangrejo.
+K_SOLO = [R.K1, R.K2, R.K3, R.K4, R.K1, R.K2, R.K3, R.K8]
+G_RIFF = [R.R1, R.R2, R.R3, R.R4, R.R1, R.R2, R.R7, R.R8, R.R1, R.R2, R.R3, R.R4, R.R1V, R.R2, R.R3, R.FILL]
+H4 = ['Em', 'Em', 'C', 'D']
+CODA_END = [e for e in CODA if e[0] < 8] + [(8, 0, CT.D5, 16)]          # (el fin: Re largo en vez de la llamada)
+OUT_R = [R.R1, R.R2, R.R3, R.R4] * 2
+PIECES = {
+    # pieza: (secciones, ¿bucle?, lo que sigue: la pieza siguiente al acabar, o la costura al cortar)
+    'intro': ([('intro', '-', 'intro', [], ['Dm'] * 8, 0, None)], False, 'tantrum'),
+    'tantrum': ([('T_A', 'tantrum', 'tantrum', CT.PH_A + CT.A_END, CT.CH_A, 0, None),
+                 ('T_chant', 'tantrum', 'chant', CT.PH_B + CT.B_END, CT.CH_B, 0, None),
+                 ('T_bridge', 'tantrum', 'bridge', CT.PH_BR, ['Dm'] * 8, 0, None)], True, 'seam_icy'),
+    'seam_icy': ([('S_TI', '-', 'seam', [], ['Dm', 'Dm', 'Bb', 'C'], 0, None)], False, 'icy'),
+    'icy': ([('I_B', 'icy', 'icy_calm', W.PH(*CI.T_B), CI.CH_B, 0, None),
+             ('I_C', 'icy', 'icy_chorus', W.PH(*CI.T_C), CI.CH_C, 0, None),
+             ('I_K', 'icy', 'icy_breath', W.PH(*CI.T_K), CI.CH_K, 0, None)], True, 'seam_gloomy'),
+    'seam_gloomy': ([('S_IG', '-', 'seam', [], ['Dm'] * 4, 0, None)], False, 'gloomy'),
+    'gloomy': ([('G_br', 'gloomy', 'gloomy_br', CT.PH_BR, ['Dm'] * 8, 0, None),
+                ('G_chant', 'gloomy', 'gloomy', CT.PH_B + CT.B_END, CT.CH_B, 0, None)], True, 'seam_groove'),
+    'seam_groove': ([('S_GGr', '-', 'seam', [], ['Dm', 'Em', 'C', 'D'], 0, [None, R.R1, R.R3, R.R4])], False, 'groove'),
+    'groove': ([('Gr_solo', 'groove', 'groove_solo', [], ['Em'] * 8, 0, K_SOLO),
+                ('Gr_A', 'groove', 'groove_riff', [], H4 + ['Em', 'Em', 'C', 'B'] + H4 + H4, 0, G_RIFF),
+                ('Gr_C1', 'groove', 'groove_a', [], ['Em', 'Em', 'C', 'B'] * 2, 0, GROOVE_A),
+                ('Gr_C2', 'groove', 'groove_b', [], ['Am', 'Am', 'Em', 'Em', 'C', 'C', 'B', 'B'], 0, GROOVE_B)],
+               True, 'seam_final'),
+    'seam_final': ([('S_GrF', '-', 'seam', [], ['Em', 'C', 'D', 'D'], 0, [R.R1V, R.R3, R.R4, R.FILL])], False, 'final_tantrum'),
+    'end': ([('end', 'todos', 'coda', CODA_END, ['Dm', 'Dm', 'Bb', 'C', 'Bb', 'C', 'Dm', 'Dm'], 0, CODA_R)], False, 'outro'),
+    'outro': ([('outro', '-', 'outro', [], H4 * 2, 0, OUT_R)], True, None),
+}
+VARIANTS = ('tantrum', 'icy', 'gloomy', 'groove')       # el final, con el instrumento del cangrejo que pelea delante
+for v_ in VARIANTS:
+    PIECES['final_' + v_] = ([('Fv', 'todos', 'final', SECTIONS[9][3], CT.CH_B * 2, 2, FINAL_R)], True, 'end')
+SEAM_TO = {'S_TI': 'icy', 'S_IG': 'gloomy', 'S_GGr': 'groove', 'S_GrF': 'final'}
+SEC_BPM.update({'G_br': 144, 'G_chant': 144, 'S_IG': 144, 'Gr_solo': 150, 'Gr_A': 150, 'Gr_C1': 150, 'Gr_C2': 150,
+                'S_GGr': 150, 'S_GrF': 170, 'Fv': 170, 'end': 170, 'outro': 150})
+RAMP.update({('S_IG', 1): 180, ('S_IG', 2): 166, ('S_IG', 3): 154, ('S_GGr', 1): 144,
+             ('S_GrF', 1): 150, ('S_GrF', 2): 156, ('S_GrF', 3): 163})
+# (en un bucle, la dinámica del final tiene que valer lo mismo que la del principio: si no, salto al dar la vuelta)
+DYN.update({'T_A': (0, 0.2), 'T_chant': (0.3, 0.8), 'T_bridge': (0.3, 0),
+            'I_B': (-1.2, -1), 'I_C': (0.5, 1.2), 'I_K': (-0.8, -1.2),
+            'G_br': (-2, -1.5), 'G_chant': (-1.5, -2),
+            'Gr_solo': (1.2, 0.6), 'Gr_A': (0.6, 0.9), 'Gr_C1': (0.9, 1.2), 'Gr_C2': (1.2, 1.2),
+            'S_TI': (0.8, 0), 'S_IG': (0.3, -1.5), 'S_GGr': (0, 1), 'S_GrF': (1.5, 2.4),
+            'Fv': (2.4, 2.4), 'end': (2.6, 2.6), 'outro': (-3, -3)})
+DYN['intro'] = (-5, 0) if os.environ.get('PIECES') else DYN['intro']
+# el final, por variante: qué grupo va delante (dB sobre la mezcla común; mismo compás, mismas notas de base)
+VAR_DB = {'tantrum': {'lead': 1.5, 'dbl': 2, 'gbass': -2, 'bell': -3},
+          'icy': {'lead': -5, 'dbl': -5, 'bell': 3, 'shim': 2},
+          'gloomy': {'lead': -5, 'dbl': -6, 'legs': 4},
+          'groove': {'lead': -4, 'dbl': -4, 'gbass': 2.5, 'spark': 3, 'gstabs': 2, 'scr': 3}}
 
-def song():
+
+def song(secs=SECTIONS, variant=None):
     mel, chords, sec, starts, q4, desc, riffs = [], [], [], {}, {}, [], []
-    for sid, boss, style, ph, cs, tr, rf in SECTIONS:
+    for sid, boss, style, ph, cs, tr, rf in secs:
         base = len(chords)
         starts[sid] = base + 1
         mel += [(base + b, st, n + tr, d) for b, st, n, d in ph]
@@ -114,9 +176,11 @@ def song():
                 (r1, q1) = (r2, q2) = SB.ch(c)
             chords.append((((r1 + tr) % 12, q1), ((r2 + tr) % 12, q2)))
             sec.append(sid)
-        if sid == 'final':
+        if sid in ('final', 'Fv'):
             desc += [(base + 8 + b, st, n + tr, d) for b, st, n, d in DESC]
-        if sid == 'coda':                                      # (la caja de música sigue en la coda: su primera mitad)
+            if variant == 'icy':                               # (la Icy delante: su caja de música en los 16)
+                desc += [(base + b, st, n + tr, d) for b, st, n, d in DESC]
+        if sid in ('coda', 'end'):                             # (la caja de música sigue en la coda: su primera mitad)
             desc += [(base + b, st, n, d) for b, st, n, d in DESC if b <= 4]
         if rf:
             for i, t in enumerate(rf):
@@ -124,9 +188,9 @@ def song():
     return mel, chords, sec, starts, q4, desc, riffs
 
 
-def check(notes, chords, sec, q4):
+def check(notes, chords, sec, q4, secs=SECTIONS):
     """notas largas (≥ 4) del acorde que suena; todo en la escala de su sección (Re menor, o Mi menor = +2)"""
-    tr = {s[0]: s[5] for s in SECTIONS}
+    tr = {s[0]: s[5] for s in secs}
     def at(b, st):
         if st >= 14: return chords[b % len(chords)][0]
         if st >= 12 and b in q4: return q4[b]
@@ -155,11 +219,15 @@ G_V2 = {'lead': 1.0, 'dbl': 1.30215, 'echo': 1.9579, 'voice': 1.54446, 'hollow':
         'toms': 0.986997, 'snare': 0.772622, 'hat': 0.443507, 'ohat': 0.400165, 'crash': 0.432239}
 
 
-def build():
-    mel, chords, sec, starts, q4, desc, riffs = song()
+def build(secs=SECTIONS, intro=INTRO, variant=None, kind='linear', ref=None, name=NAME):
+    """Renderiza `secs`. kind: 'linear' (la pista entera, masterizada: intro + bucle), 'loop' (una pieza que se repite:
+    la cola se dobla sobre su principio) u 'oneshot' (una pieza que suena una vez: se queda su cola). Las piezas vuelven
+    SIN masterizar (dict): el master común lo pone pieces(). `ref` = LUFS de referencia de la dinámica (el tema A del
+    Tantrum); `variant` = el cangrejo que va delante en el final"""
+    mel, chords, sec, starts, q4, desc, riffs = song(secs, variant)
     NB = len(chords)
-    style_of = {s[0]: s[2] for s in SECTIONS}
-    LEN = {s[0]: len(s[4]) for s in SECTIONS}
+    style_of = {s[0]: s[2] for s in secs}
+    LEN = {s[0]: len(s[4]) for s in secs}
     sty = lambda b: style_of[sec[b - 1]]
     pos = lambda b: b - starts[sec[b - 1]] + 1
     last = lambda b: pos(b) == LEN[sec[b - 1]]
@@ -175,10 +243,13 @@ def build():
     kick, sn, tom = np.zeros(NS), np.zeros(NS), np.zeros(NS)
     tv = lambda b, st: T0[b - 1] + st * s16(b)
     GLOOMY = ('gloomy', 'gloomy_br')
-    pause = lambda b, st: sty(b) in GLOOMY and st >= 12 and last(b)            # la PAUSA de la araña
+    seam = lambda b: SEAM_TO.get(sec[b - 1]) if sty(b) == 'seam' else None      # (costura: hacia qué cangrejo va)
+    pause = lambda b, st: (sty(b) in GLOOMY or seam(b) == 'gloomy') and st >= 12 and last(b)   # la PAUSA de la araña
     breath = lambda b, st: sec[b - 1] == 'tantrum_B' and st >= 12 and last(b)   # (el respiro antes de bajar a la cueva)
     ALL = ('final', 'coda')                                                    # los cuatro a la vez
-    llam = lambda b: sty(b) == 'coda' and last(b)                              # la parada de la llamada
+    chord_end = lambda b: sec[b - 1] == 'end' and last(b)                      # el FIN: acorde largo
+    llam = lambda b: sty(b) == 'coda' and last(b) and not chord_end(b)         # la parada de la llamada
+    GROOVES = ('groove_a', 'groove_b', 'groove_riff', 'groove_solo', 'outro')
 
     def hit(buf, smp, t, g=1.0):
         i = int(t * SR)
@@ -194,6 +265,8 @@ def build():
         t0, t1 = tv(b, st), tv(b, st) + d * s16(b) * 0.93
         if s in GLOOMY:
             play(Cn['hollow'], t0, t1, n, I_HOLLOW, q=q_n163, release=4)
+        elif s == 'icy_breath':                               # el respiro: la caja de música en notas largas
+            play(Cn['bell'], t0, t0 + d * s16(b) * 1.02, n, I_BELL, q=q_n163, release=8)
         elif s in ('icy_calm', 'icy_chorus'):
             play(Cn['voice'], t0, t1, n, CI.I_VOICE, q=q_n163, release=3)
             if s == 'icy_chorus' or d >= 4: play(Cn['bell'], t0, t0 + max(d, 4) * s16(b), n + 12, I_BELL, q=q_n163, release=6)
@@ -202,7 +275,9 @@ def build():
             play(Cn['lead'], t0, t1, n - 12, CT.I_SAW, q=q_saw, release=3)
             play(Cn['dbl'], t0, t1, n + (12 if s in ('chant', 'final', 'coda') else 0), CT.I_PUL, release=2)
             if s == 'coda' and k >= 5: play(Cn['bell'], t0, t0 + max(d, 4) * s16(b), n + 12, I_BELL, q=q_n163, release=6)
-        if d >= 3 and s not in GLOOMY:
+            if s == 'final' and variant == 'gloomy':          # (la Gloomy delante: su voz hueca canta el grito)
+                play(Cn['hollow'], t0, t1, n, I_HOLLOW, q=q_n163, release=4)
+        if d >= 3 and s not in GLOOMY + ('icy_breath',):
             play(Cn['echo'], t0 + 3 * s16(b), t0 + 3 * s16(b) + min(d, 3) * s16(b) * 0.8, n, CT.I_ECHO, release=1)
     for b, st, n, d in desc:                                  # la caja de música de la Icy, por encima del final
         play(Cn['bell'], tv(b, st), tv(b, st) + d * s16(b) * 1.05, n + 12, I_BELL, q=q_n163, release=8)
@@ -217,9 +292,10 @@ def build():
 
     for b, st, n, d, v in riffs:
         s, k = sty(b), pos(b)
-        if s in ALL and v < 60: continue                                       # (en el final, sin fantasmas: menos atropellado)
+        if (s in ALL or s == 'seam') and v < 60: continue                     # (en el final, sin fantasmas: menos atropellado)
+        if s == 'outro': v = int(v * 0.8)
         gslap.add(tv(b, st), tv(b, st) + d * s16(b) * 0.95, n, v)
-        if v >= 120 and (s != 'final' or k > 8):                              # el brillo: los pops, dos octavas arriba
+        if v >= 120 and s not in ('groove_riff', 'groove_solo', 'outro', 'seam') and (s != 'final' or k > 8 or variant == 'groove'):
             play(Cn['spark'], tv(b, st), tv(b, st) + s16(b) * 0.9, n + 24, SB.I_SPARK, release=1)
 
     i6 = 0
@@ -229,13 +305,17 @@ def build():
         lo = lambda r: 38 + (r - 38) % 12
         nxt = chords[b % NB][0][0]
         lb = last(b)
-        if s == 'intro' or llam(b):                                            # (la llamada: el slap trae la célula, como en la intro)
-            if k >= 3:
+        if s == 'intro' or llam(b) or s == 'icy_breath':                       # (la llamada: el slap trae la célula, como en la intro)
+            if k >= 3 or s == 'icy_breath':
                 for st, ln, iv in ((0, 5.5, 0), (6, 1.8, 0), (8, 1.8, 5), (10, 3.6, 3), (14, 1.8, 0)): bass(b, st, ln, lo(r1) + iv)
-        elif s == 'gloomy_br':                                                 # el riff, en el bajo
+        elif s in ('gloomy_br', 'bridge'):                                     # el riff, en el bajo
             for st, ln, iv in ((0, 5.5, 0), (6, 1.8, 0), (8, 1.8, 5), (10, 3.6, 3), (14, 1.8, -2 if b % 2 == 0 else 0)): bass(b, st, ln, lo(r1) + iv)
-        elif s == 'icy_calm':
+        elif s == 'icy_calm' or (seam(b) in ('icy', 'gloomy') and k >= 2):
             bass(b, 0, 7.5, lo(r1)); bass(b, 8, 5.5, lo(r2)); bass(b, 14, 1.8, lo(r2) + 7)
+        elif s == 'seam' and k == 1:                                           # el golpe de la costura: la tónica, larga
+            bass(b, 0, 7.5, lo(r1))
+        if chord_end(b):                                                       # el FIN: Re grave largo
+            gslap.add(tv(b, 0), tv(b, 0) + bar(b) * 1.6, lo(r1), 120)
         elif s == 'icy_chorus':
             for st in range(0, 16, 2):
                 bass(b, st, 1.7, lo(r1 if st < 8 else r2) + (12 if st in (6, 14) else 0))
@@ -247,44 +327,48 @@ def build():
             bass(b, 12, 1.8, lo(r3)); bass(b, 14, 1.8, step)
 
         # ── ACOMPAÑAMIENTO ──
-        if s in GLOOMY or (s in ALL and not llam(b)):                          # LAS PATAS de la Gloomy
+        legs_on = s in GLOOMY or (s in ALL and not llam(b) and not chord_end(b)) or (seam(b) == 'gloomy' and k >= 2) or seam(b) == 'final'
+        if legs_on:                                                            # LAS PATAS de la Gloomy
             for st in range(16):
                 if pause(b, st): continue
                 r, q = (r1, q1) if st < 8 else (q4[b] if st >= 12 and b in q4 else (r2, q2))
-                alone = s == 'gloomy_br' and k <= 4
+                alone = (s == 'gloomy_br' and k <= 4) or seam(b) == 'gloomy'
                 base_ = 62 + (r - 62) % 12 + (12 if alone or (s in GLOOMY and k % 4 == 0) else 0)
                 note = base_ + GN.LEG8[q][st % 8]
                 if s in GLOOMY and lb and st >= 8: note = base_ + 12 - (st - 8)            # bajada cromática hacia la pausa
-                quiet = (b, st) in sung or s in ALL
-                vs = (0.3 if (b, st) in sung else 0.55) if s in ALL else (0.4 if quiet else 1.0)
+                quiet = (b, st) in sung or s in ALL or seam(b) == 'final'
+                vs = (0.3 if (b, st) in sung else 0.55) if (s in ALL or seam(b) == 'final') else (0.4 if quiet else 1.0)
+                if seam(b) == 'gloomy': vs = 0.4 + 0.2 * k                     # (las patas se acercan)
                 play(Cn['legs'], tv(b, st), tv(b, st) + s16(b) * 0.5, note, GN.I_LEG, vs=vs, release=0)
-                if s == 'gloomy' and k >= 5:                                   # el segundo patrón, 6 contra 8
+                if (s == 'gloomy' and k >= 5) or (s == 'final' and variant == 'gloomy'):   # el segundo patrón, 6 contra 8
                     play(Cn['legs2'], tv(b, st), tv(b, st) + s16(b) * 0.5, base_ + GN.LEG6[q][i6 % 6], GN.I_LEG2, q=q_vrc6, release=0)
                     i6 += 1
-        if s in ('tantrum', 'chant') or (s == 'coda' and k >= 5):             # la marimba de la costa en el tresillo
+        if s in ('tantrum', 'chant', 'bridge') or (s == 'coda' and k >= 5 and not chord_end(b)) or (s == 'final' and variant == 'tantrum'):   # la marimba de la costa en el tresillo
             for half, (r, q) in enumerate(((r1, q1), (r2, q2))):
                 notes = [72 + (r - 72) % 12 + iv for iv in q]
                 for j, st in enumerate((0, 3, 6)):
                     if breath(b, half * 8 + st): continue
                     if half == 1 and st == 6 and b in q4: notes = [72 + (q4[b][0] - 72) % 12 + iv for iv in q4[b][1]]
                     play(Cn['mar'], tv(b, half * 8 + st), tv(b, half * 8 + st) + s16(b) * 1.5, notes[(j + half) % 3], CT.I_MAR, release=1)
-        if s in ('tantrum', 'chant') + ALL and not llam(b):                   # golpes de quinta en el tresillo
+        if (s in ('tantrum', 'chant') + ALL or (s == 'bridge' and k >= 5) or seam(b) == 'final') and not llam(b) and not chord_end(b):   # golpes de quinta en el tresillo
             for st in TRES:
                 if breath(b, st): continue
                 r = r1 if st < 8 else (q4[b][0] if st >= 12 and b in q4 else r2)
                 root = 50 + (r - 50) % 12
                 play(Cn['c1'], tv(b, st), tv(b, st) + 2.5 * s16(b), root, CT.I_STAB, release=2)
                 play(Cn['c2'], tv(b, st), tv(b, st) + 2.5 * s16(b), root + 7, CT.I_STAB, release=2)
-        if s in ('icy_calm', 'icy_chorus'):
+        icy_acc = s in ('icy_calm', 'icy_chorus') or (s == 'icy_breath' and k >= 5) or (seam(b) == 'icy' and k >= 2) \
+            or (s == 'final' and variant == 'icy')
+        if icy_acc:
             for half, (r, q) in enumerate(((r1, q1), (r2, q2))):
                 s0 = half * 8
                 notes = [72 + (r - 72) % 12 + iv for iv in q]
-                if s == 'icy_chorus':                                          # campanillas en el tresillo
+                if s == 'icy_chorus' or (seam(b) == 'icy' and k >= 3):         # campanillas en el tresillo
                     for j, st in enumerate((0, 3, 6)):
                         play(Cn['ice'], tv(b, s0 + st), tv(b, s0 + st) + s16(b) * 1.5, notes[(j + half) % 3] + 12, CI.I_ICE, release=1)
                 for st in range(8):                                            # arpegio brillante
                     play(Cn['shim'], tv(b, s0 + st), tv(b, s0 + st) + s16(b) * 0.7, notes[(0, 1, 2, 1)[st % 4]] + (12 if st >= 4 else 0), CI.I_SHIM, release=0)
-                vs = 1.3 if s == 'icy_chorus' and k >= 5 else (0.0 if s == 'icy_chorus' else 1.0)
+                vs = 1.3 if s == 'icy_chorus' and k >= 5 else (0.0 if s in ('icy_chorus', 'final') or (seam(b) == 'icy' and k < 3) else 1.0)
                 if vs:                                                         # coro
                     play(Cn['p1'], tv(b, s0), tv(b, s0) + 7.6 * s16(b), notes[1] - 12, I_CHOIR, q=q_n163, vs=vs, release=5)
                     play(Cn['p2'], tv(b, s0), tv(b, s0) + 7.6 * s16(b), notes[2] - 12, I_CHOIR, q=q_n163, vs=vs, release=5)
@@ -293,11 +377,11 @@ def build():
                     root = 50 + ((r1 if st < 8 else r2) - 50) % 12
                     play(Cn['c1'], tv(b, st), tv(b, st) + 2.5 * s16(b), root, CT.I_STAB, release=2)
                     play(Cn['c2'], tv(b, st), tv(b, st) + 2.5 * s16(b), root + 7, CT.I_STAB, release=2)
-        if s in ('groove_a', 'groove_b') + ALL:                                # el Groove: golpes de acorde a contratiempo
-            stop = llam(b)
+        if s in ('groove_a', 'groove_b', 'groove_riff', 'groove_solo') + ALL or seam(b) == 'final':   # el Groove: golpes de acorde a contratiempo
+            stop = llam(b) or chord_end(b) or (s == 'groove_solo')
             gb = 64 + (r1 - 64) % 12
             if not stop:
-                for st in (6, 14) if s == 'final' and k <= 8 else (2, 6, 10, 14):
+                for st in (6, 14) if (s == 'final' and k <= 8 and variant != 'groove') or s == 'groove_riff' or seam(b) == 'final' else (2, 6, 10, 14):
                     play(Cn['g1'], tv(b, st), tv(b, st) + 1.2 * s16(b), gb + q1[1], SB.I_STAB, release=1)
                     play(Cn['g2'], tv(b, st), tv(b, st) + 1.2 * s16(b), gb + q1[2], SB.I_STAB, release=1)
             if not stop:                                                       # el rasgueo en semicorcheas
@@ -309,25 +393,89 @@ def build():
                 pb = 57 + (r1 - 57) % 12
                 for j, iv in enumerate(q1[1:]):
                     play(Cn[('pad1', 'pad2')[j]], tv(b, 0), tv(b, 0) + bar(b) * 0.97, pb + iv, I_PAD, q=q_n163, release=6)
-            if stop:                                                           # la parada: un golpe de banda y la llamada
+            if stop and (s != 'groove_solo' or k % 2 == 1) and not chord_end(b):   # la parada: un golpe de banda (y la llamada / el solo)
                 play(Cn['h1'], tv(b, 0), tv(b, 0) + 3 * s16(b), gb + q1[1], SB.I_HIT, q=q_saw, release=3)
                 play(Cn['h2'], tv(b, 0), tv(b, 0) + 3 * s16(b), gb + q1[2], SB.I_HIT, q=q_saw, release=3)
-            if not stop and k % 4 == 0 and s not in ALL:                       # golpes de banda al cerrar frase
+            if chord_end(b):                                                   # el FIN: el acorde, largo
+                for ch_, nn in (('h1', gb + q1[1]), ('h2', gb + q1[2]), ('c1', 50 + (r1 - 50) % 12), ('c2', 57 + (r1 - 57) % 12)):
+                    if ch_[0] == 'h': play(Cn[ch_], tv(b, 0), tv(b, 0) + bar(b) * 1.4, nn, SB.I_HIT, q=q_saw, release=10)
+                    else: play(Cn[ch_], tv(b, 0), tv(b, 0) + bar(b) * 1.4, nn, CT.I_STAB, release=10)
+            if not stop and k % 4 == 0 and s not in ALL and seam(b) is None:   # golpes de banda al cerrar frase
                 for st in (12, 14) if k % 8 == 0 else (14,):
                     play(Cn['h1'], tv(b, st), tv(b, st) + 1.5 * s16(b), gb + q1[1], SB.I_HIT, q=q_saw, release=2)
                     play(Cn['h2'], tv(b, st), tv(b, st) + 1.5 * s16(b), gb + q1[2], SB.I_HIT, q=q_saw, release=2)
+
+        if s == 'outro':                                                       # la SALIDA: colchón y golpes suaves
+            gb = 64 + (r1 - 64) % 12; pb = 57 + (r1 - 57) % 12
+            for j, iv in enumerate(q1[1:]):
+                play(Cn[('pad1', 'pad2')[j]], tv(b, 0), tv(b, 0) + bar(b) * 0.97, pb + iv, I_PAD, q=q_n163, release=6)
+            for st in (6, 14):
+                play(Cn['g1'], tv(b, st), tv(b, st) + 1.2 * s16(b), gb + q1[1], SB.I_STAB, vs=0.6, release=1)
+                play(Cn['g2'], tv(b, st), tv(b, st) + 1.2 * s16(b), gb + q1[2], SB.I_STAB, vs=0.6, release=1)
+        if s == 'seam' and k == 1:                                             # COSTURA: un golpe de banda en el acorde que suena
+            gb = 64 + (r1 - 64) % 12                                           # (tapa lo que se corta del bucle)
+            play(Cn['h1'], tv(b, 0), tv(b, 0) + 6 * s16(b), gb + q1[1], SB.I_HIT, q=q_saw, release=4)
+            play(Cn['h2'], tv(b, 0), tv(b, 0) + 6 * s16(b), gb + q1[2], SB.I_HIT, q=q_saw, release=4)
+            if seam(b) != 'final':
+                play(Cn['c1'], tv(b, 0), tv(b, 0) + 6 * s16(b), 50 + (r1 - 50) % 12, CT.I_STAB, release=4)
+                play(Cn['c2'], tv(b, 0), tv(b, 0) + 6 * s16(b), 57 + (r1 - 57) % 12, CT.I_STAB, release=4)
 
         # ── BATERÍA ──
         for st in range(16):
             t = tv(b, st)
             if pause(b, st) or breath(b, st): continue
-            if s == 'intro' or llam(b):                                        # tribal: bombo en el tresillo, timbales
+            if chord_end(b):                                                   # el FIN: un golpe y que suene
+                if st == 0: hit(kick, TN.KICK_DEEP, t, 1.0); snare(t, 1.0); NZ['crash'].hit(t, 3, CT.CRASH)
+                continue
+            if s == 'intro' or llam(b) or s == 'bridge' or (seam(b) in ('icy', 'tantrum') and k == 1):   # tribal: bombo en el tresillo, timbales
                 if st in TRES: hit(kick, TN.KICK_DEEP, t, 1.0)
                 pat = {2: 0, 3: 1, 8: 2, 10: 0, 11: 1, 14: 2, 15: 2} if k % 2 else {2: 0, 3: 0, 4: 1, 8: 2, 9: 2, 10: 1, 11: 0, 14: 2, 15: 1}
                 if st in pat: hit(tom, W.TOMS[pat[st]], t, 1.0)
-                if (k >= 3 or s == 'coda') and st % 2 == 1 and st not in pat: NZ['hat'].hit(t, 1, [3, 1])
-                if (k == 4 or s == 'coda') and st >= 8: snare(t, 0.4 + (st - 8) * 0.07, [7 + (st - 8), 5, 2])
-                if s == 'coda' and st == 0: snare(t, 0.9); NZ['crash'].hit(t, 3, CT.CRASH)
+                if (k >= 3 or s in ('coda', 'bridge', 'seam')) and st % 2 == 1 and st not in pat: NZ['hat'].hit(t, 1, [3, 1])
+                if s == 'bridge' and st in (4, 12) and k >= 5: snare(t, 0.8)
+                if ((s == 'intro' and lb) or s == 'coda') and st >= 8: snare(t, 0.4 + (st - 8) * 0.07, [7 + (st - 8), 5, 2])
+                if s == 'intro' and k >= 5 and st in (4, 12): snare(t, 0.7)
+                if (s in ('coda', 'seam') or (s == 'intro' and k == 5)) and st == 0: snare(t, 0.9); NZ['crash'].hit(t, 3, CT.CRASH)
+                if s == 'bridge' and lb and st >= 12: snare(t, 0.6 + (st - 12) * 0.1, [9 + (st - 12), 5, 2])
+                continue
+            if s == 'seam':                                                    # COSTURA: el golpe y lo del siguiente
+                to = seam(b)
+                if k == 1 and st == 0: hit(kick, TN.KICK_DEEP, t, 1.0); snare(t, 1.0); NZ['crash'].hit(t, 3, CT.CRASH)
+                if to == 'icy':                                                # ligera, como su B
+                    if st in TRES: hit(kick, TN.KICK, t, 0.6 + 0.1 * k)
+                    if st in (4, 12) and k >= 3: snare(t, 0.5, [9, 5, 2])
+                    elif st % 2 == 0: NZ['hat'].hit(t, 0, [5, 3, 1])
+                    if lb and st >= 12: snare(t, 0.5 + (st - 12) * 0.1, [9 + (st - 12), 5, 2])
+                elif to == 'gloomy':                                           # se apaga: bombo hondo y seco, las patas
+                    if st in TRES and k >= 3: hit(kick, TN.KICK_DEEP, t, 0.8)
+                    if k == 1 and st in (6, 12): hit(tom, W.TOMS[2], t, 0.7)
+                elif to == 'groove':                                           # el slap solo, los charles entrando
+                    if st % 2 == 0 and k >= 2: NZ['hat'].hit(t, 1, [4, 2, 1] if st % 4 else [6, 3, 1])
+                    if lb and st >= 12: snare(t, 0.3 + 0.12 * (st - 12), [7 + (st - 12), 4, 2])
+                elif to == 'final':                                            # la subida: caja cada vez más deprisa
+                    if st % 4 == 0: hit(kick, TN.KICK_DEEP, t, 1.0)
+                    step = 4 if k <= 2 else (2 if k == 3 else 1)
+                    if st % step == 0 and k >= 2: snare(t, 0.3 + 0.1 * k + 0.015 * st, [6 + k + st // 5, 4, 2])
+                    if st % 2 == 1: NZ['hat'].hit(t, 1, [3, 1])
+                continue
+            if s == 'icy_breath':                                              # el respiro: casi nada; luego vuelven
+                if k <= 4:
+                    if st % 4 == 2: NZ['hat'].hit(t, 0, [3, 2, 1])
+                    continue
+                if st in TRES: hit(kick, TN.KICK, t, 0.8)
+                if st in (4, 12): snare(t, 0.5, [9, 5, 2])
+                else: NZ['hat'].hit(t, 0, [5, 3, 1] if st % 2 == 0 else [2, 1])
+                if lb and st >= 12: snare(t, 0.5 + (st - 12) * 0.1, [9 + (st - 12), 5, 2])
+                continue
+            if s == 'groove_solo':                                             # paradas: golpe y charles (el solo del Groove)
+                if k % 2 == 1 and st == 0: hit(kick, TN.KICK_DEEP, t, 1.0); snare(t, 0.9); NZ['crash'].hit(t, 3, CT.CRASH)
+                if st % 2 == 0: NZ['hat'].hit(t, 1, [4, 2, 1])
+                if k == 8 and st >= 8: hit(tom, W.TOMS[(st - 8) // 3 % 3], t, 0.6)
+                continue
+            if s == 'outro':                                                   # la salida: suave
+                if st in (0, 10): hit(kick, TN.KICK, t, 0.6)
+                if st in (4, 12): snare(t, 0.45, [8, 4, 2])
+                if st % 2 == 0: NZ['hat'].hit(t, 0, [4, 2, 1])
                 continue
             if s == 'gloomy_br':                                               # tribal y seco, lejos
                 if st in TRES: hit(kick, TN.KICK_DEEP, t, 1.0)
@@ -349,8 +497,8 @@ def build():
                 elif st in (10, 11) and k % 2 == 0: hit(tom, W.TOMS[st - 10], t, 0.9)
                 elif st in (7, 15) and k >= 5: snare(t, 0.35, [6, 3, 1])
                 else: NZ['hat'].hit(t, 0, [5, 3, 1] if st % 2 == 0 else [2, 1])
-            elif s in ('groove_a', 'groove_b'):                                # funk, el del clímax (bombo también en el "1 y")
-                if st in (0, 10) or (st == 7 and k % 2 == 0) or (st == 3 and k % 2 == 1): hit(kick, TN.KICK_DEEP, t, 1.0)
+            elif s in ('groove_a', 'groove_b', 'groove_riff'):                 # funk, el del clímax (bombo también en el "1 y")
+                if st in (0, 10) or (st == 7 and k % 2 == 0) or (st == 3 and k % 2 == 1 and s != 'groove_riff'): hit(kick, TN.KICK_DEEP, t, 1.0)
                 if st in (4, 12): snare(t, 1.0)
                 elif st in (7, 15) or (st == 9 and s == 'groove_b'): snare(t, 0.22, [5, 2, 1])
                 if st % 4 == 2: NZ['ohat'].hit(t, 1, [6, 5, 4, 3, 2, 1])
@@ -372,9 +520,10 @@ def build():
             if lb and st >= 12 and s not in GLOOMY:                            # entrada a la sección siguiente
                 snare(t, 0.6 + (st - 12) * 0.1, [9 + (st - 12), 5, 2]); hit(tom, W.TOMS[min(2, st - 12)], t, 0.7)
             if st == 0 and b > 1 and (k == 1 or (s in ('chant', 'coda', 'final', 'icy_chorus') and k % 2 == 1)
-                                      or (s in ('tantrum', 'groove_a', 'groove_b') and k % 4 == 1)):
+                                      or (s in ('tantrum', 'groove_a', 'groove_b') and k % 4 == 1) or (s == 'groove_riff' and k % 8 == 1)):
                 NZ['crash'].hit(t, 3, CT.CRASH)
-        if s in ('icy_chorus', 'groove_b') and lb:                             # subida de ruido hacia el Groove / el final
+        riser = (s in ('icy_chorus', 'groove_b') and lb and kind == 'linear') or (seam(b) == 'final' and k >= 3)
+        if riser:                                                              # subida de ruido hacia el Groove / el final
             n_ = int(bar(b) * 60)
             for j in range(n_):
                 x_ = j / (n_ - 1)
@@ -382,7 +531,7 @@ def build():
 
     # ── STEMS Y MEZCLA ──
     n = int(T0[NB] * SR)
-    at = int(T0[INTRO] * SR)
+    at = int(T0[intro] * SR)
     tail = 3 * SR
     cut = lambda x: x[:n + tail] - np.mean(x[:n])
     pulse = lambda k_: cut(F.pulse_dac(F.render_pulse(Cn[k_])))
@@ -402,14 +551,18 @@ def build():
         'snare': cut(F.tnd_dac((sn + 64) / 22638.0) - base) + noise('snare'),
         'hat': noise('hat'), 'ohat': noise('ohat'), 'crash': noise('crash') + noise('fx'),
     }
-    S = {k_: GN.fold(v, n, at) for k_, v in S.items() if np.abs(v).max() > 0}
-    S['hollow'] = GN.delay(S['hollow'], 3 * 15.0 / SEC_BPM['gloomy_A'], 0.22, 2)[:len(S['hollow'])]     # (un poco de cueva en la voz)
-    S['bell'] = GN.delay(S['bell'], 3 * S16, 0.25, 2, 3200)[:len(S['bell'])]
+    S = {k_: v for k_, v in S.items() if np.abs(v).max() > 0}
+    if 'hollow' in S: S['hollow'] = GN.delay(S['hollow'], 3 * 15.0 / SEC_BPM['gloomy_A'], 0.22, 2)[:len(S['hollow'])]     # (un poco de cueva en la voz)
+    if 'bell' in S: S['bell'] = GN.delay(S['bell'], 3 * S16, 0.25, 2, 3200)[:len(S['bell'])]
+    # (bucle: la cola se dobla sobre su principio — sin costura al dar la vuelta —; una vez: se queda la cola)
+    S = {k_: (GN.fold(v, n, at) if kind != 'oneshot' else v[:n + tail]) for k_, v in S.items()}
     # ganancias CONGELADAS en las de la v2 aprobada (GN.level sobre su pista entera): GN.level mide "mientras suena"
     # respecto al pico de cada grupo, así que cambiar el Groove o la coda movía la mezcla de los otros tres cangrejos
     # (el bajo del Tantrum pasaba del 28 al 19 %). Un grupo nuevo se mide como siempre
-    g = GN.level(S, {k_: LV[k_] for k_ in S}, 'lead')
+    g = GN.level(S, {k_: LV[k_] for k_ in S}, 'lead') if 'lead' in S else {}
     g.update({k_: v for k_, v in G_V2.items() if k_ in S})
+    for k_, db in VAR_DB.get(variant, {}).items():                # (el final: el cangrejo que pelea, delante)
+        if k_ in g: g[k_] *= 10 ** (db / 20)
     from scipy.signal import butter, sosfilt
     x = sum(S[k_] * g[k_] for k_ in S)
     x = sosfilt(butter(1, 30, btype='high', fs=SR, output='sos'), x)
@@ -420,10 +573,12 @@ def build():
     # cada sección, a SU nivel respecto al tema A del Tantrum (DYN): se mide cada una y se corrige (los cuatro temas
     # tienen densidades muy distintas; sin esto el estribillo de la Icy salía 5 dB por encima y la cueva 2,5 por debajo)
     lu = {}
-    for sid, *_ in SECTIONS:
+    for sid, *_ in secs:
         i0 = int(T0[starts[sid] - 1] * SR); i1 = int(T0[starts[sid] - 1 + LEN[sid]] * SR)
         lu[sid] = F.loudness(np.stack([x[i0:i1], x[i0:i1]], 1))
-    corr = {sid: -(lu[sid] - lu['tantrum_A']) for sid in lu}
+    if ref is None: ref = lu['tantrum_A' if 'tantrum_A' in lu else secs[0][0]]
+    # (el FIN y su acorde: se mide sin el acorde largo, que si no lo baja todo)
+    corr = {sid: -(lu[sid] - ref) for sid in lu}
     env = np.ones(len(x))
     for b in range(1, NB + 1):
         a_, e_ = DYN[sec[b - 1]]
@@ -435,6 +590,9 @@ def build():
     env[n:] = env[n - 1]
     k_ = int(0.03 * SR); env = np.convolve(np.pad(env, k_, mode='edge'), np.ones(2 * k_ + 1) / (2 * k_ + 1), mode='valid')[:len(x)]
     x, side = x * env, side * env
+    if kind != 'linear':                                           # (pieza: sin masterizar, la mide pieces())
+        return dict(st=np.stack([x + side, x - side], 1), T0=T0, n=n, mel=mel, ref=ref, NB=NB, lu=lu,
+                    bars=[(float(T0[b - 1]), bpm_of[b - 1]) for b in range(1, NB + 1)])
     y = F.master(np.stack([x + side, x - side], 1), lufs=LUFS)
 
     GN.report(NAME, y, S, g, n)
@@ -476,6 +634,87 @@ def preview(y, at, mel, secs, T0):
         json.dump(dict(bpm=BPM, intro_compases=INTRO, secciones=secs), f, indent=1, ensure_ascii=False)
     print(f'  previas en {PREVIEW}')
 
+
+CUE_DIR = 'bosses/crab_mashup'                       # (en assets/music/: las piezas y su mapa, cues.json)
+
+
+def pieces():
+    """Las piezas del evento: cada una renderizada aparte, con UNA ganancia de master común (medida sobre una vuelta de
+    cada bucle y el final), su mapa (compases, tempo, cortes cada 4 compases, qué sigue) y previas de cada unión"""
+    ref = build(PIECES['tantrum'][0], 0, None, 'loop')['ref']        # (la dinámica, respecto al tema A del Tantrum)
+    R_ = {}
+    for pid, (secs, loop, nxt) in PIECES.items():
+        print(f'  · {pid}')
+        R_[pid] = build(secs, 0, pid[6:] if pid.startswith('final_') else None, 'loop' if loop else 'oneshot', ref)
+    # master común: el limitador de F.master, con la ganancia y el techo medidos sobre la referencia
+    knee, ceiling = 0.55, 0.8
+    def limit(z):
+        a_ = np.abs(z); over = a_ > knee; out = z.copy()
+        out[over] = np.sign(z[over]) * (knee + (1 - knee) * np.tanh((a_[over] - knee) / (1 - knee)))
+        return out
+    refx = np.concatenate([R_[k]['st'] for k in ('tantrum', 'icy', 'gloomy', 'groove', 'final_tantrum')])
+    g, c = 1.0, 1.0
+    for _ in range(10):
+        z = limit(refx * g); c = ceiling / (np.abs(z).max() + 1e-9); z = z * c
+        err = LUFS - F.loudness(z)
+        if abs(err) < 0.05: break
+        g *= 10 ** (err / 20)
+    out, cues = {}, {}
+    for pid, (secs, loop, nxt) in PIECES.items():
+        r = R_[pid]
+        y = limit(r['st'] * g) * c
+        if not loop and pid != 'end':                                # (lo que sigue empieza justo al acabar: sin cola)
+            y = y[:r['n']].copy(); k = int(0.006 * SR); y[-k:] *= np.linspace(1, 0, k)[:, None]
+        pk = np.abs(y).max()
+        if pk > 0.97: y *= 0.97 / pk
+        out[pid] = y
+        bars = r['bars']; length = r['n'] / SR
+        cuts = [round(bars[i][0], 4) for i in range(4, len(bars), 4)] + [round(length, 4)] if loop else []
+        cues[pid] = dict(file=f'{CUE_DIR}/{pid}.ogg', loop=loop, length=round(len(y) / SR if not loop else length, 4),
+                         music_end=round(length, 4), bars=[[round(t, 4), bp] for t, bp in bars], cuts=cuts, next=nxt)
+        print(f'    {pid:14s} {r["NB"]:3d} compases  {length:6.2f} s  {F.loudness(y):6.1f} LUFS  pico {np.abs(y).max():.2f}'
+              + (f'  cortes {len(cuts)}' if loop else ''))
+    return out, cues
+
+
+def pieces_out(out, cues, install):
+    d = os.path.join(PREVIEW, 'piezas'); os.makedirs(d, exist_ok=True)
+    def enc(x, path):
+        wav = path[:-4] + '.wav'; F.write_wav(wav, x)
+        os.system(f'ffmpeg -v quiet -y -i "{wav}" -c:a libvorbis -q:a 6 "{path}"'); os.remove(wav)
+    sec = lambda t: int(round(t * SR))
+    for pid, y in out.items(): enc(y, os.path.join(d, pid + '.ogg'))
+    # las UNIONES: en cada corte de cada bucle, 2 compases antes + la costura + 2 compases del siguiente
+    for pid, cu in cues.items():
+        if not cu['loop'] or not cu['next'] or pid.startswith('final_') or pid == 'outro': continue
+        seam = cues[cu['next']]; nxt = cues[seam['next']]
+        for t in cu['cuts']:
+            bi = next(i for i, b_ in enumerate(cu['bars']) if abs(b_[0] - t) < 1e-3) if t < cu['music_end'] - 1e-3 else len(cu['bars'])
+            t0 = cu['bars'][max(0, bi - 2)][0]
+            a_ = out[pid][sec(t0):sec(t)]
+            b_ = out[seam['next']][:sec(nxt['bars'][2][0])]
+            enc(np.concatenate([a_, out[cu['next']], b_]), os.path.join(d, f'union_{pid}_compas{bi + 1:02d}.ogg'))
+    # el FINAL cambiando de variante en cada corte (sigue el compás) y el fin con la salida
+    fb = cues['final_tantrum']['bars']; q = [sec(fb[i][0]) for i in (0, 4, 8, 12)] + [len(out['final_tantrum'])]
+    seq = [out['final_' + v][q[i]:q[i + 1]] for i, v in enumerate(VARIANTS)]
+    enc(np.concatenate(seq + [out['end'], out['outro']]), os.path.join(d, 'final_variantes_fin_y_salida.ogg'))
+    with open(os.path.join(d, 'cues.json'), 'w') as f: json.dump(cues, f, indent=1)
+    print(f'  piezas y uniones en {d}')
+    if install:                                       # (assets/music/bosses/crab_mashup/: lo lee el evento)
+        dst = os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'music', CUE_DIR)
+        os.makedirs(dst, exist_ok=True)
+        for pid, y in out.items(): enc(y, os.path.join(dst, pid + '.ogg'))
+        with open(os.path.join(dst, 'cues.json'), 'w') as f:
+            json.dump(dict(_ayuda='Mapa de la música adaptativa del Mega Mashup (tools/music/crab_mashup.py PIECES=1): '
+                           'cada pieza, sus compases [inicio s, BPM], sus cortes (s) y la que sigue. NO editar a mano.',
+                           volume=1.0, first='intro', pieces=cues), f, indent=1)
+        print(f'  instalado en {os.path.normpath(dst)}')
+
+
+if __name__ == '__main__' and os.environ.get('PIECES'):
+    out, cues = pieces()
+    if not os.environ.get('REPORT'): pieces_out(out, cues, bool(os.environ.get('INSTALL')))
+    sys.exit(0)
 
 if __name__ == '__main__':
     y, at, mel, secs, T0 = build()

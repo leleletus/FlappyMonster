@@ -683,4 +683,20 @@ the old level tune in the final boss, Verity's hook).
   `GN.level` measures each stem relative to its own peak over the whole track, so changing the Groove and the coda
   had moved the Tantrum / Gloomy / Icy mix (Tantrum bass 28 → 19 %); with the freeze those three sections are
   identical to v2. Preview of the Groove block alone: `crab_mashup_180bpm_groove.ogg`. Not listened to by me.
+- 0.5.61, the EVENT's adaptive music (`PIECES=1`, [crab-mashup](../bosses/crab-mashup.md)): the user wants each crab to
+  last as long as the player takes, so the song is split into pieces — one LOOP per crab with the parts the user
+  picked, in the user's order (Tantrum: A → war chant → tribal bridge · Icy: thaw B → chorus C → breath K · Gloomy:
+  legs bridge → war chant in the cave · Groove: stop-time solo → riff A → climax), a CUT POINT every 4 bars, a 4-bar
+  SEAM per change (a band hit on the chord that is sounding — it covers whatever is cut — then the next crab's world:
+  music box and bells → Icy; the tempo falls to 144 and the legs creep in, with the pause → Gloomy; the slap alone with
+  the hats → Groove, E minor; an accelerating snare and a noise riser 150 → 170 → final), the FINAL at 170 in four
+  variants (same notes and timing; the active crab in front: Tantrum saw + marimba, Icy music box all 16 bars + shimmer,
+  Gloomy hollow voice on the chant + both legs patterns, Groove slap + sparkle on every pop) that switch at any cut
+  keeping the bar, the END (the coda with a held D minor chord instead of la llamada) and the OUTRO (the Groove riff,
+  soft). The event intro is 8 bars (tribal, then stabs and a roll into Tantrum). New styles: `bridge`, `icy_breath`,
+  `groove_solo`, `groove_riff`, `seam`, `outro`. One master gain for all pieces (measured on one lap of each loop + a
+  final); loops are seamless (tail folded), one-shots cut at their last bar with a 6 ms fade (the end keeps its ring).
+  Numbers: Tantrum −9.7 · Icy −10.2 · Gloomy −11.7 · Groove −9.2 · seams −8.4…−11.2 · finals −7.8/−7.9 · end −7.8 ·
+  outro −12.8 LUFS. The linear `crab_mashup` is unchanged. Not listened to by me: every join has a preview
+  (`piezas/union_<crab>_compasNN.ogg`, `final_variantes_fin_y_salida.ogg`).
 

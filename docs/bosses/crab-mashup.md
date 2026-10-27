@@ -166,7 +166,7 @@ nothing to build now.)
 
 **Steps** (each committed, tested and pushed; music first because the user must listen to the joins):
 
-- [ ] 1. MUSIC IN PIECES: `crab_mashup.py` renders the pieces (intro 8 · Tantrum loop 24 · seam · Icy loop 24 · seam
+- [x] 1. (0.5.61) MUSIC IN PIECES: `crab_mashup.py` renders the pieces (intro 8 · Tantrum loop 24 · seam · Icy loop 24 · seam
   · Gloomy loop 16 · seam · Groove loop · seam · 4 final variants 16 at 170 · end 8 · outro 8) with ONE master gain,
   a cut point every 4 bars, the cue map and a preview of every cut → seam join. Catalog entry.
 - [ ] 2. ADAPTIVE PLAYER + scenes + darkness fade (engine pieces, no gameplay yet).
