@@ -143,8 +143,11 @@ function love.update(dt)
                 -- reglas (0.5.28): no desaparece a la vista (salvo atascado: FLEE_MAX); la cámara no da tirones
                 -- (ni al vencerlo ni, si llega a salir — saltando hacia la izquierda: no todas las arenas se dejan —, al salir
                 -- de la zona superada)
-                local ok = last.goneT ~= nil and not last.goneSeen and (last.camJump or 0) <= 20
-                print(('huida %s  se va a la vista=%s (huyendo %.1f s) · mayor salto de cámara=%.1f px/cuadro · salió de la zona=%s (x=%d, zona desde %d)'):format(
+                -- (el que REVIENTA a la vista —el Cangrejo Groove, 0.5.56— no se va: se acaba ahí, y se ve)
+                local burst = false
+                for _, k in ipairs(last.kseq) do if k == 'dying_burst' then burst = true end end
+                local ok = last.goneT ~= nil and (burst or not last.goneSeen) and (last.camJump or 0) <= 20
+                print(('huida %s  se va a la vista=%s' .. (burst and ' (revienta: vale)' or '') .. ' (huyendo %.1f s) · mayor salto de cámara=%.1f px/cuadro · salió de la zona=%s (x=%d, zona desde %d)'):format(
                     ok and 'OK   ' or 'FALLA', tostring(last.goneSeen), last.goneFlee or -1, last.camJump or 0, tostring(out),
                     st.player.x, z and z.x0 or -1))
                 love.event.quit(ok and 0 or 1)

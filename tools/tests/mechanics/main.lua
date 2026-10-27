@@ -562,6 +562,48 @@ function cases.tramp_pinchos()
         ('revienta=%s fantasma=%s desaparece=%s'):format(tostring(burst), tostring(ghost), tostring(not c.alive)))
 end
 
+-- Crabbies de TECHO (cualquier piel, trepador o no) que se dejan caer sobre pinchos o lava: revientan (antes se quedaban
+-- clavados encima, quietos, sin camino; el usuario, 0.5.56). Y en suelo normal siguen clavándose
+function cases.techo_pinchos()
+    local TileCodec = require 'src/world/tiles/TileCodec'
+    local up = { present = true, dir = TileCodec.DIR_UP }
+    local parts, ok = {}, true
+    for _, kind in ipairs({ 'crabby', 'crabbytramp', 'crabby_ice', 'crabby_lava', 'crabby_river' }) do
+        for _, floor in ipairs({ 'pinchos', 'lava', 'suelo' }) do
+            for _, wall in ipairs({ false, true }) do
+                local put = {}
+                if floor == 'lava' then for c = 2, 13 do put[#put + 1] = { c, 7, 'danger' } end end
+                local level, es = room(14, 8, put, { { type = kind, col = 7, row = 2,
+                    props = { movement = 'walk', attach = 'ceiling', wallWalk = wall, dropOnSight = true, detectRange = 10,
+                              pauses = false, speed = 0, respawn = 0 } } })
+                if floor == 'pinchos' then for c = 2, 13 do level.tiles[7][c] = TileCodec.encode(0, false, { nil, nil, up, up }) end end
+                local e = es[1]
+                -- (alguien debajo para que caiga; fuera de la sala no le pasa nada: solo cuenta lo que ve)
+                local fake = { x = e.x, y = 6.5 * T, alive = true, getOuterBounds = function(q) return { x = q.x - 20, y = q.y - 30, w = 40, h = 60 } end,
+                               isInvulnerable = function() return true end }
+                level.players = { fake }
+                local died, st, fell
+                for i = 1, 60 * 6 do
+                    level.solidBodies = Entities.solidBodies(es)
+                    if e.alive then e:update(1 / 60, level) end
+                    if e.state == 'drop_fall' then fell = true end
+                    if i > 60 then level.players = {} end
+                    if not died and (e.state == 'dead_burst' or not e.alive) then died, st = i / 60, e.state end
+                end
+                local good
+                if floor == 'suelo' then good = fell and e.alive and e.state ~= 'dead_burst'
+                else good = fell and died ~= nil and st == 'dead_burst' end
+                ok = ok and good
+                if not good or os.getenv('TRACE') then
+                    parts[#parts + 1] = ('%s%s en %s: cae=%s, %s'):format(kind, wall and ' (trepador)' or '', floor, tostring(fell),
+                        died and ('revienta a los %.2f s'):format(died) or ('sigue: ' .. tostring(e.state)))
+                end
+            end
+        end
+    end
+    check('techo_pinchos', ok, #parts == 0 and 'todos: en pinchos y lava revientan, en suelo se clavan' or table.concat(parts, ' · '))
+end
+
 -- Enemigos que caen en LAVA (pozo de 3 casillas de hondo): revientan (antes se hundían hasta el fondo como si nada);
 -- la bomba explota; un volador por encima, nada
 function cases.lava()
@@ -1587,7 +1629,7 @@ function love.load()
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
                          'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
-                         'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado' }) do cases[n]() end
+                         'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado', 'techo_pinchos' }) do cases[n]() end
     if os.getenv('SHOT_BOMB') then bombShot() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
     if not os.getenv('SHOT') then love.event.quit(fails == 0 and 0 or 1); return end

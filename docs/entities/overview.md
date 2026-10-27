@@ -168,7 +168,9 @@ landing mark; sprites in `assets/images/bosses/common/`). Asset layout: enemies 
   + x,y (same online). `dead_fling` = the block under it broke (`Level:breakTile` →
   `Level:forStanders`: 'Enemigos' category standing on the cell), spins up and out.
   `dead_burst` = a LAUNCHED entity lands on spikes / `contact='kill'` material
-  (`Entity:onDeadlyGround`): fx `enemy_burst` (flash, shell chunks, smoke) + shake. LAVA (0.5.9, user report: they
+  (`Entity:onDeadlyGround`), or one DROPPING FROM THE CEILING (any `drop_*` state but the shake: falling, stuck,
+  bouncing, getting up) ends on them (`Entity:droppedOnSpikes`, in `Entity:update`; 0.5.56, user report: a ceiling
+  Crabby landing on spikes stayed there, idle or walking with nowhere to go; harness `mechanics`, `techo_pinchos`): fx `enemy_burst` (flash, shell chunks, smoke) + shake. LAVA (0.5.9, user report: they
   sank to the bottom as if nothing): every 'Enemigos' entity whose feet are in a `lava` tile, in any state, gets
   `Entity:onLava` (default `dieBurst`; the bomb's `dieBurst` lights it with a short fuse) — checked in `Entity:update`
   before everything else; flyers and classes with `lavaProof = true` are exempt (none today; the volcano's lava Crabby

@@ -27,6 +27,7 @@ local GAIN = {
     -- Mega Crabby (archivos ya comprimidos: subir poco por encima de 1 satura)
     megaStep     = 0.7,  megaClack  = 1.0,  megaHurt   = 1.1,  megaSlam   = 1.1,
     megaWindup   = 0.78, megaShrink = 0.8,  megaFlee   = 0.9,  megaRoar = 0.67, megaFall = 0.8,
+    crowdCheer = 0.38, crowdBoo = 0.5,                -- (el público del Groove: de fondo, tools/sounds/groove.py)
     -- Espejo (tools/sounds/mirror.py)
     bombIgnite = 0.72, bombFizz = 0.48, bombBlast = 0.87, iceBreak = 0.85,
     cryoWindup = 0.58, cryoBlast = 0.6, cryoFreeze = 0.51, cryoFree = 0.72, cryoDrop = 0.6,
@@ -175,6 +176,8 @@ function Sound.load()
     load('glassWarn',     'assets/sounds/bosses/mirror/glass_warn.wav', 'static')  -- cristal roto: aviso
     load('glassRise',     'assets/sounds/bosses/mirror/glass_rise.wav', 'static')  -- cristal roto: salen
     load('glassHit',      'assets/sounds/bosses/mirror/glass_hit.wav',  'static')  -- cristal roto: tocarlos
+    load('crowdCheer',    'assets/sounds/bosses/groove/cheer.wav', 'static')   -- el público del Cangrejo Groove: le vitorea
+    load('crowdBoo',      'assets/sounds/bosses/groove/boo.wav',   'static')   -- … y le abuchea (tools/sounds/groove.py)
     -- Mega Crabby (generados con tools/sounds/megacrabby.py)
     load('megaStep',      'assets/sounds/bosses/megacrabby/step.wav',   'static')   -- pisada pesada
     load('megaClack',     'assets/sounds/bosses/megacrabby/clack.wav',  'static')   -- chasquido de pinzas

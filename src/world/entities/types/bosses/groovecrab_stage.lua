@@ -51,12 +51,15 @@ local NOTE_COLS = { { 1, 0.31, 0.64 }, { 0.25, 0.85, 1 }, { 0.71, 0.42, 1 }, { 0
 local function beatOf(self) local s = self.songT or 0; return math.floor(s / BEAT), (s / BEAT) % 1 end
 local function live(self) return self:isActive() and not EDITOR_VIEW and self.zone ~= nil and self.zone.state == 'fight' end
 -- EL ESCENARIO APARECE EN LA ENTRADA (el usuario: que no salga de la nada al empezar la pelea): s de entrada (nil =
--- no se ve: antes de la entrada; 99 = ya está todo, en la pelea y mientras cae vencido)
+-- no se ve: antes de la entrada; 99 = ya está todo, en la pelea y mientras cae vencido). Y AL REVENTAR SE RECOGE igual
+-- que salió, al revés (el usuario, 0.5.56: "desaparecía de golpe"): la entrada hacia atrás en P.STAGE_OUT s
+local STAGE_IN = 3.3                                    -- (lo que tarda en salir todo: los láseres, a 3.2)
 local function stageT(self)
     if EDITOR_VIEW then return nil end
     local st = self.state
     if st == 'intro' then return self.deadTimer or 0 end
     if st == 'ready' then return self:introTime() + (self.deadTimer or 0) end
+    if st == 'dying_burst' then return math.max(0, STAGE_IN * (1 - (self.deadTimer or 0) / P.STAGE_OUT)) end
     if live(self) or self:isDying() then return 99 end
     return nil
 end
@@ -133,9 +136,12 @@ function GC:pose()
         p.ko = t < 0.35                                                 -- (hasta que le vuelven las gafas: drawGlasses)
         p.sy, p.sx = 1 + 0.05 * math.sin(u * 20) * (1 - u), 1
         p.bdy, p.sdy = -3 * math.sin(u * math.pi), -2 * math.sin(u * math.pi)
-    elseif st == 'dying_flee' then
-        p.sy, p.sx, p.tk, p.leg, p.bdy, p.sdy = 1.12, 0.9, 1.3, 2, -4, -3
-        p.ko = true                                                     -- (se va noqueado; las gafas se quedan en el suelo)
+    end
+    if st == 'dying_daze' then
+        -- (a punto de reventar: se va HINCHANDO y tiembla cada vez más)
+        local u = math.min(1, t / P.DAZE_T)
+        p.sx, p.sy = p.sx * (1 + 0.16 * u * u), p.sy * (1 + 0.12 * u * u)
+        p.jx = p.jx + ((math.floor(now * 50) % 2 == 0) and 1 or -1) * math.floor(1 + u * 5)
     end
     -- EL VAIVÉN de las pinzas (como los Mega Crabbies, nunca tiesas): desvío en px de arte que se suma a la postura
     -- (sin girarlas: el pixel art no se rota). Andando se mecen a contrapié; agachado, recogidas y temblando; en el
@@ -155,8 +161,6 @@ function GC:pose()
         p.bdy, p.sdy, p.bdx = -3 + sw(1.5, 20), -2 + sw(1, 20, 1.3), p.bdx + sw(0.8, 20, 0.7)
     elseif st == 'stunned' or st == 'dying_daze' then
         p.bdx, p.sdy = p.bdx + sw(0.5, 6), p.sdy + sw(0.3, 6, 2)
-    elseif st == 'dying_flee' then
-        p.bdy, p.sdy = -4 + sw(1.5, 16), -3 + sw(1, 16, 1)
     end
     if self.boingAt and now - self.boingAt < 0.5 and self:trampOut() then
         p.tk = p.tk + 0.3 * math.sin((now - self.boingAt) * 30) * (1 - (now - self.boingAt) / 0.5)
@@ -263,12 +267,19 @@ function GC:drawCrowd(camX, camY, et, nb, beat, row)
     local fy = self.floorY
     local S, n = row.scale, row.n
     local dk = { CROWD_DARK[1] * row.dark, CROWD_DARK[2] * row.dark, CROWD_DARK[3] * row.dark }
+    -- su ÁNIMO (0.5.56): VITOREANDO saltan todos en cada tiempo, más alto, agitando las barras; ABUCHEANDO se quedan
+    -- quietos, algo hundidos, con las barras bajadas (k: la fuerza, que se va al acabar la reacción)
+    local mood, age = self:crowdMood()
+    local k = mood and math.min(1, math.max(0, (GC.MOOD_T - (age or 0)) / 0.4)) or 0
+    local cheer, boo = mood == GC.CHEER and k > 0.5, mood == GC.BOO and k > 0.5
     for i = 0, n - 1 do
         local seed = math.sin(i * 91.7 + row.seed) * 43758.5453
         local r = seed - math.floor(seed)
         local x = zx0 - 3 * T + (i + 0.5) * ((zx1 - zx0) + 6 * T) / n + (r - 0.5) * T * row.gap
         local off = (i + (row.scale == 3 and 1 or 0)) % 2
         local up = ((nb + off) % 2 == 0 and beat < 0.3) and math.floor(10 * S / 4) or 0
+        if cheer then up = math.floor(math.abs(math.sin((beat + off * 0.5) * math.pi)) * 18 * S / 4)
+        elseif boo then up = -math.floor(4 * S / 4) end
         local kIn = appear(et, 0.7 + i * 0.05, 1.0 + i * 0.05)          -- (se asoma de debajo de la arena)
         up = up - math.floor((1 - kIn) * 3 * T) + math.floor(math.sin(kIn * math.pi) * 14) + math.floor(row.lift)
         local im, sp
@@ -280,6 +291,7 @@ function GC:drawCrowd(camX, camY, et, nb, beat, row)
             local feet = math.floor(fy - 0.15 * T - up - camY)
             local sx, sy = cxs - math.floor(w / 2), feet - h
             local lean = ((nb + i) % 2 == 0) and -1 or 1
+            if cheer then lean = ((math.floor(beat * 4) + i) % 2 == 0) and -1 or 1 end     -- (agitándolas)
             local si, sq = quad(art.stick, (i + nb) % 4 + 1)
             local cl = sp and clawOf(sp)
             -- (sin filo aunque sea de noche: el público es fondo y no debe confundirse con lo que hace daño — el usuario)
@@ -290,7 +302,7 @@ function GC:drawCrowd(camX, camY, et, nb, beat, row)
                 local c, st = cl.cfg, cl.strip
                 local fw, fh = c.w, st.h or st.image:getHeight()
                 for _, side in ipairs({ -1, 1 }) do
-                    local raised = side == lean
+                    local raised = side == lean and not boo
                     -- (alzada BIEN por encima del caparazón y un poco hacia fuera, y de un tono algo más claro que el
                     -- cuerpo: en silueta, si no, la pinza se fundía con él y no se veía)
                     local dy = raised and (-6 - ((beat < 0.3) and 1 or 0)) or 0
@@ -301,12 +313,19 @@ function GC:drawCrowd(camX, camY, et, nb, beat, row)
                     if raised then
                         love.graphics.setColor(1, 1, 1, 0.95)
                         love.graphics.draw(si, sq, px, top + 2, lean * 0.25, S, S, 1.5, 8)
+                    elseif boo and side == lean then                    -- (abucheando: la barra cuelga de la pinza)
+                        love.graphics.setColor(1, 1, 1, 0.95)
+                        love.graphics.draw(si, sq, px, top + math.floor(fh * S), lean * 2.6, S, S, 1.5, 8)
                     end
                 end
             else
                 -- la barra de luz, AGARRADA al cuerpo (su base en el borde de arriba, a un lado), inclinándose al ritmo
                 love.graphics.setColor(1, 1, 1, 0.95)
-                love.graphics.draw(si, sq, sx + w / 2 + lean * (w / 2 - 10 * S / 4), sy + 2 * S, lean * 0.3, S, S, 1.5, 8)
+                if boo then                                             -- (bajada, colgando por delante)
+                    love.graphics.draw(si, sq, sx + w / 2 + lean * (w / 2 - 6 * S / 4), sy + h - 2 * S, lean * 2.6, S, S, 1.5, 8)
+                else
+                    love.graphics.draw(si, sq, sx + w / 2 + lean * (w / 2 - 10 * S / 4), sy + 2 * S, lean * 0.3, S, S, 1.5, 8)
+                end
             end
         end
     end
@@ -383,6 +402,11 @@ function GC:drawDecks(camX, camY)
     local now = love.timer.getTime()
     local kIn = self.p2T and math.max(0, math.min(1, ((self.songT or 0) - self.p2T) / DECK_IN)) or 1
     if self:isDying() then kIn = 1 end
+    -- con la PISTA encendida se van con sus plataformas (el usuario, 0.5.56: que el ataque se vea solo) y, al acabar,
+    -- vuelven a salir de ellas (el momento de volver se recuerda al dibujar)
+    if self:decksAway() or self.state == 'dying_burst' then self._deckAway = true; return end
+    if self._deckAway then self._deckAway, self._deckBack = false, now end
+    if self._deckBack then kIn = math.min(kIn, math.min(1, (now - self._deckBack) / DECK_IN)) end
     local live = self:decksLive()
     for i, d in ipairs(self.decks) do
         local on = (d.on or 0) > 0
@@ -456,7 +480,7 @@ end
 
 -- Las GAFAS que le volaron al quedar noqueado: salen de la cara hacia atrás en arco, botan en el suelo y se quedan;
 -- al recomponerse ('regrow') vuelven de un salto a su cara. Pura función de state + deadTimer (el sitio donde caen se
--- recuerda al dibujar, para que se queden ahí mientras se va de un bote)
+-- recuerda al dibujar, para que se queden ahí mientras se recoge el escenario después de reventar)
 local GL_FLY, GL_BACK = 0.55, 0.35
 function GC:drawGlasses(camX, camY, alpha)
     local st, t = self.state, self.deadTimer or 0
@@ -476,8 +500,9 @@ function GC:drawGlasses(camX, camY, alpha)
     elseif st == 'regrow' and t < GL_BACK then
         local u = t / GL_BACK
         x, y = rx + (hx - rx) * u, ry + (hy - ry) * u - 1.5 * T * 4 * u * (1 - u)
-    elseif st == 'dying_flee' and self._glass then
+    elseif st == 'dying_burst' and self._glass then
         x, y = self._glass[1], self._glass[2]
+        alpha = alpha * math.max(0, 1 - (t - P.STAGE_OUT + 0.6) / 0.6)
     else return end
     local gi, gq = quad(art.glasses, 1)
     love.graphics.setColor(1, 1, 1, alpha)
@@ -496,9 +521,13 @@ function GC:render(camX, camY)
     -- (¿anda? lo que avanzó desde el dibujo anterior)
     self._walking = self._lx ~= nil and math.abs(self.x - self._lx) > 0.05 and st == 'groove'
     self._lx = self.x
+    if st == 'dying_burst' then                                       -- (reventó: solo quedan sus gafas)
+        if not EDITOR_VIEW then self:drawGlasses(camX, camY, 1) end
+        love.graphics.setColor(1, 1, 1, 1)
+        return
+    end
     local p = self:pose()
     local alpha = self:ghostAlpha()
-    if st == 'dying_flee' then alpha = alpha * self:fleeAlpha(self.deadTimer) end
     local f = (self.facing or 1) * p.flip
     local fx, fy = math.floor(self.x - camX + 0.5) + p.jx, math.floor(self:feetY() - camY + 0.5)
     local dizzy = (st == 'dying_daze' or st == 'stunned') and not EDITOR_VIEW

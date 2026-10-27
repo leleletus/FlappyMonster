@@ -22,13 +22,17 @@
 --   temblor    cada golpe que recibe hace temblar la pantalla
 --   platos     2ª FASE: los platos de DJ están en las dos plataformas; en la 1ª fase pisarlos no hace nada; en la 2ª ya
 --              no hay dorada, pisar uno lo pone a girar (y rebotas) DECK_T s y luego se apaga; los dos a la vez → el
---              BAJÓN: noqueado y vulnerable, platos apagados
+--              BAJÓN: noqueado y vulnerable, platos apagados; él no va a ponerse bajo el otro (baila como siempre)
+--   ocultos    2ª fase, con la PISTA encendida (la S): los platos y sus plataformas no están (la cuenta del plato
+--              encendido se para) y, al acabar, vuelven
+--   publico    el público vitorea cuando le da a un jugador y abuchea cuando le das (lo que llega por red)
 --   trepar     (2ª fase: las plataformas son bloques de fase) caerle al trampolín y mantener hacia un lado te deja
 --              en la plataforma de ese lado (a 5 casillas: con el doble salto no se llega)
 --   enfado     a media vida se enfada (2ª fase); enfadado salta también en el 4º compás de cada 4 de la A (tranquilo, no)
 --   solo       en el compás 5 del solo, dorada en la 0 (en el 1 ya no); en el 2, un saltito que cae en el 3 justo en el
 --              golpe, sin ondas
---   derrota    el último golpe: aturdido, se va de un bote hacia arriba (libera la zona) hasta irse; sin fragmento
+--   derrota    el último golpe: aturdido, REVIENTA (libera la zona, explosión grande, abucheo) y, recogido el escenario,
+--              se acaba; no se mueve de su sitio; sin fragmento
 --   red        netPackExtra → otro Groove (cliente): canción, enfado, fase, diana, ondas, notas (con la dorada),
 --              platos y bajón iguales; interact igual
 --
@@ -440,11 +444,7 @@ function cases.platos()
     local pl = onDeck(level, boss, decks[1])
     stepAll(level, es, { pl }, 2 / 60, function() pl.invT = 9 end)
     local spun, bounced = decks[1].on > boss.DECK_T - 0.1, pl.vy < 0
-    -- (con uno girando va a ponerse bajo el otro)
-    local g0 = math.abs(boss.x - decks[2].x)
-    stepAll(level, es, {}, 3.0)
-    local g1 = math.abs(boss.x - decks[2].x)
-    stepAll(level, es, {}, boss.DECK_T - 3.0 + 0.1)
+    stepAll(level, es, {}, boss.DECK_T + 0.1)
     local stopped = decks[1].on == 0
     -- los dos: el bajón
     local hp0 = boss.hp
@@ -454,11 +454,71 @@ function cases.platos()
     stepAll(level, es, { a2 }, 2 / 60, function() a2.invT = 9 end)
     local ko = boss.state == 'stunned' and boss:isVulnerable() and not boss:trampOut() and boss.dropT ~= nil
         and decks[1].on == 0 and decks[2].on == 0
-    check('platos', found and p1off and p2 and not gold and spun and bounced and stopped and ko and boss.hp == hp0 and g1 < g0 - T,
-        ('platos en las plataformas: %s (x %s, %s; y %s) · 1ª fase, pisarlo: nada=%s · 2ª fase=%s, dorada=%s · pisado: gira=%s, rebota=%s, a los %.1f s se apaga=%s · los dos: noqueado=%s · hacia el otro: %.0f → %.0f px'):format(
+    check('platos', found and p1off and p2 and not gold and spun and bounced and stopped and ko and boss.hp == hp0,
+        ('platos en las plataformas: %s (x %s, %s; y %s) · 1ª fase, pisarlo: nada=%s · 2ª fase=%s, dorada=%s · pisado: gira=%s, rebota=%s, a los %.1f s se apaga=%s · los dos: noqueado=%s'):format(
             tostring(found), decks and math.floor(decks[1].x) or '?', decks and math.floor(decks[2].x) or '?',
             decks and math.floor(decks[1].y) or '?', tostring(p1off), tostring(p2), tostring(gold), tostring(spun),
-            tostring(bounced), boss.DECK_T, tostring(stopped), tostring(ko), g0, g1))
+            tostring(bounced), boss.DECK_T, tostring(stopped), tostring(ko)))
+end
+
+-- (las casillas de las plataformas: ¿están todas puestas / todas quitadas?)
+local function platCells(level)
+    local on, n = 0, 0
+    for _, pb in ipairs(level.phaseBlocks or {}) do
+        for _, cell in ipairs(pb.cells) do
+            n = n + 1
+            if level:getRaw(cell.c, cell.r) == cell.raw then on = on + 1 end
+        end
+    end
+    return on, n
+end
+
+function cases.ocultos()
+    local level, es, boss = arena()
+    local pa = playerAt(level, 24)
+    phase2(level, es, boss, pa)
+    platformsOn(level)
+    songAt(boss, barOf('A', 8), 0)
+    stepAll(level, es, { pa }, 0.1, function() pa.vx, pa.invT = 0, 9 end)
+    local on0, n = platCells(level)
+    boss.decks[1].on = boss.DECK_T
+    songAt(boss, barOf('S', 2), 0)
+    stepAll(level, es, { pa }, 1.0, function() pa.vx, pa.invT = 0, 9; pa.x = 24 * T end)
+    local onS = platCells(level)
+    local away, live, left = boss:decksAway(), boss:decksLive(), boss.decks[1].on
+    songAt(boss, barOf('C', 1), 0)
+    stepAll(level, es, { pa }, 0.5, function() pa.vx, pa.invT = 0, 9; pa.x = 24 * T end)
+    local onC = platCells(level)
+    check('ocultos', n > 0 and on0 == n and onS == 0 and away and not live and math.abs(left - boss.DECK_T) < 1e-6
+        and onC == n and not boss:decksAway(),
+        ('plataformas antes: %d/%d · con la pista: %d (platos fuera=%s, pisables=%s, cuenta parada=%s) · después: %d'):format(
+            on0, n, onS, tostring(away), tostring(live), tostring(math.abs(left - boss.DECK_T) < 1e-6), onC))
+end
+
+function cases.publico()
+    local level, es, boss = arena()
+    local pa = playerAt(level, 30)
+    songAt(boss, barOf('B', 1), 0)
+    stepAll(level, es, { pa }, 0.1, function() pa.vx, pa.invT = 0, 9 end)
+    local calm = boss:crowdMood()
+    pa.invT = 0
+    pa:hurt(1)
+    stepAll(level, es, { pa }, 0.1, function() pa.vx, pa.invT = 0, 9 end)
+    local cheer = boss:crowdMood()
+    -- por red
+    local data = boss:netPackExtra()
+    local cl = Entities.create({ type = 'groovecrab', col = boss.col, row = boss.row, props = {} })
+    cl.zone, cl.levelRef, cl.state = boss.zone, level, boss.state
+    cl:netApplyExtra(data, data, 1)
+    local netCheer = cl:crowdMood()
+    stepAll(level, es, { pa }, boss.MOOD_T + 0.2, function() pa.vx, pa.invT = 0, 9 end)
+    local over = boss:crowdMood()
+    stunIt(level, es, boss, pa)
+    boss:stomp()
+    local boo = boss:crowdMood()
+    check('publico', calm == nil and cheer == boss.CHEER and netCheer == boss.CHEER and over == nil and boo == boss.BOO,
+        ('tranquilo: %s · te da: %s (cliente: %s) · %.0f s después: %s · le das: %s'):format(tostring(calm), tostring(cheer),
+            tostring(netCheer), boss.MOOD_T + 0.2, tostring(over), tostring(boo)))
 end
 
 -- Lo que pide la 2ª fase se puede hacer: del trampolín a cada plataforma, manteniendo hacia ese lado
@@ -540,18 +600,24 @@ function cases.derrota()
     boss.hp, boss.inv = 1, 0
     boss:stomp()
     local states, seen = {}, {}
-    local rel, flew = false, false
-    local y0 = boss.y
-    stepAll(level, es, { pa }, 12, function()
+    local rel, moved = false, 0
+    local x0, y0 = boss.x, boss.y
+    local Entity = require 'src/world/entities/base/Entity'
+    local fx, big = Entity.fx, 0
+    Entity.fx = function(kind, ...) if kind == 'boss_big_blast' then big = big + 1 end; if fx then return fx(kind, ...) end end
+    local booT
+    stepAll(level, es, { pa }, 8, function()
         pa.vx, pa.invT = 0, 9
         if not seen[boss.state] then seen[boss.state] = true; states[#states + 1] = boss.state end
         if boss:releasesZone() then rel = true end
-        if boss.y < y0 - 6 * T then flew = true end
+        moved = math.max(moved, math.abs(boss.x - x0), math.abs(boss.y - y0))
         return boss.state == 'dead'
     end)
-    check('derrota', states[1] == 'dying_daze' and seen.dying_flee and seen.dead and rel and flew and boss:shardDrop() == false,
-        ('estados: %s · libera=%s · se va hacia arriba=%s · fragmento=%s'):format(table.concat(states, ','), tostring(rel),
-            tostring(flew), tostring(boss:shardDrop())))
+    Entity.fx = fx
+    check('derrota', states[1] == 'dying_daze' and seen.dying_burst and seen.dead and rel and big == 1 and moved < 1
+        and boss:shardDrop() == false,
+        ('estados: %s · libera=%s · explosión grande: %d · se movió %.0f px · fragmento=%s'):format(
+            table.concat(states, ','), tostring(rel), big, moved, tostring(boss:shardDrop())))
 end
 
 function cases.red()
@@ -594,7 +660,7 @@ end
 
 function love.load(arg)
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'reloj', 'salto', 'notas', 'dorada', 'aturdido', 'trampolin', 'tocar', 'pista', 'dibujos', 'baile', 'temblor', 'platos', 'trepar', 'enfado',
+    for _, n in ipairs({ 'reloj', 'salto', 'notas', 'dorada', 'aturdido', 'trampolin', 'tocar', 'pista', 'dibujos', 'baile', 'temblor', 'platos', 'ocultos', 'publico', 'trepar', 'enfado',
                          'solo', 'derrota', 'red' }) do
         if not only or only == n then
             local ok, err = xpcall(cases[n], debug.traceback)

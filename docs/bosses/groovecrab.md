@@ -6,7 +6,9 @@ where the slap bass is the lead: `tools/music/slap_boss.py`). It appears on the 
 world's boss) is beaten: [world-map](../story/world-map.md#the-secret-node).
 **File:** `src/world/entities/types/bosses/groovecrab.lua`. **Art (its own design):** `assets/images/bosses/groovecrab/`
 (`tools/art/bosses/make_groove_crab.py`; `--gif` writes an animated mockup to `FlappyMonster_pruebas/jefes/groove/`).
-**Sounds:** reused (`megaSlam`, `megaClack`, `megaWindup`, `megaHurt`, `megaRoar`, `trampoline`, `crabPop`, `gpImpact`).
+**Sounds:** reused (`megaSlam`, `megaClack`, `megaWindup`, `megaHurt`, `megaRoar`, `trampoline`, `crabPop`, `gpImpact`,
+`bossExplode`) + the crowd's own `crowdCheer` / `crowdBoo` (`assets/sounds/bosses/groove/`, `tools/sounds/groove.py`:
+many detuned saw "voices" through a vowel formant — no samples).
 **Level:** `isla_del_groove` "Isla del Groove" / "Groove Island" (`tools/levelgen/levels_boss.py`; beach at night; level music `costa_groove`, the slap remix of Calipso: `tools/music/groove_island.py`);
 arena `tools/levelgen/arenas/jefe_groove.json` (`make_jefe_groove.py`). **Music:** `groove`. **Shard:** none.
 **Harnesses:** `groovecrab_rules`, `boss_sim` / `boss_intro` / `online_boss` / `boss_frames` with `LEVEL=` that arena
@@ -50,15 +52,19 @@ snapshot; the client's music starts when it sees the fight, with the same delay 
   platform (`GC:findDecks`: the left-most and right-most standable runs of the zone, ≥ 2 tiles above the floor and
   wide enough for a deck; same on SP and server; positions travel in the snapshot). The platforms are 5 tiles up and a
   double jump reaches ~3.1, so the ONLY way up is HIS trampoline. Stomp / ground-pound a deck → it spins for `DECK_T`
-  = 8 bars (12.8 s; stomping again restarts it; the player bounces; meanwhile he walks under the other one), with a 5-LED countdown that turns red and blinks at
-  the end, then stops (`switchOff`). An arrow bobs over every stopped deck. BOTH spinning at once → the BASS DROP: the
+  = 10 bars (16 s; stomping again restarts it; the player bounces). He does NOT go anywhere special meanwhile: the
+  player lures him (his hops follow the nearest player) to the other side. A 5-LED countdown turns red and blinks at
+  the end, then the deck stops (`switchOff`). While the DANCE FLOOR is on (`GC:decksAway` = `floorOn`), the decks AND
+  their platforms are gone (`GC:updatePlatforms` → `setPlatforms`: the phase-block cells go back to `hiddenAs`, 'set'
+  tile changes like PhaseBlocks; an occupied cell waits) so the attack is all there is; deck countdowns pause; when
+  it ends they come back and the decks rise again (`drawDecks`, render-cached return time). An arrow bobs over every stopped deck. BOTH spinning at once → the BASS DROP: the
   two speakers fire rings and a beam at him (`dropT`, drawn `DROP_FX` 0.8 s) → knocked out. Decks can't be started
   while he is knocked out or regrowing. If an arena has no such platforms (`decks = false`), phase 2 keeps the golden
   note so he can still be hurt.
-- **Knocked out** ('stunned', `STUN_T` 2 bars; also the look of 'dying_daze' / 'dying_flee'): stomp 1 / ground pound 2,
+- **Knocked out** ('stunned', `STUN_T` 2 bars; also the look of 'dying_daze'): stomp 1 / ground pound 2,
   up to 2 hits, then 'regrow' (a new trampoline grows from his head). Look (`ko-Sheet.png`, `glasses.png`): his
   SUNGLASSES fly off in an arc and bounce on the floor behind him (back on his face in the first 0.35 s of 'regrow';
-  left on the floor when he flees), X eyes that spin (X / + frames), tongue out, legs splayed, claws on the floor; the
+  left on the floor when he bursts), X eyes that spin (X / + frames), tongue out, legs splayed, claws on the floor; the
   hit SQUASHES him and he springs back, then he sways side to side (offset, never rotated) under a bigger star ring.
   The generic `stunned` wobble of the render wrapper is off (`GC.ownStunLook`): it rotated his whole render — dance
   floor included — around him.
@@ -69,8 +75,17 @@ snapshot; the client's music starts when it sees the fight, with the same delay 
   HP 11 (+4 per extra player; × the difficulty's `bossHp`).
 
 **Intro** (3.6 s): falls from the sky, lands (shake), snaps its claws twice, boings on its trampoline.
-**Defeat:** 'dying_daze' (knocked-out look, 2.2 s) → 'dying_flee': one huge bounce on its trampoline up into the sky (pure
-function of time), out of view. No shard (`shardDrop` = false).
+**Defeat:** 'dying_daze' (`DAZE_T` 1.8 s: knocked-out look, he SWELLS and shakes harder, small `boss_blast`s on his body
+closer and closer) → 'dying_burst' (`GC:burst`: `boss_big_blast`, six `enemy_burst`s around him, his trampoline in
+pieces, big confetti, big shake, `bossExplode` + `enemyExplode` + `megaSlam` + the crowd's boo; releases the zone; the
+body is no longer drawn, only his glasses on the floor) → after `STAGE_OUT` 2.4 s, 'dead'. Meanwhile the STAGE
+RETRACTS the way it came in, backwards (`stageT` runs the entrance timeline in reverse: lasers off, the crowd ducks
+under the sand one by one, the ball goes up, the speakers sink). No shard (`shardDrop` = false).
+
+**Crowd mood** (`GC:mood`, `crowdMood`; `MOOD_T` 2 s; travels in the snapshot): it CHEERS him (`crowdCheer`; everyone
+jumps on every beat, higher, waving the sticks) when a player loses HP or dies (`watchPlayers`: any HP drop of any
+player in the level, whatever hit them), and BOOS (`crowdBoo`; nobody jumps, they sink a little, sticks lowered) when
+he is hurt — and all through his death.
 
 **Look** (all from state + deadTimer + songT): bobs on every beat, claws click and SWING in every state (walking
 out of step, tucked in and shaking when crouched, flailing in the air, swaying knocked out, jolted when hit; offsets
@@ -78,7 +93,8 @@ in whole art pixels, never rotated: pixel art); two stage SPOTLIGHTS from the to
 corners of the zone onto it, changing colour on every beat (additive cones).
 
 **Network:** netPackExtra `{songT·100, rage, markX, stunHits, phase, dropT·100 (-1), p2T·100 (-1), waves
-(BossWaves.pack), nNotes, {id, x, y, vx, vy, colour}…, nDecks, {x, y, on·10}…}`. Protocol 70.
+mood (0/1/2), mood songT·100 (-1), (BossWaves.pack), nNotes, {id, x, y, vx, vy, colour}…, nDecks, {x, y, on·10}…}`.
+Protocol 71.
 
 ## History and decisions
 
@@ -152,3 +168,11 @@ corners of the zone onto it, changing colour on every beat (additive cones).
   of 30 (was 22); (3) "the hardest boss in the game, but it goes a bit too far": HP 13 → 11, notes 330 / 390 →
   300 / 345 px/s, sand waves 470 → 420 px/s, enraged he adds ONE hop every 4 bars of A (was every bar) and the
   third note every 4 bars of B (was every other bar). Not played by the user yet.
+- 0.5.56, the user: (1) during the dance-floor attack the decks AND their platforms go away (focus on the attack) and
+  come back after it; (2) "going to stand under the other deck was forced and weird": `deckGoal` removed — he behaves
+  as always and the player lures him; decks spin a bit longer (`DECK_T` 8 → 10 bars); (3) the defeat was a bounce up
+  into the sky → now he EXPLODES wildly, like the crabs on spikes or lava (`dying_burst`); (4) the stage and crowd
+  vanished at once on his death → they retract the way they came in, with the crowd booing; (5) the crowd cheers him
+  when a player is hurt or dies and boos when he is hurt or dies (new sounds, NOT listened to). Same release: a
+  ceiling Crabby (any skin) dropping onto spikes stayed there stuck → `Entity:droppedOnSpikes` (it bursts). Not
+  played by the user yet: deck length, crowd sounds and burst feel are to judge.

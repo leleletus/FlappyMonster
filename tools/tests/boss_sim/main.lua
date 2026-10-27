@@ -405,6 +405,19 @@ function love.load()
             for _, n in ipairs(boss.notes or {}) do
                 if n.c == 4 and n.t > 0.6 and not pa.dying then pa.x, pa.y, pa.vx, pa.vy = n.x, n.y, 0, 0; gcs.golds = gcs.golds + 1 end
             end
+            -- 2ª fase: pisa los platos de DJ, uno y luego el otro (3 s entre ellos: lo que tarda en atraerlo de lado)
+            if boss.phase == 2 and boss:decksLive() and not pa.dying and t - (gcs.deckT or -9) > 3 then
+                for _, d in ipairs(boss.decks or {}) do
+                    if (d.on or 0) == 0 then
+                        local box = boss:deckBox(d)
+                        local ob = pa:getOuterBounds()
+                        pa.x, pa.vx, pa.vy, pa.onGround = d.x, 0, 300, false
+                        pa.y = pa.y + (box.y - 4) - (ob.y + ob.h)
+                        gcs.deckT, gcs.decks = t, (gcs.decks or 0) + 1
+                        break
+                    end
+                end
+            end
             if boss.state == 'regrow' and gcs.lastSt ~= 'regrow' then gcs.regrow = gcs.regrow + 1 end
             gcs.lastSt = boss.state
         end
@@ -533,13 +546,13 @@ function love.load()
             print(('%-10s %s  %s'):format(name, ok and 'OK   ' or 'FALLA', msg))
             if not ok then fails = fails + 1 end
         end
-        local need = { 'groove', 'crouch', 'hop', 'snap', 'stunned', 'regrow', 'dying_daze', 'dying_flee' }
+        local need = { 'groove', 'crouch', 'hop', 'snap', 'stunned', 'regrow', 'dying_daze', 'dying_burst' }
         local miss = {}
         for _, n in ipairs(need) do if not seen[n] then miss[#miss + 1] = n end end
         check('estados', #miss == 0, #miss == 0 and 'todos vistos' or ('faltan: ' .. table.concat(miss, ',')))
         check('muerte', not boss.alive and gcs.rage and z.state == 'cleared' and gcs.regrow > 0,
-            ('vivo=%s, enfadado=%s, esquivas %d, notas doradas devueltas (pasos en ellas) %d, trampolines que le crecen %d, lanzado %d veces, zona %s'):format(
-                tostring(boss.alive), tostring(gcs.rage), gcs.dodges, gcs.golds, gcs.regrow, gcs.launches, z.state))
+            ('vivo=%s, enfadado=%s, esquivas %d, notas doradas devueltas (pasos en ellas) %d, trampolines que le crecen %d, lanzado %d veces, platos pisados %d, zona %s'):format(
+                tostring(boss.alive), tostring(gcs.rage), gcs.dodges, gcs.golds, gcs.regrow, gcs.launches, gcs.decks or 0, z.state))
     end
     if gh then
         local function check(name, ok, msg)

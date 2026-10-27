@@ -111,8 +111,8 @@ local BOOM_H = 3.5 * T                          -- alto de la columna de luz (la
 local BOOM_LEN = 3                              -- semicorcheas que dura la columna
 local FLOOR_WARN = 12                           -- semicorcheas de AVISO antes de la columna (3 tiempos: 1,2 s; antes 0,4)
 -- Los platos de DJ (2ª fase)
-local DECK_T = 8 * BAR                          -- s que gira un plato tras pisarlo (12,8 s; 8 s se quedaba corto: el usuario,
-                                                -- 0.5.53) — da para bajar, volver a su
+local DECK_T = 10 * BAR                         -- s que gira un plato tras pisarlo (16 s; el usuario, 0.5.56: tú lo atraes de un
+                                                -- lado a otro, "con los platos un poquito más") — da para bajar, volver a su
                                                 -- trampolín y subir a la otra plataforma)
 local DECK_W, DECK_H = 24 * 4, 10 * 4           -- (el arte: 24x10 a ×4)
 local DECK_IN = 1.0                             -- s que tardan en salir al empezar la 2ª fase
@@ -131,11 +131,16 @@ local WAVES = { spd = 420, life = 2.0, w = 44, h = 34, hit = { 1, 300, -440, 0.1
 P.WAVES = WAVES
 
 -- Muerte
-local DAZE_T = 2.2
-local FLEE_VX, FLEE_VY, FLEE_G = 120, -2100, 1500
-local FLEE_MIN = 1.5
-local DEATH = { dying_daze = true, dying_flee = true }
-P.DAZE_T = DAZE_T
+-- Muerte (0.5.56, el usuario: "se iba hacia arriba" → que EXPLOTE salvajemente, como los cangrejos en pinchos o lava):
+-- noqueado DAZE_T s con explosioncitas cada vez más seguidas, y REVIENTA; luego el escenario se recoge (STAGE_OUT s)
+local DAZE_T = 1.8
+local STAGE_OUT = 2.4
+local DEATH = { dying_daze = true, dying_burst = true }
+P.DAZE_T, P.STAGE_OUT = DAZE_T, STAGE_OUT
+-- El ÁNIMO del público (0.5.56): le VITOREA cuando te da o caes, le ABUCHEA cuando le das o lo vences
+local CHEER, BOO = 1, 2
+local MOOD_T = 2.0                                  -- s que dura una reacción
+GC.CHEER, GC.BOO, GC.MOOD_T = CHEER, BOO, MOOD_T
 
 function GC.sizePx() return FW * MS, FH * MS end
 function GC:feetY() return self.y + self.outerH / 2 end
@@ -328,25 +333,60 @@ function GC:deckBox(d) return { x = d.x - DECK_W / 2, y = d.y - DECK_H, w = DECK
 -- ¿Ya no suelta doradas? (2ª fase, si la arena tiene sus platos; si no, sigue con la dorada: si no, no habría forma
 -- de dañarlo)
 function GC:goldOff() return self.phase == 2 and self.decks ~= nil and self.decks ~= false end
--- ¿Se pueden poner a girar? (no con él noqueado o recomponiéndose: el bajón ya le dio)
+-- ¿Se pueden poner a girar? (no con él noqueado o recomponiéndose: el bajón ya le dio; ni durante la pista de baile)
 function GC:decksLive()
-    return self:goldOff() and self:isActive() and self.state ~= 'stunned' and self.state ~= 'regrow'
+    return self:goldOff() and self:isActive() and self.state ~= 'stunned' and self.state ~= 'regrow' and not self:decksAway()
 end
--- Con UN plato girando, el otro: su x (va a ponerse debajo —andando y con sus saltos— para que su trampolín te suba
--- a esa plataforma; el usuario, 0.5.53: muy separados, y si se quedaba quieto en un ataque, imposible). nil si no
-function GC:deckGoal()
-    if not self:decksLive() then return nil end
-    local a, b = self.decks[1], self.decks[2]
-    if (a.on > 0) == (b.on > 0) then return nil end
-    return (a.on > 0) and b.x or a.x
+-- (0.5.53-0.5.55 se iba solo a ponerse bajo el otro plato al encender uno: "queda forzado y raro" — el usuario, 0.5.56;
+-- ahora se porta como siempre y eres TÚ quien lo atrae: te sigue andando y sus saltos caen donde estás)
+
+-- DURANTE LA PISTA DE BAILE (2ª fase) los platos y sus plataformas DESAPARECEN —céntrate en el ataque— y vuelven al
+-- acabar (el usuario, 0.5.56). Del reloj de la canción: igual online (las casillas, como cambios de tile)
+function GC:decksAway()
+    if not self:goldOff() then return false end
+    local _, sec, k = GC.where(self.songT or 0)
+    return GC.floorOn(sec, k)
 end
-GC.DECK_WALK = 1.8                                  -- × WALK_SPD yendo hacia él
+-- Pone o quita las casillas de las plataformas (las de los bloques de fase de su zona); una ocupada espera
+function GC:setPlatforms(level, on)
+    local TileTypes, TileCodec = require 'src/world/tiles/TileTypes', require 'src/world/tiles/TileCodec'
+    local done, changed = true, false
+    for _, pb in ipairs(level.phaseBlocks or {}) do
+        if pb.shown then
+            local hid = TileCodec.encode((TileTypes.byName[pb.hiddenAs] or TileTypes.byName.empty).id)
+            for _, cell in ipairs(pb.cells) do
+                local want = on and cell.raw or hid
+                if level:getRaw(cell.c, cell.r) ~= want then
+                    if on and level:cellOccupied(cell.c, cell.r) then done = false
+                    else
+                        level:setTileRaw(cell.c, cell.r, want)
+                        changed = true
+                        level.brokenQueue = level.brokenQueue or {}
+                        table.insert(level.brokenQueue, { cell.c, cell.r, want, 'set' })
+                        Entity.emitFx('spawn', (cell.c - 0.5) * T, (cell.r - 0.5) * T)
+                    end
+                end
+            end
+        end
+    end
+    return done, changed
+end
+function GC:updatePlatforms(level)
+    if not self:goldOff() then return end
+    local want = not self:decksAway()
+    if self.platOn ~= want then
+        local done, changed = self:setPlatforms(level, want)
+        if done then self.platOn = want end
+        if changed then Sound.play(want and 'switchOn' or 'switchOff', 0.8) end
+    end
+end
 
 function GC:updateDecks(level, dt)
     if not self:goldOff() then return end
     local live = self:decksLive()
+    local away = self:decksAway()
     for _, d in ipairs(self.decks) do
-        if d.on > 0 then
+        if d.on > 0 and not away then                                       -- (escondidos, su cuenta se para)
             d.on = math.max(0, d.on - dt)
             if d.on == 0 then Sound.play('switchOff', 0.9) end                -- (se acabó el tiempo: hay que volver)
         end
@@ -540,7 +580,7 @@ end
 function GC:isActive() return Boss.isActive(self) and not DEATH[self.state] end
 function GC:isDying() return DEATH[self.state] == true or Boss.isDying(self) end
 function GC:isVulnerable() return self:isActive() and self.state == 'stunned' and (self.stunHits or 0) < STUN_HITS end
-function GC:releasesZone() return self.state == 'dying_flee' or self.state == 'dead' end
+function GC:releasesZone() return self.state == 'dying_burst' or self.state == 'dead' end
 function GC:shardDrop() return false end                                -- (jefe secreto: no guarda fragmento)
 function GC:isSolidBody() return Boss.isSolidBody(self) and not DEATH[self.state] end
 function GC:canBeKnocked() return false end
@@ -549,6 +589,7 @@ function GC:canBeKnocked() return false end
 -- A media vida (`rageAt`), la 2ª FASE: enfadado, sin doradas (las que queden, fuera) y salen los platos
 function GC:onDamaged(n, kind)
     if self:isDying() then return end
+    self:mood(BOO)                                                      -- (el público, triste: le abuchea a quien le pega)
     Entity.emitFx('shake_big', self.x, self.y)                          -- (cada golpe tiembla la pantalla: el usuario, 0.5.51)
     self.stunHits = (self.stunHits or 0) + 1
     if self.phase ~= 2 and self.hp <= self.hpMax * (self.props.rageAt or 0.5) then
@@ -566,9 +607,55 @@ function GC:defeat()
     if self.decks then for _, d in ipairs(self.decks) do d.on = 0 end end
     self.y = self.floorY - self.outerH / 2
     self:enter('dying_daze')
+    self.blastT = 0
     Sound.play('megaHurt', 0.9)
     Sound.play('stunned')
+    self:mood(BOO)
     self:onDefeat()
+end
+
+-- El público reacciona (con su sonido; no repite la misma reacción seguida)
+function GC:mood(kind)
+    local now = self.songT or 0
+    if self.moodKind == kind and now - (self.moodAt or -99) < 0.6 then return end
+    self.moodKind, self.moodAt = kind, now
+    Sound.play(kind == CHEER and 'crowdCheer' or 'crowdBoo', 0.95 + math.random() * 0.1)
+end
+-- → kind (CHEER / BOO / nil) y s desde que empezó (vencido: abuchea hasta el final)
+function GC:crowdMood()
+    if self:isDying() then return BOO, 0 end
+    if not self.moodKind or self.moodKind == 0 then return nil end
+    local age = (self.songT or 0) - (self.moodAt or -99)
+    if age < 0 or age > MOOD_T then return nil end
+    return self.moodKind, age
+end
+-- ¿Le dio a un jugador (o cayó)? → vítores. (Por su vida: lo mismo le dé lo que le dé)
+function GC:watchPlayers(level)
+    self._php = self._php or setmetatable({}, { __mode = 'k' })
+    for _, pa in ipairs(level.players or {}) do
+        local h = (pa.dying or pa.alive == false) and -1 or (pa.hp or 0)
+        local prev = self._php[pa]
+        if prev and h < prev then self:mood(CHEER) end
+        self._php[pa] = h
+    end
+end
+
+-- REVIENTA: explosión grande, pedazos, su trampolín hecho trizas y confeti; el escenario se recoge
+function GC:burst()
+    local b = self:getOuterBounds()
+    self:enter('dying_burst')
+    Entity.emitFx('boss_big_blast', self.x, self.y)
+    for i = 0, 5 do
+        local a = i / 6 * math.pi * 2
+        Entity.emitFx('enemy_burst', self.x + math.cos(a) * b.w * 0.4, self.y + math.sin(a) * b.h * 0.4)
+    end
+    Entity.emitFx('groove_tramp', self.x, b.y - 4 * MS)
+    Entity.emitFx('king_confetti_big', self.x, b.y)
+    Entity.emitFx('shake_big', self.x, self.y)
+    Sound.play('bossExplode', 1.0)
+    Sound.play('enemyExplode', 0.8)
+    Sound.play('megaSlam', 0.9, 0.7)
+    Sound.play('crowdBoo', 0.9)
 end
 
 -- ── Update ────────────────────────────────────────────────────────────────────
@@ -590,7 +677,7 @@ function GC:aimMark(level)
     local zx0, zx1 = self:zoneBounds()
     local hw = self.outerW / 2 + 8
     local pa = self:nearestPlayer(level)
-    local x = self:deckGoal() or (pa and pa.x) or self.x                -- (con un plato girando, bajo el otro)
+    local x = pa and pa.x or self.x
     self.markX = math.floor(math.max(zx0 + hw, math.min(zx1 - hw, x)))
 end
 
@@ -621,20 +708,18 @@ function GC:updateBoss(dt, level)
     local st, t = self.state, self.deadTimer
 
     if st == 'dying_daze' then
-        if t >= DAZE_T then
-            self.fleeDir = self:fleeSide(level)
-            self.fleeX0, self.fleeY0, self.fleeing = self.x, self.y, true
-            Sound.play('trampoline', 1, 0.5)
-            Entity.emitFx('gp_land', self.x, self.floorY)
-            self:enter('dying_flee')
+        -- explosioncitas por el cuerpo, cada vez más seguidas, y REVIENTA
+        self.blastT = (self.blastT or 0) - dt
+        if self.blastT <= 0 then
+            self.blastT = math.max(0.1, 0.38 - t * 0.16)
+            local b = self:getOuterBounds()
+            Entity.emitFx('boss_blast', self.x + (math.random() - 0.5) * b.w, self.y + (math.random() - 0.5) * b.h)
+            Sound.play('bossExplode', 0.8 + t * 0.25, 0.55)
         end
+        if t >= DAZE_T then self:burst() end
         return
-    elseif st == 'dying_flee' then
-        -- un BOTE enorme en su trampolín hacia el cielo (sin choques: pura función del tiempo)
-        self.x = self.fleeX0 + self.fleeDir * FLEE_VX * t
-        self.y = self.fleeY0 + FLEE_VY * t + 0.5 * FLEE_G * t * t
-        self.vx, self.vy = self.fleeDir * FLEE_VX, FLEE_VY + FLEE_G * t
-        if self:fleeOver(level, dt, t, FLEE_MIN) then self.state, self.alive = 'dead', false end
+    elseif st == 'dying_burst' then
+        if t >= STAGE_OUT then self.state, self.alive = 'dead', false end
         return
     end
     self.prevT, self.songT = self.songT, self.songT + dt
@@ -646,6 +731,8 @@ function GC:updateBoss(dt, level)
 
     -- El escenario va a lo suyo (también con él aturdido): la pista de baile y los platos
     self:updateFloor(level)
+    self:watchPlayers(level)
+    self:updatePlatforms(level)
     self:updateDecks(level, dt)
 
     -- En el aire: el salto sigue hasta caer en su compás
@@ -700,16 +787,8 @@ function GC:updateBoss(dt, level)
     for _, s in ipairs(plan.notes) do if crossed(s) then self:shoot(level, false, GC.noteKind(sec, k, self.rage)) end end
     local pa = self:nearestPlayer(level)
     if pa then self:faceTo(pa.x) end
-    -- (con un plato girando va a ponerse bajo el otro, también disparando)
-    local goal = self:deckGoal()
-    if goal and math.abs(goal - self.x) > 8 then
-        local d = (goal > self.x) and 1 or -1
-        self.x = self.x + d * math.min(math.abs(goal - self.x), WALK_SPD * GC.DECK_WALK * dt)
-    end
     if (last and step < last + 2) or (g and step >= g and step < g + 2) then
         self:set('snap')
-    elseif goal then
-        self:set('groove')
     else
         self:set('groove')
         local zx0, zx1 = self:zoneBounds()
@@ -758,10 +837,10 @@ function GC:updateIntro(dt, level, t)
 end
 
 -- ── Red ───────────────────────────────────────────────────────────────────────
--- { songT·100, enfadado 0/1, diana x, golpes aturdido, fase, bajón songT·100 (-1), 2ª fase songT·100 (-1), nOndas,
---   {ondas…}, nNotas, {id, x, y, vx, vy, color}…, nPlatos, {x, y, girando s·10}… }
+-- { songT·100, enfadado 0/1, diana x, golpes aturdido, fase, bajón songT·100 (-1), 2ª fase songT·100 (-1), ánimo del
+--   público (0/1/2), su songT·100 (-1), nOndas, {ondas…}, nNotas, {id, x, y, vx, vy, color}…, nPlatos, {x, y, girando s·10}… }
 local NOTE_STRIDE, DECK_STRIDE = 6, 3
-local HEAD = 8                                  -- (donde empiezan las ondas)
+local HEAD = 10                                 -- (donde empiezan las ondas)
 local function readList(b, k, stride)
     local n = type(b[k]) == 'number' and b[k] or 0
     local list = {}
@@ -775,7 +854,8 @@ end
 
 function GC:netPackExtra()
     local out = { math.floor(self.songT * 100), self.rage and 1 or 0, self.markX or 0, self.stunHits or 0, self.phase or 1,
-                  self.dropT and math.floor(self.dropT * 100) or -1, self.p2T and math.floor(self.p2T * 100) or -1 }
+                  self.dropT and math.floor(self.dropT * 100) or -1, self.p2T and math.floor(self.p2T * 100) or -1,
+                  self.moodKind or 0, self.moodAt and math.floor(self.moodAt * 100) or -1 }
     BossWaves.pack(self.waves, out)
     out[#out + 1] = #self.notes
     for _, n in ipairs(self.notes) do
@@ -797,6 +877,8 @@ function GC:netApplyExtra(a, b, f)
     self.rage, self.markX, self.stunHits, self.phase = b[2] == 1, b[3], b[4] or 0, b[5] or 1
     self.dropT = (type(b[6]) == 'number' and b[6] >= 0) and b[6] / 100 or nil
     self.p2T = (type(b[7]) == 'number' and b[7] >= 0) and b[7] / 100 or nil
+    self.moodKind = b[8] or 0
+    self.moodAt = (type(b[9]) == 'number' and b[9] >= 0) and b[9] / 100 or nil
     local waves, k = BossWaves.unpack(a, b, HEAD, f)
     self.waves = waves
     local prev = {}

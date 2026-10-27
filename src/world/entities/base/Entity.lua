@@ -409,6 +409,16 @@ function Entity:inLava(level)
 end
 function Entity:onLava(level) self:dieBurst() end
 
+-- CAYENDO DEL TECHO (cualquier tipo: cae, clavado, rebota, se levanta…) y acaba en pinchos: revienta, como lanzado por
+-- un trampolín. Antes se quedaba encima, quieto o andando sin camino (el usuario, 0.5.56). La caída solo cuenta ya
+-- bajando (al soltarse aún toca lo que haya junto al techo)
+function Entity:droppedOnSpikes(level)
+    local st = self.state
+    if st:sub(1, 5) ~= 'drop_' or st == 'drop_shake' or not self.alive then return false end
+    if st == 'drop_fall' and ((self.vy or 0) <= 0 or (self.deadTimer or 0) < 0.1) then return false end
+    return self:onDeadlyGround(level)
+end
+
 -- ¿Se cayó por debajo del nivel? (la regla de todos: antes copiada en cada tipo)
 function Entity:fellOut(level) return level ~= nil and self.y > (level.heightPx or 1e9) + TILE_PX * 4 end
 
@@ -784,6 +794,7 @@ function Entity:update(dt, level)
     end
 
     if self:inLava(level) then self:onLava(level); if Entity.SPECIAL_DEATH[self.state] then return end end
+    if self:droppedOnSpikes(level) then self:dieBurst(); return end
     if self:updateCommonStates(dt, level) then return end
     if self:updateCustom(dt, level) then return end
 
