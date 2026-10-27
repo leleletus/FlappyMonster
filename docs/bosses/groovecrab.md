@@ -114,3 +114,15 @@ corners of the zone onto it, changing colour on every beat (additive cones).
   new trait `ownStunLook`; (6) a new way to hurt him in phase 2 using the two platforms and his trampoline: proposed
   DJ decks (picked) / a falling lighting truss (two levers) / overloaded speakers stomped on the beat. Not played by
   the user yet: the 8 s deck window and the deck size are guesses to tune by feel.
+- 0.5.51, the user: (1) the screen shakes on every hit he takes (`onDamaged` → `shake_big`); (2) note PATTERNS and
+  visibility: the B / climax notes change pattern every 2 bars (`GC.noteKind`: `aim` straight at you, `fan` three in a
+  fan — not when enraged, it would rain —, `wave` straight but weaving ±46 px, `lob` an arc that falls where you stand
+  after 1.05 s and bursts on the floor); drawn at ×5 with a glow of their colour and a trail, and a ring closes on the
+  claw tip in the 0.22 s before each shot (`drawCue`, from the song clock and the plan: same online); (3) the DANCE
+  FLOOR was hard to read and dodge: one pattern per BAR (was two), a 3-beat warning (`FLOOR_WARN` 12 sixteenths =
+  1.2 s, was 0.4 s) showing the GHOST of each column (outline, fill growing stronger, a rising "!" arrow), all warned
+  tiles in danger pink, then a brighter 3-sixteenth column; (4) more MOBILE and varied: between attacks he dance-walks
+  across the stage a half tile per beat (`danceWalk`: the side changes every 2 bars, facing you — a moonwalk when
+  moving away —, never towards a player closer than 2.6 tiles), and his idle dance changes every 2 bars (bob · claws
+  up in turns · half-turn on every beat, flipping, never rotated · deep squat with a shimmy); all drawing from the song
+  clock (same online). Harness cases `dibujos`, `baile`, `temblor`; `boss_frames FROM=s`. Not played by the user yet.

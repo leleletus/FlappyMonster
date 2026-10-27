@@ -102,7 +102,8 @@ function love.load()
             -- (2ª fase: sin doradas; los dos platos a girar a la vez → el bajón)
             if boss:decksLive() and boss.deadTimer > 1.5 then for _, d in ipairs(boss.decks) do d.on = boss.DECK_T end end
         end
-        if want[boss.state] and t - lastShot >= every and (boss.alive or boss.def.name == 'megagummy') then
+        -- (FROM=s: no captura antes de esos s — p. ej. El Groove, su pista de baile a los 77 s —)
+        if want[boss.state] and t >= (tonumber(os.getenv('FROM')) or 0) and t - lastShot >= every and (boss.alive or boss.def.name == 'megagummy') then
             lastShot = t
             local col, row = n % COLS, math.floor(n / COLS)
             love.graphics.setCanvas(canvas)

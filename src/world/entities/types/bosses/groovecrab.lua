@@ -84,6 +84,17 @@ local WALK_SPD = 70                             -- px/s acercándose entre notas
 local NOTE_SPD = { 330, 390 }                   -- { normal, enfadado }
 local NOTE_R = 16                               -- media caja de una nota
 local NOTE_LIFE = 4.0
+-- Los DIBUJOS de las notas (0.5.51, el usuario: "en diferentes patrones y más visibles"): cambian cada 2 compases
+--   aim  recta hacia ti · fan  tres en abanico (la del centro, hacia ti) · wave  recta, ondulando · lob  en arco,
+--   cae donde estás. Enfadado (más notas por compás) no hay abanico: sería una lluvia
+local NOTE_KINDS = { 'aim', 'fan', 'wave', 'lob' }
+local FAN_A = 0.32                              -- rad entre las notas del abanico
+local WAVE_A, WAVE_W = 46, 2 * math.pi * 2.2    -- px y rad/s de la onda
+local LOB_G, LOB_T = 1100, 1.05                 -- gravedad y s de vuelo de la nota en arco
+-- El BAILE (0.5.51: "que sea más móvil"): entre ataques cruza el escenario a pasitos en cada tiempo, mirándote,
+-- y nunca hacia ti si estás cerca
+local DANCE_STEP = 0.5 * T                      -- px por tiempo (se mueve en la 2ª mitad de cada tiempo)
+local DANCE_KEEP = 2.6 * T                      -- no se acerca andando a un jugador a menos de esto
 local LAUNCH = 1.85                             -- × la velocidad de salto: lo que lanza el trampolín
 local GRACE  = 0.8                              -- s sin volver a dar a nadie tras un toque
 -- La nota dorada
@@ -98,7 +109,8 @@ local REGROW_T = 0.9                            -- s que tarda en crecerle el tr
 -- tiempo 1 → columna en el 2; aviso en el 3 → columna en el 4
 local PANEL = 2 * T
 local BOOM_H = 3.5 * T                          -- alto de la columna de luz (las plataformas de los lados, a 5, se salvan)
-local BOOM_LEN = 2                              -- semicorcheas que dura la columna
+local BOOM_LEN = 3                              -- semicorcheas que dura la columna
+local FLOOR_WARN = 12                           -- semicorcheas de AVISO antes de la columna (3 tiempos: 1,2 s; antes 0,4)
 -- Los platos de DJ (2ª fase)
 local DECK_T = 5 * BAR                          -- s que gira un plato tras pisarlo (8 s: da para bajar, volver a su
                                                 -- trampolín y subir a la otra plataforma)
@@ -107,7 +119,7 @@ local DECK_IN = 1.0                             -- s que tardan en salir al empe
 local DROP_FX = 0.8                             -- s que se ve el BAJÓN de los bafles
 GC.PANEL, GC.BOOM_H, GC.DECK_T = PANEL, BOOM_H, DECK_T
 P.T, P.MS, P.FW, P.FH, P.S16, P.BAR, P.BEAT = T, MS, FW, FH, S16, BAR, BEAT
-P.REGROW_T, P.STUN_T, P.BOOM_LEN = REGROW_T, STUN_T, BOOM_LEN
+P.REGROW_T, P.STUN_T, P.BOOM_LEN, P.FLOOR_WARN = REGROW_T, STUN_T, BOOM_LEN, FLOOR_WARN
 P.NOTE_R, P.GOLD_R = NOTE_R, GOLD_R
 P.DECK_T, P.DECK_W, P.DECK_H, P.DECK_IN, P.DROP_FX = DECK_T, DECK_W, DECK_H, DECK_IN, DROP_FX
 
@@ -214,8 +226,15 @@ function GC.plan(sec, k, rage, noGold)
     return p
 end
 
+-- El dibujo de las notas del compás (sec, k): cambia cada 2 compases; enfadado, sin abanico
+function GC.noteKind(sec, k, rage)
+    local kind = NOTE_KINDS[math.floor((k - 1) / 2) % #NOTE_KINDS + 1]
+    if rage and kind == 'fan' then kind = 'wave' end
+    return kind
+end
+
 -- ── La pista de baile ─────────────────────────────────────────────────────────
--- Dibujos: baldosas pares / impares (compases impares), los lados / el centro (pares). n = baldosas de la zona
+-- Dibujos (uno por compás, en este orden): baldosas pares, impares, los lados, el centro. n = baldosas de la zona
 local function pattern(which, n)
     local out = {}
     for i = 0, n - 1 do
@@ -234,15 +253,16 @@ function GC:panels()
     local x0 = zx0 + ((zx1 - zx0) - n * PANEL) / 2
     return n, x0
 end
--- Lo que pasa en la pista AHORA: → nil o { lit = {i = true}, boom = bool, beat (0..1 dentro del tiempo) }
+-- Lo que pasa en la pista AHORA: → nil o { lit = {i = true}, warn, boom, u (0..1 del aviso), beat (0..1 del tiempo) }
+-- UN dibujo por compás (0.5.51, el usuario: "más visibles y evitables"; antes dos, con 0,4 s de aviso): AVISO los 3
+-- primeros tiempos (FLOOR_WARN), la COLUMNA en el 4º (BOOM_LEN semicorcheas)
 function GC:floorNow()
     local b, sec, k, step = GC.where(self.songT or 0)
     if not GC.floorOn(sec, k) then return nil end
     local n = self:panels()
-    local half = (step < 8) and 0 or 1                                   -- (1ª o 2ª mitad del compás)
-    local s = step - half * 8
-    local which = (k % 2 == 1) and (half == 0 and 1 or 2) or (half == 0 and 3 or 4)
-    return { lit = pattern(which, n), warn = s < 4, boom = s >= 4 and s < 4 + BOOM_LEN, beat = (s % 4) / 4 }
+    local which = (k - 1) % 4 + 1
+    return { lit = pattern(which, n), warn = step < FLOOR_WARN, boom = step >= FLOOR_WARN and step < FLOOR_WARN + BOOM_LEN,
+             u = math.min(1, step / FLOOR_WARN), beat = (step % 4) / 4 }
 end
 function GC:boomBox(i)
     local _, x0 = self:panels()
@@ -397,16 +417,33 @@ function GC:clawTip()
     local f = self.facing or 1
     return self.x + f * 15 * MS, self:feetY() - 9 * MS
 end
-function GC:shoot(level, gold)
+function GC:shoot(level, gold, kind)
     local pa = self:nearestPlayer(level)
     if not pa then return end
     local x, y = self:clawTip()
     local dx, dy = pa.x - x, (pa.y - 6 - (gold and GOLD_UP or 0)) - y
     local d = math.max(1, math.sqrt(dx * dx + dy * dy))
     local spd = gold and GOLD_SPD or NOTE_SPD[self.rage and 2 or 1]
-    self.noteId = self.noteId % 999 + 1
-    self.notes[#self.notes + 1] = { id = self.noteId, x = x, y = y, vx = dx / d * spd, vy = dy / d * spd, t = 0,
-                                    c = gold and 4 or self.noteId % 4 }
+    local function add(vx, vy, extra)
+        self.noteId = self.noteId % 999 + 1
+        local n = { id = self.noteId, x = x, y = y, vx = vx, vy = vy, t = 0, c = gold and 4 or self.noteId % 4 }
+        for key, v in pairs(extra or {}) do n[key] = v end
+        self.notes[#self.notes + 1] = n
+    end
+    kind = (not gold) and kind or 'aim'
+    if kind == 'fan' then
+        local a = math.atan2(dy, dx)
+        for _, da in ipairs({ -FAN_A, 0, FAN_A }) do add(math.cos(a + da) * spd, math.sin(a + da) * spd) end
+    elseif kind == 'wave' then
+        -- (recta hacia ti, ondulando de lado: la base va recta y la nota se aparta de ella)
+        add(dx / d * spd, dy / d * spd, { bx = x, by = y, px = -dy / d, py = dx / d })
+    elseif kind == 'lob' then
+        -- (en arco: sube y cae donde estás —a tus pies— en LOB_T s)
+        local fy = pa.y + 20
+        add(dx / LOB_T, ((fy - y) - 0.5 * LOB_G * LOB_T * LOB_T) / LOB_T, { g = LOB_G })
+    else
+        add(dx / d * spd, dy / d * spd)
+    end
     if gold then
         Sound.play('megaClack', 0.9, 0.9)
         Sound.play('checkpoint', 0.5, 1.4)
@@ -431,9 +468,20 @@ function GC:updateNotes(level, dt)
             local d = math.max(1, math.sqrt(dx * dx + dy * dy))
             n.vx, n.vy = dx / d * GOLD_BACK, dy / d * GOLD_BACK
         end
-        n.x, n.y = n.x + n.vx * dt, n.y + n.vy * dt
+        if n.bx then                                                    -- (ondulando sobre su recta)
+            n.bx, n.by = n.bx + n.vx * dt, n.by + n.vy * dt
+            local o = math.sin(n.t * WAVE_W) * WAVE_A
+            n.x, n.y = n.bx + n.px * o, n.by + n.py * o
+        else
+            if n.g then n.vy = n.vy + n.g * dt end                       -- (en arco)
+            n.x, n.y = n.x + n.vx * dt, n.y + n.vy * dt
+        end
         local gone = n.t >= ((n.c >= 4) and GOLD_LIFE or NOTE_LIFE) or n.x < zx0 - T or n.x > zx1 + T
                      or n.y < zy0 - 3 * T or n.y > zy1 + T
+        if n.g and n.y >= self.floorY - NOTE_R and n.vy > 0 then          -- (la del arco, al caer al suelo: revienta)
+            gone = true
+            Entity.emitFx('king_sparkle', n.x, self.floorY - NOTE_R)
+        end
         if not gone then
             local box = self:noteBox(n)
             if n.c == 5 then
@@ -492,6 +540,7 @@ function GC:canBeKnocked() return false end
 -- A media vida (`rageAt`), la 2ª FASE: enfadado, sin doradas (las que queden, fuera) y salen los platos
 function GC:onDamaged(n, kind)
     if self:isDying() then return end
+    Entity.emitFx('shake_big', self.x, self.y)                          -- (cada golpe tiembla la pantalla: el usuario, 0.5.51)
     self.stunHits = (self.stunHits or 0) + 1
     if self.phase ~= 2 and self.hp <= self.hpMax * (self.props.rageAt or 0.5) then
         self.phase, self.rage, self.p2T = 2, true, self.songT
@@ -516,6 +565,17 @@ end
 -- ── Update ────────────────────────────────────────────────────────────────────
 function GC:faceTo(x) if math.abs(x - self.x) > 8 then self.facing = (x > self.x) and 1 or -1 end end
 function GC:set(st) if self.state ~= st then self:enter(st) end end
+
+-- BAILA ANDANDO: un pasito en la 2ª mitad de cada tiempo hacia un lado del escenario (cambia cada 2 compases),
+-- mirándote (de espaldas, a lo moonwalk, cuando se aleja); nunca hacia un jugador que tenga cerca
+function GC:danceWalk(b, dt, pa, x0, x1)
+    local dir = (math.floor(b / 2) % 2 == 0) and -1 or 1
+    if (dir < 0 and self.x <= x0) or (dir > 0 and self.x >= x1) then return end
+    if pa and (pa.x - self.x) * dir > 0 and math.abs(pa.x - self.x) < DANCE_KEEP then return end
+    local u = ((self.songT or 0) % BEAT) / BEAT
+    if u < 0.5 then return end
+    self.x = math.max(x0, math.min(x1, self.x + dir * DANCE_STEP / (BEAT / 2) * dt))
+end
 
 function GC:aimMark(level)
     local zx0, zx1 = self:zoneBounds()
@@ -628,17 +688,19 @@ function GC:updateBoss(dt, level)
 
     -- Las NOTAS, en los pops del bajo; entre una y otra se acerca andando
     local last = plan.notes[#plan.notes]
-    for _, s in ipairs(plan.notes) do if crossed(s) then self:shoot(level, false) end end
+    for _, s in ipairs(plan.notes) do if crossed(s) then self:shoot(level, false, GC.noteKind(sec, k, self.rage)) end end
     local pa = self:nearestPlayer(level)
     if pa then self:faceTo(pa.x) end
     if (last and step < last + 2) or (g and step >= g and step < g + 2) then
         self:set('snap')
     else
         self:set('groove')
+        local zx0, zx1 = self:zoneBounds()
+        local hw = self.outerW / 2 + 8
         if pa and (sec == 'B' or sec == 'C') and math.abs(pa.x - self.x) > 2.5 * T then
-            local zx0, zx1 = self:zoneBounds()
-            local hw = self.outerW / 2 + 8
             self.x = math.max(zx0 + hw, math.min(zx1 - hw, self.x + self.facing * WALK_SPD * dt))
+        else
+            self:danceWalk(b, dt, pa, zx0 + hw + T, zx1 - hw - T)
         end
     end
     self:touch(level)

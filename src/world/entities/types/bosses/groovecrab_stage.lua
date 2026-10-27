@@ -13,7 +13,7 @@ local SpriteStrip = require 'src/fx/SpriteStrip'
 
 return function(GC, P)
 local T, MS, FW, FH, S16, BAR, BEAT = P.T, P.MS, P.FW, P.FH, P.S16, P.BAR, P.BEAT
-local REGROW_T, BOOM_LEN = P.REGROW_T, P.BOOM_LEN
+local REGROW_T, BOOM_LEN, FLOOR_WARN = P.REGROW_T, P.BOOM_LEN, P.FLOOR_WARN
 local DECK_T, DECK_W, DECK_H, DECK_IN, DROP_FX = P.DECK_T, P.DECK_W, P.DECK_H, P.DECK_IN, P.DROP_FX
 
 -- ── Arte ──
@@ -73,7 +73,7 @@ function GC:pose()
     local now = love.timer.getTime()
     local nb, beat = beatOf(self)
     local on = beat < 0.25
-    local p = { leg = 1, sx = 1, sy = 1, tk = 1, bf = 1, bdx = 0, bdy = 0, sf = 1, sdy = 0, jx = 0 }
+    local p = { leg = 1, sx = 1, sy = 1, tk = 1, bf = 1, bdx = 0, bdy = 0, sf = 1, sdy = 0, jx = 0, flip = 1 }
     if st == 'intro' or st == 'ready' then
         local it = (st == 'ready') and (self:introTime() + t) or t
         if it < P.LAND_AT then p.sy, p.sx, p.tk = 1.1, 0.92, 1.2
@@ -88,6 +88,20 @@ function GC:pose()
         p.sy, p.sx, p.tk = on and 0.9 or 1, on and 1.06 or 1, on and 0.85 or 1
         p.bf, p.bdy, p.sdy = on and 2 or 1, (nb % 2 == 1) and -2 or 0, (nb % 2 == 1) and 0 or -1
         if self._walking then p.leg = math.floor(now * 8) % 3 + 1 end
+        -- PASOS DE BAILE (0.5.51, el usuario: más variedad visual), cada 2 compases uno: el meneo de siempre; las
+        -- pinzas arriba por turnos; MEDIA VUELTA en cada tiempo (se voltea: sin girar, pixel art); y sentadilla con
+        -- vaivén. Solo dibujo, del reloj de la canción: igual online
+        local move = math.floor((self.songT or 0) / (2 * BAR)) % 4
+        if move == 1 then
+            p.bdy, p.sdy = (nb % 2 == 0) and -6 or 1, (nb % 2 == 1) and -5 or 1
+            p.bf, p.sf = (nb % 2 == 0) and 1 or 2, (nb % 2 == 1) and 1 or 2
+        elseif move == 2 then
+            p.flip = (nb % 2 == 0) and 1 or -1
+        elseif move == 3 then
+            p.sy, p.sx = on and 0.8 or 0.95, on and 1.12 or 1.02
+            p.jx = ((math.floor((self.songT or 0) / (BEAT / 2)) % 2 == 0) and -1 or 1) * MS
+            p.bdy, p.sdy = on and 1 or -3, on and 1 or -3
+        end
     elseif st == 'snap' then
         p.bdy, p.bdx = -5, -2
         local step = ((self.songT or 0) % BAR) / S16
@@ -275,19 +289,38 @@ function GC:drawFloor(camX, camY)
         -- no confundirlas con la diana del salto)
         local lit = f and f.lit[i]
         local fr = 1
-        if lit and f.warn then fr = ((math.floor(f.beat * 8) % 2 == 0) and (i + nb) % 4 + 2) or 1
-        elseif lit and f.boom then fr = (i + nb) % 4 + 2 end
+        -- (el aviso parpadea cada vez más deprisa según se acerca la columna; todas del MISMO color: rojo-rosa
+        -- de peligro, que no se confunda con las luces del escenario)
+        if lit and f.warn then fr = ((math.floor(f.u * f.u * 14) % 2 == 0) and 2 or 1)
+        elseif lit and f.boom then fr = 2 end
         local pi, pq = quad(art.panel, fr)
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.draw(pi, pq, math.floor(x0 + i * P.T * 2 - camX), math.floor(self.floorY - camY) - 6, 0, 4, 4)
-        if lit and f.boom then
-            local c = BEAT_COLS[(i + nb) % 4 + 1]
-            local box = self:boomBox(i)
+        local box = self:boomBox(i)
+        local bx, by = math.floor(box.x - camX), math.floor(box.y - camY)
+        if lit and f.warn then
+            -- el FANTASMA de la columna que va a salir: dónde exactamente, cada vez más fuerte
             love.graphics.setBlendMode('add')
-            love.graphics.setColor(c[1], c[2], c[3], 0.55)
-            love.graphics.rectangle('fill', math.floor(box.x - camX), math.floor(box.y - camY), box.w, box.h)
-            love.graphics.setColor(1, 1, 1, 0.5)
-            love.graphics.rectangle('fill', math.floor(box.x + box.w / 2 - 8 - camX), math.floor(box.y - camY), 16, box.h)
+            love.graphics.setColor(1, 0.3, 0.45, 0.06 + 0.16 * f.u)
+            love.graphics.rectangle('fill', bx, by, box.w, box.h)
+            love.graphics.setBlendMode('alpha')
+            love.graphics.setColor(1, 0.35, 0.5, 0.35 + 0.5 * f.u)
+            love.graphics.setLineWidth(4)
+            love.graphics.rectangle('line', bx + 2, by + 2, box.w - 4, box.h - 4)
+            love.graphics.setLineWidth(1)
+            -- y una flecha de "¡ojo!" que sube desde la baldosa
+            local ay = math.floor(self.floorY - camY - 20 - f.u * 30)
+            love.graphics.setColor(1, 0.85, 0.3, 0.5 + 0.5 * f.u)
+            love.graphics.polygon('fill', bx + box.w / 2 - 14, ay, bx + box.w / 2 + 14, ay, bx + box.w / 2, ay - 18)
+        elseif lit and f.boom then
+            local c = BEAT_COLS[(i + nb) % 4 + 1]
+            love.graphics.setBlendMode('add')
+            love.graphics.setColor(1, 0.35, 0.5, 0.7)
+            love.graphics.rectangle('fill', bx, by, box.w, box.h)
+            love.graphics.setColor(c[1], c[2], c[3], 0.5)
+            love.graphics.rectangle('fill', bx + 10, by, box.w - 20, box.h)
+            love.graphics.setColor(1, 1, 1, 0.85)
+            love.graphics.rectangle('fill', math.floor(bx + box.w / 2 - 10), by, 20, box.h)
             love.graphics.setBlendMode('alpha')
         end
     end
@@ -413,7 +446,7 @@ function GC:render(camX, camY)
     local p = self:pose()
     local alpha = self:ghostAlpha()
     if st == 'dying_flee' then alpha = alpha * self:fleeAlpha(self.deadTimer) end
-    local f = self.facing or 1
+    local f = (self.facing or 1) * p.flip
     local fx, fy = math.floor(self.x - camX + 0.5) + p.jx, math.floor(self:feetY() - camY + 0.5)
     local dizzy = (st == 'dying_daze' or st == 'stunned') and not EDITOR_VIEW
     if dizzy then BossFx.stars(fx, fy - 9 * MS, 9 * MS, 1.8 * MS, 7, alpha, 'back') end
@@ -490,11 +523,48 @@ function GC:drawOver(camX, camY)
             love.graphics.setColor(1, 1, 1, 1)
             art.gold:draw(math.floor(now * 6) % 2 + 1, x, y, 0, 6, 6)
         else
+            -- (más visibles: más grandes, con un halo de su color y una estela detrás)
             local fr = (n.c or 0) * 2 + (math.floor(now * 6 + (n.id or 0)) % 2) + 1
-            art.note:draw(fr, math.floor(n.x - camX), math.floor(n.y - camY), 0, 4, 4)
+            local c = BEAT_COLS[(n.c or 0) % 4 + 1]
+            local x, y = math.floor(n.x - camX), math.floor(n.y - camY)
+            local sp = math.max(1, math.sqrt((n.vx or 0) ^ 2 + (n.vy or 0) ^ 2))
+            love.graphics.setBlendMode('add')
+            love.graphics.setColor(c[1], c[2], c[3], 0.3 + 0.1 * math.sin(now * 14 + (n.id or 0)))
+            love.graphics.circle('fill', x, y, 30, 16)
+            for k = 1, 3 do
+                love.graphics.setColor(c[1], c[2], c[3], 0.35 / k)
+                love.graphics.circle('fill', math.floor(x - (n.vx or 0) / sp * 14 * k), math.floor(y - (n.vy or 0) / sp * 14 * k), 14 - 3 * k, 10)
+            end
+            love.graphics.setBlendMode('alpha')
+            love.graphics.setColor(1, 1, 1, 1)
+            art.note:draw(fr, x, y, 0, 5, 5)
         end
     end
+    self:drawCue(camX, camY, now)
     BossFx.anger(self, self.rage and self:isActive(), self.x - camX, self:feetY() - camY - 16 * MS)
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
+-- AVISO DE NOTA: un pulso de luz en la punta de la pinza justo antes de cada nota (del reloj de la canción y su plan:
+-- igual online) — se ve venir el disparo
+function GC:drawCue(camX, camY, now)
+    if not (self:isActive() and self.state == 'snap') or EDITOR_VIEW then return end
+    local _, sec, k, step = GC.where(self.songT or 0)
+    local plan = GC.plan(sec, k, self.rage, self:goldOff())
+    local nextS
+    for _, s in ipairs(plan.notes) do if s > step and (not nextS or s < nextS) then nextS = s end end
+    if not nextS then return end
+    local left = (nextS - step) * S16
+    if left > 0.22 then return end
+    local u = 1 - left / 0.22
+    local x, y = self:clawTip()
+    love.graphics.setBlendMode('add')
+    love.graphics.setColor(1, 1, 1, 0.25 + 0.55 * u)
+    love.graphics.setLineWidth(4)
+    love.graphics.circle('line', math.floor(x - camX), math.floor(y - camY), math.floor(44 - 30 * u), 16)
+    love.graphics.circle('fill', math.floor(x - camX), math.floor(y - camY), math.floor(6 + 10 * u), 12)
+    love.graphics.setLineWidth(1)
+    love.graphics.setBlendMode('alpha')
     love.graphics.setColor(1, 1, 1, 1)
 end
 

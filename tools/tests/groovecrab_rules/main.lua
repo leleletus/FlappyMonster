@@ -13,8 +13,13 @@
 --   trampolin  con el trampolín, caerle encima te LANZA (vy ≈ salto × 1,85), también con ground pound, sin daño;
 --              aturdido (sin trampolín), el pisotón le da
 --   tocar      tocar su cuerpo de lado quita 1; su pinza, no; aturdido, no
---   pista      en la subida: unas baldosas avisan (tiempo 1) y en el 2 lanzan la columna: encima quita 1, en una
---              apagada no, en la plataforma de encima tampoco
+--   pista      en la subida: un dibujo por compás; las baldosas avisan 3 tiempos (1,2 s) y en el 4º lanzan la
+--              columna: encima quita 1, en una apagada no, en la plataforma de encima tampoco
+--   dibujos    las notas, por parejas de compases de la B: recta (2), abanico (3 por pop), ondulando (se aparta de su
+--              recta y vuelve), en arco (cae a menos de 1,5 casillas de los pies del jugador); enfadado, sin abanico
+--   baile      entre ataques cruza el escenario a pasitos (en la A, compás par: se mueve ≥ media casilla) y no se
+--              acerca andando a un jugador que tiene cerca
+--   temblor    cada golpe que recibe hace temblar la pantalla
 --   platos     2ª FASE: los platos de DJ están en las dos plataformas; en la 1ª fase pisarlos no hace nada; en la 2ª ya
 --              no hay dorada, pisar uno lo pone a girar (y rebotas) DECK_T s y luego se apaga; los dos a la vez → el
 --              BAJÓN: noqueado y vulnerable, platos apagados
@@ -307,7 +312,7 @@ function cases.pista()
     end
     local p1, p2 = standOn(litI), standOn(darkI)
     local pl = standOn(0, 7)                                                 -- (la plataforma de la izquierda, fila 8)
-    songAt(boss, barOf('S', 1), 3.9)
+    songAt(boss, barOf('S', 1), 11.9)
     local h1, h2, hl = p1.hp, p2.hp, pl.hp
     local boomSeen
     stepAll(level, es, { p1, p2, pl }, 0.3, function()
@@ -336,6 +341,73 @@ local function phase2(level, es, boss, pa)
     boss:stomp()
     boss.inv = 0
     boss:enter('groove')
+end
+
+function cases.dibujos()
+    local level, es, boss = arena()
+    local pa = playerAt(level, 14)
+    local function bar(k, secs)
+        songAt(boss, barOf('B', k), 3.5)
+        local seen, list = {}, {}
+        stepAll(level, es, { pa }, secs or 0.15, function()
+            pa.x, pa.vx, pa.invT = 14 * T - T / 2, 0, 9
+            for _, n in ipairs(boss.notes) do if not seen[n.id] then seen[n.id] = true; list[#list + 1] = n end end
+        end)
+        return list
+    end
+    local aim = #bar(1)
+    local fan = #bar(3)
+    -- ondulando: se aparta de su recta
+    local w = bar(5, 0.4)[1]
+    local off = w and w.bx and math.abs((w.x - w.bx) * w.px + (w.y - w.by) * w.py) or 0
+    -- en arco: cae cerca de los pies
+    local lob = bar(7, 0.1)[1]
+    local landX
+    if lob then
+        stepAll(level, es, { pa }, 1.5, function()
+            pa.x, pa.vx, pa.invT = 14 * T - T / 2, 0, 9
+            local alive = false
+            for _, n in ipairs(boss.notes) do if n.id == lob.id then alive = true; landX = n.x end end
+            return not alive
+        end)
+    end
+    local near = landX and math.abs(landX - pa.x) < 1.5 * T
+    local rageFan = boss.noteKind('B', 3, true)
+    check('dibujos', aim == 1 and fan == 3 and off > 20 and near and rageFan ~= 'fan',
+        ('B1 recta: %d nota · B3 abanico: %d · B5 ondula: %.0f px de su recta · B7 en arco: cae a %s px de los pies · enfadado, B3: %s'):format(
+            aim, fan, off, landX and math.floor(math.abs(landX - pa.x)) or '?', rageFan))
+end
+
+function cases.baile()
+    local level, es, boss = arena()
+    local pa = playerAt(level, 34)
+    songAt(boss, barOf('A', 2), 0)
+    local x0 = boss.x
+    stepAll(level, es, { pa }, boss.BAR - 0.05, function() pa.x, pa.vx, pa.invT = 34 * T - T / 2, 0, 9 end)
+    local moved = math.abs(boss.x - x0)
+    -- con un jugador cerca en el sentido en que va, no se le acerca
+    local level2, es2, boss2 = arena()
+    songAt(boss2, barOf('A', 2), 0)
+    local dir = (math.floor(barOf('A', 2) / 2) % 2 == 0) and -1 or 1
+    local pb = playerAt(level2, 24 + dir * 2)
+    local d0 = math.abs(pb.x - boss2.x)
+    stepAll(level2, es2, { pb }, boss2.BAR - 0.05, function() pb.x, pb.vx, pb.invT = (24 + dir * 2) * T - T / 2, 0, 9 end)
+    local d1 = math.abs(pb.x - boss2.x)
+    check('baile', moved >= 0.5 * T and d1 >= d0 - 1,
+        ('en un compás de baile (A2) se mueve %.0f px · con un jugador cerca delante: %.0f → %.0f px (no se acerca)'):format(moved, d0, d1))
+end
+
+function cases.temblor()
+    local level, es, boss = arena()
+    local pa = playerAt(level, 14)
+    stunIt(level, es, boss, pa)
+    local shakes = 0
+    local Entity = require 'src/world/entities/base/Entity'
+    local fx = Entity.fx
+    Entity.fx = function(kind, ...) if kind == 'shake_big' then shakes = shakes + 1 end; if fx then return fx(kind, ...) end end
+    boss:stomp()
+    Entity.fx = fx
+    check('temblor', shakes >= 1, ('al recibir un golpe: %d temblores de pantalla'):format(shakes))
 end
 
 function cases.platos()
@@ -510,7 +582,7 @@ end
 
 function love.load(arg)
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'reloj', 'salto', 'notas', 'dorada', 'aturdido', 'trampolin', 'tocar', 'pista', 'platos', 'trepar', 'enfado',
+    for _, n in ipairs({ 'reloj', 'salto', 'notas', 'dorada', 'aturdido', 'trampolin', 'tocar', 'pista', 'dibujos', 'baile', 'temblor', 'platos', 'trepar', 'enfado',
                          'solo', 'derrota', 'red' }) do
         if not only or only == n then
             local ok, err = xpcall(cases[n], debug.traceback)
