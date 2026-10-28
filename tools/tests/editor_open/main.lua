@@ -152,8 +152,25 @@ function love.update(dt)
             tostring(SAVEAS_1.saved), tostring(SAVEAS_1.confirm), tostring(SAVEAS_PATH)))
         if not ok then print('Error: "Guardar como" pisa un nivel existente sin preguntar') end
     end
-    if frame == 90 then
-        print('capturas en ' .. love.filesystem.getSaveDirectory() .. '/editor_open_{1,2,3,4,saveas}.png')
+    -- "Abrir" con el BUSCADOR (el usuario no encontraba el nivel del jefe): tiene el foco al abrir; escribir filtra (sin
+    -- tildes ni mayúsculas, por archivo y nombre) e Intro abre el primero que coincide
+    if frame == 88 then
+        local E = require('src/editor/Editor').state()
+        E.modal = { kind = 'open', files = E.listLevels() }
+        OPEN_N = #E.modal.files
+    end
+    if frame == 90 then for ch in ('TEMPLO escarabajo'):gmatch('.') do love.textinput(ch) end end
+    if frame == 93 then shot('abrir') end
+    if frame == 95 then key('return') end
+    if frame == 98 then
+        local E = require('src/editor/Editor').state()
+        local path = E.model and E.model.path
+        local ok = path == 'assets/levels/templo_escarabajo.json' and E.modal == nil and (OPEN_N or 0) > 20
+        print(('%-10s %s  %d niveles · «TEMPLO escarabajo» + Intro abre %s'):format('buscar', ok and 'OK   ' or 'FALLA', OPEN_N or 0, tostring(path)))
+        if not ok then print('Error: el buscador de "Abrir" no encuentra el nivel') end
+    end
+    if frame == 102 then
+        print('capturas en ' .. love.filesystem.getSaveDirectory() .. '/editor_open_{1,2,3,4,saveas,abrir}.png')
         print('TODO OK'); love.event.quit(0)
     end
 end

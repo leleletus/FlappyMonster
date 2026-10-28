@@ -120,6 +120,27 @@ function love.update(dt)
         check('dificultad', DIF.focus and DIF.right and DIF.left and not fp.diffFocus and fp.sel == 1,
             ('arriba → foco %s, ▶ cambia %s, ◀ cambia %s, abajo → lista %s'):format(tostring(DIF.focus),
                 tostring(DIF.right), tostring(DIF.left), tostring(not fp.diffFocus)))
+        step, T = 'buscar', t
+    elseif step == 'buscar' and t - T > 0.2 then
+        -- EL BUSCADOR: / lo abre (la / no se escribe), escribir filtra (sin tildes ni mayúsculas: por nombre, jefe…);
+        -- Esc borra la búsqueda, otro Esc la cierra sin salir de la pantalla
+        local all = #fp.files
+        love.keypressed('/'); love.textinput('/')
+        for ch in ('ESCARABAJO gigánte'):gmatch('.[\128-\191]*') do love.textinput(ch) end
+        local found = {}
+        for _, f in ipairs(fp.files) do found[#found + 1] = f end
+        shot('search')
+        love.keypressed('escape')
+        local cleared = #fp.files
+        love.keypressed('escape')
+        SRCH = { all = all, found = found, cleared = cleared, closed = not fp.searching, q = fp.query }
+        step, T = 'buscar2', t
+    elseif step == 'buscar2' and t - T > 0.2 then
+        local f = SRCH.found
+        check('buscar', #f == 1 and f[1] == 'templo_escarabajo.json' and SRCH.cleared == SRCH.all and SRCH.closed
+            and SRCH.q == '' and top() == fp,
+            ('«ESCARABAJO gigánte» → %s · Esc: %d/%d niveles · otro Esc: cerrado=%s, sigue en Juego libre=%s'):format(
+                table.concat(f, ', '), SRCH.cleared, SRCH.all, tostring(SRCH.closed), tostring(top() == fp)))
         step, T = 'nav', t
     elseif step == 'nav' and t - T > 0.3 then
         local cols = math.max(1, math.floor((WINDOW_W - 48 + 24) / (372 + 24)))

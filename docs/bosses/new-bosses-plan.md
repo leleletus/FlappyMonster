@@ -95,6 +95,8 @@ flips it onto its back = the window to hit it. It will need more mirror shards (
       spikes / the void) and the boss (`giantbeetle`: armoured; flipped by firing it into the ceiling with the scale;
       charge + debris, block toss, wing leap + waves; the scale fires the player too) with its temple arena
       (`jefe_escarabajo`) → [giantbeetle](giantbeetle.md). The scale's catapult is now general (hard impacts).
+- [x] (0.5.77) Its level `templo_escarabajo` (Free Play; the arena alone was not listed anywhere: the user could not
+      find it) + a search box in Free Play and in the editor's Open dialog.
 - [ ] The user's verdict on both (playing them).
 - [ ] The jungle island, its levels, the boss's story level and the shard count.
 

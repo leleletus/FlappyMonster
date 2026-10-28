@@ -470,5 +470,32 @@ def isla_del_groove():
     return L
 
 
+def templo_escarabajo():
+    """Templo del Escarabajo: la JUNGLA (isla futura; aún fuera de la historia: se juega en Juego Libre). Un tramo corto
+    con Escarabajos Rinoceronte — te embisten si te ven delante; pisados quedan patas arriba y se cogen y se lanzan
+    (derriban a un Gummy, rompen cajas) — y el ESCARABAJO RINOCERONTE GIGANTE al final (arena jefe_escarabajo: el
+    templo de la balanza, con su tema `templo`)."""
+    src = load_src('jefe_escarabajo.json')
+    L = Level('Templo del Escarabajo', 85, 15, (4, 12), music='costa_1')
+    L.extra.update({'name_en': 'Beetle Temple', 'background': 'forest', 'time': 'day'})
+    G = 13
+    L.rect(2, G, 42, 14, SOLID)
+    L.ent('star', 8, G - 2)
+    # el primero, solo: te ve delante y embiste; pisado, patas arriba
+    L.walker('beetle', 15, G - 1, 11, 19)
+    # unas cajas pequeñas: lánzale un escarabajo patas arriba (se rompen)
+    L.ent('smallbox', 22, G - 1)
+    L.ent('smallbox', 23, G - 1)
+    L.plat(25, 29, G - 4, DROP)
+    L.ent('star', 27, G - 5)
+    # otro escarabajo y un Gummy detrás: lanzado, lo derriba
+    L.walker('beetle', 31, G - 1, 29, 33)
+    L.walker('gummy', 36, G - 1, 35, 38)
+    L.ent('checkpoint', 40, G - 1)
+    # el templo de la balanza (la zona empieza en la columna 49)
+    graft(L, src, 6, 43)
+    return L
+
+
 BUILDERS = [ruta_del_espejo, fortaleza_malvada, cala_resaca, guarida_cangrejo_rey, lago_helado, glaciar_cangrejo, reino_gummy, gruta_lugubre,
-            gruta_del_farol, isla_del_groove]
+            gruta_del_farol, isla_del_groove, templo_escarabajo]

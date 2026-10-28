@@ -16,4 +16,25 @@ function TextUtil.fit(font, text, w)
     return text .. '..'
 end
 
+-- BUSCAR (Juego Libre, "Abrir" del editor): el texto en minúsculas y sin tildes (á → a, ñ → n, ü → u…), para que
+-- "Escarabajo" encuentre "ESCARABAJO" y "jardin" encuentre "Jardín"
+local FOLD = { ['á'] = 'a', ['é'] = 'e', ['í'] = 'i', ['ó'] = 'o', ['ú'] = 'u', ['ü'] = 'u', ['ñ'] = 'n', ['à'] = 'a',
+               ['è'] = 'e', ['ì'] = 'i', ['ò'] = 'o', ['ù'] = 'u', ['ç'] = 'c',
+               ['Á'] = 'a', ['É'] = 'e', ['Í'] = 'i', ['Ó'] = 'o', ['Ú'] = 'u', ['Ü'] = 'u', ['Ñ'] = 'n', ['Ç'] = 'c' }
+function TextUtil.fold(s)
+    s = tostring(s or ''):gsub('[\xC3][\x80-\xBF]', function(c) return FOLD[c] or c end)
+    return (s:lower():gsub('_', ' '))
+end
+
+-- ¿Encaja la búsqueda `query` con estos textos? Cada palabra de la búsqueda tiene que estar en alguno (vacía: sí)
+function TextUtil.matches(query, ...)
+    local q = TextUtil.fold(query)
+    if not q:find('%S') then return true end
+    local hay = TextUtil.fold(table.concat({ ... }, ' '))
+    for word in q:gmatch('%S+') do
+        if not hay:find(word, 1, true) then return false end
+    end
+    return true
+end
+
 return TextUtil

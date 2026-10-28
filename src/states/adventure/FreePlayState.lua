@@ -9,6 +9,11 @@
 -- Escala a muchos niveles: las fichas (src/world/level/LevelCatalog.lua) se cargan
 -- poco a poco (un presupuesto de tiempo por fotograma) y se guardan para la
 -- próxima vez; solo se dibujan las tarjetas visibles.
+--
+-- BUSCADOR (0.5.77, el usuario: "no lo logro encontrar"): arriba a la izquierda (bajo el rótulo en pantallas
+-- estrechas). Se abre con / o Ctrl+F, o tocándolo (en el móvil sale el teclado); escribir filtra las tarjetas por
+-- nombre (español e inglés), archivo, jefe y música, sin tildes ni mayúsculas (TextUtil.matches). Intro o ↓ vuelven a
+-- las tarjetas con el filtro puesto; Esc borra la búsqueda (y, vacía, la cierra). Se recuerda entre visitas.
 local BaseState     = require 'src/core/BaseState'
 local MenuScene = require 'src/ui/menu/MenuScene'
 local CornerButtons = require 'src/ui/CornerButtons'
@@ -17,7 +22,8 @@ local PixelIcons    = require 'src/ui/PixelIcons'
 local ModeSelectMenu = require 'src/ui/ModeSelectMenu'
 local LevelCatalog  = require 'src/world/level/LevelCatalog'
 local Modes         = require 'src/world/modes/Modes'
-local fitText       = require('src/ui/TextUtil').fit
+local TextUtil      = require 'src/ui/TextUtil'
+local fitText       = TextUtil.fit
 local L = require 'src/core/Lang'
 local MenuButton    = require 'src/ui/menu/MenuButton'
 local MenuKit       = require 'src/ui/menu/MenuKit'
@@ -50,7 +56,10 @@ end
 
 -- ── Ciclo de vida ─────────────────────────────────────────────────────────────
 function FreePlayState:enter()
-    self.files = LevelCatalog.files()
+    self.all = LevelCatalog.files()
+    self.query, self.searching = last.query or '', false
+    self.files = self.all
+    self:_filter()
     self.sel = math.max(1, math.min(#self.files, last.sel))
     self.scroll, self.scrollTarget = last.scroll, last.scroll
     self.t, self.diffT = 0, 1
@@ -63,7 +72,74 @@ function FreePlayState:enter()
 end
 
 function FreePlayState:exit()
-    last.sel, last.scroll = self.sel, self.scrollTarget
+    last.sel, last.scroll, last.query = self.sel, self.scrollTarget, self.query
+    if self.searching and love.keyboard.setTextInput then love.keyboard.setTextInput(false) end
+end
+
+-- ── Buscador ──────────────────────────────────────────────────────────────────
+-- Lo que se busca de un nivel: archivo, nombres, jefes y música (lo que aún no ha cargado: solo el archivo)
+local function searchText(f)
+    local info = cache[f]
+    if not info or info.broken then return f end
+    local parts = { f, info.name or '', info.name_en or '', L.localName(info) or '', info.music or '' }
+    for _, b in ipairs(info.bossNames or {}) do parts[#parts + 1] = b.type; parts[#parts + 1] = L.bossName(b.type, b.props) or '' end
+    return table.concat(parts, ' ')
+end
+function FreePlayState:_filter()
+    local cur = self.files and self.files[self.sel or 1]
+    local out = {}
+    for _, f in ipairs(self.all) do
+        if TextUtil.matches(self.query, searchText(f)) then out[#out + 1] = f end
+    end
+    self.files = out
+    self.sel = 1
+    for i, f in ipairs(out) do if f == cur then self.sel = i end end
+    self.sel = math.max(1, math.min(#out, self.sel))
+    if self.scrollTarget then self:_keepVisible(true) end
+end
+function FreePlayState:_startSearch()
+    if self.searching then return end
+    self.searching, self.diffFocus = true, false
+    self.eatSlash = true                          -- (la / que lo abrió no se escribe)
+    if love.keyboard.setTextInput then love.keyboard.setTextInput(true) end
+    Sound.play('select')
+end
+function FreePlayState:_endSearch()
+    self.searching, self.skipInput = false, true  -- (la tecla que lo cerró no cuenta como "volver" ni "jugar")
+    if love.keyboard.setTextInput then love.keyboard.setTextInput(false) end
+end
+function FreePlayState:_searchRect()
+    local cols, x0 = layout()
+    if wide() then return 48, 56, 340, 56 end
+    local dx = self:_diffRect()
+    return x0, 140, math.max(160, dx - x0 - 16), 56
+end
+function FreePlayState:textinput(t)
+    if not self.searching then return end
+    if self.eatSlash and t == '/' then self.eatSlash = false; return end
+    self.eatSlash = false
+    self.query = (self.query .. t):sub(1, 40)
+    self:_filter()
+end
+function FreePlayState:keypressed(k)
+    local ctrl = love.keyboard.isDown('lctrl', 'rctrl', 'lgui', 'rgui')
+    if not self.searching then
+        if k == '/' or k == 'kpdivide' or (k == 'f' and ctrl) then self:_startSearch() end
+        return
+    end
+    if k == 'backspace' then
+        local q = self.query
+        q = q:sub(1, -2)
+        while #q > 0 and q:byte(-1) >= 0x80 and q:byte(-1) < 0xC0 do q = q:sub(1, -2) end   -- (sin dejar un UTF-8 a medias)
+        if #q > 0 and q:byte(-1) >= 0xC0 then q = q:sub(1, -2) end
+        self.query = q
+        self:_filter()
+    elseif k == 'escape' then
+        if self.query ~= '' then self.query = ''; self:_filter() else self:_endSearch() end
+        self.skipInput = true
+    elseif k == 'return' or k == 'kpenter' or k == 'down' then
+        self:_endSearch()
+    end
 end
 
 -- Ficha del nivel i (nil mientras se carga)
@@ -170,14 +246,25 @@ function FreePlayState:update(dt)
     local firstVis = math.floor(self.scroll / (CARD_H + GAP)) * cols + 1
     local order = { self.sel }
     for i = firstVis, firstVis + cols * (math.ceil(viewH / (CARD_H + GAP)) + 1) do order[#order + 1] = i end
-    for i = 1, #self.files do order[#order + 1] = i end
-    for _, i in ipairs(order) do
-        local f = self.files[i]
+    local list = {}
+    for _, i in ipairs(order) do list[#list + 1] = self.files[i] end
+    for _, f in ipairs(self.all) do list[#list + 1] = f end      -- (también las que el filtro esconde: se buscan por nombre)
+    local loaded = false
+    for _, f in ipairs(list) do
         if f and not cache[f] then
             local info, err = LevelCatalog.load(LevelCatalog.DIR .. '/' .. f, f)
             cache[f] = info or { broken = tostring(err), file = f }
+            loaded = true
             if love.timer.getTime() - t0 > LOAD_BUDGET then break end
         end
+    end
+    if loaded and self.query ~= '' then self:_filter() end
+
+    if self.searching or self.skipInput then              -- (escribiendo: las teclas son letras, no la navegación)
+        self.skipInput = false
+        self:_clampScroll()
+        self.scroll = self.scroll + (self.scrollTarget - self.scroll) * math.min(1, dt * 14)
+        return
     end
 
     local cols2 = layout()
@@ -220,6 +307,11 @@ end
 
 function FreePlayState:touchpressed(id, x, y)
     if CornerButtons.hitBack(x, y) then self:_back(); return end
+    do                                            -- el buscador: tocarlo lo abre (y el teclado en el móvil)
+        local sx, sy, sw, sh = self:_searchRect()
+        if x >= sx and x <= sx + sw and y >= sy and y <= sy + sh then self:_startSearch(); self.eatSlash = false; return end
+        if self.searching then self:_endSearch() end
+    end
     do                                            -- la etiqueta de la dificultad: tocarla pasa a la siguiente
         local dx, dy, dw, dh = self:_diffRect()
         if x >= dx and x <= dx + dw and y >= dy and y <= dy + dh then
@@ -369,11 +461,35 @@ function FreePlayState:render()
     -- Rótulo (a la izquierda en pantallas anchas: a la derecha va la dificultad) y el número de niveles
     local hy = MenuKit.title(L('free.title'), 'teal', A, 1, 5)
     local _, soy, sa = A:slide(1, 0, -200, 0, -200)
-    local sub = L('free.subtitle', { n = #self.files })
+    local sub = (self.query ~= '') and L('free.subtitle_found', { n = #self.files, total = #self.all })
+                or L('free.subtitle', { n = #self.all })
     if wide() then
         MenuKit.text(FONT_SMALL, sub, 0, hy + 14 + soy, WINDOW_W, 'center', { 0.8, 0.85, 1 }, sa)
-    else                                          -- (estrecha: a la izquierda, con el selector a la derecha)
-        MenuKit.text(FONT_SMALL, sub, x0, 162 + soy, WINDOW_W, 'left', { 0.8, 0.85, 1 }, sa)
+    end                                           -- (estrecha: ese sitio es del buscador)
+
+    -- El BUSCADOR: arriba a la izquierda (estrecha: bajo el rótulo)
+    do
+        local sx, sy, sw, sh = self:_searchRect()
+        local _, qoy, qa = A:slide(2, 0, -200, 0, -200)
+        sy = sy + qoy
+        MenuKit.box('well', sx, sy, sw, sh)
+        if self.searching then
+            love.graphics.setColor(1, 0.86, 0.36, qa)
+            love.graphics.setLineWidth(4)
+            love.graphics.rectangle('line', sx - 2, sy - 2, sw + 4, sh + 4)
+            love.graphics.setLineWidth(1)
+        end
+        local caret = (self.searching and math.floor(self.t * 2) % 2 == 0) and '_' or ''
+        local txt, col
+        if self.query == '' and not self.searching then txt, col = L('free.search'), { 0.55, 0.62, 0.82 }
+        else txt, col = self.query .. caret, { 1, 0.95, 0.8 } end
+        local cnt = ''
+        if not wide() then                        -- (estrecha: el número de niveles, dentro de la caja a la derecha)
+            cnt = (self.query ~= '') and (#self.files .. '/' .. #self.all) or tostring(#self.all)
+            MenuKit.text(FONT_SMALL, cnt, sx, sy + math.floor((sh - FONT_SMALL:getHeight()) / 2), sw - 12, 'right', { 0.8, 0.85, 1 }, qa)
+        end
+        local tw = sw - 24 - (cnt ~= '' and FONT_SMALL:getWidth(cnt) + 12 or 0)
+        MenuKit.text(FONT_MED, fitText(FONT_MED, txt, tw), sx + 12, sy + math.floor((sh - FONT_MED:getHeight()) / 2), tw, 'left', col, qa)
     end
 
     -- Dificultad con la que se probará el nivel: ◀ DIFICULTAD X ▶ (tocar una mitad = esa flecha; [F] = la siguiente)
@@ -391,7 +507,8 @@ function FreePlayState:render()
     end
 
     if #self.files == 0 then
-        MenuKit.text(FONT_MED, L('free.empty'), 0, WINDOW_H / 2, WINDOW_W, 'center', { 0.75, 0.8, 0.95 })
+        local none = (#self.all > 0) and L('free.search_none', { q = self.query }) or L('free.empty')
+        MenuKit.text(FONT_MED, none, 0, WINDOW_H / 2, WINDOW_W, 'center', { 0.75, 0.8, 0.95 })
     end
     -- Tarjetas visibles (recortadas a la zona de la lista)
     local _, goy = A:slide(3, 0, 220)

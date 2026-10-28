@@ -12,7 +12,10 @@ the user — legs). **Sounds:** reused (`megaSlam/Step/Windup/Roar/Hurt/Fall`, `
 `caveRumble`, `boxBreak`, `scaleLaunch`, `headBump`); its own set is still open. **Arena:**
 `tools/levelgen/arenas/jefe_escarabajo.json` (`make_jefe_escarabajo.py`). **Music:** `templo` "El Templo"
 ([music-history](../audio/music-history.md#el-templo-toolsmusictemplopy-boss-track-templo)). **Shard:** none yet.
-**Harnesses:** `giantbeetle_rules`, `boss_sim` / `boss_intro` / `online_boss` / `boss_frames` with `LEVEL=` that arena.
+**Level:** `templo_escarabajo` "Templo del Escarabajo" / "Beetle Temple" (`tools/levelgen/levels_boss.py`: a short
+jungle stretch with two Rhino Beetles, small boxes to throw them at and a Gummy, then the arena; tropical theme; in Free
+Play — not in the story yet). **Harnesses:** `giantbeetle_rules`, `boss_sim` / `boss_intro` / `online_boss` /
+`boss_frames` with `LEVEL=` that arena, `sp_boss LEVEL=assets/levels/templo_escarabajo.json`.
 
 ## The arena: the temple of the scale
 

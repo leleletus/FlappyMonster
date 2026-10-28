@@ -18,6 +18,9 @@ return {
     free = {
         title = "JUEGO LIBRE",
         subtitle = "Elige un nivel para probarlo  ·  {n} niveles",
+        subtitle_found = "{n} de {total} niveles",
+        search = "Buscar nivel  ( / )",
+        search_none = "Ningún nivel coincide con «{q}»",
         loading = "Cargando...",
         broken = "Este nivel tiene errores y no se puede cargar",
         empty = "No hay niveles",

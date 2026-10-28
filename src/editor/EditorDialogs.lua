@@ -16,7 +16,7 @@ local function drawModal()
     love.graphics.setColor(0, 0, 0, 0.55)
     love.graphics.rectangle('fill', 0, 0, sw, sh)
     local w, h = 460, 200
-    if md.kind == 'open' then w, h = math.min(sw - 80, 620), math.min(sh - 80, 130 + #md.files * 34) end
+    if md.kind == 'open' then w, h = math.min(sw - 80, 620), math.min(sh - 80, 144 + #md.files * 34) end
     if md.kind == 'help' then w, h = 720, 470 end
     local x, y = (sw - w) / 2, (sh - h) / 2
     ui.rect(x, y, w, h, th.panel, 8)
@@ -30,13 +30,25 @@ local function drawModal()
         if ui.button('Cancelar', x + w - 120, y + h - 50, 100, 32) then close() end
     elseif md.kind == 'open' then
         ui.text('Abrir nivel', x + 20, y + 16, th.text, ui.fontLg)
-        ui.text(#md.files .. ' niveles  ·  rueda del ratón o flechas para moverse', x + 170, y + 22, th.muted, ui.fontSm)
+        -- BUSCADOR (el usuario: "no lo logro encontrar"): por archivo y por nombre (español e inglés), sin tildes ni
+        -- mayúsculas; tiene el foco al abrir — se escribe directamente —; las flechas y Intro siguen funcionando
+        if md.query == nil then md.query = ''; ui.state.focus = 'open_search' end
+        local q0 = md.query
+        md.query = ui.textField('open_search', md.query, x + 170, y + 16, w - 190, 40, 'Buscar nivel…')
+        if ui.state.focus == nil and not ui.state.pressed then ui.state.focus = 'open_search' end
+        local TextUtil = require 'src/ui/TextUtil'
+        local view = {}
+        for _, f in ipairs(md.files) do
+            if TextUtil.matches(md.query, (md.files.search or {})[f] or f) then view[#view + 1] = f end
+        end
+        if md.query ~= q0 then md.sel = 1; ui.state.scroll['open'] = 0 end
+        ui.text(#view .. ' de ' .. #md.files .. ' niveles  ·  rueda del ratón o flechas para moverse', x + 170, y + 46, th.muted, ui.fontSm)
         -- Lista con scroll (caben muchos niveles)
-        local top, areaH = y + 56, h - 56 - 60
-        local contentH = #md.files * 34
-        md.sel = math.max(1, math.min(#md.files, md.sel or 1))
+        local top, areaH = y + 70, h - 70 - 60
+        local contentH = #view * 34
+        md.sel = math.max(1, math.min(#view, md.sel or 1))
         local keys = ui.state.keys
-        if keys['down'] then md.sel = math.min(#md.files, md.sel + 1) end
+        if keys['down'] then md.sel = math.min(#view, md.sel + 1) end
         if keys['up'] then md.sel = math.max(1, md.sel - 1) end
         if keys['down'] or keys['up'] then          -- (que la seleccionada se vea)
             local off = ui.state.scroll['open'] or 0
@@ -49,7 +61,7 @@ local function drawModal()
             if m then E.modal = nil; setModel(m, f) else msg(err, 'error') end
         end
         local yy = ui.beginScroll('open', x + 16, top, w - 32, areaH, contentH)
-        for i, f in ipairs(md.files) do
+        for i, f in ipairs(view) do
             local file = f:match('[^/]+$')
             local name = md.files.names and md.files.names[f]
             local label = (name and name ~= '' and name ~= file:gsub('%.json$', '')) and (file .. '   —   ' .. name) or file
@@ -57,8 +69,9 @@ local function drawModal()
             yy = yy + 34
         end
         ui.endScroll()
-        if #md.files == 0 then ui.text('No hay niveles en ' .. LEVELS_DIR, x + 20, top, th.muted) end
-        if keys['return'] and md.files[md.sel] then open(md.files[md.sel]) end
+        if #md.files == 0 then ui.text('No hay niveles en ' .. LEVELS_DIR, x + 20, top, th.muted)
+        elseif #view == 0 then ui.text('Ningún nivel coincide con «' .. md.query .. '»', x + 20, top, th.muted) end
+        if keys['return'] and view[md.sel] then open(view[md.sel]) end
         if ui.button('Cancelar', x + w - 120, y + h - 46, 100, 30) then close() end
     elseif md.kind == 'saveas' then
         ui.text('Guardar como', x + 20, y + 16, th.text, ui.fontLg)

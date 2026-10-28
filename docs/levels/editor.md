@@ -42,7 +42,9 @@ via `AdventureState` with `editor_playtest.json` (SP keeps reserve entities in
 `self.enemies`: it only drops non-alive ones without `summonOf`).
 Ctrl+O "Abrir nivel" = scrollable list (wheel / arrows + Enter) with file + level
 name; hides `_*` files and `editor_playtest.json`. Test arenas live in
-`tools/levelgen/arenas/` (not listed).
+`tools/levelgen/arenas/` (not listed). A SEARCH field on top (0.5.77, the user could not find the boss level) has the
+focus as soon as the dialog opens: typing filters by file and level name (Spanish and English), ignoring accents and
+capitals (`TextUtil.matches`); arrows + Enter open the highlighted match. Harness `editor_open` (`buscar`).
 Saving (0.5.10, review): "Guardar como" with the name of an EXISTING level warns (and says when it is a story level,
 `Worlds.LIST`) and only overwrites on the second press — it used to overwrite silently. Every editor writes through
 `ToolShell.writeSafe` (temp file + rename, write result checked: a full disk no longer leaves a truncated JSON while

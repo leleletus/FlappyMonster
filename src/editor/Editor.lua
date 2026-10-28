@@ -270,14 +270,17 @@ local function listLevels()
         end
     end
     table.sort(out, function(a, b) return a:lower() < b:lower() end)
-    local names = {}
+    local names, search = {}, {}
     for _, path in ipairs(out) do
         local ok, d = pcall(function() return require('libs/json').decode(love.filesystem.read(path)) end)
         names[path] = ok and type(d) == 'table' and d.name or nil
+        search[path] = path:match('[^/]+$') .. ' ' .. (names[path] or '') .. ' ' .. (ok and type(d) == 'table' and d.name_en or '')
     end
-    out.names = names
+    out.names, out.search = names, search
     return out
 end
+
+E.listLevels = listLevels           -- (el arnés editor_open abre el diálogo con la lista de verdad)
 
 local function guardUnsaved(action)
     if E.unsaved then

@@ -34,3 +34,9 @@ Harness `free_play`.
 - 0.5.62: EVENT levels (`LevelCatalog.EVENTS`, JSON `"event": true`) come first, with a pulsing golden frame, an
   "EVENTO / EVENT" ribbon and a one-line description instead of the data lines (`mashup.card_hint`). The first one:
   the [Crab Mega Mashup](../bosses/crab-mashup.md).
+- 0.5.77, the user ("I can't find the boss level"): a SEARCH box (top left; under the title on narrow screens, with the
+  level count inside it). `/` or Ctrl+F (or tapping it: the on-screen keyboard on mobile) opens it; typing filters the
+  cards by name (Spanish and English), file, boss and music, ignoring accents and capitals (`TextUtil.matches`); levels
+  not loaded yet are matched by file name until their card loads. Enter or ↓ go back to the cards with the filter on;
+  Esc clears the text, a second Esc closes it (it never leaves the screen). Remembered between visits. Harness
+  `free_play` (`buscar`).

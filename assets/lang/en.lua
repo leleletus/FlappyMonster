@@ -18,6 +18,9 @@ return {
     free = {
         title = "FREE PLAY",
         subtitle = "Pick a level to try  ·  {n} levels",
+        subtitle_found = "{n} of {total} levels",
+        search = "Search level  ( / )",
+        search_none = "No level matches \"{q}\"",
         loading = "Loading...",
         broken = "This level has errors and can't be loaded",
         empty = "No levels",
