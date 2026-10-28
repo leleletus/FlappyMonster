@@ -262,7 +262,7 @@ class B(Level):
         tabla y el dintel). Ancho 8."""
         self.breakable(c + 4, G - 3, c + 5, G - 1)
         self.rect(c + 4, G - 4, c + 5, G - 4, STRUCT)
-        self.ent('bomb', c + 2, G - 1, respawn=5, speed=0)
+        self.ent('bombobject', c + 2, G - 1, respawn=5)   # (bomba objeto que reaparece: antes una bomba viva quieta)
         self.plat(c + 1, c + 2, G - 2, DROP)
         return c + 8
 

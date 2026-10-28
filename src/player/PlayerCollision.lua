@@ -121,7 +121,9 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
     end
     if bodies then
         for _, o in ipairs(bodies) do
-            if o ~= self and not o.dying and o.alive ~= false then
+            -- (las plataformas de un solo sentido — `oneway`: hojas de la Semilla — no chocan de lado; el cuerpo en el
+            -- que va montado tampoco: al subir se le mete por los pies)
+            if o ~= self and not o.dying and o.alive ~= false and not o.oneway and o ~= self.rideBody then
                 local ob = o:getOuterBounds()
                 local myTop, myBot = y - hh, y + hh
                 -- Solapan en vertical "de lado": en los sólidos completos (solidFull,
@@ -131,12 +133,21 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
                 local sideBot = o.solidFull and (ob.y + ob.h - 1) or (ob.y + ob.h - 8)
                 if myBot > sideTop and myTop < sideBot
                    and x + hw > ob.x and x - hw < ob.x + ob.w then
-                    local was = x0 + hw > ob.x and x0 - hw < ob.x + ob.w
+                    -- (con margen: pegado a su cara por un redondeo contaba como «ya dentro» y lo separaba)
+                    local was = x0 + hw > ob.x + 0.5 and x0 - hw < ob.x + ob.w - 0.5
                     if not was and dx ~= 0 then
+                        -- (algo que se EMPUJA — la Caja —: andando por el suelo contra ella, se mueve lo que pueda y el
+                        -- jugador se queda pegado a su cara sin perder el paso)
+                        local pushed = 0
+                        if o.pushBy and self.onGround then
+                            local over = (dx > 0) and (x + hw - ob.x) or (x - hw - (ob.x + ob.w))
+                            pushed = o:pushBy(self, over)
+                            ob = o:getOuterBounds()
+                        end
                         -- Choque al moverse: se queda pegado a su costado
                         x = (dx > 0) and (ob.x - hw) or (ob.x + ob.w + hw)
                         self.bodyHit = { o = o, face = (dx > 0) and 'left' or 'right', speed = math.abs(self.vx) }
-                        self.vx = 0
+                        if pushed == 0 then self.vx = 0 end
                     elseif was then
                         -- Ya estaban metidos (p. ej. cayó a su lado): se separan
                         -- poco a poco, sin atravesar paredes
@@ -237,11 +248,16 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
             if o.solidFull and o ~= self and o.alive ~= false then
                 local ob = o:getOuterBounds()
                 if x + hw - 2 > ob.x and x - hw + 2 < ob.x + ob.w then
-                    if dy > 0 and footWas <= ob.y + 2 and y + hh >= ob.y then
+                    -- (montado en él y sin saltar: aunque suba o baje, sigue encima; un cuerpo que sube
+                    -- `stepDy` px se ha metido eso en los pies)
+                    local riding = o == self.rideBody and self.vy >= 0
+                    local up = math.max(0, -(o.stepDy or 0)) + (riding and 8 or 0)
+                    if (dy > 0 or riding) and footWas <= ob.y + 2 + up and y + hh >= ob.y - (riding and 8 or 0) then
                         self.bodyHit = { o = o, face = 'top', speed = self.vy }
                         y = ob.y - hh; self.vy = 0; self.onGround = true; self.jumpsLeft = 2
                         self.groundDef = nil
-                    elseif dy < 0 and headWas >= ob.y + ob.h - 2 and y - hh <= ob.y + ob.h then
+                        self.standBody = o
+                    elseif dy < 0 and not o.oneway and headWas >= ob.y + ob.h - 2 and y - hh <= ob.y + ob.h then
                         self.bodyHit = { o = o, face = 'bottom', speed = -self.vy }
                         y = ob.y + ob.h + hh; self.vy = 0
                         if not o.bouncyFace then Sound.play('headBump') end

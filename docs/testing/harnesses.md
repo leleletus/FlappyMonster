@@ -4,7 +4,7 @@
 (symlinks to `src`, `assets`, `libs`, `settings.lua`, `input.lua`) and runs through ONE command from the repo root:
 
 ```
-tools/tests/run.sh all                              # the battery (~8 min), exit 0 / 1, ends with "TODO OK"
+tools/tests/run.sh all                              # the battery (parallel, no visible windows), exit 0 / 1, ends with "TODO OK"
 tools/tests/run.sh <harness> [VAR=val ...] [-- args]
 ```
 
@@ -29,7 +29,18 @@ every hand-off.
 `run.sh` starts / stops a FRESH local server for `online_*` (a reused one keeps stale peers → bots never join), copies
 `tools/levelgen/arenas/*.json` to a temporary `assets/levels/zz_tmp_*` (the server ignores `_*` names), cleans
 `server/published`, applies a timeout (a LÖVE error screen never exits) and flags Lua errors (`Error:` lines,
-tracebacks) in the harness or the server log. The list of harnesses is `tools/tests/README.md` (not repeated here).
+tracebacks) in the harness or the server log.
+
+**No windows in the user's way, in parallel (2026-10-27, the user: the flashing windows made the computer unusable
+and the battery took 20+ min):** Linux with `xvfb-run` → every harness on a virtual display; macOS (and Linux without
+xvfb) → windows open OFF-SCREEN and borderless (`src/core/TestWindow.lua`, called at the end of every harness
+`conf.lua`; it also wraps later `setMode` calls); drawing and screenshots are unchanged (verified on macOS). On macOS
+`SDL_MAC_BACKGROUND_APP=1` stops them stealing focus and showing in the Dock. `FM_TEST_SHOW=1` shows them. `all`
+runs groups in parallel (`FM_JOBS`, default half the cores): a harness and its variants in one sequential group (they
+share a save folder), every online harness (+ `update_boot`, same save folder) in one sequential group (one local
+server and port), and the timing-sensitive ones (`perf`, `gloomy_rules`) alone at the end. The online wait for the
+port uses `ss` on Linux and `lsof` on macOS (before, macOS always waited the full 10 s). Each `════` line prints how
+long it took. The list of harnesses is `tools/tests/README.md` (not repeated here).
 While working through a long list of fixes, run the targeted harnesses per change and the full battery once per large
 group, right before releasing it (the user's preference, 2026-10-20). `tools/` is not shipped (.love / updates).
 

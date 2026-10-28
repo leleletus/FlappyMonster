@@ -223,10 +223,13 @@ function OnlineAdventureState:_applyInterpolation()
             er.deadTimer = ((db[7] >= da[7]) and lerp(da[7], db[7], f) or db[7]) / 100
             er.breatheT  = ((db[8] >= da[8]) and lerp(da[8], db[8], f) or db[8]) / 100
             er.flipped   = d[9] == 1
-            -- Datos propios del tipo (desde el índice 10): los interpreta la entidad
-            if db[10] ~= nil then
+            -- (lo que se puede cargar: quién lo lleva en el 10 — systems/Carry —)
+            local from = 10
+            if er.carryable then er.carrierIdx = db[10] or 0; from = 11 end
+            -- Datos propios del tipo (desde el índice 10 u 11): los interpreta la entidad
+            if db[from] ~= nil then
                 local xa, xb = {}, {}
-                for k = 10, #db do xb[#xb+1] = db[k]; xa[#xa+1] = da[k] end
+                for k = from, #db do xb[#xb+1] = db[k]; xa[#xa+1] = da[k] end
                 er:netApply(xa, xb, f)
             end
         end

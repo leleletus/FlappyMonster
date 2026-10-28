@@ -150,6 +150,9 @@ function EntityTypes.register(def)
         end
     end
     for _, p in ipairs(t.props or {}) do table.insert(t.schema, p) end
+    -- (la ISLA: aspecto por isla — `isleArt` — o familia de tipos — Isles.FAMILIES —: src/world/level/Isles.lua)
+    local isleP = require('src/world/level/Isles').schemaFor(t)
+    if isleP then table.insert(t.schema, isleP) end
     if t.activatable then
         local has = false
         for _, p in ipairs(t.schema) do if p.key == 'id' then has = true end end
@@ -341,6 +344,7 @@ end
 
 function EntityTypes.drawWings(e, camX, camY)
     if not (e.props and e.props.movement == 'fly') or e.state == 'dead' then return end
+    if e.noWings then return end                    -- (vuela por sí mismo — el Soplón es una nube —: sin alas)
     wingStrip = wingStrip or require('src/fx/Anim').clip('enemies/wings', 'wings')
     -- Cuerpo visible (centro x, arriba y alto en px de mundo)
     local cxw, top, bw, bh

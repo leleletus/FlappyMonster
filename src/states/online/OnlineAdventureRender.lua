@@ -150,6 +150,9 @@ function OnlineAdventureState:_renderScene()
         Darkness.renderGlow(self.level, self.enemyRenderers, self.camX, self.camY)
     end
 
+    if self.localPaInit and not self.ownData.isSpectator then          -- (la ayuda de "coger": systems/Carry)
+        require('src/world/systems/Carry').drawPrompt(self.localPa, self.enemyRenderers, self.camX, self.camY)
+    end
     -- (un director de evento: siluetas de su intro y el fundido de sus costuras — el Mega Mashup —)
     local md = self.level.musicDirector
     if md and md.drawOverlay then md:drawOverlay() end

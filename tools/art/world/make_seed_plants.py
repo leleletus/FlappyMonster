@@ -10,7 +10,7 @@
 #   HOJA GRANDE 32x10 (para trepar, a un lado y al otro) · COPA 48x16 (arriba: hojas o la flor)
 #   python3 tools/art/world/make_seed_plants.py            → vistas previas en FlappyMonster_pruebas/nuevos/semilla/
 #   python3 tools/art/world/make_seed_plants.py --apply    → assets/images/items/seed/<isla>-*.png
-import os, sys, math
+import os, sys, math, json
 from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -227,8 +227,45 @@ ORG = {'pradera', 'costa', 'volcan', 'nieve', 'cueva'}
 WP = 64                                          # (ancho de la imagen: 4 casillas, la planta en el centro)
 
 
+# PLATAFORMAS de cada planta (lo que el juego pisa: las hojas grandes y la copa), medidas SOBRE EL DIBUJO: cada dibujo
+# apunta sus zonas (REGIONS) y plats() busca en cada una la cara de arriba de verdad. Se guardan junto a la imagen:
+# <isla>-plant<h>.json = {"w", "h", "plats": [[x, y, ancho], ...]} en píxeles de arte, origen arriba a la izquierda (la
+# base de la imagen es el suelo).
+REGIONS = {}
+
+
+def plats(img, regions):
+    a = img.split()[3].load()
+    out = []
+    for xa, xb, ya, yb in regions:
+        tops = []
+        for x in range(max(0, xa), min(img.width, xb + 1)):
+            for y in range(max(0, ya), min(img.height, yb + 1)):
+                if a[x, y] > 0: tops.append((x, y)); break
+        if not tops: continue
+        ys = sorted(y for _, y in tops)
+        y = ys[len(ys) // 2]                                   # (la mediana: la cara plana, sin la punta rizada)
+        xs = [x for x, yy in tops if abs(yy - y) <= 2]
+        out.append([min(xs), y, max(xs) - min(xs) + 1])
+    return out
+
+
+def plant_data(isle, h):
+    """(imagen, plataformas) de la planta de `h` casillas de la isla (dibujada entera, o la de la fortaleza montada)"""
+    REGIONS.pop((isle, h), None)
+    if isle in ORG:
+        img = full_plant(isle, h)
+    else:
+        img = assemble(isle, h)
+        oy = 16
+        REGIONS[(isle, h)] = [(43, 74, oy + 16 * (h - 3) - 2, oy + 16 * (h - 3) + 6),
+                              (5, 36, oy + 16 * (h - 5) - 2, oy + 16 * (h - 5) + 6), (24, 56, 0, 10)]
+    return img, plats(img, REGIONS[(isle, h)])
+
+
 def full_plant(isle, h):
-    rnd = random.Random(hash((isle, h)) & 0xffff)
+    # (semilla FIJA: hash() de Python cambia en cada ejecución y cada --apply dibujaba otra planta)
+    rnd = random.Random(sum(ord(ch) * (i + 1) for i, ch in enumerate(isle)) * 10 + h)
     H = 16 * h + 18                                  # (+ la copa que asoma por arriba)
     g = G(WP, H)
     cx = WP // 2
@@ -288,6 +325,8 @@ def full_plant(isle, h):
         if cells >= h: continue
         py = floor - 16 * cells + 1                   # (su parte de arriba, donde se pisa)
         x = int(round(stem_x(py + 4)))
+        x0, ln = (x + sd * 5, 22) if isle == 'cueva' else (x + sd * 2, 26)
+        REGIONS.setdefault((isle, h), []).append((min(x0, x0 + sd * ln), max(x0, x0 + sd * ln), py - 4, py + 3))
         if isle in ('pradera', 'volcan'):
             bigleaf_bean(g, x + sd * 2, py, sd)
             if isle == 'volcan':                       # la hoja grande de ascuas: borde encendido
@@ -296,6 +335,7 @@ def full_plant(isle, h):
         elif isle == 'nieve': fern(g, x + sd * 2, py, 26, sd, big=True)
         else: bracket(g, x + sd * 5, py, 22, sd, big=True)
     # ── la COPA ──
+    REGIONS.setdefault((isle, h), []).append((cx - 14, cx + 14, 0, top + 10))
     if isle == 'pradera':
         heart(g, cx - 3, top + 3, 11, -1); heart(g, cx + 3, top + 3, 11, 1)
         for yy in range(top + 6, top + 14): g.put(cx + 9, yy, 'v' if yy % 3 else 'o')       # la vaina colgando
@@ -487,8 +527,11 @@ if __name__ == '__main__':
             st.save(os.path.join(OUT, f'{isle}-stem-Sheet.png'))
             big_leaf(isle).save(os.path.join(OUT, f'{isle}-bigleaf.png'))
             crown(isle).save(os.path.join(OUT, f'{isle}-crown.png'))
-            if isle in ORG:
-                for hh in (4, 5, 6): full_plant(isle, hh).save(os.path.join(OUT, f'{isle}-plant{hh}.png'))
+            for hh in (4, 5, 6):                               # (la planta entera de cada altura + sus plataformas)
+                img, pl = plant_data(isle, hh)
+                img.save(os.path.join(OUT, f'{isle}-plant{hh}.png'))
+                with open(os.path.join(OUT, f'{isle}-plant{hh}.json'), 'w') as f:
+                    json.dump({'w': img.width, 'h': img.height, 'plats': pl}, f)
         print('  ' + OUT)
     os.makedirs(PRUEBAS, exist_ok=True)
     preview().save(os.path.join(PRUEBAS, 'vista_previa.png'))

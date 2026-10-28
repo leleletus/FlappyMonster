@@ -27,12 +27,9 @@ function Apple.loadAssets()
 end
 function Apple.sizePx() return 16 * SCALE, 16 * SCALE end
 
--- Qué comida toca en ese nivel (la misma regla de isla que el Saltarín: Hopper.skinFor)
+-- Qué comida toca en ese nivel (la isla: src/world/level/Isles.lua)
 function Apple.skinFor(props, level)
-    local id = props and props.skin or 'auto'
-    if id == 'auto' then
-        id = level and (((level.spikeSkin == 'ice' or level.snow) and 'nieve') or Hopper.BY_BG[level.background or 'meadow']) or 'pradera'
-    end
+    local id = require('src/world/level/Isles').of(level, props and props.skin)
     return FILES[id] and id or 'pradera'
 end
 

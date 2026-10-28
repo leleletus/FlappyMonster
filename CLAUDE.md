@@ -170,3 +170,4 @@ Large files are split into parts that add methods to the same table (`Level`, `P
 | A world / level to the story, a credit | `docs/story/story-mode.md`, `docs/story/world-map.md`, `docs/story/credits.md` |
 | A test harness / a perf scene | `docs/testing/harnesses.md`, `tools/tests/README.md`, `docs/testing/performance.md` |
 | A large file split into parts | `docs/architecture/project-structure.md` |
+| Something carryable, pushable, that blows, a moving platform, or that changes by island | `docs/gameplay/carry-and-push.md` |

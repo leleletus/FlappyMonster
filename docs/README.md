@@ -16,6 +16,7 @@ are never edited by hand.
 | add or change a boss | [bosses/how-to-add-a-boss](bosses/how-to-add-a-boss.md), [bosses/system](bosses/system.md), the boss's own page |
 | add a tile, a block, a trap | [gameplay/tiles-and-blocks](gameplay/tiles-and-blocks.md), [entities/traps-and-mechanisms](entities/traps-and-mechanisms.md) |
 | change how the player moves or takes damage | [gameplay/player](gameplay/player.md) |
+| make something carryable, pushable, blowing, a moving platform, or change by island | [gameplay/carry-and-push](gameplay/carry-and-push.md) |
 | change anything that goes over the network | [architecture/netcode](architecture/netcode.md) |
 | add a difficulty modifier | [gameplay/difficulty](gameplay/difficulty.md) |
 | make or edit a level | [levels/editor](levels/editor.md), [levels/level-format](levels/level-format.md), [levels/generator-and-solver](levels/generator-and-solver.md), [levels/retheme](levels/retheme.md) |

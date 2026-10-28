@@ -57,6 +57,12 @@ landing mark; sprites in `assets/images/bosses/common/`). Asset layout: enemies 
   onWalk/onIdle/onDead/onStomp, canBeStomped, isBodyDisabled, getHazardBoxes,
   netPack()/netApply(a,b,f), render(camX,camY)`.
 
+- Since 0.5.68 ([carry-and-push](../gameplay/carry-and-push.md)): `onPound(pa, zone)` → true = it handled a ground
+  pound its own way (Box breaks, Scale launches, Seed is planted); `bodyParts()` = extra solid bodies (`oneway`,
+  `moves`); `pushBy(pa, dx)` = pushed by walking into it; `carryable` (+ `canBeCarried`, `onThrow`, `onPutDown`,
+  `onCarriedPound`); `pushAt(x, y)` = it blows (systems/Push), `windK` = how much the air moves it; `weight` (Scale);
+  `isleArt = true` = art per island and the editor prop `isle` (src/world/level/Isles.lua).
+
 - `level.players` = list of active PlayerAdventure (entities "see" players).
   `level.liveEntities` = entities list.
 

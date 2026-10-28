@@ -23,8 +23,9 @@ local controls = {
     -- Aventura
     move_left  = {'key:left',  'key:a', 'button:dpleft',  'axis:leftx-'},
     move_right = {'key:right', 'key:d', 'button:dpright', 'axis:leftx+'},
-    jump       = {'key:space', 'key:up', 'key:w',
-                   'button:b', 'button:dpup'},
+    -- (ARRIBA ya no salta desde 0.5.68: es COGER / LANZAR — el usuario —; saltar = espacio y el botón de salto)
+    jump       = {'key:space', 'button:b'},
+    grab       = {'key:up', 'key:w', 'button:dpup', 'axis:lefty-'},
     crouch     = {'key:down', 'key:s', 'button:dpdown', 'axis:lefty+'},
     -- Linterna (niveles a oscuras): encender / apagar
     light      = {'key:f', 'key:lshift', 'button:x', 'button:y'},
@@ -36,14 +37,14 @@ local labelsConsole = {
     back       = "[B]",    nav_up    = "[^]",     nav_down  = "[v]",
     nav_left   = "[<]",    nav_right = "[>]",     confirm   = "[A]",
     move_left  = "[<]",    move_right= "[>]",     jump      = "[A]",
-    crouch     = "[v]",    light     = "[Y]",
+    crouch     = "[v]",    light     = "[Y]",    grab      = "[^]",
 }
 local labelsPC = {
     flap       = "[Space]", pause  = "[Esc]",   resume = "[Enter]",
     back       = "[Esc]",   nav_up  = "[^]",    nav_down  = "[v]",
     nav_left   = "[<]",     nav_right= "[>]",   confirm   = "[Enter]",
     move_left  = "[<]",     move_right= "[>]",  jump      = "[Space]",
-    crouch     = "[Down]",  light = "[F]",
+    crouch     = "[Down]",  light = "[F]",      grab      = "[Up]",
 }
 
 -- ¿Se está usando un mando? (el último aparato tocado; en la Switch, siempre que no sea el táctil)

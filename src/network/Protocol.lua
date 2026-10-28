@@ -7,7 +7,7 @@ local Tiles = require 'src/world/tiles/Tiles'
 local P = {}
 
 -- ── Versión / red ─────────────────────────────────────────────────────────────
-P.VERSION = 73        -- el servidor rechaza clientes con otra versión (73: Mega Crabby lúgubre — medidor de luz en su netPack; 72: Mega Mashup — director `crabmashup` (tipo nuevo, netPack propio), nivel mashup_cangrejos, escenas, props de evento en los jefes, ayuda inteligente (bossdrops también en eventos); 71: Cangrejo Groove — ánimo del público en su netPack, revienta al morir (dying_burst); 70: El Groove con 2ª fase — platos de DJ, bajón; sin conga (netPack nuevo); 69: El Groove rehecho: nota dorada, aturdido, pista de baile, conga (netPack nuevo); 68: El Groove (tipo nuevo groovecrab, jefe secreto) y su nivel isla_del_groove; 67: Saltarín Gigante (tipo nuevo, jefe de las cuevas) y su nivel gruta_del_farol; 66: Saltarines en lugar de algunos lúgubres en las cuevas oscuras (otra lista de entidades); 65: Saltarín de cueva a oscuras = polilla (estado 'scared' nuevo); 64: cuenta atrás del principio de la ronda — StartCountdown, `cd` en game_init, mundo congelado —; 63: peces globo de reserva del Pez Globo Gigante (otra lista de entidades) y su huida de un salto; 62: peces globo en seco (estados dry_* nuevos) y el Pez Globo Gigante reequilibrado; 61: Pez Globo Gigante (tipo nuevo, jefe de la costa) y la resaca de las inundaciones (prop undertow: arrastra al jugador mientras baja el agua); 60: derrotas nuevas de los jefes — huyen gigantes: estados dying_* nuevos, trozo aturdido del Rey Gummy —; 59: Xtra extremo con UN jefe enfadado (bossFury) en vez de dos: otra lista de entidades; 58: ayuda en las peleas de jefe (director bossdrops y su reserva: entidades nuevas al final de la lista en Extremo y Xtra extremo); 57: Claudio (tipo nuevo, hecho con datos); 56: una sola zona de puntos activa que se mueve (reloj `zc` en la instantánea), dificultad de la sala (set_difficulty); 55: manzana (tipo nuevo, ya en niveles; cura en el estado propio); 54: el Espejo perseguidor, suelto y con ataques (red nueva); 53: el Espejo perseguidor (mirrorchase) y su nivel; 52: Crabby de cueva (tipo nuevo, ya en niveles); 51: Crabby de río y Crabby de lava (tipos nuevos, ya en niveles); 50: Gummy de cueva y Gummy de la fortaleza (tipos nuevos, ya en niveles); 49: Gummy de magma y Crabby de la fortaleza (tipos nuevos, ya en niveles); 48: Saltarín (entidad nueva); 47: Crabby lúgubre solo muere con ground pound (rebote), ruidos genéricos; 46: Mega Crabby lúgubre: techo, giro, aros con alcance; 45: Mega Crabby lúgubre terrestre (red nueva); 44: Mega Crabby lúgubre rehecho (red nueva), marcas de ruido; 43: niveles a oscuras, linterna (bit de input, estado propio 31-33, PF_LIGHT), Crabby lúgubre; 42: campo de carámbanos del Mega Crabby helado, guardia del Rey Gummy por todos lados (paracaídas), vuelo libre; 41: Rey Gummy, guardias Gummy de reserva; 40: Mega Crabby helado; 39: Crabby helado; 38: Gran Bola de Nieve rehecha, fases de zona, bloques de fase; 37: Gran Bola de Nieve; 36: congelador; 27: Bloques ON/OFF, vista fija en niveles; 28: entradas de jefe genéricas; 29: ataques de arena del Espejo; 30: cristal roto de jefe; 31: muertes especiales de enemigos; 32: bombas; 33: nieve, hielo y hielo fino; 34: arena; 35: roca abisal)
+P.VERSION = 74        -- el servidor rechaza clientes con otra versión (74: CARGAR — bit de input IN_GRAB_P 128, quien lleva cada cargable en el índice 10 de su entrada —, el aire (windVx en el estado propio, 34), Caja / Caja pequeña / Balanza (tipos nuevos), bomba objeto cargable que reaparece (otra lista en 3 niveles), familias de isla (Isles); 73: Mega Crabby lúgubre — medidor de luz en su netPack; 72: Mega Mashup — director `crabmashup` (tipo nuevo, netPack propio), nivel mashup_cangrejos, escenas, props de evento en los jefes, ayuda inteligente (bossdrops también en eventos); 71: Cangrejo Groove — ánimo del público en su netPack, revienta al morir (dying_burst); 70: El Groove con 2ª fase — platos de DJ, bajón; sin conga (netPack nuevo); 69: El Groove rehecho: nota dorada, aturdido, pista de baile, conga (netPack nuevo); 68: El Groove (tipo nuevo groovecrab, jefe secreto) y su nivel isla_del_groove; 67: Saltarín Gigante (tipo nuevo, jefe de las cuevas) y su nivel gruta_del_farol; 66: Saltarines en lugar de algunos lúgubres en las cuevas oscuras (otra lista de entidades); 65: Saltarín de cueva a oscuras = polilla (estado 'scared' nuevo); 64: cuenta atrás del principio de la ronda — StartCountdown, `cd` en game_init, mundo congelado —; 63: peces globo de reserva del Pez Globo Gigante (otra lista de entidades) y su huida de un salto; 62: peces globo en seco (estados dry_* nuevos) y el Pez Globo Gigante reequilibrado; 61: Pez Globo Gigante (tipo nuevo, jefe de la costa) y la resaca de las inundaciones (prop undertow: arrastra al jugador mientras baja el agua); 60: derrotas nuevas de los jefes — huyen gigantes: estados dying_* nuevos, trozo aturdido del Rey Gummy —; 59: Xtra extremo con UN jefe enfadado (bossFury) en vez de dos: otra lista de entidades; 58: ayuda en las peleas de jefe (director bossdrops y su reserva: entidades nuevas al final de la lista en Extremo y Xtra extremo); 57: Claudio (tipo nuevo, hecho con datos); 56: una sola zona de puntos activa que se mueve (reloj `zc` en la instantánea), dificultad de la sala (set_difficulty); 55: manzana (tipo nuevo, ya en niveles; cura en el estado propio); 54: el Espejo perseguidor, suelto y con ataques (red nueva); 53: el Espejo perseguidor (mirrorchase) y su nivel; 52: Crabby de cueva (tipo nuevo, ya en niveles); 51: Crabby de río y Crabby de lava (tipos nuevos, ya en niveles); 50: Gummy de cueva y Gummy de la fortaleza (tipos nuevos, ya en niveles); 49: Gummy de magma y Crabby de la fortaleza (tipos nuevos, ya en niveles); 48: Saltarín (entidad nueva); 47: Crabby lúgubre solo muere con ground pound (rebote), ruidos genéricos; 46: Mega Crabby lúgubre: techo, giro, aros con alcance; 45: Mega Crabby lúgubre terrestre (red nueva); 44: Mega Crabby lúgubre rehecho (red nueva), marcas de ruido; 43: niveles a oscuras, linterna (bit de input, estado propio 31-33, PF_LIGHT), Crabby lúgubre; 42: campo de carámbanos del Mega Crabby helado, guardia del Rey Gummy por todos lados (paracaídas), vuelo libre; 41: Rey Gummy, guardias Gummy de reserva; 40: Mega Crabby helado; 39: Crabby helado; 38: Gran Bola de Nieve rehecha, fases de zona, bloques de fase; 37: Gran Bola de Nieve; 36: congelador; 27: Bloques ON/OFF, vista fija en niveles; 28: entradas de jefe genéricas; 29: ataques de arena del Espejo; 30: cristal roto de jefe; 31: muertes especiales de enemigos; 32: bombas; 33: nieve, hielo y hielo fino; 34: arena; 35: roca abisal)
 -- Entidades que el servidor manda a cada jugador: las que están a menos de esto (px) de donde MIRA (los jefes,
 -- siempre). El cliente, a lo que no viene y está más lejos, no lo da por "en reposo" (sigue como estaba)
 P.NEAR_X, P.NEAR_Y = 1400, 1000
@@ -42,7 +42,8 @@ P.IN_CROUCH    = 8
 P.IN_JUMP_P    = 16    -- salto recién presionado en este tick
 P.IN_CROUCH_P  = 32    -- agacharse recién presionado en este tick
 P.IN_LIGHT_P   = 64    -- linterna recién pulsada en este tick (niveles a oscuras)
-P.IN_MAX       = 127
+P.IN_GRAB_P    = 128   -- ARRIBA recién pulsado: coger / lanzar lo que se carga (systems/Carry)
+P.IN_MAX       = 255
 P.IN_HELD_MASK = 15    -- sin flags de "recién presionado"
 
 local band = bit and bit.band or function(a, b)
@@ -59,7 +60,7 @@ function P.bor(a, b)
     return a + b - band(a, b)
 end
 
-function P.encodeInput(left, right, jump, crouch, jumpPressed, crouchPressed, lightPressed)
+function P.encodeInput(left, right, jump, crouch, jumpPressed, crouchPressed, lightPressed, grabPressed)
     local b = 0
     if left          then b = b + P.IN_LEFT     end
     if right         then b = b + P.IN_RIGHT    end
@@ -68,6 +69,7 @@ function P.encodeInput(left, right, jump, crouch, jumpPressed, crouchPressed, li
     if jumpPressed   then b = b + P.IN_JUMP_P   end
     if crouchPressed then b = b + P.IN_CROUCH_P end
     if lightPressed  then b = b + P.IN_LIGHT_P  end
+    if grabPressed   then b = b + P.IN_GRAB_P   end
     return b
 end
 
@@ -80,6 +82,7 @@ function P.decodeInput(bits, out)
     out.jump_pressed   = band(bits, P.IN_JUMP_P)   ~= 0
     out.crouch_pressed = band(bits, P.IN_CROUCH_P) ~= 0
     out.light_pressed  = band(bits, P.IN_LIGHT_P)  ~= 0
+    out.grab_pressed   = band(bits, P.IN_GRAB_P)   ~= 0
     return out
 end
 
@@ -88,7 +91,7 @@ end
 -- input del tick en vez del teclado real.
 function P.newInputStub()
     local inp = { left=false, right=false, jump=false, crouch=false,
-                  jump_pressed=false, crouch_pressed=false, light_pressed=false }
+                  jump_pressed=false, crouch_pressed=false, light_pressed=false, grab_pressed=false }
     local stub = {}
     stub.state = inp
     function stub.pressed(action)
@@ -100,6 +103,9 @@ function P.newInputStub()
         end
         if action == 'light' then
             local v = inp.light_pressed; inp.light_pressed = false; return v
+        end
+        if action == 'grab' then
+            local v = inp.grab_pressed; inp.grab_pressed = false; return v
         end
         return false
     end
@@ -160,6 +166,7 @@ function P.packOwnState(pa)
         pa.gpT or 0, pa.stunT or 0, pa.invT or 0, pa.squashT or 0, pa.ctrlLockT or 0,
         pa.iceT or 0,
         pa.lightOn and 1 or 0, pa.lightBat or 1, pa.lightCd or 0,
+        pa.windVx or 0,                                   -- (el arrastre del aire: systems/Push)
     }
 end
 
@@ -202,12 +209,13 @@ function P.applyOwnState(s, pa)
     pa.lightOn     = s[31] == 1
     pa.lightBat    = s[32]
     pa.lightCd     = s[33]
+    pa.windVx      = s[34]
 end
 
 -- Estructura mínima para validar un estado propio recibido del servidor.
 function P.isValidOwnState(s)
-    if type(s) ~= 'table' or #s < 33 then return false end
-    for i = 1, 33 do if type(s[i]) ~= 'number' then return false end end
+    if type(s) ~= 'table' or #s < 34 then return false end
+    for i = 1, 34 do if type(s[i]) ~= 'number' then return false end end
     return true
 end
 

@@ -46,6 +46,8 @@ end
 
 function Interactions.check(pa, e)
     if not e.alive or e.state == 'dead' or (e.isGhost and e:isGhost()) then return nil end
+    if e.state == 'carried' then return nil end                     -- (en las manos de alguien: systems/Carry)
+    if e.thrownBy == pa and (e.thrownT or 0) > 0 then return nil end   -- (recién lanzado: no le da a quien lo lanzó)
     -- Congelada en un bloque de hielo: inofensiva; caerle encima rompe el hielo
     -- (los jefes y lo que tiene reglas propias deciden ellos: ver interact)
     if e.state == 'frozen' and not e.interact then return Interactions.frozenCheck(pa, e) end
@@ -262,8 +264,11 @@ function Interactions.run(pa, entities, cb, rewind)
         local z = Interactions.poundZone(pa)
         local rx, ry = pa.GP_RADIUS_X or 170, pa.GP_RADIUS_Y or 110
         for i, e in ipairs(entities) do
-            if e.alive and e.state ~= 'dead' and not (e.isGhost and e:isGhost()) then
-                if e.state == 'frozen' and not e.interact then
+            if e.alive and e.state ~= 'dead' and e.state ~= 'carried' and not (e.isGhost and e:isGhost()) then
+                -- (lo que reacciona a un ground pound a su manera: `onPound(pa, zona)` → true = ya está — la Caja se
+                -- rompe, la Balanza catapulta, la Semilla se planta)
+                if e.onPound and e:onPound(pa, z) then
+                elseif e.state == 'frozen' and not e.interact then
                     -- (congelada: el impacto rompe el hielo)
                     if overlap(z, e:getOuterBounds()) then
                         local killed = e.props.stompable

@@ -4,6 +4,7 @@ local Class = require 'libs/class'
 local DeadEyes = require 'src/player/DeadEyes'
 local Tiles = require 'src/world/tiles/Tiles'
 local Floods = require 'src/world/systems/Floods'
+local Push = require 'src/world/systems/Push'
 local PlayerAdventure = Class:new()
 local P = {}        -- locales de archivo que comparten las partes (ver abajo "Partes")
 local dropPlatformTop, ICE_FREE_INV, ICE_MASH, loadSprites      -- (de las partes: se rellenan al cargarlas)
@@ -449,6 +450,9 @@ function PlayerAdventure:_update(dt, level)
     -- el jefe espejo lo reproduce con retardo (ver entities/types/mirror.lua).
     local pJump, pCrouch = Input.pressed('jump'), Input.pressed('crouch')
     self:updateLight(dt, level, Input.pressed('light'))
+    -- CARGAR (systems/Carry, tras el paso de los jugadores): ARRIBA coge / lanza; AGACHADO + ARRIBA, con cuidado:
+    -- lo deja al lado en vez de lanzarlo (el usuario: para no hacer explotar nada)
+    if Input.pressed('grab') and not stunned then self.grabReq, self.grabCareful = true, Input.down('crouch') end
     local hCrouch = Input.down('crouch')
     local inX = Input.down('move_left') and -1 or (Input.down('move_right') and 1 or 0)
     self.inMoveX, self.inCrouch = inX, hCrouch
@@ -540,7 +544,15 @@ function PlayerAdventure:_update(dt, level)
 
     -- (resaca: el agua que baja arrastra hacia un lado — Floods.currentAt; igual en la predicción online)
     local current = (liq and level.floods and level.floods[1]) and Floods.currentAt(level, self.x, self.y) or 0
-    self:moveSteps(level, (self.vx + convey + current)*dt, self.vy*dt)
+    -- (de pie sobre un cuerpo que se mueve — un platillo de la Balanza, una caja empujada —: se va con él;
+    -- Entities.solidBodies mide cuánto se movió)
+    local ride = self.standBody
+    local rdx, rdy = 0, 0
+    if ride and ride.alive ~= false and ride.moves then rdx, rdy = ride.stepDx or 0, ride.stepDy or 0 end
+    self.rideBody, self.standBody = ride, nil
+    local wind = Push.player(self, level, dt)       -- (el aire que sopla: Soplón, Ventisca, Géiser — systems/Push)
+    self:moveSteps(level, (self.vx + convey + current + wind)*dt + rdx, self.vy*dt + rdy)
+    self.rideBody = nil
 
     self:updateSplash(dt, level)
     self.prevInWater = self.inWater

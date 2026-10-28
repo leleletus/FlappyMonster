@@ -26,7 +26,10 @@ the generator first, or edit the PNG directly.
 
 Safe to re-run (verified on 2026-10-07 to reproduce the committed pixels exactly): `make_hopper_sprites`,
 `make_food_sprites`, `make_sky`, `make_story_fx`, `make_story_icons`, `make_terrain`, `make_mirror_shards`,
-`make_ice_spikes`, `make_cryo_chain`, `make_sprites`. The others were moved and had their paths updated but were
+`make_ice_spikes`, `make_cryo_chain`, `make_sprites`. The 0.5.68 props (none hand-edited yet; previews without
+`--apply`): `tools/art/world/make_scale_box.py` (Box, small box, Scale), `tools/art/enemies/make_gust_sprites.py`
+(Gust), `tools/art/world/make_seed_plants.py` (Seed), `tools/art/world/make_wind_geyser.py` (Blizzard, Geyser),
+`tools/sounds/props.py` (their sounds), `tools/art/ui/make_prompts.py` (the "grab" tooltip; does not overwrite, `--force`). The others were moved and had their paths updated but were
 NOT executed after the 2026-10-07 reorganisation (their outputs are hand-edited or they need the originals): check
 the diff before committing anything they write.
 

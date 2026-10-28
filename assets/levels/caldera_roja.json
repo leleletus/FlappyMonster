@@ -50,7 +50,7 @@
     {"col":109,"row":20,"type":"extralife"},
     {"col":101,"props":{"patrol":{"left":100,"right":104},"respawn":6,"speed":40},"row":21,"type":"bomb"},
     {"col":129,"props":{"patrol":{"left":127,"right":132}},"row":21,"type":"crabby_lava"},
-    {"col":135,"props":{"respawn":5,"speed":0},"row":21,"type":"bomb"},
+    {"col":135,"props":{"respawn":5},"row":21,"type":"bombobject"},
     {"col":23,"props":{"patrol":{"left":20,"right":27}},"row":13,"type":"gummy_magma"},
     {"col":36,"row":12,"type":"star"},
     {"col":39,"row":12,"type":"star"},

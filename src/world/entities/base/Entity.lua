@@ -58,6 +58,8 @@ function Entity.extend(base, tuning)
     return cls
 end
 
+local Push = require 'src/world/systems/Push'
+local Carry = require 'src/world/systems/Carry'
 local FreeFlight
 local function randRange(a, b)
     return a + math.random() * (b - a)
@@ -612,6 +614,8 @@ local function probe(level, self, px, py, side)
         return faceBottom(t, py)
     end
     local o, b = level:bodyAt(px, py, self)
+    -- (una plataforma de un solo sentido solo para desde arriba, y solo cerca de su cara)
+    if o and o.oneway and (side ~= 'top' or py - b.y > 16) then o = nil end
     if o then
         if side == 'left'  then return b.x, o end
         if side == 'right' then return b.x + b.w, o end
@@ -772,6 +776,9 @@ end
 
 function Entity:update(dt, level)
     local tn = self.tuning
+    -- (en las manos de un jugador: va con él y no hace nada más — systems/Carry)
+    if self.carriedBy then Carry.follow(self); return end
+    if (self.thrownT or 0) > 0 then self.thrownT = self.thrownT - dt end
     if self.stepAlways then self:stepAlways(dt, level) end
 
     if self.state == 'dead' then
@@ -795,6 +802,8 @@ function Entity:update(dt, level)
 
     if self:inLava(level) then self:onLava(level); if Entity.SPECIAL_DEATH[self.state] then return end end
     if self:droppedOnSpikes(level) then self:dieBurst(); return end
+    -- (el aire que sopla — Soplón, Ventisca, Géiser — mueve todo lo que tiene física: systems/Push)
+    if level and level.pushers and level.pushers[1] and Push.canPush(self) then Push.entity(self, level, dt) end
     if self:updateCommonStates(dt, level) then return end
     if self:updateCustom(dt, level) then return end
 

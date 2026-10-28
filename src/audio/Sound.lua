@@ -155,6 +155,25 @@ function Sound.load()
     load('floodRise',     'assets/sounds/water/flood_rise.wav',    'static')   -- inundación: sube
     load('floodFall',     'assets/sounds/water/flood_fall.wav',    'static')   -- inundación: baja
     load('undertowAlert', 'assets/sounds/water/undertow.wav',      'static')   -- aviso: empieza la resaca
+    -- Lo nuevo de 0.5.68 (tools/sounds/props.py; NO escuchados aún por el usuario)
+    load('gustInhale', 'assets/sounds/props/gust_inhale.wav', 'static')   -- el Soplón coge aire
+    load('gustBlow', 'assets/sounds/props/gust_blow.wav', 'static')   -- … y sopla
+    load('gustPop', 'assets/sounds/props/gust_pop.wav', 'static')   -- … y revienta
+    load('scaleCreak', 'assets/sounds/props/scale_creak.wav', 'static')   -- la Balanza se mueve
+    load('scaleLaunch', 'assets/sounds/props/scale_launch.wav', 'static')   -- la Balanza catapulta
+    load('boxPush', 'assets/sounds/props/box_push.wav', 'static')   -- arrastrar la Caja
+    load('boxLand', 'assets/sounds/props/box_land.wav', 'static')   -- la Caja cae
+    load('boxBreak', 'assets/sounds/props/box_break.wav', 'static')   -- la Caja se rompe
+    load('seedPickup', 'assets/sounds/props/seed_pickup.wav', 'static')   -- coger la Semilla
+    load('seedPlant', 'assets/sounds/props/seed_plant.wav', 'static')   -- plantarla
+    load('seedGrow', 'assets/sounds/props/seed_grow.wav', 'static')   -- crece
+    load('seedWilt', 'assets/sounds/props/seed_wilt.wav', 'static')   -- se marchita
+    load('windWarn', 'assets/sounds/props/wind_warn.wav', 'static')   -- aviso de la Ventisca
+    load('windGust', 'assets/sounds/props/wind_gust.wav', 'static')   -- la racha
+    load('geyserRumble', 'assets/sounds/props/geyser_rumble.wav', 'static')   -- aviso del Géiser
+    load('geyserBurst', 'assets/sounds/props/geyser_burst.wav', 'static')   -- erupción de agua
+    load('steamHiss', 'assets/sounds/props/steam_hiss.wav', 'static')   -- vapor / humo
+    load('iceFreeze', 'assets/sounds/props/ice_freeze.wav', 'static')   -- el chorro se congela
     if sources['drowning'] then sources['drowning']:setLooping(false) end
     load('fwLaunch',      'assets/sounds/fireworks/launch.ogg',      'static')
     load('fwBlast1',      'assets/sounds/fireworks/blast1.ogg',       'static')

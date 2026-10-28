@@ -125,7 +125,7 @@ local _inp = Input.state
 
 -- Clases de entidades (cargadas en love.load).
 local Difficulty
-local Level, PlayerAdventure, Entities, BossZones, AutoScroll, Floods, PointAreas, StartCountdown
+local Level, PlayerAdventure, Entities, BossZones, AutoScroll, Floods, PointAreas, StartCountdown, Push, Carry
 local buildResults   -- definida más abajo
 
 -- Constantes que deben coincidir con PlayerAdventure.lua
@@ -694,6 +694,7 @@ local function stepRoom(room)
 
     -- ── Jugadores (orden estable: el de la sala) ──────────────────────────────
     sim.level.solidBodies = Entities.solidBodies(sim.enemies)    -- jefes sólidos
+    sim.level.pushers = Push.collect(sim.enemies)                -- lo que sopla (systems/Push)
     for _, pid in ipairs(room.playerIds) do
         local ps = sim.playerSims[pid]
         if ps and not ps.isSpectator then
@@ -714,6 +715,7 @@ local function stepRoom(room)
         if ps and not ps.isSpectator then active[#active+1] = ps.pa; ps.pa.ownerIdx = ps.idx end   -- (ownerIdx: el ranking del Mega Mashup)
     end
     sim.level.players = active
+    Carry.step(sim.level, active, sim.enemies)                    -- coger / lanzar (systems/Carry)
     sim.level:update(TICK_DT)
     sim.level.liveEntities = sim.enemies        -- obstáculos entre entidades
     for _, e in ipairs(sim.enemies) do
@@ -967,9 +969,12 @@ local function broadcastSnapshot(room)
             round((e.deadTimer or 0) * 100), round((e.breatheT or 0) * 100),
             e.flipped and 1 or 0,
         }
+        -- (lo que se puede cargar: quién lo lleva — índice del jugador, 0 = nadie —, en el 10: systems/Carry)
+        local base = 9
+        if e.carryable then base = 10; entry[10] = e.carrierIdx or 0 end
         -- Datos propios del tipo (p. ej. pincho y sprite del Crabby)
         local extra = e:netPack()
-        if extra then for k, v in ipairs(extra) do entry[9 + k] = v end end
+        if extra then for k, v in ipairs(extra) do entry[base + k] = v end end
         elist[i] = entry
         if e.def and e.def.boss then ebig[i] = true end
       end
@@ -1668,6 +1673,8 @@ function love.load()
     StartCountdown  = require 'src/world/systems/StartCountdown'
     Floods          = require 'src/world/systems/Floods'
     PointAreas      = require 'src/world/systems/PointAreas'
+    Push            = require 'src/world/systems/Push'
+    Carry           = require 'src/world/systems/Carry'
     Difficulty      = require 'src/core/Difficulty'
     -- Lo que un jefe le hace a un jugador (daño, muerte) suena como suyo:
     -- su cliente lo reproduce al ver bajar su vida en la reconciliación

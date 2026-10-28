@@ -1,0 +1,95 @@
+# Carrying, pushing, air and moving platforms
+
+Four generic systems from 0.5.68 that the new props (Box, Scale, Gust, Seed, Blizzard, Geyser —
+[new-props-plan](../entities/new-props-plan.md)) are built on. A type only **switches them on**; none of them names a
+concrete type.
+
+**Files**
+
+| File | Role |
+|---|---|
+| `src/world/systems/Carry.lua` | CARRYING: pick up / carry over the head / throw / put down, the "grab" tooltip |
+| `src/world/systems/Push.lua` | AIR: whatever blows pushes players and everything with physics, without damage |
+| `src/world/entities/Entities.lua` (`solidBodies`) | BODY PARTS and MOVING BODIES (measures `stepDx/stepDy`) |
+| `src/player/PlayerCollision.lua` | riding a moving body, one-way bodies, pushing a body (`pushBy`) |
+| `src/world/level/Isles.lua` | which ISLAND a level is: art per island and island FAMILIES of types (see below) |
+| `src/world/entities/types/items/box.lua` | the Box (`box`, pushed) and the small box (`smallbox`, carried) |
+| `tools/art/ui/make_prompts.py` | the tooltip sprite `assets/images/ui/prompts/grab-Sheet.png` (keyboard, pad, touch) |
+
+## Carrying (`Carry`)
+
+- **Controls (the user, 0.5.68):** the new action **`grab` = UP** (Up arrow, W, D-pad up, stick up; on touch the
+  D-pad's up). UP no longer jumps: jump is Space / the jump button only. Next to something carryable, a tooltip with
+  the UP button of the device in use (keyboard key, D-pad, touch D-pad) bobs over it. UP picks it up (also while
+  crouching) and carries it over the head; UP again THROWS it forward (farther while running); CROUCH + UP puts it
+  down CAREFULLY beside the player (in front; behind if there is a wall; never touching the player: a bomb lights when
+  touched) — "so nothing blows up". A ground pound while carrying drops it underneath (`onCarriedPound`: the Seed is
+  planted). Dying drops it.
+- **A type switches it on** with `carryable = true` (class) and optional hooks `canBeCarried()`, `onPickUp(pa)`,
+  `onThrow(pa, vx, vy)`, `onPutDown(pa)`, `onCarriedPound(pa)`. While carried: state `'carried'`, `e.carriedBy` (sim),
+  `e.carrierIdx` (network), `Entity:update` only follows the carrier, no interactions, the air ignores it. A thrown
+  object does not hit its thrower for 0.5 s (`thrownBy` / `thrownT`, checked in `Interactions.check`).
+- **Carryable today:** the bomb object (picked up UNLIT, lit when thrown; put down carefully it stays unlit) and the
+  small box and the Seed (`types/items/seed.lua`): carried, it is PLANTED with a ground pound on firm ground; a plant
+  of its island grows in 1 s (4-6 tiles: what fits; fewer than 4, nothing) with big leaves and a crown to stand on
+  (one-way body parts, positions measured on the drawing by `make_seed_plants.py` into `<isle>-plant<h>.json`); it wilts
+  after `life` s or when its planter plants another, and the seed goes back to its spot. The cave mushroom gives light.
+- **SP / server / client:** the player only records the request (`pa.grabReq`, `pa.grabCareful`); `Carry.step` runs
+  after the players move (AdventureState, `stepRoom`). The input travels as `Protocol.IN_GRAB_P` (128). In
+  snapshots a carryable entity has its carrier index at position 10 (its own `netPack` data starts at 11). The client
+  draws what IT carries on its predicted player (`Carry.clientFollow`), the rest from snapshots.
+
+## Pushing and weight (the Box)
+
+- A body with `pushBy(pa, dx)` is pushed when a player WALKS into its side on the ground: it moves (its own
+  collisions) by `dx × PUSH_K` and the player stays against its face without losing speed. Big box `PUSH_K` 0.4
+  (heavy: the user), small box 0.8. Online the pusher's client moves it ahead (`predX`) while the server says it is the
+  pusher.
+- `weight` = what it counts on a Scale pan (big box 2, small box and a player 1).
+- **Breaking** (both boxes; the user): a ground pound on it, spikes / lava, falling out of the level and a hard
+  landing (`BREAK_LAND`: big 1000 px/s ≈ 5 tiles of fall — a Scale launch, a cliff —, small 650: a throw on flat
+  ground survives, from a ledge it breaks); the small one also against a wall (`BREAK_WALL` 500). Every broken box
+  REAPPEARS at its starting spot after `respawn` s (no level can soft-lock).
+- The bomb object lights on a hard impact too (`IMPACT_V` 850 px/s, ground or wall) and can now respawn (prop
+  `respawn`); the levels that used a standing LIVE bomb for that (`pradera_explosiva`, `cantera_dinamita`,
+  `caldera_roja`, two credits sets) now use a respawning bomb object.
+
+## Moving bodies and body parts
+
+- `bodyParts()` on an entity → extra solid bodies (tables with `getOuterBounds`, `solidFull`, `alive`, optional
+  `oneway` = only from above, `moves`). The Scale pans and the Seed's leaves are parts.
+- `moves = true`: `Entities.solidBodies` measures how far the body moved since last time (`stepDx`, `stepDy`; once per
+  step in SP / server, once per frame on the client). A player standing on it (`pa.standBody`) moves with it the next
+  step (`rideBody`): it can go up and down without the player falling through or floating. Entities standing on
+  something that moves are carried by whoever moves it (the Box rides another box; the Scale moves what is on its pans).
+
+## Air (`Push`)
+
+- An entity that blows declares `pushAt(x, y)` → wind velocity `(wx, wy)` px/s at that point; `Push.collect` gathers
+  them into `level.pushers` next to `solidBodies` (SP, server, and the client's prediction from snapshot state, so
+  the player's prediction matches).
+- Sideways the air DRAGS (added to the player's movement with a little inertia, `pa.windVx`); upward it slows the fall
+  and lifts towards `wy`; downward it accelerates down. Entities: `Push.canPush` (enemies and objects with physics;
+  not bosses, fixed pickups, reserve, carried or clinging ones) × `windK` (big box 0.4: heavy).
+
+## Islands (`Isles`)
+
+One generic module for everything that changes with the island (the user: one method for everything):
+- `Isles.of(level, forced)` = the level's island from its background (`Isles.BY_BACKGROUND`; snow / ice spikes win;
+  none = meadow). Used by the Hopper (prop `skin`), the food, the boxes and every new prop.
+- A type with `isleArt = true` gets the editor prop `isle` (Auto / an island) and loads `<folder>/<isle>-….png`.
+- FAMILIES (`Isles.FAMILIES`: gummy, crabby, crabbytramp → the type of each island) get the prop `isle` with `self`
+  by default (nothing changes in old levels); `auto` or an island swaps the placement for that island's type when
+  the level loads (`Isles.resolveAll` in `Level`, same in SP / server / client). A new family = one line.
+
+## Tests
+
+`mechanics`: `caja_empuje`, `caja_rota`, `caja_borde`, `cajas_golpes`, `cargar`, `bomba_reaparece`, `islas`, `viento`,
+`cuerpo_mueve`.
+
+## History and decisions
+
+- 0.5.68 (the user): UP picks up / throws (it used to jump too — the user thought it was free; chosen: UP only
+  grabs); bomb picked up unlit, lit when thrown; crouch + UP = put down carefully instead of throwing; a small box
+  that can be carried and breaks depending on the impact; bomb objects respawn and light on a hard impact; the big box
+  also breaks on spikes, lava and big falls, and is much heavier to push than the small one; one generic island module.

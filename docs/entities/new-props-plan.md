@@ -2,8 +2,7 @@
 
 Approved by the user on 2026-10-27 (0.5.67): the **Gust** (enemy), the **Scale** (mechanism), the **Seed** (item) and,
 as the Scale's companion, a pushable **Box**; then two hazards the user added: the **Blizzard** (random wind) and the
-**Geyser**. **Status: DESIGN — sprites, animations and sounds as previews for the
-user to approve; nothing in the game yet.** Tick a step (`[x]`) in the same commit that does it.
+**Geyser**. **Status: in the game (0.5.68), not yet in real levels — test arena `tools/levelgen/arenas/cajas.json`.** Tick a step (`[x]`) in the same commit that does it.
 
 | Thing | Generator | Previews (outside the repo) |
 |---|---|---|
@@ -67,6 +66,16 @@ Every generator writes previews by default and the game assets only with `--appl
   `ice_freeze`, `gust_inhale`, `gust_blow`, `gust_pop`, `scale_creak`, `scale_launch`,
   `box_push`, `box_land`, `box_break`, `seed_pickup`, `seed_plant`, `seed_grow`, `seed_wilt`.
 
+## Decisions added during the build (0.5.68, the user)
+
+- **Carrying** is a general mechanic: UP picks up (also crouching) and throws; crouch + UP puts down carefully
+  beside; a tooltip with the device's UP button shows over carryable things. UP no longer jumps. Carryable: the bomb
+  object (unlit until thrown), a new SMALL BOX, the Seed.
+- **Small box**: carried, also pushed (light); thrown, breaks only on a strong impact; respawns. The big box is much
+  heavier to push and breaks on spikes, lava and big falls (a Scale launch), never carried.
+- **Bomb object**: respawns (prop `respawn`), lights on a hard impact; it replaces every standing live bomb.
+- **One island module** (`Isles`) for all types: art per island and island families of enemies.
+
 ## Behaviour agreed (from the proposals)
 
 - **Gust**: floats; breathes in (~1 s warning), blows a 5-6-cell horizontal gust that PUSHES (no damage) players and
@@ -100,8 +109,12 @@ Every generator writes previews by default and the game assets only with `--appl
   Seed: meadow, coast and fortress approved, v5 of cave and volcano APPROVED, snow simplified in v6
   (the v5 fern, with 1-px leaflets and frost on every tip, looked over-detailed): ALL DESIGNS APPROVED.
 - [x] 2. `--apply` the approved art and sounds.
-- [ ] 3. Box + Scale in the game (entities, physics, network, editor, harness).
-- [ ] 4. Gust in the game.
-- [ ] 5. Seed in the game.
-- [ ] 5b. Blizzard (in `torre_viento`) and Geyser in the game.
+- [x] 3a. The generic systems: moving bodies and body parts, air (`Push`), carrying (`Carry`, UP = grab, tooltip),
+  islands (`Isles`) — [carry-and-push](../gameplay/carry-and-push.md). Box and small box in the game; the bomb object
+  carryable, respawning, lit by hard impacts; standing live bombs replaced in the levels.
+- [x] 3. Scale in the game (entities, physics, network, editor, harness). The user, testing it: the pan hitbox was
+  thicker than the plank (things floated) and stacked things did not weigh — both fixed.
+- [x] 4. Gust in the game (only pushes in every island, like the volcano Geyser).
+- [x] 5. Seed in the game (carried, planted with a ground pound; platforms measured on the drawings).
+- [x] 5b. Blizzard and Geyser in the game (not yet placed in `torre_viento` or any level).
 - [ ] 6. Levels that use them; docs reference; release.

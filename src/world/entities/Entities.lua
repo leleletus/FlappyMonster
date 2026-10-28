@@ -34,7 +34,7 @@ local TYPES = { 'enemies/gummy', 'enemies/crabby', 'traps/spikefall', 'items/sta
                 'traps/cryo', 'bosses/snowboss', 'mechanisms/phaseblock', 'enemies/crabby_ice', 'bosses/megacrabby_ice', 'enemies/gummy_ice', 'bosses/megagummy', 'bosses/giantpuffer', 'bosses/gianthopper', 'bosses/groovecrab', 'enemies/gloomy', 'bosses/megagloomy', 'enemies/hopper',
                 'enemies/gummy_magma', 'enemies/crabby_fortress', 'enemies/gummy_cave', 'enemies/gummy_fortress',
                 'enemies/crabby_river', 'enemies/crabby_lava', 'enemies/crabby_cave', 'bosses/mirrorchase', 'items/apple',
-                'directors/bossdrops', 'directors/crabmashup' }
+                'directors/bossdrops', 'directors/crabmashup', 'items/box', 'mechanisms/scale', 'enemies/gust', 'items/seed', 'mechanisms/blizzard', 'mechanisms/geyser' }
 
 -- Un archivo puede definir varios tipos (p. ej. el trampolín en sus 4 direcciones)
 for _, name in ipairs(TYPES) do
@@ -63,11 +63,27 @@ function Entities.renderBack(list, camX, camY)
     end
 end
 
+-- PIEZAS: una entidad puede aportar varios cuerpos con `bodyParts()` (tablas con getOuterBounds, solidFull, alive,
+-- owner y, si quiere, `oneway` = solo se pisa desde arriba): los platillos de la Balanza, las hojas de la Semilla.
+-- CUERPOS QUE SE MUEVEN (`moves = true`): aquí se mide cuánto se movieron desde la vez anterior (`stepDx`, `stepDy`;
+-- un jugador y servidor: una vez por paso; el cliente: una vez por fotograma, aproximado) y quien está de pie encima
+-- se mueve con ellos (PlayerAdventure: `standBody`; las entidades, el que los mueve).
+local TB = {}
+local function track(o)
+    local b = o:getOuterBounds(TB)
+    local dx, dy = b.x - (o.lastBX or b.x), b.y - (o.lastBY or b.y)
+    if math.abs(dx) > 48 or math.abs(dy) > 48 then dx, dy = 0, 0 end      -- (un salto de sitio no arrastra a nadie)
+    o.stepDx, o.stepDy, o.lastBX, o.lastBY = dx, dy, b.x, b.y
+end
 function Entities.solidBodies(list)
     local out = {}
     for _, e in pairs(list) do
         if e.isSolidBody and e:isSolidBody() then out[#out+1] = e end
+        if e.bodyParts and e.alive then
+            for _, p in ipairs(e:bodyParts()) do if p.alive ~= false then out[#out+1] = p end end
+        end
     end
+    for _, o in ipairs(out) do if o.moves then track(o) end end
     return out
 end
 

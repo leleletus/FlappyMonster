@@ -18,6 +18,8 @@ local BaseState            = require 'src/core/BaseState'
 local L = require 'src/core/Lang'
 local Level                = require 'src/world/level/Level'
 local Entities             = require 'src/world/entities/Entities'
+local Push                 = require 'src/world/systems/Push'
+local Carry                = require 'src/world/systems/Carry'
 local PlayerAdventure      = require 'src/player/PlayerAdventure'
 local OnlinePlayer         = require 'src/player/OnlinePlayer'
 local NC                   = require 'src/network/NetworkClient'
@@ -311,6 +313,7 @@ function OnlineAdventureState:_collectInput()
     if Input.pressed('jump')   then self.pendingJump   = true end
     if Input.pressed('crouch') then self.pendingCrouch = true end
     if Input.pressed('light')  then self.pendingLight  = true end
+    if Input.pressed('grab')   then self.pendingGrab   = true end
 end
 
 function OnlineAdventureState:_clearInput()
@@ -598,6 +601,7 @@ function OnlineAdventureState:update(dt)
     -- ── Jugador local: predicción a paso fijo ─────────────────────────────────
     -- (los jefes son sólidos: se choca con su posición interpolada)
     self.level.solidBodies = Entities.solidBodies(self.enemyRenderers)
+    self.level.pushers = Push.collect(self.enemyRenderers)        -- (lo que sopla, de las instantáneas: systems/Push)
     if self.predictor and not self.ownData.isSpectator then
         self.simAccum = self.simAccum + dt
         local ticks = 0
@@ -606,8 +610,8 @@ function OnlineAdventureState:update(dt)
             ticks = ticks + 1
             local s = self.inputState
             local bits = Protocol.encodeInput(s.left, s.right, s.jump, s.crouch,
-                                              self.pendingJump, self.pendingCrouch, self.pendingLight)
-            self.pendingJump, self.pendingCrouch, self.pendingLight = false, false, false
+                                              self.pendingJump, self.pendingCrouch, self.pendingLight, self.pendingGrab)
+            self.pendingJump, self.pendingCrouch, self.pendingLight, self.pendingGrab = false, false, false, false
             local held = self:_startFrozenAhead()                -- (cuenta atrás: el servidor aún no lo mueve)
             self.predictor:tick(bits, held)
             if not self.localPa.dying and not held then self:_checkLocalBounce() end
@@ -622,6 +626,7 @@ function OnlineAdventureState:update(dt)
 
         self.predictor:decay(dt)
         self.renderX, self.renderY = self.predictor:renderPos(self.simAccum / TICK_DT)
+        Carry.clientFollow(self.enemyRenderers, self.myIdx, self.renderX, self.renderY)   -- (lo que llevo, conmigo)
     end
 
     -- ── Música: el respawn ocurre en el servidor (aquí solo llega la posición

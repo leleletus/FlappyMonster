@@ -16,6 +16,8 @@ local Level           = require 'src/world/level/Level'
 local PlayerAdventure = require 'src/player/PlayerAdventure'
 local PlayRecorder    = require 'src/core/PlayRecorder'
 local Entities        = require 'src/world/entities/Entities'
+local Push            = require 'src/world/systems/Push'
+local Carry           = require 'src/world/systems/Carry'
 local Entity          = require 'src/world/entities/base/Entity'
 local Particles       = require 'src/fx/Particles'
 local BossZones       = require 'src/world/systems/BossZones'
@@ -594,6 +596,7 @@ function AdventureState:update(dt)
         Sound.play('pointGain'); Particles.emit('points', pa.x, pa.y)
     end)
     self.level.solidBodies = Entities.solidBodies(self.enemies)   -- jefes sólidos
+    self.level.pushers = Push.collect(self.enemies)                -- lo que sopla (systems/Push)
     -- (la escena final de una carrera en la historia: al acabar, el nivel termina sin meta y enlaza con el siguiente)
     if self.runOut and self.runOut:update(dt) then
         local r = self:result()
@@ -614,6 +617,7 @@ function AdventureState:update(dt)
     else
         self.player:update(dt, self.level)
     end
+    Carry.step(self.level, { self.player }, self.enemies)          -- (coger / lanzar: systems/Carry)
     if self.bonus then
         self.level.players = { self.player }                          -- (los enemigos ven a todos)
         for _, b in ipairs(self.bonus.bots) do self.level.players[#self.level.players + 1] = b.pa end
@@ -862,6 +866,7 @@ function AdventureState:_renderScene()
 
     -- Fragmentos del espejo que han soltado los jefes (brillan: encima de la oscuridad)
     if self.shards then self.shards:render(self.camX, self.camY) end
+    Carry.drawPrompt(self.player, self.enemies, self.camX, self.camY)      -- (la ayuda de "coger": systems/Carry)
 
     -- ── Debug hitboxes (F1) ───────────────────────────────────────────────────
     if DEBUG_HITBOX then

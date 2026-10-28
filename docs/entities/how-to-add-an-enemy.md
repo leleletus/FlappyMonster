@@ -66,6 +66,7 @@ return {
 | `wantsLevel = true` | Gets `levelRef` when the level loads (to draw according to the terrain) |
 | `freezeFloats = true` | Frozen, it stays where it is (does not fall) |
 | `darkEdge = { r, g, b, a }` | Dark sprite: draws a thin outline of that colour around it where the level is dark |
+| `noWings = true` (class field) | A flyer that is not drawn with the generic wings (the Gust: a cloud) |
 | `ownStunLook = true` (class field) | Skips the render wrapper's generic `stunned` look (the whole render ROTATED around its centre + a star ring): for types that draw their own knockout, or whose `render` also draws things far from them (The Groove's dance floor swung with it) |
 
 (Classes share `def` when one file returns several definitions with the same class: traits that differ per definition

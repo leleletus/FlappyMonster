@@ -70,7 +70,7 @@ def pradera():
     s.ent('gummy', 9, 1, pauses=False)
     s.ent('gummy', 6)
     s.ent('star', 4, 3); s.ent('star', 5, 3)
-    s.ent('bomb', 13, 4, speed=0, fuseTime=1.2)   # se enciende al pasar: la explosión se lleva a los dos Gummies
+    s.ent('bombobject', 13, 4, fuseTime=1.2)   # se enciende al pasar: la explosión se lleva a los dos Gummies
     s.ent('gummy', 15); s.ent('gummy', 16, pauses=False)
     s.rect(18, 4, 18, 4, BREAK)                 # y rompe el bloque
     for c, t in ((3, 'tall_grass'), (7, 'flower_patch'), (11, 'tulip'), (17, 'round_bush'), (19, 'tall_grass')):
@@ -120,7 +120,7 @@ def cuevas():
     s = Strip(DEEP, DEEP)
     s.ent('gloomy', 7)
     s.ent('gummy_cave', 11)
-    s.ent('bomb', 14, 4, speed=0, fuseTime=1.0)
+    s.ent('bombobject', 14, 4, fuseTime=1.0)
     s.rect(15, 4, 16, 4, BREAK)                 # la bomba rompe los bloques... y al Crabby de detrás
     s.ent('crabby_cave', 18)
     for c, t in ((3, 'glow_mushroom'), (9, 'cave_crystals'), (12, 'stalagmite_small'), (19, 'glow_mushroom')):

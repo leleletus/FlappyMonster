@@ -110,7 +110,8 @@ function love.load()
     local files = love.filesystem.getDirectoryItems('assets/levels')
     table.sort(files)
     for _, f in ipairs(files) do
-        if f:match('%.json$') and f:match(os.getenv('ONLY') or '.') then
+        -- (sin las copias temporales de run.sh — zz_tmp_*, `_*` —: con la batería en paralelo aparecen y desaparecen)
+        if f:match('%.json$') and not f:match('^zz_tmp_') and not f:match('^_') and f:match(os.getenv('ONLY') or '.') then
             local s, level, ents = simLevel('assets/levels/' .. f)
             if s.n > 0 then
                 print(('%-28s voladores=%3d  dentro=%4d  convuls=%3d  atasco=%3d'):format(f, s.n, s.inside, s.convuls, s.stuck))

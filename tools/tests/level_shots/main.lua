@@ -25,7 +25,10 @@ if FIXED then love.timer.getTime = function() return 100 end end
 
 local function shot(path)
     if FIXED then math.randomseed(7); love.math.setRandomSeed(7) end
-    local data = json.decode(love.filesystem.read(path))
+    -- (fuera de assets/ — las arenas de prueba de tools/levelgen/arenas/ —: se lee del disco, desde la raíz del repo)
+    local raw = love.filesystem.read(path)
+    if not raw then local f = io.open(path, 'r'); if f then raw = f:read('*a'); f:close() end end
+    local data = json.decode(raw)
     local level = Level.fromData(data)
     local es = {}
     for _, pl in ipairs(level.entities) do es[#es + 1] = Entities.create(pl) end

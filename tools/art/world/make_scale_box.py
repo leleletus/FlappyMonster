@@ -9,6 +9,7 @@
 # Estilo (docs/art/style-rules.md): contorno = el tono más oscuro de su color, brillo arriba-izquierda, sombra abajo-derecha.
 #   python3 tools/art/world/make_scale_box.py            → vistas previas en FlappyMonster_pruebas/nuevos/balanza_caja/
 #   python3 tools/art/world/make_scale_box.py --apply    → assets/images/mechanisms/scale/<isla>-*.png, …/box/<isla>.png
+#                                                           (+ la caja pequeña: …/box/<isla>-small.png y -small-bits-Sheet.png)
 import os, sys
 from PIL import Image
 
@@ -155,6 +156,33 @@ def box(isle):
     return whole, bits
 
 
+def small_box(isle):
+    """La CAJA PEQUEÑA (10x10, se carga): la misma caja de cada isla en pequeño, con un solo detalle; y sus 4 trozos
+    de 5x5 (20x5)"""
+    g = G(10, 10)
+    g.block(0, 0, 10, 10)
+    if isle == 'pradera':                                  # tablas con una diagonal
+        for k in range(2, 8): g.put(k, k, 'x')
+    elif isle == 'costa':                                  # el cabo en cruz
+        g.rect(4, 1, 2, 8, 'r'); g.rect(1, 4, 8, 2, 'r'); g.rect(4, 4, 2, 2, 'R')
+    elif isle == 'fortaleza':                              # cuatro remaches
+        for x, y in ((2, 2), (7, 2), (2, 7), (7, 7)): g.put(x, y, 'y')
+    elif isle == 'nieve':                                  # un brillo de hielo
+        for k in range(2, 6): g.put(k, 7 - k, 'y')
+    elif isle == 'cueva':                                  # un punto de runa
+        g.rect(4, 3, 2, 1, 'y'); g.rect(4, 5, 2, 1, 'y'); g.put(4, 4, 'y'); g.put(5, 6, 'y')
+    elif isle == 'volcan':                                 # una grietita de lava
+        for x, y in ((2, 3), (3, 4), (4, 4), (5, 5), (6, 6), (7, 7)): g.put(x, y, 'x')
+        g.put(4, 4, 'y')
+    whole = g.img(ISLES[isle])
+    bits = Image.new('RGBA', (20, 5))
+    for i, (sx, sy) in enumerate(((0, 0), (5, 0), (0, 5), (5, 5))):
+        q = whole.crop((sx, sy, sx + 5, sy + 5))
+        q.load()[(4, 0) if i % 2 else (0, 4)] = (0, 0, 0, 0)
+        bits.paste(q, (i * 5, 0))
+    return whole, bits
+
+
 def preview(parts):
     S = 6
     rows = []
@@ -169,6 +197,8 @@ def preview(parts):
         bg.paste(bx, (20, 18), bx)
         bg.paste(pu.crop((16, 0, 32, 16)), (92, 26), pu.crop((16, 0, 32, 16)))   # (la polea girada)
         bg.paste(bits, (78, 4), bits)
+        sb, sbits = small_box(isle)
+        bg.paste(sb, (94, 12), sb); bg.paste(sbits, (86, 36), sbits)
         rows.append(bg.resize((bg.width * S, bg.height * S), Image.NEAREST))
     out = Image.new('RGBA', (rows[0].width, sum(r.height for r in rows)))
     y = 0
@@ -210,6 +240,8 @@ if __name__ == '__main__':
             p.save(os.path.join(OUT_SCALE, f'{isle}-pan.png')); r.save(os.path.join(OUT_SCALE, f'{isle}-rope.png'))
             pu.save(os.path.join(OUT_SCALE, f'{isle}-pulley-Sheet.png'))
             bx.save(os.path.join(OUT_BOX, f'{isle}.png')); bits.save(os.path.join(OUT_BOX, f'{isle}-bits-Sheet.png'))
+            sb, sbits = small_box(isle)
+            sb.save(os.path.join(OUT_BOX, f'{isle}-small.png')); sbits.save(os.path.join(OUT_BOX, f'{isle}-small-bits-Sheet.png'))
         print('  ' + OUT_SCALE + '  ·  ' + OUT_BOX)
     os.makedirs(PRUEBAS, exist_ok=True)
     preview(parts).save(os.path.join(PRUEBAS, 'vista_previa.png'))

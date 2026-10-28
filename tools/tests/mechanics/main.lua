@@ -61,10 +61,30 @@
 --   encerrado      un Gummy sin sitio para andar (bloques a los dos lados) pasa a
 --                  reposo (idle) y NO vuelve a andar (ni un cuadro); al quitar un
 --                  bloque echa a andar
+--   caja_empuje    la Caja: andando contra ella se empuja (más despacio que andar), se para en la pared, se puede estar encima
+--   caja_rota      un ground pound encima la rompe y reaparece en su sitio de salida (prop respawn)
+--   caja_borde     empujada por un borde: cae al suelo
+--   cargar         ARRIBA junto a la bomba objeto: ayuda, la coge apagada sobre la cabeza, va con él; ARRIBA la lanza
+--                  encendida; agachado + ARRIBA la deja al lado apagada (systems/Carry)
+--   bomba_reaparece la bomba objeto con `respawn`: tras explotar vuelve a su sitio
+--   islas          Isles: isla de cada fondo; familias con isla 'auto' / fija cambian de tipo al cargar; sin isla, no
+--   viento         el aire (systems/Push) arrastra al jugador de lado, lo eleva y mueve una caja
+--   cajas_golpes   la grande cuesta más empujarla que la pequeña; la pequeña lanzada se rompe solo con golpe fuerte; la
+--                  grande se rompe en pinchos y cayendo de muy alto; la bomba objeto se enciende cayendo de muy alto
+--   balanza        la Balanza: la caja (2) baja su platillo; un jugador (1) no la vence; dos, se nivela; un ground
+--                  pound en el otro platillo lanza la caja
+--   soplon         el Soplón ve al jugador, inspira y sopla: lo empuja sin daño; pisado soplando rebota, inspirando revienta
+--   semilla        la Semilla se coge, se planta con un ground pound llevándola, crece (plataformas que se pisan), se
+--                  marchita y vuelve a su sitio; con el techo bajo no se planta
+--   ventisca       la Ventisca: aviso, racha que empuja al jugador y a una caja (derecha) o lo eleva (arriba)
+--   geiser         el Géiser: aviso, columna que levanta al jugador sin daño; en la nieve, pilar que se pisa y se rompe
+--   cuerpo_mueve   de pie en un cuerpo que sube y baja: va con él, sin despegarse ni atravesarlo
 --   ping_icono     antena de conexión online: niveles (verde/amarillo/rojo/X) y que
 --                  no parpadee (mejorar espera 0,6 s; perder la conexión, al momento)
 -- SHOT_BOMB=1: <save>/mechanics_bombs.png (bombas andando, volando, encendidas
 -- a distintos tiempos, objeto y explosión).
+-- SHOT_PROPS=1: <save>/mechanics_props.png (plantas de la Semilla de las 6 islas crecidas, con sus plataformas;
+-- Soplón soplando; Balanza, Caja y caja pequeña; Géiser en erupción y el de la nieve congelado; Ventisca soplando).
 -- SHOT=1: además guarda <save>/mechanics.png (bloques, invisible visible,
 -- Gummies con y sin casco) a tamaño real.
 --
@@ -1621,6 +1641,480 @@ local function bombShot()
     print('captura bombas: ' .. love.filesystem.getSaveDirectory() .. '/mechanics_bombs.png')
 end
 
+-- ── Caja, cargar, islas, aire y cuerpos que se mueven (0.5.68) ─────────────────
+local Push  = require 'src/world/systems/Push'
+local Carry = require 'src/world/systems/Carry'
+local Isles = require 'src/world/level/Isles'
+-- Un paso como el de AdventureState / el servidor: cuerpos y aire, jugadores, cargar, entidades, interacciones
+local function sim(level, players, es, secs, each)
+    level.players = players
+    for _ = 1, math.max(1, math.floor(secs * 60)) do
+        level.solidBodies = Entities.solidBodies(es)
+        level.pushers = Push.collect(es)
+        for _, pa in ipairs(players) do pa:update(1 / 60, level) end
+        Carry.step(level, players, es)
+        level.liveEntities = es
+        for _, e in ipairs(es) do if e.alive then e:update(1 / 60, level) end end
+        for _, pa in ipairs(players) do Interactions.run(pa, es, {}) end
+        if each then each() end
+    end
+end
+local function settle(level, es, pa) for _ = 1, 30 do sim(level, pa and { pa } or {}, es, 1 / 60) end end
+
+function cases.caja_empuje()
+    local level, es = room(24, 9, {}, { { type = 'box', col = 10, row = 8 } })
+    local b = es[1]
+    settle(level, es)
+    local pa = playerAt(level, 6, 8)
+    local x0 = b.x
+    clear(); stub.state.right = true
+    sim(level, { pa }, es, 2, os.getenv('TRACE_BOX') and function() print(('  pa x=%.1f vx=%.1f suelo=%s · caja x=%.1f suelo=%s %s'):format(pa.x, pa.vx, tostring(pa.onGround), b.x, tostring(b.onGround), b.state)) end)
+    local moved = (b.x - x0) / T
+    sim(level, { pa }, es, 10)                        -- (hasta la pared de la derecha)
+    clear()
+    local atWall = b.x + T / 2 <= 23 * T + 1 and b.x + T / 2 >= 23 * T - 2
+    -- de pie encima: se apoya en ella
+    local level2, es2 = room(24, 9, {}, { { type = 'box', col = 10, row = 8 } })
+    settle(level2, es2)
+    local pb = PlayerAdventure:new(es2[1].x, es2[1].y - 2 * T)
+    sim(level2, { pb }, es2, 1)
+    local onTop = pb.onGround and pb.standBody == es2[1]
+    check('caja_empuje', moved > 1.2 and moved < 2 * ADV_MOVE_SPD / T and atWall and onTop and pa.hp == pa.hpMax,
+        ('empujada %.1f casillas en 2 s (andando serían %.1f); contra la pared: %s; de pie encima: %s'):format(
+            moved, 2 * ADV_MOVE_SPD / T, tostring(atWall), tostring(onTop)))
+end
+
+function cases.caja_rota()
+    local level, es = room(24, 9, {}, { { type = 'box', col = 10, row = 8, props = { respawn = 1 } } })
+    local b = es[1]
+    settle(level, es)
+    local hx, hy = b.x, b.y
+    -- empujada un poco y rota con un ground pound encima: vuelve a su sitio
+    b.x = b.x + T
+    local pa = PlayerAdventure:new(b.x, b.y - 3 * T)
+    sim(level, { pa }, es, 0.2)
+    clear(); stub.state.crouch_pressed = true
+    local broke = false
+    sim(level, { pa }, es, 1.2, function() if b.state == 'broken' then broke = true end end)
+    clear()
+    local gone = b.state
+    sim(level, { pa }, es, 2.5)
+    check('caja_rota', broke and b.state == 'rest' and b.x == hx and math.abs(b.y - hy) < 2,
+        ('ground pound: rota=%s (%s) → tras reaparecer: %s en (%.0f, %.0f), su sitio (%.0f, %.0f)'):format(
+            tostring(broke), gone, b.state, b.x, b.y, hx, hy))
+end
+
+function cases.caja_borde()
+    local put = {}
+    for c = 2, 11 do put[#put + 1] = { c, 6, 'solid' } end
+    local level, es = room(24, 9, put, { { type = 'box', col = 9, row = 5 } })
+    local b = es[1]
+    settle(level, es)
+    local pa = playerAt(level, 6, 5)
+    clear(); stub.state.right = true
+    sim(level, { pa }, es, 3)
+    clear()
+    sim(level, { pa }, es, 1)
+    check('caja_borde', b.y > 7.4 * T and b.onGround, ('empujada por el borde: cae hasta el suelo (fila %.1f), en el suelo=%s'):format(
+        b.y / T + 0.5, tostring(b.onGround)))
+end
+
+function cases.cargar()
+    local level, es = room(24, 9, {}, { { type = 'bombobject', col = 8, row = 8, props = { fuseTime = 3 } } })
+    local b = es[1]
+    settle(level, es)
+    local pa = playerAt(level, 7, 8)
+    pa.x = b.x - T * 0.9
+    local seen = Carry.reachable(pa, es) == b
+    clear(); stub.state.grab_pressed = true
+    sim(level, { pa }, es, 0.1)
+    clear()
+    local carried, overHead, unlit = b.carriedBy == pa, b.y < pa.y - 30, b.state == 'carried'
+    stub.state.right = true
+    sim(level, { pa }, es, 0.6)
+    clear()
+    local follows = math.abs(b.x - pa.x) < 2
+    local x0 = b.x
+    stub.state.grab_pressed = true
+    sim(level, { pa }, es, 0.1)
+    clear()
+    sim(level, { pa }, es, 0.8)
+    local thrown, lit = (b.x - x0) / T, b.state == 'lit'
+    -- dejarla a los pies agachándose: apagada
+    local level2, es2 = room(24, 9, {}, { { type = 'bombobject', col = 8, row = 8, props = { fuseTime = 3 } } })
+    settle(level2, es2)
+    local pb = playerAt(level2, 7, 8)
+    pb.x = es2[1].x - T * 0.9
+    stub.state.grab_pressed = true; sim(level2, { pb }, es2, 0.1); clear()
+    stub.state.crouch = true; stub.state.grab_pressed = true; sim(level2, { pb }, es2, 0.1); clear()
+    sim(level2, { pb }, es2, 0.5)
+    local put = es2[1].carriedBy == nil and es2[1].state == 'rest' and es2[1].onGround
+    if os.getenv('TRACE_BOX') then print('  dejada:', tostring(es2[1].carriedBy), es2[1].state, tostring(es2[1].onGround), es2[1].x, es2[1].y) end
+    check('cargar', seen and carried and overHead and unlit and follows and thrown > 2 and lit and put,
+        ('ayuda=%s · ARRIBA la coge=%s (sobre la cabeza=%s, apagada=%s), va con él=%s · ARRIBA la lanza %.1f casillas, encendida=%s · agachado + ARRIBA la deja apagada=%s'):format(
+            tostring(seen), tostring(carried), tostring(overHead), tostring(unlit), tostring(follows), thrown, tostring(lit), tostring(put)))
+end
+
+function cases.bomba_reaparece()
+    local level, es = room(24, 9, {}, { { type = 'bombobject', col = 8, row = 8, props = { respawn = 1 } } })
+    local b = es[1]
+    settle(level, es)
+    local hx = b.x
+    b.x = b.x + 2 * T
+    local Core = require 'src/world/entities/base/BombCore'
+    Core.light(b, 0.1)
+    local exploded = false
+    sim(level, {}, es, 3.5, function() if b.state == 'exploding' then exploded = true end end)
+    check('bomba_reaparece', exploded and b.alive and b.state == 'rest' and b.x == hx,
+        ('explota=%s → vuelve a su sitio: vivo=%s %s x=%.0f (su sitio %.0f)'):format(tostring(exploded), tostring(b.alive), b.state, b.x, hx))
+end
+
+function cases.islas()
+    local ents = { { type = 'gummy', col = 4, row = 8, props = { isle = 'auto' } }, { type = 'gummy', col = 6, row = 8 },
+                   { type = 'crabby', col = 8, row = 8, props = { isle = 'nieve' } }, { type = 'crabbytramp', col = 10, row = 8, props = { isle = 'auto' } } }
+    local lv = Level.fromData({ name = 't', width = 14, height = 9, playerStart = { 2, 8 }, background = 'volcano',
+                                tiles = room(14, 9).tiles and nil or (function()
+                                    local t = {}
+                                    for r = 1, 9 do t[r] = {} for c = 1, 14 do t[r][c] = (r == 9 or c == 1 or c == 14) and 1 or 0 end end
+                                    return t end)(), entities = ents })
+    local got = {}
+    for i, n in ipairs(lv.entities) do got[i] = n.type end
+    local of = { Isles.of({ background = 'coast' }), Isles.of({ background = 'snow' }), Isles.of({ snow = true, background = 'coast' }),
+                 Isles.of(nil), Isles.of({ background = 'volcano' }, 'cueva') }
+    check('islas', got[1] == 'gummy_magma' and got[2] == 'gummy' and got[3] == 'crabby_ice' and got[4] == 'crabbytramp_lava'
+          and of[1] == 'costa' and of[2] == 'nieve' and of[3] == 'nieve' and of[4] == 'pradera' and of[5] == 'cueva',
+        ('volcán: auto → %s · sin isla → %s · nieve fija → %s · trampolín auto → %s · fondos: %s'):format(got[1], got[2], got[3], got[4], table.concat(of, ',')))
+end
+
+-- Grande vs pequeña: cuánto cuesta empujarlas; la pequeña lanzada se rompe o no según el golpe; la grande se rompe
+-- en pinchos y al caer de muy alto; la bomba objeto se enciende al caer de muy alto
+function cases.cajas_golpes()
+    local function pushed(kind)
+        local level, es = room(30, 9, {}, { { type = kind, col = 10, row = 8 } })
+        settle(level, es)
+        local pa = playerAt(level, 7, 8)
+        local x0 = es[1].x
+        clear(); stub.state.right = true
+        sim(level, { pa }, es, 3)
+        clear()
+        return (es[1].x - x0) / T
+    end
+    local big, small = pushed('box'), pushed('smallbox')
+    -- la pequeña, lanzada en llano: aguanta; lanzada desde lo alto de una torre de 4: se rompe
+    local function throwFrom(h)
+        local put = {}
+        for r = 9 - h, 8 do put[#put + 1] = { 6, r, 'solid' }; put[#put + 1] = { 5, r, 'solid' } end
+        local level, es = room(30, 9, put, { { type = 'smallbox', col = 6, row = 8 - h } })
+        settle(level, es)
+        local pa = playerAt(level, 5, 8 - h)
+        pa.x = es[1].x - 0.9 * T
+        stub.state.grab_pressed = true; sim(level, { pa }, es, 0.1); clear()
+        stub.state.grab_pressed = true; sim(level, { pa }, es, 0.1); clear()
+        local broke = false
+        sim(level, { pa }, es, 2, function() if es[1].state == 'broken' then broke = true end end)
+        return broke
+    end
+    local flat, high = throwFrom(0), throwFrom(4)
+    -- la grande: empujada a pinchos se rompe; dejada caer 6 casillas, también
+    local TileCodec = require 'src/world/tiles/TileCodec'
+    local level, es = room(30, 9, {}, { { type = 'box', col = 10, row = 8 } })
+    local upS = { present = true, dir = TileCodec.DIR_UP }
+    for c = 12, 14 do level.tiles[8][c] = TileCodec.encode(0, false, { nil, nil, upS, upS }) end
+    settle(level, es)
+    local spikes = false
+    es[1].x = 12.5 * T
+    sim(level, {}, es, 1, function() if es[1].state == 'broken' then spikes = true end end)
+    local level2, es2 = room(30, 14, {}, { { type = 'box', col = 10, row = 6 }, { type = 'bombobject', col = 14, row = 4 } })
+    local fall, lit = false, false
+    sim(level2, {}, es2, 2, function() if es2[1].state == 'broken' then fall = true end; if es2[2].state == 'lit' then lit = true end end)
+    check('cajas_golpes', small > big * 1.6 and big > 0.8 and not flat and high and spikes and fall and lit,
+        ('empujadas 3 s: grande %.1f, pequeña %.1f casillas · pequeña lanzada en llano: rota=%s; desde 4 de alto: rota=%s · grande en pinchos: rota=%s; cayendo 7 casillas: rota=%s · bomba cayendo de alto: encendida=%s'):format(
+            big, small, tostring(flat), tostring(high), tostring(spikes), tostring(fall), tostring(lit)))
+end
+
+-- La Balanza: lo que pesa más baja; iguales, se nivela; un ground pound en un platillo lanza lo del otro
+function cases.balanza()
+    local level, es = room(30, 16, {}, { { type = 'scale', col = 15, row = 3, props = { span = 6, drop = 5, travel = 2 } },
+                                        { type = 'box', col = 12, row = 6 } })
+    local sc, bx = es[1], es[2]
+    level.levelRef = level
+    -- la caja cae en el platillo izquierdo: baja
+    sim(level, {}, es, 2.5)
+    local dBox = sc.d / T
+    -- un jugador en el derecho (pesa 1 < 2 de la caja): sigue abajo el izquierdo
+    local pans = sc:bodyParts()
+    local rb = pans[2]:getOuterBounds()
+    local pa = PlayerAdventure:new(rb.x + rb.w / 2, rb.y - 80)
+    sim(level, { pa }, es, 2)
+    local dOne, onIt = sc.d / T, pa.standBody == pans[2]
+    -- otro jugador más en el derecho (2 = 2): se nivela
+    local pb = PlayerAdventure:new(rb.x + rb.w / 2 + 30, rb.y - 2.5 * T)
+    sim(level, { pa, pb }, es, 3)
+    local dEven = sc.d / T
+    -- el segundo sube y cae con un ground pound en el derecho: lanza la caja del izquierdo
+    pb.x, pb.y, pb.vy = rb.x + rb.w / 2, rb.y - 4 * T, 0
+    pb.standBody = nil
+    sim(level, { pa, pb }, es, 0.25)
+    stub.state.crouch_pressed = true
+    local boxY0, boxUp = bx.y, 0
+    for _ = 1, 90 do
+        level.players = { pa, pb }
+        level.solidBodies = Entities.solidBodies(es); level.pushers = Push.collect(es)
+        pb:update(1 / 60, level)                      -- (el primero: se queda la pulsación del ground pound)
+        pa:update(1 / 60, level)
+        Carry.step(level, { pa, pb }, es)
+        level.liveEntities = es
+        for _, e in ipairs(es) do if e.alive then e:update(1 / 60, level) end end
+        Interactions.run(pa, es, {}); Interactions.run(pb, es, {})
+        boxUp = math.max(boxUp, (boxY0 - bx.y) / T)
+    end
+    clear()
+    -- APILADO (el usuario): caja grande (2) con una pequeña encima (1) contra dos jugadores (2): gana la pila; y lo de
+    -- encima del platillo no flota (los pies justo en la tabla)
+    local lv2, e2 = room(30, 16, {}, { { type = 'scale', col = 15, row = 3, props = { span = 6, drop = 5, travel = 2 } },
+                                      { type = 'box', col = 12, row = 6 }, { type = 'smallbox', col = 12, row = 5 } })
+    local s2 = e2[1]
+    sim(lv2, {}, e2, 2)
+    local gap = e2[2]:getOuterBounds().y + e2[2].outerH - s2:bodyParts()[1]:getOuterBounds().y
+    local rb2 = s2:bodyParts()[2]:getOuterBounds()
+    local q1 = PlayerAdventure:new(rb2.x + rb2.w / 2 - 30, rb2.y - 80)
+    local q2 = PlayerAdventure:new(rb2.x + rb2.w / 2 + 30, rb2.y - 80)
+    sim(lv2, { q1, q2 }, e2, 3)
+    local dStack = s2.d / T
+    if os.getenv('TRACE_BOX') then local b1, b3 = e2[2]:getOuterBounds(), e2[3]:getOuterBounds(); print(('  caja y=%.1f..%.1f x=%.1f · pequeña y=%.1f..%.1f x=%.1f %s · q1 suelo=%s q2 suelo=%s'):format(b1.y, b1.y+b1.h, b1.x, b3.y, b3.y+b3.h, b3.x, e2[3].state, tostring(q1.standBody == s2:bodyParts()[2]), tostring(q2.standBody == s2:bodyParts()[2]))) end
+    check('balanza', dBox > 1.8 and dOne > 1.8 and onIt and math.abs(dEven) < 0.2 and boxUp > 2 and dStack > 1.8 and math.abs(gap) < 1,
+        ('caja en el izquierdo: desnivel %.1f · + un jugador en el otro: %.1f (encima=%s) · + otro jugador: %.1f · ground pound en el derecho: la caja sube %.1f casillas · caja + caja pequeña encima contra 2 jugadores: %.1f · hueco caja-tabla %.1f px'):format(
+            dBox, dOne, tostring(onIt), dEven, boxUp, dStack, gap))
+end
+
+-- El Soplón: ve al jugador, inspira, sopla y lo empuja (sin daño); pisado inspirando revienta; soplando, rebota
+function cases.soplon()
+    local level, es = room(30, 10, {}, { { type = 'gust', col = 16, row = 8, props = { speed = 0, bobAmp = 0 } } })
+    local g = es[1]
+    local pa = playerAt(level, 11, 9)
+    local states, x0 = {}, pa.x
+    local hp0 = pa.hp
+    sim(level, { pa }, es, 2.4, function() states[g.state] = true end)
+    local pushed = (x0 - pa.x) / T
+    -- pisarlo mientras sopla: rebota y sigue vivo; mientras inspira: revienta
+    local function dropOn(stateWanted)
+        local lv, e2 = room(30, 10, {}, { { type = 'gust', col = 16, row = 8, props = { speed = 0, bobAmp = 0 } } })
+        local gg = e2[1]
+        local p2 = playerAt(lv, 12, 9)
+        sim(lv, { p2 }, e2, stateWanted == 'blow' and 1.9 or 0.8)
+        p2.x, p2.y, p2.vy = gg.x, gg.y - 1.6 * T, 200
+        local bounced = false
+        sim(lv, { p2 }, e2, 0.35, function() if p2.vy < -100 then bounced = true end end)
+        return gg.state, bounced, gg.alive and gg.state ~= 'dead'
+    end
+    local sb, bb, aliveB = dropOn('blow')
+    local si, bi, aliveI = dropOn('inhale')
+    check('soplon', states.inhale and states.blow and pushed > 1.2 and pa.hp == hp0 and bb and aliveB and bi and not aliveI,
+        ('inspira=%s sopla=%s · empuja al jugador %.1f casillas, vida %d→%d · pisado soplando: rebota=%s vivo=%s · pisado inspirando: %s'):format(
+            tostring(states.inhale), tostring(states.blow), pushed, hp0, pa.hp, tostring(bb), tostring(aliveB), si))
+end
+
+-- La Semilla: se coge, se planta con un ground pound llevándola, crece con plataformas que se pisan, se marchita y
+-- vuelve a su sitio; sin sitio (techo bajo) no se planta
+function cases.semilla()
+    local level, es = room(30, 12, {}, { { type = 'seed', col = 8, row = 11, props = { life = 3 } } })
+    local sd = es[1]
+    settle(level, es)
+    local hx, hy = sd.x, sd.y
+    local pa = playerAt(level, 7, 11)
+    pa.x = sd.x - 0.9 * T
+    stub.state.grab_pressed = true; sim(level, { pa }, es, 0.1); clear()
+    local carried = sd.carriedBy == pa
+    stub.state.right = true; sim(level, { pa }, es, 0.5); clear()
+    stub.state.jump_pressed = true; sim(level, { pa }, es, 0.15); clear()
+    stub.state.crouch_pressed = true
+    local grew = false
+    sim(level, { pa }, es, 1.6, function() if sd.state == 'grow' then grew = true end end)
+    clear()
+    local parts = #sd:bodyParts()
+    -- subir a la primera hoja grande: un jugador encima se apoya en ella
+    local leaf = sd:bodyParts()[1]
+    local lb = leaf and leaf:getOuterBounds()
+    local onLeaf = false
+    if lb then
+        local pb = PlayerAdventure:new(lb.x + lb.w / 2, lb.y - 90)
+        sim(level, { pa, pb }, es, 0.8)
+        onLeaf = pb.standBody == leaf
+    end
+    local h = sd.plantH
+    sim(level, { pa }, es, 3.5)                       -- (dura 3 s: se marchita y vuelve)
+    sim(level, { pa }, es, 1.2)
+    local back = sd.state == 'rest' and sd.x == hx and math.abs(sd.y - hy) < 2
+    -- techo bajo (3 casillas libres): no se planta
+    local put = {}
+    for c = 2, 29 do put[#put + 1] = { c, 7, 'solid' } end
+    local lv2, e2 = room(30, 11, put, { { type = 'seed', col = 8, row = 10 } })
+    settle(lv2, e2)
+    local p2 = playerAt(lv2, 7, 10)
+    p2.x = e2[1].x - 0.9 * T
+    stub.state.grab_pressed = true; sim(lv2, { p2 }, e2, 0.1); clear()
+    stub.state.jump_pressed = true; sim(lv2, { p2 }, e2, 0.12); clear()
+    stub.state.crouch_pressed = true; sim(lv2, { p2 }, e2, 1.2); clear()
+    local low = e2[1].plantH == 0 and e2[1].state ~= 'grow' and e2[1].state ~= 'plant'
+    check('semilla', carried and grew and h == 6 and parts == 3 and onLeaf and back and low,
+        ('se coge=%s · plantada: crece=%s, %d casillas, %d plataformas, un jugador en la hoja=%s · marchita, vuelve a su sitio=%s · techo bajo: no se planta=%s'):format(
+            tostring(carried), tostring(grew), h, parts, tostring(onLeaf), tostring(back), tostring(low)))
+end
+
+-- La Ventisca: calma → aviso → racha que empuja al jugador (y a una caja pequeña) en la dirección elegida → calma
+function cases.ventisca()
+    local res = {}
+    for _, dir in ipairs({ 'right', 'up' }) do
+        local props = { firstDelay = 0.2, warn = 0.5, blowMin = 1.5, blowMax = 1.5, gapMin = 9, gapMax = 9,
+                        dir_right = dir == 'right', dir_left = false, dir_up = dir == 'up', dir_down = false,
+                        corner = { col = 29, row = 11 } }
+        local level, es = room(30, 12, {}, { { type = 'blizzard', col = 2, row = 2, props = props },
+                                            { type = 'smallbox', col = 20, row = 11 } })
+        local bz, sb = es[1], es[2]
+        settle(level, es)
+        local pa = playerAt(level, 8, 11)
+        local x0, y0, bx0 = pa.x, pa.y, sb.x
+        local seen, minY = {}, pa.y
+        sim(level, { pa }, es, 2.0, function() seen[bz.state] = true; minY = math.min(minY, pa.y) end)
+        res[dir] = { warn = seen.warn, blow = seen.blow, dx = (pa.x - x0) / T, up = (y0 - minY) / T, box = (sb.x - bx0) / T,
+                     calm = bz.state == 'calm' or bz.state == 'blow' }
+    end
+    local r, u = res.right, res.up
+    check('ventisca', r.warn and r.blow and r.dx > 1.5 and r.box > 0.5 and u.blow and u.up > 1 and math.abs(u.dx) < 0.3,
+        ('derecha: aviso=%s racha=%s, jugador %.1f casillas, caja pequeña %.1f · arriba: sube %.1f casillas (de lado %.1f)'):format(
+            tostring(r.warn), tostring(r.blow), r.dx, r.box, u.up, u.dx))
+end
+
+-- El Géiser: aviso → columna que levanta al jugador (sin daño) → reposo; en la nieve, pilar de hielo que se pisa y se rompe
+function cases.geiser()
+    local level, es = room(20, 14, {}, { { type = 'geyser', col = 8, row = 13, props = { interval = 0.2, firstDelay = 0, warn = 0.4, erupt = 1.5, height = 6 } } })
+    local g = es[1]
+    settle(level, es)
+    local pa = playerAt(level, 8, 13)
+    local y0, hp0, minY, states = pa.y, pa.hp, pa.y, {}
+    sim(level, { pa }, es, 2.5, function() states[g.state] = true; minY = math.min(minY, pa.y) end)
+    local lift = (y0 - minY) / T
+    -- nieve: se congela, se pisa, se rompe
+    local lv2, e2 = room(20, 14, {}, { { type = 'geyser', col = 8, row = 13,
+        props = { interval = 5, firstDelay = 0, warn = 0.3, erupt = 0.8, height = 5, freeze = 3, isle = 'nieve' } } })
+    local g2 = e2[1]
+    settle(lv2, e2)
+    local frozenSeen, stood, broke = false, false, false
+    local pb
+    sim(lv2, {}, e2, 2.0, function()
+        if os.getenv('TRACE_GEY') then print(('  gey %s t=%.2f top=%.0f'):format(g2.state, g2.deadTimer, g2:topY())) end
+        if g2.state == 'iced' and not pb then
+            frozenSeen = true
+            local b = g2:bodyParts()[1]:getOuterBounds()
+            pb = PlayerAdventure:new(b.x + b.w / 2, b.y - 90)
+        end
+    end)
+    if pb then
+        sim(lv2, { pb }, e2, 0.8, os.getenv('TRACE_GEY') and function() print(('  pb y=%.0f vy=%.0f suelo=%s %s t=%.2f'):format(pb.y, pb.vy, tostring(pb.onGround), g2.state, g2.deadTimer)) end)
+        stood = pb.standBody == g2.part
+        sim(lv2, { pb }, e2, 2.5, function() if g2.state == 'idle' then broke = true end end)
+    end
+    check('geiser', states.warn and states.erupt and lift > 2 and pa.hp == hp0 and frozenSeen and stood and broke,
+        ('aviso=%s erupción=%s, levanta al jugador %.1f casillas, vida %d→%d · nieve: pilar=%s, se está de pie encima=%s, luego %s'):format(
+            tostring(states.warn), tostring(states.erupt), lift, hp0, pa.hp, tostring(frozenSeen), tostring(stood), broke and 'se rompe' or g2.state))
+end
+
+-- Un "soplador" de prueba: sopla en toda la sala con (wx, wy)
+local function blower(wx, wy)
+    return { alive = true, x = 0, y = 0, pushAt = function() return wx, wy end, update = function() end }
+end
+function cases.viento()
+    local level = room(30, 12)
+    local pa = playerAt(level, 6, 11)
+    local x0 = pa.x
+    level.pushers = { blower(220, 0) }
+    for _ = 1, 60 do pa:update(1 / 60, level) end
+    local side = (pa.x - x0) / T
+    level.pushers = { blower(0, -500) }
+    local y0 = pa.y
+    for _ = 1, 50 do pa:update(1 / 60, level) end
+    local up = (y0 - pa.y) / T
+    level.pushers = {}
+    local g = Entities.create(require('src/world/entities/base/EntityTypes').normalize({ type = 'box', col = 6, row = 11 }))
+    level.pushers = { blower(220, 0) }
+    level.liveEntities = { g }
+    for _ = 1, 30 do g:update(1 / 60, level) end
+    local gx = g.x
+    for _ = 1, 60 do g:update(1 / 60, level) end
+    check('viento', side > 1.5 and up > 1 and g.x - gx > T,
+        ('de lado 1 s: %.1f casillas · hacia arriba: sube %.1f · una caja: %.1f casillas'):format(side, up, (g.x - gx) / T))
+end
+
+-- Cuerpo sólido que sube y baja (como un platillo): quien está encima va con él, sin caerse ni atravesarlo
+function cases.cuerpo_mueve()
+    local level = room(20, 14)
+    local body = { alive = true, solidFull = true, moves = true, x = 8 * T, y = 10 * T }
+    function body:getOuterBounds(into)
+        local b = into or {}
+        b.x, b.y, b.w, b.h = self.x - 1.5 * T, self.y, 3 * T, 0.5 * T
+        return b
+    end
+    local holder = { alive = true, bodyParts = function() return { body } end }
+    local pa = PlayerAdventure:new(8 * T, 8 * T)
+    local maxGap, falls = 0, 0
+    for i = 1, 60 * 6 do
+        local t = i / 60
+        body.y = 10 * T - math.sin(t * 1.6) * 3 * T            -- (sube y baja 3 casillas)
+        level.solidBodies = Entities.solidBodies({ holder })
+        pa:update(1 / 60, level)
+        if i > 60 then
+            local ob = pa:getOuterBounds()
+            local gap = math.abs(ob.y + ob.h - body.y)
+            maxGap = math.max(maxGap, gap)
+            if not pa.onGround then falls = falls + 1 end
+        end
+    end
+    check('cuerpo_mueve', maxGap < 4 and falls == 0,
+        ('de pie en un cuerpo que sube y baja 3 casillas: hueco máximo %.1f px, pasos en el aire %d'):format(maxGap, falls))
+end
+
+-- SHOT_PROPS=1: <save>/mechanics_props.png — las plantas de la Semilla de las 6 islas ya crecidas (con sus plataformas
+-- en F1), un Soplón soplando, la Balanza con la Caja y las cajas (para revisar el aspecto sin jugar)
+local function propsShot()
+    local Isl = require 'src/world/level/Isles'
+    local ents = {}
+    for i, isle in ipairs(Isl.IDS) do
+        ents[#ents + 1] = { type = 'seed', col = 3 + (i - 1) * 6, row = 13, props = { isle = isle, life = 99 } }
+    end
+    ents[#ents + 1] = { type = 'gust', col = 42, row = 9, props = { speed = 0, bobAmp = 0 } }
+    ents[#ents + 1] = { type = 'scale', col = 44, row = 2, props = { span = 6, drop = 5, travel = 2 } }
+    ents[#ents + 1] = { type = 'box', col = 41, row = 6 }
+    ents[#ents + 1] = { type = 'smallbox', col = 47, row = 13 }
+    ents[#ents + 1] = { type = 'geyser', col = 37, row = 13, props = { firstDelay = 0, warn = 0.3, erupt = 9, interval = 9 } }
+    ents[#ents + 1] = { type = 'geyser', col = 40, row = 13, props = { firstDelay = 0, warn = 0.3, erupt = 0.5, freeze = 9, interval = 9, isle = 'nieve' } }
+    ents[#ents + 1] = { type = 'blizzard', col = 2, row = 2, props = { firstDelay = 0, warn = 0.4, blowMin = 9, blowMax = 9,
+                         dir_left = false, dir_up = false, dir_down = false, corner = { col = 18, row = 6 } } }
+    local level, es = room(52, 14, {}, ents)
+    settle(level, es)
+    for i = 1, 6 do                               -- (plantadas: como si un jugador las hubiera plantado con un ground pound)
+        local sd = es[i]
+        local fake = { x = sd.x, getOuterBounds = function() return { x = sd.x - 20, y = 13 * T - 80, w = 40, h = 80 } end }
+        sd.levelRef = level
+        sd:onCarriedPound(fake)
+    end
+    local pa = PlayerAdventure:new(38 * T, 13 * T - 60)
+    sim(level, { pa }, es, 2.2)
+    local canvas = love.graphics.newCanvas(52 * T, 14 * T)
+    love.graphics.setCanvas(canvas)
+    love.graphics.clear(0.55, 0.75, 0.92, 1)
+    level:render(0, 0)
+    for _, e in ipairs(es) do if e.alive then e:render(0, 0) end end
+    pa:render(0, 0)
+    love.graphics.setLineWidth(2)
+    for _, e in ipairs(es) do if e.alive and e.debugBoxes then
+        for _, b in ipairs(e:debugBoxes() or {}) do love.graphics.setColor(1, 0, 0, 0.8); love.graphics.rectangle('line', b.x, b.y, b.w, b.h) end
+    end end
+    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.setCanvas()
+    canvas:newImageData():encode('png', 'mechanics_props.png')
+    print('captura props: ' .. love.filesystem.getSaveDirectory() .. '/mechanics_props.png')
+end
+
 local shot
 function love.load()
     for _, n in ipairs({ 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
@@ -1629,8 +2123,10 @@ function love.load()
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
                          'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
-                         'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado', 'techo_pinchos' }) do cases[n]() end
+                         'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado', 'techo_pinchos',
+                         'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser' }) do cases[n]() end
     if os.getenv('SHOT_BOMB') then bombShot() end
+    if os.getenv('SHOT_PROPS') then propsShot() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
     if not os.getenv('SHOT') then love.event.quit(fails == 0 and 0 or 1); return end
     -- Escena para la captura

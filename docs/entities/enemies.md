@@ -299,6 +299,18 @@ sprite's pixel grid.
   it from snapshots/tile+fx+sound events. Editor overlay: the 3 radii (+ trigger range).
   Harnesses `mechanics` (bomba_*), `online_smoke WATCH=bomb` (arena `bombas.json`).
 
+## Gust (`gust`, 0.5.68)
+
+A little cloud with a face (`types/enemies/gust.lua`; art `assets/images/enemies/gust/<isle>-Sheet.png` + `wind-Sheet.png`
+from `tools/art/enemies/make_gust_sprites.py`; one look per island through `Isles`, prop `isle`). It floats (no
+wings: class field `noWings`). When it sees a player in front of it at its height (within `reach`) it turns, INHALES
+for 1 s (swells: the warning) and BLOWS for 1.6 s a horizontal gust (`reach` × `width` tiles) that PUSHES players and
+everything with physics without damage (`pushAt`, [carry-and-push](../gameplay/carry-and-push.md)), then rests 1.2 s.
+Stomped while inhaling or floating it pops; stomped while blowing it only bounces you; a ground pound always pops it;
+its body never hurts. Every island only pushes (the user's rule for the Geyser: continuity); its blow is also a noise
+(`noises`) for the Gloomies. Harness `mechanics` `soplon`.
+
+
 ## History and decisions (dated notes)
 
 Kept because they record WHY things are the way they are and what was tried and rejected. Where a note

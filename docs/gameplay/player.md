@@ -19,8 +19,10 @@ The four part files are loaded by `PlayerAdventure.lua` and add methods to the s
 [project-structure](../architecture/project-structure.md#split-files)).
 
 **Moves:** walk, jump + double jump, crouch (and crouch jump), ground pound (crouch in the air), swimming, the
-flashlight in dark levels. Input is read from the global `Input` (`jump`, `crouch`, `move_left`, `move_right`,
-`light`); the server and the bot feed it through a stub.
+flashlight in dark levels, carrying (UP: pick up / throw; crouch + UP: put down carefully — [carry-and-push](carry-and-push.md)).
+Input is read from the global `Input` (`jump`, `crouch`, `move_left`, `move_right`, `light`, `grab`); the server and
+the bot feed it through a stub. Since 0.5.68 UP (arrow, W, D-pad up) is `grab` and no longer jumps (the user). The
+player also rides moving bodies (`standBody`) and is dragged by the air (`windVx`, systems/Push).
 
 **Health:** 3 HP (4 on Easy), lives belong to whoever launched the level (the story, Free Play…). One
 invulnerability system (`invT`) for hits and respawns.

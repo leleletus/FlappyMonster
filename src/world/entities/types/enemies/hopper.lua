@@ -42,9 +42,8 @@ local SCARE_T = 2.2              -- s con el farol apagado, encogido
 local MEMORY  = 3                -- s que sigue yendo a donde te vio por última vez
 local LAMP = { 1, 0.85, 0.5 }    -- color de su luz
 Hopper.SKINS  = { 'pradera', 'costa', 'fortaleza', 'nieve', 'cueva', 'volcan' }
--- fondo del nivel (src/fx/Sky.lua) → aspecto
-local BY_BG = { meadow = 'pradera', forest = 'pradera', coast = 'costa', fortress = 'fortaleza', snow = 'nieve',
-                mountain = 'nieve', cave = 'cueva', underwater = 'cueva', volcano = 'volcan' }
+-- (qué isla es el nivel: la regla de todos, src/world/level/Isles.lua)
+local Isles = require 'src/world/level/Isles'
 
 -- Arte = el conjunto de animación `hopper` (assets/anim/enemies/hopper.json: idle, crouch, air, dead; se edita con
 -- `love . --anim enemies/hopper`); cada isla es una VARIANTE del conjunto (su hoja).
@@ -55,15 +54,8 @@ function Hopper.loadAssets()
 end
 function Hopper.sizePx() return FW * S, BODY_H * S end
 
-Hopper.BY_BG = BY_BG                 -- (qué isla es cada fondo: lo usa también la comida, types/apple.lua)
 -- (sin mirar las hojas: el servidor no las carga)
-function Hopper.skinId(props, level)
-    local id = props and props.skin or 'auto'
-    if id == 'auto' then
-        id = level and (((level.spikeSkin == 'ice' or level.snow) and 'nieve') or BY_BG[level.background or 'meadow']) or 'pradera'
-    end
-    return id
-end
+function Hopper.skinId(props, level) return Isles.of(level, props and props.skin) end
 function Hopper.skinFor(props, level)
     local id = Hopper.skinId(props, level)
     return sheets[id] and id or 'pradera'

@@ -5,8 +5,13 @@
 --   * Quieta NO hace daño al tocarla.
 --   * Cayendo o lanzada (en el aire y rápida): 1 de vida y aturde un momento
 --     a quien golpee.
+--   * REAPARECE (prop `respawn` > 0, el usuario): tras explotar vuelve a su sitio. Antes no podía y algunos niveles
+--     usaban una bomba VIVA quieta para eso; desde 0.5.68 son bombas objeto.
 -- Para un jefe futuro: BombObject:throw(vx, vy, lit, fuse) la lanza (ya
 -- encendida si lit).
+--   * SE PUEDE CARGAR (systems/Carry, el usuario): quieta, ARRIBA la coge SIN encenderla; al lanzarla se enciende.
+--     Dejarla con cuidado (agachado + ARRIBA) o con un ground pound: sigue apagada.
+--   * Un GOLPE FUERTE (caer de muy alto, chocar muy rápida con una pared: IMPACT_V) la enciende.
 -- Sprites: assets/images/enemies/bomb/bombObject-Sheet.png (+ bombObject-fuse-Sheet.png).
 local Entity       = require 'src/world/entities/base/Entity'
 local Interactions = require 'src/world/entities/base/Interactions'
@@ -17,6 +22,7 @@ local BombObject = Entity.extend(Entity, { debugColor = { 1, 0.5, 0.2 },
     hitbox = { outerW = 0.8, outerH = 0.8, innerW = 0.7, innerH = 0.7 } })
 
 local HIT_SPEED = 260          -- px/s: más rápido que esto (en el aire) golpea
+local IMPACT_V  = 850          -- px/s: un golpe más fuerte que esto (suelo o pared) la enciende (≈ caer 3,5 casillas)
 
 function BombObject.loadAssets() Core.set() end
 function BombObject.sizePx() return Core.FW * GUMMY_SCALE, Core.FH * GUMMY_SCALE end
@@ -43,6 +49,12 @@ function BombObject:isFlyingHit()
 end
 
 -- (De reserva — bombas de un jefe —: Entity:makeReserve, genérico; al explotar vuelven a la reserva)
+
+-- Cargar (systems/Carry): solo apagada y quieta; lanzada sale encendida
+BombObject.carryable = true
+function BombObject:canBeCarried() return self.state == 'rest' end
+function BombObject:onThrow(pa, vx, vy) self:throw(vx, vy, true) end
+function BombObject:onPutDown(pa) self.vx, self.vy, self.kicked = 0, 0, false end
 
 -- ── Reglas ────────────────────────────────────────────────────────────────────
 function BombObject:canBeStomped() return false end
@@ -88,8 +100,14 @@ end
 -- ── Update ────────────────────────────────────────────────────────────────────
 function BombObject:updateCustom(dt, level)
     if Core.update(self, dt, level) then return true end
-    -- Suelta: física y, si algo la toca, se enciende
+    -- Suelta: física y, si algo la toca, se enciende; un GOLPE FUERTE (caer de muy alto, chocar muy rápida contra
+    -- una pared) también la enciende (el usuario)
+    local vx0, vy0, wasGround = self.vx or 0, self.vy or 0, self.onGround
     Core.physics(self, level, dt)
+    if (self.onGround and not wasGround and vy0 > IMPACT_V) or (vx0 ~= 0 and self.vx ~= vx0 and math.abs(vx0) > IMPACT_V) then
+        Core.light(self)
+        return true
+    end
     if self.onGround then self.thrown = false end
     if Core.touched(self, level) and not self:isFlyingHit() then Core.light(self) end
     return true
@@ -111,7 +129,8 @@ return {
     description = 'Bomba sin patitas: solo física. Se enciende al tocarla y explota como la bomba viva. '
                .. 'Quieta no hace daño; cayendo o lanzada, 1 de vida y aturde.',
     class = BombObject,
-    hide = 'all',
+    hide = { 'movement', 'attach', 'speed', 'startDir', 'patrol', 'turnAtEdges', 'flyMode', 'flyRange', 'bobAmp',
+             'pauses', 'onTouch', 'stompable', 'points', 'dropOnSight', 'detectRange' },   -- (solo la reaparición)
     defaults = { movement = 'static' },
     props = Core.props(),
     editor = { sprite = 'assets/images/enemies/bomb/bombObject-Sheet.png', frameW = Core.FW },

@@ -56,3 +56,27 @@ in game it asks `level:signal(id)`.
   (`tools/art/world/make_cryo_chain.py`; two side chains when firing up). Harness `snowboss_look` (snow_cryo.png),
   `online_smoke LEVEL=tools/levelgen/arenas/congelador.json WATCH=gummy WANT=frozen WANTICE=1`,
   `editor_open PLAY=tools/levelgen/arenas/congelador.json`.
+
+## Scale, Blizzard and Geyser (0.5.68)
+
+Built on the generic systems of [carry-and-push](../gameplay/carry-and-push.md) (body parts, moving bodies, the air).
+Designs and the user's verdicts: [new-props-plan](new-props-plan.md).
+
+- **Scale** (`mechanisms/scale.lua`, "Balanza"): placed on the PULLEY cell; two pans (one-way moving body parts:
+  the plank is rows 2-7 of the 48x8 pan art — the hitbox starts there, or things floated 8 px, the user) hang `drop`
+  tiles below, `span` tiles apart. The heavier side goes down `travel` tiles, equal weights level out. Weight counts
+  everything STACKED on a pan (a box with something on top weighs both: the user): players standing on it or on
+  something of the stack (+ what they carry), entities resting on it or on the stack (`weight`: players 1, big box
+  2, small box 1, Seed 0.5, enemies 1; flyers weigh nothing). The pan moves what is stacked on it; players ride it
+  (`standBody`). A ground pound on a pan slams it down and LAUNCHES everything on the other pan (`power`). Net: the
+  offset `d` in its netPack. Harness `mechanics` `balanza`.
+- **Blizzard** (`mechanisms/blizzard.lua`, "Ventisca"): an AREA (entity cell = top-left corner, `corner` = bottom-right).
+  Calm for a random `gapMin..gapMax` s, then a `warn` s warning (three blinking arrows at the screen edge the wind
+  comes from + `windWarn`), then `blowMin..blowMax` s of wind (`windGust`, streaks of the island) in one of the allowed
+  directions (`dir_right/left/up/down`) that pushes everything with physics (`pushAt`). Its sounds come from the point
+  of the area nearest to the player (an area can be a whole tower). Net: direction and gust length in its netPack.
+- **Geyser** (`mechanisms/geyser.lua`, "Géiser"): placed on the cell above the floor (the vent fills its lower half).
+  Idle `interval` s → `warn` s bubbling (`geyserRumble`) → `erupt` s column up to `height` tiles (cut at the first
+  block) that lifts everything with physics (`pushAt`, no damage) → idle. Meadow / coast water, fortress steam, cave
+  glowing steam (gives light), volcano smoke (only pushes, the user). Snow: the column FREEZES into an ice pillar whose
+  top is a one-way platform for `freeze` s (cracks the last second) and then shatters.

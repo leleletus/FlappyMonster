@@ -70,10 +70,11 @@ end
 local function run()
     -- dos bots con sus salas (una pública esperando, otra con contraseña)
     local b1, b2 = newBot('Gummy'), newBot('Crabby')
-    waitFor(function() return b1.logged and b2.logged end, 5)
+    -- (10 s: con la batería en paralelo el servidor local puede tardar más en arrancar)
+    waitFor(function() return b1.logged and b2.logged end, 10)
     b1.c:send('create_room', { name = 'Sala de Gummy', isPublic = true, password = '', maxPlayers = 4 })
     b2.c:send('create_room', { name = 'Secreta', isPublic = false, password = 'abc', maxPlayers = 6 })
-    waitFor(function() return b1.room and b2.room end, 5)
+    waitFor(function() return b1.room and b2.room end, 10)
     check('bots', b1.room ~= nil and b2.room ~= nil, 'los bots crearon sus salas')
 
     -- ── 1. login ─────────────────────────────────────────────────────────

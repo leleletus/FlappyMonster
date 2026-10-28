@@ -31,6 +31,7 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 | `gummy_fortress` | Gummy de la fortaleza | `types/enemies/gummy_fortress.lua` |  | `helmet`: bool = false |
 | `gummy_ice` | Gummy helado | `types/enemies/gummy_ice.lua` |  | `helmet`: bool = false |
 | `gummy_magma` | Gummy de magma | `types/enemies/gummy_magma.lua` |  | `helmet`: bool = false |
+| `gust` | Soplón | `types/enemies/gust.lua` |  | `reach`: number = 5.5 · `width`: number = 1.6 · `power`: number = 1 |
 | `hopper` | Saltarín | `types/enemies/hopper.lua` | wantsLevel | `skin`: enum = auto · `jumpEvery`: number = 1.4 · `range`: int = 7 · `jumpH`: number = 3 · `jumpDist`: number = 4.5 · `careful`: bool = true |
 | `mortar` | Mortero | `types/enemies/mortar.lua` |  | `range`: int = 12 · `delayMin`: number = 2.5 · `delayMax`: number = 6 · `warnTime`: number = 0.5 · `redIntensity`: number = 0.7 · `shake`: int = 4 · `sides`: enum = both · `launchSpeed`: number = 950 · `upRatio`: number = 3 · `fireDamage`: enum = hurt · `burnTime`: number = 1.2 |
 | `pufferfish` | Pez globo | `types/enemies/pufferfish.lua` |  | `area`: points = … · `range`: number = 2.5 · `warnTime`: number = 0.6 · `inflateTime`: number = 2.5 · `cooldown`: number = 1.5 · `swimBob`: number = 6 · `dryTime`: number = 5 |
@@ -63,11 +64,14 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 
 | Id | Label | File | Flags | Own props |
 |---|---|---|---|---|
+| `blizzard` | Ventisca | `types/mechanisms/blizzard.lua` |  | `corner`: point = … · `dir_right`: bool = true · `dir_left`: bool = true · `dir_up`: bool = true · `dir_down`: bool = true · `warn`: number = 1 · `blowMin`: number = 2 · `blowMax`: number = 3 · `gapMin`: number = 3 · `gapMax`: number = 7 · `firstDelay`: number = 2 · `power`: number = 1 |
 | `bossglass` | Cristal roto de jefe | `types/mechanisms/bossglass.lua` |  | `corner`: point = … · `zone`: int = 0 · `first`: number = 15 · `every`: number = 25 · `phase1`: number = 0.66 · `phase2`: number = 0.33 · `warnTime`: number = 2.2 · `activeTime`: number = 7 · `damage`: int = 1 · `launchSpeed`: number = 900 |
 | `bosswall` | Bloque de jefe | `types/mechanisms/bosswall.lua` |  | `corner`: point = … · `zone`: int = 0 · `appearTime`: number = 0.5 · `vanishTime`: number = 0.6 · `material`: enum = solid |
 | `flood` | Inundación | `types/mechanisms/flood.lua` | activatable | `id`: int = 1 · `control`: enum = cycle · `zone`: int = 0 · `undertow`: number = 0 · `corner`: point = … · `startLevel`: number = 1 · `maxLevel`: number = 4 · `startDelay`: number = 3 · `holdTime`: number = 4 · `lowTime`: number = 4 · `riseSpeed`: number = 0.5 · `riseStep`: number = 0 · `risePause`: number = 1 · `fallSpeed`: number = 0.5 · `fallStep`: number = 0 · `fallPause`: number = 1 |
+| `geyser` | Géiser | `types/mechanisms/geyser.lua` |  | `height`: int = 5 · `interval`: number = 3 · `warn`: number = 1 · `erupt`: number = 2 · `freeze`: number = 3 · `firstDelay`: number = 1.5 · `power`: number = 1 |
 | `phaseblock` | Bloques de fase | `types/mechanisms/phaseblock.lua` |  | `corner`: point = … · `phase`: int = 3 · `zone`: int = 0 · `hiddenAs`: enum = empty |
 | `pointarea` | Zona de puntos | `types/mechanisms/pointarea.lua` |  | `corner`: point = … · `points`: int = 1 · `interval`: number = 1 · `contested`: bool = false |
+| `scale` | Balanza | `types/mechanisms/scale.lua` |  | `span`: number = 5 · `drop`: number = 4 · `travel`: number = 2.5 · `power`: number = 1 |
 | `trampoline` | Trampolín (arriba) | `types/mechanisms/trampoline.lua` | variant of `trampoline` | `power`: number = 1.75 · `cooldown`: number = 0.6 · `skin`: enum = auto |
 | `trampoline_down` | Trampolín (abajo) | `types/mechanisms/trampoline.lua` | variant of `trampoline` | `power`: number = 1.75 · `cooldown`: number = 0.6 · `skin`: enum = auto |
 | `trampoline_left` | Trampolín (izquierda) | `types/mechanisms/trampoline.lua` | variant of `trampoline` | `power`: number = 1.75 · `cooldown`: number = 0.6 · `skin`: enum = auto |
@@ -79,8 +83,11 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 |---|---|---|---|---|
 | `apple` | Comida | `types/items/apple.lua` | pickup, wantsLevel | `skin`: enum = auto |
 | `bombobject` | Bomba (objeto) | `types/items/bombobject.lua` |  | `fuseTime`: number = 2 · `killRadius`: number = 1.2 · `hurtRadius`: number = 2.3 · `pushRadius`: number = 3.6 |
+| `box` | Caja | `types/items/box.lua` |  | `respawn`: number = 5 |
 | `checkpoint` | Checkpoint | `types/items/checkpoint.lua` | checkpoint |  |
 | `extralife` | Vida extra | `types/items/extralife.lua` | pickup |  |
+| `seed` | Semilla | `types/items/seed.lua` |  | `height`: int = 6 · `life`: number = 20 |
+| `smallbox` | Caja pequeña | `types/items/box.lua` |  | `respawn`: number = 5 |
 | `star` | Estrella | `types/items/star.lua` | pickup |  |
 
 ## Directores

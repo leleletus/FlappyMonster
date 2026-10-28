@@ -172,11 +172,10 @@
    "row": 3
   },
   {
-   "type": "bomb",
+   "type": "bombobject",
    "col": 13,
    "row": 4,
    "props": {
-    "speed": 0,
     "fuseTime": 1.2
    }
   },

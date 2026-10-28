@@ -249,6 +249,8 @@ function Level.fromData(lvl, difficulty)
     self.echo      = lvl.echo == true or (lvl.echo == nil and (lvl.dark == true or self.light == 'cave'))
     self.spikeSkin = lvl.spikeSkin                     -- (aspecto de los pinchos: src/world/level/SpikeSkins.lua, solo visual)
     self.background, self.timeOfDay, self.clouds = lvl.background, lvl.time, lvl.clouds   -- (fondo y hora: src/fx/Sky.lua)
+    -- (lo de una familia de isla con isla 'auto' / otra: el tipo de esa isla — src/world/level/Isles.lua)
+    require('src/world/level/Isles').resolveAll(self, EntityTypes.normalize)
     self.depth, self.surfaceRow = lvl.depth, tonumber(lvl.surfaceRow)                    -- (fondo de profundidad y su línea)
     -- (OSCURIDAD que se funde: 0..1 sobre `dark` — la pone quien encienda / apague las luces, p. ej. un evento)
     self.darkness  = self.dark and 1 or 0

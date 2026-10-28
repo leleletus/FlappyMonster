@@ -56,7 +56,7 @@
     {"col":104,"row":21,"type":"star"},
     {"col":109,"row":21,"type":"checkpoint"},
     {"col":117,"props":{"delayMax":3.5,"delayMin":2.2,"range":9},"row":19,"type":"mortar"},
-    {"col":127,"props":{"patrol":{"left":124,"right":127},"respawn":5,"speed":0},"row":21,"type":"bomb"},
+    {"col":127,"props":{"respawn":5},"row":21,"type":"bombobject"},
     {"col":135,"props":{"patrol":{"left":133,"right":138}},"row":21,"type":"crabby_fortress"},
     {"col":23,"props":{"patrol":{"left":20,"right":27}},"row":13,"type":"gummy_fortress"},
     {"col":36,"row":12,"type":"star"},

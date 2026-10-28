@@ -4,7 +4,7 @@
 -- y los controles se ponen en ellas; si no hay sitio, encima del juego.
 --
 --   * CRUCETA (izquierda): izquierda / derecha / abajo (= agacharse; pulsado
---     en el aire = ground pound). Diagonales abajo-izq / abajo-der = agachado
+--     en el aire = ground pound) / arriba (= coger / lanzar: systems/Carry). Diagonales abajo-izq / abajo-der = agachado
 --     + dirección (el salto agachado usa la dirección que se mantiene).
 --     Zona táctil GRANDE: toda la mitad izquierda de abajo; cuenta la
 --     dirección del dedo respecto al centro de la cruceta (se puede deslizar).
@@ -24,8 +24,8 @@ local SpriteStrip = require 'src/fx/SpriteStrip'
 
 local TC = {}
 local dpad, jump, lightBtn
-local state = { l = false, r = false, d = false, j = false, f = false }
-local prev = { d = false, j = false, f = false }
+local state = { l = false, r = false, d = false, j = false, f = false, u = false }
+local prev = { d = false, j = false, f = false, u = false }
 local withLight = false       -- (niveles a oscuras: botón de la linterna, encima del salto)
 local LIGHT_FRAC = 0.13       -- su tamaño (fracción del alto)
 
@@ -73,7 +73,7 @@ end
 
 -- ¿Qué pulsa cada dedo? (posiciones de pantalla)
 function TC.read(L, touches, light)
-    local s = { l = false, r = false, d = false, j = false, f = false }
+    local s = { l = false, r = false, d = false, j = false, f = false, u = false }
     local dead = L.padW * DEAD_FRAC
     for _, t in ipairs(touches) do
         local x, y = t[1], t[2]
@@ -84,6 +84,7 @@ function TC.read(L, touches, light)
                     if dx < 0 then s.l = true else s.r = true end
                 end
                 if dy > dead and dy > 0.45 * math.abs(dx) then s.d = true end
+                if -dy > dead and -dy > 0.45 * math.abs(dx) then s.u = true end
             elseif light and (x - L.lightX) ^ 2 + (y - L.lightY) ^ 2 <= (L.lightW * 0.75) ^ 2 then
                 s.f = true                                  -- (la linterna tiene prioridad sobre el salto)
             else
@@ -100,8 +101,8 @@ function TC.update(active, light)
     local VP = Input.VirtualPad
     withLight = light == true
     if not (active and Input.isMobile) then
-        state = { l = false, r = false, d = false, j = false, f = false }
-        prev.d, prev.j, prev.f = false, false, false
+        state = { l = false, r = false, d = false, j = false, f = false, u = false }
+        prev.d, prev.j, prev.f, prev.u = false, false, false, false
         return
     end
     local sw, sh = love.graphics.getDimensions()
@@ -118,7 +119,9 @@ function TC.update(active, light)
     if state.j and not prev.j then VP.pressed['jump'] = true end
     if state.d and not prev.d then VP.pressed['crouch'] = true end
     if state.f and not prev.f then VP.pressed['light'] = true end
-    prev.d, prev.j, prev.f = state.d, state.j, state.f
+    if state.u and not prev.u then VP.pressed['grab'] = true end
+    VP.down['grab'] = state.u
+    prev.d, prev.j, prev.f, prev.u = state.d, state.j, state.f, state.u
 end
 
 -- Cuadro de la cruceta según lo pulsado
@@ -129,6 +132,7 @@ local function padFrame(s)
     if s.d then return 'dpad_down' end
     if s.l then return 'dpad_left' end
     if s.r then return 'dpad_right' end
+    if s.u then return 'dpad_up' end
     return 'dpad_neutral'
 end
 local function T(name) return require('src/fx/Anim').clip('ui/touch', name) end
