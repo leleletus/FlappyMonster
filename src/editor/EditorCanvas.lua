@@ -16,11 +16,21 @@ local img, drawTileThumb, markDirty, pushUndo = P.img, P.drawTileThumb, P.markDi
 -- ── Acciones sobre el lienzo ──────────────────────────────────────────────────
 local function pal() return E.palette[E.layer] end
 
+-- (en el PLANO DE FONDO solo se pintan los bloques que pueden ir allí: el aviso, una vez por trazo)
+local function bgWhy(why)
+    if why and E.stroke and not E.stroke.warned then E.stroke.warned = true; msg(why, 'warn') end
+    return false
+end
+
 local function applyCell(c, r, erase)
     local m = E.model
     if not m:inBounds(c, r) then return false end
     local L = E.layer
-    if L == 'tiles' then
+    if L == 'tiles' and E.plane == 'bg' then
+        local ch, why = m:setBg(c, r, erase and TILE_EMPTY or pal())
+        if ch then return true end
+        return bgWhy(why)
+    elseif L == 'tiles' then
         return m:setId(c, r, erase and TILE_EMPTY or pal())
     elseif L == 'water' then
         return m:setWater(c, r, not erase)
@@ -40,7 +50,13 @@ end
 
 local function applyFill(c, r, erase)
     local m = E.model
-    if E.layer == 'tiles' then
+    if E.layer == 'tiles' and E.plane == 'bg' then
+        local id = erase and TILE_EMPTY or pal()
+        local why = m:bgRefuses(id)
+        if why then return bgWhy(why) end
+        return m:flood(c, r, function(raw) return Codec.id(raw) end,
+                       function(cc, rr) return m:setBg(cc, rr, id) end, m.bgTiles) > 0
+    elseif E.layer == 'tiles' then
         local id = erase and TILE_EMPTY or pal()
         return m:flood(c, r, function(raw) return Codec.id(raw) end,
                        function(cc, rr) return m:setId(cc, rr, id) end) > 0
@@ -109,8 +125,10 @@ local function canvasPress(button)
         end
     elseif L == 'tiles' or L == 'water' then
         if tool == 'pick' and button == 1 then
-            local raw = m:get(c, r)
-            if raw then E.palette.tiles = Codec.id(raw); E.tool.tiles = 'brush'; msg('Bloque copiado: ' .. TT.get(Codec.id(raw)).label) end
+            local raw = (E.plane == 'bg') and m:getBg(c, r) or m:get(c, r)
+            if raw and E.plane == 'bg' and raw == 0 then
+                msg('Ahí no hay ningún bloque en el plano de fondo', 'warn')
+            elseif raw then E.palette.tiles = Codec.id(raw); E.tool.tiles = 'brush'; msg('Bloque copiado: ' .. TT.get(Codec.id(raw)).label) end
         elseif tool == 'fill' then
             s.changed = applyFill(c, r, erase)
         elseif tool == 'rect' or tool == 'line' then
@@ -164,20 +182,29 @@ local function canvasPress(button)
             E.selected = nil
         end
     elseif L == 'deco' then
+        -- (solo las decoraciones del plano que se edita: delante o el plano de fondo)
         local ft = DT.get(E.palette.deco)
         local useSub = ft and ft.placement == 'sub'
+        local plane = (E.plane == 'bg') and 'bg' or nil
         if erase then
-            local o, idx = m:findObject(m.foliage, c, r)
+            local o, idx = m:decoAt(c, r, nil, plane)
             if o then table.remove(m.foliage, idx); if E.selDeco == o then E.selDeco = nil end; s.changed = true end
         elseif tool == 'select' then
-            local o = m:findObject(m.foliage, c, r, sub) or m:findObject(m.foliage, c, r)
+            local o = m:decoAt(c, r, sub, plane) or m:decoAt(c, r, nil, plane)
             E.selDeco = o
             if o then s.moveDeco = o end
-        elseif ft and m:inBounds(c, r) and not m:findObject(m.foliage, c, r, useSub and sub or nil) then
-            local n = DT.normalize({ type = ft.name, col = c, row = r, sub = useSub and sub or nil })
-            m.foliage[#m.foliage+1] = n
-            E.selDeco = n
-            s.changed = true
+        elseif ft and m:inBounds(c, r) then
+            -- (los tipos con `plane = 'bg'` — los árboles grandes — van SIEMPRE al fondo: se pasa a editar el fondo)
+            if ft.plane == 'bg' and plane ~= 'bg' then
+                Editor.setPlane('bg'); plane = 'bg'
+                msg(ft.label .. ': va siempre al plano de fondo (editando Fondo; P vuelve a Delante)', 'warn')
+            end
+            if not m:decoAt(c, r, useSub and sub or nil, plane) then
+                local n = DT.normalize({ type = ft.name, col = c, row = r, sub = useSub and sub or nil, plane = plane })
+                m.foliage[#m.foliage+1] = n
+                E.selDeco = n
+                s.changed = true
+            end
         end
     elseif L == 'special' then
         if tool == 'spawn' and not erase then
@@ -355,6 +382,40 @@ local function canvasRelease()
 end
 
 -- ── Dibujo del lienzo ─────────────────────────────────────────────────────────
+-- Editando el PLANO DE FONDO, lo de delante (bloques, líquidos, entidades, decoraciones) se dibuja en un lienzo propio
+-- y se pone TRANSLÚCIDO encima del plano, para ver lo que hay detrás. Sin stencil.
+local FRONT_ALPHA = 0.3
+local frontCanvas, fcw, fch
+local function beginFront(cx, cy, cw, ch, z)
+    if E.plane ~= 'bg' then return end
+    if not frontCanvas or fcw ~= cw or fch ~= ch then
+        if frontCanvas then frontCanvas:release() end
+        frontCanvas, fcw, fch = love.graphics.newCanvas(cw, ch), cw, ch
+        frontCanvas:setFilter('nearest', 'nearest')
+    end
+    E.frontScissor = { love.graphics.getScissor() }
+    love.graphics.push('all')
+    love.graphics.setCanvas(frontCanvas)
+    love.graphics.clear(0, 0, 0, 0)
+    love.graphics.setScissor()            -- (el recorte del lienzo del editor está en píxeles de la ventana)
+    love.graphics.origin()
+    love.graphics.scale(z)
+end
+local function endFront(cx, cy)
+    if E.plane ~= 'bg' then return end
+    love.graphics.pop()
+    -- (pop pone el recorte con el lienzo de lo de delante aún puesto: en la ventana caía en otro sitio; se repite)
+    love.graphics.setScissor()
+    local sc = E.frontScissor
+    if sc[1] then love.graphics.setScissor(sc[1], sc[2], sc[3], sc[4]) end
+    love.graphics.push('all')
+    love.graphics.origin()
+    love.graphics.setBlendMode('alpha', 'premultiplied')
+    love.graphics.setColor(FRONT_ALPHA, FRONT_ALPHA, FRONT_ALPHA, FRONT_ALPHA)
+    love.graphics.draw(frontCanvas, cx, cy)
+    love.graphics.pop()
+end
+
 local function drawCanvas()
     local cx, cy, cw, ch = canvasRect()
     local m, lv, t, z = E.model, E.level, T(), E.zoom
@@ -382,8 +443,17 @@ local function drawCanvas()
         Clip.pop()
     end
 
+    -- El plano de fondo (una sola vez: Level:render va con noPlane), recortado al nivel como el cielo — lo que asoma
+    -- fuera del mapa (la copa de un árbol en la fila de arriba) no se ve en el juego —. Editando el fondo, lo de
+    -- delante va translúcido encima (beginFront / endFront)
     if lv then
-        lv:render(camX, camY)
+        Clip.push(-camX, -camY, m.width * t, m.height * t)
+        lv:renderBackPlane(camX, camY)
+        Clip.pop()
+    end
+    beginFront(cx, cy, cw, ch, z)
+    if lv then
+        lv:render(camX, camY, true)
         -- Líquidos: tinte por material
         local c0, c1 = math.max(1, math.floor(camX / t) + 1), math.min(m.width, math.floor((camX + vw) / t) + 1)
         local r0, r1 = math.max(1, math.floor(camY / t) + 1), math.min(m.height, math.floor((camY + vh) / t) + 1)
@@ -427,9 +497,11 @@ local function drawCanvas()
             end
         end
     end
+    endFront(cx, cy)
     Editor.drawZones(camX, camY, t, z)
     Editor.drawLinks(camX, camY, t, z)
     Editor.drawAutoScroll(camX, camY, t, z)
+    beginFront(cx, cy, cw, ch, z)
     for _, inst in pairs(E.instances or {}) do
         -- Si cae desde donde se colocó, se marca el recorrido hasta donde aterriza
         if inst._spawnY and math.abs(inst.y - inst._spawnY) > t * 0.5 then
@@ -444,6 +516,7 @@ local function drawCanvas()
         inst:render(camX, camY)
     end
     if lv then lv:renderFoliage(camX, camY) end
+    endFront(cx, cy)
     WINDOW_W, WINDOW_H = ww, wh
 
     -- Punto de inicio
@@ -589,6 +662,13 @@ local function drawCanvas()
 
     love.graphics.setLineWidth(1)
     love.graphics.pop()
+    -- (editando el plano de fondo: un cartel en la esquina, para no confundirlo con el de delante)
+    if E.plane == 'bg' then
+        local label = 'PLANO DE FONDO  ·  P: volver a Delante'
+        local bw = ui.fontSm:getWidth(label) + 20
+        ui.rect(cx + 8, cy + 8, bw, 24, th.accentDk, 5)
+        ui.text(label, cx + 8, cy + 13, th.text, ui.fontSm, bw, 'center')
+    end
     love.graphics.setScissor()
     EDITOR_VIEW = false
 end

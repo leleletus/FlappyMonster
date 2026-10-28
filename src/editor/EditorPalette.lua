@@ -7,8 +7,10 @@ local DT       = require('src/world/decorations/Decorations').types
 local SubTiles  = require 'src/world/level/SubTiles'
 
 return function(E, P)
-local TT, ET, th, LEFT, STATUS, TOP = P.TT, P.ET, P.th, P.LEFT, P.STATUS, P.TOP
+local TT, ET, th, LEFT, STATUS, TOP, Editor = P.TT, P.ET, P.th, P.LEFT, P.STATUS, P.TOP, P.Editor
 local LAYERS, TOOLS, DIRS, layerDef, drawEntThumb, drawTileThumb = P.LAYERS, P.TOOLS, P.DIRS, P.layerDef, P.drawEntThumb, P.drawTileThumb
+local layerTools, PLANE_HELP = P.layerTools, P.PLANE_HELP
+local BackPlane = require 'src/world/level/BackPlane'
 local drawDecoThumb, undo, redo, listLevels, guardUnsaved, save = P.drawDecoThumb, P.undo, P.redo, P.listLevels, P.guardUnsaved, P.save
 local startPlay = P.startPlay
 
@@ -47,6 +49,15 @@ local function drawTopBar()
     if ui.button(string.format('%d%%', math.floor(E.zoom * 100 + 0.5)), x, 8, 56, 30, { tooltip = 'Zoom al 100% (0)' }) then E.zoom = 1 end
     x = x + 60
     btn('+', 30, function() E.zoom = math.min(3, E.zoom * 1.25) end, { tooltip = 'Acercar (+)' })
+    x = barSep(x + 4)
+    -- Plano que se edita: Delante / Fondo (P). (Con la ventana estrecha, un solo botón: Fondo encendido o apagado)
+    local bg = E.plane == 'bg'
+    if w >= 1180 then
+        btn('Delante', 66, function() Editor.setPlane('front') end, { active = not bg, font = ui.fontSm, tooltip = PLANE_HELP })
+        btn('Fondo', 58, function() Editor.setPlane('bg') end, { active = bg, font = ui.fontSm, tooltip = PLANE_HELP })
+    else
+        btn('Fondo', 60, function() Editor.setPlane(bg and 'front' or 'bg') end, { active = bg, font = ui.fontSm, tooltip = PLANE_HELP })
+    end
 
     -- Nivel abierto (centro) y acciones de la derecha
     local right = w - 132 - 4 - 84
@@ -65,10 +76,15 @@ local function paletteItems(L)
     local items = {}
     if L == 'tiles' then
         for _, t in ipairs(TT.list) do
-            if not t.editorHide then items[#items+1] = { key = t.id, label = t.label, cat = t.category, ord = TT.categoryOrder(t.category), def = t,
-                                tip = string.format('%s\nColisión: %s%s · Material: %s', t.label,
+            if not t.editorHide then
+                -- (en el plano de fondo, los que no pueden ir allí salen apagados: BackPlane.allows)
+                local off = E.plane == 'bg' and not BackPlane.allows(t)
+                items[#items+1] = { key = t.id, label = t.label, cat = t.category, ord = TT.categoryOrder(t.category), def = t, off = off,
+                                tip = string.format('%s\nColisión: %s%s · Material: %s%s', t.label,
                                       ({ solid = 'sólida', oneway = 'solo desde arriba', none = 'ninguna' })[t.collision] or t.collision,
-                                      t.dropThrough and ' (se baja agachado)' or '', t.mat.label) } end
+                                      t.dropThrough and ' (se baja agachado)' or '', t.mat.label,
+                                      off and '\nNo puede ir en el plano de fondo (solo bloques que se ven sólidos)' or '') }
+            end
         end
     elseif L == 'entities' then
         local seen = {}
@@ -94,7 +110,8 @@ local function paletteItems(L)
     elseif L == 'deco' then
         for _, t in ipairs(DT.list) do
             items[#items+1] = { key = t.name, label = t.label, cat = t.category, ord = DT.categoryOrder(t.category), deco = t,
-                                 tip = t.label .. (t.placement == 'sub' and ' (subcelda)' or ' (casilla)') }
+                                 tip = t.label .. (t.placement == 'sub' and ' (subcelda)' or ' (casilla)')
+                                       .. (t.plane == 'bg' and '\nVa siempre al plano de fondo' or '') }
         end
     end
     -- Búsqueda
@@ -195,7 +212,7 @@ local function drawPalette(L, x, y, w, bottom)
                 local by = yy + math.floor((i - 1) / cols) * (cell + labelH + gap)
                 local sel = paletteSelected(L, it)
                 local hov = ui.inside(bx, by, cell, cell + labelH)
-                ui.rect(bx, by, cell, cell + labelH, sel and th.accentDk or (hov and th.hover or th.panel2), 6)
+                ui.rect(bx, by, cell, cell + labelH, sel and th.accentDk or ((hov and not it.off) and th.hover or th.panel2), 6)
                 if sel then ui.rect(bx, by, cell, cell + labelH, th.accent, 6, 'line') end
                 local ix, iy, is = bx + 14, by + 6, cell - 28
                 if it.def then
@@ -209,10 +226,15 @@ local function drawPalette(L, x, y, w, bottom)
                 end
                 -- (nombre en hasta dos líneas, centrado en la franja de abajo)
                 local nl = math.min(2, math.floor(ui.textHeight(it.label, cell - 6, ui.fontSm) / ui.fontSm:getHeight() + 0.5))
-                ui.text(it.label, bx + 3, by + cell - 22 + (2 - nl) * ui.fontSm:getHeight() / 2 + 6, th.text, ui.fontSm, cell - 6, 'center')
+                ui.text(it.label, bx + 3, by + cell - 22 + (2 - nl) * ui.fontSm:getHeight() / 2 + 6, it.off and th.muted or th.text, ui.fontSm, cell - 6, 'center')
+                if it.off then
+                    -- (apagado: un velo encima, no se puede elegir)
+                    ui.rect(bx, by, cell, cell + labelH, { th.panel[1], th.panel[2], th.panel[3], 0.7 }, 6)
+                end
                 if hov then
                     ui.tooltip(it.tip or it.label)
-                    if ui.state.pressed then pickPalette(L, it); ui.state.consumed = true end
+                    if ui.state.pressed and not it.off then pickPalette(L, it); ui.state.consumed = true end
+                    if ui.state.pressed and it.off then ui.state.consumed = true end
                 end
             end
             yy = yy + math.ceil(#cats[c] / cols) * (cell + labelH + gap) + 4
@@ -231,14 +253,16 @@ local function drawLeftPanel()
     for i, l in ipairs(LAYERS) do
         local bx = x + ((i - 1) % 3) * (bw + 4)
         local by = y + math.floor((i - 1) / 3) * 34
-        if ui.button(l.label, bx, by, bw, 30, { active = E.layer == l.id, font = ui.fontSm,
+        local off = E.plane == 'bg' and not l.bg
+        if ui.button(l.label, bx, by, bw, 30, { active = E.layer == l.id, font = ui.fontSm, disabled = off,
                                                   tooltip = l.label .. ' (tecla ' .. i .. ')\n' .. l.help }) then
-            E.layer = l.id
+            Editor.setLayer(l.id)
         end
+        if off and ui.inside(bx, by, bw, 30) then ui.tooltip(l.label .. ': no se edita en el plano de fondo (P: volver a Delante)') end
     end
     y = y + math.ceil(#LAYERS / 3) * 34 + 4
     y = sectionTitle('Herramienta', x, y, w)
-    local tools = layerDef(E.layer).tools
+    local tools = layerTools(layerDef(E.layer))
     local tw = (w - 4) / 2
     for i, tn in ipairs(tools) do
         local td = TOOLS[tn]

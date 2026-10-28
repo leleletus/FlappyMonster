@@ -16,6 +16,13 @@
 -- fino agrietándose bajo el jugador (tools/levelgen/arenas/hielo.json). AT=col,fila:
 -- pone ahí al jugador (ver cualquier parte de un nivel).
 --
+-- PLANE=1 (LEVEL=tools/levelgen/arenas/fondo.json): el PLANO DE FONDO en el editor (src/world/level/BackPlane.lua):
+-- captura Delante (_plano_delante.png) y con zoom (_plano_zoom.png), P pasa a Fondo, pinta un bloque (solo en bgTiles),
+-- uno que no puede ir allí no se pinta, el cuentagotas lee el fondo, coloca una decoración (plane = 'bg'), las capas de
+-- delante no se eligen, borrar no toca lo de delante, captura con lo de delante translúcido (_plano_fondo.png) y la
+-- paleta con lo que no puede ir apagado (_plano_paleta.png), deshacer / rehacer, guarda (bgTiles fila a fila, plane),
+-- relee, cambia el tamaño, alejado al 25 % (_plano_lejos.png) y F5 lo prueba (_plano_play.png).
+--
 --   tools/tests/run.sh editor_open
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
@@ -25,6 +32,8 @@ local LINKS = os.getenv('LINKS')
 if LINKS then arg[#arg + 1] = 'links.json' end
 local PLAY = os.getenv('PLAY')
 if PLAY then arg[#arg + 1] = PLAY end
+local PLANE = os.getenv('PLANE')
+if PLANE and not PLAY then arg[#arg + 1] = os.getenv('LEVEL') or 'assets/levels/nivel01.json' end
 love.filesystem.load('game_main.lua')()
 local frame, realDown = 0, love.keyboard.isDown
 local function key(k, ctrl)
@@ -34,6 +43,140 @@ local function key(k, ctrl)
 end
 local function shot(n)
     love.graphics.captureScreenshot(function(img) img:encode('png', 'editor_open_' .. n .. '.png') end)
+end
+-- ── PLANE=1: el plano de fondo en el editor ──
+local PL = { ok = true }
+local function check(name, ok, detail)
+    print(('%-10s %s  %s'):format(name, ok and 'OK   ' or 'FALLA', detail))
+    if not ok then PL.ok = false end
+end
+-- Ctrl + tecla (solo Ctrl: key(k, true) también "pulsa" Mayús, y Ctrl+Mayús+Z es rehacer)
+local function ctrlKey(k)
+    local real = love.keyboard.isDown
+    love.keyboard.isDown = function(...)
+        for _, x in ipairs({ ... }) do if x == 'lctrl' then return true end end
+        return false
+    end
+    love.keypressed(k)
+    love.keyboard.isDown = real
+end
+-- clic (botón b) en el centro de la casilla (c, r), con la cámara del editor
+local function clickCell(c, r, b)
+    local E = require('src/editor/Editor').state()
+    local mx = 292 + ((c - 0.5) * TILE_PX - E.camX) * E.zoom
+    local my = 46 + ((r - 0.5) * TILE_PX - E.camY) * E.zoom
+    local realPos = love.mouse.getPosition
+    love.mouse.getPosition = function() return mx, my end
+    love.mousepressed(mx, my, b or 1); love.mousereleased(mx, my, b or 1)
+    love.mouse.getPosition = realPos
+end
+function planeCase()
+    local E = require('src/editor/Editor').state()
+    local Model = require 'src/editor/EditorModel'
+    local Tiles = require 'src/world/tiles/Tiles'
+    local BackPlane = require 'src/world/level/BackPlane'
+    local DT = require('src/world/decorations/Decorations').types
+    local json = require 'libs/json'
+    local m = E.model
+    if frame == 4 then shot('plano_delante') end
+    if frame == 6 then PL.zoom0 = E.zoom; E.zoom = 1.5 end
+    if frame == 9 then shot('plano_zoom') end
+    if frame == 11 then
+        E.zoom = PL.zoom0
+        key('p')
+        check('plano', E.plane == 'bg' and E.layer == 'tiles', 'P → plano ' .. tostring(E.plane) .. ', capa ' .. E.layer)
+        -- una casilla vacía en los dos planos, a la vista
+        for r = 2, 8 do for c = 3, 16 do
+            if not PL.c and m.bgTiles[r][c] == 0 and m.tiles[r][c] == TILE_EMPTY and m.bgTiles[r][c + 1] == 0 then PL.c, PL.r = c, r end
+        end end
+        E.palette.tiles = TILE_SOLID; E.tool.tiles = 'brush'
+        PL.undo0 = #E.undo
+        clickCell(PL.c, PL.r)
+        check('pintar', m.bgTiles[PL.r][PL.c] == Tiles.codec.encode(TILE_SOLID, false, nil) and m.tiles[PL.r][PL.c] == TILE_EMPTY,
+              ('(%d,%d): fondo %d, delante %d'):format(PL.c, PL.r, m.bgTiles[PL.r][PL.c], m.tiles[PL.r][PL.c]))
+        -- uno que no puede ir al plano (líquido, peligro, activador...): no se pinta
+        local bad
+        for _, t in ipairs(Tiles.types.list) do if not bad and t.id ~= 0 and not t.editorHide and not BackPlane.allows(t) then bad = t end end
+        E.palette.tiles = bad.id
+        clickCell(PL.c + 1, PL.r)
+        check('prohibido', m.bgTiles[PL.r][PL.c + 1] == 0 and m.tiles[PL.r][PL.c + 1] == TILE_EMPTY and tostring(E.msg):find('no puede') ~= nil,
+              bad.label .. ' en el fondo: ' .. m.bgTiles[PL.r][PL.c + 1] .. ' · aviso: ' .. tostring(E.msg))
+        E.tool.tiles = 'pick'
+        clickCell(PL.c, PL.r)
+        check('gotero', E.palette.tiles == TILE_SOLID, 'el cuentagotas copia el bloque del fondo: ' .. tostring(E.palette.tiles))
+    end
+    if frame == 12 then shot('plano_paleta') end       -- (la paleta de Bloques en el fondo: lo que no puede ir, apagado)
+    if frame == 14 then
+        key('5')
+        local ft
+        for _, t in ipairs(DT.list) do if not ft and t.plane ~= 'bg' and t.placement ~= 'sub' then ft = t end end
+        E.palette.deco, E.tool.deco = ft.name, 'place'
+        PL.nDeco = #m.foliage
+        clickCell(PL.c + 2, PL.r)
+        local n = m.foliage[#m.foliage]
+        PL.deco = n
+        check('deco', #m.foliage == PL.nDeco + 1 and n.plane == 'bg' and E.layer == 'deco',
+              ft.label .. ' colocada en el fondo: plane = ' .. tostring(n and n.plane))
+        key('4')
+        check('capas', E.layer == 'deco', 'en el fondo, la tecla 4 (Entidades) no cambia de capa: ' .. E.layer)
+        -- borrar en el fondo no toca las decoraciones de delante
+        local front
+        for _, d in ipairs(m.foliage) do if not front and d.plane ~= 'bg' and not m:decoAt(d.col, d.row, nil, 'bg') then front = d end end
+        if front then
+            local before = #m.foliage
+            E.tool.deco = 'erase'
+            clickCell(front.col, front.row)
+            check('borrar', #m.foliage == before, 'borrar en el fondo sobre una decoración de delante: ' .. before .. ' → ' .. #m.foliage)
+            E.tool.deco = 'select'
+        end
+        E.selDeco = PL.deco; E.rightTab = 'sel'
+    end
+    if frame == 18 then shot('plano_fondo') end
+    if frame == 20 then
+        local u = #E.undo
+        ctrlKey('z')
+        local gone = #m.foliage == PL.nDeco
+        ctrlKey('y')
+        check('deshacer', gone and #m.foliage == PL.nDeco + 1 and m.bgTiles[PL.r][PL.c] ~= 0 and u - PL.undo0 >= 2,
+              ('deshacer quita la decoración (%s), rehacer la devuelve; %d pasos en el historial'):format(tostring(gone), u - PL.undo0))
+        ctrlKey('z'); ctrlKey('z')
+        local noBlock = E.model.bgTiles[PL.r][PL.c] == 0
+        ctrlKey('y'); ctrlKey('y')
+        m = E.model
+        check('deshacer2', noBlock and m.bgTiles[PL.r][PL.c] ~= 0, 'deshacer también quita el bloque del fondo; rehacer lo pone')
+        -- guardar (el texto que se escribiría) y releer
+        local txt = m:encode()
+        local d = json.decode(txt)
+        local hasDeco = false
+        for _, f in ipairs(d.foliage) do if f.col == PL.c + 2 and f.row == PL.r and f.plane == 'bg' then hasDeco = true end end
+        check('guardar', d.bgTiles and d.bgTiles[PL.r][PL.c] ~= 0 and hasDeco and txt:find('"bgTiles": %[\n    %[') ~= nil and #d.bgTiles == d.height,
+              'bgTiles fila a fila (' .. (d.bgTiles and #d.bgTiles or 0) .. ' filas) y la decoración con "plane": "bg"')
+        local m2 = Model.fromData(d, 'x.json')
+        local lv = require('src/world/level/Level').fromData(json.decode(txt))
+        check('releer', m2.bgTiles[PL.r][PL.c] == d.bgTiles[PL.r][PL.c] and lv.bg ~= nil and #lv.bgDecorations >= 1,
+              'el editor y el juego lo leen: Level.bg y ' .. #lv.bgDecorations .. ' decoraciones en el plano')
+        check('vacio', not Model.new(10, 8, 'x'):encode():find('bgTiles'), 'un nivel sin plano no guarda "bgTiles"')
+        m2:resize(m2.width + 3, m2.height + 2)
+        check('tamano', #m2.bgTiles == m2.height and #m2.bgTiles[1] == m2.width and m2.bgTiles[PL.r][PL.c] == d.bgTiles[PL.r][PL.c],
+              ('cambiar el tamaño cambia bgTiles: %dx%d'):format(#m2.bgTiles[1], #m2.bgTiles))
+        key('p')
+        check('delante', E.plane == 'front', 'P vuelve a Delante')
+    end
+    if frame == 21 then E.zoom = 0.25 end
+    if frame == 23 then shot('plano_lejos') end        -- (alejado del todo: el plano sigue en su sitio)
+    if frame == 24 then E.zoom = PL.zoom0; key('f5') end
+    local st = gStateMachine and gStateMachine:_top()
+    if frame > 26 and st and st.level and st.player and not PL.played then
+        PL.played = frame
+        check('probar', st.level.bg ~= nil, 'F5: el nivel de prueba tiene el plano de fondo (Level.bg)')
+    end
+    if PL.played and frame == PL.played + 60 then shot('plano_play') end
+    if PL.played and frame == PL.played + 64 then
+        print('capturas en ' .. love.filesystem.getSaveDirectory() .. '/editor_open_plano_{delante,zoom,paleta,fondo,lejos,play}.png')
+        E.unsaved = false                  -- (si no, el editor pide confirmar el cierre)
+        if PL.ok then print('TODO OK'); love.event.quit(0) else love.event.quit(1) end
+    end
+    if frame > 600 and not PL.played then print('FALLA: la prueba del nivel no arrancó'); E.unsaved = false; love.event.quit(1) end
 end
 local gameUpdate = love.update
 function love.update(dt)
@@ -98,6 +241,7 @@ function love.update(dt)
         if frame > 3000 then print('FALLA: la pelea no empezó'); love.event.quit(1) end
         return
     end
+    if PLANE then return planeCase() end
     if LINKS then
         if frame == 5 then key('1') end
         if frame == 8 then key('k') end

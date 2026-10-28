@@ -28,6 +28,7 @@ are never edited by hand.
 | change the credits, add a credit or a license | [story/credits](story/credits.md) |
 | touch the bonus matches or the bot | [story/bonus-and-bot](story/bonus-and-bot.md), [gameplay/game-modes](gameplay/game-modes.md) |
 | draw or regenerate art | [art/style-rules](art/style-rules.md), [art/generators](art/generators.md) (**hand-edited list**), [art/asset-layout](art/asset-layout.md) |
+| put blocks or decorations behind the level (the background plane) | [art/background-plane](art/background-plane.md), [levels/editor](levels/editor.md) § Background plane |
 | add a sound, or listen to all of them (secret sound test) | [audio/sound](audio/sound.md) |
 | compose or change music | [audio/music-guide](audio/music-guide.md), [audio/music-catalog](audio/music-catalog.md), [audio/music-history](audio/music-history.md) |
 | add a text or a language | [architecture/i18n](architecture/i18n.md) |
@@ -65,7 +66,8 @@ are never edited by hand.
 - **levels/** — [level-format](levels/level-format.md) · [editor](levels/editor.md) ·
   [generator-and-solver](levels/generator-and-solver.md) · [retheme](levels/retheme.md)
 - **art/** — [animation](art/animation.md) · [style-rules](art/style-rules.md) · [asset-layout](art/asset-layout.md) · [generators](art/generators.md) ·
-  [sky-and-biomes](art/sky-and-biomes.md) · [decorations](art/decorations.md) · [fx-and-particles](art/fx-and-particles.md)
+  [sky-and-biomes](art/sky-and-biomes.md) · [decorations](art/decorations.md) · [fx-and-particles](art/fx-and-particles.md) ·
+  [background-plane](art/background-plane.md)
 - **audio/** — [sound](audio/sound.md) · [music-catalog](audio/music-catalog.md) · [music-guide](audio/music-guide.md) ·
   [music-history](audio/music-history.md)
 - **testing/** — [harnesses](testing/harnesses.md) · [performance](testing/performance.md)

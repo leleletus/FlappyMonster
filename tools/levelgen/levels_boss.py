@@ -36,6 +36,8 @@ def graft(L, src, c0, x0):
     for c in range(c0, src['width'] + 1):
         for r in range(1, L.h + 1):
             L.set(c + dx, r, src['tiles'][r - 1][c - 1])
+            if src.get('bgTiles') and src['bgTiles'][r - 1][c - 1]:      # (el plano de fondo de la arena)
+                L.set_bg(c + dx, r, src['bgTiles'][r - 1][c - 1])
     for e in src['entities']:
         if e['col'] < c0:
             continue

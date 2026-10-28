@@ -11,6 +11,7 @@
 --   layer       'front' (por defecto, delante de jugador y enemigos) | 'back'
 --   cullMargin  casillas de margen al descartar fuera de pantalla (por defecto 4); lo que mide más
 --               (los árboles grandes, 5-8 casillas) pone su alto + 2, o aparecería de golpe
+--   plane       'bg': el tipo va SIEMPRE en el plano de fondo (src/world/level/BackPlane.lua: los árboles grandes)
 --   props       propiedades EXTRA editables (formato de entities/Props.lua)
 --   editor      { previewScale = 0.4 } escala de la miniatura (se dibuja con
 --               su propio draw); icon = imagen opcional; previewLift = px que se
@@ -77,12 +78,14 @@ function DecorationTypes.normalize(data)
         n.sub = (sub >= 1 and sub <= 4) and sub or 1
     end
     n.props = Props.resolve(t.schema, data.props, n)
+    -- (`plane = 'bg'`: en el PLANO DE FONDO — src/world/level/BackPlane.lua —; el tipo con `plane = 'bg'` va siempre)
+    if data.plane == 'bg' or t.plane == 'bg' then n.plane = 'bg' end
     return n
 end
 
 function DecorationTypes.serialize(d)
     local t = DecorationTypes.byName[d.type]
-    return { type = d.type, col = d.col, row = d.row, sub = d.sub,
+    return { type = d.type, col = d.col, row = d.row, sub = d.sub, plane = (d.plane == 'bg' and not (t and t.plane == 'bg')) and 'bg' or nil,
              props = t and Props.diff(t.schema, d.props, d) or nil }
 end
 
@@ -113,7 +116,7 @@ function DecorationTypes.instantiate(n)
     local d = {
         def = t, type = t.name, col = n.col, row = n.row, sub = n.sub, props = n.props,
         x = x, y = y, phase = phaseOf(n.col, n.row, n.sub),
-        flip = n.props.flip and -1 or 1, layer = n.props.layer,
+        flip = n.props.flip and -1 or 1, layer = n.props.layer, plane = n.plane,
     }
     d.animT = d.phase * 10
     if t.init then t.init(d) end

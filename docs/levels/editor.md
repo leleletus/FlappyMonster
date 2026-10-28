@@ -10,8 +10,9 @@ bar and left panel), `EditorInspector.lua` (the right panel: fields generated fr
 Selección / Nivel / Avisos), `EditorDialogs.lua` (dialogs, boss-zone and auto-scroll tools), `EditorModel.lua` (level
 data, save, `validate()`), `ui.lua` (widgets).
 
-Keys: 1-7 layers, F1 shortcuts, F5 play-test (through `AdventureState`), Ctrl+O open, Ctrl+S save, K connect.
-**Harness:** `editor_open` (`LINKS=1`, `PLAY=<level>`), `level_check` (runs the validator on every level).
+Keys: 1-7 layers, P plane (Delante / Fondo), F1 shortcuts, F5 play-test (through `AdventureState`), Ctrl+O open,
+Ctrl+S save, K connect.
+**Harness:** `editor_open` (`LINKS=1`, `PLAY=<level>`, `PLANE=1`), `level_check` (runs the validator on every level).
 
 ## Details
 
@@ -50,3 +51,31 @@ Saving (0.5.10, review): "Guardar como" with the name of an EXISTING level warns
 `ToolShell.writeSafe` (temp file + rename, write result checked: a full disk no longer leaves a truncated JSON while
 saying "Guardado"). Closing the window with unsaved changes warns in edit AND playtest mode, and the "close again"
 only counts for 5 s. Harness `editor_open` (`guardar`).
+
+## Background plane (0.5.87)
+
+The level has a second plane of blocks and decorations behind everything ([art/background-plane](../art/background-plane.md)).
+The editor edits ONE plane at a time, `E.plane` = `'front'` / `'bg'`:
+
+- **Switch**: top bar "Delante | Fondo" (a single "Fondo" toggle when the window is narrower than 1180 px) and the key
+  **P**. `Editor.setPlane` clears the selection; in Fondo only the layers with `bg = true` in `LAYERS` (Bloques and
+  Decoración) can be chosen — the others are greyed and their keys say why. **Entities, water, spikes, mini blocks and
+  the Especial layer are not available on the plane** (they always belong to the front); clicking an entity in the
+  Avisos tab or in a boss zone goes back to Delante. The Conectar tool is hidden (no ON/OFF blocks there).
+- **Blocks**: every tile tool (pencil, rectangle, line, fill, eyedropper, eraser, right click) reads and writes
+  `Model.bgTiles` through `Model:getBg` / `setBg` (fill passes the plane's grid to `Model:flood`). Blocks that
+  `BackPlane.allows` refuses are greyed in the palette, cannot be picked, and painting one only warns (once per
+  stroke). The plane has no water or spike bits.
+- **Decorations**: placing one in Fondo sets `plane = 'bg'`; select / erase / "already one here" only see the
+  decorations of the current plane (`Model:decoAt(c, r, sub, plane)`). Placing a type that always goes to the plane
+  (a big tree) from Delante switches to Fondo and says so. The decoration inspector has **Plano: Delante / Fondo**
+  (types with `plane = 'bg'` show "siempre en el fondo" instead).
+- **Drawing**: the plane is drawn once, clipped to the level like the sky (`renderBackPlane`, then
+  `Level:render(…, true)`). In Delante everything looks as in the game; in Fondo the front (blocks, liquids, vents,
+  entities, decorations) is drawn into a canvas of the view and composited at 30 % opacity, with a "PLANO DE FONDO"
+  badge in the corner; overlays (grid, zones, links, routes, selection) stay opaque. The status bar and the hovered
+  cell show the plane's block.
+- **Model**: `bgTiles` always exists in the editor (zeros); `toData` / `encode` write it only when it has a block,
+  right after `tiles`, one row per line. It is in undo snapshots and `resize` keeps it the level's size. Play-test
+  (F5) saves through `encode`, so the plane is in the game.
+

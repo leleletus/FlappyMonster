@@ -11,9 +11,10 @@ that exists: [reference/levels](../reference/levels.md).
 | `width`, `height` | size in cells |
 | `playerStart` | `[col, row]` |
 | `tiles` | grid of raw cells: tile id + water + spikes (`src/world/tiles/TileCodec.lua`) |
+| `bgTiles` | the BACKGROUND PLANE: same grid and encoding as `tiles`, only the block id counts; absent = no plane. The editor writes it (one row per line) only when the plane has a block — [art/background-plane](../art/background-plane.md) |
 | `subtiles` | mini blocks: `{col, row, sub 1..4, kind, solid}` |
 | `entities` | placements `{type, col, row, sub, props}` (also floods, point zones, boss walls…) |
-| `foliage` | decorations `{type, col, row, sub, flip, layer, …}` (the key is historic: it means decorations) |
+| `foliage` | decorations `{type, col, row, sub, flip, layer, plane, …}` (the key is historic: it means decorations); `"plane": "bg"` = on the background plane (types with `plane = 'bg'`, the big trees, always are and do not write it) |
 | `vents` | oxygen vents |
 | `bossZones` | `{id, col, row, w, h, music, event}` (`event`: driven by a director, it does not start by itself) |
 | `links`, `blockLinks` | ON/OFF Activator → activatable entity (`to` = id) / → ON/OFF Blocks |

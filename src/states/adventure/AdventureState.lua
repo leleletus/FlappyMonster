@@ -813,8 +813,9 @@ function AdventureState:_renderScene()
         Sky.punch = false
     end
 
+    self.level:renderBackPlane(self.camX, self.camY)         -- (el plano de fondo: detrás de todo menos del cielo)
     Entities.renderBack(self.enemies, self.camX, self.camY)  -- (lo que las entidades dibujan detrás de los bloques)
-    self.level:render(self.camX, self.camY)
+    self.level:render(self.camX, self.camY, true)
     IceDrips.render(self.level, self.camX, self.camY)      -- (gotas del hielo: solo dibujo)
     require('src/fx/Ambience').tick(self.level)            -- (ambiente de la isla: cuevas, jungla... solo sonido)
     LavaFx.render(self.level, self.camX, self.camY)        -- (burbujas de la lava: solo dibujo)

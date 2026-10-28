@@ -40,7 +40,7 @@ local T = function() return TILE_PX end
 -- Una capa = qué se edita; cada una tiene sus herramientas (tecla entre
 -- paréntesis) y una descripción que el panel enseña como ayuda.
 local LAYERS = {
-    { id='tiles',    label='Bloques',    tools={ 'brush', 'rect', 'line', 'fill', 'pick', 'link', 'erase' },
+    { id='tiles',    label='Bloques',    tools={ 'brush', 'rect', 'line', 'fill', 'pick', 'link', 'erase' }, bg = true,
       help='Terreno, plataformas, líquidos, peligros y meta.' },
     { id='water',    label='Agua',       tools={ 'brush', 'rect', 'fill', 'erase' },
       help='Llena celdas de agua. Se combina con cualquier bloque (una plataforma sumergida, por ejemplo). El bloque "Agua" sin nada más está en la capa Bloques.' },
@@ -48,7 +48,7 @@ local LAYERS = {
       help='Pinchos en cuartos de casilla: haz clic en el cuarto donde lo quieras. Matan al tocarlos por la punta.' },
     { id='entities', label='Entidades',  tools={ 'select', 'place', 'erase' },
       help='Enemigos, jefes, trampas, mecanismos y objetos.' },
-    { id='deco',     label='Decoración', tools={ 'select', 'place', 'erase' },
+    { id='deco',     label='Decoración', tools={ 'select', 'place', 'erase' }, bg = true,
       help='Plantas y adornos: solo se ven, no afectan al juego.' },
     { id='special',  label='Especial',   tools={ 'spawn', 'vent', 'boss', 'erase' },
       help='Estructura del nivel: inicio del jugador, vents de oxígeno y zonas de jefe.' },
@@ -69,13 +69,45 @@ local TOOLS = {
     vent   = { label='Vent',        key='o', help='Coloca un vent de oxígeno en un cuarto de casilla (sus burbujas recargan el aire bajo el agua). Clic en uno para editarlo.' },
     boss   = { label='Zona de jefe', key='z', help='Arrastra para crear una zona (clic = una pantalla, 20×11). Arrastra una zona para moverla o su esquina inferior derecha para cambiar su tamaño. La cámara se queda fija en ella y nadie sale hasta vencer al jefe.' },
 }
+-- (`bg = true` en la capa: también se edita en el PLANO DE FONDO; `bgTools`: las herramientas que valen allí)
+local BG_NO_TOOL = { link = true }        -- (en el fondo no hay activadores ON/OFF que conectar)
+local function layerTools(l)
+    if E.plane ~= 'bg' then return l.tools end
+    local out = {}
+    for _, tn in ipairs(l.tools) do if not BG_NO_TOOL[tn] then out[#out+1] = tn end end
+    return out
+end
+local PLANE_HELP = 'Plano que se edita (P). Delante: el escenario del juego. Fondo: bloques y decoraciones detrás '
+    .. 'de todo, sin colisión, más oscuros y con la sombra de lo de delante (solo capas Bloques y Decoración; '
+    .. 'lo de delante se ve translúcido).'
 local DIRS = { { 0, 'Arriba' }, { 1, 'Abajo' }, { 2, 'Izquierda' }, { 3, 'Derecha' } }
 local DIR_ARROW = { [0] = '^', [1] = 'v', [2] = '<', [3] = '>' }
 
 local function layerDef(id) for _, l in ipairs(LAYERS) do if l.id == id then return l end end end
+local function msg(s, kind) E.msg, E.msgKind, E.msgT = s, kind or 'ok', 4 end
+
+-- El PLANO que se edita: 'front' (delante, el de siempre) o 'bg' (el plano de fondo, src/world/level/BackPlane.lua).
+-- En el fondo solo valen las capas Bloques y Decoración: al pasar a él desde otra, se va a Bloques.
+function Editor.setPlane(p)
+    if p == E.plane then return end
+    E.plane = p
+    E.selected, E.selDeco, E.selSwitch = nil, nil, nil
+    if p == 'bg' then
+        if not layerDef(E.layer).bg then E.layer = 'tiles' end
+        if BG_NO_TOOL[E.tool[E.layer]] then E.tool[E.layer] = 'brush' end
+        msg('Editando el plano de FONDO (P: volver a Delante)')
+    else
+        msg('Editando el plano de delante')
+    end
+end
+function Editor.setLayer(id)
+    if E.plane == 'bg' and not layerDef(id).bg then
+        return msg('En el plano de fondo solo hay Bloques y Decoración (P: volver a Delante)', 'warn')
+    end
+    E.layer = id
+end
 
 -- ── Utilidades ────────────────────────────────────────────────────────────────
-local function msg(s, kind) E.msg, E.msgKind, E.msgT = s, kind or 'ok', 4 end
 
 local function canvasRect()
     local w, h = love.graphics.getDimensions()
@@ -394,6 +426,7 @@ function Editor.load(args, levelArg)
     E.gameArgs = args
     E.mode = 'edit'
     E.layer = 'tiles'
+    E.plane = 'front'
     E.tool = { tiles='brush', water='brush', spikes='brush', entities='select', deco='place', special='spawn', mini='brush' }
     E.selZone = nil
     E.selDeco = nil
@@ -508,11 +541,12 @@ function Editor.keypressed(k)
         return
     end
     local n = tonumber(k)
-    if n and LAYERS[n] then E.layer = LAYERS[n].id; return end
-    for _, tn in ipairs(layerDef(E.layer).tools) do
+    if n and LAYERS[n] then Editor.setLayer(LAYERS[n].id); return end
+    for _, tn in ipairs(layerTools(layerDef(E.layer))) do
         if TOOLS[tn].key == k then E.tool[E.layer] = tn; return end
     end
     if k == 'g' then E.grid = not E.grid
+    elseif k == 'p' then Editor.setPlane(E.plane == 'bg' and 'front' or 'bg')
     elseif k == 'h' then E.showRoutes = not E.showRoutes
     elseif k == 'x' then
         if E.layer == 'entities' then Editor.cycleVariant() else E.spikeDir = (E.spikeDir + 1) % 4 end
@@ -593,7 +627,7 @@ end
 P.TT = TT; P.ET = ET; P.Codec = Codec; P.th = th; P.Editor = Editor
 P.LEFT = LEFT; P.STATUS = STATUS; P.RIGHT = RIGHT; P.TOP = TOP; P.LEVELS_DIR = LEVELS_DIR
 P.T = T; P.LAYERS = LAYERS; P.TOOLS = TOOLS; P.DIRS = DIRS; P.DIR_ARROW = DIR_ARROW
-P.layerDef = layerDef; P.msg = msg; P.canvasRect = canvasRect; P.screenToWorld = screenToWorld; P.worldToCell = worldToCell
+P.layerDef = layerDef; P.layerTools = layerTools; P.PLANE_HELP = PLANE_HELP; P.msg = msg; P.canvasRect = canvasRect; P.screenToWorld = screenToWorld; P.worldToCell = worldToCell
 P.lineCells = lineCells; P.img = img; P.drawEntThumb = drawEntThumb; P.drawTileThumb = drawTileThumb; P.drawDecoThumb = drawDecoThumb
 P.markDirty = markDirty; P.pushUndo = pushUndo; P.undo = undo; P.redo = redo; P.setModel = setModel
 P.listLevels = listLevels; P.guardUnsaved = guardUnsaved; P.save = save; P.startPlay = startPlay

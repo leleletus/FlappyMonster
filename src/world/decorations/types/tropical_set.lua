@@ -28,7 +28,7 @@ end
 local PALM_LAYERS = { 'trunk', 'coconuts', 'fronds' }
 local function palm(name, label, preview, cull, amp, baseDx, layers)
     local function L(n) return DecoFx.anim('world/decorations/tropical/' .. name, n) end
-    return base { name = name, label = label, placement = 'cell', layer = 'back', cullMargin = cull,
+    return base { name = name, label = label, placement = 'cell', layer = 'back', cullMargin = cull, plane = 'bg',
         editor = { previewScale = preview },
         draw = function(d, sx, sy)
             local x = sx + baseDx * DecoFx.SCALE * d.flip

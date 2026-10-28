@@ -55,7 +55,7 @@ return {
         end,
     },
     base {
-        name = 'dead_tree', label = 'Árbol muerto', placement = 'cell', layer = 'back', cullMargin = 8,
+        name = 'dead_tree', plane = 'bg', label = 'Árbol muerto', placement = 'cell', layer = 'back', cullMargin = 8,
         light = { r = 110, color = FIRE, a = 0.14, dy = -90, pulse = 1.3 },
         editor = { previewScale = 0.15 },
         update = function(d, dt)

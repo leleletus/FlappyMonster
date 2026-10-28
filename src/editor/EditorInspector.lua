@@ -154,6 +154,22 @@ local function drawDecoInspector(x, y, w)
     y = inspectorHeader(x, y, w, function(ix, iy, s) drawDecoThumb(t, ix, iy, s) end, t.label,
                         string.format('%s  ·  col %d, fila %d%s', t.category, d.col, d.row, d.sub and (' · cuarto ' .. d.sub) or ''))
     y = actionButtons(x, y, w, { { 'Eliminar', Editor.deleteSelected, 'Supr', true } })
+    -- Plano: delante o el PLANO DE FONDO (src/world/level/BackPlane.lua); los tipos con `plane = 'bg'` (los árboles
+    -- grandes) van siempre al fondo
+    if t.plane == 'bg' then
+        ui.text('Plano: siempre en el fondo (como todos los árboles grandes)', x, y, th.muted, ui.fontSm, w)
+        y = y + ui.textHeight('Plano: siempre en el fondo (como todos los árboles grandes)', w, ui.fontSm) + 10
+    else
+        local cur = (d.plane == 'bg') and 'bg' or 'front'
+        local nv, ch = ui.enum('Plano', cur, { { value = 'front', label = 'Delante' }, { value = 'bg', label = 'Fondo' } }, x, y, w)
+        if ui.inside(x, y, w, ui.ENUM_H) then ui.tooltip('Delante: con el escenario. Fondo: en el plano de fondo, detrás de todo, más oscuro y con la sombra de los bloques de delante.') end
+        y = y + ui.ENUM_H + 8
+        if ch then
+            pushUndo(); d.plane = (nv == 'bg') and 'bg' or nil; markDirty()
+            msg('Decoración ' .. ((nv == 'bg') and 'al plano de fondo' or 'delante') .. ((nv == 'bg') == (E.plane == 'bg') and ''
+                or ' (para seleccionarla otra vez: P cambia de plano)'))
+        end
+    end
     return drawPropFields(t.schema, d.props, x, y, w, d, 'deco:' .. d.type) + 8
 end
 
@@ -239,6 +255,7 @@ function Editor.drawZoneInspector(x, y, w)
             local t = ET.get(e.type)
             if ui.button(string.format('%s  (col %d, fila %d)', t.label, e.col, e.row), x, y, w, 26,
                          { font = ui.fontSm, align = 'left', tooltip = 'Seleccionarlo' }) then
+                Editor.setPlane('front')          -- (las entidades solo están delante)
                 E.layer, E.tool.entities, E.selected = 'entities', 'select', e
             end
             y = y + 30
@@ -251,14 +268,14 @@ end
 local function drawNothingSelected(x, y, w)
     local hv = E.hover
     if hv and E.model:inBounds(hv.c, hv.r) then
-        local raw = E.model:get(hv.c, hv.r)
+        local raw = (E.plane == 'bg') and E.model:getBg(hv.c, hv.r) or E.model:get(hv.c, hv.r)
         local id, wl, sp = Codec.decode(raw)
         local d = TT.get(id)
         local ns = 0; for i = 1, 4 do if sp[i].present then ns = ns + 1 end end
         local info = string.format('Material: %s%s%s', d.mat.label, wl and '  ·  con agua' or '',
                                    ns > 0 and ('  ·  ' .. ns .. ' pincho' .. (ns > 1 and 's' or '')) or '')
         y = inspectorHeader(x, y, w, function(ix, iy, s) drawTileThumb(d, ix, iy, s) end, d.label,
-                            string.format('Casilla  ·  col %d, fila %d', hv.c, hv.r), info)
+                            string.format('%s  ·  col %d, fila %d', (E.plane == 'bg') and 'Casilla del fondo' or 'Casilla', hv.c, hv.r), info)
     else
         ui.text('Pasa el cursor por el mapa para ver una casilla.', x, y, th.muted, ui.fontSm, w); y = y + 24
     end
@@ -558,6 +575,7 @@ local function drawWarningsTab(x, y, w)
         ui.rect(x, y, 3, hgt, col, 1)
         ui.text(wn[2], x + 12, y + 5, th.text, ui.fontSm, w - 18)
         if hov and wn[3] and ui.state.pressed then
+            Editor.setPlane('front')              -- (las entidades solo están delante)
             E.layer, E.tool.entities, E.selected = 'entities', 'select', wn[3]
             E.rightTab = 'sel'
             Editor.centerOn(wn[3].col, wn[3].row)
@@ -612,11 +630,12 @@ local function drawStatus()
     local sw, sh = love.graphics.getDimensions()
     ui.rect(0, sh - STATUS, sw, STATUS, th.panel, 0)
     ui.rect(0, sh - STATUS, sw, 1, th.border, 0)
-    local parts = { layerDef(E.layer).label .. ' › ' .. TOOLS[E.tool[E.layer]].label }
+    local bg = E.plane == 'bg'
+    local parts = { (bg and 'FONDO › ' or '') .. layerDef(E.layer).label .. ' › ' .. TOOLS[E.tool[E.layer]].label }
     if E.hover then
         parts[#parts+1] = string.format('col %d, fila %d', E.hover.c, E.hover.r)
-        local raw = E.model:get(E.hover.c, E.hover.r)
-        if raw then parts[#parts+1] = TT.get(Codec.id(raw)).label end
+        local raw = bg and E.model:getBg(E.hover.c, E.hover.r) or E.model:get(E.hover.c, E.hover.r)
+        if raw then parts[#parts+1] = (bg and raw == 0) and 'vacío (fondo)' or TT.get(Codec.id(raw)).label end
     end
     parts[#parts+1] = string.format('%d×%d', E.model.width, E.model.height)
     parts[#parts+1] = #E.model.entities .. ' entidades'

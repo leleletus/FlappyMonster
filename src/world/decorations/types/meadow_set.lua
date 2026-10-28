@@ -59,7 +59,7 @@ return {
     static('fallen_log', 'Tronco caído', 'cell', 'fallen_log.png', { layer = 'back' }),
     -- ── Grandes (5-8 casillas: margen de descarte = su alto + 2) ──
     base {
-        name = 'big_oak', label = 'Roble grande', placement = 'cell', layer = 'back', cullMargin = 8,
+        name = 'big_oak', plane = 'bg', label = 'Roble grande', placement = 'cell', layer = 'back', cullMargin = 8,
         editor = { previewScale = 0.14 },
         update = function(d, dt)
             if DecoFx.every(d, 'leaf', dt, 2.5, 6) then DecoFx.leaf(d, (math.random() - 0.5) * 300, -370 + math.random() * 180) end
@@ -72,7 +72,7 @@ return {
         end,
     },
     base {
-        name = 'big_birch', label = 'Abedul', placement = 'cell', layer = 'back', cullMargin = 9,
+        name = 'big_birch', plane = 'bg', label = 'Abedul', placement = 'cell', layer = 'back', cullMargin = 9,
         editor = { previewScale = 0.13 },
         update = function(d, dt)
             if DecoFx.every(d, 'leaf', dt, 3, 7) then DecoFx.leaf(d, (math.random() - 0.5) * 170, -400 + math.random() * 200) end
@@ -85,7 +85,7 @@ return {
         end,
     },
     base {
-        name = 'big_fir', label = 'Abeto', placement = 'cell', layer = 'back', cullMargin = 9,
+        name = 'big_fir', plane = 'bg', label = 'Abeto', placement = 'cell', layer = 'back', cullMargin = 9,
         editor = { previewScale = 0.12 },
         draw = function(d, sx, sy) DecoFx.wave(d, sx, sy, A('big_fir'), nil, 0.35, 0.7) end,
     },

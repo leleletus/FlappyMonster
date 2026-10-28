@@ -25,6 +25,7 @@ sys.path.insert(0, HERE)
 from make_jefe_nieve import write, enc   # noqa: E402
 
 EMPTY, SOLID, BORDER, DROP, FINISH = 0, 1, 4, 10, 11
+TEMPLE = 42                                # sillar del templo (las ruinas del plano de fondo)
 W, H = 48, 15
 Z0, Z1 = 12, 35
 FLOOR = 13
@@ -44,6 +45,21 @@ def build():
     for c in range(2, W):
         for r in range(FLOOR, H): put(c, r, SOLID)
         if Z0 - 2 <= c <= Z1 + 2: put(c, 2, SOLID)           # (el techo del templo)
+    # RUINAS DEL TEMPLO en el PLANO DE FONDO (0.5.87, el usuario; sin colisión, más oscuras y con la sombra de lo de
+    # delante): columnas con su dintel bajo el techo, dos arcos entre ellas y un muro bajo derrumbado
+    bg = [[EMPTY] * W for _ in range(H)]
+
+    def put_bg(c, r, v): bg[r - 1][c - 1] = enc(v)
+
+    COLS = (15, 20, 28, 33)
+    for c in COLS:
+        for r in range(3, FLOOR): put_bg(c, r, TEMPLE)
+    for c in range(Z0, Z1 + 1): put_bg(c, 3, TEMPLE)                       # (el dintel, pegado al techo)
+    for a, b in ((15, 20), (28, 33)):                                       # (arcos: bajan desde el dintel)
+        for c in range(a + 1, b): put_bg(c, 4, TEMPLE)
+        put_bg(a + 1, 5, TEMPLE); put_bg(b - 1, 5, TEMPLE)
+    for c, h in ((22, 2), (23, 3), (24, 1), (25, 2), (26, 1)):              # (muro bajo derrumbado, detrás del centro)
+        for r in range(FLOOR - h, FLOOR): put_bg(c, r, TEMPLE)
     for c in list(range(Z0, Z0 + 3)) + list(range(Z1 - 2, Z1 + 1)): put(c, SIDE_ROW, DROP)
     for c in range(22, 27): put(c, MID_ROW, DROP)
     for r in (10, 11, 12): put(44, r, FINISH)
@@ -56,7 +72,16 @@ def build():
     return {
         'name': 'Jefe: Escarabajo Rinoceronte Gigante', 'name_en': 'Boss: Giant Rhino Beetle',
         'width': W, 'height': H, 'playerStart': [4, 12],
-        'tiles': t, 'entities': ents, 'foliage': [], 'vents': [],
+        'tiles': t, 'bgTiles': bg, 'entities': ents, 'vents': [],
+        # ruinas DELANTE (sin estorbar: junto a las paredes y bajo las plataformas de los lados) y DETRÁS (plane 'bg')
+        'foliage': [
+            {'type': 'stone_brazier', 'col': Z0 + 1, 'row': FLOOR - 1}, {'type': 'stone_brazier', 'col': Z1 - 1, 'row': FLOOR - 1},
+            {'type': 'fallen_block', 'col': 21, 'row': FLOOR - 1}, {'type': 'broken_pillar', 'col': 27, 'row': FLOOR - 1},
+            {'type': 'stone_idol', 'col': 25, 'row': FLOOR - 3, 'plane': 'bg'},          # (sobre el muro derrumbado)
+            {'type': 'liana_long', 'col': 17, 'row': 4, 'sub': 1, 'plane': 'bg'}, {'type': 'liana_mid', 'col': 31, 'row': 4, 'sub': 2, 'plane': 'bg'},
+            {'type': 'hanging_moss', 'col': 22, 'row': 4, 'plane': 'bg'}, {'type': 'flower_vine', 'col': 26, 'row': 4, 'plane': 'bg'},
+            {'type': 'jungle_fern', 'col': 18, 'row': FLOOR - 1, 'plane': 'bg'}, {'type': 'roots', 'col': 30, 'row': FLOOR - 1, 'plane': 'bg'},
+        ],
         'bossZones': [{'id': 1, 'col': Z0, 'row': 3, 'w': Z1 - Z0 + 1, 'h': 10, 'music': 'templo'}],
         'background': 'jungle', 'time': 'day',
     }

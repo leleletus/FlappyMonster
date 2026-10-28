@@ -17,6 +17,7 @@ local AutoScroll = require 'src/world/systems/AutoScroll'
 local Floods     = require 'src/world/systems/Floods'
 local PointAreas = require 'src/world/systems/PointAreas'
 local SubTiles   = require 'src/world/level/SubTiles'
+local BackPlane  = require 'src/world/level/BackPlane'
 local SpikeSkins = require 'src/world/level/SpikeSkins'
 local WaterSurface = require 'src/fx/WaterSurface'
 
@@ -191,6 +192,13 @@ function Level.fromData(lvl, difficulty)
         end
     end
     self.foliage = self.decorations   -- alias de compatibilidad
+    -- El PLANO DE FONDO (src/world/level/BackPlane.lua): sus bloques (`bgTiles`) y las decoraciones que van en él (se
+    -- siguen animando con las demás, pero se dibujan allí)
+    BackPlane.build(self, lvl)
+    self.bgDecorations = {}
+    for _, d in ipairs(self.decorations) do
+        if BackPlane.isBg(d) then self.bgDecorations[#self.bgDecorations + 1] = d end
+    end
     -- Zonas de jefe (src/world/systems/BossZones.lua)
     self.bossZones = BossZones.build(lvl.bossZones, lvl.openTop == true)
     self.event     = lvl.event == true                 -- (nivel de EVENTO: el Mega Mashup; Juego Libre lo destaca; la ayuda)

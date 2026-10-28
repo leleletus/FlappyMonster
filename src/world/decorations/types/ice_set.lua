@@ -124,7 +124,7 @@ return {
     },
     -- ── Abetos grandes (margen de descarte = su alto + 2): la nieve cae del borde de una rama al azar ──
     base {
-        name = 'snowy_fir', label = 'Abeto nevado', placement = 'cell', layer = 'back', cullMargin = 9,
+        name = 'snowy_fir', plane = 'bg', label = 'Abeto nevado', placement = 'cell', layer = 'back', cullMargin = 9,
         editor = { previewScale = 0.12 },
         update = function(d, dt)
             if DecoFx.every(d, 'snow', dt, 2, 5) then
@@ -140,7 +140,7 @@ return {
         end,
     },
     base {
-        name = 'snowy_fir_small', label = 'Abeto nevado pequeño', placement = 'cell', layer = 'back', cullMargin = 6,
+        name = 'snowy_fir_small', plane = 'bg', label = 'Abeto nevado pequeño', placement = 'cell', layer = 'back', cullMargin = 6,
         editor = { previewScale = 0.23 },
         update = function(d, dt)
             if DecoFx.every(d, 'snow', dt, 3, 7) then

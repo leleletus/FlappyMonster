@@ -52,7 +52,7 @@ end
 -- ── De make_big_trees.py ──
 -- Seta GIGANTE: el sombrero (de ~200 a ~300 px sobre el suelo) brilla y alumbra; caen esporas de debajo
 local function giantMushroom(name, label, col)
-    return base { name = name, label = label, placement = 'cell', layer = 'back', cullMargin = 7,
+    return base { name = name, label = label, placement = 'cell', layer = 'back', cullMargin = 7, plane = 'bg',
         light = { r = 230, color = col, a = 0.3, dy = -240, pulse = 1.4 },
         editor = { previewScale = 0.18 },
         update = function(d, dt)

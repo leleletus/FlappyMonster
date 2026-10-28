@@ -10,6 +10,7 @@ local DT       = require('src/world/decorations/Decorations').types
 local BossZones = require 'src/world/systems/BossZones'
 local AutoScroll = require 'src/world/systems/AutoScroll'
 local SubTiles  = require 'src/world/level/SubTiles'
+local BackPlane = require 'src/world/level/BackPlane'
 
 local Codec = Tiles.codec
 local ET    = Entities.types
@@ -26,6 +27,16 @@ end
 Model.deepcopy = deepcopy
 
 -- ── Crear / cargar ────────────────────────────────────────────────────────────
+-- Rejilla vacía (el plano de fondo sin bloques)
+function Model.emptyGrid(w, h)
+    local g = {}
+    for r = 1, h do
+        g[r] = {}
+        for c = 1, w do g[r][c] = 0 end
+    end
+    return g
+end
+
 function Model.new(w, h, name)
     local m = setmetatable({}, Model)
     m.name, m.width, m.height = name or 'nuevo', w, h
@@ -37,6 +48,7 @@ function Model.new(w, h, name)
             m.tiles[r][c] = edge and TILE_BORDER or TILE_EMPTY
         end
     end
+    m.bgTiles = Model.emptyGrid(w, h)
     m.playerStart = { 3, h - 2 }
     m.entities, m.foliage, m.vents, m.subtiles, m.links, m.blockLinks = {}, {}, {}, {}, {}, {}
     m.bossZones = {}
@@ -57,6 +69,15 @@ function Model.fromData(lvl, path)
         m.tiles[r] = {}
         for c = 1, m.width do
             m.tiles[r][c] = math.floor(tonumber(lvl.tiles[r] and lvl.tiles[r][c]) or 0)
+        end
+    end
+    -- El PLANO DE FONDO (src/world/level/BackPlane.lua): siempre una rejilla en el editor; se guarda solo si tiene algo
+    m.bgTiles = Model.emptyGrid(m.width, m.height)
+    if type(lvl.bgTiles) == 'table' then
+        for r = 1, m.height do
+            for c = 1, m.width do
+                m.bgTiles[r][c] = math.floor(tonumber(lvl.bgTiles[r] and lvl.bgTiles[r][c]) or 0)
+            end
         end
     end
     m.playerStart = deepcopy(lvl.playerStart or { 2, 2 })
@@ -142,7 +163,7 @@ function Model:toData()
     end
     return {
         name = self.name, name_en = self.name_en, parTime = self.parTime, width = self.width, height = self.height,
-        playerStart = self.playerStart, tiles = self.tiles,
+        playerStart = self.playerStart, tiles = self.tiles, bgTiles = self:hasBgTiles() and self.bgTiles or nil,
         entities = ents, foliage = decos, vents = self.vents, bossZones = zones, subtiles = subs, links = self.links or {}, blockLinks = self.blockLinks or {},
         autoScroll = AutoScroll.serialize(self.autoScroll),
         modes = self.modes, matchTime = self.matchTime, music = self.music, snow = self.snow, peaceful = self.peaceful, dark = self.dark, openTop = self.openTop, echo = self.echo, light = self.light, spikeSkin = self.spikeSkin,
@@ -180,6 +201,12 @@ function Model:encode()
     local rows = {}
     for r = 1, d.height do rows[r] = '    ' .. enc(d.tiles[r]) end
     out[#out+1] = '  "tiles": [\n' .. table.concat(rows, ',\n') .. '\n  ],'
+    -- (el plano de fondo, con el mismo formato: solo si tiene algún bloque)
+    if d.bgTiles then
+        local brows = {}
+        for r = 1, d.height do brows[r] = '    ' .. enc(d.bgTiles[r]) end
+        out[#out+1] = '  "bgTiles": [\n' .. table.concat(brows, ',\n') .. '\n  ],'
+    end
     local function list(name, items, last)
         if #items == 0 then line('"' .. name .. '": []', last); return end
         local l = {}
@@ -239,7 +266,7 @@ end
 
 -- ── Copias (deshacer) ─────────────────────────────────────────────────────────
 function Model:snapshot()
-    return deepcopy({ name=self.name, name_en=self.name_en, parTime=self.parTime, width=self.width, height=self.height, tiles=self.tiles,
+    return deepcopy({ name=self.name, name_en=self.name_en, parTime=self.parTime, width=self.width, height=self.height, tiles=self.tiles, bgTiles=self.bgTiles,
                       playerStart=self.playerStart, entities=self.entities,
                       foliage=self.foliage, vents=self.vents, bossZones=self.bossZones, subtiles=self.subtiles, links=self.links, blockLinks=self.blockLinks,
                       autoScroll=self.autoScroll, modes=self.modes, matchTime=self.matchTime, music=self.music, snow=self.snow, peaceful=self.peaceful, dark=self.dark, openTop=self.openTop, echo=self.echo, light=self.light, spikeSkin=self.spikeSkin,
@@ -262,6 +289,34 @@ end
 -- ── Celdas ────────────────────────────────────────────────────────────────────
 function Model:inBounds(c, r) return c >= 1 and r >= 1 and c <= self.width and r <= self.height end
 function Model:get(c, r) return self:inBounds(c, r) and self.tiles[r][c] or nil end
+
+-- ── El plano de fondo (bgTiles: solo bloques, sin agua ni pinchos) ────────────
+function Model:hasBgTiles()
+    for _, row in ipairs(self.bgTiles or {}) do
+        for _, v in ipairs(row) do if v ~= 0 then return true end end
+    end
+    return false
+end
+function Model:getBg(c, r) return self:inBounds(c, r) and self.bgTiles[r][c] or nil end
+
+-- ¿Por qué no puede ir el bloque `id` al plano? (nil = sí puede; TILE_EMPTY = quitar, siempre)
+function Model:bgRefuses(id)
+    if id == TILE_EMPTY then return nil end
+    local def = Tiles.get(id)
+    if BackPlane.allows(def) then return nil end
+    return (def and def.label or tostring(id)) .. ': no puede ir en el plano de fondo (solo bloques que se ven sólidos)'
+end
+
+-- Pone el bloque `id` en el plano (TILE_EMPTY = quitarlo). Devuelve si cambió y, si no se puede, el motivo
+function Model:setBg(c, r, id)
+    if not self:inBounds(c, r) then return false end
+    local why = self:bgRefuses(id)
+    if why then return false, why end
+    local raw = (id == TILE_EMPTY) and 0 or Codec.encode(id, false, nil)
+    if self.bgTiles[r][c] == raw then return false end
+    self.bgTiles[r][c] = raw
+    return true
+end
 
 function Model:set(c, r, raw)
     if not self:inBounds(c, r) or self.tiles[r][c] == raw then return false end
@@ -301,9 +356,10 @@ function Model:setSpike(c, r, sub, present, dir)
     return self:set(c, r, Codec.encode(id, wl, sp))
 end
 
--- Relleno por inundación: todas las celdas conectadas con la misma "clave"
-function Model:flood(c, r, keyFn, apply)
-    local start = self:get(c, r); if not start then return 0 end
+-- Relleno por inundación: todas las celdas conectadas con la misma "clave" (`grid`: otra rejilla, la del plano de fondo)
+function Model:flood(c, r, keyFn, apply, grid)
+    grid = grid or self.tiles
+    local start = self:inBounds(c, r) and grid[r][c]; if not start then return 0 end
     local key = keyFn(start)
     local seen, q, n = {}, { { c, r } }, 0
     seen[r * 100000 + c] = true
@@ -314,7 +370,7 @@ function Model:flood(c, r, keyFn, apply)
         for _, d in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
             local nc, nr = cc + d[1], rr + d[2]
             local k = nr * 100000 + nc
-            if not seen[k] and self:inBounds(nc, nr) and keyFn(self.tiles[nr][nc]) == key then
+            if not seen[k] and self:inBounds(nc, nr) and keyFn(grid[nr][nc]) == key then
                 seen[k] = true; q[#q+1] = { nc, nr }
             end
         end
@@ -329,7 +385,11 @@ function Model:resize(w, h)
         t[r] = {}
         for c = 1, w do t[r][c] = (self.tiles[r] and self.tiles[r][c]) or TILE_EMPTY end
     end
-    self.tiles, self.width, self.height = t, w, h
+    local bg = Model.emptyGrid(w, h)
+    for r = 1, math.min(h, #(self.bgTiles or {})) do
+        for c = 1, w do bg[r][c] = self.bgTiles[r][c] or 0 end
+    end
+    self.tiles, self.bgTiles, self.width, self.height = t, bg, w, h
     local function keep(list) local o = {} for _, x in ipairs(list) do if x.col <= w and x.row <= h then o[#o+1] = x end end return o end
     self.entities, self.foliage, self.vents = keep(self.entities), keep(self.foliage), keep(self.vents)
     self.subtiles = keep(self.subtiles or {})
@@ -483,6 +543,15 @@ function Model:findObject(list, c, r, sub)
     for i = #list, 1, -1 do
         local o = list[i]
         if o.col == c and o.row == r and (sub == nil or o.sub == sub) then return o, i end
+    end
+end
+
+-- Decoración en la celda, solo de ese plano ('bg' = el plano de fondo; nil = delante). Devuelve también su índice
+function Model:decoAt(c, r, sub, plane)
+    local bg = plane == 'bg'
+    for i = #self.foliage, 1, -1 do
+        local o = self.foliage[i]
+        if o.col == c and o.row == r and (sub == nil or o.sub == sub) and (o.plane == 'bg') == bg then return o, i end
     end
 end
 

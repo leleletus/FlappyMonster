@@ -64,7 +64,7 @@ end
 -- Árbol GRANDE de dos capas del mismo tamaño: tronco quieto y copa que se mece; suelta hojas de la copa
 -- (leafY = alto de la copa en px desde el ancla, leafX = ancho)
 local function bigTree(name, label, preview, cull, amp, leafX, leafY0, leafY1)
-    return base { name = name, label = label, placement = 'cell', layer = 'back', cullMargin = cull,
+    return base { name = name, label = label, placement = 'cell', layer = 'back', cullMargin = cull, plane = 'bg',
         editor = { previewScale = preview },
         update = function(d, dt)
             if DecoFx.every(d, 'leaf', dt, 2.5, 6) then

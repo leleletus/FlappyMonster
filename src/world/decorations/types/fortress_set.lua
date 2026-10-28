@@ -28,7 +28,7 @@ end
 
 return {
     base {
-        name = 'old_tree', label = 'Árbol viejo', placement = 'cell', layer = 'back', cullMargin = 8,
+        name = 'old_tree', plane = 'bg', label = 'Árbol viejo', placement = 'cell', layer = 'back', cullMargin = 8,
         editor = { previewScale = 0.16 },
         update = function(d, dt)
             -- (copa: de ~340 a ~150 px sobre el suelo)
@@ -42,7 +42,7 @@ return {
         end,
     },
     base {
-        name = 'cypress', label = 'Ciprés', placement = 'cell', layer = 'back', cullMargin = 8,
+        name = 'cypress', plane = 'bg', label = 'Ciprés', placement = 'cell', layer = 'back', cullMargin = 8,
         editor = { previewScale = 0.14 },
         draw = function(d, sx, sy) DecoFx.wave(d, sx, sy, A('cypress'), nil, 0.4, 0.7) end,
     },

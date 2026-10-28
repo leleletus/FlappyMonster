@@ -38,6 +38,12 @@ class Level:
         self.entities, self.foliage, self.vents = [], [], []
         self.boss_zones, self.auto_scroll = [], None
         self.extra = {}       # otras claves del JSON (links, snow, background, name_en...)
+        self.bg = None        # el PLANO DE FONDO (bgTiles; src/world/level/BackPlane.lua): None = sin plano
+
+    def set_bg(self, c, r, v):
+        """Un bloque del plano de fondo (sin colisión: solo dibujo, más oscuro)"""
+        if self.bg is None: self.bg = [[EMPTY] * self.w for _ in range(self.h)]
+        if self.inb(c, r): self.bg[r - 1][c - 1] = v
 
     # ── tiles ────────────────────────────────────────────────────────────
     def inb(self, c, r):
@@ -139,6 +145,10 @@ class Level:
                  '  "tiles": [']
         lines += ['    %s%s' % (j(row), ',' if i < self.h - 1 else '') for i, row in enumerate(self.g)]
         lines.append('  ],')
+        if self.bg is not None and any(v for row in self.bg for v in row):
+            lines.append('  "bgTiles": [')
+            lines += ['    %s%s' % (j(row), ',' if i < self.h - 1 else '') for i, row in enumerate(self.bg)]
+            lines.append('  ],')
         lines.append('  "entities": [')
         lines += ['    %s%s' % (j(e), ',' if i < len(self.entities) - 1 else '')
                   for i, e in enumerate(self.entities)]

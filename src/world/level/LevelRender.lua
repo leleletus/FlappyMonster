@@ -7,6 +7,7 @@ local PointAreas = require 'src/world/systems/PointAreas'
 local SubTiles   = require 'src/world/level/SubTiles'
 local SpikeSkins = require 'src/world/level/SpikeSkins'
 local WaterSurface = require 'src/fx/WaterSurface'
+local BackPlane    = require 'src/world/level/BackPlane'
 
 return function(Level, P)
 local TileTypes, DIR_UP, DIR_DOWN, DIR_LEFT, DIR_RIGHT, decTile = P.TileTypes, P.DIR_UP, P.DIR_DOWN, P.DIR_LEFT, P.DIR_RIGHT, P.decTile
@@ -42,7 +43,9 @@ end
 
 local SUB_OFF = { { 0, 0 }, { TILE_PX / 2, 0 }, { 0, TILE_PX / 2 }, { TILE_PX / 2, TILE_PX / 2 } }
 local RENDER_CTX = {}
-function Level:render(camX, camY)
+-- (`noPlane`: el plano de fondo ya se dibujó antes — los estados de nivel lo dibujan detrás de todo: Level:renderBackPlane)
+function Level:render(camX, camY, noPlane)
+    if not noPlane then self:renderBackPlane(camX, camY) end
     local t = love.timer.getTime()
     HALF_PX = TILE_PX / 2
 
@@ -270,7 +273,7 @@ end
 -- enemigos) o 'back' (detrás de ellos, justo después del nivel).
 function Level:renderDecorations(camX, camY, layer)
     for _, d in ipairs(self.decorations) do
-        if d.layer == layer then
+        if d.layer == layer and not (d.plane == 'bg' or d.def.plane == 'bg') then
             local sx = math.floor(d.x - camX)
             local sy = math.floor(d.y - camY)
             local m  = TILE_PX * d.def.cullMargin
@@ -281,6 +284,9 @@ function Level:renderDecorations(camX, camY, layer)
     end
     love.graphics.setColor(1, 1, 1, 1)
 end
+
+-- El plano de fondo (src/world/level/BackPlane.lua): después del cielo, antes de todo lo demás
+function Level:renderBackPlane(camX, camY) BackPlane.render(self, camX, camY) end
 
 function Level:renderFoliage(camX, camY)     self:renderDecorations(camX, camY, 'front') end
 function Level:renderFoliageBack(camX, camY) self:renderDecorations(camX, camY, 'back')  end
