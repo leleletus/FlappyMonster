@@ -618,6 +618,30 @@ the old level tune in the final boss, Verity's hook).
   REJECTED (0.5.44): the user preferred the previous version, which is back in the game; this one is kept in
   `FlappyMonster_originals/music/versiones/polilla_v3/`.
 
+## El Templo (`tools/music/templo.py`, boss track `templo`)
+
+The jungle boss (the Giant Rhino Beetle, a prototype for a future jungle island). Verified by numbers only.
+- Reference (the user): "Temple Tumble", the section 0:45-1:08 — "its main melody must sound, maybe not literal",
+  with its slap bass, tropical drums and jungle feel. No MIDI existed: transcribed from the user's stems
+  (`~/Descargas/Temple Tumble/`). Measured: 169.97 BPM, F minor; chords D♭ D♭ E♭ E♭ B♭m B♭m Fm Fm D♭ D♭ E♭ E♭ B♭m Cm
+  D♭ E♭; drums kick 1·7·9·14, congas 3·13, claps 7·10, offbeat hats.
+- THE RIFF was corrected BY THE USER with a throwaway comparator (an HTML piano roll over the Other stem's spectrogram
+  that plays original / Other / MIDI and exports the marks; `FlappyMonster_pruebas/musica/escarabajo/comparador.html`):
+  C C C♯ D♯ G♯ G♯ on 16ths 0·2·5·8·11·14 (2+3+3+3+3+2); over Fm: E♭ E♭ G A♭ C C. Lessons: an automatic transcription
+  was "the base right but notes extra/missing"; a beat grid fitted to the riff's own attacks (not the drums) fixed the
+  drift; the user's own ear fixed the rest. That tool is the way to transcribe the next reference.
+- v1 (riff from bar 1, own melody on a saw): the user — the song must NOT start with the riff (it goes in the middle);
+  the melody "not enjoyable nor harmonious with the riff"; try NEW instruments from soundfonts, still in the house
+  style → v2: `gm.py` + GeneralUser GS (marimba, kalimba, pan flute, ocarina, shakuhachi, taiko, latin percussion),
+  form intro · theme · bridge · RIFF (0:45) · drum break · build · climax · turn. The user: the instrumentation, riff,
+  effects and structure "very well done"; the three v2 melodies (canto, grito, aventura: fast lines in F minor, checked
+  free of clashes against the riff) "forced, as if from another song".
+- v3: a melody in Temple Tumble's OWN style (measured: outside the riff the original has no tune — a syncopated
+  brass/organ CHORD line, F major with B♭m / D♭ / E♭ borrowed, top voice by steps around C): "horrible".
+- v4 = APPROVED (2026-10-28): v2 WITHOUT melody (the theme and the climax are drums, slap bass, kalimba, pad; the riff
+  also runs under the climax). REJECTED: every lead melody tried over this arrangement (4 attempts) — the riff is the
+  melody of this piece; do not add one back without the user asking.
+
 ## The slap bass in every boss theme (0.5.44)
 
 - The user: "re-render every boss theme (except Resaca and La Polilla) with this bass I love so much instead of their

@@ -322,6 +322,7 @@ PATHS = {
     'final_fall': '../../../FlappyMonster_originals/music/versiones/final_fall_v4/final_fall',
     'resaca': 'bosses/resaca',                  # (resaca.py: el jefe de la costa, sobre el bajo de "Final Fall"; un solo archivo)
     'polilla': 'bosses/polilla',                # (polilla.py: el Saltarín Gigante, jefe de las cuevas; intro + bucle)
+    'templo': 'bosses/templo',                  # (templo.py: el Escarabajo Rinoceronte Gigante, jefe de la jungla; intro + bucle)
     'groove': 'bosses/groove',                  # (slap_boss.py: El Groove, el jefe secreto; intro + bucle)
     'crab_mashup': 'bosses/crab_mashup',        # (crab_mashup.py: los cuatro cangrejos, evento sincronizado; intro + bucle)
     'costa_groove': 'worlds/costa/costa_groove',   # (groove_island.py: el nivel del islote del Cangrejo Groove; intro + bucle)

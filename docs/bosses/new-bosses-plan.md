@@ -69,3 +69,14 @@ giant by touching a mirror shard ("La Furia del Espejo").
 - [x] (0.5.45) A third new boss born from its music (`groove`): [groovecrab](groovecrab.md), level `isla_del_groove`,
       a secret map node that appears after beating the Mirror. No shard; the secret collectible (section 3) is still open.
 - [ ] The user's verdict on the fight.
+
+### 5. The jungle (future island) — not in the original plan
+The user (2026-10-28): a future jungle / temple island (weights, crates, carryables + new enemies and mechanics). Its
+boss, chosen by the user: the **Giant Rhino Beetle** (not a crab: "there are too many crabs already"), the giant of a
+new jungle-only enemy, the Rhino Beetle. Fight proposed and liked by the user: horn charge into the temple walls (stones
+fall), horn toss of stone blocks / crates, wing-case buzz leap + slam with floor shockwaves; the temple's great SCALE
+flips it onto its back = the window to hit it. It will need more mirror shards (the user: the story will grow).
+- [x] (0.5.73) Its theme `templo` ([music-history](../audio/music-history.md#el-templo-toolsmusictemplopy-boss-track-templo)).
+- [ ] Sprites, animations and attack sprites (mockups / GIFs first, in `FlappyMonster_pruebas/escarabajo/`).
+- [ ] The entity, its fight and its arena (then the island, its levels and the shard count).
+
