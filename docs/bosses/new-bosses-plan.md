@@ -77,6 +77,10 @@ new jungle-only enemy, the Rhino Beetle. Fight proposed and liked by the user: h
 fall), horn toss of stone blocks / crates, wing-case buzz leap + slam with floor shockwaves; the temple's great SCALE
 flips it onto its back = the window to hit it. It will need more mirror shards (the user: the story will grow).
 - [x] (0.5.73) Its theme `templo` ([music-history](../audio/music-history.md#el-templo-toolsmusictemplopy-boss-track-templo)).
-- [ ] Sprites, animations and attack sprites (mockups / GIFs first, in `FlappyMonster_pruebas/escarabajo/`).
+- [ ] Sprites, animations and attack sprites. First pass (2026-10-28): `tools/art/enemies/make_beetle.py` (previews
+      only, nothing in `assets/`) → `FlappyMonster_pruebas/escarabajo/`: 22x20 frames facing right — three designs of the
+      small one (A Bronce, B Zafiro, C Castaña: walk, charge, on its back), the giant = the same sheet ×12 with the gold
+      rune of the Mirror's Fury + toss, wings, landing; temple block, debris, floor wave, dust; level / arena mockups and
+      GIFs. Waiting for the user's pick and verdict.
 - [ ] The entity, its fight and its arena (then the island, its levels and the shard count).
 
