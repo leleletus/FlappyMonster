@@ -38,7 +38,8 @@ are never edited by hand.
 | know what is saved | [architecture/save-data](architecture/save-data.md) |
 | see what is pending (review of 2026-10-20) | [pendientes](pendientes.md) |
 | the plan for the two new bosses (Giant Pufferfish, Giant Hopper) and the secret crab bosses | [bosses/new-bosses-plan](bosses/new-bosses-plan.md) |
-| the script of the four-crab event boss rush with adaptive music (Free Play, not built yet) | [bosses/crab-mashup](bosses/crab-mashup.md) |
+| the script of the four-crab event boss rush with adaptive music (Free Play) | [bosses/crab-mashup](bosses/crab-mashup.md) |
+| the plan for the new Gust enemy, Scale, pushable Box and Seed (design stage) | [entities/new-props-plan](entities/new-props-plan.md) |
 
 ## All pages
 
