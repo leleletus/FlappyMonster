@@ -2,7 +2,8 @@
 # LA BALANZA y LA CAJA (mecanismos nuevos, aprobados por el usuario en 0.5.67 — diseño en curso).
 #   BALANZA: dos platillos colgados de una cuerda que pasa por una polea: el peso baja uno y sube el otro; un ground
 #   pound en uno lanza lo que haya en el otro. Piezas (1 casilla = 16 px de arte, ×4 en el juego):
-#     platillo 48x8 (3 casillas) · cuerda 4x8 (se repite en vertical) · polea 16x16 (2 cuadros: gira)
+#     platillo 48x8 (3 casillas) · cuerda 4x8 (se repite en vertical) · polea 16x16 (2 cuadros: gira) · polea de las
+#     esquinas 10x12 (2 cuadros; `--corner` escribe solo esas)
 #   CAJA: se empuja andando contra ella, se sube encima y pesa en la balanza. 16x16 + 4 trozos de 8x8 (al romperse).
 # Un aspecto por isla: pradera madera · costa madera de deriva y cabos · fortaleza hierro con remaches · nieve hielo ·
 # cueva piedra con un cristal que brilla · volcán basalto con grietas de lava.
@@ -122,6 +123,29 @@ def pulley(isle):
     return out
 
 
+# ── La POLEA DE LA ESQUINA (10x12, 2 cuadros: gira con la grande; 0.5.87, el usuario: "en cada esquina donde la cuerda
+# se dobla no hay nada que la agarre") — la misma rueda, más pequeña, con su horquilla; `pal` = la paleta de la isla
+def corner(pal, mossy=False):
+    out = Image.new('RGBA', (20, 12))
+    for f in range(2):
+        g = G(10, 12)
+        cx, cy = 4.5, 7.0
+        for y in range(12):
+            for x in range(10):
+                d = ((x - cx) ** 2 + (y - cy) ** 2) ** 0.5
+                if d <= 4.6:
+                    g.put(x, y, 'o' if d > 3.7 else ('h' if (x - cx) + (y - cy) < -2 else ('s' if (x - cx) + (y - cy) > 2 else 'b')))
+        if f == 0:
+            g.rect(4, 4, 2, 6, 'x'); g.rect(2, 6, 6, 2, 'x')
+        else:
+            for k in range(-2, 3): g.put(int(cx + k), int(cy + k), 'x'); g.put(int(cx + k), int(cy - k), 'x')
+        g.rect(4, 6, 2, 2, 'R')                                                              # el eje
+        g.rect(3, 0, 4, 1, 'R'); g.rect(4, 1, 2, 3, 'r' if mossy else 'R')                  # la horquilla
+        if mossy: g.put(2, 10, 'y'); g.put(7, 10, 'y')
+        out.paste(g.img(pal), (f * 10, 0))
+    return out
+
+
 # ── La CAJA (16x16) y sus 4 trozos ──
 def box(isle):
     g = G(16, 16)
@@ -230,6 +254,12 @@ def gif(isle, p, r, pu, bx, path):
 
 
 if __name__ == '__main__':
+    if '--corner' in sys.argv:                             # (solo las poleas de las esquinas: no rehace lo demás)
+        os.makedirs(OUT_SCALE, exist_ok=True)
+        for isle, pal in ISLES.items():
+            corner(pal).save(os.path.join(OUT_SCALE, f'{isle}-corner-Sheet.png'))
+        print('  ' + OUT_SCALE + '/<isla>-corner-Sheet.png')
+        sys.exit(0)
     parts = {}
     for isle in ISLES:
         bx, bits = box(isle)
@@ -239,6 +269,7 @@ if __name__ == '__main__':
         for isle, (p, r, pu, bx, bits) in parts.items():
             p.save(os.path.join(OUT_SCALE, f'{isle}-pan.png')); r.save(os.path.join(OUT_SCALE, f'{isle}-rope.png'))
             pu.save(os.path.join(OUT_SCALE, f'{isle}-pulley-Sheet.png'))
+            corner(ISLES[isle]).save(os.path.join(OUT_SCALE, f'{isle}-corner-Sheet.png'))
             bx.save(os.path.join(OUT_BOX, f'{isle}.png')); bits.save(os.path.join(OUT_BOX, f'{isle}-bits-Sheet.png'))
             sb, sbits = small_box(isle)
             sb.save(os.path.join(OUT_BOX, f'{isle}-small.png')); sbits.save(os.path.join(OUT_BOX, f'{isle}-small-bits-Sheet.png'))

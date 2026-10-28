@@ -54,7 +54,7 @@ local function art(isle)
         local SpriteStrip = require 'src/fx/SpriteStrip'
         local b = 'assets/images/mechanisms/scale/' .. isle
         imgs[isle] = { pan = SpriteStrip.load(b .. '-pan.png', 48), rope = SpriteStrip.load(b .. '-rope.png', 4),
-                       pulley = SpriteStrip.load(b .. '-pulley-Sheet.png', 16) }
+                       pulley = SpriteStrip.load(b .. '-pulley-Sheet.png', 16), corner = SpriteStrip.load(b .. '-corner-Sheet.png', 10) }
     end
     return imgs[isle]
 end
@@ -384,6 +384,13 @@ local function drawScale(a, x, y, p, d, spin, camX, camY)
     local px, py = math.floor(x - camX), math.floor(y - camY)
     local ropeY = py + 6 * S                            -- (de donde salen las cuerdas: el eje de la polea)
     love.graphics.setColor(1, 1, 1, 1)
+    -- las POLEAS DE LAS ESQUINAS (0.5.87, el usuario: la cuerda se doblaba en el aire sin nada que la sujetara): una rueda
+    -- pequeña en cada codo, por dentro, y la cuerda la rodea por arriba y por fuera (se dibuja después, encima del canto)
+    local fr = 1 + math.floor(math.abs(spin or 0) / 24) % 2
+    for _, c in ipairs({ { lx, 1 }, { rx, -1 } }) do
+        local wx, wy = math.floor(c[1] - camX) + c[2] * 4 * S, ropeY + 4 * S          -- (centro de la rueda)
+        a.corner:draw(fr, wx + S / 2, wy - S, 0, S, S)                                -- (la rueda está 1 px bajo el centro del cuadro)
+    end
     -- la cuerda de arriba, de un lado al otro por encima de la polea (la cuerda tumbada)
     for xx = math.floor(lx - camX), math.floor(rx - camX) - 1, a.rope.h * S do
         a.rope:draw(1, xx + a.rope.h * S / 2, ropeY, math.pi / 2, S, S)

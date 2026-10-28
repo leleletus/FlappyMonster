@@ -73,6 +73,10 @@ Designs and the user's verdicts: [new-props-plan](new-props-plan.md).
   750 px/s — about 3 tiles —: a big box from high up, something thrown, a stack) slams it down and fires the other pan
   like a ground pound, with power `Scale.impactPower(weightIn, vy, weightOther)` = weight × speed ÷ 2200 ÷ √(weight on
   the other pan), capped at 1.6; under 0.6 it only tips the scale as before (a player's own pound is `onPound`).
+  Art per island: `mechanisms/scale/<isla>-pan.png`, `-rope.png`, `-pulley-Sheet.png` and (0.5.87, the user: the rope
+  bent in mid-air with nothing holding it) `-corner-Sheet.png`, a small pulley with its fork at each bend, inside the
+  corner, turning with the big one; the rope wraps it over the top and the outer side (`tools/art/world/make_scale_box.py
+  --corner`; the jungle's from `make_jungle_skins.py`).
   BOSSES (0.5.76): a boss weighs nothing, except one with `ridesScale`, which weighs its `weight` (0.5.84, the user: the
   Giant Rhino Beetle standing on a pan did not lower it; it weighs 3) and is moved by the pan only as a rider. Pans are
   one-way bodies: bosses moving with `Snow:move` (as entities already did) pass through them SIDEWAYS — the beetle's

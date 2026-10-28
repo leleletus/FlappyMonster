@@ -276,7 +276,8 @@ def scale_jungle():
         g.rect(6, 0, 4, 1, 'R'); g.rect(7, 1, 2, 5, 'r'); g.put(7, 1, 'R')
         out.paste(g.img(STONE_PAL), (f * 16, 0))
     return {'mechanisms/scale/jungla-pan.png': pan, 'mechanisms/scale/jungla-rope.png': rope,
-            'mechanisms/scale/jungla-pulley-Sheet.png': out}
+            'mechanisms/scale/jungla-pulley-Sheet.png': out,
+            'mechanisms/scale/jungla-corner-Sheet.png': SB.corner(STONE_PAL, mossy=True)}     # (0.5.87)
 
 
 # ══ LA VENTISCA 'jungla' (rachas con hojas y pétalos) y EL GÉISER 'jungla' (manantial turquesa con hojitas) ═══════
