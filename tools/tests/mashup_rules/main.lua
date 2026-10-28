@@ -22,7 +22,9 @@
 --   GAME=1     EL JUEGO DE VERDAD (AdventureState, con dibujo y música): el jugador empieza en la primera arena; a
 --              cada cangrejo, al segundo de pelear, se le baja su vida del turno; recorre todo el evento (intro, 4
 --              cangrejos, final, fin, salida) sin errores, con la MÚSICA ADAPTATIVA sonando la pieza del director
---              (Sound.musicPosition) en cada momento; SHOTS=1 guarda capturas de cada fase (mashup_<fase>.png)
+--              (Sound.musicPosition) en cada momento; SHOTS=1 guarda capturas de cada fase (mashup_<fase>.png);
+--              CP=n LOOP=pieza: empieza en ese cangrejo y da una vuelta entera a su bucle A TIEMPO REAL contando las
+--              recolocaciones de la música (saltos que se oyen): tiene que haber 0
 --
 --   tools/tests/run.sh mashup_rules            ·  tools/tests/run.sh mashup_rules GAME=1 [SHOTS=1]
 io.stdout:setvbuf('no')

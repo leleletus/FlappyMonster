@@ -701,6 +701,11 @@ function AdventureState:updateBoss(dt)
     if path then
         Sound.setLevelMusic(Sound.ADAPTIVE)
         if self.player.drownPhase ~= 'drowning' then Sound.followAdaptive(path, pid, pos, nxt) end
+        -- (en un jugador MANDA EL AUDIO: el reloj del director se ajusta a lo que suena — si no, a la mínima pausa del
+        -- juego se separaban, la música se recolocaba y se oía un salto: el usuario, 0.5.65, en el bucle del Groove)
+        local apid, at = Sound.adaptiveTell()
+        local md = self.level.musicDirector
+        if apid and md and apid == md.piece and math.abs(at - md.pos) < 0.5 and md.syncAudio then md:syncAudio(at) end
         return
     end
     -- Música de la pelea (intro + bucle); al terminar vuelve la del nivel

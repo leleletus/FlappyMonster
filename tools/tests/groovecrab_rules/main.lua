@@ -24,8 +24,8 @@
 --              no hay dorada, pisar uno lo pone a girar (y rebotas) DECK_T s y luego se apaga; los dos a la vez → el
 --              BAJÓN: noqueado y vulnerable, platos apagados; él no va a ponerse bajo el otro (baila como siempre)
 --   enfriar    tras el bajón, los platos no se pueden encender DECK_COOL s (0.5.64)
---   ocultos    2ª fase, con la PISTA encendida (la S): los platos y sus plataformas no están (la cuenta del plato
---              encendido se para) y, al acabar, vuelven
+--   ocultos    2ª fase, con la PISTA encendida (la S): los platos y sus plataformas no están (un plato encendido se
+--              APAGA: vuelve apagado — 0.5.65) y, al acabar, vuelven
 --   publico    el público vitorea cuando le da a un jugador y abuchea cuando le das (lo que llega por red)
 --   trepar     (2ª fase: las plataformas son bloques de fase) caerle al trampolín y mantener hacia un lado te deja
 --              en la plataforma de ese lado (a 5 casillas: con el doble salto no se llega)
@@ -490,10 +490,10 @@ function cases.ocultos()
     songAt(boss, barOf('C', 1), 0)
     stepAll(level, es, { pa }, 0.5, function() pa.vx, pa.invT = 0, 9; pa.x = 24 * T end)
     local onC = platCells(level)
-    check('ocultos', n > 0 and on0 == n and onS == 0 and away and not live and math.abs(left - boss.DECK_T) < 1e-6
+    check('ocultos', n > 0 and on0 == n and onS == 0 and away and not live and left == 0 and boss.decks[1].on == 0
         and onC == n and not boss:decksAway(),
-        ('plataformas antes: %d/%d · con la pista: %d (platos fuera=%s, pisables=%s, cuenta parada=%s) · después: %d'):format(
-            on0, n, onS, tostring(away), tostring(live), tostring(math.abs(left - boss.DECK_T) < 1e-6), onC))
+        ('plataformas antes: %d/%d · con la pista: %d (platos fuera=%s, pisables=%s, encendido → apagado y sigue apagado al volver=%s) · después: %d'):format(
+            on0, n, onS, tostring(away), tostring(live), tostring(left == 0 and boss.decks[1].on == 0), onC))
 end
 
 function cases.publico()

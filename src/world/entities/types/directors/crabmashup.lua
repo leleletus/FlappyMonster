@@ -166,6 +166,13 @@ function CM:advance(dt)
     end
 end
 
+-- (un jugador: el audio manda — AdventureState le pasa el punto que suena; sin cruzar el corte pedido ni la vuelta)
+function CM:syncAudio(t)
+    if self.pend and t >= self.pend.at then return end
+    if t < self.pos - 0.25 then return end                        -- (el audio dio la vuelta antes: lo hará el reloj)
+    self.pos = t
+end
+
 -- Para Sound.followAdaptive: mapa, pieza, punto, próximo cambio
 function CM:musicState()
     local pc = piece(self.piece)
@@ -188,7 +195,9 @@ function CM:grooveWhere(off)
     local bi, step = barAt(pc, t)
     local sec, k
     if self.piece == 'groove' then
-        if bi <= 8 then sec, k = 'K', bi elseif bi <= 24 then sec, k = 'A', bi - 8 else sec, k = 'C', bi - 24 end
+        -- (su bucle: solo 8 · riff A 16 · B 16 · clímax 16 · vuelta 4)
+        if bi <= 8 then sec, k = 'K', bi elseif bi <= 24 then sec, k = 'A', bi - 8 elseif bi <= 40 then sec, k = 'B', bi - 24
+        elseif bi <= 56 then sec, k = 'C', bi - 40 else sec, k = 'O', bi - 56 end
     else
         sec, k = 'C', bi                                            -- (el final: como su clímax)
     end

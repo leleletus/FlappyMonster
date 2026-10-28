@@ -577,7 +577,7 @@ end
 -- funcionan igual.
 local adaptMaps, adaptSrc = {}, {}
 local adaptCur = nil                      -- id de la pieza que suena (con su mapa)
-local ADAPT_TOL = 0.12
+local ADAPT_TOL = 0.2                      -- (online: recolocar suena a salto; solo si se va más de esto)
 Sound.ADAPTIVE = '_adaptativa'            -- (lo que vale getLevelMusic mientras manda una música adaptativa)
 
 function Sound.adaptiveMap(path)
@@ -633,11 +633,19 @@ function Sound.followAdaptive(path, pid, pos, nxt)
     end
     local d = t - pos
     if map.pieces[pid].loop and len > 0 then d = (d + len / 2) % len - len / 2 end
-    if math.abs(d) > ADAPT_TOL and music:getPitch() == 1 then music:seek(math.max(0, pos)) end
+    if math.abs(d) > ADAPT_TOL and music:getPitch() == 1 then
+        music:seek(math.max(0, pos))
+        Sound.adaptiveSeeks = (Sound.adaptiveSeeks or 0) + 1       -- (recolocaciones: se oyen; el arnés las cuenta)
+    end
 end
 
 -- ¿Está sonando una música adaptativa?
 function Sound.adaptivePlaying() return musicName == Sound.ADAPTIVE and music ~= nil and music:isPlaying() end
+-- La pieza adaptativa que suena y su punto (s), o nil (en UN JUGADOR el reloj del director lo sigue: el audio manda)
+function Sound.adaptiveTell()
+    if not Sound.adaptivePlaying() or paused then return nil end
+    return adaptCur, music:tell()
+end
 
 -- Lerp del pitch de la música (usado para el slowdown al morir)
 function Sound.setMusicPitch(pitch)

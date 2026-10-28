@@ -254,3 +254,8 @@ nothing to build now.)
   wide (was 28: like the Gloomy's arena). (3) Longer, more varied loops and a 16-bar section of each crab's own in its
   final version; the music 2.5 dB quieter in game (docs/audio/music-history.md). Also in this round: the Gloomy buff
   and the Groove's deck cooldown (their pages).
+- 0.5.65, the user: the Groove's decks came back switched on after hiding and spun too long (groovecrab.md); "a
+  slight discontinuity" in the Groove loop → it ends with its theme's 4-bar return (docs/audio/music-history.md);
+  the director's map of that loop also gained its B section (since 0.5.64 the Groove read bars 25-40 — its B — as
+  its climax): solo · A · B · climax · return. In single player the director's clock follows the audio
+  (`CM:syncAudio`).

@@ -716,3 +716,10 @@ the old level tune in the final boss, Verity's hook).
   icicles, the player being hurt and other effects can hardly be heard" → `levels.py`: bosses −14 in game (were −13),
   the final boss −13.5 (−12.5), the Groove and the Mega Mashup −12 (−9.5; the adaptive pieces get it through
   `cues.json` volume 0.75). Not listened to by me.
+- 0.5.65, the user: "a slight discontinuity" in the Groove loop of the Mega Mashup. The file joins cleanly (the
+  sample step at the wrap is below the music's own p99) and the player did not re-seek (counted: 0 in a real-time
+  lap); the jump was musical — from the full climax straight into the stop-time solo, which its own theme never does
+  → the loop ends with the theme's RETURN (4 bars of riff with the band, climbing chromatically to the solo's E):
+  60 bars, 96 s. Also: in single player the AUDIO is now the master clock of the event (`CM:syncAudio`), so a game
+  hitch can never make the music re-seek; online the re-seek tolerance is 0.2 s (was 0.12). Previews of every loop's
+  join: `piezas/vuelta_<piece>.ogg`. Not listened to by me.

@@ -111,7 +111,7 @@ local BOOM_H = 3.5 * T                          -- alto de la columna de luz (la
 local BOOM_LEN = 3                              -- semicorcheas que dura la columna
 local FLOOR_WARN = 12                           -- semicorcheas de AVISO antes de la columna (3 tiempos: 1,2 s; antes 0,4)
 -- Los platos de DJ (2ª fase)
-local DECK_T = 10 * BAR                         -- s que gira un plato tras pisarlo (16 s; el usuario, 0.5.56: tú lo atraes de un
+local DECK_T = 6 * BAR                          -- s que gira un plato tras pisarlo (9,6 s; 0.5.65, el usuario: con 10 compases era muy fácil)
                                                 -- lado a otro, "con los platos un poquito más") — da para bajar, volver a su
                                                 -- trampolín y subir a la otra plataforma)
 local DECK_W, DECK_H = 24 * 4, 10 * 4           -- (el arte: 24x10 a ×4)
@@ -416,7 +416,9 @@ function GC:updateDecks(level, dt)
     local live = self:decksLive()
     local away = self:decksAway()
     for _, d in ipairs(self.decks) do
-        if d.on > 0 and not away then                                       -- (escondidos, su cuenta se para)
+        if away then
+            d.on = 0                                                        -- (escondidos, se APAGAN: vuelven apagados — el usuario, 0.5.65)
+        elseif d.on > 0 then
             d.on = math.max(0, d.on - dt)
             if d.on == 0 then Sound.play('switchOff', 0.9) end                -- (se acabó el tiempo: hay que volver)
         end

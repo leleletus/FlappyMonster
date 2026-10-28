@@ -153,7 +153,11 @@ PIECES = {
                 ('Gr_A', 'groove', 'groove_riff', [], H4 + ['Em', 'Em', 'C', 'B'] + H4 + H4, 0, G_RIFF),
                 ('Gr_B', 'groove', 'groove_bsec', [], ['Am', 'Am', 'Em', 'Em', 'C', 'C', 'B', 'B'] * 2, 0, G_BSEC),
                 ('Gr_C1', 'groove', 'groove_a', [], ['Em', 'Em', 'C', 'B'] * 2, 0, GROOVE_A),
-                ('Gr_C2', 'groove', 'groove_b', [], ['Am', 'Am', 'Em', 'Em', 'C', 'C', 'B', 'B'], 0, GROOVE_B)],
+                ('Gr_C2', 'groove', 'groove_b', [], ['Am', 'Am', 'Em', 'Em', 'C', 'C', 'B', 'B'], 0, GROOVE_B),
+                # (la VUELTA de su tema, como en slap_boss.py tras el clímax: 4 de riff con la banda que suben en
+                #  cromático al Mi del solo — sin ella el bucle saltaba del clímax entero a las paradas: el usuario,
+                #  0.5.65, "una ligera discontinuidad")
+                ('Gr_O', 'groove', 'groove_riff', [], H4, 0, [R.R1, R.R2, R.R3, R.R4])],
                True, 'seam_final'),
     'seam_final': ([('S_GrF', '-', 'seam', [], ['Em', 'C', 'D', 'D'], 0, [R.R1V, R.R3, R.R4, R.FILL])], False, 'final_tantrum'),
     'end': ([('end', 'todos', 'coda', CODA_END, ['Dm', 'Dm', 'Bb', 'C', 'Bb', 'C', 'Dm', 'Dm'], 0, CODA_R)], False, 'outro'),
@@ -175,7 +179,7 @@ for v_ in VARIANTS:
 SEAM_TO = {'S_TI': 'icy', 'S_IG': 'gloomy', 'S_GGr': 'groove', 'S_GrF': 'final'}
 SEC_BPM.update({'G_A': 144, 'G_A2': 144, 'G_chant2': 144, 'G_A3': 144, 'G_coda': 144, 'Gr_B': 150,
                 'G_br': 144, 'G_chant': 144, 'S_IG': 144, 'Gr_solo': 150, 'Gr_A': 150, 'Gr_C1': 150, 'Gr_C2': 150,
-                'S_GGr': 150, 'S_GrF': 170, 'Fv': 170, 'Fv2': 170, 'Fv2a': 170, 'Fv2b': 170, 'end': 170, 'outro': 150})
+                'Gr_O': 150, 'S_GGr': 150, 'S_GrF': 170, 'Fv': 170, 'Fv2': 170, 'Fv2a': 170, 'Fv2b': 170, 'end': 170, 'outro': 150})
 RAMP.update({('S_IG', 1): 180, ('S_IG', 2): 166, ('S_IG', 3): 154, ('S_GGr', 1): 144,
              ('S_GrF', 1): 150, ('S_GrF', 2): 156, ('S_GrF', 3): 163})
 # (en un bucle, la dinámica del final tiene que valer lo mismo que la del principio: si no, salto al dar la vuelta)
@@ -185,7 +189,7 @@ DYN.update({'T_A': (0, 0.2), 'T_A2': (0.2, 0.4), 'T_B': (0.4, 0.8), 'T_B2': (0.6
             'I_A3': (0, 0.5), 'I_B2': (-1, -0.8), 'I_C2': (0.8, 1.4), 'I_coda': (1, -1),
             'G_br': (-2, -1.5), 'G_A': (-1.5, -1.2), 'G_A2': (-1.2, -1), 'G_chant': (-1, -0.6), 'G_chant2': (-0.8, -0.5),
             'G_A3': (-1, -1.2), 'G_coda': (-1, -2),
-            'Gr_solo': (1.2, 0.6), 'Gr_A': (0.6, 0.9), 'Gr_B': (0.8, 1.1), 'Gr_C1': (1.0, 1.2), 'Gr_C2': (1.2, 1.2),
+            'Gr_solo': (1.2, 0.6), 'Gr_A': (0.6, 0.9), 'Gr_B': (0.8, 1.1), 'Gr_C1': (1.0, 1.2), 'Gr_C2': (1.2, 1.2), 'Gr_O': (1.2, 1.2),
             'S_TI': (0.8, 0), 'S_IG': (0.3, -1.5), 'S_GGr': (0, 1), 'S_GrF': (1.5, 2.4),
             'Fv': (2.4, 2.4), 'Fv2': (2.4, 2.4), 'Fv2a': (2.4, 2.4), 'Fv2b': (2.4, 2.4), 'end': (2.6, 2.6), 'outro': (-3, -3)})
 DYN['intro'] = (-5, 0) if os.environ.get('PIECES') else DYN['intro']
@@ -746,6 +750,12 @@ def pieces_out(out, cues, install):
             a_ = out[pid][sec(t0):sec(t)]
             b_ = out[seam['next']][:sec(nxt['bars'][2][0])]
             enc(np.concatenate([a_, out[cu['next']], b_]), os.path.join(d, f'union_{pid}_compas{bi + 1:02d}.ogg'))
+    # la VUELTA de cada bucle: sus 4 últimos compases y los 4 primeros (lo que se oye al dar la vuelta)
+    for pid, cu in cues.items():
+        if cu['loop']:
+            y = out[pid]
+            enc(np.concatenate([y[sec(cu['bars'][-4][0]):sec(cu['music_end'])], y[:sec(cu['bars'][4][0])]]),
+                os.path.join(d, f'vuelta_{pid}.ogg'))
     # el FINAL cambiando de variante en cada corte (sigue el compás) y el fin con la salida
     fb = cues['final_tantrum']['bars']; q = [sec(fb[i][0]) for i in (0, 4, 8, 12)] + [len(out['final_tantrum'])]
     seq = [out['final_' + v][q[i]:q[i + 1]] for i, v in enumerate(VARIANTS)]

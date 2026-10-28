@@ -2,6 +2,9 @@
 love.filesystem.load('game_main.lua')()
 local gameLoad, gameUpdate, gameDraw = love.load, love.update, love.draw
 local SPEED = tonumber(os.getenv('SPEED')) or 4          -- (pasos de juego por fotograma: va más deprisa)
+-- LOOP=pieza (con SPEED=1, y CP=n para empezar en ese cangrejo): no se le baja la vida a nadie; se escucha esa pieza
+-- dando la vuelta y se cuentan las RECOLOCACIONES de la música (saltos que se oyen): tiene que haber 0
+local LOOP = os.getenv('LOOP')
 local st, t, beatenAt, seen, bad, shots = nil, 0, {}, {}, 0, {}
 local LIMIT = tonumber(os.getenv('SECS')) or 260
 -- (SHOT_AT=s,s,…: capturas en esos segundos de juego, mashup_t<s>.png)
@@ -11,15 +14,19 @@ for v in (os.getenv('SHOT_AT') or ''):gmatch('[%d%.]+') do shotAt[#shotAt + 1] =
 local function cm() return st and st.level and st.level.musicDirector end
 
 function love.load(a)
+    -- (a más velocidad que el audio, el audio no puede mandar: el reloj del director va por su cuenta — en el juego,
+    -- a tiempo real, sí manda: AdventureState → CM:syncAudio)
+    if SPEED > 1 and not LOOP then require('src/world/entities/types/directors/crabmashup').class.syncAudio = nil end
     gameLoad(a)
     love.audio.setVolume(0)
-    gStateMachine:change('adventure', { level = 'assets/levels/mashup_cangrejos.json' })
+    gStateMachine:change('adventure', { level = 'assets/levels/mashup_cangrejos.json', eventCheckpoint = tonumber(os.getenv('CP')) })
     st = gStateMachine:_top()
     st.player.hurt = function() return false end           -- (inmortal: se prueba el evento)
 end
 
 -- Al que pelea, al segundo de pelear, se le baja su vida del turno (vulnerable a la fuerza)
 local function beatActive(d)
+    if LOOP then return end
     local b
     if d.phase == 'crab' then b = d.main[d.ROLES[d.ci]]
     elseif d.phase == 'final' then b = d.active and d.fin[d.active] end
@@ -34,9 +41,10 @@ local function beatActive(d)
 end
 
 function love.update(dt)
-    for _ = 1, SPEED do
-        t = t + 1 / 60
-        gameUpdate(1 / 60)
+    for _ = 1, LOOP and 1 or SPEED do
+        local step = LOOP and math.min(dt, 1 / 20) or 1 / 60      -- (LOOP: a tiempo REAL, como el audio)
+        t = t + step
+        gameUpdate(step)
         local d = cm()
         if shotAt[1] and t >= shotAt[1] then shots[#shots + 1] = 't' .. table.remove(shotAt, 1) end
         if d then
@@ -49,6 +57,16 @@ function love.update(dt)
             -- la música que suena es la pieza del director (o la siguiente, si ya se adelantó)
             local name = Sound.musicPosition()
             if d.piece and name and name ~= Sound.ADAPTIVE and d.phase ~= 'wait' then bad = bad + 1 end
+        end
+        if LOOP and d and d.piece == LOOP then
+            if not seen.loopAt then seen.loopAt, seen.seeks0, seen.lap0 = t, Sound.adaptiveSeeks or 0, d.lap end
+            if d.lap > seen.lap0 and d.pos > 3 then
+                local n = (Sound.adaptiveSeeks or 0) - seen.seeks0
+                print(('bucle %s: una vuelta entera (%.1f s) con %d recolocaciones de la música'):format(LOOP, t - seen.loopAt, n))
+                print(n == 0 and 'TODO OK' or 'FALLOS: la música se recolocó (salto)')
+                love.event.quit(n == 0 and 0 or 1)
+                return
+            end
         end
         if (d and d.phase == 'outro' and t - (seen.outro or t) > 3) or t > LIMIT then
             local ok = d and d.phase == 'outro' and bad < 30

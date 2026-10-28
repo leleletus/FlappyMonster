@@ -180,3 +180,6 @@ Protocol 71.
   cannot be started for `DECK_COOL` = 12 bars (19.2 s, longer than the knockout): they go grey and their LEDs refill as
   the cooldown runs out (`GC:deckCool`, from `dropT` and the song clock: the same online). His level and the Mega
   Mashup. Harness `groovecrab_rules` (`enfriar`). Not played by the user yet.
+- 0.5.65, the user (his level and the Mega Mashup): (1) a deck switched on, then hidden by the dance-floor attack, came
+  back still spinning → while the decks are away they switch OFF (they return off); (2) "too easy" → a deck spins
+  `DECK_T` 6 bars (9.6 s; was 10 bars, 16 s). Harness `groovecrab_rules` (`ocultos`, `platos`). Not played yet.
