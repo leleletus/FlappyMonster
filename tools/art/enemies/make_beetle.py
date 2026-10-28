@@ -493,6 +493,9 @@ def scene_gif():
     frames[0].save(os.path.join(OUT, 'escena_jefe.gif'), save_all=True, append_images=frames[1:], duration=durs, loop=0)
 
 
+# Retocadas A MANO por el usuario (las patas, 2026-10-28; docs/art/generators.md): --apply NUNCA las reescribe. Para
+# cambiarlas, pasar antes sus retoques al generador (la salida del generador está en FlappyMonster_originals/…-orig.png)
+KEEP = {'assets/images/enemies/beetle/beetle-Sheet.png', 'assets/images/bosses/giantbeetle/body-Sheet.png'}
 CHOSEN = 'D'                                                # (el usuario eligió el D "Bronce castaño", 2026-10-28)
 
 
@@ -517,6 +520,8 @@ def apply():
     out = {E + 'beetle-Sheet.png': sheet(D, SMALL), G + 'body-Sheet.png': sheet(D, BOSS, True), G + 'block.png': stone_block(),
            G + 'debris-Sheet.png': debris(), G + 'wave-Sheet.png': shockwave(), G + 'dust-Sheet.png': dust()}
     for rel, im in out.items():
+        if rel in KEEP and os.path.exists(os.path.join(ROOT, rel)):
+            print('  ', rel, '(RETOCADA POR EL USUARIO: no se toca)'); continue
         im.save(os.path.join(ROOT, rel)); print('  ', rel)
     a = lambda fr, fps, loop=True: {"fps": fps, "frames": fr, "loop": loop}
     small = {"idle": a([1], 8), "walk": a([1, 2, 3, 4], 8), "charge": a([5, 6, 7, 8], 14), "flip": a([9, 10, 11], 10),
