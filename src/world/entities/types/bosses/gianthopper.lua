@@ -130,6 +130,7 @@ function GH:initBoss()
 end
 
 function GH:onFightStart(n) self:enter('fight') end
+function GH:rollStart(r) self.flareT, self.spawnT = r(0, FLARE_EVERY[1] * 0.8), r(0, SPAWN_EVERY * 0.8) end
 function GH:angryPhase() return self.rage end
 
 -- La punta del farol (2 px de arte hacia su cara, 16,5 por encima de los pies: el dibujo mira a la izquierda)

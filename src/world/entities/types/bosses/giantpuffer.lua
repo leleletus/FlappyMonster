@@ -128,6 +128,7 @@ function GP:initBoss()
 end
 
 function GP:onFightStart(n) self:enter('fight') end
+function GP:rollStart(r) self.atkT, self.spawnT = r(0, ATK_EVERY[1] * 0.85), r(0, SPAWN_EVERY * 0.8) end
 function GP:angryPhase() return self.rage end
 
 -- ¿Agua en su sitio? (el centro del cuerpo)

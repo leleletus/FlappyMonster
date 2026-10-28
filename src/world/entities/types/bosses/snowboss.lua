@@ -712,6 +712,10 @@ function Snow:onChilledWater(level, x, y, t)
 end
 
 -- ── Pelea ─────────────────────────────────────────────────────────────────────
+-- (empieza por un punto al azar de su ciclo de ataques: antes abría siempre escupiendo bolas)
+function Snow:rollStart(r)
+    self.cycleI = math.random(0, #CYCLE[self.phase or 1] - 1)
+end
 function Snow:onFightStart(n)
     self.state, self.deadTimer = 'idle', 0
     self.cycleI, self.streak = 0, 0

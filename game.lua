@@ -35,6 +35,10 @@ local Settings                    = require 'src/core/Settings'
 DEBUG_HITBOX = DEBUG_HITBOX or false   -- F1 para activar/desactivar hitboxes (FM_HITBOX=1: ya encendidas — settings.lua —, para las pruebas)
 
 function love.load()
+    -- AZAR de verdad: LÖVE solo siembra love.math; el math.random de Lua empezaba SIEMPRE igual — en un jugador los
+    -- jefes repetían las mismas decisiones en cada partida (el usuario, 0.5.66). El servidor ya lo sembraba
+    math.randomseed(os.time() + math.floor((love.timer.getTime() % 1) * 1e6))
+    for _ = 1, 4 do math.random() end
     -- Autoadaptar la resolución lógica para móviles y tablets (Evitar Zoom excesivo)
     -- (en los niveles se fija a 1280x720: src/ui/View.lua)
     love.graphics.setDefaultFilter('nearest', 'nearest')

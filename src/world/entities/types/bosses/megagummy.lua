@@ -126,6 +126,12 @@ function MG:phase2Hp()
     return s + (self.hpMax - s) * (self.props.phase2 or 0.5)
 end
 
+function MG:rollStart(r)
+    self.flopT = r(0, FLOP_EVERY[1] * 0.85)
+    self.hopT = r(0, HOP_GAP[1])
+    self.summonT = r(0, (self.props.guardEvery or 9) * 0.6)
+    if math.random() < 0.5 then self.facing = -(self.facing or 1) end
+end
 function MG:onFightStart(n)
     local s = self:splitHp()
     if self.hpMax < s + 2 then self.hpMax = s + 2; self.hp = self.hpMax end

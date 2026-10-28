@@ -404,6 +404,11 @@ function MG:fleeStep(level, dt)
     end
 end
 
+function MG:rollStart(r)
+    self.pingT, self.cdT = r(0, 2.2), r(0.3, 1.4)
+    self.ceilT = r(0, (self.props.ceilingEvery or 14) * 0.8)
+    self.dir = (math.random() < 0.5) and -1 or 1
+end
 function MG:onFightStart()
     self.pingT, self.cdT, self.ceilT = 1.2, 1.0, (self.props.ceilingEvery or 14) * 0.5     -- (el primero del techo, antes)
 end

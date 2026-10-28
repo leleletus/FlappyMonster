@@ -144,6 +144,16 @@ function Mega:initBoss()
     self.hitDrop = false
 end
 
+-- Al azar al empezar (Boss:startFight): qué hace primero — embestida, salto desde la pared, techo, súbditos, descanso
+function Mega:rollStart(r)
+    local p = self.props
+    self.chargeCd = r(0.8, (p.chargeEvery or 2.5) * 1.6)
+    self.pounceT = r(0, (p.pounceEvery or 9) * 0.85)
+    self.ceilT = r(0, (p.ceilingEvery or 12) * 0.7)
+    self.summonT = r(0, (p.summonEvery or 12) * 0.7)
+    self.restT = r(0, (p.restEvery or 5) * 0.6)
+    if math.random() < 0.5 then self.facing = -(self.facing or 1) end
+end
 function Mega:onFightStart(n)
     -- (tras su entrada ya ha rugido: ataca directamente)
     self.state, self.deadTimer = self.introPlayed and 'chase' or 'intro', 0

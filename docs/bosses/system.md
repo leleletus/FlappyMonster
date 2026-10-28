@@ -30,7 +30,11 @@ intro cinema bars, "RUN!"), `src/fx/BossFx.lua` (stars, anger symbols, target ma
 **Level data:** `bossZones: [{id, col, row, w, h, music}]`; the boss, its walls and its glass are entities with a
 `zone` prop (0 = nearest). **Network:** snapshot `bz` = per zone `{stateCode, arrived, needed, phase}`.
 
-**Design rules shared by all bosses:** every attack is telegraphed; one clear vulnerable window (stomp 1, ground
+**Design rules shared by all bosses:** every fight starts DIFFERENTLY (0.5.66, the user: "they always open with the
+same attack and the same move"): `Boss:startFight` calls the type's `rollStart(r)`, which randomizes its attack timers
+/ cycle start / route start / facing — and the client and single player now seed Lua's `math.random` (`game.lua`; LÖVE
+only seeds `love.math`, so every launch repeated the same "random" choices; the server always seeded it). Harness
+`difficulty_rules` (`azar`). Every attack is telegraphed; one clear vulnerable window (stomp 1, ground
 pound 2, one hit per opening); outside it, landing on the boss bounces you off sideways; damage to players goes
 through `Boss.withPlayer` / `Boss.strike`; everything drawn derives from `state + deadTimer + x, y + netPackExtra`.
 Online, levels with bosses are Race-only.

@@ -435,9 +435,32 @@ function cases.ayuda()
                 #foods, #bad > 0 and (' MAL: ' .. table.concat(bad, '; ')) or ' bien puestas', lives, beforeHint, afterHint))
 end
 
+-- (0.5.66) AZAR AL EMPEZAR: cada pelea empieza distinta (Boss:startFight → rollStart): el reloj de su primer ataque
+-- sale distinto en 8 peleas seguidas (antes: siempre el mismo — el Mega Crabby abría siempre embistiendo, la Bola de
+-- Nieve escupiendo…)
+function cases.azar()
+    local probes = { megacrabby = 'chargeCd', megacrabby_ice = 'pounceT', megagloomy = 'pingT', snowboss = 'cycleI',
+                     megagummy = 'flopT', giantpuffer = 'atkT', gianthopper = 'flareT' }
+    local out, ok = {}, true
+    for name, field in pairs(probes) do
+        local seen, n = {}, 0
+        for k = 1, 8 do
+            math.randomseed(1000 + k)
+            local e = Entities.create({ type = name, col = 6, row = 6, props = {} })
+            e:startFight(1)
+            local v = e[field]
+            if v ~= nil and not seen[v] then seen[v] = true; n = n + 1 end
+        end
+        out[#out + 1] = name .. ' ' .. n
+        if n < 2 then ok = false end
+    end
+    table.sort(out)
+    check('azar', ok, 'valores distintos de su primer reloj en 8 peleas: ' .. table.concat(out, ', '))
+end
+
 function love.load()
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'neutro', 'enemigos', 'categorias', 'jefe', 'jugador', 'peligros', 'peligros_ent', 'salas', 'sentidos', 'doble', 'ayuda', 'enfado' }) do
+    for _, n in ipairs({ 'neutro', 'enemigos', 'categorias', 'jefe', 'jugador', 'peligros', 'peligros_ent', 'salas', 'sentidos', 'doble', 'ayuda', 'enfado', 'azar' }) do
         if not only or only == n then
             local ok, err = pcall(cases[n])
             if not ok then check(n, false, 'ERROR ' .. tostring(err)) end

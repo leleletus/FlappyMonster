@@ -20,7 +20,7 @@ Reference bosses (copy from the one closest to what you want):
 
 > **First of all:** what bosses have in common is ALREADY in the base — do not copy it from another boss.
 > `Boss:enter(st)`, `Boss:zoneBounds()`, `Boss:minions(level)`, `Boss:nearestPlayer(level)`,
-> `Boss.strike(pa, {hp, vx, vy, ctrlLock, stun}, dir)`, `Boss:mayAttack(level)` (ally turns when two bosses share an arena: `bossExtra`, which no difficulty sets today);
+> `Boss.strike(pa, {hp, vx, vy, ctrlLock, stun}, dir)`, `rollStart(r)` (randomize its attack timers when the fight starts — every boss must, so no two fights open alike), `Boss:mayAttack(level)` (ally turns when two bosses share an arena: `bossExtra`, which no difficulty sets today);
 > shared effects in `src/fx/BossFx.lua` (`stars`, `anger`, `target`; sprites in `assets/images/bosses/common/`);
 > reserve minions: any entity (`Entity:makeReserve`). Each boss's art goes in `assets/images/bosses/<boss>/`.
 > Traits and the rest: [how-to-add-an-enemy](../entities/how-to-add-an-enemy.md). How zones, intros, phases and

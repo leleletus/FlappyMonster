@@ -56,7 +56,7 @@
 --   * offstage ('wait' | 'ko'): FUERA DE ESCENA, al fondo (lo dibuja el director, pequeño): ni sólido, ni se le toca.
 -- Y el jefe le avisa: onCrabHit (daño de quién) y crabDown (a 0: en vez de morir, el director decide).
 -- `props.fixedHp`: su vida no la escala la dificultad (el evento: 2 por turno en todas).
--- Hooks: initBoss, updateBoss, isStunned, endStun, onFightStart(n), onDamaged(n, kind),
+-- Hooks: initBoss, updateBoss, isStunned, endStun, onFightStart(n), rollStart(r) (al azar al empezar), onDamaged(n, kind),
 -- onDefeat, onDeathFall, onPounded(pa), onKnocked(dir), onPlayerDeath(pa),
 -- isVulnerable, isSolidBody.
 
@@ -151,6 +151,9 @@ function Boss:startFight(nPlayers)
     self.inv   = 0
     self.state, self.deadTimer = 'fight', 0
     self:onFightStart(nPlayers or 1)
+    -- (cada pelea empieza DISTINTA: el tipo desordena sus relojes de ataque — si no, siempre abría con el mismo
+    -- ataque y el mismo movimiento; el usuario, 0.5.66. Hook rollStart(r), r(a, b) = al azar entre a y b)
+    if self.rollStart then self:rollStart(function(a, b) return a + math.random() * (b - a) end) end
 end
 
 -- Nombre en la barra (y en la entrada): el que le puso el nivel en su idioma (props title /

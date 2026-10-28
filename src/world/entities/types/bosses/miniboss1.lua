@@ -124,6 +124,12 @@ function Ship:updateIntro(dt, level, t)
 end
 function Ship:introFocus() return self.home.x, self.hoverY end
 
+-- (empieza su ruta por un punto al azar y con la espera de su gesto también al azar)
+function Ship:rollStart(r)
+    local n = #(self.props.waypoints or {})
+    if n > 1 then self.wp = math.random(1, n) end
+    self.idleT = r(IDLE_EVERY[1] * 0.3, IDLE_EVERY[2])
+end
 function Ship:onFightStart(n)
     self.spike = 0
     if self.state == 'ready' or self.introY0 then
