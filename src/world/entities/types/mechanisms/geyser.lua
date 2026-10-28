@@ -19,9 +19,11 @@ local Gey = Entity.extend(Entity, { debugColor = { 0.5, 0.8, 1 },
     hitbox = { outerW = 1, outerH = 0.5, innerW = 1, innerH = 0.5 } })
 
 local S       = GUMMY_SCALE
-local LIFT    = 1050         -- px/s hacia arriba (× power): un chorro EXPLOSIVO (el usuario: era lento)
-local SHARP   = 10           -- lo brusco del empujón (systems/Push): llega a esa velocidad casi al instante
-local GROW_T  = 0.12         -- s en los que la columna sube (de golpe)
+local LIFT    = 780          -- px/s hacia arriba (× power, ÷ el peso de lo que levanta)
+local SHARP   = 3            -- lo brusco del empujón (systems/Push): fuerte pero sin salir disparado (el usuario: con 10
+                             -- una caja o el monstruo encima salían volando)
+local RISE    = 1100         -- px/s: lo rápido que SUBE el agua (no aparece entera de golpe: sube y se para en lo que toca)
+local GROW_T  = 0.12         -- s en los que la fuerza llega a su máximo
 local DECAY_T = 0.9          -- s en los que se va apagando al final (baja y empuja menos)
 local CRACK_T = 1.0          -- s agrietándose antes de romperse (nieve)
 -- Azar fijo por número (las partículas: igual en todos los clientes, sin math.random en el dibujo)
@@ -85,61 +87,48 @@ function Gey:amount()
     if st == 'iced' then return 1 end
     return 0
 end
-local HOLD = 48               -- px: lo que levanta puede pasarse un poco del alto del chorro (sube por su impulso): el chorro
-                              -- lo sigue sosteniendo y se estira hasta tocarlo (si no, se veía flotando encima)
-function Gey:topY()
-    local top = self:mouthY() - (self:mouthY() - self:reach()) * self:amount()
-    -- (algo encima del chorro: el chorro llega JUSTO a su cara de abajo — lo levanta a él, no sigue a través —)
-    if self.blockY and (self.state == 'erupt' or self.state == 'iced') then
-        top = math.max(top - HOLD, math.min(self:mouthY(), self.blockY))
-    end
-    return top
-end
+-- EL CHORRO ES UNA COLUMNA DE VERDAD (0.5.71; el usuario: antes se calculaba su alto de golpe y "se parcheaba": al
+-- empezar subía un instante hasta arriba atravesando lo que tenía encima, y al caerle una caja crecía otra vez). Su
+-- cara de arriba `jetY` es un ESTADO: sube a RISE px/s hacia su alto (el que da la fuerza ahora: al final baja) y NUNCA
+-- atraviesa nada: se para en la cara de abajo de lo primero que encuentra — un jugador, un enemigo, una caja, una
+-- bomba, una semilla… — y solo empuja a ESO (lo que está tocando su cara de arriba), más despacio cuanto más pesa con
+-- todo lo que lleva encima (systems/Weight); lo de encima sube porque va encima. Si lo que levanta baja (el chorro se
+-- apaga), baja con él: el chorro se acorta, nunca vuelve a crecer por tocarlo. Lo simula un jugador / el servidor; al
+-- cliente le llegan `jetY` y `loadF` en el netPack (dibuja con ellos y predice a su jugador: si sus pies están en
+-- `jetY`, es lo que levanta).
+function Gey:topY() return self.jetY or self:mouthY() end
 function Gey:freezes() return self:isle() == 'nieve' and self.props.freeze ~= 0 end
 
--- LO QUE LEVANTA (el usuario): el chorro empuja a lo PRIMERO que encuentra al subir (lo más bajo dentro de la columna)
--- más despacio cuanto más pesa CON TODO LO QUE LLEVA ENCIMA (systems/Weight: cajas apiladas, un jugador encima…), y
--- se corta en su cara de abajo: lo de más arriba no lo empuja el chorro (sube porque va encima). Lo mide quien simula
--- (un jugador / el servidor: `load`, `blockY`, `loadF`); al cliente le llegan `blockY` y `loadF` en el netPack y
--- predice a su jugador con ellos (si sus pies están en `blockY`, es lo que levanta).
 local B = {}
+local function inColumn(self, b) return b.x < self.x + TILE_PX * 0.45 and b.x + b.w > self.x - TILE_PX * 0.45 end
 function Gey:pushAt(x, y, o)
-    if self.state ~= 'erupt' then return nil end
+    if self.state ~= 'erupt' or not self.jetY then return nil end
     if math.abs(x - self.x) > TILE_PX * 0.45 then return nil end
     local k = self:amount()
-    if k <= 0.05 then return nil end
-    local lift = -LIFT * (self.props.power or 1) * k
-    if self.blockY then
-        local isLoad = self.load ~= nil and o == self.load
-        if not isLoad and self.load == nil and o and o.getOuterBounds then          -- (cliente: por dónde tiene los pies)
-            local b = o:getOuterBounds(B)
-            isLoad = math.abs(b.y + b.h - self.blockY) < 14
-        end
-        if isLoad then
-            -- (pasado el alto del chorro, empuja menos cuanto más se pasa: se queda sostenido arriba, sin despegarse)
-            local over = (self:mouthY() - (self:mouthY() - self:reach()) * k) - self.blockY
-            local hold = math.max(0, math.min(1, 1 - over / HOLD))
-            return 0, lift * (self.loadF or 1) * hold, SHARP, true                -- (`true`: ya va su peso: sin × windK)
-        end
-        if y < self.blockY then return nil end                                    -- (encima de lo que levanta: nada)
+    if k <= 0.05 or not o then return nil end
+    local touching
+    if self.simulated then touching = (o == self.load)
+    elseif o.getOuterBounds then                                   -- (cliente: por dónde tiene los pies)
+        local b = o:getOuterBounds(B)
+        touching = inColumn(self, b) and math.abs(b.y + b.h - self.jetY) <= 8
     end
-    -- (empuja lo que tiene los pies DENTRO del chorro que se ve: la zona coincide con el dibujo — el usuario —)
-    local top = self:topY()
-    local bot, ytop = y, y
-    if o and o.getOuterBounds then local b = o:getOuterBounds(B); bot, ytop = b.y + b.h, b.y end
-    if bot < top - 4 or ytop > self.cellBottom then return nil end
-    return 0, lift, SHARP
+    if not touching then return nil end
+    -- (cerca de su ALTO el chorro frena lo que lleva: llega arriba despacio y se queda sostenido, no sale volando — el
+    -- usuario —; 1,5 casillas antes de su alto empieza a frenar)
+    local mouth = self:mouthY()
+    local natural = mouth - (mouth - self:reach()) * k
+    local near = math.max(0.3, math.min(1, (self.jetY - natural) / (1.5 * TILE_PX)))
+    return 0, -LIFT * (self.props.power or 1) * k * (self.loadF or 1) * near, SHARP, true   -- (`true`: ya va su peso)
 end
 
--- Lo que el chorro encuentra primero al subir (simulación): jugadores y entidades con física dentro de la columna
-function Gey:findLoad(level)
-    local x0, x1 = self.x - TILE_PX * 0.45, self.x + TILE_PX * 0.45
-    local colTop = self:mouthY() - (self:mouthY() - self:reach()) * math.max(self:amount(), 0.05)
+-- Lo PRIMERO que encuentra el agua al subir hasta `top` (simulación): lo más bajo con los pies entre `top` y el suelo
+-- de la boca, dentro de la columna. Jugadores y todo lo que tiene física (no solo cajas)
+function Gey:findLoad(level, top)
     local best, bestBot, isPl
     local function try(o, player)
         local b = o:getOuterBounds(B)
         local bot = b.y + b.h
-        if b.x < x1 and b.x + b.w > x0 and bot >= colTop - HOLD and bot <= self:mouthY() + 6 and (not bestBot or bot > bestBot) then
+        if inColumn(self, b) and bot >= top - 2 and bot <= self.cellBottom + 2 and (not bestBot or bot > bestBot) then
             best, bestBot, isPl = o, bot, player
         end
     end
@@ -151,6 +140,22 @@ function Gey:findLoad(level)
     return best, bestBot, Weight.total(best, level, isPl, self)
 end
 
+-- Un paso del agua: sube hacia su alto, se para en lo que toca
+function Gey:stepJet(dt, level)
+    local mouth = self:mouthY()
+    if self.state ~= 'erupt' then
+        if self.state ~= 'iced' then self.jetY = nil end               -- (congelado: el pilar se queda como quedó)
+        self.load, self.loadF = nil, 1
+        return
+    end
+    local natural = mouth - (mouth - self:reach()) * self:amount()
+    local jy = self.jetY or mouth
+    if natural < jy then jy = math.max(natural, jy - RISE * dt) else jy = natural end
+    local o, bot, w = self:findLoad(level, jy)
+    if o then jy = math.max(jy, math.min(bot, mouth)) end            -- (se para en su cara de abajo)
+    self.jetY, self.load, self.loadF = jy, o, o and 1 / math.max(1, w) or 1
+end
+
 -- El pilar de hielo (nieve): su remate se pisa
 function Gey:bodyParts()
     if self.state == 'iced' then return { self.part } end
@@ -158,13 +163,7 @@ function Gey:bodyParts()
 end
 
 function Gey:updateCustom(dt, level)
-    self.levelRef = level
-    -- (lo que levanta ahora, su cara de abajo y lo que pesa: el chorro va más despacio cuanto más pesa)
-    self.load, self.blockY, self.loadF = nil, nil, 1
-    if self.state == 'erupt' or self.state == 'iced' then
-        local o, bot, w = self:findLoad(level)
-        if o then self.load, self.blockY, self.loadF = o, bot, 1 / math.max(1, w) end
-    end
+    self.levelRef, self.simulated = level, true
     self.deadTimer = self.deadTimer + dt
     local st, p = self.state, self.props
     local kind = KIND[self:isle()] or 'water'
@@ -187,6 +186,7 @@ function Gey:updateCustom(dt, level)
         Sound.play('iceFreeze')
         Entity.emitFx('ice_shatter', self.x, (self:mouthY() + self:reach()) / 2)
     end
+    self:stepJet(dt, level)
     return true
 end
 
@@ -199,10 +199,13 @@ end
 
 -- ── Red ───────────────────────────────────────────────────────────────────────
 function Gey:netAtRest() return self.state == 'idle' end
-function Gey:netRest() self.state, self.blockY = 'idle', nil end
-function Gey:netPack() return { self.blockY and math.floor(self.blockY + 0.5) or 0, math.floor((self.loadF or 1) * 100 + 0.5) } end
+function Gey:netRest() self.state, self.jetY = 'idle', nil end
+function Gey:netPack() return { self.jetY and math.floor(self.jetY + 0.5) or 0, math.floor((self.loadF or 1) * 100 + 0.5) } end
 function Gey:netApply(a, b, f)
-    self.blockY = (b[1] and b[1] ~= 0) and b[1] or nil
+    local ya, yb = a[1] or 0, b[1] or 0
+    if yb == 0 then self.jetY = nil
+    elseif ya == 0 then self.jetY = yb
+    else self.jetY = ya + (yb - ya) * f end
     self.loadF = (b[2] or 100) / 100
 end
 

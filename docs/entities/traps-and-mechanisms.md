@@ -83,11 +83,15 @@ Designs and the user's verdicts: [new-props-plan](new-props-plan.md).
   Idle `interval` s → `warn` s bubbling (`geyserRumble`) → `erupt` s column up to `height` tiles (cut at the first
   block) that lifts everything with physics (`pushAt`, no damage; since 0.5.69 SHARP — 1050 px/s reached almost at once —
   with a triple crest, spray and steam: the user found it slow; it fades out over the last 0.9 s — the column lowers
-  and pushes less — instead of vanishing; spray, splashes and steam with per-particle randomness, `hash`; since 0.5.70 it lifts the FIRST thing in its column
-  — `findLoad` — at a speed ÷ its total weight with what is stacked on it, systems/Weight, and the jet is cut at its
-  underside: nothing above is pushed by it; the cut height and the factor travel in its netPack. The drawn jet and the push area MATCH (the user: the box
-  looked like floating): the water reaches exactly `topY()` — clipped at the vent —, only things whose feet are inside
-  it are pushed, and a load carried a bit past the jet's height by its momentum (`HOLD` 48 px) is still held: the jet
-  stretches to touch it and pushes less the higher it goes) → idle. Meadow / coast water, fortress steam, cave
+  and pushes less — instead of vanishing; spray, splashes and steam with per-particle randomness, `hash`; since 0.5.71 the jet is a REAL COLUMN (the user: the 0.5.70 version was "patched": for an instant the water shot to
+  full height through what was on top, and a box falling back on it made it grow again): its top `jetY` is a
+  simulated STATE that rises at `RISE` px/s towards its height of the moment and never passes through anything — it
+  stops at the underside of the first thing in the column (players, enemies, boxes, bombs, seeds: anything with
+  physics) and pushes only THAT, ÷ its total weight with its stack (systems/Weight); things above rise because they
+  ride it. If the load comes down (the jet fades), the jet shortens with it — it never grows back by touching it.
+  Gentler (`LIFT` 780, `SHARP` 3: things no longer get launched) and 1.5 tiles before its top it brakes what it
+  carries, so the load arrives slowly and stays held. Drawn water = push area = `jetY`. `jetY` and the weight factor
+  travel in its netPack (the client draws and predicts its player with them). Capture: `SHOT_GEYSER=1 run.sh
+  mechanics` (a big box on a Geyser, a frame every 0.25 s)) → idle. Meadow / coast water, fortress steam, cave
   glowing steam (gives light), volcano smoke (only pushes, the user). Snow: the column FREEZES into an ice pillar whose
   top is a one-way platform for `freeze` s (cracks the last second) and then shatters.

@@ -43,8 +43,8 @@ concrete type.
 ## Pushing and weight (the Box)
 
 - A body with `pushBy(pa, dx)` is pushed when a player WALKS into its side on the ground: it moves (its own
-  collisions) by `dx × PUSH_K` and the player stays against its face without losing speed. Big box `PUSH_K` 0.4
-  (heavy: the user), small box 0.8. Online the pusher's client moves it ahead (`predX`) while the server says it is the
+  collisions) by `dx × PUSH_K` and the player stays against its face without losing speed. Since 0.5.71 the speed
+  is `0.8 ÷` the weight of the whole ROW of boxes being pushed with their stacks (big 0.4, small 0.8, big + small 0.27). Online the pusher's client moves it ahead (`predX`) while the server says it is the
   pusher.
 - `weight` = what it counts on a Scale pan (big box 2, small box and a player 1).
 - **Breaking** (both boxes; the user): a ground pound on it, spikes / lava, falling out of the level and a hard
@@ -96,6 +96,10 @@ total weight; `Weight.total(o, level, isPlayer)` = `o` + its stack. A player wei
 
 ## History and decisions
 
+- 0.5.71 (the user): boxes in a ROW are pushed together (a small box beside a big one blocked it like a wall), at
+  `0.8 ÷` the weight of the whole row with what each carries (big alone 0.4, small 0.8, big + small 0.27; the push
+  factor travels in the Box netPack so the pusher's client predicts it); bombs break boxes in their damage radius
+  (`onBlastHit`; the Seed is immune); the Geyser jet became a real simulated column (see traps-and-mechanisms).
 - 0.5.70 (the user): the air pushing a box against a player teleported the player to the box's far side → a box moved
   by something else SHOVES the player along (their own collision; a wall stops both). `pushAt(x, y, o)` gets WHO it
   pushes and may return a 4th value `true` (its weight already counted: no × `windK`). The Geyser lifts the first thing

@@ -29,7 +29,8 @@ function Seed:pushable() return false end
 function Seed:isObstacle() return false end
 function Seed:canBeCarried() return self.state == 'rest' end
 function Seed:onPickUp() Sound.play('seedPickup') end
-function Seed:onPound() return true end          -- (un ground pound cerca no le hace nada: plantarla es llevándola)
+function Seed:onPound() return true end
+function Seed:onBlastHit() end                 -- (una explosión no la rompe: es una semilla, no una caja)          -- (un ground pound cerca no le hace nada: plantarla es llevándola)
 
 -- Datos de cada planta (imagen + plataformas), por isla y altura
 local data = {}

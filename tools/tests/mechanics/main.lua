@@ -84,6 +84,9 @@
 --   cargar_gp      ground pound llevando la caja pequeña o la bomba: la sigue llevando, ni se rompe ni se enciende
 --   aire_caja      el aire empuja una caja contra el jugador: el jugador sigue a su lado (empujado), nunca al otro
 --   geiser_peso    el Géiser sube más despacio lo que pesa más con lo que lleva encima y el chorro se corta debajo
+--   bomba_cajas    una explosión rompe las cajas (grande y pequeña) dentro de su radio de daño; lejos no; la semilla no
+--   cajas_fila     cajas en fila se empujan juntas, más despacio cuanto más pesa la fila (la pequeña encima o al lado,
+--                  igual); contra la pared se para toda
 --   cuerpo_mueve   de pie en un cuerpo que sube y baja: va con él, sin despegarse ni atravesarlo
 --   ping_icono     antena de conexión online: niveles (verde/amarillo/rojo/X) y que
 --                  no parpadee (mejorar espera 0,6 s; perder la conexión, al momento)
@@ -91,6 +94,7 @@
 -- a distintos tiempos, objeto y explosión).
 -- SHOT_PROPS=1: <save>/mechanics_props.png (plantas de la Semilla de las 6 islas crecidas, con sus plataformas;
 -- Soplón soplando; Balanza, Caja y caja pequeña; Géiser en erupción y el de la nieve congelado; Ventisca soplando).
+-- SHOT_GEYSER=1: <save>/mechanics_geyser.png (una caja grande sobre un Géiser, una foto cada SHOT_EVERY s, 0,25).
 -- SHOT=1: además guarda <save>/mechanics.png (bloques, invisible visible,
 -- Gummies con y sin casco) a tamaño real.
 --
@@ -2212,10 +2216,11 @@ function cases.geiser_peso()
         local y0, cutOk, aboveFree, seenLoad = o.y, true, true, false
         local t1
         sim(level, players, es, 2.4, function()
-            if g.state == 'erupt' and g.blockY then
+            if g.state == 'erupt' and g.load then
                 seenLoad = true
                 local ob = o:getOuterBounds()
-                if math.abs(g:topY() - (ob.y + ob.h)) > 20 and g:amount() > 0.9 then cutOk = false end   -- (un paso de margen)
+                -- (el agua nunca por ENCIMA de los pies de lo que levanta: no lo atraviesa)
+                if g.load == o and g:topY() < math.min(ob.y + ob.h, g:mouthY()) - 2 then cutOk = false end   -- (un paso de margen)
                 -- lo de encima (el jugador sobre la caja): el chorro no lo empuja
                 if what == 'box+player' then
                     local pa = players[1]
@@ -2233,6 +2238,47 @@ function cases.geiser_peso()
     check('geiser_peso', tP < tB and tB < tBP and tBP < 99 and cP and cB and cBP and freeBP and rideBP,
         ('3 casillas arriba en: jugador %.2f s < caja %.2f s < caja con jugador encima %.2f s · el chorro se corta bajo lo que levanta=%s/%s/%s · al de encima no lo empuja=%s, va encima=%s'):format(
             tP, tB, tBP, tostring(cP), tostring(cB), tostring(cBP), tostring(freeBP), tostring(rideBP)))
+end
+
+-- Las BOMBAS rompen cajas (grandes y pequeñas) dentro de su radio de daño; una semilla no se rompe
+function cases.bomba_cajas()
+    local level, es = room(24, 9, {}, { { type = 'bombobject', col = 12, row = 8 }, { type = 'box', col = 10, row = 8 },
+                                       { type = 'smallbox', col = 14, row = 8 }, { type = 'box', col = 20, row = 8 },
+                                       { type = 'seed', col = 13, row = 8 } })
+    settle(level, es)
+    require('src/world/entities/base/BombCore').light(es[1], 0.1)
+    local broke = {}
+    sim(level, {}, es, 0.6, function() for i = 2, 5 do if es[i].state == 'broken' then broke[i] = true end end end)
+    check('bomba_cajas', broke[2] and broke[3] and not broke[4] and not broke[5],
+        ('explosión: caja grande cerca rota=%s · pequeña cerca rota=%s · grande lejos rota=%s · semilla rota=%s'):format(
+            tostring(broke[2] == true), tostring(broke[3] == true), tostring(broke[4] == true), tostring(broke[5] == true)))
+end
+
+-- Cajas EN FILA (el usuario: con una pequeña al lado, la grande no se movía): se empujan juntas, más despacio cuanto
+-- más pesa la fila (con lo apilado); la pequeña ENCIMA de la grande pesa lo mismo que al lado
+function cases.cajas_fila()
+    local function pushRun(ents)
+        local level, es = room(40, 9, {}, ents)
+        settle(level, es)
+        local pa = playerAt(level, 6, 8)
+        local x0 = {}
+        for i, e in ipairs(es) do x0[i] = e.x end
+        clear(); stub.state.right = true
+        sim(level, { pa }, es, 3)
+        clear()
+        local d = {}
+        for i, e in ipairs(es) do d[i] = (e.x - x0[i]) / T end
+        return d
+    end
+    local alone = pushRun({ { type = 'box', col = 10, row = 8 } })[1]
+    local side = pushRun({ { type = 'box', col = 10, row = 8 }, { type = 'smallbox', col = 11, row = 8 } })
+    local top = pushRun({ { type = 'box', col = 10, row = 8 }, { type = 'smallbox', col = 10, row = 7 } })
+    -- contra la pared: la fila se para entera (la pequeña pegada a la pared derecha)
+    local wallRun = pushRun({ { type = 'box', col = 36, row = 8 }, { type = 'smallbox', col = 38, row = 8 } })
+    check('cajas_fila', side[1] > 0.5 and math.abs(side[1] - side[2]) < 0.3 and side[1] < alone
+          and math.abs(top[1] - side[1]) < 0.35 and wallRun[2] < 0.7,
+        ('3 s empujando: grande sola %.1f · grande + pequeña al lado %.1f / %.1f · con la pequeña encima %.1f · la fila contra la pared: la pequeña %.1f'):format(
+            alone, side[1], side[2], top[1], wallRun[2]))
 end
 
 -- Un "soplador" de prueba: sopla en toda la sala con (wx, wy)
@@ -2332,6 +2378,39 @@ local function propsShot()
     print('captura props: ' .. love.filesystem.getSaveDirectory() .. '/mechanics_props.png')
 end
 
+-- SHOT_GEYSER=1: <save>/mechanics_geyser.png — una CAJA GRANDE encima de un Géiser durante un ciclo entero (aviso,
+-- erupción, se apaga, cae), una foto cada SHOT_EVERY s (0,25) en una tira, con la zona que empuja en rojo
+local function geyserShot()
+    local every = tonumber(os.getenv('SHOT_EVERY')) or 0.25
+    local level, es = room(6, 14, {}, { { type = 'geyser', col = 3, row = 13, props = { interval = 99, firstDelay = 0, warn = 0.6, erupt = 3, height = 7 } },
+                                       { type = 'box', col = 3, row = 12 } })
+    settle(level, es)
+    local frames, t = {}, 0
+    local W, H = 6 * T, 14 * T
+    while t < 6 do
+        sim(level, {}, es, every)
+        t = t + every
+        local cv = love.graphics.newCanvas(W, H)
+        love.graphics.setCanvas(cv)
+        love.graphics.clear(0.55, 0.75, 0.92, 1)
+        level:render(0, 0)
+        for _, e in ipairs(es) do if e.alive then e:render(0, 0) end end
+        love.graphics.setLineWidth(2)
+        for _, b in ipairs(es[1]:debugBoxes() or {}) do love.graphics.setColor(1, 0, 0, 0.9); love.graphics.rectangle('line', b.x, b.y, b.w, b.h) end
+        love.graphics.setColor(0, 0, 0, 1)
+        love.graphics.print(('%.2f s %s'):format(t, es[1].state), 70, 70, 0, 2, 2)
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.setCanvas()
+        frames[#frames + 1] = cv
+    end
+    local out = love.graphics.newCanvas(#frames * W / 2, H / 2)
+    love.graphics.setCanvas(out)
+    for i, cv in ipairs(frames) do love.graphics.draw(cv, (i - 1) * W / 2, 0, 0, 0.5, 0.5) end
+    love.graphics.setCanvas()
+    out:newImageData():encode('png', 'mechanics_geyser.png')
+    print('captura géiser: ' .. love.filesystem.getSaveDirectory() .. '/mechanics_geyser.png')
+end
+
 local shot
 function love.load()
     for _, n in ipairs({ 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
@@ -2341,9 +2420,10 @@ function love.load()
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
                          'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado', 'techo_pinchos',
-                         'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'aire_caja', 'geiser_peso' }) do cases[n]() end
+                         'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila' }) do cases[n]() end
     if os.getenv('SHOT_BOMB') then bombShot() end
     if os.getenv('SHOT_PROPS') then propsShot() end
+    if os.getenv('SHOT_GEYSER') then geyserShot() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
     if not os.getenv('SHOT') then love.event.quit(fails == 0 and 0 or 1); return end
     -- Escena para la captura

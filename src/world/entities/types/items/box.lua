@@ -73,9 +73,31 @@ function Box:onLava() self:breakApart(true) end
 function Box:pushable() return self.alive and self.state == 'rest' and self.onGround ~= false end
 
 -- El jugador la empuja `dx` px (andando contra ella). Devuelve lo que se movió de verdad.
+-- EMPUJAR EN FILA y según el PESO (el usuario: con una caja pequeña AL LADO la grande no se movía — la tomaba por
+-- pared —; y lo que pesa debe contar): las cajas en fila hacia donde se empuja van todas juntas, a PUSH_BASE ÷ el peso
+-- de toda la fila con lo que cada una lleva encima (systems/Weight): la grande sola 0,4 de lo que anda el jugador, la
+-- pequeña 0,8, grande + pequeña 0,27… La del final choca con la pared: se paran todas.
+local PUSH_BASE = 0.8
+local CB = {}
+function Box:pushChain(level, dir)
+    local chain, cur = { self }, self
+    for _ = 1, 12 do
+        local b = cur:getOuterBounds(CB)
+        local fx = (dir > 0) and (b.x + b.w + 2) or (b.x - 2)
+        local nxt
+        for _, py in ipairs({ b.y + 6, b.y + b.h / 2, b.y + b.h - 6 }) do
+            local o = level:bodyAt(fx, py, cur)
+            if o and o ~= self and o.pushBy and o.pushable and o:pushable() then nxt = o; break end
+        end
+        if not nxt then break end
+        chain[#chain + 1] = nxt
+        cur = nxt
+    end
+    return chain
+end
 function Box:pushBy(pa, dx)
     if not self:pushable() or not pa.onGround then return 0 end
-    local want = dx * self.PUSH_K
+    local want = dx * (self.pushK or self.PUSH_K)
     if self.clientView then
         -- (cliente: solo el que la está empujando según el servidor la adelanta; los demás chocan con ella)
         if self.pusherIdx == 0 or self.pusherIdx ~= pa.ownerIdx then return 0 end
@@ -85,14 +107,23 @@ function Box:pushBy(pa, dx)
     end
     local level = self.levelRef
     if not level then return 0 end
-    local x0, vx0, f0 = self.x, self.vx, self.facing
-    self:moveAndCollide(level, want, 0)
-    self.vx, self.facing = vx0, f0
-    local moved = self.x - x0
-    if math.abs(moved) > 0.05 then
-        self.pushedNow, self.pusherIdx = true, pa.ownerIdx or 0
+    local Weight = require 'src/world/systems/Weight'
+    local chain = self:pushChain(level, dx > 0 and 1 or -1)
+    local w = 0
+    for _, b in ipairs(chain) do w = w + Weight.total(b, level, false) end
+    self.pushK = PUSH_BASE / math.max(0.5, w)                     -- (viaja en el netPack: el cliente predice con él)
+    want = dx * self.pushK
+    -- de la del final hacia la que se empuja: cada una avanza como mucho lo que avanzó la de delante
+    local lead = want
+    for i = #chain, 1, -1 do
+        local b = chain[i]
+        local x0, vx0, f0 = b.x, b.vx, b.facing
+        b:moveAndCollide(level, lead, 0)
+        b.vx, b.facing = vx0, f0
+        lead = b.x - x0
+        if math.abs(lead) > 0.05 then b.pushedNow, b.pusherIdx = true, pa.ownerIdx or 0 end
     end
-    return moved
+    return lead
 end
 
 -- ── Nunca DENTRO de un jugador (el usuario: el jugador se teletransportaba, salía aplastado o aparecía al otro lado) ──
@@ -180,6 +211,9 @@ function Box:breakApart(quiet)
     Entity.emitFx('block_break', self.x - TILE_PX / 2, self.y - TILE_PX / 2)
 end
 
+-- Una EXPLOSIÓN (systems/Explosions) dentro de su radio de daño la rompe (el usuario: las bombas no rompían cajas)
+function Box:onBlastHit(x, y, d) self:breakApart() end
+
 -- Ground pound (Interactions.run): encima de ella, se rompe
 function Box:onPound(pa, z)
     if self.state ~= 'rest' then return false end
@@ -240,10 +274,11 @@ function Box:netAtRest()
     return self.state == 'rest' and self.x == self.home.x and self.y == self.home.y
 end
 function Box:netRest() self:resetToHome(); self.state = 'rest' end
-function Box:netPack() return { self.pusherIdx or 0 } end
+function Box:netPack() return { self.pusherIdx or 0, math.floor((self.pushK or self.PUSH_K) * 100 + 0.5) } end
 function Box:netApply(a, b, f)
     self.clientView = true
     self.pusherIdx = b[1] or 0
+    self.pushK = (b[2] or 0) > 0 and b[2] / 100 or nil
     -- Empujándola yo: la instantánea va por detrás; se queda donde la llevo (sin volver atrás) un momento
     if self.predT and self.predT > 0 and self.predX then
         local dt = love.timer.getDelta()
