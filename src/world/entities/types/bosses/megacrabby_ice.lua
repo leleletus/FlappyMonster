@@ -82,13 +82,16 @@ function IM:clawBoxes()
 end
 
 function IM:isVulnerable()
+    if self.offstage then return false end
     if self.state == 'clap_stuck' then return not self.hitDrop and not self._shell end
     return Mega.isVulnerable(self)
 end
 
 -- (sin efectos secundarios: el cliente lo usa para predecir)
 function IM:interact(pa)
-    if self.state ~= 'clap_stuck' then return Mega.interact(self, pa) end
+    -- (vencido en un evento — congelado o al fondo noqueado — con las pinzas aún en el hielo: ya no se tocan; 0.5.86, el
+    -- usuario: en el Mega Mashup sus pinzas seguían rebotando al jugador desde el fondo)
+    if self.state ~= 'clap_stuck' or self.eventFrozen or self.offstage then return Mega.interact(self, pa) end
     local pob = pa:getOuterBounds()
     if not self.hitDrop and self.inv <= 0 and (pa.vy or 0) > 0 then
         for _, cb in ipairs(self:clawBoxes()) do

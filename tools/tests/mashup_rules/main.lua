@@ -12,7 +12,7 @@
 --   final      relevos: uno pelea (enfadado), los otros tres al FONDO esperando, en sus sitios; la música es la variante
 --              del que pelea; los que esperan lanzan sus peligros (notas, carámbanos, Crabbies, apagón)
 --   relevo     vencido el que pelea: en el corte pasa al fondo NOQUEADO, baja otro (al azar, de los que quedan) y la
---              música cambia de variante SIN perder el compás
+--              música cambia de variante SIN perder el compás; la Icy noqueada al fondo no se toca (ni sus pinzas en el hielo)
 --   fin        vencidos los cuatro: la pieza 'end'; revientan uno por compás (5, 6, 7, 8); luego la SALIDA con la zona
 --              abierta (la meta)
 --   barra      la barra compartida: 8 al empezar, baja con cada golpe; el nombre, el del que pelea
@@ -237,6 +237,25 @@ function cases.flujo()
             check('relevo', cm.fin[prev].offstage == 'ko' and cm.active ~= prev and not cm.ko[cm.active] and cm.piece == pid and okPos,
                 ('%s → al fondo %s; baja %s; música %s en %.2f (corte %.2f)'):format(prev, tostring(cm.fin[prev].offstage),
                     tostring(cm.active), tostring(cm.piece), cm.pos, cut or -1))
+            if prev == 'icy' then
+                -- (0.5.86, el usuario: noqueada al fondo con las pinzas aún en el hielo, seguían rebotando al jugador)
+                local ib = cm.fin.icy
+                local st0, x0, y0, vy0, gp0, hd0, inv0 = ib.state, pa.x, pa.y, pa.vy, pa.gpPhase, ib.hitDrop, ib.inv
+                ib.state, ib.hitDrop, ib.inv = 'clap_stuck', false, 0
+                local hits = {}
+                for _, cb in ipairs(ib:clawBoxes()) do
+                    local ob = pa:getOuterBounds()
+                    pa.x, pa.y, pa.vy = cb.x + cb.w / 2, cb.y - ob.h / 2 + 4, 300
+                    for _, gp in ipairs({ false, 'fall' }) do
+                        pa.gpPhase = gp or nil
+                        hits[#hits + 1] = tostring(ib:interact(pa))
+                    end
+                end
+                ib.state, pa.x, pa.y, pa.vy, pa.gpPhase, ib.hitDrop, ib.inv = st0, x0, y0, vy0, gp0, hd0, inv0
+                local clean = true
+                for _, h in ipairs(hits) do if h ~= 'nil' then clean = false end end
+                check('relevo', clean, 'la Icy noqueada al fondo, con las pinzas en el hielo: sus pinzas dan ' .. table.concat(hits, ','))
+            end
         else
             check('fin', pid == 'end', 'vencidos los cuatro: la siguiente pieza es el fin (' .. tostring(pid) .. ')')
         end

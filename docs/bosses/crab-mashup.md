@@ -266,3 +266,7 @@ nothing to build now.)
   more than half the piece counts as a wrap. The icicles were silent: the director's sounds came from the director's
   position (far from the stage) → `Sound.playAt` at each hazard (crack warning, a falling whoosh, the impact).
   Harness: `mashup_rules GAME=1 DIFF=… ` counts the hazards per second in the final (fails above 2).
+
+- 0.5.86, the user: in the final, the Icy Mega knocked out in the background kept its FROZEN CLAWS' hitboxes (defeated
+  during its `clap_stuck`, the claw check ran before the "offstage / event-frozen: untouchable" rule) → `IM:interact`
+  and `IM:isVulnerable` check `eventFrozen` / `offstage` first. Test: `mashup_rules` `relevo`.

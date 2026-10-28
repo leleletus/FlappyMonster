@@ -364,6 +364,10 @@ jungle boss ([giantbeetle](../bosses/giantbeetle.md)). Approved design (2026-10-
   after that hit — the charge goes THROUGH them ("more comfortable and readable"); enemies, once per charge; (2) a charge
   that ends without hitting anything (time out, or an edge) no longer stops dead → 'brake' (`BRAKE_T` 0.4 s): skids to a
   halt (never off an edge) with dust and a scrape (`boxPush`), leaning on the charge frame.
+- 0.5.86 (the user: "it camouflages too well in the jungle"): new colours, same shape — METALLIC BLUE (chosen among
+  blue, red/black, gold and violet; `make_beetle.py --recolor` previews them, `RECOLORS` / `SMALL_PAL`). `--apply`
+  recolours the user's retouched `beetle-Sheet.png` tone by tone (the brown/green original is kept in
+  `FlappyMonster_originals/`), and `dead.png` / `fly-Sheet.png` follow. The giant keeps its colours.
 - **Flying Rhino Beetle** (prop `wings`, 0.5.79; the Giant Rhino Beetle's minions, like the King Gummy's flying
   guards): flies with its own wings (`fly` anim, `assets/images/enemies/beetle/fly-Sheet.png`; free flight, `flyArea`
   set by whoever spawns it) and never charges. A stomp (or any knock) drops it ON ITS BACK like the walking one

@@ -537,8 +537,18 @@ def apply():
     D = DESIGNS[CHOSEN]
     E = 'assets/images/enemies/beetle/'; G = 'assets/images/bosses/giantbeetle/'
     for d in (E, G): os.makedirs(os.path.join(ROOT, d), exist_ok=True)
+    # (el pequeño, en AZUL METÁLICO — RECOLORS[SMALL_PAL] —: su hoja retocada por el usuario se recolorea tono a tono, una
+    # vez; el original se guarda fuera del repo, en FlappyMonster_originals)
+    sp = os.path.join(ROOT, E + 'beetle-Sheet.png')
+    if os.path.exists(sp):
+        src = Image.open(sp).convert('RGBA')
+        if any('%02x%02x%02x' % p[:3] in SRC_TONES for p in src.getdata() if p[3]):
+            sys.path.insert(0, os.path.join(ROOT, 'tools/art/lib'))
+            import originals
+            print('   original guardado en', originals.keep(sp)[0])
+            recolor(src, RECOLORS[SMALL_PAL]).save(sp); print('  ', E + 'beetle-Sheet.png (recoloreada: azul metálico)')
     out = {E + 'beetle-Sheet.png': sheet(D, SMALL), G + 'body-Sheet.png': sheet(D, BOSS, True), G + 'block.png': stone_block(),
-           E + 'dead.png': squashed(), E + 'fly-Sheet.png': sheet(D, ['fly1', 'fly2']),
+           E + 'dead.png': squashed(), E + 'fly-Sheet.png': recolor(sheet(D, ['fly1', 'fly2']), RECOLORS[SMALL_PAL]),
            G + 'debris-Sheet.png': debris(), G + 'wave-Sheet.png': shockwave(), G + 'dust-Sheet.png': dust()}
     for rel, im in out.items():
         if rel in KEEP and os.path.exists(os.path.join(ROOT, rel)):
@@ -558,9 +568,66 @@ def apply():
                                         (G + 'dust-Sheet.png', 16, 16, 4)], boss)
 
 
+# ══ PALETAS NUEVAS DEL PEQUEÑO (0.5.86, el usuario: "se camufla bastante bien en la jungla") ════════════════════════
+# Misma forma y patas (las de la hoja RETOCADA por el usuario: se leen y se cambian de color tono a tono), colores que
+# destacan sobre el verde y el marrón de la jungla. El jefe se queda como está.
+#   python3 tools/art/enemies/make_beetle.py --recolor          → vista previa (FlappyMonster_pruebas/escarabajo/recolor/)
+SRC_TONES = {   # tono del diseño D → papel
+    'e9f7a8': 'shine', '9cb24a': 'light', '8a5228': 'mid', '5e3018': 'shade', '2e1608': 'outline',
+    '8fcf4e': 'pron1', '4f9a3a': 'pron2', '2f6a32': 'pron3', '7a4220': 'horn', '24100a': 'hornO', '6e3e1c': 'leg',
+    '120c08': 'eye',
+}
+SMALL_PAL = '1'                                             # (el elegido por el usuario, 2026-10-28: azul metálico)
+RECOLORS = {
+    '1': dict(name='Azul metálico', shine='d8f4ff', light='5ec2f0', mid='2f74c8', shade='22489a', outline='121f4e',
+              pron1='9fe4ff', pron2='3a8fd8', pron3='24569e', horn='3f4a7a', hornO='11142e', leg='262d55', eye='ffffff'),
+    '2': dict(name='Rojo y negro', shine='ffd8c8', light='ff6a4a', mid='d42a2a', shade='8a1420', outline='3a0812',
+              pron1='6a6a7a', pron2='3e3e4c', pron3='24242e', horn='34343e', hornO='121218', leg='24242e', eye='ffe9a0'),
+    '3': dict(name='Dorado', shine='fff6c0', light='ffd84a', mid='d49a20', shade='8e5a10', outline='3e2406',
+              pron1='ffe680', pron2='e0a830', pron3='9a6614', horn='5a3410', hornO='24120a', leg='4a2c10', eye='120c08'),
+    '4': dict(name='Violeta iridiscente', shine='f0d8ff', light='c27af0', mid='8a3ec8', shade='5a2290', outline='2a0e48',
+              pron1='8af0dc', pron2='2fb0a0', pron3='1e6e6a', horn='3a2050', hornO='160a22', leg='2a1a3a', eye='ffffff'),
+}
+
+
+def recolor(img, pal):
+    out = img.copy(); px = out.load()
+    for y in range(out.height):
+        for x in range(out.width):
+            r, g, b, a = px[x, y]
+            role = SRC_TONES.get('%02x%02x%02x' % (r, g, b))
+            if a and role and role in pal: px[x, y] = hx('#' + pal[role])
+    return out
+
+
+def recolor_preview():
+    from PIL import ImageDraw
+    E = os.path.join(ROOT, 'assets/images/enemies/beetle/')
+    srcs = [Image.open(E + f).convert('RGBA') for f in ('beetle-Sheet.png', 'dead.png', 'fly-Sheet.png')]
+    bg = Image.open('/home/mtvemo/FlappyMonster_pruebas/selva/fondo/superficie_day.png').convert('RGBA').crop((0, 300, 1280, 720))
+    rows = [('Actual (castaño y verde)', None)] + [(p['name'], p) for p in RECOLORS.values()]
+    out = Image.new('RGBA', (1280, len(rows) * 140 + 20), (30, 34, 40, 255)); d = ImageDraw.Draw(out)
+    for i, (name, pal) in enumerate(rows):
+        y0 = 20 + i * 140
+        out.alpha_composite(bg.crop((0, 140, 1280, 260)), (0, y0))
+        imgs = [s if pal is None else recolor(s, pal) for s in srcs]
+        x = 20
+        for k in (0, 4, 8):                                         # andar, embestir, patas arriba
+            f = imgs[0].crop((k * W, 0, k * W + W, H)).resize((W * 4, H * 4), Image.NEAREST)
+            out.alpha_composite(f, (x, y0 + 120 - H * 4)); x += W * 4 + 20
+        out.alpha_composite(imgs[1].resize((W * 4, H * 4), Image.NEAREST), (x, y0 + 120 - H * 4)); x += W * 4 + 20
+        out.alpha_composite(imgs[2].crop((0, 0, W, H)).resize((W * 4, H * 4), Image.NEAREST), (x, y0 + 60 - H * 4)); x += W * 4 + 40
+        d.rectangle((x - 6, y0 + 4, x + 230, y0 + 24), fill=(0, 0, 0, 160)); d.text((x, y0 + 8), name, fill=(255, 255, 255))
+    os.makedirs(os.path.join(OUT, 'recolor'), exist_ok=True)
+    out.save(os.path.join(OUT, 'recolor', 'vista_previa.png'))
+    print('  ', os.path.join(OUT, 'recolor', 'vista_previa.png'))
+
+
 if __name__ == '__main__':
     import sys
     os.makedirs(OUT, exist_ok=True)
+    if '--recolor' in sys.argv:
+        recolor_preview(); sys.exit(0)
     if '--apply' in sys.argv:
         apply(); sys.exit(0)
     for k, D in DESIGNS.items():
