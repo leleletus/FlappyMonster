@@ -82,6 +82,13 @@
 --   caja_choques   caja que cae en la cabeza del jugador, el aire que la empuja contra él y 60 carreras / saltos
 --                  contra ella: nunca se mete en él ni lo pasa al otro lado
 --   cargar_gp      ground pound llevando la caja pequeña o la bomba: la sigue llevando, ni se rompe ni se enciende
+--   balanza_impacto  una caja grande que cae desde alto en un platillo dispara la pequeña del otro; desde poco, solo
+--                  inclina; la fuerza crece con el peso y la velocidad y baja con el peso de lo que se lanza
+--   escarabajo     el Escarabajo Rinoceronte: te ve delante, escarba, embiste, se aturde contra la pared; pisado, patas
+--                  arriba (de lado no hace daño); se da la vuelta solo; pisado patas arriba, muere
+--   escarabajo_lanzado  patas arriba se coge y se lanza: derriba un Gummy, rompe una caja; a lava, pinchos o vacío,
+--                  revienta
+--   (ONLY=a,b: solo esos casos)
 --   aire_caja      el aire empuja una caja contra el jugador: el jugador sigue a su lado (empujado), nunca al otro
 --   geiser_peso    el Géiser sube más despacio lo que pesa más con lo que lleva encima y el chorro se corta debajo
 --   bomba_cajas    una explosión rompe las cajas (grande y pequeña) dentro de su radio de daño; lejos no; la semilla no
@@ -2412,6 +2419,121 @@ local function geyserShot()
 end
 
 local shot
+-- Golpe en un platillo (el usuario, 0.5.76): una caja grande que cae DESDE ALTO en uno dispara la pequeña del otro
+-- (sube mucho más que al inclinarse); dejada caer desde poco, solo inclina. Y la fuerza: más peso o más velocidad, más
+function cases.balanza_impacto()
+    local function drop(fromRow)
+        local level, es = room(30, 16, {}, { { type = 'scale', col = 15, row = 3, props = { span = 6, drop = 5, travel = 2 } },
+                                            { type = 'smallbox', col = 18, row = 6 } })
+        local sc, small = es[1], es[2]
+        level.levelRef = level
+        sim(level, {}, es, 2)                                      -- (la pequeña se posa: baja su platillo)
+        local lb = sc:bodyParts()[1]:getOuterBounds()
+        local Entities_ = require 'src/world/entities/Entities'
+        local big = Entities_.create({ type = 'box', col = 12, row = fromRow, props = {} })
+        big.x = lb.x + lb.w / 2
+        es[#es + 1] = big
+        local y0, up = small.y, 0
+        sim(level, {}, es, 2.5, function() up = math.max(up, (y0 - small.y) / T) end)
+        return up
+    end
+    local high, low = drop(1), drop(6)
+    local Scale = require('src/world/entities/types/mechanisms/scale').class
+    local k1, k2, k3 = Scale.impactPower(2, 1100, 1), Scale.impactPower(1, 1500, 1), Scale.impactPower(2, 1100, 2)
+    check('balanza_impacto', high > 3.5 and low < 2.6 and k1 > k3 and k2 < k1,
+        ('caja grande desde lo alto: la pequeña sube %.1f casillas · desde poco: %.1f (solo se inclina) · fuerza: grande %.2f, pequeña %.2f, contra 4 de peso %.2f'):format(
+            high, low, k1, k2, k3))
+end
+
+-- ── Escarabajo Rinoceronte (jungla, 0.5.76) ───────────────────────────────────
+-- Te ve delante → escarba → embiste → contra la pared, aturdido; pisado: patas arriba (no hace daño de lado);
+-- pisado otra vez: muere; patas arriba se da la vuelta solo
+function cases.escarabajo()
+    local level, es = room(26, 9, {}, { { type = 'beetle', col = 14, row = 8, props = { pauses = false, startDir = 'left', patrol = false } } })
+    local b = es[1]
+    settle(level, es)
+    local pa = playerAt(level, 9, 8)
+    clear()
+    local seen, charged, maxV, dazed = false, false, 0, false
+    sim(level, { pa }, es, 3, function()
+        if b.state == 'windup' then seen = true end
+        if b.state == 'charge' then charged = true; maxV = math.max(maxV, math.abs(b.vx)) end
+        if b.state == 'daze' then dazed = true end
+    end)
+    local hurt = pa.hp < pa.hpMax
+    -- patas arriba con un pisotón; de lado ya no hace daño
+    local lv, e2 = room(20, 9, {}, { { type = 'beetle', col = 10, row = 8, props = { pauses = false, speed = 0, patrol = false } } })
+    local c = e2[1]
+    settle(lv, e2)
+    local q = PlayerAdventure:new(c.x, c.y - 3 * T); q.vy = 300
+    local back
+    sim(lv, { q }, e2, 0.5, function()
+        if c.state == 'onback' and back == nil then back = true; q.x = c.x + 3 * T end      -- (y se aparta: no lo vuelve a pisar)
+    end)
+    local hp0 = q.hp
+    q.x, q.y, q.vy = c.x + 20, c.y - 10, 0
+    sim(lv, { q }, e2, 0.3)
+    local sideSafe = q.hp == hp0
+    -- se da la vuelta solo
+    sim(lv, {}, e2, 4)
+    local rightsUp = c.state == 'walk' or c.state == 'idle' or c.state == 'windup'
+    -- patas arriba otra vez y pisado: muere
+    c:stomp()
+    sim(lv, {}, e2, 0.8)
+    q.x, q.y, q.vy = c.x, c.y - 3 * T, 300
+    sim(lv, { q }, e2, 0.5)
+    local killed = c.state == 'dead' or not c.alive
+    check('escarabajo', seen and charged and maxV > 300 and dazed and hurt and back and sideSafe and rightsUp and killed,
+        ('ve=%s embiste=%s (%.0f px/s) aturdido=%s daño al chocar=%s · pisado: patas arriba=%s, de lado sin daño=%s · se da la vuelta=%s · pisado patas arriba: muere=%s'):format(
+            tostring(seen), tostring(charged), maxV, tostring(dazed), tostring(hurt), tostring(back), tostring(sideSafe), tostring(rightsUp), tostring(killed)))
+end
+
+-- Patas arriba se coge y se lanza (systems/Carry): derriba a un Gummy y rompe una caja; lanzado a la lava, a los pinchos
+-- o al vacío, revienta (el usuario)
+function cases.escarabajo_lanzado()
+    local TileCodec = require 'src/world/tiles/TileCodec'
+    local up = { present = true, dir = TileCodec.DIR_UP }
+    local function throwInto(kind)
+        local put = {}
+        if kind == 'lava' then for c = 8, 20 do put[#put + 1] = { c, 8, 'danger' } end end
+        _G.TILE_HUECO = 0
+        if kind == 'vacio' then for c = 8, 23 do put[#put + 1] = { c, 9, 'hueco' } end end
+        local ents = { { type = 'beetle', col = 6, row = 8, props = { pauses = false, speed = 0, patrol = false } } }
+        if kind == 'gummy' then ents[2] = { type = 'gummy', col = 9, row = 8, props = { pauses = false, speed = 0, patrol = false } } end
+        if kind == 'caja' then ents[2] = { type = 'box', col = 9, row = 8 } end
+        local level, es = room(24, 9, put, ents)
+        if kind == 'pinchos' then for c = 8, 20 do level.tiles[8][c] = TileCodec.encode(0, false, { nil, nil, up, up }) end end
+        local b = es[1]
+        settle(level, es)
+        b:stomp()
+        sim(level, {}, es, 0.8)
+        local pa = playerAt(level, 5, 8)
+        pa.facing = 1
+        clear(); pa.grabReq = true
+        sim(level, { pa }, es, 1 / 60)
+        local held = b.state == 'carried'
+        pa.grabReq = true
+        sim(level, { pa }, es, 1 / 60)
+        local out
+        sim(level, { pa }, es, 2.5, function()
+            if not out and (b.state == 'dead_burst' or not b.alive) then out = 'revienta' end
+            if os.getenv('TRACE_BEETLE') and kind == 'vacio' then print(('  b x=%.0f y=%.0f %s suelo=%s'):format(b.x, b.y, b.state, tostring(b.onGround))) end
+        end)
+        local other = es[2]
+        if kind == 'gummy' then out = (other.state == 'dead_fling' or not other.alive) and 'gummy derribado' or ('gummy ' .. other.state) end
+        if kind == 'caja' then out = (other.state == 'broken' or other.state == 'gone') and 'caja rota' or ('caja ' .. other.state) end
+        return held, out or ('escarabajo ' .. b.state)
+    end
+    local parts, ok = {}, true
+    for _, k in ipairs({ 'gummy', 'caja', 'lava', 'pinchos', 'vacio' }) do
+        local held, out = throwInto(k)
+        local want = ({ gummy = 'gummy derribado', caja = 'caja rota' })[k] or 'revienta'
+        ok = ok and held and out == want
+        parts[#parts + 1] = ('%s: cogido=%s → %s'):format(k, tostring(held), out)
+    end
+    check('escarabajo_lanzado', ok, table.concat(parts, ' · '))
+end
+
 function love.load()
     for _, n in ipairs({ 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
                          'helmet_jump', 'helmet_ride', 'helmet_gp', 'helmet_side', 'stomp_fast',
@@ -2420,7 +2542,9 @@ function love.load()
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
                          'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado', 'techo_pinchos',
-                         'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila' }) do cases[n]() end
+                         'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'escarabajo', 'escarabajo_lanzado' }) do
+        if not os.getenv('ONLY') or (',' .. os.getenv('ONLY') .. ','):find(',' .. n .. ',', 1, true) then cases[n]() end
+    end
     if os.getenv('SHOT_BOMB') then bombShot() end
     if os.getenv('SHOT_PROPS') then propsShot() end
     if os.getenv('SHOT_GEYSER') then geyserShot() end

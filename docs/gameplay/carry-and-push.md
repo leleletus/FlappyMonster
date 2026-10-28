@@ -92,7 +92,8 @@ total weight; `Weight.total(o, level, isPlayer)` = `o` + its stack. A player wei
 ## Tests
 
 `mechanics`: `caja_empuje`, `caja_rota`, `caja_borde`, `cajas_golpes`, `cargar`, `bomba_reaparece`, `islas`, `viento`,
-`cuerpo_mueve`.
+`cuerpo_mueve`, `balanza`, `balanza_tope`, `balanza_impacto` (a hard landing on a pan fires the other one),
+`escarabajo_lanzado` (the Rhino Beetle on its back is carried and thrown).
 
 ## History and decisions
 
@@ -119,3 +120,8 @@ total weight; `Weight.total(o, level, isPlayer)` = `o` + its stack. A player wei
   grabs); bomb picked up unlit, lit when thrown; crouch + UP = put down carefully instead of throwing; a small box
   that can be carried and breaks depending on the impact; bomb objects respawn and light on a hard impact; the big box
   also breaks on spikes, lava and big falls, and is much heavier to push than the small one; one generic island module.
+- 0.5.76 (the user): the scale's catapult is GENERAL — anything heavy landing hard on a pan fires what the other pan
+  carries, by weight and speed (not only a ground pound or a boss): `Scale.impactPower` ([traps-and-mechanisms](../entities/traps-and-mechanisms.md)).
+  A first threshold (500 px/s, power 0.45) made a box dropped one tile onto a pan jolt it and split a stack: raised to
+  750 px/s and 0.6. The Rhino Beetle on its back is a carryable (`carryable`, thrown = it knocks enemies down and breaks
+  boxes; it explodes in lava, on spikes or in the void).

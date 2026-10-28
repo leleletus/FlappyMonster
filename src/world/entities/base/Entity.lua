@@ -423,6 +423,13 @@ end
 
 -- ¿Se cayó por debajo del nivel? (la regla de todos: antes copiada en cada tipo)
 function Entity:fellOut(level) return level ~= nil and self.y > (level.heightPx or 1e9) + TILE_PX * 4 end
+-- ¿Cayó AL VACÍO? Fuera del nivel es sólido (también por debajo: Level.getRaw), así que lo que cae por un hueco del
+-- suelo se posa en el borde de abajo, fuera del mapa: eso es el vacío (`fellOut` no llega a pasar nunca). Lo usa quien
+-- tiene que reventar al caer por un hueco (el Escarabajo Rinoceronte)
+function Entity:inVoid(level)
+    if not level or not level.heightPx or not self.onGround then return false end
+    return self.y + self.outerH / 2 >= level.heightPx - 2
+end
 
 -- ¿Algo mortal donde está? (pinchos de verdad o material 'deadly')
 function Entity:onDeadlyGround(level)

@@ -92,6 +92,18 @@ function love.load()
             end
             if boss.state == 'scared' and boss.deadTimer > 1.2 and boss.inv <= 0 then boss:damage(1, 'stomp') end
         end
+        -- Escarabajo Rinoceronte Gigante: lo de la balanza (en un platillo, ground pound en el otro; si no está en
+        -- ninguno, se le dispara igual cada poco) y, patas arriba, un pisotón (para verlo hasta el final)
+        if boss.def.name == 'giantbeetle' then
+            local Scale = require('src/world/entities/types/mechanisms/scale').class
+            if boss.state == 'rest' and boss.deadTimer > 0.6 and boss.onGround and t - (hitDone.launch or -9) > 5 then
+                hitDone.launch = t
+                local s, pan = Scale.panUnder(level, boss)
+                if s then s.levelRef = level; s:catapult((pan == s.pans[1]) and s.pans[2] or s.pans[1], nil, 1, nil)
+                else boss:onScaleLaunch(-1000, nil) end
+            end
+            if boss.state == 'flipped' and boss.deadTimer > 0.8 and boss.inv <= 0 then boss:damage(1, 'stomp') end
+        end
         -- El Groove: cada nota dorada se le devuelve (en la 2ª fase, los dos platos a girar) y, aturdido, un pisotón
         -- (para verlo hasta el final)
         if boss.def.name == 'groovecrab' then

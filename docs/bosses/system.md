@@ -16,6 +16,7 @@ In progress: two new bosses replace Mega Crabby and Mega Gloomy, which become se
 | Icy Mega Crabby | `megacrabby_ice` | [megacrabby-ice](megacrabby-ice.md) | `glaciar_cangrejo` | 5 |
 | Giant Hopper (Saltarín Gigante) | `gianthopper` | [gianthopper](gianthopper.md) | `gruta_del_farol` | 6 |
 | Mega Gloomy Crabby (future secret boss) | `megagloomy` | [megagloomy](megagloomy.md) | `gruta_lugubre` (out of the story) | — |
+| Giant Rhino Beetle (Escarabajo Rinoceronte Gigante; jungle, future island) | `giantbeetle` | [giantbeetle](giantbeetle.md) | arena only (`jefe_escarabajo`) | — (more shards later) |
 | The Mirror | `mirror` | [mirror](mirror.md) | `ruta_del_espejo` | 7 |
 | Mirror chase (not a fight) | `mirrorchase` | [mirror-chase](mirror-chase.md) | `huida_del_espejo` | — |
 | The Groove (El Groove, SECRET, after the game; fights to its music) | `groovecrab` | [groovecrab](groovecrab.md) | `isla_del_groove` (secret map node) | — |

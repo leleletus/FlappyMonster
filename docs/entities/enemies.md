@@ -311,6 +311,27 @@ its body never hurts. Every island only pushes (the user's rule for the Geyser: 
 (`noises`) for the Gloomies. Harness `mechanics` `soplon`.
 
 
+## Rhino Beetle (`beetle`, 0.5.76) — jungle only
+
+`types/enemies/beetle.lua`; art `assets/anim/enemies/beetle.json` (22x20 frames at ×4, facing RIGHT; design D chosen by
+the user, legs retouched by hand: `tools/art/enemies/make_beetle.py` never rewrites the sheet). Its giant is the
+jungle boss ([giantbeetle](../bosses/giantbeetle.md)). Approved design (2026-10-28):
+- Walks (base walk, 4-frame tripod cycle) and turns at walls and edges. Sees a player IN FRONT at its height within
+  `SEE` 6.5 tiles with no wall in between → 'windup' (`WIND_T` 0.45 s, scraping) → 'charge' (`CHARGE_V` 380 px/s, ≤ 2.4 s;
+  stops at an edge) → hits a wall: 'daze' (0.9 s) and turns. `COOLDOWN` 1.2 s between charges.
+- Touching it from the side: 1 HP (`onTouch` 'hurt', fixed). STOMP → ON ITS BACK ('onback', `BACK_T` 3 s, harmless,
+  legs flailing) → it rights itself ('righting') and goes on. Stomped again on its back, or any ground pound → dies. The
+  push of a nearby ground pound also flips it.
+- On its back it is CARRYABLE (`systems/Carry`, weight 1): thrown ('thrown'), it knocks down the enemies it hits
+  (`dieFling`) and breaks boxes, then lands on its back again.
+- Falls in LAVA, on SPIKES or into the VOID (walking, on its back or thrown): it EXPLODES (`dieBurst`; the user). The
+  void = landing on the bottom border of the level at the bottom of a pit (`Entity:inVoid`: outside the level is solid,
+  so `fellOut` never happens).
+- Network: nothing of its own (state, deadTimer, frame, facing). Drawing: each frame with its lowest pixel on the
+  ground (`Set:footGap`, measured from the image; the user: legs floated in some frames) PLUS 1 px: the front legs are
+  1 px longer, so the back legs touch the ground and the front ones sink 1 px into it (the user).
+- Tests: `mechanics escarabajo`, `escarabajo_lanzado`.
+
 ## History and decisions (dated notes)
 
 Kept because they record WHY things are the way they are and what was tried and rejected. Where a note

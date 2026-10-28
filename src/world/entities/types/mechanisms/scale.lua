@@ -9,6 +9,15 @@
 --     quien está encima va con ellos). Lo que no es un jugador y está encima lo mueve la balanza.
 -- Arte (tools/art/world/make_scale_box.py): assets/images/mechanisms/scale/<isla>-pan.png (48x8), -rope.png (4x8),
 -- -pulley-Sheet.png (2 cuadros 16x16). Sonidos scaleCreak (se mueve) y scaleLaunch (catapulta).
+-- JEFES en la balanza (0.5.76, el Escarabajo Rinoceronte Gigante; regla de la base, cualquier jefe la usa): un jefe no
+-- pesa (Weight), pero si su clase tiene `ridesScale` y está de pie en un platillo VA CON ÉL (sube y baja); un ground pound
+-- en el OTRO platillo lo dispara: `onScaleLaunch(vy, scale)`; y un jefe que cae de golpe en un platillo
+-- (`Scale.slamUnder(level, boss, power)`) hace lo mismo que un ground pound: dispara lo del otro (jugadores incluidos) y
+-- le avisa a quién (`onScaleCatapult(players, ents)`): un arma de doble filo (el usuario).
+-- IMPACTOS (0.5.76, el usuario: "para cualquier cosa móvil de balanzas"): lo que CAE DE GOLPE en un platillo (una caja
+-- desde lo alto, algo lanzado, una pila…) lo hunde de golpe y el otro sube tan rápido que DISPARA lo que lleve, con más
+-- fuerza cuanto más pesa y más rápido cae lo que llega, y con menos cuanto más pesa lo que hay que lanzar
+-- (`impactPower`). Un golpe flojo solo inclina la balanza como siempre. El ground pound del jugador va aparte (onPound).
 -- Red: el desnivel (`d`) en su netPack; los platillos se calculan de él.
 local Entity = require 'src/world/entities/base/Entity'
 local Isles  = require 'src/world/level/Isles'
@@ -26,6 +35,10 @@ local SPEED    = 150                       -- px/s: lo que sube / baja un platil
 local SLAM_SPEED = 900                     -- px/s: hundido por un ground pound
 local LAUNCH_V = 1.9                       -- × el salto: la catapulta
 local CREAK_T  = 0.45
+local IMPACT_REF = 2 * 1100                -- peso × px/s de caída que dispara con fuerza 1 (la caja grande a 1100 px/s)
+local IMPACT_MIN = 0.6                     -- por debajo, el golpe solo inclina
+local IMPACT_MAX = 1.6
+local IMPACT_VY  = 750                     -- px/s (≈ caer 3 casillas): más despacio no es un golpe
 
 Scale.wantsLevel = true
 function Scale.sizePx() return TILE_PX, TILE_PX end
@@ -81,6 +94,21 @@ function Scale:interact(pa) return nil end
 -- de todos, systems/Weight (jugadores de pie en él o en la pila + lo que llevan; entidades apoyadas; lo que vuela no)
 local function onPan(self, pan, level) return Weight.stack(pan, level, self) end
 
+-- Los jefes que van montados en un platillo (`ridesScale` y sus pies en la tabla; uno disparado o en el aire, no)
+local RB = {}
+local function bossRiders(pan, level)
+    local out = {}
+    local b = pan:getOuterBounds(RB)
+    for _, e in ipairs(level.liveEntities or {}) do
+        if e.ridesScale and e.alive and e.def and e.def.boss and (not e.ridesPan or e:ridesPan()) then
+            local eb = e:getOuterBounds()
+            local foot = eb.y + eb.h
+            if math.abs(foot - b.y) <= 6 and eb.x + eb.w > b.x + 8 and eb.x < b.x + b.w - 8 then out[#out + 1] = e end
+        end
+    end
+    return out
+end
+
 -- ¿Choca algún platillo al pasar de `d0` a `d`? El que BAJA mira su cara de abajo contra bloques, plataformas y cuerpos
 -- sólidos (cajas) que no van en su pila; el que SUBE, su cara de arriba contra bloques y plataformas.
 local QB = {}
@@ -125,20 +153,24 @@ function Scale:panBlocked(level, d, d0)
     return false
 end
 
--- Ground pound (Interactions.run): el que cae sobre un platillo lo hunde y lanza lo del otro
-function Scale:onPound(pa, z)
-    local hit
-    for _, pan in ipairs(self.pans) do if pa.standBody == pan then hit = pan end end
-    if not hit then return false end
+-- Lo de encima del platillo `hit` se hunde de golpe y lo del OTRO sale disparado (× `power`): jugadores (menos
+-- `except`), entidades y los jefes montados (`onScaleLaunch`). `by` (un jefe que cayó encima) se entera de a quién
+-- disparó (`onScaleCatapult`)
+function Scale:catapult(hit, except, power, by)
     local level = self.levelRef
     local other = (hit == self.pans[1]) and self.pans[2] or self.pans[1]
     local players, ents = onPan(self, other, level or {})
-    local v = -math.abs(ADV_JUMP_VEL) * LAUNCH_V * (self.props.power or 1)
-    for _, p in ipairs(players) do if p ~= pa then p:launch(0, v) end end
+    local v = -math.abs(ADV_JUMP_VEL) * LAUNCH_V * (self.props.power or 1) * (power or 1)
+    local shot = {}
+    for _, p in ipairs(players) do if p ~= except then p:launch(0, v); shot[#shot + 1] = p end end
     for _, e in ipairs(ents) do
         if e.launch and e.canBeLaunched and e:canBeLaunched() then e:launch(e.vx or 0, v)
         else e.vy, e.onGround = v, false end
     end
+    for _, e in ipairs(level and bossRiders(other, level) or {}) do
+        if e ~= by and e.onScaleLaunch then e:onScaleLaunch(v, self) end
+    end
+    if by and by.onScaleCatapult then by:onScaleCatapult(shot, ents) end
     self.slamT, self.slamSide = 0.35, hit.side
     Sound.play('scaleLaunch')
     local b = other:getOuterBounds()
@@ -146,8 +178,85 @@ function Scale:onPound(pa, z)
     return true
 end
 
+-- Ground pound (Interactions.run): el que cae sobre un platillo lo hunde y lanza lo del otro
+function Scale:onPound(pa, z)
+    for _, pan in ipairs(self.pans) do if pa.standBody == pan then return self:catapult(pan, pa, 1, nil) end end
+    return false
+end
+
+-- El platillo en el que está de pie `e` (sus pies en la tabla): scale, platillo — o nil
+function Scale.panUnder(level, e)
+    local eb = e:getOuterBounds()
+    local foot = eb.y + eb.h
+    for _, s in ipairs(level.liveEntities or {}) do
+        if s.pans and s.catapult then
+            for _, pan in ipairs(s.pans) do
+                local b = pan:getOuterBounds()
+                if math.abs(foot - b.y) <= 8 and eb.x + eb.w > b.x + 8 and eb.x < b.x + b.w - 8 then return s, pan end
+            end
+        end
+    end
+    return nil
+end
+
+-- La fuerza del disparo por un golpe: peso que llega × velocidad a la que cae, contra lo que pesa lo del otro platillo
+function Scale.impactPower(wIn, vy, wOther)
+    if vy < IMPACT_VY then return 0 end
+    local k = wIn * vy / IMPACT_REF / math.sqrt(math.max(1, wOther))
+    if k < IMPACT_MIN then return 0 end
+    return math.min(IMPACT_MAX, k)
+end
+
+-- Lo que acaba de posarse en cada platillo y a qué velocidad venía (lastVy: la del paso anterior, antes de posarse)
+local function noteVy(self, level)
+    self.lastVy = self.lastVy or setmetatable({}, { __mode = 'k' })
+    for _, pa in ipairs(level.players or {}) do self.lastVy[pa] = pa.vy or 0 end
+    for _, e in ipairs(level.liveEntities or {}) do
+        if e ~= self and e.vy then self.lastVy[e] = e.vy end
+    end
+end
+function Scale:impacts(level)
+    self.prevOn = self.prevOn or { {}, {} }
+    local now = { {}, {} }
+    local fired = false
+    for i, pan in ipairs(self.pans) do
+        local players, ents, w = onPan(self, pan, level)
+        local wIn, vIn = 0, 0
+        for _, pa in ipairs(players) do
+            now[i][pa] = true
+            -- (un ground pound ya hace lo suyo: onPound)
+            if not self.prevOn[i][pa] and pa.gpPhase ~= 'fall' and not pa.gpLanded then
+                local vy = (self.lastVy or {})[pa] or 0
+                if vy > IMPACT_VY then wIn, vIn = wIn + require('src/world/systems/Weight').ofPlayer(pa), math.max(vIn, vy) end
+            end
+        end
+        for _, e in ipairs(ents) do
+            now[i][e] = true
+            if not self.prevOn[i][e] then
+                local vy = (self.lastVy or {})[e] or 0
+                if vy > IMPACT_VY then wIn, vIn = wIn + Weight.ofEntity(e), math.max(vIn, vy) end
+            end
+        end
+        if wIn > 0 and not fired and self.slamT <= 0 then
+            local _, _, wOther = onPan(self, self.pans[3 - i], level)
+            local k = Scale.impactPower(wIn, vIn, wOther)
+            if k > 0 then self:catapult(pan, nil, k, nil); fired = true end
+        end
+    end
+    self.prevOn = now
+end
+
+-- Un jefe cae de golpe en un platillo: como un ground pound (con su fuerza)
+function Scale.slamUnder(level, boss, power)
+    local s, pan = Scale.panUnder(level, boss)
+    if not s then return false end
+    s.levelRef = s.levelRef or level
+    return s:catapult(pan, nil, power, boss)
+end
+
 function Scale:updateCustom(dt, level)
     self.levelRef = level
+    self:impacts(level)
     local travel = (self.props.travel or 2.5) * TILE_PX
     local target, speed
     if self.slamT > 0 then
@@ -160,6 +269,7 @@ function Scale:updateCustom(dt, level)
         speed = SPEED * (1 + math.min(2, math.abs(wl - wr)) * 0.25)
     end
     local d0 = self.d
+    local riders = { bossRiders(self.pans[1], level), bossRiders(self.pans[2], level) }    -- (antes de moverse)
     local nd = d0
     if d0 < target then nd = math.min(target, d0 + speed * dt)
     elseif d0 > target then nd = math.max(target, d0 - speed * dt) end
@@ -178,12 +288,16 @@ function Scale:updateCustom(dt, level)
                 if e.solidFull and dy < 0 then e:moveAndCollide(level, 0, dy) else e.y = e.y + dy end   -- (una caja: con sus choques)
             end
         end
+        for i, list in ipairs(riders) do
+            for _, e in ipairs(list) do e.y = e.y + ((i == 1) and dd or -dd) end
+        end
         self.creakT = self.creakT - dt
         if self.creakT <= 0 then Sound.play('scaleCreak'); self.creakT = CREAK_T end
         self.spin = (self.spin or 0) + dd
     else
         self.state, self.creakT = 'idle', 0
     end
+    noteVy(self, level)
     return true
 end
 

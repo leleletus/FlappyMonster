@@ -9,6 +9,7 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 
 | Id | Label | File | Flags | Own props |
 |---|---|---|---|---|
+| `beetle` | Escarabajo Rinoceronte | `types/enemies/beetle.lua` |  |  |
 | `bomb` | Bomba | `types/enemies/bomb.lua` |  | `fuseTime`: number = 2 · `killRadius`: number = 1.2 · `hurtRadius`: number = 2.3 · `pushRadius`: number = 3.6 |
 | `claudio` | Claudio | `?` | renderFront |  |
 | `crabby` | Crabby | `types/enemies/crabby.lua` |  | `canHide`: bool = true · `hideChance`: number = 0.75 · `wallWalk`: bool = false |
@@ -40,6 +41,7 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 
 | Id | Label | File | Flags | Own props |
 |---|---|---|---|---|
+| `giantbeetle` | Escarabajo Rinoceronte Gigante | `types/bosses/giantbeetle.lua` | boss | `zone`: int = 0 · `hp`: int = 10 · `hpPerPlayer`: int = 4 · `title`: text =  · `title_en`: text =  · `event`: bool = false · `mashupRole`: enum = none · `fixedHp`: bool = false · `rageMode`: enum = auto · `rageAt`: number = 0.5 |
 | `gianthopper` | Saltarín Gigante | `types/bosses/gianthopper.lua` | boss | `zone`: int = 0 · `hp`: int = 10 · `hpPerPlayer`: int = 4 · `title`: text =  · `title_en`: text =  · `event`: bool = false · `mashupRole`: enum = none · `fixedHp`: bool = false · `rageMode`: enum = auto · `rageAt`: number = 0.5 |
 | `giantpuffer` | Pez Globo Gigante | `types/bosses/giantpuffer.lua` | boss | `zone`: int = 0 · `hp`: int = 10 · `hpPerPlayer`: int = 4 · `title`: text =  · `title_en`: text =  · `event`: bool = false · `mashupRole`: enum = none · `fixedHp`: bool = false · `rageMode`: enum = auto · `rageAt`: number = 0.5 |
 | `groovecrab` | Cangrejo Groove | `types/bosses/groovecrab.lua` | boss | `zone`: int = 0 · `hp`: int = 11 · `hpPerPlayer`: int = 4 · `title`: text =  · `title_en`: text =  · `event`: bool = false · `mashupRole`: enum = none · `fixedHp`: bool = false · `rageMode`: enum = auto · `rageAt`: number = 0.5 · `decksFromStart`: bool = false · `bigStage`: bool = false |

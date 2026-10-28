@@ -56,7 +56,7 @@ are never edited by hand.
 - **entities/** — [overview](entities/overview.md) · [enemies](entities/enemies.md) ·
   [traps-and-mechanisms](entities/traps-and-mechanisms.md) · [enemy-editor](entities/enemy-editor.md) ·
   [how-to-add-an-enemy](entities/how-to-add-an-enemy.md)
-- **bosses/** — [system](bosses/system.md) · [megagummy](bosses/megagummy.md) · [giantpuffer](bosses/giantpuffer.md) · [gianthopper](bosses/gianthopper.md) · [groovecrab](bosses/groovecrab.md) · [crab-mashup](bosses/crab-mashup.md) · [megacrabby](bosses/megacrabby.md) ·
+- **bosses/** — [system](bosses/system.md) · [megagummy](bosses/megagummy.md) · [giantpuffer](bosses/giantpuffer.md) · [gianthopper](bosses/gianthopper.md) · [giantbeetle](bosses/giantbeetle.md) · [groovecrab](bosses/groovecrab.md) · [crab-mashup](bosses/crab-mashup.md) · [megacrabby](bosses/megacrabby.md) ·
   [miniboss1](bosses/miniboss1.md) · [snowboss](bosses/snowboss.md) · [megacrabby-ice](bosses/megacrabby-ice.md) ·
   [megagloomy](bosses/megagloomy.md) · [mirror](bosses/mirror.md) · [mirror-chase](bosses/mirror-chase.md) ·
   [how-to-add-a-boss](bosses/how-to-add-a-boss.md)
@@ -87,6 +87,7 @@ Ids are data (level files, saves, network), so confusing ones are explained here
 | `snowboss`, "Gran Bola de Nieve"; music id `snowball_boss` | the Snowball Boss; Verity = its Easter-egg look |
 | `megagloomy`, "Mega Crabby lúgubre" | the Mega Gloomy Crabby |
 | `gianthopper`, "Saltarín Gigante" | the Giant Hopper (the caves boss) |
+| `giantbeetle`, "Escarabajo Rinoceronte Gigante" | the Giant Rhino Beetle (the jungle boss; the small one: `beetle`) |
 | `groovecrab`, "Groove Crab" (Cangrejo Groove; "El Groove" until 0.5.54); music id `groove` | the secret boss after the game (a fiddler trampoline crab that fights to its music) |
 | `mirror` / `mirrorchase`, "el Reflejo" | the Mirror boss (the Reflection) / its chase before the fight |
 | `cryo`, "Congelador" | the Freezer trap |

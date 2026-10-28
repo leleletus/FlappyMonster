@@ -91,5 +91,10 @@ flips it onto its back = the window to hit it. It will need more mirror shards (
       `assets/images/bosses/giantbeetle/` (body, block, debris, wave, dust) and the sets `assets/anim/enemies/beetle.json`
       (×4: idle, walk, charge, flip, dead) and `assets/anim/bosses/giantbeetle.json` (×12: + toss, fly, slam, hurt and the
       attack sprites). Not used by any entity yet.
-- [ ] The entity, its fight and its arena (then the island, its levels and the shard count).
+- [x] (0.5.76) The small Rhino Beetle (`beetle`: charges, flipped by a stomp, carried and thrown, explodes in lava /
+      spikes / the void) and the boss (`giantbeetle`: armoured; flipped by firing it into the ceiling with the scale;
+      charge + debris, block toss, wing leap + waves; the scale fires the player too) with its temple arena
+      (`jefe_escarabajo`) → [giantbeetle](giantbeetle.md). The scale's catapult is now general (hard impacts).
+- [ ] The user's verdict on both (playing them).
+- [ ] The jungle island, its levels, the boss's story level and the shard count.
 

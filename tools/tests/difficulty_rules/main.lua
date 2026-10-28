@@ -440,7 +440,7 @@ end
 -- Nieve escupiendo…)
 function cases.azar()
     local probes = { megacrabby = 'chargeCd', megacrabby_ice = 'pounceT', megagloomy = 'pingT', snowboss = 'cycleI',
-                     megagummy = 'flopT', giantpuffer = 'atkT', gianthopper = 'flareT' }
+                     megagummy = 'flopT', giantpuffer = 'atkT', gianthopper = 'flareT', giantbeetle = 'spawnT' }
     local out, ok = {}, true
     for name, field in pairs(probes) do
         local seen, n = {}, 0

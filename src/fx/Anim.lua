@@ -266,6 +266,35 @@ end
 
 function Set:frame(i) return self.frames[math.max(1, math.min(#self.frames, i or 1))] end
 
+-- Filas VACÍAS del cuadro `i` por debajo de su último píxel visible (medido en la imagen, una vez por cuadro): para
+-- dibujar un cuadro con los pies en el suelo aunque las patas de ese cuadro no lleguen a la última fila (la regla de
+-- todos; la usan los escarabajos). Sin imagen (servidor, arnés sin ventana): 0.
+function Set:footGap(i)
+    local f = self:frame(i)
+    if not f then return 0 end
+    if f.footGap then return f.footGap end
+    local gap = 0
+    if love.image and love.image.newImageData and f.path and love.filesystem.getInfo(f.path) then
+        local ok, data = pcall(love.image.newImageData, f.path)
+        if ok and data then
+            gap = f.h
+            for y = f.h - 1, 0, -1 do
+                local hit = false
+                for x = 0, f.w - 1 do
+                    local px, py = f.x + x, f.y + y
+                    if px < data:getWidth() and py < data:getHeight() then
+                        local _, _, _, a = data:getPixel(px, py)
+                        if a > 0 then hit = true; break end
+                    end
+                end
+                if hit then gap = f.h - 1 - y; break end
+            end
+        end
+    end
+    f.footGap = gap
+    return gap
+end
+
 -- Dibuja el cuadro `i` con su ancla en (x, y). ox, oy (0..1) cambian el ancla para esta llamada.
 function Set:drawFrame(i, x, y, r, sx, sy, ox, oy)
     local f = self:frame(i)

@@ -23,7 +23,8 @@ cd "$(dirname "$0")/../.." || exit 1
 # (el juego no se pausa al perder el foco de la ventana: game.lua love.focus)
 export FM_TEST=1
 # SIN VENTANAS a la vista (FM_TEST_SHOW=1 para verlas), igual en macOS y Linux:
-#  - Linux con xvfb-run: cada arnés en una pantalla VIRTUAL (invisible; las capturas salen exactas).
+#  - Linux con xvfb-run: cada arnés en una pantalla VIRTUAL (invisible; las capturas salen exactas); también en una
+#    sesión Wayland (se le quita WAYLAND_DISPLAY y se fuerza SDL a X11: si no, la ventana salía en el escritorio).
 #  - macOS (y Linux sin xvfb): ventanas FUERA DE LA PANTALLA (src/core/TestWindow.lua: dibujan y capturan igual);
 #    en macOS además no roban el foco ni salen en el Dock (SDL_MAC_BACKGROUND_APP).
 XVFB=0
@@ -84,7 +85,10 @@ run_one() {
     local runner=(timeout "${TEST_TIMEOUT:-900}" love)
     # (pantalla virtual: -a busca una libre; el número de partida al azar evita que dos arneses en paralelo choquen)
     if [ $XVFB = 1 ] || { [ "$name" = level_solve ] && command -v xvfb-run >/dev/null; }; then
-        runner=(timeout "${TEST_TIMEOUT:-900}" xvfb-run -a -n $((100 + RANDOM % 800)) -s "-screen 0 1920x1080x24" love)
+        # (en una sesión WAYLAND el SDL de LÖVE prefiere Wayland y abría la ventana en el escritorio de verdad aunque
+        # corriera dentro de xvfb — el usuario, 2026-10-28 —: sin WAYLAND_DISPLAY y con el vídeo forzado a X11, la
+        # ventana va a la pantalla virtual)
+        runner=(timeout "${TEST_TIMEOUT:-900}" env -u WAYLAND_DISPLAY SDL_VIDEODRIVER=x11 xvfb-run -a -n $((100 + RANDOM % 800)) -s "-screen 0 1920x1080x24" love)
     fi
     env "${envs[@]}" "${runner[@]}" "tools/tests/$name" "${args[@]}" 2>&1 \
         | grep -v "^\[warning\] Tried to activate trigger" | tee "$out"
@@ -111,7 +115,7 @@ if [ "${1:-}" = all ]; then
     # grupo seguido (comparten carpeta de guardado); los ONLINE (y los que comparten su carpeta) en un solo grupo seguido
     # (un solo servidor local, un solo puerto); los que miden TIEMPOS (perf, el coste de los lúgubres) al final, solos.
     # FM_JOBS=1 = como antes, uno detrás de otro.
-    LIST=("project_check" "docs_reference CHECK=1" "enemy_data" "tool_editors" "tool_editors TOOL=enemy" "tool_editors TOOL=enemy KIND=boss" "tool_editors FLOW=runtime" "boss_intro" "startup_intro" "menu_flow" "flyers" "flyers SEED=3" "crawler_drop" "crawler_drop SUMMON=1" "mechanics" "snowboss_rules" "megagummy_rules" "icecrabby_rules" "megagloomy_rules" "giantpuffer_rules" "gianthopper_rules" "groovecrab_rules" "mashup_rules" "mashup_rules GAME=1" "lang_names" "sounds" "boss_sim" "boss_sim LEVEL=assets/levels/ruta_del_espejo.json" "boss_intro SECS=200" "sp_boss SECS=40 RETRY=level" "sp_boss SECS=40 DIFF=xtra" "sp_boss SECS=40 DIFF=xtra PAIR=1" "sp_boss LEVEL=assets/levels/fortaleza_malvada.json SECS=40" "boss_intro LEVEL=assets/levels/ruta_del_espejo.json SECS=40" "subtiles" "touch_layout" "flood_control" "editor_open" "editor_open LINKS=1" "free_play" "story_flow" "story_film NOSHOTS=1" "difficulty_rules" "bot_nav" "flappy_hud"
+    LIST=("project_check" "docs_reference CHECK=1" "enemy_data" "tool_editors" "tool_editors TOOL=enemy" "tool_editors TOOL=enemy KIND=boss" "tool_editors FLOW=runtime" "boss_intro" "startup_intro" "menu_flow" "flyers" "flyers SEED=3" "crawler_drop" "crawler_drop SUMMON=1" "mechanics" "snowboss_rules" "megagummy_rules" "icecrabby_rules" "megagloomy_rules" "giantpuffer_rules" "gianthopper_rules" "giantbeetle_rules" "groovecrab_rules" "mashup_rules" "mashup_rules GAME=1" "lang_names" "sounds" "boss_sim" "boss_sim LEVEL=assets/levels/ruta_del_espejo.json" "boss_intro SECS=200" "sp_boss SECS=40 RETRY=level" "sp_boss SECS=40 DIFF=xtra" "sp_boss SECS=40 DIFF=xtra PAIR=1" "sp_boss LEVEL=assets/levels/fortaleza_malvada.json SECS=40" "boss_intro LEVEL=assets/levels/ruta_del_espejo.json SECS=40" "subtiles" "touch_layout" "flood_control" "editor_open" "editor_open LINKS=1" "free_play" "story_flow" "story_film NOSHOTS=1" "difficulty_rules" "bot_nav" "flappy_hud"
           "update_boot FM_UPDATE=1"
           "online_menus"
           "online_update"

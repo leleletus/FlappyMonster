@@ -68,7 +68,15 @@ Designs and the user's verdicts: [new-props-plan](new-props-plan.md).
   everything STACKED on a pan (a box with something on top weighs both: the user): players standing on it or on
   something of the stack (+ what they carry), entities resting on it or on the stack (`weight`: players 1, big box
   2, small box 1, Seed 0.5, enemies 1; flyers weigh nothing). The pan moves what is stacked on it; players ride it
-  (`standBody`). A ground pound on a pan slams it down and LAUNCHES everything on the other pan (`power`). Pans STOP when they would hit a block, a
+  (`standBody`). A ground pound on a pan slams it down and LAUNCHES everything on the other pan (`power`).
+  IMPACTS (0.5.76, the user: "for anything that moves on a scale"): whatever LANDS HARD on a pan (falling ≥ `IMPACT_VY`
+  750 px/s — about 3 tiles —: a big box from high up, something thrown, a stack) slams it down and fires the other pan
+  like a ground pound, with power `Scale.impactPower(weightIn, vy, weightOther)` = weight × speed ÷ 2200 ÷ √(weight on
+  the other pan), capped at 1.6; under 0.6 it only tips the scale as before (a player's own pound is `onPound`).
+  BOSSES (0.5.76): a boss weighs nothing, but one with `ridesScale` standing on a pan RIDES it, a pound / impact on the
+  other pan calls its `onScaleLaunch(vy, scale)`, and a boss landing hard calls `Scale.slamUnder(level, boss, power)`
+  (fires the other pan, players included, and tells it whom: `onScaleCatapult`). `Scale:catapult(pan, except, power,
+  by)` is the one launch for all of them. Pans STOP when they would hit a block, a
   platform or a box not in their stack (0.5.69, the user: they went through the floor; `Scale:panBlocked`); enemies
   pass through them. Pans are NOT drop-through (the user: boxes must be placed on them carefully with crouch + UP;
   a pan does not rise if that would push a box on it into a player above). Sounds v2 (the user: "more mechanical,

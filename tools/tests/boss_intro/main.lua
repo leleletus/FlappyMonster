@@ -247,7 +247,7 @@ function love.load()
         if (not mega or (#rests >= 4 and spawnN >= 6 and gps >= 20)) and #spawns >= 4 then break end
     end
     local want = mega and { 'dormant', 'fall_in', 'land_in', 'roar_in', 'ready', 'chase' }
-                 or { 'dormant', 'intro', 'ready', ({ miniboss1 = 'patrol', snowboss = 'idle', megagummy = 'chase', megagloomy = 'prowl', giantpuffer = 'flop_wind', gianthopper = 'rest', groovecrab = 'groove' })[boss.def.name] or 'fight' }
+                 or { 'dormant', 'intro', 'ready', ({ miniboss1 = 'patrol', snowboss = 'idle', megagummy = 'chase', megagloomy = 'prowl', giantpuffer = 'flop_wind', gianthopper = 'rest', giantbeetle = 'rest', groovecrab = 'groove' })[boss.def.name] or 'fight' }
     local okSeq = true
     for i, s in ipairs(want) do if seq[i] ~= s then okSeq = false end end
     check('orden', introSeen and okSeq, table.concat(seq, ' → ', 1, math.min(#seq, 7)))
@@ -263,6 +263,7 @@ function love.load()
                       megagummy = { 'kingLand', 'kingFanfare', 'kingLaugh' },
                       giantpuffer = { 'kingFlop', 'pufferInflate', 'pufferDeflate' },
                       gianthopper = { 'hopLand', 'lightOn', 'hopWind' },
+                      giantbeetle = { 'megaSlam', 'megaRoar', 'gustBlow' },
                       groovecrab = { 'megaSlam', 'megaClack', 'trampoline' },
                       megagloomy = { 'mgloomySlam', 'mgloomyRoar' } })[boss.def.name]
                     or { 'mirrorLaugh' }

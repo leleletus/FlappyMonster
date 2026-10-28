@@ -85,6 +85,12 @@ function love.load()
     local gc = boss.def.name == 'groovecrab'
     local gcs = { rage = false, dodges = 0, launches = 0, golds = 0, regrow = 0 }
     if gc then VULN = { stunned = true } end
+    -- Escarabajo Rinoceronte Gigante: solo patas arriba. El jugador juega como se espera: con él en un platillo de la
+    -- balanza, ground pound en el otro (se emula: la catapulta del platillo); si no está en ninguno, se pone en un
+    -- platillo de cebo (salta al otro) y se aparta de la diana
+    local gb = boss.def.name == 'giantbeetle'
+    local gbs = { launches = 0, rage = false, lastT = -9 }
+    if gb then VULN = { flipped = true } end
     local kg = { phases = {}, maxGuards = 0, flopOff = {}, waveHits = 0, partHits = 0, lastPartT = -9 }
     local sn = { phases = {}, scales = {}, frozenHits = {}, crashDizzy = 0, bonks = 0, toggles = 0, refrozen = 0,
                  deathOrder = {}, early = {}, shown = {} }
@@ -393,6 +399,27 @@ function love.load()
                 ghs.lastT, ghs.scares = t, ghs.scares + 1
             end
         end
+        if gb and z.state == 'fight' then
+            if boss.rage then gbs.rage = true end
+            local Scale = require('src/world/entities/types/mechanisms/scale').class
+            local sc
+            for _, e in ipairs(ents) do if e.def.name == 'scale' then sc = e end end
+            if sc and boss.state == 'rest' and boss.onGround and boss.deadTimer > 0.4 and t - gbs.lastT > 2 then
+                local s, pan = Scale.panUnder(level, boss)
+                if s then
+                    gbs.lastT, gbs.launches = t, gbs.launches + 1
+                    s.levelRef = level
+                    s:catapult((pan == s.pans[1]) and s.pans[2] or s.pans[1], nil, 1, nil)
+                elseif not pa.dying and not pa.standBody then
+                    local b = sc.pans[(boss.x < (z.x0 + z.x1) / 2) and 1 or 2]:getOuterBounds()   -- (el platillo de su lado: salta al otro)
+                    pa.x, pa.y, pa.vx, pa.vy = b.x + b.w / 2, b.y - 50, 0, 0
+                end
+            end
+            if boss.state == 'leap' and pa.standBody and pa.standBody.owner == sc then
+                pa.x, pa.vx = (z.x0 + z.x1) / 2, 0                             -- (se aparta: no se deja disparar)
+                pa.standBody = nil
+            end
+        end
         if gc and z.state == 'fight' then
             if boss.rage then gcs.rage = true end
             if boss.state == 'crouch' and not pa.dying and math.abs(pa.x - boss.markX) < 3 * TILE_PX then
@@ -553,6 +580,19 @@ function love.load()
         check('muerte', not boss.alive and gcs.rage and z.state == 'cleared' and gcs.regrow > 0,
             ('vivo=%s, enfadado=%s, esquivas %d, notas doradas devueltas (pasos en ellas) %d, trampolines que le crecen %d, lanzado %d veces, platos pisados %d, zona %s'):format(
                 tostring(boss.alive), tostring(gcs.rage), gcs.dodges, gcs.golds, gcs.regrow, gcs.launches, gcs.decks or 0, z.state))
+    end
+    if gb then
+        local function check(name, ok, msg)
+            print(('%-10s %s  %s'):format(name, ok and 'OK   ' or 'FALLA', msg))
+            if not ok then fails = fails + 1 end
+        end
+        local need = { 'rest', 'charge_wind', 'charge', 'bonk', 'toss_wind', 'toss', 'leap_wind', 'leap', 'slam', 'launched',
+                       'tumble', 'flipped', 'righting', 'dying_out', 'dying_flee' }
+        local miss = {}
+        for _, n in ipairs(need) do if not seen[n] then miss[#miss + 1] = n end end
+        check('estados', #miss == 0, #miss == 0 and 'todos vistos' or ('faltan: ' .. table.concat(miss, ',')))
+        check('muerte', not boss.alive and gbs.rage and z.state == 'cleared',
+            ('vivo=%s, enfadado=%s, disparado por la balanza %d veces, zona %s'):format(tostring(boss.alive), tostring(gbs.rage), gbs.launches, z.state))
     end
     if gh then
         local function check(name, ok, msg)
