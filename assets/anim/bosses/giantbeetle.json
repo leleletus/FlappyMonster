@@ -1,0 +1,318 @@
+{
+  "id": "bosses/giantbeetle",
+  "scale": 12,
+  "origin": [
+    0.5,
+    1
+  ],
+  "fallback": "idle",
+  "frames": [
+    {
+      "h": 20,
+      "image": "assets/images/bosses/giantbeetle/body-Sheet.png",
+      "w": 22,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/bosses/giantbeetle/body-Sheet.png",
+      "w": 22,
+      "x": 22,
+      "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/bosses/giantbeetle/body-Sheet.png",
+      "w": 22,
+      "x": 44,
+      "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/bosses/giantbeetle/body-Sheet.png",
+      "w": 22,
+      "x": 66,
+      "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/bosses/giantbeetle/body-Sheet.png",
+      "w": 22,
+      "x": 88,
+      "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/bosses/giantbeetle/body-Sheet.png",
+      "w": 22,
+      "x": 110,
+      "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/bosses/giantbeetle/body-Sheet.png",
+      "w": 22,
+      "x": 132,
+      "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/bosses/giantbeetle/body-Sheet.png",
+      "w": 22,
+      "x": 154,
+      "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/bosses/giantbeetle/body-Sheet.png",
+      "w": 22,
+      "x": 176,
+      "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/bosses/giantbeetle/body-Sheet.png",
+      "w": 22,
+      "x": 198,
+      "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/bosses/giantbeetle/body-Sheet.png",
+      "w": 22,
+      "x": 220,
+      "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/bosses/giantbeetle/body-Sheet.png",
+      "w": 22,
+      "x": 242,
+      "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/bosses/giantbeetle/body-Sheet.png",
+      "w": 22,
+      "x": 264,
+      "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/bosses/giantbeetle/body-Sheet.png",
+      "w": 22,
+      "x": 286,
+      "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/bosses/giantbeetle/body-Sheet.png",
+      "w": 22,
+      "x": 308,
+      "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/bosses/giantbeetle/body-Sheet.png",
+      "w": 22,
+      "x": 330,
+      "y": 0
+    },
+    {
+      "h": 16,
+      "image": "assets/images/bosses/giantbeetle/block.png",
+      "w": 16,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "h": 8,
+      "image": "assets/images/bosses/giantbeetle/debris-Sheet.png",
+      "w": 8,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "h": 8,
+      "image": "assets/images/bosses/giantbeetle/debris-Sheet.png",
+      "w": 8,
+      "x": 8,
+      "y": 0
+    },
+    {
+      "h": 8,
+      "image": "assets/images/bosses/giantbeetle/debris-Sheet.png",
+      "w": 8,
+      "x": 16,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/bosses/giantbeetle/wave-Sheet.png",
+      "w": 24,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/bosses/giantbeetle/wave-Sheet.png",
+      "w": 24,
+      "x": 24,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/bosses/giantbeetle/wave-Sheet.png",
+      "w": 24,
+      "x": 48,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/bosses/giantbeetle/wave-Sheet.png",
+      "w": 24,
+      "x": 72,
+      "y": 0
+    },
+    {
+      "h": 16,
+      "image": "assets/images/bosses/giantbeetle/dust-Sheet.png",
+      "w": 16,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "h": 16,
+      "image": "assets/images/bosses/giantbeetle/dust-Sheet.png",
+      "w": 16,
+      "x": 16,
+      "y": 0
+    },
+    {
+      "h": 16,
+      "image": "assets/images/bosses/giantbeetle/dust-Sheet.png",
+      "w": 16,
+      "x": 32,
+      "y": 0
+    },
+    {
+      "h": 16,
+      "image": "assets/images/bosses/giantbeetle/dust-Sheet.png",
+      "w": 16,
+      "x": 48,
+      "y": 0
+    }
+  ],
+  "anims": {
+    "idle": {
+      "fps": 8,
+      "frames": [
+        1
+      ],
+      "loop": true
+    },
+    "walk": {
+      "fps": 8,
+      "frames": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "loop": true
+    },
+    "charge": {
+      "fps": 14,
+      "frames": [
+        5,
+        6,
+        7,
+        8
+      ],
+      "loop": true
+    },
+    "flip": {
+      "fps": 10,
+      "frames": [
+        9,
+        10,
+        11
+      ],
+      "loop": true
+    },
+    "dead": {
+      "fps": 8,
+      "frames": [
+        9
+      ],
+      "loop": false
+    },
+    "toss": {
+      "fps": 6,
+      "frames": [
+        12,
+        13
+      ],
+      "loop": false
+    },
+    "fly": {
+      "fps": 16,
+      "frames": [
+        14,
+        15
+      ],
+      "loop": true
+    },
+    "slam": {
+      "fps": 8,
+      "frames": [
+        16
+      ],
+      "loop": false
+    },
+    "hurt": {
+      "fps": 8,
+      "frames": [
+        10
+      ],
+      "loop": true
+    },
+    "block": {
+      "fps": 8,
+      "frames": [
+        17
+      ],
+      "loop": true
+    },
+    "debris": {
+      "fps": 8,
+      "frames": [
+        18,
+        19,
+        20
+      ],
+      "loop": true
+    },
+    "wave": {
+      "fps": 12,
+      "frames": [
+        21,
+        22,
+        23,
+        24
+      ],
+      "loop": false
+    },
+    "dust": {
+      "fps": 12,
+      "frames": [
+        25,
+        26,
+        27,
+        28
+      ],
+      "loop": false
+    }
+  }
+}

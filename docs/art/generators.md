@@ -35,6 +35,7 @@ the diff before committing anything they write.
 
 ## Notes on specific generators
 
+- `tools/art/enemies/make_beetle.py`: the jungle's Rhino Beetle and the Giant Rhino Beetle (22x20 frames: 4-frame tripod walk, charge, on its back; the giant adds toss, wings, landing and the gold rune) + the giant's temple block, debris, floor wave and dust; design D chosen by the user (2026-10-28); without flags = previews, mockups and GIFs in `FlappyMonster_pruebas/escarabajo/`; `--apply` writes the sheets and both anim sets. Safe to re-run (none hand-edited yet).
 - `tools/art/bosses/make_groove_crab.py`: The Groove's OWN art (fiddler crab: body-Sheet 18x10 ×3 with the coast Crabby's legs read from `enemies/crabby/crab1-3.png`, bigclaw/claw sheets, trampoline cut from `mechanisms/trampoline/normal.png`, notes in 4 colours, sand wave reusing the Giant Hopper's wave shapes; 0.5.48: `ko-Sheet` knocked-out body, `glasses`, `deck-Sheet` DJ deck, `led-Sheet`, `arrow`); `--gif` = animated mockup in `FlappyMonster_pruebas/jefes/groove/maqueta.gif`. Approved by the user from that mockup (2026-10-26). Safe to re-run.
 - `tools/art/fx/make_screen_crack.py`: the broken screen glass of the credits finale (`assets/images/fx/screen_crack.png`, 160x120, 1 px cracks with a shadow, fixed seed). Safe to re-run.
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # tools/art/enemies/make_beetle.py — el ESCARABAJO RINOCERONTE (enemigo exclusivo de la jungla, isla futura) y el
-# ESCARABAJO RINOCERONTE GIGANTE, su jefe (docs/bosses/new-bosses-plan.md § 5). PROTOTIPO: solo vistas previas; nada
-# entra en assets/ hasta que el usuario elija (--apply).
+# ESCARABAJO RINOCERONTE GIGANTE, su jefe (docs/bosses/new-bosses-plan.md § 5). El usuario eligió el diseño D (mezcla
+# del A y el C) el 2026-10-28; --apply lo escribe en assets/ (las entidades aún no existen).
 #
 # Hoja: cuadros de 22x20 mirando a la DERECHA (el cuerno pide sitio delante y las alas detrás). Estilo de la casa
 # (docs/art/style-rules.md): contorno = el tono más oscuro del PROPIO color, luz arriba a la izquierda, sombra abajo a
@@ -10,7 +10,9 @@
 # fragmento que lo hizo crecer) y el ojo encendido; cuadros suyos además de los del pequeño: lanzar con el cuerno,
 # élitros abiertos y alas zumbando (salto), aterrizaje aplastado.
 #
-#   python tools/art/enemies/make_beetle.py   → FlappyMonster_pruebas/escarabajo/ (vista_previa.png, mockups, GIFs)
+#   python tools/art/enemies/make_beetle.py           → FlappyMonster_pruebas/escarabajo/ (vista_previa.png, mockups, GIFs)
+#   python tools/art/enemies/make_beetle.py --apply   → assets/: el diseño elegido (D) + assets/anim/enemies/beetle.json y
+#                                                       bosses/giantbeetle.json
 import os, math
 from PIL import Image, ImageDraw
 
@@ -491,8 +493,47 @@ def scene_gif():
     frames[0].save(os.path.join(OUT, 'escena_jefe.gif'), save_all=True, append_images=frames[1:], duration=durs, loop=0)
 
 
+CHOSEN = 'D'                                                # (el usuario eligió el D "Bronce castaño", 2026-10-28)
+
+
+def anim_set(aid, scale, sheets, anims):
+    """Conjunto de animación (assets/anim/<aid>.json) con los cuadros de cada hoja: [(ruta, ancho, alto, n)]"""
+    import json
+    frames = []
+    for rel, w, h, n in sheets:
+        frames += [{"h": h, "image": rel, "w": w, "x": i * w, "y": 0} for i in range(n)]
+    data = {"id": aid, "scale": scale, "origin": [0.5, 1], "fallback": "idle", "frames": frames, "anims": anims}
+    path = os.path.join(ROOT, 'assets', 'anim', aid + '.json')
+    with open(path, 'w') as f:
+        f.write(json.dumps(data, indent=2) + '\n')
+    print('  ', os.path.relpath(path, ROOT))
+
+
+def apply():
+    """Escribe en assets/ el diseño elegido: hojas del pequeño y del gigante, los ataques y sus animaciones"""
+    D = DESIGNS[CHOSEN]
+    E = 'assets/images/enemies/beetle/'; G = 'assets/images/bosses/giantbeetle/'
+    for d in (E, G): os.makedirs(os.path.join(ROOT, d), exist_ok=True)
+    out = {E + 'beetle-Sheet.png': sheet(D, SMALL), G + 'body-Sheet.png': sheet(D, BOSS, True), G + 'block.png': stone_block(),
+           G + 'debris-Sheet.png': debris(), G + 'wave-Sheet.png': shockwave(), G + 'dust-Sheet.png': dust()}
+    for rel, im in out.items():
+        im.save(os.path.join(ROOT, rel)); print('  ', rel)
+    a = lambda fr, fps, loop=True: {"fps": fps, "frames": fr, "loop": loop}
+    small = {"idle": a([1], 8), "walk": a([1, 2, 3, 4], 8), "charge": a([5, 6, 7, 8], 14), "flip": a([9, 10, 11], 10),
+             "dead": a([9], 8, False)}
+    anim_set('enemies/beetle', 4, [(E + 'beetle-Sheet.png', W, H, len(SMALL))], small)
+    boss = dict(small, toss=a([12, 13], 6, False), fly=a([14, 15], 16), slam=a([16], 8, False), hurt=a([10], 8),
+                block=a([17], 8), debris=a([18, 19, 20], 8), wave=a([21, 22, 23, 24], 12, False), dust=a([25, 26, 27, 28], 12, False))
+    anim_set('bosses/giantbeetle', 12, [(G + 'body-Sheet.png', W, H, len(BOSS)), (G + 'block.png', 16, 16, 1),
+                                        (G + 'debris-Sheet.png', 8, 8, 3), (G + 'wave-Sheet.png', 24, 12, 4),
+                                        (G + 'dust-Sheet.png', 16, 16, 4)], boss)
+
+
 if __name__ == '__main__':
+    import sys
     os.makedirs(OUT, exist_ok=True)
+    if '--apply' in sys.argv:
+        apply(); sys.exit(0)
     for k, D in DESIGNS.items():
         up(sheet(D, SMALL), 1).save(os.path.join(OUT, f'hoja_pequeno_{k}.png'))
     for k in ('D', 'E'): sheet(DESIGNS[k], BOSS, True).save(os.path.join(OUT, f'hoja_gigante_{k}.png'))

@@ -1,0 +1,133 @@
+{
+  "id": "enemies/beetle",
+  "scale": 4,
+  "origin": [
+    0.5,
+    1
+  ],
+  "fallback": "idle",
+  "frames": [
+    {
+      "h": 20,
+      "image": "assets/images/enemies/beetle/beetle-Sheet.png",
+      "w": 22,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/enemies/beetle/beetle-Sheet.png",
+      "w": 22,
+      "x": 22,
+      "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/enemies/beetle/beetle-Sheet.png",
+      "w": 22,
+      "x": 44,
+      "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/enemies/beetle/beetle-Sheet.png",
+      "w": 22,
+      "x": 66,
+      "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/enemies/beetle/beetle-Sheet.png",
+      "w": 22,
+      "x": 88,
+      "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/enemies/beetle/beetle-Sheet.png",
+      "w": 22,
+      "x": 110,
+      "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/enemies/beetle/beetle-Sheet.png",
+      "w": 22,
+      "x": 132,
+      "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/enemies/beetle/beetle-Sheet.png",
+      "w": 22,
+      "x": 154,
+      "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/enemies/beetle/beetle-Sheet.png",
+      "w": 22,
+      "x": 176,
+      "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/enemies/beetle/beetle-Sheet.png",
+      "w": 22,
+      "x": 198,
+      "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/enemies/beetle/beetle-Sheet.png",
+      "w": 22,
+      "x": 220,
+      "y": 0
+    }
+  ],
+  "anims": {
+    "idle": {
+      "fps": 8,
+      "frames": [
+        1
+      ],
+      "loop": true
+    },
+    "walk": {
+      "fps": 8,
+      "frames": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "loop": true
+    },
+    "charge": {
+      "fps": 14,
+      "frames": [
+        5,
+        6,
+        7,
+        8
+      ],
+      "loop": true
+    },
+    "flip": {
+      "fps": 10,
+      "frames": [
+        9,
+        10,
+        11
+      ],
+      "loop": true
+    },
+    "dead": {
+      "fps": 8,
+      "frames": [
+        9
+      ],
+      "loop": false
+    }
+  }
+}
