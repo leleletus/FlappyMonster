@@ -26,6 +26,7 @@
 local Entity = require 'src/world/entities/base/Entity'
 local Isles  = require 'src/world/level/Isles'
 local Weight = require 'src/world/systems/Weight'
+local TileTypes = require 'src/world/tiles/TileTypes'
 
 local Scale = Entity.extend(Entity, { debugColor = { 0.9, 0.8, 0.4 },
     hitbox = { outerW = 1, outerH = 1, innerW = 1, innerH = 1 } })
@@ -379,11 +380,42 @@ function Scale:debugBoxes()
 end
 
 -- ── Dibujo ────────────────────────────────────────────────────────────────────
-local function drawScale(a, x, y, p, d, spin, camX, camY)
+-- Dónde CUELGA una polea: la cara de abajo del primer bloque por encima de (x, top) — o el borde de arriba del nivel —
+-- (0.5.87, el usuario: las poleas quedaban flotando, sin nada que las uniera al techo). Mundo, px.
+local function ceilingAbove(level, x, top)
+    if not level then return top end
+    for yy = top - 2, 0, -4 do
+        local t = level:collisionAt(x, yy, true)
+        if t then
+            local _, hy, _, hh = TileTypes.worldHitbox(t, math.floor(x / TILE_PX) + 1, math.floor(yy / TILE_PX) + 1)
+            return hy + hh
+        end
+    end
+    return 0
+end
+-- Una cuerda vertical (la de la balanza) de y0 a y1 en la columna x (pantalla)
+local function ropeDown(a, x, y0, y1)
+    local step = a.rope.h * S
+    for yy = y0, y1 - 1, step do a.rope:draw(1, x, math.min(yy + step / 2, y1 - step / 2), 0, S, S) end
+end
+
+local function drawScale(a, x, y, p, d, spin, camX, camY, level, hang)
     local lx, ly, rx, ry = geom(x, y, p, d)
     local px, py = math.floor(x - camX), math.floor(y - camY)
     local ropeY = py + 6 * S                            -- (de donde salen las cuerdas: el eje de la polea)
     love.graphics.setColor(1, 1, 1, 1)
+    -- de qué cuelgan la polea grande y las de las esquinas (se mira una vez: el nivel no se mueve)
+    if level and hang and not hang.done then
+        hang.done = true
+        hang[1] = ceilingAbove(level, x, y - 8 * S)
+        hang[2] = ceilingAbove(level, lx + 4 * S, y + 6 * S - 3 * S)
+        hang[3] = ceilingAbove(level, rx - 4 * S, y + 6 * S - 3 * S)
+    end
+    if hang and hang.done then
+        ropeDown(a, px, math.floor(hang[1] - camY), py - 8 * S + S)
+        ropeDown(a, math.floor(lx - camX) + 4 * S, math.floor(hang[2] - camY), ropeY - 3 * S)
+        ropeDown(a, math.floor(rx - camX) - 4 * S, math.floor(hang[3] - camY), ropeY - 3 * S)
+    end
     -- las POLEAS DE LAS ESQUINAS (0.5.87, el usuario: la cuerda se doblaba en el aire sin nada que la sujetara): una rueda
     -- pequeña en cada codo, por dentro, y la cuerda la rodea por arriba y por fuera (se dibuja después, encima del canto)
     local fr = 1 + math.floor(math.abs(spin or 0) / 24) % 2
@@ -410,7 +442,9 @@ local function drawScale(a, x, y, p, d, spin, camX, camY)
 end
 
 function Scale:render(camX, camY)
-    drawScale(art(Isles.of(self.levelRef, self.props.isle)), self.x, self.y, self.props, self.d or 0, self.spin, camX, camY)
+    self.hang = self.hang or {}
+    drawScale(art(Isles.of(self.levelRef, self.props.isle)), self.x, self.y, self.props, self.d or 0, self.spin, camX, camY,
+              self.levelRef, self.hang)
 end
 
 -- Editor: dónde quedan los platillos (nivelada) y hasta dónde suben / bajan

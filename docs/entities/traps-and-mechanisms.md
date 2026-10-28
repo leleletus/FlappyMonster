@@ -76,7 +76,9 @@ Designs and the user's verdicts: [new-props-plan](new-props-plan.md).
   Art per island: `mechanisms/scale/<isla>-pan.png`, `-rope.png`, `-pulley-Sheet.png` and (0.5.87, the user: the rope
   bent in mid-air with nothing holding it) `-corner-Sheet.png`, a small pulley with its fork at each bend, inside the
   corner, turning with the big one; the rope wraps it over the top and the outer side (`tools/art/world/make_scale_box.py
-  --corner`; the jungle's from `make_jungle_skins.py`).
+  --corner`; the jungle's from `make_jungle_skins.py`). Every pulley (the big one and the corner ones) HANGS by a rope
+  from the first block above it — or the top of the level — (the user: they floated); looked up once per scale
+  (`ceilingAbove`), render only.
   BOSSES (0.5.76): a boss weighs nothing, except one with `ridesScale`, which weighs its `weight` (0.5.84, the user: the
   Giant Rhino Beetle standing on a pan did not lower it; it weighs 3) and is moved by the pan only as a rider. Pans are
   one-way bodies: bosses moving with `Snow:move` (as entities already did) pass through them SIDEWAYS — the beetle's
