@@ -97,7 +97,8 @@ Every generator writes previews by default and the game assets only with `--appl
 
 - [ ] 1. Designs approved by the user (sprites, animations, sounds) — iterate on the previews. Scale: approved
   (0.5.67); Gust v2, Blizzard and Geyser APPROVED; sounds kept as they are until the user can listen (they will say);
-  Seed: meadow, coast and fortress approved, v5 of snow / cave / volcano waiting for the user.
+  Seed: meadow, coast and fortress approved, v5 of cave and volcano APPROVED, snow simplified in v6
+  (the v5 fern, with 1-px leaflets and frost on every tip, looked over-detailed): ALL DESIGNS APPROVED.
 - [ ] 2. `--apply` the approved art and sounds.
 - [ ] 3. Box + Scale in the game (entities, physics, network, editor, harness).
 - [ ] 4. Gust in the game.

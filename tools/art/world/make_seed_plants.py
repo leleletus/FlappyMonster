@@ -32,7 +32,7 @@ ISLES = {
     'pradera':   dict(o='1e3a1a', b='4c9a38', h='86cc5a', s='2e6a28', L='7cc850', l='3e8c3c', v='2e6a28', x='7a4a24', y='c8a060', p='9cd86c', q='5cac44', bg='8cc8f0'),
     'costa':     dict(o='2a2614', b='7a6a2c', h='a8964a', s='54481c', L='b4a04c', l='7c6a28', v='54481c', x='c89a50', y='f4ecb0', p='c8b45c', q='8a7a30', bg='9cdcf0'),
     'fortaleza': dict(o='1a2016', b='4a3a2a', h='6c5a40', s='2e241a', L='3e7a44', l='2a5630', v='1e3e22', x='a82c2c', y='7a3ca8', p='4c8a50', q='2a5630', bg='8a8ea8'),
-    # (nieve, v5: HELECHO ESCARCHADO de un verde azulado con puntas blancas — el blanco pálido se perdía contra la nieve)
+    # (nieve, v6: helecho más sencillo · v5: HELECHO ESCARCHADO de un verde azulado con puntas blancas — el blanco pálido se perdía contra la nieve)
     'nieve':     dict(o='1e4a58', b='5aa8a0', h='9cdcd0', s='3c7c78', L='8cd4c4', l='4c9a94', v='2e6a70', x='ffffff', y='78acde', p='ffffff', q='bee4fa', bg='b8d4f0'),
     'cueva':     dict(o='2e2440', b='a898c8', h='dcd0f0', s='7c6ca0', L='4ac4d4', l='2a8aa0', v='1e6a80', x='b4f4ff', y='ffffff', p='4ac4d4', q='2a8aa0', bg='3a3450'),
     # (cactus de lava: OBSIDIANA negra con venas que brillan — el rojo oscuro se perdía contra el cielo del volcán)
@@ -249,7 +249,6 @@ def full_plant(isle, h):
         elif isle in ('costa', 'nieve'):              # estípite / tallo fino y ondulado
             sx = int(round(x))
             g.put(sx - 2, y, 'o'); g.rect(sx - 1, y, 3, 1, 'b'); g.put(sx - 1, y, 'h'); g.put(sx + 2, y, 'o')
-            if isle == 'nieve' and y % 9 == 0: g.put(sx + 1, y, 'x')                       # (escarcha)
         elif isle == 'cueva':                         # el pie de la seta: grueso, se ensancha abajo
             sx = int(round(x))
             hw = 3 + (2 if y > floor - 10 else (1 if y > floor - 22 else 0))
@@ -387,22 +386,26 @@ def bigfrond(g, x0, py, side):
 
 
 def fern(g, x0, y0, ln, side, big=False, flat=False):
-    """FRONDA DE HELECHO escarchada: un nervio (en diagonal, o plano si se pisa) con HOJUELAS — hojitas inclinadas hacia
-    la punta, más largas en el medio — y la punta de cada una blanca de escarcha. La grande, arriba lisa (se pisa)"""
+    """FRONDA DE HELECHO escarchada, SENCILLA (la v5, con hojuelas de 1 px y escarcha en cada una, se veía sobrecargada):
+    un nervio y hojuelas MACIZAS (hojitas de dos tonos con su borde) inclinadas hacia la punta; solo la punta de la
+    fronda lleva escarcha. La grande, arriba lisa (se pisa), con las hojuelas colgando por debajo"""
     def pt(i): return x0 + side * i, y0 - (0 if (big or flat) else i // 3)
-    for i in range(ln):
-        x, y = pt(i); g.put(x, y, 'v')
-        if big: g.put(x, y - 1, 'L'); g.put(x, y - 2, 'o')
-    for i in range(1, ln - 1, 3):
+    leaf = set()
+    step = 4 if big else 3
+    for n, i in enumerate(range(2, ln - 1, step)):
         x, y = pt(i)
-        L = max(2, int(round((4 if big else 3) * math.sin(math.pi * (i + 1) / (ln + 1)))) + 1)
-        sides = (1,) if big else (-1, 1)                        # (la grande: hojuelas solo por debajo)
-        for sy in sides:
-            for k in range(1, L + 1):
-                px, py = x + side * (k // 2), y + sy * k
-                g.put(px, py, 'L' if sy < 0 else 'l'); g.put(px - side, py, 'L')
-                g.put(px + side, py, 'o')
-            g.put(x + side * (L // 2), y + sy * (L + 1), 'x')     # (la escarcha en la punta)
+        L = max(2, int(round((5 if big else 4) * math.sin(math.pi * (i + 1) / (ln + 1)))))
+        sy = 1 if (big or n % 2) else -1                        # (la grande: solo por debajo; las otras alternan)
+        for k in range(1, L + 1):
+            px, py = x + side * (k // 2), y + sy * k
+            leaf |= {(px, py, 'L' if k < L else 'l'), (px + side, py, 'l')}
+    for px, py, _ in leaf:                                      # (el borde de las hojuelas)
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)): g.put(px + dx, py + dy, 'o')
+    for px, py, c in sorted(leaf, key=lambda t: t[2] == 'L'): g.put(px, py, c)
+    for i in range(ln):
+        x, y = pt(i); g.put(x, y, 'v'); g.put(x, y + 1, 'o'); g.put(x, y - 1, 'o')
+        if big: g.put(x, y - 1, 'L'); g.put(x, y - 2, 'o')
+    x, y = pt(ln - 1); g.put(x + side, y, 'x'); g.put(x + side, y - 1, 'o')   # (la escarcha, solo en la punta)
 
 
 def bracket(g, x0, y0, ln, side, big=False):
