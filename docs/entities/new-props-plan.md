@@ -40,6 +40,14 @@ Every generator writes previews by default and the game assets only with `--appl
   white SNOW FLOWER on top · glowing spore → glowing mushroom with BRACKET FUNGI as the big leaves (it gives light) ·
   ember seed → FIRE LILY (dark leaves with glowing veins, a flame-like flower). (v1: chain / ice pillar / basalt
   column; v2 moved the platform to the top — a T — because leaves halfway up made a cross and the ice one a sword.)
+- **Seed v4** (the user on v3: "very repetitive and a bit strange, not the typical plant you'd expect — especially the
+  lava, meadow and coast ones; the others are passable"): those three are now DRAWN WHOLE, no stacked 16-px tile — a
+  curving stem, leaves of different sizes at irregular heights (seeded random: always the same image), one image per
+  height (4, 5, 6 cells; the game reveals it from the bottom as it grows); the big leaves / arms stay at 2 and 4 cells
+  (right, left) and the crown on top, where the game puts the platforms. Meadow: a textbook BEANSTALK (two twisting
+  strands, heart leaves, curly tendrils, a bean pod). Coast: golden-brown GIANT KELP (wide wavy fronds, air bladders; the
+  big fronds float on a bladder). Volcano: a LAVA CACTUS of black obsidian with glowing veins — its ARMS are the
+  platforms, a fire flower on top. Fortress ivy, frost fern and glowing mushroom keep v3.
 - **Blizzard** (`Ventisca`): wind streaks 32×8 × 3 frames, semi-transparent, carrying each island's bits (snowflakes
   in the tower), rotated by the game for up / down; the WARNING is an arrow 16×16 × 2 frames blinking at the screen
   edge the wind will come from.
@@ -80,7 +88,7 @@ Every generator writes previews by default and the game assets only with `--appl
 ## Steps
 
 - [ ] 1. Designs approved by the user (sprites, animations, sounds) — iterate on the previews. Scale: approved
-  (0.5.67). Gust v2, Seed v3, Blizzard and Geyser v1: waiting for the user.
+  (0.5.67). Gust v2, Seed v4, Blizzard and Geyser v1: waiting for the user.
 - [ ] 2. `--apply` the approved art and sounds.
 - [ ] 3. Box + Scale in the game (entities, physics, network, editor, harness).
 - [ ] 4. Gust in the game.
