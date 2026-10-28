@@ -403,7 +403,7 @@ function GH:updateBoss(dt, level)
 
     elseif st == 'scared' then
         self:physics(level, dt); self:friction(level, dt)
-        if t >= SCARE_T[ph] then
+        if t >= self:downTime(SCARE_T[ph]) then
             self.scareCd = SCARE_CD
             Sound.play('lightOn', 0.6)
             self:rest(0.4)

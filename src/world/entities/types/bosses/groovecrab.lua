@@ -786,7 +786,7 @@ function GC:updateBoss(dt, level)
 
     -- ATURDIDO (le reventó el trampolín) y luego le CRECE otro
     if self.state == 'stunned' then
-        if t >= STUN_T then self:enter('regrow'); Sound.play('trampoline', 0.8, 0.5) end
+        if t >= self:downTime(STUN_T) then self:enter('regrow'); Sound.play('trampoline', 0.8, 0.5) end
         return
     elseif self.state == 'regrow' then
         if t < REGROW_T then return end

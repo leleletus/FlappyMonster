@@ -392,7 +392,7 @@ function GP:updateBoss(dt, level)
     elseif st == 'gasp' then
         self:physics(level, dt); self:friction(level, dt)
         if self:wet(level) then self:enter('swim'); self.atkT = 0
-        elseif t >= GASP_T[ph] then
+        elseif t >= self:downTime(GASP_T[ph]) then
             self.markX, self.markY = self:aimFlop(level)
             self:enter('flop_wind')
         end

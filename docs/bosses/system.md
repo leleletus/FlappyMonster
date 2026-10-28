@@ -132,6 +132,14 @@ Files: `src/world/systems/BossZones.lua` (zones + fight controller),
   through each other. Invulnerable players also pass through bosses (but not
   `solidFull` objects) and bosses can't hit them.
 
+- **Getting up after the hit** (0.5.82, the user, every boss: "it looks odd how they stay lying there for so long"):
+  in a knocked-down window (flipped, scared, gasping, dazed, stunned, frozen, stuck…), once it takes its FIRST hit it
+  stays at most `Boss.GETUP_T` (1.5 s) more, however long the window was. `Boss:damage` records the state and its
+  `deadTimer` at that hit (`downHitState` / `downHitT`; cleared by `Boss:enter` or leaving the state); the type ends the
+  window with `t >= self:downTime(full)`. Used by giantbeetle, gianthopper, giantpuffer, megagummy, groovecrab,
+  snowboss (frozen), miniboss1 (stuck); the others already leave on the hit (Mega Crabbies, Mega Gloomy, Mirror, data
+  bosses). A new boss with a lying-down window must use `downTime` too.
+
 - **Immune bounce**: landing on a boss that can't be hurt returns
   `'bounce', vy, dirX` → `pa:bounce(vy, dirX)` pushes the player sideways
   (no riding bosses); predicted on the client via `recordBounce(vy, dir)`.
@@ -190,6 +198,8 @@ position BEFORE moving, so no push can carry anything out of a boss zone.
 Online camera freezes while the local player is dying (same as single player).
 
 ## Adding a boss
+
+(A vulnerable lying-down window ends with `t >= self:downTime(its length)`: see Getting up after the hit.)
 
 - **Adding a boss**: FOLLOW `docs/bosses/how-to-add-a-boss.md` (step-by-step guide + checklist: design,
   art, sounds, particles, entity skeleton, minions, net, lang, arena, real level, harnesses, docs, release;

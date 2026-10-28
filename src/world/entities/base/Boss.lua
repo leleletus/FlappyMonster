@@ -66,6 +66,10 @@ local Lang = require 'src/core/Lang'
 local Boss = Entity.extend(Entity, { debugColor = { 1, 0.25, 0.6 } })
 
 Boss.INV_TIME         = 1.0     -- s invulnerable tras un golpe normal (parpadea rojo)
+-- LEVANTARSE TRAS EL GOLPE (0.5.82, el usuario, para todos los jefes: si no, "queda raro cómo se quedan ahí tirados"):
+-- tumbado / aturdido / atascado (su ventana vulnerable), en cuanto recibe el primer golpe le quedan como mucho GETUP_T s
+-- en ese estado, dure lo que dure la ventana. El tipo lo aplica con `t >= self:downTime(lo que dura)`.
+Boss.GETUP_T          = 1.5
 Boss.STUN_INV         = 3.0     -- s invulnerable tras el ground pound que lo deja KO (dura más
                                 -- que el KO) o tras el único golpe que admite aturdido
 Boss.DEATH_HOLD       = 3.4     -- s parpadeando entre explosiones antes de caer
@@ -205,6 +209,7 @@ function Boss:damage(n, kind)
         if ev then ev:crabDown(self); return true end                  -- (evento: no muere, lo decide el director)
         self:defeat(); return true
     end
+    if self.downHitState ~= self.state then self.downHitState, self.downHitT = self.state, self.deadTimer or 0 end
     if wasStunned then
         -- El único golpe que admite aturdido: se despierta, invulnerable un rato
         self.inv, self.ghost = self.STUN_INV, true
@@ -218,6 +223,12 @@ function Boss:damage(n, kind)
     end
     self:onDamaged(n or 1, kind)
     return true
+end
+
+-- Lo que dura su ventana tumbado (`full` s), recortada a GETUP_T s desde el primer golpe recibido en ella
+function Boss:downTime(full)
+    if self.downHitState == self.state then return math.min(full, self.downHitT + self.GETUP_T) end
+    return full
 end
 
 function Boss:defeat()
@@ -241,7 +252,7 @@ function Boss:isObstacle() return self.alive and not self:isDying() end
 
 -- ── Utilidades comunes de los jefes (antes cada uno traía su copia) ──────────
 -- Cambio de estado: estado nuevo y su reloj a 0 (lo que se dibuja sale de state + deadTimer)
-function Boss:enter(st) self.state, self.deadTimer = st, 0 end
+function Boss:enter(st) self.state, self.deadTimer, self.downHitState = st, 0, nil end
 -- Su zona (x0, x1, y0, y1); sin zona, un recuadro alrededor de donde está
 function Boss:zoneBounds()
     local z = self.zone
@@ -333,6 +344,7 @@ end
 
 -- ── Update ────────────────────────────────────────────────────────────────────
 function Boss:update(dt, level)
+    if self.downHitState and self.state ~= self.downHitState then self.downHitState = nil end   -- (salió de esa ventana)
     if self.inv > 0 then self.inv = math.max(0, self.inv - dt) end
     if self.inv <= 0 then self.ghost = false end
     if self.eventFrozen or self.offstage then                          -- (evento: quieto; sus animaciones siguen)

@@ -31,8 +31,9 @@ centre (row 9) to dodge the charge and the waves (0.5.81: one tile lower than in
   (`onScaleLaunch`: 'launched', straight up at `LAUNCH_V` 1500 px/s until it hits something) → smashes into the ceiling
   (shake, debris) → 'tumble' (turns over as it falls) → **'flipped'** (`FLIP_T` 4.2 / 3.4 s, legs flailing, stars):
   stomp 1 / ground pound 2 (`INV_TIME` between hits) → 'righting' (hops back up). About 3 flips win the fight.
-  `FLIP_T` by difficulty { calm, angry }: easy 10 / 8.5 · normal 8.5 / 7 · hard 6.5 / 5.5 · extreme 6.2 / 5.2 ·
-  xtra 6 / 5 s (0.5.81; was 4.2 / 3.4 for all — "almost impossible to get from one pan to the other").
+  `FLIP_T` by difficulty { calm, angry }: easy 9 / 7.5 · normal 7.5 / 6 · hard 5.5 / 4.5 · extreme 5.2 / 4.2 ·
+  xtra 5 / 4 s (0.5.81 gave +4 / +2 s over the old 4.2 / 3.4 — "almost impossible to get from one pan to the other" —;
+  0.5.82: 1 s less, "not that easy"). After the first hit it gets up in `Boss.GETUP_T` ([system](system.md)).
 - **Attacks** (never the same twice in a row; `REST_T` 1.2 / 0.8 s between):
   1. **Charge**: 'charge_wind' (scraping dust, `CHARGE_WIND` 0.8 / 0.6) → 'charge' (`CHARGE_V` 860 / 1060 px/s; running
      into it = 1 HP and a big push) → into a wall: 'bonk' (armoured) and DEBRIS falls from the ceiling (`ROCKS` 4 / 6:

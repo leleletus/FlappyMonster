@@ -286,7 +286,7 @@ function Ship:updateBoss(dt, level)
             self.y = ny
         end
     elseif st == 'stuck' then
-        if self.deadTimer >= self.stuckFor then self.state, self.deadTimer = 'rise', 0 end
+        if self.deadTimer >= self:downTime(self.stuckFor) then self.state, self.deadTimer = 'rise', 0 end
     elseif st == 'rise' then
         -- Vuelve a la altura desde la que atacó y sigue su ruta
         local backY = self.slamFrom or self.hoverY

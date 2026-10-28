@@ -68,7 +68,8 @@ local LAUNCH_V    = 1500                        -- px/s: disparado por la balanz
 local LAUNCH_MAX  = 1.4                         -- s subiendo como mucho (sin techo: cae igual, patas arriba)
 -- s patas arriba (vulnerable), según la dificultad: { normal, enfadado } (0.5.81, el usuario: con 4,2 / 3,4 era casi
 -- imposible pasar de un platillo al otro a tiempo → bastante más en Fácil / Normal, unos segundos más en las difíciles)
-local FLIP_T      = { easy = { 10, 8.5 }, normal = { 8.5, 7 }, hard = { 6.5, 5.5 }, extreme = { 6.2, 5.2 }, xtra = { 6, 5 } }
+-- (0.5.82: 1 s menos; y tras el primer golpe se levanta en Boss.GETUP_T, como todos los jefes)
+local FLIP_T      = { easy = { 9, 7.5 }, normal = { 7.5, 6 }, hard = { 5.5, 4.5 }, extreme = { 5.2, 4.2 }, xtra = { 5, 4 } }
 local RIGHT_T     = 0.7
 local GRACE       = 0.8                         -- s sin volver a dar a nadie tras un golpe
 local SLAM_POWER  = 1.5                         -- × la catapulta de la balanza cuando cae él en un platillo
@@ -579,7 +580,7 @@ function GB:updateBoss(dt, level)
 
     elseif st == 'flipped' then
         self:physics(level, dt); self:friction(level, dt)
-        if t >= (FLIP_T[level.difficulty or ''] or FLIP_T.normal)[ph] then self:enter('righting') end
+        if t >= self:downTime((FLIP_T[level.difficulty or ''] or FLIP_T.normal)[ph]) then self:enter('righting') end
 
     elseif st == 'righting' then
         self:physics(level, dt); self:friction(level, dt)

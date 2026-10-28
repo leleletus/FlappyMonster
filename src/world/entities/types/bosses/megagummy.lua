@@ -705,7 +705,7 @@ function MG:updateBoss(dt, level)
 
     elseif st == 'dazed' then
         self:physics(level, dt); self:friction(level, dt)
-        if t >= DAZE_T[ph] then self:enter('recover') end
+        if t >= self:downTime(DAZE_T[ph]) then self:enter('recover') end
 
     elseif st == 'recover' then
         self:physics(level, dt); self:friction(level, dt)

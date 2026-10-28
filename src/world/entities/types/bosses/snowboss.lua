@@ -1213,7 +1213,7 @@ function Snow:updateBoss(dt, level)
         local hit = self:physics(level, dt)          -- (resbala dentro del bloque de hielo)
         self:friction(level, dt)
         if hit then self.vx = 0 end
-        if t >= (self.frozenFor or FROZEN_T) then self:thaw() end
+        if t >= self:downTime(self.frozenFor or FROZEN_T) then self:thaw() end
 
     elseif st == 'recover' then
         self:physics(level, dt); self:friction(level, dt)

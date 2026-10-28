@@ -5,6 +5,7 @@
 --   vuelco     él en un platillo y un ground pound en el OTRO: sale disparado, se estrella contra el techo y cae
 --              PATAS ARRIBA (vulnerable); pasado el tiempo se da la vuelta
 --   golpe      patas arriba: pisotón -1, ground pound -2 (con su invulnerabilidad entre golpes)
+--   levanta    tras el primer golpe tumbado se levanta en Boss.GETUP_T s (todos los jefes)
 --   doble_filo él cae de su salto en un platillo con el jugador en el otro: el jugador sale disparado contra el techo
 --              y pierde 1
 --   cebo       el jugador en un platillo: salta (casi siempre) al OTRO platillo
@@ -168,13 +169,13 @@ function cases.vuelco()
         boss.restLen = 99
     end)
     local vuln = boss:isVulnerable()
-    -- patas arriba el tiempo de su dificultad (Normal 8,5 s: 0.5.81) y luego se da la vuelta
+    -- patas arriba el tiempo de su dificultad (Normal 7,5 s: 0.5.82) y luego se da la vuelta
     local upT, done = 0, false
     stepAll(level, es, { pa }, 11, function()
         boss.restLen = 99
         if boss.state == 'flipped' then upT = math.max(upT, boss.deadTimer) else done = true end
     end)
-    local back = done and upT >= 8.3
+    local back = done and upT >= 7.3
     check('vuelco', seen.launched and seen.tumble and flippedAt and minTop <= zy0 + 4 and vuln and back,
         ('disparado=%s · llega al techo (%d / techo %d) · cae patas arriba=%s vulnerable=%s · se da la vuelta a los %.1f s=%s'):format(
             tostring(seen.launched), math.floor(minTop), math.floor(zy0), tostring(flippedAt), tostring(vuln), upT or -1, tostring(back)))
@@ -234,6 +235,26 @@ function cases.golpe()
     local h2 = boss.hp
     check('golpe', r == 'stomp' and h1 == hp0 - 1 and h2 == hp0 - 3,
         ('patas arriba: interact=%s · pisotón %d → %d · ground pound → %d'):format(tostring(r), hp0, h1, h2))
+end
+
+-- Tras el primer golpe tumbado se levanta en Boss.GETUP_T s, dure lo que dure su tiempo patas arriba (0.5.82: todos
+-- los jefes)
+function cases.levanta()
+    local level, es, boss = arena()
+    putBoss(level, boss, 24 * T)
+    boss:enter('flipped')
+    stepAll(level, es, {}, 0.5, function() boss.restLen = 99 end)
+    boss.inv = 0
+    boss:stomp()
+    local after = 0
+    stepAll(level, es, {}, 6, function()
+        boss.restLen = 99
+        if boss.state ~= 'flipped' then return true end
+        after = after + DT
+    end)
+    local Boss = require 'src/world/entities/base/Boss'
+    check('levanta', math.abs(after - Boss.GETUP_T) < 0.1,
+        ('golpeado a los 0,5 s patas arriba: se levanta %.2f s después (quiere %.1f)'):format(after, Boss.GETUP_T))
 end
 
 function cases.doble_filo()
@@ -528,7 +549,7 @@ end
 
 function love.load(arg)
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'arena', 'acorazado', 'caparazon', 'cascotes', 'vuelco', 'golpe', 'doble_filo', 'cebo', 'embestida', 'lanzar', 'ondas', 'enfado', 'derrota', 'purga', 'trozo', 'sombra_movil', 'madera', 'voladores', 'red' }) do
+    for _, n in ipairs({ 'arena', 'acorazado', 'caparazon', 'cascotes', 'vuelco', 'golpe', 'levanta', 'doble_filo', 'cebo', 'embestida', 'lanzar', 'ondas', 'enfado', 'derrota', 'purga', 'trozo', 'sombra_movil', 'madera', 'voladores', 'red' }) do
         if not only or only == n then
             local ok, err = xpcall(cases[n], debug.traceback)
             if not ok then check(n, false, 'error: ' .. tostring(err)) end
