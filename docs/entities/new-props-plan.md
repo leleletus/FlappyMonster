@@ -131,4 +131,5 @@ Every generator writes previews by default and the game assets only with `--appl
 - [x] 4. Gust in the game (only pushes in every island, like the volcano Geyser).
 - [x] 5. Seed in the game (carried, planted with a ground pound; platforms measured on the drawings).
 - [x] 5b. Blizzard and Geyser in the game (not yet placed in `torre_viento` or any level).
-- [ ] 6. Levels that use them; docs reference; release.
+- [ ] 6. Levels that use them (Gusts in 27 levels and the Blizzard in `torre_viento`: 0.5.72; the rest per
+  [level-review-2026-10](../levels/level-review-2026-10.md)); docs reference; release.

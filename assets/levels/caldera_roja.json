@@ -39,7 +39,7 @@
     {"col":35,"props":{"patrol":{"left":33,"right":38}},"row":21,"type":"gummy_magma"},
     {"col":45,"props":{"delayMax":3.5,"delayMin":2.2,"range":9},"row":19,"type":"mortar"},
     {"col":50,"row":21,"type":"checkpoint"},
-    {"col":60,"props":{"movement":"fly","patrol":{"left":56,"right":64}},"row":20,"type":"gummy_magma"},
+    {"col":60,"row":20,"type":"gust"},
     {"col":73,"props":{"range":9},"row":17,"type":"mortar"},
     {"col":81,"row":18,"sub":1,"type":"spikefall"},
     {"col":84,"row":18,"sub":2,"type":"spikefall"},
@@ -69,7 +69,9 @@
     {"col":114,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":110,"right":119}},"row":16,"type":"crabby_lava"},
     {"col":25,"row":12,"type":"star"},
     {"col":20,"row":12,"type":"star"},
-    {"col":129,"row":13,"type":"mortar"}
+    {"col":129,"row":13,"type":"mortar"},
+    {"col":34,"row":19,"type":"gust"},
+    {"col":128,"row":19,"type":"gust"}
   ],
   "foliage": [
     {"col":18,"props":{"flip":true,"layer":"back"},"row":13,"sub":3,"type":"dead_bush"},

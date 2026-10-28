@@ -65,12 +65,13 @@
     {"col":122,"row":11,"type":"star"},
     {"col":23,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":20,"right":27}},"row":16,"type":"crabby"},
     {"col":93,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":89,"right":98}},"row":16,"type":"crabby"},
-    {"col":85,"props":{"movement":"fly"},"row":18,"type":"gummy"},
+    {"col":89,"row":19,"type":"gust"},
     {"col":21,"row":7,"type":"star"},
     {"col":23,"row":7,"type":"star"},
     {"col":24,"row":9,"type":"star"},
     {"col":26,"row":9,"type":"star"},
-    {"col":43,"row":21,"type":"trampoline"}
+    {"col":43,"row":21,"type":"trampoline"},
+    {"col":136,"row":19,"type":"gust"}
   ],
   "foliage": [
     {"col":34,"props":{"flip":true},"row":17,"type":"tiki_torch"},

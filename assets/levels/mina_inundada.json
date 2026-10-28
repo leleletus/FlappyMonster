@@ -59,7 +59,8 @@
     {"col":7,"props":{"area":[{"col":2,"row":21},{"col":13,"row":21},{"col":13,"row":22},{"col":11,"row":22},{"col":11,"row":24},{"col":2,"row":24}]},"row":22,"type":"pufferfish"},
     {"col":30,"props":{"area":[{"col":25,"row":21},{"col":33,"row":21},{"col":33,"row":22},{"col":31,"row":22},{"col":31,"row":24},{"col":30,"row":24},{"col":30,"row":22},{"col":27,"row":22},{"col":27,"row":24},{"col":25,"row":24}]},"row":21,"type":"pufferfish"},
     {"col":84,"props":{"area":[{"col":79,"row":21},{"col":91,"row":21},{"col":91,"row":22},{"col":89,"row":24},{"col":80,"row":24}],"startDir":"left"},"row":22,"type":"pufferfish"},
-    {"col":50,"props":{"area":[{"col":49,"row":21},{"col":53,"row":21},{"col":53,"row":22},{"col":51,"row":22},{"col":51,"row":24},{"col":49,"row":24}]},"row":22,"type":"pufferfish"}
+    {"col":50,"props":{"area":[{"col":49,"row":21},{"col":53,"row":21},{"col":53,"row":22},{"col":51,"row":22},{"col":51,"row":24},{"col":49,"row":24}]},"row":22,"type":"pufferfish"},
+    {"col":50,"row":10,"type":"gust"}
   ],
   "foliage": [
     {"col":4,"props":{"flip":true},"row":8,"type":"stalactite"},

@@ -45,7 +45,8 @@
     {"col":23,"props":{"patrol":{"left":16,"right":30},"points":4,"respawn":8},"row":13,"type":"gummy_ice"},
     {"col":69,"props":{"helmet":true,"patrol":{"left":62,"right":76},"points":4,"respawn":8},"row":13,"type":"gummy_ice"},
     {"col":23,"row":11,"type":"star"},
-    {"col":69,"row":11,"type":"star"}
+    {"col":69,"row":11,"type":"star"},
+    {"col":46,"props":{"points":6,"respawn":1},"row":20,"type":"gust"}
   ],
   "foliage": [
     {"col":44,"props":{"layer":"back"},"row":7,"sub":3,"type":"snow_pile"},

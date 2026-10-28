@@ -44,7 +44,8 @@
     {"col":34,"props":{"detectRange":14},"row":2,"sub":1,"type":"spikefall"},
     {"col":58,"props":{"detectRange":14},"row":2,"sub":2,"type":"spikefall"},
     {"col":19,"row":12,"type":"star"},
-    {"col":73,"row":12,"type":"star"}
+    {"col":73,"row":12,"type":"star"},
+    {"col":46,"props":{"points":6,"respawn":1},"row":19,"type":"gust"}
   ],
   "foliage": [
     {"col":10,"props":{"layer":"back"},"row":13,"sub":4,"type":"torch"},

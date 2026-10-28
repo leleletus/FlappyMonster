@@ -94,6 +94,8 @@ Gummies `artDir`, `helmetDx`, `helmetDy`.
   it sits in its usual state.
 - What shows in the dark: `renderGlow(camX, camY)`; what gives light: `lights()`.
 - Hit areas that are not the standard boxes: `debugBoxes()` (so F1 shows them).
+- Standing still ON PURPOSE (the Gust inhaling / blowing): `holdsStill()` → true, so the `flyers` harness does not
+  count it as stuck. Where it will blow (for the bots): `windArea()`.
 - Sounds: `Sound.play('name')` from its update is already attenuated by distance and, if listed in `noises`, is noise.
 
 ## 4. Other pieces that are "one file + one name"

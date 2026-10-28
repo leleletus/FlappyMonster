@@ -20,7 +20,6 @@ local INHALE_T  = 1.0
 local BLOW_T    = 1.6
 local REST_T    = 1.2
 local POWER     = 420          -- px/s: la velocidad del aire de la racha
-local SEE_H     = 1.5          -- casillas arriba / abajo en las que ve a un jugador
 local FADE      = 0.2          -- s en los que la racha crece / se apaga
 
 Gust.noWings = true
@@ -55,7 +54,7 @@ function Gust:pushAt(x, y)
     local dir = self.facing or -1
     local front = self.x + dir * self.outerW / 2
     local dx = (x - front) * dir
-    if dx < -8 or dx > reach(self) or math.abs(y - self.y) > (self.props.width or 1.6) * TILE_PX / 2 then return nil end
+    if dx < -8 or dx > reach(self) or math.abs(y - self.y) > (self.props.width or 2.8) * TILE_PX / 2 then return nil end
     local t = self.deadTimer or 0
     local k = math.min(1, t / FADE, (BLOW_T - t) / FADE)
     if k <= 0 then return nil end
@@ -64,10 +63,11 @@ end
 
 -- ¿Ve a un jugador delante, a su altura? (devuelve hacia dónde)
 local function sees(self, level)
+    local seeH = (self.props.width or 2.8) / 2 + 0.3                -- (ve a quien su racha alcanzaría)
     for _, pa in ipairs(level.players or {}) do
         if not pa.dying then
             local dx, dy = pa.x - self.x, pa.y - self.y
-            if math.abs(dy) < SEE_H * TILE_PX and math.abs(dx) < reach(self) + TILE_PX * 0.5 and math.abs(dx) > 8 then
+            if math.abs(dy) < seeH * TILE_PX and math.abs(dx) < reach(self) + TILE_PX * 0.5 and math.abs(dx) > 8 then
                 return dx > 0 and 1 or -1
             end
         end
@@ -113,12 +113,25 @@ function Gust:interact(pa)
 end
 function Gust:onStomp() Sound.play('gustPop') end
 
+-- Quieto a propósito (inspirando / soplando): no está atascado (tools/tests/flyers)
+function Gust:holdsStill() return self.state == 'inhale' or self.state == 'blow' end
+
+-- Dónde va a SOPLAR (inspirando) o sopla ya: para que los bots se aparten (src/ai/Bot.lua) — { x0, y0, x1, y1 } o nil
+function Gust:windArea()
+    if self.state ~= 'blow' and self.state ~= 'inhale' then return nil end
+    local dir, w = self.facing or -1, reach(self)
+    local x0 = self.x + dir * self.outerW / 2
+    local h = (self.props.width or 2.8) * TILE_PX
+    local a = dir > 0 and x0 or x0 - w
+    return { x0 = a, y0 = self.y - h / 2, x1 = a + w, y1 = self.y + h / 2 }
+end
+
 -- F1: la racha
 function Gust:debugBoxes()
     if self.state ~= 'blow' and self.state ~= 'inhale' then return nil end
     local dir, w = self.facing or -1, reach(self)
     local x0 = self.x + dir * self.outerW / 2
-    local h = (self.props.width or 1.6) * TILE_PX
+    local h = (self.props.width or 2.8) * TILE_PX
     return { { x = dir > 0 and x0 or x0 - w, y = self.y - h / 2, w = w, h = h, kind = 'area' } }
 end
 
@@ -166,13 +179,16 @@ return {
     name = 'gust', label = 'Soplón', category = 'Enemigos', class = Gust,
     description = 'Nubecilla que flota; al ver a un jugador delante inspira (aviso) y sopla una racha que empuja, sin daño. '
                .. 'Pisarlo lo revienta (soplando, rebota); un ground pound siempre.',
-    defaults = { movement = 'fly', speed = 25, bobAmp = 10, onTouch = 'none', points = 15, pauses = false },
+    -- (0.5.72, el usuario: se mueve como el pez globo — por una ZONA, al azar, sin atravesar nada —, pero en el aire:
+    -- el vuelo libre de entities/base/FreeFlight.lua, `flyRange` casillas alrededor de donde se coloca; la racha, más
+    -- ancha — 2,8 casillas — para no tener que estar justo delante)
+    defaults = { movement = 'fly', speed = 40, bobAmp = 6, flyMode = 'free', flyRange = 3, onTouch = 'none', points = 15, pauses = false },
     hide = { 'onTouch', 'attach', 'dropOnSight', 'detectRange', 'turnAtEdges', 'pauses' },
     noises = { gustBlow = 8 },
     props = {
         { key = 'reach', kind = 'number', label = 'Alcance (casillas)', group = 'Soplón', default = 5.5, min = 2, max = 12, step = 0.5,
           help = 'Lo largo de la racha (y desde dónde ve a un jugador)' },
-        { key = 'width', kind = 'number', label = 'Alto de la racha (casillas)', group = 'Soplón', default = 1.6, min = 0.5, max = 4, step = 0.1 },
+        { key = 'width', kind = 'number', label = 'Alto de la racha (casillas)', group = 'Soplón', default = 2.8, min = 0.5, max = 4, step = 0.1 },
         { key = 'power', kind = 'number', label = 'Fuerza', group = 'Soplón', default = 1, min = 0.3, max = 3, step = 0.05,
           help = '1 = arrastra al monstruo más deprisa de lo que anda' },
     },

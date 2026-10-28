@@ -74,7 +74,9 @@
     {"col":72,"props":{"movement":"fly","patrol":{"left":69,"right":76}},"row":20,"type":"gummy_ice"},
     {"col":20,"props":{"dir":"down","id":7},"row":19,"type":"cryo"},
     {"col":27,"props":{"dir":"down","id":8},"row":19,"type":"cryo"},
-    {"col":67,"props":{"dir":"left","id":9,"range":13},"row":21,"type":"cryo"}
+    {"col":67,"props":{"dir":"left","id":9,"range":13},"row":21,"type":"cryo"},
+    {"col":41,"row":19,"type":"gust"},
+    {"col":116,"row":19,"type":"gust"}
   ],
   "foliage": [
     {"col":21,"props":{"flip":true,"layer":"back"},"row":13,"sub":3,"type":"ice_crystal"},

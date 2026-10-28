@@ -54,7 +54,8 @@
     {"col":51,"props":{"patrol":{"left":50,"right":52}},"row":7,"type":"gummy_fortress"},
     {"col":51,"row":2,"sub":1,"type":"spikefall"},
     {"col":53,"row":2,"sub":2,"type":"spikefall"},
-    {"col":56,"row":2,"sub":2,"type":"spikefall"}
+    {"col":56,"row":2,"sub":2,"type":"spikefall"},
+    {"col":42,"row":8,"type":"gust"}
   ],
   "foliage": [
     {"col":25,"row":8,"sub":3,"type":"torch"},

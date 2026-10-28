@@ -72,7 +72,9 @@
     {"col":113,"row":10,"type":"extralife"},
     {"col":23,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":20,"right":27}},"row":16,"type":"crabby_fortress"},
     {"col":113,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":109,"right":118}},"row":16,"type":"crabby_fortress"},
-    {"col":97,"props":{"movement":"fly","patrol":{"left":94,"right":101}},"row":18,"type":"gummy_fortress"}
+    {"col":97,"row":18,"type":"gust"},
+    {"col":34,"row":19,"type":"gust"},
+    {"col":126,"row":19,"type":"gust"}
   ],
   "foliage": [
     {"col":29,"props":{"layer":"back"},"row":13,"sub":4,"type":"glow_mushroom"},

@@ -209,6 +209,12 @@ function Gey:netApply(a, b, f)
     self.loadF = (b[2] or 100) / 100
 end
 
+-- Dónde va a salir (avisando) o sale el chorro: para que los bots se aparten (src/ai/Bot.lua)
+function Gey:windArea()
+    if self.state ~= 'warn' and self.state ~= 'erupt' then return nil end
+    return { x0 = self.x - TILE_PX * 0.6, y0 = self:reach(), x1 = self.x + TILE_PX * 0.6, y1 = self.cellBottom }
+end
+
 function Gey:debugBoxes()
     if self.state ~= 'erupt' then return nil end
     local top = self:topY()

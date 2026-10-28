@@ -75,7 +75,9 @@
     {"col":104,"row":11,"type":"crabby"},
     {"col":91,"row":6,"type":"star"},
     {"col":62,"row":5,"type":"extralife"},
-    {"col":30,"row":17,"type":"trampoline"}
+    {"col":30,"row":17,"type":"trampoline"},
+    {"col":52,"row":14,"type":"gust"},
+    {"col":99,"row":13,"type":"gust"}
   ],
   "foliage": [
     {"col":5,"row":17,"type":"palmtree"},

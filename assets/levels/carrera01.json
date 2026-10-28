@@ -43,7 +43,8 @@
     {"col":80,"row":17,"type":"gummy_magma"},
     {"col":15,"props":{"patrol":{"left":12,"right":17}},"row":7,"type":"crabby_lava"},
     {"col":50,"row":8,"type":"checkpoint"},
-    {"col":57,"row":16,"type":"star"}
+    {"col":57,"row":16,"type":"star"},
+    {"col":46,"row":8,"type":"gust"}
   ],
   "foliage": [
     {"col":27,"row":9,"sub":4,"type":"dead_bush"},

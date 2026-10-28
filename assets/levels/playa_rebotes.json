@@ -73,7 +73,9 @@
     {"col":139,"props":{"movement":"fly","patrol":{"left":136,"right":143}},"row":12,"type":"gummy"},
     {"col":23,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":20,"right":27}},"row":16,"type":"crabby"},
     {"col":124,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":120,"right":129}},"row":16,"type":"crabby"},
-    {"col":127,"row":13,"type":"mortar"}
+    {"col":127,"row":13,"type":"mortar"},
+    {"col":94,"row":19,"type":"gust"},
+    {"col":151,"row":19,"type":"gust"}
   ],
   "foliage": [
     {"col":27,"props":{"flip":true,"layer":"back"},"row":13,"type":"palmtree"},

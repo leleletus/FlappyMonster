@@ -101,6 +101,15 @@ device when stale). **Harnesses:** `bot_nav`, `story_flow bonus`.
 
 - (1) BONUS RESULTS: the "enemies" row is gone (they always respawn in arenas) → "time in the zone" (`stats.zoneT`, `Score.BONUS_WEIGHTS.zone` 15 = seconds inside the active zone / half the match).
 
+## Wind (0.5.72)
+
+Things that blow tell where they will blow (`windArea()`: the Gust while inhaling / blowing, the Geyser while warning /
+erupting). The bot (`src/ai/Bot.lua`, `windy` / `calmNodes`) does not pick zone cells inside a wind area while the
+zone has others, steps out of it inside the zone when it catches it, and while following its route WAITS before a
+step that enters the wind (not counted as stuck) — the user asked for the bot to be taught rather than removing the
+Gusts from the arenas. Gusts in point-zone arenas follow the arena rule (respawn, 40 % of their points: 6). The
+`bot_nav` harness now simulates the air too (`level.pushers`, like AdventureState).
+
 ## History and decisions (dated notes)
 
 Kept because they record WHY things are the way they are and what was tried and rejected. Where a note

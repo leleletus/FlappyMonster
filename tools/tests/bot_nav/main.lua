@@ -81,6 +81,7 @@ local function play(level, nav, withTarget, lure)
     while t < SECS do
         level.players = tgt and { bpa, tgt } or { bpa }
         level.solidBodies = Entities.solidBodies(es)          -- (trampolines, morteros: como en AdventureState)
+        level.pushers = require('src/world/systems/Push').collect(es)   -- (lo que sopla — Soplones, Géiseres —: como en AdventureState)
         level:update(dt)
         level.zoneClock = t                                    -- (la zona ÚNICA que se mueve de parada en parada: PointAreas)
         do                                                     -- el "jugador" sigue a la zona: su sitio es la parada de ahora

@@ -61,7 +61,7 @@
     {"col":84,"row":12,"type":"star"},
     {"col":82,"props":{"movement":"fly","patrol":{"left":79,"right":86}},"row":12,"type":"gummy"},
     {"col":97,"props":{"patrol":{"left":93,"right":102}},"row":13,"type":"crabby_river"},
-    {"col":110,"props":{"movement":"fly","patrol":{"left":107,"right":114}},"row":11,"type":"gummy"},
+    {"col":110,"row":11,"type":"gust"},
     {"col":130,"row":12,"type":"star"},
     {"col":133,"row":12,"type":"star"},
     {"col":23,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":20,"right":27}},"row":16,"type":"crabby_river"},
@@ -79,7 +79,8 @@
     {"col":116,"row":18,"sub":1,"type":"spikefall"},
     {"col":117,"row":17,"sub":2,"type":"spikefall"},
     {"col":117,"row":17,"sub":1,"type":"spikefall"},
-    {"col":119,"row":16,"sub":1,"type":"spikefall"}
+    {"col":119,"row":16,"sub":1,"type":"spikefall"},
+    {"col":75,"row":19,"type":"gust"}
   ],
   "foliage": [
     {"col":22,"row":13,"type":"tropical_bush"},

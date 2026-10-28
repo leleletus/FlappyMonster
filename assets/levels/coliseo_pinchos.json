@@ -100,7 +100,8 @@
     {"col":20,"props":{"patrol":{"left":18,"right":23},"points":6,"respawn":1},"row":17,"type":"crabby_fortress"},
     {"col":44,"props":{"patrol":{"left":41,"right":46},"points":6,"respawn":1},"row":17,"type":"crabby_fortress"},
     {"col":30,"props":{"patrol":{"left":25,"right":39},"points":4,"respawn":1},"row":14,"type":"gummy_fortress"},
-    {"col":32,"row":12,"type":"star"}
+    {"col":32,"row":12,"type":"star"},
+    {"col":20,"props":{"points":6,"respawn":1},"row":15,"type":"gust"}
   ],
   "foliage": [
     {"col":19,"props":{"layer":"back"},"row":12,"sub":4,"type":"bones"},

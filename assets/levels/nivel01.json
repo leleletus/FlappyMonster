@@ -61,7 +61,8 @@
     {"col":3,"row":21,"sub":1,"type":"spikefall"},
     {"col":56,"row":25,"type":"extralife"},
     {"col":1,"row":22,"type":"star"},
-    {"col":2,"row":23,"type":"star"}
+    {"col":2,"row":23,"type":"star"},
+    {"col":20,"row":24,"type":"gust"}
   ],
   "foliage": [
     {"col":13,"row":10,"sub":4,"type":"bones"},

@@ -141,6 +141,28 @@ end
 
 local function inArea(a, x, y) return x >= a.x0 and x < a.x1 and y >= a.y0 and y < a.y1 end
 
+-- EL VIENTO (el usuario: con Soplones en las arenas el bot no se quedaba en la zona): lo que sopla dice dónde va a
+-- soplar o sopla ya (`windArea()`: el Soplón inspirando / soplando, el Géiser avisando / en erupción). El bot no
+-- elige casillas de la zona que estén ahí, si le quedan otras; y si le pilla donde está, se aparta dentro de la zona
+local function windy(level, x, y)
+    for _, p in ipairs(level.pushers or {}) do
+        local a = p.windArea and p:windArea()
+        if a and inArea(a, x, y) then return true end
+    end
+    return false
+end
+local function calmNodes(nav, level, set)
+    if not set or not level.pushers or not level.pushers[1] then return set, false end
+    local calm, any, cut = {}, false, false
+    for id in pairs(set) do
+        local n = nav.nodes[id]
+        if n and windy(level, n.x, (n.y or (n.r * TILE_PX - 40)) - 30) then cut = true
+        else calm[id], any = true, true end
+    end
+    if any and cut then return calm, true end
+    return set, false
+end
+
 -- ¿En qué zona está ese jugador (o nil)?
 local function areaOf(level, pa)
     for _, a in ipairs(PointAreas.live(level)) do                -- (solo cuenta la zona ACTIVA)
@@ -193,7 +215,10 @@ function Bot:_goal(level, target)
     if best then
         if not best._nodes then return nil, 'hold' end
         local here = pa.onGround and BotNav.nodeAt(self.nav, pa.x, pa.y, self:_h())
+        local calm, cut = calmNodes(self.nav, level, best._nodes)
+        if cut and here and not calm[here] then return calm, 'zone' end          -- (le va a soplar: se aparta)
         if inArea(best, pa.x, pa.y) and pa.onGround and (not best._nodes or (here and best._nodes[here])) then return nil, 'hold' end
+        if cut then return calm, 'zone' end
         -- (ya puntúa en otra zona que da lo mismo: no la deja por ir a la "mejor")
         if mine and mine ~= best and mine._nodes and here and mine._nodes[here] and (mine.points or 1) >= (best.points or 1) then
             return nil, 'hold'
@@ -643,6 +668,12 @@ function Bot:think(dt, level, target)
     if not cur then return self:_emit(0) end            -- (en el aire: deja que caiga)
     local from = self.nav.nodes[cur]
     local to = self.nav.nodes[e.to]
+    -- (el siguiente paso del camino entra en el VIENTO — un Soplón inspirando / soplando, un Géiser —, y aquí no
+    -- sopla: espera a que pase, sin contarlo como atascado; si no, el Soplón lo tiraba a los pinchos al cruzar)
+    if to and windy(level, to.x, (to.y or (to.r * TILE_PX - 40)) - 30) and not windy(level, pa.x, pa.y) then
+        self.stuckT, self.lastX = 0, pa.x
+        return self:_emit(0)
+    end
     if e.walk then
         local dx = to.x - pa.x
         if math.abs(dx) < 6 then table.remove(self.path, 1); self.pathFrom = e.to; return self:_emit(0) end

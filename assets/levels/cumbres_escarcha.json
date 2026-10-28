@@ -63,7 +63,9 @@
     {"col":140,"props":{"movement":"fly","patrol":{"left":137,"right":142}},"row":12,"type":"gummy_ice"},
     {"col":23,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":20,"right":27}},"row":16,"type":"crabby_ice"},
     {"col":125,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":121,"right":130}},"row":16,"type":"crabby_ice"},
-    {"col":54,"props":{"area":[{"col":48,"row":23},{"col":59,"row":23},{"col":57,"row":25},{"col":50,"row":25}]},"row":25,"type":"pufferfish"}
+    {"col":54,"props":{"area":[{"col":48,"row":23},{"col":59,"row":23},{"col":57,"row":25},{"col":50,"row":25}]},"row":25,"type":"pufferfish"},
+    {"col":98,"row":19,"type":"gust"},
+    {"col":154,"row":19,"type":"gust"}
   ],
   "foliage": [
     {"col":38,"props":{"flip":true,"layer":"back"},"row":13,"sub":3,"type":"snow_pile"},

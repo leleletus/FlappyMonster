@@ -88,7 +88,12 @@ local function simLevel(path)
                         end
                     end
                 end
-                if math.abs(e.x - tr.lastX) < 0.01 then tr.stillT = tr.stillT + dt else tr.stillT = 0 end
+                -- (quieto A PROPÓSITO — `holdsStill()`: el Soplón inspirando y soplando — no es estar atascado)
+                -- (en VUELO LIBRE también cuenta moverse en vertical: va a destinos, a veces justo encima o debajo — el
+                -- Soplón, lento, tarda más de 2 s —; en ruta solo lo horizontal: su vaivén taparía que está atascado)
+                local still = math.abs(e.x - tr.lastX) < 0.01 and not (e.freeFly and math.abs(e.y - (tr.lastY or e.y)) >= 0.01)
+                tr.lastY = e.y
+                if still and not (e.holdsStill and e:holdsStill()) then tr.stillT = tr.stillT + dt else tr.stillT = 0 end
                 if tr.stillT > 2 and not tr.stuckOnce then
                     tr.stuckOnce = true; stats.stuck = stats.stuck + 1
                     if os.getenv('WHY') then

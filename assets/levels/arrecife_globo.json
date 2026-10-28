@@ -62,7 +62,7 @@
     {"col":54,"row":12,"type":"checkpoint"},
     {"col":98,"row":12,"type":"checkpoint"},
     {"col":41,"props":{"movement":"fly","patrol":{"left":36,"right":47}},"row":12,"type":"gummy"},
-    {"col":73,"props":{"movement":"fly","patrol":{"left":68,"right":79}},"row":11,"type":"gummy"},
+    {"col":73,"row":11,"type":"gust"},
     {"col":115,"props":{"movement":"fly","patrol":{"left":110,"right":121}},"row":11,"type":"gummy"},
     {"col":138,"row":22,"type":"extralife"}
   ],

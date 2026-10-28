@@ -1,6 +1,7 @@
 # Level review and proposals (2026-10-28)
 
-**Status: PROPOSAL for the user — nothing here is applied yet.** The user asked (0.5.71): look at absolutely every
+**Status: the user approved the order of work (2026-10-28). Step 2 DONE in 0.5.72: the Gusts of the table below (41,
+except the two marked OPTIONAL: `pradera_explosiva` G2 and `tren_fugaz`) and the Blizzard in `torre_viento`.** The user asked (0.5.71): look at absolutely every
 level and propose (1) where to place Gusts or which enemies to replace with them, (2) changes, reworks and remakes —
 repetitive or simple levels, mechanics not used well, flyers the player cannot reach —, decoration and structure, new
 levels, and where the new mechanics (Scale, boxes) fit. The **Blizzard in `torre_viento` is mandatory** (agreed).
@@ -213,8 +214,11 @@ behind those on purpose. Sorted:
 ## Order of work (proposal)
 
 1. The user approves / edits this page.
-2. Gusts (quick: placements above) + the Blizzard in `torre_viento` — then `run.sh all` + `level_solve` on each
-   touched level.
+2. ~~Gusts (quick: placements above) + the Blizzard in `torre_viento`~~ — DONE 0.5.72 (replaced flyers keep their
+   index in the entity list: the story save remembers taken extra lives by index; new Gusts are appended). The user
+   then asked for wider blows (2.8 tiles) and Gusts that WANDER an area like the pufferfish (free flight, 3 tiles
+   around their spot); the bot was taught about wind (see story/bonus-and-bot); menu scene seeds re-picked
+   (`menu_flow FINDSEED`) and nav graphs rebuilt.
 3. Reworks of the templated levels, one island at a time (they need the user's playtesting).
 4. Decoration passes (fast, low risk).
 5. New levels.

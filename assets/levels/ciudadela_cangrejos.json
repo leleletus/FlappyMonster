@@ -66,7 +66,9 @@
     {"col":51,"props":{"patrol":{"left":45,"right":52}},"row":6,"type":"gummy"},
     {"col":49,"row":5,"type":"extralife"},
     {"col":12,"row":23,"type":"trampoline"},
-    {"col":76,"row":23,"type":"trampoline"}
+    {"col":76,"row":23,"type":"trampoline"},
+    {"col":30,"row":8,"type":"gust"},
+    {"col":70,"row":8,"type":"gust"}
   ],
   "foliage": [
     {"col":50,"props":{"flip":true,"layer":"back"},"row":2,"sub":4,"type":"hibiscus"},

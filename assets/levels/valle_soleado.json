@@ -43,7 +43,8 @@
     {"col":99,"row":9,"type":"star"},
     {"col":106,"row":9,"type":"star"},
     {"col":111,"row":14,"type":"checkpoint"},
-    {"col":116,"props":{"patrol":false,"speed":60,"wallWalk":true},"row":14,"type":"crabby_river"}
+    {"col":116,"props":{"patrol":false,"speed":60,"wallWalk":true},"row":14,"type":"crabby_river"},
+    {"col":53,"row":10,"type":"gust"}
   ],
   "foliage": [
     {"col":4,"row":14,"type":"butterflies"},

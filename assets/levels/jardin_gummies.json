@@ -58,7 +58,9 @@
     {"col":114,"row":8,"type":"star"},
     {"col":56,"row":12,"type":"extralife"},
     {"col":46,"row":13,"type":"checkpoint"},
-    {"col":98,"row":13,"type":"checkpoint"}
+    {"col":98,"row":13,"type":"checkpoint"},
+    {"col":61,"row":10,"type":"gust"},
+    {"col":111,"row":10,"type":"gust"}
   ],
   "foliage": [
     {"col":8,"row":13,"type":"palmtree"},
