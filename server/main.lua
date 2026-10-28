@@ -1687,9 +1687,9 @@ function love.load()
         if not ok then error(err, 0) end
     end
     -- Efectos de las entidades (pinchos que se clavan...): para todos
-    require('src/world/entities/base/Entity').fx = function(kind, x, y)
+    require('src/world/entities/base/Entity').fx = function(kind, x, y, opts)
         if _currentSim then
-            pushEvent(_currentSim, { type='fx', kind=kind, x=round(x), y=round(y) })
+            pushEvent(_currentSim, { type='fx', kind=kind, x=round(x), y=round(y), tile=opts and opts.tile or nil })
         end
     end
 

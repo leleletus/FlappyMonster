@@ -130,6 +130,8 @@ end
 
 local NoiseMarks = require 'src/fx/NoiseMarks'
 function Particles.emit(kind, x, y, opts)
+    -- (`opts.tile` = id de un tile → su material: `opts.def`; lo mandan las entidades — Entity.emitFx — y viaja online)
+    if opts and opts.tile and not opts.def then opts = { tile = opts.tile, def = TileTypes.get(opts.tile) } end
     opts = opts or {}
     if NoiseMarks.is(kind) then return NoiseMarks.add(kind, x, y) end     -- (marcas de ruido: no son partículas)
     if kind == 'gp_land' then
@@ -155,7 +157,8 @@ function Particles.emit(kind, x, y, opts)
             add({ x = x + math.cos(a) * 14, y = y + math.sin(a) * 14, vx = math.cos(a) * 140, vy = math.sin(a) * 140,
                   life = 0.25, size = 4, col = {1, 1, 1}, drag = 6 })
         end
-    elseif kind == 'block_break' then
+    elseif kind == 'block_break' or kind == 'chunk_break' then
+        -- (chunk_break: igual, para lo que no es un bloque del nivel — online no lo filtra como los bloques rotos —)
         -- Trozos de ladrillo de tamaños y trayectorias al azar, migas y polvo
         -- (x, y = esquina de la casilla; el material es el del bloque que había)
         local T = TILE_PX

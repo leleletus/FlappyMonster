@@ -335,7 +335,7 @@ function OnlineAdventureState:_processEvent(ev)
     elseif ev.type == 'fx' then
         -- Efectos de OTROS jugadores (los propios ya los generó la predicción)
         if ev.playerId ~= NC.myId and ev.kind ~= 'block_break' and ev.kind ~= 'switch_hit' and type(ev.kind) == 'string' then
-            Particles.emit(ev.kind, tonumber(ev.x) or 0, tonumber(ev.y) or 0)
+            Particles.emit(ev.kind, tonumber(ev.x) or 0, tonumber(ev.y) or 0, ev.tile and { tile = tonumber(ev.tile) } or nil)
         end
     elseif ev.type == 'pickup' then
         local x, y = tonumber(ev.x) or 0, tonumber(ev.y) or 0

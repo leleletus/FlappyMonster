@@ -137,8 +137,10 @@ end
 -- Efectos visuales de las entidades (impactos...). El juego pone aquí quién
 -- los dibuja: partículas en un jugador; el servidor los reenvía como eventos.
 Entity.fx = nil
-function Entity.emitFx(kind, x, y)
-    if Entity.fx then Entity.fx(kind, x, y) end
+-- `opts` (opcional, viaja a los clientes): { tile = id } = el material de un tile (los trozos de suelo que arranca el
+-- Escarabajo Rinoceronte Gigante se rompen en pedazos de ese material)
+function Entity.emitFx(kind, x, y, opts)
+    if Entity.fx then Entity.fx(kind, x, y, opts) end
 end
 
 local SPAWN_ANIM = 0.7    -- s de la animación de reaparición
@@ -636,7 +638,9 @@ function Entity:moveAndCollide(level, dx, dy)
     local hw = self.outerW / 2
     local hh = self.outerH / 2
     local x, y = self.x, self.y
-    local free = self.state == 'launched'      -- lanzada: sin límites de ruta
+    -- lanzada (o un tipo que lo pide: `freeOfRoute()` — el Escarabajo embistiendo, lanzado, patas arriba —): sin
+    -- límites de ruta; luego vuelve andando a ella (fuera de ella solo no se aleja más: ver abajo)
+    local free = self.state == 'launched' or (self.freeOfRoute ~= nil and self:freeOfRoute())
     local touched, touchedFace                 -- objeto sólido que tocó (trampolín)
 
     x = x + dx
@@ -784,7 +788,11 @@ end
 function Entity:update(dt, level)
     local tn = self.tuning
     -- (en las manos de un jugador: va con él y no hace nada más — systems/Carry)
-    if self.carriedBy then Carry.follow(self); return end
+    if self.carriedBy then
+        Carry.follow(self)
+        if self.whileCarried then self:whileCarried(dt, level) end    -- (el tipo sigue vivo en las manos: el Escarabajo)
+        return
+    end
     if (self.thrownT or 0) > 0 then self.thrownT = self.thrownT - dt end
     if self.stepAlways then self:stepAlways(dt, level) end
 

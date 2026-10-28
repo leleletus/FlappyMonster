@@ -84,10 +84,15 @@
 --   cargar_gp      ground pound llevando la caja pequeña o la bomba: la sigue llevando, ni se rompe ni se enciende
 --   balanza_impacto  una caja grande que cae desde alto en un platillo dispara la pequeña del otro; desde poco, solo
 --                  inclina; la fuerza crece con el peso y la velocidad y baja con el peso de lo que se lanza
+--   balanza_salto  quien saltó justo antes de que disparen su platillo también sale disparado; un platillo que sube de
+--                  golpe recoge a quien está encima en el aire (no lo atraviesa)
 --   escarabajo     el Escarabajo Rinoceronte: te ve delante, escarba, embiste, se aturde contra la pared; pisado, patas
 --                  arriba (de lado no hace daño); se da la vuelta solo; pisado patas arriba, muere
 --   escarabajo_lanzado  patas arriba se coge y se lanza: derriba un Gummy, rompe una caja; a lava, pinchos o vacío,
 --                  revienta
+--   escarabajo_ruta  embiste pasando su ruta y vuelve a ella; lanzado fuera de su ruta va hacia donde se lanza;
+--                  recién volcado no se le pisa (rebota de lado)
+--   escarabajo_manos  en las manos sigue contando, tiembla y se suelta solo quitando 1
 --   (ONLY=a,b: solo esos casos)
 --   aire_caja      el aire empuja una caja contra el jugador: el jugador sigue a su lado (empujado), nunca al otro
 --   geiser_peso    el Géiser sube más despacio lo que pesa más con lo que lleva encima y el chorro se corta debajo
@@ -2445,6 +2450,49 @@ function cases.balanza_impacto()
             high, low, k1, k2, k3))
 end
 
+-- Saltar justo antes (el usuario, 0.5.79): quien acaba de saltar de un platillo cuando lo disparan también sale
+-- disparado (no lo atraviesa); y un platillo que sube de golpe recoge a quien estaba encima en el aire
+function cases.balanza_salto()
+    local function setup()
+        local level, es = room(30, 16, {}, { { type = 'scale', col = 15, row = 3, props = { span = 6, drop = 5, travel = 2 } } })
+        local sc = es[1]
+        level.levelRef = level
+        sim(level, {}, es, 0.5)
+        return level, es, sc
+    end
+    -- 1) recién saltado del platillo derecho (en el aire, 0.4 casillas encima) y lo disparan
+    local level, es, sc = setup()
+    local pans = sc:bodyParts()
+    local rb = pans[2]:getOuterBounds()
+    local pa = PlayerAdventure:new(rb.x + rb.w / 2, rb.y - 80)
+    sim(level, { pa }, es, 1)
+    local stood = pa.standBody == pans[2]
+    pa.vy, pa.onGround, pa.standBody = -300, false, nil
+    pa.y = pa.y - 0.4 * T
+    local y0, up1 = pa.y, 0
+    sc:catapult(pans[1], nil, 1, nil)
+    sim(level, { pa }, es, 1.2, function() up1 = math.max(up1, (y0 - pa.y) / T) end)
+    -- 2) en el aire 1,6 casillas encima (fuera del margen) y el platillo sube de golpe hasta él: lo recoge y sale disparado
+    local lv2, e2, s2 = setup()
+    local p2s = s2:bodyParts()
+    local rb2 = p2s[2]:getOuterBounds()
+    local q = PlayerAdventure:new(rb2.x + rb2.w / 2, rb2.y - 2.1 * T - 30)
+    local qb = q:getOuterBounds()
+    q.y = q.y + (rb2.y - 1.6 * T) - (qb.y + qb.h)
+    q.vy, q.onGround = 0, false
+    local yq0, up2, through = q.y, 0, false
+    s2.slamT, s2.slamSide = 0.35, p2s[1].side
+    sim(lv2, { q }, e2, 1.2, function()
+        up2 = math.max(up2, (yq0 - q.y) / T)
+        local b = p2s[2]:getOuterBounds()
+        local qb2 = q:getOuterBounds()
+        if qb2.y + qb2.h > b.y + b.h + 2 and qb2.y < b.y then through = true end     -- (la tabla le pasa por el cuerpo)
+    end)
+    check('balanza_salto', stood and up1 > 4 and up2 > 3 and not through,
+        ('estaba en el platillo=%s · saltó justo antes y lo disparan: sube %.1f casillas · en el aire encima del que sube: sube %.1f, lo atraviesa=%s'):format(
+            tostring(stood), up1, up2, tostring(through)))
+end
+
 -- ── Escarabajo Rinoceronte (jungla, 0.5.76) ───────────────────────────────────
 -- Te ve delante → escarba → embiste → contra la pared, aturdido; pisado: patas arriba (no hace daño de lado);
 -- pisado otra vez: muere; patas arriba se da la vuelta solo
@@ -2534,6 +2582,79 @@ function cases.escarabajo_lanzado()
     check('escarabajo_lanzado', ok, table.concat(parts, ' · '))
 end
 
+-- 0.5.78 (el usuario): la RUTA no frena al escarabajo embistiendo (choca con la pared de verdad y luego vuelve andando
+-- a su ruta); lanzado fuera de su ruta va hacia donde se lanza; recién volcado no se le puede pisar (rebota de lado);
+-- en las manos sigue contando y, si no se suelta, se suelta solo y quita 1
+function cases.escarabajo_ruta()
+    local level, es = room(20, 9, {}, { { type = 'beetle', col = 8, row = 8, props = { pauses = false, startDir = 'right',
+        patrol = { left = 6, right = 10 } } } })
+    local b = es[1]
+    settle(level, es)
+    local pa = playerAt(level, 15, 8)
+    local right = b.rightBoundPx
+    local maxX, dazed = 0, false
+    sim(level, { pa }, es, 5, function()
+        maxX = math.max(maxX, b.x + b.outerW / 2)
+        if b.state == 'daze' then dazed = true end
+        pa.invT = 9
+    end)
+    pa.x = 2.5 * T
+    sim(level, {}, es, 22)
+    local back = b.x + b.outerW / 2 <= right + 2
+    -- lanzado fuera de su ruta: va hacia donde se lanza (las dos direcciones)
+    local ok2, parts = true, {}
+    for _, dir in ipairs({ -1, 1 }) do
+        local lv, e2 = room(30, 9, {}, { { type = 'beetle', col = 6, row = 8, props = { pauses = false, speed = 0, patrol = { left = 5, right = 7 } } } })
+        local c = e2[1]
+        settle(lv, e2)
+        c:stomp(); sim(lv, {}, e2, 0.6)
+        local q = playerAt(lv, 5, 8)
+        q.grabReq = true; sim(lv, { q }, e2, 1 / 60)
+        q.x = 18 * T; q.y = 8 * T - 60
+        for _ = 1, 10 do sim(lv, { q }, e2, 1 / 60) end
+        q.facing = dir
+        local x0 = c.x
+        q.grabReq = true; sim(lv, { q }, e2, 1 / 60)
+        sim(lv, { q }, e2, 0.8)
+        local moved = (c.x - x0) * dir
+        ok2 = ok2 and moved > T
+        parts[#parts + 1] = ('hacia %d: avanza %.1f casillas'):format(dir, moved / T)
+    end
+    -- recién volcado: pisarlo otra vez rebota (no lo mata); pasado el momento, sí
+    local lv, e3 = room(20, 9, {}, { { type = 'beetle', col = 10, row = 8, props = { pauses = false, speed = 0, patrol = false } } })
+    local c = e3[1]
+    settle(lv, e3)
+    c:stomp()
+    local q = PlayerAdventure:new(c.x, c.y - 60); q.vy = 300
+    local gob = c:getOuterBounds()
+    q.y = gob.y - 40
+    local r1, _, d1 = c:interact(q)
+    sim(lv, {}, e3, 0.5)
+    local r2 = c:interact(q)
+    check('escarabajo_ruta', maxX > right + T and dazed and back and ok2 and r1 == 'bounce' and d1 ~= nil and r2 == 'stomp',
+        ('embiste pasando su ruta: hasta %.1f casillas más allá, aturdido en la pared=%s, vuelve a su ruta=%s · lanzado fuera de ella: %s · recién volcado: %s (de lado %s), luego: %s'):format(
+            (maxX - right) / T, tostring(dazed), tostring(back), table.concat(parts, ', '), tostring(r1), tostring(d1), tostring(r2)))
+end
+
+function cases.escarabajo_manos()
+    local level, es = room(20, 9, {}, { { type = 'beetle', col = 8, row = 8, props = { pauses = false, speed = 0, patrol = false } } })
+    local b = es[1]
+    settle(level, es)
+    b:stomp(); sim(level, {}, es, 0.6)
+    local pa = playerAt(level, 7, 8)
+    local hp0 = pa.hp
+    pa.grabReq = true; sim(level, { pa }, es, 1 / 60)
+    local held, t0 = b.state == 'carried', b.deadTimer
+    local maxT, escaped, warnSeen = t0, nil, false
+    sim(level, { pa }, es, 3.5, function()
+        if b.state == 'carried' then maxT = math.max(maxT, b.deadTimer); if b.deadTimer >= 2.1 then warnSeen = true end end
+        if not escaped and b.state ~= 'carried' then escaped = b.state end
+    end)
+    check('escarabajo_manos', held and maxT > t0 + 1 and warnSeen and escaped and pa.carrying == nil and pa.hp == hp0 - 1,
+        ('en las manos=%s, sigue contando (%.1f → %.1f s, tiembla=%s) · se suelta solo → %s, ya no lo lleva=%s · vida %d → %d'):format(
+            tostring(held), t0, maxT, tostring(warnSeen), tostring(escaped), tostring(pa.carrying == nil), hp0, pa.hp))
+end
+
 function love.load()
     for _, n in ipairs({ 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
                          'helmet_jump', 'helmet_ride', 'helmet_gp', 'helmet_side', 'stomp_fast',
@@ -2542,7 +2663,7 @@ function love.load()
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
                          'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado', 'techo_pinchos',
-                         'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'escarabajo', 'escarabajo_lanzado' }) do
+                         'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'balanza_salto', 'escarabajo', 'escarabajo_lanzado', 'escarabajo_ruta', 'escarabajo_manos' }) do
         if not os.getenv('ONLY') or (',' .. os.getenv('ONLY') .. ','):find(',' .. n .. ',', 1, true) then cases[n]() end
     end
     if os.getenv('SHOT_BOMB') then bombShot() end

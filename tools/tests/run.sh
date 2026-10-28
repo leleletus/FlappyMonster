@@ -93,6 +93,16 @@ run_one() {
     env "${envs[@]}" "${runner[@]}" "tools/tests/$name" "${args[@]}" 2>&1 \
         | grep -v "^\[warning\] Tried to activate trigger" | tee "$out"
     rc=${PIPESTATUS[0]}
+    # (16 arneses a la vez: a veces la pantalla virtual de xvfb no está lista y SDL no arranca — "x11 not available" —;
+    # eso no es un fallo del arnés: se repite UNA vez, en otra pantalla virtual)
+    if grep -q "Could not initialize SDL video subsystem" "$out"; then
+        echo "   (la pantalla virtual no arrancó: se repite una vez)"
+        [ ${#runner[@]} -gt 3 ] && runner=(timeout "${TEST_TIMEOUT:-900}" env -u WAYLAND_DISPLAY SDL_VIDEODRIVER=x11 xvfb-run -a -n $((100 + RANDOM % 800)) -s "-screen 0 1920x1080x24" love)
+        sleep 1
+        env "${envs[@]}" "${runner[@]}" "tools/tests/$name" "${args[@]}" 2>&1 \
+            | grep -v "^\[warning\] Tried to activate trigger" | tee "$out"
+        rc=${PIPESTATUS[0]}
+    fi
     grep -q "^Error: \|stack traceback" "$out" && { echo "!! error de Lua en el arnés"; rc=1; }
     rm -f "$out"
     [ "$rc" = 124 ] && echo "!! tiempo agotado (TEST_TIMEOUT=${TEST_TIMEOUT:-900} s)"

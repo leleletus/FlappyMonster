@@ -76,7 +76,13 @@ Designs and the user's verdicts: [new-props-plan](new-props-plan.md).
   BOSSES (0.5.76): a boss weighs nothing, but one with `ridesScale` standing on a pan RIDES it, a pound / impact on the
   other pan calls its `onScaleLaunch(vy, scale)`, and a boss landing hard calls `Scale.slamUnder(level, boss, power)`
   (fires the other pan, players included, and tells it whom: `onScaleCatapult`). `Scale:catapult(pan, except, power,
-  by)` is the one launch for all of them. Pans STOP when they would hit a block, a
+  by)` is the one launch for all of them.
+  JUMPING JUST BEFORE (0.5.79, the user: you dodged the Rhino Beetle's double edge and other mechanics by jumping a
+  moment before the pan fired — the one-way pan then went through you): the catapult also fires players IN THE AIR up
+  to `JUMP_GRACE` 1.5 tiles above the plank; a RISING pan never goes through a player who was above it
+  (`Scale:sweepPlayers`: their feet go onto the plank and they rise with it); while the pan is firing, whoever lands
+  on it or is picked up by it is fired too, with the same power (a boss's slam included) and the boss is told
+  (`onScaleCatapult`); someone already flying up faster is left alone. Harness `mechanics balanza_salto`. Pans STOP when they would hit a block, a
   platform or a box not in their stack (0.5.69, the user: they went through the floor; `Scale:panBlocked`); enemies
   pass through them. Pans are NOT drop-through (the user: boxes must be placed on them carefully with crouch + UP;
   a pan does not rise if that would push a box on it into a player above). Sounds v2 (the user: "more mechanical,

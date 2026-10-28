@@ -7,7 +7,7 @@
 --     estrella contra el techo (o lo que haya encima), cae PATAS ARRIBA y se queda expuesto (FLIP_T s). Y al revés:
 --     cuando cae de su salto en un platillo, dispara lo del otro — al jugador — contra el techo (daño): doble filo.
 --   · Ataques: EMBESTIDA con el cuerno de lado a lado (contra la pared: temblor y caen CASCOTES del techo, con su sombra
---     de aviso); LANZAR un bloque del templo que arranca del suelo (en arco, a por ti; se rompe al caer); SALTO CON LAS
+--     de aviso); LANZAR un trozo del suelo que pisa (en arco, a por ti; se rompe al caer); SALTO CON LAS
 --     ALAS (zumbando; la diana marca dónde cae) y aterrizaje que suelta dos ONDAS por el suelo. Si estás en un
 --     platillo, a veces salta al OTRO para dispararte.
 --   · ENFADADO (por debajo de `rageAt`): más rápido, dos embestidas seguidas, dos bloques, y caen escarabajos pequeños
@@ -16,6 +16,10 @@
 -- vuelta y se va volando torpe hacia arriba atravesando el techo ('dying_flee'; pura función del tiempo), soltando el
 -- fragmento. Todo lo que se dibuja sale de state + deadTimer + x, y (+ netPackExtra): igual online.
 -- Física (choques, saltos a una marca, zona): la de la Gran Bola de Nieve (types/snowboss.lua), reutilizada.
+-- 0.5.78 (el usuario): su caja era más grande que su cuerpo (costaba muchísimo saltarlo): ahora es la del CUERPO, sin
+-- el cuerno, y el dibujo se corre 2 px para que caiga sobre ella; tocarlo = su caja, sin margen. LANZA un TROZO DEL
+-- SUELO que pisa (su material: césped, tierra, piedra, arena…; se dibuja con la textura de ese tile y se rompe en
+-- pedazos de ese material) en vez de un bloque fijo. Sonidos repetidos (pasos, zumbido) más espaciados.
 
 local Entity = require 'src/world/entities/base/Entity'
 local Boss   = require 'src/world/entities/base/Boss'
@@ -28,7 +32,8 @@ local GB = Entity.extend(Boss, {
     OPENINGS = { flipped = true },
     debugColor = { 0.6, 0.8, 0.3 },
     -- (el cuerpo mide ~16 de los 22 px del cuadro; de alto, del lomo a las uñas, ~12 de 20)
-    hitbox = { outerW = 0.7, outerH = 0.6, innerW = 0.6, innerH = 0.5 },
+    -- (0.5.78: el cuerpo del dibujo: ~14 de 22 px de ancho y 11 de 20 de alto con las patas)
+    hitbox = { outerW = 0.64, outerH = 0.55, innerW = 0.54, innerH = 0.44 },
 })
 GB.hurtSound   = 'megaHurt'
 GB.introLength = 3.2
@@ -69,7 +74,9 @@ local PAN_BAIT    = 0.65                        -- probabilidad de saltar al OTR
 
 -- Bloques lanzados y cascotes
 local BLOCK_G, BLOCK_VY = 2400, -1050
-local BLOCK_S     = 16 * 4                      -- lado del bloque (su dibujo de 16 a escala 4)
+local BLOCK_S     = 56                          -- lado del trozo de suelo (casi una casilla)
+local BODY_DX     = 2                           -- px del cuadro: el cuerpo, 2 a la izquierda del centro (el cuerno, delante)
+local STEP_EVERY, BUZZ_EVERY = 0.28, 0.3      -- s entre pasos embistiendo / entre zumbidos de las alas
 local ROCKS       = { 4, 6 }                    -- cascotes por choque
 local ROCK_WARN   = 0.75                        -- s de sombra antes de caer
 local ROCK_G      = 2600
@@ -173,11 +180,13 @@ end
 function GB:touch(level, hit)
     if self.graceT > 0 or BACK[self.state] then return end
     local b = self:getOuterBounds()
-    local box = { x = b.x - 6, y = b.y, w = b.w + 12, h = b.h + 4 }
+    local box = b                                                  -- (su cuerpo, sin margen: 0.5.78)
     for _, pa in ipairs(level.players or {}) do
         if not pa.dying and pa.alive ~= false and not pa:isInvulnerable() then
             local pb = pa:getOuterBounds()
-            local onTop = pb.y + pb.h <= b.y + 14 and (pa.vy or 0) >= -50
+            -- (encima del caparazón — los pies por encima de su mitad, bajando o subiendo tras el rebote — no es tocarlo: es
+            -- rebotar (Boss:interact); antes solo valía una franja de 14 px y al caer rápido dolía: el usuario, 0.5.79)
+            local onTop = pb.y + pb.h <= b.y + b.h * 0.5
             if not onTop and overlap(pb, box) and strike(pa, hit or HIT_TOUCH, (pa.x >= self.x) and 1 or -1) then
                 self.graceT = GRACE
             end
@@ -202,9 +211,25 @@ function GB:throwBlock(level, pa)
     local apex = hy + vy * tUp / 2
     local tDown = math.sqrt(2 * math.max(1, ty - apex) / BLOCK_G)
     local vx = (tx - hx) / (tUp + tDown)
-    self.blocks[#self.blocks + 1] = { id = self:nid(), x = hx, y = hy, vx = vx, vy = vy, t = 0, hit = {} }
+    local tile = self:floorTile(level)
+    self.blocks[#self.blocks + 1] = { id = self:nid(), x = hx, y = hy, vx = vx, vy = vy, t = 0, tile = tile, hit = {} }
     Sound.play('megaSlam', 0.4, 1.4)
+    -- (lo arranca del suelo delante del cuerno: tierra que salta del material de ese suelo)
+    Entity.emitFx('chunk_break', math.floor(hx - T / 2), math.floor(self:feetY() - T), { tile = tile })
 end
+-- El tile del suelo que pisa delante del cuerno (o bajo él): el material del trozo que arranca. Sin suelo (un platillo),
+-- piedra
+function GB:floorTile(level)
+    local TileTypes = require 'src/world/tiles/TileTypes'
+    local y = self:feetY() + 4
+    for _, x in ipairs({ self.x + (self.facing or 1) * self.outerW * 0.45, self.x }) do
+        local id = level:getTileAt(x, y)
+        local def = TileTypes.get(id)
+        if id and id ~= 0 and def.collision == 'solid' then return id end
+    end
+    return TileTypes.byName.stone and TileTypes.byName.stone.id or 1
+end
+
 function GB:updateBlocks(level, dt)
     local _, _, _, zy1 = self:zoneBounds()
     for i = #self.blocks, 1, -1 do
@@ -222,7 +247,7 @@ function GB:updateBlocks(level, dt)
         if (b.vy > 0 and (level:collisionAt(b.x, bottom, true) or level:bodyAt(b.x, bottom, self))) or b.y > zy1 + T
            or level:collisionAt(b.x + ((b.vx >= 0) and 1 or -1) * BLOCK_S / 2, b.y) then
             Sound.play('boxBreak', 0.9, 0.7)
-            Entity.emitFx('block_break', b.x - T / 2, b.y - T / 2)
+            Entity.emitFx('chunk_break', math.floor(b.x - T / 2), math.floor(b.y - T / 2), { tile = b.tile })   -- (en pedazos de su material)
             table.remove(self.blocks, i)
         end
     end
@@ -239,11 +264,23 @@ function GB:dropRocks(level)
         if pa and k <= #players then x = pa.x + rand(-T, T)                       -- (uno encima de cada jugador)
         else x = rand(zx0 + T, zx1 - T) end
         x = math.max(zx0 + ROCK_S, math.min(zx1 - ROCK_S, x))
-        local _, top = level:landingCross(x, zy0 + 4, zy0 + 20 * T)
+        local top = self:floorBelow(level, x, zy0 + 4)
         self.rocks[#self.rocks + 1] = { id = self:nid(), x = math.floor(x), y = zy0 + ROCK_S / 2, vy = 0,
                                         t = -ROCK_WARN - k * 0.12, floor = math.floor(top or (zy0 + 12 * T)), hit = {} }
     end
 end
+-- Lo primero que hay debajo de (x, y): un tile (también plataforma) o un cuerpo (los platillos de la balanza); así la
+-- sombra de aviso sale donde de verdad caerá (0.5.79: sobre un platillo, la sombra quedaba en el fondo del foso, tapada)
+function GB:floorBelow(level, x, y)
+    local _, _, _, zy1 = self:zoneBounds()
+    for yy = y, zy1 + 4 * T, 8 do
+        if level:collisionAt(x, yy, true) then return math.floor(yy / T) * T end
+        local o, b = level:bodyAt(x, yy, self)
+        if o then return math.floor(b.y) end
+    end
+    return zy1
+end
+
 function GB:updateRocks(level, dt)
     for i = #self.rocks, 1, -1 do
         local r = self.rocks[i]
@@ -257,7 +294,9 @@ function GB:updateRocks(level, dt)
                     r.hit[pa] = true
                 end
             end
-            if r.y + ROCK_S / 2 >= r.floor then
+            local bottom = r.y + ROCK_S / 2
+            local o = r.vy > 0 and level:bodyAt(r.x, bottom, self)
+            if bottom >= r.floor or o then
                 Sound.play('cavePebble', 0.8)
                 Entity.emitFx('block_break', r.x - T / 2, r.floor - T)
                 table.remove(self.rocks, i)
@@ -416,7 +455,7 @@ function GB:updateBoss(dt, level)
         self.vx = (self.facing or 1) * CHARGE_V[ph]
         local hit = self:physics(level, dt)
         self:touch(level, HIT_CHARGE)
-        if math.floor(t * 10) ~= math.floor((t - dt) * 10) then Sound.play('megaStep', 0.5, 1.3) end
+        if math.floor(t / STEP_EVERY) ~= math.floor((t - dt) / STEP_EVERY) then Sound.play('megaStep', 0.5, 1.3) end
         if hit == 'wall' then
             self.vx = 0
             Sound.play('megaSlam', 0.8)
@@ -472,7 +511,7 @@ function GB:updateBoss(dt, level)
     elseif st == 'leap' then
         self:physics(level, dt)
         self:touch(level)
-        if math.floor(t * 12) ~= math.floor((t - dt) * 12) then Sound.play('gustBlow', 0.25, 1.6) end    -- (el zumbido)
+        if math.floor(t / BUZZ_EVERY) ~= math.floor((t - dt) / BUZZ_EVERY) then Sound.play('gustBlow', 0.2, 1.6) end    -- (el zumbido)
         if self.onGround and self.vy >= 0 and t > 0.1 then
             self.passY, self.vx = nil, 0
             Sound.play('megaSlam', 0.9)
@@ -575,7 +614,7 @@ function GB:updateIntro(dt, level, t)
         local y0 = zy0 - self.outerH
         local u = math.max(0, t / LAND_AT)
         self.y = y0 + (hy - y0) * u * u
-        if math.floor(t * 12) ~= math.floor((t - dt) * 12) then Sound.play('gustBlow', 0.3, 1.5) end
+        if math.floor(t / BUZZ_EVERY) ~= math.floor((t - dt) / BUZZ_EVERY) then Sound.play('gustBlow', 0.25, 1.5) end
         return
     end
     self.y = hy
@@ -590,10 +629,12 @@ function GB:updateIntro(dt, level, t)
 end
 
 -- ── Red ───────────────────────────────────────────────────────────────────────
--- { enfadado, diana x, y, nBloques, {id, x, y}…, nCascotes, {id, x, y, t·100, suelo}…, ondas… }
+-- { enfadado, diana x, y, nTrozos, {id, x, y, tile}…, nCascotes, {id, x, y, t·100, suelo}…, ondas… }
 function GB:netPackExtra()
     local out = { self.rage and 1 or 0, self.markX or 0, self.markY or 0, #self.blocks }
-    for _, b in ipairs(self.blocks) do out[#out + 1] = b.id; out[#out + 1] = math.floor(b.x); out[#out + 1] = math.floor(b.y) end
+    for _, b in ipairs(self.blocks) do
+        out[#out + 1] = b.id; out[#out + 1] = math.floor(b.x); out[#out + 1] = math.floor(b.y); out[#out + 1] = b.tile or 0
+    end
     out[#out + 1] = #self.rocks
     for _, r in ipairs(self.rocks) do
         out[#out + 1] = r.id; out[#out + 1] = r.x; out[#out + 1] = math.floor(r.y)
@@ -626,11 +667,11 @@ function GB:netApplyExtra(a, b, f)
             end end
         end
     end
-    local ba, ka = readList(a, 4, 3)
-    local bb, kb = readList(b, 4, 3)
+    local ba, ka = readList(a, 4, 4)
+    local bb, kb = readList(b, 4, 4)
     lerpById(ba, bb, { 2, 3 })
     self.blocks = {}
-    for _, e in ipairs(bb) do self.blocks[#self.blocks + 1] = { id = e[1], x = e[2], y = e[3], vx = 0, vy = 0, t = 0, hit = {} } end
+    for _, e in ipairs(bb) do self.blocks[#self.blocks + 1] = { id = e[1], x = e[2], y = e[3], tile = e[4], vx = 0, vy = 0, t = 0, hit = {} } end
     local ra = (type(a[ka]) == 'number') and readList(a, ka, 5) or {}
     local rb, kr = readList(b, kb, 5)
     lerpById(ra, rb, { 3 })
@@ -681,7 +722,7 @@ function GB:render(camX, camY)
     local st = self.state
     local now = love.timer.getTime()
     local fr, sx, sy, ox, flip = self:pose()
-    local x = math.floor(self.x - camX) + ox * MS / 3
+    local x = math.floor(self.x - camX) + ox * MS / 3 + BODY_DX * MS * (self.facing or 1)   -- (el cuerpo, no el cuadro, sobre su x)
     local set = self:anims()
     local inAir = AIR[st] or ((st == 'intro' or st == 'ready') and (self.introStep or 0) == 0)
     -- (+1: las patas de DELANTE son 1 px más largas; así las de detrás tocan el suelo y las de delante lo atraviesan
@@ -717,16 +758,27 @@ function GB:drawOver(camX, camY)
         BossFx.target(now * 1.2, math.floor(self.markX - camX), math.floor(self.markY - camY - 16), 8, 8)
     end
     love.graphics.setColor(1, 1, 1, 1)
-    for _, b in ipairs(self.blocks or {}) do
-        set:drawFrame(set:frameN('block', 1), math.floor(b.x - camX), math.floor(b.y - camY), 0, 4, 4, 0.5, 0.5)
+    local TileTypes = require 'src/world/tiles/TileTypes'
+    for _, b in ipairs(self.blocks or {}) do                      -- (el trozo de suelo: la textura de su tile, girando)
+        local def = TileTypes.get(b.tile or 0)
+        love.graphics.push()
+        love.graphics.translate(math.floor(b.x - camX), math.floor(b.y - camY))
+        love.graphics.rotate(((now * 7 + (b.id or 0)) % (2 * math.pi)) * ((b.vx or 1) >= 0 and 1 or -1))
+        love.graphics.setColor(0, 0, 0, 0.35)
+        love.graphics.rectangle('fill', -BLOCK_S / 2 + 4, -BLOCK_S / 2 + 4, BLOCK_S, BLOCK_S)
+        TileTypes.drawTile(def, { x = -BLOCK_S / 2, y = -BLOCK_S / 2, size = BLOCK_S, col = 1, row = 1, time = now })
+        love.graphics.pop()
+        love.graphics.setColor(1, 1, 1, 1)
     end
     for _, r in ipairs(self.rocks or {}) do
-        if r.t < 0 then                                               -- (la sombra en el suelo: el aviso)
-            local k = 1 - math.min(1, -r.t / ROCK_WARN)
-            love.graphics.setColor(0, 0, 0, 0.25 + 0.35 * k)
-            love.graphics.ellipse('fill', math.floor(r.x - camX), math.floor(r.floor - camY) - 4, ROCK_S * (0.4 + 0.3 * k), 8)
+        if r.t < 0 or r.y < r.floor - ROCK_S then                    -- (la sombra en el suelo: el aviso, hasta que llega)
+            local fall = r.t < 0 and (1 - math.min(1, -r.t / (ROCK_WARN + 0.8))) or 1
+            local blink = (math.floor(now * 10 + r.id) % 2 == 0) and 1 or 0.7
+            love.graphics.setColor(0, 0, 0, (0.5 + 0.3 * fall) * blink)
+            love.graphics.ellipse('fill', math.floor(r.x - camX), math.floor(r.floor - camY) - 4, ROCK_S * (0.55 + 0.35 * fall), 10)
             love.graphics.setColor(1, 1, 1, 1)
-        else
+        end
+        if r.t >= 0 then
             set:drawFrame(set:frameN('debris', (r.id % 3) + 1), math.floor(r.x - camX), math.floor(r.y - camY), 0, 6, 6, 0.5, 0.5)
         end
     end

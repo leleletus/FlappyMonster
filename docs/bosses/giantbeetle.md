@@ -35,7 +35,7 @@ dodge the charge and the waves.
   1. **Charge**: 'charge_wind' (scraping dust, `CHARGE_WIND` 0.8 / 0.6) → 'charge' (`CHARGE_V` 860 / 1060 px/s; running
      into it = 1 HP and a big push) → into a wall: 'bonk' (armoured) and DEBRIS falls from the ceiling (`ROCKS` 4 / 6:
      one above each player, the rest anywhere; a SHADOW warns `ROCK_WARN` 0.75 s; 1 HP). Angry: two charges in a row.
-  2. **Toss**: tears a temple BLOCK out of the floor ('toss_wind') and throws it in an arc onto the player ('toss';
+  2. **Toss**: tears a CHUNK of the floor it stands on (0.5.78; see below) ('toss_wind') and throws it in an arc onto the player ('toss';
      1 HP; it shatters on landing). Angry: two blocks.
   3. **Wing leap**: 'leap_wind' (the target mark) → 'leap' (wings buzzing) → 'slam': two shockwaves along the floor
      (`BossWaves`, 1 HP). Landing ON A PAN fires the other pan (`Scale.slamUnder`, × `SLAM_POWER` 1.5): a player there
@@ -53,6 +53,23 @@ dodge the charge and the waves.
 - **Network**: `netPackExtra` = rage, target mark, blocks {id, x, y}, debris {id, x, y, t, floor}, waves
   (`BossWaves.pack`); protocol 79.
 
+## 0.5.78 changes (the user)
+
+- Its box was bigger than its body ("very hard to jump over or dodge") → the body without the horn (`outerW` 0.64,
+  `outerH` 0.55 of the frame), centred (the drawing shifts `BODY_DX` 2 px), touching it = that box with no margin.
+- The TOSS throws a CHUNK OF THE FLOOR it stands on instead of a fixed block: its material is the tile in front of its
+  horn (`floorTile`; on a pan, stone), drawn spinning with that tile's own texture and breaking into pieces of that
+  material (`chunk_break` with `{ tile }`; the tile id travels in the netPack and in the effect event).
+- Repeated sounds spaced out (charge steps every `STEP_EVERY` 0.28 s, wing buzz every `BUZZ_EVERY` 0.3 s; they were
+  10-12 per second).
+- Landing on its SHELL hurt instead of bouncing (the contact damage only let a 14 px band count as "on top"; a fast
+  fall crossed it in one step) → feet above the middle of its body = on top: no contact damage, `Boss:interact` bounces.
+- Only the first falling stone seemed to be marked: over a PAN the stone looked for the floor at the bottom of the pit
+  (its shadow was hidden under the pan and it fell through) and every shadow started faint and small → `floorBelow`
+  finds the first tile, platform or BODY (pan) under it, the stone stops there, and the shadows are clearly visible from
+  the start (50-80 %), blink and grow until it lands.
+- Whatever is carried or pushed into the arena breaks / bursts when it closes ([system](system.md#what-is-brought-into-the-zone)).
+
 ## How to extend
 
 - Tuning lives in the constants at the top of the file (`{ normal, angry }` pairs).
@@ -61,7 +78,7 @@ dodge the charge and the waves.
 
 ## Tests
 
-`giantbeetle_rules` (arena, armour, flip, hits, double edge, bait, charge + debris, toss, waves, rage, defeat, net);
+`giantbeetle_rules` (arena, armour, shell bounce, stone marks, flip, hits, double edge, bait, charge + debris, toss, waves, rage, defeat, net);
 `boss_sim LEVEL=tools/levelgen/arenas/jefe_escarabajo.json` (a whole fight played as intended: every state seen, killed
 by flipping it); `boss_intro`, `online_boss` with that arena.
 

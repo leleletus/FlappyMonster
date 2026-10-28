@@ -27,7 +27,8 @@ concrete type.
   touched) — "so nothing blows up". A ground pound while carrying: the PLAYER takes the impact and keeps carrying it (a box does not break, a bomb
   does not light: the user, 0.5.69); only a type with `onCarriedPound` uses it (the Seed is planted). Dying drops it.
 - **A type switches it on** with `carryable = true` (class) and optional hooks `canBeCarried()`, `onPickUp(pa)`,
-  `onThrow(pa, vx, vy)`, `onPutDown(pa)`, `onCarriedPound(pa)`. While carried: state `'carried'`, `e.carriedBy` (sim),
+  `onThrow(pa, vx, vy)`, `onPutDown(pa)`, `onCarriedPound(pa)`, `whileCarried(dt, level)` (0.5.78: the Rhino Beetle keeps
+  kicking and counting in the hands and breaks free). While carried: state `'carried'`, `e.carriedBy` (sim),
   `e.carrierIdx` (network), `Entity:update` only follows the carrier, no interactions, the air ignores it. A thrown
   object does not hit its thrower for 0.5 s (`thrownBy` / `thrownT`, checked in `Interactions.check`).
 - **Carryable today:** the bomb object (picked up UNLIT, lit when thrown; put down carefully it stays unlit) and the

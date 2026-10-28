@@ -148,6 +148,14 @@ Files: `src/world/systems/BossZones.lua` (zones + fight controller),
   `zone`) is hidden, not solid and doesn't fire until then, then drops from the ceiling on its chains
   (`DESCEND_T` 1.1 s, sound `cryoDrop`, render clipped below the ceiling). Editor: everything shows as placed.
 
+## What is brought into the zone
+
+When a zone CLOSES (the boss intro starts, or the fight starts without an intro) `Controller:purge` breaks or bursts
+everything that came in from OUTSIDE — its home is outside the zone but it is now inside, or a player carries it in:
+boxes (`breakApart`: they go back home), Rhino Beetles, bombs, enemies (`dieBurst`) — so nothing strange happens in the
+fight (the user, 0.5.78). Bosses, their minions (`summonOf`) and the arena's own things (home inside) are untouched.
+Harness `giantbeetle_rules purga`.
+
 ## Boss walls
 
 - **Boss walls** (`types/mechanisms/bosswall.lua`, entity "Bloque de jefe", Mecanismos): rect of

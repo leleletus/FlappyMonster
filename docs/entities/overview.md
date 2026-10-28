@@ -201,6 +201,13 @@ landing mark; sprites in `assets/images/bosses/common/`). Asset layout: enemies 
   (read in settings.lua) starts with them ON: `FM_HITBOX=1 tools/tests/run.sh all|sp_boss|online_boss …` checks that
   drawing them never errors.
 
+- Base hooks added in 0.5.78 (the Rhino Beetle; any type can use them): `freeOfRoute()` → true = its route limits
+  don't stop it (`moveAndCollide`, like 'launched'): it charges / flies thrown past them and then walks back (outside
+  its route it only can't go further away); `whileCarried(dt, level)` runs every step while a player carries it
+  (`Entity:update` otherwise only follows the carrier); `Entity:inVoid(level)` = landed on the bottom border of the
+  level (the void: outside is solid); `Entity.emitFx(kind, x, y, opts)` — `opts.tile` (a tile id) travels to online
+  clients and gives the particles that tile's material (`chunk_break` = `block_break` for things that aren't level
+  blocks).
 - Base hooks added by the 0.5.11 review: `Entity:stepAlways(dt, level)` (optional) runs at the very start of
   `Entity:update`, in ANY state (the data enemies' shots fly on while the shooter is stunned, launched, frozen or
   dead — they used to hang mid-air and still hurt). `Entity.onKill(e)` (set by `AdventureState`, nil elsewhere) is

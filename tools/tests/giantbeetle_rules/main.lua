@@ -170,6 +170,44 @@ function cases.vuelco()
             tostring(seen.launched), math.floor(minTop), math.floor(zy0), tostring(flippedAt), tostring(vuln), tostring(back)))
 end
 
+-- De verdad (jugador cayendo, con el paso del juego): caer en el caparazón REBOTA sin daño (el usuario, 0.5.79: dolía)
+function cases.caparazon()
+    local level, es, boss = arena()
+    putBoss(level, boss, 24 * T)
+    local gob = boss:getOuterBounds()
+    local pa = playerAt(level, es, 18 * T, (FLOOR - 1) * T)
+    local hp0 = pa.hp
+    pa.x, pa.y, pa.vy, pa.onGround = boss.x, gob.y - 3 * T, 0, false
+    local up = false
+    stepAll(level, es, { pa }, 0.9, function()
+        boss.restLen = 99
+        if pa.vy < -200 and pa.y < gob.y then up = true end
+    end)
+    check('caparazon', up and pa.hp == hp0 and boss.hp == boss.hpMax,
+        ('cae en el caparazón: rebota=%s · vida %d → %d · el jefe %d/%d'):format(tostring(up), hp0, pa.hp, boss.hp, boss.hpMax))
+end
+
+-- Los cascotes marcan dónde caen de verdad: sobre un platillo, en el platillo (no en el fondo del foso) y se paran ahí
+function cases.cascotes()
+    local level, es, boss, scale = arena()
+    stepAll(level, es, {}, 0.3)
+    putBoss(level, boss, 24 * T)
+    local pan = scale:bodyParts()[1]:getOuterBounds()
+    local cx = pan.x + pan.w / 2
+    local onPan = boss:floorBelow(level, cx, 3 * T)
+    local onFloor = boss:floorBelow(level, 20.5 * T, 3 * T)
+    local onLedge = boss:floorBelow(level, 13 * T, 3 * T)
+    boss.rocks = { { id = 1, x = cx, y = 3 * T, vy = 0, t = 0, floor = onPan, hit = {} } }
+    local stopY
+    stepAll(level, es, {}, 1.5, function()
+        boss.restLen = 99
+        if not stopY and #boss.rocks == 0 then stopY = true end
+    end)
+    check('cascotes', math.abs(onPan - pan.y) <= 1 and onFloor == (FLOOR - 1) * T and onLedge == 7 * T and stopY,
+        ('sombra en el platillo %d (su tabla %d) · en el suelo %d · en la plataforma %d · se rompe al llegar=%s'):format(
+            onPan, math.floor(pan.y), onFloor, onLedge, tostring(stopY)))
+end
+
 function cases.golpe()
     local level, es, boss = arena()
     putBoss(level, boss, 24 * T)
@@ -345,6 +383,37 @@ function cases.derrota()
             tostring(out), tostring(fled), tostring(released), tostring(shard), tostring(gone), tostring(dead)))
 end
 
+-- Lo que se mete en la zona desde fuera (cargado o empujado) se rompe / revienta al cerrarse; lo de dentro, no
+function cases.purga()
+    local level, es, boss = arena()
+    local Ent = require 'src/world/entities/Entities'
+    local box = Ent.create({ type = 'smallbox', col = 4, row = 12, props = {} })              -- (de fuera: su sitio, la entrada)
+    local beetle = Ent.create({ type = 'beetle', col = 5, row = 12, props = { patrol = false } })
+    local inner = Ent.create({ type = 'smallbox', col = 22, row = 12, props = {} })           -- (de dentro)
+    for _, e in ipairs({ box, beetle, inner }) do es[#es + 1] = e end
+    level.liveEntities = es
+    box.x, box.y = 20 * T, 11.5 * T
+    beetle.x, beetle.y = 26 * T, 11.5 * T
+    local ctl = BossZones.newController(level, es)
+    ctl:purge(level.bossZones[1])
+    local gone = (box.state == 'broken' or box.state == 'gone') and (beetle.state == 'dead_burst' or not beetle.alive)
+    check('purga', gone and inner.state == 'rest',
+        ('caja traída de fuera: %s · escarabajo de fuera: %s · caja de dentro: %s'):format(box.state, beetle.state, inner.state))
+end
+
+-- El trozo que lanza es del suelo que pisa (su tile)
+function cases.trozo()
+    local level, es, boss = arena()
+    putBoss(level, boss, 24 * T)
+    local pa = playerAt(level, es, 30 * T, (FLOOR - 1) * T)
+    boss:throwBlock(level, pa)
+    local TileTypes = require 'src/world/tiles/TileTypes'
+    local id = boss.blocks[1] and boss.blocks[1].tile
+    local under = level:getTileAt(boss.x + boss.outerW * 0.45, (FLOOR - 1) * T + 4)
+    check('trozo', id ~= nil and id == under and TileTypes.get(id).collision == 'solid',
+        ('trozo de %s (el suelo: %s)'):format(id and TileTypes.get(id).name or '?', TileTypes.get(under).name))
+end
+
 function cases.red()
     local level, es, boss = arena()
     putBoss(level, boss, 20 * T)
@@ -375,7 +444,7 @@ end
 
 function love.load(arg)
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'arena', 'acorazado', 'vuelco', 'golpe', 'doble_filo', 'cebo', 'embestida', 'lanzar', 'ondas', 'enfado', 'derrota', 'red' }) do
+    for _, n in ipairs({ 'arena', 'acorazado', 'caparazon', 'cascotes', 'vuelco', 'golpe', 'doble_filo', 'cebo', 'embestida', 'lanzar', 'ondas', 'enfado', 'derrota', 'purga', 'trozo', 'red' }) do
         if not only or only == n then
             local ok, err = xpcall(cases[n], debug.traceback)
             if not ok then check(n, false, 'error: ' .. tostring(err)) end

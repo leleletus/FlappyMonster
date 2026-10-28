@@ -200,6 +200,7 @@ function Controller:update(dt)
                     if intro then
                         -- Entrada del jefe: congelados, sin música, hasta que acabe
                         z.state = 'intro'
+                        self:purge(z)
                         for _, b in ipairs(z.bosses) do
                             if b.startIntro then b:startIntro(self.level, players, z) end
                         end
@@ -237,7 +238,29 @@ function Controller:update(dt)
     return events
 end
 
+-- Al CERRARSE la zona (entrada del jefe o empieza la pelea): lo que se metió en ella desde FUERA — cargado o empujado:
+-- cajas, escarabajos, bombas, enemigos… (su sitio de salida está fuera de la zona) — se rompe o revienta, para que no
+-- haya comportamientos raros en la pelea (el usuario, 0.5.78). Los jefes, sus súbditos y lo de la arena no se tocan
+function Controller:purge(z)
+    for _, e in ipairs(self.level.liveEntities or {}) do
+        local h = e.home
+        local cat = e.def and e.def.category
+        local inZ = contains(z, e.x, e.y) or (e.carriedBy and contains(z, e.carriedBy.x, e.carriedBy.y))
+        if e.alive and h and inZ and not contains(z, h.x, h.y) and not e.summonOf and not (e.def and e.def.boss)
+           and (cat == 'Enemigos' or e.carryable or e.pushBy) and e.state ~= 'dead' and e.state ~= 'gone' then
+            local pa = e.carriedBy
+            if pa then
+                e.carriedBy, e.carrierIdx = nil, 0
+                if pa.carrying == e then pa.carrying = nil end
+                e.state = e.carryPrevState or e.state
+            end
+            if e.breakApart then e:breakApart() elseif e.dieBurst then e:dieBurst() else e.alive = false end
+        end
+    end
+end
+
 function Controller:beginFight(z, players, events)
+    if z.state ~= 'intro' then self:purge(z) end
     z.state, z.fought = 'fight', true
     for _, b in ipairs(z.bosses) do b:startFight(#players) end
     -- Durante la pelea se reaparece dentro de la zona

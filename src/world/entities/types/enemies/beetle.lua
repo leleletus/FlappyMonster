@@ -9,6 +9,11 @@
 --   · LANZADO derriba a los enemigos con los que choca y rompe las cajas; cae otra vez patas arriba.
 --   · Cae en LAVA, en PINCHOS o al VACÍO (andando, patas arriba o lanzado): REVIENTA (el usuario).
 --   · Un ground pound cerca (el empujón) también lo pone patas arriba.
+-- 0.5.78 (el usuario): embistiendo, lanzado, en las manos o patas arriba NO le frena su ruta (`freeOfRoute`: antes
+-- chocaba con su límite como con una pared y lo lanzado volvía hacia ella); luego vuelve andando a su ruta. Al volcarse
+-- te aparta de lado y no se le puede pisar en INV_FLIP s (lo matabas sin querer con el rebote). En las MANOS sigue
+-- pataleando; antes de darse la vuelta TIEMBLA (aviso) y, si no lo sueltas, se suelta solo y te hace daño. Su caja es
+-- la del CUERPO (sin el cuerno), centrada en él: el dibujo se corre 2 px.
 -- Arte: assets/anim/enemies/beetle.json (hoja de 22x20 a escala 4, mira a la DERECHA; tools/art/enemies/
 -- make_beetle.py — sus patas, retocadas a mano por el usuario). Todo lo que se dibuja sale del estado, deadTimer,
 -- frame y facing (lo que viaja en las instantáneas): online se ve igual.
@@ -20,7 +25,8 @@ local Beetle = Entity.extend(Entity, {
     idleEvery = { 3.0, 6.0 }, idleFor = { 0.8, 1.6 },
     debugColor = { 0.55, 0.75, 0.3 },
     -- (el cuerpo mide ~16 de los 22 px del cuadro y ~12 de alto con las patas)
-    hitbox = { outerW = 0.68, outerH = 0.6, innerW = 0.56, innerH = 0.46 },
+    -- (0.5.78: el cuerpo del dibujo, sin el cuerno ni el aire: 14 de 22 px de ancho, 11 de 20 de alto con las patas)
+    hitbox = { outerW = 0.64, outerH = 0.55, innerW = 0.54, innerH = 0.42 },
 })
 
 local S         = GUMMY_SCALE
@@ -35,6 +41,11 @@ local BACK_T    = 3.0                  -- s patas arriba
 local RIGHT_T   = 0.35                 -- s dándose la vuelta
 local FLIP_HOP  = 300                  -- px/s: el saltito al volcarse
 local THROWN_BOUNCE = 0.3
+local INV_FLIP  = 0.4                  -- s tras volcarse en los que no se le puede pisar (te aparta de lado)
+local WARN_T    = 0.9                  -- s antes de darse la vuelta en los que tiembla (el aviso)
+local HIT_CARRY = 1                    -- vida que quita al soltarse de las manos
+local BODY_DX   = 2                    -- px del cuadro: el cuerpo está 2 px a la izquierda del centro (el cuerno, delante)
+local FREE = { windup = true, charge = true, daze = true, onback = true, righting = true, thrown = true, carried = true }
 
 Beetle.animId    = 'enemies/beetle'
 Beetle.carryable = true                -- (patas arriba: canBeCarried)
@@ -46,13 +57,14 @@ function Beetle.sizePx() return FW * S, FH * S end
 local BACK = { onback = true, righting = true }
 
 function Beetle:init()
-    self.cd = 0
+    self.cd, self.invT = 0, 0
     -- (sus reglas de contacto son fijas: no se cambian en el editor — `hide` —, así que se ponen aquí)
     self.props.stompable, self.props.onTouch = true, 'hurt'
 end
 
 -- ── Reglas ────────────────────────────────────────────────────────────────────
 function Beetle:onBack() return BACK[self.state] == true end
+function Beetle:freeOfRoute() return FREE[self.state] == true end
 function Beetle:canBeCarried() return self.alive and self:onBack() and self.onGround ~= false end
 function Beetle:isObstacle() return self.alive and not self:onBack() and self.state ~= 'thrown' and Entity.isObstacle(self) end
 
@@ -62,9 +74,11 @@ function Beetle:interact(pa)
     local st = self.state
     if st == 'thrown' then return nil end
     local r, a, b, c = Interactions.defaultCheck(pa, self)
+    local side = (pa.x >= self.x) and 1 or -1
     if r == 'stomp' then
+        if (self.invT or 0) > 0 then return 'bounce', a, side end      -- (recién volcado: rebota de lado, sin matarlo)
         if pa.gpPhase == 'fall' then return 'pound', a, b end
-        return r, a, b, c
+        return r, a, b, side                                           -- (el pisotón te aparta de lado)
     end
     if self:onBack() then return nil end
     return r, a, b, c
@@ -83,7 +97,7 @@ function Beetle:canBeKnocked() return self.alive and not self:onBack() and self.
 function Beetle:knockback(dirX) self:flipOver(dirX * 220) end
 
 function Beetle:flipOver(vx)
-    self.state, self.deadTimer = 'onback', 0
+    self.state, self.deadTimer, self.invT = 'onback', 0, INV_FLIP
     self.vx, self.vy, self.onGround = vx or 0, -FLIP_HOP, false
     Sound.play('stunned')
     Entity.emitFx('gp_start', self.x, self.y + self.outerH / 2)
@@ -145,9 +159,28 @@ local function fallBurst(self, level)
     return false
 end
 
+-- En las manos de un jugador (Entity:update → whileCarried): sigue pataleando y contando; al acabarse su tiempo
+-- patas arriba se suelta solo — al lado — y le hace daño a quien lo lleva
+function Beetle:whileCarried(dt, level)
+    self.deadTimer = self.deadTimer + dt
+    if self.invT > 0 then self.invT = math.max(0, self.invT - dt) end
+    if self.deadTimer < BACK_T then return end
+    local pa = self.carriedBy
+    require('src/world/systems/Carry').putDown(pa, self, level)
+    self.state, self.deadTimer = 'righting', 0
+    self.vy, self.onGround = -FLIP_HOP * 0.5, false
+    if pa and not pa.dying then
+        local dir = (pa.x >= self.x) and 1 or -1
+        pa:hurt(HIT_CARRY)
+        if pa.recoil then pa:recoil(dir) end
+    end
+    Sound.play('crabPop', 0.9, 0.8)
+end
+
 function Beetle:updateCustom(dt, level)
     local st = self.state
     if self.cd > 0 then self.cd = math.max(0, self.cd - dt) end
+    if self.invT > 0 then self.invT = math.max(0, self.invT - dt) end
 
     if st == 'walk' or st == 'idle' then
         if self.onGround and self.cd <= 0 and self.props.movement ~= 'static' then
@@ -256,7 +289,11 @@ function Beetle:pose()
     end
     if st == 'charge' then return set:frameAt('charge', t), 0, 0 end
     if st == 'daze' then return set:frameAt('idle', 0), (math.floor(t * 16) % 2 == 0) and 1 or 0, 0 end
-    if st == 'onback' or st == 'carried' or st == 'thrown' then return set:frameAt('flip', t), 0, 0 end
+    if st == 'onback' or st == 'carried' then                              -- (a punto de darse la vuelta: tiembla)
+        local warn = t >= BACK_T - WARN_T
+        return set:frameAt('flip', warn and t * 3 or t), warn and ((math.floor(t * 30) % 2 == 0) and 1 or -1) or 0, 0
+    end
+    if st == 'thrown' then return set:frameAt('flip', t), 0, 0 end
     if st == 'righting' then return set:frameAt('flip', t * 3), 0, -math.floor(math.sin(t / RIGHT_T * math.pi) * 2) end
     if st == 'dead' then return set:frameAt('dead', t), 0, 0 end
     if st == 'dead_fling' then return set:frameAt('flip', t * 2), 0, 0 end
@@ -266,7 +303,7 @@ end
 function Beetle:render(camX, camY)
     local fr, ox, oy = self:pose()
     local f = self.facing or 1
-    local x = math.floor(self.x - camX) + ox * S
+    local x = math.floor(self.x - camX) + ox * S + BODY_DX * S * f       -- (el cuerpo, no el cuadro, sobre su x)
     -- (cada cuadro con su último píxel en el suelo — Anim footGap —; lanzado o en las manos, tal cual)
     local air = self.state == 'thrown' or self.state == 'carried' or self.state == 'dead_fling' or not self.onGround
     -- (+1: las patas de delante son 1 px más largas: las de detrás tocan el suelo, las de delante lo atraviesan 1 px)

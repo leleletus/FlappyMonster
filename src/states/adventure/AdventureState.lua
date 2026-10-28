@@ -139,8 +139,8 @@ function AdventureState:enter(args)
         end
     end
     -- Impactos de pinchos que caen, bloques que rompe un jefe...
-    Entity.fx = function(kind, x, y)
-        Particles.emit(kind, x, y)
+    Entity.fx = function(kind, x, y, opts)
+        Particles.emit(kind, x, y, opts)
         if kind == 'block_break' then Sound.play('blockBreak') end
     end
     self._pfx, self._efx = PlayerAdventure.fx, Entity.fx

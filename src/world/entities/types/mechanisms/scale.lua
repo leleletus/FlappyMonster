@@ -18,6 +18,10 @@
 -- desde lo alto, algo lanzado, una pila…) lo hunde de golpe y el otro sube tan rápido que DISPARA lo que lleve, con más
 -- fuerza cuanto más pesa y más rápido cae lo que llega, y con menos cuanto más pesa lo que hay que lanzar
 -- (`impactPower`). Un golpe flojo solo inclina la balanza como siempre. El ground pound del jugador va aparte (onPound).
+-- SALTAR JUSTO ANTES (0.5.79, el usuario): quien saltó un instante antes de que su platillo saliera disparado ya no
+-- estaba "de pie" en él y el platillo, que se atraviesa desde abajo, lo atravesaba (se libraba del arma de doble filo
+-- del Escarabajo y de otras mecánicas): la catapulta lanza también a quien está en el aire justo encima (`JUMP_GRACE`)
+-- y un platillo que SUBE no atraviesa a un jugador que estaba encima: lo recoge y se lo lleva (`sweepPlayers`).
 -- Red: el desnivel (`d`) en su netPack; los platillos se calculan de él.
 local Entity = require 'src/world/entities/base/Entity'
 local Isles  = require 'src/world/level/Isles'
@@ -35,6 +39,7 @@ local SPEED    = 150                       -- px/s: lo que sube / baja un platil
 local SLAM_SPEED = 900                     -- px/s: hundido por un ground pound
 local LAUNCH_V = 1.9                       -- × el salto: la catapulta
 local CREAK_T  = 0.45
+local JUMP_GRACE = 1.5 * TILE_PX           -- px por encima de la tabla: quien está ahí en el aire también sale disparado
 local IMPACT_REF = 2 * 1100                -- peso × px/s de caída que dispara con fuerza 1 (la caja grande a 1100 px/s)
 local IMPACT_MIN = 0.6                     -- por debajo, el golpe solo inclina
 local IMPACT_MAX = 1.6
@@ -163,6 +168,19 @@ function Scale:catapult(hit, except, power, by)
     local v = -math.abs(ADV_JUMP_VEL) * LAUNCH_V * (self.props.power or 1) * (power or 1)
     local shot = {}
     for _, p in ipairs(players) do if p ~= except then p:launch(0, v); shot[#shot + 1] = p end end
+    -- (quien saltó justo antes: en el aire, encima de la tabla y a menos de JUMP_GRACE, también)
+    local ob = other:getOuterBounds()
+    for _, p in ipairs((level or {}).players or {}) do
+        if p ~= except and not p.dying and p.standBody ~= other then
+            local pb = p:getOuterBounds()
+            local foot = pb.y + pb.h
+            local seen = false
+            for _, q in ipairs(shot) do if q == p then seen = true end end
+            if not seen and foot <= ob.y + 4 and foot >= ob.y - JUMP_GRACE and pb.x + pb.w > ob.x + 4 and pb.x < ob.x + ob.w - 4 then
+                p:launch(0, v); shot[#shot + 1] = p
+            end
+        end
+    end
     for _, e in ipairs(ents) do
         if e.launch and e.canBeLaunched and e:canBeLaunched() then e:launch(e.vx or 0, v)
         else e.vy, e.onGround = v, false end
@@ -172,10 +190,47 @@ function Scale:catapult(hit, except, power, by)
     end
     if by and by.onScaleCatapult then by:onScaleCatapult(shot, ents) end
     self.slamT, self.slamSide = 0.35, hit.side
+    self.slamBy, self.slamPower = by, power or 1                          -- (para los que recoge el platillo al subir)
     Sound.play('scaleLaunch')
     local b = other:getOuterBounds()
     Entity.emitFx('gp_start', b.x + b.w / 2, b.y)
     return true
+end
+
+-- Un platillo que SUBE no atraviesa a un jugador que estaba ENCIMA de su tabla (en el aire, sin ir montado): lo recoge
+-- — los pies en la tabla, subiendo con ella — y, si el platillo va disparado (catapulta), sale disparado
+local SB0 = {}
+function Scale:sweepPlayers(level, dd, dt)
+    for i, pan in ipairs(self.pans) do
+        local dy = (i == 1) and dd or -dd
+        if dy < 0 then
+            local b1 = pan:getOuterBounds()
+            local top0 = b1.y - dy                                   -- (la tabla antes de subir)
+            local firing = self.slamT > 0 and self.slamSide ~= pan.side       -- (este platillo va disparado: la catapulta)
+            local vLaunch = -math.abs(ADV_JUMP_VEL) * LAUNCH_V * (self.props.power or 1) * (self.slamPower or 1)
+            local function fire(p)
+                p:launch(0, vLaunch)
+                local by = self.slamBy
+                if by and by.alive and by.onScaleCatapult then by:onScaleCatapult({ p }, {}) end   -- (el golpe contra el techo)
+            end
+            for _, p in ipairs(level.players or {}) do
+                if firing and not p.dying and p.standBody == pan and (p.vy or 0) > vLaunch * 0.8 then   -- (ya disparado: no)
+                    -- (se posó en él mientras sube disparado: también sale disparado)
+                    fire(p)
+                elseif not p.dying and p.standBody ~= pan then
+                    local pb = p:getOuterBounds(SB0)
+                    local foot = pb.y + pb.h
+                    if foot <= top0 + 2 and foot > b1.y and pb.x + pb.w > b1.x + 4 and pb.x < b1.x + b1.w - 4 then
+                        p.y = p.y - (foot - b1.y)
+                        local vPan = dy / math.max(dt, 1e-3)
+                        if firing then
+                            if (p.vy or 0) > vLaunch * 0.8 then fire(p) end
+                        elseif (p.vy or 0) > vPan then p.vy = vPan end
+                    end
+                end
+            end
+        end
+    end
 end
 
 -- Ground pound (Interactions.run): el que cae sobre un platillo lo hunde y lanza lo del otro
@@ -291,6 +346,7 @@ function Scale:updateCustom(dt, level)
         for i, list in ipairs(riders) do
             for _, e in ipairs(list) do e.y = e.y + ((i == 1) and dd or -dd) end
         end
+        self:sweepPlayers(level, dd, dt)
         self.creakT = self.creakT - dt
         if self.creakT <= 0 then Sound.play('scaleCreak'); self.creakT = CREAK_T end
         self.spin = (self.spin or 0) + dd

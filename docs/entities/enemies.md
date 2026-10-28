@@ -330,7 +330,14 @@ jungle boss ([giantbeetle](../bosses/giantbeetle.md)). Approved design (2026-10-
 - Network: nothing of its own (state, deadTimer, frame, facing). Drawing: each frame with its lowest pixel on the
   ground (`Set:footGap`, measured from the image; the user: legs floated in some frames) PLUS 1 px: the front legs are
   1 px longer, so the back legs touch the ground and the front ones sink 1 px into it (the user).
-- Tests: `mechanics escarabajo`, `escarabajo_lanzado`.
+- 0.5.78 (the user): (1) its ROUTE stopped the charge like an invisible wall (it got dazed against nothing) → charging,
+  thrown, carried or on its back it ignores the route (`freeOfRoute`) and charges to the real wall, then walks back
+  into its route; (2) thrown outside its route it flew back towards it → now it flies where it is thrown; (3) the bounce
+  of the stomp that flipped it landed on it again and killed it → flipping pushes you SIDEWAYS and it can't be stomped
+  for `INV_FLIP` 0.4 s (you bounce off); (4) carried it froze → it keeps kicking (`whileCarried`), TREMBLES for its
+  last `WARN_T` 0.9 s and, if you still hold it, breaks free beside you and takes 1 HP; (5) its box is its BODY (no
+  horn), centred: the drawing is shifted 2 px (`BODY_DX`).
+- Tests: `mechanics escarabajo`, `escarabajo_lanzado`, `escarabajo_ruta`, `escarabajo_manos`.
 
 ## History and decisions (dated notes)
 
