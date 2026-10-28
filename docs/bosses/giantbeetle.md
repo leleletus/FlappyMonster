@@ -21,8 +21,8 @@ Play — not in the story yet). **Harnesses:** `giantbeetle_rules`, `boss_sim` /
 
 Zone cols 12-35, rows 3-12, floor 13, LOW ceiling (row 2, 10 tiles above the floor). A big SCALE (pulley at 24,3,
 `span` 12, `drop` 6.375, `travel` 2): level, its two pans hang 3 TILES ABOVE the solid floor (no pits; 0.5.79). A loaded
-pan sinks to 1 tile above the floor (the charge bonks on it). Drop-through ledges at both sides (row 10, the height of
-the level pans) and in the centre (row 8) to dodge the charge and the waves.
+pan sinks to 1 tile above the floor (the charge bonks on it). Drop-through ledges at both sides (row 11) and in the
+centre (row 9) to dodge the charge and the waves (0.5.81: one tile lower than in 0.5.79).
 
 ## Behaviour
 
@@ -31,6 +31,8 @@ the level pans) and in the centre (row 8) to dodge the charge and the waves.
   (`onScaleLaunch`: 'launched', straight up at `LAUNCH_V` 1500 px/s until it hits something) → smashes into the ceiling
   (shake, debris) → 'tumble' (turns over as it falls) → **'flipped'** (`FLIP_T` 4.2 / 3.4 s, legs flailing, stars):
   stomp 1 / ground pound 2 (`INV_TIME` between hits) → 'righting' (hops back up). About 3 flips win the fight.
+  `FLIP_T` by difficulty { calm, angry }: easy 10 / 8.5 · normal 8.5 / 7 · hard 6.5 / 5.5 · extreme 6.2 / 5.2 ·
+  xtra 6 / 5 s (0.5.81; was 4.2 / 3.4 for all — "almost impossible to get from one pan to the other").
 - **Attacks** (never the same twice in a row; `REST_T` 1.2 / 0.8 s between):
   1. **Charge**: 'charge_wind' (scraping dust, `CHARGE_WIND` 0.8 / 0.6) → 'charge' (`CHARGE_V` 860 / 1060 px/s; running
      into it = 1 HP and a big push) → into a wall: 'bonk' (armoured) and DEBRIS falls from the ceiling (`ROCKS` 4 / 6:
@@ -87,6 +89,9 @@ the level pans) and in the centre (row 8) to dodge the charge and the waves.
 
 - A chunk of drop-through platform flew with a dark square behind it (the shadow was a full tile) → the shadow is the
   size of the tile's visible part (its `hitbox`).
+- (0.5.81) Falling stones' shadows stayed where the floor was when they started: over a moving pan they floated →
+  `updateRocks` recomputes `floor` (`floorBelow`) every step, during the warning and the fall; it travels in the
+  netPack, so clients see it too.
 - On a pan it still threw stone → `floorTile` looks for a body under its body and horn in a band (−4..+20 px from its
   feet), since riding a pan its feet are not always on the plank to the pixel.
 
@@ -98,7 +103,7 @@ the level pans) and in the centre (row 8) to dodge the charge and the waves.
 
 ## Tests
 
-`giantbeetle_rules` (arena, armour, shell bounce, stone marks, flip, hits, double edge, bait, charge + debris, toss, waves, rage, flying minions, wood chunk + sound, defeat, net);
+`giantbeetle_rules` (arena, armour, shell bounce, stone marks, moving-pan shadow, flip, hits, double edge, bait, charge + debris, toss, waves, rage, flying minions, wood chunk + sound, defeat, net);
 `boss_sim LEVEL=tools/levelgen/arenas/jefe_escarabajo.json` (a whole fight played as intended: every state seen, killed
 by flipping it); `boss_intro`, `online_boss` with that arena.
 

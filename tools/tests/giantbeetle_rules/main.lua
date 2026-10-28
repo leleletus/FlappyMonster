@@ -15,6 +15,7 @@
 --   enfado     a mitad de vida se enfada y suelta escarabajos VOLADORES (Normal 2 a la vez, Fácil 1), ninguno antes
 --   voladores  sus súbditos vuelan por la mitad de arriba de la zona sin embestir; pisados caen patas arriba y, al
 --              levantarse, vuelven a volar
+--   sombra_movil  la sombra de un cascote sigue al platillo que se mueve debajo
 --   madera     el trozo arrancado de una plataforma traspasable o de un platillo es de MADERA (no piedra) y suena a
 --              lo que es al romperse (breakSound de su material)
 --   derrota    el último golpe: patas arriba, se da la vuelta y se va volando atravesando el techo (libera la zona,
@@ -167,18 +168,22 @@ function cases.vuelco()
         boss.restLen = 99
     end)
     local vuln = boss:isVulnerable()
-    -- pasado el tiempo, se da la vuelta
-    stepAll(level, es, { pa }, 5, nil, nil)
-    local back = boss.state == 'rest' or boss.state == 'righting' or not boss:isVulnerable()
+    -- patas arriba el tiempo de su dificultad (Normal 8,5 s: 0.5.81) y luego se da la vuelta
+    local upT, done = 0, false
+    stepAll(level, es, { pa }, 11, function()
+        boss.restLen = 99
+        if boss.state == 'flipped' then upT = math.max(upT, boss.deadTimer) else done = true end
+    end)
+    local back = done and upT >= 8.3
     check('vuelco', seen.launched and seen.tumble and flippedAt and minTop <= zy0 + 4 and vuln and back,
-        ('disparado=%s · llega al techo (%d / techo %d) · cae patas arriba=%s vulnerable=%s · luego se da la vuelta=%s'):format(
-            tostring(seen.launched), math.floor(minTop), math.floor(zy0), tostring(flippedAt), tostring(vuln), tostring(back)))
+        ('disparado=%s · llega al techo (%d / techo %d) · cae patas arriba=%s vulnerable=%s · se da la vuelta a los %.1f s=%s'):format(
+            tostring(seen.launched), math.floor(minTop), math.floor(zy0), tostring(flippedAt), tostring(vuln), upT or -1, tostring(back)))
 end
 
 -- De verdad (jugador cayendo, con el paso del juego): caer en el caparazón REBOTA sin daño (el usuario, 0.5.79: dolía)
 function cases.caparazon()
     local level, es, boss = arena()
-    putBoss(level, boss, 24 * T)
+    putBoss(level, boss, 20.5 * T)                               -- (fuera de la plataforma del medio: nada encima)
     local gob = boss:getOuterBounds()
     local pa = playerAt(level, es, 18 * T, (FLOOR - 1) * T)
     local hp0 = pa.hp
@@ -208,7 +213,7 @@ function cases.cascotes()
         boss.restLen = 99
         if not stopY and #boss.rocks == 0 then stopY = true end
     end)
-    check('cascotes', math.abs(onPan - pan.y) <= 1 and onFloor == (FLOOR - 1) * T and onLedge == 9 * T and stopY,
+    check('cascotes', math.abs(onPan - pan.y) <= 1 and onFloor == (FLOOR - 1) * T and onLedge == 10 * T and stopY,
         ('sombra en el platillo %d (su tabla %d) · en el suelo %d · en la plataforma %d · se rompe al llegar=%s'):format(
             onPan, math.floor(pan.y), onFloor, onLedge, tostring(stopY)))
 end
@@ -303,7 +308,7 @@ end
 function cases.lanzar()
     local level, es, boss = arena()
     putBoss(level, boss, 20.5 * T)
-    local pa = playerAt(level, es, 24.5 * T, 7 * T)              -- (en la plataforma del medio: nada en medio del arco)
+    local pa = playerAt(level, es, 24.5 * T, 8 * T)              -- (en la plataforma del medio: nada en medio del arco)
     local hp0 = pa.hp
     boss.tossN = 1
     boss:enter('toss_wind')
@@ -419,12 +424,33 @@ function cases.trozo()
         ('trozo de %s (el suelo: %s)'):format(id and TileTypes.get(id).name or '?', TileTypes.get(under).name))
 end
 
+-- La sombra de un cascote sigue al platillo que se mueve (0.5.81: quedaba flotando donde estaba al empezar)
+function cases.sombra_movil()
+    local level, es, boss, scale = arena()
+    stepAll(level, es, {}, 0.3)
+    putBoss(level, boss, 24 * T)
+    local pans = scale:bodyParts()
+    local pan = pans[1]:getOuterBounds()
+    local cx = pan.x + pan.w / 2
+    boss.rocks = { { id = 1, x = cx, y = 3 * T, vy = 0, t = -0.6, floor = math.floor(pan.y), hit = {} } }
+    scale:catapult(pans[2], nil, 1, nil)                         -- (el platillo 1 sale disparado hacia arriba)
+    local worst = 0
+    stepAll(level, es, {}, 0.5, function()
+        boss.restLen = 99
+        local r = boss.rocks[1]
+        if r and r.t < 0 then worst = math.max(worst, math.abs(r.floor - pans[1]:getOuterBounds().y)) end
+    end)
+    local moved = math.abs(pans[1]:getOuterBounds().y - pan.y)
+    check('sombra_movil', moved > T and worst <= 20,             -- (a lo sumo un paso de retraso a toda velocidad)
+        ('el platillo se mueve %.1f casillas · la sombra se separa de él como mucho %d px'):format(moved / T, worst))
+end
+
 -- El trozo de una plataforma traspasable o de un platillo: madera, con su sonido
 function cases.madera()
     local level, es, boss, scale = arena()
     local TileTypes = require 'src/world/tiles/TileTypes'
     stepAll(level, es, {}, 0.3)
-    putBoss(level, boss, 24 * T, 7 * T)                          -- (de pie en la plataforma del medio)
+    putBoss(level, boss, 24 * T, 8 * T)                          -- (de pie en la plataforma del medio)
     boss.facing = 1
     local onLedge = boss:floorTile(level)
     local pan = scale:bodyParts()[1]:getOuterBounds()
@@ -502,7 +528,7 @@ end
 
 function love.load(arg)
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'arena', 'acorazado', 'caparazon', 'cascotes', 'vuelco', 'golpe', 'doble_filo', 'cebo', 'embestida', 'lanzar', 'ondas', 'enfado', 'derrota', 'purga', 'trozo', 'madera', 'voladores', 'red' }) do
+    for _, n in ipairs({ 'arena', 'acorazado', 'caparazon', 'cascotes', 'vuelco', 'golpe', 'doble_filo', 'cebo', 'embestida', 'lanzar', 'ondas', 'enfado', 'derrota', 'purga', 'trozo', 'sombra_movil', 'madera', 'voladores', 'red' }) do
         if not only or only == n then
             local ok, err = xpcall(cases[n], debug.traceback)
             if not ok then check(n, false, 'error: ' .. tostring(err)) end

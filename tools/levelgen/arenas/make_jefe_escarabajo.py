@@ -8,11 +8,11 @@
 #   ║▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒║     techo del templo: ahí se estrella el escarabajo disparado
 #   ║            o           ║     o  la polea de la BALANZA (span 12)
 #   ║                        ║
-#   ║          =====         ║     =  plataformas traspasables: para esquivar la embestida y las ondas
 #   ║                        ║
-#   ║===  ___          ___===║     ___ los PLATILLOS: nivelada, colgados 3 casillas sobre el suelo (0.5.79, el usuario:
-#   ║                        ║         antes a ras del suelo sobre un foso; sin fosos, cuerda más corta, plataformas
-#   ║                        ║         más bajas)
+#   ║          =====         ║     =  plataformas traspasables: para esquivar la embestida y las ondas (0.5.81: una
+#   ║     ___          ___   ║        casilla más bajas)
+#   ║===                  ===║     ___ los PLATILLOS: nivelada, colgados 3 casillas sobre el suelo (0.5.79, el usuario:
+#   ║                        ║         antes a ras del suelo sobre un foso; sin fosos, cuerda más corta)
 #   ║■■■■■■■■■■■■■■■■■■■■■■■■║
 #
 # Cómo se gana: con él en un platillo, ground pound en el otro → sale disparado, choca con el techo y cae patas arriba.
@@ -31,7 +31,7 @@ FLOOR = 13
 PULLEY = (24, 3)
 SPAN = 12                                  # casillas entre los centros de los platillos
 DROP_ROPE = 6.375                          # nivelada, el platillo queda 3 casillas sobre el suelo (giantbeetle_rules)
-SIDE_ROW, MID_ROW = 10, 8                  # plataformas traspasables: a los lados (a la altura de los platillos) y en medio
+SIDE_ROW, MID_ROW = 11, 9                  # plataformas traspasables: a los lados (a la altura de los platillos) y en medio
 
 
 def build():

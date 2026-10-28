@@ -66,7 +66,9 @@ local LEAP_UP     = 3.5                         -- casillas por encima de lo má
 local SLAM_T      = 0.5
 local LAUNCH_V    = 1500                        -- px/s: disparado por la balanza (sube recto hasta chocar)
 local LAUNCH_MAX  = 1.4                         -- s subiendo como mucho (sin techo: cae igual, patas arriba)
-local FLIP_T      = { 4.2, 3.4 }                -- s patas arriba (vulnerable)
+-- s patas arriba (vulnerable), según la dificultad: { normal, enfadado } (0.5.81, el usuario: con 4,2 / 3,4 era casi
+-- imposible pasar de un platillo al otro a tiempo → bastante más en Fácil / Normal, unos segundos más en las difíciles)
+local FLIP_T      = { easy = { 10, 8.5 }, normal = { 8.5, 7 }, hard = { 6.5, 5.5 }, extreme = { 6.2, 5.2 }, xtra = { 6, 5 } }
 local RIGHT_T     = 0.7
 local GRACE       = 0.8                         -- s sin volver a dar a nadie tras un golpe
 local SLAM_POWER  = 1.5                         -- × la catapulta de la balanza cuando cae él en un platillo
@@ -292,9 +294,11 @@ function GB:floorBelow(level, x, y)
 end
 
 function GB:updateRocks(level, dt)
+    local _, _, zy0 = self:zoneBounds()
     for i = #self.rocks, 1, -1 do
         local r = self.rocks[i]
         r.t = r.t + dt
+        if r.t < 0 then r.floor = math.floor(self:floorBelow(level, r.x, zy0 + 4)) end      -- (el aviso sigue al platillo)
         if r.t >= 0 then
             r.vy = r.vy + ROCK_G * dt
             r.y = r.y + r.vy * dt
@@ -305,6 +309,8 @@ function GB:updateRocks(level, dt)
                 end
             end
             local bottom = r.y + ROCK_S / 2
+            -- (dónde caerá, cada paso: los platillos se mueven — 0.5.81, el usuario: quedaban sombras flotando —)
+            r.floor = math.floor(self:floorBelow(level, r.x, r.y))
             local o = r.vy > 0 and level:bodyAt(r.x, bottom, self)
             if bottom >= r.floor or o then
                 Sound.play('cavePebble', 0.8)
@@ -573,7 +579,7 @@ function GB:updateBoss(dt, level)
 
     elseif st == 'flipped' then
         self:physics(level, dt); self:friction(level, dt)
-        if t >= FLIP_T[ph] then self:enter('righting') end
+        if t >= (FLIP_T[level.difficulty or ''] or FLIP_T.normal)[ph] then self:enter('righting') end
 
     elseif st == 'righting' then
         self:physics(level, dt); self:friction(level, dt)
