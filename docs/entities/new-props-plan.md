@@ -1,7 +1,8 @@
 # Plan: Gust, Scale, Box and Seed (design stage)
 
 Approved by the user on 2026-10-27 (0.5.67): the **Gust** (enemy), the **Scale** (mechanism), the **Seed** (item) and,
-as the Scale's companion, a pushable **Box**. **Status: DESIGN — sprites, animations and sounds as previews for the
+as the Scale's companion, a pushable **Box**; then two hazards the user added: the **Blizzard** (random wind) and the
+**Geyser**. **Status: DESIGN — sprites, animations and sounds as previews for the
 user to approve; nothing in the game yet.** Tick a step (`[x]`) in the same commit that does it.
 
 | Thing | Generator | Previews (outside the repo) |
@@ -9,28 +10,47 @@ user to approve; nothing in the game yet.** Tick a step (`[x]`) in the same comm
 | Gust | `tools/art/enemies/make_gust_sprites.py` | `FlappyMonster_pruebas/nuevos/soplon/` (`vista_previa.png`, `anim_<isla>.gif`) |
 | Scale + Box | `tools/art/world/make_scale_box.py` | `FlappyMonster_pruebas/nuevos/balanza_caja/` |
 | Seed | `tools/art/world/make_seed_plants.py` | `FlappyMonster_pruebas/nuevos/semilla/` |
+| Blizzard + Geyser | `tools/art/world/make_wind_geyser.py` | `FlappyMonster_pruebas/nuevos/ventisca_geiser/` (`geiser_<isla>.gif`, `ventisca_torre.gif`) |
 | Sounds | `tools/sounds/props.py` | `FlappyMonster_pruebas/nuevos/sonidos/*.wav` |
 
 Every generator writes previews by default and the game assets only with `--apply` (after the user's approval).
 
 ## The designs
 
-- **Gust** (`Soplón`): a little CLOUD with a face (three lobes, flat underside — a round body with a tuft read as the
-  Bomb). 16×16 ×4, looking left: 1-2 floating, 3-4 breathing in (swells, eyes squeezed, puffed cheeks), 5-6 blowing
+- **Gust** (`Soplón`): a little CLOUD with a face — v2 (the user: "more cloud-like, its body changing in the
+  animations, more transparent and rounded; the blowing mouth doesn't read as a mouth"): five round puffs that move and
+  grow / shrink from frame to frame, a semi-transparent rim and body with opaque highlights along the top-left, pink
+  cheeks when it swells, and a real O mouth (round lips, a dark hole, the air coming out) with the face leaning back
+  while it blows; when it pops it breaks into loose puffs. (v1: three lobes, flat underside — a round body with a tuft
+  had read as the Bomb.) 16×16 ×4, looking left: 1-2 floating, 3-4 breathing in (swells, eyes squeezed, puffed cheeks), 5-6 blowing
   (round O mouth, deflates), 7-8 bursting (a ring of air). Wind particles 8×8 × 3 frames per island. Islands: meadow
   dandelion puff (sprout and seeds) · coast sea foam (bubbles) · fortress chimney soot (rising wisps) · snow cloudlet
   (a snowflake) · cave pale dust (glowing motes) · volcano ash (embers, glowing eyes).
-- **Scale** (`Balanza`): a pan 48×8 (3 cells, a ring in its centre), a rope 4×8 that repeats (braided rope; a chain in
+- **Scale** (`Balanza`) — **APPROVED** by the user ("perfect"): a pan 48×8 (3 cells, a ring in its centre), a rope 4×8 that repeats (braided rope; a chain in
   the fortress and volcano), a pulley 16×16 with a fork to hang from the ceiling, 2 frames (it turns). Islands: planks
   with grass · driftwood tied with rope · riveted iron tray · ice slab with frost · stone slab with a glowing crystal ·
   basalt with lava cracks.
 - **Box** (`Caja`): 16×16 + 4 pieces for breaking. Islands: wooden crate with an X brace · driftwood crate with a rope
   · iron box with rivets and a plate · ice block · stone block with a glowing rune · basalt with a lava crack.
-- **Seed** (`Semilla`): the seed 12×12, a 3-frame sprout, a base, a stem that repeats and, ON TOP, a 3-cell platform
-  (the plant is a T: leaves halfway up made a cross, and the ice one a sword). Islands: bean → beanstalk with a leaf
-  canopy · kelp pod → kelp with floats · bolt → chain with a hooked bar · ice shard → ice pillar with a crystal ledge ·
-  glowing spore → glowing mushroom (its cap is the platform; it gives light) · obsidian pebble → basalt column.
-- **Sounds** (12, not listened to by me): `gust_inhale`, `gust_blow`, `gust_pop`, `scale_creak`, `scale_launch`,
+- **Seed** (`Semilla`) — v3, REAL PLANTS (the user: the fortress, ice and lava ones "looked like structures, not
+  plants", and all needed more leaves and BIG intermediate leaves to climb): the seed 12×12, a 3-frame sprout (two
+  little leaves), a base with roots, two stem tiles that alternate small leaves left / right, a BIG LEAF 32×10 (flipped
+  for the other side) every 2 cells, and the CROWN on top 48×16. Islands: bean → beanstalk · kelp pod → kelp with
+  fronds and floats · thorny seed → castle IVY (bramble with thorns and purple berries) · snow pod → FROST FERN with a
+  white SNOW FLOWER on top · glowing spore → glowing mushroom with BRACKET FUNGI as the big leaves (it gives light) ·
+  ember seed → FIRE LILY (dark leaves with glowing veins, a flame-like flower). (v1: chain / ice pillar / basalt
+  column; v2 moved the platform to the top — a T — because leaves halfway up made a cross and the ice one a sword.)
+- **Blizzard** (`Ventisca`): wind streaks 32×8 × 3 frames, semi-transparent, carrying each island's bits (snowflakes
+  in the tower), rotated by the game for up / down; the WARNING is an arrow 16×16 × 2 frames blinking at the screen
+  edge the wind will come from.
+- **Geyser** (`Géiser`): a vent 16×8 per island (rock with grass, sand with a shell, an iron grate, an icy hole,
+  crystals, a fumarole), a warning 3 × 16×8 (bubbles / puffs, more and more), a column 16×16 × 3 frames that repeats
+  upward (semi-transparent, stripes rising) and a crest 16×16 × 3 frames. Meadow and coast WATER (strong blue with an
+  opaque darker edge: a pale blue vanished against the sky) · snow WATER THAT FREEZES (an ice pillar 16×16, its top
+  16×8 to stand on, 2 crack frames before it breaks) · fortress STEAM · cave GLOWING steam (white sparks) · volcano
+  SMOKE with embers.
+- **Sounds** (18, not listened to by me): `wind_warn`, `wind_gust`, `geyser_rumble`, `geyser_burst`, `steam_hiss`,
+  `ice_freeze`, `gust_inhale`, `gust_blow`, `gust_pop`, `scale_creak`, `scale_launch`,
   `box_push`, `box_land`, `box_break`, `seed_pickup`, `seed_plant`, `seed_grow`, `seed_wilt`.
 
 ## Behaviour agreed (from the proposals)
@@ -47,11 +67,23 @@ Every generator writes previews by default and the game assets only with `--appl
   it, stand on its top; wilts after ~20 s or when another one is planted. Coast kelp also underwater with air
   bubbles; cave mushroom gives light; volcano basalt stands over lava.
 
+- **Blizzard** (proposed): an area / level setting (`windzone`: its rectangle, which directions it may blow, how often,
+  how strong, how long). Every few seconds at random: a ~1 s WARNING (the arrow blinks at the screen edge the wind
+  comes from + `wind_warn`), then 2-3 s of wind (`wind_gust`, streaks) that pushes players, enemies and everything with
+  physics left, right, up or down — up helps you fly, down drags you. First in `torre_viento`, reusable anywhere.
+- **Geyser** (proposed): a vent placed on the floor; every few seconds it bubbles (~1 s warning: `geyser_rumble`) and
+  erupts a column 4-6 cells high for ~2 s that pushes UP everything with physics (players, enemies, boxes, bombs,
+  seeds…), then falls back. Snow: the column FREEZES into an ice pillar you can stand on for a few seconds, then it
+  cracks and shatters. Cave: the glowing steam lights the dark around it. Volcano: the smoke is hot — like the Gust's
+  ash, staying inside it 2 s takes 1 HP (to confirm).
+
 ## Steps
 
-- [ ] 1. Designs approved by the user (sprites, animations, sounds) — iterate on the previews.
+- [ ] 1. Designs approved by the user (sprites, animations, sounds) — iterate on the previews. Scale: approved
+  (0.5.67). Gust v2, Seed v3, Blizzard and Geyser v1: waiting for the user.
 - [ ] 2. `--apply` the approved art and sounds.
 - [ ] 3. Box + Scale in the game (entities, physics, network, editor, harness).
 - [ ] 4. Gust in the game.
 - [ ] 5. Seed in the game.
+- [ ] 5b. Blizzard (in `torre_viento`) and Geyser in the game.
 - [ ] 6. Levels that use them; docs reference; release.

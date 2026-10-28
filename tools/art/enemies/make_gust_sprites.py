@@ -34,26 +34,32 @@ ISLES = {
 }
 
 
-def blob(rx, ry, cx=7.5, cy=8.5):
-    """Una NUBECILLA de papeles (tres lóbulos y la base plana: aire, no una bola — una bola con un penacho parecía la
-    Bomba): o contorno, h brillo (arriba-izquierda), b cuerpo, s sombra (abajo-derecha). rx / ry: lo hinchado"""
-    k = rx / 5.6
-    # tres lóbulos bien separados (se ven las dos hendiduras de arriba) sobre una base redondeada
-    lobes = [(cx - 3.6 * k, cy + 0.6, 2.7 * k), (cx + 0.1, cy - 1.0 * k, 3.1 * k), (cx + 3.7 * k, cy + 0.8, 2.5 * k)]
-    floor = cy + 2.9 * k
-    def inside(x, y):
-        if y > floor: return False
-        if any((x - lx) ** 2 + (y - ly) ** 2 <= r * r for lx, ly, r in lobes): return True
-        return abs(x - cx) <= 5.0 * k and cy + 0.8 <= y <= floor and not (abs(x - cx) > 4.2 * k and y >= floor)
+# ── EL CUERPO: una NUBE de bollitos (círculos) que se mueven de un cuadro a otro (0.5.67, el usuario: "más nube, que su
+# cuerpo vaya cambiando, más transparente y redondeado"). Cada bollito: (dx, dy, radio) respecto al centro; el borde va
+# SEMITRANSPARENTE y el relleno algo transparente, con brillos opacos arriba a la izquierda.
+PUFFS = {   # cuadro → bollitos
+    'idle1':   [(-3.6, 1.0, 2.9), (-0.8, -1.4, 3.4), (2.6, -0.6, 3.0), (4.4, 1.6, 2.3), (0.6, 2.0, 3.2)],
+    'idle2':   [(-3.9, 1.4, 2.7), (-1.0, -1.0, 3.5), (2.3, -1.1, 3.1), (4.6, 1.2, 2.4), (0.3, 2.3, 3.0)],
+    'inhale1': [(-4.1, 0.8, 3.2), (-1.0, -1.9, 3.7), (2.8, -1.1, 3.4), (4.8, 1.4, 2.7), (0.4, 1.8, 3.6)],
+    'inhale2': [(-4.4, 0.6, 3.5), (-1.1, -2.3, 4.0), (3.0, -1.5, 3.7), (5.0, 1.3, 3.0), (0.4, 1.7, 4.0)],
+    'blow1':   [(-3.2, 0.8, 3.3), (-0.6, -1.3, 3.4), (2.6, -0.7, 3.0), (4.3, 1.5, 2.4), (0.6, 2.0, 3.2)],
+    'blow2':   [(-2.8, 1.0, 2.9), (-0.4, -0.9, 3.0), (2.4, -0.4, 2.7), (4.0, 1.6, 2.1), (0.8, 2.0, 2.9)],
+}
+A_EDGE, A_BODY, A_SHADE = 150, 215, 230        # alfa: borde, cuerpo, sombra (los brillos y la cara, opacos)
+
+
+def cloud(puffs, cx=7.5, cy=8.5):
+    """→ rejilla de papeles + alfa por píxel"""
+    cover = lambda x, y: any((x - (cx + dx)) ** 2 + (y - (cy + dy)) ** 2 <= r * r for dx, dy, r in puffs)
     g = [['.'] * W for _ in range(H)]
     for y in range(H):
         for x in range(W):
-            if not inside(x, y): continue
-            edge = any(not inside(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
+            if not cover(x, y): continue
+            edge = any(not cover(x + ax, y + ay) for ax, ay in ((1, 0), (-1, 0), (0, 1), (0, -1)))
             if edge: g[y][x] = 'o'; continue
-            u, v = (x - cx) / (5 * k), (y - (cy - 1)) / (4 * k)
-            if u + v < -0.7: g[y][x] = 'h'
-            elif y >= floor - 1 or u + v > 0.75: g[y][x] = 's'
+            # brillo: el filo de ARRIBA y de la IZQUIERDA (a 2 px del borde); sombra: el filo de abajo (sin rayas)
+            if not cover(x, y - 2) or (not cover(x - 2, y) and y < cy + 1): g[y][x] = 'h'
+            elif not cover(x, y + 2): g[y][x] = 's'
             else: g[y][x] = 'b'
     return g
 
@@ -63,91 +69,89 @@ def put(g, x, y, c):
 
 
 def face(g, kind, cx=7, cy=8):
-    """Ojos y boca. kind: idle · inhale (ojos apretados, mofletes) · blow (boca en O hacia la izquierda) · pop"""
+    """Ojos y boca (mira a la izquierda). kind: idle · inhale (ojos apretados, mofletes) · blow · pop"""
     if kind == 'pop': return
     if kind == 'inhale':
-        for x in (cx - 3, cx - 2): put(g, x, cy - 1, 'e')                 # ojos apretados (rayas)
-        for x in (cx + 1, cx + 2): put(g, x, cy - 1, 'e')
-        put(g, cx - 4, cy + 1, 's'); put(g, cx + 3, cy + 1, 's')          # mofletes
-        put(g, cx - 1, cy + 2, 'e'); put(g, cx, cy + 2, 'e')              # boca cerrada y apretada
+        for x in (cx - 3, cx - 2, cx + 1, cx + 2): put(g, x, cy - 1, 'e')    # ojos apretados (rayas)
+        put(g, cx - 4, cy + 1, 'c'); put(g, cx + 3, cy + 1, 'c')            # mofletes (rosados)
+        put(g, cx - 1, cy + 2, 'e'); put(g, cx, cy + 2, 'e')                # boca apretada
         return
-    put(g, cx - 2, cy - 2, 'e'); put(g, cx - 2, cy - 1, 'e')              # ojos (2 px de alto)
-    put(g, cx + 1, cy - 2, 'e'); put(g, cx + 1, cy - 1, 'e')
-    put(g, cx - 3, cy - 2, 'h')                                           # (brillo del ojo, a la izquierda)
+    ex = cx - 1 if kind == 'blow' else cx - 2                               # (soplando: la cara se va hacia atrás)
+    for x in (ex, ex + 3):
+        put(g, x, cy - 2, 'e'); put(g, x, cy - 1, 'e')
+    put(g, ex, cy - 2, 'w'); put(g, ex + 3, cy - 2, 'w')                    # el brillo del ojo
     if kind == 'blow':
-        # la boca en O, redonda y hacia donde mira (la izquierda): un aro con el hueco oscuro dentro
-        mx, my = cx - 3, cy + 1
-        for dx, dy in ((0, -1), (1, -1), (-1, 0), (2, 0), (-1, 1), (2, 1), (0, 2), (1, 2)): put(g, mx + dx, my + dy, 'e')
-        for dx, dy in ((0, 0), (1, 0), (0, 1), (1, 1)): put(g, mx + dx, my + dy, 'o')
+        # LA BOCA SOPLANDO (rehecha, 0.5.67: "no se lee como una boca"): unos LABIOS en O fruncidos, bien redondos, con el
+        # agujero oscuro dentro, los mofletes hinchados detrás y el aire que sale por delante
+        mx, my = cx - 5, cy
+        for dx, dy in ((1, 0), (2, 0), (0, 1), (3, 1), (0, 2), (3, 2), (1, 3), (2, 3)): put(g, mx + dx, my + dy, 'l')   # labios
+        for dx, dy in ((1, 1), (2, 1), (1, 2), (2, 2)): put(g, mx + dx, my + dy, 'm')                                  # el agujero
+        put(g, cx + 2, cy + 1, 'c'); put(g, cx + 3, cy + 1, 'c')                                                        # moflete
+        for dx, dy in ((-1, 1), (-2, 2), (-1, 2)): put(g, mx + dx, my + dy, 'a')                                         # el aire
     else:
-        put(g, cx - 1, cy + 1, 'e'); put(g, cx, cy + 1, 'e')              # boquita
+        put(g, ex + 1, cy + 1, 'e'); put(g, ex + 2, cy + 1, 'e')                                                         # boquita
 
 
 def deco(g, isle, frame, big):
-    """Lo de cada isla (encima del cuerpo): el detalle que la distingue"""
+    """Lo de cada isla, encima del cuerpo (pocos píxeles: que la nube mande)"""
     top = next(y for y in range(H) if any(c != '.' for c in g[y]))
-    if isle == 'pradera':                                                 # el vilano: pelusas y un tallito arriba
-        for x, y in ((7, top - 1), (7, top - 2), (8, top - 2)): put(g, x, y, 'y' if y == top - 1 else 'x')
-        for x in (3, 12): put(g, x, top + 1, 'x')
-        put(g, 2 if big else 3, 9, 'h'); put(g, 13 if big else 12, 7, 'h')
-    elif isle == 'costa':                                                 # burbujitas de espuma
-        for x, y in ((12, top), (13, top - 1), (3, top + 1)): put(g, x, y, 'x')
-        put(g, 13, top, 'y')
-    elif isle == 'fortaleza':                                             # volutas de hollín que suben
-        for x, y in ((6, top - 1), (9, top - 2), (10, top - 1)): put(g, x, y, 'x')
-        put(g, 9, top - 3, 'y')
-    elif isle == 'nieve':                                                 # un copo encima
-        cx, cy = 8, top - 2
-        for dx, dy in ((0, 0), (-1, 0), (1, 0), (0, -1), (0, 1)): put(g, cx + dx, cy + dy, 'x')
-        put(g, cx, cy, 'y')
-    elif isle == 'cueva':                                                 # motas de luz alrededor
-        for x, y in ((2, top + 2), (13, top + 1), (12, top + 9 if top + 9 < H else H - 2)):
-            put(g, x, y, 'x' if frame % 2 else 'y')
-    elif isle == 'volcan':                                                # ascuas
-        for x, y in ((5, top + 2), (11, top + 4), (8, top + 7)): put(g, x, y, 'x')
-        put(g, 9, top - 1, 'y' if frame % 2 else 'x')
+    if isle == 'pradera':                                                   # el vilano: un brote y semillitas
+        put(g, 7, top - 1, 'y'); put(g, 8, top - 2, 'x'); put(g, 6, top - 2, 'x')
+        put(g, 2, top + 3, 'x'); put(g, 14, top + 4, 'x')
+    elif isle == 'costa':                                                   # burbujas de espuma
+        put(g, 13, top, 'x'); put(g, 14, top - 1, 'y'); put(g, 2, top + 2, 'x')
+    elif isle == 'fortaleza':                                               # volutas que suben
+        put(g, 6, top - 1, 'x'); put(g, 9, top - 2, 'x'); put(g, 10, top - 3, 'y')
+    elif isle == 'nieve':                                                   # un copo
+        for dx, dy in ((0, 0), (-1, 0), (1, 0), (0, -1), (0, 1)): put(g, 8 + dx, top - 2 + dy, 'x')
+        put(g, 8, top - 2, 'y')
+    elif isle == 'cueva':                                                   # motas de luz
+        for x, y in ((1, top + 3), (14, top + 1), (13, min(H - 1, top + 9))): put(g, x, y, 'x' if frame % 2 else 'y')
+    elif isle == 'volcan':                                                  # ascuas
+        for x, y in ((5, top + 2), (11, top + 3), (9, top + 7)): put(g, x, y, 'x')
+        put(g, 8, top - 1, 'y' if frame % 2 else 'x')
 
 
-FRAMES = [   # (rx, ry, centro y, cara)
-    (5.6, 4.9, 8.5, 'idle'), (5.6, 4.9, 9.5, 'idle'),       # flotando (sube y baja)
-    (6.2, 5.4, 8.5, 'inhale'), (6.8, 6.0, 8.0, 'inhale'),   # inspirando: se hincha
-    (6.0, 5.2, 8.5, 'blow'), (5.2, 4.6, 9.0, 'blow'),       # soplando: se deshincha
-]
+FRAMES = [('idle1', 'idle'), ('idle2', 'idle'), ('inhale1', 'inhale'), ('inhale2', 'inhale'), ('blow1', 'blow'), ('blow2', 'blow')]
+BOB = [0, 1, 0, -1, 0, 0]
 
 
 def pop_frame(k):
-    """Revienta: un aro de aire que se abre (k = 0, 1)"""
-    g = [['.'] * W for _ in range(H)]
-    r = 4.5 + k * 2.2
-    for y in range(H):
-        for x in range(W):
-            d = ((x - 7.5) ** 2 + (y - 8.5) ** 2) ** 0.5
-            if abs(d - r) < 0.6 and (x + y + k) % 2 == 0: g[y][x] = 'b' if k == 0 else 'h'
-            if k == 0 and d < 1.2: g[y][x] = 'h'
-    return g
+    """Revienta: la nube se deshace en bollitos sueltos que se van (k = 0, 1)"""
+    puffs = [(-5 - 2 * k, -2 - k, 1.6 - 0.4 * k), (4 + 2 * k, -3 - k, 1.5 - 0.4 * k), (-4 - k, 3 + k, 1.4 - 0.4 * k),
+             (5 + 2 * k, 3 + k, 1.6 - 0.4 * k), (0, 0, 2.0 - 0.8 * k)]
+    return cloud(puffs)
 
 
-def paint(g, pal):
+EXTRA = {'w': 'ffffff', 'm': '1e1e2a', 'a': 'ffffff'}           # brillo del ojo, el agujero de la boca, el aire
+LIPS = {'pradera': 'b88a6a', 'costa': '7ab4c8', 'fortaleza': '2c2c34', 'nieve': '7aaee0', 'cueva': '8c78b4', 'volcan': '2a1c1c'}
+CHEEK = {'pradera': 'f0a8a0', 'costa': 'f4b8c4', 'fortaleza': '9a7a84', 'nieve': 'f4c4d8', 'cueva': 'd8a8e0', 'volcan': 'c85a3c'}
+
+
+def paint(g, pal, isle):
+    alpha = {'o': A_EDGE, 'b': A_BODY, 's': A_SHADE}
     im = Image.new('RGBA', (W, H))
     for y in range(H):
         for x in range(W):
             c = g[y][x]
-            if c != '.': im.putpixel((x, y), rgb(pal[c]))
+            if c == '.': continue
+            col = EXTRA.get(c) or (LIPS[isle] if c == 'l' else (CHEEK[isle] if c == 'c' else pal[c]))
+            im.putpixel((x, y), rgb(col)[:3] + (alpha.get(c, 255),))
     return im
 
 
 def sheet(isle):
     pal = ISLES[isle]
     ims = []
-    for i, (rx, ry, cy, kind) in enumerate(FRAMES):
-        g = blob(rx, ry, cy=cy)
-        face(g, kind, cy=int(cy))
-        deco(g, isle, i, rx > 6)
-        ims.append(paint(g, pal))
+    for i, (key, kind) in enumerate(FRAMES):
+        g = cloud(PUFFS[key], cy=8.5 + BOB[i])
+        face(g, kind, cy=8 + BOB[i])
+        deco(g, isle, i, kind == 'inhale')
+        ims.append(paint(g, pal, isle))
     for k in (0, 1):
         g = pop_frame(k)
         for x, y in ((3, 4 - k), (12, 5 - k), (2, 12), (13, 13)): put(g, x, y, 'x')
-        ims.append(paint(g, pal))
+        ims.append(paint(g, pal, isle))
     out = Image.new('RGBA', (W * len(ims), H))
     for i, im in enumerate(ims): out.paste(im, (i * W, 0), im)
     return out

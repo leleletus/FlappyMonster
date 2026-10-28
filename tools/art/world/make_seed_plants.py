@@ -6,8 +6,8 @@
 #   fortaleza: perno → CADENA de eslabones · nieve: esquirla → PILAR de hielo
 #   cueva: espora que brilla → SETA luminosa de tallo largo (da luz) · volcán: guijarro de obsidiana → columna de BASALTO
 # Piezas (1 casilla = 16 px de arte, ×4 en el juego):
-#   semilla 12x12 · brote (3 cuadros de 16x16: la punta que sale) · base 16x16 · tallo 16x16 (se repite) ·
-#   COPA 48x8 (3 casillas, ARRIBA: donde se está de pie — la planta es una T)
+#   semilla 12x12 · brote (3 cuadros de 16x16) · base 16x16 · tallo 2 × 16x16 (alternos, con hojitas) ·
+#   HOJA GRANDE 32x10 (para trepar, a un lado y al otro) · COPA 48x16 (arriba: hojas o la flor)
 #   python3 tools/art/world/make_seed_plants.py            → vistas previas en FlappyMonster_pruebas/nuevos/semilla/
 #   python3 tools/art/world/make_seed_plants.py --apply    → assets/images/items/seed/<isla>-*.png
 import os, sys
@@ -22,14 +22,19 @@ OUT = os.path.join(ROOT, 'assets', 'images', 'items', 'seed')
 def rgb(h): return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4)) + (255,)
 
 
-# o contorno · s sombra · b cuerpo · h brillo · x/y acentos · l hoja (oscura) · L hoja (clara)
+# PLANTAS DE VERDAD (0.5.67, el usuario: las de fortaleza, hielo y lava "parecían estructuras, no plantas", y todas
+# necesitaban más hojas y HOJAS GRANDES intermedias para trepar): cada isla, una planta viva —
+#   pradera: habichuela · costa: kelp con frondas · fortaleza: hiedra de castillo (zarza con espinas y bayas) ·
+#   nieve: helecho escarchado con una flor de nieve · cueva: seta luminosa con setas de repisa · volcán: lirio de fuego
+# papeles: o contorno · b/h/s tallo (cuerpo, brillo, sombra) · L hoja clara · l hoja oscura · v nervio · x/y acentos
+# (espinas, bayas, brillo, ascuas) · p/q pétalos (la flor de arriba)
 ISLES = {
-    'pradera':   dict(o='22461e', s='3e7c32', b='5cac44', h='9cd86c', x='7a4a24', y='c8a060', l='3e8c3c', L='7cc850', bg='8cc8f0'),
-    'costa':     dict(o='2a3a1c', s='4c6230', b='6c8a40', h='9cb860', x='3cb4b4', y='e4f8fc', l='4c6230', L='8aa850', bg='9cdcf0'),
-    'fortaleza': dict(o='242830', s='4c5260', b='747c8c', h='a8b0be', x='343842', y='c8ccd6', l='4c5260', L='8a92a2', bg='8a8ea8'),
-    'nieve':     dict(o='3c6a9c', s='78acde', b='bee4fa', h='ecfaff', x='a8d0f0', y='ffffff', l='78acde', L='d8f0ff', bg='b8d4f0'),
-    'cueva':     dict(o='3c3050', s='6c5c88', b='9c8cb8', h='d0c4e8', x='2a8aa0', y='b4f4ff', l='2a8aa0', L='b4f4ff', bg='3a3450'),
-    'volcan':    dict(o='140e10', s='2c2224', b='443438', h='60504e', x='ff8a28', y='ffd23c', l='2c2224', L='443438', bg='6a2c2c'),
+    'pradera':   dict(o='1e3a1a', b='4c9a38', h='86cc5a', s='2e6a28', L='7cc850', l='3e8c3c', v='2e6a28', x='7a4a24', y='c8a060', p='9cd86c', q='5cac44', bg='8cc8f0'),
+    'costa':     dict(o='22301a', b='6c8a40', h='9cb860', s='4c6230', L='8aa850', l='5c7634', v='3c5024', x='c89a50', y='e4f8fc', p='9cb860', q='6c8a40', bg='9cdcf0'),
+    'fortaleza': dict(o='1a2016', b='4a3a2a', h='6c5a40', s='2e241a', L='3e7a44', l='2a5630', v='1e3e22', x='a82c2c', y='7a3ca8', p='4c8a50', q='2a5630', bg='8a8ea8'),
+    'nieve':     dict(o='2c5470', b='8cc8c0', h='c8f0ec', s='5c9c98', L='d8f4f8', l='a0d4e4', v='78acc8', x='ffffff', y='78acde', p='ffffff', q='bee4fa', bg='b8d4f0'),
+    'cueva':     dict(o='2e2440', b='a898c8', h='dcd0f0', s='7c6ca0', L='4ac4d4', l='2a8aa0', v='1e6a80', x='b4f4ff', y='ffffff', p='4ac4d4', q='2a8aa0', bg='3a3450'),
+    'volcan':    dict(o='120a0a', b='4a2226', h='6e3434', s='2e1416', L='5a2a28', l='3a1a1a', v='ff8a28', x='ff8a28', y='ffd23c', p='ff8a28', q='ffd23c', bg='6a2c2c'),
 }
 
 
@@ -40,14 +45,13 @@ class G:
     def rect(self, x, y, w, h, c):
         for yy in range(y, y + h):
             for xx in range(x, x + w): self.put(xx, yy, c)
-    def disc(self, cx, cy, r, shade=True):
+    def disc(self, cx, cy, r, fill='b', edge='o'):
         for y in range(self.h):
             for x in range(self.w):
                 d = ((x - cx) ** 2 + (y - cy) ** 2) ** 0.5
-                if d <= r:
-                    edge = d > r - 1
-                    c = 'o' if edge else ('h' if shade and (x - cx) + (y - cy) < -r * 0.6 else ('s' if shade and (x - cx) + (y - cy) > r * 0.5 else 'b'))
-                    self.put(x, y, c)
+                if d <= r: self.put(x, y, edge if d > r - 1 else fill)
+    def flip(self):
+        self.g = [r[::-1] for r in self.g]; return self
     def img(self, pal):
         im = Image.new('RGBA', (self.w, self.h))
         for y in range(self.h):
@@ -57,207 +61,191 @@ class G:
         return im
 
 
-# ── La SEMILLA (12x12) ──
+def leaf(g, x0, y0, ln, hgt, isle, side=1, vein=True):
+    """Una hoja que sale de (x0, y0) hacia `side` (1 derecha, -1 izquierda): `ln` de largo, `hgt` de ancho máximo, arriba
+    plana (se puede pisar) y abombada por debajo, con su nervio"""
+    for i in range(ln):
+        x = x0 + side * i
+        w = max(1, int(round(hgt * (1 - ((i - ln * 0.45) / (ln * 0.6)) ** 2))))
+        if isle == 'fortaleza': w = max(1, w - (1 if i % 4 == 3 else 0))     # (hiedra: borde lobulado)
+        for k in range(w):
+            g.put(x, y0 + k, 'L' if k < w // 2 + 1 else 'l')
+        g.put(x, y0 - 1, 'o'); g.put(x, y0 + w, 'o')
+        if vein and 1 < i < ln - 2 and w > 2: g.put(x, y0 + 1, 'v')
+    g.put(x0 + side * ln, y0, 'o')
+
+
+def stem_tile(isle, variant):
+    """Un tramo de tallo (16x16) con hojas pequeñas, alternando el lado (variant 0 / 1)"""
+    g = G(16, 16)
+    w = 4 if isle in ('nieve', 'fortaleza') else 6
+    x0 = 8 - w // 2
+    for y in range(16):
+        dx = (1 if (y // 5) % 2 else 0) if isle == 'costa' else 0          # (el kelp ondula)
+        g.put(x0 - 1 + dx, y, 'o'); g.rect(x0 + dx, y, w, 1, 'b'); g.put(x0 + dx, y, 'h'); g.put(x0 + w - 1 + dx, y, 's')
+        g.put(x0 + w + dx, y, 'o')
+    side = 1 if variant == 0 else -1
+    bx = x0 + w if side > 0 else x0 - 1
+    leaf(g, bx, 4, 5, 3, isle, side, vein=False)                             # hojita
+    leaf(g, x0 - 1 if side > 0 else x0 + w, 11, 3, 2, isle, -side, vein=False)
+    if isle == 'fortaleza':                                                  # espinas y una baya
+        g.put(x0 - 2, 8, 'x'); g.put(x0 + w + 1, 14, 'x'); g.put(bx + side * 2, 2, 'y')
+    elif isle == 'nieve':                                                    # escarcha en las puntas
+        g.put(bx + side * 5, 4, 'x'); g.put(x0 + 1, 7, 'x')
+    elif isle == 'volcan':                                                   # ascuas en el tallo
+        g.put(x0 + 2, 6, 'x'); g.put(x0 + 3, 13, 'y')
+    elif isle == 'cueva':
+        g.put(x0 + 2, 9, 'x')
+    elif isle == 'costa':                                                    # vejiga
+        g.disc(bx + side * 4 + 0.5, 6.5, 1.6, fill='y' if False else 'L'); g.put(int(bx + side * 4), 6, 'y')
+    return g.img(ISLES[isle])
+
+
+def big_leaf(isle):
+    """HOJA GRANDE para trepar (32x10, sale del tallo hacia la derecha; el juego la voltea para la izquierda)"""
+    g = G(32, 10)
+    if isle == 'cueva':                                                      # seta de repisa que brilla
+        for x in range(1, 31):
+            top = 2 + int(((x - 16) / 16) ** 2 * 3)
+            g.rect(x, top, 1, 7 - top, 'L'); g.put(x, top, 'o'); g.put(x, 7, 'o')
+            if x % 5 == 2: g.put(x, top + 1, 'x')
+        g.rect(1, 7, 30, 1, 'l')
+    else:
+        leaf(g, 0, 2, 31, 6, isle, 1)
+        if isle == 'costa':
+            for x in (8, 18, 26): g.put(x, 3, 'y')
+        if isle == 'fortaleza':
+            for x in (6, 15, 24): g.put(x, 7, 'x')
+            g.put(20, 1, 'y'); g.put(21, 1, 'y')
+        if isle == 'nieve':
+            for x in range(3, 30, 4): g.put(x, 1, 'x')
+        if isle == 'volcan':
+            for x in range(4, 28): g.put(x, 3, 'v')
+    return g.img(ISLES[isle])
+
+
+def crown(isle):
+    """La COPA de arriba (48x16): donde se está de pie — hojas en abanico o la FLOR"""
+    g = G(48, 16)
+    if isle in ('pradera', 'costa', 'fortaleza'):
+        leaf(g, 24, 8, 23, 5, isle, -1); leaf(g, 23, 8, 23, 5, isle, 1)      # dos hojas grandes a los lados
+        leaf(g, 22, 4, 10, 3, isle, -1, False); leaf(g, 25, 4, 10, 3, isle, 1, False)
+        g.rect(21, 6, 6, 10, 'b')
+        if isle == 'fortaleza':
+            for x, y in ((10, 6), (12, 7), (35, 6), (37, 7)): g.put(x, y, 'y')
+        if isle == 'costa':
+            for x in (6, 16, 31, 41): g.put(x, 9, 'y')
+    elif isle in ('nieve', 'volcan'):                                        # una FLOR: pétalos abiertos, plana arriba
+        g.rect(22, 8, 4, 8, 'b')
+        for k, (dx, ln) in enumerate(((-1, 20), (1, 20))):
+            leaf(g, 24 + (0 if dx < 0 else -1), 9, ln, 4, isle, dx, False)
+        for x in range(10, 38):
+            top = 3 + int(abs(x - 24) / 6)
+            for y in range(top, 8): g.put(x, y, 'p' if (x + y) % 3 else 'q')
+            g.put(x, top - 1, 'o')
+        g.disc(24, 6, 2.5, fill='y' if isle == 'volcan' else 'q')
+        if isle == 'volcan':
+            for x, y in ((14, 2), (33, 1), (24, 0)): g.put(x, y, 'x')
+    elif isle == 'cueva':                                                    # el sombrero que brilla
+        g.rect(21, 8, 6, 8, 'b')
+        for x in range(2, 46):
+            top = 2 + int(((x - 23.5) / 22) ** 2 * 6)
+            g.rect(x, top, 1, 10 - top, 'L'); g.put(x, top, 'o'); g.put(x, 10, 'o')
+        for x, y in ((10, 5), (11, 4), (30, 4), (31, 3), (20, 3), (38, 6)): g.put(x, y, 'x')
+        g.rect(4, 9, 40, 1, 'l')
+    return g.img(ISLES[isle])
+
+
+def base(isle):
+    g = G(16, 16)
+    im = stem_tile(isle, 0)
+    out = im.copy()
+    rt = G(16, 16)
+    for x, y in ((3, 15), (4, 14), (5, 15), (10, 15), (11, 14), (12, 15), (2, 15), (13, 15)): rt.put(x, y, 'o')
+    r = rt.img(ISLES[isle]); out.paste(r, (0, 0), r)
+    return out
+
+
 def seed(isle):
     g = G(12, 12)
-    if isle == 'pradera':                                       # judía: alubia con su brote
-        g.disc(6, 7, 3.6); g.rect(5, 1, 2, 3, 'L'); g.put(7, 1, 'l')
-    elif isle == 'costa':                                       # vaina de kelp: ovalada, con su mancha turquesa
-        for y in range(2, 11):
-            w = 2 + (min(y - 2, 10 - y) // 2)
-            g.rect(6 - w, y, 2 * w, 1, 'b')
-        g.disc(6, 6.5, 4.2); g.put(5, 6, 'x'); g.put(6, 6, 'x'); g.put(6, 7, 'y')
-    elif isle == 'fortaleza':                                   # perno: cabeza hexagonal y rosca
-        g.rect(2, 2, 8, 4, 'b'); g.rect(3, 1, 6, 1, 'o'); g.rect(2, 2, 1, 4, 'o'); g.rect(9, 2, 1, 4, 'o'); g.rect(3, 6, 6, 1, 'o')
-        g.rect(3, 2, 2, 2, 'h'); g.rect(5, 7, 2, 4, 'b'); g.rect(4, 7, 1, 4, 'o'); g.rect(7, 7, 1, 4, 'o')
-        for y in (8, 10): g.put(5, y, 's'); g.put(6, y, 's')
-    elif isle == 'nieve':                                       # esquirla de hielo: rombo con brillo
-        for y in range(1, 11):
-            w = 5 - abs(y - 5.5) * 0.8
-            g.rect(int(6 - w), y, int(2 * w), 1, 'b')
-        for y in range(1, 11): g.put(int(6 - (5 - abs(y - 5.5) * 0.8)), y, 'o')
-        g.put(5, 3, 'y'); g.put(5, 4, 'h'); g.put(6, 5, 'h')
-    elif isle == 'cueva':                                       # espora que brilla
-        g.disc(6, 6, 4.0, shade=False)
-        g.disc(6, 6, 2.6, shade=False)
-        for x, y in ((6, 6), (5, 5), (6, 5), (5, 6)): g.put(x, y, 'y')
-        g.rect(4, 4, 4, 4, 'x'); g.rect(5, 5, 2, 2, 'y')
-    elif isle == 'volcan':                                      # guijarro de obsidiana con una ascua
-        g.disc(6, 6.5, 4.0); g.put(6, 6, 'x'); g.put(7, 7, 'x'); g.put(6, 7, 'y')
-    return g.img(ISLES[isle])
-
-
-# ── El TALLO (16x16, se repite), la BASE, la COPA, el BROTE y la PLATAFORMA de hojas ──
-def stem(isle, kind):
-    """kind: 'stem' (tramo), 'base' (raíz / arranque) o 'top' (copa)"""
-    g = G(16, 16)
     if isle == 'pradera':
-        g.rect(5, 0, 6, 16, 'b'); g.rect(5, 0, 1, 16, 'o'); g.rect(10, 0, 1, 16, 'o'); g.rect(6, 0, 1, 16, 'h'); g.rect(9, 0, 1, 16, 's')
-        g.put(10, 4, 'l'); g.put(11, 3, 'l'); g.put(12, 3, 'L'); g.put(5, 11, 'l'); g.put(4, 10, 'L')   # zarcillos
-        if kind == 'base':
-            for x in (4, 5, 10, 11): g.put(x, 15, 'x')
-            g.put(3, 14, 'x'); g.put(12, 14, 'x')
-        if kind == 'top':
-            g.g = [['.'] * 16 for _ in range(16)]
-            g.rect(7, 8, 2, 8, 'b'); g.rect(7, 8, 1, 8, 'h')
-            for x, y in ((5, 6), (4, 5), (3, 5), (10, 6), (11, 5), (12, 5), (7, 5), (8, 4), (8, 3)): g.put(x, y, 'L')
-            g.put(8, 2, 'l')
-    elif isle == 'costa':                                       # kelp: cinta ondulada con vejigas
-        for y in range(16):
-            x = 5 + (1 if (y // 4) % 2 else 0)
-            g.put(x - 1, y, 'o'); g.rect(x, y, 5, 1, 'b'); g.put(x, y, 'h'); g.put(x + 4, y, 's'); g.put(x + 5, y, 'o')
-        g.disc(11, 5, 1.6, shade=False); g.put(11, 5, 'h')
-        g.disc(4, 12, 1.6, shade=False); g.put(4, 12, 'h')
-        if kind == 'top':
-            g.g = [['.'] * 16 for _ in range(16)]
-            for y in range(6, 16): g.rect(7, y, 2, 1, 'b')
-            for x, y in ((6, 5), (5, 4), (9, 5), (10, 4), (8, 3), (8, 2)): g.put(x, y, 'L')
-        if kind == 'base':
-            g.rect(4, 14, 8, 2, 'o'); g.rect(5, 14, 6, 1, 's')
-    elif isle == 'fortaleza':                                   # cadena: eslabones gordos que se trepan
-        for y0 in (0, 8):
-            g.rect(5, y0, 6, 1, 'o'); g.rect(5, y0 + 5, 6, 1, 'o'); g.rect(4, y0 + 1, 1, 4, 'o'); g.rect(11, y0 + 1, 1, 4, 'o')
-            g.rect(5, y0 + 1, 6, 1, 'h'); g.rect(5, y0 + 4, 6, 1, 's')
-            g.rect(7, y0 + 5, 2, 3, 'b'); g.put(7, y0 + 6, 'h')
-        if kind == 'top':
-            g.g = [['.'] * 16 for _ in range(16)]
-            g.rect(6, 6, 4, 10, 'b'); g.rect(6, 6, 1, 10, 'h')
-            g.rect(4, 3, 8, 3, 'b'); g.rect(4, 3, 8, 1, 'h'); g.rect(4, 5, 8, 1, 'o'); g.put(11, 2, 'o'); g.put(12, 1, 'o')
-        if kind == 'base':
-            g.rect(3, 13, 10, 3, 's'); g.rect(3, 13, 10, 1, 'o')
-    elif isle == 'nieve':                                       # pilar de hielo
-        g.rect(4, 0, 8, 16, 'b'); g.rect(4, 0, 1, 16, 'o'); g.rect(11, 0, 1, 16, 'o')
-        g.rect(5, 0, 2, 16, 'h'); g.rect(10, 0, 1, 16, 's')
-        for y in (3, 4, 10, 11): g.put(7 + (y % 2), y, 'y')
-        if kind == 'top':
-            g.g = [['.'] * 16 for _ in range(16)]
-            for y in range(2, 16):
-                w = min(4, (y - 2) // 2 + 1)
-                g.rect(8 - w, y, 2 * w, 1, 'b'); g.put(8 - w, y, 'o'); g.put(8 + w - 1, y, 'o')
-            g.put(7, 4, 'y'); g.put(7, 5, 'h')
-    elif isle == 'cueva':                                       # tallo pálido de seta
-        g.rect(5, 0, 6, 16, 'b'); g.rect(5, 0, 1, 16, 'o'); g.rect(10, 0, 1, 16, 'o'); g.rect(6, 0, 1, 16, 'h'); g.rect(9, 0, 1, 16, 's')
-        g.put(8, 5, 'x'); g.put(8, 12, 'x')
-        if kind == 'top':                                       # el sombrero que BRILLA
-            g.g = [['.'] * 16 for _ in range(16)]
-            g.rect(7, 9, 2, 7, 'b'); g.rect(7, 9, 1, 7, 'h')
-            for y in range(3, 10):
-                w = min(7, 2 + (y - 3))
-                g.rect(8 - w, y, 2 * w, 1, 'x')
-                g.put(8 - w, y, 'o'); g.put(8 + w - 1, y, 'o')
-            g.rect(4, 4, 3, 2, 'y'); g.rect(9, 6, 2, 1, 'y'); g.rect(2, 9, 12, 1, 'o')
-    elif isle == 'volcan':                                      # columna de basalto (prismas) con ascuas
-        g.rect(3, 0, 10, 16, 'b'); g.rect(3, 0, 1, 16, 'o'); g.rect(12, 0, 1, 16, 'o'); g.rect(8, 0, 1, 16, 's')
-        g.rect(4, 0, 1, 16, 'h')
-        for y in (7, 15): g.rect(3, y, 10, 1, 'o')
-        g.put(6, 4, 'x'); g.put(10, 11, 'x'); g.put(10, 12, 'y')
-        if kind == 'top':
-            g.rect(3, 0, 10, 2, 'h'); g.rect(3, 0, 10, 1, 'o')
-    if kind == 'base' and isle in ('nieve', 'cueva', 'volcan'):
-        g.rect(2, 14, 12, 2, 's'); g.rect(2, 14, 12, 1, 'o')
-    return g.img(ISLES[isle])
-
-
-def leaves(isle):
-    """La COPA donde se está de pie (48x8, arriba del todo: la planta es una T — con las hojas a media altura parecía
-    una cruz, y la de hielo, una espada): copa de hojas · flotadores de kelp · barra con ganchos · meseta de cristal ·
-    el SOMBRERO de la seta (brilla) · la cara plana del basalto"""
-    g = G(48, 8)
-    if isle == 'pradera':                                       # copa de hojas anchas
-        for x in range(1, 47):
-            top = 1 + (abs(x - 24) // 9)
-            g.rect(x, top, 1, 7 - top, 'L'); g.put(x, top, 'o'); g.put(x, 7, 'o')
-            if x % 6 == 3: g.put(x, 4, 'l'); g.put(x, 5, 'l')
-        g.put(0, 4, 'o'); g.put(47, 4, 'o')
-    elif isle == 'costa':                                       # flotadores de kelp en fila
-        for cx in range(4, 48, 8):
-            for y in range(1, 8):
-                for x in range(cx - 4, cx + 4):
-                    d = ((x - cx + 0.5) / 4) ** 2 + ((y - 4) / 3.2) ** 2
-                    if d <= 1: g.put(x, y, 'o' if d > 0.6 else ('h' if y < 4 and x < cx else 'b'))
-            g.put(cx - 1, 3, 'y')
-    elif isle == 'fortaleza':                                   # barra con ganchos a los lados
-        g.rect(1, 2, 46, 4, 'b'); g.rect(1, 2, 46, 1, 'h'); g.rect(1, 5, 46, 1, 's'); g.rect(1, 1, 46, 1, 'o'); g.rect(1, 6, 46, 1, 'o')
-        g.rect(0, 1, 1, 6, 'o'); g.rect(47, 1, 1, 6, 'o')
-        for x in (5, 16, 31, 42): g.put(x, 3, 'y')
-    elif isle == 'nieve':                                       # meseta de cristal, plana, con picos pequeños
-        g.rect(1, 2, 46, 5, 'b'); g.rect(1, 2, 46, 1, 'y'); g.rect(1, 6, 46, 1, 'o'); g.rect(0, 2, 1, 5, 'o'); g.rect(47, 2, 1, 5, 'o')
-        for x in range(3, 46, 7): g.put(x, 1, 'y'); g.put(x, 0, 'h')
-        for x in range(5, 45, 9): g.put(x, 4, 'h')
-    elif isle == 'cueva':                                       # el sombrero de la seta, ancho y que brilla
-        for x in range(0, 48):
-            top = 1 + int(((x - 23.5) / 24) ** 2 * 5)
-            g.rect(x, top, 1, 7 - top, 'x'); g.put(x, top, 'o'); g.put(x, 7, 'o')
-        for x, y in ((10, 3), (11, 3), (30, 3), (31, 2), (20, 2), (38, 4), (5, 5)): g.put(x, y, 'y')
-    elif isle == 'volcan':                                      # la cara plana de la columna de basalto
-        g.rect(2, 1, 44, 6, 'b'); g.rect(2, 1, 44, 1, 'h'); g.rect(2, 6, 44, 1, 'o'); g.rect(2, 1, 1, 6, 'o'); g.rect(45, 1, 1, 6, 'o')
-        for x in (14, 34): g.rect(x, 1, 1, 6, 'o')
-        g.put(8, 3, 'x'); g.put(26, 4, 'x'); g.put(26, 3, 'y'); g.put(40, 4, 'x')
+        g.disc(6, 7, 3.6, 'b'); g.put(4, 5, 'h'); g.rect(5, 1, 2, 3, 'L'); g.put(7, 1, 'l')
+    elif isle == 'costa':
+        g.disc(6, 6.5, 4.2, 'b'); g.put(4, 4, 'h'); g.put(6, 6, 'x'); g.put(7, 7, 'y')
+    elif isle == 'fortaleza':                                                # semilla con espinas
+        g.disc(6, 6.5, 3.4, 'b'); g.put(5, 5, 'h')
+        for x, y in ((6, 1), (1, 6), (11, 6), (6, 11), (2, 2), (10, 2)): g.put(x, y, 'x')
+    elif isle == 'nieve':                                                    # vaina blanca con escarcha
+        g.disc(6, 6.5, 3.8, 'L'); g.put(4, 4, 'x'); g.put(7, 7, 'y'); g.put(5, 8, 'v')
+    elif isle == 'cueva':                                                    # espora que brilla
+        g.disc(6, 6, 4.0, 'L'); g.rect(5, 5, 2, 2, 'x'); g.put(5, 5, 'y')
+    elif isle == 'volcan':                                                   # semilla de ascua
+        g.disc(6, 6.5, 3.8, 'b'); g.put(6, 6, 'x'); g.put(7, 7, 'x'); g.put(6, 7, 'y')
     return g.img(ISLES[isle])
 
 
 def sprout(isle):
-    """El BROTE: 3 cuadros de 16x16 (asoma, crece, ya es base)"""
-    base = stem(isle, 'base')
-    top = stem(isle, 'top')
+    """El BROTE (3 cuadros de 16x16): asoma con dos hojitas y se hace tallo"""
     out = Image.new('RGBA', (48, 16))
-    for f, h in enumerate((5, 10, 16)):
-        cv = Image.new('RGBA', (16, 16))
-        t = top.crop((0, 16 - h, 16, 16))
-        cv.paste(t, (0, 16 - h), t)
-        if f == 2: cv = base
-        out.paste(cv, (f * 16, 0), cv)
+    for f, h in enumerate((4, 9, 16)):
+        g = G(16, 16)
+        g.rect(7, 16 - h, 2, h, 'b'); g.put(7, 16 - h, 'h')
+        leaf(g, 9, 16 - h, 2 + f, 1 + (f > 0), isle, 1, False); leaf(g, 6, 16 - h + 1, 2 + f, 1 + (f > 0), isle, -1, False)
+        out.paste(g.img(ISLES[isle]), (f * 16, 0))
     return out
 
 
-def assemble(isle, h=5):
-    """Una planta montada de `h` casillas: la base, los tallos y, arriba, la COPA (donde se está de pie)"""
-    cv = Image.new('RGBA', (48, 16 * h))
-    b, s, l = stem(isle, 'base'), stem(isle, 'stem'), leaves(isle)
-    cv.paste(b, (16, 16 * (h - 1)), b)
-    for k in range(1, h): cv.paste(s, (16, 16 * (h - 1 - k)), s)
-    cv.paste(l, (0, 0), l)
+def assemble(isle, h=6):
+    """Una planta de `h` casillas: base, tramos alternos con hojitas, HOJAS GRANDES a la 2 (derecha) y a la 4
+    (izquierda) para ir trepando, y la COPA arriba"""
+    cv = Image.new('RGBA', (80, 16 * h + 16))
+    oy = 16
+    b = base(isle); cv.paste(b, (32, oy + 16 * (h - 1)), b)
+    for k in range(1, h):
+        t = stem_tile(isle, k % 2); cv.paste(t, (32, oy + 16 * (h - 1 - k)), t)
+    bl = big_leaf(isle)
+    cv.paste(bl, (43, oy + 16 * (h - 3) + 2), bl)
+    fl = bl.transpose(Image.FLIP_LEFT_RIGHT); cv.paste(fl, (5, oy + 16 * (h - 5) + 2), fl)
+    cr = crown(isle); cv.paste(cr, (16, 0), cr)
     return cv
 
 
 def preview():
-    S = 5
+    S = 4
     cols = []
     for isle in ISLES:
-        bg = Image.new('RGBA', (60, 120), rgb(ISLES[isle]['bg']))
+        pl = assemble(isle)
+        bg = Image.new('RGBA', (84, pl.height + 30), rgb(ISLES[isle]['bg']))
         sd = seed(isle); bg.paste(sd, (2, 2), sd)
-        sp = sprout(isle); bg.paste(sp, (6, 16), sp)
-        pl = assemble(isle); bg.paste(pl, (6, 120 - pl.height), pl)
+        sp = sprout(isle); bg.paste(sp, (20, 0), sp)
+        bg.paste(pl, (2, 28), pl)
         cols.append(bg.resize((bg.width * S, bg.height * S), Image.NEAREST))
-    out = Image.new('RGBA', (sum(c.width for c in cols), cols[0].height))
+    out = Image.new('RGBA', (sum(c.width for c in cols), max(c.height for c in cols)))
     x = 0
     for c in cols: out.paste(c, (x, 0)); x += c.width
     return out
 
 
 def gif(isle, path):
-    """Crece: la semilla cae, se planta y sube tramo a tramo hasta la copa; luego se marchita"""
-    S = 5
+    """Crece: la semilla cae, brota y sube tramo a tramo hasta la copa; luego se marchita"""
+    S = 4
     pal = ISLES[isle]
+    full = assemble(isle)
     frames, dur = [], []
-    total = 5
-    full = assemble(isle, total)
-    for n in range(28):
-        cv = Image.new('RGBA', (48, 100), rgb(pal['bg']))
+    for n in range(30):
+        cv = Image.new('RGBA', (84, full.height + 4), rgb(pal['bg']))
         if n < 4:
-            sd = seed(isle); cv.paste(sd, (18, 70 + n * 4 - 12), sd)
+            sd = seed(isle); cv.paste(sd, (36, cv.height - 30 + n * 4), sd)
         else:
-            k = min(1.0, (n - 4) / 12)
+            k = min(1.0, (n - 4) / 14)
             hgt = int(full.height * k)
-            alpha = 1.0 if n < 22 else max(0, 1 - (n - 22) / 5)
+            alpha = 1.0 if n < 24 else max(0, 1 - (n - 24) / 5)
             if hgt > 0:
-                part = full.crop((0, full.height - hgt, 48, full.height))
-                if alpha < 1:
-                    a = part.split()[3].point(lambda v: int(v * alpha))
-                    part.putalpha(a)
-                cv.paste(part, (0, 100 - hgt), part)
+                part = full.crop((0, full.height - hgt, full.width, full.height))
+                if alpha < 1: part.putalpha(part.split()[3].point(lambda v: int(v * alpha)))
+                cv.paste(part, (2, cv.height - hgt), part)
         frames.append(cv.resize((cv.width * S, cv.height * S), Image.NEAREST).convert('P', palette=Image.ADAPTIVE))
-        dur.append(90 if n < 16 else 140)
+        dur.append(90 if n < 18 else 140)
     frames[0].save(path, save_all=True, append_images=frames[1:], duration=dur, loop=0, disposal=2)
 
 
@@ -267,8 +255,11 @@ if __name__ == '__main__':
         for isle in ISLES:
             seed(isle).save(os.path.join(OUT, f'{isle}-seed.png'))
             sprout(isle).save(os.path.join(OUT, f'{isle}-sprout-Sheet.png'))
-            for k in ('base', 'stem', 'top'): stem(isle, k).save(os.path.join(OUT, f'{isle}-{k}.png'))
-            leaves(isle).save(os.path.join(OUT, f'{isle}-leaves.png'))
+            base(isle).save(os.path.join(OUT, f'{isle}-base.png'))
+            st = Image.new('RGBA', (32, 16)); st.paste(stem_tile(isle, 0), (0, 0)); st.paste(stem_tile(isle, 1), (16, 0))
+            st.save(os.path.join(OUT, f'{isle}-stem-Sheet.png'))
+            big_leaf(isle).save(os.path.join(OUT, f'{isle}-bigleaf.png'))
+            crown(isle).save(os.path.join(OUT, f'{isle}-crown.png'))
         print('  ' + OUT)
     os.makedirs(PRUEBAS, exist_ok=True)
     preview().save(os.path.join(PRUEBAS, 'vista_previa.png'))

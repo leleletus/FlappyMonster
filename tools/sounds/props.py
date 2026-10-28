@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# tools/sounds/props.py — los SONIDOS de lo nuevo aprobado en 0.5.67 (diseño en curso): el Soplón, la Balanza, la Caja y
-# la Semilla. Síntesis sencilla de 8 bits (ruido filtrado, cuadradas y senos con envolventes), como tools/sounds/mechanics.py.
+# tools/sounds/props.py — los SONIDOS de lo nuevo aprobado en 0.5.67 (diseño en curso): el Soplón, la Balanza, la Caja,
+# la Semilla, la Ventisca y el Géiser. Síntesis sencilla de 8 bits (ruido filtrado, cuadradas y senos con envolventes), como tools/sounds/mechanics.py.
 #   python3 tools/sounds/props.py            → vistas previas (.wav) en FlappyMonster_pruebas/nuevos/sonidos/
 #   python3 tools/sounds/props.py --apply    → assets/sounds/props/*.wav
 # Se comprueban con números: NO se han escuchado.
@@ -126,7 +126,48 @@ def seed_wilt():
     return mix(*[at(sweep(f, f * 0.94, 0.16) * env(n_(0.16), 0.01, 0.1), i * 0.14) for i, f in enumerate(notes)])
 
 
+# ── LA VENTISCA ──
+def wind_warn():
+    """El aviso: un silbido que sube y crece (1,0 s), con un aire grave debajo"""
+    d = 1.0
+    whistle = sweep(500, 1300, d) * np.linspace(0.05, 0.4, n_(d))
+    air = band(noise(d), 200, 900) * np.linspace(0.1, 0.6, n_(d))
+    return whistle + air
+def wind_gust():
+    """La racha (se repite mientras sopla, 1,2 s): aire fuerte con remolinos"""
+    d = 1.2
+    x = band(noise(d), 250, 2400) * (0.7 + 0.3 * np.sin(2 * np.pi * 3.1 * t_(d)))
+    howl = sweep(340, 300, d) * 0.12 * (0.5 + 0.5 * np.sin(2 * np.pi * 0.9 * t_(d)))
+    k = n_(0.08); x[:k] *= np.linspace(0, 1, k); x[-k:] *= np.linspace(1, 0, k)
+    return x + howl
+
+
+# ── EL GÉISER ──
+def geyser_rumble():
+    """El aviso: borboteo grave que crece (0,9 s)"""
+    d = 0.9
+    rum = low(noise(d), 160) * np.linspace(0.3, 1.0, n_(d)) * 3
+    pops = [at(sweep(220 + 40 * i, 120, 0.05) * env(n_(0.05), 0.001, 0.02) * 0.5, 0.1 + i * 0.12) for i in range(6)]
+    return mix(rum, *pops)
+def geyser_burst():
+    """La erupción de AGUA: golpe y chorro que sale (1,0 s)"""
+    boom = sweep(110, 50, 0.15) * env(n_(0.15), 0.001, 0.06)
+    jet = band(noise(1.0), 600, 6000) * env(n_(1.0), 0.01, 0.45)
+    return mix(boom, jet * 0.8)
+def steam_hiss():
+    """VAPOR / humo (fortaleza, cueva, volcán): siseo agudo (1,0 s)"""
+    x = band(noise(1.0), 3000, 9000) * env(n_(1.0), 0.02, 0.5)
+    return x + low(noise(1.0), 300) * env(n_(1.0), 0.01, 0.2) * 0.6
+def ice_freeze():
+    """Nieve: el chorro se CONGELA — crujidos que suben"""
+    cr = [at(band(noise(0.03), 2500, 8000) * env(n_(0.03), 0.001, 0.008), i * 0.05) for i in range(8)]
+    ring = sweep(1500, 1900, 0.4) * env(n_(0.4), 0.005, 0.18) * 0.3
+    return mix(ring, *cr)
+
+
 SOUNDS = {
+    'wind_warn': wind_warn, 'wind_gust': wind_gust,
+    'geyser_rumble': geyser_rumble, 'geyser_burst': geyser_burst, 'steam_hiss': steam_hiss, 'ice_freeze': ice_freeze,
     'gust_inhale': gust_inhale, 'gust_blow': gust_blow, 'gust_pop': gust_pop,
     'scale_creak': scale_creak, 'scale_launch': scale_launch,
     'box_push': box_push, 'box_land': box_land, 'box_break': box_break,
