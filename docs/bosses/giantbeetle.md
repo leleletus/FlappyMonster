@@ -83,6 +83,13 @@ the level pans) and in the centre (row 8) to dodge the charge and the waves.
   `blockBreak`, dirt/grass/sand/snow/ash `gpImpact`, ice `iceBreak`, wood `boxBreak`) at the chunk.
 - Music `templo` 2.5 dB lower ([music-history](../audio/music-history.md)).
 
+## 0.5.80 changes (the user)
+
+- A chunk of drop-through platform flew with a dark square behind it (the shadow was a full tile) → the shadow is the
+  size of the tile's visible part (its `hitbox`).
+- On a pan it still threw stone → `floorTile` looks for a body under its body and horn in a band (−4..+20 px from its
+  feet), since riding a pan its feet are not always on the plank to the pixel.
+
 ## How to extend
 
 - Tuning lives in the constants at the top of the file (`{ normal, angry }` pairs).

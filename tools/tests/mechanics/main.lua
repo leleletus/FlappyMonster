@@ -93,8 +93,9 @@
 --   escarabajo_ruta  embiste pasando su ruta y vuelve a ella; lanzado fuera de su ruta va hacia donde se lanza;
 --                  recién volcado no se le pisa (rebota de lado)
 --   escarabajo_manos  en las manos sigue contando, tiembla y se suelta solo quitando 1
---   escarabajo_arrolla  (0.5.79) lanzado no se le reinicia la cuenta patas arriba; embistiendo empuja al jugador (aunque
---                  sea invulnerable: no lo atraviesa), noquea a un Gummy y patea y enciende una bomba; muerto, aplastado
+--   escarabajo_arrolla  (0.5.79) lanzado no se le reinicia la cuenta patas arriba; embistiendo, el IMPACTO empuja al
+--                  jugador y luego (invulnerable) lo atraviesa; noquea a un Gummy, patea y enciende una bomba; sin
+--                  chocar, frena derrapando ('brake'); muerto, aplastado
 --   (ONLY=a,b: solo esos casos)
 --   aire_caja      el aire empuja una caja contra el jugador: el jugador sigue a su lado (empujado), nunca al otro
 --   geiser_peso    el Géiser sube más despacio lo que pesa más con lo que lleva encima y el chorro se corta debajo
@@ -2678,7 +2679,7 @@ function cases.escarabajo_arrolla()
         if not upAt and (b.state == 'righting' or b.state == 'walk') then upAt = t end
     end)
     local keeps = held and thrown and landT and landT >= 2.2 and upAt and upAt < 1.5
-    -- 2) embistiendo: un Gummy y una bomba delante, el jugador detrás (invulnerable: antes lo atravesaba)
+    -- 2) embistiendo: un Gummy y una bomba delante, el jugador detrás: el impacto lo empuja y luego lo atraviesa
     local lv, e2 = room(30, 9, {}, {
         { type = 'beetle', col = 4, row = 8, props = { pauses = false, startDir = 'right', patrol = false } },
         { type = 'gummy', col = 6, row = 8, props = { pauses = false, speed = 0, patrol = false } },
@@ -2686,11 +2687,11 @@ function cases.escarabajo_arrolla()
     local c, g, bomb = e2[1], e2[2], e2[3]
     settle(lv, e2)
     local q = playerAt(lv, 10, 8)
-    local charged, crossed, knocked, lit, pushed = false, false, false, false, 0
-    local qx0 = q.x
-    sim(lv, { q }, e2, 3, function()
-        q.invT = 9
+    local charged, crossed, knocked, lit, pushed, braked = false, false, false, false, 0, false
+    local qx0, hp0 = q.x, q.hp
+    sim(lv, { q }, e2, 3.5, function()
         if c.state == 'charge' then charged = true end
+        if c.state == 'brake' then braked = true end
         if charged and q.x < c.x then crossed = true end
         if g.state == 'stunned' then knocked = true end
         if bomb.state == 'lit' or bomb.state == 'exploding' then lit = true end
@@ -2704,10 +2705,10 @@ function cases.escarabajo_arrolla()
     d:stomp()
     local set = d:anims()
     local squashed = d.state == 'dead' and d:pose() == set:frameAt('dead', 0) and set:frameAt('dead', 0) ~= set:frameAt('flip', 0)
-    check('escarabajo_arrolla', keeps and charged and not crossed and pushed > T and knocked and lit and squashed,
-        ('lanzado a los 2,2 s: cogido=%s, lanzado=%s, cae con su cuenta en %.1f s, se levanta a los %.1f s · embiste=%s: jugador empujado %.1f casillas, lo atraviesa=%s · Gummy noqueado=%s · bomba encendida=%s · muerto aplastado=%s'):format(
-            tostring(held), tostring(thrown), landT or -1, upAt or -1, tostring(charged), pushed / T, tostring(crossed),
-            tostring(knocked), tostring(lit), tostring(squashed)))
+    check('escarabajo_arrolla', keeps and charged and pushed > T * 0.5 and q.hp < hp0 and crossed and braked and knocked and lit and squashed,
+        ('lanzado a los 2,2 s: cogido=%s, lanzado=%s, cae con su cuenta en %.1f s, se levanta a los %.1f s · embiste=%s: impacto empuja %.1f casillas (vida %d → %d), luego lo atraviesa=%s, frena derrapando=%s · Gummy noqueado=%s · bomba encendida=%s · muerto aplastado=%s'):format(
+            tostring(held), tostring(thrown), landT or -1, upAt or -1, tostring(charged), pushed / T, hp0, q.hp, tostring(crossed),
+            tostring(braked), tostring(knocked), tostring(lit), tostring(squashed)))
 end
 
 function love.load()

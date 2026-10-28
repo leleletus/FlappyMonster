@@ -428,7 +428,7 @@ function cases.madera()
     boss.facing = 1
     local onLedge = boss:floorTile(level)
     local pan = scale:bodyParts()[1]:getOuterBounds()
-    putBoss(level, boss, pan.x + pan.w / 2, pan.y)
+    putBoss(level, boss, pan.x + pan.w / 2, pan.y - 6)            -- (los pies, como en la pelea, no siempre al píxel)
     local onPan = boss:floorTile(level)
     local m1, m2 = TileTypes.get(onLedge).mat, TileTypes.get(onPan).mat
     -- (al romperse suena su material)

@@ -345,6 +345,11 @@ jungle boss ([giantbeetle](../bosses/giantbeetle.md)). Approved design (2026-10-
   beetles flipped), carryable light things are flung (`onThrow`, `SWEEP_VX/VY`), bosses never; (4) dead it vanished →
   a SQUASHED frame (`assets/images/enemies/beetle/dead.png`, made by the generator from the user's walk frame, the
   sheet untouched), fading out.
+- 0.5.80 (the user): (1) only the IMPACT pushes: a player who can be hit loses 1, is moved out of its box and recoils
+  almost flat (with the normal recoil hop they landed on it and stomped it by accident); invulnerable — including right
+  after that hit — the charge goes THROUGH them ("more comfortable and readable"); enemies, once per charge; (2) a charge
+  that ends without hitting anything (time out, or an edge) no longer stops dead → 'brake' (`BRAKE_T` 0.4 s): skids to a
+  halt (never off an edge) with dust and a scrape (`boxPush`), leaning on the charge frame.
 - **Flying Rhino Beetle** (prop `wings`, 0.5.79; the Giant Rhino Beetle's minions, like the King Gummy's flying
   guards): flies with its own wings (`fly` anim, `assets/images/enemies/beetle/fly-Sheet.png`; free flight, `flyArea`
   set by whoever spawns it) and never charges. A stomp (or any knock) drops it ON ITS BACK like the walking one

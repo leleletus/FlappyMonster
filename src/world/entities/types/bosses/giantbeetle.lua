@@ -229,7 +229,13 @@ function GB:floorTile(level)
         local def = TileTypes.get(id)
         if id and id ~= 0 and (def.collision == 'solid' or def.collision == 'oneway') then return id end
     end
-    if level:bodyAt(self.x, y, self) and by.platform_drop then return by.platform_drop.id end
+    -- (0.5.80: sobre un platillo seguía saliendo piedra — sus pies no siempre tocan la tabla al píxel —: se busca un
+    -- cuerpo debajo en una franja, bajo el cuerpo y bajo el cuerno)
+    for dy = -4, 20, 4 do
+        for _, x in ipairs({ self.x, self.x + (self.facing or 1) * self.outerW * 0.3, self.x - (self.facing or 1) * self.outerW * 0.3 }) do
+            if level:bodyAt(x, self:feetY() + dy, self) and by.platform_drop then return by.platform_drop.id end
+        end
+    end
     return by.stone and by.stone.id or 1
 end
 
@@ -775,8 +781,11 @@ function GB:drawOver(camX, camY)
         love.graphics.push()
         love.graphics.translate(math.floor(b.x - camX), math.floor(b.y - camY))
         love.graphics.rotate(((now * 7 + (b.id or 0)) % (2 * math.pi)) * ((b.vx or 1) >= 0 and 1 or -1))
+        -- (la sombra, del tamaño de lo que se ve del tile — su hitbox —: una pasarela es fina; 0.5.80, el usuario: el
+        -- trozo de plataforma salía con un cuadrado oscuro detrás)
+        local hb = def.hitbox or { x = 0, y = 0, w = 1, h = 1 }
         love.graphics.setColor(0, 0, 0, 0.35)
-        love.graphics.rectangle('fill', -BLOCK_S / 2 + 4, -BLOCK_S / 2 + 4, BLOCK_S, BLOCK_S)
+        love.graphics.rectangle('fill', -BLOCK_S / 2 + 4 + hb.x * BLOCK_S, -BLOCK_S / 2 + 4 + hb.y * BLOCK_S, hb.w * BLOCK_S, hb.h * BLOCK_S)
         TileTypes.drawTile(def, { x = -BLOCK_S / 2, y = -BLOCK_S / 2, size = BLOCK_S, col = 1, row = 1, time = now })
         love.graphics.pop()
         love.graphics.setColor(1, 1, 1, 1)

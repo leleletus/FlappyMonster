@@ -15,10 +15,11 @@
 -- pataleando; antes de darse la vuelta TIEMBLA (aviso) y, si no lo sueltas, se suelta solo y te hace daño. Su caja es
 -- la del CUERPO (sin el cuerno), centrada en él: el dibujo se corre 2 px.
 -- 0.5.79 (el usuario): lanzarlo NO le reinicia la cuenta patas arriba (a punto de levantarse, se levanta al caer).
--- EMBISTIENDO empuja al jugador (también invulnerable: ya no lo atraviesa) y arrolla lo que pilla delante — enemigos
+-- EMBISTIENDO el impacto empuja al jugador (invulnerable, lo atraviesa; 0.5.80) y arrolla lo que pilla delante — enemigos
 -- (los noquea: knockback; a las bombas las patea y las enciende) y lo ligero que se coge (lo despide). Muerto, se queda
 -- APLASTADO en el suelo. Con `wings` (los súbditos del jefe) es el ESCARABAJO VOLADOR: vuela con sus alas (vuelo
--- libre) sin embestir; pisado cae patas arriba como el de suelo y, si se levanta, vuelve a volar.
+-- libre) sin embestir; pisado cae patas arriba como el de suelo y, si se levanta, vuelve a volar. 0.5.80: al acabar
+-- la embestida sin chocar FRENA derrapando ('brake': polvo y sonido) en vez de pararse en seco.
 -- Arte: assets/anim/enemies/beetle.json (hoja de 22x20 a escala 4, mira a la DERECHA; tools/art/enemies/
 -- make_beetle.py — sus patas, retocadas a mano por el usuario). Todo lo que se dibuja sale del estado, deadTimer,
 -- frame y facing (lo que viaja en las instantáneas): online se ve igual.
@@ -49,10 +50,10 @@ local THROWN_BOUNCE = 0.3
 local INV_FLIP  = 0.4                  -- s tras volcarse en los que no se le puede pisar (te aparta de lado)
 local WARN_T    = 0.9                  -- s antes de darse la vuelta en los que tiembla (el aviso)
 local HIT_CARRY = 1                    -- vida que quita al soltarse de las manos
-local PUSH_CD   = 0.35                 -- s entre empujones al mismo jugador embistiendo
+local BRAKE_T   = 0.4                  -- s frenando al acabar la embestida (derrapa: polvo y sonido)
 local SWEEP_VX, SWEEP_VY = 420, -260    -- px/s: lo ligero que arrolla embistiendo sale despedido así
 local BODY_DX   = 2                    -- px del cuadro: el cuerpo está 2 px a la izquierda del centro (el cuerno, delante)
-local FREE = { windup = true, charge = true, daze = true, onback = true, righting = true, thrown = true, carried = true }
+local FREE = { windup = true, charge = true, brake = true, daze = true, onback = true, righting = true, thrown = true, carried = true }
 
 Beetle.animId    = 'enemies/beetle'
 Beetle.carryable = true                -- (patas arriba: canBeCarried)
@@ -170,19 +171,20 @@ function Beetle:thrownHits(level)
 end
 
 -- ── Embistiendo: empuja a los jugadores y arrolla lo que pilla delante ────────
--- El jugador sale apartado hacia donde embiste (aunque sea invulnerable: lo saca de su caja; si se puede, además
--- rebota con recoil); si no cabe (contra una pared), el escarabajo se para ahí: true = chocó (aturdido, como en una
--- pared). Enemigos: knockback (una vez por embestida); lo ligero que se coge: despedido como lanzado.
+-- Solo EL IMPACTO (0.5.80, el usuario: "así queda más cómodo y legible"): un jugador que se puede golpear pierde 1, sale
+-- apartado de su caja hacia donde embiste y rebota (recoil); invulnerable — también justo después del golpe — lo
+-- ATRAVIESA. Si al apartarlo no cabe (contra una pared), el escarabajo se para ahí: true = chocó (aturdido, como en
+-- una pared). Enemigos: knockback, una vez por embestida (luego los atraviesa); lo ligero que se coge: despedido.
 function Beetle:chargeHits(level, f, dt)
     local ob = self:getOuterBounds()
     local pinned = false
     local feetTop = ob.y + ob.h * 0.35
-    self.pushT = self.pushT or {}
     for _, pa in ipairs(level.players or {}) do
-        if not pa.dying and pa.alive ~= false then
+        if not pa.dying and pa.alive ~= false and not self.swept[pa] and not pa:isInvulnerable() then
             local pb = pa:getOuterBounds()
             if overlap(ob, pb) and pb.y + pb.h > feetTop and (pa.x - self.x) * f > -ob.w * 0.25 then
                 -- (arrollado: quita 1 aquí — el empujón lo saca de su caja antes de Interactions —)
+                self.swept[pa] = true
                 if not pa.peaceful and pa:hurt(1) then return false end
                 local edge = (f > 0) and (ob.x + ob.w - pb.x) or (pb.x + pb.w - ob.x)
                 if edge > 0 and pa.moveSteps then
@@ -191,14 +193,11 @@ function Beetle:chargeHits(level, f, dt)
                     local left = edge - math.abs(pa.x - px0)
                     if left > 1 then self.x, pinned = self.x - f * left, true end      -- (aplastado contra la pared)
                 end
-                if (self.pushT[pa] or 0) <= 0 then
-                    self.pushT[pa] = PUSH_CD
-                    if pa.recoil then pa:recoil(f) end
-                end
+                -- (rebote casi plano: con el salto de recoil caía encima y lo pisaba sin querer)
+                if pa.recoil and pa:recoil(f) then pa.vy = math.max(pa.vy, -120) end
             end
         end
     end
-    for k, v in pairs(self.pushT) do self.pushT[k] = (v > dt) and v - dt or nil end
     local b = { x = (f > 0) and ob.x + ob.w * 0.5 or ob.x - 8, y = ob.y, w = ob.w * 0.5 + 8, h = ob.h }
     for _, e in ipairs(level.liveEntities or {}) do
         if e ~= self and e.alive and not self.swept[e] and e.state ~= 'dead' and e.state ~= 'carried'
@@ -215,6 +214,13 @@ function Beetle:chargeHits(level, f, dt)
         end
     end
     return pinned
+end
+
+-- Acaba la embestida sin chocar: FRENA derrapando (0.5.80, el usuario: se paraba de golpe) con `vx` de partida
+function Beetle:brake(vx)
+    self.state, self.deadTimer, self.vx = 'brake', 0, vx
+    Sound.play('boxPush', 0.8, 0.9)
+    Entity.emitFx('gp_land', self.x + (self.facing or 1) * self.outerW * 0.3, self.y + self.outerH / 2)
 end
 
 -- ── Update ────────────────────────────────────────────────────────────────────
@@ -277,7 +283,7 @@ function Beetle:updateCustom(dt, level)
     elseif st == 'charge' then
         local f = self.facing or 1
         if self.onGround and not self:groundAhead(level, f) then           -- (en un borde frena: no se tira)
-            self.state, self.deadTimer, self.vx, self.cd = 'daze', DAZE_T * 0.5, 0, COOLDOWN
+            self:brake(0)                                                  -- (en un borde: frena en seco, sin derrapar)
             return true
         end
         local x0 = self.x
@@ -292,7 +298,25 @@ function Beetle:updateCustom(dt, level)
             Entity.emitFx('shake_small', self.x, self.y)
             return true
         end
-        if t >= CHARGE_MAX then self.vx = f * (self.speed or 50); self.cd = COOLDOWN; self:startWalk() end
+        if t >= CHARGE_MAX then self:brake(self.vx) end
+        return fallBurst(self, level) or true
+
+    elseif st == 'brake' then
+        -- (derrapa hasta pararse: no se tira por un borde; polvo que levanta cada 0,1 s)
+        local f = self.facing or 1
+        self.vx = self.vx * math.max(0, 1 - 9 * dt)
+        if self.onGround and not self:groundAhead(level, f) then self.vx = 0 end
+        local vx0 = self.vx
+        self:fall(level, dt, self.vx)
+        self.facing = f
+        if self.vx ~= vx0 then self.vx = 0 end
+        if self.vx ~= 0 and math.floor(t * 10) ~= math.floor((t - dt) * 10) then
+            Entity.emitFx('gp_land', self.x + f * self.outerW * 0.3, self.y + self.outerH / 2)
+        end
+        if t >= BRAKE_T then
+            self.vx, self.cd = f * (self.speed or 50), COOLDOWN
+            self:startWalk()
+        end
         return fallBurst(self, level) or true
 
     elseif st == 'daze' then
@@ -363,6 +387,9 @@ function Beetle:pose()
         return set:frameAt('charge', 0), ox, 0
     end
     if st == 'charge' then return set:frameAt('charge', t), 0, 0 end
+    if st == 'brake' then                                                  -- (derrapa: echado atrás, temblando)
+        return set:frameAt('charge', 0), (math.floor(t * 24) % 2 == 0) and 0 or -(self.facing or 1), 0
+    end
     if st == 'daze' then return set:frameAt('idle', 0), (math.floor(t * 16) % 2 == 0) and 1 or 0, 0 end
     if st == 'onback' or st == 'carried' then                              -- (a punto de darse la vuelta: tiembla)
         local warn = t >= BACK_T - WARN_T
