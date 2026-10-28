@@ -7,6 +7,8 @@
 --   techo         trepa la pared, va por el techo, aro grande, se lanza a donde detecta y queda agotado
 --   luz           alumbrarlo mientras apunta lo asusta y cancela; agotado sin luz es inmune y con luz queda
 --                 deslumbrado (se tapa con las pinzas): un golpe
+--   truco         (0.5.64) dos ground pounds seguidos: ya no embiste al ruido, suelta un aro; aterrizar a su lado: la
+--                 pinza (contragolpe)
 --   caja          la caja es el caparazón que se ve
 --   rabia         con poca vida ruge (pinzas en alto, otro cuadro), le salen cristales; luego grita: las
 --                 linternas alcanzan la mitad un rato y llama a Crabbies lúgubres
@@ -276,8 +278,11 @@ function cases.luz()
     pa.lightOn = true
     level.players = { pa }
     boss:enter('tired')
-    for _ = 1, 10 do boss:update(DT, level) end
+    for _ = 1, 20 do boss:update(DT, level) end
+    local early = boss.state                               -- (0,33 s de luz: aún no — hay que mantenerla 0,6 s)
+    for _ = 1, 25 do boss:update(DT, level) end
     local st1, hp0 = boss.state, boss.hp
+    if early ~= 'tired' then st1 = 'deslumbrado demasiado pronto' end
     p2.x, p2.y, p2.vy, p2.onGround = boss.x, boss.y - 140, 300, false
     local r2
     for _ = 1, 40 do p2.y = p2.y + 4; r2 = Interactions.check(p2, boss); if r2 then break end end
@@ -436,9 +441,42 @@ local function look()
     print('guardado ' .. love.filesystem.getSaveDirectory() .. '/megagloomy_look.png')
 end
 
+-- (0.5.64) EL TRUCO del ground pound: dos seguidos → ya no embiste contra el ruido: suelta un aro (va a por ti);
+-- un ruido normal sí lo embiste. CONTRAGOLPE: aterrizar a su lado mientras ronda → la pinza
+function cases.truco()
+    local level, es, boss = arena()
+    stepAll(level, es, {}, 0.3)
+    local zx0, zx1 = floorPos(boss)
+    local function reset() boss:stand(level, (zx0 + zx1) / 2); boss.cdT, boss.pingT, boss.ceilT = 0, -99, -99; boss:enter('prowl') end
+    local function watch(secs)
+        local seen = {}
+        stepAll(level, es, {}, secs, function() boss.pingT, boss.ceilT = math.min(boss.pingT, -50), -99; seen[boss.state] = true end)
+        return seen
+    end
+    reset()
+    Noise.emit(boss.x + 8 * T, (FLOOR - 1) * T, Noise.R.hit)
+    local plain = watch(1.5)
+    reset()
+    Noise.emit(boss.x + 8 * T, (FLOOR - 1) * T, Noise.R.pound)
+    stepAll(level, es, {}, 0.05)
+    reset()
+    Noise.emit(boss.x + 8 * T, (FLOOR - 1) * T, Noise.R.pound)
+    local trick = watch(1.0)
+    check('truco', plain.aim and plain.charge and trick.ping and not trick.charge,
+        ('un ruido: apunta %s, embiste %s · dos ground pounds: aro %s, embiste %s'):format(tostring(plain.aim), tostring(plain.charge),
+            tostring(trick.ping), tostring(trick.charge)))
+    -- contragolpe
+    reset()
+    local pa = playerAt(level, 1)
+    pa.x, pa.y, pa.vy, pa.onGround = boss.x + 2 * T, boss.y - 3 * T, 0, false
+    local claw = false
+    stepAll(level, es, { pa }, 1.2, function() boss.pingT = -99; if boss.state == 'aim' and boss.kind == 2 then claw = true end end)
+    check('truco', claw, 'aterrizar a su lado: contragolpe con la pinza ' .. tostring(claw))
+end
+
 function love.load()
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'ronda', 'aro_detecta', 'embestida', 'pinzas', 'techo', 'luz', 'caja', 'rabia', 'muerte', 'red' }) do
+    for _, n in ipairs({ 'ronda', 'aro_detecta', 'embestida', 'pinzas', 'techo', 'luz', 'truco', 'caja', 'rabia', 'muerte', 'red' }) do
         if not only or only == n then
             local ok, err = pcall(cases[n])
             if not ok then check(n, false, 'ERROR ' .. tostring(err)) end

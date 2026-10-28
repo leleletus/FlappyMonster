@@ -118,6 +118,7 @@ local DECK_W, DECK_H = 24 * 4, 10 * 4           -- (el arte: 24x10 a ×4)
 local DECK_IN = 1.0                             -- s que tardan en salir al empezar la 2ª fase
 local DROP_FX = 0.8                             -- s que se ve el BAJÓN de los bafles
 GC.PANEL, GC.BOOM_H, GC.DECK_T = PANEL, BOOM_H, DECK_T
+GC.DECK_COOL = 12 * BAR                         -- s sin poder encender los platos tras un bajón (19,2 s: más que el KO)
 P.T, P.MS, P.FW, P.FH, P.S16, P.BAR, P.BEAT = T, MS, FW, FH, S16, BAR, BEAT
 P.REGROW_T, P.STUN_T, P.BOOM_LEN, P.FLOOR_WARN = REGROW_T, STUN_T, BOOM_LEN, FLOOR_WARN
 P.NOTE_R, P.GOLD_R = NOTE_R, GOLD_R
@@ -358,6 +359,13 @@ function GC:goldOff() return self.phase == 2 and self.decks ~= nil and self.deck
 -- ¿Se pueden poner a girar? (no con él noqueado o recomponiéndose: el bajón ya le dio; ni durante la pista de baile)
 function GC:decksLive()
     return self:goldOff() and self:isActive() and self.state ~= 'stunned' and self.state ~= 'regrow' and not self:decksAway()
+        and self:deckCool() <= 0
+end
+-- ENFRIAMIENTO de los platos tras un bajón (0.5.64, el usuario: "se puede spamear, no tienen cooldown"): DECK_COOL s
+-- (en su reloj) desde el bajón no se pueden encender. → lo que falta (0 = listos). Del reloj: igual online
+function GC:deckCool()
+    if not self.dropT then return 0 end
+    return math.max(0, GC.DECK_COOL - ((self.songT or 0) - self.dropT))
 end
 -- (0.5.53-0.5.55 se iba solo a ponerse bajo el otro plato al encender uno: "queda forzado y raro" — el usuario, 0.5.56;
 -- ahora se porta como siempre y eres TÚ quien lo atrae: te sigue andando y sus saltos caen donde estás)

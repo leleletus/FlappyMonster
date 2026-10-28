@@ -79,8 +79,14 @@ local KIND = { charge = 1, claw = 2, pounce = 3, dive = 4 }
 local WALK       = { 95, 115 }             -- px/s rondando
 local CHARGE     = { 640, 730 }            -- px/s embistiendo
 local AIM_T      = { 0.9, 0.8 }           -- s apuntando (con la marca puesta)
-local TIRED_T    = { 2.3, 2.0 }            -- s agotado (hay que alumbrarlo aquí)
-local ATTACK_CD  = { 1.3, 1.0 }            -- s entre ataques
+-- (0.5.64, el usuario: "el de mejor diseño pero el más fácil: basta con spamear el ground pound y alumbrarlo" →
+-- más AGRESIVO: menos descanso y agotado menos rato; APRENDE el truco del ground pound (SUSPICIOUS); la luz tiene que
+-- MANTENERSE sobre él (LIGHT_NEED) para deslumbrarlo; contragolpe si caes a su lado; enfadado, aros de dos en dos)
+local TIRED_T    = { 1.9, 1.6 }            -- s agotado (hay que alumbrarlo aquí) (era 2.3 / 2.0)
+local ATTACK_CD  = { 0.9, 0.7 }            -- s entre ataques (era 1.3 / 1.0)
+local LIGHT_NEED = 0.6                     -- s seguidos de luz sobre su cuerpo, agotado, para deslumbrarlo
+local GP_WINDOW, GP_TRICK = 6, 2           -- ese número de ground pounds en esos s: SOSPECHA (va a por ti, no al ruido)
+local COUNTER_R  = 2.6 * T                 -- caer (aterrizar) a menos de esto de él, rondando: contragolpe con la pinza
 local FRESH      = 4.0                     -- s que un "!" sirve para atacar
 local CLAW_REACH = 240                     -- px que alcanza la estocada desde la unión de la pinza (lo que se ve)
 local CLAW_PICK  = 4.0 * T                 -- un "!" a menos de esto del cuerpo: estocada
@@ -170,6 +176,16 @@ function MG:hear(level, dt)
     if z then
         local zx0, zx1, zy0, zy1 = self:zoneBounds()
         if z.x > zx0 and z.x < zx1 and z.y > zy0 - T and z.y < zy1 + T then
+            -- (el TRUCO: ground pounds seguidos para que embista contra el ruido → empieza a sospechar)
+            if z.r >= Noise.R.pound * T then                    -- (r va en px)
+                local now = self.fightT or 0
+                self.gpTimes = self.gpTimes or {}
+                self.gpTimes[#self.gpTimes + 1] = now
+                local n = 0
+                for _, g in ipairs(self.gpTimes) do if now - g <= GP_WINDOW then n = n + 1 end end
+                while #self.gpTimes > 6 do table.remove(self.gpTimes, 1) end
+                if n >= GP_TRICK then self.suspicious = true end
+            end
             self.tx, self.ty, self.tAge, self.tEcho = z.x, z.y, 0, false
             -- (quién lo ha hecho, si está ahí: la estocada le apunta a él)
             self.tPa = nil
@@ -534,7 +550,27 @@ function MG:updateBoss(dt, level)
         end
         -- un "!" reciente: a por él
         local may = self:mayAttack(level)                       -- (con un aliado: por turnos, Boss:mayAttack)
+        -- CONTRAGOLPE: alguien aterriza a su lado (p. ej. tras rebotarle) → la pinza, ya
+        self._air = self._air or setmetatable({}, { __mode = 'k' })
+        for _, pa in ipairs(level.players or {}) do
+            local landed = pa.onGround and self._air[pa]
+            self._air[pa] = not pa.onGround
+            if may and landed and self.cdT <= 0 and not pa.dying and math.abs(pa.x - self.x) < COUNTER_R
+               and math.abs(pa.y - self.y) < 2 * T then
+                self.tx, self.ty, self.tAge, self.tEcho, self.tPa = pa.x, pa.y, 0, false, pa
+                self:startAim(level)
+                return
+            end
+        end
         if may and self.tx and self.tAge <= FRESH and self.cdT <= 0 then
+            -- SOSPECHA (ground pounds seguidos): no se fía del ruido — se para, suelta un aro y va a por quien toque
+            if self.suspicious and not self.tEcho then
+                self.suspicious, self.gpTimes, self.tAge = false, {}, FRESH + 1
+                self.icon, self.iconT = 2, 1.2
+                self.pingT = 0
+                self:enter('ping')
+                return
+            end
             self:startAim(level)
             return
         end
@@ -563,7 +599,8 @@ function MG:updateBoss(dt, level)
 
     elseif st == 'ping' then
         if t >= 0.2 and not self.pinged then self.pinged = true; self:ping() end
-        if t >= PING_T then self.pinged = nil; self:enter('prowl') end
+        if self.rage and t >= 0.65 and not self.pinged2 then self.pinged2 = true; self:ping() end   -- (enfadado: dos)
+        if t >= PING_T + (self.rage and 0.45 or 0) then self.pinged, self.pinged2 = nil, nil; self:enter('prowl') end
 
     elseif st == 'climb' then
         local P = self.path
@@ -683,7 +720,12 @@ function MG:updateBoss(dt, level)
         end
 
     elseif st == 'tired' then
-        if self:lit(level) then
+        -- la luz tiene que QUEDARSE en él LIGHT_NEED s (se llena; sin luz se vacía al doble de rápido)
+        if t < dt * 1.5 then self.lightT = 0 end
+        if self:lit(level) then self.lightT = (self.lightT or 0) + dt
+        else self.lightT = math.max(0, (self.lightT or 0) - 2 * dt) end
+        if (self.lightT or 0) >= LIGHT_NEED then
+            self.lightT = 0
             Sound.play('mgloomyDazzled')
             self:enter('dazzled')
         elseif t >= TIRED_T[ph] * (self.rage and 0.8 or 1) then
@@ -705,11 +747,12 @@ end
 -- { fase, cuadro, hacia dónde mira, marca x, y, fin de la embestida, ataque (0 ninguno, 1 embestida,
 --   2 pinzas, 3 salto, 4 desde el techo), luz·100 (0 = normal), icono, rabia, giro·100, nAros,
 --   {id, x, y, t·100, alcance}… }   (en la estocada la marca es adonde apunta la pinza)
-local NB = 11
+local NB = 12
 function MG:netPackExtra()
     local out = { self.phase, self.frame, self.face, self.markX, self.markY, self.endX, self.kind,
                   (self.dimT > 0) and math.floor((self.props.dimScale or 0.5) * 100) or 0, self.icon or 0,
-                  self.rage and 1 or 0, math.floor((self.ang or 0) * 100 + 0.5), #self.pings }
+                  self.rage and 1 or 0, math.floor((self.ang or 0) * 100 + 0.5),
+                  (self.state == 'tired') and math.floor((self.lightT or 0) / LIGHT_NEED * 100) or 0, #self.pings }
     for _, p in ipairs(self.pings) do
         out[#out + 1] = p.id; out[#out + 1] = p.x; out[#out + 1] = p.y; out[#out + 1] = math.floor(p.t * 100)
         out[#out + 1] = math.floor(p.max or RING_MAX)
@@ -724,6 +767,7 @@ function MG:netApplyExtra(a, b, f)
     self.icon = b[9] or 0
     self.rage = b[10] == 1
     self.ang = (b[11] or 0) / 100
+    self.lightK = (b[12] or 0) / 100
     self.pings = {}
     for i = 0, (b[NB + 1] or 0) - 1 do
         local j = NB + 2 + i * 5
@@ -903,6 +947,18 @@ function MG:renderGlow(camX, camY)
     if not self:visible() then return end
     local now = love.timer.getTime()
     local st, t = self.state, self.deadTimer or 0
+    -- AGOTADO: el medidor de luz sobre él (hay que mantener la linterna LIGHT_NEED s para deslumbrarlo)
+    if st == 'tired' and not EDITOR_VIEW then
+        local k = math.min(1, self.lightK or ((self.lightT or 0) / LIGHT_NEED))
+        local w, h = 6 * MS, MS
+        local x, y = math.floor(self.x - camX - w / 2), math.floor(self.y - camY - 9 * MS)
+        love.graphics.setColor(0.08, 0.06, 0.12, 0.85)
+        love.graphics.rectangle('fill', x - 3, y - 3, w + 6, h + 6)
+        love.graphics.setColor(GLOW[1], GLOW[2], GLOW[3], 0.95)
+        love.graphics.rectangle('fill', x, y, math.floor(w * k), h)
+        love.graphics.setColor(GLOW[1], GLOW[2], GLOW[3], 0.6)
+        love.graphics.rectangle('line', x - 1, y - 1, w + 2, h + 2)
+    end
     for _, p in ipairs(self.pings or {}) do
         local r = RING_SPD * p.t
         love.graphics.setColor(RING[1], RING[2], RING[3], 0.85 * math.max(0, 1 - r / (p.max or RING_MAX)))

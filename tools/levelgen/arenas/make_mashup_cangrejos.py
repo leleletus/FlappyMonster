@@ -100,7 +100,7 @@ def build():
     # ── EL ESCENARIO DEL FINAL: zona de 28 columnas a cielo abierto, suelo de arena en la 13; a los lados, paredes de
     # jefe; a la derecha, la salida (la meta) que se abre al acabar
     sand = 262147                               # (la arena del escenario de la isla del Groove)
-    zw, floor = 28, 13
+    zw, floor = 26, 13                          # (26: como la arena de la Gloomy; era 28 — el usuario, 0.5.64)
     base = len(cols) + 1
     stage = [[EMPTY] * H for _ in range(3 + zw + 3 + 8)]
     for c, colv in enumerate(stage):

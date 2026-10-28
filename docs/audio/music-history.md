@@ -702,4 +702,17 @@ the old level tune in the final boss, Verity's hook).
 - 0.5.63, the user: "the last part of the Icy section, the bass is out of tune" → in its breath (K: B♭ C Dm Dm Gm B♭ C C)
   the bass played the Tantrum riff cell (root, 4th, minor 3rd) — a D minor shape — over major chords; it now plays
   root, root, 5th, the chord's own 3rd, root. Not listened to by me.
-
+- 0.5.64, the user: (1) the crab loops were "too short (except the Groove's), too repetitive or not a good loop — they
+  don't end as they start" → ~1.5 min each, with more of each theme and in the order its own theme goes, ending the
+  way the theme returns to its start: Tantrum 64 bars (A · A′ · chant · chant′ · tribal bridge · A″ with the chant's
+  band · chant″ · its coda with la llamada → A), 85 s · Icy 68 (A · A′ · thaw · chorus · breath · A″ with its music-box
+  counterpoint · thaw · chorus · coda), 91 s · Gloomy 56 at 144 (legs bridge · A · A′ · chant · chant′ · A″ · coda, all in
+  the cave), 93 s · Groove 56 at 150 (solo · riff A · its B section — new style `groove_bsec` — · climax), 90 s. Loop
+  point steps ≤ 0.8 dB; 0 long notes off their chord. (2) "each crab's part in the final is repetitive" → every final
+  variant is 32 bars: the shared "todos" 16 + 16 of its OWN in the same harmony and 4-bar phrases (Tantrum: the war chant
+  with its tresillo slap, marimba and toms · Icy: the music box's long line on voice and bells, ice bells, shimmer,
+  choir · Gloomy: the chant in the cave, hollow voice, both legs patterns, the pause · Groove: the stop-time slap solo,
+  then its climax riff), so a switch at any cut still fits. (3) "the boss music sounds louder than it should: the
+  icicles, the player being hurt and other effects can hardly be heard" → `levels.py`: bosses −14 in game (were −13),
+  the final boss −13.5 (−12.5), the Groove and the Mega Mashup −12 (−9.5; the adaptive pieces get it through
+  `cues.json` volume 0.75). Not listened to by me.

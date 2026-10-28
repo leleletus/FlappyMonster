@@ -26,19 +26,19 @@ plays the intro once and then repeats the loop. `level` = offered as level music
 | `volcan_1` | Volcán 1 (Sendero de ceniza) | `worlds/volcan/volcan_1_intro.ogg` + `worlds/volcan/volcan_1_loop.ogg` | 0.67 | level |
 | `volcan_2` | Volcán 2 (Lluvia de fuego) | `worlds/volcan/volcan_2_intro.ogg` + `worlds/volcan/volcan_2_loop.ogg` | 0.67 | level |
 | `volcan_bonus` | Volcán (bonus) | `worlds/volcan/volcan_bonus_intro.ogg` + `worlds/volcan/volcan_bonus_loop.ogg` | 0.63 | level |
-| `gummy_king_boss` | Su Majestad Gummy (Rey Gummy) | `bosses/gummy_king_boss_intro.ogg` + `bosses/gummy_king_boss_loop.ogg` | 0.75 | boss |
-| `evil_ship_boss` | Persecución (Nave Malvada) | `bosses/evil_ship_boss_intro.ogg` + `bosses/evil_ship_boss_loop.ogg` | 0.74 | boss |
-| `crab_tantrum_normal` | Crab Tantrum (Mega Crabby) | `bosses/crab_tantrum_normal_intro.ogg` + `bosses/crab_tantrum_normal_loop.ogg` | 0.7 | boss |
-| `crab_tantrum_icy` | Crab Tantrum (Mega Crabby helado) | `bosses/crab_tantrum_icy_intro.ogg` + `bosses/crab_tantrum_icy_loop.ogg` | 0.7 | boss |
-| `crab_tantrum_gloomy` | Crab Tantrum (Mega Crabby lúgubre) | `bosses/crab_tantrum_gloomy_intro.ogg` + `bosses/crab_tantrum_gloomy_loop.ogg` | 0.79 | boss |
-| `snowball_boss` | La Gran Bola (Gran Bola de Nieve) | `bosses/snowball_boss_intro.ogg` + `bosses/snowball_boss_loop.ogg` | 0.75 | boss |
-| `mirror_chase` | ¡Corre! (la persecución del Espejo) | `bosses/mirror_chase_intro.ogg` + `bosses/mirror_chase_loop.ogg` | 0.62 | level, boss |
-| `snowball_verity` | ¿La Gran Bola? (Verity, huevo de Pascua) | `bosses/snowball_verity_intro.ogg` + `bosses/snowball_verity_loop.ogg` | 0.75 | boss |
-| `mirror_boss` | El Espejo (jefe final) | `bosses/mirror_boss_intro.ogg` + `bosses/mirror_boss_loop.ogg` | 0.71 | boss |
-| `resaca` | Resaca (Pez Globo Gigante) | `bosses/resaca.ogg` | 0.71 | boss |
-| `polilla` | La Polilla (Saltarín Gigante) | `bosses/polilla_intro.ogg` + `bosses/polilla_loop.ogg` | 0.78 | boss |
-| `groove` | El Groove (jefe secreto) | `bosses/groove_intro.ogg` + `bosses/groove_loop.ogg` | 0.99 | boss |
-| `crab_mashup` | Mega Mashup de los Cangrejos (evento) | `bosses/crab_mashup_intro.ogg` + `bosses/crab_mashup_loop.ogg` | 1 | boss |
+| `gummy_king_boss` | Su Majestad Gummy (Rey Gummy) | `bosses/gummy_king_boss_intro.ogg` + `bosses/gummy_king_boss_loop.ogg` | 0.67 | boss |
+| `evil_ship_boss` | Persecución (Nave Malvada) | `bosses/evil_ship_boss_intro.ogg` + `bosses/evil_ship_boss_loop.ogg` | 0.66 | boss |
+| `crab_tantrum_normal` | Crab Tantrum (Mega Crabby) | `bosses/crab_tantrum_normal_intro.ogg` + `bosses/crab_tantrum_normal_loop.ogg` | 0.63 | boss |
+| `crab_tantrum_icy` | Crab Tantrum (Mega Crabby helado) | `bosses/crab_tantrum_icy_intro.ogg` + `bosses/crab_tantrum_icy_loop.ogg` | 0.63 | boss |
+| `crab_tantrum_gloomy` | Crab Tantrum (Mega Crabby lúgubre) | `bosses/crab_tantrum_gloomy_intro.ogg` + `bosses/crab_tantrum_gloomy_loop.ogg` | 0.7 | boss |
+| `snowball_boss` | La Gran Bola (Gran Bola de Nieve) | `bosses/snowball_boss_intro.ogg` + `bosses/snowball_boss_loop.ogg` | 0.67 | boss |
+| `mirror_chase` | ¡Corre! (la persecución del Espejo) | `bosses/mirror_chase_intro.ogg` + `bosses/mirror_chase_loop.ogg` | 0.55 | level, boss |
+| `snowball_verity` | ¿La Gran Bola? (Verity, huevo de Pascua) | `bosses/snowball_verity_intro.ogg` + `bosses/snowball_verity_loop.ogg` | 0.67 | boss |
+| `mirror_boss` | El Espejo (jefe final) | `bosses/mirror_boss_intro.ogg` + `bosses/mirror_boss_loop.ogg` | 0.63 | boss |
+| `resaca` | Resaca (Pez Globo Gigante) | `bosses/resaca.ogg` | 0.64 | boss |
+| `polilla` | La Polilla (Saltarín Gigante) | `bosses/polilla_intro.ogg` + `bosses/polilla_loop.ogg` | 0.69 | boss |
+| `groove` | El Groove (jefe secreto) | `bosses/groove_intro.ogg` + `bosses/groove_loop.ogg` | 0.74 | boss |
+| `crab_mashup` | Mega Mashup de los Cangrejos (evento) | `bosses/crab_mashup_intro.ogg` + `bosses/crab_mashup_loop.ogg` | 0.75 | boss |
 | `menus` | Menús | `menus/menus.ogg` | 0.93 |  |
 | `flappy` | Aleteo (modo Flappy) | `flappy/flappy_intro.ogg` + `flappy/flappy_loop.ogg` | 0.7 |  |
 | `map_pradera` | Rumbo a las islas (Pradera) | `map/map_pradera.ogg` | 0.71 |  |

@@ -186,6 +186,21 @@ function cases.flujo()
     for _, r in ipairs(order) do if r ~= act and cm.fin[r].offstage == 'wait' then nBack = nBack + 1 end end
     check('final', fz.state == 'fight' and act ~= nil and nBack == 3 and cm.piece == 'final_' .. act and cm.hpMax == 16,
         ('zona %s, pelea %s, al fondo esperando %d, pieza %s, barra %s/%s'):format(fz.state, tostring(act), nBack, tostring(cm.piece), cm.hp, cm.hpMax))
+    -- los que esperan: DE PIE en el suelo del escenario y paseando (no flotando)
+    local x0, onFloor = {}, true
+    for _, r in ipairs(order) do
+        local w = cm.fin[r]
+        if r ~= act then
+            x0[r] = w.x
+            local feet = w.y + w.outerH / 2
+            if w.def.name == 'megagloomy' then feet = fz.y1 end
+            if math.abs(feet - fz.y1) > 24 then onFloor = false end
+        end
+    end
+    step(level, es, ctl, pa, 3)
+    local walked = 0
+    for r, x in pairs(x0) do if math.abs(cm.fin[r].x - x) > T then walked = walked + 1 end end
+    check('final', onFloor and walked >= 2, ('los que esperan: de pie en el suelo %s, han andado %d de 3'):format(tostring(onFloor), walked))
     local seen = { notes = 0, ice = 0, crab = 0, dark = false }
     local reserves = {}
     for _, e in ipairs(es) do if e.summonOf then reserves[#reserves + 1] = e end end
@@ -215,7 +230,8 @@ function cases.flujo()
         local pid = cm.pend and cm.pend.piece
         if k < 4 then
             step(level, es, ctl, pa, 8, function() return cm.active ~= prev end)
-            local okPos = cut and math.abs(cm.pos - (cut % (require('src/world/entities/types/directors/crabmashup').cues and 22.5882 or 22.5882))) < 0.1
+            local len = require('src/world/entities/types/directors/crabmashup').class.cues().pieces[pid].music_end
+            local okPos = cut and math.abs(cm.pos - (cut % len)) < 0.1
             check('relevo', cm.fin[prev].offstage == 'ko' and cm.active ~= prev and not cm.ko[cm.active] and cm.piece == pid and okPos,
                 ('%s → al fondo %s; baja %s; música %s en %.2f (corte %.2f)'):format(prev, tostring(cm.fin[prev].offstage),
                     tostring(cm.active), tostring(cm.piece), cm.pos, cut or -1))

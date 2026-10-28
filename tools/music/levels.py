@@ -3,7 +3,8 @@
 # assets/music/index.json para que todas suenen igual de fuertes EN EL JUEGO (sonoridad del archivo + volumen).
 # Los volúmenes de antes estaban puestos para las pistas prestadas: los jefes nuevos salían ~3,5 dB por encima de
 # los niveles y al entrar en la pelea había un salto. Objetivos (LUFS efectivos): niveles y mapa −14,5 · pistas
-# tranquilas (cuevas, arrecife) −15,3 · jefes −13 (un punto por encima del nivel, sin salto) · jefe final −12,5 ·
+# tranquilas (cuevas, arrecife) −15,3 · jefes −14 (medio punto por encima del nivel; −13 hasta la 0.5.64: tapaba los
+# efectos) · jefe final −13,5 · el Groove y el Mega Mashup −12 ·
 # resultados −15 · menús −15,5.
 #   ~/.venvs/fm-music/bin/python tools/music/levels.py      (repetirlo siempre que se regenere o añada una pista)
 import json, re, math, os
@@ -15,9 +16,12 @@ CALM = {'costa_2', 'cuevas_1', 'cuevas_2', 'cuevas_oscuras', 'map_cuevas'}
 
 def target(t):
     i = t['id']
-    if i == 'mirror_boss': return -12.5
-    if i in ('groove', 'crab_mashup'): return -9.5   # (El Groove y el mashup de los cangrejos pelean AL RITMO de su tema: aquí la música manda — el usuario)
-    if t.get('boss'): return -13.0
+    # (0.5.64, el usuario: "la música de los jefes suena más fuerte de lo que debería y los carámbanos, el daño del
+    #  jugador y otros efectos casi ni se oyen" → todo lo de jefe, 1 dB más bajo; el Groove y el mashup, que iban a
+    #  −9,5 para que la música mandara, a −12: siguen por encima del resto pero dejan oír los efectos)
+    if i == 'mirror_boss': return -13.5
+    if i in ('groove', 'crab_mashup'): return -12.0
+    if t.get('boss'): return -14.0
     if i == 'menus': return -15.5
     if i.startswith('story_'): return -14.0   # (cinemáticas: con sus efectos de sonido encima)
     if i == 'victory': return -14.0          # (la pantalla de resultados la baja aún más mientras cuenta)

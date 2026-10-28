@@ -244,3 +244,13 @@ nothing to build now.)
   much later from under the ground → its hop is timed in its own song clock from the bar number, and in the event
   that clock started at 0 while the bar came from the event's music: the Groove's clock now comes from the event's
   music (`GC:songNow`). `mashup_rules` checks hops inside the zone and the platforms.
+- 0.5.64, the user: (1) the crabs waiting for their turn in the final "appear small and floating in the middle, it
+  doesn't look right" → they WALK AROUND THE STAGE at full size (`stageWalk`: each with its own walk — the Megas' walk
+  and steps, the Gloomy's prowl, the Groove dancing —), darker (`DIM`), harmless on contact, still throwing the same
+  hazards with a gesture of their own (`throwAnim`: Tantrum roars, Icy punches, Gloomy shrieks, Groove snaps); the
+  beaten ones stay KNOCKED OUT on the floor where they fell (in their KO pose: upside down, frozen claws, covered by its
+  claws, glasses off), darker, until the end. In the intro they stand on the stage floor too, black until their
+  spotlight. The next crab in the relay starts from where it stands (no fall from the sky). (2) The stage is 26 cells
+  wide (was 28: like the Gloomy's arena). (3) Longer, more varied loops and a 16-bar section of each crab's own in its
+  final version; the music 2.5 dB quieter in game (docs/audio/music-history.md). Also in this round: the Gloomy buff
+  and the Groove's deck cooldown (their pages).

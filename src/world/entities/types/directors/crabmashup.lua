@@ -46,15 +46,18 @@ local PIDX = {}
 for i, p in ipairs(PIECE_IDS) do PIDX[p] = i end
 local RIDX = { tantrum = 1, icy = 2, gloomy = 3, groove = 4 }
 
--- Cómo se ve cada uno al FONDO (esperando / noqueado): uno de sus propios estados, quieto
+-- Los que ESPERAN su turno en el final andan por el ESCENARIO (0.5.64, el usuario: "flotando chiquitos en el centro
+-- no queda bien"): a su tamaño, más oscuros, sin hacer daño al tocarlos, con sus animaciones y sonidos; tiran su peligro
+-- con un gesto (throw: uno de sus estados, `kind` = su emote). Cada uno con uno de sus propios estados
 local LOOK = {
-    megacrabby      = { wait = 'rest',  ko = 'stuck' },
-    megacrabby_ice  = { wait = 'rest',  ko = 'clap_stuck' },
-    megagloomy      = { wait = 'prowl', ko = 'dazzled' },
-    groovecrab      = { wait = 'groove', ko = 'stunned' },
+    megacrabby      = { wait = 'chase',  throw = 'rest', kind = 1, sound = 'megaRoar',  ko = 'stuck' },
+    megacrabby_ice  = { wait = 'chase',  throw = 'rest', kind = 2, sound = 'megaClack', ko = 'clap_stuck' },
+    megagloomy      = { wait = 'prowl',  throw = 'shriek', ko = 'dazzled' },
+    groovecrab      = { wait = 'groove', throw = 'snap',   ko = 'stunned' },
 }
 local FADE_OUT, TELEPORT_AT, FADE_IN = 0.45, 0.5, 0.55          -- s de la costura: a negro, cambio, vuelve
-local BACK_SCALE = 0.5                                            -- (los del fondo, a esta escala)
+local WANDER = 75                                                 -- px/s paseando por el escenario
+local DIM = { wait = { 0.55, 0.55, 0.66 }, ko = { 0.45, 0.42, 0.52 } }   -- (más oscuros que el que pelea)
 CM.ICICLE_WARN, CM.ICICLE_FALL = 0.55, 900                        -- s de aviso, px/s
 CM.NOTE_SPEED = 300
 CM.BLACKOUT = { 0.3, 0.8, 0.45 }                                  -- s: se apaga, apagado, vuelve
@@ -273,7 +276,7 @@ function CM:onPiece(pid, old)
         local z = self.finalZone
         level:applyScene(self:sceneOf(z))
         z.state, z.cineKey = 'intro', 'mashup.title'
-        for _, r in ipairs(CM.ROLES) do if self.fin[r] then self:toBack(self.fin[r], r, 'wait') end end
+        for _, r in ipairs(CM.ROLES) do if self.fin[r] then self:toStage(self.fin[r], r) end end
     elseif LOOP[pid] then
         self:fightMain(RIDX[pid])
     elseif pid:sub(1, 5) == 'seam_' then
@@ -444,41 +447,105 @@ function CM:moveTo(i, players)
             local b = self.fin[r]
             if b then
                 if r == self.active then b.offstage = nil; b:startIntro(level, players, z)
-                else self:toBack(b, r, 'wait') end
+                else self:toStage(b, r) end
             end
         end
     end
 end
 
--- Al FONDO: su sitio arriba del escenario, quieto en uno de sus estados (LOOK)
--- (alrededor del CENTRO del escenario, a 4 casillas uno de otro: el escenario es más ancho que la pantalla y el
--- cuarto, en su esquina, no salía en la intro — el usuario, 0.5.63 —)
+-- Su sitio en el ESCENARIO (de pie en el suelo, repartidos alrededor del centro)
 function CM:slot(role)
     local z = self.finalZone
-    local i = RIDX[role]
-    return (z.x0 + z.x1) / 2 + (i - 2.5) * 4 * T, z.y0 + 4.2 * T          -- (centrados en alto, no flotando arriba: el usuario)
+    return (z.x0 + z.x1) / 2 + (RIDX[role] - 2.5) * 5 * T
 end
-function CM:toBack(b, role, kind)
-    b.offstage, b.eventFrozen = kind, false
-    b.x, b.y = self:slot(role)
-    b.vx, b.vy, b.inv, b.ghost = 0, 0, 0, false
-    local look = LOOK[b.def.name] and LOOK[b.def.name][kind]
-    if look then b.state, b.deadTimer = look, 0 end
-    b.flipped = (look == 'stuck')
+-- De pie en el suelo del escenario en x (cada tipo a su manera: su caja va distinta)
+function CM:standAt(b, x)
+    local z = self.finalZone
+    b.x, b.vx, b.vy = x, 0, 0
+    if b.stand and b.def.name == 'megagloomy' then b:stand(self.level, x)
+    elseif b.floorY and b.def.name == 'groovecrab' then b.y = b.floorY - b.outerH / 2
+    else b.y, b.onGround = z.y1 - b.outerH / 2, true end
+end
+-- Esperando su turno: a su sitio, de pie, andando por ahí (sin daño, sin pensar: lo lleva stageWalk)
+function CM:toStage(b, role)
+    b.offstage, b.eventFrozen, b.throwT = 'wait', false, nil
+    b.inv, b.ghost, b.flipped = 0, false, false
     if b.crawl ~= nil then b.crawl = false end
+    if b.ang then b.ang = 0 end
+    self:standAt(b, self:slot(role))
+    local L = LOOK[b.def.name]
+    if L then b.state, b.deadTimer = L.wait, 0 end
+    b.wanderDir = (RIDX[role] % 2 == 0) and 1 or -1
+end
+-- Vencido en el final: se queda NOQUEADO donde cayó (como estaba al congelarse), sin hacer nada hasta el fin
+function CM:toKO(b)
+    b.offstage, b.eventFrozen = 'ko', false
+    b.inv, b.ghost = 0, false
+    -- (en el suelo y en su pose de noqueado: si lo vencieron en el aire o en la pared, no se queda flotando)
+    if b.crawl ~= nil then b.crawl = false end
+    if b.ang then b.ang = 0 end
+    b.hop = nil
+    local L = LOOK[b.def.name]
+    if L and L.ko and b.state ~= L.ko then b.state, b.deadTimer = L.ko, 0 end
+    b.flipped = (b.state == 'stuck')
+    self:standAt(b, math.max(self.finalZone.x0 + 2 * T, math.min(self.finalZone.x1 - 2 * T, b.x)))
 end
 
--- El relevo del final (en el corte): el vencido, al fondo noqueado; el siguiente baja a pelear
+-- Un paso de los que esperan: pasean de un lado a otro (dan la vuelta en los bordes y, a ratos, porque sí)
+function CM:stageWalk(b, dt)
+    local L = LOOK[b.def.name]
+    if not L then return end
+    b.deadTimer = (b.deadTimer or 0) + dt
+    if b.throwT then                                              -- (el gesto de tirar su peligro)
+        b.throwT = b.throwT - dt
+        if b.throwT > 0 then return end
+        b.throwT, b.state, b.deadTimer = nil, L.wait, 0
+    end
+    local z = self.finalZone
+    local d = b.wanderDir or 1
+    b.wanderT = (b.wanderT or (2 + math.random() * 3)) - dt
+    if b.wanderT <= 0 then b.wanderT, d = 2.5 + math.random() * 3.5, -d end
+    local nx = b.x + d * WANDER * dt
+    if nx < z.x0 + 2 * T then nx, d = z.x0 + 2 * T, 1 elseif nx > z.x1 - 2 * T then nx, d = z.x1 - 2 * T, -1 end
+    b.wanderDir = d
+    local name = b.def.name
+    if name == 'megagloomy' then
+        b.face, b.dir = d, d
+        b:stand(self.level, nx)
+        b:walkAnim(dt)
+    elseif name == 'groovecrab' then
+        b.facing, b.x = d, nx
+    else
+        b.facing = d
+        b:walk(self.level, dt, d * WANDER)
+        b:animWalk(dt, (b.tuning and b.tuning.walkFps) or 8)
+    end
+end
+-- El gesto al tirar su peligro (y su sonido)
+function CM:throwAnim(b, dur)
+    local L = b and LOOK[b.def.name]
+    if not L or b.offstage ~= 'wait' then return end
+    b.state, b.deadTimer, b.throwT = L.throw, 0, dur
+    if L.kind then b.restKind = L.kind end
+    if L.sound then Sound.play(L.sound, 1.1, 0.5) end
+end
+
+-- El relevo del final (en el corte): el vencido se queda noqueado donde cayó; el siguiente — que ya está en el
+-- escenario — se pone a pelear (ruge, sin entrada desde el cielo)
 function CM:swap(role)
     local level = self.level
     local old = self.active and self.fin[self.active]
-    if old then self:toBack(old, self.active, 'ko') end
+    if old then self:toKO(old) end
     self.active = role
     local b = self.fin[role]
     if not b then return end
-    b.offstage, b.eventFrozen, b.started = nil, false, false
-    b.x, b.y = (self.finalZone.x0 + self.finalZone.x1) / 2, self.finalZone.y0 + T
-    b:startIntro(level, self:players(), self.finalZone)
+    b.offstage, b.eventFrozen, b.throwT = nil, false, nil
+    self:standAt(b, b.x)
+    b.started = true
+    b.introPlayed = true                                          -- (los Mega: ya en escena, a perseguir directamente)
+    b:startFight(#self:players())
+    Entity.emitFx('shake_roar', b.x, b.y)
+    Sound.play('megaRoar', 0.9)
     level.helpHint = true
     Sound.play('crowdCheer', 1.0)
 end
@@ -503,6 +570,10 @@ function CM:tickFinal(dt, level, players)
     elseif level.dark then
         level.darkness = math.max(0, (level.darkness or 0) - dt / 0.8)
         if level.darkness <= 0 then level.dark = false end
+    end
+    for _, r in ipairs(CM.ROLES) do
+        local x = self.fin[r]
+        if x and x.alive and x.offstage == 'wait' then self:stageWalk(x, dt) end
     end
     -- LOS QUE ESPERAN tiran su peligro, al compás de la música
     local pc = piece(self.piece)
@@ -533,6 +604,7 @@ function CM:tickFinal(dt, level, players)
     if bar ~= pbar then
         if waiting('gloomy') and bar % 8 == 5 and not self.blackT and self.active ~= 'gloomy' then
             self.blackT = self.t
+            self:throwAnim(self.fin.gloomy, 1.0)
             Sound.play('mgloomyShriek', 0.9)
         end
         if waiting('tantrum') and bar % 8 == 1 then self:dropCrabby(level, players) end
@@ -549,6 +621,7 @@ function CM:fireNote(level, players)
     self.noteId = self.noteId + 1
     self.notes[#self.notes + 1] = { id = self.noteId, x = src.x, y = src.y, vx = dx / d * CM.NOTE_SPEED,
                                     vy = dy / d * CM.NOTE_SPEED, c = self.noteId % 4 + 1, t = 0 }
+    self:throwAnim(src, 0.35)
     Sound.play('megaClack', 1.3, 0.6)
 end
 
@@ -559,6 +632,7 @@ function CM:dropIcicle(level, players)
     local floor = select(2, level:landingCross(x, tgt.y - T, z.y1 + T)) or (tgt.y + T)
     self.noteId = self.noteId + 1
     self.icicles[#self.icicles + 1] = { id = self.noteId, x = x, y = z.y0, floor = floor, t = 0 }
+    self:throwAnim(self.fin.icy, 0.8)
 end
 
 function CM:dropCrabby(level, players)
@@ -576,6 +650,7 @@ function CM:dropCrabby(level, players)
     e.state, e.deadTimer = 'spawning', 0
     e.leashZone = z
     Entity.emitFx('spawn', x, h.y)
+    self:throwAnim(mega, 1.2)
     Sound.play('respawnFx', 0.8)
 end
 
@@ -746,33 +821,46 @@ local function scaled(e, sx, sy, sc, tint, look)
 end
 CM.drawScaled = scaled
 
--- Detrás de los bloques: los cangrejos del fondo y, al final, los resultados en la pantalla del escenario
+-- Detrás de los bloques: los focos de la intro y, al final, los resultados en la pantalla del escenario
+function CM:introLit()
+    if self.phase ~= 'intro' then return 4 end
+    local pc = piece('intro')
+    return pc and math.min(4, barAt(pc, math.max(0, self.pos))) or 0
+end
 function CM:renderBack(camX, camY)
     if EDITOR_VIEW or not self.fin then return end
-    -- (la INTRO, en el escenario: a oscuras, un foco por compás sobre cada uno, en el orden de la pelea)
-    local lit = 4
-    if self.phase == 'intro' then
-        local pc = piece('intro')
-        lit = pc and math.min(4, barAt(pc, math.max(0, self.pos))) or 0
-    end
-    for k, r in ipairs(CM.ROLES) do
-        local b = self.fin[r]
-        if b and b.alive and b.offstage then
-            local sx, sy = math.floor(b.x - camX), math.floor(b.y - camY)
-            local ko = b.offstage == 'ko'
-            local on = k <= lit
-            if self.phase == 'intro' and on then
+    if self.phase == 'intro' then                                -- (un foco por compás sobre cada uno)
+        local lit = self:introLit()
+        for k, r in ipairs(CM.ROLES) do
+            local b = self.fin[r]
+            if b and b.alive and k <= lit then
+                local sx, fy = math.floor(b.x - camX), math.floor(self.finalZone.y1 - camY)
                 love.graphics.setBlendMode('add')
                 love.graphics.setColor(1, 0.95, 0.7, 0.16)
-                love.graphics.polygon('fill', sx - 20, 0, sx + 20, 0, sx + 3 * T, sy + 2 * T, sx - 3 * T, sy + 2 * T)
+                love.graphics.polygon('fill', sx - 20, 0, sx + 20, 0, sx + 3 * T, fy, sx - 3 * T, fy)
                 love.graphics.setBlendMode('alpha')
             end
-            local tint = ko and { 0.55, 0.5, 0.6 } or (on and (self.phase == 'intro' and { 1, 1, 1 } or { 0.8, 0.78, 0.9 }) or { 0.06, 0.05, 0.1 })
-            scaled(b, sx, sy, self.phase == 'intro' and 0.7 or BACK_SCALE, tint)
-            if ko then require('src/fx/BossFx').stars(sx, sy - 3 * T * BACK_SCALE, 3 * T * BACK_SCALE, 10, 6, 0.9, 'front') end
         end
     end
     if self.phase == 'outro' then self:drawResults(camX, camY) end
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
+-- Los que no pelean (esperando / noqueados), en el escenario: a su tamaño, más oscuros (en la intro, en negro hasta
+-- que les llega su foco)
+function CM:drawStaged(camX, camY)
+    local lit = self:introLit()
+    for k, r in ipairs(CM.ROLES) do
+        local b = self.fin and self.fin[r]
+        if b and b.alive and b.offstage then
+            local tint = DIM[b.offstage] or DIM.wait
+            if self.phase == 'intro' then tint = (k <= lit) and { 1, 1, 1 } or { 0.07, 0.06, 0.11 } end
+            scaled(b, math.floor(b.x - camX), math.floor(b.y - camY), 1, tint)
+            if b.offstage == 'ko' then
+                require('src/fx/BossFx').stars(math.floor(b.x - camX), math.floor(b.y - camY - b.sprH * 0.45), b.sprW * 0.35, 14, 7, 0.8, 'front')
+            end
+        end
+    end
 end
 
 -- Encima: siluetas de la intro, peligros, estrellas de los aturdidos, el fundido de las costuras
@@ -780,6 +868,7 @@ local noteArt, iceArt
 function CM:render(camX, camY)
     if EDITOR_VIEW then return end
     local now = love.timer.getTime()
+    self:drawStaged(camX, camY)
     -- estrellitas sobre los congelados (aturdidos hasta el corte)
     for _, list in ipairs({ self.main or {}, self.fin or {} }) do
         for _, b in pairs(list) do

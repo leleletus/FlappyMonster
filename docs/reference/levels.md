@@ -42,7 +42,7 @@ Every file in `assets/levels/` (48). **Story** = world number, world id and posi
 | `lago_helado` | Lago Helado / Frozen Lake | 113x15 | 4 nieve · 3 |  | `nieve_1` | `snowboss` | snow night · snowfall |
 | `lluvia_pinchos` | Lluvia de Pinchos / Spike Rain | 176x11 | 6 final · 3 | race | `volcan_2` |  | volcano · auto-scroll |
 | `marea_alta` | Marea Alta / High Tide | 40x11 |  | koth | `costa_bonus` |  | coast dusk · floods, 1 point zone, depth underwater |
-| `mashup_cangrejos` | Mega Mashup de los Cangrejos / Crab Mega Mashup | 166x15 |  | race | `costa_groove` | `groovecrab`, `megacrabby_ice`, `megacrabby`, `megagloomy` | coast night |
+| `mashup_cangrejos` | Mega Mashup de los Cangrejos / Crab Mega Mashup | 164x15 |  | race | `costa_groove` | `groovecrab`, `megacrabby_ice`, `megacrabby`, `megagloomy` | coast night |
 | `mina_inundada` | Mina Inundada / Flooded Mine | 100x26 |  | hunt | `fortaleza_1` |  | mountain · depth cave |
 | `nivel01` | Laberinto Abisal / Abyssal Labyrinth | 60x28 | 5 cuevas · 2 |  | `cuevas_1` |  | cave · depth abyss |
 | `playa_rebotes` | Playa de los Rebotes / Bounce Beach | 170x28 | 2 costa · 1 | race, hunt, hide | `costa_1` |  | coast |

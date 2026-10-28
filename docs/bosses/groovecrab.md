@@ -176,3 +176,7 @@ Protocol 71.
   when a player is hurt or dies and boos when he is hurt or dies (new sounds, NOT listened to). Same release: a
   ceiling Crabby (any skin) dropping onto spikes stayed there stuck → `Entity:droppedOnSpikes` (it bursts). Not
   played by the user yet: deck length, crowd sounds and burst feel are to judge.
+- 0.5.64, the user: the DJ decks could be spammed — no cooldown after knocking him out → after a bass drop the decks
+  cannot be started for `DECK_COOL` = 12 bars (19.2 s, longer than the knockout): they go grey and their LEDs refill as
+  the cooldown runs out (`GC:deckCool`, from `dropT` and the song clock: the same online). His level and the Mega
+  Mashup. Harness `groovecrab_rules` (`enfriar`). Not played by the user yet.

@@ -445,6 +445,7 @@ function GC:drawDecks(camX, camY)
     if self._deckAway then self._deckAway, self._deckBack = false, now end
     if self._deckBack then kIn = math.min(kIn, math.min(1, (now - self._deckBack) / DECK_IN)) end
     local live = self:decksLive()
+    local cool = self:deckCool()                                        -- (enfriándose tras un bajón: apagados, oscuros)
     for i, d in ipairs(self.decks) do
         local on = (d.on or 0) > 0
         local fr = on and (math.floor(now * 12) % 3 + 2) or 1
@@ -465,11 +466,13 @@ function GC:drawDecks(camX, camY)
                 love.graphics.setBlendMode('alpha')
             end
             Clip.push(x, y, DECK_W, h)                                  -- (los halos, fuera del recorte)
-            love.graphics.setColor(1, 1, 1, 1)
+            if cool > 0 and not on then love.graphics.setColor(0.45, 0.45, 0.55, 1) else love.graphics.setColor(1, 1, 1, 1) end
             local di, dq = quad(art.deck, fr)
             love.graphics.draw(di, dq, x, y, 0, 4, 4)
-            -- la cuenta atrás: N_LED en la tira de delante (rojos y parpadeando al final)
+            -- la cuenta atrás: N_LED en la tira de delante (rojos y parpadeando al final); enfriándose, se van
+            -- encendiendo en verde-apagado según falta menos (cuando están todos, ya se puede)
             local lit = on and math.ceil(d.on / DECK_T * N_LED) or 0
+            if cool > 0 and not on then lit = math.floor((1 - cool / GC.DECK_COOL) * N_LED) end
             for k = 0, N_LED - 1 do
                 local lf = 1
                 if k < lit then lf = (lit <= 2) and ((math.floor(now * 8) % 2 == 0) and 3 or 1) or 2 end

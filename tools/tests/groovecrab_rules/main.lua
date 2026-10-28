@@ -23,6 +23,7 @@
 --   platos     2ª FASE: los platos de DJ están en las dos plataformas; en la 1ª fase pisarlos no hace nada; en la 2ª ya
 --              no hay dorada, pisar uno lo pone a girar (y rebotas) DECK_T s y luego se apaga; los dos a la vez → el
 --              BAJÓN: noqueado y vulnerable, platos apagados; él no va a ponerse bajo el otro (baila como siempre)
+--   enfriar    tras el bajón, los platos no se pueden encender DECK_COOL s (0.5.64)
 --   ocultos    2ª fase, con la PISTA encendida (la S): los platos y sus plataformas no están (la cuenta del plato
 --              encendido se para) y, al acabar, vuelven
 --   publico    el público vitorea cuando le da a un jugador y abuchea cuando le das (lo que llega por red)
@@ -658,9 +659,26 @@ function cases.red()
             tostring(hasGold), tostring(decksSame), tostring(i1), tostring(i2)))
 end
 
+-- (0.5.64) ENFRIAMIENTO: tras el bajón los platos no se pueden encender DECK_COOL s (el usuario: "se puede spamear")
+function cases.enfriar()
+    local level, es, boss = arena()
+    local pa = playerAt(level, 24)
+    stepAll(level, es, { pa }, 0.05, function() pa.vx, pa.invT = 0, 9 end)
+    phase2(level, es, boss, pa)
+    songAt(boss, START.A + 1, 0)
+    boss:bassDrop()
+    local cool0 = boss:deckCool()
+    boss.state = 'groove'                                  -- (ya despierto: solo cuenta el enfriamiento)
+    local liveDuring = boss:decksLive()
+    boss.songT = boss.dropT + GC.DECK_COOL + 0.1
+    local liveAfter = boss:decksLive()
+    check('enfriar', cool0 > 0 and not liveDuring and liveAfter and boss:deckCool() == 0,
+        ('tras el bajón faltan %.1f s; se pueden pisar: durante %s, después %s'):format(cool0, tostring(liveDuring), tostring(liveAfter)))
+end
+
 function love.load(arg)
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'reloj', 'salto', 'notas', 'dorada', 'aturdido', 'trampolin', 'tocar', 'pista', 'dibujos', 'baile', 'temblor', 'platos', 'ocultos', 'publico', 'trepar', 'enfado',
+    for _, n in ipairs({ 'reloj', 'salto', 'notas', 'dorada', 'aturdido', 'trampolin', 'tocar', 'pista', 'dibujos', 'baile', 'temblor', 'platos', 'enfriar', 'ocultos', 'publico', 'trepar', 'enfado',
                          'solo', 'derrota', 'red' }) do
         if not only or only == n then
             local ok, err = xpcall(cases[n], debug.traceback)

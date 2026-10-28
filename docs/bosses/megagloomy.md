@@ -61,3 +61,11 @@ Background: [dark-levels](../gameplay/dark-levels.md).
   `megagloomy_rules` (+ `LOOK=1`: claws, ring, rage, each telegraph in the dark), `boss_sim` / `boss_intro` / `online_boss`
   with `LEVEL=` that arena.
 - 0.5.27, the user: in the story the bosses stay GIANT until the ending film shrinks them, so a defeat must not shrink them; they lose the crystal and leave, still giant, respecting the terrain, and DROP the shard while fleeing (not at once).
+- 0.5.64, the user: "the best design but the easiest: spamming the ground pound and then lighting it is enough" → a
+  BUFF (its level and the Mega Mashup): (1) it LEARNS THE TRICK — two ground-pound noises within `GP_WINDOW` 6 s make it
+  suspicious: instead of charging at the next noise it stops and sends an echo ring (icon "?"), so it goes for whoever
+  the ring touches; (2) more AGGRESSIVE — attack cooldown 0.9 / 0.7 s (was 1.3 / 1.0), tired 1.9 / 1.6 s (2.3 / 2.0), a
+  COUNTER-CLAW when a player lands within 2.6 cells of it while it prowls, and enraged its pings come in pairs; (3)
+  HARDER TO DAZZLE — the flashlight must stay on its body `LIGHT_NEED` 0.6 s while it is tired (it drains twice as fast
+  without light); a light meter over its head shows it (drawn in the glow pass: visible in the dark; netPack field 12,
+  protocol 73). Harness `megagloomy_rules` (`luz`, new `truco`). Not played by the user yet.
