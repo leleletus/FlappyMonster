@@ -24,14 +24,16 @@ function Push.collect(list)
 end
 
 -- Velocidad del aire en un punto: la suma de todo lo que sopla ahí. Un tercer valor de `pushAt` = lo BRUSCO que es
--- (× la rapidez con la que lleva la velocidad hacia la suya: 1 = viento, el Géiser ~10 = un chorro explosivo)
-function Push.at(level, x, y)
-    local wx, wy, k = 0, 0, 1
+-- (× la rapidez con la que lleva la velocidad hacia la suya: 1 = viento, el Géiser ~10 = un chorro explosivo).
+-- `pushAt(x, y, o)` recibe también A QUIÉN (jugador o entidad): el Géiser empuja distinto lo que levanta; un cuarto
+-- valor `true` = ya contó su peso (no se multiplica por su `windK`)
+function Push.at(level, x, y, o)
+    local wx, wy, k, exact = 0, 0, 1, false
     for _, p in ipairs(level.pushers or {}) do
-        local ax, ay, ak = p:pushAt(x, y)
-        if ax then wx, wy = wx + ax, wy + (ay or 0); k = math.max(k, ak or 1) end
+        local ax, ay, ak, ex = p:pushAt(x, y, o)
+        if ax then wx, wy = wx + ax, wy + (ay or 0); k = math.max(k, ak or 1); exact = exact or ex == true end
     end
-    return wx, wy, k
+    return wx, wy, k, exact
 end
 
 -- La vertical: hacia arriba lleva la velocidad hacia la del aire; hacia abajo acelera
@@ -46,7 +48,7 @@ end
 -- Jugador (PlayerAdventure._update): cambia su vy y devuelve el arrastre de lado (px/s) que se suma a su avance
 function Push.player(pa, level, dt)
     local wx, wy, k = 0, 0, 1
-    if level.pushers and level.pushers[1] then wx, wy, k = Push.at(level, pa.x, pa.y) end
+    if level.pushers and level.pushers[1] then wx, wy, k = Push.at(level, pa.x, pa.y, pa) end
     pa.windVx = (pa.windVx or 0) + (wx - (pa.windVx or 0)) * math.min(1, SIDE_K * dt)
     if math.abs(pa.windVx) < 1 and wx == 0 then pa.windVx = 0 end
     if wy ~= 0 then
@@ -69,9 +71,10 @@ end
 
 -- Entidad (Entity:update, antes de su propio paso)
 function Push.entity(e, level, dt)
-    local wx, wy, sharp = Push.at(level, e.x, e.y)
+    local wx, wy, sharp, exact = Push.at(level, e.x, e.y, e)
     if wx == 0 and wy == 0 then return end
-    local k = ENTITY * (e.windK or 1)                -- (lo pesado se mueve menos: la Caja grande)
+    -- (lo pesado se mueve menos — la Caja grande —; `exact`: quien sopla ya tuvo en cuenta su peso — el Géiser —)
+    local k = exact and 1 or ENTITY * (e.windK or 1)
     if wx ~= 0 then e:moveAndCollide(level, wx * k * dt, 0) end
     if wy ~= 0 and not e.flying then
         e.vy = e.vy or 0

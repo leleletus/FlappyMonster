@@ -12,6 +12,7 @@
 -- Red: el desnivel (`d`) en su netPack; los platillos se calculan de él.
 local Entity = require 'src/world/entities/base/Entity'
 local Isles  = require 'src/world/level/Isles'
+local Weight = require 'src/world/systems/Weight'
 
 local Scale = Entity.extend(Entity, { debugColor = { 0.9, 0.8, 0.4 },
     hitbox = { outerW = 1, outerH = 1, innerW = 1, innerH = 1 } })
@@ -25,7 +26,6 @@ local SPEED    = 150                       -- px/s: lo que sube / baja un platil
 local SLAM_SPEED = 900                     -- px/s: hundido por un ground pound
 local LAUNCH_V = 1.9                       -- × el salto: la catapulta
 local CREAK_T  = 0.45
-local ON_TOP   = 4                         -- px: "encima" de un platillo
 
 Scale.wantsLevel = true
 function Scale.sizePx() return TILE_PX, TILE_PX end
@@ -76,47 +76,10 @@ function Scale:isObstacle() return false end
 function Scale:interact(pa) return nil end
 
 -- Lo que hay encima de un platillo: jugadores (de pie en él) y entidades apoyadas en su cara
-local PB = {}
 -- ¿Está `e` (sus pies) apoyado en la cara de arriba de la caja `b`?
-local function restsOn(e, b)
-    local eb = e:getOuterBounds()
-    local foot = eb.y + eb.h
-    return foot >= b.y - ON_TOP and foot <= b.y + ON_TOP and eb.x + eb.w > b.x and eb.x < b.x + b.w
-end
-local function counts(self, e)
-    -- (lo que VUELA no pesa: un Soplón que pasa rozando el platillo no lo baja)
-    return e ~= self and e.alive and not e.flying and e.state ~= 'carried' and not (e.isGhost and e:isGhost()) and not (e.def and e.def.boss)
-end
-
--- Lo que hay encima de un platillo, APILADO incluido (el usuario: una caja con algo encima pesa las dos cosas):
--- jugadores de pie en el platillo o en algo de la pila (`standBody`) y entidades apoyadas en el platillo o en algo de
--- la pila; lo que lleva un jugador en las manos pesa con él
-local function onPan(self, pan, level)
-    local players, ents, w = {}, {}, 0
-    local seen = {}
-    local frontier = { pan }
-    while #frontier > 0 do
-        local base = table.remove(frontier)
-        local b = base:getOuterBounds(PB)
-        b = { x = b.x, y = b.y, w = b.w, h = b.h }
-        for _, pa in ipairs(level.players or {}) do
-            if not seen[pa] and not pa.dying and pa.standBody == base then
-                seen[pa] = true
-                players[#players + 1] = pa
-                w = w + 1 + ((pa.carrying and pa.carrying.weight) or (pa.carrying and 1) or 0)
-            end
-        end
-        for _, e in ipairs(level.liveEntities or {}) do
-            if not seen[e] and counts(self, e) and restsOn(e, b) then
-                seen[e] = true
-                ents[#ents + 1] = e
-                w = w + (e.weight or 1)
-                frontier[#frontier + 1] = e                -- (y lo que esté encima de ella)
-            end
-        end
-    end
-    return players, ents, w
-end
+-- Lo que hay encima de un platillo, APILADO incluido (el usuario: una caja con algo encima pesa las dos cosas): la regla
+-- de todos, systems/Weight (jugadores de pie en él o en la pila + lo que llevan; entidades apoyadas; lo que vuela no)
+local function onPan(self, pan, level) return Weight.stack(pan, level, self) end
 
 -- ¿Choca algún platillo al pasar de `d0` a `d`? El que BAJA mira su cara de abajo contra bloques, plataformas y cuerpos
 -- sólidos (cajas) que no van en su pila; el que SUBE, su cara de arriba contra bloques y plataformas.

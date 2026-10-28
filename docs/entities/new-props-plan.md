@@ -104,11 +104,14 @@ Every generator writes previews by default and the game assets only with `--appl
 
 ## Open — to do next (the user, 2026-10-28)
 
-- [ ] **Air pushing a box into the player**: player on the LEFT of a box, a Gust blowing from the right towards the
+- [x] **Air pushing a box into the player** (0.5.70: the box SHOVES the player along with the player's own physics — a
+  wall stops both — and stays against their face; harness `mechanics` `aire_caja`): player on the LEFT of a box, a Gust blowing from the right towards the
   left → instead of the box pushing the player along, the player is TELEPORTED to the right side of the box and only
   then pushed. Wanted: the box (moved by the air) pushes the player in front of it. (Today `Box:moveAndCollide` only
   refuses to move into a player, and the player's overlap resolution can still pick the far side.)
-- [ ] **Geyser and weight** (the user's clarification): it already lifts heavy things slower. Missing: (1) the
+- [x] **Geyser and weight** (0.5.70: `Gey:findLoad` = the lowest thing in the column; speed ÷ its TOTAL weight with
+  what is stacked on it — systems/Weight, shared with the Scale —; the jet is cut at its underside and pushes nothing
+  above; harness `mechanics` `geiser_peso`) (the user's clarification): it already lifts heavy things slower. Missing: (1) the
   weight must be the TOTAL of what it lifts, everything stacked on it included (more boxes, a player on top), like
   the Scale; (2) the jet must STOP at the underside of what it is lifting: drawn only up to that object, and pushing
   nothing above it (today the column keeps going through it to its full height and pushes what is higher up).

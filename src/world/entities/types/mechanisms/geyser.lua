@@ -11,6 +11,9 @@
 -- Red: estado y tiempo (los de siempre); en reposo no se envía. La altura se mide del nivel en cada sitio.
 local Entity = require 'src/world/entities/base/Entity'
 local Isles  = require 'src/world/level/Isles'
+local Push   = require 'src/world/systems/Push'
+local Weight = require 'src/world/systems/Weight'
+local Clip   = require 'src/ui/Clip'
 
 local Gey = Entity.extend(Entity, { debugColor = { 0.5, 0.8, 1 },
     hitbox = { outerW = 1, outerH = 0.5, innerW = 1, innerH = 0.5 } })
@@ -82,17 +85,70 @@ function Gey:amount()
     if st == 'iced' then return 1 end
     return 0
 end
-function Gey:topY() return self:mouthY() - (self:mouthY() - self:reach()) * self:amount() end
+local HOLD = 48               -- px: lo que levanta puede pasarse un poco del alto del chorro (sube por su impulso): el chorro
+                              -- lo sigue sosteniendo y se estira hasta tocarlo (si no, se veía flotando encima)
+function Gey:topY()
+    local top = self:mouthY() - (self:mouthY() - self:reach()) * self:amount()
+    -- (algo encima del chorro: el chorro llega JUSTO a su cara de abajo — lo levanta a él, no sigue a través —)
+    if self.blockY and (self.state == 'erupt' or self.state == 'iced') then
+        top = math.max(top - HOLD, math.min(self:mouthY(), self.blockY))
+    end
+    return top
+end
 function Gey:freezes() return self:isle() == 'nieve' and self.props.freeze ~= 0 end
 
-function Gey:pushAt(x, y)
+-- LO QUE LEVANTA (el usuario): el chorro empuja a lo PRIMERO que encuentra al subir (lo más bajo dentro de la columna)
+-- más despacio cuanto más pesa CON TODO LO QUE LLEVA ENCIMA (systems/Weight: cajas apiladas, un jugador encima…), y
+-- se corta en su cara de abajo: lo de más arriba no lo empuja el chorro (sube porque va encima). Lo mide quien simula
+-- (un jugador / el servidor: `load`, `blockY`, `loadF`); al cliente le llegan `blockY` y `loadF` en el netPack y
+-- predice a su jugador con ellos (si sus pies están en `blockY`, es lo que levanta).
+local B = {}
+function Gey:pushAt(x, y, o)
     if self.state ~= 'erupt' then return nil end
     if math.abs(x - self.x) > TILE_PX * 0.45 then return nil end
-    local top = self:topY()
-    if y > self.cellBottom or y < top - TILE_PX * 0.6 then return nil end
     local k = self:amount()
     if k <= 0.05 then return nil end
-    return 0, -LIFT * (self.props.power or 1) * k, SHARP
+    local lift = -LIFT * (self.props.power or 1) * k
+    if self.blockY then
+        local isLoad = self.load ~= nil and o == self.load
+        if not isLoad and self.load == nil and o and o.getOuterBounds then          -- (cliente: por dónde tiene los pies)
+            local b = o:getOuterBounds(B)
+            isLoad = math.abs(b.y + b.h - self.blockY) < 14
+        end
+        if isLoad then
+            -- (pasado el alto del chorro, empuja menos cuanto más se pasa: se queda sostenido arriba, sin despegarse)
+            local over = (self:mouthY() - (self:mouthY() - self:reach()) * k) - self.blockY
+            local hold = math.max(0, math.min(1, 1 - over / HOLD))
+            return 0, lift * (self.loadF or 1) * hold, SHARP, true                -- (`true`: ya va su peso: sin × windK)
+        end
+        if y < self.blockY then return nil end                                    -- (encima de lo que levanta: nada)
+    end
+    -- (empuja lo que tiene los pies DENTRO del chorro que se ve: la zona coincide con el dibujo — el usuario —)
+    local top = self:topY()
+    local bot, ytop = y, y
+    if o and o.getOuterBounds then local b = o:getOuterBounds(B); bot, ytop = b.y + b.h, b.y end
+    if bot < top - 4 or ytop > self.cellBottom then return nil end
+    return 0, lift, SHARP
+end
+
+-- Lo que el chorro encuentra primero al subir (simulación): jugadores y entidades con física dentro de la columna
+function Gey:findLoad(level)
+    local x0, x1 = self.x - TILE_PX * 0.45, self.x + TILE_PX * 0.45
+    local colTop = self:mouthY() - (self:mouthY() - self:reach()) * math.max(self:amount(), 0.05)
+    local best, bestBot, isPl
+    local function try(o, player)
+        local b = o:getOuterBounds(B)
+        local bot = b.y + b.h
+        if b.x < x1 and b.x + b.w > x0 and bot >= colTop - HOLD and bot <= self:mouthY() + 6 and (not bestBot or bot > bestBot) then
+            best, bestBot, isPl = o, bot, player
+        end
+    end
+    for _, pa in ipairs(level.players or {}) do if not pa.dying and pa.alive ~= false then try(pa, true) end end
+    for _, e in ipairs(level.liveEntities or {}) do
+        if e ~= self and (Push.canPush(e) or e.solidFull) and Weight.counts(e, self) then try(e, false) end
+    end
+    if not best then return nil end
+    return best, bestBot, Weight.total(best, level, isPl, self)
 end
 
 -- El pilar de hielo (nieve): su remate se pisa
@@ -103,6 +159,12 @@ end
 
 function Gey:updateCustom(dt, level)
     self.levelRef = level
+    -- (lo que levanta ahora, su cara de abajo y lo que pesa: el chorro va más despacio cuanto más pesa)
+    self.load, self.blockY, self.loadF = nil, nil, 1
+    if self.state == 'erupt' or self.state == 'iced' then
+        local o, bot, w = self:findLoad(level)
+        if o then self.load, self.blockY, self.loadF = o, bot, 1 / math.max(1, w) end
+    end
     self.deadTimer = self.deadTimer + dt
     local st, p = self.state, self.props
     local kind = KIND[self:isle()] or 'water'
@@ -137,12 +199,17 @@ end
 
 -- ── Red ───────────────────────────────────────────────────────────────────────
 function Gey:netAtRest() return self.state == 'idle' end
-function Gey:netRest() self.state = 'idle' end
+function Gey:netRest() self.state, self.blockY = 'idle', nil end
+function Gey:netPack() return { self.blockY and math.floor(self.blockY + 0.5) or 0, math.floor((self.loadF or 1) * 100 + 0.5) } end
+function Gey:netApply(a, b, f)
+    self.blockY = (b[1] and b[1] ~= 0) and b[1] or nil
+    self.loadF = (b[2] or 100) / 100
+end
 
 function Gey:debugBoxes()
     if self.state ~= 'erupt' then return nil end
     local top = self:topY()
-    return { { x = self.x - TILE_PX * 0.45, y = top - TILE_PX * 0.6, w = TILE_PX * 0.9, h = self.cellBottom - top + TILE_PX * 0.6, kind = 'area' } }
+    return { { x = self.x - TILE_PX * 0.45, y = top, w = TILE_PX * 0.9, h = self:mouthY() - top, kind = 'area' } }
 end
 
 -- ── Dibujo ────────────────────────────────────────────────────────────────────
@@ -174,7 +241,15 @@ function Gey:render(camX, camY)
         elseif top < mouth then
             local col, crest = strip(base .. '-column-Sheet.png', 16), strip(base .. '-crest-Sheet.png', 16)
             local f = 1 + math.floor(t * 12) % 3
-            for y = mouth, top + TILE_PX, -TILE_PX do col:draw(1 + (f + math.floor((mouth - y) / TILE_PX)) % 3, x, y - TILE_PX / 2, 0, S, S) end
+            -- (el agua llega EXACTAMENTE hasta `top` — donde empuja y donde se apoya lo que levanta —: los tramos se ponen
+            -- desde arriba y se recortan en la boca; antes subían de casilla en casilla y quedaban hasta una por debajo)
+            Clip.push(x - TILE_PX / 2, top, TILE_PX, mouth - top + 2)
+            local k = 0
+            for y = top, mouth, TILE_PX do
+                col:draw(1 + (f + k) % 3, x, y + TILE_PX / 2, 0, S, S)
+                k = k + 1
+            end
+            Clip.pop()
             -- ESPUMA Y VAPOR (el usuario: más, y que no sean dos "líneas" fijas a los lados): un penacho triple arriba
             -- (más grande al reventar), gotas que saltan del penacho, gotas que salpican desde la boca y CAEN, y vapor
             -- que sube desde la boca. Cada partícula, en cada vuelta, con su azar (lado, ángulo, velocidad, tamaño,
@@ -184,7 +259,7 @@ function Gey:render(camX, camY)
             local puffs = strip(base .. '-warn-Sheet.png', 16)
             for k = -1, 1 do
                 local sc = S * (0.6 + 0.4 * amt) * (1 + 0.35 * burst) * (k == 0 and 1 or 0.8)
-                crest:draw(1 + (f + k + 1) % 3, x + k * 22, top + TILE_PX / 2 - 20 - (k == 0 and 6 or 0), 0, k < 0 and -sc or sc, sc)
+                crest:draw(1 + (f + k + 1) % 3, x + k * 22, top - TILE_PX / 2 + 24 - (k == 0 and 4 or 0), 0, k < 0 and -sc or sc, sc)
             end
             local function part(n, period, salt)
                 local ph = hash(n, salt)

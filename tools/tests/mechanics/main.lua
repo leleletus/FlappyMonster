@@ -82,6 +82,8 @@
 --   caja_choques   caja que cae en la cabeza del jugador, el aire que la empuja contra él y 60 carreras / saltos
 --                  contra ella: nunca se mete en él ni lo pasa al otro lado
 --   cargar_gp      ground pound llevando la caja pequeña o la bomba: la sigue llevando, ni se rompe ni se enciende
+--   aire_caja      el aire empuja una caja contra el jugador: el jugador sigue a su lado (empujado), nunca al otro
+--   geiser_peso    el Géiser sube más despacio lo que pesa más con lo que lleva encima y el chorro se corta debajo
 --   cuerpo_mueve   de pie en un cuerpo que sube y baja: va con él, sin despegarse ni atravesarlo
 --   ping_icono     antena de conexión online: niveles (verde/amarillo/rojo/X) y que
 --                  no parpadee (mejorar espera 0,6 s; perder la conexión, al momento)
@@ -2133,6 +2135,106 @@ function cases.cargar_gp()
     check('cargar_gp', ok, table.concat(parts, ' · '))
 end
 
+-- El AIRE empuja una caja contra el jugador (el usuario: jugador a la izquierda, Soplón a la derecha soplando a la
+-- izquierda → el jugador aparecía al otro lado de la caja). Tiene que quedarse a su lado e ir empujado por ella
+function cases.aire_caja()
+    local res = {}
+    local variants = { { 'smallbox' }, { 'box' }, { 'smallbox', 'right' }, { 'box', 'right' }, { 'smallbox', 'crouch' },
+                       { 'smallbox', nil, 0.4 }, { 'box', nil, 0.4 } }
+    for vi, v in ipairs(variants) do
+        local kind, hold, width = v[1], v[2], v[3] or 1.6
+        local level, es = room(30, 10, {}, { { type = kind, col = 14, row = 9 },
+                                            { type = 'gust', col = 18, row = 9, props = { speed = 0, bobAmp = 0, reach = 8, power = 1.5, width = width } } })
+        local b = es[1]
+        settle(level, es)
+        local pa = playerAt(level, 13, 9)
+        local bb = b:getOuterBounds()
+        pa.x = bb.x - pa.w / 2 - 1
+        local x0, crossed, worst = pa.x, false, 0
+        clear()
+        if hold == 'right' then stub.state.right = true elseif hold == 'crouch' then stub.state.crouch = true end
+        sim(level, { pa }, es, 3.5, os.getenv('TRACE_AIRE') and function()
+            local q = b:getOuterBounds(); print(('  %s pa x=%.1f vx=%.1f wind=%.1f · caja x=%.1f..%.1f %s'):format(kind, pa.x, pa.vx, pa.windVx or 0, q.x, q.x + q.w, es[2].state)) end or nil)
+        clear()
+        local q = b:getOuterBounds()
+        res[vi] = { left = pa.x < q.x, moved = (x0 - pa.x) / T, name = kind .. (hold and ('+' .. hold) or '') .. (v[3] and ' estrecho' or '') }
+    end
+    -- solo la CAJA en el aire (el jugador fuera de la racha: más bajo, detrás de la caja…)
+    for _, kind in ipairs({ 'smallbox', 'box' }) do
+        local level, es = room(30, 10, {}, { { type = kind, col = 14, row = 9 } })
+        local b = es[1]
+        settle(level, es)
+        local pa = playerAt(level, 13, 9)
+        local bb = b:getOuterBounds()
+        pa.x = bb.x - pa.w / 2 - 1
+        local x0 = pa.x
+        local blow = { alive = true, x = 0, y = 0, def = {}, update = function() end }
+        function blow:pushAt(x, y, o) if o == b then return -350, 0 end return nil end
+        for i = 1, 180 do
+            level.solidBodies = Entities.solidBodies(es); level.pushers = { blow }
+            pa:update(1 / 60, level)
+            level.liveEntities = es
+            b:update(1 / 60, level)
+            if os.getenv('TRACE_AIRE') and i % 10 == 0 then local q = b:getOuterBounds(); print(('  solo-caja %s pa x=%.1f · caja %.1f..%.1f'):format(kind, pa.x, q.x, q.x + q.w)) end
+        end
+        local q = b:getOuterBounds()
+        res[#res + 1] = { left = pa.x < q.x and (x0 - pa.x) > T, moved = (x0 - pa.x) / T, name = kind .. ' (solo la caja en el aire: lo empuja)' }
+    end
+    local ok, parts = true, {}
+    for _, r in ipairs(res) do
+        ok = ok and r.left
+        parts[#parts + 1] = ('%s: a su izquierda=%s (%.1f)'):format(r.name, tostring(r.left), r.moved)
+    end
+    check('aire_caja', ok, table.concat(parts, ' · '))
+end
+
+-- El Géiser y el PESO (el usuario): lo que levanta sube más despacio cuanto más pesa con lo que lleva encima, y el
+-- chorro se corta debajo de ello (no empuja lo de arriba: lo de arriba sube porque va encima)
+function cases.geiser_peso()
+    local GP = { interval = 0.1, firstDelay = 0, warn = 0.1, erupt = 3, height = 8 }
+    local function lift(what)
+        local ents = { { type = 'geyser', col = 10, row = 13, props = GP } }
+        if what ~= 'player' then ents[2] = { type = 'box', col = 10, row = 12 } end
+        local level, es = room(20, 14, {}, ents)
+        local g = es[1]
+        local players = {}
+        if what == 'player' then
+            local pa = playerAt(level, 10, 13); players = { pa }
+        else
+            settle(level, es)
+        end
+        if what == 'box+player' then
+            local b = es[2]:getOuterBounds()
+            local pa = PlayerAdventure:new(es[2].x, b.y - 80); players = { pa }
+            sim(level, players, es, 0.05)
+        end
+        local o = (what == 'player') and players[1] or es[2]
+        local y0, cutOk, aboveFree, seenLoad = o.y, true, true, false
+        local t1
+        sim(level, players, es, 2.4, function()
+            if g.state == 'erupt' and g.blockY then
+                seenLoad = true
+                local ob = o:getOuterBounds()
+                if math.abs(g:topY() - (ob.y + ob.h)) > 20 and g:amount() > 0.9 then cutOk = false end   -- (un paso de margen)
+                -- lo de encima (el jugador sobre la caja): el chorro no lo empuja
+                if what == 'box+player' then
+                    local pa = players[1]
+                    if g:pushAt(pa.x, pa.y, pa) then aboveFree = false end
+                end
+            end
+            if not t1 and y0 - o.y > 3 * T then t1 = g.deadTimer end
+        end)
+        local rideOk = what ~= 'box+player' or players[1].standBody == es[2] or players[1].y < es[2].y
+        return t1 or 99, cutOk and seenLoad, aboveFree, rideOk
+    end
+    local tP, cP = lift('player')
+    local tB, cB = lift('box')
+    local tBP, cBP, freeBP, rideBP = lift('box+player')
+    check('geiser_peso', tP < tB and tB < tBP and tBP < 99 and cP and cB and cBP and freeBP and rideBP,
+        ('3 casillas arriba en: jugador %.2f s < caja %.2f s < caja con jugador encima %.2f s · el chorro se corta bajo lo que levanta=%s/%s/%s · al de encima no lo empuja=%s, va encima=%s'):format(
+            tP, tB, tBP, tostring(cP), tostring(cB), tostring(cBP), tostring(freeBP), tostring(rideBP)))
+end
+
 -- Un "soplador" de prueba: sopla en toda la sala con (wx, wy)
 local function blower(wx, wy)
     return { alive = true, x = 0, y = 0, pushAt = function() return wx, wy end, update = function() end }
@@ -2200,6 +2302,7 @@ local function propsShot()
     ents[#ents + 1] = { type = 'box', col = 41, row = 6 }
     ents[#ents + 1] = { type = 'smallbox', col = 47, row = 13 }
     ents[#ents + 1] = { type = 'geyser', col = 37, row = 13, props = { firstDelay = 0, warn = 0.3, erupt = 9, interval = 9 } }
+    ents[#ents + 1] = { type = 'box', col = 37, row = 6 }        -- (encima del chorro: lo corta y lo levanta)
     ents[#ents + 1] = { type = 'geyser', col = 40, row = 13, props = { firstDelay = 0, warn = 0.3, erupt = 0.5, freeze = 9, interval = 9, isle = 'nieve' } }
     ents[#ents + 1] = { type = 'blizzard', col = 2, row = 2, props = { firstDelay = 0, warn = 0.4, blowMin = 9, blowMax = 9,
                          dir_left = false, dir_up = false, dir_down = false, corner = { col = 18, row = 6 } } }
@@ -2238,7 +2341,7 @@ function love.load()
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
                          'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado', 'techo_pinchos',
-                         'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp' }) do cases[n]() end
+                         'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'aire_caja', 'geiser_peso' }) do cases[n]() end
     if os.getenv('SHOT_BOMB') then bombShot() end
     if os.getenv('SHOT_PROPS') then propsShot() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))

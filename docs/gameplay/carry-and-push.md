@@ -12,6 +12,7 @@ concrete type.
 | `src/world/systems/Push.lua` | AIR: whatever blows pushes players and everything with physics, without damage |
 | `src/world/entities/Entities.lua` (`solidBodies`) | BODY PARTS and MOVING BODIES (measures `stepDx/stepDy`) |
 | `src/player/PlayerCollision.lua` | riding a moving body, one-way bodies, pushing a body (`pushBy`) |
+| `src/world/systems/Weight.lua` | WEIGHT of what is on top of something, stacked included (Scale pans, what a Geyser lifts) |
 | `src/world/level/Isles.lua` | which ISLAND a level is: art per island and island FAMILIES of types (see below) |
 | `src/world/entities/types/items/box.lua` | the Box (`box`, pushed) and the small box (`smallbox`, carried) |
 | `tools/art/ui/make_prompts.py` | the tooltip sprite `assets/images/ui/prompts/grab-Sheet.png` (keyboard, pad, touch) |
@@ -82,6 +83,12 @@ One generic module for everything that changes with the island (the user: one me
   by default (nothing changes in old levels); `auto` or an island swaps the placement for that island's type when
   the level loads (`Isles.resolveAll` in `Level`, same in SP / server / client). A new family = one line.
 
+## Weight (`Weight`)
+
+`Weight.stack(base, level, except)` → players standing on `base` (or on the stack), entities resting on it, and their
+total weight; `Weight.total(o, level, isPlayer)` = `o` + its stack. A player weighs 1 + what they carry; an entity its
+`weight` (1 by default); flyers, carried things, bosses and ghosts nothing. Used by the Scale pans and the Geyser.
+
 ## Tests
 
 `mechanics`: `caja_empuje`, `caja_rota`, `caja_borde`, `cajas_golpes`, `cargar`, `bomba_reaparece`, `islas`, `viento`,
@@ -89,6 +96,10 @@ One generic module for everything that changes with the island (the user: one me
 
 ## History and decisions
 
+- 0.5.70 (the user): the air pushing a box against a player teleported the player to the box's far side → a box moved
+  by something else SHOVES the player along (their own collision; a wall stops both). `pushAt(x, y, o)` gets WHO it
+  pushes and may return a 4th value `true` (its weight already counted: no × `windK`). The Geyser lifts the first thing
+  in its column slower the heavier it is with its stack, and its jet is cut at that thing's underside.
 - 0.5.69 (the user, after trying it): a box made its push sound just by standing next to it → only walking TOWARD
   it pushes (`inMoveX`); the carried object a bit higher (10 px); the Geyser was slow → `pushAt` may return a third
   value, how SHARP the push is (× the rate it reaches the air speed; Geyser 10 with 1050 px/s: explosive), plus more

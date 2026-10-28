@@ -101,11 +101,13 @@ end
 -- sitio mientras haya alguien (o algo sólido) ocupándolo.
 local PB, MB = {}, {}
 local function overlaps(a, b) return a.x < b.x + b.w - 1 and a.x + a.w > b.x + 1 and a.y < b.y + b.h - 1 and a.y + a.h > b.y + 1 end
-function Box:playerIn(level, x, y)
+function Box:playerIn(level, x, y, riders)
     local b = self:getOuterBounds(MB)
     if x then b.x, b.y = x - self.outerW / 2, y - self.outerH / 2 end
     for _, pa in ipairs(level.players or {}) do
-        if not pa.dying and pa.alive ~= false and overlaps(b, pa:getOuterBounds(PB)) then return pa end
+        -- (`riders = false`: los que van de pie ENCIMA no cuentan — subiendo, la caja los lleva —)
+        if not pa.dying and pa.alive ~= false and not (riders == false and pa.standBody == self)
+           and overlaps(b, pa:getOuterBounds(PB)) then return pa end
     end
     return nil
 end
@@ -115,14 +117,26 @@ function Box:moveAndCollide(level, dx, dy)
         local x0 = self.x
         local before = self:playerIn(level)
         Entity.moveAndCollide(self, level, dx, 0)
-        if not before and self:playerIn(level) then self.x = x0 end
+        local pa = not before and self:playerIn(level)
+        if pa then
+            -- (la mueve otra cosa — el aire, la Balanza… — contra un jugador: lo EMPUJA delante de ella lo que él pueda
+            -- moverse — una pared los para a los dos — y se queda pegada a su cara; el usuario: antes el jugador
+            -- aparecía al otro lado)
+            local hw, pb = self.outerW / 2, pa:getOuterBounds(PB)
+            local over = (dx > 0) and (self.x + hw - pb.x) or (self.x - hw - (pb.x + pb.w))
+            self:shove(pa, level, over)
+            pb = pa:getOuterBounds(PB)
+            if dx > 0 then self.x = math.max(x0, math.min(self.x, pb.x - hw))
+            else self.x = math.min(x0, math.max(self.x, pb.x + pb.w + hw)) end
+        end
         if dy == 0 then self.onGround = g0 end              -- (de lado no deja de estar apoyada)
     end
     if dy ~= 0 then
         local y0 = self.y
-        local before = self:playerIn(level)
+        local riders = dy > 0 and nil or false
+        local before = self:playerIn(level, nil, nil, riders)
         Entity.moveAndCollide(self, level, 0, dy)
-        local pa = not before and self:playerIn(level)
+        local pa = not before and self:playerIn(level, nil, nil, riders)
         if pa then
             if dy > 0 then                                   -- (cae sobre un jugador: se apoya en su cabeza)
                 self.y = math.max(y0, pa:getOuterBounds(PB).y - self.outerH / 2)
@@ -132,6 +146,14 @@ function Box:moveAndCollide(level, dx, dy)
             end
         end
     end
+end
+-- Empujar a un jugador `dx` px de lado con su propia física (sus choques con el nivel), sin cambiar si está en el suelo
+function Box:shove(pa, level, dx)
+    if pa.dying or dx == 0 then return end
+    local g, gd, sb, bh = pa.onGround, pa.groundDef, pa.standBody, pa.bodyHit
+    local vx = pa.vx
+    pa:moveSteps(level, dx, 0)
+    pa.onGround, pa.groundDef, pa.standBody, pa.bodyHit, pa.vx = g, gd, sb, bh, vx
 end
 function Box:homeBlocked(level)
     if self:playerIn(level, self.home.x, self.home.y) then return true end
