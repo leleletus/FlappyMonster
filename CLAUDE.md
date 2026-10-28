@@ -151,3 +151,22 @@ Large files are split into parts that add methods to the same table (`Level`, `P
 | Testing | `docs/testing/harnesses.md`, `tools/tests/README.md` |
 | Generated tables: entities, tiles, decorations + modes, levels, music | `docs/reference/` |
 | Tools | `tools/README.md`, `docs/tools/ost-videos.md` |
+
+## How-to guides (READ the guide before adding one of these)
+
+| To add… | Guide |
+|---|---|
+| An enemy / any entity (trap, mechanism, item, director) | `docs/entities/how-to-add-an-enemy.md` (first check the enemy editor: `docs/entities/enemy-editor.md`) |
+| A data enemy behaviour | `docs/entities/enemy-editor.md` § Adding a behaviour |
+| A boss | `docs/bosses/how-to-add-a-boss.md` (+ `docs/bosses/system.md` § Adding a boss) |
+| A tile / block | `docs/gameplay/tiles-and-blocks.md` ("To add a tile") |
+| A game mode | `docs/gameplay/game-modes.md` ("To add a mode") |
+| A difficulty modifier | `docs/gameplay/difficulty.md` ("To add a modifier") |
+| A text / a language | `docs/architecture/i18n.md` |
+| A menu screen / option | `docs/architecture/menus.md` § How to extend |
+| A sound / a music track | `docs/audio/sound.md`, `docs/audio/music-catalog.md`, `docs/audio/music-guide.md`, `docs/art/asset-layout.md` |
+| An image, animation set, decoration, particle | `docs/art/asset-layout.md`, `docs/art/animation.md`, `docs/art/decorations.md`, `docs/art/fx-and-particles.md` |
+| A level / a level object in the editor / retheme | `docs/levels/level-format.md`, `docs/levels/editor.md`, `docs/levels/retheme.md` |
+| A world / level to the story, a credit | `docs/story/story-mode.md`, `docs/story/world-map.md`, `docs/story/credits.md` |
+| A test harness / a perf scene | `docs/testing/harnesses.md`, `tools/tests/README.md`, `docs/testing/performance.md` |
+| A large file split into parts | `docs/architecture/project-structure.md` |
