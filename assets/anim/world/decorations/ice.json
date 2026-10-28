@@ -12,7 +12,12 @@
     {"h": 17, "image": "assets/images/world/decorations/ice/snowman-Sheet.png", "w": 18, "x": 0, "y": 0},
     {"h": 17, "image": "assets/images/world/decorations/ice/snowman-Sheet.png", "w": 18, "x": 18, "y": 0},
     {"h": 17, "image": "assets/images/world/decorations/ice/snowman-Sheet.png", "w": 18, "x": 36, "y": 0},
-    {"h": 33, "image": "assets/images/world/decorations/ice/snowy_pine.png", "w": 18, "x": 0, "y": 0}
+    {"h": 33, "image": "assets/images/world/decorations/ice/snowy_pine.png", "w": 18, "x": 0, "y": 0},
+    {"h": 113, "image": "assets/images/world/decorations/ice/snowy_fir.png", "w": 58, "x": 0, "y": 0},
+    {"h": 61, "image": "assets/images/world/decorations/ice/snowy_fir_small.png", "w": 36, "x": 0, "y": 0},
+    {"h": 15, "image": "assets/images/world/decorations/ice/snow_rock.png", "w": 26, "x": 0, "y": 0},
+    {"h": 15, "image": "assets/images/world/decorations/ice/snow_stump.png", "w": 20, "x": 0, "y": 0},
+    {"h": 13, "image": "assets/images/world/decorations/ice/winter_grass.png", "w": 18, "x": 0, "y": 0}
   ],
   "anims": {
     "frozen_bush": {"fps": 8, "frames": [1], "loop": true},
@@ -20,8 +25,13 @@
     "icicle": {"fps": 8, "frames": [3], "loop": true},
     "icicle_small": {"fps": 8, "frames": [4], "loop": true},
     "snow_pile": {"fps": 8, "frames": [5], "loop": true},
+    "snow_rock": {"fps": 8, "frames": [12], "loop": true},
+    "snow_stump": {"fps": 8, "frames": [13], "loop": true},
     "snowman": {"fps": 2, "frames": [6, 8], "loop": true},
     "snowman_blink": {"fps": 8, "frames": [7], "loop": true},
-    "snowy_pine": {"fps": 8, "frames": [9], "loop": true}
+    "snowy_fir": {"fps": 8, "frames": [10], "loop": true},
+    "snowy_fir_small": {"fps": 8, "frames": [11], "loop": true},
+    "snowy_pine": {"fps": 8, "frames": [9], "loop": true},
+    "winter_grass": {"fps": 8, "frames": [14], "loop": true}
   }
 }

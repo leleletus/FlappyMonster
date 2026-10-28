@@ -10,6 +10,7 @@
     {"image": "assets/images/items/food_costa.png", "key": "food_costa.png"},
     {"image": "assets/images/items/food_cueva.png", "key": "food_cueva.png"},
     {"image": "assets/images/items/food_fortaleza.png", "key": "food_fortaleza.png"},
+    {"image": "assets/images/items/food_jungla.png", "key": "food_jungla.png"},
     {"image": "assets/images/items/food_nieve.png", "key": "food_nieve.png"},
     {"image": "assets/images/items/food_volcan.png", "key": "food_volcan.png"},
     {"image": "assets/images/items/spikefall.png", "key": "spikefall.png"},
@@ -22,9 +23,10 @@
     "food_costa": {"fps": 4, "frames": [4], "loop": true},
     "food_cueva": {"fps": 4, "frames": [5], "loop": true},
     "food_fortaleza": {"fps": 4, "frames": [6], "loop": true},
-    "food_nieve": {"fps": 4, "frames": [7], "loop": true},
-    "food_volcan": {"fps": 4, "frames": [8], "loop": true},
-    "spikefall": {"fps": 4, "frames": [9], "loop": true},
-    "star": {"fps": 4, "frames": [10], "loop": true}
+    "food_jungla": {"fps": 4, "frames": [7], "loop": true},
+    "food_nieve": {"fps": 4, "frames": [8], "loop": true},
+    "food_volcan": {"fps": 4, "frames": [9], "loop": true},
+    "spikefall": {"fps": 4, "frames": [10], "loop": true},
+    "star": {"fps": 4, "frames": [11], "loop": true}
   }
 }

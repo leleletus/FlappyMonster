@@ -114,12 +114,21 @@ function Sound.load()
     load('bombBlast',   'assets/sounds/enemies/bomb/blast.wav',         'static')   -- bomba: explota
     load('bombKick',    'assets/sounds/enemies/bomb/kick.wav',          'static')   -- bomba: pisada / pateada
     load('iceCrack',    'assets/sounds/mechanics/ice_crack.wav',        'static')   -- hielo fino: se agrieta
-    -- Ambiente (tools/sounds/ambience.py): gotas de las estalactitas y la cueva de fondo (src/fx/CaveAmbience.lua)
+    -- Ambiente (tools/sounds/ambience.py): gotas de las estalactitas y la cueva de fondo (src/fx/Ambience.lua)
     load('dripFall',    'assets/sounds/ambience/drip_fall.wav',         'static')   -- la gota se suelta
     load('dripSplash',  'assets/sounds/ambience/drip_splash.wav',       'static')   -- la gota llega al suelo
     load('caveDrip',    'assets/sounds/ambience/cave_drip.wav',         'static')   -- gota lejana (ambiente)
     load('caveRumble',  'assets/sounds/ambience/cave_rumble.wav',       'static')   -- rumor de la roca (ambiente)
     load('cavePebble',  'assets/sounds/ambience/cave_pebble.wav',       'static')   -- piedrecita que rueda (ambiente)
+    -- La jungla (tools/sounds/jungle.py; src/fx/Ambience.lua): sus voces de fondo y el fuego de los braseros
+    load('jungleCicada',  'assets/sounds/ambience/jungle_cicada.wav',   'static')   -- enjambre de cigarras
+    load('jungleToucan',  'assets/sounds/ambience/jungle_toucan.wav',   'static')   -- graznido de tucán
+    load('jungleWhistle', 'assets/sounds/ambience/jungle_whistle.wav',  'static')   -- silbido de pájaro
+    load('jungleTrill',   'assets/sounds/ambience/jungle_trill.wav',    'static')   -- trino
+    load('jungleFrog',    'assets/sounds/ambience/jungle_frog.wav',     'static')   -- rana
+    load('jungleHowler',  'assets/sounds/ambience/jungle_howler.wav',   'static')   -- mono aullador lejano
+    load('jungleRustle',  'assets/sounds/ambience/jungle_rustle.wav',   'static')   -- hojas que se agitan
+    load('fireCrackle',   'assets/sounds/ambience/fire_crackle.wav',    'static')   -- chisporroteo del brasero
     load('iceBreak',    'assets/sounds/mechanics/ice_break.wav',        'static')   -- hielo fino: se rompe
     load('cryoWindup',  'assets/sounds/traps/cryo_windup.wav',         'static')   -- congelador: carga
     load('cryoBlast',   'assets/sounds/traps/cryo_blast.wav',          'static')   -- congelador: chorro

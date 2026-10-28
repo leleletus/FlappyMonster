@@ -42,7 +42,11 @@ Every tile registered in `src/world/tiles/Tiles.lua`. **Id** is stored in the le
 | 37 | `packed_snow` | Nieve prensada (rompible) | Terreno | solid | snow | breakable |
 | 38 | `basalt` | Basalto | Terreno | solid | basalt | joins `ground` |
 | 39 | `ash` | Ceniza | Terreno | solid | ash | joins `ground` |
+| 40 | `mud` | Barro | Terreno | solid | mud | joins `ground` |
+| 41 | `jungle_grass` | Césped de la jungla | Terreno | solid | grass | joins `ground` |
+| 42 | `temple_brick` | Sillar del templo | Terreno | solid | temple_stone | joins `ground` |
+| 43 | `jungle_platform` | Plataforma traspasable (jungla) | Plataformas | oneway (drop-through) | wood | partial hitbox |
 
 ## Materials
 
-`src/world/tiles/materials/<name>.lua`: ash, basalt, deadly, deep_stone, default, dirt, grass, ice, sand, snow, stone, water, wood.
+`src/world/tiles/materials/<name>.lua`: ash, basalt, deadly, deep_stone, default, dirt, grass, ice, mud, sand, snow, stone, temple_stone, water, wood.

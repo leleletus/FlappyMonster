@@ -11,6 +11,7 @@
     {"image": "assets/images/enemies/hopper/costa-Sheet.png", "key": "costa-Sheet.png"},
     {"image": "assets/images/enemies/hopper/cueva-Sheet.png", "key": "cueva-Sheet.png"},
     {"image": "assets/images/enemies/hopper/fortaleza-Sheet.png", "key": "fortaleza-Sheet.png"},
+    {"image": "assets/images/enemies/hopper/jungla-Sheet.png", "key": "jungla-Sheet.png"},
     {"image": "assets/images/enemies/hopper/nieve-Sheet.png", "key": "nieve-Sheet.png"},
     {"image": "assets/images/enemies/hopper/volcan-Sheet.png", "key": "volcan-Sheet.png"}
   ],
@@ -22,13 +23,15 @@
     "dead": {"fps": 8, "frames": [4], "loop": false},
     "fortaleza-Sheet": {"fps": 4, "frames": [7], "loop": true},
     "idle": {"fps": 8, "frames": [1], "loop": true},
-    "nieve-Sheet": {"fps": 4, "frames": [8], "loop": true},
-    "volcan-Sheet": {"fps": 4, "frames": [9], "loop": true}
+    "jungla-Sheet": {"fps": 4, "frames": [8], "loop": true},
+    "nieve-Sheet": {"fps": 4, "frames": [9], "loop": true},
+    "volcan-Sheet": {"fps": 4, "frames": [10], "loop": true}
   },
   "variants": {
     "costa": {"from": "assets/images/enemies/hopper/pradera-Sheet.png", "to": "assets/images/enemies/hopper/costa-Sheet.png"},
     "cueva": {"from": "assets/images/enemies/hopper/pradera-Sheet.png", "to": "assets/images/enemies/hopper/cueva-Sheet.png"},
     "fortaleza": {"from": "assets/images/enemies/hopper/pradera-Sheet.png", "to": "assets/images/enemies/hopper/fortaleza-Sheet.png"},
+    "jungla": {"from": "assets/images/enemies/hopper/pradera-Sheet.png", "to": "assets/images/enemies/hopper/jungla-Sheet.png"},
     "nieve": {"from": "assets/images/enemies/hopper/pradera-Sheet.png", "to": "assets/images/enemies/hopper/nieve-Sheet.png"},
     "volcan": {"from": "assets/images/enemies/hopper/pradera-Sheet.png", "to": "assets/images/enemies/hopper/volcan-Sheet.png"}
   }

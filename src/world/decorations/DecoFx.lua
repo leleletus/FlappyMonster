@@ -8,14 +8,19 @@
 --                                   imagen entera es un cuadro (los sprites llevan 1 px de
 --                                   margen transparente: nunca se ven cortados)
 --   DecoFx.sheet(d, sx, sy, strip, frame, opts)   dibuja un cuadro anclado
---        opts.hang = cuelga desde arriba de su celda/subcelda; opts.alpha, opts.rot
+--        opts.hang = cuelga desde arriba de su celda/subcelda; opts.alpha, opts.rot (gira alrededor de
+--        la base, o de arriba si cuelga)
 --   DecoFx.wave(d, sx, sy, strip, frame, amp, speed, opts)
 --        dibuja por filas de arte desplazadas en seno: mecerse de algas, pinos,
---        helechos... (la raíz quieta, la punta se mueve `amp` px de arte)
+--        helechos... (la raíz quieta, la punta se mueve `amp` px de arte; las filas
+--        que se desplazan igual van juntas en una franja). Capas del mismo tamaño
+--        (tronco / copa) con el mismo amp, speed y d siguen pegadas
 --   DecoFx.glow(sx, sy, radius, color, alpha)     halo aditivo (fx/glow.png)
 --   DecoFx.seen(d) / DecoFx.visible(d)    solo se crean partículas si se ve
 --   DecoFx.emit(d, p) / update(d, dt) / draw(d, sx, sy)   partículas propias
 --   DecoFx.every(d, key, dt, a, b)  true cada [a,b] s (temporizador propio)
+--   DecoFx.leaf(d, x, y, sheet)     hoja que cae de una copa (las altas, hasta el suelo)
+--   DecoFx.drip(d, x, y, color, drop, splash)   gota que se forma, cae y salpica
 local SpriteStrip = require 'src/fx/SpriteStrip'
 
 local DecoFx = {}
@@ -63,7 +68,10 @@ function DecoFx.sheet(d, sx, sy, s, frame, opts)
     love.graphics.setColor(1, 1, 1, opts.alpha or 1)
     local f = stepOf(d, s, frame)
     local q, img = s.quads[f], s.images and s.images[f] or s.image
-    if opts.rot then
+    if opts.rot and opts.hang then
+        -- (lo que cuelga gira alrededor de su punto de arriba)
+        love.graphics.draw(img, q, math.floor(sx), math.floor(y), opts.rot, S * d.flip, S, s.w / 2, 0)
+    elseif opts.rot then
         -- (gira alrededor de la base)
         love.graphics.draw(img, q, math.floor(sx), math.floor(y + h), opts.rot, S * d.flip, S, s.w / 2, s.h)
     else
@@ -71,21 +79,20 @@ function DecoFx.sheet(d, sx, sy, s, frame, opts)
     end
 end
 
--- Quads de una fila de arte de un cuadro (cacheados en la tira)
-local function rowQuad(s, frame, row)
-    s.rows = s.rows or {}
-    local k = frame * 1024 + row
-    local q = s.rows[k]
-    if not q then
-        local r = s.recs and s.recs[frame]
-        if r then q = love.graphics.newQuad(r.x, r.y + row, r.w, 1, r.iw, r.ih)
-        else
-            local iw, ih = s.image:getDimensions()
-            q = love.graphics.newQuad((frame - 1) * s.w, row, s.w, 1, iw, ih)
-        end
-        s.rows[k] = q
+-- Franja de filas de arte [r0, r0+n) de un cuadro: UN solo Quad para todas (draw copia los vértices al momento,
+-- así que se puede mover entre dibujos sin crear nada por fotograma)
+local band
+local function bandQuad(s, frame, r0, n)
+    local r = s.recs and s.recs[frame]
+    local fx, fy, fw, iw, ih
+    if r then fx, fy, fw, iw, ih = r.x, r.y, r.w, r.iw, r.ih
+    else
+        iw, ih = s.image:getDimensions()
+        fx, fy, fw = (frame - 1) * s.w, 0, s.w
     end
-    return q
+    if band then band:setViewport(fx, fy + r0, fw, n, iw, ih)
+    else band = love.graphics.newQuad(fx, fy + r0, fw, n, iw, ih) end
+    return band
 end
 
 function DecoFx.wave(d, sx, sy, s, frame, amp, speed, opts)
@@ -97,12 +104,24 @@ function DecoFx.wave(d, sx, sy, s, frame, amp, speed, opts)
     local f = stepOf(d, s, frame)
     local img = s.images and s.images[f] or s.image
     love.graphics.setColor(1, 1, 1, opts.alpha or 1)
-    for row = 0, s.h - 1 do
-        -- k = 0 en la raíz (abajo, o arriba si cuelga) → 1 en la punta
-        local k = opts.hang and (row / (s.h - 1)) or (1 - row / (s.h - 1))
-        local off = math.floor(amp * S * k ^ 1.4 * math.sin(t - k * 1.3) + 0.5)
-        love.graphics.draw(img, rowQuad(s, f, row),
-            math.floor(x + off + (d.flip < 0 and w or 0)), math.floor(y + row * S), 0, S * d.flip, S)
+    local bx = x + (d.flip < 0 and w or 0)
+    -- Las filas seguidas con el mismo desplazamiento van en UNA franja (los árboles grandes tienen >100 filas
+    -- y casi todas se mueven 0-2 px: unas pocas franjas en vez de una por fila)
+    local r0, off0 = 0, nil
+    for row = 0, s.h do
+        local off
+        if row < s.h then
+            -- k = 0 en la raíz (abajo, o arriba si cuelga) → 1 en la punta
+            local k = opts.hang and (row / (s.h - 1)) or (1 - row / (s.h - 1))
+            off = math.floor(amp * S * k ^ 1.4 * math.sin(t - k * 1.3) + 0.5)
+        end
+        if off ~= off0 then
+            if off0 then
+                love.graphics.draw(img, bandQuad(s, f, r0, row - r0),
+                    math.floor(bx + off0), math.floor(y + r0 * S), 0, S * d.flip, S)
+            end
+            r0, off0 = row, off
+        end
     end
 end
 
@@ -182,6 +201,15 @@ function DecoFx.draw(d, sx, sy)
     love.graphics.setColor(1, 1, 1, 1)
 end
 
+-- Hoja que se desprende de una copa y cae meciéndose hasta el suelo (x, y respecto al ancla; sheet = la hoja,
+-- por defecto fx/leaf). Para copas altas (los árboles grandes) cae más rápido y vive más: llega abajo.
+function DecoFx.leaf(d, x, y, sheet)
+    local tall = y < -3 * TILE_PX
+    DecoFx.emit(d, { x = x, y = y, vx = 20 * (math.random() < 0.5 and -1 or 1), vy = 10, g = tall and 70 or 40,
+                     drag = tall and 1.0 or 1.2, life = tall and math.min(7, -y / 60) or 2.4, wob = 10,
+                     sheet = sheet or DecoFx.fx('leaf'), scale = 3, fade = 0.6 })
+end
+
 -- Sonido de ambiente de una decoración, donde está (se atenúa con la distancia; en las cuevas
 -- lleva eco). Solo en el cliente (el servidor no tiene playAt); tono algo distinto cada vez
 DecoFx.AMBIENT_VOL = 0.35                  -- (de fondo: una gota no debe sonar como un efecto del juego)
@@ -191,8 +219,10 @@ end
 
 -- Gota que cae (estalactitas, carámbanos): se forma colgando, cae y salpica al
 -- tocar el suelo del nivel (d.level), o se va a la casilla y media sin nivel
-function DecoFx.drip(d, x, y, color)
-    local s, splash = DecoFx.anim('fx', 'ice_drop'), DecoFx.anim('fx', 'ice_splash')
+--   (drop / splash: otras animaciones para la gota y la salpicadura; por defecto las del hielo)
+function DecoFx.drip(d, x, y, color, drop, splash)
+    local s = drop or DecoFx.anim('fx', 'ice_drop')
+    splash = splash or DecoFx.anim('fx', 'ice_splash')
     if not s then return end
     DecoFx.emit(d, { x = x, y = y, life = 6, sheet = s, scale = 3, color = color, phase = 'form',
         onUpdate = function(p, dt, dd)

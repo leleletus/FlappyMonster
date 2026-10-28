@@ -2,7 +2,7 @@
 -- abajo). Cada `interval` s BORBOTEA (~1 s de aviso: `geyserRumble`) y lanza una COLUMNA de `height` casillas (se
 -- corta en el primer bloque) durante `erupt` s que EMPUJA HACIA ARRIBA todo lo que tiene física (systems/Push:
 -- jugadores, enemigos, cajas, bombas, semillas…), sin daño. Por isla (Isles): pradera y costa AGUA · fortaleza VAPOR ·
--- cueva vapor que BRILLA (da luz) · volcán HUMO, que también solo empuja (el usuario: "por continuidad, para no
+-- cueva vapor que BRILLA (da luz) · jungla AGUA · volcán HUMO, que también solo empuja (el usuario: "por continuidad, para no
 -- confundir") · nieve: el agua SE CONGELA en un PILAR DE HIELO cuyo remate se pisa (`freeze` s; el último segundo se
 -- agrieta) y luego se rompe.
 -- Arte (tools/art/world/make_wind_geyser.py): assets/images/mechanisms/geyser/<isla>-vent.png (16x8), -warn-Sheet.png
@@ -31,7 +31,8 @@ local function hash(a, b)
     local v = math.sin(a * 12.9898 + b * 78.233) * 43758.5453
     return v - math.floor(v)
 end
-local KIND = { pradera = 'water', costa = 'water', nieve = 'water', fortaleza = 'steam', cueva = 'steam', volcan = 'smoke' }
+local KIND = { pradera = 'water', costa = 'water', nieve = 'water', fortaleza = 'steam', cueva = 'steam', volcan = 'smoke',
+               jungla = 'water' }
 
 Gey.wantsLevel = true
 function Gey.sizePx() return TILE_PX, TILE_PX / 2 end

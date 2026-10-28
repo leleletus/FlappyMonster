@@ -46,3 +46,33 @@ def write(doc, force=False):
 def read(set_id):
     p = path_of(set_id)
     return json.load(open(p, encoding='utf-8')) if os.path.exists(p) else None
+
+
+def add_anims(set_id, entries):
+    """Añade al conjunto `set_id` (lo crea si no existe) las animaciones que NO tiene: cada entrada es
+    (nombre, ruta de la imagen, ancho de cuadro o None = la imagen entera, ajustes {fps, loop, durations…;
+    frames_of = [k…]: solo esos cuadros de la tira}).
+    Lo que ya existe no se toca (puede estar retocado en el editor). Lo usan los generadores de arte al aplicar.
+    → nº de animaciones añadidas."""
+    from PIL import Image
+    doc = read(set_id) or {'id': set_id, 'scale': 4, 'origin': [0.5, 1], 'frames': [], 'anims': {}}
+    anims = doc.setdefault('anims', {})
+    added = 0
+    for (name, path, fw, opts) in entries:
+        if name in anims: continue
+        w, h = Image.open(os.path.join(REPO, path)).size
+        fw = fw or w
+        idx = []
+        for i in range(max(1, w // fw)):
+            f = {'image': path, 'x': i * fw, 'y': 0, 'w': fw, 'h': h}
+            if f not in doc['frames']: doc['frames'].append(f)          # (un cuadro que ya está se reutiliza)
+            idx.append(doc['frames'].index(f) + 1)
+        opts = dict(opts or {})
+        pick = opts.pop('frames_of', None)                                 # (solo esos cuadros de la tira, desde 1)
+        a = {'frames': [idx[k - 1] for k in pick] if pick else idx, 'fps': 8, 'loop': True}
+        a.update(opts)
+        anims[name] = a
+        doc.setdefault('fallback', name)
+        added += 1
+    if added: write(doc, True)
+    return added

@@ -38,6 +38,7 @@ and their own folder to `sys.path`; scripts that import each other sit in the sa
 | `enemies/make_variant_skins.py` | `enemies/gummy_magma/`, `gummy_cave/`, `gummy_fortress/`, `crabby_fortress/` | **NO: gummy_fortress is hand-edited** |
 | `enemies/make_crab_species.py` | `enemies/crabby_river/`, `crabby_lava/`, `crabby_cave/` | **NO: lava legs are hand-edited** |
 | `enemies/make_hopper_sprites.py --apply` | `enemies/hopper/<island>-Sheet.png` | yes (verified identical) |
+| `enemies/make_jungle_skins.py --apply` | the jungle island (`jungla`) variants: `enemies/gummy_jungle/`, `crabby_jungle/`, `jungla-…` of hopper, gust (+ row 7 of `gust/wind-Sheet.png`), box, scale, geyser, wind, seed, `items/food_jungla.png` (previews in `FlappyMonster_pruebas/jungla/variantes/`) | yes (never overwrites without `--force`) |
 | `enemies/make_icecrabby_sprites.py`, `make_icecrabby_claws.py` | `enemies/crabby_ice/` | **NO: bodies hand-edited** |
 | `enemies/make_gummy_variants.py` | `enemies/gummy_ice/` (`--apply-helado`), `bosses/megagummy/` (`--apply-mega`) | not re-run |
 | `enemies/make_crown_broken.py` | `bosses/megagummy/crown_broken.png` (the King's broken crown after his defeat, from `crown.png`'s colours) | safe to re-run |
@@ -49,6 +50,9 @@ and their own folder to `sys.path`; scripts that import each other sit in the sa
 | `world/make_terrain.py`, `make_world_art.py`, `make_snow_sprites.py`, `make_biome_art.py` | `world/tiles/`, mortar, checkpoints, lava, volcano and meadow art | terrain yes (verified); **make_world_art NO for checkpoints (hand-edited)** |
 | `world/make_sky.py` | `world/sky/` | yes (verified) |
 | `world/make_decorations.py` | `world/decorations/` | not re-run (never overwrites without `--force`) |
+| `world/make_jungle_decor.py [--apply [--force]]` | `world/decorations/jungle/` (the `jungle_set`) + `fx/` jungle_leaf, firefly, pollen, mist, drip, and their animations in `assets/anim/world/decorations/jungle.json` / `fx.json`; the frog, toucan and monkey are drawn but never applied (`NOT_APPLIED`); previews in `FlappyMonster_pruebas/selva/decoraciones/` | yes (never overwrites without `--force`; animations only added) |
+| `world/make_big_trees.py [--apply [--force]] [name …]` | big trees and extras per island in `world/decorations/<meadow\|tropical\|ice\|volcano\|cave\|fortress>/` (palms: `tropical/<name>/trunk\|coconuts\|fronds.png`) and their animations; previews in `FlappyMonster_pruebas/arboles/` | yes (never overwrites without `--force`; animations only added) |
+| `world/make_jungle_sky.py [--apply]` | the JUNGLE sky (`world/sky/jungle_far/mid/near/top`, depth `temple_far/mid/top/wall`, 4 frames APPENDED to `gradients.png`) and tiles (`world/tiles/mud`, `jungle_grass`, `jungle_blades`, `temple_brick`, `temple_moss`, `jungle_platform`); previews in `FlappyMonster_pruebas/selva/fondo/` | yes (never overwrites; re-running `make_sky.py` drops the 4 gradient frames: run this again after it) |
 | `world/make_ice_spikes.py`, `make_cryo_sprites.py`, `make_cryo_parts.py`, `make_cryo_chain.py` | `traps/spikes/spike_ice.png`, `traps/cryo/` | spikes and chain yes (verified) |
 | `world/make_food_sprites.py` | `items/food_<island>.png` (never the user's apple) | yes (verified) |
 | `ui/make_sprites.py`, `make_story_icons.py` | `ui/touch/`, `ui/ping/`, `ui/icons/` | yes (verified) |
@@ -68,7 +72,7 @@ diff of whatever it writes.
 ## sounds/
 
 One script per family, each writes WAVs into `assets/sounds/<group>/`: `ambience.py`, `bomb.py`, `cryo.py`,
-`gloomy.py`, `groove.py` (the Groove Crab's crowd: cheer, boo), `hopper.py`, `ice.py`, `items.py`, `water.py` (drowning music, alarm, gasp, glug, extra life), `startup.py` (the logo melody), `mechanics.py`, `megacrabby.py`, `megagummy.py`, `mirror.py`,
+`gloomy.py`, `groove.py` (the Groove Crab's crowd: cheer, boo), `hopper.py`, `ice.py`, `items.py`, `jungle.py` (the jungle ambience + the brazier fire; without `--apply` it writes previews and a 40 s level mix to `FlappyMonster_pruebas/selva/sonidos/`), `water.py` (drowning music, alarm, gasp, glug, extra life), `startup.py` (the logo melody), `mechanics.py`, `megacrabby.py`, `megagummy.py`, `mirror.py`,
 `snowboss.py`, `story.py`, `ui.py` (entering a level, the start countdown). After generating: register the sound and its gain in `src/audio/Sound.lua`, then
 `tools/tests/run.sh sounds NAMES=…`.
 
@@ -80,4 +84,4 @@ See the generator table in `docs/audio/music-catalog.md`. `famicom.py` (engine),
 ## levelgen/
 
 `lib.py`, `levels_*.py` (builders), `build.py --only <level>`, `retheme.py <levels>`, `add_apples.py <levels>`,
-`make_sets.py` (film sets), `make_credits_sets.py` (the live stages of the credits: `assets/story/sets/credits_*.json`), `arenas/` (test arenas and their `make_*.py`).
+`make_sets.py` (film sets), `make_credits_sets.py` (the live stages of the credits: `assets/story/sets/credits_*.json`), `arenas/` (test arenas and their `make_*.py`; `make_decoraciones.py` = the showcase of every decoration, from `docs/reference/decorations-and-modes.md`).

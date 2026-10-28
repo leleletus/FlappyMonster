@@ -68,6 +68,9 @@
 --                  encendida; agachado + ARRIBA la deja al lado apagada (systems/Carry)
 --   bomba_reaparece la bomba objeto con `respawn`: tras explotar vuelve a su sitio
 --   islas          Isles: isla de cada fondo; familias con isla 'auto' / fija cambian de tipo al cargar; sin isla, no
+--                  (+ la jungla: fondos jungle / temple y sus tres tipos de familia)
+--   islas_arte     CADA isla de Isles.IDS: los tipos de familia existen, andan, mueren y llevan su arte; Saltarín y comida
+--                  con la suya; todo lo de `isleArt` se dibuja con esa isla sin error
 --   viento         el aire (systems/Push) arrastra al jugador de lado, lo eleva y mueve una caja
 --   cajas_golpes   la grande cuesta más empujarla que la pequeña; la pequeña lanzada se rompe solo con golpe fuerte; la
 --                  grande se rompe en pinchos y cayendo de muy alto; la bomba objeto se enciende cayendo de muy alto
@@ -107,7 +110,7 @@
 --                  no parpadee (mejorar espera 0,6 s; perder la conexión, al momento)
 -- SHOT_BOMB=1: <save>/mechanics_bombs.png (bombas andando, volando, encendidas
 -- a distintos tiempos, objeto y explosión).
--- SHOT_PROPS=1: <save>/mechanics_props.png (plantas de la Semilla de las 6 islas crecidas, con sus plataformas;
+-- SHOT_PROPS=1: <save>/mechanics_props.png (plantas de la Semilla de todas las islas crecidas, con sus plataformas;
 -- Soplón soplando; Balanza, Caja y caja pequeña; Géiser en erupción y el de la nieve congelado; Ventisca soplando).
 -- SHOT_GEYSER=1: <save>/mechanics_geyser.png (una caja grande sobre un Géiser, una foto cada SHOT_EVERY s, 0,25).
 -- SHOT=1: además guarda <save>/mechanics.png (bloques, invisible visible,
@@ -1390,7 +1393,7 @@ end
 function cases.tapa_base()
     local Silhouette = require 'src/fx/Silhouette'
     local bad = {}
-    for _, ty in ipairs({ 'crabby', 'crabby_fortress', 'crabbytramp', 'crabby_ice', 'crabby_river', 'crabby_cave', 'crabby_lava' }) do
+    for _, ty in ipairs({ 'crabby', 'crabby_fortress', 'crabbytramp', 'crabby_ice', 'crabby_river', 'crabby_cave', 'crabby_lava', 'crabby_jungle' }) do
         local e = Entities.create({ type = ty, col = 5, row = 5, props = {} })
         e.currentImg = e.sk.hid
         if e:headH() ~= 0 then bad[#bad + 1] = ty .. '=' .. e:headH() end
@@ -1806,9 +1809,78 @@ function cases.islas()
     for i, n in ipairs(lv.entities) do got[i] = n.type end
     local of = { Isles.of({ background = 'coast' }), Isles.of({ background = 'snow' }), Isles.of({ snow = true, background = 'coast' }),
                  Isles.of(nil), Isles.of({ background = 'volcano' }, 'cueva') }
+    -- la JUNGLA (0.5.83): sus dos fondos y sus tres tipos de familia
+    local jl = Level.fromData({ name = 't', width = 14, height = 9, playerStart = { 2, 8 }, background = 'jungle',
+                                tiles = lv.tiles, entities = { { type = 'gummy', col = 4, row = 8, props = { isle = 'auto' } },
+                                    { type = 'crabby', col = 6, row = 8, props = { isle = 'auto' } },
+                                    { type = 'crabbytramp', col = 8, row = 8, props = { isle = 'jungla' } } } })
+    local jg = {}
+    for i, n in ipairs(jl.entities) do jg[i] = n.type end
+    local jungle = jg[1] == 'gummy_jungle' and jg[2] == 'crabby_jungle' and jg[3] == 'crabbytramp_jungle'
+        and Isles.of({ background = 'jungle' }) == 'jungla' and Isles.of({ background = 'temple' }) == 'jungla'
     check('islas', got[1] == 'gummy_magma' and got[2] == 'gummy' and got[3] == 'crabby_ice' and got[4] == 'crabbytramp_lava'
-          and of[1] == 'costa' and of[2] == 'nieve' and of[3] == 'nieve' and of[4] == 'pradera' and of[5] == 'cueva',
-        ('volcán: auto → %s · sin isla → %s · nieve fija → %s · trampolín auto → %s · fondos: %s'):format(got[1], got[2], got[3], got[4], table.concat(of, ',')))
+          and of[1] == 'costa' and of[2] == 'nieve' and of[3] == 'nieve' and of[4] == 'pradera' and of[5] == 'cueva' and jungle,
+        ('volcán: auto → %s · sin isla → %s · nieve fija → %s · trampolín auto → %s · fondos: %s · jungla: %s'):format(got[1], got[2], got[3], got[4],
+            table.concat(of, ','), table.concat(jg, ',')))
+end
+
+-- CADA ISLA de Isles.IDS tiene su arte en todo lo que cambia por isla: los tipos de las FAMILIAS existen, andan,
+-- mueren aplastados y llevan SU arte (Gummy: su carpeta; Crabby: su piel); el Saltarín y la comida tienen la suya; y
+-- todo lo de `isleArt` (Caja, Balanza, Soplón, Semilla, Ventisca, Géiser…) se dibuja con la isla forzada sin error
+-- (sus archivos por nombre de isla existen). Una isla nueva sin su arte falla aquí.
+function cases.islas_arte()
+    local EntityTypes = require 'src/world/entities/base/EntityTypes'
+    local Hopper = require('src/world/entities/types/enemies/hopper').class
+    local Crabby = require('src/world/entities/types/enemies/crabby').class
+    local bad = {}
+    local function fail(s) bad[#bad + 1] = s end
+    local canvas = love.graphics.newCanvas(64, 64)
+    local function draws(e, what)
+        love.graphics.setCanvas(canvas)
+        local ok, err = pcall(e.render, e, 0, 0)
+        love.graphics.setCanvas()
+        love.graphics.setColor(1, 1, 1, 1)
+        if not ok then fail(what .. ': ' .. tostring(err):sub(1, 90)) end
+    end
+    local hopSkins = {}
+    for _, id in ipairs(Hopper.SKINS) do hopSkins[id] = true end
+    local Apple = require('src/world/entities/types/items/apple').class
+    local isleTypes = {}
+    for name, d in pairs(EntityTypes.byName) do if d.isleArt then isleTypes[#isleTypes + 1] = name end end
+    table.sort(isleTypes)
+    local walked = 0
+    for _, isle in ipairs(Isles.IDS) do
+        if not hopSkins[isle] then fail('saltarín sin ' .. isle) end
+        if Apple.skinFor({ skin = isle }) ~= isle then fail('comida sin ' .. isle) end
+        for fam, t in pairs(Isles.FAMILIES) do
+            local ty = t[isle]
+            if not ty or not EntityTypes.get(ty) then fail(fam .. ' sin tipo en ' .. isle)
+            else
+                local lv, es = room(16, 9, {}, { { type = ty, col = 8, row = 8, props = { movement = 'walk', pauses = false } } })
+                local e = es[1]
+                settle(lv, es)
+                local x0 = e.x
+                sim(lv, {}, es, 1.5)
+                if math.abs(e.x - x0) > 4 then walked = walked + 1 else fail(ty .. ' no anda') end
+                if fam == 'gummy' and e:art().idle == require('src/world/entities/types/enemies/gummy').class.loadArt('assets/images/enemies/gummy/').idle
+                   and ty ~= 'gummy' then fail(ty .. ' con el arte del Gummy') end
+                if fam ~= 'gummy' and e.sk == Crabby.SKINS.normal and ty ~= 'crabby' and ty ~= 'crabbytramp' then fail(ty .. ' con la piel normal') end
+                draws(e, ty)
+                if e.state ~= 'hidden' then e:stomp() end
+                sim(lv, {}, es, 0.05)
+                if fam == 'gummy' and e.state ~= 'dead' then fail(ty .. ' no muere aplastado (' .. tostring(e.state) .. ')') end
+                draws(e, ty .. ' muerto')
+            end
+        end
+        for _, ty in ipairs(isleTypes) do
+            local lv, es = room(16, 9, {}, { { type = ty, col = 8, row = 8, props = { isle = isle } } })
+            settle(lv, es)
+            for _, e in ipairs(es) do e.levelRef = e.levelRef or lv; draws(e, ty .. '/' .. isle) end
+        end
+    end
+    check('islas_arte', #bad == 0,
+        ('%d islas (%s) · %d tipos de familia andan · isleArt: %s · fallos: %s'):format(#Isles.IDS, table.concat(Isles.IDS, ','), walked,
+            table.concat(isleTypes, ','), #bad == 0 and 'ninguno' or table.concat(bad, ' | ')))
 end
 
 -- Grande vs pequeña: cuánto cuesta empujarlas; la pequeña lanzada se rompe o no según el golpe; la grande se rompe
@@ -2350,34 +2422,35 @@ function cases.cuerpo_mueve()
         ('de pie en un cuerpo que sube y baja 3 casillas: hueco máximo %.1f px, pasos en el aire %d'):format(maxGap, falls))
 end
 
--- SHOT_PROPS=1: <save>/mechanics_props.png — las plantas de la Semilla de las 6 islas ya crecidas (con sus plataformas
+-- SHOT_PROPS=1: <save>/mechanics_props.png — las plantas de la Semilla de todas las islas ya crecidas (con sus plataformas
 -- en F1), un Soplón soplando, la Balanza con la Caja y las cajas (para revisar el aspecto sin jugar)
 local function propsShot()
     local Isl = require 'src/world/level/Isles'
     local ents = {}
+    local dx = (#Isl.IDS - 6) * 6                 -- (lo demás, a la derecha de la última planta)
     for i, isle in ipairs(Isl.IDS) do
         ents[#ents + 1] = { type = 'seed', col = 3 + (i - 1) * 6, row = 13, props = { isle = isle, life = 99 } }
     end
-    ents[#ents + 1] = { type = 'gust', col = 42, row = 9, props = { speed = 0, bobAmp = 0 } }
-    ents[#ents + 1] = { type = 'scale', col = 44, row = 2, props = { span = 6, drop = 5, travel = 2 } }
-    ents[#ents + 1] = { type = 'box', col = 41, row = 6 }
-    ents[#ents + 1] = { type = 'smallbox', col = 47, row = 13 }
-    ents[#ents + 1] = { type = 'geyser', col = 37, row = 13, props = { firstDelay = 0, warn = 0.3, erupt = 9, interval = 9 } }
-    ents[#ents + 1] = { type = 'box', col = 37, row = 6 }        -- (encima del chorro: lo corta y lo levanta)
-    ents[#ents + 1] = { type = 'geyser', col = 40, row = 13, props = { firstDelay = 0, warn = 0.3, erupt = 0.5, freeze = 9, interval = 9, isle = 'nieve' } }
+    ents[#ents + 1] = { type = 'gust', col = 42 + dx, row = 9, props = { speed = 0, bobAmp = 0 } }
+    ents[#ents + 1] = { type = 'scale', col = 44 + dx, row = 2, props = { span = 6, drop = 5, travel = 2 } }
+    ents[#ents + 1] = { type = 'box', col = 41 + dx, row = 6 }
+    ents[#ents + 1] = { type = 'smallbox', col = 47 + dx, row = 13 }
+    ents[#ents + 1] = { type = 'geyser', col = 37 + dx, row = 13, props = { firstDelay = 0, warn = 0.3, erupt = 9, interval = 9 } }
+    ents[#ents + 1] = { type = 'box', col = 37 + dx, row = 6 }        -- (encima del chorro: lo corta y lo levanta)
+    ents[#ents + 1] = { type = 'geyser', col = 40 + dx, row = 13, props = { firstDelay = 0, warn = 0.3, erupt = 0.5, freeze = 9, interval = 9, isle = 'nieve' } }
     ents[#ents + 1] = { type = 'blizzard', col = 2, row = 2, props = { firstDelay = 0, warn = 0.4, blowMin = 9, blowMax = 9,
                          dir_left = false, dir_up = false, dir_down = false, corner = { col = 18, row = 6 } } }
-    local level, es = room(52, 14, {}, ents)
+    local level, es = room(52 + dx, 14, {}, ents)
     settle(level, es)
-    for i = 1, 6 do                               -- (plantadas: como si un jugador las hubiera plantado con un ground pound)
+    for i = 1, #Isl.IDS do                               -- (plantadas: como si un jugador las hubiera plantado con un ground pound)
         local sd = es[i]
         local fake = { x = sd.x, getOuterBounds = function() return { x = sd.x - 20, y = 13 * T - 80, w = 40, h = 80 } end }
         sd.levelRef = level
         sd:onCarriedPound(fake)
     end
-    local pa = PlayerAdventure:new(38 * T, 13 * T - 60)
+    local pa = PlayerAdventure:new((38 + dx) * T, 13 * T - 60)
     sim(level, { pa }, es, 2.2)
-    local canvas = love.graphics.newCanvas(52 * T, 14 * T)
+    local canvas = love.graphics.newCanvas((52 + dx) * T, 14 * T)
     love.graphics.setCanvas(canvas)
     love.graphics.clear(0.55, 0.75, 0.92, 1)
     level:render(0, 0)
@@ -2719,7 +2792,7 @@ function love.load()
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
                          'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado', 'techo_pinchos',
-                         'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'balanza_salto', 'escarabajo', 'escarabajo_lanzado', 'escarabajo_ruta', 'escarabajo_manos', 'escarabajo_arrolla' }) do
+                         'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'islas_arte', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'balanza_salto', 'escarabajo', 'escarabajo_lanzado', 'escarabajo_ruta', 'escarabajo_manos', 'escarabajo_arrolla' }) do
         if not os.getenv('ONLY') or (',' .. os.getenv('ONLY') .. ','):find(',' .. n .. ',', 1, true) then cases[n]() end
     end
     if os.getenv('SHOT_BOMB') then bombShot() end

@@ -9,13 +9,20 @@ Registered in `src/world/decorations/Decorations.lua` (level JSON key `foliage`)
 |---|---|---|---|---|
 | `stretch` | Estiradora | Plantas | sub |  |
 | `tulip` | Tulipán | Plantas | sub |  |
+| `big_birch` | Abedul | Pradera | cell |  |
+| `big_fir` | Abeto | Pradera | cell |  |
+| `big_oak` | Roble grande | Pradera | cell |  |
+| `boulder` | Peña | Pradera | cell |  |
 | `fallen_log` | Tronco caído | Pradera | cell |  |
 | `flower_patch` | Margaritas | Pradera | sub |  |
+| `hazel_bush` | Avellano | Pradera | cell |  |
+| `lupines` | Altramuces | Pradera | cell |  |
 | `mossy_rock` | Roca con musgo | Pradera | sub |  |
 | `oak_tree` | Roble | Pradera | cell |  |
 | `pine_tree` | Pino | Pradera | cell |  |
 | `red_mushroom` | Seta roja | Pradera | sub |  |
 | `round_bush` | Arbusto redondo | Pradera | cell |  |
+| `stump` | Tocón | Pradera | cell |  |
 | `sunflower` | Girasol | Pradera | sub |  |
 | `tall_grass` | Hierba alta | Pradera | sub |  |
 | `frozen_bush` | Arbusto helado | Hielo y nieve | cell |  |
@@ -23,12 +30,22 @@ Registered in `src/world/decorations/Decorations.lua` (level JSON key `foliage`)
 | `icicle` | Carámbano | Hielo y nieve | cell |  |
 | `icicle_small` | Carámbanos pequeños | Hielo y nieve | sub |  |
 | `snow_pile` | Montón de nieve | Hielo y nieve | sub |  |
+| `snow_rock` | Roca nevada | Hielo y nieve | cell |  |
+| `snow_stump` | Tocón nevado | Hielo y nieve | cell |  |
 | `snowman` | Muñeco de nieve | Hielo y nieve | cell |  |
+| `snowy_fir` | Abeto nevado | Hielo y nieve | cell |  |
+| `snowy_fir_small` | Abeto nevado pequeño | Hielo y nieve | cell |  |
 | `snowy_pine` | Pino nevado | Hielo y nieve | cell |  |
+| `winter_grass` | Hierba helada | Hielo y nieve | cell |  |
 | `bones` | Huesos | Cueva | sub |  |
+| `cave_boulder` | Roca de cueva | Cueva | cell |  |
 | `cave_crystals` | Cristales brillantes | Cueva | cell | yes |
 | `cobweb` | Telaraña | Cueva | cell |  |
+| `giant_mushroom` | Seta gigante | Cueva | cell | yes |
+| `giant_mushroom_violet` | Seta gigante violeta | Cueva | cell | yes |
 | `glow_mushroom` | Seta luminosa | Cueva | sub | yes |
+| `hanging_roots` | Raíces colgantes | Cueva | cell |  |
+| `mushroom_cluster` | Corro de setas | Cueva | cell | yes |
 | `stalactite` | Estalactita | Cueva | cell |  |
 | `stalagmite` | Estalagmita | Cueva | cell |  |
 | `stalagmite_small` | Estalagmita pequeña | Cueva | sub |  |
@@ -41,22 +58,64 @@ Registered in `src/world/decorations/Decorations.lua` (level JSON key `foliage`)
 | `seaweed_small` | Alga pequeña | Acuático | sub |  |
 | `shell` | Concha | Acuático | sub |  |
 | `starfish` | Estrella de mar | Acuático | sub |  |
+| `beach_grass` | Hierba de playa | Tropical | cell |  |
+| `beach_rocks` | Rocas de playa | Tropical | cell |  |
 | `butterflies` | Mariposas | Tropical | cell |  |
+| `coconut_palm` | Cocotero | Tropical | cell |  |
+| `driftwood` | Madera de deriva | Tropical | cell |  |
 | `fern` | Helecho | Tropical | cell |  |
 | `hibiscus` | Hibisco | Tropical | sub |  |
 | `palmtree` | Palmera | Tropical | cell |  |
 | `pineapple` | Piña | Tropical | sub |  |
 | `tiki_torch` | Antorcha tiki | Tropical | cell |  |
 | `tropical_bush` | Arbusto tropical | Tropical | cell |  |
+| `twin_palm` | Palmeras gemelas | Tropical | cell |  |
+| `young_palm` | Palmera joven | Tropical | cell |  |
 | `ash_pile` | Montón de ceniza | Volcán | sub |  |
 | `basalt_pebbles` | Piedras de basalto | Volcán | sub |  |
 | `basalt_rock` | Columnas de basalto | Volcán | cell |  |
+| `burnt_shrub` | Matorral quemado | Volcán | cell |  |
+| `charred_stump` | Tocón calcinado | Volcán | cell |  |
 | `charred_tree` | Árbol calcinado | Volcán | cell |  |
 | `dead_bush` | Matorral seco | Volcán | sub |  |
+| `dead_tree` | Árbol muerto | Volcán | cell | yes |
 | `glow_rock` | Obsidiana ardiente | Volcán | sub | yes |
 | `lava_fall` | Cascada de lava | Volcán | cell | yes |
 | `lava_vent` | Respiradero | Volcán | sub | yes |
+| `obsidian_shards` | Esquirlas de obsidiana | Volcán | cell |  |
 | `steam_stones` | Aguas termales (vapor) | Volcán | sub |  |
+| `banner` | Estandarte | Fortaleza | cell |  |
+| `broken_column` | Columna partida | Fortaleza | cell |  |
+| `cypress` | Ciprés | Fortaleza | cell |  |
+| `ivy_hang` | Hiedra colgante | Fortaleza | cell |  |
+| `old_tree` | Árbol viejo | Fortaleza | cell |  |
+| `urn` | Maceta con flores | Fortaleza | cell |  |
+| `banana_plant` | Platanera | Jungla | cell |  |
+| `broken_pillar` | Columna rota | Jungla | cell |  |
+| `bromeliad` | Bromelia | Jungla | sub |  |
+| `ceiba` | Ceiba gigante | Jungla | cell |  |
+| `dragonfly` | Libélula | Jungla | cell |  |
+| `elephant_ear` | Oreja de elefante | Jungla | cell |  |
+| `fallen_block` | Bloque caído | Jungla | cell |  |
+| `fireflies` | Luciérnagas | Jungla | cell | yes |
+| `flower_vine` | Enredadera con flores | Jungla | cell |  |
+| `hanging_moss` | Musgo colgante | Jungla | cell |  |
+| `hanging_orchid` | Orquídea colgante | Jungla | sub |  |
+| `heliconia` | Heliconia | Jungla | cell |  |
+| `jungle_fern` | Helecho gigante | Jungla | cell |  |
+| `jungle_mushrooms` | Setas de la selva | Jungla | sub | yes |
+| `liana_long` | Liana (larga) | Jungla | sub |  |
+| `liana_mid` | Liana (media) | Jungla | sub |  |
+| `liana_short` | Liana (corta) | Jungla | sub |  |
+| `mossy_log` | Tronco con setas | Jungla | cell |  |
+| `mud_puddle` | Charco de barro | Jungla | cell |  |
+| `orchid` | Orquídea | Jungla | sub |  |
+| `roots` | Raíces | Jungla | cell |  |
+| `ruined_arch` | Arco en ruinas | Jungla | cell |  |
+| `stone_brazier` | Brasero de piedra | Jungla | cell | yes |
+| `stone_idol` | Ídolo de piedra | Jungla | cell | yes |
+| `strangler_fig` | Higuera estranguladora | Jungla | cell |  |
+| `tree_fern` | Helecho arborescente | Jungla | cell |  |
 
 ## Online game modes
 

@@ -1,0 +1,22 @@
+{
+  "id": "world/decorations/fortress",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "old_tree",
+  "frames": [
+    {"h": 87, "image": "assets/images/world/decorations/fortress/old_tree.png", "w": 78, "x": 0, "y": 0},
+    {"h": 97, "image": "assets/images/world/decorations/fortress/cypress.png", "w": 24, "x": 0, "y": 0},
+    {"h": 35, "image": "assets/images/world/decorations/fortress/banner.png", "w": 16, "x": 0, "y": 0},
+    {"h": 41, "image": "assets/images/world/decorations/fortress/broken_column.png", "w": 28, "x": 0, "y": 0},
+    {"h": 19, "image": "assets/images/world/decorations/fortress/urn.png", "w": 18, "x": 0, "y": 0},
+    {"h": 27, "image": "assets/images/world/decorations/fortress/ivy_hang.png", "w": 22, "x": 0, "y": 0}
+  ],
+  "anims": {
+    "banner": {"fps": 8, "frames": [3], "loop": true},
+    "broken_column": {"fps": 8, "frames": [4], "loop": true},
+    "cypress": {"fps": 8, "frames": [2], "loop": true},
+    "ivy_hang": {"fps": 8, "frames": [6], "loop": true},
+    "old_tree": {"fps": 8, "frames": [1], "loop": true},
+    "urn": {"fps": 8, "frames": [5], "loop": true}
+  }
+}

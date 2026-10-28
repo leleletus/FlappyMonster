@@ -5,6 +5,9 @@
 --             su casilla; Espejar = la otra esquina; con araña que sube y baja)
 --   subcelda: Estalagmita pequeña, Seta luminosa (brilla y suelta esporas),
 --             Antorcha (llama animada, luz y brasas), Huesos
+--   de tools/art/world/make_big_trees.py: Seta gigante turquesa / violeta (5 casillas: el sombrero brilla, alumbra y
+--             suelta esporas), Corro de setas (brilla), Raíces colgantes (cuelgan del techo, puntas que brillan),
+--             Roca de cueva
 local DecoFx = require 'src/world/decorations/DecoFx'
 
 local DIR = 'assets/images/world/decorations/cave/'
@@ -44,6 +47,29 @@ local function flameDraw(d, sx, sy, s, lightY, lightR)
     local flick = 0.2 + 0.05 * math.sin(d.animT * 13) + 0.03 * math.sin(d.animT * 31 + d.phase * 9)
     DecoFx.glow(sx, sy + lightY, lightR, FIRE, flick)
     DecoFx.sheet(d, sx, sy, s)                    -- (la llama, a su ritmo)
+end
+
+-- ── De make_big_trees.py ──
+-- Seta GIGANTE: el sombrero (de ~200 a ~300 px sobre el suelo) brilla y alumbra; caen esporas de debajo
+local function giantMushroom(name, label, col)
+    return base { name = name, label = label, placement = 'cell', layer = 'back', cullMargin = 7,
+        light = { r = 230, color = col, a = 0.3, dy = -240, pulse = 1.4 },
+        editor = { previewScale = 0.18 },
+        update = function(d, dt)
+            if DecoFx.every(d, 'spore', dt, 0.4, 1.1) then
+                DecoFx.emit(d, { x = (math.random() - 0.5) * 200, y = -200, vx = (math.random() - 0.5) * 8, vy = 8 + math.random() * 10,
+                                 life = 4, sheet = DecoFx.fx('spore'), variant = true, scale = 3, fade = 1, fadeIn = 0.4,
+                                 wob = 10, add = true, color = col })
+            end
+            DecoFx.update(d, dt)
+        end,
+        draw = function(d, sx, sy)
+            DecoFx.seen(d)
+            DecoFx.glow(sx, sy - 250, 120, col, 0.16 + 0.05 * math.sin(d.animT * 1.4 + d.phase * 6))
+            DecoFx.sheet(d, sx, sy, A(name))
+            DecoFx.draw(d, sx, sy)
+        end,
+    }
 end
 
 return {
@@ -138,4 +164,26 @@ return {
         end,
     },
     static('bones', 'Huesos', 'sub', 'bones.png', 8),
+    giantMushroom('giant_mushroom', 'Seta gigante', CYAN),
+    giantMushroom('giant_mushroom_violet', 'Seta gigante violeta', PURPLE),
+    base {
+        name = 'mushroom_cluster', label = 'Corro de setas', placement = 'cell', layer = 'back',
+        light = { r = 80, color = CYAN, a = 0.14, dy = -30, pulse = 1.8 },
+        editor = { previewScale = 0.62 },
+        draw = function(d, sx, sy)
+            DecoFx.glow(sx, sy - 34, 34, CYAN, 0.13 + 0.05 * math.sin(d.animT * 1.8 + d.phase * 6))
+            DecoFx.sheet(d, sx, sy, A('mushroom_cluster'))
+        end,
+    },
+    base {
+        name = 'hanging_roots', label = 'Raíces colgantes', placement = 'cell', layer = 'back',
+        description = 'Cuelgan del techo de su casilla y bajan dos casillas; las puntas brillan un poco.',
+        editor = { previewScale = 0.42, previewLift = 76 },
+        draw = function(d, sx, sy)
+            -- (puntas a ~30 px de arte del techo)
+            DecoFx.glow(sx, sy - TILE_PX + 120, 30, CYAN, 0.08 + 0.04 * math.sin(d.animT * 1.5 + d.phase * 6))
+            DecoFx.wave(d, sx, sy, A('hanging_roots'), nil, 0.4, 0.8, { hang = true })
+        end,
+    },
+    static('cave_boulder', 'Roca de cueva', 'cell', 'cave_boulder.png', 16, { layer = 'back', editor = { previewScale = 0.58 } }),
 }

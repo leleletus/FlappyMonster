@@ -5,6 +5,9 @@
 --             hoja), Antorcha tiki (llama, luz y brasas), Mariposas (revolotean
 --             por su casilla; cuántas: 1-3)
 --   subcelda: Hibisco (se balancea), Piña
+--   de tools/art/world/make_big_trees.py: Cocotero y Palmeras gemelas (7 casillas), Palmera joven: tres capas
+--             del mismo tamaño (tronco, cocos, hojas; conjunto world/decorations/tropical/<nombre>) que se mecen
+--             juntas, las hojas algo más; Hierba de playa (se mece), Madera de deriva, Rocas de playa
 local DecoFx = require 'src/world/decorations/DecoFx'
 
 local DIR = 'assets/images/world/decorations/tropical/'
@@ -19,7 +22,42 @@ local function base(def)
     return def
 end
 
+-- PALMERA GRANDE en tres capas del mismo tamaño (tronco, cocos, hojas), mecidas por filas con el mismo ritmo para
+-- que sigan pegadas; las hojas, algo más. baseDx = px de arte que el pie está a la izquierda del centro del dibujo
+-- (las que se inclinan): se corre para que el pie quede en el centro de su casilla
+local PALM_LAYERS = { 'trunk', 'coconuts', 'fronds' }
+local function palm(name, label, preview, cull, amp, baseDx, layers)
+    local function L(n) return DecoFx.anim('world/decorations/tropical/' .. name, n) end
+    return base { name = name, label = label, placement = 'cell', layer = 'back', cullMargin = cull,
+        editor = { previewScale = preview },
+        draw = function(d, sx, sy)
+            local x = sx + baseDx * DecoFx.SCALE * d.flip
+            for _, ln in ipairs(layers or PALM_LAYERS) do
+                DecoFx.wave(d, x, sy, L(ln), nil, ln == 'fronds' and amp * 1.3 or amp, 0.7)
+            end
+        end,
+    }
+end
+
 return {
+    palm('coconut_palm', 'Cocotero', 0.12, 9, 1.2, 8),
+    palm('twin_palm', 'Palmeras gemelas', 0.12, 9, 1.2, 2),
+    palm('young_palm', 'Palmera joven', 0.31, 4, 0.9, 0, { 'trunk', 'fronds' }),      -- (sin cocos)
+    base {
+        name = 'beach_grass', label = 'Hierba de playa', placement = 'cell', layer = 'back',
+        editor = { previewScale = 0.75 },
+        draw = function(d, sx, sy) DecoFx.wave(d, sx, sy, A('beach_grass'), nil, 0.8, 1.5) end,
+    },
+    base {
+        name = 'driftwood', label = 'Madera de deriva', placement = 'cell', layer = 'back',
+        editor = { previewScale = 0.47 },
+        draw = function(d, sx, sy) DecoFx.sheet(d, sx, sy, A('driftwood')) end,
+    },
+    base {
+        name = 'beach_rocks', label = 'Rocas de playa', placement = 'cell', layer = 'back',
+        editor = { previewScale = 0.62 },
+        draw = function(d, sx, sy) DecoFx.sheet(d, sx, sy, A('beach_rocks')) end,
+    },
     base {
         name = 'hibiscus', label = 'Hibisco', placement = 'sub',
         editor = { previewScale = 1.5 },

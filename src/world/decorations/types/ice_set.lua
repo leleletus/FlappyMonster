@@ -4,6 +4,8 @@
 --             Cristal de hielo (brilla)
 --   celda:    Arbusto helado, Pino nevado (2 casillas de alto; se mecen y les cae
 --             nieve), Muñeco de nieve (parpadea, la bufanda ondea)
+--   de tools/art/world/make_big_trees.py: Abeto nevado (7 casillas) y Abeto nevado pequeño (4) (se mecen, les cae
+--             nieve de las ramas), Roca nevada, Tocón nevado, Hierba helada (se mece)
 local DecoFx = require 'src/world/decorations/DecoFx'
 
 local DIR = 'assets/images/world/decorations/ice/'
@@ -119,6 +121,62 @@ return {
             DecoFx.wave(d, sx, sy, A('snowy_pine'), nil, 1.2, 0.9)
             DecoFx.draw(d, sx, sy)
         end,
+    },
+    -- ── Abetos grandes (margen de descarte = su alto + 2): la nieve cae del borde de una rama al azar ──
+    base {
+        name = 'snowy_fir', label = 'Abeto nevado', placement = 'cell', layer = 'back', cullMargin = 9,
+        editor = { previewScale = 0.12 },
+        update = function(d, dt)
+            if DecoFx.every(d, 'snow', dt, 2, 5) then
+                local y = -60 - math.random() * 340                     -- (ramas: de 60 a 400 px sobre el suelo)
+                fallSnow(d, (math.random() < 0.5 and -1 or 1) * 100 * (1 + y / 452), y)
+            end
+            DecoFx.update(d, dt)
+        end,
+        draw = function(d, sx, sy)
+            DecoFx.seen(d)
+            DecoFx.wave(d, sx, sy, A('snowy_fir'), nil, 0.35, 0.7)
+            DecoFx.draw(d, sx, sy)
+        end,
+    },
+    base {
+        name = 'snowy_fir_small', label = 'Abeto nevado pequeño', placement = 'cell', layer = 'back', cullMargin = 6,
+        editor = { previewScale = 0.23 },
+        update = function(d, dt)
+            if DecoFx.every(d, 'snow', dt, 3, 7) then
+                local y = -40 - math.random() * 170
+                fallSnow(d, (math.random() < 0.5 and -1 or 1) * 60 * (1 + y / 244), y)
+            end
+            DecoFx.update(d, dt)
+        end,
+        draw = function(d, sx, sy)
+            DecoFx.seen(d)
+            DecoFx.wave(d, sx, sy, A('snowy_fir_small'), nil, 0.45, 0.8)
+            DecoFx.draw(d, sx, sy)
+        end,
+    },
+    base {
+        name = 'snow_rock', label = 'Roca nevada', placement = 'cell', layer = 'back',
+        editor = { previewScale = 0.58 },
+        update = function(d, dt)
+            if DecoFx.every(d, 'glint', dt, 2, 5) then glint(d, 20, 10) end
+            DecoFx.update(d, dt)
+        end,
+        draw = function(d, sx, sy)
+            DecoFx.seen(d)
+            DecoFx.sheet(d, sx, sy, A('snow_rock'))
+            DecoFx.draw(d, sx, sy)
+        end,
+    },
+    base {
+        name = 'snow_stump', label = 'Tocón nevado', placement = 'cell', layer = 'back',
+        editor = { previewScale = 0.75 },
+        draw = function(d, sx, sy) DecoFx.sheet(d, sx, sy, A('snow_stump')) end,
+    },
+    base {
+        name = 'winter_grass', label = 'Hierba helada', placement = 'cell', layer = 'back',
+        editor = { previewScale = 0.8 },
+        draw = function(d, sx, sy) DecoFx.wave(d, sx, sy, A('winter_grass'), nil, 0.6, 1.3) end,
     },
     base {
         name = 'snowman', label = 'Muñeco de nieve', placement = 'cell', layer = 'back',

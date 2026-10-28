@@ -4,6 +4,8 @@
 --             fluye, alumbra y gotea brasas)
 --   subcelda: Matorral seco, Piedras de basalto, Montón de ceniza, Respiradero (humo y brasas, alumbra),
 --             Obsidiana ardiente (brilla), Aguas termales (corro de piedras que suelta VAPOR: para charcas)
+--   de tools/art/world/make_big_trees.py: Árbol muerto (6 casillas; sus grietas brillan y sueltan brasas),
+--             Tocón calcinado (humea), Esquirlas de obsidiana, Matorral quemado
 local DecoFx = require 'src/world/decorations/DecoFx'
 
 local DIR = 'assets/images/world/decorations/volcano/'
@@ -52,6 +54,38 @@ return {
             DecoFx.draw(d, sx, sy)
         end,
     },
+    base {
+        name = 'dead_tree', label = 'Árbol muerto', placement = 'cell', layer = 'back', cullMargin = 8,
+        light = { r = 110, color = FIRE, a = 0.14, dy = -90, pulse = 1.3 },
+        editor = { previewScale = 0.15 },
+        update = function(d, dt)
+            -- (grietas del tronco: de 50 a 150 px sobre el suelo)
+            if DecoFx.every(d, 'ember', dt, 0.8, 2.2) then ember(d, (math.random() - 0.5) * 30, -50 - math.random() * 100, 25) end
+            DecoFx.update(d, dt)
+        end,
+        draw = function(d, sx, sy)
+            DecoFx.seen(d)
+            DecoFx.glow(sx, sy - 100, 44, FIRE, 0.12 + 0.05 * math.sin(d.animT * 1.3 + d.phase * 6))
+            DecoFx.sheet(d, sx, sy, A('dead_tree'))
+            DecoFx.draw(d, sx, sy)
+        end,
+    },
+    base {
+        name = 'charred_stump', label = 'Tocón calcinado', placement = 'cell', layer = 'back',
+        editor = { previewScale = 0.68 },
+        update = function(d, dt)
+            if DecoFx.every(d, 'smoke', dt, 1.2, 3) then puff(d, (math.random() - 0.5) * 20, -50, { 0.4, 0.38, 0.4 }, 3) end
+            if DecoFx.every(d, 'ember', dt, 2, 5) then ember(d, 0, -48, 20) end
+            DecoFx.update(d, dt)
+        end,
+        draw = function(d, sx, sy)
+            DecoFx.seen(d)
+            DecoFx.sheet(d, sx, sy, A('charred_stump'))
+            DecoFx.draw(d, sx, sy)
+        end,
+    },
+    static('obsidian_shards', 'Esquirlas de obsidiana', 'cell', 'obsidian_shards.png', { layer = 'back', editor = { previewScale = 0.75 } }),
+    static('burnt_shrub', 'Matorral quemado', 'cell', 'burnt_shrub.png', { layer = 'back', editor = { previewScale = 0.62 } }),
     static('basalt_rock', 'Columnas de basalto', 'cell', 'basalt_rock.png', { layer = 'back' }),
     static('dead_bush', 'Matorral seco', 'sub', 'dead_bush.png'),
     static('basalt_pebbles', 'Piedras de basalto', 'sub', 'basalt_pebbles.png'),

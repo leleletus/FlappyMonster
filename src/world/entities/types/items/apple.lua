@@ -3,7 +3,7 @@
 -- `pickup = { heal = n, score = puntos si no cura }`.)
 -- ASPECTO por isla (prop `skin`; 'auto' = según el fondo del nivel, como el Saltarín): pradera = la MANZANA (dibujo
 -- del usuario), costa = piña, fortaleza = muslo asado, nieve = polo de hielo, cueva = bayas luminosas (dan un poco
--- de luz en lo oscuro), volcán = guindilla. assets/images/items/apple.png y food_<isla>.png
+-- de luz en lo oscuro), volcán = guindilla, jungla = racimo de plátanos. assets/images/items/apple.png y food_<isla>.png
 -- (tools/art/world/make_food_sprites.py). Uno nuevo = un PNG + una línea en FILES.
 local Entity = require 'src/world/entities/base/Entity'
 local Hopper = require('src/world/entities/types/enemies/hopper').class
@@ -14,6 +14,7 @@ local FILES = {
     pradera = 'assets/images/items/apple.png', costa = 'assets/images/items/food_costa.png',
     fortaleza = 'assets/images/items/food_fortaleza.png', nieve = 'assets/images/items/food_nieve.png',
     cueva = 'assets/images/items/food_cueva.png', volcan = 'assets/images/items/food_volcan.png',
+    jungla = 'assets/images/items/food_jungla.png',
 }
 local GLOW = { cueva = { 0.4, 1, 0.9 } }             -- (las que brillan: color de su luz)
 local imgs
@@ -69,7 +70,7 @@ end
 
 local skinOpts = { { value = 'auto', label = 'Auto' }, { value = 'pradera', label = 'Manzana' }, { value = 'costa', label = 'Piña' },
                    { value = 'fortaleza', label = 'Muslo' }, { value = 'nieve', label = 'Polo' }, { value = 'cueva', label = 'Bayas' },
-                   { value = 'volcan', label = 'Guindilla' } }
+                   { value = 'volcan', label = 'Guindilla' }, { value = 'jungla', label = 'Plátanos' } }
 return {
     name = 'apple', label = 'Comida', category = 'Objetos',
     description = 'Coleccionable: devuelve 1 de vida (PS); con la vida llena, +20 puntos. Su aspecto sale de la isla del nivel '

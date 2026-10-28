@@ -37,6 +37,23 @@ Sky clips with `Clip` so it works inside the editor's zoom transform), so surfac
 changes show without playtesting (at zoom ≠ 1 the view is larger than a game screen). Art: `assets/images/world/sky/` from
 `tools/art/world/make_sky.py` (simple 2-3 tone silhouettes). New biome = PNGs + one BIOMES entry.
 
+## Jungle biome (0.5.83)
+
+The JUNGLE island ("Jungla", island id `jungla`; `Isles.BY_BACKGROUND`: `jungle` and `temple` → jungla). Art from
+`tools/art/world/make_jungle_sky.py` (previews in `FlappyMonster_pruebas/selva/fondo/`; `--apply` never overwrites,
+and APPENDS 4 frames to `gradients.png`: 11-13 `jungle_day/dusk/night`, 14 `temple` — re-running `make_sky.py`, which
+writes 10 frames, must be followed by `make_jungle_sky.py --apply`).
+- Surface **jungle**: `jungle_far` (misty hills, two step pyramids), `jungle_mid` (canopy with emergent trees),
+  `jungle_near` (big trunks with buttress roots, lianas, giant leaves), `jungle_top` (leaves and lianas hanging from the
+  level top). Its gradient is its OWN per time of day: `grads = { day, dusk, night }` in `Sky.BIOMES` (not tinted;
+  `grad` = one gradient the time tints, as the volcano).
+- Depth **temple** (inside the jungle temple): `temple_far` (arcade of pillars with vines), `temple_mid` (rubble, broken
+  pillars, roots — the user removed a beetle statue there), `temple_top` (ceiling blocks with roots), `temple_wall`.
+- Tiles: [tiles-and-blocks](../gameplay/tiles-and-blocks.md) (mud, jungle grass, temple brick, jungle platform).
+- Decorations: `jungle_set` (category Jungla, `tools/art/world/make_jungle_decor.py`): giant trees, plants, temple
+  ruins, hanging lianas, brazier, idol, dragonfly, fireflies. Big trees for the other islands and the new
+  `fortress_set`: `tools/art/world/make_big_trees.py`. Both: [decorations](decorations.md).
+
 ## Volcano and meadow biome art
 
 Made for the "retheme" stage (every story level must look like ITS island). Style = the game's: parts with a 4-tone

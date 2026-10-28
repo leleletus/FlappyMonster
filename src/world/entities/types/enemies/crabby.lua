@@ -98,6 +98,8 @@ function Crabby.loadAssets()
     addSkin('cave', 'assets/images/enemies/crabby_cave/', { sink = 6 })      -- (types/crabby_cave.lua; sin pinzas)
     addSkin('lava', 'assets/images/enemies/crabby_lava/', { sink = 6 })      -- (types/crabby_lava.lua)
     Crabby.SKINS.lava.claw = { file = 'assets/images/enemies/crabby_lava/claw_left-Sheet.png', w = 5, x = 5.4, y = -1.6, inset = 0.5 }
+    addSkin('jungle', 'assets/images/enemies/crabby_jungle/', { sink = 5 })  -- (types/crabby_jungle.lua; tools/art/enemies/make_jungle_skins.py)
+    Crabby.SKINS.jungle.claw = { file = 'assets/images/enemies/crabby_jungle/claw_left-Sheet.png', w = 5, x = 5.4, y = -1.6, inset = 0.5 }
     -- Pinzas pequeñas del Crabby helado (tools/art/enemies/make_icecrabby_claws.py, opción A "Mini Mega"):
     -- 2 cuadros 7x7 (abierta / cerrada), pinza IZQUIERDA (la derecha es su espejo); dónde van en
     -- px de arte del cuerpo como en el Mega (x desde el centro, y desde los pies, hacia dentro)

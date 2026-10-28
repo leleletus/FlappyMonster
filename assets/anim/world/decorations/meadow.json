@@ -12,16 +12,30 @@
     {"h": 9, "image": "assets/images/world/decorations/meadow/red_mushroom.png", "w": 10, "x": 0, "y": 0},
     {"h": 11, "image": "assets/images/world/decorations/meadow/round_bush.png", "w": 18, "x": 0, "y": 0},
     {"h": 17, "image": "assets/images/world/decorations/meadow/sunflower.png", "w": 10, "x": 0, "y": 0},
-    {"h": 11, "image": "assets/images/world/decorations/meadow/tall_grass.png", "w": 10, "x": 0, "y": 0}
+    {"h": 11, "image": "assets/images/world/decorations/meadow/tall_grass.png", "w": 10, "x": 0, "y": 0},
+    {"h": 97, "image": "assets/images/world/decorations/meadow/big_oak.png", "w": 92, "x": 0, "y": 0},
+    {"h": 105, "image": "assets/images/world/decorations/meadow/big_birch.png", "w": 56, "x": 0, "y": 0},
+    {"h": 113, "image": "assets/images/world/decorations/meadow/big_fir.png", "w": 52, "x": 0, "y": 0},
+    {"h": 21, "image": "assets/images/world/decorations/meadow/hazel_bush.png", "w": 36, "x": 0, "y": 0},
+    {"h": 14, "image": "assets/images/world/decorations/meadow/stump.png", "w": 22, "x": 0, "y": 0},
+    {"h": 17, "image": "assets/images/world/decorations/meadow/boulder.png", "w": 28, "x": 0, "y": 0},
+    {"h": 21, "image": "assets/images/world/decorations/meadow/lupines.png", "w": 20, "x": 0, "y": 0}
   ],
   "anims": {
+    "big_birch": {"fps": 8, "frames": [11], "loop": true},
+    "big_fir": {"fps": 8, "frames": [12], "loop": true},
+    "big_oak": {"fps": 8, "frames": [10], "loop": true},
+    "boulder": {"fps": 8, "frames": [15], "loop": true},
     "fallen_log": {"fps": 8, "frames": [1], "loop": true},
     "flower_patch": {"fps": 8, "frames": [2], "loop": true},
+    "hazel_bush": {"fps": 8, "frames": [13], "loop": true},
+    "lupines": {"fps": 8, "frames": [16], "loop": true},
     "mossy_rock": {"fps": 8, "frames": [3], "loop": true},
     "oak_tree": {"fps": 8, "frames": [4], "loop": true},
     "pine_tree": {"fps": 8, "frames": [5], "loop": true},
     "red_mushroom": {"fps": 8, "frames": [6], "loop": true},
     "round_bush": {"fps": 8, "frames": [7], "loop": true},
+    "stump": {"fps": 8, "frames": [14], "loop": true},
     "sunflower": {"fps": 8, "frames": [8], "loop": true},
     "tall_grass": {"fps": 8, "frames": [9], "loop": true}
   }

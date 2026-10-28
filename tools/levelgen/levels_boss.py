@@ -477,7 +477,7 @@ def templo_escarabajo():
     templo de la balanza, con su tema `templo`)."""
     src = load_src('jefe_escarabajo.json')
     L = Level('Templo del Escarabajo', 85, 15, (4, 12), music='costa_1')
-    L.extra.update({'name_en': 'Beetle Temple', 'background': 'forest', 'time': 'day'})
+    L.extra.update({'name_en': 'Beetle Temple', 'background': 'jungle', 'time': 'day'})   # (la isla de la JUNGLA, 0.5.83)
     G = 13
     L.rect(2, G, 42, 14, SOLID)
     L.ent('star', 8, G - 2)

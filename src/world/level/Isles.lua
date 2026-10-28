@@ -16,8 +16,11 @@
 -- la nieve manda. Sin fondo: la pradera.
 local Isles = {}
 
-Isles.IDS = { 'pradera', 'costa', 'fortaleza', 'nieve', 'cueva', 'volcan' }
-Isles.NAMES = { pradera = 'Pradera', costa = 'Costa', fortaleza = 'Fortaleza', nieve = 'Nieve', cueva = 'Cueva', volcan = 'Volcán' }
+-- (0.5.83: la JUNGLA, isla nueva — el Escarabajo Rinoceronte y su templo —; va la última: el orden de IDS es el de
+-- las filas de las hojas por isla, p. ej. enemies/gust/wind-Sheet.png)
+Isles.IDS = { 'pradera', 'costa', 'fortaleza', 'nieve', 'cueva', 'volcan', 'jungla' }
+Isles.NAMES = { pradera = 'Pradera', costa = 'Costa', fortaleza = 'Fortaleza', nieve = 'Nieve', cueva = 'Cueva', volcan = 'Volcán',
+                jungla = 'Jungla' }
 
 -- fondo del nivel → isla (la regla que ya usaba el Saltarín; los fondos nuevos, donde caen)
 Isles.BY_BACKGROUND = {
@@ -27,16 +30,18 @@ Isles.BY_BACKGROUND = {
     snow = 'nieve', mountain = 'nieve', icecave = 'nieve',
     cave = 'cueva', underwater = 'cueva', abyss = 'cueva', underground = 'cueva',
     volcano = 'volcan', magma = 'volcan',
+    jungle = 'jungla', temple = 'jungla',
 }
 
 -- FAMILIAS: el de cada isla (lo que falta en una isla: el primero de la lista, el de la pradera)
 Isles.FAMILIES = {
     gummy       = { pradera = 'gummy', costa = 'gummy', fortaleza = 'gummy_fortress', nieve = 'gummy_ice',
-                    cueva = 'gummy_cave', volcan = 'gummy_magma' },
+                    cueva = 'gummy_cave', volcan = 'gummy_magma', jungla = 'gummy_jungle' },
     crabby      = { pradera = 'crabby_river', costa = 'crabby', fortaleza = 'crabby_fortress', nieve = 'crabby_ice',
-                    cueva = 'crabby_cave', volcan = 'crabby_lava' },
+                    cueva = 'crabby_cave', volcan = 'crabby_lava', jungla = 'crabby_jungle' },
     crabbytramp = { pradera = 'crabbytramp_river', costa = 'crabbytramp', fortaleza = 'crabbytramp_fortress',
-                    nieve = 'crabbytramp_ice', cueva = 'crabbytramp_cave', volcan = 'crabbytramp_lava' },
+                    nieve = 'crabbytramp_ice', cueva = 'crabbytramp_cave', volcan = 'crabbytramp_lava',
+                    jungla = 'crabbytramp_jungle' },
 }
 local familyOf = {}
 for fam, t in pairs(Isles.FAMILIES) do for _, name in pairs(t) do familyOf[name] = fam end end

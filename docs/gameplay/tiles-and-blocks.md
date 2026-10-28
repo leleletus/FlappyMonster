@@ -37,6 +37,14 @@ change (`brokenQueue`) and clients apply `tile` events. A block never becomes so
 - Tiles: **Basalto** `basalt` 38 (dark volcanic rock, 2x2 drawing like stone, very few marks) and **Ceniza** `ash` 39
   (ash cap with embers over basalt when its top is in the air, like grass over dirt); materials `basalt` / `ash`
   (debris), sub-tile kinds, thumbnails 'V' / 'H', sand blends, boss-wall `material` options.
+- Jungle island (0.5.83, `tools/art/world/make_jungle_sky.py`): **Barro** `mud` 40 (like dirt, darker and wet;
+  material `mud`), **Césped de la jungla** `jungle_grass` 41 (moss + grass cap with roots over mud when its top is in
+  the air, its own blades `jungle_blades.png`; material `grass`), **Sillar del templo** `temple_brick` 42 (big mossy
+  carved blocks, drawing over 4x4 cells — `span = 4` — with a moss cap `temple_moss.png` on top faces; material
+  `temple_stone`, grey-green debris) and **Plataforma traspasable (jungla)** `jungle_platform` 43 (the drop-through
+  platform as planks tied with liana — option A chosen by the user; material `wood`). Sub-tile kinds, thumbnails
+  'M' / 'J' / 'T', sand blends and boss-wall materials include them. `retheme.py` theme `jungle`: jungle grass / mud /
+  temple brick, and drop-through platforms → `jungle_platform`.
 
 ## Mini blocks (subtiles)
 

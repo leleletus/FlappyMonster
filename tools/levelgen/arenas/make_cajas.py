@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # tools/levelgen/arenas/make_cajas.py → cajas.json (arena de PRUEBA de lo nuevo de 0.5.68: Caja, Caja pequeña, Balanza,
-# bomba objeto que se carga y reaparece, Soplón, Semilla). Seis tramos, uno por isla (prop `isle` fija), para ver el aspecto de cada una:
+# bomba objeto que se carga y reaparece, Soplón, Semilla). Un tramo por isla (prop `isle` fija), para ver el aspecto de cada una:
 #   python3 tools/levelgen/arenas/make_cajas.py
 #   tools/tests/run.sh level_shots -- tools/levelgen/arenas/cajas.json
 #   love . --editor tools/levelgen/arenas/cajas.json   (y jugarlo desde el editor)
@@ -18,7 +18,7 @@ sys.path.insert(0, HERE)
 from make_jefe_nieve import write, enc   # noqa: E402  (mismo formato del editor)
 
 EMPTY, SOLID, BORDER, FINISH = 0, 1, 4, 11
-ISLES = ['pradera', 'costa', 'fortaleza', 'nieve', 'cueva', 'volcan']
+ISLES = ['pradera', 'costa', 'fortaleza', 'nieve', 'cueva', 'volcan', 'jungla']   # (el orden de Isles.IDS)
 SEG = 14
 W, H = 2 + SEG * len(ISLES) + 4, 16
 FLOOR = 14

@@ -79,6 +79,9 @@ local CRITTER = {
     crabby_cave = { files = { 'assets/images/enemies/crabby_cave/crab1.png', 'assets/images/enemies/crabby_cave/crab2.png', 'assets/images/enemies/crabby_cave/crab3.png' }, spd = 1.5 },
     crabby_lava = { files = { 'assets/images/enemies/crabby_lava/crab1.png', 'assets/images/enemies/crabby_lava/crab2.png', 'assets/images/enemies/crabby_lava/crab3.png' }, spd = 1.5,
                     claw = { file = 'assets/images/enemies/crabby_lava/claw_left-Sheet.png', w = 5, x = 5.4, y = -1.6, inset = 0.5 } },
+    gummy_jungle = { files = { 'assets/images/enemies/gummy_jungle/gummy1.png', 'assets/images/enemies/gummy_jungle/gummy2.png' }, spd = 1.2 },
+    crabby_jungle = { files = { 'assets/images/enemies/crabby_jungle/crab1.png', 'assets/images/enemies/crabby_jungle/crab2.png', 'assets/images/enemies/crabby_jungle/crab3.png' }, spd = 1.6,
+                      claw = { file = 'assets/images/enemies/crabby_jungle/claw_left-Sheet.png', w = 5, x = 5.4, y = -1.6, inset = 0.5 } },
     bomb = { sheet = 'assets/images/enemies/bomb/bomb-Sheet.png', fw = 15, frames = { 2, 3 }, spd = 1.1 },
     puffer = { sheet = 'assets/images/enemies/pufferfish/puffer_fish-Sheet.png', fw = 16, frames = { 1, 2 }, spd = 0.9, swim = true },
     gloomy = { sheet = 'assets/images/enemies/gloomy/gloomy-Sheet.png', fw = 26, frames = { 1, 2, 3 }, spd = 1.0,
@@ -87,7 +90,7 @@ local CRITTER = {
 
 -- SALTARINES (uno por isla): no andan, van a BOTES (se agachan, saltan en arco, caen). Su arte mira a la IZQUIERDA.
 -- Cuadros de su tira: 1 quieto, 2 agachado, 3 en el aire
-for _, isle in ipairs({ 'pradera', 'costa', 'fortaleza', 'nieve', 'cueva', 'volcan' }) do
+for _, isle in ipairs({ 'pradera', 'costa', 'fortaleza', 'nieve', 'cueva', 'volcan', 'jungla' }) do
     CRITTER['hopper_' .. isle] = { sheet = 'assets/images/enemies/hopper/' .. isle .. '-Sheet.png', fw = 16, hop = true, spd = 1.5, left = true }
 end
 

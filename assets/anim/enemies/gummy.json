@@ -22,6 +22,7 @@
     "cave": {"from": "assets/images/enemies/gummy/", "to": "assets/images/enemies/gummy_cave/"},
     "fortress": {"from": "assets/images/enemies/gummy/", "to": "assets/images/enemies/gummy_fortress/"},
     "ice": {"from": "assets/images/enemies/gummy/", "to": "assets/images/enemies/gummy_ice/"},
+    "jungle": {"from": "assets/images/enemies/gummy/", "to": "assets/images/enemies/gummy_jungle/"},
     "magma": {"from": "assets/images/enemies/gummy/", "to": "assets/images/enemies/gummy_magma/"}
   }
 }

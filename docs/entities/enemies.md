@@ -12,6 +12,7 @@ props: [reference/entities](../reference/entities.md). Base behaviour: [overview
 | Summits | `gummy_ice` | `crabby_ice` (4 covers: ice spike, icicle, snow mound, trampoline) | nieve |
 | Caves | `gummy_cave` | `crabby_cave` / `crabbytramp_cave`; dark levels: `gloomy` | cueva |
 | Volcano | `gummy_magma` | `crabby_lava` / `crabbytramp_lava` | volcan |
+| Jungle | `gummy_jungle` (tree frog) | `crabby_jungle` / `crabbytramp_jungle` (Halloween crab) | jungla |
 
 `tools/levelgen/retheme.py --enemies <levels>` swaps enemy types by the level's island (`ISLAND_ENEMIES`).
 `assets/levels/EnemyTest.json` is the user's gallery of all of them (a harmless test level).
@@ -157,6 +158,19 @@ sprite's pixel grid.
   and Crabby: meadow (Gummy / River Crabby), coast (the originals), fortress (wind-up Gummy / steel Crabby), snow (icy),
   caves (cave Gummy / cave Crabby), volcano (magma Gummy / lava Crabby).
 
+- **Jungle variants** (0.5.83, the 7th island `jungla`; the user approved the proposal of
+  `tools/art/enemies/make_jungle_skins.py`, previews in `FlappyMonster_pruebas/jungla/variantes/`): **Gummy de la jungla**
+  (`gummy_jungle`: the Gummy's every pixel in leaf green, two bulging TREE-FROG eyes on top of the head — rows 0-1, empty
+  in the Gummy —, dark spots on back and sides, never on the face, orange feet; `assets/images/enemies/gummy_jungle/`,
+  variant `jungle` of the anim set `enemies/gummy`) and **Crabby de la jungla** (`crabby_jungle` + `crabbytramp_jungle`,
+  Crabby skin `jungle`: a Halloween land crab — purple shell with two yellow spots behind the eyes, long splayed ORANGE
+  legs with the River Crabby's silhouette and walk, MAGENTA 5x5 claws placed like the lava ones (x 5.4, y −1.6), sinks
+  in 5 rows like the River Crabby; anim set `enemies/crabby_jungle`). Types from `CrabVariant.defs('jungle', …)` and the
+  usual Gummy subclass; `Isles.FAMILIES` maps `jungla` to them. Tests: `mechanics islas` / `islas_arte` (every island's
+  family types spawn, walk, die and use their own art), `tapa_base`; test arena `tools/levelgen/arenas/islas.json` (from
+  `make_islas.py`: each island's Gummy, Crabbies, Hopper, food and Geyser side by side). Not checked: the helmet over the frog eyes (they may peek
+  out from under it), and how they read on the jungle's own sky and tiles (made by other agents at the same time).
+
 ## Hopper (Saltarín)
 
 - **HOPPER / Saltarín (3.74.0; `types/enemies/hopper.lua`, protocol v48 = new entity type)**: the user's pick, design B
@@ -168,7 +182,7 @@ sprite's pixel grid.
   It stays inside its editor ROUTE (`patrol`; every entity gets a default one a few tiles around its cell — the test
   needed a wide one). Player rules = the defaults (`onTouch = 'hurt'`, stompable on the ground or in the air, 15
   points); lands on spikes / lava → `dieBurst`. Everything drawn comes from state + deadTimer. SKINS per island: prop
-  `skin` 'auto' (by `level.background`; snowy level → nieve) | pradera | costa | fortaleza | nieve | cueva | volcan —
+  `skin` 'auto' (by `level.background`; snowy level → nieve) | pradera | costa | fortaleza | nieve | cueva | volcan | jungla —
   `assets/images/enemies/hopper/<isla>-Sheet.png` (4 frames 16x21: idle, crouch, air, flat) from
   `tools/art/enemies/make_hopper_sprites.py --apply`, which builds them from the pixel maps in `tools/art/enemies/make_enemy_designs.py` (HOP,
   ISLES, HEAD: same shape, own palette, spots and head feature per island). Sounds `enemies/hopper/` from

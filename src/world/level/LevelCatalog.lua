@@ -64,6 +64,9 @@ function LevelCatalog.buildPreview(lv)
             elseif t.name == 'deep_stone' then ch = 'R'
             elseif t.name == 'basalt' then ch = 'V'                 -- (volcán)
             elseif t.name == 'ash' then ch = 'H'
+            elseif t.name == 'mud' then ch = 'M'                    -- (jungla)
+            elseif t.name == 'jungle_grass' then ch = 'J'
+            elseif t.name == 'temple_brick' then ch = 'T'
             elseif t.mat.name == 'ice' then ch = 'I'
             elseif t.collision == 'solid' then ch = '#'
             elseif t.collision == 'oneway' then ch = '='

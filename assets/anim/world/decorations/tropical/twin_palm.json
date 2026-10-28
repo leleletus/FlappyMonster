@@ -1,0 +1,16 @@
+{
+  "id": "world/decorations/tropical/twin_palm",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "trunk",
+  "frames": [
+    {"h": 113, "image": "assets/images/world/decorations/tropical/twin_palm/trunk.png", "w": 94, "x": 0, "y": 0},
+    {"h": 113, "image": "assets/images/world/decorations/tropical/twin_palm/coconuts.png", "w": 94, "x": 0, "y": 0},
+    {"h": 113, "image": "assets/images/world/decorations/tropical/twin_palm/fronds.png", "w": 94, "x": 0, "y": 0}
+  ],
+  "anims": {
+    "coconuts": {"fps": 8, "frames": [2], "loop": true},
+    "fronds": {"fps": 8, "frames": [3], "loop": true},
+    "trunk": {"fps": 8, "frames": [1], "loop": true}
+  }
+}

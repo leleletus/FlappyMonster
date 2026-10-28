@@ -83,6 +83,18 @@ One generic module for everything that changes with the island (the user: one me
 - FAMILIES (`Isles.FAMILIES`: gummy, crabby, crabbytramp → the type of each island) get the prop `isle` with `self`
   by default (nothing changes in old levels); `auto` or an island swaps the placement for that island's type when
   the level loads (`Isles.resolveAll` in `Level`, same in SP / server / client). A new family = one line.
+- Islands (`Isles.IDS`, in this order — it is also the row order of `enemies/gust/wind-Sheet.png`): pradera, costa,
+  fortaleza, nieve, cueva, volcan, jungla. What changes by island: the Gummy / Crabby / trampoline Crabby families, the
+  Hopper (`Hopper.SKINS` + its anim-set variant), the food (`apple.lua` `FILES`), and every `isleArt` type — Box and small
+  Box, Scale, Gust (+ its wind row), Seed, Blizzard, Geyser (`KIND`: water / steam / smoke; jungle = water).
+- **A new island** = its id in `Isles.IDS` / `NAMES` / `BY_BACKGROUND` / `FAMILIES`, then the ART by name in every
+  folder above (`<isle>-….png`), the anim sets that list per-island images (`enemies/hopper.json` frame + variant,
+  `items.json` food frame, `enemies/gummy.json` variant, a new `enemies/crabby_<skin>.json`), `Hopper.SKINS`, `apple.lua`
+  `FILES`, `geyser.lua` `KIND` and the editor options (`skinOpts`). `mechanics islas_arte` fails while any of it is
+  missing. The jungle (0.5.83) was added this way: `tools/art/enemies/make_jungle_skins.py --apply` (box tied with
+  lianas, mossy temple-slab scale with a liana rope and carved pulley, misty gust with a leaf and petals, leafy
+  blizzard gusts, turquoise spring geyser in a mossy stone rim, cacao-pod seed growing into a liana with monstera
+  leaves and a magenta flower, bananas).
 
 ## Weight (`Weight`)
 
@@ -92,7 +104,8 @@ total weight; `Weight.total(o, level, isPlayer)` = `o` + its stack. A player wei
 
 ## Tests
 
-`mechanics`: `caja_empuje`, `caja_rota`, `caja_borde`, `cajas_golpes`, `cargar`, `bomba_reaparece`, `islas`, `viento`,
+`mechanics`: `caja_empuje`, `caja_rota`, `caja_borde`, `cajas_golpes`, `cargar`, `bomba_reaparece`, `islas`, `islas_arte` (every
+island has its art in everything above), `viento`,
 `cuerpo_mueve`, `balanza`, `balanza_tope`, `balanza_impacto` (a hard landing on a pan fires the other one),
 `escarabajo_lanzado` (the Rhino Beetle on its back is carried and thrown).
 

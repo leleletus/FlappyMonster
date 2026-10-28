@@ -41,7 +41,7 @@ local LOUD    = 6                -- casillas: un ruido de este radio o más le a
 local SCARE_T = 2.2              -- s con el farol apagado, encogido
 local MEMORY  = 3                -- s que sigue yendo a donde te vio por última vez
 local LAMP = { 1, 0.85, 0.5 }    -- color de su luz
-Hopper.SKINS  = { 'pradera', 'costa', 'fortaleza', 'nieve', 'cueva', 'volcan' }
+Hopper.SKINS  = { 'pradera', 'costa', 'fortaleza', 'nieve', 'cueva', 'volcan', 'jungla' }
 -- (qué isla es el nivel: la regla de todos, src/world/level/Isles.lua)
 local Isles = require 'src/world/level/Isles'
 
@@ -298,7 +298,7 @@ end
 local G = 'Saltarín'
 local skinOpts = { { value = 'auto', label = 'Auto' }, { value = 'pradera', label = 'Pradera' }, { value = 'costa', label = 'Costa' },
                    { value = 'fortaleza', label = 'Fortaleza' }, { value = 'nieve', label = 'Nieve' },
-                   { value = 'cueva', label = 'Cueva' }, { value = 'volcan', label = 'Volcán' } }
+                   { value = 'cueva', label = 'Cueva' }, { value = 'volcan', label = 'Volcán' }, { value = 'jungla', label = 'Jungla' } }
 
 return {
     name = 'hopper', label = 'Saltarín', category = 'Enemigos', class = Hopper,

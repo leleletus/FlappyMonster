@@ -13,7 +13,7 @@ Separately, every level has a render-only **light mood** (day, dusk, night, cave
 | `src/world/systems/Noise.lua` | what makes noise and how far it carries; what listeners hear |
 | `src/fx/Darkness.lua` | draws the darkness, the light moods and everything that glows |
 | `src/fx/NoiseMarks.lua` | the red "!" where a noise happened |
-| `src/fx/CaveAmbience.lua`, `src/audio/Sound.lua` (`setEcho`) | ambience and echo |
+| `src/fx/Ambience.lua`, `src/audio/Sound.lua` (`setEcho`) | ambience (by island) and echo |
 | `src/ui/LightHud.lua` | the battery HUD |
 | `src/fx/Silhouette.lua` | white edge of the player / outline of dark enemies where it is dark |
 
@@ -99,10 +99,15 @@ The enemies of the dark: the Gloomy Crabby (hunts by sound), the cave Hopper as 
 
 ## Ambience and echo
 
+- **Ambience by island** (`src/fx/Ambience.lua`, was `CaveAmbience.lua` until 0.5.83): `Ambience.SETS` = one entry per
+  place (`when(level)` + its layers `{ sound, every [a, b] s, volume [a, b], pitch [a, b] }`; the first that matches
+  plays). `cave` = the layers below; `jungle` (the level's island is `jungla`: `Isles.of`) = cicadas, bird whistle,
+  trill, toucan, frog, a far howler monkey and rustling leaves (`tools/sounds/jungle.py`, also `fireCrackle` for the
+  temple braziers). A new ambience = one SETS entry + its sounds. Never listened to by me: verified by numbers only.
 - **Cave ambience** (render-only sound, per client; never Noise): `DecoFx.drip` (stalactites) and `IceDrips` play
   'dripFall' when the drop lets go and 'dripSplash' where it lands (`DecoFx.sound` → `Sound.playAt`, random pitch,
   attenuated, with the cave echo; QUIET on purpose: `DecoFx.AMBIENT_VOL` 0.35, ambience layers 0.04-0.14 — the user
-  wanted them as background, not something that stands out); `src/fx/CaveAmbience.lua` (`tick(level)` from both level states, only when
+  wanted them as background, not something that stands out); `src/fx/Ambience.lua` (`tick(level)` from both level states; the cave set only when
   `level.echo`) plays far drips every 2.5-7 s, a rolling pebble every 14-32 s and a low rock rumble every 24-50 s at
   random pitch/volume. Files `assets/sounds/ambience/` from `tools/sounds/ambience.py`.
 

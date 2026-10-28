@@ -58,7 +58,7 @@ def build():
         'width': W, 'height': H, 'playerStart': [4, 12],
         'tiles': t, 'entities': ents, 'foliage': [], 'vents': [],
         'bossZones': [{'id': 1, 'col': Z0, 'row': 3, 'w': Z1 - Z0 + 1, 'h': 10, 'music': 'templo'}],
-        'background': 'forest', 'time': 'day',
+        'background': 'jungle', 'time': 'day',
     }
 
 

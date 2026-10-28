@@ -42,8 +42,9 @@ ID_HIGH = 2 ** 17
 EMPTY, SOLID, SLAB, BORDER, WATER, DROP, FINISH, BREAK = 0, 1, 2, 4, 9, 10, 11, 12
 DIRT, GRASS, SNOW, ICE, SAND, DEEP, PACKED = 16, 17, 29, 30, 35, 36, 37
 BASALT, ASH = 38, 39                  # isla volcánica (tools/art/world/make_biome_art.py)
+MUD, JGRASS, TEMPLE, JPLAT = 40, 41, 42, 43   # isla de la jungla (tools/art/world/make_jungle_sky.py)
 THIN_ICE = {31, 32, 33, 34}
-GROUND = {SOLID, BORDER, DIRT, GRASS, SNOW, ICE, SAND, DEEP, PACKED, BASALT, ASH}
+GROUND = {SOLID, BORDER, DIRT, GRASS, SNOW, ICE, SAND, DEEP, PACKED, BASALT, ASH, MUD, JGRASS, TEMPLE}
 DEEP_ROWS = 4                     # bajo ≥ 4 filas de agua: roca abisal
 
 THEMES = {
@@ -52,7 +53,7 @@ THEMES = {
     'valle_soleado': 'meadow', 'jardin_gummies': 'meadow', 'carrera01': 'volcano', 'nivel01': 'cave',
     'lluvia_pinchos': 'volcano', 'tren_fugaz': 'fortress', 'ruta_del_espejo': 'volcano', 'huida_del_espejo': 'volcano', 'ciudadela_cangrejos': 'meadow',
     'marea_alta': 'tropical', 'cascada_dorada': 'tropical', 'isla_flotante': 'meadow', 'canon_trampolines': 'beach',
-    'rebote_real': 'tropical', 'guarida_cangrejo_rey': 'tropical', 'cala_resaca': 'beach', 'isla_del_groove': 'beach', 'templo_escarabajo': 'tropical',
+    'rebote_real': 'tropical', 'guarida_cangrejo_rey': 'tropical', 'cala_resaca': 'beach', 'isla_del_groove': 'beach', 'templo_escarabajo': 'jungle',
     'cumbre_cangrejo': 'beach', 'torre_viento': 'snow', 'lago_helado': 'snow', 'glaciar_cangrejo': 'snow', 'reino_gummy': 'meadow', 'gruta_lugubre': 'cave', 'gruta_del_farol': 'cave',
     'cavernas_cristal': 'cave', 'mina_inundada': 'mine', 'laberinto_submarino': 'cave',
     'fabrica_morteros': 'fortress', 'fortaleza_malvada': 'fortress', 'taller_trampas': 'fortress',
@@ -71,7 +72,7 @@ SKY = {
     'nivel01': ('coast', 'day', 'abyss'), 'lluvia_pinchos': ('mountain', 'day'), 'tren_fugaz': ('mountain', 'dusk'),
     'ruta_del_espejo': ('meadow', 'night'), 'ciudadela_cangrejos': ('coast', 'day'), 'marea_alta': ('coast', 'dusk'),
     'cascada_dorada': ('forest', 'day'), 'isla_flotante': ('meadow', 'day'), 'canon_trampolines': ('coast', 'day'),
-    'rebote_real': ('forest', 'day'), 'guarida_cangrejo_rey': ('coast', 'day'), 'cala_resaca': ('coast', 'day'), 'isla_del_groove': ('coast', 'night'), 'templo_escarabajo': ('forest', 'day'), 'cumbre_cangrejo': ('coast', 'dusk'),
+    'rebote_real': ('forest', 'day'), 'guarida_cangrejo_rey': ('coast', 'day'), 'cala_resaca': ('coast', 'day'), 'isla_del_groove': ('coast', 'night'), 'templo_escarabajo': ('jungle', 'day'), 'cumbre_cangrejo': ('coast', 'dusk'),
     'torre_viento': ('snow', 'night'), 'lago_helado': ('snow', 'dusk'), 'glaciar_cangrejo': ('snow', 'day'), 'reino_gummy': ('meadow', 'day'), 'gruta_lugubre': ('cave', 'night'), 'gruta_del_farol': ('cave', 'night'), 'cavernas_cristal': ('cave', 'day'), 'mina_inundada': ('mountain', 'day', 'cave'),
     'laberinto_submarino': ('coast', 'day', 'underwater'), 'fabrica_morteros': ('fortress', 'dusk'),
     'fortaleza_malvada': ('fortress', 'night'), 'taller_trampas': ('fortress', 'day', 'cave'), 'coliseo_pinchos': ('fortress', 'dusk'),
@@ -102,6 +103,7 @@ TERRAIN = {
     'forest':     (GRASS, DIRT, SOLID),
     'volcano':    (ASH, BASALT, BASALT),
     'beach':      (SAND, SAND, SOLID),            # playa: arena hasta 3 de hondo
+    'jungle':     (JGRASS, MUD, TEMPLE),          # jungla: musgo sobre barro; hondo, los sillares del templo
 }
 
 # Decoraciones: (tipo, peso, 'cell'|'sub', casillas libres que necesita hacia arriba)
@@ -127,6 +129,13 @@ FLOOR = {
                  ('red_mushroom', 2, 'sub', 1), ('tall_grass', 2, 'sub', 1), ('fallen_log', 1, 'cell', 1)],
     'volcano':  [('charred_tree', 2, 'cell', 3), ('dead_bush', 4, 'sub', 1), ('basalt_rock', 3, 'cell', 1), ('basalt_pebbles', 4, 'sub', 1),
                  ('ash_pile', 3, 'sub', 1), ('lava_vent', 2, 'sub', 1), ('glow_rock', 2, 'sub', 1), ('bones', 1, 'sub', 1)],
+    # (jungla, 0.5.83: árboles gigantes, plantas grandes, ruinas del templo; tools/art/world/make_jungle_decor.py)
+    'jungle':   [('ceiba', 1, 'cell', 8), ('strangler_fig', 1, 'cell', 6), ('banana_plant', 3, 'cell', 3), ('tree_fern', 2, 'cell', 3),
+                 ('elephant_ear', 3, 'cell', 2), ('jungle_fern', 4, 'cell', 1), ('heliconia', 3, 'cell', 2), ('bromeliad', 3, 'sub', 1),
+                 ('orchid', 2, 'sub', 1), ('jungle_mushrooms', 2, 'sub', 1), ('mossy_log', 1, 'cell', 1), ('roots', 2, 'cell', 1),
+                 ('mud_puddle', 1, 'cell', 1), ('broken_pillar', 1, 'cell', 3), ('stone_idol', 1, 'cell', 2),
+                 ('fallen_block', 1, 'cell', 1), ('stone_brazier', 1, 'cell', 2), ('ruined_arch', 1, 'cell', 3),
+                 ('dragonfly', 1, 'cell', 1), ('fireflies', 1, 'cell', 2)],
 }
 BEACH = [('shell', 3, 'sub', 1), ('starfish', 2, 'sub', 1), ('palmtree', 2, 'cell', 3), ('pineapple', 1, 'sub', 1)]
 WATER_FLOOR = [('seaweed', 4, 'cell', 2), ('seaweed_small', 5, 'sub', 1), ('coral', 3, 'cell', 1), ('coral_fan', 2, 'cell', 1),
@@ -138,6 +147,8 @@ CEIL = {
     'underwater': [('stalactite', 2, 'cell')],
     'fortress': [('cobweb', 3, 'corner')],
     'volcano':  [('stalactite', 3, 'cell'), ('lava_fall', 1, 'cell')],
+    'jungle':   [('liana_long', 3, 'sub'), ('liana_mid', 3, 'sub'), ('liana_short', 3, 'sub'), ('hanging_moss', 2, 'cell'),
+                 ('flower_vine', 2, 'cell'), ('hanging_orchid', 1, 'sub')],
 }
 # ── Cada decoración, SOLO sobre el material que le toca ─────────────────────────
 # (el usuario: nada de plantas, palmeras ni flores saliendo de la roca, la nieve, la arena o
@@ -147,6 +158,7 @@ ROCK = {SOLID, BORDER, DEEP, BASALT}
 VOLC = {ASH, BASALT}
 SOIL = {GRASS, DIRT}
 SNOWY = {SNOW, PACKED}
+JSOIL = {JGRASS, MUD, GRASS, DIRT}
 REQ = {
     # plantas: tierra o césped (las tropicales, también arena)
     'tulip': SOIL, 'stretch': SOIL, 'fern': SOIL, 'tropical_bush': SOIL, 'hibiscus': SOIL, 'butterflies': {GRASS},
@@ -167,20 +179,26 @@ REQ = {
     'charred_tree': VOLC, 'dead_bush': VOLC, 'basalt_rock': VOLC | ROCK, 'basalt_pebbles': VOLC | ROCK | {SLAB, DROP},
     'ash_pile': VOLC | {SLAB, DROP}, 'lava_vent': VOLC, 'glow_rock': VOLC | ROCK, 'lava_fall': ROCK | VOLC,
     'steam_stones': VOLC | ROCK | {SAND},
+    # jungla: plantas en su musgo o barro (o tierra); ruinas también en los sillares; lo que cuelga, de casi todo
+    **{n: JSOIL for n in ('ceiba', 'strangler_fig', 'banana_plant', 'tree_fern', 'elephant_ear', 'jungle_fern', 'heliconia',
+                          'bromeliad', 'orchid', 'jungle_mushrooms', 'mossy_log', 'roots', 'mud_puddle', 'dragonfly', 'fireflies')},
+    **{n: JSOIL | {TEMPLE} | ROCK for n in ('broken_pillar', 'stone_idol', 'fallen_block', 'stone_brazier', 'ruined_arch')},
+    **{n: JSOIL | {TEMPLE} | ROCK for n in ('liana_long', 'liana_mid', 'liana_short', 'hanging_moss', 'flower_vine', 'hanging_orchid')},
 }
 # Qué decoraciones PEGAN en cada tema (--theme: las de otro bioma se cambian por una de este; las del agua
 # se quedan si el tema tiene agua de verdad). Sale de FLOOR/CEIL/BEACH; más las sueltas que también valen.
 EXTRA_OK = {'tropical': {'shell', 'starfish'}, 'cave': {'bones', 'torch', 'cobweb'}, 'volcano': {'steam_stones'},
             'snow': {'icicle', 'icicle_small'}, 'fortress': {'stalactite', 'cave_crystals'}, 'mine': {'cave_crystals'}}
-NO_SEA = {'meadow', 'forest', 'snow', 'fortress', 'volcano', 'mine'}     # (algas sí; corales, conchas y estrellas de mar, no)
+NO_SEA = {'meadow', 'forest', 'snow', 'fortress', 'volcano', 'mine', 'jungle'}     # (algas sí; corales, conchas y estrellas de mar, no)
 SEA_LIFE = {'coral', 'coral_fan', 'anemone', 'clam', 'shell', 'starfish'}
-HANGING = {'icicle', 'icicle_small', 'stalactite', 'cobweb'}
+HANGING = {'icicle', 'icicle_small', 'stalactite', 'cobweb', 'liana_long', 'liana_mid', 'liana_short', 'hanging_moss',
+           'flower_vine', 'hanging_orchid'}
 ROOFED = {'cavernas_cristal', 'mina_inundada', 'gruta_lugubre', 'gruta_del_farol', 'laberinto_submarino', 'taller_trampas'}   # niveles bajo techo aunque su tema no sea de cueva
 AQUATIC = {'seaweed', 'seaweed_small', 'coral', 'coral_fan', 'anemone', 'clam'}     # dentro del agua, sobre cualquier fondo salvo hielo
 WET_OK = AQUATIC | {'starfish', 'shell'}
 CLOSED = {'cave', 'underwater'}        # temas de cueva cerrada: el marco de arriba sí es un techo de roca
 DENSITY = {'floor': 0.2, 'water': 0.24, 'ceil': 0.15}
-PLANKS = {SLAB, DROP}            # plataformas: solo decoraciones pequeñas encima
+PLANKS = {SLAB, DROP, JPLAT}        # plataformas: solo decoraciones pequeñas encima
 NEW_TYPES = {t for L in list(FLOOR.values()) + [WATER_FLOOR] for t, *_ in L if t not in ('tulip', 'stretch', 'palmtree')} | \
             {t for L in CEIL.values() for t, *_ in L}
 AUTO_TYPES = NEW_TYPES | {'tulip', 'stretch', 'palmtree'}
@@ -220,7 +238,7 @@ def retheme(name, force=False, dry=False, terrain=False, tiles_only=False):
         if theme not in ('tropical',): return False         # (la pradera no tiene playa: está tierra adentro)
         return any(wet(c + dx, r + dy) for dx in range(-3, 4) for dy in (-1, 0, 1))
 
-    CONVERT = {SOLID, BORDER} | ({DIRT, GRASS, SNOW, SAND, DEEP, ASH, BASALT} if terrain else set())
+    CONVERT = {SOLID, BORDER} | ({DIRT, GRASS, SNOW, SAND, DEEP, ASH, BASALT, MUD, JGRASS, TEMPLE} if terrain else set())
 
     # Profundidad bajo el agua por casilla: filas desde la superficie del agua de su
     # columna (atravesando agua y terreno; el aire la reinicia)
@@ -289,6 +307,12 @@ def retheme(name, force=False, dry=False, terrain=False, tiles_only=False):
                 if len(comp) <= 4 and len({y for _, y in comp}) == 1 and all(tid(at(x, y + 1)) not in GROUND for x, y in comp):
                     for x, y in comp:
                         new[y][x] = with_id(new[y][x], ICE); changed += 1
+    # Jungla: las plataformas traspasables, las suyas (tablones atados con liana)
+    if theme == 'jungle':
+        for r in range(H):
+            for c in range(W):
+                if tid(new[r][c]) == DROP:
+                    new[r][c] = with_id(new[r][c], JPLAT); changed += 1
     lv['tiles'] = new
     T = new
     if tiles_only:
@@ -491,7 +515,7 @@ def audit(name, fix=False):
             elif not fix: keep.append(f)
         out = keep
     names = {SOLID: 'piedra', BORDER: 'roca', DEEP: 'roca abisal', GRASS: 'césped', DIRT: 'tierra', SNOW: 'nieve', PACKED: 'nieve',
-             ICE: 'hielo', SAND: 'arena', SLAB: 'viga', DROP: 'tabla', BREAK: 'rompible', BASALT: 'basalto', ASH: 'ceniza'}
+             ICE: 'hielo', SAND: 'arena', SLAB: 'viga', DROP: 'tabla', BREAK: 'rompible', BASALT: 'basalto', ASH: 'ceniza', MUD: 'barro', JGRASS: 'musgo', TEMPLE: 'sillar', JPLAT: 'tabla de liana'}
     if bad:
         import collections
         cnt = collections.Counter((b[0], names.get(b[3], 'tile %d' % b[3])) for b in bad)
@@ -514,6 +538,7 @@ ISLAND_ENEMIES = {
     'forest': {'crabby': 'crabby_river', 'crabbytramp': 'crabbytramp_river'},
     'fortress': {'crabby': 'crabby_fortress', 'crabbytramp': 'crabbytramp_fortress', 'gummy': 'gummy_fortress'},
     'cave': {'gummy': 'gummy_cave', 'crabby': 'crabby_cave', 'crabbytramp': 'crabbytramp_cave'},
+    'jungle': {'gummy': 'gummy_jungle', 'crabby': 'crabby_jungle', 'crabbytramp': 'crabbytramp_jungle'},
 }
 # niveles cuya ISLA no es la de su tema de terreno (la cantera es de la isla de la fortaleza; la mina, de cuevas)
 ENEMY_ISLAND = {'cantera_dinamita': 'fortress', 'mina_inundada': 'cave'}

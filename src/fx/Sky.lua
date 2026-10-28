@@ -27,7 +27,8 @@ local DIR = 'assets/images/world/sky/'
 local S = 4                              -- escala del arte
 
 -- Degradados (cuadros de gradients.png)
-local GRAD = { day = 1, dusk = 2, night = 3, cave = 4, water = 5, abyss = 6, icecave = 7, underground = 8, volcano = 9, magma = 10 }
+local GRAD = { day = 1, dusk = 2, night = 3, cave = 4, water = 5, abyss = 6, icecave = 7, underground = 8, volcano = 9, magma = 10,
+               jungle_day = 11, jungle_dusk = 12, jungle_night = 13, temple = 14 }
 
 Sky.TIMES = {
     { id = 'day',   label = 'Día',       tint = { 1, 1, 1 } },
@@ -36,16 +37,21 @@ Sky.TIMES = {
 }
 
 -- capas: { archivo, paralaje, top = cuelga de arriba, add = aditiva }
+-- degradado: `grad` = uno propio que la hora tiñe; `grads` = uno propio POR HORA ({ day, dusk, night }: sin teñir)
 Sky.BIOMES = {
     { id = 'meadow',   label = 'Pradera',   sky = true, layers = { { 'meadow_far', 0.1 }, { 'meadow_mid', 0.22 }, { 'meadow_near', 0.4 } } },
     { id = 'coast',    label = 'Costa',     sky = true, layers = { { 'coast_far', 0.08 }, { 'coast_mid', 0.22 }, { 'coast_near', 0.4 } } },
     { id = 'mountain', label = 'Montaña',   sky = true, layers = { { 'mountain_far', 0.08 }, { 'mountain_mid', 0.2 }, { 'mountain_near', 0.38 } } },
     { id = 'snow',     label = 'Nieve',     sky = true, layers = { { 'snow_far', 0.08 }, { 'snow_mid', 0.2 }, { 'snow_near', 0.38 } } },
-    { id = 'forest',   label = 'Bosque / selva', sky = true, layers = { { 'forest_far', 0.1 }, { 'forest_mid', 0.22 }, { 'forest_near', 0.4 } } },
+    { id = 'forest',   label = 'Bosque', sky = true, layers = { { 'forest_far', 0.1 }, { 'forest_mid', 0.22 }, { 'forest_near', 0.4 } } },
     { id = 'fortress', label = 'Fortaleza', sky = true, layers = { { 'fortress_far', 0.08 }, { 'fortress_mid', 0.25 } } },
     -- (isla volcánica: cielo de ceniza al rojo, propio, que la hora tiñe)
     { id = 'volcano',  label = 'Volcán',    sky = true, grad = 'volcano',
       layers = { { 'volcano_far', 0.08 }, { 'volcano_mid', 0.2 }, { 'volcano_near', 0.38 } } },
+    -- (la JUNGLA, 0.5.83: bruma húmeda, pirámides lejanas, dosel; hojas y lianas que cuelgan de arriba del nivel;
+    -- tools/art/world/make_jungle_sky.py)
+    { id = 'jungle',   label = 'Jungla',    sky = true, grads = { day = 'jungle_day', dusk = 'jungle_dusk', night = 'jungle_night' },
+      layers = { { 'jungle_far', 0.08 }, { 'jungle_mid', 0.2 }, { 'jungle_near', 0.38 }, { 'jungle_top', 0.42, top = true } } },
     -- (estos también valen de PROFUNDIDAD: depth = true)
     { id = 'cave',     label = 'Cueva',     grad = 'cave', depth = true,
       wall = 'cave_wall', layers = { { 'cave_far', 0.12 }, { 'cave_mid', 0.28 }, { 'cave_top', 0.2, top = true } } },
@@ -59,6 +65,9 @@ Sky.BIOMES = {
       layers = { { 'magma_far', 0.12 }, { 'magma_mid', 0.28 }, { 'magma_top', 0.2, top = true } } },
     { id = 'underground', label = 'Subsuelo', grad = 'underground', depth = true, onlyDepth = true, wall = 'underground_wall',
       layers = { { 'underground_far', 0.12 }, { 'underground_mid', 0.28 }, { 'underground_top', 0.2, top = true } } },
+    -- (dentro del templo de la jungla: arcadas con lianas, techo de sillares con raíces)
+    { id = 'temple',   label = 'Templo (bajo la jungla)', grad = 'temple', depth = true, onlyDepth = true, wall = 'temple_wall',
+      layers = { { 'temple_far', 0.12 }, { 'temple_mid', 0.28 }, { 'temple_top', 0.2, top = true } } },
 }
 Sky.byId = {}
 for _, b in ipairs(Sky.BIOMES) do Sky.byId[b.id] = b end
@@ -249,8 +258,8 @@ function Sky.render(level, camX, camY)
 
     -- ══ SUPERFICIE ══════════════════════════════════════════════════════════
     if g then
-        local gi = biome.grad and GRAD[biome.grad] or GRAD[time.id]
-        if biome.grad then setTint(tint) else love.graphics.setColor(1, 1, 1, 1) end
+        local gi = biome.grads and GRAD[biome.grads[time.id]] or biome.grad and GRAD[biome.grad] or GRAD[time.id]
+        if biome.grad and not biome.grads then setTint(tint) else love.graphics.setColor(1, 1, 1, 1) end
         love.graphics.draw(g.img, quad('gradients', gi, 8, g), 0, 0, 0, W / 8, H / g.h)
     end
     if biome.sky then

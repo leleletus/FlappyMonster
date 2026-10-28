@@ -11,7 +11,7 @@
 --                update = function(d, dt) ... end,      -- opcional
 --                draw = function(d, sx, sy) ... end }   -- d.flip, d.animT, d.phase
 --     Un archivo puede devolver una LISTA de decoraciones (los juegos
---     temáticos: ice_set, cave_set, water_set, tropical_set; ayudas de dibujo,
+--     temáticos: ice_set, cave_set, water_set, tropical_set, meadow_set, volcano_set, fortress_set, jungle_set; ayudas de dibujo,
 --     animación y partículas en decorations/DecoFx.lua).
 --  2. Añade su nombre a TYPES abajo.
 --  Listo: aparece en la capa Decoracion del editor (con Espejar y Capa
@@ -20,7 +20,7 @@
 
 local DecorationTypes = require 'src/world/decorations/DecorationTypes'
 
-local TYPES = { 'tulip', 'stretch', 'palmtree', 'icicle', 'ice_set', 'cave_set', 'water_set', 'tropical_set', 'meadow_set', 'volcano_set' }
+local TYPES = { 'tulip', 'stretch', 'palmtree', 'icicle', 'ice_set', 'cave_set', 'water_set', 'tropical_set', 'meadow_set', 'volcano_set', 'fortress_set', 'jungle_set' }
 
 for _, name in ipairs(TYPES) do
     local def = require('src/world/decorations/types/' .. name)

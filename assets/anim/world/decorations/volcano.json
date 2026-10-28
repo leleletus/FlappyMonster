@@ -14,17 +14,25 @@
     {"h": 17, "image": "assets/images/world/decorations/volcano/lava_fall-Sheet.png", "w": 10, "x": 10, "y": 0},
     {"h": 17, "image": "assets/images/world/decorations/volcano/lava_fall-Sheet.png", "w": 10, "x": 20, "y": 0},
     {"h": 7, "image": "assets/images/world/decorations/volcano/lava_vent.png", "w": 10, "x": 0, "y": 0},
-    {"h": 5, "image": "assets/images/world/decorations/volcano/steam_stones.png", "w": 12, "x": 0, "y": 0}
+    {"h": 5, "image": "assets/images/world/decorations/volcano/steam_stones.png", "w": 12, "x": 0, "y": 0},
+    {"h": 93, "image": "assets/images/world/decorations/volcano/dead_tree.png", "w": 82, "x": 0, "y": 0},
+    {"h": 15, "image": "assets/images/world/decorations/volcano/charred_stump.png", "w": 22, "x": 0, "y": 0},
+    {"h": 17, "image": "assets/images/world/decorations/volcano/obsidian_shards.png", "w": 20, "x": 0, "y": 0},
+    {"h": 15, "image": "assets/images/world/decorations/volcano/burnt_shrub.png", "w": 24, "x": 0, "y": 0}
   ],
   "anims": {
     "ash_pile": {"fps": 8, "frames": [1], "loop": true},
     "basalt_pebbles": {"fps": 8, "frames": [2], "loop": true},
     "basalt_rock": {"fps": 8, "frames": [3], "loop": true},
+    "burnt_shrub": {"fps": 8, "frames": [15], "loop": true},
+    "charred_stump": {"fps": 8, "frames": [13], "loop": true},
     "charred_tree": {"fps": 8, "frames": [4], "loop": true},
     "dead_bush": {"fps": 8, "frames": [5], "loop": true},
+    "dead_tree": {"fps": 8, "frames": [12], "loop": true},
     "glow_rock": {"fps": 8, "frames": [6], "loop": true},
     "lava_fall": {"fps": 8, "frames": [7, 8, 9], "loop": true},
     "lava_vent": {"fps": 8, "frames": [10], "loop": true},
+    "obsidian_shards": {"fps": 8, "frames": [14], "loop": true},
     "steam_stones": {"fps": 8, "frames": [11], "loop": true}
   }
 }

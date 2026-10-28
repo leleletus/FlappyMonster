@@ -9,10 +9,12 @@
 --                        anclado al centro-abajo de la subcelda
 --               'cell' : ocupa la celda; anclado al centro-abajo de la celda
 --   layer       'front' (por defecto, delante de jugador y enemigos) | 'back'
---   cullMargin  px extra de margen al descartar fuera de pantalla (por defecto 4 tiles)
+--   cullMargin  casillas de margen al descartar fuera de pantalla (por defecto 4); lo que mide más
+--               (los árboles grandes, 5-8 casillas) pone su alto + 2, o aparecería de golpe
 --   props       propiedades EXTRA editables (formato de entities/Props.lua)
 --   editor      { previewScale = 0.4 } escala de la miniatura (se dibuja con
---               su propio draw); icon = imagen opcional
+--               su propio draw); icon = imagen opcional; previewLift = px que se
+--               sube el dibujo en la miniatura (lo que cuelga más de una casilla)
 --   loadAssets()               carga sus imágenes (una vez)
 --   init(d)                    estado propio de la instancia (d.phase ∈ [0,1) es
 --                              una fase estable derivada de la posición)
@@ -25,7 +27,7 @@ local Props = require 'src/world/entities/base/Props'
 local DecorationTypes = { byName = {}, list = {} }
 
 -- Orden de las categorías en la paleta del editor (las que no estén, al final)
-DecorationTypes.CATEGORIES = { 'Plantas', 'Grandes', 'Pequeñas (subcelda)', 'Pradera', 'Hielo y nieve', 'Cueva', 'Acuático', 'Tropical', 'Volcán' }
+DecorationTypes.CATEGORIES = { 'Plantas', 'Grandes', 'Pequeñas (subcelda)', 'Pradera', 'Hielo y nieve', 'Cueva', 'Acuático', 'Tropical', 'Volcán', 'Fortaleza', 'Jungla' }
 function DecorationTypes.categoryOrder(cat)
     for i, c in ipairs(DecorationTypes.CATEGORIES) do if c == cat then return i end end
     return #DecorationTypes.CATEGORIES + 1

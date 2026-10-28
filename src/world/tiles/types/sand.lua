@@ -8,7 +8,7 @@
 local TileTypes = require 'src/world/tiles/TileTypes'
 
 local TEX = { image = 'assets/images/world/tiles/sand.png' }
-local BLEND_OF = { dirt = 1, grass = 1, solid = 2, deep_stone = 3, border = 4, basalt = 4, ash = 4 }
+local BLEND_OF = { dirt = 1, grass = 1, solid = 2, deep_stone = 3, border = 4, basalt = 4, ash = 4, mud = 1, jungle_grass = 1, temple_brick = 2 }
 -- lado → { dx, dy en medias casillas, ángulo } (la franja del dibujo está a la izquierda)
 local SIDES = { { -1, 0, 0 }, { 0, -1, math.pi / 2 }, { 1, 0, math.pi }, { 0, 1, -math.pi / 2 } }
 local SubTiles

@@ -47,7 +47,7 @@ love . --anim [id]        open (or create) a set
 - **origin** — the anchor inside a frame (0..1); `[0.5, 1]` = the feet.
 - **fallback** — the sequence used when code asks for one that does not exist.
 - **variants** — the SAME sequences with other images: every frame path that starts with `from` is rewritten to
-  `to`. This is how one set serves the five Gummies or the six Hopper skins.
+  `to`. This is how one set serves the island Gummies or the seven Hopper skins.
 
 **The rule that makes it network-safe:** the frame is a PURE function of (sequence name, time). So drawing derives
 from what already travels in snapshots — an entity's `state` and its time in that state — and looks the same in
@@ -121,7 +121,10 @@ Generators (`tools/anim/`; they add, never overwrite what exists): `make_strip_s
 the game loads to its folder's set and records the speed the code asks for (the capture is written by running the
 battery and `level_shots` with `FM_ANIM_CAPTURE=<file>`), `make_folder_sets.py` (loose images),
 `make_family_sets.py` (the Crabbies). **After adding a new sheet or image folder to the game, run them** so it shows
-up in the editor.
+up in the editor. An art generator can also register what it applies itself: `add_anims(set_id, entries)` in
+`tools/anim/common.py` adds the missing named animations (whole image or a sheet's frames, with fps / durations;
+`frames_of` picks some frames of a sheet) and never touches an existing one (`make_jungle_decor.py`,
+`make_big_trees.py`).
 
 ## The runtime contract: ask for an animation by name
 
@@ -209,7 +212,7 @@ set:images('hide')                              -- the images of a sequence, for
 |---|---|---|
 | Gummy and its four island variants | `enemies/gummy` (variants) | the walk cycle still advances by the simulation's frame counter |
 | Hopper, six skins | `enemies/hopper` (variants) | frames by animation name: `idle`, `crouch`, `air`, `dead` |
-| Crabby, six skins (and their trampoline versions) | `enemies/crabby`, `crabby_ice`, `crabby_fortress`, `crabby_river`, `crabby_cave`, `crabby_lava` | `walk` (cycle + speed), `hide` / `unhide` (any number of frames; the length of `hide` is how long hiding takes), `hidden`, `peek`, `meat`, `dead`. A frame's `inset` = empty rows above the shell. Frames must be whole images |
+| Crabby, seven skins (and their trampoline versions) | `enemies/crabby`, `crabby_ice`, `crabby_fortress`, `crabby_river`, `crabby_cave`, `crabby_lava`, `crabby_jungle` | `walk` (cycle + speed), `hide` / `unhide` (any number of frames; the length of `hide` is how long hiding takes), `hidden`, `peek`, `meat`, `dead`. A frame's `inset` = empty rows above the shell. Frames must be whole images |
 | enemies and bosses made in the enemy editor | their own | everything |
 
 Everything else is in its folder's set as sheet animations and loose images (previous section). For the

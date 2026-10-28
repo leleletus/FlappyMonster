@@ -1,6 +1,8 @@
 -- Decoraciones de PRADERA (sprites: assets/images/world/decorations/meadow/, generados por tools/art/world/make_biome_art.py).
 -- No chocan ni hacen daño.
---   grandes:  Roble, Pino (se mecen un poco; del roble cae alguna hoja)
+--   grandes:  Roble, Pino (se mecen un poco; del roble cae alguna hoja); Roble grande, Abedul y Abeto (6-7
+--             casillas, de tools/art/world/make_big_trees.py: se mecen, de los de hoja caen hojas hasta el suelo)
+--   celda:    Avellano, Tocón, Peña, Altramuces (make_big_trees.py)
 --   celda:    Arbusto redondo, Tronco caído
 --   subcelda: Margaritas, Hierba alta (se mece), Seta roja, Roca con musgo, Girasol (se balancea)
 local DecoFx = require 'src/world/decorations/DecoFx'
@@ -55,6 +57,50 @@ return {
         draw = function(d, sx, sy) DecoFx.wave(d, sx, sy, A('round_bush'), nil, 0.4, 1.1) end,
     },
     static('fallen_log', 'Tronco caído', 'cell', 'fallen_log.png', { layer = 'back' }),
+    -- ── Grandes (5-8 casillas: margen de descarte = su alto + 2) ──
+    base {
+        name = 'big_oak', label = 'Roble grande', placement = 'cell', layer = 'back', cullMargin = 8,
+        editor = { previewScale = 0.14 },
+        update = function(d, dt)
+            if DecoFx.every(d, 'leaf', dt, 2.5, 6) then DecoFx.leaf(d, (math.random() - 0.5) * 300, -370 + math.random() * 180) end
+            DecoFx.update(d, dt)
+        end,
+        draw = function(d, sx, sy)
+            DecoFx.seen(d)
+            DecoFx.wave(d, sx, sy, A('big_oak'), nil, 0.3, 0.7)
+            DecoFx.draw(d, sx, sy)
+        end,
+    },
+    base {
+        name = 'big_birch', label = 'Abedul', placement = 'cell', layer = 'back', cullMargin = 9,
+        editor = { previewScale = 0.13 },
+        update = function(d, dt)
+            if DecoFx.every(d, 'leaf', dt, 3, 7) then DecoFx.leaf(d, (math.random() - 0.5) * 170, -400 + math.random() * 200) end
+            DecoFx.update(d, dt)
+        end,
+        draw = function(d, sx, sy)
+            DecoFx.seen(d)
+            DecoFx.wave(d, sx, sy, A('big_birch'), nil, 0.45, 0.8)
+            DecoFx.draw(d, sx, sy)
+        end,
+    },
+    base {
+        name = 'big_fir', label = 'Abeto', placement = 'cell', layer = 'back', cullMargin = 9,
+        editor = { previewScale = 0.12 },
+        draw = function(d, sx, sy) DecoFx.wave(d, sx, sy, A('big_fir'), nil, 0.35, 0.7) end,
+    },
+    base {
+        name = 'hazel_bush', label = 'Avellano', placement = 'cell', layer = 'back',
+        editor = { previewScale = 0.42 },
+        draw = function(d, sx, sy) DecoFx.wave(d, sx, sy, A('hazel_bush'), nil, 0.4, 1.1) end,
+    },
+    static('stump', 'Tocón', 'cell', 'stump.png', { layer = 'back', editor = { previewScale = 0.68 } }),
+    static('boulder', 'Peña', 'cell', 'boulder.png', { layer = 'back', editor = { previewScale = 0.54 } }),
+    base {
+        name = 'lupines', label = 'Altramuces', placement = 'cell', layer = 'back',
+        editor = { previewScale = 0.67 },
+        draw = function(d, sx, sy) DecoFx.wave(d, sx, sy, A('lupines'), nil, 0.6, 1.4) end,
+    },
     static('flower_patch', 'Margaritas', 'sub', 'flower_patch.png'),
     base {
         name = 'tall_grass', label = 'Hierba alta', placement = 'sub',
