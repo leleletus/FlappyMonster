@@ -102,6 +102,16 @@ Every generator writes previews by default and the game assets only with `--appl
   cracks and shatters. Cave: the glowing steam lights the dark around it. Volcano: the smoke ONLY PUSHES, like the
   others (the user: "for continuity and not to confuse players").
 
+## Open — to do next (the user, 2026-10-28)
+
+- [ ] **Air pushing a box into the player**: player on the LEFT of a box, a Gust blowing from the right towards the
+  left → instead of the box pushing the player along, the player is TELEPORTED to the right side of the box and only
+  then pushed. Wanted: the box (moved by the air) pushes the player in front of it. (Today `Box:moveAndCollide` only
+  refuses to move into a player, and the player's overlap resolution can still pick the far side.)
+- [ ] **Geyser and weight**: the jet always reaches the same height at the same speed. Wanted: when something blocks
+  it (box, enemy, player, anything) the jet pushes it up SLOWER the heavier it is — like a strong jet lifting
+  something heavy — and the weight includes everything stacked on it (more boxes, a player on top), as on the Scale.
+
 ## Steps
 
 - [x] 1. Designs approved by the user (sprites, animations, sounds) — iterate on the previews. Scale: approved
