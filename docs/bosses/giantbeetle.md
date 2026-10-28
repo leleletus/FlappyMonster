@@ -96,6 +96,16 @@ centre (row 9) to dodge the charge and the waves (0.5.81: one tile lower than in
 - On a pan it still threw stone → `floorTile` looks for a body under its body and horn in a band (−4..+20 px from its
   feet), since riding a pan its feet are not always on the plank to the pixel.
 
+## 0.5.84 changes (the user)
+
+- "One of the noisiest bosses": every sound call of the boss and the small beetle passed (volume, pitch) to
+  `Sound.play(name, pitch, volume)` — the wing buzz played at volume 1.6 three times a second, the steps at 1.3 — →
+  fixed; the sounds now have the pitch and volume meant.
+- Standing or walking on a pan did not lower it (bosses weighed 0) → it weighs 3 (`GB.weight`; a `ridesScale` boss
+  counts in `Weight`).
+- Its charge took a pan hit sideways (from a side ledge, or under a lowered pan) for a wall → pans are one-way bodies,
+  passed sideways (`Snow:move`).
+
 ## How to extend
 
 - Tuning lives in the constants at the top of the file (`{ normal, angry }` pairs).
@@ -104,7 +114,7 @@ centre (row 9) to dodge the charge and the waves (0.5.81: one tile lower than in
 
 ## Tests
 
-`giantbeetle_rules` (arena, armour, shell bounce, stone marks, moving-pan shadow, flip, hits, double edge, bait, charge + debris, toss, waves, rage, flying minions, wood chunk + sound, defeat, net);
+`giantbeetle_rules` (arena, pans — its weight lowers one, the charge passes through them —, armour, shell bounce, stone marks, moving-pan shadow, flip, hits, double edge, bait, charge + debris, toss, waves, rage, flying minions, wood chunk + sound, defeat, net);
 `boss_sim LEVEL=tools/levelgen/arenas/jefe_escarabajo.json` (a whole fight played as intended: every state seen, killed
 by flipping it); `boss_intro`, `online_boss` with that arena.
 

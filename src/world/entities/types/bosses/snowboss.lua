@@ -244,7 +244,9 @@ function Snow:move(level, dx, dy)
                 d = td
             else
                 local o, b = level:bodyAt(edge, py, self)
-                if o then f = (dx > 0) and b.x or (b.x + b.w) end
+                -- (un cuerpo de un solo sentido — un platillo de la Balanza — solo para desde arriba: de lado se
+                -- atraviesa, como en Entity; 0.5.84, el usuario: el Escarabajo Gigante embistiendo chocaba con él)
+                if o and not o.oneway then f = (dx > 0) and b.x or (b.x + b.w) end
             end
             if f and (not face or (dx > 0 and f < face) or (dx < 0 and f > face)) then face, hitDef = f, d end
         end

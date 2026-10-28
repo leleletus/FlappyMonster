@@ -73,7 +73,10 @@ Designs and the user's verdicts: [new-props-plan](new-props-plan.md).
   750 px/s — about 3 tiles —: a big box from high up, something thrown, a stack) slams it down and fires the other pan
   like a ground pound, with power `Scale.impactPower(weightIn, vy, weightOther)` = weight × speed ÷ 2200 ÷ √(weight on
   the other pan), capped at 1.6; under 0.6 it only tips the scale as before (a player's own pound is `onPound`).
-  BOSSES (0.5.76): a boss weighs nothing, but one with `ridesScale` standing on a pan RIDES it, a pound / impact on the
+  BOSSES (0.5.76): a boss weighs nothing, except one with `ridesScale`, which weighs its `weight` (0.5.84, the user: the
+  Giant Rhino Beetle standing on a pan did not lower it; it weighs 3) and is moved by the pan only as a rider. Pans are
+  one-way bodies: bosses moving with `Snow:move` (as entities already did) pass through them SIDEWAYS — the beetle's
+  charge took a pan for a wall. One with `ridesScale` standing on a pan RIDES it, a pound / impact on the
   other pan calls its `onScaleLaunch(vy, scale)`, and a boss landing hard calls `Scale.slamUnder(level, boss, power)`
   (fires the other pan, players included, and tells it whom: `onScaleCatapult`). `Scale:catapult(pan, except, power,
   by)` is the one launch for all of them.

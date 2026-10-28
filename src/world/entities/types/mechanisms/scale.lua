@@ -340,7 +340,8 @@ function Scale:updateCustom(dt, level)
             local _, ents = onPan(self, pan, level)
             local dy = (i == 1) and dd or -dd
             for _, e in ipairs(ents) do
-                if e.solidFull and dy < 0 then e:moveAndCollide(level, 0, dy) else e.y = e.y + dy end   -- (una caja: con sus choques)
+                if e.def and e.def.boss then                              -- (el jefe que pesa: lo mueven los riders)
+                elseif e.solidFull and dy < 0 then e:moveAndCollide(level, 0, dy) else e.y = e.y + dy end   -- (una caja: con sus choques)
             end
         end
         for i, list in ipairs(riders) do

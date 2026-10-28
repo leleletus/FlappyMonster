@@ -38,6 +38,7 @@ local GB = Entity.extend(Boss, {
 GB.hurtSound   = 'megaHurt'
 GB.introLength = 3.2
 GB.wantsLevel  = true
+GB.weight      = 3                              -- (en un platillo lo BAJA: más que un jugador con una caja pequeña; 0.5.84)
 GB.ridesScale  = true                           -- (va en los platillos de la balanza: mechanisms/scale)
 GB.animId      = 'bosses/giantbeetle'
 
@@ -153,7 +154,7 @@ function GB:onScaleLaunch(vy, scale)
     self.waves = {}
     self:enter('launched')
     Sound.play('scaleLaunch')
-    Sound.play('megaRoar', 0.6, 1.3)
+    Sound.play('megaRoar', 1.3, 0.6)
 end
 -- Cayó él en un platillo: a quién disparó (para el golpe contra el techo)
 function GB:onScaleCatapult(players, ents)
@@ -216,7 +217,7 @@ function GB:throwBlock(level, pa)
     local vx = (tx - hx) / (tUp + tDown)
     local tile = self:floorTile(level)
     self.blocks[#self.blocks + 1] = { id = self:nid(), x = hx, y = hy, vx = vx, vy = vy, t = 0, tile = tile, hit = {} }
-    Sound.play('megaSlam', 0.4, 1.4)
+    Sound.play('megaSlam', 1.4, 0.4)
     -- (lo arranca del suelo delante del cuerno: tierra que salta del material de ese suelo)
     Entity.emitFx('chunk_break', math.floor(hx - T / 2), math.floor(self:feetY() - T), { tile = tile })
 end
@@ -314,7 +315,7 @@ function GB:updateRocks(level, dt)
             r.floor = math.floor(self:floorBelow(level, r.x, r.y))
             local o = r.vy > 0 and level:bodyAt(r.x, bottom, self)
             if bottom >= r.floor or o then
-                Sound.play('cavePebble', 0.8)
+                Sound.play('cavePebble', 1, 0.8)
                 Entity.emitFx('block_break', r.x - T / 2, r.floor - T)
                 table.remove(self.rocks, i)
             end
@@ -387,7 +388,7 @@ function GB:choose(level)
             local b = other:getOuterBounds()
             self.markX, self.markY = math.floor(b.x + b.w / 2), math.floor(b.y)
             self.last = 'leap'
-            Sound.play('gustBlow', 0.6, 0.7)
+            Sound.play('gustBlow', 0.7, 0.6)
             return self:enter('leap_wind')
         end
     end
@@ -397,17 +398,17 @@ function GB:choose(level)
     self.last = pick
     if pick == 'charge' then
         self.charges = self.rage and 2 or 1
-        Sound.play('megaWindup', 0.7)
+        Sound.play('megaWindup', 1, 0.7)
         return self:enter('charge_wind')
     elseif pick == 'toss' then
         self.tossN = self.rage and 2 or 1
-        Sound.play('megaWindup', 0.5, 1.3)
+        Sound.play('megaWindup', 1.3, 0.5)
         return self:enter('toss_wind')
     end
     local tx = pa and pa.x or self.x
     local ty = pa and (pa:getOuterBounds().y + pa:getOuterBounds().h) or nil
     self.markX, self.markY = self:aimAt(level, tx, ty)
-    Sound.play('gustBlow', 0.6, 0.7)
+    Sound.play('gustBlow', 0.7, 0.6)
     self:enter('leap_wind')
 end
 
@@ -422,7 +423,7 @@ function GB:onDamaged(n, kind)
     if not self.rage and self.hp <= self.hpMax * (self.props.rageAt or 0.5) then
         self.rage = true
         Entity.emitFx('shake_roar', self.x, self.y)
-        Sound.play('megaRoar', 0.8)
+        Sound.play('megaRoar', 1, 0.8)
     end
 end
 
@@ -472,18 +473,18 @@ function GB:updateBoss(dt, level)
         if t >= CHARGE_WIND[ph] then
             self.vx = (self.facing or 1) * CHARGE_V[ph]
             self:enter('charge')
-            Sound.play('megaStep', 0.8, 1.2)
+            Sound.play('megaStep', 1.2, 0.8)
         end
 
     elseif st == 'charge' then
         self.vx = (self.facing or 1) * CHARGE_V[ph]
         local hit = self:physics(level, dt)
         self:touch(level, HIT_CHARGE)
-        if math.floor(t / STEP_EVERY) ~= math.floor((t - dt) / STEP_EVERY) then Sound.play('megaStep', 0.5, 1.3) end
+        if math.floor(t / STEP_EVERY) ~= math.floor((t - dt) / STEP_EVERY) then Sound.play('megaStep', 1.3, 0.5) end
         if hit == 'wall' then
             self.vx = 0
-            Sound.play('megaSlam', 0.8)
-            Sound.play('caveRumble', 0.7)
+            Sound.play('megaSlam', 1, 0.8)
+            Sound.play('caveRumble', 1, 0.7)
             Entity.emitFx('shake_big', self.x, self.y)
             self:dropRocks(level)
             self:enter('bonk')
@@ -495,7 +496,7 @@ function GB:updateBoss(dt, level)
             self.charges = self.charges - 1
             if self.charges > 0 then
                 self.facing = -(self.facing or 1)
-                Sound.play('megaWindup', 0.7)
+                Sound.play('megaWindup', 1, 0.7)
                 self:enter('charge_wind')
             else self:rest() end
         end
@@ -529,17 +530,17 @@ function GB:updateBoss(dt, level)
             self.passY = self.markY
             self:jumpTo(self.markX, self.markY, LEAP_UP)
             self:enter('leap')
-            Sound.play('gustBlow', 0.8, 0.6)
+            Sound.play('gustBlow', 0.6, 0.8)
         end
 
     elseif st == 'leap' then
         self:physics(level, dt)
         self:touch(level)
-        if math.floor(t / BUZZ_EVERY) ~= math.floor((t - dt) / BUZZ_EVERY) then Sound.play('gustBlow', 0.2, 1.6) end    -- (el zumbido)
+        if math.floor(t / BUZZ_EVERY) ~= math.floor((t - dt) / BUZZ_EVERY) then Sound.play('gustBlow', 1.6, 0.2) end    -- (el zumbido)
         if self.onGround and self.vy >= 0 and t > 0.1 then
             self.passY, self.vx = nil, 0
-            Sound.play('megaSlam', 0.9)
-            Sound.play('gpImpact', 0.7)
+            Sound.play('megaSlam', 1, 0.9)
+            Sound.play('gpImpact', 1, 0.7)
             Entity.emitFx('gp_land', self.x, self:feetY())
             Entity.emitFx('shake_big', self.x, self.y)
             self:spawnWaves()
@@ -559,8 +560,8 @@ function GB:updateBoss(dt, level)
         self:physics(level, dt, false)
         if self.y > y0 - LAUNCH_V * dt * 0.5 or t >= LAUNCH_MAX then
             if t < LAUNCH_MAX then
-                Sound.play('megaSlam', 1, 0.8)
-                Sound.play('blockBreak', 0.8)
+                Sound.play('megaSlam', 0.8, 1)
+                Sound.play('blockBreak', 1, 0.8)
                 Entity.emitFx('shake_big', self.x, self.y)
                 local _, _, zy0 = self:zoneBounds()
                 Entity.emitFx('block_break', self.x - T / 2, math.max(zy0, self.y - self.outerH / 2 - T))
@@ -572,7 +573,7 @@ function GB:updateBoss(dt, level)
     elseif st == 'tumble' then
         self:physics(level, dt)
         if self.onGround and t > 0.1 then
-            Sound.play('megaFall', 0.8)
+            Sound.play('megaFall', 1, 0.8)
             Sound.play('stunned')
             Entity.emitFx('shake_big', self.x, self.y)
             self:enter('flipped')
@@ -586,7 +587,7 @@ function GB:updateBoss(dt, level)
         self:physics(level, dt); self:friction(level, dt)
         if t >= RIGHT_T then
             self.vy, self.onGround = -500, false
-            Sound.play('megaStep', 0.8)
+            Sound.play('megaStep', 1, 0.8)
             self:rest(0.6)
         end
 
@@ -603,14 +604,14 @@ function GB:updateBoss(dt, level)
         -- se da la vuelta y se va volando torpe hacia arriba (pura función del tiempo): atraviesa el techo
         local tj = t - FLEE_WIND
         if tj >= 0 then
-            if tj - dt < 0 then Sound.play('gustBlow', 0.8, 0.6) end
+            if tj - dt < 0 then Sound.play('gustBlow', 0.6, 0.8) end
             self.x = self.fleeX0 + self.fleeDir * FLEE_VX * tj + math.sin(tj * 9) * 14
             self.y = self.fleeY0 + FLEE_VY * tj
             self.vx, self.vy = self.fleeDir * FLEE_VX, FLEE_VY
             local _, _, zy0 = Boss.zoneBounds(self)
             if not self.broke and self.y - self.outerH / 2 < zy0 then
                 self.broke = true
-                Sound.play('gpImpact', 0.6)
+                Sound.play('gpImpact', 1, 0.6)
                 Entity.emitFx('block_break', self.x - T / 2, zy0 - T)
                 Entity.emitFx('shake_small', self.x, zy0)
             end
@@ -638,18 +639,18 @@ function GB:updateIntro(dt, level, t)
         local y0 = zy0 - self.outerH
         local u = math.max(0, t / LAND_AT)
         self.y = y0 + (hy - y0) * u * u
-        if math.floor(t / BUZZ_EVERY) ~= math.floor((t - dt) / BUZZ_EVERY) then Sound.play('gustBlow', 0.25, 1.5) end
+        if math.floor(t / BUZZ_EVERY) ~= math.floor((t - dt) / BUZZ_EVERY) then Sound.play('gustBlow', 1.5, 0.25) end
         return
     end
     self.y = hy
     if self.introStep < 1 then
         self.introStep = 1
-        Sound.play('megaSlam', 0.9)
-        Sound.play('gpImpact', 0.6)
+        Sound.play('megaSlam', 1, 0.9)
+        Sound.play('gpImpact', 1, 0.6)
         Entity.emitFx('gp_land', self.x, self:feetY())
         Entity.emitFx('shake_big', self.x, self.y)
     end
-    if t >= ROAR_AT and self.introStep < 2 then self.introStep = 2; Sound.play('megaRoar', 0.7) end
+    if t >= ROAR_AT and self.introStep < 2 then self.introStep = 2; Sound.play('megaRoar', 1, 0.7) end
 end
 
 -- ── Red ───────────────────────────────────────────────────────────────────────

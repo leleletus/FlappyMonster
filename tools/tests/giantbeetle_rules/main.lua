@@ -1,6 +1,7 @@
 -- tools/tests/giantbeetle_rules — reglas del ESCARABAJO RINOCERONTE GIGANTE (types/bosses/giantbeetle.lua) caso a caso,
 -- en su arena real (tools/levelgen/arenas/jefe_escarabajo.json, el templo de la balanza):
 --   arena      la balanza nivelada deja los platillos colgados 3 casillas SOBRE EL SUELO (sin fosos; 0.5.79)
+--   platillos  de pie en un platillo lo baja (pesa) y va con él; embistiendo, un platillo bajado se atraviesa de lado
 --   acorazado  de pie no se le hace daño: caerle encima (pisotón o ground pound) rebota
 --   vuelco     él en un platillo y un ground pound en el OTRO: sale disparado, se estrella contra el techo y cae
 --              PATAS ARRIBA (vulnerable); pasado el tiempo se da la vuelta
@@ -196,6 +197,58 @@ function cases.caparazon()
     end)
     check('caparazon', up and pa.hp == hp0 and boss.hp == boss.hpMax,
         ('cae en el caparazón: rebota=%s · vida %d → %d · el jefe %d/%d'):format(tostring(up), hp0, pa.hp, boss.hp, boss.hpMax))
+end
+
+-- Él de pie en un platillo lo BAJA (pesa 3) y va con él; embistiendo, un platillo bajado no lo para (se atraviesa de
+-- lado: es de un solo sentido) — 0.5.84, el usuario
+function cases.platillos()
+    local level, es, boss, scale = arena()
+    stepAll(level, es, {}, 0.3)
+    local p1 = scale:bodyParts()[1]
+    local y0 = p1:getOuterBounds().y
+    putBoss(level, boss, p1:getOuterBounds().x + p1:getOuterBounds().w / 2, y0)
+    local riding = true
+    stepAll(level, es, {}, 2, function()
+        boss.restLen = 99
+        local b = p1:getOuterBounds()
+        if math.abs(boss:feetY() - b.y) > 6 then riding = false end
+    end)
+    local sank = p1:getOuterBounds().y - y0
+    -- embiste por el suelo hacia el platillo bajado (lo baja un jugador de pie en él, invulnerable)
+    local level2, es2, boss2, scale2 = arena()
+    stepAll(level2, es2, {}, 0.3)
+    local q1 = scale2:bodyParts()[1]
+    local qb = q1:getOuterBounds()
+    local pa = playerAt(level2, es2, qb.x + qb.w / 2, qb.y)
+    stepAll(level2, es2, { pa }, 2.5, function() boss2.restLen = 99; pa.invT = 9 end)
+    local low = q1:getOuterBounds().y - qb.y
+    putBoss(level2, boss2, 13.5 * T)
+    boss2.facing = 1
+    boss2:enter('charge')
+    local passed, bonkAt = false, nil
+    stepAll(level2, es2, { pa }, 1.2, function()
+        pa.invT = 9
+        if boss2.state == 'bonk' and not bonkAt then bonkAt = boss2.x end
+        if boss2.x > qb.x + qb.w + boss2.outerW / 2 then passed = true end
+        if boss2.state ~= 'charge' then return true end
+    end)
+    -- y desde la plataforma del lado: el platillo nivelado le queda a media altura del cuerpo
+    local level3, es3, boss3, scale3 = arena()
+    stepAll(level3, es3, {}, 0.3)
+    local r1 = scale3:bodyParts()[1]:getOuterBounds()
+    putBoss(level3, boss3, 12.5 * T, 10 * T)
+    boss3.facing = 1
+    boss3:enter('charge')
+    local passed3, bonk3 = false, nil
+    stepAll(level3, es3, {}, 1.2, function()
+        if boss3.state == 'bonk' and not bonk3 then bonk3 = boss3.x end
+        if boss3.x - boss3.outerW / 2 > r1.x then passed3 = true end
+        if boss3.state ~= 'charge' then return true end
+    end)
+    check('platillos', sank > T and riding and low > T and passed and passed3,
+        ('de pie en un platillo: baja %.1f casillas, va con él=%s · embistiendo bajo un platillo bajado (%.1f casillas): lo atraviesa=%s%s · desde la plataforma del lado, a la altura del platillo: lo atraviesa=%s%s'):format(
+            sank / T, tostring(riding), low / T, tostring(passed), bonkAt and (' (chocó en x=' .. math.floor(bonkAt) .. ')') or '',
+            tostring(passed3), bonk3 and (' (chocó en x=' .. math.floor(bonk3) .. ')') or ''))
 end
 
 -- Los cascotes marcan dónde caen de verdad: sobre un platillo, en el platillo (no en el fondo del foso) y se paran ahí
@@ -549,7 +602,7 @@ end
 
 function love.load(arg)
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'arena', 'acorazado', 'caparazon', 'cascotes', 'vuelco', 'golpe', 'levanta', 'doble_filo', 'cebo', 'embestida', 'lanzar', 'ondas', 'enfado', 'derrota', 'purga', 'trozo', 'sombra_movil', 'madera', 'voladores', 'red' }) do
+    for _, n in ipairs({ 'arena', 'platillos', 'acorazado', 'caparazon', 'cascotes', 'vuelco', 'golpe', 'levanta', 'doble_filo', 'cebo', 'embestida', 'lanzar', 'ondas', 'enfado', 'derrota', 'purga', 'trozo', 'sombra_movil', 'madera', 'voladores', 'red' }) do
         if not only or only == n then
             local ok, err = xpcall(cases[n], debug.traceback)
             if not ok then check(n, false, 'error: ' .. tostring(err)) end

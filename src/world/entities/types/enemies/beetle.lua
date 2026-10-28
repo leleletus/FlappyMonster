@@ -205,11 +205,11 @@ function Beetle:chargeHits(level, f, dt)
             if e.canBeKnocked and e:canBeKnocked() then
                 self.swept[e] = true
                 e:knockback(f)
-                Sound.play('crabPop', 0.7, 1.1)
+                Sound.play('crabPop', 1.1, 0.7)
             elseif e.carryable and e.canBeCarried and e:canBeCarried() and e.onThrow then
                 self.swept[e] = true
                 e:onThrow(nil, f * SWEEP_VX, SWEEP_VY)
-                Sound.play('boxLand', 0.8, 1.2)
+                Sound.play('boxLand', 1.2, 0.8)
             end
         end
     end
@@ -219,7 +219,7 @@ end
 -- Acaba la embestida sin chocar: FRENA derrapando (0.5.80, el usuario: se paraba de golpe) con `vx` de partida
 function Beetle:brake(vx)
     self.state, self.deadTimer, self.vx = 'brake', 0, vx
-    Sound.play('boxPush', 0.8, 0.9)
+    Sound.play('boxPush', 0.9, 0.8)
     Entity.emitFx('gp_land', self.x + (self.facing or 1) * self.outerW * 0.3, self.y + self.outerH / 2)
 end
 
@@ -244,7 +244,7 @@ function Beetle:whileCarried(dt, level)
         pa:hurt(HIT_CARRY)
         if pa.recoil then pa:recoil(dir) end
     end
-    Sound.play('crabPop', 0.9, 0.8)
+    Sound.play('crabPop', 0.8, 0.9)
 end
 
 function Beetle:updateCustom(dt, level)
@@ -258,7 +258,7 @@ function Beetle:updateCustom(dt, level)
             local pa = self:sees(level)
             if pa then
                 self.state, self.deadTimer, self.vx = 'windup', 0, 0
-                Sound.play('hopWind', 0.8, 1.3)
+                Sound.play('hopWind', 1.3, 0.8)
                 Entity.emitFx('gp_land', self.x - (self.facing or 1) * self.outerW / 2, self.y + self.outerH / 2)
                 return true
             end
@@ -276,7 +276,7 @@ function Beetle:updateCustom(dt, level)
         if t >= WIND_T then
             self.state, self.deadTimer, self.swept = 'charge', 0, {}
             self.vx = (self.facing or 1) * CHARGE_V
-            Sound.play('crabPop', 0.7, 0.6)
+            Sound.play('crabPop', 0.6, 0.7)
         end
         return true
 
@@ -294,7 +294,7 @@ function Beetle:updateCustom(dt, level)
         local pinned = self:chargeHits(level, f, dt)
         if pinned or math.abs(self.x - x0) < CHARGE_V * dt * 0.5 then                -- (contra una pared: aturdido)
             self.state, self.deadTimer, self.vx, self.cd = 'daze', 0, 0, COOLDOWN
-            Sound.play('blockBreak', 0.6, 0.8)
+            Sound.play('blockBreak', 0.8, 0.6)
             Entity.emitFx('shake_small', self.x, self.y)
             return true
         end
@@ -347,7 +347,7 @@ function Beetle:updateCustom(dt, level)
             if self.props.wings then                                   -- (el volador: abre las alas y vuelve a volar)
                 self.flying, self.vy, self.baseY = true, 0, self.y
                 self.ffx, self.ffy, self.ffBlock = nil, nil, nil
-                Sound.play('gustBlow', 0.5, 1.6)
+                Sound.play('gustBlow', 1.6, 0.5)
             end
             self:startWalk()
         end
