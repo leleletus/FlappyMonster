@@ -337,7 +337,21 @@ jungle boss ([giantbeetle](../bosses/giantbeetle.md)). Approved design (2026-10-
   for `INV_FLIP` 0.4 s (you bounce off); (4) carried it froze → it keeps kicking (`whileCarried`), TREMBLES for its
   last `WARN_T` 0.9 s and, if you still hold it, breaks free beside you and takes 1 HP; (5) its box is its BODY (no
   horn), centred: the drawing is shifted 2 px (`BODY_DX`).
-- Tests: `mechanics escarabajo`, `escarabajo_lanzado`, `escarabajo_ruta`, `escarabajo_manos`.
+- 0.5.79 (the user): (1) carrying and throwing one about to right itself restarted its count → thrown, its on-back
+  count (`deadTimer`) goes on, so it rights itself soon after landing; (2) charging, it went THROUGH the player →
+  `chargeHits`: a player in front is pushed out of its box in the charge direction (even while invulnerable), takes 1
+  and recoils (`PUSH_CD` 0.35 s); pinned against a wall, the beetle stops there and is dazed; (3) charging, it sweeps
+  what it meets once per charge: `canBeKnocked` entities get `knockback` (enemies stunned, bombs kicked AND lit, other
+  beetles flipped), carryable light things are flung (`onThrow`, `SWEEP_VX/VY`), bosses never; (4) dead it vanished →
+  a SQUASHED frame (`assets/images/enemies/beetle/dead.png`, made by the generator from the user's walk frame, the
+  sheet untouched), fading out.
+- **Flying Rhino Beetle** (prop `wings`, 0.5.79; the Giant Rhino Beetle's minions, like the King Gummy's flying
+  guards): flies with its own wings (`fly` anim, `assets/images/enemies/beetle/fly-Sheet.png`; free flight, `flyArea`
+  set by whoever spawns it) and never charges. A stomp (or any knock) drops it ON ITS BACK like the walking one
+  (carryable, a second stomp kills); when it rights itself it opens its wings and flies again. What is drawn comes from
+  `state` + the prop (`Beetle:winged`), so online looks the same.
+- Tests: `mechanics escarabajo`, `escarabajo_lanzado`, `escarabajo_ruta`, `escarabajo_manos`, `escarabajo_arrolla`;
+  `giantbeetle_rules voladores`.
 
 ## History and decisions (dated notes)
 

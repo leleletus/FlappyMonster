@@ -1,6 +1,6 @@
 {
  "_ayuda": "Mapa de la m\u00fasica adaptativa del Mega Mashup (tools/music/crab_mashup.py PIECES=1): cada pieza, sus compases [inicio s, BPM], sus cortes (s) y la que sigue. NO editar a mano.",
- "volume": 0.75,
+ "volume": 0.50,
  "first": "intro",
  "pieces": {
   "intro": {

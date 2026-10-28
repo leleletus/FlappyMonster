@@ -37,9 +37,9 @@ plays the intro once and then repeats the loop. `level` = offered as level music
 | `mirror_boss` | El Espejo (jefe final) | `bosses/mirror_boss_intro.ogg` + `bosses/mirror_boss_loop.ogg` | 0.63 | boss |
 | `resaca` | Resaca (Pez Globo Gigante) | `bosses/resaca.ogg` | 0.64 | boss |
 | `polilla` | La Polilla (Saltarín Gigante) | `bosses/polilla_intro.ogg` + `bosses/polilla_loop.ogg` | 0.69 | boss |
-| `templo` | El Templo (Escarabajo Rinoceronte Gigante) | `bosses/templo_intro.ogg` + `bosses/templo_loop.ogg` | 0.62 | boss |
-| `groove` | El Groove (jefe secreto) | `bosses/groove_intro.ogg` + `bosses/groove_loop.ogg` | 0.74 | boss |
-| `crab_mashup` | Mega Mashup de los Cangrejos (evento) | `bosses/crab_mashup_intro.ogg` + `bosses/crab_mashup_loop.ogg` | 0.75 | boss |
+| `templo` | El Templo (Escarabajo Rinoceronte Gigante) | `bosses/templo_intro.ogg` + `bosses/templo_loop.ogg` | 0.46 | boss |
+| `groove` | El Groove (jefe secreto) | `bosses/groove_intro.ogg` + `bosses/groove_loop.ogg` | 0.5 | boss |
+| `crab_mashup` | Mega Mashup de los Cangrejos (evento) | `bosses/crab_mashup_intro.ogg` + `bosses/crab_mashup_loop.ogg` | 0.5 | boss |
 | `menus` | Menús | `menus/menus.ogg` | 0.93 |  |
 | `flappy` | Aleteo (modo Flappy) | `flappy/flappy_intro.ogg` + `flappy/flappy_loop.ogg` | 0.7 |  |
 | `map_pradera` | Rumbo a las islas (Pradera) | `map/map_pradera.ogg` | 0.71 |  |

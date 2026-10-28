@@ -9,7 +9,7 @@ double-edged weapon (its slam fires the player too).
 **File:** `src/world/entities/types/bosses/giantbeetle.lua`. **Art:** `assets/anim/bosses/giantbeetle.json` (body: walk,
 charge, flip, toss, fly, slam + block, debris, wave, dust; `tools/art/enemies/make_beetle.py`, body sheet retouched by
 the user — legs). **Sounds:** reused (`megaSlam/Step/Windup/Roar/Hurt/Fall`, `gustBlow` = the wings, `cavePebble`,
-`caveRumble`, `boxBreak`, `scaleLaunch`, `headBump`); its own set is still open. **Arena:**
+`caveRumble`, the chunk's material `breakSound`, `scaleLaunch`, `headBump`); its own set is still open. **Arena:**
 `tools/levelgen/arenas/jefe_escarabajo.json` (`make_jefe_escarabajo.py`). **Music:** `templo` "El Templo"
 ([music-history](../audio/music-history.md#el-templo-toolsmusictemplopy-boss-track-templo)). **Shard:** none yet.
 **Level:** `templo_escarabajo` "Templo del Escarabajo" / "Beetle Temple" (`tools/levelgen/levels_boss.py`: a short
@@ -20,9 +20,9 @@ Play — not in the story yet). **Harnesses:** `giantbeetle_rules`, `boss_sim` /
 ## The arena: the temple of the scale
 
 Zone cols 12-35, rows 3-12, floor 13, LOW ceiling (row 2, 10 tiles above the floor). A big SCALE (pulley at 24,3,
-`span` 12, `drop` 9.375, `travel` 2): level, its two pans sit FLUSH WITH THE FLOOR, each over a 3-wide pit 2 deep (so the
-charge runs across them and a pan can sink). Drop-through ledges at both sides (row 8) and in the centre (row 6) to
-dodge the charge and the waves.
+`span` 12, `drop` 6.375, `travel` 2): level, its two pans hang 3 TILES ABOVE the solid floor (no pits; 0.5.79). A loaded
+pan sinks to 1 tile above the floor (the charge bonks on it). Drop-through ledges at both sides (row 10, the height of
+the level pans) and in the centre (row 8) to dodge the charge and the waves.
 
 ## Behaviour
 
@@ -42,8 +42,10 @@ dodge the charge and the waves.
      shoots up and, hitting the ceiling, loses 1 (`HIT_CEIL`). With a player standing on a pan it jumps to the OTHER
      one `PAN_BAIT` 65 % of the time — so stand on a pan to bait it, step off before it lands, get on the other pan
      and ground-pound.
-- **Angry** (under `rageAt` 0.5): faster, double charge, double toss, and small Rhino Beetles drop from the ceiling
-  (reserve minions, `def.summons`, `MINIONS` easy 1 · normal / hard 2 · extreme / xtra 3).
+- **Angry** (under `rageAt` 0.5): faster, double charge, double toss, and FLYING Rhino Beetles appear near the ceiling
+  (reserve minions, `def.summons` with `wings`, `movement` 'fly', free flight in the upper half of the zone; they patrol
+  and never charge; a stomp drops them on their back, righted they fly again — [enemies](../entities/enemies.md#rhino-beetle-beetle-0576--jungle-only);
+  `MINIONS` easy 1 · normal / hard 2 · extreme / xtra 3).
 - **Intro**: buzzes down from above the zone, lands with a slam, roars. **Defeat**: 'dying_out' (on its back, the legs
   slowing) → 'dying_flee' (clumsy flight up through the ceiling, pure function of time; shard at `THROW_T`); its
   minions burst.
@@ -70,6 +72,17 @@ dodge the charge and the waves.
   the start (50-80 %), blink and grow until it lands.
 - Whatever is carried or pushed into the arena breaks / bursts when it closes ([system](system.md#what-is-brought-into-the-zone)).
 
+## 0.5.79 changes (the user)
+
+- Arena: shorter rope (`drop` 6.375: the level pans hang in the air, not flush with the floor), lower ledges (sides row
+  10, centre row 8), no pits.
+- Minions: flying Rhino Beetles with their own wings instead of walking ones (see Angry above).
+- A chunk torn from a drop-through platform came out as STONE → `floorTile` takes one-way tiles too (wood), and on a
+  pan (a body) it is wood.
+- The chunks had no impact sound of their own → each plays its material's `breakSound` (`Materials`: stone/basalt
+  `blockBreak`, dirt/grass/sand/snow/ash `gpImpact`, ice `iceBreak`, wood `boxBreak`) at the chunk.
+- Music `templo` 2.5 dB lower ([music-history](../audio/music-history.md)).
+
 ## How to extend
 
 - Tuning lives in the constants at the top of the file (`{ normal, angry }` pairs).
@@ -78,7 +91,7 @@ dodge the charge and the waves.
 
 ## Tests
 
-`giantbeetle_rules` (arena, armour, shell bounce, stone marks, flip, hits, double edge, bait, charge + debris, toss, waves, rage, defeat, net);
+`giantbeetle_rules` (arena, armour, shell bounce, stone marks, flip, hits, double edge, bait, charge + debris, toss, waves, rage, flying minions, wood chunk + sound, defeat, net);
 `boss_sim LEVEL=tools/levelgen/arenas/jefe_escarabajo.json` (a whole fight played as intended: every state seen, killed
 by flipping it); `boss_intro`, `online_boss` with that arena.
 

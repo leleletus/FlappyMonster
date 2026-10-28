@@ -10,8 +10,8 @@
 --     de aviso); LANZAR un trozo del suelo que pisa (en arco, a por ti; se rompe al caer); SALTO CON LAS
 --     ALAS (zumbando; la diana marca dónde cae) y aterrizaje que suelta dos ONDAS por el suelo. Si estás en un
 --     platillo, a veces salta al OTRO para dispararte.
---   · ENFADADO (por debajo de `rageAt`): más rápido, dos embestidas seguidas, dos bloques, y caen escarabajos pequeños
---     del techo (súbditos de reserva, def.summons; más cuanto más difícil).
+--   · ENFADADO (por debajo de `rageAt`): más rápido, dos embestidas seguidas, dos bloques, y salen escarabajos VOLADORES
+--     pequeños que patrullan el cielo (súbditos de reserva, def.summons; más cuanto más difícil).
 -- Entrada: baja zumbando del techo, aterriza de golpe y escarba. Derrota: patas arriba, la runa se apaga, se da la
 -- vuelta y se va volando torpe hacia arriba atravesando el techo ('dying_flee'; pura función del tiempo), soltando el
 -- fragmento. Todo lo que se dibuja sale de state + deadTimer + x, y (+ netPackExtra): igual online.
@@ -217,17 +217,20 @@ function GB:throwBlock(level, pa)
     -- (lo arranca del suelo delante del cuerno: tierra que salta del material de ese suelo)
     Entity.emitFx('chunk_break', math.floor(hx - T / 2), math.floor(self:feetY() - T), { tile = tile })
 end
--- El tile del suelo que pisa delante del cuerno (o bajo él): el material del trozo que arranca. Sin suelo (un platillo),
--- piedra
+-- El tile del suelo que pisa delante del cuerno (o bajo él): el material del trozo que arranca — también una
+-- plataforma traspasable (madera; 0.5.79, salía piedra) —. Sobre un platillo de la balanza (un cuerpo), madera; sin
+-- nada, piedra
 function GB:floorTile(level)
     local TileTypes = require 'src/world/tiles/TileTypes'
+    local by = TileTypes.byName
     local y = self:feetY() + 4
     for _, x in ipairs({ self.x + (self.facing or 1) * self.outerW * 0.45, self.x }) do
         local id = level:getTileAt(x, y)
         local def = TileTypes.get(id)
-        if id and id ~= 0 and def.collision == 'solid' then return id end
+        if id and id ~= 0 and (def.collision == 'solid' or def.collision == 'oneway') then return id end
     end
-    return TileTypes.byName.stone and TileTypes.byName.stone.id or 1
+    if level:bodyAt(self.x, y, self) and by.platform_drop then return by.platform_drop.id end
+    return by.stone and by.stone.id or 1
 end
 
 function GB:updateBlocks(level, dt)
@@ -246,7 +249,8 @@ function GB:updateBlocks(level, dt)
         local bottom = b.y + BLOCK_S / 2
         if (b.vy > 0 and (level:collisionAt(b.x, bottom, true) or level:bodyAt(b.x, bottom, self))) or b.y > zy1 + T
            or level:collisionAt(b.x + ((b.vx >= 0) and 1 or -1) * BLOCK_S / 2, b.y) then
-            Sound.play('boxBreak', 0.9, 0.7)
+            local mat = require('src/world/tiles/TileTypes').get(b.tile).mat     -- (suena a lo que es: su material)
+            Sound.playAt(mat and mat.breakSound or 'blockBreak', b.x, b.y, 0.95, 1.0)
             Entity.emitFx('chunk_break', math.floor(b.x - T / 2), math.floor(b.y - T / 2), { tile = b.tile })   -- (en pedazos de su material)
             table.remove(self.blocks, i)
         end
@@ -316,12 +320,19 @@ function GB:spawnMinions(level, dt)
     end
     if not free or active >= self:minionMax(level) then return end
     self.spawnT = 0
-    local zx0, zx1, zy0 = self:zoneBounds()
-    local x = rand(zx0 + 2 * T, zx1 - 2 * T)
-    free:dropFromSky(x, zy0 + free.outerH / 2 + 4)
+    -- (0.5.79, el usuario: VOLADORES con sus alas, como la guardia del Rey Gummy: salen arriba y patrullan el cielo de
+    -- la zona — su mitad de arriba —; pisados caen patas arriba y, si se levantan, vuelven a volar)
+    local zx0, zx1, zy0, zy1 = self:zoneBounds()
+    local x, y = rand(zx0 + 2 * T, zx1 - 2 * T), zy0 + T + free.outerH / 2
+    local dir = (math.random() < 0.5) and 1 or -1
+    local h = free.home
+    h.x, h.y, h.facing, h.flipped, h.state, h.vx = x, y, dir, false, 'walk', free.speed * dir
+    free:resetToHome()
     free.leftBoundPx, free.rightBoundPx = zx0, zx1
-    free.facing = (math.random() < 0.5) and 1 or -1
-    Sound.play('cavePebble', 0.7, 1.2)
+    free.freeFly, free.flyArea = true, { x0 = zx0, y0 = zy0, x1 = zx1, y1 = math.floor((zy0 + zy1) / 2 + T) }
+    free.state, free.deadTimer = 'spawning', 0
+    Entity.emitFx('spawn', x, y)
+    Sound.play('gustBlow', 1.3, 0.6)
 end
 
 -- ── Elegir el siguiente ataque ────────────────────────────────────────────────
@@ -823,12 +834,13 @@ return {
     }),
     editor = { sprite = 'assets/images/bosses/giantbeetle/body-Sheet.png', frameW = FW },
     -- Escarabajos de la segunda fase: de reserva (Level.fromData los crea detrás de las entidades del JSON); el jefe
-    -- los deja caer del techo (GB:spawnMinions)
+    -- los suelta arriba, volando (GB:spawnMinions)
     summons = function(pl)
         local out = {}
         for _ = 1, MINION_POOL do
             out[#out + 1] = { type = 'beetle', col = pl.col, row = pl.row, summonKey = 'gb' .. pl.col .. ',' .. pl.row,
-                              props = { pauses = false, patrol = false, points = 5 } }
+                              props = { pauses = false, patrol = false, points = 5, movement = 'fly', flyMode = 'free',
+                                        wings = true, speed = 110, respawn = 0 } }
         end
         return out
     end,

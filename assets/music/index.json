@@ -53,9 +53,9 @@
     { "id": "mirror_boss",      "name": "El Espejo (jefe final)",      "intro": "bosses/mirror_boss_intro.ogg", "loop": "bosses/mirror_boss_loop.ogg", "level": false, "boss": true, "volume": 0.63 },
     { "id": "resaca",           "name": "Resaca (Pez Globo Gigante)",  "file": "bosses/resaca.ogg", "level": false, "boss": true, "volume": 0.64 },
     { "id": "polilla",          "name": "La Polilla (Saltarín Gigante)", "intro": "bosses/polilla_intro.ogg", "loop": "bosses/polilla_loop.ogg", "level": false, "boss": true, "volume": 0.69 },
-    { "id": "templo",           "name": "El Templo (Escarabajo Rinoceronte Gigante)", "intro": "bosses/templo_intro.ogg", "loop": "bosses/templo_loop.ogg", "level": false, "boss": true, "volume": 0.62 },
-    { "id": "groove",           "name": "El Groove (jefe secreto)",    "intro": "bosses/groove_intro.ogg", "loop": "bosses/groove_loop.ogg", "level": false, "boss": true, "volume": 0.74 },
-    { "id": "crab_mashup",      "name": "Mega Mashup de los Cangrejos (evento)", "intro": "bosses/crab_mashup_intro.ogg", "loop": "bosses/crab_mashup_loop.ogg", "level": false, "boss": true, "volume": 0.75 },
+    { "id": "templo",           "name": "El Templo (Escarabajo Rinoceronte Gigante)", "intro": "bosses/templo_intro.ogg", "loop": "bosses/templo_loop.ogg", "level": false, "boss": true, "volume": 0.46 },
+    { "id": "groove",           "name": "El Groove (jefe secreto)",    "intro": "bosses/groove_intro.ogg", "loop": "bosses/groove_loop.ogg", "level": false, "boss": true, "volume": 0.50 },
+    { "id": "crab_mashup",      "name": "Mega Mashup de los Cangrejos (evento)", "intro": "bosses/crab_mashup_intro.ogg", "loop": "bosses/crab_mashup_loop.ogg", "level": false, "boss": true, "volume": 0.50 },
 
     { "id": "menus",         "name": "Menús",                         "file": "menus/menus.ogg",       "level": false, "volume": 0.93 },
     { "id": "flappy",        "name": "Aleteo (modo Flappy)",          "intro": "flappy/flappy_intro.ogg", "loop": "flappy/flappy_loop.ogg", "level": false, "volume": 0.70 },

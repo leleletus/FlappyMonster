@@ -512,12 +512,33 @@ def anim_set(aid, scale, sheets, anims):
     print('  ', os.path.relpath(path, ROOT))
 
 
+def squashed():
+    """APLASTADO (pisado y muerto; 0.5.79, el usuario: "solo desaparecen"): sale del cuadro de andar de la hoja
+    RETOCADA por el usuario (se lee, no se toca): el caparazón aplastado — sus filas, una sí y otra no — pegado al suelo y
+    las patas abiertas a los lados"""
+    src = Image.open(os.path.join(ROOT, 'assets/images/enemies/beetle/beetle-Sheet.png')).convert('RGBA').crop((0, 0, W, H))
+    sp = src.load()
+    rows = [y for y in range(H) if any(sp[x, y][3] > 0 for x in range(W))]
+    body = [y for y in rows if y <= 14]                       # (las patas: de la 15 a la 18)
+    keep = body[::2][-5:] if len(body) > 5 else body
+    img = Image.new('RGBA', (W, H), (0, 0, 0, 0)); p = img.load()
+    base = 18 - len(keep) + 1
+    for i, y in enumerate(keep):
+        for x in range(W):
+            if sp[x, y][3] > 0: p[x, base + i] = sp[x, y]
+    leg = sp[3, 16] if sp[3, 16][3] > 0 else (46, 26, 12, 255)
+    for x in (0, 1, 2): p[x, 18] = leg                         # (las patas, abiertas a los dos lados)
+    for x in (17, 18, 19): p[x, 18] = leg
+    return img
+
+
 def apply():
     """Escribe en assets/ el diseño elegido: hojas del pequeño y del gigante, los ataques y sus animaciones"""
     D = DESIGNS[CHOSEN]
     E = 'assets/images/enemies/beetle/'; G = 'assets/images/bosses/giantbeetle/'
     for d in (E, G): os.makedirs(os.path.join(ROOT, d), exist_ok=True)
     out = {E + 'beetle-Sheet.png': sheet(D, SMALL), G + 'body-Sheet.png': sheet(D, BOSS, True), G + 'block.png': stone_block(),
+           E + 'dead.png': squashed(), E + 'fly-Sheet.png': sheet(D, ['fly1', 'fly2']),
            G + 'debris-Sheet.png': debris(), G + 'wave-Sheet.png': shockwave(), G + 'dust-Sheet.png': dust()}
     for rel, im in out.items():
         if rel in KEEP and os.path.exists(os.path.join(ROOT, rel)):
@@ -526,7 +547,10 @@ def apply():
     a = lambda fr, fps, loop=True: {"fps": fps, "frames": fr, "loop": loop}
     small = {"idle": a([1], 8), "walk": a([1, 2, 3, 4], 8), "charge": a([5, 6, 7, 8], 14), "flip": a([9, 10, 11], 10),
              "dead": a([9], 8, False)}
-    anim_set('enemies/beetle', 4, [(E + 'beetle-Sheet.png', W, H, len(SMALL))], small)
+    # (el pequeño: + aplastado y las alas de la variante voladora — los súbditos del jefe —; 0.5.79)
+    anim_set('enemies/beetle', 4, [(E + 'beetle-Sheet.png', W, H, len(SMALL)), (E + 'dead.png', W, H, 1),
+                                   (E + 'fly-Sheet.png', W, H, 2)],
+             dict(small, dead=a([12], 8, False), fly=a([13, 14], 14)))
     boss = dict(small, toss=a([12, 13], 6, False), fly=a([14, 15], 16), slam=a([16], 8, False), hurt=a([10], 8),
                 block=a([17], 8), debris=a([18, 19, 20], 8), wave=a([21, 22, 23, 24], 12, False), dust=a([25, 26, 27, 28], 12, False))
     anim_set('bosses/giantbeetle', 12, [(G + 'body-Sheet.png', W, H, len(BOSS)), (G + 'block.png', 16, 16, 1),

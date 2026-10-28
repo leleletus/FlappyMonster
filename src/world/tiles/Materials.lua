@@ -26,6 +26,10 @@
 --   bubbles      genera burbujas ambientales en cuerpos grandes
 --   splashIn / splashOut  sonidos al entrar / salir
 --
+--  Sonido:
+--   breakSound id de Sound al ROMPERSE un trozo de este material (los cascotes que
+--              lanza el Escarabajo Gigante; 0.5.79). Por defecto, el de piedra.
+--
 --  Editor:
 --   label, color   nombre y color para la paleta del editor de niveles
 --
@@ -40,7 +44,7 @@ Materials.DEFAULTS = {
     friction = 1, speedMult = 1, conveyor = 0, contact = nil,
     liquid = false, gravityMult = 1, jumpMult = 1, drag = 0, drown = false,
     tint = nil, distort = false, bubbles = false, splashIn = nil, splashOut = nil,
-    color = { 0.6, 0.6, 0.6 },
+    color = { 0.6, 0.6, 0.6 }, breakSound = 'blockBreak',
 }
 
 local CONTACTS = { kill = true, hurt = true }

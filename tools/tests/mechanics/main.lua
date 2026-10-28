@@ -93,6 +93,8 @@
 --   escarabajo_ruta  embiste pasando su ruta y vuelve a ella; lanzado fuera de su ruta va hacia donde se lanza;
 --                  recién volcado no se le pisa (rebota de lado)
 --   escarabajo_manos  en las manos sigue contando, tiembla y se suelta solo quitando 1
+--   escarabajo_arrolla  (0.5.79) lanzado no se le reinicia la cuenta patas arriba; embistiendo empuja al jugador (aunque
+--                  sea invulnerable: no lo atraviesa), noquea a un Gummy y patea y enciende una bomba; muerto, aplastado
 --   (ONLY=a,b: solo esos casos)
 --   aire_caja      el aire empuja una caja contra el jugador: el jugador sigue a su lado (empujado), nunca al otro
 --   geiser_peso    el Géiser sube más despacio lo que pesa más con lo que lleva encima y el chorro se corta debajo
@@ -2655,6 +2657,59 @@ function cases.escarabajo_manos()
             tostring(held), t0, maxT, tostring(warnSeen), tostring(escaped), tostring(pa.carrying == nil), hp0, pa.hp))
 end
 
+-- 0.5.79 (el usuario): lanzarlo a punto de levantarse no le reinicia la cuenta; embistiendo empuja al jugador y arrolla
+-- lo que pilla delante; al morir se queda aplastado (su cuadro 'dead')
+function cases.escarabajo_arrolla()
+    -- 1) cogido a los 2,2 s patas arriba y lanzado: se levanta poco después de caer (no 3 s más tarde)
+    local level, es = room(24, 9, {}, { { type = 'beetle', col = 8, row = 8, props = { pauses = false, speed = 0, patrol = false } } })
+    local b = es[1]
+    settle(level, es)
+    b:stomp(); sim(level, {}, es, 2.2)
+    local pa = playerAt(level, 7, 8)
+    pa.facing = 1
+    pa.grabReq = true; sim(level, { pa }, es, 1 / 60)
+    local held = b.state == 'carried'
+    pa.grabReq = true; sim(level, { pa }, es, 1 / 60)
+    local thrown, upAt, landT = b.state == 'thrown', nil, nil
+    local t = 0
+    sim(level, { pa }, es, 2.5, function()
+        t = t + 1 / 60
+        if not landT and b.state == 'onback' then landT = b.deadTimer end
+        if not upAt and (b.state == 'righting' or b.state == 'walk') then upAt = t end
+    end)
+    local keeps = held and thrown and landT and landT >= 2.2 and upAt and upAt < 1.5
+    -- 2) embistiendo: un Gummy y una bomba delante, el jugador detrás (invulnerable: antes lo atravesaba)
+    local lv, e2 = room(30, 9, {}, {
+        { type = 'beetle', col = 4, row = 8, props = { pauses = false, startDir = 'right', patrol = false } },
+        { type = 'gummy', col = 6, row = 8, props = { pauses = false, speed = 0, patrol = false } },
+        { type = 'bomb', col = 7, row = 8, props = { pauses = false, speed = 0, patrol = false } } })
+    local c, g, bomb = e2[1], e2[2], e2[3]
+    settle(lv, e2)
+    local q = playerAt(lv, 10, 8)
+    local charged, crossed, knocked, lit, pushed = false, false, false, false, 0
+    local qx0 = q.x
+    sim(lv, { q }, e2, 3, function()
+        q.invT = 9
+        if c.state == 'charge' then charged = true end
+        if charged and q.x < c.x then crossed = true end
+        if g.state == 'stunned' then knocked = true end
+        if bomb.state == 'lit' or bomb.state == 'exploding' then lit = true end
+        pushed = math.max(pushed, q.x - qx0)
+    end)
+    -- 3) muerto: aplastado (su cuadro 'dead', no el de volcado)
+    local lv3, e3 = room(20, 9, {}, { { type = 'beetle', col = 10, row = 8, props = { pauses = false, speed = 0, patrol = false } } })
+    local d = e3[1]
+    settle(lv3, e3)
+    d:stomp(); sim(lv3, {}, e3, 0.8)
+    d:stomp()
+    local set = d:anims()
+    local squashed = d.state == 'dead' and d:pose() == set:frameAt('dead', 0) and set:frameAt('dead', 0) ~= set:frameAt('flip', 0)
+    check('escarabajo_arrolla', keeps and charged and not crossed and pushed > T and knocked and lit and squashed,
+        ('lanzado a los 2,2 s: cogido=%s, lanzado=%s, cae con su cuenta en %.1f s, se levanta a los %.1f s · embiste=%s: jugador empujado %.1f casillas, lo atraviesa=%s · Gummy noqueado=%s · bomba encendida=%s · muerto aplastado=%s'):format(
+            tostring(held), tostring(thrown), landT or -1, upAt or -1, tostring(charged), pushed / T, tostring(crossed),
+            tostring(knocked), tostring(lit), tostring(squashed)))
+end
+
 function love.load()
     for _, n in ipairs({ 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
                          'helmet_jump', 'helmet_ride', 'helmet_gp', 'helmet_side', 'stomp_fast',
@@ -2663,7 +2718,7 @@ function love.load()
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
                          'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado', 'techo_pinchos',
-                         'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'balanza_salto', 'escarabajo', 'escarabajo_lanzado', 'escarabajo_ruta', 'escarabajo_manos' }) do
+                         'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'balanza_salto', 'escarabajo', 'escarabajo_lanzado', 'escarabajo_ruta', 'escarabajo_manos', 'escarabajo_arrolla' }) do
         if not os.getenv('ONLY') or (',' .. os.getenv('ONLY') .. ','):find(',' .. n .. ',', 1, true) then cases[n]() end
     end
     if os.getenv('SHOT_BOMB') then bombShot() end

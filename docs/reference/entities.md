@@ -9,7 +9,7 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 
 | Id | Label | File | Flags | Own props |
 |---|---|---|---|---|
-| `beetle` | Escarabajo Rinoceronte | `types/enemies/beetle.lua` |  |  |
+| `beetle` | Escarabajo Rinoceronte | `types/enemies/beetle.lua` |  | `wings`: bool = false |
 | `bomb` | Bomba | `types/enemies/bomb.lua` |  | `fuseTime`: number = 2 · `killRadius`: number = 1.2 · `hurtRadius`: number = 2.3 · `pushRadius`: number = 3.6 |
 | `claudio` | Claudio | `?` | renderFront |  |
 | `crabby` | Crabby | `types/enemies/crabby.lua` |  | `canHide`: bool = true · `hideChance`: number = 0.75 · `wallWalk`: bool = false |

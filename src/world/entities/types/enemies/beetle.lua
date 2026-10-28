@@ -14,6 +14,11 @@
 -- te aparta de lado y no se le puede pisar en INV_FLIP s (lo matabas sin querer con el rebote). En las MANOS sigue
 -- pataleando; antes de darse la vuelta TIEMBLA (aviso) y, si no lo sueltas, se suelta solo y te hace daño. Su caja es
 -- la del CUERPO (sin el cuerno), centrada en él: el dibujo se corre 2 px.
+-- 0.5.79 (el usuario): lanzarlo NO le reinicia la cuenta patas arriba (a punto de levantarse, se levanta al caer).
+-- EMBISTIENDO empuja al jugador (también invulnerable: ya no lo atraviesa) y arrolla lo que pilla delante — enemigos
+-- (los noquea: knockback; a las bombas las patea y las enciende) y lo ligero que se coge (lo despide). Muerto, se queda
+-- APLASTADO en el suelo. Con `wings` (los súbditos del jefe) es el ESCARABAJO VOLADOR: vuela con sus alas (vuelo
+-- libre) sin embestir; pisado cae patas arriba como el de suelo y, si se levanta, vuelve a volar.
 -- Arte: assets/anim/enemies/beetle.json (hoja de 22x20 a escala 4, mira a la DERECHA; tools/art/enemies/
 -- make_beetle.py — sus patas, retocadas a mano por el usuario). Todo lo que se dibuja sale del estado, deadTimer,
 -- frame y facing (lo que viaja en las instantáneas): online se ve igual.
@@ -44,6 +49,8 @@ local THROWN_BOUNCE = 0.3
 local INV_FLIP  = 0.4                  -- s tras volcarse en los que no se le puede pisar (te aparta de lado)
 local WARN_T    = 0.9                  -- s antes de darse la vuelta en los que tiembla (el aviso)
 local HIT_CARRY = 1                    -- vida que quita al soltarse de las manos
+local PUSH_CD   = 0.35                 -- s entre empujones al mismo jugador embistiendo
+local SWEEP_VX, SWEEP_VY = 420, -260    -- px/s: lo ligero que arrolla embistiendo sale despedido así
 local BODY_DX   = 2                    -- px del cuadro: el cuerpo está 2 px a la izquierda del centro (el cuerno, delante)
 local FREE = { windup = true, charge = true, daze = true, onback = true, righting = true, thrown = true, carried = true }
 
@@ -58,11 +65,18 @@ local BACK = { onback = true, righting = true }
 
 function Beetle:init()
     self.cd, self.invT = 0, 0
+    -- (el volador: vuela de nuevo cada vez que vuelve a casa — resetToHome llama a init —)
+    if self.props.wings then self.flying, self.freeFly = true, true end
     -- (sus reglas de contacto son fijas: no se cambian en el editor — `hide` —, así que se ponen aquí)
     self.props.stompable, self.props.onTouch = true, 'hurt'
 end
 
 -- ── Reglas ────────────────────────────────────────────────────────────────────
+-- El volador en el aire (lo que se dibuja: sale del estado; derribado no vuelve a 'walk' hasta volar otra vez)
+function Beetle:winged()
+    local st = self.state
+    return self.props.wings == true and (st == 'walk' or st == 'idle' or st == 'spawning')
+end
 function Beetle:onBack() return BACK[self.state] == true end
 function Beetle:freeOfRoute() return FREE[self.state] == true end
 function Beetle:canBeCarried() return self.alive and self:onBack() and self.onGround ~= false end
@@ -97,14 +111,16 @@ function Beetle:canBeKnocked() return self.alive and not self:onBack() and self.
 function Beetle:knockback(dirX) self:flipOver(dirX * 220) end
 
 function Beetle:flipOver(vx)
+    self.flying = false                                               -- (el volador cae: sin alas hasta levantarse)
     self.state, self.deadTimer, self.invT = 'onback', 0, INV_FLIP
     self.vx, self.vy, self.onGround = vx or 0, -FLIP_HOP, false
     Sound.play('stunned')
     Entity.emitFx('gp_start', self.x, self.y + self.outerH / 2)
 end
 
+-- (su cuenta patas arriba — deadTimer — sigue: lanzado no vuelve a empezar; el usuario)
 function Beetle:onThrow(pa, vx, vy)
-    self.state, self.deadTimer = 'thrown', 0
+    self.state, self.airT = 'thrown', 0
     self.vx, self.vy, self.onGround = vx, vy, false
 end
 
@@ -153,6 +169,54 @@ function Beetle:thrownHits(level)
     end
 end
 
+-- ── Embistiendo: empuja a los jugadores y arrolla lo que pilla delante ────────
+-- El jugador sale apartado hacia donde embiste (aunque sea invulnerable: lo saca de su caja; si se puede, además
+-- rebota con recoil); si no cabe (contra una pared), el escarabajo se para ahí: true = chocó (aturdido, como en una
+-- pared). Enemigos: knockback (una vez por embestida); lo ligero que se coge: despedido como lanzado.
+function Beetle:chargeHits(level, f, dt)
+    local ob = self:getOuterBounds()
+    local pinned = false
+    local feetTop = ob.y + ob.h * 0.35
+    self.pushT = self.pushT or {}
+    for _, pa in ipairs(level.players or {}) do
+        if not pa.dying and pa.alive ~= false then
+            local pb = pa:getOuterBounds()
+            if overlap(ob, pb) and pb.y + pb.h > feetTop and (pa.x - self.x) * f > -ob.w * 0.25 then
+                -- (arrollado: quita 1 aquí — el empujón lo saca de su caja antes de Interactions —)
+                if not pa.peaceful and pa:hurt(1) then return false end
+                local edge = (f > 0) and (ob.x + ob.w - pb.x) or (pb.x + pb.w - ob.x)
+                if edge > 0 and pa.moveSteps then
+                    local px0 = pa.x
+                    pa:moveSteps(level, f * edge, 0)
+                    local left = edge - math.abs(pa.x - px0)
+                    if left > 1 then self.x, pinned = self.x - f * left, true end      -- (aplastado contra la pared)
+                end
+                if (self.pushT[pa] or 0) <= 0 then
+                    self.pushT[pa] = PUSH_CD
+                    if pa.recoil then pa:recoil(f) end
+                end
+            end
+        end
+    end
+    for k, v in pairs(self.pushT) do self.pushT[k] = (v > dt) and v - dt or nil end
+    local b = { x = (f > 0) and ob.x + ob.w * 0.5 or ob.x - 8, y = ob.y, w = ob.w * 0.5 + 8, h = ob.h }
+    for _, e in ipairs(level.liveEntities or {}) do
+        if e ~= self and e.alive and not self.swept[e] and e.state ~= 'dead' and e.state ~= 'carried'
+           and not (e.isGhost and e:isGhost()) and not (e.def and e.def.boss) and overlap(b, e:getOuterBounds()) then
+            if e.canBeKnocked and e:canBeKnocked() then
+                self.swept[e] = true
+                e:knockback(f)
+                Sound.play('crabPop', 0.7, 1.1)
+            elseif e.carryable and e.canBeCarried and e:canBeCarried() and e.onThrow then
+                self.swept[e] = true
+                e:onThrow(nil, f * SWEEP_VX, SWEEP_VY)
+                Sound.play('boxLand', 0.8, 1.2)
+            end
+        end
+    end
+    return pinned
+end
+
 -- ── Update ────────────────────────────────────────────────────────────────────
 local function fallBurst(self, level)
     if self:onDeadlyGround(level) or self:fellOut(level) or self:inVoid(level) then self:dieBurst(); return true end
@@ -183,6 +247,7 @@ function Beetle:updateCustom(dt, level)
     if self.invT > 0 then self.invT = math.max(0, self.invT - dt) end
 
     if st == 'walk' or st == 'idle' then
+        if self.flying then return false end                           -- (el volador patrulla el cielo: no embiste)
         if self.onGround and self.cd <= 0 and self.props.movement ~= 'static' then
             local pa = self:sees(level)
             if pa then
@@ -203,7 +268,7 @@ function Beetle:updateCustom(dt, level)
         self.vx = 0
         self:fall(level, dt)
         if t >= WIND_T then
-            self.state, self.deadTimer = 'charge', 0
+            self.state, self.deadTimer, self.swept = 'charge', 0, {}
             self.vx = (self.facing or 1) * CHARGE_V
             Sound.play('crabPop', 0.7, 0.6)
         end
@@ -220,7 +285,8 @@ function Beetle:updateCustom(dt, level)
         self.vy = self.vy + ADV_GRAVITY * dt
         self:moveAndCollide(level, self.vx * dt, self.vy * dt)
         self.facing = f
-        if math.abs(self.x - x0) < CHARGE_V * dt * 0.5 then                -- (contra una pared: aturdido)
+        local pinned = self:chargeHits(level, f, dt)
+        if pinned or math.abs(self.x - x0) < CHARGE_V * dt * 0.5 then                -- (contra una pared: aturdido)
             self.state, self.deadTimer, self.vx, self.cd = 'daze', 0, 0, COOLDOWN
             Sound.play('blockBreak', 0.6, 0.8)
             Entity.emitFx('shake_small', self.x, self.y)
@@ -254,6 +320,11 @@ function Beetle:updateCustom(dt, level)
             self.vy, self.onGround = -FLIP_HOP * 0.6, false
             self.vx = self.facing * (self.speed or 50)
             self.cd = COOLDOWN
+            if self.props.wings then                                   -- (el volador: abre las alas y vuelve a volar)
+                self.flying, self.vy, self.baseY = true, 0, self.y
+                self.ffx, self.ffy, self.ffBlock = nil, nil, nil
+                Sound.play('gustBlow', 0.5, 1.6)
+            end
             self:startWalk()
         end
         return true
@@ -267,8 +338,9 @@ function Beetle:updateCustom(dt, level)
         if self.vx ~= vx0 then self.vx = -vx0 * THROWN_BOUNCE end
         if fallBurst(self, level) then return true end
         self:thrownHits(level)
-        if self.onGround and t > 0.08 then
-            self.state, self.deadTimer = 'onback', 0
+        self.airT = (self.airT or 0) + dt
+        if self.onGround and self.airT > 0.08 then
+            self.state = 'onback'                                      -- (con la cuenta que llevaba)
             Sound.play('boxLand')
         end
         return true
@@ -282,6 +354,9 @@ end
 function Beetle:pose()
     local st, t = self.state, self.deadTimer or 0
     local set = self:anims()
+    if self:winged() then
+        return set:frameN('fly', self.frame or 1), 0, 0                    -- (el volador: las alas, con el paso de andar)
+    end
     if st == 'walk' then return set:frameN('walk', self.frame or 1), 0, 0 end
     if st == 'windup' then
         local ox = (math.floor(t * 30) % 2 == 0) and 1 or -1                -- (escarba: tiembla)
@@ -306,6 +381,7 @@ function Beetle:render(camX, camY)
     local x = math.floor(self.x - camX) + ox * S + BODY_DX * S * f       -- (el cuerpo, no el cuadro, sobre su x)
     -- (cada cuadro con su último píxel en el suelo — Anim footGap —; lanzado o en las manos, tal cual)
     local air = self.state == 'thrown' or self.state == 'carried' or self.state == 'dead_fling' or not self.onGround
+                or self:winged()
     -- (+1: las patas de delante son 1 px más largas: las de detrás tocan el suelo, las de delante lo atraviesan 1 px)
     local gap = air and 1 or (self:anims():footGap(fr) + 1)
     local feet = math.floor(self.y + self.outerH / 2 - camY) + gap * S + oy * S
@@ -327,6 +403,9 @@ return {
     class = Beetle,
     defaults = { speed = 50, points = 20, onTouch = 'hurt' },
     hide = { 'movement', 'attach', 'dropOnSight', 'detectRange', 'flyMode', 'flyRange', 'bobAmp', 'stompable', 'onTouch' },
-    props = {},
+    props = {
+        { key = 'wings', kind = 'bool', label = 'Con alas (vuela, no embiste)', group = 'Escarabajo', default = false,
+          help = 'El escarabajo VOLADOR (los súbditos del jefe): vuela por la zona; pisado cae y, al levantarse, vuelve a volar' },
+    },
     editor = { sprite = 'assets/images/enemies/beetle/beetle-Sheet.png', frameW = FW },
 }

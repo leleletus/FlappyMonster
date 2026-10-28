@@ -83,6 +83,27 @@
       "w": 22,
       "x": 220,
       "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/enemies/beetle/dead.png",
+      "w": 22,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/enemies/beetle/fly-Sheet.png",
+      "w": 22,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "h": 20,
+      "image": "assets/images/enemies/beetle/fly-Sheet.png",
+      "w": 22,
+      "x": 22,
+      "y": 0
     }
   ],
   "anims": {
@@ -125,9 +146,17 @@
     "dead": {
       "fps": 8,
       "frames": [
-        9
+        12
       ],
       "loop": false
+    },
+    "fly": {
+      "fps": 14,
+      "frames": [
+        13,
+        14
+      ],
+      "loop": true
     }
   }
 }

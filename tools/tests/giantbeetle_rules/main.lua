@@ -1,6 +1,6 @@
 -- tools/tests/giantbeetle_rules — reglas del ESCARABAJO RINOCERONTE GIGANTE (types/bosses/giantbeetle.lua) caso a caso,
 -- en su arena real (tools/levelgen/arenas/jefe_escarabajo.json, el templo de la balanza):
---   arena      la balanza nivelada deja los platillos A RAS DEL SUELO (sobre sus fosos)
+--   arena      la balanza nivelada deja los platillos colgados 3 casillas SOBRE EL SUELO (sin fosos; 0.5.79)
 --   acorazado  de pie no se le hace daño: caerle encima (pisotón o ground pound) rebota
 --   vuelco     él en un platillo y un ground pound en el OTRO: sale disparado, se estrella contra el techo y cae
 --              PATAS ARRIBA (vulnerable); pasado el tiempo se da la vuelta
@@ -12,7 +12,11 @@
 --              del jugador le quita 1; tocarlo embistiendo quita 1
 --   lanzar     arranca un bloque y se lo lanza en arco al jugador: le quita 1 y se rompe
 --   ondas      al caer de su salto suelta dos ondas por el suelo, una a cada lado
---   enfado     a mitad de vida se enfada y deja caer escarabajos pequeños (Normal 2 a la vez, Fácil 1), ninguno antes
+--   enfado     a mitad de vida se enfada y suelta escarabajos VOLADORES (Normal 2 a la vez, Fácil 1), ninguno antes
+--   voladores  sus súbditos vuelan por la mitad de arriba de la zona sin embestir; pisados caen patas arriba y, al
+--              levantarse, vuelven a volar
+--   madera     el trozo arrancado de una plataforma traspasable o de un platillo es de MADERA (no piedra) y suena a
+--              lo que es al romperse (breakSound de su material)
 --   derrota    el último golpe: patas arriba, se da la vuelta y se va volando atravesando el techo (libera la zona,
 --              suelta el fragmento); sus escarabajos revientan
 --   red        netPackExtra → otro (cliente): enfado, diana, bloques, cascotes y ondas iguales; interact igual
@@ -130,9 +134,10 @@ function cases.arena()
     local _, y2 = panTop(p2)
     local floorY = (FLOOR - 1) * T
     local c1 = panTop(p1)
-    local onPit = level:collisionAt(c1, floorY + 8) == nil
-    check('arena', math.abs(y1 - floorY) <= 2 and math.abs(y2 - floorY) <= 2 and onPit,
-        ('platillos: arriba en %d y %d, suelo en %d · sobre su foso=%s'):format(y1, y2, floorY, tostring(onPit)))
+    local solid = level:collisionAt(c1, floorY + 8) ~= nil
+    check('arena', math.abs(y1 - (floorY - 3 * T)) <= 2 and math.abs(y2 - (floorY - 3 * T)) <= 2 and solid,
+        ('platillos: arriba en %d y %d (quiere %d), suelo en %d · suelo macizo debajo=%s'):format(y1, y2, floorY - 3 * T,
+            floorY, tostring(solid)))
 end
 
 function cases.acorazado()
@@ -203,7 +208,7 @@ function cases.cascotes()
         boss.restLen = 99
         if not stopY and #boss.rocks == 0 then stopY = true end
     end)
-    check('cascotes', math.abs(onPan - pan.y) <= 1 and onFloor == (FLOOR - 1) * T and onLedge == 7 * T and stopY,
+    check('cascotes', math.abs(onPan - pan.y) <= 1 and onFloor == (FLOOR - 1) * T and onLedge == 9 * T and stopY,
         ('sombra en el platillo %d (su tabla %d) · en el suelo %d · en la plataforma %d · se rompe al llegar=%s'):format(
             onPan, math.floor(pan.y), onFloor, onLedge, tostring(stopY)))
 end
@@ -297,8 +302,8 @@ end
 
 function cases.lanzar()
     local level, es, boss = arena()
-    putBoss(level, boss, 15 * T)
-    local pa = playerAt(level, es, 26 * T, (FLOOR - 1) * T)
+    putBoss(level, boss, 20.5 * T)
+    local pa = playerAt(level, es, 24.5 * T, 7 * T)              -- (en la plataforma del medio: nada en medio del arco)
     local hp0 = pa.hp
     boss.tossN = 1
     boss:enter('toss_wind')
@@ -414,6 +419,59 @@ function cases.trozo()
         ('trozo de %s (el suelo: %s)'):format(id and TileTypes.get(id).name or '?', TileTypes.get(under).name))
 end
 
+-- El trozo de una plataforma traspasable o de un platillo: madera, con su sonido
+function cases.madera()
+    local level, es, boss, scale = arena()
+    local TileTypes = require 'src/world/tiles/TileTypes'
+    stepAll(level, es, {}, 0.3)
+    putBoss(level, boss, 24 * T, 7 * T)                          -- (de pie en la plataforma del medio)
+    boss.facing = 1
+    local onLedge = boss:floorTile(level)
+    local pan = scale:bodyParts()[1]:getOuterBounds()
+    putBoss(level, boss, pan.x + pan.w / 2, pan.y)
+    local onPan = boss:floorTile(level)
+    local m1, m2 = TileTypes.get(onLedge).mat, TileTypes.get(onPan).mat
+    -- (al romperse suena su material)
+    local played = {}
+    local real = Sound
+    Sound = setmetatable({ playAt = function(n) played[#played + 1] = n end }, { __index = function() return function() end end })
+    putBoss(level, boss, 20.5 * T)
+    boss.blocks = { { id = 1, x = 20.5 * T, y = 10 * T, vx = 0, vy = 300, t = 0, tile = onLedge, hit = {} } }
+    stepAll(level, es, {}, 1.0, function() boss.restLen = 99 end)
+    Sound = real
+    check('madera', m1.name == 'wood' and m2.name == 'wood' and played[1] == 'boxBreak',
+        ('plataforma: %s · platillo: %s · al romperse suena %s'):format(m1.name, m2.name, tostring(played[1])))
+end
+
+-- Sus súbditos vuelan (mitad de arriba de la zona), no embisten; pisados caen y, levantados, vuelven a volar
+function cases.voladores()
+    local level, es, boss = arena()
+    putBoss(level, boss, 24 * T)
+    boss.rage, boss.spawnT = true, 99
+    boss:spawnMinions(level, 1)
+    local m
+    for _, e in ipairs(boss:minions(level)) do if e.alive and e.state ~= 'reserve' then m = e end end
+    local pa = playerAt(level, es, 14 * T, (FLOOR - 1) * T)
+    local maxY, charged = -1e9, false
+    stepAll(level, es, { pa }, 6, function()
+        boss.restLen = 99
+        pa.invT = 9
+        maxY = math.max(maxY, m.y)
+        if m.state == 'windup' or m.state == 'charge' then charged = true end
+    end)
+    local flew = m.flying and m.state == 'walk'
+    local _, _, zy0, zy1 = boss:zoneBounds()
+    local high = maxY < (zy0 + zy1) / 2 + T
+    m:stomp()
+    local fell, landed = not m.flying, false
+    stepAll(level, es, {}, 1.5, function() boss.restLen = 99; if m.onGround and m.state == 'onback' then landed = true end end)
+    stepAll(level, es, {}, 4, function() boss.restLen = 99 end)
+    local again = m.flying and m.state == 'walk'
+    check('voladores', m.props.wings and flew and high and not charged and fell and landed and again,
+        ('vuela=%s (lo más bajo %d, mitad %d) · embiste=%s · pisado cae=%s, patas arriba en el suelo=%s · vuelve a volar=%s'):format(
+            tostring(flew), maxY, (zy0 + zy1) / 2 + T, tostring(charged), tostring(fell), tostring(landed), tostring(again)))
+end
+
 function cases.red()
     local level, es, boss = arena()
     putBoss(level, boss, 20 * T)
@@ -444,7 +502,7 @@ end
 
 function love.load(arg)
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'arena', 'acorazado', 'caparazon', 'cascotes', 'vuelco', 'golpe', 'doble_filo', 'cebo', 'embestida', 'lanzar', 'ondas', 'enfado', 'derrota', 'purga', 'trozo', 'red' }) do
+    for _, n in ipairs({ 'arena', 'acorazado', 'caparazon', 'cascotes', 'vuelco', 'golpe', 'doble_filo', 'cebo', 'embestida', 'lanzar', 'ondas', 'enfado', 'derrota', 'purga', 'trozo', 'madera', 'voladores', 'red' }) do
         if not only or only == n then
             local ok, err = xpcall(cases[n], debug.traceback)
             if not ok then check(n, false, 'error: ' .. tostring(err)) end

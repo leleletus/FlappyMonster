@@ -740,6 +740,9 @@ The jungle boss (the Giant Rhino Beetle, a prototype for a future jungle island)
   icicles, the player being hurt and other effects can hardly be heard" → `levels.py`: bosses −14 in game (were −13),
   the final boss −13.5 (−12.5), the Groove and the Mega Mashup −12 (−9.5; the adaptive pieces get it through
   `cues.json` volume 0.75). Not listened to by me.
+- 0.5.79, the user: the Temple (Giant Rhino Beetle), the Groove and the Mega Mashup still drowned important effects →
+  `levels.py`: `templo` −16.5 in game (was −14), `groove` and `crab_mashup` −15.5 (were −12); the event's adaptive
+  pieces follow (`cues.json` volume 0.50, was 0.75). Not listened to by me.
 - 0.5.65, the user: "a slight discontinuity" in the Groove loop of the Mega Mashup. The file joins cleanly (the
   sample step at the wrap is below the music's own p99) and the player did not re-seek (counted: 0 in a real-time
   lap); the jump was musical — from the full climax straight into the stop-time solo, which its own theme never does

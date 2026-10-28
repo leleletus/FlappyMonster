@@ -6,12 +6,14 @@
 # EL TEMPLO DE LA BALANZA (zona: columnas 12-35, filas 3-12; suelo en la 13; techo bajo, fila 2):
 #
 #   ║▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒║     techo del templo: ahí se estrella el escarabajo disparado
-#   ║            o           ║     o  la polea de la BALANZA (span 12: un platillo en cada foso)
-#   ║          =====         ║     =  plataformas traspasables: para esquivar la embestida y las ondas
-#   ║===                  ===║
+#   ║            o           ║     o  la polea de la BALANZA (span 12)
 #   ║                        ║
-#   ║     ___          ___   ║     ___ los PLATILLOS, a ras del suelo (nivelada), cada uno sobre su FOSO de 2 de hondo
-#   ║■■■■■   ■■■■■■■■■■   ■■■║
+#   ║          =====         ║     =  plataformas traspasables: para esquivar la embestida y las ondas
+#   ║                        ║
+#   ║===  ___          ___===║     ___ los PLATILLOS: nivelada, colgados 3 casillas sobre el suelo (0.5.79, el usuario:
+#   ║                        ║         antes a ras del suelo sobre un foso; sin fosos, cuerda más corta, plataformas
+#   ║                        ║         más bajas)
+#   ║■■■■■■■■■■■■■■■■■■■■■■■■║
 #
 # Cómo se gana: con él en un platillo, ground pound en el otro → sale disparado, choca con el techo y cae patas arriba.
 # Entrada a la izquierda; salida (meta) a la derecha.
@@ -28,7 +30,8 @@ Z0, Z1 = 12, 35
 FLOOR = 13
 PULLEY = (24, 3)
 SPAN = 12                                  # casillas entre los centros de los platillos
-PITS = ((17, 18, 19), (29, 30, 31))        # columnas de cada foso (el platillo mide 3)
+DROP_ROPE = 6.375                          # nivelada, el platillo queda 3 casillas sobre el suelo (giantbeetle_rules)
+SIDE_ROW, MID_ROW = 10, 8                  # plataformas traspasables: a los lados (a la altura de los platillos) y en medio
 
 
 def build():
@@ -41,16 +44,12 @@ def build():
     for c in range(2, W):
         for r in range(FLOOR, H): put(c, r, SOLID)
         if Z0 - 2 <= c <= Z1 + 2: put(c, 2, SOLID)           # (el techo del templo)
-    for pit in PITS:
-        for c in pit:
-            for r in range(FLOOR, H): put(c, r, EMPTY)        # (el foso: el fondo es el borde del nivel)
-    for c in list(range(Z0, Z0 + 3)) + list(range(Z1 - 2, Z1 + 1)): put(c, 8, DROP)
-    for c in range(22, 27): put(c, 6, DROP)
+    for c in list(range(Z0, Z0 + 3)) + list(range(Z1 - 2, Z1 + 1)): put(c, SIDE_ROW, DROP)
+    for c in range(22, 27): put(c, MID_ROW, DROP)
     for r in (10, 11, 12): put(44, r, FINISH)
     ents = [
         {'type': 'giantbeetle', 'col': 24, 'row': 12},
-        # (drop: lo justo para que nivelada quede a ras del suelo — el arnés giantbeetle_rules lo comprueba)
-        {'type': 'scale', 'col': PULLEY[0], 'row': PULLEY[1], 'props': {'span': SPAN, 'drop': 9.375, 'travel': 2, 'power': 1}},
+        {'type': 'scale', 'col': PULLEY[0], 'row': PULLEY[1], 'props': {'span': SPAN, 'drop': DROP_ROPE, 'travel': 2, 'power': 1}},
         {'type': 'bosswall', 'col': Z0 - 3, 'row': 3, 'props': {'corner': {'col': Z0 - 1, 'row': 12}, 'zone': 1}},
         {'type': 'bosswall', 'col': Z1 + 1, 'row': 3, 'props': {'corner': {'col': Z1 + 3, 'row': 12}, 'zone': 1}},
     ]

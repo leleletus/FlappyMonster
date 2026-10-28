@@ -19,8 +19,10 @@ def target(t):
     # (0.5.64, el usuario: "la música de los jefes suena más fuerte de lo que debería y los carámbanos, el daño del
     #  jugador y otros efectos casi ni se oyen" → todo lo de jefe, 1 dB más bajo; el Groove y el mashup, que iban a
     #  −9,5 para que la música mandara, a −12: siguen por encima del resto pero dejan oír los efectos)
+    # (0.5.79, el usuario: el Templo, el Groove y el mashup aún tapaban efectos importantes → −16,5 / −15,5)
     if i == 'mirror_boss': return -13.5
-    if i in ('groove', 'crab_mashup'): return -12.0
+    if i == 'templo': return -16.5
+    if i in ('groove', 'crab_mashup'): return -15.5
     if t.get('boss'): return -14.0
     if i == 'menus': return -15.5
     if i.startswith('story_'): return -14.0   # (cinemáticas: con sus efectos de sonido encima)
