@@ -16,9 +16,16 @@ local Gey = Entity.extend(Entity, { debugColor = { 0.5, 0.8, 1 },
     hitbox = { outerW = 1, outerH = 0.5, innerW = 1, innerH = 0.5 } })
 
 local S       = GUMMY_SCALE
-local LIFT    = 640          -- px/s hacia arriba (× power)
-local GROW_T  = 0.2          -- s en los que la columna sube (y baja al final)
+local LIFT    = 1050         -- px/s hacia arriba (× power): un chorro EXPLOSIVO (el usuario: era lento)
+local SHARP   = 10           -- lo brusco del empujón (systems/Push): llega a esa velocidad casi al instante
+local GROW_T  = 0.12         -- s en los que la columna sube (de golpe)
+local DECAY_T = 0.9          -- s en los que se va apagando al final (baja y empuja menos)
 local CRACK_T = 1.0          -- s agrietándose antes de romperse (nieve)
+-- Azar fijo por número (las partículas: igual en todos los clientes, sin math.random en el dibujo)
+local function hash(a, b)
+    local v = math.sin(a * 12.9898 + b * 78.233) * 43758.5453
+    return v - math.floor(v)
+end
 local KIND = { pradera = 'water', costa = 'water', nieve = 'water', fortaleza = 'steam', cueva = 'steam', volcan = 'smoke' }
 
 Gey.wantsLevel = true
@@ -67,7 +74,10 @@ function Gey:amount()
     local st, t = self.state, self.deadTimer or 0
     if st == 'erupt' then
         local e = self.props.erupt or 2
-        return math.max(0, math.min(1, t / GROW_T, (e - t) / GROW_T + (self:freezes() and 1 or 0)))
+        -- (sube DE GOLPE y al final se va APAGANDO poco a poco — el chorro baja y empuja menos —: antes desaparecía de
+        -- golpe, el usuario. En la nieve no baja: se congela entero)
+        local down = self:freezes() and 1 or (e - t) / math.min(DECAY_T, e * 0.6)
+        return math.max(0, math.min(1, t / GROW_T, down))
     end
     if st == 'iced' then return 1 end
     return 0
@@ -80,7 +90,9 @@ function Gey:pushAt(x, y)
     if math.abs(x - self.x) > TILE_PX * 0.45 then return nil end
     local top = self:topY()
     if y > self.cellBottom or y < top - TILE_PX * 0.6 then return nil end
-    return 0, -LIFT * (self.props.power or 1) * math.max(0.4, self:amount())
+    local k = self:amount()
+    if k <= 0.05 then return nil end
+    return 0, -LIFT * (self.props.power or 1) * k, SHARP
 end
 
 -- El pilar de hielo (nieve): su remate se pisa
@@ -163,7 +175,56 @@ function Gey:render(camX, camY)
             local col, crest = strip(base .. '-column-Sheet.png', 16), strip(base .. '-crest-Sheet.png', 16)
             local f = 1 + math.floor(t * 12) % 3
             for y = mouth, top + TILE_PX, -TILE_PX do col:draw(1 + (f + math.floor((mouth - y) / TILE_PX)) % 3, x, y - TILE_PX / 2, 0, S, S) end
-            crest:draw(f, x, top + TILE_PX / 2 - 20, 0, S, S)
+            -- ESPUMA Y VAPOR (el usuario: más, y que no sean dos "líneas" fijas a los lados): un penacho triple arriba
+            -- (más grande al reventar), gotas que saltan del penacho, gotas que salpican desde la boca y CAEN, y vapor
+            -- que sube desde la boca. Cada partícula, en cada vuelta, con su azar (lado, ángulo, velocidad, tamaño,
+            -- vaivén): `hash`. Solo dependen de deadTimer y de su número: igual online. Todo × lo que sale (se apaga)
+            local amt = self:amount()
+            local burst = math.max(0, 1 - t / 0.35)
+            local puffs = strip(base .. '-warn-Sheet.png', 16)
+            for k = -1, 1 do
+                local sc = S * (0.6 + 0.4 * amt) * (1 + 0.35 * burst) * (k == 0 and 1 or 0.8)
+                crest:draw(1 + (f + k + 1) % 3, x + k * 22, top + TILE_PX / 2 - 20 - (k == 0 and 6 or 0), 0, k < 0 and -sc or sc, sc)
+            end
+            local function part(n, period, salt)
+                local ph = hash(n, salt)
+                local life = period * (0.7 + 0.6 * hash(n, salt + 1))
+                local c = math.floor((t + ph * life) / life)
+                return ((t + ph * life) / life) % 1, function(k) return hash(n * 31 + c, salt + k) end
+            end
+            for n = 0, 15 do                                   -- gotas del penacho
+                local u, r = part(n, 0.7, 10)
+                local side = r(1) < 0.5 and -1 or 1
+                local tt = u * 0.7
+                local px = x + side * (6 + (70 + 110 * r(2)) * tt)
+                local py = top + 12 - (180 + 220 * r(3)) * tt + 0.5 * ADV_GRAVITY * tt * tt
+                love.graphics.setColor(1, 1, 1, (1 - u) * amt)
+                local sc = S * (0.8 + 0.9 * r(4))
+                puffs:draw(1 + math.floor(r(5) * 3), math.floor(px), math.floor(py), 0, sc, sc)
+            end
+            for n = 0, 11 do                                   -- salpicaduras de la boca: saltan a los lados y caen
+                local u, r = part(n, 0.55, 30)
+                local side = r(1) < 0.5 and -1 or 1
+                local tt = u * 0.55
+                local px = x + side * (10 + (60 + 120 * r(2)) * tt)
+                local py = mouth - 4 - (160 + 200 * r(3)) * tt + 0.5 * ADV_GRAVITY * tt * tt
+                if py < mouth + 8 then
+                    love.graphics.setColor(1, 1, 1, (1 - u) * 0.9 * amt)
+                    local sc = S * (0.6 + 0.7 * r(4))
+                    puffs:draw(1 + math.floor(r(5) * 2), math.floor(px), math.floor(py), 0, sc, sc)
+                end
+            end
+            for n = 0, 13 do                                   -- vapor: sube, se abre, vaivén
+                local u, r = part(n, 1.3, 50)
+                local side = r(1) < 0.5 and -1 or 1
+                local px = x + side * (6 + (20 + 70 * r(2)) * u) + math.sin(t * (3 + 3 * r(3)) + n) * (4 + 8 * u)
+                local py = mouth - 6 - (70 + 120 * r(4)) * u
+                local a = math.min(1, u * 8) * (1 - u) ^ 1.3 * 0.8 * (0.4 + 0.6 * amt)
+                love.graphics.setColor(1, 1, 1, a)
+                local sc = S * (1 + (1.2 + 1.4 * r(5)) * u)
+                puffs:draw(3, math.floor(px), math.floor(py), 0, sc, sc)
+            end
+            love.graphics.setColor(1, 1, 1, 1)
         end
     elseif self.state == 'warn' then
         local w = strip(base .. '-warn-Sheet.png', 16)

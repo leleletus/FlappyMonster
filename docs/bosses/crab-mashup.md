@@ -259,3 +259,10 @@ nothing to build now.)
   the director's map of that loop also gained its B section (since 0.5.64 the Groove read bars 25-40 — its B — as
   its climax): solo · A · B · climax · return. In single player the director's clock follows the audio
   (`CM:syncAudio`).
+
+- 0.5.69 (the user, Xtra Extreme): in the final the crabs waiting at the back fired their hazards hundreds of times
+  per second. Cause: `CM:syncAudio` may move the music clock back up to 0.25 s and `tickFinal` treated ANY step back
+  as the loop wrapping, so it "crossed" the whole piece and fired every bar's hazard at once. Now only a jump back of
+  more than half the piece counts as a wrap. The icicles were silent: the director's sounds came from the director's
+  position (far from the stage) → `Sound.playAt` at each hazard (crack warning, a falling whoosh, the impact).
+  Harness: `mashup_rules GAME=1 DIFF=… ` counts the hazards per second in the final (fails above 2).

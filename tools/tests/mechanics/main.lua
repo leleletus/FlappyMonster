@@ -78,6 +78,10 @@
 --                  marchita y vuelve a su sitio; con el techo bajo no se planta
 --   ventisca       la Ventisca: aviso, racha que empuja al jugador y a una caja (derecha) o lo eleva (arriba)
 --   geiser         el Géiser: aviso, columna que levanta al jugador sin daño; en la nieve, pilar que se pisa y se rompe
+--   balanza_tope   un platillo se para en el suelo y en una caja (no los atraviesa); agachado encima NO se baja por él
+--   caja_choques   caja que cae en la cabeza del jugador, el aire que la empuja contra él y 60 carreras / saltos
+--                  contra ella: nunca se mete en él ni lo pasa al otro lado
+--   cargar_gp      ground pound llevando la caja pequeña o la bomba: la sigue llevando, ni se rompe ni se enciende
 --   cuerpo_mueve   de pie en un cuerpo que sube y baja: va con él, sin despegarse ni atravesarlo
 --   ping_icono     antena de conexión online: niveles (verde/amarillo/rojo/X) y que
 --                  no parpadee (mejorar espera 0,6 s; perder la conexión, al momento)
@@ -2019,6 +2023,116 @@ function cases.geiser()
             tostring(states.warn), tostring(states.erupt), lift, hp0, pa.hp, tostring(frozenSeen), tostring(stood), broke and 'se rompe' or g2.state))
 end
 
+-- La Balanza contra el suelo: un platillo que bajaría más allá del suelo (o de una caja) se para encima; agachado
+-- sobre un platillo NO se baja por él (hay que poder dejar cajas encima con cuidado: el usuario)
+function cases.balanza_tope()
+    -- polea en la fila 3, cuerda 6 → platillos en la fila 9; recorrido 4: el izquierdo llegaría a la 13, el suelo es la 12
+    local level, es = room(30, 12, {}, { { type = 'scale', col = 15, row = 3, props = { span = 6, drop = 6, travel = 4 } },
+                                        { type = 'box', col = 12, row = 7 } })
+    local sc = es[1]
+    sim(level, {}, es, 3)
+    local lb = sc:bodyParts()[1]:getOuterBounds()
+    local floorTop = 11 * T
+    local stopFloor = lb.y + lb.h <= floorTop + 1 and lb.y + lb.h > floorTop - 8
+    -- con una caja debajo del platillo: se para encima de ella
+    local lv2, e2 = room(30, 12, {}, { { type = 'scale', col = 15, row = 3, props = { span = 6, drop = 6, travel = 4 } },
+                                      { type = 'box', col = 12, row = 7 }, { type = 'box', col = 12, row = 11 } })
+    sim(lv2, {}, e2, 3)
+    local lb2 = e2[1]:bodyParts()[1]:getOuterBounds()
+    local boxTop = e2[3]:getOuterBounds().y
+    local stopBox = lb2.y + lb2.h <= boxTop + 1 and lb2.y + lb2.h > boxTop - 8
+    -- agachado sobre el platillo derecho (arriba): baja a través de él
+    local rb = sc:bodyParts()[2]:getOuterBounds()
+    local pa = PlayerAdventure:new(rb.x + rb.w / 2, rb.y - 80)
+    sim(level, { pa }, es, 0.6)
+    local on = pa.standBody == sc:bodyParts()[2]
+    stub.state.crouch = true
+    sim(level, { pa }, es, 1.2)
+    clear()
+    local stays = pa.standBody == sc:bodyParts()[2]
+    check('balanza_tope', stopFloor and stopBox and on and stays,
+        ('el platillo se para en el suelo=%s (fondo %.0f, suelo %.0f) · en una caja=%s · agachado encima (estaba=%s) NO baja por él=%s'):format(
+            tostring(stopFloor), lb.y + lb.h, floorTop, tostring(stopBox), tostring(on), tostring(stays)))
+end
+
+-- Choques caja ↔ jugador (el usuario: se teletransportaba, salía aplastado o aparecía al otro lado de la caja)
+function cases.caja_choques()
+    local function deep(pa, b)
+        local pb = pa:getOuterBounds()
+        local ox = math.min(pb.x + pb.w, b.x + b.w) - math.max(pb.x, b.x)
+        local oy = math.min(pb.y + pb.h, b.y + b.h) - math.max(pb.y, b.y)
+        return (ox > 4 and oy > 4) and math.min(ox, oy) or 0
+    end
+    -- 1) una caja cae encima del jugador: se apoya en su cabeza; el jugador no se mueve ni pierde vida
+    local level, es = room(24, 12, {}, { { type = 'box', col = 10, row = 4 } })
+    local pa = playerAt(level, 10, 11)
+    pa.x = es[1].x
+    local x0, hp0 = pa.x, pa.hp
+    sim(level, { pa }, es, 1.5)
+    local headOk = math.abs(pa.x - x0) < 3 and pa.hp == hp0 and deep(pa, es[1]:getOuterBounds()) == 0
+    -- 2) el aire empuja una caja contra el jugador: se para en él (no lo atraviesa)
+    local lv2, e2 = room(24, 10, {}, { { type = 'smallbox', col = 6, row = 9 } })
+    local p2 = playerAt(lv2, 10, 9)
+    lv2.pushers = nil
+    local blow = { alive = true, x = 0, y = 0, pushAt = function(_, x, y) return 300, 0 end, update = function() end, def = {} }
+    local x2 = p2.x
+    for _ = 1, 120 do
+        lv2.solidBodies = Entities.solidBodies(e2); lv2.pushers = { blow }
+        p2:update(1 / 60, lv2); lv2.liveEntities = e2
+        e2[1]:update(1 / 60, lv2)
+    end
+    local windOk = deep(p2, e2[1]:getOuterBounds()) == 0 and e2[1].x < p2.x
+    -- 3) saltos y carreras contra una caja desde muchos sitios y velocidades: nunca dentro ni al otro lado
+    local worst, crossed = 0, 0
+    for k = 0, 59 do
+        local lv3, e3 = room(24, 10, {}, { { type = 'box', col = 12, row = 9 } })
+        settle(lv3, e3)
+        local bx = e3[1].x
+        local side = (k % 2 == 0) and -1 or 1
+        local p3 = playerAt(lv3, 12 + side * (2 + k % 3), 9)
+        clear()
+        if side < 0 then stub.state.right = true else stub.state.left = true end
+        if k % 3 == 0 then stub.state.jump_pressed = true end
+        local startSide = (p3.x < bx) and -1 or 1
+        local over = false                                  -- (saltarla POR ENCIMA y caer al otro lado sí vale)
+        sim(lv3, { p3 }, e3, 0.9 + (k % 5) * 0.15, function()
+            if k % 3 == 1 and p3.onGround then stub.state.jump_pressed = true end
+            local b = e3[1]:getOuterBounds()
+            worst = math.max(worst, deep(p3, b))
+            local pb = p3:getOuterBounds()
+            if pb.y + pb.h <= b.y + 2 then over = true end
+            if not over and ((p3.x < b.x + b.w / 2) and -1 or 1) ~= startSide then crossed = crossed + 1 end
+        end)
+        clear()
+    end
+    check('caja_choques', headOk and windOk and worst <= 4 and crossed == 0,
+        ('caja cae en la cabeza: bien=%s · el aire la empuja contra el jugador: se para=%s · 60 carreras/saltos: lo más metido %.0f px, al otro lado %d veces'):format(
+            tostring(headOk), tostring(windOk), worst, crossed))
+end
+
+-- Ground pound llevando algo: el impacto es del jugador; la caja pequeña no se rompe, la bomba no se enciende, y lo
+-- sigue llevando (el usuario)
+function cases.cargar_gp()
+    local parts, ok = {}, true
+    for _, kind in ipairs({ 'smallbox', 'bombobject' }) do
+        local level, es = room(24, 12, {}, { { type = kind, col = 8, row = 11, props = { fuseTime = 3 } } })
+        local e = es[1]
+        settle(level, es)
+        local pa = playerAt(level, 7, 11)
+        pa.x = e.x - 0.9 * T
+        stub.state.grab_pressed = true; sim(level, { pa }, es, 0.1); clear()
+        stub.state.jump_pressed = true; sim(level, { pa }, es, 0.25); clear()
+        stub.state.crouch_pressed = true
+        local landed = false
+        sim(level, { pa }, es, 1.0, function() if pa.gpLanded then landed = true end end)
+        clear()
+        local good = landed and e.carriedBy == pa and e.state == 'carried'
+        ok = ok and good
+        parts[#parts + 1] = ('%s: ground pound=%s, la sigue llevando=%s (%s)'):format(kind, tostring(landed), tostring(e.carriedBy == pa), e.state)
+    end
+    check('cargar_gp', ok, table.concat(parts, ' · '))
+end
+
 -- Un "soplador" de prueba: sopla en toda la sala con (wx, wy)
 local function blower(wx, wy)
     return { alive = true, x = 0, y = 0, pushAt = function() return wx, wy end, update = function() end }
@@ -2124,7 +2238,7 @@ function love.load()
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
                          'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado', 'techo_pinchos',
-                         'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser' }) do cases[n]() end
+                         'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp' }) do cases[n]() end
     if os.getenv('SHOT_BOMB') then bombShot() end
     if os.getenv('SHOT_PROPS') then propsShot() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))

@@ -49,9 +49,11 @@ local function geom(x, y, p, d)
 end
 
 local function panPart(owner, side)
+    -- (NO se baja por ellos agachándose — `dropThrough` —: hay que poder dejar cajas encima con cuidado, agachado +
+    -- ARRIBA; el usuario, 0.5.69)
     local part = { owner = owner, side = side, solidFull = true, oneway = true, moves = true, alive = true }
-    function part:getOuterBounds(into)
-        local lx, ly, rx, ry = geom(owner.x, owner.y, owner.props, owner.d or 0)
+    function part:getOuterBounds(into, d)
+        local lx, ly, rx, ry = geom(owner.x, owner.y, owner.props, d or owner.d or 0)
         local cx, cy = (side < 0) and lx or rx, (side < 0) and ly or ry
         local b = into or {}
         b.x, b.y, b.w, b.h = cx - PAN_W / 2, cy + PLANK_Y, PAN_W, PLANK_H
@@ -116,6 +118,50 @@ local function onPan(self, pan, level)
     return players, ents, w
 end
 
+-- ¿Choca algún platillo al pasar de `d0` a `d`? El que BAJA mira su cara de abajo contra bloques, plataformas y cuerpos
+-- sólidos (cajas) que no van en su pila; el que SUBE, su cara de arriba contra bloques y plataformas.
+local QB = {}
+function Scale:panBlocked(level, d, d0)
+    for i, pan in ipairs(self.pans) do
+        local down = ((i == 1) and (d - d0) or (d0 - d)) > 0
+        local b = pan:getOuterBounds(QB, d)
+        local y = down and (b.y + b.h + 1) or (b.y - 1)
+        local stack
+        -- (el que SUBE no mete lo que lleva encima — una caja — en un jugador que no va montado en ello: lo aplastaba)
+        if not down and level.players then
+            local rise = math.abs(d - d0)
+            local _, ents = onPan(self, pan, level)
+            for _, e in ipairs(ents) do
+                if e.solidFull then
+                    local eb = e:getOuterBounds()
+                    for _, pa in ipairs(level.players) do
+                        local pb = pa:getOuterBounds()
+                        if not pa.dying and pa.standBody ~= e and pb.x < eb.x + eb.w - 1 and pb.x + pb.w > eb.x + 1
+                           and pb.y < eb.y - rise + eb.h - 1 and pb.y + pb.h > eb.y - rise + 1
+                           and not (pb.y < eb.y + eb.h - 1 and pb.y + pb.h > eb.y + 1) then return true end
+                    end
+                end
+            end
+        end
+        for x = b.x + 4, b.x + b.w - 4, 16 do
+            local t = level:collisionAt(x, y, true) or (level.onewayCellAt and level:onewayCellAt(x, y))
+            if t then return true end
+            if down then
+                local o = level:bodyAt(x, y, pan)
+                if o and o.owner ~= self then
+                    if not stack then
+                        stack = {}
+                        local _, ents = onPan(self, pan, level)
+                        for _, e in ipairs(ents) do stack[e] = true end
+                    end
+                    if not stack[o] then return true end
+                end
+            end
+        end
+    end
+    return false
+end
+
 -- Ground pound (Interactions.run): el que cae sobre un platillo lo hunde y lanza lo del otro
 function Scale:onPound(pa, z)
     local hit
@@ -151,8 +197,13 @@ function Scale:updateCustom(dt, level)
         speed = SPEED * (1 + math.min(2, math.abs(wl - wr)) * 0.25)
     end
     local d0 = self.d
-    if self.d < target then self.d = math.min(target, self.d + speed * dt)
-    elseif self.d > target then self.d = math.max(target, self.d - speed * dt) end
+    local nd = d0
+    if d0 < target then nd = math.min(target, d0 + speed * dt)
+    elseif d0 > target then nd = math.max(target, d0 - speed * dt) end
+    -- los platillos se PARAN si chocan con un bloque, una plataforma o una caja (el usuario: atravesaban el suelo); lo
+    -- que va encima de ese platillo no cuenta, y los enemigos sí se atraviesan
+    if nd ~= d0 and self:panBlocked(level, nd, d0) then nd = d0 end
+    self.d = nd
     local dd = self.d - d0
     if dd ~= 0 then
         self.state = 'moving'
@@ -160,7 +211,9 @@ function Scale:updateCustom(dt, level)
         for i, pan in ipairs(self.pans) do
             local _, ents = onPan(self, pan, level)
             local dy = (i == 1) and dd or -dd
-            for _, e in ipairs(ents) do e.y = e.y + dy end
+            for _, e in ipairs(ents) do
+                if e.solidFull and dy < 0 then e:moveAndCollide(level, 0, dy) else e.y = e.y + dy end   -- (una caja: con sus choques)
+            end
         end
         self.creakT = self.creakT - dt
         if self.creakT <= 0 then Sound.play('scaleCreak'); self.creakT = CREAK_T end

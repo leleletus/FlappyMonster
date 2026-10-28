@@ -7,6 +7,9 @@ local SPEED = tonumber(os.getenv('SPEED')) or 4          -- (pasos de juego por 
 local LOOP = os.getenv('LOOP')
 local st, t, beatenAt, seen, bad, shots = nil, 0, {}, {}, 0, {}
 local LIMIT = tonumber(os.getenv('SECS')) or 260
+-- (DIFF=xtra…: esa dificultad. En el FINAL se cuentan los ataques de los que esperan al fondo — notas, carámbanos,
+-- Crabbies — por segundo: más de 2 en un segundo es un fallo; el usuario vio cientos en Xtra extremo)
+local haz = { sec = -1, n = 0, max = 0, lastId = 0 }
 -- (SHOT_AT=s,s,…: capturas en esos segundos de juego, mashup_t<s>.png)
 local shotAt = {}
 for v in (os.getenv('SHOT_AT') or ''):gmatch('[%d%.]+') do shotAt[#shotAt + 1] = tonumber(v) end
@@ -19,7 +22,8 @@ function love.load(a)
     if SPEED > 1 and not LOOP then require('src/world/entities/types/directors/crabmashup').class.syncAudio = nil end
     gameLoad(a)
     love.audio.setVolume(0)
-    gStateMachine:change('adventure', { level = 'assets/levels/mashup_cangrejos.json', eventCheckpoint = tonumber(os.getenv('CP')) })
+    gStateMachine:change('adventure', { level = 'assets/levels/mashup_cangrejos.json', eventCheckpoint = tonumber(os.getenv('CP')),
+                                        difficulty = os.getenv('DIFF') })
     st = gStateMachine:_top()
     st.player.hurt = function() return false end           -- (inmortal: se prueba el evento)
 end
@@ -48,6 +52,13 @@ function love.update(dt)
         local d = cm()
         if shotAt[1] and t >= shotAt[1] then shots[#shots + 1] = 't' .. table.remove(shotAt, 1) end
         if d then
+            if d.phase == 'final' then
+                local s = math.floor(t)
+                if s ~= haz.sec then haz.sec, haz.n = s, 0 end
+                local id = (d.noteId or 0) + (d.crabDrops or 0)
+                if id > haz.lastId then haz.n = haz.n + (id - haz.lastId); haz.max = math.max(haz.max, haz.n) end
+                haz.lastId = id
+            end
             beatActive(d)
             if not seen[d.phase] then
                 seen[d.phase] = t
@@ -69,7 +80,8 @@ function love.update(dt)
             end
         end
         if (d and d.phase == 'outro' and t - (seen.outro or t) > 3) or t > LIMIT then
-            local ok = d and d.phase == 'outro' and bad < 30
+            local ok = d and d.phase == 'outro' and bad < 30 and haz.max <= 2
+            print(('ataques de los del fondo en el final: como mucho %d en un segundo (máx. 2)'):format(haz.max))
             print(('fases: %s · música no adaptativa en %d pasos'):format(
                 table.concat((function() local o = {} for _, p in ipairs({ 'intro', 'crab', 'seam', 'final', 'end', 'outro' }) do o[#o + 1] = p .. (seen[p] and '✓' or '✗') end return o end)(), ' '), bad))
             print(ok and 'TODO OK' or 'FALLOS: no llegó a la salida')

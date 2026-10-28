@@ -68,8 +68,12 @@ Designs and the user's verdicts: [new-props-plan](new-props-plan.md).
   everything STACKED on a pan (a box with something on top weighs both: the user): players standing on it or on
   something of the stack (+ what they carry), entities resting on it or on the stack (`weight`: players 1, big box
   2, small box 1, Seed 0.5, enemies 1; flyers weigh nothing). The pan moves what is stacked on it; players ride it
-  (`standBody`). A ground pound on a pan slams it down and LAUNCHES everything on the other pan (`power`). Net: the
-  offset `d` in its netPack. Harness `mechanics` `balanza`.
+  (`standBody`). A ground pound on a pan slams it down and LAUNCHES everything on the other pan (`power`). Pans STOP when they would hit a block, a
+  platform or a box not in their stack (0.5.69, the user: they went through the floor; `Scale:panBlocked`); enemies
+  pass through them. Pans are NOT drop-through (the user: boxes must be placed on them carefully with crouch + UP;
+  a pan does not rise if that would push a box on it into a player above). Sounds v2 (the user: "more mechanical,
+  chain / rope / wood"): rope creak, chain clinks and a wood knock. Net: the offset `d` in its netPack. Harness
+  `mechanics` `balanza`, `balanza_tope`.
 - **Blizzard** (`mechanisms/blizzard.lua`, "Ventisca"): an AREA (entity cell = top-left corner, `corner` = bottom-right).
   Calm for a random `gapMin..gapMax` s, then a `warn` s warning (three blinking arrows at the screen edge the wind
   comes from + `windWarn`), then `blowMin..blowMax` s of wind (`windGust`, streaks of the island) in one of the allowed
@@ -77,6 +81,8 @@ Designs and the user's verdicts: [new-props-plan](new-props-plan.md).
   of the area nearest to the player (an area can be a whole tower). Net: direction and gust length in its netPack.
 - **Geyser** (`mechanisms/geyser.lua`, "Géiser"): placed on the cell above the floor (the vent fills its lower half).
   Idle `interval` s → `warn` s bubbling (`geyserRumble`) → `erupt` s column up to `height` tiles (cut at the first
-  block) that lifts everything with physics (`pushAt`, no damage) → idle. Meadow / coast water, fortress steam, cave
+  block) that lifts everything with physics (`pushAt`, no damage; since 0.5.69 SHARP — 1050 px/s reached almost at once —
+  with a triple crest, spray and steam: the user found it slow; it fades out over the last 0.9 s — the column lowers
+  and pushes less — instead of vanishing; spray, splashes and steam with per-particle randomness, `hash`) → idle. Meadow / coast water, fortress steam, cave
   glowing steam (gives light), volcano smoke (only pushes, the user). Snow: the column FREEZES into an ice pillar whose
   top is a one-way platform for `freeze` s (cracks the last second) and then shatters.

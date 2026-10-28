@@ -23,8 +23,8 @@ concrete type.
   the UP button of the device in use (keyboard key, D-pad, touch D-pad) bobs over it. UP picks it up (also while
   crouching) and carries it over the head; UP again THROWS it forward (farther while running); CROUCH + UP puts it
   down CAREFULLY beside the player (in front; behind if there is a wall; never touching the player: a bomb lights when
-  touched) — "so nothing blows up". A ground pound while carrying drops it underneath (`onCarriedPound`: the Seed is
-  planted). Dying drops it.
+  touched) — "so nothing blows up". A ground pound while carrying: the PLAYER takes the impact and keeps carrying it (a box does not break, a bomb
+  does not light: the user, 0.5.69); only a type with `onCarriedPound` uses it (the Seed is planted). Dying drops it.
 - **A type switches it on** with `carryable = true` (class) and optional hooks `canBeCarried()`, `onPickUp(pa)`,
   `onThrow(pa, vx, vy)`, `onPutDown(pa)`, `onCarriedPound(pa)`. While carried: state `'carried'`, `e.carriedBy` (sim),
   `e.carrierIdx` (network), `Entity:update` only follows the carrier, no interactions, the air ignores it. A thrown
@@ -88,6 +88,17 @@ One generic module for everything that changes with the island (the user: one me
 `cuerpo_mueve`.
 
 ## History and decisions
+
+- 0.5.69 (the user, after trying it): a box made its push sound just by standing next to it → only walking TOWARD
+  it pushes (`inMoveX`); the carried object a bit higher (10 px); the Geyser was slow → `pushAt` may return a third
+  value, how SHARP the push is (× the rate it reaches the air speed; Geyser 10 with 1050 px/s: explosive), plus more
+  foam and steam; Scale pans went through the floor → they stop on blocks, platforms and boxes (enemies pass
+  through); `dropThrough` on one-way bodies lets a crouching player drop through one (supported, but the pans do NOT
+  use it: the user, boxes have to be placed on them carefully). Box ↔ player collisions healed (the user: teleports,
+  squashes, appearing on the other side): a box never moves INTO a player (falling it rests on their head; the air,
+  pushing and the Scale stop at them), it does not respawn on an occupied spot, and a player overlapping a solid body
+  steps on top when only the feet are in, otherwise leaves by the shallowest side. A ground pound while carrying keeps
+  the object (the player takes the impact).
 
 - 0.5.68 (the user): UP picks up / throws (it used to jump too — the user thought it was free; chosen: UP only
   grabs); bomb picked up unlit, lit when thrown; crouch + UP = put down carefully instead of throwing; a small box

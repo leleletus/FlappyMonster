@@ -70,7 +70,11 @@ run_one() {
     if [[ $name == online_* ]]; then
         # (solo los online crean server/published: los demás, que pueden ir en paralelo, no lo tocan)
         [ -d server/published ] || had_pub=0
-        pkill -f "^love server" 2>/dev/null; sleep 0.5
+        # (el de la prueba anterior tiene que haber SOLTADO el puerto: si no, el nuevo no arranca y la prueba habla con
+        # el viejo, que se está cerrando — con lsof en macOS se veía el puerto "listo" al momento)
+        pkill -f "^love server" 2>/dev/null
+        for _ in $(seq 1 20); do port_up || break; sleep 0.25; done
+        port_up && { pkill -9 -f "^love server" 2>/dev/null; sleep 0.5; }
         export FM_SERVER=localhost      # (los arneses online nunca hablan con el servidor real)
         love server --headless > /tmp/fm_test_server.log 2>&1 &
         server_pid=$!
@@ -90,6 +94,8 @@ run_one() {
     [ "$rc" = 124 ] && echo "!! tiempo agotado (TEST_TIMEOUT=${TEST_TIMEOUT:-900} s)"
     if [ -n "$server_pid" ]; then
         kill "$server_pid" 2>/dev/null; pkill -f "^love server" 2>/dev/null
+        for _ in $(seq 1 20); do kill -0 "$server_pid" 2>/dev/null || break; sleep 0.25; done
+        kill -9 "$server_pid" 2>/dev/null
         if grep -qi "error\|traceback" /tmp/fm_test_server.log; then
             echo "!! errores en el servidor (/tmp/fm_test_server.log):"; grep -i -A5 "error\|traceback" /tmp/fm_test_server.log | head -20
             rc=1

@@ -2,7 +2,7 @@
 # tools/sounds/props.py — los SONIDOS de lo nuevo aprobado en 0.5.67 (diseño en curso): el Soplón, la Balanza, la Caja,
 # la Semilla, la Ventisca y el Géiser. Síntesis sencilla de 8 bits (ruido filtrado, cuadradas y senos con envolventes), como tools/sounds/mechanics.py.
 #   python3 tools/sounds/props.py            → vistas previas (.wav) en FlappyMonster_pruebas/nuevos/sonidos/
-#   python3 tools/sounds/props.py --apply    → assets/sounds/props/*.wav
+#   python3 tools/sounds/props.py --apply    → assets/sounds/props/*.wav   (--only a,b: solo esos)
 # Se comprueban con números: NO se han escuchado.
 import os, sys, wave
 import numpy as np
@@ -70,17 +70,39 @@ def gust_pop():
 
 
 # ── LA BALANZA ──
+# (v2, el usuario: "no suena a lo que es, más mecánico, cadena / cuerda / madera")
+def clink(f, d=0.05):
+    """Un eslabón contra otro: chasquido de metal (ruido agudo) y un anillo corto inarmónico"""
+    tt = t_(d)
+    ring = (np.sin(2 * np.pi * f * tt) + 0.6 * np.sin(2 * np.pi * f * 2.76 * tt) + 0.3 * np.sin(2 * np.pi * f * 5.4 * tt))
+    return band(noise(d), 2500, 8000) * env(n_(d), 0.0005, 0.006) * 0.8 + ring * env(n_(d), 0.0005, 0.018) * 0.35
+def knock(f=180, d=0.09):
+    """Golpe de MADERA: hueco y seco (dos modos y un poco de ruido de tabla)"""
+    tt = t_(d)
+    body = np.sin(2 * np.pi * f * tt) + 0.5 * np.sin(2 * np.pi * f * 2.3 * tt)
+    return body * env(n_(d), 0.001, 0.025) + band(noise(d), 300, 2500) * env(n_(d), 0.0005, 0.008) * 0.6
+def rope_creak(d, f0=95, f1=130):
+    """La CUERDA que roza la polea: pulsos de fricción (se agarra y se suelta) a ~100 Hz, nasales"""
+    f = np.geomspace(f0, f1, n_(d)) * (1 + 0.08 * np.sin(2 * np.pi * 5 * t_(d)))
+    ph = np.cumsum(f) / SR
+    pulses = np.exp(-((ph % 1) * 9)) * (0.6 + 0.4 * rng.random(n_(d)) ** 3)
+    return band(pulses - pulses.mean(), 250, 2200) * np.sin(np.pi * np.linspace(0, 1, n_(d))) ** 0.5
 def scale_creak():
-    """La cuerda cruje al moverse: un chirrido corto que vibra (0,35 s)"""
-    d = 0.35
-    f = 260 + 60 * np.sin(2 * np.pi * 7 * t_(d))
-    sq = np.where((np.cumsum(f) / SR) % 1 < 0.2, 1.0, -1.0)
-    return low(sq, 1800) * env(n_(d), 0.02, 0.12) * (0.6 + 0.4 * np.sin(2 * np.pi * 23 * t_(d)))
+    """La Balanza se mueve (se repite cada ~0,45 s): la cuerda cruje en la polea, la cadena tintinea, la madera da
+    un golpecito"""
+    d = 0.45
+    parts = [rope_creak(d) * 0.9, at(knock(150, 0.08) * 0.5, 0.0)]
+    for k in range(6):
+        parts.append(at(clink(2300 + rng.uniform(-300, 500)) * rng.uniform(0.4, 0.8), 0.04 + k * 0.06 + rng.uniform(0, 0.03)))
+    return mix(*parts)
 def scale_launch():
-    """Catapulta: golpe seco de madera y un muelle que sube"""
-    thunk = sweep(170, 70, 0.1) * env(n_(0.1), 0.001, 0.04)
-    boing = sweep(180, 720, 0.32, 'sq', 0.3) * env(n_(0.32), 0.005, 0.16) * 0.5
-    return mix(thunk, at(boing, 0.03))
+    """Catapulta: el GOLPE de madera del platillo, la cadena que se sacude de golpe y la cuerda que da un latigazo"""
+    parts = [knock(120, 0.14) * 1.0, at(knock(240, 0.06) * 0.5, 0.012)]
+    for k in range(10):                                                      # (la cadena, un tirón)
+        parts.append(at(clink(2000 + rng.uniform(-200, 900)) * (0.9 - k * 0.07), 0.02 + k * 0.022 + rng.uniform(0, 0.01)))
+    whip = band(noise(0.18), 900, 5000) * np.linspace(0, 1, n_(0.18)) ** 2 * env(n_(0.18), 0.12, 0.05)
+    twang = sweep(85, 160, 0.3, 'sq', 0.15) * env(n_(0.3), 0.002, 0.1) * 0.35   # (la cuerda tensa)
+    return mix(*parts, at(whip * 0.5, 0.0), at(low(twang, 1200), 0.02))
 
 
 # ── LA CAJA ──
@@ -175,6 +197,14 @@ SOUNDS = {
 }
 
 if __name__ == '__main__':
+    # --only a,b: solo esos (los demás no se tocan). Cada sonido con SU azar (semilla por nombre): cambiar uno ya no
+    # cambia el ruido de los que van detrás
+    import zlib
     dst = OUT if '--apply' in sys.argv else PRUEBAS
-    for name, fn in SOUNDS.items(): save(os.path.join(dst, name + '.wav'), fn())
+    only = None
+    if '--only' in sys.argv: only = set(sys.argv[sys.argv.index('--only') + 1].split(','))
+    for name, fn in SOUNDS.items():
+        if only and name not in only: continue
+        rng = np.random.default_rng(zlib.crc32(name.encode()))
+        save(os.path.join(dst, name + '.wav'), fn())
     print('  en ' + dst)

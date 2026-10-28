@@ -89,10 +89,64 @@ function Box:pushBy(pa, dx)
     self:moveAndCollide(level, want, 0)
     self.vx, self.facing = vx0, f0
     local moved = self.x - x0
-    if moved ~= 0 then
+    if math.abs(moved) > 0.05 then
         self.pushedNow, self.pusherIdx = true, pa.ownerIdx or 0
     end
     return moved
+end
+
+-- ── Nunca DENTRO de un jugador (el usuario: el jugador se teletransportaba, salía aplastado o aparecía al otro lado) ──
+-- La caja se mueve por su cuenta (cae, el aire, la empujan, la Balanza) sin mirar a los jugadores: si un movimiento la
+-- mete en uno que antes no tocaba, se deshace en ese eje (cayendo, se queda apoyada en su cabeza). Y no reaparece en su
+-- sitio mientras haya alguien (o algo sólido) ocupándolo.
+local PB, MB = {}, {}
+local function overlaps(a, b) return a.x < b.x + b.w - 1 and a.x + a.w > b.x + 1 and a.y < b.y + b.h - 1 and a.y + a.h > b.y + 1 end
+function Box:playerIn(level, x, y)
+    local b = self:getOuterBounds(MB)
+    if x then b.x, b.y = x - self.outerW / 2, y - self.outerH / 2 end
+    for _, pa in ipairs(level.players or {}) do
+        if not pa.dying and pa.alive ~= false and overlaps(b, pa:getOuterBounds(PB)) then return pa end
+    end
+    return nil
+end
+function Box:moveAndCollide(level, dx, dy)
+    local g0 = self.onGround
+    if dx ~= 0 then
+        local x0 = self.x
+        local before = self:playerIn(level)
+        Entity.moveAndCollide(self, level, dx, 0)
+        if not before and self:playerIn(level) then self.x = x0 end
+        if dy == 0 then self.onGround = g0 end              -- (de lado no deja de estar apoyada)
+    end
+    if dy ~= 0 then
+        local y0 = self.y
+        local before = self:playerIn(level)
+        Entity.moveAndCollide(self, level, 0, dy)
+        local pa = not before and self:playerIn(level)
+        if pa then
+            if dy > 0 then                                   -- (cae sobre un jugador: se apoya en su cabeza)
+                self.y = math.max(y0, pa:getOuterBounds(PB).y - self.outerH / 2)
+                self.vy, self.onGround = 0, true
+            else
+                self.y, self.vy = y0, 0
+            end
+        end
+    end
+end
+function Box:homeBlocked(level)
+    if self:playerIn(level, self.home.x, self.home.y) then return true end
+    local h = self.home
+    for _, px in ipairs({ h.x - self.outerW / 2 + 2, h.x, h.x + self.outerW / 2 - 2 }) do
+        if level:bodyAt(px, h.y, self) then return true end
+    end
+    return false
+end
+function Box:updateCommonStates(dt, level)
+    if self.state == 'gone' and self.deadTimer + dt >= (self.props.respawn or 0) and self:homeBlocked(level) then
+        self.deadTimer = self.deadTimer + dt                -- (espera a que su sitio quede libre)
+        return true
+    end
+    return Entity.updateCommonStates(self, dt, level)
 end
 
 -- Romperse (ground pound, lava, fuera del nivel): los trozos vuelan y reaparece en su sitio

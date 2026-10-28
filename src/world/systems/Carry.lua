@@ -2,7 +2,8 @@
 -- CARGAR objetos (el usuario, 0.5.68): acercarse a algo que se puede cargar y pulsar ARRIBA (acción `grab`) lo coge y
 -- lo lleva sobre la cabeza (también agachado); ARRIBA otra vez lo LANZA hacia delante (más lejos andando); AGACHADO +
 -- ARRIBA lo DEJA con cuidado a su lado (para no hacer explotar nada); un GROUND POUND con él en las manos lo suelta
--- debajo (o lo que el tipo diga: la Semilla se planta). Lo lanzado no le da a quien lo lanzó (THROW_SAFE s).
+-- debajo... NO: lo sigue llevando (el impacto es del jugador: ni la caja se rompe ni la bomba se enciende; el usuario);
+-- solo un tipo con `onCarriedPound` lo usa (la Semilla se planta). Lo lanzado no le da a quien lo lanzó (THROW_SAFE s).
 -- Al acercarse sale encima del objeto la AYUDA con el botón de ARRIBA del aparato que se usa (teclado, mando, táctil).
 --
 -- Un sistema para todos: un tipo solo se declara `carryable = true` (clase) y, si quiere, los ganchos
@@ -10,7 +11,7 @@
 --   onPickUp(pa)             al cogerlo
 --   onThrow(pa, vx, vy)      al lanzarlo (por defecto: sale con esa velocidad, estado 'thrown' de su física)
 --   onPutDown(pa)            al dejarlo a los pies
---   onCarriedPound(pa)       ground pound con él en las manos (por defecto: dejarlo debajo)
+--   onCarriedPound(pa)       ground pound con él en las manos (sin él: no pasa nada, lo sigue llevando)
 -- Mientras va en las manos la entidad no hace su paso (Entity:update → Carry.follow), no choca ni interactúa con
 -- nadie y el aire no la mueve. Quien lo lleva: `e.carriedBy` (la simulación) y `e.carrierIdx` (lo que viaja: el
 -- índice del jugador; 0 = nadie). Se suelta al morir quien lo lleva.
@@ -52,7 +53,7 @@ end
 function Carry.holdAt(x, y, e)
     local PA = require 'src/player/PlayerAdventure'
     local b = PA.outerBoxAt(x, y)
-    return x, b.y - (e.outerH or TILE_PX) / 2 + 6
+    return x, b.y - (e.outerH or TILE_PX) / 2 - 4             -- (un poco por encima de la cabeza: el usuario lo subió 10 px)
 end
 
 local function release(e, pa)
@@ -107,7 +108,10 @@ function Carry.step(level, players, entities)
         if held and (held.carriedBy ~= pa or not held.alive) then pa.carrying, held = nil, nil end
         if held and (pa.dying or not pa.alive) then Carry.putDown(pa, held, level); held = nil end
         if not pa.dying then
-            if held and pa.gpLanded then
+            if held and pa.gpLanded and held.onCarriedPound then
+                -- (ground pound con algo en las manos: el impacto lo aguanta el JUGADOR y lo cargado sigue en sus manos
+                -- — una caja no se rompe, una bomba no se enciende; el usuario —; solo lo que tiene su regla lo usa: la
+                -- Semilla se planta)
                 release(held, pa)
                 local b = pa:getOuterBounds()
                 held.x, held.y = pa.x, b.y + b.h - (held.outerH or 0) / 2 - 2

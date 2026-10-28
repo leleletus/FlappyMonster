@@ -17,6 +17,9 @@ local INNER_W, INNER_H = P.INNER_W, P.INNER_H
 local function dropPlatformTop(pa, level)
     local ob    = pa:getOuterBounds()
     local footY = ob.y + ob.h + 2
+    -- (de pie en un CUERPO traspasable — un platillo de la Balanza: `oneway` + `dropThrough` —: su cara)
+    local sb = pa.standBody
+    if sb and sb.oneway and sb.dropThrough and sb.alive ~= false then return sb:getOuterBounds().y end
     local top
     for _, cx in ipairs({ pa.x - pa.w/2 + 4, pa.x, pa.x + pa.w/2 - 4 }) do
         local t = level:getDefAt(cx, footY)
@@ -139,7 +142,8 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
                         -- (algo que se EMPUJA — la Caja —: andando por el suelo contra ella, se mueve lo que pueda y el
                         -- jugador se queda pegado a su cara sin perder el paso)
                         local pushed = 0
-                        if o.pushBy and self.onGround then
+                        -- (solo ANDANDO hacia ella: parado a su lado — un resto de velocidad — no la empuja ni suena; el usuario)
+                        if o.pushBy and self.onGround and (self.inMoveX or 0) == ((dx > 0) and 1 or -1) then
                             local over = (dx > 0) and (x + hw - ob.x) or (x - hw - (ob.x + ob.w))
                             pushed = o:pushBy(self, over)
                             ob = o:getOuterBounds()
@@ -148,10 +152,16 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
                         x = (dx > 0) and (ob.x - hw) or (ob.x + ob.w + hw)
                         self.bodyHit = { o = o, face = (dx > 0) and 'left' or 'right', speed = math.abs(self.vx) }
                         if pushed == 0 then self.vx = 0 end
+                    elseif was and o.solidFull and (y + hh) - ob.y <= 28 and (y + hh) - ob.y < math.min(x + hw - ob.x, ob.x + ob.w - (x - hw)) then
+                        -- (un sólido completo — una caja — metido solo un poco por los pies: se sube ENCIMA, no se sale
+                        -- de lado: así nunca aparece al otro lado ni se teletransporta; el usuario)
+                        y = ob.y - hh
+                        if (self.vy or 0) > 0 then self.vy = 0 end
                     elseif was then
-                        -- Ya estaban metidos (p. ej. cayó a su lado): se separan
-                        -- poco a poco, sin atravesar paredes
+                        -- Ya estaban metidos (p. ej. cayó a su lado): se separan poco a poco, sin atravesar paredes,
+                        -- por donde MENOS está metido (con un sólido completo; los jefes, hacia su lado más cercano)
                         local dir = (x < ob.x + ob.w / 2) and -1 or 1
+                        if o.solidFull then dir = ((x + hw - ob.x) < (ob.x + ob.w - (x - hw))) and -1 or 1 end
                         if dx * dir < 0 then x = x - dx end        -- no avanzar hacia dentro
                         local nx = x + dir * 3
                         if not level:collisionAt(nx + dir * hw, y) then x = nx end
@@ -252,7 +262,10 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
                     -- `stepDy` px se ha metido eso en los pies)
                     local riding = o == self.rideBody and self.vy >= 0
                     local up = math.max(0, -(o.stepDy or 0)) + (riding and 8 or 0)
-                    if (dy > 0 or riding) and footWas <= ob.y + 2 + up and y + hh >= ob.y - (riding and 8 or 0) then
+                    -- (bajando a través de este cuerpo traspasable: no se apoya en él)
+                    local passing = self.dropping and o.oneway and o.dropThrough and math.abs(ob.y - (self.dropTop or -1e9)) < 40
+                    if passing then riding = false end
+                    if not passing and (dy > 0 or riding) and footWas <= ob.y + 2 + up and y + hh >= ob.y - (riding and 8 or 0) then
                         self.bodyHit = { o = o, face = 'top', speed = self.vy }
                         y = ob.y - hh; self.vy = 0; self.onGround = true; self.jumpsLeft = 2
                         self.groundDef = nil

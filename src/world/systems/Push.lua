@@ -23,20 +23,21 @@ function Push.collect(list)
     return out
 end
 
--- Velocidad del aire en un punto: la suma de todo lo que sopla ahí
+-- Velocidad del aire en un punto: la suma de todo lo que sopla ahí. Un tercer valor de `pushAt` = lo BRUSCO que es
+-- (× la rapidez con la que lleva la velocidad hacia la suya: 1 = viento, el Géiser ~10 = un chorro explosivo)
 function Push.at(level, x, y)
-    local wx, wy = 0, 0
+    local wx, wy, k = 0, 0, 1
     for _, p in ipairs(level.pushers or {}) do
-        local ax, ay = p:pushAt(x, y)
-        if ax then wx, wy = wx + ax, wy + (ay or 0) end
+        local ax, ay, ak = p:pushAt(x, y)
+        if ax then wx, wy = wx + ax, wy + (ay or 0); k = math.max(k, ak or 1) end
     end
-    return wx, wy
+    return wx, wy, k
 end
 
 -- La vertical: hacia arriba lleva la velocidad hacia la del aire; hacia abajo acelera
-local function vertical(o, wy, dt)
+local function vertical(o, wy, dt, k)
     if wy < 0 then
-        if o.vy > wy then o.vy = o.vy + (wy - o.vy) * math.min(1, UP_K * dt) end
+        if o.vy > wy then o.vy = o.vy + (wy - o.vy) * math.min(1, UP_K * (k or 1) * dt) end
     elseif wy > 0 then
         o.vy = o.vy + wy * DOWN_A * dt
     end
@@ -44,12 +45,12 @@ end
 
 -- Jugador (PlayerAdventure._update): cambia su vy y devuelve el arrastre de lado (px/s) que se suma a su avance
 function Push.player(pa, level, dt)
-    local wx, wy = 0, 0
-    if level.pushers and level.pushers[1] then wx, wy = Push.at(level, pa.x, pa.y) end
+    local wx, wy, k = 0, 0, 1
+    if level.pushers and level.pushers[1] then wx, wy, k = Push.at(level, pa.x, pa.y) end
     pa.windVx = (pa.windVx or 0) + (wx - (pa.windVx or 0)) * math.min(1, SIDE_K * dt)
     if math.abs(pa.windVx) < 1 and wx == 0 then pa.windVx = 0 end
     if wy ~= 0 then
-        vertical(pa, wy, dt)
+        vertical(pa, wy, dt, k)
         if wy < 0 and pa.vy < -40 then pa.onGround = false end
     end
     return pa.windVx
@@ -68,13 +69,13 @@ end
 
 -- Entidad (Entity:update, antes de su propio paso)
 function Push.entity(e, level, dt)
-    local wx, wy = Push.at(level, e.x, e.y)
+    local wx, wy, sharp = Push.at(level, e.x, e.y)
     if wx == 0 and wy == 0 then return end
     local k = ENTITY * (e.windK or 1)                -- (lo pesado se mueve menos: la Caja grande)
     if wx ~= 0 then e:moveAndCollide(level, wx * k * dt, 0) end
     if wy ~= 0 and not e.flying then
         e.vy = e.vy or 0
-        vertical(e, wy * k, dt)
+        vertical(e, wy * k, dt, sharp)
         if e.vy < -40 then e.onGround = false end
     end
 end

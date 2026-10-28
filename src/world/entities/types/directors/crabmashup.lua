@@ -589,7 +589,12 @@ function CM:tickFinal(dt, level, players)
     if not pc then return end
     local p0, p1 = self.prevPos or self.pos, self.pos
     self.prevPos = self.pos
-    if p1 < p0 then p0 = p0 - pc.music_end end                     -- (dio la vuelta)
+    -- (dio la VUELTA solo si salta mucho hacia atrás; un poco hacia atrás es el audio recolocando el reloj — CM:syncAudio
+    -- lo deja retroceder hasta 0,25 s —: no cruza nada. Antes cualquier retroceso contaba como vuelta y cruzaba la pieza
+    -- ENTERA: todos sus carámbanos, notas y Crabbies a la vez — el usuario, en Xtra extremo: "cientos por segundo")
+    if p1 < p0 then
+        if p0 - p1 > pc.music_end / 2 then p0 = p0 - pc.music_end else p0 = p1 end
+    end
     local function crossed(t) return t > p0 and t <= p1 end
     local waiting = function(r) local x = self.fin[r]; return x and x.offstage == 'wait' end
     local bar, step = barAt(pc, math.max(0, p1))
@@ -614,7 +619,7 @@ function CM:tickFinal(dt, level, players)
         if waiting('gloomy') and bar % 8 == 5 and not self.blackT and self.active ~= 'gloomy' then
             self.blackT = self.t
             self:throwAnim(self.fin.gloomy, 1.0)
-            Sound.play('mgloomyShriek', 0.9)
+            Sound.playAt('mgloomyShriek', self.fin.gloomy.x, self.fin.gloomy.y, 0.9)
         end
         if waiting('tantrum') and bar % 8 == 1 then self:dropCrabby(level, players) end
     end
@@ -631,7 +636,7 @@ function CM:fireNote(level, players)
     self.notes[#self.notes + 1] = { id = self.noteId, x = src.x, y = src.y, vx = dx / d * CM.NOTE_SPEED,
                                     vy = dy / d * CM.NOTE_SPEED, c = self.noteId % 4 + 1, t = 0 }
     self:throwAnim(src, 0.35)
-    Sound.play('megaClack', 1.3, 0.6)
+    Sound.playAt('megaClack', src.x, src.y, 1.3, 0.6)      -- (donde está: el director queda lejos del escenario)
 end
 
 function CM:dropIcicle(level, players)
@@ -642,6 +647,7 @@ function CM:dropIcicle(level, players)
     self.noteId = self.noteId + 1
     self.icicles[#self.icicles + 1] = { id = self.noteId, x = x, y = z.y0, floor = floor, t = 0 }
     self:throwAnim(self.fin.icy, 0.8)
+    Sound.playAt('iceCrack', x, floor, 1.3, 0.7)           -- (el aviso: la grieta en el suelo)
 end
 
 function CM:dropCrabby(level, players)
@@ -660,7 +666,8 @@ function CM:dropCrabby(level, players)
     e.leashZone = z
     Entity.emitFx('spawn', x, h.y)
     self:throwAnim(mega, 1.2)
-    Sound.play('respawnFx', 0.8)
+    self.crabDrops = (self.crabDrops or 0) + 1         -- (cuántos ha soltado: lo cuenta tools/tests/mashup_rules)
+    Sound.playAt('respawnFx', x, h.y, 0.8)
 end
 
 function CM:tickHazards(dt, level, players)
@@ -680,7 +687,9 @@ function CM:tickHazards(dt, level, players)
     end
     for i = #self.icicles, 1, -1 do
         local c = self.icicles[i]
+        local was = c.t
         c.t = c.t + dt
+        if was < CM.ICICLE_WARN and c.t >= CM.ICICLE_WARN then Sound.playAt('megaFall', c.x, c.floor, 1.8, 0.6) end   -- (se suelta)
         if c.t >= CM.ICICLE_WARN then c.y = c.y + CM.ICICLE_FALL * dt end
         local hit = false
         for _, pa in ipairs(players) do
@@ -690,7 +699,7 @@ function CM:tickHazards(dt, level, players)
         end
         if hit or c.y >= c.floor then
             if not hit then Entity.emitFx('ice_shatter', c.x, c.floor) end
-            Sound.play('iceCrack', 1.2, 0.6)
+            Sound.playAt('iceBreak', c.x, c.floor, 1.2, 0.9)       -- (el impacto, donde cae)
             table.remove(self.icicles, i)
         end
     end
