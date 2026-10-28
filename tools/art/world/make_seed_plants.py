@@ -32,10 +32,12 @@ ISLES = {
     'pradera':   dict(o='1e3a1a', b='4c9a38', h='86cc5a', s='2e6a28', L='7cc850', l='3e8c3c', v='2e6a28', x='7a4a24', y='c8a060', p='9cd86c', q='5cac44', bg='8cc8f0'),
     'costa':     dict(o='2a2614', b='7a6a2c', h='a8964a', s='54481c', L='b4a04c', l='7c6a28', v='54481c', x='c89a50', y='f4ecb0', p='c8b45c', q='8a7a30', bg='9cdcf0'),
     'fortaleza': dict(o='1a2016', b='4a3a2a', h='6c5a40', s='2e241a', L='3e7a44', l='2a5630', v='1e3e22', x='a82c2c', y='7a3ca8', p='4c8a50', q='2a5630', bg='8a8ea8'),
-    'nieve':     dict(o='2c5470', b='8cc8c0', h='c8f0ec', s='5c9c98', L='d8f4f8', l='a0d4e4', v='78acc8', x='ffffff', y='78acde', p='ffffff', q='bee4fa', bg='b8d4f0'),
+    # (nieve, v5: HELECHO ESCARCHADO de un verde azulado con puntas blancas — el blanco pálido se perdía contra la nieve)
+    'nieve':     dict(o='1e4a58', b='5aa8a0', h='9cdcd0', s='3c7c78', L='8cd4c4', l='4c9a94', v='2e6a70', x='ffffff', y='78acde', p='ffffff', q='bee4fa', bg='b8d4f0'),
     'cueva':     dict(o='2e2440', b='a898c8', h='dcd0f0', s='7c6ca0', L='4ac4d4', l='2a8aa0', v='1e6a80', x='b4f4ff', y='ffffff', p='4ac4d4', q='2a8aa0', bg='3a3450'),
     # (cactus de lava: OBSIDIANA negra con venas que brillan — el rojo oscuro se perdía contra el cielo del volcán)
-    'volcan':    dict(o='0a080c', b='2e2a32', h='4e4856', s='18141c', L='5a2a28', l='3a1a1a', v='ff8a28', x='ff8a28', y='ffd23c', p='ff8a28', q='ffd23c', bg='6a2c2c'),
+    # (volcán, v5: ENREDADERA DE ASCUAS — tallos carbonizados, hojas negras con el borde y el nervio encendidos)
+    'volcan':    dict(o='0a080c', b='2e2a32', h='4e4856', s='18141c', L='3a3238', l='241e24', v='ff8a28', x='ff8a28', y='ffd23c', p='ff8a28', q='ffd23c', bg='6a2c2c'),
 }
 
 
@@ -221,7 +223,7 @@ def assemble(isle, h=6):
 #   volcán: CACTUS DE LAVA (sus BRAZOS son las plataformas; espinas que brillan; flor de fuego arriba)
 import random
 
-ORG = {'pradera', 'costa', 'volcan'}
+ORG = {'pradera', 'costa', 'volcan', 'nieve', 'cueva'}
 WP = 64                                          # (ancho de la imagen: 4 casillas, la planta en el centro)
 
 
@@ -233,19 +235,27 @@ def full_plant(isle, h):
     floor = H - 1
     top = 18
     def stem_x(y):
-        if isle == 'pradera': return cx + 2.2 * math.sin((floor - y) / 9.0)
+        if isle in ('pradera', 'volcan'): return cx + 2.2 * math.sin((floor - y) / 9.0 + (0.8 if isle == 'volcan' else 0))
         if isle == 'costa': return cx + 2.6 * math.sin((floor - y) / 7.0 + 1)
-        return cx                                     # (el cactus, recto)
+        if isle == 'nieve': return cx + 1.6 * math.sin((floor - y) / 11.0 + 2)
+        return cx + 1.2 * math.sin((floor - y) / 14.0)            # (la seta: casi recta, una curva suave)
     # ── el TALLO ──
     for y in range(top, H):
         x = stem_x(y)
-        if isle == 'pradera':                         # dos hebras que se trenzan
+        if isle in ('pradera', 'volcan'):             # dos hebras que se trenzan
             for k, ph in enumerate((0, math.pi)):
                 sx = int(round(x + 1.6 * math.sin((floor - y) / 4.0 + ph)))
                 g.put(sx - 2, y, 'o'); g.rect(sx - 1, y, 3, 1, 'b'); g.put(sx - 1, y, 'h'); g.put(sx + 1, y, 's'); g.put(sx + 2, y, 'o')
-        elif isle == 'costa':                         # estípite fino y ondulado
+        elif isle in ('costa', 'nieve'):              # estípite / tallo fino y ondulado
             sx = int(round(x))
             g.put(sx - 2, y, 'o'); g.rect(sx - 1, y, 3, 1, 'b'); g.put(sx - 1, y, 'h'); g.put(sx + 2, y, 'o')
+            if isle == 'nieve' and y % 9 == 0: g.put(sx + 1, y, 'x')                       # (escarcha)
+        elif isle == 'cueva':                         # el pie de la seta: grueso, se ensancha abajo
+            sx = int(round(x))
+            hw = 3 + (2 if y > floor - 10 else (1 if y > floor - 22 else 0))
+            g.put(sx - hw - 1, y, 'o'); g.rect(sx - hw, y, 2 * hw + 1, 1, 'b'); g.rect(sx - hw, y, 2, 1, 'h')
+            g.put(sx + hw, y, 's'); g.put(sx + hw + 1, y, 'o')
+            if (y * 3) % 17 == 0: g.put(sx - 1, y, 'x')                                     # (motas que brillan)
         else:                                         # el cactus: columna gruesa con costillas
             sx = cx
             g.put(sx - 5, y, 'o'); g.rect(sx - 4, y, 9, 1, 'b'); g.rect(sx - 4, y, 2, 1, 'h'); g.rect(sx + 3, y, 2, 1, 's')
@@ -256,12 +266,19 @@ def full_plant(isle, h):
     # ── hojas PEQUEÑAS a alturas irregulares, a un lado y al otro ──
     y = floor - 8
     side = 1
-    while y > top + 10 and isle != 'volcan':
+    while y > top + 10:
         x = int(round(stem_x(y)))
         size = rnd.choice((3, 4, 4, 5, 6))
-        if isle == 'pradera':
+        if isle in ('pradera', 'volcan'):
             heart(g, x + side * 3, y, size, side)
-            if rnd.random() < 0.45: tendril(g, x - side * 3, y + 4, -side)
+            if isle == 'volcan':                      # el borde y el nervio, encendidos
+                g.put(x + side * (3 + size), y, 'x'); g.put(x + side * (3 + size // 2), y - 1, 'x')
+                if rnd.random() < 0.4: flame(g, x - side * 4, y + 2)
+            elif rnd.random() < 0.45: tendril(g, x - side * 3, y + 4, -side)
+        elif isle == 'nieve':
+            fern(g, x + side * 2, y, size + 4, side)
+        elif isle == 'cueva':
+            if rnd.random() < 0.6: bracket(g, x + side * 4, y, 4 + size // 2, side)
         else:
             ribbon(g, x + side * 2, y, size + 4, side)
             if rnd.random() < 0.5: g.disc(x + side * 3 + 0.5, y + 1.5, 1.4, 'p', 'o')       # vejiga
@@ -272,9 +289,13 @@ def full_plant(isle, h):
         if cells >= h: continue
         py = floor - 16 * cells + 1                   # (su parte de arriba, donde se pisa)
         x = int(round(stem_x(py + 4)))
-        if isle == 'pradera': bigleaf_bean(g, x + sd * 2, py, sd)
+        if isle in ('pradera', 'volcan'):
+            bigleaf_bean(g, x + sd * 2, py, sd)
+            if isle == 'volcan':                       # la hoja grande de ascuas: borde encendido
+                for i in range(2, 26, 3): g.put(x + sd * (2 + i), py - 1, 'x')
         elif isle == 'costa': bigfrond(g, x + sd * 2, py, sd)
-        else: cactus_arm(g, cx + sd * 5, py, sd)
+        elif isle == 'nieve': fern(g, x + sd * 2, py, 26, sd, big=True)
+        else: bracket(g, x + sd * 5, py, 22, sd, big=True)
     # ── la COPA ──
     if isle == 'pradera':
         heart(g, cx - 3, top + 3, 11, -1); heart(g, cx + 3, top + 3, 11, 1)
@@ -285,12 +306,26 @@ def full_plant(isle, h):
         for k, (dx, ln) in enumerate(((-1, 16), (1, 16), (-1, 9), (1, 9))):
             ribbon(g, cx + dx * (1 + k // 2), top + 2 + 3 * (k // 2), ln, dx, flat=True)
         g.disc(cx, top + 2, 2.2, 'p', 'o')
-    else:                                             # la flor de fuego en la punta del cactus
-        for yy in range(top - 2, top + 3):
-            for xx in range(cx - 5, cx + 6):
-                if abs(xx - cx) + abs(yy - top) * 2 < 7: g.put(xx, yy, 'p' if (xx + yy) % 2 else 'q')
-        g.put(cx, top - 4, 'y'); g.put(cx - 2, top - 3, 'x'); g.put(cx + 2, top - 3, 'x')
-        g.rect(cx - 5, top + 3, 11, 1, 'o')
+    elif isle == 'volcan':                            # dos hojas grandes y la FLOR DE FUEGO en medio
+        heart(g, cx - 3, top + 4, 12, -1); heart(g, cx + 3, top + 4, 12, 1)
+        for d in (-12, -6, 6, 12): g.put(cx + d, top + 3, 'x')
+        flower(g, cx, top + 1, 6, fire=True)
+    elif isle == 'nieve':                             # frondas abiertas y la FLOR DE NIEVE
+        fern(g, cx - 2, top + 5, 18, -1, flat=True); fern(g, cx + 2, top + 5, 18, 1, flat=True)
+        flower(g, cx, top + 1, 6)
+    else:                                             # el SOMBRERO: una cúpula que brilla, con motas
+        for yy in range(top - 6, top + 6):
+            for xx in range(cx - 22, cx + 23):
+                d = ((xx - cx) / 22) ** 2 + ((yy - (top + 6)) / 12) ** 2
+                if d <= 1 and yy <= top + 5:
+                    edge = ((xx - cx) / 21) ** 2 + ((yy - (top + 6)) / 11) ** 2 > 1
+                    g.put(xx, yy, 'o' if edge else ('x' if yy < top - 2 and xx < cx else 'L'))
+        g.rect(cx - 20, top + 5, 41, 1, 'l'); g.rect(cx - 21, top + 6, 43, 1, 'o')
+        for xx, yy in ((cx - 12, top - 1), (cx - 4, top - 4), (cx + 7, top - 2), (cx + 15, top + 2), (cx - 17, top + 3), (cx + 2, top + 1)):
+            g.disc(xx + 0.5, yy + 0.5, 1.3, 'y', 'y')
+        for bx in (cx - 9, cx + 8):                   # setitas al pie
+            for yy in range(floor - 4, floor + 1): g.put(bx, yy, 'b')
+            g.rect(bx - 2, floor - 5, 5, 2, 'L'); g.put(bx - 1, floor - 5, 'x')
     return g.img(ISLES[isle])
 
 
@@ -351,21 +386,52 @@ def bigfrond(g, x0, py, side):
     g.put(x0 + side * ln, py, 'o'); g.put(x0 + side * ln, py + 1, 'o')
 
 
-def cactus_arm(g, x0, py, side):
-    """BRAZO del cactus: sale de lado y sube; arriba, plano para pisar (≈ 22 px)"""
-    ln = 18
-    for i in range(ln):                               # el tramo horizontal (su lomo es la plataforma)
+def fern(g, x0, y0, ln, side, big=False, flat=False):
+    """FRONDA DE HELECHO escarchada: un nervio (en diagonal, o plano si se pisa) con HOJUELAS — hojitas inclinadas hacia
+    la punta, más largas en el medio — y la punta de cada una blanca de escarcha. La grande, arriba lisa (se pisa)"""
+    def pt(i): return x0 + side * i, y0 - (0 if (big or flat) else i // 3)
+    for i in range(ln):
+        x, y = pt(i); g.put(x, y, 'v')
+        if big: g.put(x, y - 1, 'L'); g.put(x, y - 2, 'o')
+    for i in range(1, ln - 1, 3):
+        x, y = pt(i)
+        L = max(2, int(round((4 if big else 3) * math.sin(math.pi * (i + 1) / (ln + 1)))) + 1)
+        sides = (1,) if big else (-1, 1)                        # (la grande: hojuelas solo por debajo)
+        for sy in sides:
+            for k in range(1, L + 1):
+                px, py = x + side * (k // 2), y + sy * k
+                g.put(px, py, 'L' if sy < 0 else 'l'); g.put(px - side, py, 'L')
+                g.put(px + side, py, 'o')
+            g.put(x + side * (L // 2), y + sy * (L + 1), 'x')     # (la escarcha en la punta)
+
+
+def bracket(g, x0, y0, ln, side, big=False):
+    """SETA DE REPISA (media seta que sale del pie, brilla): arriba plana, abajo curva, con sus láminas"""
+    hgt = 5 if big else 3
+    for i in range(ln):
         x = x0 + side * i
-        g.put(x, py - 1, 'o'); g.rect(x, py, 1, 6, 'b'); g.put(x, py, 'h'); g.put(x, py + 5, 's'); g.put(x, py + 6, 'o')
-        g.put(x, py + 3, 'x' if i % 4 else 'y')                                             # (la vena)
-        if i % 6 == 3: g.put(x, py - 2, 'x')
-    ex = x0 + side * ln
-    for y in range(py - 10, py + 7):                  # el codo que sube
-        for k in range(6):
-            g.put(ex + side * k, y, 'b' if 0 < k < 5 else 'o')
-        g.put(ex + side, y, 'h'); g.put(ex + side * 3, y, 'x' if y % 4 else 'y')
-    for k in range(6): g.put(ex + side * k, py - 11, 'o')
-    g.put(ex + side * 2, py - 12, 'p'); g.put(ex + side * 3, py - 12, 'q')                # florecilla de ascua
+        d = hgt - int(round(hgt * (i / ln) ** 2))
+        g.put(x, y0 - 1, 'o')
+        for k in range(d): g.put(x, y0 + k, 'L' if k < d - 1 else 'l')
+        g.put(x, y0 + d, 'o')
+        if i % 4 == 1 and d > 2: g.put(x, y0 + 1, 'x')
+    g.put(x0 + side * ln, y0, 'o')
+
+
+def flame(g, x, y):
+    """Florecilla de FUEGO (una llama de 3-4 px)"""
+    for dx, dy, c in ((0, 0, 'x'), (0, -1, 'y'), (-1, 0, 'x'), (1, 0, 'x'), (0, -2, 'x')): g.put(x + dx, y + dy, c)
+
+
+def flower(g, cx, cy, r, fire=False):
+    """Una FLOR grande arriba: pétalos alrededor y el centro (de fuego en el volcán: pétalos como llamas)"""
+    for k in range(8):
+        a = k * math.pi / 4
+        for t in range(1, r + 1):
+            x, y = int(round(cx + math.cos(a) * t)), int(round(cy + math.sin(a) * t * 0.7))
+            g.put(x, y, ('p' if t < r - 1 else 'q') if fire else ('p' if t < r - 1 else 'q'))
+            if fire and k in (5, 6, 7) and t == r: g.put(x, y - 1, 'y')
+    g.disc(cx + 0.5, cy + 0.5, 1.8, 'y' if fire else 'x', 'o' if not fire else 'x')
 
 
 def preview():

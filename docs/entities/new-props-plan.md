@@ -48,6 +48,12 @@ Every generator writes previews by default and the game assets only with `--appl
   strands, heart leaves, curly tendrils, a bean pod). Coast: golden-brown GIANT KELP (wide wavy fronds, air bladders; the
   big fronds float on a bladder). Volcano: a LAVA CACTUS of black obsidian with glowing veins — its ARMS are the
   platforms, a fire flower on top. Fortress ivy, frost fern and glowing mushroom keep v3.
+- **Seed v5** (the user on v4: meadow, coast and fortress fine; ice, cave and volcano "a bit strange"): drawn whole
+  too — snow: a FROST FERN (teal-green fronds with leaflets slanting to the tip, white frost on their tips; the big
+  fronds are flat on top to stand on; a white snow flower on top) · cave: a real GLOWING MUSHROOM (a thick curving foot
+  that widens at the base, bracket fungi on its sides as platforms, a big domed cap with glowing spots, little mushrooms
+  at its foot) · volcano: an EMBER VINE (charred twisted stems, black heart leaves with glowing edges and veins, little
+  flame flowers, a fire flower on top) — the lava cactus of v4 looked geometric.
 - **Blizzard** (`Ventisca`): wind streaks 32×8 × 3 frames, semi-transparent, carrying each island's bits (snowflakes
   in the tower), rotated by the game for up / down; the WARNING is an arrow 16×16 × 2 frames blinking at the screen
   edge the wind will come from.
@@ -70,7 +76,8 @@ Every generator writes previews by default and the game assets only with `--appl
 - **Scale**: weight lowers a pan and raises the other; a ground pound on one catapults what is on the other; enemies,
   boxes and bombs count as weight; works in co-op.
 - **Box**: pushed by walking into it (falls off ledges, stops at walls), solid to stand on, counts as weight on a
-  Scale. (Whether a ground pound breaks it: to decide — the art includes the pieces.)
+  Scale. A ground pound BREAKS it (its pieces) and, so no level can soft-lock, it REAPPEARS at its original spot after a
+  while (the user).
 - **Seed**: carried one at a time; planted with a ground pound on a plantable block; grows in ~1 s, 4-6 cells; climb
   it, stand on its top; wilts after ~20 s or when another one is planted. Coast kelp also underwater with air
   bubbles; cave mushroom gives light; volcano basalt stands over lava.
@@ -78,17 +85,19 @@ Every generator writes previews by default and the game assets only with `--appl
 - **Blizzard** (proposed): an area / level setting (`windzone`: its rectangle, which directions it may blow, how often,
   how strong, how long). Every few seconds at random: a ~1 s WARNING (the arrow blinks at the screen edge the wind
   comes from + `wind_warn`), then 2-3 s of wind (`wind_gust`, streaks) that pushes players, enemies and everything with
-  physics left, right, up or down — up helps you fly, down drags you. First in `torre_viento`, reusable anywhere.
+  physics left, right, up or down — up helps you fly, down drags you. First in `torre_viento` (all FOUR directions),
+  reusable anywhere. The user approved the 1 s warning, 2-3 s of wind and a random gap.
 - **Geyser** (proposed): a vent placed on the floor; every few seconds it bubbles (~1 s warning: `geyser_rumble`) and
   erupts a column 4-6 cells high for ~2 s that pushes UP everything with physics (players, enemies, boxes, bombs,
   seeds…), then falls back. Snow: the column FREEZES into an ice pillar you can stand on for a few seconds, then it
-  cracks and shatters. Cave: the glowing steam lights the dark around it. Volcano: the smoke is hot — like the Gust's
-  ash, staying inside it 2 s takes 1 HP (to confirm).
+  cracks and shatters. Cave: the glowing steam lights the dark around it. Volcano: the smoke ONLY PUSHES, like the
+  others (the user: "for continuity and not to confuse players").
 
 ## Steps
 
 - [ ] 1. Designs approved by the user (sprites, animations, sounds) — iterate on the previews. Scale: approved
-  (0.5.67). Gust v2, Seed v4, Blizzard and Geyser v1: waiting for the user.
+  (0.5.67); Gust v2, Blizzard and Geyser APPROVED; sounds kept as they are until the user can listen (they will say);
+  Seed: meadow, coast and fortress approved, v5 of snow / cave / volcano waiting for the user.
 - [ ] 2. `--apply` the approved art and sounds.
 - [ ] 3. Box + Scale in the game (entities, physics, network, editor, harness).
 - [ ] 4. Gust in the game.
