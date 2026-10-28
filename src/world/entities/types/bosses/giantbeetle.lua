@@ -51,7 +51,7 @@ local T  = TILE_PX
 local MS = 12
 local FW, FH = 22, 20
 -- (los pies: cada cuadro se dibuja con su último píxel en el suelo — Anim footGap —, salvo en el aire: AIR)
-local AIR = { leap = true, launched = true, tumble = true, dying_flee = true }
+local AIR = { leap = true, hop = true, launched = true, tumble = true, dying_flee = true }
 GB.MS = MS
 
 -- Ritmo: { normal, enfadado }
@@ -412,6 +412,41 @@ function GB:choose(level)
     self:enter('leap_wind')
 end
 
+-- ¿Está de pie en un platillo de la balanza? (el cuerpo de un solo sentido de una Balanza bajo sus pies)
+local function isPan(o) return o and o.owner and o.owner.pans ~= nil end
+function GB:onAPan(level)
+    for _, x in ipairs({ self.x - self.outerW * 0.3, self.x, self.x + self.outerW * 0.3 }) do
+        if isPan((level:bodyAt(x, self:feetY() + 4, self))) then return true end
+    end
+    return false
+end
+-- Si está en un platillo, salta a un sitio (suelo o plataforma) que no sea un platillo, a 3-9 casillas: 'hop'
+function GB:hopOff(level)
+    if not self:onAPan(level) then return false end
+    local zx0, zx1 = self:zoneBounds()
+    local hw = self.outerW / 2
+    local spots = {}
+    for x = zx0 + hw + 8, zx1 - hw - 8, T / 2 do
+        local d = math.abs(x - self.x)
+        if d >= 3 * T and d <= 9 * T then
+            local tx, ty = self:aimAt(level, x, nil)
+            local clear = true
+            for _, px in ipairs({ tx - hw + 8, tx, tx + hw - 8 }) do
+                if isPan((level:bodyAt(px, ty + 2, self))) then clear = false end
+            end
+            if clear then spots[#spots + 1] = { tx, ty } end
+        end
+    end
+    if #spots == 0 then return false end
+    local s = spots[math.random(#spots)]
+    self.markX, self.markY = s[1], s[2]
+    self.passY = s[2]
+    self:jumpTo(s[1], s[2], 2)
+    self:enter('hop')
+    Sound.play('gustBlow', 0.6, 0.8)
+    return true
+end
+
 function GB:rest(len)
     self.restLen = len or REST_T[self:ph()]
     self:enter('rest')
@@ -586,8 +621,23 @@ function GB:updateBoss(dt, level)
     elseif st == 'righting' then
         self:physics(level, dt); self:friction(level, dt)
         if t >= RIGHT_T then
-            self.vy, self.onGround = -500, false
             Sound.play('megaStep', 1, 0.8)
+            -- (0.5.85, el usuario: levantado en un platillo, el jugador corría al otro y lo volvía a disparar contra el
+            -- techo en bucle → si está en un platillo, salta YA al suelo o a una plataforma lejos de los platillos)
+            if not self:hopOff(level) then
+                self.vy, self.onGround = -500, false
+                self:rest(0.6)
+            end
+        end
+
+    elseif st == 'hop' then
+        -- (el salto para bajarse del platillo: sin ondas ni disparar la balanza)
+        self:physics(level, dt)
+        if math.floor(t / BUZZ_EVERY) ~= math.floor((t - dt) / BUZZ_EVERY) then Sound.play('gustBlow', 1.6, 0.2) end
+        if self.onGround and self.vy >= 0 and t > 0.1 then
+            self.passY, self.vx = nil, 0
+            Sound.play('gpImpact', 1, 0.6)
+            Entity.emitFx('gp_land', self.x, self:feetY())
             self:rest(0.6)
         end
 
@@ -729,7 +779,7 @@ function GB:pose()
     elseif st == 'toss_wind' then fr = set:frameN('toss', 1)
     elseif st == 'toss' then fr = set:frameN('toss', 2)
     elseif st == 'leap_wind' then fr, sx, sy = set:frameAt('fly', now * 2), 1.05, 0.95
-    elseif st == 'leap' then fr = set:frameAt('fly', now)
+    elseif st == 'leap' or st == 'hop' then fr = set:frameAt('fly', now)
     elseif st == 'slam' then fr = set:frameAt('slam', 0)
     elseif st == 'launched' then fr = set:frameAt('walk', now * 2)                      -- (sale disparado de pie)
     elseif st == 'tumble' then fr, flip = set:frameAt('walk', now * 2), math.min(math.pi, t * 7)   -- (se da la vuelta cayendo)

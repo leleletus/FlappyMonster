@@ -106,6 +106,13 @@ centre (row 9) to dodge the charge and the waves (0.5.81: one tile lower than in
 - Its charge took a pan hit sideways (from a side ledge, or under a lowered pan) for a wall → pans are one-way bodies,
   passed sideways (`Snow:move`).
 
+## 0.5.85 changes (the user)
+
+- An infinite loop that broke the fight: knocked out against the ceiling, not hit, it got up ON THE PAN and the player
+  ran to the other pan and fired it again, and again → when it gets up on a pan it immediately HOPS (`'hop'`: a soft
+  jump with no waves and no scale slam) to the floor or a ledge 3-9 tiles away that is not a pan (`GB:hopOff`,
+  `GB:onAPan`).
+
 ## How to extend
 
 - Tuning lives in the constants at the top of the file (`{ normal, angry }` pairs).
@@ -114,7 +121,7 @@ centre (row 9) to dodge the charge and the waves (0.5.81: one tile lower than in
 
 ## Tests
 
-`giantbeetle_rules` (arena, pans — its weight lowers one, the charge passes through them —, armour, shell bounce, stone marks, moving-pan shadow, flip, hits, double edge, bait, charge + debris, toss, waves, rage, flying minions, wood chunk + sound, defeat, net);
+`giantbeetle_rules` (arena, pans — its weight lowers one, the charge passes through them —, hop off a pan after getting up, armour, shell bounce, stone marks, moving-pan shadow, flip, hits, double edge, bait, charge + debris, toss, waves, rage, flying minions, wood chunk + sound, defeat, net);
 `boss_sim LEVEL=tools/levelgen/arenas/jefe_escarabajo.json` (a whole fight played as intended: every state seen, killed
 by flipping it); `boss_intro`, `online_boss` with that arena.
 

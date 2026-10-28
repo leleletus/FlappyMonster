@@ -2,6 +2,7 @@
 -- en su arena real (tools/levelgen/arenas/jefe_escarabajo.json, el templo de la balanza):
 --   arena      la balanza nivelada deja los platillos colgados 3 casillas SOBRE EL SUELO (sin fosos; 0.5.79)
 --   platillos  de pie en un platillo lo baja (pesa) y va con él; embistiendo, un platillo bajado se atraviesa de lado
+--   bajarse    levantado en un platillo, salta enseguida al suelo o a una plataforma (no a un platillo)
 --   acorazado  de pie no se le hace daño: caerle encima (pisotón o ground pound) rebota
 --   vuelco     él en un platillo y un ground pound en el OTRO: sale disparado, se estrella contra el techo y cae
 --              PATAS ARRIBA (vulnerable); pasado el tiempo se da la vuelta
@@ -249,6 +250,28 @@ function cases.platillos()
         ('de pie en un platillo: baja %.1f casillas, va con él=%s · embistiendo bajo un platillo bajado (%.1f casillas): lo atraviesa=%s%s · desde la plataforma del lado, a la altura del platillo: lo atraviesa=%s%s'):format(
             sank / T, tostring(riding), low / T, tostring(passed), bonkAt and (' (chocó en x=' .. math.floor(bonkAt) .. ')') or '',
             tostring(passed3), bonk3 and (' (chocó en x=' .. math.floor(bonk3) .. ')') or ''))
+end
+
+-- Se levanta en un platillo → salta YA al suelo o a una plataforma (no a un platillo): sin bucle de dispararlo otra vez
+-- (0.5.85, el usuario)
+function cases.bajarse()
+    local out, ok = {}, true
+    for k = 1, 6 do
+        local level, es, boss, scale = arena()
+        stepAll(level, es, {}, 0.3)
+        local p = scale:bodyParts()[(k % 2) + 1]:getOuterBounds()
+        putBoss(level, boss, p.x + p.w / 2, p.y)
+        boss:enter('righting')
+        local hopped, landedOn = false, nil
+        stepAll(level, es, {}, 3, function()
+            if boss.state == 'hop' then hopped = true end
+            if hopped and boss.state == 'rest' and not landedOn then landedOn = boss:onAPan(level) and 'platillo' or 'fuera' end
+            if landedOn then boss.restLen = 99 end
+        end)
+        ok = ok and hopped and landedOn == 'fuera'
+        out[#out + 1] = ('%s→%s'):format(hopped and 'salta' or 'no salta', tostring(landedOn))
+    end
+    check('bajarse', ok, 'levantado en un platillo (6 veces): ' .. table.concat(out, ' · '))
 end
 
 -- Los cascotes marcan dónde caen de verdad: sobre un platillo, en el platillo (no en el fondo del foso) y se paran ahí
@@ -602,7 +625,7 @@ end
 
 function love.load(arg)
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'arena', 'platillos', 'acorazado', 'caparazon', 'cascotes', 'vuelco', 'golpe', 'levanta', 'doble_filo', 'cebo', 'embestida', 'lanzar', 'ondas', 'enfado', 'derrota', 'purga', 'trozo', 'sombra_movil', 'madera', 'voladores', 'red' }) do
+    for _, n in ipairs({ 'arena', 'platillos', 'bajarse', 'acorazado', 'caparazon', 'cascotes', 'vuelco', 'golpe', 'levanta', 'doble_filo', 'cebo', 'embestida', 'lanzar', 'ondas', 'enfado', 'derrota', 'purga', 'trozo', 'sombra_movil', 'madera', 'voladores', 'red' }) do
         if not only or only == n then
             local ok, err = xpcall(cases[n], debug.traceback)
             if not ok then check(n, false, 'error: ' .. tostring(err)) end
