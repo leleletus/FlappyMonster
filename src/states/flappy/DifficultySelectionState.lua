@@ -19,7 +19,7 @@ function DifficultySelectionState:enter(args)
     self.anim = MenuAnim.new({ n = 2 + #DIFFICULTY_ORDER })
     local items = {}
     for i, key in ipairs(DIFFICULTY_ORDER) do
-        items[i] = { text = 'diff.' .. key, color = COLORS[key] or 'mono', go = function() self:_start(key) end }
+        items[i] = { text = 'diff.' .. key, color = COLORS[key] or 'orange', go = function() self:_start(key) end }
     end
     self.list = MenuList.new({ anim = self.anim, first = 2, top = 0.36, selected = 2, items = items })
     Sound.playMusic('menus')
@@ -46,7 +46,7 @@ end
 
 function DifficultySelectionState:render()
     MenuScene.draw()
-    MenuList.header(L('difficulty.title'), 'mono', self.anim, 1)
+    MenuList.header(L('difficulty.title'), 'orange', self.anim, 1)
     self.list:draw()
     MenuList.footer(L('menu.desc_classic'), self.anim, 2 + #DIFFICULTY_ORDER)
     CornerButtons.drawBack(self.backHover)

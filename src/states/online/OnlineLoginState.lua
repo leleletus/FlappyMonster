@@ -153,7 +153,7 @@ local function layout()
     local by = y + L.card.h + 28
     L.buttons = {
         { id = 'connect', label = 'login.connect', color = 'green', x = x,            y = by, w = bw, h = bh },
-        { id = 'back',    label = 'common.back',   color = 'mono',  x = x + bw + gap, y = by, w = bw, h = bh },
+        { id = 'back',    label = 'common.back',   color = 'grey',  x = x + bw + gap, y = by, w = bw, h = bh },
     }
     return L
 end
@@ -174,7 +174,7 @@ end
 function OnlineLoginState:render()
     MenuScene.backdrop('online')                 -- (ladrillos del Flappy: src/ui/menu/MenuScene)
     local A = self.anim
-    MenuKit.title(Lang('login.title'), 'mono', A, 1)
+    MenuKit.title(Lang('login.title'), 'purple', A, 1)
 
     local L = layout()
     local c = L.card
@@ -197,7 +197,7 @@ function OnlineLoginState:render()
         local dis = self.connecting and b.id == 'connect'
         -- (la acción principal, un punto más grande que VOLVER)
         local txt = Lang(b.label)
-        MenuButton.draw(txt, b.x + bx, b.y + by + bob, b.w, b.h, dis and 'mono' or b.color, sel and not dis,
+        MenuButton.draw(txt, b.x + bx, b.y + by + bob, b.w, b.h, dis and 'grey' or b.color, sel and not dis,
                         { alpha = ba * (dis and 0.7 or 1), scale = MenuButton.textScale(txt, b.w - 48, b.id == 'connect' and 5 or 4) })
         if sel then MenuKit.marker(b.x + bx, b.y + by + bob, b.w, b.h, self.t, ba) end
     end

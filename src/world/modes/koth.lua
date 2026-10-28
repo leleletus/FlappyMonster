@@ -12,7 +12,7 @@ local function timeLeft(m) return math.max(0, (m.data.duration or DEFAULT_TIME) 
 return {
     -- Textos (nombre, tagline, objetivo, emptyHint): assets/lang, claves mode.koth.*
     id = 'koth', icon = 'hill',
-    color = { 1.0, 0.78, 0.22 }, button = 'mono',
+    color = { 1.0, 0.78, 0.22 }, button = 'yellow',
     hudLine = function(md)
         if not md.tl then return nil end
         local secs = md.tl / 100

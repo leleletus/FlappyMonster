@@ -151,9 +151,8 @@ function MenuKit.stepper(label, value, r, color, selected, o)
     local cy = math.floor(y + face / 2)
     local wob = selected and (math.floor(love.timer.getTime() * 3) % 2) * S or 0
     local ah = math.min(face - 4 * S, 8 * S)
-    local ink = MenuButton.ink(color)
-    MenuKit.arrow(r.x + 9 * S - wob, cy, ah, -1, a, ink)
-    MenuKit.arrow(r.x + r.w - 9 * S + wob, cy, ah, 1, a, ink)
+    MenuKit.arrow(r.x + 9 * S - wob, cy, ah, -1, a, { 1, 1, 1 })
+    MenuKit.arrow(r.x + r.w - 9 * S + wob, cy, ah, 1, a, { 1, 1, 1 })
 end
 
 -- Qué mitad de un selector se tocó: -1 izquierda, 1 derecha
@@ -303,7 +302,7 @@ function MenuKit.optionsWindow(title, labels, colors, sel, a, o)
     for i, label in ipairs(labels) do
         local r, on = rects[i], i == sel
         local bob = on and ((math.floor(t * 3) % 2 == 0) and -4 or 0) or 0
-        MenuButton.draw(label, r.x, r.y + oy + bob, r.w, r.h, colors[i] or 'mono', on,
+        MenuButton.draw(label, r.x, r.y + oy + bob, r.w, r.h, colors[i] or 'grey', on,
                         { alpha = a, scale = MenuButton.textScale(label, r.w - 48, 4) })
         if on then MenuKit.marker(r.x, r.y + oy + bob, r.w, r.h, t, a) end
     end

@@ -3,7 +3,7 @@
 -- seleccionado más claro, botando y con el cursor al lado; entran y salen con la animación de la pantalla
 -- (src/ui/menu/MenuAnim). Una sola geometría para dibujo, ratón y táctil. Y lo común de las pantallas de menú:
 -- el RÓTULO de arriba, la DESCRIPCIÓN del botón elegido y la línea de AYUDA de abajo.
---   local list = MenuList.new{ items = { { text = 'menu.adventure', color = 'mono', desc = 'menu.desc_adventure',
+--   local list = MenuList.new{ items = { { text = 'menu.adventure', color = 'green', desc = 'menu.desc_adventure',
 --                                          go = function(i) ... end }, ... }, anim = A, first = 2, top = 0.36 }
 --   list:update(dt)  list:draw()  list:mousemoved(x, y)  list:touchpressed(x, y)
 --   MenuList.header(texto, color, A, i)   MenuList.footer(desc, A, i)
@@ -86,7 +86,7 @@ function MenuList:draw()
         local bob = 0
         if sel then bob = (math.floor(self.t * 3) % 2 == 0) and -4 or 0 end
         if self.chosen == i and self.t < 0.12 then bob = 4 end
-        local color = it.disabled and 'mono' or it.color
+        local color = it.disabled and 'grey' or it.color
         MenuButton.draw(self:text(i), r.x + ox, r.y + oy + bob, r.w, r.h, color, sel, { alpha = a * (it.disabled and 0.7 or 1) })
         if sel then require('src/ui/menu/MenuKit').marker(r.x + ox, r.y + oy + bob, r.w, r.h, self.t, a) end   -- (el cursor)
     end

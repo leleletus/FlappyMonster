@@ -299,7 +299,7 @@ end
 function StorySlotState:render()
     MenuScene.bricks('story')                    -- (ladrillos del Flappy, no el fondo vivo: src/ui/menu/MenuScene)
     local A = self.anim
-    if not self.pick then MenuList.header(L('story.title'), 'mono', A, 1) end
+    if not self.pick then MenuList.header(L('story.title'), 'yellow', A, 1) end
     for i = 1, Save.SLOTS do
         local x, y, w, h, s = cartRect(i)
         local sel = i == self.sel and not self.pick
@@ -318,21 +318,21 @@ function StorySlotState:render()
         if sel and self.slots[i] and not self.inserting then
             local dx, dy, dw, dh = delRect(i)
             local ask = self.confirm == i
-            MenuButton.draw(L(ask and 'story.delete_sure' or 'story.delete'), dx + ox, dy + oy, dw, dh, ask and 'red' or 'mono', ask,
+            MenuButton.draw(L(ask and 'story.delete_sure' or 'story.delete'), dx + ox, dy + oy, dw, dh, ask and 'red' or 'grey', ask,
                             { alpha = a, scale = 3 })
         end
     end
     -- Elegir dificultad (partida nueva)
     if self.pick then
         MenuScene.dim(0.55)
-        MenuList.header(L('difficulty.title'), 'mono')
+        MenuList.header(L('difficulty.title'), 'orange')
         for k, id in ipairs(Difficulty.ORDER) do
             local x, y, w, h = pickRect(k)
             local sel, open = k == self.pick.sel, self:_diffOpen(k)
             local kin = math.min(1, math.max(0, (self.pick.t - (k - 1) * 0.05) / 0.25))
             local oy = math.floor((1 - kin) * 60 / 4) * 4
             local bob = (sel and math.floor(self.t * 3) % 2 == 0) and -4 or 0
-            MenuButton.draw(L('difficulty.' .. id), x, y + oy + bob, w, h, open and (DIFF_COLORS[id] or 'mono') or 'mono', sel,
+            MenuButton.draw(L('difficulty.' .. id), x, y + oy + bob, w, h, open and (DIFF_COLORS[id] or 'blue') or 'grey', sel,
                             { alpha = kin, scale = 4 })
             if not open then
                 local PixelIcons = require 'src/ui/PixelIcons'

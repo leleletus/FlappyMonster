@@ -196,9 +196,9 @@ end
 -- ── Overlay de pausa ──────────────────────────────────────────────────────────
 
 function OnlineAdventureState:_renderPauseOverlay()
-    local colors = { ['common.resume'] = 'green', ['oadv.leave_hub'] = 'mono', ['room.stop'] = 'red' }
+    local colors = { ['common.resume'] = 'green', ['oadv.leave_hub'] = 'blue', ['room.stop'] = 'red' }
     local labels, cols = {}, {}
-    for i, opt in ipairs(self:_getPauseOpts()) do labels[i], cols[i] = L(opt):upper(), colors[opt] or 'mono' end
+    for i, opt in ipairs(self:_getPauseOpts()) do labels[i], cols[i] = L(opt):upper(), colors[opt] or 'grey' end
     MenuKit.optionsWindow(L('pause.title'), labels, cols, self.pauseSel, self.pauseAlpha)
 end
 
@@ -232,7 +232,7 @@ function OnlineAdventureState:_renderSpectatorOverlay()
 
     local labels = {}
     for i, opt in ipairs(SPEC_OPTS) do labels[i] = L(opt) end
-    MenuKit.optionsWindow(finished and L('oadv.finished') or L('oadv.eliminated'), labels, { 'mono', 'mono' }, self.specSel, 1,
+    MenuKit.optionsWindow(finished and L('oadv.finished') or L('oadv.eliminated'), labels, { 'blue', 'grey' }, self.specSel, 1,
                           { titleColor = finished and { 1, 0.86, 0.36 } or { 0.72, 0.76, 1 } })
 end
 

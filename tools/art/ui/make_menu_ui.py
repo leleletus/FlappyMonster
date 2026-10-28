@@ -4,10 +4,9 @@
 #        letra por separado. Sale del logo de siempre (assets/images/ui/menus/logo.png, que NO se toca: lo usa
 #        también el final de la historia): se guardan todos sus píxeles y solo se añade el estilo de la casa. El
 #        .json dice dónde está el recuadro y cada letra en la hoja y dónde va cada letra (para que salgan una a una).
-#   assets/images/ui/menus/button.png + .json       los BOTONES (9-slice): una columna por color — el genérico 'mono'
-#        (negro con letras blancas; elegido, borde blanco) y verde, amarillo, rojo, azul, morado —, fila 1 normal y
-#        fila 2 seleccionado (más claro y con borde blanco), en tonos apagados (MUTE). El .json: tamaño de celda,
-#        cortes y nombres de color.
+#   assets/images/ui/menus/button.png + .json       los BOTONES (9-slice): una columna por color, fila 1 normal y
+#        fila 2 seleccionado (más claro y con borde blanco), en tonos
+#        apagados (MUTE). El .json: tamaño de celda, cortes y nombres de color.
 #   assets/images/ui/menus/cartridge.png + .json, cart_labels.png   los CARTUCHOS de las partidas (ver abajo).
 #   assets/images/ui/menus/panel.png                el PANEL (9-slice) de las pantallas con contenido (partidas,
 #        juego libre, online): azul noche translúcido con borde claro.
@@ -23,15 +22,16 @@ from PIL import Image
 DIR = 'assets/images/ui/menus'
 
 # Paleta: por color, 5 tonos de oscuro a claro: contorno, labio (cara de abajo), sombra, medio, luz
-# (0.5.50, el usuario: SOLO estos — 'mono' el GENÉRICO, blanco y negro, para casi todo; los de color, para lo
-# especial: aceptar / cancelar, dificultades, configuración... —ver docs/architecture/menus.md—)
 PAL = {
-    'mono':   [(12, 12, 16), (176, 176, 184), (206, 206, 212), (232, 232, 228), (255, 255, 255)],   # (contorno NEGRO, relleno BLANCO)
     'green':  [(24, 70, 38), (36, 104, 52), (52, 140, 62), (88, 190, 78), (168, 236, 128)],
+    'orange': [(96, 40, 20), (150, 62, 26), (200, 96, 36), (244, 146, 52), (255, 212, 120)],
+    'blue':   [(24, 40, 96), (34, 64, 142), (48, 98, 190), (80, 148, 236), (160, 212, 255)],
+    'pink':   [(96, 24, 66), (146, 40, 98), (196, 62, 128), (240, 108, 170), (255, 186, 218)],
+    'purple': [(52, 26, 96), (82, 40, 142), (112, 62, 188), (156, 104, 232), (214, 180, 255)],
     'yellow': [(100, 70, 10), (156, 110, 20), (206, 156, 30), (246, 206, 58), (255, 240, 150)],
     'red':    [(96, 22, 22), (146, 34, 34), (196, 52, 46), (238, 90, 72), (255, 168, 150)],
-    'blue':   [(24, 40, 96), (34, 64, 142), (48, 98, 190), (80, 148, 236), (160, 212, 255)],
-    'purple': [(52, 26, 96), (82, 40, 142), (112, 62, 188), (156, 104, 232), (214, 180, 255)],
+    'teal':   [(16, 70, 72), (24, 106, 106), (34, 146, 140), (60, 196, 180), (150, 240, 224)],
+    'grey':   [(40, 42, 52), (64, 66, 80), (92, 96, 110), (128, 132, 146), (186, 190, 202)],
 }
 # (los BOTONES usan la paleta APAGADA: cada tono se acerca MUTE a su gris; el usuario, 3.103: demasiado coloridos;
 # 0.5.19, otra vez "bastante más coloridos de lo que deberían": más apagados aún y con MENOS tonos — ver button_cell)
@@ -43,7 +43,7 @@ def muted(c):
     return tuple(int(round(v + (g - v) * MUTE)) for v in c)
 
 
-ORDER = ['mono', 'green', 'yellow', 'red', 'blue', 'purple']
+ORDER = ['green', 'orange', 'blue', 'pink', 'purple', 'yellow', 'red', 'teal', 'grey']
 
 
 def lighter(c, k):
@@ -137,40 +137,32 @@ def logo():
 CELL, CUT = 8, {'l': 2, 'r': 2, 't': 2, 'b': 3}
 
 
-def button_cell(p, sel, mono=False):
+def button_cell(p, sel):
     """Botón SIMPLE (0.5.19, el usuario: menos paleta y menos textura, sin llegar a plano): 3 tonos — contorno,
     cuerpo y labio de abajo — más una línea de luz solo arriba. Sin sombra lateral ni luz a la izquierda."""
     t = [lighter(c, 0.12) for c in p] if sel else p
     outline = (255, 255, 255) if sel else t[0]
-    if mono:                                            # (el genérico: siempre contorno negro; elegido, más blanco)
-        t, outline = ([lighter(c, 0.5) for c in p] if sel else p), p[0]
     im = Image.new('RGBA', (CELL, CELL), (0, 0, 0, 0))
     for y in range(CELL):
         for x in range(CELL):
             if x in (0, CELL - 1) or y in (0, CELL - 1): c = outline
             elif y >= CELL - 3: c = t[1]                    # labio (2 px: el relieve de abajo)
             elif y == 1: c = lighter(t[3], 0.22)            # luz de arriba
-            elif sel and mono: c = (255, 255, 255)
             else: c = t[3]
             im.putpixel((x, y), c + (255,))
     return im
 
 
-# (el genérico lleva letras NEGRAS —`ink`— con una sombra gris clara)
-TEXT = {'mono': {'ink': (16, 16, 20), 'shadow': (190, 190, 196), 'shadow_sel': (210, 210, 216)}}
-
-
 def buttons():
     sheet = Image.new('RGBA', (CELL * len(ORDER), CELL * 2), (0, 0, 0, 0))
     for i, name in enumerate(ORDER):
-        mono = name == 'mono'
-        p = PAL[name] if mono else [muted(c) for c in PAL[name]]
-        sheet.paste(button_cell(p, False, mono), (i * CELL, 0))
-        sheet.paste(button_cell(p, True, mono), (i * CELL, CELL))
+        p = [muted(c) for c in PAL[name]]
+        sheet.paste(button_cell(p, False), (i * CELL, 0))
+        sheet.paste(button_cell(p, True), (i * CELL, CELL))
     sheet.save(os.path.join(DIR, 'button.png'))
     with open(os.path.join(DIR, 'button.json'), 'w') as f:
         json.dump({'cell': CELL, 'cut': CUT, 'colors': ORDER,
-                   'text': {n: TEXT.get(n) or {'shadow': muted(PAL[n][0]), 'shadow_sel': muted(PAL[n][1])} for n in ORDER}}, f, indent=1)
+                   'text': {n: {'shadow': muted(PAL[n][0]), 'shadow_sel': muted(PAL[n][1])} for n in ORDER}}, f, indent=1)
     print('button.png: %d colores' % len(ORDER))
 
 

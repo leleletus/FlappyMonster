@@ -32,7 +32,7 @@ local PMENU_KICK   = 2
 local PMENU_BAN    = 3
 local PMENU_CANCEL = 4
 local PMENU_LABELS = { 'room.give_admin', 'room.kick', 'room.ban', 'hub.cancel' }   -- claves de idioma
-local PMENU_COLORS = { 'yellow', 'red', 'red', 'mono' }                             -- (colores de botón)
+local PMENU_COLORS = { 'yellow', 'orange', 'red', 'grey' }                           -- (colores de botón)
 
 -- ── Enter ─────────────────────────────────────────────────────────────────────
 
@@ -149,16 +149,16 @@ function OnlineRoomState:_buildActions()
     if isAdmin then
         if room.state == "WAITING" then
             -- El host elige el objetivo de la ronda y el nivel en su menú
-            table.insert(list, { id='gamemode', label=Lang('room.game_mode'), color = 'mono' })
+            table.insert(list, { id='gamemode', label=Lang('room.game_mode'), color = 'blue' })
             -- … y la DIFICULTAD: un selector ◀ ▶ con todas (todos la ven en la tarjeta de la partida)
             local d = self:_difficulty()
             table.insert(list, { id='difficulty', stepper = true, diff = d, value = Lang('difficulty.' .. d),
-                                 color = Difficulty.COLORS[d] or 'mono' })
+                                 color = Difficulty.COLORS[d] or 'teal' })
             local why = self:_startBlocker()
             table.insert(list, { id='start', label=Lang('room.start'), color='green',
                                  disabled = why ~= nil, why = why })
         else
-            table.insert(list, { id='stop',  label=Lang('room.stop'), color='red' })
+            table.insert(list, { id='stop',  label=Lang('room.stop'), color='orange' })
         end
     end
     table.insert(list, { id='leave', label=Lang('room.leave'), color='red' })
@@ -533,8 +533,8 @@ local function pill(text, x, y, s, fg, bg, a, alignRight)
 end
 
 -- Colores de fondo de las pastillas de dificultad (los mismos tonos que sus botones)
-local DIFF_BG = { mono = { 0.2, 0.2, 0.23 }, green = { 0.25, 0.52, 0.3 }, yellow = { 0.62, 0.5, 0.18 },
-                  blue = { 0.22, 0.34, 0.62 }, red = { 0.62, 0.24, 0.22 }, purple = { 0.4, 0.27, 0.62 } }
+local DIFF_BG = { teal = { 0.18, 0.5, 0.5 }, green = { 0.25, 0.52, 0.3 }, yellow = { 0.62, 0.5, 0.18 },
+                  orange = { 0.66, 0.38, 0.18 }, red = { 0.62, 0.24, 0.22 }, purple = { 0.4, 0.27, 0.62 } }
 
 -- Tarjeta "PARTIDA": modo elegido, su objetivo, el mapa con miniatura y la dificultad.
 function OnlineRoomState:_renderGameCard(r, isAdmin, a, oy)
@@ -559,7 +559,7 @@ function OnlineRoomState:_renderGameCard(r, isAdmin, a, oy)
     PixelFont.draw(Lang('room.mode'), tx, y + 22, 2, 0.6 * a)
     -- la DIFICULTAD de la sala (la elige el host), arriba a la derecha
     local d = self:_difficulty()
-    local dc = DIFF_BG[Difficulty.COLORS[d] or 'mono'] or DIFF_BG.mono
+    local dc = DIFF_BG[Difficulty.COLORS[d] or 'teal'] or DIFF_BG.teal
     local dw = pill(Lang('difficulty.' .. d), x + w - pad, y + 20, 2, { 1, 1, 1 }, dc, a, true)
     MenuKit.text(FONT_MED, fitText(FONT_MED, mode.label, x + w - pad - dw - 12 - tx), tx, y + 38, w, 'left', { col[1] * 0.6 + 0.4, col[2] * 0.6 + 0.4, col[3] * 0.6 + 0.4 }, a)
 
@@ -611,7 +611,7 @@ function OnlineRoomState:render()
     local L       = self:_layout()
 
     -- ── Cabecera: el nombre de la sala y su estado ───────────────────────────
-    local hy = MenuKit.title(room.name or Lang('room.default_name'), 'mono', A, 1)
+    local hy = MenuKit.title(room.name or Lang('room.default_name'), 'purple', A, 1)
     local stateStr = (room.state == "IN_GAME") and Lang('hub.in_game') or Lang('hub.waiting')
     local privStr  = (room.isPublic == false) and Lang('hub.private') or Lang('hub.public')
     local countStr = Lang('room.players_count', { n = np, max = room.maxPlayers or '?' })
@@ -671,7 +671,7 @@ function OnlineRoomState:render()
             local bx, by, ba = A:slide(3 + i, 0, 220)
             local sel = focusA and i == self.actionSel
             local rr = { x = r.x + bx, y = r.y + by, w = r.w, h = r.h }
-            local color = act.disabled and 'mono' or act.color
+            local color = act.disabled and 'grey' or act.color
             if act.stepper then
                 MenuKit.stepper(Lang('room.difficulty_label'), act.value, rr, color, sel, { alpha = ba, bob = bobOf(self.t, sel), scale = 4 })
             else

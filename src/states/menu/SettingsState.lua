@@ -103,18 +103,18 @@ function SettingsState:render()
     if self.flash and self.flash.t < 0.14 then kick = self.flash.d * 8 end
     local bob = (math.floor(self.t * 3) % 2 == 0) and -4 or 0
     if self.row ~= 1 then bob = 0 end
-    MenuButton.draw(L.LANGUAGES[langIndex()].name, Lt.value.x + ox2 + kick, Lt.value.y + oy2 + bob, Lt.value.w, Lt.value.h, 'blue', self.row == 1, { alpha = a2 })
+    MenuButton.draw(L.LANGUAGES[langIndex()].name, Lt.value.x + ox2 + kick, Lt.value.y + oy2 + bob, Lt.value.w, Lt.value.h, 'teal', self.row == 1, { alpha = a2 })
     -- Flechas
     local ox3, oy3, a3 = A:slide(4, 0, 220)
     local pl = self.flash and self.flash.d < 0 and self.flash.t < 0.12
     local pr = self.flash and self.flash.d > 0 and self.flash.t < 0.12
-    MenuButton.draw('<', Lt.left.x + ox3, Lt.left.y + oy3 + (pl and 4 or 0), Lt.left.w, Lt.left.h, 'blue', self.hover == 'left', { alpha = a3 })
-    MenuButton.draw('>', Lt.right.x + ox3, Lt.right.y + oy3 + (pr and 4 or 0), Lt.right.w, Lt.right.h, 'blue', self.hover == 'right', { alpha = a3 })
+    MenuButton.draw('<', Lt.left.x + ox3, Lt.left.y + oy3 + (pl and 4 or 0), Lt.left.w, Lt.left.h, 'yellow', self.hover == 'left', { alpha = a3 })
+    MenuButton.draw('>', Lt.right.x + ox3, Lt.right.y + oy3 + (pr and 4 or 0), Lt.right.w, Lt.right.h, 'yellow', self.hover == 'right', { alpha = a3 })
 
     -- Créditos
     local ox4, oy4, a4 = A:slide(5, 0, 220)
     local cb = (self.row == 2 and math.floor(self.t * 3) % 2 == 0) and -4 or 0
-    MenuButton.draw(L('credits.button'), Lt.credits.x + ox4, Lt.credits.y + oy4 + cb, Lt.credits.w, Lt.credits.h, 'mono', self.row == 2, { alpha = a4 })
+    MenuButton.draw(L('credits.button'), Lt.credits.x + ox4, Lt.credits.y + oy4 + cb, Lt.credits.w, Lt.credits.h, 'purple', self.row == 2, { alpha = a4 })
 
     MenuList.footer(L('menu.desc_settings'), A, 6,
         L('settings.hint', { change = Input.label('nav_left') .. Input.label('nav_right'), back = Input.label('back') }))

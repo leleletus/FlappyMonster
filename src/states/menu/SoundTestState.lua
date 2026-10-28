@@ -342,7 +342,7 @@ function SoundTestState:render()
     MenuScene.backdrop('sound')
     MenuKit.dim(0.45)
     local A = self.anim
-    MenuKit.title('SOUND TEST', 'mono', A, 1, 5)
+    MenuKit.title('SOUND TEST', 'teal', A, 1, 5)
     local Ly = self:_layout()
 
     -- Lista (con su pestaña arriba)
@@ -400,7 +400,7 @@ function SoundTestState:render()
     -- Opciones (◀ valor ▶)
     for o, r in ipairs(Ly.opts) do
         local selO = self.focus == 'opts' and self.opt == o
-        MenuKit.stepper(L('st.opt_' .. OPTS[o]) .. ':', self:_value(o), r, 'mono', selO, { scale = 3 })
+        MenuKit.stepper(L('st.opt_' .. OPTS[o]) .. ':', self:_value(o), r, selO and 'teal' or 'blue', selO, { scale = 3 })
         if selO then MenuKit.marker(r.x, r.y, r.w, r.h, self.t) end
     end
 

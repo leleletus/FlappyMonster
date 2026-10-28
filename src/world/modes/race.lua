@@ -8,7 +8,7 @@ local GRACE = 15
 return {
     -- Textos (nombre, tagline, objetivo, emptyHint): assets/lang, claves mode.race.*
     id = 'race', icon = 'flag',
-    color = { 0.35, 0.85, 1.0 }, button = 'mono',
+    color = { 0.35, 0.85, 1.0 }, button = 'teal',
     -- En un nivel con JEFE se juega en cooperativo (el jefe es uno para todos): se llama "Cooperativo" (textos
     -- mode.race.boss.*); el id `race` y las reglas son las mismas
     variant = function(info) return (info.bosses or 0) > 0 and 'boss' or nil end,

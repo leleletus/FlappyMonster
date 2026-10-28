@@ -7,31 +7,17 @@
   "b": 3
  },
  "colors": [
-  "mono",
   "green",
+  "orange",
+  "blue",
+  "pink",
+  "purple",
   "yellow",
   "red",
-  "blue",
-  "purple"
+  "teal",
+  "grey"
  ],
  "text": {
-  "mono": {
-   "ink": [
-    16,
-    16,
-    20
-   ],
-   "shadow": [
-    190,
-    190,
-    196
-   ],
-   "shadow_sel": [
-    210,
-    210,
-    216
-   ]
-  },
   "green": {
    "shadow": [
     39,
@@ -42,6 +28,54 @@
     58,
     90,
     65
+   ]
+  },
+  "orange": {
+   "shadow": [
+    74,
+    48,
+    38
+   ],
+   "shadow_sel": [
+    116,
+    74,
+    56
+   ]
+  },
+  "blue": {
+   "shadow": [
+    33,
+    41,
+    68
+   ],
+   "shadow_sel": [
+    49,
+    64,
+    101
+   ]
+  },
+  "pink": {
+   "shadow": [
+    72,
+    38,
+    58
+   ],
+   "shadow_sel": [
+    111,
+    60,
+    88
+   ]
+  },
+  "purple": {
+   "shadow": [
+    47,
+    34,
+    68
+   ],
+   "shadow_sel": [
+    73,
+    52,
+    101
    ]
   },
   "yellow": {
@@ -68,28 +102,28 @@
     51
    ]
   },
-  "blue": {
+  "teal": {
    "shadow": [
-    33,
-    41,
-    68
+    36,
+    62,
+    63
    ],
    "shadow_sel": [
-    49,
-    64,
-    101
+    54,
+    93,
+    93
    ]
   },
-  "purple": {
+  "grey": {
    "shadow": [
-    47,
-    34,
-    68
+    41,
+    42,
+    47
    ],
    "shadow_sel": [
-    73,
-    52,
-    101
+    66,
+    66,
+    73
    ]
   }
  }

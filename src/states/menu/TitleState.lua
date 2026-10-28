@@ -53,12 +53,12 @@ function TitleState:_buildList(selected)
     self.slot = slot
     local items = {}
     if slot then
-        items[#items + 1] = { text = 'menu.continue', color = 'green', desc = 'menu.desc_continue', descArgs = { n = slot },
+        items[#items + 1] = { text = 'menu.continue', color = 'pink', desc = 'menu.desc_continue', descArgs = { n = slot },
                               id = 'continue', go = function() self:_continue() end }
     end
-    items[#items + 1] = { text = 'menu.adventure', color = 'mono', desc = 'menu.desc_adventure', id = 'adventure',
+    items[#items + 1] = { text = 'menu.adventure', color = 'green', desc = 'menu.desc_adventure', id = 'adventure',
                           go = function() self:_leave('adv_mode_select') end }
-    items[#items + 1] = { text = 'menu.classic', color = 'mono', desc = 'menu.desc_classic', id = 'classic',
+    items[#items + 1] = { text = 'menu.classic', color = 'orange', desc = 'menu.desc_classic', id = 'classic',
                           go = function() self:_leave('difficulty') end }
     items[#items + 1] = { text = 'menu.settings', color = 'blue', desc = 'menu.desc_settings', id = 'settings',
                           go = function() self:_leave('settings') end }

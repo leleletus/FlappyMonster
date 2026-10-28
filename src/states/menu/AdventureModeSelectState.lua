@@ -18,9 +18,9 @@ function AdventureModeSelectState:enter(args)
     self.anim = MenuAnim.new({ n = 5 })
     local go = function(state) return function() self:_leave(state) end end
     self.list = MenuList.new({ anim = self.anim, first = 2, top = 0.34, selected = (args and args.selected) or 1, items = {
-        { text = 'adv.story',  color = 'mono', desc = 'adv.desc_story',  go = go('story_slots') },
-        { text = 'adv.online', color = 'mono', desc = 'adv.desc_online', go = go('online_login') },
-        { text = 'adv.free',   color = 'mono',   desc = 'adv.desc_free',   go = go('free_play') },
+        { text = 'adv.story',  color = 'yellow', desc = 'adv.desc_story',  go = go('story_slots') },
+        { text = 'adv.online', color = 'purple', desc = 'adv.desc_online', go = go('online_login') },
+        { text = 'adv.free',   color = 'teal',   desc = 'adv.desc_free',   go = go('free_play') },
     } })
     Sound.playMusic('menus')
 end
@@ -46,7 +46,7 @@ end
 
 function AdventureModeSelectState:render()
     MenuScene.draw()
-    MenuList.header(L('adv.title'), 'mono', self.anim, 1)
+    MenuList.header(L('adv.title'), 'green', self.anim, 1)
     self.list:draw()
     MenuList.footer(self.list:desc(), self.anim, 5)
     CornerButtons.drawBack(self.backHover)
