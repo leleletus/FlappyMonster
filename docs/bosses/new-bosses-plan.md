@@ -81,6 +81,11 @@ flips it onto its back = the window to hit it. It will need more mirror shards (
       only, nothing in `assets/`) → `FlappyMonster_pruebas/escarabajo/`: 22x20 frames facing right — three designs of the
       small one (A Bronce, B Zafiro, C Castaña: walk, charge, on its back), the giant = the same sheet ×12 with the gold
       rune of the Mirror's Fury + toss, wings, landing; temple block, debris, floor wave, dust; level / arena mockups and
-      GIFs. Waiting for the user's pick and verdict.
+      GIFs. User's verdict: "quite good", but (1) the legs did not really walk, in any animation; (2) the eyes must be
+      more noticeable; (3) a mix of A and C → second pass: legs with femur + tibia + claw, the far side's three legs
+      behind in shadow, a 4-frame TRIPOD walk (stance foot stays on the ground and slides back, swing foot lifts and
+      returns), charge = the same with a longer stride, on its back = 3 frames of flailing, toss = planted / pushing,
+      flight = dangling, landing = splayed; a 2x2 eye with a shine; mixes D "Bronce castaño" (chestnut shell with a green
+      sheen, green thorax) and E "Verde y castaña" (green shell, chestnut thorax, head and horn). Waiting for the pick.
 - [ ] The entity, its fight and its arena (then the island, its levels and the shard count).
 

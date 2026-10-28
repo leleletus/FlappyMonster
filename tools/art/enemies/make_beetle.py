@@ -34,40 +34,99 @@ DESIGNS = {
               horn='#3f4a7a', hornS='#262d55', hornO='#11142e', leg='#1c2040', eye='#ffffff'),
     'C': dict(name='Castaña', shine='#ffe0b0', light='#d68a4a', mid='#9c5228', shade='#6a3218', outline='#34160a',
               horn='#5a2c14', hornS='#3c1c0c', hornO='#1e0c04', leg='#2a1408', eye='#ffe9a0'),
+    # (el usuario, 2026-10-28: "una mezcla entre el A y el C") — dos mezclas:
+    # D: élitros castaños con reflejo verde metálico (el brillo del A sobre el cuerpo del C); protórax y cabeza verdes
+    'D': dict(name='Bronce castaño', shine='#e9f7a8', light='#9cb24a', mid='#8a5228', shade='#5e3018', outline='#2e1608',
+              pron=('#8fcf4e', '#4f9a3a', '#2f6a32'), horn='#7a4220', hornS='#4e2810', hornO='#24100a', leg='#6e3e1c', eye='#120c08'),
+    # E: élitros verdes del A; protórax, cabeza, cuerno y patas castaños del C
+    'E': dict(name='Verde y castaña', shine='#e9f7a8', light='#8fcf4e', mid='#4f9a3a', shade='#2f6a32', outline='#173a22',
+              pron=('#d68a4a', '#9c5228', '#6a3218'), pronO='#34160a', horn='#5a2c14', hornS='#3c1c0c', hornO='#1e0c04',
+              leg='#6e3e1c', eye='#120c08'),
 }
-GOLD, GOLD_S, GLOW = hx('#ffd84a'), hx('#c4901c'), hx('#ff6a2a')
+MIX = 'D'                                                   # (la mezcla A+C de los GIFs y las maquetas del jefe)
+GOLD, GOLD_S, GLOW, GLOW_C = hx('#ffd84a'), hx('#c4901c'), hx('#ff6a2a'), hx('#ffe08a')
+EYE_SHINE = hx('#f4f0e0')
 
 # ── las piezas de cada cuadro (de pie, mirando a la derecha; las poses las mueven) ─────────────────────────────────
 # élitros: una cúpula alta; protórax: un bloque redondo delante, con un espolón; cabeza baja con el ojo; el CUERNO
 # grande sale de la cabeza, sube hacia delante y se curva hacia atrás (2 px de grueso en la base)
-ELYTRA = (7.0, 9.2 + OY, 6.2, 5.4)
-PRONOTUM = (12.8, 9.0 + OY, 2.9, 2.9)
-HEAD = (15.7, 10.6 + OY, 1.9, 1.6)
+ELYTRA = (7.0, 8.2 + OY, 6.2, 5.4)
+PRONOTUM = (12.8, 8.0 + OY, 2.9, 2.9)
+HEAD = (15.6, 9.4 + OY, 2.2, 1.9)
 HORNS = {
-    'up': [(16, 13), (17, 13), (17, 12), (18, 12), (17, 11), (18, 11), (18, 10), (18, 9), (17, 8), (18, 8), (17, 7), (16, 6)],
-    'fwd': [(16, 14), (17, 14), (17, 13), (18, 13), (19, 13), (19, 12), (20, 12), (20, 11)],
-    'toss': [(16, 13), (16, 12), (17, 12), (16, 11), (17, 11), (17, 10), (17, 9), (17, 8), (16, 7), (16, 6), (15, 5)],
+    'up': [(16, 12), (17, 12), (17, 11), (18, 11), (17, 10), (18, 10), (18, 9), (18, 8), (17, 7), (18, 7), (17, 6), (16, 5)],
+    'fwd': [(16, 13), (17, 13), (17, 12), (18, 12), (19, 12), (19, 11), (20, 11), (20, 10)],
+    'toss': [(16, 12), (16, 11), (17, 11), (16, 10), (17, 10), (17, 9), (17, 8), (17, 7), (16, 6), (16, 5), (15, 4)],
 }
-SPUR = [(14, 10), (15, 9)]
-LEG_X = (4, 8, 11)
-# poses: dy (sube/baja), shear (inclina: el frente baja si > 0), cuerno, patas (desplazamiento del pie de cada pata),
-# y extras: 'flip' (patas arriba), 'wings' (1/2: élitro levantado y alas arriba/abajo), 'squash'
+SPUR = [(14, 9), (15, 8)]
+# PATAS (v2; el usuario: "no parece que camine"): tres patas de este lado y, detrás y más oscuras, las tres del otro;
+# cada una con fémur y tibia (rodilla) y uña. Andar = trípode: delantera y trasera de un lado con la del medio del
+# otro; en el APOYO el pie se queda en el suelo y va hacia atrás, en el VUELO se levanta y vuelve adelante.
+# (cadera en x, pie en reposo respecto a la cadera, hacia dónde dobla la rodilla): trasera, media, delantera
+LEGS = ((4, -3, -1), (8, 0, 0), (12, 3, 1))
+GROUND = 14 + OY
+# gait: ('walk', fase 0..1, zancada) · ('flip', fase) · ('plant', 1|2) · ('dangle', vaivén) · ('splay',)
 FRAMES = {
-    'walk1': dict(dy=0, shear=0.0, horn='up', legs=(-1, 1, -1)),
-    'walk2': dict(dy=-1, shear=0.0, horn='up', legs=(1, -1, 1)),
-    'charge1': dict(dy=0, shear=0.16, horn='fwd', legs=(-2, -2, -1)),
-    'charge2': dict(dy=-1, shear=0.16, horn='fwd', legs=(-1, -1, -2)),
-    'flip1': dict(flip=True, horn='fwd', legs=(-1, 1, -1)),
-    'flip2': dict(flip=True, horn='fwd', legs=(1, -1, 1)),
-    'toss1': dict(dy=0, shear=0.2, horn='fwd', legs=(-1, -1, -1)),
-    'toss2': dict(dy=-1, shear=-0.18, horn='toss', legs=(1, 1, 0)),
-    'fly1': dict(dy=-3, shear=0.0, horn='up', legs=(0, 0, 0), wings=1, dangle=True),
-    'fly2': dict(dy=-3, shear=0.0, horn='up', legs=(0, 0, 0), wings=2, dangle=True),
-    'slam': dict(dy=1, shear=0.0, horn='up', legs=(-2, 0, 2), squash=True),
+    'walk1': dict(dy=0, shear=0.0, horn='up', gait=('walk', 0.0, 1.5)),
+    'walk2': dict(dy=0, shear=0.0, horn='up', gait=('walk', 0.25, 1.5)),
+    'walk3': dict(dy=0, shear=0.0, horn='up', gait=('walk', 0.5, 1.5)),
+    'walk4': dict(dy=0, shear=0.0, horn='up', gait=('walk', 0.75, 1.5)),
+    'charge1': dict(dy=0, shear=0.16, horn='fwd', gait=('walk', 0.0, 2.6)),
+    'charge2': dict(dy=-1, shear=0.16, horn='fwd', gait=('walk', 0.25, 2.6)),
+    'charge3': dict(dy=0, shear=0.16, horn='fwd', gait=('walk', 0.5, 2.6)),
+    'charge4': dict(dy=-1, shear=0.16, horn='fwd', gait=('walk', 0.75, 2.6)),
+    'flip1': dict(flip=True, horn='fwd', gait=('flip', 0.0)),
+    'flip2': dict(flip=True, horn='fwd', gait=('flip', 0.33)),
+    'flip3': dict(flip=True, horn='fwd', gait=('flip', 0.66)),
+    'toss1': dict(dy=0, shear=0.2, horn='fwd', gait=('plant', 1)),
+    'toss2': dict(dy=-1, shear=-0.18, horn='toss', gait=('plant', 2)),
+    'fly1': dict(dy=-3, shear=0.0, horn='up', gait=('dangle', 0), wings=1),
+    'fly2': dict(dy=-3, shear=0.0, horn='up', gait=('dangle', 1), wings=2),
+    'slam': dict(dy=1, shear=0.0, horn='up', gait=('splay',), squash=True),
 }
-W = 22
-SMALL = ['walk1', 'walk2', 'charge1', 'charge2', 'flip1', 'flip2']
+SMALL = ['walk1', 'walk2', 'walk3', 'walk4', 'charge1', 'charge2', 'charge3', 'charge4', 'flip1', 'flip2', 'flip3']
 BOSS = SMALL + ['toss1', 'toss2', 'fly1', 'fly2', 'slam']
+
+
+def line(a, b):
+    (x0, y0), (x1, y1) = a, b
+    n = max(abs(x1 - x0), abs(y1 - y0), 1)
+    return [(int(round(x0 + (x1 - x0) * i / n)), int(round(y0 + (y1 - y0) * i / n))) for i in range(n + 1)]
+
+
+def leg_points(gait, hip, rest, kd, phase_off, flip):
+    """Una pata: [cadera → rodilla → pie] + la uña, según el paso"""
+    hx_, hy_ = hip
+    g = gait[0]
+    if g == 'walk':
+        p = (gait[1] + phase_off) % 1.0
+        st = gait[2]
+        if p < 0.5: fx, fy = hx_ + rest + st * (1 - 4 * p), GROUND                # (apoyo: el pie va hacia atrás)
+        else:
+            t = (p - 0.5) / 0.5
+            fx, fy = hx_ + rest - st + 2 * st * t, GROUND - round(2 * math.sin(math.pi * t))   # (vuelo: sube y vuelve)
+        knee = (hx_ + kd + (fx - hx_) * 0.45, min(hy_ + 1, fy - 2))
+    elif g == 'flip':
+        w = math.sin(2 * math.pi * (gait[1] + phase_off))
+        fx, fy = hx_ + rest * 0.6 + round(1.5 * w), hy_ - 4 + round(abs(w))
+        knee = (hx_ + kd * 2 + round(w * 0.5), hy_ - 2)
+    elif g == 'plant':
+        push = {1: (-4, 0, 3), 2: (-5, -1, 4)}[gait[1]]
+        fx = hx_ + {-1: push[0], 0: push[1], 1: push[2]}[kd]
+        fy = GROUND - (2 if gait[1] == 2 and kd == 1 else 0)                   # (al lanzar, la delantera se levanta)
+        knee = (hx_ + kd * 2 + (fx - hx_) * 0.3, hy_ + 1)
+    elif g == 'dangle':
+        sway = (-1, 1)[gait[1]] * (1 if phase_off < 0.5 else -1)
+        fx, fy = hx_ - 1 + sway + kd, hy_ + 4
+        knee = (hx_ + kd + 1, hy_ + 2)
+    else:                                                                      # splay: aplastado, patas abiertas
+        fx, fy = hx_ + rest * 1.5 + kd, GROUND
+        knee = (hx_ + kd * 2 + rest * 0.6, hy_)
+    foot = (int(round(fx)), int(round(fy)))
+    knee = (int(round(knee[0])), int(round(knee[1])))
+    pts = line(hip, knee) + line(knee, foot)[1:]
+    claw = (foot[0] + (kd if kd else (1 if fx >= hx_ else -1)), foot[1] if not flip else foot[1])
+    return pts + [claw]
 
 
 def ell(cx, cy, rx, ry, rot=0.0):
@@ -84,12 +143,12 @@ def ell(cx, cy, rx, ry, rot=0.0):
 
 def frame(D, name, boss=False):
     F = FRAMES[name]
-    C = {k: hx(v) for k, v in D.items() if k != 'name'}
+    C = {k: hx(v) for k, v in D.items() if isinstance(v, str) and k != 'name'}
     flip, sq, wings = F.get('flip'), F.get('squash'), F.get('wings', 0)
     part = {}                                       # (x, y) -> (pieza, color)
     ex, ey, erx, ery = ELYTRA
     if sq: ery, erx, ey = ery * 0.8, erx * 1.08, ey + 1.0
-    floor = 11.5 + OY + (0.6 if sq else 0)
+    floor = 10.5 + OY + (0.6 if sq else 0)
 
     def put(pts, kind, pal):
         for (x, y), (nx, ny) in pts.items():
@@ -101,8 +160,9 @@ def frame(D, name, boss=False):
         put({p: n for p, n in ell(ex + 0.5, ey + 1.6, erx - 0.8, ery - 1.8).items() if p[1] + 0.5 <= floor}, 'body', (C['mid'], C['shade'], C['shade']))
     else:
         put({p: n for p, n in ell(ex, ey, erx, ery).items() if p[1] + 0.5 <= floor}, 'elytra', shell)
-    put({p: n for p, n in ell(*PRONOTUM).items() if p[1] + 0.5 <= floor + 0.4}, 'pron', shell)
-    put(ell(*HEAD), 'head', (C['mid'], C['shade'], C['outline']))
+    pron = tuple(hx(c) for c in D['pron']) if 'pron' in D else shell
+    put({p: n for p, n in ell(*PRONOTUM).items() if p[1] + 0.5 <= floor + 0.4}, 'pron', pron)
+    put(ell(*HEAD), 'head', (pron[1], pron[2], hx(D.get('pronO', D['outline']))))
     for p in SPUR: part[p] = ('horn', C['horn'])
     for i, p in enumerate(HORNS[F['horn']]): part[p] = ('horn', C['horn'] if i % 3 != 2 else C['hornS'])
     # pose: inclinar (el frente baja o sube) y subir/bajar
@@ -127,25 +187,23 @@ def frame(D, name, boss=False):
         ys = [y for (x, y) in part]
         top, bot = min(ys), max(ys)
         part = {(x, top + bot - y): v for (x, y), v in part.items()}
-        shift = 14 + OY - max(y for (x, y) in part)
+        shift = GROUND - max(y for (x, y) in part)
         part = {(x, y + shift): v for (x, y), v in part.items()}
-    # patas (detrás de todo): de pie, del vientre al suelo; patas arriba, hacia el cielo y moviéndose
-    legs = []
-    for lx, d in zip(LEG_X, F['legs']):
-        if flip:
-            base = min(y for (x, y) in part if abs(x - lx) <= 1) - 1
-            pts = [(lx, base), (lx + (1 if d > 0 else -1), base - 1), (lx + d, base - 2), (lx + d, base - 3)]
-        elif F.get('dangle'):
-            base = int(floor) + dy + 1
-            pts = [(lx, base), (lx - 1, base + 1), (lx - 1, base + 2)]
-        else:
-            base = int(floor) + dy + int(round(sh * (lx - 9))) + 1
-            foot = 14 + OY
-            pts = [(lx, base)] + [(lx + (d if y >= foot - 1 else (d > 0) - (d < 0) if y > base else 0), y) for y in range(base + 1, foot + 1)]
-            pts.append((lx + d + (1 if d >= 0 else -1), foot))
-        legs += pts
+    # patas: las de este lado y, detrás y más oscuras, las del otro (desfasadas medio paso, 1 px atrás)
+    body_pts = [p for p, v in part.items() if v[0] in ('elytra', 'pron', 'body', 'head')]
+    def hip_at(x):
+        col = [y for (xx, y) in body_pts if xx == x]
+        if not col: col = [y for (xx, y) in body_pts if abs(xx - x) <= 1]
+        return (x, (min(col) - 0) if flip else (max(col) + 0))
+    legs, far = [], []
+    for (lx, rest, kd) in LEGS:
+        tripod = 0.0 if kd != 0 else 0.5                                    # (trasera y delantera juntas; la media, al revés)
+        legs += leg_points(F['gait'], hip_at(lx), rest, kd, tripod, flip)
+        far += leg_points(F['gait'], hip_at(lx - 1), rest, kd, (tripod + 0.5) % 1.0, flip)
     img = Image.new('RGBA', (W, H), (0, 0, 0, 0)); px = img.load()
     inside = lambda p: 0 < p[0] < W - 1 and 0 < p[1] < H - 1
+    for p in far:
+        if inside(p) and p not in part: px[p] = C['outline'] if 'pronO' not in D else hx(D['pronO'])
     for p in legs:
         if inside(p) and p not in part: px[p] = C['leg']
     for p, (k, col) in part.items():
@@ -168,11 +226,15 @@ def frame(D, name, boss=False):
             a = 2.55 - t * 0.2
             p = (int(round(cx_ + erx * 0.66 * math.cos(a))), int(round(cy_ - ery * 0.66 * math.sin(a) + sh * 0)))
             if p in solid and p not in out and part[p][0] == 'elytra': px[p] = C['shine']
-    # el ojo
+    # el ojo (v2; el usuario: "un poco más notable"): 2x2, oscuro con un punto de brillo arriba-delante
     eye = [p for p in solid if part[p][0] == 'head' and p not in out]
     if eye:
-        e = max(eye, key=lambda p: (p[0] * 2 - abs(p[1] - (sum(q[1] for q in eye) / len(eye)))))
-        px[e] = GLOW if boss else C['eye']
+        cy_e = sum(q[1] for q in eye) / len(eye)
+        e = max(eye, key=lambda p: (p[0] * 2 - abs(p[1] + 0.5 - cy_e) * 1.5))
+        ex0, ey0 = e[0] - 1, int(round(cy_e - 1))
+        for q in ((ex0, ey0), (ex0 + 1, ey0), (ex0, ey0 + 1), (ex0 + 1, ey0 + 1)):
+            if q in solid: px[q] = GLOW if boss else C['eye']
+        if (ex0 + 1, ey0) in solid: px[ex0 + 1, ey0] = GLOW_C if boss else EYE_SHINE
     # la Furia del Espejo (gigante): una RUNA dorada en el centro de los élitros (rombo con el corazón encendido) y
     # una franja dorada a lo largo del borde de abajo del caparazón
     if boss and not flip:
@@ -281,9 +343,11 @@ def text(d, xy, s, fill=(255, 255, 255, 255)):
 
 def preview():
     rows = []
-    for k, D in DESIGNS.items():
-        rows.append((f'Pequeño {k} "{D["name"]}" (x8): andar 1-2 · cargar 1-2 · patas arriba 1-2', up(sheet(D, SMALL), 8)))
-    rows.append(('Gigante A (x8; en el juego x12): + lanzar 1-2 · alas 1-2 · aterrizaje', up(sheet(DESIGNS['A'], BOSS, True), 8)))
+    for k in ('D', 'E'):
+        D = DESIGNS[k]
+        rows.append((f'Pequeño {k} "{D["name"]}" (x6): andar 1-4 · cargar 1-4 · patas arriba 1-3', up(sheet(D, SMALL), 6)))
+    for k in ('D', 'E'):
+        rows.append((f'Gigante {k} (x6; en el juego x12): lo mismo + lanzar 1-2 · alas 1-2 · aterrizaje', up(sheet(DESIGNS[k], BOSS, True), 6)))
     atk = Image.new('RGBA', (16 + 24 + 96 + 64 + 30, 16), (0, 0, 0, 0))
     x = 0
     for im in (stone_block(), debris(), shockwave(), dust()):
@@ -339,9 +403,10 @@ def mockups():
     bg, gy = jungle_bg(1280, 720); deco(bg, gy)
     d = ImageDraw.Draw(bg)
     pl = player(); bg.alpha_composite(pl, (160, gy - pl.height))
-    for i, (k, D) in enumerate(DESIGNS.items()):
-        im = up(frame(D, ('walk1', 'charge1', 'walk2')[i]), 4)
-        x = 440 + i * 240
+    for i, k in enumerate(('A', 'C', 'D', 'E')):
+        D = DESIGNS[k]
+        im = up(frame(D, ('walk1', 'walk3', 'charge1', 'walk2')[i]), 4)
+        x = 400 + i * 170
         bg.alpha_composite(im, (x, gy - im.height + 4))
         text(d, (x, gy - im.height - 16), f'{k} {D["name"]}')
     blk = up(stone_block(), 4); bg.alpha_composite(blk, (1100, gy - 64))
@@ -350,7 +415,7 @@ def mockups():
     # 2) el templo: el gigante (x12), el jugador, la onda del suelo y bloques
     bg, gy = jungle_bg(1600, 900, temple=True); deco(bg, gy, temple=True)
     d = ImageDraw.Draw(bg)
-    boss = up(frame(DESIGNS['A'], 'walk1', True), 12)
+    boss = up(frame(DESIGNS[MIX], 'walk1', True), 12)
     bg.alpha_composite(boss, (820, gy - boss.height + 12))
     pl = player(); bg.alpha_composite(pl, (300, gy - pl.height))
     sw = up(shockwave().crop((48, 0, 72, 12)), 6); bg.alpha_composite(sw, (620, gy - sw.height))
@@ -370,18 +435,20 @@ def gif(name, frames, ms, k, bgc=(52, 78, 58, 255), pad=8):
 
 
 def gifs():
-    A = DESIGNS['A']
-    for k, D in DESIGNS.items():
-        gif(f'pequeno_{k}_andar.gif', [frame(D, 'walk1'), frame(D, 'walk2')], 180, 8)
-    gif('pequeno_A_cargar.gif', [frame(A, 'charge1'), frame(A, 'charge2')], 90, 8)
-    gif('pequeno_A_patas_arriba.gif', [frame(A, 'flip1'), frame(A, 'flip2')], 130, 8)
+    A = DESIGNS[MIX]
+    WALK, CHARGE, FLIP = ['walk1', 'walk2', 'walk3', 'walk4'], ['charge1', 'charge2', 'charge3', 'charge4'], ['flip1', 'flip2', 'flip3']
+    for k in ('D', 'E'):
+        D = DESIGNS[k]
+        gif(f'pequeno_{k}_andar.gif', [frame(D, n) for n in WALK], 120, 8)
+        gif(f'pequeno_{k}_cargar.gif', [frame(D, n) for n in CHARGE], 70, 8)
+        gif(f'pequeno_{k}_patas_arriba.gif', [frame(D, n) for n in FLIP], 100, 8)
     B = lambda n: frame(A, n, True)
-    gif('jefe_andar.gif', [B('walk1'), B('walk2')], 220, 10)
-    gif('jefe_cargar.gif', [B('charge1'), B('charge2')], 90, 10)
+    gif('jefe_andar.gif', [B(n) for n in WALK], 160, 10)
+    gif('jefe_cargar.gif', [B(n) for n in CHARGE], 80, 10)
     gif('jefe_lanzar.gif', [B('walk1'), B('toss1'), B('toss1'), B('toss2'), B('toss2'), B('walk1')], [300, 150, 150, 120, 300, 300], 10)
     gif('jefe_salto_y_golpe.gif', [B('walk1'), B('fly1'), B('fly2'), B('fly1'), B('fly2'), B('slam'), B('slam'), B('walk1')],
         [300, 70, 70, 70, 70, 140, 260, 300], 10)
-    gif('jefe_patas_arriba.gif', [B('flip1'), B('flip2')], 130, 10)
+    gif('jefe_patas_arriba.gif', [B(n) for n in FLIP], 110, 10)
     st = [shockwave().crop((i * 24, 0, i * 24 + 24, 12)) for i in range(4)]
     gif('ataque_onda.gif', st, 90, 10)
     gif('ataque_polvo.gif', [dust().crop((i * 16, 0, i * 16 + 16, 16)) for i in range(4)], 90, 10)
@@ -390,7 +457,7 @@ def gifs():
 
 
 def scene_gif():
-    A = DESIGNS['A']
+    A = DESIGNS[MIX]
     bg0, gy = jungle_bg(960, 540, temple=True); deco(bg0, gy, temple=True)
     wall = up(stone_block(), 4)
     for yy in range(gy - 64 * 6, gy, 64): bg0.alpha_composite(wall, (900, yy))
@@ -407,11 +474,11 @@ def scene_gif():
         frames.append(c.convert('RGB').convert('P', palette=Image.ADAPTIVE)); durs.append(d)
     x = 330                                                        # (se para con el cuerno contra la pared, en x≈700)
     for i in range(10):                                            # carga hacia la pared
-        x += 37; shot(x, gy, ('charge1', 'charge2')[i % 2], (( up(dust().crop((16, 0, 32, 16)), 4), (x - 30, gy - 60)),) if i % 3 == 0 else ())
+        x += 37; shot(x, gy, ('charge1', 'charge2', 'charge3', 'charge4')[i % 4], (( up(dust().crop((16, 0, 32, 16)), 4), (x - 30, gy - 60)),) if i % 3 == 0 else ())
     deb = up(debris(), 4)
     for i in range(8):                                             # choque: caen cascotes
         ex = [(deb.crop((j * 32, 0, j * 32 + 32, 32)), (640 + j * 70, 40 + i * 50 + j * 24)) for j in range(3)]
-        shot(x, gy, 'walk1' if i < 6 else 'walk2', ex, 90)
+        shot(x, gy, ('walk1', 'walk2', 'walk3', 'walk4')[i % 4] if i >= 4 else 'walk1', ex, 90)
     for i in range(6):                                             # se da la vuelta y salta (alas)
         shot(x - i * 30, gy - i * 40, ('fly1', 'fly2')[i % 2], (), 70, flip=True)
     for i in range(5):
@@ -428,6 +495,6 @@ if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
     for k, D in DESIGNS.items():
         up(sheet(D, SMALL), 1).save(os.path.join(OUT, f'hoja_pequeno_{k}.png'))
-    sheet(DESIGNS['A'], BOSS, True).save(os.path.join(OUT, 'hoja_gigante_A.png'))
+    for k in ('D', 'E'): sheet(DESIGNS[k], BOSS, True).save(os.path.join(OUT, f'hoja_gigante_{k}.png'))
     preview(); mockups(); gifs()
     print('  vistas previas en', OUT)
