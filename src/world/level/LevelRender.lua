@@ -154,14 +154,18 @@ function Level:renderDebug(camX, camY)
 end
 
 -- ¿Celda de agua con la superficie arriba? (encima hay aire: ni líquido ni
--- un bloque macizo, que sería agua apretada contra un techo)
+-- un bloque macizo, que sería agua apretada contra un techo). Tampoco si el agua
+-- de una INUNDACIÓN le llega por encima (la marea que sube sobre el agua fija):
+-- las dos son un solo cuerpo y la superficie es la de arriba (la de la marea).
 function Level:isWaterSurfaceCell(col, row)
     if row <= 1 then return false end
     local d = self:getDef(col, row)
     if d.collision == 'solid' and d.fullHitbox then return false end
     if liquidOfRaw(self:getRaw(col, row - 1)) then return false end
     local up = self:getDef(col, row - 1)
-    return not (up.collision == 'solid' and up.fullHitbox)
+    if up.collision == 'solid' and up.fullHitbox then return false end
+    local fl = self.floods
+    return not (fl and fl[1] and Floods.liquidAt(fl, (col - 0.5) * TILE_PX, (row - 1) * TILE_PX - 0.5))
 end
 
 -- La malla de la distorsión: se rellena en cada fotograma (setVertex: sin crear tablas) y solo se vuelve a crear si
@@ -184,6 +188,13 @@ local function addDistortRect(x, y, w, h)
     if w <= 0 or h <= 0 or distortN + 6 > distortCap then return end
     vert(x, y); vert(x + w, y); vert(x + w, y + h)
     vert(x, y); vert(x + w, y + h); vert(x, y + h)
+end
+
+-- Franja de tinte [ya, yb) (px de mundo) entre las x de pantalla x0 y x1
+local function tintBand(tint, x0, x1, ya, yb, camY)
+    local y0 = math.floor(ya - camY)
+    local h = math.floor(yb - camY) - y0
+    if h > 0 then love.graphics.setColor(tint); love.graphics.rectangle('fill', x0, y0, x1 - x0, h) end
 end
 
 -- Efecto de los líquidos: distorsión (shader) y tinte según su material.
@@ -230,24 +241,35 @@ function Level:renderWaterEffect(camX, camY, sceneCanvas)
         if shaderOk and waterShader then love.graphics.setShader() end
     end
 
-    -- Tinte: una sola pasada, color uniforme por material (sin acumulación)
+    -- Tinte: una sola pasada, color uniforme por material (sin acumulación). Lo que el agua de una inundación
+    -- cubre de la celda lleva el tinte de la inundación (la física le da a ella ese trozo: Level:liquidAt / coldAt),
+    -- así el agua fija y la marea que la tapa se ven como un solo cuerpo, sin dos tintes.
+    local floods = self.floods
+    if floods and not floods[1] then floods = nil end
     for row = sr2, er2 do
         for col = sc2, ec2 do
             local m = liquidOfRaw(self:getRaw(col, row))
             if m and m.tint then
                 local tint = (self.coldWater and m.coldTint) or m.tint          -- (agua helada: Level:coldAt)
-                if self:isWaterSurfaceCell(col, row) then
-                    -- Superficie con olas (el tinte sigue a la ola: sin borde plano detrás)
-                    WaterSurface.draw((col-1)*TILE_PX, col*TILE_PX, (row-1)*TILE_PX, row*TILE_PX,
-                                      camX, camY, tint, 2, t)
-                else
-                    -- Alineado al píxel igual que la franja de la superficie (si
-                    -- no, con la cámara en posiciones fraccionarias quedaba una
-                    -- rendija de 1 px entre la superficie y el agua de debajo)
-                    love.graphics.setColor(tint)
-                    local x0, y0 = math.floor((col-1)*TILE_PX - camX), math.floor((row-1)*TILE_PX - camY)
-                    love.graphics.rectangle('fill', x0, y0, math.floor(col*TILE_PX - camX) - x0,
-                                            math.floor(row*TILE_PX - camY) - y0)
+                local cT, cB = (row-1)*TILE_PX, row*TILE_PX
+                -- Alineado al píxel igual que la franja de la superficie (si
+                -- no, con la cámara en posiciones fraccionarias quedaba una
+                -- rendija de 1 px entre la superficie y el agua de debajo)
+                local x0, x1 = math.floor((col-1)*TILE_PX - camX), math.floor(col*TILE_PX - camX)
+                local f, fa, fb
+                if floods then f, fa, fb = Floods.coverIn(floods, col, cT, cB) end
+                local ownB = f and fa or cB                  -- (lo de la celda que es solo agua fija, desde arriba)
+                if ownB > cT then
+                    if self:isWaterSurfaceCell(col, row) then
+                        -- Superficie con olas (el tinte sigue a la ola: sin borde plano detrás)
+                        WaterSurface.draw((col-1)*TILE_PX, col*TILE_PX, cT, ownB, camX, camY, tint, 2, t)
+                    else
+                        tintBand(tint, x0, x1, cT, ownB, camY)
+                    end
+                end
+                if f then
+                    tintBand(Floods.tintOf(f), x0, x1, fa, fb, camY)
+                    if fb < cB then tintBand(tint, x0, x1, fb, cB, camY) end
                 end
             end
         end

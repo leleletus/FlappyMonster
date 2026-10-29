@@ -13,6 +13,9 @@ Lo que NUNCA tiene plano detrás (para que el camino se lea): pinchos, lava, agu
 casilla de margen y 2 por encima, donde se pisa), trampas, objetos y puntos de control, la salida y la meta, las zonas
 de jefe y sus muros. Cerca del inicio, la meta y los puntos de control solo va algo bajo (zonas ligeras), sin árboles.
 Las estructuras nunca llegan a menos de 1 casilla de lo de arriba (se recortan enteras, sin muescas).
+Detrás de lo que puede desaparecer o deja ver lo de detrás (Bloques ON/OFF, rompibles, hielo fino, invisibles, de fase,
+nieve prensada; el hielo translúcido) el plano SIGUE donde lo de alrededor sigue (`Gen.bury`, `Gen.holes`);
+`retheme.py --bg --holes <niveles>` hace SOLO eso sobre el plano que ya hay.
 
 Lo GENERADO se apunta en un fichero aparte (`tools/levelgen/bg_gen/<nivel>.json`; con --out, `<dir>/<nivel>.bggen.json`):
 cada bloque [col, fila, valor] y cada decoración tal cual. El editor no guarda claves desconocidas del nivel, por eso
@@ -48,6 +51,18 @@ READ_ENTS = {'rainspike', 'spikefall', 'mortar', 'gust', 'trampoline', 'trampoli
 FALLING = {'rainspike', 'spikefall'}
 LIGHT_R = {'start': 8, 'finish': 7, 'checkpoint': 4}      # zonas ligeras (columnas a cada lado): solo cosas bajas
 LIGHT_H = 2
+# Bloques de delante que pueden DESAPARECER (se rompen, se apagan, no se ven hasta tocarlos) — y las casillas de los
+# Bloques de fase — y los que dejan ver lo de detrás (hielo translúcido): detrás de ellos el plano SIGUE (el usuario,
+# 2026-10-29: «no coloca bloques atrás si hay bloques adelante; esto genera huecos en la capa de fondo, especialmente si
+# el bloque de adelante es un ON/OFF»). src/world/tiles/types/: breakable, hidden_block, switchblock_on (ON/OFF activo e
+# inactivo), thin_ice, packed_snow · ice (alpha 0.78), frozen_pack ice_ledge (0.85)
+VANISH = {R.BREAK, 15, 18, 19, 27, 28, R.PACKED} | R.THIN_ICE
+SEE = {R.ICE, R.ILEDGE}
+# Lo de delante que tapa del todo lo de detrás (el plano detrás no se ve): el terreno fijo y lo que se ve como él
+# (activadores, pared / borde / rompible falsos)
+OPAQUE = (R.GROUND - VANISH - SEE) | {13, 14, 20, 24, 25}
+HOLE_RUN, HOLE_RUN_WALL, HOLE_POCKET = 6, 3, 12     # casillas: tramo entre plano y plano · entre plano y pared · bolsa
+UNCAP = {GRASS: DIRT, JGRASS: MUD}                  # (al rellenar por debajo de un tope: su cuerpo)
 TALL_FRONT = {'oak_tree', 'pine_tree', 'palmtree', 'snowy_pine', 'charred_tree', 'tree_fern', 'banana_plant', 'ceiba', 'strangler_fig'}
 
 
@@ -123,6 +138,7 @@ class Gen:
         self.P = [[0] * self.W for _ in range(self.H)]          # lo nuestro
         self.decos, self.boxes, self.trees = [], set(), []
         self.closed = theme in R.CLOSED or name in R.ROOFED
+        self.phase = phase_cells(lv)
         self._terrain()
         self._avoid()
 
@@ -133,6 +149,11 @@ class Gen:
     def empty(self, c, r):
         raw = self.at(c, r)
         return R.tid(raw) == E and not R.waterlogged(raw) and not R.spiky(raw)
+
+    def changes(self, c, r):
+        """¿El bloque de delante puede desaparecer o deja ver lo de detrás? (VANISH, SEE, Bloques de fase)"""
+        i = R.tid(self.at(c, r))
+        return i in VANISH or i in SEE or (i != E and (c, r) in self.phase)
 
     def _terrain(self):
         """Terreno = bloques de suelo unidos al marco o en masas grandes (≥ 12); lo demás son bloques sueltos."""
@@ -155,11 +176,15 @@ class Gen:
     def _avoid(self):
         H, W, lv = self.H, self.W, self.lv
         av = self.av = set()
+        hard = self.hard = set()           # (lo prohibido de verdad: también para cerrar huecos — `close_holes`)
+        self.forbid = set()                # (las zonas de jefe: su arena lleva su propio plano)
         cap = self.capH = [99] * W
 
-        def box(c0, r0, c1, r1):
+        def box(c0, r0, c1, r1, soft=False):
             for x in range(c0, c1 + 1):
-                for y in range(r0, r1 + 1): av.add((x, y))
+                for y in range(r0, r1 + 1):
+                    av.add((x, y))
+                    if not soft: hard.add((x, y))
 
         for r in range(H):
             for c in range(W):
@@ -168,8 +193,11 @@ class Gen:
                 if (c, r) in self.terr: continue
                 if i == E and not R.waterlogged(raw) and not R.spiky(raw): continue
                 if i == WATER or (i == E and R.waterlogged(raw)) and not R.spiky(raw):
-                    av.add((c, r)); continue                    # (detrás del agua, nada)
-                box(c - 1, r - 2, c + 1, r + 1)                 # pinchos, lava, plataformas, bloques sueltos, meta...
+                    av.add((c, r)); hard.add((c, r)); continue  # (detrás del agua, nada)
+                # pinchos, lava, plataformas, bloques sueltos, meta... (el margen de las plataformas y los bloques sueltos
+                # es blando: la generación no pone nada ahí, pero si el plano ya los rodea, `holes` cierra el hueco; el
+                # de los pinchos, la lava y la meta, no)
+                box(c - 1, r - 2, c + 1, r + 1, soft=not (R.spiky(raw) or i in (LAVA, R.FINISH)))
                 if i == R.FINISH: box(c - 3, r - 3, c + 3, r + 1)
         for e in lv.get('entities', []):
             c, r, tp = e['col'] - 1, e['row'] - 1, e['type']
@@ -178,6 +206,7 @@ class Gen:
                 k = props['corner']
                 c1, r1 = (k.get('col', c + 1) - 1, k.get('row', r + 1) - 1) if isinstance(k, dict) else (k[0] - 1, k[1] - 1)
                 box(min(c, c1) - 3, 0, max(c, c1) + 3, H - 1)
+                self.forbid |= {(x, y) for x in range(min(c, c1) - 3, max(c, c1) + 4) for y in range(H)}
             elif tp == 'checkpoint':
                 box(c - 2, r - 3, c + 2, r + 1)
                 for x in range(c - LIGHT_R['checkpoint'], c + LIGHT_R['checkpoint'] + 1):
@@ -191,6 +220,7 @@ class Gen:
                     while y < H and self.empty(c, y): av.add((c, y)); y += 1
         for z in lv.get('bossZones', []) or []:
             box(z['col'] - 1 - 3, 0, z['col'] - 1 + z['w'] + 2, H - 1)
+            self.forbid |= {(x, y) for x in range(z['col'] - 4, z['col'] + z['w'] + 2) for y in range(H)}
         ps = lv.get('playerStart', [2, 2])
         sc, sr = ps[0] - 1, ps[1] - 1
         box(sc - 3, sr - 3, sc + 3, sr + 1)
@@ -203,7 +233,7 @@ class Gen:
         # (el plano del usuario: ni encima ni pegado)
         for r in range(H):
             for c in range(W):
-                if self.user[r][c]: box(c - 1, r - 1, c + 1, r + 1)
+                if self.user[r][c]: box(c - 1, r - 1, c + 1, r + 1, soft=True)
         for f in lv.get('foliage', []):
             if f.get('plane') == 'bg' or f.get('type') in BG_TYPES:
                 box(f['col'] - 4, f['row'] - 8, f['col'] + 2, f['row'])
@@ -225,8 +255,19 @@ class Gen:
         filas más hacia dentro del terreno (tapadas: así no se ve el canto de abajo)."""
         for r in range(top, floor):
             self.put(c, r, cap_tile if (r == top and cap_tile) else body)
-        for r in (floor, floor + 1):
-            if (c, r) in self.terr: self.put(c, r, body, hidden=True)
+        self.bury(c, floor, 1, body)
+
+    def bury(self, c, r, dr, tile):
+        """Mete el plano 2 casillas en el terreno de delante (hacia abajo, dr = 1, o hacia el techo, dr = -1) para que no
+        se vea su canto; los bloques que pueden desaparecer (una losa rompible, nieve prensada, un Bloque ON/OFF) no
+        cuentan: se sigue por detrás de ellos hasta 2 de terreno fijo (si no, al romperse quedaba un hueco)"""
+        n = 0
+        while n < 2 and 0 <= r < self.H:
+            vanish = R.tid(self.at(c, r)) in VANISH or (R.tid(self.at(c, r)) != E and (c, r) in self.phase)
+            if (c, r) not in self.terr and not vanish: break
+            self.put(c, r, tile, hidden=True)
+            if not vanish: n += 1
+            r += dr
 
     # ── dónde hay hueco: los suelos ──
     def sites(self):
@@ -416,8 +457,7 @@ class Gen:
             for r in range(t + 1, s['f']):
                 if k in wins and t + 2 <= r <= t + 3: continue
                 self.put(c, r, m['body'])
-            for r in (s['f'], s['f'] + 1):
-                if (c, r) in self.terr: self.put(c, r, m['body'], hidden=True)
+            self.bury(c, s['f'], 1, m['body'])
         # (estandartes en el muro, entre ventanas; hiedra colgando de lo alto)
         free = [k for k in range(1, w - 1) if k not in wins and k - 1 not in wins and k + 1 not in wins]
         if free and h >= 4:
@@ -444,8 +484,7 @@ class Gen:
             for r in range(t + 1, s['f']):
                 win = h >= 4 and 1 <= k < w - 1 and (k - 1) % 3 == 0 and r == t + 2
                 self.put(c, r, m['window'] if win else (m['rock'] if r == s['f'] - 1 else m['brick']))
-            for r in (s['f'], s['f'] + 1):
-                if (c, r) in self.terr: self.put(c, r, m['rock'], hidden=True)
+            self.bury(c, s['f'], 1, m['rock'])
         self.tops(cols, 'frostwall')
         return True
 
@@ -529,8 +568,7 @@ class Gen:
                     c, a = s['c'], s['a']
                     if pil and j in pil:
                         for r in range(a, s['f']): self.put(c, r, m['body'])
-                        for r in (a - 1, a - 2, s['f'], s['f'] + 1):
-                            if (c, r) in self.terr: self.put(c, r, m['body'], hidden=True)
+                        self.bury(c, a - 1, -1, m['body']); self.bury(c, s['f'], 1, m['body'])
                         prev = None
                         continue
                     x = (j + 0.5) / len(cols)
@@ -540,8 +578,7 @@ class Gen:
                     prev = d
                     for r in range(a, a + d): self.put(c, r, m['drape'])
                     if d:
-                        for r in (a - 1, a - 2):
-                            if (c, r) in self.terr: self.put(c, r, m['drape'], hidden=True)
+                        self.bury(c, a - 1, -1, m['drape'])
                         if self.rnd.random() < 0.15 and self.empty(c, a + d) and (c, a + d) not in self.av:
                             self.deco('stalactite', c, a + d)
                 k += w + self.rnd.randint(2, 6)
@@ -613,13 +650,105 @@ class Gen:
             tp = self.pick(sp['small'])[0]
             if self.fits(tp, c, r): self.place_big(tp, c, r); self.trees.pop()
 
+    # ── huecos: el plano tiene que seguir detrás de lo que puede desaparecer ──
+    def holes(self, strict=True):
+        """Los HUECOS del plano detrás de los bloques que cambian (`changes`): casillas sin plano donde el plano de
+        alrededor sigue. Dos reglas, repetidas hasta que no salga nada:
+          tramo  una fila (o columna) de bloques que pueden desaparecer (el hielo translúcido, no), con plano a la
+                 vista en las dos puntas (≤ HOLE_RUN) o
+                 plano en una y una pared de delante (OPAQUE) en la otra (≤ HOLE_RUN_WALL): un ON/OFF en medio de un
+                 muro del plano, una losa rompible bajo una loma
+          bolsa  un hueco cerrado (≤ HOLE_POCKET casillas, sin agua, pinchos ni lava) con algún bloque que cambia, rodeado
+                 solo de plano y de pared de delante, y con ≥ 2 casillas de plano a la vista en su borde
+        strict: no se rellena lo prohibido (`hard`: lo que se tiene que leer, el inicio, la meta, los puntos de control,
+        el canal de un alud...), ni las zonas de jefe, ni los recuadros de las decoraciones grandes. Devuelve
+        [(col, fila, valor)] (base 0) y lo apunta en P."""
+        H, W = self.H, self.W
+        plane = lambda c, r: 0 <= c < W and 0 <= r < H and bool(self.P[r][c] or self.user[r][c])
+        opaque = lambda c, r: not (0 <= c < W and 0 <= r < H) or R.tid(self.at(c, r)) in OPAQUE
+        # (plano que se ve: sin nada delante o detrás de algo que puede desaparecer; detrás del hielo translúcido, no:
+        # ahí está lo enterrado de las estructuras — 2 filas — y seguirlo pintaba franjas bajo los huecos entre ellas)
+        vis = lambda c, r: plane(c, r) and not opaque(c, r) and R.tid(self.at(c, r)) not in SEE
+        gone = lambda c, r: self.changes(c, r) and R.tid(self.at(c, r)) not in SEE
+        ok = lambda c, r: (0 < c < W - 1 and 0 < r < H - 1 and not plane(c, r) and not opaque(c, r) and
+                           not (strict and ((c, r) in self.hard or (c, r) in self.forbid or (c, r) in self.boxes)))
+        out = []
+
+        def fill(c, r, src):
+            v = R.tid(self.P[src[1]][src[0]] or self.user[src[1]][src[0]])
+            self.P[r][c] = R.enc(UNCAP.get(v, v) if src[1] < r else v)
+            out.append((c, r, self.P[r][c]))
+
+        for _ in range(6):
+            n = len(out)
+            # tramos (filas y columnas)
+            for dc, dr in ((1, 0), (0, 1)):
+                for a in range(H if dr == 0 else W):
+                    k = 0
+                    L = W if dr == 0 else H
+                    while k < L:
+                        c, r = (k, a) if dr == 0 else (a, k)
+                        if not (gone(c, r) and ok(c, r)): k += 1; continue
+                        j = k
+                        while j < L and gone(*((j, a) if dr == 0 else (a, j))) and ok(*((j, a) if dr == 0 else (a, j))): j += 1
+                        e1 = (k - 1, a) if dr == 0 else (a, k - 1)
+                        e2 = (j, a) if dr == 0 else (a, j)
+                        both = vis(*e1) and vis(*e2)
+                        one = (vis(*e1) and opaque(*e2)) or (vis(*e2) and opaque(*e1))
+                        if (both and j - k <= HOLE_RUN) or (one and j - k <= HOLE_RUN_WALL):
+                            src = e1 if vis(*e1) else e2
+                            for x in range(k, j): fill(*((x, a) if dr == 0 else (a, x)), src)
+                        k = j
+            # bolsas
+            seen = set()
+            for r0 in range(H):
+                for c0 in range(W):
+                    if (c0, r0) in seen or not self.changes(c0, r0) or not ok(c0, r0): continue
+                    comp, stack, bad, rim = [], [(c0, r0)], False, 0
+                    while stack and not bad:
+                        c, r = stack.pop()
+                        if (c, r) in seen: continue
+                        seen.add((c, r))
+                        raw = self.at(c, r)
+                        if R.tid(raw) in (WATER, LAVA) or R.waterlogged(raw) or R.spiky(raw) or not ok(c, r):
+                            bad = True; break
+                        comp.append((c, r))
+                        if len(comp) > HOLE_POCKET: bad = True; break
+                        for x, y in ((c + 1, r), (c - 1, r), (c, r + 1), (c, r - 1)):
+                            if plane(x, y) or opaque(x, y):
+                                rim += vis(x, y) and (x, y) not in seen
+                            elif (x, y) not in seen: stack.append((x, y))
+                    if bad or rim < 2: continue
+                    left = set(comp)
+                    while left:                          # (de fuera adentro: cada casilla copia a una vecina con plano)
+                        for c, r in sorted(left):
+                            src = next(((x, y) for x, y in ((c - 1, r), (c + 1, r), (c, r + 1), (c, r - 1))
+                                        if plane(x, y)), None)
+                            if src: fill(c, r, src); left.discard((c, r)); break
+                        else: break
+            if len(out) == n: break
+        return out
+
     def run(self):
         sites = self.sites()
         segs = self.segments(sites)
         if self.theme in CAVE_LIKE: self.drapes(segs)
         for seg in segs: self.build_segment(seg)
         self.decorate(segs)
+        self.holes()
         return self.P, self.decos
+
+
+def phase_cells(lv):
+    """Las casillas de los Bloques de fase (base 0): no están en la partida hasta su fase"""
+    out = set()
+    for e in lv.get('entities', []):
+        if e['type'] != 'phaseblock': continue
+        k = (e.get('props') or {}).get('corner')
+        c0, r0 = e['col'], e['row']
+        c1, r1 = ((k.get('col', c0), k.get('row', r0)) if isinstance(k, dict) else (k[0], k[1])) if k else (c0, r0)
+        out |= {(c - 1, r - 1) for c in range(min(c0, c1), max(c0, c1) + 1) for r in range(min(r0, r1), max(r0, r1) + 1)}
+    return out
 
 
 # ── leer / escribir lo generado ──────────────────────────────────────────────────────────────────────────────────────
@@ -652,6 +781,36 @@ def remove_generated(lv, rec):
     for d in rec.get('decos', []):
         if d in fol: fol.remove(d); nd += 1
     return nb, nd
+
+
+def holes_only(name, dry=False, out=None, theme=None, strict=True):
+    """`--bg --holes`: SOLO cierra los huecos del plano que ya hay (`Gen.holes`), sin rehacer nada: lo generado, lo
+    retocado y lo del usuario se quedan tal cual; lo que se añade se apunta en el fichero de lo generado. Un plano hecho
+    a mano (sin ese fichero) no se toca: con --dry se listan sus huecos. Devuelve [(col, fila)] (base 1)."""
+    theme = theme or R.THEMES.get(name, 'meadow')
+    src = os.path.join(R.LEVELS, name + '.json')
+    dst = os.path.join(out, name + '.json') if out else src
+    if out and os.path.exists(dst): src = dst
+    side = sidecar_path(name, out)
+    lv = json.load(open(src))
+    rec = json.load(open(side)) if os.path.exists(side) else None
+    if rec and not still_there(lv, rec): rec = None
+    if not lv.get('bgTiles'):
+        print('  %-22s sin plano' % name); return []
+    H, W = len(lv['tiles']), len(lv['tiles'][0])
+    g = Gen(lv, name, theme, R.random.Random(0), lv['bgTiles'])
+    cells = g.holes(strict=strict)
+    pos = [(c + 1, r + 1) for c, r, _ in cells]
+    print('  %-22s %s huecos del plano: %d%s' % (name, 'generado' if rec else 'A MANO  ', len(cells),
+          (' ' + ' '.join('%d,%d' % p for p in pos)) if cells and (dry or not rec) else ''))
+    if dry or not cells: return pos
+    if not rec:
+        print('  %-22s plano hecho a mano: no se toca (solo se listan los huecos)' % name); return pos
+    for c, r, v in cells: lv['bgTiles'][r][c] = v
+    R.save(dst, lv)
+    rec['tiles'] = rec.get('tiles', []) + [[c + 1, r + 1, v] for c, r, v in cells]
+    json.dump(rec, open(side, 'w'), ensure_ascii=False, separators=(',', ':'))
+    return pos
 
 
 def run(name, force=False, dry=False, out=None):

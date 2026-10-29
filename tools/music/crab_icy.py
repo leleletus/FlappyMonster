@@ -331,7 +331,7 @@ def build(lufs=-10.0):
     y = F.master(np.stack([x + side, x - side], 1), lufs=lufs)
     if EVENTS is not None:
         EVENTS['_mix'] = dict(S=S, g=g, LV=LV, n=n, n_i=n_i, BAR=BAR, S16=S16, mel=mel, ch=chords, tag=tag, starts=starts,
-                              env=env, lufs=lufs, bpm=BPM, desc=desc)
+                              env=env, lufs=lufs, bpm=BPM, desc=desc, slap=slap)
     GN.report('crab_tantrum_icy', y, S, g, n)
     bad, out = check(mel + desc, chords)
     drums = sum(np.mean((S[k_][:n] * g[k_]) ** 2) for k_ in ('kick', 'toms', 'snare', 'hat', 'crash')) / sum(np.mean((S[k_][:n] * g[k_]) ** 2) for k_ in S)

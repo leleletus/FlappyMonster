@@ -380,63 +380,155 @@ function Floods.updateFx(level, dt)
 end
 
 -- ── Dibujo ────────────────────────────────────────────────────────────────────
--- ¿Celda que no se pinta de agua? (bloque macizo, o agua de tiles, que ya
--- tiene su propio tinte)
--- (Solo se salta el agua de tile, que ya se pinta sola: no dos tintes. Los
--- bloques NO: la inundación va por delante de todo lo que cubre, bloques,
--- rompibles, entidades... así se ve que el agua los tapa al subir)
-local function skipCell(level, col, row, liquidOfCell)
-    return liquidOfCell(level, col, row) ~= nil
+-- Reglas (solo el dibujo: la física sigue siendo Floods.liquidAt, agua en todo el rectángulo bajo la superficie):
+--  · El agua de casillas se pinta sola (Level:renderWaterEffect): aquí se salta, no dos tintes.
+--  · Un bloque macizo se tiñe solo si lo TAPA agua que se ve encima (la inundación va por delante de los bloques y
+--    rompibles que cubre, 3.7.1); el tinte entra poco a poco con la hondura de esa agua (COVER_FADE px), sin saltos
+--    cuando la superficie cruza la cara de arriba del suelo. Si la superficie está DENTRO del bloque (la marea bajo
+--    tierra) no se pinta nada en él: ni tinte ni olas.
+--  · La superficie (olas, línea clara) solo se pinta en celdas abiertas y si encima no hay más agua (otra inundación
+--    o agua de casillas): dos aguas que se juntan son UN cuerpo con una sola superficie, la de arriba.
+--  · Donde dos inundaciones se solapan, cada trozo es de la primera de la lista (como Floods.liquidAt): un solo tinte.
+local COVER_FADE = TILE_PX / 2
+
+function Floods.tintOf(f)
+    return (f.cold > 0 and f.mat and f.mat.coldTint) or (f.mat and f.mat.tint) or { 0.05, 0.3, 0.9, 0.35 }
 end
 
--- Recorre las porciones visibles bajo el agua (una por celda):
--- fn(x, y, w, h, col, isSurface) en px de pantalla. `topMargin` = px que se
--- saltan bajo la superficie (la distorsión no llega hasta la ola)
-local function eachWetCell(level, f, camX, camY, liquidOfCell, fn, topMargin)
+-- La inundación cuya agua entra en [a, b) de la columna col (la primera de la lista, como la física) y el trozo
+-- que ocupa, o nil. Lo usa el agua de casillas para su tinte y su superficie.
+function Floods.coverIn(floods, col, a, b)
+    for i = 1, #floods do
+        local f = floods[i]
+        if f.level > 0 and col >= f.col0 and col <= f.col1 then
+            local pa, pb = math.max(a, f.surf), math.min(b, f.y1)
+            if pb > pa then return f, pa, pb end
+        end
+    end
+    return nil
+end
+
+local function closedCell(level, col, row)
+    local d = level:getDef(col, row)
+    return d.collision == 'solid' and d.fullHitbox
+end
+
+-- Tramos de la columna col que son agua de la inundación i y no de una anterior (SEGS = a1, b1, a2, b2...; n = cuántos
+-- números)
+local SEGS = {}
+local function ownSegments(floods, i, col)
+    local f = floods[i]
+    for k = #SEGS, 1, -1 do SEGS[k] = nil end
+    local n = 2
+    SEGS[1], SEGS[2] = f.surf, f.y1
+    for j = 1, i - 1 do
+        local g = floods[j]
+        if g.level > 0 and col >= g.col0 and col <= g.col1 then
+            local k = 1
+            while k < n do
+                local a, b = SEGS[k], SEGS[k + 1]
+                if g.surf < b and g.y1 > a then              -- (le quita [g.surf, g.y1): quedan 0, 1 o 2 tramos)
+                    local keepA, keepB = g.surf > a, g.y1 < b
+                    if keepA and keepB then
+                        table.insert(SEGS, k + 2, b); table.insert(SEGS, k + 2, g.y1)
+                        SEGS[k + 1] = g.surf
+                        n = n + 2; k = k + 4
+                    elseif keepA then SEGS[k + 1] = g.surf; k = k + 2
+                    elseif keepB then SEGS[k] = g.y1; k = k + 2
+                    else table.remove(SEGS, k); table.remove(SEGS, k); n = n - 2 end
+                else
+                    k = k + 2
+                end
+            end
+        end
+    end
+    return SEGS, n
+end
+
+-- Recorre los trozos de agua de la inundación i que se pintan (en pantalla):
+-- fn(x, y, w, h, kTinte, superficie, wa, wb) — x, y, w, h en px de pantalla; wa, wb = el trozo en px de mundo;
+-- kTinte < 1 = bloque tapado por poca agua; superficie = el trozo empieza en la superficie y se ve.
+local function eachWetPiece(level, i, camX, camY, liquidOfCell, fn)
+    local floods = level.floods
+    local f = floods[i]
     local T = TILE_PX
     local c0 = math.max(f.col0, math.floor(camX / T) + 1)
     local c1 = math.min(f.col1, math.floor((camX + WINDOW_W) / T) + 1)
-    local rs = math.floor(f.surf / T) + 1
-    local r0 = math.max(f.row0, rs, math.floor(camY / T) + 1)
+    local rs = math.max(f.row0, math.floor(f.surf / T) + 1)
+    local rTop = math.floor(camY / T) + 1
     local r1 = math.min(f.row1, math.floor((camY + WINDOW_H) / T) + 1)
-    for row = r0, r1 do
-        local top = math.max((row - 1) * T, f.surf + (topMargin or 0))
-        local y = math.floor(top - camY)
-        local h = math.floor(math.min(row * T, f.y1) - camY) - y
-        if h > 0 then
-            for col = c0, c1 do
-                if not skipCell(level, col, row, liquidOfCell) then
-                    fn(math.floor((col - 1) * T - camX), y, T, h, col, row == rs)
+    for col = c0, c1 do
+        local segs, n = ownSegments(floods, i, col)
+        if n > 0 then
+            local xw = (col - 1) * T
+            local x = math.floor(xw - camX)
+            -- (¿se ve la superficie? encima no hay más agua: ni otra inundación ni agua de casillas)
+            local surfOk = not level:liquidAt(xw + T / 2, f.surf - 0.5)
+            local depth, prevClosed = 0, false   -- (px de agua ABIERTA justo encima del bloque en el que se está)
+            for row = rs, r1 do
+                local cT, cB = (row - 1) * T, row * T
+                local wa, wb = math.max(cT, f.surf), math.min(cB, f.y1)
+                if wb > wa then
+                    local closed = closedCell(level, col, row)
+                    local k = 1
+                    if closed then
+                        k = math.min(1, depth / COVER_FADE)
+                    else
+                        if prevClosed then depth = 0 end
+                        depth = depth + (wb - wa)
+                    end
+                    prevClosed = closed
+                    if row >= rTop and k > 0 and liquidOfCell(level, col, row) == nil then
+                        for s = 1, n - 1, 2 do
+                            local pa, pb = math.max(wa, segs[s]), math.min(wb, segs[s + 1])
+                            if pb > pa then
+                                local y = math.floor(pa - camY)
+                                local h = math.floor(pb - camY) - y
+                                if h > 0 then
+                                    fn(x, y, T, h, k, surfOk and not closed and pa == f.surf, pa, pb, col)
+                                end
+                            end
+                        end
+                    end
                 end
             end
         end
     end
 end
 
--- Distorsión: la escena otra vez con el shader, recortada a lo sumergido
+-- Distorsión: la escena otra vez con el shader, recortada a lo sumergido (sin distorsión justo bajo la ola)
 -- addRect(x, y, w, h): añade a la malla de la distorsión (Level:renderWaterEffect) cada trozo mojado
 function Floods.renderDistort(level, camX, camY, addRect, liquidOfCell)
-    for _, f in ipairs(level.floods or {}) do
-        if f.level > 0 then eachWetCell(level, f, camX, camY, liquidOfCell, addRect, WaterSurface.MARGIN) end
+    local M = WaterSurface.MARGIN
+    for i, f in ipairs(level.floods or {}) do
+        if f.level > 0 then
+            eachWetPiece(level, i, camX, camY, liquidOfCell, function(x, y, w, h, _, surf)
+                if surf then addRect(x, y + M, w, h - M) else addRect(x, y, w, h) end
+            end)
+        end
     end
 end
 
--- Tinte + superficie con olas (la fila de la superficie la pinta
--- WaterSurface, con la parte de arriba siguiendo la ola)
+-- Tinte + superficie con olas (el trozo de la superficie lo pinta WaterSurface, con la parte de arriba siguiendo la
+-- ola)
+local FADED = { 0, 0, 0, 0 }
 function Floods.renderTint(level, camX, camY, liquidOfCell)
     local t = love.timer.getTime()
     local T = TILE_PX
-    for _, f in ipairs(level.floods or {}) do
+    for i, f in ipairs(level.floods or {}) do
         if f.level > 0 and f.mat then
-            local tint = (f.cold > 0 and f.mat.coldTint) or f.mat.tint or { 0.05, 0.3, 0.9, 0.35 }
+            local tint = Floods.tintOf(f)
             local amp = f.moving and 3 or 2
-            eachWetCell(level, f, camX, camY, liquidOfCell, function(x, y, w, h, col, isSurface)
-                if isSurface then
-                    local row = math.floor(f.surf / T) + 1
-                    WaterSurface.draw((col - 1) * T, col * T, f.surf, math.min(row * T, f.y1),
-                                      camX, camY, tint, amp, t)
+            eachWetPiece(level, i, camX, camY, liquidOfCell, function(x, y, w, h, k, surf, wa, wb, col)
+                if surf then
+                    WaterSurface.draw((col - 1) * T, col * T, f.surf, wb, camX, camY, tint, amp, t)
                 else
-                    love.graphics.setColor(tint)
+                    if k < 1 then
+                        FADED[1], FADED[2], FADED[3], FADED[4] = tint[1], tint[2], tint[3], (tint[4] or 1) * k
+                        love.graphics.setColor(FADED)
+                    else
+                        love.graphics.setColor(tint)
+                    end
                     love.graphics.rectangle('fill', x, y, w, h)
                 end
             end)

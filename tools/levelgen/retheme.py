@@ -38,6 +38,9 @@ Uso (desde la raíz del repo):
             OBLIGA a nombrar los niveles (o --bg-all: todos los de THEMES). Nunca toca un plano hecho a mano; lo
             generado se apunta en tools/levelgen/bg_gen/<nivel>.json y --force quita SOLO eso (lo que siga igual) y
             lo rehace. --out escribe COPIAS en esa carpeta (lee la copia si ya existe; el apunte, <nivel>.bggen.json)
+            --holes: SOLO cierra los huecos del plano que ya hay detrás de los bloques que cambian (ON/OFF, rompibles,
+            hielo fino, invisibles, de fase...), sin rehacer nada; lo añadido se apunta como generado. Un plano a mano
+            no se toca: con --dry se listan sus huecos (vale cualquier nivel)
 Una opción desconocida PARA sin tocar nada (antes re-vestía todos los niveles).
 Tras `build.py --only x` (que reescribe el nivel) hay que volver a pasarlo.
 """
@@ -622,7 +625,7 @@ THEME_CHECK = '--theme' in sys.argv     # con --decor: también lo que no es del
 if DEEP_ONLY: sys.argv += ['--tiles', '--terrain']
 
 FLAGS = {'--force', '--terrain', '--dry', '--tiles', '--sky', '--deep', '--decor', '--fix', '--theme', '--enemies',
-         '--bg', '--bg-all', '--out'}
+         '--bg', '--bg-all', '--out', '--holes'}
 
 if __name__ == '__main__':
     argv = sys.argv[1:]
@@ -639,12 +642,24 @@ if __name__ == '__main__':
     args = [a for a in argv if not a.startswith('--')]
     if out and '--bg' not in argv and '--bg-all' not in argv:
         sys.exit('retheme.py: --out solo vale con --bg')
+    if '--holes' in argv and '--bg' not in argv and '--bg-all' not in argv:
+        sys.exit('retheme.py: --holes solo vale con --bg (no se ha tocado nada)')
     if '--bg' in argv or '--bg-all' in argv:    # el PLANO DE FONDO por isla (tools/levelgen/retheme_bg.py)
         import retheme_bg
         if '--bg-all' in argv and args:
             sys.exit('retheme.py: --bg-all no lleva nombres de nivel')
         if '--bg-all' not in argv and not args:
             sys.exit('retheme.py --bg: di los niveles (o --bg-all para todos los de THEMES)')
+        if '--holes' in argv:           # (solo cerrar los huecos del plano que ya hay; vale cualquier nivel)
+            if '--force' in argv:
+                sys.exit('retheme.py --bg --holes: sin --force (no rehace nada)')
+            missing = [n for n in args if not os.path.exists(os.path.join(LEVELS, n + '.json'))]
+            if missing:
+                sys.exit('retheme.py --bg --holes: no existe: %s' % ' '.join(missing))
+            print('Huecos del plano de fondo%s:' % (' → ' + out if out else ''))
+            for n in (args or sorted(THEMES)):
+                retheme_bg.holes_only(n, '--dry' in argv, out)
+            sys.exit(0)
         unknown = [n for n in args if n not in THEMES]
         if unknown:
             sys.exit('retheme.py --bg: sin tema en THEMES: %s' % ' '.join(unknown))

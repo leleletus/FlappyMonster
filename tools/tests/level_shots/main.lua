@@ -7,7 +7,8 @@
 --   TAG=texto  se añade al nombre de la salida (shot_<nivel>_<texto>.png): antes / después sin pisarse
 --   TIME=day|dusk|night  la hora del nivel (un fondo a las tres horas: TIME=night TAG=night)
 --   SECS=n  segundos de simulación antes de la foto (1 por defecto): ver una trampa con reloj a su hora (el alud de
---           la_cima cayendo: SECS=11)
+--           la_cima cayendo: SECS=11); las inundaciones y mareas avanzan con ella (la marea de bahia_de_las_mareas
+--           bajo tierra con SECS=1, sobre el agua fija con SECS=8)
 --   FIXED=1  foto REPETIBLE (azar con semilla fija y reloj parado): dos ejecuciones dan el mismo PNG, para
 --            comparar antes / después de mover o rehacer algo que no debe cambiar el dibujo
 -- Salida: <save>/shot_<nivel>.png  (~/.local/share/love/fm_test_levelshots/)
@@ -24,6 +25,7 @@ local Entities = require 'src/world/entities/Entities'
 local Sky = require 'src/fx/Sky'
 local Darkness = require 'src/fx/Darkness'
 local BossZones = require 'src/world/systems/BossZones'
+local Floods = require 'src/world/systems/Floods'
 
 local FIXED = os.getenv('FIXED') == '1'
 if FIXED then love.timer.getTime = function() return 100 end end
@@ -43,6 +45,7 @@ local function shot(path)
     BossZones.link(level, es)
     for _ = 1, math.max(1, math.floor((tonumber(os.getenv('SECS')) or 1) * 60 + 0.5)) do
         level.solidBodies = Entities.solidBodies(es)
+        Floods.advance(level, 1 / 60)          -- (inundaciones y mareas a su hora, como en el juego)
         level:update(1 / 60); level:updateFoliage(1 / 60)
         for _, e in ipairs(es) do if e.alive then e:update(1 / 60, level) end end
     end

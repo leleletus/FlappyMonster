@@ -49,6 +49,9 @@ of the sky layers. No stencil (Switch / Android).
 - A new block that should be allowed or refused: `BackPlane.allows` decides from the definition (collision, trigger,
   toggle, activator, lava, liquid / contact material); a new kind of hazard must be refused there.
 - A decoration type that must always be in the background: `plane = 'bg'` in its definition.
+- A new front block that can vanish (break, switch off, appear late) or that lets the back show (translucent): add its
+  id to `VANISH` / `SEE` in `tools/levelgen/retheme_bg.py`, so the generator keeps the plane continuous behind it
+  (`Gen.bury`, `Gen.holes`); a new opaque solid that is not `GROUND`, to `OPAQUE`.
 - Structures for a theme generated on existing levels: table `SPEC` in `tools/levelgen/retheme_bg.py` (see
   [levels/retheme](../levels/retheme.md) § Background-plane structures; generated parts are listed in `tools/levelgen/bg_gen/<level>.json`).
 - Darker / lighter or a different shadow: `SHADE`, `SHADOW`, `OFF` (the user chose them: ask before changing).
@@ -88,3 +91,19 @@ of the sky layers. No stencil (Switch / Android).
 - 2026-10-29: the user reversed it — in day levels the plane looked much darker than it should ("haz que sean iguales e
   incluso un poquito menos oscuros"): `SHADE` and `SHADE_DAY` are now the SAME, a little lighter than the first preview
   (0.62 / 0.65 / 0.72). `shadeOf` and the two values stay, so a level kind can get its own shade again by data.
+- 2026-10-29, the user: "Hay niveles nuevos en donde el generador de niveles falla y confunde los bloques de adelante con
+  los bloques de atrás y por tanto no coloca bloques atrás si hay bloques adelante; esto genera huecos en la capa de
+  fondo, especialmente si el bloque de adelante es un ON/OFF (al desactivarse se vuelve invisible y se ve que detrás no
+  hay nada)." Causes: (1) the generator only buried its structures 2 rows into front TERRAIN, counting packed snow /
+  breakable slabs as terrain — broken, they showed sky under the structure (cumbres_escarcha); (2) every non-terrain
+  front block (ON/OFF, breakable…) got the loose-block margin, so structures were cut around it and nothing ever closed
+  the cut; (3) the rio_revuelto builder (`levels_jungle_2.py` `backplane`) skipped the cells of the ON-block staircase
+  that crosses a pier and the OFF door between two temple rooms. Fix: `Gen.bury` goes on behind vanishing blocks;
+  `Gen.holes` closes holes behind vanishing / see-through blocks where the plane around continues
+  ([retheme](../levels/retheme.md) § No holes behind blocks that change); the builder fills behind the staircase and the
+  door. Applied with `retheme.py --bg --holes` (nothing regenerated) to cumbres_escarcha (5 cells) and rio_revuelto (7).
+  Hand-made planes only listed: bahia_de_las_mareas 44-45 × 19-20 (the 2×2 shaft under the breakable blocks between the
+  two brick rooms shows sky when they break). bosque_interruptores had already been retouched by the user (plane behind
+  the ON bridges, the OFF walls and the pits); levels whose ON bridges cross a pit in open sky (ciudadela_alterna,
+  templo_del_eco) have no plane around them: there is no hole, the sky goes on. Previews:
+  `FlappyMonster_pruebas/plano_huecos/` (`cmp_*.png`: before | after, with the blocks switched off / broken).

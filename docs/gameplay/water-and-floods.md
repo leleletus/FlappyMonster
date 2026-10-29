@@ -16,7 +16,7 @@ entity `flood` with a `corner` handle and timing props; difficulty scales air ti
 vent bubbles (`ventDelay`). Underwater design numbers for level builders are in
 [generator-and-solver](../levels/generator-and-solver.md).
 
-**Harnesses:** `flood_control`, `online_boss LEVEL=tools/tests/online_boss/fortaleza_flood.json`, `mechanics`,
+**Harnesses:** `iceberg_rules CASE=olas` (the drawing rules below, by pixels; `SHOT=1` → `olas.png`), `flood_control`, `online_boss LEVEL=tools/tests/online_boss/fortaleza_flood.json`, `mechanics`,
 `iceberg_rules` (tide, freezing water, icebergs; its level `tools/tests/iceberg_rules/costa.json` also runs online:
 `online_smoke LEVEL=tools/tests/iceberg_rules/costa.json WATCH=iceberg WANT=warn,sunk WANTICE=1`).
 
@@ -39,8 +39,19 @@ holdTime, fallSpeed/fallStep/fallPause, lowTime. `Level.fromData` builds
 at which its predicted inputs get processed; 0 corrections in tests). Physics:
 `Level:liquidAt` returns water below `f.surf`, so swimming/drowning/splash/
 fireballs work unchanged. Render in `renderWaterEffect` (distortion + tint per
-cell, over EVERYTHING it covers incl. solid blocks — only tile water is skipped, no double tint). Surfaces (floods AND tile water
-with air above: `Level:isWaterSurfaceCell`) use `src/fx/WaterSurface.lua`: tint
+cell, column by column: `eachWetPiece` in `Floods.lua`). DRAWING rules (physics is untouched: the flood's water is still
+the whole rect below `f.surf`, inside blocks too):
+- tile water is skipped (it draws itself), no double tint;
+- a solid block is tinted only when water you can SEE covers it from above (in front of the blocks and breakables it
+  covers, 3.7.1); its tint fades in with the depth of that open water (`COVER_FADE` = half a tile), so nothing pops when
+  the surface crosses the top of the ground. If the surface is INSIDE the block (a tide below the ground) nothing is
+  drawn in it — no tint, no waves; an open pocket below it is drawn (water under a ceiling, no waves);
+- ONE body, ONE surface: a surface (waves, light line) is drawn only in open cells with no other water right above it
+  (`Level:liquidAt(x, f.surf - 0.5)`); tile water loses its surface where a flood's water reaches above it
+  (`Level:isWaterSurfaceCell`) and the part of a tile-water cell a flood covers gets the FLOOD's tint (`Floods.coverIn`,
+  `Floods.tintOf`: the physics gives that water to the flood — `Level:coldAt`); where two floods overlap each piece
+  belongs to the first one in the list, like `Floods.liquidAt`.
+Surfaces use `src/fx/WaterSurface.lua`: tint
 drawn in 4-px columns whose top follows the wave (no flat edge behind it);
 distortion starts `WaterSurface.MARGIN` px below the surface. `Floods.updateFx`
 (clients only): 'floodRise'/'floodFall' sounds when the water starts moving
@@ -105,6 +116,16 @@ kept unique (`Model:fixFloodIds`); warnings for dangling links. Harness `flood_c
 
 ## History
 
+- 2026-10-29 (drawing of the tide, the user: "Cuando una marea desciende bajo tierra, se buggea y salen sus 'olas' por
+  debajo de la tierra" and "Cuando ya hay agua fija y la marea sube, en lugar de que ambos cuerpos se mezclen en uno, el
+  agua fija conserva su propio oleaje en su superficie y queda raro ver olas dentro del agua"). Causes: the flood drew
+  its surface row and its tint in every cell below `f.surf`, solid or not (3.7.1 made it cover blocks), so a tide inside
+  the ground drew its waves in the ground; tile water decided its surface only from the cell above, ignoring floods, and
+  two overlapping floods each drew their own tint and surface. Fix = the drawing rules in "Floods" (one body, one
+  surface; nothing inside the ground the water is hidden in; covered blocks still tinted, fading in). Physics and the
+  harness numbers are identical before / after. Captures: `FlappyMonster_pruebas/marea_olas/` (`antes_*` / `despues_*`).
+  Side effect: a block sticking out of the water (its top cell holds the surface) is no longer tinted below the water
+  line — the water is drawn around it, not in front of it. Not yet seen by the user in game.
 - 2026-10-29 (the Frozen Coast, the user's approved design `FlappyMonster_pruebas/islas_heladas/diseno.md` §A 2-3):
   tide and freezing water as options of the existing flood / level water, not new tiles. Not yet felt by the user.
 - 0.5.11 (review): oxygen bubbles (gameplay: they give air) no longer depend on the bubble images having loaded, and

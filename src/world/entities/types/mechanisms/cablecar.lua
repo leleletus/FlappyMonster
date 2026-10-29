@@ -33,6 +33,8 @@ local DECK_Y  = HOOK_Y + 22 * S       -- del cable a la cara de arriba de la pla
 local DECK_H  = 6 * S
 local BACK_DELAY = 1.0                -- s sin peso antes de volver al principio (`onWeight` + `back`)
 local MOVE_SND = 0.6                  -- s: cada cuánto se repite el sonido de moverse
+-- volumen de sus sonidos (el usuario, 2026-10-29: "los teleféricos suenan mucho"): de fondo, que no tapen el juego
+local MOVE_VOL, STOP_VOL = 0.3, 0.45
 local MAX_POSES = 12                  -- poses del grafo del bot (BotNav): como mucho
 CC.DECK_Y, CC.CAB_W = DECK_Y, CAB_W
 
@@ -225,13 +227,14 @@ function CC:updateCustom(dt, level)
     end
     if self.state == 'moving' and moved ~= 0 then
         self.sndT = (self.sndT or 0) - dt
-        if self.sndT <= 0 then Sound.playAt('cablecarMove', near()); self.sndT = MOVE_SND end
+        if self.sndT <= 0 then local sx, sy = near(); Sound.playAt('cablecarMove', sx, sy, 1, MOVE_VOL); self.sndT = MOVE_SND end
     else
         self.sndT = 0
     end
     if (self.state == 'waiting' and was == 'moving') or (was == 'waiting' and self.state == 'moving')
        or (was == 'idle' and self.state == 'moving') then
-        Sound.playAt('cablecarStop', near())
+        local sx, sy = near()
+        Sound.playAt('cablecarStop', sx, sy, 1, STOP_VOL)
     end
     self.spin = (self.spin or 0) + moved
     return true

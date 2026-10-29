@@ -370,6 +370,11 @@ def counter_gm(sg, R, bars, prog, vel, lo=55, hi=67, key='cm'):
             R.gm(key, prog, b, st, prev, d, vel, gate=0.97)
 
 
+# (2026-10-29, el usuario: "deja montaña 1 como estaba antes" — montana_1 conserva sus cascabeles de 0.5.103, a
+#  contratiempo; las demás pistas, a tiempo con jv())
+M1_OLD_JINGLES = True
+
+
 def jv(st, beat=68, eighth=54, sixteenth=38):
     """velocidad de los cascabeles A TIEMPO (2026-10-29, el usuario: la "nevada" sonaba a destiempo — iba solo entre
     los tiempos —): el tiempo, fuerte; la corchea, media; la semicorchea, floja"""
@@ -519,22 +524,29 @@ def arrange_m1(sg, R, v):
         for st in range(16):
             t = sg.t(b, st)
             if tag == 'intro':
-                if k >= 2 and st % 2 == 0: R.dr('jingle', b, st, JINGLE, jv(st, 64, 50))
+                if M1_OLD_JINGLES:
+                    if k >= 2 and st % 4 == 2: R.dr('jingle', b, st, JINGLE, 64)
+                elif k >= 2 and st % 2 == 0: R.dr('jingle', b, st, JINGLE, jv(st, 64, 50))
                 if k >= 3 and st in (0, 8): R.kick(b, st, 0.8)
                 continue
             if thin:
-                if st % 4 == 0: R.dr('jingle', b, st, JINGLE, 48)
+                if st % 4 == (2 if M1_OLD_JINGLES else 0): R.dr('jingle', b, st, JINGLE, 48)
                 continue
             big = tag in ('C', 'V')
             if tag == 'B':                                                   # la vista: medio tiempo
                 if st == 0: R.kick(b, st, 0.9)
                 if st == 8: R.dr('snare', b, st, SN, 92, kit=kit)
-                if st % 2 == 0: R.dr('jingle', b, st, JINGLE, jv(st, 62, 50))
+                if M1_OLD_JINGLES:
+                    if st % 4 == 2: R.dr('jingle', b, st, JINGLE, 62)
+                elif st % 2 == 0: R.dr('jingle', b, st, JINGLE, jv(st, 62, 50))
             else:
                 if st in (0, 8) or (big and st in (6, 14)) or st == 6: R.kick(b, st, 1.0 if st in (0, 8) else 0.75)
                 if st in (4, 12): R.dr('snare', b, st, SN, 100 if big else 90, kit=kit)
                 if big and st in (7, 15) and v == 'B': R.dr('snare', b, st, SN, 46, kit=kit)
-                if big or st % 2 == 0: R.dr('jingle', b, st, JINGLE, jv(st, 72, 58, 42) if big else jv(st, 64, 52))
+                if M1_OLD_JINGLES:
+                    if st % 2 == 1 and big: R.dr('jingle', b, st, JINGLE, 50)
+                    if st % 4 == 2: R.dr('jingle', b, st, JINGLE, 72 if big else 64)
+                elif big or st % 2 == 0: R.dr('jingle', b, st, JINGLE, jv(st, 72, 58, 42) if big else jv(st, 64, 52))
                 if v == 'B' and st in (0, 8) and big: R.gm('bd', CONCERT_BD, b, st, 36, 2, 92 if st == 0 else 74)
             if st == 0 and k in (1, 5) and tag in ('A', 'C', 'V'): R.NZ['crash'].hit(t, 3, CRASH_N)
             if v == 'A' and big and st % 4 == 0: R.dr('ride', b, st, RIDE_BELL, 56)

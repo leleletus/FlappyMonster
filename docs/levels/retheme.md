@@ -68,9 +68,27 @@ mechanisms, items: `READ_ENTS`; falling ones also down their column; an avalanch
 (+3 columns, their arena keeps its own plane) and boss walls. LIGHT zones (start ±8 columns, finish ±7, checkpoints ±4)
 only get things 2 tiles high and no big trees. Structures stand on front terrain (blocks joined to the frame or masses
 of ≥ 12), are never taller than the free space above them minus 1 (they shrink whole, no notches), fill 2 rows down
-into the hidden terrain (no bottom edge shows) and never overlap the user's plane. Big decorations must fit their
-whole box in front-empty, allowed space and never hide a plane structure; enemies don't count (they read on the dark
-plane by themselves).
+into the hidden terrain (no bottom edge shows; blocks that can vanish — packed snow, a breakable slab, an ON/OFF block —
+do not count: the fill goes on behind them down to 2 rows of FIXED terrain, `Gen.bury`) and never overlap the user's plane.
+Big decorations must fit their whole box in front-empty, allowed space and never hide a plane structure; enemies don't
+count (they read on the dark plane by themselves).
+
+**No holes behind blocks that change** (2026-10-29, [background plane](../art/background-plane.md) § History). After
+building, `Gen.holes` closes the plane behind front blocks that can disappear or show what is behind (`VANISH`:
+breakable, invisible, ON/OFF blocks active and inactive, thin ice, packed snow, phase-block cells; `SEE`: translucent
+ice and ice ledge) wherever the plane around them goes on: a *run* of vanishing blocks in a row or column with visible
+plane at both ends (≤ 6) or plane at one end and an opaque front wall at the other (≤ 3), and a *pocket* (≤ 12 cells,
+no water / spikes / lava) holding one of those blocks and bounded only by plane and opaque front blocks (≥ 2 visible
+plane cells on its rim). Plane behind translucent ice does not count as an end (it is the buried part of the structures:
+following it painted strips under the gaps between them). The margin around platforms and loose blocks is "soft" for
+it (generation never builds there, but a hole the plane already surrounds is closed); spikes, lava, the finish,
+entities to read, start, checkpoints, chutes and boss zones are never filled.
+`retheme.py --bg --holes <levels>` runs ONLY that pass on the plane a level already has (nothing is regenerated: the
+generated part, the user's retouches and the user's cells stay as they are) and appends what it adds to the sidecar;
+a hand-made plane (no sidecar) is never written — `--holes --dry` lists its holes (any level, with or without a theme).
+Do not use `--force` to fix holes: on 2026-10-29 (tried on copies) it reproduced the current plane in only 39 of the 52
+levels with a sidecar — the others had been retouched or predate later generator rules, and their blocks and
+decorations would change.
 
 **Safety and tagging.** `--bg` refuses to run without level names (`--bg-all` = every THEMES level, on purpose) and
 rejects names without a theme; any unknown flag now stops `retheme.py` without touching anything. Generated content is
@@ -84,6 +102,8 @@ changed or added is theirs), then regenerates around what remains. Seeded per le
 python3 tools/levelgen/retheme.py --bg valle_soleado                       # writes assets/levels + bg_gen/
 python3 tools/levelgen/retheme.py --bg --force valle_soleado               # redo only the generated part
 python3 tools/levelgen/retheme.py --bg --dry valle_soleado                 # count only
+python3 tools/levelgen/retheme.py --bg --holes valle_soleado               # only close holes behind ON/OFF, breakables...
+python3 tools/levelgen/retheme.py --bg --holes --dry <any levels>          # list the holes (also hand-made planes)
 python3 tools/levelgen/retheme.py --bg --out <dir> valle_soleado ...       # COPIES in <dir> (+ <dir>/<level>.bggen.json)
 tools/tests/run.sh level_shots SCALE=0.35 -- <dir>/valle_soleado.json     # look at it (LIGHT=0 for dark levels)
 ```

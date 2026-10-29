@@ -21,6 +21,11 @@
 --   red          el estado propio lleva `frostT`; un "cliente" que se corrige con él predice igual (frío y hielo); el
 --                iceberg viaja (netPack / netApply) y se dibuja; la marea no manda nada (la calcula cada uno)
 --   editor       `coldWater` del nivel y la marea / agua helada de una inundación se guardan y se cargan
+--   olas         DIBUJO del agua (Level:renderWaterEffect, píxeles): la marea BAJO TIERRA no pinta nada dentro de los
+--                bloques (ni olas ni tinte) y sí en el hoyo abierto de su columna (`bajo_tierra`); la marea que SUBE
+--                sobre agua fija es un solo cuerpo: sin la superficie del agua fija dentro, un solo tinte, y al bajar
+--                vuelve la del agua fija (`sobre_fija`); con agua helada, un solo tinte el de quien manda en la física
+--                (`frio_tinte`); dos inundaciones solapadas: una superficie, un tinte (`dos`). SHOT=1 → <save>/olas.png
 --
 --   tools/tests/run.sh iceberg_rules   (CASE=nombre)
 io.stdout:setvbuf('no')
@@ -63,6 +68,7 @@ local function room(opts)
             local v = 0
             if r == H or r == 1 or c == 1 or c == W then v = SOLID
             elseif c <= 7 and r >= 7 and not opts.noShore then v = SOLID
+            elseif opts.ground and r >= opts.ground and not (c == opts.pit and r < H - 1) then v = SOLID
             elseif opts.pool and r >= 7 then v = WATER end
             row[c] = v
         end
@@ -440,6 +446,134 @@ function cases.red()
             tostring(Floods.netPack(lvT, P.TICK_DT)), same))
 end
 
+-- ── Dibujo del agua ───────────────────────────────────────────────────────────
+-- Escena (nivel sobre negro) + efecto del agua en un lienzo del tamaño de la sala, con la hora fija (olas quietas)
+local function shoot(level)
+    local W0, H0 = WINDOW_W, WINDOW_H
+    WINDOW_W, WINDOW_H = W * T, H * T
+    local scene = love.graphics.newCanvas(W * T, H * T)
+    local out = love.graphics.newCanvas(W * T, H * T)
+    love.graphics.setCanvas(scene); love.graphics.clear(0, 0, 0, 1); level:render(0, 0, true)
+    love.graphics.setCanvas(out); love.graphics.clear(0, 0, 0, 1); level:renderWaterEffect(0, 0, scene)
+    love.graphics.setCanvas()
+    WINDOW_W, WINDOW_H = W0, H0
+    return out:newImageData(), out
+end
+local function floodAt(id, c0, r0, c1, r1, props)
+    local p = { id = id, corner = { col = c1, row = r1 } }
+    for k, v in pairs(props) do p[k] = v end
+    return { type = 'flood', col = c0, row = r0, props = p }
+end
+local function tide(lo, hi, phase, extra)
+    local p = { control = 'tide', startLevel = lo, maxLevel = hi, tidePeriod = 8, tidePhase = phase }
+    for k, v in pairs(extra or {}) do p[k] = v end
+    return flood(p)
+end
+local function lit(level) Floods.setTime(level, 0); return level end
+local function px(img, x, y) local r, g, b = img:getPixel(x, y); return r, g, b end
+local function sameAt(a, xa, ya, b, xb, yb) local r1, g1, b1 = px(a, xa, ya); local r2, g2, b2 = px(b, xb, yb)
+    return math.abs(r1 - r2) + math.abs(g1 - g2) + math.abs(b1 - b2) < 1.5 / 255 end
+local function same(a, b, x, y) return sameAt(a, x, y, b, x, y) end
+-- Píxeles distintos entre dos fotos en las casillas [c0..c1] x [r0..r1] (salvo la columna `skip`)
+local function diffCells(a, b, c0, r0, c1, r1, skip)
+    local n = 0
+    for y = (r0 - 1) * T, r1 * T - 1 do
+        for x = (c0 - 1) * T, c1 * T - 1 do
+            if math.floor(x / T) + 1 ~= skip and not same(a, b, x, y) then n = n + 1 end
+        end
+    end
+    return n
+end
+-- ¿La columna x es del mismo color de y0 a y1? (un solo cuerpo de agua: sin otra superficie ni otro tinte dentro;
+-- se para 8 px sobre el suelo: el borde de arriba del arte del suelo asoma y la distorsión lo mueve)
+local function uniform(img, x, y0, y1)
+    local bad = 0
+    for y = y0, y1 do if not sameAt(img, x, y, img, x, y0) then bad = bad + 1 end end
+    return bad
+end
+local function bright(img, x, y0, y1)             -- (la línea clara de una ola entre y0 e y1)
+    local _, _, b0 = px(img, x, y1)
+    for y = y0, y1 do local r = px(img, x, y); if r > b0 * 0.5 + 0.3 then return true end end
+    return false
+end
+
+function cases.olas()
+    local gt = love.timer.getTime
+    love.timer.getTime = function() return 100 end
+    local shots = {}
+    -- bajo_tierra: suelo macizo en las filas 10-12 con un hoyo abierto en la columna 15 (filas 10-11); marea a 1,5
+    -- casillas = superficie en y = 10,5 casillas, DENTRO del suelo
+    local g = { noShore = true, ground = 10, pit = 15 }
+    g.entities = { tide(1.5, 6, 0) }
+    local imgA, cA = shoot(lit(room(g)))
+    g.entities = {}
+    local refA = shoot(room(g))
+    local inSolid = diffCells(imgA, refA, 8, 10, 23, 12, 15)
+    local above = diffCells(imgA, refA, 8, 2, 23, 9)
+    local cx = 14 * T + T / 2
+    local inPit = not same(imgA, refA, cx, 10 * T + 40) and bright(imgA, cx, 10.5 * T - 4, 10.5 * T + 8)
+    check('bajo_tierra', inSolid == 0 and above == 0 and inPit,
+        ('marea con la superficie dentro del suelo: %d px pintados en los bloques (0), %d sobre el suelo (0); en el hoyo abierto hay agua con su ola=%s'):format(
+            inSolid, above, tostring(inPit)))
+    shots[1] = cA
+    -- sobre_fija: charca de casillas (filas 7-12, superficie en y = 6 casillas) y la marea a 8 casillas encima
+    -- (superficie en y = 4): un cuerpo de un solo color desde bajo la ola de la marea hasta el fondo
+    local x = 11 * T + 20
+    local imgB, cB = shoot(lit(room({ pool = true, entities = { tide(2, 8, 0.5) } })))
+    local badB = uniform(imgB, x, 4 * T + 8, 12 * T - 8)
+    local lineB = bright(imgB, x, 4 * T - 4, 4 * T + 8)
+    local imgB2 = shoot(lit(room({ pool = true, entities = { tide(2, 8, 0) } })))      -- (marea baja: dentro de la charca)
+    local refB = shoot(room({ pool = true }))
+    local backB = diffCells(imgB2, refB, 8, 2, 23, 12)
+    local lineB2 = bright(imgB2, x, 6 * T - 4, 6 * T + 8)
+    check('sobre_fija', badB == 0 and lineB and backB == 0 and lineB2,
+        ('marea alta sobre el agua fija: %d px distintos en la columna bajo su ola (0: sin la ola del agua fija ni otro tinte), ola arriba=%s; marea baja: igual que el agua fija sola (%d px distintos) y su ola vuelve=%s'):format(
+            badB, tostring(lineB), backB, tostring(lineB2)))
+    shots[2] = cB
+    -- frio: marea HELADA sobre agua fija normal y marea normal sobre agua fija de un nivel `coldWater`: un solo tinte, el
+    -- del agua que manda en la física (Level:coldAt: la de la inundación)
+    local imgC, cC = shoot(lit(room({ pool = true, entities = { tide(2, 8, 0.5, { cold = 3 }) } })))
+    local lvC2 = lit(room({ pool = true, coldWater = 4, entities = { tide(2, 8, 0.5) } }))
+    local imgC2 = shoot(lvC2)
+    local badC, badC2 = uniform(imgC, x, 4 * T + 8, 12 * T - 8), uniform(imgC2, x, 4 * T + 8, 12 * T - 8)
+    local coldOk = lit(room({ pool = true, entities = { tide(2, 8, 0.5, { cold = 3 }) } })):coldAt(x, 9 * T) == 3
+        and lvC2:coldAt(x, 9 * T) == nil
+    check('frio_tinte', badC == 0 and badC2 == 0 and not same(imgC, imgB, x, 9 * T) and same(imgC2, imgB, x, 9 * T) and coldOk,
+        ('marea helada sobre agua normal: %d px distintos en la columna (0); marea normal sobre agua helada: %d (0); helada ≠ normal=%s; la física dice lo mismo=%s'):format(
+            badC, badC2, tostring(not same(imgC, imgB, x, 9 * T)), tostring(coldOk)))
+    shots[3] = cC
+    -- dos: inundación ancha a 4 casillas (superficie y = 8) y otra estrecha (columnas 12-19) a 7 (y = 5), en los dos
+    -- órdenes: dentro de la estrecha, una sola superficie (arriba) y el mismo tinte que donde solo hay una
+    local okD, msgs, cD = true, {}, nil
+    for _, order in ipairs({ { 1, 2 }, { 2, 1 } }) do
+        local fs = { floodAt(1, 8, 2, 23, 12, { startLevel = 4, maxLevel = 4 }), floodAt(2, 12, 2, 19, 12, { startLevel = 7, maxLevel = 7 }) }
+        local imgD, canD = shoot(lit(room({ noShore = true, entities = { fs[order[1]], fs[order[2]] } })))
+        local xs = 15 * T + 20
+        local bad = uniform(imgD, xs, 5 * T + 8, 12 * T - 8)
+        local tintSame = sameAt(imgD, xs, 10 * T, imgD, 8 * T + 20, 10 * T)
+        local line = bright(imgD, xs, 5 * T - 4, 5 * T + 8) and bright(imgD, 8 * T + 20, 8 * T - 4, 8 * T + 8)
+        okD = okD and bad == 0 and tintSame and line
+        msgs[#msgs + 1] = ('orden %d,%d: %d px distintos bajo la ola de arriba (0), mismo tinte que con una sola=%s, olas en y=5 y y=8 (fuera de la estrecha)=%s'):format(
+            order[1], order[2], bad, tostring(tintSame), tostring(line))
+        cD = cD or canD
+    end
+    check('dos', okD, table.concat(msgs, '; '))
+    shots[4] = cD
+    love.timer.getTime = gt
+    if os.getenv('SHOT') then
+        local k = 0.5
+        local sheet = love.graphics.newCanvas(W * T, H * T)
+        love.graphics.setCanvas(sheet); love.graphics.clear(0.1, 0.1, 0.1, 1)
+        love.graphics.setColor(1, 1, 1, 1)
+        for i, c in ipairs(shots) do
+            love.graphics.draw(c, ((i - 1) % 2) * W * T * k, math.floor((i - 1) / 2) * H * T * k, 0, k, k)
+        end
+        love.graphics.setCanvas()
+        sheet:newImageData():encode('png', 'olas.png')
+        print('foto: ' .. love.filesystem.getSaveDirectory() .. '/olas.png')
+    end
+end
+
 function cases.editor()
     local Model = require 'src/editor/EditorModel'
     local _, _, data = room({ pool = true, coldWater = 4.5, entities = { berg(12, 6, { width = 6, capacity = 3 }),
@@ -460,7 +594,7 @@ end
 function love.load()
     local only = os.getenv('CASE')
     for _, n in ipairs({ 'flota', 'fondo', 'inundacion', 'marea', 'montar', 'peso', 'quieto', 'empuje', 'nadando', 'viento',
-                          'choque', 'caja_encima', 'frio', 'red', 'editor' }) do
+                          'choque', 'caja_encima', 'frio', 'red', 'editor', 'olas' }) do
         if not only or only == n then
             local ok, err = pcall(cases[n])
             if not ok then check(n, false, 'error: ' .. tostring(err)) end

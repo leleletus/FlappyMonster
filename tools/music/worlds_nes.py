@@ -1761,7 +1761,7 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
         print('  capas en %s · suma de capas vs pista: diferencia máxima %.5f' % (STEMS_TO, np.abs(tot - y).max()))
     if EVENTS is not None:
         EVENTS['_mix'] = dict(S=S, g=g, LV=LV, n=n, n_i=n_i, BAR=BAR, S16=S16, mel=mel, ch=ch, tag=tag, starts=starts,
-                              var=var, lufs=lufs, bpm=bpm, side={'chords': 0.35, 'echo': -0.6, 'trill': 0.4, 'hat': 0.3, 'bell': 0.25})
+                              var=var, slap=slap, lufs=lufs, bpm=bpm, side={'chords': 0.35, 'echo': -0.6, 'trill': 0.4, 'hat': 0.3, 'bell': 0.25})
     GN.report(name, y, S, g, n)
     off = np.mean([st % 4 != 0 for b, st, nn, d in mel])
     print(f'  {bpm} BPM, {NB} compases ({NB * BAR:.1f} s); melodía: {len(mel)} notas, {100 * off:.0f} % fuera del tiempo, '

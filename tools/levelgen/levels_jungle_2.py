@@ -245,13 +245,15 @@ def backplane(L, blinks):
     for a, b, r0 in PIERS:
         for c in range(a, b + 1):
             for r in range(r0, H):
-                if L.get(c, r) not in (EMPTY,) or (c, r) in stairs:
-                    if r > r0 and L.get(c, r) != EMPTY and (c, r) not in stairs: break      # (hasta el suelo)
+                if L.get(c, r) != EMPTY and (c, r) not in stairs:
+                    if r > r0: break                                   # (hasta el suelo)
                     continue
-                L.set_bg(c, r, TEMPLE)
+                L.set_bg(c, r, TEMPLE)          # (también detrás de los Bloques ON de la escalera: apagados se ven a trazos
+                                                # y detrás quedaba un hueco — el usuario, 2026-10-29)
     # (por dentro, los templos tienen pared al fondo: la sala del Activador, la escalera de la torre y la ruina de la
     # estrella escondida — así se leen como salas y la estrella no se ve tanto desde fuera)
-    for c0, r0, c1, r1 in ((147, 18, 152, G - 1), (154, 12, 158, G - 1), (27, 13, 30, 16)):
+    # (y detrás de la puerta de Bloques OFF de la escalera, la 153: abierta se ve a trazos y quedaba un hueco)
+    for c0, r0, c1, r1 in ((147, 18, 152, G - 1), (153, 18, 153, G - 1), (154, 12, 158, G - 1), (27, 13, 30, 16)):
         for c in range(c0, c1 + 1):
             for r in range(r0, r1 + 1):
                 if L.get(c, r) != TEMPLE: L.set_bg(c, r, TEMPLE)
