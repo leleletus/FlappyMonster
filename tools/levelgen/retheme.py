@@ -33,6 +33,12 @@ Uso (desde la raíz del repo):
   --decor [--fix] [--theme]  revisa las decoraciones de TODOS los niveles (o los nombrados): cada una sobre
             su material (tabla REQ); con --fix cambia las que no por otra que valga ahí, o las quita; con
             --theme, también las de OTRO bioma (palmeras en la pradera, corales en la nieve): tabla THEMES
+  --bg <niveles> [--force] [--dry] [--out <carpeta>]   el PLANO DE FONDO por isla (tools/levelgen/retheme_bg.py):
+            colinas, murallas, peñascos, ruinas... y árboles grandes detrás de la capa jugable, sin estorbar el camino.
+            OBLIGA a nombrar los niveles (o --bg-all: todos los de THEMES). Nunca toca un plano hecho a mano; lo
+            generado se apunta en tools/levelgen/bg_gen/<nivel>.json y --force quita SOLO eso (lo que siga igual) y
+            lo rehace. --out escribe COPIAS en esa carpeta (lee la copia si ya existe; el apunte, <nivel>.bggen.json)
+Una opción desconocida PARA sin tocar nada (antes re-vestía todos los niveles).
 Tras `build.py --only x` (que reescribe el nivel) hay que volver a pasarlo.
 """
 import json, os, random, sys, hashlib
@@ -202,6 +208,9 @@ PLANKS = {SLAB, DROP, JPLAT}        # plataformas: solo decoraciones pequeñas e
 NEW_TYPES = {t for L in list(FLOOR.values()) + [WATER_FLOOR] for t, *_ in L if t not in ('tulip', 'stretch', 'palmtree')} | \
             {t for L in CEIL.values() for t, *_ in L}
 AUTO_TYPES = NEW_TYPES | {'tulip', 'stretch', 'palmtree'}
+# Tipos de decoración que van SIEMPRE al plano de fondo (su tipo lleva plane = 'bg' en src/world/decorations/types/)
+BG_TYPES = {'big_oak', 'big_birch', 'big_fir', 'coconut_palm', 'twin_palm', 'young_palm', 'snowy_fir', 'snowy_fir_small',
+            'dead_tree', 'giant_mushroom', 'giant_mushroom_violet', 'old_tree', 'cypress', 'ceiba', 'strangler_fig'}
 
 
 def tid(raw): return raw % 16 + 16 * ((raw // ID_HIGH) % 16)
@@ -450,7 +459,10 @@ def audit(name, fix=False):
     rnd = random.Random(int(hashlib.md5((name + 'decor').encode()).hexdigest()[:8], 16))
     subs = {(s_['col'] - 1, s_['row'] - 1) for s_ in lv.get('subtiles', []) or []}
     bad, out = [], []
+    # (las del PLANO DE FONDO no se miran: se apoyan en los bloques del plano, no en los de delante; --bg)
+    plane = [f for f in lv.get('foliage', []) if f.get('plane') == 'bg' or f.get('type') in BG_TYPES]
     for f in lv.get('foliage', []):
+        if f in plane: continue
         tp, c, r = f['type'], f['col'] - 1, f['row'] - 1
         hang = tp in HANGING
         sr = r - 1 if hang else r + 1
@@ -521,7 +533,7 @@ def audit(name, fix=False):
         cnt = collections.Counter((b[0], names.get(b[3], 'tile %d' % b[3])) for b in bad)
         print('  %-22s %3d fuera de sitio: %s' % (name, len(bad), ', '.join('%s en %s ×%d' % (a, m, n) for (a, m), n in cnt.most_common(6))))
         if fix:
-            lv['foliage'] = out
+            lv['foliage'] = out + plane
             save(path, lv)
     else:
         print('  %-22s bien' % name)
@@ -575,8 +587,37 @@ DEEP_ONLY = '--deep' in sys.argv
 THEME_CHECK = '--theme' in sys.argv     # con --decor: también lo que no es del bioma del nivel
 if DEEP_ONLY: sys.argv += ['--tiles', '--terrain']
 
+FLAGS = {'--force', '--terrain', '--dry', '--tiles', '--sky', '--deep', '--decor', '--fix', '--theme', '--enemies',
+         '--bg', '--bg-all', '--out'}
+
 if __name__ == '__main__':
-    args = [a for a in sys.argv[1:] if not a.startswith('--')]
+    argv = sys.argv[1:]
+    out = None
+    if '--out' in argv:                 # (--out <carpeta>: solo con --bg)
+        k = argv.index('--out')
+        if k + 1 >= len(argv) or argv[k + 1].startswith('--'):
+            sys.exit('retheme.py: --out necesita una carpeta')
+        out = argv[k + 1]
+        argv = argv[:k] + argv[k + 2:]
+    bad = [a for a in argv if a.startswith('-') and a not in FLAGS]
+    if bad:                             # (una opción mal escrita NO puede acabar re-vistiendo todos los niveles)
+        sys.exit('retheme.py: opción desconocida %s (no se ha tocado nada)' % ' '.join(bad))
+    args = [a for a in argv if not a.startswith('--')]
+    if out and '--bg' not in argv and '--bg-all' not in argv:
+        sys.exit('retheme.py: --out solo vale con --bg')
+    if '--bg' in argv or '--bg-all' in argv:    # el PLANO DE FONDO por isla (tools/levelgen/retheme_bg.py)
+        import retheme_bg
+        if '--bg-all' in argv and args:
+            sys.exit('retheme.py: --bg-all no lleva nombres de nivel')
+        if '--bg-all' not in argv and not args:
+            sys.exit('retheme.py --bg: di los niveles (o --bg-all para todos los de THEMES)')
+        unknown = [n for n in args if n not in THEMES]
+        if unknown:
+            sys.exit('retheme.py --bg: sin tema en THEMES: %s' % ' '.join(unknown))
+        print('Plano de fondo%s:' % (' → ' + out if out else ''))
+        for n in (args or sorted(THEMES)):
+            retheme_bg.run(n, '--force' in argv, '--dry' in argv, out)
+        sys.exit(0)
     if '--sky' in sys.argv:
         print('Fondo y hora:')
         for n in (args or sorted(SKY)): set_sky(n)

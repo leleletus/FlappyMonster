@@ -16,7 +16,7 @@ local TileCodec = require 'src/world/tiles/TileCodec'
 
 local BackPlane = {}
 
-BackPlane.SHADE  = { 0.5, 0.53, 0.6 }    -- lo oscuro del plano (con un punto azulado hacia el cielo; el usuario: un poco más)
+BackPlane.SHADE  = { 0.56, 0.59, 0.66 }  -- lo oscuro del plano (con un punto azulado hacia el cielo; el de la primera vista previa: el usuario lo pidió más oscuro y luego, viendo las islas oscuras, volvió a este)
 BackPlane.SHADOW = { 0.5, 0.5, 0.56 }    -- lo que deja la sombra de un bloque de delante (× sobre el plano)
 BackPlane.OFF    = 16                    -- px: la sombra, abajo a la derecha (¼ de casilla)
 

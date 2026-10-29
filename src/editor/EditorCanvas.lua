@@ -396,8 +396,10 @@ local function beginFront(cx, cy, cw, ch, z)
     E.frontScissor = { love.graphics.getScissor() }
     love.graphics.push('all')
     love.graphics.setCanvas(frontCanvas)
+    -- (sin recorte ANTES de borrar: clear respeta el recorte, que está en píxeles de la ventana — con él puesto solo se
+    -- borraba un trozo del lienzo y lo demás arrastraba los fotogramas anteriores al mover la cámara; el usuario)
+    love.graphics.setScissor()
     love.graphics.clear(0, 0, 0, 0)
-    love.graphics.setScissor()            -- (el recorte del lienzo del editor está en píxeles de la ventana)
     love.graphics.origin()
     love.graphics.scale(z)
 end

@@ -77,7 +77,8 @@
     {"col":51,"props":{"layer":"back"},"row":16,"sub":3,"type":"torch"},
     {"col":51,"props":{"layer":"back"},"row":16,"sub":4,"type":"torch"},
     {"col":55,"props":{"flip":true,"layer":"back"},"row":16,"sub":4,"type":"bones"},
-    {"col":55,"props":{"layer":"back"},"row":16,"sub":3,"type":"torch"}
+    {"col":55,"props":{"layer":"back"},"row":16,"sub":3,"type":"torch"},
+    {"col":30,"row":11,"type":"cypress"}
   ],
   "vents": [
     {"col":40,"limit":4,"row":11,"sub":3}

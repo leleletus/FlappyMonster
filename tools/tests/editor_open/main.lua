@@ -131,6 +131,27 @@ function planeCase()
         end
         E.selDeco = PL.deco; E.rightTab = 'sel'
     end
+    -- (el usuario: en el Fondo, al mover la cámara lo de delante translúcido dejaba ESTELA fuera del nivel — se borraba
+    -- con el recorte de la ventana puesto —): se aparta la cámara para que a la izquierda del nivel no haya nada, se
+    -- mueve, y a la izquierda del nivel todo debe ser el fondo liso del lienzo
+    if frame == 15 then PL.cam0 = { E.camX, E.camY }; E.camX = -420 / E.zoom end
+    if frame == 16 then
+        E.camX = -210 / E.zoom
+        love.graphics.captureScreenshot(function(img) PL.cap = img end)
+    end
+    if frame == 17 and PL.cap then
+        local lx = 292 + (0 - E.camX) * E.zoom                    -- (borde izquierdo del nivel en la ventana)
+        local r0, g0, b0 = PL.cap:getPixel(300, 300)
+        local same = true
+        for x = 300, math.floor(lx) - 6, 12 do
+            for y = 120, 700, 40 do
+                local r, g, b = PL.cap:getPixel(x, y)
+                if math.abs(r - r0) + math.abs(g - g0) + math.abs(b - b0) > 0.02 then same = false end
+            end
+        end
+        check('estela', lx > 360 and same, ('fuera del nivel (x 300..%d), tras mover la cámara: todo el fondo liso=%s'):format(math.floor(lx), tostring(same)))
+        E.camX, E.camY = PL.cam0[1], PL.cam0[2]
+    end
     if frame == 18 then shot('plano_fondo') end
     if frame == 20 then
         local u = #E.undo

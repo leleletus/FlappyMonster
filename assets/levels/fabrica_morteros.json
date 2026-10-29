@@ -92,7 +92,8 @@
     {"col":40,"props":{"flip":true,"layer":"back"},"row":14,"sub":3,"type":"torch"},
     {"col":40,"props":{"layer":"back"},"row":14,"sub":4,"type":"torch"},
     {"col":52,"props":{"flip":true,"layer":"back"},"row":14,"sub":4,"type":"torch"},
-    {"col":52,"props":{"layer":"back"},"row":14,"sub":3,"type":"torch"}
+    {"col":52,"props":{"layer":"back"},"row":14,"sub":3,"type":"torch"},
+    {"col":85,"row":11,"type":"cypress"}
   ],
   "vents": [],
   "modes": ["race"],

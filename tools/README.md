@@ -19,7 +19,9 @@ Run everything from the repo root. Documentation: `docs/README.md`. Python tools
 ## Three traps
 
 1. `python3 tools/levelgen/build.py` without `--only <level>` rewrites EVERY generated level (so does `--show`).
-2. `python3 tools/levelgen/retheme.py` has no `--help`: any unknown flag runs it over every level. Pass level names.
+2. `python3 tools/levelgen/retheme.py` has no `--help` and WITHOUT level names runs over every THEMES level. Pass
+   level names. (An unknown flag now stops it without touching anything; `--bg` refuses to run without names or
+   `--bg-all`.)
 3. Several art generators would overwrite sprites the user has since hand-edited. Check `docs/art/generators.md`.
 
 ## art/
@@ -83,5 +85,6 @@ See the generator table in `docs/audio/music-catalog.md`. `famicom.py` (engine),
 
 ## levelgen/
 
-`lib.py`, `levels_*.py` (builders), `build.py --only <level>`, `retheme.py <levels>`, `add_apples.py <levels>`,
+`lib.py`, `levels_*.py` (builders), `build.py --only <level>`, `retheme.py <levels>` (`retheme.py --bg <levels> [--out <dir>]`:
+the background-plane structures per island, `retheme_bg.py`; generated content listed in `bg_gen/<level>.json`), `add_apples.py <levels>`,
 `make_sets.py` (film sets), `make_credits_sets.py` (the live stages of the credits: `assets/story/sets/credits_*.json`), `arenas/` (test arenas and their `make_*.py`; `make_decoraciones.py` = the showcase of every decoration, from `docs/reference/decorations-and-modes.md`).

@@ -14,6 +14,7 @@ the front blocks cast a hard shadow on it. Added in 0.5.87.
 | `src/world/decorations/DecorationTypes.lua` | `plane` in `normalize` / `serialize` / `instantiate`; a type with `plane = 'bg'` always goes on the plane |
 | `src/editor/` | the editor's plane switch (see [levels/editor](../levels/editor.md) § Background plane) |
 | `tools/levelgen/arenas/make_fondo.py` → `fondo.json` | the showcase arena (jungle front, temple walls, an arch and a big tree behind) |
+| `tools/levelgen/retheme_bg.py` (`retheme.py --bg <levels>`) | generates island structures on the plane of existing levels (hills, walls, outcrops, ruins, big trees) — [levels/retheme](../levels/retheme.md) § Background-plane structures |
 
 ## Data
 
@@ -48,6 +49,8 @@ of the sky layers. No stencil (Switch / Android).
 - A new block that should be allowed or refused: `BackPlane.allows` decides from the definition (collision, trigger,
   toggle, activator, lava, liquid / contact material); a new kind of hazard must be refused there.
 - A decoration type that must always be in the background: `plane = 'bg'` in its definition.
+- Structures for a theme generated on existing levels: table `SPEC` in `tools/levelgen/retheme_bg.py` (see
+  [levels/retheme](../levels/retheme.md) § Background-plane structures; generated parts are listed in `tools/levelgen/bg_gen/<level>.json`).
 - Darker / lighter or a different shadow: `SHADE`, `SHADOW`, `OFF` (the user chose them: ask before changing).
 
 ## Tests
@@ -71,3 +74,11 @@ of the sky layers. No stencil (Switch / Android).
 ## History
 
 - 0.5.87: first version (plane, shadow, big trees moved to it, editor switch). Rejected: nothing yet.
+
+- 2026-10-28, after seeing the generated levels of the dark islands (night fortress, caves too dark): the user asked to
+  go back to the ORIGINAL shade (0.56 / 0.59 / 0.66, the first preview; the "a little darker" 0.5 / 0.53 / 0.6 is
+  rejected) and to install the generated background in every story level to try how it plays (originals backed up in
+  `FlappyMonster_originals/assets/levels_antes_plano_fondo_2026-10-28/`).
+- Editor bug (the user): editing the plane, the translucent front left TRAILS outside the level when panning — its canvas
+  was cleared with the window's scissor still set (clear respects the scissor) → cleared without it. Test:
+  `editor_open PLANE=1` case `estela`.
