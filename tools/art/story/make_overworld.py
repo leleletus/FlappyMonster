@@ -9,6 +9,9 @@
 #   assets/images/story/          node-Sheet, castle-Sheet, water-Sheet, path.png, bridge.png, ground-Sheet,
 #                                 edge-Sheet, foam.png y features/*.png (colinas, dunas, picos, agujas de roca,
 #                                 rocas, bocas de cueva: el relieve de cada isla)
+#   + la JUNGLA (próximamente): una isla más al SUR, entre la Costa y la Fortaleza, aún SIN niveles (no está en
+#     Worlds.LIST): terreno, relieve, ruinas, bichos, castillo con su jefe y puentes CERRADOS; no es una parada.
+#     Se genera al final con su propio azar: las 6 islas de la historia salen igual que antes (filas 0..H0-1)
 # El terreno se pinta en el juego con las texturas de los BLOQUES del juego (césped, arena, nieve, piedra,
 # roca, lava…) y las decoraciones / enemigos / jefes son sus sprites de siempre en pequeño.
 # Reglas del relieve: los caminos van por el LLANO (valles entre mesetas; nada se levanta a menos de ~2
@@ -21,11 +24,15 @@ OUT_JSON = 'assets/story/overworld.json'
 IMG = 'assets/images/story/'
 FEAT = IMG + 'features/'
 os.makedirs(FEAT, exist_ok=True)
-W, H = 84, 48
+W, H = 84, 63
+H0 = 48                    # alto del mapa de las 6 islas de la historia (las cinemáticas encuadran esto: 'view');
+                           # debajo, la jungla (próximamente). Los bucles con azar de las 6 islas van hasta H0, así
+                           # crecer el mapa no mueve ni una decoración de lo de arriba
 rng = random.Random(1987)
 
 # ── Terreno ──────────────────────────────────────────────────────────────────
 # '~' mar · g césped · s arena · w nieve · c roca de cueva · f piedra (fortaleza) · l roca volcánica · L lava
+# · j suelo de la jungla (césped oscuro) · t piedra del templo (ruinas de la jungla)
 grid = [['~'] * W for _ in range(H)]
 hgt = [[1] * W for _ in range(H)]          # altura de cada casilla de tierra (el mar no cuenta)
 
@@ -145,8 +152,8 @@ def raise_blob(cx, cy, rx, ry, level, chars, clear):
                 hgt[y][x] = level
 
 
-def open2x2(level):
-    """Quita lo que no forme al menos un bloque de 2x2 de esa altura (sin crestas de una casilla)"""
+def open2x2(level, y0=0):
+    """Quita lo que no forme al menos un bloque de 2x2 de esa altura (sin crestas de una casilla); solo desde la fila y0"""
     keep = [[False] * W for _ in range(H)]
     for y in range(H - 1):
         for x in range(W - 1):
@@ -154,7 +161,7 @@ def open2x2(level):
                 for dx in (0, 1):
                     for dy in (0, 1):
                         keep[y + dy][x + dx] = True
-    for y in range(H):
+    for y in range(y0, H):
         for x in range(W):
             if hgt[y][x] >= level and not keep[y][x]:
                 hgt[y][x] = level - 1
@@ -232,7 +239,7 @@ def h(x, y):
 
 decos = []
 taken = set()
-for y in range(2, H - 2):
+for y in range(2, H0 - 2):
     for x in range(2, W - 2):
         ch = grid[y][x]
         if ch not in DECOS or ch == 'L' or dist[y][x] < 1.6 or hgt[y][x] == 0:
@@ -251,7 +258,7 @@ for y in range(2, H - 2):
             decos.append({'t': rng.choice(DECOS[ch]), 'x': x, 'y': y})
 # bocas de cueva en las paredes de las cuevas (en la casilla de abajo, sobre la cara del acantilado)
 mouths = 0
-for y in range(3, H - 2):
+for y in range(3, H0 - 2):
     for x in range(3, W - 3):
         if grid[y][x] == 'c' and h(x, y - 1) > h(x, y) >= 1 and h(x - 1, y - 1) > h(x, y) and h(x + 1, y - 1) > h(x, y) \
                 and dist[y][x] >= 1.4 and (x, y) not in taken and rng.random() < 0.5 and mouths < 9:
@@ -279,7 +286,7 @@ CRITTERS = [
     ('gummy', 39, 44, 14), ('crabby', 40, 45, 21), ('hopper', 37, 42, 23),
     ('puffer', 36, 41, 8), ('puffer', 52, 57, 26),
 ]
-ISLE_OF = {'w': 'nieve', 'c': 'cueva', 'f': 'fortaleza', 'l': 'volcan'}
+ISLE_OF = {'w': 'nieve', 'c': 'cueva', 'f': 'fortaleza', 'l': 'volcan', 'j': 'jungla', 't': 'jungla'}
 ISLE_TYPES = {
     'pradera':   {'crabby': 'crabby_river', 'hopper': 'hopper_pradera'},
     'costa':     {'hopper': 'hopper_costa'},
@@ -287,6 +294,7 @@ ISLE_TYPES = {
     'nieve':     {'gummy': 'gummy_ice', 'crabby': 'crabby_ice', 'hopper': 'hopper_nieve'},
     'cueva':     {'gummy': 'gummy_cave', 'crabby': 'crabby_cave', 'hopper': 'hopper_cueva'},
     'volcan':    {'gummy': 'gummy_magma', 'crabby': 'crabby_lava', 'hopper': 'hopper_volcan'},
+    'jungla':    {'gummy': 'gummy_jungle', 'crabby': 'crabby_jungle', 'hopper': 'hopper_jungla'},   # (+ 'beetle': el suyo)
 }
 
 
@@ -295,11 +303,9 @@ def critter_type(t, x, y):
     return ISLE_TYPES[isle].get(t, t)
 
 
-critters = []
-for t, x0, x1, y in CRITTERS:
+def place_critter(t, x0, x1, y):
     if t == 'puffer':      # (coordenadas a mano: el juego los lleva al mar abierto más cercano — StoryMapState loadMap)
-        critters.append({'t': t, 'x0': x0, 'x1': x1, 'y': y})
-        continue
+        return {'t': t, 'x0': x0, 'x1': x1, 'y': y}
     # el tramo más largo de casillas de tierra seguidas a la misma altura (sin cruzar paredes)
     best, run = None, []
     for x in range(x0 - 2, x1 + 3):
@@ -311,9 +317,12 @@ for t, x0, x1, y in CRITTERS:
                 best = run
             run = [x] if ok and run and h(x, y) != h(run[0], y) else ([] if not ok else run)
     if best and len(best) >= 3:
-        critters.append({'t': critter_type(t, best[0], y), 'x0': best[0], 'x1': best[-1], 'y': y})
-    else:
-        print('  (bicho sin sitio: %s %d-%d fila %d)' % (t, x0, x1, y))
+        return {'t': critter_type(t, best[0], y), 'x0': best[0], 'x1': best[-1], 'y': y}
+    print('  (bicho sin sitio: %s %d-%d fila %d)' % (t, x0, x1, y))
+    return None
+
+
+critters = [c for c in (place_critter(*a) for a in CRITTERS) if c]
 
 # El jefe de cada mundo, en pequeño junto a su castillo (sus sprites del juego; fw = ancho de cuadro)
 BOSS_ART = {
@@ -339,6 +348,96 @@ SSECRET = {k: catmull(v) for k, v in SECRET.items()}
 blob(48.8, 8.1, 3.0, 2.4, 's', 0.1)
 decos.append({'t': 'palm', 'x': 49, 'y': 6})
 
+# ── LA JUNGLA (PRÓXIMAMENTE): la isla de después de la Costa, aún SIN niveles ─────────────────────────────────
+# Al SUR, entre la Costa y la Fortaleza (el mapa creció hacia abajo: H0 → H). NO está en Worlds.LIST (el progreso y
+# las partidas cuentan los mundos por su posición): en el mapa es solo DATOS + ARTE (`soon` en overworld.json): su
+# terreno, relieve, ruinas, árboles, bichos, el castillo con el Escarabajo Gigante, un camino con paradas de
+# muestra (cerradas, no son paradas: no se puede ir) y dos puentes CERRADOS: desde el castillo de la Costa (por el
+# canal entre la Costa y su bonus) y hasta el primer nivel de la Fortaleza (por el canal de la Fortaleza). El
+# puente de siempre Costa → Fortaleza sigue igual. Con su azar propio y al final: lo de arriba no se mueve.
+jrng = random.Random(2027)
+old_land = [(x, y) for y in range(H) for x in range(W) if grid[y][x] != '~']
+
+
+def blob_sea(cx, cy, rx, ry, ch, jag=0.18, gap=2.6):
+    """Como blob(), pero solo sobre el MAR y sin acercarse a menos de `gap` casillas de la tierra de antes"""
+    for y in range(H):
+        for x in range(W):
+            dx, dy = (x - cx) / rx, (y - cy) / ry
+            ang = math.atan2(dy, dx)
+            wob = 1 + jag * (math.sin(ang * 5 + cx) * 0.6 + math.sin(ang * 9 + cy) * 0.4)
+            if grid[y][x] == '~' and dx * dx + dy * dy <= wob * wob \
+                    and all(math.hypot(x - ox, y - oy) >= gap for ox, oy in old_land if abs(ox - x) < 4 and abs(oy - y) < 4):
+                grid[y][x] = ch
+
+
+blob_sea(55, 54.6, 12.5, 5.2, 'j'); blob_sea(44.5, 53.8, 4.6, 3.6, 'j'); blob_sea(66, 54.2, 4.8, 4.2, 'j')
+JPATH = [(49, 50.5), (44.5, 53.5), (47.5, 57.6), (54, 57.8), (58.5, 54.6), (62.5, 57.2), (65, 52)]
+JSTOPS = 5                 # paradas de muestra (4 niveles + el castillo): cuando tenga niveles, las de Worlds.lua
+# Puentes (cerrados): castillo de la Costa → primer nivel de la jungla · castillo de la jungla → primer nivel de la Fortaleza
+JBRIDGES = [
+    [(50, 38), (50.2, 41.5), (50.4, 45), (49.6, 48.2), (49, 50.5)],
+    [(65, 52), (62.2, 48.6), (58.2, 45.6), (56.4, 42.4), (57, 40), (58, 38)],
+]
+SJPATH = catmull(JPATH)
+SJBRIDGES = [catmull(b) for b in JBRIDGES]
+JLINES = [SJPATH] + SJBRIDGES
+# bajo el camino, tierra; alrededor del castillo, la plaza de piedra del templo
+for y in range(H0, H):
+    for x in range(W):
+        dd = min(seg_dist(x + 0.5, y + 0.5, SJPATH[i], SJPATH[i + 1]) for i in range(len(SJPATH) - 1))
+        if grid[y][x] == '~' and dd < 1.3:
+            grid[y][x] = 'j'
+        if grid[y][x] == 'j' and wobbly(x, y, 65, 52, 2.4, 1.9, 0.2):
+            grid[y][x] = 't'
+# la distancia a los caminos ya cuenta también los de la jungla (lo de arriba ya está hecho: no cambia nada)
+for y in range(H):
+    for x in range(W):
+        dist[y][x] = min(dist[y][x], min(seg_dist(x + 0.5, y + 0.5, l[i], l[i + 1]) for l in JLINES for i in range(len(l) - 1)))
+# relieve: la meseta del templo (dentro de la vuelta del camino), lomas de selva al oeste y al sur
+for cx, cy, rx, ry, lv, ch, clear in [
+        (54, 52.2, 4.2, 2.2, 2, 'j', 1.8), (54.5, 52, 2.2, 1.4, 3, 'j', 2.2), (43.4, 55.6, 2.4, 2.4, 2, 'j', 1.8),
+        (68.4, 54.6, 2.6, 2.6, 2, 'j', 1.8), (59.6, 50.6, 2.4, 1.6, 2, 'j', 1.8), (50.6, 59.6, 3.2, 1.4, 2, 'j', 1.8)]:
+    raise_blob(cx, cy, rx, ry, lv, ch, clear)
+open2x2(3, H0)             # (solo la jungla: arriba, el cráter del volcán ya rompió bloques a propósito)
+open2x2(2, H0)
+# landmarks a mano: el ZIGURAT en lo alto de la meseta y ruinas sueltas
+jdecos = [{'t': 'ziggurat', 'x': 54, 'y': 52}]
+JLABEL = (54.5, 55.4)       # (el cartel "LA JUNGLA / PRÓXIMAMENTE": sin nada encima)
+jtaken = {(x, y) for x in range(52, 57) for y in range(50, 54)} | {(x, y) for x in range(51, 59) for y in range(55, 57)}
+JDECOS = {'j': ['jungle_fern', 'heliconia', 'banana_plant', 'elephant_ear', 'tree_fern', 'bromeliad', 'jungle_fern'],
+          't': ['stone_brazier', 'broken_pillar', 'stone_idol']}
+JFEATURES = {('j', 1): ['jungle_tree'] * 6 + ['ruin'], ('j', 2): ['jungle_tree', 'jungle_tree', 'ruin'],
+             ('j', 3): ['jungle_tree'], ('t', 1): ['ruin']}
+for y in range(H0, H - 1):
+    for x in range(2, W - 2):
+        ch = grid[y][x]
+        if ch not in JDECOS or dist[y][x] < 1.6 or (x, y) in jtaken:
+            continue
+        if h(x, y - 1) > h(x, y) or h(x, y + 1) != h(x, y):
+            continue
+        if any((x + dx, y + dy) in jtaken for dx in (-1, 0, 1) for dy in (-1, 0, 1)):
+            continue
+        feats = JFEATURES.get((ch, hgt[y][x]))
+        roll = jrng.random()
+        if feats and roll < 0.55:                      # (selva densa: muchos árboles)
+            jtaken.add((x, y))
+            jdecos.append({'t': jrng.choice(feats), 'x': x, 'y': y})
+        elif roll < 0.7:
+            jtaken.add((x, y))
+            jdecos.append({'t': jrng.choice(JDECOS[ch]), 'x': x, 'y': y})
+decos += jdecos
+# bichos de la jungla: la rana (Gummy de la selva), el Crabby de la selva, el Escarabajo Rinoceronte azul, su Saltarín
+JCRITTERS = [('gummy', 45, 50, 55), ('beetle', 58, 63, 52), ('crabby', 60, 65, 55), ('hopper', 46, 52, 59),
+             ('beetle', 41, 46, 52), ('gummy', 64, 69, 57), ('puffer', 37, 42, 52), ('puffer', 68, 73, 50)]
+for t, x0, x1, y in JCRITTERS:
+    c = place_critter(t, x0, x1, y)
+    if c:
+        critters.append(c)
+JUNGLE = {'id': 'jungla', 'path': [list(p) for p in SJPATH], 'stops': JSTOPS,
+          'boss': {'img': 'assets/images/bosses/giantbeetle/body-Sheet.png', 'fw': 22},
+          'bridges': [[list(p) for p in b] for b in SJBRIDGES], 'label': list(JLABEL)}
+
 data = {
     'cell': 32, 'w': W, 'h': H,
     'rows': [''.join(r) for r in grid],
@@ -347,6 +446,8 @@ data = {
                 **({'secret': [list(p) for p in SSECRET[k]]} if k in SSECRET else {})} for k in ORDER],
     'connect': [[list(p) for p in c] for c in SCONNECT],
     'decos': decos, 'critters': critters,
+    'view': [W, H0],              # (lo que encuadran las cinemáticas: las 6 islas de la historia)
+    'soon': [JUNGLE],             # islas PRÓXIMAMENTE: dibujadas, nunca paradas (StoryMapState `soon`)
 }
 with open(OUT_JSON, 'w') as f:
     json.dump(data, f, ensure_ascii=False, separators=(',', ':'))
@@ -450,6 +551,8 @@ TERR = [
     (tone(T + 'border.png', 60, 60), (26, 26, 34, 255), (80, 78, 100, 255)),                                          # c
     (tone(T + 'stone.png', 60, 60), (52, 52, 62, 255), (110, 110, 124, 255)),                                         # f
     (tone(T + 'deep_stone.png', 60, 60), (60, 30, 34, 255), (140, 66, 50, 255)),                                      # l
+    ((47, 122, 58, 255), (29, 74, 42, 255), (95, 176, 74, 255)),                                                       # j (jungle_grass)
+    ((95, 110, 88, 255), (62, 74, 60, 255), (138, 154, 124, 255)),                                                     # t (temple_brick)
 ]
 # 3 variantes por terreno (el juego elige una por casilla): lisa, con motas y con una mancha más oscura
 tops = []
@@ -559,4 +662,80 @@ def mouth_extra(im):
         if im.getpixel((x, 5))[3] and im.getpixel((x, 5)) == (10, 8, 16, 255):
             pass
 save_feat('cave_mouth', shape_img(15, 12, lambda x, y: ((x - 7) / 7.5) ** 2 + ((y - 12) / 12) ** 2 <= 1, ROCK['dark'], mouth_extra))
+
+# ── La JUNGLA: árbol de la selva (copa redonda sobre su tronco), el ZIGURAT del templo y ruinas ─────────────
+JGREEN = ((47, 122, 58, 255), (95, 176, 74, 255), (29, 74, 42, 255))
+TEMPLE = ((95, 110, 88, 255), (138, 154, 124, 255), (62, 74, 60, 255))
+MOSS = ((79, 122, 38, 255), (134, 176, 60, 255))
+TRUNK = ((110, 76, 46, 255), (146, 104, 64, 255), (74, 50, 30, 255))
+
+
+def over(a, b):
+    """b encima de a (mismo tamaño)"""
+    out = a.copy()
+    out.alpha_composite(b)
+    return out
+
+
+# árbol: tronco corto y copa grande de tres bultos (con brillos arriba a la izquierda)
+def canopy_in(x, y):
+    return any(((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1
+               for cx, cy, rx, ry in ((7.5, 6.5, 7.5, 5.5), (4, 8, 4, 3.5), (11, 8, 4, 3.5), (7.5, 3, 4.5, 3)))
+def canopy_extra(im):
+    for x, y in ((5, 4), (6, 4), (10, 6), (3, 8), (12, 9)):
+        im.putpixel((x, y), JGREEN[1])
+    for x, y in ((7, 10), (8, 10), (4, 11), (11, 11)):
+        im.putpixel((x, y), JGREEN[2])
+tree_trunk = shape_img(16, 17, lambda x, y: 6 <= x <= 8 + (y > 14) and y >= 9, TRUNK)
+tree_top = shape_img(16, 17, lambda x, y: y <= 12 and canopy_in(x, y), JGREEN, canopy_extra)
+save_feat('jungle_tree', over(tree_trunk, tree_top))
+
+
+# zigurat: tres gradas de piedra del templo, escalera en medio, musgo en lo alto y la puerta oscura
+def zig_in(x, y):
+    steps = ((0, 3, 21), (4, 6, 17), (8, 9, 13))       # (y desde arriba de la grada, mitad del ancho visible)
+    if y >= 11:
+        return True
+    if y >= 7:
+        return 3 <= x <= 20
+    if y >= 3:
+        return 6 <= x <= 17
+    return 9 <= x <= 14
+def zig_extra(im):
+    for y in range(4, 16):                              # la escalera (franja más clara en el centro)
+        for x in (11, 12):
+            if im.getpixel((x + 1, y + 1)) not in ((0, 0, 0, 0), OUT):
+                im.putpixel((x + 1, y + 1), TEMPLE[1] if y % 2 else TEMPLE[0])
+    for y in (4, 8, 12):                                # juntas de las gradas
+        for x in range(1, 23):
+            p = im.getpixel((x + 1, y + 1))
+            if p not in ((0, 0, 0, 0), OUT) and x not in (11, 12):
+                im.putpixel((x + 1, y + 1), TEMPLE[2])
+    for x, y in ((10, 0), (11, 0), (14, 0), (7, 3), (8, 3), (16, 3), (4, 7), (19, 7), (20, 7), (1, 11), (2, 11), (22, 11)):
+        if im.getpixel((x + 1, y + 1)) not in ((0, 0, 0, 0), OUT):
+            im.putpixel((x + 1, y + 1), MOSS[x % 2])
+    for y in range(13, 16):                             # la puerta, abajo en el centro
+        for x in (11, 12):
+            im.putpixel((x + 1, y + 1), (20, 24, 22, 255))
+    im.putpixel((12, 13), (20, 24, 22, 255)); im.putpixel((13, 13), (20, 24, 22, 255))
+save_feat('ziggurat', shape_img(24, 16, zig_in, TEMPLE, zig_extra))
+
+
+# ruina: un muro de piedra del templo roto por arriba, con una columna en pie a un lado y musgo
+RUIN_TOP = [0, 0, 0, 5, 4, 4, 6, 7, 5, 5, 6, 8, 8, 9]          # (fila de arriba de cada columna)
+def ruin_in(x, y):
+    return y >= RUIN_TOP[x] and not (x == 2 and y < 4 and y % 3 == 2)
+def ruin_extra(im):
+    for y in range(1, 13):                              # juntas: hiladas y llagas alternas
+        for x in range(1, 15):
+            p = im.getpixel((x, y))
+            if p in ((0, 0, 0, 0), OUT) or x <= 3:
+                continue
+            if (y - 1) % 3 == 2 or ((x + (3 if ((y - 1) // 3) % 2 else 0)) % 6 == 0):
+                im.putpixel((x, y), TEMPLE[2])
+    for x in range(14):                                 # musgo por lo alto
+        y = RUIN_TOP[x] + 1
+        if im.getpixel((x + 1, y)) not in ((0, 0, 0, 0), OUT) and x % 3 != 1:
+            im.putpixel((x + 1, y), MOSS[x % 2])
+save_feat('ruin', shape_img(14, 12, ruin_in, TEMPLE, ruin_extra))
 print('  %s*.png' % FEAT)

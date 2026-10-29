@@ -39,8 +39,9 @@ local TOP_H, BOT_H = 112, 104            -- franjas de la cabecera y de la ficha
 local WALK_SPD = 300                     -- px/s andando por el camino (más deprisa en viajes largos)
 
 -- Terreno: baldosa de arriba (ground-Sheet) y la textura de su bloque para el ACANTILADO (vista de lado)
-local GROUND = { g = 1, s = 2, w = 3, c = 4, f = 5, l = 6 }
-local CLIFF = { g = 'grass', s = 'sand', w = 'snow', c = 'border', f = 'stone', l = 'deep_stone' }
+-- (j = suelo de la jungla, t = piedra del templo: la isla PRÓXIMAMENTE de la jungla)
+local GROUND = { g = 1, s = 2, w = 3, c = 4, f = 5, l = 6, j = 7, t = 8 }
+local CLIFF = { g = 'grass', s = 'sand', w = 'snow', c = 'border', f = 'stone', l = 'deep_stone', j = 'jungle_grass', t = 'temple_brick' }
 -- Decoraciones: imagen + ancho de cuadro (animadas) + brillo
 local DECO = {
     tulip = { 'assets/images/world/decorations/foliage/tulip.png' },
@@ -59,6 +60,16 @@ local DECO = {
     snow_pile = { 'assets/images/world/decorations/ice/snow_pile.png' },
     crystals = { 'assets/images/world/decorations/cave/crystals.png', glow = { 0.5, 0.7, 1 } },
     glow_mushroom = { 'assets/images/world/decorations/cave/glow_mushroom.png', glow = { 0.4, 1, 0.7 } },
+    -- la jungla (las decoraciones de su isla en el juego: jungle_set.lua)
+    jungle_fern = { 'assets/images/world/decorations/jungle/jungle_fern.png' },
+    heliconia = { 'assets/images/world/decorations/jungle/heliconia.png' },
+    banana_plant = { 'assets/images/world/decorations/jungle/banana_plant.png' },
+    elephant_ear = { 'assets/images/world/decorations/jungle/elephant_ear.png' },
+    tree_fern = { 'assets/images/world/decorations/jungle/tree_fern.png' },
+    bromeliad = { 'assets/images/world/decorations/jungle/bromeliad.png' },
+    broken_pillar = { 'assets/images/world/decorations/jungle/broken_pillar.png' },
+    stone_idol = { 'assets/images/world/decorations/jungle/stone_idol-Sheet.png', fw = 24, fps = 1.2, glow = { 0.35, 1, 0.9 } },
+    stone_brazier = { 'assets/images/world/decorations/jungle/stone_brazier-Sheet.png', fw = 14, fps = 9, glow = { 1, 0.55, 0.2 } },
 }
 -- Bichos: cuadros para andar (archivos o cuadros de una tira) y si se voltean al girar
 local CRITTER = {
@@ -83,6 +94,7 @@ local CRITTER = {
     crabby_jungle = { files = { 'assets/images/enemies/crabby_jungle/crab1.png', 'assets/images/enemies/crabby_jungle/crab2.png', 'assets/images/enemies/crabby_jungle/crab3.png' }, spd = 1.6,
                       claw = { file = 'assets/images/enemies/crabby_jungle/claw_left-Sheet.png', w = 5, x = 5.4, y = -1.6, inset = 0.5 } },
     bomb = { sheet = 'assets/images/enemies/bomb/bomb-Sheet.png', fw = 15, frames = { 2, 3 }, spd = 1.1 },
+    beetle = { sheet = 'assets/images/enemies/beetle/beetle-Sheet.png', fw = 22, frames = { 1, 2, 3, 4 }, spd = 1.0 },   -- (el Escarabajo Rinoceronte azul)
     puffer = { sheet = 'assets/images/enemies/pufferfish/puffer_fish-Sheet.png', fw = 16, frames = { 1, 2 }, spd = 0.9, swim = true },
     gloomy = { sheet = 'assets/images/enemies/gloomy/gloomy-Sheet.png', fw = 26, frames = { 1, 2, 3 }, spd = 1.0,
                glow = 'assets/images/enemies/gloomy/glow-Sheet.png' },
@@ -231,6 +243,20 @@ local function loadMap()
         for i, q in ipairs(p) do out[i] = { (q[1] + 0.5) * C, (q[2] + 0.5) * C } end
         return out
     end
+    -- el jefe, al lado del castillo que tenga TIERRA (derecha, izquierda o debajo); nunca en el agua
+    local function land(x, y)
+        local row = d.rows[math.floor(y / C) + 1]
+        local ch = row and row:sub(math.floor(x / C) + 1, math.floor(x / C) + 1)
+        return ch and ch ~= '' and ch ~= '~' and ch ~= 'L'
+    end
+    local function bossSide(bx, by)
+        for _, o in ipairs({ { 58, 0 }, { -58, 0 }, { 40, 40 }, { -40, 40 }, { 0, 52 } }) do
+            if land(bx + o[1], by + o[2]) and land(bx + o[1] - 14, by + o[2]) and land(bx + o[1] + 14, by + o[2]) then
+                return o[1], o[2]
+            end
+        end
+        return 58, 0
+    end
     for w = 1, Worlds.count() do
         local def = d.worlds[w] or d.worlds[#d.worlds]
         local p = px(def.path)
@@ -253,20 +279,22 @@ local function loadMap()
             M.secret = px(def.secret)
             M.node[n + 2] = M.secret[#M.secret]
         end
-        -- el jefe, al lado del castillo que tenga TIERRA (derecha, izquierda o debajo); nunca en el agua
-        local bx, by = M.node[n][1], M.node[n][2]
-        local function land(x, y)
-            local row = d.rows[math.floor(y / C) + 1]
-            local ch = row and row:sub(math.floor(x / C) + 1, math.floor(x / C) + 1)
-            return ch and ch ~= '' and ch ~= '~' and ch ~= 'L'
-        end
-        M.bossDx, M.bossDy = 58, 0
-        for _, o in ipairs({ { 58, 0 }, { -58, 0 }, { 40, 40 }, { -40, 40 }, { 0, 52 } }) do
-            if land(bx + o[1], by + o[2]) and land(bx + o[1] - 14, by + o[2]) and land(bx + o[1] + 14, by + o[2]) then
-                M.bossDx, M.bossDy = o[1], o[2]; break
-            end
-        end
+        M.bossDx, M.bossDy = bossSide(M.node[n][1], M.node[n][2])
         MAP.worlds[w] = M
+    end
+    -- ISLAS PRÓXIMAMENTE (`soon`: la jungla, aún sin niveles ni sitio en Worlds.LIST): su camino con paradas de MUESTRA
+    -- (cerradas, no son paradas: ni se anda a ellas ni se tocan), su castillo con el jefe y sus puentes CERRADOS
+    MAP.soon = {}
+    for _, def in ipairs(d.soon or {}) do
+        local p = px(def.path)
+        local acc = polyLen(p)
+        local n = math.max(2, def.stops or 2)
+        local S = { def = def, p = p, node = {}, bridges = {} }
+        for k = 1, n do S.node[k] = { pointAt(p, acc, acc[#acc] * (k - 1) / (n - 1)) } end
+        for _, b in ipairs(def.bridges or {}) do S.bridges[#S.bridges + 1] = px(b) end
+        S.bossDx, S.bossDy = bossSide(S.node[n][1], S.node[n][2])
+        if def.label then S.label = { (def.label[1] + 0.5) * C, (def.label[2] + 0.5) * C } end
+        MAP.soon[#MAP.soon + 1] = S
     end
     -- los PUNTOS del camino (cada 16 px), con la llave que dice si ese tramo está abierto
     local function dots(pts, key)
@@ -280,7 +308,7 @@ local function loadMap()
             local cx, cy = math.floor(x / C), math.floor(y / C)
             local row = d.rows[cy + 1]
             local water = row and row:sub(cx + 1, cx + 1) == '~'
-            list[i] = { x = x, y = y, ang = math.atan2(y2 - y, x2 - x), wet = water, key = key }
+            list[i] = { x = x, y = y, ang = math.atan2(y2 - y, x2 - x), wet = water, key = key or nil, soon = key == false }
         end
         -- el puente sigue dos tablones más sobre la orilla de cada lado (si no, acababa cortado en el borde)
         for i, dt in ipairs(list) do
@@ -293,6 +321,10 @@ local function loadMap()
         if M.bridge then dots(M.bridge, { w + 1, 1 }) end
         if M.branch then dots(M.branch, { w, #Worlds.nodes(w) + 1 }) end
         if M.secret then dots(M.secret, { w, #Worlds.nodes(w) + 2 }) end
+    end
+    for _, S in ipairs(MAP.soon) do                    -- (siempre cerrados: `soon` en vez de llave)
+        dots(S.p, false)
+        for _, b in ipairs(S.bridges) do dots(b, false) end
     end
     return MAP
 end
@@ -376,6 +408,13 @@ function StoryMapState:_music()
         end
     end
     local id = best and Worlds.get(best).id
+    -- (una isla PRÓXIMAMENTE más cerca que todas: su arreglo, `map_<isla>`, solo si ya está en el catálogo)
+    for _, S in ipairs(loadMap().soon) do
+        for _, p in ipairs(S.node) do
+            local d = (p[1] - self.heroX) ^ 2 + (p[2] - self.heroY) ^ 2
+            if (not bd or d < bd) and require('src/audio/Music').get('map_' .. S.def.id) then id, bd = S.def.id, d end
+        end
+    end
     if id == self.musicIsland then return end
     self.musicIsland = id
     local track = require('src/audio/Music').get('map_' .. tostring(id)) and ('map_' .. id) or 'menus'
@@ -787,7 +826,7 @@ end
 -- Luz del suelo por altura (los hoyos, oscuros; lo alto, más claro) y textura del CUERPO del acantilado
 -- (bajo el labio, que es la textura de su bloque: el césped enseña tierra debajo, la nieve roca…)
 local LIT = { [0] = 0.4, 0.78, 0.9, 1 }
-local CLIFF_BODY = { g = 'dirt', s = 'sand', w = 'stone', c = 'border', f = 'stone', l = 'deep_stone' }
+local CLIFF_BODY = { g = 'dirt', s = 'sand', w = 'stone', c = 'border', f = 'stone', l = 'deep_stone', j = 'mud', t = 'temple_brick' }
 
 local tilePaths = {}
 local function tilePath(name)
@@ -833,8 +872,8 @@ function StoryMapState:_drawTerrain(cx, cy)
                 local v = (h < 11) and 1 or (h < 15) and 2 or 3
                 love.graphics.draw(ground, frameQ(ground, 16, ((GROUND[ch] or 1) - 1) * 3 + v), x, y, 0, C / 16, C / 16)
                 -- hierba alta (las briznas del bloque de césped del juego) sobre algo de la pradera
-                if ch == 'g' and (c * 31 + r * 17) % 7 == 0 and ht(c, r) > 0 then
-                    local bl = img('assets/images/world/tiles/grass_blades.png')
+                if (ch == 'g' or ch == 'j') and (c * 31 + r * 17) % (ch == 'j' and 4 or 7) == 0 and ht(c, r) > 0 then
+                    local bl = img(ch == 'j' and 'assets/images/world/tiles/jungle_blades.png' or 'assets/images/world/tiles/grass_blades.png')
                     love.graphics.draw(bl, frameQ(bl, 64, (c + r) % 3 + 1), x, y + math.floor(C * 0.4), 0, C / 64, C / 64)
                 end
             end
@@ -913,12 +952,15 @@ function StoryMapState:_drawPaths(cx, cy)
     local bridge = img('assets/images/story/bridge.png')
     for _, d in ipairs(M.dots) do
         local x, y = d.x - cx, d.y - cy
-        if not hiddenNode(d.key[1], d.key[2]) and x > -20 and x < WINDOW_W + 20 and y > -20 and y < WINDOW_H + 20 then
-            local open = stateOf(d.key[1], d.key[2]) ~= 'locked'
+        if (d.soon or not hiddenNode(d.key[1], d.key[2])) and x > -20 and x < WINDOW_W + 20 and y > -20 and y < WINDOW_H + 20 then
+            local open = not d.soon and stateOf(d.key[1], d.key[2]) ~= 'locked'
             if d.water then
                 -- (siempre opaco: cerrado = más oscuro, nunca transparente)
                 love.graphics.setColor(open and 1 or 0.5, open and 1 or 0.5, open and 1 or 0.56, 1)
                 love.graphics.draw(bridge, math.floor(x), math.floor(y), d.ang, 2.25, 4, 4, 2)
+            elseif d.soon then                     -- (la isla PRÓXIMAMENTE: cerrado, pero que se lea sobre la selva oscura)
+                love.graphics.setColor(0.62, 0.62, 0.66, 0.9)
+                love.graphics.draw(dot, math.floor(x) - 4, math.floor(y) - 4, 0, 2, 2)
             else
                 love.graphics.setColor(open and 1 or 0.35, open and 1 or 0.35, open and 1 or 0.4, open and 1 or 0.6)
                 love.graphics.draw(dot, math.floor(x) - 4, math.floor(y) - 4, 0, 2, 2)
@@ -1175,6 +1217,42 @@ function StoryMapState:_drawNodes(cx, cy)
             end
         end
     end
+    self:_drawSoon(cx, cy)
+end
+
+-- Las islas PRÓXIMAMENTE (la jungla): nodos de muestra cerrados, el castillo con su jefe y el cartel. No son
+-- paradas: no se anda a ellas, no se tocan, no tienen ficha
+function StoryMapState:_drawSoon(cx, cy)
+    local nodeImg = img('assets/images/story/node-Sheet.png')
+    for _, S in ipairs(loadMap().soon) do
+        local n = #S.node
+        for k = 1, n do
+            local x, y = math.floor(S.node[k][1] - cx), math.floor(S.node[k][2] - cy)
+            if x > -120 and x < WINDOW_W + 120 and y > -120 and y < WINDOW_H + 80 then
+                if k == n then
+                    local castle = img('assets/images/story/castle-Sheet.png')
+                    love.graphics.setColor(1, 1, 1, 1)
+                    drawBottom(castle, frameQ(castle, 16, 1), x, y + 12, 4, 16, 16)
+                    if S.def.boss and not self.filmBoss then
+                        self:_drawBossArt(S.def.boss, x + S.bossDx, y + 12 + S.bossDy, 0, 1)
+                    end
+                else
+                    love.graphics.setColor(1, 1, 1, 1)
+                    love.graphics.draw(nodeImg, frameQ(nodeImg, 8, 1), x - 16, y - 16, 0, 4, 4)
+                end
+            end
+        end
+        if S.label then                                 -- (su nombre y, debajo, PRÓXIMAMENTE latiendo)
+            local name, soon = L('story.world.' .. S.def.id), L('story.soon')
+            local x, y = math.floor(S.label[1] - cx), math.floor(S.label[2] - cy)
+            if x > -400 and x < WINDOW_W + 400 and y > -60 and y < WINDOW_H + 60 then
+                PixelFont.shadow(name, x - math.floor(PixelFont.width(name, 3) / 2), y - 16, 3, 1, { 1, 1, 1 })
+                local a = 0.7 + 0.3 * math.sin(self.t * 2.4)
+                PixelFont.shadow(soon, x - math.floor(PixelFont.width(soon, 2) / 2), y + 6, 2, a, { 1, 0.85, 0.35 })
+            end
+        end
+    end
+    love.graphics.setColor(1, 1, 1, 1)
 end
 
 function StoryMapState:_drawHero(cx, cy)
@@ -1207,7 +1285,12 @@ function StoryMapState.bossXY(w)
     local n = M.node[#Worlds.nodes(w)]
     return n[1] + M.bossDx, n[2] + 12 + M.bossDy, n[1], n[2]
 end
-function StoryMapState.mapSize() local M = loadMap(); return M.pw, M.ph end
+-- (las cinemáticas encuadran las 6 islas de la historia: `view` del overworld.json; la jungla queda fuera)
+function StoryMapState.mapSize()
+    local M = loadMap()
+    local v = M.d.view
+    return v and v[1] * M.C or M.pw, v and v[2] * M.C or M.ph
+end
 function StoryMapState:filmDraw(cx, cy, zoom, o)
     o = o or {}
     local ww, wh = WINDOW_W, WINDOW_H

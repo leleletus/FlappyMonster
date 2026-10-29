@@ -100,9 +100,45 @@ function love.load()
 end
 
 -- Cada pista: se coloca la intro a 0.3 s de su final y se mira, frame a frame, cuándo entra el bucle
+-- 5. el FUNDIDO CRUZADO del mapa (Sound.switchMusic, 0.5.95): de map_pradera a map_costa a mitad de canción — las
+--    dos suenan a la vez en el MISMO punto, una bajando y la otra subiendo, y al acabar solo queda la nueva
+local xf
+local function crossfade(dt)
+    if not xf then
+        Sound.playMusic('map_pradera')
+        Sound.source('map_pradera'):seek(10)
+        xf = { t = 0, phase = 0 }
+        return false
+    end
+    xf.t = xf.t + dt
+    Sound.update(dt)
+    local a, b = Sound.source('map_pradera'), Sound.source('map_costa')
+    if xf.phase == 0 and xf.t > 0.2 then
+        Sound.switchMusic('map_costa')
+        xf.phase, xf.t0, xf.va0 = 1, xf.t, a:getVolume()
+    elseif xf.phase == 1 and xf.t - xf.t0 > Sound.XFADE * 0.5 then
+        xf.mid = { both = a:isPlaying() and b:isPlaying(), va = a:getVolume(), vb = b:getVolume(),
+                   gap = math.abs(a:tell() - b:tell()) }
+        xf.phase = 2
+    elseif xf.phase == 2 and xf.t - xf.t0 > Sound.XFADE + 0.3 then
+        local m = xf.mid
+        local name = Sound.musicPosition()
+        check(m.both and m.va < xf.va0 and m.va > 0.05 and m.vb > 0.05 and m.gap < 0.05 and not a:isPlaying() and name == 'map_costa',
+            ('fundido del mapa: a medio camino suenan las dos=%s (pradera %.2f → %.2f, costa %.2f, desfase %.0f ms); al acabar solo %s, la de antes parada=%s')
+                :format(tostring(m.both), xf.va0, m.va, m.vb, m.gap * 1000, tostring(name), tostring(not a:isPlaying())))
+        Sound.stopMusic()
+        return true
+    end
+    return false
+end
+
 function love.update(dt)
     local id = introTracks[cur]
     if not id then
+        if not (xf and xf.done) then
+            if crossfade(dt) then xf.done = true end
+            return
+        end
         print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
         return love.event.quit(fails == 0 and 0 or 1)
     end

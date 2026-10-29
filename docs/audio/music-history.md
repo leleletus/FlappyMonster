@@ -772,4 +772,12 @@ only (melody checks clean: no long notes off the chord, no loose notes, no clash
 - `templo_escarabajo` (the only jungle level so far) plays `jungla_1` outside the arena (was `costa_1`).
 - To judge by ear: whether the literal riff in `jungla_1` sounds too much like the boss; the 12/8 → 4/4 → 12/8 switch;
   the flutes against the chip; the accents are very quiet.
+- `map_jungla` (2026-10-28; the user: "create its remix of the world-map theme"; verified by numbers only, never
+  listened to): the SEVENTH arrangement of "Rumbo a las islas" (`worldmap_nes.py jungla`) — the same melody, chords,
+  tempo and 24 bars; the file is exactly 2 116 800 samples like the other six (bar 9 at the same sample in all seven:
+  A/B `FlappyMonster_pruebas/musica/mapa/map_costa_a_jungla_compas9_AB.ogg`). Pan flute (+ N163 flute below), marimba
+  balafón, kalimba, triangle bass, congas / shakers / taiko; leitmotif = the toucan in bars 4, 8, 12, 20, 24 (chord
+  tones only; no m2 / M7 / tritone against the melody in any layer). −11.5 LUFS (volume 0.71, like the bright maps);
+  lead 36 % of the energy. Attack envelopes land 1.5-6 ms after the chip arrangements' (the soft GM attacks; between
+  the other six it is 0-1.5 ms). To judge by ear: the flute's balance, the switch from another island, the toucan's level.
 

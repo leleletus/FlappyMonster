@@ -506,8 +506,10 @@ end
 
 -- Cambio intro → bucle de las pistas con intro (llamar cada frame).
 local paused = nil
+local xf, xfadeStep                        -- (el fundido cruzado de Sound.switchMusic: abajo)
 local INTRO_LEAD = 0.009
 function Sound.update(dt)
+    if xfadeStep then xfadeStep(dt or 0) end                -- (el fundido cruzado de switchMusic)
     if echoes[1] then                                      -- ecos pendientes
         local now = love.timer.getTime()
         for i = #echoes, 1, -1 do
@@ -582,12 +584,38 @@ function Sound.syncMusic(name, t, tol)
 end
 
 -- Cambia a OTRA versión de la misma canción en el mismo punto (el mapa del mundo: cada isla su arreglo,
--- mismo tempo y largo — tools/music/worldmap_nes.py): sigue el compás, solo cambian los instrumentos
-function Sound.switchMusic(name)
+-- mismo tempo y largo — tools/music/worldmap_nes.py): sigue el compás, solo cambian los instrumentos.
+-- FUNDIDO CRUZADO (0.5.95, el usuario: el cambio de golpe se notaba): la de antes sigue sonando y BAJA mientras la
+-- nueva, en el mismo punto, SUBE (`fade` s; curva de igual potencia: no se hunde a medio camino). Sound.update lo lleva.
+Sound.XFADE = 1.2
+-- xf = { src (la que se va), v0, target (volumen de la nueva), t, dur }
+function Sound.switchMusic(name, fade)
     local cur, pos = Sound.musicPosition()
     if cur and resolve(name) == cur then return end
+    fade = fade or Sound.XFADE
+    local old = music
+    if xf then xf.src:stop(); xf = nil end                  -- (otro cambio a medio fundido: la que ya se iba, fuera)
+    if fade > 0 and old and old:isPlaying() then music = nil end    -- (que playMusic no pare la de antes)
     Sound.playMusic(name)
     if pos then Sound.syncMusic(name, pos, 0) end
+    if old and music and music ~= old and fade > 0 and old:isPlaying() then
+        local target = music:getVolume()
+        music:setVolume(0)
+        xf = { src = old, v0 = old:getVolume(), target = target, t = 0, dur = fade }
+    elseif old and music ~= old and old:isPlaying() then
+        old:stop()
+    end
+end
+function xfadeStep(dt)
+    if not xf or paused then return end
+    xf.t = xf.t + dt
+    local k = math.min(1, xf.t / xf.dur)
+    xf.src:setVolume(xf.v0 * math.cos(k * math.pi / 2))
+    if music then music:setVolume(xf.target * math.sin(k * math.pi / 2)) end
+    if k >= 1 then
+        xf.src:stop()
+        xf = nil
+    end
 end
 
 -- Pista que suena y su posición (s) dentro del archivo actual (intro o bucle)
@@ -687,6 +715,7 @@ end
 function Sound.pauseAll()
     paused = {}
     if music and music:isPlaying() then music:pause(); table.insert(paused, music) end
+    if xf and xf.src:isPlaying() then xf.src:pause(); table.insert(paused, xf.src) end
     for _, src in pairs(tracked) do
         if src:isPlaying() then src:pause(); table.insert(paused, src) end
     end
@@ -724,6 +753,7 @@ end
 -- seguía desde donde se quedó) y olvida lo pausado
 function Sound.stopMusic()
     if music then music:stop() end
+    if xf then xf.src:stop(); xf = nil end
     local lp = musicName and loops[musicName]
     if lp then lp:stop() end
     if paused then

@@ -509,7 +509,7 @@ function love.update(dt)
         if TOUR == Worlds.count() then
             check('musica', MUSIC_OK, 'cada isla del mapa suena con su arreglo de "Rumbo a las islas": ' .. tostring(MUSIC_OK))
         end
-        -- el MAPA ENTERO en una imagen (2688x1536), para revisarlo: story_map_full.png
+        -- el MAPA ENTERO en una imagen (2688x2016, con la jungla PRÓXIMAMENTE), para revisarlo: story_map_full.png
         if TOUR == Worlds.count() then
             top():renderFull():encode('png', 'story_map_full.png')
             top().showBosses = true                       -- (otra vez con los jefes junto a sus castillos: sus pinzas, la corona)

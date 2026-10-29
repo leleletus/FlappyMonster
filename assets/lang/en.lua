@@ -133,10 +133,12 @@ return {
         go_world = "No lives left: back to the start of this world",
         go_game = "No lives left: the adventure starts over",
         go_notice = "GAME OVER: BACK TO THE START",
+        soon = "COMING SOON",
         map_hint = "{arrows} walk    {ok} play    {back} saves",
         world = {
             pradera = "THE MEADOW", costa = "THE COAST", fortaleza = "THE FORTRESS",
             nieve = "THE PEAKS", cuevas = "THE CAVES", final = "THE END",
+            jungla = "THE JUNGLE",
         },
     },
     flappy = {

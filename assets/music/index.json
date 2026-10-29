@@ -68,6 +68,7 @@
     { "id": "map_nieve",     "name": "Rumbo a las islas (Cumbres)",   "file": "map/map_nieve.ogg",     "level": false, "volume": 0.75 },
     { "id": "map_cuevas",    "name": "Rumbo a las islas (Cuevas)",    "file": "map/map_cuevas.ogg",    "level": false, "volume": 0.77 },
     { "id": "map_final",     "name": "Rumbo a las islas (Volcán)",    "file": "map/map_final.ogg",     "level": false, "volume": 0.71 },
+    { "id": "map_jungla",    "name": "Rumbo a las islas (Jungla)",    "file": "map/map_jungla.ogg",    "level": false, "volume": 0.71 },
     { "id": "story_intro",   "name": "Historia: intro (cinemática)",  "file": "story/story_intro.ogg",  "loop": false, "level": false, "volume": 0.91 },
     { "id": "story_ending",  "name": "Historia: final (cinemática)",  "file": "story/story_ending.ogg", "loop": false, "level": false, "volume": 0.90 },
     { "id": "story_chase",   "name": "Historia: la emboscada (cinemática)", "file": "story/story_chase.ogg", "loop": false, "level": false, "volume": 0.90 },

@@ -133,10 +133,12 @@ return {
         go_world = "Sin vidas: vuelves al principio de este mundo",
         go_game = "Sin vidas: la aventura empieza de nuevo",
         go_notice = "GAME OVER: DE VUELTA AL PRINCIPIO",
+        soon = "PRÓXIMAMENTE",
         map_hint = "{arrows} andar    {ok} jugar    {back} partidas",
         world = {
             pradera = "LA PRADERA", costa = "LA COSTA", fortaleza = "LA FORTALEZA",
             nieve = "LAS CUMBRES", cuevas = "LAS CUEVAS", final = "EL FINAL",
+            jungla = "LA JUNGLA",            -- (aún no está en la historia: en el mapa, PRÓXIMAMENTE)
         },
     },
     flappy = {
