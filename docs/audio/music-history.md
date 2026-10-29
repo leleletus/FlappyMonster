@@ -750,3 +750,26 @@ The jungle boss (the Giant Rhino Beetle, a prototype for a future jungle island)
   60 bars, 96 s. Also: in single player the AUDIO is now the master clock of the event (`CM:syncAudio`), so a game
   hitch can never make the music re-seek; online the re-seek tolerance is 0.2 s (was 0.12). Previews of every loop's
   join: `piezas/vuelta_<piece>.ogg`. Not listened to by me.
+
+## The jungle set (`tools/music/jungla_nes.py`: `jungla_1`, `jungla_2`, `jungla_bonus`)
+
+The user (2026-10-28): the jungle's 2 level tracks and its bonus, "following the pattern and motifs of the beetle's
+theme and the musical inspiration of the rest of the game, but with jungle instruments" — and, mid-way, "it's not
+always necessary to follow the house style: you can always create an original theme". A/B previews for the two level
+tracks (one closer to the house, one more original); the user chose the ORIGINAL one both times. Verified by numbers
+only (melody checks clean: no long notes off the chord, no loose notes, no clashes); never listened to by me.
+- `jungla_1` "Corazón de la selva" — chosen **B "dos flautas"**: F minor, 138 BPM, intro 7.0 s + loop 97.4 s (56 bars:
+  A · A' · B · C · K · A'' · C'). GM pan flute with the N163 flute quietly an octave below, hemiola rhythm (a note every
+  3 sixteenths); the ocarina in parallel thirds below in A'' / C'. C = the beetle RIFF at its own pitch over A♭ (marimba +
+  kalimba, as in the boss) answered by own phrases; K = a drum circle; la llamada at 0:47; dark turn G♭ (♭II); the
+  toucan accent. Rejected: A "liana" (N163 wooden flute, house style).
+- `jungla_2` "Río de tambores" — chosen **B "balafón"**: B♭ dorian in 12/8 (the game's first compound-time track, on the
+  African bell 2-2-1-2-2-2-1), dotted quarter = 120, intro 8.0 s + loop 96.0 s (48 bars). GM marimba lead rolled on
+  long notes, kalimba an octave up. R "the beetle's shadow" (0:56): 8 bars in 4/4 at the same beat with the boss's drum
+  pattern and the riff head in sequence, then back to 12/8. The night-bird accent. Rejected: A "pulso" (2A03 pulse).
+- `jungla_bonus` "Lianas": A♭ mixolydian, 160 BPM, intro 6.0 s + loop 60.0 s; pulse lead + marimba; the solo "selva"
+  (taiko calls, conga answers, tuned log drums in 3s against surdo quarters, the riff rhythm struck in unison).
+- `templo_escarabajo` (the only jungle level so far) plays `jungla_1` outside the arena (was `costa_1`).
+- To judge by ear: whether the literal riff in `jungla_1` sounds too much like the boss; the 12/8 → 4/4 → 12/8 switch;
+  the flutes against the chip; the accents are very quiet.
+

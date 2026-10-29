@@ -41,6 +41,9 @@
     { "id": "volcan_1",   "name": "Volcán 1 (Sendero de ceniza)", "intro": "worlds/volcan/volcan_1_intro.ogg", "loop": "worlds/volcan/volcan_1_loop.ogg", "volume": 0.67 },
     { "id": "volcan_2",   "name": "Volcán 2 (Lluvia de fuego)", "intro": "worlds/volcan/volcan_2_intro.ogg", "loop": "worlds/volcan/volcan_2_loop.ogg", "volume": 0.67 },
     { "id": "volcan_bonus", "name": "Volcán (bonus)", "intro": "worlds/volcan/volcan_bonus_intro.ogg", "loop": "worlds/volcan/volcan_bonus_loop.ogg", "volume": 0.63 },
+    { "id": "jungla_1",   "name": "Jungla 1 (Corazón de la selva)", "intro": "worlds/jungla/jungla_1_intro.ogg", "loop": "worlds/jungla/jungla_1_loop.ogg", "volume": 0.66 },
+    { "id": "jungla_2",   "name": "Jungla 2 (Río de tambores)", "intro": "worlds/jungla/jungla_2_intro.ogg", "loop": "worlds/jungla/jungla_2_loop.ogg", "volume": 0.66 },
+    { "id": "jungla_bonus", "name": "Jungla (bonus: Lianas)", "intro": "worlds/jungla/jungla_bonus_intro.ogg", "loop": "worlds/jungla/jungla_bonus_loop.ogg", "volume": 0.66 },
 
     { "id": "gummy_king_boss", "name": "Su Majestad Gummy (Rey Gummy)", "intro": "bosses/gummy_king_boss_intro.ogg", "loop": "bosses/gummy_king_boss_loop.ogg", "level": false, "boss": true, "volume": 0.67 },
     { "id": "evil_ship_boss",  "name": "Persecución (Nave Malvada)",   "intro": "bosses/evil_ship_boss_intro.ogg",  "loop": "bosses/evil_ship_boss_loop.ogg",  "level": false, "boss": true, "volume": 0.66 },

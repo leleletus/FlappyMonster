@@ -82,7 +82,7 @@
   "bossZones": [
     {"col":49,"h":10,"id":1,"music":"templo","row":3,"w":24}
   ],
-  "music": "costa_1",
+  "music": "jungla_1",
   "background": "jungle",
   "time": "day",
   "surfaceRow": 13

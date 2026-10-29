@@ -12,6 +12,7 @@ screens play `victory`; the Flappy mode plays `flappy`.
 
 | Generator | Writes |
 |---|---|
+| `jungla_nes.py` | the JUNGLE set (0.5.93; GM jungle instruments + the chip cast, in the `templo.py` style): `jungla_1` "Corazón de la selva", `jungla_2` "Río de tambores", `jungla_bonus` "Lianas". Without flags: A/B previews + `LEEME.txt` in `FlappyMonster_pruebas/musica/jungla/`; `REPORT=1` = numbers only; `INSTALL=1 JUNGLA_1=A\|B JUNGLA_2=A\|B` writes `worlds/jungla/<track>_intro\|_loop.ogg` + `mid/<track>.mid` (installed: B and B) |
 | `worlds_nes.py <track>` | the island sets (`pradera_*`, `costa_*`, `fortaleza_*`, `nieve_*`, `cuevas_1/2/bonus`, `volcan_*`), `gummy_king_boss`, `evil_ship_boss`, `snowball_boss`, `victory`, `flappy`; `--capas` = stems |
 | `worldmap_nes.py` | `map_<world>` ×6 |
 | `crab_tantrum.py [normal gloomy]` | `crab_tantrum_normal`, `crab_tantrum_gloomy` |
@@ -42,7 +43,7 @@ screens play `victory`; the Flappy mode plays `flappy`.
 
 ## Catalog layout and rules
 
-`assets/music/`: `menus/`, `map/` (map_<world>), `worlds/<pradera|costa|fortaleza|nieve|cuevas|volcan>/` (LEVEL music:
+`assets/music/`: `menus/`, `map/` (map_<world>), `worlds/<pradera|costa|fortaleza|nieve|cuevas|volcan|jungla>/` (LEVEL music:
 2-3 themed tracks per world, ids `<world>_<n>`), `bosses/` (+ `extras/`), `jingles/`. `index.json` documents it.
 
 - INTRO + LOOP (user's rule, 3.50.1): a track with an intro is TWO files — `<track>_intro.ogg` (plays once on entering)

@@ -478,7 +478,7 @@ def templo_escarabajo():
     (derriban a un Gummy, rompen cajas) — y el ESCARABAJO RINOCERONTE GIGANTE al final (arena jefe_escarabajo: el
     templo de la balanza, con su tema `templo`)."""
     src = load_src('jefe_escarabajo.json')
-    L = Level('Templo del Escarabajo', 85, 15, (4, 12), music='costa_1')
+    L = Level('Templo del Escarabajo', 85, 15, (4, 12), music='jungla_1')
     L.extra.update({'name_en': 'Beetle Temple', 'background': 'jungle', 'time': 'day'})   # (la isla de la JUNGLA, 0.5.83)
     G = 13
     L.rect(2, G, 42, 14, SOLID)

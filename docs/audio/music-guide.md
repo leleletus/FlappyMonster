@@ -75,6 +75,7 @@ way the map and the levels are the same music. The Mirror boss's motif is la lla
 | Summits (nieve) | F major / D minor | 144-160 | music box an octave up | sleigh bells, half-note bass, pad | falling bells |
 | Caves (cuevas) | D dorian | 96-110 (72 in the dark) | music box with echo | half time, deep kick, no cymbals | drips |
 | Volcano (final) | E or A phrygian (♭II) | 156-172 | brass / saw + octave pulse | 8th bass, double kick, 3+3+2 | plucked flourish |
+| Jungle (jungla) | F minor (♭VI ♭VII of the beetle theme) · `_2` B♭ dorian in 12/8 · bonus A♭ mixolydian | 120 (12/8) - 160 | GM pan flute (+ N163 flute below), GM marimba as balafón, pulse | bouncing triangle bass, marimba 3+3+3+3+2+2, conga tumbao; African bell 2-2-1-2-2-2-1 in 12/8; the beetle riff's rhythm 2+3+3+3+3+2 | the toucan (ocarina 5-5-8), the night bird (blown bottle 5→3) |
 
 ### Which track is which slot
 - `<world>_1` = the world's THEME: the most melodic, for its first levels (story order: odd levels).
