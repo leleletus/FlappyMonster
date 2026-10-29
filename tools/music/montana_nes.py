@@ -143,6 +143,7 @@ class Rig(J.Rig):
         super().__init__(sg)
         NF = len(self.Cn['lead'].f)
         self.Cn['howl'] = Chan(NF)
+        self.NZ['hat'].exact = True              # (el siseo de nieve en semicorcheas, cada golpe en su muestra: famicom.Noise.exact)
 
     def gm(self, k, prog, b, st, n, d, vel, gate=0.95):
         sg = self.sg
@@ -369,6 +370,12 @@ def counter_gm(sg, R, bars, prog, vel, lo=55, hi=67, key='cm'):
             R.gm(key, prog, b, st, prev, d, vel, gate=0.97)
 
 
+def jv(st, beat=68, eighth=54, sixteenth=38):
+    """velocidad de los cascabeles A TIEMPO (2026-10-29, el usuario: la "nevada" sonaba a destiempo — iba solo entre
+    los tiempos —): el tiempo, fuerte; la corchea, media; la semicorchea, floja"""
+    return beat if st % 4 == 0 else (eighth if st % 2 == 0 else sixteenth)
+
+
 def bass_note(sg, b, st, deg, lo=38):
     r, q = sg.chord(b, st)
     base = lo + (r - lo) % 12
@@ -512,23 +519,22 @@ def arrange_m1(sg, R, v):
         for st in range(16):
             t = sg.t(b, st)
             if tag == 'intro':
-                if k >= 2 and st % 4 == 2: R.dr('jingle', b, st, JINGLE, 64)
+                if k >= 2 and st % 2 == 0: R.dr('jingle', b, st, JINGLE, jv(st, 64, 50))
                 if k >= 3 and st in (0, 8): R.kick(b, st, 0.8)
                 continue
             if thin:
-                if st % 4 == 2: R.dr('jingle', b, st, JINGLE, 48)
+                if st % 4 == 0: R.dr('jingle', b, st, JINGLE, 48)
                 continue
             big = tag in ('C', 'V')
             if tag == 'B':                                                   # la vista: medio tiempo
                 if st == 0: R.kick(b, st, 0.9)
                 if st == 8: R.dr('snare', b, st, SN, 92, kit=kit)
-                if st % 4 == 2: R.dr('jingle', b, st, JINGLE, 62)
+                if st % 2 == 0: R.dr('jingle', b, st, JINGLE, jv(st, 62, 50))
             else:
                 if st in (0, 8) or (big and st in (6, 14)) or st == 6: R.kick(b, st, 1.0 if st in (0, 8) else 0.75)
                 if st in (4, 12): R.dr('snare', b, st, SN, 100 if big else 90, kit=kit)
                 if big and st in (7, 15) and v == 'B': R.dr('snare', b, st, SN, 46, kit=kit)
-                if st % 2 == 1 and big: R.dr('jingle', b, st, JINGLE, 50)
-                if st % 4 == 2: R.dr('jingle', b, st, JINGLE, 72 if big else 64)
+                if big or st % 2 == 0: R.dr('jingle', b, st, JINGLE, jv(st, 72, 58, 42) if big else jv(st, 64, 52))
                 if v == 'B' and st in (0, 8) and big: R.gm('bd', CONCERT_BD, b, st, 36, 2, 92 if st == 0 else 74)
             if st == 0 and k in (1, 5) and tag in ('A', 'C', 'V'): R.NZ['crash'].hit(t, 3, CRASH_N)
             if v == 'A' and big and st % 4 == 0: R.dr('ride', b, st, RIDE_BELL, 56)
@@ -625,7 +631,7 @@ def arrange_m2(sg, R, v):
                 if k >= 3 and st in (0, 10): R.kick(b, st, 0.8)
                 continue
             if tag == 'E' or thin:
-                if st % 4 == 2 and tag != 'E': R.NZ['hat'].hit(t, 0, [3, 1])
+                if st % 4 == 0 and tag != 'E': R.NZ['hat'].hit(t, 0, [3, 1])
                 if last and st >= 12: R.snare(b, st, 0.35 + 0.08 * (st - 12))
                 continue
             if stop:
@@ -640,8 +646,8 @@ def arrange_m2(sg, R, v):
                 if st in (0, 10): R.kick(b, st, 1.0 if st == 0 else 0.85)
                 if st == 8: R.snare(b, st, 0.9)
                 if st == 15 and k % 2 == 0: R.snare(b, st, 0.35)
-                R.NZ['hat'].hit(t, 0, [4, 2, 1] if st % 4 == 2 else [2, 1])
-                if tag == 'B' and st % 4 == 2: R.dr('jingle', b, st, JINGLE, 52)
+                R.NZ['hat'].hit(t, 0, [4, 2, 1] if st % 4 == 0 else ([3, 1] if st % 2 == 0 else [2, 1]))   # (el tiempo, fuerte)
+                if tag == 'B' and st % 2 == 0: R.dr('jingle', b, st, JINGLE, jv(st, 56, 44))
             if st == 0 and k in (1, 5): R.NZ['crash'].hit(t, 3, CRASH_N)
         if 'stop' in var and k == L:
             for st in range(8, 16): R.gm('timp', TIMPANI, b, st, bass_note(sg, b, 0, 0, 40), 1, 70 + 5 * (st - 8), gate=0.9)
@@ -667,7 +673,7 @@ def solo_hielo(sg, R, b, k, v):
             if st % 3 == 0 and st < 15: R.gm('glock', GLOCK, b, st, tones[seq[(st // 3) % 6]] + 12, 2, 86)
             if st % 4 == 0: R.dr('brush', b, st, SN, 80, kit=K_BRUSH)
             if st in (0, 8): R.kick(b, st, 0.7)
-            R.dr('jingle', b, st, JINGLE, 56 if st % 2 else 40)
+            R.dr('jingle', b, st, JINGLE, jv(st, 60, 50, 36))
         elif k in (5, 6):
             R.dr('wood', b, st, (WOOD_H, WOOD_L, CLAVES, WOOD_L)[st % 4], 88 if st % 4 == 0 else 66)
             if st % 2 == 0: R.dr('tri', b, st, TRI_M if st % 4 else TRI_O, 70)
@@ -678,7 +684,7 @@ def solo_hielo(sg, R, b, k, v):
                 if st == s0:
                     R.gm('timp', TIMPANI, b, st, (43, 46, 43, 51)[(2, 1, 2, 3).index(deg)] if deg != 3 else 39, 2, 108)
                     R.gm('glock', GLOCK, b, st, tones[deg + 3] + 12 if deg != 3 else tones[6] + 12, 2, 92)
-            R.dr('jingle', b, st, JINGLE, 60 if st % 2 else 46)
+            R.dr('jingle', b, st, JINGLE, jv(st, 64, 52, 40))
         else:
             R.gm('timp', TIMPANI, b, st, 39, 1, 60 + 4 * st, gate=0.9)
             if st == 0: R.dr('tree', b, st, BELL_TREE, 100, d=8)
@@ -740,13 +746,13 @@ def arrange_bonus(sg, R, v):
             t = sg.t(b, st)
             if tag == 'intro':
                 if st % 4 == 0: R.gm('timp', TIMPANI, b, st, 39 if st % 8 == 0 else 46, 2, 70 + 8 * k)
-                if k >= 2: R.dr('jingle', b, st, JINGLE, 56 if st % 2 else 40)
+                if k >= 2: R.dr('jingle', b, st, JINGLE, jv(st, 60, 50, 36))
                 if k >= 3 and st % 4 == 0: R.kick(b, st, 0.9)
                 if k == 4 and st >= 12: R.dr('snare', b, st, SN, 80 + 8 * (st - 12), kit=K_ORCH)
                 continue
             if st % 4 == 0: R.kick(b, st, 1.0 if st % 8 == 0 else 0.9)
             if st in (4, 12): R.snare(b, st, 0.9) if v == 'A' else R.dr('snare', b, st, SN, 100, kit=K_ORCH)
-            R.dr('jingle', b, st, JINGLE, 62 if st % 4 == 2 else 42)
+            R.dr('jingle', b, st, JINGLE, jv(st, 66, 54, 40))
             if v == 'B' and st in (0, 8): R.gm('bd', CONCERT_BD, b, st, 36, 2, 84)
             if st == 0 and k in (1, 5): R.NZ['crash'].hit(t, 3, CRASH_N)
             if last and st >= 12 and nxt_tag in ('solo', 'A') and b != sg.NB:
@@ -988,8 +994,7 @@ def arrange_map(sg, R, v):
         for st in range(16):
             if st == 0 or (B and st == 8): R.kick(b, st, 0.7 if st == 0 else 0.55)
             if st in (4, 12): R.dr('snare', b, st, SN, 74 if not B else 84, kit=kit)
-            if st % 4 == 2: R.dr('jingle', b, st, JINGLE, 64)
-            if B and st % 2 == 1: R.dr('jingle', b, st, JINGLE, 40)
+            if st % 2 == 0 or B: R.dr('jingle', b, st, JINGLE, jv(st, 66, 52, 38))
             if st == 0 and b in (1, 9, 17):
                 R.NZ['crash'].hit(sg.t(b, st), 3, CRASH_N)
                 R.gm('timp', TIMPANI, b, st, 40 + (r - 40) % 12, 4, 96)

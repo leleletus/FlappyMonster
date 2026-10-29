@@ -1248,6 +1248,8 @@ def _solo_volcan(k, at, kick, sn, tom, NZ, hit, chord, ping):
 SOLOS = {'costa': _solo_costa, 'fortaleza': _solo_fortaleza, 'nieve': _solo_nieve, 'cueva': _solo_cueva, 'volcan': _solo_volcan}
 
 BACKING = 4.0                # dB que sube el acompañamiento respecto a la melodía (ver build)
+EVENTS = None                # (dict) build() apunta en él cada nota, golpe y capa (y la mezcla) para cambiar el
+                             # reparto sin tocar la composición: tools/music/jefes_helados.py. None = nada cambia
 BACKING_KEYS = ('chords', 'bass', 'kick', 'snare', 'hat', 'crash', 'toms')
 STEMS_TO = None
 STEM_NAMES = [('lead', 'melodia'), ('cm', 'contracanto'), ('swap', 'melodia_en_otro_instrumento'), ('perc', 'solo_afinado'), ('echo', 'eco_de_la_melodia'), ('dbl', 'melodia_doblada'), ('bell', 'caja_de_musica'),
@@ -1268,6 +1270,8 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
     NF = F.frames_for(NB * BAR + 3)
     Cn = {k: Chan(NF) for k in ('lead', 'echo', 'c1', 'c2', 'bass', 'trill', 'dbl', 'bell', 'cm', 'swap', 'perc')}
     NZ = {k: Noise(NF) for k in ('hat', 'snare', 'crash', 'fx')}
+    # (2026-10-29, el usuario: los cascabeles de la nieve sonaban "a destiempo" → cada golpe en su muestra: famicom.Noise.exact)
+    if isle in SNOW: NZ['hat'].exact = NZ['fx'].exact = True
     NS = int(NF * F.FRAME_S) + SR
     kick, sn, tom = np.zeros(NS), np.zeros(NS), np.zeros(NS)
     tv = lambda b, st: (b - 1) * BAR + st * S16
@@ -1278,6 +1282,11 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
         i = int(t * SR)
         m = max(0, min(len(smp), NS - i))
         buf[i:i + m] += smp[:m] * g
+        if EVENTS is not None: EVENTS.setdefault('buf_' + ('kick' if buf is kick else 'snare' if buf is sn else 'toms'), []).append((t, g, smp))
+
+    if EVENTS is not None:
+        EVENTS.clear()
+        for k_, c_ in list(Cn.items()) + [('nz_' + k_, z_) for k_, z_ in NZ.items()]: c_.log = EVENTS.setdefault(k_, [])
 
     # CONTRACANTO ('cm', y en 'swap' lo canta la voz): una línea por debajo de la melodía, una nota del acorde por medio
     # compás, la más cercana a la anterior (si repite tres veces, se mueve); los saltos de tercera se rellenan con la
@@ -1750,6 +1759,9 @@ def build(name, variant='A', bpm=136, minor=False, drive=0, lufs=-11.5, solo=Fal
         F.write_wav(os.path.join(STEMS_TO, '20_bateria_completa.wav'), drums)
         F.write_wav(os.path.join(STEMS_TO, '00_todo_junto.wav'), y)
         print('  capas en %s · suma de capas vs pista: diferencia máxima %.5f' % (STEMS_TO, np.abs(tot - y).max()))
+    if EVENTS is not None:
+        EVENTS['_mix'] = dict(S=S, g=g, LV=LV, n=n, n_i=n_i, BAR=BAR, S16=S16, mel=mel, ch=ch, tag=tag, starts=starts,
+                              var=var, lufs=lufs, bpm=bpm, side={'chords': 0.35, 'echo': -0.6, 'trill': 0.4, 'hat': 0.3, 'bell': 0.25})
     GN.report(name, y, S, g, n)
     off = np.mean([st % 4 != 0 for b, st, nn, d in mel])
     print(f'  {bpm} BPM, {NB} compases ({NB * BAR:.1f} s); melodía: {len(mel)} notas, {100 * off:.0f} % fuera del tiempo, '

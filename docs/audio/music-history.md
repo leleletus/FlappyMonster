@@ -818,6 +818,43 @@ instruments" (the rest of the islands will be modernised later). Verified by num
   modern, the reverb, the choir and horn levels, the gust against the Snowball boss, the map switch between islands
   (GM attacks land 0-6 ms after the chip arrangements').
 
+## The icy bosses on the GM cast and the snowfall on time (`tools/music/jefes_helados.py`, 2026-10-29)
+
+- The user: "rework a la música de la Gran Bola de Nieve y del Icy Mega Crabby de forma que solo mejore (si aplica) su
+  estructura musical/ritmo y utilice las nuevas sound fonts para las melodías, percusiones y efectos". `jefes_helados.py`
+  re-voices `snowball_boss` and `crab_tantrum_icy` WITHOUT touching their composition: `worlds_nes.EVENTS` /
+  `crab_icy.EVENTS` (opt-in; `None` = output unchanged) capture every note, drum hit and the mix, and each layer is
+  replayed on GM instruments with the same notes and levels (same melodies, harmony, key, tempo, form, intro + loop
+  sample-exact; the Crab Mega Mashup only reads melodies / chords from `crab_icy.py`). Added: GM drums hit by hit
+  (orchestral snare, jingle bells, cymbals; chip toms → timpani tuned to the chord; concert bass drum), a tuned timpani
+  roll doubling every entry roll, reverse cymbals into sections, the frost reverb; the note echo removed.
+  Verdicts: (1) "están bien, pero en ambos se debe optar por un instrumento diferente para la melodía principal: el de
+  la Giant Ball le quita potencia, y al Crabby lo pone algo tropical" (Crystal / vibraphone + steel drum leads) → three
+  lead options each (`OPCIONES=1`); (2) then "volver a usar los instrumentos chiptune para las melodías principales de
+  ambas canciones; de esa manera se conserva la esencia original del juego" → `LEAD_CHIP=1`: the installed chip voice
+  (snowball: 2A03 pulse; crab: N163 soft voice + its pulse octave in the last chorus; in the crab's breather the GM
+  "Voice Oohs"), dry, at the original lead level, the rest GM. Previews only (`FlappyMonster_pruebas/musica_jefes_helados/`),
+  waiting for approval. Verified by numbers only; **not listened to**.
+- The user (same day): "Retirar efecto eco en instrumentos de fondo y hacer que los 'shakers' que hacen de 'nevada' en
+  todos los niveles que lo usen suenen bien, es decir, a tiempo: actualmente noto que van a destiempo para dar alguna
+  especie de efecto, pero no termina de quedar bien con el resto del juego (esto no solo incluye estos nuevos temas
+  remastered, también los anteriores)". Found by numbers: the chip NOISE channel placed every hit on the nearest 60 Hz
+  driver frame, up to ±8 ms off — the sleigh bells in 16ths came out uneven (at 148 BPM, 100 and 117 ms apart; at 186,
+  67-83 ms). Fix: `famicom.Noise.exact` (each hit starts on its own sample; same timbre), switched on for the snow
+  percussion only: `worlds_nes.py` snow isles (`nieve_1`, `nieve_2`, `nieve_bonus`, `snowball_boss`: sleigh bells +
+  the sleigh-shake accent), `crab_icy.py`, `verity_boss.py` (`snowball_verity`), the old snow map
+  (`map_costa_helada`, whose sleigh bells also sat ONLY on the odd 16ths — now on the 8ths, the beat stronger) and the
+  chip snow hiss of `montana_2`. In `montana_nes.py` the GM jingle bells, which were only on the offbeats, now play
+  the 8ths (16ths in the busy sections) with the beat strongest (`jv()`), and `montana_2`'s hiss accents the beat.
+  Echo: none left on background instruments in the chosen tracks (`montana_2` B lost its howl echo earlier; the boss
+  reworks have none; the frost reverb is a convolution, not discrete repeats); `map_nieve`'s MELODY echo (the old snow
+  map's music-box echo) was kept. Reinstalled with identical lengths: `montana_1`, `montana_2`, `montana_bonus`,
+  `map_nieve`, `map_costa_helada`, `nieve_1/2/bonus`, `snowball_boss`, `crab_tantrum_icy`, `snowball_verity`, and
+  `story_credits` (cut from those tracks). Before/after mp3 excerpts: `FlappyMonster_pruebas/musica_correcciones/`.
+  Not changed (listed for the user): the chip `echo` layer (melody notes 3 sixteenths later) of the older
+  `worlds_nes.py` tracks, the crab's own music-box echo in the installed `crab_tantrum_icy`, and the noise hats of the
+  non-snow tracks and of the Crab Mega Mashup (frame-rounded like every chip hat in the game). Not listened to.
+
 ## The film scores for any number of shards (`tools/music/story_music.py`, 0.5.99)
 
 - The jungle boss got a shard (8 shards, 7 bosses) and the user asked that neither the cinematic nor its music be

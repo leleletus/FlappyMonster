@@ -193,6 +193,8 @@ def build(lufs=-10.5):
     NF = F.frames_for(NB * BAR + 3)
     Cn = {k: Chan(NF) for k in ('lead', 'dbl', 'echo', 'bell', 'p1', 'p2', 'c1', 'c2', 'ice', 'shim', 'bass', 'bdef')}
     NZ = {k: Noise(NF) for k in ('hat', 'snare', 'crash', 'fx')}
+    # (2026-10-29, el usuario: los cascabeles de la nieve sonaban "a destiempo" → cada golpe en su muestra: famicom.Noise.exact)
+    NZ['hat'].exact = True
     NS = int(NF * F.FRAME_S) + SR
     kick, sn, tom = np.zeros(NS), np.zeros(NS), np.zeros(NS)
     tv = lambda b, st: (b - 1) * BAR + st * S16

@@ -96,6 +96,8 @@ T_IN = ["0:F5/8 8:F6/8", "0:E6/8 8:C6/8", "0:D6/16", ""]
 CH_IN = ['Bb', 'C', 'Dm', 'Dm']
 ORDER = ['IN', 'A', 'A2', 'B', 'C', 'K', 'A3', 'B2', 'C2', 'CODA']
 Q4 = {}
+EVENTS = None          # (dict) build() apunta en él cada nota, golpe y capa (y la mezcla) para cambiar el reparto
+                       # sin tocar la composición: tools/music/jefes_helados.py. None = nada cambia
 
 
 def song():
@@ -161,6 +163,8 @@ def build(lufs=-10.0):
     NF = F.frames_for(NB * BAR + 3)
     Cn = {k: Chan(NF) for k in ('lead', 'dbl', 'echo', 'bell', 'p1', 'p2', 'c1', 'c2', 'ice', 'shim', 'bass', 'bdef')}
     NZ = {k: Noise(NF) for k in ('hat', 'snare', 'crash', 'fx')}
+    # (2026-10-29, el usuario: los cascabeles de la nieve sonaban "a destiempo" → cada golpe en su muestra: famicom.Noise.exact)
+    NZ['hat'].exact = True
     NS = int(NF * F.FRAME_S) + SR
     kick, sn, tom = np.zeros(NS), np.zeros(NS), np.zeros(NS)
     tv = lambda b, st: (b - 1) * BAR + st * S16
@@ -169,6 +173,11 @@ def build(lufs=-10.0):
         i = int(t * SR)
         m = max(0, min(len(smp), NS - i))
         buf[i:i + m] += smp[:m] * g
+        if EVENTS is not None: EVENTS.setdefault('buf_' + ('kick' if buf is kick else 'snare' if buf is sn else 'toms'), []).append((t, g, smp))
+
+    if EVENTS is not None:
+        EVENTS.clear()
+        for k_, c_ in list(Cn.items()) + [('nz_' + k_, z_) for k_, z_ in NZ.items()]: c_.log = EVENTS.setdefault(k_, [])
 
     def snare(t, g=1.0, vols=SNARE_N):
         NZ['snare'].hit(t, 4, vols); hit(sn, TN.SNARE_BODY, t, g)
@@ -320,6 +329,9 @@ def build(lufs=-10.0):
     k_ = int(0.03 * SR); env = np.convolve(np.pad(env, k_, mode='edge'), np.ones(2 * k_ + 1) / (2 * k_ + 1), mode='valid')[:len(x)]
     x, side = x * env, side * env
     y = F.master(np.stack([x + side, x - side], 1), lufs=lufs)
+    if EVENTS is not None:
+        EVENTS['_mix'] = dict(S=S, g=g, LV=LV, n=n, n_i=n_i, BAR=BAR, S16=S16, mel=mel, ch=chords, tag=tag, starts=starts,
+                              env=env, lufs=lufs, bpm=BPM, desc=desc)
     GN.report('crab_tantrum_icy', y, S, g, n)
     bad, out = check(mel + desc, chords)
     drums = sum(np.mean((S[k_][:n] * g[k_]) ** 2) for k_ in ('kick', 'toms', 'snare', 'hat', 'crash')) / sum(np.mean((S[k_][:n] * g[k_]) ** 2) for k_ in S)

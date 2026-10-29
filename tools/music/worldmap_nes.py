@@ -133,6 +133,8 @@ def build(island):
     NF = F.frames_for(NB * BAR + 3)
     C_ = {k: Chan(NF) for k in ('lead', 'lead2', 'arp', 'bass', 'motif', 'pad1', 'pad2')}
     NZ = {k: Noise(NF) for k in ('hat', 'snare', 'crash')}
+    # (2026-10-29, el usuario: los cascabeles de la nieve sonaban "a destiempo" → cada golpe en su muestra: famicom.Noise.exact)
+    NZ['hat'].exact = island == 'nieve'
     NS = int(NF * F.FRAME_S) + SR
     kick = np.zeros(NS)
     sn = np.zeros(NS)
@@ -249,7 +251,9 @@ def build(island):
             elif island == 'nieve':
                 if st == 0: hitk(tt, 0.5)
                 if st in (4, 12): NZ['snare'].hit(tt, 6, [6, 3, 1])
-                if st % 2 == 1: NZ['hat'].hit(tt, 0, SLEIGH, short=1)        # cascabeles (ruido corto, metálico)
+                if st % 2 == 0: NZ['hat'].hit(tt, 0, SLEIGH if st % 4 == 0 else SLEIGH[1:], short=1)   # cascabeles (ruido corto, metálico)
+                # (2026-10-29: iban en las semicorcheas impares — entre los tiempos — y sonaban a destiempo; ahora en las
+                #  corcheas, con el tiempo más fuerte, como los platos de los otros arreglos)
             elif island == 'cuevas':
                 if st == 0 and b % 2 == 1: hitk(tt, 0.9, deep=True)
                 if st == 8: NZ['snare'].hit(tt, 8, [5, 3, 1])

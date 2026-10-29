@@ -66,6 +66,8 @@ def q_saw(f):
 def play(chn, t0, t1, m, inst, q=q_pulse, vs=1.0, arp=None, release=3):
     """Una nota con su instrumento: envolvente de volumen, duty, vibrato y
     arpegio frame a frame (como un driver de NES/FamiTracker)"""
+    log = getattr(chn, 'log', None)
+    if log is not None: log.append((t0, t1, m, inst, vs))           # (captura: cambiar el reparto, jefes_helados.py)
     a, b = fr(t0), max(fr(t0) + 1, fr(t1))
     env = inst['vol']
     for k in range(a, min(len(chn.f), b + release)):
@@ -199,11 +201,20 @@ def q_n163(f):
 
 
 class Noise:
-    """Canal de ruido: periodo, volumen y modo (corto = metálico) por frame"""
+    """Canal de ruido: periodo, volumen y modo (corto = metálico) por frame.
+    `exact = True` (2026-10-29): cada golpe empieza en SU muestra, no en el frame más cercano. Los frames (60 por s)
+    corrían cada golpe hasta ±8 ms y las semicorcheas salían desiguales (a 148 BPM, 100 y 117 ms): los cascabeles de
+    la nieve sonaban "a destiempo" (el usuario). Mismo timbre (LFSR, periodo y volumen por frame, monofónico: un golpe
+    corta al anterior); solo cambia dónde empieza cada uno."""
     def __init__(self, nf):
         self.per, self.vol, self.short = np.zeros(nf), np.zeros(nf), np.zeros(nf)
+        self.exact, self.ev = False, []
 
     def hit(self, t, per, vols, short=0):
+        if getattr(self, 'log', None) is not None: self.log.append((t, per, list(vols), short))
+        if self.exact:
+            self.ev.append((t, per, list(vols), short))
+            return
         a = fr(t)
         for i, v in enumerate(vols):
             if a + i < len(self.per):
@@ -211,7 +222,22 @@ class Noise:
                 self.vol[a + i], self.short[a + i] = v, short
 
     def render(self):
-        return render_noise(self.per, self.vol, self.short)
+        if not self.exact:
+            return render_noise(self.per, self.vol, self.short)
+        n = int(len(self.per) * FRAME_S)
+        out = np.zeros(n)
+        ev = sorted(self.ev, key=lambda e: e[0])
+        for i, (t, per, vols, short) in enumerate(ev):
+            s0 = int(round(t * SR))
+            if s0 >= n: continue
+            s1 = min(n, s0 + int(len(vols) * FRAME_S), int(round(ev[i + 1][0] * SR)) if i + 1 < len(ev) else n)
+            k = np.arange(s1 - s0)
+            fi = (k / FRAME_S).astype(int)
+            pp = np.array([per if not isinstance(per, list) else per[min(j, len(per) - 1)] for j in range(len(vols))])[np.minimum(fi, len(vols) - 1)]
+            pos = np.cumsum(CPU / np.array(NOISE_PER)[pp] / SR) + s0 * 7.0              # (fase: sigue al tiempo, no se repite)
+            src = LFSR_SHORT if short else LFSR_LONG
+            out[s0:s1] = src[pos.astype(np.int64) % len(src)] * np.array(vols, float)[np.minimum(fi, len(vols) - 1)]
+        return out
 
 
 def pulse_dac(p):
