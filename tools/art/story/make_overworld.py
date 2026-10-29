@@ -24,7 +24,9 @@ OUT_JSON = 'assets/story/overworld.json'
 IMG = 'assets/images/story/'
 FEAT = IMG + 'features/'
 os.makedirs(FEAT, exist_ok=True)
-W, H = 90, 63
+W, H = 112, 63
+W0 = 90                    # (el ancho de antes de la Costa Helada: los bucles con azar de las otras islas no pasan de
+                           #  aquí, así crecer el mapa hacia el este no mueve ni una decoración de lo de antes)
 H0 = 50                    # alto del mapa de las 6 islas de la historia (las cinemáticas encuadran esto: 'view');
                            # debajo, la jungla (próximamente). Los bucles con azar de las 6 islas van hasta H0, así
                            # crecer el mapa no mueve ni una decoración de lo de arriba
@@ -106,7 +108,7 @@ CONNECT = [
 
 # BONUS de cada mundo (arena contra el bot): un ramal corto desde el castillo hasta su nodo
 BONUS = {'pradera': [(24, 31), (24, 27.5), (22, 24.5)], 'costa': [(50, 38), (52.5, 40), (52, 43)],
-         'fortaleza': [(77, 27), (74.5, 25.5), (71.5, 26.5)], 'nieve': [(73, 9), (76.5, 8), (78.5, 5.5)],
+         'fortaleza': [(77, 27), (74.5, 25.5), (71.5, 26.5)], 'nieve': [(73, 9), (69.5, 6.5), (66, 5.5)],
          'cuevas': [(23, 17), (26, 18.5), (26.5, 21)], 'final': [(42, 14), (45, 13), (47.5, 14)]}
 BONUS = {k: off(k, v) for k, v in BONUS.items()}
 
@@ -275,7 +277,7 @@ def h(x, y):
 decos = []
 taken = set()
 for y in range(2, H0 - 2):
-    for x in range(2, W - 2):
+    for x in range(2, W0 - 2):
         ch = grid[y][x]
         if ch not in DECOS or ch == 'L' or dist[y][x] < 1.6 or hgt[y][x] == 0:
             continue
@@ -294,7 +296,7 @@ for y in range(2, H0 - 2):
 # bocas de cueva en las paredes de las cuevas (en la casilla de abajo, sobre la cara del acantilado)
 mouths = 0
 for y in range(3, H0 - 2):
-    for x in range(3, W - 3):
+    for x in range(3, W0 - 3):
         if grid[y][x] == 'c' and h(x, y - 1) > h(x, y) >= 1 and h(x - 1, y - 1) > h(x, y) and h(x + 1, y - 1) > h(x, y) \
                 and dist[y][x] >= 1.4 and (x, y) not in taken and rng.random() < 0.5 and mouths < 9:
             diff = min(2, h(x, y - 1) - h(x, y))
@@ -321,7 +323,7 @@ CRITTERS = [
     ('gummy', 39, 44, 14), ('crabby', 40, 45, 21), ('hopper', 37, 42, 23),
     ('puffer', 36, 41, 8), ('puffer', 52, 57, 26),
 ]
-ISLE_OF = {'w': 'nieve', 'c': 'cueva', 'f': 'fortaleza', 'l': 'volcan', 'j': 'jungla', 't': 'jungla'}
+ISLE_OF = {'w': 'nieve', 'c': 'cueva', 'f': 'fortaleza', 'l': 'volcan', 'j': 'jungla', 't': 'jungla', 'i': 'costa_helada'}
 ISLE_TYPES = {
     'pradera':   {'crabby': 'crabby_river', 'hopper': 'hopper_pradera'},
     'costa':     {'hopper': 'hopper_costa'},
@@ -330,6 +332,7 @@ ISLE_TYPES = {
     'cueva':     {'gummy': 'gummy_cave', 'crabby': 'crabby_cave', 'hopper': 'hopper_cueva'},
     'volcan':    {'gummy': 'gummy_magma', 'crabby': 'crabby_lava', 'hopper': 'hopper_volcan'},
     'jungla':    {'gummy': 'gummy_jungle', 'crabby': 'crabby_jungle', 'hopper': 'hopper_jungla'},   # (+ 'beetle': el suyo)
+    'costa_helada': {'gummy': 'gummy_ice', 'crabby': 'crabby_ice', 'hopper': 'hopper_nieve'},
 }
 
 
@@ -373,14 +376,13 @@ BOSS_ART = {
     'pradera':   {'img': 'assets/images/bosses/megagummy/body-Sheet.png', 'fw': 16, 'over': 'assets/images/bosses/megagummy/crown.png', 'overBig': True},
     'costa':     {'img': 'assets/images/bosses/megacrabby/crab1.png'},
     'fortaleza': {'img': 'assets/images/bosses/miniboss1/ship.png', 'fly': True, 'under': 'assets/images/bosses/miniboss1/monster/Idle1.png'},
-    'nieve':     {'img': 'assets/images/bosses/megacrabby_ice/crab1.png'},
+    'nieve':     {'img': 'assets/images/bosses/snowboss/body-Sheet.png', 'fw': 16},          # (la Gran Bola de Nieve)
     'cuevas':    {'img': 'assets/images/bosses/megagloomy/body-Sheet.png', 'fw': 38, 'glow': 'assets/images/bosses/megagloomy/glow-Sheet.png'},
     'final':     {'img': 'assets/images/bosses/mirror/Body_ArmsDown.png', 'over': 'assets/images/bosses/mirror/Head_Down.png', 'invert': True},
 }
 
 # Jefes de MITAD de isla (un nivel normal con jefe: no tiene castillo): se dibujan junto a SU nodo
-NODE_BOSS = {
-    'nieve': {'lago_helado': {'img': 'assets/images/bosses/snowboss/body-Sheet.png', 'fw': 16}},
+NODE_BOSS = {                # (hoy ninguno: la Bola de Nieve tiene castillo desde que las Montañas Heladas son su isla)
 }
 
 # ── La ISLA DEL GROOVE (el nivel secreto de después del juego: Worlds `secret`): un islote de arena al noreste del
@@ -485,8 +487,65 @@ for t, x0, x1, y in JCRITTERS:
 # vez del de siempre Costa → Fortaleza (que sigue contando arriba para la distancia a los caminos: no mueve nada)
 SPATHS['jungla'], SBONUS['jungla'] = SJPATH, SJBONUS
 BOSS_ART['jungla'] = {'img': 'assets/images/bosses/giantbeetle/body-Sheet.png', 'fw': 22}
-STORY = ['pradera', 'costa', 'jungla', 'fortaleza', 'nieve', 'cuevas', 'final']        # (= Worlds.LIST)
-SCONNECT_OUT = [SCONNECT[0], SJBRIDGES[0], SJBRIDGES[1]] + SCONNECT[2:]
+
+# ── LA COSTA HELADA (el usuario, 0.5.100: la isla helada se parte en dos — las Montañas Heladas, la de siempre, con la
+# Gran Bola de Nieve, y esta, la del Mega Crabby helado): al ESTE de las Montañas (el mapa creció hacia el este:
+# W0 → W), llana, de hielo (`i`), con su camino, su castillo al noroeste y su bonus. Puentes: castillo de las Montañas
+# → primer nivel de aquí · castillo de aquí → primer nivel de las Cuevas (por el norte, sobre el mar, como el de
+# antes). Con su azar propio y al final: lo de antes no se mueve.
+crng = random.Random(2031)
+old_land = [(x, y) for y in range(H) for x in range(W) if grid[y][x] != '~']
+blob_sea(97.5, 13.5, 9.5, 8, 'i'); blob_sea(90.5, 18.5, 4, 3.2, 'i'); blob_sea(104, 18, 4, 3.6, 'i')
+CPATH = [(89, 13), (91.5, 18.5), (97.5, 20.5), (103, 17), (102.5, 10.5), (97, 7.5), (93, 6.5)]
+CBONUS = [(93, 6.5), (97, 4.6), (100.5, 5.2)]
+CBRIDGES = [
+    [(73, 9), (77.5, 6.5), (82, 7), (86, 10), (89, 13)],                                                 # Montañas → aquí
+    [(93, 6.5), (91, 2.6), (84, 0.9), (70, 0.8), (56, 1), (44, 1.6), (35, 4.4), (29, 10)],              # aquí → Cuevas
+]
+SCPATH, SCBONUS = catmull(CPATH), catmull(CBONUS)
+SCBRIDGES = [catmull(b) for b in CBRIDGES]
+for y in range(H):
+    for x in range(W0 - 4, W):
+        dd = min(seg_dist(x + 0.5, y + 0.5, l[i], l[i + 1]) for l in (SCPATH, SCBONUS) for i in range(len(l) - 1))
+        if grid[y][x] == '~' and dd < 1.3:
+            grid[y][x] = 'i'
+for y in range(H):
+    for x in range(W):
+        dist[y][x] = min(dist[y][x], min(seg_dist(x + 0.5, y + 0.5, l[i], l[i + 1]) for l in [SCPATH, SCBONUS] + SCBRIDGES
+                                         for i in range(len(l) - 1)))
+# relieve: dos bancos de hielo (la costa es llana)
+for cx, cy, rx, ry, lv in [(98, 14.5, 3.4, 2.2, 2), (104.5, 18.5, 2, 1.6, 2), (95, 18, 2.2, 1.4, 2)]:
+    raise_blob(cx, cy, rx, ry, lv, 'i', 1.8)
+open2x2(2)
+CDECOS = ['snow_pile', 'snow_pile', 'frozen_bush', 'snowman']
+ctaken = set()
+cdecos = []
+for y in range(2, H0 - 2):
+    for x in range(W0 - 4, W - 2):
+        if grid[y][x] != 'i' or dist[y][x] < 1.6 or (x, y) in ctaken:
+            continue
+        if h(x, y - 1) > h(x, y) or h(x, y + 1) != h(x, y):
+            continue
+        if any((x + dx, y + dy) in ctaken for dx in (-1, 0, 1) for dy in (-1, 0, 1)):
+            continue
+        roll = crng.random()
+        if hgt[y][x] > 1 and roll < 0.3:
+            ctaken.add((x, y))
+            cdecos.append({'t': 'rock_grey', 'x': x, 'y': y})
+        elif roll < 0.22:
+            ctaken.add((x, y))
+            cdecos.append({'t': crng.choice(CDECOS), 'x': x, 'y': y})
+decos += cdecos
+for t, x0, x1, y in [('crabby', 92, 97, 16), ('crabby', 99, 104, 13), ('gummy', 96, 101, 18), ('hopper', 100, 105, 9),
+                     ('puffer', 107, 111, 10), ('puffer', 86, 90, 23)]:
+    c = place_critter(t, x0, x1, y)
+    if c:
+        critters.append(c)
+SPATHS['costa_helada'], SBONUS['costa_helada'] = SCPATH, SCBONUS
+BOSS_ART['costa_helada'] = {'img': 'assets/images/bosses/megacrabby_ice/crab1.png'}
+
+STORY = ['pradera', 'costa', 'jungla', 'fortaleza', 'nieve', 'costa_helada', 'cuevas', 'final']        # (= Worlds.LIST)
+SCONNECT_OUT = [SCONNECT[0], SJBRIDGES[0], SJBRIDGES[1], SCONNECT[2], SCBRIDGES[0], SCBRIDGES[1], SCONNECT[4]]
 
 data = {
     'cell': 32, 'w': W, 'h': H,
@@ -602,6 +661,7 @@ TERR = [
     (tone(T + 'deep_stone.png', 60, 60), (60, 30, 34, 255), (140, 66, 50, 255)),                                      # l
     ((47, 122, 58, 255), (29, 74, 42, 255), (95, 176, 74, 255)),                                                       # j (jungle_grass)
     ((95, 110, 88, 255), (62, 74, 60, 255), (138, 154, 124, 255)),                                                     # t (temple_brick)
+    (tone(T + 'ice.png', 30, 30), (120, 176, 214, 255), (226, 246, 255, 255)),                                        # i (ice: la Costa Helada)
 ]
 # 3 variantes por terreno (el juego elige una por casilla): lisa, con motas y con una mancha más oscura
 tops = []

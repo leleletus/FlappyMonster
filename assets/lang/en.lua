@@ -137,8 +137,9 @@ return {
         map_hint = "{arrows} walk    {ok} play    {back} saves",
         world = {
             pradera = "THE MEADOW", costa = "THE COAST", fortaleza = "THE FORTRESS",
-            nieve = "THE PEAKS", cuevas = "THE CAVES", final = "THE END",
+            nieve = "THE FROZEN MOUNTAINS", cuevas = "THE CAVES", final = "THE END",
             jungla = "THE JUNGLE",
+            costa_helada = "THE FROZEN COAST",
         },
     },
     flappy = {

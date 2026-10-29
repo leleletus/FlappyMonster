@@ -698,14 +698,25 @@ function love.update(dt)
         require('src/story/Save').migrate(v1)
         local v1b = { version = 1, world = 1, worldReward = {}, open = {}, done = { reino_gummy = true } }
         require('src/story/Save').migrate(v1b)
-        local keep = Run.data
-        Run.data = v1
-        local j, f = Run.worldOpen(3), Run.worldOpen(4)
-        Run.data = keep
-        check('migrar_mundos', v1.version == 2 and v1.world == 4 and v1.worldReward[2] == 'A' and v1.worldReward[3] == nil
-            and Worlds.get(3).id == 'jungla' and j and f and v1.open.fortaleza == true and next(v1b.open) == nil,
-            ('partida de 6 mundos en la Fortaleza: versión %s, mundo %s, nota del mundo 2=%s; jungla abierta=%s, Fortaleza abierta=%s; otra en la Pradera: abiertos de más=%s'):format(
-             tostring(v1.version), tostring(v1.world), tostring(v1.worldReward[2]), tostring(j), tostring(f), tostring(next(v1b.open))))
+        -- (versión 2: la isla helada partida en dos en la 3 — Montañas Heladas con la Bola de Nieve, Costa Helada con el
+        --  Mega Crabby helado —): una que había vencido a la Bola de Nieve pero no al Crabby helado tiene abierta la
+        --  Costa Helada y NO las Cuevas; otra que ya había vencido al Crabby helado, las Cuevas abiertas)
+        local S = require 'src/story/Save'
+        local all = function(list) local t = {} for _, id in ipairs(list) do t[id] = true end return t end
+        local v2a = { version = 2, world = 5, worldReward = {}, open = {},
+                      done = all({ 'reino_gummy', 'cala_resaca', 'templo_escarabajo', 'fortaleza_malvada', 'cumbres_escarcha', 'fabrica_criogenica', 'lago_helado' }) }
+        local v2b = { version = 2, world = 6, worldReward = { [5] = 'B' }, open = {},
+                      done = all({ 'reino_gummy', 'cala_resaca', 'templo_escarabajo', 'fortaleza_malvada', 'cumbres_escarcha', 'fabrica_criogenica', 'lago_helado', 'torre_viento', 'glaciar_cangrejo' }) }
+        S.migrate(v2a); S.migrate(v2b)
+        local function opens(d) local keep = Run.data; Run.data = d; local o = {} for w = 1, Worlds.count() do o[w] = Run.worldOpen(w) end Run.data = keep; return o end
+        local o1, oa, ob = opens(v1), opens(v2a), opens(v2b)
+        local CH, CU = 6, 7
+        check('migrar_mundos', v1.version == S.VERSION and v1.world == 4 and v1.worldReward[2] == 'A' and v1.worldReward[3] == nil
+            and Worlds.get(3).id == 'jungla' and o1[3] and o1[4] and not o1[5] and next(v1b.open) == nil
+            and Worlds.get(CH).id == 'costa_helada' and oa[CH] and not oa[CU] and ob[CH] and ob[CU] and ob[CU + 1] == false and v2b.world == 7 and v2b.worldReward[5] == 'B',
+            ('versión 1 en la Fortaleza: mundo %s, jungla=%s, Fortaleza=%s, Montañas=%s; en la Pradera: abiertos de más=%s · versión 2 con la Bola vencida: Costa Helada=%s, Cuevas=%s · con el Crabby helado vencido: Costa Helada=%s, Cuevas=%s, Final=%s, mundo %s'):format(
+             tostring(v1.world), tostring(o1[3]), tostring(o1[4]), tostring(o1[5]), tostring(next(v1b.open)), tostring(oa[CH]), tostring(oa[CU]),
+             tostring(ob[CH]), tostring(ob[CU]), tostring(ob[CU + 1]), tostring(v2b.world)))
         gStateMachine:change('story_map', { world = 1, node = 1 }); go('walk0')
     -- ── MAPA: pulsar ENTRAR mientras el monstruo aún anda hacia el nodo: entra al LLEGAR, no antes ──
     elseif step == 'walk0' and t - T > 0.4 then

@@ -137,8 +137,9 @@ return {
         map_hint = "{arrows} andar    {ok} jugar    {back} partidas",
         world = {
             pradera = "LA PRADERA", costa = "LA COSTA", fortaleza = "LA FORTALEZA",
-            nieve = "LAS CUMBRES", cuevas = "LAS CUEVAS", final = "EL FINAL",
+            nieve = "LAS MONTAÑAS HELADAS", cuevas = "LAS CUEVAS", final = "EL FINAL",
             jungla = "LA JUNGLA",            -- (el mundo 3 de la historia desde 0.5.99)
+            costa_helada = "LA COSTA HELADA", -- (0.5.100: la isla helada partida en dos)
         },
     },
     flappy = {

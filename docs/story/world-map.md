@@ -1,6 +1,6 @@
 # The world map
 
-One big scrolling map in the style of Super Mario World: seven islands (the JUNGLE, world 3 since 0.5.99:
+One big scrolling map in the style of Super Mario World: eight islands (the JUNGLE, world 3 since 0.5.99; the FROZEN COAST, world 6 since 0.5.100: [below](#the-frozen-coast-world-6-0-5-100);
 [below](#the-jungle-island-world-3)), one path per world with a node per level, a castle for the boss, a blue "B"
 bonus node, bridges between worlds, wandering critters and the hero walking along the path. Everything about its shape is DATA in `assets/story/overworld.json`, written by a deterministic generator.
 
@@ -29,6 +29,18 @@ user.
 `NODE_BOSS`) and re-run it; never hand-edit `overworld.json`. Adding a level to a world needs nothing here: nodes
 are spread along the path from `Worlds.lua`. **Harness:** `story_flow` (captures at three widths,
 `story_map_full.png`, `story_map_bosses.png`).
+
+## The Frozen Coast (world 6, 0.5.100)
+
+The ice island split in two (the user, 2026-10-29: "8 bosses and 7 islands"): the old one is now the FROZEN MOUNTAINS
+(`nieve`, the Snowball Boss beside its castle — `BOSS_ART['nieve']`; `NODE_BOSS` is empty now, the support stays) and
+the new FROZEN COAST (`costa_helada`, the Icy Mega Crabby) is a flat ICE island EAST of the Mountains: the map grew
+eastwards (90x63 → 112x63, `W0` = 90 keeps the random loops of the older islands where they were). Terrain `i` (ice:
+`ice` tile lip and cliff, `GROUND`/`CLIFF` in StoryMapState), low ice banks, snow piles / frozen bushes / snowmen,
+icy crabs, a Gummy, a Hopper and two pufferfish. Built at the END of `make_overworld.py` with its own seed (`crng`):
+path `CPATH` (castle at its north-west), bonus `CBONUS`, bridges `CBRIDGES`: Mountains' castle → its first level, its
+castle → the Caves (along the north edge, over the sea, like the old Mountains → Caves bridge). The Mountains' bonus
+branch now points north-west (their bonus is still to come). Map music: `map_costa_helada` = the old ice arrangement.
 
 ## The jungle island (world 3)
 
@@ -74,7 +86,7 @@ new land). Not yet judged by the user.
 ## How it is built and drawn
 
 - `StorySlotState` (pick / create / delete with confirmation) and `StoryMapState` = the WORLD MAP (stage 5, Super Mario
-  World style): ONE big scrolling map (90x63 cells of 32 px; seven islands) from DATA `assets/story/overworld.json`, written by
+  World style): ONE big scrolling map (112x63 cells of 32 px; eight islands) from DATA `assets/story/overworld.json`, written by
   `tools/art/story/make_overworld.py` (deterministic; also writes `assets/images/story/` node/castle/water/path/bridge/ground/
   edge/foam sprites): terrain letters per cell (`~` sea, g grass, s sand, w snow, c cave rock, f fortress stone, l volcanic
   rock, L lava = the game's lava.png animated, j jungle grass, t temple stone) + `heights` per cell (0 pit, 1 plain, 2 plateau, 3 summit; RELIEF table
@@ -95,7 +107,7 @@ new land). Not yet judged by the user.
   hero between the top band (TOP_H) and the level card (BOT_H), clamped to the map. The boss stands on the side of
   its castle that has LAND (`bossDx/bossDy`, right → left → below). Bridges are always opaque (locked = darker) and run
   2 planks onto each shore. FULL MAP for review: `StoryMapState:renderFull()` → `story_flow` writes
-  `story_map_full.png` (2880x2016, every world open); copy it to `FlappyMonster_pruebas/mapa/mapa_completo.png`. Bonus nodes (KOTH vs bot) = stage 8.
+  `story_map_full.png` (3584x2016, every world open); copy it to `FlappyMonster_pruebas/mapa/mapa_completo.png`. Bonus nodes (KOTH vs bot) = stage 8.
   `PixelFont.draw` draws ONLY the letters (it used to fill a tight black box behind them: fine on the black menus,
   odd everywhere else — the user had it removed); over coloured backgrounds use `PixelFont.shadow` (1-font-pixel black
   drop shadow).
@@ -147,6 +159,8 @@ case `secreto`.
 Kept because they record WHY things are the way they are and what was tried and rejected. Where a note
 conflicts with the sections above, the sections above describe the current behaviour.
 
+- 0.5.100 (2026-10-29): the ice island split in two — the Frozen Coast (world 6) added east of the Mountains; map
+  112x63 (the user: "son 8 bosses y 7 islas… separamos la isla congelada en 2").
 - 0.5.99 (2026-10-29): the jungle became world 3 (its four levels, boss and bonus; bridges Coast → Jungle → Fortress);
   the islands were moved apart on the user's request (`OFF`, above); map 90x63.
 - 2026-10-28: the JUNGLE island added as "coming soon" (south of the Coast–Fortress gap, map 84x48 →

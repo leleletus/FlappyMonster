@@ -21,10 +21,10 @@ the save directory is searched before the game's own files.
 finished.** Leaving through the pause menu keeps only what was LOST (lives); pickups, shards, points and grades are
 written by `Run.complete` / `Run.addShard` from `onFinish`. Any new thing a level can give must follow it.
 
-Old saves are migrated on load: `Save.migrate` (slot `version` < `Save.VERSION`, today 2: the world index and the
-`worldReward` keys are remapped by id through `Save.WORLDS`, the per-version world lists; a world inserted in the
-middle — the jungle, 0.5.99 — leaves the world after it open in `open[id]` for saves that had already reached it, the
-user's "keep their progress, jungle open"; details in [story-mode](../story/story-mode.md#worlds-and-saves)), then
+Old saves are migrated on load: `Save.migrate` (slot `version` < `Save.VERSION`, today 3: the world index and the
+`worldReward` keys are remapped by id through `Save.WORLDS`, the per-version world lists with the boss that closed
+each world; every world that was open in the old version stays open in `open[id]` — the jungle inserted in 0.5.99, the
+user's "keep their progress, jungle open", and the ice island split in two in 0.5.100; details in [story-mode](../story/story-mode.md#worlds-and-saves)), then
 `Shards.migrate` (shards of bosses already beaten are granted).
 
 Going to Google Play: cloud saves would wrap `src/story/Save.lua` and `src/core/Settings.lua` — both already funnel

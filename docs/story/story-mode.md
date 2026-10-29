@@ -40,14 +40,21 @@ Xtra Extreme. **Harness:** `story_flow` (the real game end to end; many named ca
 
 - **The worlds today:** 1 `pradera`, 2 `costa`, **3 `jungla`** (0.5.99: `senda_del_dosel`, `rio_revuelto`,
   `templo_de_los_pesos`, `la_estampida`, boss `templo_escarabajo`, bonus `claro_de_la_balanza`), 4 `fortaleza`,
-  5 `nieve`, 6 `cuevas`, 7 `final`.
+  **5 `nieve` = the FROZEN MOUNTAINS** (`cumbres_escarcha`, `torre_viento`, boss `lago_helado` — the Snowball Boss,
+  no longer a mid-island boss —; two more levels and a bonus to come), **6 `costa_helada` = the FROZEN COAST**
+  (0.5.100: `fabrica_criogenica`, boss `glaciar_cangrejo`, bonus `lago_de_cristal`; three more levels to come),
+  7 `cuevas`, 8 `final`. The split (the user, 2026-10-29): "there are 8 bosses and 7 islands" — the Snowball and the
+  Icy Mega Crabby shared the ice island; now every island has one boss and one shard, with no new shard. Music: the
+  old ice set (`nieve_*`, `map_nieve` → `map_costa_helada`) goes to the Coast; the Mountains get a new set (pending).
 
-- **A WORLD INSERTED IN THE MIDDLE (an expansion) — `Save.VERSION` 2, `Save.WORLDS`, `Save.migrate`.** Saves store
+- **A WORLD INSERTED OR SPLIT (an expansion) — `Save.VERSION` 3, `Save.WORLDS`, `Save.migrate`.** Saves store
   the current world by POSITION (`world`) and the world grades by position (`worldReward[w]`). `Save.WORLDS[v]` lists
-  the world ids of each save version (1 = the six worlds before the jungle, 2 = with it). On load, a save of an older
-  version is translated step by step: `world` and the `worldReward` keys are remapped by id to today's positions, and
-  for each world that did not exist in the old list, if the save had beaten the boss of the world BEFORE it, the world
-  AFTER it is marked open (`open[id] = true`). `Run.worldOpen(w)` = the previous boss beaten OR `open[W.id]`;
+  the worlds of each save version as `{ id, boss that closed it then }` (1 = the six worlds before the jungle, 2 = with
+  it, 3 = the ice island split). On load, a save of an older version is translated step by step: `world` and the
+  `worldReward` keys are remapped by id to today's positions, and every world that WAS OPEN in the old version (the
+  first one, or the old previous world's boss beaten, or already `open`) stays open (`open[id] = true`) when today's
+  previous boss is not beaten. (0.5.99's first rule — "open the world after a new one" — would have opened the Caves
+  for a save that had beaten the Snowball but not the Icy Crabby after the split; replaced in 0.5.100.) `Run.worldOpen(w)` = the previous boss beaten OR `open[W.id]`;
   `Run.gameOver` on `restartGame` (Xtra) clears `open` with the rest. The user's decision (0.5.99, asked how old saves
   should get the jungle): **"Keep their progress, jungle open"** — a save already past the Coast keeps the Fortress and
   everything after it open, and the jungle appears open for it; new saves must beat the jungle boss to open the

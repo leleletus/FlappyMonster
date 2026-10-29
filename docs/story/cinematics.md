@@ -42,8 +42,8 @@ slots; the films stay unseen, so re-run it to watch them again).
 Since 0.5.99 (the user, below) the films take every count and place from data:
 - `common.lua` `K.targets()` = one target per boss of the catalog (`Shards.BOSSES`, `assets/story/shards.json`, in story
   order), found in `Worlds.LIST`: a world's boss stands by its castle (`castle`, drawn by the map via `filmBoss[w]`),
-  a mid-island boss (the Snowball Boss of `lago_helado`) by its node with its map art (`art` = `nodeBoss` of
-  `overworld.json`, drawn by `K.drawExtras`); `normal` (its normal enemy before the shard) comes from the catalog.
+  a mid-island boss (none since 0.5.100, when the Snowball Boss got its own island; the support stays) by its node
+  with its map art (`art` = `nodeBoss` of `overworld.json`, drawn by `K.drawExtras`); `normal` (its normal enemy before the shard) comes from the catalog.
   `K.count()`, `K.all(v)` (one value per boss), `K.mirrorWorld()` / `K.volcanoXY()` (the world whose boss drops the
   FINAL shard), `K.FINAL` (that shard's id), `K.note(i, n)` (the rising major-scale note of piece i of n, last on the
   top tonic: 7 → 0 2 4 5 7 9 12, 8 → 0 2 4 5 7 9 11 12).

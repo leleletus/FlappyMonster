@@ -28,6 +28,7 @@ local StoryMapState = BaseState:new()
 -- Color de cada mundo (lo usa la pantalla de resultados)
 local THEME = {
     pradera = { 0.36, 0.62, 0.36 }, costa = { 0.25, 0.6, 0.72 }, jungla = { 0.24, 0.46, 0.26 }, fortaleza = { 0.42, 0.36, 0.44 },
+    costa_helada = { 0.36, 0.62, 0.76 },
     nieve = { 0.6, 0.75, 0.88 }, cuevas = { 0.2, 0.2, 0.32 }, final = { 0.5, 0.22, 0.2 },
 }
 StoryMapState.THEME = THEME
@@ -40,8 +41,9 @@ local WALK_SPD = 300                     -- px/s andando por el camino (más dep
 
 -- Terreno: baldosa de arriba (ground-Sheet) y la textura de su bloque para el ACANTILADO (vista de lado)
 -- (j = suelo de la jungla, t = piedra del templo: la isla PRÓXIMAMENTE de la jungla)
-local GROUND = { g = 1, s = 2, w = 3, c = 4, f = 5, l = 6, j = 7, t = 8 }
-local CLIFF = { g = 'grass', s = 'sand', w = 'snow', c = 'border', f = 'stone', l = 'deep_stone', j = 'jungle_grass', t = 'temple_brick' }
+-- (i = hielo: la Costa Helada)
+local GROUND = { g = 1, s = 2, w = 3, c = 4, f = 5, l = 6, j = 7, t = 8, i = 9 }
+local CLIFF = { g = 'grass', s = 'sand', w = 'snow', c = 'border', f = 'stone', l = 'deep_stone', j = 'jungle_grass', t = 'temple_brick', i = 'ice' }
 -- Decoraciones: imagen + ancho de cuadro (animadas) + brillo
 local DECO = {
     tulip = { 'assets/images/world/decorations/foliage/tulip.png' },

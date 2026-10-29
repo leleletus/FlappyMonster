@@ -29,11 +29,14 @@ Worlds.LIST = {
     { id = 'jungla',    levels = { 'senda_del_dosel', 'rio_revuelto', 'templo_de_los_pesos', 'la_estampida' },        boss = 'templo_escarabajo', bonus = 'claro_de_la_balanza' },
     -- 4 La Fortaleza: morteros y bombas primero; luego el taller denso y el tren (cámara automática)
     { id = 'fortaleza', levels = { 'fabrica_morteros', 'cantera_dinamita', 'taller_trampas', 'tren_fugaz' },               boss = 'fortaleza_malvada', bonus = 'ciudadela_alterna' },
-    -- 5 Las Cumbres: nieve y congeladores; la Bola de Nieve a media isla; la torre (subir) antes del jefe
-    { id = 'nieve',     levels = { 'cumbres_escarcha', 'fabrica_criogenica', 'lago_helado', 'torre_viento' },              boss = 'glaciar_cangrejo', bonus = 'lago_de_cristal' },
-    -- 6 Las Cuevas: cristal, los dos laberintos de agua y el templo a oscuras justo antes del jefe a oscuras
+    -- 5 Las Montañas Heladas: las cumbres y la torre (subir); en lo alto, la Gran Bola de Nieve
+    -- (0.5.100: la isla helada se parte en dos; faltan sus niveles 3 y 4 y su bonus)
+    { id = 'nieve',     levels = { 'cumbres_escarcha', 'torre_viento' },                                              boss = 'lago_helado' },
+    -- 6 La Costa Helada: la fábrica que congela el mar; el Mega Crabby helado en su glaciar (faltan sus niveles 2-4)
+    { id = 'costa_helada', levels = { 'fabrica_criogenica' },                                                       boss = 'glaciar_cangrejo', bonus = 'lago_de_cristal' },
+    -- 7 Las Cuevas: cristal, los dos laberintos de agua y el templo a oscuras justo antes del jefe a oscuras
     { id = 'cuevas',    levels = { 'cavernas_cristal', 'nivel01', 'laberinto_submarino', 'templo_del_eco' },             boss = 'gruta_del_farol', bonus = 'cripta_del_silencio' },   -- (Saltarín Gigante; el Mega Crabby lúgubre de gruta_lugubre pasa a jefe secreto)
-    -- 7 El Final (el volcán): lava; la lluvia de pinchos (cámara automática) es la erupción, antes del Espejo
+    -- 8 El Final (el volcán): lava; la lluvia de pinchos (cámara automática) es la erupción, antes del Espejo
     { id = 'final',     levels = { 'carrera01', 'caldera_roja', 'lluvia_pinchos', 'huida_del_espejo' },                                       boss = 'ruta_del_espejo', bonus = 'cantera_real',
       secret = 'isla_del_groove',                                             -- (El Groove, el jefe secreto)
       films = { huida_del_espejo = 'chase', ruta_del_espejo = 'lair' },      -- (la emboscada; la guarida)

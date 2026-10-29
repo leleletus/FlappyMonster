@@ -4,15 +4,22 @@
 -- story.sav (lo GLOBAL: dificultades desbloqueadas). OJO: nunca nombres .lua del juego (ver
 -- src/core/Settings.lua: la carpeta de guardado tapa los módulos).
 -- El archivo es una tabla de Lua (`return { ... }`) que se carga sin entorno: no puede ejecutar nada.
-local Save = { SLOTS = 3, VERSION = 2 }
+local Save = { SLOTS = 3, VERSION = 3 }
 
 -- Los MUNDOS de cada versión de las partidas (Worlds.LIST por sus ids, en orden). La partida guarda el mundo por su
--- POSICIÓN: al cargar una de una versión anterior se traduce a la lista de hoy, y un mundo NUEVO metido en medio
--- (una expansión) queda ABIERTO para quien ya había pasado el de antes, sin cerrarle lo que ya tenía (el usuario,
--- 0.5.99: "mantener su progreso, la jungla abierta"). Para añadir mundos: VERSION + 1 y su lista aquí.
+-- POSICIÓN: al cargar una de una versión anterior se traduce a la lista de hoy, y lo que la partida YA TENÍA ABIERTO
+-- sigue abierto aunque delante haya un mundo nuevo o un jefe que antes no estaba (el usuario, 0.5.99: "mantener su
+-- progreso, la jungla abierta"). Cada mundo, con el JEFE que lo cerraba en esa versión (`{ id, jefe }`): el de después
+-- estaba abierto si ese jefe estaba vencido. Para añadir o partir mundos: VERSION + 1 y su lista aquí.
 Save.WORLDS = {
-    [1] = { 'pradera', 'costa', 'fortaleza', 'nieve', 'cuevas', 'final' },
-    [2] = { 'pradera', 'costa', 'jungla', 'fortaleza', 'nieve', 'cuevas', 'final' },          -- (0.5.99: la jungla)
+    [1] = { { 'pradera', 'reino_gummy' }, { 'costa', 'cala_resaca' }, { 'fortaleza', 'fortaleza_malvada' },
+            { 'nieve', 'glaciar_cangrejo' }, { 'cuevas', 'gruta_del_farol' }, { 'final', 'ruta_del_espejo' } },
+    [2] = { { 'pradera', 'reino_gummy' }, { 'costa', 'cala_resaca' }, { 'jungla', 'templo_escarabajo' },        -- (0.5.99: la jungla)
+            { 'fortaleza', 'fortaleza_malvada' }, { 'nieve', 'glaciar_cangrejo' }, { 'cuevas', 'gruta_del_farol' },
+            { 'final', 'ruta_del_espejo' } },
+    [3] = { { 'pradera', 'reino_gummy' }, { 'costa', 'cala_resaca' }, { 'jungla', 'templo_escarabajo' },        -- (0.5.100: la isla
+            { 'fortaleza', 'fortaleza_malvada' }, { 'nieve', 'lago_helado' }, { 'costa_helada', 'glaciar_cangrejo' }, --  helada, partida
+            { 'cuevas', 'gruta_del_farol' }, { 'final', 'ruta_del_espejo' } },                                         --  en dos)
 }
 
 local function file(i) return 'story' .. i .. '.sav' end
@@ -97,29 +104,28 @@ function Save.load(i)
 end
 
 -- Una partida de una versión anterior, a la de hoy (ver Save.WORLDS): el mundo actual y las notas de mundo pasan de su
--- posición de entonces a la de hoy; cada mundo nuevo queda abierto, y el de DESPUÉS de él también si la partida ya
--- había llegado a él (`open`: Run.worldOpen)
+-- posición de entonces a la de hoy; cada mundo que estaba ABIERTO entonces (el primero, o el jefe del de antes
+-- vencido) queda abierto (`open`: Run.worldOpen) aunque hoy tenga delante otro mundo u otro jefe
 function Save.migrate(d)
     local v = tonumber(d.version) or 1
-    local Worlds = require 'src/story/Worlds'
     while v < Save.VERSION do
         local old, new = Save.WORLDS[v], Save.WORLDS[v + 1]
         if not (old and new) then break end
         local pos = {}
-        for i, id in ipairs(new) do pos[id] = i end
-        local was = {}
-        for _, id in ipairs(old) do was[id] = true end
-        d.world = pos[old[d.world] or ''] or d.world
+        for i, w in ipairs(new) do pos[w[1]] = i end
+        local wasOpen = {}
+        for i, w in ipairs(old) do
+            wasOpen[w[1]] = i == 1 or d.done[old[i - 1][2]] == true or d.open[w[1]] == true
+        end
+        d.world = pos[(old[d.world] or {})[1] or ''] or d.world
         local rw = {}
         for k, g in pairs(d.worldReward) do
-            local i = type(k) == 'number' and pos[old[k] or ''] or nil
+            local i = type(k) == 'number' and old[k] and pos[old[k][1]] or nil
             if i then rw[i] = g end
         end
         d.worldReward = rw
-        for i, id in ipairs(new) do
-            local prev, nxt = new[i - 1], new[i + 1]
-            local W = Worlds.LIST[pos[prev or ''] or 0]
-            if not was[id] and prev and nxt and W and d.done[W.boss] then d.open[nxt] = true end
+        for i, w in ipairs(new) do
+            if wasOpen[w[1]] and i > 1 and not d.done[new[i - 1][2]] then d.open[w[1]] = true end
         end
         v = v + 1
     end

@@ -42,8 +42,8 @@ in story order.
 | 2 | 2 | Giant Pufferfish (was Mega Crabby, now a secret boss) | `cala_resaca` | top-right |
 | 3 | 8 | Giant Rhino Beetle (the jungle, 0.5.99) | `templo_escarabajo` | right, upper |
 | 4 | 3 | Evil Ship | `fortaleza_malvada` | right, lower |
-| 5 | 4 | Snowball Boss | `lago_helado` | bottom-right |
-| 6 | 5 | Icy Mega Crabby | `glaciar_cangrejo` | bottom-left |
+| 5 | 4 | Snowball Boss (the Frozen Mountains, world 5) | `lago_helado` | bottom-right |
+| 6 | 5 | Icy Mega Crabby (the Frozen Coast, world 6, 0.5.100) | `glaciar_cangrejo` | bottom-left |
 | 7 | 6 | Giant Hopper (was Mega Gloomy Crabby, now a secret boss) | `gruta_del_farol` | left |
 | 8 | 7 | The Mirror | `ruta_del_espejo` | centre (where it crashed) |
 
