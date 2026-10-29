@@ -1825,6 +1825,11 @@ if __name__ == '__main__':
                 os.system(f'ffmpeg -v quiet -y -i "{wav}" -c:a libvorbis -q:a 6 "{wav[:-4]}.ogg"'); os.remove(wav)
                 print('  ' + wav[:-4] + '.ogg')
             continue
+        if a == 'snowball_boss' and not os.environ.get('CHIP_ORIGINAL') and '--capas' not in sys.argv:
+            # (2026-10-29) la que suena en el juego es la v4 aprobada: esta composición, con el reparto GM de
+            # jefes_helados.py (CHIP_ORIGINAL=1 = la de chip de antes)
+            os.system(f'INSTALL=1 {sys.executable} {os.path.join(os.path.dirname(os.path.abspath(__file__)), "jefes_helados.py")}')
+            continue
         kw = dict(TRACKS[a])
         if var and a == 'pradera_1': kw = dict(VARIANTS[var])
         if '--capas' in sys.argv:                  # capas por separado (no exporta la pista): FlappyMonster_pruebas/musica/<pista>_capas/

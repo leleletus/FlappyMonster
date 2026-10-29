@@ -855,6 +855,26 @@ instruments" (the rest of the islands will be modernised later). Verified by num
   `worlds_nes.py` tracks, the crab's own music-box echo in the installed `crab_tantrum_icy`, and the noise hats of the
   non-snow tracks and of the Crab Mega Mashup (frame-rounded like every chip hat in the game). Not listened to.
 
+## Icy bosses: v3 → v5 and the installed Giant Snowball (2026-10-29)
+
+- After "retirar efecto eco en instrumentos de fondo" / the snowfall shakers "a tiempo" (meant for these two bosses):
+  v3 measures every GM layer's attack in the rendered audio and advances it by its own fluidsynth delay (the concert
+  bass drum landed +10.7 ms late under the chip kick, the pizzicato +12, the shaker +15; now all within ±0.5 ms of the
+  grid in median), sends notes at 0.1 ms resolution, removes ALL reverb, the chip layers doubling a GM one (heard as
+  flams) and same-instant double hits. v4 (the user: "mejor quítales el shaker navideño a ambas y normaliza/nivela los
+  instrumentos/efectos para que suene más parecido a la mezcla original"): no GM jingle bells nor shaker; each layer at
+  its original layer's energy relative to the lead and a 5-band EQ toward the original's band balance (`REF_BANDS`).
+- **`snowball_boss` v4 APPROVED and installed**: `worlds_nes.py snowball_boss` now runs `jefes_helados.py` with
+  `INSTALL=1` (the composition is still `worlds_nes.py`'s; `CHIP_ORIGINAL=1` = the old chip render). Same intro + loop
+  lengths; `story_credits` re-cut (same length).
+- `crab_tantrum_icy` v4 was not ready — the user, "MUY importante": "aún hay como campanillas que suenan con eco o
+  reverb que malogran la experiencia sonora del juego". Fluidsynth's own reverb / chorus were off all along
+  (`-R 0 -C 0`, also in the Frozen Mountains renders); the tail was the GM bell samples themselves: the GM music box
+  rang 0.78 s, the Christmas Bells 0.97 s and the marimba 0.48 s, at 186 BPM over the next 2, 4 and 5 notes. v5: the
+  chord chimes and the music box are the installed track's CHIP voices again (dry, without the old music-box echo; one
+  channel, each note cuts the previous: 0.10 s and 0.32 s), and the marimba is a `damped_line` (every note stops when
+  the next one enters). Preview `lead_chip_v5/`, waiting for the user. Not listened to.
+
 ## The film scores for any number of shards (`tools/music/story_music.py`, 0.5.99)
 
 - The jungle boss got a shard (8 shards, 7 bosses) and the user asked that neither the cinematic nor its music be

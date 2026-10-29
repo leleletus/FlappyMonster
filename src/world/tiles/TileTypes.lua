@@ -47,6 +47,8 @@
 --                 blend  = { image, of = { <tile> = cuadro } }   franjas tramadas hacia el vecino (como la arena)
 --                 edges  = { top = {r,g,b[,a]}, bottom = …, left = …, right = … }   filo de 2 px en las caras al aire
 --                 capEdge = { {r,g,b}, filas }   el filo de los lados junto a la capa de arriba (filas de 16)
+--   spill       { image, frame, onto = { <tile>, … } }: COSTURA que este tipo deja sobre los bloques de `onto` que lo
+--               tocan, dibujada por ellos (la nieve sobre la tierra, la piedra…; TileTypes.drawSpill). Solo dibujo.
 --   texture     { anim='id', seq='idle' } = un conjunto de animación (assets/anim, `love . --anim`), o
 --               { image='assets/...png', frames=1, fps=0 } imagen (o tira
 --               horizontal de `frames` cuadros animada a `fps`) escalada al tile
@@ -96,6 +98,10 @@ function TileTypes.register(def)
     t.mat         = Materials.get(t.material)
     t.label       = t.label or name
     t.category    = t.category or 'Otros'
+    if t.spill then                            -- (de quién recibe la costura: TileTypes.drawSpill)
+        t.spill.set = {}
+        for _, n in ipairs(t.spill.onto) do t.spill.set[n] = true; TileTypes.spillTargets[n] = true end
+    end
     if t.joinAlso then                         -- (lista → conjunto: grupos o nombres de tile)
         local set = {}
         for _, v in ipairs(t.joinAlso) do set[v] = true end
@@ -374,16 +380,19 @@ local function blendQuads(spec)
     end
     return e
 end
-local function blendHalf(spec, e, level, gx, gy, x, y, u)
+-- (la franja `f` de `e` en la media casilla (gx, gy) dibujada en (x, y, u), hacia el lado `sd`)
+local function band(e, f, sd, gx, gy, x, y, u)
+    if not e.blend[f] then return end
     local fh = e.img:getHeight()
     local k = u / (fh / 2)
+    local half = ((sd[1] ~= 0) and gy or gx) % 2 + 1        -- (sigue el dibujo a lo largo del lado)
+    love.graphics.draw(e.img, e.blend[f][half], x + u / 2, y + u / 2, sd[3], k, k, fh / 4, fh / 4)
+end
+local function blendHalf(spec, e, level, gx, gy, x, y, u)
     for _, sd in ipairs(BLEND_SIDES) do
         local n = SubTilesMod.kindAt(level, gx + sd[1], gy + sd[2])
         local f = n and spec.of[n]
-        if f and e.blend[f] then
-            local half = ((sd[1] ~= 0) and gy or gx) % 2 + 1        -- (sigue el dibujo a lo largo del lado)
-            love.graphics.draw(e.img, e.blend[f][half], x + u / 2, y + u / 2, sd[3], k, k, fh / 4, fh / 4)
-        end
+        if f then band(e, f, sd, gx, gy, x, y, u) end
     end
 end
 function TileTypes.drawBlend(spec, ctx)
@@ -400,6 +409,56 @@ function TileTypes.drawBlend(spec, ctx)
         for qy = 0, 1 do
             for qx = 0, 1 do
                 blendHalf(spec, e, level, (ctx.col - 1) * 2 + qx, (ctx.row - 1) * 2 + qy, ctx.x + qx * u, ctx.y + qy * u, u)
+            end
+        end
+    end
+end
+
+-- ── Costura que DERRAMA un vecino (def.spill, 2026-10-29) ─────────────────────
+-- Al revés que `blend` (que dibuja el bloque sobre sí mismo): un tipo con `spill = { image, frame, onto = { <tile>, … } }`
+-- se derrama sobre los bloques de `onto` que lo tocan — la nieve deja su labio y sus grumos sobre la tierra, la piedra…
+-- (arriba, abajo y a los lados; también mini bloques y el plano de fondo) —. El dibujo es un cuadro como los de `blend`
+-- (franja a la IZQUIERDA, girada hacia el lado del vecino) y lo pone el bloque que RECIBE, dentro de su casilla, al
+-- dibujarse (TileTypes.drawTile): nunca tapa al que se derrama.
+TileTypes.spillTargets = {}            -- [nombre del tile que recibe] = true (si nadie se derrama en él, no se mira nada)
+local function spillOf(n, name)
+    local d = n and TileTypes.byName[n]
+    local sp = d and d.spill
+    return sp and sp.set[name] and sp or nil
+end
+local function spillHalf(name, level, gx, gy, x, y, u)
+    for _, sd in ipairs(BLEND_SIDES) do
+        local sp = spillOf(SubTilesMod.kindAt(level, gx + sd[1], gy + sd[2]), name)
+        if sp then
+            local e = blendQuads(sp)
+            if e then band(e, sp.frame or 1, sd, gx, gy, x, y, u) end
+        end
+    end
+end
+local function spills(level, c, r, name)
+    local sp = level:getDef(c, r).spill
+    return sp ~= nil and sp.set[name] == true
+end
+local function spillNear(level, name, c, r)
+    -- (antes de mirar por medias casillas: ¿algún vecino grande se derrama aquí? Con mini bloques, siempre se mira)
+    if level.subCells then return true end
+    return spills(level, c - 1, r, name) or spills(level, c + 1, r, name) or spills(level, c, r - 1, name)
+        or spills(level, c, r + 1, name)
+end
+function TileTypes.drawSpill(t, ctx)
+    local level = ctx.level
+    if not (level and ctx.col and level.getDef) then return end
+    local name = t.mimics or t.name
+    if not TileTypes.spillTargets[name] then return end
+    SubTilesMod = SubTilesMod or require 'src/world/level/SubTiles'
+    love.graphics.setColor(1, 1, 1, 1)
+    if ctx.quarter then
+        spillHalf(name, level, ctx.col, ctx.row, ctx.x, ctx.y, ctx.size)
+    elseif spillNear(level, name, ctx.col, ctx.row) then
+        local u = ctx.size / 2
+        for qy = 0, 1 do
+            for qx = 0, 1 do
+                spillHalf(name, level, (ctx.col - 1) * 2 + qx, (ctx.row - 1) * 2 + qy, ctx.x + qx * u, ctx.y + qy * u, u)
             end
         end
     end
@@ -480,6 +539,7 @@ function TileTypes.drawTile(t, ctx)
         love.graphics.setColor(t.color)
         love.graphics.rectangle('fill', ctx.x, ctx.y, ctx.size, ctx.size)
     end
+    if TileTypes.spillTargets[t.mimics or t.name] then TileTypes.drawSpill(t, ctx) end     -- (la costura de un vecino)
 end
 
 return TileTypes

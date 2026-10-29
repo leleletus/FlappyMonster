@@ -50,8 +50,16 @@ if it should exist as a mini block, add it to `SubTiles.KINDS`. Then
 - **Blends** (`TileTypes.drawBlend(spec, ctx)`): the sand's dithered transitions, now in the base. `spec = { image,
   of = { <neighbour tile name> = frame } }`, each frame 16x16 art with the band on the LEFT (5 columns), rotated per
   side, per half cell (towards big blocks and mini blocks). Users: sand (`sand_blend.png`), ice and the opaque ice
-  blocks towards snow (`ice_blend.png`, frost). Snow towards dirt / stone: NOT used — tried, the dirt dither under the
-  snow read as spiky grass (option B kept in `FlappyMonster_pruebas/tiles_helados/opciones/`).
+  blocks towards snow (`ice_blend.png`, frost). Snow towards dirt / stone: NOT a blend — tried, the dirt dither under
+  the snow read as spiky grass (kept in `FlappyMonster_pruebas/tiles_helados/opciones/`); snow uses a spill instead.
+- **Spills** (`def.spill = { image, frame, onto = { <tile>, … } }`, `TileTypes.drawSpill`, 2026-10-29): the inverse of
+  a blend — a type leaves its seam ON the neighbours listed in `onto`, drawn by the RECEIVING block inside its own cell
+  at the end of `TileTypes.drawTile` (so it never covers the spilling block), per half cell like the blends: every side
+  (snow above, below, beside), mini blocks, boss walls, fakes (by `mimics`) and the background plane. Only blocks in
+  `TileTypes.spillTargets` look at their neighbours (4 `getDef` per cell; per half cell only when a neighbour spills
+  or there are mini blocks). Snow spills `snow_spill.png` onto the terrain that is neither snow nor ice (dirt, grass,
+  stone, border, deep stone, sand, basalt, ash, mud, jungle grass, temple brick, frost brick, ice rock, frost window,
+  breakable).
 
 - Tiles: **Basalto** `basalt` 38 (dark volcanic rock, 2x2 drawing like stone, very few marks) and **Ceniza** `ash` 39
   (ash cap with embers over basalt when its top is in the air, like grass over dirt); materials `basalt` / `ash`
@@ -123,7 +131,7 @@ if it should exist as a mini block, add it to `SubTiles.KINDS`. Then
   the user's colours): snow = `snow.png` body (plain, 64x64 — other tools read it) + `snow_top.png` (a snow cushion
   with a wavy lower edge, only on top faces in the air) + `snow_under.png` (shade, only on bottom faces in the air);
   ice = `ice.png` body 2x2 cells (long diagonal shines that cross blocks) + `ice_top.png` frost rim + `ice_under.png`
-  + `ice_blend.png` frost band towards snow. The user's originals and the per-cell versions of before are outside
+  + `ice_blend.png` frost band towards snow; snow's seam on other blocks = `snow_spill.png` (spill, above). The user's originals and the per-cell versions of before are outside
   the repo (`snow-orig.png`, `snow-antes_capas.png`, same for ice). Thin ice still comes from
   `tools/art/world/make_snow_sprites.py`.
 
@@ -170,6 +178,11 @@ walls for structures and backdrops. The user was away: applied option A (snow cu
 diagonal shines) — B (thin straight snow layer, ice in strata) is `make_frozen_tiles.py --snow B --ice B`; previews
 in `FlappyMonster_pruebas/tiles_helados/`. Rejected while making it: the snow→dirt dither (looked like spiky grass),
 diagonal ice veins on the ice rock (looked like rain). Not placed in any existing level (the user places them by hand).
+The user approved the result ("perfectamente bien") and asked for one more thing: «Añadir la costura de nieve con otros
+bloques: así como el hielo / la arena tiene costura con otros bloques, la nieve también debe» → the spill (snow lip 1
+art px into the neighbour + ROUND clumps with a shaded tip, so it does not read as grass). Option A (lip + clumps) applied;
+B (frost dither) = `make_frozen_tiles.py --apply --seam B`; A/B captures of the real frozen levels in
+`FlappyMonster_pruebas/tiles_helados/costura_nieve/`.
 
 ## Spikes and their skins
 

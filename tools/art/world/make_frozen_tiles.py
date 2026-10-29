@@ -11,7 +11,7 @@
 #      ice.png          el CUERPO del hielo, 2x2 casillas (los brillos cruzan de un bloque al de al lado)
 #      ice_top.png      el filo de escarcha de arriba;  ice_under.png  lo más denso de abajo
 #      ice_blend.png    franja tramada de escarcha del hielo hacia la nieve (como sand_blend.png)
-#    (la nieve hacia la tierra / piedra usa las franjas de sand_blend.png: el mismo tramado)
+#      snow_spill.png   la costura de la nieve SOBRE los otros bloques (la dibujan ellos: TileTypes.drawSpill)
 # 2. El paquete de construcción helado (tiles 50-58):
 #      frost_brick.png  ladrillo helado (2x2)          ice_rock.png     roca helada (2x2)
 #      ice_brick.png    sillares de hielo opaco (2x2)  glacier_ice.png  hielo glaciar opaco en estratos (2x2)
@@ -23,6 +23,9 @@
 # Opciones de diseño (vista previa A / B; se aplica la elegida):
 #   --snow A|B   A = almohadilla gruesa con el borde ondulado (por defecto) · B = capa fina y recta
 #   --ice A|B    A = brillos diagonales largos (por defecto) · B = estratos horizontales
+#   --seam A|B   la COSTURA de la nieve sobre los otros bloques (snow_spill.png, TileTypes.drawSpill; el usuario,
+#                2026-10-29: «así como el hielo / la arena tiene costura con otros bloques, la nieve también debe»):
+#                A = labio de nieve con grumos redondos (por defecto) · B = escarcha tramada
 # Sin --apply: solo la hoja de texturas en /home/mtvemo/FlappyMonster_pruebas/tiles_helados/paquete/ (la maqueta en el
 # juego: tools/levelgen/arenas/make_hielo_paquete.py + run.sh level_shots).
 # --apply escribe los PNG; el snow.png / ice.png de antes se guardan una vez FUERA del repo
@@ -44,6 +47,7 @@ def arg(name, default):
 APPLY = '--apply' in sys.argv
 SNOW_OPT = arg('--snow', 'A')
 ICE_OPT = arg('--ice', 'A')
+SEAM_OPT = arg('--seam', 'A')
 T = 'assets/images/world/tiles'
 PRUEBAS = '/home/mtvemo/FlappyMonster_pruebas/tiles_helados'
 X = 4                                   # escala del arte
@@ -172,6 +176,21 @@ def blend_band(colors):
         for y in range(16):
             yy = (y + x * 3) % 16
             if yy in rows: put(im, x, y, colors[(x + y) % len(colors)])
+    return im
+
+
+def snow_spill(opt):
+    """Costura de la nieve sobre el bloque vecino: cuadro de 16x16 con la franja a la IZQUIERDA (la columna 0 toca la
+    nieve; se gira hacia cada lado). A: el labio de nieve sigue 1 px dentro del vecino y cuelgan grumos REDONDOS (no
+    picos: la franja tramada de la arena, en tierra, parecía hierba), con la punta a la sombra. B: escarcha tramada."""
+    if opt == 'B':
+        return blend_band([SN_B, SN_L, SN_S])
+    im = new(16, 16)
+    depth = [1, 2, 3, 3, 2, 1, 1, 2, 3, 4, 4, 3, 2, 1, 1, 1]    # (hondo de la nieve en cada fila, a lo largo del lado)
+    for y, d in enumerate(depth):
+        for k in range(d):
+            put(im, k, y, SN_S if (k == d - 1 and d >= 2) else SN_B)
+    for y in (2, 9): put(im, 1, y, SN_L)                        # brillo dentro de los grumos grandes
     return im
 
 
@@ -317,11 +336,11 @@ def up(im):
     return im.resize((im.width * X, im.height * X), Image.NEAREST)
 
 
-def build(snow_opt, ice_opt):
+def build(snow_opt, ice_opt, seam_opt='A'):
     return {
         'snow': snow_body(), 'snow_top': snow_top(snow_opt), 'snow_under': snow_under(),
         'ice': ice_body(ice_opt), 'ice_top': ice_top(), 'ice_under': ice_under(),
-        'ice_blend': blend_band([SN_L, SN_W, SN_B]),
+        'ice_blend': blend_band([SN_L, SN_W, SN_B]), 'snow_spill': snow_spill(seam_opt),
         'frost_brick': frost_brick(), 'ice_rock': ice_rock(), 'ice_brick': ice_brick(), 'glacier_ice': glacier_ice(),
         'snow_brick': snow_brick(), 'frost_top': frost_top(),
         'ice_pillar': pillar_shaft(), 'ice_pillar_top': pillar_cap(), 'ice_pillar_bottom': pillar_cap(True),
@@ -375,11 +394,12 @@ def sheet(path, sets):
 
 
 if __name__ == '__main__':
-    tex = build(SNOW_OPT, ICE_OPT)
+    tex = build(SNOW_OPT, ICE_OPT, SEAM_OPT)
     os.makedirs(os.path.join(PRUEBAS, 'paquete'), exist_ok=True)
     sheet(os.path.join(PRUEBAS, 'paquete', 'hoja_texturas.png'),
           [('A (nieve: almohadilla ondulada · hielo: brillos diagonales)  [aplicada]', build('A', 'A')),
-           ('B (nieve: capa fina recta · hielo: estratos)', {k: v for k, v in build('B', 'B').items() if k in ('snow_top', 'ice')})])
+           ('B (nieve: capa fina recta · hielo: estratos · costura: escarcha tramada)',
+            {k: v for k, v in build('B', 'B', 'B').items() if k in ('snow_top', 'ice', 'snow_spill')})])
     if APPLY:
-        print('Tiles helados (nieve %s, hielo %s):' % (SNOW_OPT, ICE_OPT))
+        print('Tiles helados (nieve %s, hielo %s, costura %s):' % (SNOW_OPT, ICE_OPT, SEAM_OPT))
         apply(tex)

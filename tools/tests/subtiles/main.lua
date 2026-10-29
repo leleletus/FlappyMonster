@@ -22,7 +22,8 @@
 --                bloques de jefe entre sí y con la piedra (solo sólidos)
 --   dibujo       Level:render con tierra, césped y subtiles no da errores
 --   helado       joinAlso (2026-10-29): la nieve y el hielo se unen sin borde (grandes y mini), el hielo NO con la
---                tierra, la columna de hielo solo consigo; y las pieles por capas (TileTypes.drawSkin: nieve, hielo y el
+--                tierra, la columna de hielo solo consigo; la nieve deja su costura (spill) sobre la tierra / la piedra y no
+--                sobre el hielo ni la nieve; y las pieles por capas (TileTypes.drawSkin: nieve, hielo y el
 --                paquete helado; grandes, mini, a media arista, en el plano de fondo y en miniatura) se dibujan sin errores
 -- SHOT=1: además guarda <save>/subtiles.png a tamaño real.
 --
@@ -394,6 +395,9 @@ function cases.helado()
     local pil = TileTypes.byName.ice_pillar
     t('columna→columna', ex(level, 12, 3, 'bottom', pil.joinGroup, pil.joinAlsoSet), false)
     t('columna→ladrillo', ex(level, 12, 4, 'bottom', pil.joinGroup, pil.joinAlsoSet), true)
+    -- costura de la nieve (spill): la dibujan la tierra, la piedra… (no el hielo ni la nieve, que tienen la suya)
+    t('costura→tierra', TileTypes.spillTargets.dirt == true and snow.spill.set.dirt == true, true)
+    t('costura→hielo', snow.spill.set.ice == nil and not TileTypes.spillTargets.snow, true)
     local ok, err = pcall(function()
         require('src/world/level/BackPlane').build(level, { bgTiles = level.tiles })     -- (lo mismo en el plano de fondo)
         local canvas = love.graphics.newCanvas(1280, 720)

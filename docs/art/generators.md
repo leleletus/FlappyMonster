@@ -46,7 +46,8 @@ the diff before committing anything they write.
   flags = the texture sheet in `FlappyMonster_pruebas/tiles_helados/paquete/`; `--apply` writes every PNG (the snow.png
   / ice.png of before are copied once to `FlappyMonster_originals/assets/images/world/tiles/*-antes_capas.png`).
   Options: `--snow A|B` (A cushion with a wavy edge — applied —, B thin straight layer), `--ice A|B` (A diagonal
-  shines — applied —, B strata). Safe to re-run (nothing hand-edited yet). `make_snow_sprites.py` no longer writes
+  shines — applied —, B strata), `--seam A|B` (snow's seam on other blocks, `snow_spill.png`: A lip + round clumps —
+  applied —, B frost dither). Safe to re-run (nothing hand-edited yet). `make_snow_sprites.py` no longer writes
   snow.png / ice.png (only thin ice, snowflakes, the drop).
 - `tools/art/story/make_mirror_shards.py`: the story mirror (`frame`, `glass`) and its shards (`shard_<id>.png` + the
   Xtra halves `<id>a/b`), all on one 48x64 canvas. 0.5.99: it READS the catalog `assets/story/shards.json` and cuts as

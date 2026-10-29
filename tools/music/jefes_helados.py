@@ -40,7 +40,9 @@ P = MN   # (los instrumentos: MN.CRYSTAL, MN.CELESTA…)
 STEEL, MARIMBA, SEASHORE, SHAKER = 114, 12, (0, 122), 82
 
 
-V4 = os.environ.get('SUB') == 'lead_chip_v4'
+INSTALL = bool(os.environ.get('INSTALL'))            # (snowball_boss v4, APROBADA: INSTALL=1 la escribe en assets/)
+V5 = os.environ.get('SUB') == 'lead_chip_v5'
+V4 = os.environ.get('SUB') == 'lead_chip_v4' or V5 or INSTALL
 V3 = os.environ.get('SUB') == 'lead_chip_v3' or V4
 # v4 (2026-10-29, el usuario: "mejor quítales el shaker navideño a ambas y normaliza/nivela los instrumentos/efectos
 # para que suene más parecido a la mezcla original"): fuera los cascabeles GM ('hat') y el shaker; cada capa con la
@@ -163,6 +165,59 @@ def slap_x(ev, L, timing=None):
         timing.append(('bass', 'slap', len(d), np.median(d) / SR * 1000, np.median(d2) / SR * 1000,
                        (np.percentile(d2, 90) - np.percentile(d2, 10)) / SR * 1000 / 2))
     return y2
+
+
+def rerender_chip(ev, n, n_i, L):
+    """la caja de música del N163 de crab_icy, nota a nota como la manda el generador (mismo canal: cada nota corta la
+    anterior), SIN el eco que crab_icy.build le pone después"""
+    c = F.Chan(F.frames_for(L / SR + 1))
+    for t0, t1, m, inst, vs in ev:
+        F.play(c, t0, t1, m, inst, q=F.q_n163, vs=vs, release=6)
+    x = F.render_wave(c, CI.WAVES) * 0.0075
+    x = np.concatenate([x, np.zeros(max(0, L - len(x)))])[:L] - np.mean(x[:n])
+    return GN.fold(x, n, n_i)
+
+
+def damped_line(ev, prog, vel, L, n, n_i, timing=None, fade=0.008):
+    """una línea de notas seguidas (GM) en la que ninguna suena más allá de la siguiente: las notas, alternas, en dos
+    grabaciones; cada una se calla (fundido de 8 ms) al entrar la nota siguiente"""
+    ev = sorted(ev, key=lambda e: e[0])
+    out = np.zeros(L)
+    for par in (0, 1):
+        r = XRec(prog)
+        for e in ev[par::2]: r.add(e[0], e[1], e[2], vel)
+        y = GM.cached(r, L)
+        d = latency(y, r.ev); lat = int(np.median(d)) if len(d) >= 3 else MN.GM_LAT
+        y = np.concatenate([y[lat:], np.zeros(lat)])
+        gate = np.zeros(L)
+        f_ = int(fade * SR)
+        for i in range(par, len(ev), 2):
+            a = max(0, int(ev[i][0] * SR) - 88)
+            b = int(ev[i + 1][0] * SR) if i + 1 < len(ev) else min(L, a + int(0.3 * SR))
+            b = min(b, a + int(0.6 * SR))
+            gate[a:b] = 1.0
+            gate[b:b + f_] = np.linspace(1, 0, len(gate[b:b + f_]))
+        out += y * gate
+        if timing is not None:
+            d2 = latency(y, r.ev)
+            timing.append(('shim', f'{prog}·amortiguada', len(d2), (np.median(d) - MN.GM_LAT) / SR * 1000 if len(d) else float('nan'),
+                           np.median(d2) / SR * 1000 if len(d2) else float('nan'), 0.0))
+    return GN.fold(out, n, n_i)
+
+
+def ring_t30(stem, ev, sr=SR):
+    """cuánto queda sonando cada golpe: el tiempo (s) hasta caer 30 dB desde su pico, mediana sobre las notas"""
+    w = int(0.005 * sr)
+    res = []
+    for t0, *_ in sorted(ev)[::7]:
+        s0 = int(t0 * sr)
+        seg = stem[s0:s0 + int(1.5 * sr)]
+        if len(seg) < w * 4: continue
+        e = np.sqrt(np.convolve(seg ** 2, np.ones(w) / w, mode='valid'))[::w]
+        p = int(np.argmax(e[:20])); thr = e[p] * 10 ** (-1.5)
+        k = np.nonzero(e[p:] < thr)[0]
+        if len(k): res.append(k[0] * 0.005)
+    return float(np.median(res)) if res else float('nan')
 
 
 def grid_st(mx, t):
@@ -321,9 +376,14 @@ def prep_v4(S, g, mx, tid, mapping):
     mx['share_v4'] = lead_share(S, g, mx['n'])
     S0, g0 = mx['S'], mx['g']
     mx['share_orig'] = lead_share(S0, g0, mx['n'])
-    a, b = installed(tid)
-    mx['ref_bands'] = band_frac(b)
+    mx['ref_bands'] = np.array(REF_BANDS[tid])
     return S, g
+
+
+# el reparto de bandas de la mezcla ORIGINAL (las instaladas antes de la v4; congelado: la v4 instalada ya no sirve de
+# referencia de sí misma)
+REF_BANDS = {'snowball_boss': [0.417571, 0.256975, 0.187504, 0.070341, 0.067608],
+             'crab_tantrum_icy': [0.415548, 0.192479, 0.248276, 0.084223, 0.059473]}
 
 
 # ══ LA GRAN BOLA (snowball_boss) — helado ════════════════════════════════════════════════════════════════════════
@@ -429,7 +489,7 @@ def recast_crab(lead=None):
         else:
             Lz.add('lead', MN.VIBES, t0, t1, m, 102)
             Lz.add('steel', STEEL, t0, t1, m, 72)
-    for t0, t1, m, inst, vs in E['bell']:                                     # la caja de música (y el contrapunto) → la GM
+    for t0, t1, m, inst, vs in ([] if V5 else E['bell']):                     # la caja de música (y el contrapunto) → la GM
         Lz.add('bell', MN.MUSICBOX, t0, t1, m, 92)
     for t0, t1, m, inst, vs in ([] if lead == 'chip' else E['dbl']):   # (con la voz de chip, su octava de pulso también)
         Lz.add('dbl', MN.GLOCK, t0, min(t1, t0 + 0.2), m, 66)
@@ -437,9 +497,9 @@ def recast_crab(lead=None):
         Lz.add('choir', MN.CHOIR, t0, t1, m, int(64 + 16 * vs))
     for t0, t1, m, inst, vs in E['c1'] + E['c2']:                            # golpes de quinta → pizzicato (+ el chip)
         Lz.add('stabs', MN.PIZZ, t0, t0 + 0.16, m, 92)
-    for t0, t1, m, inst, vs in E['ice']:                                      # campanillas del tresillo → campanas
+    for t0, t1, m, inst, vs in ([] if V5 else E['ice']):                      # campanillas del tresillo → campanas
         Lz.add('ice', (12, 10), t0, t1, m, 78)
-    for t0, t1, m, inst, vs in E['shim']:                                     # arpegio en semicorcheas → marimba (la costa)
+    for t0, t1, m, inst, vs in ([] if V5 else E['shim']):                     # arpegio en semicorcheas → marimba (la costa)
         Lz.add('shim', MARIMBA, t0, t1, m, 70)
     common_drums(E, mx, Lz)
     # RITMO: shaker en semicorcheas en las partes tranquilas (B) y en el respiro desde su 5º compás
@@ -480,6 +540,15 @@ def recast_crab(lead=None):
         G['lead'] = G['lead'] if 'lead' in G else 0 * chip_lead
     if V3:
         G['bass'] = GN.fold(slap_x(mx['slap'].ev, L, Lz.timing), n, n_i)
+    if V5:
+        # v5 (el usuario: "aún hay como campanillas que suenan con eco o reverb que malogran la experiencia sonora"): las
+        # campanas GM (Christmas Bells, caja de música) quedaban sonando ~0,8-1 s y a 186 BPM se montaban 4-6 notas = la
+        # cola que se oía como eco. Vuelven las del chip de la pista instalada, SECAS: las campanillas del tresillo
+        # (I_ICE, ~0,1 s) y la caja de música del N163 sin el eco que llevaba (I_BELL, ~0,4 s y un solo canal: cada nota
+        # corta la anterior); la marimba sigue, pero cada nota se apaga cuando entra la siguiente (damped_line)
+        G['ice'] = S0['ice']
+        G['bell'] = rerender_chip(E['bell'], n, n_i, L)
+        G['shim'] = damped_line(E['shim'], MARIMBA, 70, L, n, n_i, Lz.timing)
     S = {'lead': (chip_lead + G['lead']) if lead == 'chip' else G['lead'] + (lead[2] if lead else 0.35) * rescale(S0['lead'], G['lead']), 'steel': G.get('steel', 0 * G['lead']), 'bell': G['bell'], 'choir': G['choir'],
          'stabs': G['stabs'] + (0.0 if V3 else 0.35) * rescale(S0['stabs'], G['stabs']), 'ice': G['ice'], 'shim': G['shim'],
          'bass': G['bass'] if V3 else S0['bass'],
@@ -678,6 +747,21 @@ Mismos archivos que en lead_chip/. NO SE HA ESCUCHADO.
 """
 
 
+V5_README = """
+
+lead_chip_v5/ (2026-10-29, solo el CANGREJO) — "aún hay como campanillas que suenan con eco o reverb que malogran la
+experiencia sonora del juego". La reverb y el chorus del propio fluidsynth estaban APAGADOS siempre (-R 0 -C 0); la
+"cola" era de los propios sonidos de campana del soundfont: la Christmas Bells y la caja de música GM se quedan sonando
+~0,8-1 s y, a 186 BPM, cada una se monta sobre las 4-6 notas siguientes. En la v5:
+- las campanillas del tresillo → las del CHIP de la pista instalada (cortas, secas);
+- la caja de música → la del CHIP (N163) de la pista instalada, SIN el eco que llevaba; un solo canal: cada nota corta
+  la anterior;
+- la marimba del arpegio sigue, pero cada nota se calla al entrar la siguiente;
+- todo lo demás como la v4 (a tiempo, sin reverb, sin shaker, nivelada como la original).
+Mismos archivos que en lead_chip/. NO SE HA ESCUCHADO.
+"""
+
+
 V4_README = """
 
 lead_chip_v4/ (2026-10-29) — tu petición: "mejor quítales el shaker navideño a ambas y normaliza/nivela los
@@ -690,18 +774,33 @@ Mismos archivos que en lead_chip/. NO SE HA ESCUCHADO.
 """
 
 
+if __name__ == '__main__' and INSTALL:
+    # snowball_boss v4 (APROBADA por el usuario, 2026-10-29): la voz de chip de siempre, el resto GM a tiempo, sin reverb,
+    # sin los cascabeles, nivelada como la original → assets/music/bosses/snowball_boss_intro|_loop.ogg + mid
+    r = recast_snowball('chip')
+    report(r)
+    GN.export('snowball_boss', r['y'], r['n_i'])
+    W.write_mid(F.out('snowball_boss', 'mid'), r['mel'], r['mx']['bpm'])
+    sys.exit(0)
+
 if __name__ == '__main__' and os.environ.get('LEAD_CHIP'):
     SUB = os.environ.get('SUB', 'lead_chip')                # (lead_chip_v2: los cascabeles a tiempo, 2026-10-29)
     out = os.path.join(PRUEBAS, SUB)
     os.makedirs(out, exist_ok=True)
     nums = []
     import soundfile as sf
-    for tid in ('snowball_boss', 'crab_tantrum_icy'):
+    for tid in (('crab_tantrum_icy',) if V5 else ('snowball_boss', 'crab_tantrum_icy')):
         r = (recast_snowball if tid == 'snowball_boss' else recast_crab)('chip')
+        if V5:                                                           # cuánto suena cada golpe de campana (T30)
+            St = r['S']
+            rows_ = [f"{k_} {ring_t30(St[k_][:r['n']], [(e[0],) for e in r['E'][k_]]):.2f} s" for k_ in ('bell', 'ice', 'shim') if k_ in St]
+            line_ = f'{tid} v5 — cuánto queda sonando cada golpe (hasta −30 dB, mediana): ' + ' · '.join(rows_)
+            print('  ' + line_)
         x = report(r)
         S, g, n, y, n_i = r['S'], r['g'], r['n'], r['y'], r['n_i']
         tot = sum(np.mean((S[k][:n] * g[k]) ** 2) for k in S)
         share = 100 * sum(np.mean((S[k][:n] * g[k]) ** 2) for k in ('lead', 'dbl') if k in S) / tot
+        if V5: nums.append(line_)
         if V4:
             mxx = r['mx']
             v3, _ = sf.read(os.path.join(PRUEBAS, 'lead_chip_v3', f'{tid}_lead_chip_loop.ogg'))
@@ -748,6 +847,9 @@ if __name__ == '__main__' and os.environ.get('LEAD_CHIP'):
         txt = open(p_).read().split('\n\nLA MELODÍA CON EL CHIP DE SIEMPRE')[0]
         with open(p_, 'w') as f:
             f.write(txt + CHIP_README + '\nLOS NÚMEROS (lead_chip)\n' + '\n'.join(nums) + '\n')
+    elif not os.environ.get('REPORT') and V5:
+        with open(os.path.join(PRUEBAS, 'LEEME.txt'), 'a') as f:
+            f.write(V5_README + '\nLOS NÚMEROS (' + SUB + ')\n' + '\n'.join(nums) + '\n')
     elif not os.environ.get('REPORT') and V4:
         with open(os.path.join(PRUEBAS, 'LEEME.txt'), 'a') as f:
             f.write(V4_README + '\nLOS NÚMEROS (' + SUB + ')\n' + '\n'.join(nums) + '\n')
