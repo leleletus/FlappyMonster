@@ -63,7 +63,9 @@ concrete type.
   `oneway` = only from above, `moves`). The Scale pans and the Seed's leaves are parts.
 - `moves = true`: `Entities.solidBodies` measures how far the body moved since last time (`stepDx`, `stepDy`; once per
   step in SP / server, once per frame on the client). A player standing on it (`pa.standBody`) moves with it the next
-  step (`rideBody`): it can go up and down without the player falling through or floating. Entities standing on
+  step (`rideBody`): it can go up and down without the player falling through or floating. Walking between a body and
+  the ground (or another body) over a seam of ≤ 16 px needs no jump: [low steps](player.md#low-steps-step-up)
+  (2026-10-29); the highest support under the feet wins. Entities standing on
   something that moves are carried by whoever moves it (the Box rides another box; the Scale moves what is on its pans).
 - A SLED (`entities/base/Sled.lua`, the dazed Penguin) is such a part that only exists in some states and carries its
   rider at speed: the rider is found with `pa.standBody == part`; the part reappearing does not drag anyone for what

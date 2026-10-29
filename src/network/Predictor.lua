@@ -22,7 +22,7 @@ local BOUNCE_WINDOW = 20     -- ticks: rebote local ≈ rebote del servidor
 
 -- Campos puramente visuales de PlayerAdventure (no afectan a la física)
 local VISUAL_FIELDS = { 'animT', 'frame', 'puff', 'airBarAlpha', 'airBarBobT', 'airBarBobOn', 'airBarShakeX',
-                        'splashSt', 'splashCD', 'gpLanded' }
+                        'splashSt', 'splashCD', 'gpLanded', 'stepVis' }   -- (stepVis: el escalón bajo que se ve subir)
 
 local function noop() end
 local MUTED_SOUND = setmetatable({}, { __index = function() return noop end })

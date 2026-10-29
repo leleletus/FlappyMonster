@@ -170,7 +170,9 @@ generic moving platform on a cable"). Both generic: any island can use them. Har
   `onWeight` = moves only while something stands on a cabin (`Weight.stack`); without weight, after 1 s, it goes BACK
   to the start (`back`, default on: a cabin stranded mid-way cannot soft-lock a level; off = it stays).
 - Each cabin's deck is a one-way MOVING body part (`moves`, rows 22-27 of the 48x28 cabin art, 100 px under the
-  cable): players ride it with `standBody` / `rideBody` (corners and the turnaround included), entities resting on it
+  cable — so it sits 4 px below a station floor two rows under the cable point: the player walks off onto the station
+  thanks to the low step rule, [player](../gameplay/player.md#low-steps-step-up)): players ride it with `standBody` /
+  `rideBody` (corners and the turnaround included), entities resting on it
   are moved by the cable car (`carryRiders`, a block ahead stops them sideways), except those that follow a moving body
   by themselves (`ridesMoving`: the Box).
 - SUPPORTS (render only, measured once): every point has a pulley held by a lattice TOWER down to the ground below

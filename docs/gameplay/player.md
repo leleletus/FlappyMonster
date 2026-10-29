@@ -8,7 +8,7 @@ everything that needs "a body that moves like a player": the KOTH bot, the Mirro
 | File | Contents |
 |---|---|
 | `PlayerAdventure.lua` | tuning constants, hitboxes, actions (`hurt`, `bounce`, `knockback`, `launch`, `squash`, `freeze`, `die`, `respawn`, invulnerability), the flashlight, `update(dt, level)` |
-| `PlayerCollision.lua` | `moveAndCollide`: tiles, one-way platforms, solid bodies, arena walls, spikes; `moveSteps` cuts a long move into ≤ 30 px pieces (at low FPS a 75 px ground-pound step went through a 1-tile floor; 0.5.9, harness `mechanics` `pocos_fps`) |
+| `PlayerCollision.lua` | `moveAndCollide`: tiles, one-way platforms, solid bodies, arena walls, spikes, low steps ([below](#low-steps-step-up)); `moveSteps` cuts a long move into ≤ 30 px pieces (at low FPS a 75 px ground-pound step went through a 1-tile floor; 0.5.9, harness `mechanics` `pocos_fps`) |
 | `PlayerAir.lua` | drowning, the countdown, splashes, the air bar; FREEZING WATER (`updateFrost`, `frostT`, the frost meter: [water-and-floods](water-and-floods.md#freezing-water-flood-prop-cold-level-key-coldwater)) |
 | `PlayerGroundPound.lua` | the ground pound and being frozen in ice |
 | `PlayerGulp.lua` | being SWALLOWED by a Carnivorous Plant: mashing out, the bites, the mash prompt (0.5.97) |
@@ -29,8 +29,8 @@ player also rides moving bodies (`standBody`) and is dragged by the air (`windVx
 invulnerability system (`invT`) for hits and respawns.
 
 **When you add a field that changes physics:** add it to `Protocol.packOwnState / applyOwnState / isValidOwnState`
-and bump `Protocol.VERSION`, or reconciliation desyncs. **Harnesses:** `mechanics`, `level_solve` (searches with the
-real physics), `difficulty_rules`.
+and bump `Protocol.VERSION`, or reconciliation desyncs. **Harnesses:** `mechanics`, `step_rules`, `level_solve`
+(searches with the real physics), `difficulty_rules`.
 
 **Sprite:** `src/player/PlayerSprite.lua` — the monster's animations come from the set `player`, by name; the pose
 number that the simulation and the network carry (`frame`: 1 glide, 2 jump, 3 idle, 5 crouch; 4 = dead) is mapped
@@ -92,6 +92,41 @@ Online camera freezes while the local player is dying (same as single player).
 - `pa:launch(vx, vy)`: sideways launches set `ctrlLockT` (no input, no
   friction, NO stun/stars) instead of stunT. Own-state index 29 (protocol v12; v13 = flood entity type; v14 = crouch jump).
   Side trampoline faces trigger at any push speed; top/bottom need 120 px/s.
+
+## Low steps (step-up)
+
+The user (2026-10-29): "cuando en frente tenga un escalón menor a cierta altura, podrá pasarlo sin necesidad de saltar
+(es una mecánica típica de muchos juegos)". Stepping off a cable car cabin onto its station needed a small hop: the deck
+sits 4 px below the station floor.
+
+- **Rule:** on the ground and moving sideways (walking, but also carried by a deck, a conveyor or the wind) into
+  something solid whose top is at most `PlayerAdventure.STEP_MAX` (**16 px**) above the feet, with room for the
+  standing box at the new height, the player is lifted onto it — same speed, no jump. Tiles (solid and one-way, mini
+  blocks included) and solid bodies (`solidFull`: boxes, decks, pans, sleds…) count. A solid thing higher than that is a
+  wall (stops as before); a one-way one higher than that is passed through as before.
+- **Why 16:** tile tops are on a 32 px grid (mini blocks are 32 px), so no step made of tiles changes — a mini block
+  and a full tile still need a jump, a mini-block staircase is still a staircase, the solver (tiles only) gives the same
+  results. It only covers off-grid seams between moving bodies and the ground (the cable car deck: 4 px). ≈ 1/5 of the
+  monster's box (75 px). NOT covered on purpose: a Scale plank resting on the floor (24 px) and an empty floating Iceberg
+  (≈ 19 px over the water): they keep their hop / push. Raising it to 24 would make those walkable, and walking into a
+  low Iceberg from the shore would climb it instead of pushing it.
+- **Not** while airborne or rising (`vy < 0`), crouching, in water, dropping through a platform, ground-pounding, in an
+  ice block (`iceT`), swallowed, or frozen at a boss intro (`canStepUp()`). The body being ridden (`rideBody`) does not
+  count as a step (it moves the rider itself).
+- **Smooth:** the lift happens once the leading edge is `STEP_FOOT` (4 px) over the step — the landing probes are
+  inset 4 px, so lifting earlier made the player drop back. Until then the step does not block (the box overlaps its
+  corner by < 4 px). The sprite is drawn `stepVis` px lower and catches up at `STEP_EASE` 320 px/s (16 px in 3 frames);
+  render only (`Predictor` keeps it out of the re-simulation: `VISUAL_FIELDS`).
+- When both a tile and a body (or two bodies) hold the feet, the HIGHEST wins — before, riding a deck 4 px below its
+  station pulled the player back down onto it.
+- **Code:** `src/world/level/StepUp.lua` — `StepUp.lift(level, x0, x1, head, foot, dir, maxH, bodies, back, skipA,
+  skipB)` → `lift, face` (a box already moved sideways; generic: any walker could use it; enemies don't yet).
+- **Network:** a pure function of state that already travels (position, `onGround`, `vy`, crouch, water, GP, ice…);
+  no new own-state field, but it changes predicted physics: it needs `Protocol.VERSION` + 1 and `version.txt` at the
+  next release.
+- **Harness:** `step_rules` (heights 4/8/16 vs 20/24/32, bodies, tiles, head room, the real cable car, the Scale, the
+  excluded states, client prediction parity).
+- History: 2026-10-29 first version (agent). No user verdict yet on the feel (threshold, the 3-frame ease).
 
 ## Swallowed by a Carnivorous Plant
 

@@ -15,6 +15,9 @@ local function loadSprites() end
 
 function PlayerAdventure:render(camX, camY)
     if self.gulped and not self.dying then return end      -- (tragado por una planta: no se ve — PlayerGulp.lua —)
+    -- (acaba de subir un escalón bajo andando: se dibuja lo que le falta por "subir" — stepVis, PlayerCollision —)
+    local vis = (not self.dying and self.stepVis) or 0
+    if vis > 0 then camY = camY - math.floor(vis + 0.5) end
     local img
     if self.dying then
         img = PS.rec('dead')

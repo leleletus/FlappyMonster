@@ -15,6 +15,10 @@ local FALL_FPS   = 6
 local PUFF_SCALE = 1.15
 local PUFF_SPD   = 14
 
+-- Escalón bajo subido andando (PlayerCollision, STEP_MAX): el sprite se queda `stepVis` px más abajo y lo recupera a
+-- STEP_EASE px/s (16 px en 3 fotogramas: sin salto brusco). Solo dibujo: no viaja por la red ni cambia la física
+local STEP_EASE = 320
+
 local DEATH_FREEZE_TIME = 0.05
 local DEATH_JUMP_VEL    = -560
 local DEATH_FALL_DIST   = WINDOW_H + 100
@@ -327,7 +331,7 @@ function PlayerAdventure:respawn()
     self.prevInWater=false
     self.splashSt='out'; self.splashCD=0
     self.gpPhase=nil; self.gpT=0; self.gpLanded=false; self.stunT=0; self.squashT=0; self.ctrlLockT=0; self.iceT=0
-    self.frostT=0
+    self.frostT=0; self.stepVis=0
     self.gulped=false; self.gulpMash=0; self.gulpBiteT=0
     self.lightOn=false; self.lightBat=1; self.lightCd=0
     self:grantInvulnerability(SPAWN_INV * Difficulty.k('invuln'))
@@ -443,6 +447,7 @@ function PlayerAdventure:_update(dt, level)
     end
 
     self.gpLanded = false
+    if (self.stepVis or 0) > 0 then self.stepVis = math.max(0, self.stepVis - STEP_EASE * dt) end
     if self.stunT > 0 then self.stunT = math.max(0, self.stunT - dt) end
     if (self.invT or 0) > 0 then self.invT = math.max(0, self.invT - dt) end
     if (self.squashT or 0) > 0 then self.squashT = math.max(0, self.squashT - dt) end

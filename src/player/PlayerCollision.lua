@@ -3,6 +3,8 @@
 -- La carga PlayerAdventure.lua con require(...)(PlayerAdventure, P): añade sus funciones a la tabla PlayerAdventure. P = lo que
 -- antes eran locales del archivo y comparten las partes.
 
+local StepUp = require 'src/world/level/StepUp'
+
 return function(PlayerAdventure, P)
 local fx, DIR_UP, DIR_DOWN, DIR_LEFT, DIR_RIGHT, OUTER_YOFF = P.fx, P.DIR_UP, P.DIR_DOWN, P.DIR_LEFT, P.DIR_RIGHT, P.OUTER_YOFF
 local INNER_W, INNER_H = P.INNER_W, P.INNER_H
@@ -49,6 +51,28 @@ local function spikeHitsPlayer(spike, pb)
     return true
 end
 
+-- ESCALONES BAJOS (src/world/level/StepUp.lua; el usuario, 2026-10-29: «cuando en frente tenga un escalón menor a cierta
+-- altura, podrá pasarlo sin necesidad de saltar»). De pie y moviéndose de lado contra algo cuya cara de arriba está como
+-- mucho STEP_MAX px por encima de los pies, con sitio encima, se sube a él sin perder velocidad.
+-- 16 px: las casillas y los bloques pequeños tienen la cara de arriba cada 32 px, así que NINGÚN escalón hecho de
+-- casillas cambia (un bloque pequeño, 32, y una casilla, 64, siguen pidiendo un salto: las paredes son paredes); solo
+-- cuentan los desniveles "sueltos" entre un cuerpo que se mueve y el suelo (la cabina del teleférico queda 4 px bajo su
+-- estación). Es ~1/5 del alto del monstruo (75 px). Una tabla de la Balanza apoyada en el suelo (24 px) o un Iceberg
+-- vacío (≈19 px sobre el agua) siguen siendo un escalón de verdad: se salta o se empuja como antes.
+PlayerAdventure.STEP_MAX = 16
+-- Se SUBE cuando el borde de delante ya está STEP_FOOT px encima del escalón: los pies se apoyan en una casilla desde
+-- que pisan 4 px de ella (el aterrizaje mira de x-hw+4 a x+hw-4); subido antes, se caía otra vez abajo. Mientras
+-- tanto el escalón no le para (se mete esos px en su esquina, que no se ve).
+local STEP_FOOT = 4
+-- (lo que se subió se DIBUJA subiendo en unos fotogramas: `stepVis`, PlayerAdventure STEP_EASE / PlayerRender)
+
+-- ¿Puede subir un escalón andando? En el suelo (y sin estar saltando), de pie, sin nadar, ni bajando por una plataforma,
+-- ni en un ground pound, congelado, tragado o quieto en la entrada de un jefe.
+function PlayerAdventure:canStepUp()
+    return self.onGround and (self.vy or 0) >= 0 and not self.crouching and not self.inWater and not self.dropping
+       and not self.gpPhase and (self.iceT or 0) <= 0 and not self.gulped and not self.frozen and not self.dying
+end
+
 -- Mover en TROZOS de como mucho MOVE_STEP px: a pocos FPS (dt hasta 0.05) un paso de 75 px (ground pound) metía los
 -- pies en la celda de DEBAJO de un suelo de una casilla y se atravesaba. Tras chocar en un eje, ese eje ya no sigue
 -- (no rompe dos bloques de cabeza ni empuja la pared otra vez). A 60 FPS (y en el servidor) es un solo trozo.
@@ -83,11 +107,37 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
     -- con la que se llegó (los trampolines la usan para saber si rebotar).
     self.bodyHit = nil
 
+    -- Cuerpos sólidos con los que choca (también los mira el escalón)
+    local bodies
+    if self.solidAgainst then bodies = self.solidAgainst(level)
+    elseif not self:isInvulnerable() then bodies = level.solidBodies
+    elseif level.solidBodies then
+        -- Invulnerable: atraviesa a los jefes, pero no los objetos sólidos (morteros...)
+        bodies = {}
+        for _, o in ipairs(level.solidBodies) do if o.solidFull then bodies[#bodies+1] = o end end
+    end
+
     -- X: al chocar, pegarse al borde de la hitbox del tile
     x = x + dx
+    -- (escalón bajo delante: primero se sube — StepUp —; así el paso de lado ya no choca con él)
+    -- (lift: lo que sube en este paso; pend: escalón de esa altura en el que aún está entrando — STEP_FOOT —)
+    local lift, pend = 0, 0
+    if dx ~= 0 and self:canStepUp() then
+        local dir = dx > 0 and 1 or -1
+        local h, face = StepUp.lift(level, x - hw, x + hw, y - hh, y + hh, dir, PlayerAdventure.STEP_MAX,
+                                    bodies, STEP_FOOT + 0.5, self, self.rideBody)
+        if h and ((dir > 0) and (x + hw - face) or (face - (x - hw))) >= STEP_FOOT then
+            lift = h
+            y = y - lift
+            self.stepVis = math.min(PlayerAdventure.STEP_MAX, math.max(self.stepVis or 0, lift))
+        elseif h then
+            pend = h
+        end
+    end
     -- (con varios choques manda la cara más restrictiva: con subtiles, medio
     -- tile y un tile entero pueden tener caras distintas en la misma columna)
-    local chy = level.samples and level:samples(y-hh+4, y+hh-4) or {y-hh+4, y, y+hh-4}
+    -- (entrando en un escalón bajo, lo que hay por debajo de su cara no le para)
+    local chy = level.samples and level:samples(y-hh+4, y+hh-math.max(4, pend+1)) or {y-hh+4, y, y+hh-math.max(4, pend+1)}
     if dx > 0 then
         local edge
         for _,py in ipairs(chy) do
@@ -114,19 +164,13 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
     -- Cuerpos sólidos (p. ej. el jefe espejo): de lado se chocan y se paran,
     -- sin empujones. Desde arriba no (eso es pisar / caer encima).
     local x0 = self.x
-    local bodies
-    if self.solidAgainst then bodies = self.solidAgainst(level)
-    elseif not self:isInvulnerable() then bodies = level.solidBodies
-    elseif level.solidBodies then
-        -- Invulnerable: atraviesa a los jefes, pero no los objetos sólidos (morteros...)
-        bodies = {}
-        for _, o in ipairs(level.solidBodies) do if o.solidFull then bodies[#bodies+1] = o end end
-    end
     if bodies then
         for _, o in ipairs(bodies) do
             -- (las plataformas de un solo sentido — `oneway`: hojas de la Semilla — no chocan de lado; el cuerpo en el
             -- que va montado tampoco: al subir se le mete por los pies)
-            if o ~= self and not o.dying and o.alive ~= false and not o.oneway and o ~= self.rideBody then
+            -- (ni el escalón bajo en el que está entrando: pend)
+            if o ~= self and not o.dying and o.alive ~= false and not o.oneway and o ~= self.rideBody
+               and not (pend > 0 and o.solidFull and o:getOuterBounds().y >= y + hh - pend - 0.5) then
                 local ob = o:getOuterBounds()
                 local myTop, myBot = y - hh, y + hh
                 -- Solapan en vertical "de lado": en los sólidos completos (solidFull,
@@ -182,8 +226,9 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
     end
 
     -- Y
-    local prevFoot = self.y + yoff - OUTER_YOFF + hh     -- (misma referencia que de pie)
+    local prevFoot = self.y + yoff - OUTER_YOFF + hh - lift     -- (misma referencia que de pie; subido el escalón)
     y = y + dy
+    local groundTop                                     -- (la cara de la casilla en la que se apoya, si alguna)
     self.onGround = false
     self.groundDef = nil
     local chx = level.samples and level:samples(x-hw+4, x+hw-4) or {x-hw+4, x, x+hw-4}
@@ -211,6 +256,7 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
             y=best-hh
             self.vy=0; self.onGround=true; self.jumpsLeft=2
             self.groundDef=bestT
+            groundTop = best
         end
     elseif dy < 0 then
         -- El centro primero: si hay un bloque rompible sobre la cabeza, es el que se rompe
@@ -253,24 +299,28 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
     -- Sólidos completos (solidFull): se puede estar de pie encima y darse con
     -- la cabeza por debajo, como con un bloque
     if bodies then
-        local footWas = self.y + yoff + hh
-        local headWas = self.y + yoff - hh
+        local footWas = self.y + yoff + hh - lift
+        local headWas = self.y + yoff - hh - lift
         for _, o in ipairs(bodies) do
             if o.solidFull and o ~= self and o.alive ~= false then
                 local ob = o:getOuterBounds()
                 if x + hw - 2 > ob.x and x - hw + 2 < ob.x + ob.w then
                     -- (montado en él y sin saltar: aunque suba o baje, sigue encima; un cuerpo que sube
                     -- `stepDy` px se ha metido eso en los pies)
-                    local riding = o == self.rideBody and self.vy >= 0
+                    local riding = o == self.rideBody and self.vy >= 0 and lift == 0   -- (subiendo un escalón: lo deja)
                     local up = math.max(0, -(o.stepDy or 0)) + (riding and 8 or 0)
                     -- (bajando a través de este cuerpo traspasable: no se apoya en él)
                     local passing = self.dropping and o.oneway and o.dropThrough and math.abs(ob.y - (self.dropTop or -1e9)) < 40
                     if passing then riding = false end
-                    if not passing and (dy > 0 or riding) and footWas <= ob.y + 2 + up and y + hh >= ob.y - (riding and 8 or 0) then
+                    -- (apoyado ya en algo MÁS ALTO — una casilla, otro cuerpo —: manda lo más alto; si no, montado en
+                    -- la cabina que queda unos px por debajo de su estación, lo volvía a bajar a ella al subir el escalón)
+                    local higher = groundTop and groundTop < ob.y - 0.5
+                    if not passing and not higher and (dy > 0 or riding) and footWas <= ob.y + 2 + up and y + hh >= ob.y - (riding and 8 or 0) then
                         self.bodyHit = { o = o, face = 'top', speed = self.vy }
                         y = ob.y - hh; self.vy = 0; self.onGround = true; self.jumpsLeft = 2
                         self.groundDef = nil
                         self.standBody = o
+                        groundTop = ob.y
                     elseif dy < 0 and not o.oneway and headWas >= ob.y + ob.h - 2 and y - hh <= ob.y + ob.h then
                         self.bodyHit = { o = o, face = 'bottom', speed = -self.vy }
                         y = ob.y + ob.h + hh; self.vy = 0

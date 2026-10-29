@@ -37,7 +37,8 @@ local EntityTypes = require 'src/world/entities/base/EntityTypes'
 local SECS = tonumber(os.getenv('SECS')) or 60                 -- (una partida bonus entera: la zona cambia de parada)
 
 local function play(level, nav, withTarget, lure, counter)
-    if os.getenv('SEED') then math.randomseed(tonumber(os.getenv('SEED'))); JIT = 0 end      -- (SEED=n: el mismo azar —y los mismos tirones— en cada partida: probar varias suertes)
+    if os.getenv('SEED') then math.randomseed(tonumber(os.getenv('SEED'))); JIT = 0       -- (SEED=n: el mismo azar —y los mismos tirones— en cada partida: probar varias suertes)
+    else math.randomseed(ARENA_SEED or 1) end      -- (sin SEED: el azar de CADA arena sale de su nombre — añadir una arena a la lista no cambia la suerte de las demás —)
     local sx, sy = level:getSpawnPx()
     local bpa = PlayerAdventure:new(sx + TILE_PX, sy)
     bpa.spawnX, bpa.spawnY = bpa.x, bpa.y
@@ -282,6 +283,8 @@ function love.load(arg)
     if #list == 0 then for _, n in ipairs(DEFAULT) do list[#list + 1] = 'assets/levels/' .. n .. '.json' end end
     for _, path in ipairs(list) do
         local name = path:match('([^/]+)%.json$')
+        ARENA_SEED = 0
+        for i = 1, #name do ARENA_SEED = (ARENA_SEED * 31 + name:byte(i)) % 2147483647 end
         local level = Level.new(path)
         if os.getenv('BUILD') then
             local t0 = love.timer.getTime()
