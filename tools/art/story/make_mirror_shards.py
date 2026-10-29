@@ -4,16 +4,15 @@
 # el MISMO lienzo (48x64): dibujadas en el mismo punto, encajan solas y el espejo se va completando.
 #   frame.png            el marco dorado con su pie y el fondo oscuro (sin cristal)
 #   glass.png            el cristal ENTERO, sin grietas (el espejo restaurado)
-#   shard_1..7.png       los 7 fragmentos, uno por jefe y en el orden de la historia:
-#                        1 Rey Gummy · 2 Mega Crabby · 3 Nave Malvada · 4 Gran Bola de Nieve ·
-#                        5 Mega Crabby helado · 6 Mega Crabby lúgubre · 7 el Espejo (el del CENTRO: donde
-#                        chocó el monstruo, el último que se recupera)
+#   shard_<id>.png       un fragmento por jefe del catálogo assets/story/shards.json (el id es el que se guarda en la
+#                        partida; van en el sentido del reloj alrededor del centro por el orden de la historia; el
+#                        del Espejo, en el CENTRO: donde chocó el monstruo, el último que se recupera)
 #   shard_<n>a/b.png     Xtra Extremo: cada fragmento partido en dos (uno por cada jefe de la pareja)
 # Cada fragmento refleja un poco el color de su isla. Estilo del juego: contorno = el tono más oscuro
 # del propio cristal (nunca negro), luz arriba-izquierda.
 #   python3 tools/art/story/make_mirror_shards.py            → solo la vista previa
 #   python3 tools/art/story/make_mirror_shards.py --apply    → escribe los assets
-import math, os, sys
+import json, math, os, sys
 from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -34,20 +33,31 @@ EDGE = rgb('#34508c')
 GOLD = [rgb(c) for c in ('#fff2a8', '#f0c040', '#b87c20', '#6c4418')]
 BACK = rgb('#161a2a')
 
-# Semillas de los fragmentos (Voronoi): la 7 es el punto del golpe, algo descentrado; las otras seis lo
-# rodean, irregulares. (dx, dy) en fracción de los radios del óvalo.
-SEEDS = [
-    (-0.50, -0.62),      # 1 arriba-izquierda
-    (0.42, -0.70),       # 2 arriba-derecha
-    (0.74, -0.02),       # 3 derecha
-    (0.36, 0.66),        # 4 abajo-derecha
-    (-0.40, 0.72),       # 5 abajo-izquierda
-    (-0.76, 0.06),       # 6 izquierda
-    (-0.06, -0.04),      # 7 centro
-]
-WEIGHT = [0, 2, -1, 1, -2, 1, 18]                 # (px²: el del centro, algo más pequeño... o grande)
-TINT = [rgb(c) for c in ('#a0f098', '#ffe498', '#c4c4dc', '#ffffff', '#98f0ff', '#d0a4ff', '#ffa48c')]
-SPLIT = [18, -14, 12, -20, 16, -10, 22]           # Xtra: giro (grados) del corte respecto al ancho del fragmento
+# LOS FRAGMENTOS salen del catálogo (assets/story/shards.json: id, orden de la historia, color de su isla, `seed`
+# opcional): un jefe nuevo = una línea allí y volver a pasar esto con --apply. Voronoi: el del Espejo (`final`) es el
+# punto del golpe, algo descentrado; los demás lo rodean en ANILLO en el sentido del reloj por el orden de la historia
+# (empezando arriba a la izquierda), algo irregulares. (dx, dy) en fracción de los radios del óvalo; índice = id - 1
+CATALOG = json.load(open(os.path.join(HERE, '..', '..', '..', 'assets', 'story', 'shards.json')))['shards']
+N = len(CATALOG)
+assert sorted(c['id'] for c in CATALOG) == list(range(1, N + 1)), 'los ids de shards.json tienen que ser 1..N'
+ORDER = [c['id'] for c in CATALOG]                # el de la historia (src/story/Shards.lua ORDER)
+RING = [c['id'] for c in CATALOG if not c.get('final')]
+A0 = math.radians(-129)                           # (el primero, arriba a la izquierda)
+SEEDS, WEIGHT, TINT, SPLIT = [None] * N, [0] * N, [None] * N, [0] * N
+for c in CATALOG:
+    i = c['id'] - 1
+    if c.get('seed'):
+        SEEDS[i] = tuple(c['seed'])
+    elif c.get('final'):
+        SEEDS[i] = (-0.06, -0.04)
+    else:
+        k = RING.index(c['id'])
+        a = A0 + 2 * math.pi * k / len(RING)
+        rr = 0.8 + 0.05 * math.sin(c['id'] * 2.7)            # (algo irregular, siempre igual para ese id)
+        SEEDS[i] = (round(math.cos(a) * rr, 3), round(math.sin(a) * rr, 3))
+    WEIGHT[i] = 16 if c.get('final') else 0                 # (px²: el del centro, algo más grande)
+    TINT[i] = rgb(c['tint'])
+    SPLIT[i] = (c['id'] * 29) % 37 - 18                     # Xtra: giro (grados) del corte respecto al ancho
 TINT_K = 0.36
 
 
@@ -82,19 +92,19 @@ def mix(a, b, k):
 
 
 def build():
-    ids = {}                                                  # (x, y) → fragmento 0..6
+    ids = {}                                                  # (x, y) → fragmento 0..N-1
     for y in range(H):
         for x in range(W):
             if in_glass(x, y):
                 ids[(x, y)] = shard_of(x, y)
     cen = []
-    for i in range(7):
+    for i in range(N):
         pts = [p for p, s in ids.items() if s == i]
         cen.append((sum(p[0] for p in pts) / len(pts), sum(p[1] for p in pts) / len(pts)))
     # Xtra: cada fragmento se corta por su centro A LO ANCHO (perpendicular a su eje largo, con un pequeño
     # giro), para que las dos mitades sean trozos y no astillas
     ang = []
-    for i in range(7):
+    for i in range(N):
         pts = [p for p, s in ids.items() if s == i]
         sxx = sum((p[0] - cen[i][0]) ** 2 for p in pts)
         syy = sum((p[1] - cen[i][1]) ** 2 for p in pts)
@@ -192,7 +202,7 @@ def main():
     ids, halves, ang = build()
     files = {'frame.png': frame(), 'glass.png': glass_whole(ids)}
     sizes = []
-    for i in range(7):
+    for i in range(N):
         px = {p for p, s in ids.items() if s == i}
         files['shard_%d.png' % (i + 1)] = piece(px, TINT[i])
         ha = {p for p in px if halves[p] == 0}
@@ -203,39 +213,40 @@ def main():
     for i, s in enumerate(sizes):
         print('  fragmento %d: %d px (mitades %d + %d)' % ((i + 1,) + s))
 
-    # vista previa: el espejo llenándose (0..7), el entero, cada fragmento suelto y sus mitades
+    # vista previa: el espejo llenándose (0..N, en el orden de la historia), el entero, cada fragmento suelto y sus mitades
     S, PAD = 5, 8
-    cols = 9
+    cols = N + 2
     cw, ch = W * S + PAD, H * S + PAD
     pv = Image.new('RGBA', (cols * cw + PAD, 4 * ch + PAD), rgb('#2c3048') + (255,))
 
     def put(im, col, row):
         pv.alpha_composite(im.resize((W * S, H * S), Image.NEAREST), (PAD + col * cw, PAD + row * ch))
 
-    for n in range(8):                                        # fila 0: 0..7 fragmentos
+    for n in range(N + 1):                                    # fila 0: 0..N fragmentos
         m = files['frame.png'].copy()
-        for i in range(n):
-            m.alpha_composite(files['shard_%d.png' % (i + 1)])
+        for k in ORDER[:n]:
+            m.alpha_composite(files['shard_%d.png' % k])
         put(m, n, 0)
     whole = files['frame.png'].copy(); whole.alpha_composite(files['glass.png'])
-    put(whole, 8, 0)
-    for i in range(7):                                        # fila 1: sueltos; fila 2: mitades (separadas)
-        put(files['shard_%d.png' % (i + 1)], i, 1)
+    put(whole, N + 1, 0)
+    for col, k in enumerate(ORDER):                           # fila 1: sueltos; fila 2: mitades (separadas)
+        i = k - 1
+        put(files['shard_%d.png' % k], col, 1)
         a = ang[i]
         ox, oy = int(round(-math.sin(a) * 2)), int(round(math.cos(a) * 2))
         ta = Image.new('RGBA', (W + 8, H + 8), (0, 0, 0, 0))
         ta.alpha_composite(files['shard_%da.png' % (i + 1)], (4 + ox, 4 + oy))
         ta.alpha_composite(files['shard_%db.png' % (i + 1)], (4 - ox, 4 - oy))
-        put(ta.crop((4, 4, 4 + W, 4 + H)), i, 2)
-    for n in (0, 5, 9, 14):                                   # fila 3: Xtra, el espejo con n mitades
+        put(ta.crop((4, 4, 4 + W, 4 + H)), col, 2)
+    for col, n in enumerate((0, 5, 11, 2 * N)):               # fila 3: Xtra, el espejo con n mitades
         m = files['frame.png'].copy()
         k = 0
-        for i in range(7):
+        for sid in ORDER:
             for h in 'ab':
                 if k < n:
-                    m.alpha_composite(files['shard_%d%s.png' % (i + 1, h)])
+                    m.alpha_composite(files['shard_%d%s.png' % (sid, h)])
                 k += 1
-        put(m, (0, 1, 2, 3)[(0, 5, 9, 14).index(n)], 3)
+        put(m, col, 3)
     os.makedirs(os.path.dirname(PREVIEW), exist_ok=True)
     pv.save(PREVIEW)
     print('  vista previa → ' + PREVIEW)

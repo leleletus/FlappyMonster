@@ -1,8 +1,8 @@
 # Story mode: worlds, saves, lives, results, shards
 
-Story mode is a thin layer of DATA and bookkeeping around `AdventureState`: six worlds (islands) of levels ending in a
-boss, three save slots, lives that persist, a results screen with grades and rewards, difficulties with unlocks, and
-the seven mirror shards. The lore is in [story](story.md).
+Story mode is a thin layer of DATA and bookkeeping around `AdventureState`: seven worlds (islands) of levels ending in
+a boss, three save slots, lives that persist, a results screen with grades and rewards, difficulties with unlocks, and
+the mirror shards (one per boss + the Mirror's: `assets/story/shards.json`). The lore is in [story](story.md).
 
 **Files** (`src/story/`)
 
@@ -12,7 +12,7 @@ the seven mirror shards. The lore is in [story](story.md).
 | `Save.lua` | 3 slots + global unlocks (see [save-data](../architecture/save-data.md)) |
 | `Run.lua` | the open slot: node states, `complete(id, result)`, lives, Game Over, rewards, unlocks, bonus results, shards |
 | `Score.lua` | scoring as data: weights, par time, grades, rewards |
-| `Shards.lua` | which boss drops which shard; the in-level drop and pickup |
+| `Shards.lua` | the shard catalog (`assets/story/shards.json`: which boss drops which shard, story order); the in-level drop and pickup |
 | `BonusMatch.lua` | the King-of-the-Hill match against the bot ([bonus-and-bot](bonus-and-bot.md)) |
 | `Film.lua`, `Stage.lua`, `films/` | the cinematics ([cinematics](cinematics.md)) |
 
@@ -37,6 +37,21 @@ Xtra Extreme. **Harness:** `story_flow` (the real game end to end; many named ca
 - `src/story/Save.lua`: 3 slots `story1..3.sav` + global `story.sav` (unlocks) in the save dir — Lua tables loaded
   without an environment; never a `.lua` name. `src/story/Run.lua`: the open slot; `state(w, k)` = done / open /
   locked (levels open in order, the next world when the boss is beaten), `complete(id, result)` saves, `frontier()`.
+
+- **The worlds today:** 1 `pradera`, 2 `costa`, **3 `jungla`** (0.5.99: `senda_del_dosel`, `rio_revuelto`,
+  `templo_de_los_pesos`, `la_estampida`, boss `templo_escarabajo`, bonus `claro_de_la_balanza`), 4 `fortaleza`,
+  5 `nieve`, 6 `cuevas`, 7 `final`.
+
+- **A WORLD INSERTED IN THE MIDDLE (an expansion) — `Save.VERSION` 2, `Save.WORLDS`, `Save.migrate`.** Saves store
+  the current world by POSITION (`world`) and the world grades by position (`worldReward[w]`). `Save.WORLDS[v]` lists
+  the world ids of each save version (1 = the six worlds before the jungle, 2 = with it). On load, a save of an older
+  version is translated step by step: `world` and the `worldReward` keys are remapped by id to today's positions, and
+  for each world that did not exist in the old list, if the save had beaten the boss of the world BEFORE it, the world
+  AFTER it is marked open (`open[id] = true`). `Run.worldOpen(w)` = the previous boss beaten OR `open[W.id]`;
+  `Run.gameOver` on `restartGame` (Xtra) clears `open` with the rest. The user's decision (0.5.99, asked how old saves
+  should get the jungle): **"Keep their progress, jungle open"** — a save already past the Coast keeps the Fortress and
+  everything after it open, and the jungle appears open for it; new saves must beat the jungle boss to open the
+  Fortress. To add worlds: `Save.VERSION` + 1 and its list in `Save.WORLDS`. Harness `story_flow` `migrar_mundos`.
 
 ## Finishing a level
 
@@ -113,24 +128,28 @@ Xtra Extreme. **Harness:** `story_flow` (the real game end to end; many named ca
 ## The mirror shards
 
 The monster could FLAP (Flappy mode) — by a MAGIC of its own: it has NO WINGS, never draw or mention wings. It crashed
-into an old mirror in the volcano, which broke into 7 SHARDS; its REFLECTION (the Mirror boss) walked out and stole
+into an old mirror in the volcano, which broke into SHARDS (8 today); its REFLECTION (the Mirror boss) walked out and stole
 the flap, so the adventure is on foot with only the double jump (the little magic left). Whoever finds a shard grows
 huge and furious = "LA FURIA DEL ESPEJO" / "The Fury of the Mirror" (every boss; the Evil Ship's pilot found one
-like the rest). Each boss drops its shard; all 7 restore the mirror, the bosses shrink back and the monster flaps
+like the rest). Each boss drops its shard; all of them restore the mirror, the bosses shrink back and the monster flaps
 again. No dialogue or text: animation + music.
 
 - **Shards** (3.68.0): images `assets/images/story/mirror/` from `tools/art/story/make_mirror_shards.py --apply` (`frame.png`,
-  `glass.png` whole, `shard_1..7.png` in story order — Gummy King, Giant Pufferfish (was Mega Crabby), Evil Ship, Snowball, Icy Mega, Giant
-  Hopper (was Mega Gloomy), Mirror = the CENTRE piece — and `shard_<n>a/b.png` for Xtra Extreme; all on one 48x64 canvas so they
-  assemble). Logic `src/story/Shards.lua`: `Shards.LEVEL[level] = n`, `pending(level, data)`, `owned/count(data)`
-  (7, or 14 halves when the difficulty has `bossExtra`), `migrate` (old saves: shards of beaten bosses granted; halves of a save whose difficulty no longer has `bossExtra` become the whole shard).
+  `glass.png` whole, `shard_<id>.png` — Gummy King 1, Giant Pufferfish (was Mega Crabby) 2, Giant Rhino Beetle 8 (0.5.99), Evil Ship 3,
+  Snowball 4, Icy Mega 5, Giant Hopper (was Mega Gloomy) 6, Mirror 7 = the CENTRE piece; story order 1 2 8 3 4 5 6 7 — and
+  `shard_<n>a/b.png` for Xtra Extreme; all on one 48x64 canvas so they assemble). **Catalog `assets/story/shards.json`**
+  (0.5.99: the single list, in story order; ids are saved, never renumbered — see [story](story.md#the-shards)). Logic
+  `src/story/Shards.lua`: `LIST`, `ORDER` (ids in story order), `LEVEL[level] = id`, `BOSSES` (all but the final),
+  `TOTAL`, `FINAL`; `pending(level, data)`, `owned/count(data)` (`TOTAL`, or twice as many halves when the difficulty
+  has `bossExtra`), `migrate` (old saves: shards of beaten bosses granted; halves of a save whose difficulty no longer has `bossExtra` become the whole shard).
   In a level (STORY + single player only, not part of the shared sim): `AdventureState` `args.shards = { ids, onGet,
   final }` → `Shards.drops`: every boss that dies (or `releasesZone()`) drops the next id (with `bossExtra` — no difficulty today —: original 'a', copy
   'b'); it rises and hovers, is picked up by touch (after 5 s it homes to the player; touching the finish collects
   it), saved at once (`Run.addShard`; save field `shards`), popup `hud.shard`. `final` (the Mirror's): on pickup the
   player is frozen + invulnerable, the screen fades to white (`ENDING_TIME`) and `onFinish(result)` gets
   `result.ending = true` WITHOUT touching the finish → the map plays the ending film, then the usual results. The
-  world map shows a card with the mirror (owned shards in place) and "n / 7" (`story.shards`). Xtra's game-over
+  world map shows a card with the mirror (owned shards in place) and "n / 8" (`story.shards`). The jungle boss's drop
+  is checked by `story_flow` `fragmento_jungla` (shard 8 dropped, picked up, saved when the level ends). Xtra's game-over
   restart also clears the shards.
 
 ## Tests

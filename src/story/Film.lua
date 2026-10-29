@@ -10,7 +10,7 @@
 --     (imagen y sonido no se separan aunque el juego vaya a tirones).
 -- `c` (el contexto que reciben las escenas): c.t (s dentro de la escena), c.dur, c.beat (s por pulso),
 -- c.at(cue) (s), c.b(pulsos) (s), c.k(t0, t1) (0..1 entre dos tiempos), c.shared (lo que pasa de una escena a
--- la siguiente), c.v (lo de esta escena), c.xtra (Xtra extremo: 14 mitades), c.sfx(nombre, tono, volumen).
+-- la siguiente), c.v (lo de esta escena), c.xtra (Xtra extremo: las mitades), c.sfx(nombre, tono, volumen).
 local json = require 'libs/json'
 
 local Film = {}
@@ -22,6 +22,17 @@ function Film.data()
     return DATA
 end
 
+-- Cuántos pulsos dura una escena: `beats` + `plus` (por cada jefe con fragmento / cada fragmento del catálogo:
+-- assets/story/shards.json) — = tools/music/story_music.py scene_beats
+function Film.beats(s)
+    local n = s.beats
+    if s.plus then
+        local Shards = require 'src/story/Shards'
+        n = n + (s.plus.bosses or 0) * #Shards.BOSSES + (s.plus.shards or 0) * Shards.TOTAL
+    end
+    return n
+end
+
 -- La línea de tiempo de una película: { music, next (la pista del nivel que sigue), total, scenes = { { id, t0, dur, beat, beats, cues = { nombre = s }, enter = 'cut'... } } }
 function Film.timeline(name)
     local def = Film.data()[name]
@@ -29,7 +40,8 @@ function Film.timeline(name)
     local tl = { name = name, music = def.music, next = def.next, bars = def.bars ~= false, scenes = {}, total = 0 }
     for i, s in ipairs(def.scenes) do
         local beat = 60 / s.bpm
-        local sc = { id = s.id, index = i, t0 = tl.total, dur = s.beats * beat, beat = beat, beats = s.beats, cues = {}, enter = s['in'] or 'cut' }
+        local beats = Film.beats(s)
+        local sc = { id = s.id, index = i, t0 = tl.total, dur = beats * beat, beat = beat, beats = beats, cues = {}, enter = s['in'] or 'cut' }
         for k, v in pairs(s.cues or {}) do sc.cues[k] = v * beat end
         tl.scenes[i] = sc
         tl.total = tl.total + sc.dur

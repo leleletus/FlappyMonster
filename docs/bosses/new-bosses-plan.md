@@ -70,7 +70,7 @@ giant by touching a mirror shard ("La Furia del Espejo").
       a secret map node that appears after beating the Mirror. No shard; the secret collectible (section 3) is still open.
 - [ ] The user's verdict on the fight.
 
-### 5. The jungle (future island) — not in the original plan
+### 5. The jungle (world 3 since 0.5.99) — not in the original plan
 The user (2026-10-28): a future jungle / temple island (weights, crates, carryables + new enemies and mechanics). Its
 boss, chosen by the user: the **Giant Rhino Beetle** (not a crab: "there are too many crabs already"), the giant of a
 new jungle-only enemy, the Rhino Beetle. Fight proposed and liked by the user: horn charge into the temple walls (stones
@@ -98,5 +98,7 @@ flips it onto its back = the window to hit it. It will need more mirror shards (
 - [x] (0.5.77) Its level `templo_escarabajo` (Free Play; the arena alone was not listed anywhere: the user could not
       find it) + a search box in Free Play and in the editor's Open dialog.
 - [ ] The user's verdict on both (playing them).
-- [ ] The jungle island, its levels, the boss's story level and the shard count.
+- [x] (0.5.99) The jungle island as world 3 of the story (`senda_del_dosel`, `rio_revuelto`, `templo_de_los_pesos`,
+      `la_estampida`, boss `templo_escarabajo`, bonus `claro_de_la_balanza`), the boss's shard (8, the mirror re-cut in
+      8 pieces) and data-driven films ([cinematics](../story/cinematics.md)). Levels not played yet.
 

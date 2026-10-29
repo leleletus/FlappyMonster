@@ -100,11 +100,12 @@ local function zoneNodes(nav, area, level)
         local y = n.y or (n.r * TILE_PX - 40)
         if n.x >= area.x0 and n.x < area.x1 and y >= area.y0 and y < area.y1 and not flooded(level, n.x, y) then   -- (ni lo que ahora está bajo el agua)
             rect[id], anyR = true, true
-            if level:isStandable(n.c, n.r) then
+            if BotNav.standable(nav, n, level) then
                 all[id], anyA = true, true
                 -- (ni FIRME lo que está bajo el agua: en lago_de_cristal la zona llega al fondo del lago, bajo el hielo
                 -- fino; prefería el fondo, al que no se llega hasta que se rompe el hielo, y se pasaba la parada vagando)
-                if not level:getDef(n.c, n.r + 1).thinIce and not level:liquidOfCell(n.c, n.r) then firm[id], anyF = true, true end
+                -- (un cuerpo que se mueve — un platillo — es firme: no es hielo)
+                if (n.body or not level:getDef(n.c, n.r + 1).thinIce) and not level:liquidOfCell(n.c, n.r) then firm[id], anyF = true, true end
             end
         end
     end
@@ -125,8 +126,10 @@ end
 -- La zona que le conviene al bot ahora (se recalcula cada segundo)
 function Bot.pickZone(nav, level, x, y, clock)
     local best, bs
+    BotNav.track(nav, level)                                 -- (los nodos de los cuerpos que se mueven, al día)
     for _, a in ipairs(goalZones(level)) do
-        if not a._navAt or clock - a._navAt > 1 or clock < a._navAt then
+        -- (una zona MONTADA en un cuerpo que se mueve — `ride`: un platillo — cambia de fila: cada vez)
+        if a.ride or not a._navAt or clock - a._navAt > 1 or clock < a._navAt then
             a._nodes, a._firm = zoneNodes(nav, a, level)
             a._navAt = clock
         end
@@ -356,7 +359,7 @@ function Bot:_water(dt, level, goals)
         w.gx, w.gy = nil, nil
         for pass = 1, 2 do                               -- primero lo seco de su destino; si no hay, cualquier casilla seca
             for id, n in pairs(self.nav.nodes) do
-                if (pass == 2 or (goals and goals[id])) and n.y and not flooded(level, n.x, n.y) and level:isStandable(n.c, n.r) then
+                if (pass == 2 or (goals and goals[id])) and n.y and not flooded(level, n.x, n.y) and BotNav.standable(self.nav, n, level) then
                     local d = math.abs(n.x - pa.x) + 2.5 * math.abs(n.y - pa.y)
                     if not bd or d < bd then bd, w.gx, w.gy = d, n.x, n.y end
                 end
@@ -391,6 +394,7 @@ end
 -- Los bits de este fotograma
 function Bot:think(dt, level, target)
     local pa = self.pa
+    BotNav.track(self.nav, level)                           -- (los nodos de los cuerpos que se mueven: dónde están ahora)
     self.cd = math.max(0, self.cd - dt)
     self.clock = self.clock + dt
     local bits = 0
@@ -584,7 +588,7 @@ function Bot:think(dt, level, target)
             if kind == 'roam' and not e.walk then return true end      -- (paseando por la zona: solo andando)
             -- (el grafo junta los dos estados de los bloques ON/OFF: fuera lo que AHORA no tiene suelo)
             local n = self.nav.nodes[e.to]
-            if n == nil or not level:isStandable(n.c, n.r) then return true end
+            if n == nil or not BotNav.standable(self.nav, n, level) then return true end
             -- (ni lo que AHORA está bajo el agua de una inundación: ahí la física es otra y no se sale igual)
             return n.y ~= nil and flooded(level, n.x, n.y)
         end)

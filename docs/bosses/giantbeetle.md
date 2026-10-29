@@ -1,7 +1,6 @@
 # Giant Rhino Beetle (Escarabajo Rinoceronte Gigante) — `giantbeetle`
 
-The JUNGLE boss (a future island: weights, crates and carryables; not in the story yet — it will need more mirror
-shards, [new-bosses-plan](new-bosses-plan.md) § 5). The Rhino Beetle ([enemies](../entities/enemies.md#rhino-beetle-beetle-0576--jungle-only))
+The JUNGLE boss (world 3 of the story since 0.5.99: weights, crates and carryables; [new-bosses-plan](new-bosses-plan.md) § 5). The Rhino Beetle ([enemies](../entities/enemies.md#rhino-beetle-beetle-0576--jungle-only))
 giant: the same 22x20 sheet at scale 12 with the gold RUNE of the Mirror's Fury and a glowing eye. Not a crab (the
 user: "there are too many crabs already"). Design approved by the user on 2026-10-28, with two additions of theirs:
 the beetle FIRED by the scale must SMASH into the ceiling (or anything above) and fall on its back, and the scale is a
@@ -11,10 +10,12 @@ charge, flip, toss, fly, slam + block, debris, wave, dust; `tools/art/enemies/ma
 the user — legs). **Sounds:** reused (`megaSlam/Step/Windup/Roar/Hurt/Fall`, `gustBlow` = the wings, `cavePebble`,
 `caveRumble`, the chunk's material `breakSound`, `scaleLaunch`, `headBump`); its own set is still open. **Arena:**
 `tools/levelgen/arenas/jefe_escarabajo.json` (`make_jefe_escarabajo.py`). **Music:** `templo` "El Templo"
-([music-history](../audio/music-history.md#el-templo-toolsmusictemplopy-boss-track-templo)). **Shard:** none yet.
+([music-history](../audio/music-history.md#el-templo-toolsmusictemplopy-boss-track-templo)). **Shard:** **8** (0.5.99; third in story order, the right-upper piece of the mirror — [story](../story/story.md#the-shards),
+`assets/story/shards.json`): it drops it while fleeing (`shardDrop`, at `THROW_T` of `dying_flee`); harness `story_flow`
+`fragmento_jungla` (dropped, picked up, saved when the level ends).
 **Level:** `templo_escarabajo` "Templo del Escarabajo" / "Beetle Temple" (`tools/levelgen/levels_boss.py`: a short
-jungle stretch with two Rhino Beetles, small boxes to throw them at and a Gummy, then the arena; tropical theme; in Free
-Play — not in the story yet). **Harnesses:** `giantbeetle_rules`, `boss_sim` / `boss_intro` / `online_boss` /
+jungle stretch with two Rhino Beetles, small boxes to throw them at and a Gummy, then the arena; tropical theme; the
+jungle's boss node in the story since 0.5.99, and in Free Play). **Harnesses:** `giantbeetle_rules`, `boss_sim` / `boss_intro` / `online_boss` /
 `boss_frames` with `LEVEL=` that arena, `sp_boss LEVEL=assets/levels/templo_escarabajo.json`.
 
 ## The arena: the temple of the scale

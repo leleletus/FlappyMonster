@@ -10,7 +10,7 @@
 import json, os, sys
 
 LEVELS = os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'levels')
-GROUND = {1, 4, 16, 17, 29, 30, 35, 36, 38, 39, 2, 10}
+GROUND = {1, 4, 16, 17, 29, 30, 35, 36, 38, 39, 2, 10, 40, 41, 42, 43}     # (40-43: barro, césped y sillares de la jungla, tablones de liana)
 
 
 def tid(raw): return raw % 16 + 16 * ((raw >> 17) % 16)

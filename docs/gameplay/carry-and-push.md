@@ -64,6 +64,9 @@ concrete type.
   step in SP / server, once per frame on the client). A player standing on it (`pa.standBody`) moves with it the next
   step (`rideBody`): it can go up and down without the player falling through or floating. Entities standing on
   something that moves are carried by whoever moves it (the Box rides another box; the Scale moves what is on its pans).
+- The BOT's nav graph has nodes on top of moving bodies too (0.5.99); an owner whose body moves along a known range
+  exposes `navPoses()` / `navPose(p)` (the Scale: one pose per tile of `travel`) so the graph is recorded at each pose:
+  [bonus and bot](../story/bonus-and-bot.md#zones-that-ride-a-moving-body-0599).
 
 ## Air (`Push`)
 

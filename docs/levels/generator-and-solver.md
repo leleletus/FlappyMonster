@@ -7,7 +7,7 @@ destroys the user's hand edits (`--show` does too). Always `python3 tools/levelg
 `tools/levelgen/retheme.py` has no `--help`: any unknown flag runs it over every level — always pass level names.
 
 **Files** (`tools/levelgen/`): `lib.py` (grid helpers), `levels_run.py`, `levels_hunt.py`, `levels_koth.py`,
-`levels_boss.py`, `levels_water.py`, `levels_batch2.py`, `levels_chase.py` (the builders), `build.py`, `retheme.py`
+`levels_boss.py`, `levels_water.py`, `levels_batch2.py`, `levels_chase.py`, `levels_jungle_1..4.py` + `levels_jungle_bonus.py` (the jungle, 0.5.99: one module per level; each docstring gives its build order) (the builders), `build.py`, `retheme.py`
 ([retheme](retheme.md)), `add_apples.py` (places food; re-run after a rebuild), `make_sets.py` (film sets),
 `arenas/` (test arenas + their generators; boss levels graft them).
 

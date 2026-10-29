@@ -24,13 +24,16 @@ Worlds.LIST = {
     { id = 'pradera',   levels = { 'valle_soleado', 'pradera_explosiva', 'bosque_interruptores' },                           boss = 'reino_gummy', bonus = 'isla_flotante' },
     -- 2 La Costa: trampolines y agua; del más suelto al más denso, y el arrecife (bucear) al final
     { id = 'costa',     levels = { 'playa_rebotes', 'jungla_colgante', 'canon_trampolines', 'arrecife_globo' },              boss = 'cala_resaca', bonus = 'cala_de_los_muelles' },   -- (Pez Globo Gigante; el Mega Crabby de guarida_cangrejo_rey pasa a jefe secreto)
-    -- 3 La Fortaleza: morteros y bombas primero; luego el taller denso y el tren (cámara automática)
+    -- 3 La Jungla (0.5.99): dos pisos a la vez, el río que se cruza dos veces, el templo de tres alas y la estampida
+    -- (cámara automática) hasta el templo del Escarabajo Gigante
+    { id = 'jungla',    levels = { 'senda_del_dosel', 'rio_revuelto', 'templo_de_los_pesos', 'la_estampida' },        boss = 'templo_escarabajo', bonus = 'claro_de_la_balanza' },
+    -- 4 La Fortaleza: morteros y bombas primero; luego el taller denso y el tren (cámara automática)
     { id = 'fortaleza', levels = { 'fabrica_morteros', 'cantera_dinamita', 'taller_trampas', 'tren_fugaz' },               boss = 'fortaleza_malvada', bonus = 'ciudadela_alterna' },
-    -- 4 Las Cumbres: nieve y congeladores; la Bola de Nieve a media isla; la torre (subir) antes del jefe
+    -- 5 Las Cumbres: nieve y congeladores; la Bola de Nieve a media isla; la torre (subir) antes del jefe
     { id = 'nieve',     levels = { 'cumbres_escarcha', 'fabrica_criogenica', 'lago_helado', 'torre_viento' },              boss = 'glaciar_cangrejo', bonus = 'lago_de_cristal' },
-    -- 5 Las Cuevas: cristal, los dos laberintos de agua y el templo a oscuras justo antes del jefe a oscuras
+    -- 6 Las Cuevas: cristal, los dos laberintos de agua y el templo a oscuras justo antes del jefe a oscuras
     { id = 'cuevas',    levels = { 'cavernas_cristal', 'nivel01', 'laberinto_submarino', 'templo_del_eco' },             boss = 'gruta_del_farol', bonus = 'cripta_del_silencio' },   -- (Saltarín Gigante; el Mega Crabby lúgubre de gruta_lugubre pasa a jefe secreto)
-    -- 6 El Final (el volcán): lava; la lluvia de pinchos (cámara automática) es la erupción, antes del Espejo
+    -- 7 El Final (el volcán): lava; la lluvia de pinchos (cámara automática) es la erupción, antes del Espejo
     { id = 'final',     levels = { 'carrera01', 'caldera_roja', 'lluvia_pinchos', 'huida_del_espejo' },                                       boss = 'ruta_del_espejo', bonus = 'cantera_real',
       secret = 'isla_del_groove',                                             -- (El Groove, el jefe secreto)
       films = { huida_del_espejo = 'chase', ruta_del_espejo = 'lair' },      -- (la emboscada; la guarida)

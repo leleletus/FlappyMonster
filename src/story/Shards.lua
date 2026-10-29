@@ -1,6 +1,6 @@
 -- src/story/Shards.lua
 -- LOS FRAGMENTOS DEL ESPEJO (historia "El Espejo Roto", docs/historia/HISTORIA.md). Cada jefe guarda uno:
--- al vencerlo lo SUELTA, el jugador lo recoge y queda en su partida (Run.addShard). Con los siete, el final.
+-- al vencerlo lo SUELTA, el jugador lo recoge y queda en su partida (Run.addShard). Con todos, el final.
 -- Con dos jefes por arena (`bossExtra`: Xtra extremo hasta 0.5.23; hoy ninguna dificultad) cada uno suelta MEDIO
 -- fragmento ('3a' el original, '3b' la copia).
 --   Shards.LEVEL[nivel] = nº de fragmento       Shards.ids(n, xtra) → { '3' } | { '3a', '3b' }
@@ -13,13 +13,18 @@ local Difficulty = require 'src/core/Difficulty'
 
 local Shards = {}
 
-Shards.TOTAL = 7
--- (el orden de la historia: assets/images/story/mirror/shard_<n>.png)
-Shards.LEVEL = {
-    reino_gummy = 1, cala_resaca = 2, fortaleza_malvada = 3, lago_helado = 4,     -- (2: el Pez Globo Gigante; antes el Mega Crabby)
-    glaciar_cangrejo = 5, gruta_del_farol = 6, ruta_del_espejo = 7,                -- (6: el Saltarín Gigante; antes el Mega Crabby lúgubre)
-}
-Shards.FINAL = 7
+-- El catálogo, en el orden de la historia: assets/story/shards.json (la única lista: el juego, el arte del espejo y
+-- la música de las películas la leen). Una expansión con más jefes = una línea allí, sin tocar esto ni las películas.
+--   Shards.LIST[i] = { id, level, tint, normal, final }   Shards.ORDER = ids en orden   Shards.LEVEL[nivel] = id
+--   Shards.TOTAL = cuántos   Shards.FINAL = el id del Espejo   Shards.BOSSES = los demás (en orden)
+Shards.LIST = require('libs/json').decode(love.filesystem.read('assets/story/shards.json')).shards
+Shards.ORDER, Shards.LEVEL, Shards.BOSSES = {}, {}, {}
+for _, s in ipairs(Shards.LIST) do
+    Shards.ORDER[#Shards.ORDER + 1] = s.id
+    Shards.LEVEL[s.level] = s.id
+    if s.final then Shards.FINAL = s.id else Shards.BOSSES[#Shards.BOSSES + 1] = s end
+end
+Shards.TOTAL = #Shards.LIST
 
 function Shards.isXtra(difficulty) return Difficulty.of(difficulty, 'bossExtra', false) == true end
 
@@ -28,10 +33,10 @@ function Shards.ids(n, xtra)
     return { tostring(n) }
 end
 
--- Los que tiene la partida, en orden, y cuántos son en total (7; Xtra extremo: 14 mitades)
+-- Los que tiene la partida, en orden, y cuántos son en total (TOTAL; Xtra extremo: el doble de mitades)
 function Shards.owned(data)
     local out, xtra = {}, Shards.isXtra(data.difficulty)
-    for n = 1, Shards.TOTAL do
+    for _, n in ipairs(Shards.ORDER) do
         for _, id in ipairs(Shards.ids(n, xtra)) do
             if data.shards and data.shards[id] then out[#out + 1] = id end
         end
@@ -60,7 +65,7 @@ function Shards.migrate(data)
         -- (las MITADES de cuando Xtra extremo tenía dos jefes por arena — hasta 0.5.23 —: si su dificultad ya no
         --  los pone, cada mitad recogida cuenta como el fragmento entero: para acabar el nivel había que vencer a los dos)
         if not Shards.isXtra(data.difficulty) then
-            for n = 1, Shards.TOTAL do
+            for _, n in ipairs(Shards.ORDER) do
                 local a, b = n .. 'a', n .. 'b'
                 if data.shards[a] or data.shards[b] then data.shards[tostring(n)] = true end
                 data.shards[a], data.shards[b] = nil, nil

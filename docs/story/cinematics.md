@@ -11,6 +11,10 @@ ONE source for picture and music), `assets/story/sets/crater.json`, `ladera.json
 by `tools/levelgen/make_sets.py`), music from `tools/music/story_music.py`, sounds from `tools/sounds/story.py`.
 
 **To change a time:** edit `films.json`, regenerate the music (`story_music.py`, then `levels.py`).
+**To add a boss with a shard** (an expansion with more worlds): one line in `assets/story/shards.json` (in story order;
+its world in `Worlds.LIST`, its island on the map), then `python3 tools/art/story/make_mirror_shards.py --apply` (the
+mirror re-cut with one more piece) and `~/.venvs/fm-music/bin/python tools/music/story_music.py intro ending chase lair`
+(the film music, longer by itself). Nothing in the films' code changes (see "Data-driven" below).
 **Harness:** `story_film` (`FILM=intro|ending|chase|lair|credits`, `XTRA=1`, `NOSHOTS=1`). The credits are a film too: [credits](credits.md).
 
 **Pre-level films:** a world can name a film to play the FIRST time a level is entered (`Worlds.LIST` `films =
@@ -33,6 +37,28 @@ and a level already cleared never plays it. Today: `chase` before `huida_del_esp
 Test saves to watch them: `python3 tools/story/test_saves.py 2=lluvia_pinchos 3=huida_del_espejo` (overwrites those
 slots; the films stay unseen, so re-run it to watch them again).
 
+## Data-driven: how many bosses and shards there are is never written in a film
+
+Since 0.5.99 (the user, below) the films take every count and place from data:
+- `common.lua` `K.targets()` = one target per boss of the catalog (`Shards.BOSSES`, `assets/story/shards.json`, in story
+  order), found in `Worlds.LIST`: a world's boss stands by its castle (`castle`, drawn by the map via `filmBoss[w]`),
+  a mid-island boss (the Snowball Boss of `lago_helado`) by its node with its map art (`art` = `nodeBoss` of
+  `overworld.json`, drawn by `K.drawExtras`); `normal` (its normal enemy before the shard) comes from the catalog.
+  `K.count()`, `K.all(v)` (one value per boss), `K.mirrorWorld()` / `K.volcanoXY()` (the world whose boss drops the
+  FINAL shard), `K.FINAL` (that shard's id), `K.note(i, n)` (the rising major-scale note of piece i of n, last on the
+  top tonic: 7 → 0 2 4 5 7 9 12, 8 → 0 2 4 5 7 9 11 12).
+- `K.far()` = the camera of the WIDE map shots: the box of all the land in `overworld.json` (one tile of margin),
+  centred between the letterbox bars, zoom = what fits it, at most 0.5 (the old one). With the jungle (7 islands) it
+  is ~0.33: everything is smaller than before.
+- `films.json` `plus = { bosses = n, shards = n }`: a scene that goes one by one lasts `beats` + n per boss / per
+  shard (`scatter` 2 + 1/boss, `fury` 2 + 2/boss, `pieces` 2 + 2/shard, `shrink` 2 + 2/boss). `Film.beats(s)` and
+  `story_music.py` `scene_beats(s)` compute the same.
+- `story_music.py` reads the catalog too: `fit(notes, n, scale)` stretches (or shrinks) a melody written for 6/7 to
+  `n` notes keeping its first and last (inserts the scale note nearest the middle of the widest leap); `rise(n)` =
+  the ending's notes (= `K.note`). With 6 bosses it gives exactly the old notes; the descending bells of `scatter` walk
+  the A harmonic minor scale down to G#; `fury`'s roots, the chase/lair bells and the `shrink` bars (one map-theme
+  bar per two bosses, the dominant after them) follow `n`.
+
 ## Details
 
 - **Cinematics are rendered BY THE GAME** (user's rule: never pre-rendered or animated outside it; real sprites,
@@ -53,7 +79,8 @@ slots; the films stay unseen, so re-run it to watch them again).
   `story_intro` / `story_ending` / `story_chase` / `story_lair` (`assets/music/story/`, no loop; verified by numbers only: track = film length,
   hits land on the cues). Change a time in films.json → regenerate the music (+ `levels.py`). Material: the map tune
   (= the monster), "la llamada" on the music box, the mirror motif + the Mirror boss theme's head in A minor (= the
-  Reflection); the ending is in A major and its seven rising notes are the pitches the `storyClink` sfx sings.
+  Reflection); the ending is in A major and its rising notes (one per shard, `rise`) are the pitches the `storyClink`
+  sfx sings (`K.note`).
 
 - Sets: `assets/story/sets/crater.json`, `ladera.json` (the volcano slope at dusk, like `huida_del_espejo`; a ditch
   and a lava lake), `ladera_noche.json` (the same at night, like `ruta_del_espejo`) (`tools/levelgen/make_sets.py`;
@@ -61,7 +88,7 @@ slots; the films stay unseen, so re-run it to watch them again).
   `assets/sounds/story/` (`tools/sounds/story.py`, ids `story*`, `shardDrop`, `shardGet`).
 
 - Harnesses: `story_film` (both films through the real state, durations, music clock, skip; 3 captures per scene;
-  `XTRA=1`), `story_flow` (`fragmento`, `final`, `migrar`). Contact sheets: `FlappyMonster_pruebas/historia/`.
+  `XTRA=1`), `story_flow` (`fragmento`, `fragmento_jungla`, `final`, `migrar`). Contact sheets: `FlappyMonster_pruebas/historia/`.
 
 ## History and decisions (dated notes)
 
@@ -77,7 +104,7 @@ conflicts with the sections above, the sections above describe the current behav
   canvas and cut to the GLASS SHAPE with a mask shader, glass sheen on top. (4) Monster poses as in the levels
   (`K.pose`: idle = frame 3, walk = 3↔2 at 8 fps + puff + 'step' every other frame via `K.steps`, rising 2, falling
   1↔3 at 6 fps, crouch 5 at the SAME centre — it used to be pushed 18 px into the floor; `K.hop` = idle the moment
-  it lands). (5) BEFORE its shard each boss is its NORMAL enemy (`K.NORMAL`, drawn by `K.drawExtras`): Gummy, Crabby
+  it lands). (5) BEFORE its shard each boss is its NORMAL enemy (`K.NORMAL` then; today `normal` in shards.json, drawn by `K.drawExtras`): Gummy, Crabby
   (no claws/spike), the ship small, a snowball, Icy Crabby with its small claws, Gloomy Crabby; after shrinking too.
   Still open (user's optional idea): Evil Monster sprites standing outside its ship, the shard summoning the ship.
 - 3.100.0 — the user: going from the level before the chase to the chase, and from it to the Mirror boss, was
@@ -113,3 +140,11 @@ conflicts with the sections above, the sections above describe the current behav
   (camera and monster where `escape` left them) and the dusk set dissolves into the night set over `DUSK_OUT` beats;
   `follow` starts from that camera and pans smoothly. And the level music must fade WITH the fade to black at the end
   of the chase outro → `RunOut` lowers it to zero in the same 0.7 s (`Sound.musicVolume`).
+- 0.5.99 — the jungle's boss (the Giant Rhino Beetle) got its shard (id 8, third in story order) and the user asked:
+  "haz que tanto la cinemática como la canción no estén hardcoded: si algún día decido añadir un pack de expansión
+  con más mundos y bosses, no requiera reescribir todo esto… mi filosofía siempre ha sido pensar siempre en el
+  futuro" → the catalog `assets/story/shards.json` and the data-driven films above (targets, counts, `plus`, `fit`,
+  `rise`); the hard-coded world numbers (the volcano was `bossXY(6)`), the "six"/"seven" loops, `K.NORMAL` and the
+  snowball special case are gone. The intro is now 53.4 s and the ending 54.8 s; the four film tracks were regenerated
+  (verified by numbers only, NOT listened to). The wide map shots zoom out to fit the 7 islands (`K.far`): the user's
+  verdict on how small the bosses look there is pending.

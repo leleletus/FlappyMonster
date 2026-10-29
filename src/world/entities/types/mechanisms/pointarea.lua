@@ -87,6 +87,8 @@ return {
           help='Segundos que hay que estar dentro para recibirlos (al salir se empieza de cero)' },
         { key='contested', kind='bool', label='Disputada', group=G, default=false,
           help='Si hay varios jugadores dentro, nadie suma: hay que echar a los demás' },
+        { key='ride', kind='bool', label='Montada (sube y baja)', group=G, default=false,
+          help='Va encima del cuerpo que se mueve justo debajo (un platillo de la Balanza) y sube y baja con él' },
     },
     editor = { draw = drawIcon },
 }

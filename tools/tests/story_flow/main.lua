@@ -31,7 +31,7 @@ local function check(name, ok, msg)
 end
 local step, t, T, shotQ = 'start', 0, 0, {}
 local introSeen
-local SHIDS, DROPPED, ENDING, FILMS, WALK1, RUN, SEC
+local SHIDS, DROPPED, ENDING, FILMS, WALK1, RUN, SEC, JB
 local Save, Run, Worlds
 
 function love.load(a)
@@ -606,7 +606,7 @@ function love.update(dt)
         local have, total = Run.shards()
         -- (recogido, pero el nivel SIN terminar: aún no está en la partida ni en disco; se apunta al acabarlo)
         local held = st.shards and st.shards.got == 1
-        check('fragmento', SHIDS == '1' and DROPPED and held and Run.data.shards['1'] == nil and disk.shards['1'] == nil and have == 0 and total == 7 and not st.endingT,
+        check('fragmento', SHIDS == '1' and DROPPED and held and Run.data.shards['1'] == nil and disk.shards['1'] == nil and have == 0 and total == require('src/story/Shards').TOTAL and not st.endingT,
             ('el jefe del mundo 1 guarda el %s; lo suelta=%s; sin terminar el nivel: en la partida=%s, en disco=%s; cuenta %d/%d'):format(
              SHIDS, tostring(DROPPED), tostring(Run.data.shards['1']), tostring(disk.shards['1']), have, total))
         go('sh6')
@@ -615,12 +615,46 @@ function love.update(dt)
         check('jefe_solo', st.args ~= nil and st.args.summary ~= nil and Run.isDone(W1[#W1].id) and Run.data.shards['1'] == true,
             ('vencido el jefe y recogido el fragmento, sin ir a la meta: resultados=%s, nivel superado=%s, fragmento guardado=%s'):format(
              tostring(st.args ~= nil and st.args.summary ~= nil), tostring(Run.isDone(W1[#W1].id)), tostring(Run.data.shards['1'])))
-        -- ahora, el último: todo superado menos el jefe Espejo, con los seis primeros
+        -- el Escarabajo Gigante (la jungla, mundo 3) suelta el SUYO (el 8: assets/story/shards.json) y queda guardado
+        local d = Run.data
+        local WJ = Worlds.nodes(3)
+        for w = 1, 2 do for _, n in ipairs(Worlds.nodes(w)) do d.done[n.id] = true end end
+        for k = 1, #WJ - 1 do d.done[WJ[k].id] = true end
+        Run.save()
+        gStateMachine:change('story_map', { world = 3, node = #WJ }); go('jb1')
+    elseif step == 'jb1' and t - T > 0.5 then
+        pressNext('confirm'); go('jb2')
+    elseif step == 'jb2' and st.level and t - T > 0.8 then
+        local z = st.level.bossZones[1]
+        st.player.x, st.player.y = require('src/world/systems/BossZones').safeSpawn(st.level, z)
+        st.player.spawnX, st.player.spawnY = st.player.x, st.player.y
+        JB = { ids = st.shards and table.concat(st.shards.ids, ',') or 'ninguno', level = st.levelPath }
+        go('jb3')
+    elseif step == 'jb3' and (st.level.bossZones[1].state == 'fight' or t - T > 25) then
+        for _, e in ipairs(st.enemies) do if e.def.category == 'Jefes' then e:defeat() end end
+        st.player:grantInvulnerability(60)
+        go('jb4')
+    elseif step == 'jb4' and ((st.shards and #st.shards.list > 0 and st.shards.list[1].t > 0.9) or t - T > 25) then
+        local s1 = st.shards and st.shards.list[1]
+        JB.dropped = s1 ~= nil
+        if s1 then shot('shard_beetle'); st.player.x, st.player.y, st.player.vx, st.player.vy = s1.x, s1.y, 0, 0 end
+        go('jb5')
+    elseif step == 'jb5' and ((st.args and st.args.summary ~= nil) or t - T > 12) then
+        local have = Run.shards()
+        check('fragmento_jungla', JB.ids == '8' and JB.level == Worlds.path('templo_escarabajo') and JB.dropped and Run.isDone('templo_escarabajo')
+            and Run.data.shards['8'] == true and Save.load(1).shards['8'] == true and have == 2,
+            ('jefe de la jungla (%s): guarda %s; lo suelta=%s; nivel superado=%s; fragmento 8 en la partida=%s, en disco=%s; cuenta %d'):format(
+             tostring(JB.level), JB.ids, tostring(JB.dropped), tostring(Run.isDone('templo_escarabajo')), tostring(Run.data.shards['8']),
+             tostring(Save.load(1).shards['8']), have))
+        go('fin0')
+    elseif step == 'fin0' and t - T > 0.3 then
+        -- ahora, el último: todo superado menos el jefe Espejo, con todos los demás fragmentos
         local d = Run.data
         for w = 1, Worlds.count() do for _, n in ipairs(Worlds.nodes(w)) do d.done[n.id] = true end end
         local last = Worlds.nodes(Worlds.count())
         d.done[last[#last].id] = nil
-        for n = 1, 6 do d.shards[tostring(n)] = true end
+        local SH = require 'src/story/Shards'
+        for _, n in ipairs(SH.ORDER) do if n ~= SH.FINAL then d.shards[tostring(n)] = true end end
         Run.save()
         FILMS = {}
         gStateMachine:change('story_map', { world = Worlds.count(), node = #last }); go('fin1')
@@ -639,8 +673,8 @@ function love.update(dt)
         local last = Worlds.nodes(Worlds.count())
         -- (antes del nivel, la primera vez, su película — Worlds films: 'lair' —, apuntada como vista; y con el último
         -- fragmento, el final)
-        check('final', SHIDS == '7' and DROPPED and ENDING and NOFINISH and FILMS[1] == 'lair' and FILMS[2] == 'ending' and Run.data.films.lair == true
-            and st.args and st.args.summary ~= nil and Run.isDone(last[#last].id) and have == 7,
+        check('final', SHIDS == tostring(require('src/story/Shards').FINAL) and DROPPED and ENDING and NOFINISH and FILMS[1] == 'lair' and FILMS[2] == 'ending' and Run.data.films.lair == true
+            and st.args and st.args.summary ~= nil and Run.isDone(last[#last].id) and have == total,
             ('el Espejo guarda el %s; lo suelta=%s; al recogerlo se queda quieto y a blanco=%s; sin meta=%s; películas=%s (vista=%s); luego resultados=%s; nivel superado=%s sin tocar la meta; %d/%d'):format(
              SHIDS, tostring(DROPPED), tostring(ENDING), tostring(NOFINISH), table.concat(FILMS, ','), tostring(Run.data.films.lair), tostring(st.args ~= nil and st.args.summary ~= nil), tostring(Run.isDone(last[#last].id)), have, total))
         -- partida antigua (sin fragmentos): los de los jefes ya vencidos se dan por recogidos
@@ -656,6 +690,22 @@ function love.update(dt)
         check('migrar', n == 2 and old.shards['1'] and old.shards['4'] and h == 2 and halves.shards['1'] and halves.shards['3'],
             ('partida antigua en Xtra con 2 jefes vencidos: %d fragmentos; con mitades 1a, 1b, 3a: %d fragmentos (1=%s, 3=%s)'):format(
              n, h, tostring(halves.shards['1']), tostring(halves.shards['3'])))
+        -- partida de ANTES de la jungla (versión 1: 6 mundos) que ya estaba en la Fortaleza (su mundo 3) con la nota del
+        -- mundo 2: el mundo pasa al 4, la nota sigue en la Costa, la jungla (3) se abre y la Fortaleza (4) sigue abierta;
+        -- otra que solo había pasado la Pradera: nada abierto de más
+        local v1 = { version = 1, difficulty = 'normal', world = 3, node = 2, worldReward = { [2] = 'A' }, open = {},
+                     done = { reino_gummy = true, cala_resaca = true, fabrica_morteros = true } }
+        require('src/story/Save').migrate(v1)
+        local v1b = { version = 1, world = 1, worldReward = {}, open = {}, done = { reino_gummy = true } }
+        require('src/story/Save').migrate(v1b)
+        local keep = Run.data
+        Run.data = v1
+        local j, f = Run.worldOpen(3), Run.worldOpen(4)
+        Run.data = keep
+        check('migrar_mundos', v1.version == 2 and v1.world == 4 and v1.worldReward[2] == 'A' and v1.worldReward[3] == nil
+            and Worlds.get(3).id == 'jungla' and j and f and v1.open.fortaleza == true and next(v1b.open) == nil,
+            ('partida de 6 mundos en la Fortaleza: versión %s, mundo %s, nota del mundo 2=%s; jungla abierta=%s, Fortaleza abierta=%s; otra en la Pradera: abiertos de más=%s'):format(
+             tostring(v1.version), tostring(v1.world), tostring(v1.worldReward[2]), tostring(j), tostring(f), tostring(next(v1b.open))))
         gStateMachine:change('story_map', { world = 1, node = 1 }); go('walk0')
     -- ── MAPA: pulsar ENTRAR mientras el monstruo aún anda hacia el nodo: entra al LLEGAR, no antes ──
     elseif step == 'walk0' and t - T > 0.4 then

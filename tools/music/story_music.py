@@ -12,12 +12,12 @@
 #     del jefe Espejo (aquí en La menor) = el Reflejo
 #   INTRO (Do mayor → La menor → Do mayor): vuela con su tema; el tema se queda colgado en el destello; ante el
 #     espejo la caja de música canta la llamada y el espejo la devuelve AL REVÉS; el golpe; el Reflejo entra con
-#     su tema, le roba la llamada (que se desinfla) y se ríe con el motivo martilleado; seis campanas que bajan,
-#     una por fragmento; seis golpes que suben, uno por jefe; y, ya en la Pradera, la llamada: primero no le sale,
+#     su tema, le roba la llamada (que se desinfla) y se ríe con el motivo martilleado; campanas que bajan,
+#     una por fragmento; golpes que suben, uno por jefe; y, ya en la Pradera, la llamada: primero no le sale,
 #     luego decidida — enlaza con la música del mapa.
-#   FINAL (La mayor, el paralelo luminoso): la llamada en la caja de música; siete notas que SUBEN la escala, una
+#   FINAL (La mayor, el paralelo luminoso): la llamada en la caja de música; notas que SUBEN la escala, una
 #     por fragmento (las mismas que canta el efecto de sonido al encajar); el acorde entero; el tema del Reflejo se
-#     deshace hacia abajo; el tema del mapa a pleno mientras la luz recorre las islas; seis respuestas juguetonas
+#     deshace hacia abajo; el tema del mapa a pleno mientras la luz recorre las islas; respuestas juguetonas
 #     (los jefes encogen); la llamada, nota a nota, con cada aleteo; y el tema entero volando a casa.
 #   PERSECUCIÓN (chase, Fa# menor, el tono de "¡Corre!" y del jefe): la llamada, andando ladera arriba; el motivo del
 #     espejo en las campanas (notan el séptimo); latidos y un trémolo con su napolitana; el golpe al caer el Reflejo y
@@ -28,7 +28,7 @@
 #     llamada, decidida, con la cabeza del tema del Reflejo debajo.
 #   ~/.venvs/fm-music/bin/python tools/music/story_music.py [intro ending chase lair]     REPORT=1 → números, sin exportar
 # Se comprueba con números (NO se ha escuchado): duración = la de la película, sonoridad, energía por escena.
-import json, os, sys
+import json, math, os, sys
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -40,12 +40,55 @@ import worlds_nes as W
 import worldmap_nes as WM
 
 FILMS = json.load(open(os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'story', 'films.json')))
+# LOS FRAGMENTOS (assets/story/shards.json): cuántos jefes hay decide cuántas campanas, golpes y notas van "uno por
+# uno" — y cuánto duran esas escenas (films.json `plus`, = src/story/Film.lua Film.beats). Con más jefes (una
+# expansión) basta con volver a generar: las melodías se estiran solas (`fit`)
+SHARDS = json.load(open(os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'story', 'shards.json')))['shards']
+N_SHARDS = len(SHARDS)
+N_BOSSES = len([s_ for s_ in SHARDS if not s_.get('final')])
+
+
+def scene_beats(s):
+    plus = s.get('plus', {})
+    return s['beats'] + plus.get('bosses', 0) * N_BOSSES + plus.get('shards', 0) * N_SHARDS
 NAMES = {'C': 0, 'C#': 1, 'D': 2, 'D#': 3, 'E': 4, 'F': 5, 'F#': 6, 'G': 7, 'G#': 8, 'A': 9, 'A#': 10, 'B': 11}
 
 
 def nn(s):
     """'C#5' → nota MIDI"""
     return 12 * (int(s[-1]) + 1) + NAMES[s[:-1]]
+
+
+def fit(notes, n, scale):
+    """Una línea de notas (las de siempre, pensadas para 6 o 7) llevada a `n` notas, con el mismo principio y el
+    mismo final: si faltan, se mete en el salto MÁS GRANDE la nota de la escala (`scale`: clases de nota) más cercana a
+    su mitad; si sobran, se quita la de dentro que deja el salto más pequeño. MIDI, en orden (suba o baje)"""
+    out = [nn(x) if isinstance(x, str) else x for x in notes]
+    while len(out) > n and len(out) > 2:
+        i = min(range(1, len(out) - 1), key=lambda k: abs(out[k + 1] - out[k - 1]))
+        out.pop(i)
+    while len(out) < n:
+        i = max(range(len(out) - 1), key=lambda k: abs(out[k + 1] - out[k]))
+        a, b = out[i], out[i + 1]
+        cands = [m for m in range(min(a, b) + 1, max(a, b)) if m % 12 in scale]
+        if not cands:
+            break
+        out.insert(i + 1, min(cands, key=lambda m: abs(m - (a + b) / 2)))
+    return out
+
+
+A_MINOR_H = {9, 11, 0, 2, 4, 5, 8}          # La menor armónica (clases de nota)
+A_MINOR = {9, 11, 0, 2, 4, 5, 7}
+A_MAJOR = {9, 11, 1, 2, 4, 6, 8}
+FS_MINOR = {6, 8, 9, 11, 1, 2, 4}
+
+
+def rise(n, tonic):
+    """Las `n` notas que SUBEN la escala mayor desde `tonic` (MIDI); la última, la tónica de arriba (el del Espejo
+    resuelve). 7: 0 2 4 5 7 9 12; 8: 0 2 4 5 7 9 11 12 — = src/story/films/common.lua C.note"""
+    major = (0, 2, 4, 5, 7, 9, 11)
+    deg = lambda k: major[(k - 1) % 7] + 12 * ((k - 1) // 7)
+    return [tonic + (deg(i) if i < n else 12 * (deg(max(1, n - 1)) // 12 + 1)) for i in range(1, n + 1)]
 
 
 WAVES = [wavetable([1.0, 0.5, 0.33, 0.2, 0.12]),                # 0 voz suave
@@ -75,8 +118,8 @@ class Song:
         for s in FILMS[film]['scenes']:
             beat = 60.0 / s['bpm']
             self.t0[s['id']], self.bs[s['id']], self.cues[s['id']] = t, beat, s.get('cues', {})
-            self.order.append((s['id'], t, t + s['beats'] * beat))
-            t += s['beats'] * beat
+            self.order.append((s['id'], t, t + scene_beats(s) * beat))
+            t += scene_beats(s) * beat
         self.total = t
         self.NF = F.frames_for(t + 3)
         self.C = {k: Chan(self.NF) for k in ('lead', 'lead2', 'thin', 'saw', 'bell', 'bell2', 'soft', 'p1', 'p2', 'p3',
@@ -90,6 +133,7 @@ class Song:
     def scene(self, sid): self.sc = sid; return self
     def T(self, beat): return self.t0[self.sc] + beat * self.bs[self.sc]
     def cue(self, name): return self.cues[self.sc][name]
+    def beats(self): return next(round((t1 - t0) / self.bs[sid]) for sid, t0, t1 in self.order if sid == self.sc)
 
     # ── notas (b = pulso de la escena, d = duración en pulsos) ──
     def n(self, ch, b, d, note, inst, q=q_pulse, vs=1.0, rel=3, leg=0.92):
@@ -288,34 +332,38 @@ def intro():
     S.roll(bl - 1, bl + 1, 0.125, 0.2, 1.1); S.riser(bl - 1, 12)
     S.pad(bl - 1, 2, ['E3', 'G#3', 'D4'], 1.2)
 
-    # 7. scatter — el golpe y seis campanas que BAJAN, una por fragmento
+    # 7. scatter — el golpe y una campana que BAJA por cada fragmento (la escala, hasta la sensible: Sol#)
     S.scene('scatter')
+    sb = S.beats()
     S.k(0, 1.2, True); S.tm(0, 2, 1.2); S.cr(0); S.stab(0, 1.5, 'A2', 1.3)
-    S.pad(0, 8, ['A3', 'C4', 'E4'], 0.9)
-    for i in range(8):
+    S.pad(0, sb, ['A3', 'C4', 'E4'], 0.9)
+    for i in range(int(sb)):
         S.bass(i, 0.6, 'A1'); S.bass(i + 0.667, 0.3, 'A1')
         S.k(i, 0.6); S.h(i + 0.667, [3, 1])
     f_ = S.cue('first')
-    for i, note in enumerate(('E6', 'D6', 'C6', 'B5', 'A5', 'G#5')):
+    down = [nn('G#5') + d for d in (0, 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 19, 20, 22, 24)]     # Sol# La Si Do Re Mi Fa Sol#...
+    for i, note in enumerate(reversed(down[:N_BOSSES])):
         S.bell(f_ + i, 1.5, note, 1.0, ch='bell' if i % 2 == 0 else 'bell2')
-        S.saw(f_ + i, 0.9, nn(note) - 24, 0.8)
+        S.saw(f_ + i, 0.9, note - 24, 0.8)
 
-    # 8. fury — seis golpes que SUBEN, uno por jefe; y la dominante, con redoble
+    # 8. fury — un golpe que SUBE por cada jefe; y la dominante, con redoble
     S.scene('fury')
     e_ = S.cue('each')
-    roots = ('A2', 'A#2', 'C3', 'D3', 'E3', 'F3')
+    roots = fit(('A2', 'A#2', 'C3', 'D3', 'E3', 'F3'), N_BOSSES, A_MINOR_H | {10})
+    minor = {nn('A2') % 12, nn('D3') % 12, nn('B2') % 12}
     for i, r in enumerate(roots):
         b_ = S.cue('first') + i * e_
         for j in range(4):                                             # el fragmento cae: una carrerilla
-            S.n('arp', b_ + j * 0.125, 0.12, nn(r) + 36 - j * 2, I_ARP, vs=1.2, rel=0)
+            S.n('arp', b_ + j * 0.125, 0.12, r + 36 - j * 2, I_ARP, vs=1.2, rel=0)
         S.k(b_ + 0.5, 1.2, True); S.tm(b_ + 0.5, 2, 1.1); S.cr(b_ + 0.5)
         S.stab(b_ + 0.5, 1.3, r, 1.3)
-        S.saw(b_ + 0.5, 1.3, nn(r) + 24)
-        S.bass(b_ + 0.5, 1.3, nn(r) - 12)
-        S.pad(b_ + 0.5, 1.4, [nn(r) + 12, nn(r) + 15 if r in ('A2', 'D3') else nn(r) + 16, nn(r) + 19], 0.9)
+        S.saw(b_ + 0.5, 1.3, r + 24)
+        S.bass(b_ + 0.5, 1.3, r - 12)
+        S.pad(b_ + 0.5, 1.4, [r + 12, r + 15 if r % 12 in minor else r + 16, r + 19], 0.9)
         S.tm(b_ + 1.5, 1, 0.7); S.tm(b_ + 1.75, 0, 0.7)
-    S.pad(12, 2, ['E3', 'G#3', 'B3'], 1.3); S.bass(12, 2, 'E1', leg=1.0); S.saw(12, 2, 'E5')
-    S.roll(12, 14, 0.125, 0.3, 1.2); S.cr(12)
+    dm = S.cue('first') + N_BOSSES * e_
+    S.pad(dm, 2, ['E3', 'G#3', 'B3'], 1.3); S.bass(dm, 2, 'E1', leg=1.0); S.saw(dm, 2, 'E5')
+    S.roll(dm, dm + 2, 0.125, 0.3, 1.2); S.cr(dm)
 
     # 9. onfoot — cae; silencio; la llamada no le sale; y entonces sí: decidida, en Do mayor (enlaza con el mapa)
     S.scene('onfoot')
@@ -345,7 +393,12 @@ def intro():
 # ═════════════════════════════════════════════════════════════════════════════
 # EL FINAL (La mayor)
 # ═════════════════════════════════════════════════════════════════════════════
-A_SCALE = ('A5', 'B5', 'C#6', 'D6', 'E6', 'F#6', 'A6')                 # las siete notas: las que canta `storyClink`
+A_SCALE = rise(N_SHARDS, nn('A5'))                                     # una por fragmento: las que canta `storyClink`
+# el acorde de cada una (I, IV o V de La mayor, el que la tiene; el último, la dominante suspendida: resuelve en `whole`)
+PIECE_CHORD = {9: ('A2', ('A3', 'C#4', 'E4')), 11: ('E2', ('G#3', 'B3', 'E4')), 1: ('A2', ('A3', 'C#4', 'E4')),
+               2: ('D2', ('A3', 'D4', 'F#4')), 4: ('A2', ('C#4', 'E4', 'A4')), 6: ('D2', ('D4', 'F#4', 'A4')),
+               8: ('E2', ('G#3', 'B3', 'E4'))}
+PIECE_LAST = ('E2', ('E4', 'A4', 'B4'))
 TR = -3                                                               # el tema del mapa, de Do a La
 
 
@@ -363,23 +416,22 @@ def ending():
         ch_ = ('A4', 'C#5', 'E5', 'A5') if o_ + i / 4 < 4 else (('D5', 'F#5', 'A5', 'D6') if o_ + i / 4 < 6 else ('E5', 'G#5', 'B5', 'E6'))
         S.n('arp', o_ + i / 4, 0.3, ch_[i % 4], I_ARP, vs=1.0 + 0.03 * i, rel=1)
 
-    # 2. pieces — siete notas que SUBEN, una por fragmento, cada una con su acorde; entre ellas, el pulso espera
+    # 2. pieces — una nota que SUBE por fragmento, cada una con su acorde; entre ellas, el pulso espera
     S.scene('pieces')
     f_, e_ = S.cue('first'), S.cue('each')
-    chords = (('A2', ('A3', 'C#4', 'E4')), ('E2', ('G#3', 'B3', 'E4')), ('A2', ('A3', 'C#4', 'E4')), ('D2', ('A3', 'D4', 'F#4')),
-              ('A2', ('C#4', 'E4', 'A4')), ('D2', ('D4', 'F#4', 'A4')), ('E2', ('E4', 'A4', 'B4')))      # el último: suspendido
     for i, note in enumerate(A_SCALE):
         b_ = f_ + i * e_
         S.bell(b_, 2, note, 1.0, ch='bell' if i % 2 == 0 else 'bell2')
-        S.n('soft', b_, 1.8, nn(note) - 12, I_SOFT, q=q_n163, vs=0.8 + 0.05 * i)
-        r, ch_ = chords[i]
+        S.n('soft', b_, 1.8, note - 12, I_SOFT, q=q_n163, vs=0.8 + 0.05 * i)
+        r, ch_ = PIECE_LAST if i == len(A_SCALE) - 1 else PIECE_CHORD[note % 12]
         S.pad(b_, 2, ch_, 0.7 + 0.08 * i)
         S.bass(b_, 1.8, r)
         if i >= 2: S.k(b_, 0.5 + 0.08 * i)
         if i >= 4: S.tm(b_ - 0.5, 1, 0.5); S.tm(b_ - 0.25, 0, 0.5)
         for j in range(3):                                             # camino del marco: tres notas que suben hacia ella
-            S.n('arp', b_ - 0.75 + j * 0.25, 0.22, nn(note) - (3 - j) * 2, I_ARP, vs=0.9, rel=0)
-    S.roll(14.5, 16, 0.125, 0.2, 1.1); S.riser(14, 16)
+            S.n('arp', b_ - 0.75 + j * 0.25, 0.22, note - (3 - j) * 2, I_ARP, vs=0.9, rel=0)
+    pb = S.beats()
+    S.roll(pb - 1.5, pb, 0.125, 0.2, 1.1); S.riser(pb - 2, pb)
 
     # 3. whole — el acorde entero y la llamada, deprisa, en lo alto
     S.scene('whole')
@@ -407,16 +459,19 @@ def ending():
     S.map_tune([5, 6, 7], tr=TR, bells=True, drums='full', vs=1.0)
     S.pad(0, 12, ['A3', 'C#4', 'E4'], 0.8)
 
-    # 6. shrink — juguetón: el tema sigue (compases 9-11) y cada jefe que encoge contesta con un "pop" que baja
+    # 6. shrink — juguetón: el tema sigue (desde el compás 9, tantos como jefes) y cada jefe que encoge contesta con
+    #    un "pop" que baja; al final, la dominante
     S.scene('shrink')
-    S.map_tune([9, 10, 11], tr=TR, drums='light', vs=0.9)
     e_ = S.cue('each')
-    for i in range(6):
+    dm = S.cue('first') + N_BOSSES * e_
+    S.map_tune([9 + k_ for k_ in range(int(math.ceil(dm / 4)))], tr=TR, drums='light', vs=0.9)
+    for i in range(N_BOSSES):
         b_ = S.cue('first') + i * e_ + 0.5
         for j in range(4):
             S.n('arp', b_ + j * 0.09, 0.09, nn('A6') + i - j * 3, I_ARP, vs=1.3, rel=0)
         S.tm(b_ + 0.36, 0, 0.6)
-    S.pad(12, 2, ['E3', 'G#3', 'D4'], 0.9); S.bass(12, 1.9, 'E2'); S.lead(12, 1.8, 'B5', 0.9)
+    S.pad(dm, 2, ['E3', 'G#3', 'D4'], 0.9); S.bass(dm, 1.9, 'E2')
+    if dm % 4 == 0: S.lead(dm, 1.8, 'B5', 0.9)                         # (si el tema acabó justo ahí: si no, sigue él)
 
     # 7. flap — silencio; el aleteo vuelve; con cada aleteo, una nota más de la llamada; y sube
     S.scene('flap')
@@ -455,7 +510,7 @@ def ending():
 HEAD = ((0, 1, 'F#4'), (1, 0.667, 'C#4'), (1.667, 0.333, 'F#4'), (2, 1, 'A4'), (3, 0.667, 'G#4'), (3.667, 0.333, 'F#4'))
 CALL = ('C#5', 'F#5', 'A5', 'C#6')                                     # la llamada (5-1-3-5) en Fa# menor
 MOTIF = ('C#6', 'G#5', 'F5', 'C#5')                                    # el motivo del espejo: la llamada del revés
-SIX = ('C#6', 'F#6', 'G#6', 'A6', 'C#7', 'F#7')                        # seis campanas que suben: sale cada fragmento
+SIX = fit(('C#6', 'F#6', 'G#6', 'A6', 'C#7', 'F#7'), N_BOSSES, FS_MINOR)  # campanas que suben: sale cada fragmento (uno por jefe)
 
 
 def two_step(S, b0, b1, g=1.0, bass='F#1'):
@@ -474,8 +529,8 @@ def two_step(S, b0, b1, g=1.0, bass='F#1'):
 def chase():
     S = Song('chase')
 
-    # 1. arrive — andando ladera arriba: la llamada, tranquila, con pasos; se para; SACA los fragmentos (seis campanas
-    #    que suben); brillan: el motivo del espejo
+    # 1. arrive — andando ladera arriba: la llamada, tranquila, con pasos; se para; SACA los fragmentos (una campana
+    #    que sube por cada uno); brillan: el motivo del espejo
     S.scene('arrive')
     st, tk, gl = S.cue('stop'), S.cue('take'), S.cue('glow')
     S.pad(0, st, ['F#3', 'A3', 'C#4'], 0.6); S.bass(0, st - 0.1, 'F#2', leg=1.0)
@@ -483,7 +538,7 @@ def chase():
         S.h(i, [4, 1]); S.k(i, 0.45) if i % 2 == 0 else S.tm(i, 0, 0.35)
     for i, note in enumerate(CALL): S.n('soft', 0.5 + i, 1.0 if i < 3 else 1.5, note, I_SOFT, q=q_n163, vs=0.9)
     S.pad(st, 12 - st, ['D3', 'F#3', 'A3'], 0.55); S.bass(st, 12 - st - 0.1, 'D2', leg=1.0)
-    for i, note in enumerate(SIX): S.bell(tk + 0.4 + i * 0.23, 1.5, note, 0.75, ch='bell' if i % 2 == 0 else 'bell2')
+    for i, note in enumerate(SIX): S.bell(tk + 0.4 + i * 1.15 / max(1, len(SIX) - 1), 1.5, note, 0.75, ch='bell' if i % 2 == 0 else 'bell2')
     for i, note in enumerate(MOTIF): S.bell(gl + i * 0.5, 1.5, note, 0.85, ch='bell' if i % 2 == 0 else 'bell2')
     for i in range(int((12 - gl) * 4)):                                # tiemblan: trémolo agudo
         S.n('arp', gl + i / 4, 0.2, 'C#6' if i % 2 == 0 else 'D6', I_ARP, vs=0.5 + 0.02 * i, rel=0)
@@ -562,13 +617,13 @@ def lair():
     S.bell(gn, 2, 'C#7'); S.bell(gn + 0.33, 2, 'F#7', 0.8, ch='bell2')                               # el destello, en la cima
     S.pad(gn, 20 - gn, ['D3', 'F#3', 'A3'], 0.5); S.bass(gn, 20 - gn - 0.1, 'D2', leg=1.0)
 
-    # 2. night — de noche: saca los fragmentos (seis campanas); tiemblan y señalan (el motivo); arriba, el séptimo
+    # 2. night — de noche: saca los fragmentos (una campana cada uno); tiemblan y señalan (el motivo); arriba, el séptimo
     #    contesta (dos campanas altas) y la risa, con eco, en lo grave
     S.scene('night')
     ot, pt, gl = S.cue('out'), S.cue('point'), S.cue('glint')
     S.pad(0, 10, ['D3', 'F#3', 'A3'], 0.5); S.bass(0, ot, 'D2', leg=1.0)
     for i, note in enumerate(CALL[:3]): S.n('lead', 0.2 + i * 0.5, 0.5, note, I_SAD, vs=0.7 - 0.1 * i, rel=1)
-    for i, note in enumerate(SIX): S.bell(ot + i * 0.2, 1.5, note, 0.7, ch='bell' if i % 2 == 0 else 'bell2')
+    for i, note in enumerate(SIX): S.bell(ot + i * 1.0 / max(1, len(SIX) - 1), 1.5, note, 0.7, ch='bell' if i % 2 == 0 else 'bell2')
     S.bass(ot, pt - ot, 'F#2', leg=1.0)
     for i in range(int((gl - pt) * 4)):
         S.n('arp', pt + i / 4, 0.2, 'C#6' if i % 2 == 0 else 'D6', I_ARP, vs=0.5 + 0.04 * i, rel=0)

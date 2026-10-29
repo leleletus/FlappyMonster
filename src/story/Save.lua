@@ -4,7 +4,16 @@
 -- story.sav (lo GLOBAL: dificultades desbloqueadas). OJO: nunca nombres .lua del juego (ver
 -- src/core/Settings.lua: la carpeta de guardado tapa los módulos).
 -- El archivo es una tabla de Lua (`return { ... }`) que se carga sin entorno: no puede ejecutar nada.
-local Save = { SLOTS = 3, VERSION = 1 }
+local Save = { SLOTS = 3, VERSION = 2 }
+
+-- Los MUNDOS de cada versión de las partidas (Worlds.LIST por sus ids, en orden). La partida guarda el mundo por su
+-- POSICIÓN: al cargar una de una versión anterior se traduce a la lista de hoy, y un mundo NUEVO metido en medio
+-- (una expansión) queda ABIERTO para quien ya había pasado el de antes, sin cerrarle lo que ya tenía (el usuario,
+-- 0.5.99: "mantener su progreso, la jungla abierta"). Para añadir mundos: VERSION + 1 y su lista aquí.
+Save.WORLDS = {
+    [1] = { 'pradera', 'costa', 'fortaleza', 'nieve', 'cuevas', 'final' },
+    [2] = { 'pradera', 'costa', 'jungla', 'fortaleza', 'nieve', 'cuevas', 'final' },          -- (0.5.99: la jungla)
+}
 
 local function file(i) return 'story' .. i .. '.sav' end
 local GLOBAL = 'story.sav'
@@ -61,6 +70,7 @@ function Save.new(difficulty)
     return { version = Save.VERSION, difficulty = difficulty, world = 1, node = 1,
              lives = require('src/core/Difficulty').of(difficulty, 'livesStart', 3),     -- (3; Extremo 4; Xtra extremo 6)
              done = {}, best = {}, playTime = 0, gameOvers = 0, points = 0, worldReward = {}, bonus = {},
+             open = {},                                        -- (mundos abiertos sin su jefe anterior: Save.migrate)
              shards = {},                                      -- (fragmentos del espejo: src/story/Shards.lua)
              films = {},                                       -- (cinemáticas de antes de un nivel ya vistas: Worlds films)
              taken = {} }                                      -- (vidas extra ya cogidas, por nivel: no se repiten)
@@ -80,8 +90,40 @@ function Save.load(i)
     d.bonus = type(d.bonus) == 'table' and d.bonus or {}
     d.films = type(d.films) == 'table' and d.films or {}
     d.taken = type(d.taken) == 'table' and d.taken or {}         -- (vidas extra cogidas por nivel: [id] = { [colocación] = true })
+    d.open = type(d.open) == 'table' and d.open or {}
+    Save.migrate(d)
     require('src/story/Shards').migrate(d)                    -- (partidas de antes de los fragmentos)
     return d
+end
+
+-- Una partida de una versión anterior, a la de hoy (ver Save.WORLDS): el mundo actual y las notas de mundo pasan de su
+-- posición de entonces a la de hoy; cada mundo nuevo queda abierto, y el de DESPUÉS de él también si la partida ya
+-- había llegado a él (`open`: Run.worldOpen)
+function Save.migrate(d)
+    local v = tonumber(d.version) or 1
+    local Worlds = require 'src/story/Worlds'
+    while v < Save.VERSION do
+        local old, new = Save.WORLDS[v], Save.WORLDS[v + 1]
+        if not (old and new) then break end
+        local pos = {}
+        for i, id in ipairs(new) do pos[id] = i end
+        local was = {}
+        for _, id in ipairs(old) do was[id] = true end
+        d.world = pos[old[d.world] or ''] or d.world
+        local rw = {}
+        for k, g in pairs(d.worldReward) do
+            local i = type(k) == 'number' and pos[old[k] or ''] or nil
+            if i then rw[i] = g end
+        end
+        d.worldReward = rw
+        for i, id in ipairs(new) do
+            local prev, nxt = new[i - 1], new[i + 1]
+            local W = Worlds.LIST[pos[prev or ''] or 0]
+            if not was[id] and prev and nxt and W and d.done[W.boss] then d.open[nxt] = true end
+        end
+        v = v + 1
+    end
+    d.version = Save.VERSION
 end
 
 function Save.write(i, data) return write(file(i), data) end

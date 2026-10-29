@@ -36,6 +36,14 @@ the diff before committing anything they write.
 
 ## Notes on specific generators
 
+- `tools/art/story/make_mirror_shards.py`: the story mirror (`frame`, `glass`) and its shards (`shard_<id>.png` + the
+  Xtra halves `<id>a/b`), all on one 48x64 canvas. 0.5.99: it READS the catalog `assets/story/shards.json` and cuts as
+  many pieces as it lists (8 today, for the jungle boss's shard id 8): a Voronoi cut whose centre seed is the Mirror's
+  (`final`) and whose other seeds sit on a ring clockwise from the top-left in story order (1 2 8 3 4 5 6 7), slightly
+  irregular per id; an entry may fix its own `seed`; `tint` = its island's colour; ids must be 1..N. Without flags =
+  preview `FlappyMonster_pruebas/espejo/vista_previa.png`, `--apply` writes the assets. A new boss with a shard = a line
+  in the catalog and `--apply`. The 7-piece set of before is kept in
+  `/home/mtvemo/FlappyMonster_originals/story/mirror_7/`.
 - `tools/art/enemies/make_beetle.py`: the jungle's Rhino Beetle and the Giant Rhino Beetle (22x20 frames: 4-frame tripod walk, charge, on its back; the giant adds toss, wings, landing and the gold rune) + the giant's temple block, debris, floor wave and dust; design D chosen by the user (2026-10-28); without flags = previews, mockups and GIFs in `FlappyMonster_pruebas/escarabajo/`; `--apply` writes the attack sprites and both anim sets; it never rewrites the two body sheets the user retouched (`KEEP`).
 - `tools/art/enemies/make_jungle_enemies.py`: the Mole (general, one sheet per island), the Piranha and the Carnivorous
   Plant (jungle). Two designs each (A / B; the mole's in the 7 islands), drawn from PIECES (ellipses, polygons, tubes)

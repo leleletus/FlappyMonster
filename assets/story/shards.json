@@ -1,0 +1,13 @@
+{
+  "_": "LOS FRAGMENTOS DEL ESPEJO, en el ORDEN de la historia (en el que se ganan). La única lista: el juego (src/story/Shards.lua: qué jefe suelta cuál, la cuenta, las películas — cuántas campanas, cuántos jefes crecen y encogen, por qué islas pasa la onda), el arte (tools/art/story/make_mirror_shards.py: corta el espejo en tantos trozos como haya, los de fuera en el sentido del reloj por este orden) y la música de las películas (tools/music/story_music.py). `id` = el que se guarda en la partida y el nombre de su imagen (shard_<id>.png): NUNCA se renumera; uno nuevo lleva el siguiente número libre. `level` = el nivel del jefe que lo suelta (en Worlds.LIST). `final` = el del Espejo (el del centro, el último: con él, el final). `tint` = el color de su isla en el cristal. `normal` = cómo es el jefe ANTES del fragmento en la intro (su enemigo normal, sprite y ancho de cuadro); sin él, el propio jefe en pequeño. `seed` (opcional) = dónde cae su trozo en el espejo (dx, dy en fracción de los radios del óvalo); sin él, en su sitio del anillo. Para añadir un jefe con fragmento: una línea aquí, sus imágenes (make_mirror_shards.py --apply) y la música de las películas (story_music.py intro ending).",
+  "shards": [
+    { "id": 1, "level": "reino_gummy",       "tint": "#a0f098", "normal": { "img": "assets/images/enemies/gummy/gummy.png" } },
+    { "id": 2, "level": "cala_resaca",       "tint": "#ffe498", "normal": { "img": "assets/images/enemies/crabby/crab1.png" } },
+    { "id": 8, "level": "templo_escarabajo", "tint": "#d8f070", "normal": { "img": "assets/images/enemies/beetle/beetle-Sheet.png", "fw": 22 } },
+    { "id": 3, "level": "fortaleza_malvada", "tint": "#c4c4dc" },
+    { "id": 4, "level": "lago_helado",       "tint": "#ffffff" },
+    { "id": 5, "level": "glaciar_cangrejo",  "tint": "#98f0ff", "normal": { "img": "assets/images/enemies/crabby_ice/crab1.png" } },
+    { "id": 6, "level": "gruta_del_farol",   "tint": "#d0a4ff", "normal": { "img": "assets/images/enemies/gloomy/gloomy-Sheet.png", "fw": 26, "glow": "assets/images/enemies/gloomy/glow-Sheet.png" } },
+    { "id": 7, "level": "ruta_del_espejo",   "tint": "#ffa48c", "final": true, "seed": [-0.06, -0.04] }
+  ]
+}

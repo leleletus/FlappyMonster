@@ -4,10 +4,10 @@
 -- El monstruo y el Reflejo son ACTORES (src/story/Actor.lua): cuerpos de verdad del juego, con su física, sus saltos
 -- y su doble salto, movidos por un guion de entradas. Lo único "mágico" es lo que en el juego también lo es: el
 -- espejo flotante del Reflejo y su salto en plancha.
---   arrive   tras la erupción, sube por la ladera; se para, se agacha y SACA sus seis fragmentos: brillan y tiemblan
+--   arrive   tras la erupción, sube por la ladera; se para, se agacha y SACA sus fragmentos (los de los jefes): brillan y tiemblan
 --            (notan el séptimo cerca)
 --   ambush   una risa; un espejo flotante; el REFLEJO cae en picado detrás de él, con el fragmento del centro. Se
---            ríe... y mira los seis: se agacha para saltar
+--            ríe... y mira sus fragmentos: se agacha para saltar
 --   run      ¡a correr! (al ritmo de "¡Corre!", la música del nivel): salta del susto, los dos guardan sus
 --            fragmentos, huye, salta la zanja de lava;
 --            el Reflejo se lanza en plancha y el doble salto lo salva por poco. Sale corriendo de cuadro; la música
@@ -51,8 +51,8 @@ local function centre(x, y, t, glow, out)
     local e = K.easeOut(out)
     local sx, sy = math.floor(x), math.floor(K.lerp(y - 8, y - 108 + math.sin(t * 3) * 4, e))
     local s = (out < 0.5) and 1 or 2
-    K.shardGlow('7', sx, sy, s, 0, (glow or 0.8) * out, t)
-    Stage.shard('7', sx, sy, { s = s })
+    K.shardGlow(K.FINAL, sx, sy, s, 0, (glow or 0.8) * out, t)
+    Stage.shard(K.FINAL, sx, sy, { s = s })
 end
 
 -- ── 1. La ladera ────────────────────────────────────────────────────────────

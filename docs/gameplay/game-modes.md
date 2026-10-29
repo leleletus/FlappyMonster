@@ -53,7 +53,9 @@ list in `triggers` are hidden: `Modes.hiddenTriggers(mode)` →
 150 s; hud `tl` = centiseconds left, big countdown ≤10 s). Any mode whose hud sends `tl`
 turns the HUD TIME clock into a countdown (`roundEndAt` = levelTime + tl, smooth). Points come from
 **Point Areas** (`src/world/systems/PointAreas.lua`, entity `pointarea`: rect via
-`corner` handle, props points/interval/contested; placeholder entity like
+`corner` handle, props points/interval/contested/`ride` (0.5.99: the zone RIDES the moving body right under it — a
+Scale pan — and moves up and down with it, `PointAreas.follow` every step in single player, the server and the
+client; the jungle bonus "El Claro de la Balanza"); placeholder entity like
 `flood`). `PointAreas.update(level, dt, players, award)` is authoritative (SP
 and server: server adds ps.score/scoreT and pushes `score` {kind='zone'} +
 `fx` 'points' + sound 'pointGain'); `clientUpdate` only drives the visuals

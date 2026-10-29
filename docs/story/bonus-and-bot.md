@@ -25,7 +25,8 @@ plays the first safe of: jump forward, double jump, hop, wait, jump in place, ba
 points; no extra-life items; the level's music is its island's `_bonus` track.
 
 **After changing an arena:** `tools/tests/run.sh bot_nav BUILD=1` rebuilds the nav files (they also rebuild on the
-device when stale). **Harnesses:** `bot_nav`, `story_flow bonus`.
+device when stale). **Harnesses:** `bot_nav`, `story_flow bonus`. Zones on a moving body (the Scale pan of the jungle
+bonus): [below](#zones-that-ride-a-moving-body-0599).
 
 ## The match and the bot
 
@@ -109,6 +110,41 @@ zone has others, steps out of it inside the zone when it catches it, and while f
 step that enters the wind (not counted as stuck) — the user asked for the bot to be taught rather than removing the
 Gusts from the arenas. Gusts in point-zone arenas follow the arena rule (respawn, 40 % of their points: 6). The
 `bot_nav` harness now simulates the air too (`level.pushers`, like AdventureState).
+
+## Zones that ride a moving body (0.5.99)
+
+The jungle bonus **El Claro de la Balanza** (`claro_de_la_balanza`, generator `tools/levelgen/levels_jungle_bonus.py`)
+puts its only point zone on the left pan of a big Scale: a `pointarea` with `ride` sticks to the moving body right
+under it (`PointAreas.follow`, see [game modes](../gameplay/game-modes.md)). Whoever stands on that pan sinks it
+(±2.5 tiles: `travel`); someone on the other pan lifts it.
+
+**How the bot plays it (generic: any moving body, any `ride` zone):**
+- **Nav graph** (`BotNav.buildPoses`): the top face of every MOVING body (`moves`: Scale pans, a Box) is also nodes
+  (`body` = which body — `type@col,row#part`, stable between the build and the match —, `top` / `bx` = where the body
+  was when they were recorded). An entity whose body moves along a known range says so with `navPoses()` /
+  `navPose(p)` (the Scale: level, both ends and one pose per tile in between — every row the pan crosses gets nodes):
+  the graph is recorded once per pose; pose 1 (rest) is the usual graph, the other poses only add the NEW body nodes
+  (rows not seen yet) and their edges (simulated only from body nodes and cells within 9 tiles of a body). A level
+  without moving bodies builds exactly the same graph as before (checked byte for byte on isla_flotante and
+  ciudadela_alterna).
+- **At run time** (`BotNav.track`, every `think` and `pickZone`): a body node is valid only while its body's top is
+  in its row NOW (`BotNav.standable`, used everywhere `isStandable` was), and its x / y follow the body. Body-node rows
+  use nodeAt's own rule (feet minus the player box offset) — with `floor(top / 64)` the pan at rest mapped to a
+  different row than the bot standing on it and no edge onto the levelled pan was ever recorded. `nodeAt` gives the
+  valid node of the next row when the rider lags a step behind a pan that just crossed a row (the bot used to leave
+  the zone by the ledge to "re-enter" it).
+- A `ride` zone recomputes its nodes every call (others: every second). Everything else is the normal bot: it
+  plans to the pan wherever it is, holds it, and ground-pounds a rival standing on it.
+
+**Arena tweak (0.5.99, needed to be playable at all):** the low ledges were 4 tiles from the pans — the levelled pan,
+where the zone starts, was out of reach for the bot and only a pixel-perfect jump for a player. Now the low ledges
+(row 13) end 1 tile from each pan and two inner high ledges (row 10, cols 11-14 / 34-37) reach the RAISED pan.
+Arena data rule: plants 20 → 8 points and respawn 8 s, Gummies 10 → 4.
+
+**Harness** `bot_nav` (the arena is in its default list): `montada` — while scoring the bot stands ON the pan
+(100 %) and the zone moves with it (160 px); `contrapeso` — a dummy hops on and off the OTHER pan every 4 s (the zone
+moves 320 px while the bot approaches or rides): it arrives in 3.6 s and is inside 94 % (6 seeds); `caza` pushes the
+dummy off the pan 22 times.
 
 ## History and decisions (dated notes)
 

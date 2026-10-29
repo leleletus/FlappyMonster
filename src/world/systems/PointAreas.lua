@@ -8,6 +8,9 @@
 --    recibe `points`. Al salir, su contador vuelve a cero.
 --  * `contested`: si hay más de un jugador dentro, nadie suma (hay que
 --    echar a los demás).
+--  * `ride` (0.5.99; el bonus de la jungla, "El Claro de la Balanza"): la zona va MONTADA en el cuerpo que se mueve
+--    justo debajo de ella — un platillo de la Balanza —: sube y baja con él (`PointAreas.follow`, cada paso, en un
+--    jugador, el servidor y el cliente: el cuerpo sale de la simulación / de la instantánea, igual en todos).
 --
 --  * UNA SOLA ZONA ACTIVA A LA VEZ (el usuario: con varias a la vez cada uno se queda en la suya sumando y nadie
 --    se pelea): con dos o más zonas en el nivel, sus sitios son las PARADAS de una única zona que va de una a
@@ -40,6 +43,7 @@ function PointAreas.fromPlacement(pl)
         points    = math.max(0, math.floor(num(p.points, 1))),
         interval  = math.max(0.05, num(p.interval, 1)),
         contested = p.contested == true,
+        ride      = p.ride == true,
         timers    = setmetatable({}, { __mode = 'k' }),   -- [jugador] = s acumulados
         count     = 0,        -- jugadores dentro (para el dibujo)
         scoring   = false,    -- ¿está dando puntos ahora mismo?
@@ -56,6 +60,42 @@ function PointAreas.build(placements)
 end
 
 local function inside(a, x, y) return x >= a.x0 and x < a.x1 and y >= a.y0 and y < a.y1 end
+
+-- Zonas `ride`: la primera vez buscan el cuerpo que se mueve bajo su borde de abajo (a menos de una casilla; que la
+-- cubra en horizontal) y guardan a qué distancia van de su cara; luego, cada paso, se colocan a esa distancia
+local function bodyUnder(level, a)
+    local best, bd
+    for _, o in ipairs(level.solidBodies or {}) do
+        if o.moves and o.alive ~= false then
+            local b = o:getOuterBounds()
+            local cx = (a.x0 + a.x1) / 2
+            local d = b.y - a.y1
+            if cx >= b.x and cx < b.x + b.w and d >= -TILE_PX / 2 and d <= TILE_PX and (not bd or math.abs(d) < bd) then
+                best, bd = o, math.abs(d)
+            end
+        end
+    end
+    return best
+end
+function PointAreas.follow(level)
+    for _, a in ipairs(level.pointAreas or {}) do
+        if a.ride then
+            if not a.body then
+                a.body = bodyUnder(level, a)
+                if a.body then
+                    local b = a.body:getOuterBounds()
+                    a.gapY, a.h = b.y - a.y1, a.y1 - a.y0
+                    a.dxL, a.w = a.x0 - b.x, a.x1 - a.x0
+                end
+            end
+            if a.body then
+                local b = a.body:getOuterBounds()
+                a.y1 = b.y - a.gapY; a.y0 = a.y1 - a.h
+                a.x0 = b.x + a.dxL; a.x1 = a.x0 + a.w
+            end
+        end
+    end
+end
 
 -- ── La zona única que se mueve ───────────────────────────────────────────────
 PointAreas.HOLD = 18          -- s en cada parada (con 12 casi no daba tiempo a llegar: las paradas pueden quedar a 10 s de camino)
@@ -119,6 +159,7 @@ PointAreas.inside = inside
 -- Autoritativo (un jugador y servidor). players = lista de PlayerAdventure
 -- activos; award(pa, points, area) reparte los puntos.
 function PointAreas.update(level, dt, players, award)
+    PointAreas.follow(level)
     level.zoneClock = (level.zoneClock or 0) + dt
     local active = PointAreas.state(level)
     for _, a in ipairs(level.pointAreas or {}) do
@@ -153,6 +194,7 @@ end
 
 -- Cliente online: solo lo visual. `positions` = { {x, y, isLocal}, ... }
 function PointAreas.clientUpdate(level, dt, positions)
+    PointAreas.follow(level)
     level.zoneClock = (level.zoneClock or 0) + dt          -- (entre instantáneas; el servidor la corrige: netApply)
     local active = PointAreas.state(level)
     for _, a in ipairs(level.pointAreas or {}) do

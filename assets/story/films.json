@@ -1,5 +1,5 @@
 {
-  "_": "TIEMPOS de las cinemáticas de la historia (intro, final y las de antes de la persecución y del jefe Espejo): la ÚNICA fuente para la imagen (src/story/Film.lua + src/story/films/) y para la música (tools/music/story_music.py). Cada escena dura `beats` pulsos a `bpm`; `cues` = momentos, en pulsos desde el principio de la escena. `in` = cómo entra (cut, fade, white). `next` = la pista del NIVEL que sigue: la película acaba en su tempo y su tono y, al terminar, esa pista entra sin hueco (el nivel la sigue). Los CRÉDITOS (credits): `src` = de qué pista del juego, parte (intro / loop / file), compás y cuántos compases sale la música de cada escena (tools/music/credits_music.py la monta con ellos: cada escena dura justo esos compases a su tempo); `bars` false = sin franjas de cine.",
+  "_": "TIEMPOS de las cinemáticas de la historia (intro, final y las de antes de la persecución y del jefe Espejo): la ÚNICA fuente para la imagen (src/story/Film.lua + src/story/films/) y para la música (tools/music/story_music.py). Cada escena dura `beats` pulsos a `bpm`; `cues` = momentos, en pulsos desde el principio de la escena. `in` = cómo entra (cut, fade, white). `plus` = las escenas que van UNO POR UNO por los jefes o los fragmentos se alargan solas: duran `beats` + `plus.bosses` pulsos por cada jefe con fragmento (sin el Espejo) + `plus.shards` por cada fragmento (assets/story/shards.json): con más jefes (una expansión) no hay que tocar nada aquí, solo volver a generar la música. `next` = la pista del NIVEL que sigue: la película acaba en su tempo y su tono y, al terminar, esa pista entra sin hueco (el nivel la sigue). Los CRÉDITOS (credits): `src` = de qué pista del juego, parte (intro / loop / file), compás y cuántos compases sale la música de cada escena (tools/music/credits_music.py la monta con ellos: cada escena dura justo esos compases a su tempo); `bars` false = sin franjas de cine.",
   "intro": {
     "music": "story_intro",
     "scenes": [
@@ -9,8 +9,8 @@
       { "id": "crash",   "bpm": 84,  "beats": 4,  "in": "cut",   "cues": { "flap": 1, "crash": 2 } },
       { "id": "reflex",  "bpm": 96,  "beats": 8,  "in": "cut",   "cues": { "peek": 1, "step": 3, "land": 4 } },
       { "id": "steal",   "bpm": 96,  "beats": 12, "in": "cut",   "cues": { "pull": 1, "got": 4, "laugh": 5, "try": 8, "fall": 9, "blast": 11 } },
-      { "id": "scatter", "bpm": 96,  "beats": 8,  "in": "white", "cues": { "first": 1 } },
-      { "id": "fury",    "bpm": 120, "beats": 14, "in": "cut",   "cues": { "first": 0, "each": 2 } },
+      { "id": "scatter", "bpm": 96,  "beats": 2,  "plus": { "bosses": 1 }, "in": "white", "cues": { "first": 1 } },
+      { "id": "fury",    "bpm": 120, "beats": 2,  "plus": { "bosses": 2 }, "in": "cut",   "cues": { "first": 0, "each": 2 } },
       { "id": "onfoot",  "bpm": 120, "beats": 12, "in": "fade",  "cues": { "land": 2, "up": 5, "walk": 8 } }
     ]
   },
@@ -18,11 +18,11 @@
     "music": "story_ending",
     "scenes": [
       { "id": "seven",   "bpm": 84,  "beats": 8,  "in": "white", "cues": { "out": 2 } },
-      { "id": "pieces",  "bpm": 96,  "beats": 16, "in": "cut",   "cues": { "first": 1, "each": 2 } },
+      { "id": "pieces",  "bpm": 96,  "beats": 2,  "plus": { "shards": 2 }, "in": "cut",   "cues": { "first": 1, "each": 2 } },
       { "id": "whole",   "bpm": 96,  "beats": 4,  "in": "white", "cues": {} },
       { "id": "return",  "bpm": 96,  "beats": 8,  "in": "cut",   "cues": { "pull": 1, "inside": 5, "orb": 6 } },
       { "id": "light",   "bpm": 120, "beats": 12, "in": "white", "cues": { "wave": 1 } },
-      { "id": "shrink",  "bpm": 120, "beats": 14, "in": "cut",   "cues": { "first": 0, "each": 2 } },
+      { "id": "shrink",  "bpm": 120, "beats": 2,  "plus": { "bosses": 2 }, "in": "cut",   "cues": { "first": 0, "each": 2 } },
       { "id": "flap",    "bpm": 100, "beats": 12, "in": "fade",  "cues": { "orb": 1, "try1": 4, "try2": 6, "rise": 8 } },
       { "id": "home",    "bpm": 132, "beats": 20, "in": "fade",  "cues": { "cross": 6, "pipes": 8, "logo": 12 } }
     ]

@@ -69,6 +69,9 @@ THEMES = {
     'cantera_dinamita': 'mine', 'cumbres_escarcha': 'snow', 'fabrica_criogenica': 'snow', 'templo_del_eco': 'cave',
     'jungla_colgante': 'beach', 'caldera_roja': 'volcano', 'cantera_real': 'volcano', 'lago_de_cristal': 'snow',
     'ciudadela_alterna': 'fortress', 'cala_de_los_muelles': 'beach', 'cripta_del_silencio': 'cave',
+    # la JUNGLA (tools/levelgen/levels_jungle_*.py)
+    'senda_del_dosel': 'jungle', 'rio_revuelto': 'jungle', 'templo_de_los_pesos': 'jungle', 'la_estampida': 'jungle',
+    'claro_de_la_balanza': 'jungle',
 }
 
 # Fondo de superficie (src/fx/Sky.lua), hora y fondo de profundidad (opcional) de cada nivel: `--sky` los escribe SOLO si el nivel

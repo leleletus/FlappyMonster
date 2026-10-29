@@ -11,6 +11,11 @@
 --            pulsa el salto menos de 1,2 veces por segundo de media (nadar sí; aporrear el botón sin salir, no)
 --     datos  en estos niveles TODOS los enemigos reaparecen y dan el 40 % de sus puntos (15 → 6, 10 → 4),
 --            y no hay ninguna VIDA EXTRA (las vidas las da el premio del bonus)
+--     montada (zonas `ride`, en un cuerpo que se mueve: el platillo de la Balanza de claro_de_la_balanza) mientras el
+--            bot puntúa SOLO está de pie EN el platillo (≥ 80 % del tiempo dentro) y la zona sube y baja con él
+--            (≥ 1 casilla); con el "jugador" en la zona (en el platillo) lo echa a empujones como en las demás;
+--            `contrapeso`: alguien se sube y se baja del OTRO platillo cada 4 s (la zona sube y baja ±2,5 casillas
+--            mientras el bot va o está): llega y está dentro ≥ 50 %
 --   tools/tests/run.sh bot_nav [BUILD=1] [-- assets/levels/a.json ...]   (sin niveles: las arenas de los bonus)
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
@@ -29,7 +34,7 @@ local Floods = require 'src/world/systems/Floods'
 local EntityTypes = require 'src/world/entities/base/EntityTypes'
 local SECS = tonumber(os.getenv('SECS')) or 60                 -- (una partida bonus entera: la zona cambia de parada)
 
-local function play(level, nav, withTarget, lure)
+local function play(level, nav, withTarget, lure, counter)
     if os.getenv('SEED') then math.randomseed(tonumber(os.getenv('SEED'))); JIT = 0 end      -- (SEED=n: el mismo azar —y los mismos tirones— en cada partida: probar varias suertes)
     local sx, sy = level:getSpawnPx()
     local bpa = PlayerAdventure:new(sx + TILE_PX, sy)
@@ -38,6 +43,8 @@ local function play(level, nav, withTarget, lure)
     local es = {}
     for _, pl in ipairs(level.entities) do es[#es + 1] = Entities.create(pl) end
     level.liveEntities = es
+    level.solidBodies = Entities.solidBodies(es)
+    PointAreas.follow(level)                                   -- (las zonas `ride`, ya en su cuerpo)
     -- el "jugador": quieto en el centro de la zona que más da (y vuelve a ella si lo echan)
     -- la zona que elige el bot (la que más da con suelo firme AHORA)
     local best = Bot.pickZone(nav, level, bpa.x, bpa.y, 0)
@@ -45,10 +52,10 @@ local function play(level, nav, withTarget, lure)
     local tgt
     if withTarget then
         local zn = {}
-        for id in pairs(best._nodes or {}) do zn[#zn + 1] = nav.nodes[id] end
+        for id in pairs(best and best._nodes or {}) do zn[#zn + 1] = nav.nodes[id] end
         table.sort(zn, function(a, b) return math.abs(a.x - (best.x0 + best.x1) / 2) < math.abs(b.x - (best.x0 + best.x1) / 2) end)
         local at = zn[1]
-        if lure then
+        if lure and zn[1] then
             -- el CEBO: fuera de toda zona, en una casilla a la que el bot sabe ir, a 3-7 casillas de la suya
             local bd
             at = nil
@@ -56,15 +63,32 @@ local function play(level, nav, withTarget, lure)
                 local out = true
                 for _, a in ipairs(level.pointAreas) do if PointAreas.inside(a, n.x, n.y) then out = false end end
                 local d = math.abs(n.x - zn[1].x) / TILE_PX + math.abs(n.y - zn[1].y) / TILE_PX
-                if out and d >= 3 and d <= 7 and level:isStandable(n.c, n.r) and BotNav.path(nav, next(best._nodes), { [id] = true }) and (not bd or d < bd) then bd, at = d, n end
+                if out and d >= 3 and d <= 7 and level:isStandable(n.c, n.r) and BotNav.path(nav, zn[1] and next(best._nodes), { [id] = true }) and (not bd or d < bd) then bd, at = d, n end
             end
         end
-        if at then
+        if at and zn[1] then
             tgt = PlayerAdventure:new(at.x, at.y)
             tgt.spawnX, tgt.spawnY = tgt.x, tgt.y
             tgt.immortal = lure or nil
         end
     end
+    -- CONTRAPESO (zonas `ride`): un "jugador" en OTRO cuerpo del mismo dueño (el otro platillo) que se sube y se baja
+    -- cada 4 s: la zona sube y baja ±2,5 casillas mientras el bot va hacia ella o está en ella
+    local cw, cwBody
+    if counter then
+        for _, a in ipairs(level.pointAreas) do
+            if a.body and a.body.owner and a.body.owner.bodyParts then
+                for _, p in ipairs(a.body.owner:bodyParts()) do if p ~= a.body then cwBody = p end end
+            end
+        end
+        if cwBody then cw = PlayerAdventure:new(0, 0); cw.immortal = true end
+    end
+    local function cwDrop()                                    -- (encima del centro del platillo, cayendo)
+        local b = cwBody:getOuterBounds()
+        cw.x, cw.y, cw.vx, cw.vy = b.x + b.w / 2, b.y - 70, 0, 0
+    end
+    if cw then cwDrop() end
+    local cwWas = true
     local toggles, lastSw, wetT, wetJ, prevJ, breakable = 0, nil, 0, 0, false, false
     local swCells = BotNav._switchCells(level)
     local function swKey()
@@ -77,11 +101,19 @@ local function play(level, nav, withTarget, lure)
     local t, arrive, inside, pushes, tIn, activeT = 0, nil, 0, 0, 0, 0
     local curStop, stopT, stopIn, stops, reached = nil, 0, 0, 0, 0
     local ax, ay, still, worst = bpa.x, bpa.y, 0, 0             -- lo más que pasa PARADO en un sitio fuera de una zona
+    local rideIn, rideOn, rideLo, rideHi = 0, 0, nil, nil       -- (zona montada: tiempo dentro, de él en su cuerpo; alto y bajo)
     local dt = 1 / 60
     while t < SECS do
         level.players = tgt and { bpa, tgt } or { bpa }
+        local cwOn = cw ~= nil and math.floor(t / 4) % 2 == 0
+        if cwOn then
+            if not cwWas then cwDrop() end
+            level.players[#level.players + 1] = cw
+        end
+        cwWas = cwOn
         level.solidBodies = Entities.solidBodies(es)          -- (trampolines, morteros: como en AdventureState)
         level.pushers = require('src/world/systems/Push').collect(es)   -- (lo que sopla — Soplones, Géiseres —: como en AdventureState)
+        PointAreas.follow(level)                               -- (zonas `ride`: van con su cuerpo, como en PointAreas.update)
         level:update(dt)
         level.zoneClock = t                                    -- (la zona ÚNICA que se mueve de parada en parada: PointAreas)
         do                                                     -- el "jugador" sigue a la zona: su sitio es la parada de ahora
@@ -151,6 +183,12 @@ local function play(level, nav, withTarget, lure)
             else tgt.outT = 0 end
             if PointAreas.inside(best, tgt.x, tgt.y) then tIn = tIn + dt end
         end
+        if cwOn then                                           -- (el contrapeso: quieto en su platillo; si lo echan, vuelve)
+            local real = Input; Input = stubT; P.decodeInput(0, stubT.state)
+            cw:update(dt, level); Input = real
+            local b = cwBody:getOuterBounds()
+            if cw.dying or math.abs(cw.x - (b.x + b.w / 2)) > 40 or cw.y > b.y then cw.dying, cw.alive = false, true; cwDrop() end
+        end
         for _, e in ipairs(es) do if e.alive then e:update(dt, level) end end
         Interactions.run(bpa, es, {})
         -- (dentro de la zona ACTIVA; mientras viaja a la parada siguiente, ir hacia ella no es estar parado)
@@ -166,11 +204,19 @@ local function play(level, nav, withTarget, lure)
         if isIn or bot.kind == 'wait' or math.abs(bpa.x - ax) > 40 or math.abs(bpa.y - ay) > 100 then ax, ay, still = bpa.x, bpa.y, 0
         else still = still + dt; worst = math.max(worst, still) end
         if isIn then inside = inside + dt end
+        if active and active.ride then
+            rideLo, rideHi = math.min(rideLo or active.y1, active.y1), math.max(rideHi or active.y1, active.y1)
+            if isIn and bpa.onGround then
+                rideIn = rideIn + dt
+                if active.body and bpa.standBody == active.body then rideOn = rideOn + dt end
+            end
+        end
         t = t + dt
     end
     return arrive, inside / math.max(1, activeT), pushes, tIn / SECS, worst,
            { toggles = toggles, wetT = wetT, wetJ = wetJ, breakable = breakable, lured = tgt ~= nil, stops = stops, reached = reached,
-             moving = #level.pointAreas > 1 }
+             moving = #level.pointAreas > 1, ride = rideLo ~= nil, rideOn = rideOn / math.max(0.01, rideIn),
+             rideMove = rideLo and (rideHi - rideLo) or 0 }
 end
 
 -- DATOS: en un nivel con zonas de puntos todo enemigo que se puede pisar REAPARECE y da el 40 % de sus puntos
@@ -201,7 +247,7 @@ end
 -- TODOS los niveles con zonas de puntos (los 6 bonus de la historia y los demás de Rey de la Colina, que en Juego
 -- libre también se juegan contra el bot)
 local DEFAULT = { 'cala_de_los_muelles', 'cantera_real', 'ciudadela_alterna', 'cripta_del_silencio', 'lago_de_cristal',
-                  'isla_flotante', 'coliseo_pinchos', 'cascada_dorada', 'cumbre_cangrejo', 'marea_alta', 'rebote_real' }
+                  'claro_de_la_balanza', 'isla_flotante', 'coliseo_pinchos', 'cascada_dorada', 'cumbre_cangrejo', 'marea_alta', 'rebote_real' }
 local fails = 0
 
 function love.load(arg)
@@ -229,6 +275,8 @@ function love.load(arg)
                 local arrive, frac, _, _, w1, x1 = play(Level.new(path), g, false)
                 local _, fracH, pushes, tIn, w2, x2 = play(Level.new(path), g, true)
                 local arrL, fracL, _, _, _, x3 = play(Level.new(path), g, true, true)
+                local arrC, fracC, xC
+                if x1.ride then arrC, fracC, _, _, _, xC = play(Level.new(path), g, false, false, true) end
                 local stuck = math.max(w1, w2)                  -- (nunca clavado en un sitio fuera de una zona más de 6 s)
                 -- echarlo: a empujones, o quitándole el suelo con el Activador; sobre suelo rompible no ataca: se queda
                 local kicks = pushes + x2.toggles
@@ -240,12 +288,18 @@ function love.load(arg)
                 local need = x1.moving and 0.3 or 0.5                    -- (zona que se mueve: parte del tiempo es ir de parada en parada)
                 if wetT > 30 then need = math.min(need, 0.4) end        -- (media partida con la zona bajo el agua)
                 local follows = not x1.moving or x1.reached >= x1.stops - 1
-                local good = arrive ~= nil and arrive < 25 and frac > need and follows and hunted and stuck < 6 and calm and keeps and #bad == 0     -- (0.5: en cala_de_los_muelles un enemigo lo tira de la zona y tarda en volver)
+                -- (zona MONTADA en un cuerpo: puntúa de pie EN él y la zona sube y baja con él)
+                local rides = not x1.ride or (x1.rideOn >= 0.8 and x1.rideMove >= TILE_PX and arrC ~= nil and arrC < 25 and fracC >= 0.5 and xC.rideMove >= TILE_PX)
+                local good = arrive ~= nil and arrive < 25 and frac > need and follows and hunted and stuck < 6 and calm and keeps and rides and #bad == 0     -- (0.5: en cala_de_los_muelles un enemigo lo tira de la zona y tarda en volver)
                 if not good then fails = fails + 1 end
                 print(('%-22s %s  sola: llega en %s s, dentro el %d %% · caza: %d empujones%s%s, el jugador en la zona el %d %% · cebo: dentro el %s · agua: %.0f s, %.1f saltos/s · parado como mucho %.1f s · paradas alcanzadas %d/%d'):format(
                     name, good and 'OK   ' or 'FALLA', arrive and string.format('%.1f', arrive) or '—', math.floor(frac * 100), pushes,
                     x2.toggles > 0 and (' + ' .. x2.toggles .. ' Activador') or '', x2.breakable and ' (suelo rompible: no ataca)' or '', math.floor(tIn * 100),
                     x3.lured and (math.floor(fracL * 100) .. ' %') or 'sin cebo', wetT, wetT > 0 and wetJ / wetT or 0, stuck, x1.reached, x1.stops))
+                if x1.ride then
+                    print(('    montada: en el platillo el %d %% del tiempo dentro, la zona sube y baja %d px · contrapeso (alguien sube y baja del otro platillo cada 4 s): llega en %s s, dentro el %d %%, la zona sube y baja %d px'):format(
+                        math.floor(x1.rideOn * 100), x1.rideMove, arrC and string.format('%.1f', arrC) or '—', math.floor((fracC or 0) * 100), xC.rideMove))
+                end
                 for _, b in ipairs(bad) do print('    datos: ' .. b) end
             end
         end

@@ -781,3 +781,15 @@ only (melody checks clean: no long notes off the chord, no loose notes, no clash
   lead 36 % of the energy. Attack envelopes land 1.5-6 ms after the chip arrangements' (the soft GM attacks; between
   the other six it is 0-1.5 ms). To judge by ear: the flute's balance, the switch from another island, the toucan's level.
 
+## The film scores for any number of shards (`tools/music/story_music.py`, 0.5.99)
+
+- The jungle boss got a shard (8 shards, 7 bosses) and the user asked that neither the cinematic nor its music be
+  hard-coded ("si algún día decido añadir un pack de expansión con más mundos y bosses, no requiera reescribir todo
+  esto"). `story_music.py` now reads `assets/story/shards.json`: the one-by-one scenes last `beats` + `plus` per boss
+  / shard (`scene_beats`, = `Film.beats`), and the per-shard material is generated: `scatter` = one bell per boss
+  walking the A harmonic minor scale down to G#; `fury` = `fit()` of the old roots A A# C D E F (a seventh root, B, goes
+  into the widest leap); `pieces` = `rise(n)` (the major scale up, the last on the top tonic; 8 → the full octave) with
+  each note's I / IV / V chord; `shrink` = one map-theme bar per two bosses then the dominant; chase / lair = `fit()`
+  of the six rising bells spread over the same span. With 6 bosses it reproduces the old notes exactly.
+- Regenerated `story_intro` (51.8 → 53.4 s), `story_ending` (52.5 → 54.8 s), `story_chase`, `story_lair` (same
+  lengths). Verified by numbers only (length = film, −13 LUFS, energy per scene): **NOT listened to**.

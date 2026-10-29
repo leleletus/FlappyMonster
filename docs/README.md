@@ -102,7 +102,7 @@ Ids are data (level files, saves, network), so confusing ones are explained here
 | KOTH, `koth` | King of the Hill |
 | worlds `pradera`, `costa`, `fortaleza`, `nieve`, `cuevas`, `final` | Meadow, Coast, Fortress, Summits, Caves, Volcano |
 | "la llamada" | the game's musical leitmotif (the opening of the map tune) |
-| "fragmento" / shard | one of the 7 mirror shards |
+| "fragmento" / shard | one of the mirror shards (8 today: one per boss + the Mirror's; catalog `assets/story/shards.json`) |
 | Xtra Extreme (`xtra`) | the top difficulty: one boss per arena, enraged from the start (two bosses per arena until 0.5.24) |
 | arnés | a test harness in `tools/tests/` |
 | `FlappyMonster_originals/`, `FlappyMonster_pruebas/` | folders OUTSIDE the repo: the user's original art / audio and archived tools; previews for the user |

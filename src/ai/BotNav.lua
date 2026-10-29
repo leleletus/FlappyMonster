@@ -13,6 +13,14 @@
 --   BotNav.nodeAt(g, x, y)         → nodo donde está algo de pie en (x, y) (o el más cercano de esa fila)
 --   BotNav.path(g, from, goals[, avoid, skip]) → lista de aristas (Dijkstra por fotogramas) hasta cualquiera de
 --                                  `goals`; skip(u, e) = true descarta una arista (las que el bot vio fallar)
+--   BotNav.track(g, level)         → pone al día los nodos de los CUERPOS QUE SE MUEVEN (ver abajo)
+--   BotNav.standable(g, n, level)  → ¿se puede estar de pie en ese nodo AHORA? (casilla con suelo / cuerpo ahí)
+-- CUERPOS QUE SE MUEVEN (0.5.99; los platillos de la Balanza: la zona de puntos `ride` del bonus de la jungla va
+-- montada en uno): su cara de arriba también son nodos (`body` = qué cuerpo, `top` = dónde estaba su cara al
+-- grabarlos). Un cuerpo con dueño que tenga `navPoses()` / `navPose(p)` (la Balanza: cuánto baja un platillo) se
+-- graba en cada POSE —una por fila que recorre—: los nodos de esa pose son las casillas donde queda su cara y sus
+-- aristas se graban con él ahí. En la partida (`track`), un nodo de cuerpo vale solo si la cara del cuerpo está
+-- AHORA en su fila, y su x / y siguen al cuerpo: el bot planea hasta el platillo esté donde esté.
 local P = require 'src/network/Protocol'
 local json = require 'libs/json'
 
@@ -135,14 +143,101 @@ local function feetRow(pa)
     return math.floor((ob.y + ob.h - 2) / TILE_PX) + 1
 end
 
-function BotNav.nodeAt(g, x, y, h)
-    local c = math.floor(x / TILE_PX) + 1
-    local r = math.floor((y + (h or 0) / 2 - 2) / TILE_PX) + 1
+local function cellNode(g, c, r)
     if g.nodes[nodeId(c, r)] then return nodeId(c, r) end
     for _, dc in ipairs({ -1, 1 }) do
         if g.nodes[nodeId(c + dc, r)] then return nodeId(c + dc, r) end
     end
     return nil
+end
+function BotNav.nodeAt(g, x, y, h)
+    local c = math.floor(x / TILE_PX) + 1
+    local r = math.floor((y + (h or 0) / 2 - 2) / TILE_PX) + 1
+    local id = cellNode(g, c, r)
+    -- (de pie en un cuerpo que se mueve, justo al cambiar de fila: quien va encima lo sigue un paso después — se
+    -- mueve con él en su update siguiente — y caía en el nodo de la fila de antes, que ya no vale: el bot "salía" de
+    -- la zona por la cornisa para volver a entrar. El de la fila de al lado que SÍ vale ahora)
+    if g.bodyNodes and g.bodyNodes[1] then
+        local n = id and g.nodes[id]
+        if not n or (n.body and not n.live) then
+            for _, dr in ipairs({ -1, 1 }) do
+                local alt = cellNode(g, c, r + dr)
+                if alt and g.nodes[alt].body and g.nodes[alt].live then return alt end
+            end
+        end
+    end
+    return id
+end
+
+-- ── Cuerpos que se mueven ─────────────────────────────────────────────────────
+-- Qué cuerpo es (estable entre la construcción y la partida: tipo y casilla de su colocación + qué pieza)
+local function bodyKey(owner, i)
+    return ('%s@%d,%d#%d'):format(tostring(owner.typeName), owner.col or 0, owner.row or 0, i)
+end
+-- Los cuerpos que se mueven de una lista de entidades: { {key, body, owner} }
+local function movingBodies(ents)
+    local out = {}
+    for _, e in ipairs(ents or {}) do
+        if e.alive ~= false then
+            if e.solidFull and e.moves then out[#out + 1] = { key = bodyKey(e, 0), body = e, owner = e } end
+            if e.bodyParts then
+                for i, p in ipairs(e:bodyParts()) do
+                    if p.moves and p.alive ~= false then out[#out + 1] = { key = bodyKey(e, i), body = p, owner = e } end
+                end
+            end
+        end
+    end
+    return out
+end
+BotNav._movingBodies = movingBodies
+
+-- La fila en que nodeAt pone a quien está de pie en una cara a la altura `y` (nodeAt mira pa.y + h/2: los pies menos
+-- el desfase de la caja del jugador; en el suelo de casillas da igual, en una cara a media casilla no)
+local YOFF
+local function rowOfTop(y)
+    if not YOFF then
+        local PlayerAdventure = require 'src/player/PlayerAdventure'
+        local p = PlayerAdventure:new(0, 0)
+        local ob = p:getOuterBounds()
+        YOFF = (ob.y + ob.h) - (p.y + ob.h / 2)
+    end
+    return math.floor((y - YOFF - 2) / TILE_PX) + 1
+end
+
+-- La clave de un cuerpo de level.solidBodies (se guarda en él)
+local function keyOfLive(o)
+    if o._navKey then return o._navKey end
+    if o.owner and o.owner.bodyParts then
+        for i, p in ipairs(o.owner:bodyParts()) do if p == o then o._navKey = bodyKey(o.owner, i) end end
+    else o._navKey = bodyKey(o, 0) end
+    return o._navKey
+end
+
+-- Pone al día los nodos de cuerpo: dónde están ahora (x / y siguen al cuerpo) y si valen (su cara en su fila)
+local TRB = {}
+function BotNav.track(g, level)
+    if not g.bodyNodes then
+        g.bodyNodes = {}
+        for id, n in pairs(g.nodes) do if n.body then g.bodyNodes[#g.bodyNodes + 1] = n; n.x0, n.y0 = n.x, n.y end end
+    end
+    if #g.bodyNodes == 0 then return end
+    local live = {}
+    for _, o in ipairs(level.solidBodies or {}) do
+        if o.moves and o.alive ~= false then live[keyOfLive(o)] = o end
+    end
+    for _, n in ipairs(g.bodyNodes) do
+        local o = live[n.body]
+        if o then
+            local b = o:getOuterBounds(TRB)
+            n.x, n.y = n.x0 + (b.x - n.bx), (n.y0 or 0) + (b.y - n.top)
+            n.live = rowOfTop(b.y) == n.r
+        else n.live = false end
+    end
+end
+
+function BotNav.standable(g, n, level)
+    if n.body then return n.live == true end
+    return level:isStandable(n.c, n.r)
 end
 
 -- ── Construcción (física real) ────────────────────────────────────────────────
@@ -177,11 +272,11 @@ BotNav._switchCells, BotNav._setSwitches = switchCells, setSwitches
 
 function BotNav.build(level, opts)
     local cells = switchCells(level)
-    if #cells == 0 then return BotNav.buildOne(level, opts) end
+    if #cells == 0 then return BotNav.buildPoses(level, opts) end
     setSwitches(level, cells, true)
-    local a = BotNav.buildOne(level, opts)
+    local a = BotNav.buildPoses(level, opts)
     setSwitches(level, cells, false)
-    local b = BotNav.buildOne(level, opts)
+    local b = BotNav.buildPoses(level, opts)
     for _, k in ipairs(cells) do level.tiles[k[2]][k[1]] = k[3] end
     a.sig = BotNav.signature(level)
     for id, n in pairs(b.nodes) do a.nodes[id] = a.nodes[id] or n end
@@ -198,7 +293,58 @@ function BotNav.build(level, opts)
     return a
 end
 
-function BotNav.buildOne(level, opts)
+-- Con CUERPOS QUE SE MUEVEN: una pasada por POSE (las de `navPoses()` de su dueño; la primera, la de reposo, es el
+-- grafo de siempre) y de las demás solo se toman los nodos de cuerpo NUEVOS (filas que el cuerpo no tenía) y sus
+-- aristas. Sin cuerpos que se muevan, como siempre (el mismo grafo).
+function BotNav.buildPoses(level, opts)
+    local Entities = require 'src/world/entities/Entities'
+    local ents = {}
+    for _, pl in ipairs(level.entities or {}) do
+        local ok, e = pcall(Entities.create, pl)
+        if ok and e then ents[#ents + 1] = e end
+    end
+    if #movingBodies(ents) == 0 then return BotNav.buildOne(level, opts) end
+    local posers, passes = {}, 1
+    for _, e in ipairs(ents) do
+        if e.navPoses and e.navPose then
+            local list = e:navPoses()
+            if list and #list > 0 then posers[#posers + 1] = { e = e, poses = list }; passes = math.max(passes, #list) end
+        end
+    end
+    local function pose(i) for _, p in ipairs(posers) do p.e:navPose(p.poses[math.min(i, #p.poses)]) end end
+    pose(1)
+    local g = BotNav.buildOne(level, opts, ents)
+    for i = 2, passes do
+        pose(i)
+        local gi = BotNav.buildOne(level, opts, ents, true)
+        local fresh = {}
+        for id, n in pairs(gi.nodes) do
+            if n.body and n.y and not g.nodes[id] then g.nodes[id], fresh[id] = n, true; g.stats.nodes = g.stats.nodes + 1 end
+        end
+        local function usable(id) return fresh[id] or (g.nodes[id] ~= nil and not g.nodes[id].body) end
+        for from, list in pairs(gi.edges) do
+            if usable(from) then
+                for _, e in ipairs(list) do
+                    if (fresh[from] or fresh[e.to]) and usable(e.to) then
+                        local mine = g.edges[from] or {}
+                        g.edges[from] = mine
+                        local found
+                        for _, f in ipairs(mine) do if f.to == e.to then found = f end end
+                        if not found then mine[#mine + 1] = e elseif e.cost < found.cost then found.cost, found.seq, found.walk = e.cost, e.seq, e.walk end
+                    end
+                end
+            end
+        end
+        g.stats.steps = g.stats.steps + gi.stats.steps
+    end
+    pose(1)
+    return g
+end
+
+-- ents: las entidades ya creadas (buildPoses; si no, se crean aquí). nearOnly: solo se graban movimientos desde los
+-- nodos de cuerpo y las casillas cerca de un cuerpo que se mueve (las demás pasadas de buildPoses)
+local NEAR = 9                 -- casillas
+function BotNav.buildOne(level, opts, ents, nearOnly)
     opts = opts or {}
     local PlayerAdventure = require 'src/player/PlayerAdventure'
     local stub = P.newInputStub()
@@ -222,11 +368,20 @@ function BotNav.buildOne(level, opts)
     -- (se pregunta su interact, sin gastarlo); en la partida, si está recargando, la arista falla y se descarta
     local Entities = require 'src/world/entities/Entities'
     local bodies = {}
-    for _, pl in ipairs(level.entities or {}) do
-        local ok, e = pcall(Entities.create, pl)
-        if ok and e and e.solidFull then bodies[#bodies + 1] = e end
+    if ents then
+        for _, e in ipairs(ents) do if e.solidFull then bodies[#bodies + 1] = e end end
+    else
+        for _, pl in ipairs(level.entities or {}) do
+            local ok, e = pcall(Entities.create, pl)
+            if ok and e and e.solidFull then bodies[#bodies + 1] = e end
+        end
     end
-    level.solidBodies = bodies
+    -- (y las PIEZAS que se mueven — los platillos de la Balanza —, en su pose: se pisan como en la partida)
+    local moving = movingBodies(ents)
+    local all = {}
+    for _, e in ipairs(bodies) do all[#all + 1] = e end
+    for _, mb in ipairs(moving) do if mb.body ~= mb.owner then all[#all + 1] = mb.body end end
+    level.solidBodies = all
     -- Las casillas OCUPADAS por un objeto sólido (un mortero, un trampolín) no son sitios donde estar ni por donde
     -- andar: el bot se quedaba empujando contra el mortero (cantera_real)
     for id, n in pairs(g.nodes) do
@@ -239,6 +394,27 @@ function BotNav.buildOne(level, opts)
             end
         end
     end
+    -- la cara de arriba de cada cuerpo que se mueve: nodos (en las casillas que cubre, en la fila de sus pies)
+    local near = {}
+    for _, mb in ipairs(moving) do
+        local b = mb.body:getOuterBounds()
+        local r = rowOfTop(b.y)
+        for c = math.floor(b.x / TILE_PX) + 1, math.floor((b.x + b.w) / TILE_PX) + 1 do
+            local x, id = (c - 0.5) * TILE_PX, nodeId(c, r)
+            if x >= b.x + 8 and x <= b.x + b.w - 8 and not g.nodes[id] and r >= 2 and r <= level.tileH - 1
+               and level:getDef(c, r).collision ~= 'solid' then
+                g.nodes[id] = { c = c, r = r, x = x, body = mb.key, top = b.y, bx = b.x }
+            end
+        end
+        near[#near + 1] = { b.x / TILE_PX - NEAR, (b.x + b.w) / TILE_PX + NEAR, b.y / TILE_PX - NEAR, b.y / TILE_PX + NEAR }
+    end
+    local function isNear(n)
+        if n.body then return true end
+        for _, q in ipairs(near) do
+            if n.c >= q[1] and n.c <= q[2] + 1 and n.r >= q[3] and n.r <= q[4] + 1 then return true end
+        end
+        return false
+    end
     local function step()
         pa:update(DT, level)
         for _, e in ipairs(bodies) do
@@ -249,15 +425,22 @@ function BotNav.buildOne(level, opts)
         end
     end
     local h = pa:getOuterBounds().h
+    local ob0 = pa:getOuterBounds()
+    local feetOff = ob0.y + ob0.h - pa.y              -- (de pa.y a sus pies)
     local count, steps = 0, 0
     for id, n in pairs(g.nodes) do
+      if nearOnly and not isNear(n) then
+        -- (otra pose de buildPoses: lo lejos de los cuerpos ya está grabado en la primera)
+      else
         -- estado de partida: quieto en el centro de su casilla, ya asentado
         -- (se deja caer desde un poco más arriba: empezar con la caja metida en el suelo lo atravesaba)
-        pa.x, pa.y, pa.vx, pa.vy = n.x, (n.r - 1) * TILE_PX - 12, 0, 0
+        -- (en un cuerpo: desde un poco por encima de su cara)
+        pa.x, pa.y, pa.vx, pa.vy = n.x, n.body and (n.top - feetOff - 12) or ((n.r - 1) * TILE_PX - 12), 0, 0
         pa.onGround, pa.jumpsLeft, pa.dying, pa.alive = false, 2, false, true
         P.decodeInput(0, stub.state)
         for _ = 1, 40 do step() end
-        if pa.onGround and feetRow(pa) == n.r then
+        local ob = pa:getOuterBounds()
+        if pa.onGround and (n.body and rowOfTop(ob.y + ob.h) == n.r or (not n.body and feetRow(pa) == n.r)) then
             n.y = pa.y
             local s0 = P.packOwnState(pa)
             local out = {}
@@ -302,6 +485,7 @@ function BotNav.buildOne(level, opts)
         else
             g.nodes[id] = nil
         end
+      end
     end
     for id, list in pairs(g.edges) do
         for i = #list, 1, -1 do if not g.nodes[list[i].to] then table.remove(list, i) end end
@@ -316,7 +500,13 @@ end
 -- ── Archivo ───────────────────────────────────────────────────────────────────
 function BotNav.encode(g)
     local nodes, edges = {}, {}
-    for id, n in pairs(g.nodes) do nodes[#nodes + 1] = { id, n.c, n.r, math.floor(n.x), math.floor(n.y or 0) } end
+    for id, n in pairs(g.nodes) do
+        nodes[#nodes + 1] = { id, n.c, n.r, math.floor(n.x), math.floor(n.y or 0) }
+        if n.body then                                 -- (nodo de un cuerpo que se mueve: cuál y dónde estaba al grabarlo)
+            local t = nodes[#nodes]
+            t[6], t[7], t[8] = n.body, math.floor(n.top + 0.5), math.floor(n.bx + 0.5)
+        end
+    end
     for id, list in pairs(g.edges) do
         for _, e in ipairs(list) do edges[#edges + 1] = { id, e.to, e.cost, e.walk or 0, e.seq or 0 } end
     end
@@ -329,7 +519,7 @@ function BotNav.decode(text)
     local ok, d = pcall(json.decode, text)
     if not ok or type(d) ~= 'table' or d.version ~= BotNav.VERSION then return nil end
     local g = { version = d.version, sig = d.sig, nodes = {}, edges = {} }
-    for _, n in ipairs(d.nodes) do g.nodes[n[1]] = { c = n[2], r = n[3], x = n[4], y = n[5] } end
+    for _, n in ipairs(d.nodes) do g.nodes[n[1]] = { c = n[2], r = n[3], x = n[4], y = n[5], body = n[6], top = n[7], bx = n[8] } end
     for _, e in ipairs(d.edges) do
         local list = g.edges[e[1]] or {}
         g.edges[e[1]] = list

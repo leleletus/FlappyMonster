@@ -27,10 +27,12 @@ function Run.save() if Run.slot and Run.data then Save.write(Run.slot, Run.data)
 
 function Run.isDone(id) return Run.data ~= nil and Run.data.done[id] == true end
 
+-- (o, en una partida de antes de que se metiera un mundo nuevo delante de él, el que ya tenía abierto: Save.migrate)
 function Run.worldOpen(w)
     if w <= 1 then return true end
-    local prev = Worlds.get(w - 1)
-    return prev ~= nil and Worlds.get(w) ~= nil and Run.isDone(prev.boss)
+    local prev, W = Worlds.get(w - 1), Worlds.get(w)
+    if not (prev and W) then return false end
+    return Run.isDone(prev.boss) or (Run.data ~= nil and Run.data.open ~= nil and Run.data.open[W.id] == true)
 end
 
 function Run.state(w, k)
@@ -241,7 +243,7 @@ function Run.gameOver(w)
     d.lives = Difficulty.of(d.difficulty, 'livesStart', 3)
     d.gameOvers = (d.gameOvers or 0) + 1
     if Difficulty.of(d.difficulty, 'restartGame', false) then
-        d.done, d.shards, w = {}, {}, 1          -- (todo el juego otra vez: también los fragmentos)
+        d.done, d.shards, d.open, w = {}, {}, {}, 1      -- (todo el juego otra vez: también los fragmentos)
     else
         for _, n in ipairs(Worlds.nodes(w)) do d.done[n.id] = nil end
     end

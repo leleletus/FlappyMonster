@@ -138,7 +138,7 @@ return {
         world = {
             pradera = "LA PRADERA", costa = "LA COSTA", fortaleza = "LA FORTALEZA",
             nieve = "LAS CUMBRES", cuevas = "LAS CUEVAS", final = "EL FINAL",
-            jungla = "LA JUNGLA",            -- (aún no está en la historia: en el mapa, PRÓXIMAMENTE)
+            jungla = "LA JUNGLA",            -- (el mundo 3 de la historia desde 0.5.99)
         },
     },
     flappy = {

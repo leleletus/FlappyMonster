@@ -360,6 +360,17 @@ function Scale:updateCustom(dt, level)
     return true
 end
 
+-- ── Bot (src/ai/BotNav.lua) ───────────────────────────────────────────────────
+-- Las POSES en que se graba el grafo del bot: nivelada (la primera: la de reposo), los dos extremos y una cada casilla
+-- entre medias (así la cara de cada platillo pasa por todas las filas de su recorrido). Pose = el desnivel `d`.
+function Scale:navPoses()
+    local travel = (self.props.travel or 2.5) * TILE_PX
+    local list = { 0, travel, -travel }
+    for o = TILE_PX, travel - 1, TILE_PX do list[#list + 1] = o; list[#list + 1] = -o end
+    return list
+end
+function Scale:navPose(d) self.d = d end
+
 -- ── Red ───────────────────────────────────────────────────────────────────────
 function Scale:netAtRest() return self.d == 0 and self.state == 'idle' end
 function Scale:netRest() self.d, self.state = 0, 'idle' end

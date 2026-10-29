@@ -4,10 +4,10 @@
 --   flappy   un día cualquiera: el monstruo ALETEA entre las tuberías (el modo Flappy de verdad)
 --   glint    algo brilla a lo lejos; las tuberías se acaban y aparece el volcán
 --   mirror   baja por la chimenea del cráter: un espejo antiguo; su reflejo lo imita
---   crash    aletea demasiado cerca: ¡CRAC! el cristal se rompe en siete
+--   crash    aletea demasiado cerca: ¡CRAC! el cristal se rompe en pedazos (uno por jefe y el del centro: assets/story/shards.json)
 --   reflex   del marco vacío sale su REFLEJO
 --   steal    el Reflejo le arranca el aleteo (su magia), se ríe, y lo echa del cráter con los fragmentos
---   scatter  seis fragmentos (y el monstruo) cruzan el cielo y caen por las islas; el séptimo se lo queda
+--   scatter  los fragmentos (y el monstruo) cruzan el cielo y caen por las islas, uno por jefe; el del centro se lo queda
 --   fury     la FURIA DEL ESPEJO: quien encuentra un fragmento crece y se enfurece
 --   onfoot   el monstruo cae en la Pradera; ya no puede aletear: echa a andar
 local Stage = require 'src/story/Stage'
@@ -36,19 +36,14 @@ F.flappy = {
 -- y aparece el cielo de verdad, el de la Pradera. A lo lejos, algo brilla. Corte al MAPA: cruza el mar, de la
 -- Pradera al volcán, hacia el destello.
 local GLINT_X, GLINT_Y = 1090, 300
-local ZOOM_FAR = 0.5
-local function farCam()
-    local _, SM = Stage.map()
-    local pw, ph = SM.mapSize()
-    return (pw - WINDOW_W / ZOOM_FAR) / 2, (ph - WINDOW_H / ZOOM_FAR) / 2
-end
+local farCam = K.far                    -- (x, y, zoom: todo el mapa en pantalla)
 
 F.glint = {
     enter = function(c)
         c.shared.rig = c.shared.rig or K.flappyRig(-999, 0)
         c.v.flaps = 0
         local map = Stage.map()
-        K.setBosses(map, { K.SMALL, K.SMALL, K.SMALL, K.SMALL, K.SMALL, K.SMALL }, 0)
+        K.setBosses(map, K.all(K.SMALL), 0)
     end,
     events = {
         { cue = 'glint', fn = function(c) c.sfx('storyGlint'); Stage.spark(GLINT_X, GLINT_Y, 10, 6, 90, { life = 0.7, s = 4 }) end },
@@ -91,17 +86,17 @@ F.glint = {
         else
             -- el mapa: de la Pradera al volcán, aleteando sobre el mar
             local map, SM = Stage.map()
-            local cx, cy = farCam()
+            local cx, cy, zf = farCam()
             local hx, hy = SM.nodeXY(1, 1)
-            local vx, vy = SM.bossXY(6)
+            local vx, vy = K.volcanoXY()
             local u = smooth(c.k(turn, c.dur))
             local ft = c.v.flapT or turn
             local ph = (t - ft) / c.b(0.5)                                     -- cada aleteo: sube y cae un poco
             local bob = -44 * ph * (1 - ph) * 4 * 0.5
-            map:filmDraw(cx, cy, ZOOM_FAR, { extra = function(ox, oy)
+            map:filmDraw(cx, cy, zf, { extra = function(ox, oy)
                 love.graphics.push()
                 love.graphics.translate(-ox, -oy)
-                K.drawExtras(map, { K.SMALL, K.SMALL, K.SMALL, K.SMALL, K.SMALL, K.SMALL })
+                K.drawExtras(map, K.all(K.SMALL))
                 local tw = 0.5 + 0.5 * math.sin(t * 9)
                 Stage.rays(vx, vy - 40, t * 3, 4, 50 + 40 * tw, 0.7, { 0.8, 0.95, 1 })
                 local x, y = lerp(hx, vx - 30, u), lerp(hy - 120, vy - 110, u) + bob
@@ -191,7 +186,7 @@ F.crash = {
             if t < crash then
                 Stage.mirror(K.MX, K.MF, { whole = true, reflection = K.reflect(x, y, o) })
             else
-                Stage.mirror(K.MX, K.MF, { shards = ALL, shake = shake })      -- (agrietado: los siete trozos, aún en su sitio)
+                Stage.mirror(K.MX, K.MF, { shards = ALL, shake = shake })      -- (agrietado: todos los trozos, aún en su sitio)
             end
             Stage.monster(x, y, o)
         end, { Stage.mirrorLight(K.MX, K.MF, (t < crash) and 0.6 or 0.3) })
@@ -314,16 +309,16 @@ F.steal = {
         local sx, sy = Particles.shakeOffset()
         Stage.drawSet(c.v.set, K.CAMX + sx, K.CAMY + sy, function()
             Stage.mirror(K.MX, K.MF, {})
-            -- los seis de alrededor flotan; al final salen disparados por la chimenea
-            for _, id in ipairs(ALL) do
+            -- los de alrededor flotan; al final salen disparados por la chimenea
+            for i, id in ipairs(ALL) do
                 local hx, hy = K.hover(id, t)
-                if id == '7' then
+                if id == K.FINAL then
                     -- el del centro va a la mano del Reflejo y gira a su alrededor
                     local u = smooth(c.k(got, laugh))
                     local a = t * 2.4
                     hx, hy = lerp(hx, REF_X + math.cos(a) * 70, u), lerp(hy, ry - 10 + math.sin(a) * 28, u)
                 elseif bk > 0 then
-                    hx, hy = lerp(hx, K.HOLE_X + (tonumber(id) - 3.5) * 16, easeIn(bk)), lerp(hy, -120, easeIn(bk))
+                    hx, hy = lerp(hx, K.HOLE_X + (i - (#ALL + 1) / 2) * 16, easeIn(bk)), lerp(hy, -120, easeIn(bk))
                 end
                 Stage.shard(id, hx, hy, { rot = math.sin(t * 1.3 + tonumber(id)) * 0.25 + bk * 9 })
             end
@@ -341,16 +336,16 @@ F.steal = {
     end,
 }
 
--- ── 7. Seis fragmentos, seis sitios ─────────────────────────────────────────
+-- ── 7. Un fragmento a cada sitio (uno por jefe del catálogo) ───────────────────
 F.scatter = {
     enter = function(c)
         local map = Stage.map()
-        K.setBosses(map, { K.SMALL, K.SMALL, K.SMALL, K.SMALL, K.SMALL, K.SMALL }, 1)
+        K.setBosses(map, K.all(K.SMALL), 1)
         c.v.landed = 0
     end,
     update = function(c, t, dt)
         -- cada fragmento sale en su pulso y tarda 1,2 pulsos en llegar
-        for i = c.v.landed + 1, 6 do
+        for i = c.v.landed + 1, K.count() do
             if t >= c.at('first') + c.b(i - 1) + c.b(1.2) then
                 c.v.landed = i
                 local tg = K.targets()[i]
@@ -361,22 +356,22 @@ F.scatter = {
     end,
     draw = function(c, t)
         local map, SM = Stage.map()
-        local cx, cy = farCam()
-        local vx, vy = SM.bossXY(6)
+        local cx, cy, zf = farCam()
+        local vx, vy = K.volcanoXY()
         local hx, hy = SM.nodeXY(1, 1)
-        map:filmDraw(cx, cy, ZOOM_FAR, { extra = function(ox, oy)
+        map:filmDraw(cx, cy, zf, { extra = function(ox, oy)
             love.graphics.push()
             love.graphics.translate(-ox, -oy)
-            K.drawExtras(map, { K.SMALL, K.SMALL, K.SMALL, K.SMALL, K.SMALL, K.SMALL })
+            K.drawExtras(map, K.all(K.SMALL))
             for i, tg in ipairs(K.targets()) do
                 local t0 = c.at('first') + c.b(i - 1)
                 local u = (t - t0) / c.b(1.2)
                 if u > 0 and u < 1 then
                     local x, y = lerp(vx, tg.x, u), lerp(vy - 40, tg.y - 20, u) - math.sin(u * math.pi) * 260
-                    Stage.shard(tostring(i), x, y, { s = 5, rot = t * 9 })
+                    Stage.shard(tg.shard, x, y, { s = 5, rot = t * 9 })
                     if math.random() < 0.5 then Stage.spark(x, y, 1, 6, 20, { life = 0.4, s = 5 }) end
                 elseif u >= 1 then
-                    Stage.shard(tostring(i), tg.x, tg.y - 34 + math.sin(t * 4 + i) * 4, { s = 4 })
+                    Stage.shard(tg.shard, tg.x, tg.y - 34 + math.sin(t * 4 + i) * 4, { s = 4 })
                 end
             end
             -- el monstruo, lanzado desde el volcán hasta la Pradera
@@ -393,10 +388,10 @@ F.scatter = {
 -- ── 8. La furia del espejo ──────────────────────────────────────────────────
 local ZOOM_NEAR = 2
 F.fury = {
-    enter = function(c) c.v.done = 0; c.v.sizes = { K.SMALL, K.SMALL, K.SMALL, K.SMALL, K.SMALL, K.SMALL } end,
+    enter = function(c) c.v.done = 0; c.v.sizes = K.all(K.SMALL) end,
     update = function(c, t, dt)
         local each = c.at('each')
-        for i = c.v.done + 1, 6 do
+        for i = c.v.done + 1, K.count() do
             if t >= c.at('first') + (i - 1) * each + c.b(0.5) then
                 c.v.done = i
                 c.sfx('storyGrow', 0.85 + i * 0.05)
@@ -408,10 +403,11 @@ F.fury = {
     draw = function(c, t)
         local map = Stage.map()
         local each, tgs = c.at('each'), K.targets()
-        local i = math.min(6, math.floor((t - c.at('first')) / each) + 1)
-        local wide = t >= c.at('first') + 6 * each
+        local N = K.count()
+        local i = math.min(N, math.floor((t - c.at('first')) / each) + 1)
+        local wide = t >= c.at('first') + N * each
         -- tamaños: los que ya crecieron, grandes; el de ahora, creciendo
-        for n = 1, 6 do
+        for n = 1, N do
             local t0 = c.at('first') + (n - 1) * each + c.b(0.5)
             c.v.sizes[n] = (t < t0) and K.SMALL or math.max(K.SMALL + 0.02, lerp(K.SMALL, 1, K.elastic((t - t0) / c.b(0.9))))
         end
@@ -423,14 +419,14 @@ F.fury = {
             if not wide then
                 local tg = tgs[i]
                 local u = c.k(c.at('first') + (i - 1) * each, c.at('first') + (i - 1) * each + c.b(0.5))
-                if u < 1 then Stage.shard(tostring(i), tg.x, lerp(tg.y - 200, tg.y - 26, easeIn(u)), { s = 2, rot = t * 6 }) end
+                if u < 1 then Stage.shard(tg.shard, tg.x, lerp(tg.y - 200, tg.y - 26, easeIn(u)), { s = 2, rot = t * 6 }) end
             end
             Stage.drawSparks()
             love.graphics.pop()
         end
         if wide then
-            local cx, cy = farCam()
-            map:filmDraw(cx, cy, ZOOM_FAR, { extra = extra })
+            local cx, cy, zf = farCam()
+            map:filmDraw(cx, cy, zf, { extra = extra })
             Stage.flash(0.12 + 0.08 * math.sin(t * 6), 0.9, 0.1, 0.1)       -- la furia, sobre todas las islas
         else
             local tg = tgs[i]
@@ -450,7 +446,7 @@ F.fury = {
 F.onfoot = {
     enter = function(c)
         local map = Stage.map()
-        K.setBosses(map, { 1, 1, 1, 1, 1, 1 }, 1)
+        K.setBosses(map, K.all(1), 1)
     end,
     events = {
         { cue = 'land', fn = function(c)
@@ -472,7 +468,7 @@ F.onfoot = {
         map:filmDraw(cx, cy, 1, { extra = function(ox, oy)
             love.graphics.push()
             love.graphics.translate(-ox, -oy)
-            K.drawExtras(map, { 1, 1, 1, 1, 1, 1 })
+            K.drawExtras(map, K.all(1))
             local y0 = hy - 16                                       -- (el centro del monstruo de pie en su nodo)
             local x, y, o = hx, y0, K.pose('idle')
             if t < land then

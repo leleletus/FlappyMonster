@@ -1,8 +1,8 @@
 # The world map
 
-One big scrolling map in the style of Super Mario World: six islands, one path per world with a node per level, a
-castle for the boss, a blue "B" bonus node, bridges between worlds, wandering critters and the hero walking along the
-path — plus a seventh island, the JUNGLE, drawn as "coming soon" ([below](#the-jungle-island-coming-soon)). Everything about its shape is DATA in `assets/story/overworld.json`, written by a deterministic generator.
+One big scrolling map in the style of Super Mario World: seven islands (the JUNGLE, world 3 since 0.5.99:
+[below](#the-jungle-island-world-3)), one path per world with a node per level, a castle for the boss, a blue "B"
+bonus node, bridges between worlds, wandering critters and the hero walking along the path. Everything about its shape is DATA in `assets/story/overworld.json`, written by a deterministic generator.
 
 **Files:** `src/states/story/StoryMapState.lua` (drawing, walking, input, camera, the films' map set),
 `tools/art/story/make_overworld.py` (writes `overworld.json` and the sprites in `assets/images/story/`),
@@ -30,61 +30,51 @@ user.
 are spread along the path from `Worlds.lua`. **Harness:** `story_flow` (captures at three widths,
 `story_map_full.png`, `story_map_bosses.png`).
 
-## The jungle island (coming soon)
+## The jungle island (world 3)
 
 The island after the Coast (`jungla`, `src/world/level/Isles.lua`; boss the [Giant Rhino Beetle](../bosses/giantbeetle.md),
-level `templo_escarabajo`, Free Play only today) is on the map with NO levels yet: data + art only.
+`templo_escarabajo`). Added on 2026-10-28 as "coming soon" (art only); since 0.5.99 it is **world 3 of `Worlds.LIST`**
+with its levels and bonus ([story-mode](story-mode.md#worlds-and-saves): how old saves are migrated).
 
-- **Where:** SOUTH of the gap between the Coast and the Fortress. The map grew downwards from 84x48 to 84x63 cells
-  (`H`; `H0 = 48` is the old height). The six story islands are untouched: every random loop of the generator for
-  them runs only to `H0`, and the jungle comes at the END of the generator with its own seed (`jrng`), like the
-  secret islet — `overworld.json` rows, heights, decorations and critters of the old map are identical (checked by
-  diffing the JSON when it was added).
+- **Where:** SOUTH of the gap between the Coast and the Fortress; the map grew downwards (84x48 → 84x63 cells, now
+  90x63). It is generated at the END of `make_overworld.py` with its own seed (`jrng`), so it does not move anything
+  of the other islands; their random loops run only to `H0` (50).
 - **What:** terrain `j` (dark jungle grass: `jungle_grass` lip, `mud` cliff body, `jungle_blades` tufts) and `t`
   (temple stone plaza around the castle: `temple_brick`); a plateau inside the path's loop with the hand-placed
-  ZIGGURAT; new feature sprites drawn by the generator in the features' house style — `jungle_tree` (round canopy on
+  ZIGGURAT; feature sprites drawn by the generator in the features' house style — `jungle_tree` (round canopy on
   a trunk), `ziggurat` (three stepped tiers, stairs, moss, dark door), `ruin` (broken mossy wall) — plus the game's
   jungle decorations (`jungle_fern`, `heliconia`, `banana_plant`, `elephant_ear`, `tree_fern`, `bromeliad`,
   `broken_pillar`, `stone_idol`, `stone_brazier`: `DECO` in `StoryMapState`); critters: jungle Gummy (tree frog),
-  jungle Crabby, the blue Rhino Beetle (`beetle`, new `CRITTER`), the jungle Hopper, two pufferfish. The boss art is
-  `giantbeetle/body-Sheet.png` (fw 22) beside a red-flag castle.
-- **Data:** `overworld.json` `soon = [{ id, path, stops, boss, bridges, label }]` (NOT in `worlds`: that list is
-  read by position = `Worlds.LIST` index). `StoryMapState.loadMap` builds `MAP.soon`: `stops` sample nodes spread
-  along the path (the last one = the castle), the boss side, the bridges, and path dots with `soon = true` (always
-  drawn locked). `_drawSoon` draws grey nodes, the castle + boss and the label (`story.world.jungla` +
-  `story.soon`, "PRÓXIMAMENTE" pulsing). They are NOT stops: `stopIndex` / `dirMap` / `_nodeAt` / `totalStops` only
-  know `Worlds`, so no arrow, tap or walk can reach them and the hero can never be on the island.
-- **Bridges:** two LOCKED (dark) bridges — Coast castle → down the 1-cell canal between the Coast and its bonus
-  strip → the jungle's first sample node; the jungle castle → up the channel west of the Fortress → the Fortress's
-  first node. The Coast → Fortress bridge (`connect[2]`) is unchanged: that is still how the hero walks.
-- **Music:** `_music` also measures the jungle's sample nodes; when one is nearer than every real node AND
-  `Music.get('map_jungla')` exists it plays `map_jungla`, otherwise the old rule. Today the hero only stands on or
-  walks between real stops, all nearer than the jungle, so in practice the jungle track will play once the island
-  has stops.
-- **Films:** `StoryMapState.mapSize()` returns `view` (84x48 cells = the six islands), so the films that centre or
-  clamp on the map frame exactly as before; the jungle stays out of them.
+  jungle Crabby, the blue Rhino Beetle (`beetle`, a `CRITTER`), the jungle Hopper, two pufferfish. The boss art is
+  `giantbeetle/body-Sheet.png` (fw 22) beside its castle.
+- **Data:** in `make_overworld.py` the jungle's path (`JPATH`), its bonus branch (`JBONUS`, east of the castle) and its
+  boss art join `SPATHS` / `SBONUS` / `BOSS_ART` at the end, and the output lists the worlds in story order (`STORY`
+  = `Worlds.LIST`). Bridges: Coast castle → down the canal between the Coast and its bonus strip → the jungle's first
+  node; the jungle castle → up the channel west of the Fortress → the Fortress's first node (`JBRIDGES`, in place of
+  the old Coast → Fortress bridge, which still counts for the path distances of the old islands so nothing there
+  moved). `THEME.jungla` in `StoryMapState`; its map music `map_jungla` plays as for any island.
+- **`soon` is kept, empty:** `overworld.json` `soon = [{ id, path, stops, boss, bridges, label }]` is still read
+  (`MAP.soon`, `_drawSoon`: grey sample nodes, castle, "PRÓXIMAMENTE" label, locked bridges; NOT stops) for a future
+  island shown before it has levels; the jungle no longer uses it.
+- **Films:** `view` is now the whole map; the wide map shots of the films frame all the land (`K.far`,
+  [cinematics](cinematics.md#data-driven-how-many-bosses-and-shards-there-are-is-never-written-in-a-film)).
 
-**Why it is NOT in `Worlds.LIST` yet:** the saves and the progression address worlds BY INDEX: `Run.worldOpen(w)`
-opens world w when the boss of w-1 is done, `Run.frontier()` walks the list in order, the save keeps `world` /
-`node` (where the hero stands) and `worldReward[w]` (the once-per-world reward) by index, and `overworld.json`
-`worlds[i]` / `connect[i]` are read by the same index. A world with no levels has no boss to beat (nothing would
-ever open the Fortress), and inserting it as world 3 would shift every saved `world` and `worldReward` of existing
-slots onto the wrong island.
+## Island separation (`OFF`)
 
-**To give it levels later:** (1) add `{ id = 'jungla', levels = {...}, boss = 'templo_escarabajo', bonus = ... }`
-to `Worlds.LIST` right after `costa` (add the boss to `Shards`/films if it needs them); (2) migrate old saves that
-are past the Coast (`Run.data.world` ≥ 3 → +1, `worldReward` keys ≥ 3 → +1; the Fortress opens on the jungle boss,
-so a save that already beat the Coast boss must be handled — e.g. treat the jungle as open but not required, or
-mark it done; decide with the user); (3) in `make_overworld.py` move the jungle from `soon` into `ORDER` / `PATHS` /
-`BOSS_ART` (path = `JPATH`, `LAND` 'j', `ISLE_TYPES` already know it), replace `CONNECT[1]` (Coast → Fortress) with
-the two `JBRIDGES` (Coast castle → jungle first node, jungle castle → Fortress first node), add its `BONUS`, and
-drop `soon`; (4) `THEME.jungla` in `StoryMapState`; (5) `story_flow` (`direccion` counts the stops, `musica` wants
-`map_jungla`), `story-mode.md`, the shards / Mirror counts if a shard is added.
+The user (2026-10-29): "separa la isla costera de la isla fortaleza porque si no parecen muy pegadas y queda algo
+raro. Lo mismo con la isla pradera con la isla caverna y la isla caverna con la isla volcánica" — measured, the Coast
+and the Fortress were one land mass and the Caves were 1.4 tiles from the Meadow and from the Volcano. In
+`make_overworld.py` every island moves as a whole with `OFF[island] = (dx, dy)` (cells): its blobs (`iblob`), path
+and bonus (`off`), relief groups (`RELIEF` is grouped by island name), cave pits and critters (`CRITTERS` grouped by
+island); bridges stretch between the two islands' offsets (`stretch`). Today `pradera` (0, 2), `fortaleza` (5, 0),
+`cuevas` (0, -1) with a narrower caves blob (rx 14 → 12.5, centre one cell left); map 84 → 90 cells wide. Gaps now:
+Coast–Fortress 6.0, Caves–Meadow 5.7, Caves–Volcano 4.1 tiles. Decorations were re-rolled by the generator (same seed,
+new land). Not yet judged by the user.
 
 ## How it is built and drawn
 
 - `StorySlotState` (pick / create / delete with confirmation) and `StoryMapState` = the WORLD MAP (stage 5, Super Mario
-  World style): ONE big scrolling map (84x63 cells of 32 px; the six story islands in the top 84x48) from DATA `assets/story/overworld.json`, written by
+  World style): ONE big scrolling map (90x63 cells of 32 px; seven islands) from DATA `assets/story/overworld.json`, written by
   `tools/art/story/make_overworld.py` (deterministic; also writes `assets/images/story/` node/castle/water/path/bridge/ground/
   edge/foam sprites): terrain letters per cell (`~` sea, g grass, s sand, w snow, c cave rock, f fortress stone, l volcanic
   rock, L lava = the game's lava.png animated, j jungle grass, t temple stone) + `heights` per cell (0 pit, 1 plain, 2 plateau, 3 summit; RELIEF table
@@ -105,7 +95,7 @@ drop `soon`; (4) `THEME.jungla` in `StoryMapState`; (5) `story_flow` (`direccion
   hero between the top band (TOP_H) and the level card (BOT_H), clamped to the map. The boss stands on the side of
   its castle that has LAND (`bossDx/bossDy`, right → left → below). Bridges are always opaque (locked = darker) and run
   2 planks onto each shore. FULL MAP for review: `StoryMapState:renderFull()` → `story_flow` writes
-  `story_map_full.png` (2688x2016, every world open); copy it to `FlappyMonster_pruebas/mapa/mapa_completo.png`. Bonus nodes (KOTH vs bot) = stage 8.
+  `story_map_full.png` (2880x2016, every world open); copy it to `FlappyMonster_pruebas/mapa/mapa_completo.png`. Bonus nodes (KOTH vs bot) = stage 8.
   `PixelFont.draw` draws ONLY the letters (it used to fill a tight black box behind them: fine on the black menus,
   odd everywhere else — the user had it removed); over coloured backgrounds use `PixelFont.shadow` (1-font-pixel black
   drop shadow).
@@ -157,6 +147,8 @@ case `secreto`.
 Kept because they record WHY things are the way they are and what was tried and rejected. Where a note
 conflicts with the sections above, the sections above describe the current behaviour.
 
+- 0.5.99 (2026-10-29): the jungle became world 3 (its four levels, boss and bonus; bridges Coast → Jungle → Fortress);
+  the islands were moved apart on the user's request (`OFF`, above); map 90x63.
 - 2026-10-28: the JUNGLE island added as "coming soon" (south of the Coast–Fortress gap, map 84x48 →
   84x63, locked bridges, no stops) — the user asked for its island "after the coast", still without levels. Not
   judged by the user yet.

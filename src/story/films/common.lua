@@ -1,11 +1,16 @@
 -- src/story/films/common.lua
 -- Lo que comparten las películas de la historia (intro, final, persecución y guarida): medidas de los decorados
--- (el cráter, la ladera), el "equipo" del modo Flappy (el jugador y las tuberías DE VERDAD, pilotados), los seis
+-- (el cráter, la ladera), el "equipo" del modo Flappy (el jugador y las tuberías DE VERDAD, pilotados), los
 -- sitios del mapa donde caen los fragmentos, el Reflejo corriendo, los fragmentos que lleva el monstruo y unas
--- cuantas curvas.
+-- cuantas curvas. CUÁNTOS jefes y fragmentos hay y dónde está cada uno NO se escribe aquí: sale del catálogo
+-- (assets/story/shards.json, src/story/Shards.lua) y del mapa (Worlds.LIST, overworld.json); las escenas que van
+-- uno por uno (y su música) se alargan solas con `plus` en films.json (src/story/Film.lua).
 local Stage = require 'src/story/Stage'
+local Shards = require 'src/story/Shards'
 
 local C = {}
+C.FINAL = tostring(Shards.FINAL)                -- el fragmento del Espejo (el del centro)
+local function base(id) return tostring(id):match('^%d+') end
 
 -- ── Curvas ──────────────────────────────────────────────────────────────────
 function C.lerp(a, b, k) return a + (b - a) * k end
@@ -72,15 +77,16 @@ C.FLOOR = 592                       -- y del centro del monstruo de pie en el su
 C.MX, C.MF = 928, 576               -- el espejo: x de su centro, y de sus pies (sobre el pedestal)
 C.HOLE_X = 352                      -- la chimenea del cráter (por donde se entra y se sale)
 
--- Dónde flota cada fragmento alrededor del marco cuando el espejo se rompe (7 = el del centro, arriba)
+-- Dónde flota cada fragmento alrededor del marco cuando el espejo se rompe (el del centro, arriba)
 function C.hover(id, t)
-    local n = tonumber(id:sub(1, 1))
+    local n = tonumber(base(id))
+    local final = base(id) == C.FINAL
     local sx, sy = Stage.shardSlot(id, C.MX, C.MF)
     local gx, gy = Stage.glassCenter(C.MX, C.MF)
     local dx, dy = sx - gx, sy - gy
     local d = math.sqrt(dx * dx + dy * dy)
-    if n == 7 or d < 8 then dx, dy, d = 0, -1, 1 end
-    local out = (n == 7) and 190 or 120
+    if final or d < 8 then dx, dy, d = 0, -1, 1 end
+    local out = final and 190 or 120
     local bob = math.sin((t or 0) * 2 + n * 1.3) * 8
     return sx + dx / d * out, sy + dy / d * out + bob
 end
@@ -91,10 +97,10 @@ C.LFLOOR = 528                      -- y del centro del monstruo de pie (suelo e
 C.DITCH = { 1728, 1856 }            -- la zanja de lava (columnas 28-29), en x del mundo
 C.LAKE = { 2688, 2880 }             -- el lago de lava (columnas 43-45: con un salto no llega; con el doble, sí)
 
--- Los fragmentos que LLEVA el monstruo (los seis de los jefes; Xtra: las doce mitades)
+-- Los fragmentos que LLEVA el monstruo (los de los jefes, todos menos el del Espejo; Xtra: sus mitades)
 function C.carryIds(xtra)
     local out = {}
-    for _, id in ipairs(Stage.shardIds(xtra)) do if id:sub(1, 1) ~= '7' then out[#out + 1] = id end end
+    for _, id in ipairs(Stage.shardIds(xtra)) do if base(id) ~= C.FINAL then out[#out + 1] = id end end
     return out
 end
 
@@ -245,61 +251,114 @@ C.SKY_DUSK = { 1.00, 0.60, 0.45 }
 function C.mix(a, b, k) return { a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k, a[3] + (b[3] - a[3]) * k } end
 
 -- ── El mapa: dónde cae cada fragmento (y crece cada jefe), en el orden de la historia ─────────────────
-local SNOW_ART = { img = 'assets/images/bosses/snowboss/body-Sheet.png', fw = 16 }
-C.SNOW_ART = SNOW_ART
+-- Uno por jefe del catálogo (Shards.BOSSES): el de un castillo, junto a él (`castle`: lo dibuja el mapa, filmBoss); uno
+-- de MITAD de isla (un nivel normal con jefe: la Gran Bola de Nieve), junto a su nodo con su arte del mapa (`art`:
+-- `nodeBoss` del overworld.json, lo dibuja C.drawExtras). `normal` = su enemigo normal de antes del fragmento.
+local TARGETS
 function C.targets()
+    if TARGETS then return TARGETS end
     local _, SM = Stage.map()
+    local Worlds = require 'src/story/Worlds'
+    local map = SM.loadMap()
+    TARGETS = {}
+    for _, s in ipairs(Shards.BOSSES) do
+        for w = 1, Worlds.count() do
+            for k, n in ipairs(Worlds.nodes(w)) do
+                if n.id == s.level then
+                    local tg = { w = w, normal = s.normal, shard = tostring(s.id) }
+                    if n.boss then
+                        tg.x, tg.y = SM.bossXY(w)
+                        tg.castle = true
+                    else
+                        local nx, ny = SM.nodeXY(w, k)
+                        tg.x, tg.y = nx + 44, ny + 14
+                        tg.art = (map.worlds[w].def.nodeBoss or {})[n.id]
+                    end
+                    TARGETS[#TARGETS + 1] = tg
+                end
+            end
+        end
+    end
+    return TARGETS
+end
+-- Cuántos jefes con fragmento (sin el Espejo) y una lista con `v` para cada uno (tamaños para setBosses)
+function C.count() return #C.targets() end
+function C.all(v)
     local out = {}
-    for _, w in ipairs({ 1, 2, 3 }) do
-        local bx, by = SM.bossXY(w)
-        out[#out + 1] = { w = w, x = bx, y = by }
-    end
-    local nx, ny = SM.nodeXY(4, 3)                 -- la Gran Bola de Nieve: a media isla (lago_helado)
-    out[#out + 1] = { snow = true, x = nx + 44, y = ny + 14 }
-    for _, w in ipairs({ 4, 5 }) do
-        local bx, by = SM.bossXY(w)
-        out[#out + 1] = { w = w, x = bx, y = by }
-    end
+    for i = 1, C.count() do out[i] = v end
     return out
+end
+-- El mundo del Espejo (el volcán: el del nivel del fragmento final) y dónde está su jefe en el mapa
+function C.mirrorWorld()
+    local Worlds = require 'src/story/Worlds'
+    for w = 1, Worlds.count() do
+        if Shards.LEVEL[Worlds.get(w).boss] == Shards.FINAL then return w end
+    end
+    return Worlds.count()
+end
+function C.volcanoXY()
+    local _, SM = Stage.map()
+    return SM.bossXY(C.mirrorWorld())
+end
+-- La cámara de los planos GENERALES del mapa: TODAS las islas (la caja de la tierra del overworld.json, con una
+-- casilla de margen), centradas entre las franjas de cine, con el zoom que las deja enteras (como mucho 0,5: el de
+-- siempre; con más islas — una expansión — se aleja solo). → x, y, zoom
+local LANDBOX
+function C.far()
+    local _, SM = Stage.map()
+    if not LANDBOX then
+        local M = SM.loadMap()
+        local x0, y0, x1, y1 = math.huge, math.huge, -1, -1
+        for y, row in ipairs(M.d.rows) do
+            for x = 1, #row do
+                if row:sub(x, x) ~= '~' then
+                    x0, x1, y0, y1 = math.min(x0, x), math.max(x1, x), math.min(y0, y), math.max(y1, y)
+                end
+            end
+        end
+        LANDBOX = { (x0 - 2) * M.C, (y0 - 2) * M.C, (x1 + 1) * M.C, (y1 + 1) * M.C }
+    end
+    local b = LANDBOX
+    local bw, bh = b[3] - b[1], b[4] - b[2]
+    local z = math.min(0.5, WINDOW_W / bw, (WINDOW_H - 2 * Stage.BAR_H) / bh)
+    return (b[1] + b[3]) / 2 - WINDOW_W / z / 2, (b[2] + b[4]) / 2 - WINDOW_H / z / 2, z
+end
+
+-- La nota (semitonos sobre la tónica) del fragmento i de n al encajar: SUBEN la escala mayor y el último (el del
+-- Espejo) cae en la tónica de arriba — 7: 0 2 4 5 7 9 12; 8: 0 2 4 5 7 9 11 12 (= tools/music/story_music.py rise)
+local MAJOR = { 0, 2, 4, 5, 7, 9, 11 }
+function C.note(i, n)
+    local function deg(k) return MAJOR[(k - 1) % 7 + 1] + 12 * math.floor((k - 1) / 7) end
+    if i < n then return deg(i) end
+    return 12 * (math.floor(deg(math.max(1, n - 1)) / 12) + 1)
 end
 
 C.SMALL = 0.42          -- un enemigo normal, al lado de su versión gigante
 
--- ANTES del fragmento cada jefe es un enemigo NORMAL, con su sprite de siempre: un Gummy (sin corona), un Crabby
--- (sin pinzas ni pincho), el Monstruo Malvado en su nave (pequeña), una bola de nieve, un Crabby helado (con sus
--- pinzas pequeñas, sin pincho) y un Crabby lúgubre. nil = el mismo dibujo del jefe, en pequeño
-C.NORMAL = {
-    { img = 'assets/images/enemies/gummy/gummy.png' },
-    { img = 'assets/images/enemies/crabby/crab1.png' },
-    nil,
-    nil,
-    { img = 'assets/images/enemies/crabby_ice/crab1.png' },
-    { img = 'assets/images/enemies/gloomy/gloomy-Sheet.png', fw = 26, glow = 'assets/images/enemies/gloomy/glow-Sheet.png' },
-}
 local function isSmall(size) return size and size <= C.SMALL + 0.005 end
 
--- Tamaño de los jefes en el mapa: `sizes[i]` para cada uno de C.targets() (C.SMALL = todavía un enemigo normal);
--- `mirror` = el del volcán. Los que tienen sprite de enemigo normal los dibuja C.drawExtras
+-- Tamaño de los jefes en el mapa: `sizes[i]` para cada uno de C.targets() (C.SMALL = todavía su enemigo normal);
+-- `mirror` = el del volcán. Los de mitad de isla y los enemigos normales los dibuja C.drawExtras
 function C.setBosses(map, sizes, mirror)
     for i, tg in ipairs(C.targets()) do
-        if tg.w then
+        if tg.castle then
             local size = sizes[i] or 0
-            map.filmBoss[tg.w] = (isSmall(size) and C.NORMAL[i]) and 0 or size
+            map.filmBoss[tg.w] = (isSmall(size) and tg.normal) and 0 or size
         end
     end
-    map.filmBoss[6] = mirror or 0
+    map.filmBoss[C.mirrorWorld()] = mirror or 0
 end
 
--- Lo que el mapa no dibuja solo (dentro de `extra` de filmDraw, en coordenadas del mapa): la Bola de Nieve (no
--- tiene castillo) y los enemigos normales de antes del fragmento
+-- Lo que el mapa no dibuja solo (dentro de `extra` de filmDraw, en coordenadas del mapa): los jefes de mitad de isla
+-- (no tienen castillo) y los enemigos normales de antes del fragmento
 function C.drawExtras(map, sizes)
     love.graphics.setColor(1, 1, 1, 1)
     for i, tg in ipairs(C.targets()) do
         local size = sizes[i] or 0
-        if tg.snow then
-            if size > 0 then map:_drawBossArt(SNOW_ART, tg.x, tg.y, 4, size) end
-        elseif isSmall(size) and C.NORMAL[i] then
-            map:_drawBossArt(C.NORMAL[i], tg.x, tg.y, tg.w, 0.62)       -- (su sprite, al tamaño de un enemigo del mapa)
+        if isSmall(size) and tg.normal then
+            map:_drawBossArt(tg.normal, tg.x, tg.y, tg.w, 0.62)          -- (su sprite, al tamaño de un enemigo del mapa)
+        elseif tg.art and size > 0 then
+            map:_drawBossArt(tg.art, tg.x, tg.y, tg.w, size)
         end
     end
 end

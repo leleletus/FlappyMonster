@@ -27,7 +27,7 @@ local StoryMapState = BaseState:new()
 
 -- Color de cada mundo (lo usa la pantalla de resultados)
 local THEME = {
-    pradera = { 0.36, 0.62, 0.36 }, costa = { 0.25, 0.6, 0.72 }, fortaleza = { 0.42, 0.36, 0.44 },
+    pradera = { 0.36, 0.62, 0.36 }, costa = { 0.25, 0.6, 0.72 }, jungla = { 0.24, 0.46, 0.26 }, fortaleza = { 0.42, 0.36, 0.44 },
     nieve = { 0.6, 0.75, 0.88 }, cuevas = { 0.2, 0.2, 0.32 }, final = { 0.5, 0.22, 0.2 },
 }
 StoryMapState.THEME = THEME
@@ -1362,7 +1362,7 @@ function StoryMapState:_drawHud()
         .. '     ' .. L('difficulty.' .. Run.data.difficulty)
         .. ((done > 0) and ('     ' .. L('story.world_grade', { grade = select(2, Run.worldRating(self.world)) })) or ''), 0, 72, WINDOW_W, 'center')
     -- Fragmentos del espejo: una ficha bajo la cabecera, a la derecha, con el espejo (los que lleva, puestos) y
-    -- la cuenta (Xtra extremo: 14 mitades)
+    -- la cuenta (Xtra extremo: 16 mitades)
     local owned, shardTotal = Shards.owned(Run.data)
     local Stage = require 'src/story/Stage'
     local sx, sy, sw, sh = WINDOW_W - 316, TOP_H + 16, 300, 112

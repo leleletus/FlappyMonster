@@ -24,8 +24,8 @@ OUT_JSON = 'assets/story/overworld.json'
 IMG = 'assets/images/story/'
 FEAT = IMG + 'features/'
 os.makedirs(FEAT, exist_ok=True)
-W, H = 84, 63
-H0 = 48                    # alto del mapa de las 6 islas de la historia (las cinemáticas encuadran esto: 'view');
+W, H = 90, 63
+H0 = 50                    # alto del mapa de las 6 islas de la historia (las cinemáticas encuadran esto: 'view');
                            # debajo, la jungla (próximamente). Los bucles con azar de las 6 islas van hasta H0, así
                            # crecer el mapa no mueve ni una decoración de lo de arriba
 rng = random.Random(1987)
@@ -48,13 +48,35 @@ def blob(cx, cy, rx, ry, ch, jag=0.18):
                 grid[y][x] = ch
 
 
+# SEPARACIÓN de las islas (el usuario, 0.5.99: "parecen muy pegadas"): cada isla se desplaza entera — su tierra, su
+# camino, su bonus, su relieve y sus bichos — con OFF[isla] (casillas); los puentes se estiran entre las dos
+OFF = {'pradera': (0, 2), 'costa': (0, 0), 'fortaleza': (5, 0), 'nieve': (0, 0), 'cuevas': (0, -1), 'final': (0, 0)}
+
+
+def off(k, pts):
+    ox, oy = OFF.get(k, (0, 0))
+    return [(x + ox, y + oy) for x, y in pts]
+
+
+def stretch(a, b, pts):
+    """un puente de la isla a a la b: cada punto se desplaza de OFF[a] a OFF[b] a lo largo del puente"""
+    (ax, ay), (bx, by) = OFF.get(a, (0, 0)), OFF.get(b, (0, 0))
+    n = max(1, len(pts) - 1)
+    return [(x + ax + (bx - ax) * i / n, y + ay + (by - ay) * i / n) for i, (x, y) in enumerate(pts)]
+
+
+def iblob(k, cx, cy, rx, ry, ch, jag=0.18):
+    ox, oy = OFF.get(k, (0, 0))
+    blob(cx + ox, cy + oy, rx, ry, ch, jag)
+
+
 # Mundo 1, la Pradera (abajo a la izquierda) · 2, la Costa (abajo en medio) · 3, la Fortaleza (abajo a la derecha)
 # 4, las Cumbres (arriba a la derecha) · 5, las Cuevas (arriba a la izquierda) · 6, el Final (el volcán, en medio)
-blob(14, 35, 12, 9, 'g'); blob(8, 30, 6, 5, 'g')
+iblob('pradera', 14, 35, 12, 9, 'g'); iblob('pradera', 8, 30, 6, 5, 'g')
 blob(40, 39, 12, 7, 's'); blob(41, 38, 8, 5, 'g'); blob(48, 36, 5, 4, 'g')
-blob(68, 36, 13, 9, 'f'); blob(76, 30, 5, 5, 'f')
+iblob('fortaleza', 68, 36, 13, 9, 'f'); iblob('fortaleza', 76, 30, 5, 5, 'f')
 blob(67, 12, 14, 9, 'w'); blob(58, 18, 6, 4, 'w')
-blob(19, 12, 14, 9, 'c'); blob(10, 17, 6, 4, 'c')
+iblob('cuevas', 18, 12, 12.5, 9, 'c'); iblob('cuevas', 10, 17, 6, 4, 'c')          # (algo más estrecha: lejos del volcán)
 blob(42, 19, 8, 7, 'l', 0.25)
 for y in range(1, H - 1):
     for x in range(1, W - 1):
@@ -71,13 +93,14 @@ PATHS = {
     'final':     [(36, 18), (40, 23), (45, 22), (47, 17), (42, 14)],
 }
 ORDER = ['pradera', 'costa', 'fortaleza', 'nieve', 'cuevas', 'final']
+PATHS = {k: off(k, v) for k, v in PATHS.items()}
 # Puentes entre mundos: del castillo de uno al primer nivel del siguiente (con puntos intermedios para que curven)
 CONNECT = [
-    [(24, 31), (26, 34), (28.5, 36.5), (31, 38)],
-    [(50, 38), (53, 39.5), (56, 39.5), (58, 38)],
-    [(77, 27), (79, 23.5), (78.5, 20), (76, 17)],
-    [(73, 9), (68, 3.5), (58, 2.5), (45, 3), (35, 5), (29, 11)],
-    [(23, 17), (27, 19.5), (32, 19.5), (36, 18)],
+    stretch('pradera', 'costa', [(24, 31), (26, 34), (28.5, 36.5), (31, 38)]),
+    stretch('costa', 'fortaleza', [(50, 38), (53, 39.5), (56, 39.5), (58, 38)]),
+    stretch('fortaleza', 'nieve', [(77, 27), (79, 23.5), (78.5, 20), (76, 17)]),
+    stretch('nieve', 'cuevas', [(73, 9), (68, 3.5), (58, 2.5), (45, 3), (35, 5), (29, 11)]),
+    stretch('cuevas', 'final', [(23, 17), (27, 19.5), (32, 19.5), (36, 18)]),
 ]
 
 
@@ -85,6 +108,7 @@ CONNECT = [
 BONUS = {'pradera': [(24, 31), (24, 27.5), (22, 24.5)], 'costa': [(50, 38), (52.5, 40), (52, 43)],
          'fortaleza': [(77, 27), (74.5, 25.5), (71.5, 26.5)], 'nieve': [(73, 9), (76.5, 8), (78.5, 5.5)],
          'cuevas': [(23, 17), (26, 18.5), (26.5, 21)], 'final': [(42, 14), (45, 13), (47.5, 14)]}
+BONUS = {k: off(k, v) for k, v in BONUS.items()}
 
 
 def catmull(pts, n=8):
@@ -175,37 +199,48 @@ def lower_pits(cx, cy, rx, ry, chars, clear):
                 hgt[y][x] = 0
 
 
-# (x, y, rx, ry, altura, terrenos, distancia mínima al camino)
+# (x, y, rx, ry, altura, terrenos, distancia mínima al camino); cada grupo, con el desplazamiento de su isla
 RELIEF = [
+    'pradera',
     # Pradera: lomas y una colina alta; el camino va por los valles
     (10, 34, 3, 2.6, 2, 'g', 2), (13, 44, 4.5, 2.2, 2, 'g', 2), (5, 40, 3, 2.4, 2, 'g', 2), (17, 32, 2.6, 2.4, 2, 'g', 1.8),
     (11, 26, 3.5, 2.2, 2, 'g', 2), (4, 33, 2.5, 2.5, 2, 'g', 2), (21, 42, 3, 1.8, 2, 'g', 2), (13, 34, 1.8, 1.6, 3, 'g', 2.6),
     (5, 27, 3, 2, 2, 'g', 2),
+    'costa',
     # Costa: mesetas de hierba con acantilados de tierra; dunas en la arena
     (38, 39, 3, 2.6, 2, 'gs', 2), (45, 43, 3.5, 1.8, 2, 'gs', 2), (37, 33, 2.8, 1.8, 2, 'gs', 1.8), (44, 37, 2, 1.5, 2, 'g', 1.8),
     (38, 39, 1.6, 1.4, 3, 'g', 2.6),
+    'fortaleza',
     # Fortaleza: terrazas de piedra a varias alturas
     (66, 38, 4, 4, 2, 'f', 2), (66, 38, 2.4, 2.4, 3, 'f', 2.6), (76, 35, 3.5, 4.5, 2, 'f', 2), (76, 35, 2, 2.6, 3, 'f', 2.6),
     (63, 31, 3.5, 2.4, 2, 'f', 2), (71, 44, 3.5, 1.8, 2, 'f', 2), (58, 43, 3, 2, 2, 'f', 1.8), (79, 41, 2, 2.5, 2, 'f', 2),
+    'nieve',
     # Cumbres: una cordillera (mesetas grandes con cumbres)
     (68, 11, 6, 4, 2, 'w', 1.8), (68, 11, 4, 2.6, 3, 'w', 2.4), (59, 14, 3.5, 3.5, 2, 'w', 1.8), (59, 14, 2.2, 2.2, 3, 'w', 2.4),
     (74, 14, 3.5, 2.6, 2, 'w', 1.8), (64, 19, 4.5, 1.8, 2, 'w', 1.8), (77, 8, 3.5, 3, 2, 'w', 1.8), (77, 8, 2, 1.8, 3, 'w', 2.4),
     (62, 5, 3, 2, 2, 'w', 1.8), (79, 15, 2, 2.4, 2, 'w', 1.8),
+    'cuevas',
     # Cuevas: terreno muy quebrado (terrazas a tres alturas, pegadas unas a otras)
     (19, 11, 4.5, 3.4, 2, 'c', 1.8), (19, 11, 3, 2.2, 3, 'c', 2.4), (10, 11, 3.5, 2.4, 2, 'c', 1.8), (27, 14, 3.2, 2.4, 2, 'c', 1.8),
     (14, 19, 4, 2.4, 2, 'c', 1.8), (23, 4, 4.5, 1.8, 2, 'c', 1.8), (31, 8, 2.4, 3.4, 2, 'c', 1.8), (6, 20, 3.4, 2.4, 2, 'c', 1.8),
     (6, 13, 2.4, 2.4, 2, 'c', 1.8), (14, 4, 3, 1.6, 2, 'c', 1.8), (27, 14, 1.8, 1.4, 3, 'c', 2.4), (10, 11, 1.8, 1.4, 3, 'c', 2.4),
+    'final',
     # Volcán: el cono alrededor del cráter y coladas
     (41, 18, 3.6, 3.4, 2, 'l', 1.8), (41, 18, 2.6, 2.4, 3, 'l', 2.2), (38, 23, 2.4, 1.8, 2, 'l', 1.8), (48, 21, 2, 2.4, 2, 'l', 1.8),
     (44, 25, 2.5, 1.5, 2, 'l', 1.8),
 ]
-for cx, cy, rx, ry, lv, ch, clear in RELIEF:
-    raise_blob(cx, cy, rx, ry, lv, ch, clear)
+isle = None
+for e in RELIEF:
+    if isinstance(e, str):
+        isle = e
+        continue
+    cx, cy, rx, ry, lv, ch, clear = e
+    raise_blob(cx + OFF[isle][0], cy + OFF[isle][1], rx, ry, lv, ch, clear)
 open2x2(3)
 open2x2(2)
 # hoyos de las cuevas (simas): bajo el llano, con su pared
 for cx, cy, rx, ry in [(13, 13, 1.6, 1.2), (24, 11, 1.5, 1.4), (9, 7, 1.5, 1.2), (19, 18, 1.4, 1.1), (27, 4, 1.4, 1)]:
-    lower_pits(cx, cy, rx, ry, 'c', 2.2)
+    lower_pits(cx + OFF['cuevas'][0], cy + OFF['cuevas'][1], rx, ry, 'c', 2.2)
 # el cráter: lava en lo alto del cono
 for y in range(H):
     for x in range(W):
@@ -271,18 +306,18 @@ for y in range(3, H0 - 2):
 # (el TIPO sale de la ISLA donde caen — `critter_type` —: cada isla enseña SUS Gummies, Crabbies y Saltarines, como
 # en los niveles; en las cuevas, además del Crabby de cueva, el lúgubre)
 CRITTERS = [
-    # pradera
+    'pradera',
     ('gummy', 6, 11, 41), ('crabby', 17, 22, 36), ('gummy', 9, 14, 28), ('crabby', 3, 7, 35), ('hopper', 12, 17, 32), ('hopper', 5, 10, 38),
-    # costa
+    'costa',
     ('crabby', 33, 38, 36), ('gummy', 43, 47, 41), ('hopper', 36, 41, 43), ('crabby', 30, 34, 39),
     ('puffer', 28, 33, 44), ('puffer', 50, 55, 44),
-    # fortaleza
+    'fortaleza',
     ('bomb', 60, 65, 35), ('crabby', 70, 75, 41), ('bomb', 64, 69, 30), ('gummy', 62, 67, 38), ('hopper', 72, 77, 33),
-    # cumbres
+    'nieve',
     ('crabby', 62, 67, 14), ('gummy', 69, 74, 15), ('crabby', 56, 60, 19), ('hopper', 60, 65, 9),
-    # cuevas
+    'cuevas',
     ('gloomy', 12, 17, 12), ('gloomy', 21, 26, 9), ('gloomy', 8, 11, 18), ('crabby', 14, 19, 7), ('gummy', 22, 27, 14), ('hopper', 10, 15, 15),
-    # volcán
+    'final',
     ('gummy', 39, 44, 14), ('crabby', 40, 45, 21), ('hopper', 37, 42, 23),
     ('puffer', 36, 41, 8), ('puffer', 52, 57, 26),
 ]
@@ -322,7 +357,16 @@ def place_critter(t, x0, x1, y):
     return None
 
 
-critters = [c for c in (place_critter(*a) for a in CRITTERS) if c]
+critters = []
+for a in CRITTERS:
+    if isinstance(a, str):
+        isle = a
+        continue
+    t, x0, x1, y = a
+    ox, oy = OFF[isle]
+    c = place_critter(t, x0 + ox, x1 + ox, y + oy)
+    if c:
+        critters.append(c)
 
 # El jefe de cada mundo, en pequeño junto a su castillo (sus sprites del juego; fw = ancho de cuadro)
 BOSS_ART = {
@@ -373,19 +417,22 @@ def blob_sea(cx, cy, rx, ry, ch, jag=0.18, gap=2.6):
 
 blob_sea(55, 54.6, 12.5, 5.2, 'j'); blob_sea(44.5, 53.8, 4.6, 3.6, 'j'); blob_sea(66, 54.2, 4.8, 4.2, 'j')
 JPATH = [(49, 50.5), (44.5, 53.5), (47.5, 57.6), (54, 57.8), (58.5, 54.6), (62.5, 57.2), (65, 52)]
-JSTOPS = 5                 # paradas de muestra (4 niveles + el castillo): cuando tenga niveles, las de Worlds.lua
-# Puentes (cerrados): castillo de la Costa → primer nivel de la jungla · castillo de la jungla → primer nivel de la Fortaleza
+# (0.5.99: ya es el MUNDO 3 de Worlds.LIST; sus paradas son las de Worlds.lua: 4 niveles + el castillo)
+# Puentes: castillo de la Costa → primer nivel de la jungla · castillo de la jungla → primer nivel de la Fortaleza
 JBRIDGES = [
     [(50, 38), (50.2, 41.5), (50.4, 45), (49.6, 48.2), (49, 50.5)],
-    [(65, 52), (62.2, 48.6), (58.2, 45.6), (56.4, 42.4), (57, 40), (58, 38)],
+    stretch('jungla', 'fortaleza', [(65, 52), (62.2, 48.6), (58.2, 45.6), (56.4, 42.4), (57, 40), (58, 38)]),
 ]
+# su BONUS (El Claro de la Balanza): un ramal corto desde el castillo hacia el este, sobre el islote del templo
+JBONUS = [(65, 52), (67.4, 53.2), (69.2, 55.4)]
 SJPATH = catmull(JPATH)
 SJBRIDGES = [catmull(b) for b in JBRIDGES]
-JLINES = [SJPATH] + SJBRIDGES
+SJBONUS = catmull(JBONUS)
+JLINES = [SJPATH] + SJBRIDGES + [SJBONUS]
 # bajo el camino, tierra; alrededor del castillo, la plaza de piedra del templo
 for y in range(H0, H):
     for x in range(W):
-        dd = min(seg_dist(x + 0.5, y + 0.5, SJPATH[i], SJPATH[i + 1]) for i in range(len(SJPATH) - 1))
+        dd = min(seg_dist(x + 0.5, y + 0.5, l[i], l[i + 1]) for l in (SJPATH, SJBONUS) for i in range(len(l) - 1))
         if grid[y][x] == '~' and dd < 1.3:
             grid[y][x] = 'j'
         if grid[y][x] == 'j' and wobbly(x, y, 65, 52, 2.4, 1.9, 0.2):
@@ -403,7 +450,7 @@ open2x2(3, H0)             # (solo la jungla: arriba, el cráter del volcán ya 
 open2x2(2, H0)
 # landmarks a mano: el ZIGURAT en lo alto de la meseta y ruinas sueltas
 jdecos = [{'t': 'ziggurat', 'x': 54, 'y': 52}]
-JLABEL = (54.5, 55.4)       # (el cartel "LA JUNGLA / PRÓXIMAMENTE": sin nada encima)
+# (el sitio del cartel de cuando era PRÓXIMAMENTE: sin nada encima)
 jtaken = {(x, y) for x in range(52, 57) for y in range(50, 54)} | {(x, y) for x in range(51, 59) for y in range(55, 57)}
 JDECOS = {'j': ['jungle_fern', 'heliconia', 'banana_plant', 'elephant_ear', 'tree_fern', 'bromeliad', 'jungle_fern'],
           't': ['stone_brazier', 'broken_pillar', 'stone_idol']}
@@ -434,20 +481,22 @@ for t, x0, x1, y in JCRITTERS:
     c = place_critter(t, x0, x1, y)
     if c:
         critters.append(c)
-JUNGLE = {'id': 'jungla', 'path': [list(p) for p in SJPATH], 'stops': JSTOPS,
-          'boss': {'img': 'assets/images/bosses/giantbeetle/body-Sheet.png', 'fw': 22},
-          'bridges': [[list(p) for p in b] for b in SJBRIDGES], 'label': list(JLABEL)}
+# La jungla entra en el mapa como el MUNDO 3 (tras la Costa): sus datos, y los puentes Costa → jungla → Fortaleza en
+# vez del de siempre Costa → Fortaleza (que sigue contando arriba para la distancia a los caminos: no mueve nada)
+SPATHS['jungla'], SBONUS['jungla'] = SJPATH, SJBONUS
+BOSS_ART['jungla'] = {'img': 'assets/images/bosses/giantbeetle/body-Sheet.png', 'fw': 22}
+STORY = ['pradera', 'costa', 'jungla', 'fortaleza', 'nieve', 'cuevas', 'final']        # (= Worlds.LIST)
+SCONNECT_OUT = [SCONNECT[0], SJBRIDGES[0], SJBRIDGES[1]] + SCONNECT[2:]
 
 data = {
     'cell': 32, 'w': W, 'h': H,
     'rows': [''.join(r) for r in grid],
     'heights': [''.join(str(v) for v in r) for r in hgt],
     'worlds': [{'id': k, 'path': [list(p) for p in SPATHS[k]], 'boss': BOSS_ART[k], 'nodeBoss': NODE_BOSS.get(k, {}), 'bonus': [list(p) for p in SBONUS[k]],
-                **({'secret': [list(p) for p in SSECRET[k]]} if k in SSECRET else {})} for k in ORDER],
-    'connect': [[list(p) for p in c] for c in SCONNECT],
+                **({'secret': [list(p) for p in SSECRET[k]]} if k in SSECRET else {})} for k in STORY],
+    'connect': [[list(p) for p in c] for c in SCONNECT_OUT],
     'decos': decos, 'critters': critters,
-    'view': [W, H0],              # (lo que encuadran las cinemáticas: las 6 islas de la historia)
-    'soon': [JUNGLE],             # islas PRÓXIMAMENTE: dibujadas, nunca paradas (StoryMapState `soon`)
+    'view': [W, H],               # (lo que encuadran las cinemáticas: las 7 islas, la jungla abajo)
 }
 with open(OUT_JSON, 'w') as f:
     json.dump(data, f, ensure_ascii=False, separators=(',', ':'))

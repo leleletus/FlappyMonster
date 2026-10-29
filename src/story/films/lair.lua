@@ -5,7 +5,7 @@
 --   escape   el final de la huida (los fragmentos, guardados): el monstruo cruza el lago de lava con un salto y el DOBLE salto; el Reflejo se para
 --            en la orilla, se ríe, salta a un espejo flotante... y el espejo se va volando, lejos, hasta perderse en
 --            el horizonte (allí está su guarida). El monstruo lo ve irse
---   night    cae la noche. Sin aliento, saca sus seis fragmentos: tiemblan y se ponen en fila SEÑALANDO hacia allí;
+--   night    cae la noche. Sin aliento, saca sus fragmentos: tiemblan y se ponen en fila SEÑALANDO hacia allí;
 --            a lo lejos el séptimo contesta con un destello, y la risa llega con eco
 --   follow   asiente y echa a andar detrás de sus fragmentos, hacia allí (al ritmo de la música del nivel, que
 --            entra al acabar)
@@ -32,8 +32,8 @@ local function peak(t, k)
     if k <= 0 then return end
     local tw = 0.5 + 0.5 * math.sin(t * 9)
     Stage.rays(PEAK_SX, PEAK_SY, t * 3, 4, (18 + 16 * tw) * k, 0.6 * k, { 0.8, 0.95, 1 })
-    K.shardGlow('7', PEAK_SX, PEAK_SY, 1, 0, k, t)
-    Stage.shard('7', PEAK_SX, PEAK_SY, { s = 1, alpha = k })
+    K.shardGlow(K.FINAL, PEAK_SX, PEAK_SY, 1, 0, k, t)
+    Stage.shard(K.FINAL, PEAK_SX, PEAK_SY, { s = 1, alpha = k })
 end
 
 -- ── 1. El final de la huida ─────────────────────────────────────────────────

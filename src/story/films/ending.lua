@@ -2,7 +2,7 @@
 -- EL FINAL de la historia: empieza cuando el jugador recoge el último fragmento (el del jefe Espejo), sin
 -- tocar la meta. Tiempos: assets/story/films.json. Guion: docs/historia/HISTORIA.md.
 --   seven    en el cráter, ante el marco vacío, los fragmentos salen y giran alrededor del monstruo
---   pieces   vuelan al marco y encajan uno a uno, en el orden en que se ganaron (Xtra extremo: las 14 mitades)
+--   pieces   vuelan al marco y encajan uno a uno, en el orden en que se ganaron (Xtra extremo: sus mitades)
 --   whole    el espejo, entero: las grietas se borran
 --   return   el espejo tira del Reflejo, que vuelve dentro y suelta lo que robó: el aleteo
 --   light    una onda de luz sale del volcán y recorre las islas: la furia del espejo se apaga
@@ -11,6 +11,7 @@
 --   home     vuela a casa; el cielo vuelve a ser el del modo Flappy, vuelven las tuberías; el logo
 local Stage = require 'src/story/Stage'
 local K = require 'src/story/films/common'
+local Shards = require 'src/story/Shards'
 local Particles = require 'src/fx/Particles'
 
 local lerp, smooth, easeIn, easeOut = K.lerp, K.smooth, K.easeIn, K.easeOut
@@ -18,7 +19,6 @@ local F = {}
 
 local MONSTER_X = 520
 local ORBIT_Y = K.FLOOR - 70
-local SCALE = { 0, 2, 4, 5, 7, 9, 12 }              -- la nota de cada fragmento al encajar (semitonos: una escala que sube)
 
 -- Dónde gira el fragmento i de n alrededor del monstruo (gt = tiempo de la película: no salta entre escenas)
 local function orbit(i, n, gt)
@@ -26,7 +26,7 @@ local function orbit(i, n, gt)
     return MONSTER_X + math.cos(a) * 200, ORBIT_Y + math.sin(a) * 104
 end
 
--- ── 1. Los siete ────────────────────────────────────────────────────────────
+-- ── 1. Todos los fragmentos ─────────────────────────────────────────────────
 F.seven = {
     enter = function(c)
         c.v.set = Stage.set('crater')
@@ -68,7 +68,7 @@ F.seven = {
 -- ── 2. Pieza a pieza ────────────────────────────────────────────────────────
 local function arrival(c, i)
     local n = #c.shared.ids
-    local step = c.at('each') * 7 / n                  -- (7 fragmentos: uno cada 2 pulsos; 14 mitades: una por pulso)
+    local step = c.at('each') * Shards.TOTAL / n       -- (los enteros: uno cada `each` pulsos; las mitades: dos)
     return c.at('first') + (i - 1) * step
 end
 
@@ -83,8 +83,8 @@ F.pieces = {
         for i = c.v.placed + 1, #ids do
             if t >= arrival(c, i) then
                 c.v.placed = i
-                local n = tonumber(ids[i]:sub(1, 1))
-                c.sfx('storyClink', 2 ^ (SCALE[n] / 12))
+                local k = math.ceil(i * Shards.TOTAL / #ids)          -- (su sitio en el orden: las mitades, el de su entero)
+                c.sfx('storyClink', 2 ^ (K.note(k, Shards.TOTAL) / 12))
                 local sx, sy = Stage.shardSlot(ids[i], K.MX, K.MF)
                 Stage.spark(sx, sy, 8, 12, 150, { life = 0.5, s = 3 })
             end
@@ -188,44 +188,44 @@ F['return'] = {
 }
 
 -- ── 5. La luz recorre las islas ─────────────────────────────────────────────
-local ZOOM_FAR, ZOOM_NEAR = 0.5, 2
-local function farCam()
-    local _, SM = Stage.map()
-    local pw, ph = SM.mapSize()
-    return (pw - WINDOW_W / ZOOM_FAR) / 2, (ph - WINDOW_H / ZOOM_FAR) / 2
+local ZOOM_NEAR = 2
+-- hasta dónde llega la onda: un poco más allá del jefe más lejano del volcán
+local function ringMax()
+    local vx, vy = K.volcanoXY()
+    local r = 0
+    for _, tg in ipairs(K.targets()) do r = math.max(r, math.sqrt((tg.x - vx) ^ 2 + (tg.y - vy) ^ 2)) end
+    return r + 400
 end
-local RING_MAX = 2100
 
 F.light = {
     enter = function(c)
         local map = Stage.map()
-        K.setBosses(map, { 1, 1, 1, 1, 1, 1 }, 0)
+        K.setBosses(map, K.all(1), 0)
         c.v.hit = {}
     end,
     events = { { cue = 'wave', fn = function(c) c.sfx('storyWave') end } },
     update = function(c, t, dt)
-        local _, SM = Stage.map()
-        local vx, vy = SM.bossXY(6)
-        local R = RING_MAX * easeOut(c.k(c.at('wave'), c.b(10)))
+        local vx, vy = K.volcanoXY()
+        local R = ringMax() * easeOut(c.k(c.at('wave'), c.b(10)))
         for i, tg in ipairs(K.targets()) do
             local d = math.sqrt((tg.x - vx) ^ 2 + (tg.y - vy) ^ 2)
             if not c.v.hit[i] and R >= d and t >= c.at('wave') then
                 c.v.hit[i] = true
-                c.sfx('storyBell', 2 ^ (SCALE[i] / 12), 0.8)
+                c.sfx('storyBell', 2 ^ (K.note(i, K.count() + 1) / 12), 0.8)
                 Stage.spark(tg.x, tg.y - 24, 10, 14, 150, { life = 0.7, s = 6 })
             end
         end
     end,
     draw = function(c, t)
-        local map, SM = Stage.map()
-        local cx, cy = farCam()
-        local vx, vy = SM.bossXY(6)
+        local map = Stage.map()
+        local cx, cy, zf = K.far()
+        local vx, vy = K.volcanoXY()
         local k = c.k(c.at('wave'), c.b(10))
-        local R = RING_MAX * easeOut(k)
-        map:filmDraw(cx, cy, ZOOM_FAR, { extra = function(ox, oy)
+        local R = ringMax() * easeOut(k)
+        map:filmDraw(cx, cy, zf, { extra = function(ox, oy)
             love.graphics.push()
             love.graphics.translate(-ox, -oy)
-            K.drawExtras(map, { 1, 1, 1, 1, 1, 1 })
+            K.drawExtras(map, K.all(1))
             Stage.rays(vx, vy - 30, t * 2, 8, 150, 0.35)
             if t >= c.at('wave') then                             -- la onda: tres anillos duros
                 love.graphics.setBlendMode('add')
@@ -250,10 +250,10 @@ F.light = {
 
 -- ── 6. Todos, pequeños otra vez ─────────────────────────────────────────────
 F.shrink = {
-    enter = function(c) c.v.done = 0; c.v.sizes = { 1, 1, 1, 1, 1, 1 } end,
+    enter = function(c) c.v.done = 0; c.v.sizes = K.all(1) end,
     update = function(c, t, dt)
         local each = c.at('each')
-        for i = c.v.done + 1, 6 do
+        for i = c.v.done + 1, K.count() do
             if t >= c.at('first') + (i - 1) * each + c.b(0.5) then
                 c.v.done = i
                 c.sfx('storyShrink', 0.9 + i * 0.06)
@@ -265,9 +265,10 @@ F.shrink = {
     draw = function(c, t)
         local map = Stage.map()
         local each, tgs = c.at('each'), K.targets()
-        local i = math.min(6, math.floor((t - c.at('first')) / each) + 1)
-        local wide = t >= c.at('first') + 6 * each
-        for n = 1, 6 do
+        local N = K.count()
+        local i = math.min(N, math.floor((t - c.at('first')) / each) + 1)
+        local wide = t >= c.at('first') + N * each
+        for n = 1, N do
             local t0 = c.at('first') + (n - 1) * each + c.b(0.5)
             c.v.sizes[n] = (t < t0) and 1 or ((t >= t0 + c.b(0.9)) and K.SMALL or lerp(1, K.SMALL, K.elastic((t - t0) / c.b(0.9))))
         end
@@ -280,8 +281,8 @@ F.shrink = {
             love.graphics.pop()
         end
         if wide then
-            local cx, cy = farCam()
-            map:filmDraw(cx, cy, ZOOM_FAR, { extra = extra })
+            local cx, cy, zf = K.far()
+            map:filmDraw(cx, cy, zf, { extra = extra })
         else
             local tg = tgs[i]
             map:filmDraw(tg.x - WINDOW_W / ZOOM_NEAR / 2, tg.y - 26 - WINDOW_H / ZOOM_NEAR / 2, ZOOM_NEAR, { extra = extra })

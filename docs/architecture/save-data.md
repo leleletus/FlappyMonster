@@ -9,7 +9,7 @@ the save directory is searched before the game's own files.
 |---|---|---|
 | `options.cfg` | `src/core/Settings.lua` | language, last accepted online name (`onlineName`) |
 | `<difficulty>_highscore.dat` (`SCORE_FILE`) | `src/states/flappy/PlayState.lua` | Flappy best score, one file per Flappy difficulty |
-| `story1.sav` … `story3.sav` | `src/story/Save.lua` | one story slot each: difficulty, lives, per-level best (rating, grade, points, time), done nodes, shards, bonus results, world rewards, points, play time (`playTime`), Game Overs (`gameOvers`), pre-level films already seen (`films`), extra lives already taken per level (`taken`) |
+| `story1.sav` … `story3.sav` | `src/story/Save.lua` | one story slot each: difficulty, lives, per-level best (rating, grade, points, time), done nodes, shards, bonus results, world rewards, points, play time (`playTime`), Game Overs (`gameOvers`), pre-level films already seen (`films`), extra lives already taken per level (`taken`), worlds open without the previous boss (`open`, from a migration), `version` |
 | `story.sav` | `src/story/Save.lua` | global: unlocked difficulties, cleared difficulties |
 | `*.sav.bak`, `*.sav.damaged` | `src/story/Save.lua` | copy written before each save; a file found unreadable (with its copy) is kept here |
 | `update/state.lua`, `update/slots/<version>/`, `update/boot.log` | `main.lua`, `src/update/Updater.lua` | downloaded versions (see [updates-and-release](updates-and-release.md)) |
@@ -21,7 +21,11 @@ the save directory is searched before the game's own files.
 finished.** Leaving through the pause menu keeps only what was LOST (lives); pickups, shards, points and grades are
 written by `Run.complete` / `Run.addShard` from `onFinish`. Any new thing a level can give must follow it.
 
-Old saves are migrated on load (`Shards.migrate`: shards of bosses already beaten are granted).
+Old saves are migrated on load: `Save.migrate` (slot `version` < `Save.VERSION`, today 2: the world index and the
+`worldReward` keys are remapped by id through `Save.WORLDS`, the per-version world lists; a world inserted in the
+middle — the jungle, 0.5.99 — leaves the world after it open in `open[id]` for saves that had already reached it, the
+user's "keep their progress, jungle open"; details in [story-mode](../story/story-mode.md#worlds-and-saves)), then
+`Shards.migrate` (shards of bosses already beaten are granted).
 
 Going to Google Play: cloud saves would wrap `src/story/Save.lua` and `src/core/Settings.lua` — both already funnel
 every read and write through two functions each.

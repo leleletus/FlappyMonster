@@ -4,7 +4,7 @@
 --   Stage.monster(x, y, o)        el monstruo (los mismos cuadros y escala que en los niveles); o.invert = el Reflejo
 --   Stage.laugh(x, y, t, o)       el Reflejo riéndose (la animación de risa del jefe Espejo)
 --   Stage.mirror(x, feetY, o)     el espejo: marco + los fragmentos que tenga (o.shards) o el cristal entero (o.whole)
---   Stage.shard(id, x, y, o)      un fragmento suelto ('1'..'7'; Xtra: '1a', '1b'...); Stage.shardSlot = su sitio en el espejo
+--   Stage.shard(id, x, y, o)      un fragmento suelto ('1'..'8'; Xtra: '1a', '1b'...); Stage.shardSlot = su sitio en el espejo
 --   Stage.orb / Stage.spark       el aleteo hecho magia (orbe) y sus chispas
 --   Stage.flappyBg(scroll, col)   el fondo del modo Flappy
 --   Stage.sky(def, camX)          el cielo de los niveles (src/fx/Sky.lua) sin nivel
@@ -152,10 +152,10 @@ local function shardInfo(id)
 end
 Stage.shardInfo = shardInfo
 
--- Los fragmentos, en el orden en que se ganan: 7 enteros o (Xtra extremo) 14 mitades
+-- Los fragmentos, en el orden en que se ganan (Shards.ORDER): 8 enteros o (Xtra extremo) 16 mitades
 function Stage.shardIds(xtra)
     local out = {}
-    for n = 1, 7 do
+    for _, n in ipairs(require('src/story/Shards').ORDER) do
         if xtra then out[#out + 1] = n .. 'a'; out[#out + 1] = n .. 'b' else out[#out + 1] = tostring(n) end
     end
     return out
