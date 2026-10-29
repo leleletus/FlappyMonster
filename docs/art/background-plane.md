@@ -82,3 +82,6 @@ of the sky layers. No stencil (Switch / Android).
 - Editor bug (the user): editing the plane, the translucent front left TRAILS outside the level when panning — its canvas
   was cleared with the window's scissor still set (clear respects the scissor) → cleared without it. Test:
   `editor_open PLANE=1` case `estela`.
+- 2026-10-28, after retouching some backgrounds the user settled it: DARK levels (cave backgrounds, dusk, night, `dark`)
+  keep the current shade (`SHADE` 0.56 / 0.59 / 0.66); BRIGHT levels (day, a surface sky biome, not dark) get a darker
+  one (`SHADE_DAY` 0.44 / 0.47 / 0.54), or it was hard to tell what is background. `BackPlane.shadeOf(level)`.

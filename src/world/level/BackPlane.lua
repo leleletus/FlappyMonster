@@ -16,7 +16,11 @@ local TileCodec = require 'src/world/tiles/TileCodec'
 
 local BackPlane = {}
 
-BackPlane.SHADE  = { 0.56, 0.59, 0.66 }  -- lo oscuro del plano (con un punto azulado hacia el cielo; el de la primera vista previa: el usuario lo pidió más oscuro y luego, viendo las islas oscuras, volvió a este)
+-- Lo oscuro del plano (con un punto azulado hacia el cielo). Dos tonos (2026-10-28, el usuario, tras retocar fondos):
+-- en los niveles CLAROS — de día, al aire libre y sin oscuridad — más oscuro, o no se distingue bien qué es fondo; en los
+-- oscuros (cueva, atardecer, noche, a oscuras) el de la primera vista previa, que la hora y la oscuridad ya oscurecen.
+BackPlane.SHADE     = { 0.56, 0.59, 0.66 }
+BackPlane.SHADE_DAY = { 0.44, 0.47, 0.54 }
 BackPlane.SHADOW = { 0.5, 0.5, 0.56 }    -- lo que deja la sombra de un bloque de delante (× sobre el plano)
 BackPlane.OFF    = 16                    -- px: la sombra, abajo a la derecha (¼ de casilla)
 
@@ -97,6 +101,13 @@ local function drawShadows(level, camX, camY)
     end
 end
 
+-- ¿Nivel CLARO? De día, al aire libre (un fondo de superficie, no de cueva) y sin oscuridad
+function BackPlane.shadeOf(level)
+    local Sky = require 'src/fx/Sky'
+    local bright = Sky.timeOf(level).id == 'day' and not level.dark and Sky.biomeOf(level).sky == true
+    return bright and BackPlane.SHADE_DAY or BackPlane.SHADE
+end
+
 -- Dibuja el plano (si el nivel lo tiene): después del cielo, antes de todo lo demás
 function BackPlane.render(level, camX, camY)
     local bg, decos = level.bg, level.bgDecorations
@@ -139,8 +150,9 @@ function BackPlane.render(level, camX, camY)
     love.graphics.setScissor()
     if sx then love.graphics.setScissor(sx, sy, sw, sh) end
     -- sobre el cielo, más oscuro (y teñido por la hora, como las capas del cielo)
-    local tint = require('src/fx/Sky').timeOf(level).tint
-    local s = BackPlane.SHADE
+    local Sky = require 'src/fx/Sky'
+    local tint = Sky.timeOf(level).tint
+    local s = BackPlane.shadeOf(level)
     love.graphics.push('all')
     love.graphics.setBlendMode('alpha', 'premultiplied')
     love.graphics.setColor(s[1] * tint[1], s[2] * tint[2], s[3] * tint[3], 1)
