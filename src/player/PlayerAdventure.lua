@@ -132,6 +132,8 @@ function PlayerAdventure:new(x, y)
     o.invT=0              -- invulnerable (reaparecer, tras un golpe...: ver HIT_INV)
     o.squashT=0           -- aplastado (agachado y aturdido)
     o.iceT=0              -- congelado en un bloque de hielo (congelador)
+    o.gulped=false        -- tragado por una Planta carnívora (PlayerGulp.lua): gulpMash pulsaciones, gulpBiteT, gulpNx/Ny
+    o.gulpMash=0; o.gulpBiteT=0; o.gulpNx=0; o.gulpNy=-1
     o.ctrlLockT=0         -- sin control un instante (lanzado de lado por un trampolín)
     o.lightOn=false       -- linterna (niveles a oscuras): encendida
     o.lightBat=1          -- batería 0..1
@@ -233,7 +235,8 @@ end
 
 -- ¿Invulnerable? (por lo que sea: reaparecer, un golpe reciente...)
 -- (congelado en la entrada de un jefe también: sin control, nada le hace daño)
-function PlayerAdventure:isInvulnerable() return (self.invT or 0) > 0 or self.frozen == true end
+-- (tragado por una planta también: dentro, solo le hace daño ella — PlayerGulp.lua —)
+function PlayerAdventure:isInvulnerable() return (self.invT or 0) > 0 or self.frozen == true or self.gulped == true end
 -- Da invulnerabilidad `t` s (se queda con la que dure más)
 function PlayerAdventure:grantInvulnerability(t)
     self.invT = math.max(self.invT or 0, t)
@@ -281,7 +284,7 @@ function PlayerAdventure:die(drownDeath, force)
     end
     if self:isInvulnerable() and not drownDeath and not force then return false end
     self.dying=true; self.vx=0; self.vy=0
-    self.gpPhase=nil; self.stunT=0; self.squashT=0; self.iceT=0
+    self.gpPhase=nil; self.stunT=0; self.squashT=0; self.iceT=0; self.gulped=false; self.gulpMash=0
     self.deathPhase='freeze'; self.deathTimer=0; self.deathY=self.y
     if not drownDeath then
         Sound.play('dies2')
@@ -323,6 +326,7 @@ function PlayerAdventure:respawn()
     self.prevInWater=false
     self.splashSt='out'; self.splashCD=0
     self.gpPhase=nil; self.gpT=0; self.gpLanded=false; self.stunT=0; self.squashT=0; self.ctrlLockT=0; self.iceT=0
+    self.gulped=false; self.gulpMash=0; self.gulpBiteT=0
     self.lightOn=false; self.lightBat=1; self.lightCd=0
     self:grantInvulnerability(SPAWN_INV * Difficulty.k('invuln'))
     Sound.stopTracked('drowning')
@@ -342,6 +346,8 @@ function PlayerAdventure:update(dt, level)
     -- (`forceFrozen`: lo pone quien lleva la partida cuando ya ha terminado — el bonus contra el bot —: sin control
     -- e invulnerable, como en la entrada de un jefe)
     if self.forceFrozen and not self.dying then self.frozen = true end
+    -- Tragado por una planta carnívora: machacar botones para salir (PlayerGulp.lua)
+    if self.gulped and not self.dying then return self:updateGulped(dt, level, FROZEN_INPUT) end
     if (self.iceT or 0) > 0 and not self.dying then
         -- Congelado: las pulsaciones rompen el hielo antes; el cuerpo se queda en
         -- su pose (cuadro y escala) y resbala/cae como un bloque
@@ -600,11 +606,12 @@ P.PUFF_SCALE = PUFF_SCALE; P.PUFF_SPD = PUFF_SPD; P.DROWN_TOTAL = DROWN_TOTAL; P
 P.DROWN_AUDIO_DUR = DROWN_AUDIO_DUR; P.AIR_BAR_W = AIR_BAR_W; P.AIR_BAR_H = AIR_BAR_H; P.GP_WINDUP = GP_WINDUP; P.GP_SPEED = GP_SPEED
 P.GP_WATER = GP_WATER; P.GP_PUSH_VX = GP_PUSH_VX; P.GP_PUSH_VY = GP_PUSH_VY; P.GP_STUN = GP_STUN; P.fx = fx
 P.DIR_UP = DIR_UP; P.DIR_DOWN = DIR_DOWN; P.DIR_LEFT = DIR_LEFT; P.DIR_RIGHT = DIR_RIGHT; P.SPRITE_H = SPRITE_H
-P.OUTER_YOFF = OUTER_YOFF; P.INNER_W = INNER_W; P.INNER_H = INNER_H; P.SQUASH_K = SQUASH_K
+P.OUTER_YOFF = OUTER_YOFF; P.OUTER_W = OUTER_W; P.OUTER_H = OUTER_H; P.HURT_FLASH = HURT_FLASH; P.INNER_W = INNER_W; P.INNER_H = INNER_H; P.SQUASH_K = SQUASH_K
 require('src/player/PlayerCollision')(PlayerAdventure, P)
 require('src/player/PlayerAir')(PlayerAdventure, P)
 require('src/player/PlayerGroundPound')(PlayerAdventure, P)
 require('src/player/PlayerRender')(PlayerAdventure, P)
+require('src/player/PlayerGulp')(PlayerAdventure, P)
 dropPlatformTop, ICE_FREE_INV, ICE_MASH, loadSprites = P.dropPlatformTop, P.ICE_FREE_INV, P.ICE_MASH, P.loadSprites
 
 return PlayerAdventure

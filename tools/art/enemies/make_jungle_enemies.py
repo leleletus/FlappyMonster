@@ -30,6 +30,9 @@
 #            bosses/common.json); esos nunca se pisan (se retocan en el editor de animaciones).
 #   El usuario eligió (2026-10-29): topo A «Periscopio», piraña B «Aguja», planta B «Cepo»:
 #     python tools/art/enemies/make_jungle_enemies.py --apply --mole A --piranha B --plant B
+#   `--only mole|piranha|plant` escribe solo las hojas de ese (con --force, las otras no se pisan). La planta cerrada
+#   con hojas de la base y tallo (0.5.97):
+#     python tools/art/enemies/make_jungle_enemies.py --apply --plant B --only plant --force
 import os, sys, math
 from PIL import Image, ImageDraw, ImageFont
 
@@ -589,19 +592,29 @@ def plantA_items(H, ctrl, ha, theta=50, closed=False, bulge=0.0, dead=False):
 
 def plantB_items(lift=4, sway=0.0, bulge=0.0, droop=0.0, dead=False, bait=True):
     """B «Cepo» (el atrevido): dos hojas largas TUMBADAS en el suelo con dientes en el borde (un cepo de hojas) y una
-    florecita de cebo en medio; al pisar al lado, las hojas saltan y se cierran de pie"""
-    H = (12, 21.8)
-    out = Xf(rot=droop, pivot=(12, 24))
+    florecita de cebo en medio; al pisar al lado, las hojas saltan y se cierran de pie.
+    0.5.97 (el usuario: "cerrada le faltan las hojas de la base y el tallito, y parece que flota"): debajo de la
+    trampa, dos HOJAS DE LA BASE tumbadas en la fila de abajo (no se mueven: la anclan al suelo) y, al levantarse las
+    hojas, un TALLO corto que sube la bisagra (cerrada, la vaina queda de pie sobre él, no en una punta)"""
+    up = 0.0 if dead else 3.0 * max(0.0, min(1.0, (lift - 20) / 66.0))   # (lo que sube la bisagra: el tallo)
+    H = (12, 21.8 - up)
+    out = Xf(rot=droop, pivot=(12, 23.5))
+    base = []
+    if not dead:                                              # hojas de la base: fijas, en la fila de abajo
+        base.append(P(E(7.2, 22.9, 4.6, 1.0, -10), LEAFD))
+        base.append(P(E(16.8, 22.9, 4.6, 1.0, 10), LEAFD))
     it = []
+    if up > 0.5:
+        it.append(P(tube([(12, 23.2), (12, H[1] + 0.5)], 0.9), LEAFD))
     if bait and lift < 40:
         it.append(P(tube([(12, 22), (12 + sway, 17.6)], 0.5), LEAFD if not dead else DRY))
         it.append(P(E(12 + sway, 16.8, 1.4, 1.1), PINK if not dead else DRY))
         it.append(D([(int(12 + sway), 16, YEL)] if not dead else []))
     closed = lift > 80
-    it += _trap(H, 0, 90 - lift, 10.0, 2.4, closed, dead, teeth_every=2, bulge=bulge)
+    it += _trap(H, 0, 90 - lift, 9.4 if closed else 10.0, 2.4, closed, dead, teeth_every=2, bulge=bulge)
     for x in it:
         x.xf = out
-    return it
+    return base + it
 
 
 def plant_frame(design, name):
@@ -994,12 +1007,14 @@ def maqueta(moles, fish, plants, ticks_per_isle=64):
     return frames
 
 
-def apply(moles, fish, plants, choice, force):
-    """Escribe en assets/ el diseño elegido de cada uno (no pisa nada que exista salvo con --force)"""
+def apply(moles, fish, plants, choice, force, only=None):
+    """Escribe en assets/ el diseño elegido de cada uno (no pisa nada que exista salvo con --force). `only` = 'mole' |
+    'piranha' | 'plant': solo las hojas de ese (las demás ni se miran)"""
     out = {}
-    for isle in ISLES: out['enemies/mole/%s-Sheet.png' % isle] = sheet(moles[(choice['mole'], isle)])
-    out['enemies/piranha/piranha-Sheet.png'] = sheet(fish[choice['piranha']])
-    out['enemies/carnivoreplant/plant-Sheet.png'] = sheet(plants[choice['plant']])
+    if only in (None, 'mole'):
+        for isle in ISLES: out['enemies/mole/%s-Sheet.png' % isle] = sheet(moles[(choice['mole'], isle)])
+    if only in (None, 'piranha'): out['enemies/piranha/piranha-Sheet.png'] = sheet(fish[choice['piranha']])
+    if only in (None, 'plant'): out['enemies/carnivoreplant/plant-Sheet.png'] = sheet(plants[choice['plant']])
     for rel, im in out.items():
         path = os.path.join(IMG, rel)
         if os.path.exists(path) and not force:
@@ -1075,7 +1090,9 @@ def main():
         choice = {'mole': 'A', 'piranha': 'A', 'plant': 'A'}
         for k in choice:
             if '--' + k in args: choice[k] = args[args.index('--' + k) + 1]
-        apply(moles, fish, plants, choice, '--force' in args)
+        only = args[args.index('--only') + 1] if '--only' in args else None
+        if only not in (None, 'mole', 'piranha', 'plant'): sys.exit('--only mole|piranha|plant')
+        apply(moles, fish, plants, choice, '--force' in args, only)
         apply_extras()
         return
     os.makedirs(os.path.join(OUT, 'archivos'), exist_ok=True)

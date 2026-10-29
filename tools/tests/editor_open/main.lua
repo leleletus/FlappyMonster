@@ -3,7 +3,10 @@
 -- (<save>/editor_open_1.png, _2.png), cierra el diálogo y captura la capa
 -- Mini bloques (tecla 7, _3.png) y la pestaña Nivel con "Fondo y clima" abierto
 -- (_4.png); "Guardar como" con el nombre de un nivel existente avisa y solo guarda al segundo Guardar
--- (_saveas.png; la escritura se intercepta); comprueba que no hay errores.
+-- (_saveas.png; la escritura se intercepta); la PALETA de la capa Entidades con la categoría Enemigos (_entidades.png
+-- arriba, _entidades_2.png abajo:
+-- las miniaturas con dibujo propio — pez globo, piraña, topo, planta… — salían oscuras, 0.5.97); comprueba que no hay
+-- errores.
 -- LINKS=1: abre links.json (un bloque ON/OFF conectado a una inundación),
 -- elige Bloques → Conectar (K), hace clic en el bloque y captura el
 -- inspector y la línea de la conexión (_links.png).
@@ -334,8 +337,19 @@ function love.update(dt)
         print(('%-10s %s  %d niveles · «TEMPLO escarabajo» + Intro abre %s'):format('buscar', ok and 'OK   ' or 'FALLA', OPEN_N or 0, tostring(path)))
         if not ok then print('Error: el buscador de "Abrir" no encuentra el nivel') end
     end
-    if frame == 102 then
-        print('capturas en ' .. love.filesystem.getSaveDirectory() .. '/editor_open_{1,2,3,4,saveas,abrir}.png')
+    -- La paleta de Entidades, solo los Enemigos (buscar "enemigos": la categoría)
+    if frame == 99 then
+        local Ed = require('src/editor/Editor')
+        Ed.setLayer('entities')
+        local E = Ed.state()
+        E.search = E.search or {}
+        E.search.entities = 'enemigos'
+    end
+    if frame == 102 then shot('entidades') end
+    if frame == 103 then require('src/editor/ui').state.scroll.pal_entities = 9999 end      -- (y el final de la lista)
+    if frame == 105 then shot('entidades_2') end
+    if frame == 108 then
+        print('capturas en ' .. love.filesystem.getSaveDirectory() .. '/editor_open_{1,2,3,4,saveas,abrir,entidades,entidades_2}.png')
         print('TODO OK'); love.event.quit(0)
     end
 end

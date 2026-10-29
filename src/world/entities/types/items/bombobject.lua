@@ -58,9 +58,12 @@ function BombObject:onPutDown(pa) self.vx, self.vy, self.kicked = 0, 0, false en
 
 -- ── Reglas ────────────────────────────────────────────────────────────────────
 function BombObject:canBeStomped() return false end
-function BombObject:canBeKnocked() return self.alive and self.state ~= 'exploding' end
-function BombObject:isGhost() return self.state == 'exploding' or Entity.isGhost(self) end
-function BombObject:isObstacle() return self.alive and self.state ~= 'exploding' end
+function BombObject:canBeKnocked() return self.alive and self.state ~= 'exploding' and self.state ~= 'eaten' end
+function BombObject:isGhost() return self.state == 'exploding' or self.state == 'eaten' or Entity.isGhost(self) end
+function BombObject:isObstacle() return self.alive and self.state ~= 'exploding' and self.state ~= 'eaten' end
+-- La Planta carnívora solo se la come LANZADA por un jugador; dentro de ella explota (BombCore 'eaten')
+function BombObject:canBeEaten() return Core.canBeEaten(self) end
+function BombObject:onEaten(eater) return Core.onEaten(self, eater) end
 
 -- Sin efectos (el cliente lo usa para predecir)
 -- F1: con la mecha encendida, los tres radios de su explosión (mata / hiere / empuja)

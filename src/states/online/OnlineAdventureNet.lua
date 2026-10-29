@@ -183,6 +183,7 @@ function OnlineAdventureState:_applyInterpolation()
                 squashed    = Protocol.band(d[6], Protocol.PF_SQUASH) ~= 0,
                 iced        = Protocol.band(d[6], Protocol.PF_ICE) ~= 0,
                 lightOn     = Protocol.band(d[6], Protocol.PF_LIGHT) ~= 0,
+                gulped      = Protocol.band(d[6], Protocol.PF_GULP) ~= 0,
                 place       = d[12],
             })
         else

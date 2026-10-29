@@ -276,6 +276,11 @@ sprite's pixel grid.
   ('dry_fall'), flops wildly on the ground in random hops that tire ('dry_flop'; no hazard), swims again if it lands in
   water, and after `dryTime` s (prop, default 5) DIES ('dry_die': belly up, fades, `alive=false`). Inside a block counts
   as wet (its area may cross blocks). Drawn from state + deadTimer: the same online.
+  **Shared base (0.5.97):** the swim-area movement and the whole out-of-water behaviour live in
+  `src/world/entities/base/Swimmer.lua` (the SWIMMER: `Swimmer.init / ready / move / updateDry / dryPose`, the editor's
+  `area` / `dryTime` props), which the pufferfish and the Piranha switch on. `e.swimPass = true` = moves through blocks
+  (the pufferfish); without it (the piranha) targets and straight paths must keep the whole body (bob included) in free
+  water. The pufferfish behaves exactly as before (harness cases `puffer_*` unchanged).
 
 ## Bombs (living bomb and bomb object) and explosions
 
@@ -388,8 +393,10 @@ ornament per island, slim long silhouettes; B was always the bolder option. Chos
 «Gusano», a long worm-like mole, stays in the script), piranha **B «Aguja»** (A «Mandíbula», all head with a red jaw),
 plant **B «Cepo»** (A «Cuello», a small flytrap on a long neck). Sounds: `tools/sounds/jungle_enemies.py`
 ([sound](../audio/sound.md)). Test arena: `tools/levelgen/arenas/nuevos_enemigos.json` (`make_nuevos_enemigos.py`).
-Tests: `mechanics topo`, `topo_culetazo`, `topo_suelo`, `pirana`, `pirana_pisar`, `planta`; `SHOT_JUNGLA=1` →
-`mechanics_jungla.png` (every pose). NOT placed in any real level yet; feel, timings and sounds not judged by a person.
+Tests: `mechanics topo`, `topo_culetazo`, `topo_suelo`, `topo_borde`, `pirana`, `pirana_pisar`, `pirana_rebota`,
+`pirana_nada`, `planta`, `planta_pisar`, `planta_traga`, `planta_colgada`, `planta_come`, `planta_bomba`; `online_smoke LEVEL=tools/tests/online_smoke/planta.json
+… WANTGULP=1` (swallowed online); `SHOT_JUNGLA=1` → `mechanics_jungla.png` (every pose). NOT placed in any real level
+yet; feel, timings and sounds not judged by a person.
 
 ### Mole (`mole`, «Topo») — every island
 
@@ -418,6 +425,14 @@ volcano).
   cave mole stone and deep stone (those islands are nearly all stone). At an edge / a wall / undiggable ground it waits
   there while chasing and turns round while wandering. Placed on undiggable ground it stays where it is (still bites
   whoever stands on it). Lava, spikes, the void: bursts (`dieBurst`).
+- NO FLICKER (0.5.97, the user: standing at the edge of its range its sprite flipped between looking at you and away
+  every frame, "very creepy"): HYSTERESIS — once it sees a player (`self.prey`) it keeps them until they are `LOSE_M`
+  1.5 tiles beyond `range` (and `LOSE_UP` 0.5 tiles beyond the height window); it never turns for less than `FACE_DZ`
+  10 px sideways and turns at most once per `TURN_MIN` 0.35 s (chasing, if it cannot turn yet it waits); boxed in on
+  both sides it stays still (it used to flip every frame). Harness `topo_borde`: 20 runs of 4 s at the edge (flat,
+  ±2 px jitter, ground ending before the player, facing away) — at most 1 turn (the old code: up to 32).
+- It avoids the Carnivorous Plant's danger zone (`canTravel` asks `Entity:dangerAt`) and is only eaten above ground
+  (`canBeEaten`: emerge / bite / look / dizzy).
 - Network: nothing of its own (state, deadTimer, x, facing). Whether the mound rolls is drawn from how x changes.
 
 ### Piranha (`piranha`, «Piraña») — jungle (any water level can use it)
@@ -425,43 +440,113 @@ volcano).
 `types/enemies/piranha.lua`; `assets/images/enemies/piranha/piranha-Sheet.png` (9 frames 22x20, facing RIGHT, the fish
 centred: swim ×3, leap ×2, bite ×2, fall, dead belly-up), anim set `enemies/piranha`. Design B «Aguja»: long and thin
 like a spear, a beak of teeth, teal back, magenta fins.
-- `swim`: side to side inside its water (turns where the water ends, at a block or at its route's limit), at its home
-  depth but always under the surface (it follows a falling water level), a 4 px bob.
+- `swim` (0.5.97, the user: "move in the water like the pufferfish"): it EXPLORES its swim area like the pufferfish
+  (`base/Swimmer.lua`; prop `area`, the same polygon editor; without one, 4 tiles to each side and 2 up / down of where
+  it was placed), but NOT through blocks: targets and straight paths keep the whole body in free water; it stays under
+  the surface (it follows a falling water level), a 4 px bob. The route (`patrol`) no longer applies (hidden).
 - A player OUT of the water, above the surface, within `range` tiles sideways (4.5 × `sense`) and up to `LEAP_MAX` 5
   tiles above the surface → `aim` (`AIM_T` 0.35 s: rises to just under the surface, trembling) → `leap`: a ballistic arc
   whose top reaches the player (min 1.5 tiles, ≤ 380 px/s sideways), `piranhaBite` near the top; shortened so that it
   always falls back into ITS water (never onto the bank: both ends of its body must land in water). Back in the water →
   `swim` with `cooldown` (1.4 s). A player SWIMMING within range → after the same warning, a straight `lunge` under
   water (330 px/s, 0.45 s).
-- Touching it = 1 HP + recoil. It can be STOMPED only in the AIR (leaping): dies belly up and, in water, floats up to
-  the surface. In the water a stomp is turned into a hurt (no stomp in water).
-- Dry (it lands on dry ground, or the water goes: a falling flood, `flop`): flops in random tiring hops, harmless and
-  stompable; back in water it swims; after `DRY_T` 3.5 s it dies. Lava / spikes: bursts.
+- Touching it from the side or below = 1 HP + recoil. It can be STOMPED in the air AND in the water (0.5.97, the user:
+  "otherwise it's unfair"; it used to turn a stomp in water into a hurt): dies belly up and, in water, floats up to the
+  surface.
+- REBOUND after biting (0.5.97, the user: "when a piranha jumps on a player and hurts + pushes them, often it ends up
+  under the player from the sheer inertia of its jump and accidentally, without the player doing anything, it dies
+  squashed. So it should BOUNCE AWAY in the opposite direction to its jump"): a bite while leaping (`onHurtPlayer`) →
+  state `rebound`: `REB_VX` 200 px/s backwards (against its leap; a straight-up leap: away from the player), `REB_VY`
+  300 px/s up, shortened so it lands in the water it leapt from (`leapY`); drawn with the `bite` frame, nose tilting
+  up. For the first `REB_INV` 0.4 s a stomp only bounces the player sideways (like the beetle's `INV_FLIP`) and it does
+  not bite; then it is stompable again until it is back in the water. `interact` reads state + deadTimer (both in the
+  snapshot): the client predicts the same. Re-entering the water also pushes its un-bobbed centre under the surface
+  (it used to jitter `swim` ↔ `dry_fall` at the surface forever when the bob phase lifted it out).
+- Dry (it overshoots a leap onto the bank, or the water goes: a falling flood): EXACTLY the pufferfish's behaviour
+  (0.5.97, the user; `Swimmer.updateDry`): `dry_fall` → `dry_flop` (random tiring hops, harmless, stompable) → back in
+  water it swims; after `dryTime` s (prop, default 5, like the pufferfish) `dry_die` (its belly-up `dead` frame, fades).
+  Lava / spikes / the void: bursts (`dryDeadly`). The Carnivorous Plant eats it only out of the water (leaping or dry).
 - Network: its netPack carries `apexT` (the time to the top of the leap), so the client picks leap / bite / fall frames.
 
 ### Carnivorous Plant (`carnivoreplant`, «Planta carnívora») — jungle
 
 `types/enemies/carnivoreplant.lua`; `assets/images/enemies/carnivoreplant/plant-Sheet.png` (11 frames 26x24, base on
 the bottom row: idle ×2, tell ×2, snap ×2, chew ×2, sleep ×2, withered dead), anim set `enemies/carnivoreplant`. Design B
-«Cepo»: two toothed leaves lying flat with a bait flower; closed, an upright green pod.
-- FIXED on the ground (static, not pushed / launched / knocked; an obstacle for walkers). `idle` (open) → a player in its
-  TRIGGER box (`TRIGGER_HW` ±52 px, `TRIGGER_H` 1.2 tiles up: over it or right next to it) → `tell` (`TELL_T` 0.3 s,
-  `plantRustle`) → `snap` (`SNAP_T` 0.15 s, `plantSnap`): a hazard box (`SNAP_HW` ±44 px, 0.9 tiles high) = 1 HP and a
-  recoil (out of the pod). Running over it gets you bitten: you have to jump it.
-- Then `chew` (prop `chewTime`, 2.4 s): ONLY now (or asleep) can it be stomped (dies, withered, 20 points); touching it
-  shut does nothing. → `open` (0.35 s, the snap frames backwards) → `idle`, re-armed after `REARM` 0.4 s. Stomping it
-  open does not kill it (it just springs it).
-- FEEDING (decided here): anything whose class has `edible = true` — today the Rhino Beetle, thrown or walking /
-  charging / on its back — entering its trigger box (or its snap box while closing) → it snaps on it, the beetle
-  vanishes (`Entity:dieEaten`, `plantCrunch`) and it SLEEPS (prop `sleepTime`, 6 s; rising "z": `BossFx.sleepZ`, sprite
-  `bosses/common/sleep_z.png`), harmless and stompable, then reopens. Other enemies are NOT eaten: walkers treat it as an
-  obstacle and turn round.
-- Network: nothing of its own; open and waiting it is not sent (`netAtRest`).
+«Cepo»: two toothed leaves lying flat with a bait flower; closed, an upright green pod on a short stem with two base
+leaves lying on the bottom row (0.5.97, the user: "when closed it lacks the base leaves and the little stem, and seems
+to float"; the base leaves are under the trap leaves in every frame, the stem rises as the trap closes;
+`make_jungle_enemies.py --apply --plant B --only plant --force` rewrites only this sheet). Its box is the closed pod's:
+~8 × 16 px.
+- FIXED (static, not pushed / launched / knocked). WHERE (prop `mount`, 0.5.97, the user): `floor` (default: it falls
+  to the ground), `ceiling`, `wall_left` (the wall on its left: it faces right), `wall_right`. Hanging, it ATTACHES to
+  the block behind it (`tryAttach`: from its cell centre towards that block; base on the block face, no gravity); if
+  that block disappears it is flung (`dieFling`). Its boxes (trigger, snap, body: `frontBox` / `getOuterBounds`) and the
+  drawing (rotated around its base) turn with it; the editor overlay too. Everything is derived from x, y and the prop:
+  the same online (a client without a snapshot yet attaches it itself).
+- `idle` (open) → a player in its TRIGGER box (`TRIGGER_HW` ±52 px, `TRIGGER_H` 1.2 tiles out from its base) → `tell`
+  (`TELL_T` 0.3 s, `plantRustle`) → `snap` (`SNAP_T` 0.15 s, `plantSnap`): a player inside the SNAP box (`SNAP_HW`
+  ±44 px, 0.9 tiles) is SWALLOWED (0.5.97, the user: "like the beetles"; it used to be 1 HP and a recoil) → `hold` (it
+  chews and shakes with the player inside; ONE player at a time). The player has to MASH buttons to get out (see
+  [player](../gameplay/player.md#swallowed-by-a-carnivorous-plant)); inside, −1 HP every 1.75 s. When the player gets
+  out (or dies) → `chew`. Running over it gets you swallowed: you have to jump it.
+- Then `chew` (prop `chewTime`, 2.4 s); touching it shut does nothing. → `open` (0.35 s, the snap frames backwards) →
+  `idle`, re-armed after `REARM` 0.4 s.
+- IT CANNOT BE KILLED BY STOMPING (0.5.97, the user: "this makes the player prioritise distracting / putting it to sleep
+  instead of killing it"): stepping on it OPEN gets you swallowed (you fall into its trigger / snap box); a stomp or a
+  ground pound while it is CLOSED (`chew`, `hold`, `bomb`, `eat`) or ASLEEP only BOUNCES you off — no damage to it, none
+  to you. Generic trait `stompProof = true` in the class (`Interactions.check` turns `stomp` / `pound` into `bounce`, the
+  ground-pound impact zone skips it, `Entity:stomp` ignores it). It "remains vulnerable to absolutely everything else
+  that can kill it": a bomb exploding inside it, a nearby blast (`Explosions.blast` → `dieFling`), the block it stands
+  on / hangs from breaking (`Level:forStanders` / `supported` → `dieFling`), lava, spikes, the void.
+- IT EATS EVERYTHING (0.5.97, the user): anything that is not a boss and `Entity:canBeEaten()` — every enemy (Gummies,
+  Crabbies, Hoppers, a Mole above ground, a Piranha leaping or dry…) and what has `edible = true` (the Rhino Beetle) —
+  entering its trigger box (or its snap box while closing) → it snaps on it, it vanishes (`Entity:dieEaten`,
+  `plantCrunch`) and the plant SLEEPS (prop `sleepTime`, 6 s; rising "z": `BossFx.sleepZ`, sprite
+  `bosses/common/sleep_z.png`), harmless (stomping it just bounces you), then reopens. Not eaten: bosses, the pufferfish
+  (`inedible`), other plants, the dead / carried / frozen.
+- INSTINCT (0.5.97, the user: "all enemies try to keep away from the plants, but the player can push them in"): its
+  trigger box + 6 px is a DANGER ZONE (`dangerBox()`), generic in the base (`Entity:dangerAt` / `dangerAhead`): walkers
+  turn round before it (`blockedAhead`, like an edge), chasers wait (`canGo`, the `melee` lunge stops), crawlers turn
+  (`Crawler.entityAhead`), free flyers never pick a destination or path through it (`FreeFlight.fits`), the Hopper never
+  jumps into it nor low over it (its arc is checked) and the Mole does not dig towards it. PUSHED (a ground pound's
+  knockback, thrown, a trampoline, the air, an explosion, stunned) they can end up inside: eaten.
+- BOMBS (0.5.97, the user): a bomb lying or rolling near it (even lit, even kicked) does not interest it; a bomb THROWN
+  by a player (`BombCore.canBeEaten`: `thrown` + `thrownBy`, still in the air) makes it snap: it swallows it (`bomb`
+  state; the bomb goes to state `eaten`: invisible, untouchable), shakes harder and flashes red, and after
+  `BombCore.EATEN_FUSE` 1.2 s the bomb explodes INSIDE (the normal `Explosions.blast` from the pod) and the plant BURSTS
+  (`dieBurst`). If the plant dies first, the bomb explodes at once.
+- THE BITE IS SEEN (0.5.97, the user: "it lacks squash & stretch: it should be seen LUNGING to one side, to the other,
+  up or down, STRETCHING to grab its prey in one bite"): `Plant:pose` → `tell` crouches a little and leans away
+  (anticipation); `snap` STRETCHES along its normal towards the prey (up on the floor, down from the ceiling, sideways on
+  a wall; `STRETCH_MIN`..`STRETCH_MAX` 0.2..0.5 of its height, more the farther the prey) and LEANS its tip towards the
+  prey's side (a shear from the base, `LEAN_MAX` 48 px: the base leaves stay put; `Set:drawFrame` takes `kx, ky`);
+  closing on something (`eat` / `hold` / `bomb` / `chew`) it recoils like a damped spring (stretched → squashed → rest,
+  `RECOIL_T` 0.7 s); swallowing a player shakes the screen a little. Where the prey is (`aimT` sideways, `aimN` out
+  from its base) is set on `tell`, `snap`, eating and swallowing.
+- Network: its netPack carries `aimT`, `aimN` (the bite's direction); the rest is state, deadTimer, x, y (`mount` comes
+  with the level); open and waiting it is not sent (`netAtRest`).
 
 ## History and decisions (dated notes)
 
 Kept because they record WHY things are the way they are and what was tried and rejected. Where a note
 conflicts with the sections above, the sections above describe the current behaviour.
+
+- 0.5.97 (2026-10-29, the user's requests after trying the three new enemies): (1) the Piranha "moves in the water
+  like the pufferfish" and, landing on dry ground, "flops until it dies dried out, like the pufferfish" — done by
+  moving the pufferfish's code into the base `Swimmer` that both switch on (no copy); (2) the Mole flickered between
+  facing the player and facing away at the edge of its range ("very creepy") — hysteresis + turn rate; (3) the Plant
+  swallows the PLAYER "like the beetles" and the player mashes all buttons to get out (new prompt
+  `ui/prompts/mash-Sheet.png`), −1 HP every few seconds inside; (4) it can hang from ceilings and walls; (5) it eats
+  everything that is not a boss, and enemies keep away from it by instinct unless pushed in; (6) the palette thumbnails
+  of the pufferfish, piranha, mole and plant were dark — the editor left the cell's background colour set before the
+  types' own `editor.draw` (fixed in `drawEntThumb`, for every type); (7) bombs: only a THROWN bomb is swallowed, and it
+  blows the plant up; (8) the Piranha can be stomped in the water too. Feel, numbers (10 presses, 1.75 s per bite) and
+  the mash prompt's look are not judged by the user yet.
+- 0.5.97, second round (2026-10-29, the user): (1) the Plant "cannot die from being stomped" (open = swallowed; closed or
+  asleep = bounce; everything else still kills it) — the generic `stompProof` trait; (2) its closed frames got base
+  leaves and a stem ("it seems to float") and its bite got squash & stretch with a lunge towards the prey; (3) the
+  Piranha rebounds backwards after biting with 0.4 s in which it cannot be stomped ("it dies squashed without the
+  player doing anything"). Feel of the lunge, the spring and the rebound numbers: not judged by the user yet.
 
 - STILL OPEN — third round of mockups, `FlappyMonster_pruebas/enemigos/variantes_v3.png` (maps `V3_*`): Cave Gummy A pear / B gem with crystal ears / C low and wide; Fortress Gummy (square wind-up toy, approved concept) with feet A Gummy / B boots / C pistons and the brass KEY turning with the walk (tall → medium → thin); River Crabby A stocky / B claws up / C slim; Lava Crabby with claws 1 sides-inward / 2 raised / 3 maces / 4 tongs. USER'S RULES for all variants: legs 1 px wide with only the foot wider (like the Gummy), SYMMETRIC faces (body an odd number of pixels wide, eyes mirrored), claws that read as claws and point inward.
 

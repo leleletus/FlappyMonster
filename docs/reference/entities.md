@@ -11,7 +11,7 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 |---|---|---|---|---|
 | `beetle` | Escarabajo Rinoceronte | `types/enemies/beetle.lua` |  | `wings`: bool = false |
 | `bomb` | Bomba | `types/enemies/bomb.lua` |  | `fuseTime`: number = 2 · `killRadius`: number = 1.2 · `hurtRadius`: number = 2.3 · `pushRadius`: number = 3.6 |
-| `carnivoreplant` | Planta carnívora | `types/enemies/carnivoreplant.lua` |  | `chewTime`: number = 2.4 · `sleepTime`: number = 6 |
+| `carnivoreplant` | Planta carnívora | `types/enemies/carnivoreplant.lua` | wantsLevel | `mount`: enum = floor · `chewTime`: number = 2.4 · `sleepTime`: number = 6 |
 | `claudio` | Claudio | `?` | renderFront |  |
 | `crabby` | Crabby | `types/enemies/crabby.lua` |  | `canHide`: bool = true · `hideChance`: number = 0.75 · `wallWalk`: bool = false |
 | `crabby_cave` | Crabby de cueva (pincho) | `types/enemies/crabby_cave.lua` | variant of `crabby_cave` | `canHide`: bool = true · `hideChance`: number = 0.75 · `wallWalk`: bool = false |
@@ -40,7 +40,7 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 | `hopper` | Saltarín | `types/enemies/hopper.lua` | wantsLevel | `skin`: enum = auto · `jumpEvery`: number = 1.4 · `range`: int = 7 · `jumpH`: number = 3 · `jumpDist`: number = 4.5 · `careful`: bool = true |
 | `mole` | Topo | `types/enemies/mole.lua` | wantsLevel | `range`: int = 6 · `lookTime`: number = 0.9 |
 | `mortar` | Mortero | `types/enemies/mortar.lua` |  | `range`: int = 12 · `delayMin`: number = 2.5 · `delayMax`: number = 6 · `warnTime`: number = 0.5 · `redIntensity`: number = 0.7 · `shake`: int = 4 · `sides`: enum = both · `launchSpeed`: number = 950 · `upRatio`: number = 3 · `fireDamage`: enum = hurt · `burnTime`: number = 1.2 |
-| `piranha` | Piraña | `types/enemies/piranha.lua` | wantsLevel | `range`: number = 4.5 · `cooldown`: number = 1.4 |
+| `piranha` | Piraña | `types/enemies/piranha.lua` | wantsLevel | `area`: points = … · `range`: number = 4.5 · `cooldown`: number = 1.4 · `dryTime`: number = 5 |
 | `pufferfish` | Pez globo | `types/enemies/pufferfish.lua` |  | `area`: points = … · `range`: number = 2.5 · `warnTime`: number = 0.6 · `inflateTime`: number = 2.5 · `cooldown`: number = 1.5 · `swimBob`: number = 6 · `dryTime`: number = 5 |
 
 ## Jefes

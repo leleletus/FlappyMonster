@@ -11,11 +11,12 @@ everything that needs "a body that moves like a player": the KOTH bot, the Mirro
 | `PlayerCollision.lua` | `moveAndCollide`: tiles, one-way platforms, solid bodies, arena walls, spikes; `moveSteps` cuts a long move into ≤ 30 px pieces (at low FPS a 75 px ground-pound step went through a 1-tile floor; 0.5.9, harness `mechanics` `pocos_fps`) |
 | `PlayerAir.lua` | drowning, the countdown, splashes, the air bar |
 | `PlayerGroundPound.lua` | the ground pound and being frozen in ice |
+| `PlayerGulp.lua` | being SWALLOWED by a Carnivorous Plant: mashing out, the bites, the mash prompt (0.5.97) |
 | `PlayerRender.lua` | sprites and drawing |
 | `OnlinePlayer.lua` | draws the OTHER players from snapshot data (tint, name tag) |
 | `DeadEyes.lua` | the X eyes |
 
-The four part files are loaded by `PlayerAdventure.lua` and add methods to the same class (see
+The part files are loaded by `PlayerAdventure.lua` and add methods to the same class (see
 [project-structure](../architecture/project-structure.md#split-files)).
 
 **Moves:** walk, jump + double jump, crouch (and crouch jump), ground pound (crouch in the air), swimming, the
@@ -91,6 +92,34 @@ Online camera freezes while the local player is dying (same as single player).
 - `pa:launch(vx, vy)`: sideways launches set `ctrlLockT` (no input, no
   friction, NO stun/stars) instead of stunT. Own-state index 29 (protocol v12; v13 = flood entity type; v14 = crouch jump).
   Side trampoline faces trigger at any push speed; top/bottom need 120 px/s.
+
+## Swallowed by a Carnivorous Plant
+
+(0.5.97, the user: "the plant can eat the PLAYER too, like the beetles, and the player has to MASH all the buttons
+to get out; if they don't get out in time, the plant takes 1 HP every few seconds". `src/player/PlayerGulp.lua`; the
+plant: [enemies](../entities/enemies.md#carnivorous-plant-carnivoreplant-planta-carnívora--jungle).)
+
+- `pa:swallow(bx, by, nx, ny)` (called by the plant when its snap closes on the player; `canBeSwallowed()` = not dying,
+  not invulnerable, not iced, not already swallowed): `gulped = true`, the player is put just in front of the plant —
+  its box touching the face of the plant's block from outside (floor: feet on it; ceiling: head; wall: side) — and stays
+  there: NOT drawn (others: `PF_GULP`), no movement, no control, touches nothing (`Interactions.run` skips it, what it
+  carried is dropped) and nothing hurts it but the plant (`isInvulnerable()` is true while swallowed).
+- MASH: every press of jump, crouch, UP (grab) or the flashlight — what travels as "just pressed" over the network —
+  adds one (`gulpMash`); at `GULP_MASH` (10) it is SPAT OUT along the plant's normal (`gulpNx, gulpNy`; 640 px/s, up
+  from a floor plant, sideways and up from a wall), `ctrlLockT` 0.2 s, invulnerable `GULP_FREE_INV` 1.2 s; the plant is
+  left shut (`chew`: stompable).
+- BITES: every `GULP_BITE` (1.75 s, `gulpBiteT`) −1 HP with the red flash and `plantCrunch`, bypassing invulnerability
+  (`gulpBite`); at 0 HP a normal death (`die(false, true)`, respawn as always). Immortal bots only flash. The story's bot
+  rival mashes jump by itself (`Bot:think`).
+- MASH PROMPT (`PlayerAdventure.drawMashPrompt`, local player only — `AdventureState` and the online render, next to the
+  grab prompt): a button pressing and releasing fast over the swallowed player (below it under a ceiling plant), the one
+  of the current device: `assets/images/ui/prompts/mash-Sheet.png` (6 frames 16x16: keyboard key, pad button, touch
+  button — up / down; `tools/art/ui/make_prompts.py`, does not overwrite an existing PNG). The same prompt also shows
+  while frozen in an ice block (the same mashing; it had none).
+- Network: own state — flag `F_GULP` (256) in s[5] and indices 35-38 (`gulpMash`, `gulpBiteT`, `gulpNx`, `gulpNy`),
+  protocol v91. The server swallows (the plant lives there); the client gets it with the reconciliation and predicts the
+  mashing and the bites like the ice (`iceT`). Harnesses: `mechanics planta_traga` / `planta_colgada`, `online_smoke
+  LEVEL=tools/tests/online_smoke/planta.json WANTGULP=1`.
 
 ## Network
 

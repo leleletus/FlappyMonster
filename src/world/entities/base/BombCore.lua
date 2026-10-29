@@ -7,6 +7,10 @@
 --   'lit'        mecha encendida: parpadea (sprite 4 ↔ 1, cada vez más rápido),
 --                se pone roja, chisporrotea; con física (se la puede patear)
 --   'exploding'  explota (Explosions.blast) y se ve la explosión; luego muere
+--   'eaten'      TRAGADA por una Planta carnívora (0.5.97, el usuario): solo una bomba LANZADA por un jugador
+--                (Core.canBeEaten; suelta o andando no le interesa a la planta). No se ve ni se toca; dentro de la
+--                planta explota a los EATEN_FUSE s (desde su vaina: la planta revienta) — o enseguida si la planta
+--                muere antes —
 -- Se enciende: al tocarla (jugador o enemigo), al pisarla / patearla / con el
 -- empujón de un ground pound, con otra explosión cerca (mecha corta) y, la
 -- viva, además al acercarse un jugador (triggerRange).
@@ -22,6 +26,7 @@ local Core = {}
 Core.EXPLODE_T = 0.6          -- s de la animación de la explosión
 Core.KICK_VX, Core.KICK_VY = 380, -330
 Core.CHAIN_FUSE = 0.35        -- mecha al encenderla otra explosión
+Core.EATEN_FUSE = 1.2         -- s: tragada por una planta, lo que tarda en explotar dentro
 Core.FIZZ_EVERY = 0.5         -- s entre chisporroteos (bomb_fizz dura 0,5 s)
 Core.FW, Core.FH = 15, 16     -- cuadro de las hojas
 -- ANIMACIONES (assets/anim/enemies/bomb.json, `love . --anim`), pedidas por nombre: el cuerpo `idle` / `walk` /
@@ -78,9 +83,23 @@ function Core.explode(self, level)
     Explosions.blast(level, self.x, self.y, Core.radii(self), self)
 end
 
+-- ¿Se la come una Planta carnívora? Solo LANZADA por un jugador (systems/Carry) y aún en el aire
+function Core.canBeEaten(self)
+    return self.alive and self.thrown == true and self.thrownBy ~= nil and not self.onGround
+       and self.state ~= 'exploding' and self.state ~= 'eaten' and self.state ~= 'dead'
+end
+-- Tragada (la planta llama a esto: Plant:snapOn): se queda dentro, encendida, y la planta la guarda (true)
+function Core.onEaten(self, eater)
+    self.state, self.deadTimer, self.vx, self.vy = 'eaten', 0, 0, 0
+    self.eatenBy, self.thrown, self.kicked = eater, false, true
+    if eater.podCenter then self.x, self.y = eater:podCenter() end
+    Sound.play('bombIgnite', 0.8)
+    return true
+end
+
 -- Otra explosión la alcanza: patada y mecha corta (reacción en cadena)
 function Core.onBlast(self, x, y, d, pushR)
-    if self.state == 'exploding' or not self.alive then return end
+    if self.state == 'exploding' or self.state == 'eaten' or not self.alive then return end
     local dir = (self.x >= x) and 1 or -1
     local wasLit = self.state == 'lit'
     Core.kick(self, dir, 1 - math.min(1, d / pushR))
@@ -133,6 +152,17 @@ function Core.update(self, dt, level)
         end
         if self.deadTimer >= self.fuseT then Core.explode(self, level) end
         return true
+    elseif st == 'eaten' then
+        -- dentro de una planta: va con ella y explota a los EATEN_FUSE s (o ya, si la planta murió)
+        self.deadTimer = self.deadTimer + dt
+        local p = self.eatenBy
+        if p and p.podCenter then self.x, self.y = p:podCenter() end
+        self.vx, self.vy = 0, 0
+        if self.deadTimer >= Core.EATEN_FUSE or not p or not p.alive or p.state ~= 'bomb' then
+            self.eatenBy = nil
+            Core.explode(self, level)
+        end
+        return true
     elseif st == 'exploding' then
         self.deadTimer = self.deadTimer + dt
         if self.deadTimer >= Core.EXPLODE_T then
@@ -159,6 +189,7 @@ function Core.redness(t, fuse) return math.min(1, math.max(0, t / math.max(0.05,
 local Particles
 function Core.draw(self, pre, fx, fy, s, name, k, alpha, camX, camY, bx, by)
     local st, t = self.state, self.deadTimer or 0
+    if st == 'eaten' then return end                          -- (dentro de una planta: no se ve)
     local now = love.timer.getTime()
     local set = Core.set()
     if st == 'exploding' then

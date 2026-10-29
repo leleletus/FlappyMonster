@@ -153,6 +153,7 @@ function OnlineAdventureState:_renderScene()
 
     if self.localPaInit and not self.ownData.isSpectator then          -- (la ayuda de "coger": systems/Carry)
         require('src/world/systems/Carry').drawPrompt(self.localPa, self.enemyRenderers, self.camX, self.camY)
+        require('src/player/PlayerAdventure').drawMashPrompt(self.localPa, self.camX, self.camY)   -- (machacar: PlayerGulp)
     end
     -- (un director de evento: siluetas de su intro y el fundido de sus costuras — el Mega Mashup —)
     local md = self.level.musicDirector

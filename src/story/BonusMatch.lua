@@ -125,7 +125,7 @@ function BonusMatch:render(camX, camY)
         local pa, v = bot.pa, bot.view
         v:applyData({ x = pa.x, y = pa.y, facing = pa.facing, frame = pa.frame, dying = false,
                       stunned = (pa.stunT or 0) > 0, hurt = (pa.hurtT or 0) > 0, invuln = pa:isInvulnerable(),
-                      squashed = (pa.squashT or 0) > 0, iced = (pa.iceT or 0) > 0,
+                      squashed = (pa.squashT or 0) > 0, iced = (pa.iceT or 0) > 0, gulped = pa.gulped,
                       color = BonusMatch.BOT_COLORS[i] or BonusMatch.BOT_COLOR })
         v:render(camX, camY)
     end

@@ -197,6 +197,7 @@ local set = Anim.load('enemies/gummy', 'ice')   -- cached
 set:draw('walk', t, x, y, 0, sx, sy)            -- anchored at its origin
 local frame, finished = set:frameAt('dead', t)
 set:drawFrame(set:frameN('walk', self.frame), x, y, 0, sx, sy)   -- for code that keeps its own frame counter
+-- (drawFrame also takes ox, oy, kx, ky: anchor and an optional shear around it — the Carnivorous Plant leans its bite)
 set:images('hide')                              -- the images of a sequence, for code that works image by image
 ```
 

@@ -868,6 +868,7 @@ function AdventureState:_renderScene()
     -- Fragmentos del espejo que han soltado los jefes (brillan: encima de la oscuridad)
     if self.shards then self.shards:render(self.camX, self.camY) end
     Carry.drawPrompt(self.player, self.enemies, self.camX, self.camY)      -- (la ayuda de "coger": systems/Carry)
+    self.player.drawMashPrompt(self.player, self.camX, self.camY)          -- (machacar: tragado por una planta / en hielo)
 
     -- ── Debug hitboxes (F1) ───────────────────────────────────────────────────
     if DEBUG_HITBOX then

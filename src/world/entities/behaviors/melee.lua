@@ -29,7 +29,7 @@ return {
         local vx = 0
         if t >= cfg.windup and t < cfg.windup + cfg.active then vx = cfg.lunge * e.facing end
         local dir = e.facing
-        if vx ~= 0 and e.onGround and not e:groundAhead(level, dir) then vx = 0 end
+        if vx ~= 0 and e.onGround and (not e:groundAhead(level, dir) or e:dangerAhead(level, dir)) then vx = 0 end
         e:fall(level, dt, vx)
         e.facing = dir
         if t >= cfg.windup + cfg.active + cfg.rest then

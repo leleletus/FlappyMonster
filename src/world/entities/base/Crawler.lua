@@ -297,6 +297,8 @@ function Crawler.entityAhead(e, level)
             if px > b.x and px < b.x + b.w and py > b.y and py < b.y + b.h then return o end
         end
     end
+    -- (una zona de peligro — la Planta carnívora: Entity:dangerAt —: tampoco se mete en ella, da media vuelta)
+    if e.dangerAt and e:dangerAt(level, px - 2, py - 2, 4, 4) then return e end
     return nil
 end
 

@@ -42,6 +42,7 @@ function FF.fits(e, level, x, y, a, m)
     m = m or MARGIN
     local hw, hh = e.outerW / 2 + m, e.outerH / 2 + m
     if x - hw < a.x0 or x + hw > a.x1 or y - hh < a.y0 or y + hh > a.y1 then return false end
+    if e.dangerAt and e:dangerAt(level, x - hw, y - hh, 2 * hw, 2 * hh) then return false end    -- (zona de peligro: una planta)
     local nx, ny = math.max(2, math.ceil(2 * hw / 24) + 1), math.max(2, math.ceil(2 * hh / 24) + 1)
     for i = 0, nx - 1 do
         for j = 0, ny - 1 do

@@ -17,6 +17,7 @@ type only switches them on** — never copy another entity's code. The recipe is
 | `base/Interactions.lua` | the player ↔ entity rules: kill / hurt / stomp / bounce / pickup / checkpoint / ground pound |
 | `base/Crawler.lua` | surface-following movement (floor ↔ walls ↔ ceiling) |
 | `base/FreeFlight.lua` | flying to chosen destinations instead of a back-and-forth route |
+| `base/Swimmer.lua` | swimming around a swim area (polygon) and the out-of-water fall / flop / dry death (pufferfish, Piranha) |
 | `base/Boss.lua` | the boss base class (see [bosses/system](../bosses/system.md)) |
 | `base/BombCore.lua`, `base/CrabVariant.lua`, `base/GloomyNav.lua` | shared code of the bombs, the island Crabby variants, the Gloomy's pathfinder |
 | `types/<category>/<name>.lua` | one file per type: `enemies/`, `bosses/`, `traps/`, `mechanisms/`, `items/`, `directors/` |
@@ -37,7 +38,7 @@ Objetos, Directores.
 
 **Flexibility rule (user's priority): base behaviours live in the BASE and a type only switches them on** — never
 copy another entity's code. Guide: `docs/entities/how-to-add-an-enemy.md` (every def field, trait and hook).
-Switches on the type def: `traits = { needsPound, diesWithBlock, solidFull, renderFront, wantsLevel, freezeFloats }`
+Switches on the type def: `traits = { needsPound, stompProof, diesWithBlock, solidFull, renderFront, wantsLevel, freezeFloats }`
 (copied onto each instance by `Entity.create`), `noises = { sound = tiles }` / `noise` (see Noise), `summons`,
 `activatable`. In the base: RESERVE minions for ANY entity (`Entity:makeReserve` + default `netAtRest/netRest`; hook
 `onMakeReserve`), FALL FROM THE SKY for any entity (`Entity:dropFromSky(x, y, lift)`: back in play in the common state 'skyfall', slow gravity, rests on the ground, then its usual state; used by the boss-fight help, `docs/gameplay/difficulty.md`), stock crawler (`Crawler.mixin(Class)`: rotated boxes, surface normal, release, no fall while
@@ -201,6 +202,14 @@ landing mark; sprites in `assets/images/bosses/common/`). Asset layout: enemies 
   (read in settings.lua) starts with them ON: `FM_HITBOX=1 tools/tests/run.sh all|sp_boss|online_boss …` checks that
   drawing them never errors.
 
+- Base additions of 0.5.97 (the user's requests on the jungle enemies, [enemies](enemies.md)): the SWIMMER
+  `base/Swimmer.lua` (swim area, free-water movement, the out-of-water fall / flop / dry death: the pufferfish and the
+  Piranha switch it on); `Entity:canBeEaten()` (what the Carnivorous Plant can eat: every non-boss enemy unless
+  `inedible`, plus `edible`; types refine it — the Piranha out of water, the Mole above ground, bombs only thrown by a
+  player — and `onEaten(eater)` → true keeps it alive inside, the thrown bomb); DANGER ZONES: an entity with
+  `dangerBox()` marks an area the enemies avoid by themselves — `Entity:dangerAt(level, x, y, w, h)` /
+  `dangerAhead(level, dir)` asked by `blockedAhead`, `canGo`, `Crawler.entityAhead`, `FreeFlight.fits`, the `melee`
+  behaviour, the Hopper's jump and the Mole; pushed, they can still end up inside. Trait `fearless = true` = ignores them.
 - Base additions of 0.5.96 (the Mole, the Piranha, the Carnivorous Plant): `Entity:dieEaten()` (eaten: counts as a
   kill and ends at once — `finishDeath` — with no body to draw) and the class field `edible` (what the Carnivorous Plant
   eats); material field `diggable` (soft soil, [tiles-and-blocks](../gameplay/tiles-and-blocks.md)); `BossFx.sleepZ`

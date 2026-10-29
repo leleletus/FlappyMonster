@@ -60,6 +60,7 @@ return {
 | Trait | Effect |
 |---|---|
 | `needsPound = true` | TOUGH: a normal stomp bounces; only a ground pound kills it. Touching it from above never hurts (unless `hurtsFromAbove()` says so: its own attack) |
+| `stompProof = true` | Cannot be killed by stomps or ground pounds: they only BOUNCE the player (`Interactions.check` turns `stomp` / `pound` into `bounce`; the pound's impact zone and `Entity:stomp` skip it). Everything else that kills an enemy still does (blasts, its block breaking, lava, spikes, void). Keep `props.stompable` so the stomp is still detected; an `interact` can return nil for states where landing on it should do something else (the Carnivorous Plant open: it swallows you) |
 | `diesWithBlock = true / false` | Dies (flung) when the block it stands on / grips breaks. Default: category Enemigos yes |
 | `solidFull = true` | Solid like a block (sides, top, head bump). Needs `isSolidBody()` |
 | `renderFront = true` | Drawn in front of the players |
@@ -67,7 +68,9 @@ return {
 | `freezeFloats = true` | Frozen, it stays where it is (does not fall) |
 | `darkEdge = { r, g, b, a }` | Dark sprite: draws a thin outline of that colour around it where the level is dark |
 | `noWings = true` (class field) | A flyer that is not drawn with the generic wings (the Gust: a cloud) |
-| `edible = true` (class field) | The Carnivorous Plant eats it when it enters its trigger (thrown, walking…): `Entity:dieEaten()` (gone at once, counts as a kill, respawns with `respawn`). Today: the Rhino Beetle |
+| `edible = true` (class field) | The Carnivorous Plant eats it when it enters its trigger (thrown, walking…): `Entity:dieEaten()` (gone at once, counts as a kill, respawns with `respawn`). Since 0.5.97 every non-boss ENEMY is eaten anyway (`Entity:canBeEaten`); `edible` adds other categories. Override `canBeEaten()` to refine (only out of water, only above ground…) |
+| `inedible = true` (class field) | The Carnivorous Plant never eats it (the pufferfish, other plants) |
+| `fearless = true` | Ignores the DANGER ZONES (`dangerBox()` of other entities: the plant) that enemies avoid by instinct |
 | `ownStunLook = true` (class field) | Skips the render wrapper's generic `stunned` look (the whole render ROTATED around its centre + a star ring): for types that draw their own knockout, or whose `render` also draws things far from them (The Groove's dance floor swung with it) |
 
 (Classes share `def` when one file returns several definitions with the same class: traits that differ per definition
@@ -79,8 +82,11 @@ Gummies `artDir`, `helmetDx`, `helmetDy`.
 ## 3. What is inherited (hooks of `Entity`, all with a default)
 
 - Movement: `props.movement` = walk / fly / static; routes (`patrol`), edges, pauses, free flight
-  (`flyMode = 'free'`, `entities/base/FreeFlight.lua`). Walkers turn round at another entity (`isObstacle()`), spikes
-  and edges; boxed in, they stay idle.
+  (`flyMode = 'free'`, `entities/base/FreeFlight.lua`). Walkers turn round at another entity (`isObstacle()`), spikes,
+  edges and DANGER ZONES (`Entity:dangerAt`: the Carnivorous Plant); boxed in, they stay idle. A type that moves by
+  itself should ask `self:dangerAt(level, box)` before choosing where to go.
+- SWIMMER (lives in water: `entities/base/Swimmer.lua`): call `Swimmer.init` / `ready` / `move` / `updateDry` from the
+  type; props `Swimmer.areaProp(group)` and `Swimmer.dryTimeProp(group)`; `swimPass = true` to cross blocks.
 - CRAWLER (floor ↔ walls ↔ ceiling): `Crawler.mixin(Class)` gives the rotated boxes, the normal for the stomp,
   letting go and not falling while attached; move it with `Crawler.move(self, level, px)` and ask
   `Crawler.entityAhead(self, level)` so it does not walk through others.

@@ -951,6 +951,7 @@ local function broadcastSnapshot(room)
             if (pa.squashT or 0) > 0 and not pa.dying then flags = flags + Protocol.PF_SQUASH end
             if (pa.iceT or 0) > 0 and not pa.dying then flags = flags + Protocol.PF_ICE end
             if pa.lightOn and not pa.dying then flags = flags + Protocol.PF_LIGHT end
+            if pa.gulped and not pa.dying then flags = flags + Protocol.PF_GULP end
             table.insert(plist, {
                 ps.idx, round(pa.x), round(pa.y), pa.facing, pa.frame, flags,
                 pa.lives, pa.hp, ps.score, Protocol.drownCode(pa.drownPhase),

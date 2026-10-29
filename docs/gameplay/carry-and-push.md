@@ -15,7 +15,7 @@ concrete type.
 | `src/world/systems/Weight.lua` | WEIGHT of what is on top of something, stacked included (Scale pans, what a Geyser lifts) |
 | `src/world/level/Isles.lua` | which ISLAND a level is: art per island and island FAMILIES of types (see below) |
 | `src/world/entities/types/items/box.lua` | the Box (`box`, pushed) and the small box (`smallbox`, carried) |
-| `tools/art/ui/make_prompts.py` | the tooltip sprite `assets/images/ui/prompts/grab-Sheet.png` (keyboard, pad, touch) |
+| `tools/art/ui/make_prompts.py` | the tooltip sprite `assets/images/ui/prompts/grab-Sheet.png` (keyboard, pad, touch); also `mash-Sheet.png`, the MASH prompt of a swallowed / frozen player ([player](player.md#swallowed-by-a-carnivorous-plant)) |
 
 ## Carrying (`Carry`)
 

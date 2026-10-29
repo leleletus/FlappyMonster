@@ -23,6 +23,9 @@
 -- el jugador local (LEVEL=tools/levelgen/arenas/hielo.json)
 -- WANTICE=1: falla si el jugador local nunca quedó congelado (congelador:
 -- LEVEL=tools/levelgen/arenas/congelador.json WATCH=gummy WANT=frozen WANTICE=1)
+-- WANTGULP=1: TRAGADO por una Planta carnívora (0.5.97; LEVEL=tools/tests/online_smoke/planta.json WATCH=carnivoreplant
+-- WANT=hold): el jugador local tiene que quedar tragado (estado propio `gulped`, predicho), no verse, machacar el salto
+-- (lo manda por red) y salir escupido, vivo; falla si nunca lo tragó o si no salió
 io.stdout:setvbuf("no")
 love.filesystem.setSymlinksEnabled(true)
 lovesize = require 'libs/lovesize'
@@ -157,6 +160,10 @@ function love.update(dt)
             if pa.dying and not watch.wasDying then watch.deaths = watch.deaths + 1 end
             watch.wasDying = pa.dying
             if (pa.iceT or 0) > 0 then watch.iced = (watch.iced or 0) + 1 end
+            if pa.gulped then
+                watch.gulped = (watch.gulped or 0) + 1
+                if frames % 6 == 0 then stub.state.jump_pressed = true end    -- (machaca el salto: viaja por red)
+            elseif (watch.gulped or 0) > 0 and not pa.dying then watch.spat = true end
         end
     end
     -- Cuenta atrás del principio (StartCountdown): mientras dura, el jugador propio no se mueve (aunque se pulse)
@@ -209,6 +216,10 @@ function love.update(dt)
             end
             print(('jugador local congelado: %d fotogramas'):format(watch.iced or 0))
             if os.getenv('WANTICE') and (watch.iced or 0) == 0 then print('Error: el jugador local nunca quedó congelado') end
+            print(('jugador local tragado por una planta: %d fotogramas, escupido=%s'):format(watch.gulped or 0, tostring(watch.spat)))
+            if os.getenv('WANTGULP') and ((watch.gulped or 0) == 0 or not watch.spat) then
+                print('Error: el jugador local no quedó tragado por la planta o no salió machacando')
+            end
             for w in (os.getenv('WANT') or ''):gmatch('[^,]+') do
                 if not watch.states[w] then print('Error: el cliente no vio el estado ' .. w) end
             end

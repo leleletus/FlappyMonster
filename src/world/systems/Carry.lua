@@ -106,7 +106,7 @@ function Carry.step(level, players, entities)
     for _, pa in ipairs(players or {}) do
         local held = pa.carrying
         if held and (held.carriedBy ~= pa or not held.alive) then pa.carrying, held = nil, nil end
-        if held and (pa.dying or not pa.alive) then Carry.putDown(pa, held, level); held = nil end
+        if held and (pa.dying or not pa.alive or pa.gulped) then Carry.putDown(pa, held, level); held = nil end   -- (tragado: lo suelta)
         if not pa.dying then
             if held and pa.gpLanded and held.onCarriedPound then
                 -- (ground pound con algo en las manos: el impacto lo aguanta el JUGADOR y lo cargado sigue en sus manos

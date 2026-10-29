@@ -184,7 +184,11 @@ end
 local function drawEntThumb(t, x, y, w, h, flipY)
     if t.editor and t.editor.draw then
         local s = math.min(w, h)
+        -- (en blanco: el color que quedaba puesto era el del fondo de la casilla de la paleta y los dibujos propios
+        -- — pez globo, piraña, topo, planta… — salían teñidos de oscuro)
+        love.graphics.setColor(1, 1, 1, 1)
         t.editor.draw(x + (w - s) / 2, y + (h - s) / 2, s)
+        love.graphics.setColor(1, 1, 1, 1)
     elseif t.editor and t.editor.frameW then
         -- Hoja de animación (editor.frameW): solo el primer cuadro
         local i = entThumb(t)

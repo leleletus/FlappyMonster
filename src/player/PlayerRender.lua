@@ -14,6 +14,7 @@ local PS = require 'src/player/PlayerSprite'       -- (el sprite del monstruo: a
 local function loadSprites() end
 
 function PlayerAdventure:render(camX, camY)
+    if self.gulped and not self.dying then return end      -- (tragado por una planta: no se ve — PlayerGulp.lua —)
     local img
     if self.dying then
         img = PS.rec('dead')

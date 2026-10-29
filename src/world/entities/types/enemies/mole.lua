@@ -13,6 +13,11 @@
 --     ceniza, barro; el de la fortaleza y el de la cueva también la PIEDRA de su isla: EXTRA_DIG), con aire encima,
 --     sin pinchos y dentro de su ruta; en un borde, una pared o un suelo que no se puede cavar, se para (persiguiendo:
 --     espera ahí) o se da la vuelta (paseando). Lava, pinchos, vacío: revienta como los demás.
+--   · SIN PARPADEOS (0.5.97, el usuario: en el borde de su alcance el sprite se volvía de un lado a otro sin parar,
+--     "muy creepy"): una vez te ve, te sigue viendo hasta que te alejas de verdad (alcance + LOSE_M casillas, y un
+--     margen de altura); no se gira por menos de FACE_DZ px de lado y entre dos giros pasa al menos TURN_MIN s
+--     (persiguiendo, si aún no puede girarse, espera quieto); encajonado sin salida, se queda quieto sin girarse.
+--   · Evita las zonas de peligro (la Planta carnívora: Entity:dangerAt) — no avanza hacia ellas —.
 -- Todo lo que se dibuja sale de estado + deadTimer + x + facing (las instantáneas): igual online. Sin netPack.
 -- Arte: hojas assets/images/enemies/mole/<isla>-Sheet.png (14 cuadros 22x20, mira a la DERECHA, los pies en la fila
 -- de abajo) de tools/art/enemies/make_jungle_enemies.py; conjunto assets/anim/enemies/mole.json (una VARIANTE por isla).
@@ -46,6 +51,10 @@ local DIZZY_HOP = 420           -- px/s: el salto al salir despedido del suelo
 local POUND_RX  = 2.5           -- casillas de lado de un ground pound que lo saca
 local POUND_RY  = 1             -- casillas de alto (el jugador, a la altura de su suelo)
 local DIG_EVERY = 0.3           -- s entre dos ruidos de escarbar
+local LOSE_M    = 1.5           -- casillas de más: a quien ya ve no lo pierde hasta que se aleja de verdad
+local LOSE_UP   = 0.5           -- casillas de más (arriba / abajo) para no perderlo
+local FACE_DZ   = 10            -- px de lado: por menos no se gira hacia el jugador
+local TURN_MIN  = 0.35          -- s entre dos giros
 -- La piedra de SU isla también se cava (la fortaleza y las cuevas son casi todo piedra)
 local EXTRA_DIG = { fortaleza = { stone = true }, cueva = { stone = true, deep_stone = true } }
 
@@ -60,6 +69,7 @@ function Mole:init()
     self.state, self.deadTimer = 'under', 0
     self.cd, self.digT = 0, 0
     self.vx = 0
+    self.turnT, self.prey = TURN_MIN, nil
     self.props.stompable, self.props.onTouch = true, 'hurt'      -- (fijas: ocultas en el editor)
 end
 
@@ -81,6 +91,7 @@ function Mole:canBeLaunched() return UP[self.state] == true and Entity.canBeLaun
 function Mole:canFreeze() return UP[self.state] == true and Entity.canFreeze(self) end
 function Mole:canBePushed() return false end                     -- (está en su agujero: el aire no lo mueve)
 function Mole:canDropNow() return false end
+function Mole:canBeEaten() return UP[self.state] == true and Entity.canBeEaten(self) end   -- (bajo tierra, la planta no lo alcanza)
 
 -- Sin efectos (el cliente predice con esto). Bajo tierra, nada; mareado no hace daño (se le pisa)
 function Mole:interact(pa)
@@ -133,23 +144,39 @@ function Mole:canTravel(level, dir)
     if not self:digsAt(level, ax, feet + 6) then return false end
     if level:isEnemySolidAt(ax, feet - 6) or level:isEnemySolidAt(ax, feet - TILE_PX * 0.6) then return false end
     if level.hasSpikeCellInBox and level:hasSpikeCellInBox(ax - 2, feet - TILE_PX * 0.5, 4, TILE_PX * 0.5 - 2) then return false end
+    if self:dangerAt(level, ax - 2, feet - self.outerH, 4, self.outerH) then return false end    -- (una planta: ni se acerca)
     return true
 end
 
 -- El jugador vivo más cercano a su alcance: de lado `range` casillas, los pies sobre su suelo (no por debajo) y no
--- más de UP_SEE casillas por encima
+-- más de UP_SEE casillas por encima. Al que ya seguía no lo pierde hasta que se aleja de verdad (LOSE_M / LOSE_UP:
+-- en el borde del alcance lo veía y dejaba de verlo cada fotograma y se giraba sin parar)
 function Mole:target(level)
+    local T = TILE_PX
     local feet = self.y + self.outerH / 2
-    local best, bd = nil, (self.props.range or 6) * TILE_PX * require('src/core/Difficulty').k('sense')
+    local R = (self.props.range or 6) * T * require('src/core/Difficulty').k('sense')
+    local best, bd = nil, nil
     for _, pa in ipairs(level.players or {}) do
-        if not pa.dying and pa.alive ~= false then
+        if not pa.dying and pa.alive ~= false and not pa.gulped then
             local pb = pa:getOuterBounds()
             local pf = pb.y + pb.h
             local d = math.abs(pa.x - self.x)
-            if d <= bd and pf <= feet + 8 and pf >= feet - UP_SEE * TILE_PX then best, bd = pa, d end
+            local kept = pa == self.prey
+            local r, lo, hi = R, feet + 8, feet - UP_SEE * T
+            if kept then r, lo, hi = R + LOSE_M * T, lo + LOSE_UP * T, hi - LOSE_UP * T end
+            if d <= r and pf <= lo and pf >= hi and (not bd or d < bd) then best, bd = pa, d end
         end
     end
+    self.prey = best
     return best
+end
+
+-- Se gira hacia `f` (si no, false): como mucho un giro cada TURN_MIN s
+function Mole:turnTo(f)
+    if f == self.facing then return true end
+    if (self.turnT or TURN_MIN) < TURN_MIN then return false end
+    self.facing, self.turnT = f, 0
+    return true
 end
 
 -- ¿Está justo encima, a tiro de mordisco?
@@ -158,7 +185,7 @@ function Mole:inReach(pa)
     return math.abs(pa.x - self.x) <= REACH * TILE_PX and pb.y + pb.h >= self.y + self.outerH / 2 - REACH_UP * TILE_PX
 end
 
-function Mole:face(pa) if pa and math.abs(pa.x - self.x) > 4 then self.facing = (pa.x > self.x) and 1 or -1 end end
+function Mole:face(pa) if pa and math.abs(pa.x - self.x) > FACE_DZ then self:turnTo((pa.x > self.x) and 1 or -1) end end
 
 -- ── Update ────────────────────────────────────────────────────────────────────
 local function deadly(self, level)
@@ -171,6 +198,7 @@ function Mole:updateCustom(dt, level)
     local st = self.state
     if st == 'walk' then st = 'under'; self.state, self.deadTimer = 'under', 0 end     -- (al reaparecer / caer de un trampolín)
     if self.cd > 0 then self.cd = math.max(0, self.cd - dt) end
+    self.turnT = (self.turnT or TURN_MIN) + dt
     self.deadTimer = self.deadTimer + dt
     local t = self.deadTimer
 
@@ -186,17 +214,20 @@ function Mole:updateCustom(dt, level)
                 return true
             end
             local dx = pa.x - self.x
-            if math.abs(dx) > 2 then dir = (dx > 0) and 1 or -1 end
+            -- (de cara al jugador; por menos de FACE_DZ no se gira: si ya mira hacia él, se arrima hasta debajo)
+            if math.abs(dx) > FACE_DZ or (math.abs(dx) > 2 and ((dx > 0) and 1 or -1) == self.facing) then
+                dir = (dx > 0) and 1 or -1
+            end
             v = math.min(self.speed > 0 and self.speed or 110, math.abs(dx) / dt)    -- (en el último tramo no se pasa)
             if dir ~= 0 and not self:canTravel(level, dir) then dir = 0 end          -- (persiguiendo: espera en el borde)
+            if dir ~= 0 and not self:turnTo(dir) then dir = 0 end                    -- (aún no puede girarse: espera)
         else
             dir, v = self.facing or 1, WANDER_V
             if not self:canTravel(level, dir) then
-                self.facing = -dir
-                dir = self:canTravel(level, -dir) and -dir or 0
+                -- (paseando: media vuelta si por detrás puede ir; encajonado, quieto — no se gira cada fotograma —)
+                if self:canTravel(level, -dir) and self:turnTo(-dir) then dir = -dir else dir = 0 end
             end
         end
-        if dir ~= 0 then self.facing = dir end
         local x0, f = self.x, self.facing
         self:fall(level, dt, dir * v)
         self.facing, self.vx = f, dir * v

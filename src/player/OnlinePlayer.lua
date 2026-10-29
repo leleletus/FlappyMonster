@@ -63,6 +63,7 @@ function OnlinePlayer:applyData(data)
     if data.iced and not self.iced then self.icedAt = love.timer.getTime() end
     self.iced        = data.iced        or false
     self.lightOn     = data.lightOn     or false     -- (linterna encendida: la dibuja Darkness)
+    self.gulped      = data.gulped      or false     -- (tragado por una planta: no se dibuja)
     self.color       = data.color       or self.color
 
     self.renderX = self.x
@@ -77,6 +78,7 @@ function OnlinePlayer:render(camX, camY)
     local sx = math.floor(self.renderX - camX)
     local sy = math.floor(self.renderY - camY)
 
+    if self.gulped and not self.dying then return end       -- (tragado por una Planta carnívora: está dentro)
     -- Solo renderizar si está en pantalla (con margen)
     if sx < -PLAYER_SCALE * 18 or sx > WINDOW_W + PLAYER_SCALE * 18 then return end
     if sy < -PLAYER_SCALE * 18 or sy > WINDOW_H + PLAYER_SCALE * 18 then return end

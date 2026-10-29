@@ -30,7 +30,7 @@ Safe to re-run (verified on 2026-10-07 to reproduce the committed pixels exactly
 `make_ice_spikes`, `make_cryo_chain`, `make_sprites`. The 0.5.68 props (none hand-edited yet; previews without
 `--apply`): `tools/art/world/make_scale_box.py` (Box, small box, Scale), `tools/art/enemies/make_gust_sprites.py`
 (Gust), `tools/art/world/make_seed_plants.py` (Seed), `tools/art/world/make_wind_geyser.py` (Blizzard, Geyser),
-`tools/sounds/props.py` (their sounds), `tools/art/ui/make_prompts.py` (the "grab" tooltip; does not overwrite, `--force`). The others were moved and had their paths updated but were
+`tools/sounds/props.py` (their sounds), `tools/art/ui/make_prompts.py` (the "grab" and "mash" tooltips; does not overwrite, `--force`). The others were moved and had their paths updated but were
 NOT executed after the 2026-10-07 reorganisation (their outputs are hand-edited or they need the originals): check
 the diff before committing anything they write.
 
@@ -44,6 +44,8 @@ the diff before committing anything they write.
   piranha B «Aguja», plant B «Cepo». Without flags = previews, mockup GIF and every sheet in
   `FlappyMonster_pruebas/enemigos_nuevos/`; `--apply --mole A --piranha B --plant B` writes the chosen sheets (never over an
   existing one without `--force`), the three anim sets and the shared sleeping "z" (never touching an existing set).
+  `--only mole|piranha|plant` writes only that one's sheets (so `--force` cannot overwrite the others): the plant's
+  closed pod with base leaves and a stem (0.5.97) was applied with `--apply --plant B --only plant --force`.
   Nothing hand-edited yet.
 - `tools/art/world/make_jungle_decor.py` and `tools/art/world/make_big_trees.py`: the jungle decorations (`jungle_set`)
   and the big trees + extras of every island (`fortress_set` and new names in the other sets), approved by the user

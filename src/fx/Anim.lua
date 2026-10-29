@@ -296,15 +296,16 @@ function Set:footGap(i)
 end
 
 -- Dibuja el cuadro `i` con su ancla en (x, y). ox, oy (0..1) cambian el ancla para esta llamada.
-function Set:drawFrame(i, x, y, r, sx, sy, ox, oy)
+-- (kx, ky: inclinación — shear — opcional, alrededor del ancla; la Planta carnívora se lanza de lado así)
+function Set:drawFrame(i, x, y, r, sx, sy, ox, oy, kx, ky)
     local f = self:frame(i)
     if not (f and f.image) then return end
     local ax = (ox or f.ox or self.ox) * f.w
     local ay = (oy or f.oy or self.oy) * f.h
     if f.quad then
-        love.graphics.draw(f.image, f.quad, x, y, r or 0, sx or 1, sy or sx or 1, ax, ay)
+        love.graphics.draw(f.image, f.quad, x, y, r or 0, sx or 1, sy or sx or 1, ax, ay, kx or 0, ky or 0)
     else
-        love.graphics.draw(f.image, x, y, r or 0, sx or 1, sy or sx or 1, ax, ay)
+        love.graphics.draw(f.image, x, y, r or 0, sx or 1, sy or sx or 1, ax, ay, kx or 0, ky or 0)
     end
 end
 

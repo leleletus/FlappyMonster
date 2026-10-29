@@ -145,7 +145,18 @@ end
 function Hopper:safeDx(level, dx, top)
     if self.props.careful == false then return dx end
     local step = (dx >= 0) and -TILE_PX / 2 or TILE_PX / 2
-    while math.abs(dx) > 1 and not self:groundAt(level, self.x + dx, top) do
+    -- (ni a una zona de peligro — la Planta carnívora: Entity:dangerAt —: por instinto no salta a ella ni por encima de
+    -- ella a poca altura: se mira el arco del salto, una parábola que sube hasta `top`)
+    local hw, hh = self.outerW / 2, self.outerH / 2
+    local function bad(d)
+        if not self:groundAt(level, self.x + d, top) then return true end
+        for _, k in ipairs({ 0.15, 0.3, 0.5, 0.7, 0.85, 1 }) do
+            local y = self.y - (self.y - top) * 4 * k * (1 - k)
+            if self:dangerAt(level, self.x + d * k - hw, y - hh, 2 * hw, 2 * hh) then return true end
+        end
+        return false
+    end
+    while math.abs(dx) > 1 and bad(dx) do
         dx = dx + step
         if (step < 0 and dx < 0) or (step > 0 and dx > 0) then dx = 0 end
     end

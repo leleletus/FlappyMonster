@@ -12,7 +12,7 @@
 --   'pound', bounceVy, points     le cae encima en pleno ground pound (e:pound)
 --   'helmet', bounceVy            salta sobre un Gummy con casco: rebota, el
 --                                 casco aguanta (e:onHelmetBounce), sin puntos
---   'bounce', bounceVy, dirX      rebota sin hacerle nada (jefe invulnerable);
+--   'bounce', bounceVy, dirX      rebota sin hacerle nada (jefe invulnerable, `stompProof`);
 --                                 con dirX sale empujado hacia ese lado
 --   'recoil', dirX                choca con su cuerpo y sale empujado
 --   'launch', vx, vy[, jumps]     lanzado (trampolín, cristal roto): pa:launch, e:onLaunch(pa)
@@ -58,6 +58,10 @@ function Interactions.check(pa, e)
     -- Enemigos DUROS (`needsPound` en su clase): un pisotón normal solo rebota; hace falta un
     -- ground pound para matarlos
     if r == 'stomp' and e.needsPound and pa.gpPhase ~= 'fall' then return 'bounce', a, c end
+    -- A prueba de PISOTONES (`stompProof = true` en su clase; 0.5.97, la Planta carnívora: "no se la puede matar
+    -- pisándola"): ni un pisotón ni un ground pound le hacen nada, solo rebotas. Todo lo demás que mata a un enemigo
+    -- (explosiones, su bloque roto, lava, pinchos, el vacío...) sí
+    if (r == 'stomp' or r == 'pound') and e.stompProof then return 'bounce', a, (r == 'stomp') and c or nil end
     -- … y encima de ellos NO hacen daño (solo de lado, o con su ataque: `hurtsFromAbove()`): tras el
     -- rebote el jugador sigue un momento dentro de su caja, subiendo, y eso contaba como tocarlo
     if e.needsPound and (r == 'hurt' or r == 'kill') and not (e.hurtsFromAbove and e:hurtsFromAbove()) then
@@ -201,6 +205,7 @@ end
 --                           del enemigo que veía el jugador
 function Interactions.run(pa, entities, cb, rewind)
     if pa.dying or not pa.alive then return end
+    if pa.gulped then return end                      -- (tragado por una planta: no toca nada — PlayerGulp.lua —)
     local Noise = require 'src/world/systems/Noise'
     for i, e in ipairs(entities) do
         local result, a, b, c
@@ -275,7 +280,7 @@ function Interactions.run(pa, entities, cb, rewind)
                         e:shatter()
                         if killed and cb.stomp then cb.stomp(e, e.props.points, i) end
                     end
-                elseif e.props.stompable and e:canBeStomped() and overlap(z, e:getInnerBounds()) then
+                elseif e.props.stompable and not e.stompProof and e:canBeStomped() and overlap(z, e:getInnerBounds()) then
                     e:stomp()
                     if cb.stomp then cb.stomp(e, e.props.points, i) end
                 else

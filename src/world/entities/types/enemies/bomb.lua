@@ -32,7 +32,10 @@ function Bomb:init() self.kicked, self.kickCd = false, 0 end
 -- ── Reglas ────────────────────────────────────────────────────────────────────
 function Bomb:canBeStomped() return false end
 function Bomb:canBeKnocked() return self.alive and self.state ~= 'exploding' end
-function Bomb:isGhost() return self.state == 'exploding' or Entity.isGhost(self) end
+function Bomb:isGhost() return self.state == 'exploding' or self.state == 'eaten' or Entity.isGhost(self) end
+-- (la Planta carnívora: solo una bomba lanzada por un jugador — BombCore —; andando, no le interesa)
+function Bomb:canBeEaten() return Core.canBeEaten(self) end
+function Bomb:onEaten(eater) return Core.onEaten(self, eater) end
 function Bomb:isObstacle() return self.alive and self.state ~= 'exploding' and self.state ~= 'dead' end
 
 -- Sin efectos (el cliente lo usa para predecir): caerle encima = rebote (la

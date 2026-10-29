@@ -394,6 +394,10 @@ function Bot:think(dt, level, target)
     self.cd = math.max(0, self.cd - dt)
     self.clock = self.clock + dt
     local bits = 0
+    if pa.gulped and not pa.dying then                     -- (tragado por una planta: machaca el salto para salir)
+        self.mode, self.path = 'route', nil
+        return self:_emit((math.floor(self.clock * 14) % 2 == 0) and JP or 0)
+    end
     if pa.dying or (pa.stunT or 0) > 0 or (pa.ctrlLockT or 0) > 0 or (pa.iceT or 0) > 0 then
         self.mode, self.path = 'route', nil
         return self:_emit(0)

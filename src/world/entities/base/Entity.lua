@@ -21,6 +21,8 @@
 --   e:netAtRest() / e:netRest()          no enviarla mientras está en reposo
 --   Cls.sizePx() -> w, h  tamaño en px (en vez de sizeImage) para dibujos por código
 --   Cls.customDrop = true  los estados 'drop_*' los lleva su updateCustom
+--   Cls.stompProof = true  a prueba de pisotones y ground pounds: solo rebotas (Interactions.check); lo demás
+--                          que mata a un enemigo (explosión, bloque roto, lava, pinchos, vacío...) sí la mata
 --
 -- Comunes a todas (propiedades): reaparecer tras morir (respawn), y para las
 -- de techo, dejarse caer al ver a un jugador debajo (dropOnSight/detectRange).
@@ -398,8 +400,47 @@ function Entity:dieBurst()
     Entity.emitFx('shake_small', self.x, self.y)
 end
 
--- COMIDA: se la come algo (la Planta carnívora se come lo que tiene `edible = true` en su clase — el Escarabajo
--- Rinoceronte —). Desaparece en el acto (sin cuerpo: lo que se ve es la planta masticando); cuenta como muerte y
+-- COMIDA DE LA PLANTA CARNÍVORA (0.5.97, el usuario: "se puede comer de TODO"): ¿se la puede comer ahora? Cualquier
+-- ENEMIGO (no los jefes, ni lo que tiene `inedible = true` en su clase — el pez globo, que nada por delante; las
+-- plantas —) y lo que tiene `edible = true` (el Escarabajo Rinoceronte). Un tipo afina con su propio canBeEaten (la
+-- Piraña, solo fuera del agua; el Topo, solo asomado; las bombas, solo lanzadas por un jugador). Nunca lo que está
+-- muerto, esperando, en las manos de alguien o congelado.
+function Entity:canBeEaten()
+    if not self.alive or self.carriedBy then return false end
+    local st = self.state
+    if st == 'dead' or st == 'reserve' or st == 'carried' or st == 'frozen' or st == 'eaten' or self:isGhost() then return false end
+    if self.edible then return true end
+    local d = self.def or {}
+    if self.inedible or d.boss or d.category ~= 'Enemigos' then return false end
+    return true
+end
+
+-- ZONAS DE PELIGRO (0.5.97, el usuario: "los enemigos, por instinto, se apartan de las plantas"): una entidad con
+-- `dangerBox()` (la Planta carnívora: su caja de disparo) marca una zona a la que los enemigos NO van POR SU CUENTA.
+-- Lo miran las reglas base al elegir moverse: andar (blockedAhead → se dan la vuelta como en un borde; canGo → el que
+-- persigue espera), trepar (Crawler.entityAhead), el vuelo libre (FreeFlight.fits: no elige destinos ni caminos que
+-- pasen por ella), el Saltarín (no salta a ella) y el Topo (no avanza hacia ella). EMPUJADOS (un ground pound,
+-- lanzados por un trampolín o por el jugador, el aire, una explosión, aturdidos...) sí pueden acabar dentro: ahí se
+-- los come. `fearless = true` (rasgo) = no la evita.
+local function boxHit(b, x, y, w, h) return x < b.x + b.w and x + w > b.x and y < b.y + b.h and y + h > b.y end
+function Entity:dangerAt(level, x, y, w, h)
+    if self.fearless or not level then return false end
+    for _, o in ipairs(level.liveEntities or {}) do
+        if o ~= self and o.dangerBox and o.alive then
+            local b = o:dangerBox()
+            if b and boxHit(b, x, y, w, h) then return true end
+        end
+    end
+    return false
+end
+local DANGER_PROBE = 6          -- px por delante que mira
+function Entity:dangerAhead(level, dir)
+    local hw, hh = self.outerW / 2, self.outerH / 2
+    local bx = dir > 0 and (self.x + hw) or (self.x - hw - DANGER_PROBE)
+    return self:dangerAt(level, bx, self.y - hh + 2, DANGER_PROBE, self.outerH - 4)
+end
+
+-- COMIDA: se la come algo (la Planta carnívora: Entity:canBeEaten). Desaparece en el acto (sin cuerpo: lo que se ve es la planta masticando); cuenta como muerte y
 -- reaparece si tiene `respawn`. (`alive` / 'gone' viajan en la instantánea: igual online)
 function Entity:dieEaten()
     if Entity.SPECIAL_DEATH[self.state] or self.state == 'dead' or not self.alive then return end
@@ -571,6 +612,7 @@ function Entity:blockedAhead(level, dir)
     local bx = dir > 0 and (self.x + hw) or (self.x - hw - probe)
     local by, bh = self.y - hh + 2, self.outerH - 4
     if level.hasSpikeCellInBox and level:hasSpikeCellInBox(bx, by, probe, bh) then return true end
+    if self:dangerAhead(level, dir) then return true end               -- (una zona de peligro: una planta carnívora)
     for _, o in ipairs(level.liveEntities or {}) do
         if o ~= self and not o.solidFull and (o.x - self.x) * dir > 0 and o:isObstacle() then   -- (los sólidos los choca moveAndCollide)
             local ob = o:getOuterBounds()
@@ -592,6 +634,7 @@ function Entity:canGo(level, dir)
     for _, py in ipairs({ self.y - self.outerH / 2 + 4, self.y, self.y + self.outerH / 2 - 4 }) do
         if level:entitySolidAt(ex, py, self) then return false end
     end
+    if self:dangerAhead(level, dir) then return false end            -- (zona de peligro: no va por su cuenta)
     return true
 end
 
@@ -1052,7 +1095,7 @@ end
 function Entity:stomp()
     if self.state == 'dead' then return end
     if self.state == 'frozen' then return self:shatter() end
-    if not self:canBeStomped() then return end
+    if self.stompProof or not self:canBeStomped() then return end   -- (a prueba de pisotones: Interactions.check)
     self.state     = 'dead'
     self.deadTimer = 0
     self.vx        = 0
