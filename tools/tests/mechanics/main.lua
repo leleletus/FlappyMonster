@@ -1029,7 +1029,8 @@ local function cryoRoom(props, put, ents)
 end
 
 function cases.cryo_jugador()
-    local function trial(mashEvery)
+    -- (`how`: qué se machaca — 'jump', 'lr' = izquierda/derecha alternas, 'light' = la linterna, que NO cuenta)
+    local function trial(mashEvery, how)
         local level, es, cryo = cryoRoom({ firstDelay = 0.3, interval = 60, windup = 0.5, freezeTime = 3 })
         local pa = playerAt(level, 8, 8)
         clear()
@@ -1038,12 +1039,18 @@ function cases.cryo_jugador()
         stepEnts(level, es, 6, function()
             n = n + 1
             seen[cryo.state] = true
-            stub.state.right = (pa.iceT or 0) > 0                 -- (intenta andar congelado)
+            if how ~= 'lr' then stub.state.right = (pa.iceT or 0) > 0 end     -- (intenta andar congelado)
             if (pa.iceT or 0) > 0 then
                 frozenFor = frozenFor + 1 / 60
                 x0 = x0 or pa.x
                 moved = math.max(moved, math.abs(pa.x - x0))
-                if mashEvery and n % mashEvery == 0 then stub.state.jump_pressed = true end
+                if mashEvery and n % mashEvery == 0 then
+                    if how == 'lr' then
+                        local k = math.floor(n / mashEvery) % 2
+                        stub.state.left, stub.state.right = k == 0, k == 1
+                    elseif how == 'light' then stub.state.light_pressed = true
+                    else stub.state.jump_pressed = true end
+                end
             end
             pa:update(1 / 60, level)
         end)
@@ -1052,9 +1059,13 @@ function cases.cryo_jugador()
     end
     local seen, tFree, moved = trial(nil)
     local _, tMash = trial(8)
-    check('cryo_jugador', seen.windup and seen.fire and tFree > 2.7 and tFree < 3.3 and moved < 8 and tMash < tFree * 0.5,
-        ('estados carga=%s chorro=%s · congelado %.2f s (se mueve %d px pulsando →) · pulsando saltar %.2f s'):format(
-            tostring(seen.windup), tostring(seen.fire), tFree, moved, tMash))
+    -- (0.5.98, el usuario: TODOS los botones menos la linterna: izquierda / derecha también cuentan)
+    local _, tLR = trial(8, 'lr')
+    local _, tLight = trial(8, 'light')
+    check('cryo_jugador', seen.windup and seen.fire and tFree > 2.7 and tFree < 3.3 and moved < 8 and tMash < tFree * 0.5
+        and tLR < tFree * 0.5 and tLight > 2.6,
+        ('estados carga=%s chorro=%s · congelado %.2f s (se mueve %d px pulsando →) · pulsando saltar %.2f s · izquierda/derecha %.2f s · linterna %.2f s (no cuenta)'):format(
+            tostring(seen.windup), tostring(seen.fire), tFree, moved, tMash, tLR, tLight))
 end
 
 function cases.cryo_enemigo()
@@ -3316,12 +3327,16 @@ function cases.planta_traga()
     local still = math.abs(pa.x - x0) < 0.5 and math.abs(pa.y - y0) < 0.5
     local bite = bitAt ~= nil and pa.hp == hp0 - 1
     -- 2) machacando: sale escupido hacia arriba, invulnerable, la planta cerrada (se la pisa)
-    local presses, keys = 0, { 'jump_pressed', 'crouch_pressed', 'grab_pressed', 'light_pressed' }
+    -- (todos los botones menos la linterna — 0.5.98 —: saltar, agacharse, ARRIBA, izquierda y derecha al pulsarlas;
+    -- entre medias una linterna, que NO cuenta)
+    local presses, keys = 0, { 'jump_pressed', 'crouch_pressed', 'grab_pressed', 'left', 'right' }
     local n, topY = 0, pa.y
-    sim(level, { pa }, es, 1.2, function()
+    sim(level, { pa }, es, 1.6, function()
         n = n + 1
         topY = math.min(topY, pa.y)
-        if pa.gulped and n % 4 == 0 then presses = presses + 1; stub.state[keys[presses % 4 + 1]] = true end
+        stub.state.left, stub.state.right = false, false
+        if pa.gulped and n % 4 == 0 then presses = presses + 1; stub.state[keys[presses % 5 + 1]] = true
+        elseif pa.gulped and n % 4 == 2 then stub.state.light_pressed = true end
     end)
     clear()
     local escaped = not pa.gulped and topY < y0 - T and presses == PlayerAdventure.GULP_MASH

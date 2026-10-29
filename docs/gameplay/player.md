@@ -104,8 +104,10 @@ plant: [enemies](../entities/enemies.md#carnivorous-plant-carnivoreplant-planta-
   its box touching the face of the plant's block from outside (floor: feet on it; ceiling: head; wall: side) — and stays
   there: NOT drawn (others: `PF_GULP`), no movement, no control, touches nothing (`Interactions.run` skips it, what it
   carried is dropped) and nothing hurts it but the plant (`isInvulnerable()` is true while swallowed).
-- MASH: every press of jump, crouch, UP (grab) or the flashlight — what travels as "just pressed" over the network —
-  adds one (`gulpMash`); at `GULP_MASH` (10) it is SPAT OUT along the plant's normal (`gulpNx, gulpNy`; 640 px/s, up
+- MASH (`PlayerAdventure:mashPresses`, shared with the ICE block; 0.5.98, the user: "every button, absolutely every
+  one except the flashlight"): every press of jump, crouch, UP (grab), and LEFT / RIGHT when they go down (only their
+  held state travels: the up → down change is counted, `mashL/mashR` travel in the own state, index 39) adds one; the
+  flashlight does NOT. Plant: `gulpMash`; at `GULP_MASH` (10) it is SPAT OUT along the plant's normal (`gulpNx, gulpNy`; 640 px/s, up
   from a floor plant, sideways and up from a wall), `ctrlLockT` 0.2 s, invulnerable `GULP_FREE_INV` 1.2 s; the plant is
   left shut (`chew`: stompable).
 - BITES: every `GULP_BITE` (1.75 s, `gulpBiteT`) −1 HP with the red flash and `plantCrunch`, bypassing invulnerability

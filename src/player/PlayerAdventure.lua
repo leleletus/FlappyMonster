@@ -351,10 +351,7 @@ function PlayerAdventure:update(dt, level)
     if (self.iceT or 0) > 0 and not self.dying then
         -- Congelado: las pulsaciones rompen el hielo antes; el cuerpo se queda en
         -- su pose (cuadro y escala) y resbala/cae como un bloque
-        local mash = 0
-        if Input.pressed('jump') then mash = mash + 1 end
-        if Input.pressed('crouch') then mash = mash + 1 end
-        self.iceT = math.max(0, self.iceT - dt - mash * ICE_MASH)
+        self.iceT = math.max(0, self.iceT - dt - self:mashPresses() * ICE_MASH)
         if self.onGround then self.vx = self.vx * math.max(0, 1 - 1.5 * dt) end
         local frame, puff, crouch = self.frame, self.puff, self.crouching
         local real = Input

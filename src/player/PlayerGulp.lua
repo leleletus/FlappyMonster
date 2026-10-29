@@ -81,6 +81,22 @@ end
 -- El paso de un jugador tragado (lo llama PlayerAdventure:update; `frozenInput` = el Input sin control de siempre).
 -- Las pulsaciones se leen UNA vez (el stub de red las consume); el resto del paso (relojes, ahogo…) va sin control y
 -- sin moverse.
+-- MACHACAR BOTONES (tragado por una planta y congelado en hielo; el usuario: "todos los botones, absolutamente todos
+-- menos el de la linterna"): saltar, agacharse y ARRIBA recién pulsados + izquierda y derecha al PULSARLAS (lo que
+-- viaja por red de ellas es si están pulsadas: se cuenta el cambio de suelta a pulsada — igual en un jugador, el
+-- servidor y la predicción del cliente). La linterna, no.
+function PlayerAdventure:mashPresses()
+    local n = 0
+    for _, a in ipairs({ 'jump', 'crouch', 'grab' }) do
+        if Input.pressed(a) then n = n + 1 end
+    end
+    local l, r = Input.down('move_left') and true or false, Input.down('move_right') and true or false
+    if l and not self.mashL then n = n + 1 end
+    if r and not self.mashR then n = n + 1 end
+    self.mashL, self.mashR = l, r
+    return n
+end
+
 function PlayerAdventure:updateGulped(dt, level, frozenInput)
     -- (quien lo simula de verdad sabe qué planta lo tiene: si ya no lo tiene — muerta, reventada… —, sale)
     local by = self.gulpBy
@@ -88,11 +104,7 @@ function PlayerAdventure:updateGulped(dt, level, frozenInput)
         self.gulpBy = nil
         return self:gulpEscape()
     end
-    local mash = 0
-    for _, a in ipairs({ 'jump', 'crouch', 'grab', 'light' }) do
-        if Input.pressed(a) then mash = mash + 1 end
-    end
-    self.gulpMash = (self.gulpMash or 0) + mash
+    self.gulpMash = (self.gulpMash or 0) + self:mashPresses()
     local x, y = self.x, self.y
     self.vx, self.vy = 0, 0
     local real = Input

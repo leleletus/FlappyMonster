@@ -37,8 +37,9 @@ in game it asks `level:signal(id)`.
   idle. `mode` 'interval' (`interval`, `firstDelay`) or 'switch' (`activatable`: fires when its linked ON/OFF
   Activator changes, `trigger` any/on/off; linking it in the editor sets switch) — boss arenas: fires with
   the gates. Stream = hazard box `effect='freeze', time` → `pa:freeze(t)` (own-state index 30 `iceT`,
-  `PF_ICE` 128, protocol v36): no control (FROZEN_INPUT), keeps its pose, slides/falls; each jump/crouch
-  press removes 0.22 s; on break cryoFree + fx `ice_shatter` + 0.7 s invulnerability. Enemies in the
+  `PF_ICE` 128, protocol v36): no control (FROZEN_INPUT), keeps its pose, slides/falls; each press of ANY button
+  but the flashlight removes 0.22 s (jump, crouch, UP, left, right — `PlayerAdventure:mashPresses`, shared with the
+  carnivorous plant; 0.5.98, was jump/crouch only); on break cryoFree + fx `ice_shatter` + 0.7 s invulnerability. Enemies in the
   stream: `Entity:freeze(t)` → common state 'frozen' (`canFreeze`: category Enemigos only; mortar no;
   bosses no unless they override; `freezeFloats` = stays in place, pufferfish), deadTimer = time LEFT,
   falls (flyers too), harmless (`Interactions.frozenCheck`: landing on it / GP → 'stomp' kills a stompable
