@@ -113,6 +113,16 @@ centre (row 9) to dodge the charge and the waves (0.5.81: one tile lower than in
   jump with no waves and no scale slam) to the floor or a ledge 3-9 tiles away that is not a pan (`GB:hopOff`,
   `GB:onAPan`).
 
+## 0.5.92 changes (the user)
+
+- A chunk torn from a scale PAN was drawn with the drop-through platform texture → it is a piece OF THAT PAN (the
+  middle 16x8 of `mechanisms/scale/<isle>-pan.png`) and breaks as the pan's island material (`PAN_MAT`: meadow/coast
+  wood, fortress/cave stone, snow ice, volcano basalt, jungle temple stone); the island travels in the netPack (tile +
+  island × 256).
+- Standing on a pan reduced the fight to dodging its jump to the other pan → it LEARNS: after `BAIT_LEARN` (2) such
+  jumps without the player leaving the pans, it throws chunks at them or jumps ONTO their pan; it forgets after
+  `BAIT_FORGET` (2 s) off the pans. Test: `aprende`.
+
 ## How to extend
 
 - Tuning lives in the constants at the top of the file (`{ normal, angry }` pairs).

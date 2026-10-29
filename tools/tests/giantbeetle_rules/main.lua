@@ -11,6 +11,7 @@
 --   doble_filo él cae de su salto en un platillo con el jugador en el otro: el jugador sale disparado contra el techo
 --              y pierde 1
 --   cebo       el jugador en un platillo: salta (casi siempre) al OTRO platillo
+--   aprende    quieto en un platillo: tras 2 saltos al otro ya no lo hace (trozos o le salta encima); fuera, se le olvida
 --   embestida  embiste, choca con la pared (aturdido, sin daño) y caen cascotes con sombra de aviso; el de encima
 --              del jugador le quita 1; tocarlo embistiendo quita 1
 --   lanzar     arranca un bloque y se lo lanza en arco al jugador: le quita 1 y se rompe
@@ -366,11 +367,45 @@ function cases.cebo()
         local pa = playerAt(level, es, c2, t2)
         putBoss(level, boss, 24 * T)
         math.randomseed(i)
-        boss.last = nil
+        boss.last, boss.baitN = nil, 0                           -- (cada vez, uno que aún no ha aprendido)
         boss:choose(level)
         if boss.state == 'leap_wind' and math.abs(boss.markX - c1) < 8 then other = other + 1 end
     end
     check('cebo', other >= 5, ('en un platillo: salta al otro %d de 12 veces'):format(other))
+end
+
+-- APRENDE (0.5.92, el usuario): el jugador quieto en un platillo; tras BAIT_LEARN saltos al otro ya no lo hace (le
+-- lanza trozos o le salta encima); fuera de los platillos un rato, se le olvida
+function cases.aprende()
+    local level, es, boss, scale = arena()
+    stepAll(level, es, {}, 0.3)
+    local p1, p2 = scale:bodyParts()[1], scale:bodyParts()[2]
+    local c2, t2 = panTop(p2)
+    local c1 = panTop(p1)
+    local pa = playerAt(level, es, c2, t2)
+    level.players = { pa }
+    local seq = {}
+    local baitsAfter = 0
+    for i = 1, 20 do
+        putBoss(level, boss, 24 * T)
+        math.randomseed(100 + i)
+        boss.last = nil
+        boss:choose(level)
+        local what = (boss.state == 'leap_wind' and math.abs(boss.markX - c1) < 8) and 'otro'
+                     or (boss.state == 'leap_wind' and math.abs(boss.markX - c2) < p2:getOuterBounds().w / 2 + 8) and 'encima'
+                     or (boss.state == 'toss_wind') and 'trozos' or boss.state
+        seq[#seq + 1] = what
+        if i > 6 and what == 'otro' then baitsAfter = baitsAfter + 1 end
+    end
+    local n = 0
+    for _, w in ipairs(seq) do if w == 'otro' then n = n + 1 end end
+    -- fuera de los platillos 2,5 s: se le olvida
+    pa.x, pa.y, pa.standBody = 4 * T, (FLOOR - 1) * T - 60, nil
+    stepAll(level, es, { pa }, 2.5, function() boss.restLen = 99; boss.state = 'rest' end)
+    local forgot = (boss.baitN or 0) == 0
+    check('aprende', n == 2 and baitsAfter == 0 and forgot,
+        ('quieto en un platillo, 20 ataques: %s · al otro platillo %d veces (después, %d) · fuera 2,5 s, se le olvida=%s'):format(
+            table.concat(seq, ','), n, baitsAfter, tostring(forgot)))
 end
 
 function cases.embestida()
@@ -552,7 +587,7 @@ function cases.madera()
     local onLedge = boss:floorTile(level)
     local pan = scale:bodyParts()[1]:getOuterBounds()
     putBoss(level, boss, pan.x + pan.w / 2, pan.y - 6)            -- (los pies, como en la pelea, no siempre al píxel)
-    local onPan = boss:floorTile(level)
+    local onPan, panIsle = boss:floorTile(level)
     local m1, m2 = TileTypes.get(onLedge).mat, TileTypes.get(onPan).mat
     -- (al romperse suena su material)
     local played = {}
@@ -562,8 +597,11 @@ function cases.madera()
     boss.blocks = { { id = 1, x = 20.5 * T, y = 10 * T, vx = 0, vy = 300, t = 0, tile = onLedge, hit = {} } }
     stepAll(level, es, {}, 1.0, function() boss.restLen = 99 end)
     Sound = real
-    check('madera', m1.name == 'wood' and m2.name == 'wood' and played[1] == 'boxBreak',
-        ('plataforma: %s · platillo: %s · al romperse suena %s'):format(m1.name, m2.name, tostring(played[1])))
+    -- (el del platillo: un trozo DEL PLATILLO de su isla — la jungla: piedra del templo —, no de la plataforma; 0.5.92)
+    local isle = require('src/world/level/Isles').IDS[panIsle or 0]
+    check('madera', m1.name == 'wood' and isle == 'jungla' and m2.name == 'temple_stone' and played[1] == 'boxBreak',
+        ('plataforma: %s · platillo: trozo del platillo de %s, de %s · al romperse suena %s'):format(m1.name, tostring(isle),
+            m2.name, tostring(played[1])))
 end
 
 -- Sus súbditos vuelan (mitad de arriba de la zona), no embisten; pisados caen y, levantados, vuelven a volar
@@ -625,7 +663,7 @@ end
 
 function love.load(arg)
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'arena', 'platillos', 'bajarse', 'acorazado', 'caparazon', 'cascotes', 'vuelco', 'golpe', 'levanta', 'doble_filo', 'cebo', 'embestida', 'lanzar', 'ondas', 'enfado', 'derrota', 'purga', 'trozo', 'sombra_movil', 'madera', 'voladores', 'red' }) do
+    for _, n in ipairs({ 'arena', 'platillos', 'bajarse', 'acorazado', 'caparazon', 'cascotes', 'vuelco', 'golpe', 'levanta', 'doble_filo', 'cebo', 'aprende', 'embestida', 'lanzar', 'ondas', 'enfado', 'derrota', 'purga', 'trozo', 'sombra_movil', 'madera', 'voladores', 'red' }) do
         if not only or only == n then
             local ok, err = xpcall(cases[n], debug.traceback)
             if not ok then check(n, false, 'error: ' .. tostring(err)) end

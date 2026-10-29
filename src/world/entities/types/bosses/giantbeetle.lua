@@ -75,6 +75,10 @@ local RIGHT_T     = 0.7
 local GRACE       = 0.8                         -- s sin volver a dar a nadie tras un golpe
 local SLAM_POWER  = 1.5                         -- × la catapulta de la balanza cuando cae él en un platillo
 local PAN_BAIT    = 0.65                        -- probabilidad de saltar al OTRO platillo si estás en uno
+-- APRENDE (0.5.92, el usuario: quedándose en un platillo la pelea se reducía a esquivar ese salto): tras BAIT_LEARN
+-- saltos al otro platillo sin que el jugador se baje de los platillos, ya no cae en eso — le lanza trozos o le salta
+-- ENCIMA de su platillo —; se le olvida cuando el jugador pasa BAIT_FORGET s fuera de los platillos
+local BAIT_LEARN, BAIT_FORGET = 2, 2.0
 
 -- Bloques lanzados y cascotes
 local BLOCK_G, BLOCK_VY = 2400, -1050
@@ -215,15 +219,34 @@ function GB:throwBlock(level, pa)
     local apex = hy + vy * tUp / 2
     local tDown = math.sqrt(2 * math.max(1, ty - apex) / BLOCK_G)
     local vx = (tx - hx) / (tUp + tDown)
-    local tile = self:floorTile(level)
-    self.blocks[#self.blocks + 1] = { id = self:nid(), x = hx, y = hy, vx = vx, vy = vy, t = 0, tile = tile, hit = {} }
+    local tile, pan = self:floorTile(level)
+    self.blocks[#self.blocks + 1] = { id = self:nid(), x = hx, y = hy, vx = vx, vy = vy, t = 0, tile = tile, pan = pan, hit = {} }
     Sound.play('megaSlam', 1.4, 0.4)
     -- (lo arranca del suelo delante del cuerno: tierra que salta del material de ese suelo)
     Entity.emitFx('chunk_break', math.floor(hx - T / 2), math.floor(self:feetY() - T), { tile = tile })
 end
 -- El tile del suelo que pisa delante del cuerno (o bajo él): el material del trozo que arranca — también una
--- plataforma traspasable (madera; 0.5.79, salía piedra) —. Sobre un platillo de la balanza (un cuerpo), madera; sin
--- nada, piedra
+-- plataforma traspasable (madera; 0.5.79, salía piedra) —. Sobre un PLATILLO de la balanza: un trozo DEL PLATILLO
+-- (0.5.92, el usuario: salía con la textura de la plataforma traspasable) — devuelve también su isla (índice en
+-- Isles.IDS: se dibuja con el arte de ese platillo) y el material de su isla —; sin nada, piedra
+local PAN_MAT = { pradera = 'platform_drop', costa = 'platform_drop', fortaleza = 'solid', nieve = 'ice', cueva = 'solid',
+                  volcan = 'basalt', jungla = 'temple_brick' }
+-- (el dibujo del platillo de la isla `idx` — Isles.IDS —, con el tramo del medio: el trozo que arranca de él)
+local panImgs = {}
+local function panImage(idx)
+    if panImgs[idx] == nil then
+        local isle = require('src/world/level/Isles').IDS[idx]
+        local ok, img = pcall(require('src/fx/Anim').image, 'assets/images/mechanisms/scale/' .. tostring(isle) .. '-pan.png')
+        if ok and img then
+            img:setFilter('nearest', 'nearest')
+            panImgs[idx] = { img = img, quad = love.graphics.newQuad(16, 0, 16, 8, img:getDimensions()) }
+        else
+            panImgs[idx] = false
+        end
+    end
+    return panImgs[idx]
+end
+
 function GB:floorTile(level)
     local TileTypes = require 'src/world/tiles/TileTypes'
     local by = TileTypes.byName
@@ -237,7 +260,16 @@ function GB:floorTile(level)
     -- cuerpo debajo en una franja, bajo el cuerpo y bajo el cuerno)
     for dy = -4, 20, 4 do
         for _, x in ipairs({ self.x, self.x + (self.facing or 1) * self.outerW * 0.3, self.x - (self.facing or 1) * self.outerW * 0.3 }) do
-            if level:bodyAt(x, self:feetY() + dy, self) and by.platform_drop then return by.platform_drop.id end
+            local o = level:bodyAt(x, self:feetY() + dy, self)
+            if o and o.owner and o.owner.pans then
+                local Isles = require 'src/world/level/Isles'
+                local isle = Isles.of(level, o.owner.props and o.owner.props.isle)
+                local idx = 1
+                for i, id in ipairs(Isles.IDS) do if id == isle then idx = i end end
+                local m = by[PAN_MAT[isle] or 'platform_drop'] or by.platform_drop
+                return m.id, idx
+            end
+            if o and by.platform_drop then return by.platform_drop.id end
         end
     end
     return by.stone and by.stone.id or 1
@@ -381,10 +413,23 @@ end
 function GB:choose(level)
     local pa = self:nearestPlayer(level)
     if pa and math.abs(pa.x - self.x) > 8 then self.facing = (pa.x > self.x) and 1 or -1 end
-    -- en un platillo: salta al OTRO para dispararlo (doble filo)
+    -- en un platillo: salta al OTRO para dispararlo (doble filo) — hasta que aprende (BAIT_LEARN)
     if pa then
-        local _, _, other = panOf(level, pa)
+        local _, mine, other = panOf(level, pa)
+        if other and (self.baitN or 0) >= BAIT_LEARN then
+            if math.random() < 0.5 then
+                self.last, self.tossN = 'toss', self.rage and 2 or 1
+                Sound.play('megaWindup', 1.3, 0.5)
+                return self:enter('toss_wind')
+            end
+            local b = mine:getOuterBounds()                                -- (le salta encima, a su platillo)
+            self.markX, self.markY = math.floor(math.max(b.x + 8, math.min(b.x + b.w - 8, pa.x))), math.floor(b.y)
+            self.last = 'leap'
+            Sound.play('gustBlow', 0.7, 0.6)
+            return self:enter('leap_wind')
+        end
         if other and math.random() < PAN_BAIT then
+            self.baitN = (self.baitN or 0) + 1
             local b = other:getOuterBounds()
             self.markX, self.markY = math.floor(b.x + b.w / 2), math.floor(b.y)
             self.last = 'leap'
@@ -482,6 +527,14 @@ function GB:updateBoss(dt, level)
     self.deadTimer = self.deadTimer + dt
     if self.graceT > 0 then self.graceT = math.max(0, self.graceT - dt) end
     BossWaves.update(self, level, dt, WAVES)
+    -- (lo que aprende del jugador que no se baja de los platillos: se le olvida fuera de ellos BAIT_FORGET s)
+    local near = self:nearestPlayer(level)
+    if near and not panOf(level, near) then
+        self.offPanT = (self.offPanT or 0) + dt
+        if self.offPanT >= BAIT_FORGET then self.baitN = 0 end
+    else
+        self.offPanT = 0
+    end
     self:updateBlocks(level, dt)
     self:updateRocks(level, dt)
     self:updateShot(level, dt)
@@ -708,7 +761,8 @@ end
 function GB:netPackExtra()
     local out = { self.rage and 1 or 0, self.markX or 0, self.markY or 0, #self.blocks }
     for _, b in ipairs(self.blocks) do
-        out[#out + 1] = b.id; out[#out + 1] = math.floor(b.x); out[#out + 1] = math.floor(b.y); out[#out + 1] = b.tile or 0
+        out[#out + 1] = b.id; out[#out + 1] = math.floor(b.x); out[#out + 1] = math.floor(b.y)
+        out[#out + 1] = (b.tile or 0) + (b.pan or 0) * 256                -- (tile + isla del platillo × 256)
     end
     out[#out + 1] = #self.rocks
     for _, r in ipairs(self.rocks) do
@@ -746,7 +800,11 @@ function GB:netApplyExtra(a, b, f)
     local bb, kb = readList(b, 4, 4)
     lerpById(ba, bb, { 2, 3 })
     self.blocks = {}
-    for _, e in ipairs(bb) do self.blocks[#self.blocks + 1] = { id = e[1], x = e[2], y = e[3], tile = e[4], vx = 0, vy = 0, t = 0, hit = {} } end
+    for _, e in ipairs(bb) do
+        local pan = math.floor(e[4] / 256)
+        self.blocks[#self.blocks + 1] = { id = e[1], x = e[2], y = e[3], tile = e[4] % 256, pan = pan > 0 and pan or nil,
+                                          vx = 0, vy = 0, t = 0, hit = {} }
+    end
     local ra = (type(a[ka]) == 'number') and readList(a, ka, 5) or {}
     local rb, kr = readList(b, kb, 5)
     lerpById(ra, rb, { 3 })
@@ -841,10 +899,20 @@ function GB:drawOver(camX, camY)
         love.graphics.rotate(((now * 7 + (b.id or 0)) % (2 * math.pi)) * ((b.vx or 1) >= 0 and 1 or -1))
         -- (la sombra, del tamaño de lo que se ve del tile — su hitbox —: una pasarela es fina; 0.5.80, el usuario: el
         -- trozo de plataforma salía con un cuadrado oscuro detrás)
-        local hb = def.hitbox or { x = 0, y = 0, w = 1, h = 1 }
-        love.graphics.setColor(0, 0, 0, 0.35)
-        love.graphics.rectangle('fill', -BLOCK_S / 2 + 4 + hb.x * BLOCK_S, -BLOCK_S / 2 + 4 + hb.y * BLOCK_S, hb.w * BLOCK_S, hb.h * BLOCK_S)
-        TileTypes.drawTile(def, { x = -BLOCK_S / 2, y = -BLOCK_S / 2, size = BLOCK_S, col = 1, row = 1, time = now })
+        local pimg = b.pan and panImage(b.pan)
+        if pimg then
+            -- (un trozo del platillo: el tramo del medio de su dibujo — 16x8 —, con su sombra)
+            local k = BLOCK_S / 16
+            love.graphics.setColor(0, 0, 0, 0.35)
+            love.graphics.rectangle('fill', -BLOCK_S / 2 + 4, -4 * k + 4, BLOCK_S, 8 * k)
+            love.graphics.setColor(1, 1, 1, 1)
+            love.graphics.draw(pimg.img, pimg.quad, -BLOCK_S / 2, -4 * k, 0, k, k)
+        else
+            local hb = def.hitbox or { x = 0, y = 0, w = 1, h = 1 }
+            love.graphics.setColor(0, 0, 0, 0.35)
+            love.graphics.rectangle('fill', -BLOCK_S / 2 + 4 + hb.x * BLOCK_S, -BLOCK_S / 2 + 4 + hb.y * BLOCK_S, hb.w * BLOCK_S, hb.h * BLOCK_S)
+            TileTypes.drawTile(def, { x = -BLOCK_S / 2, y = -BLOCK_S / 2, size = BLOCK_S, col = 1, row = 1, time = now })
+        end
         love.graphics.pop()
         love.graphics.setColor(1, 1, 1, 1)
     end
