@@ -398,6 +398,17 @@ function Entity:dieBurst()
     Entity.emitFx('shake_small', self.x, self.y)
 end
 
+-- COMIDA: se la come algo (la Planta carnívora se come lo que tiene `edible = true` en su clase — el Escarabajo
+-- Rinoceronte —). Desaparece en el acto (sin cuerpo: lo que se ve es la planta masticando); cuenta como muerte y
+-- reaparece si tiene `respawn`. (`alive` / 'gone' viajan en la instantánea: igual online)
+function Entity:dieEaten()
+    if Entity.SPECIAL_DEATH[self.state] or self.state == 'dead' or not self.alive then return end
+    killed(self)
+    if self.releaseCrawl then self:releaseCrawl() end
+    self.vx, self.vy, self.deadTimer = 0, 0, 0
+    self:finishDeath()
+end
+
 -- LAVA: un ENEMIGO que cae en ella (andando, empujado, aturdido, lanzado...) revienta. Antes solo lo miraba el vuelo del
 -- trampolín y los demás se hundían hasta el fondo como si nada. Los voladores no tocan nada; un tipo que viva en la
 -- lava pone `lavaProof = true` en su clase. Lo que hace al caer lo decide `onLava` (por defecto: reventar).

@@ -1,0 +1,39 @@
+{
+  "id": "enemies/mole",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "mound",
+  "frames": [
+    {"h": 20, "image": "assets/images/enemies/mole/pradera-Sheet.png", "w": 22, "x": 0, "y": 0},
+    {"h": 20, "image": "assets/images/enemies/mole/pradera-Sheet.png", "w": 22, "x": 22, "y": 0},
+    {"h": 20, "image": "assets/images/enemies/mole/pradera-Sheet.png", "w": 22, "x": 44, "y": 0},
+    {"h": 20, "image": "assets/images/enemies/mole/pradera-Sheet.png", "w": 22, "x": 66, "y": 0},
+    {"h": 20, "image": "assets/images/enemies/mole/pradera-Sheet.png", "w": 22, "x": 88, "y": 0},
+    {"h": 20, "image": "assets/images/enemies/mole/pradera-Sheet.png", "w": 22, "x": 110, "y": 0},
+    {"h": 20, "image": "assets/images/enemies/mole/pradera-Sheet.png", "w": 22, "x": 132, "y": 0},
+    {"h": 20, "image": "assets/images/enemies/mole/pradera-Sheet.png", "w": 22, "x": 154, "y": 0},
+    {"h": 20, "image": "assets/images/enemies/mole/pradera-Sheet.png", "w": 22, "x": 176, "y": 0},
+    {"h": 20, "image": "assets/images/enemies/mole/pradera-Sheet.png", "w": 22, "x": 198, "y": 0},
+    {"h": 20, "image": "assets/images/enemies/mole/pradera-Sheet.png", "w": 22, "x": 220, "y": 0},
+    {"h": 20, "image": "assets/images/enemies/mole/pradera-Sheet.png", "w": 22, "x": 242, "y": 0},
+    {"h": 20, "image": "assets/images/enemies/mole/pradera-Sheet.png", "w": 22, "x": 264, "y": 0},
+    {"h": 20, "image": "assets/images/enemies/mole/pradera-Sheet.png", "w": 22, "x": 286, "y": 0}
+  ],
+  "anims": {
+    "bite": {"fps": 10, "frames": [8, 9], "loop": true},
+    "dead": {"fps": 8, "frames": [14], "loop": false},
+    "dive": {"fps": 10, "frames": [10, 11], "loop": false},
+    "dizzy": {"fps": 4, "frames": [12, 13], "loop": true},
+    "emerge": {"fps": 14, "frames": [4, 5], "loop": false},
+    "idle": {"fps": 3, "frames": [6, 7], "loop": true},
+    "mound": {"fps": 9, "frames": [1, 2, 3], "loop": true}
+  },
+  "variants": {
+    "costa": {"from": "assets/images/enemies/mole/pradera-Sheet.png", "to": "assets/images/enemies/mole/costa-Sheet.png"},
+    "cueva": {"from": "assets/images/enemies/mole/pradera-Sheet.png", "to": "assets/images/enemies/mole/cueva-Sheet.png"},
+    "fortaleza": {"from": "assets/images/enemies/mole/pradera-Sheet.png", "to": "assets/images/enemies/mole/fortaleza-Sheet.png"},
+    "jungla": {"from": "assets/images/enemies/mole/pradera-Sheet.png", "to": "assets/images/enemies/mole/jungla-Sheet.png"},
+    "nieve": {"from": "assets/images/enemies/mole/pradera-Sheet.png", "to": "assets/images/enemies/mole/nieve-Sheet.png"},
+    "volcan": {"from": "assets/images/enemies/mole/pradera-Sheet.png", "to": "assets/images/enemies/mole/volcan-Sheet.png"}
+  }
+}

@@ -201,6 +201,10 @@ landing mark; sprites in `assets/images/bosses/common/`). Asset layout: enemies 
   (read in settings.lua) starts with them ON: `FM_HITBOX=1 tools/tests/run.sh all|sp_boss|online_boss …` checks that
   drawing them never errors.
 
+- Base additions of 0.5.96 (the Mole, the Piranha, the Carnivorous Plant): `Entity:dieEaten()` (eaten: counts as a
+  kill and ends at once — `finishDeath` — with no body to draw) and the class field `edible` (what the Carnivorous Plant
+  eats); material field `diggable` (soft soil, [tiles-and-blocks](../gameplay/tiles-and-blocks.md)); `BossFx.sleepZ`
+  (the rising "z" of something asleep, sprite `bosses/common/sleep_z.png`); particle `water_splash`.
 - Base hooks added in 0.5.78 (the Rhino Beetle; any type can use them): `freeOfRoute()` → true = its route limits
   don't stop it (`moveAndCollide`, like 'launched'): it charges / flies thrown past them and then walks back (outside
   its route it only can't go further away); `whileCarried(dt, level)` runs every step while a player carries it

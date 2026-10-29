@@ -1,0 +1,24 @@
+{
+  "id": "enemies/piranha",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "swim",
+  "frames": [
+    {"h": 20, "image": "assets/images/enemies/piranha/piranha-Sheet.png", "w": 22, "x": 0, "y": 0},
+    {"h": 20, "image": "assets/images/enemies/piranha/piranha-Sheet.png", "w": 22, "x": 22, "y": 0},
+    {"h": 20, "image": "assets/images/enemies/piranha/piranha-Sheet.png", "w": 22, "x": 44, "y": 0},
+    {"h": 20, "image": "assets/images/enemies/piranha/piranha-Sheet.png", "w": 22, "x": 66, "y": 0},
+    {"h": 20, "image": "assets/images/enemies/piranha/piranha-Sheet.png", "w": 22, "x": 88, "y": 0},
+    {"h": 20, "image": "assets/images/enemies/piranha/piranha-Sheet.png", "w": 22, "x": 110, "y": 0},
+    {"h": 20, "image": "assets/images/enemies/piranha/piranha-Sheet.png", "w": 22, "x": 132, "y": 0},
+    {"h": 20, "image": "assets/images/enemies/piranha/piranha-Sheet.png", "w": 22, "x": 154, "y": 0},
+    {"h": 20, "image": "assets/images/enemies/piranha/piranha-Sheet.png", "w": 22, "x": 176, "y": 0}
+  ],
+  "anims": {
+    "bite": {"fps": 12, "frames": [6, 7], "loop": true},
+    "dead": {"fps": 8, "frames": [9], "loop": false},
+    "fall": {"fps": 8, "frames": [8], "loop": false},
+    "leap": {"fps": 10, "frames": [4, 5], "loop": false},
+    "swim": {"fps": 8, "frames": [1, 2, 3, 2], "loop": true}
+  }
+}

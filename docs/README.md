@@ -89,6 +89,7 @@ Ids are data (level files, saves, network), so confusing ones are explained here
 | `snowboss`, "Gran Bola de Nieve"; music id `snowball_boss` | the Snowball Boss; Verity = its Easter-egg look |
 | `megagloomy`, "Mega Crabby lúgubre" | the Mega Gloomy Crabby |
 | `gianthopper`, "Saltarín Gigante" | the Giant Hopper (the caves boss) |
+| `mole` "Topo" · `piranha` "Piraña" · `carnivoreplant` "Planta carnívora" | the 0.5.96 enemies: the mole of every island, the jungle's piranha and carnivorous plant ([enemies](entities/enemies.md)) |
 | `giantbeetle`, "Escarabajo Rinoceronte Gigante" | the Giant Rhino Beetle (the jungle boss; the small one: `beetle`) |
 | `groovecrab`, "Groove Crab" (Cangrejo Groove; "El Groove" until 0.5.54); music id `groove` | the secret boss after the game (a fiddler trampoline crab that fights to its music) |
 | `mirror` / `mirrorchase`, "el Reflejo" | the Mirror boss (the Reflection) / its chase before the fight |

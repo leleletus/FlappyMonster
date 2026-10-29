@@ -86,7 +86,8 @@ One generic module for everything that changes with the island (the user: one me
 - Islands (`Isles.IDS`, in this order — it is also the row order of `enemies/gust/wind-Sheet.png`): pradera, costa,
   fortaleza, nieve, cueva, volcan, jungla. What changes by island: the Gummy / Crabby / trampoline Crabby families, the
   Hopper (`Hopper.SKINS` + its anim-set variant), the food (`apple.lua` `FILES`), and every `isleArt` type — Box and small
-  Box, Scale, Gust (+ its wind row), Seed, Blizzard, Geyser (`KIND`: water / steam / smoke; jungle = water).
+  Box, Scale, Gust (+ its wind row), Seed, Blizzard, Geyser (`KIND`: water / steam / smoke; jungle = water), the Mole
+  (0.5.96: its anim-set variant `enemies/mole` + the stone of its island it can dig, `EXTRA_DIG`).
 - **A new island** = its id in `Isles.IDS` / `NAMES` / `BY_BACKGROUND` / `FAMILIES`, then the ART by name in every
   folder above (`<isle>-….png`), the anim sets that list per-island images (`enemies/hopper.json` frame + variant,
   `items.json` food frame, `enemies/gummy.json` variant, a new `enemies/crabby_<skin>.json`), `Hopper.SKINS`, `apple.lua`

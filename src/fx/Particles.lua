@@ -6,7 +6,7 @@
 --        'spike_pop', 'boss_hit', 'boss_blast', 'boss_big_blast', 'mortar_blast', 'fire_puff', 'ember',
 --        'exhaust', 'smoke', 'sparks', 'mega_step', 'mega_trail', 'mega_debris', 'mega_dirt',
 --        'mega_slam', 'mega_land', 'mega_poof', 'mega_roar' (Mega Crabby), 'switch_hit' (bloque ON/OFF),
---        'helmet_break' (casco de Gummy), 'puffer_pop' (pez globo), 'cryo_puff' / 'cryo_mist' /
+--        'helmet_break' (casco de Gummy), 'puffer_pop' (pez globo), 'water_splash' (salta del agua), 'cryo_puff' / 'cryo_mist' /
 --        'cryo_blast' (congelador), 'ice_freeze' / 'ice_shatter' (bloque de hielo de lo congelado),
 --        'shake_small', 'shake_big', 'shake_roar' (suave y largo) (temblor de pantalla:
 --        Particles.shakeOffset() se suma a la cámara al dibujar)
@@ -284,6 +284,14 @@ function Particles.emit(kind, x, y, opts)
             add({ x = x + math.cos(a) * 26, y = y + math.sin(a) * 26, vx = math.cos(a) * rnd(90, 170),
                   vy = math.sin(a) * rnd(90, 170) - 30, life = rnd(0.35, 0.6), size = math.random(1, 2) * 3,
                   col = { 0.8, 0.95, 1 }, drag = 4 })
+        end
+    elseif kind == 'water_splash' then
+        -- Algo que salta del agua o cae en ella (la piraña): gotas que suben en abanico y caen
+        for i = 1, 12 do
+            local a = -math.pi / 2 + rnd(-0.9, 0.9)
+            local sp = rnd(160, 380)
+            add({ x = x + rnd(-14, 14), y = y, vx = math.cos(a) * sp, vy = math.sin(a) * sp, g = 1300,
+                  life = rnd(0.35, 0.6), size = math.random(1, 2) * 3, col = (i % 3 == 0) and { 1, 1, 1 } or { 0.62, 0.86, 0.96 } })
         end
     elseif kind == 'helmet_break' then
         -- Casco de Gummy que se rompe: trozos negros y grises que saltan

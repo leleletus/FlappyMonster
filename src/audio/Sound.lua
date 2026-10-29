@@ -231,6 +231,14 @@ function Sound.load()
     for _, n in ipairs({ 'wind', 'jump', 'land' }) do
         load('hop' .. n:gsub('^%l', string.upper), 'assets/sounds/enemies/hopper/' .. n .. '.wav', 'static')
     end
+    -- Topo, piraña y planta carnívora (tools/sounds/jungle_enemies.py)
+    load('moleDig',     'assets/sounds/enemies/mole/dig.wav',               'static')   -- topo: el montículo avanza
+    load('molePop',     'assets/sounds/enemies/mole/pop.wav',               'static')   -- topo: asoma del suelo
+    load('moleBite',    'assets/sounds/enemies/mole/bite.wav',              'static')   -- topo: muerde
+    load('piranhaBite', 'assets/sounds/enemies/piranha/bite.wav',           'static')   -- piraña: muerde en el salto
+    load('plantRustle', 'assets/sounds/enemies/carnivoreplant/rustle.wav',  'static')   -- planta: el aviso
+    load('plantSnap',   'assets/sounds/enemies/carnivoreplant/snap.wav',    'static')   -- planta: se cierra de golpe
+    load('plantCrunch', 'assets/sounds/enemies/carnivoreplant/crunch.wav',  'static')   -- planta: se come algo
     -- Linterna y Crabby lúgubre (tools/sounds/gloomy.py)
     for _, n in ipairs({ 'on', 'off', 'out', 'dead' }) do
         load('light' .. n:gsub('^%l', string.upper), 'assets/sounds/player/light_' .. n .. '.wav', 'static')

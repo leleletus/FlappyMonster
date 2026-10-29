@@ -67,6 +67,7 @@ return {
 | `freezeFloats = true` | Frozen, it stays where it is (does not fall) |
 | `darkEdge = { r, g, b, a }` | Dark sprite: draws a thin outline of that colour around it where the level is dark |
 | `noWings = true` (class field) | A flyer that is not drawn with the generic wings (the Gust: a cloud) |
+| `edible = true` (class field) | The Carnivorous Plant eats it when it enters its trigger (thrown, walking…): `Entity:dieEaten()` (gone at once, counts as a kill, respawns with `respawn`). Today: the Rhino Beetle |
 | `ownStunLook = true` (class field) | Skips the render wrapper's generic `stunned` look (the whole render ROTATED around its centre + a star ring): for types that draw their own knockout, or whose `render` also draws things far from them (The Groove's dance floor swung with it) |
 
 (Classes share `def` when one file returns several definitions with the same class: traits that differ per definition
@@ -87,7 +88,7 @@ Gummies `artDir`, `helmetDx`, `helmetDy`.
   boxes `getHazardBoxes()` with `effect = 'hurt' | 'freeze'`…). Own rules: `interact(pa)` (side-effect free: the
   client uses it to predict) and the notifications `onStomp`, `onBounced`, `onHurtPlayer`, `onLaunch`,
   `onHelmetBounce`.
-- Deaths: `stomp()`, `dieFling(dir)`, `dieBurst()`, respawn (`props.respawn`).
+- Deaths: `stomp()`, `dieFling(dir)`, `dieBurst()`, `dieEaten()` (eaten: gone at once), respawn (`props.respawn`).
 - Freezing (`canFreeze`), being launched by trampolines (`canBeLaunched`), the ground-pound shove (`knockback`).
 - Reserve MINION: any entity can be one (`Entity:makeReserve`; hook `onMakeReserve`).
 - Network: `netPack()` / `netApply(a, b, f)` for its own data; `netAtRest()` / `netRest()` so it is not sent while

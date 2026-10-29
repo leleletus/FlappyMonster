@@ -4,7 +4,8 @@ The level is a grid of 64-px cells. Each cell stores one raw number = tile id + 
 (`src/world/tiles/TileCodec.lua`). A tile type is one file in `src/world/tiles/types/` registered in
 `src/world/tiles/Tiles.lua`; its physical behaviour comes from its `collision` (`none` / `solid` / `oneway`), its
 `hitbox` and its material (`src/world/tiles/materials/`: friction, liquid, deadly contact, debris colours, `breakSound`
-— the sound of a chunk of it breaking, 0.5.79). The full
+— the sound of a chunk of it breaking, 0.5.79 —, `diggable` — soft soil the Mole digs through: dirt, grass and jungle
+grass, sand, snow and packed snow, ash, mud; not stone, deep stone, basalt, ice, wood, temple brick or lava, 0.5.96). The full
 list is generated: [reference/tiles](../reference/tiles.md).
 
 **Files:** `src/world/tiles/` (catalog), `src/world/level/Level.lua` (queries: `collisionAt`, `getDefAt`,

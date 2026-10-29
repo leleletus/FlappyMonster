@@ -25,6 +25,14 @@ what (`SHARED_SOUNDS`, `PRIVATE_SOUNDS`). Sounds can also be NOISE that enemies 
 bells as the iris closes), `countTick` / `countGo` (the start countdown). At ≈ −12 dBFS, no GAIN entry. Not listened
 to by anyone yet.
 
+## The 0.5.96 enemies' sounds
+
+`tools/sounds/jungle_enemies.py` → `assets/sounds/enemies/{mole,piranha,carnivoreplant}/`: `moleDig` (the mound moving:
+soft earth grains), `molePop` (it pops out), `moleBite` (two tooth clicks), `piranhaBite` (a dry, high snap at the top of
+its leap), `plantRustle` (the plant's warning: trembling leaves), `plantSnap` (it shuts: wet low thud + click),
+`plantCrunch` (it eats something). The piranha's leap reuses `waterSplashOut` / `waterSplash`; the dizzy mole,
+`stunned`. All at ≈ −12 dBFS (−11.6 to −14.1, harness `sounds`), no GAIN entry. Not listened to by anyone yet.
+
 ## Distance attenuation
 
 `Sound.setListener(x, y)` (the local player; camera centre when spectating)

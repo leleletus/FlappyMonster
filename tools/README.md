@@ -40,6 +40,7 @@ and their own folder to `sys.path`; scripts that import each other sit in the sa
 | `enemies/make_variant_skins.py` | `enemies/gummy_magma/`, `gummy_cave/`, `gummy_fortress/`, `crabby_fortress/` | **NO: gummy_fortress is hand-edited** |
 | `enemies/make_crab_species.py` | `enemies/crabby_river/`, `crabby_lava/`, `crabby_cave/` | **NO: lava legs are hand-edited** |
 | `enemies/make_hopper_sprites.py --apply` | `enemies/hopper/<island>-Sheet.png` | yes (verified identical) |
+| `enemies/make_jungle_enemies.py [--apply --mole A --piranha B --plant B]` | the three 0.5.96 enemies: `enemies/mole/<island>-Sheet.png` (7 islands), `enemies/piranha/piranha-Sheet.png`, `enemies/carnivoreplant/plant-Sheet.png`, their anim sets `assets/anim/enemies/{mole,piranha,carnivoreplant}.json` and the sleeping "z" `bosses/common/sleep_z.png` (+ `sleep_z` in `bosses/common`); without flags, designs A and B of each as previews in `FlappyMonster_pruebas/enemigos_nuevos/`. The user chose mole A, piranha B, plant B (2026-10-29) | yes (never overwrites a sheet without `--force`; never touches an existing anim set) |
 | `enemies/make_jungle_skins.py --apply` | the jungle island (`jungla`) variants: `enemies/gummy_jungle/`, `crabby_jungle/`, `jungla-…` of hopper, gust (+ row 7 of `gust/wind-Sheet.png`), box, scale, geyser, wind, seed, `items/food_jungla.png` (previews in `FlappyMonster_pruebas/jungla/variantes/`) | yes (never overwrites without `--force`) |
 | `enemies/make_icecrabby_sprites.py`, `make_icecrabby_claws.py` | `enemies/crabby_ice/` | **NO: bodies hand-edited** |
 | `enemies/make_gummy_variants.py` | `enemies/gummy_ice/` (`--apply-helado`), `bosses/megagummy/` (`--apply-mega`) | not re-run |
@@ -74,7 +75,7 @@ diff of whatever it writes.
 ## sounds/
 
 One script per family, each writes WAVs into `assets/sounds/<group>/`: `ambience.py`, `bomb.py`, `cryo.py`,
-`gloomy.py`, `groove.py` (the Groove Crab's crowd: cheer, boo), `hopper.py`, `ice.py`, `items.py`, `jungle.py` (the jungle ambience + the brazier fire; without `--apply` it writes previews and a 40 s level mix to `FlappyMonster_pruebas/selva/sonidos/`), `water.py` (drowning music, alarm, gasp, glug, extra life), `startup.py` (the logo melody), `mechanics.py`, `megacrabby.py`, `megagummy.py`, `mirror.py`,
+`gloomy.py`, `groove.py` (the Groove Crab's crowd: cheer, boo), `hopper.py`, `ice.py`, `items.py`, `jungle_enemies.py` (mole, piranha and carnivorous plant: dig, pop, bite, piranha bite, plant rustle / snap / crunch), `jungle.py` (the jungle ambience + the brazier fire; without `--apply` it writes previews and a 40 s level mix to `FlappyMonster_pruebas/selva/sonidos/`), `water.py` (drowning music, alarm, gasp, glug, extra life), `startup.py` (the logo melody), `mechanics.py`, `megacrabby.py`, `megagummy.py`, `mirror.py`,
 `snowboss.py`, `story.py`, `ui.py` (entering a level, the start countdown). After generating: register the sound and its gain in `src/audio/Sound.lua`, then
 `tools/tests/run.sh sounds NAMES=…`.
 
@@ -87,4 +88,4 @@ See the generator table in `docs/audio/music-catalog.md`. `famicom.py` (engine),
 
 `lib.py`, `levels_*.py` (builders), `build.py --only <level>`, `retheme.py <levels>` (`retheme.py --bg <levels> [--out <dir>]`:
 the background-plane structures per island, `retheme_bg.py`; generated content listed in `bg_gen/<level>.json`), `add_apples.py <levels>`,
-`make_sets.py` (film sets), `make_credits_sets.py` (the live stages of the credits: `assets/story/sets/credits_*.json`), `arenas/` (test arenas and their `make_*.py`; `make_decoraciones.py` = the showcase of every decoration, from `docs/reference/decorations-and-modes.md`).
+`make_sets.py` (film sets), `make_credits_sets.py` (the live stages of the credits: `assets/story/sets/credits_*.json`), `arenas/` (test arenas and their `make_*.py`; `make_nuevos_enemigos.py` = a mole of each island, a river with piranhas and carnivorous plants with a beetle to feed them; `make_decoraciones.py` = the showcase of every decoration, from `docs/reference/decorations-and-modes.md`).

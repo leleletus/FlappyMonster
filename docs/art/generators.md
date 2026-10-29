@@ -37,6 +37,14 @@ the diff before committing anything they write.
 ## Notes on specific generators
 
 - `tools/art/enemies/make_beetle.py`: the jungle's Rhino Beetle and the Giant Rhino Beetle (22x20 frames: 4-frame tripod walk, charge, on its back; the giant adds toss, wings, landing and the gold rune) + the giant's temple block, debris, floor wave and dust; design D chosen by the user (2026-10-28); without flags = previews, mockups and GIFs in `FlappyMonster_pruebas/escarabajo/`; `--apply` writes the attack sprites and both anim sets; it never rewrites the two body sheets the user retouched (`KEEP`).
+- `tools/art/enemies/make_jungle_enemies.py`: the Mole (general, one sheet per island), the Piranha and the Carnivorous
+  Plant (jungle). Two designs each (A / B; the mole's in the 7 islands), drawn from PIECES (ellipses, polygons, tubes)
+  rasterised per frame with a transform, 3 tones per part, one ornament per island — the user's brief after the first
+  round: "not so detailed, not so chubby: slimmer, more original shapes". Chosen (2026-10-29): mole A «Periscopio»,
+  piranha B «Aguja», plant B «Cepo». Without flags = previews, mockup GIF and every sheet in
+  `FlappyMonster_pruebas/enemigos_nuevos/`; `--apply --mole A --piranha B --plant B` writes the chosen sheets (never over an
+  existing one without `--force`), the three anim sets and the shared sleeping "z" (never touching an existing set).
+  Nothing hand-edited yet.
 - `tools/art/world/make_jungle_decor.py` and `tools/art/world/make_big_trees.py`: the jungle decorations (`jungle_set`)
   and the big trees + extras of every island (`fortress_set` and new names in the other sets), approved by the user
   on 2026-10-28 (the jungle set without the frog, the toucan and the monkey: drawn but `NOT_APPLIED`). Without flags =

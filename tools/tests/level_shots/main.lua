@@ -44,6 +44,8 @@ local function shot(path)
     local out = love.graphics.newCanvas(math.ceil(W * k), math.ceil(H * k))
     WINDOW_W, WINDOW_H = 1280, 720
     local view = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
+    local water = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
+    local warned
     for cy = 0, H - 1, WINDOW_H do
         for cx = 0, W - 1, WINDOW_W do
             love.graphics.setCanvas(view)
@@ -56,7 +58,18 @@ local function shot(path)
             for _, e in ipairs(es) do if e.alive and not e.renderFront then e:render(cx, cy) end end
             for _, e in ipairs(es) do if e.alive and e.renderFront then e:render(cx, cy) end end
             level:renderFoliage(cx, cy)
-            if level.renderWaterEffect then pcall(level.renderWaterEffect, level, cx, cy, view) end
+            -- el AGUA (tinte, olas, distorsión): se dibuja la escena ya hecha en OTRO lienzo con el agua encima (antes
+            -- se le pedía dibujar `view` sobre sí mismo: el error se tragaba con pcall y el agua no salía en las fotos)
+            if level.renderWaterEffect then
+                love.graphics.setCanvas(water)
+                love.graphics.clear(0, 0, 0, 1)
+                love.graphics.setColor(1, 1, 1, 1)
+                local ok, err = pcall(level.renderWaterEffect, level, cx, cy, view)
+                if not ok and not warned then warned = true; print('[agua] ' .. tostring(err)) end
+                love.graphics.setCanvas(view)
+                love.graphics.setColor(1, 1, 1, 1)
+                if ok then love.graphics.draw(water, 0, 0) end
+            end
             -- la LUZ AMBIENTE del nivel (atardecer, noche, cueva, a oscuras; src/fx/Darkness.lua), con un "jugador"
             -- en su salida para ver el halo (LIGHT=0: sin luz, el nivel tal cual)
             if os.getenv('LIGHT') ~= '0' and Darkness.active(level) then

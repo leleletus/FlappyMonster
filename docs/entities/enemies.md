@@ -1,7 +1,8 @@
 # Enemies
 
 The regular enemies. Every island has its own Gummy and its own Crabby (same class, other art, sometimes other
-shape); dark levels have the Gloomy Crabby; plus the Hopper, bombs, the pufferfish and the mortar. Types, files and
+shape); dark levels have the Gloomy Crabby; plus the Hopper, bombs, the pufferfish, the mortar, the Mole (every island), and the
+jungle's Rhino Beetle, Piranha and Carnivorous Plant. Types, files and
 props: [reference/entities](../reference/entities.md). Base behaviour: [overview](overview.md).
 
 | Island | Gummy | Crabby (spike / trampoline) | Hopper skin |
@@ -375,6 +376,87 @@ jungle boss ([giantbeetle](../bosses/giantbeetle.md)). Approved design (2026-10-
   `state` + the prop (`Beetle:winged`), so online looks the same.
 - Tests: `mechanics escarabajo`, `escarabajo_lanzado`, `escarabajo_ruta`, `escarabajo_manos`, `escarabajo_arrolla`;
   `giantbeetle_rules voladores`.
+
+## Mole, Piranha and Carnivorous Plant (0.5.96) — the user's designs
+
+Three enemies designed with the user on 2026-10-29. Art: `tools/art/enemies/make_jungle_enemies.py` (two designs each, A
+and B; the mole's in the 7 islands; previews in `FlappyMonster_pruebas/enemigos_nuevos/`). The user's brief after the
+first round: "not so detailed — many differently coloured pixels at this resolution do not read — and not so chubby:
+slimmer, more original shapes even if they stand out a little from the rest; if everything is the same, there will never
+be anything new". So: SIMPLE FLAT COLOURS (3 tones per part: outline, shadow, mid; no highlights or specks), one
+ornament per island, slim long silhouettes; B was always the bolder option. Chosen: mole **A «Periscopio»** (B
+«Gusano», a long worm-like mole, stays in the script), piranha **B «Aguja»** (A «Mandíbula», all head with a red jaw),
+plant **B «Cepo»** (A «Cuello», a small flytrap on a long neck). Sounds: `tools/sounds/jungle_enemies.py`
+([sound](../audio/sound.md)). Test arena: `tools/levelgen/arenas/nuevos_enemigos.json` (`make_nuevos_enemigos.py`).
+Tests: `mechanics topo`, `topo_culetazo`, `topo_suelo`, `pirana`, `pirana_pisar`, `planta`; `SHOT_JUNGLA=1` →
+`mechanics_jungla.png` (every pose). NOT placed in any real level yet; feel, timings and sounds not judged by a person.
+
+### Mole (`mole`, «Topo») — every island
+
+`types/enemies/mole.lua`; sheets `assets/images/enemies/mole/<isle>-Sheet.png` (14 frames 22x20 at ×4, facing RIGHT,
+feet on the bottom row: mound ×3, emerge ×2, idle ×2, bite ×2, dive ×2, dizzy ×2, dead), anim set
+`assets/anim/enemies/mole.json` with one VARIANT per island; `isleArt` = the editor prop `isle` (Auto = the level's
+island). Each island: its fur, nose and claws + at most ONE ornament (coast: a conch shell; fortress: a sapper's bronze
+helmet; snow: a red scarf; cave: a miner's helmet with its lamp; jungle: a leaf hat; meadow and volcano — black fur,
+fiery nose and claws — none), and the MOUND is its island's earth (grass cap on the meadow and the jungle, ash cap on the
+volcano).
+- States: `under` (only a MOUND moves along the ground surface; harmless, body off, cannot be stomped) → `tell`
+  (`TELL_T` 0.45 s, the mound shakes) → `emerge` (0.14 s) → `bite` (0.45 s) → `look` (prop `lookTime`, 0.9 s: the
+  window to stomp it) → `dive` (0.25 s) → `under` with `COOLDOWN` 1 s before it can emerge again.
+- Under ground it goes towards the nearest player within `range` tiles sideways (default 6 × difficulty `sense`) whose
+  feet are on or up to `UP_SEE` 3 tiles above its ground, at `speed` (110 px/s; the player runs at 240). It emerges
+  when the player is within `REACH` 0.3 tiles sideways and the player's feet no higher than `REACH_UP` 1.5 tiles. Nobody
+  near: it wanders slowly (`WANDER_V` 35 px/s) back and forth.
+- Above ground (emerge / bite / look): touching it = 1 HP (`onTouch` hurt, fixed) and a recoil; a stomp kills it
+  (squashed `dead` frame, 20 points); the push of a nearby ground pound makes it dizzy.
+- GROUND POUND (`onPound`): landing within `POUND_RX` 2.5 tiles sideways of its mound, at the height of its ground
+  (`POUND_RY` 1 tile), knocks it OUT: `dizzy` (`DIZZY_T` 3 s, a hop out of the hole, `BossFx.stars` ring, `stunned`
+  sound), harmless and stompable; then it dives again.
+- Its GROUND (decided here): it only travels over soft soil — material field `diggable` (dirt, grass, jungle grass,
+  sand, snow, packed snow, ash, mud) — with air above (no wall, no spikes) and inside its route. NOT stone, deep stone,
+  basalt, ice, wood, temple brick, lava. Exception per island (`EXTRA_DIG`): the fortress mole also digs stone and the
+  cave mole stone and deep stone (those islands are nearly all stone). At an edge / a wall / undiggable ground it waits
+  there while chasing and turns round while wandering. Placed on undiggable ground it stays where it is (still bites
+  whoever stands on it). Lava, spikes, the void: bursts (`dieBurst`).
+- Network: nothing of its own (state, deadTimer, x, facing). Whether the mound rolls is drawn from how x changes.
+
+### Piranha (`piranha`, «Piraña») — jungle (any water level can use it)
+
+`types/enemies/piranha.lua`; `assets/images/enemies/piranha/piranha-Sheet.png` (9 frames 22x20, facing RIGHT, the fish
+centred: swim ×3, leap ×2, bite ×2, fall, dead belly-up), anim set `enemies/piranha`. Design B «Aguja»: long and thin
+like a spear, a beak of teeth, teal back, magenta fins.
+- `swim`: side to side inside its water (turns where the water ends, at a block or at its route's limit), at its home
+  depth but always under the surface (it follows a falling water level), a 4 px bob.
+- A player OUT of the water, above the surface, within `range` tiles sideways (4.5 × `sense`) and up to `LEAP_MAX` 5
+  tiles above the surface → `aim` (`AIM_T` 0.35 s: rises to just under the surface, trembling) → `leap`: a ballistic arc
+  whose top reaches the player (min 1.5 tiles, ≤ 380 px/s sideways), `piranhaBite` near the top; shortened so that it
+  always falls back into ITS water (never onto the bank: both ends of its body must land in water). Back in the water →
+  `swim` with `cooldown` (1.4 s). A player SWIMMING within range → after the same warning, a straight `lunge` under
+  water (330 px/s, 0.45 s).
+- Touching it = 1 HP + recoil. It can be STOMPED only in the AIR (leaping): dies belly up and, in water, floats up to
+  the surface. In the water a stomp is turned into a hurt (no stomp in water).
+- Dry (it lands on dry ground, or the water goes: a falling flood, `flop`): flops in random tiring hops, harmless and
+  stompable; back in water it swims; after `DRY_T` 3.5 s it dies. Lava / spikes: bursts.
+- Network: its netPack carries `apexT` (the time to the top of the leap), so the client picks leap / bite / fall frames.
+
+### Carnivorous Plant (`carnivoreplant`, «Planta carnívora») — jungle
+
+`types/enemies/carnivoreplant.lua`; `assets/images/enemies/carnivoreplant/plant-Sheet.png` (11 frames 26x24, base on
+the bottom row: idle ×2, tell ×2, snap ×2, chew ×2, sleep ×2, withered dead), anim set `enemies/carnivoreplant`. Design B
+«Cepo»: two toothed leaves lying flat with a bait flower; closed, an upright green pod.
+- FIXED on the ground (static, not pushed / launched / knocked; an obstacle for walkers). `idle` (open) → a player in its
+  TRIGGER box (`TRIGGER_HW` ±52 px, `TRIGGER_H` 1.2 tiles up: over it or right next to it) → `tell` (`TELL_T` 0.3 s,
+  `plantRustle`) → `snap` (`SNAP_T` 0.15 s, `plantSnap`): a hazard box (`SNAP_HW` ±44 px, 0.9 tiles high) = 1 HP and a
+  recoil (out of the pod). Running over it gets you bitten: you have to jump it.
+- Then `chew` (prop `chewTime`, 2.4 s): ONLY now (or asleep) can it be stomped (dies, withered, 20 points); touching it
+  shut does nothing. → `open` (0.35 s, the snap frames backwards) → `idle`, re-armed after `REARM` 0.4 s. Stomping it
+  open does not kill it (it just springs it).
+- FEEDING (decided here): anything whose class has `edible = true` — today the Rhino Beetle, thrown or walking /
+  charging / on its back — entering its trigger box (or its snap box while closing) → it snaps on it, the beetle
+  vanishes (`Entity:dieEaten`, `plantCrunch`) and it SLEEPS (prop `sleepTime`, 6 s; rising "z": `BossFx.sleepZ`, sprite
+  `bosses/common/sleep_z.png`), harmless and stompable, then reopens. Other enemies are NOT eaten: walkers treat it as an
+  obstacle and turn round.
+- Network: nothing of its own; open and waiting it is not sent (`netAtRest`).
 
 ## History and decisions (dated notes)
 

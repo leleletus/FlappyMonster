@@ -15,12 +15,14 @@
     {"h": 4, "image": "assets/images/bosses/common/target-Sheet.png", "w": 16, "x": 0, "y": 0},
     {"h": 4, "image": "assets/images/bosses/common/target-Sheet.png", "w": 16, "x": 16, "y": 0},
     {"h": 5, "image": "assets/images/bosses/common/stars-Sheet.png", "w": 5, "x": 0, "y": 0},
-    {"h": 5, "image": "assets/images/bosses/common/stars-Sheet.png", "w": 5, "x": 5, "y": 0}
+    {"h": 5, "image": "assets/images/bosses/common/stars-Sheet.png", "w": 5, "x": 5, "y": 0},
+    {"h": 7, "image": "assets/images/bosses/common/sleep_z.png", "w": 6, "x": 0, "y": 0}
   ],
   "anims": {
     "anger_scribble": {"fps": 12, "frames": [2, 3], "loop": true},
     "anger_steam": {"fps": 8, "frames": [4, 5, 6], "loop": false},
     "anger_vein": {"fps": 7, "frames": [7, 8], "loop": true},
+    "sleep_z": {"fps": 1, "frames": [13], "loop": true},
     "stars": {"fps": 8, "frames": [11, 12], "loop": true},
     "target": {"fps": 10, "frames": [9, 10], "loop": true}
   }

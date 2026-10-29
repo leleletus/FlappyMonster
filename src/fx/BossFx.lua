@@ -9,6 +9,7 @@
 --   BossFx.fury(boss, camX, camY, render)          el ENFADO GENÉRICO (Xtra extremo, Boss:furyActive): lo dibuja
 --                                                  con `render` rojizo que late y un temblor leve, y le saca
 --                                                  símbolos de enfado sobre la cabeza
+--   BossFx.sleepZ(t, x, y, scale)    las "z" de DORMIDO que suben (la Planta carnívora tras comer)
 --   BossFx.target(t, x, y, sx, sy)    (t = reloj: parpadea a su ritmo)             la DIANA de "voy a caer aquí" (2 cuadros 16x4)
 -- Solo dibujo (cada cliente a su aire): nada de esto es simulación.
 local Anim = require 'src/fx/Anim'
@@ -59,6 +60,23 @@ end
 
 function BossFx.target(t, x, y, sx, sy)
     clip('target'):play(t, x, y, 0, sx, sy)
+end
+
+-- Las "z" de DORMIDO (sprite `sleep_z`): suben desde (x, y) haciendo eses y se apagan, una tras otra; la primera
+-- grande y las siguientes más pequeñas. `t` = reloj (lo que lleva dormido: viaja en la instantánea)
+local ZZ_EVERY, ZZ_LIFE = 0.6, 1.8
+function BossFx.sleepZ(t, x, y, scale)
+    local c = clip('sleep_z')
+    for k = 0, math.floor(ZZ_LIFE / ZZ_EVERY) - 1 do
+        local age = (t - k * ZZ_EVERY) % ZZ_LIFE
+        if t >= k * ZZ_EVERY then
+            local p = age / ZZ_LIFE
+            local s = math.max(1, scale - (k % 3 == 0 and 0 or 1))
+            love.graphics.setColor(1, 1, 1, math.min(1, (1 - p) * 2.5))
+            c:play(0, math.floor(x + p * 8 * scale + math.sin(p * 7) * 2 * scale + 0.5), math.floor(y - p * 14 * scale + 0.5), 0, s, s)
+        end
+    end
+    love.graphics.setColor(1, 1, 1, 1)
 end
 
 local KINDS = { 'vein', 'vein', 'steam', 'scribble', 'vein', 'steam' }

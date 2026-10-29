@@ -58,6 +58,7 @@ local FREE = { windup = true, charge = true, brake = true, daze = true, onback =
 Beetle.animId    = 'enemies/beetle'
 Beetle.carryable = true                -- (patas arriba: canBeCarried)
 Beetle.weight    = 1
+Beetle.edible    = true                -- (la Planta carnívora se lo come: lanzado o andando a su alcance)
 Beetle.wantsLevel = true
 Beetle.ownStunLook = true
 function Beetle.sizePx() return FW * S, FH * S end

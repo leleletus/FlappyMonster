@@ -99,6 +99,17 @@
 --   escarabajo_arrolla  (0.5.79) lanzado no se le reinicia la cuenta patas arriba; embistiendo, el IMPACTO empuja al
 --                  jugador y luego (invulnerable) lo atraviesa; noquea a un Gummy, patea y enciende una bomba; sin
 --                  chocar, frena derrapando ('brake'); muerto, aplastado
+--   topo           (0.5.96) el Topo: bajo tierra avanza como montículo hacia el jugador sin hacer daño, debajo de él
+--                  tiembla, asoma y muerde (1), mira y se hunde; fuera, pisado muere; bajo tierra no se le pisa
+--   topo_culetazo  un ground pound cerca de su montículo lo saca mareado (inofensivo, pisado muere) y se vuelve a
+--                  hundir; lejos, nada
+--   topo_suelo     nunca deja su tierra (se para en la piedra persiguiendo; paseando va y viene); el de la fortaleza
+--                  cava piedra y el de la pradera no; cada isla con su hoja
+--   pirana         la Piraña salta hacia un jugador por encima del agua (aviso, salto, mordisco) y vuelve a nadar;
+--                  nadando nunca sale del agua
+--   pirana_pisar   en el aire pisada muere y flota; en el agua pisarla hace daño; en seco coletea y se muere
+--   planta         la Planta carnívora: pasar por encima → aviso, se cierra (1 de vida), mastica; pisada abierta no
+--                  muere, cerrada o dormida sí; se come un Escarabajo lanzado y se duerme; un Gummy se da la vuelta
 --   (ONLY=a,b: solo esos casos)
 --   aire_caja      el aire empuja una caja contra el jugador: el jugador sigue a su lado (empujado), nunca al otro
 --   geiser_peso    el Géiser sube más despacio lo que pesa más con lo que lleva encima y el chorro se corta debajo
@@ -112,6 +123,7 @@
 -- a distintos tiempos, objeto y explosión).
 -- SHOT_PROPS=1: <save>/mechanics_props.png (plantas de la Semilla de todas las islas crecidas, con sus plataformas;
 -- Soplón soplando; Balanza, Caja y caja pequeña; Géiser en erupción y el de la nieve congelado; Ventisca soplando).
+-- SHOT_JUNGLA=1: <save>/mechanics_jungla.png (las poses del Topo, la Piraña y la Planta carnívora).
 -- SHOT_GEYSER=1: <save>/mechanics_geyser.png (una caja grande sobre un Géiser, una foto cada SHOT_EVERY s, 0,25).
 -- SHOT=1: además guarda <save>/mechanics.png (bloques, invisible visible,
 -- Gummies con y sin casco) a tamaño real.
@@ -2784,6 +2796,319 @@ function cases.escarabajo_arrolla()
             tostring(braked), tostring(knocked), tostring(lit), tostring(squashed)))
 end
 
+-- ── 0.5.96: el Topo, la Piraña y la Planta carnívora ──────────────────────────
+-- Suelo de un tile (fila `row`) entre las columnas c0..c1 (las salas de room() tienen el suelo de piedra)
+local function floorOf(put, c0, c1, row, tile)
+    for c = c0, c1 do put[#put + 1] = { c, row, tile } end
+    return put
+end
+local function dropPlayer(level, x, y, vy)
+    local pa = PlayerAdventure:new(x, y)
+    pa.vy, pa.onGround = vy or 300, false
+    level.players = { pa }
+    return pa
+end
+
+-- TOPO: bajo tierra avanza como montículo hacia el jugador (inofensivo), debajo de él tiembla, asoma y muerde (1), se
+-- queda fuera un momento y se hunde; pisado fuera, muere; bajo tierra no se le pisa
+function cases.topo()
+    local level, es = room(26, 9, floorOf({}, 2, 25, 9, 'grass'),
+        { { type = 'mole', col = 6, row = 8, props = { patrol = false, range = 12 } } })
+    local m = es[1]
+    settle(level, es)
+    local pa = playerAt(level, 15, 8)
+    clear()
+    local seen, x0, hp0, hpAtTell, minDx = {}, m.x, pa.hp, nil, 99
+    local disabled = true
+    sim(level, { pa }, es, 9, function()
+        if os.getenv('TRACE_TOPO') and not seen[m.state] then print(('  %s t=%.2f x=%.0f alive=%s'):format(m.state, m.deadTimer, m.x, tostring(m.alive))) end
+        seen[m.state] = true
+        if m.state == 'under' and not m:isBodyDisabled() then disabled = false end
+        if m.state == 'tell' and not hpAtTell then hpAtTell = pa.hp; minDx = math.abs(m.x - pa.x) / T end
+    end)
+    if os.getenv('TRACE_TOPO') then local l = {}; for k in pairs(seen) do l[#l + 1] = k end; print('  estados: ' .. table.concat(l, ',')) end
+    local travelled = (seen.tell and hpAtTell == hp0)
+    local cycle = seen.tell and seen.emerge and seen.bite and seen.look and seen.dive
+    local bit = pa.hp < hp0
+    -- pisado FUERA (mirando tras morder): muere
+    local lv2, e2 = room(16, 9, floorOf({}, 2, 15, 9, 'grass'), { { type = 'mole', col = 8, row = 8, props = { patrol = false, range = 1 } } })
+    local m2 = e2[1]
+    settle(lv2, e2)
+    m2.state, m2.deadTimer = 'look', 0
+    local q = dropPlayer(lv2, m2.x, m2.y - 3 * T, 300)
+    sim(lv2, { q }, e2, 0.5)
+    local stomped = m2.state == 'dead' and q.hp == q.hpMax
+    -- bajo tierra: caerle encima no lo mata (ni hace daño al caer)
+    local lv3, e3 = room(16, 9, floorOf({}, 2, 15, 9, 'grass'), { { type = 'mole', col = 8, row = 8, props = { patrol = false, range = 1 } } })
+    local m3 = e3[1]
+    settle(lv3, e3)
+    local r = dropPlayer(lv3, m3.x, m3.y - 3 * T, 300)
+    local hp3 = r.hp
+    sim(lv3, { r }, e3, 0.3)
+    local safeUnder = m3.alive and m3.state ~= 'dead' and r.hp == hp3
+    check('topo', travelled and disabled and cycle and bit and minDx < 0.4 and stomped and safeUnder,
+        ('avanza bajo tierra %.1f casillas sin daño=%s (cuerpo apagado=%s), tiembla a %.2f casillas · asoma/muerde/mira/se hunde=%s · mordisco: vida %d → %d · fuera pisado muere=%s · bajo tierra pisado sigue vivo y sin daño=%s'):format(
+            math.abs(m.x - x0) / T, tostring(travelled), tostring(disabled), minDx, tostring(cycle), hp0, pa.hp, tostring(stomped), tostring(safeUnder)))
+end
+
+-- TOPO: un ground pound cerca de su montículo lo saca MAREADO (inofensivo, se le pisa) y luego se vuelve a hundir;
+-- un ground pound lejos, nada
+function cases.topo_culetazo()
+    local function pound(dxTiles)
+        local level, es = room(20, 9, floorOf({}, 2, 19, 9, 'grass'), { { type = 'mole', col = 10, row = 8, props = { patrol = false, range = 1 } } })
+        local m = es[1]
+        settle(level, es)
+        m.cd = 99                                          -- (que no asome a morder: solo el culetazo)
+        local pa = dropPlayer(level, m.x + dxTiles * T, m.y - 2 * T, 0)
+        clear(); stub.state.crouch_pressed = true
+        local dizzy = false
+        sim(level, { pa }, es, 1.0, function() if m.state == 'dizzy' then dizzy = true end; stub.state.crouch_pressed = false end)
+        return dizzy, m, level, es, pa
+    end
+    local near, m, level, es, pa = pound(1.5)
+    -- mareado: tocarlo no hace daño
+    pa.x, pa.y, pa.vy = m.x + 10, m.y - 10, 0
+    local hp0 = pa.hp
+    sim(level, { pa }, es, 0.3)
+    local harmless = pa.hp == hp0
+    -- se vuelve a hundir solo
+    pa.x = m.x + 8 * T
+    local dived = false
+    sim(level, { pa }, es, 3.5, function() if m.state == 'dive' or m.state == 'under' then dived = true end end)
+    -- mareado y pisado: muere
+    local near2, m2, lv2, e2 = pound(-1)
+    sim(lv2, {}, e2, 0.6)
+    local q = dropPlayer(lv2, m2.x, m2.y - 3 * T, 300)
+    sim(lv2, { q }, e2, 0.5)
+    local killed = m2.state == 'dead'
+    local far = pound(4)
+    check('topo_culetazo', near and harmless and dived and near2 and killed and not far,
+        ('ground pound a 1,5 casillas: mareado=%s, tocarlo sin daño=%s, se vuelve a hundir=%s · a 1 casilla mareado=%s y pisado muere=%s · a 4 casillas, nada=%s'):format(
+            tostring(near), tostring(harmless), tostring(dived), tostring(near2), tostring(killed), tostring(not far)))
+end
+
+-- TOPO: nunca deja su suelo (para en la piedra, en un borde; paseando se da la vuelta); el de la fortaleza cava piedra;
+-- cada isla con su hoja
+function cases.topo_suelo()
+    -- persiguiendo: se para donde acaba la tierra (el jugador está sobre piedra)
+    local level, es = room(26, 9, floorOf({}, 2, 12, 9, 'grass'), { { type = 'mole', col = 6, row = 8, props = { patrol = false, range = 20 } } })
+    local m = es[1]
+    settle(level, es)
+    local pa = playerAt(level, 20, 8)
+    local maxR = 0
+    sim(level, { pa }, es, 5, function() maxR = math.max(maxR, m.x + m.outerW / 2) end)
+    local stops = maxR <= 12 * T + 2 and m.state == 'under'
+    -- paseando sin nadie: va y viene sin salir de la tierra
+    local lv2, e2 = room(26, 9, floorOf({}, 6, 12, 9, 'grass'), { { type = 'mole', col = 8, row = 8, props = { patrol = false } } })
+    local w = e2[1]
+    settle(lv2, e2)
+    local lo, hi, turns, f0 = 1e9, -1e9, 0, w.facing
+    sim(lv2, {}, e2, 25, function()
+        lo, hi = math.min(lo, w.x - w.outerW / 2), math.max(hi, w.x + w.outerW / 2)
+        if w.facing ~= f0 then turns = turns + 1; f0 = w.facing end
+    end)
+    local wanders = lo >= 5 * T - 2 and hi <= 12 * T + 2 and turns >= 2
+    -- piedra: la pradera no cava, la fortaleza sí
+    local lv3, e3 = room(16, 9, {}, { { type = 'mole', col = 8, row = 8, props = { patrol = false, isle = 'pradera' } },
+                                      { type = 'mole', col = 8, row = 8, props = { patrol = false, isle = 'fortaleza' } } })
+    settle(lv3, e3)
+    local stone = not e3[1]:canTravel(lv3, 1) and e3[2]:canTravel(lv3, 1)
+    -- cada isla, su hoja
+    local bad = {}
+    for _, isle in ipairs(Isles.IDS) do
+        local lv, e = room(10, 9, {}, { { type = 'mole', col = 5, row = 8, props = { isle = isle } } })
+        local set = e[1]:anims()
+        if not set.frames[1].path:find(isle .. '-Sheet.png', 1, true) then bad[#bad + 1] = isle .. ' → ' .. set.frames[1].path end
+    end
+    check('topo_suelo', stops and wanders and stone and #bad == 0,
+        ('persiguiendo se para en la piedra=%s (borde derecho %.2f casillas) · paseando va y viene en su tierra=%s (%.1f..%.1f, %d giros) · piedra: pradera no, fortaleza sí=%s · hojas por isla: %s'):format(
+            tostring(stops), maxR / T, tostring(wanders), lo / T, hi / T, turns, tostring(stone), #bad == 0 and 'las 7' or table.concat(bad, ', ')))
+end
+
+-- Sala con un estanque: agua en las columnas 2..W-1, filas 7..11 (superficie en la y 6·T)
+local function pond(W, ents, extra)
+    local put = {}
+    for c = 2, W - 1 do for r = 7, 11 do put[#put + 1] = { c, r, 'water' } end end
+    for _, q in ipairs(extra or {}) do put[#put + 1] = q end          -- (lo propio, encima del agua)
+    return room(W, 12, put, ents)
+end
+
+-- PIRAÑA: un jugador por encima del agua cerca → aviso y salta hacia él (muerde: 1), vuelve al agua y nada
+function cases.pirana()
+    local level, es = pond(24, { { type = 'piranha', col = 7, row = 10, props = { patrol = false, range = 6 } } })
+    local f = es[1]
+    settle(level, es)
+    local surf = 6 * T
+    local pa = PlayerAdventure:new(11.5 * T, surf - 2 * T)
+    level.players = { pa }
+    local hold = true
+    local seen, top, hp0, back = {}, 1e9, pa.hp, false
+    clear()
+    sim(level, { pa }, es, 4, function()
+        if hold then pa.x, pa.y, pa.vy, pa.onGround = 11.5 * T, surf - 2 * T, 0, false end
+        seen[f.state] = true
+        top = math.min(top, f.y)
+        if pa.hp < hp0 then hold = false; pa.x = 20 * T end
+        if seen.leap and f.state == 'swim' and f.y > surf then back = true end
+    end)
+    local leapt = seen.aim and seen.leap and (surf - top) > T
+    -- nadando en su agua: nunca sale de ella (sin nadie: 6 s)
+    local lv2, e2 = pond(16, { { type = 'piranha', col = 8, row = 9, props = { patrol = false } } }, { { 6, 9, 'solid' } })
+    local g = e2[1]
+    settle(lv2, e2)
+    local dry, x0, x1 = false, 1e9, -1e9
+    sim(lv2, {}, e2, 6, function()
+        if not lv2:liquidAt(g.x, g.y) then dry = true end
+        x0, x1 = math.min(x0, g.x), math.max(x1, g.x)
+    end)
+    -- un jugador en la ORILLA: salta hacia él pero cae en su agua (nunca se tira a la orilla)
+    local put = {}
+    for c = 12, 17 do for rr = 7, 11 do put[#put + 1] = { c, rr, 'solid' } end end
+    local lv3, e3 = pond(18, { { type = 'piranha', col = 7, row = 10, props = { patrol = false, range = 8 } } }, put)
+    local h = e3[1]
+    settle(lv3, e3)
+    local p3 = playerAt(lv3, 14, 6)
+    p3.immortal = true
+    local leaps, flops = 0, false
+    sim(lv3, { p3 }, e3, 8, function()
+        if h.state == 'leap' and h.deadTimer < 1 / 50 then leaps = leaps + 1 end
+        if h.state == 'flop' or not h.alive then flops = true end
+    end)
+    check('pirana', leapt and pa.hp < hp0 and back and not dry and x1 - x0 > 3 * T and leaps >= 2 and not flops,
+        ('aviso=%s salto=%s (sube %.1f casillas sobre el agua) · mordisco: vida %d → %d · vuelve al agua y nada=%s · nadando nunca sale del agua=%s (recorre %.1f casillas) · jugador en la orilla: %d saltos, se tira a la orilla=%s'):format(
+            tostring(seen.aim), tostring(seen.leap), (surf - top) / T, hp0, pa.hp, tostring(back), tostring(not dry), (x1 - x0) / T, leaps, tostring(flops)))
+end
+
+-- PIRAÑA: en el aire se la pisa (muere panza arriba y flota); en el agua no (hace daño); en seco coletea y se muere
+function cases.pirana_pisar()
+    local surf = 6 * T
+    local level, es = pond(20, { { type = 'piranha', col = 10, row = 10, props = { patrol = false, range = 0.1 } } })
+    local f = es[1]
+    settle(level, es)
+    f:startLeap(level, { x = f.x, y = surf - 3 * T })
+    local q
+    local pl = {}
+    sim(level, pl, es, 2, function()
+        if not q and f.state == 'leap' and f.deadTimer >= f.apexT * 0.9 then
+            q = dropPlayer(level, f.x, f.y - 130, 400)
+            pl[1] = q
+        end
+        if os.getenv('TRACE_PIR') and q then print(('  pez %s y=%.0f · jugador pies=%.0f vy=%.0f · %s'):format(f.state, f.y, q:getOuterBounds().y + q:getOuterBounds().h, q.vy, tostring(Interactions.check(q, f)))) end
+    end)
+    local killed = f.state == 'dead' or not f.alive
+    local floated = killed and level:liquidAt(f.x, f.y + f.outerH) ~= nil and f.y - f.outerH / 2 <= surf + 4
+    -- en el agua: caerle encima hace daño y no la mata
+    local lv2, e2 = pond(20, { { type = 'piranha', col = 10, row = 8, props = { patrol = false, range = 0.1, speed = 0 } } })
+    local g = e2[1]
+    settle(lv2, e2)
+    local r = dropPlayer(lv2, g.x, g.y - 2.5 * T, 400)
+    local hp0 = r.hp
+    sim(lv2, { r }, e2, 0.6)
+    local wet = g.alive and g.state ~= 'dead' and r.hp < hp0
+    -- en seco (el agua se va): coletea y se muere
+    local lv3, e3 = pond(14, { { type = 'piranha', col = 7, row = 10, props = { patrol = false } } })
+    local h = e3[1]
+    settle(lv3, e3)
+    for c = 2, 13 do for rr = 7, 11 do lv3.tiles[rr][c] = 0 end end
+    local flop = false
+    sim(lv3, {}, e3, 5, function() if h.state == 'flop' then flop = true end end)
+    local driedOut = flop and (h.state == 'dead' or not h.alive)
+    check('pirana_pisar', killed and floated and wet and driedOut,
+        ('en el aire pisada muere=%s y flota en la superficie=%s · en el agua pisarla: viva=%s, vida %d → %d · en seco coletea y se muere=%s'):format(
+            tostring(killed), tostring(floated), tostring(g.alive and g.state ~= 'dead'), hp0, r.hp, tostring(driedOut)))
+end
+
+-- PLANTA CARNÍVORA: pasar por encima la dispara (aviso → se cierra: 1 de vida); solo cerrada o dormida se la pisa;
+-- se come un Escarabajo lanzado y se duerme; un Gummy no se mete en ella (se da la vuelta)
+function cases.planta()
+    local level, es = room(20, 9, {}, { { type = 'carnivoreplant', col = 10, row = 8 } })
+    local p = es[1]
+    settle(level, es)
+    local pa = playerAt(level, 6, 8)
+    local hp0, seen = pa.hp, {}
+    clear(); stub.state.right = true
+    sim(level, { pa }, es, 1.5, function() seen[p.state] = true end)
+    clear()
+    local snapped = seen.tell and seen.snap and seen.chew and pa.hp == hp0 - 1
+    -- pisarla: abierta, no (la dispara); cerrada (masticando) o dormida, muere
+    local function stompIn(st)
+        local lv, e = room(20, 9, {}, { { type = 'carnivoreplant', col = 10, row = 8 } })
+        local q = e[1]
+        settle(lv, e)
+        if st then q.state, q.deadTimer = st, 0 end
+        local r = dropPlayer(lv, q.x, q.y - 3 * T, 300)
+        sim(lv, { r }, e, 0.45)
+        return q.state == 'dead'
+    end
+    local openSafe, chewDies, sleepDies = not stompIn(nil), stompIn('chew'), stompIn('sleep')
+    -- un Escarabajo patas arriba lanzado a ella: se lo come y se duerme
+    local lv, e = room(24, 9, {}, { { type = 'beetle', col = 6, row = 8, props = { pauses = false, speed = 0, patrol = false } },
+                                     { type = 'carnivoreplant', col = 10, row = 8 } })
+    local b, q = e[1], e[2]
+    settle(lv, e)
+    b:stomp()
+    sim(lv, {}, e, 0.8)
+    local r = playerAt(lv, 5, 8)
+    r.facing = 1
+    r.grabReq = true; sim(lv, { r }, e, 1 / 60)
+    local held = b.state == 'carried'
+    r.grabReq = true; sim(lv, { r }, e, 1 / 60)
+    local slept, sleepT = false, 0
+    sim(lv, { r }, e, 4, function() if q.state == 'sleep' then slept = true; sleepT = sleepT + 1 / 60 end end)
+    local eaten = not b.alive or b.state == 'gone'
+    -- un Gummy que anda hacia ella: se da la vuelta, no se lo come
+    local lg, eg = room(24, 9, {}, { { type = 'gummy', col = 5, row = 8, props = { pauses = false, startDir = 'right', patrol = false } },
+                                      { type = 'carnivoreplant', col = 10, row = 8 } })
+    settle(lg, eg)
+    local gx = 0
+    sim(lg, {}, eg, 5, function() gx = math.max(gx, eg[1].x) end)
+    local gummyOk = eg[1].alive and eg[1].state ~= 'dead' and gx < eg[2].x
+    check('planta', snapped and openSafe and chewDies and sleepDies and held and eaten and slept and sleepT > 3 and gummyOk,
+        ('pasando por encima: aviso=%s se cierra=%s mastica=%s, vida %d → %d · pisada abierta sigue viva=%s, masticando muere=%s, dormida muere=%s · Escarabajo cogido=%s, lanzado: comido=%s y se duerme=%s (%.1f s) · un Gummy se da la vuelta=%s'):format(
+            tostring(seen.tell), tostring(seen.snap), tostring(seen.chew), hp0, pa.hp, tostring(openSafe), tostring(chewDies),
+            tostring(sleepDies), tostring(held), tostring(eaten), tostring(slept), sleepT, tostring(gummyOk)))
+end
+
+-- SHOT_JUNGLA=1: <save>/mechanics_jungla.png — las POSES de los enemigos de 0.5.96 congeladas: el Topo (pradera arriba,
+-- volcán abajo) en montículo, aviso, asomando, mordiendo, mirando, hundiéndose, mareado y aplastado; la Piraña nadando,
+-- avisando, saltando, mordiendo, cayendo y muerta; la Planta abierta, avisando, cerrándose, masticando, dormida y marchita
+local function junglaShot()
+    local moleSt = { { 'under', 0 }, { 'tell', 0.1 }, { 'emerge', 0.1 }, { 'bite', 0.05 }, { 'look', 0.2 }, { 'dive', 0.15 }, { 'dizzy', 0.5 }, { 'dead', 0.1 } }
+    local fishSt = { { 'swim', 0 }, { 'aim', 0.1 }, { 'leap', 0.1 }, { 'leap', 0.42 }, { 'leap', 0.8 }, { 'dead', 0.1 } }
+    local plantSt = { { 'idle', 0 }, { 'tell', 0.1 }, { 'snap', 0.05 }, { 'chew', 0.3 }, { 'sleep', 0.7 }, { 'dead', 0.1 } }
+    local ents, W = {}, 2 + #moleSt * 3 + 1
+    for i = 1, #moleSt do
+        ents[#ents + 1] = { type = 'mole', col = 2 + i * 3, row = 4, props = { isle = 'pradera', patrol = false } }
+        ents[#ents + 1] = { type = 'mole', col = 2 + i * 3, row = 7, props = { isle = 'volcan', patrol = false } }
+    end
+    for i = 1, #fishSt do ents[#ents + 1] = { type = 'piranha', col = 2 + i * 3, row = 9, props = { patrol = false } } end
+    for i = 1, #plantSt do ents[#ents + 1] = { type = 'carnivoreplant', col = 2 + i * 3, row = 13 } end
+    local put = {}
+    for c = 2, W - 1 do put[#put + 1] = { c, 5, 'grass' }; put[#put + 1] = { c, 8, 'ash' } end
+    local level, es = room(W, 14, put, ents)
+    settle(level, es)
+    local k = 0
+    for i, s in ipairs(moleSt) do
+        for _ = 1, 2 do k = k + 1; es[k].state, es[k].deadTimer, es[k].facing = s[1], s[2], 1 end
+    end
+    for _, s in ipairs(fishSt) do
+        k = k + 1
+        es[k].state, es[k].deadTimer, es[k].apexT, es[k].facing = s[1], s[2], 0.5, 1
+    end
+    for _, s in ipairs(plantSt) do k = k + 1; es[k].state, es[k].deadTimer = s[1], s[2] end
+    local canvas = love.graphics.newCanvas(W * T, 14 * T)
+    local ww = WINDOW_W
+    WINDOW_W = W * T                                     -- (el nivel solo dibuja lo que cabe en la ventana)
+    love.graphics.setCanvas(canvas)
+    love.graphics.clear(0.55, 0.75, 0.92, 1)
+    level:render(0, 0)
+    for _, e in ipairs(es) do e:render(0, 0) end
+    love.graphics.setCanvas()
+    WINDOW_W = ww
+    canvas:newImageData():encode('png', 'mechanics_jungla.png')
+    print('captura jungla: ' .. love.filesystem.getSaveDirectory() .. '/mechanics_jungla.png')
+end
+
 function love.load()
     for _, n in ipairs({ 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
                          'helmet_jump', 'helmet_ride', 'helmet_gp', 'helmet_side', 'stomp_fast',
@@ -2792,12 +3117,14 @@ function love.load()
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
                          'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado', 'techo_pinchos',
-                         'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'islas_arte', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'balanza_salto', 'escarabajo', 'escarabajo_lanzado', 'escarabajo_ruta', 'escarabajo_manos', 'escarabajo_arrolla' }) do
+                         'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'islas_arte', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'balanza_salto', 'escarabajo', 'escarabajo_lanzado', 'escarabajo_ruta', 'escarabajo_manos', 'escarabajo_arrolla',
+                         'topo', 'topo_culetazo', 'topo_suelo', 'pirana', 'pirana_pisar', 'planta' }) do
         if not os.getenv('ONLY') or (',' .. os.getenv('ONLY') .. ','):find(',' .. n .. ',', 1, true) then cases[n]() end
     end
     if os.getenv('SHOT_BOMB') then bombShot() end
     if os.getenv('SHOT_PROPS') then propsShot() end
     if os.getenv('SHOT_GEYSER') then geyserShot() end
+    if os.getenv('SHOT_JUNGLA') then junglaShot() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
     if not os.getenv('SHOT') then love.event.quit(fails == 0 and 0 or 1); return end
     -- Escena para la captura

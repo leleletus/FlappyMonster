@@ -26,6 +26,11 @@
 --   bubbles      genera burbujas ambientales en cuerpos grandes
 --   splashIn / splashOut  sonidos al entrar / salir
 --
+--  Excavable:
+--   diggable   true = tierra BLANDA en la que cava el Topo (types/enemies/mole.lua): tierra, césped, arena, nieve,
+--              ceniza, barro. La piedra, el ladrillo, el hielo, la madera y la lava no (el topo de la fortaleza y el de
+--              la cueva, además, la piedra de su isla: lo decide el tipo).
+--
 --  Sonido:
 --   breakSound id de Sound al ROMPERSE un trozo de este material (los cascotes que
 --              lanza el Escarabajo Gigante; 0.5.79). Por defecto, el de piedra.
@@ -44,7 +49,7 @@ Materials.DEFAULTS = {
     friction = 1, speedMult = 1, conveyor = 0, contact = nil,
     liquid = false, gravityMult = 1, jumpMult = 1, drag = 0, drown = false,
     tint = nil, distort = false, bubbles = false, splashIn = nil, splashOut = nil,
-    color = { 0.6, 0.6, 0.6 }, breakSound = 'blockBreak',
+    color = { 0.6, 0.6, 0.6 }, breakSound = 'blockBreak', diggable = false,
 }
 
 local CONTACTS = { kill = true, hurt = true }
