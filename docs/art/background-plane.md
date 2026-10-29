@@ -85,3 +85,6 @@ of the sky layers. No stencil (Switch / Android).
 - 2026-10-28, after retouching some backgrounds the user settled it: DARK levels (cave backgrounds, dusk, night, `dark`)
   keep the current shade (`SHADE` 0.56 / 0.59 / 0.66); BRIGHT levels (day, a surface sky biome, not dark) get a darker
   one (`SHADE_DAY` 0.44 / 0.47 / 0.54), or it was hard to tell what is background. `BackPlane.shadeOf(level)`.
+- 2026-10-29: the user reversed it — in day levels the plane looked much darker than it should ("haz que sean iguales e
+  incluso un poquito menos oscuros"): `SHADE` and `SHADE_DAY` are now the SAME, a little lighter than the first preview
+  (0.62 / 0.65 / 0.72). `shadeOf` and the two values stay, so a level kind can get its own shade again by data.

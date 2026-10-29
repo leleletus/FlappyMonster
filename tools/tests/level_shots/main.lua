@@ -6,6 +6,8 @@
 --   CROP=c0,r0,c1,r1  solo ese trozo del nivel (casillas, desde 1, ambos incluidos): para mirar de cerca unos bloques
 --   TAG=texto  se añade al nombre de la salida (shot_<nivel>_<texto>.png): antes / después sin pisarse
 --   TIME=day|dusk|night  la hora del nivel (un fondo a las tres horas: TIME=night TAG=night)
+--   SECS=n  segundos de simulación antes de la foto (1 por defecto): ver una trampa con reloj a su hora (el alud de
+--           la_cima cayendo: SECS=11)
 --   FIXED=1  foto REPETIBLE (azar con semilla fija y reloj parado): dos ejecuciones dan el mismo PNG, para
 --            comparar antes / después de mover o rehacer algo que no debe cambiar el dibujo
 -- Salida: <save>/shot_<nivel>.png  (~/.local/share/love/fm_test_levelshots/)
@@ -39,7 +41,7 @@ local function shot(path)
     for _, pl in ipairs(level.entities) do es[#es + 1] = Entities.create(pl) end
     level.liveEntities, level.players = es, {}
     BossZones.link(level, es)
-    for _ = 1, 60 do
+    for _ = 1, math.max(1, math.floor((tonumber(os.getenv('SECS')) or 1) * 60 + 0.5)) do
         level.solidBodies = Entities.solidBodies(es)
         level:update(1 / 60); level:updateFoliage(1 / 60)
         for _, e in ipairs(es) do if e.alive then e:update(1 / 60, level) end end

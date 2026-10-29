@@ -64,7 +64,7 @@ command line.
 
 **Readability rules** (the path must stay readable): nothing on the plane behind or 1 tile around spikes, lava, water,
 platforms and loose (non-terrain) blocks — 2 tiles above them, where the player lands —, readable entities (traps,
-mechanisms, items: `READ_ENTS`; falling ones also down their column), checkpoints, the finish, the start, boss zones
+mechanisms, items: `READ_ENTS`; falling ones also down their column; an avalanche, its whole chute ±1), checkpoints, the finish, the start, boss zones
 (+3 columns, their arena keeps its own plane) and boss walls. LIGHT zones (start ±8 columns, finish ±7, checkpoints ±4)
 only get things 2 tiles high and no big trees. Structures stand on front terrain (blocks joined to the frame or masses
 of ≥ 12), are never taller than the free space above them minus 1 (they shrink whole, no notches), fill 2 rows down

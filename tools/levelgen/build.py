@@ -12,7 +12,7 @@ import levels_run
 mods = [levels_run]
 # (la jungla: un módulo por nivel — se hicieron a la vez —; levels_jungle_bonus = la arena del bonus)
 for name in ('levels_hunt', 'levels_koth', 'levels_boss', 'levels_water', 'levels_batch2', 'levels_chase',
-             'levels_jungle_1', 'levels_jungle_2', 'levels_jungle_3', 'levels_jungle_4', 'levels_jungle_bonus'):
+             'levels_jungle_1', 'levels_jungle_2', 'levels_jungle_3', 'levels_jungle_4', 'levels_jungle_bonus', 'levels_montanas_bonus', 'levels_montanas_2', 'levels_montanas_1', 'levels_costa_helada_1', 'levels_costa_helada_2','levels_costa_helada_3'):
     try:
         mods.append(__import__(name))
     except ImportError:

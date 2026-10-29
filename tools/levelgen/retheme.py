@@ -76,6 +76,12 @@ THEMES = {
     # la JUNGLA (tools/levelgen/levels_jungle_*.py)
     'senda_del_dosel': 'jungle', 'rio_revuelto': 'jungle', 'templo_de_los_pesos': 'jungle', 'la_estampida': 'jungle',
     'claro_de_la_balanza': 'jungle',
+    'la_cima': 'snow',                                   # bonus de las Montañas Heladas (levels_montanas_bonus.py)
+    'ladera_del_alud': 'snow',                           # Montañas Heladas 4 (levels_montanas_2.py)
+    'el_teleferico': 'snow',                             # Montañas Heladas 2 (levels_montanas_1.py)
+    'tempanos_a_la_deriva': 'frozen_coast',              # Costa Helada 2 (levels_costa_helada_1.py)
+    'bahia_de_las_mareas': 'frozen_coast',               # Costa Helada 3 (levels_costa_helada_2.py)
+    'bajo_el_hielo': 'frozen_coast',                     # Costa Helada 4 (levels_costa_helada_3.py)
 }
 
 # Fondo de superficie (src/fx/Sky.lua), hora y fondo de profundidad (opcional) de cada nivel: `--sky` los escribe SOLO si el nivel
@@ -89,6 +95,12 @@ SKY = {
     'torre_viento': ('snow', 'night'), 'lago_helado': ('snow', 'dusk'), 'glaciar_cangrejo': ('snow', 'day'), 'reino_gummy': ('meadow', 'day'), 'gruta_lugubre': ('cave', 'night'), 'gruta_del_farol': ('cave', 'night'), 'cavernas_cristal': ('cave', 'day'), 'mina_inundada': ('mountain', 'day', 'cave'),
     'laberinto_submarino': ('coast', 'day', 'underwater'), 'fabrica_morteros': ('fortress', 'dusk'),
     'fortaleza_malvada': ('fortress', 'night'), 'taller_trampas': ('fortress', 'day', 'cave'), 'coliseo_pinchos': ('fortress', 'dusk'),
+    'la_cima': ('snow', 'day'),
+    'ladera_del_alud': ('snow', 'dusk'),
+    'el_teleferico': ('snow', 'day'),
+    'tempanos_a_la_deriva': ('frozen_coast', 'day'),
+    'bahia_de_las_mareas': ('frozen_coast', 'dusk'),
+    'bajo_el_hielo': ('frozen_coast', 'night', 'underwater'),
 }
 
 

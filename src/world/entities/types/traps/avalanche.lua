@@ -135,6 +135,16 @@ function Aval:pushAt(x, y)
     return nil
 end
 
+-- Dónde va a caer (avisando) o cae ya la nieve: para que los bots se aparten (src/ai/Bot.lua, como el viento del
+-- Soplón y del Géiser) — { x0, y0, x1, y1 } o nil. La franja entera, hasta la columna que llega más abajo
+function Aval:windArea()
+    local st = self.state
+    if st ~= 'warn' and st ~= 'pour' and st ~= 'drain' then return nil end
+    local lo = 0
+    for _, b in ipairs(self:bottoms()) do lo = math.max(lo, b) end
+    return { x0 = self.x0, y0 = self.top, x1 = self.x1, y1 = self.top + lo }
+end
+
 -- Daño (Interactions: caja de peligro 'hurt' = 1 de vida, la regla de siempre)
 function Aval:getHazardBoxes()
     if self.props.damage == false then return nil end

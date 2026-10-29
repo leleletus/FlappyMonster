@@ -29,11 +29,12 @@ Worlds.LIST = {
     { id = 'jungla',    levels = { 'senda_del_dosel', 'rio_revuelto', 'templo_de_los_pesos', 'la_estampida' },        boss = 'templo_escarabajo', bonus = 'claro_de_la_balanza' },
     -- 4 La Fortaleza: morteros y bombas primero; luego el taller denso y el tren (cámara automática)
     { id = 'fortaleza', levels = { 'fabrica_morteros', 'cantera_dinamita', 'taller_trampas', 'tren_fugaz' },               boss = 'fortaleza_malvada', bonus = 'ciudadela_alterna' },
-    -- 5 Las Montañas Heladas: las cumbres y la torre (subir); en lo alto, la Gran Bola de Nieve
-    -- (0.5.100: la isla helada se parte en dos; faltan sus niveles 3 y 4 y su bonus)
-    { id = 'nieve',     levels = { 'cumbres_escarcha', 'torre_viento' },                                              boss = 'lago_helado' },
-    -- 6 La Costa Helada: la fábrica que congela el mar; el Mega Crabby helado en su glaciar (faltan sus niveles 2-4)
-    { id = 'costa_helada', levels = { 'fabrica_criogenica' },                                                       boss = 'glaciar_cangrejo', bonus = 'lago_de_cristal' },
+    -- 5 Las Montañas Heladas: las cumbres, el teleférico, la torre (subir) y la ladera del alud (bajar) hasta el lago de
+    -- la Gran Bola de Nieve (0.5.100: la isla helada partida en dos; 0.5.102: sus niveles nuevos y el bonus)
+    { id = 'nieve',     levels = { 'cumbres_escarcha', 'el_teleferico', 'torre_viento', 'ladera_del_alud' },          boss = 'lago_helado', bonus = 'la_cima' },
+    -- 6 La Costa Helada: la fábrica que congela el mar, los témpanos, la bahía de las mareas y bajo el hielo hasta el
+    -- glaciar del Mega Crabby helado
+    { id = 'costa_helada', levels = { 'fabrica_criogenica', 'tempanos_a_la_deriva', 'bahia_de_las_mareas', 'bajo_el_hielo' }, boss = 'glaciar_cangrejo', bonus = 'lago_de_cristal' },
     -- 7 Las Cuevas: cristal, los dos laberintos de agua y el templo a oscuras justo antes del jefe a oscuras
     { id = 'cuevas',    levels = { 'cavernas_cristal', 'nivel01', 'laberinto_submarino', 'templo_del_eco' },             boss = 'gruta_del_farol', bonus = 'cripta_del_silencio' },   -- (Saltarín Gigante; el Mega Crabby lúgubre de gruta_lugubre pasa a jefe secreto)
     -- 8 El Final (el volcán): lava; la lluvia de pinchos (cámara automática) es la erupción, antes del Espejo

@@ -7,7 +7,7 @@ destroys the user's hand edits (`--show` does too). Always `python3 tools/levelg
 `tools/levelgen/retheme.py` has no `--help`: any unknown flag runs it over every level — always pass level names.
 
 **Files** (`tools/levelgen/`): `lib.py` (grid helpers), `levels_run.py`, `levels_hunt.py`, `levels_koth.py`,
-`levels_boss.py`, `levels_water.py`, `levels_batch2.py`, `levels_chase.py`, `levels_jungle_1..4.py` + `levels_jungle_bonus.py` (the jungle, 0.5.99: one module per level; each docstring gives its build order) (the builders), `build.py`, `retheme.py`
+`levels_boss.py`, `levels_water.py`, `levels_batch2.py`, `levels_chase.py`, `levels_jungle_1..4.py` + `levels_jungle_bonus.py` (the jungle, 0.5.99: one module per level; each docstring gives its build order), `levels_montanas_bonus.py` (`la_cima`, the Frozen Mountains bonus), `levels_montanas_2.py` (`ladera_del_alud`, Frozen Mountains 4: the avalanche descent), `levels_costa_helada_2.py` (`bahia_de_las_mareas`, Frozen Coast 3: the tide harbour; its solver checks fix the water at low / high tide with the icebergs as blocks — table `SOLVES` — and `--tidy` runs after retheme), `levels_costa_helada_3.py` (`bajo_el_hielo`, Frozen Coast 4: under the ice sheet in freezing water — breath holes of thin ice, fishermen's igloos as air pockets, sinking floes, a floe pushed by swimming; solver variants `SOLVE=…` in its docstring) (the builders), `build.py`, `retheme.py`
 ([retheme](retheme.md)), `add_apples.py` (places food; re-run after a rebuild), `make_sets.py` (film sets),
 `arenas/` (test arenas + their generators; boss levels graft them).
 
@@ -32,6 +32,11 @@ the whole level), `bot_nav` for arenas.
   **`build.py --show name` ALSO rewrites every level** (it happened on 2026-10-03: 36 files had to be restored with
   `git checkout HEAD -- assets/levels`). To LOOK at a level, read its JSON (tile id = `raw % 16 + 16 * (raw / 2^17 % 16)`,
   `TileCodec`); never call build.py without `--only`.
+  **Freezing water** (`coldWater` / flood `cold`, 2026-10-29): `level_solve` keys its states on the frost and the ice
+  block too (`frostT`, `iceT`): before, the moment the player froze every state inside the ice block looked like a repeat
+  and the search died there. Under ice: the double jump reaches a ceiling 2 rows above the floor and bumps thin ice
+  (half-cell hitbox) there, but climbing OUT through a hole needs 3 → a breath hole without a ledge under it never
+  lets you out (`bajo_el_hielo`).
   Underwater design numbers: one jump ≈ 1.1 tiles, double ≈ 2.1 (jumps only come back on
   ground) → vertical climbs need footholds: ladders of waterlogged drop-through
   platforms (`DROP + 16`, one per row). Surfacing (head in air) refills air at once;

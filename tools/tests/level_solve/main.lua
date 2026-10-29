@@ -74,6 +74,9 @@ local function solve(path)
         return table.concat({ math.floor(pa.x / (explore and 24 or 14)), math.floor(pa.y / (explore and 24 or 14)), pa.onGround and 1 or 0,
             pa.jumpsLeft, math.floor(pa.vy / 260), math.floor(pa.vx / 120), pa.crouching and 1 or 0,
             math.floor((pa.drownTimer or 0) / 3),          -- (con más aire no es el mismo estado)
+            -- (agua helada: con menos frío, o dentro del bloque de hielo, tampoco; si no, al congelarse se
+            -- descartaban todos los estados de dentro del hielo por repetidos y no se salía de ahí)
+            math.floor((pa.frostT or 0) / 2), math.floor((pa.iceT or 0) * 2),
             pa.gpPhase == 'windup' and 1 or (pa.gpPhase == 'fall' and 2 or 0), math.floor((pa.dropHoldT or 0) * 8), pa.dropping and 1 or 0 }, ',')
     end
     local s0 = P.packOwnState(pa)

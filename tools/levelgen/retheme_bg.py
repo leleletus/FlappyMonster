@@ -31,7 +31,7 @@ SIZE = {'big_oak': (5.8, 6.1), 'big_birch': (3.5, 6.6), 'big_fir': (3.3, 7.1), '
         'twin_palm': (5.9, 7.1), 'young_palm': (2.9, 2.8), 'snowy_fir': (3.6, 7.1), 'snowy_fir_small': (2.3, 3.8),
         'dead_tree': (5.1, 5.8), 'giant_mushroom': (4, 4.9), 'giant_mushroom_violet': (4, 4.9), 'old_tree': (4.9, 5.4),
         'cypress': (1.5, 6.1), 'ceiba': (3.6, 8.1), 'strangler_fig': (2.6, 6.1),
-        'hazel_bush': (2.3, 1.3), 'boulder': (1.8, 1.1), 'stump': (1.4, 0.9), 'snow_rock': (1.6, 1), 'basalt_rock': (1.1, 0.8),
+        'hazel_bush': (2.3, 1.3), 'boulder': (1.8, 1.1), 'stump': (1.4, 0.9), 'snow_rock': (1.6, 1), 'iceberg': (1.9, 1.7), 'basalt_rock': (1.1, 0.8),
         'charred_stump': (1.4, 1), 'obsidian_shards': (1.3, 1.1), 'beach_rocks': (1.5, 0.8), 'driftwood': (2, 0.7),
         'cave_crystals': (1.1, 1), 'cave_boulder': (1.6, 1.1), 'broken_pillar': (1, 2.6), 'stone_idol': (1, 1.6),
         'fallen_block': (1.4, 0.8), 'urn': (1.1, 1.2), 'broken_column': (1.8, 2.6), 'mushroom_cluster': (1.5, 1)}
@@ -182,6 +182,8 @@ class Gen:
                 box(c - 2, r - 3, c + 2, r + 1)
                 for x in range(c - LIGHT_R['checkpoint'], c + LIGHT_R['checkpoint'] + 1):
                     if 0 <= x < W: cap[x] = min(cap[x], LIGHT_H)
+            elif tp == 'avalanche':                             # (el alud: su canal entero, hasta abajo, se tiene que leer)
+                box(c - 1, r - 1, c + int(props.get('width', 2)), r + int(props.get('length', 10)))
             elif tp in READ_ENTS or tp.startswith('trampoline'):
                 box(c - 1, r - 1, c + 1, r + 1)
                 if tp in FALLING:

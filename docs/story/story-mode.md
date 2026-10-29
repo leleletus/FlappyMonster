@@ -40,9 +40,10 @@ Xtra Extreme. **Harness:** `story_flow` (the real game end to end; many named ca
 
 - **The worlds today:** 1 `pradera`, 2 `costa`, **3 `jungla`** (0.5.99: `senda_del_dosel`, `rio_revuelto`,
   `templo_de_los_pesos`, `la_estampida`, boss `templo_escarabajo`, bonus `claro_de_la_balanza`), 4 `fortaleza`,
-  **5 `nieve` = the FROZEN MOUNTAINS** (`cumbres_escarcha`, `torre_viento`, boss `lago_helado` — the Snowball Boss,
-  no longer a mid-island boss —; two more levels and a bonus to come), **6 `costa_helada` = the FROZEN COAST**
-  (0.5.100: `fabrica_criogenica`, boss `glaciar_cangrejo`, bonus `lago_de_cristal`; three more levels to come),
+  **5 `nieve` = the FROZEN MOUNTAINS** (`cumbres_escarcha`, `el_teleferico`, `torre_viento`, `ladera_del_alud`, boss
+  `lago_helado` — the Snowball Boss, no longer a mid-island boss —, bonus `la_cima`), **6 `costa_helada` = the FROZEN
+  COAST** (0.5.100; `fabrica_criogenica`, `tempanos_a_la_deriva`, `bahia_de_las_mareas`, `bajo_el_hielo`, boss
+  `glaciar_cangrejo`, bonus `lago_de_cristal`; the new levels since 0.5.102),
   7 `cuevas`, 8 `final`. The split (the user, 2026-10-29): "there are 8 bosses and 7 islands" — the Snowball and the
   Icy Mega Crabby shared the ice island; now every island has one boss and one shard, with no new shard. Music: the
   old ice set (`nieve_*`, `map_nieve` → `map_costa_helada`) goes to the Coast; the Mountains get a new set (pending).

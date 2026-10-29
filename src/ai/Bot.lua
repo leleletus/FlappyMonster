@@ -154,6 +154,7 @@ local function windy(level, x, y)
     end
     return false
 end
+Bot.windy = windy
 local function calmNodes(nav, level, set)
     if not set or not level.pushers or not level.pushers[1] then return set, false end
     local calm, any, cut = {}, false, false
@@ -163,7 +164,23 @@ local function calmNodes(nav, level, set)
         else calm[id], any = true, true end
     end
     if any and cut then return calm, true end
-    return set, false
+    return set, false, cut                                   -- (3º: TODA la zona está en el viento)
+end
+-- A CUBIERTO junto a la zona: casillas fuera de ella y de todo viento, a pocas casillas, con suelo y sin agua (la zona
+-- entera bajo el ALUD de la_cima: cuando retumba se sale y espera al lado, y vuelve cuando pasa) — conjunto o nil
+local SHELTER_X, SHELTER_Y = 6, 3
+local function shelterNodes(nav, level, area)
+    local out, any = {}, false
+    for id, n in pairs(nav.nodes) do
+        local y = n.y or (n.r * TILE_PX - 40)
+        if n.x >= area.x0 - SHELTER_X * TILE_PX and n.x < area.x1 + SHELTER_X * TILE_PX
+           and y >= area.y0 - SHELTER_Y * TILE_PX and y < area.y1 + SHELTER_Y * TILE_PX
+           and not (n.x >= area.x0 and n.x < area.x1 and y >= area.y0 and y < area.y1)
+           and not windy(level, n.x, y - 30) and BotNav.standable(nav, n, level) and not flooded(level, n.x, y) then
+            out[id], any = true, true
+        end
+    end
+    return any and out or nil
 end
 
 -- ¿En qué zona está ese jugador (o nil)?
@@ -201,6 +218,8 @@ function Bot:_goal(level, target)
             hunt = theirs ~= nil and close
         end
     end
+    -- (no va a por ti adonde está a punto de soplar o de caer el alud: ya te echa eso)
+    if hunt and windy(level, target.x, target.y) then hunt = false end
     if hunt then
         local tn = BotNav.nodeAt(self.nav, target.x, target.y, target:getOuterBounds().h)
         if tn then
@@ -218,7 +237,14 @@ function Bot:_goal(level, target)
     if best then
         if not best._nodes then return nil, 'hold' end
         local here = pa.onGround and BotNav.nodeAt(self.nav, pa.x, pa.y, self:_h())
-        local calm, cut = calmNodes(self.nav, level, best._nodes)
+        local calm, cut, all = calmNodes(self.nav, level, best._nodes)
+        if all then                                     -- (TODA la zona: sale y espera a cubierto al lado — el alud —)
+            local sh = shelterNodes(self.nav, level, best)
+            if sh then
+                if here and sh[here] then return { [here] = true }, 'shelter', self.nav.nodes[here].x end
+                return sh, 'shelter'
+            end
+        end
         if cut and here and not calm[here] then return calm, 'zone' end          -- (le va a soplar: se aparta)
         if inArea(best, pa.x, pa.y) and pa.onGround and (not best._nodes or (here and best._nodes[here])) then return nil, 'hold' end
         if cut then return calm, 'zone' end
@@ -487,7 +513,7 @@ function Bot:think(dt, level, target)
     end
     local goals, kind
     local approach
-    if self.goalFn then goals, kind, approach = self.goalFn(self, level) else goals, kind = self:_goal(level, target) end
+    if self.goalFn then goals, kind, approach = self.goalFn(self, level) else goals, kind, approach = self:_goal(level, target) end
     -- ACTIVADOR ON/OFF: si pulsarlo le conviene (y no está persiguiéndote), va a por él
     local press = (kind ~= 'hunt' and not self.goalFn) and self:_switchPlan(level, target) or nil
     if press then
@@ -524,7 +550,8 @@ function Bot:think(dt, level, target)
     -- (puntuando en una zona solo ataca si tú estás en ELLA: no la deja por ti; y nunca sobre suelo rompible)
     local myZone = pa.onGround and areaOf(level, pa)
     if target and not target.dying and not target:isPushProtected() and pa.onGround and self.cd <= 0
-       and (not myZone or areaOf(level, target) == myZone) and self:_canPound(level, target) and not breakableUnder(level, pa) then
+       and (not myZone or areaOf(level, target) == myZone) and self:_canPound(level, target) and not breakableUnder(level, pa)
+       and not (windy(level, target.x, target.y) and not windy(level, pa.x, pa.y)) then        -- (ni se mete en el alud / el viento a por ti)
         local dx, dy = target.x - pa.x, target.y - pa.y
         if math.abs(dx) < Bot.ATTACK_R * TILE_PX and dy > -1.6 * TILE_PX and dy < 0.8 * TILE_PX then
             self.mode, self.atkT = 'attack', 0
@@ -597,7 +624,7 @@ function Bot:think(dt, level, target)
     end
     local e = self.path and self.path[1]
     if e then self.noPathT = 0
-    elseif kind ~= 'roam' and kind ~= 'hunt' then self.noPathT = (self.noPathT or 0) + dt end      -- (también en el aire: a lo bruto se pasa el rato saltando)
+    elseif kind ~= 'roam' and kind ~= 'hunt' and kind ~= 'shelter' then self.noPathT = (self.noPathT or 0) + dt end      -- (también en el aire: a lo bruto se pasa el rato saltando; a cubierto, quieto a propósito)
     -- (con objetivo propio y ya en él — o sin camino — pero sin haberlo TOCADO — la meta —: anda hasta el punto
     -- `approach` que devuelve opts.goal, saltando si algo lo frena)
     -- (y YA en él, quieto: si no, caía abajo, al "a lo bruto" hacia el CENTRO de la casilla —a unos px del punto, al

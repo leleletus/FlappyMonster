@@ -568,7 +568,7 @@ it follows the sprite memory best (flat colours, slim original silhouette, not r
   `vacio`, `red`; `SHOT=1` → `penguin.png` with every pose, the player on the sled and the boxes); `online_smoke
   LEVEL=tools/tests/online_smoke/pinguino.json WATCH=penguin WANT=walk,slide` (a real server and client). Online: the client
   draws the sled 100 ms late; the `red` case measures a predicted rider 6 steps behind the server (≤ 32 px apart, never
-  off the sled) — not yet played with a real server. NOT placed in any level yet; feel (speeds, ride time, the squawk) and
+  off the sled) — not yet played with a real server. Placed in the Frozen Coast levels (0.5.102: `tempanos_a_la_deriva`, `bahia_de_las_mareas`, `bajo_el_hielo`); feel (speeds, ride time, the squawk) and
   the look at game size not judged by a person.
 
 ## Snowball (`snowball`, «Bola de Nieve») — Frozen Mountains
@@ -606,7 +606,7 @@ only needs its art and a JSON.
   `launchState`). Measured: 0 px correction on a local server, ≤ 19 px with 120 ms lag and 10 % loss.
 - **Sounds:** `tools/sounds/snowball.py` → `enemies/snowball/{windup,launch,shove,bonk}.wav` (`snowballWindup`…), played
   on entering windup / charge / recoil / dazed. Not listened to by anyone.
-- Not placed in any level yet. Not judged by a person: feel (push strength, wind-up), sounds, the look at game scale.
+- Placed in the Frozen Mountains levels (0.5.102: `el_teleferico`, `ladera_del_alud`, the bonus `la_cima`). Not judged by a person: feel (push strength, wind-up), sounds, the look at game scale.
 - Tests: `snowball_rules` (every rule above, the Beetle's sweep, client = server parity; `LOOK=1` → `snowball_look.png`);
   `online_smoke LEVEL=tools/tests/online_smoke/bola_de_nieve.json MODE=hunt WATCH=snowball WANT=windup,charge WANTSHOVE=1`.
 

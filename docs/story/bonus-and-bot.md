@@ -111,6 +111,34 @@ step that enters the wind (not counted as stuck) — the user asked for the bot 
 Gusts from the arenas. Gusts in point-zone arenas follow the arena rule (respawn, 40 % of their points: 6). The
 `bot_nav` harness now simulates the air too (`level.pushers`, like AdventureState).
 
+### The avalanche over the zone (2026-10-29, `la_cima`)
+
+The Frozen Mountains bonus **La Cima** (`la_cima`, "The Summit", generator `tools/levelgen/levels_montanas_bonus.py`;
+48x18, music `montana_bonus`, background `snow`, day; NOT yet in `Worlds.lua`: the integrator adds it) puts its only
+point zone (cols 22-27) on the summit right under an **avalanche chute** of the same width, hanging from a glacier
+lip on the top frame: first warning at 8 s, then every 15 s (warn 1.6 s, 3 s of snow). Nobody can score while it
+pours; the two cells on each side of the summit are the cover. Left: valley, two steps, the shoulder, a **cable car**
+(2 cabins, ping-pong, valley col 4 → shoulder col 18, decks 60 px above the floor and the summit). Right: ice-rock
+steps down to a valley with a slippery ice lake, two ice ledges (a star). Two **Snowballs** (shoulder, right step)
+and an icy Gummy, all respawning at 40 % (8 / 4); two stars, an apple.
+
+**How the bot plays it (generic: any `windArea()` that covers a WHOLE zone):**
+- The avalanche says where it will pour (`Avalanche:windArea()`: the band down to its lowest column, while warning,
+  pouring and draining), like the Gust and the Geyser.
+- When EVERY cell of its zone is in a wind area (`calmNodes` 3rd value), `_goal` returns `shelter`: the nearest
+  standable cells outside the zone and out of the wind within 6 tiles across / 3 up or down (`shelterNodes`); there it
+  stands still (`approach`), and goes back when the area clears. Waiting there does not count toward `GIVE_UP`.
+- It does not hunt you, nor jump at you, while you stand in a wind area and it does not (the snow throws you out
+  anyway; before, it followed you into the chute).
+- Before this the bot (immortal) simply stood in the chute and kept SCORING while it poured: its hits never recoil it
+  (`Interactions` calls `onHurtPlayer` only when the hit takes HP).
+
+**Harness** `bot_nav` (`la_cima` is in its default list, 13 arenas): `alud` — the time with the whole zone under the
+snow does not count for "inside n %"; alone, the torrent may catch the bot at most once (it catches it 0 times;
+hunting a dummy that stands in the zone, 1-4); `shelter` is not "stuck". Seeds 1-3 and starts in the left valley,
+the right valley and the high ice ledge: arrives in 7-14 s, inside 70-76 %, 0 hits alone. The nav graph has 21 cabin
+nodes (cable car poses) but in those runs the bot climbs on foot; riding the cable car is not verified.
+
 ## Zones that ride a moving body (0.5.99)
 
 The jungle bonus **El Claro de la Balanza** (`claro_de_la_balanza`, generator `tools/levelgen/levels_jungle_bonus.py`)

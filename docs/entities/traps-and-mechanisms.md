@@ -150,6 +150,8 @@ generic moving platform on a cable"). Both generic: any island can use them. Har
   bombs… fall faster; jumping up through it is hard); with `damage` (default) its stream segments are hazard boxes with
   `effect = 'hurt'` (1 HP + the usual invulnerability) and `onHurtPlayer` recoils the player sideways towards the
   nearer edge of the chute (`PlayerAdventure:recoil`).
+- Bots: `windArea()` = the band down to its lowest column while warning, pouring or draining — the bonus bot stays
+  out of it and, if it covers its whole zone, waits at the side ([bonus and bot](../story/bonus-and-bot.md#the-avalanche-over-the-zone-2026-10-29-la_cima)).
 - Sounds come from the point of the band nearest the closest player (`Sound.playAt`): a chute can be tall. Its `x, y`
   is the middle of the band (≤ 30 tiles long: within `Protocol.NEAR_Y` of any point of it, so the snapshot filter
   needs nothing special).
@@ -178,8 +180,8 @@ generic moving platform on a cable"). Both generic: any island can use them. Har
   `netBounds()` = the box of the whole cable: the server sends it to whoever is near ANY part of it (a generic hook in
   the snapshot filter, [netcode](../architecture/netcode.md)). Sounds `cablecarMove` (while moving) and `cablecarStop`
   (arrives / leaves an end, starts with weight), from the cabin nearest a player.
-- Bot: `navPoses()` / `navPose(u)` (up to 12 poses along the cycle) like the Scale; NOT yet verified with a bot run
-  (no bonus level uses it).
+- Bot: `navPoses()` / `navPose(u)` (up to 12 poses along the cycle) like the Scale. The bonus `la_cima` has one (its
+  nav graph holds 21 cabin nodes), but in the `bot_nav` runs the bot climbs on foot: riding it is NOT yet verified.
 - Art per island (`isleArt`; `assets/images/mechanisms/cablecar/<isla>-cabin|trolley-Sheet|cable|pulley-Sheet|tower|
   towertop|towerfoot|hanger|clamp.png`): neutral metal and wood, each island its paint; the snow one has snow on top.
   `tools/art/world/make_avalanche_cablecar.py`.

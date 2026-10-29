@@ -16,11 +16,12 @@ local TileCodec = require 'src/world/tiles/TileCodec'
 
 local BackPlane = {}
 
--- Lo oscuro del plano (con un punto azulado hacia el cielo). Dos tonos (2026-10-28, el usuario, tras retocar fondos):
--- en los niveles CLAROS — de día, al aire libre y sin oscuridad — más oscuro, o no se distingue bien qué es fondo; en los
--- oscuros (cueva, atardecer, noche, a oscuras) el de la primera vista previa, que la hora y la oscuridad ya oscurecen.
-BackPlane.SHADE     = { 0.56, 0.59, 0.66 }
-BackPlane.SHADE_DAY = { 0.44, 0.47, 0.54 }
+-- Lo oscuro del plano (con un punto azulado hacia el cielo). Dos tonos posibles: los niveles CLAROS — de día, al aire
+-- libre y sin oscuridad — usan SHADE_DAY; los oscuros (cueva, atardecer, noche, a oscuras), SHADE. Hoy son IGUALES y algo
+-- más claros que la primera vista previa (el usuario, 2026-10-29: de día se veía bastante más oscuro de lo que debía;
+-- "iguales e incluso un poquito menos oscuros"; antes: SHADE 0.56 / 0.59 / 0.66, SHADE_DAY 0.44 / 0.47 / 0.54).
+BackPlane.SHADE     = { 0.62, 0.65, 0.72 }
+BackPlane.SHADE_DAY = { 0.62, 0.65, 0.72 }
 BackPlane.SHADOW = { 0.5, 0.5, 0.56 }    -- lo que deja la sombra de un bloque de delante (× sobre el plano)
 BackPlane.OFF    = 16                    -- px: la sombra, abajo a la derecha (¼ de casilla)
 

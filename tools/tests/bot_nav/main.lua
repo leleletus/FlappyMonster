@@ -16,6 +16,8 @@
 --            (≥ 1 casilla); con el "jugador" en la zona (en el platillo) lo echa a empujones como en las demás;
 --            `contrapeso`: alguien se sube y se baja del OTRO platillo cada 4 s (la zona sube y baja ±2,5 casillas
 --            mientras el bot va o está): llega y está dentro ≥ 50 %
+--     alud   (un alud sobre la zona: la_cima) el rato con la zona ENTERA bajo la nieve no cuenta para el % de dentro;
+--            solo, el torrente pilla al bot como mucho 1 vez: sale cuando retumba y espera a cubierto al lado
 --   tools/tests/run.sh bot_nav [BUILD=1] [-- assets/levels/a.json ...]   (sin niveles: las arenas de los bonus)
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
@@ -102,6 +104,9 @@ local function play(level, nav, withTarget, lure, counter)
     local curStop, stopT, stopIn, stops, reached = nil, 0, 0, 0, 0
     local ax, ay, still, worst = bpa.x, bpa.y, 0, 0             -- lo más que pasa PARADO en un sitio fuera de una zona
     local rideIn, rideOn, rideLo, rideHi = 0, 0, nil, nil       -- (zona montada: tiempo dentro, de él en su cuerpo; alto y bajo)
+    local sweptT, avHits, avWas = 0, 0, false                   -- (el ALUD: tiempo con la zona entera debajo; golpes al bot)
+    local avs = {}
+    for _, e in ipairs(es) do if e.def and e.def.name == 'avalanche' then avs[#avs + 1] = e end end
     local dt = 1 / 60
     while t < SECS do
         level.players = tgt and { bpa, tgt } or { bpa }
@@ -121,7 +126,18 @@ local function play(level, nav, withTarget, lure, counter)
             if z and z ~= best and not lure then best = z end
         end
         local active = PointAreas.state(level)
-        if active then activeT = activeT + dt end
+        -- (la zona ENTERA bajo el alud — o el viento —: ahí no puntúa nadie; el bot espera a cubierto al lado y ese
+        -- rato no cuenta para el "dentro el n %")
+        local swept = false
+        if active and active._nodes and level.pushers[1] then
+            swept = true
+            for id in pairs(active._nodes) do
+                local n = nav.nodes[id]
+                if n and not Bot.windy(level, n.x, (n.y or (n.r * TILE_PX - 40)) - 30) then swept = false; break end
+            end
+        end
+        if swept then sweptT = sweptT + dt end
+        if active and not swept then activeT = activeT + dt end
         -- (cada PARADA de la zona: ¿llega el bot a estar dentro mientras dura?)
         if active ~= curStop then
             if curStop and stopT > 6 then stops = stops + 1; if stopIn >= 1 then reached = reached + 1 end end
@@ -191,6 +207,16 @@ local function play(level, nav, withTarget, lure, counter)
         end
         for _, e in ipairs(es) do if e.alive then e:update(dt, level) end end
         Interactions.run(bpa, es, {})
+        do                                                     -- (¿lo pilla el torrente de un alud? cada vez que entra)
+            local ob, inAv = bpa:getOuterBounds(), false
+            for _, av in ipairs(avs) do
+                for _, hb in ipairs(av:getHazardBoxes() or {}) do
+                    if ob.x < hb.x + hb.w and hb.x < ob.x + ob.w and ob.y < hb.y + hb.h and hb.y < ob.y + ob.h then inAv = true end
+                end
+            end
+            if inAv and not avWas then avHits = avHits + 1 end
+            avWas = inAv
+        end
         -- (dentro de la zona ACTIVA; mientras viaja a la parada siguiente, ir hacia ella no es estar parado)
         local isIn = active ~= nil and PointAreas.inside(active, bpa.x, bpa.y)
         local zt = PointAreas.target(level)
@@ -201,7 +227,7 @@ local function play(level, nav, withTarget, lure, counter)
                 bot.path and #bot.path or '-', tgt and tgt.x or 0, tgt and tgt.y or 0, tgt and tgt.stunT or 0))
         end
         -- (esperar a que baje el agua no es quedarse atascado)
-        if isIn or bot.kind == 'wait' or math.abs(bpa.x - ax) > 40 or math.abs(bpa.y - ay) > 100 then ax, ay, still = bpa.x, bpa.y, 0
+        if isIn or bot.kind == 'wait' or bot.kind == 'shelter' or math.abs(bpa.x - ax) > 40 or math.abs(bpa.y - ay) > 100 then ax, ay, still = bpa.x, bpa.y, 0
         else still = still + dt; worst = math.max(worst, still) end
         if isIn then inside = inside + dt end
         if active and active.ride then
@@ -216,7 +242,7 @@ local function play(level, nav, withTarget, lure, counter)
     return arrive, inside / math.max(1, activeT), pushes, tIn / SECS, worst,
            { toggles = toggles, wetT = wetT, wetJ = wetJ, breakable = breakable, lured = tgt ~= nil, stops = stops, reached = reached,
              moving = #level.pointAreas > 1, ride = rideLo ~= nil, rideOn = rideOn / math.max(0.01, rideIn),
-             rideMove = rideLo and (rideHi - rideLo) or 0 }
+             rideMove = rideLo and (rideHi - rideLo) or 0, avalanche = #avs > 0, avHits = avHits, sweptT = sweptT }
 end
 
 -- DATOS: en un nivel con zonas de puntos todo enemigo que se puede pisar REAPARECE y da el 40 % de sus puntos
@@ -247,7 +273,7 @@ end
 -- TODOS los niveles con zonas de puntos (los 6 bonus de la historia y los demás de Rey de la Colina, que en Juego
 -- libre también se juegan contra el bot)
 local DEFAULT = { 'cala_de_los_muelles', 'cantera_real', 'ciudadela_alterna', 'cripta_del_silencio', 'lago_de_cristal',
-                  'claro_de_la_balanza', 'isla_flotante', 'coliseo_pinchos', 'cascada_dorada', 'cumbre_cangrejo', 'marea_alta', 'rebote_real' }
+                  'claro_de_la_balanza', 'la_cima', 'isla_flotante', 'coliseo_pinchos', 'cascada_dorada', 'cumbre_cangrejo', 'marea_alta', 'rebote_real' }
 local fails = 0
 
 function love.load(arg)
@@ -290,12 +316,19 @@ function love.load(arg)
                 local follows = not x1.moving or x1.reached >= x1.stops - 1
                 -- (zona MONTADA en un cuerpo: puntúa de pie EN él y la zona sube y baja con él)
                 local rides = not x1.ride or (x1.rideOn >= 0.8 and x1.rideMove >= TILE_PX and arrC ~= nil and arrC < 25 and fracC >= 0.5 and xC.rideMove >= TILE_PX)
-                local good = arrive ~= nil and arrive < 25 and frac > need and follows and hunted and stuck < 6 and calm and keeps and rides and #bad == 0     -- (0.5: en cala_de_los_muelles un enemigo lo tira de la zona y tarda en volver)
+                -- (ALUD sobre la zona: solo, el bot sale cuando retumba y espera a cubierto — como mucho un golpe: llegar
+                -- justo cuando cae —)
+                local dodges = not x1.avalanche or x1.avHits <= 1
+                local good = arrive ~= nil and arrive < 25 and frac > need and follows and hunted and stuck < 6 and calm and keeps and rides and dodges and #bad == 0     -- (0.5: en cala_de_los_muelles un enemigo lo tira de la zona y tarda en volver)
                 if not good then fails = fails + 1 end
                 print(('%-22s %s  sola: llega en %s s, dentro el %d %% · caza: %d empujones%s%s, el jugador en la zona el %d %% · cebo: dentro el %s · agua: %.0f s, %.1f saltos/s · parado como mucho %.1f s · paradas alcanzadas %d/%d'):format(
                     name, good and 'OK   ' or 'FALLA', arrive and string.format('%.1f', arrive) or '—', math.floor(frac * 100), pushes,
                     x2.toggles > 0 and (' + ' .. x2.toggles .. ' Activador') or '', x2.breakable and ' (suelo rompible: no ataca)' or '', math.floor(tIn * 100),
                     x3.lured and (math.floor(fracL * 100) .. ' %') or 'sin cebo', wetT, wetT > 0 and wetJ / wetT or 0, stuck, x1.reached, x1.stops))
+                if x1.avalanche then
+                    print(('    alud: la zona entera debajo %.0f s (no cuentan) · el torrente pilla al bot: sola %d veces, caza %d, cebo %d'):format(
+                        x1.sweptT, x1.avHits, x2.avHits, x3.avHits))
+                end
                 if x1.ride then
                     print(('    montada: en el platillo el %d %% del tiempo dentro, la zona sube y baja %d px · contrapeso (alguien sube y baja del otro platillo cada 4 s): llega en %s s, dentro el %d %%, la zona sube y baja %d px'):format(
                         math.floor(x1.rideOn * 100), x1.rideMove, arrC and string.format('%.1f', arrC) or '—', math.floor((fracC or 0) * 100), xC.rideMove))
