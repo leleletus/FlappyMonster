@@ -357,13 +357,35 @@ def mixdown(S, g, mx, side_w, send_w, env=None, wet=0.4, rt=1.4, ceiling=0.7):
             gd = np.clip(gd + 10 * np.log10(mx['ref_bands'] / cur), -6, 6)
         (x, side), _g = band_eq((x0, s0), np.ones(len(BANDS)), 10 ** (-gd / 10), lim=99)
         mx['eq_db'] = gd
+    else:
+        gd = None
     pad = np.zeros(3 * SR)
     if V3: wet = 0.0                                                     # (v3: sin reverb en nada)
     rl, rr = MN.frost(np.concatenate([send, pad]), rt=rt) if wet else (0.0, 0.0)
     Lx = np.concatenate([x + side, pad]) + wet * rl
     Rx = np.concatenate([x - side, pad]) + wet * rr
     y = np.stack([GN.fold(Lx, n, n_i), GN.fold(Rx, n, n_i)], 1)            # (la cola de la reverb, al principio del bucle)
-    return F.master(y, lufs=mx['lufs'], ceiling=ceiling)                    # (con 0,8 el OGG pasaba de 1,0 en el cangrejo)
+    ym = F.master(y, lufs=mx['lufs'], ceiling=ceiling)                    # (con 0,8 el OGG pasaba de 1,0 en el cangrejo)
+    if os.environ.get('STEMS') and not wet:
+        # CAPAS SUELTAS tal como suenan en esta mezcla: cada una por la misma cadena lineal (filtro, dinámica por
+        # secciones, ecualizador, pliegue del bucle) y con la ganancia, muestra a muestra, que el masterizado dio a la mezcla
+        # → sumadas dan exactamente la pista
+        from scipy.signal import butter, sosfilt
+        hp = butter(1, 30, btype='high', fs=SR, output='sos')
+        st = {}
+        for k in S:
+            for name, arr in (mx.get('parts', {}).get(k) or {k: S[k]}).items():
+                xk = sosfilt(hp, arr * g[k]); sk = arr * g[k] * side_w.get(k, 0)
+                if env is not None: xk, sk = xk * env, sk * env
+                if gd is not None: (xk, sk), _g = band_eq((xk, sk), np.ones(len(BANDS)), 10 ** (-gd / 10), lim=99)
+                st[name] = np.stack([GN.fold(np.concatenate([xk + sk, pad]), n, n_i), GN.fold(np.concatenate([xk - sk, pad]), n, n_i)], 1)
+        pre = sum(st.values())
+        ok = np.abs(pre) > 1e-5
+        ratio = np.where(ok, ym / np.where(ok, pre, 1), np.median((ym / np.where(ok, pre, 1))[ok]))
+        mx['stems'] = {k: v * ratio for k, v in st.items()}
+        mx['pre_stems'], mx['pre_mix'], mx['ceiling'] = st, y, ceiling      # (antes del masterizado)
+        mx['stems_err'] = float(np.abs(sum(mx['stems'].values()) - ym).max())
+    return ym
 
 
 def prep_v4(S, g, mx, tid, mapping):
@@ -555,6 +577,9 @@ def recast_crab(lead=None):
          'kick': S0['kick'] + 0.6 * rescale(G['kick'], S0['kick']), 'snare': G['snare'] + (0.0 if V3 else 0.45) * rescale(S0['snare'], G['snare']),
          'hat': G['hat'], 'crash': G['crash'], 'toms': G['toms'], 'shaker': G['shaker'], 'revcym': G['revcym'],
          'sea': G['sea'], 'wind': G['wind']}
+    if lead == 'chip':                                                   # (para las capas sueltas: las dos partes de 'lead' y de 'kick')
+        mx['parts'] = {'lead': {'voz_chip': chip_lead, 'voces_ooh': G['lead']},
+                       'kick': {'bombo_chip': S0['kick'], 'bombo_concierto': 0.6 * rescale(G['kick'], S0['kick'])}}
     if 'dbl' in G: S['dbl'] = G['dbl']
     if lead == 'chip': S['dbl'] = S0['dbl']
     if 'lead2' in G: S['lead2'] = G['lead2']
@@ -774,13 +799,93 @@ Mismos archivos que en lead_chip/. NO SE HA ESCUCHADO.
 """
 
 
+STEM_INFO = [   # (capa, nombre del archivo, instrumento, qué toca) — el cangrejo v4
+    ('voz_chip', 'voz_chip', 'CHIP: voz suave del N163 (la de la pista instalada)', 'la MELODÍA del tema (A, B, C, coda)'),
+    ('voces_ooh', 'voces_ooh', 'GM Voice Oohs (programa 53)', 'el respiro K: la voz suave una 8ª abajo'),
+    ('dbl', 'octava_pulso_chip', 'CHIP: pulso del 2A03', 'la melodía una 8ª arriba en el último estribillo (C2)'),
+    ('bell', 'caja_de_musica', 'GM Music Box (programa 10)', 'dobla la melodía una 8ª arriba; sola en la intro y el respiro; el contrapunto de A3'),
+    ('ice', 'campanillas_christmas_bells', 'GM Christmas Bells (banco 12, programa 10)', 'campanillas del acorde en el tresillo 3+3+2 (tema y estribillo)'),
+    ('shim', 'marimba_arpegio', 'GM Marimba (programa 12)', 'arpegio en semicorcheas (B, estribillos, coda)'),
+    ('choir', 'coro', 'GM Choir Aahs (programa 52)', 'colchón de acordes (intro, B, respiro, último estribillo)'),
+    ('stabs', 'pizzicato_quintas', 'GM Pizzicato Strings (programa 45)', 'golpes de quinta (tresillo en el tema, a tiempo en el estribillo)'),
+    ('bass', 'bajo_slap', 'GM Slap Bass (TimGM6mb, programa 36)', 'el bajo de los jefes'),
+    ('bombo_chip', 'bombo_chip', 'CHIP: bombo DPCM', 'el bombo de siempre'),
+    ('bombo_concierto', 'bombo_concierto', 'GM Concert Bass Drum (banco 8, programa 116)', 'bajo el bombo de chip en los tiempos 1 y 3'),
+    ('snare', 'caja_orquesta', 'GM caja del kit de orquesta (kit 48, nota 38)', 'la caja golpe a golpe, con sus redobles'),
+    ('toms', 'timbales', 'GM Timpani (programa 47)', 'los toms de antes, afinados al acorde, y el redoble que dobla cada entrada'),
+    ('crash', 'platillos', 'GM platillo del kit de orquesta (kit 48, nota 49)', 'platillos de cada sección'),
+    ('revcym', 'platillo_al_reves', 'GM Reverse Cymbal (programa 119)', 'llega a cada sección y donde subía el ruido'),
+    ('sea', 'olas_mar', 'GM Seashore (programa 122)', 'el mar: intro y donde subía el ruido hacia el tema'),
+    ('wind', 'viento', 'GM Wind (banco 3, programa 122)', 'bajo el respiro K'),
+]
+
+if __name__ == '__main__' and os.environ.get('STEMS'):
+    # las CAPAS del cangrejo v4, una por instrumento, tal como suenan en la mezcla (para que el usuario encuentre la culpable)
+    out = os.path.join(PRUEBAS, 'crab_v4_capas')
+    os.makedirs(out, exist_ok=True)
+    r = recast_crab('chip')
+    mx, y = r['mx'], r['y']
+    st = mx['stems']
+    print(f"  capas: {len(st)}; suma de capas frente a la mezcla: diferencia máxima {mx['stems_err']:.6f}")
+    v4, _ = sf_.read(os.path.join(PRUEBAS, 'lead_chip_v4', 'crab_tantrum_icy_lead_chip_loop.ogg')) if False else (None, None)
+    lines = ['LAS CAPAS DEL CANGREJO v4 (crab_tantrum_icy, lead_chip_v4) — una por instrumento (2026-10-29)',
+             '=' * 88, 'NO SE HA ESCUCHADO. Cada capa suena EXACTAMENTE como en la mezcla v4 (mismo nivel, mismo ecualizador y',
+             'dinámica, misma ganancia del masterizado muestra a muestra): sumadas dan la pista. Intro + una vuelta del bucle',
+             f"({len(y) / SR:.1f} s). En .mp3 y .ogg. Para encontrar la que suena con eco: escúchalas sueltas.", '',
+             '  00_mezcla_completa       la mezcla v4 entera, de referencia']
+    enc_both(y, os.path.join(out, '00_mezcla_completa'))
+    i = 0
+    for key, fname, inst, what in STEM_INFO:
+        if key not in st or np.abs(st[key]).max() < 1e-6: continue
+        i += 1
+        nm_ = f'{i:02d}_{fname}'
+        enc_both(st[key], os.path.join(out, nm_))
+        e = 10 * np.log10(np.mean(st[key] ** 2) / np.mean(y ** 2) + 1e-12)
+        lines.append(f'  {nm_:32s} {inst} — {what} ({e:+.1f} dB frente a la mezcla)')
+        print('  ' + lines[-1].strip())
+    rest = [k for k in st if k not in {s_[0] for s_ in STEM_INFO}]
+    if rest: print('  SIN DESCRIBIR: ' + ', '.join(rest))
+    with open(os.path.join(out, 'LEEME.txt'), 'w') as f:
+        f.write('\n'.join(lines) + '\n')
+    sys.exit(0)
+
+def crab_final():
+    """crab_tantrum_icy FINAL (2026-10-29): la v4 tal cual MENOS la capa de las campanillas GM (Christmas Bells, el
+    tresillo 3+3+2). El usuario escuchó las capas sueltas de la v4 (STEMS=1 → crab_v4_capas/) y señaló la culpable del
+    "eco": "05_campanillas_christmas_bells — DESTRÚYELO". Nada más cambia: las otras 16 capas tal como entraban en la
+    v4 (mismo nivel, ecualizador, dinámica y pliegue), sumadas, pasan por el MISMO masterizado (mismo objetivo de
+    sonoridad y techo). (Restar la capa ya masterizada no vale: la ganancia del limitador muestra a muestra, repartida
+    entre capas, deja picos de 1,07 al quitar una.)"""
+    os.environ['STEMS'] = '1'
+    r = recast_crab('chip')
+    mx, y4 = r['mx'], r['y']
+    pre = mx['pre_stems']
+    pre16 = sum(v for k, v in pre.items() if k != 'ice')
+    err = float(np.abs(pre16 - (mx['pre_mix'] - pre['ice'])).max())          # (la mezcla v4 menos las campanillas, antes del máster)
+    y = F.master(pre16, lufs=mx['lufs'], ceiling=mx['ceiling'])
+    r.update(y=y, y4=y4, gain=1.0, err=err, n_stems=len(pre) - 1)
+    return r
+
+
 if __name__ == '__main__' and INSTALL:
-    # snowball_boss v4 (APROBADA por el usuario, 2026-10-29): la voz de chip de siempre, el resto GM a tiempo, sin reverb,
-    # sin los cascabeles, nivelada como la original → assets/music/bosses/snowball_boss_intro|_loop.ogg + mid
-    r = recast_snowball('chip')
-    report(r)
-    GN.export('snowball_boss', r['y'], r['n_i'])
-    W.write_mid(F.out('snowball_boss', 'mid'), r['mel'], r['mx']['bpm'])
+    which = [a for a in sys.argv[1:] if a in ('snowball_boss', 'crab_tantrum_icy')] or ['snowball_boss']
+    if 'snowball_boss' in which:
+        # snowball_boss v4 (APROBADA por el usuario, 2026-10-29): la voz de chip de siempre, el resto GM a tiempo, sin
+        # reverb, sin los cascabeles, nivelada como la original → assets/music/bosses/snowball_boss_intro|_loop.ogg + mid
+        r = recast_snowball('chip')
+        report(r)
+        GN.export('snowball_boss', r['y'], r['n_i'])
+        W.write_mid(F.out('snowball_boss', 'mid'), r['mel'], r['mx']['bpm'])
+    if 'crab_tantrum_icy' in which:
+        r = crab_final()
+        print(f"  crab_tantrum_icy final: {r['n_stems']} capas de la v4 (sin las campanillas; suma frente a v4 − campanillas: diferencia máx. {r['err']:.2e}); "
+              f"{F.loudness(r['y']):.2f} LUFS (v4 {F.loudness(r['y4']):.2f}); pico {np.abs(r['y']).max():.3f}; "
+              f"intro {r['n_i']} + bucle {r['n'] - r['n_i']} muestras")
+        GN.export('crab_tantrum_icy', r['y'], r['n_i'])
+        W.write_mid(F.out('crab_tantrum_icy', 'mid'), r['mel'], CI.BPM)
+        if os.environ.get('PREVIEW'):
+            out = os.path.join(PRUEBAS, 'crab_final'); os.makedirs(out, exist_ok=True)
+            enc_both(np.concatenate([r['y'], r['y'][r['n_i']:]]), os.path.join(out, 'crab_tantrum_icy_final_preview'))
     sys.exit(0)
 
 if __name__ == '__main__' and os.environ.get('LEAD_CHIP'):

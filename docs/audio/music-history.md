@@ -875,6 +875,21 @@ instruments" (the rest of the islands will be modernised later). Verified by num
   channel, each note cuts the previous: 0.10 s and 0.32 s), and the marimba is a `damped_line` (every note stops when
   the next one enters). Preview `lead_chip_v5/`, waiting for the user. Not listened to.
 
+## The Icy Mega Crabby, final: the culprit found by stems (`crab_tantrum_icy`, 2026-10-29)
+
+- The user on v5 (chip music box / chimes back, damped marimba): "Prácticamente lo ha dejado como el tema original.
+  Lo único necesario es encontrar cuál es el instrumento culpable y cambiarlo, no quitar todos los efectos de toda la
+  canción." → v4 split into STEMS, one per instrument exactly as it sat in the mix (`jefes_helados.py STEMS=1
+  SUB=lead_chip_v4` → `FlappyMonster_pruebas/musica_jefes_helados/crab_v4_capas/`, 17 layers + the mix; they sum to the
+  mix). He listened and named it: `05_campanillas_christmas_bells` (GM Christmas Bells, bank 12 prog 10, the chord
+  chimes on the 3+3+2 figure) — "DESTRÚYELO". LESSON: when the user hears "echo" in a dense GM mix, give him the stems
+  and let him point; don't strip effects track-wide.
+- INSTALLED: v4 minus that layer, nothing else changed — the other 16 layers exactly as they entered the v4 mix, summed
+  and mastered the same way (same LUFS target and ceiling; subtracting the already-mastered stem left 1.07 peaks).
+  `crab_icy.py` now calls `INSTALL=1 jefes_helados.py crab_tantrum_icy` (`CHIP_ORIGINAL=1` = the old chip render); the
+  composition, melodies and chords stay in `crab_icy.py` (the Crab Mega Mashup reads them; harness `mashup_rules` OK).
+  Intro 227 612 + loop 3 869 420 samples (unchanged), −9.9 LUFS. Not listened to by me.
+
 ## The film scores for any number of shards (`tools/music/story_music.py`, 0.5.99)
 
 - The jungle boss got a shard (8 shards, 7 bosses) and the user asked that neither the cinematic nor its music be

@@ -340,6 +340,12 @@ def build(lufs=-10.0):
     return y, mel, n_i
 
 
+if __name__ == '__main__' and not os.environ.get('CHIP_ORIGINAL'):
+    # (2026-10-29) la que suena en el juego es la versión FINAL: esta composición con el reparto GM de jefes_helados.py
+    # (la v4 sin las campanillas Christmas Bells). CHIP_ORIGINAL=1 = la de chip de antes
+    os.system(f'INSTALL=1 {sys.executable} {os.path.join(os.path.dirname(os.path.abspath(__file__)), "jefes_helados.py")} crab_tantrum_icy')
+    sys.exit(0)
+
 if __name__ == '__main__':
     y, mel, n_i = build()
     if not os.environ.get('REPORT'):
