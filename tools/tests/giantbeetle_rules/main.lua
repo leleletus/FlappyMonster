@@ -11,7 +11,8 @@
 --   doble_filo él cae de su salto en un platillo con el jugador en el otro: el jugador sale disparado contra el techo
 --              y pierde 1
 --   cebo       el jugador en un platillo: salta (casi siempre) al OTRO platillo
---   aprende    quieto en un platillo: tras 2 saltos al otro ya no lo hace (trozos o le salta encima); fuera, se le olvida
+--   aprende    acampando en un platillo, tras dispararlo la balanza ya no cae en el cebo: lo baja (salto encima) o le lanza
+--              trozos; fuera de los platillos ~15 s se le olvida
 --   embestida  embiste, choca con la pared (aturdido, sin daño) y caen cascotes con sombra de aviso; el de encima
 --              del jugador le quita 1; tocarlo embistiendo quita 1
 --   lanzar     arranca un bloque y se lo lanza en arco al jugador: le quita 1 y se rompe
@@ -374,8 +375,9 @@ function cases.cebo()
     check('cebo', other >= 5, ('en un platillo: salta al otro %d de 12 veces'):format(other))
 end
 
--- APRENDE (0.5.92, el usuario): el jugador quieto en un platillo; tras BAIT_LEARN saltos al otro ya no lo hace (le
--- lanza trozos o le salta encima); fuera de los platillos un rato, se le olvida
+-- APRENDE (0.5.92 / 0.5.94, el usuario: quieto en un platillo, noquearlo, volver y repetir): la primera vez cae en el
+-- cebo; cuando la balanza lo ha disparado (y el jugador sigue acampando) ya no: intenta BAJARLO del platillo — su salto
+-- encima lo aparta — o le lanza trozos; fuera de los platillos un buen rato (~15 s) se le olvida
 function cases.aprende()
     local level, es, boss, scale = arena()
     stepAll(level, es, {}, 0.3)
@@ -384,28 +386,54 @@ function cases.aprende()
     local c1 = panTop(p1)
     local pa = playerAt(level, es, c2, t2)
     level.players = { pa }
-    local seq = {}
-    local baitsAfter = 0
-    for i = 1, 20 do
+    local function pick(seed)
         putBoss(level, boss, 24 * T)
-        math.randomseed(100 + i)
+        math.randomseed(seed)
         boss.last = nil
         boss:choose(level)
-        local what = (boss.state == 'leap_wind' and math.abs(boss.markX - c1) < 8) and 'otro'
-                     or (boss.state == 'leap_wind' and math.abs(boss.markX - c2) < p2:getOuterBounds().w / 2 + 8) and 'encima'
-                     or (boss.state == 'toss_wind') and 'trozos' or boss.state
-        seq[#seq + 1] = what
-        if i > 6 and what == 'otro' then baitsAfter = baitsAfter + 1 end
+        if boss.state == 'leap_wind' and math.abs(boss.markX - c1) < 8 then return 'otro' end
+        if boss.state == 'leap_wind' and math.abs(boss.markX - c2) < p2:getOuterBounds().w / 2 + 8 then return 'encima' end
+        if boss.state == 'toss_wind' then return 'trozos' end
+        return boss.state
     end
-    local n = 0
-    for _, w in ipairs(seq) do if w == 'otro' then n = n + 1 end end
-    -- fuera de los platillos 2,5 s: se le olvida
+    boss.camp = 0
+    local first = {}
+    for i = 1, 6 do first[#first + 1] = pick(200 + i) end
+    local baitedFirst = false
+    for _, w in ipairs(first) do if w == 'otro' then baitedFirst = true end end
+    -- la balanza lo dispara (el truco le sale al jugador): ya no cae
+    boss:enter('rest'); boss:onScaleLaunch(-1500, scale); boss:enter('rest')
+    local after, baits = {}, 0
+    for i = 1, 16 do
+        local w = pick(300 + i)
+        after[#after + 1] = w
+        if w == 'otro' then baits = baits + 1 end
+    end
+    -- su salto encima del platillo del jugador (que no se mueve): lo baja
+    local level2, es2, boss2, scale2 = arena()
+    stepAll(level2, es2, {}, 0.3)
+    local q2 = scale2:bodyParts()[2]
+    local d2, u2 = panTop(q2)
+    local qa = playerAt(level2, es2, d2, u2)
+    putBoss(level2, boss2, 24 * T)
+    boss2.camp = 99
+    local hp0, off = qa.hp, false
+    for seed = 1, 40 do
+        math.randomseed(seed); boss2.last = nil; boss2:choose(level2)
+        if boss2.state == 'leap_wind' then break end
+        putBoss(level2, boss2, 24 * T)
+    end
+    stepAll(level2, es2, { qa }, 3, function()
+        if boss2.state == 'rest' then boss2.restLen = 99 end
+        if qa.standBody ~= q2 and qa.onGround then off = true end
+    end)
+    -- fuera de los platillos 15 s: se le olvida
     pa.x, pa.y, pa.standBody = 4 * T, (FLOOR - 1) * T - 60, nil
-    stepAll(level, es, { pa }, 2.5, function() boss.restLen = 99; boss.state = 'rest' end)
-    local forgot = (boss.baitN or 0) == 0
-    check('aprende', n == 2 and baitsAfter == 0 and forgot,
-        ('quieto en un platillo, 20 ataques: %s · al otro platillo %d veces (después, %d) · fuera 2,5 s, se le olvida=%s'):format(
-            table.concat(seq, ','), n, baitsAfter, tostring(forgot)))
+    stepAll(level, es, { pa }, 15, function() boss.restLen = 99; boss.state = 'rest' end)
+    local forgot = (boss.camp or 0) < 6
+    check('aprende', baitedFirst and baits == 0 and (off or qa.hp < hp0) and forgot,
+        ('al principio: %s · tras dispararlo la balanza: %s (al otro platillo %d) · su salto encima: lo baja=%s, vida %d → %d · fuera 15 s, se le olvida=%s'):format(
+            table.concat(first, ','), table.concat(after, ','), baits, tostring(off), hp0, qa.hp, tostring(forgot)))
 end
 
 function cases.embestida()

@@ -183,7 +183,8 @@ function Scale:catapult(hit, except, power, by)
         end
     end
     for _, e in ipairs(ents) do
-        if e.launch and e.canBeLaunched and e:canBeLaunched() then e:launch(e.vx or 0, v)
+        if e.def and e.def.boss then                                      -- (un jefe que pesa: lo dispara onScaleLaunch, abajo)
+        elseif e.launch and e.canBeLaunched and e:canBeLaunched() then e:launch(e.vx or 0, v)
         else e.vy, e.onGround = v, false end
     end
     for _, e in ipairs(level and bossRiders(other, level) or {}) do

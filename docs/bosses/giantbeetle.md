@@ -119,9 +119,20 @@ centre (row 9) to dodge the charge and the waves (0.5.81: one tile lower than in
   middle 16x8 of `mechanisms/scale/<isle>-pan.png`) and breaks as the pan's island material (`PAN_MAT`: meadow/coast
   wood, fortress/cave stone, snow ice, volcano basalt, jungle temple stone); the island travels in the netPack (tile +
   island × 256).
-- Standing on a pan reduced the fight to dodging its jump to the other pan → it LEARNS: after `BAIT_LEARN` (2) such
-  jumps without the player leaving the pans, it throws chunks at them or jumps ONTO their pan; it forgets after
-  `BAIT_FORGET` (2 s) off the pans. Test: `aprende`.
+- Standing on a pan reduced the fight to dodging its jump to the other pan → it LEARNS (0.5.92: after 2 such jumps;
+  it forgot after 2 s off the pans — not enough, see 0.5.94).
+
+## 0.5.94 changes (the user: it still fell for it — stay on a pan, knock it out, go back and repeat)
+
+- A CAMPING score (`camp`): +`CAMP_UP` 0.2 per second while the nearest player stands on a pan, +`CAMP_LAUNCH` 10 each
+  time the scale fires it against the ceiling, −`CAMP_DOWN` 0.3 per second off the pans. At `CAMP_MAX` 6 or more it no
+  longer jumps to the other pan: it tries to GET THE PLAYER OFF theirs — jumps onto it (70 %: the landing knocks them
+  off and takes 1) or throws chunks (30 %). After a launch it takes ~13 s off the pans to fall for the bait again.
+- A real bug under it: since the boss weighs on the scale (0.5.84), `Scale:catapult` also launched it as an ordinary
+  entity resting on the pan, so `GB:onScaleLaunch` never ran (it could not learn). Bosses are now launched only
+  through `onScaleLaunch`.
+- `boss_sim LEVEL=assets/levels/templo_escarabajo.json`: its scripted bot only knows the bait, so it no longer wins
+  this fight (1-2 launches); a smarter bot is pending. The behaviour is covered by `giantbeetle_rules aprende`.
 
 ## How to extend
 
@@ -132,8 +143,8 @@ centre (row 9) to dodge the charge and the waves (0.5.81: one tile lower than in
 ## Tests
 
 `giantbeetle_rules` (arena, pans — its weight lowers one, the charge passes through them —, hop off a pan after getting up, armour, shell bounce, stone marks, moving-pan shadow, flip, hits, double edge, bait, charge + debris, toss, waves, rage, flying minions, wood chunk + sound, defeat, net);
-`boss_sim LEVEL=tools/levelgen/arenas/jefe_escarabajo.json` (a whole fight played as intended: every state seen, killed
-by flipping it); `boss_intro`, `online_boss` with that arena.
+`boss_sim LEVEL=assets/levels/templo_escarabajo.json` (a scripted fight; since 0.5.94 its bait-only bot no longer kills it,
+see above); `boss_intro`, `online_boss` with that arena.
 
 ## History and decisions
 

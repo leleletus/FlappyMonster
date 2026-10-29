@@ -75,10 +75,12 @@ local RIGHT_T     = 0.7
 local GRACE       = 0.8                         -- s sin volver a dar a nadie tras un golpe
 local SLAM_POWER  = 1.5                         -- × la catapulta de la balanza cuando cae él en un platillo
 local PAN_BAIT    = 0.65                        -- probabilidad de saltar al OTRO platillo si estás en uno
--- APRENDE (0.5.92, el usuario: quedándose en un platillo la pelea se reducía a esquivar ese salto): tras BAIT_LEARN
--- saltos al otro platillo sin que el jugador se baje de los platillos, ya no cae en eso — le lanza trozos o le salta
--- ENCIMA de su platillo —; se le olvida cuando el jugador pasa BAIT_FORGET s fuera de los platillos
-local BAIT_LEARN, BAIT_FORGET = 2, 2.0
+-- APRENDE (0.5.92; 0.5.94, el usuario: aún caía en la trampa — quieto en un platillo, noquearlo, volver al platillo y
+-- repetir —): una cuenta de lo que el jugador "acampa" en los platillos: sube CAMP_UP por segundo encima de ellos y
+-- CAMP_LAUNCH cada vez que la balanza lo dispara contra el techo; baja CAMP_DOWN por segundo fuera. Con CAMP_MAX o
+-- más ya no salta al otro platillo: intenta BAJARLO del suyo — le salta encima (el aterrizaje lo aparta) o le lanza
+-- trozos —. (Antes: 2 saltos y se le olvidaba a los 2 s fuera: lo que se tarda en ir a pegarle.)
+local CAMP_UP, CAMP_LAUNCH, CAMP_DOWN, CAMP_MAX = 0.2, 10, 0.3, 6
 
 -- Bloques lanzados y cascotes
 local BLOCK_G, BLOCK_VY = 2400, -1050
@@ -154,6 +156,7 @@ function GB:canBeKnocked() return false end
 -- Un ground pound en el otro platillo: sale DISPARADO hacia arriba
 function GB:onScaleLaunch(vy, scale)
     if not self:isActive() or BACK[self.state] then return end
+    self.camp = (self.camp or 0) + CAMP_LAUNCH                            -- (lo ha pillado la balanza: aprende)
     self.vx, self.vy, self.onGround = 0, -LAUNCH_V, false
     self.waves = {}
     self:enter('launched')
@@ -413,11 +416,11 @@ end
 function GB:choose(level)
     local pa = self:nearestPlayer(level)
     if pa and math.abs(pa.x - self.x) > 8 then self.facing = (pa.x > self.x) and 1 or -1 end
-    -- en un platillo: salta al OTRO para dispararlo (doble filo) — hasta que aprende (BAIT_LEARN)
+    -- en un platillo: salta al OTRO para dispararlo (doble filo) — hasta que aprende (CAMP_MAX): entonces lo baja
     if pa then
         local _, mine, other = panOf(level, pa)
-        if other and (self.baitN or 0) >= BAIT_LEARN then
-            if math.random() < 0.5 then
+        if other and (self.camp or 0) >= CAMP_MAX then
+            if math.random() < 0.3 then
                 self.last, self.tossN = 'toss', self.rage and 2 or 1
                 Sound.play('megaWindup', 1.3, 0.5)
                 return self:enter('toss_wind')
@@ -429,7 +432,6 @@ function GB:choose(level)
             return self:enter('leap_wind')
         end
         if other and math.random() < PAN_BAIT then
-            self.baitN = (self.baitN or 0) + 1
             local b = other:getOuterBounds()
             self.markX, self.markY = math.floor(b.x + b.w / 2), math.floor(b.y)
             self.last = 'leap'
@@ -527,14 +529,10 @@ function GB:updateBoss(dt, level)
     self.deadTimer = self.deadTimer + dt
     if self.graceT > 0 then self.graceT = math.max(0, self.graceT - dt) end
     BossWaves.update(self, level, dt, WAVES)
-    -- (lo que aprende del jugador que no se baja de los platillos: se le olvida fuera de ellos BAIT_FORGET s)
+    -- (lo que el jugador acampa en los platillos: sube encima, se le olvida despacio fuera)
     local near = self:nearestPlayer(level)
-    if near and not panOf(level, near) then
-        self.offPanT = (self.offPanT or 0) + dt
-        if self.offPanT >= BAIT_FORGET then self.baitN = 0 end
-    else
-        self.offPanT = 0
-    end
+    if near and panOf(level, near) then self.camp = (self.camp or 0) + CAMP_UP * dt
+    else self.camp = math.max(0, (self.camp or 0) - CAMP_DOWN * dt) end
     self:updateBlocks(level, dt)
     self:updateRocks(level, dt)
     self:updateShot(level, dt)
@@ -980,3 +978,4 @@ return {
         return out
     end,
 }
+
