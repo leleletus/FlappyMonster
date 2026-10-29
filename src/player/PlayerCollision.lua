@@ -143,7 +143,8 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
                         -- jugador se queda pegado a su cara sin perder el paso)
                         local pushed = 0
                         -- (solo ANDANDO hacia ella: parado a su lado — un resto de velocidad — no la empuja ni suena; el usuario)
-                        if o.pushBy and self.onGround and (self.inMoveX or 0) == ((dx > 0) and 1 or -1) then
+                        -- (lo que flota — el Iceberg, `pushInWater` — también se empuja nadando contra él)
+                        if o.pushBy and (self.onGround or (o.pushInWater and self.inWater)) and (self.inMoveX or 0) == ((dx > 0) and 1 or -1) then
                             local over = (dx > 0) and (x + hw - ob.x) or (x - hw - (ob.x + ob.w))
                             pushed = o:pushBy(self, over)
                             ob = o:getOuterBounds()

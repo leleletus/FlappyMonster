@@ -28,9 +28,9 @@ Adventure/OnlineAdventure states (`Sky.render(level, camX, camY)`; `Background.p
 for the Flappy mode now). Pixel-banded gradient per time (cave/underwater have their own,
 tinted by the time), sun (day; low + orange at dusk) or moon + twinkling stars (night),
 drifting clouds, then the biome's silhouette layers (`Sky.BIOMES`: meadow, coast, mountain,
-snow, forest, fortress, cave, underwater) repeated horizontally with parallax; ground layers
+snow, forest, fortress, volcano, jungle, frozen_coast, cave, underwater…) repeated horizontally with parallax; ground layers
 rest on the level bottom (tall levels show more sky as you climb), `top` layers hang from the
-level top (cave ceiling), `add` = additive (underwater rays); outside a layer, its edge row
+level top (cave ceiling), `add` = additive (underwater rays), `time` = only at that time of day (the frozen coast's night aurora); outside a layer, its edge row
 colour fills the screen. Dusk/night tint layers and clouds. The EDITOR draws the same sky under the map (`drawCanvas`:
 `Sky.render(lv, camX, camY)` with WINDOW_W/H = the visible world area, clipped to the level rect;
 Sky clips with `Clip` so it works inside the editor's zoom transform), so surface/depth/row
@@ -53,6 +53,32 @@ writes 10 frames, must be followed by `make_jungle_sky.py --apply`).
 - Decorations: `jungle_set` (category Jungla, `tools/art/world/make_jungle_decor.py`): giant trees, plants, temple
   ruins, hanging lianas, brazier, idol, dragonfly, fireflies. Big trees for the other islands and the new
   `fortress_set`: `tools/art/world/make_big_trees.py`. Both: [decorations](decorations.md).
+
+## Frozen coast biome (2026-10-29)
+
+The FROZEN COAST (story island `costa_helada`, Icy Mega Crabby's) gets its own surface sky, **`frozen_coast`** ("Costa
+helada" in the editor); the frozen MOUNTAINS keep `snow` (the user: perfect for the mountains). Art from
+`tools/art/world/make_frozen_coast_sky.py --apply A` (previews in `FlappyMonster_pruebas/fondo_costa_helada/`;
+never overwrites; APPENDS 3 frames to `gradients.png`: 15-17 `frozen_coast_day/dusk/night` — after `make_sky.py` and
+`make_jungle_sky.py --apply`, run it again).
+- Everything is at SEA LEVEL and horizontal (no peaks): `frozen_coast_far` (polar sea horizon, an ice shelf and icebergs),
+  `frozen_coast_mid` (a glacier front falling into the sea, a small harbour: pier, two huts, a striped lighthouse;
+  floes), `frozen_coast_near` (pack-ice ridges, mooring posts with a rope). The ice (bergs, shelf, glacier) is drawn in
+  FLAT FACETS with a striped reflection in the water (`crystal`, `ice_wall`). Own gradients per time (`grads`).
+- The windows and the lighthouse lamp use the amber that `Sky` already treats as glowing: they stay lit at night.
+- **Aurora**: `frozen_coast_aurora`, an additive layer with **`time = 'night'`** — a generic layer option in
+  `Sky.BIOMES`: a layer with `time` is only drawn at that time of day (`drawLayers` skips it otherwise). Green curtains
+  with a touch of magenta, parallax 0.03, resting on the level bottom like the other layers.
+- Island for the art that changes by island (`Isles.BY_BACKGROUND`): `frozen_coast` → **`nieve`** (icy Crabby / Gummy,
+  Box, Geyser… of the snow). A new id in `Isles.IDS` would need a row of art in every `isleArt` type (`islas_arte`
+  fails without it).
+- Decorations: `frozen_coast_set` ([decorations](decorations.md)); retheme theme `frozen_coast`
+  ([retheme](../levels/retheme.md)). Showcase arena `tools/levelgen/arenas/costa_helada.json`
+  (`run.sh level_shots SCALE=1 TIME=night TAG=night -- tools/levelgen/arenas/costa_helada.json`).
+- History: two options were previewed — A "costa de témpanos" (house style: harbour, lighthouse, pack ice) and B "mar
+  congelado" (turquoise sea, frozen breaking waves, faceted icebergs with reflections, a shipwreck). The user chose
+  **A, with B's faceted icebergs / ice walls, and liked the auroras** ("Las auroras son una muy buena idea"). B's art
+  stays in the generator.
 
 ## Volcano and meadow biome art
 

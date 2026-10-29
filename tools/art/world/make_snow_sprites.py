@@ -2,10 +2,8 @@
 # tools/art/world/make_snow_sprites.py
 # Sprites del hielo y la nieve (arte de 16x16 escalado x4, como el resto de
 # texturas de tiles):
-#   assets/images/world/tiles/snow.png        Nieve (a partir del color del usuario;
-#                                       su original, fuera del repo: tools/art/lib/originals.py)
-#   assets/images/world/tiles/ice.png         Hielo (sus burbujas, con brillos y grietas;
-#                                       original fuera del repo). Se dibuja semitransparente
+#   (snow.png / ice.png: desde 2026-10-29 los escribe tools/art/world/make_frozen_tiles.py, por capas;
+#    snow() e ice() de abajo son el dibujo de antes y ya no se escriben)
 #   assets/images/world/tiles/thin_ice_0..3.png  Hielo fino (losa de media casilla):
 #                                       normal, dañado, muy dañado, a punto de romperse
 #   assets/images/fx/snowflakes.png     copos de nieve, 4 cuadros de 7x7
@@ -170,11 +168,8 @@ def drop():
 
 if __name__ == '__main__':
     print('Sprites de hielo y nieve:')
-    if backup('snow'):
-        FORCE_SAVE = True
-        snow().resize((64, 64), Image.NEAREST).save(os.path.join(T, 'snow.png')); print('  ' + T + '/snow.png (original: ' + originals.path(os.path.join(T, 'snow.png')) + ')')
-    if backup('ice'):
-        ice().resize((64, 64), Image.NEAREST).save(os.path.join(T, 'ice.png')); print('  ' + T + '/ice.png (original: ' + originals.path(os.path.join(T, 'ice.png')) + ')')
+    # (snow.png e ice.png ya NO salen de aquí: desde 2026-10-29 son pieles por capas de
+    # tools/art/world/make_frozen_tiles.py; snow() e ice() quedan como el dibujo de antes, sin escribirse)
     for st in range(4):
         save(thin_ice(st), os.path.join(T, 'thin_ice_%d.png' % st), 4)
     save(flakes(), os.path.join(FX, 'snowflakes.png'))

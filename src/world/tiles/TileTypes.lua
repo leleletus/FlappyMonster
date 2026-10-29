@@ -32,9 +32,21 @@
 --               los modos de juego con Level:triggerInBox
 --   joinGroup   tiles del mismo grupo "se unen": no dibujan borde entre sí
 --               (ver TileTypes.edges). Los líquidos también ocultan bordes.
+--   joinAlso    { 'grupo' o 'nombre de tile', ... }: con qué MÁS se une (sin borde) aunque sea de otro
+--               grupo (la nieve con el hielo y al revés). Solo dibujo.
 --
---   Aspecto (uno de los tres; se usa el primero que exista):
+--   Aspecto (uno de los cuatro; se usa el primero que exista):
 --   draw        function(def, ctx) dibujo por código (ver ctx abajo)
+--   skin        piel de bloque por capas (TileTypes.drawSkin, 2026-10-29): un CUERPO sin costuras y capas que
+--               solo se ponen en las caras al aire, así una pared de bloques se ve como UNA masa:
+--                 body   = { image, span }   el cuerpo (span 2: el dibujo cubre 2x2 casillas)
+--                 top / bottom / left / right = { image }   capa de esa cara (16x16 de arte, transparente fuera de
+--                          su franja) solo si la cara da al aire (o a medias: se pone en su mitad)
+--                 over   = { image }   capa que va siempre (la ventana de un muro)
+--                 alpha  = 0.78        el hielo, semitransparente
+--                 blend  = { image, of = { <tile> = cuadro } }   franjas tramadas hacia el vecino (como la arena)
+--                 edges  = { top = {r,g,b[,a]}, bottom = …, left = …, right = … }   filo de 2 px en las caras al aire
+--                 capEdge = { {r,g,b}, filas }   el filo de los lados junto a la capa de arriba (filas de 16)
 --   texture     { anim='id', seq='idle' } = un conjunto de animación (assets/anim, `love . --anim`), o
 --               { image='assets/...png', frames=1, fps=0 } imagen (o tira
 --               horizontal de `frames` cuadros animada a `fps`) escalada al tile
@@ -84,6 +96,11 @@ function TileTypes.register(def)
     t.mat         = Materials.get(t.material)
     t.label       = t.label or name
     t.category    = t.category or 'Otros'
+    if t.joinAlso then                         -- (lista → conjunto: grupos o nombres de tile)
+        local set = {}
+        for _, v in ipairs(t.joinAlso) do set[v] = true end
+        t.joinAlsoSet = set
+    end
 
     TileTypes.byId[id]     = t
     TileTypes.byName[name] = t
@@ -132,12 +149,18 @@ end
 -- (false) o solo a medias ({ primera, segunda } = mitad izquierda/arriba y
 -- derecha/abajo) cuando al otro lado hay mini bloques que cubren solo media.
 
--- ¿Se une con `group` la celda (c, r)? Bloque grande del grupo, líquido, o un
--- cuerpo que se dibuja como bloque (level.joinOverlay: bloques de jefe sólidos)
-function TileTypes.joinsCell(level, c, r, group)
+-- ¿Se une el tipo `n` con el grupo `group` (o con el conjunto `also` de grupos / nombres: joinAlso)?
+function TileTypes.joinsDef(n, group, also)
+    if group and n.joinGroup == group then return true end
+    return also ~= nil and (also[n.name] or (n.joinGroup ~= nil and also[n.joinGroup])) == true
+end
+
+-- ¿Se une con `group` (o con `also`, el joinAlso del que se dibuja) la celda (c, r)? Bloque grande del grupo,
+-- líquido, o un cuerpo que se dibuja como bloque (level.joinOverlay: bloques de jefe sólidos)
+function TileTypes.joinsCell(level, c, r, group, also)
     local raw = level:getRaw(c, r)
     local n = TileTypes.get(TileCodec.id(raw))
-    if (group and n.joinGroup == group) or n.mat.liquid or TileCodec.isWaterlogged(raw) then return true end
+    if TileTypes.joinsDef(n, group, also) or n.mat.liquid or TileCodec.isWaterlogged(raw) then return true end
     if group and level.joinOverlay then
         for o in pairs(level.joinOverlay) do
             if o.joinsCell and o:joinsCell(c, r, group) then return true end
@@ -153,18 +176,18 @@ local SIDE = {
     left   = { -1, 0, { 2, 4 } }, right  = { 1, 0, { 1, 3 } },
 }
 -- Exposición de la arista `side` de la celda (c, r): true / false / {a, b}
-local function subJoined(cells, k, group)
+local function subJoined(cells, k, group, also)
     local s = cells[k]
     local def = s and TileTypes.byName[s.kind]
-    return def ~= nil and def.joinGroup == group
+    return def ~= nil and TileTypes.joinsDef(def, group, also)
 end
-function TileTypes.sideExposure(level, c, r, side, group)
+function TileTypes.sideExposure(level, c, r, side, group, also)
     local d = SIDE[side]
     local nc, nr = c + d[1], r + d[2]
-    if TileTypes.joinsCell(level, nc, nr, group) then return false end
+    if TileTypes.joinsCell(level, nc, nr, group, also) then return false end
     local cells = group and level.subCells and level.subCells[nr * 65536 + nc]
     if not cells then return true end
-    local a, b = not subJoined(cells, d[3][1], group), not subJoined(cells, d[3][2], group)
+    local a, b = not subJoined(cells, d[3][1], group, also), not subJoined(cells, d[3][2], group, also)
     if a == b then return a end
     return { a, b }
 end
@@ -183,11 +206,11 @@ function TileTypes.edges(t, ctx)
     if ctx.edges then return ctx.edges end
     local level = ctx.level
     if not level or not t.joinGroup then return ALL_EDGES end
-    local col, row, g = ctx.col, ctx.row, t.joinGroup
-    EDGES.top    = TileTypes.sideExposure(level, col, row, 'top', g)
-    EDGES.bottom = TileTypes.sideExposure(level, col, row, 'bottom', g)
-    EDGES.left   = TileTypes.sideExposure(level, col, row, 'left', g)
-    EDGES.right  = TileTypes.sideExposure(level, col, row, 'right', g)
+    local col, row, g, also = ctx.col, ctx.row, t.joinGroup, t.joinAlsoSet
+    EDGES.top    = TileTypes.sideExposure(level, col, row, 'top', g, also)
+    EDGES.bottom = TileTypes.sideExposure(level, col, row, 'bottom', g, also)
+    EDGES.left   = TileTypes.sideExposure(level, col, row, 'left', g, also)
+    EDGES.right  = TileTypes.sideExposure(level, col, row, 'right', g, also)
     return EDGES
 end
 
@@ -256,7 +279,7 @@ local function texQuad(e, sx, sy, sw, sh, w, h)
     return q
 end
 
-function TileTypes.drawTexture(tex, ctx, alpha, capRow)
+function TileTypes.drawTexture(tex, ctx, alpha, capRow, capCol)
     -- Textura ANIMADA con un conjunto de animación (assets/anim/<id>.json, editor: love . --anim):
     --   texture = { anim = 'mi_tile', seq = 'idle' }   → el cuadro que toca, estirado a la casilla
     -- (todas las casillas van a la vez: el cuadro sale del reloj; con ctx.quarter, su cuarto del cuadro)
@@ -268,7 +291,7 @@ function TileTypes.drawTexture(tex, ctx, alpha, capRow)
         love.graphics.setColor(1, 1, 1, alpha or 1)
         local sx, sy, sw, sh = f.x, f.y, f.w, f.h
         local q = ctx.quarter
-        if q then sw, sh = f.w / 2, f.h / 2; sx, sy = f.x + q[1] * sw, f.y + (capRow or q[2]) * sh end
+        if q then sw, sh = f.w / 2, f.h / 2; sx, sy = f.x + (capCol or q[1]) * sw, f.y + (capRow or q[2]) * sh end
         tex._q = tex._q or {}
         local key = sx .. ',' .. sy .. ',' .. sw .. ',' .. sh
         local quad = tex._q[key]
@@ -294,15 +317,148 @@ function TileTypes.drawTexture(tex, ctx, alpha, capRow)
     local sx, sy, sw, sh = cx * cw, cy * ch, cw, ch
     if q then
         sw, sh = cw / 2, ch / 2
-        sx, sy = sx + q[1] * sw, sy + (capRow or q[2]) * sh
+        sx, sy = sx + (capCol or q[1]) * sw, sy + (capRow or q[2]) * sh
     end
     love.graphics.draw(e.img, texQuad(e, sx, sy, sw, sh, w, h), ctx.x, ctx.y, 0, ctx.size / sw, ctx.size / sh)
+end
+
+-- ── Pieles por capas (def.skin) ───────────────────────────────────────────────
+-- Capa de una cara (`side`) de 16x16 de arte: entera si la cara da al aire (true), o solo en la mitad de la cara que da
+-- al aire ({a, b}); en un mini bloque, el cuarto de la capa que toca a esa cara (escala de los bloques grandes)
+local OVER_ROW = { top = 0, bottom = 1 }
+local OVER_COL = { left = 0, right = 1 }
+local function drawOverlay(tex, ctx, side, exp, alpha)
+    if ctx.quarter then
+        if exp then TileTypes.drawTexture(tex, ctx, alpha, OVER_ROW[side], OVER_COL[side]) end
+        return
+    end
+    if type(exp) ~= 'table' then
+        if exp then TileTypes.drawTexture(tex, ctx, alpha) end
+        return
+    end
+    local e = getTexture(tex)
+    if not e then return end
+    local w, h = e.img:getWidth(), e.img:getHeight()
+    local k = ctx.size / w
+    love.graphics.setColor(1, 1, 1, alpha or 1)
+    local vertical = (side == 'left' or side == 'right')
+    for i = 1, 2 do
+        if exp[i] then
+            local o = (i - 1) / 2
+            if vertical then
+                love.graphics.draw(e.img, texQuad(e, 0, o * h, w, h / 2, w, h), ctx.x, ctx.y + o * ctx.size, 0, k, k)
+            else
+                love.graphics.draw(e.img, texQuad(e, o * w, 0, w / 2, h, w, h), ctx.x + o * ctx.size, ctx.y, 0, k, k)
+            end
+        end
+    end
+end
+
+-- Franjas tramadas de transición hacia los vecinos (la arena hacia la tierra, la nieve hacia la piedra, el hielo hacia
+-- la nieve), por MEDIAS casillas — así también hacia mini bloques y en los mini bloques —. `spec` = { image, of =
+-- { <nombre del tile vecino> = cuadro } }: cada cuadro es de 16x16 de arte con la franja a la IZQUIERDA (5 columnas),
+-- que se gira para cada lado.
+local BLEND_SIDES = { { -1, 0, 0 }, { 0, -1, math.pi / 2 }, { 1, 0, math.pi }, { 0, 1, -math.pi / 2 } }
+local SubTilesMod
+local function blendQuads(spec)
+    local e = getTexture(spec)
+    if not e then return nil end
+    if not e.blend then
+        local w, h = e.img:getWidth(), e.img:getHeight()
+        e.blend = {}
+        -- [cuadro][mitad 1|2]: el cuarto izquierdo de arriba / de abajo de cada cuadro
+        for i = 1, math.floor(w / h) do
+            e.blend[i] = { love.graphics.newQuad((i - 1) * h, 0, h / 2, h / 2, w, h),
+                           love.graphics.newQuad((i - 1) * h, h / 2, h / 2, h / 2, w, h) }
+        end
+    end
+    return e
+end
+local function blendHalf(spec, e, level, gx, gy, x, y, u)
+    local fh = e.img:getHeight()
+    local k = u / (fh / 2)
+    for _, sd in ipairs(BLEND_SIDES) do
+        local n = SubTilesMod.kindAt(level, gx + sd[1], gy + sd[2])
+        local f = n and spec.of[n]
+        if f and e.blend[f] then
+            local half = ((sd[1] ~= 0) and gy or gx) % 2 + 1        -- (sigue el dibujo a lo largo del lado)
+            love.graphics.draw(e.img, e.blend[f][half], x + u / 2, y + u / 2, sd[3], k, k, fh / 4, fh / 4)
+        end
+    end
+end
+function TileTypes.drawBlend(spec, ctx)
+    local level = ctx.level
+    if not (level and ctx.col) then return end
+    local e = blendQuads(spec)
+    if not e then return end
+    SubTilesMod = SubTilesMod or require 'src/world/level/SubTiles'
+    love.graphics.setColor(1, 1, 1, 1)
+    if ctx.quarter then
+        blendHalf(spec, e, level, ctx.col, ctx.row, ctx.x, ctx.y, ctx.size)          -- (ctx.col/row = media casilla)
+    else
+        local u = ctx.size / 2
+        for qy = 0, 1 do
+            for qx = 0, 1 do
+                blendHalf(spec, e, level, (ctx.col - 1) * 2 + qx, (ctx.row - 1) * 2 + qy, ctx.x + qx * u, ctx.y + qy * u, u)
+            end
+        end
+    end
+end
+
+-- Dibuja un bloque con piel por capas (def.skin; ver la cabecera)
+local SKIN_SIDES = { 'bottom', 'left', 'right', 'top' }       -- (la de arriba, la última: tapa a las otras)
+local function edgeRect(side, x, y, s, i, h1, h2)
+    local a = (i == 1) and 0 or h1
+    local len = (i == 1) and h1 or h2
+    if side == 'top' then return x + a, y, len, 2
+    elseif side == 'bottom' then return x + a, y + s - 2, len, 2
+    elseif side == 'left' then return x, y + a, 2, len
+    else return x + s - 2, y + a, 2, len end
+end
+function TileTypes.drawSkin(t, ctx)
+    local sk = t.skin
+    local e = TileTypes.edges(t, ctx)
+    local alpha = sk.alpha
+    if sk.body then TileTypes.drawTexture(sk.body, ctx, alpha) end
+    if sk.over then TileTypes.drawTexture(sk.over, ctx, alpha) end
+    if sk.blend then TileTypes.drawBlend(sk.blend, ctx) end
+    for _, side in ipairs(SKIN_SIDES) do
+        local tex = sk[side]
+        if tex and e[side] then drawOverlay(tex, ctx, side, e[side], alpha) end
+    end
+    local x, y, s = ctx.x, ctx.y, ctx.size
+    local ed = sk.edges
+    if ed then
+        local h1 = math.floor(s / 2)
+        local h2 = s - h1
+        local half, rect = TileTypes.half, love.graphics.rectangle
+        for _, side in ipairs(SKIN_SIDES) do
+            local c = ed[side]
+            if c and e[side] then
+                love.graphics.setColor(c[1], c[2], c[3], c[4] or 1)
+                for i = 1, 2 do
+                    if half(e[side], i) then rect('fill', edgeRect(side, x, y, s, i, h1, h2)) end
+                end
+            end
+        end
+    end
+    local ce = sk.capEdge
+    if ce and e.top then
+        -- (junto a la capa de arriba el filo de los lados es del color de la capa)
+        local cap = math.floor(s * ce[2] / (ctx.quarter and 8 or 16))
+        local c = ce[1]
+        love.graphics.setColor(c[1], c[2], c[3], c[4] or 1)
+        if TileTypes.half(e.left, 1) then love.graphics.rectangle('fill', x, y, 2, math.min(cap, s)) end
+        if TileTypes.half(e.right, 1) then love.graphics.rectangle('fill', x + s - 2, y, 2, math.min(cap, s)) end
+    end
 end
 
 -- Dibuja un tile completo (aspecto del tipo) en ctx.x, ctx.y, tamaño ctx.size.
 function TileTypes.drawTile(t, ctx)
     if t.draw then
         t.draw(t, ctx)
+    elseif t.skin then
+        TileTypes.drawSkin(t, ctx)
     elseif t.texture and t.texture.anim then
         TileTypes.drawTexture(t.texture, ctx)          -- (animada con un conjunto de animación)
     elseif t.texture then

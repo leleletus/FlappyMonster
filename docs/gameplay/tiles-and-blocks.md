@@ -18,7 +18,8 @@ during play: breakable, ON/OFF, thin ice, invisible blocks), `src/world/level/Su
 change (`brokenQueue`) and clients apply `tile` events. A block never becomes solid with a player inside.
 
 **To add a tile:** a file in `types/` + its name in `Tiles.lua` `TYPES`; give it a `texture` (an image in
-`assets/images/world/tiles/`) and, if it should exist as a mini block, add it to `SubTiles.KINDS`. Then
+`assets/images/world/tiles/`) — for a block that must read as ONE mass when stacked, a layered `skin` (below) — and,
+if it should exist as a mini block, add it to `SubTiles.KINDS`. Then
 `tools/tests/run.sh docs_reference`. **Harnesses:** `mechanics` (ice, thin ice, switches, helmet…), `subtiles`,
 `flood_control switchblocks`.
 
@@ -34,6 +35,23 @@ change (`brokenQueue`) and clients apply `tile` events. A block never becomes so
   only half the side; `drawEdges` and grass blades honour halves). Entities that draw as
   blocks expose `e:joinsCell(c, r, group)` and are registered by `BossZones.link` in
   `level.joinOverlay` (boss walls, only while 'solid'). Harness `subtiles` case `union`.
+  `joinAlso = { 'group' or 'tile name', ... }` (2026-10-29): extra groups / tiles a type also joins with, draw only
+  (snow ↔ ice: snow `joinAlso = {'ice'}`, ice `joinAlso = {'snow', 'packed_snow', 'snow_brick'}`); big tiles and mini
+  blocks honour it (`TileTypes.joinsDef`). Harness `subtiles` case `helado`.
+
+- **Layered skins** (`def.skin`, `TileTypes.drawSkin`, 2026-10-29) — the generic way to draw a block that must read
+  as one continuous mass: a seamless `body` (`span = 2` → the drawing covers 2x2 cells), and overlays `top` /
+  `bottom` / `left` / `right` (16x16 art, transparent outside their band) drawn ONLY on the faces exposed to the air
+  (or on the exposed half of a face; on a mini block, its quarter), `over` (always: a window on a wall), `alpha`,
+  `blend` (dithered bands towards neighbours, below), per-side 2-px `edges` colours and `capEdge` (side edge colour
+  next to the top layer). A tile with `skin` and no `draw` needs no code. Before, snow and ice baked a light top band
+  and a dark bottom band into EVERY cell, so a snow wall or an ice wall showed horizontal stripes, one per block
+  (the user's report, 2026-10-29). Grass, ash and temple brick still draw their cap by code (same idea, older).
+- **Blends** (`TileTypes.drawBlend(spec, ctx)`): the sand's dithered transitions, now in the base. `spec = { image,
+  of = { <neighbour tile name> = frame } }`, each frame 16x16 art with the band on the LEFT (5 columns), rotated per
+  side, per half cell (towards big blocks and mini blocks). Users: sand (`sand_blend.png`), ice and the opaque ice
+  blocks towards snow (`ice_blend.png`, frost). Snow towards dirt / stone: NOT used — tried, the dirt dither under the
+  snow read as spiky grass (option B kept in `FlappyMonster_pruebas/tiles_helados/opciones/`).
 
 - Tiles: **Basalto** `basalt` 38 (dark volcanic rock, 2x2 drawing like stone, very few marks) and **Ceniza** `ash` 39
   (ash cap with embers over basalt when its top is in the air, like grass over dirt); materials `basalt` / `ash`
@@ -50,7 +68,7 @@ change (`brokenQueue`) and clients apply `tile` events. A block never becomes so
 ## Mini blocks (subtiles)
 
 - **Subtiles** (`src/world/level/SubTiles.lua`): quarter-cell versions of the tiles in
-  `SubTiles.KINDS` ({'solid','dirt','grass'}; a new one = one name). JSON
+  `SubTiles.KINDS` (stone, dirt, grass, sand, deep stone, basalt, ash, the jungle three and the frozen seven; a new one = one name). JSON
   `"subtiles": [{col,row,sub 1..4,kind[,solid=false]}]` (solid by default; the editor
   only writes `solid:false`). Physics: `Level:getDefAt` returns the quarter's def
   (`SubTiles.def(kind,q)` = the tile def with that quarter as hitbox) in cells without
@@ -101,8 +119,13 @@ change (`brokenQueue`) and clients apply `tile` events. A block never becomes so
 ## Snow, ice and thin ice
 
 - **Snow / ice** (`snow` 29, material snow, joinGroup ground; `ice` 30, drawn at 0.78 alpha, SLIPPERY: material `friction = 0.2` scales the player's ground friction, ice + thin ice; harness `mechanics hielo_resbala`;
-  joinGroup ice). Textures `tiles/snow.png`, `ice.png` (the user's originals kept outside the
-  repo), from `tools/art/world/make_snow_sprites.py` (never overwrites; `--force`).
+  joinGroup ice; they join each other). Layered skins since 2026-10-29 (`tools/art/world/make_frozen_tiles.py`,
+  the user's colours): snow = `snow.png` body (plain, 64x64 — other tools read it) + `snow_top.png` (a snow cushion
+  with a wavy lower edge, only on top faces in the air) + `snow_under.png` (shade, only on bottom faces in the air);
+  ice = `ice.png` body 2x2 cells (long diagonal shines that cross blocks) + `ice_top.png` frost rim + `ice_under.png`
+  + `ice_blend.png` frost band towards snow. The user's originals and the per-cell versions of before are outside
+  the repo (`snow-orig.png`, `snow-antes_capas.png`, same for ice). Thin ice still comes from
+  `tools/art/world/make_snow_sprites.py`.
 
 - **Thin ice** (`thin_ice.lua`, 4 tiles 31-34: normal → `_1` damaged → `_2` → `_3` about to
   break; later stages `editorHide`): SOLID on every side, half a cell tall (hitbox top half),
@@ -118,6 +141,35 @@ change (`brokenQueue`) and clients apply `tile` events. A block never becomes so
   level JSON `"snow": true` (editor Nivel → Clima → "Nieve cayendo"), 3 depth layers of
   `fx/snowflakes.png`, visual only. Decoration `icicle` (Carámbano, `decorations/ice/icicle.png`,
   hangs from the top of its cell). Test arena `tools/levelgen/arenas/hielo.json`.
+
+## The frozen pack (tiles 50-58)
+
+Construction blocks for the frozen islands (2026-10-29, `src/world/tiles/types/frozen_pack.lua`, art
+`tools/art/world/make_frozen_tiles.py`, all layered skins, all allowed on the background plane). Material
+`frost_stone` = stone (normal friction, not diggable) with blue-grey debris. Showcase arena
+`tools/levelgen/arenas/hielo_paquete.json` (`make_hielo_paquete.py`).
+
+| Id | Name | Label | Behaviour | Look |
+|---|---|---|---|---|
+| 50 | `frost_brick` | Ladrillo helado | solid, frost_stone, ground | running-bond bricks (2x2), thin snow on top |
+| 51 | `ice_rock` | Roca helada | solid, frost_stone, ground | blue-grey rock (2x2), frost in the cracks, thin snow on top |
+| 52 | `ice_brick` | Sillar de hielo | solid, ice (SLIPPERY), group ice | opaque bevelled ice blocks (2x2), frost rim |
+| 53 | `glacier_ice` | Hielo glaciar | solid, ice (SLIPPERY), group ice | opaque ice in strata (2x2): the glacier wall that does not look ghostly on the plane |
+| 54 | `snow_brick` | Bloque de nieve (iglú) | solid, snow (the Mole digs it), ground | snow bricks (2x2), snow cushion on top |
+| 55 | `ice_pillar` | Columna de hielo | solid, ice (SLIPPERY), own group | fluted shaft; capital where the top is free of pillar, base where the bottom is |
+| 56 | `frost_window` | Ventana helada | solid, frost_stone, ground | a frost brick with an arched ice window (meant for the plane) |
+| 57 | `frost_platform` | Plataforma helada (traspasable) | one-way, drop-through, wood, h 0.36 | frozen planks, snow on top, icicles under |
+| 58 | `ice_ledge` | Repisa de hielo (traspasable) | one-way, drop-through, ice (SLIPPERY), h 0.36, drips | translucent ice slab |
+
+Mini blocks: snow, ice, frost brick, ice rock, snow brick, glacier ice, ice brick. Boss walls: frost brick, ice
+rock, ice brick. `retheme.py`: the snow theme turns `platform_drop` into `frost_platform` (`PLATFORM_OF`) and its
+plane gets frozen-brick ruins (`frostwall`) — see [levels/retheme](../levels/retheme.md).
+
+History (2026-10-29): the user asked to make snow and ice walls continuous and for a pack of frozen bricks / rock
+walls for structures and backdrops. The user was away: applied option A (snow cushion with a wavy edge, ice with
+diagonal shines) — B (thin straight snow layer, ice in strata) is `make_frozen_tiles.py --snow B --ice B`; previews
+in `FlappyMonster_pruebas/tiles_helados/`. Rejected while making it: the snow→dirt dither (looked like spiky grass),
+diagonal ice veins on the ice rock (looked like rain). Not placed in any existing level (the user places them by hand).
 
 ## Spikes and their skins
 

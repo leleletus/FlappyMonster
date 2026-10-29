@@ -1,0 +1,37 @@
+{
+  "id": "snowball",
+  "label": "Bola de Nieve",
+  "category": "Enemigos",
+  "description": "La hermana pequeña de la Gran Bola de Nieve: patrulla rodando y, si ve a un jugador, se agacha y se lanza hacia él (también a otra repisa): lo que pilla sale EMPUJADO con fuerza de lado, sin quitar vida, para tirarlo de las repisas. Tocarla rodando quita 1. Se le pisa (se deshace en un montón de nieve).",
+  "anim": "enemies/snowball",
+  "scale": 4,
+  "facesLeft": false,
+  "breathe": true,
+  "hitbox": {
+    "innerH": 0.75,
+    "innerW": 0.6,
+    "outerH": 1.0,
+    "outerW": 0.78
+  },
+  "hp": 1,
+  "hurtTime": 0.5,
+  "defaults": {
+    "movement": "walk",
+    "onTouch": "hurt",
+    "pauses": false,
+    "points": 20,
+    "speed": 70,
+    "stompable": true
+  },
+  "traits": {},
+  "states": {},
+  "behaviors": [
+    { "type": "ram" }
+  ],
+  "sounds": {
+    "windup": "snowballWindup",
+    "charge": "snowballLaunch",
+    "recoil": "snowballShove",
+    "dazed": "snowballBonk"
+  }
+}

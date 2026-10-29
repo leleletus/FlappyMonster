@@ -401,6 +401,31 @@ function Level:syncOxyBubbles(serverVentBubbles)
     end
 end
 
+-- ── Superficie del agua ──────────────────────────────────────────────────────
+-- Y de la SUPERFICIE del agua que cubre el punto (x, y), subiendo por la columna x (agua de casillas, waterlogged y de
+-- inundaciones, a la vez); un bloque encima la corta (su cara de abajo). nil = el punto no está en el agua. Lo usa lo que
+-- FLOTA (el Iceberg) en un jugador y en el servidor: es la misma agua que la física.
+local SURF_STEP = 8
+local function wetAt(level, x, y) return y >= 0 and level:liquidAt(x, y) ~= nil and not level:collisionAt(x, y) end
+function Level:waterSurfaceAt(x, y, maxUp)
+    if not wetAt(self, x, y) then return nil end
+    local lim = y - (maxUp or 24 * TILE_PX)
+    local yy = y
+    while yy > lim do
+        local ny = yy - SURF_STEP
+        if not wetAt(self, x, ny) then
+            local lo, hi = ny, yy                       -- (lo: seco o bloque; hi: agua) → media a media hasta < 1 px
+            for _ = 1, 4 do
+                local mid = (lo + hi) / 2
+                if wetAt(self, x, mid) then hi = mid else lo = mid end
+            end
+            return hi
+        end
+        yy = ny
+    end
+    return yy
+end
+
 -- Exporta spikeHitbox para que AdventureState la reutilice en el debug,
 -- garantizando que debug y física usen exactamente la misma función.
 Level._spikeHitbox = spikeHitbox

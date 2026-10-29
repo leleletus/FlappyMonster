@@ -5,7 +5,7 @@ hay hueco detrás de la capa jugable, según el tema de la isla (THEMES de rethe
   pradera / bosque   colinas de tierra y césped + árboles grandes (roble, abedul, abeto)
   playa / trópico    dunas de arena, peñascos de arenisca (con césped en el trópico) + cocoteros y palmeras
   fortaleza          murallas de piedra con almenas y ventanas, torres; estandartes y hiedra en ellas; cipreses
-  nieve              lomas de nieve, muros de hielo con nieve encima + abetos nevados
+  nieve              lomas de nieve, muros de hielo con nieve encima, ruinas de ladrillo helado + abetos nevados
   cueva / mina / submarino  montones de roca en el suelo, roca que cuelga del techo, columnas; cristales y setas gigantes
   volcán             agujas y muros de basalto, montones de ceniza + árboles muertos
   jungla             ruinas del templo (columnatas con dintel y arcos, pirámides escalonadas, muros rotos) + ceibas
@@ -78,10 +78,15 @@ SPEC = {
                      mat=dict(body=SOLID),
                      trees=[('cypress', 3, {SOLID, BORDER, DIRT, GRASS}), ('old_tree', 1, {SOLID, BORDER, DIRT, GRASS})],
                      tree_gap=10, tree_p=0.3, small=[('urn', 1)], small_p=0.06),
-    'snow': dict(kinds=[('hill', 3, 8, 14, 2, 3), ('icewall', 1, 5, 9, 3, 4)], gap=(1, 5), cap=6,
-                 mat=dict(top=SNOW, body=SNOW, ice=ICE),
+    'snow': dict(kinds=[('hill', 3, 8, 14, 2, 3), ('icewall', 1, 5, 9, 3, 4), ('frostwall', 1, 5, 9, 3, 5)], gap=(1, 5), cap=6,
+                 mat=dict(top=SNOW, body=SNOW, ice=ICE, brick=R.FBRICK, rock=R.IROCK, window=R.FWINDOW),
                  trees=[('snowy_fir', 3, {SNOW}), ('snowy_fir_small', 3, {SNOW})], tree_gap=6, tree_p=0.55,
                  small=[('snow_rock', 1)], small_p=0.03),
+    # (costa helada: barreras de hielo y lomas bajas de nieve — a nivel del mar, sin bosque —, algún iceberg encima)
+    'frozen_coast': dict(kinds=[('icewall', 3, 5, 10, 2, 4), ('hill', 1, 8, 14, 1, 2)], gap=(2, 6), cap=5,
+                         mat=dict(top=SNOW, body=SNOW, ice=ICE),
+                         trees=[('snowy_fir_small', 1, {SNOW})], tree_gap=16, tree_p=0.12,
+                         small=[('iceberg', 2), ('snow_rock', 1)], small_p=0.06),
     'cave': dict(kinds=[('mound', 1, 6, 14, 2, 4)], gap=(1, 5), cap=4,
                  mat=dict(top=SOLID, body=SOLID, drape=SOLID),
                  trees=[('giant_mushroom', 2, {SOLID, BORDER, DEEP, DIRT}), ('giant_mushroom_violet', 2, {SOLID, BORDER, DEEP, DIRT})],
@@ -424,6 +429,23 @@ class Gen:
 
     def tower(self, cols, base, h):
         return self.wall(cols, base, h, tower=True)
+
+    def frostwall(self, cols, base, h):
+        """Ruina helada (2026-10-29): muro de ladrillo helado con almenas (una sí, una no), el pie de roca helada y
+        ventanas heladas cada 3 columnas (bloques con su ventana dibujada: no hay huecos)"""
+        m = self.spec['mat']
+        t = base - h
+        w = len(cols)
+        for k, s in enumerate(cols):
+            c = s['c']
+            if k % 2 == 0: self.put(c, t, m['brick'])
+            for r in range(t + 1, s['f']):
+                win = h >= 4 and 1 <= k < w - 1 and (k - 1) % 3 == 0 and r == t + 2
+                self.put(c, r, m['window'] if win else (m['rock'] if r == s['f'] - 1 else m['brick']))
+            for r in (s['f'], s['f'] + 1):
+                if (c, r) in self.terr: self.put(c, r, m['rock'], hidden=True)
+        self.tops(cols, 'frostwall')
+        return True
 
     def colonnade(self, cols, base, h):
         """Ruina del templo: columnas cada 4, dintel encima (roto a trozos) y arcos junto a las columnas"""

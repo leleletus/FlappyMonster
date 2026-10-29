@@ -28,6 +28,9 @@ Isles.BY_BACKGROUND = {
     coast = 'costa',
     fortress = 'fortaleza',
     snow = 'nieve', mountain = 'nieve', icecave = 'nieve',
+    -- (la Costa Helada usa el arte de la nieve — Crabby / Gummy helados, Caja, Géiser…: una isla nueva en IDS pediría
+    -- una fila de arte en CADA tipo con `isleArt`; `islas_arte` falla sin ella)
+    frozen_coast = 'nieve',
     cave = 'cueva', underwater = 'cueva', abyss = 'cueva', underground = 'cueva',
     volcano = 'volcan', magma = 'volcan',
     jungle = 'jungla', temple = 'jungla',

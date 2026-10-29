@@ -272,6 +272,18 @@ function DataEnemy:getHazardBoxes()
     return out
 end
 
+-- Lanzó a un jugador (una caja de peligro `effect = 'launch'` de un comportamiento: Interactions.run): se lo dice al
+-- comportamiento dueño (`onLaunch(e, cfg, pa)`: el empujón de `ram` rebota y se ríe)
+function DataEnemy:onLaunch(pa)
+    local b = DataEnemy.Core.ownerNow(self)
+    if b and b.def.onLaunch then b.def.onLaunch(self, b.cfg, pa) end
+end
+-- Un comportamiento con `freeOfRoute = true` (embestir, lanzarse) no se para en los límites de la ruta mientras manda
+function DataEnemy:freeOfRoute()
+    local b = DataEnemy.Core.ownerNow(self)
+    return b ~= nil and b.def.freeOfRoute == true
+end
+
 -- Un proyectil que le quita vida a un jugador se gasta
 function DataEnemy:onHurtPlayer(pa)
     local b = pa:getOuterBounds()
@@ -410,6 +422,13 @@ function DataEnemy.typeDef(spec)
     })
     cls.spec = spec
     cls.darkEdge = spec.darkEdge
+    -- (el sonido del estado en que entra al LANZAR a un jugador — `launchState` del comportamiento —: el cliente online
+    -- predice ese lanzamiento y lo suena él, Interactions / OnlineAdventureState `launchSound`)
+    for _, b in ipairs(spec.behaviors or {}) do
+        local def = Behaviors.byName[b.type]
+        local snd = def and def.launchState and spec.sounds and spec.sounds[def.launchState]
+        if snd and snd ~= '' then cls.launchSound = snd end
+    end
     if spec.crawl then
         Crawler.mixin(cls)                       -- (empujado: se suelta en Entity:knockback)
     end

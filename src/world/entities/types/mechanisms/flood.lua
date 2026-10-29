@@ -1,4 +1,5 @@
--- Inundación: el nivel del agua de un rectángulo sube y baja en ciclo.
+-- Inundación: el nivel del agua de un rectángulo sube y baja en ciclo (o con una pelea, bloques ON/OFF, o como una
+-- MAREA). Puede ser agua HELADA (prop `cold`: congela a quien se queda dentro).
 -- La entidad solo sirve para colocarla y configurarla en el editor: la
 -- casilla donde se coloca es la esquina superior izquierda y la cajita
 -- "Esquina" (arrastrable) la inferior derecha. En la partida no hace nada:
@@ -76,7 +77,9 @@ function Flood.drawEditorOverlay(props, cx, cy, zoom, ctx)
     local y0, y1 = f.y0 * s - ctx.camY, f.y1 * s - ctx.camY
     local function yAt(lv) return y1 - lv * T end
     -- Agua animada según el ciclo
-    local lv, phase = Floods.levelAt(f, love.timer.getTime() % math.max(0.01, f.startDelay + f.cycle))
+    local lv, phase
+    if f.control == 'tide' then lv, phase = Floods.tideAt(f, love.timer.getTime())
+    else lv, phase = Floods.levelAt(f, love.timer.getTime() % math.max(0.01, f.startDelay + f.cycle)) end
     love.graphics.setColor(0.15, 0.45, 1, 0.35)
     love.graphics.rectangle('fill', x0, yAt(lv), x1 - x0, lv * T)
     love.graphics.setLineWidth(2 / zoom)
@@ -95,11 +98,15 @@ function Flood.drawEditorOverlay(props, cx, cy, zoom, ctx)
     if f.control == 'switch' then
         txt = string.format('#%d · bloques ON/OFF: ON = sube al máximo en %.1f s · OFF = baja al mínimo en %.1f s',
             f.id, f.riseT, f.fallT)
+    elseif f.control == 'tide' then
+        txt = string.format('#%d · marea: de %.2f a %.2f casillas cada %.1f s (desfase %.2f) - %s', f.id, f.lo, f.hi,
+            f.tidePeriod, f.tidePhase, names[phase] or phase)
     else
         txt = string.format('#%d · %sciclo %.1f s (sube %.1f, arriba %.1f, baja %.1f, abajo %.1f) - %s', f.id,
             f.control == 'boss' and 'durante la pelea de jefe: ' or '', f.cycle, f.riseT, f.holdTime, f.fallT,
             f.lowTime, names[phase] or phase)
     end
+    if f.cold > 0 then txt = txt .. string.format(' · HELADA: congela a los %.1f s', f.cold) end
     love.graphics.setColor(0, 0, 0, 0.6)
     love.graphics.print(txt, 1, 1)
     love.graphics.setColor(1, 1, 1, 1)
@@ -109,11 +116,14 @@ function Flood.drawEditorOverlay(props, cx, cy, zoom, ctx)
 end
 
 local G0, G1, G2, G3 = 'Control', 'Área y niveles', 'Subida', 'Bajada'
-local function cyclic(p) return p.control ~= 'switch' end
+local function cyclic(p) return p.control ~= 'switch' and p.control ~= 'tide' end
+local function stepped(p) return p.control ~= 'tide' end
+local function tide(p) return p.control == 'tide' end
 return {
     name = 'flood', label = 'Inundación', category = 'Mecanismos',
     description = 'Área cuyo nivel de agua sube y baja: siempre en ciclo, durante la pelea de una zona de jefe, '
-               .. 'o al encender/apagar bloques ON/OFF conectados a ella (capa Bloques → herramienta Conectar).',
+               .. 'o al encender/apagar bloques ON/OFF conectados a ella (capa Bloques → herramienta Conectar), o como una marea. '
+               .. 'Puede ser agua helada (congela a quien se queda dentro).',
     class = Flood,
     inBlockOk = true,          -- (zona: puede empezar dentro de los bloques)
     hide = 'all',
@@ -126,9 +136,16 @@ return {
           help='Los bloques ON/OFF se conectan a este número (capa Bloques → Conectar)' },
         { key='control', kind='enum', label='Se mueve', group=G0, default='cycle',
           options={ { value='cycle', label='Siempre' }, { value='boss', label='Pelea de jefe' },
-                    { value='switch', label='Bloques ON/OFF' } },
+                    { value='switch', label='Bloques ON/OFF' }, { value='tide', label='Marea' } },
           help='Siempre: ciclo sin fin. Pelea de jefe: su ciclo solo mientras dura la pelea; al morir el jefe baja al mínimo y se queda. '
-            .. 'Bloques ON/OFF: con uno conectado en ON sube al máximo y se queda; con todos en OFF baja al mínimo' },
+            .. 'Bloques ON/OFF: con uno conectado en ON sube al máximo y se queda; con todos en OFF baja al mínimo. '
+            .. 'Marea: sube y baja sola, suave, entre el nivel mínimo (marea baja) y el máximo (marea alta)' },
+        { key='tidePeriod', kind='number', label='Marea: periodo (s)', group=G0, default=20, min=2, max=600, step=1,
+          showIf=tide, help='Lo que tarda una marea entera: de baja a alta y otra vez a baja' },
+        { key='tidePhase', kind='number', label='Marea: desfase', group=G0, default=0, min=0, max=0.95, step=0.05,
+          showIf=tide, help='En qué punto del ciclo empieza (fracción del periodo): 0 = marea baja subiendo, 0.5 = marea alta bajando' },
+        { key='cold', kind='number', label='Agua helada: congela a los (s)', group=G0, default=0, min=0, max=60, step=0.5,
+          help='0 = agua normal. Si no, quien pasa este tiempo seguido dentro se congela (bloque de hielo: machacar botones para salir). Fuera del agua se reinicia' },
         { key='zone', kind='int', label='Zona de jefe (id)', group=G0, default=0, min=0, max=99, step=1,
           showIf=function(p) return p.control == 'boss' end, help='0 = la zona con la que se solapa (o la más cercana)' },
         { key='undertow', kind='number', label='Resaca al bajar (px/s)', group=G0, default=0, min=-600, max=600, step=10,
@@ -147,17 +164,17 @@ return {
         { key='lowTime', kind='number', label='Tiempo abajo (s)', group=G1, default=4, showIf=cyclic,
           min=0, max=600, step=0.5, help='Lo que se queda en el nivel mínimo antes de volver a subir' },
         { key='riseSpeed', kind='number', label='Velocidad (casillas/s)', group=G2, default=0.5,
-          min=0.05, max=20, step=0.05 },
+          min=0.05, max=20, step=0.05, showIf=stepped },
         { key='riseStep', kind='number', label='Escalón (casillas)', group=G2, default=0,
-          min=0, max=200, step=0.25, help='0 = sube seguido. Si no, sube de esto en esto con pausas' },
+          min=0, max=200, step=0.25, help='0 = sube seguido. Si no, sube de esto en esto con pausas', showIf=stepped },
         { key='risePause', kind='number', label='Pausa entre escalones (s)', group=G2, default=1,
-          min=0, max=120, step=0.25, showIf=function(p) return (p.riseStep or 0) > 0 end },
+          min=0, max=120, step=0.25, showIf=function(p) return stepped(p) and (p.riseStep or 0) > 0 end },
         { key='fallSpeed', kind='number', label='Velocidad (casillas/s)', group=G3, default=0.5,
-          min=0.05, max=20, step=0.05 },
+          min=0.05, max=20, step=0.05, showIf=stepped },
         { key='fallStep', kind='number', label='Escalón (casillas)', group=G3, default=0,
-          min=0, max=200, step=0.25, help='0 = baja seguido. Si no, baja de esto en esto con pausas' },
+          min=0, max=200, step=0.25, help='0 = baja seguido. Si no, baja de esto en esto con pausas', showIf=stepped },
         { key='fallPause', kind='number', label='Pausa entre escalones (s)', group=G3, default=1,
-          min=0, max=120, step=0.25, showIf=function(p) return (p.fallStep or 0) > 0 end },
+          min=0, max=120, step=0.25, showIf=function(p) return stepped(p) and (p.fallStep or 0) > 0 end },
     },
     editor = { draw = drawIcon },
 }

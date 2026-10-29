@@ -71,6 +71,8 @@ return {
 | `edible = true` (class field) | The Carnivorous Plant eats it when it enters its trigger (thrown, walking…): `Entity:dieEaten()` (gone at once, counts as a kill, respawns with `respawn`). Since 0.5.97 every non-boss ENEMY is eaten anyway (`Entity:canBeEaten`); `edible` adds other categories. Override `canBeEaten()` to refine (only out of water, only above ground…) |
 | `inedible = true` (class field) | The Carnivorous Plant never eats it (the pufferfish, other plants) |
 | `fearless = true` | Ignores the DANGER ZONES (`dangerBox()` of other entities: the plant) that enemies avoid by instinct |
+| `denseProbe = true` (class field) | A WIDE / TALL body: `Entity:moveAndCollide` probes every half tile along each side instead of 3 points (the Iceberg up to 8 tiles wide) |
+| `pushInWater = true` (class field) | Something pushed (`pushBy`) can also be pushed by a SWIMMING player (`PlayerCollision`, `Box:pushBy`; the Iceberg) |
 | `ownStunLook = true` (class field) | Skips the render wrapper's generic `stunned` look (the whole render ROTATED around its centre + a star ring): for types that draw their own knockout, or whose `render` also draws things far from them (The Groove's dance floor swung with it) |
 
 (Classes share `def` when one file returns several definitions with the same class: traits that differ per definition
@@ -85,6 +87,9 @@ Gummies `artDir`, `helmetDx`, `helmetDy`.
   (`flyMode = 'free'`, `entities/base/FreeFlight.lua`). Walkers turn round at another entity (`isObstacle()`), spikes,
   edges and DANGER ZONES (`Entity:dangerAt`: the Carnivorous Plant); boxed in, they stay idle. A type that moves by
   itself should ask `self:dangerAt(level, box)` before choosing where to go.
+- SLED (lies down, slides with momentum and can be RIDDEN: `entities/base/Sled.lua`): `Sled.mixin(Class, { states,
+  top, w })` + `Sled.move` / `Sled.rider` / `Sled.buck` from the type (the Penguin). Sight in front: `self:seesAhead(level,
+  tiles)`; the ground's material (ice): `self:groundMat(level)`; spikes / void / below the level: `self:burstIfDoomed(level)`.
 - SWIMMER (lives in water: `entities/base/Swimmer.lua`): call `Swimmer.init` / `ready` / `move` / `updateDry` from the
   type; props `Swimmer.areaProp(group)` and `Swimmer.dryTimeProp(group)`; `swimPass = true` to cross blocks.
 - CRAWLER (floor ↔ walls ↔ ceiling): `Crawler.mixin(Class)` gives the rotated boxes, the normal for the stomp,
@@ -94,6 +99,14 @@ Gummies `artDir`, `helmetDx`, `helmetDy`.
   boxes `getHazardBoxes()` with `effect = 'hurt' | 'freeze'`…). Own rules: `interact(pa)` (side-effect free: the
   client uses it to predict) and the notifications `onStomp`, `onBounced`, `onHurtPlayer`, `onLaunch`,
   `onHelmetBounce`.
+- SHOVING without damage: a hazard box with `effect = 'launch', vx, vy[, jumps][, stompable]` launches the player like a
+  trampoline (`pa:launch`; the online client predicts it); never again while the player is still flying from a launch
+  (`ctrlLockT`); `stompable` = falling on it from above does not shove (the stomp rules apply). The entity hears it in
+  `onLaunch(pa)` and the client plays its `launchSound`. Used by the `ram` behaviour (the Snowball).
+- RAMMING: `Entity:sweepAhead(level, box, dir, swept, vx, vy)` knocks down what is in `box` (enemies `knockback`,
+  light carryables `onThrow`, never bosses; once each per `swept` table) — the Beetle and `ram`;
+  `Entity:landingAhead(level, dir, maxGap)` = distance to floor at its height across a gap (nil = no landing, a wall,
+  spikes or a danger zone first) for things that jump gaps.
 - Deaths: `stomp()`, `dieFling(dir)`, `dieBurst()`, `dieEaten()` (eaten: gone at once), respawn (`props.respawn`).
 - Freezing (`canFreeze`), being launched by trampolines (`canBeLaunched`), the ground-pound shove (`knockback`).
 - Reserve MINION: any entity can be one (`Entity:makeReserve`; hook `onMakeReserve`).

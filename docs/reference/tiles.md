@@ -46,7 +46,16 @@ Every tile registered in `src/world/tiles/Tiles.lua`. **Id** is stored in the le
 | 41 | `jungle_grass` | Césped de la jungla | Terreno | solid | grass | joins `ground` |
 | 42 | `temple_brick` | Sillar del templo | Terreno | solid | temple_stone | joins `ground` |
 | 43 | `jungle_platform` | Plataforma traspasable (jungla) | Plataformas | oneway (drop-through) | wood | partial hitbox |
+| 50 | `frost_brick` | Ladrillo helado | Terreno | solid | frost_stone | joins `ground` |
+| 51 | `ice_rock` | Roca helada | Terreno | solid | frost_stone | joins `ground` |
+| 52 | `ice_brick` | Sillar de hielo | Terreno | solid | ice | joins `ice` |
+| 53 | `glacier_ice` | Hielo glaciar | Terreno | solid | ice | joins `ice` |
+| 54 | `snow_brick` | Bloque de nieve (iglú) | Terreno | solid | snow | joins `ground` |
+| 55 | `ice_pillar` | Columna de hielo | Terreno | solid | ice | joins `ice_pillar` |
+| 56 | `frost_window` | Ventana helada | Terreno | solid | frost_stone | joins `ground` |
+| 57 | `frost_platform` | Plataforma helada (traspasable) | Plataformas | oneway (drop-through) | wood | partial hitbox |
+| 58 | `ice_ledge` | Repisa de hielo (traspasable) | Plataformas | oneway (drop-through) | ice | partial hitbox |
 
 ## Materials
 
-`src/world/tiles/materials/<name>.lua`: ash, basalt, deadly, deep_stone, default, dirt, grass, ice, mud, sand, snow, stone, temple_stone, water, wood.
+`src/world/tiles/materials/<name>.lua`: ash, basalt, deadly, deep_stone, default, dirt, frost_stone, grass, ice, mud, sand, snow, stone, temple_stone, water, wood.

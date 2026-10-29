@@ -26,6 +26,9 @@
 -- WANTGULP=1: TRAGADO por una Planta carnívora (0.5.97; LEVEL=tools/tests/online_smoke/planta.json WATCH=carnivoreplant
 -- WANT=hold): el jugador local tiene que quedar tragado (estado propio `gulped`, predicho), no verse, machacar el salto
 -- (lo manda por red) y salir escupido, vivo; falla si nunca lo tragó o si no salió
+-- WANTSHOVE=1: EMPUJADO por una Bola de Nieve (LEVEL=tools/tests/online_smoke/bola_de_nieve.json WATCH=snowball
+-- WANT=windup,charge): el jugador local tiene que salir lanzado de lado (predicho como un trampolín: ctrlLockT y vx) sin
+-- perder vida; se mide la mayor corrección del servidor en el medio segundo siguiente (falla si pasa de SHOVE_ERR px)
 io.stdout:setvbuf("no")
 love.filesystem.setSymlinksEnabled(true)
 lovesize = require 'libs/lovesize'
@@ -160,6 +163,14 @@ function love.update(dt)
             if pa.dying and not watch.wasDying then watch.deaths = watch.deaths + 1 end
             watch.wasDying = pa.dying
             if (pa.iceT or 0) > 0 then watch.iced = (watch.iced or 0) + 1 end
+            -- (empujado por una Bola de Nieve: lanzado de lado sin control un momento; la corrección que llega después)
+            if (pa.ctrlLockT or 0) > 0.1 and math.abs(pa.vx or 0) > 450 then
+                if not watch.shoveAt or t > watch.shoveAt + 1 then watch.shoves = (watch.shoves or 0) + 1 end
+                watch.shoveAt = watch.shoveAt and t <= watch.shoveAt + 1 and watch.shoveAt or t
+            end
+            if watch.shoveAt and t < watch.shoveAt + 0.5 and st.predictor then
+                watch.shoveErr = math.max(watch.shoveErr or 0, st.predictor.lastError or 0)
+            end
             if pa.gulped then
                 watch.gulped = (watch.gulped or 0) + 1
                 if frames % 6 == 0 then stub.state.jump_pressed = true end    -- (machaca el salto: viaja por red)
@@ -222,6 +233,13 @@ function love.update(dt)
             end
             for w in (os.getenv('WANT') or ''):gmatch('[^,]+') do
                 if not watch.states[w] then print('Error: el cliente no vio el estado ' .. w) end
+            end
+            print(('jugador local empujado: %d veces, mayor corrección tras el empujón %.1f px'):format(watch.shoves or 0, watch.shoveErr or 0))
+            if os.getenv('WANTSHOVE') then
+                local maxErr = tonumber(os.getenv('SHOVE_ERR')) or 48
+                if (watch.shoves or 0) == 0 then print('Error: el jugador local nunca salió empujado') end
+                if (watch.shoveErr or 0) > maxErr then print(('Error: corrección tras el empujón %.1f px > %d'):format(watch.shoveErr, maxErr)) end
+                if watch.minHp < 3 then print('Error: el empujón le quitó vida') end
             end
         end
         if netQ and st and st.predictor then

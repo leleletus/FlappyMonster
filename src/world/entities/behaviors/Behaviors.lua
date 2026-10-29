@@ -13,13 +13,16 @@
 --         hazards = function(e, cfg) return { {x,y,w,h, effect='hurt', dmg=1} } end,    -- (opcional) cajas que dañan
 --         disabled = function(e, cfg) return true end,       -- (opcional) ¿ahora no se le puede tocar ni pisar?
 --         anim = function(e, cfg, set, map) return 'hide', t end,   -- (opcional) secuencia y tiempo dentro de su estado
---         crawlOk = true }                                    -- (opcional) vale también para un enemigo que trepa
+--         crawlOk = true,                                     -- (opcional) vale también para un enemigo que trepa
+--         onLaunch = function(e, cfg, pa) … end,             -- (opcional) una caja suya effect='launch' lanzó a un jugador
+--         launchState = 'recoil',                            -- (opcional) el estado en que entra entonces (su sonido lo predice el cliente)
+--         freeOfRoute = true }                               -- (opcional) en sus estados no le paran los límites de la ruta
 --  2. Añade su nombre a TYPES abajo.
 --  Listo: sale en el editor de enemigos con sus parámetros, y funciona en un jugador y online (solo simulan un
 --  jugador y el servidor; el cliente dibuja el estado y su reloj `deadTimer`, que ya viajan por red).
 -- Reglas: nada de love.graphics ni de estado que el dibujo necesite y no viaje; el tiempo dentro de un estado es
 -- `e.deadTimer` (e:enter lo pone a 0); para ver a los jugadores, `e:nearestPlayer(level)`.
-local TYPES = { 'chase', 'melee', 'leap', 'shoot', 'hide' }
+local TYPES = { 'chase', 'melee', 'leap', 'shoot', 'hide', 'ram' }
 
 local Behaviors = { byName = {}, list = {} }
 for _, name in ipairs(TYPES) do

@@ -2,7 +2,7 @@
 
 The regular enemies. Every island has its own Gummy and its own Crabby (same class, other art, sometimes other
 shape); dark levels have the Gloomy Crabby; plus the Hopper, bombs, the pufferfish, the mortar, the Mole (every island), and the
-jungle's Rhino Beetle, Piranha and Carnivorous Plant. Types, files and
+jungle's Rhino Beetle, Piranha and Carnivorous Plant, and the Frozen Coast's Penguin. Types, files and
 props: [reference/entities](../reference/entities.md). Base behaviour: [overview](overview.md).
 
 | Island | Gummy | Crabby (spike / trampoline) | Hopper skin |
@@ -525,6 +525,90 @@ to float"; the base leaves are under the trap leaves in every frame, the stem ri
   from its base) is set on `tell`, `snap`, eating and swallowing.
 - Network: its netPack carries `aimT`, `aimN` (the bite's direction); the rest is state, deadTimer, x, y (`mount` comes
   with the level); open and waiting it is not sent (`netAtRest`).
+
+## Penguin (`penguin`, «Pingüino») — Frozen Coast
+
+`types/enemies/penguin.lua` + the generic SLED `base/Sled.lua`; art `assets/anim/enemies/penguin.json` (16 frames 24x20 at
+×4 in `assets/images/enemies/penguin/penguin-Sheet.png`, facing RIGHT, feet on the bottom row: walk ×4, idle ×2, dive ×2,
+slide ×2, dazed ×2, ridden ×2, getup, dead). Approved by the user as an idea (2026-10-29); the design was chosen WITHOUT
+them (they were away): `tools/art/enemies/make_penguin.py` draws A «Torpedo» (a long slim spindle, navy and white, the
+one closest to the house look) and B «Zancos» (the bold one: angular faceted body leaning forward, a thin yellow
+rockhopper crest streaming back, red eye, short sharp beak and LONG 1-px legs with the wide foot); B was applied because
+it follows the sprite memory best (flat colours, slim original silhouette, not round); previews in
+`FlappyMonster_pruebas/pinguino/` (both sheets + a mockup on ice next to the player at game scale). Switch:
+`python3 tools/art/enemies/make_penguin.py --apply A --force` (same frame layout: the anim set stays valid).
+- WADDLES (base walk, 45 px/s). It drops on its BELLY (`dive` 0.3 s, a hop) and SLIDES (`slide`, 320 px/s) when:
+  it stands on ICE (ground material `friction` < 0.5: `Entity:groundMat`), it reaches a DOWNHILL edge (a drop of 1-2
+  tiles ahead; a deeper drop does not tempt it) or it SEES a player in front at its height within prop `range` (6 tiles ×
+  difficulty `sense`: `Entity:seesAhead`; it squawks). Sliding it keeps its speed for 0.9 s, then brakes (×1.6/s × the
+  material's friction: on ice it barely slows), BOUNCES off walls, slides off ledges, and getting up (`getup` 0.35 s) it
+  walks again with a 1.5 s cooldown. Touching it standing or sliding = 1 HP (`onTouch` hurt, fixed).
+- STOMPED (standing or sliding) it lies on its belly DAZED (`dazed`, stun stars, 3.5 s; low box 60 x 36 px): harmless,
+  and a SLED. Standing on it makes it run (`sled`, `Sled.V` 380 px/s) in the direction it faces, carrying the player;
+  it crosses a gap of up to 2 tiles by momentum (a 4-tile gap is too wide: it falls), climbs 14-px lips, bounces off
+  walls. Jumping off ends the ride (`RIDE_GRACE` 0.12 s without a rider → `dazed`, brakes, gets up 1 s later); after
+  `RIDE_T` 4 s it gets up and bucks the rider off (a soft sideways hop).
+- A GROUND POUND kills it in every state (standing, sliding, dazed, ridden — also landing in a dive on the sled's top
+  while someone rides it). The push of a nearby ground pound or of an explosion knocks it onto its belly (dazed).
+  Explosion blast, lava, spikes and the VOID (`Entity:burstIfDoomed`): it bursts / dies as every enemy.
+- Network: nothing of its own — boxes, the sled piece and the drawing come from `state`, `deadTimer`, `x`, `y`,
+  `facing`. A new type: `Protocol.VERSION` + `version.txt` must be bumped before release.
+- **THE SLED (`base/Sled.lua`, generic):** `Sled.mixin(Class, { states, top, w })` gives the type a one-way, MOVING body
+  part ([carry-and-push](../gameplay/carry-and-push.md#moving-bodies-and-body-parts)) in those states, `top` px above its
+  feet, `w` px wide; a player standing on it rides it like a Scale pan (single player, server and the client's
+  prediction: the part comes from what the snapshot carries). `Sled.rider(e, level)` = who stands on it, `Sled.buck`
+  throws them off, `Sled.move(e, level, dt, fric)` slides with momentum (hang time `HANG` 0.12 s off a ledge, step-up
+  `STEP` 14 px, wall bounce ×0.85, friction × the ground material's). The type keeps its box HEIGHT fixed (feet = y +
+  outerH/2) and says `freeOfRoute()` while sliding. Any enemy that lies down and slides (a beetle on its back, a shell…)
+  can switch it on. `Level:bodyAt(x, y, except)` ignores the parts whose `owner` is `except` (an entity never collides
+  with its own sled).
+- Sounds: `penguinSquawk` (sees you and dives), `penguinSlide` (slides / starts the sled) — `tools/sounds/penguin.py`;
+  the dazed one uses `stunned`. Not listened to by anyone.
+- Tests: `penguin_rules` (`ve`, `hielo`, `cuesta`, `rebota`, `pisar`, `trineo`, `hueco_grande`, `levanta`, `culetazo`,
+  `vacio`, `red`; `SHOT=1` → `penguin.png` with every pose, the player on the sled and the boxes); `online_smoke
+  LEVEL=tools/tests/online_smoke/pinguino.json WATCH=penguin WANT=walk,slide` (a real server and client). Online: the client
+  draws the sled 100 ms late; the `red` case measures a predicted rider 6 steps behind the server (≤ 32 px apart, never
+  off the sled) — not yet played with a real server. NOT placed in any level yet; feel (speeds, ride time, the squawk) and
+  the look at game size not judged by a person.
+
+## Snowball (`snowball`, «Bola de Nieve») — Frozen Mountains
+
+The Giant Snowball's normal-enemy counterpart (the user, 2026-10-29: "the giant snowball has no normal-enemy version
+like the other bosses; it could launch itself and shove players like the proposed mountain goat"). A DATA enemy
+(`assets/enemies/snowball.json`, no Lua of its own) whose whole action is the generic behaviour **`ram`**
+([enemy-editor](enemy-editor.md#behaviours-available), `src/world/entities/behaviors/ram.lua`), written so a future goat
+only needs its art and a JSON.
+- **Look:** design A «Hermanita» from `tools/art/enemies/make_snowball.py` — the boss's ball in small (12 px at ×4 =
+  48 px, 3/4 of a tile): the boss's exact palette (measured from the user's `bosses/snowboss/body-Sheet.png`, which is
+  only READ), block eyes, the face turning with the roll (like `roll_happy`), angry brows when it launches, laughing
+  after a shove, `> <` when dazed, squashed into a snow pile when stomped. B «Carnero» (an egg of snow with two curled
+  ice horns that hops instead of rolling) has the same frames: `--apply B` swaps it. A was applied without the user
+  because it is the one that reads as the boss's sibling and that the intro film grows into the boss; previews in
+  `FlappyMonster_pruebas/bola_de_nieve/`. Set `assets/anim/enemies/snowball.json` (walk = happy roll, charge = angry
+  roll, idle, windup, recoil, dazed, hurt, dead).
+- **Behaviour (defaults):** rolls along (speed 70, no pauses, turns at edges). Sees a player within 6 tiles (2.5 high,
+  no wall between) → `windup` 0.55 s (squashed, trembling, angry) → `charge` at 430 px/s for up to 6 tiles: at an edge
+  it hops the gap if there is floor at its height beyond within one jump (`Entity:landingAhead`), otherwise it stops
+  there (it never throws itself into a pit); if the player stands higher it jumps up to that ledge. Its front SHOVES
+  whoever it meets: 640 px/s sideways + 330 up, NO damage (the player keeps one air jump to try to recover). A wall →
+  `dazed` (1 s), a shove → `recoil` (bounces back and laughs, 0.7 s); 1.6 s before it launches again.
+- **Why no damage on the shove (chosen):** its danger is the TERRAIN — a ledge, a pit, water. Damage on top would
+  punish twice when it throws you into a pit, and on flat ground a harmless bump reads as its "personality", not as a
+  cheap hit. Touching it while it rolls normally still takes 1 (common prop `onTouch` = hurt; set it to none for a
+  pure prop). The behaviour's `damage` param (0-3) adds damage to the shove when a level wants it.
+- **Killing it:** stomp (also while charging: falling on it from above never shoves, `stompable` on the shove box) or
+  ground pound → it squashes into a snow pile (20 points). Spikes, lava, the void: bursts.
+- **Others:** charging, it knocks down the enemies it meets (stunned, `knockback`) and flings light carryables (small
+  box, bomb object) — the Beetle's sweep, now the base `Entity:sweepAhead`; a big box stops it like a wall.
+- **Online:** server-authoritative; the shove box comes from `state` + `deadTimer` + position (already in snapshots)
+  and Interactions answers `'launch'`, so the local client PREDICTS it like a trampoline (`OnlineAdventureState`
+  `_checkLocalBounce` + `Predictor:recordLaunch`) with the shove sound (`launchSound` = the sound of the behaviour's
+  `launchState`). Measured: 0 px correction on a local server, ≤ 19 px with 120 ms lag and 10 % loss.
+- **Sounds:** `tools/sounds/snowball.py` → `enemies/snowball/{windup,launch,shove,bonk}.wav` (`snowballWindup`…), played
+  on entering windup / charge / recoil / dazed. Not listened to by anyone.
+- Not placed in any level yet. Not judged by a person: feel (push strength, wind-up), sounds, the look at game scale.
+- Tests: `snowball_rules` (every rule above, the Beetle's sweep, client = server parity; `LOOK=1` → `snowball_look.png`);
+  `online_smoke LEVEL=tools/tests/online_smoke/bola_de_nieve.json MODE=hunt WATCH=snowball WANT=windup,charge WANTSHOVE=1`.
 
 ## History and decisions (dated notes)
 

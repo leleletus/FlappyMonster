@@ -28,6 +28,8 @@ local PRED_T     = 0.25                  -- s que el cliente adelanta la caja tr
 
 Box.solidFull = true
 Box.moves     = true                     -- (cuerpo que se mueve: lleva encima a quien la pisa — Entities.solidBodies)
+Box.ridesMoving = true                   -- (encima de un cuerpo que se mueve de lado va con él ELLA SOLA — updateCustom:
+                                         -- `carry` —; lo que mueve a sus pasajeros — el Teleférico — no la mueve de lado)
 Box.weight    = 2                        -- (cuenta en la Balanza: la grande pesa el doble que la pequeña o un jugador)
 Box.PUSH_K    = 0.4                      -- empujarla: esta fracción de lo que anda el jugador (la grande cuesta: el usuario)
 Box.windK     = 0.4                      -- el aire la mueve así de poco (systems/Push)
@@ -96,7 +98,7 @@ function Box:pushChain(level, dir)
     return chain
 end
 function Box:pushBy(pa, dx)
-    if not self:pushable() or not pa.onGround then return 0 end
+    if not self:pushable() or not (pa.onGround or (self.pushInWater and pa.inWater)) then return 0 end
     local want = dx * (self.pushK or self.PUSH_K)
     if self.clientView then
         -- (cliente: solo el que la está empujando según el servidor la adelanta; los demás chocan con ella)
@@ -257,15 +259,23 @@ function Box:updateCustom(dt, level)
     if self.onGround and not wasGround and vy0 > LAND_VY then Sound.play('boxLand') end
     if self:fellOut(level) then self:breakApart(true) end
     -- (arrastrándola: el roce, cada poco)
-    if self.pushedNow then
+    if self:tickPush(dt) then
         self.pushSndT = self.pushSndT - dt
         if self.pushSndT <= 0 then Sound.play('boxPush'); self.pushSndT = PUSH_SND_T end
-        self.pushedNow, self.pushT = false, 0.15
-    else
-        self.pushT = (self.pushT or 0) - dt
-        if self.pushT <= 0 then self.pusherIdx, self.pushSndT = 0, 0 end
     end
     return true
+end
+
+-- ¿La empujaron en este paso? (y lleva la cuenta de QUIÉN la empuja — pusherIdx, que viaja en el netPack — hasta un
+-- poco después del último empujón). Lo usa todo lo que se empuja como ella (también el Iceberg).
+function Box:tickPush(dt)
+    if self.pushedNow then
+        self.pushedNow, self.pushT = false, 0.15
+        return true
+    end
+    self.pushT = (self.pushT or 0) - dt
+    if self.pushT <= 0 then self.pusherIdx, self.pushSndT = 0, 0 end
+    return false
 end
 
 -- ── Red ───────────────────────────────────────────────────────────────────────

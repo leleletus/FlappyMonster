@@ -25,6 +25,20 @@ what (`SHARED_SOUNDS`, `PRIVATE_SOUNDS`). Sounds can also be NOISE that enemies 
 bells as the iris closes), `countTick` / `countGo` (the start countdown). At ≈ −12 dBFS, no GAIN entry. Not listened
 to by anyone yet.
 
+## The Penguin's sounds
+
+`tools/sounds/penguin.py` (reuses `jungle_enemies.py`'s helpers) → `assets/sounds/enemies/penguin/`: `penguinSquawk`
+(it sees you and dives: a short nasal two-beat honk), `penguinSlide` (belly rub on snow and ice with an icy hiss: it
+starts sliding / the sled starts). ≈ −12 dBFS, no GAIN entry. Not listened to by anyone yet.
+
+## The Snowball's sounds
+
+`tools/sounds/snowball.py` (reuses `jungle_enemies.py`'s helpers) → `assets/sounds/enemies/snowball/`: `snowballWindup`
+(snow packing: crunches speeding up), `snowballLaunch` (a soft "fffump" + rolling hiss), `snowballShove` (a low snowy
+"pomf" + a short high giggle: it shoved someone; the online client plays it when it predicts the shove),
+`snowballBonk` (dull thud + falling snow dust: against a wall). Played by the data enemy on entering its states
+(`sounds` in `assets/enemies/snowball.json`). ≈ −12 dBFS, no GAIN entry. Not listened to by anyone yet.
+
 ## The 0.5.96 enemies' sounds
 
 `tools/sounds/jungle_enemies.py` → `assets/sounds/enemies/{mole,piranha,carnivoreplant}/`: `moleDig` (the mound moving:
@@ -32,6 +46,16 @@ soft earth grains), `molePop` (it pops out), `moleBite` (two tooth clicks), `pir
 its leap), `plantRustle` (the plant's warning: trembling leaves), `plantSnap` (it shuts: wet low thud + click),
 `plantCrunch` (it eats something). The piranha's leap reuses `waterSplashOut` / `waterSplash`; the dizzy mole,
 `stunned`. All at ≈ −12 dBFS (−11.6 to −14.1, harness `sounds`), no GAIN entry. Not listened to by anyone yet.
+
+## Avalanche and Cable car sounds (2026-10-29)
+
+`tools/sounds/avalanche_cablecar.py` (previews in `FlappyMonster_pruebas/mecanicas_heladas/sonidos/`, `--apply` writes
+the game's): `avalancheRumble` (`traps/avalanche_rumble.wav`, 1.2 s: low rumble growing, cornice cracks speeding up),
+`avalanchePour` (`traps/avalanche_pour.wav`, 1.3 s, repeated while it pours: heavy snow whoosh over a rumble),
+`cablecarMove` (`mechanics/cablecar_move.wav`, 0.6 s, repeated while moving: cable hum + two wheel clacks),
+`cablecarStop` (`mechanics/cablecar_stop.wav`, 0.35 s: metal thud, clang and a short squeal). The generator levels
+each to −12 dBFS (loudest 100 ms), no GAIN entry. Played with `Sound.playAt` from the nearest point / cabin. Not
+listened to by anyone yet.
 
 ## Distance attenuation
 

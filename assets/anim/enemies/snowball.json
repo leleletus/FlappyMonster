@@ -1,0 +1,279 @@
+{
+  "anims": {
+    "charge": {
+      "fps": 20,
+      "frames": [
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "loop": true
+    },
+    "dazed": {
+      "fps": 4,
+      "frames": [
+        23
+      ],
+      "loop": true
+    },
+    "dead": {
+      "durations": [
+        0.18,
+        0.8,
+        0.42
+      ],
+      "fps": 4,
+      "frames": [
+        24,
+        25,
+        26
+      ],
+      "loop": false
+    },
+    "hurt": {
+      "fps": 4,
+      "frames": [
+        23
+      ],
+      "loop": true
+    },
+    "idle": {
+      "durations": [
+        1.8,
+        0.14
+      ],
+      "fps": 2,
+      "frames": [
+        17,
+        18
+      ],
+      "loop": true
+    },
+    "recoil": {
+      "fps": 8,
+      "frames": [
+        21,
+        22
+      ],
+      "loop": true
+    },
+    "walk": {
+      "fps": 10,
+      "frames": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "loop": true
+    },
+    "windup": {
+      "fps": 14,
+      "frames": [
+        19,
+        20
+      ],
+      "loop": true
+    }
+  },
+  "fallback": "idle",
+  "frames": [
+    {
+      "h": 12,
+      "image": "assets/images/enemies/snowball/snowball-Sheet.png",
+      "w": 14,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/enemies/snowball/snowball-Sheet.png",
+      "w": 14,
+      "x": 14,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/enemies/snowball/snowball-Sheet.png",
+      "w": 14,
+      "x": 28,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/enemies/snowball/snowball-Sheet.png",
+      "w": 14,
+      "x": 42,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/enemies/snowball/snowball-Sheet.png",
+      "w": 14,
+      "x": 56,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/enemies/snowball/snowball-Sheet.png",
+      "w": 14,
+      "x": 70,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/enemies/snowball/snowball-Sheet.png",
+      "w": 14,
+      "x": 84,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/enemies/snowball/snowball-Sheet.png",
+      "w": 14,
+      "x": 98,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/enemies/snowball/snowball-Sheet.png",
+      "w": 14,
+      "x": 112,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/enemies/snowball/snowball-Sheet.png",
+      "w": 14,
+      "x": 126,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/enemies/snowball/snowball-Sheet.png",
+      "w": 14,
+      "x": 140,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/enemies/snowball/snowball-Sheet.png",
+      "w": 14,
+      "x": 154,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/enemies/snowball/snowball-Sheet.png",
+      "w": 14,
+      "x": 168,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/enemies/snowball/snowball-Sheet.png",
+      "w": 14,
+      "x": 182,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/enemies/snowball/snowball-Sheet.png",
+      "w": 14,
+      "x": 196,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/enemies/snowball/snowball-Sheet.png",
+      "w": 14,
+      "x": 210,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/enemies/snowball/snowball-Sheet.png",
+      "w": 14,
+      "x": 224,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/enemies/snowball/snowball-Sheet.png",
+      "w": 14,
+      "x": 238,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/enemies/snowball/snowball-Sheet.png",
+      "w": 14,
+      "x": 252,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/enemies/snowball/snowball-Sheet.png",
+      "w": 14,
+      "x": 266,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/enemies/snowball/snowball-Sheet.png",
+      "w": 14,
+      "x": 280,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/enemies/snowball/snowball-Sheet.png",
+      "w": 14,
+      "x": 294,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/enemies/snowball/snowball-Sheet.png",
+      "w": 14,
+      "x": 308,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/enemies/snowball/snowball-Sheet.png",
+      "w": 14,
+      "x": 322,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/enemies/snowball/snowball-Sheet.png",
+      "w": 14,
+      "x": 336,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/enemies/snowball/snowball-Sheet.png",
+      "w": 14,
+      "x": 350,
+      "y": 0
+    }
+  ],
+  "id": "enemies/snowball",
+  "origin": [
+    0.5,
+    1
+  ],
+  "scale": 4
+}

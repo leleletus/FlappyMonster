@@ -474,6 +474,11 @@ local function drawLevelTab(x, y, w)
         v, ch = ui.toggle('A oscuras (linterna)', m.dark == true, x, y, w)
         y = y + 28
         if ch then pushUndo(); m.dark = v or nil; markDirty() end
+        v, ch = ui.number('Agua helada (s; 0 = no)', m.coldWater or 0, x, y, w,
+                          { kind = 'number', min = 0, max = 60, step = 0.5,
+                            help = 'AFECTA AL JUEGO: el agua de las casillas del nivel congela a quien pasa este tiempo seguido dentro (bloque de hielo: machacar botones para salir; fuera del agua se reinicia) y se ve más clara. Las inundaciones tienen su propia opción.' })
+        y = y + 30
+        if ch then pushUndo(); m.coldWater = (v > 0) and v or nil; markDirty() end
         do
             local auto = require('src/world/level/Level').lightMood({ background = m.background, time = m.time })
             local names = { day = 'Día', dusk = 'Atardecer', night = 'Noche', cave = 'Cueva', none = 'Sin' }

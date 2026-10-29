@@ -25,6 +25,9 @@ and underwater floors, always `layer = 'back'`, never on spikes/entities/start/f
 vents/boss walls/boss arenas. `--force` re-rolls only its own decorations (the ones with
 `layer='back'` of its types; hand-placed ones stay); `--terrain` also re-decides dirt/grass/
 snow/sand blocks (overrides hand-placed ones); `--tiles` = terrain only (decorations untouched);
+Theme **frozen_coast** (the Frozen Coast island, 2026-10-29) behaves like snow (`ICY` = snow + frozen_coast: falling
+snow, ice spikes, loose one-row islands → ice, icy enemies, no sand / deep stone under water) with its own decorations
+(`frozen_coast_set`; the floating `floe` is placed by hand on the cell above the water). No level uses it yet.
 `--deep` = ONLY ground ≥ 4 rows under a water surface → deep stone (any theme but snow; the
 'underwater' theme also below 45 % of the height); `--sky` = writes the SKY table's background/
 time only into levels that don't set them. The user edits levels by hand afterwards: prefer the
@@ -53,9 +56,10 @@ command line.
 | meadow / forest | rolling hills (grass cap over dirt), ramps of one step every 1-2 columns | big_oak, big_birch, big_fir (forest: more firs); hazel bush, boulder, stump on the hills |
 | beach / tropical | sand dunes; sandstone outcrops (tropical: grass cap) — stone on the plane reads almost black in daylight, so the outcrops are SAND | coconut_palm, twin_palm, young_palm on sand / grass (front floor or plane top) |
 | fortress | stone walls with alternate merlons and 1×2 windows, 4-wide towers with a slit | banner and hanging ivy ON the wall face; cypress, old_tree; urns on top |
-| snow | snow drifts; snow walls with an ICE crest (ice is translucent: reads as glacier) | snowy_fir, snowy_fir_small (on snow only) |
+| snow | snow drifts; snow walls with an ICE crest (ice is translucent: reads as glacier); frozen-brick ruins (`frostwall`, 2026-10-29: `frost_brick` with merlons, `frost_window` every 3 columns, an `ice_rock` foot) | snowy_fir, snowy_fir_small (on snow only) |
 | cave / mine / underwater | floor mounds; rock hanging from the ceiling in irregular bands (≤ 45 % of the cavity); now and then a 2-wide floor-to-ceiling column in a wide, clear spot (never against a front wall). mine: dirt top, underwater: deep stone | giant_mushroom(_violet), cave_crystals, cave_boulder, mushroom_cluster; stalactites under the hanging rock |
 | volcano | basalt spires (one full column, shorter ones beside it), jagged basalt walls, ash mounds | dead_tree; charred stump, basalt rock, obsidian shards |
+| frozen_coast | low snow drifts and ice walls (sea level, no forest) | a rare snowy_fir_small; iceberg, snow rock on top |
 | jungle | temple ruins (`temple_brick`): colonnades with a lintel (a piece fallen, one column broken) and arch springers, stepped pyramids, broken walls; low jungle-grass hills | ceiba, strangler_fig; lianas / moss hanging from the lintels; broken pillar, idol, fallen block on top |
 
 **Readability rules** (the path must stay readable): nothing on the plane behind or 1 tile around spikes, lava, water,
@@ -83,6 +87,14 @@ python3 tools/levelgen/retheme.py --bg --dry valle_soleado                 # cou
 python3 tools/levelgen/retheme.py --bg --out <dir> valle_soleado ...       # COPIES in <dir> (+ <dir>/<level>.bggen.json)
 tools/tests/run.sh level_shots SCALE=0.35 -- <dir>/valle_soleado.json     # look at it (LIGHT=0 for dark levels)
 ```
+
+Frozen pack (2026-10-29, tiles 50-58, [tiles-and-blocks](../gameplay/tiles-and-blocks.md) § The frozen pack): the ids are
+constants in `retheme.py` (`FBRICK`, `IROCK`, `IBRICK`, `GLACIER`, `SBRICK`, `IPILLAR`, `FWINDOW`, `FPLAT`, `ILEDGE`)
+and count as `GROUND` (never converted by the terrain pass: they are the user's construction). Decorations: snow
+things also on `snow_brick`, rock things and icicles also on frost brick / ice rock / window, icicles also under
+`ice_brick` / `glacier_ice`. `PLATFORM_OF` = the drop-through platform of each theme (`jungle` → `jungle_platform`,
+`snow` → `frost_platform`; a new theme such as `frozen_coast` = one entry). Tried on COPIES of snow levels with their
+plane removed (`FlappyMonster_pruebas/tiles_helados/plano_fondo/`); not run on any real level.
 
 History: 0.5.87, first version (user approved "Island structures"). Previews on copies in
 `FlappyMonster_pruebas/plano_fondo/generado/` (one level per island; jungle tried on a copy of valle_soleado because

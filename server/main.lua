@@ -435,11 +435,11 @@ local function checkPlayerEnemyCollisions(sim, pid, ps, seq)
         end
         local now = scalarState(g, REWIND_NOW)
         applyState(g, old)
-        local r, a, b = check(pa, g)
+        local r, a, b, c = check(pa, g)
         applyState(g, now)
         -- (lo que ahora es nil, p. ej. turnT al acabar un giro, vuelve a nil)
         for k in pairs(old) do if now[k] == nil then g[k] = nil end end
-        return r, a, b
+        return r, a, b, c                       -- (4º valor: los saltos que deja un 'launch', el lado de un pisotón)
     end
 
     -- Reglas compartidas con el modo un jugador (entities/Interactions.lua).
@@ -961,7 +961,7 @@ local function broadcastSnapshot(room)
         end
     end
 
-    local elist, ebig = {}, {}
+    local elist, ebig, ebox = {}, {}, {}
     for i, e in ipairs(sim.enemies) do
       -- En reposo (p. ej. pinchos colgando): no se envía, el cliente lo sabe
       if not e:netAtRest() then
@@ -978,6 +978,7 @@ local function broadcastSnapshot(room)
         if extra then for k, v in ipairs(extra) do entry[base + k] = v end end
         elist[i] = entry
         if e.def and e.def.boss then ebig[i] = true end
+        if e.netBounds then ebox[i] = { e:netBounds() } end
       end
     end
 
@@ -1019,7 +1020,10 @@ local function broadcastSnapshot(room)
                 if not ps.pa.dying then ps.viewX, ps.viewY = ps.pa.x, ps.pa.y end
                 local px, py = ps.viewX or ps.pa.x, ps.viewY or ps.pa.y
                 for i, entry in pairs(elist) do
-                    if ebig[i] or (math.abs(entry[1] - px) < NEAR_X and math.abs(entry[2] - py) < NEAR_Y) then el[i] = entry end
+                    -- (lo que ocupa mucho — el cable de un Teleférico —: `netBounds()` = su caja; cerca de ella, se manda)
+                    local nb = ebox[i]
+                    if ebig[i] or (nb and px > nb[1] - NEAR_X and px < nb[3] + NEAR_X and py > nb[2] - NEAR_Y and py < nb[4] + NEAR_Y)
+                       or (not nb and math.abs(entry[1] - px) < NEAR_X and math.abs(entry[2] - py) < NEAR_Y) then el[i] = entry end
                 end
             end
             local snap = { t=sim.tick, lt=lt, p=plist, e=el, vb=vb, md=md, bz=bz, sc=sc, fc=fc, zc=zc }

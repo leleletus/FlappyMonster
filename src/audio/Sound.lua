@@ -177,12 +177,19 @@ function Sound.load()
     load('seedPlant', 'assets/sounds/props/seed_plant.wav', 'static')   -- plantarla
     load('seedGrow', 'assets/sounds/props/seed_grow.wav', 'static')   -- crece
     load('seedWilt', 'assets/sounds/props/seed_wilt.wav', 'static')   -- se marchita
+    load('icebergCreak', 'assets/sounds/props/iceberg_creak.wav', 'static')   -- el Iceberg cruje (sobrepeso: va a hundirse)
+    load('icebergSink', 'assets/sounds/props/iceberg_sink.wav', 'static')   -- … y se hunde
     load('windWarn', 'assets/sounds/props/wind_warn.wav', 'static')   -- aviso de la Ventisca
     load('windGust', 'assets/sounds/props/wind_gust.wav', 'static')   -- la racha
     load('geyserRumble', 'assets/sounds/props/geyser_rumble.wav', 'static')   -- aviso del Géiser
     load('geyserBurst', 'assets/sounds/props/geyser_burst.wav', 'static')   -- erupción de agua
     load('steamHiss', 'assets/sounds/props/steam_hiss.wav', 'static')   -- vapor / humo
     load('iceFreeze', 'assets/sounds/props/ice_freeze.wav', 'static')   -- el chorro se congela
+    -- (el Alud y el Teleférico: tools/sounds/avalanche_cablecar.py, ya a ≈ −12 dBFS)
+    load('avalancheRumble', 'assets/sounds/traps/avalanche_rumble.wav', 'static')   -- aviso del Alud
+    load('avalanchePour', 'assets/sounds/traps/avalanche_pour.wav', 'static')       -- el torrente de nieve
+    load('cablecarMove', 'assets/sounds/mechanics/cablecar_move.wav', 'static')     -- el Teleférico se mueve
+    load('cablecarStop', 'assets/sounds/mechanics/cablecar_stop.wav', 'static')     -- llega / arranca
     if sources['drowning'] then sources['drowning']:setLooping(false) end
     load('fwLaunch',      'assets/sounds/fireworks/launch.ogg',      'static')
     load('fwBlast1',      'assets/sounds/fireworks/blast1.ogg',       'static')
@@ -239,6 +246,13 @@ function Sound.load()
     load('plantRustle', 'assets/sounds/enemies/carnivoreplant/rustle.wav',  'static')   -- planta: el aviso
     load('plantSnap',   'assets/sounds/enemies/carnivoreplant/snap.wav',    'static')   -- planta: se cierra de golpe
     load('plantCrunch', 'assets/sounds/enemies/carnivoreplant/crunch.wav',  'static')   -- planta: se come algo
+    -- Pingüino (tools/sounds/penguin.py)
+    load('penguinSquawk', 'assets/sounds/enemies/penguin/squawk.wav', 'static')   -- te ve y se tira de barriga
+    load('penguinSlide',  'assets/sounds/enemies/penguin/slide.wav',  'static')   -- se desliza / echa a correr de trineo
+    -- Bola de Nieve (tools/sounds/snowball.py): snowballWindup, snowballLaunch, snowballShove, snowballBonk
+    for _, n in ipairs({ 'windup', 'launch', 'shove', 'bonk' }) do
+        load('snowball' .. n:gsub('^%l', string.upper), 'assets/sounds/enemies/snowball/' .. n .. '.wav', 'static')
+    end
     -- Linterna y Crabby lúgubre (tools/sounds/gloomy.py)
     for _, n in ipairs({ 'on', 'off', 'out', 'dead' }) do
         load('light' .. n:gsub('^%l', string.upper), 'assets/sounds/player/light_' .. n .. '.wav', 'static')

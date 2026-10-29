@@ -18,6 +18,7 @@ type only switches them on** — never copy another entity's code. The recipe is
 | `base/Crawler.lua` | surface-following movement (floor ↔ walls ↔ ceiling) |
 | `base/FreeFlight.lua` | flying to chosen destinations instead of a back-and-forth route |
 | `base/Swimmer.lua` | swimming around a swim area (polygon) and the out-of-water fall / flop / dry death (pufferfish, Piranha) |
+| `base/Sled.lua` | the SLED: lies down, slides with momentum (hang time over gaps, step-up, wall bounce) and can be RIDDEN (a one-way moving body part) — the Penguin ([enemies](enemies.md#penguin-penguin-pingüino--frozen-coast)) |
 | `base/Boss.lua` | the boss base class (see [bosses/system](../bosses/system.md)) |
 | `base/BombCore.lua`, `base/CrabVariant.lua`, `base/GloomyNav.lua` | shared code of the bombs, the island Crabby variants, the Gloomy's pathfinder |
 | `types/<category>/<name>.lua` | one file per type: `enemies/`, `bosses/`, `traps/`, `mechanisms/`, `items/`, `directors/` |
@@ -81,7 +82,10 @@ landing mark; sprites in `assets/images/bosses/common/`). Asset layout: enemies 
 - `Interactions.check` returns kill/hurt/stomp/pickup/checkpoint; `run()` also
   applies the ground-pound impact (`poundZone` kills, radius knockbacks).
   Entities can override interaction completely with `e:interact(pa)` (see boss).
-  Hazard boxes may carry `effect = 'hurt'` (1 HP) instead of the default kill.
+  Hazard boxes may carry `effect = 'hurt'` (1 HP) instead of the default kill, or `effect = 'launch'` (a SHOVE:
+  `vx, vy`, no damage, predicted online like a trampoline, not repeated while the player flies — `ctrlLockT` —;
+  `stompable` = not from above; the `ram` behaviour of the Snowball, [enemies](enemies.md)). The server's lag-compensated
+  check passes all four results (`launch` jumps, a side stomp's direction: it used to drop the 4th).
 
 - Stomp window fix (all floor enemies, `Interactions.defaultCheck`): a stomp also
   counts when the feet were above the stomp line one step before (`STEP_DT`); fast
@@ -202,6 +206,10 @@ landing mark; sprites in `assets/images/bosses/common/`). Asset layout: enemies 
   (read in settings.lua) starts with them ON: `FM_HITBOX=1 tools/tests/run.sh all|sp_boss|online_boss …` checks that
   drawing them never errors.
 
+- Base additions for the Penguin (Frozen Coast, 2026-10-29): `base/Sled.lua` (the rideable slider, above);
+  `Entity:seesAhead(level, tiles, height)` (a player in FRONT at its feet's height, clear line, × `sense`);
+  `Entity:groundMat(level)` (the material it stands on: ice = `friction` < 1); `Entity:burstIfDoomed(level)` (spikes /
+  deadly material / below the level / the void → `dieBurst`); `Level:bodyAt` skips the caller's own body parts (`owner`).
 - Base additions of 0.5.97 (the user's requests on the jungle enemies, [enemies](enemies.md)): the SWIMMER
   `base/Swimmer.lua` (swim area, free-water movement, the out-of-water fall / flop / dry death: the pufferfish and the
   Piranha switch it on); `Entity:canBeEaten()` (what the Carnivorous Plant can eat: every non-boss enemy unless

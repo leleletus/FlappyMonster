@@ -200,20 +200,7 @@ function Beetle:chargeHits(level, f, dt)
         end
     end
     local b = { x = (f > 0) and ob.x + ob.w * 0.5 or ob.x - 8, y = ob.y, w = ob.w * 0.5 + 8, h = ob.h }
-    for _, e in ipairs(level.liveEntities or {}) do
-        if e ~= self and e.alive and not self.swept[e] and e.state ~= 'dead' and e.state ~= 'carried'
-           and not (e.isGhost and e:isGhost()) and not (e.def and e.def.boss) and overlap(b, e:getOuterBounds()) then
-            if e.canBeKnocked and e:canBeKnocked() then
-                self.swept[e] = true
-                e:knockback(f)
-                Sound.play('crabPop', 1.1, 0.7)
-            elseif e.carryable and e.canBeCarried and e:canBeCarried() and e.onThrow then
-                self.swept[e] = true
-                e:onThrow(nil, f * SWEEP_VX, SWEEP_VY)
-                Sound.play('boxLand', 1.2, 0.8)
-            end
-        end
-    end
+    self:sweepAhead(level, b, f, self.swept, SWEEP_VX, SWEEP_VY)      -- (lo que arrolla: Entity:sweepAhead)
     return pinned
 end
 

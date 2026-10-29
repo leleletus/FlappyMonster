@@ -49,9 +49,13 @@ EMPTY, SOLID, SLAB, BORDER, WATER, DROP, FINISH, BREAK = 0, 1, 2, 4, 9, 10, 11, 
 DIRT, GRASS, SNOW, ICE, SAND, DEEP, PACKED = 16, 17, 29, 30, 35, 36, 37
 BASALT, ASH = 38, 39                  # isla volcánica (tools/art/world/make_biome_art.py)
 MUD, JGRASS, TEMPLE, JPLAT = 40, 41, 42, 43   # isla de la jungla (tools/art/world/make_jungle_sky.py)
+# el paquete helado (src/world/tiles/types/frozen_pack.lua, tools/art/world/make_frozen_tiles.py)
+FBRICK, IROCK, IBRICK, GLACIER, SBRICK, IPILLAR, FWINDOW, FPLAT, ILEDGE = 50, 51, 52, 53, 54, 55, 56, 57, 58
+FROZEN = {FBRICK, IROCK, IBRICK, GLACIER, SBRICK, IPILLAR, FWINDOW}
 THIN_ICE = {31, 32, 33, 34}
-GROUND = {SOLID, BORDER, DIRT, GRASS, SNOW, ICE, SAND, DEEP, PACKED, BASALT, ASH, MUD, JGRASS, TEMPLE}
+GROUND = {SOLID, BORDER, DIRT, GRASS, SNOW, ICE, SAND, DEEP, PACKED, BASALT, ASH, MUD, JGRASS, TEMPLE} | FROZEN
 DEEP_ROWS = 4                     # bajo ≥ 4 filas de agua: roca abisal
+ICY = {'snow', 'frozen_coast'}    # temas helados: nieve cayendo, pinchos de hielo, islas sueltas de hielo, enemigos helados
 
 THEMES = {
     # (modo historia: cada nivel con el tema de SU isla — src/story/Worlds.lua). La COSTA es 'beach' (arena): con
@@ -101,6 +105,9 @@ def set_sky(name):
 
 
 # Superficie al aire / cerca de la superficie / hondo, por tema
+# Plataforma traspasable de cada tema (la de siempre, `DROP`, se cambia por esta; idéntica en el juego)
+PLATFORM_OF = {'jungle': JPLAT, 'snow': FPLAT}
+
 TERRAIN = {
     'meadow':     (GRASS, DIRT, SOLID),
     'tropical':   (GRASS, DIRT, SOLID),
@@ -113,6 +120,7 @@ TERRAIN = {
     'volcano':    (ASH, BASALT, BASALT),
     'beach':      (SAND, SAND, SOLID),            # playa: arena hasta 3 de hondo
     'jungle':     (JGRASS, MUD, TEMPLE),          # jungla: musgo sobre barro; hondo, los sillares del templo
+    'frozen_coast': (SNOW, DIRT, SOLID),          # costa helada: como la nieve (hielo en las islas sueltas, enemigos helados)
 }
 
 # Decoraciones: (tipo, peso, 'cell'|'sub', casillas libres que necesita hacia arriba)
@@ -145,6 +153,11 @@ FLOOR = {
                  ('mud_puddle', 1, 'cell', 1), ('broken_pillar', 1, 'cell', 3), ('stone_idol', 1, 'cell', 2),
                  ('fallen_block', 1, 'cell', 1), ('stone_brazier', 1, 'cell', 2), ('ruined_arch', 1, 'cell', 3),
                  ('dragonfly', 1, 'cell', 1), ('fireflies', 1, 'cell', 2)],
+    # (costa helada, 2026-10-29: el viejo puerto pesquero helado; tools/art/world/make_frozen_coast_decor.py. El témpano
+    # flotante, `floe`, va encima del agua: se pone a mano)
+    'frozen_coast': [('ice_chunks', 4, 'sub', 1), ('snow_pile', 3, 'sub', 1), ('starfish_ice', 2, 'sub', 1), ('bollard', 2, 'sub', 1),
+                     ('iceberg', 2, 'cell', 2), ('kelp_rock', 2, 'cell', 1), ('crab_pot', 2, 'cell', 1), ('anchor', 1, 'cell', 2),
+                     ('buoy', 1, 'cell', 2), ('rowboat', 1, 'cell', 1)],
 }
 BEACH = [('shell', 3, 'sub', 1), ('starfish', 2, 'sub', 1), ('palmtree', 2, 'cell', 3), ('pineapple', 1, 'sub', 1)]
 WATER_FLOOR = [('seaweed', 4, 'cell', 2), ('seaweed_small', 5, 'sub', 1), ('coral', 3, 'cell', 1), ('coral_fan', 2, 'cell', 1),
@@ -158,15 +171,16 @@ CEIL = {
     'volcano':  [('stalactite', 3, 'cell'), ('lava_fall', 1, 'cell')],
     'jungle':   [('liana_long', 3, 'sub'), ('liana_mid', 3, 'sub'), ('liana_short', 3, 'sub'), ('hanging_moss', 2, 'cell'),
                  ('flower_vine', 2, 'cell'), ('hanging_orchid', 1, 'sub')],
+    'frozen_coast': [('icicle', 3, 'cell'), ('icicle_small', 4, 'sub'), ('net_hang', 1, 'cell')],
 }
 # ── Cada decoración, SOLO sobre el material que le toca ─────────────────────────
 # (el usuario: nada de plantas, palmeras ni flores saliendo de la roca, la nieve, la arena o
 # una viga; cada material lleva lo suyo). REQ = materiales del bloque que la sostiene (el de
 # debajo; las que cuelgan, el de encima). Lo que no esté aquí no se pone en ningún sitio.
-ROCK = {SOLID, BORDER, DEEP, BASALT}
+ROCK = {SOLID, BORDER, DEEP, BASALT, FBRICK, IROCK, FWINDOW}
 VOLC = {ASH, BASALT}
 SOIL = {GRASS, DIRT}
-SNOWY = {SNOW, PACKED}
+SNOWY = {SNOW, PACKED, SBRICK}
 JSOIL = {JGRASS, MUD, GRASS, DIRT}
 REQ = {
     # plantas: tierra o césped (las tropicales, también arena)
@@ -180,7 +194,7 @@ REQ = {
     # playa
     'shell': {SAND}, 'starfish': {SAND},
     # colgando (el bloque de ENCIMA)
-    'icicle': SNOWY | {ICE} | ROCK, 'icicle_small': SNOWY | {ICE} | ROCK, 'stalactite': ROCK | {DIRT}, 'cobweb': GROUND,
+    'icicle': SNOWY | {ICE, IBRICK, GLACIER} | ROCK, 'icicle_small': SNOWY | {ICE, IBRICK, GLACIER} | ROCK, 'stalactite': ROCK | {DIRT}, 'cobweb': GROUND,
     # pradera (tools/art/world/make_biome_art.py)
     'oak_tree': SOIL, 'pine_tree': SOIL, 'round_bush': SOIL, 'fallen_log': SOIL, 'flower_patch': SOIL, 'tall_grass': SOIL,
     'sunflower': SOIL, 'red_mushroom': SOIL, 'mossy_rock': SOIL | ROCK,
@@ -193,21 +207,25 @@ REQ = {
                           'bromeliad', 'orchid', 'jungle_mushrooms', 'mossy_log', 'roots', 'mud_puddle', 'dragonfly', 'fireflies')},
     **{n: JSOIL | {TEMPLE} | ROCK for n in ('broken_pillar', 'stone_idol', 'fallen_block', 'stone_brazier', 'ruined_arch')},
     **{n: JSOIL | {TEMPLE} | ROCK for n in ('liana_long', 'liana_mid', 'liana_short', 'hanging_moss', 'flower_vine', 'hanging_orchid')},
+    # costa helada: sobre nieve o hielo (y la arena de una playa helada); lo pequeño, también en una tabla
+    **{n: SNOWY | {ICE, SAND} for n in ('iceberg', 'anchor', 'buoy', 'crab_pot', 'kelp_rock', 'rowboat')},
+    **{n: SNOWY | {ICE, SAND, SLAB, DROP} for n in ('ice_chunks', 'bollard', 'starfish_ice')},
+    'net_hang': SNOWY | {ICE, SLAB, DROP} | ROCK, 'floe': {WATER} | SNOWY | {ICE},
 }
 # Qué decoraciones PEGAN en cada tema (--theme: las de otro bioma se cambian por una de este; las del agua
 # se quedan si el tema tiene agua de verdad). Sale de FLOOR/CEIL/BEACH; más las sueltas que también valen.
 EXTRA_OK = {'tropical': {'shell', 'starfish'}, 'cave': {'bones', 'torch', 'cobweb'}, 'volcano': {'steam_stones'},
-            'snow': {'icicle', 'icicle_small'}, 'fortress': {'stalactite', 'cave_crystals'}, 'mine': {'cave_crystals'}}
-NO_SEA = {'meadow', 'forest', 'snow', 'fortress', 'volcano', 'mine', 'jungle'}     # (algas sí; corales, conchas y estrellas de mar, no)
+            'snow': {'icicle', 'icicle_small'}, 'frozen_coast': {'icicle', 'icicle_small', 'floe', 'ice_crystal'}, 'fortress': {'stalactite', 'cave_crystals'}, 'mine': {'cave_crystals'}}
+NO_SEA = {'meadow', 'forest', 'snow', 'fortress', 'volcano', 'mine', 'jungle', 'frozen_coast'}     # (algas sí; corales, conchas y estrellas de mar, no)
 SEA_LIFE = {'coral', 'coral_fan', 'anemone', 'clam', 'shell', 'starfish'}
 HANGING = {'icicle', 'icicle_small', 'stalactite', 'cobweb', 'liana_long', 'liana_mid', 'liana_short', 'hanging_moss',
-           'flower_vine', 'hanging_orchid'}
+           'flower_vine', 'hanging_orchid', 'net_hang'}
 ROOFED = {'cavernas_cristal', 'mina_inundada', 'gruta_lugubre', 'gruta_del_farol', 'laberinto_submarino', 'taller_trampas'}   # niveles bajo techo aunque su tema no sea de cueva
 AQUATIC = {'seaweed', 'seaweed_small', 'coral', 'coral_fan', 'anemone', 'clam'}     # dentro del agua, sobre cualquier fondo salvo hielo
 WET_OK = AQUATIC | {'starfish', 'shell'}
 CLOSED = {'cave', 'underwater'}        # temas de cueva cerrada: el marco de arriba sí es un techo de roca
 DENSITY = {'floor': 0.2, 'water': 0.24, 'ceil': 0.15}
-PLANKS = {SLAB, DROP, JPLAT}        # plataformas: solo decoraciones pequeñas encima
+PLANKS = {SLAB, DROP, JPLAT, FPLAT, ILEDGE}        # plataformas: solo decoraciones pequeñas encima
 NEW_TYPES = {t for L in list(FLOOR.values()) + [WATER_FLOOR] for t, *_ in L if t not in ('tulip', 'stretch', 'palmtree')} | \
             {t for L in CEIL.values() for t, *_ in L}
 AUTO_TYPES = NEW_TYPES | {'tulip', 'stretch', 'palmtree'}
@@ -284,12 +302,12 @@ def retheme(name, force=False, dry=False, terrain=False, tiles_only=False):
                 else:
                     w_ = above == WATER or waterlogged(at(c, r - 1))
                     depth, top = 0, ('water' if w_ else 'air')
-                    sandy = (w_ and theme not in ('snow', 'fortress', 'volcano')) or (not w_ and beach(c, r))
+                    sandy = (w_ and theme not in ('snow', 'frozen_coast', 'fortress', 'volcano')) or (not w_ and beach(c, r))
             else:
                 depth += 1
             if frame(c, r) or i not in CONVERT or (i == BORDER and r != H - 1):
                 continue
-            if theme not in ('snow', 'volcano') and (deepAt.get((c, r), 0) >= DEEP_ROWS or (theme == 'underwater' and r >= H * 0.45)):
+            if theme not in ('snow', 'frozen_coast', 'volcano') and (deepAt.get((c, r), 0) >= DEEP_ROWS or (theme == 'underwater' and r >= H * 0.45)):
                 want = DEEP
             elif depth <= 1 and top != 'rock' and sandy:
                 want = SAND
@@ -304,7 +322,7 @@ def retheme(name, force=False, dry=False, terrain=False, tiles_only=False):
                 new[r][c] = with_id(T[r][c], want)
                 changed += 1
     # Nieve: islas pequeñas de una fila → hielo
-    if theme == 'snow':
+    if theme in ICY:
         seen = set()
         for r in range(1, H - 1):
             for c in range(1, W - 1):
@@ -319,12 +337,13 @@ def retheme(name, force=False, dry=False, terrain=False, tiles_only=False):
                 if len(comp) <= 4 and len({y for _, y in comp}) == 1 and all(tid(at(x, y + 1)) not in GROUND for x, y in comp):
                     for x, y in comp:
                         new[y][x] = with_id(new[y][x], ICE); changed += 1
-    # Jungla: las plataformas traspasables, las suyas (tablones atados con liana)
-    if theme == 'jungle':
+    # Las plataformas traspasables, las de la isla (PLATFORM_OF: la jungla, tablones atados con liana; la nieve, tablones
+    # helados): misma hitbox y mismo comportamiento
+    if theme in PLATFORM_OF:
         for r in range(H):
             for c in range(W):
                 if tid(new[r][c]) == DROP:
-                    new[r][c] = with_id(new[r][c], JPLAT); changed += 1
+                    new[r][c] = with_id(new[r][c], PLATFORM_OF[theme]); changed += 1
     lv['tiles'] = new
     T = new
     if tiles_only:
@@ -440,7 +459,7 @@ def retheme(name, force=False, dry=False, terrain=False, tiles_only=False):
                 else:
                     place(tp, c, r)
     lv.setdefault('foliage', []).extend(added)
-    if theme == 'snow':
+    if theme in ICY:
         lv['snow'], lv['spikeSkin'] = True, 'ice'      # (nieve cayendo, pinchos de hielo)
         for e in lv.get('entities', []):               # Crabbies / Gummies → helados (mismas propiedades)
             e['type'] = ICY_CRABS.get(e['type'], e['type'])
@@ -530,7 +549,7 @@ def audit(name, fix=False):
             elif not fix: keep.append(f)
         out = keep
     names = {SOLID: 'piedra', BORDER: 'roca', DEEP: 'roca abisal', GRASS: 'césped', DIRT: 'tierra', SNOW: 'nieve', PACKED: 'nieve',
-             ICE: 'hielo', SAND: 'arena', SLAB: 'viga', DROP: 'tabla', BREAK: 'rompible', BASALT: 'basalto', ASH: 'ceniza', MUD: 'barro', JGRASS: 'musgo', TEMPLE: 'sillar', JPLAT: 'tabla de liana'}
+             ICE: 'hielo', SAND: 'arena', SLAB: 'viga', DROP: 'tabla', BREAK: 'rompible', BASALT: 'basalto', ASH: 'ceniza', MUD: 'barro', JGRASS: 'musgo', TEMPLE: 'sillar', JPLAT: 'tabla de liana', FPLAT: 'tabla helada', ILEDGE: 'repisa de hielo', FBRICK: 'ladrillo helado', IROCK: 'roca helada', IBRICK: 'sillar de hielo', GLACIER: 'hielo glaciar', SBRICK: 'bloque de nieve', IPILLAR: 'columna de hielo', FWINDOW: 'ventana helada'}
     if bad:
         import collections
         cnt = collections.Counter((b[0], names.get(b[3], 'tile %d' % b[3])) for b in bad)
@@ -547,7 +566,7 @@ ICY_CRABS = {'crabby': 'crabby_ice', 'crabbytramp': 'crabbytramp_ice', 'gummy': 
 # Los enemigos de CADA ISLA (mismo enemigo, su variante): `--enemies [niveles]` solo cambia eso (nada de terreno ni
 # decoraciones). Nieve: los helados; volcán: Gummy de magma; fortaleza: Crabby de acero
 ISLAND_ENEMIES = {
-    'snow': ICY_CRABS,
+    'snow': ICY_CRABS, 'frozen_coast': ICY_CRABS,
     'volcano': {'gummy': 'gummy_magma', 'crabby': 'crabby_lava', 'crabbytramp': 'crabbytramp_lava'},
     'meadow': {'crabby': 'crabby_river', 'crabbytramp': 'crabbytramp_river'},
     'forest': {'crabby': 'crabby_river', 'crabbytramp': 'crabbytramp_river'},

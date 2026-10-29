@@ -8,6 +8,7 @@
 --        'mega_slam', 'mega_land', 'mega_poof', 'mega_roar' (Mega Crabby), 'switch_hit' (bloque ON/OFF),
 --        'helmet_break' (casco de Gummy), 'puffer_pop' (pez globo), 'water_splash' (salta del agua), 'cryo_puff' / 'cryo_mist' /
 --        'cryo_blast' (congelador), 'ice_freeze' / 'ice_shatter' (bloque de hielo de lo congelado),
+--        'snow_burst' (el Alud: polvo de nieve al soltarse y al chocar abajo),
 --        'shake_small', 'shake_big', 'shake_roar' (suave y largo) (temblor de pantalla:
 --        Particles.shakeOffset() se suma a la cámara al dibujar)
 -- (otros nombres no hacen nada)
@@ -698,6 +699,14 @@ function Particles.emit(kind, x, y, opts)
             add({ x = x, y = y, vx = math.cos(a) * s, vy = math.sin(a) * s * 0.5, g = -20, drag = 2,
                   life = rnd(0.6, 1.1), size = math.random(2, 4) * 2, dust = true,
                   col = ({ {0.9, 0.97, 1}, {0.7, 0.88, 1} })[math.random(2)] })
+        end
+    elseif kind == 'snow_burst' then
+        -- El Alud: nube de polvo de nieve (al soltarse la cornisa y al chocar el frente abajo): se abre a los lados y cae
+        for i = 1, 14 do
+            local dir = (i % 2 == 0) and 1 or -1
+            add({ x = x + rnd(-20, 20), y = y + rnd(-6, 6), vx = dir * rnd(40, 220), vy = -rnd(20, 160), g = 260, drag = 2.5,
+                  life = rnd(0.45, 0.9), size = math.random(2, 4) * 2, dust = true,
+                  col = ({ {1, 1, 1}, {0.88, 0.95, 1}, {0.72, 0.86, 0.98} })[math.random(3)] })
         end
     elseif kind == 'cryo_puff' then
         -- Congelador cargando: bocanadas de escarcha por la boquilla (opts.nx, ny = hacia dónde mira)

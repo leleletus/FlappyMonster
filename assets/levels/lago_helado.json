@@ -89,7 +89,7 @@
   "bossZones": [
     {"col":77,"h":11,"id":1,"music":"snowball_boss","row":4,"w":20}
   ],
-  "music": "nieve_1",
+  "music": "montana_1",
   "snow": true,
   "spikeSkin": "ice",
   "background": "snow",

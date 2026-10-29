@@ -28,7 +28,8 @@ local S = 4                              -- escala del arte
 
 -- Degradados (cuadros de gradients.png)
 local GRAD = { day = 1, dusk = 2, night = 3, cave = 4, water = 5, abyss = 6, icecave = 7, underground = 8, volcano = 9, magma = 10,
-               jungle_day = 11, jungle_dusk = 12, jungle_night = 13, temple = 14 }
+               jungle_day = 11, jungle_dusk = 12, jungle_night = 13, temple = 14,
+               frozen_coast_day = 15, frozen_coast_dusk = 16, frozen_coast_night = 17 }
 
 Sky.TIMES = {
     { id = 'day',   label = 'Día',       tint = { 1, 1, 1 } },
@@ -36,7 +37,7 @@ Sky.TIMES = {
     { id = 'night', label = 'Noche',     tint = { 0.42, 0.48, 0.72 } },
 }
 
--- capas: { archivo, paralaje, top = cuelga de arriba, add = aditiva }
+-- capas: { archivo, paralaje, top = cuelga de arriba, add = aditiva, time = solo a esa hora ('night': la aurora) }
 -- degradado: `grad` = uno propio que la hora tiñe; `grads` = uno propio POR HORA ({ day, dusk, night }: sin teñir)
 Sky.BIOMES = {
     { id = 'meadow',   label = 'Pradera',   sky = true, layers = { { 'meadow_far', 0.1 }, { 'meadow_mid', 0.22 }, { 'meadow_near', 0.4 } } },
@@ -53,6 +54,12 @@ Sky.BIOMES = {
     { id = 'jungle',   label = 'Jungla',    sky = true, grads = { day = 'jungle_day', dusk = 'jungle_dusk', night = 'jungle_night' },
       layers = { { 'jungle_far', 0.08 }, { 'jungle_mid', 0.2 }, { 'jungle_near', 0.38 }, { 'jungle_top', 0.42, top = true } } },
     -- (estos también valen de PROFUNDIDAD: depth = true)
+    -- (la COSTA HELADA, la isla del Mega Crabby de hielo: mar polar a nivel del mar — tools/art/world/make_frozen_coast_sky.py —;
+    -- de noche, una aurora: capa aditiva con `time = 'night'`, se apoya en el fondo del nivel con poco paralaje)
+    { id = 'frozen_coast', label = 'Costa helada', sky = true,
+      grads = { day = 'frozen_coast_day', dusk = 'frozen_coast_dusk', night = 'frozen_coast_night' },
+      layers = { { 'frozen_coast_aurora', 0.03, add = true, time = 'night' }, { 'frozen_coast_far', 0.08 },
+                 { 'frozen_coast_mid', 0.2 }, { 'frozen_coast_near', 0.38 } } },
     { id = 'cave',     label = 'Cueva',     grad = 'cave', depth = true,
       wall = 'cave_wall', layers = { { 'cave_far', 0.12 }, { 'cave_mid', 0.28 }, { 'cave_top', 0.2, top = true } } },
     { id = 'underwater', label = 'Submarino', grad = 'water', depth = true, wall = 'underwater_wall',
@@ -178,11 +185,12 @@ Sky.punch = false
 Sky.punched = false
 
 
+local layerTime                          -- (la hora del nivel que se dibuja: las capas con `time` solo salen a esa hora)
 local function drawLayers(biome, tint, camX, ground, top, now)
     local W, H = WINDOW_W, WINDOW_H
     local mode, am = love.graphics.getBlendMode()
     for _, L in ipairs(biome.layers) do
-        local e = img(L[1])
+        local e = (not L.time or L.time == layerTime) and img(L[1])
         if e then
             local p = L[2]
             local w, h = e.w * S, e.h * S
@@ -250,6 +258,7 @@ function Sky.render(level, camX, camY)
     Sky.punched = false
     local biome, time = Sky.biomeOf(level), Sky.timeOf(level)
     local tint = time.tint
+    layerTime = time.id
     local W, H = WINDOW_W, WINDOW_H
     local now = love.timer.getTime()
     local levelTop, levelBottom = 0, (level.tileH or 12) * TILE_PX

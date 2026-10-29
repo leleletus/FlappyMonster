@@ -15,7 +15,8 @@
 --   'bounce', bounceVy, dirX      rebota sin hacerle nada (jefe invulnerable, `stompProof`);
 --                                 con dirX sale empujado hacia ese lado
 --   'recoil', dirX                choca con su cuerpo y sale empujado
---   'launch', vx, vy[, jumps]     lanzado (trampolín, cristal roto): pa:launch, e:onLaunch(pa)
+--   'launch', vx, vy[, jumps]     lanzado (trampolín, cristal roto, el EMPUJÓN de lo que embiste — caja de
+--                                 peligro effect='launch' —): pa:launch, e:onLaunch(pa)
 --   'freeze', t                   congelado t s (chorro del congelador): pa:freeze(t)
 --   'shatter', bounceVy           le cae encima a un enemigo congelado que no se puede
 --                                 matar: rebota y le rompe el hielo (e:shatter)
@@ -120,7 +121,18 @@ function Interactions.defaultCheck(pa, e)
     -- matan, salvo que la caja diga otra cosa (hb.effect = 'hurt': 1 de vida)
     -- (3er valor 'hazard': un peligro, no el cuerpo — en Fácil quita 1 como los pinchos del suelo: hazardHit)
     for _, hb in ipairs(e:getHazardBoxes() or EMPTY) do
-        if overlap(pob, hb) then return hb.effect or 'kill', hb.time or hb.dmg, 'hazard' end
+        if overlap(pob, hb) then
+            if hb.effect == 'launch' then
+                -- EMPUJÓN (hb.vx, hb.vy[, hb.jumps]: lo que embiste, comportamiento `ram`): sale lanzado como por un
+                -- trampolín, sin daño (el cliente lo predice igual). Ya lanzado (ctrlLockT, viaja en el estado propio)
+                -- no se repite ni hace nada más esta entidad; `stompable`: cayéndole ENCIMA no empuja (se le pisa)
+                if (pa.ctrlLockT or 0) > 0 then return nil end
+                local fromAbove = hb.stompable and (pa.vy > 0 or prevDy(pa) > 0) and pob.y + pob.h - prevDy(pa) <= hb.y + 8
+                if not fromAbove then return 'launch', hb.vx or 0, hb.vy or 0, hb.jumps end
+            else
+                return hb.effect or 'kill', hb.time or hb.dmg, 'hazard'
+            end
+        end
     end
 
     if e:isBodyDisabled() then return nil end

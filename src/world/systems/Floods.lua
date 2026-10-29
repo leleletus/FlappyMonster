@@ -33,6 +33,13 @@
 -- función pura del tiempo, así que el cliente online la predice igual. Se ve: espuma que corre hacia ese lado, y al
 -- empezar a arrastrar, si quien juega está cerca, suena un aviso y el HUD enseña "¡RESACA!" con flechas hacia ese
 -- lado mientras dure (`f.alertAt`, solo clientes: BossHud.drawUndertow).
+-- MAREA (control 'tide'): sube y baja SOLA en un ciclo suave (seno) entre el nivel mínimo (marea baja) y el máximo
+-- (marea alta), con su periodo (`tidePeriod` s) y su desfase (`tidePhase`, fracción del periodo: 0 = empieza en marea
+-- baja, subiendo). Es función pura del tiempo como el ciclo: no se manda nada por red. La fase ('rise' / 'fall' / 'hold'
+-- arriba / 'low' abajo) sale de hacia dónde va, así la resaca también arrastra con la marea bajando.
+-- AGUA HELADA (prop `cold`, s; 0 = normal): quien está dentro tanto tiempo se congela (PlayerAir: updateFrost); se ve
+-- de otro color (`coldTint` del material). También el agua de las casillas, con la clave del nivel `coldWater`
+-- (Level:coldAt).
 -- Una controlada guarda solo {active, t0, L0}: si está activa, desde cuándo
 -- y a qué nivel estaba entonces. El nivel en el instante t sigue siendo una
 -- función pura de t y de eso (Floods.levelAt), así que el cliente online
@@ -86,7 +93,10 @@ function Floods.fromPlacement(pl, Materials)
         mat = Materials and Materials.get('water') or nil,
     }
     f.id      = math.floor(num(p.id, pl.floodIndex or 0))
-    f.control = (p.control == 'boss' or p.control == 'switch') and p.control or 'cycle'
+    f.control = (p.control == 'boss' or p.control == 'switch' or p.control == 'tide') and p.control or 'cycle'
+    f.cold = math.max(0, num(p.cold, 0))         -- (agua helada: s hasta congelarse; 0 = normal)
+    f.tidePeriod = math.max(1, num(p.tidePeriod, 20))
+    f.tidePhase  = num(p.tidePhase, 0) % 1
     f.zoneId  = math.floor(num(p.zone, 0))
     f.undertow = num(p.undertow, 0)              -- (resaca: px/s mientras baja; 0 = ninguna)
     local lo = math.max(0, math.min(f.hTiles, num(p.startLevel, 1)))
@@ -166,6 +176,22 @@ function Floods.levelAt(f, t)
     return f.lo, 'low'
 end
 
+-- Marea: nivel y fase en el instante t (seno entre lo y hi; 'hold' / 'low' en el 4 % de arriba / abajo)
+function Floods.tideAt(f, t)
+    local D = f.hi - f.lo
+    if D <= 0 then return f.lo, 'low' end
+    local a = 2 * math.pi * (t / f.tidePeriod + f.tidePhase)
+    local u = 0.5 - 0.5 * math.cos(a)                -- (0 = marea baja, 1 = alta)
+    local ph
+    if u > 0.96 then ph = 'hold' elseif u < 0.04 then ph = 'low'
+    else ph = (math.sin(a) > 0) and 'rise' or 'fall' end
+    return f.lo + D * u, ph
+end
+
+-- ¿La deciden los bloques ON/OFF o una pelea? (las demás son función pura del tiempo)
+local function controlled(f) return f.control == 'boss' or f.control == 'switch' end
+Floods.controlled = controlled
+
 -- Controlada: desde el cambio en t0 (nivel L0) sube / hace su ciclo (activa)
 -- o baja a su mínimo (apagada)
 function Floods.controlledLevelAt(f, t)
@@ -182,7 +208,8 @@ function Floods.controlledLevelAt(f, t)
 end
 
 function Floods.setFloodTime(f, t)
-    if f.control and f.control ~= 'cycle' then f.level, f.phase = Floods.controlledLevelAt(f, t)
+    if f.control == 'tide' then f.level, f.phase = Floods.tideAt(f, t)
+    elseif controlled(f) then f.level, f.phase = Floods.controlledLevelAt(f, t)
     else f.level, f.phase = Floods.levelAt(f, t) end
     f.surf = f.y1 - f.level * TILE_PX            -- Y de la superficie (px de mundo)
 end
@@ -214,7 +241,7 @@ end
 -- jugador y el servidor). El nivel al cambiar pasa a ser el nuevo L0.
 function Floods.control(level, t)
     for _, f in ipairs(level.floods or {}) do
-        if f.control ~= 'cycle' then
+        if controlled(f) then
             local want = wantsActive(level, f)
             if want ~= f.active then
                 f.L0 = Floods.controlledLevelAt(f, t)
@@ -238,7 +265,7 @@ end
 function Floods.netPack(level, tickDt)
     local out, any = {}, false
     for i, f in ipairs(level.floods or {}) do
-        if f.control ~= 'cycle' then
+        if controlled(f) then
             any = true
             out[i] = { f.active and 1 or 0, math.floor(f.t0 / tickDt + 0.5), math.floor(f.L0 * 1000 + 0.5) }
         else
@@ -252,7 +279,7 @@ function Floods.netApply(level, list, tickDt)
     if type(list) ~= 'table' then return end
     for i, f in ipairs(level.floods or {}) do
         local d = list[i]
-        if f.control ~= 'cycle' and type(d) == 'table' then
+        if controlled(f) and type(d) == 'table' then
             f.active = d[1] == 1
             f.t0 = (tonumber(d[2]) or 0) * tickDt
             f.L0 = (tonumber(d[3]) or 0) / 1000
@@ -269,6 +296,15 @@ function Floods.currentAt(level, x, y)
         end
     end
     return 0
+end
+
+-- Agua HELADA de una inundación en el punto: sus s hasta congelarse, o nil (no helada, o fuera de su agua)
+function Floods.coldAt(floods, x, y)
+    for i = 1, #floods do
+        local f = floods[i]
+        if f.cold > 0 and x >= f.x0 and x < f.x1 and y >= f.surf and y < f.y1 then return f.cold end
+    end
+    return nil
 end
 
 -- Material líquido de una inundación en el punto, o nil
@@ -392,7 +428,7 @@ function Floods.renderTint(level, camX, camY, liquidOfCell)
     local T = TILE_PX
     for _, f in ipairs(level.floods or {}) do
         if f.level > 0 and f.mat then
-            local tint = f.mat.tint or { 0.05, 0.3, 0.9, 0.35 }
+            local tint = (f.cold > 0 and f.mat.coldTint) or f.mat.tint or { 0.05, 0.3, 0.9, 0.35 }
             local amp = f.moving and 3 or 2
             eachWetCell(level, f, camX, camY, liquidOfCell, function(x, y, w, h, col, isSurface)
                 if isSurface then

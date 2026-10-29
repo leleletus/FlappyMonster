@@ -20,8 +20,10 @@ local TileCodec = require 'src/world/tiles/TileCodec'
 
 local SubTiles = {}
 
-SubTiles.KINDS = { 'solid', 'dirt', 'grass', 'sand', 'deep_stone', 'basalt', 'ash', 'mud', 'jungle_grass', 'temple_brick' }
--- (piedra, tierra, césped, arena, roca abisal, basalto, ceniza; y la jungla: barro, su césped, sillar del templo)
+SubTiles.KINDS = { 'solid', 'dirt', 'grass', 'sand', 'deep_stone', 'basalt', 'ash', 'mud', 'jungle_grass', 'temple_brick',
+                   'snow', 'ice', 'frost_brick', 'ice_rock', 'snow_brick', 'glacier_ice', 'ice_brick' }
+-- (piedra, tierra, césped, arena, roca abisal, basalto, ceniza; la jungla: barro, su césped, sillar del templo; y lo
+-- helado, 2026-10-29: nieve, hielo, ladrillo helado, roca helada, bloque de nieve, hielo glaciar, sillar de hielo)
 
 local QUAD = { { 0, 0 }, { 0.5, 0 }, { 0, 0.5 }, { 0.5, 0.5 } }   -- esquina de cada subcelda (fracción)
 SubTiles.QUAD = QUAD
@@ -114,10 +116,10 @@ local function hiddenTowards(level, def, gx, gy)
     local s = cells and cells[(gx % 2) + (gy % 2) * 2 + 1]
     if s then
         local n = TileTypes.byName[s.kind]
-        return n.joinGroup ~= nil and n.joinGroup == def.joinGroup
+        return (n.joinGroup ~= nil and n.joinGroup == def.joinGroup) or TileTypes.joinsDef(n, nil, def.joinAlsoSet)
     end
-    -- (misma regla que los bloques grandes: bloque del grupo, líquido o bloque de jefe)
-    return TileTypes.joinsCell(level, col, row, def.joinGroup)
+    -- (misma regla que los bloques grandes: bloque del grupo — o de su joinAlso —, líquido o bloque de jefe)
+    return TileTypes.joinsCell(level, col, row, def.joinGroup, def.joinAlsoSet)
 end
 
 local function edgesOf(level, def, gx, gy)

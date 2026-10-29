@@ -15,6 +15,7 @@ concrete type.
 | `src/world/systems/Weight.lua` | WEIGHT of what is on top of something, stacked included (Scale pans, what a Geyser lifts) |
 | `src/world/level/Isles.lua` | which ISLAND a level is: art per island and island FAMILIES of types (see below) |
 | `src/world/entities/types/items/box.lua` | the Box (`box`, pushed) and the small box (`smallbox`, carried) |
+| `src/world/entities/types/mechanisms/iceberg.lua` | the Iceberg (`iceberg`): floats on the water, pushed / blown, sinks under weight (below) |
 | `tools/art/ui/make_prompts.py` | the tooltip sprite `assets/images/ui/prompts/grab-Sheet.png` (keyboard, pad, touch); also `mash-Sheet.png`, the MASH prompt of a swallowed / frozen player ([player](player.md#swallowed-by-a-carnivorous-plant)) |
 
 ## Carrying (`Carry`)
@@ -64,9 +65,52 @@ concrete type.
   step in SP / server, once per frame on the client). A player standing on it (`pa.standBody`) moves with it the next
   step (`rideBody`): it can go up and down without the player falling through or floating. Entities standing on
   something that moves are carried by whoever moves it (the Box rides another box; the Scale moves what is on its pans).
+- A SLED (`entities/base/Sled.lua`, the dazed Penguin) is such a part that only exists in some states and carries its
+  rider at speed: the rider is found with `pa.standBody == part`; the part reappearing does not drag anyone for what
+  it moved while it was gone (`lastBX` reset). [enemies](../entities/enemies.md#penguin-penguin-pingüino--frozen-coast).
+- FREE-PATH moving platform (2026-10-29): the Cable car (`mechanisms/cablecar.lua`,
+  [traps-and-mechanisms](../entities/traps-and-mechanisms.md)) — one-way
+  deck parts that follow a polyline (ping-pong or loop), sideways and up / down. Players ride them with `rideBody`
+  (which already takes `stepDx` as well as `stepDy`); entities resting on a deck are moved by the cable car itself,
+  except types with the class field `ridesMoving = true`, which follow the moving body under them on their own (the
+  Box: its `carry = under.stepDx`) — so nothing is moved twice. Use it for mine carts, rafts, elevators: a type that
+  moves along a path only needs body parts with `moves = true`.
 - The BOT's nav graph has nodes on top of moving bodies too (0.5.99); an owner whose body moves along a known range
   exposes `navPoses()` / `navPose(p)` (the Scale: one pose per tile of `travel`) so the graph is recorded at each pose:
   [bonus and bot](../story/bonus-and-bot.md#zones-that-ride-a-moving-body-0599).
+
+## The Iceberg (floating ice)
+
+The Frozen Coast's floe (2026-10-29; the user's approved design, `FlappyMonster_pruebas/islas_heladas/diseno.md` §A 1,
+with his corrections: icebergs do NOT crack and do NOT drift on their own). `mechanisms/iceberg.lua`, placed on its
+TOP-LEFT cell; props `width` 1-8, `height` 1-3 (tiles), `capacity` (weight it holds, default 1.5: a player floats, a
+player + a small box / a carried beetle sinks it), `float` (tiles above the water when empty, 0.3), `sinkDepth` (tiles
+under the surface when sunk, 1).
+- It is a CLASS OF THE BOX (`Entity.extend(Box)`): it inherits pushing in a row by weight (`Box:pushBy`, its client
+  prediction and `pusherIdx` / `pushK` in the netPack), `Box:tickPush` (who pushes it, shared) and never moving into a
+  player (`Box:moveAndCollide`: it shoves them or rests on their head). It is solid (`solidFull`), a moving body
+  (`moves`) and ride-able: players with `standBody`, entities resting on it are moved by it (sideways only those
+  without `ridesMoving`; up first when it rises, so a box on top never blocks it).
+- FLOATING: `Level:waterSurfaceAt(x, y)` (LevelWater: tile water, waterlogged and floods at once, cut by a block above)
+  under three points of its underside; with water it springs to `top = surface − float × (1 − 0.75 × min(1, weight /
+  capacity))` (the damping follows the water's own speed: it rides a tide without lagging) and bobs 2 px; without water
+  it falls and rests on the bottom (state `ground`). Someone landing on it dips it (`DIP` per weight unit); a ground pound
+  on it dunks it a moment. OVERLOAD (`Weight.stack` > `capacity`): `warn` (shakes, `icebergCreak`, 0.7 s) → `sunk`
+  (`icebergSink`; top `sinkDepth` under the surface: riders get wet — freezing water…) → back to `float` 0.35 s after
+  the weight drops (`waterSplashOut`).
+- SIDEWAYS only when PUSHED (walking into it on the ground, or SWIMMING into it: class field `pushInWater`, honoured by
+  `PlayerCollision` and `Box:pushBy`; or a box / another iceberg pushed into it — the row) or BLOWN (`Push.at` over its
+  top, approached with inertia, less with weight; it opts out of `Push.entity` with `canBePushed() = false`). Released,
+  it GLIDES at the speed it was pushed and slows with the water drag (0.9 / s); walls and other icebergs stop it. Never
+  moves by itself (harness `quieto`). Stranded on the bottom it stops at once.
+- Wide bodies: the class field `denseProbe = true` makes `Entity:moveAndCollide` probe every half tile along a side (3
+  points missed a one-tile pillar under an 8-tile floe).
+- Online: x, y and the state travel in the snapshot (always: it bobs; stranded at home it is at rest); the client
+  draws it and predicts the push like the Box; riders use `stepDx/stepDy` as on any moving body. The BOT's nav graph
+  does not record its poses (its position depends on the water and pushes: no fixed `navPoses`).
+- Art: `assets/images/mechanisms/iceberg/h<h>-w<w>-<1|2>.png` (every size, two variants alternating by cell; flat
+  facets like the Frozen Coast background berg, smooth lit top face) from `tools/art/world/make_iceberg.py`; sounds from
+  `tools/sounds/iceberg.py`.
 
 ## Air (`Push`)
 
@@ -111,7 +155,10 @@ total weight; `Weight.total(o, level, isPlayer)` = `o` + its stack. A player wei
 `mechanics`: `caja_empuje`, `caja_rota`, `caja_borde`, `cajas_golpes`, `cargar`, `bomba_reaparece`, `islas`, `islas_arte` (every
 island has its art in everything above), `viento`,
 `cuerpo_mueve`, `balanza`, `balanza_tope`, `balanza_impacto` (a hard landing on a pan fires the other one),
-`escarabajo_lanzado` (the Rhino Beetle on its back is carried and thrown).
+`escarabajo_lanzado` (the Rhino Beetle on its back is carried and thrown). `cablecar_rules` (riding the Cable car
+through corners and turnarounds, a box and a Gummy on a deck, `onWeight`). `iceberg_rules` (floating on tile water and
+floods, following a tide, riding, sinking under weight and recovering, never drifting, pushed walking and swimming,
+blown, stopping at walls and other icebergs, a box riding it, online parity).
 
 ## History and decisions
 

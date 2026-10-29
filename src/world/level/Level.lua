@@ -98,6 +98,8 @@ function Level.fromData(lvl, difficulty)
     self.tileW       = lvl.width
     self.tileH       = lvl.height
     self.playerStart = lvl.playerStart
+    -- AGUA HELADA de las casillas (s que se aguanta dentro antes de congelarse; nil = agua normal): Level:coldAt
+    self.coldWater   = (tonumber(lvl.coldWater) or 0) > 0 and tonumber(lvl.coldWater) or nil
     self.widthPx     = self.tileW * TILE_PX
     self.heightPx    = self.tileH * TILE_PX
     -- Entidades (enemigos, NPCs): colocaciones normalizadas con sus
@@ -465,7 +467,8 @@ function Level:bodyAt(wx, wy, except)
     local bodies = self.solidBodies
     if not bodies then return nil end
     for _, o in ipairs(bodies) do
-        if o.solidFull and o ~= except and o.alive ~= false then
+        -- (las piezas de una entidad no la paran a ella misma: `owner`, p. ej. el trineo del Pingüino)
+        if o.solidFull and o ~= except and o.alive ~= false and (except == nil or o.owner ~= except) then
             local b = o:getOuterBounds(BODY_B)
             if wx >= b.x and wx < b.x + b.w and wy >= b.y and wy < b.y + b.h then
                 return o, { x = b.x, y = b.y, w = b.w, h = b.h }        -- (una copia: quien llama puede guardarla)
@@ -500,6 +503,19 @@ function Level:liquidAt(wx, wy)
         if m then return m end
     end
     return liquidOfRaw(self:getRawAt(wx, wy))
+end
+
+-- AGUA HELADA en el punto: los s que se aguantan dentro antes de congelarse (la de una inundación con `cold`, o la de
+-- las casillas si el nivel tiene `coldWater`), o nil (agua normal o fuera del agua). PlayerAir: updateFrost.
+function Level:coldAt(wx, wy)
+    local fl = self.floods
+    if fl and fl[1] then
+        local c = Floods.coldAt(fl, wx, wy)
+        if c then return c end
+        if Floods.liquidAt(fl, wx, wy) then return nil end      -- (el agua de una inundación normal manda)
+    end
+    if self.coldWater and liquidOfRaw(self:getRawAt(wx, wy)) then return self.coldWater end
+    return nil
 end
 
 -- Material líquido de una celda (col,row), o nil.

@@ -38,10 +38,11 @@ STRIPS = [
     (('Cueva',), SOLID, False),
     (('Fortaleza',), SOLID, False),
     (('Jungla',), GRASS, False),
+    (('Costa helada',), SNOW, False),
 ]
 # Las que cuelgan del techo de su casilla / subcelda (DecoFx.sheet / wave con hang)
 HANG = {'stalactite', 'cobweb', 'icicle', 'icicle_small', 'lava_fall', 'hanging_roots', 'banner', 'ivy_hang',
-        'liana_long', 'liana_mid', 'liana_short', 'hanging_moss', 'flower_vine', 'hanging_orchid'}
+        'liana_long', 'liana_mid', 'liana_short', 'hanging_moss', 'flower_vine', 'hanging_orchid', 'net_hang'}
 WIDE = {'butterflies': 32, 'fireflies': 40, 'dragonfly': 32}      # (las que vuelan: su zona)
 
 

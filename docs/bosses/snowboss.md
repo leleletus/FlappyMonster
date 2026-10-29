@@ -2,7 +2,9 @@
 
 The mid-island boss of the Summits: a giant snowball that can never be hurt directly — only while dizzy, soaked or
 frozen — and SHRINKS over three phases. Its physics (`Snow.move / physics / jumpTo / strike…`) are reused by the
-Gummy King. 2 % of the fights it is **Verity**, a yellow smiley with its own music (an Easter egg).
+Gummy King. 2 % of the fights it is **Verity**, a yellow smiley with its own music (an Easter egg). Its normal-enemy little
+sister is the **Snowball** (`snowball`, [enemies](../entities/enemies.md)), drawn from this design; the intro film shows
+it (shards.json `normal`) before it grows into the boss.
 **File:** `src/world/entities/types/bosses/snowboss.lua`. **Art:** `assets/images/bosses/snowboss/` (+ `verity/`, the
 user's). **Sounds:** `tools/sounds/snowboss.py`. **Level:** `lago_helado`; arena
 `tools/levelgen/arenas/jefe_nieve.json` (`make_jefe_nieve.py`). **Music:** `snowball_boss` / `snowball_verity`.

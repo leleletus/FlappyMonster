@@ -7,14 +7,18 @@ surfaces or catches an oxygen bubble from a **vent**.
 **Files:** `src/world/level/LevelWater.lua` (water bodies, bubbles, vents, oxygen), `src/player/PlayerAir.lua`
 (drowning, the Sonic-style countdown, splashes, air bar), `src/world/systems/Floods.lua` + the placeholder entity
 `types/mechanisms/flood.lua`, `src/fx/WaterSurface.lua` and `assets/shaders/water.glsl` (drawing),
-`src/world/tiles/materials/water.lua`.
+`src/world/tiles/materials/water.lua`; the Frozen Coast additions (2026-10-29): the TIDE and FREEZING WATER (below) and
+the floating ICEBERG ([carry-and-push](carry-and-push.md#the-iceberg-floating-ice)), `Level:waterSurfaceAt` and
+`Level:coldAt` in `src/world/level/LevelWater.lua` / `Level.lua`, the frost meter in `PlayerAir.lua`.
 
 **Configuration:** vents are level objects (`vents` in the level JSON; editor layer "Especial"); a flood is the
 entity `flood` with a `corner` handle and timing props; difficulty scales air time (`airTime`) and the delay between
 vent bubbles (`ventDelay`). Underwater design numbers for level builders are in
 [generator-and-solver](../levels/generator-and-solver.md).
 
-**Harnesses:** `flood_control`, `online_boss LEVEL=tools/tests/online_boss/fortaleza_flood.json`, `mechanics`.
+**Harnesses:** `flood_control`, `online_boss LEVEL=tools/tests/online_boss/fortaleza_flood.json`, `mechanics`,
+`iceberg_rules` (tide, freezing water, icebergs; its level `tools/tests/iceberg_rules/costa.json` also runs online:
+`online_smoke LEVEL=tools/tests/iceberg_rules/costa.json WATCH=iceberg WANT=warn,sunk WANTICE=1`).
 
 ## Oxygen bubbles
 
@@ -74,6 +78,35 @@ the Selección tab (+ "Empieza encendido"); links drawn as yellow dotted lines; 
 kept unique (`Model:fixFloodIds`); warnings for dangling links. Harness `flood_control`
 (+ `online_boss` with `tools/tests/online_boss/fortaleza_flood.json`). Protocol v25.
 
+## Tide (flood `control = 'tide'`)
+
+- A flood that rises and falls BY ITSELF, smoothly (a sine), between its minimum (`startLevel` = low tide) and its
+  maximum (`maxLevel` = high tide): `tidePeriod` s for a whole tide, `tidePhase` = where the cycle starts (fraction of
+  the period: 0 = low tide rising, 0.5 = high tide falling). Editor: "Se mueve" → "Marea" (the rise / fall props hide).
+- Like the cycle it is a PURE function of `level.floodTime` (`Floods.tideAt`): nothing travels online
+  (`Floods.netPack` only carries the boss / switch floods, `Floods.controlled`), every client computes it at its
+  predicted time. Its phase is `rise` / `fall` from where it is going (`hold` / `low` in the top / bottom 4 %), so an
+  `undertow` also drags on the falling tide.
+
+## Freezing water (flood prop `cold`, level key `coldWater`)
+
+- `Level:coldAt(x, y)` = the seconds that water allows (a flood with `cold > 0` — its own water —, or the tile water of a
+  level with `"coldWater": s`), or nil. Editor: the flood's "Agua helada: congela a los (s)"; the level's "Agua helada
+  (s; 0 = no)" (Nivel → aspect section). It is drawn paler (`coldTint` of the water material) so it reads as icy.
+- The player (`PlayerAdventure:updateFrost`, `PlayerAir.lua`, after the drowning step): while the body centre is in
+  freezing water `frostT` counts; at `cold × airTime` (the difficulty's air modifier) it FREEZES — the same ice block as
+  the Freezer (`pa:freeze(FROST_ICE)` 3 s, mash any button to break out, `ICE_FREE_INV` after). Out of the water (or in
+  normal water) `frostT` is 0 at once; inside the ice it stays 0, so after breaking out in the water it starts again.
+  Invulnerable at the limit (just respawned) it waits full until it can freeze.
+- HUD: the FROST METER (`renderFrostBar`, drawn by `renderAirBar` — local player only) above the air bar, pale blue,
+  pulsing past 75 %, with the snowflake icon `assets/images/ui/icons/frost.png` (`tools/art/world/make_iceberg.py`).
+- Network: `frostT` is index 40 of the own state (`Protocol.packOwnState`); the client predicts it like the air
+  (needs a `Protocol.VERSION` bump). Others only see the ice (`PF_ICE`).
+
+## History
+
+- 2026-10-29 (the Frozen Coast, the user's approved design `FlappyMonster_pruebas/islas_heladas/diseno.md` §A 2-3):
+  tide and freezing water as options of the existing flood / level water, not new tiles. Not yet felt by the user.
 - 0.5.11 (review): oxygen bubbles (gameplay: they give air) no longer depend on the bubble images having loaded, and
   every bubble's zigzag uses the level's own clock (`level.waterT`), not the wall clock (rule 1: the pause no longer
   moves them). The headless server already spawned them (it gets placeholder images). Harness `online_smoke

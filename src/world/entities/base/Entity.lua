@@ -357,6 +357,29 @@ function Entity:knockback(dirX)
     Sound.play('stunned')
 end
 
+-- ARROLLAR (lo que embiste: el Escarabajo, el comportamiento `ram` de la Bola de Nieve): lo que toca la caja `box`
+-- sale despedido hacia `dir` — enemigos que se pueden empujar con `knockback`, lo ligero que se coge con `onThrow`
+-- (vx, vy) —, una vez a cada uno (`swept`: tabla suya, por embestida). Nunca los jefes. Devuelve cuántos arrolló.
+local function overlapBox(a, b) return a.x < b.x + b.w and a.x + a.w > b.x and a.y < b.y + b.h and a.y + a.h > b.y end
+function Entity:sweepAhead(level, box, dir, swept, vx, vy)
+    local n = 0
+    for _, e in ipairs(level.liveEntities or {}) do
+        if e ~= self and e.alive and not swept[e] and e.state ~= 'dead' and e.state ~= 'carried'
+           and not (e.isGhost and e:isGhost()) and not (e.def and e.def.boss) and overlapBox(box, e:getOuterBounds()) then
+            if e.canBeKnocked and e:canBeKnocked() then
+                swept[e], n = true, n + 1
+                e:knockback(dir)
+                Sound.play('crabPop', 1.1, 0.7)
+            elseif e.carryable and e.canBeCarried and e:canBeCarried() and e.onThrow then
+                swept[e], n = true, n + 1
+                e:onThrow(nil, dir * vx, vy)
+                Sound.play('boxLand', 1.2, 0.8)
+            end
+        end
+    end
+    return n
+end
+
 -- Coleccionables: desaparece (con su animación de 'dead'). true si se recogió.
 function Entity:collect()
     if self.state == 'dead' or self:isGhost() then return false end
@@ -494,6 +517,49 @@ function Entity:onDeadlyGround(level)
         if t and t.mat and t.mat.contact == 'kill' then return true end
     end
     return false
+end
+
+-- ¿Algo MORTAL al caer o deslizarse? (pinchos / material mortal, por debajo del nivel o en el VACÍO): revienta
+-- (`dieBurst`) y devuelve true. La regla de lo que se tira por los huecos (el Pingüino deslizándose)
+function Entity:burstIfDoomed(level)
+    if self:onDeadlyGround(level) or self:fellOut(level) or self:inVoid(level) then self:dieBurst(); return true end
+    return false
+end
+
+-- El MATERIAL que pisa (el bloque bajo el centro de sus pies; si no, bajo sus bordes) o nil (en el aire / un cuerpo).
+-- `friction` < 1 = resbala (hielo 0.2): src/world/tiles/materials/
+function Entity:groundMat(level)
+    if not self.onGround or not level then return nil end
+    local b = self:getOuterBounds()
+    local y = self.y + self.outerH / 2 + 4
+    for _, x in ipairs({ self.x, b.x + 4, b.x + b.w - 4 }) do
+        local t = level:collisionAt(x, y, true)
+        if t then return t.mat end
+    end
+    return nil
+end
+
+-- ¿Ve a un jugador DELANTE (hacia donde mira), a la altura de sus pies (± `height` casillas), hasta `tiles` casillas
+-- (× el `sense` de la dificultad) y sin pared en medio? Devuelve ese jugador (el más cercano) o nil
+function Entity:seesAhead(level, tiles, height)
+    local f, T = self.facing or 1, TILE_PX
+    local range = tiles * T * require('src/core/Difficulty').k('sense')
+    local feet = self.y + self.outerH / 2
+    local best, bd
+    for _, pa in ipairs(level.players or {}) do
+        if not pa.dying and pa.alive ~= false then
+            local pb = pa:getOuterBounds()
+            local dx = (pa.x - self.x) * f
+            if dx > 4 and dx <= range and math.abs(pb.y + pb.h - feet) <= (height or 0.9) * T and (not bd or dx < bd) then
+                local clear = true
+                for x = self.x, pa.x, f * T / 4 do
+                    if level:collisionAt(x, feet - T / 3) then clear = false; break end
+                end
+                if clear then best, bd = pa, dx end
+            end
+        end
+    end
+    return best
 end
 
 -- Está de pie sobre la casilla (c, r)? (pies en su cara de arriba)
@@ -664,6 +730,19 @@ end
 -- de una plataforma queda pegada a ella, no flotando).
 local MAX_STEP = 16      -- px por sub-paso vertical (no atravesar losas finas)
 local EMBED = 6         -- px: un volador más metido que esto en una cara la atraviesa (sale)
+-- Puntos de choque a lo largo de un lado: 3 (los dos extremos y el medio) o, con subtiles, cada SUB_STEP. Un cuerpo
+-- ANCHO o ALTO que lo pide (`denseProbe = true`: el Iceberg de varias casillas) mira cada media casilla: con 3 puntos
+-- se metía en una columna de una casilla que le quedaba entre medias.
+local DENSE_STEP = TILE_PX / 2
+local function sidePoints(level, self, a, b)
+    if self.denseProbe and not level.subSolid and b - a > 2 * DENSE_STEP then      -- (con subtiles ya va más denso)
+        local n = math.ceil((b - a) / DENSE_STEP)
+        local out = {}
+        for i = 0, n do out[i + 1] = a + (b - a) * i / n end
+        return out
+    end
+    return level.samples and level:samples(a, b) or { a, (a + b) / 2, b }
+end
 
 -- Cara que se toca en el punto: tile (forma real) u objeto sólido (trampolín,
 -- mortero...). `side` = cara del obstáculo que se toca ('left' al ir hacia la
@@ -698,7 +777,7 @@ function Entity:moveAndCollide(level, dx, dy)
     local touched, touchedFace                 -- objeto sólido que tocó (trampolín)
 
     x = x + dx
-    local rows = level.samples and level:samples(y - hh + 4, y + hh - 4) or { y - hh + 4, y, y + hh - 4 }
+    local rows = sidePoints(level, self, y - hh + 4, y + hh - 4)
     if dx ~= 0 then
         local side = (dx > 0) and 'left' or 'right'
         local edge = (dx > 0) and (x + hw) or (x - hw)
@@ -730,7 +809,7 @@ function Entity:moveAndCollide(level, dx, dy)
     end
 
     self.onGround = false
-    local chx = level.samples and level:samples(x - hw + 4, x + hw - 4) or { x - hw + 4, x, x + hw - 4 }
+    local chx = sidePoints(level, self, x - hw + 4, x + hw - 4)
     local landDown = not self.flipped
     -- En sub-pasos: una caída rápida no se salta una losa fina
     local left = dy
@@ -959,6 +1038,24 @@ function Entity:groundAhead(level, dir)
     local lookX = self.x + dir * (self.outerW / 2 + 2)
     local lookY = self.flipped and (self.y - self.outerH / 2 - 4) or (self.y + self.outerH / 2 + 4)
     return solidAt(level, lookX, lookY)
+end
+
+-- Al borde de un HUECO: ¿hay suelo al otro lado, a la misma altura, a menos de `maxGap` px (contados desde su
+-- frente)? → distancia hasta ese suelo (nil = no hay, o hay pared, pinchos o una zona de peligro antes). Para lo que
+-- salta huecos (el comportamiento `ram`: lanzada, la Bola de Nieve cruza de una repisa a otra)
+function Entity:landingAhead(level, dir, maxGap)
+    local feet = self.y + self.outerH / 2
+    local front = self.x + dir * self.outerW / 2
+    for d = 8, maxGap, 8 do
+        local x = front + dir * d
+        if solidAt(level, x, self.y) or solidAt(level, x, feet - 8) then return nil end     -- (una pared: no es un hueco)
+        if solidAt(level, x, feet + 4) then
+            if #level:getSpikesInBox(x - 4, feet - 8, 8, 12) > 0 then return nil end
+            if self:dangerAt(level, x - self.outerW / 2, feet - self.outerH, self.outerW, self.outerH) then return nil end
+            return d
+        end
+    end
+    return nil
 end
 
 -- Sitio libre hacia `dir` (px, hasta `max`): hasta una pared u objeto sólido,

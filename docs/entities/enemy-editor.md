@@ -55,6 +55,7 @@ taken as frames and sorted into animations by file name (`…idle…` → idle, 
 | `leap` | Salto (acción especial) | `special` | every so often crouches and jumps in an arc at the player | range, every, wind-up, height, max distance |
 | `shoot` | Disparo | `attack` | wind-up, then a straight projectile that takes HP and stops at walls; drawn with the set's `shot` sequence | range, wind-up, rest, speed, life, size, damage, cooldown |
 | `hide` | Esconderse | `hide` | every so often (or when a player is near) hides for a while and comes back out: hidden it cannot be stomped or touched, and can show a cover that hurts or kills from above (like the Crabby's spike). Animations `hide`, `hidden`, `unhide` (missing ones fall back to `hide`, reversed for coming out). Works for crawlers too | every, near, in / stay / out times, cover |
+| `ram` | Lanzarse y empujar | `windup`, `charge`, `recoil`, `dazed` | sees a player → wind-up → LAUNCHES itself at it rolling fast (hops a gap when there is floor at its height beyond — `Entity:landingAhead` —, jumps up to a higher ledge the player stands on); what it meets in front is SHOVED sideways and a bit up with no damage (a hazard box `effect = 'launch'`: the player is launched like by a trampoline, predicted online, never twice while still flying; falling on it from above stomps it instead); knocks down enemies / flings light carryables (`Entity:sweepAhead`); a wall → `dazed`; after a shove it bounces back (`recoil`) and its sound is the one the online client predicts (`launchState`); its route limits do not stop it (`freeOfRoute`). Made for the Snowball, reusable by any rammer (a goat) | range, height, wind-up, speed, max distance, hop, push sideways / up, damage (0), rest, cooldown |
 
 Detection ranges are scaled by the difficulty's `sense`; the whole enemy is scaled by `enemyPace` like any other.
 
@@ -66,7 +67,9 @@ Create `src/world/entities/behaviors/<name>.lua` returning
 parameters. Rules: `think(e, cfg, dt, level)` runs while the enemy is in `walk` / `idle` and returns true after
 calling `e:enter(state)` to take over; `update` runs each step while the enemy is in one of its states and ends with
 `e:backToWalk()`; the time in a state is `e.deadTimer`; no drawing code and no state that drawing needs but the
-network does not carry. Helpers on the enemy: `e:seesPlayer(level, tiles, height)`, `e:nearestPlayer(level)`,
+network does not carry. Optional hooks: `onLaunch(e, cfg, pa)` (a hazard box of its own with `effect = 'launch'` launched a player; with
+`launchState` = the state it enters then, whose sound the online client plays when it predicts the launch) and
+`freeOfRoute = true` (its states ignore the route limits). Helpers on the enemy: `e:seesPlayer(level, tiles, height)`, `e:nearestPlayer(level)`,
 `e:addShot(x, y, vx, vy, life, size, dmg)`, plus everything in `Entity` (`moveAndCollide`, `groundAhead`, `canGo`…).
 
 ## How it runs
@@ -86,6 +89,7 @@ network does not carry. Helpers on the enemy: `e:seesPlayer(level, tiles, height
 | Id | What |
 |---|---|
 | `claudio` | Claudio — the character the user drew for Claude (2026-10-08): a harmless friend that strolls, cannot be stomped and does not hurt; Claude added the blink in its idle. Set `claudio`, images `assets/images/enemies/claudio/` |
+| `snowball` | Bola de Nieve — the Giant Snowball's little sister (2026-10-29): `ram` only; see [enemies](enemies.md#snowball-snowball-bola-de-nieve--frozen-mountains). Set `enemies/snowball`, sheet `assets/images/enemies/snowball/snowball-Sheet.png` (`tools/art/enemies/make_snowball.py`) |
 
 ## Crawlers
 
@@ -126,7 +130,7 @@ name in the bar comes from its `title` / `title_en` (no language-file entry need
   [how-to-add-an-enemy](how-to-add-an-enemy.md)): dropping from ceilings on sight, covers that become trampolines,
   custom per-frame poses. New kinds of action are best added as a behaviour so every data enemy can use them.
 
-**Tests:** `enemy_data` (registration, each behaviour, health, crawling, hiding, a whole boss fight, network,
+**Tests:** `snowball_rules` (the `ram` behaviour and the Snowball, online parity), `enemy_data` (registration, each behaviour, health, crawling, hiding, a whole boss fight, network,
 validation, the index), `tool_editors TOOL=enemy` and `TOOL=enemy KIND=boss` (the real editor end to end, undo,
 the play-test). Not covered: a data enemy in an online match with
 a real server (none ships yet) — run `online_smoke LEVEL=<a level that places it> WATCH=<id>` with the first one.

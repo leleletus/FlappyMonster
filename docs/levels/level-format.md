@@ -28,6 +28,7 @@ that exists: [reference/levels](../reference/levels.md).
 | `modes`, `matchTime` | whitelist of online modes; seconds for timed modes |
 | `parTime` | target time in seconds for the story results (0 / absent = automatic by width) |
 | `peaceful` | harmless enemies (test galleries); never listed online |
+| `coldWater` | seconds: the level's TILE water freezes whoever stays in it that long ([water-and-floods](../gameplay/water-and-floods.md#freezing-water-flood-prop-cold-level-key-coldwater); floods have their own prop `cold`) |
 | `openTop` | nothing solid ABOVE the level (outside the map is solid everywhere else) and its boss zones may start above row 1 (the credits' live stages: no ceiling a few cells over the ground) |
 
 Level ids (file names) are referenced by `src/story/Worlds.lua`, by saves and by online rooms: **do not rename

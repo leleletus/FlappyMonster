@@ -15,7 +15,7 @@ Render-only (client + editor; the server builds them but never draws). `placemen
 their cell/quarter (`DecoFx.sheet(..., {hang=true})`). A type file may return a LIST: themed
 sets `ice_set` (Hielo y nieve), `cave_set` (Cueva), `water_set` (Acuático), `tropical_set`
 (Tropical) + `icicle`, `palmtree` (Tropical), `meadow_set` (Pradera), `volcano_set` (Volcán), `fortress_set`
-(Fortaleza), `jungle_set` (Jungla), `tulip`/`stretch` (Plantas); palette order
+(Fortaleza), `jungle_set` (Jungla), `frozen_coast_set` (Costa helada), `tulip`/`stretch` (Plantas); palette order
 `DecorationTypes.CATEGORIES`. `src/world/decorations/DecoFx.lua` = shared helpers: sprite
 strips at ×4, `wave` (row-by-row sine sway, root still), additive `glow`, per-decoration
 particles in `d.fx` (`emit/update/draw`, spawned only while seen, `every` timers), `drip`
@@ -65,9 +65,20 @@ ceiling. The list comes from `docs/reference/decorations-and-modes.md` (written 
 - `DecoFx.leaf(d, x, y, sheet)`: a leaf from a canopy (from a tall one it falls faster and lives longer: it reaches
   the ground). `DecoFx.sheet(..., { hang = true, rot = r })` turns around the top.
 
+## Frozen coast set (2026-10-29)
+
+**`tools/art/world/make_frozen_coast_decor.py --apply A`**: `frozen_coast_set` (category Costa helada, sprites in
+`world/decorations/frozen_coast/`, anim set `world/decorations/frozen_coast`): iceberg and floe (flat facets, like the
+ice of the `frozen_coast` sky), ice_chunks, anchor, buoy (lamp blinks: 2 frames, amber glow + light while on), bollard,
+crab_pot, kelp_rock, rowboat (icicles drip), net_hang (hangs, sways), starfish_ice, floe (bobs 1 art px; goes in the cell
+just ABOVE the water, anchored 2 art px under the surface). Showcase arena `tools/levelgen/arenas/costa_helada.json`.
+
 ## History
 
 - 2026-10-28: the user approved both packs from their previews (`FlappyMonster_pruebas/selva/decoraciones/`,
   `FlappyMonster_pruebas/arboles/`) but REMOVED the dart frog, the toucan and the monkey from the jungle set (they may
   become enemies): their drawing code stays in `make_jungle_decor.py` (`NOT_APPLIED`), they are neither applied nor
   registered.
+- 2026-10-29: frozen coast — two sets drawn (A: house style, harbour things; B: flat facets, coral accent); the user
+  chose **A**, with its iceberg / floe redrawn in B's flat facets. B stays in the generator and the preview
+  (`FlappyMonster_pruebas/fondo_costa_helada/`).

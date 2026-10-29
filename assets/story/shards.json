@@ -5,7 +5,7 @@
     { "id": 2, "level": "cala_resaca",       "tint": "#ffe498", "normal": { "img": "assets/images/enemies/crabby/crab1.png" } },
     { "id": 8, "level": "templo_escarabajo", "tint": "#d8f070", "normal": { "img": "assets/images/enemies/beetle/beetle-Sheet.png", "fw": 22 } },
     { "id": 3, "level": "fortaleza_malvada", "tint": "#c4c4dc" },
-    { "id": 4, "level": "lago_helado",       "tint": "#ffffff" },
+    { "id": 4, "level": "lago_helado",       "tint": "#ffffff", "normal": { "img": "assets/images/enemies/snowball/snowball-Sheet.png", "fw": 14 } },
     { "id": 5, "level": "glaciar_cangrejo",  "tint": "#98f0ff", "normal": { "img": "assets/images/enemies/crabby_ice/crab1.png" } },
     { "id": 6, "level": "gruta_del_farol",   "tint": "#d0a4ff", "normal": { "img": "assets/images/enemies/gloomy/gloomy-Sheet.png", "fw": 26, "glow": "assets/images/enemies/gloomy/glow-Sheet.png" } },
     { "id": 7, "level": "ruta_del_espejo",   "tint": "#ffa48c", "final": true, "seed": [-0.06, -0.04] }

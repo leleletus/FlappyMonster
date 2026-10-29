@@ -77,6 +77,68 @@ function PlayerAdventure:updateDrowning(dt, level)
     end
 end
 
+-- ── Agua HELADA (Level:coldAt: inundación con `cold`, o el agua del nivel con `coldWater`) ─────────────────────
+-- Con el cuerpo en agua helada cuenta `frostT`; al llegar a los s de esa agua (× el aire de la dificultad, `airTime`)
+-- se CONGELA: el bloque de hielo de siempre (freeze: machacar para salir). Roto el hielo, si sigue dentro, vuelve a
+-- empezar; fuera del agua (o en agua normal) se pone a 0. Simulación: va en el estado propio (40), el cliente lo predice.
+local FROST_ICE = 3                         -- s dentro del bloque de hielo (machacar lo acorta: ICE_MASH)
+PlayerAdventure.FROST_ICE = FROST_ICE
+function PlayerAdventure:updateFrost(dt, level)
+    if self.dying or self.immortal or self.frozen then return end
+    if (self.iceT or 0) > 0 then self.frostT = 0; return end
+    local cold
+    if self.inWater and level and level.coldAt then
+        local ob = self:getOuterBounds()
+        cold = level:coldAt(ob.x + ob.w / 2, ob.y + ob.h / 2)
+    end
+    if not cold then self.frostT = 0; return end
+    local lim = cold * Difficulty.k('airTime')
+    self.frostLim = lim
+    self.frostT = (self.frostT or 0) + dt
+    if self.frostT >= lim then
+        -- (invulnerable — recién reaparecido, recién salido del hielo —: espera lleno hasta que pueda)
+        if self:freeze(FROST_ICE) then self.frostT = 0 else self.frostT = lim end
+    end
+end
+
+-- Medidor de ESCARCHA (solo el HUD del jugador local): encima de la barra de aire, se llena con el frío
+local frostIcon
+function PlayerAdventure:renderFrostBar()
+    local want = ((self.frostT or 0) > 0 and not self.dying) and 1 or 0
+    local dt = love.timer.getDelta()
+    self.frostBarAlpha = (self.frostBarAlpha or 0) + (want - (self.frostBarAlpha or 0)) * math.min(1, (want > 0 and 6 or 3) * dt)
+    if self.frostBarAlpha < 0.01 then self.frostBarAlpha = 0; return end
+    local a = self.frostBarAlpha
+    local k = math.min(1, (self.frostT or 0) / math.max(0.1, self.frostLim or 1))
+    local w, h = AIR_BAR_W, 8
+    local bx = math.floor((WINDOW_W - w) / 2)
+    local by = math.floor(WINDOW_H - 60 - h - 10)
+    love.graphics.setColor(0, 0, 0, 0.75 * a)
+    love.graphics.rectangle('fill', bx + 2, by + 2, w, h)
+    love.graphics.setColor(0.10, 0.12, 0.18, a)
+    love.graphics.rectangle('fill', bx, by, w, h)
+    local fw = math.floor(w * k)
+    if fw > 0 then
+        local pulse = (k > 0.75) and (0.6 + math.abs(math.sin(love.timer.getTime() * 9)) * 0.4) or 1
+        love.graphics.setColor((0.55 + 0.45 * k) * pulse, (0.85 + 0.15 * k) * pulse, 1 * pulse, a)
+        love.graphics.rectangle('fill', bx, by, fw, h)
+        love.graphics.setColor(1, 1, 1, 0.35 * a)
+        love.graphics.rectangle('fill', bx, by, fw, 2)
+    end
+    love.graphics.setColor(0.55, 0.75, 0.9, a)
+    love.graphics.rectangle('line', bx, by, w, h)
+    if frostIcon == nil then
+        local ok, img = pcall(love.graphics.newImage, 'assets/images/ui/icons/frost.png')
+        frostIcon = ok and img or false
+        if frostIcon then frostIcon:setFilter('nearest', 'nearest') end
+    end
+    if frostIcon then
+        love.graphics.setColor(1, 1, 1, a)
+        love.graphics.draw(frostIcon, bx - 4 - frostIcon:getWidth() * 2, by + h / 2 - frostIcon:getHeight(), 0, 2, 2)
+    end
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
 -- ── Splash al entrar / salir del agua ────────────────────────────────────────
 -- splashSt: 'out'      fuera del líquido
 --           'wading'   pies dentro, la cabeza aún no se ha hundido
@@ -181,6 +243,7 @@ end
 
 -- ── HUD: barra de aire pixel-art ─────────────────────────────────────────────
 function PlayerAdventure:renderAirBar()
+    self:renderFrostBar()                       -- (el medidor de escarcha va con ella: agua helada)
     if self.airBarAlpha <= 0 then return end
 
     local a = self.airBarAlpha

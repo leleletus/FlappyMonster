@@ -3,6 +3,9 @@
 -- simulación) a trozos de pantalla y los junta en una imagen reducida.
 --   tools/tests/run.sh level_shots -- assets/levels/a.json [b.json ...]
 --   SCALE=0.25 (por defecto; 1 = tamaño real)   LIGHT=1 (los niveles a oscuras, sin la oscuridad)
+--   CROP=c0,r0,c1,r1  solo ese trozo del nivel (casillas, desde 1, ambos incluidos): para mirar de cerca unos bloques
+--   TAG=texto  se añade al nombre de la salida (shot_<nivel>_<texto>.png): antes / después sin pisarse
+--   TIME=day|dusk|night  la hora del nivel (un fondo a las tres horas: TIME=night TAG=night)
 --   FIXED=1  foto REPETIBLE (azar con semilla fija y reloj parado): dos ejecuciones dan el mismo PNG, para
 --            comparar antes / después de mover o rehacer algo que no debe cambiar el dibujo
 -- Salida: <save>/shot_<nivel>.png  (~/.local/share/love/fm_test_levelshots/)
@@ -29,6 +32,8 @@ local function shot(path)
     local raw = love.filesystem.read(path)
     if not raw then local f = io.open(path, 'r'); if f then raw = f:read('*a'); f:close() end end
     local data = json.decode(raw)
+    -- (TIME: la hora del nivel, para ver un fondo a las tres horas sin tocar el nivel)
+    if os.getenv('TIME') and os.getenv('TIME') ~= '' then data.time = os.getenv('TIME') end
     local level = Level.fromData(data)
     local es = {}
     for _, pl in ipairs(level.entities) do es[#es + 1] = Entities.create(pl) end
@@ -41,13 +46,25 @@ local function shot(path)
     end
     local k = tonumber(os.getenv('SCALE')) or 0.25
     local W, H = level.tileW * TILE_PX, level.tileH * TILE_PX
+    -- (CROP: el trozo [x0, x0 + W) x [y0, y0 + H) del nivel, en píxeles)
+    local x0, y0 = 0, 0
+    local crop = os.getenv('CROP')
+    if crop and crop ~= '' then
+        local c0, r0, c1, r1 = crop:match('^(%d+),(%d+),(%d+),(%d+)$')
+        assert(c0, 'CROP=c0,r0,c1,r1')
+        c0, r0 = math.max(1, tonumber(c0)), math.max(1, tonumber(r0))
+        c1, r1 = math.min(level.tileW, tonumber(c1)), math.min(level.tileH, tonumber(r1))
+        x0, y0 = (c0 - 1) * TILE_PX, (r0 - 1) * TILE_PX
+        W, H = (c1 - c0 + 1) * TILE_PX, (r1 - r0 + 1) * TILE_PX
+    end
     local out = love.graphics.newCanvas(math.ceil(W * k), math.ceil(H * k))
     WINDOW_W, WINDOW_H = 1280, 720
     local view = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
     local water = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
     local warned
-    for cy = 0, H - 1, WINDOW_H do
-        for cx = 0, W - 1, WINDOW_W do
+    for oy = 0, H - 1, WINDOW_H do
+        for ox = 0, W - 1, WINDOW_W do
+            local cx, cy = x0 + ox, y0 + oy
             love.graphics.setCanvas(view)
             love.graphics.clear(0, 0, 0, 1)
             love.graphics.setColor(1, 1, 1, 1)
@@ -79,11 +96,12 @@ local function shot(path)
             end
             love.graphics.setCanvas(out)
             love.graphics.setColor(1, 1, 1, 1)
-            love.graphics.draw(view, math.floor(cx * k), math.floor(cy * k), 0, k, k)
+            love.graphics.draw(view, math.floor(ox * k), math.floor(oy * k), 0, k, k)
         end
     end
     love.graphics.setCanvas()
-    local name = 'shot_' .. path:match('([^/]+)%.json$') .. '.png'
+    local tag = os.getenv('TAG')
+    local name = 'shot_' .. path:match('([^/]+)%.json$') .. ((tag and tag ~= '') and ('_' .. tag) or '') .. '.png'
     out:newImageData():encode('png', name)
     print('guardado ' .. love.filesystem.getSaveDirectory() .. '/' .. name)
 end

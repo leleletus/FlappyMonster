@@ -125,7 +125,7 @@ if [ "${1:-}" = all ]; then
     # grupo seguido (comparten carpeta de guardado); los ONLINE (y los que comparten su carpeta) en un solo grupo seguido
     # (un solo servidor local, un solo puerto); los que miden TIEMPOS (perf, el coste de los lúgubres) al final, solos.
     # FM_JOBS=1 = como antes, uno detrás de otro.
-    LIST=("project_check" "docs_reference CHECK=1" "enemy_data" "tool_editors" "tool_editors TOOL=enemy" "tool_editors TOOL=enemy KIND=boss" "tool_editors FLOW=runtime" "boss_intro" "startup_intro" "menu_flow" "flyers" "flyers SEED=3" "crawler_drop" "crawler_drop SUMMON=1" "mechanics" "snowboss_rules" "megagummy_rules" "icecrabby_rules" "megagloomy_rules" "giantpuffer_rules" "gianthopper_rules" "giantbeetle_rules" "groovecrab_rules" "mashup_rules" "mashup_rules GAME=1" "lang_names" "sounds" "boss_sim" "boss_sim LEVEL=assets/levels/ruta_del_espejo.json" "boss_intro SECS=200" "sp_boss SECS=40 RETRY=level" "sp_boss SECS=40 DIFF=xtra" "sp_boss SECS=40 DIFF=xtra PAIR=1" "sp_boss LEVEL=assets/levels/fortaleza_malvada.json SECS=40" "boss_intro LEVEL=assets/levels/ruta_del_espejo.json SECS=40" "subtiles" "touch_layout" "flood_control" "editor_open" "editor_open LINKS=1" "editor_open PLANE=1 LEVEL=tools/levelgen/arenas/fondo.json" "free_play" "story_flow" "story_film NOSHOTS=1" "difficulty_rules" "bot_nav" "flappy_hud"
+    LIST=("project_check" "docs_reference CHECK=1" "enemy_data" "tool_editors" "tool_editors TOOL=enemy" "tool_editors TOOL=enemy KIND=boss" "tool_editors FLOW=runtime" "boss_intro" "startup_intro" "menu_flow" "flyers" "flyers SEED=3" "crawler_drop" "crawler_drop SUMMON=1" "mechanics" "snowboss_rules" "megagummy_rules" "icecrabby_rules" "avalanche_rules" "cablecar_rules" "megagloomy_rules" "giantpuffer_rules" "gianthopper_rules" "giantbeetle_rules" "penguin_rules" "snowball_rules" "groovecrab_rules" "mashup_rules" "mashup_rules GAME=1" "lang_names" "sounds" "boss_sim" "boss_sim LEVEL=assets/levels/ruta_del_espejo.json" "boss_intro SECS=200" "sp_boss SECS=40 RETRY=level" "sp_boss SECS=40 DIFF=xtra" "sp_boss SECS=40 DIFF=xtra PAIR=1" "sp_boss LEVEL=assets/levels/fortaleza_malvada.json SECS=40" "boss_intro LEVEL=assets/levels/ruta_del_espejo.json SECS=40" "subtiles" "touch_layout" "flood_control" "iceberg_rules" "editor_open" "editor_open LINKS=1" "editor_open PLANE=1 LEVEL=tools/levelgen/arenas/fondo.json" "free_play" "story_flow" "story_film NOSHOTS=1" "difficulty_rules" "bot_nav" "flappy_hud"
           "update_boot FM_UPDATE=1"
           "online_menus"
           "online_update"
@@ -138,7 +138,11 @@ if [ "${1:-}" = all ]; then
           "online_smoke LEVEL=assets/levels/lluvia_pinchos.json MODE=race SECS=12 WATCH=rainspike WANT=armed,falling,stuck"
           "online_smoke LEVEL=tools/levelgen/arenas/bombas.json MODE=race SECS=12 WATCH=bomb WANT=lit,exploding"
           "online_smoke LEVEL=tools/levelgen/arenas/hielo.json MODE=race SECS=10 WANTTILES=thin_ice_1,thin_ice_2,thin_ice_3,empty"
+          "online_smoke LEVEL=tools/tests/avalanche_rules/montana.json MODE=race SECS=12 WATCH=avalanche WANT=warn,pour,drain"
           "online_smoke LEVEL=tools/tests/online_smoke/planta.json MODE=race SECS=12 WATCH=carnivoreplant WANT=hold WANTGULP=1"
+          "online_smoke LEVEL=tools/tests/iceberg_rules/costa.json MODE=race SECS=14 WATCH=iceberg WANT=warn,sunk WANTICE=1"
+          "online_smoke LEVEL=tools/tests/online_smoke/pinguino.json MODE=race SECS=12 WATCH=penguin WANT=walk,slide"
+          "online_smoke LEVEL=tools/tests/online_smoke/bola_de_nieve.json MODE=hunt SECS=14 WATCH=snowball WANT=windup,charge WANTSHOVE=1"
           "online_boss LEVEL=tools/levelgen/arenas/jefe_cangrejo.json NOSHOTS=1"
           "online_boss LEVEL=tools/tests/online_boss/fortaleza_flood.json NOSHOTS=1 SECS=40"
           "online_boss LEVEL=tools/tests/online_boss/espejo.json NOSHOTS=1 SECS=30")

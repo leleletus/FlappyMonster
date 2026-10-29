@@ -90,10 +90,12 @@ Ids are data (level files, saves, network), so confusing ones are explained here
 | `megagloomy`, "Mega Crabby lúgubre" | the Mega Gloomy Crabby |
 | `gianthopper`, "Saltarín Gigante" | the Giant Hopper (the caves boss) |
 | `mole` "Topo" · `piranha` "Piraña" · `carnivoreplant` "Planta carnívora" | the 0.5.96 enemies: the mole of every island, the jungle's piranha and carnivorous plant ([enemies](entities/enemies.md)) |
+| `penguin` "Pingüino" | the Frozen Coast's penguin: waddles, belly-slides, stomped it is a SLED you ride (generic `base/Sled.lua`) ([enemies](entities/enemies.md#penguin-penguin-pingüino--frozen-coast)) |
 | `giantbeetle`, "Escarabajo Rinoceronte Gigante" | the Giant Rhino Beetle (the jungle boss; the small one: `beetle`) |
 | `groovecrab`, "Groove Crab" (Cangrejo Groove; "El Groove" until 0.5.54); music id `groove` | the secret boss after the game (a fiddler trampoline crab that fights to its music) |
 | `mirror` / `mirrorchase`, "el Reflejo" | the Mirror boss (the Reflection) / its chase before the fight |
 | `cryo`, "Congelador" | the Freezer trap |
+| `avalanche` "Alud" · `cablecar` "Teleférico" | the Frozen Mountains' snow chute trap and the generic cable car platform ([traps-and-mechanisms](entities/traps-and-mechanisms.md)) |
 | tile `solid` | stone ("Piedra"); `border` = very hard rock; `danger` = LAVA; `hidden_block` = invisible block |
 | `switch_on/off` | ON/OFF Activator; `switchblock_*` = ON/OFF Blocks |
 | level key `foliage` | decorations |

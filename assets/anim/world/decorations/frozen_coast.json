@@ -1,0 +1,33 @@
+{
+  "id": "world/decorations/frozen_coast",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "iceberg",
+  "frames": [
+    {"h": 27, "image": "assets/images/world/decorations/frozen_coast/iceberg.png", "w": 30, "x": 0, "y": 0},
+    {"h": 10, "image": "assets/images/world/decorations/frozen_coast/ice_chunks.png", "w": 13, "x": 0, "y": 0},
+    {"h": 26, "image": "assets/images/world/decorations/frozen_coast/anchor.png", "w": 19, "x": 0, "y": 0},
+    {"h": 24, "image": "assets/images/world/decorations/frozen_coast/buoy-Sheet.png", "w": 16, "x": 0, "y": 0},
+    {"h": 24, "image": "assets/images/world/decorations/frozen_coast/buoy-Sheet.png", "w": 16, "x": 16, "y": 0},
+    {"h": 14, "image": "assets/images/world/decorations/frozen_coast/bollard.png", "w": 10, "x": 0, "y": 0},
+    {"h": 13, "image": "assets/images/world/decorations/frozen_coast/crab_pot.png", "w": 18, "x": 0, "y": 0},
+    {"h": 15, "image": "assets/images/world/decorations/frozen_coast/kelp_rock.png", "w": 23, "x": 0, "y": 0},
+    {"h": 16, "image": "assets/images/world/decorations/frozen_coast/rowboat.png", "w": 32, "x": 0, "y": 0},
+    {"h": 24, "image": "assets/images/world/decorations/frozen_coast/net_hang.png", "w": 18, "x": 0, "y": 0},
+    {"h": 9, "image": "assets/images/world/decorations/frozen_coast/starfish_ice.png", "w": 10, "x": 0, "y": 0},
+    {"h": 7, "image": "assets/images/world/decorations/frozen_coast/floe.png", "w": 20, "x": 0, "y": 0}
+  ],
+  "anims": {
+    "anchor": {"fps": 8, "frames": [3], "loop": true},
+    "bollard": {"fps": 8, "frames": [6], "loop": true},
+    "buoy": {"durations": [0.5, 0.9], "fps": 8, "frames": [4, 5], "loop": true},
+    "crab_pot": {"fps": 8, "frames": [7], "loop": true},
+    "floe": {"fps": 8, "frames": [12], "loop": true},
+    "ice_chunks": {"fps": 8, "frames": [2], "loop": true},
+    "iceberg": {"fps": 8, "frames": [1], "loop": true},
+    "kelp_rock": {"fps": 8, "frames": [8], "loop": true},
+    "net_hang": {"fps": 8, "frames": [10], "loop": true},
+    "rowboat": {"fps": 8, "frames": [9], "loop": true},
+    "starfish_ice": {"fps": 8, "frames": [11], "loop": true}
+  }
+}

@@ -116,6 +116,17 @@ Registered in `src/world/decorations/Decorations.lua` (level JSON key `foliage`)
 | `stone_idol` | Ídolo de piedra | Jungla | cell | yes |
 | `strangler_fig` | Higuera estranguladora | Jungla | cell |  |
 | `tree_fern` | Helecho arborescente | Jungla | cell |  |
+| `anchor` | Ancla | Costa helada | cell |  |
+| `bollard` | Bolardo | Costa helada | sub |  |
+| `buoy` | Boya con luz | Costa helada | cell | yes |
+| `crab_pot` | Nasa | Costa helada | cell |  |
+| `floe` | Témpano flotante | Costa helada | cell |  |
+| `ice_chunks` | Trozos de hielo | Costa helada | sub |  |
+| `iceberg` | Iceberg | Costa helada | cell |  |
+| `kelp_rock` | Roca con algas | Costa helada | cell |  |
+| `net_hang` | Red colgante | Costa helada | cell |  |
+| `rowboat` | Bote volcado | Costa helada | cell |  |
+| `starfish_ice` | Estrella de mar en hielo | Costa helada | sub |  |
 
 ## Online game modes
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # tools/music/worldmap_nes.py
 # La música del MAPA DEL MUNDO del modo historia (música de Famicom; motor: famicom.py): UNA canción —
-# "Rumbo a las islas" — con la MISMA melodía, acordes, tempo y largo en siete arreglos, uno por isla, para que
+# "Rumbo a las islas" — con la MISMA melodía, acordes, tempo y largo en ocho arreglos, uno por isla, para que
 # el mapa cambie de versión al cruzar a otra isla sin perder el compás (src/states/story/StoryMapState.lua salta a la
 # misma posición de la nueva). Cada isla tiene su instrumentación y su LEITMOTIV (un motivo propio que contesta
 # a la melodía en los compases en que esta se queda quieta):
@@ -11,8 +11,10 @@
 #                  maraca en semicorcheas; motivo: arpegio de marimba que sube
 #   map_fortaleza  sierra del VRC6 (metal), caja de marcha en redobles, bajo en octavas; motivo: fanfarria de
 #                  tresillos
-#   map_nieve      caja de música (la del nivel a oscuras) una octava arriba, cascabeles, bajo en blancas,
-#                  colchón suave; motivo: campanitas que caen
+#   map_costa_helada  (era map_nieve hasta 0.5.100: la isla helada se partió en dos) caja de música (la del nivel
+#                  a oscuras) una octava arriba, cascabeles, bajo en blancas, colchón suave; motivo: campanitas que caen
+#   map_nieve      las MONTAÑAS HELADAS (0.5.100): montana_nes.build_map('A') "carillón" — celesta una octava arriba +
+#                  vibráfono, arpa, vidrio frotado, escobillas y cascabeles GM; motivo: el YODEL (glockenspiel)
 #   map_cuevas     caja de música con ECO de cueva, a medio tiempo, bombo grave, bordón de triángulo, nada de
 #                  platillos; motivo: gotas
 #   map_final      sierra + pulso una octava arriba, bajo en corcheas, doble bombo, platillo cada 2 compases;
@@ -24,7 +26,7 @@
 #                  motivo: el TUCÁN (ocarina: la 5ª dos veces y la raíz una 4ª arriba; sobre el Sol7 del compás 12,
 #                  la 3ª dos veces y la raíz arriba: solo notas del acorde)
 # Forma: A (8) · B (8) · A (8) = 24 compases a 120 BPM = 48 s, bucle sin costura.
-# Se comprueba con números (NO se ha escuchado): duración igual en las siete, sonoridad, reparto de energía.
+# Se comprueba con números (NO se ha escuchado): duración igual en las ocho, sonoridad, reparto de energía.
 #   python3 tools/music/worldmap_nes.py [pradera costa ...]      REPORT=1 → números, sin exportar
 #   (jungla: además tools/music/mid/map_jungla.mid y las previas en FlappyMonster_pruebas/musica/mapa/)
 import os, sys
@@ -121,6 +123,12 @@ def tval(b, st):
 def build(island):
     if island == 'jungla':
         return build_jungla()[0]
+    if island == 'nieve':           # (0.5.100) las MONTAÑAS HELADAS: el arreglo helado de montana_nes.py (variante A)
+        import montana_nes
+        return montana_nes.build_map('A')[0]
+    label = 'map_' + island
+    if island == 'costa_helada':    # (0.5.100) la COSTA HELADA se queda con el arreglo de la nieve de siempre
+        island = 'nieve'
     rng =np.random.default_rng({'pradera': 1, 'costa': 2, 'fortaleza': 3, 'nieve': 4, 'cuevas': 5, 'final': 6}[island])
     NF = F.frames_for(NB * BAR + 3)
     C_ = {k: Chan(NF) for k in ('lead', 'lead2', 'arp', 'bass', 'motif', 'pad1', 'pad2')}
@@ -290,7 +298,7 @@ def build(island):
     side = (S.get('arp', 0) * g.get('arp', 0) * 0.35 - S['motif'] * g['motif'] * 0.35
             + (S['hat'] * g['hat'] * 0.3 if 'hat' in S else 0))
     y = F.master(np.stack([x + side, x - side], 1), lufs={'cuevas': -13.0, 'nieve': -12.0}.get(island, -11.5))
-    GN.report('map_' + island, y, S, g, n)
+    GN.report(label, y, S, g, n)
     return y
 
 
@@ -443,7 +451,7 @@ def check_jungla(sg, R):
             print(f'  choques melodía / {k} (≥ corchea): {len(cl)} {cl[:6] if cl else ""}')
 
 
-ISLANDS = ['pradera', 'costa', 'fortaleza', 'nieve', 'cuevas', 'final', 'jungla']
+ISLANDS = ['pradera', 'costa', 'fortaleza', 'nieve', 'costa_helada', 'cuevas', 'final', 'jungla']
 
 if __name__ == '__main__':
     which = [a for a in sys.argv[1:]] or ISLANDS

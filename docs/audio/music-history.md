@@ -781,6 +781,43 @@ only (melody checks clean: no long notes off the chord, no loose notes, no clash
   lead 36 % of the energy. Attack envelopes land 1.5-6 ms after the chip arrangements' (the soft GM attacks; between
   the other six it is 0-1.5 ms). To judge by ear: the flute's balance, the switch from another island, the toucan's level.
 
+## The Frozen Mountains set (`tools/music/montana_nes.py`: `montana_1`, `montana_2`, `montana_bonus`, `map_nieve`)
+
+0.5.100: the frozen island was split in two — LAS MONTAÑAS HELADAS (world `nieve`, the Snowball) and LA COSTA HELADA
+(`costa_helada`, the Icy Mega Crabby). The user: the existing ice tracks (`nieve_1`, `nieve_2`, `nieve_bonus`, ids kept)
+and the old map arrangement go to the COAST (the map one is now `map_costa_helada`, still `worldmap_nes.py`); the
+MOUNTAINS get a new set "with the same motifs as the frozen island but original themes", with "more original, 'icy'
+instruments" (the rest of the islands will be modernised later). Verified by numbers only; **never listened to by me**.
+- Motifs reused, each over its own chord: the head of the Winter Fallympics music-box motif (note, octave up, step
+  down) opens `montana_1`'s chorus over IV, as in `nieve_1`; the 1:48 phrase's "three rising 8ths + long note" is the
+  climb of `montana_1` B and the answer of every `montana_2` phrase; its closing "three repeated dotted notes + a
+  leap" is the GUST that opens every `montana_2` phrase, a 16th late (the Snowball boss riff's cell); the map's
+  falling bells are the avalanche cascades and the bonus solo's icicles; jingle bells; the music box an octave up
+  (now celesta / glockenspiel); la llamada once per track. New accents: the YODEL (5th low · 3rd a sixth up · 5th ·
+  root up; chord tones only) and, in `montana_2`, a chip HOWL (hollow N163 voice sliding up to the chord's 5th).
+- The cast is GM ("icy", GeneralUser GS banks and drum kits through `montana_nes.Rec`): celesta, glockenspiel,
+  vibraphone, music box, Crystal, Ice Rain, bowed glass, Halo, choir, Voice Oohs, harp, pizzicato, tremolo strings,
+  timpani, concert bass drum, brush / orchestral kits, jingle bells, bell tree, wind, reverse cymbal, solo French horn;
+  the chip cast stays underneath (triangle bass, DPCM kick and snare, noise cymbals, N163 pad and howl). The B variants
+  add the house's first REVERB ("frost": a synthetic decaying-noise response, folded into the loop like the tails).
+- A/B previews (`FlappyMonster_pruebas/musica_montanas/`); THE USER'S PICKS (2026-10-29), installed in
+  `assets/music/worlds/montanas/`: `montana_1` = **B "glaciar"** (Crystal + choir on long notes, Ice Rain in 3+3+2,
+  bowed glass / Halo, orchestral kit, horn yodel, reverb, its own 8-bar AVALANCHE section; D major, 144, intro 6.67 s +
+  loop 93.3 s = 56 bars); `montana_2` = **B "coro"** (Voice Oohs + glockenspiel an octave up, synth-mallet swirl of 6
+  notes against the bar, choir in B, wind, reverb, the EYE of the storm section; B minor, 128, 7.5 s + 105 s = 56
+  bars) "but without the delayed-notes effect" → REMOVED in B: the howl's echo (`GN.delay`, three repeats every
+  0.33 s — the only delay layer B had); the gust's 16th-late rhythm and the reverb stay (to confirm with the user);
+  `montana_bonus` = **A "carámbanos"** (glockenspiel + chip pulse, pizzicato offbeats; E♭ major, 160, 6 s + 60 s);
+  the map = **A "carillón"** → `map_nieve` (exactly 2 116 800 samples like the other seven; the old one is
+  `map_costa_helada`). Rejected: `montana_1` A "carillón", `montana_2` A "flauta", bonus B "polca", map B "glaciar".
+- Levels: `cumbres_escarcha` and `lago_helado` (outside the boss zone, which keeps `snowball_boss`) play `montana_1`,
+  `torre_viento` `montana_2`; the coast's levels keep `nieve_*`. `montana_bonus` waits for the mountains' bonus level.
+- Numbers: melody checks clean (no long notes off the chord, no loose notes, nothing off the scale; 47-54 % of notes
+  off the beat), no m2 / M7 / tritone clashes ≥ an 8th with any layer, lead 13-19 % of the energy (map 36 %), loops
+  exact bar counts with seams below an ordinary downbeat's jump. To judge by ear: whether the GM cast sounds icy and
+  modern, the reverb, the choir and horn levels, the gust against the Snowball boss, the map switch between islands
+  (GM attacks land 0-6 ms after the chip arrangements').
+
 ## The film scores for any number of shards (`tools/music/story_music.py`, 0.5.99)
 
 - The jungle boss got a shard (8 shards, 7 bosses) and the user asked that neither the cinematic nor its music be

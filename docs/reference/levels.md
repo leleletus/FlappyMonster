@@ -24,7 +24,7 @@ Every file in `assets/levels/` (54). **Story** = world number, world id and posi
 | `coliseo_pinchos` | Coliseo de Pinchos / Spike Colosseum | 64x20 |  | koth | `fortaleza_bonus` |  | fortress dusk · 1 point zone, match 100 s |
 | `cripta_del_silencio` | Cripta del Silencio / Silent Crypt | 92x28 | 7 cuevas · bonus | koth, hide | `cuevas_bonus` |  | cave night · dark, 2 point zones, match 100 s |
 | `cumbre_cangrejo` | Peñón del Cangrejo / Crab Rock | 24x11 |  | koth | `costa_bonus` |  | coast dusk · floods, 1 point zone |
-| `cumbres_escarcha` | Cumbres de Escarcha / Frost Peaks | 168x28 | 5 nieve · 1 | race, hunt, hide | `nieve_1` |  | snow · snowfall |
+| `cumbres_escarcha` | Cumbres de Escarcha / Frost Peaks | 168x28 | 5 nieve · 1 | race, hunt, hide | `montana_1` |  | snow · snowfall |
 | `EnemyTest` | EnemyTest / — | 50x15 |  |  |  |  | meadow · peaceful (test) |
 | `fabrica_criogenica` | Fábrica Criogénica / Cryo Works | 159x28 | 6 costa_helada · 1 | race, hunt, hide | `nieve_2` |  | snow night · snowfall, depth icecave |
 | `fabrica_morteros` | Fábrica de Morteros / Mortar Factory | 124x17 | 4 fortaleza · 1 | race | `fortaleza_1` |  | fortress dusk |
@@ -41,7 +41,7 @@ Every file in `assets/levels/` (54). **Story** = world number, world id and posi
 | `la_estampida` | La Estampida / The Stampede | 200x11 | 3 jungla · 4 | race | `jungla_2` |  | jungle dusk · auto-scroll |
 | `laberinto_submarino` | Laberinto Submarino / Undersea Labyrinth | 134x55 | 7 cuevas · 3 | race | `cuevas_2` |  | cave · par 300 s, depth abyss |
 | `lago_de_cristal` | Lago de Cristal / Glass Lake | 92x28 | 6 costa_helada · bonus | koth, hide | `nieve_bonus` |  | snow dusk · 2 point zones, snowfall, match 100 s |
-| `lago_helado` | Lago Helado / Frozen Lake | 113x15 | 5 nieve · boss |  | `nieve_1` | `snowboss` | snow night · snowfall |
+| `lago_helado` | Lago Helado / Frozen Lake | 113x15 | 5 nieve · boss |  | `montana_1` | `snowboss` | snow night · snowfall |
 | `lluvia_pinchos` | Lluvia de Pinchos / Spike Rain | 176x11 | 8 final · 3 | race | `volcan_2` |  | volcano · auto-scroll |
 | `marea_alta` | Marea Alta / High Tide | 40x11 |  | koth | `costa_bonus` |  | coast dusk · floods, 1 point zone, depth underwater |
 | `mashup_cangrejos` | Mega Mashup de los Cangrejos / Crab Mega Mashup | 164x15 |  | race | `costa_groove` | `groovecrab`, `megacrabby_ice`, `megacrabby`, `megagloomy` | coast night |
@@ -58,6 +58,6 @@ Every file in `assets/levels/` (54). **Story** = world number, world id and posi
 | `templo_de_los_pesos` | El Templo de los Pesos / The Temple of Weights | 150x40 | 3 jungla · 3 | race | `jungla_1` |  | jungle day · depth temple |
 | `templo_del_eco` | Templo del Eco / Echo Temple | 154x28 | 7 cuevas · 4 | race, hunt, hide | `cuevas_oscuras` |  | cave night · dark |
 | `templo_escarabajo` | Templo del Escarabajo / Beetle Temple | 85x15 | 3 jungla · boss |  | `jungla_2` | `giantbeetle` | jungle day |
-| `torre_viento` | Torre del Viento / Wind Tower | 44x56 | 5 nieve · 2 | race | `nieve_2` |  | snow night · snowfall, depth icecave |
+| `torre_viento` | Torre del Viento / Wind Tower | 44x56 | 5 nieve · 2 | race | `montana_2` |  | snow night · snowfall, depth icecave |
 | `tren_fugaz` | Tren Fugaz / Bullet Train | 170x11 | 4 fortaleza · 4 | race | `fortaleza_2` |  | fortress dusk · auto-scroll |
 | `valle_soleado` | Valle Soleado / Sunny Valley | 130x18 | 1 pradera · 1 | race | `pradera_1` |  | meadow |

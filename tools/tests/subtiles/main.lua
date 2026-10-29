@@ -21,6 +21,9 @@
 --                grande ↔ mini bloques (arista entera o media arista), césped/tierra,
 --                bloques de jefe entre sí y con la piedra (solo sólidos)
 --   dibujo       Level:render con tierra, césped y subtiles no da errores
+--   helado       joinAlso (2026-10-29): la nieve y el hielo se unen sin borde (grandes y mini), el hielo NO con la
+--                tierra, la columna de hielo solo consigo; y las pieles por capas (TileTypes.drawSkin: nieve, hielo y el
+--                paquete helado; grandes, mini, a media arista, en el plano de fondo y en miniatura) se dibujan sin errores
 -- SHOT=1: además guarda <save>/subtiles.png a tamaño real.
 --
 --   tools/tests/run.sh subtiles
@@ -371,10 +374,47 @@ function cases.dibujo()
     check('dibujo', ok, ok and 'sin errores' or tostring(err))
 end
 
+function cases.helado()
+    local subs = { S(6, 5, 1, 'ice'), S(6, 5, 3, 'ice'),          -- hielo pequeño junto a la nieve
+                   S(9, 5, 1, 'snow'), S(9, 5, 2, 'frost_brick'), S(9, 5, 3, 'glacier_ice'), S(9, 5, 4, 'snow_brick') }
+    local put = { { 5, 5, 'snow' }, { 5, 4, 'ice' }, { 5, 6, 'dirt' }, { 4, 6, 'ice' },
+                  { 12, 3, 'ice_pillar' }, { 12, 4, 'ice_pillar' }, { 12, 5, 'frost_brick' }, { 13, 5, 'frost_window' } }
+    local names = { 'frost_brick', 'ice_rock', 'ice_brick', 'glacier_ice', 'snow_brick', 'frost_platform', 'ice_ledge' }
+    for i, n in ipairs(names) do put[#put + 1] = { 1 + i, 9, n }; put[#put + 1] = { 1 + i, 8, n } end
+    local level = room(20, 11, put, subs, {})
+    local ex = TileTypes.sideExposure
+    local snow, ice = TileTypes.byName.snow, TileTypes.byName.ice
+    local res = {}
+    local function t(name, got, want) res[#res + 1] = { name, got == want, got } end
+    t('nieve→hielo', ex(level, 5, 5, 'top', snow.joinGroup, snow.joinAlsoSet), false)
+    t('hielo→nieve', ex(level, 5, 4, 'bottom', ice.joinGroup, ice.joinAlsoSet), false)
+    t('nieve→hielo mini', ex(level, 5, 5, 'right', snow.joinGroup, snow.joinAlsoSet), false)
+    t('hielo→tierra', ex(level, 4, 6, 'right', ice.joinGroup, ice.joinAlsoSet), true)
+    t('nieve→tierra', ex(level, 5, 5, 'bottom', snow.joinGroup, snow.joinAlsoSet), false)
+    local pil = TileTypes.byName.ice_pillar
+    t('columna→columna', ex(level, 12, 3, 'bottom', pil.joinGroup, pil.joinAlsoSet), false)
+    t('columna→ladrillo', ex(level, 12, 4, 'bottom', pil.joinGroup, pil.joinAlsoSet), true)
+    local ok, err = pcall(function()
+        require('src/world/level/BackPlane').build(level, { bgTiles = level.tiles })     -- (lo mismo en el plano de fondo)
+        local canvas = love.graphics.newCanvas(1280, 720)
+        love.graphics.setCanvas(canvas)
+        level:render(0, 0)
+        for _, n in ipairs(names) do TileTypes.drawTile(TileTypes.byName[n], { x = 0, y = 0, size = 48 }) end   -- (miniaturas)
+        love.graphics.setCanvas()
+    end)
+    res[#res + 1] = { 'dibujo', ok, ok and 'sin errores' or tostring(err) }
+    local all, parts = true, {}
+    for _, r in ipairs(res) do
+        all = all and r[2]
+        parts[#parts + 1] = r[1] .. '=' .. tostring(r[3]) .. (r[2] and '' or '(MAL)')
+    end
+    check('helado', all, table.concat(parts, ' '))
+end
+
 local shot
 function love.load()
     for _, n in ipairs({ 'de_pie', 'medio_pie', 'pared', 'decorativa', 'cabeza', 'crabby', 'caida',
-                         'part_suelo', 'part_agua', 'part_color', 'debris_pared', 'inundacion', 'editor', 'union', 'dibujo' }) do cases[n]() end
+                         'part_suelo', 'part_agua', 'part_color', 'debris_pared', 'inundacion', 'editor', 'union', 'dibujo', 'helado' }) do cases[n]() end
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
     if not os.getenv('SHOT') then love.event.quit(fails == 0 and 0 or 1); return end
     love.window.setMode(1280, 720)

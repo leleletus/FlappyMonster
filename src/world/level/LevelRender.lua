@@ -235,15 +235,16 @@ function Level:renderWaterEffect(camX, camY, sceneCanvas)
         for col = sc2, ec2 do
             local m = liquidOfRaw(self:getRaw(col, row))
             if m and m.tint then
+                local tint = (self.coldWater and m.coldTint) or m.tint          -- (agua helada: Level:coldAt)
                 if self:isWaterSurfaceCell(col, row) then
                     -- Superficie con olas (el tinte sigue a la ola: sin borde plano detrás)
                     WaterSurface.draw((col-1)*TILE_PX, col*TILE_PX, (row-1)*TILE_PX, row*TILE_PX,
-                                      camX, camY, m.tint, 2, t)
+                                      camX, camY, tint, 2, t)
                 else
                     -- Alineado al píxel igual que la franja de la superficie (si
                     -- no, con la cámara en posiciones fraccionarias quedaba una
                     -- rendija de 1 px entre la superficie y el agua de debajo)
-                    love.graphics.setColor(m.tint)
+                    love.graphics.setColor(tint)
                     local x0, y0 = math.floor((col-1)*TILE_PX - camX), math.floor((row-1)*TILE_PX - camY)
                     love.graphics.rectangle('fill', x0, y0, math.floor(col*TILE_PX - camX) - x0,
                                             math.floor(row*TILE_PX - camY) - y0)

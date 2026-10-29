@@ -119,3 +119,72 @@ Designs and the user's verdicts: [new-props-plan](new-props-plan.md).
   mechanics` (a big box on a Geyser, a frame every 0.25 s)) → idle. Meadow / coast water, fortress steam, cave
   glowing steam (gives light), volcano smoke (only pushes, the user). Snow: the column FREEZES into an ice pillar whose
   top is a one-way platform for `freeze` s (cracks the last second) and then shatters.
+
+## Iceberg (Frozen Coast, 2026-10-29)
+
+`mechanisms/iceberg.lua`, "Iceberg" (Mecanismos): a floating floe of `width` × `height` tiles that rides the water
+surface (tile water, floods, the tide), sinks a little under weight and goes under past its `capacity`, and only moves
+sideways when pushed or blown. Everything about it (the Box class it extends, floating, weight, push, air, network,
+art) is in [carry-and-push](../gameplay/carry-and-push.md#the-iceberg-floating-ice); the tide and the freezing water
+it is meant for are in [water-and-floods](../gameplay/water-and-floods.md). Harness `iceberg_rules`.
+
+## Avalanche and Cable car (Frozen Mountains, 2026-10-29)
+
+Approved by the user in `FlappyMonster_pruebas/islas_heladas/diseno.md` §A 4-5 (design: "the snow chute" and "a
+generic moving platform on a cable"). Both generic: any island can use them. Harnesses `avalanche_rules` and
+`cablecar_rules`; online: `online_smoke LEVEL=tools/tests/avalanche_rules/montana.json WATCH=avalanche|cablecar`.
+
+### Avalanche (`traps/avalanche.lua`, "Alud", Trampas)
+
+- A SNOW CHUTE: a band of `width` columns from the entity cell to the right, up to `length` tiles down. Placed on the
+  TOP-LEFT cell of the chute, right under the ledge its CORNICE hangs from.
+- A CLOCK (pure function of its own `clock`, so staggered chutes stay in step): calm until `delay` s, then every
+  `period` s (raised to fit warn + pour + drain if too short): `warn` s WARNING (`avalancheRumble` once, flakes falling
+  from the cornice, the cornice shaking with cracks) → `pour` s TORRENT (`avalanchePour` every 1.2 s, `snow_burst`
+  particles at the top and where the front lands) → `drain` (the tail falls off at the same 900 px/s) → calm, the
+  cornice grows back. A line of chutes with `delay` 1, 2, 3 is a staggered line.
+- THE SNOW AGAINST THE LEVEL: in each column the stream stops at the first block or one-way platform
+  (`Avalanche:measure`, tile hitbox top; re-measured every step / every client frame, so a broken block opens the
+  column). Under a ledge you are covered; on top of it, you are in the stream.
+- WHAT IT DOES (base rules only): `pushAt` pushes DOWN at 650 px/s × `power` (systems/Push: players, enemies, boxes,
+  bombs… fall faster; jumping up through it is hard); with `damage` (default) its stream segments are hazard boxes with
+  `effect = 'hurt'` (1 HP + the usual invulnerability) and `onHurtPlayer` recoils the player sideways towards the
+  nearer edge of the chute (`PlayerAdventure:recoil`).
+- Sounds come from the point of the band nearest the closest player (`Sound.playAt`): a chute can be tall. Its `x, y`
+  is the middle of the band (≤ 30 tiles long: within `Protocol.NEAR_Y` of any point of it, so the snapshot filter
+  needs nothing special).
+- Network: only the usual `state` + `deadTimer` (no netPack); at rest (`idle`) it is not sent. The client measures the
+  columns itself (`wantsLevel`) and predicts the push with the same `pushAt`.
+- Art `assets/images/traps/avalanche/` (cornice, stream, side fringe, head, splash, flakes), snow only;
+  `tools/art/world/make_avalanche_cablecar.py`. Editor overlay: the band.
+
+### Cable car (`mechanisms/cablecar.lua`, "Teleférico", Mecanismos)
+
+- A platform hanging from a CABLE between 2+ points: the entity cell is the first point, `path` (`points` prop: the
+  editor's numbered draggable boxes, "Añadir punto" / "Quitar el último") the others; each point is its cell centre.
+  `mode` = `pingpong` (back and forth) or `loop` (closed: from the last point back to the first; needs 3+ points).
+  `speed` tiles/s. `cabins` (1-6) spread along the cable on one drive (`u`): on a ping-pong cable two cabins cross
+  in the middle. `stops` s = every cabin waits at an end (loop: at the first point; one drive, so all wait).
+  `onWeight` = moves only while something stands on a cabin (`Weight.stack`); without weight, after 1 s, it goes BACK
+  to the start (`back`, default on: a cabin stranded mid-way cannot soft-lock a level; off = it stays).
+- Each cabin's deck is a one-way MOVING body part (`moves`, rows 22-27 of the 48x28 cabin art, 100 px under the
+  cable): players ride it with `standBody` / `rideBody` (corners and the turnaround included), entities resting on it
+  are moved by the cable car (`carryRiders`, a block ahead stops them sideways), except those that follow a moving body
+  by themselves (`ridesMoving`: the Box).
+- SUPPORTS (render only, measured once): every point has a pulley held by a lattice TOWER down to the ground below
+  (within 14 tiles), else by a ROD up to the ceiling, else by a tower down to the far ground / the level bottom — never
+  floating (the user, about the Scale's pulleys). Trolleys are drawn rotated with their segment, cabins hang upright.
+- Network: `u` × 4 in its netPack (interpolated the short way round when it wraps); at rest only when idle at `u = 0`.
+  `netBounds()` = the box of the whole cable: the server sends it to whoever is near ANY part of it (a generic hook in
+  the snapshot filter, [netcode](../architecture/netcode.md)). Sounds `cablecarMove` (while moving) and `cablecarStop`
+  (arrives / leaves an end, starts with weight), from the cabin nearest a player.
+- Bot: `navPoses()` / `navPose(u)` (up to 12 poses along the cycle) like the Scale; NOT yet verified with a bot run
+  (no bonus level uses it).
+- Art per island (`isleArt`; `assets/images/mechanisms/cablecar/<isla>-cabin|trolley-Sheet|cable|pulley-Sheet|tower|
+  towertop|towerfoot|hanger|clamp.png`): neutral metal and wood, each island its paint; the snow one has snow on top.
+  `tools/art/world/make_avalanche_cablecar.py`.
+
+### Decisions and history
+
+- 2026-10-29: first version (agent). The cable has no sag (straight segments) and towers sit under every point, so a
+  cabin passes IN FRONT of a tower (side view). No user verdict yet on looks, sounds or feel.
