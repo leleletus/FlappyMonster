@@ -57,8 +57,20 @@ function Model.new(w, h, name)
     return m
 end
 
+-- Lo que el editor LEE y ESCRIBE él mismo; cualquier otra clave del nivel (las escenas del Mega Mashup `scenes`, su
+-- `event`, lo que traiga un nivel en el futuro) se guarda tal cual en `extra` y se vuelve a escribir al guardar y al
+-- probar (el usuario, 2026-10-29: probando el Mashup desde el editor la arena de la Gloomy no se ponía a oscuras —
+-- el editor tiraba `scenes` — y guardarlo las habría borrado del archivo)
+local KNOWN = {}
+for k in ('name name_en parTime width height playerStart tiles bgTiles entities foliage vents bossZones subtiles links '
+          .. 'blockLinks autoScroll modes matchTime music snow peaceful dark coldWater openTop echo light spikeSkin '
+          .. 'background time clouds depth surfaceRow'):gmatch('%S+') do KNOWN[k] = true end
+Model.KNOWN = KNOWN
+
 function Model.fromData(lvl, path)
     local m = setmetatable({}, Model)
+    m.extra = {}
+    for k, v in pairs(lvl) do if type(k) == 'string' and not KNOWN[k] then m.extra[k] = deepcopy(v) end end
     m.name   = lvl.name or 'nivel'
     m.name_en = lvl.name_en                                -- (nombre en inglés)
     m.parTime = tonumber(lvl.parTime)                      -- (tiempo objetivo, s; nil = automático por el ancho)
@@ -162,7 +174,7 @@ function Model:toData()
         if o.solid == false then d.solid = false end
         subs[#subs+1] = d
     end
-    return {
+    local d = {
         name = self.name, name_en = self.name_en, parTime = self.parTime, width = self.width, height = self.height,
         playerStart = self.playerStart, tiles = self.tiles, bgTiles = self:hasBgTiles() and self.bgTiles or nil,
         entities = ents, foliage = decos, vents = self.vents, bossZones = zones, subtiles = subs, links = self.links or {}, blockLinks = self.blockLinks or {},
@@ -172,6 +184,8 @@ function Model:toData()
         background = self.background, time = self.time, clouds = self.clouds,
         depth = self.depth, surfaceRow = self.surfaceRow,
     }
+    for k, v in pairs(self.extra or {}) do if d[k] == nil then d[k] = deepcopy(v) end end
+    return d
 end
 
 -- JSON estable y legible: claves ordenadas, una fila de tiles por línea.
@@ -240,6 +254,15 @@ function Model:encode()
     if d.clouds == false then tail[#tail+1] = function(last) line('"clouds": false', last) end end
     if d.depth then tail[#tail+1] = function(last) line('"depth": ' .. json.encode(d.depth), last) end end
     if d.surfaceRow then tail[#tail+1] = function(last) line('"surfaceRow": ' .. json.encode(d.surfaceRow), last) end end
+    -- (lo que el editor no conoce, tal cual — `extra` —; en orden, para que guardar dos veces dé lo mismo)
+    local ek = {}
+    for k in pairs(self.extra or {}) do if not KNOWN[k] then ek[#ek+1] = k end end
+    table.sort(ek)
+    for _, k in ipairs(ek) do
+        local v = d[k]
+        if type(v) == 'table' and #v > 0 then tail[#tail+1] = function(last) list(k, v, last) end
+        elseif v ~= nil then tail[#tail+1] = function(last) line(json.encode(k) .. ': ' .. enc(v), last) end end
+    end
     list('vents', d.vents, #tail == 0)
     for i, f in ipairs(tail) do f(i == #tail) end
     out[#out+1] = '}'
@@ -670,6 +693,16 @@ function Model:validate()
             w[#w+1] = { 'warn', 'Inundación #' .. id .. ': se mueve con bloques ON/OFF pero no tiene ninguno conectado (capa Bloques → Conectar)', f }
         elseif f.props.control == 'boss' and #self.bossZones == 0 then
             w[#w+1] = { 'warn', 'Inundación #' .. id .. ': se mueve con la pelea de jefe pero no hay zonas de jefe', f }
+        end
+    end
+    -- (los tipos que no hacen nada sin un Activador: `needsLink` — la Puerta —)
+    for _, e in ipairs(self:activatables()) do
+        local t = ET.get(e.type)
+        local need = t.needsLink
+        if type(need) == 'function' then need = need(e.props) end
+        local id = tonumber(e.props.id) or 1
+        if need and not linked[id] then
+            w[#w+1] = { 'warn', t.label .. ' #' .. id .. ' (' .. e.col .. ',' .. e.row .. '): no tiene ningún Activador ON/OFF conectado (capa Bloques → Conectar)', e }
         end
     end
     -- (un mini bloque dentro de un bloque no es un aviso: el bloque grande manda y

@@ -41,6 +41,11 @@ when it fits), textField (placeholder), section, tabs, hint, caption, label
 in-game. `Model:validate()` → warnings (Avisos tab, clickable). F5 playtests
 via `AdventureState` with `editor_playtest.json` (SP keeps reserve entities in
 `self.enemies`: it only drops non-alive ones without `summonOf`).
+NOTHING IS LOST (0.5.109): the editor model keeps every top-level key it does not edit itself (`EditorModel.KNOWN` = the
+ones it reads and writes) in `extra` and writes them back unchanged on save AND on play-test — before, it dropped the
+Crab Mega Mashup's `scenes` and `event`: play-testing it from the editor, the Gloomy's arena never went dark (the user,
+2026-10-29), and saving it would have erased them. Harness `editor_open` case `conserva` loads and re-encodes every
+level of `assets/levels` and checks no key is lost.
 Ctrl+O "Abrir nivel" — FILTERS (0.5.108, the user: "que solo salgan de una isla u otra, de un modo u otro, y los
 de jefe"): three buttons under the search field, combinable with it — **Isla** (the story world the level belongs to;
 outside the story, its art island from `Isles.of`, plus `frozen_coast` → `costa_helada`), **Modo** (the online modes the

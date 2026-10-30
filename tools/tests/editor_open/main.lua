@@ -359,6 +359,38 @@ function love.update(dt)
         print(('%-10s %s  %d niveles · «TEMPLO escarabajo» + Intro abre %s'):format('buscar', ok and 'OK   ' or 'FALLA', OPEN_N or 0, tostring(path)))
         if not ok then print('Error: el buscador de "Abrir" no encuentra el nivel') end
     end
+    -- NADA SE PIERDE al guardar o probar desde el editor (el usuario: probando el Mega Mashup desde el editor, la arena
+    -- de la Gloomy no se ponía a oscuras — el editor tiraba `scenes` —): cada nivel del juego, cargado en el editor y
+    -- escrito como lo guarda, conserva todas sus claves de primer nivel; las que el editor no conoce, idénticas
+    if frame == 99 then
+        local Model = require 'src/editor/EditorModel'
+        local json = require 'libs/json'
+        local n, lost = 0, {}
+        for _, f in ipairs(love.filesystem.getDirectoryItems('assets/levels')) do
+            if f:match('%.json$') then
+                local path = 'assets/levels/' .. f
+                local okA, a = pcall(json.decode, love.filesystem.read(path))
+                local m = okA and Model.load(path)
+                if m then
+                    n = n + 1
+                    local okB, b = pcall(json.decode, m:encode())
+                    for k, v in pairs(a) do
+                        local miss = not okB or b[k] == nil
+                        if not miss and not (Model.KNOWN or {})[k] then miss = json.encode(v) ~= json.encode(b[k]) end
+                        if miss and not (type(v) == 'table' and next(v) == nil) and v ~= false then lost[#lost + 1] = f .. ':' .. k end
+                    end
+                end
+            end
+        end
+        local m = Model.load('assets/levels/mashup_cangrejos.json')
+        local back = json.decode(m:encode())
+        local dark3 = back.scenes and back.scenes[3] and back.scenes[3].dark == true
+        local ok = n > 40 and #lost == 0 and dark3 and back.event ~= nil
+        print(('%-10s %s  %d niveles cargados y escritos por el editor: claves perdidas %d%s · Mashup: escenas %d (la 3ª a oscuras %s), evento %s'):format(
+            'conserva', ok and 'OK   ' or 'FALLA', n, #lost, #lost > 0 and (' (' .. table.concat(lost, ', ', 1, math.min(#lost, 6)) .. ')') or '',
+            back.scenes and #back.scenes or 0, tostring(dark3), tostring(back.event ~= nil)))
+        if not ok then print('Error: el editor pierde datos del nivel al guardar o probar') end
+    end
     -- La paleta de Entidades, solo los Enemigos (buscar "enemigos": la categoría)
     if frame == 99 then
         local Ed = require('src/editor/Editor')
