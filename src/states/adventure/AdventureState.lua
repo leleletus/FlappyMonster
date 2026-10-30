@@ -99,7 +99,8 @@ function AdventureState:enter(args)
     self.level  = Level.new(self.levelPath, args.difficulty)
     -- (modo historia, nivel de jefe: sin META — acaba al vencer al jefe y recoger su fragmento, src/story/Shards —;
     --  sus casillas de meta se quitan)
-    if args.shards and #(self.level.bossZones or {}) > 0 then
+    -- (un nivel de EVENTO — el Mega Mashup — sí acaba en su salida: tiene su propio guion)
+    if args.shards and #(self.level.bossZones or {}) > 0 and not self.level.event then
         for r = 1, self.level.tileH do
             for c = 1, self.level.tileW do
                 if self.level:getDef(c, r).trigger == 'finish' then self.level.tiles[r][c] = 0 end
@@ -165,7 +166,8 @@ function AdventureState:enter(args)
     -- FRAGMENTOS DEL ESPEJO (modo historia, src/story/Shards.lua): los jefes de este nivel sueltan los suyos
     -- al caer. `shards.final` = es el último (el del jefe Espejo): al recogerlo el nivel acaba SIN tocar la meta.
     -- (también sin fragmentos por ganar si el nivel termina solo al vencer al jefe: `auto`, repetir un jefe ya vencido)
-    self.shards = (args.shards and (#(args.shards.ids or {}) > 0 or args.shards.auto)) and require('src/story/Shards').drops(self, args.shards) or nil
+    self.shards = (args.shards and (#(args.shards.ids or {}) > 0 or #(args.shards.collect or {}) > 0 or args.shards.auto)) and require('src/story/Shards').drops(self, args.shards) or nil
+    if self.shards and self.level.event then self.shards.auto = false end
     self.endingT, self.shardArgs = nil, args.shards
     -- Modo historia: el final de una carrera como escena dentro del nivel, que enlaza con el siguiente (src/story/RunOut.lua)
     self.outroArgs = args.outro
@@ -418,7 +420,7 @@ function AdventureState:result()
     for i in pairs(self.takenNow or {}) do taken[#taken + 1] = i end
     return { score = self.score, time = self.levelTime, lives = self.player.lives, width = self.level.tileW, par = self.level.parTime, taken = taken,
              kills = st.kills, killable = st.killable, stars = st.stars, starsTotal = st.starsTotal,
-             deaths = st.deaths, hits = st.hits }
+             deaths = st.deaths, hits = st.hits, secretExit = self.secretExit or nil }
 end
 
 -- Fragmentos del espejo: cada jefe vencido suelta el suyo; al recogerlo se apunta en la partida (onGet). Con el
@@ -430,8 +432,9 @@ AdventureState.AUTO_WIN_T = 0.8          -- s tras recoger el fragmento (que se 
 function AdventureState:updateShards(dt)
     local sh = self.shards
     if not sh then return end
-    local before = sh.got
+    local before, cbefore = sh.got, sh.cgot
     sh:update(dt)
+    if sh.cgot > cbefore then self:spawnPopup(L('hud.collect'), self.player.x, self.player.y - 70) end   -- (un coleccionable)
     if sh.got > before then
         self:spawnPopup(L('hud.shard'), self.player.x, self.player.y - 70)
         if sh.final and sh:allGot() and not self.endingT and not self.won then
@@ -662,6 +665,12 @@ function AdventureState:update(dt)
     if not self.won and not self.endingT and not self.player.dying then
         local ob = self.player:getOuterBounds()
         if self.level:triggerInBox(ob.x, ob.y, ob.w, ob.h, 'finish') then self:win() end
+        -- (la SALIDA SECRETA, tile `secret_exit`: termina el nivel como la meta y el resultado lo dice — `secretExit` —; en
+        --  la historia abre además el camino secreto: Worlds `secrets`, StoryMapState. Fuera de la historia es una meta más)
+        if not self.won and self.level:triggerInBox(ob.x, ob.y, ob.w, ob.h, 'secret_exit') then
+            self.secretExit = true
+            self:win()
+        end
     end
 
     -- ── Detectar muerte del jugador ───────────────────────────────────────────

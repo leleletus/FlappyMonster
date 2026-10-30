@@ -107,6 +107,36 @@ more of them (`plus` in films.json); the times below are for today's 7 bosses + 
 | `night` Night falls | 6.9–14.0 s | Night. Alone, it takes out its shards: they tremble and line up POINTING the way it went. Far off, the Mirror's answers with a glint; the laugh echoes. | La llamada alone, sad; one rising bell per shard; the mirror motif; two high bells (the answer) and the motif deep down; a Phrygian cadence toward A. |
 | `follow` Into the lair | 14.0–19.6 s | It nods and walks after its shards, toward the glint, into the dark. → the level. | At 172 in A, the tempo and key of "Lluvia de fuego" (the level's music): the galloping bass, la llamada in A minor, determined; then an A pedal with its B♭ at half voice, and the level's intro comes in. |
 
+## The secrets: the splinters, the Groove and the true ending
+
+The user's design and decisions of 2026-10-29 (analysis: `FlappyMonster_pruebas/secretos/lore_analisis.md`). How it is
+built: [story-mode](story-mode.md#the-secrets-secret-exits-splinters-the-groove-and-the-mashup),
+[world-map](world-map.md#the-secret-nodes).
+
+- **The splinters.** When the mirror broke, tiny SPLINTERS flew off as well as the shards. Crabs that found one became
+  the "Mega" crabs, hidden in secret lairs reached through a SECRET EXIT in a level of their island (Arrecife Globo →
+  the Mega Crabby's lair; Templo del Eco → the Mega Gloomy's grotto). Each WEARS its splinter: the Mega Crabby a SHELL
+  CROWN, the Mega Gloomy an AMULET. Beaten, it drops the piece (crown / amulet with its splinter) and flees, still big,
+  like the main bosses. The player keeps the pieces.
+- **The rule that holds it together:** losing the piece never shrinks anyone; only the restored mirror's LIGHT does.
+  In the ending the wave shrinks every boss grown by mirror power — the secret crabs too, if the player found them (at
+  their red nodes, all at once, in the wide shot of `shrink`). The GROOVE does not shrink: its disco ball, made of
+  splinters, bounces the wave away (shown only when the player owns every splinter: then the Groove matters).
+- **Two endings.** Without every splinter (kind `splinter`) the game ends at the Mirror, exactly as before, nothing
+  extra. With all of them (when the Mirror falls, or later when the last one is won), back on the map the Groove's
+  scene plays: its ball pulls the splinters out of the crown and the amulet (the player keeps the empty settings: state
+  `stolen`, the cards say so), the ball is whole, and on its island and in the Mashup — the ball's dance field — the
+  monster's flap is jammed (it sputters; elsewhere the adventure is on foot anyway). The Groove's island opens: the
+  Groove, then the CRAB MEGA MASHUP. After beating the Groove, its ball's beams make the three small crabs (Icy Mega
+  Crabby, Mega Crabby, Mega Gloomy) grow again (that is why they are big in the Mashup; there they wear no crown or
+  amulet: the ball holds the splinters). The TRUE ENDING, after the Mashup: the ball breaks, the splinters go back to
+  their settings, everyone small and dancing, the flap free again, and the trophy: the Disco Ball.
+- No text anywhere, as always: the map scenes `groove`, `regrow`, `disco` and the ending's additions are animation and
+  sound only. Not watched by a person yet.
+
 ## Open ideas (optional, from the user)
 
 Evil Monster sprites standing outside its ship; the shard summoning the ship.
+
+FUTURE (the user, 2026-10-29; not to build yet): after the ending, the player might FLY in replayed levels to reach
+secret places.

@@ -1,7 +1,10 @@
 # Mega Crabby — `megacrabby`
 
-Was the Coast boss until 0.5.30 (now replaced by the [Giant Pufferfish](giantpuffer.md); it will return as a secret
-boss: [new-bosses-plan](new-bosses-plan.md)). A giant Crabby (the Crabby's own pixel grid at scale 10) that chases, charges, climbs walls and the
+Was the Coast boss until 0.5.30 (now replaced by the [Giant Pufferfish](giantpuffer.md)). Since 2026-10-29 it is a
+SECRET boss: its lair `guarida_cangrejo_rey` is reached through the secret exit of `arrecife_globo` (a red node on the
+Coast); it wears the SHELL CROWN with a mirror splinter and drops it when it falls (collectible `astilla_crabby`), then
+flees still big — the mirror's light shrinks it in the ending
+([story-mode](../story/story-mode.md#the-secrets-secret-exits-splinters-the-groove-and-the-mashup)). A giant Crabby (the Crabby's own pixel grid at scale 10) that chases, charges, climbs walls and the
 ceiling, pounces, drops spike-first and summons Crabbies. It is also the base class of the Icy Mega Crabby.
 **File:** `src/world/entities/types/bosses/megacrabby.lua`. **Art:** `assets/images/bosses/megacrabby/` (the claws
 are the USER's drawing: never overwrite). **Sounds:** `assets/sounds/bosses/megacrabby/` (`tools/sounds/megacrabby.py`).

@@ -67,7 +67,8 @@ and their own folder to `sys.path`; scripts that import each other sit in the sa
 | `ui/make_mtvemo_logo.py [--apply]` | without flags: the logo proposals A-D as GIFs in `FlappyMonster_pruebas/logo_mtvemo/`; `--apply`: `assets/startup/logo_anim.png` + `.json`, `sky.png`, `stars.png` (design D, the boot intro) | yes |
 | `enemies/make_claudio_extras.py [parpadeo] [baile]` | `enemies/claudio/claudio_blink.png`, `claudio_dance-Sheet.png` (from the user's `claudio_idle.png`; only the eyes / the arms change) | yes |
 | `ui/make_player_redesign.py`, `make_flappy_redesign.py` | `player/`, the Mirror's pieces, `flappy/` | not re-run |
-| `story/make_overworld.py` | `assets/story/overworld.json` + `story/` map sprites | deterministic; not re-run |
+| `story/make_overworld.py` | `assets/story/overworld.json` + `story/` map sprites | deterministic; not re-run (it also writes the map's `cannons`; re-running it rewrites `overworld.json` identically except for what you changed) |
+| `story/make_cannon.py` | `story/cannon/` (the world map's circus cannon: barrel at 0-90°, the corked one, carriage, smoke, flash, spark) + `FlappyMonster_pruebas/canones/hoja.png` | yes |
 | `story/make_mirror_shards.py --apply`, `make_story_fx.py` | `story/mirror/`, `story/fx/` | yes (verified) |
 
 "Verified" = executed on 2026-10-07 after the reorganisation and the output was pixel-identical to the committed
@@ -78,7 +79,7 @@ diff of whatever it writes.
 
 One script per family, each writes WAVs into `assets/sounds/<group>/`: `ambience.py`, `bomb.py`, `cryo.py`,
 `gloomy.py`, `groove.py` (the Groove Crab's crowd: cheer, boo), `hopper.py`, `ice.py`, `items.py`, `jungle_enemies.py` (mole, piranha and carnivorous plant: dig, pop, bite, piranha bite, plant rustle / snap / crunch), `penguin.py` (the Penguin's squawk and belly slide), `jungle.py` (the jungle ambience + the brazier fire; without `--apply` it writes previews and a 40 s level mix to `FlappyMonster_pruebas/selva/sonidos/`), `water.py` (drowning music, alarm, gasp, glug, extra life), `startup.py` (the logo melody), `mechanics.py`, `megacrabby.py`, `megagummy.py`, `mirror.py`,
-`snowboss.py`, `story.py`, `ui.py` (entering a level, the start countdown). After generating: register the sound and its gain in `src/audio/Sound.lua`, then
+`snowboss.py`, `story.py`, `map_cannon.py` (the world map's cannon: load, fuse, boom, whoosh, land), `ui.py` (entering a level, the start countdown). After generating: register the sound and its gain in `src/audio/Sound.lua`, then
 `tools/tests/run.sh sounds NAMES=…`.
 
 ## music/

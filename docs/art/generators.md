@@ -33,7 +33,7 @@ Safe to re-run (verified on 2026-10-07 to reproduce the committed pixels exactly
 `tools/sounds/props.py` (their sounds), `tools/art/world/make_iceberg.py` (the Iceberg, every size × 2 variants,
 and the frost-meter icon `ui/icons/frost.png`, 2026-10-29; preview `FlappyMonster_pruebas/mecanicas_heladas/iceberg/vista_previa.png`) +
 `tools/sounds/iceberg.py`, `tools/art/world/make_avalanche_cablecar.py` (Avalanche and Cable car,
-2026-10-29; preview `FlappyMonster_pruebas/mecanicas_heladas/vista_previa.png`) + `tools/sounds/avalanche_cablecar.py`, `tools/art/world/make_doors.py` (the Door, one sheet per island, 2026-10-29; preview `FlappyMonster_pruebas/puertas/vista_previa.png`) + `tools/sounds/door.py`, `tools/art/ui/make_prompts.py` (the "grab" and "mash" tooltips; does not overwrite, `--force`). The others were moved and had their paths updated but were
+2026-10-29; preview `FlappyMonster_pruebas/mecanicas_heladas/vista_previa.png`) + `tools/sounds/avalanche_cablecar.py`, `tools/art/world/make_doors.py` (the Door, one sheet per island, 2026-10-29; preview `FlappyMonster_pruebas/puertas/vista_previa.png`) + `tools/sounds/door.py`, `tools/art/story/make_cannon.py` (the world map's cannon, 2026-10-29; sheet `FlappyMonster_pruebas/canones/hoja.png`) + `tools/sounds/map_cannon.py`, `tools/art/ui/make_prompts.py` (the "grab" and "mash" tooltips; does not overwrite, `--force`). The others were moved and had their paths updated but were
 NOT executed after the 2026-10-07 reorganisation (their outputs are hand-edited or they need the originals): check
 the diff before committing anything they write.
 
@@ -49,6 +49,16 @@ the diff before committing anything they write.
   shines — applied —, B strata), `--seam A|B` (snow's seam on other blocks, `snow_spill.png`: A lip + round clumps —
   applied —, B frost dither). Safe to re-run (nothing hand-edited yet). `make_snow_sprites.py` no longer writes
   snow.png / ice.png (only thin ice, snowflakes, the drop).
+- `tools/art/story/make_collectibles.py` (2026-10-29): the story COLLECTIBLES (`assets/images/story/collectibles/`
+  `astilla_crabby` = shell crown, `astilla_gloomy` = amulet, `bola_disco`, `locked` = the "???" silhouette, `astilla_crabby_empty` / `astilla_gloomy_empty` = the pieces without their
+  splinter, for the `stolen` save state) and the
+  pieces the secret crabs WEAR as overlay layers (`bosses/megacrabby/wear_crown.png`, `bosses/megagloomy/wear_amulet.png`
+  — new files beside the bosses' hand-edited sprites, which it never touches). Character maps, outline added in each
+  material's dark tone. Without flags = previews in `FlappyMonster_pruebas/coleccion/`; `--apply` writes only its own
+  files. Safe to re-run (nothing of it is hand-edited yet). See [story-mode](../story/story-mode.md#the-collection).
+- `tools/art/world/make_secret_exit.py`: the SECRET EXIT tile (`assets/images/world/tiles/secret_exit.png`, a red plate
+  with a gold frame and a keyhole, 16x16 ×4). `tools/art/story/make_overworld.py` also writes the red keyhole map node
+  `assets/images/story/node_secret-Sheet.png`. Safe to re-run (nothing hand-edited yet).
 - `tools/art/story/make_mirror_shards.py`: the story mirror (`frame`, `glass`) and its shards (`shard_<id>.png` + the
   Xtra halves `<id>a/b`), all on one 48x64 canvas. 0.5.99: it READS the catalog `assets/story/shards.json` and cuts as
   many pieces as it lists (8 today, for the jungle boss's shard id 8): a Voronoi cut whose centre seed is the Mirror's

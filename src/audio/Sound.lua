@@ -276,6 +276,10 @@ function Sound.load()
     load('storyRumble',   'assets/sounds/story/rumble.wav',    'static')   -- el volcán ruge, lejos
     load('storyLaughFar', 'assets/sounds/story/laugh_far.wav', 'static')   -- la risa del Reflejo, con eco
     load('storyPant',     'assets/sounds/story/pant.wav',      'static')   -- el monstruo, sin aliento
+    -- el CAÑÓN del mapa entre islas (tools/sounds/map_cannon.py; src/states/story/StoryMapCannons.lua)
+    for _, n in ipairs({ 'load', 'fuse', 'boom', 'whoosh', 'land' }) do
+        load('cannon' .. n:gsub('^%l', string.upper), 'assets/sounds/story/cannon_' .. n .. '.wav', 'static')
+    end
     -- Música: todas las pistas del índice (assets/music/index.json)
     for _, tr in ipairs(Music.list) do Sound.loadTrack(tr) end
 end

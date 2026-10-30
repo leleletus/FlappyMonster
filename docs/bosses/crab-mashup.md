@@ -127,8 +127,13 @@ Replaces today's random director (`types/directors/bossdrops.lua`: food every ~1
 
 ## The reward
 
-An EXCLUSIVE COLLECTIBLE. The collectibles system does not exist yet: this event must give one when it does. (Note,
-nothing to build now.)
+The DISCO BALL (`bola_disco`, kind `trophy` in `assets/story/collectibles.json`), given when the level is FINISHED in
+the story (it has no boss source: `Collect.onFinish`). Since 2026-10-29 the Mashup is the TRUE FINAL of the story: a red
+node on the Groove's island, after `isla_del_groove`, opened by the `regrow` map scene (the ball's beams make the three
+small crabs grow again); after it the `disco` map scene (the true ending). In the story it stays an EVENT: it keeps its
+own exit (`AdventureState` keeps the finish of `event` levels and does not auto-win them). Its Mega Crabbies and Mega
+Gloomies wear no crown / amulet here (`props.wear = false` in `mashup_cangrejos.json`): the Groove's ball holds the
+splinters ([story-mode](../story/story-mode.md#the-secrets-secret-exits-splinters-the-groove-and-the-mashup)).
 
 ## Decided after the first script (2026-10-27)
 

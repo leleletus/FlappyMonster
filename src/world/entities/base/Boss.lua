@@ -522,6 +522,60 @@ function Boss:ghostAlpha()
     return 1
 end
 
+-- ── PIEZAS PUESTAS (wear) ─────────────────────────────────────────────────────
+-- Capas de dibujo ENCIMA del jefe con lo que lleva puesto: la corona de conchas del Mega Crabby y el amuleto del
+-- Lúgubre (la astilla del espejo que guardan, que es su coleccionable: docs/story/story-mode.md). Nunca se tocan los
+-- sprites del jefe (los retoca el usuario a mano): son imágenes aparte (tools/art/story/make_collectibles.py).
+-- Solo dibujo y sale de los datos del tipo + sus props: igual en un jugador, servidor (no dibuja) y cliente.
+--   Cls.WEAR = { { image = 'assets/…png', anchor = 'head', ax = 5, ay = 4, frames = { [n] = { dx, dy } | false },
+--                  glint = { x, y } }, … }
+--     (ax, ay) = el punto de la pieza (px de arte, desde su esquina) que va EN el ancla (con medios píxeles si hace
+--     falta para que caiga en la rejilla del cuerpo); frames = desplazamiento (px de
+--     arte) en ese cuadro del cuerpo (false = no se ve en ese cuadro); glint = el píxel que brilla a oscuras.
+--   El tipo llama, DENTRO de su transformación y con su color ya puesto, self:drawWear(anchor, x, y, s, frame, flip)
+--   donde está ese ancla (x, y en pantalla; s = su escala de píxel); con glow = true solo el destello (renderGlow).
+--   Un subtipo sin pieza: Cls.WEAR = false. `props.wear = false` se la quita (Boss.WEAR_PROP, en el editor). Al caer
+--   (Boss:shardDrop, cuando suelta su fragmento) deja de llevarla: la pieza que suelta es esa misma.
+Boss.WEAR_PROP = { key='wear', kind='bool', label='Lleva su pieza (la astilla)', group='Jefe', default=true,
+                   help='La pieza que lleva puesta (corona, amuleto: la astilla del espejo que guarda). Solo dibujo' }
+local wearImg = {}
+Boss._wearImages = wearImg              -- (ruta → imagen: el arnés `collection` mira qué se dibuja)
+local function wearImage(path)
+    local im = wearImg[path]
+    if im == nil then
+        local ok, i = pcall(love.graphics.newImage, path)
+        im = ok and i or false
+        if im then im:setFilter('nearest', 'nearest') end
+        wearImg[path] = im
+    end
+    return im or nil
+end
+function Boss:drawWear(anchor, x, y, s, frame, flip, glow)
+    local list = self.WEAR
+    if not list or self.props.wear == false then return end
+    if self:shardDrop() then return end          -- (al caer, la suelta: es lo que deja en el nivel, como su fragmento)
+    local fx = flip and -1 or 1
+    for _, w in ipairs(list) do
+        local off = (w.anchor or 'body') == anchor and (w.frames and frame and w.frames[frame])
+        local im = off ~= false and (w.anchor or 'body') == anchor and wearImage(w.image)
+        if im then
+            local dx, dy = off and off[1] or 0, off and off[2] or 0
+            local ox, oy = w.ax or im:getWidth() / 2, w.ay or 0
+            local px, py = x + dx * s * fx, y + dy * s
+            if not glow then
+                love.graphics.draw(im, px, py, 0, s * fx, s, ox, oy)
+            elseif w.glint and math.floor(love.timer.getTime() * 3) % 3 ~= 0 then
+                -- (a oscuras: el píxel del cristal que recoge la luz, parpadeando)
+                local r, g, b, a = love.graphics.getColor()
+                love.graphics.setColor(1, 1, 1, 0.9 * a)
+                local gx = px + (w.glint[1] - ox) * s * fx
+                love.graphics.rectangle('fill', fx > 0 and gx or gx - s, py + (w.glint[2] - oy) * s, s, s)
+                love.graphics.setColor(r, g, b, a)
+            end
+        end
+    end
+end
+
 -- ── Red ───────────────────────────────────────────────────────────────────────
 function Boss:netPack()
     local out = { self.hp, self.hpMax, math.floor(self.inv * 100 + 0.5), self.ghost and 1 or 0 }

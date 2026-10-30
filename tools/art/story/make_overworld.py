@@ -389,8 +389,7 @@ NODE_BOSS = {                # (hoy ninguno: la Bola de Nieve tiene castillo des
 # volcán, siempre a la vista (un misterio); su camino desde el bonus del Final y su nodo solo aparecen al vencer al
 # Espejo (StoryMapState). Se añade AL FINAL, después de decoraciones y bichos, para no mover nada de lo demás (rng).
 # El camino cruza el agua: se dibuja como puente.
-SECRET = {'final': [(47.5, 14), (48.3, 11.4), (48.6, 8.9)]}
-SSECRET = {k: catmull(v) for k, v in SECRET.items()}
+# (su camino: SECRETS, al final del todo, con los demás secretos)
 blob(48.8, 8.1, 3.0, 2.4, 's', 0.1)
 decos.append({'t': 'palm', 'x': 49, 'y': 6})
 
@@ -544,16 +543,152 @@ for t, x0, x1, y in [('crabby', 92, 97, 16), ('crabby', 99, 104, 13), ('gummy', 
 SPATHS['costa_helada'], SBONUS['costa_helada'] = SCPATH, SCBONUS
 BOSS_ART['costa_helada'] = {'img': 'assets/images/bosses/megacrabby_ice/crab1.png'}
 
+# ── LOS SECRETOS (Worlds `secrets`, docs/story/world-map.md#the-secret-nodes): un camino corto desde su nodo `from` hasta un
+# nodo ROJO con cerradura, que no existe en el mapa hasta que se abre (StoryMapState). El juego reparte los niveles de cada
+# mundo por su camino por longitud de arco: aquí se calcula igual dónde cae el nodo `from` (`(k, n)` = su nodo k de n,
+# = Worlds.lua: si allí cambia, cambia esto). Va AL FINAL, después de todas las decoraciones y bichos y sin azar: bajo el
+# camino y en su islote se pone tierra donde había mar y se quitan las pocas decoraciones que pisa; nada más se mueve.
+#   (level, mundo, desde: (k, n) de su camino | 'bonus' | otro secreto, puntos intermedios, fin, islote (cx, cy, rx, ry) | None, tierra)
+def node_at(path, k, n):
+    acc = [0.0]
+    for i in range(1, len(path)):
+        acc.append(acc[-1] + math.dist(path[i - 1], path[i]))
+    sv = acc[-1] * (k - 1) / max(1, n - 1)
+    for i in range(1, len(path)):
+        if sv <= acc[i] or i == len(path) - 1:
+            q = max(0.0, min(1.0, (sv - acc[i - 1]) / max(1e-9, acc[i] - acc[i - 1])))
+            return (round(path[i - 1][0] + (path[i][0] - path[i - 1][0]) * q, 2), round(path[i - 1][1] + (path[i][1] - path[i - 1][1]) * q, 2))
+
+
+SECRETS = [
+    # la GUARIDA del Mega Crabby: una lengua de arena al norte del Arrecife Globo (nodo 4 de 5 de la Costa) hasta su islote
+    ('guarida_cangrejo_rey', 'costa', (4, 5), [(44.5, 32.0)], (45.3, 29.9), (45.5, 29.6, 1.9, 1.5), 's'),
+    # la GRUTA del Mega Crabby lúgubre: al oeste del Templo del Eco (nodo 4 de 5 de las Cuevas), por el llano
+    ('gruta_lugubre', 'cuevas', (4, 5), [(10.4, 15.1)], (7.3, 15.6), None, 'c'),
+    # el GROOVE: del bonus del Final a su islote de arena al noreste del volcán (el de siempre)
+    ('isla_del_groove', 'final', 'bonus', [(48.3, 11.4)], (48.6, 8.9), (48.8, 8.1, 3.0, 2.4), 's'),
+    # el MEGA MASHUP (el final de verdad): del Groove, por su islote, un poco más al este
+    ('mashup_cangrejos', 'final', 'isla_del_groove', [(49.9, 8.7)], (50.8, 7.6), (50.7, 7.7, 1.7, 1.5), 's'),
+]
+SSECRET, SECRET_END = {}, {}
+for lvl, wk, frm, mid, end, isle, ch in SECRETS:
+    if frm == 'bonus':
+        start = SBONUS[wk][-1]
+    elif isinstance(frm, str):
+        start = SECRET_END[frm]
+    else:
+        start = node_at(SPATHS[wk], frm[0], frm[1])
+    SSECRET[lvl] = catmull([start] + mid + [end])
+    SECRET_END[lvl] = end
+    if isle:
+        blob(isle[0], isle[1], isle[2], isle[3], ch, 0.1)
+    # (tierra bajo el camino: que no cruce el mar)
+    for y in range(H):
+        for x in range(W):
+            if grid[y][x] == '~' and min(seg_dist(x, y, a, b) for a, b in zip(SSECRET[lvl], SSECRET[lvl][1:])) < 0.95:
+                grid[y][x] = ch
+                hgt[y][x] = 1
+            if grid[y][x] != '~' and min(seg_dist(x, y, a, b) for a, b in zip(SSECRET[lvl], SSECRET[lvl][1:])) < 1.6:
+                hgt[y][x] = min(hgt[y][x], 1)          # (por el llano)
+decos = [d for d in decos if all(min(seg_dist(d['x'], d['y'], a, b) for a, b in zip(l, l[1:])) >= 1.0 for l in SSECRET.values())
+         and all(math.dist((d['x'], d['y']), e) >= 1.4 for e in SECRET_END.values())]
+SECRET_OF = {lvl: wk for lvl, wk, *_ in SECRETS}
+
 STORY = ['pradera', 'costa', 'jungla', 'fortaleza', 'nieve', 'costa_helada', 'cuevas', 'final']        # (= Worlds.LIST)
 SCONNECT_OUT = [SCONNECT[0], SJBRIDGES[0], SJBRIDGES[1], SCONNECT[2], SCBRIDGES[0], SCBRIDGES[1], SCONNECT[4]]
+
+
+# ── CAÑONES entre islas (el usuario, 2026-10-29: "para cambiar de isla se usa un puente; estaba pensando en usar un
+# cañón… se vería mejor y quedaría más cómico"): en vez de los puentes, un cañón en CADA punta de cada cruce (el de
+# ida y el de vuelta). Sale de los mismos cruces (SCONNECT_OUT, que siguen contando para la distancia a los caminos:
+# nada se mueve): cada cañón, en tierra junto a la orilla por la que el cruce salía al mar, sin pisar caminos,
+# decoraciones ni el castillo con su jefe; `la` / `lb` = dónde aterriza el monstruo al llegar a esa punta (entre el
+# cañón y el nodo). Va DESPUÉS de todo lo demás y sin azar: no cambia nada del mapa. Una isla nueva = un cruce más.
+# (coordenadas como las de los caminos: el punto q cae en la casilla floor(q + 0.5), como lo dibuja el juego)
+def cell_at(x, y):
+    cx, cy = math.floor(x + 0.5), math.floor(y + 0.5)
+    if 0 <= cx < W and 0 <= cy < H:
+        return grid[cy][cx], hgt[cy][cx]
+    return '~', 0
+
+
+def boss_spot(n):
+    """dónde pone el juego al jefe junto a su castillo (StoryMapState bossSide), en casillas"""
+    for ox, oy in ((58, 0), (-58, 0), (40, 40), (-40, 40), (0, 52)):
+        bx, by = n[0] + ox / 32, n[1] + (12 + oy) / 32
+        if all(cell_at(bx + d / 32, by)[0] not in '~L' for d in (-14, 0, 14)):
+            return bx, by
+    return n[0] + 58 / 32, n[1] + 12 / 32
+
+
+def cannon_end(line, castle, avoid):
+    """el cañón de la punta de `line` que empieza en su nodo (line[0]): junto a la orilla por la que sale al mar"""
+    node = line[0]
+    acc = [0.0]
+    for i in range(1, len(line)):
+        acc.append(acc[-1] + math.dist(line[i - 1], line[i]))
+
+    def at(s):
+        for i in range(1, len(line)):
+            if s <= acc[i] or i == len(line) - 1:
+                q = max(0.0, min(1.0, (s - acc[i - 1]) / max(1e-9, acc[i] - acc[i - 1])))
+                return (line[i - 1][0] + (line[i][0] - line[i - 1][0]) * q, line[i - 1][1] + (line[i][1] - line[i - 1][1]) * q)
+    shore, s = node, 0.0
+    while s < acc[-1]:
+        p = at(s)
+        if cell_at(*p)[0] == '~':
+            break
+        shore, s = p, s + 0.05
+    far = at(min(acc[-1], s + 3.0))                    # (hacia dónde sigue el cruce, ya en el mar)
+    keep = 1.7 if castle else 1.25                     # (lejos del castillo / del nodo)
+    boss = boss_spot(node) if castle else None
+    best = None
+    for iy in range(-10, 11):
+        for ix in range(-10, 11):
+            x, y = node[0] + ix * 0.5, node[1] + iy * 0.5
+            if math.dist((x, y), node) < keep or math.dist((x, y), node) > 5:
+                continue
+            ch, hh = cell_at(x, y)
+            if ch in '~L' or any(cell_at(x + dx, y)[0] in '~L' or cell_at(x + dx, y)[1] != hh for dx in (-0.7, 0.7)):
+                continue
+            if cell_at(x, y - 0.8)[0] in '~L' or cell_at(x, y - 0.8)[1] > hh:   # (nada más alto detrás)
+                continue
+            if boss and abs(x - boss[0]) < 1.6 and -1.6 < y - boss[1] < 0.8:
+                continue
+            if any(math.dist((x, y), (d['x'], d['y'])) < 1.3 for d in decos):
+                continue
+            if any(min(seg_dist(x, y, l[i], l[i + 1]) for i in range(len(l) - 1)) < 0.9 for l in avoid):
+                continue
+            # el camino del nodo al cañón, todo por tierra
+            if any(cell_at(node[0] + (x - node[0]) * k / 8, node[1] + (y - node[1]) * k / 8)[0] in '~L' for k in range(9)):
+                continue
+            score = math.dist((x, y), shore) + 0.25 * math.dist((x, y), node) + 0.15 * math.dist((x, y), far)
+            if not best or score < best[0]:
+                best = (score, x, y)
+    if not best:
+        raise SystemExit('cañón: no hay sitio junto al nodo %s' % (node,))
+    x, y = best[1], best[2]
+    k = min(1.0, 0.5 * math.dist((x, y), node)) / max(1e-9, math.dist((x, y), node))
+    land_ = (x + (node[0] - x) * k, y + (node[1] - y) * k)      # (aterriza a una casilla del cañón, hacia el nodo)
+    return [round(x, 2), round(y, 2)], [round(land_[0], 2), round(land_[1], 2)]
+
+
+AVOID = [SPATHS[k] for k in STORY] + [SBONUS[k] for k in STORY] + list(SSECRET.values())
+CANNONS = []
+for c in SCONNECT_OUT:
+    a, la = cannon_end(c, True, AVOID)
+    b, lb = cannon_end(c[::-1], False, AVOID)
+    CANNONS.append({'a': a, 'la': la, 'b': b, 'lb': lb})
+print('  cañones: %d cruces' % len(CANNONS))
 
 data = {
     'cell': 32, 'w': W, 'h': H,
     'rows': [''.join(r) for r in grid],
     'heights': [''.join(str(v) for v in r) for r in hgt],
     'worlds': [{'id': k, 'path': [list(p) for p in SPATHS[k]], 'boss': BOSS_ART[k], 'nodeBoss': NODE_BOSS.get(k, {}), 'bonus': [list(p) for p in SBONUS[k]],
-                **({'secret': [list(p) for p in SSECRET[k]]} if k in SSECRET else {})} for k in STORY],
+                'secrets': {lvl: [list(p) for p in SSECRET[lvl]] for lvl in SSECRET if SECRET_OF[lvl] == k}} for k in STORY],
     'connect': [[list(p) for p in c] for c in SCONNECT_OUT],
+    'cannons': CANNONS,           # (un cañón en cada punta de cada cruce; el juego ya no dibuja los puentes)
     'decos': decos, 'critters': critters,
     'view': [W, H],               # (lo que encuadran las cinemáticas: las 7 islas, la jungla abajo)
 }
@@ -590,6 +725,11 @@ node_pals = [
     {'o': OUT, 'a': (40, 90, 170, 255), 'b': (90, 170, 255, 255), 'c': (60, 130, 220, 255)},     # bonus abierto (azul)
 ]
 sheet([grid_img(NODE, p) for p in node_pals], IMG + 'node-Sheet.png')
+# el nodo SECRETO (Worlds `secrets`): más grande, con una CERRADURA (la de la salida secreta de los niveles):
+# 1 abierto (rojo) · 2 superado (dorado)
+NODE_SECRET = ['...oooo...', '..oaaaao..', '.oabbbbao.', 'oabbkkbbao', 'oabkkkkbao', 'oabbkkbbao', 'oacbkkbcao',
+               '.oaccccao.', '..oaaaao..', '...oooo...']
+sheet([grid_img(NODE_SECRET, dict(p, k=(24, 10, 14, 255))) for p in (node_pals[1], node_pals[2])], IMG + 'node_secret-Sheet.png')
 
 CASTLE = ['....f...........',
           '....fFF.........',

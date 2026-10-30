@@ -894,7 +894,17 @@ function MG:drawSheet(pre, camX, camY, ox, oy)
     local sx, sy = math.floor(self.x - camX + (ox or 0)), math.floor(self.y - camY + (oy or 0))
     local st = self.state
     if st == 'dazzled' or st == 'dying_curl' or self:roaring() then sx = sx + math.floor(math.sin(love.timer.getTime() * 50) * 2) end
-    self:anims():drawFrame(self:frameNow(pre), sx, sy, 0, MS, MS, 0.5, BODY_ROW / FH)
+    local f = self:frameNow(pre)
+    self:anims():drawFrame(f, sx, sy, 0, MS, MS, 0.5, BODY_ROW / FH)
+    return sx, sy, f
+end
+
+-- Lo que lleva PUESTO (Boss:drawWear): el AMULETO con su astilla del espejo, colgando bajo el caparazón (el ancla es
+-- el centro de la fila de abajo del caparazón en los cuadros 1-5; los demás cuadros la mueven; muerto, no se ve)
+MG.WEAR = { { image = 'assets/images/bosses/megagloomy/wear_amulet.png', anchor = 'neck', ax = 4.5, ay = 1, glint = { 3, 4 },
+              frames = { [6] = { 0, 2 }, [7] = { 0, -2 }, [8] = { 0, -1 }, [9] = false } } }
+function MG:drawAmulet(sx, sy, f, glow)
+    self:drawWear('neck', sx + MS / 2, sy + (13 - BODY_ROW) * MS, MS, f, false, glow)
 end
 
 -- ¿Se le nota la RABIA? (como al Mega Crabby: temblor leve, pulso rojizo y símbolos de enfado)
@@ -934,7 +944,7 @@ function MG:render(camX, camY)
         love.graphics.setColor(r_, g_, b_, a_)
     end
     local turned = self:pushTurn(camX, camY)
-    self:drawSheet('', camX, camY)
+    self:drawAmulet(self:drawSheet('', camX, camY))
     self:drawClaws(camX, camY, now)
     if turned then love.graphics.pop() end
     love.graphics.setColor(1, 1, 1, 1)
@@ -1000,7 +1010,8 @@ function MG:renderGlow(camX, camY)
     if a > 0.01 then
         local turned = self:pushTurn(camX, camY)
         love.graphics.setColor(GLOW[1], GLOW[2], GLOW[3], a)
-        self:drawSheet('glow_', camX, camY)
+        local gx, gy, gf = self:drawSheet('glow_', camX, camY)
+        if gf then self:drawAmulet(gx, gy, self:frameNow(''), true) end      -- (el destello de su astilla)
         love.graphics.setBlendMode('add')
         love.graphics.setColor(GLOW[1], GLOW[2], GLOW[3], 0.22 * a)
         for _, o in ipairs({ { MS, 0 }, { -MS, 0 }, { 0, MS }, { 0, -MS } }) do self:drawSheet('glow_', camX, camY, o[1], o[2]) end
@@ -1040,6 +1051,7 @@ return {
     hide = Boss.HIDE,
     defaults = { points = 60 },
     props = Boss.props({ hp = 8, hpPerPlayer = 3 }, {
+        Boss.WEAR_PROP,
         { key='pingEvery', kind='number', label='Ecolocalización cada (s)', group=G, default=2.4, min=0.8, max=8, step=0.1,
           help='Alza las pinzas y suelta un aro: detecta ("!" rojo) a los jugadores que toca, aunque estén quietos, y salta ahí' },
         { key='ceilingEvery', kind='number', label='Al techo cada (s)', group=G, default=14, min=4, max=60, step=0.5,

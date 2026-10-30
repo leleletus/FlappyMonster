@@ -74,6 +74,7 @@ function love.load()
         story_slots        = function() return require('src/states/story/StorySlotState'):new() end,   -- Historia: partidas
         story_results      = function() return require('src/states/story/StoryResultsState'):new() end, -- Historia: resultados del nivel
         story_map          = function() return require('src/states/story/StoryMapState'):new() end,    -- Historia: el mapa
+        story_collection   = function() return require('src/states/story/StoryCollectionState'):new() end, -- Historia: la Colección (encima del mapa)
         story_film         = function() return require('src/states/story/StoryFilmState'):new() end,   -- Historia: cinemáticas (intro y final)
         online_login       = function() return OnlineLoginState:new() end,
         online_hub         = function() return OnlineHubState:new() end,

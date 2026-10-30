@@ -337,7 +337,8 @@ function E.levelMeta(path)
         local id = path:match('([^/]+)%.json$')
         local world
         for _, W in ipairs(require('src/story/Worlds').LIST) do
-            if W.boss == id or W.bonus == id or W.secret == id then world = W.id end
+            if W.boss == id or W.bonus == id then world = W.id end
+            for _, e in ipairs(W.secrets or {}) do if e.level == id then world = W.id end end      -- (sus niveles secretos)
             for _, l in ipairs(W.levels) do if l == id then world = W.id end end
         end
         if not world then

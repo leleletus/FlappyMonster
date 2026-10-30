@@ -1,0 +1,16 @@
+{
+  "_": "LOS COLECCIONABLES de la historia (los secretos): la ÚNICA lista. La leen el juego (src/story/Collect.lua: qué nivel o jefe da cada uno, la puerta del Groove, el guardado `collect`) y la pantalla de la Colección. `id` = el que se guarda en la partida (data.collect[id]): NUNCA se renombra. `icon` = su imagen (también la pieza que suelta el jefe en el nivel). `source.level` = el nivel donde se gana; `source.boss` = el jefe (tipo de entidad) que lo SUELTA al caer, como los fragmentos (sin `boss`: se gana al TERMINAR el nivel); `source.from` = el nivel con la salida secreta que lleva hasta él (para el texto). `keys` = prefijo de sus textos (.name, .desc, .how, .hint en assets/lang/es.lua y en.lua). `states` (opcional) = lo que cambia en un ESTADO de la partida distinto de tenerlo (data.collect[id] = ese estado, p. ej. 'stolen': el Groove le robó la astilla): `icon` = otra imagen; la ficha de la Colección enseña además la etiqueta story.collect.state.<estado> y el texto <keys>.<estado>. `kind` = 'splinter' (astilla del espejo: el Groove pide TODAS las de este tipo, contadas de aquí) o 'trophy'. Uno nuevo = una línea aquí, su icono y sus textos.",
+  "collectibles": [
+    { "id": "astilla_crabby", "icon": "assets/images/story/collectibles/astilla_crabby.png",
+      "source": { "boss": "megacrabby", "level": "guarida_cangrejo_rey", "from": "arrecife_globo" },
+      "keys": "story.collect.astilla_crabby", "kind": "splinter",
+      "states": { "stolen": { "icon": "assets/images/story/collectibles/astilla_crabby_empty.png" } } },
+    { "id": "astilla_gloomy", "icon": "assets/images/story/collectibles/astilla_gloomy.png",
+      "source": { "boss": "megagloomy", "level": "gruta_lugubre", "from": "templo_del_eco" },
+      "keys": "story.collect.astilla_gloomy", "kind": "splinter",
+      "states": { "stolen": { "icon": "assets/images/story/collectibles/astilla_gloomy_empty.png" } } },
+    { "id": "bola_disco", "icon": "assets/images/story/collectibles/bola_disco.png",
+      "source": { "level": "mashup_cangrejos" },
+      "keys": "story.collect.bola_disco", "kind": "trophy" }
+  ]
+}

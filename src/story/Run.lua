@@ -143,14 +143,39 @@ function Run.bonusState(w)
     return Run.isDone(W.boss) and 'open' or 'locked'
 end
 
--- NIVEL SECRETO (Worlds `secret`): 'done' superado · 'open' con el JUEGO ACABADO (el jefe del último mundo) · 'locked'
--- (y, cerrado, ni se ve en el mapa)
-function Run.secretState(w)
-    local s = Worlds.secret(w)
-    if not (s and Run.data) then return 'locked' end
-    if Run.isDone(s.id) then return 'done' end
-    local last = Worlds.get(Worlds.count())
-    return Run.isDone(last.boss) and 'open' or 'locked'
+-- NIVEL SECRETO (Worlds `secrets`; `e` = su entrada o el id de su nivel): 'done' superado · 'open' con todo lo que
+-- pide su entrada (la salida secreta usada — `found` —, los niveles de `after` superados, todos los coleccionables de su
+-- tipo `collect`, la ESCENA del mapa que lo abre ya vista — `scene`: StoryMapScenes —) · 'locked' (y, cerrado, ni se ve
+-- en el mapa). Superado una vez, ya no se cierra. `noScene`: sin contar la escena (¿le toca ya su escena?)
+function Run.secretState(e, noScene)
+    if type(e) == 'string' then e = Worlds.secretOf(e) end
+    if not (e and Run.data) then return 'locked' end
+    if Run.isDone(e.level) then return 'done' end
+    if e.exit and not (Run.data.found and Run.data.found[e.level]) then return 'locked' end
+    for _, id in ipairs(e.after or {}) do if not Run.isDone(id) then return 'locked' end end
+    if e.collect and not require('src/story/Collect').hasAll(Run.data, e.collect) then return 'locked' end
+    if e.scene and not noScene and not (Run.data.films and Run.data.films[e.scene]) then return 'locked' end
+    return 'open'
+end
+
+-- SALIDA SECRETA usada (terminado el nivel `from` por ella): se apunta el secreto al que lleva (`found[nivel]`)
+-- (noSave: el nivel terminado lo guarda todo junto en Run.complete)
+function Run.findSecret(level, noSave)
+    local d = Run.data
+    if not d then return end
+    d.found = d.found or {}
+    d.found[level] = true
+    if not noSave then Run.save() end
+end
+
+-- COLECCIONABLE ganado (src/story/Collect.lua): como los fragmentos, solo al TERMINAR el nivel. Un estado que ya
+-- tuviera (p. ej. 'stolen') no se pisa
+function Run.addCollect(id, noSave)
+    local d = Run.data
+    if not d then return end
+    d.collect = d.collect or {}
+    if d.collect[id] == nil or d.collect[id] == false then d.collect[id] = true end
+    if not noSave then Run.save() end
 end
 
 -- Fin de una partida bonus: su NOTA (Score.bonus), sus puntos (solo si se gana, × la dificultad) y sus premios — la
@@ -243,7 +268,8 @@ function Run.gameOver(w)
     d.lives = Difficulty.of(d.difficulty, 'livesStart', 3)
     d.gameOvers = (d.gameOvers or 0) + 1
     if Difficulty.of(d.difficulty, 'restartGame', false) then
-        d.done, d.shards, d.open, w = {}, {}, {}, 1      -- (todo el juego otra vez: también los fragmentos)
+        d.done, d.shards, d.open, w = {}, {}, {}, 1      -- (todo el juego otra vez: también los fragmentos,
+        d.collect, d.found = {}, {}                       --  los coleccionables y las salidas secretas encontradas)
     else
         for _, n in ipairs(Worlds.nodes(w)) do d.done[n.id] = nil end
     end

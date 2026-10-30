@@ -128,7 +128,7 @@ end
 -- Triggers de tile que un modo NO usa: { finish = true, ... }
 function ModeTypes.hiddenTriggers(mode)
     local hide = {}
-    for _, name in ipairs({ 'finish' }) do
+    for _, name in ipairs({ 'finish', 'secret_exit' }) do       -- (la salida secreta: ningún modo online la usa)
         if not ModeTypes.usesTrigger(mode, name) then hide[name] = true end
     end
     return hide

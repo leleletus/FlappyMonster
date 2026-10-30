@@ -46,6 +46,7 @@ Every tile registered in `src/world/tiles/Tiles.lua`. **Id** is stored in the le
 | 41 | `jungle_grass` | Césped de la jungla | Terreno | solid | grass | joins `ground` |
 | 42 | `temple_brick` | Sillar del templo | Terreno | solid | temple_stone | joins `ground` |
 | 43 | `jungle_platform` | Plataforma traspasable (jungla) | Plataformas | oneway (drop-through) | wood | partial hitbox |
+| 44 | `secret_exit` | Salida secreta | Objetivos | none | default | trigger `secret_exit` |
 | 50 | `frost_brick` | Ladrillo helado | Terreno | solid | frost_stone | joins `ground` |
 | 51 | `ice_rock` | Roca helada | Terreno | solid | frost_stone | joins `ground` |
 | 52 | `ice_brick` | Sillar de hielo | Terreno | solid | ice | joins `ice` |

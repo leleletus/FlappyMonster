@@ -115,6 +115,16 @@ if it should exist as a mini block, add it to `SubTiles.KINDS`. Then
   then click/drag ON/OFF Blocks to (un)link; cyan lines = links, faint = nearest.
   Harness `flood_control` case `switchblocks`. Protocol v27.
 
+## Secret exit
+
+- **Secret exit** (`secret_exit` 44, "Salida secreta", Objetivos; 2026-10-29): no collision; touching it ends the level
+  like the finish (`trigger = 'secret_exit'`, `AdventureState` → `win()` with `result.secretExit`). In the story it also
+  opens the secret level of that level (`Worlds` `secrets` with `exit`:
+  [story-mode](../story/story-mode.md#the-secrets-secret-exits-splinters-the-groove-and-the-mashup)). Art: a red plate
+  with a keyhole (`tools/art/world/make_secret_exit.py`) with a soft pulse of light drawn on top. It may be waterlogged.
+  Online modes do not use it (`ModeTypes.hiddenTriggers`: hidden and inert). `level_solve GOAL=secret_exit` checks it
+  can be reached without touching the finish.
+
 ## Invisible block
 
 - **Invisible block** (`hidden_block` 15, Plataformas): FULL-cell hitbox but

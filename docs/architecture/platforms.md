@@ -50,7 +50,8 @@ Actions (`input.lua`): `move_left`, `move_right`, `jump`, `crouch`, `light` (lev
 - Input devices (0.5.10, review): `Input.lastDevice` (keyboard / mouse / gamepad / touch; a stick move > 0.6 counts as
   gamepad; the Switch starts on gamepad; Android's Back arrives as escape and no longer switches to keyboard, which
   hid the touch controls). `Input.usingPad()` decides the labels: `Input.label(action)` and `Input.hints()` (the keys
-  of every menu hint: `{ok} {back} {arrows} {lr} {ud} {up} {down} {diff} {del}`, keyboard words from the `keys.*`
+  of every menu hint: `{ok} {back} {arrows} {lr} {ud} {up} {down} {diff} {del} {alt}` (`{alt}` = the light button as a
+  menu's secondary action: the Collection on the story map), keyboard words from the `keys.*`
   language keys, pad = Nintendo layout `[A]` confirm / `[B]` back / `[Y]` light) — before, labels went by platform
   only, so a PC pad showed `[Enter]` and the Switch / Android showed PC keys written into the texts. Hints are hidden
   while using touch. Pads: `love.joystickremoved` releases the pad and the next connected one is used (a re-plugged

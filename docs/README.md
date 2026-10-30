@@ -22,8 +22,9 @@ are never edited by hand.
 | make or edit a level | [levels/editor](levels/editor.md), [levels/level-format](levels/level-format.md), [levels/generator-and-solver](levels/generator-and-solver.md), [levels/retheme](levels/retheme.md) |
 | see the level review and the proposals (Gusts, reworks, new levels) | [levels/level-review-2026-10](levels/level-review-2026-10.md) |
 | change the countdown at the start of every level (single player and online) | [gameplay/start-countdown](gameplay/start-countdown.md) |
-| change the story order, saves, results | [story/story-mode](story/story-mode.md) |
+| change the story order, saves, results, the Collection (collectibles screen, worn boss pieces) | [story/story-mode](story/story-mode.md) |
 | change the world map | [story/world-map](story/world-map.md) |
+| add a secret (secret exit, secret level, splinter, map scene) | [story/story-mode](story/story-mode.md#the-secrets-secret-exits-splinters-the-groove-and-the-mashup) |
 | change a cinematic | [story/cinematics](story/cinematics.md), [story/story](story/story.md) |
 | change the credits, add a credit or a license | [story/credits](story/credits.md) |
 | touch the bonus matches or the bot | [story/bonus-and-bot](story/bonus-and-bot.md), [gameplay/game-modes](gameplay/game-modes.md) |

@@ -4,6 +4,8 @@
 -- enemigos y trampolines: solo terreno (pinchos, agua y aire sí cuentan).
 -- PUERTAS (`door`): cerradas son sólidas como en el juego; DOORS=1,3 = abiertas las de esos id, DOORS=all = todas
 -- (el resolvedor no pulsa Activadores: así se prueba qué puertas hacen falta).
+-- GOAL=secret_exit: la meta es la SALIDA SECRETA (tile `secret_exit`); tocar la meta normal termina el nivel, así que
+-- esos estados se descartan (¿se llega a la secreta sin pasar por la meta?).
 --
 --   xvfb-run -a love tools/tests/level_solve assets/levels/x.json [x.json ...]
 -- Resultado por nivel: OK (con nº de pasos) o FALLA + la columna más lejana.
@@ -21,6 +23,8 @@ local Entities = require 'src/world/entities/Entities'
 
 local DT, K = 1 / 60, 6
 local NODROWN = os.getenv('NODROWN')    -- (sin ahogarse: ¿el terreno se puede recorrer?)
+local VENTS                                          -- (VENTS=1: ver más abajo)
+local GOAL = os.getenv('GOAL') or 'finish'          -- (el trigger que hay que tocar: 'finish' o 'secret_exit')
 local ACTIONS = {}
 for _, d in ipairs({ -1, 0, 1 }) do
     for _, j in ipairs({ false, true }) do
@@ -32,10 +36,11 @@ local function targets(level, data)
     local T, list = TILE_PX, {}
     for r = 1, level.tileH do
         for c = 1, level.tileW do
-            if level:getDef(c, r).trigger == 'finish' then list[#list + 1] = { (c - 0.5) * T, (r - 0.5) * T } end
+            if level:getDef(c, r).trigger == GOAL then list[#list + 1] = { (c - 0.5) * T, (r - 0.5) * T } end
         end
     end
-    local kind = 'meta'
+    local kind = GOAL == 'finish' and 'meta' or GOAL
+    if #list > 0 or GOAL ~= 'finish' then return list, kind end
     if #list == 0 then
         kind = 'zona'
         for _, e in ipairs(data.entities or {}) do
@@ -53,6 +58,15 @@ local function solve(path)
     data.bossZones = nil                        -- las arenas de jefe se ignoran (solo terreno)
     data.autoScroll = nil                       -- la cámara automática no cuenta: solo el terreno
     local level = Level.fromData(data)
+    -- BREAK=1: los bloques ROMPIBLES (ground pound) cuentan como ya rotos — el resolvedor no los rompe de forma fiable;
+    -- así se comprueba un camino que pasa por ellos (p. ej. el túnel de templo_del_eco hasta su salida secreta)
+    if os.getenv('BREAK') then
+        for r = 1, level.tileH do
+            for c = 1, level.tileW do
+                if level:getDef(c, r).breakable then level:setTileRaw(c, r, 0) end
+            end
+        end
+    end
     -- las puertas: cuerpos sólidos (cerradas) salvo las abiertas con DOORS
     local open, doors = {}, {}
     for id in (os.getenv('DOORS') or ''):gmatch('[^,]+') do open[id] = true end
@@ -78,6 +92,13 @@ local function solve(path)
                 power = (e.props and e.props.power) or 1.75 }
         end
     end
+    VENTS = nil
+    if os.getenv('VENTS') then
+        VENTS = {}
+        for _, v in ipairs(data.vents or {}) do
+            VENTS[#VENTS + 1] = { x = (v.col - 0.5) * TILE_PX, y0 = ((data.surfaceRow or 1) - 1) * TILE_PX, y1 = v.row * TILE_PX }
+        end
+    end
     local pa = PlayerAdventure:new((data.playerStart[1] - 0.5) * TILE_PX, (data.playerStart[2] - 0.5) * TILE_PX)
     level.players = { pa }
     local goals, kind = targets(level, data)
@@ -85,6 +106,10 @@ local function solve(path)
     if #goals == 0 and not explore then return false, 'sin meta ni zona', 0 end
     local function near(pa)
         if explore then return false end
+        if GOAL ~= 'finish' then                        -- (la secreta: tocarla de verdad)
+            local ob = pa:getOuterBounds()
+            return level:triggerInBox(ob.x, ob.y, ob.w, ob.h, GOAL)
+        end
         for _, g in ipairs(goals) do
             if math.abs(pa.x - g[1]) < TILE_PX * 0.9 and math.abs(pa.y - g[2]) < TILE_PX * 1.6 then return true end
         end
@@ -178,6 +203,16 @@ local function solve(path)
                 local before = pa.y + pa:getOuterBounds().h / 2
                 if NODROWN then pa.drownTimer, pa.drownPhase, pa.drownAudT = 0, 'none', 0 end
                 pa:update(DT, level)
+                -- VENTS=1: las BURBUJAS de aire de los respiraderos, aproximadas — la columna de cada vent, de él hasta
+                -- la superficie (`surfaceRow`), devuelve el aire al tocarla (en el juego suben a ratos)
+                if VENTS then
+                    local ob = pa:getOuterBounds()
+                    for _, v in ipairs(VENTS) do
+                        if ob.x < v.x + 24 and ob.x + ob.w > v.x - 24 and ob.y < v.y1 and ob.y + ob.h > v.y0 then
+                            pa.drownTimer, pa.drownPhase, pa.drownAudT, pa.drownChime = 0, 'none', 0, 0
+                        end
+                    end
+                end
                 -- trampolines (emulación: solo terreno + lanzamiento)
                 for _, t in ipairs(tramps) do
                     local ob = pa:getOuterBounds()
@@ -201,6 +236,10 @@ local function solve(path)
                     end
                 end
                 if pa.dying or not pa.alive or pa.drownPhase == 'dead' then ok = false; break end
+                if GOAL ~= 'finish' then                    -- (la meta normal acaba el nivel: por ahí no se llega a la otra)
+                    local ob = pa:getOuterBounds()
+                    if level:triggerInBox(ob.x, ob.y, ob.w, ob.h, 'finish') then ok = false; break end
+                end
             end
             if ok then
                 if pa.x > best then best = pa.x end

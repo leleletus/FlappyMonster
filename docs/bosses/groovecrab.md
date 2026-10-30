@@ -2,8 +2,11 @@
 
 The SECRET boss, after the game: a giant Trampoline Crabby — a FIDDLER CRAB (one big claw, one small) with visor
 sunglasses and the game's trampoline on its back — that FIGHTS TO THE BEAT OF ITS OWN THEME (`groove`, the track
-where the slap bass is the lead: `tools/music/slap_boss.py`). It appears on the world map once the Mirror (the last
-world's boss) is beaten: [world-map](../story/world-map.md#the-secret-node).
+where the slap bass is the lead: `tools/music/slap_boss.py`). Its island opens on the world map after the Mirror is beaten AND
+every splinter is owned, through the theft scene (its disco ball takes the splinters out of the crown and the amulet):
+[world-map](../story/world-map.md#the-secret-nodes), [story](../story/story.md#the-secrets-the-splinters-the-groove-and-the-true-ending).
+It is the only one the mirror's light does not shrink: its ball bounces the wave. Beating it drops nothing; it opens the
+Mega Mashup.
 **File:** `src/world/entities/types/bosses/groovecrab.lua`. **Art (its own design):** `assets/images/bosses/groovecrab/`
 (`tools/art/bosses/make_groove_crab.py`; `--gif` writes an animated mockup to `FlappyMonster_pruebas/jefes/groove/`).
 **Sounds:** reused (`megaSlam`, `megaClack`, `megaWindup`, `megaHurt`, `megaRoar`, `trampoline`, `crabPop`, `gpImpact`,

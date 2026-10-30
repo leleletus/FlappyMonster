@@ -32,6 +32,8 @@ end
 local step, t, T, shotQ = 'start', 0, 0, {}
 local introSeen
 local SHIDS, DROPPED, ENDING, FILMS, WALK1, RUN, SEC, JB
+local XS, AST
+local CAN
 local Save, Run, Worlds
 
 function love.load(a)
@@ -66,12 +68,12 @@ local function top() return gStateMachine:_top() end
 local function shot(name) shotQ[#shotQ + 1] = name end
 local function resize(w, h) love.window.setMode(w, h, { resizable = true }); love.resize(w, h) end
 
--- Lleva al jugador a la meta del nivel en curso
-local function toFinish(st)
+-- Lleva al jugador a la meta del nivel en curso (o a la casilla con otro trigger: 'secret_exit')
+local function toFinish(st, trigger)
     local lv = st.level
     for r = 1, lv.tileH do
         for c = 1, lv.tileW do
-            if lv:getDef(c, r).trigger == 'finish' then
+            if lv:getDef(c, r).trigger == (trigger or 'finish') then
                 st.player.x, st.player.y = (c - 0.5) * TILE_PX, (r - 0.5) * TILE_PX
                 st.player.vx, st.player.vy = 0, 0
                 return true
@@ -81,6 +83,20 @@ local function toFinish(st)
 end
 
 local go = function(s) step, T = s, t end
+-- (los nodos del MAPA de un mundo: sus niveles, el bonus y sus secretos, como los pone StoryMapState)
+local function mapNodesOf(w)
+    local list = {}
+    for _, n in ipairs(Worlds.nodes(w)) do list[#list + 1] = n end
+    if Worlds.bonus(w) then list[#list + 1] = Worlds.bonus(w) end
+    for _, n in ipairs(Worlds.secrets(w)) do list[#list + 1] = n end
+    return list
+end
+local function mapNode(w, k) return mapNodesOf(w)[k] end
+local function stopOfMap(w, k)                -- (= StoryMapState:_stopOf, sin estar en el mapa)
+    local i = k
+    for ww = 1, w - 1 do i = i + #mapNodesOf(ww) end
+    return i
+end
 function love.update(dt)
     t = t + dt
     local cur = press; press = {}
@@ -777,35 +793,271 @@ function love.update(dt)
              tostring(RUN.film1), tostring(RUN.finish == 0), tostring(RUN.active), tostring(RUN.cinema), tostring(RUN.chase), tostring(RUN.seen), tostring(RUN.behind), RUN.moved or 0, tostring(RUN.camEnd == RUN.cam0), RUN.vol0 or -1, RUN.vol1 or -1, RUN.vx or 0, (RUN.wall or 0) - (RUN.px or 0),
              tostring(FILMS[2]), tostring(st.levelPath), tostring(Run.isDone('huida_del_espejo')), tostring(Run.data.node)))
         gStateMachine:change('story_map', { world = 1, node = 1 }); go('sec1')
-    -- EL NIVEL SECRETO (Worlds `secret`, el Groove): sin el jefe del último mundo, ni se ve ni es una parada; vencido,
-    -- aparece como la última parada (un ramal desde el bonus del Final) y se juega su nivel
+    -- LOS SECRETOS (Worlds `secrets`). El GROOVE: sin vencer al Espejo, o sin TODAS las astillas (las de tipo 'splinter'
+    -- de assets/story/collectibles.json, en cualquier estado: también 'stolen'), ni se ve ni es una parada ni le lleva
+    -- una flecha; con las dos cosas aparece (un ramal desde el bonus del Final) y se juega su nivel. El MEGA MASHUP
+    -- cuelga del Groove: escondido hasta vencerlo
     elseif step == 'sec1' and t - T > 0.3 then
         local w = Worlds.count()
+        local keep = {}
+        for k, v in pairs(Run.data.done) do keep[k] = v end
+        SEC = { keepDone = keep }
         Run.data.done[Worlds.get(w).boss] = nil
+        Run.data.collect, Run.data.found = { astilla_crabby = true, astilla_gloomy = true }, {}
         gStateMachine:change('story_map', { world = w, node = #Worlds.nodes(w) + 1 }); go('sec2')
     elseif step == 'sec2' and t - T > 0.3 then
         local w = Worlds.count()
-        local total, all = st:_stops()
-        local sec = st:_stopOf(w, #Worlds.nodes(w) + 2)
-        local arrows = false
-        for _, i in pairs(st:_dirs(w, #Worlds.nodes(w) + 1)) do if i == sec then arrows = true end end
-        SEC = { hidden = Run.secretState(w) == 'locked' and total == all - 1 and not arrows and sec == all }
+        SEC.gk, SEC.mk = #Worlds.nodes(w) + 2, #Worlds.nodes(w) + 3          -- (el bonus, el Groove, el Mashup)
+        local function hidden(k)                     -- (ni parada que se vea, ni flecha desde el nodo del que sale)
+            local total, all = st:_stops()
+            local stop = st:_stopOf(w, k)
+            for _, i in pairs(st:_dirs(w, k - 1)) do if i == stop then return false end end
+            return Run.secretState(mapNode(w, k).id) == 'locked' and total < all
+        end
+        SEC.noMirror = hidden(SEC.gk)
         Run.data.done[Worlds.get(w).boss] = true
-        gStateMachine:change('story_map', { world = w, node = #Worlds.nodes(w) + 1 }); go('sec3')
-    elseif step == 'sec3' and t - T > 0.3 then
+        Run.data.collect = { astilla_crabby = true }
+        SEC.noSplinter = hidden(SEC.gk)
+        SEC.mashHidden = hidden(SEC.mk)
+        -- con las dos: EL ROBO (escena del mapa, StoryMapScenes 'groove') se pone sola; hasta que acaba (o se salta), el
+        -- Groove sigue cerrado; después las astillas quedan robadas ('stolen') y su isla, abierta
+        Run.data.collect = { astilla_crabby = true, astilla_gloomy = true }
+        Run.data.films.groove, Run.data.films.regrow, Run.data.films.disco = nil, nil, nil
+        gStateMachine:change('story_map', { world = w, node = #Worlds.nodes(w) + 1 }); go('sec2b')
+    elseif step == 'sec2b' and ((st._sceneNow and st:_sceneNow() == 'groove' and select(2, st:_sceneNow()) > 3.2) or t - T > 10) then
+        SEC.scene = st._sceneNow and st:_sceneNow() == 'groove'
+        SEC.lockedDuring = Run.secretState('isla_del_groove') == 'locked'
+        shot('scene_groove')
+        pressNext('confirm'); go('sec3')                                    -- (se salta: su efecto se aplica igual)
+    elseif step == 'sec3' and t - T > 2.2 then
         local w = Worlds.count()
-        local total, all = st:_stops()
-        SEC.open = Run.secretState(w) == 'open' and total == all
+        SEC.open = Run.secretState('isla_del_groove') == 'open' and mapNode(w, SEC.gk).id == 'isla_del_groove'
+        SEC.stolen = Run.data.collect.astilla_crabby == 'stolen' and Run.data.collect.astilla_gloomy == 'stolen' and Run.data.films.groove == true
+                     and Save.load(1).collect.astilla_crabby == 'stolen'
         shot('map_secret')
-        st:_walkTo(all); go('sec4')
+        st:_walkTo(st:_stopOf(w, SEC.gk)); go('sec4')
     elseif step == 'sec4' and #st.queue == 0 and t - T > 0.3 then
-        SEC.there = st.node == #Worlds.nodes(Worlds.count()) + 2
+        SEC.there = st.node == SEC.gk
         st:_play(); go('sec5')
     elseif step == 'sec5' and (st.level or t - T > 6) then
         if st.startCd then CD_DONE = true end
-        check('secreto', SEC.hidden and SEC.open and SEC.there and st.levelPath == Worlds.path('isla_del_groove'),
-            ('sin vencer al Espejo, escondido (ni parada ni flecha)=%s; vencido, abierto=%s; anda hasta él=%s; entra en %s'):format(
-             tostring(SEC.hidden), tostring(SEC.open), tostring(SEC.there), tostring(st.levelPath)))
+        check('secreto', SEC.noMirror and SEC.noSplinter and SEC.scene and SEC.lockedDuring and SEC.open and SEC.stolen and SEC.there and st.levelPath == Worlds.path('isla_del_groove'),
+            ('sin vencer al Espejo, escondido=%s; vencido pero sin todas las astillas, escondido=%s; con las dos, la escena del robo=%s (cerrado mientras=%s); después abierto=%s, astillas robadas y guardado=%s; anda hasta él=%s; entra en %s'):format(
+             tostring(SEC.noMirror), tostring(SEC.noSplinter), tostring(SEC.scene), tostring(SEC.lockedDuring), tostring(SEC.open), tostring(SEC.stolen), tostring(SEC.there), tostring(st.levelPath)))
+        -- el Groove vencido: se abre el MEGA MASHUP, se entra y, terminado (en su salida: es un EVENTO y conserva su meta),
+        -- da la BOLA DE DISCOTECA, guardada al acabar
+        -- (al volver, la escena de los tres que CRECEN otra vez: StoryMapScenes 'regrow'; luego se abre el Mashup)
+        Run.data.done.isla_del_groove = true
+        Run.save()
+        gStateMachine:change('story_map', { world = Worlds.count(), node = SEC.gk }); go('mash0')
+    elseif step == 'mash0' and ((st._sceneNow and st:_sceneNow() == 'regrow' and select(2, st:_sceneNow()) > 2.6) or t - T > 10) then
+        SEC.regrow = st._sceneNow and st:_sceneNow() == 'regrow' and Run.secretState('mashup_cangrejos') == 'locked'
+        shot('scene_regrow')
+        pressNext('confirm'); go('mash1')
+    elseif step == 'mash1' and t - T > 2.2 then
+        SEC.mashOpen = Run.secretState('mashup_cangrejos') == 'open'
+        st:_walkTo(st:_stopOf(Worlds.count(), SEC.mk)); go('mash2')
+    elseif step == 'mash2' and #st.queue == 0 and t - T > 0.3 then
+        SEC.mashThere = st.node == SEC.mk
+        shot('map_mashup')
+        st:_play(); go('mash3')
+    elseif step == 'mash3' and st.level and t - T > 1.0 then
+        local fin = 0
+        for r = 1, st.level.tileH do for c = 1, st.level.tileW do if st.level:getDef(c, r).trigger == 'finish' then fin = fin + 1 end end end
+        SEC.mash = { level = st.levelPath, event = st.level.event, finish = fin }
+        toFinish(st); go('mash4')
+    elseif step == 'mash4' and t - T > 0.5 and not SEC.mash.notYet then
+        SEC.mash.notYet = Run.data.collect.bola_disco == nil and Save.load(1).collect.bola_disco == nil and st.won == true
+    elseif step == 'mash4' and ((st.args and st.args.summary ~= nil) or t - T > 12) then
+        -- (de los resultados al mapa: EL FINAL DE VERDAD, StoryMapScenes 'disco': las astillas vuelven a sus monturas)
+        SEC.mash.results = st.args ~= nil and st.args.summary ~= nil
+        gStateMachine:change('story_map', st.args and st.args.map or { world = Worlds.count(), node = SEC.mk }); go('mash5')
+    elseif step == 'mash5' and ((st._sceneNow and st:_sceneNow() == 'disco' and select(2, st:_sceneNow()) > 5.8) or t - T > 12) then
+        SEC.mash.disco = st._sceneNow and st:_sceneNow() == 'disco'
+        shot('scene_disco')
+        pressNext('confirm'); go('mash6')
+    elseif step == 'mash6' and t - T > 0.5 then
+        local M = SEC.mash
+        M.back = Run.data.collect.astilla_crabby == true and Run.data.collect.astilla_gloomy == true and Run.data.films.disco == true
+        check('mashup', SEC.mashHidden and SEC.mashOpen and SEC.mashThere and M.level == Worlds.path('mashup_cangrejos') and M.event and M.finish > 0
+            and M.notYet and Run.data.collect.bola_disco == true and Save.load(1).collect.bola_disco == true and Run.isDone('mashup_cangrejos')
+            and SEC.regrow and M.results and M.disco and M.back,
+            ('sin vencer al Groove, escondido=%s; vencido, la escena de los tres que crecen (cerrado mientras)=%s; luego abierto=%s; anda hasta él=%s; entra en %s (evento=%s, con meta=%d); en la meta sin terminar, sin bola=%s; terminado: resultados=%s, bola de discoteca en la partida=%s, en disco=%s; en el mapa, el final de verdad=%s y las astillas de vuelta=%s'):format(
+             tostring(SEC.mashHidden), tostring(SEC.regrow), tostring(SEC.mashOpen), tostring(SEC.mashThere), tostring(M.level), tostring(M.event), M.finish,
+             tostring(M.notYet), tostring(M.results), tostring(Run.data.collect.bola_disco), tostring(Save.load(1).collect.bola_disco), tostring(M.disco), tostring(M.back)))
+        -- LA SALIDA SECRETA del Arrecife Globo (Costa): con el nodo secreto ESCONDIDO, se juega el arrecife y se acaba
+        -- por su salida secreta (tile `secret_exit`): resultados como siempre y, de vuelta en el mapa, su camino se
+        -- dibuja solo y sale el nodo rojo; guardado al TERMINAR el nivel
+        local d = Run.data
+        d.done, d.collect, d.found = {}, {}, {}
+        for _, n in ipairs(Worlds.nodes(1)) do d.done[n.id] = true end
+        local W2 = Worlds.nodes(2)
+        for k = 1, #W2 - 2 do d.done[W2[k].id] = true end                          -- (hasta el arrecife, abierto)
+        Run.save()
+        XS = { k = #W2 - 1, gk = #mapNodesOf(2) }
+        gStateMachine:change('story_map', { world = 2, node = XS.k }); go('xs1')
+    elseif step == 'xs1' and t - T > 0.4 then
+        local stop = st:_stopOf(2, XS.gk)
+        XS.arrow0 = false
+        for _, i in pairs(st:_dirs(2, XS.k)) do if i == stop then XS.arrow0 = true end end
+        XS.hidden = Run.secretState('guarida_cangrejo_rey') == 'locked' and mapNode(2, XS.gk).id == 'guarida_cangrejo_rey' and not XS.arrow0
+        pressNext('confirm'); go('xs2')
+    elseif step == 'xs2' and st.level and t - T > 0.8 then
+        XS.level = st.levelPath
+        XS.tile = toFinish(st, 'secret_exit')
+        go('xs3')
+    elseif step == 'xs3' and t - T > 0.5 then
+        XS.won = st.won == true and st.secretExit == true
+        XS.notYet = Run.data.found.guarida_cangrejo_rey == nil and (Save.load(1).found or {}).guarida_cangrejo_rey == nil
+        go('xs4')
+    elseif step == 'xs4' and ((st.args and st.args.summary ~= nil) or t - T > 8) then
+        XS.results = st.args ~= nil and st.args.summary ~= nil
+        XS.saved = Run.data.found.guarida_cangrejo_rey == true and Save.load(1).found.guarida_cangrejo_rey == true and Run.isDone('arrecife_globo')
+        local m = st.args and st.args.map or { world = 2, node = XS.k }
+        XS.opened = false
+        for _, i in ipairs(m.opened or {}) do if i == stopOfMap(2, XS.gk) then XS.opened = true end end
+        gStateMachine:change('story_map', m); go('xs5')
+    elseif step == 'xs5' and t - T > 0.85 then
+        shot('map_secret_path')                       -- (el camino a medio dibujar)
+        XS.midNode = st.opening and st.opening[st:_stopOf(2, XS.gk)] and st.t < 1.5
+        go('xs6')
+    elseif step == 'xs6' and t - T > 1.3 then
+        shot('map_secret_open')
+        local stop = st:_stopOf(2, XS.gk)
+        XS.arrow = false
+        for _, i in pairs(st:_dirs(2, XS.k)) do if i == stop then XS.arrow = true end end
+        check('salida_secreta', XS.hidden and XS.level == Worlds.path('arrecife_globo') and XS.tile and XS.won and XS.notYet and XS.results
+            and XS.saved and XS.opened and XS.midNode and XS.arrow and Run.secretState('guarida_cangrejo_rey') == 'open' and st.node == XS.k,
+            ('antes, el nodo secreto escondido (sin flecha)=%s; entra en %s, toca la salida secreta=%s → nivel superado=%s, sin guardar aún=%s; resultados=%s; guardado al terminar=%s; en el mapa se abre a la vista=%s (camino dibujándose=%s), con flecha desde el arrecife=%s; sigue en el nodo %s'):format(
+             tostring(XS.hidden), tostring(XS.level), tostring(XS.tile), tostring(XS.won), tostring(XS.notYet), tostring(XS.results),
+             tostring(XS.saved), tostring(XS.opened), tostring(XS.midNode), tostring(XS.arrow), tostring(st.node)))
+        st:_walkTo(stop); go('ast1')
+    -- LA ASTILLA del Mega Crabby: su jefe secreto la SUELTA al caer (la corona: su icono), se recoge, no se guarda
+    -- hasta terminar el nivel (que acaba solo al vencerlo); con ella ya en la partida, no la vuelve a soltar
+    elseif step == 'ast1' and #st.queue == 0 and t - T > 0.3 then
+        AST = { walked = st.node == XS.gk }
+        st:_play(); go('ast2')
+    elseif step == 'ast2' and st.level and t - T > 0.8 then
+        local z = st.level.bossZones[1]
+        st.player.x, st.player.y = require('src/world/systems/BossZones').safeSpawn(st.level, z)
+        st.player.spawnX, st.player.spawnY = st.player.x, st.player.y
+        AST.level = st.levelPath
+        AST.items = st.shards and #st.shards.items or 0
+        go('ast3')
+    elseif step == 'ast3' and (st.level.bossZones[1].state == 'fight' or t - T > 25) then
+        for _, e in ipairs(st.enemies) do if e.def.category == 'Jefes' then e:defeat() end end
+        st.player:grantInvulnerability(60)
+        go('ast4')
+    elseif step == 'ast4' and ((st.shards and #st.shards.list > 0 and st.shards.list[1].t > 0.9) or t - T > 25) then
+        local s1 = st.shards and st.shards.list[1]
+        AST.drop = s1 and s1.collect and s1.id
+        if s1 then shot('splinter_drop'); st.player.x, st.player.y, st.player.vx, st.player.vy = s1.x, s1.y, 0, 0 end
+        go('ast5')
+    elseif step == 'ast5' and t - T > 0.4 then
+        AST.held = st.shards and st.shards.cgot == 1
+        AST.notYet = Run.data.collect.astilla_crabby == nil and (Save.load(1).collect or {}).astilla_crabby == nil
+        go('ast6')
+    elseif step == 'ast6' and ((st.args and st.args.summary ~= nil) or t - T > 12) then
+        local Collect = require 'src/story/Collect'
+        local again = #Collect.drops('guarida_cangrejo_rey', Run.data)
+        check('astilla', AST.walked and AST.level == Worlds.path('guarida_cangrejo_rey') and AST.items == 1 and AST.drop == 'astilla_crabby'
+            and AST.held and AST.notYet and st.args ~= nil and st.args.summary ~= nil and Run.data.collect.astilla_crabby == true
+            and Save.load(1).collect.astilla_crabby == true and again == 0,
+            ('anda al nodo secreto=%s; entra en %s (%d coleccionable por soltar); el jefe suelta %s, recogida=%s, sin guardar aún=%s; el nivel acaba solo (resultados=%s); guardada=%s (disco %s); con ella, la vuelve a soltar %d'):format(
+             tostring(AST.walked), tostring(AST.level), AST.items, tostring(AST.drop), tostring(AST.held), tostring(AST.notYet),
+             tostring(st.args ~= nil and st.args.summary ~= nil), tostring(Run.data.collect.astilla_crabby), tostring(Save.load(1).collect.astilla_crabby), again))
+        -- partidas de ANTES de los secretos (versión 3): llegan a la 4 sin coleccionables ni salidas encontradas, y quien
+        -- ya había jugado la guarida del Mega Crabby fuera de la historia (o cuando era el jefe de la Costa) no se lleva nada
+        local S = require 'src/story/Save'
+        local v3 = { version = 3, world = 2, worldReward = {}, open = {}, done = { reino_gummy = true, guarida_cangrejo_rey = true, gruta_lugubre = true, arrecife_globo = true } }
+        S.migrate(v3)
+        local function empty(tb) return type(tb) == 'table' and next(tb) == nil end
+        check('migrar_secretos', v3.version == S.VERSION and S.VERSION >= 4 and empty(v3.collect) and empty(v3.found) and v3.done.guarida_cangrejo_rey == nil
+            and v3.done.gruta_lugubre == nil and v3.done.arrecife_globo == true and v3.world == 2,
+            ('versión 3 → %s: coleccionables vacíos=%s, salidas encontradas vacías=%s; la guarida y la gruta ya no superadas=%s/%s; el arrecife sigue=%s'):format(
+             tostring(v3.version), tostring(empty(v3.collect)), tostring(empty(v3.found)), tostring(v3.done.guarida_cangrejo_rey == nil),
+             tostring(v3.done.gruta_lugubre == nil), tostring(v3.done.arrecife_globo)))
+        Run.data.done, Run.data.collect, Run.data.found = SEC.keepDone, {}, {}
+        Run.save()
+        CAN = { keep = Run.data.done, keepOpen = Run.data.open }
+        go('can1')
+    -- LOS CAÑONES entre islas (StoryMapCannons): con el mundo 1 superado (el 2 abierto, el 3 no), del castillo del
+    -- mundo 1 al primer nivel del 2 por la FLECHA que lleva allí: anda al cañón, se mete, apunta, mecha, ¡bum!, vuela,
+    -- cae y llega al nodo; suena la música de la isla nueva; y de vuelta con el otro cañón. Un cruce CERRADO no
+    -- dispara. Capturas del vuelo: story_cannon_<momento>.png
+    elseif step == 'can1' and t - T > 0.3 then
+        Run.data.done, Run.data.open = {}, {}
+        for _, n in ipairs(Worlds.nodes(1)) do Run.data.done[n.id] = true end
+        local n1 = #Worlds.nodes(1)
+        gStateMachine:change('story_map', { world = 1, node = n1 }); go('can2')
+    elseif step == 'can2' and t - T > 0.4 then
+        local function arrowTo(w, k)
+            local want = st:_stopOf(w, k)
+            for name, i in pairs(st:_dirs()) do if i == want then return name end end
+        end
+        CAN.dirF = arrowTo(2, 1)
+        CAN.shots0, CAN.phases, CAN.snap = st.cannonShots or 0, {}, {}
+        if CAN.dirF then pressNext('nav_' .. CAN.dirF) end
+        go('can3')
+    elseif step == 'can3' then
+        local F = st.flight
+        if F then
+            if not CAN.phases[F.ph] then CAN.phases[F.ph] = true; CAN.phases[#CAN.phases + 1] = F.ph end
+            CAN.music = CAN.music or {}
+            if F.ph == 'fly' then CAN.maxH = math.max(CAN.maxH or 0, st.flyH or 0); CAN.musicMid = CAN.musicMid or (F.t / F.T > 0.9 and Sound.musicPosition()) end
+            for _, m in ipairs({ { 'hop', 0.6 }, { 'aim', 0.9 }, { 'fuse', 0.5 }, { 'fly', 0.05 }, { 'fly', 0.4 }, { 'fly', 0.8 }, { 'land', 0.15 } }) do
+                local key = m[1] .. m[2]
+                local u = (m[1] == 'fly') and F.t / F.T or F.t / ({ hop = 0.32, aim = 0.45, fuse = 0.6, land = 0.4 })[m[1]]
+                if F.ph == m[1] and u >= m[2] and not CAN.snap[key] then
+                    CAN.snap[key] = true
+                    CAN.nshot = (CAN.nshot or 0) + 1
+                    shot(('cannon_%d_%s%d'):format(CAN.nshot, m[1], math.floor(m[2] * 100)))
+                end
+            end
+        end
+        if not F and #st.queue == 0 and t - T > 1 then
+            local x, y = st:_nodeXY(2, 1)
+            CAN.fwd = st.world == 2 and st.node == 1 and math.abs(st.heroX - x) < 1 and math.abs(st.heroY - y) < 1
+                and (st.cannonShots or 0) == CAN.shots0 + 1 and #CAN.phases >= 7 and (CAN.maxH or 0) > 60
+            CAN.musicF = Sound.musicPosition()
+            CAN.fwdMsg = ('flecha %s; fases %s; altura máx. %.0f px; llega a %d:%d'):format(tostring(CAN.dirF), table.concat(CAN.phases, '>'),
+                CAN.maxH or 0, st.world, st.node)
+            local want = st:_stopOf(1, #Worlds.nodes(1))
+            for name, i in pairs(st:_dirs()) do if i == want then CAN.dirB = name end end
+            CAN.phases = {}
+            if CAN.dirB then pressNext('nav_' .. CAN.dirB) end
+            go('can4')
+        elseif t - T > 15 then CAN.fwdMsg = 'no llegó (15 s)'; go('can5') end
+    elseif step == 'can4' then
+        local F = st.flight
+        if F and not CAN.phases[F.ph] then CAN.phases[F.ph] = true; CAN.phases[#CAN.phases + 1] = F.ph; CAN.sideB = F.side end
+        if not F and #st.queue == 0 and t - T > 1 then
+            local n1 = #Worlds.nodes(1)
+            local x, y = st:_nodeXY(1, n1)
+            CAN.back = st.world == 1 and st.node == n1 and math.abs(st.heroX - x) < 1 and math.abs(st.heroY - y) < 1
+                and (st.cannonShots or 0) == CAN.shots0 + 2 and CAN.sideB == 'b'
+            CAN.musicB = Sound.musicPosition()
+            CAN.backMsg = ('flecha %s; cañón %s; fases %s; llega a %d:%d'):format(tostring(CAN.dirB), tostring(CAN.sideB), table.concat(CAN.phases, '>'), st.world, st.node)
+            -- CERRADO: el castillo del mundo 2 (sin superar: la isla 3 sigue cerrada) no cruza a la 3
+            local n2 = #Worlds.nodes(2)
+            gStateMachine:change('story_map', { world = 2, node = n2 })
+            go('can5')
+        elseif t - T > 15 then CAN.backMsg = 'no volvió (15 s)'; go('can5') end
+    elseif step == 'can5' and t - T > 0.4 then
+        CAN.shotsL = st.cannonShots or 0
+        st:_walkTo(st:_stopOf(3, 1))
+        CAN.lockMoved = #st.queue > 0 or st.world ~= 2
+        shot('cannon_locked')
+        go('can6')
+    elseif step == 'can6' and t - T > 1.2 then
+        local locked = Run.state(3, 1) == 'locked' and not CAN.lockMoved and st.flight == nil and (st.cannonShots or 0) == CAN.shotsL
+        local want1, want2 = 'map_' .. Worlds.get(2).id, 'map_' .. Worlds.get(1).id
+        local mus = CAN.musicF == want1 and CAN.musicB == want2 and CAN.musicMid == want1
+        check('canon', CAN.fwd and CAN.back and locked and mus,
+            ('ida=%s (%s); vuelta=%s (%s); cruce cerrado no dispara=%s; música: al caer %s, en el 2 %s, de vuelta %s'):format(
+            tostring(CAN.fwd), tostring(CAN.fwdMsg), tostring(CAN.back), tostring(CAN.backMsg), tostring(locked),
+            tostring(CAN.musicMid), tostring(CAN.musicF), tostring(CAN.musicB)))
+        Run.data.done, Run.data.open = CAN.keep, CAN.keepOpen
         gStateMachine:change('story_map', { world = 1, node = 1 }); go('del')
     elseif step == 'del' and t - T > 0.3 then
         resize(1280, 720)

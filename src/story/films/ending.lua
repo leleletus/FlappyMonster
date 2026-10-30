@@ -197,6 +197,37 @@ local function ringMax()
     return r + 400
 end
 
+-- LOS SECRETOS en el final (decisiones del usuario, 2026-10-29; StoryMapScenes): la onda encoge también a los
+-- cangrejos secretos que la partida descubrió (en su nodo rojo; `small` = 0..1 de encogidos) y, si la partida tiene
+-- TODAS las astillas, el GROOVE no encoge: su bola de discoteca rebota la onda (un anillo que vuelve desde su islote).
+-- Sin ellos, nada de esto se dibuja: el final de siempre.
+local function secretExtras(map, t, R, small, bounceAt)
+    for _, sc in ipairs(map.secretCrabs()) do
+        local u = small or 0
+        if u < 0.5 then map:_drawBossArt(sc.art, sc.x, sc.y, 0, lerp(1, 0.6, u * 2))
+        else map:_drawBossArt(sc.small, sc.x, sc.y, 0, 1) end
+    end
+    local gx, gy = map.grooveSpot()
+    if gx then
+        map.drawGrooveArt(gx, gy, t, 3, true)
+        map.drawDiscoBall(gx, gy - 74, t, 3, true)
+        if R then                                                 -- (la onda llega al islote y REBOTA en la bola)
+            local vx, vy = K.volcanoXY()
+            local d = math.sqrt((gx - vx) ^ 2 + (gy - 74 - vy + 30) ^ 2)
+            local back = R - d
+            if back > 0 and back < 600 then
+                love.graphics.setBlendMode('add')
+                love.graphics.setColor(1, 0.7, 1, 0.5 * (1 - back / 600))
+                love.graphics.setLineWidth(14)
+                love.graphics.circle('line', gx, gy - 74, back, 48)
+                love.graphics.setLineWidth(1)
+                love.graphics.setBlendMode('alpha')
+                love.graphics.setColor(1, 1, 1, 1)
+            end
+        end
+    end
+end
+
 F.light = {
     enter = function(c)
         local map = Stage.map()
@@ -226,6 +257,7 @@ F.light = {
             love.graphics.push()
             love.graphics.translate(-ox, -oy)
             K.drawExtras(map, K.all(1))
+            secretExtras(map, t, R, nil)
             Stage.rays(vx, vy - 30, t * 2, 8, 150, 0.35)
             if t >= c.at('wave') then                             -- la onda: tres anillos duros
                 love.graphics.setBlendMode('add')
@@ -277,6 +309,8 @@ F.shrink = {
             love.graphics.push()
             love.graphics.translate(-ox, -oy)
             K.drawExtras(map, c.v.sizes)
+            -- (los cangrejos secretos encogen todos a la vez, en el plano de todas las islas; el Groove, no)
+            secretExtras(map, t, nil, wide and K.elastic(math.min(1, (t - (c.at('first') + N * each)) / c.b(0.9))) or 0)
             Stage.drawSparks()
             love.graphics.pop()
         end

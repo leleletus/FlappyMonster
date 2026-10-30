@@ -134,7 +134,38 @@ return {
         go_game = "Sin vidas: la aventura empieza de nuevo",
         go_notice = "GAME OVER: DE VUELTA AL PRINCIPIO",
         soon = "PRÓXIMAMENTE",
-        map_hint = "{arrows} andar    {ok} jugar    {back} partidas",
+        map_hint = "{arrows} andar    {ok} jugar    {alt} colección    {back} partidas",
+        -- LA COLECCIÓN (src/states/story/StoryCollectionState.lua; catálogo assets/story/collectibles.json: cada
+        -- coleccionable tiene aquí name, desc, how y hint)
+        collect = {
+            title = "COLECCIÓN",
+            count = "{n} / {total}",
+            map = "Colección {n}/{total}",
+            hint = "{arrows} elegir    {back} volver",
+            unknown = "???",
+            state = { stolen = "ROBADA" },
+            kind = { splinter = "Astilla del espejo", trophy = "Trofeo" },
+            astilla_crabby = {
+                name = "Corona de conchas",
+                desc = "Conchas y coral con una astilla del espejo engastada. La llevaba el Mega Crabby.",
+                how = "Venciste al Mega Crabby en su guarida, por la salida secreta del Arrecife Globo.",
+                hint = "Un nivel de la Costa esconde una salida secreta...",
+                stolen = "El Groove te robó la astilla para su bola de discoteca: solo te queda la corona.",
+            },
+            astilla_gloomy = {
+                name = "Amuleto lúgubre",
+                desc = "Una astilla del espejo que cuelga de un cordón y atrapa la luz. La llevaba el Mega Crabby lúgubre.",
+                how = "Venciste al Mega Crabby lúgubre en su gruta, por la salida secreta del Templo del Eco.",
+                hint = "Un nivel de las Cuevas esconde una salida secreta...",
+                stolen = "El Groove te robó la astilla para su bola de discoteca: solo te queda el engarce.",
+            },
+            bola_disco = {
+                name = "Bola de discoteca",
+                desc = "La bola del Groove, hecha con astillas del espejo. Por fin, completa.",
+                how = "Venciste a los cuatro cangrejos en el Mega Mashup.",
+                hint = "Reúne todas las astillas y sigue el ritmo...",
+            },
+        },
         world = {
             pradera = "LA PRADERA", costa = "LA COSTA", fortaleza = "LA FORTALEZA",
             nieve = "LAS MONTAÑAS HELADAS", cuevas = "LAS CUEVAS", final = "EL FINAL",
@@ -164,6 +195,7 @@ return {
         go = "¡YA!",
         boss = "¡JEFE!",
         shard = "¡FRAGMENTO DEL ESPEJO!",
+        collect = "¡UN TESORO SECRETO!",         -- (un coleccionable que suelta un jefe: src/story/Collect.lua)
         boss_defeated = "¡JEFE DERROTADO!",
         you = "TÚ",
     },

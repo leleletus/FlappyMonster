@@ -25,6 +25,14 @@ what (`SHARED_SOUNDS`, `PRIVATE_SOUNDS`). Sounds can also be NOISE that enemies 
 bells as the iris closes), `countTick` / `countGo` (the start countdown). At ≈ −12 dBFS, no GAIN entry. Not listened
 to by anyone yet.
 
+## The world map's cannon
+
+`tools/sounds/map_cannon.py` (reuses `megacrabby.py`'s helpers and `story.py`'s `save`) → `assets/sounds/story/`:
+`cannonLoad` (the hero drops in: hollow iron clonk + a short comic boing), `cannonFuse` (0.6 s crackling hiss),
+`cannonBoom` (low thump, crack and a smoky tail), `cannonWhoosh` (air passing by, filter up and down), `cannonLand`
+(dull thud + a little bounce). Each at −12 dBFS, no GAIN entry. Played by `StoryMapCannons`
+([world map](../story/world-map.md#cannons-between-islands)). Not listened to by anyone yet.
+
 ## The Penguin's sounds
 
 `tools/sounds/penguin.py` (reuses `jungle_enemies.py`'s helpers) → `assets/sounds/enemies/penguin/`: `penguinSquawk`

@@ -60,10 +60,15 @@ giant by touching a mirror shard ("La Furia del Espejo").
 - [ ] The user's verdict on the fight.
 
 ### 3. Secret bosses
-- [ ] Secret exits (which levels; how a level has two exits; the map shows the lairs once found).
-- [ ] `guarida_cangrejo_rey` and `gruta_lugubre` as secret levels; their bosses drop the secret collectible.
-- [ ] The secret collectible: what it is, where it is saved and shown (save data, results, map).
-- [ ] Films / story text that mention the crabs as shard holders (`docs/story/`).
+- [x] (2026-10-29, unreleased) Secret exits: tile `secret_exit` in `arrecife_globo` and `templo_del_eco`; red keyhole
+      nodes whose path draws itself once found ([story-mode](../story/story-mode.md#the-secrets-secret-exits-splinters-the-groove-and-the-mashup)).
+- [x] (2026-10-29) `guarida_cangrejo_rey` and `gruta_lugubre` as secret levels (`Worlds` `secrets`); their bosses drop
+      their splinter piece (the Shell Crown, the Gloomy Amulet).
+- [x] (2026-10-29) The secret collectible: the mirror SPLINTERS (`assets/story/collectibles.json`, save `collect`,
+      the Collection screen); the Groove's island asks for all of them; the Mashup gives the Disco Ball.
+- [x] (2026-10-29) Story text: the splinters, the theft, the true ending ([story](../story/story.md)). The Collection
+      screen and its art: the Collection agent's work.
+- [ ] The user's verdict on the secret exits' places, the map scenes and the ending's secret additions (not played).
 
 ### 4. The Groove (secret, after the game) — not in the original plan
 - [x] (0.5.45) A third new boss born from its music (`groove`): [groovecrab](groovecrab.md), level `isla_del_groove`,

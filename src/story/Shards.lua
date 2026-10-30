@@ -6,7 +6,11 @@
 --   Shards.LEVEL[nivel] = nº de fragmento       Shards.ids(n, xtra) → { '3' } | { '3a', '3b' }
 --   Shards.count(data) → tengo, total           Shards.pending(nivel, data) → los que faltan de ese nivel
 --   Shards.drops(state, def) → el gestor dentro de un nivel (AdventureState: args.shards = def)
---     def = { ids = { ... }, onGet = function(id) end, final = bool }
+--     def = { ids = { ... }, onGet = function(id) end, final = bool, auto = bool,
+--             collect = { { id, boss }, ... }, onCollect = function(id) end }
+--   `collect` = los COLECCIONABLES que sueltan los jefes de este nivel (src/story/Collect.lua: las astillas de los
+--   cangrejos secretos): la misma pieza que flota y se recoge, con su icono; cada uno solo lo suelta el jefe de su
+--   tipo (`boss`); los fragmentos, cualquier jefe
 -- Solo existe en el modo historia de un jugador (no es parte de la simulación compartida: no toca la física
 -- de nadie; el fragmento flota y se recoge al tocarlo).
 local Difficulty = require 'src/core/Difficulty'
@@ -93,6 +97,7 @@ local TOUCH = 46            -- px (medio lado de su caja)
 
 function Shards.drops(state, def)
     return setmetatable({ state = state, ids = def.ids or {}, onGet = def.onGet, final = def.final, auto = def.auto,
+                          items = def.collect or {}, onCollect = def.onCollect, cgot = 0,
                           next = 1, list = {}, seen = {}, got = 0 }, Drops)
 end
 
@@ -102,19 +107,27 @@ function Drops:allGot() return #self.ids > 0 and self.got >= #self.ids end
 -- ningún fragmento suyo por recoger; si la partida ya los tenía, basta con vencerlos)
 function Drops:cleared()
     if not self.bosses or #self.bosses == 0 then return false end
-    for _, e in ipairs(self.bosses) do if self.seen[e] ~= 'dropped' then return false end end
-    return #self.list == 0 and self.got >= #self.ids
+    -- (un jefe que no guarda nada — el Groove: Boss:shardDrop false — cuenta al morir)
+    for _, e in ipairs(self.bosses) do if self.seen[e] ~= 'dropped' and e.alive ~= false then return false end end
+    return #self.list == 0 and self.got >= #self.ids and self.cgot >= #self.items
 end
 
--- Un fragmento sale de (x, y): sube en arco (hacia `dir`, lanzado) y se queda flotando
-function Drops:spawn(x, y, dir)
-    local id = self.ids[self.next]
-    if not id then return end
-    self.next = self.next + 1
+-- Un fragmento sale de (x, y): sube en arco (hacia `dir`, lanzado) y se queda flotando. Si el jefe que cae (`boss`,
+-- su tipo) guarda un COLECCIONABLE, sale ese (su pieza: la corona, el amuleto…); si no, el fragmento siguiente
+function Drops:spawn(x, y, dir, boss)
+    local id, collect
+    for _, it in ipairs(self.items) do
+        if not it.out and (it.boss == nil or it.boss == boss) then it.out, id, collect = true, it.id, true; break end
+    end
+    if not id then
+        id = self.ids[self.next]
+        if not id then return end
+        self.next = self.next + 1
+    end
     -- (lanzado: `dir` = hacia dónde, más lejos y más alto; si no, sube a un lado)
     local side = (dir and dir ~= 0) and dir or ((#self.list % 2 == 0) and -1 or 1)
     local far = (dir and dir ~= 0) and 200 or 60
-    self.list[#self.list + 1] = { id = id, x0 = x, y0 = y, x = x, y = y, tx = x + side * far, ty = y - 110, t = 0 }
+    self.list[#self.list + 1] = { id = id, collect = collect, x0 = x, y0 = y, x = x, y = y, tx = x + side * far, ty = y - 110, t = 0 }
     Sound.playAt('shardDrop', x, y)
 end
 
@@ -140,7 +153,7 @@ function Drops:update(dt)
                 self.seen[e] = 'dropped'
                 local z = e.zone
                 local dir = z and (((z.x0 + z.x1) / 2 < e.x) and -1 or 1) or 0
-                self:spawn(e.x, e.y - (e.outerH or 0) * 0.3, dir)
+                self:spawn(e.x, e.y - (e.outerH or 0) * 0.3, dir, e.def and e.def.name)
             end
         end
     end
@@ -167,11 +180,10 @@ function Drops:update(dt)
             local ob = p:getOuterBounds()
             if ob.x < s.x + TOUCH and ob.x + ob.w > s.x - TOUCH and ob.y < s.y + TOUCH and ob.y + ob.h > s.y - TOUCH then
                 table.remove(self.list, i)
-                self.got = self.got + 1
+                self:_got(s)
                 Sound.play('shardGet')
                 require('src/fx/Particles').emit('collect', s.x, s.y)
                 require('src/fx/Particles').emit('oneup', s.x, s.y)
-                if self.onGet then self.onGet(s.id, s.x, s.y) end
             end
         end
     end
@@ -180,7 +192,16 @@ end
 -- Los que ya han salido y nadie ha recogido (al tocar la meta): se recogen solos
 function Drops:collectAll()
     for i = #self.list, 1, -1 do
-        local s = table.remove(self.list, i)
+        self:_got(table.remove(self.list, i))
+    end
+end
+
+-- (recogido: fragmento → onGet; coleccionable → onCollect. Los dos solo se APUNTAN: se guardan al terminar el nivel)
+function Drops:_got(s)
+    if s.collect then
+        self.cgot = self.cgot + 1
+        if self.onCollect then self.onCollect(s.id, s.x, s.y) end
+    else
         self.got = self.got + 1
         if self.onGet then self.onGet(s.id, s.x, s.y) end
     end
@@ -192,8 +213,15 @@ function Drops:render(camX, camY)
     local now = love.timer.getTime()
     for _, s in ipairs(self.list) do
         local x, y = math.floor(s.x - camX), math.floor(s.y - camY)
-        Stage.rays(x, y, now * 2, 6, 70 + 10 * math.sin(now * 4), 0.22, { 0.8, 0.95, 1 })
-        Stage.shard(s.id, x, y, { s = 4, rot = math.sin(now * 2.2) * 0.2 })
+        local im = s.collect and require('src/story/Collect').image(s.id)
+        if s.collect then                                             -- (un coleccionable: su icono, con luz dorada)
+            Stage.rays(x, y, now * 2, 6, 70 + 10 * math.sin(now * 4), 0.22, { 1, 0.9, 0.55 })
+            love.graphics.setColor(1, 1, 1, 1)
+            if im then love.graphics.draw(im, x, y, math.sin(now * 2.2) * 0.15, 4, 4, math.floor(im:getWidth() / 2), math.floor(im:getHeight() / 2)) end
+        else
+            Stage.rays(x, y, now * 2, 6, 70 + 10 * math.sin(now * 4), 0.22, { 0.8, 0.95, 1 })
+            Stage.shard(s.id, x, y, { s = 4, rot = math.sin(now * 2.2) * 0.2 })
+        end
     end
 end
 

@@ -134,7 +134,38 @@ return {
         go_game = "No lives left: the adventure starts over",
         go_notice = "GAME OVER: BACK TO THE START",
         soon = "COMING SOON",
-        map_hint = "{arrows} walk    {ok} play    {back} saves",
+        map_hint = "{arrows} walk    {ok} play    {alt} collection    {back} saves",
+        -- THE COLLECTION (src/states/story/StoryCollectionState.lua; catalog assets/story/collectibles.json: each
+        -- collectible has name, desc, how and hint here)
+        collect = {
+            title = "COLLECTION",
+            count = "{n} / {total}",
+            map = "Collection {n}/{total}",
+            hint = "{arrows} choose    {back} back",
+            unknown = "???",
+            state = { stolen = "STOLEN" },
+            kind = { splinter = "Mirror splinter", trophy = "Trophy" },
+            astilla_crabby = {
+                name = "Shell Crown",
+                desc = "Shells and coral with a mirror splinter set in it. The Mega Crabby wore it.",
+                how = "You beat the Mega Crabby in its lair, through the secret exit of Puffer Reef.",
+                hint = "A level of the Coast hides a secret exit...",
+                stolen = "The Groove stole its splinter for its disco ball: only the crown is left.",
+            },
+            astilla_gloomy = {
+                name = "Gloomy Amulet",
+                desc = "A mirror splinter hanging from a cord, catching the light. The Mega Gloomy Crabby wore it.",
+                how = "You beat the Mega Gloomy Crabby in its grotto, through the secret exit of Echo Temple.",
+                hint = "A level of the Caves hides a secret exit...",
+                stolen = "The Groove stole its splinter for its disco ball: only the empty setting is left.",
+            },
+            bola_disco = {
+                name = "Disco Ball",
+                desc = "The Groove's ball, made of mirror splinters. Whole at last.",
+                how = "You beat the four crabs in the Crab Mega Mashup.",
+                hint = "Gather every splinter and follow the beat...",
+            },
+        },
         world = {
             pradera = "THE MEADOW", costa = "THE COAST", fortaleza = "THE FORTRESS",
             nieve = "THE FROZEN MOUNTAINS", cuevas = "THE CAVES", final = "THE END",
@@ -164,6 +195,7 @@ return {
         go = "GO!",
         boss = "BOSS!",
         shard = "MIRROR SHARD!",
+        collect = "A SECRET TREASURE!",          -- (a collectible dropped by a boss: src/story/Collect.lua)
         boss_defeated = "BOSS DEFEATED!",
         you = "YOU",
     },

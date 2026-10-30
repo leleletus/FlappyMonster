@@ -2,7 +2,8 @@
 
 One big scrolling map in the style of Super Mario World: eight islands (the JUNGLE, world 3 since 0.5.99; the FROZEN COAST, world 6 since 0.5.100: [below](#the-frozen-coast-world-6-0-5-100);
 [below](#the-jungle-island-world-3)), one path per world with a node per level, a castle for the boss, a blue "B"
-bonus node, bridges between worlds, wandering critters and the hero walking along the path. Everything about its shape is DATA in `assets/story/overworld.json`, written by a deterministic generator.
+bonus node, a CANNON at each end of every crossing between worlds ([below](#cannons-between-islands); they replaced the
+bridges on 2026-10-29), wandering critters and the hero walking along the path. Everything about its shape is DATA in `assets/story/overworld.json`, written by a deterministic generator.
 
 **Files:** `src/states/story/StoryMapState.lua` (drawing, walking, input, camera, the films' map set),
 `tools/art/story/make_overworld.py` (writes `overworld.json` and the sprites in `assets/images/story/`),
@@ -13,7 +14,7 @@ equal-power curve (`sounds` harness: "fundido del mapa").
 
 **Controls:** each arrow goes to the neighbouring stop that lies that way on the map; tap a node to walk there, tap
 your own to play; ENTER plays. Rules (`dirMap` in `StoryMapState.lua`): neighbours of a stop = previous and next
-along the path, plus the bridge to the next island from a castle (and back from an island's first level). (1) What
+along the path, plus the crossing to the next island from a castle (and back from an island's first level) — by cannon. (1) What
 counts is where the neighbouring NODE is. (2) Every neighbour always has an arrow of its own: the clearest direction
 wins; between two equally clear (the level next door and, far away, the next island, both straight left) the NEAREST
 node wins and the other takes the arrow that points where its path leaves. (3) A free arrow goes to a neighbour only
@@ -29,6 +30,48 @@ user.
 `NODE_BOSS`) and re-run it; never hand-edit `overworld.json`. Adding a level to a world needs nothing here: nodes
 are spread along the path from `Worlds.lua`. **Harness:** `story_flow` (captures at three widths,
 `story_map_full.png`, `story_map_bosses.png`).
+
+## Cannons between islands
+
+The user (2026-10-29): "para cambiar de isla se usa un puente; estaba pensando en usar un cañón. El cañón se carga con
+el jugador, apunta y dispara. Se vería mejor y quedaría más cómico." Decision: a cannon at EACH end of every crossing
+(one goes forward, the other brings you back); the bridges are gone from the map (the sea between islands is empty).
+
+- **Data:** `overworld.json` `cannons[w]` = the crossing from world `w`'s castle to world `w + 1`'s first node:
+  `a` / `b` = the cannon at the castle end / at the arriving end, `la` / `lb` = where the hero lands when arriving at
+  that end (one cell from the cannon toward the node). Cell coordinates like the paths. Written by
+  `make_overworld.py` from the same crossings as before (`SCONNECT_OUT`, still in `connect` and still counted for the
+  distance to paths, so nothing else on the map moved): each cannon goes on land next to the shore where the old
+  bridge left the island, never on a path, a decoration, the castle or the boss beside it, with a land-only line to
+  its node. Placement runs last and without randomness. A new island = one more crossing, nothing in code.
+- **Route:** `M.bridge` is now `{ castle, first node }` whose arrival point carries `fly = crossing` ("this hop is a
+  cannon flight"); `reversed()` moves the mark so the way back is a flight too. Everything that walks legs (arrows,
+  `_walkTo`, the queue, ENTER-on-arrival, chaining presses) is unchanged: the walker stops at a `fly` point and
+  `StoryMapCannons:_cannonTick` does the rest, starting from the cannon nearest to the hero. `legDir` points a
+  crossing at its cannon (the little dotted path), so the arrow that leads to the next island is the one that points
+  at the cannon.
+- **The sequence** (`src/states/story/StoryMapCannons.lua`, a part of `StoryMapState`): walk to the cannon → hop into
+  the mouth (0.32 s; `cannonLoad`, the cannon squashes) → aim (0.45 s; the barrel turns from 20° to the launch angle
+  of the arc, in 10° frames) → fuse (0.6 s; spark, `cannonFuse`, the cannon trembles) → BOOM (`cannonBoom` +
+  `cannonWhoosh`, muzzle flash, 4 smoke puffs, screen shake, recoil) → flight along a parabola (0.8-2.4 s by
+  distance, height 80-360 px; the hero curled — `monstrito5` — spinning, a smoke trail, a shadow on the ground; the
+  camera follows, including some of the height) → landing (0.4 s; `cannonLand`, dust both sides, squash and a bounce)
+  → walk to the node. `heroX/heroY` follow the GROUND track during the flight, so the map music crossfades to the
+  next island when the hero is nearest to it, mid-air.
+- **Locked crossing** (the next island not open): both cannons darker and corked (barrel frame 11); the route never
+  reaches them (the next stop is locked: the usual bump). When the island opens after its boss, the corks pop with a
+  puff at `OPEN_AT`, with the other "just opened" animations.
+- **Art:** `tools/art/story/make_cannon.py` → `assets/images/story/cannon/` — a CIRCUS cannon (the human cannonball
+  kind): a long slim red barrel with a bell mouth and gold rings on a blue one-wheel carriage; few flat colours.
+  Drawn ×3 like the hero. Sheet: `FlappyMonster_pruebas/canones/hoja.png`; frames of a real crossing:
+  `FlappyMonster_pruebas/canones/` (from `story_flow`). Sounds: [sound](../audio/sound.md#the-world-maps-cannon).
+- **Films** draw the map with the cannons (state as in the save; no flight).
+- `soon` islands still draw locked bridges (none exists today).
+- **Harness:** `story_flow` case `canon` (forward and back by arrow, every phase, lands on the right node, the music
+  switches, a locked crossing does not fire; captures `story_cannon_*.png`). Feel, timing and sounds are not judged
+  by the user yet.
+
+In the older notes below, "bridge" between islands now means this crossing.
 
 ## The Frozen Coast (world 6, 0.5.100)
 
@@ -126,17 +169,46 @@ new land). Not yet judged by the user.
   and `hopper_<isla>` (`hop = true`: stands, crouches, jumps in an arc, ~1 hop per second; `left` = art faces left).
   Hoppers are only in huida_del_espejo and the dark caves (and the EnemyTest gallery).
 
-## The secret node
+## The secret nodes
 
-The last world has a `secret` level in `Worlds.lua` (`isla_del_groove`: [Groove Crab](../bosses/groovecrab.md)). On the
-map it is the LAST STOP: a branch from the Final's bonus node (`worlds[6].secret` in `overworld.json`, `SECRET` in
-`make_overworld.py`) to a sand islet NE of the volcano. The islet is always there (a mystery); while the secret is
-locked (`Run.secretState`: open once the last world's boss is beaten) it DOES NOT EXIST on the map: no node, no path
-dots, not a stop (`totalStops` leaves it out), no arrow leads to it, it cannot be tapped. When the Mirror falls it
-opens with the usual rings (the "what just opened" check counts every stop, `allStops`). Its node carries one of The
-Groove's notes dancing above it; its card says "a secret stage". It does not count for progress. The islet is added
-at the END of the generator (after decorations and critters), so nothing else on the map moved. Harness: `story_flow`
-case `secreto`.
+`Worlds.lua` `secrets` ([story-mode](story-mode.md#the-secrets-secret-exits-splinters-the-groove-and-the-mashup)) puts
+optional secret levels on the map: a RED node with a KEYHOLE (`assets/images/story/node_secret-Sheet.png`, 10x10 ×4:
+open red, done gold) at the end of a short branch from its `from` node, with the icon of what it guards floating above
+it (its collectible's icon; the Groove, which guards nothing, a dancing note). While locked it DOES NOT EXIST: no node,
+no dots, not a stop (`totalStops` counts only visible stops; hidden stops keep their number, `allStops`), no arrow
+leads to it, it cannot be tapped. When it opens (the stops that were locked before a level and are not after it:
+`args.opened`) its DOTTED PATH DRAWS ITSELF from the `from` node (`SECRET_PATH_T`: from 0.35 s, in 1.1 s; each dot knows
+its place along the path, `u`) and the node pops out at `SECRET_OPEN_AT` 1.5 s with the usual rings and sound.
+
+- **Geometry** (`make_overworld.py`, `SECRETS`, at the END of the generator, no randomness): the `from` node is found as
+  the game finds it (node k of n spread by arc length along the world's path: `(k, n)` = `Worlds.lua`, keep them in
+  step; the game starts the branch at the real node anyway if they drift), a Catmull-Rom branch through its control
+  points, sand / rock put under it where it crossed the sea, an islet blob where given, relief flattened next to it and
+  the few decorations it touches removed — nothing else moves. Output `worlds[i].secrets = { [level] = points }`.
+  Today: the Mega Crabby's lair on a sand spit north of Arrecife Globo; the Mega Gloomy's grotto west of Templo del Eco
+  on the flat; the Groove's islet NE of the volcano (its path, which crossed water as a bridge, now runs on a sand spit);
+  the Mega Mashup a little east on the same islet (slightly enlarged).
+- **The map is a TREE** (rewritten 2026-10-29 for the secrets, which hang mid-sequence): every stop hangs from another
+  by one leg — a level from the previous one (`seg`), the bonus from the castle (`branch`), a secret from its `from`
+  (`secret`), a world's first level from the previous castle (`bridge` = the crossing, the cannon flight of
+  `StoryMapCannons.lua`). `parentOf(i)`, `edgeOf(a, b)` → `{ pts, kind }` (points passed through untouched: the cannon's
+  `fly` marks survive; backwards with `reversed()`), `route(a, b)` = the unique path. `_walkTo` walks that path stop by
+  stop and stops in front of a locked (or hidden) one; `neighbours` (the arrows) = the visible tree neighbours. Same
+  behaviour as before on the main chain; from a bonus the next island is no longer a direct neighbour (walk back to the
+  castle). The bottom arrows / `_move` step to the previous / next VISIBLE stop in stop order.
+- **The map SCENES** (`StoryMapScenes.lua`; text-free; seen once — `films[id]` —; ENTER / back skips, its effect still
+  applies; they start when nothing is opening and the hero is still, with cinema bars over the HUD, and the camera goes
+  to the scene and back): `groove` — the Groove on its islet, its disco ball pulls the splinters out of the crown and
+  the amulet (they rise from the monster; orbs fly to the ball), the ball is whole (flash, rays), its beams hit the
+  monster, whose flap sputters (three ever-smaller hops with fizzling sparks), the Groove dances → splinters become
+  `'stolen'` and the Groove's node opens. `regrow` — after beating the Groove: beams from the ball make the small Mega
+  Crabby, Icy Mega Crabby and Mega Gloomy grow back (normal sprite → giant) → the Mashup's node opens. `disco` — after
+  the Mashup: the ball shakes and shatters, the splinters fly back (states `true` again), the crabs and the Groove
+  shrink and dance with notes, the monster flaps free above them, and the Disco Ball trophy fills the screen. Not
+  watched by a person yet.
+- Harness `story_flow`: `salida_secreta` (hidden → secret exit → the path draws itself, `story_map_secret_path.png`,
+  `story_map_secret_open.png`), `secreto` (Groove gate + the theft scene, `story_scene_groove.png`), `mashup`
+  (`story_scene_regrow.png`, `story_scene_disco.png`).
 
 ## Moving on the map
 
@@ -159,6 +231,9 @@ case `secreto`.
 Kept because they record WHY things are the way they are and what was tried and rejected. Where a note
 conflicts with the sections above, the sections above describe the current behaviour.
 
+- 2026-10-29: CANNONS replace the bridges between islands, one at each end of every crossing (the user:
+  "para cambiar de isla se usa un puente; estaba pensando en usar un cañón. El cañón se carga con el jugador, apunta y
+  dispara. Se vería mejor y quedaría más cómico") — [above](#cannons-between-islands). Not judged by the user yet.
 - 0.5.100 (2026-10-29): the ice island split in two — the Frozen Coast (world 6) added east of the Mountains; map
   112x63 (the user: "son 8 bosses y 7 islas… separamos la isla congelada en 2").
 - 0.5.99 (2026-10-29): the jungle became world 3 (its four levels, boss and bonus; bridges Coast → Jungle → Fortress);

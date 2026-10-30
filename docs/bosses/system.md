@@ -140,6 +140,12 @@ Files: `src/world/systems/BossZones.lua` (zones + fight controller),
   snowboss (frozen), miniboss1 (stuck); the others already leave on the hit (Mega Crabbies, Mega Gloomy, Mirror, data
   bosses). A new boss with a lying-down window must use `downTime` too.
 
+- **Worn pieces** (`Cls.WEAR` + `Boss:drawWear`, 2026-10-29): extra drawing layers with what a boss wears (the Mega
+  Crabby's shell crown, the Mega Gloomy's amulet: the mirror splinter it guards). The type calls `drawWear(anchor, x, y,
+  s, frame, flip)` inside its own transform; per-frame offsets or `false` hide it; `glint` blinks in the dark; prop
+  `wear` (`Boss.WEAR_PROP`) turns it off; it is gone once `shardDrop()` is true. Details:
+  [story-mode](../story/story-mode.md#the-collection).
+
 - **Immune bounce**: landing on a boss that can't be hurt returns
   `'bounce', vy, dirX` → `pa:bounce(vy, dirX)` pushes the player sideways
   (no riding bosses); predicted on the client via `recordBounce(vy, dir)`.

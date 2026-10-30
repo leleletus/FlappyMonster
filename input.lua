@@ -61,7 +61,8 @@ function Input.label(action)
     return t[action] or ("[" .. action .. "]")
 end
 
--- Las teclas de las AYUDAS de los menús ({ok}, {back}, {arrows}...: src/core/Lang.lua las rellena solas). Se rehace
+-- Las teclas de las AYUDAS de los menús ({ok}, {back}, {arrows}...: src/core/Lang.lua las rellena solas; {alt} = el
+-- botón secundario de los menús, el de la linterna: p. ej. la Colección en el mapa). Se rehace
 -- solo al cambiar de aparato o de idioma (se dibuja cada fotograma: sin basura)
 local hintCache, hintPad, hintLang
 function Input.hints()
@@ -71,10 +72,12 @@ function Input.hints()
     hintPad, hintLang = pad, lang
     if pad then
         hintCache = { ok = labelsConsole.confirm, back = labelsConsole.back, arrows = L('keys.dpad'), lr = '[<][>]',
-                      ud = '[^][v]', up = '[^]', down = '[v]', diff = labelsConsole.light, del = labelsConsole.light }
+                      ud = '[^][v]', up = '[^]', down = '[v]', diff = labelsConsole.light, del = labelsConsole.light,
+                      alt = labelsConsole.light }
     else
         hintCache = { ok = '[ENTER]', back = '[ESC]', arrows = L('keys.arrows'), lr = L('keys.lr'), ud = L('keys.ud'),
-                      up = L('keys.up'), down = L('keys.down'), diff = labelsPC.light, del = L('keys.del') }
+                      up = L('keys.up'), down = L('keys.down'), diff = labelsPC.light, del = L('keys.del'),
+                      alt = labelsPC.light }
     end
     return hintCache
 end

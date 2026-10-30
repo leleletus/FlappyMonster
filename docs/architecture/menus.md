@@ -20,6 +20,7 @@ save slots are **cartridges** (Sonic 3 style save select).
 | `src/states/menu/TitleState.lua` | title + main menu (`title` starts on the title, `main_menu` starts with the buttons; `args.selected` = 1 adventure, 2 classic, 3 settings) |
 | `src/states/menu/AdventureModeSelectState.lua`, `SettingsState.lua`, `src/states/flappy/DifficultySelectionState.lua` | the sub-menus, built with the pieces below |
 | `src/states/story/StorySlotState.lua` | the save slots as cartridges (see below) |
+| `src/states/story/StoryCollectionState.lua` | the story COLLECTION, pushed over the world map (see below) |
 | `src/ui/menu/MenuScene.lua` | the living background: `SCENES` (level + seed), `SCENE_MAX`, `STALL`, `CAM_X/CAM_Y` (where the monster sits on screen), iris timings; `update`, `draw`, `backdrop()` (background + big dark panel for content screens), `dim(a)` |
 | `src/states/adventure/AdventureState.lua` | `args.demo = { step, camX, camY }`: the demo mode MenuScene uses (no View lock, HUD, pause, music or recorder; endless lives; `step(dt, level)` moves the player instead of the pad); `rebindGlobals()` |
 | `src/ai/Bot.lua` | the bonus bot, reused: `opts.goal` (own goal instead of the point zones; returns goal nodes, kind, approach x), `opts.mortal`, `opts.dodge` (caution, below) |
@@ -68,10 +69,23 @@ one rises and bobs; DELETE is a button UNDER the selected cartridge (second pres
 information. Choosing one makes the cartridge "go in" (rises a bit, drops) and the iris closes on it. An empty one
 asks the difficulty (muted coloured buttons, locked ones grey with a lock, the description in the footer).
 
+**The Collection** (`story_collection`, 2026-10-29): one card per entry of `assets/story/collectibles.json`
+(`src/story/Collect.lua`), any number of them. It is PUSHED over the world map (`StoryMapState:_collection`: `{alt}` =
+the light button, [F] / [Y], shown in `story.map_hint`; or tapping the mirror-shard card, which now also says
+"Colección n/N"), so BACK (`back`, the light button again, or the corner VOLVER) pops it and the map is exactly where
+it was, music included. Gold story bricks over the map, a purple banner, the count, cards in a grid
+(`layout(n)`: columns = what fits at `CARD_MIN_W` 520, one geometry for drawing, mouse and touch; scrolls with the
+selection, a drag or the wheel, clipped with `Clip`). An owned card: icon in a well (largest integer scale), name,
+kind (`story.collect.kind.<kind>`), what it is (`desc`) and how it was won (`how`); a missing one: the "???" silhouette
+(`assets/images/story/collectibles/locked.png`) and its `hint`. Texts: `<entry.keys>.name|desc|how|hint`. Arrows walk
+the grid in order (left / right wrap to the next row, up / down change row). Harness `collection`.
+
 **SP / server / client:** client only. The demo is a local single-player simulation, never online.
 
 **How to extend**
 
+- A screen over another one that must come back untouched (the Collection over the map): `gStateMachine:push` it,
+  `pop` on back, and cover what is below (`MenuKit.dim(1)` also clears the cursor's obstacles from the screen below).
 - A new menu screen: `MenuScene.update(dt)` in `update`, `MenuScene.draw()` first in `render`; a `MenuAnim` for its
   elements; `MenuList` for a list of buttons; leave with `anim:leave(function() gStateMachine:change(...) end)` to
   another menu screen, or `Transition.go(...)` to anything else.

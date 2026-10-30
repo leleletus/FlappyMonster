@@ -120,6 +120,9 @@ end
 function Mega.sizePx() return 16 * MS, 9 * MS end
 Mega.MS = MS                        -- (por clase: el helado es algo más pequeño; el dibujo y el tamaño usan self.MS)
 Mega.STARS_Y = 1.28                 -- altura del corro de estrellitas de aturdido (× alto del sprite, desde los pies)
+-- Lo que lleva PUESTO (Boss:drawWear): la CORONA DE CONCHAS con su astilla del espejo engastada, abrazando la base de
+-- la púa (tools/art/story/make_collectibles.py; su última fila pisa el contorno de la cabeza). El helado no la lleva
+Mega.WEAR = { { image = 'assets/images/bosses/megacrabby/wear_crown.png', anchor = 'head', ax = 5, ay = 5 } }
 
 -- Estados en los que va pegado a una superficie (trepando)
 local CRAWL = { climb = true, ceiling = true, aim = true, wallclimb = true, wallaim = true, dying_flee = true }
@@ -1367,6 +1370,7 @@ function Mega:drawLocal(px, py, ang, s, img, withSpike, alpha, nervous, sx, sy, 
                            spike.w / 2, spike.h - 1)
     end
     love.graphics.draw(img.image, img.quad, 0, 0, 0, s * self.facing, s, img.w / 2, ih)
+    self:drawWear('head', 0, -(ih - A.spikeDy) * s, s, nil, self.facing < 0)    -- (su corona: Boss:drawWear)
     if self.drawBodyOverlay then self:drawBodyOverlay(s, now) end      -- (capas de otras variantes)
     -- Pinzas delante del cuerpo, saliendo del costado junto a las patas
     for i, side in ipairs(noClaws and {} or { -1, 1 }) do
@@ -1614,6 +1618,7 @@ return {
     hide = Boss.HIDE,
     defaults = { points = 60 },
     props = Boss.props({ hp = 10, hpPerPlayer = 4 }, {
+        Boss.WEAR_PROP,
         { key='chaseSpeed', kind='number', label='Velocidad persiguiendo', group='Persecución', default=150,
           min=20, max=600, step=10, help='px/s (el jugador anda a 240)' },
         { key='chargeRange', kind='number', label='Distancia para embestir (casillas)', group='Persecución',

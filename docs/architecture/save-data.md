@@ -9,7 +9,7 @@ the save directory is searched before the game's own files.
 |---|---|---|
 | `options.cfg` | `src/core/Settings.lua` | language, last accepted online name (`onlineName`) |
 | `<difficulty>_highscore.dat` (`SCORE_FILE`) | `src/states/flappy/PlayState.lua` | Flappy best score, one file per Flappy difficulty |
-| `story1.sav` … `story3.sav` | `src/story/Save.lua` | one story slot each: difficulty, lives, per-level best (rating, grade, points, time), done nodes, shards, bonus results, world rewards, points, play time (`playTime`), Game Overs (`gameOvers`), pre-level films already seen (`films`), extra lives already taken per level (`taken`), worlds open without the previous boss (`open`, from a migration), `version` |
+| `story1.sav` … `story3.sav` | `src/story/Save.lua` | one story slot each: difficulty, lives, per-level best (rating, grade, points, time), done nodes, shards, bonus results, world rewards, points, play time (`playTime`), Game Overs (`gameOvers`), pre-level films already seen (`films`), extra lives already taken per level (`taken`), worlds open without the previous boss (`open`, from a migration), collectibles (`collect[id]` = true or a state such as `'stolen'`), secret exits used (`found[level]`), `version` |
 | `story.sav` | `src/story/Save.lua` | global: unlocked difficulties, cleared difficulties |
 | `*.sav.bak`, `*.sav.damaged` | `src/story/Save.lua` | copy written before each save; a file found unreadable (with its copy) is kept here |
 | `update/state.lua`, `update/slots/<version>/`, `update/boot.log` | `main.lua`, `src/update/Updater.lua` | downloaded versions (see [updates-and-release](updates-and-release.md)) |
@@ -19,9 +19,10 @@ the save directory is searched before the game's own files.
 
 **The story rule (user's rule, enforced by `story_flow`): nothing gained in a level is saved until the level is
 finished.** Leaving through the pause menu keeps only what was LOST (lives); pickups, shards, points and grades are
-written by `Run.complete` / `Run.addShard` from `onFinish`. Any new thing a level can give must follow it.
+written by `Run.complete` / `Run.addShard` / `Run.addCollect` / `Run.findSecret` from `onFinish`. Any new thing a level can give must follow it.
 
-Old saves are migrated on load: `Save.migrate` (slot `version` < `Save.VERSION`, today 3: the world index and the
+Old saves are migrated on load: `Save.migrate` (slot `version` < `Save.VERSION`, today 4 — version 4 = the secrets: `collect` / `found` start empty and
+the levels a secret exit leads to stop being done, `Save.UPGRADE` —; from 3: the world index and the
 `worldReward` keys are remapped by id through `Save.WORLDS`, the per-version world lists with the boss that closed
 each world; every world that was open in the old version stays open in `open[id]` — the jungle inserted in 0.5.99, the
 user's "keep their progress, jungle open", and the ice island split in two in 0.5.100; details in [story-mode](../story/story-mode.md#worlds-and-saves)), then

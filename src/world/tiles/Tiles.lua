@@ -45,6 +45,7 @@ local TYPES = {
     'jungle_grass',   -- 41 (césped de la jungla sobre barro)
     'temple_brick',   -- 42 (sillar del templo, con musgo arriba)
     'jungle_platform', -- 43 (plataforma traspasable de la jungla)
+    'secret_exit',    -- 44 (la salida SECRETA: termina el nivel y abre el camino secreto de la historia)
     'frozen_pack',    -- 50-58 (el paquete helado: ladrillo, roca, sillar y hielo glaciar, iglú, columna, ventana, plataformas)
 }
 

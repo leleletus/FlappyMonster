@@ -1,6 +1,9 @@
 # Mega Gloomy Crabby — `megagloomy`
 
-The Caves boss, fought in the dark. ONE rule, visible on screen: **it only attacks where there is a red "!"** — made
+A SECRET boss since 2026-10-29 (the Caves boss is the [Giant Hopper](gianthopper.md)): its grotto `gruta_lugubre` is
+reached through the secret exit of `templo_del_eco`; it wears the GLOOMY AMULET with a mirror splinter and drops it
+when it falls (collectible `astilla_gloomy`), then flees still big
+([story-mode](../story/story-mode.md#the-secrets-secret-exits-splinters-the-groove-and-the-mashup)). Fought in the dark. ONE rule, visible on screen: **it only attacks where there is a red "!"** — made
 by its echolocation ring or by the player's noise. It is immune except when it is tired AND a flashlight lights it.
 **File:** `src/world/entities/types/bosses/megagloomy.lua`. **Art:** `assets/images/bosses/megagloomy/` (body, glow
 and claws HAND-EDITED by the user). **Level:** `gruta_lugubre` (dark); arena

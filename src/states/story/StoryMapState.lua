@@ -149,8 +149,8 @@ end
 
 -- Los nodos de un mundo EN EL MAPA: sus niveles, el jefe y, detrás, su BONUS (arena contra el bot; un ramal
 -- desde el castillo). El bonus no es un nodo de Worlds.nodes (no cuenta para el progreso): su estado es aparte.
--- Y, en el último mundo, su nodo SECRETO (Worlds `secret`: un ramal desde el bonus), que cerrado NO EXISTE en el
--- mapa: ni se dibuja él ni su camino, y no es una parada (totalStops lo deja fuera)
+-- Y sus nodos SECRETOS (Worlds `secrets`: un ramal desde su nodo `from`), que cerrados NO EXISTEN en el mapa: ni se
+-- dibujan ellos ni su camino, no son paradas (no se anda a ellos ni por ellos) y ninguna flecha lleva a ellos
 local mapCache = {}
 local function mapNodes(w)
     if not mapCache[w] then
@@ -158,8 +158,7 @@ local function mapNodes(w)
         for _, n in ipairs(Worlds.nodes(w)) do list[#list + 1] = n end
         local b = Worlds.bonus(w)
         if b then list[#list + 1] = b end
-        local sc = Worlds.secret(w)
-        if sc then list[#list + 1] = sc end
+        for _, sc in ipairs(Worlds.secrets(w)) do list[#list + 1] = sc end
         mapCache[w] = list
     end
     return mapCache[w]
@@ -167,12 +166,12 @@ end
 local function stateOf(w, k)
     local n = mapNodes(w)[k]
     if n and n.bonus then return Run.bonusState(w) end
-    if n and n.secret then return Run.secretState(w) end
+    if n and n.secret then return Run.secretState(n.def) end
     return Run.state(w, k)
 end
 local function hiddenNode(w, k)
     local n = mapNodes(w)[k]
-    return n ~= nil and n.secret == true and Run.secretState(w) == 'locked'
+    return n ~= nil and n.secret == true and Run.secretState(n.def) == 'locked'
 end
 
 -- ── El mapa (datos) y su geometría en píxeles ───────────────────────────────
@@ -199,9 +198,16 @@ local function subPath(p, acc, s0, s1)
     out[#out + 1] = { pointAt(p, acc, s1) }
     return out
 end
+-- (un punto con `fly` = "el tramo que llega a él es un vuelo en CAÑÓN" — StoryMapCannons —: al darle la vuelta, la
+-- marca pasa al punto de la otra punta de ese tramo)
 local function reversed(p)
     local r = {}
-    for i = #p, 1, -1 do r[#r + 1] = p[i] end
+    for i = #p, 1, -1 do
+        local q, nx = p[i], p[i + 1]
+        local fly = nx and nx.fly or nil
+        if fly or q.fly then q = { q[1], q[2], fly = fly } end
+        r[#r + 1] = q
+    end
     return r
 end
 
@@ -277,9 +283,25 @@ local function loadMap()
             M.branch = px(def.bonus)
             M.node[n + 1] = M.branch[#M.branch]
         end
-        if def.secret and Worlds.secret(w) and M.branch then           -- (del bonus a su nodo secreto)
-            M.secret = px(def.secret)
-            M.node[n + 2] = M.secret[#M.secret]
+        -- el ÁRBOL de las paradas del mundo: de qué nodo sale cada una (`parent`) y por qué tramo (`legIn`, desde él);
+        -- el primer nodo cuelga del castillo del mundo anterior por el cruce (parentOf)
+        M.parent, M.legIn, M.kind = {}, {}, {}
+        for k = 2, n do M.parent[k], M.legIn[k], M.kind[k] = k - 1, M.seg[k - 1], 'seg' end
+        if M.branch then M.parent[n + 1], M.legIn[n + 1], M.kind[n + 1] = n, M.branch, 'branch' end
+        -- los SECRETOS (Worlds `secrets`): un ramal desde su nodo `from` — un nivel, 'bonus' u otro secreto —, dibujado
+        -- por el generador (overworld.json `secrets[nivel]`); si el nodo `from` ya no está donde lo dejó el generador
+        -- (otro número de niveles), el ramal empieza en él igualmente
+        local idx = {}
+        for k, nd in ipairs(mapNodes(w)) do
+            idx[nd.bonus and 'bonus' or nd.id] = k
+            if nd.secret then
+                local pk = idx[nd.def.from] or n
+                local p0 = M.node[pk]
+                local pts = (def.secrets and def.secrets[nd.id]) and px(def.secrets[nd.id]) or { { p0[1] + 48, p0[2] - 48 } }
+                if (pts[1][1] - p0[1]) ^ 2 + (pts[1][2] - p0[2]) ^ 2 > (C * 0.8) ^ 2 then table.insert(pts, 1, { p0[1], p0[2] }) end
+                M.parent[k], M.legIn[k], M.kind[k] = pk, pts, 'secret'
+                M.node[k] = pts[#pts]
+            end
         end
         M.bossDx, M.bossDy = bossSide(M.node[n][1], M.node[n][2])
         MAP.worlds[w] = M
@@ -310,7 +332,7 @@ local function loadMap()
             local cx, cy = math.floor(x / C), math.floor(y / C)
             local row = d.rows[cy + 1]
             local water = row and row:sub(cx + 1, cx + 1) == '~'
-            list[i] = { x = x, y = y, ang = math.atan2(y2 - y, x2 - x), wet = water, key = key or nil, soon = key == false }
+            list[i] = { x = x, y = y, ang = math.atan2(y2 - y, x2 - x), wet = water, key = key or nil, soon = key == false, u = i / n }
         end
         -- el puente sigue dos tablones más sobre la orilla de cada lado (si no, acababa cortado en el borde)
         for i, dt in ipairs(list) do
@@ -318,11 +340,12 @@ local function loadMap()
             MAP.dots[#MAP.dots + 1] = dt
         end
     end
+    StoryMapState._buildCannons(MAP, dots)          -- (los CAÑONES entre islas en vez de los puentes: StoryMapCannons)
     for w, M in ipairs(MAP.worlds) do
         for k, seg in ipairs(M.seg) do dots(seg, { w, k + 1 }) end
-        if M.bridge then dots(M.bridge, { w + 1, 1 }) end
+        if M.bridge and not M.cannon then dots(M.bridge, { w + 1, 1 }) end
         if M.branch then dots(M.branch, { w, #Worlds.nodes(w) + 1 }) end
-        if M.secret then dots(M.secret, { w, #Worlds.nodes(w) + 2 }) end
+        for k, kind in pairs(M.kind) do if kind == 'secret' then dots(M.legIn[k], { w, k, secret = true }) end end
     end
     for _, S in ipairs(MAP.soon) do                    -- (siempre cerrados: `soon` en vez de llave)
         dots(S.p, false)
@@ -345,23 +368,88 @@ local function stopAt(i)
         i = i - n
     end
 end
--- (todas, también la secreta escondida: para ver qué se acaba de abrir)
+-- (todas, también las secretas escondidas — tienen su número aunque no se vean —: para ver qué se acaba de abrir)
 local function allStops() return stopIndex(Worlds.count(), #mapNodes(Worlds.count())) end
+-- las que SE VEN (las secretas cerradas no son paradas)
 local function totalStops()
-    local last = Worlds.count()
-    return allStops() - (hiddenNode(last, #mapNodes(last)) and 1 or 0)
+    local n = 0
+    for w = 1, Worlds.count() do
+        for k = 1, #mapNodes(w) do if not hiddenNode(w, k) then n = n + 1 end end
+    end
+    return n
 end
--- puntos del camino de la parada i a la i+1
-local function legForward(i)
+local function hiddenStop(i)
     local w, k = stopAt(i)
+    return w == nil or hiddenNode(w, k)
+end
+-- la parada que SE VE siguiente (d = 1) o anterior (d = -1) en el orden de las paradas, o nil
+local function stepStop(i, d)
+    local j = i + d
+    while j >= 1 and j <= allStops() do
+        if not hiddenStop(j) then return j end
+        j = j + d
+    end
+    return nil
+end
+
+-- EL MAPA ES UN ÁRBOL: cada parada cuelga de otra por un tramo — un nivel del anterior (su camino), el bonus del
+-- castillo (su ramal), un secreto de su nodo `from` (su ramal: Worlds `secrets`) y el primer nivel de un mundo del
+-- castillo del anterior (el CRUCE entre islas: kind 'bridge', el vuelo en cañón de StoryMapCannons). Entre dos
+-- paradas hay un solo camino: se anda por él, parada a parada.
+--   parentOf(i) → parada madre, sus puntos HASTA i (desde la madre), su tipo ('seg' | 'branch' | 'secret' | 'bridge')
+local function parentOf(i)
+    local w, k = stopAt(i)
+    if not w then return nil end
     local M = loadMap().worlds[w]
-    local n = #Worlds.nodes(w)
-    if k < n then return M.seg[k] end
-    if k == n and M.branch then return M.branch end                       -- del castillo a su bonus
-    if k == n + 1 and M.secret then return M.secret end                   -- del bonus a su nodo secreto
+    if k == 1 then
+        if w <= 1 then return nil end
+        local P = loadMap().worlds[w - 1]
+        local pn = #Worlds.nodes(w - 1)
+        return stopIndex(w - 1, pn), P.bridge or { P.node[pn], M.node[1] }, 'bridge'
+    end
+    if not M.parent[k] then return nil end
+    return stopIndex(w, M.parent[k]), M.legIn[k], M.kind[k]
+end
+-- El tramo entre dos paradas VECINAS del árbol: { pts = puntos de a hasta b, kind } (o nil si no son vecinas).
+-- (los puntos van tal cual — con su marca `fly` del cañón —; al revés, con reversed(), que la respeta)
+local function edgeOf(a, b)
+    local pa, leg, kind = parentOf(b)
+    if pa == a then return { pts = leg, kind = kind } end
+    pa, leg, kind = parentOf(a)
+    if pa == b then return { pts = reversed(leg), kind = kind } end
+    return nil
+end
+StoryMapState.edgeOf = edgeOf
+-- Las hijas de una parada (las que cuelgan de ella)
+local function childrenOf(i)
+    local w, k = stopAt(i)
     local out = {}
-    if k == n + 1 then for _, p in ipairs(reversed(M.branch)) do out[#out + 1] = p end end   -- del bonus, de vuelta al castillo…
-    for _, p in ipairs(M.bridge or { M.node[n], (loadMap().worlds[w + 1] or M).node[1] }) do out[#out + 1] = p end   -- … y el puente
+    local M = loadMap().worlds[w]
+    for k2 = 1, #mapNodes(w) do if M.parent[k2] == k then out[#out + 1] = stopIndex(w, k2) end end
+    if k == #Worlds.nodes(w) and w < Worlds.count() then out[#out + 1] = stopIndex(w + 1, 1) end
+    return out
+end
+-- El camino de la parada a a la b: las paradas por las que pasa, sin a y con b ({} si a == b)
+local function route(a, b)
+    local up, at = {}, {}
+    local x = a
+    while x do at[x] = #up + 1; up[#up + 1] = x; x = (parentOf(x)) end
+    local down = {}
+    x = b
+    while x and not at[x] do down[#down + 1] = x; x = (parentOf(x)) end
+    if not x then return {} end
+    local out = {}
+    for i = 2, at[x] do out[#out + 1] = up[i] end              -- (subiendo hasta el antepasado común…)
+    for i = #down, 1, -1 do out[#out + 1] = down[i] end        -- (… y bajando hasta b)
+    return out
+end
+-- puntos del camino de la parada i a la j, pasando por las de en medio
+local function legAlong(i, j)
+    local out, cur = {}, i
+    for _, nxt in ipairs(route(i, j)) do
+        for _, p in ipairs(edgeOf(cur, nxt).pts) do out[#out + 1] = p end
+        cur = nxt
+    end
     return out
 end
 
@@ -371,6 +459,8 @@ local function nodeXY(w, k)
 end
 
 local OPEN_AT = 0.7          -- s tras llegar al mapa en que se abre lo recién desbloqueado
+local SECRET_PATH_T = { 0.35, 1.1 }     -- (un SECRETO recién abierto: su camino se dibuja desde 0.35 s, en 1.1 s…
+local SECRET_OPEN_AT = 1.5              --  y su nodo sale a los 1.5 s)
 
 -- ── Estado ──────────────────────────────────────────────────────────────────
 function StoryMapState:enter(args)
@@ -385,6 +475,7 @@ function StoryMapState:enter(args)
     self.t, self.shake = 0, 0
     self.heroX, self.heroY = nodeXY(self.world, self.node)
     self.queue = {}                               -- puntos que le quedan por andar
+    self.flight, self.cfx, self.corksOut, self.boomShake = nil, {}, nil, 0      -- (el cañón entre islas: StoryMapCannons)
     self.facing = 1
     self.camX, self.camY = nil, nil
     self.justCleared = args.cleared               -- (acaba de superar ese nivel: destello)
@@ -392,6 +483,13 @@ function StoryMapState:enter(args)
     self.opening = {}
     for _, i in ipairs(args.opened or {}) do self.opening[i] = true end
     self.openSound = next(self.opening) ~= nil
+    self.scene = nil                              -- (una escena de los secretos en el mapa: StoryMapScenes)
+    self.openAt = OPEN_AT                         -- (con un SECRETO entre lo que se abre, suena cuando sale su nodo)
+    for i in pairs(self.opening) do
+        local ow, ok = stopAt(i)
+        local on = ow and mapNodes(ow)[ok]
+        if on and on.secret then self.openAt = SECRET_OPEN_AT end
+    end
     self.notice, self.noticeT = args.notice, 0    -- (aviso un momento: tras un Game Over, tras un bonus)
     self.noticeGood = args.good
     self.musicIsland = nil
@@ -434,29 +532,16 @@ local function stopOpen(i)
 end
 
 -- Anda de parada en parada hasta la `target` (si alguna está cerrada, se para delante y "choca")
+-- (por el ÁRBOL del mapa: el único camino entre las dos; una parada cerrada — o escondida — por medio lo para)
 function StoryMapState:_walkTo(target)
     self.playOnArrive = false                       -- (otro destino: lo de entrar al llegar se olvida)
     local cur = stopIndex(self.world, self.node)
-    target = math.max(1, math.min(totalStops(), target))
+    target = math.max(1, math.min(allStops(), target))
     if target == cur then return false end
-    local d = (target > cur) and 1 or -1
     local moved = false
-    while cur ~= target do
-        local nxt = cur + d
-        local leg
-        -- (del CASTILLO al mundo siguiente — o de vuelta — se va por el puente: sin el rodeo hasta el bonus)
-        local w, k = stopAt(cur)
-        local M = loadMap().worlds[w]
-        local n = #Worlds.nodes(w)
-        if d > 0 and k == n and M.branch and M.bridge and target >= cur + 2 and stopOpen(cur + 2) then
-            nxt, leg = cur + 2, M.bridge
-        elseif d < 0 and k == 1 and w > 1 and target <= cur - 2 then
-            local P = loadMap().worlds[w - 1]
-            if P.branch and P.bridge and stopOpen(cur - 2) then nxt, leg = cur - 2, reversed(P.bridge) end
-        end
+    for _, nxt in ipairs(route(cur, target)) do
         if not stopOpen(nxt) then break end
-        leg = leg or ((d > 0) and legForward(cur) or reversed(legForward(nxt)))
-        for _, p in ipairs(leg) do self.queue[#self.queue + 1] = p end
+        for _, p in ipairs(edgeOf(cur, nxt).pts) do self.queue[#self.queue + 1] = p end
         cur, moved = nxt, true
     end
     if moved then
@@ -467,13 +552,23 @@ function StoryMapState:_walkTo(target)
     return moved
 end
 
+-- (a la parada anterior / siguiente que se VE, en el orden de las paradas)
 function StoryMapState:_move(d)
-    self:_walkTo(stopIndex(self.world, self.node) + d)
+    local j = stepStop(stopIndex(self.world, self.node), d)
+    if j then self:_walkTo(j) else self.shake = 0.3; Sound.play('headBump') end
 end
 
 -- Hacia dónde SALE un tramo desde su principio (unitario): el punto a ~2 casillas por el camino
 local function legDir(leg)
     local x0, y0 = leg[1][1], leg[1][2]
+    -- (un cruce en CAÑÓN sale por el caminito hasta el cañón de esta punta: StoryMapCannons)
+    if leg[2] and leg[2].fly then
+        local K = leg[2].fly
+        local A = ((x0 - K.a[1]) ^ 2 + (y0 - K.a[2]) ^ 2 <= (x0 - K.b[1]) ^ 2 + (y0 - K.b[2]) ^ 2) and K.a or K.b
+        local dx, dy = A[1] - x0, A[2] - y0
+        local d = math.sqrt(dx * dx + dy * dy)
+        if d >= 1 then return dx / d, dy / d end
+    end
     for i = 2, #leg do
         local dx, dy = leg[i][1] - x0, leg[i][2] - y0
         local d = math.sqrt(dx * dx + dy * dy)
@@ -492,13 +587,14 @@ function StoryMapState:_stopOf(w, k) return stopIndex(w, k) end
 function StoryMapState:_nodeXY(w, k) return nodeXY(w, k) end
 function StoryMapState:_legTo(w, k, d)
     local cur = stopIndex(w, k)
-    local vx, vy = legDir((d > 0) and legForward(cur) or reversed(legForward(cur - 1)))
+    local vx, vy = legDir(legAlong(cur, cur + d))
     return { vx, vy }
 end
 
 -- FLECHAS = HACIA DÓNDE ESTÁ LA PARADA VECINA en el mapa. Vecinas de una parada: la anterior y la siguiente por el
--- camino; desde un castillo, además, el mundo siguiente por el puente (y desde el primer nivel de un mundo, el
--- castillo anterior). Reglas (rehecho el 2026-10-08: lo de antes miraba hacia dónde SALÍA el camino, dejaba vecinas
+-- camino; desde un castillo, además, el mundo siguiente por el cruce y su bonus (y desde el primer nivel de un mundo, el
+-- castillo anterior); y los secretos abiertos, con el nodo del que salen: las vecinas en el ÁRBOL del mapa (edgeOf).
+-- Reglas (rehecho el 2026-10-08: lo de antes miraba hacia dónde SALÍA el camino, dejaba vecinas
 -- sin flecha y, si no acertaba, hacía otra cosa — izquierda / derecha = anterior / siguiente, arriba / abajo = saltar
 -- de mundo —):
 --   1. cuenta dónde está el NODO vecino (con un poco de por dónde sale su camino, para desempatar);
@@ -510,15 +606,12 @@ local DIRS = { left = { -1, 0 }, right = { 1, 0 }, up = { 0, -1 }, down = { 0, 1
 local DIR_ORDER = { 'left', 'right', 'up', 'down' }
 local function neighbours(cur)
     local w, k = stopAt(cur)
-    local M = loadMap().worlds[w]
-    local n = #Worlds.nodes(w)
     local cands = {}
-    if cur < totalStops() then cands[#cands + 1] = { stop = cur + 1, leg = legForward(cur) } end
-    if cur > 1 then cands[#cands + 1] = { stop = cur - 1, leg = reversed(legForward(cur - 1)) } end
-    if k == n and M.branch and M.bridge and cur + 2 <= totalStops() then cands[#cands + 1] = { stop = cur + 2, leg = M.bridge } end
-    if k == 1 and w > 1 then
-        local P = loadMap().worlds[w - 1]
-        if P.branch and P.bridge then cands[#cands + 1] = { stop = cur - 2, leg = reversed(P.bridge) } end
+    -- (sus vecinas en el ÁRBOL que se ven: de la que cuelga y las que cuelgan de ella)
+    local near = childrenOf(cur)
+    near[#near + 1] = (parentOf(cur))
+    for _, j in ipairs(near) do
+        if not hiddenStop(j) then cands[#cands + 1] = { stop = j, leg = edgeOf(cur, j).pts } end
     end
     local x0, y0 = nodeXY(w, k)
     for _, c in ipairs(cands) do
@@ -659,7 +752,8 @@ end
 -- Entra en el nivel del nodo (con sus vidas, fragmentos, Game Over y, al terminarlo, los resultados)
 function StoryMapState:_start(world, node)
     local n = mapNodes(world)[node]
-    local gotShards = {}
+    local gotShards, gotCollect = {}, {}
+    local Collect = require 'src/story/Collect'
     self:_go('adventure', {
         level = Worlds.path(n.id), returnTo = 'story_map', difficulty = Run.data.difficulty,
         -- las VIDAS son de la aventura: entran con las que lleva; las PERDIDAS se guardan salga como salga, las
@@ -669,8 +763,14 @@ function StoryMapState:_start(world, node)
         onLeave = function(lives) Run.setLives(lives) end,
         -- los FRAGMENTOS DEL ESPEJO que guarda el jefe de este nivel (los que aún no tiene); con el último, el final
         -- en los niveles con JEFE (`auto`) el nivel termina solo al vencerlo y recoger su fragmento (sin ir a la meta)
-        shards = { ids = Shards.pending(n.id, Run.data), final = Shards.LEVEL[n.id] == Shards.FINAL, auto = Shards.LEVEL[n.id] ~= nil,
-                   onGet = function(id) gotShards[#gotShards + 1] = id end },      -- (se apuntan al TERMINAR el nivel)
+        -- (y los COLECCIONABLES que suelta su jefe — las astillas de los cangrejos secretos: src/story/Collect.lua —; los
+        --  niveles SECRETOS con jefe también acaban solos al vencerlo; un nivel de EVENTO — el Mega Mashup — no:
+        --  acaba en su salida, AdventureState)
+        shards = { ids = Shards.pending(n.id, Run.data), final = Shards.LEVEL[n.id] == Shards.FINAL,
+                   auto = Shards.LEVEL[n.id] ~= nil or Collect.bossLevel(n.id) or n.secret == true,
+                   collect = Collect.drops(n.id, Run.data),
+                   onGet = function(id) gotShards[#gotShards + 1] = id end,        -- (se apuntan al TERMINAR el nivel)
+                   onCollect = function(id) gotCollect[#gotCollect + 1] = id end },
         -- la escena final de una carrera, que enlaza con el nodo siguiente (Worlds: outros; src/story/RunOut.lua)
         outro = Worlds.outro(n.id),
         gameOverNote = L(Difficulty.of(Run.data.difficulty, 'restartGame', false) and 'story.go_game' or 'story.go_world'),
@@ -681,9 +781,16 @@ function StoryMapState:_start(world, node)
             gStateMachine:change('story_map', { world = w, node = 1, notice = 'story.go_notice' })
         end,
         onFinish = function(result)
-            for _, id in ipairs(gotShards) do Run.addShard(id, true) end       -- (se guardan con Run.complete)
             local was = {}
             for i = 1, allStops() do was[i] = stateOf(stopAt(i)) end
+            -- lo GANADO en el nivel, que solo ahora se guarda (todo junto, con Run.complete): los fragmentos, los
+            -- coleccionables que soltó un jefe y los que da el nivel al terminarlo (la bola de discoteca del Mega Mashup),
+            -- y la SALIDA SECRETA si acabó por ella (abre su nodo secreto: Worlds `secrets` con `exit`)
+            for _, id in ipairs(gotShards) do Run.addShard(id, true) end
+            for _, id in ipairs(gotCollect) do Run.addCollect(id, true) end
+            for _, id in ipairs(Collect.onFinish(n.id, Run.data)) do Run.addCollect(id, true) end
+            local sx = result.secretExit and Worlds.secretExitOf(n.id)
+            if sx then Run.findSecret(sx.level, true) end
             local summary = Run.complete(n.id, result)
             -- a los RESULTADOS y, de ahí, al mapa, ya en el siguiente (tras el jefe: al mundo que se abre)
             -- de vuelta al mapa se queda en el nodo que ACABA de superar y ve abrirse lo siguiente (antes aparecía ya
@@ -736,7 +843,7 @@ function StoryMapState:_camTarget()
     local M = loadMap()
     local viewH = WINDOW_H - TOP_H - BOT_H
     local cx = self.heroX - WINDOW_W / 2
-    local cy = self.heroY - TOP_H - viewH / 2
+    local cy = self.heroY - (self.flyH or 0) * 0.6 - TOP_H - viewH / 2      -- (volando en cañón: también lo alto)
     cx = (M.pw <= WINDOW_W) and (M.pw - WINDOW_W) / 2 or math.max(0, math.min(M.pw - WINDOW_W, cx))
     cy = math.max(-TOP_H, math.min(M.ph - WINDOW_H + BOT_H, cy))
     return cx, cy
@@ -744,15 +851,21 @@ end
 
 function StoryMapState:update(dt)
     self.t = self.t + dt
-    if self.openSound and self.t >= OPEN_AT then self.openSound = false; Sound.play('checkpoint') end
+    if self.openSound and self.t >= (self.openAt or OPEN_AT) then self.openSound = false; Sound.play('checkpoint') end
+    if self:_sceneTick(dt) then return end          -- (una ESCENA de los secretos en el mapa: StoryMapScenes)
     self.noticeT = (self.noticeT or 0) + dt
     self.shake = math.max(0, self.shake - dt)
-    -- andar por el camino (en viajes largos, más deprisa: llega en ~1 s)
-    if #self.queue > 0 then
+    -- andar por el camino (en viajes largos, más deprisa: llega en ~1 s); un punto con `fly` es el CAÑÓN de un cruce
+    -- entre islas: ahí se para y lo hace todo _cannonTick (StoryMapCannons)
+    self:_cannonTick(dt)
+    if #self.queue > 0 and not self.queue[1].fly then
         local left, px, py = 0, self.heroX, self.heroY
-        for _, p in ipairs(self.queue) do left = left + math.sqrt((p[1] - px) ^ 2 + (p[2] - py) ^ 2); px, py = p[1], p[2] end
+        for _, p in ipairs(self.queue) do
+            if p.fly then break end
+            left = left + math.sqrt((p[1] - px) ^ 2 + (p[2] - py) ^ 2); px, py = p[1], p[2]
+        end
         local step = math.max(WALK_SPD, left / 1.1) * dt
-        while step > 0 and #self.queue > 0 do
+        while step > 0 and #self.queue > 0 and not self.queue[1].fly do
             local p = self.queue[1]
             local dx, dy = p[1] - self.heroX, p[2] - self.heroY
             local dist = math.sqrt(dx * dx + dy * dy)
@@ -781,6 +894,7 @@ function StoryMapState:update(dt)
     if Input.pressed('nav_right') then self:_dirMove(1, 0) end
     if Input.pressed('nav_up') then self:_dirMove(0, -1) end
     if Input.pressed('nav_down') then self:_dirMove(0, 1) end
+    if Input.pressed('light') then self:_collection(); return end      -- (la COLECCIÓN, encima del mapa)
     if Input.pressed('confirm') or Input.pressed('flap') then self:_play(); return end
     if Input.pressed('back') then self:_back() end
 end
@@ -791,6 +905,14 @@ local function arrowRect(side)
     return (side < 0) and 16 or (WINDOW_W - w - 16), WINDOW_H - BOT_H + math.floor((BOT_H - h) / 2), w, h
 end
 local function inside(px, py, x, y, w, h) return px >= x and px <= x + w and py >= y and py <= y + h end
+-- La ficha de los FRAGMENTOS (bajo la cabecera, a la derecha); también abre la Colección al tocarla
+local function shardCardRect() return WINDOW_W - 316, TOP_H + 16, 300, 112 end
+
+-- LA COLECCIÓN (src/states/story/StoryCollectionState.lua): encima del mapa; al volver, todo sigue igual
+function StoryMapState:_collection()
+    Sound.play('select')
+    gStateMachine:push('story_collection')
+end
 
 function StoryMapState:_nodeAt(x, y)
     local cx, cy = math.floor(self.camX or 0), math.floor(self.camY or 0)
@@ -809,6 +931,7 @@ end
 
 function StoryMapState:touchpressed(id, x, y)
     if CornerButtons.hitBack(x, y) then self:_back(); return end
+    if inside(x, y, shardCardRect()) then self:_collection(); return end   -- (la ficha de los fragmentos: la Colección)
     if inside(x, y, arrowRect(-1)) then self:_move(-1); return end
     if inside(x, y, arrowRect(1)) then self:_move(1); return end
     if y < TOP_H or y > WINDOW_H - BOT_H then return end
@@ -954,7 +1077,10 @@ function StoryMapState:_drawPaths(cx, cy)
     local bridge = img('assets/images/story/bridge.png')
     for _, d in ipairs(M.dots) do
         local x, y = d.x - cx, d.y - cy
-        if (d.soon or not hiddenNode(d.key[1], d.key[2])) and x > -20 and x < WINDOW_W + 20 and y > -20 and y < WINDOW_H + 20 then
+        -- (el camino de un SECRETO recién abierto se DIBUJA solo, de su nodo `from` al suyo, antes de que salga el nodo)
+        local reveal = d.key and d.key.secret and self.opening and self.opening[stopIndex(d.key[1], d.key[2])]
+                       and (d.u or 1) > (self.t - SECRET_PATH_T[1]) / SECRET_PATH_T[2]
+        if (d.soon or not hiddenNode(d.key[1], d.key[2])) and not reveal and x > -20 and x < WINDOW_W + 20 and y > -20 and y < WINDOW_H + 20 then
             local open = not d.soon and stateOf(d.key[1], d.key[2]) ~= 'locked'
             if d.water then
                 -- (siempre opaco: cerrado = más oscuro, nunca transparente)
@@ -970,6 +1096,7 @@ function StoryMapState:_drawPaths(cx, cy)
         end
     end
     love.graphics.setColor(1, 1, 1, 1)
+    self:_drawCannons(cx, cy)                     -- (los cañones entre islas, en vez de los puentes: StoryMapCannons)
 end
 
 function StoryMapState:_drawDecos(cx, cy)
@@ -1160,13 +1287,16 @@ function StoryMapState:_drawNodes(cx, cy)
         for k, node in ipairs(mapNodes(w)) do
             local nx, ny = nodeXY(w, k)
             local x, y = math.floor(nx - cx), math.floor(ny - cy)
-            if not hiddenNode(w, k) and x > -120 and x < WINDOW_W + 120 and y > -120 and y < WINDOW_H + 80 then
+            -- (recién abierta: aún cerrada OPEN_AT s, luego salta y suelta unos aros; un SECRETO recién abierto no está
+            --  hasta que su camino acaba de dibujarse: SECRET_OPEN_AT)
+            local opening = self.opening and self.opening[stopIndex(w, k)]
+            local oa = node.secret and SECRET_OPEN_AT or OPEN_AT
+            if not hiddenNode(w, k) and not (node.secret and opening and self.t < oa)
+               and x > -120 and x < WINDOW_W + 120 and y > -120 and y < WINDOW_H + 80 then
                 local st = stateOf(w, k)
-                -- (recién abierta: aún cerrada OPEN_AT s, luego salta y suelta unos aros)
-                local opening = self.opening and self.opening[stopIndex(w, k)]
-                if opening and self.t < OPEN_AT then st = 'locked' end
-                if opening and self.t >= OPEN_AT and self.t < OPEN_AT + 1.2 then
-                    local u = (self.t - OPEN_AT) / 1.2
+                if opening and self.t < oa then st = 'locked' end
+                if opening and self.t >= oa and self.t < oa + 1.2 then
+                    local u = (self.t - oa) / 1.2
                     love.graphics.setLineWidth(3)
                     for ring = 0, 1 do
                         local q = math.min(1, u * 1.4 - ring * 0.25)
@@ -1181,6 +1311,11 @@ function StoryMapState:_drawNodes(cx, cy)
                 end
                 if node.boss then
                     self:_drawCastle(w, x, y, st == 'done' and not self.showBosses)     -- (showBosses: para revisar el mapa con todos los jefes)
+                elseif node.secret then
+                    -- (el SECRETO: un nodo rojo, más grande, con la cerradura; dorado al superarlo)
+                    local si = img('assets/images/story/node_secret-Sheet.png')
+                    love.graphics.setColor(1, 1, 1, 1)
+                    love.graphics.draw(si, frameQ(si, 10, (st == 'done') and 2 or 1), x - 20, y - 20, 0, 4, 4)
                 else
                     love.graphics.setColor(1, 1, 1, 1)
                     local fi = (st == 'done') and 3 or (st == 'open') and (node.bonus and 4 or 2) or 1
@@ -1203,11 +1338,20 @@ function StoryMapState:_drawNodes(cx, cy)
                     love.graphics.rectangle('line', x - r - p, y + oy - r - p, 2 * (r + p), 2 * (r + p))
                     love.graphics.setLineWidth(1)
                 end
-                if node.secret and st ~= 'locked' then          -- (el secreto: una nota de El Groove que baila encima)
-                    local note = img('assets/images/bosses/groovecrab/note-Sheet.png')
-                    local fr = (math.floor(self.t * 2.5) % 4) * 2 + (math.floor(self.t * 6) % 2) + 1
+                if node.secret and st ~= 'locked' then
+                    -- (encima, lo que guarda: el icono de su coleccionable — src/story/Collect.lua —, que flota; uno que no
+                    --  da nada, el Groove, lleva una de sus notas bailando)
+                    local give = require('src/story/Collect').forLevel(node.id)[1]
+                    local ci = give and require('src/story/Collect').image(give.id)
+                    local bob = math.floor(math.sin(self.t * 4 + k) * 3)
                     love.graphics.setColor(1, 1, 1, 1)
-                    love.graphics.draw(note, frameQ(note, 9, fr), x - 13, y - 64 + math.floor(math.sin(self.t * 5) * 3), 0, 3, 3)
+                    if ci then
+                        love.graphics.draw(ci, x - ci:getWidth(), y - 34 - ci:getHeight() * 2 + bob, 0, 2, 2)
+                    elseif not give then
+                        local note = img('assets/images/bosses/groovecrab/note-Sheet.png')
+                        local fr = (math.floor(self.t * 2.5) % 4) * 2 + (math.floor(self.t * 6) % 2) + 1
+                        love.graphics.draw(note, frameQ(note, 9, fr), x - 13, y - 64 + bob, 0, 3, 3)
+                    end
                 end
                 if node.bonus and st ~= 'locked' then
                     PixelFont.shadow('B', x - math.floor(PixelFont.width('B', 3) / 2), y - 40, 3, 1, { 0.6, 0.85, 1 })
@@ -1258,6 +1402,7 @@ function StoryMapState:_drawSoon(cx, cy)
 end
 
 function StoryMapState:_drawHero(cx, cy)
+    if self:_drawFlight(cx, cy) then return end    -- (dentro del cañón, volando o cayendo: StoryMapCannons)
     local walking = #self.queue > 0
     local fi = walking and (math.floor(self.t * 10) % 3) + 1 or 1
     local im = img('assets/images/player/monstrito' .. fi .. '.png')
@@ -1313,13 +1458,19 @@ end
 
 function StoryMapState:render()
     local cx, cy = math.floor(self.camX or 0), math.floor(self.camY or 0)
+    if (self.boomShake or 0) > 0 then                -- (el ¡BUM! del cañón sacude la pantalla)
+        cx = cx + math.floor(math.sin(self.t * 87) * self.boomShake * 22)
+        cy = cy + math.floor(math.cos(self.t * 71) * self.boomShake * 16)
+    end
     self:_drawTerrain(cx, cy)
     self:_drawPaths(cx, cy)
     self:_drawDecos(cx, cy)
     self:_drawCritters(cx, cy)
     self:_drawNodes(cx, cy)
     self:_drawHero(cx, cy)
+    self:_drawScene(cx, cy)                          -- (las escenas de los secretos: StoryMapScenes)
     self:_drawHud()
+    self:_drawSceneOver()
 end
 
 -- El mapa ENTERO en una imagen (sin cabecera ni ficha), para revisarlo: lo usa el harness story_flow
@@ -1367,7 +1518,7 @@ function StoryMapState:_drawHud()
     -- la cuenta (Xtra extremo: 16 mitades)
     local owned, shardTotal = Shards.owned(Run.data)
     local Stage = require 'src/story/Stage'
-    local sx, sy, sw, sh = WINDOW_W - 316, TOP_H + 16, 300, 112
+    local sx, sy, sw, sh = shardCardRect()
     love.graphics.setColor(0, 0, 0, 0.5); love.graphics.rectangle('fill', sx + 4, sy + 4, sw, sh)
     love.graphics.setColor(0.07, 0.08, 0.13, 0.9); love.graphics.rectangle('fill', sx, sy, sw, sh)
     Stage.mirror(sx + 48, sy + sh - 8, { s = 1.5, shards = (#owned < shardTotal) and owned or nil, whole = #owned >= shardTotal })
@@ -1375,7 +1526,14 @@ function StoryMapState:_drawHud()
     love.graphics.setColor(1, 1, 1, 0.85)
     love.graphics.printf(L('story.shards'), sx + 96, sy + 20, sw - 104, 'left')
     love.graphics.setColor(1, 1, 1, 1)
-    PixelFont.shadow(#owned .. ' / ' .. shardTotal, sx + 96, sy + 58, 5, 1, (#owned >= shardTotal) and { 1, 0.9, 0.25 } or { 0.75, 0.9, 1 })
+    PixelFont.shadow(#owned .. ' / ' .. shardTotal, sx + 96, sy + 50, 5, 1, (#owned >= shardTotal) and { 1, 0.9, 0.25 } or { 0.75, 0.9, 1 })
+    -- (y la COLECCIÓN: cuántos coleccionables lleva; tocar la ficha la abre)
+    local Collect = require 'src/story/Collect'
+    local cHave, cTotal = Collect.count(Run.data)
+    love.graphics.setFont(FONT_SMALL)
+    love.graphics.setColor(1, 0.86, 0.36, 0.9)
+    love.graphics.printf(L('story.collect.map', { n = cHave, total = cTotal }), sx + 96, sy + 88, sw - 104, 'left')
+    love.graphics.setColor(1, 1, 1, 1)
     -- Vidas de la aventura (arriba a la derecha, como en el nivel)
     love.graphics.setColor(1, 1, 1, 1)
     local icon = img('assets/images/player/icon.png')
@@ -1424,8 +1582,8 @@ function StoryMapState:_drawHud()
     -- flechas: nivel anterior / siguiente
     local cur = stopIndex(self.world, self.node)
     for _, side in ipairs({ -1, 1 }) do
-        local i = cur + side
-        if i >= 1 and i <= totalStops() then
+        local i = stepStop(cur, side)                  -- (la anterior / siguiente que se VE)
+        if i then
             local x, y, aw, ah = arrowRect(side)
             local open = stopOpen(i)
             love.graphics.setColor(0, 0, 0, 0.5); love.graphics.rectangle('fill', x + 4, y + 4, aw, ah)
@@ -1441,5 +1599,11 @@ function StoryMapState:_drawHud()
     love.graphics.setColor(1, 1, 1, 1)
     CornerButtons.drawBack(self.backHover)
 end
+
+-- (las PARTES: lo que añaden a la tabla; P = los locales del archivo que comparten)
+require('src/states/story/StoryMapCannons')(StoryMapState, { img = img, frameQ = frameQ, loadMap = loadMap, stateOf = stateOf,
+                                                             stopIndex = stopIndex, OPEN_AT = OPEN_AT })
+require('src/states/story/StoryMapScenes')(StoryMapState, { img = img, frameQ = frameQ, nodeXY = nodeXY, mapNodes = mapNodes,
+                                                            stopIndex = stopIndex, OPEN_AT = OPEN_AT, SECRET_OPEN_AT = SECRET_OPEN_AT })
 
 return StoryMapState

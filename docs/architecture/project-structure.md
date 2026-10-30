@@ -65,7 +65,7 @@ adds the repo root to `package.path`; harnesses reach `src/` and `assets/` throu
 
 ## Split files
 
-Four files that had grown past 1300 lines are split by system. The pattern is always the same and deliberately
+Files that had grown past 1300 lines are split by system. The pattern is always the same and deliberately
 simple: the ORIGINAL file is still the entry point and the public table; each part file is
 `return function(Class, P) … end`, is loaded at the END of the original file, and adds methods to the same table.
 `P` is a private table carrying what used to be file-level locals shared between sections (constants, small helper
@@ -77,6 +77,7 @@ functions). Call sites never changed.
 | `src/player/PlayerAdventure.lua` | `PlayerCollision`, `PlayerAir`, `PlayerGroundPound`, `PlayerRender` |
 | `src/states/online/OnlineAdventureState.lua` | `OnlineAdventureNet` (init data, snapshots, events), `OnlineAdventureRender`, `OnlineAdventureHud` |
 | `src/editor/Editor.lua` | `EditorCanvas`, `EditorPalette`, `EditorInspector`, `EditorDialogs` |
+| `src/states/story/StoryMapState.lua` | `StoryMapCannons` (the cannons between islands: data, the load-aim-fire-fly sequence, drawing) |
 
 Rules when editing a split file: a new method goes in the part of its system; a new file-level local that two parts
 need goes through `P` (export it where it is defined: `P.name = name`; import it at the top of the part that uses

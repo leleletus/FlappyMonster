@@ -4,7 +4,7 @@
 -- story.sav (lo GLOBAL: dificultades desbloqueadas). OJO: nunca nombres .lua del juego (ver
 -- src/core/Settings.lua: la carpeta de guardado tapa los módulos).
 -- El archivo es una tabla de Lua (`return { ... }`) que se carga sin entorno: no puede ejecutar nada.
-local Save = { SLOTS = 3, VERSION = 3 }
+local Save = { SLOTS = 3, VERSION = 4 }
 
 -- Los MUNDOS de cada versión de las partidas (Worlds.LIST por sus ids, en orden). La partida guarda el mundo por su
 -- POSICIÓN: al cargar una de una versión anterior se traduce a la lista de hoy, y lo que la partida YA TENÍA ABIERTO
@@ -20,6 +20,23 @@ Save.WORLDS = {
     [3] = { { 'pradera', 'reino_gummy' }, { 'costa', 'cala_resaca' }, { 'jungla', 'templo_escarabajo' },        -- (0.5.100: la isla
             { 'fortaleza', 'fortaleza_malvada' }, { 'nieve', 'lago_helado' }, { 'costa_helada', 'glaciar_cangrejo' }, --  helada, partida
             { 'cuevas', 'gruta_del_farol' }, { 'final', 'ruta_del_espejo' } },                                         --  en dos)
+    [4] = { { 'pradera', 'reino_gummy' }, { 'costa', 'cala_resaca' }, { 'jungla', 'templo_escarabajo' },        -- (los secretos:
+            { 'fortaleza', 'fortaleza_malvada' }, { 'nieve', 'lago_helado' }, { 'costa_helada', 'glaciar_cangrejo' }, --  los mismos
+            { 'cuevas', 'gruta_del_farol' }, { 'final', 'ruta_del_espejo' } },                                         --  mundos)
+}
+
+-- Lo que cambia AL LLEGAR a una versión, aparte de los mundos (Save.migrate lo aplica en orden):
+--   4 (los secretos: salidas secretas, coleccionables): `collect` y `found` empiezan vacíos y los niveles a los que
+--     lleva una salida secreta (Worlds `secrets` con `exit`) dejan de estar superados — una partida que ya los jugó
+--     fuera de la historia (o cuando el Mega Crabby era el jefe de la Costa) no se lleva nada: hay que encontrar la
+--     salida y vencer al jefe en su guarida para ganar su astilla
+Save.UPGRADE = {
+    [4] = function(d)
+        d.collect, d.found = {}, {}
+        for _, e in ipairs(require('src/story/Worlds').allSecrets()) do
+            if e.exit then d.done[e.level] = nil end
+        end
+    end,
 }
 
 local function file(i) return 'story' .. i .. '.sav' end
@@ -80,6 +97,8 @@ function Save.new(difficulty)
              open = {},                                        -- (mundos abiertos sin su jefe anterior: Save.migrate)
              shards = {},                                      -- (fragmentos del espejo: src/story/Shards.lua)
              films = {},                                       -- (cinemáticas de antes de un nivel ya vistas: Worlds films)
+             collect = {},                                     -- (COLECCIONABLES: [id] = true | otro estado — src/story/Collect.lua)
+             found = {},                                       -- (salidas SECRETAS usadas: [nivel al que llevan] = true)
              taken = {} }                                      -- (vidas extra ya cogidas, por nivel: no se repiten)
 end
 
@@ -98,6 +117,8 @@ function Save.load(i)
     d.films = type(d.films) == 'table' and d.films or {}
     d.taken = type(d.taken) == 'table' and d.taken or {}         -- (vidas extra cogidas por nivel: [id] = { [colocación] = true })
     d.open = type(d.open) == 'table' and d.open or {}
+    d.collect = type(d.collect) == 'table' and d.collect or {}
+    d.found = type(d.found) == 'table' and d.found or {}
     Save.migrate(d)
     require('src/story/Shards').migrate(d)                    -- (partidas de antes de los fragmentos)
     return d
@@ -127,6 +148,7 @@ function Save.migrate(d)
         for i, w in ipairs(new) do
             if wasOpen[w[1]] and i > 1 and not d.done[new[i - 1][2]] then d.open[w[1]] = true end
         end
+        if Save.UPGRADE[v + 1] then Save.UPGRADE[v + 1](d) end
         v = v + 1
     end
     d.version = Save.VERSION

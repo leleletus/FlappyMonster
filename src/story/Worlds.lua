@@ -9,8 +9,21 @@
 --   outros  CARRERAS QUE ENLAZAN (solo en la historia): { [nivel] = columna }: ese nivel no acaba en la meta sino en una
 --           escena dentro de él a partir de esa columna de la cámara (src/story/RunOut.lua) y pasa directamente al nodo
 --           siguiente (su película, si tiene, y él), sin resultados ni mapa por medio
---   secret  nivel SECRETO de después del juego (solo en el ÚLTIMO mundo: en el mapa es la última parada): no se ve —ni
---           su nodo ni su camino— hasta vencer al jefe del último mundo; no cuenta para el progreso (el Groove)
+--   secrets NIVELES SECRETOS del mundo, en orden: { { level, from, exit, after, collect }, ... }. En el mapa, un nodo
+--           ROJO con cerradura y un camino que sale del nodo `from` (un nivel del mundo, 'bonus' u otro secreto; el
+--           dibujo del camino: assets/story/overworld.json `secrets`, tools/art/story/make_overworld.py). Cerrado NO
+--           EXISTE en el mapa (ni nodo ni camino ni parada). Se abre con TODO lo que pida:
+--             exit = true    haber usado la SALIDA SECRETA del nivel `from` (tile `secret_exit`; la partida lo apunta en
+--                            `found[level]` al terminar el nivel por ella: Run.findSecret)
+--             after = { … }  esos niveles superados
+--             collect = kind tener (en cualquier estado) todos los coleccionables de ese tipo (src/story/Collect.lua)
+--             scene = id     haber visto esa ESCENA del mapa, que se pone sola cuando todo lo demás se cumple
+--                            (src/states/story/StoryMapScenes.lua: el robo de las astillas, los tres que crecen)
+--           Son OPCIONALES: no cuentan para el progreso ni para abrir el mundo siguiente; se pueden repetir. Su jefe suelta
+--           su coleccionable (assets/story/collectibles.json). Un secreto nuevo = una línea aquí, su camino en el
+--           generador del mapa y, si da algo, su entrada en collectibles.json
+--   epilogue { after = nivel, scene = id }: la ESCENA del mapa que se ve al volver tras superar ese nivel (el final
+--           de verdad, tras el Mega Mashup: StoryMapScenes)
 --   films   CINEMÁTICAS de antes de un nivel: { [nivel] = película (assets/story/films.json) }; se ven la
 --           primera vez que se entra en él (la partida apunta las vistas: `films`)
 -- Todo nivel de la historia necesita META (los de solo Cazamonstruos no la tienen).
@@ -23,7 +36,8 @@ Worlds.LIST = {
     -- 1 La Pradera: lo básico; luego bombas e interruptores
     { id = 'pradera',   levels = { 'valle_soleado', 'pradera_explosiva', 'bosque_interruptores' },                           boss = 'reino_gummy', bonus = 'isla_flotante' },
     -- 2 La Costa: trampolines y agua; del más suelto al más denso, y el arrecife (bucear) al final
-    { id = 'costa',     levels = { 'playa_rebotes', 'jungla_colgante', 'canon_trampolines', 'arrecife_globo' },              boss = 'cala_resaca', bonus = 'cala_de_los_muelles' },   -- (Pez Globo Gigante; el Mega Crabby de guarida_cangrejo_rey pasa a jefe secreto)
+    { id = 'costa',     levels = { 'playa_rebotes', 'jungla_colgante', 'canon_trampolines', 'arrecife_globo' },              boss = 'cala_resaca', bonus = 'cala_de_los_muelles',     -- (Pez Globo Gigante)
+      secrets = { { level = 'guarida_cangrejo_rey', from = 'arrecife_globo', exit = true } } },   -- (el Mega Crabby, jefe secreto: por la salida secreta del arrecife)
     -- 3 La Jungla (0.5.99): dos pisos a la vez, el río que se cruza dos veces, el templo de tres alas y la estampida
     -- (cámara automática) hasta el templo del Escarabajo Gigante
     { id = 'jungla',    levels = { 'senda_del_dosel', 'rio_revuelto', 'templo_de_los_pesos', 'la_estampida' },        boss = 'templo_escarabajo', bonus = 'claro_de_la_balanza' },
@@ -36,10 +50,18 @@ Worlds.LIST = {
     -- glaciar del Mega Crabby helado
     { id = 'costa_helada', levels = { 'fabrica_criogenica', 'tempanos_a_la_deriva', 'bahia_de_las_mareas', 'bajo_el_hielo' }, boss = 'glaciar_cangrejo', bonus = 'lago_de_cristal' },
     -- 7 Las Cuevas: cristal, los dos laberintos de agua y el templo a oscuras justo antes del jefe a oscuras
-    { id = 'cuevas',    levels = { 'cavernas_cristal', 'nivel01', 'laberinto_submarino', 'templo_del_eco' },             boss = 'gruta_del_farol', bonus = 'cripta_del_silencio' },   -- (Saltarín Gigante; el Mega Crabby lúgubre de gruta_lugubre pasa a jefe secreto)
+    { id = 'cuevas',    levels = { 'cavernas_cristal', 'nivel01', 'laberinto_submarino', 'templo_del_eco' },             boss = 'gruta_del_farol', bonus = 'cripta_del_silencio',   -- (Saltarín Gigante)
+      secrets = { { level = 'gruta_lugubre', from = 'templo_del_eco', exit = true } } },       -- (el Mega Crabby lúgubre: por la salida secreta del templo)
     -- 8 El Final (el volcán): lava; la lluvia de pinchos (cámara automática) es la erupción, antes del Espejo
     { id = 'final',     levels = { 'carrera01', 'caldera_roja', 'lluvia_pinchos', 'huida_del_espejo' },                                       boss = 'ruta_del_espejo', bonus = 'cantera_real',
-      secret = 'isla_del_groove',                                             -- (El Groove, el jefe secreto)
+      -- (el Groove: vencido el Espejo y con TODAS las astillas; luego el Mega Mashup, el final de verdad, en su isla)
+      -- (los dos se abren con su escena del mapa: el robo de las astillas, los tres cangrejos que crecen; y tras el
+      --  Mashup, el final de verdad)
+      secrets = { { level = 'isla_del_groove', from = 'bonus', after = { 'ruta_del_espejo' }, collect = 'splinter', scene = 'groove' },
+                  { level = 'mashup_cangrejos', from = 'isla_del_groove', after = { 'isla_del_groove' }, scene = 'regrow' } },
+      epilogue = { after = 'mashup_cangrejos', scene = 'disco' },
+      -- (un nivel secreto también puede tener la suya: `mashup_cangrejos = '<película>'` — pendiente de la decisión
+      --  del usuario sobre la escena de antes del Mega Mashup —; la ve la primera vez que entra, como cualquier otro)
       films = { huida_del_espejo = 'chase', ruta_del_espejo = 'lair' },      -- (la emboscada; la guarida)
       outros = { huida_del_espejo = 182 } },                                  -- (la huida sigue en la guarida)
 }
@@ -67,12 +89,38 @@ function Worlds.bonus(w)
     return W._bonus
 end
 
--- El nodo SECRETO de un mundo ({ id, secret = true }) o nil
-function Worlds.secret(w)
+-- Los nodos SECRETOS de un mundo, en orden: { { id, secret = true, def = su entrada de `secrets` }, ... }
+function Worlds.secrets(w)
     local W = Worlds.LIST[w]
-    if not (W and W.secret) then return nil end
-    W._secret = W._secret or { id = W.secret, secret = true }
-    return W._secret
+    if not W then return {} end
+    if not W._secrets then
+        W._secrets = {}
+        for _, e in ipairs(W.secrets or {}) do W._secrets[#W._secrets + 1] = { id = e.level, secret = true, def = e } end
+    end
+    return W._secrets
+end
+
+-- Todas las entradas `secrets` del juego (con `world` = su mundo)
+function Worlds.allSecrets()
+    local out = {}
+    for w, W in ipairs(Worlds.LIST) do
+        for _, e in ipairs(W.secrets or {}) do e.world = w; out[#out + 1] = e end
+    end
+    return out
+end
+
+-- El secreto al que lleva la SALIDA SECRETA del nivel `id` (su entrada de `secrets`, con `exit`) o nil
+function Worlds.secretExitOf(id)
+    for _, e in ipairs(Worlds.allSecrets()) do
+        if e.exit and e.from == id then return e end
+    end
+    return nil
+end
+
+-- ¿Es `id` un nivel secreto? → su entrada (o nil)
+function Worlds.secretOf(id)
+    for _, e in ipairs(Worlds.allSecrets()) do if e.level == id then return e end end
+    return nil
 end
 
 -- La película de antes del nivel `id` (o nil)

@@ -54,6 +54,7 @@ function IM.loadAssets()
 end
 function IM.sizePx() return 18 * MS, 13 * MS end
 IM.MS = MS
+IM.WEAR = false                      -- (la corona es del Mega Crabby: Boss:drawWear)
 
 function IM:initBoss()
     Mega.initBoss(self)
@@ -492,7 +493,7 @@ end
 
 -- ── Definición: la del Mega + lo helado ───────────────────────────────────────
 local props = {}
-for _, pr in ipairs(baseDef.props) do props[#props + 1] = pr end
+for _, pr in ipairs(baseDef.props) do if pr.key ~= 'wear' then props[#props + 1] = pr end end   -- (sin corona)
 local G = 'Hielo'
 for _, pr in ipairs({
     { key='waveFreeze', kind='number', label='Palmada: congela (s)', group=G, default=1.0, min=0.2, max=4, step=0.1,
