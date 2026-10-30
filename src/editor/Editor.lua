@@ -314,7 +314,65 @@ local function listLevels()
         search[path] = path:match('[^/]+$') .. ' ' .. (names[path] or '') .. ' ' .. (ok and type(d) == 'table' and d.name_en or '')
     end
     out.names, out.search = names, search
+    out.meta = {}
+    for _, path in ipairs(out) do out.meta[path] = E.levelMeta(path) end
     return out
+end
+
+-- ── FILTROS del diálogo "Abrir" (el usuario, 2026-10-29: aislar por isla, por modo y los de jefe) ──────────────
+-- La ficha de cada nivel sale de lo que ya calcula el juego: LevelCatalog.info (los modos que admite, los jefes) y
+-- la ISLA = el mundo de la historia en que está (Worlds.LIST); fuera de la historia, la de su arte (Isles.of) llevada
+-- al mundo (ISLE_WORLD). Se guarda por archivo y fecha: abrir el diálogo otra vez no vuelve a cargar los niveles.
+local ISLE_WORLD = { pradera = 'pradera', costa = 'costa', fortaleza = 'fortaleza', nieve = 'nieve', cueva = 'cuevas',
+                     volcan = 'final', jungla = 'jungla' }
+local BACKGROUND_WORLD = { frozen_coast = 'costa_helada' }      -- (fondos con mundo propio sin isla de arte propia)
+local metaCache = {}
+function E.levelMeta(path)
+    local info = love.filesystem.getInfo(path)
+    local key = path .. '|' .. tostring(info and info.modtime or 0)
+    if metaCache[key] ~= nil then return metaCache[key] or nil end
+    local meta = false
+    local okInfo, ci = pcall(require('src/world/level/LevelCatalog').load, path)
+    if okInfo and ci then
+        local id = path:match('([^/]+)%.json$')
+        local world
+        for _, W in ipairs(require('src/story/Worlds').LIST) do
+            if W.boss == id or W.bonus == id or W.secret == id then world = W.id end
+            for _, l in ipairs(W.levels) do if l == id then world = W.id end end
+        end
+        if not world then
+            local ok, d = pcall(function() return require('libs/json').decode(love.filesystem.read(path)) end)
+            d = ok and type(d) == 'table' and d or {}
+            world = BACKGROUND_WORLD[d.background or ''] or ISLE_WORLD[require('src/world/level/Isles').of(d)] or 'pradera'
+        end
+        meta = { world = world, modes = ci.modes or {}, boss = #(ci.bossTypes or {}) > 0 }
+    end
+    metaCache[key] = meta
+    return meta or nil
+end
+
+-- Las opciones de cada filtro (nil = todas): mundos en el orden de la historia, modos en el de su catálogo
+function E.filterOptions()
+    local worlds, modes = {}, {}
+    for _, W in ipairs(require('src/story/Worlds').LIST) do worlds[#worlds + 1] = W.id end
+    for _, m in ipairs(require('src/world/modes/Modes').list) do modes[#modes + 1] = m.id end
+    return worlds, modes
+end
+
+-- La lista que se ve: el texto del buscador y los filtros { world, mode, boss }
+function E.filterLevels(files, query, f)
+    local TextUtil = require 'src/ui/TextUtil'
+    f = f or {}
+    local view = {}
+    for _, path in ipairs(files) do
+        local m = files.meta and files.meta[path]
+        local ok = TextUtil.matches(query or '', (files.search or {})[path] or path)
+        if ok and f.world then ok = m ~= nil and m.world == f.world end
+        if ok and f.mode then ok = m ~= nil and m.modes[f.mode] == true end
+        if ok and f.boss then ok = m ~= nil and m.boss end
+        if ok then view[#view + 1] = path end
+    end
+    return view
 end
 
 E.listLevels = listLevels           -- (el arnés editor_open abre el diálogo con la lista de verdad)

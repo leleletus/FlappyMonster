@@ -16,7 +16,7 @@ local function drawModal()
     love.graphics.setColor(0, 0, 0, 0.55)
     love.graphics.rectangle('fill', 0, 0, sw, sh)
     local w, h = 460, 200
-    if md.kind == 'open' then w, h = math.min(sw - 80, 620), math.min(sh - 80, 144 + #md.files * 34) end
+    if md.kind == 'open' then w, h = math.min(sw - 80, 660), math.min(sh - 80, 180 + #md.files * 34) end
     if md.kind == 'help' then w, h = 720, 470 end
     local x, y = (sw - w) / 2, (sh - h) / 2
     ui.rect(x, y, w, h, th.panel, 8)
@@ -36,15 +36,32 @@ local function drawModal()
         local q0 = md.query
         md.query = ui.textField('open_search', md.query, x + 170, y + 16, w - 190, 40, 'Buscar nivel…')
         if ui.state.focus == nil and not ui.state.pressed then ui.state.focus = 'open_search' end
-        local TextUtil = require 'src/ui/TextUtil'
-        local view = {}
-        for _, f in ipairs(md.files) do
-            if TextUtil.matches(md.query, (md.files.search or {})[f] or f) then view[#view + 1] = f end
+        -- FILTROS (aislar): ISLA (el mundo de la historia), MODO y solo los de JEFE. Clic = el siguiente; Mayús + clic =
+        -- el anterior; el primero de la vuelta es "todas"
+        md.filters = md.filters or {}
+        local fl = md.filters
+        local worlds, modes = E.filterOptions()
+        local function cycle(list, cur)
+            local back = love.keyboard.isDown('lshift', 'rshift')
+            local i = 0
+            for k, v in ipairs(list) do if v == cur then i = k end end
+            i = back and (i - 1) or (i + 1)
+            if i < 0 then i = #list end
+            return list[i]                                        -- (0 o #list + 1 → nil: todas)
         end
-        if md.query ~= q0 then md.sel = 1; ui.state.scroll['open'] = 0 end
-        ui.text(#view .. ' de ' .. #md.files .. ' niveles  ·  rueda del ratón o flechas para moverse', x + 170, y + 46, th.muted, ui.fontSm)
+        local Lang = require 'src/core/Lang'
+        local wName = fl.world and (Lang.has('story.world.' .. fl.world) and Lang('story.world.' .. fl.world) or fl.world) or 'Todas'
+        local mDef = fl.mode and require('src/world/modes/Modes').get(fl.mode)
+        local fy = y + 66
+        local changed = false
+        if ui.button('Isla: ' .. wName, x + 20, fy, 250, 28, { align = 'left', active = fl.world ~= nil }) then fl.world = cycle(worlds, fl.world); changed = true end
+        if ui.button('Modo: ' .. (mDef and mDef.label or 'Todos'), x + 280, fy, 210, 28, { align = 'left', active = fl.mode ~= nil }) then fl.mode = cycle(modes, fl.mode); changed = true end
+        if ui.button(fl.boss and 'Solo jefes: sí' or 'Solo jefes: no', x + 500, fy, w - 520, 28, { active = fl.boss == true }) then fl.boss = not fl.boss or nil; changed = true end
+        local view = E.filterLevels(md.files, md.query, fl)
+        if md.query ~= q0 or changed then md.sel = 1; ui.state.scroll['open'] = 0 end
+        ui.text(#view .. ' de ' .. #md.files .. ' niveles  ·  flechas o rueda  ·  Mayús + clic: filtro anterior', x + 170, y + 46, th.muted, ui.fontSm)
         -- Lista con scroll (caben muchos niveles)
-        local top, areaH = y + 70, h - 70 - 60
+        local top, areaH = y + 104, h - 104 - 60
         local contentH = #view * 34
         md.sel = math.max(1, math.min(#view, md.sel or 1))
         local keys = ui.state.keys
@@ -70,7 +87,7 @@ local function drawModal()
         end
         ui.endScroll()
         if #md.files == 0 then ui.text('No hay niveles en ' .. LEVELS_DIR, x + 20, top, th.muted)
-        elseif #view == 0 then ui.text('Ningún nivel coincide con «' .. md.query .. '»', x + 20, top, th.muted) end
+        elseif #view == 0 then ui.text('Ningún nivel coincide' .. (md.query ~= '' and (' con «' .. md.query .. '»') or '') .. ' (mira los filtros)', x + 20, top, th.muted) end
         if keys['return'] and view[md.sel] then open(view[md.sel]) end
         if ui.button('Cancelar', x + w - 120, y + h - 46, 100, 30) then close() end
     elseif md.kind == 'saveas' then

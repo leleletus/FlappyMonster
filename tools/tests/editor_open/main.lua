@@ -324,8 +324,30 @@ function love.update(dt)
     -- tildes ni mayúsculas, por archivo y nombre) e Intro abre el primero que coincide
     if frame == 88 then
         local E = require('src/editor/Editor').state()
+        local t0 = love.timer.getTime()
         E.modal = { kind = 'open', files = E.listLevels() }
+        local t1 = love.timer.getTime()
+        local again = E.listLevels()                                -- (la 2ª vez, de la caché)
+        local t2 = love.timer.getTime()
         OPEN_N = #E.modal.files
+        -- FILTROS (el usuario: aislar por isla, por modo y los de jefe): la Costa Helada = sus 6 niveles de la historia;
+        -- Rey de la Colina = solo niveles con zona de puntos; solo jefes = con jefe (sí el templo del escarabajo, no el
+        -- valle soleado); los tres a la vez se combinan
+        local files = E.modal.files
+        local set = function(v) local t = {} for _, p in ipairs(v) do t[p:match('([^/]+)%.json$')] = true end return t end
+        local ch = set(E.filterLevels(files, '', { world = 'costa_helada' }))
+        local nch = 0 for _ in pairs(ch) do nch = nch + 1 end
+        local koth = E.filterLevels(files, '', { mode = 'koth' })
+        local kothOk = #koth > 5
+        for _, p in ipairs(koth) do if not files.meta[p].modes.koth then kothOk = false end end
+        local boss = set(E.filterLevels(files, '', { boss = true }))
+        local both = E.filterLevels(files, '', { world = 'nieve', boss = true })
+        local ok = nch == 6 and ch.fabrica_criogenica and ch.bajo_el_hielo and ch.glaciar_cangrejo and ch.lago_de_cristal
+            and kothOk and boss.templo_escarabajo and boss.lago_helado and not boss.valle_soleado
+            and #both == 1 and both[1]:match('lago_helado') ~= nil
+        print(('%-10s %s  Costa Helada %d niveles · Rey de la Colina %d · con jefe %d · Montañas + jefe = %s · lista %.2f s (2ª vez %.2f s)'):format(
+            'filtros', ok and 'OK   ' or 'FALLA', nch, #koth, #E.filterLevels(files, '', { boss = true }), tostring(both[1]), t1 - t0, t2 - t1))
+        if not ok then print('Error: los filtros del diálogo "Abrir" no aíslan bien') end
     end
     if frame == 90 then for ch in ('TEMPLO escarabajo'):gmatch('.') do love.textinput(ch) end end
     if frame == 93 then shot('abrir') end

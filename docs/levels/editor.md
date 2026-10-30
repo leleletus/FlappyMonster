@@ -41,6 +41,12 @@ when it fits), textField (placeholder), section, tabs, hint, caption, label
 in-game. `Model:validate()` → warnings (Avisos tab, clickable). F5 playtests
 via `AdventureState` with `editor_playtest.json` (SP keeps reserve entities in
 `self.enemies`: it only drops non-alive ones without `summonOf`).
+Ctrl+O "Abrir nivel" — FILTERS (0.5.108, the user: "que solo salgan de una isla u otra, de un modo u otro, y los
+de jefe"): three buttons under the search field, combinable with it — **Isla** (the story world the level belongs to;
+outside the story, its art island from `Isles.of`, plus `frozen_coast` → `costa_helada`), **Modo** (the online modes the
+level supports, from `LevelCatalog.info`), **Solo jefes** (levels with a boss). Click = next value, Shift + click =
+previous; the first of the cycle is "all". `E.levelMeta` (cached per file and modification time), `E.filterOptions`,
+`E.filterLevels`; harness `editor_open` case `filtros`.
 Ctrl+O "Abrir nivel" = scrollable list (wheel / arrows + Enter) with file + level
 name; hides `_*` files and `editor_playtest.json`. Test arenas live in
 `tools/levelgen/arenas/` (not listed). A SEARCH field on top (0.5.77, the user could not find the boss level) has the
