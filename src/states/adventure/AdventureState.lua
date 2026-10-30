@@ -225,6 +225,8 @@ function AdventureState:enter(args)
     self.prevHp = self.player.hp
     self.levelTime  = 0   -- segundos transcurridos
     self.popups     = {}  -- lista de textos flotantes de puntos
+    -- (args.onReady(st): el nivel ya montado — el FILM TEST lo usa para llevar al jugador a la escena que quiere ver)
+    if args.onReady then args.onReady(self) end
 end
 
 -- Vuelve a apuntar a ESTE nivel lo que es global (dificultad, partículas, ruidos, efectos): lo usa la demo del

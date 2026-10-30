@@ -59,6 +59,21 @@ Since 0.5.99 (the user, below) the films take every count and place from data:
   the A harmonic minor scale down to G#; `fury`'s roots, the chase/lair bells and the `shrink` bars (one map-theme
   bar per two bosses, the dominant after them) follow `n`.
 
+## Film test (secret, 0.5.112)
+
+The user (2026-10-30): "un test de cinemática, de esta forma podré ver las que quiera cuando quiera", including "las
+microcinemáticas in-game del Mirror". `src/states/menu/FilmTestState.lua` (state `film_test`), entered from the SOUND
+TEST with ◀ (left). The list is built from the catalogs, so new films, scenes and bosses appear by themselves:
+- FILMS: every film of `films.json` (the ending twice: without and with every splinter — the Groove's ball bouncing
+  the wave);
+- MAP scenes: `StoryMapState.SCENES` (the Groove's theft, the crabs growing back, the ball breaking) — the map opens
+  with `args.scene` / `args.sceneDone`;
+- IN GAME: each `outros` race closing scene (the chase's, fast-forwarded to its column), every boss ENTRANCE (world
+  bosses and secret lairs: the player is placed in the zone with `BossZones.safeSpawn` — the Mirror's dive and laugh
+  among them) and the Crab Mega Mashup intro — `AdventureState` `args.onReady(st)`.
+Scenes that read the save use a FAKE in-memory run (`Run.slot = nil`, so nothing is written) and the real one is
+restored when the film test opens again. Harness `menu_flow` case `filmtest`.
+
 ## Details
 
 - **Cinematics are rendered BY THE GAME** (user's rule: never pre-rendered or animated outside it; real sprites,

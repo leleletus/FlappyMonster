@@ -484,6 +484,7 @@ function StoryMapState:enter(args)
     for _, i in ipairs(args.opened or {}) do self.opening[i] = true end
     self.openSound = next(self.opening) ~= nil
     self.scene = nil                              -- (una escena de los secretos en el mapa: StoryMapScenes)
+    self.forceScene, self.sceneDone = args.scene, args.sceneDone      -- (el FILM TEST: ver esa escena y volver)
     self.openAt = OPEN_AT                         -- (con un SECRETO entre lo que se abre, suena cuando sale su nodo)
     for i in pairs(self.opening) do
         local ow, ok = stopAt(i)

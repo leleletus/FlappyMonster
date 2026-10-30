@@ -73,11 +73,11 @@ function Input.hints()
     if pad then
         hintCache = { ok = labelsConsole.confirm, back = labelsConsole.back, arrows = L('keys.dpad'), lr = '[<][>]',
                       ud = '[^][v]', up = '[^]', down = '[v]', diff = labelsConsole.light, del = labelsConsole.light,
-                      alt = labelsConsole.light }
+                      alt = labelsConsole.light, left = '[<]', right = '[>]' }
     else
         hintCache = { ok = '[ENTER]', back = '[ESC]', arrows = L('keys.arrows'), lr = L('keys.lr'), ud = L('keys.ud'),
                       up = L('keys.up'), down = L('keys.down'), diff = labelsPC.light, del = L('keys.del'),
-                      alt = labelsPC.light }
+                      alt = labelsPC.light, left = L('keys.left'), right = L('keys.right') }
     end
     return hintCache
 end

@@ -238,6 +238,7 @@ function SoundTestState:update(dt)
         if Input.pressed('nav_up') then self:_move(-1) end
         if Input.pressed('nav_down') then self:_move(1) end
         if Input.pressed('nav_right') then self.focus = 'opts'; Sound.play('select') end
+        if Input.pressed('nav_left') then self:_stop(); Sound.play('select'); gStateMachine:change('film_test'); return end   -- (el FILM TEST)
         if Input.pressed('light') then self:_change(1, 1) end                       -- (atajo: música / efectos)
         if Input.pressed('confirm') or Input.pressed('flap') then self:_toggle() end
         if Input.pressed('back') then Sound.play('select'); gStateMachine:change('title', { menu = true }) end

@@ -119,6 +119,47 @@ local function run()
     check('soundtest', inST and musicOk and pitchOk and sfxOk and back and taps and TOUCH_ST,
         ('código → %s; música suena=%s; tono 1,05 en lo que suena=%s; efectos suena=%s; atrás → título=%s; 7 toques en la versión → entra=%s; con el dedo: %s'):format(
          name(stt), tostring(musicOk), tostring(pitchOk), tostring(sfxOk), tostring(back), tostring(taps), tostring(TOUCH_MSG)))
+    -- ── 1c. FILM TEST secreto (desde el sound test, ◀): la lista sale de los catálogos (películas, escenas del mapa,
+    --        escenas dentro del juego); ver una película, una escena del mapa, la escena final de la huida y la
+    --        entrada de un jefe, y cada una vuelve al film test; la partida de mentira no toca la de verdad ──
+    do
+        gStateMachine:change('sound_test'); wait(0.3)
+        press('nav_left', 0.3)
+        local ft = top()
+        local inFT = name(ft) == 'FilmTestState'
+        local groups, ids = {}, {}
+        for i, it in ipairs(inFT and ft.list or {}) do groups[it.group] = (groups[it.group] or 0) + 1; ids[it.id] = i end
+        local Run = require 'src/story/Run'
+        local before = Run.data
+        local function pick(id) local t = top(); t.sel = ids[id]; press('confirm', 0.4) end
+        local filmOk, mapOk, outroOk, bossOk = false, false, false, false
+        if inFT then
+            pick('intro')
+            filmOk = name(top()) == 'StoryFilmState'
+            if filmOk then top():_finish(); wait(0.3) end
+            filmOk = filmOk and name(top()) == 'FilmTestState'
+            pick('groove'); wait(0.6)
+            local m = top()
+            mapOk = name(m) == 'StoryMapState' and m.scene ~= nil and m.scene.id == 'groove'
+            if mapOk then shot('filmtest_escena'); press('confirm', 0.4) end
+            mapOk = mapOk and name(top()) == 'FilmTestState'
+            pick('outro_huida_del_espejo'); wait(1.2)
+            local a = top()
+            outroOk = name(a) == 'AdventureState' and a.runOut ~= nil and (a.runOut.active == true or a.level.cinema == true)
+            if outroOk then shot('filmtest_huida') end
+            gStateMachine:change('film_test'); wait(0.3)
+            pick('boss_ruta_del_espejo'); wait(2.0)
+            local b = top()
+            local z = name(b) == 'AdventureState' and b.level.bossZones and b.level.bossZones[1]
+            bossOk = z ~= nil and z ~= false and z.state ~= 'wait'
+            if bossOk then shot('filmtest_espejo') end
+            gStateMachine:change('film_test'); wait(0.3)
+        end
+        local restored = (Run.data == before) and not Run.filmTest
+        check('filmtest', inFT and (groups.film or 0) >= 6 and (groups.map or 0) >= 3 and (groups.game or 0) >= 10 and filmOk and mapOk and outroOk and bossOk and restored,
+            ('◀ en el sound test → %s; %d películas, %d escenas del mapa, %d en el juego; película → y vuelta=%s; escena del mapa=%s; escena final de la huida=%s; entrada del Espejo=%s; partida de verdad intacta=%s'):format(
+             name(ft), groups.film or 0, groups.map or 0, groups.game or 0, tostring(filmOk), tostring(mapOk), tostring(outroOk), tostring(bossOk), tostring(restored)))
+    end
     gStateMachine:change('title'); st = top(); wait(1.8)
     press('confirm', 0.8)
 

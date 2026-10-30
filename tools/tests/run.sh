@@ -57,6 +57,12 @@ run_one() {
         shift
     done
     [ -d "tools/tests/$name" ] || { echo "No existe el arnés tools/tests/$name"; return 2; }
+    # UNO A LA VEZ por arnés: dos copias del mismo arnés comparten su carpeta de guardado y una borra la partida de la
+    # otra a medias (el usuario, 2026-10-30: una que se fue al fondo y otra lanzada a mano se pisaron y el arnés
+    # "falló" sin culpa). La segunda ESPERA, y lo dice, a que acabe la primera.
+    local lockfd
+    exec {lockfd}>"${TMPDIR:-/tmp}/fm_test_lock.$name"
+    if ! flock -n "$lockfd"; then echo "   (ya hay otro $name en marcha: espero a que acabe)"; flock "$lockfd"; fi
     # Arena de prueba fuera de assets/levels → copia temporal
     local i
     for i in "${!envs[@]}"; do
@@ -117,6 +123,7 @@ run_one() {
     fi
     [ -n "$tmp" ] && rm -f "$tmp"
     [ $had_pub = 0 ] && rm -rf server/published
+    flock -u "$lockfd"; exec {lockfd}>&-
     return $rc
 }
 

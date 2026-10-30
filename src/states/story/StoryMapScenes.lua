@@ -82,12 +82,30 @@ end
 
 -- ── Piezas de dibujo (en píxeles del mapa; la cámara ya está aplicada) ───────────────────────────────────────────
 local GFW = 18                                -- (groovecrab/body-Sheet: 3 cuadros de 18x10)
+-- El Groove entero, como en el juego (groovecrab_stage.lua GC:render) y con la vida de los otros cangrejos gigantes del
+-- mapa (StoryMapState:_drawBossArt / BOSS_CLAWS): respira (un aplastado suave), las pinzas se mecen y chasquean de vez en
+-- cuando; el trampolín de la espalda, el cuerpo y sus dos pinzas — la grande delante, la pequeña detrás — (el usuario:
+-- en el mapa le faltaban las pinzas y el trampolín). Mira a la izquierda, como su dibujo; (x, y) = sus pies
 local function drawGroove(x, y, t, s, dance)
-    local im = img('assets/images/bosses/groovecrab/body-Sheet.png')
-    local fr = (floor(t * 4) % 3) + 1
+    local D = 'assets/images/bosses/groovecrab/'
+    local body, big, small, tramp = img(D .. 'body-Sheet.png'), img(D .. 'bigclaw-Sheet.png'), img(D .. 'claw-Sheet.png'), img(D .. 'tramp.png')
+    local fr = dance and ((floor(t * 4) % 3) + 1) or 1
+    local squash = 1 + 0.06 * sin(t * 4)
     local hop = dance and floor(-math.abs(sin(t * 6)) * 8) or 0
+    local function snap(k)                                                   -- (un chasquido de vez en cuando; bailando, al ritmo)
+        local q = t * (dance and 3 or 1.1) + k * 0.5
+        return (floor(q) % (dance and 2 or 3) == 0 and q % 1 < 0.22) and 2 or 1
+    end
     love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.draw(im, frameQ(im, GFW, fr), floor(x - GFW * s / 2), floor(y - 10 * s + hop), 0, s, s)
+    love.graphics.push()
+    love.graphics.translate(floor(x), floor(y + hop))
+    love.graphics.draw(tramp, 0, floor(-9 * s * squash), 0, s, s * (2 - squash), 8, 9)     -- (el muelle: se encoge al respirar)
+    love.graphics.draw(body, frameQ(body, GFW, fr), 0, 0, 0, s, s * squash, GFW / 2, 10)
+    local dyB, dxB = sin(t * 5) * 0.5, 0.15 + 0.15 * sin(t * 2.5)
+    local dyS, dxS = sin(t * 5 + 1.9) * 0.5, 0.15 + 0.15 * sin(t * 2.5 + 1.9)
+    love.graphics.draw(big, frameQ(big, 12, snap(1)), floor((-13 - dxB) * s), floor((-4.5 + dyB) * s * squash), 0, s, s, 6, 4.5)
+    love.graphics.draw(small, frameQ(small, 7, snap(2)), floor((11.5 + dxS) * s), floor((-4 + dyS) * s * squash), 0, -s, s, 3.5, 3)
+    love.graphics.pop()
 end
 local function drawBall(x, y, t, s, bright)
     local im = img('assets/images/bosses/groovecrab/discoball-Sheet.png')
@@ -348,6 +366,8 @@ function SM:_sceneEnd()
     local sc = self.scene
     if not sc then return end
     self.scene = nil
+    -- (vista desde el FILM TEST: sin efectos en la partida — es de mentira — y vuelta a él)
+    if self.sceneDone then local f = self.sceneDone; self.sceneDone = nil; f(); return end
     local d = Run.data
     if sc.def.done then sc.def.done(d) end
     d.films = d.films or {}
@@ -361,6 +381,11 @@ end
 
 -- (update: true = la escena manda en este fotograma — sin andar ni flechas —)
 function SM:_sceneTick(dt)
+    if not self.scene and self.forceScene then          -- (el FILM TEST: esa escena, ya)
+        local id = self.forceScene
+        self.forceScene = nil
+        if SCENES[id] then self:_sceneStart(id) end
+    end
     if not self.scene then
         local busy = #self.queue > 0 or self.flight or (next(self.opening or {}) ~= nil and self.t < (self.openAt or P.OPEN_AT) + 1.3)
         if busy or self.t < 0.5 then return false end
