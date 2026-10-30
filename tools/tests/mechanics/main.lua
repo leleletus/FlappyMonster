@@ -2549,6 +2549,87 @@ function cases.balanza_impacto()
             high, low, k1, k2, k3))
 end
 
+-- CONTRA EL TECHO (2026-10-30, el usuario: la regla de la pelea del Escarabajo Gigante, en cualquier balanza): lo que
+-- la catapulta dispara FUERTE y se estrella subiendo contra un techo queda aturdido (Gummy: 'stunned'; Escarabajo: patas
+-- arriba); una caja solo se para; el jugador pierde 1 y queda aturdido. Flojo (la fuerza más pequeña que llega al
+-- techo: llega a < HardLaunch.MIN_VY), nada; un salto de trampolín (sin catapulta) contra el techo, nada (systems/HardLaunch)
+function cases.balanza_techo()
+    local HardLaunch = require 'src/world/systems/HardLaunch'
+    local still = { pauses = false, speed = 0, patrol = false }
+    -- techo bajo encima del platillo derecho (centro en la columna 18); el izquierdo, libre
+    local function setup(kind)
+        local put = {}
+        for c = 15, 22 do put[#put + 1] = { c, 4, 'solid' } end
+        local ents = { { type = 'scale', col = 15, row = 3, props = { span = 6, drop = 5, travel = 2 } } }
+        if kind ~= 'jugador' then ents[2] = { type = kind, col = 18, row = 6, props = (kind == 'box') and {} or still } end
+        local level, es = room(30, 16, put, ents)
+        level.levelRef = level
+        es[1].levelRef = level
+        return level, es, es[1]
+    end
+    local ceilY = 4 * T                                           -- (la cara de abajo del techo)
+    local function ent(kind, kFix)
+        local level, es, sc = setup(kind)
+        sim(level, {}, es, 0.8)
+        local e = es[2]
+        local pan = sc:bodyParts()[2]:getOuterBounds()
+        local onIt = math.abs(e.y + e.outerH / 2 - pan.y) < 6
+        local k = kFix or 1
+        sc:catapult(sc:bodyParts()[1], nil, k, nil)
+        local states, top, broke = {}, e.y, false
+        sim(level, {}, es, 1.6, function()
+            states[e.state] = true
+            top = math.min(top, e.y - e.outerH / 2)
+            if not e.alive or e.state == 'gone' or e.state == 'broken' then broke = true end
+        end)
+        return onIt, states, top, broke, k
+    end
+    local gOn, gSt, gTop = ent('gummy')
+    local bOn, bSt = ent('beetle')
+    local xOn, xSt, xTop, xBroke = ent('box')
+    -- (flojo: la fuerza más pequeña con la que llega al techo — se busca: el platillo que sube también empuja —)
+    local function barely(fn)
+        for k = 0.1, 1.2, 0.02 do
+            local r = { fn(k) }
+            if r[#r] then return k, r end
+        end
+    end
+    local sK, sR = barely(function(k) local a, b, c, d = ent('gummy', k); return a, b, c, d, c <= ceilY + 2 end)
+    local sOn, sSt, sTop = sR[1], sR[2], sR[3]
+    local gummyOk = gOn and gSt.stunned and gTop <= ceilY + 2
+    local beetleOk = bOn and (bSt.onback == true) and not bSt.stunned
+    local boxOk = xOn and not xSt.stunned and xTop <= ceilY + 2 and not xBroke
+    local softOk = sOn and not sSt.stunned and sTop <= ceilY + 2
+    -- el jugador: en el platillo derecho, ground pound… aquí la catapulta directa (como un golpe en el otro platillo)
+    local function player(kFix, tramp)
+        local level, es, sc = setup('jugador')
+        sim(level, {}, es, 0.5)
+        local pan = sc:bodyParts()[2]:getOuterBounds()
+        local pa = PlayerAdventure:new(pan.x + pan.w / 2, pan.y - 70)
+        pa.invT = 0
+        sim(level, { pa }, es, 0.6)
+        pa.invT = 0
+        local onIt = pa.standBody == sc:bodyParts()[2]
+        local hp0 = pa.hp
+        local pb = pa:getOuterBounds()
+        local k = kFix or 1
+        if tramp then pa:launch(0, -math.abs(ADV_JUMP_VEL) * 1.9)       -- (trampolín: sin marca)
+        else sc:catapult(sc:bodyParts()[1], nil, k, nil) end
+        local stun, top = 0, 1e9
+        sim(level, { pa }, es, 1.2, function() stun = math.max(stun, pa.stunT or 0); top = math.min(top, pa:getOuterBounds().y)
+            if os.getenv('TRACE_TECHO') then print(('  y=%.1f top=%.1f vy=%.1f hp=%d marca=%s'):format(pa.y, pa:getOuterBounds().y, pa.vy, pa.hp, tostring(pa.hardLaunch))) end end)
+        return onIt and top <= ceilY + 2, hp0 - pa.hp, stun
+    end
+    local pOn, pLost, pStun = player()
+    local qK, qR = barely(function(k) local a, b, c = player(k); return a, b, c, a end)
+    local qOn, qLost = qR[1], qR[2]
+    local tOn, tLost = player(nil, true)
+    check('balanza_techo', gummyOk and beetleOk and boxOk and softOk and pOn and pLost == 1 and pStun > 0 and qOn and qLost == 0 and tOn and tLost == 0,
+        ('fuerte contra el techo (llega a > %d px/s): Gummy aturdido=%s (encima=%s, llega al techo=%s) · Escarabajo patas arriba=%s · caja se para=%s sin aturdir ni romperse=%s · flojo (la fuerza más pequeña que llega al techo, %.2f; llega=%s): Gummy aturdido=%s · jugador (en el platillo y llega al techo=%s): pierde %d, aturdido %.2f s · flojo (fuerza %.2f, llega=%s): pierde %d · trampolín (sin catapulta, llega=%s): pierde %d'):format(
+            HardLaunch.MIN_VY, tostring(gSt.stunned == true), tostring(gOn), tostring(gTop <= ceilY + 2), tostring(bSt.onback == true),
+            tostring(xTop <= ceilY + 2), tostring(not xSt.stunned and not xBroke), sK, tostring(sTop <= ceilY + 2), tostring(sSt.stunned == true), tostring(pOn), pLost, pStun, qK, tostring(qOn), qLost, tostring(tOn), tLost))
+end
+
 -- Saltar justo antes (el usuario, 0.5.79): quien acaba de saltar de un platillo cuando lo disparan también sale
 -- disparado (no lo atraviesa); y un platillo que sube de golpe recoge a quien estaba encima en el aire
 function cases.balanza_salto()
@@ -3601,7 +3682,7 @@ function love.load()
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
                          'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado', 'techo_pinchos',
-                         'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'islas_arte', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'balanza_salto', 'escarabajo', 'escarabajo_lanzado', 'escarabajo_ruta', 'escarabajo_manos', 'escarabajo_arrolla',
+                         'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'islas_arte', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'balanza_salto', 'balanza_techo', 'escarabajo', 'escarabajo_lanzado', 'escarabajo_ruta', 'escarabajo_manos', 'escarabajo_arrolla',
                          'topo', 'topo_culetazo', 'topo_suelo', 'topo_borde', 'pirana', 'pirana_pisar', 'pirana_rebota', 'pirana_nada', 'planta', 'planta_pisar', 'planta_traga', 'planta_colgada', 'planta_come', 'planta_bomba' }) do
         if not os.getenv('ONLY') or (',' .. os.getenv('ONLY') .. ','):find(',' .. n .. ',', 1, true) then cases[n]() end
     end

@@ -32,7 +32,13 @@ local function drawModal()
         ui.text('Abrir nivel', x + 20, y + 16, th.text, ui.fontLg)
         -- BUSCADOR (el usuario: "no lo logro encontrar"): por archivo y por nombre (español e inglés), sin tildes ni
         -- mayúsculas; tiene el foco al abrir — se escribe directamente —; las flechas y Intro siguen funcionando
-        if md.query == nil then md.query = ''; ui.state.focus = 'open_search' end
+        -- (vuelve con los filtros y el texto de la última vez: E.openPrefs)
+        if md.query == nil then
+            local pr = E.openPrefs()
+            md.query = pr.query
+            md.filters = md.filters or { world = pr.filters.world, mode = pr.filters.mode, boss = pr.filters.boss }
+            ui.state.focus = 'open_search'
+        end
         local q0 = md.query
         md.query = ui.textField('open_search', md.query, x + 170, y + 16, w - 190, 40, 'Buscar nivel…')
         if ui.state.focus == nil and not ui.state.pressed then ui.state.focus = 'open_search' end
@@ -50,13 +56,22 @@ local function drawModal()
             return list[i]                                        -- (0 o #list + 1 → nil: todas)
         end
         local Lang = require 'src/core/Lang'
-        local wName = fl.world and (Lang.has('story.world.' .. fl.world) and Lang('story.world.' .. fl.world) or fl.world) or 'Todas'
+        local wName = fl.world == E.NO_WORLD and 'Otros'
+            or fl.world and (Lang.has('story.world.' .. fl.world) and Lang('story.world.' .. fl.world) or fl.world) or 'Todas'
         local mDef = fl.mode and require('src/world/modes/Modes').get(fl.mode)
         local fy = y + 66
         local changed = false
         if ui.button('Isla: ' .. wName, x + 20, fy, 250, 28, { align = 'left', active = fl.world ~= nil }) then fl.world = cycle(worlds, fl.world); changed = true end
         if ui.button('Modo: ' .. (mDef and mDef.label or 'Todos'), x + 280, fy, 210, 28, { align = 'left', active = fl.mode ~= nil }) then fl.mode = cycle(modes, fl.mode); changed = true end
         if ui.button(fl.boss and 'Solo jefes: sí' or 'Solo jefes: no', x + 500, fy, w - 520, 28, { active = fl.boss == true }) then fl.boss = not fl.boss or nil; changed = true end
+        -- QUITAR FILTROS: los tres y el texto, de un clic
+        local any = fl.world ~= nil or fl.mode ~= nil or fl.boss ~= nil or md.query ~= ''
+        if ui.button('Quitar filtros', x + 20, y + h - 46, 150, 30, { disabled = not any, tooltip = 'Isla, modo, jefes y el texto del buscador' }) and any then
+            fl.world, fl.mode, fl.boss = nil, nil, nil
+            md.query = ''
+            changed = true
+        end
+        if md.query ~= q0 or changed then E.saveOpenPrefs(fl, md.query) end
         local view = E.filterLevels(md.files, md.query, fl)
         if md.query ~= q0 or changed then md.sel = 1; ui.state.scroll['open'] = 0 end
         ui.text(#view .. ' de ' .. #md.files .. ' niveles  ·  flechas o rueda  ·  Mayús + clic: filtro anterior', x + 170, y + 46, th.muted, ui.fontSm)
@@ -82,6 +97,11 @@ local function drawModal()
             local file = f:match('[^/]+$')
             local name = md.files.names and md.files.names[f]
             local label = (name and name ~= '' and name ~= file:gsub('%.json$', '')) and (file .. '   —   ' .. name) or file
+            local meta = md.files.meta and md.files.meta[f]
+            if meta and meta.guess then                 -- (isla adivinada: no está en Worlds ni en Worlds.MEMBERS)
+                local wk = 'story.world.' .. meta.world
+                label = label .. '   (por el fondo: ' .. (Lang.has(wk) and Lang(wk) or meta.world) .. ')'
+            end
             if ui.button(label, x + 20, yy, w - 48, 28, { align = 'left', active = (i == md.sel) }) then open(f) end
             yy = yy + 34
         end

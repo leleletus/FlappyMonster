@@ -29,10 +29,10 @@ Every file in `assets/levels/` (60). **Story** = world number, world id and posi
 | `cumbres_escarcha` | Cumbres de Escarcha / Frost Peaks | 168x28 | 5 nieve · 1 | race, hunt, hide | `montana_1` |  | snow · snowfall |
 | `el_teleferico` | El Teleférico / The Cable Car Pass | 172x26 | 5 nieve · 2 | race, hide | `montana_1` |  | snow day · snowfall |
 | `EnemyTest` | EnemyTest / — | 50x15 |  |  |  |  | meadow · peaceful (test) |
-| `fabrica_criogenica` | Fábrica Criogénica / Cryo Works | 159x28 | 6 costa_helada · 1 | race, hunt, hide | `nieve_2` |  | snow night · snowfall, depth icecave |
+| `fabrica_criogenica` | Fábrica Criogénica / Cryo Works | 159x28 | 6 costa_helada · 1 | race, hunt, hide | `nieve_2` |  | frozen_coast night · snowfall, depth icecave |
 | `fabrica_morteros` | Fábrica de Morteros / Mortar Factory | 124x17 | 4 fortaleza · 1 | race | `fortaleza_1` |  | fortress dusk |
 | `fortaleza_malvada` | Fortaleza Malvada / Evil Fortress | 121x15 | 4 fortaleza · boss |  | `fortaleza_1` | `miniboss1` | fortress night · floods |
-| `glaciar_cangrejo` | Glaciar del Cangrejo / Crab Glacier | 120x15 | 6 costa_helada · boss |  | `nieve_1` | `megacrabby_ice` | snow · snowfall |
+| `glaciar_cangrejo` | Glaciar del Cangrejo / Crab Glacier | 120x15 | 6 costa_helada · boss |  | `nieve_1` | `megacrabby_ice` | frozen_coast · snowfall |
 | `gruta_del_farol` | Gruta del Farol / Lantern Grotto | 125x15 | 7 cuevas · boss |  | `cuevas_oscuras` | `gianthopper` | cave night · dark |
 | `gruta_lugubre` | Gruta Lúgubre / Gloomy Grotto | 124x15 |  |  | `cuevas_oscuras` | `megagloomy` | cave night · dark |
 | `guarida_cangrejo_rey` | Guarida del Cangrejo Rey / King Crab's Lair | 122x15 |  |  | `costa_1` | `megacrabby` | coast |
@@ -45,7 +45,7 @@ Every file in `assets/levels/` (60). **Story** = world number, world id and posi
 | `la_estampida` | La Estampida / The Stampede | 200x11 | 3 jungla · 4 | race | `jungla_2` |  | jungle dusk · auto-scroll |
 | `laberinto_submarino` | Laberinto Submarino / Undersea Labyrinth | 134x55 | 7 cuevas · 3 | race | `cuevas_2` |  | cave · par 300 s, depth abyss |
 | `ladera_del_alud` | La Ladera del Alud / Avalanche Slope | 48x64 | 5 nieve · 4 | race | `montana_2` |  | snow dusk · snowfall |
-| `lago_de_cristal` | Lago de Cristal / Glass Lake | 92x28 | 6 costa_helada · bonus | koth, hide | `nieve_bonus` |  | snow dusk · 2 point zones, snowfall, match 100 s |
+| `lago_de_cristal` | Lago de Cristal / Glass Lake | 92x28 | 6 costa_helada · bonus | koth, hide | `nieve_bonus` |  | frozen_coast dusk · 2 point zones, snowfall, match 100 s |
 | `lago_helado` | Lago Helado / Frozen Lake | 113x15 | 5 nieve · boss |  | `montana_1` | `snowboss` | snow night · snowfall |
 | `lluvia_pinchos` | Lluvia de Pinchos / Spike Rain | 176x11 | 8 final · 3 | race | `volcan_2` |  | volcano · auto-scroll |
 | `marea_alta` | Marea Alta / High Tide | 40x11 |  | koth | `costa_bonus` |  | coast dusk · floods, 1 point zone, depth underwater |

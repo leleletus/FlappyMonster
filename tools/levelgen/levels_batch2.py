@@ -620,7 +620,7 @@ def cumbres_escarcha():
 
 def fabrica_criogenica():
     """Fábrica de noche: pasillos con CONGELADORES por turnos, puertas ON/OFF, hielo y pinchos."""
-    L = B('Fábrica Criogénica', 'Cryo Works', 190, music='flying_machine', background='fortress', time='night', depth='icecave')
+    L = B('Fábrica Criogénica', 'Cryo Works', 190, music='flying_machine', background='frozen_coast', time='night', depth='icecave')   # (la Costa Helada, 2026-10-30)
     c = L.flat(2, 10); L.walk('gummy', 6, 10)
     s1 = c; c = L.stairs(c)
     c = L.freezer_hall(c, 10, 2)
@@ -768,7 +768,7 @@ def cantera_real():
 
 def lago_de_cristal():
     """Arena helada: la colina es una placa de HIELO FINO sobre un lago con peces globo; arriba, otra bajo dos congeladores."""
-    L = arena('Lago de Cristal', 'Glass Lake', music='classic', background='snow', time='dusk', snow=True, spikeSkin='ice')
+    L = arena('Lago de Cristal', 'Glass Lake', music='classic', background='frozen_coast', time='dusk', snow=True, spikeSkin='ice')
     m = 46
     L.lake(m - 13, 27, depth=4, puffer=True)
     L.koth_zone(m - 7, G - 5, m + 7, G - 1)

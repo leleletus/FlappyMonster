@@ -57,7 +57,8 @@ writes 10 frames, must be followed by `make_jungle_sky.py --apply`).
 ## Frozen coast biome (2026-10-29)
 
 The FROZEN COAST (story island `costa_helada`, Icy Mega Crabby's) gets its own surface sky, **`frozen_coast`** ("Costa
-helada" in the editor); the frozen MOUNTAINS keep `snow` (the user: perfect for the mountains). Art from
+helada" in the editor); the frozen MOUNTAINS keep `snow` (the user: perfect for the mountains). All six Frozen Coast story
+levels use it (2026-10-30: the factory, the boss glacier and the bonus lake moved from `snow`; [retheme](../levels/retheme.md)). Art from
 `tools/art/world/make_frozen_coast_sky.py --apply A` (previews in `FlappyMonster_pruebas/fondo_costa_helada/`;
 never overwrites; APPENDS 3 frames to `gradients.png`: 15-17 `frozen_coast_day/dusk/night` — after `make_sky.py` and
 `make_jungle_sky.py --apply`, run it again).

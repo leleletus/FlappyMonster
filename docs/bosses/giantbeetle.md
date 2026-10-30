@@ -140,6 +140,12 @@ centre (row 9) to dodge the charge and the waves (0.5.81: one tile lower than in
 - Tuning lives in the constants at the top of the file (`{ normal, angry }` pairs).
 - The scale rules are generic (any boss with `ridesScale` + `onScaleLaunch` / `onScaleCatapult`):
   [traps-and-mechanisms](../entities/traps-and-mechanisms.md).
+- Its smash into the ceiling is the boss version of a BASE rule since 2026-10-30 (the user: the scale's double edge must
+  not stay in this fight): anything any scale fires hard into a ceiling is stunned and a player loses 1
+  ([carry-and-push](../gameplay/carry-and-push.md#hard-launches-into-a-ceiling-hardlaunch), `HardLaunch.MIN_VY` = its
+  250 px/s). `GB:onCeilingSmash` (shake + debris, then `'tumble'`) overrides `Entity:onCeilingSmash`; players fired by
+  its slam are still hit by `GB:updateShot` (`HIT_CEIL`), which the base rule skips (`onScaleCatapult`). Nothing in the
+  fight changed (`giantbeetle_rules`), except that in co-op a player fired by the other player's pound now loses 1 too.
 
 ## Tests
 

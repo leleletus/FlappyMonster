@@ -5,6 +5,7 @@ local DeadEyes = require 'src/player/DeadEyes'
 local Tiles = require 'src/world/tiles/Tiles'
 local Floods = require 'src/world/systems/Floods'
 local Push = require 'src/world/systems/Push'
+local HardLaunch = require 'src/world/systems/HardLaunch'
 local PlayerAdventure = Class:new()
 local P = {}        -- locales de archivo que comparten las partes (ver abajo "Partes")
 local dropPlatformTop, ICE_FREE_INV, ICE_MASH, loadSprites      -- (de las partes: se rellenan al cargarlas)
@@ -331,7 +332,7 @@ function PlayerAdventure:respawn()
     self.prevInWater=false
     self.splashSt='out'; self.splashCD=0
     self.gpPhase=nil; self.gpT=0; self.gpLanded=false; self.stunT=0; self.squashT=0; self.ctrlLockT=0; self.iceT=0
-    self.frostT=0; self.stepVis=0
+    self.frostT=0; self.stepVis=0; self.hardLaunch=nil; self.hardBy=nil
     self.gulped=false; self.gulpMash=0; self.gulpBiteT=0
     self.lightOn=false; self.lightBat=1; self.lightCd=0
     self:grantInvulnerability(SPAWN_INV * Difficulty.k('invuln'))
@@ -561,8 +562,11 @@ function PlayerAdventure:_update(dt, level)
     if ride and ride.alive ~= false and ride.moves then rdx, rdy = ride.stepDx or 0, ride.stepDy or 0 end
     self.rideBody, self.standBody = ride, nil
     local wind = Push.player(self, level, dt)       -- (el aire que sopla: Soplón, Ventisca, Géiser — systems/Push)
+    local vyMove = self.vy
     self:moveSteps(level, (self.vx + convey + current + wind)*dt + rdx, self.vy*dt + rdy)
     self.rideBody = nil
+    -- (disparado fuerte por una catapulta contra el techo: pierde 1 y queda aturdido — systems/HardLaunch)
+    if self.hardLaunch then HardLaunch.player(self, level, vyMove) end
 
     self:updateSplash(dt, level)
     self.prevInWater = self.inWater

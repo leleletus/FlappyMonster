@@ -37,6 +37,17 @@ local PLAY = os.getenv('PLAY')
 if PLAY then arg[#arg + 1] = PLAY end
 local PLANE = os.getenv('PLANE')
 if PLANE and not PLAY then arg[#arg + 1] = os.getenv('LEVEL') or 'assets/levels/nivel01.json' end
+-- (filtros) sin preferencias de otra pasada: el diálogo "Abrir" empieza sin filtros; y un nivel FUERA de la historia y
+-- de Worlds.MEMBERS, con fondo de fortaleza, en la carpeta de guardado (se borra al acabar): su isla se adivina por el fondo
+local GUESS_LEVEL = 'assets/levels/zz_fondo_prueba.json'
+love.filesystem.remove('editor_prefs.json')
+if not (PLAY or LINKS or PLANE) then
+    local json = require 'libs/json'
+    local d = json.decode(love.filesystem.read('assets/levels/jardin_gummies.json'))
+    d.name, d.name_en, d.background = 'Prueba por el fondo', 'Background guess test', 'fortress'
+    love.filesystem.createDirectory('assets/levels')
+    love.filesystem.write(GUESS_LEVEL, json.encode(d))
+end
 love.filesystem.load('game_main.lua')()
 local frame, realDown = 0, love.keyboard.isDown
 local function key(k, ctrl)
@@ -348,6 +359,28 @@ function love.update(dt)
         print(('%-10s %s  Costa Helada %d niveles · Rey de la Colina %d · con jefe %d · Montañas + jefe = %s · lista %.2f s (2ª vez %.2f s)'):format(
             'filtros', ok and 'OK   ' or 'FALLA', nch, #koth, #E.filterLevels(files, '', { boss = true }), tostring(both[1]), t1 - t0, t2 - t1))
         if not ok then print('Error: los filtros del diálogo "Abrir" no aíslan bien') end
+        -- ISLA = la isla a la que PERTENECE (el usuario: "no por el fondo que usan"): los secretos con su mundo; fuera de
+        -- la historia, la tabla Worlds.MEMBERS (la mina inundada, con fondo de montaña, en las Cuevas); solo sin tabla se
+        -- adivina por el fondo, avisado; sin isla, "Otros"
+        local Worlds = require 'src/story/Worlds'
+        local function inW(w) return set(E.filterLevels(files, '', { world = w })) end
+        local costa, cuevas, final, nieve, fort, otros = inW('costa'), inW('cuevas'), inW('final'), inW('nieve'), inW('fortaleza'), inW(E.NO_WORLD)
+        local tableOk, bad = true, {}
+        local wset = {} for _, W in ipairs(Worlds.LIST) do wset[W.id] = true end
+        for id, w in pairs(Worlds.MEMBERS) do
+            local m = files.meta['assets/levels/' .. id .. '.json']
+            if not love.filesystem.getInfo('assets/levels/' .. id .. '.json') or (w and not wset[w]) or (m and (m.guess or m.world ~= (w or nil))) then
+                tableOk = false; bad[#bad + 1] = id
+            end
+        end
+        local gm = files.meta[GUESS_LEVEL]
+        local ok2 = costa.guarida_cangrejo_rey and cuevas.gruta_lugubre and final.isla_del_groove and final.mashup_cangrejos
+            and cuevas.mina_inundada and not nieve.mina_inundada and costa.rebote_real and otros.EnemyTest and not otros.valle_soleado
+            and tableOk and fort.zz_fondo_prueba and gm and gm.guess and not files.meta['assets/levels/mina_inundada.json'].guess
+        print(('%-10s %s  secretos en su isla (guarida → Costa, gruta lúgubre → Cuevas, Groove y Mashup → Final) · fuera de la historia por la tabla (%d; mina inundada → Cuevas, no Montañas)%s · adivinado por el fondo: zz_fondo_prueba → %s · Otros %d'):format(
+            'isla', ok2 and 'OK   ' or 'FALLA', (function() local n = 0 for _ in pairs(Worlds.MEMBERS) do n = n + 1 end return n end)(),
+            #bad > 0 and (' MAL: ' .. table.concat(bad, ', ')) or '', tostring(gm and gm.guess and gm.world), (function() local n = 0 for _ in pairs(otros) do n = n + 1 end return n end)()))
+        if not ok2 then print('Error: el filtro Isla no usa la isla a la que pertenece el nivel') end
     end
     if frame == 90 then for ch in ('TEMPLO escarabajo'):gmatch('.') do love.textinput(ch) end end
     if frame == 93 then shot('abrir') end
@@ -402,8 +435,57 @@ function love.update(dt)
     if frame == 102 then shot('entidades') end
     if frame == 103 then require('src/editor/ui').state.scroll.pal_entities = 9999 end      -- (y el final de la lista)
     if frame == 105 then shot('entidades_2') end
-    if frame == 108 then
-        print('capturas en ' .. love.filesystem.getSaveDirectory() .. '/editor_open_{1,2,3,4,saveas,abrir,entidades,entidades_2}.png')
+    -- LOS FILTROS SE RECUERDAN (el usuario: "es incómodo colocar el filtro a cada rato"): al cerrar y volver a abrir
+    -- "Abrir" siguen los tres filtros y el texto (el de «buscar»), también en otra sesión del editor (editor_prefs.json);
+    -- "Quitar filtros" los quita todos de un clic (y también para la siguiente vez)
+    local function openDlg() local E = require('src/editor/Editor').state(); E.modal = { kind = 'open', files = E.listLevels() } end
+    local function dlgClick(which)
+        local E = require('src/editor/Editor').state()
+        local sw, sh = love.graphics.getDimensions()
+        local w, h = math.min(sw - 80, 660), math.min(sh - 80, 180 + #E.modal.files * 34)
+        local x, y = (sw - w) / 2, (sh - h) / 2
+        local mx, my
+        if which == 'isla' then mx, my = x + 145, y + 80 else mx, my = x + 95, y + h - 31 end
+        CLICK_UNTIL = frame + 3
+        REAL_POS = REAL_POS or love.mouse.getPosition
+        love.mouse.getPosition = function() return mx, my end
+        love.mousepressed(mx, my, 1); love.mousereleased(mx, my, 1)
+    end
+    if CLICK_UNTIL and frame >= CLICK_UNTIL then love.mouse.getPosition = REAL_POS; CLICK_UNTIL = nil end
+    local function md() return require('src/editor/Editor').state().modal end
+    if frame == 108 then openDlg() end
+    if frame == 110 then REM = { q1 = md().query }; dlgClick('isla') end
+    if frame == 114 then REM.w1 = md().filters.world; shot('abrir_filtros') end
+    if frame == 115 then require('src/editor/Editor').state().modal = nil end
+    if frame == 116 then openDlg() end
+    if frame == 118 then REM.w2, REM.q2 = md().filters.world, md().query
+        require('src/editor/Editor').state().modal = nil
+        require('src/editor/Editor').state().forgetOpenPrefs()             -- (otra sesión: lo relee del archivo)
+        openDlg() end
+    if frame == 120 then REM.w3, REM.q3 = md().filters.world, md().query; dlgClick('quitar') end
+    if frame == 124 then
+        local E = require('src/editor/Editor').state()
+        REM.reset = md().filters.world == nil and md().filters.mode == nil and md().filters.boss == nil and md().query == ''
+            and #E.filterLevels(md().files, md().query, md().filters) == #md().files
+        md().query = 'prueba por el fondo'                -- (sin guardarlo: la captura del aviso "(por el fondo)")
+        shot('abrir_fondo')
+    end
+    if frame == 125 then local E = require('src/editor/Editor').state(); E.modal = nil; E.forgetOpenPrefs(); openDlg() end
+    if frame == 127 then
+        local f = md().filters
+        local again = f.world == nil and f.mode == nil and f.boss == nil and md().query == ''
+        local q = 'TEMPLO escarabajo'
+        local ok = REM.q1 == q and REM.w1 == 'pradera' and REM.w2 == 'pradera' and REM.q2 == q and REM.w3 == 'pradera'
+            and REM.q3 == q and REM.reset and again and love.filesystem.getInfo('editor_prefs.json') ~= nil
+        print(('%-10s %s  al reabrir: texto «%s», Isla %s → cerrar y abrir: %s «%s» · otra sesión (archivo): %s «%s» · Quitar filtros: %s, y al reabrir %s'):format(
+            'recuerda', ok and 'OK   ' or 'FALLA', tostring(REM.q1), tostring(REM.w1), tostring(REM.w2), tostring(REM.q2),
+            tostring(REM.w3), tostring(REM.q3), tostring(REM.reset), again and 'sin filtros' or 'CON filtros'))
+        if not ok then print('Error: el diálogo "Abrir" no recuerda (o no quita) los filtros') end
+        require('src/editor/Editor').state().modal = nil
+        love.filesystem.remove(GUESS_LEVEL)
+    end
+    if frame == 129 then
+        print('capturas en ' .. love.filesystem.getSaveDirectory() .. '/editor_open_{1,2,3,4,saveas,abrir,abrir_filtros,abrir_fondo,entidades,entidades_2}.png')
         print('TODO OK'); love.event.quit(0)
     end
 end

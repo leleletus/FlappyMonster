@@ -40,6 +40,11 @@ local CRAB_ART = {
 SM.CRAB_ART = CRAB_ART
 -- (los del Mega Mashup, en su orden: el Tantrum, el helado, el lúgubre; el Groove aparte)
 local MASHUP_CRABS = { 'megacrabby', 'megacrabby_ice', 'megagloomy' }
+-- Tamaños, los del mapa y las películas (films/common.lua K.SMALL): el jefe gigante a 1 y su enemigo normal a 0.62 — los
+-- dos dibujos miden lo mismo: el tamaño lo da esto — (el usuario, 2026-10-30: en las escenas el pequeño se veía más grande
+-- que el gigante y al "crecer" encogía). Crecer: el normal de 0.62 a MID y el gigante de MID a 1; encoger, al revés
+local SMALL, MID = 0.62, 0.8
+SM.CRAB_SMALL = SMALL
 
 -- ── Dónde: los nodos de los secretos ─────────────────────────────────────────────────────────────────────────────
 local function secretNode(level)
@@ -86,7 +91,7 @@ local GFW = 18                                -- (groovecrab/body-Sheet: 3 cuadr
 -- mapa (StoryMapState:_drawBossArt / BOSS_CLAWS): respira (un aplastado suave), las pinzas se mecen y chasquean de vez en
 -- cuando; el trampolín de la espalda, el cuerpo y sus dos pinzas — la grande delante, la pequeña detrás — (el usuario:
 -- en el mapa le faltaban las pinzas y el trampolín). Mira a la izquierda, como su dibujo; (x, y) = sus pies
-local function drawGroove(x, y, t, s, dance)
+local function drawGroove(x, y, t, s, dance, mini)
     local D = 'assets/images/bosses/groovecrab/'
     local body, big, small, tramp = img(D .. 'body-Sheet.png'), img(D .. 'bigclaw-Sheet.png'), img(D .. 'claw-Sheet.png'), img(D .. 'tramp.png')
     local fr = dance and ((floor(t * 4) % 3) + 1) or 1
@@ -99,11 +104,17 @@ local function drawGroove(x, y, t, s, dance)
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.push()
     love.graphics.translate(floor(x), floor(y + hop))
-    love.graphics.draw(tramp, 0, floor(-9 * s * squash), 0, s, s * (2 - squash), 8, 9)     -- (el muelle: se encoge al respirar)
+    -- (`mini`: el Groove PEQUEÑO, tras romperse su bola — su Crabby de siempre —: sin trampolín y con las DOS pinzas
+    --  pequeñas; el usuario, 2026-10-30)
+    if not mini then love.graphics.draw(tramp, 0, floor(-9 * s * squash), 0, s, s * (2 - squash), 8, 9) end     -- (el muelle: se encoge al respirar)
     love.graphics.draw(body, frameQ(body, GFW, fr), 0, 0, 0, s, s * squash, GFW / 2, 10)
     local dyB, dxB = sin(t * 5) * 0.5, 0.15 + 0.15 * sin(t * 2.5)
     local dyS, dxS = sin(t * 5 + 1.9) * 0.5, 0.15 + 0.15 * sin(t * 2.5 + 1.9)
-    love.graphics.draw(big, frameQ(big, 12, snap(1)), floor((-13 - dxB) * s), floor((-4.5 + dyB) * s * squash), 0, s, s, 6, 4.5)
+    if mini then
+        love.graphics.draw(small, frameQ(small, 7, snap(1)), floor((-11.5 - dxB) * s), floor((-4 + dyB) * s * squash), 0, s, s, 3.5, 3)
+    else
+        love.graphics.draw(big, frameQ(big, 12, snap(1)), floor((-13 - dxB) * s), floor((-4.5 + dyB) * s * squash), 0, s, s, 6, 4.5)
+    end
     love.graphics.draw(small, frameQ(small, 7, snap(2)), floor((11.5 + dxS) * s), floor((-4 + dyS) * s * squash), 0, -s, s, 3.5, 3)
     love.graphics.pop()
 end
@@ -253,8 +264,8 @@ SCENES.regrow = {
             local u = k01(t, t0, t0 + 0.7)
             if t >= t0 - 0.3 and t < t0 + 0.4 then beam(bx, by, c.x, c.y - 20, 0.6) end
             local art = CRAB_ART[c.b]
-            if u < 0.5 then SM._drawBossArt(sc.map, art.small, c.x, c.y, 0, 1 + u * 0.6)
-            else SM._drawBossArt(sc.map, art.big, c.x, c.y, 0, lerp(0.6, 1, (u - 0.5) * 2)) end
+            if u < 0.5 then SM._drawBossArt(sc.map, art.small, c.x, c.y, 0, lerp(SMALL, MID, u * 2))
+            else SM._drawBossArt(sc.map, art.big, c.x, c.y, 0, lerp(MID, 1, (u - 0.5) * 2)) end
             if u > 0.45 and u < 0.55 then Stage().spark(c.x, c.y - 20, 6, 12, 160, { life = 0.5, s = 3 }) end
         end
         love.graphics.setColor(1, 1, 1, 1)
@@ -287,7 +298,7 @@ SCENES.disco = {
         local shrunk = k01(t, 2.0, 2.6)
         -- el Groove (encoge también) y los tres; luego bailan todos, pequeños
         local dance = t >= 2.6
-        drawGroove(sc.gx, sc.gy, t, lerp(3, 1.5, shrunk), dance)
+        drawGroove(sc.gx, sc.gy, t, lerp(3, 3 * SMALL, shrunk), dance, shrunk >= 0.5)
         if not broken then
             local j = floor(sin(t * 60) * 3 * k01(t, 0.2, 0.9))
             drawBall(bx + j, by, t, 3, true)
@@ -295,8 +306,8 @@ SCENES.disco = {
         for i, c in ipairs(sc.crabs) do
             local art = CRAB_ART[c.b]
             local hop = dance and floor(-math.abs(sin(t * 6 + i)) * 10) or 0
-            if shrunk < 0.5 then SM._drawBossArt(sc.map, art.big, c.x, c.y, 0, lerp(1, 0.6, shrunk * 2))
-            else SM._drawBossArt(sc.map, art.small, c.x, c.y + hop, 0, lerp(1.4, 1, (shrunk - 0.5) * 2)) end
+            if shrunk < 0.5 then SM._drawBossArt(sc.map, art.big, c.x, c.y, 0, lerp(1, MID, shrunk * 2))
+            else SM._drawBossArt(sc.map, art.small, c.x, c.y + hop, 0, lerp(MID, SMALL, (shrunk - 0.5) * 2)) end
         end
         -- las astillas vuelven a sus monturas (hacia el monstruo)
         for i = 1, #sc.ids do

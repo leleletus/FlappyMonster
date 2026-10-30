@@ -27,7 +27,8 @@ vents/boss walls/boss arenas. `--force` re-rolls only its own decorations (the o
 snow/sand blocks (overrides hand-placed ones); `--tiles` = terrain only (decorations untouched);
 Theme **frozen_coast** (the Frozen Coast island, 2026-10-29) behaves like snow (`ICY` = snow + frozen_coast: falling
 snow, ice spikes, loose one-row islands → ice, icy enemies, no sand / deep stone under water) with its own decorations
-(`frozen_coast_set`; the floating `floe` is placed by hand on the cell above the water). No level uses it yet.
+(`frozen_coast_set`; the floating `floe` is placed by hand on the cell above the water). It is the theme of the six
+Frozen Coast story levels (THEMES + SKY; see History).
 `--deep` = ONLY ground ≥ 4 rows under a water surface → deep stone (any theme but snow; the
 'underwater' theme also below 45 % of the height); `--sky` = writes the SKY table's background/
 time only into levels that don't set them. The user edits levels by hand afterwards: prefer the
@@ -122,3 +123,20 @@ its only level, templo_escarabajo, has a hand-made plane). Tried and changed: st
 in daylight → sandstone); 1-high hills (read as dark slabs → hills are ≥ 2 high and ≥ 3 columns); 1-wide volcano
 spires (read as chimneys → 2-4 wide); 3-wide towers with a centre window (read as an "H" → 4 wide, side slit); ice
 walls of solid ice (ghostly → snow body, ice crest). Not applied to any real level yet.
+
+**Frozen Coast levels on their island's look (2026-10-30).** `fabrica_criogenica`, `glaciar_cangrejo` and
+`lago_de_cristal` were still dressed as the Frozen MOUNTAINS (`background = 'snow'`, snowy pines, frozen bushes); now
+THEMES / SKY say `frozen_coast` for them too (`fabrica_criogenica` keeps night + `depth = 'icecave'`, `lago_de_cristal`
+dusk, `glaciar_cangrejo` day), and so do their builders (`levels_batch2.py`, `levels_boss.py`; the three new coast
+levels already had it). The levels are hand-edited, so neither `retheme.py <level>` (they are "already re-dressed":
+it would only act with `--force`, re-rolling positions) nor `--decor --fix --theme` (tried on copies: it swaps in place
+but at random, putting 2-tile rowboats and wide kelp rocks where 1-tile bushes stood) was used. Instead a scripted,
+position-preserving TYPE swap (same cell, sub, flip, layer) by footprint: `snowy_pine` → `anchor` / `iceberg`
+alternately, `frozen_bush` → `crab_pot` / `kelp_rock`, one hanging `stalactite` → `icicle`; on the background plane
+(generated, listed in the sidecar, which was updated with it) `snowy_fir` → `iceberg` and of the `snowy_fir_small` one
+in three stays (the coast's "rare" fir), the rest → `iceberg` / `snow_rock` (`plane = 'bg'`). `snowman`, `snow_pile`,
+`ice_crystal`, `icicle*` and `snow_rock` stay (`snowman` added to `EXTRA_OK['frozen_coast']`, so `--decor --theme`
+reports the three levels clean). Tiles, entities and `bgTiles` untouched. `tempanos_a_la_deriva`,
+`bahia_de_las_mareas` and `bajo_el_hielo` were already `frozen_coast` and unchanged (`bahia`: the audit lists 4
+bollards on frost brick and 2 crab pots on glacier ice — left as built). Captures before / after:
+`FlappyMonster_pruebas/retheme_costa_helada/`.

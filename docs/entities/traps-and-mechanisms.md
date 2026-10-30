@@ -162,7 +162,8 @@ Designs and the user's verdicts: [new-props-plan](new-props-plan.md).
   pass through them. Pans are NOT drop-through (the user: boxes must be placed on them carefully with crouch + UP;
   a pan does not rise if that would push a box on it into a player above). Sounds v2 (the user: "more mechanical,
   chain / rope / wood"): rope creak, chain clinks and a wood knock. Net: the offset `d` in its netPack. Harness
-  `mechanics` `balanza`, `balanza_tope`.
+  `mechanics` `balanza`, `balanza_tope`. INTO THE CEILING (2026-10-30): whatever the catapult fires is marked; smashing
+  hard into something above stuns an entity and hurts a player ([carry-and-push](../gameplay/carry-and-push.md#hard-launches-into-a-ceiling-hardlaunch)).
 - **Blizzard** (`mechanisms/blizzard.lua`, "Ventisca"): an AREA (entity cell = top-left corner, `corner` = bottom-right).
   Calm for a random `gapMin..gapMax` s, then a `warn` s warning (three blinking arrows at the screen edge the wind
   comes from + `windWarn`), then `blowMin..blowMax` s of wind (`windGust`, streaks of the island) in one of the allowed

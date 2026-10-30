@@ -850,7 +850,9 @@ function love.update(dt)
         Run.data.done.isla_del_groove = true
         Run.save()
         gStateMachine:change('story_map', { world = Worlds.count(), node = SEC.gk }); go('mash0')
-    elseif step == 'mash0' and ((st._sceneNow and st:_sceneNow() == 'regrow' and select(2, st:_sceneNow()) > 2.6) or t - T > 10) then
+    elseif step == 'mash0' and not SEC.shotSmall and st._sceneNow and st:_sceneNow() == 'regrow' and select(2, st:_sceneNow()) > 0.6 then
+        SEC.shotSmall = true; shot('scene_regrow_pequenos')              -- (los tres aún pequeños: su tamaño y sus pinzas)
+    elseif step == 'mash0' and ((st._sceneNow and st:_sceneNow() == 'regrow' and select(2, st:_sceneNow()) > 4.7) or t - T > 10) then
         SEC.regrow = st._sceneNow and st:_sceneNow() == 'regrow' and Run.secretState('mashup_cangrejos') == 'locked'
         shot('scene_regrow')
         pressNext('confirm'); go('mash1')
@@ -872,6 +874,8 @@ function love.update(dt)
         -- (de los resultados al mapa: EL FINAL DE VERDAD, StoryMapScenes 'disco': las astillas vuelven a sus monturas)
         SEC.mash.results = st.args ~= nil and st.args.summary ~= nil
         gStateMachine:change('story_map', st.args and st.args.map or { world = Worlds.count(), node = SEC.mk }); go('mash5')
+    elseif step == 'mash5' and not SEC.shotBig and st._sceneNow and st:_sceneNow() == 'disco' and select(2, st:_sceneNow()) > 0.6 then
+        SEC.shotBig = true; shot('scene_disco_grandes')                  -- (antes de romperse la bola: grandes)
     elseif step == 'mash5' and ((st._sceneNow and st:_sceneNow() == 'disco' and select(2, st:_sceneNow()) > 5.8) or t - T > 12) then
         SEC.mash.disco = st._sceneNow and st:_sceneNow() == 'disco'
         shot('scene_disco')

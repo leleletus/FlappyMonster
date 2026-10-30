@@ -22,10 +22,13 @@
 -- estaba "de pie" en él y el platillo, que se atraviesa desde abajo, lo atravesaba (se libraba del arma de doble filo
 -- del Escarabajo y de otras mecánicas): la catapulta lanza también a quien está en el aire justo encima (`JUMP_GRACE`)
 -- y un platillo que SUBE no atraviesa a un jugador que estaba encima: lo recoge y se lo lleva (`sweepPlayers`).
+-- CONTRA EL TECHO (2026-10-30, el usuario: no solo en la pelea del Escarabajo): todo lo que dispara la catapulta va
+-- marcado (systems/HardLaunch): si se estrella fuerte subiendo, una entidad queda aturdida y un jugador pierde 1.
 -- Red: el desnivel (`d`) en su netPack; los platillos se calculan de él.
 local Entity = require 'src/world/entities/base/Entity'
 local Isles  = require 'src/world/level/Isles'
 local Weight = require 'src/world/systems/Weight'
+local HardLaunch = require 'src/world/systems/HardLaunch'
 local TileTypes = require 'src/world/tiles/TileTypes'
 
 local Scale = Entity.extend(Entity, { debugColor = { 0.9, 0.8, 0.4 },
@@ -168,7 +171,7 @@ function Scale:catapult(hit, except, power, by)
     local players, ents = onPan(self, other, level or {})
     local v = -math.abs(ADV_JUMP_VEL) * LAUNCH_V * (self.props.power or 1) * (power or 1)
     local shot = {}
-    for _, p in ipairs(players) do if p ~= except then p:launch(0, v); shot[#shot + 1] = p end end
+    for _, p in ipairs(players) do if p ~= except then p:launch(0, v); HardLaunch.mark(p, by); shot[#shot + 1] = p end end
     -- (quien saltó justo antes: en el aire, encima de la tabla y a menos de JUMP_GRACE, también)
     local ob = other:getOuterBounds()
     for _, p in ipairs((level or {}).players or {}) do
@@ -178,13 +181,13 @@ function Scale:catapult(hit, except, power, by)
             local seen = false
             for _, q in ipairs(shot) do if q == p then seen = true end end
             if not seen and foot <= ob.y + 4 and foot >= ob.y - JUMP_GRACE and pb.x + pb.w > ob.x + 4 and pb.x < ob.x + ob.w - 4 then
-                p:launch(0, v); shot[#shot + 1] = p
+                p:launch(0, v); HardLaunch.mark(p, by); shot[#shot + 1] = p
             end
         end
     end
     for _, e in ipairs(ents) do
         if e.def and e.def.boss then                                      -- (un jefe que pesa: lo dispara onScaleLaunch, abajo)
-        elseif e.launch and e.canBeLaunched and e:canBeLaunched() then e:launch(e.vx or 0, v)
+        elseif e.launch and e.canBeLaunched and e:canBeLaunched() then e:launch(e.vx or 0, v); HardLaunch.mark(e, by)
         else e.vy, e.onGround = v, false end
     end
     for _, e in ipairs(level and bossRiders(other, level) or {}) do
@@ -213,6 +216,7 @@ function Scale:sweepPlayers(level, dd, dt)
             local function fire(p)
                 p:launch(0, vLaunch)
                 local by = self.slamBy
+                HardLaunch.mark(p, by)
                 if by and by.alive and by.onScaleCatapult then by:onScaleCatapult({ p }, {}) end   -- (el golpe contra el techo)
             end
             for _, p in ipairs(level.players or {}) do

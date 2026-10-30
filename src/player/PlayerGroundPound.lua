@@ -92,6 +92,7 @@ end
 -- de los jefes los recarga todos)
 function PlayerAdventure:launch(vx, vy, jumps)
     self.vy = vy
+    self.hardLaunch, self.hardBy = nil, nil  -- (la catapulta lo marca después: systems/HardLaunch)
     if vx and vx ~= 0 then
         -- Un instante sin control (el impulso no se pierde), pero SIN aturdir
         self.vx = vx

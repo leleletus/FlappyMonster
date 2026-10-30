@@ -47,11 +47,22 @@ Crab Mega Mashup's `scenes` and `event`: play-testing it from the editor, the Gl
 2026-10-29), and saving it would have erased them. Harness `editor_open` case `conserva` loads and re-encodes every
 level of `assets/levels` and checks no key is lost.
 Ctrl+O "Abrir nivel" — FILTERS (0.5.108, the user: "que solo salgan de una isla u otra, de un modo u otro, y los
-de jefe"): three buttons under the search field, combinable with it — **Isla** (the story world the level belongs to;
-outside the story, its art island from `Isles.of`, plus `frozen_coast` → `costa_helada`), **Modo** (the online modes the
+de jefe"): three buttons under the search field, combinable with it — **Isla**, **Modo** (the online modes the
 level supports, from `LevelCatalog.info`), **Solo jefes** (levels with a boss). Click = next value, Shift + click =
 previous; the first of the cycle is "all". `E.levelMeta` (cached per file and modification time), `E.filterOptions`,
-`E.filterLevels`; harness `editor_open` case `filtros`.
+`E.filterLevels`; harness `editor_open` cases `filtros`, `isla`, `recuerda`.
+ISLAND = the island the level BELONGS TO, not its background (0.5.113, the user: "no filtra por la isla a la que
+pertenecen, sino por el fondo que usan"): `Worlds.worldOf(id)` — its story world (levels, boss, bonus AND secret lairs:
+`guarida_cangrejo_rey` → Coast, `gruta_lugubre` → Caves, `isla_del_groove` / `mashup_cangrejos` → Final), else the data
+table `Worlds.MEMBERS` (non-story levels; [story-mode](../story/story-mode.md)). Only when it is in neither, it is
+GUESSED from the background (`frozen_coast` → `costa_helada`, else `Isles.BY_BACKGROUND` → world) and the list says
+"(por el fondo: <world>)"; no table entry and no background (or `false` in the table) = **Otros**, the last option.
+Frozen Coast levels are story levels, so they are under La Costa Helada whatever background they use.
+REMEMBERED (0.5.113, the user: "los ajustes de filtrado no se guardan… es incómodo colocar el filtro a cada rato"): the
+three filters and the search text come back when the dialog is reopened and in the next editor session —
+`E.openPrefs` / `E.saveOpenPrefs`, written on every change to `editor_prefs.json` in the LÖVE save dir (never the repo;
+key `open`, other keys kept; values that are no longer options are dropped on load). **Quitar filtros** (bottom left,
+greyed when nothing is set) clears the three and the text in one click, for next time too.
 Ctrl+O "Abrir nivel" = scrollable list (wheel / arrows + Enter) with file + level
 name; hides `_*` files and `editor_playtest.json`. Test arenas live in
 `tools/levelgen/arenas/` (not listed). A SEARCH field on top (0.5.77, the user could not find the boss level) has the

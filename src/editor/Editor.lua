@@ -321,11 +321,15 @@ end
 
 -- ── FILTROS del diálogo "Abrir" (el usuario, 2026-10-29: aislar por isla, por modo y los de jefe) ──────────────
 -- La ficha de cada nivel sale de lo que ya calcula el juego: LevelCatalog.info (los modos que admite, los jefes) y
--- la ISLA = el mundo de la historia en que está (Worlds.LIST); fuera de la historia, la de su arte (Isles.of) llevada
--- al mundo (ISLE_WORLD). Se guarda por archivo y fecha: abrir el diálogo otra vez no vuelve a cargar los niveles.
+-- la ISLA = el mundo al que PERTENECE (el usuario, 2026-10-30: "no filtra por la isla a la que pertenecen, sino por el
+-- fondo que usan"): Worlds.worldOf — el de la historia (niveles, jefe, bonus, secretos) o, fuera de ella, la tabla
+-- Worlds.MEMBERS —. Solo si no está en ninguna, se ADIVINA por el fondo (BACKGROUND_WORLD, y si no la isla de arte del
+-- fondo llevada al mundo: ISLE_WORLD) y la lista lo dice ("(por el fondo)"); sin fondo ni tabla: "Otros".
+-- Se guarda por archivo y fecha: abrir el diálogo otra vez no vuelve a cargar los niveles.
 local ISLE_WORLD = { pradera = 'pradera', costa = 'costa', fortaleza = 'fortaleza', nieve = 'nieve', cueva = 'cuevas',
                      volcan = 'final', jungla = 'jungla' }
 local BACKGROUND_WORLD = { frozen_coast = 'costa_helada' }      -- (fondos con mundo propio sin isla de arte propia)
+E.NO_WORLD = '_otros'                                           -- (la opción "Otros" del filtro Isla: sin isla)
 local metaCache = {}
 function E.levelMeta(path)
     local info = love.filesystem.getInfo(path)
@@ -335,27 +339,28 @@ function E.levelMeta(path)
     local okInfo, ci = pcall(require('src/world/level/LevelCatalog').load, path)
     if okInfo and ci then
         local id = path:match('([^/]+)%.json$')
-        local world
-        for _, W in ipairs(require('src/story/Worlds').LIST) do
-            if W.boss == id or W.bonus == id then world = W.id end
-            for _, e in ipairs(W.secrets or {}) do if e.level == id then world = W.id end end      -- (sus niveles secretos)
-            for _, l in ipairs(W.levels) do if l == id then world = W.id end end
-        end
-        if not world then
+        local world, from = require('src/story/Worlds').worldOf(id)
+        local guess = false
+        if not from then
             local ok, d = pcall(function() return require('libs/json').decode(love.filesystem.read(path)) end)
-            d = ok and type(d) == 'table' and d or {}
-            world = BACKGROUND_WORLD[d.background or ''] or ISLE_WORLD[require('src/world/level/Isles').of(d)] or 'pradera'
+            local bg = ok and type(d) == 'table' and d.background or nil
+            if bg then
+                world = BACKGROUND_WORLD[bg] or ISLE_WORLD[require('src/world/level/Isles').BY_BACKGROUND[bg] or '']
+                guess = world ~= nil
+            end
         end
-        meta = { world = world, modes = ci.modes or {}, boss = #(ci.bossTypes or {}) > 0 }
+        meta = { world = world, guess = guess, modes = ci.modes or {}, boss = #(ci.bossTypes or {}) > 0 }
     end
     metaCache[key] = meta
     return meta or nil
 end
 
--- Las opciones de cada filtro (nil = todas): mundos en el orden de la historia, modos en el de su catálogo
+-- Las opciones de cada filtro (nil = todas): mundos en el orden de la historia (y "Otros" al final), modos en el de
+-- su catálogo
 function E.filterOptions()
     local worlds, modes = {}, {}
     for _, W in ipairs(require('src/story/Worlds').LIST) do worlds[#worlds + 1] = W.id end
+    worlds[#worlds + 1] = E.NO_WORLD
     for _, m in ipairs(require('src/world/modes/Modes').list) do modes[#modes + 1] = m.id end
     return worlds, modes
 end
@@ -368,13 +373,47 @@ function E.filterLevels(files, query, f)
     for _, path in ipairs(files) do
         local m = files.meta and files.meta[path]
         local ok = TextUtil.matches(query or '', (files.search or {})[path] or path)
-        if ok and f.world then ok = m ~= nil and m.world == f.world end
+        if ok and f.world == E.NO_WORLD then ok = m == nil or m.world == nil
+        elseif ok and f.world then ok = m ~= nil and m.world == f.world end
         if ok and f.mode then ok = m ~= nil and m.modes[f.mode] == true end
         if ok and f.boss then ok = m ~= nil and m.boss end
         if ok then view[#view + 1] = path end
     end
     return view
 end
+
+-- LO ÚLTIMO QUE SE PUSO en "Abrir" (el usuario: "los ajustes de filtrado no se guardan cuando abro y cierro el menú;
+-- es incómodo colocar el filtro a cada rato"): los tres filtros y el texto del buscador siguen al volver a abrirlo y
+-- entre sesiones del editor (editor_prefs.json en la carpeta de guardado de LÖVE, nunca en el repo). Lo que no sea
+-- una opción que exista hoy (un mundo o un modo quitado) se ignora al leerlo.
+E.PREFS_FILE = 'editor_prefs.json'
+local openPrefs
+function E.openPrefs()
+    if openPrefs then return openPrefs end
+    openPrefs = { filters = {}, query = '' }
+    local ok, d = pcall(function() return require('libs/json').decode(love.filesystem.read(E.PREFS_FILE)) end)
+    local o = ok and type(d) == 'table' and type(d.open) == 'table' and d.open or nil
+    if o then
+        local worlds, modes = E.filterOptions()
+        local has = function(list, v) for _, x in ipairs(list) do if x == v then return true end end return false end
+        if has(worlds, o.world) then openPrefs.filters.world = o.world end
+        if has(modes, o.mode) then openPrefs.filters.mode = o.mode end
+        if o.boss == true then openPrefs.filters.boss = true end
+        if type(o.query) == 'string' then openPrefs.query = o.query:sub(1, 64) end
+    end
+    return openPrefs
+end
+function E.saveOpenPrefs(filters, query)
+    local p = E.openPrefs()
+    p.filters = { world = filters.world, mode = filters.mode, boss = filters.boss }
+    p.query = query or ''
+    local json = require 'libs/json'
+    local ok, d = pcall(function() return json.decode(love.filesystem.read(E.PREFS_FILE)) end)
+    d = ok and type(d) == 'table' and d or {}                    -- (conserva otras preferencias que haya)
+    d.open = { world = p.filters.world, mode = p.filters.mode, boss = p.filters.boss, query = p.query }
+    pcall(love.filesystem.write, E.PREFS_FILE, json.encode(d))
+end
+function E.forgetOpenPrefs() openPrefs = nil end                -- (el arnés: "otra sesión" relee el archivo)
 
 E.listLevels = listLevels           -- (el arnés editor_open abre el diálogo con la lista de verdad)
 

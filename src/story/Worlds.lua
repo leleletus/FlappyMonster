@@ -66,6 +66,33 @@ Worlds.LIST = {
       outros = { huida_del_espejo = 182 } },                                  -- (la huida sigue en la guarida)
 }
 
+-- NIVELES FUERA DE LA HISTORIA y su ISLA (el mundo al que pertenecen, aunque usen otro fondo): { [nivel] = mundo }
+-- (`false` = de ninguna isla: los de prueba). Lo usa el filtro Isla del editor (Ctrl+O) a través de Worlds.worldOf; un
+-- nivel nuevo fuera de la historia = una línea aquí (sin ella, el editor la adivina por su fondo y lo avisa)
+Worlds.MEMBERS = {
+    jardin_gummies      = 'pradera',      -- (gummies y cangrejos de río)
+    ciudadela_cangrejos = 'pradera',      -- (cangrejos de río y gummies de la pradera, con música de la pradera)
+    cascada_dorada      = 'costa',
+    cumbre_cangrejo     = 'costa',        -- (el Peñón del Cangrejo)
+    marea_alta          = 'costa',
+    rebote_real         = 'costa',        -- (trampolines y cangrejos saltarines; música de la costa)
+    coliseo_pinchos     = 'fortaleza',
+    mina_inundada       = 'cuevas',       -- (gummies y cangrejos de cueva; el fondo de montaña la mandaba a las Montañas)
+    EnemyTest           = false,          -- (banco de pruebas de enemigos)
+}
+
+-- El mundo al que PERTENECE el nivel `id`: el de la historia (niveles, jefe, bonus, secretos) o el de MEMBERS.
+-- → id del mundo y de dónde sale ('story' | 'table'); nil si no se sabe (false en MEMBERS: nil, 'table')
+function Worlds.worldOf(id)
+    for _, W in ipairs(Worlds.LIST) do
+        if W.boss == id or W.bonus == id then return W.id, 'story' end
+        for _, l in ipairs(W.levels) do if l == id then return W.id, 'story' end end
+        for _, e in ipairs(W.secrets or {}) do if e.level == id then return W.id, 'story' end end
+    end
+    if Worlds.MEMBERS[id] ~= nil then return Worlds.MEMBERS[id] or nil, 'table' end
+    return nil
+end
+
 function Worlds.count() return #Worlds.LIST end
 function Worlds.get(w) return Worlds.LIST[w] end
 

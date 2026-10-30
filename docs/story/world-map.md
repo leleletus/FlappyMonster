@@ -234,6 +234,12 @@ conflicts with the sections above, the sections above describe the current behav
 - 2026-10-29: CANNONS replace the bridges between islands, one at each end of every crossing (the user:
   "para cambiar de isla se usa un puente; estaba pensando en usar un cañón. El cañón se carga con el jugador, apunta y
   dispara. Se vería mejor y quedaría más cómico") — [above](#cannons-between-islands). Not judged by the user yet.
+- 0.5.113 (2026-10-30): the user — in the "crabs grow back" and "ball breaks" scenes the small crabs looked bigger than
+  the giants and "growing" shrank them; the small Icy Crabby lacked its claws; the Groove kept its trampoline and big claw
+  when small; the islet was too tight. Now the scenes use the map's sizes (giant 1, normal enemy 0.62, `SMALL`/`MID` in
+  StoryMapScenes; the ending film too), the small Groove has no trampoline and two small claws, and the Groove's islet
+  grew westwards with the Mashup node at its west end. story_flow captures every stage (`scene_regrow_pequenos`,
+  `scene_disco_grandes`).
 - 0.5.100 (2026-10-29): the ice island split in two — the Frozen Coast (world 6) added east of the Mountains; map
   112x63 (the user: "son 8 bosses y 7 islas… separamos la isla congelada en 2").
 - 0.5.99 (2026-10-29): the jungle became world 3 (its four levels, boss and bonus; bridges Coast → Jungle → Fortress);

@@ -163,7 +163,17 @@ function GB:onScaleLaunch(vy, scale)
     Sound.play('scaleLaunch')
     Sound.play('megaRoar', 1.3, 0.6)
 end
--- Cayó él en un platillo: a quién disparó (para el golpe contra el techo)
+-- Se estrella contra el techo (o lo que haya encima) disparado por la balanza: su versión del gancho de la base
+-- (Entity:onCeilingSmash, systems/HardLaunch: lo lanzado fuerte contra el techo queda aturdido) — sacudida y cascotes;
+-- luego su estado 'launched' lo pone a dar la vuelta ('tumble') y queda patas arriba
+function GB:onCeilingSmash(vy, level)
+    Sound.play('megaSlam', 0.8, 1)
+    Sound.play('blockBreak', 1, 0.8)
+    Entity.emitFx('shake_big', self.x, self.y)
+    local _, _, zy0 = self:zoneBounds()
+    Entity.emitFx('block_break', self.x - T / 2, math.max(zy0, self.y - self.outerH / 2 - T))
+end
+-- Cayó él en un platillo: a quién disparó (para el golpe contra el techo: lo hace él, no HardLaunch)
 function GB:onScaleCatapult(players, ents)
     for _, pa in ipairs(players) do self.shot[#self.shot + 1] = { pa = pa, t = 0, vy = pa.vy or 0 } end
 end
@@ -645,13 +655,7 @@ function GB:updateBoss(dt, level)
         local y0 = self.y
         self:physics(level, dt, false)
         if self.y > y0 - LAUNCH_V * dt * 0.5 or t >= LAUNCH_MAX then
-            if t < LAUNCH_MAX then
-                Sound.play('megaSlam', 0.8, 1)
-                Sound.play('blockBreak', 1, 0.8)
-                Entity.emitFx('shake_big', self.x, self.y)
-                local _, _, zy0 = self:zoneBounds()
-                Entity.emitFx('block_break', self.x - T / 2, math.max(zy0, self.y - self.outerH / 2 - T))
-            end
+            if t < LAUNCH_MAX then self:onCeilingSmash(LAUNCH_V, level) end
             self.vy = 0
             self:enter('tumble')
         end

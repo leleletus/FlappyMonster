@@ -568,7 +568,9 @@ SECRETS = [
     # el GROOVE: del bonus del Final a su islote de arena al noreste del volcán (el de siempre)
     ('isla_del_groove', 'final', 'bonus', [(48.3, 11.4)], (48.6, 8.9), (48.8, 8.1, 3.0, 2.4), 's'),
     # el MEGA MASHUP (el final de verdad): del Groove, por su islote, un poco más al este
-    ('mashup_cangrejos', 'final', 'isla_del_groove', [(49.9, 8.7)], (50.8, 7.6), (50.7, 7.7, 1.7, 1.5), 's'),
+    # (el usuario, 2026-10-30: que quepan los tres cangrejos y el Groove sin verse apretados — el islote crece hacia el
+    #  OESTE, donde hay mar libre, y el Mashup se va a su punta oeste, lejos del Groove)
+    ('mashup_cangrejos', 'final', 'isla_del_groove', [(46.6, 7.9)], (43.6, 6.6), (44.6, 6.3, 4.8, 3.2), 's'),
 ]
 SSECRET, SECRET_END = {}, {}
 for lvl, wk, frm, mid, end, isle, ch in SECRETS:

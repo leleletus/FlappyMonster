@@ -67,14 +67,14 @@ THEMES = {
     'lluvia_pinchos': 'volcano', 'tren_fugaz': 'fortress', 'ruta_del_espejo': 'volcano', 'huida_del_espejo': 'volcano', 'ciudadela_cangrejos': 'meadow',
     'marea_alta': 'tropical', 'cascada_dorada': 'tropical', 'isla_flotante': 'meadow', 'canon_trampolines': 'beach',
     'rebote_real': 'tropical', 'guarida_cangrejo_rey': 'tropical', 'cala_resaca': 'beach', 'isla_del_groove': 'beach', 'templo_escarabajo': 'jungle',
-    'cumbre_cangrejo': 'beach', 'torre_viento': 'snow', 'lago_helado': 'snow', 'glaciar_cangrejo': 'snow', 'reino_gummy': 'meadow', 'gruta_lugubre': 'cave', 'gruta_del_farol': 'cave',
+    'cumbre_cangrejo': 'beach', 'torre_viento': 'snow', 'lago_helado': 'snow', 'glaciar_cangrejo': 'frozen_coast', 'reino_gummy': 'meadow', 'gruta_lugubre': 'cave', 'gruta_del_farol': 'cave',
     'cavernas_cristal': 'cave', 'mina_inundada': 'mine', 'laberinto_submarino': 'cave',
     'fabrica_morteros': 'fortress', 'fortaleza_malvada': 'fortress', 'taller_trampas': 'fortress',
     'coliseo_pinchos': 'fortress',
     # tanda 2 (tools/levelgen/levels_batch2.py)
     'pradera_explosiva': 'meadow', 'bosque_interruptores': 'forest', 'playa_rebotes': 'beach', 'arrecife_globo': 'tropical',
-    'cantera_dinamita': 'mine', 'cumbres_escarcha': 'snow', 'fabrica_criogenica': 'snow', 'templo_del_eco': 'cave',
-    'jungla_colgante': 'beach', 'caldera_roja': 'volcano', 'cantera_real': 'volcano', 'lago_de_cristal': 'snow',
+    'cantera_dinamita': 'mine', 'cumbres_escarcha': 'snow', 'fabrica_criogenica': 'frozen_coast', 'templo_del_eco': 'cave',
+    'jungla_colgante': 'beach', 'caldera_roja': 'volcano', 'cantera_real': 'volcano', 'lago_de_cristal': 'frozen_coast',
     'ciudadela_alterna': 'fortress', 'cala_de_los_muelles': 'beach', 'cripta_del_silencio': 'cave',
     # la JUNGLA (tools/levelgen/levels_jungle_*.py)
     'senda_del_dosel': 'jungle', 'rio_revuelto': 'jungle', 'templo_de_los_pesos': 'jungle', 'la_estampida': 'jungle',
@@ -95,7 +95,7 @@ SKY = {
     'ruta_del_espejo': ('meadow', 'night'), 'ciudadela_cangrejos': ('coast', 'day'), 'marea_alta': ('coast', 'dusk'),
     'cascada_dorada': ('forest', 'day'), 'isla_flotante': ('meadow', 'day'), 'canon_trampolines': ('coast', 'day'),
     'rebote_real': ('forest', 'day'), 'guarida_cangrejo_rey': ('coast', 'day'), 'cala_resaca': ('coast', 'day'), 'isla_del_groove': ('coast', 'night'), 'templo_escarabajo': ('jungle', 'day'), 'cumbre_cangrejo': ('coast', 'dusk'),
-    'torre_viento': ('snow', 'night'), 'lago_helado': ('snow', 'dusk'), 'glaciar_cangrejo': ('snow', 'day'), 'reino_gummy': ('meadow', 'day'), 'gruta_lugubre': ('cave', 'night'), 'gruta_del_farol': ('cave', 'night'), 'cavernas_cristal': ('cave', 'day'), 'mina_inundada': ('mountain', 'day', 'cave'),
+    'torre_viento': ('snow', 'night'), 'lago_helado': ('snow', 'dusk'), 'glaciar_cangrejo': ('frozen_coast', 'day'), 'reino_gummy': ('meadow', 'day'), 'gruta_lugubre': ('cave', 'night'), 'gruta_del_farol': ('cave', 'night'), 'cavernas_cristal': ('cave', 'day'), 'mina_inundada': ('mountain', 'day', 'cave'),
     'laberinto_submarino': ('coast', 'day', 'underwater'), 'fabrica_morteros': ('fortress', 'dusk'),
     'fortaleza_malvada': ('fortress', 'night'), 'taller_trampas': ('fortress', 'day', 'cave'), 'coliseo_pinchos': ('fortress', 'dusk'),
     'la_cima': ('snow', 'day'),
@@ -104,6 +104,10 @@ SKY = {
     'tempanos_a_la_deriva': ('frozen_coast', 'day'),
     'bahia_de_las_mareas': ('frozen_coast', 'dusk'),
     'bajo_el_hielo': ('frozen_coast', 'night', 'underwater'),
+    # (la Costa Helada entera con su fondo y sus decoraciones, 2026-10-30: la fábrica y el bonus estaban con los de
+    # las Montañas)
+    'fabrica_criogenica': ('frozen_coast', 'night', 'icecave'),
+    'lago_de_cristal': ('frozen_coast', 'dusk'),
 }
 
 
@@ -230,7 +234,7 @@ REQ = {
 # Qué decoraciones PEGAN en cada tema (--theme: las de otro bioma se cambian por una de este; las del agua
 # se quedan si el tema tiene agua de verdad). Sale de FLOOR/CEIL/BEACH; más las sueltas que también valen.
 EXTRA_OK = {'tropical': {'shell', 'starfish'}, 'cave': {'bones', 'torch', 'cobweb'}, 'volcano': {'steam_stones'},
-            'snow': {'icicle', 'icicle_small'}, 'frozen_coast': {'icicle', 'icicle_small', 'floe', 'ice_crystal'}, 'fortress': {'stalactite', 'cave_crystals'}, 'mine': {'cave_crystals'}}
+            'snow': {'icicle', 'icicle_small'}, 'frozen_coast': {'icicle', 'icicle_small', 'floe', 'ice_crystal', 'snowman'}, 'fortress': {'stalactite', 'cave_crystals'}, 'mine': {'cave_crystals'}}
 NO_SEA = {'meadow', 'forest', 'snow', 'fortress', 'volcano', 'mine', 'jungle', 'frozen_coast'}     # (algas sí; corales, conchas y estrellas de mar, no)
 SEA_LIFE = {'coral', 'coral_fan', 'anemone', 'clam', 'shell', 'starfish'}
 HANGING = {'icicle', 'icicle_small', 'stalactite', 'cobweb', 'liana_long', 'liana_mid', 'liana_short', 'hanging_moss',

@@ -204,8 +204,8 @@ end
 local function secretExtras(map, t, R, small, bounceAt)
     for _, sc in ipairs(map.secretCrabs()) do
         local u = small or 0
-        if u < 0.5 then map:_drawBossArt(sc.art, sc.x, sc.y, 0, lerp(1, 0.6, u * 2))
-        else map:_drawBossArt(sc.small, sc.x, sc.y, 0, 1) end
+        if u < 0.5 then map:_drawBossArt(sc.art, sc.x, sc.y, 0, lerp(1, 0.8, u * 2))
+        else map:_drawBossArt(sc.small, sc.x, sc.y, 0, lerp(0.8, 0.62, (u - 0.5) * 2)) end      -- (0.62: el enemigo normal en el mapa, K.drawExtras)
     end
     local gx, gy = map.grooveSpot()
     if gx then

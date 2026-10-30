@@ -62,6 +62,7 @@ end
 
 local Push = require 'src/world/systems/Push'
 local Carry = require 'src/world/systems/Carry'
+local HardLaunch = require 'src/world/systems/HardLaunch'
 local FreeFlight
 local function randRange(a, b)
     return a + math.random() * (b - a)
@@ -223,8 +224,14 @@ function Entity:updateCommonStates(dt, level)
         self.deadTimer = self.deadTimer + dt
         local vx = self.vx
         self.vy = self.vy + ADV_GRAVITY * dt
+        local vy0 = self.vy
         self:moveAndCollide(level, vx * dt, self.vy * dt)
         if self.state ~= 'launched' then return true end     -- (otro trampolín la relanzó)
+        -- (disparada fuerte por una catapulta contra el techo: aturdida — systems/HardLaunch, onCeilingSmash)
+        if self.hardLaunch and HardLaunch.crashed(self, vy0) then
+            self:onCeilingSmash(-vy0, level)
+            if self.state ~= 'launched' then return true end
+        end
         if self.vx ~= vx then self.vx = -vx * 0.3 end         -- chocó con una pared: rebota un poco
         if self.deadTimer > 0.05 and self:onDeadlyGround(level) then
             self:dieBurst()                                    -- (¡en pinchos! revienta)
@@ -232,6 +239,7 @@ function Entity:updateCommonStates(dt, level)
         end
         if self.onGround and self.deadTimer > 0.05 then
             self.launchedPrev = nil
+            HardLaunch.clear(self)
             self.vy = 0
             self.vx = self.moving and self.speed * self.facing or 0
             self:startWalk()
@@ -872,10 +880,23 @@ function Entity:launch(vx, vy)
     if self.releaseCrawl then self:releaseCrawl() end
     if self.launchedPrev == nil and self.state ~= 'launched' then self.launchedPrev = self.state end
     self.state, self.deadTimer = 'launched', 0
+    self.hardLaunch, self.hardBy = nil, nil              -- (la catapulta la marca después: systems/HardLaunch)
     self.flipped, self.onGround = false, false
     self.vx, self.vy = vx, vy
     if vx ~= 0 then self.facing = vx > 0 and 1 or -1 end
     self.leftBoundPx, self.rightBoundPx = -math.huge, math.huge
+end
+
+-- Disparada fuerte por una catapulta, se estrella subiendo contra algo de arriba (systems/HardLaunch; `vy` = a qué
+-- velocidad): queda ATURDIDA con su knockback (cada tipo con el suyo); lo que no se aturde solo se para. Un tipo lo
+-- sobrescribe para reaccionar a su manera (el Escarabajo Gigante: su vuelco)
+function Entity:onCeilingSmash(vy, level)
+    Sound.play('headBump')
+    Entity.emitFx('shake_small', self.x, self.y - self.outerH / 2)
+    if self.canBeKnocked and self:canBeKnocked() then
+        self:knockback(0)
+        self.vy = 0                                      -- (sin el saltito: está contra el techo; cae desde ahí)
+    end
 end
 
 -- Gravedad (hacia el techo si está boca abajo) sin desplazamiento horizontal.

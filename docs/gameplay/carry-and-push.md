@@ -12,6 +12,7 @@ concrete type.
 | `src/world/systems/Push.lua` | AIR: whatever blows pushes players and everything with physics, without damage |
 | `src/world/entities/Entities.lua` (`solidBodies`) | BODY PARTS and MOVING BODIES (measures `stepDx/stepDy`) |
 | `src/player/PlayerCollision.lua` | riding a moving body, one-way bodies, pushing a body (`pushBy`) |
+| `src/world/systems/HardLaunch.lua` | HARD LAUNCHES: whatever a catapult fires and smashes hard into a ceiling is stunned (a player is hurt) |
 | `src/world/systems/Weight.lua` | WEIGHT of what is on top of something, stacked included (Scale pans, what a Geyser lifts) |
 | `src/world/level/Isles.lua` | which ISLAND a level is: art per island and island FAMILIES of types (see below) |
 | `src/world/entities/types/items/box.lua` | the Box (`box`, pushed) and the small box (`smallbox`, carried) |
@@ -152,11 +153,38 @@ One generic module for everything that changes with the island (the user: one me
 total weight; `Weight.total(o, level, isPlayer)` = `o` + its stack. A player weighs 1 + what they carry; an entity its
 `weight` (1 by default); flyers, carried things, bosses and ghosts nothing. Used by the Scale pans and the Geyser.
 
+## Hard launches into a ceiling (`HardLaunch`)
+
+The Giant Beetle fight's rule, for EVERY catapult (2026-10-30). `Scale:catapult` and `Scale:sweepPlayers` mark what
+they fire (`HardLaunch.mark(o, by)`, right after its `launch`, which clears any old mark; any other catapult just calls
+`mark` too). The mark lasts until the body stops rising. If, rising faster than **`HardLaunch.MIN_VY` 250 px/s**,
+something ABOVE stops it dead (a tile, a ceiling, a solid body):
+
+- **an entity** in the base `'launched'` state → `e:onCeilingSmash(vy, level)`. `Entity`'s version: `headBump` +
+  small shake and, if `canBeKnocked()`, its own **`knockback(0)`** (the base daze: `'stunned'` with the star ring, then it
+  carries on; each type with its own version — the Rhino Beetle falls on its back). What cannot be knocked (a box,
+  which the catapult moves without `launch`; a beetle already on its back) just stops. A type overrides
+  `onCeilingSmash` for its own reaction: the Giant Beetle's version is its shake + debris before its `'tumble'` →
+  `'flipped'` (its fight is unchanged; bosses are fired through `onScaleLaunch`, never marked).
+- **a player** (`HardLaunch.player`, from `PlayerAdventure:update` after moving) → `headBump`, a small shake and, unless
+  invulnerable, **−1** (`hurt`: normal rules, invulnerability after) plus the Giant Beetle's `HIT_CEIL` reaction: pushed
+  down at 260 px/s, 0.3 s without control, 0.6 s dazed (`stunT`). If the launch came from a boss that tracks whom it
+  fired (`by.onScaleCatapult`: the Giant Beetle's slam), that boss deals the hit itself (`GB:updateShot`) and this
+  does nothing — no double hit.
+
+Same threshold as the beetle fight ("hard" = still rising at > 250 px/s when stopped). A trampoline or a normal jump
+into a ceiling is never marked. **Online**: server-authoritative and no new state: the catapult is not predicted (the
+server moves the pans and launches), so the hit reaches the client in its own state (`hp`, `hurtT`, `invT`, `stunT`,
+`ctrlLockT`) and the hp drop plays the hurt sound, like the beetle's ceiling hit; a client never holds a mark. No
+protocol bump (but the simulated behaviour changed: an older server would not stun / hurt).
+
 ## Tests
 
 `mechanics`: `caja_empuje`, `caja_rota`, `caja_borde`, `cajas_golpes`, `cargar`, `bomba_reaparece`, `islas`, `islas_arte` (every
 island has its art in everything above), `viento`,
 `cuerpo_mueve`, `balanza`, `balanza_tope`, `balanza_impacto` (a hard landing on a pan fires the other one),
+`balanza_techo` (fired hard into a low ceiling: a Gummy is stunned, a Rhino Beetle lands on its back, a box just stops; the
+player loses 1 and is dazed; the weakest launch that still reaches the ceiling and a trampoline launch do nothing),
 `escarabajo_lanzado` (the Rhino Beetle on its back is carried and thrown). `cablecar_rules` (riding the Cable car
 through corners and turnarounds, a box and a Gummy on a deck, `onWeight`). `iceberg_rules` (floating on tile water and
 floods, following a tide, riding, sinking under weight and recovering, never drifting, pushed walking and swimming,
@@ -164,6 +192,13 @@ blown, stopping at walls and other icebergs, a box riding it, online parity).
 
 ## History and decisions
 
+- 2026-10-30 (the user): "La mecánica de la balanza que usa el boss para hacerle daño al jugador y que usa el jugador
+  también para hacerle daño a él no se debe quedar solo en la pelea del boss: en cualquier otra circunstancia en la que
+  se use una balanza como catapulta, si se lanza muy fuerte a cualquier entidad contra el techo, ésta debería quedar
+  aturdida (y en el caso del jugador, recibir daño)." → `HardLaunch` (above): a base rule with the beetle fight's
+  threshold and player reaction; the Giant Beetle keeps its own reaction as its `onCeilingSmash` override. Side effect
+  in the beetle arena: a co-op player fired by the OTHER player's ground pound (or by a hard impact) into the ceiling
+  now loses 1 too (before only the boss's slam hurt).
 - 0.5.71 (the user): boxes in a ROW are pushed together (a small box beside a big one blocked it like a wall), at
   `0.8 ÷` the weight of the whole row with what each carries (big alone 0.4, small 0.8, big + small 0.27; the push
   factor travels in the Box netPack so the pusher's client predicts it); bombs break boxes in their damage radius

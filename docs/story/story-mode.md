@@ -114,6 +114,10 @@ line in `Worlds.lua`, its branch in the map generator and, if it gives something
   `gruta_lugubre` (from `templo_del_eco`, exit), Final `isla_del_groove` (from the bonus; after `ruta_del_espejo`,
   every `splinter`, scene `groove`) and `mashup_cangrejos` (from the Groove; after it, scene `regrow`), plus the Final's
   `epilogue = { after = 'mashup_cangrejos', scene = 'disco' }`. The old single `secret` field is gone.
+- **Island of a level** — `Worlds.worldOf(id)` → the world the level BELONGS to and where it comes from: `'story'`
+  (levels, boss, bonus, secrets of `Worlds.LIST`) or `'table'` (`Worlds.MEMBERS = { [level] = world | false }`: the
+  levels OUTSIDE the story — Free Play / online arenas — with their island; `false` = none, e.g. `EnemyTest`). A new
+  non-story level = one line in `MEMBERS`. Used by the editor's Island filter ([editor](../levels/editor.md)).
 - **Secret exits** — tile `secret_exit` (id 44, `src/world/tiles/types/secret_exit.lua`, art
   `tools/art/world/make_secret_exit.py`: a red plate with a keyhole). Touching it ends the level like the finish
   (`AdventureState` → `win()`, `result.secretExit = true`; results as usual). In the story, `onFinish` then calls

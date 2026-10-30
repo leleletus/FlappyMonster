@@ -250,7 +250,7 @@ def glaciar_cangrejo():
     Mega Crabby helado al final (arena jefe_cangrejo_helado: la del Mega con suelo de nieve)."""
     src = load_src('jefe_cangrejo_helado.json')
     L = Level('Glaciar del Cangrejo', 120, 15, (4, 12), music='labyrinth')
-    L.extra.update({'name_en': 'Crab Glacier', 'snow': True, 'spikeSkin': 'ice'})
+    L.extra.update({'name_en': 'Crab Glacier', 'snow': True, 'spikeSkin': 'ice', 'background': 'frozen_coast'})   # (la Costa Helada, 2026-10-30)
     G = 13
     L.rect(2, G, 81, 14, SNOW)
     # salida: un Crabby helado normal (púa de hielo) para empezar
