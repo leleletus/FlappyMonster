@@ -57,6 +57,14 @@ the game's): `avalancheRumble` (`traps/avalanche_rumble.wav`, 1.2 s: low rumble 
 each to −12 dBFS (loudest 100 ms), no GAIN entry. Played with `Sound.playAt` from the nearest point / cabin. Not
 listened to by anyone yet.
 
+## Door sounds (2026-10-29)
+
+`tools/sounds/door.py` (previews in `FlappyMonster_pruebas/puertas/sonidos/`, `--apply` writes the game's):
+`doorClick` (`mechanics/door_click.wav`, 0.3 s: a dry metal latch clack and a dull thunk; played at the door AND at
+each linked Activator), `doorOpen` (`mechanics/door_open.wav`, 1.0 s: rough grinding with a low rumble; pitch 0.85 when
+it starts closing), `doorThud` (`mechanics/door_thud.wav`, 0.4 s: heavy low thud with dust). Each at −12 dBFS, no GAIN
+entry. Not listened to by anyone yet.
+
 ## Distance attenuation
 
 `Sound.setListener(x, y)` (the local player; camera centre when spectating)

@@ -102,7 +102,8 @@ if it should exist as a mini block, add it to `SubTiles.KINDS`. Then
 
 - **ON/OFF Activators** (`switch_on` 13 / `switch_off` 14, labels "Activador ON/OFF",
   Mecanismos; textures `assets/images/world/tiles/switch_*.png`; fx `switch_hit`, sounds
-  switchOn/switchOff). They drive linked activatable entities (floods, `links`) and
+  switchOn/switchOff). They drive linked activatable entities (floods, Freezers, Doors — `links`,
+  [traps-and-mechanisms](../entities/traps-and-mechanisms.md#door-puerta-2026-10-29) —) and
   **ON/OFF Blocks** (`switchblock_on.lua`, 4 tiles: `switchblock_on` 18 / `_on_x` 19,
   `switchblock_off` 27 / `_off_x` 28; `switchBlock = {kind, active, other}`; inactive
   variants `editorHide`): ON Block solid while its activator is ON, OFF Block while it's

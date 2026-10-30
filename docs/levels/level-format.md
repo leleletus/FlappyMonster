@@ -17,7 +17,7 @@ that exists: [reference/levels](../reference/levels.md).
 | `foliage` | decorations `{type, col, row, sub, flip, layer, plane, …}` (the key is historic: it means decorations); `"plane": "bg"` = on the background plane (types with `plane = 'bg'`, the big trees, always are and do not write it) |
 | `vents` | oxygen vents |
 | `bossZones` | `{id, col, row, w, h, music, event}` (`event`: driven by a director, it does not start by itself) |
-| `links`, `blockLinks` | ON/OFF Activator → activatable entity (`to` = id) / → ON/OFF Blocks |
+| `links`, `blockLinks` | ON/OFF Activator → activatable entity (`to` = its `id`: floods, Freezers, Doors) / → ON/OFF Blocks |
 | `autoScroll` | `{startCol, endCol, speed, width, margin, countdown}` |
 | `xtraBosses` | optional explicit placements of the second boss when `bossExtra` is on (no difficulty sets it since 0.5.24; default: mirrored) |
 | `background`, `time`, `clouds`, `depth`, `surfaceRow` | sky: surface biome, day / dusk / night, depth biome and the surface line |

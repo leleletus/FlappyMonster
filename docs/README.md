@@ -96,6 +96,7 @@ Ids are data (level files, saves, network), so confusing ones are explained here
 | `mirror` / `mirrorchase`, "el Reflejo" | the Mirror boss (the Reflection) / its chase before the fight |
 | `cryo`, "Congelador" | the Freezer trap |
 | `avalanche` "Alud" · `cablecar` "Teleférico" | the Frozen Mountains' snow chute trap and the generic cable car platform ([traps-and-mechanisms](entities/traps-and-mechanisms.md)) |
+| `door` "Puerta" | a solid door that opens when its linked ON/OFF Activator fires (or its boss zone is won), per-island art ([traps-and-mechanisms](entities/traps-and-mechanisms.md#door-puerta-2026-10-29)) |
 | tile `solid` | stone ("Piedra"); `border` = very hard rock; `danger` = LAVA; `hidden_block` = invisible block |
 | `switch_on/off` | ON/OFF Activator; `switchblock_*` = ON/OFF Blocks |
 | level key `foliage` | decorations |

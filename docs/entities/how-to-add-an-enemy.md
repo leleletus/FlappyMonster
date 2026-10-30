@@ -50,7 +50,7 @@ return {
 | `noise = tiles` | (pickups) how loud picking it up is | `Interactions.run` |
 | `pickup = { score, lives, heal }` / `checkpoint = true` | It is collected / it is a checkpoint | `Interactions` (`pickupEffect`) |
 | `summons = function(placement) ... end` | RESERVE placements the level creates for it (minions) | `Level.fromData` |
-| `activatable = true` | Can be linked to an ON/OFF Activator (prop `id`) | `Level:signal`, editor |
+| `activatable = true` | Can be linked to an ON/OFF Activator (prop `id`); `needsLink` (true / `function(props)`) = an editor warning while nothing is linked | `Level:signal`, editor |
 | `category`, `description`, `variant`, `hide`, `placement`, `ceilingOnly` | Editor: palette, inspector, placement | `EntityTypes`, editor |
 | `boss = { title }` | It is a boss (bars, zone) | `Boss.lua`, `BossZones` |
 | `pace = false` / `pace = '<modifier>'` | Opt out of / choose the difficulty time scale | `Difficulty.dt` |

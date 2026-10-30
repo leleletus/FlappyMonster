@@ -33,7 +33,7 @@ Safe to re-run (verified on 2026-10-07 to reproduce the committed pixels exactly
 `tools/sounds/props.py` (their sounds), `tools/art/world/make_iceberg.py` (the Iceberg, every size × 2 variants,
 and the frost-meter icon `ui/icons/frost.png`, 2026-10-29; preview `FlappyMonster_pruebas/mecanicas_heladas/iceberg/vista_previa.png`) +
 `tools/sounds/iceberg.py`, `tools/art/world/make_avalanche_cablecar.py` (Avalanche and Cable car,
-2026-10-29; preview `FlappyMonster_pruebas/mecanicas_heladas/vista_previa.png`) + `tools/sounds/avalanche_cablecar.py`, `tools/art/ui/make_prompts.py` (the "grab" and "mash" tooltips; does not overwrite, `--force`). The others were moved and had their paths updated but were
+2026-10-29; preview `FlappyMonster_pruebas/mecanicas_heladas/vista_previa.png`) + `tools/sounds/avalanche_cablecar.py`, `tools/art/world/make_doors.py` (the Door, one sheet per island, 2026-10-29; preview `FlappyMonster_pruebas/puertas/vista_previa.png`) + `tools/sounds/door.py`, `tools/art/ui/make_prompts.py` (the "grab" and "mash" tooltips; does not overwrite, `--force`). The others were moved and had their paths updated but were
 NOT executed after the 2026-10-07 reorganisation (their outputs are hand-edited or they need the originals): check
 the diff before committing anything they write.
 

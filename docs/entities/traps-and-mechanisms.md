@@ -1,7 +1,7 @@
 # Traps and mechanisms
 
 Things that are not enemies: **traps** (Freezer, falling spikes, the mortar is an "enemy" by category but behaves
-like a turret), **mechanisms** (trampolines, floods, point zones, boss walls, boss glass, phase blocks) and
+like a turret), **mechanisms** (trampolines, floods, point zones, boss walls, boss glass, phase blocks, doors) and
 **directors** (the invisible spike-rain orchestrator). Types and props: [reference/entities](../reference/entities.md).
 
 Related docs: ON/OFF Activators and blocks are tiles → [tiles-and-blocks](../gameplay/tiles-and-blocks.md); floods →
@@ -10,7 +10,10 @@ walls, glass and phase blocks → [bosses/system](../bosses/system.md); spike ra
 [autoscroll](../gameplay/autoscroll.md).
 
 **Linking:** any type with `activatable = true` can be wired to ON/OFF Activators in the editor (tool "Conectar");
-in game it asks `level:signal(id)`.
+in game it asks `level:signal(id)`. The level stores `links: [{col, row, to}]` = Activator cell → the entity's `id`
+(one Activator drives one id; several Activators may drive the same id: ON if ANY is ON). A type with `needsLink`
+(true or `function(props)`) gets an editor warning when nothing is linked, and every activatable's inspector lists
+its linked Activators and how to link one (the Door).
 
 ## Trampolines
 
@@ -57,6 +60,68 @@ in game it asks `level:signal(id)`.
   (`tools/art/world/make_cryo_chain.py`; two side chains when firing up). Harness `snowboss_look` (snow_cryo.png),
   `online_smoke LEVEL=tools/levelgen/arenas/congelador.json WATCH=gummy WANT=frozen WANTICE=1`,
   `editor_open PLAY=tools/levelgen/arenas/congelador.json`.
+
+## Door (Puerta, 2026-10-29)
+
+The user (2026-10-29): *"En el Templo de los Pesos necesitamos añadir un nuevo objeto, puertas activables (temáticas).
+¿Por qué? Porque actualmente solo con presionar 2 activadores ON/OFF es más que suficiente para pasar el nivel, lo cual
+no es deseado; con 3 puertas una detrás de otra el jugador sí o sí tendrá que presionarlas todas para pasar."* (The old
+exit was a column of 3 ON/OFF blocks, one per wing: any two adjacent blocks open left a 2-tall gap the player fits
+through.)
+
+- **What:** `mechanisms/door.lua`, "Puerta" (Mecanismos). A SOLID door of `width` × `height` tiles (default 1 × 3),
+  placed on its BOTTOM-LEFT cell and growing up. `solidFull` + `isSolidBody` (the same body rules as boss walls and
+  boxes): players, walking enemies (they turn round), pushed boxes and bombs stop at it. Each column is one LEAF 12 art
+  px wide (2 px margin each side, the hitbox too): doors in adjacent cells read as separate doors one behind another.
+- **What opens it (`source`):** `switch` (default) = its linked ON/OFF Activator(s) via the generic `links`
+  (`activatable`, prop `id`); it "fires" when the signal CHANGES (`trigger`: `any` / `on` / `off`, like the Freezer).
+  `boss` = the fight of its boss zone (`zone`, 0 = nearest: `BossZones.find`, now shared with the boss wall and the
+  boss glass) ends won (`fight` → `cleared`).
+- **States** (authoritative: SP and server): `closed` → `unlock` (`UNLOCK_T` 0.35 s: the latch, the leaf shakes 2 px)
+  → `opening` (`openTime`, default 0.8 s) → `open`. `k` = 0..1 open; the solid box is the part still visible (`dir`
+  `up` = it slides into the ceiling, `down` = into the floor; drawn clipped to its own rect with `Clip`). `stay`
+  (default true) = never closes again. Without it: `closeAfter` > 0 closes it after N s; 0 = every fire toggles it.
+  CLOSING never crushes: if the box it is about to cover holds a player, an enemy / boss or something that moves (a
+  box, a bomb: `carryable` / `moves`), it holds still and finishes when they leave (`Door:occupied`); a fire while
+  closing reopens it.
+- **Sounds** (`tools/sounds/door.py`, `mechanics/door_*.wav`, ≈ −12 dBFS, not listened to): `doorClick` (the latch:
+  played at the door AND at each linked Activator, so whoever hit a far switch hears that something opened),
+  `doorOpen` (stone / wood grinding up, also when it starts closing, lower), `doorThud` (closed). Dust (`smoke`) at the
+  moving edge, `shake_small` when it closes.
+- **Islands** (`isleArt`): `assets/images/mechanisms/door/<isla>-Sheet.png`, 4 frames of 16×16 (single, top, middle,
+  bottom) from `tools/art/world/make_doors.py` (preview `FlappyMonster_pruebas/puertas/vista_previa.png`): jungle =
+  temple-brick slab with a carved green eye; meadow = planks with iron bands; coast = sea-green planks with a rope;
+  fortress = an iron PORTCULLIS (see-through bars, spikes at the bottom); snow = an ice slab; cave = dark stone with
+  a cyan crystal; volcano = basalt with a glowing rune. Simple flat colours (the user's sprite rule).
+- **Network:** the open part in PIXELS (`k` × height, rounded as the box is) in its netPack, so the client's box is the
+  server's to the pixel and the predicted player hits / passes exactly like the server's; `closed` is at rest (not
+  sent). States travel as usual (`state`, `deadTimer`). **A new entity type: `Protocol.VERSION` + 1 is needed (not
+  done with this change).**
+- **Editor:** palette Mecanismos → Puerta; link it with the layer Bloques → **Conectar**: click the Activator, then pick
+  «Puerta #id» in its panel (yellow dotted line Activator → door). The door's inspector says which Activators drive it
+  (or none, in the warning colour) and how to link one; the overlay shows «Puerta #id» above it; a door with
+  `source` = switch and no Activator is a warning in Avisos.
+- **Solver:** `level_solve` treats closed doors as solid; `DOORS=1,3` / `DOORS=all` opens those ids (the solver does
+  not press Activators).
+- **Harness** `door_rules` (bloquea, su_activador, se_queda, tres, cerrar, baja, jefe, red, dibujo, templo); online
+  `online_smoke LEVEL=tools/tests/online_smoke/puerta.json WATCH=door WANT=unlock,opening,open` (the bot flips a row of
+  Activators with its head; the client sees the door open).
+
+### The Temple of Weights exit (2026-10-29)
+
+`templo_de_los_pesos`: the 3 OFF blocks at column 93 (rows 27-29) and their `blockLinks` were removed; three doors
+(height 3, rows 27-29) stand at columns 93, 94 and 95, one behind another, and column 95 got a 3-tile lintel of temple
+brick (rows 24-26) so the third door also reaches the ceiling. `links`: the Scale wing's Activator (45,6) → door #1,
+the Mouths wing's (80,4) → #2, the Tunnels wing's (98,20) → #3. Every other byte of the level is unchanged (minimal JSON
+edit; the builder `tools/levelgen/levels_jungle_3.py` makes the same doors, never re-run on it). Solver:
+`DOORS=all` → OK; `DOORS=1,2` / `1,3` / `2,3` / none → FALLA (the closest point is the closed door).
+
+### Decisions and history
+
+- 2026-10-29: first version (agent), for the Temple of Weights (the user's words above). Slide-into-the-ceiling chosen
+  over swinging (a swinging leaf would need a different hitbox through the motion; sliding keeps "solid = what you
+  see"). Closing waits instead of pushing out (nothing gets stuck, nothing is shoved through a wall). No user verdict
+  yet on looks, sounds or feel.
 
 ## Scale, Blizzard and Geyser (0.5.68)
 

@@ -145,6 +145,18 @@ local function drawEntityInspector(x, y, w)
         local nv, ch = ui.enum(t.variant.prop or 'Versión', e.type, opts, x, y, w); y = y + ui.ENUM_H + 8
         if ch then pushUndo(); e.type = nv; markDirty() end
     end
+    -- Activable (inundación, Congelador, Puerta…): qué Activadores ON/OFF la mueven y cómo conectar más
+    if t.activatable then
+        local id, cells = tonumber(e.props.id) or 1, {}
+        for _, l in ipairs(E.model.links or {}) do
+            if l.to == id then cells[#cells + 1] = string.format('col %d, fila %d', l.col, l.row) end
+        end
+        local txt = (#cells > 0 and ('Activadores conectados (#' .. id .. '): ' .. table.concat(cells, ' · ') .. '.')
+                     or ('Ningún Activador conectado a #' .. id .. '.'))
+                    .. ' Para conectar uno: capa Bloques → Conectar, haz clic en el Activador y en su panel elige «'
+                    .. t.label .. ' #' .. id .. '».'
+        y = y + ui.hint(txt, x, y, w, #cells > 0 and th.border or th.warn) + 8
+    end
     return drawPropFields(t.schema, e.props, x, y, w, e, 'ent:' .. e.type) + 8
 end
 

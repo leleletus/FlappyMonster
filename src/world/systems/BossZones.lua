@@ -100,6 +100,24 @@ local function contains(z, x, y)
 end
 BossZones.contains = contains
 
+-- La zona de jefe de algo que ocupa el rectángulo (x0, y0)-(x1, y1) px: la de id `want` o, con `want` 0 / nil, la
+-- más cercana (los bloques de jefe, el cristal de jefe, la Puerta activable con `source` = 'boss'). nil = ninguna
+function BossZones.find(level, want, x0, y0, x1, y1)
+    local best, bd = nil, nil
+    want = want or 0
+    for _, z in ipairs(level.bossZones or {}) do
+        if want > 0 then
+            if z.id == want then return z end
+        else
+            local dx = math.max(z.x0 - x1, 0, x0 - z.x1)
+            local dy = math.max(z.y0 - y1, 0, y0 - z.y1)
+            local d = dx * dx + dy * dy
+            if not bd or d < bd then best, bd = z, d end
+        end
+    end
+    return best
+end
+
 -- Zona sin superar que contiene el punto (paredes invisibles), o nil
 function BossZones.arenaAt(level, x, y)
     for _, z in ipairs(level.bossZones or {}) do

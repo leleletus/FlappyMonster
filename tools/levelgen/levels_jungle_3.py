@@ -1,8 +1,11 @@
 """La jungla, nivel 3: «El Templo de los Pesos» (templo_de_los_pesos) — un templo NO LINEAL.
 
-Diseño aprobado por el usuario (FlappyMonster_pruebas/niveles_jungla/diseno.md, §3): un SALÓN central con una
-puerta de 3 bloques ON/OFF y TRES ALAS en cualquier orden; cada ala acaba en un Activador que quita un bloque de la
-puerta. Dentro del templo (fondo `jungle` + profundidad `temple`), música jungla_1.
+Diseño aprobado por el usuario (FlappyMonster_pruebas/niveles_jungla/diseno.md, §3): un SALÓN central con la salida
+cerrada y TRES ALAS en cualquier orden; cada ala acaba en un Activador. Dentro del templo (fondo `jungle` + profundidad
+`temple`), música jungla_1.
+LA SALIDA (2026-10-29, el usuario: con la puerta de 3 bloques ON/OFF bastaba con pulsar 2 Activadores — dos bloques
+abiertos dejan un hueco por el que se pasa —): TRES PUERTAS (`door`, types/mechanisms/door.lua) una detrás de otra en
+las columnas 93-95, cada una conectada (`links`) al Activador de UN ala: hay que pulsar los tres.
 
     fila  2 ┌───────────── ala de la BALANZA ─────┐┌ ala de las BOCAS ┐
             │  galería del Activador ←·catapulta  ││ C: bomba → planta │→ tolva de vuelta
@@ -23,11 +26,14 @@ de su repisa (bloque OFF) sobre el platillo de la izquierda: cae 3 casillas (784
 Si cae con el platillo nivelado (nadie en el otro), cae 5 casillas y se rompe; reaparece (3 s) y vuelve a caer:
 basta con subirse al platillo de la derecha y esperar.
 
-Comprobación (level_solve no rompe bloques, no usa Activadores ni balanzas): `OPEN=1` = la variante RESUELTA (puerta
-abierta, rompibles fuera, el ascensor como una tabla fija arriba, cada catapulta como un trampolín de su fuerza más
-floja); `SOLVE=<ala>` / `SOLVE=<ala>_vuelta` (balanza, bocas, tuneles) mueve la salida y la meta para comprobar CADA ala
-de ida (del salón a su Activador) y de vuelta (del Activador al salón) con la puerta cerrada:
+Comprobación (level_solve no rompe bloques, no usa Activadores ni balanzas): `OPEN=1` = la variante RESUELTA
+(rompibles fuera, el ascensor como una tabla fija arriba, cada catapulta como un trampolín de su fuerza más floja; las
+PUERTAS las abre el resolvedor: `DOORS=all`); `SOLVE=<ala>` / `SOLVE=<ala>_vuelta` (balanza, bocas, tuneles) mueve la
+salida y la meta para comprobar CADA ala de ida (del salón a su Activador) y de vuelta (del Activador al salón) con las
+puertas cerradas:
     OPEN=1 [SOLVE=bocas] python3 tools/levelgen/build.py --only templo_de_los_pesos --out <carpeta>
+    tools/tests/run.sh level_solve DOORS=all -- <carpeta>/templo_de_los_pesos.json
+Las puertas: `run.sh level_solve [DOORS=1,2] -- assets/levels/templo_de_los_pesos.json` (sin las tres abiertas, FALLA).
 """
 import os
 from lib import *
@@ -53,11 +59,13 @@ class Temple(Level):
         Level.__init__(self, 'El Templo de los Pesos', W, H, (57, FLOOR - 1), music='jungla_1', modes=['race'])
         self.extra.update(name_en='The Temple of Weights', background='jungle', time='day', depth='temple', surfaceRow=2)
         self.blinks = []
+        self.links = []                  # Activador → objeto activable (las puertas)
         # todo el templo es piedra; las salas se excavan
         self.rect(2, 2, W - 1, H - 1, TEMPLE)
 
     def to_json(self):
         if self.blinks: self.extra['blockLinks'] = self.blinks
+        if self.links: self.extra['links'] = self.links
         return Level.to_json(self)
 
     def sw(self, c, r):
@@ -102,9 +110,8 @@ def templo_de_los_pesos():
     L.jplat(71, 74, 20); L.jplat(71, 74, 18); L.jplat(71, 74, 16)
     # trampilla al ala de los túneles (tablones: agachado se baja)
     clear(86, 31, 87, 31); L.jplat(86, 87, FLOOR)
-    # puerta: 3 bloques OFF en la columna 93, uno por ala; columna 94 libre
-    door = [(93, 27), (93, 28), (93, 29)]
-    clear(94, 27, 94, 29)
+    # la salida: el pasillo de las columnas 93-95 (las puertas, al final)
+    clear(93, 27, 94, 29)
     clear(93, 19, 94, 22)                      # el desván (ala de los túneles) se asoma al salón por arriba
     ent('checkpoint', 80, FLOOR - 1)
     # LA ESTRELLA ESCONDIDA: en lo alto, entre el musgo colgante (solo con la catapulta de R0)
@@ -145,7 +152,7 @@ def templo_de_los_pesos():
         ent('trampoline', 33, 15, power=round(TRAMP_CATAPULT, 2))
     rect(36, 9, 46, 9, TEMPLE)                 # la galería
     rect(47, 3, 49, 9, TEMPLE)
-    sw_scale = L.sw(45, 6)                     # ACTIVADOR del ala: quita el bloque de abajo de la puerta
+    sw_scale = L.sw(45, 6)                     # ACTIVADOR del ala: abre la puerta 1
     rect(44, 3, 46, 5, TEMPLE)
     ent('beetle', 42, 15, patrol={'left': 36, 'right': 48})
 
@@ -172,7 +179,7 @@ def templo_de_los_pesos():
     rect(73, 5, 75, 5, TEMPLE)
     ent('carnivoreplant', 74, 7)
     ent('bombobject', 69, 7, respawn=4)
-    sw_mouths = L.sw(80, 4)                    # ACTIVADOR del ala: el bloque del medio
+    sw_mouths = L.sw(80, 4)                    # ACTIVADOR del ala: la puerta 2
     # la tolva de vuelta al salón (columnas 83-84)
     clear(82, 5, 82, 7); clear(83, 5, 84, 18)
 
@@ -212,13 +219,15 @@ def templo_de_los_pesos():
     # el DESVÁN sobre la antesala (columnas 95-114, filas 19-22) con el Activador colgado
     clear(95, 19, 114, 22)
     rect(97, 19, 99, 19, TEMPLE)
-    sw_tunnels = L.sw(98, 20)                  # ACTIVADOR del ala: el bloque de arriba
+    sw_tunnels = L.sw(98, 20)                  # ACTIVADOR del ala: la puerta 3
     ent('gummy_jungle', 106, 22, patrol={'left': 101, 'right': 112})
 
-    # ══ LA PUERTA y la META ═══════════════════════════════════════════════════════════════════════════════════
-    for (c, r), src in zip(door, (sw_tunnels, sw_mouths, sw_scale)):
-        L.off_block(c, r, src, solved=OPEN and not SOLVE)
+    # ══ LAS PUERTAS y la META ═════════════════════════════════════════════════════════════════════════════════
     clear(95, 24, 112, 29)                     # antesala
+    rect(95, 24, 95, 26, TEMPLE)               # (dintel: la tercera puerta, en la columna 95, también llega al techo)
+    for i, (c, src) in enumerate(zip((93, 94, 95), (sw_scale, sw_mouths, sw_tunnels)), 1):
+        ent('door', c, FLOOR - 1, id=i)        # (3 de alto: filas 27-29; se abre subiendo al techo y se queda abierta)
+        L.links.append({'col': src[0], 'row': src[1], 'to': i})
     L.finish(108, 29)
 
     decorate(L)

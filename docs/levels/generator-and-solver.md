@@ -12,7 +12,7 @@ destroys the user's hand edits (`--show` does too). Always `python3 tools/levelg
 `arenas/` (test arenas + their generators; boss levels graft them).
 
 **Checks:** `tools/tests/run.sh level_solve -- <level>` (can it be completed? a search with the REAL player
-physics), `level_check` (validator + which modes list it + 20 s of entity simulation), `level_shots` (a picture of
+physics; closed Doors are solid, `DOORS=1,3` / `DOORS=all` opens them), `level_check` (validator + which modes list it + 20 s of entity simulation), `level_shots` (a picture of
 the whole level), `bot_nav` for arenas.
 
 ## Generator, solver and design numbers

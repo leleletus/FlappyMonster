@@ -28,6 +28,8 @@
 --               level:signal(id) (¿algún bloque conectado en ON?). Opcional
 --               onLink(props): al conectarle un bloque en el editor (p. ej. la
 --               inundación pasa a moverse con bloques ON/OFF). Ver flood.lua.
+--   needsLink   (con activatable) true o function(props): sin ningún Activador conectado es un aviso del editor
+--               (la Puerta: types/mechanisms/door.lua)
 --
 -- En el nivel, cada colocación es:
 --   { type='crabby', col=10, row=2, props={ attach='ceiling', ... } }

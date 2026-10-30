@@ -2,6 +2,8 @@
 -- con la física REAL del jugador? Búsqueda en anchura sobre estados del
 -- jugador (packOwnState/applyOwnState) con acciones de 6 pasos. Ignora
 -- enemigos y trampolines: solo terreno (pinchos, agua y aire sí cuentan).
+-- PUERTAS (`door`): cerradas son sólidas como en el juego; DOORS=1,3 = abiertas las de esos id, DOORS=all = todas
+-- (el resolvedor no pulsa Activadores: así se prueba qué puertas hacen falta).
 --
 --   xvfb-run -a love tools/tests/level_solve assets/levels/x.json [x.json ...]
 -- Resultado por nivel: OK (con nº de pasos) o FALLA + la columna más lejana.
@@ -15,6 +17,7 @@ Input = stub
 local json = require 'libs/json'
 local Level = require 'src/world/level/Level'
 local PlayerAdventure = require 'src/player/PlayerAdventure'
+local Entities = require 'src/world/entities/Entities'
 
 local DT, K = 1 / 60, 6
 local NODROWN = os.getenv('NODROWN')    -- (sin ahogarse: ¿el terreno se puede recorrer?)
@@ -50,6 +53,22 @@ local function solve(path)
     data.bossZones = nil                        -- las arenas de jefe se ignoran (solo terreno)
     data.autoScroll = nil                       -- la cámara automática no cuenta: solo el terreno
     local level = Level.fromData(data)
+    -- las puertas: cuerpos sólidos (cerradas) salvo las abiertas con DOORS
+    local open, doors = {}, {}
+    for id in (os.getenv('DOORS') or ''):gmatch('[^,]+') do open[id] = true end
+    for _, pl in ipairs(level.entities) do
+        if pl.type == 'door' then
+            local d = Entities.create(pl)
+            d:setOpen(open.all or open[tostring((pl.props or {}).id or 1)] or false)
+            doors[#doors + 1] = d
+        end
+    end
+    level.solidBodies = Entities.solidBodies(doors)
+    if #doors > 0 then
+        local o = {}
+        for _, d in ipairs(doors) do o[#o + 1] = ('#%s %s'):format(d.props.id or 1, d.k >= 1 and 'abierta' or 'cerrada') end
+        print('puertas: ' .. table.concat(o, ', '))
+    end
     local tramps = {}
     for _, e in ipairs(data.entities or {}) do
         local d = e.type:match('^trampoline_?(%a*)$')

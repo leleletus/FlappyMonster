@@ -111,18 +111,7 @@ end
 
 -- Su zona de jefe (por id, o la más cercana)
 function G:findZone(level)
-    local want, best, bd = self.props.zone or 0, nil, nil
-    for _, z in ipairs(level.bossZones or {}) do
-        if want > 0 then
-            if z.id == want then return z end
-        else
-            local dx = math.max(z.x0 - self.x1, 0, self.x0 - z.x1)
-            local dy = math.max(z.y0 - self.y1, 0, self.y0 - z.y1)
-            local d = dx * dx + dy * dy
-            if not bd or d < bd then best, bd = z, d end
-        end
-    end
-    return best
+    return require('src/world/systems/BossZones').find(level, self.props.zone or 0, self.x0, self.y0, self.x1, self.y1)
 end
 
 -- Vida del jefe de la zona (fracción), para las fases

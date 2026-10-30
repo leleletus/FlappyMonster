@@ -190,6 +190,10 @@ function Sound.load()
     load('avalanchePour', 'assets/sounds/traps/avalanche_pour.wav', 'static')       -- el torrente de nieve
     load('cablecarMove', 'assets/sounds/mechanics/cablecar_move.wav', 'static')     -- el Teleférico se mueve
     load('cablecarStop', 'assets/sounds/mechanics/cablecar_stop.wav', 'static')     -- llega / arranca
+    -- (la Puerta activable: tools/sounds/door.py, ya a ≈ −12 dBFS)
+    load('doorClick', 'assets/sounds/mechanics/door_click.wav', 'static')   -- su Activador la suelta (en la puerta y en él)
+    load('doorOpen', 'assets/sounds/mechanics/door_open.wav', 'static')     -- se abre
+    load('doorThud', 'assets/sounds/mechanics/door_thud.wav', 'static')     -- se cierra
     if sources['drowning'] then sources['drowning']:setLooping(false) end
     load('fwLaunch',      'assets/sounds/fireworks/launch.ogg',      'static')
     load('fwBlast1',      'assets/sounds/fireworks/blast1.ogg',       'static')
