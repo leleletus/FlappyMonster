@@ -43,7 +43,7 @@ are never edited by hand.
 | see what is pending (review of 2026-10-20) | [pendientes](pendientes.md) |
 | the plan for the two new bosses (Giant Pufferfish, Giant Hopper) and the secret crab bosses | [bosses/new-bosses-plan](bosses/new-bosses-plan.md) |
 | see what was planned or saved for later, old designs and proposals | [design/](design/README.md) |
-| see the secret bosses saved for later (Mother Mole, Carnivorous Queen, Supreme Gust, Emperor Penguin) | [bosses/future-secret-bosses](bosses/future-secret-bosses.md) |
+| see the secret bosses saved for later (Mother Mole, Carnivorous Queen, Supreme Gust, Three-Tailed Scorpion) | [bosses/future-secret-bosses](bosses/future-secret-bosses.md) |
 | the script of the four-crab event boss rush with adaptive music (Free Play) | [bosses/crab-mashup](bosses/crab-mashup.md) |
 | the plan for the new Gust enemy, Scale, pushable Box and Seed (design stage) | [entities/new-props-plan](entities/new-props-plan.md) |
 

@@ -41,17 +41,26 @@ Common to all:
   - **Phase 2:** it spins and changes direction mid-blow.
 - **Piece:** a **weather vane**, the splinter as the arrow's tip.
 
-## 4. The Emperor Penguin — Frozen Coast
-- **Unlock:** in `bahia_de_las_mareas`, a cave under the wrecked ship that only opens at the lowest tide, for a few seconds per cycle.
-- **Lair:** a frozen rink with thin ice and icebergs.
-- **Fight:**
-  - Giant and elegant, it belly-slides across the rink, bounces off the walls and calls penguin chicks.
-  - **Weak spot:** stomp a chick, ride it as a sled, and crash it into the Emperor. Its own sliding cracks the thin ice, and it falls into the freezing water.
-  - **Phase 2:** the rink breaks into floes, and you fight jumping between icebergs.
-- **Piece:** a **monocle**, the splinter as the lens.
+## 4. The Three-Tailed Scorpion — Volcano
+The user's idea (2026-10-31), replacing the Emperor Penguin. Previews to choose from (nothing in `assets/` yet):
+`tools/art/enemies/make_scorpion.py` → `FlappyMonster_pruebas/escorpion/`. **The user's design pick is pending.**
+- **Normal enemy (the lore rule):** a small one-tailed scorpion of the volcano; touching a splinter split its tail in three.
+- **Unlock:** a secret exit in a volcano level (not chosen yet).
+- **How it looks:** a low body on splayed legs; the tails are its biggest feature, so it does not read as one more crab
+  (the user: too many crabs). At rest they fan out like a trident, each stinger glowing a different colour.
+- **The tails are SEGMENTS animated live** (the user's idea): round discs placed along a spring chain, so they need no
+  rotation, plus a stinger in 16 directions. The body is a normal sheet; the arms are segments and a pincer in 16 directions.
+- **The rattle, its signature:** every combined attack sounds 3 clicks like a matraca, and each click flashes one stinger.
+  - **Joined:** 3 clicks as they braid into one thick tail, a short pause, one heavy strike at a marked spot. It sticks
+    in the ground: the window to hit it.
+  - **Split:** 3 clicks as they separate, then each strikes in the order of its click, at its own marked spot.
+  - **Harder phases:** faster clicks and mixed patterns (2 + 1), but the clicks never lie.
+- **Claws:** they really catch the player, using the existing "mash buttons to get out", with a clear warning while the
+  tails get ready. (Mega Gloomy's claw only thrusts and hits.)
+- **Piece:** a **clasp** at the base of the tails, the splinter set in it.
 
-## (Optional fifth) — Volcano
-- For example a lava piranha. Not proposed in detail.
+The Frozen Coast has no secret boss now. An earlier idea, the Emperor Penguin (rink with thin ice, belly-slides, ride a
+chick as a sled and crash it into him), was dropped by the user on 2026-10-31.
 
 The level files the user has hand-edited (`rio_revuelto`, `senda_del_dosel`, and any later ones) take minimal JSON edits only, never a rebuild.
 
