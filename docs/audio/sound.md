@@ -49,11 +49,12 @@ starts sliding / the sled starts). ≈ −12 dBFS, no GAIN entry. Not listened t
 
 ## The Scorpion's sounds
 
-`tools/sounds/scorpion.py` → `assets/sounds/enemies/scorpion/` and `assets/sounds/bosses/giantscorpion/`: the rattle is three files,
-`scorpionClick1-3`, one per tail, so the code plays each click with its stinger's flash; plus `scorpionSting`,
-`scorpionSnap`, `scorpionSkitter`, `scorpionStrike`, `scorpionPull`, `scorpionHiss`. Very short sounds cannot reach −12
-dBFS by gain alone, so the generator saturates them softly (clicks −10.5, the rest ≈ −12), no GAIN entry. Not used by
-any entity yet. Not listened to by anyone yet. Timbres to compare: `FlappyMonster_pruebas/escorpion/sonidos/`.
+`tools/sounds/scorpion.py` → `assets/sounds/enemies/scorpion/` and `assets/sounds/bosses/giantscorpion/`: the rattle (`scorpionRattleJoin`,
+`scorpionRattleSplit`: 3 wooden clicks in one file per gesture, so the rhythm survives online), `scorpionClick`,
+`scorpionSting`, `scorpionSnap`, `scorpionSkitter`, `scorpionStrike`, `scorpionPull`, `scorpionHiss`. The rattle sits at ≈ −14
+dBFS to avoid saturating away the wood, the rest ≈ −12; no GAIN entry. `--apply` only rewrites the rattle; `--others`
+rewrites the rest, which comes out slightly different each time its random stream changes. Not used by any entity yet.
+Not listened to by anyone yet. Woods to compare: `FlappyMonster_pruebas/escorpion/sonidos/`.
 
 ## The 0.5.96 enemies' sounds
 

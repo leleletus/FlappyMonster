@@ -59,17 +59,21 @@ Package (`tools/art/enemies/make_scorpion.py --apply`, `tools/sounds/scorpion.py
   Groove's gate asks for every splinter, so it would become impossible to open.
 - Anchors in the body sheet (art pixels from the top left, facing right): tail base (4, 9), far shoulder (21, 14), near shoulder (24, 15).
   Preview chain: boss 19 segments, 3.4 art px apart; small 8, 3.2 apart.
-- Sounds (names in `src/audio/Sound.lua`): `scorpionClick1-3` (one per tail, low to high: `join` plays 1 2 3, `split` 3 2 1,
-  the code plays each with its stinger's flash), `scorpionSting`, `scorpionSnap`, `scorpionSkitter`, `scorpionStrike`,
-  `scorpionPull`, `scorpionHiss`. Click timbre B «matraca» installed; A «quitina» and C «hueso» with `--click`.
-  Not listened to by anyone yet.
+- Sounds (names in `src/audio/Sound.lua`): `scorpionRattleJoin` / `scorpionRattleSplit` (3 wooden clicks 0.09 s apart in ONE
+  file per gesture: three separate network sounds would lose the rhythm online), `scorpionClick` (one click, the small
+  one), `scorpionSting`, `scorpionSnap`, `scorpionSkitter`, `scorpionStrike`, `scorpionPull`, `scorpionHiss`.
+  **Timing rule (the user):** the rattle sounds exactly while the tails coil or uncoil: play it the frame the movement
+  starts, make that movement last about 0.2 s (preview: `COIL_F`, `COIL_K`), one stinger flash per click at 0, 0.09 and
+  0.18 s. Wood B «hueca» installed; A «seca», C «grave» with `--click`. Not listened to by anyone yet.
+- History: first version rejected ("no me terminan de convencer"): 3 separate clicks 0.36 s apart, not tied to the movement.
+
 - **Normal enemy (the lore rule):** a small one-tailed scorpion of the volcano; touching a splinter split its tail in three.
 - **Unlock:** a secret exit in a volcano level (not chosen yet).
 - **How it looks:** a low body on splayed legs; the tails are its biggest feature, so it does not read as one more crab
   (the user: too many crabs). At rest they fan out like a trident, each stinger glowing a different colour.
 - **The tails are SEGMENTS animated live** (the user's idea): round discs placed along a spring chain, so they need no
   rotation, plus a stinger in 16 directions. The body is a normal sheet; the arms are segments and a pincer in 16 directions.
-- **The rattle, its signature:** every combined attack sounds 3 clicks like a matraca, and each click flashes one stinger.
+- **The rattle, its signature:** 3 quick clicks like a wooden matraca, exactly while the tails coil or uncoil; each click flashes one stinger.
   - **Joined:** 3 clicks as they braid into one thick tail, a short pause, one heavy strike at a marked spot. It sticks
     in the ground: the window to hit it.
   - **Split:** 3 clicks as they separate, then each strikes in the order of its click, at its own marked spot.

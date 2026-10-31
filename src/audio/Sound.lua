@@ -253,8 +253,10 @@ function Sound.load()
     -- Pingüino (tools/sounds/penguin.py)
     load('penguinSquawk', 'assets/sounds/enemies/penguin/squawk.wav', 'static')   -- te ve y se tira de barriga
     load('penguinSlide',  'assets/sounds/enemies/penguin/slide.wav',  'static')   -- se desliza / echa a correr de trineo
-    -- Escorpión y Escorpión de Tres Colas (tools/sounds/scorpion.py): un clic por cola, sonados uno a uno
-    for i = 1, 3 do load('scorpionClick' .. i, 'assets/sounds/enemies/scorpion/click' .. i .. '.wav', 'static') end
+    -- Escorpión y Escorpión de Tres Colas (tools/sounds/scorpion.py): la matraca, 3 clics en un solo archivo por gesto
+    load('scorpionRattleJoin',  'assets/sounds/bosses/giantscorpion/rattle_join.wav',  'static')  -- las colas se enrollan
+    load('scorpionRattleSplit', 'assets/sounds/bosses/giantscorpion/rattle_split.wav', 'static')  -- se desenrollan
+    load('scorpionClick',   'assets/sounds/enemies/scorpion/click.wav',     'static')   -- un clic (el pequeño)
     load('scorpionSting',   'assets/sounds/enemies/scorpion/sting.wav',     'static')   -- un aguijón golpea
     load('scorpionSnap',    'assets/sounds/enemies/scorpion/snap.wav',      'static')   -- la pinza se cierra
     load('scorpionSkitter', 'assets/sounds/enemies/scorpion/skitter.wav',   'static')   -- patitas sobre la roca

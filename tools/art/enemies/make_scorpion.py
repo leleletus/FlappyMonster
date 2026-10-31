@@ -22,6 +22,8 @@ SMALL_K, BOSS_K = 4, 10
 W, H = 40, 24
 GROUND = 22
 TAU = math.tau
+RATTLE_F = (0, 3, 6)                 # (cuadros del movimiento en que suena cada clic; a 0,03 s: 0,09 s entre clics)
+COIL_F, COIL_K = 12, 0.34            # (enrollarse: cuadros rápidos y su muelle)
 
 
 def hx(s):
@@ -405,7 +407,9 @@ def boss_scene(K, name):
     for s, d in seq: tl += [(s, i, d) for i in range(d)]
     marks = [640, 700, 760]
     hit_x = 700
-    clicks = {'join': (0, 12, 24), 'split': (0, 12, 24)}
+    # los 3 clics van SEGUIDOS y DURANTE el movimiento de enrollarse / desenrollarse (el usuario, 2026-10-31): RATTLE_F
+    clicks = {'join': RATTLE_F, 'split': RATTLE_F}
+    spread_log = []
     armN = 0
     for f, (st, i, d) in enumerate(tl):
         t = f / 30
@@ -422,7 +426,7 @@ def boss_scene(K, name):
             for a in range(3):
                 tg[a], zs[a] = braid_target(tails[a].P[0], k, a, t, N, tip_j)
             for a, cf in enumerate(clicks['join']):
-                if cf <= i < cf + 5: flash[a] = True
+                if cf <= i < cf + 2: flash[a] = True
         elif st == 'wind':
             for a in range(3):
                 tg[a], zs[a] = braid_target(tails[a].P[0], k, a, t, N, (base[0] - 4 * k, base[1] - 30 * k), 1.2)
@@ -432,7 +436,7 @@ def boss_scene(K, name):
         elif st == 'split':
             tg = [fan_target(tails[a].P[0], k, a, t, N, 1.1) for a in range(3)]
             for a, cf in enumerate(clicks['split']):
-                if cf <= i < cf + 5: flash[a] = True
+                if cf <= i < cf + 2: flash[a] = True
         elif st in ('s0', 's1', 's2', 'stuck3'):
             who = {'s0': 0, 's1': 1, 's2': 2, 'stuck3': 3}[st]
             tg = []
@@ -445,8 +449,9 @@ def boss_scene(K, name):
         elif st == 'claw':
             tg = [fan_target(tails[a].P[0], k, a, t, N) for a in range(3)]
         for a in range(3):
-            fast = st in ('hit', 's0', 's1', 's2')
-            tails[a].step(tails[a].P[0], tg[a], k=0.42 if fast else 0.16, damp=0.62 if fast else 0.72)
+            fast = st in ('hit', 's0', 's1', 's2') or (st in ('join', 'split') and i < COIL_F)
+            tails[a].step(tails[a].P[0], tg[a], k=COIL_K if st in ('join', 'split') and fast else (0.42 if fast else 0.16), damp=0.62 if fast else 0.72)
+        spread_log.append((st, i, max(math.hypot(tails[a].P[-1][0] - tails[b].P[-1][0], tails[a].P[-1][1] - tails[b].P[-1][1]) for a in range(3) for b in range(a))))
         # marcas del suelo: donde va a caer
         d_ = ImageDraw.Draw(c)
         if st in ('wind',) or (st == 'join' and i > 30):
@@ -498,6 +503,9 @@ def boss_scene(K, name):
         text(dd, (20, 16), f'{name} — {label}')
         frames.append(c.convert('RGB').convert('P', palette=Image.ADAPTIVE, colors=128))
     frames[0].save(os.path.join(OUT, f'jefe_{name}.gif'), save_all=True, append_images=frames[1:], duration=33, loop=0)
+    if os.environ.get('SPREAD'):
+        for g in ('join', 'split'):
+            print(g, ' '.join(f'{d:.0f}' for st_, i_, d in spread_log if st_ == g)[:220])
     return frames
 
 
@@ -767,8 +775,8 @@ def video(name, frames_s=312 * 0.03):
     import numpy as np
     S = 'enemies/scorpion/'; G = 'bosses/giantscorpion/'
     f = 0.03                                                             # (un GIF va de 10 en 10 ms: 33 → 30)
-    ev = [(30 * f, S + 'click1.wav'), (42 * f, S + 'click2.wav'), (54 * f, S + 'click3.wav'), (92 * f, G + 'strike.wav'), (120 * f, G + 'pull.wav'),
-          (127 * f, S + 'click3.wav'), (139 * f, S + 'click2.wav'), (151 * f, S + 'click1.wav'), (176 * f, S + 'sting.wav'), (194 * f, S + 'sting.wav'),
+    ev = [((30 + RATTLE_F[0]) * f, G + 'rattle_join.wav'), (92 * f, G + 'strike.wav'), (120 * f, G + 'pull.wav'),
+          ((127 + RATTLE_F[0]) * f, G + 'rattle_split.wav'), (176 * f, S + 'sting.wav'), (194 * f, S + 'sting.wav'),
           (212 * f, S + 'sting.wav'), (288 * f, S + 'snap.wav'), (0.1, S + 'skitter.wav'), (248 * f, S + 'skitter.wav')]
     y = np.zeros(int(44100 * frames_s) + 44100)
     for t, rel in ev:
