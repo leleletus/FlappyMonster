@@ -1,0 +1,100 @@
+{
+  "id": "bosses/giantscorpion",
+  "scale": 10,
+  "origin": [
+    0.5,
+    1
+  ],
+  "fallback": "idle",
+  "frames": [
+    {
+      "h": 24,
+      "image": "assets/images/bosses/giantscorpion/body-Sheet.png",
+      "w": 30,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "h": 24,
+      "image": "assets/images/bosses/giantscorpion/body-Sheet.png",
+      "w": 30,
+      "x": 30,
+      "y": 0
+    },
+    {
+      "h": 24,
+      "image": "assets/images/bosses/giantscorpion/body-Sheet.png",
+      "w": 30,
+      "x": 60,
+      "y": 0
+    },
+    {
+      "h": 24,
+      "image": "assets/images/bosses/giantscorpion/body-Sheet.png",
+      "w": 30,
+      "x": 90,
+      "y": 0
+    },
+    {
+      "h": 24,
+      "image": "assets/images/bosses/giantscorpion/body-Sheet.png",
+      "w": 30,
+      "x": 120,
+      "y": 0
+    },
+    {
+      "h": 24,
+      "image": "assets/images/bosses/giantscorpion/body-Sheet.png",
+      "w": 30,
+      "x": 150,
+      "y": 0
+    },
+    {
+      "h": 24,
+      "image": "assets/images/bosses/giantscorpion/body-Sheet.png",
+      "w": 30,
+      "x": 180,
+      "y": 0
+    }
+  ],
+  "anims": {
+    "idle": {
+      "fps": 4,
+      "frames": [
+        1
+      ],
+      "loop": true
+    },
+    "walk": {
+      "fps": 10,
+      "frames": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "loop": true
+    },
+    "windup": {
+      "fps": 8,
+      "frames": [
+        5
+      ],
+      "loop": false
+    },
+    "hurt": {
+      "fps": 8,
+      "frames": [
+        6
+      ],
+      "loop": true
+    },
+    "dead": {
+      "fps": 8,
+      "frames": [
+        7
+      ],
+      "loop": false
+    }
+  }
+}

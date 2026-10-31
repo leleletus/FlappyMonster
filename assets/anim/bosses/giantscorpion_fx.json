@@ -1,0 +1,121 @@
+{
+  "id": "bosses/giantscorpion_fx",
+  "scale": 10,
+  "origin": [
+    0.5,
+    1
+  ],
+  "fallback": "mark1",
+  "frames": [
+    {
+      "h": 4,
+      "image": "assets/images/bosses/giantscorpion/mark-Sheet.png",
+      "w": 24,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "h": 4,
+      "image": "assets/images/bosses/giantscorpion/mark-Sheet.png",
+      "w": 24,
+      "x": 24,
+      "y": 0
+    },
+    {
+      "h": 4,
+      "image": "assets/images/bosses/giantscorpion/mark-Sheet.png",
+      "w": 24,
+      "x": 48,
+      "y": 0
+    },
+    {
+      "h": 4,
+      "image": "assets/images/bosses/giantscorpion/mark-Sheet.png",
+      "w": 24,
+      "x": 72,
+      "y": 0
+    },
+    {
+      "h": 8,
+      "image": "assets/images/bosses/giantscorpion/crack.png",
+      "w": 24,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "h": 16,
+      "image": "assets/images/bosses/giantscorpion/impact-Sheet.png",
+      "w": 24,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "h": 16,
+      "image": "assets/images/bosses/giantscorpion/impact-Sheet.png",
+      "w": 24,
+      "x": 24,
+      "y": 0
+    },
+    {
+      "h": 16,
+      "image": "assets/images/bosses/giantscorpion/impact-Sheet.png",
+      "w": 24,
+      "x": 48,
+      "y": 0
+    },
+    {
+      "h": 16,
+      "image": "assets/images/bosses/giantscorpion/impact-Sheet.png",
+      "w": 24,
+      "x": 72,
+      "y": 0
+    }
+  ],
+  "anims": {
+    "mark1": {
+      "fps": 1,
+      "frames": [
+        1
+      ],
+      "loop": true
+    },
+    "mark2": {
+      "fps": 1,
+      "frames": [
+        2
+      ],
+      "loop": true
+    },
+    "mark3": {
+      "fps": 1,
+      "frames": [
+        3
+      ],
+      "loop": true
+    },
+    "mark_heavy": {
+      "fps": 1,
+      "frames": [
+        4
+      ],
+      "loop": true
+    },
+    "crack": {
+      "fps": 1,
+      "frames": [
+        5
+      ],
+      "loop": false
+    },
+    "impact": {
+      "fps": 14,
+      "frames": [
+        6,
+        7,
+        8,
+        9
+      ],
+      "loop": false
+    }
+  }
+}

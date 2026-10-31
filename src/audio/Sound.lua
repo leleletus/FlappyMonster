@@ -253,6 +253,14 @@ function Sound.load()
     -- Pingüino (tools/sounds/penguin.py)
     load('penguinSquawk', 'assets/sounds/enemies/penguin/squawk.wav', 'static')   -- te ve y se tira de barriga
     load('penguinSlide',  'assets/sounds/enemies/penguin/slide.wav',  'static')   -- se desliza / echa a correr de trineo
+    -- Escorpión y Escorpión de Tres Colas (tools/sounds/scorpion.py): un clic por cola, sonados uno a uno
+    for i = 1, 3 do load('scorpionClick' .. i, 'assets/sounds/enemies/scorpion/click' .. i .. '.wav', 'static') end
+    load('scorpionSting',   'assets/sounds/enemies/scorpion/sting.wav',     'static')   -- un aguijón golpea
+    load('scorpionSnap',    'assets/sounds/enemies/scorpion/snap.wav',      'static')   -- la pinza se cierra
+    load('scorpionSkitter', 'assets/sounds/enemies/scorpion/skitter.wav',   'static')   -- patitas sobre la roca
+    load('scorpionStrike',  'assets/sounds/bosses/giantscorpion/strike.wav', 'static')  -- las 3 colas se clavan
+    load('scorpionPull',    'assets/sounds/bosses/giantscorpion/pull.wav',  'static')   -- arranca la cola del suelo
+    load('scorpionHiss',    'assets/sounds/bosses/giantscorpion/hiss.wav',  'static')   -- su rugido
     -- Bola de Nieve (tools/sounds/snowball.py): snowballWindup, snowballLaunch, snowballShove, snowballBonk
     for _, n in ipairs({ 'windup', 'launch', 'shove', 'bonk' }) do
         load('snowball' .. n:gsub('^%l', string.upper), 'assets/sounds/enemies/snowball/' .. n .. '.wav', 'static')

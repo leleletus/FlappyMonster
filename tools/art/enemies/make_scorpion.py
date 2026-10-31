@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # tools/art/enemies/make_scorpion.py — el ESCORPIÓN del volcán (una cola) y el ESCORPIÓN DE TRES COLAS, jefe secreto
-# (docs/bosses/future-secret-bosses.md). Solo PREVIAS para elegir: nada entra en assets/ todavía.
+# (docs/bosses/future-secret-bosses.md). El usuario eligió el C «Obsidiana» (2026-10-31), con el cuerpo más corto y las colas
+# dibujadas por encima de él.
 #
 # El cuerpo es una hoja de cuadros; las COLAS y los BRAZOS son PIEZAS sueltas (idea del usuario, 2026-10-31: "segmentos
 # que el juego anime al momento"): discos que se colocan por una cadena con muelle y la punta en 16 direcciones. Los
@@ -8,8 +9,10 @@
 # El jefe es la misma hoja a más escala (regla de los "Mega") con 3 colas y el broche con la astilla.
 # Estilo del usuario para los enemigos nuevos: colores planos (3 tonos por parte), siluetas finas y originales.
 #
-#   python tools/art/enemies/make_scorpion.py   → FlappyMonster_pruebas/escorpion/
-import math, os
+#   python tools/art/enemies/make_scorpion.py          → FlappyMonster_pruebas/escorpion/final/ (el elegido, con sonido)
+#   python tools/art/enemies/make_scorpion.py --all    → los 4 diseños, para comparar
+#   python tools/art/enemies/make_scorpion.py --apply  → assets/ (hojas y animaciones)
+import json, math, os, shutil, subprocess, sys
 from PIL import Image, ImageDraw, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -41,8 +44,8 @@ DESIGNS = {
               glow=[('#ffffff', '#ff3a4a'), ('#fff4c0', '#ffa01e'), ('#ffffd8', '#ffe23a')]),
     # C: fino y largo, con púas en el lomo y las pinzas como ganchos
     'C': dict(name='Obsidiana', light='#8a78c8', mid='#3e2f6e', shade='#231a44', line='#0e0a22', leg='#3a2d68', legF='#1f183e',
-              eye='#6affe0', core='#c060ff', seg='facet', spikes=True, ss=0.95, claw=(4.6, 0.9), legs=(-6, -2, 3, 6),
-              plates=[(5, 3.6, 2.2, 12), (10, 4.0, 2.6, 12), (15, 4.2, 2.9, 12), (20, 4.4, 3.2, 12), (25, 4.2, 3.2, 12)], head=(31, 4.8, 3.2, 12),
+              eye='#6affe0', core='#c060ff', seg='facet', spikes=True, ss=0.95, claw=(4.6, 0.9), legs=(-5, -2, 2, 5),
+              plates=[(6, 3.6, 2.2, 12), (11, 4.1, 2.8, 12), (16, 4.4, 3.2, 12)], head=(22, 4.8, 3.2, 12),
               glow=[('#ffc0f0', '#ff3ac0'), ('#e0c8ff', '#a050ff'), ('#c8fff0', '#2ae0d0')]),
     # D: esqueleto de ceniza: placas estrechas, patas largas, cola de vértebras
     'D': dict(name='Ceniza', light='#e4d8c4', mid='#b0a08c', shade='#786a60', line='#352c2c', leg='#b0a08c', legF='#6a5c54',
@@ -50,6 +53,7 @@ DESIGNS = {
               plates=[(6, 3.0, 2.2, 10), (10.5, 3.0, 2.5, 10), (15, 3.0, 2.7, 10), (19.5, 3.0, 2.9, 10), (24, 3.0, 2.9, 10)], head=(29.5, 4.4, 3.1, 10),
               glow=[('#ffd0a0', '#e0342a'), ('#ffe0a0', '#ee7a1e'), ('#fff0b0', '#e8b82a')]),
 }
+SEG_N, ST_N, PIN_N = 13, 21, 31     # (lado del cuadro de cada pieza en sus hojas)
 TAIL_XY = (4, 9)                     # (donde nace la cola, en la hoja)
 SIZES = (3.0, 2.7, 2.4, 2.0, 1.6)    # (radios de los segmentos, de la base a la punta; cada diseño los multiplica por ss)
 
@@ -83,7 +87,7 @@ def tone(D, lit):
 def segment(D, r):
     """un segmento de cola (o de brazo): redondo, se coloca sin girar"""
     r *= D['ss']
-    n = int(r * 2 + 5); c = n / 2
+    n = SEG_N; c = n / 2
     style = D['seg']
     def fn(x, y):
         dx, dy = (x - c) / r, (y - c) / r
@@ -97,7 +101,7 @@ def segment(D, r):
 
 def stinger(D, ang, glow, flash=False):
     """la punta en la dirección ang (0 = derecha): bulbo con el veneno que brilla y el pincho curvado"""
-    n = 21; c = n / 2
+    n = ST_N; c = n / 2
     ca, sa = math.cos(ang), math.sin(ang)
     hi, mid = (hx('#ffffff'), hx('#ffffff')) if flash else (hx(glow[0]), hx(glow[1]))
     def fn(x, y):
@@ -116,7 +120,7 @@ def stinger(D, ang, glow, flash=False):
 def pincer(D, ang, opened):
     """la pinza en la dirección ang: palma y dos dedos en forma de C (se lee como pinza desde cualquier lado)"""
     R_, th = D['claw']
-    n = 31; c = n / 2
+    n = PIN_N; c = n / 2
     ca, sa = math.cos(ang), math.sin(ang)
     gap = 0.22 + 0.62 * opened
     cx = 1.2 + R_
@@ -151,8 +155,10 @@ def line_px(p, a, b, c):
         if 0 <= int(x) < W and 0 <= int(y) < H: p[int(x), int(y)] = c
 
 
-def body(D, frame=0, f4=4):
-    """el cuerpo sin cola ni pinzas, mirando a la DERECHA; frame = el paso de las patas"""
+def body(D, frame=0, f4=4, low=0):
+    """el cuerpo sin cola ni pinzas, mirando a la DERECHA; frame = el paso de las patas; low = agachado"""
+    if low:
+        D = dict(D, plates=[(c, a, b, y + low) for c, a, b, y in D['plates']], head=D['head'][:3] + (D['head'][3] + low,))
     im = Image.new('RGBA', (W, H), (0, 0, 0, 0))
     p = im.load()
     x0, x1 = D['plates'][0][0] + 3, D['head'][0] - 2
@@ -392,13 +398,13 @@ def boss_scene(K, name):
     for i, ch in enumerate(tails):
         ch.P = [list(p) for p in fan_target(ch.P[0], k, i, 0, N)]
     frames, zbr = [], 0.0
-    px = 1040
+    px = 960
     # línea de tiempo (cuadros a 30 por segundo)
     seq = [('fan', 30), ('join', 45), ('wind', 14), ('hit', 8), ('stuck', 30), ('split', 45), ('s0', 18), ('s1', 18), ('s2', 18), ('stuck3', 22), ('fan2', 24), ('claw', 40)]
     tl = []
     for s, d in seq: tl += [(s, i, d) for i in range(d)]
-    marks = [690, 750, 810]
-    hit_x = 750
+    marks = [640, 700, 760]
+    hit_x = 700
     clicks = {'join': (0, 12, 24), 'split': (0, 12, 24)}
     armN = 0
     for f, (st, i, d) in enumerate(tl):
@@ -453,7 +459,19 @@ def boss_scene(K, name):
         # el jugador
         pxx = px + (0 if st not in ('claw',) else -160 * min(1, i / 16))
         c.alpha_composite(pl, (int(pxx), gy - pl.height))
-        # las colas: entrelazadas se ordenan por z; separadas, la de atrás más oscura
+        # pinza de atrás, cuerpo, pinza de delante y, ENCIMA de todo (el usuario, 2026-10-31), las colas y el broche
+        sh, rest = anchors(K.D, x, top, k)
+        reach = 0
+        opened = 0
+        if st == 'claw':
+            reach = (0 if i < 10 else min(1, (i - 10) / 6)) * 36 * k if i < 28 else 36 * k * (1 - (i - 28) / 12)
+            opened = 1 if i < 16 else 0
+        hand = (rest[0] + reach, rest[1])
+        draw_arm(K, c, (sh[0] - 3 * k, sh[1] - k), (hand[0] - 3 * k, hand[1] - 6 * k), -0.35, opened, 0.65)
+        K.put(c, K.body[walk], x + W * k / 2, top + H * k / 2)
+        K.put(c, K.rune, x + W * k / 2, top + H * k / 2)
+        draw_arm(K, c, sh, hand, 0.0, opened)
+        # entrelazadas se ordenan por z; separadas, la de atrás más oscura
         if zs[0] is not None and st in ('join', 'wind', 'hit', 'stuck'):
             items = []
             for a, ch in enumerate(tails):
@@ -465,23 +483,9 @@ def boss_scene(K, name):
                 d = round(tails[a].tip_angle() / TAU * 16) % 16
                 K.put(c, K.st_f[d] if flash[a] else K.st[a][d], tails[a].P[-1][0], tails[a].P[-1][1])
         else:
-            for a, sh in ((0, 0.62), (2, 0.8)):
-                draw_tail(K, c, tails[a], a, flash[a], sh)
-        # pinza de atrás, cuerpo, broche
-        sh, rest = anchors(K.D, x, top, k)
-        reach = 0
-        opened = 0
-        if st == 'claw':
-            reach = (0 if i < 10 else min(1, (i - 10) / 6)) * 36 * k if i < 28 else 36 * k * (1 - (i - 28) / 12)
-            opened = 1 if i < 16 else 0
-        hand = (rest[0] + reach, rest[1])
-        draw_arm(K, c, (sh[0] - 3 * k, sh[1] - k), (hand[0] - 3 * k, hand[1] - 6 * k), -0.35, opened, 0.65)
-        K.put(c, K.body[walk], x + W * k / 2, top + H * k / 2)
-        K.put(c, K.rune, x + W * k / 2, top + H * k / 2)
-        if not (zs[0] is not None and st in ('join', 'wind', 'hit', 'stuck')):
-            draw_tail(K, c, tails[1], 1, flash[1], None)
+            for a, sh_ in ((0, 0.62), (2, 0.8), (1, None)):
+                draw_tail(K, c, tails[a], a, flash[a], sh_)
         K.put(c, K.clasp, base[0], base[1])
-        draw_arm(K, c, sh, hand, 0.0, opened)
         # el clic, escrito (la previa no tiene sonido)
         for a in range(3):
             if flash[a]:
@@ -513,6 +517,11 @@ def still_boss(K, w=860, h=640, pose='fan'):
             tg = fan_target(ch.P[0], k, a, 0.6, N)
         ch.P = [list(p) for p in tg]
         for _ in range(4): ch.step(ch.P[0], tg, k=0.5, damp=0.3)
+    sh, hand = anchors(K.D, x, top, k)
+    draw_arm(K, bg, (sh[0] - 3 * k, sh[1] - k), (hand[0] - 3 * k, hand[1] - 6 * k), -0.35, 1, 0.65)
+    K.put(bg, K.body[0], x + W * k / 2, top + H * k / 2)
+    K.put(bg, K.rune, x + W * k / 2, top + H * k / 2)
+    draw_arm(K, bg, sh, hand, 0.0, 1)
     if pose == 'braid':
         items = sorted((zs[a][j], j, a) for a in range(3) for j in range(N - 1))
         for z, j, a in items: K.put(bg, K.segs[seg_for(j, N)], tails[a].P[j][0], tails[a].P[j][1], 0.72 + 0.28 * (z + 1) / 2)
@@ -520,14 +529,8 @@ def still_boss(K, w=860, h=640, pose='fan'):
             d = round(tails[a].tip_angle() / TAU * 16) % 16
             K.put(bg, K.st[a][d], tails[a].P[-1][0], tails[a].P[-1][1])
     else:
-        draw_tail(K, bg, tails[0], 0, False, 0.62); draw_tail(K, bg, tails[2], 2, False, 0.8)
-    sh, hand = anchors(K.D, x, top, k)
-    draw_arm(K, bg, (sh[0] - 3 * k, sh[1] - k), (hand[0] - 3 * k, hand[1] - 6 * k), -0.35, 1, 0.65)
-    K.put(bg, K.body[0], x + W * k / 2, top + H * k / 2)
-    K.put(bg, K.rune, x + W * k / 2, top + H * k / 2)
-    if pose != 'braid': draw_tail(K, bg, tails[1], 1)
+        draw_tail(K, bg, tails[0], 0, False, 0.62); draw_tail(K, bg, tails[2], 2, False, 0.8); draw_tail(K, bg, tails[1], 1)
     K.put(bg, K.clasp, base[0], base[1])
-    draw_arm(K, bg, sh, hand, 0.0, 1)
     p = player()
     bg.alpha_composite(p, (w - p.width - 8, gy - p.height))
     return bg
@@ -537,10 +540,10 @@ def small_frame(K, c, x, gy, t, walk, ch, tg, flash=False):
     k = K.k
     top = gy - GROUND * k
     ch.step((x + TAIL_XY[0] * k, top + TAIL_XY[1] * k), tg)
-    draw_tail(K, c, ch, 1, flash)
     K.put(c, K.body[walk], x + W * k / 2, top + H * k / 2)
     sh, hand = anchors(K.D, x, top, k)
     draw_arm(K, c, sh, hand, 0.0, 1)
+    draw_tail(K, c, ch, 1, flash)
 
 
 def small_gif(K, name):
@@ -623,11 +626,184 @@ def preview():
     return kits
 
 
+# ══ EL PAQUETE: hojas y animaciones del diseño elegido ═══════════════════════════════════════════════════════════
+CHOSEN = 'C'
+E_DIR, B_DIR = 'assets/images/enemies/scorpion/', 'assets/images/bosses/giantscorpion/'
+BODY_W = 30                          # (el cuerpo corto cabe en menos ancho: la hoja se recorta por la derecha)
+
+
+def strip(ims, w, h):
+    sh = Image.new('RGBA', (w * len(ims), h), (0, 0, 0, 0))
+    for i, im in enumerate(ims): sh.alpha_composite(im, (i * w, 0))
+    return sh
+
+
+def body_frames(D, rune=False):
+    fr = [body(D, f) for f in range(4)] + [body(D, 0, low=2), body(D, 2, low=1)]
+    if rune:
+        for f, l in zip(fr, (0, 0, 0, 0, 2, 1)):
+            f.alpha_composite(rune_overlay(D), (0, l))
+    dead = body(D, 0).transpose(Image.FLIP_TOP_BOTTOM)                   # (panza arriba, sobre el lomo)
+    bbox = dead.getbbox()
+    fr.append(Image.new('RGBA', (W, H), (0, 0, 0, 0)))
+    fr[-1].alpha_composite(dead, (0, GROUND - bbox[3]))
+    return [f.crop((0, 0, BODY_W, H)) for f in fr]
+
+
+def mark_sheet(D):
+    """la marca del suelo donde va a caer un aguijón: una por cola y la del golpe entrelazado (blanca)"""
+    out = []
+    for hi, mid in list(D['glow']) + [('#ffffff', '#ff5a4a')]:
+        im = Image.new('RGBA', (24, 4), (0, 0, 0, 0))
+        d = ImageDraw.Draw(im)
+        d.rectangle((1, 1, 22, 3), fill=hx(mid)); d.rectangle((4, 1, 19, 1), fill=hx(hi))
+        out.append(im)
+    return out
+
+
+def crack_img(D):
+    """la grieta que deja una cola clavada"""
+    im = Image.new('RGBA', (24, 8), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    dk, gl = hx(D['line']), hx(D['core'])
+    for a, b in (((12, 0), (12, 3)), ((12, 3), (7, 5)), ((7, 5), (3, 5)), ((12, 3), (17, 6)), ((17, 6), (21, 6)), ((12, 3), (12, 7))):
+        d.line((a, b), fill=dk)
+    im.putpixel((12, 2), gl); im.putpixel((9, 4), gl); im.putpixel((15, 5), gl)
+    return im
+
+
+def impact_frames(D):
+    """polvo y esquirlas al clavarse: 4 cuadros"""
+    out = []
+    for f in range(4):
+        im = Image.new('RGBA', (24, 16), (0, 0, 0, 0))
+        d = ImageDraw.Draw(im)
+        r = 2 + f * 2
+        for sx in (-1, 1):
+            cx = 12 + sx * (2 + f * 3)
+            d.ellipse((cx - r / 2, 13 - r, cx + r / 2, 14), fill=hx('#8a7a78' if f < 2 else '#5a4e50'))
+            if f < 3:
+                sy = 9 - f * 3
+                d.rectangle((12 + sx * (3 + f * 3), sy, 12 + sx * (3 + f * 3) + 1, sy + 1), fill=hx(D['mid']))
+                d.point((12 + sx * (5 + f * 4), sy + 2), fill=hx(D['core']))
+        out.append(outlined(im, hx('#2a2226')) if f < 3 else im)
+    return out
+
+
+def icon(D, empty=False):
+    """el coleccionable (17x13): el broche con su astilla; sin ella al robarla el Groove"""
+    gold, goldS, line = hx('#ffd84a'), hx('#b8801c'), hx('#4a2c10')
+    glass, glassL, hole = hx('#a8e8ff'), hx('#ffffff'), hx('#3a2410')
+    def fn(x, y):
+        dx, dy = x - 8.5, y - 6.5
+        if abs(dx) * 0.9 + abs(dy) <= 2.4: return hole if empty else (glassL if dx + dy < -0.3 else glass)
+        if (dx / 5.5) ** 2 + (dy / 4.8) ** 2 <= 1: return gold if dx + dy < 0.8 else goldS
+        if abs(dy) <= 1.1 and abs(dx) <= 7.2: return goldS
+        return None
+    return raster(17, 13, fn, line)
+
+
+def anim_set(aid, scale, origin, sheets, anims):
+    frames = []
+    for rel, w, h, n in sheets:
+        frames += [{"h": h, "image": rel, "w": w, "x": i * w, "y": 0} for i in range(n)]
+    data = {"id": aid, "scale": scale, "origin": origin, "fallback": next(iter(anims)), "frames": frames, "anims": anims}
+    path = os.path.join(ROOT, 'assets', 'anim', aid + '.json')
+    with open(path, 'w') as f: f.write(json.dumps(data, indent=2) + '\n')
+    print('  ', os.path.relpath(path, ROOT))
+
+
+def apply():
+    D = DESIGNS[CHOSEN]
+    a = lambda fr, fps, loop=True: {"fps": fps, "frames": fr, "loop": loop}
+    fan = [i * TAU / 16 for i in range(16)]
+    out = {E_DIR + 'body-Sheet.png': strip(body_frames(D), BODY_W, H),
+           E_DIR + 'segments-Sheet.png': strip([segment(D, r) for r in SIZES], SEG_N, SEG_N),
+           E_DIR + 'stinger-Sheet.png': strip([stinger(D, g, D['glow'][1]) for g in fan], ST_N, ST_N),
+           E_DIR + 'stinger_flash-Sheet.png': strip([stinger(D, g, D['glow'][1], True) for g in fan], ST_N, ST_N),
+           E_DIR + 'pincer_open-Sheet.png': strip([pincer(D, g, 1) for g in fan], PIN_N, PIN_N),
+           E_DIR + 'pincer_closed-Sheet.png': strip([pincer(D, g, 0) for g in fan], PIN_N, PIN_N),
+           B_DIR + 'body-Sheet.png': strip(body_frames(D, True), BODY_W, H),
+           B_DIR + 'mark-Sheet.png': strip(mark_sheet(D), 24, 4), B_DIR + 'crack.png': crack_img(D),
+           B_DIR + 'impact-Sheet.png': strip(impact_frames(D), 24, 16), B_DIR + 'wear_clasp.png': clasp(D),
+           'assets/images/story/collectibles/astilla_escorpion.png': icon(D),
+           'assets/images/story/collectibles/astilla_escorpion_empty.png': icon(D, True)}
+    for t in range(3):
+        out[B_DIR + f'stinger{t + 1}-Sheet.png'] = strip([stinger(D, g, D['glow'][t]) for g in fan], ST_N, ST_N)
+    for rel, im in out.items():
+        os.makedirs(os.path.dirname(os.path.join(ROOT, rel)), exist_ok=True)
+        im.save(os.path.join(ROOT, rel)); print('  ', rel)
+    # Cuerpo: origen en los pies. Piezas: origen en el centro; la punta y la pinza, cuadro = 1 + round(ángulo / 22,5°)
+    body_anims = {"idle": a([1], 4), "walk": a([1, 2, 3, 4], 10), "windup": a([5], 8, False), "hurt": a([6], 8), "dead": a([7], 8, False)}
+    d16 = list(range(1, 17))
+    anim_set('enemies/scorpion', SMALL_K, [0.5, 1], [(E_DIR + 'body-Sheet.png', BODY_W, H, 7)], body_anims)
+    anim_set('bosses/giantscorpion', BOSS_K, [0.5, 1], [(B_DIR + 'body-Sheet.png', BODY_W, H, 7)], body_anims)
+    def part_set(aid, k, stingers):
+        sheets = [(E_DIR + 'segments-Sheet.png', SEG_N, SEG_N, 5), (E_DIR + 'pincer_open-Sheet.png', PIN_N, PIN_N, 16),
+                  (E_DIR + 'pincer_closed-Sheet.png', PIN_N, PIN_N, 16), (E_DIR + 'stinger_flash-Sheet.png', ST_N, ST_N, 16)]
+        an = {"segment": a([1, 2, 3, 4, 5], 1, False), "pincer_open": a([5 + i for i in d16], 8), "pincer_closed": a([21 + i for i in d16], 8),
+              "stinger_flash": a([37 + i for i in d16], 8)}
+        n = 53
+        for name, rel in stingers:
+            sheets.append((rel, ST_N, ST_N, 16))
+            an[name] = a([n + i for i in d16], 8)
+            n += 16
+        anim_set(aid, k, [0.5, 0.5], sheets, an)
+    part_set('enemies/scorpion_parts', SMALL_K, [('stinger', E_DIR + 'stinger-Sheet.png')])
+    part_set('bosses/giantscorpion_parts', BOSS_K, [(f'stinger{t + 1}', B_DIR + f'stinger{t + 1}-Sheet.png') for t in range(3)])
+    anim_set('bosses/giantscorpion_fx', BOSS_K, [0.5, 1], [(B_DIR + 'mark-Sheet.png', 24, 4, 4), (B_DIR + 'crack.png', 24, 8, 1), (B_DIR + 'impact-Sheet.png', 24, 16, 4)],
+             {"mark1": a([1], 1), "mark2": a([2], 1), "mark3": a([3], 1), "mark_heavy": a([4], 1), "crack": a([5], 1, False), "impact": a([6, 7, 8, 9], 14, False)})
+
+
+def wav(rel):
+    import wave
+    with wave.open(os.path.join(ROOT, 'assets/sounds', rel)) as w:
+        import numpy as np
+        return np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16) / 32768.0
+
+
+def video(name, frames_s=312 * 0.03):
+    """la coreografía CON los sonidos del juego, cada uno en su cuadro"""
+    import numpy as np
+    S = 'enemies/scorpion/'; G = 'bosses/giantscorpion/'
+    f = 0.03                                                             # (un GIF va de 10 en 10 ms: 33 → 30)
+    ev = [(30 * f, S + 'click1.wav'), (42 * f, S + 'click2.wav'), (54 * f, S + 'click3.wav'), (92 * f, G + 'strike.wav'), (120 * f, G + 'pull.wav'),
+          (127 * f, S + 'click3.wav'), (139 * f, S + 'click2.wav'), (151 * f, S + 'click1.wav'), (176 * f, S + 'sting.wav'), (194 * f, S + 'sting.wav'),
+          (212 * f, S + 'sting.wav'), (288 * f, S + 'snap.wav'), (0.1, S + 'skitter.wav'), (248 * f, S + 'skitter.wav')]
+    y = np.zeros(int(44100 * frames_s) + 44100)
+    for t, rel in ev:
+        x = wav(rel); i = int(t * 44100); y[i:i + len(x)] += x[:len(y) - i]
+    import wave
+    wp = os.path.join(OUT, 'pista.wav')
+    with wave.open(wp, 'wb') as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(44100)
+        w.writeframes((np.clip(y, -1, 1) * 32767).astype(np.int16).tobytes())
+    subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', os.path.join(OUT, f'jefe_{name}.gif'), '-i', wp, '-shortest', '-pix_fmt', 'yuv420p',
+                    '-c:a', 'aac', os.path.join(OUT, f'jefe_{name}_con_sonido.mp4')], check=True)
+    os.remove(wp)
+
+
 if __name__ == '__main__':
+    if '--apply' in sys.argv:
+        apply()
+        sys.exit(0)
+    if '--all' in sys.argv:
+        os.makedirs(OUT, exist_ok=True)
+        kits = preview()
+        for i, D in DESIGNS.items():
+            pieces_sheet(i, D)
+            boss_scene(kits[i][0], i)
+            small_gif(kits[i][1], i)
+        print('previas en', OUT)
+        sys.exit(0)
+    OUT = os.path.join(OUT, 'final')
     os.makedirs(OUT, exist_ok=True)
-    kits = preview()
-    for i, D in DESIGNS.items():
-        pieces_sheet(i, D)
-        boss_scene(kits[i][0], i)
-        small_gif(kits[i][1], i)
+    D = DESIGNS[CHOSEN]
+    KB, KS = Kit(D, BOSS_K), Kit(D, SMALL_K)
+    still_boss(KB).convert('RGB').save(os.path.join(OUT, 'jefe_colas_separadas.png'))
+    still_boss(KB, pose='braid').convert('RGB').save(os.path.join(OUT, 'jefe_colas_entrelazadas.png'))
+    pieces_sheet(CHOSEN, D)
+    boss_scene(KB, CHOSEN)
+    small_gif(KS, CHOSEN)
+    video(CHOSEN)
     print('previas en', OUT)

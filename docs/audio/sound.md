@@ -47,6 +47,14 @@ starts sliding / the sled starts). ≈ −12 dBFS, no GAIN entry. Not listened t
 `snowballBonk` (dull thud + falling snow dust: against a wall). Played by the data enemy on entering its states
 (`sounds` in `assets/enemies/snowball.json`). ≈ −12 dBFS, no GAIN entry. Not listened to by anyone yet.
 
+## The Scorpion's sounds
+
+`tools/sounds/scorpion.py` → `assets/sounds/enemies/scorpion/` and `assets/sounds/bosses/giantscorpion/`: the rattle is three files,
+`scorpionClick1-3`, one per tail, so the code plays each click with its stinger's flash; plus `scorpionSting`,
+`scorpionSnap`, `scorpionSkitter`, `scorpionStrike`, `scorpionPull`, `scorpionHiss`. Very short sounds cannot reach −12
+dBFS by gain alone, so the generator saturates them softly (clicks −10.5, the rest ≈ −12), no GAIN entry. Not used by
+any entity yet. Not listened to by anyone yet. Timbres to compare: `FlappyMonster_pruebas/escorpion/sonidos/`.
+
 ## The 0.5.96 enemies' sounds
 
 `tools/sounds/jungle_enemies.py` → `assets/sounds/enemies/{mole,piranha,carnivoreplant}/`: `moleDig` (the mound moving:

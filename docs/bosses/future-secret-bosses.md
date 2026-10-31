@@ -42,8 +42,27 @@ Common to all:
 - **Piece:** a **weather vane**, the splinter as the arrow's tip.
 
 ## 4. The Three-Tailed Scorpion — Volcano
-The user's idea (2026-10-31), replacing the Emperor Penguin. Previews to choose from (nothing in `assets/` yet):
-`tools/art/enemies/make_scorpion.py` → `FlappyMonster_pruebas/escorpion/`. **The user's design pick is pending.**
+The user's idea (2026-10-31), replacing the Emperor Penguin. **Art and sounds are in `assets/`; no entity, level or
+collectible entry yet.** The user chose design C «Obsidiana» (rejected: A «Basalto», B «Ascua», D «Ceniza»), with a
+shorter body and the tails drawn OVER the body. Type ids to use: `scorpion`, `giantscorpion`.
+
+Package (`tools/art/enemies/make_scorpion.py --apply`, `tools/sounds/scorpion.py --apply`; previews in
+`FlappyMonster_pruebas/escorpion/final/`, with `jefe_C_con_sonido.mp4` showing the sounds in place):
+- `assets/anim/enemies/scorpion.json` (×4), `assets/anim/bosses/giantscorpion.json` (×10; same grid + gold marks), origin at the feet:
+  `idle`, `walk`, `windup`, `hurt`, `dead`.
+- `assets/anim/enemies/scorpion_parts.json`, `assets/anim/bosses/giantscorpion_parts.json`, origin at the centre: `segment` (5 sizes,
+  base to tip), `pincer_open`, `pincer_closed`, `stinger` (boss: `stinger1-3`) and `stinger_flash`. Directions: frame
+  position = round(angle / 22.5°), 0 = right, clockwise on screen. Sequences here are lists of frames to pick from, not to play.
+- `assets/anim/bosses/giantscorpion_fx.json`: `mark1-3`, `mark_heavy` (floor warnings), `crack`, `impact`.
+- `assets/images/bosses/giantscorpion/wear_clasp.png` (the worn piece); `assets/images/story/collectibles/astilla_escorpion.png` and
+  `astilla_escorpion_empty.png`. Do NOT add the entry to `assets/story/collectibles.json` before the boss exists: the
+  Groove's gate asks for every splinter, so it would become impossible to open.
+- Anchors in the body sheet (art pixels from the top left, facing right): tail base (4, 9), far shoulder (21, 14), near shoulder (24, 15).
+  Preview chain: boss 19 segments, 3.4 art px apart; small 8, 3.2 apart.
+- Sounds (names in `src/audio/Sound.lua`): `scorpionClick1-3` (one per tail, low to high: `join` plays 1 2 3, `split` 3 2 1,
+  the code plays each with its stinger's flash), `scorpionSting`, `scorpionSnap`, `scorpionSkitter`, `scorpionStrike`,
+  `scorpionPull`, `scorpionHiss`. Click timbre B «matraca» installed; A «quitina» and C «hueso» with `--click`.
+  Not listened to by anyone yet.
 - **Normal enemy (the lore rule):** a small one-tailed scorpion of the volcano; touching a splinter split its tail in three.
 - **Unlock:** a secret exit in a volcano level (not chosen yet).
 - **How it looks:** a low body on splayed legs; the tails are its biggest feature, so it does not read as one more crab

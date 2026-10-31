@@ -17,7 +17,7 @@ assets/
                     water/ ambience/ jingles/ ui/ flappy/ fireworks/ story/
   images/
     player/         the monster (monstrito1-5, icon)
-    enemies/<enemy>/  gummy*, crabby*, gloomy, hopper, bomb, pufferfish, mortar, wings, beetle, mole (one sheet per island), piranha, carnivoreplant
+    enemies/<enemy>/  gummy*, crabby*, gloomy, hopper, bomb, pufferfish, mortar, wings, beetle, mole (one sheet per island), piranha, carnivoreplant, scorpion (body + live tail and arm pieces)
     bosses/<boss>/  one folder per boss + common/ (stun stars, anger symbols, target mark)
     traps/          cryo/ (Freezer), spikes/
     mechanisms/     trampoline/
