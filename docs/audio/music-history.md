@@ -818,6 +818,32 @@ instruments" (the rest of the islands will be modernised later). Verified by num
   modern, the reverb, the choir and horn levels, the gust against the Snowball boss, the map switch between islands
   (GM attacks land 0-6 ms after the chip arrangements').
 
+### `montana_2` on time (2026-10-31)
+
+The user: "en general es perfecto y muy bueno, lo único malo es que algunos instrumentos tienen un efecto de que 'llegan
+tarde' y se superponen o melodías que suenan fuera de tiempo... ¿se puede quitar y 'normalizar'?". Answers the open
+question above about the gust. Only `montana_2` B changes; the same melody notes, harmony, form and lengths (7.5 s + 105
+s, same LUFS). What each layer did, measured one note at a time, and the fix (`on_time_stems` in `montana_nes.py`):
+- **Late, slow attacks:** half volume after 318 ms (choir), 205 ms (bowed glass), 188 ms (tremolo strings), 50 ms (Voice
+  Oohs, against a glockenspiel at 4 ms an octave up); the concert bass drum +12 ms. Each layer is now advanced by its own
+  attack, measured from the instrument: choir 144 ms, glass 164, tremolo 95 (pads to 1/4 of their peak on the grid), lead
+  25, the rest 3-18. The pads still swell, so they reach full volume after the beat.
+- **Overlap:** the synth mallet swirl played 16ths (117 ms) with a 549 ms tail, the glockenspiel 584 ms, glass 1 269 ms.
+  Now every note or chord of the lead, its doubles, the swirl and the pads stops when the next one enters.
+- **Reverb:** off everything rhythmic; only choir and glass keep the frost (its tail on 16ths is heard as late notes).
+- **Written late:** the gust (1 5 9 13, "a 16th late") now sits on the beats (0 4 8 12), which also takes the melody
+  off-the-beat share from about half to 34 %; the swirl's 6 notes against the bar, whose accent drifted, became an
+  8-step pattern with the accent on the beat. These two are composition changes, the swirl's "wind" idea is gone.
+- **The howl** slid a 5th over 0.27 s with a 0.17 s fade-in; now it lands in 50 ms. Chip snare and crash start on their
+  exact sample like the hiss.
+- A note on the loop's first beat sounds before its place, inside the intro; that part is repeated at the end of the
+  loop (`wrap_pre_roll`) so it does not start abruptly when looping. The seam's sample jump is 0.42 (crash on the
+  downbeat, now on its exact sample) against up to 1.13 elsewhere in the track.
+
+Remaining: chip bass and pad still on 60 Hz frames (up to ±8 ms). Old version: `FlappyMonster_originals/music/versiones/montana_2_v1/`.
+Comparison: `FlappyMonster_pruebas/musica_correcciones/montana_2_a_tiempo/`. Verified by numbers only; **not listened to**.
+The user's verdict is pending.
+
 ## The icy bosses on the GM cast and the snowfall on time (`tools/music/jefes_helados.py`, 2026-10-29)
 
 - The user: "rework a la música de la Gran Bola de Nieve y del Icy Mega Crabby de forma que solo mejore (si aplica) su

@@ -32,7 +32,7 @@
 #                                  (la trompa alpina); reverb de "escarcha"; sección nueva V = la AVALANCHA
 #   montana_2      "Viento negro" — la noche y la ventisca (niveles pares; torre_viento): Si menor, 128 BPM. Cada
 #                  frase empieza con la RACHA (tres repetidas y salto) y contesta trepando (2-2-2-6). Un remolino de
-#                  6 notas contra el compás de 8 corcheas (se desfasa: el viento). Giro oscuro: Sol menor (el Si♭).
+#                  notas del acorde en semicorcheas. Giro oscuro: Sol menor (el Si♭).
 #                  W = la TORMENTA: la racha se acelera (puntillos → corcheas → semicorcheas).
 #                    A "flauta"     flauta GM + celesta en las notas largas, arpa en el remolino, vidrio en B
 #                    B "coro"       (más original) "Voice Oohs" + glockenspiel una octava arriba, mazo sintético
@@ -90,10 +90,11 @@ I_PAD = {'vol': [2, 3, 4, 5, 5, 5], 'sus': 5, 'vib': (24, 0.12, 4.5), 'duty': 1}
 I_TRI = {'vol': [15], 'sus': 15}
 I_PULSE = J.I_PULSE
 I_DBL = J.I_DBL
-# el AULLIDO: entra una 5ª por debajo y sube deslizándose (~0,25 s) hasta su nota; vibrato lento; se apaga despacio
-I_HOWL = {'vol': [2, 3, 4, 5, 6, 7, 8, 8, 9, 9, 9, 9, 8, 8, 8, 7, 7, 7, 6, 6, 6, 5, 5, 5, 4, 4, 4, 3, 3, 3, 2, 2, 2, 1],
+# el AULLIDO: entra un tono por debajo y se posa enseguida en su nota; vibrato lento; se apaga despacio
+# (2026-10-31, el usuario: "llegan tarde": subía una 5ª en 0,27 s y tardaba 0,17 s en sonar → llega a su sitio en 50 ms)
+I_HOWL = {'vol': [6, 8, 9, 9, 9, 9, 9, 9, 8, 8, 8, 7, 7, 7, 6, 6, 6, 5, 5, 5, 4, 4, 4, 3, 3, 3, 2, 2, 2, 1],
           'sus': 1, 'vib': (16, 0.25, 4.2), 'duty': 2,
-          'drop': [-7, -6.4, -5.8, -5.2, -4.6, -4.0, -3.4, -2.8, -2.3, -1.8, -1.4, -1.0, -0.7, -0.45, -0.25, -0.1]}
+          'drop': [-2, -1, -0.4]}
 HAT, SNARE_N, CRASH_N = J.HAT, J.SNARE_N, J.CRASH_N
 
 
@@ -225,13 +226,14 @@ M2_B = "G D Em Bm G D Gm|F# Bm"                                      # el GIRO O
 M2_W = "Bm Bm G G Em Em F# F#"                                       # la TORMENTA
 M2_E = "Bm A G F#m Em Bm Em|F# Bm"                                   # (B) el OJO de la tormenta
 M2_MEL = {
-    # A: la RACHA (tres repetidas con puntillo y el salto: el cierre de la frase de 1:48), una semicorchea tarde,
+    # A: la RACHA (tres repetidas y el salto: el cierre de la frase de 1:48), EN los tiempos (2026-10-31, el usuario:
+    # "melodías que suenan fuera de tiempo": iba una semicorchea tarde, 1 5 9 13),
     # y la TREPADA (tres corcheas que suben y la larga: el 2º compás de la frase de 1:48)
-    'A': ["1:F#5/3 5:F#5/3 9:F#5/3 13:D6/3",                                         # (llega tarde: el viento empuja)
+    'A': ["0:F#5/3 4:F#5/3 8:F#5/3 12:D6/4",
           "2:G5/2 4:A5/2 6:B5/2 8:D6/8",
-          "1:E5/3 5:E5/3 9:E5/3 13:C#6/3",
+          "0:E5/3 4:E5/3 8:E5/3 12:C#6/4",
           "2:C#6/2 4:B5/2 6:A#5/2 8:F#5/8",
-          "1:F#5/3 5:F#5/3 9:F#5/3 13:B5/3",
+          "0:F#5/3 4:F#5/3 8:F#5/3 12:B5/4",
           "2:B5/2 4:C#6/2 6:D6/2 8:E6/8",
           "0:G5/3 3:B5/3 6:E6/2 8:C#6/3 11:A#5/3 14:F#5/2"],                         # el tresillo 3+3+2
     'E1': "0:D6/2 2:C#6/2 4:B5/2 6:F#5/10",
@@ -246,9 +248,9 @@ M2_MEL = {
           "0:D6/6 6:Bb5/2 8:C#6/6 14:A#5/2",
           "0:F#5/4 4:B5/2 6:D6/2 8:F#6/8"],                                           # LA LLAMADA (Fa#-Si-Re-Fa#)
     # W: la TORMENTA — la racha se acelera: puntillos, corcheas, semicorcheas; luego se deja caer
-    'W': ["1:F#5/3 5:F#5/3 9:F#5/3 13:B5/3",
+    'W': ["0:F#5/3 4:F#5/3 8:F#5/3 12:B5/4",
           "0:D6/2 2:D6/2 4:D6/2 6:C#6/2 8:B5/8",
-          "1:G5/3 5:G5/3 9:G5/3 13:D6/3",
+          "0:G5/3 4:G5/3 8:G5/3 12:D6/4",
           "0:B5/2 2:B5/2 4:B5/2 6:A5/2 8:G5/8",
           "0:E6/1 1:E6/1 2:E6/1 3:E6/1 4:D6/1 5:D6/1 6:D6/1 7:C#6/1 8:B5/8",
           "0:G6/1 1:G6/1 2:G6/1 3:G6/1 4:F#6/1 5:F#6/1 6:F#6/1 7:E6/1 8:B5/8",
@@ -560,6 +562,7 @@ STOP_HITS = (0, 3, 6, 12)
 
 def arrange_m2(sg, R, v):
     thirds_bars = []
+    R.NZ['snare'].exact = R.NZ['crash'].exact = True                         # (cada golpe en su muestra, como el siseo)
     for b in range(1, sg.NB + 1):
         tag, var = sg.tag[b - 1], sg.var[b - 1]
         for bb, st, n, d in mel_bar(sg, b):
@@ -595,14 +598,13 @@ def arrange_m2(sg, R, v):
             for st, deg in ((0, 0), (2, 0), (4, 8), (6, 0), (8, 0), (10, 5), (12, 8)):
                 R.chip('bass', b, st, bass_note(sg, b, st, deg, 35), 2, I_TRI, q=q_tri, gate=0.75, release=1)
             R.chip('bass', b, 14, approach(sg, R, b, 35), 2, I_TRI, q=q_tri, gate=0.75, release=1)
-        # ── EL REMOLINO: 6 notas del acorde en semicorcheas contra el compás de 8 corcheas (se desfasa) ──
+        # ── EL REMOLINO: notas del acorde en semicorcheas, a TIEMPO (2026-10-31, el usuario: "fuera de tiempo": eran 6
+        #    notas contra el compás, con el acento desfasándose; ahora el dibujo se repite cada 2 tiempos y acentúa el tiempo) ──
         if not stop and not (tag == 'E') and not (tag == 'B' and v == 'B'):
             for st in range(16):
-                gq = int(sg.q(b, st))
-                i = (gq % 6)
                 c = sg.chord(b, st)
-                nn = place(None, c, 59)[(0, 1, 2, 3, 2, 1)[i]]
-                vel = (78 if i == 0 else 56) + (8 if tag == 'W' else 0) - (14 if tag == 'intro' and k <= 2 else 0)
+                nn = place(None, c, 59)[(0, 1, 2, 3, 2, 1, 2, 3)[st % 8]]
+                vel = (78 if st % 4 == 0 else 56) + (8 if tag == 'W' else 0) - (14 if tag == 'intro' and k <= 2 else 0)
                 if thin: vel -= 16
                 if not R.rub(b, st, nn, 1): R.gm('swirl', swirl_prog, b, st, nn, 1, vel)
         # ── COLCHONES ──
@@ -813,16 +815,95 @@ REVERB_SEND = {'lead': 0.22, 'lead2': 0.35, 'choir': 0.4, 'glass': 0.45, 'halo':
                'trem': 0.2, 'pizz': 0.2, 'glock': 0.3}
 
 
-def render_stems(R, n, L):
+# (2026-10-31, el usuario, montana_2: "algunos instrumentos llegan tarde y se superponen": es A TIEMPO, solo la B)
+# cuánto llega a sonar una capa en su sitio: las rápidas, a media altura; los colchones (tardan 0,2-0,3 s), a 1/4
+PAD_KEYS = ('choir', 'glass', 'trem')
+# sin cola sobre la nota siguiente: la voz, sus dobles, el remolino y los colchones. Timbales, viento y platillo, enteros
+TIGHT_KEYS = ('lead', 'lead2', 'dbl', 'thirds', 'swirl', 'box') + PAD_KEYS
+
+
+def attack_smp(r, level):
+    """muestras que tarda el instrumento de r en llegar a `level` de su pico (una nota típica suya, sola)"""
+    t = sorted(r.ev)[len(r.ev) // 2]
+    p = Rec(drums=True, kit=r.kit) if r.drums else Rec((r.bank, r.prog))
+    p.add(0.5, 0.5 + min(t[1] - t[0], 1.5), t[2], t[3])
+    y = p.render(4 * SR)
+    e = np.convolve(np.abs(y), np.ones(48) / 48, mode='same')
+    return int(np.argmax(e[SR // 2:] >= level * e.max()))
+
+
+def tight_stem(r, L, adv, fade):
+    """la capa con cada nota (o acorde) callándose al entrar la siguiente: en dos grabaciones alternas, cada grupo con
+    su puerta; las notas ya están adelantadas `adv` muestras"""
+    groups = {}
+    for e in sorted(r.ev): groups.setdefault(round(e[0], 4), []).append(e)
+    starts = sorted(groups)
+    out = np.zeros(L)
+    f_ = int(fade * SR)
+    for par in (0, 1):
+        rr = Rec(drums=True, kit=r.kit) if r.drums else Rec((r.bank, r.prog))
+        gate = np.zeros(L)
+        for i in range(par, len(starts), 2):
+            g = groups[starts[i]]
+            for e in g: rr.add(*e)
+            a = max(0, int(starts[i] * SR) - adv)
+            end = max(e[1] for e in g) + 0.12                            # (si nadie la corta: 0,12 s de caída)
+            b = int(min(end, starts[i + 1] if i + 1 < len(starts) else end) * SR)
+            b = max(a + 1, min(b, L - f_))
+            gate[a:b] = 1.0
+            gate[b:b + f_] = np.maximum(gate[b:b + f_], np.linspace(1, 0, f_))
+        if rr.ev:
+            y = GM.cached(rr, L)
+            out += np.concatenate([y[adv:], np.zeros(adv)]) * gate
+    return out
+
+
+def wrap_pre_roll(S, k, r, adv, at_t, n):
+    """lo que una nota del primer tiempo del bucle suena ANTES de su sitio cae en la intro: al volver a empezar el bucle
+    faltaría y la nota entraría de golpe (un chasquido). Se repite al final del bucle"""
+    ev = [e for e in r.ev if abs(e[0] - at_t) < 0.001]
+    if not ev or adv <= 0: return
+    p = Rec(drums=True, kit=r.kit) if r.drums else Rec((r.bank, r.prog))
+    for e in ev: p.add(1.0, 1.0 + (e[1] - e[0]), e[2], e[3])
+    y = GM.cached(p, 3 * SR)
+    S[k][n - adv:n] += y[SR:SR + adv] * np.linspace(0, 1, adv)
+
+
+def on_time_stems(R, L, n, at_t):
+    S = {}
+    for pre, recs in (('', R.G), ('d_', R.D)):
+        for k, r in recs.items():
+            if k in ('wind', 'revcym'):                                  # (efectos que crecen: no tienen "ataque")
+                adv = GM_LAT
+            else:
+                adv = attack_smp(r, 0.25 if k in PAD_KEYS or r.drums else 0.5)     # (la batería: su golpe, no la cola que crece)
+            print(f'  a tiempo: {k} adelantada {adv / SR * 1000:.0f} ms' + (' · sin cola' if k in TIGHT_KEYS else ''))
+            if k in TIGHT_KEYS:
+                y = tight_stem(r, L, adv, 0.03 if k in PAD_KEYS or k == 'lead' else 0.012)
+            else:
+                y = GM.cached(r, L)
+                y = np.concatenate([y[adv:], np.zeros(adv)])
+            S[pre + k] = y
+            wrap_pre_roll(S, pre + k, r, adv, at_t, n)
+    for k in list(S):
+        if k.startswith('d_') and k[2:] in S: S[k[2:]] = S[k[2:]] + S.pop(k)
+        elif k.startswith('d_'): S[k[2:]] = S.pop(k)
+    return S
+
+
+def render_stems(R, n, L, on_time=False, at_t=0.0):
     def cut(x):
         x = x[:L] - np.mean(x[:n])
         return np.concatenate([x, np.zeros(L - len(x))]) if len(x) < L else x
     base = F.tnd_dac(np.full(R.NS, 64 / 22638.0))
-    S = {k: GM.cached(R.G[k], L) for k in R.G}
-    S.update({('d_' + k if k in S else k): GM.cached(R.D[k], L) for k in R.D})
-    for k in list(S):
-        if k.startswith('d_'): S[k[2:]] = S[k[2:]] + S.pop(k)
-    S = {k: np.concatenate([x[GM_LAT:], np.zeros(GM_LAT)]) for k, x in S.items()}      # (las capas GM, a tiempo con el chip)
+    if on_time:
+        S = on_time_stems(R, L, n, at_t)
+    else:
+        S = {k: GM.cached(R.G[k], L) for k in R.G}
+        S.update({('d_' + k if k in S else k): GM.cached(R.D[k], L) for k in R.D})
+        for k in list(S):
+            if k.startswith('d_'): S[k[2:]] = S[k[2:]] + S.pop(k)
+        S = {k: np.concatenate([x[GM_LAT:], np.zeros(GM_LAT)]) for k, x in S.items()}      # (las capas GM, a tiempo con el chip)
     chip = {'pad': cut(F.render_wave(R.Cn['pad1'], WAVES) * 0.0075) + cut(F.render_wave(R.Cn['pad2'], WAVES) * 0.0075),
             'howl': cut(F.render_wave(R.Cn['howl'], WAVES) * 0.0075),
             'cm_chip': cut(F.render_wave(R.Cn['cm'], WAVES) * 0.0075),
@@ -851,7 +932,8 @@ def build(track, v):
     n = int(sg.NB * sg.BAR * SR)
     at = int(sg.INTRO * sg.BAR * SR)
     L = n + 5 * SR
-    S = render_stems(R, n, L)
+    on_time = (track, v) == ('montana_2', 'B')
+    S = render_stems(R, n, L, on_time, at / SR)
     from scipy.signal import butter, sosfilt
     hp = butter(2, 30, btype='high', fs=SR, output='sos')
     S = {k: sosfilt(hp, x) for k, x in S.items() if np.abs(x).max() > 0}
@@ -871,7 +953,8 @@ def build(track, v):
         - sd('wood', 0.3) + sd('choir', 0.15) - sd('box', 0.3) + sd('tri', 0.3) - sd('glock', 0.25)
     Lx, Rx = x + side, x - side
     if v == 'B':                                                         # la ESCARCHA (reverb), solo en B
-        send = sum(S[k] * g[k] * w for k, w in REVERB_SEND.items() if k in S)
+        # (montana_2: solo los colchones; en lo rítmico, la cola de la reverb se oye como notas que llegan tarde)
+        send = sum(S[k] * g[k] * w for k, w in REVERB_SEND.items() if k in S and (not on_time or k in ('choir', 'glass')))
         rl, rr = frost(send, rt=1.8 if track != 'montana_bonus' else 1.2)
         wet = 0.55 if track != 'montana_bonus' else 0.4
         Lx, Rx = Lx + wet * rl, Rx + wet * rr
