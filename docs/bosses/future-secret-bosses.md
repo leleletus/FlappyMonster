@@ -1,4 +1,4 @@
-# Future secret bosses: 4 ideas (NOT BUILT)
+# Future secret bosses: 4 ideas (not in the story yet)
 
 Proposal of 2026-10-29; the user asked to keep them for later. None of this exists in the game yet. Secret bosses
 already in the game: Mega Crabby, Mega Gloomy Crabby and the Groove ([system](system.md)). How a secret is wired:
@@ -42,9 +42,9 @@ Common to all:
 - **Piece:** a **weather vane**, the splinter as the arrow's tip.
 
 ## 4. The Three-Tailed Scorpion — Volcano
-The user's idea (2026-10-31), replacing the Emperor Penguin. **Art and sounds are in `assets/`; no entity, level or
+The user's idea (2026-10-31), replacing the Emperor Penguin. **Built as entities: [giantscorpion](giantscorpion.md). No level, music or
 collectible entry yet.** The user chose design C «Obsidiana» (rejected: A «Basalto», B «Ascua», D «Ceniza»), with a
-shorter body and the tails drawn OVER the body. Type ids to use: `scorpion`, `giantscorpion`.
+shorter body and the tails drawn OVER the body. Type ids: `scorpion`, `giantscorpion`.
 
 Package (`tools/art/enemies/make_scorpion.py --apply`, `tools/sounds/scorpion.py --apply`; previews in
 `FlappyMonster_pruebas/escorpion/final/`, with `jefe_C_con_sonido.mp4` showing the sounds in place):

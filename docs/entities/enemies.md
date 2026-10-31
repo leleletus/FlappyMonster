@@ -382,6 +382,11 @@ jungle boss ([giantbeetle](../bosses/giantbeetle.md)). Approved design (2026-10-
 - Tests: `mechanics escarabajo`, `escarabajo_lanzado`, `escarabajo_ruta`, `escarabajo_manos`, `escarabajo_arrolla`;
   `giantbeetle_rules voladores`.
 
+## Scorpion (`scorpion`, «Escorpión») — volcano
+
+Walks; a click, then its tail strikes where you were, or its pincer if you are very close. Stomping kills it. Details,
+with its giant: [giantscorpion](../bosses/giantscorpion.md).
+
 ## Mole, Piranha and Carnivorous Plant (0.5.96) — the user's designs
 
 Three enemies designed with the user on 2026-10-29. Art: `tools/art/enemies/make_jungle_enemies.py` (two designs each, A

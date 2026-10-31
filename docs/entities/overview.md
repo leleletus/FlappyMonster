@@ -17,6 +17,7 @@ type only switches them on** — never copy another entity's code. The recipe is
 | `base/Interactions.lua` | the player ↔ entity rules: kill / hurt / stomp / bounce / pickup / checkpoint / ground pound |
 | `base/Crawler.lua` | surface-following movement (floor ↔ walls ↔ ceiling) |
 | `base/FreeFlight.lua` | flying to chosen destinations instead of a back-and-forth route |
+| `base/SegmentChain.lua` | a live chain of segments for tails, tentacles or ropes: springs and fixed length, drawing only ([giantscorpion](../bosses/giantscorpion.md)) |
 | `base/Swimmer.lua` | swimming around a swim area (polygon) and the out-of-water fall / flop / dry death (pufferfish, Piranha) |
 | `base/Sled.lua` | the SLED: lies down, slides with momentum (hang time over gaps, step-up, wall bounce) and can be RIDDEN (a one-way moving body part) — the Penguin ([enemies](enemies.md#penguin-penguin-pingüino--frozen-coast)) |
 | `base/Boss.lua` | the boss base class (see [bosses/system](../bosses/system.md)) |

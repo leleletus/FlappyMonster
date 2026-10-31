@@ -91,6 +91,9 @@ function love.load()
     local gb = boss.def.name == 'giantbeetle'
     local gbs = { launches = 0, rage = false, lastT = -9 }
     if gb then VULN = { flipped = true } end
+    -- Escorpión de Tres Colas: solo clavada; esquiva las marcas (lo hace el bloque de abajo)
+    local gs = boss.def.name == 'giantscorpion'
+    if gs then VULN = { stuck = true } end
     local kg = { phases = {}, maxGuards = 0, flopOff = {}, waveHits = 0, partHits = 0, lastPartT = -9 }
     local sn = { phases = {}, scales = {}, frozenHits = {}, crashDizzy = 0, bonks = 0, toggles = 0, refrozen = 0,
                  deathOrder = {}, early = {}, shown = {} }
@@ -580,6 +583,18 @@ function love.load()
         check('muerte', not boss.alive and gcs.rage and z.state == 'cleared' and gcs.regrow > 0,
             ('vivo=%s, enfadado=%s, esquivas %d, notas doradas devueltas (pasos en ellas) %d, trampolines que le crecen %d, lanzado %d veces, platos pisados %d, zona %s'):format(
                 tostring(boss.alive), tostring(gcs.rage), gcs.dodges, gcs.golds, gcs.regrow, gcs.launches, gcs.decks or 0, z.state))
+    end
+    if gs then
+        local function check(name, ok, msg)
+            print(('%-10s %s  %s'):format(name, ok and 'OK   ' or 'FALLA', msg))
+            if not ok then fails = fails + 1 end
+        end
+        local need = { 'rest', 'join_coil', 'join_wind', 'join_hit', 'stuck', 'pull', 'split_coil', 'split_aim', 'sting',
+                       'split_back', 'dying_out', 'dying_flee' }
+        local miss = {}
+        for _, n in ipairs(need) do if not seen[n] then miss[#miss + 1] = n end end
+        check('estados', #miss == 0, #miss == 0 and 'todos vistos' or ('faltan: ' .. table.concat(miss, ',')))
+        check('muerte', not boss.alive and z.state == 'cleared', ('vivo=%s, zona %s'):format(tostring(boss.alive), z.state))
     end
     if gb then
         local function check(name, ok, msg)

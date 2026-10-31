@@ -65,8 +65,27 @@ function love.load()
         if boss.state == 'aim' and math.abs(pa.x - boss.x) < 3 * TILE_PX then
             pa.x = boss.x + ((boss.x - z.x0 > z.x1 - boss.x) and -5 or 5) * TILE_PX
         end
+        -- Escorpión de Tres Colas: CLAW=1, siempre a tiro de pinza y sin rematarlo; SMALL=1, el pequeño junto al jugador
+        -- (FOCUS=small: la captura sigue al pequeño)
+        if boss.def.name == 'giantscorpion' then
+            if os.getenv('CLAW') then
+                boss.clawCd = 0
+                if boss.state == 'rest' then pa.x, pa.invT = boss.x - 3.8 * TILE_PX, 0 end
+            end
+            if os.getenv('SMALL') then
+                for _, e in ipairs(ents) do
+                    if e.def.name == 'scorpion' and e.alive and not hitDone.small then
+                        hitDone.small = true
+                        e.x, e.y = pa.x + 2.4 * TILE_PX, z.y1 - e.outerH / 2
+                        e.facing, e.home.x, e.home.y = -1, e.x, e.y
+                        boss.focusSmall = e
+                    end
+                end
+                if pa.invT then pa.invT = 1 end
+            end
+        end
         -- golpea al jefe clavado (para ver el daño y, al final, la muerte)
-        if boss.state == 'stuck' and boss.deadTimer > 1.0 and not hitDone[boss] then
+        if boss.state == 'stuck' and boss.deadTimer > 1.0 and not hitDone[boss] and not os.getenv('CLAW') and not os.getenv('SMALL') then
             boss.hp = math.min(boss.hp, 1)
             boss:damage(1, 'stomp')
         end
@@ -115,7 +134,8 @@ function love.load()
             if boss:decksLive() and boss.deadTimer > 1.5 then for _, d in ipairs(boss.decks) do d.on = boss.DECK_T end end
         end
         -- (FROM=s: no captura antes de esos s — p. ej. El Groove, su pista de baile a los 77 s —)
-        if want[boss.state] and t >= (tonumber(os.getenv('FROM')) or 0) and t - lastShot >= every and (boss.alive or boss.def.name == 'megagummy') then
+        local shotState = (os.getenv('FOCUS') == 'small' and boss.focusSmall) and boss.focusSmall.state or boss.state
+        if want[shotState] and t >= (tonumber(os.getenv('FROM')) or 0) and t - lastShot >= every and (boss.alive or boss.def.name == 'megagummy') then
             lastShot = t
             local col, row = n % COLS, math.floor(n / COLS)
             love.graphics.setCanvas(canvas)
@@ -124,6 +144,7 @@ function love.load()
             -- (ZONE=1: toda la zona del jefe en cada captura)
             local zoom = os.getenv('ZONE') and ((z.x1 - z.x0 + 4 * TILE_PX) / CW) or tonumber(os.getenv('ZOOM') or 1.6)
             local cx, cy = boss.x, boss.y
+            if os.getenv('FOCUS') == 'small' and boss.focusSmall then cx, cy = boss.focusSmall.x + 60, boss.focusSmall.y - 40; zoom = 0.75 end
             if os.getenv('ZONE') then cx, cy = (z.x0 + z.x1) / 2, (z.y0 + z.y1) / 2 end
             local camX = math.floor(cx - CW / 2 * zoom)
             local camY = math.floor(cy - CH / 2 * zoom)
@@ -159,7 +180,7 @@ function love.load()
             love.graphics.setScissor()
             love.graphics.setColor(0, 0, 0, 0.7); love.graphics.rectangle('fill', col * CW, row * CH, CW - 2, 14)
             love.graphics.setColor(1, 1, 1, 1); love.graphics.setFont(FONT_SMALL)
-            love.graphics.print(('%.1fs %s'):format(t, boss.state), col * CW + 3, row * CH + 2)
+            love.graphics.print(('%.1fs %s'):format(t, shotState), col * CW + 3, row * CH + 2)
             love.graphics.setCanvas()
             n = n + 1
         end

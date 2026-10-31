@@ -335,6 +335,8 @@ Sound.FAR  = 1400
 -- en toda la arena (un jefe que la cruza no debe quedarse mudo)
 Sound.RANGE = {
     bombBlast = 4,
+    scorpionRattleJoin = 3, scorpionRattleSplit = 3, scorpionStrike = 3, scorpionPull = 2.5, scorpionHiss = 3,
+    scorpionSting = 2.5, scorpionSnap = 2.5,
     mirrorWarp = 2.5, mirrorAppear = 2.5, mirrorPortal = 2.5, glassWarn = 3, glassRise = 3,
     mgloomyPing = 3, mgloomyListen = 3, mgloomyDrop = 3, mgloomySlam = 3, mgloomyDazzled = 3, mgloomyShriek = 3,
     mgloomyHurt = 3, mgloomyStep = 2, mgloomyRoar = 3,

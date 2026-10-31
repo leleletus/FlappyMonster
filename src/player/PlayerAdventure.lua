@@ -139,7 +139,7 @@ function PlayerAdventure:new(x, y)
     o.iceT=0              -- congelado en un bloque de hielo (congelador)
     o.frostT=0            -- s seguidos en agua HELADA (PlayerAir: updateFrost; al llegar a su límite se congela)
     o.gulped=false        -- tragado por una Planta carnívora (PlayerGulp.lua): gulpMash pulsaciones, gulpBiteT, gulpNx/Ny
-    o.gulpMash=0; o.gulpBiteT=0; o.gulpNx=0; o.gulpNy=-1
+    o.gulpMash=0; o.gulpBiteT=0; o.gulpNx=0; o.gulpNy=-1; o.gulpKind=0
     o.ctrlLockT=0         -- sin control un instante (lanzado de lado por un trampolín)
     o.lightOn=false       -- linterna (niveles a oscuras): encendida
     o.lightBat=1          -- batería 0..1

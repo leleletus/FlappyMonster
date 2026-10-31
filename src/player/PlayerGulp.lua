@@ -18,6 +18,8 @@ local GULP_BITE     = 1.75     -- s entre dos mordiscos (−1 de vida)
 local GULP_FREE_INV = 1.2      -- s invulnerable al salir
 local SPIT_V        = 640      -- px/s al salir escupido (hacia fuera del bloque de la planta)
 PlayerAdventure.GULP_MASH, PlayerAdventure.GULP_BITE = GULP_MASH, GULP_BITE
+-- Quién lo tiene: el mordisco (sonido, tono, volumen) y al soltarlo (sonido, tono). 0 la Planta · 1 la pinza del Escorpión
+local GULP_KINDS = { [0] = { 'plantCrunch', 1.1, 0.7, 'plantRustle', 1.5 }, [1] = { 'scorpionSnap', 0.8, 0.8, 'scorpionSnap', 1.3 } }
 
 -- ¿Se le puede tragar ahora? (ni muriendo, ni invulnerable, ni congelado, ni ya tragado)
 function PlayerAdventure:canBeSwallowed()
@@ -26,7 +28,8 @@ end
 
 -- Tragado por una planta cuya base está en (bx, by) con la normal (nx, ny) hacia fuera de su bloque: se queda justo
 -- delante de ella (su caja tocando la cara del bloque, por fuera), quieto. true si se lo tragó.
-function PlayerAdventure:swallow(bx, by, nx, ny)
+-- `kind` = quién lo tiene (GULP_KINDS: sus sonidos; viaja en el estado propio, porque el cliente los predice).
+function PlayerAdventure:swallow(bx, by, nx, ny, kind)
     if not self:canBeSwallowed() then return false end
     nx, ny = nx or 0, ny or -1
     local x, y = bx, by
@@ -35,7 +38,7 @@ function PlayerAdventure:swallow(bx, by, nx, ny)
     else x, y = bx + nx * (OUTER_W / 2 + 1), by - OUTER_YOFF end            -- (en una pared: de lado)
     self.x, self.y, self.vx, self.vy = x, y, 0, 0
     self.gulped, self.gulpMash, self.gulpBiteT = true, 0, GULP_BITE
-    self.gulpNx, self.gulpNy = nx, ny
+    self.gulpNx, self.gulpNy, self.gulpKind = nx, ny, kind or 0
     self.gpPhase, self.gpT = nil, 0
     self.dropping, self.dropHoldT, self.crouching = false, 0, false
     self.onGround = false
@@ -50,6 +53,7 @@ end
 -- Escupido: sale disparado hacia fuera del bloque de la planta, un instante sin control e invulnerable
 function PlayerAdventure:gulpEscape()
     local nx, ny = self.gulpNx or 0, self.gulpNy or -1
+    local kind = GULP_KINDS[self.gulpKind or 0] or GULP_KINDS[0]
     self:gulpClear()
     if ny ~= 0 then self.vx, self.vy = 0, ny * SPIT_V
     else self.vx, self.vy = nx * SPIT_V * 0.8, -SPIT_V * 0.55 end
@@ -57,7 +61,7 @@ function PlayerAdventure:gulpEscape()
     self.ctrlLockT = math.max(self.ctrlLockT or 0, 0.2)
     self.jumpsLeft = 1
     self:grantInvulnerability(GULP_FREE_INV)
-    Sound.play('plantRustle', 1.5)
+    Sound.play(kind[4], kind[5])
     Sound.play('jump', 0.8, 0.6)
     fx(self, 'gp_land', self.x, self.y)
 end
@@ -65,7 +69,8 @@ end
 -- Un mordisco de dentro (la planta: no lo para ser invulnerable). true si lo mató
 function PlayerAdventure:gulpBite()
     self.hurtT = HURT_FLASH
-    Sound.play('plantCrunch', 1.1, 0.7)
+    local kind = GULP_KINDS[self.gulpKind or 0] or GULP_KINDS[0]
+    Sound.play(kind[1], kind[2], kind[3])
     if self.immortal then return false end                 -- (los bots rivales: les llega el golpe, no pierden vida)
     self.hp = self.hp - 1
     if self.hp <= 0 then

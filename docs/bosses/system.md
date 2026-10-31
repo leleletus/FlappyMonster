@@ -19,6 +19,7 @@ later, NOT built: [future-secret-bosses](future-secret-bosses.md). The four crab
 | Giant Rhino Beetle (Escarabajo Rinoceronte Gigante; the jungle, world 3) | `giantbeetle` | [giantbeetle](giantbeetle.md) | `templo_escarabajo` | 8 (third in story order: `assets/story/shards.json`) |
 | The Mirror | `mirror` | [mirror](mirror.md) | `ruta_del_espejo` | 7 |
 | Mirror chase (not a fight) | `mirrorchase` | [mirror-chase](mirror-chase.md) | `huida_del_espejo` | — |
+| Three-Tailed Scorpion (Escorpión de Tres Colas, SECRET; no level yet) | `giantscorpion` | [giantscorpion](giantscorpion.md) | test arena only | — |
 | The Groove (El Groove, SECRET, after the game; fights to its music) | `groovecrab` | [groovecrab](groovecrab.md) | `isla_del_groove` (secret map node) | — |
 | Crab Mega Mashup (EVENT: the four crabs in turns, adaptive music; Free Play) | `crabmashup` (director) | [crab-mashup](crab-mashup.md) | `mashup_cangrejos` | — |
 
